@@ -292,6 +292,7 @@ body .paste-toast { border-radius: 12px; }
   text-align: left; cursor: pointer;
 }
 .sidebar-project-row::before { content: "▸"; flex: none; color: var(--fg-muted); font-size: 10px; }
+.sidebar-project-row[aria-expanded="true"]::before { content: "▾"; }
 .sidebar-project-row:hover { background: var(--hover-bg); }
 .sidebar-project-row.empty { color: var(--fg-muted); font-weight: 400; }
 .sidebar-item-time {

@@ -202,7 +202,12 @@ function projectsOf(model) {
 /** 展开态（cwd 集合 · localStorage 持久 —— ZCode `expandedWorkspacePaths` 同义）：当前项目恒展开。 */
 
 /** 项目行（ZCode 形：**文件夹图标 + 名称** 纯文本；点击 = 收起 ∕ 展开其下会话）。 */
+/** 项目组折叠集合（cwd 键 · 模块态——不持久，重开应用回默认展开）：
+ *  **不挂 project 对象**——projectsOf 每次重绘重建项目对象，挂其上随重绘即丢（真机实测失效根因）。 */
+const collapsedProjects = new Set()
+
 function projectRowNode(project) {
+  const collapsed = collapsedProjects.has(project.cwd)
   return {
     tag: "button",
     props: {
@@ -210,8 +215,10 @@ function projectRowNode(project) {
       type: "button",
       "data-project": project.cwd,
       title: project.cwd,
+      "aria-expanded": String(!collapsed),
       onClick: () => {
-        project.collapsed = !project.collapsed
+        if (collapsedProjects.has(project.cwd)) collapsedProjects.delete(project.cwd)
+        else collapsedProjects.add(project.cwd)
         paintSidebarFace() // 模块态不进 store —— 无订阅径，就地刷
       },
     },
@@ -243,7 +250,7 @@ function sessionsTree(model, handlers) {
       .sort((a, b) => b.updatedAt - a.updatedAt)
     if (filter !== "" && sessions.length === 0) continue
     any = true
-    const collapsed = project.collapsed === true
+    const collapsed = collapsedProjects.has(project.cwd)
     parts.push(projectRowNode(project, collapsed, sessions.length))
     if (collapsed) continue
     parts.push(...sessions.map((s) => sessionItemNode({ key: s.slot, title: s.display, badge: null, time: s.time }, handlers, { cwd: project.cwd, isCurrentProject: project.isCurrent })))
