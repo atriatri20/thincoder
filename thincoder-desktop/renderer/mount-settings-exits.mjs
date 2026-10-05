@@ -30,7 +30,7 @@
  */
 import { initDict } from "./i18n.mjs"
 import { configuredFlag, patchSettings, setProviderState } from "./store.mjs"
-import { setTheme } from "./theme.mjs"
+import { setAccent, setTheme } from "./theme.mjs"
 import { presetValue } from "./mount-onboarding.mjs"
 import { createSegmentExits } from "./mount-settings-segments.mjs"
 import { createModelsExits } from "./mount-settings-segments-models.mjs"
@@ -191,6 +191,14 @@ export function createExits(deps = {}) {
   /** 主题出口（D33 · 台账 #743 —— 单写者 = `renderer/theme.mjs`）：`setTheme` 落 `data-theme` + 存储 ⇒ 返落地值；
    *  落地值非 `null` ⇒ 切片写（`SETTINGS_KEYS` 含 `theme` ⇒ 设置面头三钮当前态随动）+ **勾选态回读报告**（D36 · 两写作点②）；
    *  表外值 ⇒ `null`（零写零改 —— 面零变更；报告零发）。 */
+  /** 主题色出口（下级配色 · 2026-10-05 —— `theme.mjs` `setAccent` 单写者 + 切片写）：
+   *  落地 `data-accent` + 落存储 ⇒ `--accent` 全域联动；SETTINGS_KEYS 含 accent ⇒ 色板态随重绘。 */
+  function setAccentFace(id) {
+    const landed = setAccent(id)
+    if (landed === null) return
+    store.set({ accent: landed })
+  }
+
   function setThemeFace(target) {
     const landed = setTheme(target)
     if (landed === null) return
@@ -245,6 +253,7 @@ export function createExits(deps = {}) {
     ...agentSegments.handlers,
     onToggleLang: (target) => void toggleLang(target),
     onSetTheme: (target) => setThemeFace(target),
+    onSetAccent: (id) => setAccentFace(id),
     onCloseSettings: () => closeSettings(),
     onSelectSection: (name) => setSettings({ nav: name }), // 侧边栏导航式设置页 · 2026-10-04：选中段落切片（`views/settings.mjs` 读面 `nav`）
     onSubmit: (event) => void submitChannel(event),

@@ -83,3 +83,80 @@ export function setTheme(value, { doc = globalThis.document, storage = defaultSt
   writeStored(storage, value)
   return value
 }
+
+/* ─── 主题色（accent · 2026-10-05 —— 浅 ∕ 深主题的**下级配色**）：预设闭集 ∕ 状态载体 =
+ *  `documentElement` 的 `data-accent`（缺省 "blue" —— theme.css `--accent` 即蓝，零覆写）；
+ *  单写者 = 本档（`initAccent` 装配期一次 ∕ `setAccent` 出口）；持久化 = `localStorage`
+ *  （键 `thincoder.accent`——沿 theme 键同族）；读 ∥ 写皆捕获 + console.error（零静默）。
+ *  预设色值（浅 ∕ 深两枚 —— 每预设一对 `light-dark()` 覆写住 codex.css；消费面 = `var(--accent)` 全域联动）。 */
+export const ACCENTS = Object.freeze([
+  { id: "blue", light: "#2f6feb", dark: "#5b8def" },
+  { id: "teal", light: "#0e8a80", dark: "#3ec1b3" },
+  { id: "violet", light: "#6e56cf", dark: "#a48bfa" },
+  { id: "green", light: "#17855c", dark: "#3dd68c" },
+  { id: "orange", light: "#c96a08", dark: "#f0a35c" },
+  { id: "rose", light: "#cf3d9c", dark: "#ef85c7" },
+])
+
+const ACCENT_KEY = "thincoder.accent"
+
+function accentNormalize(raw) {
+  return ACCENTS.some((a) => a.id === raw) ? raw : "blue"
+}
+
+function accentReadStored(storage) {
+  if (!storage || typeof storage.getItem !== "function") return null
+  try {
+    const raw = storage.getItem(ACCENT_KEY)
+    if (raw === null || raw === undefined) return null
+    if (!ACCENTS.some((a) => a.id === raw)) {
+      console.error(`[theme] accent stored value out of range: ${String(raw)}`)
+      return null
+    }
+    return raw
+  } catch (error) {
+    console.error("[theme] accent read failed:", error)
+    return null
+  }
+}
+
+function accentWriteStored(storage, value) {
+  if (!storage || typeof storage.setItem !== "function") return
+  try {
+    storage.setItem(ACCENT_KEY, value)
+  } catch (error) {
+    console.error("[theme] accent write failed:", error)
+  }
+}
+
+function applyAccent(doc, value) {
+  doc.documentElement.dataset.accent = value
+}
+
+/** 当前落地值（设置面板读面——store 切片缺位兜底）。 */
+export function currentAccent() {
+  try {
+    const raw = globalThis.document?.documentElement?.dataset?.accent
+    return accentNormalize(raw)
+  } catch {
+    return "blue"
+  }
+}
+
+/** 装配入口（`renderer/app.mjs` 装配期一次，先于首绘可及面）：读存储 ⇒ 归一 ⇒ 写 `data-accent` ⇒ 返落地值。 */
+export function initAccent({ doc = globalThis.document, storage = defaultStorage() } = {}) {
+  const value = accentNormalize(accentReadStored(storage))
+  applyAccent(doc, value)
+  return value
+}
+
+/** 出口（设置面色板 ⇒ 本径）：闭集校验 ⇒ 应用 + 落存储 ⇒ 返落地值；表外值 ⇒ `null` + 记错（零写零改）。 */
+export function setAccent(value, { doc = globalThis.document, storage = defaultStorage() } = {}) {
+  if (!ACCENTS.some((a) => a.id === value)) {
+    console.error(`[theme] setAccent refused out-of-range value: ${String(value)}`)
+    return null
+  }
+  applyAccent(doc, value)
+  accentWriteStored(storage, value)
+  return value
+}

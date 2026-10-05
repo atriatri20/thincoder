@@ -21,7 +21,7 @@
  */
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
-import { THEMES } from "../theme.mjs"
+import { ACCENTS, THEMES } from "../theme.mjs"
 import { wire } from "./chat-tool.mjs"
 import { channelFormTree, verifyControl } from "./settings-controls.mjs"
 import { agentBody, envBody, mcpBody, modelBody, modelIdOf, modelsBody, providersBody, tierFace, toolsBody } from "./settings-sections.mjs"
@@ -154,6 +154,7 @@ export function settingsModel(state) {
     open: settings.open === true,
     nav: str(settings.nav) ?? SECTIONS[0].name, // 侧边栏导航选中段（Codex 形设置页 · 2026-10-04 —— 表外 ⇒ 首段，不猜）
     lang: langOf(state),
+    accent: str(state?.accent) && ACCENTS.some((a) => a.id === state.accent) ? state.accent : "blue",
     theme: themeOf(state),
     notice: notice === null ? null : { scope, text: reasonWord(notice.reason) },
     providers: {
@@ -262,7 +263,35 @@ function themeBody(model, handlers) {
   return [{ tag: "div", props: { class: "settings-row", "data-pref": "theme" }, children: [
     { tag: "span", props: { class: "settings-row-name" }, children: [t("settings.theme")] },
     themeNode(model, handlers),
+  ] },
+  { tag: "div", props: { class: "settings-row", "data-pref": "accent" }, children: [
+    { tag: "span", props: { class: "settings-row-name" }, children: [t("settings.accent")] },
+    accentNode(model, handlers),
   ] }]
+}
+
+/** 主题色色板（下级配色 · 2026-10-05 —— `theme.mjs` `ACCENTS` 预设闭集；点击 = `onSetAccent(id)` ⇒
+ *  `data-accent` 落地 ∕ 落存储 ⇒ `--accent` 全域联动）。缺 handlers ⇒ `disabled`（诚实非死控）。 */
+function accentNode(model, handlers) {
+  const onSet = typeof handlers?.onSetAccent === "function" ? handlers.onSetAccent : null
+  const current = typeof model?.accent === "string" ? model.accent : "blue"
+  return {
+    tag: "div",
+    props: { class: "accent-swatches", role: "group", "aria-label": t("settings.accent") },
+    children: ACCENTS.map((a) => {
+      const active = a.id === current
+      return { tag: "button", props: {
+        class: active ? "accent-swatch active" : "accent-swatch",
+        type: "button",
+        "data-action": "settings:accent",
+        "data-accent-id": a.id,
+        "aria-label": t(`settings.accent.${a.id}`),
+        title: t(`settings.accent.${a.id}`),
+        "aria-pressed": String(active),
+        onClick: onSet === null ? undefined : () => onSet(a.id),
+      }, children: [] }
+    }),
+  }
 }
 
 function langNode(model, handlers) {
