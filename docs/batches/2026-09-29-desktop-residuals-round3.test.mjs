@@ -205,7 +205,7 @@ test("⑤ #617-CH 主进程臂：agentFields 五键出（slotAuthority 真 ∕ �
   assert.deepEqual([...settingsValues.SLOT_AUTHORITY_PATHS], ["agent.advisor.guard", "agent.engineering"])
   const mainSrc = read("src/main/settings.mjs")
   assert.equal(/const SLOT_AUTHORITY_PATHS/.test(mainSrc), false, "主档零自持副本（单源随迁）")
-  assert.match(mainSrc, /import \{ SLOT_AUTHORITY_PATHS, agentFields, deepEqual, deleteKeyPath, isConfigured, setKeyPath \} from "\.\/settings-values\.mjs"/)
+  assert.match(mainSrc, /import \{ SLOT_AUTHORITY_PATHS, agentFields, deleteKeyPath, isConfigured, setKeyPath \} from "\.\/settings-values\.mjs"/) // 断代重锚 2026-10-04：`deepEqual` 随退役面净删（17 批）——导入名单去之
   const dir = mkdtempSync(join(tmpdir(), "r3c-"))
   try {
     const cfg = join(dir, "config.json")
@@ -530,8 +530,8 @@ test("⑬ #541 end 帧尾臂：携 cap ⇒ 组驻留 ∧ 计数行 = digest.done
 // ─── ⑭ #541 样式臂 ──────────────────────────────────────────────────────────
 test("⑭ #541 样式臂：chat.css 两规则在盘（值面对位）", () => {
   const css = read("renderer/chat.css")
-  assert.match(css, /\.chat-digest \.digest-cap \{[^}]*color: var\(--fg-muted\);[^}]*\}/, "基规则：`.chat-digest .digest-cap`（--fg-muted）")
-  assert.match(css, /\.digest-cap\.digest-cap-stop \{[^}]*color: var\(--warn\);[^}]*\}/, "stop 档规则：`.digest-cap.digest-cap-stop`（--warn）")
+  assert.match(css, /\.chat-digest\.digest-cap \{[^}]*color: var\(--fg-muted\);[^}]*\}/, "基规则：`.chat-digest.digest-cap`（--fg-muted；选择器拼写随收正——父侧重锚 2026-10-04）")
+  assert.match(css, /\.chat-digest\.digest-cap-stop \{[^}]*color: var\(--warn\);[^}]*\}/, "stop 档规则：`.chat-digest.digest-cap-stop`（--warn；同上随正）")
   const theme = read("renderer/theme.css")
   assert.ok(theme.includes("--fg-muted:") && theme.includes("--warn:"), "角色对位两值在册（theme.css）")
   out("⑭ #541 样式", "两规则在盘（--fg-muted ∕ --warn）✓")

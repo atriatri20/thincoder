@@ -36,8 +36,6 @@ import { blockOnNoWorkspace } from "./workspace-guard.mjs"
 // 2026-09-11 第 10 批（§5.1.4 第 1/2 条）：任务可见性族投递通道（队列 flush 拍——webviewReady case）
 // （W15 事件中继面 + AGENT-LOOP-SUBAGENT.md §6.7.6 C-5/C-6 permissionResponse 释放面随回合交互族迁出——见 panel-messages-turn.mjs）
 import { flushSubagentOutbox } from "./panel-callbacks.mjs"
-// LEDGER-SURFACE（§2.30.3.5）：台账启动行投递（webviewReady 时机）
-import { pushLedgerStartup } from "./ledger-surface.mjs"
 // #875（2026-10-04 issue 修复批·三 · 协议 §3.2 行 23）：视图偏好三键——webviewReady 握手重推
 import { pushUiPrefs } from "./ui-prefs.mjs"
 
@@ -147,8 +145,8 @@ export async function routeUserTurn(panel, { text, modelOverride, reasoning, pro
   // #221（hygiene-sweep 批 · C-B2-6 细则①「归位受理路径同推队列实况」**前移**至此）：
   // 入口即推一次（含无工作区早退口与下方降级 await **之前**）——`pushBusyQueued` 恒读 host
   // 实况、幂等 ⇒ 前移零语义风险；原后置位（降级 await 之后）在挂起期镜像停在旧态（窗口内提交
-  // 被守卫误拒——窄竞态）。补因仍成立：webview 镜像在提交受理时本地先行自增，推文须含归位
-  // 路径（正常队空 ⇒ `count:0`；有残项 ⇒ 实况）。同点推的前移使原 :170 推冗余 ⇒ 删。
+  // 被守卫误拒——窄竞态）。补因改挂：镜像 = host 快照如实镜像（端侧零本地增量——提交受理时不改写）——
+  // 快照幂等 ⇒ 入口即推零副作用；镜像滞后窗 ⇒ 早推免挂起期守卫误拒；推文须含归位路径（正常队空 ⇒ `count:0`；有残项 ⇒ 实况）。同点推的前移使原 :170 推冗余 ⇒ 删。
   pushBusyQueued(panel)
   // ② 无工作区守卫（**先于** busy 与 `savePastedImages`——图片不落 `<cwd>/.thincoder/tmp/`）：
   // webview 发消息 / retry 共用本入口 ⇒ 无文件夹窗口里一律拒（提示明示——不静默丢）。
@@ -356,7 +354,6 @@ export async function handlePanelMessage(panel, msg) {
       flushSubagentOutbox(panel)
       reassertLiveChildren(panel)
       startLiveHeartbeat(panel) // 出生自愈心跳起拍（D-W20——止于 panel dispose）
-      pushLedgerStartup(panel) // LEDGER-SURFACE：启动行（会话内容落定后——不被 clearMessages 抹掉；不可动作零 post）
       break
     }
     case "panelDiag": {

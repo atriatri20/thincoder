@@ -43,7 +43,7 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 | 模块 | 职责 |
 |---|---|
 | `chat.js` | 编排层（装配 + 全局键 / 点击 + 启动握手）：init 装配（welcome / autocomplete / settings / onboarding / toolbar / 文件链接 / ⏹ 取消委托）+ 命令块 `initMessageLoop(deps)`（**原址**注册消息监听——D-C1）+ `dismissLoadingScreen` 族；启动握手 `webviewReady`（`chat.js:147`——as-of 2026-09-22 structure-debt 拆分轮实读）· **147 行**（`wc -l`） |
-| `chat-messages.js` | host → webview **消息分发循环**（`initMessageLoop`——`window.addEventListener("message")` + `case` 单表整块；D-C2 不拆族）；**238 行**（`wc -l`——实读 2026-09-28；LEDGER-RELIABILITY 批 +1 ＝ `sessions` 载荷 `ledger` 捕获点） |
+| `chat-messages.js` | host → webview **消息分发循环**（`initMessageLoop`——`window.addEventListener("message")` + `case` 单表整块；D-C2 不拆族）；**267 行**（`wc -l`——实读 2026-10-04（收口复读）；流尾台账行组退役批（#913）净 **−3**（`ledgerNotice` case ∥ import 退场）；前读 238（实读 2026-09-28——LEDGER-RELIABILITY 批 +1 ＝ `sessions` 载荷 `ledger` 捕获点；238 → 267 含历轮他批累计）） |
 | `chat-status.js` | **显示状态元素一族**（`clearStatusText` / `handleStatusText` / `showCompressStatus` / `showDigestStatus`——压缩状态行 + 状态段 + digest 轮可见面；模块级 `_digestRoundEl` 随迁）；**124 行**（`wc -l`——as-of 2026-09-22） |
 | `streaming.js` | token/reasoning 流式渲染（rAF 节流 + ≥50ms 重排门——核 `flow/stream.mjs:18` / `:36`；端实例 `:28-33`）+ 回合收尾（含未结算工具卡清扫 `sweepUnsettledToolCards`——M1——`:95`）+ 子代理块路由（`subagentChunk` `:169`）+ code-block 复制按钮（核 `flow/stream.mjs:95`） |
 | `ui.js` | 端壳面：欢迎条 / 横幅 + `ctx` 装配（气泡 / 工具卡 / advisor 块经核构件——`thincoder-render-core/flow/block.mjs` / `thincoder-render-core/flow/tool-card.mjs`）+ 滚动族（`scrollDown` / `maybeScrollDown` / `maybeScrollActivity` `:190-193` / `initScrollFollow` `:211-221` / `trimOldMessages` `:199-206`）——leaf：不 import `state.js` |
@@ -65,12 +65,12 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 | `session-bar.js` | 会话栏（标题/下拉/新建） |
 | `mode-buttons.js` | ENG / ADVISOR / AUTO / PLAN 按钮状态反射 |
 | `i18n.js` / `i18n-dom.js` | 文案解析（`${k}` 插值——`i18n.js:30`）与 DOM 反查 |
-| 其余 | `search.js` · `onboarding.js` · `ledger-line.js`（台账行投递壳——行构造 R2 迁核 = 核 `flow/ledger-line.mjs`，本端留 append / 跟滚） · `lib.js`（纯 helper——R1 迁核：实现单源 = 核包 `@thincoder/render-core/lib.mjs`，本端档 = 2 行再导出 shim） |
+| 其余 | `search.js` · `onboarding.js` · `lib.js`（纯 helper——R1 迁核：实现单源 = 核包 `@thincoder/render-core/lib.mjs`，本端档 = 2 行再导出 shim） |
 | CSS | `base.css` · `chat.css` · `controls.css` · `session.css` · `settings.css` |
 
 **R1 迁核注**（六档）：`md` / `highlight` / `diff` / `lib` / `tool-summary` / `i18n` 实现单源 = 核包 `@thincoder/render-core`——本端五档 = 2 行再导出 shim，`highlight.js` 删除（核内 `md.mjs` 自引；本端零消费）；上表六档相关坐标 = 迁核前实读。
 
-**R2 迁核注**（八拆档 + 三核档）：`ui` / `streaming` / `activity` / `panels` / `permission` / `question` / `ledger-line` / `queued-mark` 八档 = 换接核构件（直 import 核包 `.mjs`；端留守面 = `ctx` 装配 / 滚动族 / 消息分流 / 出站绑 / DOM 效果执行）；
+**R2 迁核注**（七拆档 + 三核档）：`ui` / `streaming` / `activity` / `panels` / `permission` / `question` / `queued-mark` 七档 = 换接核构件（直 import 核包 `.mjs`；端留守面 = `ctx` 装配 / 滚动族 / 消息分流 / 出站绑 / DOM 效果执行）；
 `activity-view` / `toast` / `tool-card-restore` 三档 = 2 行 `export *` shim（实现单源 = 核包 `@thincoder/render-core/subblocks/activity-view.mjs` / `@thincoder/render-core/toast.mjs` / `@thincoder/render-core/flow/tool-card-restore.mjs`）；§5.x 各节内未逐处重锚的其余相关坐标 = 换接前实读。
 
 **本端接线**：实现为唯一事实源——模块图登记见 `thincoder-vscode/AGENTS.md`（webview 行为维护寄存器）。
@@ -99,18 +99,17 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 ### 4.1 权限卡族释放形态（逐项 / 合并 · F-W13）
 
 - 卡族 = `.permission-prompt`——逐项卡（`permissionRequest`）与合并卡（`batchPermissionRequest`）同族；**族键 = `data-prompt-id`**（合并卡自 2026-09-18 批起同携 `promptId`）。
-- 释放形态 = **卡消失**：`permissionWithdrawn` 经同一选择器移除（`thincoder-vscode/webview/chat-messages.js:194-200`——逐项 / 合并零分支；as-of 2026-09-22 structure-debt 拆分轮实测）；**不做「已拒绝态」变体**（同一语义不做两形态）。
+- 释放形态 = **卡消失**：`permissionWithdrawn` 经同一选择器移除（`thincoder-vscode/webview/chat-messages.js:191-197`——逐项 / 合并零分支；as-of 2026-10-04 收口重锚〔#913 删行位移〕；原 as-of 2026-09-22 structure-debt 拆分轮实测）；**不做「已拒绝态」变体**（同一语义不做两形态）。
 - **零静默无效**：队列无对应条目时 host 回 `permissionWithdrawn`（可见处置）⇒ 卡被同一消费者移除——「点了没反应」在形态上不可达。
 - **释放 ⇒ 状态栏刷新**（F-W13 族——2026-09-18 修轮补）：卡释放后 VS Code 状态栏不得残留 `waiting for your input`；`waiting` 判据含**批权限队列**、刷新点 = 释放通道单点（判据与落点 = `WEBVIEW-PROTOCOL.md` §4.4 · §4.6——本档不重述，D2）。
 - 消息面 / id 纪律 / 响应匹配判据 = `WEBVIEW-PROTOCOL.md` §4.6（本档不重述——D2）。
 
-### 4.2 模型 / 推理按钮忙态门（F-W14）
+### 4.2 模型 / 推理按钮 —— 随处可切（F-W14 收正 · 2026-10-04 解锁批）
 
-- **判据 = 忙态**（`S._turnState !== "idle"`——**同经 `S._turnState` 派生的独立谓词**；与 Send / Stop 的 `=== "running"`（`thincoder-vscode/webview/loading.js:56-57`）**差值 = 本门多含 `susp`**——非同一条判据；派生单点 = `webview/loading.js` `applyBusyLock`）。
-  `running`（回合 / digest / 标题窗口）与 `susp`（池活跃 / 释放窗口——**含在飞蒸馏落盘窗**）⇒ 模型 / 推理按钮**显式禁用**（`disabled` + `aria-disabled`；`.ctrl-btn:disabled` 有可见态）；idle ⇒ 复原。
-- **入口守卫（同谓词）**：两处写槽入口同读 `modelSwitchBlocked()`——① 按钮点击（模型菜单 / 推理下拉）② `models` 推送的自动回写（`thincoder-vscode/webview/model-picker.js` `handleModelsMessage`）；进忙态时关闭已弹出的两个浮层（不留「点了没用」的假 affordance）。
-- **与 Send 隐藏的分工**（`WEBVIEW-PROTOCOL.md` D-P9）：Send = 动作钮（Stop 承接同语义）⇒ 隐藏；模型 / 推理 = **信息钮**（屏上须可读当前会话模型 / 推理级）⇒ 禁用——隐藏即失去信息。
-- **与试运行语义的关系**：`thincoder-vscode/src/extension/turn-model.mjs` 的「真 override 单回合不落槽」**零改**；本门挡住的是「忙态写槽」入口 ⇒ 回合尾快照（`panel-chat.mjs:329` · `panel-callbacks.mjs:305`）恒等于槽值（幂等，零覆写）。
+- **钮面零忙态门**（用户 2026-10-04 17:02 走查裁——「总是被锁着」）：模型 / 推理按钮**任意忙态可点**（`running` / `susp` / `idle` 同面）——不 `disabled`、不 `aria-disabled`、进忙态**不关**已弹浮层；信息钮**保位不隐藏**（与 Send 隐藏的分工不变——`WEBVIEW-PROTOCOL.md` D-P9）。
+- **写面保护 = 偏好键单写者**（替代硬挡）：会话级三键（`provider` / `model` / `effort`）唯一写者 = 显式选定 + 首播种；**回合关联落盘不携三键**——四处 `slotStamp` 落盘改**播种印章**（`panel-turn-stages.mjs` ∥ `panel-turn-loop.mjs` ∥ `panel-callbacks.mjs` 两处；`saveLines` 取值 = 显式写位 > 槽在场 > seed）。
+- **自动回写门保留**（共享核件 `applyModels`）：`models` 推送的自动回写忙态零回写（防陈旧推送回声覆写新选定——`writebackBlocked`）；idle 照发（同值回声）。
+- **下一回合生效**：回合入口恒读槽复合（`resolveTurnStage` `_activeData`——`panel-turn-stages.mjs:45-61`）；在飞回合持起跑 `p` ⇒ 回合内零变；忙期选定自**下一回合**起跑生效。试运行语义（`turn-model.mjs`）零改。
 
 ### 4.3 工具卡失败信号与摘要（F-W16）
 
@@ -351,7 +350,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 
 **出生自愈心跳（host · 2 s 拍——F-A1 · F-A4 · F-A5）**：
 
-- 拍体 = `reassertLiveChildren(panel)` **本体**（与就绪握手 / `loadSession` 同一函数——单源，不新造存活投影）；起 = `webviewReady` case 内（`panel-messages.mjs:229` 之后），停 = `panel` dispose（`chat-panel.mjs:127` 旁）；`unref?.()`（不阻进程退出——同 `thincoder-vscode/src/extension/ledger-surface.mjs:125-126`）。
+- 拍体 = `reassertLiveChildren(panel)` **本体**（与就绪握手 / `loadSession` 同一函数——单源，不新造存活投影）；起 = `webviewReady` case 内（`panel-messages.mjs:229` 之后），停 = `panel` dispose（`chat-panel.mjs:127` 旁）；`unref?.()`（不阻进程退出——同 `thincoder-vscode/src/extension/ledger-surface.mjs:83`〔as-of 2026-10-04 收口重锚——#913 后现位〕）。
 - 拍体前置两守卫：`panel._wvReady === true`（未就绪不向队列堆重复出生事件——就绪拍已覆盖该窗口）；`n > 0` 才留痕（空拍零日志）。`n` = 本拍重发条数。
 - **幂等契约靠既有守卫导出（不改判据）**：键 live → `ensureBlock` 复用（不重挂 / 不重复 append / 区序不动）；键**已冻结** + host 判 live → `takeoverBlock` 建新代（F-A3——host 是「该键仍 live」的权利人，冻结条目 = 陈旧墓碑）；键 live 但元素被移除 → tombstone 丢弃（语义不变）。
 - **降级块修复**：内容 chunk 先到、出生事件从未到（块 `pool: null`）⇒ 心跳 ≤2 s 内补 `pool: true` + `model` + `startedAt` ⇒ ⏹ 与 `sync/async` 词随 `pool` 派生恢复（F-A4——控制面与内容面同块）。
@@ -556,7 +555,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | D-W13 | 块级跟滚载体 = **原语入核 · 本端留调用点 ∕ 帧驱动**（核件 `thincoder-render-core/subblocks/block.mjs` `initBlockFollow` / `maybeScrollBlock`——2026-09-29 提核） | 否决内联裸钉底（无让位）· 否决几何派生（新造模式）· 否决 `ui.js` 滚动族泛化（状态模型不符 + `ui.js` 473 行（口径 = `wc -l` / 含末行 · as-of 2026-09-20 实读）越 300 建议线） |
 | D-W14 | 高度 60px 作用于 `.sub-block` 全部（live + 冻结同卡面） | 否决仅 `.sub-live`（冻结展开态须同卡面）；advisor 流内块维持 100px |
 | D-W15 | 合并权限卡**携 `promptId` 并入逐项卡族**（单一释放通道 + 同一移除选择器） | 否决单开释放语义（同语义两通道 + 消费者按类分支——`permissionWithdrawn` 已按 id 精确匹配，见 `WEBVIEW-PROTOCOL.md` §4.6 · D-P12） |
-| D-W16 | 忙态门 = **禁用**（非隐藏 / 非不做）；判据 = `_turnState !== "idle"` | 否决隐藏（信息钮隐藏即失去「当前模型」读数）· 否决仅 `running`（留 `susp` 在飞蒸馏落盘窗——`panel-callbacks.mjs:319` 携旧回合快照）+ 与 D-P9 的分工见 §4.2 |
+| D-W16 | **模型 / 推理钮随处可切**（2026-10-04 解锁批收正——原「忙态禁用」形退场） | 收正由 = 体验目标（真 idle 窗罕见——「总是被锁着」）+ 写面保护替代硬挡；D-W16 原「否决仅 running」理由面（`susp` 在飞蒸馏落盘窗携旧回合快照）由落盘保护（偏好键单写者）吸收——不靠挡；见 §4.2 |
 | D-W17 | `@` 引用 = **显示边界剥离**（消费面二处 = 恢复面显示 + **标题源文本**——均还原简洁形；落点端侧） | 否决改存储本体（动人读线 = CLI 共文件）· 否决活面同步展开（B 口——正文搬上屏）· 否决落核窗口面（消费方只有 VSC + 语法产者住端——§4.4 判据） |
 | D-W18 | 非零退出 = **判据扩**（卡态 + 保持展开 + 摘要含退出状态，同一判据派生） | 否决仅摘要（卡仍绿）· 否决仅展开（折叠面读作 `(empty)`）——单信号不达「可见失败」 |
 | D-W19 | spawn 失败（进程未启动） = **产者补状态位** `(spawn failed)`（状态位族第三成员；端侧判据族随扩一名）——**产者两处、同名同形**：核 `thincoder-core/tools/bash.mjs:183-190`（CLI 面）· **宿主 `thincoder-vscode/src/tools/shell.mjs:242-260`（本端卡面真产者）**；同批收正宿主两态（超时 ⇒ `(killed: timeout <N>ms)` · 输出超容 ⇒ `(killed: output limit exceeded)`）+ **退出码槽只接受数字**规则。本端 `bash` ≠ 核 `bash`（`thincoder-vscode/src/tools/index.mjs:29` · `:172-175`）⇒ 只改核面则本端卡面零变化（评审 id=118 #1 实核） | 否决判据面认产者措辞（`Command failed:` 前缀——跨端措辞耦合 ⇒ 产者改字即静默复辟；且不产状态文本 ⇒ 摘要仍读 `(empty)`，第三信号须二次手术；CLI 端零收益）· 否决 `Error:` 前缀（核侧控制信号——`dispatch.mjs:369` · `:420` · `:426` · `:438` 同读，语义升格面）· 否决伪造 `(exit code N)`（进程未启动，禁造假状态）· 否决「本端改判为核/CLI 面收口」（本端卡面即本缺陷的用户可见承诺面） |
@@ -621,7 +620,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | U-W6 | 块内容区高度 60px（live + 冻结同卡面） | 已定（§5.5 · D-W14） |
 | U-W7 | 可调常量（批准环节可翻转）：`max-height: 32vh` · 60px 数值本身 | 已定（open 面 = 数值，非语义） |
 | U-W8 | 合并权限卡释放形态 = **卡消失**（不做「已拒绝态」变体） | 已定（§4.1 · D-W15） |
-| U-W9 | 模型 / 推理按钮忙态**禁用**（`disabled` + `aria-disabled`），进忙态关浮层 | 已定（§4.2 · D-W16） |
+| U-W9 | 模型 / 推理按钮**随处可点**（零 `disabled` / `aria-disabled`；进忙态不关浮层） | 已定（2026-10-04 解锁批收正——§4.2 · D-W16） |
 | U-W10 | 失败工具卡 = 红 + **保持展开** + 摘要含退出状态；成功面不拼 `(exit code 0)` | 已定（§4.3 · D-W18） |
 | U-W11 | spawn 失败（无退出码）摘要 = 状态位本体（`→ (spawn failed)`）；三信号同形不改 | 已定（§4.3 · D-W19） |
 | U-W12 | 未钉底时新块出生 = **区首计数钮**（`↓ N 新块`，点击回底）；不抢用户阅读位、不牵动 `#messages` | 已定（§5.5 · D-W27） |
@@ -660,7 +659,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | 6 | 内容面投递（子代内容 chunk relay 前缀分流 → `sub:<role>#<id>` · 事件面/内容面次序 · 嵌套链数据面（`dataset.sub`）） | F-W1 · N-W5 |
 | 7 | 机检面（新增档 ≤500 行 · 无 >300 字符单行 · 文档锚零悬空） | N-M3 · N-M2 |
 | 8 | 权限卡族释放形态（逐项 / 合并 · 卡消失 · 零静默无效 · 释放即刷新（状态栏）） | F-W13 |
-| 9 | 模型 / 推理按钮忙态门（禁用派生 · 入口守卫 · 试运行语义零改） | F-W14 |
+| 9 | 模型 / 推理按钮随处可切（钮面零门 · 落盘保护 · 回写门保留） | F-W14（2026-10-04 解锁批收正） |
 | 10 | 工具卡失败信号与摘要（判据单源 · 产者两处：核 `thincoder-core/tools/bash.mjs` / 宿主 `thincoder-vscode/src/tools/shell.mjs` · 活卡/恢复卡同判据 · 摘要含状态位——族三成员：退出码 / 被杀 / spawn 失败） | F-W16 |
 | 11 | 恢复面用户文本清洗（显示边界 · fail-closed · 盘面/机读线零触碰 · 标题源同源剥离） | F-W15 |
 | 12 | 出生可见性（区 pin 旗标（`scroll` 事件）· 未钉底计数钮 · `:empty` 不回归） | N-W3 · **（出生面 / 视口面新增条目号待父侧落——建议文本：「活动区未钉底时新块出生 ⇒ 区首出现未读计数钮（`↓ ${n} 新块`）且不夺阅读位；点击 ⇒ 回底并清账」；实据 = 批档 §1.2 ④ · 判据 = T-A21–T-A23）** |
@@ -699,6 +698,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 **边界（本节不做）**：不做常驻仪表（默认一次性探针）；不加 webview `performance` 标记（真画证据归真机 QA · 台账 #162）；口径 A 不入本批。**读数留档** = 批次档 §5 / §6（一次性材料）；探针撤除后 `git diff` 空 = 方案自身验证面。
 
 ## 变更记录
+- 2026-10-04（**模型切换解锁批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §2 · 台账 #918）：**§4.2 整节重写**（F-W14 收正——钮面零忙态门 ∥ 写面保护 = 偏好键单写者 ∥ 自动回写门保留 ∥ 下一回合生效）· **D-W16** ∥ **U-W9** ∥ §10 回指行同拍。**零既有语义改**（判据面收正——钮面零门由共享核改正兑现）。明细 = 批档 §2。
 - 2026-09-30（**跨端消化面恢复批 · 修正轮（评审轮 1 · 发现 1 ∥ 4 ∥ 7）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §3 轮次 1）：§5.7 出站字面统一 `recordAppend`（协议登记面同拍）；写面处理体载体收正（人读线数组 `fullHistory` 同引用 + 载体缺位失败面）；§5.4 归档块锚面按径分述（live 不补锚 ∥ 重建携锚）+ 防双渲染判据；§5.7 cap 坐标 `:82-83` ⇒ `:83`；§10 行 17 同拍。**零既有语义改**。
 
 - 2026-09-30（**跨端消化面恢复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2 · 台账 #726）：新增 **§5.7**（消化面记录恢复——写面两产生面 ∥ 读面 opt-in ∥ 重建 ∥ 容差；记录形 ∥ 缝 ∥ 义务单源 = `docs/core/design/SESSION.md` §6.26）· §10 补行 17。**零既有语义改**（承接新增）；`WEBVIEW-PROTOCOL.md` §13 补 `appendRecord` 行（同批）。
@@ -856,3 +856,5 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-10-04（**issue 修复批·三 · 实施后登记 / 回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §5（#79 甲舱 ∥ #80 乙舱交付）· 父侧裁定）：§5.8 随落笔收正——「（拟新增）」两处标去（`ui-prefs.mjs` ∥ `ui-prefs.js` 在盘）；**`activityTailLines` 缺省单源 = 核**（`DEFAULT_TAIL_LINES`——端侧镜像 = 冗余防御层（消解路径 + 到期条件在册））；新增**射程说明（滚写入两处例外登记）**：提示件 `scrollIntoView`（`webview/permission.js:25/:37` ∥ `webview/question.js:22`——保持在场语义）∥ 推理区内滚写（核 `thincoder-render-core/flow/stream.mjs:30`——本端展开 + 溢出时生效（按实况登记）；桌面归别批）。**零新语义**（登记 ∥ 标去 ∥ 例外声明）。明细 = 批档 §2 登记轮块。
 - 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §2 · 台账 #883）：新增 **§4.10 会话模型选定写回**（触发支 ∥ 写面单点 ∥ 刷新点 ∥ 回声零写 ∥ 边界）；§4.8 动作落点行收正（会话选定已同拍写回 `defaultModel`——按钮仍指设置面）。**产品码零触（设计轮）**。
 - 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 修正轮（评审轮次 1 · 发现 1 ∥ 3）· eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §3 轮次 1 · 台账 #883）：§4.10 收正——**boot 播种径零写机制**（宿主簿记判回声——写面单点增参 `lastPushedPrefs` + 播种回声门）∥ 回声句内引收正（§4.2 ① ⇒ ②）。**产品码零触（修正轮）**。明细 = 批档 §2 修正轮块。
+- 2026-10-04（**流尾台账行组退役批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2 · 台账 #913）：§3 其余行去 `ledger-line.js` ∥ R2 迁核注收正（**八拆档 ⇒ 七拆档**——投递壳退场，核构件随之删除）。**零新语义**。明细 = 批档 §2。
+- 2026-10-04（**收口轮 · 父侧直接执行〔可 revert〕**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §6）：§3 文件表 `chat-messages.js` 读数 238 ⇒ **267**（收口复读）；引文重锚（`ledger-surface.mjs` 的 `:125-126` ⇒ `:83` ∥ `chat-messages.js` 的 `:194-200` ⇒ `:191-197`）。**零新语义**（读数 ∥ 坐标）。

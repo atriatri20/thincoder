@@ -49,8 +49,8 @@ import { attachChatWork } from "./chat-work.mjs"
 import { attachSidebar } from "./mount-sidebar.mjs"
 import { reasoningBulkExpanded, setReasoningBulkExpanded } from "./reasoning-pref.mjs"
 import { configuredFlag, patchSettings, returnToBottom, setFollowing, store } from "./store.mjs"
-import { initAccent, initTheme } from "./theme.mjs" // 主题三态 + 主题色（chrome 级状态直写面；装配期一次 + 切片播种）
-import { MAX_RENDER_BLOCKS, attachScroll, nextWindow } from "./views/chat-scroll.mjs"
+import { initAccent, initTheme } from "./theme.mjs" // 主题三态 + 主题色（D33 · #743 · fork 主题色批 —— chrome 级状态直写面；装配期一次 + 切片播种）
+import { MAX_RENDER_BLOCKS, attachScroll, compensateTop, nextWindow } from "./views/chat-scroll.mjs" // #910：compensateTop = 回填全重建视口补偿
 import { chatModel, retrySourceOf } from "./views/chat-model.mjs"
 import { mountChat, settleFrame } from "./views/chat.mjs"
 import { focusAutofocus, syncChrome } from "./views/chat-chrome.mjs"
@@ -217,9 +217,16 @@ function paintChat(state = store.get()) {
   const construct = chatFrame === null || ops.some((op) => op?.kind === "build") || (prev !== null && state.locale !== prev.locale)
   let mounted
   if (construct) {
+    // 构造帧出口补偿（回填收束帧 —— 回填落位批 · 2026-10-04）：读门 = 上帧在飞 ∧ 本帧坍落 ∧ 非跟滚（收束沿先例 = `nextWindow`）；写门 = 高度净增 ΔH ≠ 0；根 ∥ handle 缺位 ⇒ 零读零写；算式单源 = `views/chat-scroll.mjs` `compensateTop`。
+    const sealFrame = root !== null && chatScroll !== null && prev?.history?.inFlight === true && state.history?.inFlight !== true && state.following !== true
+    const t0 = sealFrame ? chatScroll.readMetrics() : null
     mounted = mountChat(root, state, handlers, chatLimit).mounted
     syncChrome(root, model, handlers)
     paintCardsOnce(state)
+    if (t0 !== null) {
+      const t1 = chatScroll.readMetrics()
+      if (t1.scrollHeight !== t0.scrollHeight) root.scrollTop = compensateTop({ prevTop: t0.scrollTop, prevHeight: t0.scrollHeight, nextHeight: t1.scrollHeight })
+    }
   } else {
     paintCardsOnce(state) // 先于结算：卡高不入头侧增量
     mounted = settleFrame(root, model, chatScroll, handlers, { mounted: chatFrame.mounted, hidden: chatFrame.hidden, ops })
