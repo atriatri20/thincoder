@@ -225,6 +225,18 @@ export function attachSettings(host, deps = {}) {
   })
 
   paintSettings()
+
+  /** 点外关闭（2026-10-05 —— 用户需求「点容器空白即快速退出，免点 ✕」）：mousedown 落在槽容器**自身**
+   *  （= 卡外变暗余白 —— 卡内点击 target 为后代 ⇒ 不触发；按 `mousedown` 判据防「卡内按下 ∕ 卡外松开」误关；
+   *  组弹窗开着 ⇒ 由其自带背板层接住，本径不动；取色器原生弹层点击不入 DOM ⇒ 不受影响）⇒
+   *  经既有 `closeSettings` 出口关面（确认弹层 ∕ 面态复位单一实现随行）。 */
+  const settingsHost = document.querySelector(SETTINGS_SLOT)
+  settingsHost?.addEventListener("mousedown", (event) => {
+    if (event.target !== settingsHost) return
+    const state = store.get()
+    if (state.settings?.open !== true || state.settings?.modal != null) return
+    exits.closeSettings()
+  })
   void reads.loadProviders()
 
   /** config 写盘感知复读（R8 · `ev:config` 窄口 —— 接线 = `renderer/app.mjs`）：设置 ∕ 向导面**在场** ⇒ 七段读数
