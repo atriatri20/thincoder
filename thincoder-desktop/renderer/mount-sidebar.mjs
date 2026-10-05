@@ -208,8 +208,8 @@ function projectsOf(model) {
   const rest = list
     .filter((project) => !projectOrder.includes(project.cwd))
     .sort((a, b) => {
-      const ta = startedAtOf(a)
-      const tb = startedAtOf(b)
+      const ta = bornOf(projectBorn, PROJECT_BORN_KEY, a.cwd, startedAtOf(a)) // 冻结出生时间——项目活动零漂移
+      const tb = bornOf(projectBorn, PROJECT_BORN_KEY, b.cwd, startedAtOf(b))
       if (ta !== tb) return tb - ta
       return a.cwd < b.cwd ? -1 : 1
     })
@@ -240,6 +240,35 @@ let projectOrder = (() => {
 })()
 function persistProjectOrder() {
   try { globalThis.localStorage?.setItem(PROJECT_ORDER_KEY, JSON.stringify(projectOrder)) } catch { /* fail-soft */ }
+}
+
+/** 出生册（用户反馈 2026-10-05 —— 「置顶动作」根因修复）：此前项目序键 = 最早会话 updatedAt——该会话
+ *  一被使用其 updatedAt 即变新 ⇒ 项目排序键跳前（= 项目置顶）；会话组内按 updatedAt 排——每发言即跳顶
+ *  （= 会话置顶）。同病根 = 排序键随活动漂移。治法 = **首见播种 ∕ 永冻**：键（项目 cwd ∕ 会话 cwd::slot）
+ *  第一次入册记当下时间，此后恒读册值——无论后续怎么用，序零漂移；真正新建（键首见）记 now ⇒ 新的在前只发生一次。
+ *  两册写面 = 只增未见键（幂等）⇒ 渲染期写安全（partial list 无污染面——与 projectOrder 的整列重写不同）。
+ *  播种回退值：项目 = 最早会话 updatedAt（存量最稳代理）；会话 = 当下 updatedAt；均无 ⇒ now。 */
+function loadBornMap(key) {
+  try {
+    const raw = globalThis.localStorage?.getItem(key)
+    const parsed = raw === null || raw === undefined ? {} : JSON.parse(raw)
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {}
+  } catch { return {} }
+}
+const PROJECT_BORN_KEY = "thincoder.projectBorn"
+const SLOT_BORN_KEY = "thincoder.slotBorn"
+let projectBorn = loadBornMap(PROJECT_BORN_KEY)
+let slotBorn = loadBornMap(SLOT_BORN_KEY)
+function persistBornMap(key, map) {
+  try { globalThis.localStorage?.setItem(key, JSON.stringify(map)) } catch { /* fail-soft */ }
+}
+function bornOf(map, persistKey, id, fallbackMs) {
+  const known = map[id]
+  if (Number.isFinite(known) && known > 0) return known
+  const born = Number.isFinite(fallbackMs) && fallbackMs > 0 ? fallbackMs : Date.now()
+  map[id] = born
+  persistBornMap(persistKey, map)
+  return born
 }
 
 function projectRowNode(project) {
@@ -316,7 +345,8 @@ function sessionsTree(model, handlers) {
     const sessions = project.sessions
       .map((s) => ({ ...s, display: displayTitleOfSession(s), time: timeSpanOf(s.updatedAt) }))
       .filter((s) => matched(s.display) || matched(project.cwd))
-      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .map((s) => ({ ...s, born: bornOf(slotBorn, SLOT_BORN_KEY, `${project.cwd}::${s.slot}`, s.updatedAt) }))
+      .sort((a, b) => b.born - a.born)
     if (filter !== "" && sessions.length === 0) continue
     any = true
     const collapsed = collapsedProjects.has(project.cwd)
