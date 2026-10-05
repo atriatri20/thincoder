@@ -287,6 +287,12 @@ body .paste-toast { border-radius: 12px; }
   cursor: pointer;
 }
 .sidebar-new::before { content: "+"; flex: none; font-size: 15px; font-weight: 600; }
+/* 打开项目钮（重点功能升级批 · 2026-10-05）：沿 sidebar-new 胶囊形（同款 flex ∕ 高度 ∕ hover），
+ * 字形 = 📂 覆写 "+"；两胶囊并排各半（sidebar-actions gap 6px）；折叠态由 body.sidebar-collapsed
+ * 既有 label 隐藏 ∕ 32px 收窄规则自动接管（同 class 面）。 */
+.sidebar-new.sidebar-open::before { content: "📂"; font-size: 13px; }
+.sidebar-new.sidebar-open { flex: 1; }
+.sidebar-new.sidebar-open + .sidebar-new { flex: 1; }
 .sidebar-new:hover { background: var(--hover-bg-strong); }
 .sidebar-new:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .sidebar-new-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -375,6 +381,7 @@ body.sidebar-collapsed .sidebar-settings-label { display: none; }
 body.sidebar-collapsed .sidebar-head { justify-content: center; padding-inline: 4px; }
 body.sidebar-collapsed .sidebar-actions { flex-direction: column; padding-inline: 4px; }
 body.sidebar-collapsed .sidebar-new { flex: none; width: 32px; justify-content: center; padding: 0; }
+body.sidebar-collapsed .sidebar-new.sidebar-open { flex: none; }
 body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; }
 
 /* ── 会话控制条 → 线程头（Codex 顶栏形）：项目钮退场（职责归边栏）────────────── */

@@ -135,7 +135,7 @@ import { VIEWS_DICT } from "./i18n-views.mjs"
  *  `renderer/views/statusline-segments.mjs` + `renderer/views/statusline-banner.mjs`〔banner 四态〕）· 占位方言沿核 `${name}`，本档零字形字面）。 */
 export const HOST_DICT = Object.freeze({
   en: {
-    "rail.action.openDir": "Open folder…",
+    "rail.action.openDir": "Open project",
     "rail.action.newSession": "New session",
     "rail.session.untitled": "Untitled session",
     "rail.session.msgs": "${n} msgs",
@@ -277,7 +277,7 @@ export const HOST_DICT = Object.freeze({
     ...VIEWS_DICT.en,
   },
   zh: {
-    "rail.action.openDir": "打开目录…",
+    "rail.action.openDir": "打开项目",
     "rail.action.newSession": "新建会话",
     "rail.session.untitled": "未命名会话",
     "rail.session.msgs": "${n} 条消息",

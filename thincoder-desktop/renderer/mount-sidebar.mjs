@@ -369,10 +369,14 @@ function sidebarTree(model, handlers) {
         { tag: "span", props: { class: "sidebar-brand" }, children: ["ThinCoder"] },
       ] },
       { tag: "div", props: { class: "sidebar-actions" }, children: [
+        // 打开项目（用户 2026-10-05——「打开文件夹新建项目 = 重点功能」：升级为与新聊天同款文字胶囊钮，居前；
+        // 原 ⌂ 图标钮吸收退场——出口同链 onOpenProject = openDir 装配单源）。
+        { tag: "button", props: { class: "sidebar-new sidebar-open", type: "button", "data-action": "sidebar:openDir", "aria-label": t("rail.action.openDir"), title: t("rail.action.openDir"), onClick: () => handlers.onOpenProject?.() }, children: [
+          { tag: "span", props: { class: "sidebar-new-label" }, children: [t("rail.action.openDir")] },
+        ] },
         { tag: "button", props: { class: "sidebar-new", type: "button", "data-action": "sidebar:new", "aria-label": t("sidebar.newChat"), title: t("sidebar.newChat"), onClick: handlers.onNew }, children: [
           { tag: "span", props: { class: "sidebar-new-label" }, children: [t("sidebar.newChat")] },
         ] },
-        { tag: "button", props: { class: "sidebar-opendir", type: "button", "data-action": "sidebar:openDir", "aria-label": t("rail.action.openDir"), title: t("rail.action.openDir"), onClick: () => handlers.onOpenProject?.() }, children: [] },
       ] },
       { tag: "div", props: { class: "sidebar-search" }, children: [
         { tag: "input", props: {
