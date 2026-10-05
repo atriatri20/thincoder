@@ -455,13 +455,15 @@ export function syncHostProps(root, tree) {
   hostProps.set(root, next)
 }
 
-/** 薄挂载：props 应收进宿主（`syncHostProps` —— `data-slot` 等骨架属性保留 + 前任所加属性摘除）+ `clear` + `append`；容器缺位 ⇒ 空转。 */
+/** 薄挂载：props 应收进宿主（`syncHostProps` —— `data-slot` 等骨架属性保留 + 前任所加属性摘除）+ `clear` + `append`；容器缺位 ⇒ 空转。
+ *  **2026-10-05 弹窗化**：`.settings` 包装层**保留入树**（弹窗卡片宿主 —— codex.css 卡面样式锚）——
+ *  原扁平化（children 直挂宿主）使卡片无处附着；closed 态仍清容器（`:empty` 退场不变，wrapper 不 append）。 */
 export function mountSettings(root, state, handlers = {}) {
   const model = settingsModel(state)
   if (!root || typeof root.setAttribute !== "function") return model
   const tree = build(settingsTree(model, handlers))
   syncHostProps(root, tree)
   clear(root)
-  for (const child of [...tree.childNodes]) root.append(child)
+  if (tree.childNodes.length > 0) root.append(tree)
   return model
 }
