@@ -45,7 +45,15 @@ export async function refreshRail() {
       console.error("[renderer] session list payload shape unexpected:", project, list)
       return
     }
-    store.set({ project: { cwd: project.cwd ?? null, recent: project.recent }, sessions: list.sessions, ledger: list.ledger ?? null })
+    // 项目目录同拍拉取（项目组展开数据面 · 2026-10-05）：recent + 当前 cwd 全量喂 catalog
+    const cwds = [...new Set([project.cwd, ...(project.recent ?? []).map((r) => r?.cwd)].filter((v) => typeof v === "string" && v !== ""))]
+    const catalog = cwds.length > 0 ? await host.invoke("sessions:catalog", { cwds }).catch(() => ({ ok: false, projects: [] })) : { ok: true, projects: [] }
+    store.set({
+      project: { cwd: project.cwd ?? null, recent: project.recent },
+      sessions: list.sessions,
+      ledger: list.ledger ?? null,
+      catalog: Array.isArray(catalog.projects) ? catalog.projects : [],
+    })
   } catch (error) {
     console.error("[renderer] session list refresh failed:", error)
   }

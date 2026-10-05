@@ -79,7 +79,7 @@ export function initialState() {
     sessions: [],
     activeSession: null,
     ledger: null,
-    tabBadges: {},
+    catalog: [],    tabBadges: {},
     sessionMeta: {},
     sessionFlags: {},
     usage: {},

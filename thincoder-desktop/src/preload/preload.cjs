@@ -30,7 +30,7 @@
  * 返回退订函数（同 listener 引用 ⇒ 二次退订零抛）。
  */
 const CHANNELS = Object.freeze([
-  "config:read", "project:open", "project:recent", "sessions:list",
+  "config:read", "project:open", "project:recent", "sessions:list", "sessions:catalog",
   "session:create", "session:switch", "session:rename", "session:delete", "session:resume",
   "approval:respond", "history:page", "msg:send", "msg:interrupt",
   "provider:list", "provider:save", "provider:remove", "provider:verify",

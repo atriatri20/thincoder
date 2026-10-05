@@ -14,7 +14,7 @@
 import { ipcMain } from "electron"
 import {
   CHANNELS, ipcStats,
-  readConfig, openProjectChannel, recentProjects, sessionList, sessionCreate, sessionSwitch,
+  readConfig, openProjectChannel, recentProjects, sessionList, sessionCatalog, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
   questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, recordAppend, themeState,
   panelState,
@@ -35,6 +35,7 @@ const HANDLERS = Object.freeze({
   "project:open": openProjectChannel,
   "project:recent": recentProjects,
   "sessions:list": sessionList,
+  "sessions:catalog": sessionCatalog,
   "session:create": sessionCreate,
   "session:switch": sessionSwitch,
   "session:rename": sessionRename,

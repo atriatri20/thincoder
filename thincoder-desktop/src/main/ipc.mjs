@@ -29,7 +29,7 @@ import { normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
 import { releaseClaimsAll } from "@thincoder/core/session-slots-manifest.mjs"
 import { PRELOAD_PATH, confirmRecycle, refreshMenu, setMenuTheme } from "./window.mjs"
 import { currentCwd, openProject, recentDirs } from "./projects.mjs"
-import { listSessions } from "./sessions.mjs"
+import { listSessions, catalogSessions } from "./sessions.mjs"
 import {
   createSession, deleteSession, renameSession, resumeSession, switchSession,
 } from "./session-actions.mjs"
@@ -98,7 +98,7 @@ function readConfig() {
  *  表行 + 预载白名单三处同拍）。**本档留用面** = 核心 23 通道 + `liveAgents`（#685 新导出 —— mcp 四转口随动面，
  *  单向供 `ipc-relays.mjs` 取用，零环）。 */
 export {
-  readConfig, openProjectChannel, recentProjects, sessionList, sessionCreate, sessionSwitch,
+  readConfig, openProjectChannel, recentProjects, sessionList, sessionCatalog, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
   questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, recordAppend, themeState,
   panelState,
@@ -133,6 +133,12 @@ function recentProjects() {
 function sessionList() {
   const { rows, ...receipt } = listSessions(currentCwd())
   return { ...receipt, sessions: rows }
+}
+
+/** `sessions:catalog({ cwds })` ⇒ `{ ok, projects: [{ cwd, sessions }] }`（项目目录 · 2026-10-05 —— 侧边栏项目组
+ *  展开数据面；读面转口 `sessions.mjs` `catalogSessions`——manifest 只读，零写）。 */
+function sessionCatalog(payload) {
+  return catalogSessions(payload?.cwds)
 }
 
 /** 会话族五通道处理体（本批增）：入参到动作层即止 —— cwd 取主进程当前项目内存态（动作层收 `cwd` 入参

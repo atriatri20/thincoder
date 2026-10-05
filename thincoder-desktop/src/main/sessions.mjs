@@ -46,3 +46,32 @@ export function listSessions(cwd) {
   }
   return receipt
 }
+
+/** `sessions:catalog` 读面（**项目目录** · 2026-10-05 —— 侧边栏项目组展开的数据面）：
+ *  载荷 `{ cwds: string[] }` ⇒ 逐项目核 `listSlots(cwd)` 轻投影（清单 manifest 读——**只读链零写**，
+ *  懒核实 = 纯内存登记 + 延迟拍，非本档承担）；回执逐项目 `{ cwd, sessions: [{slot, title, firstMessage,
+ *  updatedAt, isActive, messageCount}] }`（**无 title 兜底**——显示链归渲染面 `displayTitleOf` 同一判据）。
+ *  单项目读失败 ⇒ 该项目 `sessions: []`（fail-soft——目录面不因单盘坏档全灭）。消费面 = `renderer/mount-sidebar.mjs`
+ *  项目组展开（wire 经 store `catalog` 切片）。 */
+export function catalogSessions(cwds) {
+  const list = Array.isArray(cwds) ? cwds.filter((cwd) => typeof cwd === "string" && cwd !== "") : []
+  return {
+    ok: true,
+    projects: list.map((cwd) => {
+      try {
+        return {
+          cwd,
+          sessions: listSlots(cwd).map((entry) => ({
+            slot: entry.slot,
+            isActive: entry.isActive,
+            title: typeof entry.title === "string" ? entry.title : "",
+            firstMessage: typeof entry.firstMessage === "string" ? entry.firstMessage : "",
+            updatedAt: entry.updatedAt ?? entry.timestamp ?? 0,
+          })),
+        }
+      } catch {
+        return { cwd, sessions: [] }
+      }
+    }),
+  }
+}
