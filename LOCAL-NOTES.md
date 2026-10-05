@@ -41,6 +41,15 @@ set ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-buil
 npm run package
 ```
 
+## GitHub Releases（fork 构建发布）
+
+```bat
+gh release create v0.10.3-x.N dist/ThinCoder-Setup-0.10.3-x.N.exe -R atriatri20/thincoder --target codex-ui --title ... --notes ...
+```
+
+- **必须显式 `-R atriatri20/thincoder`**——本仓双 remote，gh 默认解析到 upstream（xinbo-tech）⇒ 404。
+- 仓库私有 ⇒ Release 及资产私有（个人下载库 ∕ 版本史）；首例 = v0.10.3-x.5。
+
 ## 冒烟
 
 ```
