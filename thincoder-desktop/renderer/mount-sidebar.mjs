@@ -196,20 +196,27 @@ function projectsOf(model) {
       model.items.map((item) => ({ slot: item.key, title: item.title, badge: item.badge, updatedAt: item.ts ?? 0, isActive: item.active })),
     )
   }
-  // 排序（用户反馈 2026-10-05 两轮：① 选定项目不置顶；② 按项目**新建时间**降序——新的在前）。
-  // 「新建时间」= 项目**最早会话**的 updatedAt（manifest 无 createdAt ⇒ 首次启用时点为最稳代理；
-  // 旧项目不因新会话跳动——固定序同求）。零会话项目（catalog 空组）⇒ 时间 0 ⇒ 排尾；同刻以全路径决序。
+  // 顺序（用户反馈 2026-10-05 三轮收敛 —— ZCode `SortableWorkspaceSidebar` 同义）：**手动拖拽序优先**
+  // （`projectOrder` 在册 cwds 按册序）；未入册（新开）项目按首次启用时间排尾部——「新建时间」= 项目最早会话
+  // 的 updatedAt（manifest 无 createdAt ⇒ 首次启用时点为最稳代理）；无册 ⇒ 全按首次启用时间降序。
+  // 渲染期**零写册**（catalog 迟到的 partial list 不得清洗册子——清洗只发生在拖放时点）。
   // 会话在组内仍按最近活动降序。
   const startedAtOf = (project) => project.sessions.reduce(
     (min, s) => (Number.isFinite(s.updatedAt) && s.updatedAt > 0 && (min === 0 || s.updatedAt < min) ? s.updatedAt : min),
     0,
   )
-  return list.sort((a, b) => {
-    const ta = startedAtOf(a)
-    const tb = startedAtOf(b)
-    if (ta !== tb) return tb - ta
-    return a.cwd < b.cwd ? -1 : 1
-  })
+  const rest = list
+    .filter((project) => !projectOrder.includes(project.cwd))
+    .sort((a, b) => {
+      const ta = startedAtOf(a)
+      const tb = startedAtOf(b)
+      if (ta !== tb) return tb - ta
+      return a.cwd < b.cwd ? -1 : 1
+    })
+  const known = projectOrder
+    .map((cwdKey) => list.find((project) => project.cwd === cwdKey))
+    .filter((project) => project !== undefined)
+  return [...known, ...rest]
 }
 
 /** 展开态（cwd 集合 · localStorage 持久 —— ZCode `expandedWorkspacePaths` 同义）：当前项目恒展开。 */
@@ -218,6 +225,22 @@ function projectsOf(model) {
 /** 项目组折叠集合（cwd 键 · 模块态——不持久，重开应用回默认展开）：
  *  **不挂 project 对象**——projectsOf 每次重绘重建项目对象，挂其上随重绘即丢（真机实测失效根因）。 */
 const collapsedProjects = new Set()
+
+/** 手动排序册子（用户需求 2026-10-05 —— ZCode `SortableWorkspaceSidebar` 同义）：项目组顺序 = 用户拖拽决定 +
+ *  localStorage 持久（键 `thincoder.projectOrder`——cwd 数组；读写皆捕获，写失败 fail-soft 本会话内照常生效）。
+ *  未入册项目（新开）按首次启用时间排**尾部**（ZCode「新 tab 追加末尾」同律）；册子在拖放时点才清洗（渲染期零写——
+ *  catalog 迟到时 partial list 不得污染册子）。 */
+const PROJECT_ORDER_KEY = "thincoder.projectOrder"
+let projectOrder = (() => {
+  try {
+    const raw = globalThis.localStorage?.getItem(PROJECT_ORDER_KEY)
+    const parsed = raw === null || raw === undefined ? [] : JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter((cwd) => typeof cwd === "string" && cwd !== "") : []
+  } catch { return [] }
+})()
+function persistProjectOrder() {
+  try { globalThis.localStorage?.setItem(PROJECT_ORDER_KEY, JSON.stringify(projectOrder)) } catch { /* fail-soft */ }
+}
 
 function projectRowNode(project) {
   const collapsed = collapsedProjects.has(project.cwd)
@@ -229,10 +252,43 @@ function projectRowNode(project) {
       "data-project": project.cwd,
       title: project.cwd,
       "aria-expanded": String(!collapsed),
+      draggable: true, // 项目组拖拽排序（册子 = projectOrder——ZCode SortableWorkspaceSidebar 同义）
       onClick: () => {
         if (collapsedProjects.has(project.cwd)) collapsedProjects.delete(project.cwd)
         else collapsedProjects.add(project.cwd)
         paintSidebarFace() // 模块态不进 store —— 无订阅径，就地刷
+      },
+      onDragstart: (event) => {
+        try { event?.dataTransfer?.setData("text/plain", project.cwd) } catch { /* 拖态容错 */ }
+        if (event?.dataTransfer != null) event.dataTransfer.effectAllowed = "move"
+        event?.currentTarget?.classList?.add("dragging")
+      },
+      onDragend: (event) => event?.currentTarget?.classList?.remove("dragging"),
+      onDragover: (event) => {
+        event.preventDefault() // 允许落点（仅项目行接拖——会话行 ∕ 余白零 preventDefault ⇒ 落无效）
+        const rect = event.currentTarget.getBoundingClientRect()
+        const above = event.clientY < rect.top + rect.height / 2
+        event.currentTarget.classList.toggle("drag-over-above", above)
+        event.currentTarget.classList.toggle("drag-over-below", !above)
+      },
+      onDragleave: (event) => event.currentTarget.classList.remove("drag-over-above", "drag-over-below"),
+      onDrop: (event) => {
+        event.preventDefault()
+        event.currentTarget.classList.remove("drag-over-above", "drag-over-below")
+        const fromCwd = typeof event?.dataTransfer?.getData === "function" ? event.dataTransfer.getData("text/plain") : ""
+        const rect = event.currentTarget.getBoundingClientRect()
+        const above = event.clientY < rect.top + rect.height / 2
+        // 可见序 = 当下渲染序（DOM 直读——与 projectsOf 产出同源，零陈旧）；册子整列重写 + 持久 + 就地刷
+        const rows = [...document.querySelectorAll('.sidebar-project-row[data-project]')]
+          .map((el) => el.dataset.project)
+          .filter((cwdKey) => typeof cwdKey === "string" && cwdKey !== "")
+        const fromIdx = rows.indexOf(fromCwd)
+        const toIdx = rows.indexOf(project.cwd)
+        if (fromIdx === -1 || toIdx === -1 || fromCwd === project.cwd) return
+        rows.splice(toIdx + (above ? 0 : 1), 0, rows.splice(fromIdx, 1)[0])
+        projectOrder = rows
+        persistProjectOrder()
+        paintSidebarFace()
       },
     },
     children: [{ tag: "span", props: { class: "sidebar-item-title" }, children: [baseName(project.cwd)] }],

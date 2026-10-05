@@ -320,6 +320,11 @@ body .paste-toast { border-radius: 12px; }
 .sidebar-project-row[aria-expanded="true"]::before { content: "▾"; }
 .sidebar-project-row:hover { background: var(--hover-bg); }
 .sidebar-project-row.empty { color: var(--fg-muted); font-weight: 400; }
+/* 项目组拖拽排序（ZCode SortableWorkspaceSidebar 同义）：行 = 拖柄；落点插入指示线随 accent */
+.sidebar-project-row[draggable] { cursor: grab; }
+.sidebar-project-row.dragging { opacity: 0.45; }
+.sidebar-project-row.drag-over-above { box-shadow: inset 0 2px 0 0 var(--accent); }
+.sidebar-project-row.drag-over-below { box-shadow: inset 0 -2px 0 0 var(--accent); }
 .sidebar-item-time {
   flex: none;
   margin-left: auto;
