@@ -16,7 +16,7 @@ import {
   CHANNELS, ipcStats,
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCatalog, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
-  questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, recordAppend, themeState,
+  questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, recordAppend, themeState, shellOpenPath,
   panelState,
   sessionGc, sessionIndex,
 } from "./ipc.mjs"
@@ -66,6 +66,7 @@ const HANDLERS = Object.freeze({
   "session:prefs": sessionPrefs,
   "subagent:stop": subagentStop,
   "file:open": fileOpen,
+  "shell:openPath": shellOpenPath,
   "session:flags": sessionFlags,
   "at:complete": atComplete,
   "session:gc": sessionGc,

@@ -201,6 +201,7 @@ function wireFace(root, handlers) {
     onDelete: (item) => showDeleteConfirm(root, item, handlers),
     onNew: handlers.onNew,
     onOpenProject: handlers.onOpenProject,
+    onOpenProjectFolder: handlers.onOpenProjectFolder, // 打开项目文件夹（shell:openPath —— 装配面读 cwd 切片）
   }
 }
 

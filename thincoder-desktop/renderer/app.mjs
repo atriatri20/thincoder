@@ -114,6 +114,13 @@ function paintSessionBar(state = store.get()) {
     onRename: confirmRename, // 改名确认（词面读数 = 挂载面 —— `onRename(key, text)` 回转）
     onDelete: deleteSession, // 确认 popover「删除」键出口
     onOpenProject: () => openDir(), // 项目钮 = 引导面同出口（`project:open` 单一实现）
+    onOpenProjectFolder: () => { // 打开项目文件夹（fork 2026-10-05——shell:openPath；无项目 ⇒ 零动作）
+      const cwd = store.get().project?.cwd
+      if (typeof cwd !== "string" || cwd === "") return
+      void Promise.resolve(host?.invoke("shell:openPath", { path: cwd })).then((receipt) => {
+        if (receipt?.ok !== true) console.error(`[shell] openPath failed: ${receipt?.reason ?? "unknown"}`)
+      })
+    },
     onToggleReasoning: () => { // 思考链总折叠（批量动作 · ZCode 语义对齐：新块恒收起，本钮只翻当前树）
       const expanded = setReasoningBulkExpanded(!reasoningBulkExpanded())
       document.querySelectorAll(".reasoning-block").forEach((details) => {

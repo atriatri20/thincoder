@@ -113,6 +113,16 @@ export function sessionBarTree(model, handlers = {}, face = {}) {
         children: [t("reasoning.label")],
       },
       buttonNode({ className: "session-new", action: "session:create", label: t("rail.action.newSession"), onClick: handlers.onNew }),
+      // 打开项目文件夹（fork 2026-10-05 —— 用户需求「去项目文件夹里面查看内容」）：居栏右端（CSS margin-left auto）；
+      // 载荷 = 当前项目 cwd（装配面 `onOpenProjectFolder` 读切片）；`shell:openPath` 主侧目录校验 fail-closed。
+      {
+        tag: "button",
+        props: wire({
+          class: "session-open-folder", type: "button", "data-action": "session:openFolder",
+          "aria-label": t("session.openFolder"), title: t("session.openFolder"),
+        }, handlers.onOpenProjectFolder),
+        children: [],
+      },
     ],
   }
 }

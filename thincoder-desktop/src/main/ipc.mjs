@@ -23,6 +23,7 @@
  * `ipc-registry.mjs`（本档只留处理体本体 + 宿主注入面；跨档引用面 = 表位处 `export { … }` 列）。
  */
 import { createRequire } from "node:module"
+import { statSync } from "node:fs"
 import { dialog, shell } from "electron"
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
@@ -100,7 +101,7 @@ function readConfig() {
 export {
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCatalog, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
-  questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, recordAppend, themeState,
+  questionRespond, sessionPrefs, subagentStop, fileOpen, shellOpenPath, sessionFlags, atComplete, recordAppend, themeState,
   panelState,
   sessionGc, sessionIndex, liveAgents,
 }
@@ -250,6 +251,18 @@ async function fileOpen(payload) {
   }
   const failed = await shell.openPath(path)
   return failed ? { ok: false, reason: failed } : { ok: true, reason: null }
+}
+
+/** `shell:openPath(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason }`（打开项目文件夹 · fork 2026-10-05——用户需求
+ *  「去项目文件夹里面查看内容」）：载荷 `{ path }` 串非空 ∧ 目录在盘（statSync isDirectory——fail-closed，非目录拒开）
+ *  ⇒ `shell.openPath`（目录 ⇒ 系统文件管理器；失败串 ⇒ reason 直传）。零编辑器 CLI 优先（与 `file:open` 分工）。 */
+function shellOpenPath(payload) {
+  const path = typeof payload?.path === "string" ? payload.path : ""
+  if (path === "") return { ok: false, reason: "bad-path" }
+  try {
+    if (!statSync(path).isDirectory()) return { ok: false, reason: "not-directory" }
+  } catch { return { ok: false, reason: "not-found" } }
+  return shell.openPath(path).then((failed) => (failed ? { ok: false, reason: failed } : { ok: true, reason: null }))
 }
 
 /** 在装配 agent 列表（MCP 随动面用）：宿主未注入 ⇒ `null`（无宿主面 ⇒ 随动空操作，非报错——

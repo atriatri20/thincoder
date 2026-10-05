@@ -163,6 +163,29 @@ body.pool-resizing .pool-resizer::before { background: var(--accent); }
   background: var(--hover-bg-strong);
   color: var(--accent);
   opacity: 1;
+}
+/* 打开项目文件夹钮（fork 2026-10-05）：居会话栏右端（margin-left auto）；字形 = 📂（沿项目钮 CSS content 同律） */
+.session-open-folder {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--fs);
+  line-height: var(--lh);
+  opacity: 0.6;
+}
+.session-open-folder::before {
+  content: "📂";
+}
+.session-open-folder:not(:disabled):hover {
+  background: var(--hover-bg-strong);
+  opacity: 1;
   cursor: pointer;
 }
 /* 内联确认 popover（`.auto-confirm` 族 —— VSC 形：背板 + 两键 + 默认焦点取消；挂 `document.body` ⇒ 出面板溢出裁面。
