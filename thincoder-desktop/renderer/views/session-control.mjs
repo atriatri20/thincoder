@@ -46,6 +46,16 @@ function baseName(cwd) {
 /** 会话控制模型（纯 · 零 DOM）：`sessions` 行投影 ⇒ 选择器标签 + 条目集（对位 VSC `buildSessionDropdown` 行形）。
  *  活动判据 = 行 `isActive`（`sessions:list` 投影 —— VSC 同源 `s.active`）；标题空 ⇒ 缺省词（**不猜**）；无活动行
  *  ⇒ `session.title`（VSC `updateSessionTitle` 同径）。元数据三值各自缺席（非串 / 空串 / 非数）⇒ 该值**零节点**。 */
+/** 显示标题兜底链（2026-10-05 —— 修「未命名会话」恒驻）：`title` 空 ⇒ **首条消息**单行截 60 字
+ *  （核投影 `firstMessage` 载波 —— 上一轮实为 LLM 标题静默失败 ∕ 未生成的会话；ZCode 同语义——
+ *  首条消息即标题）；再空（纯空会话）⇒ 缺省词。重命名后 title 在场 ⇒ 首条消息退位。 */
+function displayTitleOf(row) {
+  if (typeof row?.title === "string" && row.title !== "") return row.title
+  const first = typeof row?.firstMessage === "string" ? row.firstMessage.replace(/\s+/gu, " ").trim() : ""
+  if (first !== "") return first.length > 60 ? `${first.slice(0, 60)}…` : first
+  return t("rail.session.untitled")
+}
+
 export function sessionModel(state = {}) {
   const rows = Array.isArray(state?.sessions) ? state.sessions : []
   const badges = state?.tabBadges !== null && typeof state?.tabBadges === "object" ? state.tabBadges ?? {} : {}
@@ -54,7 +64,7 @@ export function sessionModel(state = {}) {
     const codes = Array.isArray(badges[key]) ? badges[key] : []
     return {
       key,
-      title: typeof row?.title === "string" && row.title !== "" ? row.title : t("rail.session.untitled"),
+      title: displayTitleOf(row),
       provider: typeof row?.provider === "string" && row.provider !== "" ? row.provider : null,
       msgs: Number.isFinite(row?.messageCount) ? row.messageCount : null,
       updated: Number.isFinite(row?.updatedAt) ? shortDate(row.updatedAt) : null,

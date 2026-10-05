@@ -123,6 +123,16 @@ export async function generateTitle(userContent, provider) {
   }
 }
 
+/** 标题兜底取形（首条用户消息 → 单行 → 截 40 字）：多模态取 text 部件；全空白 ⇒ 空串（调用面零赋值）。 */
+function sessionTitleFallback(content) {
+  const text = Array.isArray(content)
+    ? content.find((p) => p.type === "text")?.text ?? ""
+    : content
+  if (typeof text !== "string") return ""
+  const single = text.replace(/\s+/gu, " ").trim()
+  return single !== "" ? single.slice(0, 40) : ""
+}
+
 /** Derive + assign the session title from the first user message (once per session).
  *  Extracted from agent-turn.mjs's finally block (2026-08-30): the lookup + call +
  *  assign belongs beside generateTitle, not in the turn driver. Non-fatal on
@@ -138,7 +148,16 @@ export async function ensureSessionTitle(agent) {
     if (firstUser) {
       // #632：读源处剥离（注入形不得入标题请求——与恢复面同读一函数，零第二实现）
       const title = await generateTitle(stripAtRefs(firstUser.content), agent.provider)
-      if (title) agent.title = title
+if (title) {
+        agent.title = title
+      } else {
+        // 标题兜底（2026-10-05 · 桌面实测）：网关层非流式请求超时 ∕ LLM 生成静默失败（本函数自吞错）
+        // ⇒ 槽位标题恒空 ＝「未命名会话」，且 title 缺位让每个回合尾都重试一次 10s 网络请求（坏网关下
+        // 逐回合停顿）。首条用户消息规整后截 40 字兜底（ZCode 同语义——首条消息即标题）；此后 title 在场
+        // ⇒ 回合尾短路（零重试）。用户重命名走 rename 通道照常覆盖。
+        const fallback = sessionTitleFallback(firstUser.content)
+        if (fallback) agent.title = fallback
+      }
     }
   } catch {
     // Title generation failure is non-fatal

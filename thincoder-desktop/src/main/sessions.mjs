@@ -13,11 +13,13 @@ import { ledgerHealth, listSlots } from "./session-slots.mjs"
  *  `firstMessage` 非会话控制条目所需 ⇒ **不载**（关键决策 D-4）；**R3c 增** `provider`（= 核条目 `activeProvider`
  *  —— D18 元数据族首值；核 `listSlots` 投影口径：`provider:model` 复合串（无活动模型 ⇒ 裸渠道名）· 老槽 ⇒ `""`）。 */
 export const ROW_FIELDS = Object.freeze([
-  "slot", "title", "createdBy", "updatedAt", "messageCount", "isActive", "provider",
+  "slot", "title", "createdBy", "updatedAt", "messageCount", "isActive", "provider", "firstMessage",
 ])
 
 /** 核条目 → 载荷行：**只挑字段、不改写**（字段名与核投影同源 —— 零改名、零重算、零缺省回填；
- *  `provider` = 核 `activeProvider` 逐字（老槽缺键 ⇒ 核已归 `""` —— 渲染面不标注）。 */
+ *  `provider` = 核 `activeProvider` 逐字（老槽缺键 ⇒ 核已归 `""` —— 渲染面不标注）。
+ *  `firstMessage` = 显示兜底载波（2026-10-05 —— 标题空 ⇒ 渲染面以首条消息为显示标题；
+ *  核投影本就携带 —— D-4 决策修订，读取零成本）。 */
 function toRow(entry) {
   return {
     slot: entry.slot,
@@ -27,6 +29,7 @@ function toRow(entry) {
     messageCount: entry.messageCount,
     isActive: entry.isActive,
     provider: entry.activeProvider,
+    firstMessage: typeof entry.firstMessage === "string" ? entry.firstMessage : "",
   }
 }
 
