@@ -29,7 +29,7 @@ node node_modules/electron/install.js
 上游源 `https://thincoder.com/downloads/` 活发版（latest.yml 现 0.10.3 > fork 版本 ⇒ 装即被静默覆盖）。
 已三层独立化：① `electron-builder.yml` win 目标 `publish: null` ⇒ 零 `app-update.yml` 随装；
 ② `main.mjs` 武装门加 feed 在位校验（无 feed ⇒ 更新面不武装，手动检查静默忽略——与 dev 同语义）；
-③ 版本号携 fork 标记（`0.10.3-codex.1`）。`check-dist.mjs` 改双契约感知（feed 在场 = 上游断言；
+③ 版本号携 fork 标记（`0.10.3-x.1（fork 构建号不带 codex 字样——用户 2026-10-05 起改 `0.10.3-x.N`）`）。`check-dist.mjs` 改双契约感知（feed 在场 = 上游断言；
 不在场 = 反向断言产物零 app-update.yml）。**升级 = 手动装新包**；若日后恢复自动更新，把 win `publish: null`
 摘掉并指自有源即可。注意 AppImage（linux）仍带上游 publish——fork 若发 Linux 需同样处理。
 
