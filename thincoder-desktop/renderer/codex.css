@@ -89,7 +89,13 @@ body .paste-toast { border-radius: 12px; }
   padding: 10px 14px;
   border-radius: 16px;
   background: color-mix(in srgb, var(--accent) 13%, var(--bg-raised));
+  /* 文字随主题色（ZCode 同款）：浅色 = 深主题色字（软底上可读），深色 = 亮主题色字 */
+  color: light-dark(
+    color-mix(in srgb, var(--accent) 82%, black),
+    color-mix(in srgb, var(--accent) 55%, white)
+  );
 }
+.block-user > .block-text :is(strong, em, code) { color: inherit; }
 
 /* 工具卡 = 细描边圆角卡 + 微填充（原透明盒）。 */
 .block-tool {
@@ -136,7 +142,19 @@ body .paste-toast { border-radius: 12px; }
 
 /* ── Markdown 面（core-markdown.css 覆盖）：代码块 ∕ 行内码 ∕ 引用 ∕ 图片圆角 ── */
 .code-block { border-radius: 10px; }
-.block-text code, .reasoning-content code { border-radius: 4px; }
+.code-lang { color: light-dark(color-mix(in srgb, var(--accent) 75%, black), color-mix(in srgb, var(--accent) 60%, white)); opacity: 0.85; }
+.block-text code, .reasoning-content code {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  color: light-dark(
+    color-mix(in srgb, var(--accent) 80%, black),
+    color-mix(in srgb, var(--accent) 60%, white)
+  );
+}
+.block-user > .block-text code {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: inherit;
+}
 .block-text blockquote, .reasoning-content blockquote {
   border-radius: 0 8px 8px 0;
   background: color-mix(in srgb, var(--fg) 4%, transparent);
@@ -164,7 +182,13 @@ body .paste-toast { border-radius: 12px; }
 .activity-new-btn { border-radius: 999px; }
 
 /* ── 输入面板（composer.css 核件 + chat-composer.css 覆盖）：悬浮胶囊卡 ─────── */
-.composer #toolbar { border-top: 0; background: transparent; padding: 8px 16px 14px; }
+/* 修（2026-10-05）：#toolbar 自带 class=composer（非后代）——`.composer #toolbar` 恒不匹配（死规则），
+   灰底即核 `#toolbar { background: var(--bg) }`。同特异性 (1,0,0) 后载胜 ⇒ 底白 ∕ 去顶边。 */
+#toolbar#toolbar {
+  background: var(--bg-raised);
+  border-top: 0;
+  padding: 8px 16px 14px;
+}
 .composer #input-row {
   padding: 4px 6px 4px 16px;
   border: 1px solid var(--line);
