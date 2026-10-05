@@ -603,6 +603,56 @@ body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; 
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
+/* ── 设置页按钮统一（2026-10-05 —— 行动钮 ∕ 提交钮全套胶囊化，覆盖原 UA 默认样式）────────
+   覆盖面 = `.settings-row-action`（行内行动钮族：修改 ∕ ✕ ∕ 校验 ∕ 移除 ∕ 采用 ∕ MCP 四钮 ∕ 代理测试 ∕
+   密钥四钮 ∕ 索引重建 ∕ 会诊增删 ∕ 顾问保存）+ `.settings-submit`（表单提交族：添加渠道 ∕ 拉取模型 ∕
+   MCP 提交）。危险系（removeProvider ∕ providerKeyDelete ∕ keyDelete ∕ consultRemove）= 静默灰 ∕ hover 红。 */
+.settings-content .settings-row-action,
+.settings-content .settings-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-raised);
+  color: var(--fg);
+  font: 500 12.5px/1.6 var(--font);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.settings-content .settings-row-action:not(:disabled):hover,
+.settings-content .settings-submit:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--fg) 30%, transparent);
+  background: var(--hover-bg);
+}
+.settings-content .settings-row-action:not(:disabled):active,
+.settings-content .settings-submit:not(:disabled):active { background: var(--hover-bg-strong); }
+.settings-content .settings-row-action:disabled,
+.settings-content .settings-submit:disabled { opacity: 0.4; cursor: default; }
+.settings-content .settings-row-action:focus-visible,
+.settings-content .settings-submit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.settings-content .settings-row-action[data-action="settings:removeProvider"],
+.settings-content .settings-row-action[data-action="settings:providerKeyDelete"],
+.settings-content .settings-row-action[data-action="settings:keyDelete"],
+.settings-content .settings-row-action[data-action="settings:consultRemove"] { color: var(--fg-muted); }
+.settings-content .settings-row-action[data-action="settings:removeProvider"]:not(:disabled):hover,
+.settings-content .settings-row-action[data-action="settings:providerKeyDelete"]:not(:disabled):hover,
+.settings-content .settings-row-action[data-action="settings:keyDelete"]:not(:disabled):hover,
+.settings-content .settings-row-action[data-action="settings:consultRemove"]:not(:disabled):hover {
+  color: var(--error-fg);
+  border-color: color-mix(in srgb, var(--error-fg) 40%, transparent);
+  background: var(--diff-del-bg);
+}
+/* 密钥编辑态的保存 ∕ 取消沿同族；语言 ∕ 主题伪段已自带胶囊（勿双重覆盖）。 */
+.settings-content [data-pref] .settings-theme-opt { border-radius: 999px; }
+
+/* ── 对话流漏网按钮收编（同批）──────────────────────────────────────────── */
+.error-retry-btn { border-radius: 999px; padding: 4px 16px; transition: background 0.15s, border-color 0.15s; }
+.error-retry-btn:not(:disabled):hover { border-color: color-mix(in srgb, var(--error-fg) 45%, transparent); }
+.chat-backfill { border-radius: 999px; border-color: var(--line); }
+
 /* ── 侧边栏会话管理（右键菜单 + 行内改名 · 2026-10-05）────────────────────── */
 .sidebar-menu {
   position: fixed;
