@@ -88,7 +88,7 @@ body .paste-toast { border-radius: 12px; }
   max-width: 85%;
   padding: 10px 14px;
   border-radius: 16px;
-  background: var(--bubble);
+  background: color-mix(in srgb, var(--accent) 13%, var(--bg-raised));
 }
 
 /* 工具卡 = 细描边圆角卡 + 微填充（原透明盒）。 */
@@ -174,7 +174,7 @@ body .paste-toast { border-radius: 12px; }
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .composer #input-row:focus-within {
-  border-color: color-mix(in srgb, var(--fg) 38%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
   box-shadow: 0 4px 18px var(--overlay);
 }
 .composer #input { padding: 8px 6px; }
@@ -182,9 +182,9 @@ body .paste-toast { border-radius: 12px; }
 /* 发送 ∕ 停止 ∕ 附件：胶囊化；发送钮单色化（Codex 式 —— 前景底 ∕ 背景字）。 */
 .composer #send-btn, .composer #abort-btn, .composer #controls-row #attach-btn { height: 28px; border-radius: 999px; }
 .composer #controls-row #attach-btn, .composer #controls-row #send-btn, .composer #controls-row #abort-btn { padding: 0 14px; }
-.composer #send-btn { background: var(--fg); color: var(--bg); font-weight: 500; box-shadow: none; }
-.composer #send-btn:hover { background: var(--fg); opacity: 0.88; box-shadow: none; }
-.composer #send-btn:active { opacity: 0.8; transform: none; }
+.composer #send-btn { background: var(--accent); color: #fff; font-weight: 500; box-shadow: none; }
+.composer #send-btn:hover { background: var(--accent); opacity: 0.88; box-shadow: none; }
+.composer #send-btn:active { opacity: 0.78; transform: none; }
 .composer #send-btn:disabled { background: var(--hover-bg-strong); color: var(--fg); opacity: 0.4; box-shadow: none; transform: none; }
 
 /* 模式钮（AUTO ∕ PLAN ∕ …）：灰底胶囊；active = accent 淡底。 */
@@ -314,7 +314,7 @@ body .paste-toast { border-radius: 12px; }
 }
 .sidebar-item:hover { background: var(--hover-bg); }
 .sidebar-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.sidebar-item.active { background: var(--hover-bg); font-weight: 500; }
+.sidebar-item.active { background: color-mix(in srgb, var(--accent) 10%, transparent); font-weight: 500; }
 .sidebar-item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sidebar-item-badge { flex: none; color: var(--warn); font-size: 11px; }
 .sidebar-recent-item { color: var(--fg-muted); }
