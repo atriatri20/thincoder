@@ -35,22 +35,6 @@ function collapsedWrite(value) {
 
 /** cwd 尾段（最近项目行显示名 —— 与 `session-control.mjs` `baseName` 同判，本档私有零导出）。 */
 
-/** 项目组展开集合（localStorage 持久 · ZCode `expandedWorkspacePaths` 同义）：键 = cwd。 */
-const expandedProjects = new Set()
-const PROJ_EXPANDED_KEY = "thincoder.sidebar.expandedProjects"
-
-function projectExpandedRead() {
-  try {
-    const raw = localStorage.getItem(PROJ_EXPANDED_KEY)
-    if (typeof raw === "string" && raw !== "") {
-      for (const cwd of JSON.parse(raw)) expandedProjects.add(cwd)
-    }
-  } catch { /* fail-soft */ }
-}
-
-function projectExpandedWrite() {
-  try { localStorage.setItem(PROJ_EXPANDED_KEY, JSON.stringify([...expandedProjects])) } catch { /* fail-soft */ }
-}
 function baseName(cwd) {
   const parts = String(cwd ?? "").split(/[\\/]/).filter((part) => part !== "")
   return parts.length > 0 ? parts[parts.length - 1] : String(cwd ?? "")
@@ -88,6 +72,23 @@ function sidebarModel(state = {}) {
 }
 
 /** 显示标题兜底（与 `session-control.mjs` `displayTitleOf` 同判——title 空 ⇒ 首条消息单行截 60）。 */
+/** 相对时间（ZCode 侧栏同款口径：<1 分「刚刚」< 1 小时「N 分」< 24 小时「N 小时」其余「N 天」）。 */
+function fmtRelative(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return ""
+  const minutes = Math.floor((Date.now() - ms) / 60000)
+  if (minutes < 1) return t("time.justNow")
+  if (minutes < 60) return t("time.min", { n: minutes })
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return t("time.hour", { n: hours })
+  return t("time.day", { n: Math.floor(hours / 24) })
+}
+
+/** 相对时间 span（会话行右侧 · 弱化）。 */
+function timeSpanOf(ms) {
+  const text = fmtRelative(ms)
+  return text === "" ? null : { tag: "span", props: { class: "sidebar-item-time" }, children: [text] }
+}
+
 function displayTitleOfSession(session) {
   if (typeof session?.title === "string" && session.title !== "") return session.title
   const first = typeof session?.firstMessage === "string" ? session.firstMessage.trim() : ""
@@ -139,6 +140,9 @@ function sessionItemNode(item, handlers, opts = {}) {
       { tag: "span", props: { class: "sidebar-item-title" }, children: [item.title] },
       item.badge
         ? { tag: "span", props: { class: "sidebar-item-badge" }, children: [item.badge] }
+        : null,
+      item.time
+        ? { tag: "span", props: { class: "sidebar-item-time" }, children: [item.time] }
         : null,
       isCurrentProject && typeof handlers.onMenuOpen === "function"
         ? {
@@ -196,18 +200,9 @@ function projectsOf(model) {
 }
 
 /** 展开态（cwd 集合 · localStorage 持久 —— ZCode `expandedWorkspacePaths` 同义）：当前项目恒展开。 */
-function isProjectExpanded(cwd, isCurrent) {
-  return isCurrent || expandedProjects.has(cwd)
-}
 
-function toggleProjectExpanded(cwd) {
-  if (expandedProjects.has(cwd)) expandedProjects.delete(cwd)
-  else expandedProjects.add(cwd)
-  try { localStorage.setItem(PROJ_EXPANDED_KEY, JSON.stringify([...expandedProjects])) } catch { /* fail-soft */ }
-}
-
-/** 项目行（点击 = 展开 ∕ 收起该项目的会话预览；当前项目行高亮）。 */
-function projectRowNode(project, expanded, count) {
+/** 项目行（ZCode 形：**文件夹图标 + 名称** 纯文本；点击 = 收起 ∕ 展开其下会话）。 */
+function projectRowNode(project) {
   return {
     tag: "button",
     props: {
@@ -215,22 +210,18 @@ function projectRowNode(project, expanded, count) {
       type: "button",
       "data-project": project.cwd,
       title: project.cwd,
-      "aria-expanded": String(expanded),
       onClick: () => {
-        toggleProjectExpanded(project.cwd)
-        paintSidebarFace() // 翻转后重绘（模块态不进 store —— 无订阅径，就地刷）
+        project.collapsed = !project.collapsed
+        paintSidebarFace() // 模块态不进 store —— 无订阅径，就地刷
       },
     },
-    children: [
-      { tag: "span", props: { class: "sidebar-project-count" }, children: [String(count)] },
-      { tag: "span", props: { class: "sidebar-item-title" }, children: [baseName(project.cwd)] },
-    ],
+    children: [{ tag: "span", props: { class: "sidebar-item-title" }, children: [baseName(project.cwd)] }],
   }
 }
 
-/** 会话区树（滚动区全量内容 · 2026-10-05 重构 = **项目组形**）：
- *  每项目 = 可展开组（项目行 + 会话预览）；当前项目组内保留 今天 ∕ 7 天 ∕ 更早 日期分组，其他项目平铺；
- *  搜索词 ⇒ 跨项目平铺匹配（忽略展开态——搜索即全局）；无匹配 ⇒ 空态词。 */
+/** 会话区树（滚动区全量内容 · 2026-10-05 重构 = **ZCode 项目组形**）：
+ *  每项目 = 文件夹行 + 其会话列表（缩进 ∕ 行尾相对时间，降序）；点击项目行收起 ∕ 展开该组
+ *  （`project.collapsed` 模块态——挂对象上随重绘保持）；搜索词 ⇒ 跨项目平铺匹配；无匹配 ⇒ 空态词。 */
 function sessionsTree(model, handlers) {
   const filter = filterText.trim().toLowerCase()
   const matched = (text) => filter === "" || String(text ?? "").toLowerCase().includes(filter)
@@ -244,38 +235,20 @@ function sessionsTree(model, handlers) {
     })
     return parts
   }
-  let anyMatch = false
+  let any = false
   for (const project of projects) {
     const sessions = project.sessions
-      .map((s) => ({ ...s, display: displayTitleOfSession(s) }))
+      .map((s) => ({ ...s, display: displayTitleOfSession(s), time: timeSpanOf(s.updatedAt) }))
       .filter((s) => matched(s.display) || matched(project.cwd))
       .sort((a, b) => b.updatedAt - a.updatedAt)
     if (filter !== "" && sessions.length === 0) continue
-    anyMatch = true
-    const expanded = filter !== "" || isProjectExpanded(project.cwd, project.isCurrent)
-    parts.push(projectRowNode(project, expanded, sessions.length))
-    if (!expanded) continue
-    if (project.isCurrent && filter === "") {
-      // 当前项目：日期分组（今天 ∕ 7 天 ∕ 更早——ZCode 同口径）
-      const groups = [
-        { key: "today", label: t("sidebar.group.today"), items: [] },
-        { key: "week", label: t("sidebar.group.week"), items: [] },
-        { key: "earlier", label: t("sidebar.group.earlier"), items: [] },
-      ]
-      for (const s of sessions) {
-        const key = groupKeyOf(s.updatedAt)
-        ;(key === "today" ? groups[0] : key === "week" ? groups[1] : groups[2]).items.push(s)
-      }
-      for (const group of groups) {
-        if (group.items.length === 0) continue
-        parts.push({ tag: "div", props: { class: "sidebar-group-label" }, children: [group.label] })
-        parts.push(...group.items.map((s) => sessionItemNode({ key: s.slot, title: s.display, badge: null }, handlers, { cwd: project.cwd, isCurrentProject: true })))
-      }
-    } else {
-      parts.push(...sessions.map((s) => sessionItemNode({ key: s.slot, title: s.display, badge: null }, handlers, { cwd: project.cwd, isCurrentProject: project.isCurrent })))
-    }
+    any = true
+    const collapsed = project.collapsed === true
+    parts.push(projectRowNode(project, collapsed, sessions.length))
+    if (collapsed) continue
+    parts.push(...sessions.map((s) => sessionItemNode({ key: s.slot, title: s.display, badge: null, time: s.time }, handlers, { cwd: project.cwd, isCurrentProject: project.isCurrent })))
   }
-  if (!anyMatch) parts.push({ tag: "div", props: { class: "sidebar-empty-filter" }, children: [t("sidebar.empty")] })
+  if (!any) parts.push({ tag: "div", props: { class: "sidebar-empty-filter" }, children: [t("sidebar.empty")] })
   return parts
 }
 
@@ -453,7 +426,6 @@ function confirmDelete(pane, handlers, { key, title }) {
  */
 export function attachSidebar(handlers = {}) {
   if (collapsedRead()) document.body.classList.add("sidebar-collapsed")
-  projectExpandedRead()
   const face = {
     ...handlers,
     onToggle: () => {
