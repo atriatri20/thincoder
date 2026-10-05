@@ -88,7 +88,7 @@ body .paste-toast { border-radius: 12px; }
   max-width: 85%;
   padding: 10px 14px;
   border-radius: 16px;
-  background: color-mix(in srgb, var(--accent) 18%, var(--bg-raised));
+  background: color-mix(in srgb, var(--accent) 9%, var(--bg-raised));
   /* 文字随主题色但**低饱和 ∕ 压暗**（用户反馈：全主题色字太艳）——accent 22% 混入前景灰 */
   color: light-dark(
     color-mix(in srgb, var(--accent) 22%, var(--fg)),
@@ -146,13 +146,14 @@ body .paste-toast { border-radius: 12px; }
 .block-text code, .reasoning-content code {
   border-radius: 4px;
   background: color-mix(in srgb, var(--accent) 9%, transparent);
+  /* 代码文字随主题色但低饱和压暗（用户反馈：亮蓝太艳）——accent 混前景灰为主 */
   color: light-dark(
-    color-mix(in srgb, var(--accent) 80%, black),
-    color-mix(in srgb, var(--accent) 60%, white)
+    color-mix(in srgb, var(--accent) 38%, var(--fg)),
+    color-mix(in srgb, var(--accent) 30%, var(--fg))
   );
 }
 .block-user > .block-text code {
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: inherit;
 }
 .block-text blockquote, .reasoning-content blockquote {
