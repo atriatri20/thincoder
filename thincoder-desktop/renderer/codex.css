@@ -169,7 +169,7 @@ body .paste-toast { border-radius: 12px; }
   padding: 4px 6px 4px 16px;
   border: 1px solid var(--line);
   border-radius: 22px;
-  background: color-mix(in srgb, var(--fg) 3.5%, transparent);
+  background: var(--bg-raised);
   box-shadow: 0 2px 10px var(--overlay);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
