@@ -30,7 +30,7 @@
  */
 import { initDict } from "./i18n.mjs"
 import { configuredFlag, patchSettings, setProviderState } from "./store.mjs"
-import { setAccent, setTheme } from "./theme.mjs"
+import { setAccent, setCustomAccent, setTheme } from "./theme.mjs"
 import { presetValue } from "./mount-onboarding.mjs"
 import { createSegmentExits } from "./mount-settings-segments.mjs"
 import { createModelsExits } from "./mount-settings-segments-models.mjs"
@@ -194,6 +194,13 @@ export function createExits(deps = {}) {
   /** 主题色出口（下级配色 · 2026-10-05 —— `theme.mjs` `setAccent` 单写者 + 切片写）：
    *  落地 `data-accent` + 落存储 ⇒ `--accent` 全域联动；SETTINGS_KEYS 含 accent ⇒ 色板态随重绘。 */
   function setAccentFace(id) {
+    // 自定义取色 · 2026-10-05：#开头值 = 自定义 hex（theme.mjs setCustomAccent 校验落地 —— inline --accent + data-accent=custom）
+    if (typeof id === "string" && id.startsWith("#")) {
+      const hex = setCustomAccent(id)
+      if (hex === null) return
+      store.set({ accent: hex })
+      return
+    }
     const landed = setAccent(id)
     if (landed === null) return
     store.set({ accent: landed })
@@ -254,6 +261,7 @@ export function createExits(deps = {}) {
     onToggleLang: (target) => void toggleLang(target),
     onSetTheme: (target) => setThemeFace(target),
     onSetAccent: (id) => setAccentFace(id),
+    onSetCustomAccent: (hex) => setAccentFace(hex), // 自定义取色出口（views/settings.mjs input[type=color] onInput）
     onCloseSettings: () => closeSettings(),
     onSelectSection: (name) => setSettings({ nav: name }), // 侧边栏导航式设置页 · 2026-10-04：选中段落切片（`views/settings.mjs` 读面 `nav`）
     onSubmit: (event) => void submitChannel(event),

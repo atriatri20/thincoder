@@ -100,6 +100,9 @@ export const ACCENTS = Object.freeze([
 
 const ACCENT_KEY = "thincoder.accent"
 
+/** 自定义 hex 闭集（#rgb ∕ #rrggbb —— 与 setCustomAccent 同判）。 */
+const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i
+
 function accentNormalize(raw) {
   return ACCENTS.some((a) => a.id === raw) ? raw : "blue"
 }
@@ -109,7 +112,7 @@ function accentReadStored(storage) {
   try {
     const raw = storage.getItem(ACCENT_KEY)
     if (raw === null || raw === undefined) return null
-    if (!ACCENTS.some((a) => a.id === raw)) {
+    if (!ACCENTS.some((a) => a.id === raw) && !HEX_RE.test(raw)) {
       console.error(`[theme] accent stored value out of range: ${String(raw)}`)
       return null
     }
@@ -133,11 +136,20 @@ function applyAccent(doc, value) {
   doc.documentElement.dataset.accent = value
 }
 
+/** 自定义色应用（inline `--accent` —— 特异性高于一切规则，预设切换时须清除）。 */
+function applyAccentCustom(doc, hex) {
+  doc.documentElement.dataset.accent = "custom"
+  doc.documentElement.style.setProperty("--accent", hex)
+}
+
 /** 当前落地值（设置面板读面——store 切片缺位兜底）。 */
 export function currentAccent() {
   try {
-    const raw = globalThis.document?.documentElement?.dataset?.accent
-    return accentNormalize(raw)
+    if (globalThis.document?.documentElement?.dataset?.accent === "custom") {
+      const inline = String(globalThis.document.documentElement.style.getPropertyValue("--accent") ?? "").trim()
+      return HEX_RE.test(inline) ? inline : "blue"
+    }
+    return accentNormalize(globalThis.document?.documentElement?.dataset?.accent)
   } catch {
     return "blue"
   }
@@ -145,17 +157,36 @@ export function currentAccent() {
 
 /** 装配入口（`renderer/app.mjs` 装配期一次，先于首绘可及面）：读存储 ⇒ 归一 ⇒ 写 `data-accent` ⇒ 返落地值。 */
 export function initAccent({ doc = globalThis.document, storage = defaultStorage() } = {}) {
-  const value = accentNormalize(accentReadStored(storage))
+  const stored = accentReadStored(storage)
+  if (stored !== null && stored.startsWith("#")) {
+    applyAccentCustom(doc, stored) // 自定义 hex（`setCustomAccent` 落盘形态）回放
+    return stored
+  }
+  const value = accentNormalize(stored)
   applyAccent(doc, value)
   return value
 }
 
 /** 出口（设置面色板 ⇒ 本径）：闭集校验 ⇒ 应用 + 落存储 ⇒ 返落地值；表外值 ⇒ `null` + 记错（零写零改）。 */
+/** 自定义色出口（取色器 ⇒ 本径）：hex 闭集（#rgb ∕ #rrggbb）校验 ⇒ inline `--accent` 应用 + 落存储
+ *  （`data-accent = "custom"` 标记态）；表外值 ⇒ `null` + 记错。深浅两主题同色（v1——不做双值自定义）。 */
+export function setCustomAccent(hex, { doc = globalThis.document, storage = defaultStorage() } = {}) {
+  const value = String(hex ?? "").trim()
+  if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value)) {
+    console.error(`[theme] setCustomAccent refused invalid hex: ${value}`)
+    return null
+  }
+  applyAccentCustom(doc, value)
+  accentWriteStored(storage, value)
+  return value
+}
+
 export function setAccent(value, { doc = globalThis.document, storage = defaultStorage() } = {}) {
   if (!ACCENTS.some((a) => a.id === value)) {
     console.error(`[theme] setAccent refused out-of-range value: ${String(value)}`)
     return null
   }
+  doc.documentElement.style.removeProperty("--accent") // 清自定义残留（inline 恒胜预设覆写）
   applyAccent(doc, value)
   accentWriteStored(storage, value)
   return value

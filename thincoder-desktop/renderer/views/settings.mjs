@@ -154,7 +154,7 @@ export function settingsModel(state) {
     open: settings.open === true,
     nav: str(settings.nav) ?? SECTIONS[0].name, // 侧边栏导航选中段（Codex 形设置页 · 2026-10-04 —— 表外 ⇒ 首段，不猜）
     lang: langOf(state),
-    accent: str(state?.accent) && ACCENTS.some((a) => a.id === state.accent) ? state.accent : "blue",
+    accent: (typeof state?.accent === "string" && state.accent !== "" && (ACCENTS.some((a) => a.id === state.accent) || /^#[0-9a-f]{3}|#[0-9a-f]{6}$/i.test(state.accent))) ? state.accent : "blue",
     theme: themeOf(state),
     notice: notice === null ? null : { scope, text: reasonWord(notice.reason) },
     providers: {
@@ -270,27 +270,43 @@ function themeBody(model, handlers) {
   ] }]
 }
 
-/** 主题色色板（下级配色 · 2026-10-05 —— `theme.mjs` `ACCENTS` 预设闭集；点击 = `onSetAccent(id)` ⇒
- *  `data-accent` 落地 ∕ 落存储 ⇒ `--accent` 全域联动）。缺 handlers ⇒ `disabled`（诚实非死控）。 */
+/** 主题色色板（下级配色 · 2026-10-05 —— `theme.mjs` `ACCENTS` 预设闭集 + 自定义选色；点击 = `onSetAccent(id)` ∕
+ *  取色 = `onSetCustomAccent(hex)` ⇒ `data-accent` ∕ inline `--accent` 落地 ∕ 落存储 ⇒ `--accent` 全域联动）。
+ *  缺 handlers ⇒ `disabled`（诚实非死控）。 */
 function accentNode(model, handlers) {
   const onSet = typeof handlers?.onSetAccent === "function" ? handlers.onSetAccent : null
-  const current = typeof model?.accent === "string" ? model.accent : "blue"
+  const onCustom = typeof handlers?.onSetCustomAccent === "function" ? handlers.onSetCustomAccent : null
+  const current = typeof model?.accent === "string" && model.accent !== "" ? model.accent : "blue"
+  const customActive = current.startsWith("#")
+  const swatch = (a) => {
+    const active = a.id === current
+    return { tag: "button", props: {
+      class: active ? "accent-swatch active" : "accent-swatch",
+      type: "button",
+      "data-action": "settings:accent",
+      "data-accent-id": a.id,
+      "aria-label": t(`settings.accent.${a.id}`),
+      title: t(`settings.accent.${a.id}`),
+      "aria-pressed": String(active),
+      onClick: onSet === null ? undefined : () => onSet(a.id),
+    }, children: [] }
+  }
+  const custom = { tag: "label", props: {
+    class: customActive ? "accent-swatch custom active" : "accent-swatch custom",
+    "aria-label": t("sidebar.accentCustom"),
+    title: t("sidebar.accentCustom"),
+  }, children: [
+    { tag: "input", props: {
+      type: "color",
+      value: customActive ? current : "#7c6cf0",
+      "aria-label": t("sidebar.accentCustom"),
+      onInput: (event) => onCustom === null ? undefined : onCustom(String(event?.target?.value ?? "")),
+    }, children: [] },
+  ] }
   return {
     tag: "div",
     props: { class: "accent-swatches", role: "group", "aria-label": t("settings.accent") },
-    children: ACCENTS.map((a) => {
-      const active = a.id === current
-      return { tag: "button", props: {
-        class: active ? "accent-swatch active" : "accent-swatch",
-        type: "button",
-        "data-action": "settings:accent",
-        "data-accent-id": a.id,
-        "aria-label": t(`settings.accent.${a.id}`),
-        title: t(`settings.accent.${a.id}`),
-        "aria-pressed": String(active),
-        onClick: onSet === null ? undefined : () => onSet(a.id),
-      }, children: [] }
-    }),
+    children: [...ACCENTS.map(swatch), custom],
   }
 }
 

@@ -88,11 +88,11 @@ body .paste-toast { border-radius: 12px; }
   max-width: 85%;
   padding: 10px 14px;
   border-radius: 16px;
-  background: color-mix(in srgb, var(--accent) 13%, var(--bg-raised));
-  /* 文字随主题色（ZCode 同款）：浅色 = 深主题色字（软底上可读），深色 = 亮主题色字 */
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg-raised));
+  /* 文字随主题色但**低饱和 ∕ 压暗**（用户反馈：全主题色字太艳）——accent 22% 混入前景灰 */
   color: light-dark(
-    color-mix(in srgb, var(--accent) 82%, black),
-    color-mix(in srgb, var(--accent) 55%, white)
+    color-mix(in srgb, var(--accent) 22%, var(--fg)),
+    color-mix(in srgb, var(--accent) 16%, var(--fg))
   );
 }
 .block-user > .block-text :is(strong, em, code) { color: inherit; }
@@ -897,3 +897,14 @@ body.pool-collapsed .pool-collapse { left: 4px; }
 .accent-swatch[data-accent-id="rose"] { background: light-dark(#cf3d9c, #ef85c7); }
 .accent-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--bg-raised) inset, 0 0 0 2px var(--fg); }
 .accent-swatch:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.accent-swatch.custom {
+  position: relative;
+  overflow: hidden;
+  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+}
+.accent-swatch.custom input[type="color"] {
+  position: absolute; inset: -4px;
+  width: calc(100% + 8px); height: calc(100% + 8px);
+  border: 0; padding: 0; cursor: pointer;
+  opacity: 0;
+}

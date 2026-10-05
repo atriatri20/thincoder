@@ -158,6 +158,7 @@ export const HOST_DICT = Object.freeze({
     "time.min": "${n}m",
     "time.hour": "${n}h",
     "time.day": "${n}d",
+    "sidebar.accentCustom": "Custom color",
     "pool.collapse": "Collapse activity panel",
     "pool.expand": "Expand activity panel",
     // ── 思考链折叠 ∕ 耗时（Codex 形大改批 · 2026-10-04 —— 四键）──
@@ -301,6 +302,7 @@ export const HOST_DICT = Object.freeze({
     "time.min": "${n}分",
     "time.hour": "${n}小时",
     "time.day": "${n}天",
+    "sidebar.accentCustom": "自定义颜色",
     "pool.collapse": "收起活动面板",
     "pool.expand": "展开活动面板",
     // ── 思考链折叠 ∕ 耗时（四键两语同拍）──
