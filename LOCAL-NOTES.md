@@ -43,3 +43,9 @@ npm run quickcheck   （用系统 Edge；9 段全绿 = 可交付）
 - 会话归档：后端无 `session:archive` 通道，需 core 层（manifest 归档标志 + listSlots 过滤 + 新通道）——未做。
 - 上游同步：本分支与 `main`（xinbo-tech 镜像）会漂移，pull 后重点核对 `renderer/index.html` 链序、
   `views/settings.mjs`、`mount-sessions.mjs wireFace` 透传、core 四文件（reasoning 持久化）。
+
+## 远端（2026-10-05 起）
+
+- `origin` = `atriatri20/thincoder`（**私有仓库**——工作备份，codex-ui 为主分支）
+- `upstream` = `xinbo-tech/thincoder`（官方 GitHub 镜像，同步上游用：`git fetch upstream && git rebase upstream/main`）
+- gh CLI 走代理需显式：`HTTPS_PROXY=http://127.0.0.1:7897`（git 自身已配代理，不受影响）
