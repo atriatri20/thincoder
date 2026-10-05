@@ -196,10 +196,13 @@ try {
 
 // ── 更新面断言（+4——`docs/desktop/design/PACKAGING.md` §2.8.2；闸内 · fail-closed）──
 // 契约：publish = generic ⇒ 构建生成 latest.yml（dist 根）∥ app-update.yml（随包）；上传恒走站点小件（无上传面）。
-// UPDATE_URL 已上提至顶部常量区（平台分臂——win ∥ linux 两臂共用）
+// **双契约感知（fork 独立打包批 · 2026-10-05）**：`feedMode = latest.yml 在场`——上游契约（feed 随构建）走全量断言；
+// fork 独立契约（electron-builder.yml win `publish: null` ⇒ 零 feed 面）反向断言：产物**不得**携带 app-update.yml
+// （随装即指上游 feed ⇒ 上游发版即静默覆盖 fork 构建——独立打包批根因）。UPDATE_URL 已上提至顶部常量区。
 const latestPath = join(distDir, "latest.yml")
-if (!existsSync(latestPath)) {
-  failures.push("missing artifact: latest.yml（dist 根——更新 feed 三件之一；§2.8.2①）")
+const feedMode = existsSync(latestPath)
+if (!feedMode) {
+  console.log("⚠ feed 模式：无（fork 独立契约——publish null ⇒ 零 latest.yml ∕ app-update.yml；更新 = 手动装新包）")
 } else {
   const latestYml = readFileSync(latestPath, "utf8")
   const version = /^version:\s*(.+?)\s*$/m.exec(latestYml)?.[1]
@@ -218,9 +221,11 @@ if (!existsSync(latestPath)) {
   }
 }
 const appUpdatePath = join(distDir, "win-unpacked/resources/app-update.yml")
-if (!existsSync(appUpdatePath)) {
+if (!feedMode && existsSync(appUpdatePath)) {
+  failures.push("fork 独立契约违背：无 latest.yml 而产物带 app-update.yml（随装即指上游 feed——独立打包批 2026-10-05）")
+} else if (feedMode && !existsSync(appUpdatePath)) {
   failures.push("missing artifact: win-unpacked/resources/app-update.yml（随包；§2.8.2④）")
-} else {
+} else if (feedMode) {
   const appUpdateYml = readFileSync(appUpdatePath, "utf8")
   if (!/^provider:\s*generic\s*$/m.test(appUpdateYml)) failures.push("app-update.yml provider 不符（须 generic；§2.8.2④）")
   const url = /^url:\s*(.+?)\s*$/m.exec(appUpdateYml)?.[1]

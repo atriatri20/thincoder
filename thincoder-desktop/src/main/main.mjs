@@ -12,6 +12,8 @@
  */
 import { app, dialog, Notification } from "electron"
 import { createRequire } from "node:module" // 自动更新（KD-71）：CJS 互操作——`require("electron-updater")` 取 `autoUpdater`
+import { existsSync } from "node:fs"
+import { join } from "node:path"
 import { hostFloorMet, MIN_NODE, sqliteAvailable } from "./host-floor.mjs"
 import { protocolStats, registerAppScheme, serveAppProtocol } from "./protocol.mjs"
 import { ipcStats, setAgentHost, setLedgerEmit } from "./ipc.mjs"
@@ -223,8 +225,13 @@ async function main() {
   // `app.isPackaged ∧ 非 --smoke ∧ updaterMediumOk(...)`——Linux 介质合项（仅 AppImage 运行武装：`APPIMAGE` 在；
   // deb 安装零自检 ∥ 零网络 ∥ 零状态机——§2.11.4）；未打包 ⇒ 库自身 `isUpdaterActive()` 返回 false——双保险；
   // `--smoke` 读数面零增字段。
+  // fork 独立打包（2026-10-05）：feed 在位（`app-update.yml` 随装）才武装——win 目标 publish null ⇒ 零 feed ⇒
+  // 自动 ∕ 手动检查同走未武装径（静默忽略 + stderr 一行——与 dev 同语义），不弹 ENOENT 失败框；上游原配置在位 ⇒ 行为不变。
+  const updateFeedPresent = (() => {
+    try { return app.isPackaged && existsSync(join(process.resourcesPath, "app-update.yml")) } catch { return false }
+  })()
   const updateFace = createUpdateFace({
-    enabled: app.isPackaged && !SMOKE && updaterMediumOk({ platform: process.platform, appImageEnv: process.env.APPIMAGE }),
+    enabled: app.isPackaged && !SMOKE && updateFeedPresent && updaterMediumOk({ platform: process.platform, appImageEnv: process.env.APPIMAGE }),
     updater: autoUpdater,
     words: () => {
       try { return menuLabels(loadConfig()?.locale) } catch (error) {

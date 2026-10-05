@@ -25,6 +25,10 @@ publish:
   url: https://thincoder.com/downloads/
 
 win:
+  # fork 独立打包（2026-10-05 —— 用户构建不指上游 feed）：目标级 publish null ⇒ 零 app-update.yml 随装
+  # （机制同 deb 行——app-builder-lib PublishManager.js（:337-346）⇒ 该目标零 update-info 条目）。
+  # 上游源 https://thincoder.com/downloads/ 活发版（0.10.3 > fork 0.10.2 ⇒ 装即静默下载 + 退出覆盖）——故裁。
+  publish: null
   target:
     - target: nsis
       arch:
