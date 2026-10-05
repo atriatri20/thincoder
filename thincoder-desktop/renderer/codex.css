@@ -587,6 +587,45 @@ body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; 
   pointer-events: none;
 }
 .minimap-tip[data-visible] { display: block; }
+/* ── 可定制 select（2026-10-05 —— 用户反馈「设置下拉框旧样式」）：Chromium 135+ `appearance: base-select`
+   把原生弹层完全样式化——零 DOM 改动，全部 select 消费点（设置页预设 ∕ 会诊 ∕ advisor ∕ 协议格式等）自动受益；
+   弹层 = codex 卡形（.minimap-tip ∕ .title-tip 同律：描边 ∕ 12px 圆角 ∕ pop 阴影）；hover ∕ 选中态随 accent。
+   不支持浏览器 ⇒ 声明忽略退回原生（无害回退）。═══ */
+select { appearance: base-select; }
+select::picker(select) {
+  appearance: base-select;
+  margin-block-start: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-pop);
+  max-block-size: 21rem; /* 长列表（24 项预设）弹层内滚动 */
+  overflow-block: auto;
+}
+select::picker-icon {
+  margin-inline-start: auto;
+  color: var(--fg-muted);
+  transition: transform 0.12s ease;
+}
+select:open::picker-icon { transform: rotate(180deg); }
+select option {
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--fg);
+  font: inherit;
+  min-block-size: 0;
+}
+option:hover, option:focus { background: var(--hover-bg); }
+option:checked {
+  color: var(--accent-text);
+  font-weight: 500;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+option::checkmark { color: var(--accent-text); }
+select optgroup { padding: 4px; }
+select optgroup::before { color: var(--fg-muted); font-weight: 500; }
+
 /* title 浮窗（title-tips.mjs 接管面——全局原生 tooltip 替身）：.minimap-tip 同构卡（用户需求
  * 「浮选窗改小地图样式」）——12px 圆角 ∕ 描边 ∕ pop 阴影 ∕ 13px 字 ∕ pre-line 多行；定位 inline style（JS）。 */
 .title-tip {
