@@ -602,7 +602,12 @@ select::picker(select) {
   box-shadow: var(--shadow-pop);
   max-block-size: 21rem; /* 长列表（24 项预设）弹层内滚动 */
   overflow-block: auto;
+  /* 限宽（用户反馈：弹层随最长选项撑到比触发框还宽）：恒 = 触发框宽（锚点定位 anchor-size），
+   * 上限 32rem 双保险；长选项文本**换行**呈现（anywhere 防长 URL 撑破）——不再横向溢出。 */
+  inline-size: anchor-size(width);
+  max-inline-size: min(32rem, calc(100vw - 2rem));
 }
+select option { white-space: normal; overflow-wrap: anywhere; } /* 弹层内 option 默认 nowrap ⇒ 显式 normal 才换行 */
 select::picker-icon {
   margin-inline-start: auto;
   color: var(--fg-muted);
