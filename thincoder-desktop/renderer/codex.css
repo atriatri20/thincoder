@@ -243,6 +243,9 @@ body .paste-toast { border-radius: 12px; }
 
 .settings-row { border-radius: 8px; }
 .settings-field { border-radius: 8px; }
+/* select 触发框最小宽（用户反馈：触发框太短 ⇒ 弹层跟着窄 ⇒ 选项竖排一字一行）：12rem 起步
+ * （原收缩到内容宽 ≈ 5rem ⇒ 翻倍有余）；大框（预设 24 项弹层）不受 min 约束。 */
+select.settings-field { min-inline-size: 12rem; }
 .settings-mark { border-radius: 999px; }
 .settings-modal { border-radius: 16px; box-shadow: var(--shadow-pop); }
 
@@ -604,7 +607,7 @@ select::picker(select) {
   overflow-block: auto;
   /* 限宽（用户反馈：弹层随最长选项撑到比触发框还宽）：恒 = 触发框宽（锚点定位 anchor-size），
    * 上限 32rem 双保险；长选项文本**换行**呈现（anywhere 防长 URL 撑破）——不再横向溢出。 */
-  inline-size: anchor-size(width);
+  inline-size: max(anchor-size(width), 12rem); /* 恒 ≥ 触发框宽 ∕ ≥ 12rem（窄框选项不竖排） */
   max-inline-size: min(32rem, calc(100vw - 2rem));
 }
 select option { white-space: normal; overflow-wrap: anywhere; } /* 弹层内 option 默认 nowrap ⇒ 显式 normal 才换行 */
