@@ -246,6 +246,9 @@ body .paste-toast { border-radius: 12px; }
 /* select 触发框最小宽（用户反馈：触发框太短 ⇒ 弹层跟着窄 ⇒ 选项竖排一字一行）：12rem 起步
  * （原收缩到内容宽 ≈ 5rem ⇒ 翻倍有余）；大框（预设 24 项弹层）不受 min 约束。 */
 select.settings-field { min-inline-size: 12rem; }
+/* agent 参数段模型槽六件（id = agent.subagentModel* —— 全局默认 ∕ explore ∕ plan ∕ coder ∕ eng-coder ∕
+ * eng-designer）：选项 = 「渠道:模型」长串 ⇒ 24rem（用户反馈「再宽一倍，模型选项要长点」——长串单行呈现）。 */
+.settings-field-row select.settings-field[id^="agent.subagentModel"] { min-inline-size: 24rem; }
 .settings-mark { border-radius: 999px; }
 .settings-modal { border-radius: 16px; box-shadow: var(--shadow-pop); }
 
