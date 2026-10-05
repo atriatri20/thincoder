@@ -212,7 +212,12 @@ export function createComposerWire(deps = {}) {
       return
     }
     const table = store.get().sessionMeta
-    store.set({ sessionMeta: { ...(table !== null && typeof table === "object" ? table : {}), [key]: meta } })
+    // 值等门（fork 2026-10-05——档位震荡死循环兜底）：回执 meta 与现槽值等 ⇒ 零 store 写
+    // （签名不动 ⇒ #5 零重推；并发双写回执后落覆盖前落所致的「值回退」由此断根）。
+    const prev = typeof table === "object" && table !== null ? table[key] : null
+    if (JSON.stringify(prev ?? null) !== JSON.stringify(meta ?? null)) {
+      store.set({ sessionMeta: { ...(table !== null && typeof table === "object" ? table : {}), [key]: meta } })
+    }
     store.set(setProviderState(store.get(), receipt.providerState)) // #880：键缺席 ⇒ 原引用（零写）
   }
 

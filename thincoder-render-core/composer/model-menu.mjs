@@ -410,9 +410,16 @@ export function createModelMenu(deps) {
         const visible = levels.length > 0 ? selectedReasoning : "off"
         reasoningBtn.textContent = visible === "" ? "—" : visible === "none" ? "off" : (reasoningLabel(visible))
         reasoningBtn.classList.toggle("active", levels.length > 0 && visible !== "off" && visible !== "")
-        // 回写门（F-W14 判据收窄 · 2026-10-04 解锁批——只治系统回声径）：忙态零回写（显示仍更新——上列已刷）——不携快照覆写槽；idle 零回归（照发）
-        if (!blocked()) {
-          post("selectModel", { model: match.id, provider: match.provider })
+        // 回写门（fork 重设计 · 2026-10-05——**drift-only**，根治档位震荡死循环）：
+        // 原形 = idle 态每次 models 推送无条件回发 selectModel + selectReasoning——selectModel 恒为
+        // 同值回声（match 即按 prefs.model 检得），与 selectReasoning 两个并发 session:prefs 回执
+        // **竞态**：model 回执（meta.effort = 槽旧值）后落 ⇒ 覆盖 reasoning 回执 ⇒ 签名复变 ⇒
+        // #5 再推 ⇒ 再回写……永不收敛（实测 —∕低 221+ 次仍在涨）。收窄：
+        // ① selectModel 回声删除（match.id ∕ provider === prefs 复合恒真，零语义损失）；
+        // ② selectReasoning 仅「归一结果 ≠ prefs 请求值」时发（真漂移校正——行集 ∕ effortDefault
+        //    变化后落槽；同值零发 ⇒ 无写 ⇒ 无竞态 ⇒ 必收敛）。
+        // 忙态门保留（blocked ⇒ 零回写——回合一致性不因目录推送破）。
+        if (!blocked() && selectedReasoning !== (prefs.reasoning || "off")) {
           post("selectReasoning", { reasoning: selectedReasoning })
         }
       } else if (prefs.model) {
