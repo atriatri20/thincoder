@@ -91,8 +91,8 @@ body .paste-toast { border-radius: 12px; }
   background: color-mix(in srgb, var(--accent) 9%, var(--bg-raised));
   /* 文字随主题色但**低饱和 ∕ 压暗**（用户反馈：全主题色字太艳）——accent 22% 混入前景灰 */
   color: light-dark(
-    color-mix(in srgb, var(--accent) 40%, var(--fg)),
-    color-mix(in srgb, var(--accent) 32%, var(--fg))
+    color-mix(in srgb, var(--accent-text) 40%, var(--fg)),
+    color-mix(in srgb, var(--accent-text) 32%, var(--fg))
   );
 }
 .block-user > .block-text :is(strong, em, code) { color: inherit; }
@@ -142,14 +142,14 @@ body .paste-toast { border-radius: 12px; }
 
 /* ── Markdown 面（core-markdown.css 覆盖）：代码块 ∕ 行内码 ∕ 引用 ∕ 图片圆角 ── */
 .code-block { border-radius: 10px; }
-.code-lang { color: light-dark(color-mix(in srgb, var(--accent) 75%, black), color-mix(in srgb, var(--accent) 60%, white)); opacity: 0.85; }
+.code-lang { color: light-dark(color-mix(in srgb, var(--accent-text) 75%, black), color-mix(in srgb, var(--accent-text) 60%, white)); opacity: 0.85; }
 .block-text code, .reasoning-content code {
   border-radius: 4px;
   background: color-mix(in srgb, var(--accent) 9%, transparent);
   /* 代码文字随主题色但低饱和压暗（用户反馈：亮蓝太艳）——accent 混前景灰为主 */
   color: light-dark(
-    color-mix(in srgb, var(--accent) 38%, var(--fg)),
-    color-mix(in srgb, var(--accent) 30%, var(--fg))
+    color-mix(in srgb, var(--accent-text) 38%, var(--fg)),
+    color-mix(in srgb, var(--accent-text) 30%, var(--fg))
   );
 }
 .block-user > .block-text code {
@@ -207,8 +207,8 @@ body .paste-toast { border-radius: 12px; }
 /* 发送 ∕ 停止 ∕ 附件：胶囊化；发送钮单色化（Codex 式 —— 前景底 ∕ 背景字）。 */
 .composer #send-btn, .composer #abort-btn, .composer #controls-row #attach-btn { height: 28px; border-radius: 999px; }
 .composer #controls-row #attach-btn, .composer #controls-row #send-btn, .composer #controls-row #abort-btn { padding: 0 14px; }
-.composer #send-btn { background: color-mix(in srgb, var(--accent) 55%, var(--bg-raised)); color: #fff; font-weight: 500; box-shadow: none; }
-.composer #send-btn:hover { background: color-mix(in srgb, var(--accent) 70%, var(--bg-raised)); opacity: 1; box-shadow: none; }
+.composer #send-btn { background: color-mix(in srgb, var(--accent-solid) 55%, var(--bg-raised)); color: #fff; font-weight: 500; box-shadow: none; }
+.composer #send-btn:hover { background: color-mix(in srgb, var(--accent-solid) 70%, var(--bg-raised)); opacity: 1; box-shadow: none; }
 .composer #send-btn:active { opacity: 0.78; transform: none; }
 .composer #send-btn:disabled { background: var(--hover-bg-strong); color: var(--fg); opacity: 0.4; box-shadow: none; transform: none; }
 
@@ -226,7 +226,7 @@ body .paste-toast { border-radius: 12px; }
   opacity: 1;
   border-color: transparent;
   background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .composer .ctrl-btn.warning { border-color: transparent; }
 .composer #reasoning-btn { text-transform: none; letter-spacing: normal; }
@@ -457,7 +457,7 @@ body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; 
   cursor: pointer;
 }
 .settings-nav-item:hover { background: var(--hover-bg); color: var(--fg); }
-.settings-nav-item.active { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); font-weight: 500; }
+.settings-nav-item.active { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent-text); font-weight: 500; }
 .settings-nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .settings-content { min-width: 0; height: 100%; min-height: 0; overflow-y: auto; padding-right: 6px; }
 /* 内容段壳：卡片化（原裸 section + 面底同色 —— 现给独立卡面）。 */
@@ -498,7 +498,7 @@ body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; 
   line-height: var(--lh);
   background: var(--bg-raised);
 }
-.model-grid .settings-row-action:not(:disabled):hover { border-color: var(--accent); color: var(--accent); background: transparent; cursor: pointer; }
+.model-grid .settings-row-action:not(:disabled):hover { border-color: var(--accent); color: var(--accent-text); background: transparent; cursor: pointer; }
 
 /* ══════════════════════════════════════════════════════════════════════════
    ── 会话轮导航栏（原对话小地图 · ZCode 形重做 · 2026-10-04）──────────────────
@@ -674,7 +674,7 @@ body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; 
 .settings-content .settings-theme-opt:hover { color: var(--fg); border-color: color-mix(in srgb, var(--fg) 22%, transparent); }
 .settings-content .settings-theme-opt[data-active] {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
@@ -881,6 +881,8 @@ body.pool-collapsed .pool-collapse { left: 4px; }
 :root[data-accent="green"] { --accent: light-dark(#17855c, #3dd68c); }
 :root[data-accent="orange"] { --accent: light-dark(#c96a08, #f0a35c); }
 :root[data-accent="rose"] { --accent: light-dark(#cf3d9c, #ef85c7); }
+/* 派生变量兜底（theme.mjs 落 accent 时以 inline 重写 —— 钳制版；此处为 JS 前首绘兜底） */
+:root { --accent-text: var(--accent); --accent-solid: var(--accent); }
 
 /* 色板（外观段 · 点选即切）：圆点填预设浅 ∕ 深色（light-dark 随主题），active = 外环。 */
 .accent-swatches { display: flex; gap: 8px; margin-left: auto; }

@@ -132,14 +132,82 @@ function accentWriteStored(storage, value) {
   }
 }
 
+/* ─── 可读性钳制（2026-10-05 —— 用户反馈「选浅色 ⇒ 混色文字跟着浅到看不清」）：
+ *  HSL 亮度钳制（色相 ∕ 饱和保留）派生两枚 inline 变量，恒伴 --accent 落地：
+ *  --accent-text —— accent 混色**文字**的亮度上限（浅色主题 L ≤ 0.52；深色主题 L ≥ 0.66 —— 深底要够亮）；
+ *  --accent-solid —— 白前景**实心钮底**的钳制（浅色 L ≤ 0.55；深色 L ∈ [0.50, 0.66]）。
+ *  消费面（codex.css）：气泡 ∕ 行内代码 ∕ code-lang ∕ 各 active 文字 → text；发送钮底 → solid。
+ *  表面（气泡底 ∕ 色板圆 ∕ 焦点环 ∕ 描边）仍读真 --accent ——「选什么显示什么」。 */
+function hexToRgb(hex) {
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex)
+  if (m === null) return null
+  let body = m[1]
+  if (body.length === 3) body = [...body].map((c) => c + c).join("")
+  const n = Number.parseInt(body, 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+
+function rgbToHsl([r, g, b]) {
+  const rf = r / 255, gf = g / 255, bf = b / 255
+  const max = Math.max(rf, gf, bf), min = Math.min(rf, gf, bf)
+  const l = (max + min) / 2
+  if (max === min) return [0, 0, l]
+  const d = max - min
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+  let h
+  if (max === rf) h = ((gf - bf) / d + (gf < bf ? 6 : 0)) / 6
+  else if (max === gf) h = ((bf - rf) / d + 2) / 6
+  else h = ((rf - gf) / d + 4) / 6
+  return [h, s, l]
+}
+
+function hslToRgb([h, s, l]) {
+  if (s === 0) { const v = Math.round(l * 255); return [v, v, v] }
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s
+  const p = 2 * l - q
+  const chan = (t) => {
+    if (t < 0) t += 1
+    if (t > 1) t -= 1
+    if (t < 1 / 6) return p + (q - p) * 6 * t
+    if (t < 1 / 2) return q
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6
+    return p
+  }
+  return [Math.round(chan(h + 1 / 3) * 255), Math.round(chan(h) * 255), Math.round(chan(h - 1 / 3) * 255)]
+}
+
+/** HSL 亮度钳制 ⇒ hex（解析失败 ⇒ 原值；已在区间内 ⇒ 原值）。 */
+function clampLightness(hex, min, max) {
+  const rgb = hexToRgb(hex)
+  if (rgb === null) return hex
+  const [h, s, l] = rgbToHsl(rgb)
+  const clamped = Math.min(max, Math.max(min, l))
+  if (clamped === l) return hex
+  return "#" + hslToRgb([h, s, clamped]).map((v) => v.toString(16).padStart(2, "0")).join("")
+}
+
+function applyAccentVars(doc, lightHex, darkHex) {
+  doc.documentElement.style.setProperty(
+    "--accent-text",
+    `light-dark(${clampLightness(lightHex, 0, 0.52)}, ${clampLightness(darkHex, 0.66, 1)})`,
+  )
+  doc.documentElement.style.setProperty(
+    "--accent-solid",
+    `light-dark(${clampLightness(lightHex, 0, 0.55)}, ${clampLightness(darkHex, 0.5, 0.66)})`,
+  )
+}
+
 function applyAccent(doc, value) {
   doc.documentElement.dataset.accent = value
+  const preset = ACCENTS.find((a) => a.id === value)
+  if (preset !== undefined) applyAccentVars(doc, preset.light, preset.dark)
 }
 
 /** 自定义色应用（inline `--accent` —— 特异性高于一切规则，预设切换时须清除）。 */
 function applyAccentCustom(doc, hex) {
   doc.documentElement.dataset.accent = "custom"
   doc.documentElement.style.setProperty("--accent", hex)
+  applyAccentVars(doc, hex, hex)
 }
 
 /** 当前落地值（设置面板读面——store 切片缺位兜底）。 */
