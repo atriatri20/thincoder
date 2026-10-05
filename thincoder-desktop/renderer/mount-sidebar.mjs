@@ -53,7 +53,7 @@ function sidebarModel(state = {}) {
   const recent = (Array.isArray(state?.project?.recent) ? state.project.recent : [])
     .map((row) => (typeof row?.cwd === "string" && row.cwd !== "" ? row.cwd : null))
     .filter((rowCwd) => rowCwd !== null && rowCwd !== cwd)
-  // 项目目录（sessions:catalog · 2026-10-05）：当前项目排首；displayTitle 兜底链（title → firstMessage）与
+  // 项目目录（sessions:catalog · 2026-10-05）：排序由 projectsOf 统一（固定字母序）；displayTitle 兜底链（title → firstMessage）与
   // sessionModel `displayTitleOf` 同判（零第二判据——此处独立实现因跨档不可导入）。
   const catalogProjects = (Array.isArray(state?.catalog) ? state.catalog : []).map((project) => ({
     cwd: project?.cwd ?? null,
@@ -165,7 +165,7 @@ function sessionItemNode(item, handlers, opts = {}) {
   }
 }
 
-/** 项目组数据（**catalog 驱动** · 当前项目排首；catalog 未到 ⇒ 当前项目由 model.items 兜底合成）：
+/** 项目组数据（**catalog 驱动** · 按项目新建时间降序——新的在前；catalog 未到 ⇒ 当前项目由 model.items 兜底合成）：
  *  每项目 { cwd, isCurrent, sessions: [{ slot, item(title 兜底链 ∕ badge), updatedAt }] }。 */
 function projectsOf(model) {
   const cwd = model.project?.cwd ?? null
@@ -196,7 +196,20 @@ function projectsOf(model) {
       model.items.map((item) => ({ slot: item.key, title: item.title, badge: item.badge, updatedAt: item.ts ?? 0, isActive: item.active })),
     )
   }
-  return list.sort((a, b) => (b.isCurrent ? 1 : 0) - (a.isCurrent ? 1 : 0))
+  // 排序（用户反馈 2026-10-05 两轮：① 选定项目不置顶；② 按项目**新建时间**降序——新的在前）。
+  // 「新建时间」= 项目**最早会话**的 updatedAt（manifest 无 createdAt ⇒ 首次启用时点为最稳代理；
+  // 旧项目不因新会话跳动——固定序同求）。零会话项目（catalog 空组）⇒ 时间 0 ⇒ 排尾；同刻以全路径决序。
+  // 会话在组内仍按最近活动降序。
+  const startedAtOf = (project) => project.sessions.reduce(
+    (min, s) => (Number.isFinite(s.updatedAt) && s.updatedAt > 0 && (min === 0 || s.updatedAt < min) ? s.updatedAt : min),
+    0,
+  )
+  return list.sort((a, b) => {
+    const ta = startedAtOf(a)
+    const tb = startedAtOf(b)
+    if (ta !== tb) return tb - ta
+    return a.cwd < b.cwd ? -1 : 1
+  })
 }
 
 /** 展开态（cwd 集合 · localStorage 持久 —— ZCode `expandedWorkspacePaths` 同义）：当前项目恒展开。 */
