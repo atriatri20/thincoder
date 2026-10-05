@@ -655,6 +655,47 @@ body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; 
 }
 .sidebar-rename > button:hover { background: var(--hover-bg); color: var(--fg); }
 
+/* ── 侧边栏：搜索框 ∕ hover ⋯ ∕ 日期分组（2026-10-05）─────────────────────── */
+.sidebar-search { padding: 0 10px 8px; }
+.sidebar-search-input {
+  width: 100%;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-raised);
+  color: var(--fg);
+  font: 13px/1.6 var(--font);
+  outline: none;
+}
+.sidebar-search-input:focus { border-color: color-mix(in srgb, var(--fg) 30%, transparent); }
+.sidebar-search-input::placeholder { color: var(--fg-muted); opacity: 0.7; }
+.sidebar-item { position: relative; }
+.sidebar-item-more {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-muted);
+  font: 14px/1 var(--font);
+  cursor: pointer;
+  opacity: 0;
+}
+.sidebar-item-more::before { content: "⋯"; }
+.sidebar-item:hover .sidebar-item-more,
+.sidebar-item-more:focus-visible { opacity: 1; }
+.sidebar-item-more:hover { background: var(--hover-bg-strong); color: var(--fg); }
+.sidebar-item-more:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+.sidebar-item-title { padding-right: 2px; }
+.sidebar-item:hover .sidebar-item-title { padding-right: 22px; }
+.sidebar-empty-filter { padding: 8px; color: var(--fg-muted); font-size: 12px; }
+
 /* ── 顶部会话下拉：宽度随内容放足（修长标题显示不全 · 2026-10-05）──────────── */
 .session-dropdown {
   left: 0;

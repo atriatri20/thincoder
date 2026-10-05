@@ -39,38 +39,79 @@ function baseName(cwd) {
   return parts.length > 0 ? parts[parts.length - 1] : String(cwd ?? "")
 }
 
-/** 边栏模型（纯读切片）：当前项目树 = `sessionModel` 复用 + 最近项目（当前 cwd 除外 —— 回执原序 = mtime 降序）。 */
+/** 边栏模型（纯读切片）：当前项目树 = `sessionModel` 复用（补 ts 供日期分组）+ 最近项目（当前 cwd 除外）。
+ *  搜索过滤文案住本档模块态（`filterText` —— 输入域局部态，不入 store）。 */
+let filterText = ""
+
 function sidebarModel(state = {}) {
   const model = sessionModel(state)
   const cwd = model.project?.cwd ?? null
+  const raw = Array.isArray(state?.sessions) ? state.sessions : []
+  const tsBySlot = new Map(raw.map((row) => [String(row?.slot), row?.updatedAt]))
+  const items = model.items.map((item) => ({ ...item, ts: tsBySlot.get(item.key) }))
   const recent = (Array.isArray(state?.project?.recent) ? state.project.recent : [])
     .map((row) => (typeof row?.cwd === "string" && row.cwd !== "" ? row.cwd : null))
     .filter((rowCwd) => rowCwd !== null && rowCwd !== cwd)
-  return { ...model, recent }
+  return { ...model, items, recent }
 }
 
-/** 会话条目行（点击即切 —— 三路开会话同一路 = `activateSession`；**右键 = 会话管理菜单**（重命名 ∕ 删除 ——
- *  出口复用 session-wire 单一实现，见 handlers.onRename ∕ onDelete）。 */
+/** 日期分组键（ZCode 同口径：今天 ∕ 最近 7 天 ∕ 更早；无 ts ⇒ 更早）。 */
+function groupKeyOf(ts) {
+  if (!Number.isFinite(ts)) return "earlier"
+  const now = new Date()
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  if (ts >= startToday) return "today"
+  if (ts >= startToday - 6 * 86400000) return "week"
+  return "earlier"
+}
+
+/** 会话条目行（**容器 = div**（⋯ 按钮需内嵌——button 嵌 button 非法）：点击 ∕ Enter ∕ Space 即切；
+ *  **右键 = 管理菜单**；**hover ⋯ = 同款菜单**（发现性 · 2026-10-05）。 */
 function sessionItemNode(item, handlers) {
+  const openMenuAt = (x, y) => handlers.onMenuOpen?.({ key: item.key, title: item.title, x, y })
   return {
-    tag: "button",
+    tag: "div",
     props: {
       class: item.active === true ? "sidebar-item active" : "sidebar-item",
-      type: "button",
+      role: "button",
+      tabindex: "0",
       "data-action": "sidebar:switch",
       "data-key": item.key,
       title: item.title,
       onClick: () => handlers.onSwitch?.(item.key),
+      onKeydown: (event) => {
+        if (event?.key === "Enter" || event?.key === " ") {
+          event.preventDefault()
+          handlers.onSwitch?.(item.key)
+        }
+      },
       onContextMenu: (event) => {
         if (typeof handlers.onMenuOpen !== "function") return
         event.preventDefault()
-        handlers.onMenuOpen({ key: item.key, title: item.title, x: event.clientX, y: event.clientY })
+        openMenuAt(event.clientX, event.clientY)
       },
     },
     children: [
       { tag: "span", props: { class: "sidebar-item-title" }, children: [item.title] },
       item.badge
         ? { tag: "span", props: { class: "sidebar-item-badge" }, children: [item.badge] }
+        : null,
+      typeof handlers.onMenuOpen === "function"
+        ? {
+          tag: "button",
+          props: {
+            class: "sidebar-item-more",
+            type: "button",
+            "aria-label": t("sidebar.menu"),
+            title: t("sidebar.menu"),
+            onClick: (event) => {
+              event.stopPropagation()
+              const rect = event.currentTarget.getBoundingClientRect()
+              openMenuAt(rect.right, rect.top)
+            },
+          },
+          children: [],
+        }
         : null,
     ],
   }
@@ -92,19 +133,53 @@ function recentRowNode(cwd, handlers) {
   }
 }
 
-/** 边栏树（品牌行 → 动作行 → 滚动区〔项目段 ∕ 最近段〕→ 底行〔设置〕）。字形全住 CSS `content`。 */
+/** 会话区树（滚动区全量内容 · **搜索过滤 + 日期分组** · 2026-10-05）：有过滤词 ⇒ 平铺过滤结果（标题 ∕ 路径
+ *  包含，大小写不敏感）；无过滤 ⇒ 会话按 今天 ∕ 最近 7 天 ∕ 更早 三组（ZCode 同口径，空组不出头）+ 最近项目。 */
+function sessionsTree(model, handlers) {
+  const filter = filterText.trim().toLowerCase()
+  const matched = (text) => filter === "" || String(text ?? "").toLowerCase().includes(filter)
+  const sessions = model.items.filter((item) => matched(item.title))
+  const recents = model.recent.filter((cwd) => matched(cwd))
+  const parts = [
+    { tag: "div", props: { class: "sidebar-section-head" }, children: [t("sidebar.projects")] },
+    model.project === null
+      ? { tag: "div", props: { class: "sidebar-project-row empty", "data-project": "" }, children: [{ tag: "span", props: { class: "sidebar-item-title" }, children: [t("rail.action.openDir")] }] }
+      : { tag: "div", props: { class: "sidebar-project-row", "data-project": model.project.cwd, title: model.project.cwd }, children: [{ tag: "span", props: { class: "sidebar-item-title" }, children: [model.project.name] }] },
+  ]
+  if (filter !== "") {
+    parts.push(...sessions.map((item) => sessionItemNode(item, handlers)))
+    if (recents.length > 0) {
+      parts.push({ tag: "div", props: { class: "sidebar-section-head recent" }, children: [t("sidebar.recent")] })
+      parts.push(...recents.map((cwd) => recentRowNode(cwd, handlers)))
+    }
+    if (sessions.length === 0 && recents.length === 0) {
+      parts.push({ tag: "div", props: { class: "sidebar-empty-filter" }, children: [t("sidebar.empty")] })
+    }
+    return parts
+  }
+  const groups = [
+    { key: "today", label: t("sidebar.group.today"), items: [] },
+    { key: "week", label: t("sidebar.group.week"), items: [] },
+    { key: "earlier", label: t("sidebar.group.earlier"), items: [] },
+  ]
+  for (const item of model.items) {
+    const key = groupKeyOf(item.ts)
+    ;(key === "today" ? groups[0] : key === "week" ? groups[1] : groups[2]).items.push(item)
+  }
+  for (const group of groups) {
+    if (group.items.length === 0) continue
+    parts.push({ tag: "div", props: { class: "sidebar-section-head" }, children: [group.label] })
+    parts.push(...group.items.map((item) => sessionItemNode(item, handlers)))
+  }
+  if (model.recent.length > 0) {
+    parts.push({ tag: "div", props: { class: "sidebar-section-head recent" }, children: [t("sidebar.recent")] })
+    parts.push(...model.recent.map((cwd) => recentRowNode(cwd, handlers)))
+  }
+  return parts
+}
+
+/** 边栏树（品牌行 → 动作行 → 搜索框 → 滚动区〔项目 ∕ 会话分组 ∕ 最近〕→ 底行〔设置〕）。字形全住 CSS `content`。 */
 function sidebarTree(model, handlers) {
-  const projectRow = model.project === null
-    ? {
-      tag: "div",
-      props: { class: "sidebar-project-row empty", "data-project": "" },
-      children: [{ tag: "span", props: { class: "sidebar-item-title" }, children: [t("rail.action.openDir")] }],
-    }
-    : {
-      tag: "div",
-      props: { class: "sidebar-project-row", "data-project": model.project.cwd, title: model.project.cwd },
-      children: [{ tag: "span", props: { class: "sidebar-item-title" }, children: [model.project.name] }],
-    }
   return {
     tag: "div",
     props: { class: "sidebar-body" },
@@ -119,15 +194,21 @@ function sidebarTree(model, handlers) {
         ] },
         { tag: "button", props: { class: "sidebar-opendir", type: "button", "data-action": "sidebar:openDir", "aria-label": t("rail.action.openDir"), title: t("rail.action.openDir"), onClick: () => handlers.onOpenProject?.() }, children: [] },
       ] },
-      { tag: "div", props: { class: "sidebar-scroll" }, children: [
-        { tag: "div", props: { class: "sidebar-section-head" }, children: [t("sidebar.projects")] },
-        projectRow,
-        { tag: "div", props: { class: "sidebar-sessions" }, children: model.items.map((item) => sessionItemNode(item, handlers)) },
-        model.recent.length > 0
-          ? { tag: "div", props: { class: "sidebar-section-head recent" }, children: [t("sidebar.recent")] }
-          : null,
-        ...model.recent.map((cwd) => recentRowNode(cwd, handlers)),
+      { tag: "div", props: { class: "sidebar-search" }, children: [
+        { tag: "input", props: {
+          class: "sidebar-search-input", type: "search",
+          placeholder: t("sidebar.search"), "aria-label": t("sidebar.search"),
+          value: filterText,
+          onInput: (event) => {
+            filterText = String(event?.target?.value ?? "")
+            paintSidebarFace()
+            const input = document.querySelector(".sidebar-search-input")
+            input?.focus()
+            input?.setSelectionRange(filterText.length, filterText.length)
+          },
+        }, children: [] },
       ] },
+      { tag: "div", props: { class: "sidebar-scroll" }, children: sessionsTree(model, handlers) },
       { tag: "div", props: { class: "sidebar-foot" }, children: [
         { tag: "button", props: { class: "sidebar-settings", type: "button", "data-action": "sidebar:settings", "aria-label": t("settings.title"), title: t("settings.title"), onClick: handlers.onOpenSettings }, children: [
           { tag: "span", props: { class: "sidebar-settings-label" }, children: [t("settings.title")] },
@@ -137,7 +218,9 @@ function sidebarTree(model, handlers) {
   }
 }
 
-/** 整树重挂（纯读现态 —— 容器缺位 ⇒ 空转；树小 ⇒ 零键控差分）。 */
+/** 整树重挂（纯读现态 —— 容器缺位 ⇒ 空转；树小 ⇒ 零键控差分）。前向引用（搜索框 onInput 消费）。 */
+let paintSidebarFace = () => {}
+
 function paintSidebar(handlers) {
   const root = document.querySelector(SIDEBAR_SLOT)
   if (!root || typeof root.append !== "function") return null
@@ -282,6 +365,7 @@ export function attachSidebar(handlers = {}) {
     },
   }
   const paint = () => paintSidebar(face)
+  paintSidebarFace = paint
   const detach = store.subscribe((state, changedKeys) => {
     if (Array.isArray(changedKeys) && !changedKeys.some((key) => SIDEBAR_KEYS.includes(key))) return
     paint()
