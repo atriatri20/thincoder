@@ -587,6 +587,23 @@ body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; 
   pointer-events: none;
 }
 .minimap-tip[data-visible] { display: block; }
+/* title 浮窗（title-tips.mjs 接管面——全局原生 tooltip 替身）：.minimap-tip 同构卡（用户需求
+ * 「浮选窗改小地图样式」）——12px 圆角 ∕ 描边 ∕ pop 阴影 ∕ 13px 字 ∕ pre-line 多行；定位 inline style（JS）。 */
+.title-tip {
+  position: fixed;
+  z-index: 9999;
+  max-width: 20rem;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-pop);
+  color: var(--fg);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-line;
+  pointer-events: none;
+}
 .minimap-tip-user {
   margin: 0 0 8px;
   font: 500 13px/1.5 var(--font);

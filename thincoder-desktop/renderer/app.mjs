@@ -49,6 +49,7 @@ import { attachChatWork } from "./chat-work.mjs"
 import { attachSidebar } from "./mount-sidebar.mjs"
 import { reasoningBulkExpanded, setReasoningBulkExpanded } from "./reasoning-pref.mjs"
 import { configuredFlag, patchSettings, returnToBottom, setFollowing, store } from "./store.mjs"
+import { initTitleTips } from "./title-tips.mjs" // title 浮窗接管（fork 2026-10-05——原生 tooltip 旧样式 → codex 卡）
 import { initAccent, initTheme } from "./theme.mjs" // 主题三态 + 主题色（D33 · #743 · fork 主题色批 —— chrome 级状态直写面；装配期一次 + 切片播种）
 import { MAX_RENDER_BLOCKS, attachScroll, compensateTop, nextWindow } from "./views/chat-scroll.mjs" // #910：compensateTop = 回填全重建视口补偿
 import { chatModel, retrySourceOf } from "./views/chat-model.mjs"
@@ -330,6 +331,7 @@ initPoolCollapse() // 活动池整列折叠（Codex 形大改批 —— chrome �
 
 /** 主题三态（D33 · 台账 #743 —— 出档 `renderer/theme.mjs`）：装配期一次（读存储 ⇒ 归一 ⇒ 写 `data-theme` ⇒ 切片播种
  *  —— 先于首绘可及面，同 `initPoolWidth` 位）；`dataset.theme` 写仍同步不经帧（设置面重绘键 = `SETTINGS_KEYS` 含 `theme`）。 */
+initTitleTips() // title 浮窗接管——先于首绘（否则首帧 title 原生弹旧样式）
 store.set({ theme: initTheme(), accent: initAccent() })
 // 勾选态回读（D36 · 两写作点①装配初值）：报告落地主题 ⇒ 主进程菜单主题▸带勾（拒绝 ∥ ok 假 ⇒ 记错，零静默；菜单侧 fail-open 全零勾）。
 void host?.invoke("theme:state", { theme: store.get().theme })?.then(

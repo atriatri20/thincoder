@@ -43,14 +43,15 @@ export function paintComposerWords() {
  *  回写 plan title —— 静涂被覆盖的在册边缘；本观察器见字面回英文 ⇒ 复涂，Attribute Observer 自持断开防线）。 */
 export function attachChromeWords() {
   paintComposerWords()
-  const plan = document.querySelector("#plan-btn")
-  if (plan !== null && typeof MutationObserver === "function") {
-    const repaint = () => {
-      if (plan.title === t("toolbar.plan")) return
-      if (plan.disabled !== true && plan.title !== t("toolbar.planDisabled")) plan.title = t("toolbar.plan")
-    }
-    new MutationObserver(repaint).observe(plan, { attributes: true, attributeFilter: ["title"] })
-  }
+  // plan 监听（title-tips 接管批 · 2026-10-05 二修）：原生 title 属性已被接管摘除 ⇒ **属性变异信号消失**
+  // （MutationObserver attributeFilter 失效——首修的 document 级委托同样收不到）⇒ 改听接管面派发的
+  // `titlechange` 事件（title-tips.mjs 值变即派 ∕ bubbles）+ 回调内**现查** #plan-btn（顺根治重挂失锚在册债）。
+  document.addEventListener("titlechange", () => {
+    const plan = document.querySelector("#plan-btn")
+    if (plan === null) return
+    if (plan.title === t("toolbar.plan")) return
+    if (plan.disabled !== true && plan.title !== t("toolbar.planDisabled")) plan.title = t("toolbar.plan")
+  })
   return store.subscribe((state, changedKeys) => {
     if (Array.isArray(changedKeys) && !changedKeys.includes("locale")) return
     paintComposerWords()
