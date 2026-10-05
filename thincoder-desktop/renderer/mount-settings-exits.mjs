@@ -261,7 +261,20 @@ export function createExits(deps = {}) {
     onToggleLang: (target) => void toggleLang(target),
     onSetTheme: (target) => setThemeFace(target),
     onSetAccent: (id) => setAccentFace(id),
-    onSetCustomAccent: (hex) => setAccentFace(hex), // 自定义取色出口（views/settings.mjs input[type=color] onInput）
+    // 自定义取色两段出口（views/settings.mjs input[type=color]）：**input = 预览段** —— 只落 `documentElement` +
+    // localStorage（`setCustomAccent`），**零 store 写**（SETTINGS_KEYS 含 accent ⇒ store 写即设置面重绘 ⇒
+    // 重绘销毁 input 节点 ⇒ 原生取色弹层失锚即关 —— 用户「点一下就退出 ∕ 没法试色」根因）；
+    // **change ∕ cancel = 提交段**（弹层已收口）⇒ 补 store 切片 ⇒ 色板 active 态随重绘；cancel 值 = 打开时原值 ⇒ 语义 = 还原。
+    onSetCustomAccent: (hex) => {
+      if (typeof hex !== "string" || !hex.startsWith("#")) return
+      setCustomAccent(hex)
+    },
+    onCommitCustomAccent: (hex) => {
+      if (typeof hex !== "string" || !hex.startsWith("#")) return
+      const landed = setCustomAccent(hex)
+      if (landed === null) return
+      store.set({ accent: landed })
+    },
     onCloseSettings: () => closeSettings(),
     onSelectSection: (name) => setSettings({ nav: name }), // 侧边栏导航式设置页 · 2026-10-04：选中段落切片（`views/settings.mjs` 读面 `nav`）
     onSubmit: (event) => void submitChannel(event),

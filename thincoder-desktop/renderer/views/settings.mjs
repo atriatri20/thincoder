@@ -276,6 +276,7 @@ function themeBody(model, handlers) {
 function accentNode(model, handlers) {
   const onSet = typeof handlers?.onSetAccent === "function" ? handlers.onSetAccent : null
   const onCustom = typeof handlers?.onSetCustomAccent === "function" ? handlers.onSetCustomAccent : null
+  const onCommit = typeof handlers?.onCommitCustomAccent === "function" ? handlers.onCommitCustomAccent : null
   const current = typeof model?.accent === "string" && model.accent !== "" ? model.accent : "blue"
   const customActive = current.startsWith("#")
   const swatch = (a) => {
@@ -301,6 +302,8 @@ function accentNode(model, handlers) {
       value: customActive ? current : "#7c6cf0",
       "aria-label": t("sidebar.accentCustom"),
       onInput: (event) => onCustom === null ? undefined : onCustom(String(event?.target?.value ?? "")),
+      onChange: (event) => onCommit === null ? undefined : onCommit(String(event?.target?.value ?? "")),
+      onCancel: (event) => onCommit === null ? undefined : onCommit(String(event?.target?.value ?? "")),
     }, children: [] },
   ] }
   return {
