@@ -79,22 +79,28 @@ export function effortOf(entry, model) {
 }
 
 /**
- * `provider:list` ⇒ `{ ok, presets:[{ name, desc, baseURL, model }], providers:[{ name, shape, baseURL, model?, hasKey, maskedKey, active, proxy, effort, available?, unavailableReason? }], active }`。
+ * `provider:list` ⇒ `{ ok, presets:[{ name, desc, baseURL, model }], providers:[{ name, shape, baseURL, model?, hasKey, maskedKey, active, proxy, effort, available?, unavailableReason? }], active, defaultModel }`。
  * `presets` = 核预设表投影（24 条 · 序 = 核表声明序——供设置面渠道段与首启向导第一步选预设，
  * 消费面无第二份表）；`shape` = 名在核预设表 ⇒ `preset`，否则 `custom`；
  * `active` 单源 = 核 `resolveProviders().activeProvider`
  * （= `defaultModel` 的 provider 段 ⇒ 命中行同时 `provider.active` 与顶层 `active` 双读一致）。
+ * **2026-10-04 端差收正（采用按钮显示源修复）**：增顶层 `defaultModel`（真值复合串逐字直传 ∥ 缺 ⇒ null）——
+ * 渲染面「当前模型」读数直取本键（对齐 VSC `settings.mjs:160` 直读 `loadRaw().defaultModel`），不再经渠行
+ * `model` 字段重算：渠道条目 `model` = 建渠时默认（`provider:save` 播种），采用径（`settings:agent`
+ * `defaultModel` patch）**不回写渠行** ⇒ 两值分叉时旧径显示失真（采用成功而界面恒不刷新——真机实锤）。
  * **S5 增**：逐行 `proxy` = 渠级代理位（布尔投影）；**S3 增**：逐行 `available` ∕ `unavailableReason` **读核落账**
  * （`admissionOf` —— 最近一次落账；**未落账 ⇒ 两键缺席** —— 禁假造；`unavailableReason` = 核失败句逐字）。
  * 畸形档不吞：核 `loadRaw` 抛 ⇒ 本档零 catch ⇒ invoke 拒绝直传。
  */
 export function providerList() {
   const { providers, activeProvider } = resolveProviders()
+  const dmRaw = loadConfig()?.defaultModel
   // spec 绑定模型：`defaultModel` 复合串（核 `parseModelRef` 单源解析）——活动行取模型段，余行取自身 `model`。
-  const ref = parseModelRef(loadConfig()?.defaultModel ?? null, providers)
+  const ref = parseModelRef(dmRaw ?? null, providers)
   return {
     ok: true,
     presets: presetChoices(),
+    defaultModel: typeof dmRaw === "string" && dmRaw !== "" ? dmRaw : null,
     active: activeProvider ?? null,
     providers: providers.map((p) => {
       const hasKey = hasKeyOf(p)

@@ -26,7 +26,7 @@ import { setBoot } from "./dom.mjs"
 import { attachEvents } from "./events-subscribe.mjs"
 import { dispatchFrame } from "./frame-dispatch.mjs"
 import { createHeartbeat, refreshLiveBlocks } from "./heartbeat.mjs"
-import { initDict, setStringsSink } from "./i18n.mjs"
+import { initDict, setStringsSink, t } from "./i18n.mjs"
 import { createFrameMerge } from "/rc/flow/frame.mjs"
 import { setStrings } from "/rc/i18n.mjs"
 import { attachCards } from "./mount-cards.mjs"
@@ -42,6 +42,12 @@ import { createMenuActions } from "./menu-actions.mjs" // 菜单动作分派（D
 import { createPanelReadout } from "./panel-readout.mjs" // 实况回读上报（子代理面板批 —— `panel:state` 渲染→主单向；帧出口挂点见 `applyFrame`）
 import { initPoolWidth, refreshResizerLabel } from "./pool-width.mjs" // 右栏宽度拖动（D30 · #742 —— chrome 级直写面）
 import { attachSearch } from "./search.mjs"
+import { attachChromeWords } from "./chrome-words.mjs"
+import { attachMinimap } from "./minimap.mjs"
+import { attachReasoningTimes } from "./reasoning-times.mjs"
+import { attachChatWork } from "./chat-work.mjs"
+import { attachSidebar } from "./mount-sidebar.mjs"
+import { reasoningBulkExpanded, setReasoningBulkExpanded } from "./reasoning-pref.mjs"
 import { configuredFlag, patchSettings, returnToBottom, setFollowing, store } from "./store.mjs"
 import { initTheme } from "./theme.mjs" // 主题三态（D33 · #743 —— chrome 级状态直写面；装配期一次 + 切片播种）
 import { MAX_RENDER_BLOCKS, attachScroll, nextWindow } from "./views/chat-scroll.mjs"
@@ -67,6 +73,20 @@ const settingsFace = attachSettings(host, { onProjectOpened: openDir, onProvider
 // 输入区一族（挂载 + deps 构造 → 核件工厂；出档 `renderer/mount-composer.mjs`）：`openSettings` = 控件行第 7 钮出口 ∕ `submit` = 直发径单副本（错误横幅重试消费）。
 const composer = attachComposer(host, { openSettings: () => settingsFace.openSettings() })
 const { paintStatus } = attachStatus() // 状态行一族（D17 / D22 承载 17 段单点重建 —— 出档 `renderer/mount-status.mjs`）
+// 左侧工作区边栏（Codex 形大改批 · 2026-10-04 —— 出档 `renderer/mount-sidebar.mjs`；自持订阅 ∕ 折叠态内聚；
+// 出口复用既有单一实现：切会话 ∕ 新建 ∕ 开项目〔openDir = 函数声明提升，迟绑定安全〕∕ 设置面开口）。
+attachSidebar({
+  onSwitch: activateSession,
+  onNew: createSession,
+  onOpenProject: (path) => openDir(path),
+  onOpenSettings: () => settingsFace.openSettings(),
+  onRename: confirmRename, // 会话管理（右键菜单 · 2026-10-05）—— session-wire 单一实现转口
+  onDelete: deleteSession,
+})
+attachChromeWords() // 核件控件行静态字面语言补丁（中文模式收正批 —— 出档 `renderer/chrome-words.mjs`；序须在 `attachComposer` 后）
+attachMinimap() // 对话小地图（Codex 形大改批 —— 出档 `renderer/minimap.mjs`；自持三观察，零帧路径涉入）
+attachReasoningTimes() // 思考耗时摘要增量回写（同批 —— 出档 `renderer/reasoning-times.mjs`；补增量挂载径的摘要缝）
+attachChatWork() // 工作过程折叠（ZCode ConversationTurnGroup 语义移植 —— 出档 `renderer/chat-work.mjs`；DOM 后处理，块机制零涉）
 
 /** 菜单动作分派（D36 · #811 ∥ 设置菜单升级批 · #817 —— `ev:menu` 窄口消费）：六动作 ⇒ 既有单一实现（零第二份）；`searchFace` 迟绑定（装配序在下行）。 */
 const menuActions = createMenuActions({
@@ -94,6 +114,16 @@ function paintSessionBar(state = store.get()) {
     onRename: confirmRename, // 改名确认（词面读数 = 挂载面 —— `onRename(key, text)` 回转）
     onDelete: deleteSession, // 确认 popover「删除」键出口
     onOpenProject: () => openDir(), // 项目钮 = 引导面同出口（`project:open` 单一实现）
+    onToggleReasoning: () => { // 思考链总折叠（批量动作 · ZCode 语义对齐：新块恒收起，本钮只翻当前树）
+      const expanded = setReasoningBulkExpanded(!reasoningBulkExpanded())
+      document.querySelectorAll(".reasoning-block").forEach((details) => {
+        if (details.open !== expanded) {
+          details.dataset.autoT = "1" // 程序态翻转标记 —— `reasoning-times.mjs` toggle 判据豁免 userOpen
+          details.open = expanded
+        }
+      })
+      paintSessionBar() // 钮态随批量态（syncBar 不刷本钮 —— 全量重挂最简）
+    },
   })
 }
 

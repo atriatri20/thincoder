@@ -54,6 +54,22 @@ export const COMPOSER_DICT = Object.freeze({
     "reasoning.minimal": "Minimal",
     "reasoning.none": "Off",
     "reasoning.enabled": "Reasoning",
+    // ── ⑤ 控件行静态字面（中文模式收正批 · 2026-10-04 —— 消费面 = `renderer/chrome-words.mjs` DOM 补丁；
+    //    核 `controls.mjs` ∕ `attach.mjs` 原字面 = VSC 逐字英文硬编码（C4），en 值逐字保持，zh 补译）──
+    "toolbar.changeModel": "Change model",
+    "toolbar.reasoning": "Reasoning effort",
+    "toolbar.autoApprove": "Auto-approve tools",
+    "toolbar.autoApproveToggle": "Toggle auto-approve",
+    "toolbar.advisor": "Advisor review",
+    "toolbar.advisorToggle": "Toggle advisor review",
+    "toolbar.engineering": "Engineering mode",
+    "toolbar.engineeringToggle": "Toggle engineering mode",
+    "toolbar.plan": "Plan mode (read-only exploration)",
+    "toolbar.planToggle": "Toggle plan mode",
+    "toolbar.settings": "Settings",
+    "toolbar.openSettings": "Open settings",
+    "attach.image": "Attach image",
+    "attach.label": "Attach",
   },
   zh: {
     // ── ① 输入行 ∕ 提交面 ──
@@ -88,5 +104,20 @@ export const COMPOSER_DICT = Object.freeze({
     "reasoning.minimal": "最小",
     "reasoning.none": "关闭",
     "reasoning.enabled": "推理",
+    // ── ⑤ 控件行静态字面（与 en 块同拍 —— 键集须相等）──
+    "toolbar.changeModel": "切换模型",
+    "toolbar.reasoning": "推理档位",
+    "toolbar.autoApprove": "自动批准工具",
+    "toolbar.autoApproveToggle": "切换自动批准",
+    "toolbar.advisor": "顾问评审",
+    "toolbar.advisorToggle": "切换顾问评审",
+    "toolbar.engineering": "工程模式",
+    "toolbar.engineeringToggle": "切换工程模式",
+    "toolbar.plan": "计划模式（只读探索）",
+    "toolbar.planToggle": "切换计划模式",
+    "toolbar.settings": "设置",
+    "toolbar.openSettings": "打开设置",
+    "attach.image": "附加图片",
+    "attach.label": "附件",
   },
 })

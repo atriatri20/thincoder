@@ -31,7 +31,8 @@ export { channelFormTree, verifyControl } from "./settings-controls.mjs"
 
 /** 段闭集（序固定 = 渠道 → 模型与档位 → agent 参数 → MCP → 环境〔R7 增〕→ 工具与服务〔R2 增〕→
  *  咨询与顾问〔R7 增〕；R7 终态枚举行「providers ∕ model ∕ agent ∕ mcp ＋ env ＋ tools ＋ models」同序）：
- *  名（`data-section`）+ 词键单源。 */
+ *  名（`data-section`）+ 词键单源。**数据段闭集** —— SCOPES ∕ 弹窗分派 ∕ 失败段标同源；导航展示域另见
+ *  `NAV_SECTIONS`（2026-10-05 增两伪段：外观 ∕ 语言 —— 头部控件迁入左导航，非数据段零切片零状态词）。 */
 export const SECTIONS = Object.freeze([
   { name: "providers", word: "settings.section.providers" },
   { name: "model", word: "settings.section.model" },
@@ -40,6 +41,14 @@ export const SECTIONS = Object.freeze([
   { name: "env", word: "settings.section.env" },
   { name: "tools", word: "settings.section.tools" },
   { name: "models", word: "settings.section.models" },
+])
+
+/** 导航段闭集（= 数据段 + 两**伪段**〔appearance ∕ language〕—— 头部主题 ∕ 语言控件迁入左导航 · 2026-10-05）：
+ *  伪段零数据切片 ∕ 零状态词 ∕ 零弹窗（不在 `SECTIONS` ⇒ SCOPES ∕ modal 分派天然不含）。 */
+export const NAV_SECTIONS = Object.freeze([
+  ...SECTIONS,
+  { name: "appearance", word: "settings.section.appearance" },
+  { name: "language", word: "settings.section.language" },
 ])
 
 /** 段态出词闭集（两态：`none` / `loading`）；`ready` ⇒ 行内容（零状态词）。 */
@@ -143,6 +152,7 @@ export function settingsModel(state) {
   const scope = notice !== null && Object.hasOwn(SCOPE_WORD, notice.scope) ? notice.scope : "panel"
   return {
     open: settings.open === true,
+    nav: str(settings.nav) ?? SECTIONS[0].name, // 侧边栏导航选中段（Codex 形设置页 · 2026-10-04 —— 表外 ⇒ 首段，不猜）
     lang: langOf(state),
     theme: themeOf(state),
     notice: notice === null ? null : { scope, text: reasonWord(notice.reason) },
@@ -244,12 +254,50 @@ function sectionStateNode(state) {
   return { tag: "div", props: { class: "settings-section-state", "data-state-word": "" }, children: [t(STATE_WORD[state])] }
 }
 
+/** 语言体 ∕ 主题体（伪段 · 2026-10-05 —— 头部控件迁入左导航）：同一分段钮族形态（`.settings-theme`），
+ *  主题三态出口 = `onSetTheme(value)`（`theme.mjs` 单写者）；语言二态出口 = `onToggleLang(value)`
+ *  （`config:write` locale 键——显式目标语，非头部的「取另一语」toggle 语义）。缺 handlers ⇒ `disabled`
+ *  （诚实非死控——沿 wire 通则）。 */
+function themeBody(model, handlers) {
+  return [{ tag: "div", props: { class: "settings-row", "data-pref": "theme" }, children: [
+    { tag: "span", props: { class: "settings-row-name" }, children: [t("settings.theme")] },
+    themeNode(model, handlers),
+  ] }]
+}
+
+function langNode(model, handlers) {
+  const lang = model?.lang ?? langOf(null)
+  const onLang = typeof handlers?.onToggleLang === "function" ? handlers.onToggleLang : null
+  return {
+    tag: "div",
+    props: { class: "settings-theme", role: "group", "aria-label": t("settings.section.language") },
+    children: ["zh", "en"].map((value) => {
+      const props = { class: "settings-theme-opt", type: "button", "data-action": "settings:lang", "data-lang": value }
+      if (value === lang.current) {
+        props["data-active"] = ""
+        props["aria-pressed"] = "true"
+      }
+      return { tag: "button", props: wire(props, onLang === null ? undefined : () => onLang(value)), children: [t(`settings.lang.${value}`)] }
+    }),
+  }
+}
+
+function langBody(model, handlers) {
+  return [{ tag: "div", props: { class: "settings-row", "data-pref": "language" }, children: [
+    { tag: "span", props: { class: "settings-row-name" }, children: [t("settings.section.language")] },
+    langNode(model, handlers),
+  ] }]
+}
+
 /** 段体分派（七段各一形；段名闭集 —— 表外段零节点）：各段体住 `settings-sections*.mjs`（经本档导入面），
  *  本档经 `deps` 注入两导出面 + 词表（单一 owner —— 零副本）。**段态门**（三态单源）：`env` ∕ `models` 两
- *  新段 = `ready` 才落行（`none` / `loading` ⇒ 零行节点 —— 防未读达即落默认值〔假读数〕）；`agent` 沿旧
- *  （`loading` 期零体）；`providers` ∕ `model` ∕ `mcp` ∕ `tools` 沿各自旧判（零行为改）。 */
+ *  新段 = `ready` 才落行（`none` ∕ `loading` ⇒ 零行节点 —— 防未读达即落默认值〔假读数〕）；`agent` 沿旧
+ *  （`loading` 期零体）；`providers` ∕ `model` ∕ `mcp` ∕ `tools` 沿各自旧判（零行为改）。
+ *  **伪段**（appearance ∕ language · 2026-10-05）：零切片零状态词，体恒在场。 */
 function sectionBody(name, model, handlers) {
   const deps = { channelForm: channelFormTree, verifyControl, reasonWord, formats: FORMATS, edit: model?.providers?.edit ?? null, keyDraft: model?.providers?.keyDraft ?? null }
+  if (name === "appearance") return themeBody(model, handlers)
+  if (name === "language") return langBody(model, handlers)
   if (name === "providers") return [sectionStateNode(model.providers.state), ...providersBody(model.providers, handlers, deps)]
   if (name === "model") return [sectionStateNode(model.model.state), ...modelBody(model.model, handlers)]
   if (name === "agent") {
@@ -294,28 +342,15 @@ function themeNode(model, handlers) {
   }
 }
 
-/** 面头：标题 + 主题三态钮族（居语言控件**左侧**）+ 语言控件（**锚名逐字** `settings:lang` —— 在关闭控件**左侧**）+ 关闭控件
- *  （**锚名逐字** `settings:close`；字形住 `settings.css` content）。 */
+/** 面头：标题 + 关闭控件（**锚名逐字** `settings:close`；字形住 `settings.css` content）。
+ *  主题 ∕ 语言控件已迁入左导航伪段（appearance ∕ language · 2026-10-05 —— 头部瘦身为标题 + 关闭）。 */
 function headNode(model, handlers) {
-  const lang = model?.lang ?? langOf(null)
-  const onLang = typeof handlers?.onToggleLang === "function" ? () => handlers.onToggleLang(lang.target) : undefined
   const onClose = typeof handlers?.onCloseSettings === "function" ? handlers.onCloseSettings : undefined
   return {
     tag: "header",
     props: { class: "settings-head" },
     children: [
       { tag: "h2", props: { class: "settings-title" }, children: [t("settings.title")] },
-      themeNode(model, handlers),
-      {
-        tag: "button",
-        props: wire({
-          class: "settings-lang",
-          type: "button",
-          "data-action": "settings:lang",
-          "data-lang": lang.target,
-        }, onLang),
-        children: [t(`settings.lang.${lang.target}`)],
-      },
       {
         tag: "button",
         props: wire({
@@ -330,13 +365,46 @@ function headNode(model, handlers) {
   }
 }
 
-/** 面树（纯构树 · 零 DOM）：`open` 假 ⇒ 零子节点（退场 = 容器清空 —— 非 `hidden`）。 */
+/** 导航条目（侧边栏导航式设置页 · 2026-10-04）：段词钮 —— 选中 = `data-active` + `aria-current`。 */
+function navItemNode(section, active, handlers) {
+  const onSelect = typeof handlers?.onSelectSection === "function" ? () => handlers.onSelectSection(section.name) : undefined
+  return {
+    tag: "button",
+    props: wire({
+      class: active ? "settings-nav-item active" : "settings-nav-item",
+      type: "button",
+      "data-action": "settings:section",
+      "data-section": section.name,
+      ...(active ? { "aria-current": "true" } : {}),
+    }, onSelect),
+    children: [t(section.word)],
+  }
+}
+
+/** 设置页双栏体（侧边栏导航式 · 2026-10-04）：左 = 段导航（`NAV_SECTIONS` 闭集全列 —— 数据段 + 外观 ∕ 语言两
+ *  伪段 · 2026-10-05），右 = 选中段内容（`sectionNode` 段壳 + `sectionBody` 段体 —— 复用既有分派单点）；
+ *  `nav` 表外（防御面 —— settingsModel 已归首段，此处兜底同判）。伪段零切片 ⇒ 段态恒 `ready`（零状态词）。 */
+function settingsPageNode(model, handlers) {
+  const nav = NAV_SECTIONS.some((s) => s.name === model.nav) ? model.nav : NAV_SECTIONS[0].name
+  const section = NAV_SECTIONS.find((s) => s.name === nav)
+  return {
+    tag: "div",
+    props: { class: "settings-page", "data-nav": nav },
+    children: [
+      { tag: "nav", props: { class: "settings-nav", "aria-label": t("settings.title") }, children: NAV_SECTIONS.map((s) => navItemNode(s, s.name === nav, handlers)) },
+      { tag: "div", props: { class: "settings-content" }, children: [
+        sectionNode({ ...section, state: model[nav]?.state ?? "ready" }, sectionBody(nav, model, handlers)),
+      ] },
+    ],
+  }
+}
+
+/** 面树（纯构树 · 零 DOM）：`open` 假 ⇒ 零子节点（退场 = 容器清空 —— 非 `hidden`）；
+ *  段呈现 = **双栏导航式**（2026-10-04 —— 原七段纵排栈改左目录 + 右内容，段壳复用零改）。 */
 export function settingsTree(model, handlers = {}) {
   const open = model?.open === true
   const children = open
-    ? [headNode(model, handlers), noticeNode(model.notice), ...SECTIONS.map((s) => sectionNode(
-      { ...s, state: model[s.name].state }, sectionBody(s.name, model, handlers),
-    ))]
+    ? [headNode(model, handlers), noticeNode(model.notice), settingsPageNode(model, handlers)]
     : []
   return { tag: "div", props: { "data-settings": "", "data-state": open ? "open" : "closed", class: "settings" }, children }
 }

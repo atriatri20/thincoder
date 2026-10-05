@@ -130,7 +130,7 @@ export function mountChat(root, state, handlers = {}, limit = MAX_RENDER_BLOCKS)
 /** 造项挂载（尾段 ∥ 中洞 ∥ 头段同点 · 先于其所在侧的读数 —— 新建即着装：巨块初窗 / 说话人标签 / 归档回显 /
  *  推理钉底）：位次 = 窗位（`item.index`）；插点 = `item.before`（其后首账项）—— 缺 ⇒ 尾插点 `blockAnchor`。 */
 function mountItem(root, model, handlers, item) {
-  const node = build(blockNode(item.block, item.index, model.hidden, handlers, model.blocks[item.index - 1], model.canRetry === true))
+  const node = build(blockNode(item.block, item.index, model.hidden, handlers, model.blocks[item.index - 1], model.canRetry === true, model.blocks[item.index + 1]))
   root.insertBefore(node, item.before === null ? blockAnchor(root) : item.before.node)
   dressNode(node, item.block, model.following === true)
 }
@@ -148,7 +148,7 @@ function setStreaming(node, on) {
 function refreshNode(node, block, index, model, handlers) {
   if (!node || !block) return node
   if (node.getAttribute?.("data-block-kind") !== block.kind) {
-    const fresh = build(blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true))
+    const fresh = build(blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true, model.blocks[index + 1]))
     node.replaceWith(fresh)
     dressNode(fresh, block, model.following === true)
     return fresh

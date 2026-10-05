@@ -105,13 +105,15 @@ function normSubagentMeta(meta) {
 export function blockOfMessage(msg) {
   const kind = msg?.kind
   const at = atOf(msg)
+  // 块级 ts（工作折叠时长端点 · `chat-work.mjs` 消费）：assistant 帧时刻 = 该帧全部产出块共享。
+  const ts = typeof msg?.timestamp === "number" && Number.isFinite(msg.timestamp) ? msg.timestamp : null
   if (kind === "user") {
     const block = { kind: "user", text: textOf(msg.text), ...at }
-    if (typeof msg.timestamp === "number" && Number.isFinite(msg.timestamp)) block.ts = msg.timestamp
+    if (ts !== null) block.ts = ts
     return [block]
   }
   if (kind === "error") return [{ kind: "error", text: textOf(msg.text), ...at }]
-  if (kind === "tool") return [{ ...toolBlock(msg), ...at }]
+  if (kind === "tool") return [{ ...toolBlock(msg), ...at, ...(ts !== null ? { ts } : {}) }]
   // 留档记录 · subagent 快照（活流归档同形 —— `renderer/subagent-reduce.mjs` `archiveIntoFlow` 单源）
   if (kind === "subagent") {
     const src = msg.meta !== null && typeof msg.meta === "object" ? msg.meta : {}
@@ -121,9 +123,9 @@ export function blockOfMessage(msg) {
   if (kind !== "assistant") return []
   const blocks = []
   const reasoning = textOf(msg.reasoning)
-  if (reasoning !== null && reasoning !== "") blocks.push({ kind: "reasoning", text: reasoning, ...at })
+  if (reasoning !== null && reasoning !== "") blocks.push({ kind: "reasoning", text: reasoning, ...at, ...(ts !== null ? { ts } : {}) })
   const text = textOf(msg.text)
-  if (text !== null && text !== "") blocks.push({ kind: "assistant", text, ...at })
+  if (text !== null && text !== "") blocks.push({ kind: "assistant", text, ...at, ...(ts !== null ? { ts } : {}) })
   const tools = Array.isArray(msg.tools) ? msg.tools : []
   for (const tool of tools) blocks.push({ ...toolBlock(tool), ...at })
   return blocks

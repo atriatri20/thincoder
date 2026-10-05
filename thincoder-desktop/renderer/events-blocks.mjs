@@ -40,21 +40,23 @@ export function clearCursor(state) {
 }
 
 /** `ev:reasoning`——推理块增量（R3c · D19 · `docs/desktop/design/IPC.md` §1 该行）：续写判据 = **尾块 `kind === "reasoning"`**（与正文同形）；
- *  否则起新推理块；键门同 `onToken`（非活动会话零落）。 */
-export function onReasoning(state, ev) {
+ *  否则起新推理块；键门同 `onToken`（非活动会话零落）。
+ *  **思考耗时统计（Codex 形大改批 · 2026-10-04）**：新块携 `startedAt`（`reduce` 帧时刻）——视图耗时 =
+ *  下一块 `startedAt` − 本块（`views/chat-tree.mjs` 投影；尾块在途 ⇒ 无值 ⇒ 摘要恒「思考中」口径不变）。 */
+export function onReasoning(state, ev, now = Date.now()) {
   if (!forActive(state, ev)) return state
   const text = typeof ev.text === "string" ? ev.text : ""
   if (text === "") return state
   const blocks = state.blocks ?? []
   const tail = blocks[blocks.length - 1]
-  if (!tail || tail.kind !== "reasoning") return appendBlock(state, { kind: "reasoning", id: `${LIVE_ID}${blocks.length}`, text })
+  if (!tail || tail.kind !== "reasoning") return appendBlock(state, { kind: "reasoning", id: `${LIVE_ID}${blocks.length}`, text, startedAt: now })
   const head = typeof tail.text === "string" ? tail.text : ""
   return { ...state, blocks: [...blocks.slice(0, -1), { ...tail, text: head + text }] }
 }
 
 /** `ev:token`——助手尾块续写（判据 = 尾块 `kind === "assistant"` ∧ `streaming === true`）；否则起活块。
  *  新块经 `appendBlock`（停跟期间只累 `pendingNew` —— `store.mjs` 纯动作，跨切片语义同源）。 */
-export function onToken(state, ev) {
+export function onToken(state, ev, now = Date.now()) {
   if (!forActive(state, ev)) return state
   const text = typeof ev.text === "string" ? ev.text : ""
   if (text === "") return state
@@ -63,7 +65,8 @@ export function onToken(state, ev) {
   if (tail && tail.kind === "assistant" && tail.streaming === true) {
     return { ...state, blocks: [...blocks.slice(0, -1), { ...tail, text: tail.text + text }] }
   }
-  return appendBlock(state, { kind: "assistant", id: `${LIVE_ID}${blocks.length}`, text, streaming: true })
+  // `startedAt` 同 `onReasoning`（思考耗时统计 · 2026-10-04）：助手首块时刻 = 前序推理块耗时的右端点。
+  return appendBlock(state, { kind: "assistant", id: `${LIVE_ID}${blocks.length}`, text, streaming: true, startedAt: now })
 }
 
 /** `ev:tool-call`——工具块入（活块形：`{kind,id,name,argsSummary,status,startedAt}`）；**段界游标清点**（#459 ② 族：入场 ⇒ 前序

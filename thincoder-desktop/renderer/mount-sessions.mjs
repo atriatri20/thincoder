@@ -174,9 +174,11 @@ export function mountSessionBar(root, state, handlers = {}) {
   return model
 }
 
-/** 面接线（面内态 ∘ 注入 handlers 合流；**唯一装配点** —— 树面只认这一层）：开合 ∕ 选择 ∕ 换形三键 ∕ 删除请求。 */
+/** 面接线（面内态 ∘ 注入 handlers 合流；**唯一装配点** —— 树面只认这一层）：开合 ∕ 选择 ∕ 换形三键 ∕ 删除请求。
+ *  `onToggleReasoning` 透传（Codex 形大改批 · 2026-10-04 —— 思考链总折叠钮出口；本档零实现，单源在 `app.mjs`）。 */
 function wireFace(root, handlers) {
   return {
+    onToggleReasoning: handlers.onToggleReasoning,
     onToggle: () => {
       const face = faceOf(root)
       setFace(root, { open: face.open !== true, form: null })

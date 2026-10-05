@@ -1,0 +1,667 @@
+/* codex.css — Codex 风格皮肤覆盖层（2026-10-04 · 用户需求「UI 朝 Codex 靠拢」）：
+   本档 = **纯覆盖层**（链序最后 —— `renderer/index.html` 末位）—— 原设计档零改（theme ∕ chrome ∕ chat 系列 ∕
+   core 系列 ∕ pool ∕ settings 全保留），拆除只需删本档 + 链入行。覆盖策略 = 同名选择器后置胜出 ∥
+   `.composer` 前缀提升特征度（沿 chat-composer.css 先例）。
+
+   设计基准（OpenAI Codex 桌面 / Web 观感）：
+     · UI 字族 = 无衬线系统栈（代码 ∕ 工具输出仍等宽 —— `--mono` 不动）；
+     · 全族圆角回归：卡 12px ∕ 输入面板 22px ∕ 按钮胶囊（推翻 2026-09-30 扁平化的 --radius: 0）；
+     · 中性调色（近黑 ∕ 纯白双态）+ 柔和投影，替代直角硬边；
+     · 对话流 = 居中阅读列（52rem）+ 宽松竖向节奏；
+     · 用户消息 = 气泡（无「❯ You:」标签）；助手标签 = 弱化小字（去 ❯ ∕ 冒号字形）；
+     · 工具卡 ∕ 推理块 = 细描边圆角卡 + 微填充；输入面板 = 悬浮胶囊卡（去顶部分割线）+ 单色发送钮。 */
+
+:root {
+  /* 排版：UI 走无衬线栈；`--mono`（代码面）原值不动（theme.css）。 */
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+  --lh: 1.6;
+  --radius: 12px;
+
+  /* Codex 中性调色（亮 ∕ 暗）。 */
+  --bg: light-dark(#f7f7f8, #0e1013);
+  --bg-raised: light-dark(#ffffff, #15171b);
+  --fg: light-dark(#1a1c1f, #e6e8eb);
+  --fg-muted: light-dark(#6f757d, #98a0a8);
+  --line: light-dark(#e4e4e7, #262a31);
+
+  /* 新槽：用户气泡底 ∕ 卡片微填充（两态）。 */
+  --bubble: light-dark(#e9e9eb, #1d2126);
+  --card: light-dark(#f4f4f5, #171a1f);
+
+  /* 投影：双层柔和（弹层 ∕ 下拉 ∕ 药丸共用）。 */
+  --shadow: 0 6px 24px var(--overlay), 0 1px 4px var(--overlay);
+  --shadow-pop: 0 12px 32px var(--overlay), 0 2px 8px var(--overlay);
+}
+
+/* ── 滚动条（skin.css 覆盖）：细 ∕ 圆 ∕ 更含蓄 ─────────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { border-radius: 999px; background-color: color-mix(in srgb, var(--fg) 18%, transparent); }
+::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--fg) 32%, transparent); }
+
+/* ── 中区骨架（chrome.css 覆盖）：双列间细分割线 + 状态栏发丝线 ───────────── */
+.pool { border-left-color: var(--line); }
+.status { border-top-color: var(--line); }
+/* 状态行整体降阶（Codex statusline 弱存在感）：12px 小字。 */
+.status { font-size: 12px; }
+.status .status-bar > [data-seg],
+.status .status-alert,
+.status .status-goal { font-size: 12px; }
+
+/* 会话控制条：呼吸感 + 圆角交互面。 */
+.session-bar { min-height: 48px; padding: 10px 14px; gap: 8px; }
+.session-project { border-radius: 8px; font-weight: 500; }
+.session-selector { border-radius: 8px; padding: 5px 10px; }
+.session-new { border-radius: 8px; }
+
+/* 会话下拉面板：圆角浮层。 */
+.session-dropdown { border-radius: var(--radius); padding: 4px; box-shadow: var(--shadow-pop); }
+.session-item { border-radius: 8px; padding: 7px 10px; }
+.session-item-meta { font-size: 12px; }
+.session-rename-input { border-radius: 8px; }
+
+/* 内联确认弹层（chrome.css ∕ chat-composer.css 扁平化覆盖的 `body .auto-confirm { border-radius: 0 }` 同特征度后置胜出）。 */
+body .auto-confirm { border-radius: 14px; padding: 16px; box-shadow: var(--shadow-pop); }
+body .paste-toast { border-radius: 12px; }
+
+/* ── 对话流（chat.css 覆盖）：居中阅读列 + 宽松节奏 ─────────────────────── */
+.flow > div { max-width: 52rem; margin-inline: auto; width: 100%; }
+
+/* 竖向节奏：带签块 20px ∕ 盒块 10px ∕ 工具卡链 6px（原 8 ∕ 8 ∕ 0）。 */
+.block + .block:has(> .msg-label) { margin-top: 20px; }
+.block + .block:is(.block-reasoning, .block-error, .block-subagent):not(:has(> .msg-label)) { margin-top: 10px; }
+.block + .block.block-tool { margin-top: 6px; }
+.chat-digest + .block:has(> .msg-label) { margin-top: 20px; }
+.chat-digest + .block:is(.block-reasoning, .block-error, .block-subagent):not(:has(> .msg-label)) { margin-top: 10px; }
+
+/* 说话人标签：弱化小字（用户标签整体退场 —— 气泡即身份）。 */
+.msg-label { font-size: 12px; font-weight: 600; letter-spacing: 0.02em; margin-bottom: 6px; color: var(--fg-muted); }
+.msg-label[data-label="user"],
+.msg-label[data-label="assistant"] { color: var(--fg-muted); }
+.msg-label[data-label="assistant"]::before { content: none; }
+.msg-label[data-label="assistant"]::after { content: none; }
+.msg-time { margin-left: 6px; }
+.block-user > .msg-label { display: none; }
+
+/* 用户消息 = 气泡。 */
+.block-user > .block-text {
+  display: inline-block;
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--bubble);
+}
+
+/* 工具卡 = 细描边圆角卡 + 微填充（原透明盒）。 */
+.block-tool {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.block-tool > .msg-label { padding: 8px 12px 0; }
+.tool-head { padding: 7px 12px; gap: 8px; border-radius: var(--radius); }
+.tool-head:not(:disabled):hover { background: color-mix(in srgb, var(--fg) 4%, transparent); }
+.tool-changes { padding: 0 12px; margin-top: 2px; }
+.tool-result {
+  margin-left: 18px;
+  padding: 2px 0 8px 10px;
+  border-left: 2px solid var(--line);
+  border-radius: 0;
+}
+
+/* 错误横幅 ∕ 压缩行 ∡ 消化状态行：圆角。 */
+.block-error { border-radius: var(--radius); padding: 8px 12px; }
+.chat-digest.digest-status { border-radius: 10px; }
+.compress-status { border-radius: 10px; }
+
+/* 药丸（回到底部）：胶囊浮层。 */
+.chat-pill { padding: 6px 16px; border-radius: 999px; border-color: var(--line); box-shadow: var(--shadow); }
+
+/* 空态欢迎条：抬升标题层级。 */
+.chat-welcome { padding: 96px 20px 40px; opacity: 1; color: var(--fg-muted); }
+.welcome-heading { font-size: 1.35em; font-weight: 600; opacity: 1; color: var(--fg); }
+
+/* ── 推理块 ∕ 子代理块（core.css 覆盖）：圆角卡 + 弱化内容 ────────────────── */
+.reasoning-block {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.reasoning-summary { padding: 7px 12px; }
+.reasoning-content { border-left: 0; margin-left: 0; padding: 0 12px 10px; opacity: 0.72; }
+.reasoning-content .code-block { border-radius: 8px; background: color-mix(in srgb, var(--fg) 4%, transparent); }
+.advisor-block { border-radius: var(--radius); }
+.sub-follow-btn { border-radius: 999px; }
+.goal-status-badge { border-radius: 999px; }
+.code-copy-btn { border-radius: 6px; }
+
+/* ── Markdown 面（core-markdown.css 覆盖）：代码块 ∕ 行内码 ∕ 引用 ∕ 图片圆角 ── */
+.code-block { border-radius: 10px; }
+.block-text code, .reasoning-content code { border-radius: 4px; }
+.block-text blockquote, .reasoning-content blockquote {
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+}
+.block-text img { border-radius: 8px; }
+
+/* 卡族（chat-cards.css 覆盖）：审批 ∕ 提问 ∕ 计划 ∕ 目标圆角卡。 */
+.permission-prompt { border-radius: var(--radius); }
+.question-card { border-radius: var(--radius); }
+.plan-card, .goal-card { border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); }
+.approval-action { border-radius: 8px; }
+.question-input { border-radius: 8px; }
+.perm-btn { border-radius: 999px; padding: 5px 14px; }
+
+/* diff 预览 ∕ 错误详情（chat-fixes.css 覆盖）。 */
+.diff-preview { border-radius: 10px; }
+.error-details pre { border-radius: 8px; }
+.error-retry-btn { border-radius: 8px; }
+
+/* 活动池（pool.css 覆盖）：条目圆角 + 头部弱化。 */
+.pool-family-label { font-size: 12px; letter-spacing: 0.05em; }
+.pool-item { border-radius: 10px; }
+.pool-item:not([data-status]):hover { border-color: var(--line); }
+.pool-toggle { border-radius: 8px; }
+.activity-new-btn { border-radius: 999px; }
+
+/* ── 输入面板（composer.css 核件 + chat-composer.css 覆盖）：悬浮胶囊卡 ─────── */
+.composer #toolbar { border-top: 0; background: transparent; padding: 8px 16px 14px; }
+.composer #input-row {
+  padding: 4px 6px 4px 16px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--fg) 3.5%, transparent);
+  box-shadow: 0 2px 10px var(--overlay);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.composer #input-row:focus-within {
+  border-color: color-mix(in srgb, var(--fg) 38%, transparent);
+  box-shadow: 0 4px 18px var(--overlay);
+}
+.composer #input { padding: 8px 6px; }
+
+/* 发送 ∕ 停止 ∕ 附件：胶囊化；发送钮单色化（Codex 式 —— 前景底 ∕ 背景字）。 */
+.composer #send-btn, .composer #abort-btn, .composer #controls-row #attach-btn { height: 28px; border-radius: 999px; }
+.composer #controls-row #attach-btn, .composer #controls-row #send-btn, .composer #controls-row #abort-btn { padding: 0 14px; }
+.composer #send-btn { background: var(--fg); color: var(--bg); font-weight: 500; box-shadow: none; }
+.composer #send-btn:hover { background: var(--fg); opacity: 0.88; box-shadow: none; }
+.composer #send-btn:active { opacity: 0.8; transform: none; }
+.composer #send-btn:disabled { background: var(--hover-bg-strong); color: var(--fg); opacity: 0.4; box-shadow: none; transform: none; }
+
+/* 模式钮（AUTO ∕ PLAN ∕ …）：灰底胶囊；active = accent 淡底。 */
+.composer .ctrl-btn {
+  border-color: transparent;
+  border-radius: 999px;
+  background: var(--hover-bg);
+  color: var(--fg-muted);
+  opacity: 1;
+}
+.composer .ctrl-btn:hover { opacity: 1; border-color: transparent; background: var(--hover-bg-strong); color: var(--fg); }
+.composer .ctrl-btn:disabled { opacity: 0.45; }
+.composer .ctrl-btn.active {
+  opacity: 1;
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+.composer .ctrl-btn.warning { border-color: transparent; }
+.composer #reasoning-btn { text-transform: none; letter-spacing: normal; }
+
+/* 下拉 ∕ @补全：圆角浮层 + 内条目圆角。 */
+.composer .dropdown, .composer #at-dropdown { border-radius: var(--radius); box-shadow: var(--shadow-pop); padding: 4px; background: var(--bg-raised); }
+.composer .dropdown-item { border-radius: 8px; }
+.composer .dropdown.submenu { border-radius: var(--radius); }
+
+/* ── 搜索条（/rc/search.css）∥ 设置面（settings.css）∥ 弹窗（settings-modal.css）── */
+#search-bar { border-top-color: var(--line); }
+#search-input { border-radius: 8px; }
+#search-bar button { border-radius: 8px; }
+
+.settings-row { border-radius: 8px; }
+.settings-field { border-radius: 8px; }
+.settings-mark { border-radius: 999px; }
+.settings-modal { border-radius: 16px; box-shadow: var(--shadow-pop); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ── Codex 形工作区布局（大改批 · 2026-10-04）：三列栅格（边栏 ∣ 会话 ∣ 活动池）──
+   面单 = `renderer/mount-sidebar.mjs`（边栏挂载）+ 本段皮肤；chrome.css 两列栅格被本段
+   三列覆盖（同选择器后置胜出）。边栏 = 深底（`--bg`）+ 发丝右线；主区 ∕ 池 = 升底。 ═══ */
+.app {
+  grid-template-columns: auto minmax(0, 1fr) clamp(15rem, var(--pool-w), max(36rem, 100vw - 30rem));
+}
+
+/* ── 边栏（展开 264px ∕ 折叠 52px 图标列）────────────────────────────────── */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 264px;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+}
+.sidebar-head { display: flex; align-items: center; gap: 8px; padding: 10px 10px 6px; }
+.sidebar-brand { font-size: 13px; font-weight: 600; letter-spacing: 0.01em; }
+.sidebar-toggle {
+  width: 28px; height: 28px; flex: none;
+  padding: 0; border: 0; border-radius: 8px;
+  background: transparent; color: var(--fg-muted);
+  font: inherit; font-size: 14px; line-height: 1;
+  cursor: pointer;
+}
+.sidebar-toggle::before { content: "☰"; }
+.sidebar-toggle:hover { background: var(--hover-bg); color: var(--fg); }
+.sidebar-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.sidebar-actions { display: flex; align-items: center; gap: 6px; padding: 4px 10px 8px; }
+.sidebar-new {
+  flex: 1; display: inline-flex; align-items: center; gap: 6px;
+  min-width: 0; height: 32px; padding: 0 10px;
+  border: 0; border-radius: 8px;
+  background: var(--hover-bg); color: var(--fg);
+  font: inherit; font-size: 13px; line-height: 1;
+  cursor: pointer;
+}
+.sidebar-new::before { content: "+"; flex: none; font-size: 15px; font-weight: 600; }
+.sidebar-new:hover { background: var(--hover-bg-strong); }
+.sidebar-new:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sidebar-new-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-opendir {
+  width: 32px; height: 32px; flex: none;
+  padding: 0; border: 0; border-radius: 8px;
+  background: transparent; color: var(--fg-muted);
+  font: inherit; font-size: 15px; line-height: 1;
+  cursor: pointer;
+}
+.sidebar-opendir::before { content: "⌂"; }
+.sidebar-opendir:hover { background: var(--hover-bg); color: var(--fg); }
+.sidebar-opendir:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.sidebar-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 8px 12px; }
+.sidebar-section-head {
+  padding: 12px 8px 4px;
+  color: var(--fg-muted); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.sidebar-section-head.recent { margin-top: 6px; }
+.sidebar-project-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px; border-radius: 8px;
+  color: var(--fg); font-size: 13px; font-weight: 600;
+}
+.sidebar-project-row::before { content: "▾"; flex: none; color: var(--fg-muted); font-size: 10px; }
+.sidebar-project-row.empty { color: var(--fg-muted); font-weight: 400; }
+.sidebar-sessions { display: flex; flex-direction: column; gap: 1px; padding-left: 8px; }
+.sidebar-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 6px 8px;
+  border: 0; border-radius: 8px;
+  background: transparent; color: var(--fg);
+  font: inherit; font-size: 13px; line-height: var(--lh); text-align: left;
+  cursor: pointer;
+}
+.sidebar-item:hover { background: var(--hover-bg); }
+.sidebar-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sidebar-item.active { background: var(--hover-bg); font-weight: 500; }
+.sidebar-item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-item-badge { flex: none; color: var(--warn); font-size: 11px; }
+.sidebar-recent-item { color: var(--fg-muted); }
+
+.sidebar-foot { padding: 8px 10px 10px; border-top: 1px solid var(--line); }
+.sidebar-settings {
+  display: inline-flex; align-items: center; gap: 6px;
+  width: 100%; height: 30px; padding: 0 8px;
+  border: 0; border-radius: 8px;
+  background: transparent; color: var(--fg-muted);
+  font: inherit; font-size: 13px; line-height: 1;
+  cursor: pointer;
+}
+.sidebar-settings::before { content: "⚙"; flex: none; font-size: 14px; }
+.sidebar-settings:hover { background: var(--hover-bg); color: var(--fg); }
+.sidebar-settings:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* 折叠 = 图标列（52px）：文字节退场 ∕ 动作钮收心 —— 重展钮常在（折叠不失出口）。 */
+body.sidebar-collapsed .sidebar { width: 52px; }
+body.sidebar-collapsed .sidebar-brand,
+body.sidebar-collapsed .sidebar-scroll,
+body.sidebar-collapsed .sidebar-new-label,
+body.sidebar-collapsed .sidebar-settings-label { display: none; }
+body.sidebar-collapsed .sidebar-head { justify-content: center; padding-inline: 4px; }
+body.sidebar-collapsed .sidebar-actions { flex-direction: column; padding-inline: 4px; }
+body.sidebar-collapsed .sidebar-new { flex: none; width: 32px; justify-content: center; padding: 0; }
+body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; }
+
+/* ── 会话控制条 → 线程头（Codex 顶栏形）：项目钮退场（职责归边栏）────────────── */
+.session-bar { min-height: 46px; padding: 8px 14px; gap: 8px; border-bottom-color: var(--line); }
+.session-project { display: none; }
+.session-selector { flex: 0 1 auto; min-width: 0; }
+.session-title { font-weight: 500; }
+.session-new { width: 30px; height: 30px; }
+.session-new::before { content: "+"; font-size: 16px; }
+
+/* ── 对话流：用户消息右置（Codex ∕ ChatGPT 形）──────────────────────────── */
+.block-user { display: flex; justify-content: flex-end; }
+.block-user > .block-text { max-width: 78%; }
+/* 小地图让位（Rail 左 12px ∕ 宽 36px ⇒ 让 52px；列心随余区微移，视觉居中保持）。 */
+.session.has-minimap .flow {
+  padding-left: max(52px, calc((100% - 52rem) / 2 + 26px));
+  padding-right: max(var(--gap), calc((100% - 52rem) / 2));
+}
+
+/* ── 发送钮 = 圆盘（Codex 形 ↑）────────────────────────────────────────── */
+.composer #controls-row #send-btn { width: 30px; height: 30px; padding: 0; border-radius: 50%; }
+.composer #controls-row #send-btn::after { content: "↑"; font-size: 15px; font-weight: 600; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ── 侧边栏导航式设置页（设置页大改批 · 2026-10-04）：左目录 ∣ 右内容 ──────────
+   面单 = `views/settings.mjs` `settingsPageNode`（本段皮肤）；`[data-slot="settings"]`
+   子级 48rem 列宽约束对 `.settings-page` 放宽到 62rem（双栏需要横向余量）。 ═══ */
+[data-slot="settings"] > .settings-page { max-width: 62rem; }
+.settings-page {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.settings-nav {
+  position: sticky;
+  top: var(--gap);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.settings-nav-item {
+  display: flex; align-items: center;
+  width: 100%; padding: 7px 10px;
+  border: 0; border-radius: 8px;
+  background: transparent; color: var(--fg-muted);
+  font: inherit; font-size: 13px; line-height: var(--lh); text-align: left;
+  cursor: pointer;
+}
+.settings-nav-item:hover { background: var(--hover-bg); color: var(--fg); }
+.settings-nav-item.active { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); font-weight: 500; }
+.settings-nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.settings-content { min-width: 0; }
+/* 内容段壳：卡片化（原裸 section + 面底同色 —— 现给独立卡面）。 */
+.settings-content .settings-section {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-raised);
+}
+
+/* ── 模型候选 = 紧凑卡片网格（同批 —— 原 21 行通栏占用过大）────────────────── */
+.model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.model-grid > .settings-row {
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  gap: 6px;
+}
+.model-grid > .settings-row:hover { border-color: color-mix(in srgb, var(--fg) 22%, transparent); }
+.model-grid > .settings-row[data-current] {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--card));
+}
+.model-grid .settings-row-name { font-size: 13px; }
+.model-grid .settings-row-action {
+  flex: none;
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: var(--lh);
+  background: var(--bg-raised);
+}
+.model-grid .settings-row-action:not(:disabled):hover { border-color: var(--accent); color: var(--accent); background: transparent; cursor: pointer; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ── 会话轮导航栏（原对话小地图 · ZCode 形重做 · 2026-10-04）──────────────────
+   参照 zai-org/ZCode `ConversationTurnNavigator`：每条用户提问一根刻度、等距 10px 纵列（轨可滚），
+   「山峰」视觉 = 活动刻度 scaleX 2.6 ∕ 1，邻项衰减；比例小地图形废除。 ═══ */
+.session { position: relative; }
+.minimap {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 48px;
+  z-index: 5;
+  pointer-events: none;
+}
+.minimap[data-empty] { display: none; }
+.minimap-rail {
+  pointer-events: auto;
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  max-height: calc(100% - 96px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-block: 4px;
+  scrollbar-width: none;
+}
+.minimap-rail::-webkit-scrollbar { display: none; }
+.minimap-list { position: relative; width: 36px; }
+.minimap-item {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 36px;
+  height: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+}
+.minimap-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.minimap-bar {
+  display: block;
+  width: 12px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--fg);
+  opacity: 0.58;
+  transform-origin: left center;
+  transition: transform 0.15s ease-out, opacity 0.15s ease-out, background-color 0.15s ease-out;
+}
+.minimap-item[data-active="true"] .minimap-bar { opacity: 0.9; }
+.minimap-bar.focus { background: var(--fg); }
+.minimap-bar.error { background: var(--error-fg); }
+.minimap-tip {
+  position: absolute;
+  left: 52px;
+  transform: translateY(-50%);
+  z-index: 6;
+  display: none;
+  width: 20rem;
+  max-width: calc(100vw - 2rem);
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-pop);
+  color: var(--fg);
+  pointer-events: none;
+}
+.minimap-tip[data-visible] { display: block; }
+.minimap-tip-user {
+  margin: 0 0 8px;
+  font: 500 13px/1.5 var(--font);
+  white-space: pre-line;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.minimap-tip-assistant {
+  margin: 0;
+  font: 13px/1.5 var(--font);
+  color: var(--fg-muted);
+  white-space: pre-line;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.minimap-tip-assistant[data-empty] { display: none; }
+
+/* ── 思考链：线程头折叠钮 ∕ 已思考耗时摘要 ───────────────────────────────── */
+.session-reasoning {
+  flex: none;
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 28px; padding: 0 10px;
+  border: 1px solid transparent; border-radius: 999px;
+  background: var(--hover-bg); color: var(--fg-muted);
+  font: inherit; font-size: 12px; line-height: 1;
+  cursor: pointer;
+}
+.session-reasoning::before { content: "◆"; font-size: 9px; }
+.session-reasoning.open::before { content: "◇"; }
+.session-reasoning:hover { background: var(--hover-bg-strong); color: var(--fg); }
+.session-reasoning:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* 折叠态摘要行收紧（占比最小化）：摘要 = 弱化胶囊观感。 */
+.reasoning-block:not([open]) > .reasoning-summary { opacity: 0.6; }
+/* 已思考 Ns：摘要尾「…」退场（core.css `.reasoning-summary::after` 覆盖 —— `data-done` 锚住外层块壳）。 */
+.block-reasoning[data-done] > .reasoning-block > .reasoning-summary::after { content: none; }
+.block-reasoning[data-done] > .reasoning-block > .reasoning-summary { color: var(--fg-muted); }
+/* 思考走马灯（ZCode ReasoningTrigger 同款 · 折叠流式摘要 = 标签 + 思考最新行：单行 ∕ 边缘渐隐 ∕ 恒滚最新）。 */
+.block-reasoning .reasoning-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.reasoning-summary:has(.reasoning-ticker)::after { content: none; }
+.reasoning-ticker { flex: 1 1 auto; min-width: 0; }
+.reasoning-ticker-viewport {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 12px, black calc(100% - 12px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 12px, black calc(100% - 12px), transparent 100%);
+}
+.reasoning-ticker-inner {
+  display: inline-block;
+  min-width: max-content;
+  font-style: italic;
+  color: var(--fg-muted);
+}
+.reasoning-block[open] .reasoning-ticker { display: none; }
+
+/* ── 工作过程折叠（ZCode ConversationTurnGroup 形 · 2026-10-05）：「已工作 X」折叠头 + 区内块隐藏 ── */
+.chat-workhead { margin: 14px 0 2px; }
+.chat-workhead > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg-muted);
+  font: 500 12px/1.6 var(--font);
+  cursor: pointer;
+}
+.chat-workhead > button::before { content: "▸"; font-size: 10px; }
+.chat-workhead > button[data-open="true"]::before { content: "▾"; }
+.chat-workhead > button:hover { background: var(--hover-bg); color: var(--fg); }
+.chat-workhead > button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.work-hidden { display: none !important; }
+
+/* ── 设置页伪段（外观 ∕ 语言 · 2026-10-05）：分段钮胶囊观感 ────────────────── */
+.settings-content .settings-row[data-pref] { align-items: center; }
+.settings-content .settings-theme { gap: 6px; margin-left: auto; }
+.settings-content .settings-theme-opt {
+  padding: 5px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-raised);
+  color: var(--fg-muted);
+  font-size: 13px;
+}
+.settings-content .settings-theme-opt:hover { color: var(--fg); border-color: color-mix(in srgb, var(--fg) 22%, transparent); }
+.settings-content .settings-theme-opt[data-active] {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* ── 侧边栏会话管理（右键菜单 + 行内改名 · 2026-10-05）────────────────────── */
+.sidebar-menu {
+  position: fixed;
+  z-index: 80;
+  min-width: 8rem;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-pop);
+}
+.sidebar-menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg);
+  font: 13px/1.6 var(--font);
+  text-align: left;
+  cursor: pointer;
+}
+.sidebar-menu button:hover { background: var(--hover-bg); }
+.sidebar-menu button.danger { color: var(--error-fg); }
+.sidebar-menu button.danger:hover { background: var(--diff-del-bg); }
+.sidebar-rename { display: flex; align-items: center; gap: 4px; padding: 2px 6px 2px 8px; }
+.sidebar-rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.6 var(--font);
+  outline: none;
+}
+.sidebar-rename > button {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-muted);
+  font: 12px/1 var(--font);
+  cursor: pointer;
+}
+.sidebar-rename > button:hover { background: var(--hover-bg); color: var(--fg); }
+
+/* ── 顶部会话下拉：宽度随内容放足（修长标题显示不全 · 2026-10-05）──────────── */
+.session-dropdown {
+  left: 0;
+  right: auto;
+  width: max-content;
+  min-width: 100%;
+  max-width: min(52rem, calc(100vw - 20rem));
+}
+.session-item-title { max-width: 34rem; }
+.session-item-meta { flex: none; }

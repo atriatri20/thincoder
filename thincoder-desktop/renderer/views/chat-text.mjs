@@ -41,20 +41,30 @@ export function textFace(block, className = "block-text") {
 }
 
 /** 推理块（核件结构同形 —— 核 `flow/reasoning.mjs` `renderReasoning`）：块壳 = 桌面五型锚（`data-block-id` /
- *  `data-block-kind` —— 窗限 / 对齐 / 游标三机制零改），内容 = 核类名面（`details.reasoning-block[open]` +
- *  `summary` + `.reasoning-content`）；默认展开（核件同形）；内容经核 `md`（转义闸同文本面）。
- *  `withLabel` 真 ⇒ 首子挂说话人标签容器（回合首块判据归 `renderer/views/chat.mjs` —— 本档只落形）。 */
-export function reasoningNode(block, key, handlers = {}, withLabel = false) {
+ *  `data-block-kind` —— 窗限 / 对齐 / 游标三机制零改），内容 = 核类名面（`details.reasoning-block` +
+ *  `summary` + `.reasoning-content`）；内容经核 `md`（转义闸同文本面）。
+ *  `withLabel` 真 ⇒ 首子挂说话人标签容器（回合首块判据归 `renderer/views/chat.mjs` —— 本档只落形）。
+ *  **收起语义（第六轮 ZCode 对齐 · 2026-10-04）**：`open: false` **恒定**（ZCode `Reasoning` `defaultOpen=false`
+ *  同口径 —— 流式 ∕ 完成皆默认收起，边界自动收起归 `reasoning-times.mjs`；原全局偏好粘性致几十块全展开，
+ *  废）。`durationSec` 数值 ⇒ 摘要「已思考 Ns」+ `data-done` 锚；缺 ⇒ 「思考中」+ 走马灯（`reasoning-times.mjs`
+ *  增量回写）。 */
+export function reasoningNode(block, key, handlers = {}, withLabel = false, durationSec = null) {
+  const done = typeof durationSec === "number" && Number.isFinite(durationSec) && durationSec >= 0
   return {
     tag: "div",
-    props: { class: "block block-reasoning", "data-block-id": key, "data-block-kind": "reasoning" },
+    props: {
+      class: "block block-reasoning",
+      "data-block-id": key,
+      "data-block-kind": "reasoning",
+      "data-started": typeof block?.startedAt === "number" ? block.startedAt : undefined, // 耗时右端点投影（`reasoning-times.mjs` 增量回写消费）
+    },
     children: [
       ...(withLabel ? [labelNode("assistant")] : []),
       {
         tag: "details",
-        props: { class: "reasoning-block", open: true },
+        props: { class: "reasoning-block", ...(done ? { "data-done": "" } : {}) }, // open 恒缺省 = 收起（HTML details 缺省收起）
         children: [
-          { tag: "summary", props: { class: "reasoning-summary" }, children: [t("status.thinking")] },
+          { tag: "summary", props: { class: "reasoning-summary" }, children: [done ? t("reasoning.done", { n: Math.round(durationSec) }) : t("status.thinking")] },
           textFace(block, "reasoning-content"),
         ],
       },

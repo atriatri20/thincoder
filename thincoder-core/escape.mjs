@@ -131,15 +131,17 @@ export function escapeMessageContent(message) {
   return changed ? next : message
 }
 
-/** IKBGX4 + SESSION.md §6.9：剥离仅本地使用的整消息标记字段（transient/ts）——发送给 provider 前移除。
+/** IKBGX4 + SESSION.md §6.9：剥离仅本地使用的整消息标记字段（transient/ts/reasoning）——发送给 provider 前移除。
  * 严格 OpenAI 兼容服务端（opencode/LiteLLM 等）会拒绝消息级未知 key
  * （"Extra inputs are not permitted, field: 'messages[i].transient'"）；ts 同理
- * （消息时间戳是本地取证字段，不进任何 provider 请求——T-S3）。copy-on-write：
- * 历史里的原对象不动（read_history 仍能读到 ts）。 */
+ * （消息时间戳是本地取证字段，不进任何 provider 请求——T-S3）。reasoning = 思考留档字段（2026-10-04
+ * 桌面思考块跨会话重建——`context-push.mjs` `assistantRealFrame` 携入；**不进任何 provider 请求**：
+ * 严格服务端同样拒绝消息级未知 key，且思考回传语义归 `reasoning_content` echo 族——两字段互不相干）。
+ * copy-on-write：历史里的原对象不动（read_history ∕ 恢复径仍能读到 reasoning）。 */
 export function stripLocalMessageFields(messages) {
   return messages.map((m) => {
-    if (m && typeof m === "object" && ("transient" in m || "ts" in m)) {
-      const { transient, ts, ...rest } = m
+    if (m && typeof m === "object" && ("transient" in m || "ts" in m || "reasoning" in m)) {
+      const { transient, ts, reasoning, ...rest } = m
       return rest
     }
     return m

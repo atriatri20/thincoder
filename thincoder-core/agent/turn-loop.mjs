@@ -5,7 +5,7 @@
  * 接口 = runTurnLoop(agent, ctx)；控制流零转换（`continue` ∕ `return cr.content` ∕ `throw` 全留环内）。
  */
 import { resolve } from "node:path"
-import { pushReal, summarizeRunExplorations } from "../context.mjs"
+import { pushReal, assistantRealFrame, summarizeRunExplorations } from "../context.mjs"
 import { abortError, annotateAbort } from "../abort-provenance.mjs"
 import { specForModel, assistantToolCallMessage } from "../config.mjs"
 import { executeToolCalls } from "./dispatch.mjs"
@@ -125,7 +125,7 @@ export async function runTurnLoop(agent, {
     // message as a reminder, retry from the same context.
     if (response.ruleTriggered) {
       if (response.content) {
-        pushReal(agent, { role: "assistant", content: response.content })
+        pushReal(agent, assistantRealFrame(response))
       }
       const label = response.ruleName ? ` — stream rule "${response.ruleName}"` : ""
       agent.history.push({
@@ -143,7 +143,7 @@ export async function runTurnLoop(agent, {
     // message, then signal the outer loop to recreate the controller and resume.
     if (response.interrupted) {
       if (response.content) {
-        pushReal(agent, { role: "assistant", content: response.content })
+        pushReal(agent, assistantRealFrame(response))
       }
       agent.history.push({
         role: "user",

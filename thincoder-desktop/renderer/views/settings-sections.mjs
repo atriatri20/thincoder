@@ -58,10 +58,13 @@ export function modelHeadNode(model) {
 }
 
 /** 候选行（**导出面** —— 同上）：行 + 空态词（`ready` 而零候选 ⇒ 禁假造）。行形 = 行自带渠 `{ id, provider }`
- *  （全渠扇出面 · #842）∥ 纯 id（常规面 —— 渠落段级）。 */
+ *  （全渠扇出面 · #842）∥ 纯 id（常规面 —— 渠落段级）。
+ *  **2026-10-04 卡片网格**：行族包进 `.model-grid`（CSS 网格 —— `codex.css` 多列紧凑卡；原单行通栏占用过大）。 */
 export function modelChoicesTree(model, handlers = {}) {
   const rows = listOf(model?.models).map((row) => modelRowNode(row, model, handlers))
-  if (model?.state !== "ready" || rows.length > 0) return rows
+  if (model?.state !== "ready" || rows.length > 0) {
+    return [{ tag: "div", props: { class: "model-grid", "data-grid": "models" }, children: rows }]
+  }
   return [{ tag: "div", props: { class: "settings-empty", "data-empty": "" }, children: [t("settings.model.empty")] }]
 }
 

@@ -204,8 +204,8 @@ export function reduce(state, ev, now = Date.now()) {
   // 逐事件恒变：「无变化 ⇒ 原引用」对时间戳切片自然不适用）。
   if (OUTPUT_CHANNELS.has(channel)) state = withOutputAt(state, ev.key, now)
   switch (channel) {
-    case "ev:token": return onToken(state, ev)
-    case "ev:reasoning": return onReasoning(state, ev)
+    case "ev:token": return onToken(state, ev, now)
+    case "ev:reasoning": return onReasoning(state, ev, now)
     case "ev:subchunk": return onSubchunk(state, ev, now)
     case "ev:tool-call": return onToolCall(state, ev, now)
     case "ev:tool-output": return onToolOutput(state, ev)

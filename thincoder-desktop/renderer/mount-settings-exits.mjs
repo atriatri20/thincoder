@@ -246,6 +246,7 @@ export function createExits(deps = {}) {
     onToggleLang: (target) => void toggleLang(target),
     onSetTheme: (target) => setThemeFace(target),
     onCloseSettings: () => closeSettings(),
+    onSelectSection: (name) => setSettings({ nav: name }), // 侧边栏导航式设置页 · 2026-10-04：选中段落切片（`views/settings.mjs` 读面 `nav`）
     onSubmit: (event) => void submitChannel(event),
     onVerify: (name) => void verifyChannel(name),
     onRemoveProvider: (name) => void removeProvider(name),

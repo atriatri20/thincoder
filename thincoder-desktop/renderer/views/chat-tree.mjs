@@ -58,16 +58,32 @@ function errorNode(block, key, handlers, withLabel, canRetry) {
   return { tag: "div", props: { class: "block block-error", "data-block-id": key, "data-block-kind": "error" }, children }
 }
 
+/** 思考耗时投影（Codex 形大改批 · 2026-10-04）：`startedAt` 两端齐备且顺序合理 ⇒ 秒差；否则 `null`
+ *  （尾块在途 ∕ 旧会话无时刻面 ∕ 时钟回拨 —— **零假造**）。端点单源 = `events-blocks.mjs` 建块 `startedAt`
+ *  （`onReasoning` ∕ `onToken` ∕ `onToolCall` 三径同拍 —— `reduce` 帧时刻）。 */
+function reasoningDurationOf(block, next) {
+  const start = typeof block?.startedAt === "number" ? block.startedAt : null
+  const end = typeof next?.startedAt === "number" ? next.startedAt : null
+  if (start === null || end === null || end <= start) return null
+  return Math.max(1, (end - start) / 1000) // 显示下限 1s（亚秒思考 ⇒ 0s 拗口 —— 取整前抬底）
+}
+
 /** 块节点（六型单序列）：文本族 = 核 Markdown 面（`textFace` —— 转义闸在核 · 原文另存 `[data-raw]`）；
- *  `reasoning` ⇒ 核推理块结构（`reasoningNode`）；`tool` ⇒ 工具卡三行；`subagent` ⇒
+ *  `reasoning` ⇒ 核推理块结构（`reasoningNode`，携耗时投影）；`tool` ⇒ 工具卡三行；`subagent` ⇒
  *  归档块壳（回显 = 核件元素，帧后补装）；`withLabel` = 说话人标签容器（用户块恒出 / 助手族回合首出 ——
- *  文本落笔归帧尾着装面；标签容器为块内子节点 —— 不入块序）。 */
-export function blockNode(block, index, hidden, handlers, prev, canRetry = false) {
+ *  文本落笔归帧尾着装面；标签容器为块内子节点 —— 不入块序）。
+ *  `next` = 后继块（**思考耗时右端点** —— 2026-10-04 增参；调用面三径皆携 `blocks[index + 1]`）。 */
+export function blockNode(block, index, hidden, handlers, prev, canRetry = false, next = undefined) {
   const kind = block?.kind
   const key = blockKey(block, hidden + index)
   const label = kind === "user" || turnHeadOf(kind, prev, index, hidden)
-  if (kind === "tool") return toolCard(block, key, handlers, label)
-  if (kind === "reasoning") return reasoningNode(block, key, handlers, label)
+  const started = typeof block?.startedAt === "number" ? block.startedAt : undefined // 耗时端点投影（`reasoning-times.mjs` 增量回写消费）
+  if (kind === "reasoning") return reasoningNode(block, key, handlers, label, reasoningDurationOf(block, next))
+  if (kind === "tool") {
+    const node = toolCard(block, key, handlers, label)
+    if (started !== undefined) node.props = { ...node.props, "data-started": started }
+    return node
+  }
   if (kind === "subagent") return subagentNode(block, key, label)
   if (kind === "error") return errorNode(block, key, handlers, label, canRetry)
   return {
@@ -76,7 +92,8 @@ export function blockNode(block, index, hidden, handlers, prev, canRetry = false
       class: `block block-${kind}`,
       "data-block-id": key,
       "data-block-kind": kind,
-      "data-ts": kind === "user" && typeof block?.ts === "number" ? String(block.ts) : undefined,
+      "data-ts": typeof block?.ts === "number" ? String(block.ts) : undefined, // 全型携带（工作折叠时长端点 · `chat-work.mjs` 消费；user 面原语义不变）
+      "data-started": started,
       "data-streaming": kind === "assistant" && block?.streaming === true ? "1" : undefined,
     },
     children: [...(label ? [labelNode(kind === "user" ? "user" : "assistant")] : []), textFace(block)],
@@ -112,7 +129,7 @@ function pushFlow(children, model, handlers) {
   }
   blocks.forEach((block, index) => {
     flush(atOf(block))
-    children.push(blockNode(block, index, model.hidden, handlers, blocks[index - 1], model.canRetry === true))
+    children.push(blockNode(block, index, model.hidden, handlers, blocks[index - 1], model.canRetry === true, blocks[index + 1]))
   })
   while (cursor < rounds.length) {
     children.push(...digestRows(rounds[cursor])) // 未结轮 ∥ 余轮 = 流末（运行期尾段）

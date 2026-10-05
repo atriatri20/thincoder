@@ -8,7 +8,9 @@
  * v1 零事件发射：`on` 登记入记录面 ⇒ 返回空退订（事件面不在本冒烟——设计档 §7-5）。
  */
 
-/** 7 通道 stub 表（回执逐形 = 设计档 §3.2 表；扩表走设计档修订——不在工具里就地长语义）。 */
+/** 7 通道 stub 表（回执逐形 = 设计档 §3.2 表；扩表走设计档修订——不在工具里就地长语义）。
+ *  2026-10-04 补 `theme:state`（D33 主题面 boot 通道——原表漏登 ⇒ 冒烟恒红，基线实测；回执形 = `app.mjs`
+ *  消费判据 `receipt.ok === true`）。 */
 const STUBS = Object.freeze({
   "config:read": () => ({ config: {}, locale: "en", dict: {}, configured: true }),
   "project:recent": () => ({ cwd: null, recent: [] }),
@@ -17,6 +19,7 @@ const STUBS = Object.freeze({
   "provider:list": () => ({ ok: true, active: null, presets: [], providers: [] }),
   "ledger:read": () => ({ ok: true, counts: null, thresholdReached: false }),
   "batch:status": () => ({ ok: true, phase: null }),
+  "theme:state": () => ({ ok: true }),
 })
 
 /** 装配（`target` = 注入缝——页面面缺省 `globalThis`，平 node 直测传入假载体）：记录面 + 窄桥两件 ⇒ 返记录面（= `target.__quickcheck`）。 */

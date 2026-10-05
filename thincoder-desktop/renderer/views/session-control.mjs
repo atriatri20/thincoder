@@ -20,6 +20,7 @@
  * （守卫 = `test/guard-closure.test.mjs`）。
  */
 import { locale, t } from "../i18n.mjs"
+import { reasoningBulkExpanded } from "../reasoning-pref.mjs"
 import { deriveTabBadge } from "../store.mjs"
 import { BADGE_WORD } from "./chrome.mjs"
 
@@ -74,14 +75,33 @@ export function sessionModel(state = {}) {
 
 /** 条体树（两子树：项目钮 → 下拉选择器 → 新建钮；下拉内容 = `sessionDropdownTree`，开时挂进选择器）。
  *  `handlers` = 面接线（`mountSessionBar` 装配：`onToggle` / `onSelect` / `onRename` / `onRenameCancel` /
- *  `onRenameConfirm` / `onDelete` / `onNew` / `onOpenProject`）；`face` = 面内态 `{ open, form }`。 */
+ *  `onRenameConfirm` / `onDelete` / `onNew` / `onOpenProject` / `onToggleReasoning`）；`face` = 面内态 `{ open, form }`。
+ *  **思考链总折叠钮（Codex 形大改批 · 2026-10-04）**：`session-reasoning` 钮居新建钮左侧 —— 态住
+ *  `reasoning-pref.mjs` 批量瞬时态（`data-collapsed` 锚 + `aria-pressed`）；出口 = `handlers.onToggleReasoning`
+ *  （翻态 + 当前树就地翻转 —— 装配面）。缺 handlers ⇒ 零接线（诚实非死控）。 */
 export function sessionBarTree(model, handlers = {}, face = {}) {
+  const onReasoning = typeof handlers.onToggleReasoning === "function" ? handlers.onToggleReasoning : undefined
+  const collapsed = !reasoningBulkExpanded()
   return {
     tag: "div",
     props: { class: "session-bar" },
     children: [
       projectNode(model, handlers),
       selectorNode(model, handlers, face),
+      {
+        tag: "button",
+        props: {
+          class: collapsed ? "session-reasoning" : "session-reasoning open",
+          type: "button",
+          "data-action": "session:reasoning",
+          "data-collapsed": collapsed ? "" : undefined,
+          "aria-pressed": String(!collapsed),
+          "aria-label": collapsed ? t("reasoning.expandAll") : t("reasoning.collapseAll"),
+          title: collapsed ? t("reasoning.expandAll") : t("reasoning.collapseAll"),
+          onClick: onReasoning,
+        },
+        children: [t("reasoning.label")],
+      },
       buttonNode({ className: "session-new", action: "session:create", label: t("rail.action.newSession"), onClick: handlers.onNew }),
     ],
   }

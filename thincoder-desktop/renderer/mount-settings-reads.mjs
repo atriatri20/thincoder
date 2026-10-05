@@ -30,10 +30,17 @@ const pickerOf = (value) => ({
   model: str(value?.model),
 })
 
-/** 激活渠道读数（`provider:list` 投影）：激活名 + 该行 `model` ⇒ 复合串；缺 ⇒ 两者 `null`（**未知不造串**）。 */
+/** 激活渠道读数（`provider:list` 投影）：激活名 + 该行 `model` ⇒ 复合串；缺 ⇒ 两者 `null`（**未知不造串**）。
+ *  **2026-10-04 端差收正（采用按钮显示源修复）**：回执 `defaultModel`（真值复合串）在场且渠道段 = 激活名
+ *  ⇒ **直取**（对齐 VSC `settings.mjs:160` 直读 `loadRaw().defaultModel`）——渠行 `model` 字段 = 建渠时
+ *  播种值，采用径不回写 ⇒ 分叉时旧径「当前模型」恒滞留旧值（采用成功而界面不刷新——真机实锤）；
+ *  回执键缺席（旧回执形）∥ 渠道段与激活名不一致（畸形档保守面）⇒ 落回渠行旧径（行为不变）。 */
 function activeModel(receipt) {
   const name = typeof receipt.active === "string" && receipt.active !== "" ? receipt.active : null
   if (name === null) return { provider: null, current: null }
+  const dm = typeof receipt.defaultModel === "string" ? receipt.defaultModel : ""
+  const sep = dm.indexOf(":")
+  if (sep > 0 && dm.slice(0, sep) === name && dm.slice(sep + 1)) return { provider: name, current: dm }
   const row = listOf(receipt.providers).find((p) => p?.name === name)
   const model = typeof row?.model === "string" && row.model !== "" ? row.model : null
   return { provider: name, current: model === null ? null : `${name}:${model}` }

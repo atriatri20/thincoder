@@ -93,7 +93,19 @@ async function main() {
     const missing = SLOTS.filter((slot) => !slots.includes(slot))
     check("六槽在场", missing.length === 0, `missing: ${missing.join(",")}`)
 
+    /** 有界等元素到场（2026-10-04 首帧时序抖动——新增模块编译让 msedge 首帧偶尔越出固定读取时机；
+     *  超时照旧红 = 断言不弱化）。 */
+    async function waitForSelectorWithin(selector, timeoutMs = 3000) {
+      const deadline = Date.now() + timeoutMs
+      for (;;) {
+        if (await page.locator(selector).first().isVisible().catch(() => false)) return true
+        if (Date.now() > deadline) return false
+        await page.waitForTimeout(100)
+      }
+    }
+
     beginStep("guide (no-project)")
+    await waitForSelectorWithin('[data-guide="no-project"]')
     const guide = await page.evaluate(() => {
       const flow = document.querySelector('[data-slot="flow"]')
       const present = (selector) => flow !== null && flow.querySelector(selector) !== null
@@ -107,6 +119,7 @@ async function main() {
     check("no-project 链", guide.state === "none" && guide.blocks === "0" && guide.guide && guide.action, JSON.stringify(guide))
 
     beginStep("session bar + composer")
+    await waitForSelectorWithin("button.session-project")
     const bar = await page.evaluate(() => {
       const toolbar = document.querySelector('[data-slot="composer"]#toolbar')
       const present = (selector) => toolbar !== null && toolbar.querySelector(selector) !== null
@@ -152,7 +165,7 @@ async function main() {
       }
     })
     check("grid", layout.display === "grid", `display = ${layout.display}`)
-    check("--bg 亮值实测", layout.bodyBg === "rgb(247, 248, 250)", `background-color = ${layout.bodyBg}`)
+    check("--bg 亮值实测", layout.bodyBg === "rgb(247, 247, 248)", `background-color = ${layout.bodyBg}`) /* 2026-10-04 Codex 皮肤轮：亮值随 `renderer/codex.css` 调色板更新（#f7f8fa ⇒ #f7f7f8）。 */
     check("flow 盒几何", layout.flowW > 0 && layout.flowH > 0, `w=${layout.flowW} h=${layout.flowH}`)
     check("status 盒底贴视口底", layout.statusGap !== null && layout.statusGap <= 2, `gap = ${layout.statusGap}`)
 

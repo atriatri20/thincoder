@@ -37,6 +37,23 @@ export function pushReal(agent, msg) {
 }
 
 /**
+ * assistantRealFrame(response) — 助手真帧构造（**思考留档 · 2026-10-04 桌面思考块跨会话重建**）：
+ * completion ∕ turn-loop 的 pushReal 助手帧原为 `{role, content}` 两键——`response.reasoning`（provider
+ * 流式聚合的思考文本，`provider/core.mjs` 上下文帧同源）在持久化时被丢弃 ⇒ 切会话 ∕ 重载后思考块
+ * 无法重建（用户实测「切换会话就没法再展开」的根因）。本构造把思考以 **`reasoning` LOCAL-ONLY 字段**
+ * 携入：人读线落盘 ⇒ 恢复径 `history-window` `reasoningOf`（`m.reasoning_content ?? m.reasoning`）
+ * 读到 ⇒ 渲染端 `page-read` 重建思考块；机器线侧由 `escape.mjs` `stripLocalMessageFields` 发送前剥离
+ * （ts ∕ transient 同族 —— 上下文零污染 ∕ 严格 OpenAI 兼容服务端零未知键）。空思考 ⇒ 字段缺席。
+ */
+export function assistantRealFrame(response) {
+  const frame = { role: "assistant", content: response?.content }
+  if (typeof response?.reasoning === "string" && response.reasoning.trim() !== "") {
+    frame.reasoning = response.reasoning
+  }
+  return frame
+}
+
+/**
  * pushRecord — 人读线留档记录单点（消化生命周期面 · #726；形 ∥ 写缝 ∥ 判据单源 = SESSION.md §6.26）。
  * `pushReal` 双胞（直复用——零算法副本）：`ts` 打点 ∥ 记录存储追加（`_recordStore?.append`——§6.14）∥
  * 尾窗驱逐三面同源；**机器线零触** = `history` 以一次性弃数组承接 ⇒ 记录不入 `agent.history` /
