@@ -207,8 +207,8 @@ body .paste-toast { border-radius: 12px; }
 /* 发送 ∕ 停止 ∕ 附件：胶囊化；发送钮单色化（Codex 式 —— 前景底 ∕ 背景字）。 */
 .composer #send-btn, .composer #abort-btn, .composer #controls-row #attach-btn { height: 28px; border-radius: 999px; }
 .composer #controls-row #attach-btn, .composer #controls-row #send-btn, .composer #controls-row #abort-btn { padding: 0 14px; }
-.composer #send-btn { background: var(--accent); color: #fff; font-weight: 500; box-shadow: none; }
-.composer #send-btn:hover { background: var(--accent); opacity: 0.88; box-shadow: none; }
+.composer #send-btn { background: color-mix(in srgb, var(--accent) 45%, var(--bg-raised)); color: #fff; font-weight: 500; box-shadow: none; }
+.composer #send-btn:hover { background: color-mix(in srgb, var(--accent) 60%, var(--bg-raised)); opacity: 1; box-shadow: none; }
 .composer #send-btn:active { opacity: 0.78; transform: none; }
 .composer #send-btn:disabled { background: var(--hover-bg-strong); color: var(--fg); opacity: 0.4; box-shadow: none; transform: none; }
 
