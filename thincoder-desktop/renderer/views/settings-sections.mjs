@@ -165,8 +165,39 @@ function tierRowNode(tier, handlers) {
   }
 }
 
-/** 模型段体：当前读数 + 档位行（不可解 ⇒ 零节点）+ 候选行（**向导不经本函数** —— 向导步 2 内零档位行）。 */
+/** 模型段体：当前读数 + 档位行（不可解 ⇒ 零节点）+ 候选行（**向导不经本函数** —— 向导步 2 内零档位行）
+ *  + **自定义模型 ID 行**（2026-10-05 —— 网关列表外的模型（如 `qd/qfmodel`）此前无入口；写径复用
+ *  `onUseCustomModel`（装配层现读输入值 + 活跃渠道 `section.provider`）——值持久 = 草稿面（`data-draft`）。 */
 export function modelBody(section, handlers) {
   const tier = section?.tier ?? null
-  return [modelHeadNode(section), ...(tier === null ? [] : [tierRowNode(tier, handlers)]), ...modelChoicesTree(section, handlers)]
+  const onUseCustom = typeof handlers?.onUseCustomModel === "function" && section?.provider !== null ? handlers.onUseCustomModel : undefined
+  return [
+    modelHeadNode(section),
+    ...(tier === null ? [] : [tierRowNode(tier, handlers)]),
+    ...modelChoicesTree(section, handlers),
+    {
+      tag: "div",
+      props: { class: "settings-field-row", "data-field": "model.custom" },
+      children: [
+        {
+          tag: "input",
+          props: {
+            class: "settings-field",
+            "data-draft": "custom-model",
+            placeholder: t("settings.model.customPlaceholder"),
+            "aria-label": t("settings.model.customPlaceholder"),
+            onKeydown: (event) => {
+              if (event?.key === "Enter") handlers?.onUseCustomModel?.()
+            },
+          },
+          children: [],
+        },
+        {
+          tag: "button",
+          props: wire({ class: "settings-row-action", type: "button", "data-action": "settings:useCustomModel" }, onUseCustom),
+          children: [t("settings.model.customUse")],
+        },
+      ],
+    },
+  ]
 }

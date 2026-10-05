@@ -40,7 +40,7 @@ import {
 import { attachSettings } from "./mount-settings.mjs"
 import { createMenuActions } from "./menu-actions.mjs" // 菜单动作分派（D36 · #811 —— `ev:menu` 窄口消费；零第二实现）
 import { createPanelReadout } from "./panel-readout.mjs" // 实况回读上报（子代理面板批 —— `panel:state` 渲染→主单向；帧出口挂点见 `applyFrame`）
-import { initPoolWidth, refreshResizerLabel } from "./pool-width.mjs" // 右栏宽度拖动（D30 · #742 —— chrome 级直写面）
+import { initPoolWidth, refreshResizerLabel, initPoolCollapse, refreshPoolCollapseLabel } from "./pool-width.mjs" // 右栏宽度拖动 ∕ 整列折叠（D30 · #742 —— chrome 级直写面）
 import { attachSearch } from "./search.mjs"
 import { attachChromeWords } from "./chrome-words.mjs"
 import { attachMinimap } from "./minimap.mjs"
@@ -268,6 +268,7 @@ async function boot() {
     store.set({ ...patchSettings(store.get(), { configured: configuredFlag(payload.configured) }), locale: initDict(payload) })
     composer.refresh() // 词面到位 ⇒ 输入面板重派生（面板挂载先于词表下发 —— 注册面后到，缺 ⇒ 占位符停留为键名）
     refreshResizerLabel() // 同因（词面到位 ⇒ 拖柄可及名注入 —— en 首启等值零通知窗不达 locale 支，父侧 2026-09-30 裁决 B）
+    refreshPoolCollapseLabel()
     await refreshRail() // 会话列表数据面（读失败不改 boot 判据 —— 读面自持错误面，不抬高引导位）
     // 重载补启（D9 · 批档 §2.14a）：主进程仍持项目（`cwd` 非空串）⇒ 活跃会话自动接续 —— 复用「点开即续」同路
     // （`session:resume` ⇒ 端记录判据 ⇒ `openPage` + `refreshRail`）；冷启（`cwd` 空 ∥ 读面失败）零触发；失败沿既有
@@ -311,6 +312,7 @@ const searchFace = attachSearch()
 
 /** 右栏宽度拖动（D30 · 台账 #742 —— 出档 `renderer/pool-width.mjs`）：装配期一次（读存储 ⇒ 内联 `--pool-w` ⇒ 拖柄接线；先于首绘可及面 —— 引导层在场期完成 ⇒ 零可见跳变）；词面注入两处 = boot 词表置位点 + 帧分派 `locale` 支。 */
 initPoolWidth()
+initPoolCollapse() // 活动池整列折叠（Codex 形大改批 —— chrome 级直写面，沿宽度拖动同律）
 
 /** 主题三态（D33 · 台账 #743 —— 出档 `renderer/theme.mjs`）：装配期一次（读存储 ⇒ 归一 ⇒ 写 `data-theme` ⇒ 切片播种
  *  —— 先于首绘可及面，同 `initPoolWidth` 位）；`dataset.theme` 写仍同步不经帧（设置面重绘键 = `SETTINGS_KEYS` 含 `theme`）。 */
@@ -343,6 +345,7 @@ function applyFrame(dirtyKeys) {
   if (dirtyKeys.includes("locale")) {
     document.documentElement.dataset.locale = state.locale
     refreshResizerLabel()
+    refreshPoolCollapseLabel()
   }
   const painted = dispatchFrame({ dirtyKeys, state, faces })
   // 实况回读上报（子代理面板批 —— 帧出口尾：五面分派后 DOM 已落；签名去重 ⇒ 状态迁转 ∥ 出生 ∥ 归档 ∥

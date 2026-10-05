@@ -154,6 +154,8 @@ export const HOST_DICT = Object.freeze({
     "sidebar.group.week": "Last 7 days",
     "sidebar.group.earlier": "Earlier",
     "sidebar.empty": "No matches",
+    "pool.collapse": "Collapse activity panel",
+    "pool.expand": "Expand activity panel",
     // ── 思考链折叠 ∕ 耗时（Codex 形大改批 · 2026-10-04 —— 四键）──
     "reasoning.label": "Thinking",
     "reasoning.done": "Thought for ${n}s",
@@ -291,6 +293,8 @@ export const HOST_DICT = Object.freeze({
     "sidebar.group.week": "最近 7 天",
     "sidebar.group.earlier": "更早",
     "sidebar.empty": "无匹配会话",
+    "pool.collapse": "收起活动面板",
+    "pool.expand": "展开活动面板",
     // ── 思考链折叠 ∕ 耗时（四键两语同拍）──
     "reasoning.label": "思考",
     "reasoning.done": "已思考 ${n}s",

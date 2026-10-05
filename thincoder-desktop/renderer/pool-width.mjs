@@ -121,3 +121,50 @@ export function refreshResizerLabel({ doc = document, root = doc?.querySelector?
   if (!root || typeof root.setAttribute !== "function") return
   root.setAttribute("aria-label", t("pool.resize"))
 }
+
+/* ─── 活动池整列折叠（Codex 形大改批 · 2026-10-05 —— chrome 级直写面，沿本档宽度拖动同律）────────
+ *  体 = body 类（`body.pool-collapsed` —— CSS 单源：栅格池列收 30px 竖条 ∕ 池体 ∕ 拖柄退场）+ 把手钮
+ *  （骨架 `data-pool-collapse`，贴池左缘垂直居中，「»」收 ∕ 「«」开）。持久 = localStorage
+ *  （键 `thincoder.desktop.poolCollapsed` = "1"）——读失败 ⇒ 展开（默认）；写失败 ⇒ 会话内生效（fail-soft）。 */
+
+const COLLAPSE_CLASS = "pool-collapsed"
+const COLLAPSE_KEY = "thincoder.desktop.poolCollapsed"
+const COLLAPSE_ANCHOR = "[data-pool-collapse]"
+
+function collapseRead(storage) {
+  try {
+    return storage?.getItem?.(COLLAPSE_KEY) === "1"
+  } catch {
+    return false
+  }
+}
+
+function collapseWrite(storage, collapsed) {
+  try {
+    storage?.setItem?.(COLLAPSE_KEY, collapsed ? "1" : "0")
+  } catch {
+    /* fail-soft（沿宽度拖动同律） */
+  }
+}
+
+/** 可及名随语（调用面 = `refreshResizerLabel` 同两处）。 */
+export function refreshPoolCollapseLabel({ doc = document, root = doc?.querySelector?.(COLLAPSE_ANCHOR) } = {}) {
+  if (!root || typeof root.setAttribute !== "function") return
+  const collapsed = doc.body?.classList?.contains(COLLAPSE_CLASS) === true
+  root.setAttribute("aria-label", collapsed ? t("pool.expand") : t("pool.collapse"))
+  root.title = collapsed ? t("pool.expand") : t("pool.collapse")
+}
+
+/** 装配入口（`renderer/app.mjs` 装配期一次）：读存储 ⇒ body 类 ⇒ 把手接线（点击翻转 + 落存储）。 */
+export function initPoolCollapse({ doc = document, storage = window?.localStorage ?? null } = {}) {
+  if (collapseRead(storage)) doc.body?.classList?.add(COLLAPSE_CLASS)
+  const root = doc.querySelector?.(COLLAPSE_ANCHOR)
+  if (!root || typeof root.addEventListener !== "function") return
+  root.addEventListener("click", () => {
+    const collapsed = !doc.body.classList.contains(COLLAPSE_CLASS)
+    doc.body.classList.toggle(COLLAPSE_CLASS, collapsed)
+    collapseWrite(storage, collapsed)
+    refreshPoolCollapseLabel({ doc, root })
+  })
+  refreshPoolCollapseLabel({ doc, root })
+}

@@ -696,6 +696,47 @@ body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; 
 .sidebar-item:hover .sidebar-item-title { padding-right: 22px; }
 .sidebar-empty-filter { padding: 8px; color: var(--fg-muted); font-size: 12px; }
 
+/* ── 活动池整列折叠（2026-10-05）：左缘把手，收成 30px 竖条 ────────────────── */
+.pool-collapse {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 48px;
+  z-index: 6;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-raised);
+  color: var(--fg-muted);
+  font: 12px/1 var(--font);
+  cursor: pointer;
+}
+.pool-collapse::before { content: "»"; }
+.pool-collapse:hover { color: var(--fg); border-color: color-mix(in srgb, var(--fg) 30%, transparent); }
+.pool-collapse:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+body.pool-collapsed .pool-collapse::before { content: "«"; }
+body.pool-collapsed .app { grid-template-columns: auto minmax(0, 1fr) 30px; }
+body.pool-collapsed .pool-resizer,
+body.pool-collapsed [data-slot="pool"] { display: none; }
+body.pool-collapsed .pool-collapse { left: 4px; }
+
+/* ── 欢迎页 Codex 化（纯 CSS · 2026-10-05）────────────────────────────────── */
+.chat-welcome { padding: 120px 20px 40px; gap: 6px; }
+.welcome-heading { font-size: 2em; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 2px; }
+.welcome-text { color: var(--fg-muted); max-width: none; }
+.welcome-shortcuts {
+  margin-top: 22px;
+  padding: 8px 18px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--fg-muted);
+  font-size: 12px;
+  max-width: none;
+}
+
 /* ── 顶部会话下拉：宽度随内容放足（修长标题显示不全 · 2026-10-05）──────────── */
 .session-dropdown {
   left: 0;

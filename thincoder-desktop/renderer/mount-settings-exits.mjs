@@ -252,6 +252,16 @@ export function createExits(deps = {}) {
     onRemoveProvider: (name) => void removeProvider(name),
     onUseModel: (provider, name) => void useModel(provider, name),
     onTier: (provider, model, level) => void setTier(provider, model, level),
+    /** 自定义模型 ID 采用（2026-10-05 —— 网关列表外模型入口）：现读输入值（`data-draft="custom-model"` ——
+     *  草稿面持久）+ 活跃渠道（`model.provider` 切片）⇒ 复用 `useModel` 单一实现（写 `defaultModel` 复合串）。
+     *  值空 ∕ 无活跃渠道 ⇒ 零动作（钮态已 disabled —— 双保险）。 */
+    onUseCustomModel: () => {
+      const input = document.querySelector('[data-draft="custom-model"]')
+      const id = typeof input?.value === "string" ? input.value.trim() : ""
+      const provider = store.get().settings?.model?.provider
+      if (id === "" || typeof provider !== "string" || provider === "") return
+      void useModel(provider, id)
+    },
   }
 
   /** Esc 关闭（F-Esc —— 一律经既有 `closeSettings` 出口，单一实现；向导态不在本项）：**绑定宿主 = `document`**（面板为窗口级覆盖层
