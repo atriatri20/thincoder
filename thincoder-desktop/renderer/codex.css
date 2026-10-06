@@ -166,7 +166,11 @@ body .paste-toast { border-radius: 12px; }
 }
 .code-lang {
   background: color-mix(in srgb, var(--accent) 8%, var(--bg-raised));
-  color: var(--accent-text);
+  /* 字色 = 行内代码同款逻辑（用户反馈：直引主题色太饱和）——accent-text 混前景灰压暗 */
+  color: light-dark(
+    color-mix(in srgb, var(--accent-text) 38%, var(--fg)),
+    color-mix(in srgb, var(--accent-text) 30%, var(--fg))
+  );
   opacity: 1;
   font-weight: 600;
   font-size: 12px;
@@ -183,7 +187,11 @@ body .paste-toast { border-radius: 12px; }
 .block-text table, .reasoning-content table { border-color: var(--line); }
 .block-text th, .reasoning-content th {
   background: color-mix(in srgb, var(--accent) 8%, var(--bg-raised));
-  color: var(--accent-text);
+  /* 字色 = 行内代码同款逻辑（同上——低饱和压暗）*/
+  color: light-dark(
+    color-mix(in srgb, var(--accent-text) 38%, var(--fg)),
+    color-mix(in srgb, var(--accent-text) 30%, var(--fg))
+  );
   border-color: color-mix(in srgb, var(--accent) 18%, var(--line));
 }
 .block-text td, .reasoning-content td { border-color: var(--line); }
