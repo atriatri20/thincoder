@@ -236,6 +236,7 @@ export function settingsModel(state) {
     },
     usage: {
       state: stateOf(settings.usage),
+      period: typeof settings.usage?.period === "string" && settings.usage.period !== "" ? settings.usage.period : "today",
       stats: settings.usage?.stats !== null && typeof settings.usage?.stats === "object" ? settings.usage.stats : null,
     },
   }

@@ -320,8 +320,9 @@ function panelState(payload) {
   return { ok: true }
 }
 
-/** `usage:stats({ months })` ⇒ `{ ok, generatedAt, total, byDay, byModel }`（**用量统计读面** —— 2026-10-06 ·
- *  白名单末位 49；转口 `usage-log.mjs` `usageStats` —— 归一化 ∕ 聚合单源在台账档，本档零算法副本）。 */
+/** `usage:stats({ months, period })` ⇒ `{ ok, generatedAt, period, total, byDay, byModel }`（**用量统计读面** ——
+ *  2026-10-06 · 白名单末位 49；转口 `usage-log.mjs` `usageStats` —— 归一化 ∕ 聚合 ∕ 期档过滤〔today ∕ 24h ∕
+ *  7d ∕ 30d ∕ all，二轮增 —— 9Router 同形〕单源在台账档，本档零算法副本）。 */
 function usageStatsChannel(payload) { return usageStats(payload) }
 
 /** R1 · 会话维护线两处理体转口（出档 `session-maintenance.mjs`）：`session:gc` ⇒ `{ ok, candidates, confirmed,

@@ -244,6 +244,12 @@ export function createExits(deps = {}) {
     ...modelSegments.handlers,
     ...providerSegments.handlers,
     ...agentSegments.handlers,
+    // 期档切换（2026-10-06 二轮 —— 9Router 同形）：切片先落（tab active 态随重绘即达）+ force 重读
+    //（聚合在主进程单源 —— byModel ∕ 24h 滚动窗不可由客户端 byDay 推导）。loadUsage 自持 loading 态。
+    onSelectPeriod: (period) => {
+      setSettings({ usage: { ...store.get().settings?.usage, period } })
+      void loadUsage({ force: true, period })
+    },
     onRefreshUsage: () => void loadUsage({ force: true }),
     onToggleLang: (target) => void toggleLang(target),
     onSetTheme: (target) => setThemeFace(target),

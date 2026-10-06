@@ -1141,26 +1141,17 @@ body.pool-collapsed .pool-collapse { left: 4px; }
   color: var(--fg-muted);
   margin-bottom: 6px;
 }
-.usage-card-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-  margin-top: 5px;
-}
-.usage-card-key {
-  font-size: 12px;
-  color: var(--fg-muted);
-  flex: none;
-}
-.usage-card-val {
-  font-size: 15px;
+.usage-card-value {
+  font-size: 18px;
   font-weight: 600;
   color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.usage-card-value + .usage-card-sub { margin-top: 7px; }
 .usage-card-sub {
   font-size: 12px;
   color: var(--fg-muted);
@@ -1199,7 +1190,46 @@ body.pool-collapsed .pool-collapse { left: 4px; }
 .usage-table-cell:first-child { text-align: left; }
 .usage-table-head .usage-table-cell { text-align: right; }
 .usage-table-head .usage-table-cell:first-child { text-align: left; }
-[data-usage-meta] { align-items: center; }
+[data-usage-meta] {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.usage-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+/* 期档切换器（9Router 同形 —— 胶囊组 ∕ active 实心 accent） */
+.usage-periods {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+  background: var(--bg-raised);
+}
+.usage-period {
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fg-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.usage-period:hover { color: var(--fg); background: var(--bg); }
+.usage-period.active {
+  background: var(--accent-solid);
+  color: #fff;
+  font-weight: 600;
+}
 @media (max-width: 60rem) {
   .usage-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

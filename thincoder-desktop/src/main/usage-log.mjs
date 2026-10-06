@@ -203,16 +203,38 @@ export const cacheHitPctOf = (bucket) => {
   return Math.round((cacheRead / prompt) * 1000) / 10
 }
 
+/** 期档闭集（9Router 同形 —— `today ∕ 24h ∕ 7d ∕ 30d ∕ all`；表外 ⇒ all fail-soft）。 */
+const PERIOD_CUTOFFS = Object.freeze(["today", "24h", "7d", "30d"])
+
+/** 期档截止时点（本地时区）：`today` = 今日零点 ∕ `24h` = 滚动 24 小时 ∕ `7d` ∕ `30d` = 起始日零点 ∕
+ *  其余（含 `all` ∕ 表外）= `null`（不过滤）。纯函数。 */
+function periodCutoff(period, now = new Date()) {
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  switch (period) {
+    case "today": return startOfDay
+    case "24h": return new Date(now.getTime() - 24 * 3600 * 1000)
+    case "7d": { const d = new Date(startOfDay); d.setDate(d.getDate() - 6); return d }
+    case "30d": { const d = new Date(startOfDay); d.setDate(d.getDate() - 29); return d }
+    default: return null
+  }
+}
+
 /**
- * 全局用量统计读面：`{ months }` → `{ ok, generatedAt, total, byDay, byModel }`。
+ * 全局用量统计读面：`{ months, period }` → `{ ok, generatedAt, period, total, byDay, byModel }`。
+ * `period`（2026-10-06 增 —— 9Router 同形期档切换器；9Router UsageStats PERIODS 同闭集）：
+ * `today` ∕ `24h` ∕ `7d` ∕ `30d` = 截止时点过滤（ts 早于截止的行不聚合）；`all`（缺省 ∕ 表外）= 不过滤。
  * - `total` = 五键 + requests（窗口内全部）；
  * - `byDay` = 本地时区按天分桶升序，桶附 `models`（日 × 模型 token 面零假造：模型缺省行归 `"?"`）；
  * - `byModel` = 按模型汇总降序（requests ∕ 五键 ∕ lastTs）。
  */
-export async function usageStats({ months = 3 } = {}) {
+export async function usageStats({ months = 3, period = "all" } = {}) {
   const window = Math.min(Math.max(Number(months) || 3, 1), KEEP_MONTHS)
-  const records = []
-  for (const monthKey of recentMonths(window)) records.push(...(await readMonth(monthKey)))
+  const cutoff = periodCutoff(period)
+  const allRecords = []
+  for (const monthKey of recentMonths(window)) allRecords.push(...(await readMonth(monthKey)))
+  const records = cutoff === null
+    ? allRecords
+    : allRecords.filter((rec) => typeof rec.ts === "string" && Date.parse(rec.ts) >= cutoff.getTime())
   const total = emptyBucket()
   const byDay = new Map()
   const byModel = new Map()
@@ -230,6 +252,7 @@ export async function usageStats({ months = 3 } = {}) {
   return {
     ok: true,
     generatedAt: new Date().toISOString(),
+    period: cutoff === null ? "all" : period,
     total: sumTokens(total),
     requests: total.requests,
     byDay: days.map(([day, bucket]) => ({ day, ...sumTokens(bucket), requests: bucket.requests })),

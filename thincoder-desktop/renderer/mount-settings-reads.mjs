@@ -208,14 +208,18 @@ export function createReads(deps = {}) {
   }
 
   /** 用量段读数（`usage:stats` · 2026-10-06 —— 台账聚合转口 `usage-log.mjs`）：**懒加载** ——
-   *  切片无 stats ∕ force 才发读（台账读面月档扫描比其余段贵）；失败面零静默。 */
-  async function loadUsage({ force = false } = {}) {
+   *  切片无 stats（且期档未变）∥ force 才发读（台账读面月档扫描比其余段贵）；失败面零静默。
+   *  `period`（2026-10-06 二轮 —— 9Router 同形期档切换器）：`today ∕ 24h ∕ 7d ∕ 30d ∕ all`，缺省沿
+   *  切片现值 ∕ `today`；期档切换 = onSelectPeriod 落切片 + force 重读（归聚合在主进程单源）。 */
+  async function loadUsage({ force = false, period = null } = {}) {
     const held = store.get().settings?.usage ?? {}
-    if (force !== true && held.stats) return
-    setSettings({ usage: { ...held, state: "loading" } })
-    const receipt = await ask("usage:stats", { months: 3 })
+    const target = typeof period === "string" && period !== "" ? period
+      : (typeof held.period === "string" && held.period !== "" ? held.period : "today")
+    if (force !== true && held.stats && held.period === target) return
+    setSettings({ usage: { ...held, period: target, state: "loading" } })
+    const receipt = await ask("usage:stats", { months: 3, period: target })
     if (receipt?.ok !== true || typeof receipt.total !== "object") {
-      setSettings({ usage: { state: "none", stats: null } })
+      setSettings({ usage: { state: "none", period: target, stats: null } })
       report("usage", receipt?.ok !== true ? receipt : { reason: "invalid-shape" }, "usage:stats")
       return
     }
@@ -223,6 +227,7 @@ export function createReads(deps = {}) {
       notice: null,
       usage: {
         state: "ready",
+        period: target,
         stats: {
           generatedAt: typeof receipt.generatedAt === "string" ? receipt.generatedAt : null,
           requests: Number.isFinite(receipt.requests) ? receipt.requests : 0,
