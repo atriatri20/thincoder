@@ -357,10 +357,11 @@ select.settings-field { min-inline-size: 12rem; }
 .win-btn[data-win="minimize"]::before { content: "─"; }
 .win-btn[data-win="maximize"]::before { content: "❐"; }
 .win-btn[data-win="maximize"][data-maxed]::before { content: "▣"; }
+.win-btn[data-win="close"]::before { content: "✕"; } /* 静息即显（原漏——content 只定义在 hover ⇒ 静息空）*/
 .win-btn:hover { background: var(--hover-bg); }
 .win-btn:hover::before { color: var(--fg); }
 .win-btn.win-close:hover { background: #e81123; }
-.win-btn.win-close:hover::before { content: "✕"; color: #fff; }
+.win-btn.win-close:hover::before { color: #fff; }
 /* 会话控制条留守对话区（fork 2026-10-06 回迁——用户反馈「标题栏显乱 ∕ 展开选择 ∕ 新建会话功能没了」）：
    Header 只承载品牌 ∕ 全局菜单 ∕ 拖拽；条形本貌（chrome.css）原样留在 .session 首位。 */
 
