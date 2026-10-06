@@ -201,7 +201,8 @@ body .paste-toast { border-radius: 12px; }
   border-color: color-mix(in srgb, var(--accent) 18%, var(--line));
 }
 .block-text td, .reasoning-content td { border-color: var(--line); }
-.block-text tbody tr:hover, .reasoning-content tbody tr:hover { background: var(--hover-bg); }
+/* 行 hover = accent 5%（用户反馈「预选用更淡的主题色」——比选中态 8% 更淡一档）*/
+.block-text tbody tr:hover, .reasoning-content tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
 .block-text blockquote, .reasoning-content blockquote {
   border-radius: 0 8px 8px 0;
   background: color-mix(in srgb, var(--fg) 4%, transparent);
@@ -738,7 +739,7 @@ select option {
   font: inherit;
   min-block-size: 0;
 }
-option:hover, option:focus { background: var(--hover-bg); }
+option:hover, option:focus { background: color-mix(in srgb, var(--accent) 7%, transparent); } /* 预选 = 更淡主题色（选中 10% 的弱化档）*/
 option:checked {
   color: var(--accent-text);
   font-weight: 500;
