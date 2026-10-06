@@ -792,7 +792,18 @@ select optgroup::before { color: var(--fg-muted); font-weight: 500; }
 }
 .session-reasoning::before { content: "◆"; font-size: 9px; }
 .session-reasoning.open::before { content: "◇"; }
+/* 激活态（用户反馈「很难一眼看出点了没点」）：展开态 = accent 淡底 + 主题色字——
+   对齐 composer 控件激活观感（ADVISOR 同款）；折叠态保持灰。 */
+.session-reasoning[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent-text);
+}
+.session-reasoning[aria-pressed="true"]::before { color: var(--accent-text); }
 .session-reasoning:hover { background: var(--hover-bg-strong); color: var(--fg); }
+.session-reasoning[aria-pressed="true"]:hover {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent-text);
+}
 .session-reasoning:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 /* 折叠态摘要行收紧（占比最小化）：摘要 = 弱化胶囊观感。 */
 .reasoning-block:not([open]) > .reasoning-summary { opacity: 0.6; }
