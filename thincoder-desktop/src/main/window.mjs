@@ -40,9 +40,11 @@ const THEME_COLORS = Object.freeze({ dark: "#15171c", light: "#f7f8fa" })
 /** 统一 Header（fork 2026-10-06 —— 双层 Top Bar 合并）：隐藏原生标题栏，窗口控制钮走系统 overlay
  *  （高 40 = HTML 层 Header 行高）；两主题各一枚 overlay 配色（底 ∕ 控制符），随 `setMenuTheme` 同步。 */
 const OVERLAY_HEIGHT = 40
+// 底色 = `--bg-raised` 同值（Header 行底）——用户反馈「右上控制钮区浅灰」：初版误用 --bg（#f7f8fa）
+// 与 Header 白底形成色差；暗值同理对齐 #14171c。
 const OVERLAY_COLORS = Object.freeze({
-  light: { color: "#f7f8fa", symbolColor: "#1b1f24" },
-  dark: { color: "#15171c", symbolColor: "#e6e9ee" },
+  light: { color: "#ffffff", symbolColor: "#1b1f24" },
+  dark: { color: "#14171c", symbolColor: "#e6e9ee" },
 })
 
 /** 菜单勾选态回读缓存（D36 —— `theme:state` 到达置位；报告未达窗 ⇒ `null` ⇒ 主题▸全零勾，fail-open 零误勾）。 */
