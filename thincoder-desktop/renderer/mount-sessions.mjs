@@ -28,6 +28,7 @@ import { t } from "./i18n.mjs"
 import { store } from "./store.mjs"
 // 会话控制面树面单源（R13 硬限拆分产出）+ 差分辅助件（槽序 ∕ 空态行 ∕ 注记 ∕ 条目构建：挂载面同引）
 import { ITEM_SLOTS, emptyRowNode, itemNode, ledgerNoticeNode, sessionBarTree, sessionDropdownTree, sessionModel } from "./views/session-control.mjs"
+import { reasoningBulkExpanded } from "./reasoning-pref.mjs" // 思考批量态读面（syncBar 钮态同步用）
 // 快照族（波 1 产物 —— 重建保真「位置 ∕ 状态」半边：#606④ 包络，壳全建径复填滚位 ∕ 域内焦点）
 import { captureView, restoreView } from "./view-state.mjs"
 // 同名 re-export（越线档结构轮 · #536 —— 缝 = 同名再出口）：会话族接线面随本批出档 `renderer/session-wire.mjs`；
@@ -155,6 +156,19 @@ function syncBar(root, model, handlers, face) {
   if (face.open !== true) { if (dropdown !== null) dropdown.remove() }
   else if (dropdown === null) selector.append(build(sessionDropdownTree(model, handlers, face)))
   else syncDropdown(dropdown, model, handlers, face)
+  // 思考钮态同步（**漏项修正**——原 syncBar 只对账选择器 ∕ 下拉 ⇒ 钮 aria-pressed ∕ class ∕ 词面
+  // 恒停初绘态：点击功能走了（思考块翻转）而钮视觉死灰——用户「测试没变化」根因之二）。
+  const reasoning = root.querySelector(".session-reasoning")
+  if (reasoning !== null) {
+    const expanded = reasoningBulkExpanded()
+    const collapsed = !expanded
+    const pressed = String(expanded)
+    if (reasoning.getAttribute("aria-pressed") !== pressed) reasoning.setAttribute("aria-pressed", pressed)
+    const wantClass = collapsed ? "session-reasoning" : "session-reasoning open"
+    if (reasoning.className !== wantClass) reasoning.className = wantClass
+    const word = collapsed ? t("reasoning.expandAll") : t("reasoning.collapseAll")
+    if (reasoning.getAttribute("aria-label") !== word) { reasoning.setAttribute("aria-label", word); reasoning.setAttribute("title", word) }
+  }
   return true
 }
 
@@ -202,6 +216,7 @@ function wireFace(root, handlers) {
     onNew: handlers.onNew,
     onOpenProject: handlers.onOpenProject,
     onOpenProjectFolder: handlers.onOpenProjectFolder, // 打开项目文件夹（shell:openPath —— 装配面读 cwd 切片）
+    onToggleReasoning: handlers.onToggleReasoning, // 思考总折叠（**漏透传修正**——原钮 onClick 恒空 ∕ aria-pressed 恒 false）
   }
 }
 
