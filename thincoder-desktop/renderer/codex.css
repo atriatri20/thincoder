@@ -156,6 +156,38 @@ body .paste-toast { border-radius: 12px; }
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: inherit;
 }
+
+/* ── 代码块主题联动（fork 2026-10-06 —— 用户反馈 + Codex 参考图）：语言条 = accent 淡底 + 主题色字
+   （图 2 Codex 形——头部条淡蓝 ∕ 复制钮同条）；块体白底细边（accent 20% 混 line）圆角 10。
+   表格：表头 accent 淡底 + 主题色字；行 hover 淡灰（面 7 ∕ 8 ∕ 12 同形覆盖——codex 后载胜）。 ═══ */
+.code-block {
+  background: var(--bg-raised); /* 代码体白底（原 --overlay 灰——参考图 Codex 形）*/
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
+}
+.code-lang {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-raised));
+  color: var(--accent-text);
+  opacity: 1;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 12px;
+}
+.code-copy-btn {
+  top: 4px;
+  right: 4px;
+  border: 0;
+  background: transparent;
+  opacity: 0.55;
+}
+.code-copy-btn:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); opacity: 1; }
+.block-text table, .reasoning-content table { border-color: var(--line); }
+.block-text th, .reasoning-content th {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-raised));
+  color: var(--accent-text);
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--line));
+}
+.block-text td, .reasoning-content td { border-color: var(--line); }
+.block-text tbody tr:hover, .reasoning-content tbody tr:hover { background: var(--hover-bg); }
 .block-text blockquote, .reasoning-content blockquote {
   border-radius: 0 8px 8px 0;
   background: color-mix(in srgb, var(--fg) 4%, transparent);
