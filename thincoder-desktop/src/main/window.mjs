@@ -37,15 +37,7 @@ const WINDOW = Object.freeze({ WIDTH: 1200, HEIGHT: 800, MIN_WIDTH: 800, MIN_HEI
 /** 画布色镜像（非通道面）：与 `theme.css` 主题变量（`--bg` 两态）同值，防首帧白闪；单源在 `theme.css` ⇒ 改色须两处同步（待修正轮定形）。 */
 const THEME_COLORS = Object.freeze({ dark: "#15171c", light: "#f7f8fa" })
 
-/** 统一 Header（fork 2026-10-06 —— 双层 Top Bar 合并）：隐藏原生标题栏，窗口控制钮走系统 overlay
- *  （高 40 = HTML 层 Header 行高）；两主题各一枚 overlay 配色（底 ∕ 控制符），随 `setMenuTheme` 同步。 */
-const OVERLAY_HEIGHT = 40
-// 底色 = `--bg-raised` 同值（Header 行底）——用户反馈「右上控制钮区浅灰」：初版误用 --bg（#f7f8fa）
-// 与 Header 白底形成色差；暗值同理对齐 #14171c。
-const OVERLAY_COLORS = Object.freeze({
-  light: { color: "#ffffff", symbolColor: "#1b1f24" },
-  dark: { color: "#14171c", symbolColor: "#e6e9ee" },
-})
+
 
 /** 菜单勾选态回读缓存（D36 —— `theme:state` 到达置位；报告未达窗 ⇒ `null` ⇒ 主题▸全零勾，fail-open 零误勾）。 */
 let menuTheme = null
@@ -152,14 +144,26 @@ export function setMenuTheme(theme) {
   }
   menuTheme = theme
   refreshMenu()
-  // overlay 配色随主题（统一 Header 批 · fork 2026-10-06）：`setTitleBarOverlay` = Win 专属面——
-  // 他平台抛 ⇒ 捕获记错零失败（fail-soft；overlay 缺席平台本就无此 UI）。
-  try {
-    activeWin?.setTitleBarOverlay?.({ ...(OVERLAY_COLORS[theme] ?? OVERLAY_COLORS.light), height: OVERLAY_HEIGHT })
-  } catch (error) {
-    console.error("[window] setTitleBarOverlay unavailable:", error?.message ?? error)
-  }
   return { ok: true }
+}
+
+/** 窗口控制出口（统一 Header 自绘三钮 · fork 2026-10-06 —— `window:control` 处理体）：
+ *  闭集 `minimize` ∕ `maximize`（toggle—— maximize ∕ unmaximize 按现态）∕ `close`；终态经
+ *  `ev:win-max` 推送（渲染面切图标 ❐∕▣——toggle 后系统事件异步，UI 态以推送为准）。 */
+export function winControl(action) {
+  if (activeWin === null || activeWin.isDestroyed()) return { ok: false, reason: "no-window" }
+  if (action === "minimize") activeWin.minimize()
+  else if (action === "maximize") activeWin.isMaximized() ? activeWin.unmaximize() : activeWin.maximize()
+  else if (action === "close") activeWin.close()
+  else return { ok: false, reason: "unknown-action" }
+  return { ok: true, reason: null }
+}
+
+/** 最大化态推送（建窗 ∕ `ev:win-max` 源——渲染面图标随态）：幂等两事件各挂一次。 */
+function bindWindowStatePush(win) {
+  const push = () => { if (!win.isDestroyed()) win.webContents.send("ev:win-max", win.isMaximized()) }
+  win.on("maximize", push)
+  win.on("unmaximize", push)
 }
 
 /** 更新面转口（桌面发布·阶段二批 · KD-71——`main.mjs` 装配登记，沿 `setMenuTheme` 先例）：句柄两出口校验
@@ -262,10 +266,10 @@ export function createWindow(onError) {
   const win = new BrowserWindow({
     width: WINDOW.WIDTH, height: WINDOW.HEIGHT, minWidth: WINDOW.MIN_WIDTH, minHeight: WINDOW.MIN_HEIGHT,
     backgroundColor: THEME_COLORS[resolveTheme()],
-    // 统一 Header（fork 2026-10-06）：原生标题栏隐藏（HTML 层单行 Header 承担品牌 ∕ 菜单 ∕ 拖拽），
-    // 窗口控制钮 = 系统 overlay（Win ∕ Linux）；overlay 初色随启动主题。
+    // 统一 Header（fork 2026-10-06）：原生标题栏隐藏（HTML 层单行 Header 承担品牌 ∕ 菜单 ∕ 拖拽）。
+    // 窗口控制钮 = **HTML 自绘**（用户反馈「没和 Header 集成在一起」——系统 overlay 独立绘制层，
+    // 遮 Header 分隔线 ∕ hover 系统样式不可控；自绘 = 边框 ∕ hover ∕ 主题全归 CSS）⇒ 零 overlay。
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
-    titleBarOverlay: { ...(OVERLAY_COLORS[resolveTheme()] ?? OVERLAY_COLORS.light), height: OVERLAY_HEIGHT },
     show: false,
     // #787 后台不节流：窗口后台（遮挡/隐藏）期照常出帧与交换——消「停摆—复显」相变（RENDERER.md §1.5）。
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: PRELOAD_PATH,
@@ -276,6 +280,7 @@ export function createWindow(onError) {
   win.maximize()
   win.show()
   activeWin = win // 菜单重建面持有（D36）——启动建窗 = 重建点①（`refreshMenu` 幂等）
+  bindWindowStatePush(win) // 自绘三钮图标随态（`ev:win-max`）
   // 关于面（D36 ∥ KD-65 ⑥ —— 建窗时一次）：应用名 ∥ 版本（`app.getVersion()` 动态）∥ 版权行（源 = D32 签名主体）。
   app.setAboutPanelOptions({ applicationName: "ThinCoder", applicationVersion: app.getVersion(), copyright: "© 2026 Shanghai Xinbo Technology Co., Ltd." })
   refreshMenu()

@@ -28,7 +28,7 @@ import { dialog, shell } from "electron"
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
 import { releaseClaimsAll } from "@thincoder/core/session-slots-manifest.mjs"
-import { PRELOAD_PATH, confirmRecycle, popupAppMenu, refreshMenu, setMenuTheme } from "./window.mjs"
+import { PRELOAD_PATH, confirmRecycle, popupAppMenu, refreshMenu, setMenuTheme, winControl } from "./window.mjs"
 import { currentCwd, openProject, recentDirs } from "./projects.mjs"
 import { listSessions, catalogSessions } from "./sessions.mjs"
 import {
@@ -101,7 +101,7 @@ function readConfig() {
 export {
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCatalog, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
-  questionRespond, sessionPrefs, subagentStop, fileOpen, shellOpenPath, sessionFlags, atComplete, recordAppend, themeState, menuPopup,
+  questionRespond, sessionPrefs, subagentStop, fileOpen, shellOpenPath, sessionFlags, atComplete, recordAppend, themeState, menuPopup, windowControl,
   panelState,
   sessionGc, sessionIndex, liveAgents,
 }
@@ -288,6 +288,11 @@ function atComplete(payload) { return requireAgentHost().atComplete(payload?.que
  *  —— 转口宿主记录面（处理体住 `agent-host.mjs`：装配表命中门 + `appendRecord`；reason 闭集 = `bad-key` ∥
  *  `unknown-key`）。宿主未注入 ⇒ fail-loud 直抛（沿 `subagent:stop` 先例）。 */
 function recordAppend(payload) { return requireAgentHost().recordAppend(payload?.key, payload?.record) }
+
+/** `window:control(payload)` ⇒ `{ ok, reason }`（统一 Header 自绘三钮 · fork 2026-10-06）：载荷
+ *  `{ action }` 闭集 = minimize ∕ maximize（toggle）∕ close——转口 `window.mjs` `winControl`
+ *  （activeWin 单例；终态经 `ev:win-max` 异步推送，回执只证受理）。 */
+function windowControl(payload) { return winControl(payload?.action) }
 
 /** `menu:popup(payload)` ⇒ `{ ok, reason }`（统一 Header 批 · fork 2026-10-06）：载荷
  *  `{ name, x, y }`——五顶层项尾段（file ∕ edit ∕ view ∕ settings ∕ help）+ 触发钮**内容坐标**

@@ -57,11 +57,38 @@ function paint() {
     toggle.setAttribute("aria-label", t("sidebar.collapse"))
     toggle.setAttribute("title", t("sidebar.collapse"))
   }
+  const winWords = { minimize: "header.win.min", maximize: "header.win.max", close: "header.win.close" }
+  for (const btn of document.querySelectorAll(".header-win-controls .win-btn")) {
+    const word = winWords[btn.getAttribute("data-win")]
+    if (word === undefined) continue
+    btn.setAttribute("aria-label", t(word))
+    btn.setAttribute("title", t(word))
+  }
+}
+
+/** 自绘窗口控制钮接线（fork 2026-10-06——「和 Header 集成在一起」）：三钮 → `window:control`
+ *  （minimize ∕ maximize toggle ∕ close）；`ev:win-max` 推送切最大化图标（❐ ∕ ▣）。
+ *  词面 = 系统钮无字面（aria 双语键沿最小面——复用 `settings.close` ∕ `sidebar.collapse` 族外另立三键）。 */
+function wireWinControls() {
+  const host = globalThis.window?.thincoder
+  for (const btn of document.querySelectorAll(".header-win-controls .win-btn")) {
+    btn.addEventListener("click", () => {
+      const action = btn.getAttribute("data-win")
+      if (host?.invoke === undefined) return // web 平测
+      void Promise.resolve(host.invoke("window:control", { action })).catch((error) => console.error("[header] window:control failed:", error))
+    })
+  }
+  if (host?.on === undefined) return
+  host.on("ev:win-max", (ev) => {
+    const maximized = ev?.maximized === true
+    document.querySelector('.header-win-controls .win-max')?.toggleAttribute("data-maxed", maximized)
+  })
 }
 
 /** 装配（`app.mjs` 装配期一次）：首涂 + `locale` 随涂。返回句柄面（退订——现状零消费面，形对称）。 */
 export function attachHeader() {
   paint()
+  wireWinControls()
   return store.subscribe((_state, changedKeys) => {
     if (Array.isArray(changedKeys) && !changedKeys.includes("locale")) return
     paint()
