@@ -36,7 +36,7 @@ const CHANNELS = Object.freeze([
   "provider:list", "provider:save", "provider:remove", "provider:verify",
   "model:list", "settings:agent", "mcp:list", "mcp:save", "mcp:remove",
   "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs", "subagent:stop", "file:open",
-  "session:flags", "at:complete", "shell:openPath",
+  "session:flags", "at:complete", "shell:openPath", "menu:popup",
   "session:gc", "session:index",
   "index:build", "index:status",
   "settings:env", "settings:tools", "mcp:tools",

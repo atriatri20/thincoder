@@ -38,9 +38,17 @@
          批 9 一容器：设置 / 向导 = `settings`（**窗口级覆盖层面** —— 两列栅格之外 · body 末子元素 · 一容器两树互斥 · 样式住 `settings.css`）。
          **零面向用户字符串**——词表供给面 = `config:read` 语言面下发（同档 §1 i18n 行：本端不另立词表源）⇒ 文案随视图批，经 `renderer/i18n.mjs`。例外仅 `<title>`（窗口标题 = 产品名，非词表项）。 -->
     <div class="app" id="app">
+      <!-- 统一 Header（fork 2026-10-06 —— 双层 Top Bar 合并）：隐藏原生标题栏 + 摘除窗口菜单栏后，
+           本行单层承载品牌 ∕ 全局菜单 ∕ 会话控制 ∕ 拖拽区（窗口控制钮 = 系统 overlay 右上）。
+           菜单钮词面 = `mount-header.mjs`（i18n）；会话控制条槽位原样迁入（mount-sessions 填充不变）。 -->
+      <header class="app-header" data-slot="app-header">
+        <button class="header-toggle" type="button" data-action="app:toggle-sidebar" aria-label=""></button>
+        <span class="header-brand">ThinCoder</span>
+        <nav class="header-menus" data-slot="header-menus"></nav>
+        <div class="header-session" data-slot="session-control"></div>
+      </header>
       <aside class="sidebar" data-slot="sidebar"></aside>
       <main class="session">
-        <div data-slot="session-control"></div>
         <div class="flow" data-slot="flow"></div>
         <div class="composer" data-slot="composer"></div>
       </main>

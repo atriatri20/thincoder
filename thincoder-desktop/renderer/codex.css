@@ -258,7 +258,55 @@ select.settings-field { min-inline-size: 12rem; }
    三列覆盖（同选择器后置胜出）。边栏 = 深底（`--bg`）+ 发丝右线；主区 ∕ 池 = 升底。 ═══ */
 .app {
   grid-template-columns: auto minmax(0, 1fr) clamp(15rem, var(--pool-w), max(36rem, 100vw - 30rem));
+  grid-template-rows: auto minmax(0, 1fr) auto; /* 统一 Header 批：首行 = Header（auto）*/
 }
+
+/* ── 统一 Header（fork 2026-10-06 —— 双层 Top Bar 合并）：单行 40px 承载品牌 ∕ 全局菜单 ∕ 会话控制 ──
+   原生标题栏隐藏（titleBarStyle hidden）+ 窗口控制钮 = 系统 overlay（右上，高 40 同步）；本行 = 全窗拖拽区。 */
+.app-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 0 8px 0 6px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-raised);
+  -webkit-app-region: drag; /* 全行拖拽移窗 */
+}
+.app-header button { -webkit-app-region: no-drag; }
+.header-toggle {
+  width: 28px; height: 28px; flex: none;
+  padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--fg);
+  font: inherit; cursor: pointer;
+}
+.header-toggle::before { content: "☰"; font-size: 15px; }
+.header-toggle:hover { background: var(--hover-bg); }
+.header-brand {
+  flex: none; margin: 0 6px 0 2px;
+  font-weight: 600; font-size: 13px; color: var(--fg);
+  user-select: none;
+}
+.header-menus { display: flex; align-items: center; gap: 0; }
+.header-menu-btn {
+  padding: 5px 11px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--fg);
+  font: inherit; font-size: 13px; line-height: 1;
+  cursor: pointer;
+}
+.header-menu-btn:hover { background: var(--hover-bg); }
+.header-session { display: flex; align-items: center; min-width: 0; }
+/* 会话控制条入 Header：条形退场（透明 ∕ 零边 ∕ 紧凑），仅留控件。
+   保留 = 会话选择器（当前会话信息）+ 思考总折叠 + 📂 打开文件夹（页面操作）；
+   隐藏 = 项目钮（职责归「打开项目」）+ 新会话钮（职责归「新聊天」）——Header 零重复出口。 */
+.app-header .session-bar { min-height: 0; padding: 0; border-bottom: 0; gap: 4px; }
+.app-header .session-bar .session-project,
+.app-header .session-bar .session-new { display: none; }
+.app-header .session-bar .session-selector { max-width: 22rem; }
+.app-header .session-bar .session-title { max-width: 19rem; }
+body.sidebar-collapsed .app-header .session-bar .session-selector { max-width: 13rem; }
+body.sidebar-collapsed .app-header .session-bar .session-title { max-width: 10rem; }
 
 /* ── 边栏（展开 264px ∕ 折叠 52px 图标列）────────────────────────────────── */
 .sidebar {

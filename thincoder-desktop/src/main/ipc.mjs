@@ -28,7 +28,7 @@ import { dialog, shell } from "electron"
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
 import { releaseClaimsAll } from "@thincoder/core/session-slots-manifest.mjs"
-import { PRELOAD_PATH, confirmRecycle, refreshMenu, setMenuTheme } from "./window.mjs"
+import { PRELOAD_PATH, confirmRecycle, popupAppMenu, refreshMenu, setMenuTheme } from "./window.mjs"
 import { currentCwd, openProject, recentDirs } from "./projects.mjs"
 import { listSessions, catalogSessions } from "./sessions.mjs"
 import {
@@ -101,7 +101,7 @@ function readConfig() {
 export {
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCatalog, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
-  questionRespond, sessionPrefs, subagentStop, fileOpen, shellOpenPath, sessionFlags, atComplete, recordAppend, themeState,
+  questionRespond, sessionPrefs, subagentStop, fileOpen, shellOpenPath, sessionFlags, atComplete, recordAppend, themeState, menuPopup,
   panelState,
   sessionGc, sessionIndex, liveAgents,
 }
@@ -288,6 +288,12 @@ function atComplete(payload) { return requireAgentHost().atComplete(payload?.que
  *  —— 转口宿主记录面（处理体住 `agent-host.mjs`：装配表命中门 + `appendRecord`；reason 闭集 = `bad-key` ∥
  *  `unknown-key`）。宿主未注入 ⇒ fail-loud 直抛（沿 `subagent:stop` 先例）。 */
 function recordAppend(payload) { return requireAgentHost().recordAppend(payload?.key, payload?.record) }
+
+/** `menu:popup(payload)` ⇒ `{ ok, reason }`（统一 Header 批 · fork 2026-10-06）：载荷
+ *  `{ name, x, y }`——五顶层项尾段（file ∕ edit ∕ view ∕ settings ∕ help）+ 触发钮**内容坐标**
+ *  （client → `menu.popup` 窗口相对直传）。转口 `window.mjs` `popupAppMenu`（现建现弹——recent ∕
+ *  主题勾 ∕ 更新态每次现读）；表外 name ⇒ `{ ok:false, reason:"unknown-menu" }`。 */
+function menuPopup(payload) { return popupAppMenu(payload?.name, payload?.x, payload?.y) }
 
 /** `theme:state(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason:"invalid-theme" }`（**勾选态回读** —— 菜单体系批 · D36：
  *  渲染→主单向；载荷 `{ theme }` 三值闭集）。缓存与菜单重建住 `window.mjs` `setMenuTheme` —— 本档只做转口

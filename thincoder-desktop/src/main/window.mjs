@@ -37,6 +37,14 @@ const WINDOW = Object.freeze({ WIDTH: 1200, HEIGHT: 800, MIN_WIDTH: 800, MIN_HEI
 /** 画布色镜像（非通道面）：与 `theme.css` 主题变量（`--bg` 两态）同值，防首帧白闪；单源在 `theme.css` ⇒ 改色须两处同步（待修正轮定形）。 */
 const THEME_COLORS = Object.freeze({ dark: "#15171c", light: "#f7f8fa" })
 
+/** 统一 Header（fork 2026-10-06 —— 双层 Top Bar 合并）：隐藏原生标题栏，窗口控制钮走系统 overlay
+ *  （高 40 = HTML 层 Header 行高）；两主题各一枚 overlay 配色（底 ∕ 控制符），随 `setMenuTheme` 同步。 */
+const OVERLAY_HEIGHT = 40
+const OVERLAY_COLORS = Object.freeze({
+  light: { color: "#f7f8fa", symbolColor: "#1b1f24" },
+  dark: { color: "#15171c", symbolColor: "#e6e9ee" },
+})
+
 /** 菜单勾选态回读缓存（D36 —— `theme:state` 到达置位；报告未达窗 ⇒ `null` ⇒ 主题▸全零勾，fail-open 零误勾）。 */
 let menuTheme = null
 /** 当前窗口（菜单重建面持有 —— `createWindow` 登记；`refreshMenu` 经其幂等重建）。 */
@@ -114,7 +122,23 @@ function buildMenu() {
  *  窗口缺 ∕ 已毁 ⇒ 零动作（fail-open）。 */
 export function refreshMenu() {
   if (activeWin === null || activeWin.isDestroyed()) return
-  activeWin.setMenu(buildMenu())
+  // 统一 Header（fork 2026-10-06）：菜单转应用级（**加速键恒活**——窗口菜单栏已由 HTML Header 取代）
+  // + 窗口菜单栏摘除（setMenu(null)——Win 可见条消失，`titleBarStyle: hidden` 下不再占行）。
+  Menu.setApplicationMenu(buildMenu())
+  activeWin.setMenu(null)
+}
+
+/** Header 菜单弹出（`menu:popup` 处理体 —— fork 2026-10-06）：`name` = 五顶层项 id 尾段
+ *  （file ∕ edit ∕ view ∕ settings ∕ help）；`(x, y)` = 触发钮**内容坐标**（client → menu.popup 窗口相对）。
+ *  现建现弹（recent ∕ 主题勾 ∕ 更新态 = 每次现读——`refreshMenu` 同源模板）；表外 name ∕ 项缺 ⇒ 零弹。 */
+export function popupAppMenu(name, x, y) {
+  if (activeWin === null || activeWin.isDestroyed()) return { ok: false, reason: "no-window" }
+  const menu = buildMenu()
+  const item = menu.getMenuItemById(`app-menu-${String(name ?? "")}`)
+  if (item?.submenu === undefined) return { ok: false, reason: "unknown-menu" }
+  const pos = Number.isFinite(x) && Number.isFinite(y) ? { x: Math.round(x), y: Math.round(y) } : {}
+  item.submenu.popup({ window: activeWin, ...pos })
+  return { ok: true, reason: null }
 }
 
 /** 勾选态回读收面（`theme:state` 处理体转口 —— 渲染→主单向；D36 ∥ KD-65 ②）：三值闭集校验（`THEME_VALUES`
@@ -126,6 +150,13 @@ export function setMenuTheme(theme) {
   }
   menuTheme = theme
   refreshMenu()
+  // overlay 配色随主题（统一 Header 批 · fork 2026-10-06）：`setTitleBarOverlay` = Win 专属面——
+  // 他平台抛 ⇒ 捕获记错零失败（fail-soft；overlay 缺席平台本就无此 UI）。
+  try {
+    activeWin?.setTitleBarOverlay?.({ ...(OVERLAY_COLORS[theme] ?? OVERLAY_COLORS.light), height: OVERLAY_HEIGHT })
+  } catch (error) {
+    console.error("[window] setTitleBarOverlay unavailable:", error?.message ?? error)
+  }
   return { ok: true }
 }
 
@@ -229,6 +260,10 @@ export function createWindow(onError) {
   const win = new BrowserWindow({
     width: WINDOW.WIDTH, height: WINDOW.HEIGHT, minWidth: WINDOW.MIN_WIDTH, minHeight: WINDOW.MIN_HEIGHT,
     backgroundColor: THEME_COLORS[resolveTheme()],
+    // 统一 Header（fork 2026-10-06）：原生标题栏隐藏（HTML 层单行 Header 承担品牌 ∕ 菜单 ∕ 拖拽），
+    // 窗口控制钮 = 系统 overlay（Win ∕ Linux）；overlay 初色随启动主题。
+    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
+    titleBarOverlay: { ...(OVERLAY_COLORS[resolveTheme()] ?? OVERLAY_COLORS.light), height: OVERLAY_HEIGHT },
     show: false,
     // #787 后台不节流：窗口后台（遮挡/隐藏）期照常出帧与交换——消「停摆—复显」相变（RENDERER.md §1.5）。
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: PRELOAD_PATH,

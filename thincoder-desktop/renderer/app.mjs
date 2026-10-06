@@ -49,6 +49,7 @@ import { attachChatWork } from "./chat-work.mjs"
 import { attachSidebar } from "./mount-sidebar.mjs"
 import { reasoningBulkExpanded, setReasoningBulkExpanded } from "./reasoning-pref.mjs"
 import { configuredFlag, patchSettings, returnToBottom, setFollowing, store } from "./store.mjs"
+import { attachHeader } from "./mount-header.mjs" // 统一 Header（fork 2026-10-06——全局菜单五钮 ∕ 词面随动）
 import { initTitleTips } from "./title-tips.mjs" // title 浮窗接管（fork 2026-10-05——原生 tooltip 旧样式 → codex 卡）
 import { initAccent, initTheme } from "./theme.mjs" // 主题三态 + 主题色（D33 · #743 · fork 主题色批 —— chrome 级状态直写面；装配期一次 + 切片播种）
 import { MAX_RENDER_BLOCKS, attachScroll, compensateTop, nextWindow } from "./views/chat-scroll.mjs" // #910：compensateTop = 回填全重建视口补偿
@@ -84,6 +85,7 @@ attachSidebar({
   onRename: confirmRename, // 会话管理（右键菜单 · 2026-10-05）—— session-wire 单一实现转口
   onDelete: deleteSession,
 })
+attachHeader() // 统一 Header（菜单钮 ∕ 词面；toggle 接线在 mount-sidebar——折叠逻辑单源）
 attachChromeWords() // 核件控件行静态字面语言补丁（中文模式收正批 —— 出档 `renderer/chrome-words.mjs`；序须在 `attachComposer` 后）
 attachMinimap() // 对话小地图（Codex 形大改批 —— 出档 `renderer/minimap.mjs`；自持三观察，零帧路径涉入）
 attachReasoningTimes() // 思考耗时摘要增量回写（同批 —— 出档 `renderer/reasoning-times.mjs`；补增量挂载径的摘要缝）

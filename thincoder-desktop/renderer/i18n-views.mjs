@@ -87,6 +87,11 @@ export const VIEWS_DICT = Object.freeze({
     "settings.agent.advisorEffort": "Review effort",
     // ── ⑤ 会话控制面（会话模型轮 R13 —— 键名与两语值皆 VSC 逐字：`thincoder-vscode/locales/en.json:2-7` 同名键）──
     "session.title": "Session",
+    "header.menu.file": "File",
+    "header.menu.edit": "Edit",
+    "header.menu.view": "View",
+    "header.menu.settings": "Settings",
+    "header.menu.help": "Help",
     "session.openFolder": "Open project folder in Explorer",
     "session.empty": "No sessions",
     "session.rename": "Rename",
@@ -255,6 +260,11 @@ export const VIEWS_DICT = Object.freeze({
     "settings.agent.advisorEffort": "审查强度",
     // ── ⑤ 会话控制面（会话模型轮 R13 —— 键名与两语值皆 VSC 逐字：`thincoder-vscode/locales/zh.json:2-7` 同名键）──
     "session.title": "会话",
+    "header.menu.file": "文件",
+    "header.menu.edit": "编辑",
+    "header.menu.view": "视图",
+    "header.menu.settings": "设置",
+    "header.menu.help": "帮助",
     "session.openFolder": "在资源管理器中打开项目文件夹",
     "session.empty": "暂无会话",
     "session.rename": "重命名",

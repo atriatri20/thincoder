@@ -74,6 +74,7 @@ export function menuTemplate(deps = {}) {
 
   return [
     {
+      id: "app-menu-file",
       label: words.file,
       submenu: [
         { label: words.newSession, accelerator: "CmdOrCtrl+N", click: () => emit("newSession") },
@@ -85,6 +86,7 @@ export function menuTemplate(deps = {}) {
       ],
     },
     {
+      id: "app-menu-edit",
       label: words.edit,
       submenu: [
         roleItem("undo", "undo"),
@@ -99,6 +101,7 @@ export function menuTemplate(deps = {}) {
       ],
     },
     {
+      id: "app-menu-view",
       label: words.view,
       submenu: [
         roleItem("reload", "reload"),
@@ -123,6 +126,7 @@ export function menuTemplate(deps = {}) {
       ],
     },
     {
+      id: "app-menu-settings",
       label: words.settings,
       submenu: [
         { label: words.settingsOpen, click: () => emit("openSettings") },
@@ -146,6 +150,7 @@ export function menuTemplate(deps = {}) {
       ],
     },
     {
+      id: "app-menu-help",
       label: words.help,
       submenu: [
         updateItem(), // 桌面发布·阶段二批：状态机首项（+ sep）

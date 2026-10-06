@@ -364,10 +364,6 @@ function sidebarTree(model, handlers) {
     tag: "div",
     props: { class: "sidebar-body" },
     children: [
-      { tag: "div", props: { class: "sidebar-head" }, children: [
-        { tag: "button", props: { class: "sidebar-toggle", type: "button", "aria-label": t("sidebar.collapse"), title: t("sidebar.collapse"), "data-action": "sidebar:toggle", onClick: handlers.onToggle }, children: [] },
-        { tag: "span", props: { class: "sidebar-brand" }, children: ["ThinCoder"] },
-      ] },
       { tag: "div", props: { class: "sidebar-actions" }, children: [
         // 打开项目（用户 2026-10-05——「打开文件夹新建项目 = 重点功能」：升级为与新聊天同款文字胶囊钮，居前；
         // 原 ⌂ 图标钮吸收退场——出口同链 onOpenProject = openDir 装配单源）。
@@ -536,6 +532,13 @@ function confirmDelete(pane, handlers, { key, title }) {
  */
 export function attachSidebar(handlers = {}) {
   if (collapsedRead()) document.body.classList.add("sidebar-collapsed")
+  // 统一 Header（fork 2026-10-06）：折叠钮迁 Header（`data-action=app:toggle-sidebar`）——同一折叠逻辑
+  // 单源（body 类 + localStorage）；静态 HTML 钮由本档接线（词面 = `mount-header.mjs`）。
+  document.querySelector('[data-action="app:toggle-sidebar"]')?.addEventListener("click", () => {
+    const collapsed = !document.body.classList.contains("sidebar-collapsed")
+    document.body.classList.toggle("sidebar-collapsed", collapsed)
+    collapsedWrite(collapsed)
+  })
   const face = {
     ...handlers,
     onToggle: () => {
