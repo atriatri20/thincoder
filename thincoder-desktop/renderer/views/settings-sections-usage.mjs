@@ -69,8 +69,15 @@ function summaryCard(label, bucket, requests) {
     props: { class: "usage-card", "data-usage-card": "" },
     children: [
       { tag: "div", props: { class: "usage-card-label" }, children: [label] },
-      { tag: "div", props: { class: "usage-card-tokens" }, children: [
-        t("rail.session.usage", { input: fmtCompact(bucket?.prompt) ?? "0", output: fmtCompact(bucket?.completion) ?? "0" }),
+      // 明写标签行（用户裁定 2026-10-06 ——「上下箭头含义不明确，明写输入 ∕ 输出」；图 2 参考样同构：
+      // 标签弱色 + 数值强色同行，替代原 ↑↓ 复合短形）。
+      { tag: "div", props: { class: "usage-card-row" }, children: [
+        { tag: "span", props: { class: "usage-card-key" }, children: [t("settings.usage.input")] },
+        { tag: "span", props: { class: "usage-card-val" }, children: [fmtCompact(bucket?.prompt) ?? "0"] },
+      ] },
+      { tag: "div", props: { class: "usage-card-row" }, children: [
+        { tag: "span", props: { class: "usage-card-key" }, children: [t("settings.usage.output")] },
+        { tag: "span", props: { class: "usage-card-val" }, children: [fmtCompact(bucket?.completion) ?? "0"] },
       ] },
       { tag: "div", props: { class: "usage-card-sub" }, children: [
         hit === null ? t("settings.usage.noCache") : t("settings.usage.cacheHit", { pct: hit }),
@@ -94,13 +101,14 @@ function tableRow(cells, head = false) {
 function summaryCards(stats) {
   const byDay = listOf(stats?.byDay)
   const total = stats?.total ?? {}
+  const windowOf = (days) => sumWindow(byDay, days)
   return {
     tag: "div",
     props: { class: "usage-cards" },
     children: [
-      summaryCard(t("settings.usage.today"), sumWindow(byDay, 1), sumWindow(byDay, 1)?.requests),
-      summaryCard(t("settings.usage.days7"), sumWindow(byDay, 7), sumWindow(byDay, 7)?.requests),
-      summaryCard(t("settings.usage.days30"), sumWindow(byDay, 30), sumWindow(byDay, 30)?.requests),
+      summaryCard(t("settings.usage.today"), windowOf(1), windowOf(1)?.requests),
+      summaryCard(t("settings.usage.days7"), windowOf(7), windowOf(7)?.requests),
+      summaryCard(t("settings.usage.days30"), windowOf(30), windowOf(30)?.requests),
       summaryCard(t("settings.usage.all"), total, stats?.requests),
     ],
   }
@@ -132,7 +140,7 @@ export function usageBody(section, handlers = {}) {
     // ── 按模型 ──
     { tag: "div", props: { class: "settings-field-label", "data-subtitle": "by-model" }, children: [t("settings.usage.byModel")] },
     { tag: "div", props: { class: "usage-table", "data-usage-models": "" }, children: [
-      tableRow([t("settings.usage.model"), t("settings.usage.requestsCol"), "↑", "↓", t("settings.usage.cacheCol")], true),
+      tableRow([t("settings.usage.model"), t("settings.usage.requestsCol"), t("settings.usage.input"), t("settings.usage.output"), t("settings.usage.cacheCol")], true),
       ...(byModel.length === 0
         ? [tableRow([t("settings.usage.empty"), "", "", "", ""])]
         : byModel.map((row) => tableRow([
@@ -146,7 +154,7 @@ export function usageBody(section, handlers = {}) {
     // ── 按天 ──
     { tag: "div", props: { class: "settings-field-label", "data-subtitle": "by-day" }, children: [t("settings.usage.byDay")] },
     { tag: "div", props: { class: "usage-table", "data-usage-days": "" }, children: [
-      tableRow([t("settings.usage.day"), t("settings.usage.requestsCol"), "↑", "↓", t("settings.usage.cacheCol")], true),
+      tableRow([t("settings.usage.day"), t("settings.usage.requestsCol"), t("settings.usage.input"), t("settings.usage.output"), t("settings.usage.cacheCol")], true),
       ...(byDay.length === 0
         ? [tableRow([t("settings.usage.empty"), "", "", "", ""])]
         : byDay.map((row) => tableRow([
