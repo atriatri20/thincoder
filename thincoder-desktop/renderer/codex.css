@@ -515,10 +515,13 @@ body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; 
 /* ── 对话流：用户消息右置（Codex ∕ ChatGPT 形）──────────────────────────── */
 .block-user { display: flex; justify-content: flex-end; }
 .block-user > .block-text { max-width: 78%; }
-/* 小地图让位（Rail 左 12px ∕ 宽 36px ⇒ 让 52px；列心随余区微移，视觉居中保持）。 */
+/* 小地图让位（Rail 左 12px ∕ 宽 36px ⇒ 让 52px；列心随余区微移，视觉居中保持）。
+   **列宽锚 52rem → 106rem**（用户 4K 实测「还是 1200px」根因——旧公式按 52rem 居中列算让位，
+   会话区越宽 padding 越巨（1480 区算出 349px），列永远 ≈ 52rem+；与列宽跟随容器（106rem）对齐后：
+   超出区只余对称留白，4K 列 ≈ 1700 对齐 ZCode）。 */
 .session.has-minimap .flow {
-  padding-left: max(52px, calc((100% - 52rem) / 2 + 26px));
-  padding-right: max(var(--gap), calc((100% - 52rem) / 2));
+  padding-left: max(52px, calc((100% - 106rem) / 2 + 26px));
+  padding-right: max(52px, calc((100% - 106rem) / 2));
 }
 
 /* ── 发送钮 = 圆盘（Codex 形 ↑）────────────────────────────────────────── */
