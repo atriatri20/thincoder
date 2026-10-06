@@ -43,6 +43,7 @@ import { slotOfKey, writeSlotPrefs } from "./session-slots.mjs"
 import { carryoverDefaultModel } from "./settings.mjs"
 // 五族出档（见档头）：回调桥 / 待决门 / 槽 I/O / 子 agent 面 / 装配面 —— 本档只装配与注入，算法面各归其档。
 import { createBridge } from "./agent-bridge.mjs" // 含「对齐第三批」两采样面注入（见下）
+import { appendUsageRecord } from "./usage-log.mjs" // 用量台账落账面（2026-10-06 —— onUsage 同拍注入）
 import { extractFileLinks } from "./file-links.mjs" // 验存文件链接（相抵② · KD-39 —— 盘上存在闸）
 import { createGates } from "./suspensions.mjs"
 import { appendRecord, loadAgentSlot, saveDistilledSlot } from "./session-io.mjs"
@@ -145,6 +146,14 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     extractLinks: (text) => extractFileLinks(projects?.currentCwd(), text),
     persistDistilled: (key) => { const agent = agents.get(key); if (agent) saveDistilledSlot(agent) },
     goalOf: (key) => { const agent = agents.get(key); return agent === undefined ? undefined : (agent.goal ?? null) },
+    // 用量台账落账面（2026-10-06 —— 桥 `onUsage` 同拍注入；归一化落 `usage-log.mjs` 单源）：
+    // 归属三值取装配实例活读（cwd = 装配时点固化 `_usageCwd` —— 防切项目后误归属；provider ∕ model =
+    // 核 `agent.provider` 活对象两字段，与 `advisorMeta` 同读法）。agent 缺席 ⇒ cwd ∕ 渠道 ∕ 模型三 null 落行
+    //（token 数仍在 —— 不假造归属，不丢用量）。
+    usageLogOf: (key, usage) => {
+      const agent = agents.get(key)
+      appendUsageRecord({ cwd: agent?._usageCwd ?? null, slot: key, provider: agent?.provider?.name ?? null, model: agent?.provider?.model ?? null, usage })
+    },
   })
 
   /** 计时读数（R3a 载荷扩 `timers` —— 核 `_pendingTimers` 活读投影 `{count, expired}`；新鲜度 = 本回合尾时点
@@ -182,6 +191,7 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   async function assembleAndLoad(key, slot) {
     const cwd = projects.currentCwd()
     const agent = await assemble({ cwd, slot, key, deps })
+    agent._usageCwd = cwd // 用量台账归属固化（2026-10-06 —— 装配时点快照，防切项目后回合尾误归属）
     loadAgentSlot(agent, cwd, slot)
     // 实况回读读面（子代理面板批 · 2026-10-04 —— `PANEL-READBACK.md` §2.1 per-key）：核 `panel` 工具经
     // `ctx.readout` 取值（`subagent.mjs` 接线）——桌面渲染面快照 ⇒ `source:"renderer"` / freeze 数据源。

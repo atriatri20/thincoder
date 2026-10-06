@@ -1121,3 +1121,73 @@ body.pool-collapsed .pool-collapse { left: 4px; }
   border: 0; padding: 0; cursor: pointer;
   opacity: 0;
 }
+
+/* ── 用量段（Token 用量统计批 · 2026-10-06 —— settings-sections-usage.mjs）── */
+.usage-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 10px 0 4px;
+}
+.usage-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--bg-raised);
+  min-width: 0;
+}
+.usage-card-label {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-bottom: 6px;
+}
+.usage-card-tokens {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.usage-card-sub {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-top: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.usage-table {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 8px 0 4px;
+}
+.usage-table-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  align-items: center;
+}
+.usage-table-row + .usage-table-row { border-top: 1px solid var(--border); }
+.usage-table-head {
+  background: var(--bg-raised);
+  color: var(--fg-muted);
+  font-size: 11.5px;
+}
+.usage-table-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+.usage-table-cell:first-child { text-align: left; }
+.usage-table-head .usage-table-cell { text-align: right; }
+.usage-table-head .usage-table-cell:first-child { text-align: left; }
+[data-usage-meta] { align-items: center; }
+@media (max-width: 60rem) {
+  .usage-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

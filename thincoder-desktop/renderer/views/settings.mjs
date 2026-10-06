@@ -24,7 +24,7 @@ import { t } from "../i18n.mjs"
 import { ACCENTS, THEMES } from "../theme.mjs"
 import { wire } from "./chat-tool.mjs"
 import { channelFormTree, verifyControl } from "./settings-controls.mjs"
-import { agentBody, envBody, mcpBody, modelBody, modelIdOf, modelsBody, providersBody, toolsBody } from "./settings-sections.mjs"
+import { agentBody, envBody, mcpBody, modelBody, modelIdOf, modelsBody, providersBody, toolsBody, usageBody } from "./settings-sections.mjs"
 
 // 两导出面随 R7 出档 `settings-controls.mjs`；本档 re-export ⇒ 导出面零改（消费面 = 首启向导）。
 export { channelFormTree, verifyControl } from "./settings-controls.mjs"
@@ -41,6 +41,7 @@ export const SECTIONS = Object.freeze([
   { name: "env", word: "settings.section.env" },
   { name: "tools", word: "settings.section.tools" },
   { name: "models", word: "settings.section.models" },
+  { name: "usage", word: "settings.section.usage" },
 ])
 
 /** 导航段闭集（= 数据段 + 两**伪段**〔appearance ∕ language〕—— 头部主题 ∕ 语言控件迁入左导航 · 2026-10-05）：
@@ -233,6 +234,10 @@ export function settingsModel(state) {
         model: str(settings.models?.advisorPicker?.model),
       },
     },
+    usage: {
+      state: stateOf(settings.usage),
+      stats: settings.usage?.stats !== null && typeof settings.usage?.stats === "object" ? settings.usage.stats : null,
+    },
   }
 }
 
@@ -351,6 +356,7 @@ function sectionBody(name, model, handlers) {
     return [sectionStateNode(model.agent.state), ...(model.agent.state === "loading" ? [] : agentBody(model.agent, handlers))]
   }
   if (name === "env") return [sectionStateNode(model.env.state), ...(model.env.state === "ready" ? envBody(model.env, handlers) : [])]
+  if (name === "usage") return [sectionStateNode(model.usage.state), ...(model.usage.state === "ready" ? usageBody(model.usage, handlers) : [])]
   if (name === "tools") return [sectionStateNode(model.tools.state), ...toolsBody(model.tools, handlers)]
   if (name === "models") return [sectionStateNode(model.models.state), ...(model.models.state === "ready" ? modelsBody(model.models, handlers) : [])]
   return [sectionStateNode(model.mcp.state), ...mcpBody(model.mcp, handlers, deps)]

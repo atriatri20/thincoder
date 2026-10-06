@@ -56,7 +56,7 @@ const reasonOf = (receipt) => (typeof receipt?.reason === "string" && receipt.re
  */
 export function createExits(deps = {}) {
   const { ask, store, setSettings, report, clearReport, occupies, slot, paintSettings, onProvidersChanged, invalidateDrafts } = deps
-  const { loadProviders, loadAgent, loadMcp, loadEnv, loadTools } = deps.reads ?? {}
+  const { loadProviders, loadAgent, loadMcp, loadEnv, loadTools, loadUsage } = deps.reads ?? {}
 
   /** 渠道表单提交（两形同一路）：载荷按形直取（表内 `name` = 载荷键）—— 空名 ⇒ 端侧形判 `invalid-shape` 零发送。 */
   async function submitChannel(event) {
@@ -225,6 +225,7 @@ export function createExits(deps = {}) {
     void loadMcp()
     void loadEnv()
     void loadTools()
+    void loadUsage()
   }
 
   /** 设置面关（退场 = 零子节点 —— 订阅面重绘清容器）：同清确认弹层（S6 —— 弹层挂 `document.body`，
@@ -243,6 +244,7 @@ export function createExits(deps = {}) {
     ...modelSegments.handlers,
     ...providerSegments.handlers,
     ...agentSegments.handlers,
+    onRefreshUsage: () => void loadUsage({ force: true }),
     onToggleLang: (target) => void toggleLang(target),
     onSetTheme: (target) => setThemeFace(target),
     onSetAccent: (id) => setAccentFace(id),
@@ -261,7 +263,12 @@ export function createExits(deps = {}) {
       store.set({ accent: landed })
     },
     onCloseSettings: () => closeSettings(),
-    onSelectSection: (name) => setSettings({ nav: name }), // 侧边栏导航式设置页 · 2026-10-04：选中段落切片（`views/settings.mjs` 读面 `nav`）
+    // 用量段懒加载（Token 用量统计批 · 2026-10-06）：选中段即触发（loadUsage 自持切片幂等门 ——
+    // 有 stats 不重读；刷新钮走 `onRefreshUsage` force 形）。
+    onSelectSection: (name) => {
+      setSettings({ nav: name })
+      if (name === "usage") void loadUsage()
+    },
     onSubmit: (event) => void submitChannel(event),
     onVerify: (name) => void verifyChannel(name),
     onRemoveProvider: (name) => void removeProvider(name),

@@ -1,6 +1,12 @@
 # Token 使用统计——后续版本计划（2026-10-05 探查定稿）
 
-> 状态：**未开工**。本文档为调研结论 + 分档实施计划，供后续版本直接照做。
+> 状态：**档位一 ∕ 二已落地（2026-10-06）**——落地形与本文档原案有一处偏离：会话级持久化不走 manifest
+>（零动 core），改桌面自持 JSONL 台账 `~/.thincoder/usage/usage-YYYY-MM.jsonl`（单源 `thincoder-desktop/src/main/usage-log.mjs`：
+> 归一化五键 [prompt=含缓存总输入 ∕ completion ∕ reasoning ∕ cacheRead ∕ cacheWrite] + 月档存储 + `usageStats`
+> 聚合 + `usageBySlotSync` 会话聚合），采集 = 桥面 `onUsage` 同拍注入 `usageLogOf`（agent-bridge ∕ agent-host）；
+> IPC `usage:stats`（白名单末位 49）；设置页「用量」段（`settings-sections-usage.mjs` —— 摘要四卡 ∕ 按模型 ∕
+> 按天）；会话行用量 = sessions:list ∕ catalog 行拼 `usage` 六键 + 下拉 meta 段 ∕ 侧栏 tooltip。**档位三未做**。
+> 参考：deepseek-harness `token-meter`（命中率口径 = cacheRead ∕ prompt；统一桶投影）同日并读。
 > 探查时点：codex-ui 分支 0.10.2；ZCode 参考源码为本地只读 checkout（路径见文末）。
 
 ## 0. 结论速览

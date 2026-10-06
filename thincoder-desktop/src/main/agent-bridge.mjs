@@ -132,7 +132,7 @@ function subChunkOf(face, a, b) {
  *  ⇒ 零载波；`null` = goal 缺席（取消）——两义不可合）。
  *  relay 面 per-键 scope（`pendingAsync` / `queued` 缓存——核 `createRelayScope`；**多会话互不串味**：
  *  各键 `role#id` 可同名，缓存不得跨键共享）。 */
-export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf, syncLiveOf, now, advisorOf, extractLinks, persistDistilled, goalOf }) {
+export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf, syncLiveOf, now, advisorOf, extractLinks, persistDistilled, goalOf, usageLogOf }) {
   const scopes = new Map() // 会话键 → relay scope（懒建 · 随键存活）
   const scopeOf = (key) => {
     if (!scopes.has(key)) scopes.set(key, createRelayScope())
@@ -283,7 +283,12 @@ export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf,
       // 用量回调（R3a · 核 `callbacks.onUsage(response.usage)` —— `thincoder-core/agent/turn-loop.mjs:154`）：**非独立通道** ——
       // 逐次响应累入本键会话级令牌表（`tokensOf(key)` 注入；表缺 ⇒ 零动作），随宿主回合尾 `ev:usage` 载荷出
       // （`docs/desktop/design/IPC.md` §1 `ev:usage` 行「载荷扩」）。
-      onUsage: (usage) => accumulateTokens(tokensOf?.(key), usage),
+      // **用量台账 2026-10-06**：同拍回调注入面 `usageLogOf(key, usage)`（原始 usage 直通 —— 归一化落
+      // `usage-log.mjs` 单源；缺注入 ⇒ 零落账，状态行链零感知）。
+      onUsage: (usage) => {
+        accumulateTokens(tokensOf?.(key), usage)
+        if (typeof usageLogOf === "function") usageLogOf(key, usage)
+      },
       // 等待相位（R4 —— 核 `callbacks.onWait`（`chat-call.mjs:33` 透传 provider 链）⇒ `ev:statusText`）：映射 = 核单源
       // `waitStatusOf`（→ `{ kind, seconds }` ∕ `{ kind, message }`）；`null`（`warn` ∕ 未知相位）⇒ **零载波**
       //（禁假造——本端零相位枚举 ∕ 零自铸词；文案取词归渲染面 `status.*` 核字典投影）。

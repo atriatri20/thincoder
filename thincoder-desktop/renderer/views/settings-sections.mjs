@@ -23,6 +23,8 @@ export { agentBody, NAMED_FIELDS } from "./settings-agent.mjs"
 export { toolsBody } from "./settings-sections-tools.mjs"
 // R7 两新段体（环境 ∕ 咨询与顾问）自立出档；本档 re-export ⇒ 分派面零改。
 export { envBody } from "./settings-sections-env.mjs"
+// 用量段体（Token 用量统计批 · 2026-10-06）同拍出档；本档 re-export ⇒ 分派面零改。
+export { usageBody } from "./settings-sections-usage.mjs"
 export { modelsBody } from "./settings-sections-models.mjs"
 // MCP 段体（R7 随两钮先拆后改 —— `-mcp.mjs`）同拍；本档 re-export ⇒ 分派面零改。
 export { mcpBody } from "./settings-sections-mcp.mjs"

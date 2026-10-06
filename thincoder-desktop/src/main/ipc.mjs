@@ -1,5 +1,5 @@
 /**
- * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**四十八项**白名单面（菜单体系批 · D36 落 `theme:state`；消化面留档批 · #719 落 `record:append`；子代理面板批落 `panel:state`）=
+ * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**四十九项**白名单面（菜单体系批 · D36 落 `theme:state`；消化面留档批 · #719 落 `record:append`；子代理面板批落 `panel:state`）=
  * 本档（配置读取 + 项目面 `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` /
  * `session:switch` / `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` +
  * 作答响应 `question:respond` —— `question` 工具真作答面 + 历史页 `history:page` + 回合驱动 `msg:send` /
@@ -43,7 +43,8 @@ import { runSessionGcMaintenance, runSessionIndexMaintenance } from "./session-m
 import { fileOpenTarget } from "./file-links.mjs"
 // 行定位消解面（端差清算轮 #627 —— 外部编辑器 CLI 探测 ∕ argv 构造 / spawn 形；本档零算法副本）。
 import { buildEditorArgs, detectEditorCli, spawnEditorCli } from "./editor-open.mjs"
-import { panelLive } from "./panel-live.mjs" // 实况回读缓存（子代理面板批 —— `panel:state` 接收半；与装配面同单例）
+import { panelLive } from "./panel-live.mjs"
+import { usageStats } from "./usage-log.mjs" // 用量统计读面（2026-10-06） // 实况回读缓存（子代理面板批 —— `panel:state` 接收半；与装配面同单例）
 
 const require = createRequire(import.meta.url)
 
@@ -103,7 +104,7 @@ export {
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
   questionRespond, sessionPrefs, subagentStop, fileOpen, shellOpenPath, sessionFlags, atComplete, recordAppend, themeState, menuPopup, windowControl,
   panelState,
-  sessionGc, sessionIndex, liveAgents,
+  sessionGc, sessionIndex, liveAgents, usageStatsChannel,
 }
 
 /** `project:open(payload)` ⇒ `{ cwd, recent }`：载荷 `{ fsPath }` **可选**（A7 收正形 —— VSC `setProject` 同键；
@@ -318,6 +319,10 @@ function panelState(payload) {
   panelLive.report(key, blocks)
   return { ok: true }
 }
+
+/** `usage:stats({ months })` ⇒ `{ ok, generatedAt, total, byDay, byModel }`（**用量统计读面** —— 2026-10-06 ·
+ *  白名单末位 49；转口 `usage-log.mjs` `usageStats` —— 归一化 ∕ 聚合单源在台账档，本档零算法副本）。 */
+function usageStatsChannel(payload) { return usageStats(payload) }
 
 /** R1 · 会话维护线两处理体转口（出档 `session-maintenance.mjs`）：`session:gc` ⇒ `{ ok, candidates, confirmed,
  *  deleted, files, skipped, skippedFiles }`；`session:index` ⇒ `{ ok, sessions, changed, messages, toolCalls,

@@ -207,5 +207,32 @@ export function createReads(deps = {}) {
     if (state.settings?.notice !== null && state.settings?.notice !== undefined) setSettings({ notice: null })
   }
 
-  return { loadProviders, loadModels, loadAgent, loadMcp, loadEnv, loadTools }
+  /** 用量段读数（`usage:stats` · 2026-10-06 —— 台账聚合转口 `usage-log.mjs`）：**懒加载** ——
+   *  切片无 stats ∕ force 才发读（台账读面月档扫描比其余段贵）；失败面零静默。 */
+  async function loadUsage({ force = false } = {}) {
+    const held = store.get().settings?.usage ?? {}
+    if (force !== true && held.stats) return
+    setSettings({ usage: { ...held, state: "loading" } })
+    const receipt = await ask("usage:stats", { months: 3 })
+    if (receipt?.ok !== true || typeof receipt.total !== "object") {
+      setSettings({ usage: { state: "none", stats: null } })
+      report("usage", receipt?.ok !== true ? receipt : { reason: "invalid-shape" }, "usage:stats")
+      return
+    }
+    setSettings({
+      notice: null,
+      usage: {
+        state: "ready",
+        stats: {
+          generatedAt: typeof receipt.generatedAt === "string" ? receipt.generatedAt : null,
+          requests: Number.isFinite(receipt.requests) ? receipt.requests : 0,
+          total: receipt.total ?? {},
+          byDay: listOf(receipt.byDay),
+          byModel: listOf(receipt.byModel),
+        },
+      },
+    })
+  }
+
+  return { loadProviders, loadModels, loadAgent, loadMcp, loadEnv, loadTools, loadUsage }
 }

@@ -56,6 +56,34 @@ function displayTitleOf(row) {
   return t("rail.session.untitled")
 }
 
+/** 令牌紧凑显示（1234 ⇒ 1.2k ∕ 3400000 ⇒ 3.4M —— 会话行 meta 段；0 ∕ 非数 ⇒ null 零节点）。 */
+function fmtCompact(n) {
+  if (!Number.isFinite(n) || n <= 0) return null
+  if (n >= 1e6) return `${Math.round(n / 1e5) / 10}M`
+  if (n >= 1e3) return `${Math.round(n / 100) / 10}k`
+  return String(n)
+}
+
+/** 行用量摘要（`sessions:list` 行 `usage` 六键投影 —— 2026-10-06）：meta 段短形（↑输入 ↓输出）+
+ *  tooltip 长形（含思考 ∕ 缓存命中率）。零台账 ⇒ `null`（零节点 —— 旧会话不假造零值）。 */
+function usageOf(row) {
+  const u = row?.usage
+  if (u === null || typeof u !== "object") return null
+  const input = fmtCompact(u.prompt)
+  const output = fmtCompact(u.completion)
+  if (input === null && output === null) return null
+  const pct = (Number.isFinite(u.prompt) && u.prompt > 0 && Number.isFinite(u.cacheRead) && u.cacheRead > 0)
+    ? `${Math.round((u.cacheRead / u.prompt) * 1000) / 10}%`
+    : null
+  return {
+    short: t("rail.session.usage", { input: input ?? "0", output: output ?? "0" }),
+    tip: t("rail.session.usageTip", {
+      input: input ?? "0", output: output ?? "0",
+      reasoning: fmtCompact(u.reasoning) ?? "0", pct: pct ?? "0",
+    }),
+  }
+}
+
 export function sessionModel(state = {}) {
   const rows = Array.isArray(state?.sessions) ? state.sessions : []
   const badges = state?.tabBadges !== null && typeof state?.tabBadges === "object" ? state.tabBadges ?? {} : {}
@@ -70,6 +98,7 @@ export function sessionModel(state = {}) {
       updated: Number.isFinite(row?.updatedAt) ? shortDate(row.updatedAt) : null,
       active: row?.isActive === true,
       badge: deriveTabBadge(codes),
+      usage: usageOf(row),
     }
   })
   const active = items.find((item) => item.active === true) ?? null
@@ -201,6 +230,7 @@ export function itemNode(item, handlers, canDelete, inForm) {
   const props = {
     class: item.active === true ? "session-item active" : "session-item",
     "data-slot": item.key, role: "option", "aria-selected": String(item.active === true),
+    ...(item.usage ? { title: item.usage.tip } : {}),
   }
   if (inForm === true) {
     return { tag: "div", props: { ...props, "data-form": "rename" }, children: renameForm(item, handlers) }
@@ -221,6 +251,7 @@ function metaNode(item) {
     item.provider === null ? null : { tag: "span", props: { "data-seg": "provider" }, children: [item.provider] },
     item.msgs === null ? null : { tag: "span", props: { "data-seg": "msgs" }, children: [t("rail.session.msgs", { n: item.msgs })] },
     item.updated === null ? null : { tag: "span", props: { "data-seg": "updated" }, children: [t("rail.session.updated", { date: item.updated })] },
+    item.usage === null ? null : { tag: "span", props: { "data-seg": "usage" }, children: [item.usage.short] },
   ].filter((child) => child !== null)
   if (children.length === 0) return null
   return { tag: "span", props: { class: "session-item-meta", "data-row-meta": "" }, children }

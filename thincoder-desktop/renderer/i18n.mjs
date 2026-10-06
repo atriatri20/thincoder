@@ -140,6 +140,8 @@ export const HOST_DICT = Object.freeze({
     "rail.session.untitled": "Untitled session",
     "rail.session.msgs": "${n} msgs",
     "rail.session.updated": "${date}",
+    "rail.session.usage": "↑${input} ↓${output}",
+    "rail.session.usageTip": "Session tokens: ↑${input} ↓${output} · reasoning ${reasoning} · cache hit ${pct}",
     "rail.ledger.notice": "Session ledger anomaly (${reason}) — opening a session self-heals it",
     "rail.ledger.notice.scene": "Corrupted-scene files kept 30 days",
     // ── 左侧工作区边栏（Codex 形大改批 · 2026-10-04 —— 面单 = `renderer/mount-sidebar.mjs`；六键两语同拍）──
@@ -282,6 +284,8 @@ export const HOST_DICT = Object.freeze({
     "rail.session.untitled": "未命名会话",
     "rail.session.msgs": "${n} 条消息",
     "rail.session.updated": "${date}",
+    "rail.session.usage": "↑${input} ↓${output}",
+    "rail.session.usageTip": "会话用量：↑${input} ↓${output} · 思考 ${reasoning} · 缓存命中 ${pct}",
     "rail.ledger.notice": "会话账本异常（${reason}）——打开会话即自动补回",
     "rail.ledger.notice.scene": "损坏现场档保留 30 天",
     // ── 左侧工作区边栏（Codex 形大改批 · 2026-10-04 —— 六键两语同拍）──

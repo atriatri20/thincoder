@@ -54,6 +54,7 @@ const MODAL_READS = Object.freeze({
   env: "loadEnv",
   tools: "loadTools",
   models: "loadAgent",
+  usage: "loadUsage",
 })
 
 /**
@@ -251,6 +252,7 @@ export function attachSettings(host, deps = {}) {
     void reads.loadMcp()
     void reads.loadEnv()
     void reads.loadTools()
+    void reads.loadUsage()
     return true
   }
 

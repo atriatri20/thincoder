@@ -89,6 +89,24 @@ function timeSpanOf(ms) {
   return text === "" ? null : { tag: "span", props: { class: "sidebar-item-time" }, children: [text] }
 }
 
+/** 行用量短串（会话行 tooltip —— 2026-10-06）：六键 usage → `↑输入 ↓输出`（符号通用零词面；
+ *  零台账 ∕ 零量 ⇒ `null` 零节点 —— 不假造零值）。与 `session-control.mjs` meta 段同源数据、
+ *  独立实现（跨档不可导入同先例 —— `displayTitleOfSession` 注）。 */
+function usageShortOf(usage) {
+  const u = usage ?? null
+  if (u === null || typeof u !== "object") return null
+  const fmt = (n) => {
+    if (!Number.isFinite(n) || n <= 0) return null
+    if (n >= 1e6) return `${Math.round(n / 1e5) / 10}M`
+    if (n >= 1e3) return `${Math.round(n / 100) / 10}k`
+    return String(n)
+  }
+  const input = fmt(u.prompt)
+  const output = fmt(u.completion)
+  if (input === null && output === null) return null
+  return `↑${input ?? "0"} ↓${output ?? "0"}`
+}
+
 function displayTitleOfSession(session) {
   if (typeof session?.title === "string" && session.title !== "") return session.title
   const first = typeof session?.firstMessage === "string" ? session.firstMessage.trim() : ""
@@ -122,7 +140,8 @@ function sessionItemNode(item, handlers, opts = {}) {
       tabindex: "0",
       "data-action": "sidebar:switch",
       "data-key": item.key,
-      title: item.title,
+      title: item.usageShort ? `${item.title}
+${item.usageShort}` : item.title,
       onClick: activate,
       onKeydown: (event) => {
         if (event?.key === "Enter" || event?.key === " ") {
@@ -193,7 +212,7 @@ function projectsOf(model) {
     add(
       cwd,
       true,
-      model.items.map((item) => ({ slot: item.key, title: item.title, badge: item.badge, updatedAt: item.ts ?? 0, isActive: item.active })),
+      model.items.map((item) => ({ slot: item.key, title: item.title, badge: item.badge, updatedAt: item.ts ?? 0, isActive: item.active, usageShort: item.usage?.short ?? null })),
     )
   }
   // 顺序（用户反馈 2026-10-05 三轮收敛 —— ZCode `SortableWorkspaceSidebar` 同义）：**手动拖拽序优先**
@@ -343,7 +362,7 @@ function sessionsTree(model, handlers) {
   let any = false
   for (const project of projects) {
     const sessions = project.sessions
-      .map((s) => ({ ...s, display: displayTitleOfSession(s), time: timeSpanOf(s.updatedAt) }))
+      .map((s) => ({ ...s, display: displayTitleOfSession(s), time: timeSpanOf(s.updatedAt), usageShort: s.usageShort ?? usageShortOf(s.usage) }))
       .filter((s) => matched(s.display) || matched(project.cwd))
       .map((s) => ({ ...s, born: bornOf(slotBorn, SLOT_BORN_KEY, `${project.cwd}::${s.slot}`, s.updatedAt) }))
       .sort((a, b) => b.born - a.born)
@@ -352,7 +371,7 @@ function sessionsTree(model, handlers) {
     const collapsed = collapsedProjects.has(project.cwd)
     parts.push(projectRowNode(project, collapsed, sessions.length))
     if (collapsed) continue
-    parts.push(...sessions.map((s) => sessionItemNode({ key: s.slot, title: s.display, badge: null, time: s.time }, handlers, { cwd: project.cwd, isCurrentProject: project.isCurrent })))
+    parts.push(...sessions.map((s) => sessionItemNode({ key: s.slot, title: s.display, badge: null, time: s.time, usageShort: s.usageShort ?? null }, handlers, { cwd: project.cwd, isCurrentProject: project.isCurrent })))
   }
   if (!any) parts.push({ tag: "div", props: { class: "sidebar-empty-filter" }, children: [t("sidebar.empty")] })
   return parts

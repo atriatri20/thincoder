@@ -4,7 +4,7 @@
  * 整块落装配函数体内；守卫谓词写死 = `typeof window !== "undefined"`（沙箱预载处为渲染进程上下文 ⇒ 装配；
  * 主进程 `createRequire` 读取与平 node 测试无 `window` ⇒ 零装配、不触 `electron`）。
  * 白名单 `CHANNELS` **单源**（主侧经 `createRequire` 读之据以注册——`src/main/ipc-registry.mjs`）；非白名单通道**立即 reject**（不入 IPC）。
- * 请求白名单 = **四十八项**（三十五 ⇒ 三十八 ⇒ 三十九 ⇒ 四十三 ⇒ 四十五 ⇒ 四十六 ⇒ 四十七 ⇒ 四十八 —— R7 设置补充三项：`settings:env` ∕ `settings:tools` ∕ `mcp:tools` · 模型菜单全渠扇出批增 `model:catalog` · B10 W2 设置面四增：`provider:setKey` ∕ `provider:delKey` ∕ `provider:models` ∕ `provider:setProxy` · B10 W3 MCP 两增：`mcp:update` ∕ `mcp:reconnect` · 菜单体系批一增 `theme:state`（勾选态回读——D36）· 子代理面板批一增 `panel:state`（渲染面实况回读上报——渲染→主单向）· 定序末位）= 配置读取 + 项目面（打开 —— 原生目录选择 / 最近目录）+ 会话面（列表 / 新建 / 切换 / 重命名 /
+ * 请求白名单 = **四十九项**（四十八 ⇒ 四十九 —— 用量统计批 `usage:stats`）（三十五 ⇒ 三十八 ⇒ 三十九 ⇒ 四十三 ⇒ 四十五 ⇒ 四十六 ⇒ 四十七 ⇒ 四十八 —— R7 设置补充三项：`settings:env` ∕ `settings:tools` ∕ `mcp:tools` · 模型菜单全渠扇出批增 `model:catalog` · B10 W2 设置面四增：`provider:setKey` ∕ `provider:delKey` ∕ `provider:models` ∕ `provider:setProxy` · B10 W3 MCP 两增：`mcp:update` ∕ `mcp:reconnect` · 菜单体系批一增 `theme:state`（勾选态回读——D36）· 子代理面板批一增 `panel:state`（渲染面实况回读上报——渲染→主单向）· 定序末位）= 配置读取 + 项目面（打开 —— 原生目录选择 / 最近目录）+ 会话面（列表 / 新建 / 切换 / 重命名 /
  * 删除 / 恢复）+ 审批响应（`approval:respond` —— 出口动作面，见 `src/main/ipc.mjs`）+ 作答响应
  * （`question:respond` —— `question` 工具真作答面）+ 历史页（`history:page`）
  * + 回合驱动（`msg:send` / `msg:interrupt`）（`docs/desktop/design/IPC.md` §2 该行 · 白名单面）
@@ -46,6 +46,7 @@ const CHANNELS = Object.freeze([
   "record:append",
   "theme:state",
   "panel:state",
+  "usage:stats",
 ])
 /** 出站订阅白名单（序同桥面表；名面与主侧 `webContents.send` 用名同；**二十四条** = 回调映射十三条（含 **R4 增 `ev:statusText` ∕ `ev:compress`**——桥 `onWait` ∕ `onCompressStart` ∕ `onCompress` ∕ `onCompressFail` 映射）+ 宿主自产十一条（`ev:usage` / `ev:error` / `ev:susp` / `ev:digest` / `ev:ledger` [`ev:timer` —— timer-wake 阶段 2 增] / [`ev:queue` —— 「回合中插入」批增] / [`ev:flags` —— R1 输入面板移植增：工具驱动翻转 ∕ 写回执后] / [`ev:goal` —— **R5 增**：goal 工具结果时点采样] / [`ev:config` —— **R8 增**：config 写盘感知——宿主 watch onChange 出站，渲染面设置面复读] / [`ev:menu` —— **D36 增**：菜单动作（主→渲染单向；六动作闭集——#817 收正（五 ⇒ 六：+`openSettings`）；纯信号）]）—— 非回调映射；计数族权威数 / 三档同值收正 = 在册登记（`docs/desktop/design/PROJECT.md` §10 BE 行），事件映射段 = `docs/desktop/design/IPC.md` §1）。 */
 const EVENT_CHANNELS = Object.freeze([

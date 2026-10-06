@@ -8,6 +8,7 @@
  * 本批**不认领活动槽**：`isActive` 只读（不写 manifest、不发端壳认领）。
  */
 import { ledgerHealth, listSlots } from "./session-slots.mjs"
+import { usageBySlotSync } from "./usage-log.mjs" // 会话用量聚合（2026-10-06 —— 行拼 `usage` 六键）
 
 /** 载荷行字段集（闭集 · 单源 = IPC 会话族注项 1）：`date` / `updatedDate` 是核本地化显示串、
  *  `firstMessage` 非会话控制条目所需 ⇒ **不载**（关键决策 D-4）；**R3c 增** `provider`（= 核条目 `activeProvider`
@@ -20,7 +21,10 @@ export const ROW_FIELDS = Object.freeze([
  *  `provider` = 核 `activeProvider` 逐字（老槽缺键 ⇒ 核已归 `""` —— 渲染面不标注）。
  *  `firstMessage` = 显示兜底载波（2026-10-05 —— 标题空 ⇒ 渲染面以首条消息为显示标题；
  *  核投影本就携带 —— D-4 决策修订，读取零成本）。 */
-function toRow(entry) {
+function toRow(entry, usageMap) {
+  // 用量拼装（2026-10-06）：本会话台账聚合（六键 + requests）——**零台账行 ⇒ 零 `usage` 键**（缺席 =
+  // 未产用量 ∕ 旧会话，渲染面零节点，不假造零值）。
+  const usage = usageMap?.get(String(entry.slot))
   return {
     slot: entry.slot,
     title: entry.title,
@@ -30,6 +34,16 @@ function toRow(entry) {
     isActive: entry.isActive,
     provider: entry.activeProvider,
     firstMessage: typeof entry.firstMessage === "string" ? entry.firstMessage : "",
+    ...(usage ? {
+      usage: {
+        requests: usage.requests,
+        prompt: usage.prompt,
+        completion: usage.completion,
+        reasoning: usage.reasoning,
+        cacheRead: usage.cacheRead,
+        cacheWrite: usage.cacheWrite,
+      },
+    } : {}),
   }
 }
 
@@ -39,7 +53,8 @@ function toRow(entry) {
  *  `ledgerHealth(cwd)`（经端壳转口引核出口——零算法副本）；`reason` = `lastReason` 逐字 ∥ `"scene"`（仅损坏现场时；`refused > 0` ⇒ `lastReason` 恒非空——核同拍写，`?? "scene"` 兜底不可达）；`cwd` 空 ⇒ 不携。 */
 export function listSessions(cwd) {
   if (typeof cwd !== "string" || cwd === "") return { cwd: null, rows: [] }
-  const receipt = { cwd, rows: listSlots(cwd).map(toRow) }
+  const usageMap = usageBySlotSync({ cwd })
+  const receipt = { cwd, rows: listSlots(cwd).map((entry) => toRow(entry, usageMap)) }
   const health = ledgerHealth(cwd)
   if (health.refused > 0 || health.scene) {
     receipt.ledger = { refused: health.refused, reason: health.lastReason ?? "scene", scene: health.scene }
@@ -59,15 +74,30 @@ export function catalogSessions(cwds) {
     ok: true,
     projects: list.map((cwd) => {
       try {
+        // 用量拼装（2026-10-06 —— 与 listSessions 同源 `usageBySlotSync`；逐项目一次聚合）。
+        const usageMap = usageBySlotSync({ cwd })
         return {
           cwd,
-          sessions: listSlots(cwd).map((entry) => ({
-            slot: entry.slot,
-            isActive: entry.isActive,
-            title: typeof entry.title === "string" ? entry.title : "",
-            firstMessage: typeof entry.firstMessage === "string" ? entry.firstMessage : "",
-            updatedAt: entry.updatedAt ?? entry.timestamp ?? 0,
-          })),
+          sessions: listSlots(cwd).map((entry) => {
+            const usage = usageMap.get(String(entry.slot))
+            return {
+              slot: entry.slot,
+              isActive: entry.isActive,
+              title: typeof entry.title === "string" ? entry.title : "",
+              firstMessage: typeof entry.firstMessage === "string" ? entry.firstMessage : "",
+              updatedAt: entry.updatedAt ?? entry.timestamp ?? 0,
+              ...(usage ? {
+                usage: {
+                  requests: usage.requests,
+                  prompt: usage.prompt,
+                  completion: usage.completion,
+                  reasoning: usage.reasoning,
+                  cacheRead: usage.cacheRead,
+                  cacheWrite: usage.cacheWrite,
+                },
+              } : {}),
+            }
+          }),
         }
       } catch {
         return { cwd, sessions: [] }
