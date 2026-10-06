@@ -297,16 +297,8 @@ select.settings-field { min-inline-size: 12rem; }
 }
 .header-menu-btn:hover { background: var(--hover-bg); }
 .header-session { display: flex; align-items: center; min-width: 0; }
-/* 会话控制条入 Header：条形退场（透明 ∕ 零边 ∕ 紧凑），仅留控件。
-   保留 = 会话选择器（当前会话信息）+ 思考总折叠 + 📂 打开文件夹（页面操作）；
-   隐藏 = 项目钮（职责归「打开项目」）+ 新会话钮（职责归「新聊天」）——Header 零重复出口。 */
-.app-header .session-bar { min-height: 0; padding: 0; border-bottom: 0; gap: 4px; }
-.app-header .session-bar .session-project,
-.app-header .session-bar .session-new { display: none; }
-.app-header .session-bar .session-selector { max-width: 22rem; }
-.app-header .session-bar .session-title { max-width: 19rem; }
-body.sidebar-collapsed .app-header .session-bar .session-selector { max-width: 13rem; }
-body.sidebar-collapsed .app-header .session-bar .session-title { max-width: 10rem; }
+/* 会话控制条留守对话区（fork 2026-10-06 回迁——用户反馈「标题栏显乱 ∕ 展开选择 ∕ 新建会话功能没了」）：
+   Header 只承载品牌 ∕ 全局菜单 ∕ 拖拽；条形本貌（chrome.css）原样留在 .session 首位。 */
 
 /* ── 边栏（展开 264px ∕ 折叠 52px 图标列）────────────────────────────────── */
 .sidebar {
