@@ -74,7 +74,9 @@ export function md(raw) {
   text = text.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
     const i = blocks.length
     const norm = normalizeLang(lang)
-    const l = lang ? `<span class="code-lang">${esc(lang)}</span>` : ""
+    // 无语言围栏也恒产标题条（fork 2026-10-06——用户「纯文本块统一设计」）：缺省名 "text"
+    // （语言名同族小写惯例——Codex ∕ VSC 同形）；空条曾致复制钮悬空 ∕ 块头参差。
+    const l = `<span class="code-lang">${esc(lang || "text")}</span>`
     const hl = highlight(code.trimEnd(), norm)
     blocks.push(`<pre class="code-block">${l}<code>${hl}</code></pre>`)
     return `\x00B${i}\x00`
