@@ -3,8 +3,10 @@
  *
  * 职责：整会话读（核 `loadSlotFile` 单源 —— **一次读全量**，零翻页）→ 人读线窗口（核 `historyWindow`
  * 全窗投影 —— 与 `history:page` 同形同源，可见性谓词零副本）→ Markdown 拼装（纯函数可直测）。
- * 收录面（v1）：**用户 ∕ ThinCoder 正文** + 思考链（`<details>` 折叠块）+ 错误行（引用块）；
- * 工具调用 ∕ 子代理留档 ∕ 消化记录**不收录**（面向人读文档，机器噪声零价值）。
+ * 收录面（**v2 定形 —— 用户裁定「只导正文」** 2026-10-07：v1 逐帧出段产出 659 个标题 ∕ 大量空段——
+ * 工作过程帧 ∕ 旁白帧全成了节）：**每轮一问一答** = 用户消息 + 本轮**最后一条非空** assistant 正文
+ * （轮尾最终正文——`chat-work.mjs` 轮组同语义）；思考链 ∕ 工具调用 ∕ 子代理留档 ∕ 消化记录 ∕
+ * 错误行 ∕ 中途旁白帧**全不收录**；段间零分隔线零时间戳（人读文档最小面）。
  * **隔离形（禁令）= 零 `electron` import**（先例 `heap-watch.mjs` ∕ `usage-log.mjs` —— 平 node 可 import 直测；
  * 保存对话框归 `ipc.mjs` 处理体，本档零 UI）。
  */
@@ -28,62 +30,58 @@ const datePrefix = (date = new Date()) => {
   return `${date.getFullYear()}-${m}-${d}`
 }
 
-/** 保存对话框默认文件名：`YYYY-MM-DD-<标题>.md`。 */
+/** 保存对话框默认文件名：`YYYY-MM-DD-<标题>.md`（标题截 24 字 —— 文件名可读，文档内标题仍全量）。 */
 export function exportFileName(title, date = new Date()) {
-  return `${datePrefix(date)}-${sanitizeFileName(title)}.md`
+  return `${datePrefix(date)}-${sanitizeFileName(String(title ?? "").slice(0, 24))}.md`
 }
 
-/** 时间戳显示（本地 `YYYY-MM-DD HH:mm`；缺 ∕ 非数 ⇒ `null` —— 零假造）。 */
-function formatTs(ms) {
-  if (!Number.isFinite(ms) || ms <= 0) return null
-  const d = new Date(ms)
-  const pad = (n) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-/** 单段转义：md 语义字符最少处理（正文原样保留 —— 零再加工；仅剥尾部多余空行）。 */
-const asBlock = (text) => String(text ?? "").replace(/\s+$/, "")
-
-/** 思考折叠块（GFM `<details>` —— GitHub ∕ 常见阅读器可折叠；空 ⇒ `null` 零节点）。 */
-function reasoningBlock(reasoning) {
-  const body = asBlock(reasoning)
-  if (body === "") return null
-  return `<details>\n<summary>思考</summary>\n\n${body}\n\n</details>`
-}
+/** 单段修剪：剥首尾空白（段内原文保留 —— 零再加工）。 */
+const asBlock = (text) => String(text ?? "").trim()
 
 /**
  * Markdown 拼装（**纯函数**）：`{ title, cwd, messages }` → 文档串。
- * 结构 = `# 标题` + 引注行（导出源 ∕ 项目 ∕ 时间 ∕ 条数）+ 逐消息 `## 用户 ∕ ## ThinCoder` 段
- * （时间戳在场则随标题行；思考链折叠块随段尾；错误行 `>` 引用）。
+ * **轮折叠**：扫人读线——用户消息 = 开新轮（前轮挂起的 assistant 正文先落段）；assistant 帧 = 挂起
+ * 正文覆写（**最后一条非空胜出** = 轮尾最终正文）；其余形（空帧 ∕ 错误 ∕ 工具 ∕ 留档）零贡献。
+ * 文档 = `# 标题` + 引注行（N 轮对话）+ 逐轮 `## 用户 ∕ ## ThinCoder` 两段，零分隔线零时间戳。
  */
 export function buildMarkdown({ title, cwd, messages }) {
   const list = Array.isArray(messages) ? messages : []
+  const turns = []
+  let pending = null
+  const flush = () => {
+    if (pending !== null) {
+      turns.push({ role: "ThinCoder", text: pending })
+      pending = null
+    }
+  }
+  for (const msg of list) {
+    if (msg?.kind === "user") {
+      const text = asBlock(msg.text)
+      if (text === "") continue
+      flush()
+      turns.push({ role: "用户", text })
+    } else if (msg?.kind === "assistant") {
+      const text = asBlock(msg.text)
+      if (text !== "") pending = text
+    }
+  }
+  flush()
+  if (turns.length === 0) return ""
   const now = new Date()
   const pad = (n) => String(n).padStart(2, "0")
   const exportedAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+  const userTurns = turns.filter((turn) => turn.role === "用户").length
   const head = [
     `# ${String(title ?? "").trim() === "" ? "会话" : title}`,
     "",
-    `> 导出自 ThinCoder${typeof cwd === "string" && cwd !== "" ? ` · 项目 \`${cwd}\`` : ""} · ${exportedAt} · ${list.length} 条消息`,
+    `> 导出自 ThinCoder${typeof cwd === "string" && cwd !== "" ? ` · 项目 \`${cwd}\`` : ""} · ${exportedAt} · ${userTurns} 轮对话（正文）`,
     "",
   ]
   const body = []
-  for (const msg of list) {
-    const at = formatTs(msg?.timestamp)
-    if (msg?.kind === "user") {
-      body.push("", "---", "", `## 用户${at === null ? "" : ` · ${at}`}`, "", asBlock(msg.text))
-    } else if (msg?.kind === "assistant") {
-      body.push("", "---", "", `## ThinCoder${at === null ? "" : ` · ${at}`}`, "")
-      const text = asBlock(msg.text)
-      if (text !== "") body.push(text)
-      const reasoning = reasoningBlock(msg.reasoning)
-      if (reasoning !== null) body.push("", reasoning)
-    } else if (msg?.kind === "error") {
-      body.push("", "---", "", `> ⚠ ${asBlock(msg.text)}`)
-    }
-    // tool ∕ subagent ∕ digest ∕ 未知形：不收录（见档头收录面）。
+  for (const turn of turns) {
+    body.push(`## ${turn.role}`, "", turn.text, "")
   }
-  return `${head.join("\n")}${body.join("\n")}\n`
+  return `${head.join("\n")}\n${body.join("\n")}`
 }
 
 /**
@@ -104,7 +102,9 @@ export function sessionToMarkdown(cwd, key) {
   const fallbackTitle = firstUser === undefined ? "会话" : String(firstUser.text).replace(/\s+/g, " ").trim().slice(0, 40)
   const title = typeof data.title === "string" && data.title !== "" ? data.title : fallbackTitle
   if (messages.length === 0) return { ok: false, reason: "empty" }
-  const exported = messages.filter((msg) => msg?.kind === "user" || msg?.kind === "assistant" || msg?.kind === "error")
-  if (exported.length === 0) return { ok: false, reason: "empty" }
-  return { ok: true, title, markdown: buildMarkdown({ title, cwd, messages }), count: exported.length }
+  const markdown = buildMarkdown({ title, cwd, messages })
+  if (markdown === "") return { ok: false, reason: "empty" }
+  // 轮数 = 用户段数（正文内助手自带的 `## ` 标题不算 —— `## 用户` 前缀锚定）。
+  const turns = (markdown.match(/^## 用户/gm) ?? []).length
+  return { ok: true, title, markdown, count: turns }
 }
