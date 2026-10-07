@@ -19,8 +19,10 @@ import { applyPin, nearBottom } from "/rc/scroll.mjs"
 /** 近底阈再出口保名（**唯一数值源** = 核工厂 `NEAR_BOTTOM_PX`——消费面零改；判据漂移 = 缺陷）。 */
 export { NEAR_BOTTOM_PX as FOLLOW_PX } from "/rc/scroll.mjs"
 
-/* 回填触发阈 —— VSC `webview/history.js:82`（`scrollTop > 40` 即不取 ⇒ 触顶 ≤ 40px 取页）逐值。 */
-export const BACKFILL_PX = 40
+/* 回填触发阈（fork 2026-10-06 二调 —— 用户「滚动卡住」：原 VSC 40px = 撞死顶才取 ⇒ 每页边界
+   一次 IPC + 头段重建的可见停顿；480px = 提前一屏多预取，页边界隐入滚动途中——ZCode loadOlder
+   滚动中途自动加载同语义。落地续链见 chat.mjs 帧尾补偿点）。 */
+export const BACKFILL_PX = 480
 export const SMOOTH_MS = 420
 /* 首屏渲染窗 —— 对齐 VSC `MAX_MESSAGE_BLOCKS`（`webview/ui.js:204` = 150）逐值（2026-09-29 · 批
    `docs/batches/2026-09-29-hatch-clearance-2.md` · #673 · E10 端差消：VSC 150 = 防卡顿硬约束，
