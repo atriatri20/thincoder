@@ -72,11 +72,22 @@ function reasonOf(receipt) {
   return typeof receipt?.reason === "string" && receipt.reason !== "" ? receipt.reason : "unknown"
 }
 
+/** 后台预载预算（fork 2026-10-06 —— 用户「滚动卡住 ∕ ZCode 小地图全展示」）：**实测定海**——1173 块
+ *  全挂载下纯滚动零长任务（contain 生效）⇒ 卡感 = 等待链（页未到就看不到）而非算力 ⇒ 开会话即后台
+ *  链式预载全史（预算 12 页 ≈ 2400 行；每页落地若 hasOlder ∧ 预算未尽 ∧ 仍在该会话 ⇒ 60ms 续页——
+ *  backfill 重入闸单源防叠）；预算尽的大会话仍可触顶按需取。滚动 ∕ 小地图随挂载全量生长。 */
+let preloadBudget = 0
+
 /** 页读（首屏 `before = null` / 回填 = 页游标）：`history:page` ⇒ `applyPage` 落态；抛 / 拒绝 ⇒ 记错 + 清在途（成败皆清）。 */
 async function loadPage(key, before) {
   try {
     const receipt = await host.invoke("history:page", { key, before })
     store.set(applyPage(store.get(), receipt, { key, before }))
+    // 预载链：预算未尽 ∧ 有更早 ∧ 仍在本会话 ⇒ 续页（openPage 置预算 ∕ 切会话即断链）
+    if (preloadBudget > 0 && store.get().history?.hasOlder === true && store.get().activeSession === key) {
+      preloadBudget -= 1
+      setTimeout(() => { if (store.get().activeSession === key) backfill() }, 60)
+    }
   } catch (error) {
     console.error("[renderer] history:page failed:", error)
     showToast(t("session.loadFailed")) // R9 · #486：页读失败 ⇒ 可见提示（载入失败不静默）
@@ -84,8 +95,10 @@ async function loadPage(key, before) {
   }
 }
 
-/** 开页（三路开会话**同一路**）：键面动作（`openSession` ⇒ `activeSession` + 清本键 `done` 位标）+ 首屏页读。 */
+/** 开页（三路开会话**同一路**）：键面动作（`openSession` ⇒ `activeSession` + 清本键 `done` 位标）+ 首屏页读
+ *  + **后台预载预算重置**（12 页——全史 ≤2400 行的会话开会话即全部挂载）。 */
 function openPage(key) {
+  preloadBudget = 12
   store.set(openSession(store.get(), key))
   void loadPage(key, null)
 }
