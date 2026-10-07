@@ -49,7 +49,7 @@ import { t } from "../i18n.mjs"
 // 快照族（波 1 产物 —— #606④ 重挂保真：滚位 ∕ 域内焦点复填）
 import { captureView, restoreView } from "../view-state.mjs"
 import { attachCopyButtons } from "/rc/flow/stream.mjs"
-import { BACKFILL_PX, MAX_RENDER_BLOCKS, compensateTop, stickToBottom, tailAction } from "./chat-scroll.mjs"
+import { MAX_RENDER_BLOCKS, compensateTop, stickToBottom, tailAction } from "./chat-scroll.mjs"
 import { chatModel } from "./chat-model.mjs"
 import { blockAnchor, syncChrome } from "./chat-chrome.mjs"
 // 构树面出档（留档批 · #719 拆分预案执行 —— 原 `errorNode` / `blockNode` / `chatTree` 迁入；重建径按记录位次复列）。
@@ -199,11 +199,6 @@ export function settleFrame(root, model, scroll, handlers = {}, account = null) 
   else if (writing === "compensate") {
     const t1 = readMetrics()
     root.scrollTop = compensateTop({ prevTop: t0.scrollTop, prevHeight: t0.scrollHeight, nextHeight: t1.scrollHeight })
-    // 落地续链（fork 2026-10-06 —— ZCode loadOlder 同义）：补偿后仍在触发区 ∧ 有更早 ∧ 非在飞
-    // ⇒ rAF 派下页（快速滚顶的用户不每页撞墙；链有界 = hasOlder 尽 ∕ 区退出 ∕ inFlight 闸）。
-    if (root.scrollTop <= BACKFILL_PX && model.hasOlder === true && model.inFlight !== true && typeof handlers.onBackfill === "function") {
-      requestAnimationFrame(() => handlers.onBackfill())
-    }
   }
   segmentViewStep(root, model, account?.mounted ?? []) // 步⑦（六步之后 —— 巨块段窗：独立显式补偿）
   return mountedOf(root, model.blocks)

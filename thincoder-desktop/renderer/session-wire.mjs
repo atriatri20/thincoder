@@ -72,12 +72,10 @@ function reasonOf(receipt) {
   return typeof receipt?.reason === "string" && receipt.reason !== "" ? receipt.reason : "unknown"
 }
 
-/** 后台预载预算（fork 2026-10-06 —— 用户「滚动卡住 ∕ ZCode 小地图全展示」）：**实测定海**——1173 块
- *  全挂载下纯滚动零长任务（contain 生效）⇒ 卡感 = 等待链（页未到就看不到）而非算力 ⇒ 开会话即后台
- *  链式预载全史（预算 12 页 ≈ 2400 行；每页落地若 hasOlder ∧ 预算未尽 ∧ 仍在该会话 ⇒ 60ms 续页——
- *  backfill 重入闸单源防叠）；预算尽的大会话仍可触顶按需取。滚动 ∕ 小地图随挂载全量生长。 */
-let preloadBudget = 0
-
+/** 后台预载链（CHAT-RENDER-DESIGN.md §2 —— **唯一加载器**）：开会话即链式取全史直到 hasOlder=false。
+ *  实测定海：1173 块全挂载下纯滚动零长任务（contain 生效）⇒ 卡感 = 等待链而非算力 ⇒ 预载后滚动零等待。
+ *  （2026-10-06 统一批：12 页预算退役——预算帽曾致大会话链死半路 ∕「打开只载 4 根」残留。）
+ *  每页落地若 hasOlder ∧ 仍在该会话 ⇒ 60ms 续页（backfill 重入闸单源防叠 ∕ 切会话即断链）。 */
 /** 页读（首屏 `before = null` / 回填 = 页游标）：`history:page` ⇒ `applyPage` 落态；抛 / 拒绝 ⇒ 记错 + 清在途（成败皆清）。 */
 async function loadPage(key, before) {
   try {
@@ -85,8 +83,7 @@ async function loadPage(key, before) {
     // 预载链调度**前置**（store.set 前——用户重启实测链死半路：set 同步跑 paintChat 回填整置，
     // 与流式高频重绘相撞的异常沿 store.set 上抛 ⇒ 续链永不排上；前置 = paint 异常被 loadPage
     // catch 吸收（endBackfill 清在途）⇒ 已排的续页重试同页——**自愈环**）。切会话即断链。
-    const chained = preloadBudget > 0 && receipt?.ok === true && receipt?.hasOlder === true
-    if (chained) preloadBudget -= 1
+    const chained = receipt?.ok === true && receipt?.hasOlder === true
     // **调度整体前置**（含定时器——上一稿只前置预算判定：set 抛 ⇒ 定时器仍永不排上，链死同前）
     if (chained) setTimeout(() => { if (store.get().activeSession === key) backfill() }, 60)
     store.set(applyPage(store.get(), receipt, { key, before }))
@@ -100,7 +97,6 @@ async function loadPage(key, before) {
 /** 开页（三路开会话**同一路**）：键面动作（`openSession` ⇒ `activeSession` + 清本键 `done` 位标）+ 首屏页读
  *  + **后台预载预算重置**（12 页——全史 ≤2400 行的会话开会话即全部挂载）。 */
 function openPage(key) {
-  preloadBudget = 12
   store.set(openSession(store.get(), key))
   void loadPage(key, null)
 }

@@ -36,12 +36,10 @@ function metricsOf(source) {
   return { scrollTop: read(metrics.scrollTop), scrollHeight: read(metrics.scrollHeight), clientHeight: read(metrics.clientHeight) }
 }
 
-/** 滚动出口判据（三出口互斥）：触顶 ≤ `BACKFILL_PX`（边界命中）∧ 有更早 ∧ 非回填中 ⇒ `backfill`；
+/** 滚动出口判据（统一批 · fork 2026-10-06 —— **两出口**：backfill 出口退役，加载唯一 = 预载链）：
  *  近底（判据 = 核工厂 `nearBottom`——三读数归一 + 严格小于：恰阈不判近底）⇒ `follow`；其余 ⇒ `unfollow`。
- *  `guards` = 只读取数口（缺 ⇒ 恒假 —— 不造事实）。 */
+ *  `guards` 形保留（读数口兼容——现无消费键）。 */
 export function scrollAction(metrics, guards = {}) {
-  const { scrollTop } = metricsOf(metrics)
-  if (scrollTop <= BACKFILL_PX && guards?.hasOlder === true && guards?.inFlight !== true) return "backfill"
   if (nearBottom(metrics)) return "follow"
   return "unfollow"
 }
@@ -103,7 +101,7 @@ export function attachScroll(root, deps = {}) {
     if (!smoothWindowOpen(Date.now(), handle.lastAt)) return
     if (typeof deps.onScrollTick === "function") deps.onScrollTick() // 滚动拍（巨块段窗信号 —— 帧合并节流）
     const action = scrollAction(metricsOf(root), guards())
-    const outlet = action === "backfill" ? deps.onBackfill : action === "follow" ? deps.onFollow : deps.onUnfollow
+    const outlet = action === "follow" ? deps.onFollow : deps.onUnfollow
     if (typeof outlet === "function") outlet()
   }, { passive: true })
   return handle

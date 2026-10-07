@@ -17,7 +17,11 @@ import { guideOf } from "./chat-guide.mjs"
  *  `none` ⇒ `blocks` 空 ∧ `hidden` 0 ∧ `approval` 空（守 `data-blocks` = DOM 块节点数不变式 —— 不落 stale 块 / 卡）。 */
 export function chatModel(state, limit = MAX_RENDER_BLOCKS) {
   const live = state?.activeSession !== null && state?.activeSession !== undefined
-  const { visible, hidden } = visibleWindow(Array.isArray(state?.blocks) ? state.blocks : [], limit)
+  // 窗口退役（CHAT-RENDER-DESIGN.md 统一批 · fork 2026-10-06）：加载唯一 = 预载链（全史后台取齐），
+  // 挂载 = 全量（屏外渲染成本由 .block content-visibility 原生虚拟化承担）；hidden 恒 0 ⇒ 摘要钮退场。 */
+  const allBlocks = Array.isArray(state?.blocks) ? state.blocks : []
+  const visible = allBlocks
+  const hidden = 0
   const mode = !live ? "none" : visible.length === 0 ? "empty" : "flow"
   return {
     state: mode,

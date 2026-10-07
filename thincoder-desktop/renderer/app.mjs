@@ -35,7 +35,7 @@ import { attachComposer } from "./mount-composer.mjs"
 import { POOL_SLOT, attachPool } from "./mount-pool.mjs"
 import { attachStatus } from "./mount-status.mjs"
 import {
-  SESSION_SLOT, activateSession, backfill, confirmRename, createSession, deleteSession, mountSessionBar,
+  SESSION_SLOT, activateSession, confirmRename, createSession, deleteSession, mountSessionBar,
   refreshRail, resumeOpened,
 } from "./mount-sessions.mjs"
 import { attachSettings } from "./mount-settings.mjs"
@@ -320,7 +320,7 @@ document.addEventListener("DOMContentLoaded", boot)
  *  **`onScrollTick`**（E4-JS 支）：平滑窗门后每 scroll 事件 ⇒ `frame.mark(["segView"])`（**哨兵键 —— 非切片**；
  *  巨块段窗滚动作 —— 帧合并节流 ≥50ms ⇒ ≤20 拍 ∕ 秒）。 */
 chatScroll = attachScroll(document.querySelector(FLOW_SLOT), {
-  onBackfill: backfill,
+  // onBackfill 退役（统一批 · fork 2026-10-06——加载唯一 = 开会话预载链；滚动只管跟滚两态）
   onFollow: () => store.set(setFollowing(store.get(), true)),
   onUnfollow: () => store.set(setFollowing(store.get(), false)),
   guards: () => ({ hasOlder: store.get().history?.hasOlder === true, inFlight: store.get().history?.inFlight === true }),

@@ -64,6 +64,12 @@ body .auto-confirm { border-radius: 14px; padding: 16px; box-shadow: var(--shado
 body .paste-toast { border-radius: 12px; }
 
 /* ── 对话流（chat.css 覆盖）：居中阅读列 + 宽松节奏 ─────────────────────── */
+/* 原生虚拟化（统一批 · fork 2026-10-06）：content-visibility 屏外块跳过布局∕绘制——
+   全量挂载（预载链）下滚动∕绘制恒轻；contain-intrinsic-size auto = 上次实高记忆 ∕ 兜底估计。 */
+.block {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+}
 /* 列宽（fork 2026-10-06 五调 —— 用户「缩小窗口两侧缺留白」）：width 抄 ZCode conversationLayout
    `calc(100% − 6rem)`——**宽窗两侧恒保 3rem 留白**；窄窗回退 100%（ZCode 同条件
    `@min-[864px]/conversation:`——否则 minimap 让位 ∕ pool ∕ 留白叠加把列挤扁）。 */
