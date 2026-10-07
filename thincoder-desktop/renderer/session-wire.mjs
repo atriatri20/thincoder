@@ -82,12 +82,13 @@ let preloadBudget = 0
 async function loadPage(key, before) {
   try {
     const receipt = await host.invoke("history:page", { key, before })
+    // 预载链调度**前置**（store.set 前——用户重启实测链死半路：set 同步跑 paintChat 回填整置，
+    // 与流式高频重绘相撞的异常沿 store.set 上抛 ⇒ 续链永不排上；前置 = paint 异常被 loadPage
+    // catch 吸收（endBackfill 清在途）⇒ 已排的续页重试同页——**自愈环**）。切会话即断链。
+    const chained = preloadBudget > 0 && receipt?.ok === true && receipt?.hasOlder === true
+    if (chained) preloadBudget -= 1
     store.set(applyPage(store.get(), receipt, { key, before }))
-    // 预载链：预算未尽 ∧ 有更早 ∧ 仍在本会话 ⇒ 续页（openPage 置预算 ∕ 切会话即断链）
-    if (preloadBudget > 0 && store.get().history?.hasOlder === true && store.get().activeSession === key) {
-      preloadBudget -= 1
-      setTimeout(() => { if (store.get().activeSession === key) backfill() }, 60)
-    }
+    if (chained) setTimeout(() => { if (store.get().activeSession === key) backfill() }, 60)
   } catch (error) {
     console.error("[renderer] history:page failed:", error)
     showToast(t("session.loadFailed")) // R9 · #486：页读失败 ⇒ 可见提示（载入失败不静默）

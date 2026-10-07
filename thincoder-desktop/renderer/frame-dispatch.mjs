@@ -46,8 +46,15 @@ export function dispatchFrame({ dirtyKeys, state, faces } = {}) {
   for (const [name, keys] of FRAME_FACES) {
     const paint = faces?.[name]
     if (typeof paint !== "function" || !faceHit(dirtyKeys, keys)) continue
-    paint(state, dirtyKeys)
-    painted.push(name)
+    try {
+      paint(state, dirtyKeys)
+      painted.push(name)
+    } catch (error) {
+      // 面级隔离（统一 Header 批顺带 · fork 2026-10-06——用户「整软件卡住」防御档）：单面异常
+      // **不阻断其余面 ∕ 不死 rAF 链**——吞 + stderr 带栈（回填整置 ∕ 流式重绘相撞类瞬时异常
+      // 下一帧自愈；持续异常可见栈定位）。原形零隔离 ⇒ 单面抛 = 帧管线死 = 全窗冻结。
+      console.error(`[frame] face "${name}" paint failed:`, error)
+    }
   }
   return painted
 }
