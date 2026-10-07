@@ -106,6 +106,43 @@ body .paste-toast { border-radius: 12px; }
 }
 .block-user > .block-text :is(strong, em, code) { color: inherit; }
 
+/* ── 用户长文折叠（fork 2026-10-06 —— ZCode ConversationUserInputBody 移植）：>120px 折叠。
+   折叠态 = 120px 钳高 + 底部 30% 渐隐遮罩（ZCode mask-image 同值）；展开态 = inline max-height
+   （user-collapse.mjs 写实际内容高 ⇒ 300ms 过渡有终点）；箭头钮浮于渐隐区上居中。 ═══ */
+.block-user > .block-text { position: relative; }
+.block-user > .block-text[data-collapsed] {
+  max-height: 120px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 70%, transparent 100%);
+}
+.block-user > .block-text[data-expanded] { overflow: hidden; }
+.msg-collapse-btn {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-pop);
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+.msg-collapse-btn::before { content: "▾"; }
+.msg-collapse-btn:hover { color: var(--fg); background: var(--hover-bg); }
+.block-user > .block-text[data-collapsed] .msg-collapse-btn { display: inline-flex; }
+.block-user > .block-text[data-expanded] .msg-collapse-btn { display: inline-flex; }
+.block-user > .block-text[data-expanded] .msg-collapse-btn::before { content: "▴"; }
+
 /* 工具卡 = 细描边圆角卡 + 微填充（原透明盒）。 */
 .block-tool {
   border: 1px solid var(--line);

@@ -87,6 +87,8 @@ export const VIEWS_DICT = Object.freeze({
     "settings.agent.advisorEffort": "Review effort",
     // ── ⑤ 会话控制面（会话模型轮 R13 —— 键名与两语值皆 VSC 逐字：`thincoder-vscode/locales/en.json:2-7` 同名键）──
     "session.title": "Session",
+    "chat.msg.expand": "Expand",
+    "chat.msg.collapse": "Collapse",
     "header.menu.file": "File",
     "header.menu.edit": "Edit",
     "header.menu.view": "View",
@@ -290,6 +292,8 @@ export const VIEWS_DICT = Object.freeze({
     "settings.agent.advisorEffort": "审查强度",
     // ── ⑤ 会话控制面（会话模型轮 R13 —— 键名与两语值皆 VSC 逐字：`thincoder-vscode/locales/zh.json:2-7` 同名键）──
     "session.title": "会话",
+    "chat.msg.expand": "展开",
+    "chat.msg.collapse": "收起",
     "header.menu.file": "文件",
     "header.menu.edit": "编辑",
     "header.menu.view": "视图",
