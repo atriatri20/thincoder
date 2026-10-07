@@ -139,7 +139,7 @@ export function usageBody(section, handlers = {}) {
     // ── 按模型 ──
     { tag: "div", props: { class: "settings-field-label", "data-subtitle": "by-model" }, children: [t("settings.usage.byModel")] },
     { tag: "div", props: { class: "usage-table", "data-usage-models": "" }, children: [
-      tableRow([t("settings.usage.model"), t("settings.usage.requestsCol"), t("settings.usage.input"), t("settings.usage.output"), t("settings.usage.cacheCol")], true),
+      tableRow([t("settings.usage.model"), t("settings.usage.requestsCol"), t("settings.usage.input"), t("settings.usage.output"), t("settings.usage.cacheRateCol")], true),
       ...(byModel.length === 0
         ? [tableRow([t("settings.usage.empty"), "", "", "", ""])]
         : byModel.map((row) => tableRow([
@@ -153,7 +153,7 @@ export function usageBody(section, handlers = {}) {
     // ── 按天 ──
     { tag: "div", props: { class: "settings-field-label", "data-subtitle": "by-day" }, children: [t("settings.usage.byDay")] },
     { tag: "div", props: { class: "usage-table", "data-usage-days": "" }, children: [
-      tableRow([t("settings.usage.day"), t("settings.usage.requestsCol"), t("settings.usage.input"), t("settings.usage.output"), t("settings.usage.cacheCol")], true),
+      tableRow([t("settings.usage.day"), t("settings.usage.requestsCol"), t("settings.usage.input"), t("settings.usage.output"), t("settings.usage.cacheRateCol")], true),
       ...(byDay.length === 0
         ? [tableRow([t("settings.usage.empty"), "", "", "", ""])]
         : byDay.map((row) => tableRow([
