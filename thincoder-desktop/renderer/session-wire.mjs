@@ -87,8 +87,9 @@ async function loadPage(key, before) {
     // catch 吸收（endBackfill 清在途）⇒ 已排的续页重试同页——**自愈环**）。切会话即断链。
     const chained = preloadBudget > 0 && receipt?.ok === true && receipt?.hasOlder === true
     if (chained) preloadBudget -= 1
-    store.set(applyPage(store.get(), receipt, { key, before }))
+    // **调度整体前置**（含定时器——上一稿只前置预算判定：set 抛 ⇒ 定时器仍永不排上，链死同前）
     if (chained) setTimeout(() => { if (store.get().activeSession === key) backfill() }, 60)
+    store.set(applyPage(store.get(), receipt, { key, before }))
   } catch (error) {
     console.error("[renderer] history:page failed:", error)
     showToast(t("session.loadFailed")) // R9 · #486：页读失败 ⇒ 可见提示（载入失败不静默）
