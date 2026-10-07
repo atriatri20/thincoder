@@ -27,6 +27,7 @@ import { attachEvents } from "./events-subscribe.mjs"
 import { dispatchFrame } from "./frame-dispatch.mjs"
 import { createHeartbeat, refreshLiveBlocks } from "./heartbeat.mjs"
 import { initDict, setStringsSink, t } from "./i18n.mjs"
+import { showToast } from "/rc/toast.mjs" // 会话导出 toast（fork 2026-10-07 —— session-wire 同源）
 import { createFrameMerge } from "/rc/flow/frame.mjs"
 import { setStrings } from "/rc/i18n.mjs"
 import { attachCards } from "./mount-cards.mjs"
@@ -117,6 +118,18 @@ function paintSessionBar(state = store.get()) {
     onRename: confirmRename, // 改名确认（词面读数 = 挂载面 —— `onRename(key, text)` 回转）
     onDelete: deleteSession, // 确认 popover「删除」键出口
     onOpenProject: () => openDir(), // 项目钮 = 引导面同出口（`project:open` 单一实现）
+    onExportSession: () => { // 会话导出（fork 2026-10-07 —— session:export；无活动会话 ⇒ 零动作）
+      const key = store.get().activeSession
+      if (typeof key !== "string" || key === "") return
+      void Promise.resolve(host?.invoke("session:export", { key })).then((receipt) => {
+        if (receipt?.ok === true) {
+          const name = String(receipt.path ?? "").split(/[\/]/).pop() ?? ""
+          showToast(t("session.exportDone", { name }))
+        } else if (receipt?.reason !== "canceled") {
+          showToast(t("session.exportFailed", { reason: String(receipt?.reason ?? "unknown") }))
+        }
+      })
+    },
     onOpenProjectFolder: () => { // 打开项目文件夹（fork 2026-10-05——shell:openPath；无项目 ⇒ 零动作）
       const cwd = store.get().project?.cwd
       if (typeof cwd !== "string" || cwd === "") return

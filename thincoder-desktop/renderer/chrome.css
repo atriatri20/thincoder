@@ -188,6 +188,29 @@ body.pool-resizing .pool-resizer::before { background: var(--accent); }
   opacity: 1;
   cursor: pointer;
 }
+/* 会话导出钮（fork 2026-10-07）：随 📂 右侧同族（28px 方钮 ∕ CSS 字形 ⤓）；出口 = session:export */
+.session-export {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--fs);
+  line-height: var(--lh);
+  opacity: 0.6;
+}
+.session-export::before {
+  content: "⤓";
+}
+.session-export:not(:disabled):hover {
+  background: var(--hover-bg-strong);
+  opacity: 1;
+  cursor: pointer;
+}
 /* 内联确认 popover（`.auto-confirm` 族 —— VSC 形：背板 + 两键 + 默认焦点取消；挂 `document.body` ⇒ 出面板溢出裁面。
    VSC 侧该族零容器规则（只 base.css 聚焦臂）⇒ 面体 ∕ 背板两值 = 端补最小可用形，族名与两键锚逐字保持）。 */
 .auto-backdrop {

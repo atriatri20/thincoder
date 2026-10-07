@@ -18,7 +18,7 @@ import {
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
   questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, recordAppend, themeState, shellOpenPath, menuPopup, windowControl,
   panelState,
-  sessionGc, sessionIndex, usageStatsChannel,
+  sessionGc, sessionIndex, usageStatsChannel, sessionExportChannel,
 } from "./ipc.mjs"
 /** 转口群（#685 拆档）：二十四项设置族 ∕ 索引数据面 / 台账相位 / 配置写 —— 出档 `ipc-relays.mjs`（表行逐字不动）。 */
 import {
@@ -74,6 +74,7 @@ const HANDLERS = Object.freeze({
   "session:gc": sessionGc,
   "session:index": sessionIndex,
   "usage:stats": usageStatsChannel,
+  "session:export": sessionExportChannel,
   "index:build": indexBuild,
   "index:status": indexStatusChannel,
   "settings:env": settingsEnvChannel,

@@ -152,6 +152,16 @@ export function sessionBarTree(model, handlers = {}, face = {}) {
         }, handlers.onOpenProjectFolder),
         children: [],
       },
+      // 会话导出（fork 2026-10-07 —— 「把对话导出成 md 文档」）：居 📂 右侧；载荷 = 活动会话键
+      //（装配面 `onExportSession` 读 `activeSession` 切片）；`session:export` 主侧拼装 + 保存对话框。
+      {
+        tag: "button",
+        props: wire({
+          class: "session-export", type: "button", "data-action": "session:export",
+          "aria-label": t("session.export"), title: t("session.export"),
+        }, handlers.onExportSession),
+        children: [],
+      },
     ],
   }
 }

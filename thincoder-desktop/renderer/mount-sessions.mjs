@@ -216,6 +216,8 @@ function wireFace(root, handlers) {
     onNew: handlers.onNew,
     onOpenProject: handlers.onOpenProject,
     onOpenProjectFolder: handlers.onOpenProjectFolder, // 打开项目文件夹（shell:openPath —— 装配面读 cwd 切片）
+    onExportSession: handlers.onExportSession, // 会话导出（session:export —— 装配面读 activeSession 切片）
+    onOpenProjectFolder: handlers.onOpenProjectFolder, // 打开项目文件夹透传（同上）
     onToggleReasoning: handlers.onToggleReasoning, // 思考总折叠（**漏透传修正**——原钮 onClick 恒空 ∕ aria-pressed 恒 false）
   }
 }

@@ -24,6 +24,7 @@
  */
 import { createRequire } from "node:module"
 import { statSync } from "node:fs"
+import { writeFile } from "node:fs/promises"
 import { dialog, shell } from "electron"
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
@@ -44,7 +45,8 @@ import { fileOpenTarget } from "./file-links.mjs"
 // 行定位消解面（端差清算轮 #627 —— 外部编辑器 CLI 探测 ∕ argv 构造 / spawn 形；本档零算法副本）。
 import { buildEditorArgs, detectEditorCli, spawnEditorCli } from "./editor-open.mjs"
 import { panelLive } from "./panel-live.mjs"
-import { usageStats } from "./usage-log.mjs" // 用量统计读面（2026-10-06） // 实况回读缓存（子代理面板批 —— `panel:state` 接收半；与装配面同单例）
+import { usageStats } from "./usage-log.mjs" // 用量统计读面（2026-10-06）
+import { sessionToMarkdown, exportFileName } from "./session-export.mjs" // 会话导出（fork 2026-10-07） // 实况回读缓存（子代理面板批 —— `panel:state` 接收半；与装配面同单例）
 
 const require = createRequire(import.meta.url)
 
@@ -104,7 +106,7 @@ export {
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
   questionRespond, sessionPrefs, subagentStop, fileOpen, shellOpenPath, sessionFlags, atComplete, recordAppend, themeState, menuPopup, windowControl,
   panelState,
-  sessionGc, sessionIndex, liveAgents, usageStatsChannel,
+  sessionGc, sessionIndex, liveAgents, usageStatsChannel, sessionExportChannel,
 }
 
 /** `project:open(payload)` ⇒ `{ cwd, recent }`：载荷 `{ fsPath }` **可选**（A7 收正形 —— VSC `setProject` 同键；
@@ -324,6 +326,26 @@ function panelState(payload) {
  *  2026-10-06 · 白名单末位 49；转口 `usage-log.mjs` `usageStats` —— 归一化 ∕ 聚合 ∕ 期档过滤〔today ∕ 24h ∕
  *  7d ∕ 30d ∕ all，二轮增 —— 9Router 同形〕单源在台账档，本档零算法副本）。 */
 function usageStatsChannel(payload) { return usageStats(payload) }
+
+/** `session:export({ key })` ⇒ `{ ok, path, count }` ∥ `{ ok:false, reason }`（**会话导出** —— fork 2026-10-07 ·
+ *  白名单末位 50；载荷 = 活动会话键。md 拼装 ∕ 整会话读单源 = `session-export.mjs`（平 node 可直测）；
+ *  本档只做**保存对话框 + 落盘**（`dialog` 注入同 `project:open` 先例；取消 ⇒ `canceled` 零静默——渲染面 toast）。 */
+async function sessionExportChannel(payload) {
+  const read = sessionToMarkdown(currentCwd(), payload?.key)
+  if (read.ok !== true) return read
+  const { filePath, canceled } = await dialog.showSaveDialog({
+    defaultPath: exportFileName(read.title),
+    filters: [{ name: "Markdown", extensions: ["md"] }],
+  })
+  if (canceled === true || typeof filePath !== "string" || filePath === "") return { ok: false, reason: "canceled" }
+  try {
+    await writeFile(filePath, read.markdown, "utf8")
+  } catch (error) {
+    console.error("[ipc] session export write failed:", error)
+    return { ok: false, reason: String(error?.message ?? error) }
+  }
+  return { ok: true, path: filePath, count: read.count }
+}
 
 /** R1 · 会话维护线两处理体转口（出档 `session-maintenance.mjs`）：`session:gc` ⇒ `{ ok, candidates, confirmed,
  *  deleted, files, skipped, skippedFiles }`；`session:index` ⇒ `{ ok, sessions, changed, messages, toolCalls,
