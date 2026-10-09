@@ -198,6 +198,12 @@ ${item.usageShort}` : item.title,
  *  每项目 { cwd, isCurrent, sessions: [{ slot, item(title 兜底链 ∕ badge), updatedAt }] }。 */
 function projectsOf(model) {
   const cwd = model.project?.cwd ?? null
+  // 渲染时兜底解隐（fork 2026-10-06 —— 当前项目必出席）：任何路径令项目变当前（openDir ∕ 启动恢复 ∕
+  // 跨项目点会话）⇒ 从隐藏集清出（否则切走后会被旧隐藏项误藏）。与 bornOf 同族 = 渲染期只增删当前键。
+  if (cwd !== null && hiddenProjects.has(cwd)) {
+    hiddenProjects.delete(cwd)
+    persistHiddenProjects()
+  }
   const list = []
   const seen = new Set()
   const add = (cwdKey, isCurrent, sessions) => {
@@ -245,7 +251,8 @@ function projectsOf(model) {
   const known = projectOrder
     .map((cwdKey) => list.find((project) => project.cwd === cwdKey))
     .filter((project) => project !== undefined)
-  return [...known, ...rest]
+  // 隐藏集过滤（ZCode 移除 = 藏；当前项目恒豁免——正在用的不可能不在列表）
+  return [...known, ...rest].filter((project) => project.isCurrent === true || !hiddenProjects.has(project.cwd))
 }
 
 /** 展开态（cwd 集合 · localStorage 持久 —— ZCode `expandedWorkspacePaths` 同义）：当前项目恒展开。 */
@@ -269,6 +276,29 @@ let projectOrder = (() => {
 })()
 function persistProjectOrder() {
   try { globalThis.localStorage?.setItem(PROJECT_ORDER_KEY, JSON.stringify(projectOrder)) } catch { /* fail-soft */ }
+}
+
+/** 项目隐藏集（fork 2026-10-06 —— ZCode「移除工作区」同义：**隐藏非删除**——磁盘会话零动，
+ *  重新打开该目录即自动解隐回列表）。localStorage 持久（键 `thincoder.projects.hidden`——cwd 数组；
+ *  读写捕获 fail-soft）；当前项目恒不可隐（`projectsOf` 过滤时 isCurrent 豁免）。 */
+const PROJECT_HIDDEN_KEY = "thincoder.projects.hidden"
+let hiddenProjects = new Set((() => {
+  try {
+    const raw = globalThis.localStorage?.getItem(PROJECT_HIDDEN_KEY)
+    const parsed = raw === null || raw === undefined ? [] : JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter((cwd) => typeof cwd === "string" && cwd !== "") : []
+  } catch { return [] }
+})())
+function persistHiddenProjects() {
+  try { globalThis.localStorage?.setItem(PROJECT_HIDDEN_KEY, JSON.stringify([...hiddenProjects])) } catch { /* fail-soft */ }
+}
+
+/** 解隐（app.mjs `openDir` 成功径调用）：打开 = 出席 ⇒ 从隐藏集移除（幂等——不在集 ⇒ 零写）。 */
+export function unhideProject(cwd) {
+  if (typeof cwd !== "string" || cwd === "" || !hiddenProjects.has(cwd)) return
+  hiddenProjects.delete(cwd)
+  persistHiddenProjects()
+  paintSidebarFace()
 }
 
 /** 出生册（用户反馈 2026-10-05 —— 「置顶动作」根因修复）：此前项目序键 = 最早会话 updatedAt——该会话
@@ -300,13 +330,17 @@ function bornOf(map, persistKey, id, fallbackMs) {
   return born
 }
 
-function projectRowNode(project) {
+/** 项目行（div 容器 —— 内嵌「移除」钮 button 合法；行体 = 折叠符 + 名称 + 悬停 ✕）。
+ *  移除（ZCode 同义 · fork 2026-10-06）= **隐藏非删除**：入本地隐藏集，磁盘会话零动，
+ *  重新打开该目录自动回表（`unhideProject`）。当前项目不可移（钮不现）。 */
+function projectRowNode(project, handlers) {
   const collapsed = collapsedProjects.has(project.cwd)
   return {
-    tag: "button",
+    tag: "div",
     props: {
       class: "sidebar-project-row" + (project.isCurrent ? " current" : ""),
-      type: "button",
+      role: "button",
+      tabindex: "0",
       "data-project": project.cwd,
       title: project.cwd,
       "aria-expanded": String(!collapsed),
@@ -315,6 +349,13 @@ function projectRowNode(project) {
         if (collapsedProjects.has(project.cwd)) collapsedProjects.delete(project.cwd)
         else collapsedProjects.add(project.cwd)
         paintSidebarFace() // 模块态不进 store —— 无订阅径，就地刷
+      },
+      onKeydown: (event) => {
+        if (event?.key !== "Enter" && event?.key !== " ") return
+        event.preventDefault()
+        if (collapsedProjects.has(project.cwd)) collapsedProjects.delete(project.cwd)
+        else collapsedProjects.add(project.cwd)
+        paintSidebarFace()
       },
       onDragstart: (event) => {
         try { event?.dataTransfer?.setData("text/plain", project.cwd) } catch { /* 拖态容错 */ }
@@ -349,7 +390,25 @@ function projectRowNode(project) {
         paintSidebarFace()
       },
     },
-    children: [{ tag: "span", props: { class: "sidebar-item-title" }, children: [baseName(project.cwd)] }],
+    children: [
+      { tag: "span", props: { class: "sidebar-item-title" }, children: [baseName(project.cwd)] },
+      project.isCurrent === true || typeof handlers?.onRemoveProject !== "function"
+        ? null
+        : {
+          tag: "button",
+          props: {
+            class: "sidebar-project-remove",
+            type: "button",
+            "aria-label": t("sidebar.removeProject"),
+            title: t("sidebar.removeProject"),
+            onClick: (event) => {
+              event.stopPropagation()
+              handlers.onRemoveProject(project.cwd)
+            },
+          },
+          children: [],
+        },
+    ],
   }
 }
 
@@ -379,7 +438,7 @@ function sessionsTree(model, handlers) {
     if (filter !== "" && sessions.length === 0) continue
     any = true
     const collapsed = collapsedProjects.has(project.cwd)
-    parts.push(projectRowNode(project, collapsed, sessions.length))
+    parts.push(projectRowNode(project, handlers))
     if (collapsed) continue
     parts.push(...sessions.map((s) => sessionItemNode({ key: s.slot, title: s.display, badge: null, time: s.time, usageShort: s.usageShort ?? null }, handlers, { cwd: project.cwd, isCurrentProject: project.isCurrent })))
   }
@@ -655,6 +714,14 @@ export function attachSidebar(handlers = {}) {
     onMenuOpen: (payload) => {
       bindMenuDismiss()
       openSessionMenu(document.querySelector(SIDEBAR_SLOT), face, payload)
+    },
+    // 移除项目（ZCode 同义 · fork 2026-10-06）= 入隐藏集（**非删除**——磁盘会话零动；
+    // 重新打开该目录 unhideProject 自动回表）。隐藏集本档模块态 ⇒ 内聚接线。
+    onRemoveProject: (cwd) => {
+      if (typeof cwd !== "string" || cwd === "") return
+      hiddenProjects.add(cwd)
+      persistHiddenProjects()
+      paintSidebarFace()
     },
   }
   const paint = () => paintSidebar(face)

@@ -48,7 +48,7 @@ import { attachMinimap } from "./minimap.mjs"
 import { attachReasoningTimes } from "./reasoning-times.mjs"
 import { attachChatWork } from "./chat-work.mjs"
 import { attachUserCollapse } from "./user-collapse.mjs" // 用户长文折叠（ZCode ConversationUserInputBody 移植）
-import { attachSidebar } from "./mount-sidebar.mjs"
+import { attachSidebar, unhideProject } from "./mount-sidebar.mjs" // unhideProject：重开目录解隐（移除=隐藏 · fork 2026-10-06）
 import { reasoningBulkExpanded, setReasoningBulkExpanded } from "./reasoning-pref.mjs"
 import { configuredFlag, patchSettings, returnToBottom, setFollowing, store } from "./store.mjs"
 import { attachHeader } from "./mount-header.mjs" // 统一 Header（fork 2026-10-06——全局菜单五钮 ∕ 词面随动）
@@ -174,7 +174,10 @@ async function openDir(path) {
     const before = store.get().project?.cwd ?? null
     const receipt = await host.invoke("project:open", path ? { fsPath: path } : undefined)
     await refreshRail()
-    if (opened(receipt, before, path)) await resumeOpened()
+    if (opened(receipt, before, path)) {
+      unhideProject(store.get().project?.cwd) // 打开 = 出席 ⇒ 解隐（ZCode 移除=隐藏 · fork 2026-10-06）
+      await resumeOpened()
+    }
   } catch (error) {
     console.error("[renderer] project:open failed:", error)
   }
