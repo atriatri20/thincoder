@@ -59,12 +59,17 @@ export async function refreshRail() {
   }
 }
 
-/** 归档列表刷新（fork · 2026-10-06 —— 归档视图数据源）：`sessions:archived` ⇒ `archived` 切片。
- *  独立于 `refreshRail`（归档读面只在开视图 ∕ 归档动作后刷新，非每次 rail 拍——省一次盘读）；
- *  形不合 ⇒ 记错 + 清列（禁假造）；抛 ⇒ 记错（零静默）。 */
+/** 归档列表刷新（fork · 2026-10-06 · 二调 —— **跨项目**）：拉 recent 算 cwds（当前 + 最近全集，
+ *  与 catalog 同源）⇒ `sessions:archived({ cwds })` ⇒ `archived` 切片（每行带 `project` 归属）。
+ *  独立于 `refreshRail`（归档读面只在开视图 ∕ 归档动作后刷新）；形不合 ∕ 抛 ⇒ 记错（零静默）。 */
 export async function refreshArchived() {
   try {
-    const list = await host.invoke("sessions:archived")
+    const project = await host.invoke("project:recent").catch(() => null)
+    const cwds = isProject(project)
+      ? [...new Set([project.cwd, ...(project.recent ?? []).map((r) => r?.cwd)].filter((v) => typeof v === "string" && v !== ""))]
+      : []
+    if (cwds.length === 0) { store.set({ archived: [] }); return }
+    const list = await host.invoke("sessions:archived", { cwds })
     if (!Array.isArray(list?.sessions)) {
       console.error("[renderer] archived list payload shape unexpected:", list)
       return
@@ -96,9 +101,10 @@ export async function archiveSession(key) {
 }
 
 /** 取消归档：`session:unarchive` 成功 ⇒ 刷归档列 + 刷 rail（回默认列表）；失败 ⇒ toast。 */
-export async function unarchiveSession(key) {
+export async function unarchiveSession(key, cwd = null) {
   try {
-    const receipt = await host.invoke("session:unarchive", { slot: slotOf(key) })
+    // 归档行可属非当前项目 ⇒ 传行 cwd（缺省 null = 当前项目，主侧回退）。
+    const receipt = await host.invoke("session:unarchive", { slot: slotOf(key), ...(typeof cwd === "string" && cwd !== "" ? { cwd } : {}) })
     if (receipt?.ok !== true) {
       console.error("[renderer] session:unarchive failed:", receipt?.reason, "slot:", key)
       showToast(t("session.unarchiveFailed", { reason: reasonOf(receipt) }))
@@ -239,20 +245,21 @@ export async function confirmRename(key, text) {
  *  （`closeTab` 同律的会话列表形：同位置行〔越界取末行〕⇒ `session:switch` 同一路；列表空 ⇒ 关页）；
  *  `ok:false`（核拒：末项门 `last-session` ∕ `slot-missing`）∕ 抛 ⇒ **零动作**（不造死页）+ 记错
  *  + **可见提示**（toast —— #578③：删除失败径同 toast 面；词面同 `session.openFailed` 族）。 */
-export async function deleteSession(key) {
+export async function deleteSession(key, cwd = null) {
   try {
     const before = store.get()
     const rows = Array.isArray(before.sessions) ? before.sessions : []
     const index = rows.findIndex((row) => String(row?.slot) === String(key))
     const wasActive = String(before.activeSession ?? "") === String(key)
-    const receipt = await host.invoke("session:delete", { slot: slotOf(key) })
+    // 归档视图行可属**非当前项目** ⇒ 传行 cwd（缺省 null = 当前项目，主侧回退 currentCwd）。
+    const receipt = await host.invoke("session:delete", { slot: slotOf(key), ...(typeof cwd === "string" && cwd !== "" ? { cwd } : {}) })
     if (receipt?.ok !== true) {
       console.error("[renderer] session:delete failed:", receipt?.reason, "slot:", key)
       showToast(t("session.deleteFailed", { reason: reasonOf(receipt) })) // #578③：失败面可见（回执拒径）
       return false
     }
     await refreshRail()
-    if (wasActive) await takeover(index)
+    if (cwd == null && wasActive) await takeover(index) // 跨项目删除不动本活动页
     return true
   } catch (error) {
     console.error("[renderer] session:delete failed:", error)

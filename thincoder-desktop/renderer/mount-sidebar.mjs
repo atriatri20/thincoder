@@ -75,6 +75,8 @@ function sidebarModel(state = {}) {
       firstMessage: typeof row?.firstMessage === "string" ? row.firstMessage.replace(/\s+/gu, " ").trim() : "",
       updatedAt: Number.isFinite(row?.updatedAt) ? row.updatedAt : 0,
       archivedAt: Number.isFinite(row?.archivedAt) ? row.archivedAt : 0,
+      cwd: typeof row?.cwd === "string" ? row.cwd : "", // 所属项目（跨项目归档 · fork 2026-10-06）
+      project: typeof row?.project === "string" ? row.project : "",
     }))
   return { ...model, items, recent, catalogProjects, archived, showArchived: state?.showArchived === true, badges: state?.tabBadges ?? null }
 }
@@ -393,8 +395,8 @@ function archivedTree(model, handlers) {
   const matched = (text) => filter === "" || String(text ?? "").toLowerCase().includes(filter)
   const parts = [{ tag: "div", props: { class: "sidebar-section-head" }, children: [t("sidebar.archivedTitle")] }]
   const rows = model.archived
-    .map((s) => ({ ...s, display: displayTitleOfSession(s), time: timeSpanOf(s.archivedAt || s.updatedAt) }))
-    .filter((s) => matched(s.display))
+    .map((s) => ({ ...s, display: displayTitleOfSession(s), time: timeSpanOf(s.archivedAt || s.updatedAt), proj: s.project || baseName(s.cwd) }))
+    .filter((s) => matched(s.display) || matched(s.proj))
     .sort((a, b) => (b.archivedAt || b.updatedAt) - (a.archivedAt || a.updatedAt))
   if (rows.length === 0) {
     parts.push({ tag: "div", props: { class: "sidebar-empty-filter" }, children: [t("sidebar.archiveEmpty")] })
@@ -410,20 +412,27 @@ function archivedTree(model, handlers) {
         "data-action": "sidebar:openArchived",
         "data-key": s.slot,
         title: s.display,
-        onClick: () => handlers.onOpenArchived?.(s.slot),
+        onClick: () => handlers.onOpenArchived?.(s.slot, s.cwd),
         onKeydown: (event) => {
-          if (event?.key === "Enter" || event?.key === " ") { event.preventDefault(); handlers.onOpenArchived?.(s.slot) }
+          if (event?.key === "Enter" || event?.key === " ") { event.preventDefault(); handlers.onOpenArchived?.(s.slot, s.cwd) }
         },
       },
       children: [
-        { tag: "span", props: { class: "sidebar-item-title" }, children: [s.display] },
-        { tag: "span", props: { class: "sidebar-item-time" }, children: [s.time] },
+        { tag: "div", props: { class: "sidebar-item-row" }, children: [
+          { tag: "span", props: { class: "sidebar-item-title" }, children: [s.display] },
+          { tag: "span", props: { class: "sidebar-item-time" }, children: [s.time] },
+        ] },
+        // 第二行 = 所属项目（跨项目归档 · ZCode 形：📁 项目名）。
+        { tag: "div", props: { class: "sidebar-item-row sidebar-item-project" }, children: [
+          { tag: "span", props: { class: "sidebar-item-project-icon" }, children: [] },
+          { tag: "span", props: { class: "sidebar-item-project-name" }, children: [s.proj] },
+        ] },
         {
           tag: "button",
           props: {
             class: "sidebar-archived-restore", type: "button",
             "aria-label": t("sidebar.unarchive"), title: t("sidebar.unarchive"),
-            onClick: (event) => { event.stopPropagation(); void handlers.onUnarchive?.(s.slot) },
+            onClick: (event) => { event.stopPropagation(); void handlers.onUnarchive?.(s.slot, s.cwd) },
           },
           children: [],
         },
@@ -432,7 +441,7 @@ function archivedTree(model, handlers) {
           props: {
             class: "sidebar-archived-delete", type: "button",
             "aria-label": t("sidebar.delete"), title: t("sidebar.delete"),
-            onClick: (event) => { event.stopPropagation(); confirmDelete(document.querySelector(SIDEBAR_SLOT), handlers, { key: s.slot, title: s.display }) },
+            onClick: (event) => { event.stopPropagation(); confirmDelete(document.querySelector(SIDEBAR_SLOT), handlers, { key: s.slot, title: s.display, cwd: s.cwd }) },
           },
           children: [],
         },
@@ -595,7 +604,7 @@ function startRename(pane, handlers, { key, title }) {
 }
 
 /** 删除确认 popover（复用 `.auto-confirm` 族样式 —— session 删除确认同款；默认焦点落取消）。 */
-function confirmDelete(pane, handlers, { key, title }) {
+function confirmDelete(pane, handlers, { key, title, cwd = null }) {
   const backdrop = el("div", { class: "auto-backdrop", onClick: () => closeConfirm() })
   const popover = el("div", { class: "auto-confirm", role: "alertdialog", "aria-label": t("session.delete") }, [
     el("div", { class: "auto-confirm-text" }, [t("session.deleteConfirm", { title })]),
@@ -604,7 +613,7 @@ function confirmDelete(pane, handlers, { key, title }) {
         type: "button", class: "auto-confirm-yes", "aria-label": t("session.delete"),
         onClick: () => {
           closeConfirm()
-          void handlers.onDelete?.(key)
+          void handlers.onDelete?.(key, cwd) // 归档行可跨项目 ⇒ 透传行 cwd（当前项目行 = null）
         },
       }, [t("session.delete")]),
       el("button", { type: "button", class: "auto-confirm-no", "aria-label": t("question.cancel"), onClick: () => closeConfirm() }, [t("question.cancel")]),

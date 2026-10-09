@@ -147,8 +147,8 @@ function sessionCatalog(payload) {
 
 /** `sessions:archived({})` ⇒ `{ cwd, sessions }`（fork · 2026-10-06 —— 归档视图读面；转口
  *  `sessions.mjs` `archivedSessions`——manifest 只读，零写）。 */
-function sessionArchived() {
-  const { rows, ...receipt } = archivedSessions(currentCwd())
+function sessionArchived(payload) {
+  const { rows, ...receipt } = archivedSessions(payload?.cwds)
   return { ...receipt, sessions: rows }
 }
 
@@ -165,11 +165,13 @@ function sessionRename(payload) {
 }
 /** `session:archive({ slot })`（归档软删除 · fork 2026-10-06）：转口动作层；**不 dispose 宿主**
  *  （归档保数据，异于删除——取消归档即原样回表；活动会话装配实例照活在表）。 */
-function sessionArchive(payload) { return archiveSession(currentCwd(), payload?.slot) }
-/** `session:unarchive({ slot })`（取消归档回默认列表）。 */
-function sessionUnarchive(payload) { return unarchiveSession(currentCwd(), payload?.slot) }
+function sessionArchive(payload) { return archiveSession(currentCwd(), payload?.slot) } // 归档仅当前项目 ⋯ 菜单触发（跨项目行不可归档）
+/** `session:unarchive({ slot, cwd? })`（取消归档回默认列表 · 归档视图行可属**非当前项目** ⇒
+ *  渲染面传行 `cwd`，缺省回退当前项目）。 */
+function sessionUnarchive(payload) { return unarchiveSession(typeof payload?.cwd === "string" && payload.cwd !== "" ? payload.cwd : currentCwd(), payload?.slot) }
 function sessionDelete(payload) {
-  const receipt = deleteSession(currentCwd(), payload?.slot)
+  // 归档视图删除可跨项目 ⇒ 载荷携行 cwd（缺省回退当前项目）。
+  const receipt = deleteSession(typeof payload?.cwd === "string" && payload.cwd !== "" ? payload.cwd : currentCwd(), payload?.slot)
   // R3b（D20 数据链「会话关闭 / 删除 / 宿主退出 ⇒ 该键投影清」）：删除成功 ⇒ 装配实例出表（宿主 `dispose`
   //  ⇒ 存活投影**清点**：已删会话不随 2s 拍重投）；未装配宿主 / 零键 ⇒ 软跳过（零抛 —— 删除面不受累）。
   if (receipt?.ok === true && payload?.slot != null) agentHost?.dispose(String(payload.slot))

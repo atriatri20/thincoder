@@ -1071,8 +1071,13 @@ select optgroup::before { color: var(--fg-muted); font-weight: 500; }
 .sidebar-item-more:hover { background: var(--hover-bg-strong); color: var(--fg); }
 .sidebar-item-more:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 
-/* 归档视图（fork · 2026-10-06）：归档行 = 标题 + 时刻 + 恢复/删除两钮（hover 现形，沿 item-more 律）。 */
-.sidebar-archived-item { position: relative; }
+/* 归档视图（fork · 2026-10-06）：归档行 = 标题 + 时刻 + 恢复/删除两钮（hover 现形，沿 item-more 律）；
+   双行（跨项目 · ZCode 形）：第一行标题+时刻，第二行 📁 项目名（弱化小字）。 */
+.sidebar-archived-item { position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 1px; padding-top: 5px; padding-bottom: 5px; }
+.sidebar-item-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sidebar-item-project { color: var(--fg-muted); font-size: 11px; }
+.sidebar-item-project-icon::before { content: "📁"; font-size: 10px; margin-right: 3px; }
+.sidebar-item-project-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sidebar-archived-item:hover .sidebar-item-time { opacity: 0; }
 .sidebar-archived-restore, .sidebar-archived-delete {
   position: absolute; top: 50%; transform: translateY(-50%);

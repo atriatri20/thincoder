@@ -62,13 +62,25 @@ export function listSessions(cwd) {
   return receipt
 }
 
-/** `sessions:archived` 读面（fork · 2026-10-06 —— 归档视图数据源）：`cwd` 空 ⇒ 空载荷；
- *  否则核 `listArchivedSlots` 投影逐行挑字段（同 `toRow` 形 + `archivedAt` 归档时刻）。
- *  行序 = 核序 = `archivedAt` 降序（最近归档在前）。只读零写。 */
-export function archivedSessions(cwd) {
-  if (typeof cwd !== "string" || cwd === "") return { cwd: null, rows: [] }
-  const usageMap = usageBySlotSync({ cwd })
-  return { cwd, rows: listArchivedSlots(cwd).map((entry) => ({ ...toRow(entry, usageMap), archivedAt: entry.archivedAt })) }
+/** `sessions:archived` 读面（fork · 2026-10-06 · 二调 —— **跨项目归档** ∕ ZCode 归档列表同形）：
+ *  载荷 `{ cwds }`（当前项目 + 最近项目全集，与 catalog 同源喂入）⇒ 逐项目核 `listArchivedSlots`
+ *  投影，每行**附 `cwd`（所属项目路径）+ `project`（项目名 = 尾段）**——归档视图行显归属。
+ *  全局按 `archivedAt` 降序（最近归档在前，跨项目混排）。单项目读失败 ⇒ 该项目零行（fail-soft）。
+ *  只读零写。 */
+export function archivedSessions(cwds) {
+  const list = Array.isArray(cwds) ? cwds.filter((cwd) => typeof cwd === "string" && cwd !== "") : []
+  const rows = []
+  for (const cwd of list) {
+    try {
+      const usageMap = usageBySlotSync({ cwd })
+      const name = cwd.split(/[\/]/).filter(Boolean).pop() ?? cwd
+      for (const entry of listArchivedSlots(cwd)) {
+        rows.push({ ...toRow(entry, usageMap), archivedAt: entry.archivedAt, cwd, project: name })
+      }
+    } catch { /* 单盘坏档不拖垮全表 */ }
+  }
+  rows.sort((a, b) => (b.archivedAt ?? 0) - (a.archivedAt ?? 0) || b.slot - a.slot)
+  return { ok: true, rows }
 }
 
 /** `sessions:catalog` 读面（**项目目录** · 2026-10-05 —— 侧边栏项目组展开的数据面）：

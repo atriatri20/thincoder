@@ -89,8 +89,12 @@ attachSidebar({
   // 会话归档（fork · 2026-10-06）：⋯ 菜单「归档」+ 归档视图（入口钮 ∕ 恢复 ∕ 删除 ∕ 开归档会话）。
   onArchive: archiveSession,
   onUnarchive: unarchiveSession,
-  // 归档会话点击 = 切项目接续（复用 activateSession 单路 —— 归档行恒当前项目槽，直接切）。
-  onOpenArchived: (key) => void activateSession(key),
+  // 归档会话点击 = 当前项目直接切会话；非当前项目先切项目上下文（openDir 接续该项目活跃会话）。
+  onOpenArchived: (key, cwd) => {
+    const current = store.get().project?.cwd
+    if (typeof cwd === "string" && cwd !== "" && cwd !== current) void openDir(cwd)
+    else void activateSession(key)
+  },
   // 归档视图开关：置 showArchived 切片 ⇒ 侧栏滚动区切归档树；开时拉归档列（懒）。
   onToggleArchived: () => {
     const next = store.get().showArchived !== true
