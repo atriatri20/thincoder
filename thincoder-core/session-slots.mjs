@@ -42,6 +42,7 @@ import { unlinkRecordStore } from "./session-store.mjs"
 // 探测束（init-block 批 · F-MI7）：实现 / 判据单源住 process-probe.mjs——本档零自有 exec、
 // 零逐 pid 探测（判据面与探测面分离）；单 pid 判活 re-export 见下方「判活兼容面」。
 import { probeOwnersAsync, isProcessAlive } from "./process-probe.mjs"
+import { archivedMap } from "./session-archive.mjs" // 会话归档（fork · 2026-10-06）：listSlots 过滤 ∕ listArchivedSlots 消费
 // 清单 / 认领 / 属主面（init-block 批外提——双向静态环见头注）：本档 import 取用 + re-export
 // 保既有 import 面（消费档路径与名面不动）。
 import {
@@ -188,30 +189,49 @@ export { isProcessAlive }
  *  2026-09-01 会诊 🟢：只读操作不认领（清单链**零写**——不认领、不写 manifest、零探测）——
  *  原实现 active 缺失时调 activeSlot（写 manifest 副作用，ACP session/list 可触发）。
  *  m.active 缺失时全部 isActive=false，由下一次 activeSlot 正常认领。 */
+/** 槽行投影（listSlots ∕ listArchivedSlots 共享单源——零第二份字段闭集）。 */
+function projectSlotRow(slot, meta, active) {
+  return {
+    slot,
+    isActive: slot === active,
+    timestamp: meta.ts,
+    date: new Date(meta.ts).toLocaleString(),
+    messageCount: meta.messageCount ?? null,
+    turnCount: meta.turnCount ?? null,
+    firstMessage: meta.firstMessage ?? "",
+    // MODEL-MERGE-SESSION 摘要 "p:m"：activeProvider 保持裸渠道名——列表消费面显复合
+    // （旧摘要无 activeModel → 回退裸渠道名——新老兼容；cmd-session/VSC sessions 行免改）
+    activeProvider: meta.activeProvider ? (meta.activeModel ? `${meta.activeProvider}:${meta.activeModel}` : meta.activeProvider) : "",
+    updatedAt: meta.updatedAt ?? meta.ts,
+    updatedDate: new Date(meta.updatedAt ?? meta.ts).toLocaleString(),
+    title: meta.title ?? "",
+    // 创建端（§6.20 判据句 4 读面——缺键/老槽 ⇒ "" = 未知；「未知」的渲染文案归消费面）
+    createdBy: meta.createdBy ?? "",
+  }
+}
+
 export function listSlots(cwd) {
   const m = loadManifest(cwd)
   const active = m.active ?? null
-  const scanned = scanSlotMetas(cwd, m.slots ?? {})
+  const archived = m.archived && typeof m.archived === "object" ? m.archived : {} // 归档槽集（fork · 2026-10-06）
+  const scanned = scanSlotMetas(cwd, m.slots ?? {}).filter(({ slot }) => archived[slot] == null) // 归档即从默认列表消失
   scheduleVerify(cwd, scanned, m.slots ?? {})
   return scanned
-    .map(({ slot, meta }) => ({
-      slot,
-      isActive: slot === active,
-      timestamp: meta.ts,
-      date: new Date(meta.ts).toLocaleString(),
-      messageCount: meta.messageCount ?? null,
-      turnCount: meta.turnCount ?? null,
-      firstMessage: meta.firstMessage ?? "",
-      // MODEL-MERGE-SESSION 摘要 "p:m"：activeProvider 保持裸渠道名——列表消费面显复合
-      // （旧摘要无 activeModel → 回退裸渠道名——新老兼容；cmd-session/VSC sessions 行免改）
-      activeProvider: meta.activeProvider ? (meta.activeModel ? `${meta.activeProvider}:${meta.activeModel}` : meta.activeProvider) : "",
-      updatedAt: meta.updatedAt ?? meta.ts,
-      updatedDate: new Date(meta.updatedAt ?? meta.ts).toLocaleString(),
-      title: meta.title ?? "",
-      // 创建端（§6.20 判据句 4 读面——缺键/老槽 ⇒ "" = 未知；「未知」的渲染文案归消费面）
-      createdBy: meta.createdBy ?? "",
-    }))
+    .map(({ slot, meta }) => projectSlotRow(slot, meta, active))
     .sort((a, b) => b.updatedAt - a.updatedAt || b.slot - a.slot)
+}
+
+/** 归档槽列表（fork · 2026-10-06 —— 归档视图数据源）：与 listSlots 同投影 ∕ 同排序，
+ *  只留归档项并附 `archivedAt`（归档时刻——视图行时间列用）。**只读零写**（scheduleVerify 不参与——
+ *  归档视图非活动面，不触发核实链）。 */
+export function listArchivedSlots(cwd) {
+  const m = loadManifest(cwd)
+  const active = m.active ?? null
+  const archived = m.archived && typeof m.archived === "object" ? m.archived : {}
+  return scanSlotMetas(cwd, m.slots ?? {})
+    .filter(({ slot }) => archived[slot] != null)
+    .map(({ slot, meta }) => ({ ...projectSlotRow(slot, meta, active), archivedAt: archived[slot] }))
+    .sort((a, b) => b.archivedAt - a.archivedAt || b.slot - a.slot)
 }
 
 /** Delete a slot: remove its file and manifest entry. Deleting the active slot
@@ -229,8 +249,8 @@ export function deleteSlot(cwd, slot, { end = sessionEnd() } = {}) {
   unlinkRecordStore(slotPath(cwd, n)) // §6.14 生命周期联动：删槽连带删除记录存储（sidecar）
   if (m.active === n) delete m.active
   // setActive: true —— 显式表达"删到 active 时 active 置空"的意图（saveManifest 默认
-  // 保留 fresh.active，2026-09-01 会诊三家 🟡）
-  saveManifest(cwd, m, { slots: [n], slotSessions: [n] }, { setActive: true })
+  // 保留 fresh.active，2026-09-01 会诊三家 🟡）；archived 随删清（fork · 2026-10-06——不留孤儿归档项）。
+  saveManifest(cwd, m, { slots: [n], slotSessions: [n], archived: [n] }, { setActive: true })
   // 2026-09-05 §6.10 D-4/F4：删到本端记录槽 → 记录显式置空（文件保留 + slot:null——下次全新起步，不复活——T-M4/T-M8）
   if (readEndMarker(cwd, end)?.slot === n) writeEndMarker(cwd, null, end)
   return true

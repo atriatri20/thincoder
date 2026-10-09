@@ -208,6 +208,9 @@ export function saveManifest(cwd, m, deletions = null, opts = {}) {
   if (opts.setActive) merged.active = m.active
   merged.slots = { ...fresh.slots, ...(m.slots ?? {}) }
   merged.slotSessions = { ...(fresh.slotSessions ?? {}), ...(m.slotSessions ?? {}) }
+  // 归档 map 条目级合并（fork · 2026-10-06 —— 与 slots ∕ slotSessions 同族）：fresh 起底 ∕ m 增项覆盖；
+  // 删除意图经 deletions.archived 显式表达（下方通用 deletions 循环消费）。
+  merged.archived = { ...(fresh.archived ?? {}), ...(m.archived ?? {}) }
   if (m.sessionId) merged.sessionId = m.sessionId
   // ① 释放集按**本次 fresh 快照**取值（不得以陈旧内存 manifest 构 deletions）；② **值条件删除**
   // （仅当 fresh 属主仍为本进程——窗口内他人的新认领不在集内、不被误删）⇒ 并入本次 deletions。

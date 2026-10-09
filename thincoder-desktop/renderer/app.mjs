@@ -35,8 +35,8 @@ import { attachComposer } from "./mount-composer.mjs"
 import { POOL_SLOT, attachPool } from "./mount-pool.mjs"
 import { attachStatus } from "./mount-status.mjs"
 import {
-  SESSION_SLOT, activateSession, confirmRename, createSession, deleteSession, mountSessionBar,
-  refreshRail, resumeOpened,
+  SESSION_SLOT, activateSession, archiveSession, confirmRename, createSession, deleteSession, mountSessionBar,
+  refreshArchived, refreshRail, resumeOpened, unarchiveSession,
 } from "./mount-sessions.mjs"
 import { attachSettings } from "./mount-settings.mjs"
 import { createMenuActions } from "./menu-actions.mjs" // 菜单动作分派（D36 · #811 —— `ev:menu` 窄口消费；零第二实现）
@@ -86,6 +86,17 @@ attachSidebar({
   onOpenSettings: () => settingsFace.openSettings(),
   onRename: confirmRename, // 会话管理（右键菜单 · 2026-10-05）—— session-wire 单一实现转口
   onDelete: deleteSession,
+  // 会话归档（fork · 2026-10-06）：⋯ 菜单「归档」+ 归档视图（入口钮 ∕ 恢复 ∕ 删除 ∕ 开归档会话）。
+  onArchive: archiveSession,
+  onUnarchive: unarchiveSession,
+  // 归档会话点击 = 切项目接续（复用 activateSession 单路 —— 归档行恒当前项目槽，直接切）。
+  onOpenArchived: (key) => void activateSession(key),
+  // 归档视图开关：置 showArchived 切片 ⇒ 侧栏滚动区切归档树；开时拉归档列（懒）。
+  onToggleArchived: () => {
+    const next = store.get().showArchived !== true
+    store.set({ showArchived: next })
+    if (next) void refreshArchived()
+  },
 })
 attachHeader() // 统一 Header（菜单钮 ∕ 词面；toggle 接线在 mount-sidebar——折叠逻辑单源）
 attachChromeWords() // 核件控件行静态字面语言补丁（中文模式收正批 —— 出档 `renderer/chrome-words.mjs`；序须在 `attachComposer` 后）

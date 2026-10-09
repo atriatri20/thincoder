@@ -4,7 +4,7 @@
  * 整块落装配函数体内；守卫谓词写死 = `typeof window !== "undefined"`（沙箱预载处为渲染进程上下文 ⇒ 装配；
  * 主进程 `createRequire` 读取与平 node 测试无 `window` ⇒ 零装配、不触 `electron`）。
  * 白名单 `CHANNELS` **单源**（主侧经 `createRequire` 读之据以注册——`src/main/ipc-registry.mjs`）；非白名单通道**立即 reject**（不入 IPC）。
- * 请求白名单 = **五十项**（四十九 ⇒ 五十 —— 会话导出批 `session:export`）（三十五 ⇒ 三十八 ⇒ 三十九 ⇒ 四十三 ⇒ 四十五 ⇒ 四十六 ⇒ 四十七 ⇒ 四十八 —— R7 设置补充三项：`settings:env` ∕ `settings:tools` ∕ `mcp:tools` · 模型菜单全渠扇出批增 `model:catalog` · B10 W2 设置面四增：`provider:setKey` ∕ `provider:delKey` ∕ `provider:models` ∕ `provider:setProxy` · B10 W3 MCP 两增：`mcp:update` ∕ `mcp:reconnect` · 菜单体系批一增 `theme:state`（勾选态回读——D36）· 子代理面板批一增 `panel:state`（渲染面实况回读上报——渲染→主单向）· 定序末位）= 配置读取 + 项目面（打开 —— 原生目录选择 / 最近目录）+ 会话面（列表 / 新建 / 切换 / 重命名 /
+ * 请求白名单 = **五十七项**（五十 ⇒ 五十三 ⇒ 五十四（fork 独立打包批 `shell:openPath` ∕ 统一 Header 批 `menu:popup` ∕ `window:control`）⇒ **五十七**（会话归档批 `sessions:archived` ∕ `session:archive` ∕ `session:unarchive`））（三十五 ⇒ 三十八 ⇒ 三十九 ⇒ 四十三 ⇒ 四十五 ⇒ 四十六 ⇒ 四十七 ⇒ 四十八 —— R7 设置补充三项：`settings:env` ∕ `settings:tools` ∕ `mcp:tools` · 模型菜单全渠扇出批增 `model:catalog` · B10 W2 设置面四增：`provider:setKey` ∕ `provider:delKey` ∕ `provider:models` ∕ `provider:setProxy` · B10 W3 MCP 两增：`mcp:update` ∕ `mcp:reconnect` · 菜单体系批一增 `theme:state`（勾选态回读——D36）· 子代理面板批一增 `panel:state`（渲染面实况回读上报——渲染→主单向）· 定序末位）= 配置读取 + 项目面（打开 —— 原生目录选择 / 最近目录）+ 会话面（列表 / 新建 / 切换 / 重命名 /
  * 删除 / 恢复）+ 审批响应（`approval:respond` —— 出口动作面，见 `src/main/ipc.mjs`）+ 作答响应
  * （`question:respond` —— `question` 工具真作答面）+ 历史页（`history:page`）
  * + 回合驱动（`msg:send` / `msg:interrupt`）（`docs/desktop/design/IPC.md` §2 该行 · 白名单面）
@@ -30,8 +30,9 @@
  * 返回退订函数（同 listener 引用 ⇒ 二次退订零抛）。
  */
 const CHANNELS = Object.freeze([
-  "config:read", "project:open", "project:recent", "sessions:list", "sessions:catalog",
+  "config:read", "project:open", "project:recent", "sessions:list", "sessions:catalog", "sessions:archived",
   "session:create", "session:switch", "session:rename", "session:delete", "session:resume",
+  "session:archive", "session:unarchive",
   "approval:respond", "history:page", "msg:send", "msg:interrupt",
   "provider:list", "provider:save", "provider:remove", "provider:verify",
   "model:list", "settings:agent", "mcp:list", "mcp:save", "mcp:remove",

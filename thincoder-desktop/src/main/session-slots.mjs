@@ -67,7 +67,8 @@ export {
   activeSlot, claimSlot, allocateFresh, _setSessionsDirForTest, _resetSessionsDirForTest,
 } from "@thincoder/core/session-slots.mjs"
 // 会话清单消费（`createdBy` 有值才带 —— 核投影口径；`docs/desktop/design/UI.md:38,40`）+ 槽重命名纯 re-export。
-export { listSlots, slotOccupancy, renameSlot } from "@thincoder/core/session.mjs"
+export { listSlots, listArchivedSlots, slotOccupancy, renameSlot, archiveSlot, unarchiveSlot } from "@thincoder/core/session.mjs"
+export { archivedMap } from "@thincoder/core/session-archive.mjs" // 归档判定（deleteSession 末项门豁免归档槽 · fork 2026-10-06）
 export { ledgerHealth } from "@thincoder/core/session-slots.mjs" // 账本健康出口（账本可靠批 · §6.25 判据句 4——桌面警示面消费）
 export { newSlotData } from "@thincoder/core/session-slot-write.mjs"
 

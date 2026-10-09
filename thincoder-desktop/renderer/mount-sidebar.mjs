@@ -20,7 +20,7 @@ import { sessionModel } from "./views/session-control.mjs"
 export const SIDEBAR_SLOT = '[data-slot="sidebar"]'
 
 /** 重挂触发切片（project ∕ sessions = `refreshRail` 写面 ∕ tabBadges = 位标 ∕ locale = 词表切换）。 */
-const SIDEBAR_KEYS = ["project", "sessions", "catalog", "tabBadges", "locale"]
+const SIDEBAR_KEYS = ["project", "sessions", "catalog", "tabBadges", "locale", "archived", "showArchived"]
 const COLLAPSE_KEY = "thincoder.sidebar.collapsed"
 
 /** 折叠态读（localStorage fail-soft）。 */
@@ -68,7 +68,15 @@ function sidebarModel(state = {}) {
       }))
       .sort((a, b) => b.updatedAt - a.updatedAt),
   }))
-  return { ...model, items, recent, catalogProjects, badges: state?.tabBadges ?? null }
+  const archived = (Array.isArray(state?.archived) ? state.archived : [])
+    .map((row) => ({
+      slot: String(row?.slot ?? ""),
+      title: typeof row?.title === "string" && row.title !== "" ? row.title : "",
+      firstMessage: typeof row?.firstMessage === "string" ? row.firstMessage.replace(/\s+/gu, " ").trim() : "",
+      updatedAt: Number.isFinite(row?.updatedAt) ? row.updatedAt : 0,
+      archivedAt: Number.isFinite(row?.archivedAt) ? row.archivedAt : 0,
+    }))
+  return { ...model, items, recent, catalogProjects, archived, showArchived: state?.showArchived === true, badges: state?.tabBadges ?? null }
 }
 
 /** 显示标题兜底（与 `session-control.mjs` `displayTitleOf` 同判——title 空 ⇒ 首条消息单行截 60）。 */
@@ -377,6 +385,63 @@ function sessionsTree(model, handlers) {
   return parts
 }
 
+/** 归档区树（fork · 2026-10-06 —— ZCode 归档视图极简移植）：跨项目**平铺**（归档 = 收件箱清空心智）；
+ *  每行 = 标题 + 归档时刻相对时间 + 恢复钮（↩）+ 删除钮（✕，确认 popover）；点击行 = 开该会话（切项目接续）。
+ *  搜索词 ⇒ 标题 ∕ 首条消息匹配过滤；空 ⇒ 空态词。`opts.cwd` 恒非当前项目标记（归档行 always 可操作）。 */
+function archivedTree(model, handlers) {
+  const filter = filterText.trim().toLowerCase()
+  const matched = (text) => filter === "" || String(text ?? "").toLowerCase().includes(filter)
+  const parts = [{ tag: "div", props: { class: "sidebar-section-head" }, children: [t("sidebar.archivedTitle")] }]
+  const rows = model.archived
+    .map((s) => ({ ...s, display: displayTitleOfSession(s), time: timeSpanOf(s.archivedAt || s.updatedAt) }))
+    .filter((s) => matched(s.display))
+    .sort((a, b) => (b.archivedAt || b.updatedAt) - (a.archivedAt || a.updatedAt))
+  if (rows.length === 0) {
+    parts.push({ tag: "div", props: { class: "sidebar-empty-filter" }, children: [t("sidebar.archiveEmpty")] })
+    return parts
+  }
+  for (const s of rows) {
+    parts.push({
+      tag: "div",
+      props: {
+        class: "sidebar-item sidebar-archived-item",
+        role: "button",
+        tabindex: "0",
+        "data-action": "sidebar:openArchived",
+        "data-key": s.slot,
+        title: s.display,
+        onClick: () => handlers.onOpenArchived?.(s.slot),
+        onKeydown: (event) => {
+          if (event?.key === "Enter" || event?.key === " ") { event.preventDefault(); handlers.onOpenArchived?.(s.slot) }
+        },
+      },
+      children: [
+        { tag: "span", props: { class: "sidebar-item-title" }, children: [s.display] },
+        { tag: "span", props: { class: "sidebar-item-time" }, children: [s.time] },
+        {
+          tag: "button",
+          props: {
+            class: "sidebar-archived-restore", type: "button",
+            "aria-label": t("sidebar.unarchive"), title: t("sidebar.unarchive"),
+            onClick: (event) => { event.stopPropagation(); void handlers.onUnarchive?.(s.slot) },
+          },
+          children: [],
+        },
+        {
+          tag: "button",
+          props: {
+            class: "sidebar-archived-delete", type: "button",
+            "aria-label": t("sidebar.delete"), title: t("sidebar.delete"),
+            onClick: (event) => { event.stopPropagation(); confirmDelete(document.querySelector(SIDEBAR_SLOT), handlers, { key: s.slot, title: s.display }) },
+          },
+          children: [],
+        },
+      ],
+    })
+  }
+  return parts
+}
+
 /** 边栏树（品牌行 → 动作行 → 搜索框 → 滚动区〔项目 ∕ 会话分组 ∕ 最近〕→ 底行〔设置〕）。字形全住 CSS `content`。 */
 function sidebarTree(model, handlers) {
   return {
@@ -407,8 +472,18 @@ function sidebarTree(model, handlers) {
           },
         }, children: [] },
       ] },
-      { tag: "div", props: { class: "sidebar-scroll" }, children: sessionsTree(model, handlers) },
+      { tag: "div", props: { class: "sidebar-scroll" }, children: model.showArchived === true ? archivedTree(model, handlers) : sessionsTree(model, handlers) },
       { tag: "div", props: { class: "sidebar-foot" }, children: [
+        // 归档视图入口（fork · 2026-10-06）：置 showArchived 切片 ⇒ 滚动区切归档树；再点返回。
+        { tag: "button", props: {
+          class: "sidebar-settings sidebar-archive-toggle" + (model.showArchived === true ? " active" : ""),
+          type: "button", "data-action": "sidebar:toggleArchived",
+          "aria-label": model.showArchived === true ? t("sidebar.hideArchived") : t("sidebar.showArchived"),
+          title: model.showArchived === true ? t("sidebar.hideArchived") : t("sidebar.showArchived"),
+          onClick: handlers.onToggleArchived,
+        }, children: [
+          { tag: "span", props: { class: "sidebar-settings-label" }, children: [t("sidebar.archived")] },
+        ] },
         { tag: "button", props: { class: "sidebar-settings", type: "button", "data-action": "sidebar:settings", "aria-label": t("settings.title"), title: t("settings.title"), onClick: handlers.onOpenSettings }, children: [
           { tag: "span", props: { class: "sidebar-settings-label" }, children: [t("settings.title")] },
         ] },
@@ -456,6 +531,9 @@ function openSessionMenu(pane, handlers, { key, title, x, y }) {
     return button
   }
   menuEl.append(item(t("sidebar.rename"), "", () => startRename(pane, handlers, { key, title })))
+  if (typeof handlers.onArchive === "function") {
+    menuEl.append(item(t("sidebar.archive"), "", () => { void handlers.onArchive?.(key) }))
+  }
   menuEl.append(item(t("sidebar.delete"), "danger", () => confirmDelete(pane, handlers, { key, title })))
   document.body.append(menuEl)
   const rect = menuEl.getBoundingClientRect()

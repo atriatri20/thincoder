@@ -34,7 +34,8 @@ import { captureView, restoreView } from "./view-state.mjs"
 // 同名 re-export（越线档结构轮 · #536 —— 缝 = 同名再出口）：会话族接线面随本批出档 `renderer/session-wire.mjs`；
 // `app.mjs` 导入面零改（七名经本档转口 ∕ 名面与引用同为直导出——单模块实例）。
 export {
-  activateSession, backfill, confirmRename, createSession, deleteSession, refreshRail, resumeOpened,
+  activateSession, archiveSession, backfill, confirmRename, createSession, deleteSession, refreshArchived,
+  refreshRail, resumeOpened, unarchiveSession,
 } from "./session-wire.mjs"
 
 /** 会话控制条容器锚（骨架 = `renderer/index.html`：`.session` 首子元素槽 —— 原标签条槽改锚）。 */

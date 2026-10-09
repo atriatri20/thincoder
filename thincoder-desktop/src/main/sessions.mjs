@@ -7,7 +7,7 @@
  * 读取失败（核抛）⇒ 本档不吞：**抛出 ⇒ `invoke` 拒绝**（失败面口径 = `src/main/ipc.mjs:23-25` 头注同形）。
  * 本批**不认领活动槽**：`isActive` 只读（不写 manifest、不发端壳认领）。
  */
-import { ledgerHealth, listSlots } from "./session-slots.mjs"
+import { ledgerHealth, listSlots, listArchivedSlots } from "./session-slots.mjs"
 import { usageBySlotSync } from "./usage-log.mjs" // 会话用量聚合（2026-10-06 —— 行拼 `usage` 六键）
 
 /** 载荷行字段集（闭集 · 单源 = IPC 会话族注项 1）：`date` / `updatedDate` 是核本地化显示串、
@@ -60,6 +60,15 @@ export function listSessions(cwd) {
     receipt.ledger = { refused: health.refused, reason: health.lastReason ?? "scene", scene: health.scene }
   }
   return receipt
+}
+
+/** `sessions:archived` 读面（fork · 2026-10-06 —— 归档视图数据源）：`cwd` 空 ⇒ 空载荷；
+ *  否则核 `listArchivedSlots` 投影逐行挑字段（同 `toRow` 形 + `archivedAt` 归档时刻）。
+ *  行序 = 核序 = `archivedAt` 降序（最近归档在前）。只读零写。 */
+export function archivedSessions(cwd) {
+  if (typeof cwd !== "string" || cwd === "") return { cwd: null, rows: [] }
+  const usageMap = usageBySlotSync({ cwd })
+  return { cwd, rows: listArchivedSlots(cwd).map((entry) => ({ ...toRow(entry, usageMap), archivedAt: entry.archivedAt })) }
 }
 
 /** `sessions:catalog` 读面（**项目目录** · 2026-10-05 —— 侧边栏项目组展开的数据面）：

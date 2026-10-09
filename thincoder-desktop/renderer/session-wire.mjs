@@ -59,6 +59,61 @@ export async function refreshRail() {
   }
 }
 
+/** 归档列表刷新（fork · 2026-10-06 —— 归档视图数据源）：`sessions:archived` ⇒ `archived` 切片。
+ *  独立于 `refreshRail`（归档读面只在开视图 ∕ 归档动作后刷新，非每次 rail 拍——省一次盘读）；
+ *  形不合 ⇒ 记错 + 清列（禁假造）；抛 ⇒ 记错（零静默）。 */
+export async function refreshArchived() {
+  try {
+    const list = await host.invoke("sessions:archived")
+    if (!Array.isArray(list?.sessions)) {
+      console.error("[renderer] archived list payload shape unexpected:", list)
+      return
+    }
+    store.set({ archived: list.sessions })
+  } catch (error) {
+    console.error("[renderer] archived list refresh failed:", error)
+  }
+}
+
+/** 归档（fork · 2026-10-06 —— ⋯ 菜单出口）：`session:archive` 成功 ⇒ 刷 rail（本槽从默认列表消失）
+ *  + 刷归档列（若视图开着）；失败 ⇒ 记错 + toast（沿 rename/delete 失败面 R9 同律）。 */
+export async function archiveSession(key) {
+  try {
+    const receipt = await host.invoke("session:archive", { slot: slotOf(key) })
+    if (receipt?.ok !== true) {
+      console.error("[renderer] session:archive failed:", receipt?.reason, "slot:", key)
+      showToast(t("session.archiveFailed", { reason: reasonOf(receipt) }))
+      return false
+    }
+    await refreshRail()
+    if (store.get().showArchived === true) await refreshArchived()
+    return true
+  } catch (error) {
+    console.error("[renderer] session:archive failed:", error)
+    showToast(t("session.archiveFailed", { reason: String(error?.message ?? error) }))
+    return false
+  }
+}
+
+/** 取消归档：`session:unarchive` 成功 ⇒ 刷归档列 + 刷 rail（回默认列表）；失败 ⇒ toast。 */
+export async function unarchiveSession(key) {
+  try {
+    const receipt = await host.invoke("session:unarchive", { slot: slotOf(key) })
+    if (receipt?.ok !== true) {
+      console.error("[renderer] session:unarchive failed:", receipt?.reason, "slot:", key)
+      showToast(t("session.unarchiveFailed", { reason: reasonOf(receipt) }))
+      return false
+    }
+    await refreshArchived()
+    await refreshRail()
+    return true
+  } catch (error) {
+    console.error("[renderer] session:unarchive failed:", error)
+    showToast(t("session.unarchiveFailed", { reason: String(error?.message ?? error) }))
+    return false
+  }
+}
+
 /** 槽号回代：视图面行键 / 条目键是**串**（键域），通道载荷 `{ slot }` 是槽号域 —— 核写本端记录时**原值落盘**
  *  （`thincoder-core/session-slots.mjs:133`）且读面要求整数槽（同档 `:126` `Number.isInteger`）⇒ 串入会使本端记录
  *  退化为「缺失」。纯类型回代（非整数 ⇒ 原值直传，交核判 —— 端层**零预校验**：判据单源 = 核）。 */

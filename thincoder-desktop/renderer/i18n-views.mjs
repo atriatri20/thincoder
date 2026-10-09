@@ -112,6 +112,8 @@ export const VIEWS_DICT = Object.freeze({
     "session.loadFailed": "Could not load the session content",
     "session.renameFailed": "Could not rename the session (${reason})",
     "session.deleteFailed": "Could not delete the session (${reason})",
+    "session.archiveFailed": "Could not archive the session (${reason})",
+    "session.unarchiveFailed": "Could not restore the session (${reason})",
     // ── ⑥ 核卡族（R1 直消费 —— 核包取词；值逐字同 VSC `locales/en.json` 同名键）──
     "perm.wantsTo": "ThinCoder wants to run",
     "perm.approve": "Approve",
@@ -317,6 +319,8 @@ export const VIEWS_DICT = Object.freeze({
     "session.loadFailed": "会话内容加载失败",
     "session.renameFailed": "会话改名失败（${reason}）",
     "session.deleteFailed": "会话删除失败（${reason}）",
+    "session.archiveFailed": "会话归档失败（${reason}）",
+    "session.unarchiveFailed": "会话恢复失败（${reason}）",
     // ── ⑥ 核卡族（R1 直消费 —— 值逐字同 VSC `locales/zh.json` 同名键）──
     "perm.wantsTo": "ThinCoder 想要执行",
     "perm.approve": "批准",

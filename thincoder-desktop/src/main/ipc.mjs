@@ -31,9 +31,9 @@ import { normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
 import { releaseClaimsAll } from "@thincoder/core/session-slots-manifest.mjs"
 import { PRELOAD_PATH, confirmRecycle, popupAppMenu, refreshMenu, setMenuTheme, winControl } from "./window.mjs"
 import { currentCwd, openProject, recentDirs } from "./projects.mjs"
-import { listSessions, catalogSessions } from "./sessions.mjs"
+import { archivedSessions, listSessions, catalogSessions } from "./sessions.mjs"
 import {
-  createSession, deleteSession, renameSession, resumeSession, switchSession,
+  archiveSession, createSession, deleteSession, renameSession, resumeSession, switchSession, unarchiveSession,
 } from "./session-actions.mjs"
 import { pageHistory, scheduleSessionGC } from "./session-slots.mjs"
 // 设置族 ∕ 索引面 ∕ 台账相位 ∕ 配置写的处理体转口群随 #685 出档 `ipc-relays.mjs`（本档只取核心面值件）。
@@ -104,7 +104,7 @@ function readConfig() {
 export {
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCatalog, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
-  questionRespond, sessionPrefs, subagentStop, fileOpen, shellOpenPath, sessionFlags, atComplete, recordAppend, themeState, menuPopup, windowControl,
+  questionRespond, sessionPrefs, subagentStop, fileOpen, shellOpenPath, sessionFlags, atComplete, recordAppend, themeState, menuPopup, windowControl, sessionArchive, sessionUnarchive, sessionArchived,
   panelState,
   sessionGc, sessionIndex, liveAgents, usageStatsChannel, sessionExportChannel,
 }
@@ -145,6 +145,13 @@ function sessionCatalog(payload) {
   return catalogSessions(payload?.cwds)
 }
 
+/** `sessions:archived({})` ⇒ `{ cwd, sessions }`（fork · 2026-10-06 —— 归档视图读面；转口
+ *  `sessions.mjs` `archivedSessions`——manifest 只读，零写）。 */
+function sessionArchived() {
+  const { rows, ...receipt } = archivedSessions(currentCwd())
+  return { ...receipt, sessions: rows }
+}
+
 /** 会话族五通道处理体（本批增）：入参到动作层即止 —— cwd 取主进程当前项目内存态（动作层收 `cwd` 入参
  *  是为可脱壳直测，KD-a；信封 / reason 分档单源 = `session-actions.mjs`）。无载荷通道（create / resume）
  *  忽略 `payload`；载荷形 = `{slot}`（switch / delete）· `{slot, title}`（rename）。 */
@@ -156,6 +163,11 @@ function sessionRename(payload) {
   if (receipt?.ok === true) agentHost?.syncTitle(payload?.slot, payload?.title)
   return receipt
 }
+/** `session:archive({ slot })`（归档软删除 · fork 2026-10-06）：转口动作层；**不 dispose 宿主**
+ *  （归档保数据，异于删除——取消归档即原样回表；活动会话装配实例照活在表）。 */
+function sessionArchive(payload) { return archiveSession(currentCwd(), payload?.slot) }
+/** `session:unarchive({ slot })`（取消归档回默认列表）。 */
+function sessionUnarchive(payload) { return unarchiveSession(currentCwd(), payload?.slot) }
 function sessionDelete(payload) {
   const receipt = deleteSession(currentCwd(), payload?.slot)
   // R3b（D20 数据链「会话关闭 / 删除 / 宿主退出 ⇒ 该键投影清」）：删除成功 ⇒ 装配实例出表（宿主 `dispose`

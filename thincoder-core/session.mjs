@@ -40,6 +40,7 @@ export { isLegacyTransient, slimForDisplay, bindRecordStore, unbindRecordStore }
 export {
   getSessionId, normalizeCwd, sessionPath, slotPath, manifestPath, activePath,
   writeSessionFile, slotDigest, loadManifest, saveManifest, activeSlot, listSlots,
+  listArchivedSlots,
   deleteSlot, isProcessAlive, END, endMarkerPath,
   readEndMarker, writeEndMarker, claimSlot, allocateFresh,
   // §6.25 判据句 4：账本健康出口随动（端壳警示面消费——CLI / VSC 接线另座）
@@ -47,6 +48,8 @@ export {
 } from "./session-slots.mjs"
 // §6.12 标题写契约使 session-slots.mjs 超 500 行硬限 → renameSlot 拆至 session-rename.mjs（§6.12 模块与实现约束）
 export { renameSlot } from "./session-rename.mjs"
+// 会话归档（fork · 2026-10-06 —— 软删除 ∕ 归档视图）：archiveSlot ∕ unarchiveSlot 写面 re-export。
+export { archiveSlot, unarchiveSlot } from "./session-archive.mjs"
 // 人读线惰性窗口面（`history-window.mjs`）——re-export 保调用方单一路径。
 export { historyWindow, HISTORY_PAGE_SIZE, isRealUserMsg } from "./history-window.mjs"
 // 会话生命周期面（init-block 批 · F-MI7 拆分——语义原样外提）：本端恢复入口包装（含残留 GC

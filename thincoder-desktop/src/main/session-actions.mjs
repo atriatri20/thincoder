@@ -13,7 +13,7 @@
  * 端参绑定 / 转口单源 = `./session-slots.mjs`（本档零核导入）。
  */
 import {
-  deleteSlot, listSlots, newSession, renameSlot, resumeSlot, slotOccupancy, switchToSlot,
+  archiveSlot, archivedMap, deleteSlot, listSlots, newSession, renameSlot, resumeSlot, slotOccupancy, switchToSlot, unarchiveSlot,
 } from "./session-slots.mjs"
 
 /** 成功信封：`slot` = 请求槽号（成功 ⇒ 核已判定其为清单内整数槽；取数 = 信封类型归一 —— 与 `sessions:list`
@@ -61,12 +61,35 @@ export function renameSession(cwd, slot, title) {
   return fail(result?.reason ?? null, cwd)
 }
 
+/** `session:archive({ slot })`（fork · 2026-10-06 —— 归档软删除）：核 `archiveSlot` 返 `{ ok, reason }`
+ *  （`invalid-slot` ∕ `slot-missing` ∕ `already` 直传）；成功 ⇒ 信封携槽号。cwd 空 ⇒ `no-project`。
+ *  归档后该槽从 `sessions:list` ∕ `sessions:catalog` 消失（核 listSlots 过滤）。 */
+export function archiveSession(cwd, slot) {
+  if (blank(cwd)) return fail("no-project", null)
+  const result = archiveSlot(cwd, slot)
+  if (result?.ok === true) return ok(cwd, Number(slot))
+  return fail(result?.reason ?? null, cwd)
+}
+
+/** `session:unarchive({ slot })`（取消归档回默认列表）：核 `unarchiveSlot` 返 `{ ok, reason }`
+ *  （`invalid-slot` ∕ `not-archived` 直传）。 */
+export function unarchiveSession(cwd, slot) {
+  if (blank(cwd)) return fail("no-project", null)
+  const result = unarchiveSlot(cwd, slot)
+  if (result?.ok === true) return ok(cwd, Number(slot))
+  return fail(result?.reason ?? null, cwd)
+}
+
 /** `session:delete({ slot })`：**末项门**（「对齐第三批」P12 —— `docs/desktop/design/UI.md` §1 本批注 P12 ·
  *  `docs/desktop/design/IPC.md` §2「会话族注」项 5）⇒ 会话数 ≤ 1 拒 `last-session`（动作层判；对位 VSC 宿主
  *  同门 `thincoder-vscode/src/extension/panel-session.mjs:220-221` —— 计数 = 核 `listSlots` 投影长，零算法副本）。
  *  cwd 空 ⇒ **不入门**（守既有档不对称：恒落 `slot-missing`）。核 `true` ⇒ 删除成立（清单条目 / 槽文件 / 记录存储联动全在核）；`false` ⇒ `slot-missing`。 */
 export function deleteSession(cwd, slot) {
-  if (!blank(cwd) && listSlots(cwd).length <= 1) return fail("last-session", cwd)
+  // 末项门（对齐第三批 P12）：会话数 ≤ 1 拒删——**归档槽豁免**（fork · 2026-10-06）：删归档会话不减
+  // 活动列表（归档本不在 `listSlots`），若仍受末项门则「1 活动 + N 归档」时归档删不掉。判据 = 目标在归档集 ⇒ 跳门。
+  const n = Number(slot)
+  const isArchived = !blank(cwd) && Number.isInteger(n) && archivedMap(cwd)[n] != null
+  if (!isArchived && !blank(cwd) && listSlots(cwd).length <= 1) return fail("last-session", cwd)
   return deleteSlot(cwd, slot) === true ? ok(cwd, Number(slot)) : fail("slot-missing", cwd)
 }
 

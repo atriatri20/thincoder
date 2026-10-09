@@ -80,6 +80,8 @@ export function initialState() {
     activeSession: null,
     ledger: null,
     catalog: [],    tabBadges: {},
+    archived: [],
+    showArchived: false,
     sessionMeta: {},
     sessionFlags: {},
     usage: {},
