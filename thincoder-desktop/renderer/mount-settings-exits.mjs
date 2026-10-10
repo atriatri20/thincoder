@@ -188,6 +188,11 @@ export function createExits(deps = {}) {
     clearReport()
     invalidateDrafts?.("modelParams") // #652：写成功 ⇒ 该表单草稿一次性作废（失败径零声明）
     await loadModelParams?.(id)
+    // **输入区候选面强制刷新**（2026-10-10 真机实测漏点）：覆写改的是模型**档位枚举 ∕ 默认档**，
+    // 而输入区的候选行来自 `model:catalog` 投影（`modelEntry` 经 `specMatch`）—— 不重取则「前面」仍持
+    // 旧行（用户实测：弹窗里设了 推理档位 low,max + 默认档 low，输入区钮仍显「未设置」、下拉只有「关闭」）。
+    // 复用 provider 写成功同一条出口（`onProvidersChanged` ⇒ `composer.refreshCandidates()`）。
+    onProvidersChanged?.()
   }
 
   /** 「编辑模型配置」重置出口：删 `modelOverrides[命中键]`（键 = `spec.overrideKey`，缺 ⇒ 模型 ID）⇒ 复读。
@@ -208,6 +213,7 @@ export function createExits(deps = {}) {
     clearReport()
     invalidateDrafts?.("modelParams")
     await loadModelParams?.(id)
+    onProvidersChanged?.() // 同保存径：重置也改了档位枚举 ∕ 默认档 ⇒ 输入区候选面同拍刷新
   }
 
   /** 「编辑模型配置」弹窗开（模型行铅笔钮 ⇒ 本出口）：切片落 `{ open:true, id }` + 读 `model:spec`

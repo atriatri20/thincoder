@@ -253,7 +253,13 @@ export function createReads(deps = {}) {
       setSettings({ modelParams: { open: false, id: null, spec: null } })
       return
     }
-    setSettings({ modelParams: { open: true, id: target, spec: held.id === target ? held.spec ?? null : null } })
+    const sameSpec = held.id === target && held.spec !== null && typeof held.spec === "object"
+    // **同模型复读 ⇒ 不落 loading 重绘**（2026-10-10 真机实测修）：保存 ∕ 重置径 = 同一模型重读，若此处
+    // 先重绘一次（带**旧** spec），`invalidateDrafts` 的一次性集合会被该次重绘消费掉 ⇒ 随后带**新** spec 的
+    // 第二次重绘把中间态（旧值）当草稿捕获并复填 ⇒ 弹窗回读显示旧值（主进程 ∕ 盘面已是新值 —— 实测：
+    // 改档位为 `low, high, max, xhigh` 保存后，主进程回执新值而弹窗恒显旧值）。只重绘一次 ⇒ 失效集合
+    // 恰好覆盖那次 ⇒ 草稿被摘除、输入取新 spec。首开 ∕ 换模型（`sameSpec` 假）仍落 loading（原有反馈）。
+    if (!sameSpec) setSettings({ modelParams: { open: true, id: target, spec: null } })
     const receipt = await ask("model:spec", { id: target })
     if (receipt.ok !== true || receipt.spec === null || typeof receipt.spec !== "object") {
       setSettings({ modelParams: { open: false, id: null, spec: null } })
