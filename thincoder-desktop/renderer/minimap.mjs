@@ -194,12 +194,17 @@ function applyActive(list, flow, state) {
   }
 }
 
-/** 装配（一次性 —— `renderer/app.mjs` 消费）：容器缺位 ⇒ 空转；返回 `{ repaint }`。 */
+/** 装配（一次性 —— `renderer/app.mjs` 消费）：容器缺位 ⇒ 空转；返回 `{ repaint }`。
+ *  **定位面 = `.flow-area`（只包对话流），非 `.session`**（2026-10-10 修：后者还含会话控制条与输入区
+ *  ⇒ `.minimap { inset-block: 0 }` 把刻度一路铺到输入框下方 —— 用户真机圈红「最低刻度落在输入区」。
+ *  同 ZCode：导航栏挂 `@container/conversation`（对话区容器，与输入区兄弟）上、`inset-y-0` 只覆盖对话区）。
+ *  `has-minimap` 仍落 `.session`（让位公式锚 = `.session.has-minimap .flow` —— 选择器零改）。 */
 export function attachMinimap() {
-  const column = document.querySelector(".session")
+  const session = document.querySelector(".session")
   const flow = document.querySelector('[data-slot="flow"]')
-  if (column === null || flow === null) return { repaint: () => {} }
-  column.classList.add("has-minimap")
+  const area = document.querySelector(".flow-area") ?? session // 兜底：旧骨架（无 flow-area）退原径
+  if (area === null || flow === null) return { repaint: () => {} }
+  session?.classList.add("has-minimap")
 
   const strip = document.createElement("div")
   strip.className = "minimap"
@@ -211,9 +216,10 @@ export function attachMinimap() {
   const tip = document.createElement("div")
   tip.className = "minimap-tip"
   strip.append(rail)
-  column.append(strip, tip)
+  area.append(strip, tip)
 
-  const state = { signature: "", items: [], active: -1, focus: -1, column }
+  // `column` 名沿旧（= 提示卡 ∕ 刻度条的定位面）——值与 `tip` 的 offsetParent 同源，rect 数学才自洽。
+  const state = { signature: "", items: [], active: -1, focus: -1, column: area }
   let timer = 0
   const schedule = () => {
     if (timer !== 0) return

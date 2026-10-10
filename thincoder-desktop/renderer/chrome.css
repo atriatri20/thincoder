@@ -52,6 +52,19 @@ body.pool-resizing .pool-resizer::before { background: var(--accent); }
   padding: var(--gap);
 }
 
+/* 对话区容器（2026-10-10 增 · 小地图 ∕ 轮导航栏的纵向锚 —— 参照 ZCode `@container/conversation`
+   「relative flex min-h-0 flex-1 flex-col」：**只包对话流**，与输入区 ∕ 会话控制条兄弟）。
+   原小地图直挂 `.session`（含控制条 + 输入区）⇒ `inset-block: 0` 把刻度一路铺到输入框下方
+   （用户真机圈红：最低刻度落在输入区而非对话区）。本容器承担 `.session` 的伸缩位；`.flow` 在其内继续
+   `flex: 1` 撑满（滚动容器仍是 `.flow` 自身 —— 上面那条规则零改）。 */
+.flow-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 /* 对话流上距 = 14px（R12 收口修复轮 —— 首块上距 VSC 逐值：`#messages { padding: 0 12px 12px }`（`webview/base.css:93-97`）
    + 首块 `.message { margin-top: 14px }`（`webview/chat.css:20-23`）；桌面首块无块距（`.block + .block` 只管相邻块）
    ⇒ 上距由骨架承担；左右 ∕ 下沿用 `--gap`（12px —— 与 VSC 左右 ∕ 下 12px 同值）。 */

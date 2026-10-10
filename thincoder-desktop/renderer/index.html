@@ -54,7 +54,12 @@
       <aside class="sidebar" data-slot="sidebar"></aside>
       <main class="session">
         <div data-slot="session-control"></div>
-        <div class="flow" data-slot="flow"></div>
+        <!-- 对话区容器（2026-10-10 增 · 小地图纵向锚）：**只包对话流**，与输入区 ∕ 会话控制条兄弟 ——
+             绝对定位的浮层（小地图 ∕ 轮导航栏）须锚在对话区上，不能锚 `.session`（后者含输入区，
+             `inset-block: 0` 会把刻度铺到输入框下方）。同 ZCode `@container/conversation` 结构。 -->
+        <div class="flow-area" data-slot="flow-area">
+          <div class="flow" data-slot="flow"></div>
+        </div>
         <div class="composer" data-slot="composer"></div>
       </main>
       <aside class="pool">
