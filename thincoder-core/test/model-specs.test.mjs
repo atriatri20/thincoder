@@ -127,3 +127,18 @@ test("既有契约零回归：非串 ∕ 空串 ∕ DEFAULT_SPEC 形状 ∕ prov
   assert.equal(providerSpec({ model: "glm-4.6" }).context, 128_000, "命名三面串值基线")
   assert.deepEqual(specForModel(42), { context: 128_000, maxOutput: 32_000 }, "DEFAULT_SPEC 未被覆写污染")
 })
+
+test("cherry-pick 锁：gemini 3.7 ∕ 3.8 flash 行（上游 #1198 · 1M ∕ 64K ∕ 恒思考）", () => {
+  clearOverrides()
+  for (const id of ["gemini-3.8-flash", "gemini-3.7-flash", "global:gemini-3.8-flash"]) {
+    const r = specMatch(id)
+    assert.equal(r.matched, true, `${id} 应命中内置表`)
+    assert.equal(r.spec.context, 1_048_576, `${id} context`)
+    assert.equal(r.spec.maxOutput, 65_536, `${id} maxOutput`)
+    assert.equal(r.spec.thinkAlwaysOn, true, `${id} 思考恒开（无 off 路径）`)
+    assert.equal(r.spec.multimodal, true, `${id} 图像面`)
+  }
+  // 表缺口在册：上游 #1198 只补 3.7 ∕ 3.8 两行 ⇒ `gemini-3.5-flash` 仍落 DEFAULT_SPEC（用户可经
+  // `modelOverrides` 自救——模型参数能力的用例）。
+  assert.equal(specMatch("gemini-3.5-flash").matched, false, "3.5-flash 仍是表缺口（未随上游补行）")
+})
