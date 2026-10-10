@@ -51,6 +51,24 @@ set ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-buil
 npm run package
 ```
 
+**打包会改写源 `package.json`（2026-10-10 实测）**：electron-builder 在「searching for node modules
+pm=npm」步把**产物用精简版**（去 `scripts` ∕ `devDependencies` ∕ 尾换行）写回了**源档** —— 不还原的后果 =
+下次 `npm run package` 直接跑不起来（`scripts` 没了）。打包后**必须**：
+
+```bat
+git checkout -- thincoder-desktop/package.json
+```
+
+**dist 残留闸**：`postpackage`（`scripts/check-dist.mjs`）扫 `dist/` 根下 `ThinCoder-Setup-<版本>.exe`
+（含 AppImage ∕ deb）——**含非源版本的旧产物即判红**。旧包别删，挪进子目录即可（子目录不匹配该模式）：
+
+```bat
+mkdir dist\_prev-<旧版本>
+move dist\ThinCoder-Setup-<旧版本>.exe dist\_prev-<旧版本>\
+```
+
+**未签名**为常态（证书库无指纹 ⇒ `[win-sign] ⚠` 跳过，构建零失败）；「已签」只在证书 token 在场时达成。
+
 ## GitHub Releases（fork 构建发布）
 
 ```bat
