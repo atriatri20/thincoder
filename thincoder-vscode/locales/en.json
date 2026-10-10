@@ -151,6 +151,7 @@
   "reasoning.low": "Low",
   "reasoning.minimal": "Minimal",
   "reasoning.none": "Off",
+  "reasoning.unset": "Not set",
   "reasoning.enabled": "Reasoning",
   "task.in_progress": "in progress",
   "goal.objective": "Objective",

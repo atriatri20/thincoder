@@ -1884,6 +1884,81 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 连带面（同变）= §15.4-2 表 · §16.2 派生与生产者第 2 行 · §16.4 表第 3 行 · §16.8 AC-1 / AC-3 · §16.9 T-4 / R-2。
 2. **`glm-5.2` / `glm-5` 的 `thinkAlwaysOn`——取证已落（2026-09-29）**（承 `docs/batches/2026-09-28-tech-debt-closeout.md` §5 · 台账 #356）：渠道校验级读数 = `{type:"disabled"}` **受理且生效**（载荷 200 · `reasoning_content` 缺席——off 路径存在，族形态与 `glm-5.3` 族相反）⇒ **维持不标**（D-11）· 判据默认侧（可宣称 OFF）成立。
 
+## 17. 模型参数能力批（2026-10-10 · 反代前缀识别 + 用户覆写表 + 默认档上提）
+
+**根因**：`lookupSpec`（`thincoder-core/model-specs.mjs`）原只剥「第一个 `/` 前的命名空间」一次 ⇒ 反代 ∕ 聚合网关的**冒号前缀**（`cn:deepseek-v4-flash`、`global:glm-5.3`）与**多段路径**（`cl/cline-free/deepseek-v4.1-flash`）全部未命中 ⇒ 落 `DEFAULT_SPEC`（128K ∕ 32K ∕ 无思考）。实测用户 24 个在册模型 ID：**1 命中 ∕ 23 未命中**。
+
+**三处变更**：
+
+1. **边界剥离泛化**：`prefixCandidates(m)` = 全名 + 每个 `:` ∕ `/` 之后的剩余串（长者在先）；`lookupSpec` 全名前缀命中优先
+   （既有语义零变），未命中则逐候选重试，取**命中前缀最长者**（最具体）。剥离**只在边界**进行（不做任意位置子串匹配——
+   `xglm-5.3` 仍不命中）。实测 24 名恢复 **18 名**（余 6 名 = 表真缺行：`gpt-5.4` ∕ `gemini-3.5-flash` ∕
+   点号名 `doubao-seed-2.1-pro` ∕ `step-5-preview` ∕ `qfmodel` ∕ `space-bunny`）。
+2. **用户覆写表 `modelOverrides`**（新 config 顶层键——键面登记见 `docs/core/design/CONFIG.md` §6.4）：键 = 模型 ID
+   （亦按**前缀**命中——键 `cn:` 覆盖该渠道全部模型），值 = 可覆写叶白名单（`context` ∕ `maxOutput` ∕ `thinking` ∕
+   `thinkApi` ∕ `thinkAlwaysOn` ∕ `reasoningEffortEnum` ∕ `reasoningEffortDefault` ∕ `multimodal` ∕ `tempRange` ∕
+   `partialMode` ∕ `prefixMode` ∕ `reasoningEcho` ∕ `format` ∕ `noUsageStream`）。装配 = 模块级单写者
+   `setModelOverrides`（`loadConfig` 调用——`specForModel` 无 config 入参，**签名零改** ⇒ 23 个消费方零改）。
+   清洗 = 逐叶类型判据，非法条目丢弃 + 一次性警告（同 `providers[].context` 先例，绝不 throw）。
+   **生效序（低 → 高）**：`DEFAULT_SPEC` < `MODEL_SPECS` 命中 < `modelOverrides` < `providers[].context`
+   （渠道级最具体——同一模型跨端点窗口差异归渠道级）。
+3. **`reasoningEffortDefault` 上提进核**：原 = VSC 端差表（`thincoder-vscode/src/specs.mjs` `EFFORT_DEFAULT_PREFIXES`）。
+   桌面 ∕ CLI 无此表 ⇒ 有档位枚举但无默认档时思考强度钮恒显中性「—」（render-core `effortSelection` 的
+   `registeredDefault` 恒 undefined ⇒ 回落中性档）。现由核 `effortDefaultFor(model)` 单源供给（用户覆写优先于内置表）。
+   **上提时补一行** `deepseek-v4.1-flash`（值 `high`）：该名 = V4.1-Flash 的 qwen-plan 渠道名（与 `deepseek-v4-flash`
+   同物，见本表行注），而 `.1` ≠ `-` ⇒ 原表前缀不覆盖（真机实测：用户默认模型 `global:deepseek-v4.1-flash` 的
+   档位钮原显「—」，补行后显该档）。
+
+**端侧落点**：桌面设置页**模型段每行新增「编辑」图标钮**（「采用」同拍改图标钮 —— 用户裁定「不用独立一页，
+在采用后面加一个编辑按钮，弹窗编辑」）+「编辑模型配置」弹窗体（`thincoder-desktop/renderer/views/settings-sections-modelparams.mjs`，
+宿主 = 既有设置弹窗 `renderer/settings-modal.mjs`；行另携上下文 K 徽标，「已覆写」行编辑钮染主题色）
++ 三条 IPC（`model:spec` ∕ `model:specSave` ∕ `model:specReset`）+ `model:list` ∕ `model:catalog` 投影**扩五键**
+（`effortDefault` ∕ `context` ∕ `maxOutput` ∕ `thinking` ∕ `source`——纯增，旧消费面零破坏）；CLI
+`/model → Model parameters…`（`thincoder-cli/src/tui/provider-admin.mjs` `setModelParamsFlow`）。思考强度钮接线 =
+桌面 `thincoder-desktop/renderer/composer-sync.mjs` `modelRowOf` 透传 `effortDefault`（**render-core 零改**——
+`effortDefault` 钩子本为它留）。
+
+**常见档位下拉（2026-10-10 四 ∕ 五轮 · 用户「还得看多少位数」+「下拉框要和别的统一样式」）**：上下文窗口 ∕
+最大输出 Token 两输入挂档位 `select`。**形态 = 快填 `select` + 值持有 `input` 两件**（四轮原用 `datalist`，
+五轮打回改形）：`datalist` 弹层由浏览器原生绘制、**CSS 无法着色** ⇒ 与全站 `select`（`codex.css`
+`select { appearance: base-select }` + `::picker(select)` 卡形）不同族；改 `select` 即自动吃全站统一样式
+（零本档样式），而 `select` 不能承载任意值 —— 上下文有大量非整档实值（`1_050_000` ∕ `1_048_576` ∕
+`524_288`）⇒ **`select` 只当快填菜单（选完自复位、不持有值）、`input` 仍是唯一值持有者**，两全且无新增状态。
+**邻接不变量**：档位 `select` 恒为其值输入框的紧邻后继兄弟（出口族 `onPickTier` 按 `previousElementSibling`
+解析 —— 三处布局各异，且渠道表单两形的 `id="context"` 是重复 id ⇒ 不能按 id ∕ name 定位）。档位项文本 =
+`友好名 · 精确值`（选前即见会填入什么）。表单一源 = `thincoder-desktop/renderer/context-tiers.mjs`
+（三消费面：弹窗 token 两字段 32K…2M ∕ 8K…384K · 渠道表单 K 字段 · 渠行内 ctx 编辑态 32…1024）。
+**端差**：CLI 是行编辑无 `select` ⇒ 档位写进提示行（`provider-admin.mjs` 三常量；渲染面静态闭包判据禁
+`@thincoder/core` 导入 ⇒ 两侧各持一份，值同源、改一处须同改另一处）。
+
+**档位钮显示层收正（2026-10-10 六轮 · 参照 ZCode `chat-input-toolbar`）**：三处显示径（下拉项点选 ∥
+`selectModel` ∥ `applyModels`）原各写各的 —— ①`off` ∥ `none` 两 token 历史分叉 ⇒ 钮上**硬编码英文 `"off"`
+字面**（zh 界面选「关闭」后露英文；且词表无 `reasoning.off` 键，改走 `t()` 也只会回落成键名）；
+②中性档画成 `"—"`。现收敛为单点 `reasoningBtnText`（`thincoder-render-core/composer/model-menu.mjs`）：
+`off` 归一为 `none` 后经 `reasoningLabel` 出词；中性档 ⇒ `t("reasoning.unset")`（**新增键** —— 桌面
+`i18n-composer.mjs` ∥ VSC `locales/{en,zh}.json` 两语同增）。**依据 = ZCode**：`thoughtLevelOptions.ts`
+`THOUGHT_LEVEL_LABEL_IDS` 把 `disabled/false/no/none/nothink/no-think/no_think/off` 一律映到同一个「关闭」
+词条（别名归一在**显示层**做，不动内部 token）；`ThoughtLevelCycleControl.tsx` 对未选态用
+`chat.toolbar.thoughtLevel.placeholder`（「选择思考档位」）且注「未选／失效及关闭值始终为零进度，
+**不能把缺失选择投影成首档**」。同轮收正 `active` 高亮判据：原 `visible !== "off"`（`visible` 可达值域里
+根本没有 `"off"` ⇒ 对「关闭」恒真 ⇒ 点选径熄灭而推送径点亮，自相矛盾）⇒ 改 `visible !== "none"`
+（与点选径 `level !== "none"` 同律）。**纯显示**：不写状态 ⇒ 零回写 ∥ 零载荷影响。真机实测：`global:deepseek-v4.1-flash`
+选「关闭」⇒ 钮「关闭」+ 不亮；换到 `cn:minimax-m3`（枚举不含已存档 ∥ 无注册默认）⇒ 钮「未设置」+ 不亮。
+
+**双源退场（2026-10-10 七轮）**：VSC 端差表 `EFFORT_DEFAULT_PREFIXES` + 本档 `effortDefaultFor` 已删 ——
+`thincoder-vscode/src/specs.mjs` 改为**转口核 `effortDefaultFor`**（`specForModel` 保留附加形以维持导出面零改，
+消费链 `provider-probe-window.mjs:67` → `webview/settings-state.js` `effortSelectView` 不变）。
+**依据 = 本仓既定取核约定**（`LOCAL-NOTES.md`「core 源码联接（关键）」：`node_modules/@thincoder/core` 必须
+指向本地源码，验证例即 fork 专属导出 `assistantRealFrame`；`scripts/dev-link.mjs` 亦按 `package.json` 声明
+自动建 cli/vsc ∕ desktop 三链）⇒ 端侧导入核新导出与既有 `specForModel` ∕ `providerSpec` 同径、零新增前提。
+**退场顺带修掉一处真实分叉**：本轮给核表补的 `deepseek-v4.1-flash` 行（`.1` ≠ `-`）当时只进了核 ⇒ VSC 端仍缺该行
+（该模型 VSC 下拉显占位）；转口后两端一致（实测 `specForModel("global:deepseek-v4.1-flash").reasoningEffortDefault`
+= `high`，且 `cn:glm-5.3` ∕ `cbcn/glm-5.3` 等前缀名一并命中 —— 核的后缀扫描同时覆盖 VSC 原「剥第一个 `/`」法）。
+
+**验证**：核测试 `thincoder-core/test/model-specs.test.mjs`（8 用例——真值表 ∕ 反例 ∕ 覆写清洗 ∕ 生效序 ∕
+既有契约零回归）；`loadConfig` 端到端实测（覆写驱动 `compactThreshold` = ctx × 0.6 ⇒ 1M 覆写得 600000）；
+桌面 web 快筛 9/9 段绿（`thincoder-desktop/tools/web-quickcheck/run.mjs`）；CLI `check-syntax` 121 档 OK；doc-check 悬空 0。
+
 ## 变更记录
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§9.9 清单 6 引文回锚（VSC 枚举源 = 端单源 `thincoder-vscode/src/specs.mjs` `effortEnumForModel`——#677 I7 已落）。**零新语义**。
 

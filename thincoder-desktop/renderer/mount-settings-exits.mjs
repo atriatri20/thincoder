@@ -56,7 +56,7 @@ const reasonOf = (receipt) => (typeof receipt?.reason === "string" && receipt.re
  */
 export function createExits(deps = {}) {
   const { ask, store, setSettings, report, clearReport, occupies, slot, paintSettings, onProvidersChanged, invalidateDrafts } = deps
-  const { loadProviders, loadAgent, loadMcp, loadEnv, loadTools, loadUsage } = deps.reads ?? {}
+  const { loadProviders, loadAgent, loadMcp, loadEnv, loadTools, loadUsage, loadModelParams } = deps.reads ?? {}
 
   /** 渠道表单提交（两形同一路）：载荷按形直取（表内 `name` = 载荷键）—— 空名 ⇒ 端侧形判 `invalid-shape` 零发送。 */
   async function submitChannel(event) {
@@ -66,14 +66,17 @@ export function createExits(deps = {}) {
     const shape = String(data.get("shape") ?? "")
     const name = String(data.get("name") ?? "")
     const key = String(data.get("key") ?? "")
+    // 上下文窗口（2026-10-10 · 模型参数能力批）：**K 单位**；空 ⇒ 不带键（不落 = 用模型规格值）。
+    const ctx = String(data.get("context") ?? "").trim()
+    const ctxPart = ctx === "" ? {} : { context: ctx }
     if (name === "") {
       console.error("[renderer] provider:save: empty name")
       report("providers", { reason: "invalid-shape" }, "provider:save")
       return
     }
     const payload = shape === "custom"
-      ? { name, shape, baseURL: String(data.get("baseURL") ?? ""), model: String(data.get("model") ?? ""), format: String(data.get("format") ?? ""), active: data.get("active") !== null, ...(key === "" ? {} : { key }) }
-      : { name, shape: "preset", preset: name, active: data.get("active") !== null, ...(key === "" ? {} : { key }) }
+      ? { name, shape, baseURL: String(data.get("baseURL") ?? ""), model: String(data.get("model") ?? ""), format: String(data.get("format") ?? ""), active: data.get("active") !== null, ...(key === "" ? {} : { key }), ...ctxPart }
+      : { name, shape: "preset", preset: name, active: data.get("active") !== null, ...(key === "" ? {} : { key }), ...ctxPart }
     const receipt = await ask("provider:save", payload)
     if (receipt.ok !== true) {
       report("providers", receipt, "provider:save")
@@ -143,6 +146,83 @@ export function createExits(deps = {}) {
     await loadProviders()
   }
 
+  /** 正整数归一（空 ∕ 非数 ∕ 非正 ⇒ null——零发送该叶）。 */
+  function posIntOrNull(raw) {
+    const text = String(raw ?? "").trim()
+    if (text === "") return null
+    const n = Number(text)
+    return Number.isInteger(n) && n > 0 ? n : null
+  }
+
+  /** 「编辑模型配置」保存出口（2026-10-10 · 模型参数能力批）：表单值 ⇒ patch（逐叶归一，白名单在核）⇒
+   *  `model:specSave`（写 `config.modelOverrides[<模型 ID>]`）。**空值 ⇒ 该叶不入 patch**（保持既有 ∕
+   *  默认值，不写空叶）；档位文本逗号分隔 ⇒ 数组（去重保序）。成功 ⇒ 清失败串 + 草稿一次性作废 +
+   *  复读 `model:spec`（生效值 ∕ 来源徽标 ∕ 行徽标随动——零网络复探；**弹窗保持开**，可连续改）。 */
+  async function saveModelSpec(event) {
+    const form = formOf(event)
+    if (form === null) return
+    const id = store.get().settings?.modelParams?.id
+    if (typeof id !== "string" || id === "") {
+      report("model", { reason: "invalid-shape" }, "model:specSave")
+      return
+    }
+    const data = new FormData(form)
+    const patch = {}
+    const context = posIntOrNull(data.get("context"))
+    if (context !== null) patch.context = context
+    const maxOutput = posIntOrNull(data.get("maxOutput"))
+    if (maxOutput !== null) patch.maxOutput = maxOutput
+    const think = String(data.get("thinking") ?? "")
+    if (think === "off") { patch.thinking = false; patch.thinkAlwaysOn = false }
+    else if (think === "on") { patch.thinking = true; patch.thinkAlwaysOn = false }
+    else if (think === "always") { patch.thinking = true; patch.thinkAlwaysOn = true }
+    const enums = String(data.get("reasoningEffortEnum") ?? "").split(",").map((s) => s.trim()).filter((s) => s !== "")
+    if (enums.length > 0) patch.reasoningEffortEnum = [...new Set(enums)]
+    const effortDefault = String(data.get("reasoningEffortDefault") ?? "").trim()
+    if (effortDefault !== "") patch.reasoningEffortDefault = effortDefault
+    const receipt = await ask("model:specSave", { id, patch })
+    if (receipt.ok !== true) {
+      report("model", receipt, "model:specSave")
+      return
+    }
+    clearReport()
+    invalidateDrafts?.("modelParams") // #652：写成功 ⇒ 该表单草稿一次性作废（失败径零声明）
+    await loadModelParams?.(id)
+  }
+
+  /** 「编辑模型配置」重置出口：删 `modelOverrides[命中键]`（键 = `spec.overrideKey`，缺 ⇒ 模型 ID）⇒ 复读。
+   *  **弹窗保持开**（用户看得到生效值 ∕ 徽标回落到内置表）。 */
+  async function resetModelSpec() {
+    const held = store.get().settings?.modelParams ?? {}
+    const id = typeof held.id === "string" && held.id !== "" ? held.id : null
+    if (id === null) {
+      report("model", { reason: "invalid-shape" }, "model:specReset")
+      return
+    }
+    const key = typeof held.spec?.overrideKey === "string" && held.spec.overrideKey !== "" ? held.spec.overrideKey : id
+    const receipt = await ask("model:specReset", { key })
+    if (receipt.ok !== true) {
+      report("model", receipt, "model:specReset")
+      return
+    }
+    clearReport()
+    invalidateDrafts?.("modelParams")
+    await loadModelParams?.(id)
+  }
+
+  /** 「编辑模型配置」弹窗开（模型行铅笔钮 ⇒ 本出口）：切片落 `{ open:true, id }` + 读 `model:spec`
+   *  （读数落地即重绘弹窗体；读失败 ⇒ `loadModelParams` 自行退场 + 失败面 —— 零静默）。 */
+  function openModelParams(id) {
+    if (typeof id !== "string" || id === "") return
+    setSettings({ modelParams: { open: true, id, spec: null } })
+    void loadModelParams?.(id)
+  }
+
+  /** 「编辑模型配置」弹窗关（✕ ∕ 背板 ∕ 卡内 Esc 三关同引）：切片清（宿主 `renderSettingsModal(null)` 退场）。 */
+  function closeModelParams() {
+    setSettings({ modelParams: { open: false, id: null, spec: null } })
+  }
+
   /** 段出口族（env ∕ 工具与服务 ∕ MCP **十八**项 + models 八项 —— 合 **26**）随 R7 ∕ W3 迁 `mount-settings-segments.mjs` ∕
    *  `mount-settings-segments-models.mjs`（段出口族工厂 —— 共享项注入，本档零副本）；`formOf` 回注
    *  （单一 owner 在本档）；**#679**：`invalidateDrafts` 随注入（段族三径声明 —— MCP 增 ∕ 改 · tools 钥存 ∕ 删钥 · env shell）。 */
@@ -201,12 +281,31 @@ export function createExits(deps = {}) {
     })
   }
 
+  /** 档位快填出口（2026-10-10 五轮 —— 三处档位 `select` 共用：弹窗两字段 ∕ 渠道表单 ∕ 渠行内 ctx 编辑态）。
+   *  **邻接不变量**：档位 `select` 恒为其值输入框的**紧邻后继兄弟**（`previousElementSibling` 解析 ——
+   *  三处布局各异，且渠道表单两形的 `id="context"` 是重复 id ⇒ 不能按 id ∕ name 定位）。
+   *  `select` 选完**自复位**（它是纯快填菜单、不持有值 —— 唯一值持有者恒为输入框；免「谁是真值」歧义）；
+   *  写值后派 `input` 事件（下游若监听 input 亦能感知）。邻接失配 ⇒ 记错零动作（零静默 —— 结构漂移即显）。 */
+  function pickTier(event) {
+    const select = event?.target ?? null
+    const value = typeof select?.value === "string" ? select.value : ""
+    if (typeof select === "object" && select !== null && "value" in select) select.value = ""
+    if (value === "") return
+    const input = select?.previousElementSibling ?? null
+    if (input === null || input.tagName !== "INPUT") {
+      console.error("[renderer] tier pick: sibling value input not found (adjacency invariant broken)")
+      return
+    }
+    input.value = value
+    input.dispatchEvent?.(new Event("input", { bubbles: true }))
+  }
+
   /** 本组面态复位（D39 ∥ KD-68 ④ —— modal 开 ∥ 关**限本组**；原语与开 ∥ 关面整复位同口径：providers →
    *  `edit/probe/draft/keyDraft`（S1 ∕ S2 ∕ #615②）∥ mcp → `form`（S8）；他组零动）。返回 `setSettings` 补丁。 */
   function resetFacets(state, group) {
     if (group === "providers") {
       const providers = state.settings?.providers ?? {}
-      return { providers: { ...providers, edit: null, probe: null, draft: null, keyDraft: null } }
+      return { providers: { ...providers, edit: null, probe: null, draft: null, keyDraft: null, ctxEdit: null, ctxDraft: null } }
     }
     if (group === "mcp") {
       const mcp = state.settings?.mcp ?? {}
@@ -219,7 +318,7 @@ export function createExits(deps = {}) {
    *  S1 ∕ S2：渠道段面态复位（钥编辑态 ∕ 探果 ∕ 暂存值 ∕ 失败草稿〔#615②〕——**钥暂存不跨面驻留**）；S8：MCP 编辑态复位（`form`）——本组复位原语 = `resetFacets`。 */
   function openSettings() {
     const state = store.get()
-    setSettings({ open: true, notice: null, ...resetFacets(state, "providers"), ...resetFacets(state, "mcp") })
+    setSettings({ open: true, notice: null, modelParams: { open: false, id: null, spec: null }, ...resetFacets(state, "providers"), ...resetFacets(state, "mcp") })
     void loadProviders()
     void loadAgent()
     void loadMcp()
@@ -234,7 +333,7 @@ export function createExits(deps = {}) {
   function closeSettings() {
     closeSettingsConfirm()
     const state = store.get()
-    setSettings({ open: false, notice: null, modal: null, ...resetFacets(state, "providers"), ...resetFacets(state, "mcp") })
+    setSettings({ open: false, notice: null, modal: null, modelParams: { open: false, id: null, spec: null }, ...resetFacets(state, "providers"), ...resetFacets(state, "mcp") })
   }
 
   /** 设置面出口族（锚名逐字 = 视图 `data-action` 同域；具名控件面 = 单键同路；段族 **26** 项经 `segments` ∕
@@ -275,6 +374,14 @@ export function createExits(deps = {}) {
       setSettings({ nav: name })
       if (name === "usage") void loadUsage()
     },
+    // 「编辑模型配置」弹窗（2026-10-10 · 模型参数能力批）：开 = 模型行铅笔钮；关 = ✕ ∕ 背板 ∕ 卡内 Esc 三关同引；
+    // 保存 ∕ 重置 = 写 `modelOverrides`（弹窗保持开 —— 可连续改）。
+    onEditModel: (id) => openModelParams(id),
+    onCloseModelParams: () => closeModelParams(),
+    onSaveModelSpec: (event) => void saveModelSpec(event),
+    onResetModelSpec: () => void resetModelSpec(),
+    // 档位快填（三处档位 select 共用 —— 见 `pickTier` 注）
+    onPickTier: (event) => pickTier(event),
     onSubmit: (event) => void submitChannel(event),
     onVerify: (name) => void verifyChannel(name),
     onRemoveProvider: (name) => void removeProvider(name),
@@ -300,6 +407,7 @@ export function createExits(deps = {}) {
       const state = store.get()
       if (state?.settings?.open !== true || occupies(state)) return
       if (state?.settings?.modal != null) return // 弹窗在场 ⇒ 页保持开（D39 ∥ KD-68 ⑥——卡内 Esc 自持）
+      if (state?.settings?.modelParams?.open === true) return // 模型配置弹窗在场 ⇒ 同上（卡内 Esc 自持）
       closeSettings()
     })
   }

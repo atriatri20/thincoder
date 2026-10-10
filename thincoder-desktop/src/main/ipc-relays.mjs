@@ -8,10 +8,10 @@
  */
 import { currentCwd } from "./projects.mjs"
 import { liveAgents } from "./ipc.mjs"
-import { configWrite, indexStatus, modelCatalog, modelList, settingsAgent } from "./settings.mjs"
+import { configWrite, indexStatus, modelCatalog, modelList, modelSpec, modelSpecReset, modelSpecSave, settingsAgent } from "./settings.mjs"
 import { settingsEnv } from "./settings-env.mjs"
 import { settingsTools } from "./settings-tools.mjs"
-import { providerDelKey, providerList, providerModels, providerRemove, providerSave, providerSetKey, providerSetProxy, providerVerify } from "./providers.mjs"
+import { providerDelKey, providerList, providerModels, providerRemove, providerSave, providerSetContext, providerSetKey, providerSetProxy, providerVerify } from "./providers.mjs"
 import { mcpList, mcpReconnect, mcpRemove, mcpSave, mcpTools, mcpUpdate } from "./mcp-servers.mjs"
 import { batchStatus, ledgerRead } from "./project-info.mjs"
 import { runIndexBuild } from "./index-status.mjs"
@@ -48,12 +48,22 @@ export function providerSetKeyChannel(payload) { return providerSetKey(payload) 
 export function providerDelKeyChannel(payload) { return providerDelKey(payload) }
 export function providerModelsChannel(payload) { return providerModels(payload) }
 export function providerSetProxyChannel(payload) { return providerSetProxy(payload) }
+/** `provider:setContext(payload)` ⇒ `{ ok, reason }`：载荷 `{ name, context }`——`context` = **K 单位**正整数
+ *  ∥ `null` ∕ 空串 ⇒ 清除覆写（回模型规格值）。渠道级 `providers[].context`（2026-10-10 · 模型参数能力批）。 */
+export function providerSetContextChannel(payload) { return providerSetContext(payload) }
 /** `model:list(payload)` ⇒ `{ ok, models }` ∥ `{ ok:false, reason }`：载荷 `{ provider }`（provider 名）。 */
 export function modelListChannel(payload) { return modelList(payload) }
 /** `model:catalog`（无载荷）⇒ `{ ok, models, unavailable }`（全渠扇出 —— 逐 `hasKey` 渠探针；失败渠零行 + 诊断项）。 */
 export function modelCatalogChannel() { return modelCatalog() }
 /** `settings:agent(payload)`：读 `{}` ⇒ `{ ok, fields }`；写 `{ patch }` ⇒ `{ ok, reason, fields }`（写后回读）。 */
 export function settingsAgentChannel(payload) { return settingsAgent(payload) }
+/** 模型参数三转口（2026-10-10 · 模型参数能力批 —— `modelOverrides` 覆写读写）：
+ *  `model:spec { id }` ⇒ `{ ok, id, source, overrideKey, override, spec }`（生效值 + 来源 + 命中键）；
+ *  `model:specSave { id, patch }` ⇒ `{ ok, reason }`（逐叶白名单过滤后写 `config.modelOverrides[id]`，
+ *  空 patch ⇒ 删键）；`model:specReset { key }` ⇒ `{ ok, reason }`（删该键）。写径 = 核唯一写盘执行体。 */
+export function modelSpecChannel(payload) { return modelSpec(payload) }
+export function modelSpecSaveChannel(payload) { return modelSpecSave(payload) }
+export function modelSpecResetChannel(payload) { return modelSpecReset(payload) }
 /** `mcp:list`（无入参）⇒ `{ ok, servers }`（只列已配；不连接）。 */
 export function mcpListChannel() { return mcpList() }
 /** `mcp:save(payload)` ⇒ `{ ok, tools }` ∥ `{ ok:false, reason, detail? }`（探活不通 ⇒ 零写盘）。 */

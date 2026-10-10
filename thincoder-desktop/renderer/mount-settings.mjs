@@ -36,6 +36,7 @@ import { renderSettingsModal, settingsModalNode } from "./settings-modal.mjs"
 import { closeSettingsConfirm } from "./settings-confirm.mjs"
 import { mountWizard, wizardModel } from "./views/onboarding.mjs"
 import { SECTIONS, mountSettings, settingsModalTree } from "./views/settings.mjs"
+import { modelParamsModalTree } from "./views/settings-sections-modelparams.mjs"
 
 /** 设置 / 向导容器锚（**一容器两树互斥** —— 骨架属性住 `index.html`）。 */
 export const SETTINGS_SLOT = '[data-slot="settings"]'
@@ -165,11 +166,15 @@ export function attachSettings(host, deps = {}) {
     closeSettingsConfirm()
   }
 
-  /** 弹窗在场渲染（第二闸重建 ∥ 退场清件）：切片组名 ⇒ 树 + 宿主建 ∕ 刷（返回卡根供复填）；`null` ⇒ 宿主清件。 */
+  /** 弹窗在场渲染（第二闸重建 ∥ 退场清件）：**两源互斥** —— 设置组弹窗（`settings.modal`，数据段闭集）∥
+   *  「编辑模型配置」弹窗（`settings.modelParams.open`，单模型参数覆写表单 · 2026-10-10）；皆无 ⇒ 宿主清件。
+   *  两源共用同一宿主（`renderSettingsModal` 单例）⇒ 卡根捕获 ∕ 复填（第二闸）同径，零第二实现。 */
   function renderModal(state) {
     const group = state?.settings?.modal ?? null
-    if (group === null) return renderSettingsModal(null)
-    return renderSettingsModal(settingsModalTree(state, group, modalHandlers))
+    if (group !== null) return renderSettingsModal(settingsModalTree(state, group, modalHandlers))
+    const params = state?.settings?.modelParams ?? null
+    if (params?.open === true) return renderSettingsModal(modelParamsModalTree(params, modalHandlers))
+    return renderSettingsModal(null)
   }
 
   /** 重绘残件（跨**在途重建**携带 —— 读数落地致段入 `loading` 时树面控件暂缺：残件留待下轮复填；
@@ -236,6 +241,7 @@ export function attachSettings(host, deps = {}) {
     if (event.target !== settingsHost) return
     const state = store.get()
     if (state.settings?.open !== true || state.settings?.modal != null) return
+    if (state.settings?.modelParams?.open === true) return // 模型配置弹窗在场 ⇒ 由自带背板接住（本径不动）
     exits.closeSettings()
   })
   void reads.loadProviders()
@@ -255,7 +261,6 @@ export function attachSettings(host, deps = {}) {
     void reads.loadUsage()
     return true
   }
-
   return {
     paintSettings, openSettings: exits.openSettings, refreshSettings,
     openSettingsModal, closeSettingsModal, // D39：菜单「组弹窗」开 ∥ 关出口（face 返回 —— 消费面 = `renderer/app.mjs` 注入）

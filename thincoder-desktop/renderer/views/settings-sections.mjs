@@ -16,6 +16,8 @@
  */
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
+// 上下文窗口 K 摘要（单源 —— 「编辑模型配置」弹窗与本段行徽标同形；本档零第二副本）。
+import { contextKBadge } from "./settings-sections-modelparams.mjs"
 
 // agent 段体（含具名十键表 `NAMED_FIELDS`）已随 R8 拆出 `./settings-agent.mjs`；本档 re-export ⇒ 导出面零改。
 export { agentBody, NAMED_FIELDS } from "./settings-agent.mjs"
@@ -65,8 +67,13 @@ export function modelChoicesTree(model, handlers = {}) {
   return [{ tag: "div", props: { class: "settings-empty", "data-empty": "" }, children: [t("settings.model.empty")] }]
 }
 
-/** 模型行：名 + 采用控件（当前项 / 无渠 ⇒ 非死控 = `disabled`）。**#842**：行自带渠（全渠扇出面）⇒ 名显示
- *  `provider · id`、「采用」按行自带渠（`onUseModel(provider, id)`）；行无渠 ⇒ 落段级激活渠（常规面判据零变）。 */
+/** 模型行：名 + 上下文 K 徽标 + 两**图标钮**（编辑 ∕ 采用）。**#842**：行自带渠（全渠扇出面）⇒ 名显示
+ *  `provider · id`、「采用」按行自带渠（`onUseModel(provider, id)`）；行无渠 ⇒ 落段级激活渠（常规面判据零变）。
+ *  **2026-10-10（模型参数批 · 用户裁定）**：①「采用」改**图标钮**（原文字胶囊占宽 —— 四列网格下挤）；
+ *  ②其后加**编辑图标钮** ⇒ 开「编辑模型配置」弹窗（`onEditModel(id)` —— 覆写键 = 模型 ID，与渠道无关）；
+ *  ③行携上下文 K 徽标（ZCode 模型列表同形 —— `qd/qfmodel 200K`），规格来源 = 主侧 `modelEntry` 投影；
+ *  ④**已覆写**行（`source === "override"`）⇒ 编辑钮染主题色（`data-overridden` 锚 —— 一眼可辨自定模型）。
+ *  字形住 `renderer/codex.css` `content`（零字形字面 —— 纪律同全档）；`aria-label` ∕ `title` 保留可及名。 */
 function modelRowNode(row, model, handlers) {
   const id = modelIdOf(row) ?? ""
   const own = row !== null && typeof row === "object" && typeof row.provider === "string" && row.provider !== "" ? row.provider : null
@@ -75,20 +82,33 @@ function modelRowNode(row, model, handlers) {
   const onUse = !current && typeof handlers?.onUseModel === "function" && provider !== null
     ? () => handlers.onUseModel(provider, id)
     : undefined
+  const onEdit = typeof handlers?.onEditModel === "function" ? () => handlers.onEditModel(id) : undefined
+  const kb = contextKBadge(row?.context)
+  const overridden = row !== null && typeof row === "object" && row.source === "override"
+  const iconBtn = (kind, action, handler, label) => ({
+    tag: "button",
+    props: wire({
+      class: `settings-icon-btn ${kind}`,
+      type: "button",
+      "data-action": action,
+      "data-model": id,
+      ...(kind === "edit" && overridden ? { "data-overridden": "" } : {}),
+      "aria-label": label,
+      title: label,
+    }, handler),
+    children: [],
+  })
   return {
     tag: "div",
     props: { class: "settings-row", "data-model": id, "data-current": current ? "" : undefined },
-    children: [{ tag: "span", props: { class: "settings-row-name" }, children: [own === null ? id : `${own} · ${id}`] }, {
-      tag: "button",
-      props: wire({
-        class: "settings-row-action",
-        type: "button",
-        "data-action": "settings:useModel",
-        "data-model": id,
-        "aria-label": t("settings.model.use"),
-      }, onUse),
-      children: [t("settings.model.use")],
-    }],
+    children: [
+      { tag: "span", props: { class: "settings-row-name" }, children: [
+        { tag: "span", props: { class: "settings-row-model" }, children: [own === null ? id : `${own} · ${id}`] },
+        ...(kb === null ? [] : [{ tag: "span", props: { class: "settings-row-k" }, children: [kb] }]),
+      ] },
+      iconBtn("use", "settings:useModel", onUse, t("settings.model.use")),
+      iconBtn("edit", "settings:editModel", onEdit, t("settings.modelParams.edit")),
+    ],
   }
 }
 

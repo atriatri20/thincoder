@@ -32,6 +32,13 @@ function cfgPath() { return _configPath() }
 
 export const DEFAULTS = {
   defaultModel: null, // top-level "provider:model" composite — new-session starting point (F-1)
+  // 模型级规格覆写（2026-10-10）：键 = 模型 ID（亦按前缀命中——键 `cn:` 覆盖该渠道全部模型），值 =
+  // 覆写叶（context / maxOutput / thinking / thinkApi / thinkAlwaysOn / reasoningEffortEnum /
+  // reasoningEffortDefault / multimodal / tempRange / partialMode / prefixMode / reasoningEcho /
+  // format / noUsageStream）。装载期经 `setModelOverrides` 注册进核查表（model-specs.mjs），
+  // 生效序 = DEFAULT_SPEC < MODEL_SPECS < **本表** < providers[].context。反代 ∕ 聚合网关的
+  // 前缀模型名（`cn:auto`、`global:gpt-5.4`）与表内缺行的模型靠它自救。
+  modelOverrides: {},
   agent: {
     maxTurns: 200,
     subagentTurns: 100,
@@ -95,8 +102,8 @@ export const DEFAULTS = {
 // Model capability table + spec lookup live in model-specs.mjs (2026-08-31
 // extract — config.mjs had grown past the 300-line advisory). Re-exported here
 // so the 23 existing importers keep their import paths.
-import { specForModel, providerSpec, specMatch, assistantToolCallMessage } from "./model-specs.mjs"
-export { specForModel, providerSpec, specMatch, assistantToolCallMessage }
+import { specForModel, providerSpec, specMatch, assistantToolCallMessage, setModelOverrides, getModelOverrides, effortDefaultFor, overrideKeyFor } from "./model-specs.mjs"
+export { specForModel, providerSpec, specMatch, assistantToolCallMessage, setModelOverrides, getModelOverrides, effortDefaultFor, overrideKeyFor }
 
 
 // Window utilization threshold: compacts at 60% context, reserving 40% headroom
@@ -325,6 +332,13 @@ export function loadConfig() {
     }
     delete p.context
   }
+
+  // modelOverrides（2026-10-10）：模型级规格覆写——装载期注册进核查表（模块级单写者；`specForModel`
+  // 无 config 入参 ⇒ 注册式装配，先例 = model-specs.mjs 的 warnedModels Set ∕ theme.mjs）。清洗在
+  // `setModelOverrides` 内（可覆写叶白名单 + 逐叶类型判据，非法条目丢弃 + 一次性警告——同上方
+  // providers[].context 清洗先例，绝不 throw）。**必须早于下方 resolveCompactThreshold**（该处经
+  // providerSpec → specForModel 消费覆写值）。合并值挂 merged.modelOverrides 供端侧读面（设置页表单回填）。
+  merged.modelOverrides = setModelOverrides(merged.modelOverrides)
 
   // F-4 (IKCDMR) consultModels 软失败化——D-S1 范式（defaultModel 无效同族）：非法条目
   // 过滤不 throw（去 startup brick——无修复入口的硬崩消）；一次性启动警告内嵌修复指引

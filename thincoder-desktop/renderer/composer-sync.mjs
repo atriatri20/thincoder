@@ -99,9 +99,13 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
     return { tag: "div", props: { class: "composer-notice", "data-notice": "provider-fallback" }, children: [t("composer.send.noDefaultModelFallback")] }
   }
 
-  /** 候选行投影（全渠扇出行 `{ provider, id, effortEnum, thinkOff }` ⇒ 核件面形 —— VSC `provider-probe-window.mjs:64-67`
-   *  同形）：`reasoning` 值域 = 端两判据（§2.2 A9）—— `thinkOff` 真 ⇒ 首项 `none`（核件「关闭」档），余项 =
-   *  `effortEnum` 去空去重；`effortDefault` 端无读数 ⇒ 键缺席（核件中性档显示「—」，禁假造）；`id` 缺 ⇒ `null`（弃项）。 */
+  /** 候选行投影（全渠扇出行 `{ provider, id, effortEnum, thinkOff, effortDefault }` ⇒ 核件面形 —— VSC
+   *  `provider-probe-window.mjs:64-67` 同形）：`reasoning` 值域 = 端两判据（§2.2 A9）—— `thinkOff` 真 ⇒ 首项
+   *  `none`（核件「关闭」档），余项 = `effortEnum` 去空去重；**`effortDefault`**（2026-10-10 接线）=
+   *  主侧 `modelEntry` 经核 `effortDefaultFor` 的注册默认档（内置前缀表 ∕ 用户覆写）——透传给核件
+   *  `effortSelection(levels, current, registeredDefault)`（`render-core/composer/model-menu.mjs:37`）⇒
+   *  会话无显式 effort 时钮显**真档**而非中性「—」（原「端无读数 ⇒ 键缺席」就此消解）；缺 ⇒ 键缺席
+   *  （核件落「—」——禁假造）；`id` 缺 ⇒ `null`（弃项）。 */
   function modelRowOf(row, provider) {
     const levels = []
     if (row?.thinkOff === true) levels.push(REASONING_NONE)
@@ -111,7 +115,8 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
     }
     const id = typeof row?.id === "string" ? row.id : ""
     if (id === "") return null
-    return { id, label: id, provider, group: provider, reasoning: levels }
+    const effortDefault = typeof row?.effortDefault === "string" && row.effortDefault !== "" ? row.effortDefault : null
+    return { id, label: id, provider, group: provider, reasoning: levels, ...(effortDefault === null ? {} : { effortDefault }) }
   }
 
   /** 现值供给（核件 `models` 推送的 `prefs` 件）：端会话元 `{ provider, model, effort }` ⇒ 核件形 `{ model, provider,

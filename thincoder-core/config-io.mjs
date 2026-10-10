@@ -218,9 +218,10 @@ export function removeProviderKeyFromConfig(name) {
 
 const FORMATS = ["openai", "anthropic", "google"]
 
-/** 新增渠道。payload: { preset?: name, custom?: { name, baseURL, model, format }, key? }
- *  返回错误串或 null。 */
-export function addProviderEntry({ preset, custom, key } = {}) {
+/** 新增渠道。payload: { preset?: name, custom?: { name, baseURL, model, format }, key?, context? }
+ *  `context`（**K 单位** —— PROVIDER.md §15 同域：`providers[].context`）可选；正整数才落键，其余
+ *  （缺 ∕ 非数 ∕ ≤0）**静默不落**（合法缺省 = 用模型规格值，非错误）。返回错误串或 null。 */
+export function addProviderEntry({ preset, custom, key, context } = {}) {
   let providers
   try {
     ({ providers } = resolveProviders())
@@ -249,6 +250,10 @@ export function addProviderEntry({ preset, custom, key } = {}) {
   } else {
     return "Add provider needs a preset or a custom config"
   }
+
+  // providers[].context（K 单位 —— PROVIDER.md §15）：正整数才落键（其余静默不落 = 用模型规格值）。
+  const ctxK = Number(context)
+  if (Number.isInteger(ctxK) && ctxK > 0) entry.context = ctxK
 
   const r = persistRaw((raw) => { (raw.providers ??= []).push(entry) })
   const err = conflictError(r)

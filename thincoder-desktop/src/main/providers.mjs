@@ -22,7 +22,7 @@
  * 渲染面 `hostBusy` ⇒ 「宿主繁忙」+ 抑制失败句）；两探径失败支经 `loop-sampler.mjs` `overrideAdmissionIfHostBusy`
  * 以宿主证据覆盖落账分类（`reason` 逐字不动——核 `deps.hostBusyOverride` 缝同判）。
  */
-import { PROVIDER_PRESETS, loadConfig, normalizeProxy } from "@thincoder/core/config.mjs"
+import { PROVIDER_PRESETS, loadConfig, normalizeProxy, providerSpec } from "@thincoder/core/config.mjs"
 import {
   _configPath, addProviderEntry, loadRaw, removeProviderEntry, removeProviderKeyFromConfig,
   resolveProviders, setProviderKey, writeConfigAtomic,
@@ -89,6 +89,10 @@ export function providerList() {
         shape: PROVIDER_PRESETS[p.name] ? "preset" : "custom",
         baseURL: p.baseURL ?? "",
         ...(typeof p.model === "string" && p.model ? { model: p.model } : {}),
+        // 上下文窗口两键（2026-10-10 · 模型参数能力批）：`context` = 渠道级覆写原文（**K 单位**，未设 ⇒
+        // 键缺席）；`contextTokens` = **生效值**（`providerSpec` 单源——覆写 ×1024 ∥ 模型规格值）。
+        ...(Number.isInteger(p.context) && p.context > 0 ? { context: p.context } : {}),
+        contextTokens: providerSpec(p).context,
         hasKey,
         maskedKey: hasKey ? maskKey(`providers.${p.name}.apiKey`, p.apiKey) : null,
         active: p.name === activeProvider,
@@ -139,16 +143,26 @@ export function providerSave(payload) {
   const shape = payload?.shape
   if (!name || !SHAPES.includes(shape)) return { ok: false, reason: "invalid-shape" }
   const key = typeof payload?.key === "string" && payload.key ? payload.key : undefined
+  // 上下文窗口（2026-10-10）：`context` 在场 ⇒ 必为正整数（**K 单位**）；非法 ⇒ `invalid-value` 零写盘
+  //（表单显式报错；缺 ⇒ 不落键 = 用模型规格值）。核 `addProviderEntry` 侧另有静默门（直调方兜底）。
+  const rawContext = payload?.context
+  const hasContext = rawContext !== undefined && rawContext !== null && String(rawContext).trim() !== ""
+  let context
+  if (hasContext) {
+    const k = Number(rawContext)
+    if (!Number.isInteger(k) || k <= 0) return { ok: false, reason: "invalid-value" }
+    context = k
+  }
   let err
   if (shape === "preset") {
-    err = addProviderEntry({ preset: name, key })
+    err = addProviderEntry({ preset: name, key, context })
   } else {
     const baseURL = String(payload?.baseURL ?? "").trim()
     const model = String(payload?.model ?? "").trim()
     const format = payload?.format ?? "openai"
     // 自定形必填步序（baseURL → model → format）+ 协议域 = 核流程族判据（R8）——端侧零副本、拒码照旧。
     if (customFieldsError({ baseURL, model, format }) !== null) return { ok: false, reason: "invalid-shape" }
-    err = addProviderEntry({ custom: { name, baseURL, model, format }, key })
+    err = addProviderEntry({ custom: { name, baseURL, model, format }, key, context })
   }
   if (err) return { ok: false, reason: err }
   probeAfterWrite(name) // S3：加渠道 = 配置写入面 —— 写后探一次（零阻断）
@@ -241,6 +255,41 @@ export function providerSetProxy(payload) {
   if (!w.ok) return { ok: false, reason: w.reason }
   const entry = resolveProviders().providers.find((p) => p.name === name) // 回读核验：写内 `!entry` 早退 ⇒ 零假成功
   if (entry === undefined || (entry.proxy === true) !== proxy) return { ok: false, reason: "unavailable" }
+  return { ok: true, reason: null }
+}
+
+/**
+ * `provider:setContext(payload)` ⇒ `{ ok:true, reason:null }` ∥ `{ ok:false, reason }`（2026-10-10 · 模型参数
+ * 能力批 —— CLI `/model → Set context window` 的桌面对位）。
+ *
+ * 载荷 `{ name, context }`：`context` = **K 单位**正整数（128 = 128K）∥ `null` ∕ 空串 ⇒ **清除覆写**
+ *（回模型规格值 —— 与 CLI `setContextFlow` 空输入同义）。渠道级 `providers[].context` 与**模型级**
+ * `modelOverrides.<id>.context`（tokens）分工：渠道级 = 端点差异（同模型跨端点窗口不同），模型级 = 模型能力。
+ * 写面 = 核唯一写盘执行体（端侧零自写盘）+ 回读核验（零假成功 —— 沿 `provider:setProxy` 同形）。
+ * 生效面注：核 `loadConfig` 的 `compactThreshold` 由装载期派生 ⇒ 本写对**已在跑的会话**不追溯
+ *（下个会话 ∕ 下次装载生效 —— 与 `provider:save` 同限，非本通道独有）。
+ */
+export function providerSetContext(payload) {
+  const name = String(payload?.name ?? "").trim()
+  if (!name) return { ok: false, reason: "invalid-shape" }
+  const raw = payload?.context
+  const clear = raw === null || raw === undefined || String(raw).trim() === ""
+  let k = null
+  if (!clear) {
+    const n = Number(raw)
+    if (!Number.isInteger(n) || n <= 0) return { ok: false, reason: "invalid-value" }
+    k = n
+  }
+  if (!resolveProviders().providers.some((p) => p.name === name)) return { ok: false, reason: "unavailable" }
+  const w = writeConfigAtomic(_configPath(), (disk) => {
+    const entry = (Array.isArray(disk.providers) ? disk.providers : []).find((p) => p?.name === name)
+    if (!entry) return
+    if (clear) delete entry.context
+    else entry.context = k
+  })
+  if (!w.ok) return { ok: false, reason: w.reason }
+  const entry = resolveProviders().providers.find((p) => p.name === name) // 回读核验（零假成功）
+  if (entry === undefined || (clear ? entry.context !== undefined : entry.context !== k)) return { ok: false, reason: "unavailable" }
   return { ok: true, reason: null }
 }
 

@@ -681,16 +681,123 @@ body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; 
   background: color-mix(in srgb, var(--accent) 8%, var(--card));
 }
 .model-grid .settings-row-name { font-size: 13px; }
-.model-grid .settings-row-action {
+
+/* ── 模型行图标钮 + 上下文 K 徽标（模型参数批 · 2026-10-10）──────────────────────
+   用户裁定：「采用」改图标（原文字胶囊在四列网格下占宽）⇒ 其后加铅笔钮开「编辑模型配置」弹窗。
+   字形住本档 `content`（零字形字面 —— 全档纪律）；`aria-label` ∕ `title` 由视图档给可及名。
+   `[data-overridden]` = 该模型已有用户覆写（`modelOverrides`）⇒ 铅笔钮染主题色，一眼可辨自定模型。 */
+.model-grid .settings-row { display: flex; align-items: center; }
+.model-grid .settings-row-name { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
+.model-grid .settings-row-model { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-grid .settings-row-k {
   flex: none;
-  padding: 2px 10px;
+  padding: 0 5px;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  font-size: 12px;
-  line-height: var(--lh);
-  background: var(--bg-raised);
+  border-radius: 5px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--fg-muted);
 }
-.model-grid .settings-row-action:not(:disabled):hover { border-color: var(--accent); color: var(--accent-text); background: transparent; cursor: pointer; }
+.settings-icon-btn {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.settings-icon-btn::before { content: ""; }
+.settings-icon-btn[data-action="settings:useModel"]::before { content: "✓"; }
+.settings-icon-btn[data-action="settings:editModel"]::before { content: "✎"; }
+.settings-icon-btn:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--accent-text);
+}
+.settings-icon-btn:disabled { opacity: 0.3; cursor: default; }
+.settings-icon-btn[data-overridden] { color: var(--accent-text); }
+
+/* ── 「编辑模型配置」弹窗体（模型参数批 · 2026-10-10）─────────────────────────
+   参照 ZCode `ProviderModelMetadataDialog`：基本字段（上下文窗口 ∕ 最大输出）恒显；「高级配置」
+   折叠区收思考 ∕ 档位 ∕ 默认档；页脚 = 重置为默认（左） + 取消 ∕ 保存（右）。 */
+.settings-row-badge {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+.settings-row-badge[data-source="override"] {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  color: var(--accent-text);
+}
+.settings-row-value.mono { font-family: var(--mono); font-size: 12.5px; }
+.settings-modelparams .settings-modal-body { gap: 14px; }
+/* 弹窗内读数行 = 纯行（`.settings-row` 的描边盒在页内是卡片行，在弹窗里会被读成输入框 —— 去盒）。 */
+.settings-modelparams .settings-row { padding: 0; border: 0; background: transparent; }
+.settings-field-block { display: flex; flex-direction: column; gap: 5px; }
+.settings-field-block .settings-field-label { font-size: 12.5px; color: var(--fg-muted); }
+.settings-field-hint { font-size: 11.5px; color: var(--fg-muted); opacity: 0.85; }
+.settings-advanced { border-top: 1px solid var(--line); padding-top: 10px; }
+.settings-advanced-summary { cursor: pointer; font-size: 12.5px; color: var(--fg-muted); }
+.settings-advanced-body { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+.settings-modal-actions { display: flex; align-items: center; gap: 8px; padding-top: 4px; }
+.settings-actions-spacer { flex: 1; }
+.settings-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 12.5px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.settings-link:not(:disabled):hover { color: var(--accent-text); }
+.settings-link:disabled { opacity: 0.4; cursor: default; text-decoration: none; }
+
+/* ── 渠道级上下文窗口控件（模型参数批 · 2026-10-10）────────────────────────────
+   副行尾紧凑钮（`ctx 128K` = 生效值）；有渠道级覆写 ⇒ 染主题色（`data-override` —— 一眼可辨自定值）；
+   编辑态 = 窄 K 输入 + 存 ∕ 消（沿钥行编辑态同形）。 */
+.settings-row-sub .settings-ctx-btn {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--fg-muted);
+}
+.settings-row-sub .settings-ctx-btn[data-override] {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  color: var(--accent-text);
+}
+/* 窄输入（特异性须压过基础 `input.settings-field:not([type="checkbox"])` 的 `flex: 1` —— 三件式提权）。 */
+.settings-row-sub input.settings-field.settings-ctx-input { width: 6.5rem; flex: none; margin-left: auto; }
+/* 渠行内档位下拉（窄 —— 压过 `select.settings-field` 的 `min-inline-size: 12rem`）。 */
+.settings-row-sub select.settings-field.settings-ctx-tier { min-inline-size: 7rem; flex: none; }
+
+/* ── 档位下拉（快填菜单 · 模型参数批五轮 · 2026-10-10）──────────────────────────
+   `select` 自动吃全站 `appearance: base-select` + `::picker(select)` 卡形（`renderer/codex.css` 上文）
+   ⇒ 与设置页其余下拉（agent 参数 ∕ 会诊 ∕ 协议格式）**同族**；本档只补两处布局位。
+   形态 = 「输入框 + 档位下拉」同排（下拉是快填菜单、输入框是唯一值持有者 —— 见 `renderer/context-tiers.mjs`）。 */
+.settings-field-pair { display: flex; align-items: center; gap: 6px; }
+.settings-field-pair > input.settings-field { flex: 1 1 auto; min-width: 0; }
+.settings-field-pair > select.settings-field.settings-tier-select { flex: none; min-inline-size: 10rem; }
+/* 表单内提示行（上下文窗口单位说明）——紧贴其输入（`.settings-form` gap 8px 对提示过宽）。 */
+.settings-form > .settings-field-hint { margin-top: -4px; }
 
 /* ══════════════════════════════════════════════════════════════════════════
    ── 会话轮导航栏（原对话小地图 · ZCode 形重做 · 2026-10-04）──────────────────
@@ -947,7 +1054,9 @@ select optgroup::before { color: var(--fg-muted); font-weight: 500; }
    密钥四钮 ∕ 索引重建 ∕ 会诊增删 ∕ 顾问保存）+ `.settings-submit`（表单提交族：添加渠道 ∕ 拉取模型 ∕
    MCP 提交）。危险系（removeProvider ∕ providerKeyDelete ∕ keyDelete ∕ consultRemove）= 静默灰 ∕ hover 红。 */
 .settings-content .settings-row-action,
-.settings-content .settings-submit {
+.settings-content .settings-submit,
+.settings-modal .settings-row-action,
+.settings-modal .settings-submit {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -962,16 +1071,31 @@ select optgroup::before { color: var(--fg-muted); font-weight: 500; }
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 .settings-content .settings-row-action:not(:disabled):hover,
-.settings-content .settings-submit:not(:disabled):hover {
+.settings-content .settings-submit:not(:disabled):hover,
+.settings-modal .settings-row-action:not(:disabled):hover,
+.settings-modal .settings-submit:not(:disabled):hover {
   border-color: color-mix(in srgb, var(--fg) 30%, transparent);
   background: var(--hover-bg);
 }
 .settings-content .settings-row-action:not(:disabled):active,
-.settings-content .settings-submit:not(:disabled):active { background: var(--hover-bg-strong); }
+.settings-content .settings-submit:not(:disabled):active,
+.settings-modal .settings-row-action:not(:disabled):active,
+.settings-modal .settings-submit:not(:disabled):active { background: var(--hover-bg-strong); }
 .settings-content .settings-row-action:disabled,
-.settings-content .settings-submit:disabled { opacity: 0.4; cursor: default; }
+.settings-content .settings-submit:disabled,
+.settings-modal .settings-row-action:disabled,
+.settings-modal .settings-submit:disabled { opacity: 0.4; cursor: default; }
 .settings-content .settings-row-action:focus-visible,
-.settings-content .settings-submit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.settings-content .settings-submit:focus-visible,
+.settings-modal .settings-row-action:focus-visible,
+.settings-modal .settings-submit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* 保存钮 = 主题色实底（ZCode「保存」同形 —— 弹窗页脚主行动）；取消留描边（`.settings-row-action` 默认形）。 */
+.settings-modal .settings-submit:not(:disabled) {
+  border-color: transparent;
+  background: var(--accent-solid);
+  color: #fff;
+}
+.settings-modal .settings-submit:not(:disabled):hover { background: color-mix(in srgb, var(--accent-solid) 88%, var(--fg)); border-color: transparent; }
 .settings-content .settings-row-action[data-action="settings:removeProvider"],
 .settings-content .settings-row-action[data-action="settings:providerKeyDelete"],
 .settings-content .settings-row-action[data-action="settings:keyDelete"],

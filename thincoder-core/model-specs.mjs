@@ -242,66 +242,241 @@ const MODEL_SPECS = [
 ]
 const DEFAULT_SPEC = { context: 128_000, maxOutput: 32_000 }
 
-/** Look up spec by model name prefix (case-insensitive), conservative default for unknown models.
+/** 命名空间前缀剥离的**边界候选**（2026-10-10 泛化——原「剥第一个 `/` 一次」）。
  *
- * Vendor-namespace prefix stripping (2026-09-04)：第三方 token 市场（roapi/new-api/one-api/
- * aiproxy 聚合网关）惯例在模型名前加厂商前缀（zhipu/glm-5.3、openai/gpt-4o）。完整名未命中
- * 且含 "/" 时，剥掉第一个 "/" 前的 namespace 再按前缀匹配一次——ZHIPU/GLM-5.3 → glm-5.3 命中
- * 真实规格，不再降级 128K 默认。kimi/kimi-k3 的显式 alias 行保留为文档锚（发送路径
+ * 第三方 token 市场 / 反代聚合网关在模型名前加**路由前缀**，分隔符不止 `/`：
+ *   - 斜杠族（roapi/new-api/one-api/aiproxy）：`zhipu/glm-5.3`、`openai/gpt-4o`
+ *   - 冒号族（渠道聚合）：`cn:deepseek-v4-flash`、`global:glm-5.3`、`workbuddy:global:deepseek-v4.1-flash`
+ *   - 多段混合：`cl/cline-free/deepseek-v4.1-flash`、`qdcn/qfmodel`
+ * 剥离**只在 `:` ∕ `/` 边界**进行（不做任意位置的子串匹配——那样误命中面过大）：返回全名 +
+ * 每个边界之后的剩余串，长者在先。kimi/kimi-k3 的显式 alias 行保留为文档锚（发送路径
  * provider.core isRouter 依赖含 "/" 判定），通用机制已覆盖同类。 */
+function prefixCandidates(m) {
+  const out = [m]
+  for (let i = 0; i < m.length; i++) {
+    if (m[i] === ":" || m[i] === "/") {
+      const rest = m.slice(i + 1)
+      if (rest) out.push(rest)
+    }
+  }
+  return out
+}
+
 const warnedModels = new Set() // warn once per model name — spec lookup runs on every request (hot path)
 // Pre-sorted once at module scope — spec lookup runs on every request (agent, provider core,
 // context, auto-think, TUI rendering); re-sorting per call was wasteful.
 const SORTED_SPECS = [...MODEL_SPECS].sort((a, b) => b[0].length - a[0].length)
 
-/** Single table lookup shared by specForModel / specMatch — prefix match (case-insensitive)
- *  with vendor-namespace stripping. Returns null on a miss (DEFAULT_SPEC is the caller-side
- *  fallback and is deliberately NOT returned here — `matched` needs the miss itself).
- *  非串 model（外端脏载 / 手工档）归一等价空串 ⇒ 未命中 ⇒ 调用侧 DEFAULT_SPEC（#638 查表全性：
- *  下游无类型门——`.toLowerCase` 只认串，非串归一后本函数恒 total，同 providerSpec 文档句）。 */
-function lookupSpec(model) {
-  const m = (typeof model === "string" ? model : "").toLowerCase()
+/** 单串前缀匹配（长名优先）→ { prefix, spec } | null（SORTED_SPECS 已按前缀长度降序 ⇒ 首个命中即最长）。 */
+function matchPrefix(s) {
   for (const [prefix, spec] of SORTED_SPECS) {
-    if (m.startsWith(prefix.toLowerCase())) return spec
-  }
-  // Vendor-namespace strip: vendor/model — retry the prefix match on the bare model part.
-  const slash = m.indexOf("/")
-  if (slash > 0) {
-    const bare = m.slice(slash + 1)
-    for (const [prefix, spec] of SORTED_SPECS) {
-      if (bare.startsWith(prefix.toLowerCase())) return spec
-    }
+    if (s.startsWith(prefix.toLowerCase())) return { prefix, spec }
   }
   return null
 }
 
-/** Unknown model: warn ONCE (not per request) so a typo'd ID or a missing alias surfaces
+/** Single table lookup shared by specForModel / specMatch — prefix match (case-insensitive)
+ *  with namespace-boundary stripping. Returns null on a miss (DEFAULT_SPEC is the caller-side
+ *  fallback and is deliberately NOT returned here — `matched` needs the miss itself).
+ *  非串 model（外端脏载 / 手工档）归一等价空串 ⇒ 未命中 ⇒ 调用侧 DEFAULT_SPEC（#638 查表全性：
+ *  下游无类型门——`.toLowerCase` 只认串，非串归一后本函数恒 total，同 providerSpec 文档句）。
+ *
+ *  匹配序：①全名前缀命中直接返回（既有语义零变）；②未命中 ⇒ 逐边界候选重试，取**命中前缀最长者**
+ *  （最具体），并列取候选最长者（迭代自长至短 + 严格大于替换 ⇒ 天然成立）。 */
+function lookupSpec(model) {
+  const m = (typeof model === "string" ? model : "").toLowerCase()
+  if (!m) return null
+  const direct = matchPrefix(m)
+  if (direct) return direct.spec
+  let best = null
+  for (const cand of prefixCandidates(m)) {
+    if (cand === m) continue
+    const hit = matchPrefix(cand)
+    if (hit && (best === null || hit.prefix.length > best.prefix.length)) best = hit
+  }
+  return best ? best.spec : null
+}
+
+// ─── 用户覆写表（modelOverrides · 2026-10-10）───────────────────────────────────────────────
+// 内置 MODEL_SPECS 是源码硬表，用户改不了；反代 ∕ 聚合网关还会带来表内没有的模型名（`cn:auto`、
+// `global:gpt-5.4`、`qdcn/qfmodel`…）⇒ 一律落 DEFAULT_SPEC（128K ∕ 32K ∕ 无思考）。覆写表给用户
+// 一条**不改源码**的自救路径（ZCode `manualProviderModelRules` 同义）。
+//
+// 装配方式 = 模块级单写者：`specForModel(model)` 是**无 config 入参的纯查表**（23 个消费方按此
+// 调用），不能改签名 ⇒ 由 `loadConfig()` 在装载期 `setModelOverrides(...)` 注入（先例 =
+// 本档 `warnedModels` Set ∕ `theme.mjs` 单写者）。键 = 模型 ID；亦按**前缀**命中（键 `cn:` 即
+// 覆盖该渠道全部模型，键 `deepseek-v4.1-flash` 覆盖任何前缀包裹的同名模型）。
+const OVERRIDE_INT_FIELDS = ["context", "maxOutput"]
+const OVERRIDE_BOOL_FIELDS = ["thinking", "thinkAlwaysOn", "multimodal", "partialMode", "prefixMode", "noUsageStream"]
+const OVERRIDE_STR_FIELDS = ["thinkApi", "thinkEnabledValue", "reasoningEcho", "format", "reasoningEffortDefault"]
+
+/** 单条覆写清洗（纯函数）：可覆写叶白名单 + 逐叶类型判据；非法叶丢弃（不 throw——D-S1 软失败范式，
+ *  同 `providers[].context` 清洗先例）。返回清洗后对象，零有效叶 ⇒ null（调用侧计一次警告）。 */
+function sanitizeOverride(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null
+  const out = {}
+  for (const [k, v] of Object.entries(raw)) {
+    if (OVERRIDE_INT_FIELDS.includes(k)) { if (Number.isInteger(v) && v > 0) out[k] = v; continue }
+    if (OVERRIDE_BOOL_FIELDS.includes(k)) { if (typeof v === "boolean") out[k] = v; continue }
+    if (OVERRIDE_STR_FIELDS.includes(k)) { if (typeof v === "string" && v.trim()) out[k] = v.trim(); continue }
+    if (k === "reasoningEffortEnum") {
+      if (Array.isArray(v)) {
+        const vals = [...new Set(v.filter((x) => typeof x === "string" && x.trim()).map((x) => x.trim()))]
+        if (vals.length) out[k] = vals
+      }
+      continue
+    }
+    if (k === "tempRange") {
+      if (Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === "number" && Number.isFinite(x))) out[k] = [v[0], v[1]]
+      continue
+    }
+  }
+  return Object.keys(out).length ? out : null
+}
+
+let MODEL_OVERRIDES = Object.freeze({})
+let warnedOverrides = false
+
+/** 装配用户覆写表（`loadConfig` 单调用点）。键归一小写；非法条目整条丢弃 + 一次性警告。 */
+export function setModelOverrides(table) {
+  const clean = {}
+  const dropped = []
+  if (table && typeof table === "object" && !Array.isArray(table)) {
+    for (const [key, val] of Object.entries(table)) {
+      const k = typeof key === "string" ? key.trim().toLowerCase() : ""
+      if (!k) continue
+      const ov = sanitizeOverride(val)
+      if (!ov) { dropped.push(key); continue }
+      clean[k] = Object.freeze(ov)
+    }
+  }
+  MODEL_OVERRIDES = Object.freeze(clean)
+  if (dropped.length && !warnedOverrides) {
+    warnedOverrides = true
+    console.warn(`[config] modelOverrides: ${dropped.length} entr${dropped.length === 1 ? "y" : "ies"} ignored (no usable field — expected e.g. { "context": 1000000, "maxOutput": 384000, "thinking": true, "reasoningEffortEnum": ["low","high","max"] }): ${dropped.join(", ")}`)
+  }
+  return MODEL_OVERRIDES
+}
+
+/** 读面（端侧只读消费 ∕ 测试断言）。 */
+export function getModelOverrides() { return MODEL_OVERRIDES }
+
+/** 覆写命中：精确键 > 前缀键（长键优先）；候选亦逐边界剥离（`cn:glm-5.3` 可被 `glm-5.3` 键命中）。 */
+function overrideFor(model) {
+  const key = overrideKeyFor(model)
+  return key === null ? null : MODEL_OVERRIDES[key]
+}
+
+/** 命中的覆写键（端侧「重置为默认」需知道该删哪个键；无覆写 ⇒ null）。与 `overrideFor` 同判据单源。 */
+export function overrideKeyFor(model) {
+  const m = (typeof model === "string" ? model : "").toLowerCase()
+  if (!m) return null
+  const keys = Object.keys(MODEL_OVERRIDES)
+  if (keys.length === 0) return null
+  if (MODEL_OVERRIDES[m]) return m
+  const scan = (s) => {
+    let best = null
+    for (const k of keys) {
+      if (s.startsWith(k) && (best === null || k.length > best.length)) best = k
+    }
+    return best
+  }
+  for (const cand of prefixCandidates(m)) {
+    const k = scan(cand)
+    if (k) return k
+  }
+  return null
+}
+
+/** 合成：内置表命中 ∕ 用户覆写命中（任一）⇒ 生效 spec + 来源；两者皆无 ⇒ null（调用侧落 DEFAULT_SPEC）。
+ *  覆写与内置表合并 = 浅合并（覆写只写要改的叶——未写叶沿用内置值；内置未命中则沿用 DEFAULT_SPEC）。 */
+function composeSpec(model) {
+  const hit = lookupSpec(model)
+  const ov = overrideFor(model)
+  if (!hit && !ov) return null
+  const base = hit ?? DEFAULT_SPEC
+  return { spec: ov ? { ...base, ...ov } : base, source: ov ? "override" : "builtin" }
+}
+
+/** Unknown model: warn ONCE (not per request) so a typo'd ID or a missing row surfaces
  *  instead of silently degrading to the 128K default (IK5VGJ). The dedupe set is shared by
- *  specForModel / specMatch (PROVIDER.md §16 M5). */
+ *  specForModel / specMatch (PROVIDER.md §16 M5). 已有覆写 ⇒ 不算未知（composeSpec 命中，不警告）。 */
 function warnUnknownModel(model) {
   // 非串 model（脏载）归一空串 ⇒ 不警告（未登记 ≠ 拼错——不刷屏；#638 与 lookupSpec 同归一）
   const m = (typeof model === "string" ? model : "").toLowerCase()
   if (m && !warnedModels.has(m)) {
     warnedModels.add(m)
-    console.warn(`[config] model "${model}" not found in MODEL_SPECS — using default spec (128K context, 32K output). Check the model ID or add an alias.`)
+    console.warn(`[config] model "${model}" not found in MODEL_SPECS — using default spec (128K context, 32K output). Add a "modelOverrides" entry to ~/.thincoder/config.json (desktop: 设置 → 模型参数; CLI: /model → Model parameters) to set the real context window and reasoning levels.`)
   }
 }
 
 export function specForModel(model) {
-  const hit = lookupSpec(model)
-  if (hit) return hit
+  const r = composeSpec(model)
+  if (r) return r.spec
   warnUnknownModel(model)
   return DEFAULT_SPEC
 }
 
-/** specMatch(model) → { spec, matched }（PROVIDER.md §16 M5——切换回显的来源判定）。
- *  `matched:false` = DEFAULT_SPEC 兜底（未知模型）；与 specForModel 共享同一查表实现（单次），
- *  specForModel 的返回形状与共享对象契约零改（热路径零变）。 */
+/** specMatch(model) → { spec, matched, source }（PROVIDER.md §16 M5——切换回显的来源判定）。
+ *  `matched:false` = DEFAULT_SPEC 兜底（未知模型）；`source` = `"builtin"`（内置表命中）∕
+ *  `"override"`（用户覆写命中）∕ `"default"`（兜底）——桌面「来源」徽标的判据。
+ *  与 specForModel 共享同一合成实现（单次），specForModel 的返回形状与共享对象契约零改（热路径零变）。 */
 export function specMatch(model) {
-  const hit = lookupSpec(model)
-  if (hit) return { spec: hit, matched: true }
+  const r = composeSpec(model)
+  if (r) return { spec: r.spec, matched: true, source: r.source }
   warnUnknownModel(model)
-  return { spec: DEFAULT_SPEC, matched: false }
+  return { spec: DEFAULT_SPEC, matched: false, source: "default" }
+}
+
+// ─── 推理强度注册默认档（端差面上提 · 2026-10-10）────────────────────────────────────────────
+// 原 = VSC 端差表 `thincoder-vscode/src/specs.mjs` `EFFORT_DEFAULT_PREFIXES`（CORE-UNIFICATION
+// §2.13.4 #143「端侧自有」裁定）。桌面与 CLI 无此表 ⇒ 有档位枚举但无默认档时，思考强度钮恒显中性
+// `"—"`（render-core `effortSelection` 的 `registeredDefault` 恒 undefined）——本表上提进核后三端
+// 同源，VSC 端差表退场改为转口本函数。
+const EFFORT_DEFAULT_PREFIXES = [
+  ["deepseek-v4-flash-vision-exp", "high"],
+  ["deepseek-v4-flash", "high"],
+  // deepseek-v4.1-flash：与 `deepseek-v4-flash` 同物（`MODEL_SPECS` 行注明 —— V4.1-Flash 的 qwen-plan
+  // 渠道名），`.1` ≠ `-` ⇒ 原表前缀不覆盖 ⇒ 单独立行（族默认档同 `high`）。2026-10-10 补。
+  ["deepseek-v4.1-flash", "high"],
+  ["deepseek-flash", "high"],
+  ["deepseek-v4-pro", "high"],
+  ["kimi", "max"],
+  ["k3-256k", "high"],
+  ["k3", "max"],
+  ["glm-5", "max"],
+  ["qwen3.7-max", "xhigh"],
+  ["qwen3.8-max", "xhigh"],
+  ["qwen3.7-flash", "high"],
+  ["qwen3.8-flash", "high"],
+  ["qwen3.8-omni-flash", "high"],
+  ["qwen3.8-27b", "high"],
+  ["qwen3.6-flash", "high"],
+  ["qwen3.6-plus", "high"],
+  ["qwen3.6-max-preview", "high"],
+  ["qwen3.6-27b", "high"],
+  ["qwen3.6-35b-a3b", "high"],
+]
+
+/** 注册默认档（最长前缀优先；用户覆写 `reasoningEffortDefault` 优先于内置表）。未命中 ⇒ undefined
+ *  （端侧落占位「—」——不取枚举首项回落：effort 型族首项 = `none` ⇒ 换模型即静默关思考）。 */
+export function effortDefaultFor(model) {
+  const m = (typeof model === "string" ? model : "").toLowerCase()
+  if (!m) return undefined
+  const ov = overrideFor(model)?.reasoningEffortDefault
+  if (ov !== undefined) return ov
+  const scan = (s) => {
+    let best = null
+    for (const [prefix, value] of EFFORT_DEFAULT_PREFIXES) {
+      if (s.startsWith(prefix) && (best === null || prefix.length > best[0].length)) best = [prefix, value]
+    }
+    return best ? best[1] : undefined
+  }
+  for (const cand of prefixCandidates(m)) {
+    const hit = scan(cand)
+    if (hit !== undefined) return hit
+  }
+  return undefined
 }
 
 /**
@@ -317,8 +492,11 @@ export function specMatch(model) {
  *
  * Validation is defensive (pure function): absent/invalid context falls back to the plain spec
  * (config.mjs loadConfig already warns + strips invalid values; this guard covers direct callers
- * and keeps the function total). specForModel stays a pure table lookup — callers without a
- * provider keep using it.
+ * and keeps the function total). specForModel stays a config-free lookup (table + registered
+ * modelOverrides) — callers without a provider keep using it.
+ *
+ * 生效序（低 → 高）：DEFAULT_SPEC < MODEL_SPECS 命中 < `modelOverrides`（模型级）< `providers[].context`
+ * （渠道级最具体——本函数）。同一模型在不同端点的真实窗口差异由渠道级承载。
  */
 export function providerSpec(provider) {
   const spec = specForModel(provider?.model ?? "")

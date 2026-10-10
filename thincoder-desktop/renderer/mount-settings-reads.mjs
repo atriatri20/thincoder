@@ -239,5 +239,45 @@ export function createReads(deps = {}) {
     })
   }
 
-  return { loadProviders, loadModels, loadAgent, loadMcp, loadEnv, loadTools, loadUsage }
+  /** 「编辑模型配置」弹窗读数（`model:spec` · 2026-10-10 · 模型参数能力批）：选中模型 ⇒ 解析值 + 来源 +
+   *  命中覆写键（表单回填 ∕ 「重置为默认」判据）。**行面零第二探针**：候选面复用 `model` 切片（同源），
+   *  读成后**就地改写该行**的 `context ∕ maxOutput ∕ thinking ∕ effortEnum ∕ effortDefault ∕ source`
+   *  六键（覆写保存后的行徽标 ∕ 「已覆写」标记即时随动——零网络复探）。
+   *  切片形 = `{ open, id, spec }`——`open` 由出口族控（本档只在成功读成时置真）；**读失败 ⇒ 退场**
+   *  （`open:false` + 失败面：模态体内无失败串位，退场让设置页的 notice 可见 —— 零静默）。
+   *  id 缺（未选）⇒ 退场。 */
+  async function loadModelParams(id = null) {
+    const held = store.get().settings?.modelParams ?? {}
+    const target = typeof id === "string" && id !== "" ? id : str(held.id)
+    if (target === null) {
+      setSettings({ modelParams: { open: false, id: null, spec: null } })
+      return
+    }
+    setSettings({ modelParams: { open: true, id: target, spec: held.id === target ? held.spec ?? null : null } })
+    const receipt = await ask("model:spec", { id: target })
+    if (receipt.ok !== true || receipt.spec === null || typeof receipt.spec !== "object") {
+      setSettings({ modelParams: { open: false, id: null, spec: null } })
+      report("model", receipt.ok === true ? { reason: "invalid-shape" } : receipt, "model:spec")
+      return
+    }
+    const spec = {
+      id: str(receipt.id) ?? target,
+      source: str(receipt.source),
+      overrideKey: str(receipt.overrideKey),
+      context: receipt.spec.context,
+      maxOutput: receipt.spec.maxOutput,
+      thinking: receipt.spec.thinking === true,
+      alwaysOn: receipt.spec.alwaysOn === true,
+      effortEnum: listOf(receipt.spec.effortEnum),
+      effortDefault: str(receipt.spec.effortDefault),
+    }
+    const model = store.get().settings?.model ?? {}
+    const models = listOf(model.models).map((row) =>
+      row !== null && typeof row === "object" && row.id === target
+        ? { ...row, context: spec.context, maxOutput: spec.maxOutput, thinking: spec.thinking, effortEnum: spec.effortEnum, effortDefault: spec.effortDefault, source: spec.source }
+        : row)
+    setSettings({ notice: null, model: { ...model, models }, modelParams: { open: true, id: target, spec } })
+  }
+
+  return { loadProviders, loadModels, loadAgent, loadMcp, loadEnv, loadTools, loadUsage, loadModelParams }
 }

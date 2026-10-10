@@ -93,6 +93,35 @@ export function createProviderExits(deps = {}) {
     confirmSecretDelete(() => { void runDeleteProviderKey(name) })
   }
 
+  /** 渠级上下文窗口编辑态（2026-10-10 · 模型参数能力批 —— CLI `setContextFlow` 对位）：开 ∕ 消两件
+   *  （输入形换于副行尾 —— 视图 `deps.ctxEdit` 单源判据）。开 = 落本行名；消 = 回静止 + 清失败种子
+   *  （取消 = 弃输入 —— 同钥行 `cancelKeyEdit` 语义，含 #652 草稿失效声明）。 */
+  const openCtxEdit = (name) => setProvidersSlice({ ctxEdit: typeof name === "string" && name !== "" ? name : null })
+  const cancelCtxEdit = () => {
+    const input = typeof document?.querySelector === "function" ? document.querySelector(`${slot} [data-provider-ctx-input]`) : null
+    invalidateDrafts?.(typeof input?.getAttribute === "function" ? input.getAttribute("data-draft-scope") : null)
+    setProvidersSlice({ ctxEdit: null, ctxDraft: null })
+  }
+
+  /** 渠级上下文窗口保存出口：读行内输入现值（**K 单位**）⇒ `provider:setContext`（写后复读行面）。
+   *  空值 ⇒ **清除覆写**（回模型规格值 —— 合法意图，非错误；沿 CLI `setContextFlow` 空输入同义）；
+   *  非法值 ⇒ 主侧 `invalid-value` 拒（段级失败面 + `ctxDraft` 落键入 —— 失败不丢键入，同钥行 #615②）。 */
+  async function saveProviderCtx(name) {
+    const input = typeof document?.querySelector === "function" ? document.querySelector(`${slot} [data-provider-ctx-input]`) : null
+    const value = typeof input?.value === "string" ? input.value.trim() : ""
+    const receipt = await ask("provider:setContext", { name, context: value === "" ? null : value })
+    if (receipt.ok !== true) {
+      report("providers", receipt, "provider:setContext")
+      setProvidersSlice({ ctxDraft: { name, value } })
+      return
+    }
+    invalidateDrafts?.(typeof input?.getAttribute === "function" ? input.getAttribute("data-draft-scope") : null)
+    clearReport()
+    setProvidersSlice({ ctxEdit: null, ctxDraft: null })
+    await loadProviders()
+    onProvidersChanged?.() // 上下文窗口影响压缩阈值 ∕ 候选面探针 ⇒ 同拍刷新（沿代理开关先例）
+  }
+
   /** 渠级代理开关出口（S5）：布尔直发（主侧 `true` 写 ∕ `false` 删键）；失败 ⇒ 段级失败面
    *  （**零乐观写** —— 复选值随读档面回退）。 */
   async function setProviderProxy(name, value) {
@@ -122,6 +151,7 @@ export function createProviderExits(deps = {}) {
       model: String(data.get("model") ?? ""),
       format: String(data.get("format") ?? ""),
       key: String(data.get("key") ?? ""),
+      context: String(data.get("context") ?? ""),
     }
     if (draft.baseURL.trim() === "") {
       console.error("[renderer] provider:models skipped: baseURL is required")
@@ -142,6 +172,9 @@ export function createProviderExits(deps = {}) {
     onProviderKeyCancel: () => cancelKeyEdit(),
     onProviderKeySave: (name) => void saveProviderKey(name),
     onProviderKeyDelete: (name) => deleteProviderKey(name),
+    onProviderCtxEdit: (name) => openCtxEdit(name),
+    onProviderCtxCancel: () => cancelCtxEdit(),
+    onProviderCtxSave: (name) => void saveProviderCtx(name),
     onSetProxy: (name, value) => void setProviderProxy(name, value),
     onFetchModels: (event) => void fetchModels(event),
   }

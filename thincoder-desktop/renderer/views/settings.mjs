@@ -166,13 +166,23 @@ export function settingsModel(state) {
       edit: str(settings.providers?.edit), probe: objOf(settings.providers?.probe), draft: objOf(settings.providers?.draft),
       // #615②：失败径草稿种子（`{ name, value }` ∕ `null` —— 消费面 = 渠道段钥行输入回填，`settings-sections.mjs` `keyControls`）
       keyDraft: objOf(settings.providers?.keyDraft),
+      // 2026-10-10（模型参数能力批）：渠级上下文窗口编辑态（`ctxEdit` = 编辑中渠道名 ∕ null；`ctxDraft` = 失败径键入种子）
+      ctxEdit: str(settings.providers?.ctxEdit), ctxDraft: objOf(settings.providers?.ctxDraft),
     },
     model: {
       state: stateOf(settings.model),
       provider: typeof settings.model?.provider === "string" ? settings.model.provider : null,
       current: typeof settings.model?.current === "string" ? settings.model.current : null,
       // #842：行保持带渠形（全渠扇出面 `{ provider, id }` 行穿透至视图——行自带渠；串行 / 无渠行 ⇒ `provider: null`）。
-      models: listOf(settings.model?.models).map((row) => ({ id: modelIdOf(row), provider: str(row?.provider) })).filter((row) => row.id !== null),
+      // 2026-10-10（模型参数批）：行另携**规格面三键** —— `context`（K 徽标）· `source`（「已覆写」提示：
+      // 编辑钮染主题色）· `thinking`（思考能力位）；主侧 `modelEntry` 投影直取，渲染面零自判。
+      models: listOf(settings.model?.models).map((row) => ({
+        id: modelIdOf(row),
+        provider: str(row?.provider),
+        context: row?.context,
+        source: str(row?.source),
+        thinking: row?.thinking === true,
+      })).filter((row) => row.id !== null),
     },
     agent: {
       state: stateOf(settings.agent),
@@ -348,7 +358,9 @@ function langBody(model, handlers) {
  *  （`loading` 期零体）；`providers` ∕ `model` ∕ `mcp` ∕ `tools` 沿各自旧判（零行为改）。
  *  **伪段**（appearance ∕ language · 2026-10-05）：零切片零状态词，体恒在场。 */
 function sectionBody(name, model, handlers) {
-  const deps = { channelForm: channelFormTree, verifyControl, reasonWord, formats: FORMATS, edit: model?.providers?.edit ?? null, keyDraft: model?.providers?.keyDraft ?? null }
+  const deps = { channelForm: channelFormTree, verifyControl, reasonWord, formats: FORMATS, edit: model?.providers?.edit ?? null, keyDraft: model?.providers?.keyDraft ?? null,
+    // 渠级上下文窗口编辑态（2026-10-10 · 模型参数能力批 —— 渠道段行面判据面）
+    ctxEdit: model?.providers?.ctxEdit ?? null, ctxDraft: model?.providers?.ctxDraft ?? null }
   if (name === "appearance") return themeBody(model, handlers)
   if (name === "language") return langBody(model, handlers)
   if (name === "providers") return [sectionStateNode(model.providers.state), ...providersBody(model.providers, handlers, deps)]

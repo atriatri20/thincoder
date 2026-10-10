@@ -151,6 +151,7 @@
   "reasoning.low": "低",
   "reasoning.minimal": "最小",
   "reasoning.none": "关闭",
+  "reasoning.unset": "未设置",
   "reasoning.enabled": "推理",
   "task.in_progress": "进行中",
   "goal.objective": "目标",

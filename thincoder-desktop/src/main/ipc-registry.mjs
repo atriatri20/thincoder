@@ -23,7 +23,8 @@ import {
 /** 转口群（#685 拆档）：二十四项设置族 ∕ 索引数据面 / 台账相位 / 配置写 —— 出档 `ipc-relays.mjs`（表行逐字不动）。 */
 import {
   providerListChannel, providerSaveChannel, providerRemoveChannel, providerVerifyChannel, modelListChannel,
-  providerSetKeyChannel, providerDelKeyChannel, providerModelsChannel, providerSetProxyChannel, modelCatalogChannel,
+  providerSetKeyChannel, providerDelKeyChannel, providerModelsChannel, providerSetProxyChannel, providerSetContextChannel, modelCatalogChannel,
+  modelSpecChannel, modelSpecSaveChannel, modelSpecResetChannel,
   settingsAgentChannel, mcpListChannel, mcpSaveChannel, mcpRemoveChannel, configWriteChannel, ledgerReadChannel,
   batchStatusChannel, indexBuild, indexStatusChannel, settingsEnvChannel, settingsToolsChannel, mcpToolsChannel,
   mcpUpdateChannel, mcpReconnectChannel,
@@ -56,8 +57,12 @@ const HANDLERS = Object.freeze({
   "provider:delKey": providerDelKeyChannel,
   "provider:models": providerModelsChannel,
   "provider:setProxy": providerSetProxyChannel,
+  "provider:setContext": providerSetContextChannel,
   "model:list": modelListChannel,
   "model:catalog": modelCatalogChannel,
+  "model:spec": modelSpecChannel,
+  "model:specSave": modelSpecSaveChannel,
+  "model:specReset": modelSpecResetChannel,
   "settings:agent": settingsAgentChannel,
   "mcp:list": mcpListChannel,
   "mcp:save": mcpSaveChannel,

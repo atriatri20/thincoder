@@ -344,7 +344,7 @@ export function createModelMenu(deps) {
       item.innerHTML = `<span>${label}</span>${level === selectedReasoning ? '<span class="check">✓</span>' : ""}`
       item.addEventListener("click", () => {
         selectedReasoning = level
-        reasoningBtn.textContent = level === "none" ? "off" : label
+        reasoningBtn.textContent = reasoningBtnText(level)
         reasoningBtn.classList.toggle("active", level !== "none")
         reasoningDropdown.style.display = "none"
         post("selectReasoning", { reasoning: level })
@@ -370,8 +370,11 @@ export function createModelMenu(deps) {
     // 不得回落 `levels[0]`：effort 型新档（qwen3.7/3.8-flash 族）首项 = `"none"` ⇒ 换模型即静默关思考。
     if (levels.length > 0) selectedReasoning = effortSelection(levels, selectedReasoning, m.effortDefault) ?? ""
     const visible = levels.length > 0 ? selectedReasoning : "off"
-    reasoningBtn.textContent = visible === "" ? "—" : visible === "none" ? "off" : (reasoningLabel(visible))
-    reasoningBtn.classList.toggle("active", levels.length > 0 && visible !== "off" && visible !== "")
+    reasoningBtn.textContent = reasoningBtnText(visible)
+    // active 判据单源 = 点选径（`level !== "none"`）：**只有真档位**才亮。原写 `visible !== "off"` —— 而
+    // `visible` 的可达值域是 `""` ∕ `"none"` ∕ 真档位（`"off"` 只出现在枚举为空的分支）⇒ 该判据对「关闭」
+    // 恒真 ⇒ 点选径熄灭而推送径点亮（真机实测的自相矛盾），2026-10-10 收正。
+    reasoningBtn.classList.toggle("active", levels.length > 0 && visible !== "none" && visible !== "")
   }
 
   function toggleDropdown(el, build) {
@@ -391,6 +394,22 @@ export function createModelMenu(deps) {
     return t("reasoning." + (level || "none"))
   }
 
+  /** 档位钮文字（**显示层单源** —— 三处消费：下拉项点选 ∥ `selectModel` ∥ `applyModels`）。
+   *
+   *  ① **`off` ∥ `none` 同义出词**（2026-10-10 收正 · 参照 ZCode `thoughtLevelOptions.ts` 的
+   *     `THOUGHT_LEVEL_LABEL_IDS` 别名表：`disabled/false/no/none/nothink/off…` 一律映到同一个「关闭」词条）
+   *     —— 本件三处原为**硬编码英文 `"off"` 字面**，中文界面下选中「关闭」后钮上会露出英文（且词表里没有
+   *     `reasoning.off` 键，即便改走 `t()` 也只会回落成键名）⇒ 统一经 `reasoningLabel("none")` 出词。
+   *  ② **中性档 `""`（未设置）⇒ `t("reasoning.unset")`**（原为 `"—"`）：ZCode 同一状态用
+   *     `chat.toolbar.thoughtLevel.placeholder`（「选择思考档位」）—— 不把「缺失选择」画成一个看起来像档位
+   *     的记号，也不**凭空断言**某个档位（同源注 = ZCode `ThoughtLevelCycleControl`「未选／失效及关闭值始终
+   *     为零进度，不能把缺失选择投影成首档」）。
+   *  ③ **纯显示**：本函数不写任何状态 ⇒ 零回写 ∥ 零载荷影响（写径仍只由显式点选 ∥ drift 门触发）。 */
+  function reasoningBtnText(visible) {
+    if (visible === "" || visible === undefined || visible === null) return t("reasoning.unset")
+    return reasoningLabel(visible === "off" ? "none" : visible)
+  }
+
   /** models message: apply the pushed model list + persisted prefs.（`model-picker.js:111-151` 逐字） */
   function applyModels(m) {
     _models = m.models || []
@@ -408,8 +427,8 @@ export function createModelMenu(deps) {
         // 中性档 `""`——不得回落 `levels[0]`（§15.4；`levels[0] === "none"` 族两径都不再被静默关思考）。
         if (levels.length > 0) selectedReasoning = effortSelection(levels, selectedReasoning, match.effortDefault) ?? ""
         const visible = levels.length > 0 ? selectedReasoning : "off"
-        reasoningBtn.textContent = visible === "" ? "—" : visible === "none" ? "off" : (reasoningLabel(visible))
-        reasoningBtn.classList.toggle("active", levels.length > 0 && visible !== "off" && visible !== "")
+        reasoningBtn.textContent = reasoningBtnText(visible)
+        reasoningBtn.classList.toggle("active", levels.length > 0 && visible !== "none" && visible !== "") // 同 `selectModel` 注：只有真档位才亮
         // 回写门（fork 重设计 · 2026-10-05——**drift-only**，根治档位震荡死循环）：
         // 原形 = idle 态每次 models 推送无条件回发 selectModel + selectReasoning——selectModel 恒为
         // 同值回声（match 即按 prefs.model 检得），与 selectReasoning 两个并发 session:prefs 回执

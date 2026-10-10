@@ -16,6 +16,8 @@
  */
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
+// 常见档位下拉（单一来源 —— 与「编辑模型配置」弹窗同表；K 单位口径见 `renderer/context-tiers.mjs` 档头）。
+import { CONTEXT_K_TIERS, tierSelectNode } from "../context-tiers.mjs"
 
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */
 const listOf = (value) => (Array.isArray(value) ? value : [])
@@ -103,6 +105,25 @@ export function channelFormTree(form, handlers = {}) {
     })
   }
   children.push(...fieldPair("key", "password", "settings.providers.keyLabel", seed("key")))
+  // 上下文窗口（2026-10-10 · 模型参数能力批 —— CLI `/model → Set context window` 的表单对位）：
+  // **K 单位**（128 = 128K —— 与核 `providers[].context` 同单位；模型级覆写用 tokens，两处标签各标单位）；
+  // 留空 ⇒ 不落键 = 用模型规格值。**输入框 + 档位下拉同排**（下拉 = 快填菜单，输入框仍是唯一值持有者）。
+  children.push({ tag: "label", props: { class: "settings-field-label", for: "context" }, children: [t("settings.providers.contextLabel")] })
+  children.push({
+    tag: "div",
+    props: { class: "settings-field-pair" },
+    children: [
+      { tag: "input", props: { class: "settings-field", id: "context", name: "context", type: "text", "data-draft": "", ...seed("context") } },
+      tierSelectNode({
+        tiers: CONTEXT_K_TIERS,
+        className: "settings-field settings-tier-select",
+        label: t("settings.providers.contextLabel"),
+        placeholder: t("settings.tiers.placeholder"),
+        props: { onChange: handlers?.onPickTier },
+      }),
+    ],
+  })
+  children.push({ tag: "span", props: { class: "settings-field-hint" }, children: [t("settings.providers.contextHint")] })
   children.push({ tag: "label", props: { class: "settings-field-label", for: "active" }, children: [t("settings.providers.activeToggle")] })
   children.push({
     tag: "input",

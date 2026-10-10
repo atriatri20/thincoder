@@ -29,7 +29,7 @@ import { _configPath, resolveProviders, writeConfigAtomic } from "@thincoder/cor
 import { SUPPORTED_LOCALES, normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
 import { channelUnavailableMessage, probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
 import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
-import { specForModel } from "@thincoder/core/model-specs.mjs"
+import { specForModel, specMatch, effortDefaultFor, getModelOverrides, overrideKeyFor } from "@thincoder/core/model-specs.mjs"
 import { thinkOffPath, applyAdvisorEffort } from "@thincoder/core/think-off.mjs"
 import { _checkKnownKeyValue } from "@thincoder/core/agent-tools/settings.mjs"
 import { readIndexCounts } from "./index-status.mjs"
@@ -87,15 +87,28 @@ export function modelsFace(config) {
 }
 
 /**
- * 逐模型档位投影（`docs/desktop/design/PROJECT.md` §2 KD-18 端侧零族别自判）：`{ id, effortEnum,
- * thinkOff }` 三键闭集逐项——两判据单源 = 核 `specForModel(id).reasoningEffortEnum`
- * （`thincoder-core/model-specs.mjs:287`）与 `thinkOffPath(spec)`（`thincoder-core/think-off.mjs:22`）。
+ * 逐模型档位 ∕ 规格投影（`docs/desktop/design/PROJECT.md` §2 KD-18 端侧零族别自判）：逐项
+ * `{ id, effortEnum, thinkOff, effortDefault, context, maxOutput, thinking, source }`——判据单源 =
+ * 核 `specMatch(id)`（`thincoder-core/model-specs.mjs`：内置表命中 ∕ 用户覆写 ∕ 兜底 + `source`）与
+ * `effortDefaultFor(id)`（注册默认档 —— 思考强度钮初值；2026-10-10 端差表上提进核）与 `thinkOffPath(spec)`
+ * （`thincoder-core/think-off.mjs`）。
  * 未声明枚举 ⇒ `[]`（键恒在，渲染面免守卫——先例 = VSC 空枚举零渲染）；未登记模型 ⇒ 空枚举 +
- * 默认规格判据（核 `DEFAULT_SPEC` 非 effort 族 ⇒ off 可达）。
+ * 默认规格判据（核 `DEFAULT_SPEC` 非 effort 族 ⇒ off 可达）+ `source:"default"`。
+ * **2026-10-10 扩键**：`context ∕ maxOutput ∕ thinking ∕ effortDefault ∕ source` 五键纯增（设置面
+ * 「模型参数」段与思考强度钮消费）；旧消费面（模型菜单 ∕ agent 段槽）读旧键 ⇒ 零破坏。
  */
 const modelEntry = (id) => {
-  const spec = specForModel(id)
-  return { id, effortEnum: spec.reasoningEffortEnum ?? [], thinkOff: thinkOffPath(spec) }
+  const r = specMatch(id)
+  return {
+    id,
+    effortEnum: r.spec.reasoningEffortEnum ?? [],
+    thinkOff: thinkOffPath(r.spec),
+    effortDefault: effortDefaultFor(id) ?? null,
+    context: r.spec.context,
+    maxOutput: r.spec.maxOutput,
+    thinking: r.spec.thinking === true,
+    source: r.source,
+  }
 }
 
 /** 渠条目持密钥判据（全渠扇出前的**渠滤**单点）—— 对位 VSC `isProviderConfigured` 的 `resolveKey` 口径
@@ -297,4 +310,88 @@ export function settingsAgent(payload) {
   }
   if (!w.ok) return { ok: false, reason: w.reason, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()) }
   return { ok: true, reason: null, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()), providerState: providerStateOf(loadConfig()) }
+}
+
+/* ─── 模型参数（`modelOverrides` 读写 · 2026-10-10 · 模型参数能力批）──────────────────────────── */
+
+/** 桌面表单可写叶（与核 `sanitizeOverride` 同域的子集——真清洗 ∕ 类型判据仍在核；UI 首版暴露这五叶，
+ *  其余叶（`thinkApi` ∕ `multimodal` ∕ `tempRange` ∕ `partialMode` ∕ `prefixMode` ∕ `reasoningEcho` ∕
+ *  `format` ∕ `noUsageStream`）经核可写、桌面表单不暴露（手改 config.json 生效）。 */
+const OVERRIDE_WRITABLE = new Set(["context", "maxOutput", "thinking", "thinkAlwaysOn", "reasoningEffortEnum", "reasoningEffortDefault"])
+
+/** 写后核表刷新：`writeConfigAtomic` 只落盘，模块级覆写表（`setModelOverrides`）须经 `loadConfig` 重注册
+ *  ——否则本进程内 `specForModel` ∕ `modelEntry` 仍读旧表（新覆写「保存了但界面没变」的根因面）。 */
+function refreshOverrides() {
+  try { loadConfig() } catch { /* 畸形档：读面已另有失败面，此处不抛 */ }
+}
+
+/**
+ * `model:spec(payload)` ⇒ `{ ok, id, source, overrideKey, override, spec }`——「模型参数」段读数。
+ * `spec` = 生效值（`context ∕ maxOutput ∕ thinking ∕ alwaysOn ∕ effortEnum ∕ effortDefault`），
+ * `source` = 核 `specMatch().source`（`builtin` ∕ `override` ∕ `default`——来源徽标），
+ * `overrideKey` = 命中的覆写键（「重置为默认」的删除目标），`override` = 覆写原文（表单回填）。
+ */
+export function modelSpec(payload) {
+  const id = String(payload?.id ?? "").trim()
+  if (!id) return { ok: false, reason: "invalid-shape" }
+  const r = specMatch(id)
+  const key = overrideKeyFor(id)
+  return {
+    ok: true,
+    id,
+    source: r.source,
+    overrideKey: key,
+    override: key === null ? null : { ...getModelOverrides()[key] },
+    spec: {
+      context: r.spec.context,
+      maxOutput: r.spec.maxOutput,
+      thinking: r.spec.thinking === true,
+      alwaysOn: r.spec.thinkAlwaysOn === true,
+      effortEnum: r.spec.reasoningEffortEnum ?? [],
+      effortDefault: effortDefaultFor(id) ?? null,
+    },
+  }
+}
+
+/**
+ * `model:specSave(payload)` ⇒ `{ ok:true, reason:null }` ∥ `{ ok:false, reason }`——载荷 `{ id, patch }`：
+ * 逐叶白名单过滤后写 `config.modelOverrides[id]`（**空 patch ⇒ 删键**——不留空壳）。写面 = 核唯一写盘
+ * 执行体（端侧零自写盘）；写成功 ⇒ 重注册覆写表（`refreshOverrides`）——本进程内后续 `model:list` ∕
+ * `model:catalog` 读数即时随动。
+ */
+export function modelSpecSave(payload) {
+  const id = String(payload?.id ?? "").trim()
+  const patch = payload?.patch
+  if (!id || patch === null || typeof patch !== "object" || Array.isArray(patch)) return { ok: false, reason: "invalid-shape" }
+  const clean = {}
+  for (const [key, value] of Object.entries(patch)) {
+    if (!OVERRIDE_WRITABLE.has(key)) continue
+    if (value === null || value === undefined) continue
+    clean[key] = value
+  }
+  const w = writeConfigAtomic(_configPath(), (disk) => {
+    if (disk.modelOverrides === null || typeof disk.modelOverrides !== "object" || Array.isArray(disk.modelOverrides)) disk.modelOverrides = {}
+    if (Object.keys(clean).length === 0) delete disk.modelOverrides[id]
+    else disk.modelOverrides[id] = clean
+    if (Object.keys(disk.modelOverrides).length === 0) delete disk.modelOverrides
+  })
+  if (!w.ok) return { ok: false, reason: w.reason }
+  refreshOverrides()
+  return { ok: true, reason: null }
+}
+
+/** `model:specReset(payload)` ⇒ 删 `modelOverrides[key]`（`key` 缺省取 `id`）——「重置为默认」。
+ *  空表 ⇒ 整键删除（规范形态）。写成功 ⇒ 重注册覆写表。 */
+export function modelSpecReset(payload) {
+  const key = String(payload?.key ?? payload?.id ?? "").trim()
+  if (!key) return { ok: false, reason: "invalid-shape" }
+  const w = writeConfigAtomic(_configPath(), (disk) => {
+    const table = disk.modelOverrides
+    if (table === null || typeof table !== "object" || Array.isArray(table)) return
+    delete table[key]
+    if (Object.keys(table).length === 0) delete disk.modelOverrides
+  })
+  if (!w.ok) return { ok: false, reason: w.reason }
+  refreshOverrides()
+  return { ok: true, reason: null }
 }

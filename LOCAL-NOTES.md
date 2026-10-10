@@ -17,6 +17,16 @@ mklink /J node_modules\@thincoder\core ..\thincoder-core
 验证：`grep -c assistantRealFrame node_modules/@thincoder/core/context-push.mjs` 应 ≥ 1。
 （renderer/ 下的改动不受影响——直接从仓库伺服。）
 
+**CLI ∕ VSC 同理（2026-10-10 补）**：`thincoder-cli` ∕ `thincoder-vscode` 的 `@thincoder/*` 链同样必须指向本地源码
+（`npm install` 会按 registry 版覆盖）。一次建齐五链：
+
+```bat
+node scripts/dev-link.mjs
+```
+
+（`--check` 只读判漂移；`--force` 可把 desktop 的**物化副本**换回联接——打包前仍应 `materialize-deps`。）
+CLI ∕ VSC 端源码现已直接消费核新导出（如 `effortDefaultFor`）⇒ **链缺位 = 端侧启动即报「无该导出」**，非静默降级。
+
 ## Electron 二进制（中国网络）
 
 ```bat

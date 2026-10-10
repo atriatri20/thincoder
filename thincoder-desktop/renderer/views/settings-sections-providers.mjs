@@ -19,6 +19,8 @@
  */
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
+// 常见档位下拉（K 单位 —— 单一来源同「编辑模型配置」弹窗；见 `renderer/context-tiers.mjs` 档头）。
+import { CONTEXT_K_TIERS, tierSelectNode } from "../context-tiers.mjs"
 
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */
 const listOf = (value) => (Array.isArray(value) ? value : [])
@@ -65,7 +67,7 @@ function subLineWord(row) {
  *  **S3 分档（#673 · 2026-09-29 —— 消）**：`failure === "hostBusy"` ⇒ 状态词「宿主繁忙」（≠ 渠道故障词）+
  *  **抑制渠道故障句**（载体为宿主忙，不得渲渠道故障文案 —— 载具 = `data-failure` 机检锚 + 词键分档；
  *  判据同 VSC `webview/settings-providers.js:189 ∕ :192`；单源 = `docs/vsc/design/SETTINGS.md` §2.12 展示面分档）。 */
-function subRowNode(row, handlers, editing) {
+function subRowNode(row, handlers, editing, ctxEditing, deps) {
   const unavailable = row?.available === false
   const hostBusy = unavailable && row?.failure === "hostBusy"
   const line = subLineWord(row)
@@ -75,7 +77,8 @@ function subRowNode(row, handlers, editing) {
     unavailable
       ? { tag: "span", props: { class: "settings-mark", "data-available": "false", "data-failure": failure }, children: [t(hostBusy ? "settings.reason.hostBusy" : "settings.reason.unavailable")] }
       : null,
-    ...(editing ? [] : [proxyNode(row, handlers)]),
+    ...(editing ? [] : contextControls(row, handlers, ctxEditing, deps)),
+    ...(editing || ctxEditing ? [] : [proxyNode(row, handlers)]),
   ]
   if (children.every((child) => child === null)) return null
   return { tag: "div", props: { class: "settings-row-sub" }, children }
@@ -128,10 +131,72 @@ function keyControls(row, handlers, editing, deps) {
   return controls
 }
 
+/** 渠级生效窗口读数（**K 单位** —— 渠级字段本即 K，显示与输入同单位；`Math.round(tokens/1024)` 与核
+ *  `providerSpec` 的 ×1024 互逆 ⇒ 有覆写时显示值与用户键入值逐字相同）。`tokens` 缺 ∕ 非正 ⇒ `—`。 */
+function ctxKWord(tokens) {
+  return Number.isFinite(tokens) && tokens > 0 ? `${Math.round(tokens / 1024)}K` : "—"
+}
+
+/** 渠级生效窗口的**裸 K 数**（编辑态占位用 —— 输入框内不带 `K` 后缀，免用户照抄出非法值）。 */
+function ctxKNumber(tokens) {
+  return Number.isFinite(tokens) && tokens > 0 ? String(Math.round(tokens / 1024)) : null
+}
+
+/** 渠级上下文窗口控件（2026-10-10 · 模型参数能力批 —— CLI `setContextFlow` 桌面对位）：静止 = 紧凑按钮
+ *  （`ctx 128K` = **生效值**；有渠道级覆写 ⇒ `data-override` 锚，CSS 染主题色）；编辑态 = K 输入 + 存 ∕ 消
+ *  （输入空 = 清除覆写 ⇒ 回模型规格值）。输入携 `[data-draft]`（作用域 `ctx:<名>`）—— 沿钥行编辑态同款
+ *  （#604 草稿保真 ∕ #615② 失败种子 ∕ #652 写成功失效）。
+ *  初值两径：有覆写 ⇒ 预填该 K 值（改而不重敲）；无覆写 ⇒ **空值 + 占位 = 生效 K 数**（看得到当前吃什么值，
+ *  且不因预填而静默造出一条覆写 —— 规格值非 K 整数倍，预填会失真）。
+ *  缺 handler ⇒ `wire` 落 `disabled`（诚实非死控 —— 沿全档通则）。 */
+function contextControls(row, handlers, editing, deps) {
+  if (editing) {
+    const draft = deps?.ctxDraft ?? null
+    const seeded = draft !== null && draft.name === row.name && typeof draft.value === "string" ? draft.value : undefined
+    const overrideK = Number.isInteger(row?.context) && row.context > 0 ? String(row.context) : undefined
+    const save = typeof handlers?.onProviderCtxSave === "function" ? () => handlers.onProviderCtxSave(row.name) : undefined
+    const cancel = typeof handlers?.onProviderCtxCancel === "function" ? () => handlers.onProviderCtxCancel() : undefined
+    return [
+      { tag: "input", props: {
+        class: "settings-field settings-ctx-input", type: "text", inputmode: "numeric",
+        "data-provider-ctx-input": row.name, "data-draft": row.name, "data-draft-scope": `ctx:${row.name}`,
+        placeholder: ctxKNumber(row?.contextTokens) ?? t("settings.providers.contextPlaceholder"),
+        "aria-label": t("settings.providers.contextLabel"), value: seeded ?? overrideK,
+      } },
+      // 档位下拉（快填菜单 —— 恒为上方输入框的紧邻后继兄弟，出口族按此邻接解析；见 `renderer/context-tiers.mjs`）。
+      tierSelectNode({
+        tiers: CONTEXT_K_TIERS,
+        className: "settings-field settings-ctx-tier",
+        label: t("settings.providers.contextLabel"),
+        placeholder: t("settings.tiers.short"),
+        props: { onChange: handlers?.onPickTier },
+      }),
+      rowButton("settings:providerCtxSave", row.name, t("settings.save"), t("settings.save"), save),
+      rowButton("settings:providerCtxCancel", row.name, t("settings.cancel"), t("settings.cancel"), cancel),
+    ]
+  }
+  const edit = typeof handlers?.onProviderCtxEdit === "function" ? () => handlers.onProviderCtxEdit(row.name) : undefined
+  return [{
+    tag: "button",
+    props: wire({
+      class: "settings-row-action settings-ctx-btn",
+      type: "button",
+      "data-action": "settings:providerCtxEdit",
+      "data-name": row.name,
+      ...(Number.isInteger(row?.context) && row.context > 0 ? { "data-override": "" } : {}),
+      "aria-label": t("settings.providers.contextLabel"),
+      title: t("settings.providers.contextLabel"),
+    }, edit),
+    children: [`${t("settings.providers.contextShort")} ${ctxKWord(row?.contextTokens)}`],
+  }]
+}
+
 /** 渠道行（D37 两行卡）：主行 + 副行 + 条件第三行；编辑态 = 主行换形 [名 + 钥面 + 输入 + 存 ∥ 消]
- *  （代理 ∥ 移除 ∥ 校验暂撤 —— 取消即回；见档头 ②）。 */
+ *  （代理 ∥ 移除 ∥ 校验暂撤 —— 取消即回；见档头 ②）。**2026-10-10**：副行尾增渠级上下文窗口控件
+ *  （`ctxEdit` = 本行名 ⇒ 换输入形；钥编辑态中同撤 —— 一行一编辑态，防两输入并存）。 */
 function providerRowNode(row, handlers, deps, verify = null) {
   const editing = typeof deps?.edit === "string" && deps.edit !== "" && deps.edit === row.name
+  const ctxEditing = typeof deps?.ctxEdit === "string" && deps.ctxEdit !== "" && deps.ctxEdit === row.name
   /** 本行校验态（轮六）：结果行名对上 ⇒ `"ok"` ∥ `"fail"`；否则 `null`（按钮原词）。 */
   const verifyState = verify !== null && verify.name === row.name && (verify.kind === "ok" || verify.kind === "fail") ? verify.kind : null
   const onRemove = typeof handlers?.onRemoveProvider === "function" ? () => handlers.onRemoveProvider(row.name) : undefined
@@ -144,6 +209,7 @@ function providerRowNode(row, handlers, deps, verify = null) {
     props: {
       class: "settings-row", "data-provider": row.name,
       "data-active": row.active === true ? "" : undefined, "data-edit": editing ? "" : undefined,
+      "data-ctx-edit": ctxEditing ? "" : undefined,
     },
     children: [
       {
@@ -157,7 +223,7 @@ function providerRowNode(row, handlers, deps, verify = null) {
           ...(editing ? [] : [deps.verifyControl(row.name, handlers, verifyState), remove]),
         ],
       },
-      subRowNode(row, handlers, editing),
+      subRowNode(row, handlers, editing, ctxEditing, deps),
       reasonNode(row),
       verifyState === null || editing ? null : verifyNode(verify, deps),
     ],

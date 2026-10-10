@@ -185,6 +185,45 @@
 
 **边界（不做）**：非敏感值位（`baseURL` ∕ `model` ∕ `command` ∕ `args` 等）不解析；无缺省语法（`${env:VAR:-…}`）与转义形；MCP `url` ∕ `command` ∕ `args` 不解析；解析单遍（产物不再二次解析）。
 
+### 6.4 模型规格覆写键 `modelOverrides`（2026-10-10 · 模型参数能力批）
+
+**键面**：`config.json` 顶层 `modelOverrides`——`{ "<模型 ID 或前缀>": { <可覆写叶> } }`。默认 `{}`（`DEFAULTS` 单源 = `thincoder-core/config.mjs`）。
+
+**为什么**：`MODEL_SPECS` 是源码硬表（`thincoder-core/model-specs.mjs`），用户改不了；反代 ∕ 聚合网关还会带来表内没有的模型名（`cn:auto`、`global:gpt-5.4`、`qdcn/qfmodel`）⇒ 此前一律落 `DEFAULT_SPEC`（128K ∕ 32K ∕ 无思考），且**无任何覆写入口**（旧告警文案说 "add an alias"，该入口并不存在）。本键给用户一条不改源码的自救路径。
+
+**键匹配**：精确键 > 前缀键（长键优先）；候选亦逐 `:` ∕ `/` 边界剥离（`cn:glm-5.3` 可被 `glm-5.3` 键命中；
+键 `cn:` 覆盖该渠道全部模型）。
+
+**可覆写叶白名单**（逐叶类型判据；白名单外字段丢弃）：`context`（正整数 ∕ **tokens**——非 K 单位）·
+`maxOutput`（正整数）· `thinking` ∕ `thinkAlwaysOn` ∕ `multimodal` ∕ `partialMode` ∕ `prefixMode` ∕
+`noUsageStream`（布尔）· `thinkApi` ∕ `thinkEnabledValue` ∕ `reasoningEcho` ∕ `format` ∕
+`reasoningEffortDefault`（非空串）· `reasoningEffortEnum`（非空串数组，去重保序 = 强度低 → 高）·
+`tempRange`（二元数值数组）。
+
+**生效序（低 → 高）**：`DEFAULT_SPEC` < `MODEL_SPECS` 命中 < **`modelOverrides`** < `providers[].context`
+（渠道级最具体，K 单位——同一模型跨端点窗口差异归渠道级，见 `docs/core/design/PROVIDER.md` §15）。
+
+**装配与清洗**：模块级单写者 `setModelOverrides(table)`——`loadConfig` 装载期调用（`specForModel(model)` 是
+**无 config 入参的纯查表**，23 个消费方按此调用 ⇒ 不能改签名；先例 = `model-specs.mjs` 的 `warnedModels` Set ∕
+`theme.mjs` 单写者）。清洗 = 逐叶类型判据，非法条目**整条丢弃** + 进程级一次性警告（同 `providers[].context`
+清洗先例，绝不 throw——D-S1 软失败范式）；清洗后挂 `merged.modelOverrides` 供端侧读面。
+
+**写面**：桌面三条 IPC——`model:spec`（读：生效值 + `source` ∕ `overrideKey` + 覆写原文）·
+`model:specSave`（`{ id, patch }`，空 patch ⇒ 删键）· `model:specReset`（`{ key }` ⇒ 删键）；三者经核唯一
+写盘执行体 `writeConfigAtomic`，写成功即重注册覆写表（本进程内后续读数即时随动）。CLI 对位 =
+`/model → Model parameters…`（`thincoder-cli/src/tui/provider-admin.mjs` `setModelParamsFlow`，逐字段即写即存）。
+`settings` 工具亦接受 `modelOverrides.*` 路径（未知键原样通过——全量域；注意模型 ID 含 `.` 时点分路径不可用，
+走端侧表单）。
+
+**渠道级对位（2026-10-10 三批）**：`providers[].context` 的桌面写面 = `provider:setContext { name, context }`
+（`context` = **K 单位**正整数 ∕ `null` ∕ 空串 ⇒ 清除覆写；空值 = 合法意图非错误）+ `provider:save` 收 `context`
+（建渠时同写）；读面 = `provider:list` 行两键 `context`（覆写原文）∕ `contextTokens`（生效值，`providerSpec` 单源）；
+UI = 渠道表单「上下文窗口（K）」字段 + 渠道行副行 `ctx 128K` 紧凑钮（点入 K 输入编辑态）。核 `addProviderEntry`
+收可选 `context`（正整数才落键，其余静默不落 = 用模型规格值）。
+
+**纪律**：端侧零自写盘、零自建类型白名单（真清洗在核）；UI 首版只暴露六叶（`context` ∕ `maxOutput` ∕
+`thinking` ∕ `thinkAlwaysOn` ∕ `reasoningEffortEnum` ∕ `reasoningEffortDefault`）——其余叶手改 `config.json` 生效。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 现有决策面见 §3.1 A4 / A5 与 §4.1 第 1–4 行。**2026-09-15 批 5 并入**（自 `POOL-CONFIG-UNIFIED`）：

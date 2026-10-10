@@ -53,6 +53,7 @@ export const COMPOSER_DICT = Object.freeze({
     "reasoning.low": "Low",
     "reasoning.minimal": "Minimal",
     "reasoning.none": "Off",
+    "reasoning.unset": "Not set",
     "reasoning.enabled": "Reasoning",
     // ── ⑤ 控件行静态字面（中文模式收正批 · 2026-10-04 —— 消费面 = `renderer/chrome-words.mjs` DOM 补丁；
     //    核 `controls.mjs` ∕ `attach.mjs` 原字面 = VSC 逐字英文硬编码（C4），en 值逐字保持，zh 补译）──
@@ -103,6 +104,7 @@ export const COMPOSER_DICT = Object.freeze({
     "reasoning.low": "低",
     "reasoning.minimal": "最小",
     "reasoning.none": "关闭",
+    "reasoning.unset": "未设置",
     "reasoning.enabled": "推理",
     // ── ⑤ 控件行静态字面（与 en 块同拍 —— 键集须相等）──
     "toolbar.changeModel": "切换模型",

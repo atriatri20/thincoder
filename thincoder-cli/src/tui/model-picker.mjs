@@ -21,7 +21,7 @@ import { carryoverDefaultModel } from "./config-helpers.mjs"
 import { getProviderModels, modelListFailureText, dedupeModels } from "./model-catalog.mjs"
 import { createProviderAdmin } from "./provider-admin.mjs"
 
-/** createModelPicker(ctx) → { openModelPicker, selectModel, setProviderKey, setContextFlow, pickModelForSlot } */
+/** createModelPicker(ctx) → { openModelPicker, selectModel, setProviderKey, setContextFlow, setModelParamsFlow, pickModelForSlot } */
 export function createModelPicker(ctx) {
   const { agent, state, pushLine, persistRaw, askQuestion, maskKey, showPicker, closePicker, renderPickerLines, confirmDelete = () => { throw new Error("ctx.confirmDelete missing — deletion refused (fail-closed)") } } = ctx
   const { ansi, C } = ctx
@@ -81,6 +81,8 @@ export function createModelPicker(ctx) {
         await admin.setKeyFlow()
       } else if (e.action === "context") {
         await admin.setContextFlow()
+      } else if (e.action === "modelParams") {
+        await admin.setModelParamsFlow()
       }
     }
   }
@@ -139,6 +141,7 @@ export function createModelPicker(ctx) {
     if (agent.providers.length > 1) entries.push({ type: "item", text: "Remove provider…", action: "remove" })
     entries.push({ type: "item", text: "Set / change API key…", action: "key" })
     entries.push({ type: "item", text: "Set context window (K units)…", action: "context" })
+    entries.push({ type: "item", text: "Model parameters (context / thinking)…", action: "modelParams" })
     return entries
   }
 
@@ -319,7 +322,7 @@ export function createModelPicker(ctx) {
     renderPickerLines()
   }
 
-  return { openModelPicker, selectModel, setProviderKey: admin.setProviderKey, setContextFlow: admin.setContextFlow, pickModelForSlot }
+  return { openModelPicker, selectModel, setProviderKey: admin.setProviderKey, setContextFlow: admin.setContextFlow, setModelParamsFlow: admin.setModelParamsFlow, pickModelForSlot }
 }
 
 export { cascadeRemoveProvider } from "./provider-admin.mjs"
