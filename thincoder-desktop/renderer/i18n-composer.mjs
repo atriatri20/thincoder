@@ -69,7 +69,7 @@ export const COMPOSER_DICT = Object.freeze({
     "toolbar.planToggle": "Toggle plan mode",
     "toolbar.settings": "Settings",
     "toolbar.openSettings": "Open settings",
-    "attach.image": "Attach image",
+    "attach.file": "Attach file",
     "attach.label": "Attach",
   },
   zh: {
@@ -119,7 +119,7 @@ export const COMPOSER_DICT = Object.freeze({
     "toolbar.planToggle": "切换计划模式",
     "toolbar.settings": "设置",
     "toolbar.openSettings": "打开设置",
-    "attach.image": "附加图片",
+    "attach.file": "附加文件",
     "attach.label": "附件",
   },
 })

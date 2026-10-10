@@ -257,6 +257,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
    **零影响证据**：起跑窗补发按起跑快照 ⇒ `n = 0` 轮零 `done` 投递；**边界行写点唯一**（start 分支，每轮重写——边界行 = 计数元素（`n > 0`）∥ 无 ⇒ 标签元素）⇒ 无跨轮残留。**元素级契约（标签行 / 计数行 / `start`·`end` 语义）单源 = `WEBVIEW-PROTOCOL.md` §5**（本档只记档位与元素约束）。
   - **行/元素出即留（显示面 · 2026-10-01 自然形跟正 · 台账 #768）**：痕元素 = 流内事件，**出即留**——标签 ∥ 计数 ∥ cap ∥ 终态：**不改 ∥ 不删 ∥ 不退场**（零清理机器：无旧轮痕元素退场 ∥ 无就地换文）；新轮起跑 = **追加**（旧轮元素留置原位；逐行 `appendChild`）；
     **终态 = 追加终态元素**（`.digest-status` + `digest-done` ∕ `digest-failed`——词键 `digest.done` ∕ `digest.aborted` 直取；**不动原计数元素**）；**重建复列 = 全量（未结轮照现）**（§5.7——记录序 ≡ 恢复序）；**记录面照留**（§5.7 记录 ∥ `recordAppend` 零动）；口径 = 用户 2026-10-01 08:21「CLI/VSC也跟。」；被否 = 「只留当轮」恢复 ∥ 旧轮痕元素退场 ∥ 终态就地换文 ∥ 复列末轮。
+  - **残余元素（消化账务批 · 2026-10-05 · 台账 #930）**：`end` 载荷携 `unsettled > 0` ⇒ 追加残余元素（`.digest-status` 族——词键 `digest.residue`——核字典直取）；`= 0` ⇒ 零元素（零噪音）。机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31。
   - **裁 A（2026-10-01——两端随正 · 台账 #754）**：归档时点 = 起跑窗 ∥ 落位 = 当刻流末（起跑刻语义——起跑刻行族在流末 ⇒ 即「放族后」——`insertAfter` 边界行 = 计数元素 ∥ 无 ⇒ 标签元素）
     ∥ **迟到面 = 族锚位**（消化回收 `done` ⇒ `atBoundary`——边界行之后 ∥ 边界失效/无 ⇒ 尾追；会话退出 flush = 尾追——核 `subblocks/state.mjs` `:238` ∥ `:300-304`）——与桌面同形同义（口径 = 用户 02:21「A」；单源 = `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条）。
 - **终态补桩状态表**（`activity.js:211-230` 判定 + `:365-373` 调用；前置 = `id != null` ∧ 角色段合法（`[\w-]+`）∧ 回读解析一致——`FAMILY_ROLES` 前置退场（2026-09-19 收正，射程含 consult / escalate——见下「终态必现」）；不满足 → no-op + 记 `drop-unknown-role`）：
@@ -306,7 +307,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 **键文法单源**：relay 前缀文法 `RELAY_PREFIX_RE = /^([\w-]+)#(\d+)\//`（`thincoder-core/agent/relay-prefix.mjs:10`——角色段**不容空格**）；
 端侧内容面键 = `"sub:" + <role>#<id>`——构形单源 = rc `relaySubContentChunk`（B7 2a 换接：前缀剥除 ∕ 四面 gate 均在 rc）；端侧由 chunk `role` / `id` 重导（`thincoder-vscode/src/extension/panel-subagent-relay.mjs:139`——与 `path.head` 等价）。
 **键形收正（2026-09-19 · 本批）**：`consult` / `escalate` 的端侧键 = `sub:consult#4` / `sub:escalate#2`——**不含模型段**；
-实据 = 键构造（`panel-subagent-relay.mjs:139`）+ 既有断言 `thincoder-vscode/test/subagent-content-relay.test.mjs:129`（逐字 `["sub:escalate#2","sub:consult#1"]`）。
+实据 = 键构造（`panel-subagent-relay.mjs:139`）+ 既有断言 `thincoder-vscode/test/subagent-content-relay.test.mjs:129`（逐字 `["sub:escalate#2","sub:consult#1"]`）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 `activity.js:44-48` 的 `sub:consult <model> #<id>` 解析分支 = CLI 形态残留（端侧**无产者**）——保留不改，但**不作判据**。
 
 **出生面 = 存活闸（F-A3 · 本批 ①）**：出生事件 = `queued` 与 `started`（`[model]` token = 真启动锚）；命中三向：
@@ -380,7 +381,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 **终态必现（F-A2）**：
 
 - 「块缺失」判据**扩一形**：map 条目存在但元素被移除（live tombstone）+ 终态消息 ⇒ 走补桩（折叠桩 + 立即归档 + `late-terminal-stub` 痕迹），不再静默丢弃；**live / chunk 消息的 tombstone 丢弃语义零变化**（NFR-A1）。
-- **射程（2026-09-19）**：consult / escalate 的端侧键 = `sub:<role>#<id>`（**可单源重建**——`relay-prefix.mjs:10` 文法与内容面键构造 `panel-subagent-relay.mjs:130` 同形；实据 `subagent-content-relay.test.mjs:129`）⇒ **纳入补桩射程**（与 family 角色同规）。
+- **射程（2026-09-19）**：consult / escalate 的端侧键 = `sub:<role>#<id>`（**可单源重建**——`relay-prefix.mjs:10` 文法与内容面键构造 `panel-subagent-relay.mjs:130` 同形；实据 `subagent-content-relay.test.mjs:129`）⇒ **纳入补桩射程**（与 family 角色同规）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
   前置判据改 = `id != null ∧ 角色段合法（[\w-]+）∧ 回读解析一致`（`FAMILY_ROLES` **补桩前置**退场——D-W10 收窄；该族表在 ⏹ 可见性 / sync-async 词面仍存续——`activity-view.js:14` · 见上「出生面射程」）。
 
 **清屏可恢复（F-A5）**：心跳 + 既有两处再断言（`webviewReady` 握手后 · `loadSession` 清屏后同 tick）覆盖「boot / loadSession 清屏后仍存活者重现」；载荷与语义同 F-A4（同一存活投影）。
@@ -858,3 +859,4 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 修正轮（评审轮次 1 · 发现 1 ∥ 3）· eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §3 轮次 1 · 台账 #883）：§4.10 收正——**boot 播种径零写机制**（宿主簿记判回声——写面单点增参 `lastPushedPrefs` + 播种回声门）∥ 回声句内引收正（§4.2 ① ⇒ ②）。**产品码零触（修正轮）**。明细 = 批档 §2 修正轮块。
 - 2026-10-04（**流尾台账行组退役批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2 · 台账 #913）：§3 其余行去 `ledger-line.js` ∥ R2 迁核注收正（**八拆档 ⇒ 七拆档**——投递壳退场，核构件随之删除）。**零新语义**。明细 = 批档 §2。
 - 2026-10-04（**收口轮 · 父侧直接执行〔可 revert〕**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §6）：§3 文件表 `chat-messages.js` 读数 238 ⇒ **267**（收口复读）；引文重锚（`ledger-surface.mjs` 的 `:125-126` ⇒ `:83` ∥ `chat-messages.js` 的 `:194-200` ⇒ `:191-197`）。**零新语义**（读数 ∥ 坐标）。
+- 2026-10-05（**批 digest-accounting · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §1 · 需求 §4.15 · 台账 #930）：§5.1 增**残余元素**条（`end` 载荷 `unsettled > 0` ⇒ 追加 `.digest-status` 残余元素——词键 `digest.residue` 核字典直取；`= 0` ⇒ 零元素）。**零新语义**（判据 / 机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31）。明细 = 批档 §2。

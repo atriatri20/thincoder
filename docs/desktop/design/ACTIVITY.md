@@ -31,7 +31,7 @@
 1. **块内容区跟滚（行为对齐 VSC §5.5）**——机制 = 核件原语直消费（`initBlockFollow` ∕ `maybeScrollBlock`——`thincoder-render-core/subblocks/block.mjs`）；桌面四点接线 = ① 出生 ∕ 接管（`subElementOf`）· ② 内容增量（`replayRows` 追加后）· ③ 挂载补钉（`createSubBlock` `family.append` 后）· ④ 接管径补钉（`replaceWith` 后）——落点 = `views/pool-subagents.mjs`。
    **不夺阅读位**（用户上滚 ⇒ `_pinFollow=false` ⇒ 零写）；折叠 ∕ 已移除 ⇒ no-op；VSC 先例 = `webview/activity.js:160-176` + 帧尾 `streaming.js:31-32`；桌面帧 = **store 变更排帧**（核帧合并件——触发源 = store 变更；单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-9 ∕ `docs/desktop/design/RENDERER.md` §1.2）。
 2. **池区帧尾钉底**——`mountPool` 尾 `maybePinPool(root)`（`views/activity-new.mjs`；`_poolPin !== false` ⇒ 写 `scrollTop`）——R10 E6 出生径的帧尾补齐（VSC `streaming.js:32` `frameEnd` 对位）；旗标 ∕ 计数贴 ∕ 点击回底三路零改。
-3. **值面两行（映射源范围外漏项——本批补）**——`.advisor-block.sub-block .advisor-content { max-height: 60px }` · `.advisor-block.sub-block > summary { opacity: 0.75 }`（值源 = `thincoder-vscode/webview/chat.css:466-467` 逐字；落点 = `renderer/core.css` ④ 段）。
+3. **值面两行（映射源范围外漏项——本批补）**——`.advisor-block.sub-block .advisor-content { max-height: 60px }` · `.advisor-block.sub-block > summary { opacity: 0.75 }`（值源 = `thincoder-vscode/webview/chat.css:467-468` 逐字；落点 = `renderer/core.css` ④ 段）。
 4. **判据**——机检 = 单元测试档（核心原语四例 + 桌面接线例 + 区钉底例 + 值落点锁；复跑 = `node --test docs/batches/2026-09-28-desktop-subblock-follow.test.mjs`）；真机 = 五行为（流式内容跟滚 ∕ 近底复跟 ∕ 上滚不抢 ∕ 换块默认跟底 ∕ 区近底保持）。
 5. **边界**——会话流主跟滚面零触（R12 既落在册）；核件其余留端项（出生位 ∕ 说明行判重 ∕ 痕迹 ∕ 帧调度）不属本批（逐项对账表 = 批档 §2）。
 
@@ -112,7 +112,9 @@
 | 退出（应用 ∕ 窗口关闭） | VSC = 宿主进程亡 ∥ CLI = 进程退出 | **零额外机制**（进程终止 ⇒ 窗随进程亡；窗态零持久化——`ev:susp` 为运行期切片） |
 
 **非同键输入 ∕ 事件处置**：窗属 A、用户在 B 发送 ⇒ B 走既有 `send` 单驱动径（`flights` 按键隔离）；A 的事件（`ev:susp` ∕ `ev:digest` ∕ `ev:subagent`）按 `key` 落各自切片——非同键帧对当前视图零可见面（**活态切回即见**（窗 ∕ 计数切片）；
-   **行痕族**——显示 = 自然形（行出即留——全轮在流；2026-10-01 收正；**五清家族** = `stopMark` ∕ `timerNotice` ∕ `compress` ∕ `digest` ∕ `helpLines`——首屏门单源 = `thincoder-desktop/renderer/page-read.mjs` `applyPage`）
+   **行痕族**——显示 = 自然形（**digest 员行出即留——全轮在流**；**五清家族** = `stopMark` ∕ `timerNotice` ∕ `compress` ∕ `digest` ∕ `helpLines`——**首屏门单源** = `thincoder-desktop/renderer/page-read.mjs` `applyPage`；清点面分员见下句——两门 ∥ 单门）
+   **清点两门（行痕族消失时机批 · 2026-10-04 · 台账 #919；timer 员并入 · 2026-10-05 · 台账 #952）**：`helpLines` ∕ `stopMark` ∕ `timerNotice` 三员 = 首屏门 ∥ **回合起跑门**（`msg:send` 出站即清 + 晚到 `stopped` 丢弃闩；timer 员晚到（出站后到期）照写照显 · 留至下一回合门——两门幂等并集；单源 = `docs/desktop/design/RENDERER.md` §1.6 **KD-74**）；
+   `compress` ∕ `digest` 两员 = 首屏门单门（未裁零动——`compress` 观察项；`digest` 行出即留全轮在流，2026-10-01 口径维持）。
    **+ 复列 = 全量（未结轮照现；记录位次原位——零配对）**（留档批 · #719——单源 = `docs/desktop/design/RENDERER.md` §1.1「留档记录」条）；跨会话可见面维持标签位标既有口径）。
 
 **唤醒 ∕ 消化轮的会话钉定（`_slot` 重钉）**：窗项持**入口键 + 入口 cwd**；每轮起跑（消化轮 ∥ 唤醒轮 ∥ 窗内用户回合）前按本窗键重装槽（`loadAgentSlot`——含 `_slot` 重钉 + 跨端槽改动随新读；先例 = 扩展端「每轮从槽新读」`thincoder-vscode/src/extension/suspension.mjs:242-243`）⇒ 回合落槽面 = 本窗键槽（非现刻 `activeSession`——切标签零影响）。
@@ -136,7 +138,7 @@
 |---|---|---|
 | `thincoder-desktop/src/main/suspension-drive.mjs` | **308**（届盘实读收正——表载 305 ⇒ 308；波 2a 迁移销项） | 挂起驱动胶水（起跑 ∕ 注册 ∕ 关清 ∕ 输入路由 ∕ 窗内队——行全文随分片轮齐平） |
 | `thincoder-desktop/src/main/suspension-timers.mjs` | **75**（届盘实读收正——表载 68 ⇒ 75；波 2a 迁移销项） | 窗内定时器面（自 `suspension-drive.mjs` 出档——行全文随分片轮齐平） |
-| `thincoder-desktop/renderer/events-wake.mjs`（R5 拆档产出） | **102**（届盘实读收正——表载 101 ⇒ 102；波 2a 迁移销项） | 宿主唤醒面三切片归约（`ev:susp` ∕ `ev:digest` ∕ `ev:timer`——行全文随分片轮齐平） |
+| `thincoder-desktop/renderer/events-wake.mjs`（R5 拆档产出） | **105**（实读 2026-10-05——timer 提醒行回合起跑门批（#952）实施落盘（104 ⇒ 105——`onTimer` 注随动）；前读 **104**（实读 2026-10-05——设计轮实读收正——表载 102 ⇒ 104）；前读 **102**（届盘实读收正——表载 101 ⇒ 102；波 2a 迁移销项） | 宿主唤醒面三切片归约（`ev:susp` ∕ `ev:digest` ∕ `ev:timer`——行全文随分片轮齐平） |
 | `thincoder-desktop/renderer/views/chat-digest-rows.mjs` | **292**（届盘实读收正——表载 239 ⇒ 292；波 2a 迁移销项） | 消化行族构树（自然形——起跑行 ∥ 计数行 ∥ cap 行 ∥ 终态行；单源 = 本档 §1 **KD-62**——行全文随分片轮齐平） |
 | `thincoder-desktop/src/main/suspension-guard.mjs`（队列取项边缘收正批新档） | **27**（实读 2026-09-29） | 降级窗占位守卫序列出档（自 `thincoder-desktop/src/main/suspension-drive.mjs` 拆出——越 300 预案落形：`guardedDeliver(key, hold, deliver)` = 起窗 ⇒ 送达面（信号直通）⇒ 窗后查位 ⇒ `release`（纯结构搬 ∕ 零行为变）；差异面（裁决回传后的 `return` ∕ `break` 与 `consumed` 用法）留调用点（`driveTurn` ∕ `resumeResidual`）；零宿主依赖 ⇒ 平 node 直测；单源 = 批档 `docs/batches/2026-09-29-queue-pickup-edge.md` §2.10 出档预案） |
 | `thincoder-desktop/src/main/timer-watch.mjs`（timer-wake 阶段 2 新档） | **76**（实读 2026-09-29） | 空闲 deadline 闩（键面 · 注入缝 · `unref`；单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.13） |
@@ -185,7 +187,7 @@
 | `thincoder-desktop/renderer/views/pool-subagents.mjs` | **108 ⇒ ≈118**（+import + 四点接线——核原语 `initBlockFollow` ∕ `maybeScrollBlock`） | 本批 |
 | `thincoder-desktop/renderer/views/activity-new.mjs` | **100 ⇒ ≈109**（+`maybePinPool` + `notePoolBirth` 复用） | 本批 |
 | `thincoder-desktop/renderer/views/activity.mjs` | **259 ⇒ ≈262**（`mountPool` 尾一调 + import） | 本批 |
-| `thincoder-desktop/renderer/core.css` | **281 ⇒ ≈287**（+两值规则 + 值源行——值源 = `thincoder-vscode/webview/chat.css:466-467`） | 本批 |
+| `thincoder-desktop/renderer/core.css` | **281 ⇒ ≈287**（+两值规则 + 值源行——值源 = `thincoder-vscode/webview/chat.css:467-468`） | 本批 |
 | 测试面 | 单元测试档 `docs/batches/2026-09-28-desktop-subblock-follow.test.mjs`（已建成 · 367 行 · 随批留存 · 不入仓套件；复跑 = `node --test`） | 本批 |
 | `docs/desktop/design/{UI,PROJECT,RENDERER}.md` + `docs/render-core/design/RENDER-CORE.md` + `docs/vsc/design/WEBVIEW.md` | 本批设计落定（五档——机制面 = 核档 KD-RC-8 ∕ UI 本批注；明细 = 批档 §2） | 本批（已落） |
 
@@ -444,6 +446,17 @@
 
 ## 变更记录
 
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（消化重放口径批（#771 ∥ #773） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-replay-choices.md` §2（唯一承载面——一次性批次材料）。
+**本批（消化行只留当轮收正 · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-row-current-only.md` §2（唯一承载面——一次性批次材料）。
+**本批（消化行自然形（终态追加 ∥ 零清理） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-rows-natural-form.md` §2（唯一承载面——一次性批次材料）。
+**本批（timer 唤醒投递修复 · 2026-10-01）落点表** = `docs/batches/2026-10-01-timer-wake-delivery.md` §2（唯一承载面——一次性批次材料）。
+**本批（桌面 UX 收尾批 · 2026-10-02）落点表** = `docs/batches/2026-10-02-desktop-ux-closeout.md` §2（唯一承载面——一次性批次材料）。
+**本批（文档体系重组批（DOC-MIGRATION） · 2026-10-02）落点表** = `docs/batches/2026-10-02-doc-structure-reorg.md` §2（唯一承载面——一次性批次材料）。
+**本批（核面小修批 · 2026-10-04）落点表** = `docs/batches/2026-10-04-core-patch-batch.md` §2（唯一承载面——一次性批次材料）。
+**本批（消化行回填落位（记录序） · 2026-10-04）落点表** = `docs/batches/2026-10-04-digest-reentry-order.md` §2（唯一承载面——一次性批次材料）。
+**本批（行痕族消失时机 · 2026-10-04）落点表** = `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §2（唯一承载面——一次性批次材料）。
+
 - 2026-10-04（**消化行回填落位批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-digest-reentry-order.md` §1 · 台账 #910）：KD-62 ⑦ 涉句收正——原「复入窗补建」登记句（位次轮入区 ⇒ 缺行者流末补建——登记例外）⇒ **复入窗 = 整置径**（回填 ⇒ 删档 + 新写——记录序复列；零位置机具）；单源 = `docs/desktop/design/RENDERER.md` §1.1（同拍）。**零新语义 · 产品码零触（设计轮）**。
 
 - 2026-10-04（**核面小修批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-core-patch-batch.md` §2 · 台账 #793）：§7 **DD ②** 行收正——核侧观察 ⇒ **核侧收正已裁**（环头 ∥ 环尾 abort 前置；端侧墓碑门 #782 = 兜底保留）。**零产品码**（设计轮）。
@@ -458,3 +471,5 @@
 - 2026-10-02（**文档清账轮 · 同族残项收正 · 主 agent**〔父侧直接执行 · 可 revert〕——承评审 #19 发现 5）：§4.2 测试面行 `timer-wake.test.mjs`（阶段 2 批）「**已落** ·」陈标同法去（实读 **286** 保留；**档已失**——2026-10-02 实核，同 #785 族）。**族定义** = 「陈标『已落』而档实失」行（`:177` ∥ `:221` 两行已收正；族判据 = 档在盘实核）。台账 #797 族 ∥ #806。
 - 2026-10-02（**桌面 UX 收尾批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §2 · 台账 #801 · 需求卷 D35）：§2 增「本批注（右栏池极多实例可滚动 · D35）」——实读结论（探针 3–5：容器链完好 ∥ 帧密同绿 ∥ 内容区首拍截留 = 既定语义 ∥ 覆盖层全吞）+ 复现判据两腿 + 候选映射 + 收口规则。**零新语义 · 产品码零触（设计轮）**。
 - 2026-10-02（**文档清账轮 · 执行轮 4（render-core + 桌面轻段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：§4 行数账 8 处 R3 裸名化（`chat-digest.mjs` ×5 ∥ `chat-digest-seat.mjs` ×3——两档已删 ∕ 改名 `chat-digest-rows.mjs`，去目录段）。**零新语义**。
+- 2026-10-04（**行痕族消失时机批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §2 · 台账 #919）：§3 行痕族句清点面收正——两员（`helpLines` ∥ `stopMark`）增回合起跑门、三员维持首屏门（单源 = `RENDERER.md` §1.6 KD-74）。**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-05（**timer 提醒行回合起跑门批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-timer-notice-turn-gate.md` §1 ∥ §2 · 台账 #952）：§3 行痕族句清点面收正——`timerNotice` 员并入回合起跑门（两门三员）、余两员（`compress` ∕ `digest`）维持首屏单门（单源 = `RENDERER.md` §1.6 KD-74）。**产品码零触（设计轮）**。明细 = 批档 §2。

@@ -145,14 +145,18 @@ function foldDigest(messages, key, tail) {
   let at = null // 本轮起跑记录位次（`start` 记录点——非有限数 ⇒ 本轮零产）
   let open = false // 本页「本轮 start 已见 ∧ 未终态」——截断记录（起跑居前页）不入折
   const rounds = []
-  /** 折出轮投影（去运行期标 —— 单一实现零副本的出口面；位次门 = `at` 不可得 ⇒ 零产）。 */
+  /** 折出轮投影（去运行期标 —— 单一实现零副本的出口面；位次门 = `at` 不可得 ⇒ 零产）。
+   *  消化账务批 · 2026-10-05 · 台账 #930：`unsettled > 0` 随投影出（残余行载荷——复列承接；
+   *  `digestRows` 同源消费；`= 0` / 缺 ⇒ 零行）。 */
   const flush = () => {
     const slice = scratch.digest[key]
     const round = Array.isArray(slice) ? slice[slice.length - 1] : undefined
     if (round === undefined || at === null) return
     rounds.push({
       status: round.status, n: round.n, tier: round.tier, from: round.from, msg: round.msg,
-      ok: round.ok, ms: round.ms, ...(round.cap == null ? {} : { cap: round.cap }), at,
+      ok: round.ok, ms: round.ms, ...(round.cap == null ? {} : { cap: round.cap }),
+      ...(typeof round.unsettled === "number" && round.unsettled > 0 ? { unsettled: round.unsettled } : {}),
+      at,
     })
   }
   for (const msg of messages) {
@@ -202,7 +206,8 @@ function clearStopMark(table, key) {
 }
 
 /** 到期触发痕清点（timer-wake 阶段 2 · 单源 = 本档）：首屏页读（`before == null`）⇒ 摘本键触发行（运行期痕 ——
- *  **非落盘件**：重开 / 切回页读即失）；无痕 ⇒ 原引用（零写）。 */
+ *  **非落盘件**：重开 / 切回页读即失；**本族清点 = 两门**——首屏门 + 回合起跑门（`msg:send` 出站即清——`clearTurnTraces`；
+ *  timer 员 2026-10-05 · 台账 #952 并入；单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）；无痕 ⇒ 原引用（零写）。 */
 function clearTimerNotice(table, key) {
   if (table === null || typeof table !== "object" || table[key] === undefined) return table
   const next = { ...table }
@@ -220,7 +225,8 @@ function clearCompress(table, key) {
 }
 
 /** `/help` 行族清点（`/help` 增量 · 2026-10-01② —— 单源 = 本档）：首屏页读（`before == null`）⇒ 摘本键行族
- *  （运行期痕 —— **非落盘件**：重开 / 切回页读即失，同 `[data-timer]` 族）；无行 ⇒ 原引用（零写）。 */
+ *  （运行期痕 —— **非落盘件**：重开 / 切回页读即失，同 `[data-timer]` 族；**本族清点 = 两门**——首屏门 + 回合起跑门
+ *  （`msg:send` 出站即清——`clearTurnTraces`，单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）；无行 ⇒ 原引用（零写）。 */
 function clearHelpLines(table, key) {
   if (table === null || typeof table !== "object" || table[key] === undefined) return table
   const next = { ...table }

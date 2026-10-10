@@ -478,7 +478,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | 1 | CLI·源 | `thincoder-cli/src/tui/subagent-blocks.mjs` | 437 | `:31` import 面加 `livePoolHas` / `removeFrozenSubTaskLine` · `:80-99` `ensureSubTaskKey` 墓碑分支加存活复活 + 旧载体行摘除 + 留痕 | ~460 |
 | 2 | CLI·源 | `thincoder-cli/src/tui/subagent-freeze.mjs` | 176 | `:142-154` `freezeAllSubTasks` 加存活跳过 + 新增导出 `livePoolHas(state, key)` / `removeFrozenSubTaskLine(state, key)`（与墓碑写点同址） | ~205 |
 | 3 | 核·源 | `thincoder-core/agent-tools/subagent-scheduler.mjs` | 429 | `:340-342` catch 补 `logEvent`（+ 顶注 import 面 `:12-22` 补 `logEvent`——现未 import） | ~437 |
-| 4 | CLI·测（**拟新增**） | `thincoder-cli/test/subagent-zero-block.test.mjs` | 新 | T-ZB1–T-ZB6（§6.8.3.6）；直驱 `routeSubToken` / `freezeAllSubTasks` / `refreshQueuedTokens`——零网络、零定时器 | ~120 |
+| 4 | CLI·测（**拟新增**） | `thincoder-cli/test/subagent-zero-block.test.mjs` | 新 | T-ZB1–T-ZB6（§6.8.3.6）；直驱 `routeSubToken` / `freezeAllSubTasks` / `refreshQueuedTokens`——零网络、零定时器 | ~120（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | 5 | 设计档 | `docs/cli/design/TUI.md` | 555 | 本节（§6.8.3）+ §6.8.1 指针行 + 变更记录一行 | 本档已落（→ 576 行——本 fix 轮后） |
 
 **跨文件限**：三份源档预计后均 < 500 硬限（460 / 205 / 437）——**无拆分需要**。
@@ -515,7 +515,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | AC-ZB1 | 墓碑命中且条目**存活** ⇒ 复活建块 | T-ZB1 / T-ZB2 | 台账 #19 症状 |
 | AC-ZB2 | 墓碑命中且条目**不存活**（池外 / `entry.done === true`〔含 done-in-pool〕/ `entry.cancelled === true`）⇒ 维持丢弃（迟到 chunk 丢弃语义不回归） | T-ZB3 | 批次档 §1.1 by-design 面 |
 | AC-ZB3 | `freezeAllSubTasks` 不冻存活条目；已终态（含 done-in-pool）照旧冻结 | T-ZB4 | 批次档 §1.2 ②（清扫面） |
-| AC-ZB4 | 发射面零改：域释放补位仍发 `⟦ev⟧async` + `[model]`；queued 仍不发 `[model]` | 既有断言（`advisor-pool-queue.test.mjs:86/211`——**仅 async 面**）+ T-ZB1（**`[model]` 面**落位断言） | 批次档 §1.3 判据 2 |
+| AC-ZB4 | 发射面零改：域释放补位仍发 `⟦ev⟧async` + `[model]`；queued 仍不发 `[model]` | 既有断言（`advisor-pool-queue.test.mjs:86/211`——**仅 async 面**）+ T-ZB1（**`[model]` 面**落位断言）（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） | 批次档 §1.3 判据 2 |
 | AC-ZB5 | 降级面（无 `state._agent`）行为与批前逐字一致 | T-ZB5 | §6.8.1 降级路径条 |
 | AC-ZB6 | 留痕：复活分支与 relay 异常各留一条可观测痕（禁静默） | T-ZB6 | 批次档 §1.3 判据 3 |
 | AC-ZB7 | 两端全量 `npm test` 绿 | `npm test`（cli + core） | 常规门 |
@@ -534,6 +534,8 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **起跑数行**：标签行之后、`runAgentTurn` 之前 `pushLine(t("digest.start", { n: pend0 }), C.dim)`——规则 = **`pend0 > 0`**（`pend0 = pendingFamilyCount(agent)` 取数前置，与收尾行同源；ask-only 轮零此行）。
 - **收尾行（X9——显示面消差批）**：轮尾 `pushLine` 一行 dim（**到达序追加于当刻流末**——终态行；零就地换文 ∥ 不动原起跑行）——完成 ⇒ `digest.done`（`已消化 N 份后台报告（Xs）`）/ 中止与失败 ⇒ `digest.aborted`（`消化中断（Xs）`）；
   **`pend0 > 0` 守卫**（ask-only 轮零收尾行——done / aborted 两形态同判）；**文案单源 = 核 i18n 容器**（`t()` 取值——CLI 侧首个核 i18n 消费点）；**计数口径 = 起跑数**（与 VSC 端同源——消费数另计会引入双口径）；秒位 = `toFixed(1)`（与 VSC 同式）。
+  **`unsettled` 残余行（消化账务批 · 2026-10-05 · 台账 #930）**：消化轮收尾后本轮仍有未销账条目（`_daFailures > 0` 的在途条目数 > 0）⇒ 终态行之后再落一行 dim（`t("digest.residue", { n })`——核字典新键，逐字 = 核容器）；**两行同屏口径**：终态行 N 仍按起跑数（不扣减）∥ 未销账数由残余行承载（两行各表其一）；
+  零未销账 ⇒ 零此行（零噪音）；记录面 `digestEndRecord` 同携 `unsettled`（重建同调——`lifecycle-records.mjs`）。判据 / 机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31。
 - **边界**：`digest:start` / `digest:end` 日志事件零改（LOGGING 面）；消化轮机制 / 计数语义零改（编排面 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8；可见面口径单源 = `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.27.12.13 ①–③——本节 = CLI 侧落地形态）。
 - **行出即留（显示面 · 2026-10-01 自然形跟正 · 台账 #768）**：行 = 流内事件，**出即留**——起跑行 ∥ 计数行 ∥ cap 行 ∥ 终态行：**不改 ∥ 不删 ∥ 不退场**（零清理机器：无终态摘除 ∥ 无换代删旧 ∥ 无复列截点）；新轮起跑 = **追加**（旧轮行留置原位）；
   **重建复列 = 全量**（记录序 ≡ 恢复序——逐轮痕行按其记录位次出；未结轮照现（无 `end` 记录 ⇒ 起跑行 ∥ 计数行 ∥ cap 行照出——三端同判；消化重放口径批 · 2026-10-01 · 台账 #771））；**记录面照留**（`digest` 记录全量——`lifecycle-records.mjs` ∥ 会话视图重建承接零动）；口径 = 用户 2026-10-01 08:21「CLI/VSC也跟。」；被否 = 「只留当轮」恢复 ∥ 旧轮痕行退场 ∥ 复列末轮痕。
@@ -773,6 +775,11 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | VSC webview 对位 | webview 渲染 / 消息协议 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异如实登记——登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底；端差默认 = 消，保留须结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**已裁保留 · A9 三件齐**：① 结构性不对称 = 渲染宿主不同（VSC webview DOM + 宿主↔面板消息协议 ∥ CLI 裸 ANSI 终端行内渲染；消息协议仅单侧存在）；② 证据 = 两实现树（`thincoder-vscode/webview/**` + `WEBVIEW-PROTOCOL.md` ∥ `thincoder-cli/src/tui/**`）；③ 显式裁定 = 2026-09-14「逻辑 / 渲染分家」（同判据 · `CORE-UNIFICATION.md` §2.5 端特有桶）+ 2026-09-25 misc-four 批确认（台账 #185）） |
 
 ## 变更记录
+
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（消化重放口径批（#771 ∥ #773） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-replay-choices.md` §2（唯一承载面——一次性批次材料）。
+**本批（消化行只留当轮收正 · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-row-current-only.md` §2（唯一承载面——一次性批次材料）。
+**本批（消化行自然形·两端跟正（CLI ∥ VSC） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §2（唯一承载面——一次性批次材料）。
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§7.4 标题段收正（空值回退链已落——#677 I2；可机判行同变）；§7.5 宽度口径收正（编号前缀预扣除已落——#677 I6；指位 `:375` → `:387`）。**零新语义**。
 
 - 2026-09-30（**跨线清零轮 · 设计档收正（修正轮 1 补落变更记录）· eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2 · 台账 #677）：§7.4 空窗差行 = 消（本段补同款回退链，对位 `thincoder-vscode/src/extension/panel-session.mjs:235-243`——实施清单 I2）；§7.5 宽度口径行 = 消（编号前缀预扣除——实施清单 I6）。**零机制改**。
@@ -906,3 +913,5 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - 2026-10-01（**消化重放口径批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-01-digest-replay-choices.md` §1 ∥ §2 · 台账 #771 ∥ #773）：§6.9 行出即留条「未结末轮照现——沿现行口径」⇒ 统一口径（未结轮照现——无 `end` 记录 ⇒ 起跑行 ∥ 计数行 ∥ cap 行照出；三端同判；CLI 产品码零改）。**零新语义**（口径收正）。明细 = 批档 §2。
 - 2026-10-01（**消化重放口径批 · 修复轮（评审轮 1 · 发现 9）· eng-designer**——承批档 `docs/batches/2026-10-01-digest-replay-choices.md` §3 轮次 1 · 台账 #771 ∥ #773）：§6.9 名义随动（「复列口径统一批」⇒「消化重放口径批」——随批档题名）。**零新语义**（名随动）。明细 = 批档 §2 修复轮块。
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R5 行注记（「机检豁免——用例退场登记」入 §7.4 可机判行）；宽面 2 行折行（538 ∥ 539——语义零改）。**零新语义**。
+- 2026-10-05（**批 digest-accounting · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §1 · 需求 §4.15 · 台账 #930）：§6.9 增**未销账残余行**条（`digest.residue` 核字典新键——终态行之后追加；零未销账零行；记录面同携 `unsettled`）。**零新语义**（可见面落 CLI 形面；判据 / 机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31）。明细 = 批档 §2。
+- 2026-10-05（**批 digest-accounting · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §3 轮次 1 发现 13 · 父裁全收）：§6.9 补**两行同屏口径注**（终态行 N = 起跑数不扣减 ∥ 未销账数由残余行承载）；判据单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31.6。**零新语义**。明细 = 批档 §2 修正块。

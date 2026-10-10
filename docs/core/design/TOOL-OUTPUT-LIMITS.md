@@ -59,10 +59,10 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 
 ## 4. advisor 结果截断（P3）
 
-- 上限常量 `MAX_RESULT_CHARS = 64 * 1024`（`thincoder-core/advisor/compaction.mjs:37`，与主链路对齐）。
+- 上限常量 `MAX_RESULT_CHARS = 64 * 1024`（`thincoder-core/advisor/compaction.mjs:38`，与主链路对齐）。
 - **双端化截断**（DUAL-END-TRUNCATION）：工具结果回填由「保头弃尾」改为**头尾双保**——头行累加至预算约 **60%**（`ADVISOR_HEAD_RATIO = 0.6`，`thincoder-core/advisor/truncate.mjs:14`）→ 中段切 → 尾行累加至剩余预算（**裁决 / 结论行可见**）。
 - 头尾之间省略注 + offset 续读提示保留；**绝不半行切开**；K=0 时不谎报截断。
-- 实现落点：截断纯函数 `truncateAdvisorResult`（`thincoder-core/advisor/truncate.mjs`），唯一调用点 = `thincoder-core/advisor/loop.mjs:290`。
+- 实现落点：截断纯函数 `truncateAdvisorResult`（`thincoder-core/advisor/truncate.mjs`），唯一调用点 = `thincoder-core/advisor/loop.mjs:282`。
 - advisor 上下文保护另有 `compactMessages` 兜底——放宽上限后不新增风险。
 
 ## 5. read 读回双端返回
@@ -90,14 +90,14 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 | 落盘主函数 + 写时自清理 | `thincoder-core/agent/helpers.mjs:124` · `:114`（清理判定）· `:127`（清理调用） | 在位 |
 | 主链路调用点 | `thincoder-core/agent/dispatch.mjs:428` | 非 multimodal 结果过守卫 |
 | 共享 UTF-16 安全切片 | `thincoder-core/text-budget.mjs:55` · `:69` | 单一来源（agent 捕获 + TUI 额度共用） |
-| advisor 上限常量 | `thincoder-core/advisor/compaction.mjs:37`（`MAX_RESULT_CHARS`） | 由 `thincoder-core/advisor/run.mjs:16` re-export |
-| advisor 双端截断 | `thincoder-core/advisor/truncate.mjs:14` · 调用 `thincoder-core/advisor/loop.mjs:290` | 头/尾预算行级累加 |
+| advisor 上限常量 | `thincoder-core/advisor/compaction.mjs:38`（`MAX_RESULT_CHARS`） | 由 `thincoder-core/advisor/run.mjs:16` re-export |
+| advisor 双端截断 | `thincoder-core/advisor/truncate.mjs:14` · 调用 `thincoder-core/advisor/loop.mjs:282` | 头/尾预算行级累加 |
 | read 双端返回 | `thincoder-core/tools/file.mjs:30`（`READ_TAIL_LINES`）· `:104`（判别）· `:111`（尾区起点） | `MAX_READ_LINES` = `thincoder-core/tools/shared.mjs:20` |
 
 ### 6.2 双端与测试面
 
 - **双端**：CLI 与 VSC 各自实现、语义同源（锁步镜像）。镜像面 = `read` 双端返回与 advisor 截断两族；VSC 端坐标已并入（批 6——§6.3），测试随 CLI 同批落。
-- **测试面**：`thincoder-cli/test/read-dual-end.test.mjs` · `thincoder-cli/test/advisor-truncation.test.mjs` · `thincoder-core/test/advisor-truncate.test.mjs` + VSC 侧同名对位 `thincoder-vscode/test/{read-dual-end,advisor-truncation}.test.mjs`。
+- **测试面**：`thincoder-cli/test/read-dual-end.test.mjs` · `thincoder-cli/test/advisor-truncation.test.mjs` · `thincoder-core/test/advisor-truncate.test.mjs` + VSC 侧同名对位 `thincoder-vscode/test/{read-dual-end,advisor-truncation}.test.mjs`。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 ### 6.3 VSC 端实现坐标（B 式并入 · 实核 as-of 2026-09-15）
 

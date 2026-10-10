@@ -34,6 +34,8 @@ import {
 import { cancelAsyncAdvisor, noteMutations, refreshAdvisorQueuedTokens } from "./advisor-async.mjs"
 // #94（VSC 侧并入——异步机械族）：池读取载体吸收 + 墓碑写入单点（原 inline 写收口）。
 import { getAsyncPool, tombstoneOf, writeTombstone } from "./async-settle.mjs"
+// #949（评审 history 串台面）：评审实例投递水印单点（叶档——零环）。
+import { noteReviewDelivered } from "./review-facts.mjs"
 // #9（TOOLS.md §6.19）：后台 bash 任务注入器（digest 单点族按 role="bg" 分发到本档）。
 import { injectBgResult } from "./bash-async.mjs"
 
@@ -394,10 +396,15 @@ export async function injectAsyncResult(agent, entry) {
     role: "user",
     content: label,
   })
+  // #949：评审族投递水印落点（响应表取件下界 = 投递刻下标；非评审族零写）。
+  if (entry.role === "advisor") noteReviewDelivered(agent, entry.run)
   // §6.9 D-SD5 终态墓碑：本函数是全部自动注入路径的共享形态（回合尾 collect + 挂起
-  // digest 首行注入）——注入即消费（调用方随即从容器移除）——dependsOn 引用该 id 的
-  // 后续 spawn 视为已满足（T-SD14 消费终态语义——AGENT-LOOP-SUBAGENT.md §6.7.5 后 check 消费路径删除，本自动
-  // 通道为唯一消费方；error 条目记 failed——依赖取消/失败分支照旧，不误标成功）。
+  // digest 首行注入）——注入即消费（墓碑落注入时点——依赖满足判据不随销账后移）——容器侧：
+  // 会话态（`_daDelivered`）注入后**不随即从容器移除**（留容器至销账 / 升级；移除 =
+  // `accountDigestRound` 的 splice，§6.31），fallback 面照旧（缺省条取尽离容器——先离容后注入；
+  // `_daDelivered` 条同判据跳过且留容器）——
+  // dependsOn 引用该 id 的后续 spawn 视为已满足（T-SD14 消费终态语义——AGENT-LOOP-SUBAGENT.md §6.7.5 后 check
+  // 消费路径删除，本自动通道为唯一消费方；error 条目记 failed——依赖取消/失败分支照旧，不误标成功）。
   writeTombstone(agent, entry.id, entry.error != null ? "failed" : "consumed", entry.role)
 }
 

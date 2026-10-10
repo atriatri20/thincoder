@@ -41,6 +41,9 @@ export const CORE_MESSAGES = Object.freeze({
   "digest.turnLabelAsk": { en: "[auto-turn: answering ${from}: ${msg}]", zh: "自动回合：答复 ${from}：${msg}" },
   "digest.capAuto": { en: "[auto-turn: continuing past turn cap…]", zh: "自动回合：越过轮次上限，继续推进…" },
   "digest.capStop": { en: "[auto-turn stopped at ${turns} turns — partial digest; finished reports stay in history]", zh: "自动回合在 ${turns} 轮处停止——部分消化；已完成的报告保留在历史中" },
+  // 消化账务批 · 2026-10-05 · 台账 #930（§6.31.6 端面残余行——判据 = `unsettledCount(carrier)`；
+  // 消费面 = CLI 痕行 ∥ 桌面 / VSC 行元素；三端共读本键）
+  "digest.residue": { en: "${n} background report(s) not accounted — they will be re-delivered", zh: "有 ${n} 份后台报告未销账——将自动重投" },
   // ── 限流 / 供应商状态行 ──
   "status.rateWait": { en: "TPM throttle wait ~${s}s", zh: "TPM 限流等待 ~${s}s" },
   "status.rateLimited": { en: "Rate-limited 429, retry in ${s}s", zh: "限流 429，${s}s 后重试" },
@@ -69,6 +72,8 @@ export const CORE_MESSAGES = Object.freeze({
   "status.turn": { en: "turn ${n}/${m}", zh: "轮次 ${n}/${m}" },
   "tool.running": { en: "running…", zh: "执行中…" },
   "tool.done": { en: "done", zh: "完成" },
+  // ── 台账（ledger）· F-LX3 变体键库首跑提示（批 2026-10-05-ledger-variant-db-notice · 台账 #935 · LEDGER.md §12.2 逐字；消费面 = CLI TUI 启动行）
+  "ledger.variantDbNotice": { en: "Legacy variant-key ledger DB found for this project (pre-upgrade; rows may be outside the current ledger): thincoder ledger audit to inspect; thincoder ledger migrate to reconcile", zh: "检测到本项目的存量变体键台账库（升级遗留，数据可能未并入当前库）：thincoder ledger audit 查看；thincoder ledger migrate 收正" },
 })
 // 深度冻结（机器消费面冻结——嵌套 { en, zh } 也冻结；浅冻结下值可被静默改写）。
 for (const entry of Object.values(CORE_MESSAGES)) Object.freeze(entry)

@@ -47,13 +47,13 @@ export {
 // 第 11 批拆分（2026-09-11）：settle 记账 + 变更日志（noteMutations）+ 陈旧判定
 // （reviewIsStale）+ 冻结冲突（inflightDesignReviewConflict）迁 advisor-settle.mjs——
 // 既有 import 面（dispatch / subagent-async / escalate-async / 测试）经此 re-export 不变。
-import { normAbs, mutationSeqOf, settleAdvisorRun } from "./advisor-settle.mjs"
+import { mutationSeqOf, settleAdvisorRun } from "./advisor-settle.mjs"
 export {
   mutationSeqOf, noteMutations, reviewIsStale, settleAdvisorRun, inflightDesignReviewConflict,
 } from "./advisor-settle.mjs"
 // 第 33 批（评审失败护栏）：doc-set 键迁事实面档（实例续跑与陈旧判定同锚单源；原为私有——零 import 面）。
 // 本文件继续在实例解析 / 池 entries 上消费它。
-import { docSetKey } from "./review-facts.mjs"
+import { docSetKey, resolveReviewDocPaths, scopeAdvisorMirror } from "./review-facts.mjs"
 // F31（2026-09-18 顾问面治理批）：拒回文案对象标识行单源。
 import { withIdentityLine, scopeSummary } from "../advisor/notice.mjs"
 import { runAdvisorReview, resolveAdvisorProvider, ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
@@ -65,6 +65,8 @@ import { deathLine } from "../abort-provenance.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
 import { bindChildController, buildChildSignal, carrierField, getAsyncPool, settleAsyncEntry, tombstoneOf, writeTombstone } from "./async-settle.mjs"
 import { nextSubagentId, consumeSubagentToken, assertPoolKeyFree, entryTerminal } from "./subagent-scheduler.mjs"
+// #934（零落笔看门狗——AGENT-LOOP-UPSTREAM.md §6.32.6 触发接线②）：评审族推送单源（叶档——恒零抛）。
+import { pushAdvisorAlert } from "./zero-write-watch.mjs"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Review-instance registry (_advisorRuns — per-review rounds/prior/cap)
@@ -161,9 +163,9 @@ export function resolveAdvisorLaunch(agent, reviewType, { documents = null } = {
       runs.set(reviewId, run)
     }
   }
-  // Scope the legacy mirror fields (message builder + run.mjs cap + displays).
-  agent._advisorRound = run.priorOutput ? run.round : 0
-  agent._lastAdvisorOutput = run.priorOutput
+  // Scope the mirror fields to THIS instance (message builder + run.mjs cap +
+  // displays; #949 ① — the queued-launch window is re-secured at entry.start).
+  scopeAdvisorMirror(agent, run)
   return { run, isNew: run.round === 0 && !run.priorOutput, reviewId: run.reviewId, designId: run.designId }
 }
 
@@ -390,8 +392,11 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
     id, role: "advisor", reviewType, run,
     reviewId: run.reviewId, designId, designToken, documents, paths, object,
     launchSeq: mutationSeqOf(parent),
+    // docAbs 产出面同源归一（2026-10-04 · #921 · A 随件）：四腿单源 resolved（裸形/前缀形
+    // 命中候选项目根即归一为绝对路径）——冻结窗/陈旧判定对**裸形受理档**照护成立（否则 A
+    // 开冻结窗保护洞）；绝对形与旧 normAbs 面逐字等价。
     docAbs: reviewType === "design" && Array.isArray(documents)
-      ? documents.filter((d) => typeof d === "string").map((d) => normAbs(d, parent.cwd))
+      ? [...resolveReviewDocPaths(documents, parent.cwd).resolved.values()]
       : [],
     relayPrefix: `advisor#${id}/`,
     status: queued ? "queued" : "running", position: undefined,
@@ -420,9 +425,12 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
     // Async mark + [model] — the TUI block opens at ACTUAL start (⏹ gating reads it).
     ctx?.callbacks?.onToken?.(entry.relayPrefix + "⟦ev⟧async\x1e")
     ctx?.callbacks?.onToken?.(entry.relayPrefix + "[model]" + (entry.model ?? ""))
+    // #949 ①：排队 / 延迟窗口封死——构建前按本评审实例复核镜像（消费点定域；幂等）。
+    scopeAdvisorMirror(parent, run)
     runAdvisorReview(parent, reviewType, {
       onOutput: (chunk) => relayAdvisorOutput(ctx?.callbacks, entry.relayPrefix, chunk),
       signal: entry.controller.signal,
+      onStall: (rounds) => pushAdvisorAlert(parent, `advisor#${id}`, rounds), // #934：连续无产出越阈 ⇒ 自动上行提醒（只推——§6.32）
     }, designToken, documents, paths, object, designId)
       .then((report) => { entry.report = report })
       // §6.12 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀

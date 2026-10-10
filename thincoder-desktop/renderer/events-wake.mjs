@@ -47,7 +47,9 @@ export function onSusp(state, ev, now) {
  *  （`cap: { mode, turns }` —— 保起跑 `n`）；`end` **就末轮**更新（保留起跑 `n` —— 终态句 `digest.done` 需 n；
  *  `ok` 缺省 ⇒ 真，沿宿主 `ok !== false` 判据；并末轮 ⇒ 撞帽事实跨 `end` 存续）；**记录面全量照留**
  *  （人读线 `digest` 记录 —— 显示 ∥ 记录两面同在档）。
- *  轮记录 = `{ status, n, tier, from, msg }`（本批 2026-10-01 · #765 精收：**零位置面**——位置 ∥ 编号 ∥ 身份标
+ *  **消化账务批 · 2026-10-05 · 台账 #930**：`end` 帧携 `unsettled`（本轮未销账条数——非上行轮且 > 0
+ *  ——端载荷侧已筛）⇒ 归一入轮记录（缺省 0——零噪音；残余行判据 / 复列承接同源）。
+ *  轮记录 = `{ status, n, tier, from, msg, unsettled }`（本批 2026-10-01 · #765 精收：**零位置面**——位置 ∥ 编号 ∥ 身份标
  *  随拆净）；行族出生 ∥ 终态追加（零就地换文 ∥ 零摘除）归帧面 `renderer/views/chat-digest-rows.mjs`
  *  （自然形收正批 · 2026-10-01）。
  *  表外 `status` ⇒ 零写；**无轮**（`cap` ∕ `end` 而轮集空）⇒ **零写**（防守档——**可达面 = 起跑帧未及**（轮在飞时渲染面新接入——
@@ -84,14 +86,15 @@ export function onDigest(state, ev) {
         turns: typeof ev.turns === "number" && Number.isFinite(ev.turns) ? ev.turns : null,
       },
     }
-  } else record = { ...prev, status: "end", ok: ev.ok !== false, ms: countOf(ev.ms) }
+  } else record = { ...prev, status: "end", ok: ev.ok !== false, ms: countOf(ev.ms), unsettled: countOf(ev.unsettled) }
   if (sameRecord(prev, record)) return state
   return { ...state, digest: { ...table, [ev.key]: [...rounds.slice(0, -1), record] } }
 }
 
 /** `ev:timer`——到期触发切片（按会话 `key` 分槽 · 同键就地替换——**最近一次交付**；行文 = 交付原文）：
  *  消费 = 流内触发行组 `[data-timer]`（构树 ∕ 帧尾同刷住 `renderer/views/chat-chrome.mjs`）；生命期 = **运行期痕**
- *  （非落盘件 —— 首屏页读整置即失；同 `[data-stopped]` 族）；`text` 非非空串 ⇒ **零写**（禁假造空行）。
+ *  （非落盘件 —— 清点两门：首屏页读整置即失 + **回合起跑门** = `msg:send` 出站即清——timer 员 2026-10-05 · 台账 #952 并入；
+ *  晚到到达照写照显 · 留至下一回合门；单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）；`text` 非非空串 ⇒ **零写**（禁假造空行）。
  *  显示裁（≤3 行 + `…`）= 渲染面单点（`timerGroupNode`）；单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.11。 */
 export function onTimer(state, ev) {
   if (typeof ev.text !== "string" || ev.text === "") return state

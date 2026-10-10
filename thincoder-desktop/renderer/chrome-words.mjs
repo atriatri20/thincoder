@@ -32,8 +32,11 @@ export function paintComposerWords() {
   }
   const attach = document.querySelector("#attach-btn")
   if (attach !== null) {
-    attach.title = t("attach.image")
-    attach.setAttribute("aria-label", t("attach.image"))
+    // 上游 0.10.4（#948）把核件字面 `Attach image` 改成了 `Attach file`（受纳面扩文本/源码族）⇒
+    // 本档键 `attach.image` 更名 `attach.file`（值同核新字面；不更名则中文界面仍写「附加图片」——
+    // 合并后真机实测的措辞错位）。
+    attach.title = t("attach.file")
+    attach.setAttribute("aria-label", t("attach.file"))
     attach.textContent = t("attach.label")
   }
 }

@@ -11,13 +11,13 @@
 
 **谓词（单源）**：`advisorIncompleteMarker(text) → kind | null`——**块首行**逐字前缀（六 kind）：
 
-| kind | 行前缀（逐字） | 生成点（交付态 · 实测 as-of 2026-09-18） |
+| kind | 行前缀（逐字） | 生成点（交付态 · 实测 as-of 2026-09-18；`:16` / `:17` / `:19` / `:20` 四行随 advisor-loop-split 批按 2026-10-05 重锚） |
 |---|---|---|
-| `context_limit` | `Advisor: context window limit reached (N tokens).` | `thincoder-core/advisor/loop.mjs:132` |
-| `turn_cap` | `Advisor: stopped after 100 tool rounds` | `thincoder-core/advisor/loop.mjs:121` |
+| `context_limit` | `Advisor: context window limit reached (N tokens).` | `thincoder-core/advisor/compaction.mjs:98` |
+| `turn_cap` | `Advisor: stopped after 100 tool rounds` | `thincoder-core/advisor/loop.mjs:119` |
 | `timeout` | `Advisor: review timeout after {S}s.` | `thincoder-core/advisor/loop.mjs`（另两处同判）；尾文案居 `thincoder-core/advisor/compaction.mjs` |
-| `empty` | `Advisor: empty response — review was inconclusive` | `thincoder-core/advisor/loop.mjs:195` |
-| `interrupted` | `Advisor: interrupted.` | `thincoder-core/advisor/loop.mjs:100`（另 :184 同判） |
+| `empty` | `Advisor: empty response — review was inconclusive` | `thincoder-core/advisor/loop.mjs:197` |
+| `interrupted` | `Advisor: interrupted.` | `thincoder-core/advisor/loop.mjs:98`（另 :186 同判） |
 | `review_failed` | `Advisor: review failed` | `thincoder-core/advisor/run.mjs:195`（catch 内字符串 resolve——不 throw） |
 
 **匹配规则**：**块首行扫描**（按空行分块，逐块取首行 trim 后测前缀）——时间线渲染以空行连接时间线与尾 ⇒ 六条尾均以块首行形态落地（`review_failed` 为独立返回串 = 文本首行）；
@@ -102,8 +102,11 @@ Nothing was sent: no review instance, no round consumed, no design token minted,
   - `type` = 实际评审轨（`code` / `design`）；拒回面**未定轨**记 `absent`（缺失 / `null` / 空串）或 `invalid`（非法值）；**冲突拒回**记**顶层实收值**（`code` / `design`——与 `criterion=type-object-conflict` 配对读，未定轨）；**失败结论族**记**实际评审轨**（两轨共用——§7 契约二）。
   - `scope` = 范围摘要（首路径 + `+N more`；无范围记 `none`）。
   - `round` = 拒回族记**本次发起将使用的轮次号**（**撤 cap 后恒记 `{N}/uncapped`**——机制真相；判定先于实例解析时记 `—`）；**失败结论族记本次已结算尝试号**（与尝试表 `#` 同值——§7 契约二）。
-  - `criterion` = 触发判据名（拒回族：`type-missing` / `type-invalid` / `type-object-conflict` / `scope-missing` / `scope-not-doc` / `scope-in-flight`；失败族：§7 判据名表）。
-- **载面（枚举闭合——四项）**：① 范围缺失（`thincoder-core/agent-tools/advisor.mjs`）② 范围非法（同档——design documents 非文档）③ 同 scope 在跑（`thincoder-core/agent-tools/advisor-async.mjs`）④ **类型门拒回**（§2.4——缺 `type` / 非法值 / 与 `object` 声明冲突）。
+  - `criterion` = 触发判据名（拒回族：`type-missing` / `type-invalid` / `type-object-conflict` / `scope-missing` / `scope-not-doc` / `scope-doc-ambiguous` / `scope-in-flight`；失败族：§7 判据名表）。
+- **载面（枚举闭合——五项）**：① 范围缺失（`thincoder-core/agent-tools/advisor.mjs`）
+  ② 范围非法（同档——design documents 非文档；`criterion=scope-not-doc` 判据本体零改——拒文案追加解析诊断尾：逐文档载「解析后绝对路径 ← 基面 = 会话 cwd」+ 候选项目根提示 + 重试指引）
+  ③ **范围歧义**（同档——documents 相对形命中多个候选项目且可读命中 ≥2 ⇒ fail-closed 拒，列全部可读命中路径——`criterion=scope-doc-ambiguous`；**不静默挑一**，#828 歧义锚同哲学）
+  ④ 同 scope 在跑（`thincoder-core/agent-tools/advisor-async.mjs`）⑤ **类型门拒回**（§2.4——缺 `type` / 非法值 / 与 `object` 声明冲突）。
 - **cap 文案**：随 cap 撤除**整体退场**（机制不再产生该文案）。
 - **不载面（登记——本批不改，避免扩面）**：async 误用拒回（depth>0 + `async:true`）· 启动断言拒回（无 token / 无 Approval Signal——其前缀已是稳定契约面）· 池队列 ack（非拒回）。
 - **边界**：不改判定语义；不把文案扩为长报告（标识行恰一行）。
@@ -117,12 +120,12 @@ Nothing was sent: no review instance, no round consumed, no design token minted,
 1. `cwd`（保留——绝对路径与工作区根相对路径保持不变）；
 2. `segs = relative(cwd, resolve(cwd, s))` 非 `..` 开头时：**声明仓根**（`cwd/segs[0]`）与**声明文件目录 / 声明目录本身**。
 
-**逐引文解析**：按候选顺序试 `resolve(root, file)`；命中判据三条件全中——① realpath 在 cwd 内（**围栏不变**）；② 可读；③ 该行内容包含引文内容。命中记录所用根。
+**逐引文解析**：按候选顺序试 `resolve(root, file)`；命中判据三条件全中——① realpath 在 cwd 内（**围栏不变**）；② 可读；③ 该行内容包含引文**任一内容候选**（c1 原捕获 ∥ c2 反复剥「引号族（`"` `'` `“”` `「」` `『』`）+ 空白」的先导/尾随 ∥ c3 首个引号字符后段 ∥ c4 首个成对引号段内层文本——任一候选为所引行**连续子串**即中；零模糊、零内容级归一；派生候选下限 2 字符）。命中记录所用根。
 
 **失败原因四类（报告可判）**：无任何候选文件存在 ⇒ `file unreadable`；存在但内容不符 ⇒ `content mismatch @ {解析到的相对路径}`；越围栏 ⇒ `path traversal`（不变）；
-**非连续引文**（引文内容含省略号 `…` / `...`——缩略形，非所引行的连续子串）⇒ `not a contiguous citation (ellipsis) @ {相对路径} — quote one contiguous excerpt`——**形状不符与内容造假分列**
-（承 2026-10-03 用户裁定「省略号禁用于承担判断面」）。**判定优先级：含省略号且不连续 ⇒ 非连续引文类——先于 `content mismatch` 判定**（两表描同时成立时以此为准；判据同 A-AG16 ∥ F34 判定句①）。
-报告头行 `[host-verified] N/M citations match current file state.` 与命中判据（所引行**连续子串** `includes`）零改；判定面 = 仅失败分类，零新增匹配路径、零模糊匹配。
+**非连续引文**（引文内容含省略号 `…` / `...` 且**全部候选未中**——缩略形，非所引行的连续子串）⇒ `not a contiguous citation (ellipsis) @ {相对路径} — quote one contiguous excerpt`——**形状不符与内容造假分列**
+（承 2026-10-03 用户裁定「省略号禁用于承担判断面」）。**判定优先级：含省略号且全部候选未中 ⇒ 非连续引文类——先于 `content mismatch` 判定**（候选命中先于本分类；两表述同时成立时以此为准；判据同 A-AG16 ∥ A-AG18 ∥ F34 判定句①）。
+报告头行 `[host-verified] N/M citations match current file state.` 零改；命中判据 = **装饰剥离候选集**（c1–c4——所引行**连续子串** `includes`；零模糊匹配、零内容级归一）；判定面 = 失败分类与候选构成。
 
 **引证形状写作禁则（评审提示词面——逐字建议，内容权在主 agent）**：四面（round1 / round2 / round3 / design，各 EN ⊗ CN）Host verification / Citation 段追加：
 
@@ -140,7 +143,7 @@ run.mjs:180: timeoutId = setTimeout(...)  ⇒  run.mjs:180: timeoutId = setTimeo
 
 **归宿面（不可验证 ⇒ 有结论——F28/F29 邻域，零新判定族）**：未通过机械核验的引用**不能支撑打回**（本体零改）；其条目不得悬置——每轮以明列 Status 收束（`Unfixed` 携状态 ∥ 经争议窗收口；`design/ADVISOR-CONVERGENCE.md` §2.5），评审收尾时未验证条目逐一明列、**不得静默丢条目**；评审**不完整**（宿主截断族）⇒ 失败结论块逐次产出（§7——零改复核）。
 
-**取舍**：只按“声明范围 + 内容判据”扩充候选——**零新增假命中**（不会因同名文件而误命中：内容必须逐字包含）；残余如实报告：引用声明范围外、且其仓根不在声明范围时仍判 unreadable。
+**取舍**：只按“声明范围 + 内容判据”扩充候选根——命中内容仍须**逐字连续子串**（候选仅剥外层装饰 / 取引号内文——**零模糊、零内容级归一**；不会因同名文件误命中：内容必须逐字包含）；残余如实报告：引用声明范围外、且其仓根不在声明范围时仍判 unreadable。
 
 ## 4. 预算硬墙 + 提示 + 结构化收尾（D 族）
 
@@ -376,8 +379,9 @@ export function advisorContextBudget(provider) {
 | A-AG13 | 类型门（F30）：`args.type ∉ {code,design}`（缺失 / `null` / 空串 / 非法值 / 非字符串）⇒ 拒发串（前缀 + 两合法值各一行用途 + 标识行）+ `_advisorRefusals` 登记，零实例 / 零 token；显式 `code` / `design` ∧ `object.type` 未声明 / 一致 / 非枚举值 ⇒ 照常；**冲突对**（顶层显式合法值 ≠ `object.type` 的另一合法值）⇒ 同拒（`criterion=type-object-conflict` + 两路指引） | 类型门 |
 | A-AG14 | 对象标识行（F31）：三类文案首行载四项（type / scope / round / criterion）；既有稳定前缀逐字在位；类型门拒回 `type=absent\|invalid`（冲突拒回记顶层实收值 `code\|design`）；失败结论块 `type` = 实际评审轨（两轨共用） | 对象标识行 |
 | A-AG15 | 调用面零残留（F30 判定句 ③）：`advisor.mjs` 源内 `args.type \|\| "code"` 零命中 + 声明面三处 type `(default)` 旧句零命中；三树 `advisorTool.execute(` / `runAdvisorReview(` / `prepareAdvisorMessages(` 调用点逐处显式；**声明一致零残留**——三树 `*.mjs` 调用点 `object` 声明零命中（静态面；结构断言 + 口径命令可重跑） | 类型门 |
-| A-AG16 | 引证形状分类：省略号引文 ⇒ 非连续引文类（含改法），不再报 content mismatch；非省略号不匹配 ⇒ mismatch 照旧；命中判据与报告头行零改；四面禁则 + 示例替形在位（`setTimeout(...)` 示例零残留） | 引文解析 |
+| A-AG16 | 引证形状分类：省略号引文（**候选全未中**——A-AG18）⇒ 非连续引文类（含改法），不再报 content mismatch；非省略号不匹配 ⇒ mismatch 照旧；报告头行零改（命中判据 = A-AG18 本批增量）；四面禁则 + 示例替形在位（`setTimeout(...)` 示例零残留） | 引文解析 |
 | A-AG17 | 归宿面：未验证引用不支撑打回（既有断言零改）；「不得静默丢条目」收尾句在位；不完整 ⇒ 失败结论块（A-AG9 覆盖） | 引文解析 / 失败结论 |
+| A-AG18 | 引文**装饰剥离候选集**：包裹引号 ∥ 行内注记装饰的引文 ⇒ 候选（c1 原捕获 ∥ c2 反复剥引号族 + 空白 ∥ c3 首个引号字符后段 ∥ c4 首个成对引号段内层文本；派生候选下限 2 字符）任一为所引行连续子串即 matched（零模糊、零内容级归一）；候选命中先于省略号分类（引号外语义省略形 ⇒ matched；引号内省略形 ⇒ 非连续引文类照判）；失败四类 / 报告头行 / 围栏零改 | 引文解析 |
 
 ## 11. 边界
 
@@ -404,6 +408,9 @@ export function advisorContextBudget(provider) {
 
 ## 变更记录
 
+- 2026-10-05（**批 review-face-gaps · 实施轮 · eng-coder**——承批档 `docs/batches/2026-10-05-review-face-gaps.md` §2 · 台账 #928）：§3 判据句收正——命中判据 = **装饰剥离候选集**（c1–c4；零模糊、零内容级归一；候选命中先于省略号分类——引号外语义省略形转 matched）；§10 A-AG16 尾句收正 + 新增 **A-AG18**。
+
+- 2026-10-04（**工具路径基面根治批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-tool-path-baseline.md` §2 · 台账 #921）：§2.5 判据名表 + `scope-doc-ambiguous`（范围歧义 fail-closed 拒——documents 相对形多候选可读命中 ≥2）；载面枚举四 ⇒ 五项（③ 范围歧义新载 + ② 范围非法载面加解析诊断尾——报「解析后绝对路径 + 基面 + 候选项目根提示」，纠「误报因」缺陷）；既有判据（`scope-not-doc` 本体 ∥ 稳定前缀 ∥ 标识行形态）零改。实施 = eng-coder 轮。
 - 2026-10-03（**复评（轮次 2）发现 4 处置 · 父侧直接执行 · 可 revert**——承 `docs/batches/2026-10-03-advisor-convergence.md` §3 轮次 2）：§3 失败分类处补**判定优先级**句（含省略号且不连续 ⇒ 非连续引文类，先于 `content mismatch`——与 A-AG16 ∥ F34 判定句① 同口径）。**零语义改**（表述补全）。
 
 - 2026-10-03（**轻量收正 · 父侧直接执行 · 可 revert**——承设计修复轮 #19 §3 另记）：§3 归宿面「评审收尾（预算用尽）时」 ⇒ 「评审收尾时」——射程与 `design/ADVISOR-CONVERGENCE.md` 收尾句（不限预算用尽）同口径（同轮发现 #7 同形残面）。**零语义改**（归宿面义务本体零动；只删射程括注）。
