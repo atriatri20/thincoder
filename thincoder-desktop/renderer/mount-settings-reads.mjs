@@ -276,6 +276,10 @@ export function createReads(deps = {}) {
       alwaysOn: receipt.spec.alwaysOn === true,
       effortEnum: listOf(receipt.spec.effortEnum),
       effortDefault: str(receipt.spec.effortDefault),
+      // 图像输入（文本 ∕ 多模态区分 · 2026-10-10）：生效值 + 显式覆写值（select 初值判据——
+      // 生效值恒有，用它选不出「跟随内置表」态）。**漏映则读数行恒「不支持」**（主侧回执有值也没用）。
+      multimodal: receipt.spec.multimodal === true,
+      multimodalExplicit: receipt.spec.multimodalExplicit === true ? true : receipt.spec.multimodalExplicit === false ? false : null,
     }
     const model = store.get().settings?.model ?? {}
     const models = listOf(model.models).map((row) =>
