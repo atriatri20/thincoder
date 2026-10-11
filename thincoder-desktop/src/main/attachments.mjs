@@ -21,7 +21,8 @@
  * 纪律：零 electron / 零模块态（诊断 = `console.error`）；`cwd` 由宿主注入（**非** `process.cwd()`，
  * 与装配取值面同源）；本档出口零抛（附件面不许把回合驱动带崩）。
  */
-import { mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { downgradeNonVisionImages, isNonVisionModel, savePastedImages } from "@thincoder/core/attachments.mjs"
 import { appendImagePointer } from "@thincoder/core/agent/setup-reminders.mjs"
 import { normalizeLocale } from "@thincoder/core/i18n.mjs"
@@ -96,12 +97,56 @@ export async function degradeTurnAttachments(attached, { model, cwd, parentAgent
   return { text: appendLine(body, noticeText(locale)), paths, degraded: "non-vision" } // 失败径（旧端态文本）
 }
 
-/** 回合尾清理（项 6 —— 宿主三径结算点调）：逐件删**本回合**落盘件；`force` 吞「已不在」（目的已达），
- *  余失败 `console.error`（容忍 —— 不阻断结算）。不删目录（他回合件可能在内）。 */
+/** 图文消息显示窗（2026-10-10 · 用户对照 ZCode「图文消息」提出）：贴图落盘件**不再回合尾即删**，
+ *  保留 30 天供对话内缩略图渲染（`renderer/chat-images.mjs` 经 `image:read` 读回）；过期由本清理的
+ *  目录扫面回收（每次 cleanup 调用顺带扫 `paste-*`，节奏 = 每回合一次）。 */
+const IMAGE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
+
+/** 回合尾清理（项 6 —— 宿主三径结算点调）：**过期才删**（2026-10-10 前为逐件即删——图文消息批改为
+ *  留存窗语义）；本回合在册件 + 目录内 `paste-*` 旧件同扫（他回合件可能在内 ⇒ 只扫 `paste-` 命名）；
+ *  `force` 吞「已不在」，余失败 `console.error`（容忍——不阻断结算）。不删目录。 */
 export function cleanupTurn(paths) {
-  if (!Array.isArray(paths)) return
-  for (const file of paths) {
-    try { rmSync(file, { force: true }) }
-    catch (error) { console.error(`[attachments] temp cleanup failed: ${file}`, error) }
+  const now = Date.now()
+  const expired = (file) => {
+    try { return now - statSync(file).mtimeMs > IMAGE_RETENTION_MS }
+    catch { return true /* 已不在 ⇒ 视同过期（删除零害） */ }
   }
+  const dirs = new Set()
+  if (Array.isArray(paths)) {
+    for (const file of paths) {
+      if (typeof file !== "string" || file === "") continue
+      dirs.add(dirname(file))
+      if (expired(file)) {
+        try { rmSync(file, { force: true }) }
+        catch (error) { console.error(`[attachments] temp cleanup failed: ${file}`, error) }
+      }
+    }
+  }
+  for (const dir of dirs) {
+    let entries
+    try { entries = readdirSync(dir) } catch { continue }
+    for (const name of entries) {
+      if (!/^paste-/.test(name)) continue
+      const file = join(dir, name)
+      if (expired(file)) {
+        try { rmSync(file, { force: true }) }
+        catch { /* 竞态删除 ⇒ 零动作 */ }
+      }
+    }
+  }
+}
+
+/** `image:read(payload)` ⇒ `{ ok, dataUrl }` ∥ `{ ok:false, reason }`——对话内图文消息的**特权读图口**
+ *  （渲染端无本地文件读取面 ⇒ 经本通道把落盘贴图读成 dataURL 供缩略图渲染；ZCode `readAttachment`
+ *  的对位——彼处返回 bytes ∕ 本地协议 URL，此处 dataURL 同效）。
+ *  受限面：路径必须落在 `.thincoder` 下 ∧ 基名 `paste-` 打头（会话附件面；渲染端不可凭它读任意本地文件）。 */
+export function imageRead(payload) {
+  const file = String(payload?.path ?? "")
+  if (!file.includes(".thincoder") || !/[/\\]paste-[^/\\]*$/.test(file)) return { ok: false, reason: "invalid-path" }
+  try {
+    const ext = file.split(".").pop()?.toLowerCase() ?? ""
+    const mime = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp" }[ext]
+    if (mime === undefined) return { ok: false, reason: "invalid-type" }
+    return { ok: true, dataUrl: `data:${mime};base64,${readFileSync(file).toString("base64")}` }
+  } catch { return { ok: false, reason: "gone" } }
 }

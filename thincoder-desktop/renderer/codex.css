@@ -682,6 +682,27 @@ body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; 
 }
 .model-grid .settings-row-name { font-size: 13px; }
 
+/* ── 用户消息图文缩略图（模型参数批 · 2026-10-10）──────────────────────────
+   贴图落盘件经窄桥 `image:read` 读成 dataURL 回填（ZCode 附件预览同位——缩略图条居文本前）。
+   回填前 = 静息占位（同尺寸 muted 底，防跳动）；读失败（超清理窗被回收）= 「图已清理」占位。 */
+.block-images { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; justify-content: flex-end; }
+.block-image {
+  max-height: 160px;
+  max-width: min(240px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  object-fit: cover;
+}
+.block-images img[data-pending] { min-width: 96px; min-height: 64px; background: color-mix(in srgb, var(--fg) 7%, transparent); }
+.block-images img[data-gone] {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 96px; min-height: 40px; padding: 0 10px;
+  border: 1px dashed var(--line); border-radius: 10px;
+  color: var(--fg-muted); font-size: 12px;
+}
+.block-images img[data-gone]::before { content: attr(data-gone); }
+
 /* ── 模型行图标钮 + 上下文 K 徽标（模型参数批 · 2026-10-10）──────────────────────
    用户裁定：「采用」改图标（原文字胶囊在四列网格下占宽）⇒ 其后加铅笔钮开「编辑模型配置」弹窗。
    字形住本档 `content`（零字形字面 —— 全档纪律）；`aria-label` ∕ `title` 由视图档给可及名。

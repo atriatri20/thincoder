@@ -70,6 +70,7 @@ export const COMPOSER_DICT = Object.freeze({
     "toolbar.settings": "Settings",
     "toolbar.openSettings": "Open settings",
     "attach.file": "Attach file",
+    "chat.imageGone": "Image cleaned up",
     "attach.label": "Attach",
   },
   zh: {
@@ -120,6 +121,7 @@ export const COMPOSER_DICT = Object.freeze({
     "toolbar.settings": "设置",
     "toolbar.openSettings": "打开设置",
     "attach.file": "附加文件",
+    "chat.imageGone": "图已清理",
     "attach.label": "附件",
   },
 })

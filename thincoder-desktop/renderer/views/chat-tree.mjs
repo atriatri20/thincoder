@@ -18,7 +18,8 @@ import { t } from "../i18n.mjs"
 import { toolCard, wire } from "./chat-tool.mjs"
 import { approvalCardNode } from "./approval.mjs"
 import { compressNode } from "./compress-status.mjs"
-import { labelNode, reasoningNode, textFace } from "./chat-text.mjs"
+import { blockTextOf, labelNode, reasoningNode, textFace } from "./chat-text.mjs"
+import { attachedImagePathsOf, imageStripNode, stripImagePointer } from "../chat-images.mjs"
 import { blockKey } from "./chat-stream.mjs"
 import { subagentNode } from "./chat-subagent.mjs"
 import { digestRows, roundAt } from "./chat-digest-rows.mjs"
@@ -86,6 +87,13 @@ export function blockNode(block, index, hidden, handlers, prev, canRetry = false
   }
   if (kind === "subagent") return subagentNode(block, key, label)
   if (kind === "error") return errorNode(block, key, handlers, label, canRetry)
+  // 用户块**图文**（2026-10-10 · 用户对照 ZCode「图文消息」提出）：指引行 `[Attached images: …]`
+  // （核 `appendImagePointer` 尾附——模型读图用）在显示面**剥除**，路径交给缩略图条（`chat-images.mjs`
+  // 经窄桥 `image:read` 读落盘贴图回填）——对话里直接可见所贴图（原形态：图只落盘 ∕ 模型经工具读，
+  // 对话里零展示）。缩略图条居文本**前**（ZCode 同位）。
+  const imagePaths = kind === "user" ? attachedImagePathsOf(blockTextOf(block)) : null
+  const userText = imagePaths === null ? blockTextOf(block) : stripImagePointer(blockTextOf(block))
+  const strip = imagePaths === null ? null : imageStripNode(imagePaths)
   return {
     tag: "div",
     props: {
@@ -96,7 +104,11 @@ export function blockNode(block, index, hidden, handlers, prev, canRetry = false
       "data-started": started,
       "data-streaming": kind === "assistant" && block?.streaming === true ? "1" : undefined,
     },
-    children: [...(label ? [labelNode(kind === "user" ? "user" : "assistant")] : []), textFace(block)],
+    children: [
+      ...(label ? [labelNode(kind === "user" ? "user" : "assistant")] : []),
+      ...(strip === null ? [] : [strip]),
+      textFace({ ...block, text: userText }),
+    ],
   }
 }
 

@@ -46,6 +46,7 @@ import { attachSearch } from "./search.mjs"
 import { attachChromeWords } from "./chrome-words.mjs"
 import { attachMinimap } from "./minimap.mjs"
 import { attachReasoningTimes } from "./reasoning-times.mjs"
+import { attachChatImages } from "./chat-images.mjs"
 import { attachChatWork } from "./chat-work.mjs"
 import { attachUserCollapse } from "./user-collapse.mjs" // 用户长文折叠（ZCode ConversationUserInputBody 移植）
 import { attachSidebar, unhideProject } from "./mount-sidebar.mjs" // unhideProject：重开目录解隐（移除=隐藏 · fork 2026-10-06）
@@ -106,6 +107,7 @@ attachHeader() // 统一 Header（菜单钮 ∕ 词面；toggle 接线在 mount-
 attachChromeWords() // 核件控件行静态字面语言补丁（中文模式收正批 —— 出档 `renderer/chrome-words.mjs`；序须在 `attachComposer` 后）
 attachMinimap() // 对话小地图（Codex 形大改批 —— 出档 `renderer/minimap.mjs`；自持三观察，零帧路径涉入）
 attachReasoningTimes() // 思考耗时摘要增量回写（同批 —— 出档 `renderer/reasoning-times.mjs`；补增量挂载径的摘要缝）
+attachChatImages() // 用户消息图文缩略图回填（模型参数批 · 2026-10-10 —— 出档 `renderer/chat-images.mjs`）
 attachChatWork()
 attachUserCollapse() // 用户长文折叠（气泡 >120px 折叠 ∕ 渐隐 ∕ 居中箭头钮——ZCode 同值） // 工作过程折叠（ZCode ConversationTurnGroup 语义移植 —— 出档 `renderer/chat-work.mjs`；DOM 后处理，块机制零涉）
 

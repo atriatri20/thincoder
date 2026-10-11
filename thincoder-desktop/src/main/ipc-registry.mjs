@@ -12,6 +12,7 @@
  * - `channels` 读数口径 = 本次运行**实际分发集合**（顺序去重 —— 批档 §2.11 收正⑦）。
  */
 import { ipcMain } from "electron"
+import { imageRead } from "./attachments.mjs"
 import {
   CHANNELS, ipcStats,
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCatalog, sessionCreate, sessionSwitch,
@@ -74,6 +75,7 @@ const HANDLERS = Object.freeze({
   "session:prefs": sessionPrefs,
   "subagent:stop": subagentStop,
   "file:open": fileOpen,
+  "image:read": imageRead,
   "shell:openPath": shellOpenPath,
   "menu:popup": menuPopup,
   "window:control": windowControl,
