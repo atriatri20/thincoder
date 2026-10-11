@@ -1464,3 +1464,59 @@ body.pool-collapsed .pool-collapse { left: 4px; }
 @media (max-width: 60rem) {
   .usage-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ── 图片预览 lightbox（ZCode ImagePreviewDialog 对位 · 2026-10-12）────────────
+   遮罩 ∕ 舞台 ∕ 居中大图 ∕ 环形钮（可及名 = `preview.*` 词键）∕ 底部缩放药丸。
+   字形纪律：`content` 住本档（零字形字面进 JS——`.settings-icon-btn` 同式）。
+   缩略图已回填件 `cursor: zoom-in`（可点暗示——pending ∕ gone 不响应）。 */
+.image-preview {
+  position: fixed; inset: 0; z-index: 1000;
+  display: none; align-items: center; justify-content: center;
+  background: color-mix(in srgb, black 62%, transparent);
+  backdrop-filter: blur(4px);
+}
+.image-preview-stage {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+  cursor: grab; touch-action: none;
+}
+.image-preview-stage:active { cursor: grabbing; }
+.image-preview-img {
+  max-width: min(92vw, 1400px); max-height: 92vh;
+  border-radius: 12px; border: 1px solid var(--line); background: var(--bg);
+  object-fit: contain; user-select: none;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+}
+.image-preview-btn {
+  position: absolute; z-index: 2;
+  width: 34px; height: 34px; padding: 0;
+  border-radius: 50%; border: 1px solid var(--line);
+  background: var(--overlay); color: var(--fg);
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 15px; font-weight: 600;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+.image-preview-btn:hover { background: color-mix(in srgb, var(--fg) 8%, var(--overlay)); }
+.image-preview-close { top: 14px; right: 14px; }
+.image-preview-close::before { content: "✕"; }
+.image-preview-download { top: 14px; right: 56px; }
+.image-preview-download::before { content: "↓"; }
+.image-preview-nav { top: 50%; margin-top: -17px; }
+.image-preview-prev { left: 14px; }
+.image-preview-prev::before { content: "‹"; }
+.image-preview-next { right: 14px; }
+.image-preview-next::before { content: "›"; }
+.image-preview-pill {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 2;
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--overlay); backdrop-filter: blur(8px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+.image-preview-pill .image-preview-btn {
+  position: static; width: 26px; height: 26px; font-size: 16px; box-shadow: none;
+}
+.image-preview-zoom-out::before { content: "−"; }
+.image-preview-zoom-in::before { content: "+"; }
+.image-preview-pct { min-width: 44px; text-align: center; font-size: 12.5px; color: var(--fg); }
+.block-image[data-loaded] { cursor: zoom-in; }
