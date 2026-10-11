@@ -8,6 +8,8 @@
  * The caller passes the spec (providerSpec from core.mjs — provider-aware).
  */
 
+import { crc32 as pngCrc32, inflateSync } from "node:zlib"
+
 const RASTER_IMAGE_URL = /^data:image\/(png|jpe?g|gif|webp);base64,/
 
 /** 历史图片累计字节预算（D-PR32——40MB 级请求体的保守下界，留两张大图余量；可调）。 */
@@ -82,6 +84,99 @@ export function stripImagesForTextModel(messages, spec) {
         ? `unsupported format ${url.match(/^data:([^;,]+)/)?.[1] || "unknown"}`
         : "this model does not support image input"
       return { type: "text", text: `[image omitted — ${reason}]` }
+    })
+    if (!msgChanged) return m
+    changed = true
+    return { ...m, content: parts }
+  })
+  return changed ? out : messages
+}
+
+/** Magic-byte sniff for raster images (single source — the read tool's bad-bytes gate and the
+ *  wire-side quarantine below both consume this). Matches png/jpeg/gif/webp ⇒ its mime; garbage /
+ *  truncated / non-image bytes ⇒ null. Judges CONTENT, not declarations.
+ *  Exported (re-exported from tools/file.mjs for its test floor). */
+export function sniffImageMime(buf) {
+  const b = Buffer.isBuffer(buf) ? buf : Buffer.from(buf ?? [])
+  if (b.length < 12) return null
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "image/png"
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg"
+  const head6 = b.slice(0, 6).toString("latin1")
+  if (head6 === "GIF87a" || head6 === "GIF89a") return "image/gif"
+  if (b.slice(0, 4).toString("latin1") === "RIFF" && b.slice(8, 12).toString("latin1") === "WEBP") return "image/webp"
+  return null
+}
+
+/** PNG 完整解码判据（伪件实锤批 · 2026-10-12）：头 8 字节真魔数 ∕ IHDR 合法 ∕ 逐块 CRC ∕ IDAT zlib
+ *  膨胀尺寸 = h×(1+行字节) 四关全过才算图——**头验拦不住「真魔数 + 偽内部」件**（真机毒源正是它：
+ *  上游做完整解码 ⇒ 1210）。失败 ⇒ false（含截断 ∕ CRC 错 ∕ 膨胀尺寸不合）。 */
+function pngComplete(b) {
+  try {
+    let off = 8
+    let w = 0, h = 0, depth = 0, color = 0
+    const idat = []
+    while (off + 12 <= b.length) {
+      const len = b.readUInt32BE(off)
+      const type = b.slice(off + 4, off + 8).toString("latin1")
+      const data = b.slice(off + 8, off + 8 + len)
+      if (pngCrc32(Buffer.concat([b.slice(off + 4, off + 8), data])) !== b.readUInt32BE(off + 8 + len)) return false
+      if (type === "IHDR") { w = data.readUInt32BE(0); h = data.readUInt32BE(4); depth = data[8]; color = data[9] }
+      else if (type === "IDAT") idat.push(data)
+      else if (type === "IEND") break
+      off += 12 + len
+    }
+    if (idat.length === 0 || w === 0 || h === 0 || depth === 0) return false
+    const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[color]
+    if (channels === undefined) return false
+    const rowBytes = Math.ceil((w * channels * depth) / 8)
+    return inflateSync(Buffer.concat(idat)).length === h * (1 + rowBytes)
+  } catch {
+    return false
+  }
+}
+
+/** 光栅图**完整可解码**判据（发侧隔离 ∕ 读侧拒注入同源）：PNG = 全解码四关；JPEG = EOI 尾标记在场；
+ *  GIF = 图像描述符（0x2C）+ trailer（0x3B）收尾；WebP = RIFF 长度场与实际长度一致。真图零误伤
+ *  （浏览器能显示的件全过）；伪件 ∕ 截断件 ⇒ false。 */
+export function rasterImageComplete(buf) {
+  const b = Buffer.isBuffer(buf) ? buf : Buffer.from(buf ?? [])
+  const mime = sniffImageMime(b)
+  if (mime === null) return false
+  try {
+    if (mime === "image/png") return pngComplete(b)
+    if (mime === "image/jpeg") return b.length > 4 && b[b.length - 2] === 0xff && b[b.length - 1] === 0xd9
+    if (mime === "image/gif") return b.length > 16 && b[b.length - 1] === 0x3b && b.includes(0x2c)
+    if (mime === "image/webp") return b.length >= 12 && b.readUInt32LE(4) === b.length - 8
+  } catch {
+    return false
+  }
+  return false
+}
+
+/** 坏图隔离（1210 毒化批 · 2026-10-12）：`contextHistory` 持久化**含 base64 图 part** ⇒ 历史里的坏图
+ *  （伪件 ∕ 截断件——曾由 read_image 误注入）**跨重启重放**，上游对坏图 part 恒 400
+ *  （`[1210]图片输入格式/解析错误`）⇒ 该会话后续每个请求连带失败（连纯文本也死——毒在请求体里）。
+ *  发送前逐 data-URL 图 part **完整可解码**判（`rasterImageComplete`——PNG 全解码四关，头验拦不住
+ *  「真魔数 + 偽内部」件——真机毒源正是它）⇒ 不过 ⇒ 该 part 替换为占位文本（先例 =
+ *  `stripImagesForTextModel` 的 omit 句式）⇒ **带毒旧会话下一回合自愈**（请求体恒净；休眠坏 part
+ *  留在持久化里无害）。非 data 引用（http(s)）本地不可验 ⇒ 原样放行（上游自行取件）。
+ *  纯函数 ∕ 拷贝语义（未命中返回原引用——幂等帧零重建）。 */
+const MALFORMED_IMAGE_PLACEHOLDER = "[image omitted — malformed or corrupt image content]"
+
+export function quarantineMalformedImages(messages) {
+  if (!Array.isArray(messages)) return messages
+  let changed = false
+  const out = messages.map((m) => {
+    if (!Array.isArray(m?.content) || !m.content.some((p) => p?.type === "image_url")) return m
+    let msgChanged = false
+    const parts = m.content.map((p) => {
+      if (p?.type !== "image_url") return p
+      const url = p.image_url?.url || ""
+      if (!url.startsWith("data:") || !url.includes(",")) return p
+      const bytes = Buffer.from(url.slice(url.indexOf(",") + 1), "base64")
+      if (rasterImageComplete(bytes)) return p
+      msgChanged = true
+      return { type: "text", text: MALFORMED_IMAGE_PLACEHOLDER }
     })
     if (!msgChanged) return m
     changed = true

@@ -126,6 +126,10 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   // window/clamping logic below reads the overridden value where it matters.
   const spec = providerSpec(provider)
   messages = stripImagesForTextModel(messages, spec)
+  // 1210 毒化批（2026-10-12）：坏图 part 隔离——`contextHistory` 持久化含 base64 图 part，历史带毒
+  // **跨重启重放**（上游对坏图 part 恒 400「图片输入格式/解析错误」⇒ 会话连纯文本也答不了）；
+  // 发送前占位替换 ⇒ 带毒旧会话下一回合自愈。机制全文 = normalize.mjs 该函数档注。
+  messages = quarantineMalformedImages(messages)
   // #853 D-PR32：历史图片累计字节预算——发送前对消息副本累计驱逐（最老先弃；history 本体零触）。
   messages = capHistoryImages(messages)
   // SESSION.md §6.9 T-S3: local-only message fields (ts/transient) never reach the wire.
@@ -332,8 +336,8 @@ export function buildContinuationMessages(messages, result, spec) {
 // Pre-send payload normalization lives in normalize.mjs (2026-08-31 extract,
 // TODO #2); re-exported so provider/index.mjs and tool-pairing.test.mjs keep
 // their import paths.
-import { stripImagesForTextModel, normalizeToolPairing, capHistoryImages } from "./normalize.mjs"
-export { stripImagesForTextModel, normalizeToolPairing }
+import { stripImagesForTextModel, normalizeToolPairing, capHistoryImages, quarantineMalformedImages } from "./normalize.mjs"
+export { stripImagesForTextModel, normalizeToolPairing, quarantineMalformedImages }
 /** Merge tool calls from a retry/continuation into the accumulated result.
  *  2026-08-31 会诊 #7/#17：readSSE 输出的 tc 已 finalize（无 index 字段），
  *  原实现恒 append（重试里 provider 重发完整 tc → tool 名 "get_weatherget_weather"、

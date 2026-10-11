@@ -124,20 +124,10 @@ export const readTool = {
 const IMAGE_EXTENSIONS = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp" }
 const MAX_SVG_CHARS = 100_000
 
-/** Magic-byte sniff (bad-bytes gate, 2026-10-12): content-declared raster format — matches one of
- *  png/jpeg/gif/webp ⇒ its mime; garbage / truncated / text-as-image ⇒ null. Judges FILE CONTENT,
- *  not the extension (mislabels don't count — the gateway sniffs too, but only after we declare
- *  something decodable). Exported for the test floor. */
-export function sniffImageMime(buf) {
-  const b = Buffer.isBuffer(buf) ? buf : Buffer.from(buf ?? [])
-  if (b.length < 12) return null
-  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "image/png"
-  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg"
-  const head6 = b.slice(0, 6).toString("latin1")
-  if (head6 === "GIF87a" || head6 === "GIF89a") return "image/gif"
-  if (b.slice(0, 4).toString("latin1") === "RIFF" && b.slice(8, 12).toString("latin1") === "WEBP") return "image/webp"
-  return null
-}
+// 图判据单源 = `provider/normalize.mjs`（嗅探 ∕ 完整可解码——读侧坏件闸 ∕ 发送侧坏图隔离两消费，
+// 零第二实现）；此处保名再出口（本档测试面 ∕ 既有 import 面零改）。
+import { sniffImageMime, rasterImageComplete } from "../provider/normalize.mjs";
+export { sniffImageMime };
 
 export const readImageTool = {
   name: "read_image",
@@ -187,19 +177,21 @@ export const readImageTool = {
     const imgStat = await stat(abs).catch(() => null)
     if (imgStat && imgStat.size > MAX_IMAGE_BYTES) throw new Error(`Image too large: ${Math.round(imgStat.size / 1_000_000)}MB (max 15MB)`)
     const buf = await readFile(abs) // raw buffer, no encoding
-    // 坏字节闸（2026-10-12 · 1210 毒化批）：内容魔数与扩展名声明**两判**——垃圾 ∕ 截断件（.png 名下装着
-    // 非图字节）一旦注入即**毒化运行态历史**：网关对坏图 part 恒 400（1210 图片输入格式∕解析错误——
-    // 真机探针复现），该会话后续**每个请求**连带失败，直到端侧重启重建历史。工具**报错不注入** ⇒ 会话
-    // 保持干净；错标件（真 GIF 装在 .jpg 名下）⇒ 按**嗅探 mime** 出 dataURL（网关嗅探容忍错标——真机
-    // 探针：真 gif 明标 image/gif 200 ∕ 错标 image/jpeg 亦 200；明标真 mime 更诚实）。
-    const realMime = sniffImageMime(buf)
-    if (realMime === null) {
+    // 坏件闸（2026-10-12 · 1210 毒化批）：**完整可解码**判（`rasterImageComplete`——PNG 走 CRC ∕
+    // zlib 膨胀尺寸全解码四关，头魔数验拦不住「真魔数 + 偽内部」件——真机毒源正是它）。垃圾 ∕ 截断 ∕
+    // 伪件一旦注入即**毒化持久化上下文**（contextHistory 含 base64 图 part ⇒ 跨重启重放）：网关对坏图
+    // part 恒 400（1210 图片输入格式∕解析错误）⇒ 该会话后续**每个请求**连带失败。工具**报错不注入**
+    // ⇒ 会话保持干净（纵深：发侧另有隔离占位——normalize.mjs `quarantineMalformedImages`）；
+    // 错标件（真 GIF 装在 .jpg 名下）⇒ 按**嗅探 mime** 出 dataURL（网关嗅探容忍错标——真机探针：
+    // 真 gif 明标 image/gif 200 ∕ 错标 image/jpeg 亦 200；明标真 mime 更诚实）。
+    if (!rasterImageComplete(buf)) {
       throw new Error(
-        `Corrupt or unsupported image: ${args.path} — file content does not match any raster format (png/jpeg/gif/webp). ` +
+        `Corrupt, truncated, or unsupported image: ${args.path} — the file does not fully decode as png/jpeg/gif/webp. ` +
         `Refusing to inject: a malformed image part would make every subsequent request in this session fail (upstream 400 image-parse-error). ` +
         `Re-export the file as a real image and try again.`
       )
     }
+    const realMime = sniffImageMime(buf)
     const b64 = buf.toString("base64")
     const bytes = buf.length
     const result = JSON.stringify({
