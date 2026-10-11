@@ -568,8 +568,13 @@ body.sidebar-collapsed .sidebar-settings { justify-content: center; padding: 0; 
 .session-new::before { content: "+"; font-size: 16px; }
 
 /* ── 对话流：用户消息右置（Codex ∕ ChatGPT 形）──────────────────────────── */
-.block-user { display: flex; justify-content: flex-end; }
+.block-user { display: flex; flex-wrap: wrap; justify-content: flex-end; }
 .block-user > .block-text { max-width: 78%; }
+/* 图文消息布局（2026-10-11 · 用户裁定「缩略图与文字混在一起」）：缩略图条 = 气泡**上方**的独立容器
+   （ZCode 同形）——条占满整行（flex-wrap 换行）⇒ 文本气泡独占下一行；气泡底色只在 `.block-text`，
+   条零底色 ⇒ 图文视觉分离。纯图消息（剥除指引行后文本为空）⇒ 气泡隐藏，只余图条。 */
+.block-user > .block-images { width: 100%; }
+.block-user > .block-text:empty { display: none; }
 /* 小地图让位（Rail 左 12px ∕ 宽 36px ⇒ 让 52px；列心随余区微移，视觉居中保持）。
    **列宽锚 52rem → 106rem**（用户 4K 实测「还是 1200px」根因——旧公式按 52rem 居中列算让位，
    会话区越宽 padding 越巨（1480 区算出 349px），列永远 ≈ 52rem+；与列宽跟随容器（106rem）对齐后：
