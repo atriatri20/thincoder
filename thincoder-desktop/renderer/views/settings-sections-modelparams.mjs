@@ -184,6 +184,32 @@ function readRow(labelKey, value) {
   }
 }
 
+/** 图像输入 select（`multimodal` 叶——文本 ∕ 多模态区分，参照 ZCode「输入类型」；消费点 = 附件门
+ *  `attachments.mjs isNonVisionModel` ∕ 视觉读图工具注册 `vision-reader.mjs`——改它有真效果）。
+ *  三态：**跟随内置表**（空值 = 不写该叶 ⇒ 整条覆写重写时该叶缺席）∕ 支持图片 ∕ 不支持图片。
+ *  初值判据 = **显式覆写值**（非生效值——生效值恒有，用它选不出「跟随」态）；生效值另见读数行。 */
+function multimodalField(explicit, effective) {
+  const opts = [
+    { value: "", word: t("settings.modelParams.multimodal.follow") },
+    { value: "true", word: t("settings.modelParams.multimodal.yes") },
+    { value: "false", word: t("settings.modelParams.multimodal.no") },
+  ]
+  const current = explicit === true ? "true" : explicit === false ? "false" : ""
+  return {
+    tag: "label",
+    props: { class: "settings-field-block", "data-field": "multimodal" },
+    children: [
+      { tag: "span", props: { class: "settings-field-label" }, children: [t("settings.modelParams.multimodal")] },
+      {
+        tag: "select",
+        props: { class: "settings-field", name: "multimodal", "data-draft": "modelParams.multimodal", "aria-label": t("settings.modelParams.multimodal") },
+        children: opts.map((o) => ({ tag: "option", props: { value: o.value, ...(o.value === current ? { selected: "" } : {}) }, children: [o.word] })),
+      },
+      { tag: "span", props: { class: "settings-field-hint" }, children: [t("settings.modelParams.multimodalHint")] },
+    ],
+  }
+}
+
 /** 弹窗体（`spec` 未达 ⇒ 载入提示 —— 宿主已在场，零退场）。 */
 function bodyNodes(section, handlers) {
   const spec = section?.spec
@@ -202,6 +228,7 @@ function bodyNodes(section, handlers) {
       sourceBadge(spec.source),
     ] },
     readRow("settings.modelParams.effective", effectText(spec)),
+    readRow("settings.modelParams.multimodal", spec.multimodal === true ? t("settings.modelParams.multimodal.yes") : t("settings.modelParams.multimodal.no")),
     {
       tag: "form",
       props: { class: "settings-form", "data-form": "modelParams", "data-draft-scope": "modelParams" },
@@ -214,6 +241,7 @@ function bodyNodes(section, handlers) {
           children: [
             { tag: "summary", props: { class: "settings-advanced-summary" }, children: [t("settings.modelParams.advanced")] },
             { tag: "div", props: { class: "settings-advanced-body" }, children: [
+              multimodalField(spec.multimodalExplicit, spec.multimodal === true),
               thinkField(thinkOf(spec)),
               effortField(enumList),
               effortDefaultField(enumList, spec.effortDefault),

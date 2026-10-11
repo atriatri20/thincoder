@@ -176,6 +176,10 @@ export function createExits(deps = {}) {
     if (think === "off") { patch.thinking = false; patch.thinkAlwaysOn = false }
     else if (think === "on") { patch.thinking = true; patch.thinkAlwaysOn = false }
     else if (think === "always") { patch.thinking = true; patch.thinkAlwaysOn = true }
+    // 图像输入（三态）：空 = 跟随内置表（不入 patch ⇒ 整条覆写重写时该叶缺席）∕ 真 ∕ 假
+    const mm = String(data.get("multimodal") ?? "")
+    if (mm === "true") patch.multimodal = true
+    else if (mm === "false") patch.multimodal = false
     const enums = String(data.get("reasoningEffortEnum") ?? "").split(",").map((s) => s.trim()).filter((s) => s !== "")
     if (enums.length > 0) patch.reasoningEffortEnum = [...new Set(enums)]
     const effortDefault = String(data.get("reasoningEffortDefault") ?? "").trim()

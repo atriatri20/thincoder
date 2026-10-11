@@ -314,10 +314,15 @@ export function settingsAgent(payload) {
 
 /* ─── 模型参数（`modelOverrides` 读写 · 2026-10-10 · 模型参数能力批）──────────────────────────── */
 
-/** 桌面表单可写叶（与核 `sanitizeOverride` 同域的子集——真清洗 ∕ 类型判据仍在核；UI 首版暴露这五叶，
- *  其余叶（`thinkApi` ∕ `multimodal` ∕ `tempRange` ∕ `partialMode` ∕ `prefixMode` ∕ `reasoningEcho` ∕
- *  `format` ∕ `noUsageStream`）经核可写、桌面表单不暴露（手改 config.json 生效）。 */
-const OVERRIDE_WRITABLE = new Set(["context", "maxOutput", "thinking", "thinkAlwaysOn", "reasoningEffortEnum", "reasoningEffortDefault"])
+/** 桌面表单可写叶（与核 `sanitizeOverride` 同域的子集——真清洗 ∕ 类型判据仍在核）。UI 暴露六叶 +
+ *  `multimodal`（2026-10-10 用户裁定补：文本 ∕ 多模态区分——核侧消费点已两处在位：附件门
+ *  `attachments.mjs isNonVisionModel` ∕ 视觉读图工具注册 `vision-reader.mjs`）。其余叶（`thinkApi` ∕
+ *  `tempRange` ∕ `partialMode` ∕ `prefixMode` ∕ `reasoningEcho` ∕ `format` ∕ `noUsageStream`）经核可写、
+ *  桌面表单不暴露（手改 config.json 生效）。 */
+const OVERRIDE_WRITABLE = new Set(["context", "maxOutput", "thinking", "thinkAlwaysOn", "reasoningEffortEnum", "reasoningEffortDefault", "multimodal"])
+
+/** 布尔叶归一（表单串 → 真值；其余类型 ⇒ 丢弃——核 `sanitizeOverride` 的 bool 判据同域）。 */
+const boolOrNull = (v) => (typeof v === "boolean" ? v : v === "true" ? true : v === "false" ? false : null)
 
 /** 写后核表刷新：`writeConfigAtomic` 只落盘，模块级覆写表（`setModelOverrides`）须经 `loadConfig` 重注册
  *  ——否则本进程内 `specForModel` ∕ `modelEntry` 仍读旧表（新覆写「保存了但界面没变」的根因面）。 */
@@ -327,7 +332,7 @@ function refreshOverrides() {
 
 /**
  * `model:spec(payload)` ⇒ `{ ok, id, source, overrideKey, override, spec }`——「模型参数」段读数。
- * `spec` = 生效值（`context ∕ maxOutput ∕ thinking ∕ alwaysOn ∕ effortEnum ∕ effortDefault`），
+ * `spec` = 生效值（`context ∕ maxOutput ∕ thinking ∕ alwaysOn ∕ effortEnum ∕ effortDefault ∕ multimodal`），
  * `source` = 核 `specMatch().source`（`builtin` ∕ `override` ∕ `default`——来源徽标），
  * `overrideKey` = 命中的覆写键（「重置为默认」的删除目标），`override` = 覆写原文（表单回填）。
  */
@@ -336,12 +341,15 @@ export function modelSpec(payload) {
   if (!id) return { ok: false, reason: "invalid-shape" }
   const r = specMatch(id)
   const key = overrideKeyFor(id)
+  const override = key === null ? null : { ...getModelOverrides()[key] }
+  // 显式覆写值（true ∕ false ∕ null = 未覆写）——「图像输入」select 初值与生效值分离的判据
+  const multimodalExplicit = override?.multimodal === true ? true : override?.multimodal === false ? false : null
   return {
     ok: true,
     id,
     source: r.source,
     overrideKey: key,
-    override: key === null ? null : { ...getModelOverrides()[key] },
+    override,
     spec: {
       context: r.spec.context,
       maxOutput: r.spec.maxOutput,
@@ -349,6 +357,8 @@ export function modelSpec(payload) {
       alwaysOn: r.spec.thinkAlwaysOn === true,
       effortEnum: r.spec.reasoningEffortEnum ?? [],
       effortDefault: effortDefaultFor(id) ?? null,
+      multimodal: r.spec.multimodal === true,
+      multimodalExplicit,
     },
   }
 }
@@ -367,6 +377,11 @@ export function modelSpecSave(payload) {
   for (const [key, value] of Object.entries(patch)) {
     if (!OVERRIDE_WRITABLE.has(key)) continue
     if (value === null || value === undefined) continue
+    if (key === "multimodal") {
+      const b = boolOrNull(value) // 表单串 "true" ∕ "false" → 真值（其他 ⇒ 丢弃——核 bool 判据同域）
+      if (b !== null) clean[key] = b
+      continue
+    }
     clean[key] = value
   }
   const w = writeConfigAtomic(_configPath(), (disk) => {

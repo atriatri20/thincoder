@@ -14,6 +14,7 @@ import assert from "node:assert/strict"
 import {
   specForModel, specMatch, providerSpec, setModelOverrides, getModelOverrides, effortDefaultFor,
 } from "../model-specs.mjs"
+import { isNonVisionModel } from "../attachments.mjs"
 
 /** 每用例前清空覆写表（模块级单写者——用例间不得互相污染）。 */
 const clearOverrides = () => setModelOverrides({})
@@ -117,6 +118,16 @@ test("生效序：DEFAULT_SPEC < 内置表 < modelOverrides < providers[].contex
   assert.equal(specForModel("cn:glm-5.3").context, 500_000, "覆写盖内置")
   assert.equal(providerSpec({ model: "cn:glm-5.3", context: 64 }).context, 65_536, "渠道级最具体（K 单位 ×1024）")
   clearOverrides()
+})
+
+test("L2 · multimodal 叶翻转（文本 ∕ 多模态区分——附件门 ∕ 读图工具的判据单源）", () => {
+  setModelOverrides({ "qdcn/qfmodel": { multimodal: true }, "glm-5.3": { multimodal: false } })
+  assert.equal(specForModel("qdcn/qfmodel").multimodal, true, "未知模型（DEFAULT_SPEC）显式开")
+  assert.equal(specForModel("glm-5.3").multimodal, false, "内置行未声明 ⇒ 显式关")
+  assert.equal(specForModel("deepseek-v4.1-flash").multimodal, true, "内置行已声明者零改")
+  assert.equal(isNonVisionModel("qdcn/qfmodel"), false, "附件门随覆写翻转（挂图可随发）")
+  clearOverrides()
+  assert.equal(isNonVisionModel("qdcn/qfmodel"), true, "清覆写 ⇒ 回落非多模态（DEFAULT_SPEC）")
 })
 
 test("既有契约零回归：非串 ∕ 空串 ∕ DEFAULT_SPEC 形状 ∕ providerSpec 基线", () => {

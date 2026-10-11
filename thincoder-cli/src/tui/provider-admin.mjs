@@ -206,6 +206,17 @@ export function createProviderAdmin(ctx) {
       if (se.name === "on") return { thinking: true, thinkAlwaysOn: false }
       return { thinking: true, thinkAlwaysOn: true }
     }
+    if (field === "multimodal") {
+      const se = await showPicker("Image input (multimodal)", [
+        { type: "item", text: "follow built-in spec (clear override)", name: "follow" },
+        { type: "item", text: "yes — model accepts images", name: "yes" },
+        { type: "item", text: "no — model has no image input", name: "no" },
+      ])
+      if (!se?.name) return undefined
+      if (se.name === "follow") return { multimodal: null }
+      if (se.name === "yes") return { multimodal: true }
+      return { multimodal: false }
+    }
     if (field === "context" || field === "maxOutput") {
       const tiers = field === "context" ? CONTEXT_TOKEN_TIER_HINT : MAX_OUTPUT_TIER_HINT
       const val = ((await askQuestion(`${field} in tokens (common: ${tiers}; empty to clear):`)) ?? "").trim()
@@ -279,6 +290,7 @@ export function createProviderAdmin(ctx) {
         { type: "header", text: "Edit" },
         { type: "item", text: "Context window (tokens)…", name: "context" },
         { type: "item", text: "Max output tokens…", name: "maxOutput" },
+        { type: "item", text: "Image input (multimodal)…", name: "multimodal" },
         { type: "item", text: "Thinking (off / on / always)…", name: "thinking" },
         { type: "item", text: "Reasoning levels (comma-separated, low→high)…", name: "reasoningEffortEnum" },
         { type: "item", text: "Default reasoning level…", name: "reasoningEffortDefault" },
