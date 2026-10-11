@@ -88,10 +88,14 @@ export function createTurnChain({ queue, post, prepare, drive, busyOf = () => fa
       return false // 零取批零起跑（占位被摘 = 窗内 dispose ∕ 切项目级联；队列随会话已清 —— 交调用面收口）
     }
     queue.take(key) // 落取（核件取项就地 —— 与试算同界）
-    const delivered = { text: peeked.item.text, ts: entryTimeOf(peeked.item) }
+    // 消费回执文本 = **送达终文**（2026-10-11 图文条批）：指引行 ∕ 非视觉注文在送达面装配 ⇒ 入流用户块须与
+    // 落盘历史同文（渲染面缩略图条判据 = 指引行——原文出站则队径块零条，切会话才显）；送达面违约（非串）
+    // ⇒ 条目原文兜底（与 `drive` 入参同式）。
+    const deliveredText = typeof attached?.text === "string" ? attached.text : peeked.item.text
+    const delivered = { text: deliveredText, ts: entryTimeOf(peeked.item) }
     if (typeof attached?.degraded === "string" && attached.degraded !== "") delivered.degraded = attached.degraded
     postQueue(key, delivered)
-    drive(key, agent, typeof attached?.text === "string" ? attached.text : peeked.item.text, attached)
+    drive(key, agent, deliveredText, attached)
     return true
   }
 

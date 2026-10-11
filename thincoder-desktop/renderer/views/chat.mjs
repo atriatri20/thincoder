@@ -59,7 +59,8 @@ export { chatTree } // 保名面（旧 import 面零改 —— 沿 `chat-chrome.
 import { syncDigest } from "./chat-digest-rows.mjs"
 import { blockKey, flowStep } from "./chat-stream.mjs"
 import { fillSubagentEcho, applyEchoOpen, echoOpenSet, syncSubagentEcho } from "./chat-subagent.mjs"
-import { paintSpeakerLabels, patchTextBlock, pinReasoning, pinReasoningBlocks } from "./chat-text.mjs"
+import { paintSpeakerLabels, patchTextBlock, pinReasoning, pinReasoningBlocks, blockTextOf } from "./chat-text.mjs"
+import { attachedImagePathsOf } from "../chat-images.mjs"
 // 巨块分段挂载窗（E4-JS 支 —— 初窗 ∥ 重挂转移 ∥ 帧尾第 ⑦ 步；机制 ∕ 参数单源 = 批档 §2.15）
 import { captureSegmentWindows, mountSegmentWindows, mountSegments, segmentViewStep } from "./chat-text-segments.mjs"
 import { linkifyResult, patchToolCard } from "./chat-tool.mjs"
@@ -152,6 +153,21 @@ function refreshNode(node, block, index, model, handlers) {
     node.replaceWith(fresh)
     dressNode(fresh, block, model.following === true)
     return fresh
+  }
+  // 图文条同步（2026-10-11 · 发图即显）：缩略图条只住构造径（`blockNode`）——回声块经回执收敛补收指引行时
+  // 就地面（`patchTextBlock`）不长条 ⇒ 指引行集变 ⇒ 单块节点换（kind 变径同形）。`img[data-gone]`（占位终态）
+  // 在场 ⇒ 不换（诚实占位——重换只会重读必缺的盘上件）；`data-pending` 仍携 `data-path` ⇒ 集相等零换
+  // （回填归观察者 `chat-images.mjs`——禁与回填竞态重挂）。
+  if (block.kind === "user" && node.querySelector?.("img[data-gone]") === null) {
+    const want = (attachedImagePathsOf(blockTextOf(block)) ?? []).join("|")
+    const strip = node.querySelector(".block-images")
+    const have = strip === null ? "" : [...strip.querySelectorAll("img[data-path]")].map((img) => img.getAttribute("data-path")).join("|")
+    if (want !== have) {
+      const fresh = build(blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true, model.blocks[index + 1]))
+      node.replaceWith(fresh)
+      dressNode(fresh, block, model.following === true)
+      return fresh
+    }
   }
   if (block.kind === "tool") {
     patchToolCard(node, block, blockKey(block, model.hidden + index), handlers)

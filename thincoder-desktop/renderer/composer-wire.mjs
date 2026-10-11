@@ -31,7 +31,7 @@
  * 同规则切片写（键缺席 ⇒ 零写——`setProviderState` 负向锁；提示带 `paintNotices` 重派生）。
  */
 import { clearRunning } from "./badges.mjs"
-import { clearTurnTraces, setProviderState, withFlowOp } from "./store.mjs"
+import { clearTurnTraces, convergeBlockText, setProviderState, withFlowOp } from "./store.mjs"
 
 /** 回执 `reason` 归一（缺 ∕ 非串 ∕ 空串 ⇒ `fallback`）—— 诊断串单源（mount 侧候选面同引）。 */
 export function reasonOf(receipt, fallback = "unknown") {
@@ -116,6 +116,13 @@ export function createComposerWire(deps = {}) {
       }
       // #841：成功回执 `providerState` 落切片（键缺席/形不合 ⇒ 零写）—— 提示带明示行重派生。失败径零叠加。
       store.set(setProviderState(store.get(), receipt.providerState))
+      // 图文条活流收敛（2026-10-11）：回声块以原文出生 ⇒ 成功回执携装配后终文（`finalText`）时按引用收敛
+      // （缩略图条判据 = 指引行——不收敛则发图当帧零条，切会话才显）。回声非本尝试（未认领 ∕ 已换代 ∕
+      // 队径已退流）⇒ 引用不在场零动作（`convergeBlockText` 自守）。
+      const echo = lastEcho !== null && lastEcho.key === key && lastEcho.attempt === attempt ? lastEcho.block : null
+      if (echo !== null && typeof receipt.finalText === "string" && receipt.finalText !== "") {
+        store.set(convergeBlockText(store.get(), key, echo, receipt.finalText))
+      }
       if (receipt.queued === true) { // 忙位读数滞后正径（端判闲 ∕ 宿主已忙 ∕ 已入挂起窗）
         retractEcho(key, attempt) // 本地块退流（待发送件归输入区带）
         if (suspIdleOf?.(store.get(), key) === true) { // 挂起空闲复位（窗内回合在飞 ⇒ 零复位——真回合门不误关）
@@ -148,7 +155,9 @@ export function createComposerWire(deps = {}) {
     }
     if (inFlight.get(key) === attempt && failed !== null) { failed = null; touched = true }
     if (receipt.queued !== true) {
-      store.set(withUserBlock(store.get(), key, { kind: "user", text, ts: Date.now() }))
+      // 迟到回执同携装配后终文（图文条活流批 · 2026-10-11）——补写块与正径块同文（缩略图条判据一致）。
+      const finalText = typeof receipt.finalText === "string" && receipt.finalText !== "" ? receipt.finalText : text
+      store.set(withUserBlock(store.get(), key, { kind: "user", text: finalText, ts: Date.now() }))
       touched = true
     }
     if (touched) repaint()
@@ -168,7 +177,9 @@ export function createComposerWire(deps = {}) {
     failed = null // B21 清（受理径 —— 收正轮 · 行 1）
     store.set(setProviderState(store.get(), receipt.providerState)) // #841：成功回执 providerState 落切片（键缺席 ⇒ 零写）
     if (receipt.queued !== true) {
-      const block = { kind: "user", text, ts: Date.now() }
+      // 忙态竞态正径同携装配后终文（图文条活流批 · 2026-10-11）——补写块与直发块同文。
+      const finalText = typeof receipt.finalText === "string" && receipt.finalText !== "" ? receipt.finalText : text
+      const block = { kind: "user", text: finalText, ts: Date.now() }
       store.set(withUserBlock(store.get(), key, block))
     }
     repaint()

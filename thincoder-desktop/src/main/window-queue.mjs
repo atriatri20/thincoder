@@ -39,10 +39,12 @@ export function createWindowQueue({ postQueue = null, prepare = null, degrade = 
   /** 帧出站（`delivered` 缺 ⇒ 状态形；帧形构造单点住链 —— 本档只定点）。 */
   const emit = (key, delivered = null) => { if (typeof postQueue === "function") postQueue(key, delivered) }
 
-  /** 消费回执载荷（`delivered` 形单源 = `docs/desktop/design/IPC.md` §1）：`text` = 该条文本逐字 · `ts` = 入队
-   *  现刻（非有限数 ⇒ 键缺席 —— 禁假造）· `degraded` = 送达面判决码（非串 ∕ 空串 ⇒ 键缺席）。 */
+  /** 消费回执载荷（`delivered` 形单源 = `docs/desktop/design/IPC.md` §1）：`text` = **送达终文**（2026-10-11
+   *  图文条批收正——指引行 ∕ 非视觉注文在送达面装配，入流用户块须与落盘历史同文；送达面违约〔非串〕⇒ 条目
+   *  原文兜底，与消费返回面同式）· `ts` = 入队现刻（非有限数 ⇒ 键缺席 —— 禁假造）· `degraded` = 送达面判决码
+   *  （非串 ∕ 空串 ⇒ 键缺席）。 */
   function deliveredOf(entry, attached) {
-    const delivered = { text: textOf(entry), ts: entryTimeOf(entry) }
+    const delivered = { text: typeof attached?.text === "string" ? attached.text : textOf(entry), ts: entryTimeOf(entry) }
     if (delivered.ts === null) delete delivered.ts
     if (typeof attached?.degraded === "string" && attached.degraded !== "") delivered.degraded = attached.degraded
     return delivered

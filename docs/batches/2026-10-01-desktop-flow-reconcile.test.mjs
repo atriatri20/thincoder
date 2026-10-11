@@ -660,6 +660,7 @@ test("腿 5·禁词零命中（八词 ∥ 词界 ∥ 历史批名不计面）+ �
   const WRITES = [
     { file: "store.mjs", pattern: /blocks: \[\]/, why: "初态（空单）" },
     { file: "store.mjs", pattern: /blocks: \[\.\.\.state\.blocks, block\]/, why: "appendBlock（追加 —— 零作业）" },
+    { file: "store.mjs", pattern: /blocks: next \}/, why: "原地换（非结构 —— 回声块文本收敛 · 长度不变；图文条活流批 2026-10-11）" },
     { file: "page-read.mjs", pattern: /blocks: page,/, why: "整置作业点（build）" },
     { file: "page-read.mjs", pattern: /blocks: \[\.\.\.page, \.\.\.\(flagged\.blocks \?\? \[\]\)\]/, why: "回填整置作业点（build —— 页并入；回填落位批 2026-10-04：`prepend` 退场、作业型改 build、写入行保留）" },
     { file: "composer-wire.mjs", pattern: /blocks: next \}, \{ kind: "cut", index \}/, why: "退流摘作业点（cut —— 摘至零块时同笔并 build）" },

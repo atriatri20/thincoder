@@ -229,7 +229,10 @@ test("W5 AC-3 ∕ AC-5 端到端：窗内 send 同形回执 + queueSnapshot 两�
   await until(() => runs.length === 3)
   assert.match(runs[2].text, /^携图\n\n\[Attached images: /, "携图消费 ⇒ 图随回合送达（指针段——既成送达面）")
   const delivered = events.filter((e) => e.ch === "ev:queue" && e.payload?.delivered).map((e) => e.payload.delivered.text)
-  assert.deepEqual(delivered, ["纯文本", "携图"], "AC-2 消费回执逐条（单写者——入流恰一枚的宿主半）")
+  // 消费回执文本 = 送达终文（图文条活流批 2026-10-11）：纯文本条零装配 = 原文；携图条指针已装配 =
+  // 终文（入流块与落盘历史同文——渲染面缩略图条判据 = 指引行）。
+  assert.equal(delivered[0], "纯文本", "AC-2 消费回执逐条（零附件径 = 原文）")
+  assert.match(delivered[1], /^携图\n\n\[Attached images: /, "AC-2 携图回执 = 送达终文（指针段在列）")
   agent._pendingAsyncResults.length = 0
   agent._asyncSubagents.clear()
   runs[2].res("done")
@@ -348,7 +351,7 @@ test("W10 AC-8 其余可见面零动（QUEUE_MAX ∕ 段 14 源 ∕ 通道表 24
   assert.equal(channels.length, 24, "通道表 24 项（原 23——菜单体系批 +1 = ev:menu；父侧重锚 2026-10-04）")
   const preload = text("thincoder-desktop/src/preload/preload.cjs")
   const allow = preload.match(/EVENT_CHANNELS = Object\.freeze\(\[[\s\S]*?\]\)/)[0].match(/"[^"]+"/g) ?? []
-  assert.equal(allow.length, 24, "preload 白名单 24 项（原 23——+1 = ev:menu）")
+  assert.equal(allow.length, 25, "preload 白名单 25 项（原 24——+1 = ev:win-max；窗口三钮批随册）")
   // 词键零新退：实施面四档引用之词键皆可解析（缺键回落键名 ⇒ `t(key) === key` 即缺键）
   const i18n = await mod("thincoder-desktop/renderer/i18n.mjs")
   const faces = [

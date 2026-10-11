@@ -146,6 +146,21 @@ export function appendBlock(state, block) {
   return { ...state, blocks: [...state.blocks, block], pendingNew }
 }
 
+/** 回声块文本收敛（图文条活流批 · 2026-10-11）：本地先行块（回声）以**原文**出生 —— 落盘逐字（指引行 ∕
+ *  非视觉注文在主侧送达面装配，先行无凭）随 `msg:send` 成功回执 `finalText` 后到 ⇒ 按**引用**定位换新块对象
+ *  （块面唯一刷新判据 = 块对象引用变 ⇒ 帧刷；缩略图条判据 = 指引行，`renderer/chat-images.mjs`）。
+ *  值同 ⇒ 原引用（幂等帧零写）；键门同块面写者（非活动会话原引用）；引用不在场（已退流 ∕ 已被正径替换）
+ *  ⇒ 原引用。 */
+export function convergeBlockText(state, key, blockRef, text) {
+  if (state?.activeSession !== key || typeof text !== "string" || text === "") return state
+  const blocks = Array.isArray(state.blocks) ? state.blocks : []
+  const index = blocks.indexOf(blockRef)
+  if (index === -1 || blocks[index].text === text) return state
+  const next = blocks.slice()
+  next[index] = { ...blocks[index], text }
+  return { ...state, blocks: next }
+}
+
 /** 流面作业单写口（**唯一写口** —— 与 `blocks` 写同笔；单源 = `docs/desktop/design/RENDERER.md` §1.1「流面作业单」条）：
  *  结构变更由**发生点**带上作业（有序单；帧出口结算后清账）——`{ kind: "build" }`（整置 —— 页回执首屏 ∥ **回填页并入**
  *  （回填落位批 · 2026-10-04） ∥ 换会话 ∥ 关页 ∥ 摘至零块）· `{ kind: "insert", index }`（按位插入 —— 座次位，#765 在册面）·

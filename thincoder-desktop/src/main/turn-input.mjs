@@ -118,7 +118,12 @@ export function createTurnInput({ post, ensure, flights, queued, chain, suspensi
     // #841（「provider 态投影注」）：成功回执携 `providerState` —— 发送时点刷新（渲染面落切片 ⇒
     // 提示带明示行重派生）；失败径零叠加（沿 #840 `providerKind` 面）。
     const providerState = providerStateOf(agent.config)
-    return attached.degraded ? { ok: true, degraded: attached.degraded, providerState } : { ok: true, providerState }
+    // 图文条活流收敛（2026-10-11）：装配后终文（指引行 ∕ 非视觉注文已定局）随成功回执浮出 —— 本地先行
+    // 回声块以原文出生（指引行在主侧送达面装配，先行无凭）⇒ 渲染面按回执收敛到落盘逐字（缩略图条判据 =
+    // 指引行，`renderer/chat-images.mjs`）；文本同值（无附件径 ∕ 全弃径）⇒ 零键零叠加（回执形不变）。
+    return attached.degraded
+      ? { ok: true, degraded: attached.degraded, ...(attached.text !== String(text ?? "") ? { finalText: attached.text } : {}), providerState }
+      : (attached.text !== String(text ?? "") ? { ok: true, finalText: attached.text, providerState } : { ok: true, providerState })
   }
 
   /** `msg:interrupt`：无在飞 ⇒ `idle`；在飞 ⇒ abort（**携核 abort 面**：`message` 非空串 ⇒ `{ interrupt: true, message }`
