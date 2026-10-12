@@ -1520,3 +1520,26 @@ body.pool-collapsed .pool-collapse { left: 4px; }
 .image-preview-zoom-in::before { content: "+"; }
 .image-preview-pct { min-width: 44px; text-align: center; font-size: 12.5px; color: #171717; }
 .block-image[data-loaded] { cursor: zoom-in; }
+
+/* ── 消息操作行（复制 · ZCode MessageActions 对位 · 2026-10-12）────────────────
+   hover ∕ focus-within 显现（桌面降噪——ZCode `group-hover/user-row:opacity-100` 同义）；
+   用户块独占末行右对齐（`.block-user` flex-wrap 同图条先例）；字形住本档 `content`。 */
+.msg-actions {
+  display: flex; align-items: center; gap: 4px;
+  margin-top: 4px; opacity: 0; transition: opacity 0.12s ease;
+}
+.block-user > .msg-actions { width: 100%; justify-content: flex-end; }
+.block-user:hover > .msg-actions,
+.block-assistant:hover > .msg-actions,
+.msg-actions:focus-within { opacity: 1; }
+.msg-action-btn {
+  width: 26px; height: 26px; padding: 0;
+  border: 0; border-radius: 6px; background: transparent;
+  color: var(--fg-muted); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; line-height: 1;
+}
+.msg-action-btn:hover { background: color-mix(in srgb, var(--fg) 8%, transparent); color: var(--fg); }
+.msg-copy-btn::before { content: "⧉"; }
+.msg-copy-btn[data-copied]::before { content: "✓"; }
+.msg-copy-btn[data-copied] { color: var(--accent-text, var(--fg)); }

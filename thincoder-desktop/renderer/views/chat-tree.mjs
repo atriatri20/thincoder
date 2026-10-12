@@ -94,6 +94,10 @@ export function blockNode(block, index, hidden, handlers, prev, canRetry = false
   const imagePaths = kind === "user" ? attachedImagePathsOf(blockTextOf(block)) : null
   const userText = imagePaths === null ? blockTextOf(block) : stripImagePointer(blockTextOf(block))
   const strip = imagePaths === null ? null : imageStripNode(imagePaths)
+  // 消息操作行（复制 · ZCode `MessageActions` 对位 · 2026-10-12）：用户 ∕ 助手两族挂图标钮，hover ∕
+  // focus 显现（CSS——桌面降噪同 ZCode `group-hover/user-row:opacity-100`）；点击委托 = 新档
+  // `renderer/msg-actions.mjs`（按钮只落静态形 + `data-action` 判据，零 handler 依赖 ⇒ 重建零接线）。
+  const actions = kind === "user" || kind === "assistant" ? [msgActionsNode()] : []
   return {
     tag: "div",
     props: {
@@ -108,6 +112,30 @@ export function blockNode(block, index, hidden, handlers, prev, canRetry = false
       ...(label ? [labelNode(kind === "user" ? "user" : "assistant")] : []),
       ...(strip === null ? [] : [strip]),
       textFace({ ...block, text: userText }),
+      ...actions,
+    ],
+  }
+}
+
+/** 消息操作行（复制钮单枚 —— 形与核件代码块复制钮同族：图标钮 + 成功态打勾 1200ms）。
+ *  文案（`title` ∕ `aria-label`）= 既有词键 `msg.copy`（复制成功态词面由委托面就地刷 `msg.copied`——
+ *  值逐字同核件代码块复制钮，零新键）；字形住 `codex.css` `content`（零字形字面）。 */
+function msgActionsNode() {
+  return {
+    tag: "div",
+    props: { class: "msg-actions" },
+    children: [
+      {
+        tag: "button",
+        props: {
+          type: "button",
+          class: "msg-action-btn msg-copy-btn",
+          "data-action": "msg:copy",
+          title: t("msg.copy"),
+          "aria-label": t("msg.copy"),
+        },
+        children: [],
+      },
     ],
   }
 }
