@@ -30,7 +30,7 @@ export function indexStatusChannel() { return indexStatus({ dir: currentCwd() })
  *  `{ patch: { embedding?: { apiKey }, websearch?: { apiKey } } }`；`mcp:tools` 两支 = `{ name }`
  *  （连接列举）∥ `{ name, test: true }`（Test 探活一次）。载荷 / 回执形 = `docs/desktop/design/IPC.md` §2。 */
 export function settingsEnvChannel(payload) { return settingsEnv(payload) }
-export function settingsToolsChannel(payload) { return settingsTools(payload) }
+export function settingsToolsChannel(payload) { return settingsTools(payload, { listAgents: liveAgents }) }
 export function mcpToolsChannel(payload) { return mcpTools(payload) }
 
 /* ─── 转口群十九项处理体（本块设置族十六 ∕ 配置写一 ∕ 台账相位两）：转口四档模块，本档零算法副本 ─── */

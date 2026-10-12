@@ -8,6 +8,12 @@
  * 语义源：embedding merge（置键回填 `baseURL` ∕ `model`——既有自定义值优先、缺位取核
  * `DEFAULTS.embedding`）= CLI `cmd-config.mjs:6` `embeddingPatch`（默认值单源 = 核）；websearch
  * 单键写 = VSC `saveWebsearchKeyFromPanel`。
+ * **热应用（2026-10-12 · 方案 A）**：写盘成功后同笔把补丁刷进**在装配 agent 的活配置对象**
+ * （`agent.config`）——此前只写盘 ⇒ 运行中 agent 的 `config.websearch.apiKey` 恒空 ⇒ 核
+ * `tools/web.mjs` `fetchTavily` 取不到 key **静默掉回 Bing**（用户实测：盘上有 key、工具仍出
+ * `[bing]` 标签）。语义与核 `agent-tools/settings.mjs` set 对齐（写盘 + 内存同笔，回合边界键下回合
+ * 生效）；在装配列表经调用面注入（`listAgents`——mcp 四转口同款，本档**不 import** 会话宿主 ⇒ 零环）；
+ * 无宿主 ∕ 无在装配 agent ⇒ 零动作（配置已落盘，下次装配生效——非静默降级）。
  * 纪律：零 electron 依赖（平 node 可直测）；`apiKey` 非串 ⇒ `invalid-patch`（零写）。
  */
 import { DEFAULTS, loadConfig } from "@thincoder/core/config.mjs"
@@ -51,11 +57,29 @@ function applyWebsearchKey(disk, apiKey) {
 }
 
 /**
+ * 热应用（方案 A · 2026-10-12）：把同一补丁刷进在装配 agent 的活配置对象——写形与写盘**同函数复用**
+ * （`applyEmbeddingKey` ∕ `applyWebsearchKey` 只碰 `.embedding` ∕ `.websearch` 两节 ⇒ 盘对象与
+ * `agent.config` 同形可共用；摘键 ∕ 删空节点语义逐字一致 ⇒ 盘 ∕ 内存零分叉）。
+ * 在装配列表缺位（无宿主）⇒ 零动作（配置已落盘，下次装配生效）。
+ */
+function hotApply(patch, listAgents) {
+  const agents = typeof listAgents === "function" ? listAgents() : null
+  if (!Array.isArray(agents)) return
+  for (const agent of agents) {
+    const config = agent?.config
+    if (!config || typeof config !== "object") continue
+    if ("embedding" in patch) applyEmbeddingKey(config, patch.embedding.apiKey)
+    if ("websearch" in patch) applyWebsearchKey(config, patch.websearch.apiKey)
+  }
+}
+
+/**
  * `settings:tools(payload)`：读 `{}` ⇒ `{ ok, reason:null, embedding:{hasKey}, websearch:{hasKey} }`；
  * 写 `{ patch: { embedding?: { apiKey }, websearch?: { apiKey } } }` ⇒ 同形回执（写后回读）。
  *  `apiKey` 非串 ⇒ `invalid-patch`（零写）；空串 = 清键（摘键语义）。
+ *  `deps.listAgents` = 在装配 agent 列表访问器（缺省 `null` ⇒ 热应用零动作——平 node 直测面）。
  */
-export function settingsTools(payload) {
+export function settingsTools(payload, { listAgents = null } = {}) {
   const patch = payload?.patch
   if (patch === undefined || patch === null) return { ok: true, reason: null, ...toolsFace() }
   if (typeof patch !== "object" || Array.isArray(patch)) return { ok: false, reason: "invalid-patch", ...toolsFace() }
@@ -75,5 +99,6 @@ export function settingsTools(payload) {
     if ("websearch" in patch) applyWebsearchKey(disk, patch.websearch.apiKey)
   })
   if (!w.ok) return { ok: false, reason: w.reason, ...toolsFace() }
+  hotApply(patch, listAgents) // 写盘成功 ⇒ 同笔热应用（运行中 agent 即刻可用——下回合生效）
   return { ok: true, reason: null, ...toolsFace() }
 }
