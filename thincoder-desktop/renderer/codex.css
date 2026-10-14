@@ -1209,28 +1209,7 @@ select optgroup::before { color: var(--fg-muted); font-weight: 500; }
 .sidebar-search-input:focus { border-color: color-mix(in srgb, var(--fg) 30%, transparent); }
 .sidebar-search-input::placeholder { color: var(--fg-muted); opacity: 0.7; }
 .sidebar-item { position: relative; }
-.sidebar-item-more {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  flex: none;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--fg-muted);
-  font: 14px/1 var(--font);
-  cursor: pointer;
-  opacity: 0;
-}
-.sidebar-item-more::before { content: "⋯"; }
-.sidebar-item:hover .sidebar-item-more,
-.sidebar-item-more:focus-visible { opacity: 1; }
-.sidebar-item-more:hover { background: var(--hover-bg-strong); color: var(--fg); }
-.sidebar-item-more:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+/* ⋯ 全功能钮样式随钮退场净删（2026-10-13 —— 行内唯归档钮 `.sidebar-item-archive`，见档尾该段）。 */
 
 /* 归档视图（fork · 2026-10-06）：归档行 = 标题 + 时刻 + 恢复/删除两钮（hover 现形，沿 item-more 律）；
    双行（跨项目 · ZCode 形）：第一行标题+时刻，第二行 📁 项目名（弱化小字）。 */
