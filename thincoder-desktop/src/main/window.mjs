@@ -116,10 +116,15 @@ function buildMenu() {
  *  窗口缺 ∕ 已毁 ⇒ 零动作（fail-open）。 */
 export function refreshMenu() {
   if (activeWin === null || activeWin.isDestroyed()) return
-  // 统一 Header（fork 2026-10-06）：菜单转应用级（**加速键恒活**——窗口菜单栏已由 HTML Header 取代）
-  // + 窗口菜单栏摘除（setMenu(null)——Win 可见条消失，`titleBarStyle: hidden` 下不再占行）。
+  // 统一 Header（fork 2026-10-06）：菜单转应用级 + 窗口菜单栏**隐藏**（HTML Header 取代可见条）。
+  // ⚠ 加速键宿主（2026-10-12 修 —— 原实现用 `activeWin.setMenu(null)` 摘条，注释误记「加速键恒活」）：
+  // Windows/Linux 上应用菜单**就是窗口菜单**，`setMenu(null)` 把窗口菜单整只摘掉 ⇒ 全部菜单加速键
+  // （Ctrl+N ∕ Ctrl+O ∕ Ctrl+R ∕ 缩放 ∕ 全屏等）随之失效——真机实测：真实按键 Ctrl+N 不建会话、
+  // Ctrl+R 不重载（页面标记存活），而渲染端自绑的 Ctrl+F 照常 ⇒ 判别式确证。
+  // 正解 = **保留菜单、只藏条**：`setMenuBarVisibility(false)`（且不开 `autoHideMenuBar`——否则按 Alt
+  // 会弹出原生条压住 HTML Header）；加速键随菜单在位而恒活（六重建点各重设一次，幂等）。
   Menu.setApplicationMenu(buildMenu())
-  activeWin.setMenu(null)
+  activeWin.setMenuBarVisibility(false)
 }
 
 /** Header 菜单弹出（`menu:popup` 处理体 —— fork 2026-10-06）：`name` = 五顶层项 id 尾段
