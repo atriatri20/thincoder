@@ -355,6 +355,10 @@ export function createExits(deps = {}) {
     ...agentSegments.handlers,
     // 期档切换（2026-10-06 二轮 —— 9Router 同形）：切片先落（tab active 态随重绘即达）+ force 重读
     //（聚合在主进程单源 —— byModel ∕ 24h 滚动窗不可由客户端 byDay 推导）。loadUsage 自持 loading 态。
+    // 快捷键段搜索词（只读参考页 · 2026-10-12）：查询态住设置切片 ⇒ 段体随重绘过滤（伪段零数据面）
+    onShortcutQuery: (value) => {
+      setSettings({ shortcuts: { ...store.get().settings?.shortcuts, query: String(value ?? "") } })
+    },
     onSelectPeriod: (period) => {
       setSettings({ usage: { ...store.get().settings?.usage, period } })
       void loadUsage({ force: true, period })

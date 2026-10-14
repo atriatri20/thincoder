@@ -25,6 +25,7 @@ import { ACCENTS, THEMES } from "../theme.mjs"
 import { wire } from "./chat-tool.mjs"
 import { channelFormTree, verifyControl } from "./settings-controls.mjs"
 import { agentBody, envBody, mcpBody, modelBody, modelIdOf, modelsBody, providersBody, toolsBody, usageBody } from "./settings-sections.mjs"
+import { shortcutsBody } from "./settings-sections-shortcuts.mjs"
 
 // 两导出面随 R7 出档 `settings-controls.mjs`；本档 re-export ⇒ 导出面零改（消费面 = 首启向导）。
 export { channelFormTree, verifyControl } from "./settings-controls.mjs"
@@ -50,6 +51,7 @@ export const NAV_SECTIONS = Object.freeze([
   ...SECTIONS,
   { name: "appearance", word: "settings.section.appearance" },
   { name: "language", word: "settings.section.language" },
+  { name: "shortcuts", word: "settings.section.shortcuts" },
 ])
 
 /** 段态出词闭集（两态：`none` / `loading`）；`ready` ⇒ 行内容（零状态词）。 */
@@ -215,6 +217,10 @@ export function settingsModel(state) {
       },
       test: settings.env?.test !== null && typeof settings.env?.test === "object" ? settings.env.test : null,
     },
+    // 快捷键段（只读参考页 · 2026-10-12）：查询态 = 段内搜索词（伪段零数据面——切片只此一键）
+    shortcuts: {
+      query: typeof settings.shortcuts?.query === "string" ? settings.shortcuts.query : "",
+    },
     tools: {
       state: stateOf(settings.tools),
       status: settings.tools?.status !== null && typeof settings.tools?.status === "object" ? settings.tools.status : null,
@@ -363,6 +369,7 @@ function sectionBody(name, model, handlers) {
     ctxEdit: model?.providers?.ctxEdit ?? null, ctxDraft: model?.providers?.ctxDraft ?? null }
   if (name === "appearance") return themeBody(model, handlers)
   if (name === "language") return langBody(model, handlers)
+  if (name === "shortcuts") return shortcutsBody(model.shortcuts ?? {}, handlers) // 伪段：只读参考页（2026-10-12）
   if (name === "providers") return [sectionStateNode(model.providers.state), ...providersBody(model.providers, handlers, deps)]
   if (name === "model") return [sectionStateNode(model.model.state), ...modelBody(model.model, handlers)]
   if (name === "agent") {
