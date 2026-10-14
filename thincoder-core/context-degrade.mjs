@@ -2,7 +2,7 @@
  * context-degrade.mjs — 确定性降级面（无 LLM 的有损收缩 · 自 `context.mjs` 迁出 · 2026-10-01 core 拆分批 #755 ∥ #786）。
  * 内容 = `pruneStub` ∥ `pruneStaleToolOutputs`（F-CC3 陈旧工具输出清理）∥ `OVERSIZE_CONTENT_LIMIT` ∥
  * `shrinkOversized`（splitHistory 无中间段时的单条超限收缩）——迁出块逐字。
- * 原档 `context.mjs` 经 `export { … } from` 转口保名（消费面 / 批内件 import 面零改）；
+ * 原档 `context.mjs` 经 `export { … } from` 转口保名（消费面 / 单元测试档 import 面零改）；
  * 跨档被引的原私有面（`shrinkOversized`）补 `export` 关键字。
  */
 import { collectStaleToolOutputs } from "./token-window.mjs"

@@ -40,7 +40,7 @@ export function faceHit(dirtyKeys, keys) {
 }
 
 /** 帧分派（纯件）：`faces` = 面名 → 回调（注入面 —— 回调缺 ⇒ 该面零动作）；命中面**每帧至多调一次**（面序 = 表序）。
- *  返回本次实际绘制面名表（读数 ∕ 机检面；未知键 ⇒ 空表 —— 零面）。 */
+ *  返回本次实际绘制面名表（读数 ∕ 机检；未知键 ⇒ 空表 —— 零面）。 */
 export function dispatchFrame({ dirtyKeys, state, faces } = {}) {
   const painted = []
   for (const [name, keys] of FRAME_FACES) {

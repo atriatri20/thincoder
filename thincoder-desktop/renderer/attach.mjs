@@ -1,6 +1,6 @@
 /**
  * attach.mjs — 输入区附件面**残余档**（输入面板上提批 `2026-09-28-desktop-input-vsc-align.md` §2.4 Q3 ∕ P5）：
- * 采集 ∕ 栅格门 ∕ 芯片条三面随上提入核（`thincoder-render-core/composer/attach.mjs` —— 该档判据面与本档现物
+ * 采集 ∕ 栅格门 ∕ 芯片条三面随上提入核（`thincoder-render-core/composer/attach.mjs` —— 该档判据与本档现物
  * 同源合流），本档只留**载荷与提示两投影**（另半 = 挂件锚，见 `renderer/mount-composer.mjs`）：
  *   ① 归档码闭集 `DEGRADED_WORD` + `degradedCode`——回执 `degraded` 两值（`non-vision` / `partial`）过闸；
  *      表外码 ⇒ `null`（不猜、不造串）；单源 = `docs/desktop/design/IPC.md` §2「附件注」项 3 / 项 4；

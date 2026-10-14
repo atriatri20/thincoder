@@ -9,8 +9,8 @@
  * `tool-table.mjs`——缝 = re-export（KD-6）。2026-09-29 parity-b1（批档 §2.2 行 12）：
  * `buildToolTable` 收敛为**基础集**装配（家族段归核；装饰体经 `opts.toolDecorate` 供核）；
  * 旧拷贝项 `withPool` / `modeRoleField` 并入装饰体 ∕ 取核（§2.5「拷贝项取核或登记差额」）。
- * W8 契约②（端壳静态闭包零 `node:sqlite`；判据现载体 = 批件
- * `docs/batches/2026-09-29-residuals-round2.test.mjs`——单测树重建时回迁端侧单测档）：本档静态边
+ * W8 契约②（端壳静态闭包零 `node:sqlite`；判据现载体 = 单元测试档
+ * `docs/batches/2026-09-29-residuals-round2.test.mjs`——单元测试树重建时回迁端侧单元测试档）：本档静态边
  * = setup.mjs 既有静态边之子集；核 `agent-tools/skill.mjs` / `eng.mjs` 两类面仍走**动态** import()
  * （见 `wireAgentToolSeams`）；`vscStatusTerminalEcho` 同法（住 `tool-table.mjs`）。
  */
@@ -25,7 +25,7 @@ import { setSlotEngineering } from "../extension/session-slot-write.mjs"
 // VSC 特有增量随删旧迁入端壳（四步协议 ②）：核 `agent-tools/batch.mjs` 的写入回调默认
 // no-op；本端在装配层注册 = 写入成功即记绑定档绝对路径入 `agent._touchedFiles`（与删除前
 // `src/agent-tools/batch-segment.mjs:184` 逐字同语义——Array.isArray 守卫 + includes 去重）——
-// 冻结窗口 / 子代理合入记账（execute-tools 的 recordFileMutation 同一载体）行为不变。
+// 冻结窗口 / 子代理合入记账（核 `agent/record-results.mjs` 的 `_touchedFiles` mutation 记账同一载体）行为不变。
 configureBatchSegment({
   onWrite: (agent, abs) => {
     if (Array.isArray(agent._touchedFiles) && !agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)

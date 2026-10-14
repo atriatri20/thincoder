@@ -74,10 +74,16 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
    *  **真因分类 → 词路由（#840）**：`provider-invalid` ∧ `kind === "defaultModel"`（缺 ∥ 无效 `defaultModel`；
    *  分类单源 = 主侧 `providerKind`）⇒ 新键 `composer.send.noDefaultModel`（状态陈述——指向真实可修的下一步）；
    *  其余 `provider-invalid`（真无渠道 ∥ 条目结构不全 ∥ 分类缺）⇒ 现键 `composer.send.noProvider` 逐字不动；
-   *  余码仍走 `composer.send.failed`（含 `${reason}` 原码）。 */
+   *  余码仍走 `composer.send.failed`（含 `${reason}` 原码）。
+   *  **#1121 修③（来源分家）**：`failure.source === "session:prefs"`（切模型 ∥ 档位写失败）⇒ 行属性
+   *  `prefs-failed` + 新键 `composer.prefs.failed`（「发送失败」词不套写面——一词两义即失实）；
+   *  发送径（`msg:send` ∕ `queuedUserMessage`）逐字不动。 */
   function failedNotice(failure) {
     const reason = failure?.reason
     if (typeof reason !== "string" || reason === "") return null
+    if (failure?.source === "session:prefs") {
+      return { tag: "div", props: { class: "composer-notice", "data-notice": "prefs-failed" }, children: [t("composer.prefs.failed", { reason })] }
+    }
     const word = reason === "provider-invalid"
       ? (failure?.kind === "defaultModel" ? t("composer.send.noDefaultModel") : t("composer.send.noProvider"))
       : t("composer.send.failed", { reason })
@@ -85,18 +91,22 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
   }
 
   /** provider 态明示行（#841 —— 提示带尾：`state === "fallback"` ∧ **非 invalid 类** ⇒ 行在场）：
-   *  词 = `composer.send.noDefaultModelFallback`（**澄清半句**「— 正在使用可用渠道」——与 VSC
-   *  `banner.defaultModelFallback` 同构；**轻通道轮八 · 2026-10-03 收正**：原「逐字复用 #840 键」使
-   *  可运行态读起来像错误 ⇒ 失败词 ∥ 态词分家——用户反馈「显示未配置模型但能用」）；
+   *  词 = `composer.send.noDefaultModelFallback`（**2026-10-09 清除批：两字面按载荷 `model` 在场分**——
+   *  在场 ⇒ 「… — 正在使用可用渠道」（现字面）∥ 缺 ⇒ 「… — 渠道可用、模型未定」（新键 `…Unset`）；
+   *  **澄清半句**与 VSC `banner.defaultModelFallback` 同构；**轻通道轮八 · 2026-10-03 收正**：原「逐字复用
+   *  #840 键」使可运行态读起来像错误 ⇒ 失败词 ∥ 态词分家——用户反馈「显示未配置模型但能用」）；
    *  `state === "ok"` ⇒ 零行（负向锁）；invalid 类（合成式 = `state === "invalid"` ∨ `invalidReason` 非空）
    *  ⇒ 本行零行（归发送失败行 —— #840 面）。判据 ∥ 行序单源 = `docs/desktop/design/IPC.md` §2「provider
-   *  态投影注」∥ `docs/desktop/design/COMPOSER.md` §2 本批注（轮八收正）。 */
+   *  态投影注」∥ `docs/desktop/design/COMPOSER.md` §2 本批注（轮八收正 ∥ 2026-10-09 清除批两字面）。 */
   function providerNotice(state1) {
     const face = state1?.providerState
     if (face === null || typeof face !== "object" || Array.isArray(face)) return null
     if (face.state !== "fallback") return null // ok ∥ invalid ⇒ 零行（负向锁）
-    if (typeof face.invalidReason === "string" && face.invalidReason !== "") return null // invalid 类合成式（第二腿）
-    return { tag: "div", props: { class: "composer-notice", "data-notice": "provider-fallback" }, children: [t("composer.send.noDefaultModelFallback")] }
+    if (typeof face.invalidReason === "string" && face.invalidReason !== "") return null // invalid 类合成式（第二分支）
+    const word = typeof face.model === "string" && face.model !== ""
+      ? t("composer.send.noDefaultModelFallback")
+      : t("composer.send.noDefaultModelFallbackUnset")
+    return { tag: "div", props: { class: "composer-notice", "data-notice": "provider-fallback" }, children: [word] }
   }
 
   /** 候选行投影（全渠扇出行 `{ provider, id, effortEnum, thinkOff, effortDefault }` ⇒ 核件面形 —— VSC
@@ -124,6 +134,15 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
   function prefsOf(meta) {
     const text = (value) => (typeof value === "string" ? value : "")
     return { model: text(meta?.model), provider: text(meta?.provider), reasoning: reasoningOf(meta?.effort) }
+  }
+
+  /** 写失败回滚（#1121 修③ · 零乐观写）：以**槽现值**重推候选行 —— 核 `applyModels` 单点（钮文本 ∥ 本地选中态
+   *  随槽回滚）；槽复合缺 ⇒ `rollback` 位 ⇒ 核件复归「未选」空态（乐观值零留影）。零取数（用现切片候选行
+   *  —— 与推送单点同源）；键缺 ⇒ 以活动会话代。 */
+  function rollbackPrefs(key) {
+    const held = store.get()
+    const live = typeof key === "string" && key !== "" ? key : (held?.activeSession ?? null)
+    push({ type: "models", models: held?.modelCandidates?.models ?? [], prefs: prefsOf(live === null ? null : held?.sessionMeta?.[live]), rollback: true })
   }
 
   const state = {
@@ -325,5 +344,5 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
   function primeBusy(state1) { lastBusy = busyOf(state1, activeKey()) }
   function resetBusy() { lastBusy = false }
 
-  return { state, primeBusy, resetBusy, paintNotices, syncPanel, refreshCandidates }
+  return { state, primeBusy, resetBusy, paintNotices, syncPanel, refreshCandidates, rollbackPrefs }
 }

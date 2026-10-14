@@ -151,13 +151,13 @@ test("T-DA2 · 重投补账：轮 1 缺 #22 ⇒ 留容器 `_daRetry`；轮 2 补
 })
 
 /* ── T-DA3 · 正常·用户回合投递不销账 ── */
-test("T-DA3 · 用户回合投递不销账：留容器（`_daDelivered`）；下一消化轮补账", async () => {
+test("T-DA3 · 用户回合零投递（2026-10-13 收窄）：留容器（`_daDelivered`）；下一消化轮投递并补账", async () => {
   const agent = mkAgent({ _daSession: true })
   const e = entry(31)
   agent._pendingAsyncResults = [e]
   await withFetch([sseResponse(turnSSE("用户回合作答"))], () => CORE.runAgent(agent, "hello", {}, { suspDriven: true }))
 
-  assert.equal(e._daDelivered, true, "任意回合首投（投递面）")
+  assert.notEqual(e._daDelivered, true, "用户回合零投递（首投仅系统轮——async-delivery-formalize 批）")
   assert.equal(agent._pendingAsyncResults.length, 1, "用户回合不销账 ⇒ 留容器")
   assert.equal(countIn(agent, REQ_PREFIX), 0, "非消化轮不发账目要求行")
 

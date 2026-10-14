@@ -112,7 +112,7 @@ function pairToolEntries(history) {
  * `opts.records === true`（opt-in —— 留档批 · #719）⇒ `digest` ∕ `subagent` 两型
  * 记录原样入窗（`{ ...record, idx }`，字段零改名）并占条目位（游标按条目推进）；
  * 记录不参与 turn ∕ 可见性谓词（`visible` 面语义不动）。**默认关** ⇒ 输出与改前
- * 逐字等价（负控腿）；缺 `opts` ∕ 非 `true` ⇒ 同默认径。
+ * 逐字等价（负控分支）；缺 `opts` ∕ 非 `true` ⇒ 同默认径。
  */
 export function historyWindow(history, before, pageSize = HISTORY_PAGE_SIZE, opts = {}) {
   const total = Array.isArray(history) ? history.length : 0

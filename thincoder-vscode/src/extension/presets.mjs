@@ -3,9 +3,9 @@
  * provider/config 访问层——核无对位件的端侧读面逐字迁入本档）。
  *
  * Single source of truth is the shared ~/.thincoder/config.json (CLI format:
- * providers[] with a single `model` default per channel + top-level defaultModel composite —
- * MODEL-SELECTION：渠道单值 = 新装种子/槽空兜底/显示回退；provider.model = 运行时解析值；
- * 候选面 = 运行期 `/models` 拉取（非配置字段））。
+ * providers[] + top-level defaultModel composite；渠道条目不携模型——2026-10-09 清除批：单值模型退场）：
+ * MODEL-SELECTION：provider.model = 运行时解析值（`defaultModel` 属渠段 ∥ null）；
+ * 候选面 = 运行期 `/models` 拉取（非配置字段）。
  * 预设表 = 核单源 `@thincoder/core/config.mjs`（PROVIDER_PRESETS——#129 取一侧）。
  *
  * W16 迁入的端侧面（核无对位件——CORE-UNIFICATION §2.5 #177「UI 壳按端注入」/ #130
@@ -41,10 +41,13 @@ export function isProviderConfigured(name) {
 }
 
 /** Store an API key into config.json (kept async for call-site compatibility).
- *  #695：核写结果（`{ok:false,reason:"mtime-conflict"}` → 提示串）穿透返回。 */
+ *  #695：核写结果（`{ok:false,reason:"mtime-conflict"}` → 提示串）穿透。
+ *  #1073：写面显式三态（**回执 ⟺ 真写**）——`{status:"ok"}`（写成功）∥ `{status:"no-write"}`（空钥守卫零写——零写盘 ∥ 零错误）
+ *  ∥ `{status:"conflict", hint}`（mtime 冲突；`hint` = 既有 `CONFIG_CONFLICT_HINT` 透传）。 */
 export async function storeProviderKey(name, key) {
-  if (!key || !key.trim()) return
-  return setProviderKey(name, key.trim())
+  if (!key || !key.trim()) return { status: "no-write" }
+  const hint = setProviderKey(name, key.trim())
+  return hint ? { status: "conflict", hint } : { status: "ok" }
 }
 
 /** Remove an API key from config.json (the provider entry itself stays). #695：核写结果穿透返回。 */
@@ -103,8 +106,8 @@ export function resolveKey(entry) {
 /**
  * Runtime model for an entry——#841 核转口（单源 = `@thincoder/core/model-ref.mjs`
  * `resolveChannelModel`——接入面自持解析退场）：① `defaultModel` 复合属本渠道 → 其模型段；
- * ② 渠道默认单值 `entry.model`；③ null。
- *（不再静默回退 models[0]——候选清单字段已退场；空值合法——准入/候选经 /models 拉取）。
+ * ② null（2026-10-09 清除批：渠道单值模型退场——原第二档 `entry.model` 无源可读）。
+ *（不静默回退 models[0]——候选清单字段已退场；空值合法——准入/候选经 /models 拉取）。
  */
 export function resolveDefaultModel(entry, raw) {
   return resolveChannelModel(entry, raw?.defaultModel ?? null)
@@ -128,10 +131,10 @@ export function providerFromConfig(name) {
   }
   if (provider.baseURL) provider.baseURL = provider.baseURL.replace(/\/+$/, "")
 
-  // Proxy: per-provider `proxy: true` AND global config.proxy.model === true (CLI injectProxy parity).
-  // Default model requests go direct — proxy.model is opt-in.
+  // Proxy: per-provider `proxy: true` AND `proxy.uri` present (CLI injectProxy parity) — 逐渠独立,
+  // no global gate (2026-10-08). Default model requests go direct — the per-provider flag is opt-in.
   const proxyCfg = normalizeProxy(raw.proxy)
-  if (target.proxy === true && proxyCfg?.uri && proxyCfg.model === true) {
+  if (target.proxy === true && proxyCfg?.uri) {
     provider.proxyUri = proxyCfg.uri
   }
   return provider

@@ -146,7 +146,7 @@ export function relaySubagentContentChunk(panel, face, a, b) {
 const _subContentSeen = new WeakMap() // panel → Set<频道名>
 
 /** 内容面正收据（§5.3——`logEvent("ev:subcontent", …)`，载荷 `{ ch, face }`）：每频道**首条**
- *  （该频道首条实收面）。**不并入** `ev:subdeliver` 五处置计数（评审 #11——T-A13 判据面零改）。 */
+ *  （该频道首条实收面）。**不并入** `ev:subdeliver` 五处置计数（评审 #11——T-A13 判据零改）。 */
 function noteContentFirst(panel, ch, face) {
   let seen = _subContentSeen.get(panel)
   if (!seen) { seen = new Set(); _subContentSeen.set(panel, seen) }

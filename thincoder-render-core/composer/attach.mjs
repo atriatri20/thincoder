@@ -5,7 +5,7 @@
  *
  * 面：
  *  - 栅格门 `RASTER_MIME`（值源 = `autocomplete.js:126` 同式，含非标 `image/jpg`）——
- *    **判据面与桌面 `renderer/attach.mjs` 现物同源合流**：两处现为同一字面；桌面换装轮改指本档（§2.3 attach 行）。
+ *    **判据与桌面 `renderer/attach.mjs` 现物同源合流**：两处现为同一字面；桌面换装轮改指本档（§2.3 attach 行）。
  *  - 文档级 paste 采集（`:127-142` 逐字：栅格受纳 + `preventDefault` 一次；非栅格图项拒即核 toast，非图零吞）。
  *  - `#file-input` ∕ `#attach-btn`（`:144-153` 逐字：点击 ⇒ 文件选取；change 毕清 `value`）——**受纳面扩文本/源码族**
  *    （2026-10-05 · §2 KD-RC-13 · 批 `docs/batches/2026-10-05-attach-file-support.md`）：`accept` 同源派生

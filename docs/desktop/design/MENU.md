@@ -4,7 +4,7 @@
 > 需求侧 = 需求分卷（本域卷 = `docs/desktop/requirements/MENU.md`——**D36 ∥ D38**；查卷口 = `docs/desktop/requirements/PROJECT.md` §4 **D 表索引**）；
 > 总览 ∥ 跨域决策 ∥ 索引 = `docs/desktop/design/PROJECT.md`；通道面 = `docs/desktop/design/IPC.md` §1 `ev:menu` 行 ∥ §2 `theme:state` 行；宿主面 = `docs/desktop/design/SHELL.md` §1 树行 + §2 菜单行；界面总则 = `docs/desktop/design/UI.md`。
 > 建档 = 2026-10-02（文档体系重组批 #813 · 波 1——内容逐字迁自 `docs/desktop/design/PROJECT.md` §2 / §4.1 / §4.2 / §6.1 / §7 / §10 ∥ `docs/desktop/design/UI.md` §1，as-of 2026-10-02；迁移前原址 = 各源档保位指针）。
-> **行数纪律（300 建议 ∕ 500 硬限）只对代码档**（`.mjs` ∥ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
+> **行数纪律（500 建议 ∕ 800 硬限）只对代码档**（`.mjs` ∥ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
 
 ## 1. 关键决策（KD-65）
 
@@ -34,7 +34,7 @@
    组名与条目双语（词表单源 = `thincoder-desktop/src/main/menu-words.mjs`；role 默认文案 = Electron 英文硬编码 ⇒ 显式双语 label 覆写——防 en-only 债）；**窗口组（minimize/zoom）按五组枚举退场**（窗口操作走系统标题栏）。
 2. **交互落径（每项 = 既有单一实现）**：新建会话 → 会话创建出口 ∥ 打开项目 ∥ 最近项 → `openDir`（原生选择框同径）∥ 查找 → 搜索面 `openSearch()`（与核件 `Ctrl+F` 键径**同径收敛**——开语义幂等，双触发零害）∥ 主题 → 设置面出口 `setTheme`（`theme.mjs` 单写者 + 切片写；**落地值回读主进程**——`theme:state` ⇒ 菜单勾随动）∥ 命令与快捷键 → `/help` 流内打印口 ∥ 关于 → 原生面板（版本 = `app.getVersion()` 动态）。
 3. **键盘可达**：三新增键位（`Ctrl+N` ∥ `Ctrl+O` ∥ `Ctrl+F`——菜单加速键；**记法注**：macOS 上 = Cmd——实现取 `CmdOrCtrl`；需求档字面 `Ctrl` 保持）；其余等于 role 默认加速键保留；零冲突实读（渲染面 `ctrlKey` 零既有绑定）。
-4. **判据**：机检 = 批内件 `docs/batches/2026-10-02-desktop-menu-system.test.mjs`（已建成 · 300 行 · 8/8 绿——五腿：树形（含带勾态）∥ 双语回落 ∥ 动作闭集 ∥ 词表纪律 ∥ 通道双表（含 `theme:state` 白名单））；真机面 = **T-DSK57**（走查：五组双语在场 ∥ 五入口 ∥ 三键 ∥ 关于面板含版本 0.10.1 ∥ 主题勾随动）。
+4. **判据**：机检 = 单元测试档 `docs/batches/2026-10-02-desktop-menu-system.test.mjs`（已建成 · 300 行 · 8/8 绿——五用例：树形（含带勾态）∥ 双语回落 ∥ 动作闭集 ∥ 词表纪律 ∥ 通道双表（含 `theme:state` 白名单））；真机 = **T-DSK57**（走查：五组双语在场 ∥ 五入口 ∥ 三键 ∥ 关于面板含版本 0.10.1 ∥ 主题勾随动）。
 5. **边界**：菜单项选中态 = 唯主题▸带勾（命令下行 + 状态回读 `theme:state`——限度 = 报告缓存；其余条目零选中态）∥ 托盘 ∥ 自绘菜单 ∥ 全量快捷键体系 ∥ 语言切换进菜单（设置面单源）（检查更新 = **桌面发布·阶段二批落**——单源 = `docs/desktop/design/PACKAGING.md` §2.8.1）；零触面 = `context-menu.mjs`（D27）∥ `projects.mjs`。
 
 ## 3. 文件账
@@ -43,9 +43,10 @@
 
 | 文件 | 预估行数 | 说明 |
 |---|---|---|
-| `thincoder-desktop/src/main/menu-words.mjs`（残余族清账批 · 新档；菜单体系批扩键；设置体系升级批扩键；桌面发布·阶段二批扩键） | **145**（实读 2026-10-03——桌面发布·阶段二批实施落盘（115 ⇒ 145：+11 键（菜单四 + 对话框 ∥ 通知七）× zh/en ⇒ 键集 43 + `{version}` 占位三句）；前读 **115**（实读 2026-10-02——设置体系升级批（#817）实施落盘（86 ⇒ 115：+3 键（`settings` ∥ `settingsOpen` ∥ `aboutShortcuts`——键集 29 ⇒ 32）+ `settingsSectionLabels` 读器）；前读 **86**（实读 2026-10-02——菜单体系批实施落盘（30 ⇒ 86）；扩至全菜单键集：组名五 + 条目 + role 标签 + 主题三值 + 最近/关于/占位词））） | **应用菜单词表**（zh/en 常量对 + `menuLabels(locale)` 纯函数；零 `electron` ⇒ 平 node 直测；zh = 语义直译值 ∕ en = 回归面现值——单源 = `docs/batches/2026-09-29-desktop-residuals-sweep.md` §2 #533 行 · `docs/batches/2026-10-02-desktop-menu-system.md` §2） |
+| `thincoder-desktop/src/main/menu-words.mjs`（残余族清账批 · 新档；菜单体系批扩键；设置体系升级批扩键；桌面发布·阶段二批扩键） | **145**（实读 2026-10-03——桌面发布·阶段二批实施落盘（115 ⇒ 145：+11 键（菜单四 + 对话框 ∥ 通知七）× zh/en ⇒ 键集 43 + `{version}` 占位三句）；前读 **115**（实读 2026-10-02——设置体系升级批（#817）实施落盘（86 ⇒ 115：+3 键（`settings` ∥ `settingsOpen` ∥ `aboutShortcuts`——键集 29 ⇒ 32）+ `settingsSectionLabels` 读器）；前读 **86**（实读 2026-10-02——菜单体系批实施落盘（30 ⇒ 86）；扩至全菜单键集：组名五 + 条目 + role 标签 + 主题三值 + 最近/关于/占位词））） | **应用菜单词表**（zh/en 常量对 + `menuLabels(locale)` 纯函数；零 `electron` ⇒ 平 node 直测；zh = 语义直译值 ∕ en = 回归现值——单源 = `docs/batches/2026-09-29-desktop-residuals-sweep.md` §2 #533 行 · `docs/batches/2026-10-02-desktop-menu-system.md` §2） |
 | `thincoder-desktop/src/main/app-menu.mjs`（菜单体系批 · 已落；设置体系升级批重组；桌面发布·阶段二批扩项） | **已落 · 158**（实读 2026-10-03——桌面发布·阶段二批实施落盘（143 ⇒ 158：帮助组 +「检查更新…」首项 + sep ∥ `update` 注入（状态 ⇒ label ∥ enabled））；前读 **143**（实读 2026-10-02——设置体系升级批（#817）实施落盘（111 ⇒ 143：设置组重组 + `SETTINGS_GROUPS` 镜像闭集同导出）；前读 111（菜单体系批实施落盘））） | 应用菜单模板纯函数（`menuTemplate({ words, edit, recent, theme, onAction, onNative })`——五组 ∥ 条目 ∥ role/加速键 ∥ 主题▸/最近▸ 子菜单 ∥ 主题勾选态（`checked` 判等；`THEME_VALUES` 导出）∥ `onAction` ∥ `onNative` 两接缝（`onNative(action)` = 宿主自办**四项** `gc` ∥ `index` ∥ `about` ∥ `update`（末项 = 桌面发布·阶段二批 +1）——不经 `ev:menu`）；零 `electron` ⇒ 平 node 直测；决策单源 = 本档 §1 **KD-65**） |
 | `thincoder-desktop/renderer/menu-actions.mjs`（菜单体系批 · 已落；设置体系升级批扩支） | **已落 · 44**（实读 2026-10-02——设置体系升级批（#817）实施落盘（37 ⇒ 44：+`openSettings` 分支——六动作闭集）；前读 37（菜单体系批实施落盘）） | 菜单动作落面（`ev:menu` 六动作 → 各既有单一实现分派（#817 收正——五 ⇒ 六：+`openSettings`）；注入缝 ⇒ 平 node 直测；决策单源 = 本档 §1 **KD-65**） |
+**行数面机检**：`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`，运行根单读）**逐条声明节域——本表为其一**（本域值行单源）；后续本域新档由落盘批在本表补值行，`docs/desktop/design/PROJECT.md` §4.1 同拍补指针行（沿 §4.1 纪律）。
 
 ### 3.2 现有文件改动 · 菜单体系批（实施落盘）
 
@@ -53,7 +54,7 @@
 
 | # | 档 | 现行 ⇒ 实读（实施落盘） | 面 |
 |---|---|---|---|
-| 1 | `thincoder-desktop/src/main/window.mjs` | **229 ⇒ 283**（实施落盘）（buildMenu 改消费 `menuTemplate`（携 `theme` 回读缓存）+ `refreshMenu` + `setMenuTheme`（勾选态缓存收面——表外值零变更）+ focus 重建 + 关于面两行 + `onAction` 接缝；菜单行注「只挂主进程动作面 ∥ 零 IPC 依赖项」句随 KD-65 收正；**越 300 顾问线远内**） | 宿主菜单面 |
+| 1 | `thincoder-desktop/src/main/window.mjs` | **229 ⇒ 283**（实施落盘）（buildMenu 改消费 `menuTemplate`（携 `theme` 回读缓存）+ `refreshMenu` + `setMenuTheme`（勾选态缓存收面——表外值零变更）+ focus 重建 + 关于面两行 + `onAction` 接缝；菜单行注「只挂主进程动作面 ∥ 零 IPC 依赖项」句随 KD-65 收正；**500 顾问线远内**） | 宿主菜单面 |
 | 2 | `thincoder-desktop/src/main/menu-words.mjs` | **30 ⇒ 86**（实施落盘）（全菜单键集；结构 ∥ `normalizeLocale` 归一 ∥ en 回落零改） | 词表面 |
 | 3 | `thincoder-desktop/src/main/app-menu.mjs` | **无 ⇒ 111**（实施落盘）（新档——模板纯函数 `menuTemplate({ words, edit, recent, theme, onAction, onNative })`；主题三值 + 勾选态 `checked` 判等 ∥ `THEME_VALUES` 闭集同导出；`onNative(action)` = 宿主自办三项 `gc` ∥ `index` ∥ `about`——不经 `ev:menu`） | 菜单模板面 |
 | 4 | `thincoder-desktop/src/main/ipc.mjs` | **270 ⇒ 276**（实施落盘）（`openProjectChannel` 成功径 `refreshMenu()` 调用 + `theme:state` 处理体（`setMenuTheme` 转口 + 回执）+ import ∕ 注） | 项目面 |
@@ -62,14 +63,15 @@
 | 5 | `thincoder-desktop/src/preload/preload.cjs` | **80 ⇒ 83**（实施落盘）（`EVENT_CHANNELS` + `"ev:menu"`（23 ⇒ 24）∥ `CHANNELS` + `"theme:state"`（46 ⇒ 47）+ 头注计数随正） | 桥面 |
 | 6 | `thincoder-desktop/renderer/events-subscribe.mjs` | **93 ⇒ 101**（实施落盘）（`CHANNELS` + `"ev:menu"` + 窄口 `onMenu` 参 + 分派行 + 头注） | 订阅面 |
 | 7 | `thincoder-desktop/renderer/menu-actions.mjs` | **无 ⇒ 37**（实施落盘）（新档——五动作分派） | 动作落面 |
-| 8 | `thincoder-desktop/renderer/app.mjs` | **305 ⇒ 319**（实施落盘）（`searchFace` 捕获 + `onMenu` 接线 + `menuActions` 建面 + import + **主题态回读接线**（装配初值报告 = 写点①）；**越 300 顾问线在册**——随趟登记，拆分预案随下次结构性触碰评估；**本批触属性 = 装配接线（非结构性）**〔新增行全为接线点〕——窗口沿「任一后续批择机」顺延（越层段条目同拍）） | 装配面 |
+| 8 | `thincoder-desktop/renderer/app.mjs` | **305 ⇒ 319**（实施落盘）（`searchFace` 捕获 + `onMenu` 接线 + `menuActions` 建面 + import + **主题态回读接线**（装配初值报告 = 写点①）；**本批触属性 = 装配接线（非结构性）**〔新增行全为接线点〕——**≤500 ⇒ 免拆（500/800 口径更换批）**） | 装配面 |
 | 9 | `thincoder-desktop/renderer/mount-composer.mjs` | **296 ⇒ 297**（实施落盘）（face 暴露 `printHelp`——**#761 冻结邻接披露**，批档 §2 上抛 U4） | 输入区面 |
 | 10 | `thincoder-desktop/renderer/mount-settings.mjs` | **179 ⇒ 181**（实施落盘）（face 暴露 `setTheme` = 既有 `exits.handlers.onSetTheme` 转名——零第二实现） | 设置面 |
 | 10b | `thincoder-desktop/renderer/mount-settings-exits.mjs` | **242 ⇒ 248**（实施落盘）（`setThemeFace` 落地径补主题态回读报告——写点②（`ask("theme:state")`；菜单 ∥ 设置两入口同痕） | 设置出口面 |
-| 11 | 批内件 | `docs/batches/2026-10-02-desktop-menu-system.test.mjs`（**已建成 · 300 行 · 五腿 · 8/8 绿**——腿集 = 批档 §2 六） | 全批 |
+| 11 | 单元测试档 | `docs/batches/2026-10-02-desktop-menu-system.test.mjs`（**已建成 · 300 行 · 五用例 · 8/8 绿**——用例集 = 批档 §2 六） | 全批 |
 | 12 | 设计档 | 本档 §1 **KD-65** ∥ 本档 §3.1（新行二 + 三行随动）∥ 本档 §3.2 本块 ∥ 本档 §4（本批块 + `docs/desktop/design/PROJECT.md` §6.1 表头 **D1–D35 ⇒ D1–D36**）∥ 本档 §5（批注 + **T-DSK57**）∥ `docs/desktop/design/PROJECT.md` §8 本批边界行 ∥ 本档 §6 **DG** ∥ `docs/desktop/design/PROJECT.md` §10 **BE**（计数随动）；`docs/desktop/design/SHELL.md` §1 树三行 + §2 菜单行；`docs/desktop/design/UI.md` §1 本批注；`docs/desktop/design/IPC.md` §1 `ev:menu` 行 + §2 `theme:state` 行 + 计数随动（白名单 46 ⇒ 47）；`docs/desktop/design/RENDERER.md`（**机制面零触**——计数随动：档头 **D1–D34 ⇒ D1–D36** ∥ 变更行 `:369`） | 全批 |
 
-零触面：`src/main/context-menu.mjs`（D27 零触 ∥ 只读复用 `contextMenuLabels`）∥ `src/main/projects.mjs`（数据面只读复用——`recentDirs` ∥ `openProject` 零改）∥ `renderer/theme.mjs` ∥ `thincoder-desktop/renderer/search.mjs` ∥ 核件 `thincoder-render-core/**` ∥ 核 `thincoder-core/**` ∥ CLI ∥ VSC；测试面随修随加——不占设计条目（2026-09-27 裁定）。
+零触面：`src/main/context-menu.mjs`（D27 零触 ∥ 只读复用 `contextMenuLabels`）∥ `thincoder-desktop/src/main/projects.mjs`（数据面只读复用——`recentDirs` ∥ `openProject` 零改）∥ `renderer/theme.mjs` ∥ `thincoder-desktop/renderer/search.mjs` ∥
+  核件 `thincoder-render-core/**` ∥ 核 `thincoder-core/**` ∥ CLI ∥ VSC；测试覆盖随修随加——不占设计条目（2026-09-27 裁定）。
 
 ### 3.3 现有文件改动 · 设置菜单升级批（实施落盘）
 
@@ -81,12 +83,12 @@
 | 2 | `thincoder-desktop/src/main/app-menu.mjs` | **111 ⇒ 143**（实施落盘）（设置组重组——改名 + 设置… + 七组项（`sections` 注入）+ 两子组；`SETTINGS_GROUPS` 镜像闭集同导出） | 模板面 |
 | 3 | `thincoder-desktop/src/main/window.mjs` | **283 ⇒ 288**（实施落盘）（`buildMenu` 读 `settingsSectionLabels` + 注入 `sections`） | 宿主菜单面 |
 | 4 | `thincoder-desktop/renderer/menu-actions.mjs` | **37 ⇒ 44**（实施落盘）（+`openSettings` 分支；deps +1） | 动作落面 |
-| 5 | `thincoder-desktop/renderer/app.mjs` | **319 ⇒ 321**（实施落盘）（deps.`openSettings` 注入——设置面临时双口（页 ∥ 弹窗）转接；**越 300 在册**——本批触属性 = 装配接线（非结构性）） | 装配面 |
+| 5 | `thincoder-desktop/renderer/app.mjs` | **319 ⇒ 321**（实施落盘）（deps.`openSettings` 注入——设置面临时双口（页 ∥ 弹窗）转接；本批触属性 = 装配接线（非结构性）——**≤500 ⇒ 免拆（500/800 口径更换批）**） | 装配面 |
 | 6 | 弹窗族（设置域） | `docs/desktop/design/SETTINGS.md` §3.2 本批块（新档 `settings-modal.mjs` ∥ `settings-modal.css` + 改档五） | 设置域 |
-| 7 | 批内件 | `docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs`（已建成 · 六腿——波 1 三 + 波 2 三） | 全批 |
+| 7 | 单元测试档 | `docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs`（已建成 · 六用例——波 1 三 + 波 2 三） | 全批 |
 | 8 | 设计档 | 本档 §1 **KD-67** ∥ §2 本批注 ∥ §3.3 本块 ∥ §4 本批块 ∥ §5 交叉行 ∥ §6 **DI**；`docs/desktop/design/SETTINGS.md`（§1 **KD-68** ∥ §2.10 ∥ §3.2 ∥ §4 ∥ §5 ∥ §6）；`docs/desktop/design/IPC.md` §1 `ev:menu` 行（五 ⇒ 六 + `value` 携主二）+ §1「事件映射」`:52` ∥「载荷键集」`:88`（同拍收正）+ §2 菜单面段；`docs/desktop/design/{SHELL,UI}.md`；`docs/desktop/design/PROJECT.md` §2 登记行二 + §6.1 + §7 + §10 **DI** | 全批 |
 
-零触面：`onNative` 三缝行为（原生对话框 ∥ 原生面板）∥ 帮助组 ∥ 键位面（零新加速键）∥ 通道集（事件 24 ∥ 白名单 47）∥ `preload.cjs` ∥ `ipc-registry.mjs`；测试面随修随加——不占设计条目（2026-09-27 裁定）。
+零触面：`onNative` 三缝行为（原生对话框 ∥ 原生面板）∥ 帮助组 ∥ 键位面（零新加速键）∥ 通道集（事件 24 ∥ 白名单 47）∥ `preload.cjs` ∥ `ipc-registry.mjs`；测试覆盖随修随加——不占设计条目（2026-09-27 裁定）。
 
 ### 3.4 现有文件改动 · 设置菜单组项收窄批（实施落盘）
 
@@ -98,10 +100,10 @@
 | 2 | `thincoder-desktop/src/main/menu-words.mjs` | **115 ⇒ 115**（实施落盘）（`SETTINGS_SECTION_KEYS` 七 ⇒ 六 + 注面随正） | 词表面 |
 | 3 | `thincoder-desktop/src/main/window.mjs` | **288 ⇒ 288**（实施落盘）（注两行随正（「设置六组段名」∥「组名六值」）——功能零改） | 宿主菜单面 |
 | 4 | 零改面 | 渲染面全档（`SECTIONS` ∥ `SCOPES` ∥ 弹窗族 ∥ `menu-actions.mjs` ∥ `store.mjs`——校验七名宽容〔支 A 裁定〕零触 ∥ 设置页七段）∥ `preload.cjs` ∥ `ipc-registry.mjs` ∥ 通道集（事件 24 ∥ 白名单 47）∥ 词表键集（32——零新键）∥ 动作集（六动作）∥ 核 ∥ `thincoder-render-core` ∥ CLI ∥ VSC | 零触 |
-| 5 | 批内件 | `docs/batches/2026-10-02-settings-menu-trim.test.mjs`（已建成 · 3/3 绿——三腿 = 六项集 ∥ 跨面闭集一致性 ∥ 弹窗仍达六组〔+校验七名宽容 pin〕） | 全批 |
+| 5 | 单元测试档 | `docs/batches/2026-10-02-settings-menu-trim.test.mjs`（已建成 · 3/3 绿——三用例 = 六项集 ∥ 跨面闭集一致性 ∥ 弹窗仍达六组〔+校验七名宽容 pin〕） | 全批 |
 | 6 | 设计档 | 本档 §1 **KD-65** ①② ∥ **KD-67** ①–③ ∥ §2 本批注 + §2.1 项 1 ∥ §3.4 本块 ∥ §4 本批块 ∥ §5 交叉行 ∥ §6 **DJ**；`docs/desktop/design/SETTINGS.md` §1 **KD-68** ④ ∥ §2.11 ∥ §3.2 本批块 ∥ §4 ∥ §5 **T-DSK59**；`docs/desktop/design/IPC.md` §1 `ev:menu` 行；`docs/desktop/design/SHELL.md` §2 菜单行 | 全批 |
 
-零触面：`onNative` 三缝 ∥ 帮助组 ∥ 键位面 ∥ 设置页七段（需求明文零动）∥ 弹窗复用链（七行——设置页对齐）∥ `PROJECT.md` ∥ 需求卷（收正已落——引 `docs/desktop/requirements/SETTINGS.md:18` D39 行内收正句 ∥ `:24` 变更行）；测试面随修随加——不占设计条目（2026-09-27 裁定）。
+零触面：`onNative` 三缝 ∥ 帮助组 ∥ 键位面 ∥ 设置页七段（需求明文零动）∥ 弹窗复用链（七行——设置页对齐）∥ `PROJECT.md` ∥ 需求卷（收正已落——引 `docs/desktop/requirements/SETTINGS.md:18` D39 行内收正句 ∥ `:24` 变更行）；测试覆盖随修随加——不占设计条目（2026-09-27 裁定）。
 
 ### 3.5 现有文件改动 · 桌面发布·阶段二批（菜单半——实施落盘）
 
@@ -111,50 +113,50 @@
 |---|---|---|---|
 | 1 | `thincoder-desktop/src/main/menu-words.mjs` | **115 ⇒ 145**（实施落盘）（+11 键 × zh/en（菜单四 + 对话框 ∥ 通知七）；键集 32 ⇒ 43；宪章句扩「应用菜单与更新面词表」） | 词表面 |
 | 2 | `thincoder-desktop/src/main/app-menu.mjs` | **143 ⇒ 158**（实施落盘）（帮助组 +「检查更新…」项（首项 + sep）∥ `update` 注入（状态 ⇒ label ∥ enabled；`ready` ⇒ 「重启以安装更新」）） | 菜单模板面 |
-| 3 | `thincoder-desktop/src/main/window.mjs` | **288 ⇒ 336**（实施落盘）（`onNative` +`update` 转口（`setUpdateFace` 注入——沿 `setMenuTheme` 先例）∥ 确认 ∥ 结果对话框两枚；**越 300 顾问线在册**——拆分预案 ∥ 消解窗口 = `docs/desktop/design/PROJECT.md` §4.1 越层段本批行） | 宿主菜单面 |
+| 3 | `thincoder-desktop/src/main/window.mjs` | **288 ⇒ 336**（实施落盘）（`onNative` +`update` 转口（`setUpdateFace` 注入——沿 `setMenuTheme` 先例）∥ 确认 ∥ 结果对话框两枚；**（≤500 ⇒ 免拆——500/800 口径更换批）**） | 宿主菜单面 |
 | 4 | 零改面 | 渲染面全档（`menu-actions.mjs` ∥ `events-subscribe.mjs` ∥ `app.mjs`）∥ `context-menu.mjs` ∥ `projects.mjs` ∥ 通道集（事件 24 ∥ 白名单 47）∥ 动作集（六动作——`ev:menu` 零动）∥ `preload.cjs` ∥ `ipc-registry.mjs` ∥ 核 ∥ `thincoder-render-core` ∥ CLI ∥ VSC | 零触 |
 | 5 | 设计档 | `docs/desktop/design/PACKAGING.md`（§1 **KD-71** ∥ §2.8.1 ∥ §3.3 本批块 ∥ §4.3 ∥ §5 **T-DSK60** ∥ §6 **DK**）；本档 §1 **KD-65** ①/②/⑦ 随拍 + 本块 + 变更记录；`docs/desktop/design/PROJECT.md`（§2 ∥ §5 ∥ §8 ∥ §10 **DK** ∥ §7 **T-DSK60**） | 全批 |
 
-零触面：`onNative` 前三缝行为（原生对话框 ∥ 原生面板）∥ 其余四组 ∥ 键位面（零新加速键）∥ 设置组「关于与快捷键」子菜单（**不加更新项**——子菜单名语义 = 快捷键 + 关于；更新项单入口 = 帮助组）；测试面随修随加——不占设计条目（2026-09-27 裁定）。
+零触面：`onNative` 前三缝行为（原生对话框 ∥ 原生面板）∥ 其余四组 ∥ 键位面（零新加速键）∥ 设置组「关于与快捷键」子菜单（**不加更新项**——子菜单名语义 = 快捷键 + 关于；更新项单入口 = 帮助组）；测试覆盖随修随加——不占设计条目（2026-09-27 裁定）。
 
 ## 4. 验收回指（需求卷 D36）
 
-**菜单体系批（验收面 · 2026-10-02 · 台账 #811）**：需求回指 = **D36**（五组扩充 ∥ 双语 ∥ 窄通道 ∥ 四默认定案）；设计单源 = 本档 §1 **KD-65** ∥ `docs/desktop/design/SHELL.md` §2 菜单行 ∥ `docs/desktop/design/IPC.md` §1 `ev:menu` 行 ∥ §2 `theme:state` 行 ∥ 本档 §2；
-机检面 = 批内件 `docs/batches/2026-10-02-desktop-menu-system.test.mjs`（已建成 · 300 行 · 8/8 绿——五腿：① **菜单树结构**（五组序 ∥ 逐组条目 ∥ 三加速键 ∥ 主题子菜单三值序 = `THEMES` 闭集序 + **带勾态**（`theme` 给定 ⇒ 恰一枚 `checked`；缺省 ⇒ 全假） ∥ 最近子菜单 ≤10 + 空表占位禁用）② **双语 ∥ 回落**（zh/en 词值 + 未知 ∕ 缺 locale ⇒ en 回落——沿 #533 腿形）
+**菜单体系批（验收 · 2026-10-02 · 台账 #811）**：需求回指 = **D36**（五组扩充 ∥ 双语 ∥ 窄通道 ∥ 四默认定案）；设计单源 = 本档 §1 **KD-65** ∥ `docs/desktop/design/SHELL.md` §2 菜单行 ∥ `docs/desktop/design/IPC.md` §1 `ev:menu` 行 ∥ §2 `theme:state` 行 ∥ 本档 §2；
+机检 = 单元测试档 `docs/batches/2026-10-02-desktop-menu-system.test.mjs`（已建成 · 300 行 · 8/8 绿——五用例：① **菜单树结构**（五组序 ∥ 逐组条目 ∥ 三加速键 ∥ 主题子菜单三值序 = `THEMES` 闭集序 + **带勾态**（`theme` 给定 ⇒ 恰一枚 `checked`；缺省 ⇒ 全假） ∥ 最近子菜单 ≤10 + 空表占位禁用）② **双语 ∥ 回落**（zh/en 词值 + 未知 ∕ 缺 locale ⇒ en 回落——沿 #533 用例形）
   ③ **动作闭集**（五动作 `onAction` 派发正确 ∥ 未知 action ⇒ 零动作 + 记错）④ **词表纪律**（`menuLabels` 键集 = 预期集 ∥ Edit 四值 = `contextMenuLabels` 同源读取）
-  ⑤ **通道面**（`preload.cjs` `EVENT_CHANNELS` ∧ `events-subscribe.mjs` `CHANNELS` 双表含 `"ev:menu"` 且等值；**回读面**——`preload.cjs` `CHANNELS` 含 `"theme:state"`（46 ⇒ 47）∧ `ipc-registry.mjs` `HANDLERS` 含同项））；随批留存 · 不进仓套件）；
-真机面 = **T-DSK57**（走查十一项：五组双语在场 ∥ 新建会话 ∥ 打开项目 ∥ 最近项 ∥ 查找 ∥ 主题切换 ∥ **主题勾随动**（切主题 ⇒ 当前生效主题带勾——设置面 ∥ 菜单两径）∥ `/help` 打印 ∥ 关于面板含版本 0.10.1 ∥ `CmdOrCtrl+N/O/F` 三键（macOS = Cmd）∥ 边界两查（空最近表 ⇒ 单枚禁用占位；未配 locale ⇒ en 回落））；**离线不可产面**（真菜单 ∥ 原生关于面板 ∥ 系统对话框）= 人工走查 + 父侧真跑闭合（D16 义务）；测试档随修随加——不占设计条目（2026-09-27 裁定）。
+  ⑤ **通道面**（`preload.cjs` `EVENT_CHANNELS` ∧ `events-subscribe.mjs` `CHANNELS` 双表含 `"ev:menu"` 且等值；**回读面**——`preload.cjs` `CHANNELS` 含 `"theme:state"`（46 ⇒ 47）∧ `ipc-registry.mjs` `HANDLERS` 含同项））；随批留存 · 不进集成测试树）；
+真机 = **T-DSK57**（走查十一项：五组双语在场 ∥ 新建会话 ∥ 打开项目 ∥ 最近项 ∥ 查找 ∥ 主题切换 ∥ **主题勾随动**（切主题 ⇒ 当前生效主题带勾——设置面 ∥ 菜单两径）∥ `/help` 打印 ∥ 关于面板含版本 0.10.1 ∥ `CmdOrCtrl+N/O/F` 三键（macOS = Cmd）∥ 边界两查（空最近表 ⇒ 单枚禁用占位；未配 locale ⇒ en 回落））；**离线不可产面**（真菜单 ∥ 原生关于面板 ∥ 系统对话框）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计条目（2026-09-27 裁定）。
 
-**设置菜单升级批（验收面 · 菜单半 · 2026-10-02 · 台账 #817 · 需求 D38 ∥ D39）**：需求回指 = **D38**（改名 ∥ 设置… 入口 ∥ 维护子组零改）∥ **D39**（七组项 ⇒ 组弹窗）；设计单源 = 本档 §1 **KD-67** ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-68**；
-机检面 = 批内件 `docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs`（已建成——**波 1 腿**：① 菜单树（组名设置 ∥ 条目序 = 设置… ∥ sep ∥ 七组项（序 = `SECTIONS`）∥ sep ∥ 维护▸ 两项 ∥ 关于与快捷键▸ 两项 ∥ 七项 emit 值 = 组名闭集——**跨面闭集一致性**：`SETTINGS_GROUPS`（主）≡ `SECTIONS` 名序（渲染——`SCOPES` 同源派生）源扫）
-   ② 词表纪律（键集 32 ∥ `settingsSectionLabels` HOST_DICT 投影 + en 回落）③ 动作闭集六（`openSettings` 两形派发 ∥ 表外 ⇒ 记错））；随批留存 · 不进仓套件；
-真机面 = **T-DSK59**（用例行 = `docs/desktop/design/SETTINGS.md` §5——两波合一走查）；**离线不可产面**（原生菜单 ∥ 原生对话框 ∥ 原生面板）= 人工走查 + 父侧真跑闭合（D16 义务）；测试档随修随加——不占设计条目（2026-09-27 裁定）。
+**设置菜单升级批（验收 · 菜单半 · 2026-10-02 · 台账 #817 · 需求 D38 ∥ D39）**：需求回指 = **D38**（改名 ∥ 设置… 入口 ∥ 维护子组零改）∥ **D39**（七组项 ⇒ 组弹窗）；设计单源 = 本档 §1 **KD-67** ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-68**；
+机检 = 单元测试档 `docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs`（已建成——**波 1 用例**：① 菜单树（组名设置 ∥ 条目序 = 设置… ∥ sep ∥ 七组项（序 = `SECTIONS`）∥ sep ∥ 维护▸ 两项 ∥ 关于与快捷键▸ 两项 ∥ 七项 emit 值 = 组名闭集——**跨面闭集一致性**：`SETTINGS_GROUPS`（主）≡ `SECTIONS` 名序（渲染——`SCOPES` 同源派生）源扫）
+   ② 词表纪律（键集 32 ∥ `settingsSectionLabels` HOST_DICT 投影 + en 回落）③ 动作闭集六（`openSettings` 两形派发 ∥ 表外 ⇒ 记错））；随批留存 · 不进集成测试树；
+真机 = **T-DSK59**（用例行 = `docs/desktop/design/SETTINGS.md` §5——两波合一走查）；**离线不可产面**（原生菜单 ∥ 原生对话框 ∥ 原生面板）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计条目（2026-09-27 裁定）。
 
-**设置菜单组项收窄批（验收面 · 菜单半 · 2026-10-02 · 台账 #820 · 需求 D39 收正）**：需求回指 = **D39**（菜单组项 七 ⇒ 六——「模型」不入菜单；设置页面七段零动）；设计单源 = 本档 §1 **KD-67** ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-68** ④（闭集关系）。
-机检面 = 批内件 `docs/batches/2026-10-02-settings-menu-trim.test.mjs`（已建成 · 3/3 绿——三腿：① 六项集（条目序 = 设置… ∥ sep ∥ 六组项（序 = `SECTIONS` 去「模型」）∥ sep ∥ 维护▸ 两项 ∥ 关于与快捷键▸ 两项；六项 emit 值 = 组名闭集；「模型」零在场）；
-② 跨面闭集一致性（`SETTINGS_GROUPS`（主）≡ `SECTIONS` 名序去「模型」（渲染）源扫；读取面键序同值）∥ ③ 弹窗仍达六组（逐组开 ⇒ 切片写 + 读取链）+ 校验七名宽容（`model` 受理 = 支 A pin；表外 ⇒ 拒））；随批留存 · 不进仓套件。
-前批注（#817 批内件腿①/② 断言 = 七组项快照——**已实证**：本批实施落盘后恰 2 红（2026-10-02 复跑 = `tests 8 ∥ pass 6 ∥ fail 2`；红例 = 腿① `:171` ∥ 腿② `:254`）；处置 = 该档头注（已落）+ 收口互指；#817 记录零触、不追改）。
-真机面 = **T-DSK59**（条目面随正 = `docs/desktop/design/SETTINGS.md` §5——六组项）；**离线不可产面**（真菜单）= 人工走查 + 父侧真跑闭合（D16 义务）；测试档随修随加——不占设计面条目（2026-09-27 裁定）。
+**设置菜单组项收窄批（验收 · 菜单半 · 2026-10-02 · 台账 #820 · 需求 D39 收正）**：需求回指 = **D39**（菜单组项 七 ⇒ 六——「模型」不入菜单；设置页面七段零动）；设计单源 = 本档 §1 **KD-67** ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-68** ④（闭集关系）。
+机检 = 单元测试档 `docs/batches/2026-10-02-settings-menu-trim.test.mjs`（已建成 · 3/3 绿——三用例：① 六项集（条目序 = 设置… ∥ sep ∥ 六组项（序 = `SECTIONS` 去「模型」）∥ sep ∥ 维护▸ 两项 ∥ 关于与快捷键▸ 两项；六项 emit 值 = 组名闭集；「模型」零在场）；
+② 跨面闭集一致性（`SETTINGS_GROUPS`（主）≡ `SECTIONS` 名序去「模型」（渲染）源扫；读取面键序同值）∥ ③ 弹窗仍达六组（逐组开 ⇒ 切片写 + 读取链）+ 校验七名宽容（`model` 受理 = 支 A pin；表外 ⇒ 拒））；随批留存 · 不进集成测试树。
+前批注（#817 单元测试档用例①/② 断言 = 七组项快照——**已实证**：本批实施落盘后恰 2 红（2026-10-02 复跑 = `tests 8 ∥ pass 6 ∥ fail 2`；红例 = 用例① `:171` ∥ 用例② `:254`）；处置 = 该档头注（已落）+ 收口互指；#817 记录零触、不追改）。
+真机 = **T-DSK59**（条目面随正 = `docs/desktop/design/SETTINGS.md` §5——六组项）；**离线不可产面**（真菜单）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计面条目（2026-09-27 裁定）。
 
 ## 5. 用例
 
-| 用例 | 场景 | 输入 | 预期输出 | 机检面 / 落点 |
+| 用例 | 场景 | 输入 | 预期输出 | 机检 / 落点 |
 |---|---|---|---|---|
-| T-DSK57 | 正常 / 边界 · 菜单体系（D36 · 真 Electron） | 真 Electron（三启程）：① 默认家（含历史项目）——逐项走查（**十一项**清单 = 本档 §4）；② 空最近表家（无记录）；③ 未配 locale 家（config 无 `locale` 键） | ① 十一项逐条：五组双语在场（zh ∥ en 各一轮）∥ 新建会话 ∥ 打开项目 ∥ 最近项（≤10 · label = cwd 全路径）∥ 查找 ∥ 主题切换（序 = `THEMES` 闭集序）∥ **主题勾随动**（切主题（设置面 ∥ 菜单两径）⇒ 当前生效主题带勾随动——`data-theme` 值与菜单勾位一致）∥ `/help` 打印（流内）∥ 关于面板含版本 `0.10.1` ∥ `CmdOrCtrl+N/O/F` 三键真触发（记法 = macOS Cmd）∥ 边界两查（空最近表 ⇒ 单枚禁用占位〔不可点〕；未配 locale ⇒ en 回落〔零空白 ∥ 零混排〕）；**离线不可产面**（真菜单 ∥ 原生关于面板 ∥ 系统对话框）= 人工走查 + 父侧真跑闭合（D16 义务） | 机检面 = 批内件 `docs/batches/2026-10-02-desktop-menu-system.test.mjs`（已建成 · 300 行 · 五腿 · 8/8 绿；随批留存 · 不进仓套件）；用例号自铸披露 = §6 **DG** |
+| T-DSK57 | 正常 / 边界 · 菜单体系（D36 · 真 Electron） | 真 Electron（三启程）：① 默认家（含历史项目）——逐项走查（**十一项**清单 = 本档 §4）；② 空最近表家（无记录）；③ 未配 locale 家（config 无 `locale` 键） | ① 十一项逐条：五组双语在场（zh ∥ en 各一轮）∥ 新建会话 ∥ 打开项目 ∥ 最近项（≤10 · label = cwd 全路径）∥ 查找 ∥ 主题切换（序 = `THEMES` 闭集序）∥ **主题勾随动**（切主题（设置面 ∥ 菜单两径）⇒ 当前生效主题带勾随动——`data-theme` 值与菜单勾位一致）∥ `/help` 打印（流内）∥ 关于面板含版本 `0.10.1` ∥ `CmdOrCtrl+N/O/F` 三键真触发（记法 = macOS Cmd）∥ 边界两查（空最近表 ⇒ 单枚禁用占位〔不可点〕；未配 locale ⇒ en 回落〔零空白 ∥ 零混排〕）；**离线不可产面**（真菜单 ∥ 原生关于面板 ∥ 系统对话框）= 人工走查 + 父侧真跑闭合（D16 义务） | 机检 = 单元测试档 `docs/batches/2026-10-02-desktop-menu-system.test.mjs`（已建成 · 300 行 · 五用例 · 8/8 绿；随批留存 · 不进集成测试树）；用例号自铸披露 = §6 **DG** |
 
-**菜单体系批注（验收面 · 2026-10-02 · 台账 #811）**：机检面 = 批内件 `docs/batches/2026-10-02-desktop-menu-system.test.mjs`（已建成 · 300 行 · 五腿 · 8/8 绿——逐条 = 本档 §4）；真机面 = **T-DSK57**（走查十一项——清单 = 本档 §4；用例行 = 本表）；用例行随测试档修加——不进设计面条目（2026-09-27 裁定）。
+**菜单体系批注（验收 · 2026-10-02 · 台账 #811）**：机检 = 单元测试档 `docs/batches/2026-10-02-desktop-menu-system.test.mjs`（已建成 · 300 行 · 五用例 · 8/8 绿——逐条 = 本档 §4）；真机 = **T-DSK57**（走查十一项——清单 = 本档 §4；用例行 = 本表）；用例行随测试文件修加——不进设计面条目（2026-09-27 裁定）。
 
-**设置菜单升级批注（验收面 · 2026-10-02 · 台账 #817）**：真机用例 = **T-DSK59**（全文 = `docs/desktop/design/SETTINGS.md` §5——菜单 ∥ 弹窗两波合一走查；as-of 2026-10-02）；机检腿 = 本档 §3.3 ∥ §4（波 1 三腿）+ `docs/desktop/design/SETTINGS.md` §3.2 ∥ §4（波 2 三腿）。
+**设置菜单升级批注（验收 · 2026-10-02 · 台账 #817）**：真机用例 = **T-DSK59**（全文 = `docs/desktop/design/SETTINGS.md` §5——菜单 ∥ 弹窗两波合一走查；as-of 2026-10-02）；机检用例 = 本档 §3.3 ∥ §4（波 1 三用例）+ `docs/desktop/design/SETTINGS.md` §3.2 ∥ §4（波 2 三用例）。
 
-**设置菜单组项收窄批注（验收面 · 2026-10-02 · 台账 #820）**：真机用例 = **T-DSK59**（条目面随正——六组项；全文 = `docs/desktop/design/SETTINGS.md` §5）；机检腿 = 本档 §3.4 ∥ §4；批档 = `docs/batches/2026-10-02-settings-menu-trim.md`。
+**设置菜单组项收窄批注（验收 · 2026-10-02 · 台账 #820）**：真机用例 = **T-DSK59**（条目面随正——六组项；全文 = `docs/desktop/design/SETTINGS.md` §5）；机检用例 = 本档 §3.4 ∥ §4；批档 = `docs/batches/2026-10-02-settings-menu-trim.md`。
 
 ## 6. 上抛与登记（DG）
 
 | 行 | 内容 | 状态 | 单源 |
 |---|---|---|---|
-| DG | **`T-DSK57` 用例号自铸披露 + 菜单体系批（#811）上抛四项**（沿 T-DSK37–T-DSK56 先例——菜单体系批自铸；若实施批 ∥ 并行批占用同号 ⇒ 请父侧并号裁定）：① 用例行随测试档修加——不进设计面条目（2026-09-27 裁定）；② **窄通道动作数披露**——D36 ∥ §1 现文记「四动作」，设计实取**五**（+`openProject`——渲染面 `openDir` 单一实现 + 会话/轨面随动所需）；若父侧本意四 ⇒ 裁；③ **窗口组（minimize/zoom）去留披露**——D36 ∥ §1 ∥ 台账三处枚举均无它，设计按五组落 = 该组退场；如需保留 = +1 组；④ **关于版权文案取值**（内容权 = 主 agent）——提案 = `© 2026 Shanghai Xinbo Technology Co., Ltd.`（源 = D32 签名主体）；版本 = `app.getVersion()` 动态；⑤ **#761 冻结邻接披露**——`mount-composer.mjs` 增 face 暴露 `printHelp` 一行（slash 批存量文件——UI.md ∥ RENDERER.md 同为其「零写」清单档；本批按派单触其非 slash 区，slash 区零动）；若裁冻结面绝对零触 ⇒ help 另径求助（现无零触替代） | 登记（自铸披露 + 上抛四项——**已裁（引需求档 `:181` ∥ 变更行 `:299`——「D36 动作集收正（四 ⇒ 五）+ 窗口组退场确认」条）**） | 单源 = 本档 §1 **KD-65** ∥ 批档 `docs/batches/2026-10-02-desktop-menu-system.md` §2 上抛项 |
-| DI | **`T-DSK59` 用例号自铸披露 + 设置菜单升级批（#817）五披露**（沿 T-DSK37–T-DSK58 先例——本批自铸；若实施批 ∥ 并行批占用同号 ⇒ 请父侧并号裁定）：① 用例行随测试档修加——不进设计面条目（2026-09-27 裁定）；② **「设置…」落面判定**——设计取「现有设置页」（D38 字面「打开设置面」+ D39「现有设置页保留」）；备选 = 总览弹窗（未采——若父侧本意备选 ⇒ 裁，改动面小）；③ **「关于与快捷键」= 第二入口**（帮助组零动——D36 保持；若父侧裁「移动（帮助组退场）」⇒ 需求变更级，本设计不擅动）；④ **需求侧已收正**（主 agent 笔面——已落）：D36 动作集「五」⇒ **六**（+`openSettings`——沿上批「四 ⇒ 五」收正先例）——引需求卷 `docs/desktop/requirements/MENU.md:12` D36 行内收正句 ∥ `:19` 变更行；⑤ **D39「多子菜单」读法登记**——设计读法 = 「七组项平铺 + 维护 ∥ 关于与快捷键两枚真子菜单」（细目设计定之内——沿 ② 先例）；若父侧原意「每组一条子菜单」⇒ 属 U1 同族细化，请裁。设置半披露 = `docs/desktop/design/SETTINGS.md` §6 **DI（设置半）** | 登记（自铸披露 + **五**披露） | 单源 = 本档 §1 **KD-67** ∥ 批档 `docs/batches/2026-10-02-desktop-settings-menu-upgrade.md` §2 |
-| DJ | **设置菜单组项收窄批（#820）二择项裁定 + 披露一**：① **弹窗校验面 = 支 A（七名宽容）**——菜单不发第七名，零改 `SCOPES`；**读器投影枚举 = 六名**（与组项集对齐）——两裁明写 = 本档 §1 **KD-67** ③ ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-68** ④；② **#817 批内件腿①/②（= 七组项快照）实施落盘后预期变红**——处置沿 #811→#817 先例（该档头注 + 收口互指；#817 记录零触）；③ **T-DSK59 条目面随正（六组项——同号复用，不新铸）** | 登记（裁定二 + 披露一） | 单源 = 本档 §1 **KD-67** ∥ 批档 `docs/batches/2026-10-02-settings-menu-trim.md` §2 |
+| DG | **`T-DSK57` 用例号自铸披露 + 菜单体系批（#811）上抛四项**（沿 T-DSK37–T-DSK56 先例——菜单体系批自铸；若实施批 ∥ 并行批占用同号 ⇒ 请父侧并号裁定）：① 用例行随测试文件修加——不进设计面条目（2026-09-27 裁定）；② **窄通道动作数披露**——D36 ∥ §1 现文记「四动作」，设计实取**五**（+`openProject`——渲染面 `openDir` 单一实现 + 会话/轨面随动所需）；若父侧本意四 ⇒ 裁；③ **窗口组（minimize/zoom）去留披露**——D36 ∥ §1 ∥ 台账三处枚举均无它，设计按五组落 = 该组退场；如需保留 = +1 组；④ **关于版权文案取值**（内容权 = 主 agent）——提案 = `© 2026 Shanghai Xinbo Technology Co., Ltd.`（源 = D32 签名主体）；版本 = `app.getVersion()` 动态；⑤ **#761 冻结邻接披露**——`mount-composer.mjs` 增 face 暴露 `printHelp` 一行（slash 批存量文件——UI.md ∥ RENDERER.md 同为其「零写」清单档；本批按派单触其非 slash 区，slash 区零动）；若裁冻结面绝对零触 ⇒ help 另径求助（现无零触替代） | 登记（自铸披露 + 上抛四项——**已裁（引需求档 `:181` ∥ 变更行 `:299`——「D36 动作集收正（四 ⇒ 五）+ 窗口组退场确认」条）**） | 单源 = 本档 §1 **KD-65** ∥ 批档 `docs/batches/2026-10-02-desktop-menu-system.md` §2 上抛项 |
+| DI | **`T-DSK59` 用例号自铸披露 + 设置菜单升级批（#817）五披露**（沿 T-DSK37–T-DSK58 先例——本批自铸；若实施批 ∥ 并行批占用同号 ⇒ 请父侧并号裁定）：① 用例行随测试文件修加——不进设计面条目（2026-09-27 裁定）；② **「设置…」落面判定**——设计取「现有设置页」（D38 字面「打开设置面」+ D39「现有设置页保留」）；备选 = 总览弹窗（未采——若父侧本意备选 ⇒ 裁，改动面小）；③ **「关于与快捷键」= 第二入口**（帮助组零动——D36 保持；若父侧裁「移动（帮助组退场）」⇒ 需求变更级，本设计不擅动）；④ **需求侧已收正**（主 agent 笔面——已落）：D36 动作集「五」⇒ **六**（+`openSettings`——沿上批「四 ⇒ 五」收正先例）——引需求卷 `docs/desktop/requirements/MENU.md:12` D36 行内收正句 ∥ `:19` 变更行；⑤ **D39「多子菜单」读法登记**——设计读法 = 「七组项平铺 + 维护 ∥ 关于与快捷键两枚真子菜单」（细目设计定之内——沿 ② 先例）；若父侧原意「每组一条子菜单」⇒ 属 U1 同族细化，请裁。设置半披露 = `docs/desktop/design/SETTINGS.md` §6 **DI（设置半）** | 登记（自铸披露 + **五**披露） | 单源 = 本档 §1 **KD-67** ∥ 批档 `docs/batches/2026-10-02-desktop-settings-menu-upgrade.md` §2 |
+| DJ | **设置菜单组项收窄批（#820）二择项裁定 + 披露一**：① **弹窗校验面 = 支 A（七名宽容）**——菜单不发第七名，零改 `SCOPES`；**读器投影枚举 = 六名**（与组项集对齐）——两裁明写 = 本档 §1 **KD-67** ③ ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-68** ④；② **#817 单元测试档用例①/②（= 七组项快照）实施落盘后预期变红**——处置沿 #811→#817 先例（该档头注 + 收口互指；#817 记录零触）；③ **T-DSK59 条目面随正（六组项——同号复用，不新铸）** | 登记（裁定二 + 披露一） | 单源 = 本档 §1 **KD-67** ∥ 批档 `docs/batches/2026-10-02-settings-menu-trim.md` §2 |
 
 ## 变更记录
 

@@ -1,6 +1,6 @@
 /**
  * test/suite.test.mjs — 题集注册表自检（id 唯一 / 类覆盖 / 隐藏用例 3–5）
- * + 判据面分层冻结（§2.10.2）+ 题面全量冻结与注记隔离（§5.13 `prompt.1/2`）+ 夹具覆盖（`fixture.1`）；
+ * + 判据分层冻结（§2.10.2）+ 题面全量冻结与注记隔离（§5.13 `prompt.1/2`）+ 夹具覆盖（`fixture.1`）；
  * 数据档 schema / 名单解析 / 价格键对齐面 = `roster.test.mjs`（本批迁出——越线降载）。
  * 手动跑：`node --test "bench/test/*.test.mjs"`（不进 CI —— AC-8）。
  */
@@ -79,7 +79,7 @@ test("用例对象字段（§2.6 冻结）：prompt / callOpts / grade 齐；判
     }
     if (c.mechRubric != null) assert.equal(typeof c.mechRubric, "string")
   }
-  // 每个用例至少有一个判据面（机械 / 判官）；两者皆无 ⇒ 判据缺失
+  // 每个用例至少有一个判据（机械 / 判官）；两者皆无 ⇒ 判据缺失
   for (const c of CASES) assert.ok(c.mechRubric || c.judge, `${c.id} 无任何判据面`)
 })
 

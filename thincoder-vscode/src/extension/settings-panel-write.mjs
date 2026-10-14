@@ -1,7 +1,7 @@
 /**
  * settings-panel-write.mjs — ChatPanel 面板写面（MODEL-MERGE-SESSION 拆分产物）+
  * VSC 端写盘通道（W16：`$schema` 注入缝供值)。
- * 纯 Node——无 vscode import——单测可在 extension host 外运行。
+ * 纯 Node——无 vscode import——单元测试可在 extension host 外运行。
  * 面板写面 = saveAgentSettingsFromPanel（agent.* + defaultModel 顶层单写通道）+
  * saveShellSettingsFromPanel；
  * 会话选定写回单点 = carryoverDefaultModel（SESSION.md §6.21 判据句 6——选定实变 ⇒ defaultModel

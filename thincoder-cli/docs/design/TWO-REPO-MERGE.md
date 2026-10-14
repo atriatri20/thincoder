@@ -214,7 +214,7 @@
 
 | 产品 | 现状 | 合并后 |
 |---|---|---|
-| CLI（npm 包 `thincoder`） | 仓根即包根；`prepublishOnly` → `release:check`（lint → 全量测试 → 集成集） | 在 `thincoder-cli/` 子目录内执行 `npm publish`；门禁链**步骤不变**（lint → test:full → test:integration）——文档机检改指仓根统一脚本并传本产品域（§2.5） |
+| CLI（npm 包 `thincoder`） | 仓根即包根；`prepublishOnly` → `release:check`（lint → 测试 → 集成测试集） | 在 `thincoder-cli/` 子目录内执行 `npm publish`；门禁链**步骤不变**（lint → test:full → test:integration）——文档机检改指仓根统一脚本并传本产品域（§2.5） |
 | VSC（vsix `thincoder-vscode`） | `vscode:prepublish` = lint + doc:check + test:full + test:integration；`vsce package` → 双源发布（Marketplace + Open VSX） | 在 `thincoder-vscode/` 子目录内执行；`vscode:prepublish` 四环**步骤不变**——`doc:check` 改指仓根统一脚本并传本产品域（§2.5）；`publish-all.mjs` 链逻辑不变，仅工作目录变化 |
 
 要点：

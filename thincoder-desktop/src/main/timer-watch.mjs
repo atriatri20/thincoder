@@ -26,7 +26,7 @@ export function deliverExpiredTimers(agent, key, { post, now = Date.now } = {}) 
 /** 空闲 deadline 闩表（**键面** —— 同键至多一闩；跨键独立）：键 ⇒ 核件一次性闩（闩体 = 核 `createTimerWatch`——
  * `sync(key, agent)` = 按该键在途最近到期时点（重）武装：无在途 ∕ 开关关
  *  ⇒ **撤旧 · 零注册**；载体换新（同键新 agent）⇒ 撤旧立新。`disarm(key)` ∕ `disarmAll()` = 撤闩清点；
- *  `size()` = 在场闩数（诊断 ∕ 用例面）；`keys()` = 键面读数（切项目级联逐键中止编排——#515③）。
+ *  `size()` = 在场闩数（诊断 ∕ 用例）；`keys()` = 键面读数（切项目级联逐键中止编排——#515③）。
  *  **武装刻代次捕获（#515③）**：`rev(key)` 在场 ⇒ 每闩槽记武装刻代次，到点回调携值（`onFire(key, agent, rev)`）
  *  ——「已点火（回调在队）恰逢中止」的陈旧点火由调用面据代次比对丢弃（中止后不投递）。
  *  @param {Function} [p.onFire] 到点回调（收 `(key, agent, rev)`——生产 = 宿主空闲火面；测试 = 假实现）

@@ -17,7 +17,7 @@ resolved from the npm registry for releases).
 - **Checkpoint system**: auto-snapshot before every user task, `list`/`create`/`rewind` tools for the model, single-file restore — rewinding itself is reversible (pre-rewind state auto-saved)
 - **Codebase understanding** ⭐0.5.0: `repo_outline` (dependency outline, auto-injected at startup), `code_search` (source FTS5 + vectors + JSDoc extraction), `doc_search` (docs chunked by ## headings) — background indexing, auto-incremental updates on file writes, three tools
 guided by "structure → intent → details"
-- **Model adaptation** ⭐: top-tier only, latest only. Built-in flagship models from twenty-four providers — DeepSeek / Kimi / Kimi For Coding / GLM / GLM Coding Plan (智谱 Coding) / Qwen / Qwen Token Plan / MiMo (小米) / MiMo Token Plan (小米套餐) / MiniMax / OpenAI / Claude / Gemini /
+- **Model adaptation** ⭐: top-tier only, latest only. Built-in flagship models from twenty-five providers — DeepSeek / Kimi / Kimi For Coding / GLM / GLM Coding Plan (智谱 Coding) / Qwen / Qwen Token Plan / MiMo (小米) / MiMo Token Plan (小米套餐) / MiniMax / OpenAI / Claude / Gemini / Gemini (OpenAI-compatible — same key) /
 Grok / Mistral / Volcengine Ark (豆包) / Hunyuan (腾讯混元) / Tencent TokenHub (腾讯混元网关) / Huawei Cloud MaaS (华为云 MaaS) / SiliconFlow (硅基流动) / OpenRouter / Groq / OpenCode Go (same key for both protocol sides: OpenAI-compatible + Anthropic Messages). No legacy model compatibility. Auto-matched context windows, truncation-resume protocols (prefix/partial), thinking-mode APIs (thinking.type /
 reasoning_effort), reasoning_content echo strategies (reasoningEcho), output limits, temperature range clamping — all deeply adapted.
 - **Toolset**: `read` / `write` / `edit` / `bash` / `glob` (supports `**`) / `grep` / `websearch` / `ls` / `fetch` + `read_image` (image/video paste) + three retrieval tools + MCP — all zero-dependency, file tools confined to the working directory
@@ -218,7 +218,7 @@ Key design decisions:
 ## Development
 
 ```bash
-npm test                          # repo suite (integration set, offline) — empty manifest after the 2026-09-28 reset; unit tests = docs/batches/ — current state: ../docs/core/design/TESTING.md §2.3
+npm test                          # integration tests (offline) — empty manifest after the 2026-09-28 reset; unit tests = docs/batches/ — current state: ../docs/core/design/TESTING.md §2.3
 node scripts/verify-compress.mjs  # real-API verification of context compaction (needs valid config)
 node scripts/verify-team.mjs      # team memory A->git->B full-chain verification (local git, offline)
 ```
@@ -230,6 +230,25 @@ Code conventions: pure `.mjs`, no semicolons, no third-party npm dependencies al
 - More builtin skills
 
 ## Changelog
+
+### 0.12.74 (2026-10)
+- **Core `^0.10.7`** — document index scoping: `docs/batches/**` excluded by default; index scope is now declared by manifest (declared dirs ∪ first-level subdirectory manifests).
+
+### 0.12.73 (2026-10)
+- **Core `^0.10.6`** — P0 packaging hotfix: the published core now ships `browser/`, so fresh installs no longer crash at startup.
+- Fixed: startup `ERR_MODULE_NOT_FOUND` after install (missing `@thincoder/core/browser/*` in the tarball whitelist — fixed via core `0.10.6`).
+
+### 0.12.72 (2026-10)
+- **Team command family (B1)** — `team` login / logout / status with completion and derived-entry hiding; rides the core `teamVerify` seam.
+- **Four-end timer completeness** — background timers delivered on all four faces.
+- **Core `^0.10.5`** — browser tool input/clipboard/async faces, the manifest tool, index self-maintenance, the team ledger tool, the read-before-ask prompt line, provider config parity, and more ride in with the core.
+- Fixed: TUI cmd-config / pickers / lifecycle, smoke scripts, doc-impact surfaces; ledger family anchors and status-line live refresh (via core).
+
+### 0.12.71 (2026-10)
+- **Ledger variant detection (#935)** — first-run detection of stale drive-case ledger DB variants with a `migrate` pointer (no more silent splits).
+- **Digest accounting fixes (#930)** — delivery-vs-settlement split, retry cap with escalation, unsettled entries visible.
+- **bash executor identity (#922)** — the injected executor line now matches the real runtime shell.
+- **Core `^0.10.4`** — the review verdict gate, engineering-mode state-file write path, batch-path landing fixes, citation-check decoration fix, and more ride in with the core.
 
 ### 0.12.70 (2026-10)
 - **ACP face round 2 (#870–#873)** — `resource_link` (@ file references from Zed, with three graceful degradations); `usage_update` `{used,size}` + ISO `updatedAt`; stable session identity (slot-key ids, delete→new); `set_config_option` returns full `configOptions` + a `type` discriminator.

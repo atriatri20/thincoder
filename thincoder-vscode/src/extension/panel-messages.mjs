@@ -20,7 +20,7 @@ import { handleNewSession, handleSwitchSession, handleDeleteSession, handleRenam
 // ——本档分发表按**同名 case 标签**转发行分发（case 标签集合零变化；两新档名带 `panel-messages`
 // 前缀以落在 reverse 机检的 `HOST_DISPATCH` 扫描域内）。
 import { handleAbort, handleCancelSubagent, handleInterrupt, handleOpenFile, handleOpenDiff, handleQuestionResponse, handleSetAutoApprove, handleAtComplete, handlePermissionResponse, handleBatchPermissionResponse } from "./panel-messages-turn.mjs"
-import { handleSaveProviderKey, handleDeleteProviderKey, handleSaveMcpServer, handleDeleteMcpServer, handleReconnectMcp, handleEditMcp, handleTestMcp, handleAddProvider, handleRemoveProvider, handleSetProviderProxy, handleSetKey, handleSaveEmbedKey, handleDeleteEmbedKey, handleSaveWebsearchKey, handleDeleteWebsearchKey, handleTestProvider, handleBuildIndex, handleGetMcpStatus, handleMcpTools, handleSaveAgentSettings, handleGetAgentSettings, handleSetAdvisorGuard, handleSetEngineeringEnabled, handleSetPlanMode, handleGetShellCandidates, handleSaveShellSettings, handleSaveProxySettings, handleTestProxy } from "./panel-messages-settings.mjs"
+import { handleSaveProviderKey, handleDeleteProviderKey, handleSaveMcpServer, handleDeleteMcpServer, handleReconnectMcp, handleEditMcp, handleTestMcp, handleAddProvider, handleRemoveProvider, handleSetProviderProxy, handleSetKey, handleSaveEmbedKey, handleDeleteEmbedKey, handleSaveWebsearchKey, handleDeleteWebsearchKey, handleTestProvider, handleBuildIndex, handleGetMcpStatus, handleMcpTools, handleSaveAgentSettings, handleGetAgentSettings, handleSetAdvisorGuard, handleSetEngineeringEnabled, handleSetPlanMode, handleGetShellCandidates, handleSaveShellSettings, handleSaveProxySettings, handleTestProxy, handleTeamLogin, handleTeamLogout } from "./panel-messages-settings.mjs"
 // C-B2-6 细则⑥（busy-injection 批 fix 轮 2026-09-22）：F-1 降级判决函数已迁 `image-handler.mjs`
 // ——本档只留触发（`downgradeNonVisionImages` + `visionReader` per-call 缝）。
 import { savePastedImages, downgradeNonVisionImages } from "./image-handler.mjs"
@@ -42,6 +42,12 @@ import { pushUiPrefs } from "./ui-prefs.mjs"
 /** Current workspace folder (or process cwd) — shared with chat-panel. */
 let _cwdOverride = null
 export const _cwd = () => _cwdOverride ?? (vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath || process.cwd())
+
+/** 未选定判据（#1101㈠ (a)——2026-10-10 vsc-consistency 批）：「没选过不猜」面单点。
+ *  无活 override ⇒ 当前锚 = 无根兜底（`folders[0]`）——UI 面据此显未选定标记（多根才显）。 */
+export function hasProjectOverride() {
+  return _cwdOverride !== null
+}
 
 // ─── 出生自愈心跳（D-W20/D-W21——§5.3）──────────────────────────────
 // 拍体 = `reassertLiveChildren` 本体（单一存活投影）；起 = `webviewReady` case；止 = panel dispose。
@@ -375,5 +381,9 @@ export async function handlePanelMessage(panel, msg) {
     case "saveShellSettings": handleSaveShellSettings(panel, msg); break
     case "saveProxySettings": handleSaveProxySettings(panel, msg); break
     case "testProxy": await handleTestProxy(panel, msg); break
+    // B1（团队族——登录 ∥ 退出；handler 住 panel-messages-settings.mjs——case 标签与分发沿既有缝；
+    // 读面 = `teamStatus` 推送（无上行请求——推送点 = 快照族 + 登录/退出成拍））
+    case "teamLogin": await handleTeamLogin(panel, msg); break
+    case "teamLogout": await handleTeamLogout(panel); break
   }
 }

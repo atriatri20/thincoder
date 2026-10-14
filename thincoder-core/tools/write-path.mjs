@@ -6,7 +6,7 @@
  * 写入又与用户随后的保存互相竞写（split-brain 数据丢失）。核内原先写盘直调
  * `node:fs/promises`、散在 5 个档的 8 个写点上 ⇒ **没有可注入的一跳** ⇒ 端侧接核后会
  * 丢掉编辑器径。本模块就是那一跳：核内**工具面的 8 个编辑写点**全改调 `writeThroughPath`
- * （模型面直写 `agent-tools/batch.mjs` = 设计登记的 S2 前置门——不在本缝覆盖面；
+ * （模型面直写 `agent-tools/batch.mjs` = 设计登记的 S2 前置门——不在本缝覆盖范围；
  * 口径与 `CORE-UNIFICATION.md` §2.13.5 落地收正同源）。
  *
  * 默认径 = CLI 语义（**零行为变**）：`writeFile` + 记账。端侧
@@ -93,7 +93,7 @@ function gateOpenDoc(impl, abs) {
 /**
  * 试注入面：命中 ⇒ 编辑器径（`{ written: true, via: "editor" }`）；未处理 ⇒ null（回默认）。
  * 未打开（`openDoc` 返回假值）/ 无注入面 / 非内容写点 ⇒ 未处理。
- * **dest 面门禁**（move / rename / **copy** 的覆盖面——父侧裁定补丁，copy 扩面同批）：
+ * **dest 面门禁**（move / rename / **copy** 的覆盖范围——父侧裁定补丁，copy 扩面同批）：
  * 路径操作会覆盖目标档 ⇒ 目标档与源档**同过门禁**（覆盖「编辑器打开且脏」的目标档 =
  * 直接吞掉用户缓冲，与 src 面同源 split-brain 风险）⇒ 拒写。src 未打开**不豁免** dest 门
  * （两面各问一次）。copy 不写 src、但覆 dest（`cp { force }`）⇒ 同过 dest 门。

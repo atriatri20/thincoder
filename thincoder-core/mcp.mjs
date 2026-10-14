@@ -52,7 +52,7 @@ export const _mcpHooks = {
 }
 
 /** initialize 请求参数单源（D-MC18）：建连握手（doInitialize）与 transport 内 404 自愈重建共用——
- *  建连时经 `transport.setInitPayload(...)` 注入。导出面供批内件复用（参数单源不可分叉）。 */
+ *  建连时经 `transport.setInitPayload(...)` 注入。导出面供单元测试档复用（参数单源不可分叉）。 */
 export function buildInitParams() {
   return {
     protocolVersion: "2024-11-05",

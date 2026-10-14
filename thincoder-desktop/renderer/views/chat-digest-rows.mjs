@@ -246,7 +246,7 @@ function syncRoundRows(root, rounds, floor, anchor) {
     remember(root, lives.length, rows)
     return
   }
-  // 全组标务补全（树面同源档：组序 = 在区轮序 —— 零标组逐组就轮标；判据面 = `at`——行标随建随记 ∥ 零重标）
+  // 全组标务补全（树面同源档：组序 = 在区轮序 —— 零标组逐组就轮标；判据 = `at`——行标随建随记 ∥ 零重标）
   const zone = rounds.filter((round) => inZone(round, floor))
   if (account === null && groups.length === zone.length) {
     groups.forEach((list, index) => {

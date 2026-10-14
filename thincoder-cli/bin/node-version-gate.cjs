@@ -4,7 +4,7 @@
  * 执行点 = `bin/thincoder.cjs`（shim）**首行**——先于 `.mjs` 链任何 ESM 静态 import 求值；不满足 ⇒
  * 一行显式错误（当前版本 + 要求）+ `exit 1`（`node:sqlite` 等核 API 在旧版行为不可期）。
  * 纯函数 `nodeVersionError(version = process.versions.node)` 版本串入参 ⇒ 供直测假版本；
- * 零依赖（主版本整数比较）。射程 = npm bin 入口（`node bin/thincoder.mjs` 直跑 = 开发 ∥ 测试面）。
+ * 零依赖（主版本整数比较）。射程 = npm bin 入口（`node bin/thincoder.mjs` 直跑 = 开发 ∥ 测试）。
  */
 "use strict"
 

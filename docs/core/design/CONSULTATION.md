@@ -38,7 +38,7 @@
   - 左端读数（CLI）：差异 = 2 行 JSDoc 注释引用端内模块名 `advisor.mjs`（`buildAdvisorFollowUp` 所在模块与 import cycle 描述）；其余逐字相同。
   - 右端读数（VSC）：同 2 行注释引用 `main.mjs`（端内 advisor 主模块名）；其余逐字相同。
   - 建议归一形态：取一侧 + 注释端名提及按核内结构订正（非语义改动）。
-  - 影响面：无——差异仅注释，不属可观察行为 / 对外契约 / 语义分叉（须用户裁 = —）；测试面无涉。
+  - 影响面：无——差异仅注释，不属可观察行为 / 对外契约 / 语义分叉（须用户裁 = —）；测试无涉。
 - **#41 `advisor/truncate.mjs`**（同路径 · j 0.9600 · sha `a2d90d320ac9` / `a1d1621af6b2` · 57 / 57 行）
   - 左端读数（CLI）：差异 = 1 行注释中规格档指针 `DUAL-END-TRUNCATION.md`。
   - 右端读数（VSC）：同 1 行作完整目录前缀式指针（`docs/design/` + 档名——对照左端的短式）；**指针现状** = 该规格档已归档（CLI 侧 `_archive/`；VSC 侧未见同名档）⇒ 两侧指针均不指现状。
@@ -62,7 +62,7 @@
 > **#106 S2 接线前口径确认项（只记——S2 动作；设计面收正轮 3 补 · 2026-09-14）**：
 > 归一形态 = **取一侧 = CLI**（核内已承载：`thincoder-core/advisor/repos.mjs:128` `isDocOnlyChange` = **非代码即「只文档」**——`docs/` / `*.md` 与临时件（`tmp-*` / `.tmp` / `.temp`）**同落「只文档」流**；逐行实核）；
 > 对端严格形态 = **非代码 ∧ 是文档**（`thincoder-vscode/src/advisor/repos.mjs:111`——临时件既非代码也非文档 ⇒ **中断「只文档」流**）——随 S2 接线被取代。
-> 两端当前**均无生产消费方**（对端仅测试面引用：`thincoder-vscode/test/portability-vsc-classification.test.mjs:16`）⇒ 属**潜伏差异**；（迁移期引文）
+> 两端当前**均无生产消费方**（对端仅测试引用：`thincoder-vscode/test/portability-vsc-classification.test.mjs:16`）⇒ 属**潜伏差异**；（迁移期引文）
 > **S2 接线前须确认**：接线后差异面 = **仅「临时件场景」**（`isDocOnlyChange` 对「临时件（+ 文档）」变更集的判定由 false 变为 true）——接受统一，或以端差注入承载严格形态（二选一——属 S2 接线轮动作，本项只记）。
 
 ### 2.4 语义对位遍行（原 §2.5（四）行集——同职责但相对路径不同）

@@ -25,7 +25,7 @@
 - **N2 版本面**：`schemaVersion` = 对外兼容性判据——结构变更须同步升号（对标 `memory.db` `PRAGMA user_version` 先例；台账库本批新增标记）。
 - **N3 时序**：FR2 的族口径依赖台账族合计批（#882——`scopeMarkerOf` / `discoverFamily`）——同源成套，不另立。
 
-## 4. 验收方向（机检面）
+## 4. 验收方向（机检）
 
 ① `thincoder ledger list --json` 可解析 + `schemaVersion` 在场 + evidence 默认省；② 空库空集 exit 0；③ 只读证明（旧库读后零改）；④ ACP 三方法 + 通知可达（对拍文件面）；⑤ 双出口序列化同源（同一行集两出口等值）。
 

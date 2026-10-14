@@ -151,7 +151,7 @@ export function respondApproval(host, promptId, verdict) {
 
 // ─── 卡面（核卡工厂 + 端壳四件）──────────────────────────────────────────
 
-/** 形归一（工厂选择）：`"batch"` ⇒ 批卡；余 ⇒ 逐项卡（**核卡两形**；`data-shape` 仍落原样值 —— 锚面零假造）。 */
+/** 形归一（工厂选择）：`"batch"` ⇒ 批卡；余 ⇒ 逐项卡（**核卡两形**；`data-shape` 仍落原样值 —— 锚零假造）。 */
 const shapeOf = (item) => (item?.shape === "batch" ? "batch" : "single")
 
 /** 卡模型投影（端 `ev:approval` 载荷 ⇒ 核卡 `m` 形 · 键名沿核面）：逐项形 = `{ tool, args, owner?, diff?, promptId? }`；

@@ -3,7 +3,7 @@
  * 500 行硬限触碰执行——VSC TODO L15 / CLI TODO L10 同物登记；原注释随函数逐字迁入）：
  * resetRunState（per-run 复位清单 A——`_pendingTimers` 除外：跨 run 存活 · §6.30.11 端差 #445）/
  * reconcileEngDesignTokens（C engDesignTokens 水合）/ applySlotSessionState（槽字段 ↔ hydrate 映射）——
- * 纯函数、无 IO（test/agent-lifecycle-singleton.test.mjs 单测锚点）。
+ * 纯函数、无 IO（test/agent-lifecycle-singleton.test.mjs 单元测试锚点）。
  */
 // W12（2026-09-15）：原 `../agent-tools/advisor.mjs` 的 token 工具随 advisor 镜像删旧退役——
 // 过期判定改指核 `@thincoder/core/token-ttl.mjs`（`tokenExpired`——单一权威；畸形 token 不判过期
@@ -19,7 +19,7 @@ const tokenUUID = (token) => String(token).split(":")[0]
 /**
  * per-run 复位清单 A —— 现靠重建清零的字段回合边界显式复位——预算/守卫不跨回合
  * 累计——AC6；顺序纪律：hydrateRun 先复位、agent.mjs 的 inheritedGuard 应用在后）。
- * 纯函数（单测锚点）。C 类（槽回填源）与 B 类（hydrate 立即重指）不受影响。
+ * 纯函数（单元测试锚点）。C 类（槽回填源）与 B 类（hydrate 立即重指）不受影响。
  */
 export function resetRunState(agent) {
   agent._touchedFiles = []
@@ -75,7 +75,7 @@ export function reconcileEngDesignTokens(existing, slotTokens, legacyToken) {
 }
 
 /**
- * 槽字段 ↔ hydrate 映射（纯函数——单测锚点）。槽 = 权威（每轮 apply）：
+ * 槽字段 ↔ hydrate 映射（纯函数——单元测试锚点）。槽 = 权威（每轮 apply）：
  * engineering/advisor.guard → agent.config（槽字段钉；缺席 → engState（子代理镜像）→ cfg）；
  * traces → agent.config.traces（cfg.traces 或核 DEFAULTS.traces 合并——TRACE-STORE-VSC
  * D-TR6——恒有定义——chat 调用点开关读 agent.config.traces.enabled）；
@@ -130,12 +130,12 @@ export function applySlotSessionState(agent, { slot, engState, planModeOverride 
 
 /**
  * §3.3（#45——`docs/vsc/design/WEBVIEW-PROTOCOL.md`）工具驱动的模式 / 参数变更 → **端显示同步**
- * cell（纯函数、零 IO——单测锚点）：触发面 = 工具批后（`src/agent.mjs` 载体镜像回填块尾）。
+ * cell（纯函数、零 IO——单元测试锚点）：触发面 = 工具批后（`src/agent.mjs` 载体镜像回填块尾）。
  * 判据两条（**读后复位**——快照重推幂等）：
- *  ① **模式腿** —— `agent.config?.agent?.engineering` 与 `agent._engShown`（**已展示基线**
+ *  ① **模式分支** —— `agent.config?.agent?.engineering` 与 `agent._engShown`（**已展示基线**
  *     布尔；`hydrateRun` 按槽应用处置值——非 `undefined` / `null`）不等；触发 ⇒ 基线更新 +
  *     `callbacks.onEngMode(新值)`。
- *  ② **参数腿** —— `agent._settingsTouched`（端侧 settings 工具包装 `execute` 返回处置位；
+ *  ② **参数分支** —— `agent._settingsTouched`（端侧 settings 工具包装 `execute` 返回处置位；
  *     不做「成功」判定）为 true；触发 ⇒ 位复位 + `callbacks.onSettingsChanged()`。
  * 深度 > 0 子代理：其 `callbacks` 无该两键 ⇒ `?.` 调用恒 no-op（零注入、零推送）。
  * @param {object} agent 顶层 agent（读 `config.agent.engineering` / 写两状态位）

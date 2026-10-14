@@ -9,7 +9,7 @@
  * 删除目标、不吞确认（VSC 同契约）。
  *
  * 出口两件：`confirmSecretDelete(onConfirm)`（单例：开框前先清既有）· `closeSettingsConfirm()`
- * （设置面关 ∕ 背板 ∕ 取消三路同清）；纯描述符面 `settingsConfirmTree(onConfirm)` 供批内件直测两键语义。
+ * （设置面关 ∕ 背板 ∕ 取消三路同清）；纯描述符面 `settingsConfirmTree(onConfirm)` 供单元测试档直测两键语义。
  * 纪律：零 `node:` ∕ 零裸包；DOM 构造经 `dom.mjs`（唯一构造点）。
  */
 import { build } from "./dom.mjs"
@@ -27,7 +27,7 @@ export function closeSettingsConfirm() {
 }
 
 /**
- * 确认弹层描述符（纯 —— 批内件直测面）：是 ⇒ 关框 + `onConfirm`；否 ∕ 背板 ∕ 框内 Escape ⇒ 关框零动作
+ * 确认弹层描述符（纯 —— 单元测试档直测面）：是 ⇒ 关框 + `onConfirm`；否 ∕ 背板 ∕ 框内 Escape ⇒ 关框零动作
  * （Escape 拦截冒泡 ⇒ 设置面 Esc 关面不连带触发）。
  */
 export function settingsConfirmTree(onConfirm) {

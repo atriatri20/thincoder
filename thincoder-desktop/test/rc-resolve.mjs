@@ -1,5 +1,5 @@
 /**
- * rc-resolve.mjs — `/rc/` 解析钩子（**非用例档** ⇒ 不入 `test/files.mjs`；由 `test/run.mjs` 以 `--import` 预载
+ * rc-resolve.mjs — `/rc/` 解析钩子（**非用例文件** ⇒ 不入 `test/files.mjs`；由 `test/run.mjs` 以 `--import` 预载
  * —— `node --test` 的测试文件进程同生效）。
  * 渲染面经 `app://desktop/rc/**` **第二根**取核件（同源绝对路径 —— `docs/render-core/design/RENDER-CORE.md` §1.3
  * 「桌面端加载形」；`test/guard-closure.test.mjs` `/rc/` 前缀白名单同源）。平 node 无该 origin ⇒ 本钩子把

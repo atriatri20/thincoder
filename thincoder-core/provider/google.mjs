@@ -215,7 +215,7 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
     if (idleTimer) clearTimeout(idleTimer)
     idleTimer = setTimeout(() => {
       // #878：断流单点分流——直连 fetch（web 流）走 `IDLE_ABORT` 内部 abort 通道；
-      // proxy 形回落 destroyBody（原契约）。相位串 = 本腿专属 google-sse-idle。
+      // proxy 形回落 destroyBody（原契约）。相位串 = 本分支专属 google-sse-idle。
       idleError = timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "google-sse-idle")
       try { terminateBody(response, idleError) } catch { /* already gone */ }
     }, READ_IDLE_MS)

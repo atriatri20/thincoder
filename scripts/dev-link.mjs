@@ -9,7 +9,7 @@
  * `realpathSync.native` 输出（盘符大写 + 真大小写 + `\` 分隔；陷阱实读：`.native` 面折叠盘符
  * 大小写，JS 面 `realpathSync` 保留输入拼写——故必须用 `.native`）。
  *
- * 覆盖面 = 五链（三个产品 × 各自 `package.json` 的 `@thincoder/*` 依赖声明）：target 派生规则 =
+ * 覆盖范围 = 五链（三个产品 × 各自 `package.json` 的 `@thincoder/*` 依赖声明）：target 派生规则 =
  * 声明 × 仓内兄弟目录（`@thincoder/<n>` → `<仓根>/thincoder-<n>`，读回该目录 `package.json.name`
  * 逐字对账；兄弟目录缺位 / 对账失败 ⇒ 报错跳过，不建悬空链）——与现存链无关 ⇒ 缺失链可判 ∕ 可建。
  *
@@ -22,13 +22,13 @@
  *   --check   只读判：逐链报类；退出码 0 = 全规范 ∕ 1 = 漂移。
  *   --json    只读（同 --check 判定）：stdout 输出契约 `{ links: [{ product, link, target, class }], ok }`。
  *   --force   仅 apply 面、仅 materialized 类：允许替换真目录（破坏性——显式；本批不入判据）。
- * 零依赖（全 `node:` 面）；纯函数面（classify ∕ canonicalTarget）可直测（批内件 T4 ∕ T6）。
+ * 零依赖（全 `node:` 面）；纯函数面（classify ∕ canonicalTarget）可直测（单元测试档 T4 ∕ T6）。
  */
 import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, rmSync, symlinkSync, unlinkSync } from "node:fs";
 import { dirname, join, posix, resolve, win32 } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-/** 产品目录（覆盖面宿主——五链 = cli:core ∕ vsc:core+render-core ∕ desktop:core+render-core）。 */
+/** 产品目录（覆盖范围宿主——五链 = cli:core ∕ vsc:core+render-core ∕ desktop:core+render-core）。 */
 const PRODUCTS = ["thincoder-cli", "thincoder-vscode", "thincoder-desktop"];
 
 const USAGE = "用法：node scripts/dev-link.mjs [--check] [--json] [--force]";
@@ -168,5 +168,5 @@ export function main(argv = process.argv.slice(2), { log = console.log, errorLog
   return r.ok ? 0 : 1;
 }
 
-const isMain = process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
+const isMain = process.argv[1] && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url;
 if (isMain) process.exit(main());

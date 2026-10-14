@@ -18,12 +18,10 @@
 import { opendirSync, statSync } from "node:fs"
 import { basename, dirname, join, resolve } from "node:path"
 import { projectRootView } from "./manifest.mjs"
-import { ledgerDbPath, PENDING_STATUSES } from "./ledger-db.mjs"
+import { ledgerDbPath, PENDING_STATUSES, AGING_DAYS } from "./ledger-db.mjs"
 import { ledgerQuery } from "./ledger-cmd.mjs"
 import { executorTail } from "./ledger-executors.mjs"
 
-/** 老化阈值（天——口径 = 需求档；`days` 参数可覆盖）。 */
-export const AGING_DAYS = 30
 /** 「可开批」阈值：同一板块（需求类条目 board 列）未决 ≥ 2。 */
 export const THRESHOLD_BOARD = 2
 /** 「可开批」阈值：需求池未决 ≥ 3。 */
@@ -65,8 +63,9 @@ export function findProject(anchor) {
 /** 同级枚举上限（N2 成本有界：父目录超此规模 = 缓存 / 临时等非仓族形态 → 退化空集，只显当前项目）。 */
 export const MAX_SIBLING_SCAN = 100
 
-/** 目录下已注册台账的直接子目录（目录名升序；不可读 → []；**惰性枚举 + 上限**——大目录零全量扫描）。 */
-function ledgerChildren(dir) {
+/** 目录下已注册台账的直接子目录（目录名升序；不可读 → []；**惰性枚举 + 上限**——大目录零全量扫描）。
+ *  导出面 = 族发现（本档）∥ 轻通道闸候选枚举（`agent/light-round.mjs`——同级判据单源）。 */
+export function ledgerChildren(dir) {
   const out = []
   let handle
   try { handle = opendirSync(dir) } catch { return out }
@@ -87,7 +86,7 @@ function ledgerChildren(dir) {
 }
 
 /** 项目族发现：{current, projects}——projects = current + 其同级含台账库目录（**发现序：current 在前**，
- *  其余按目录名升序）；current 缺（容器目录，K6）→ 上下文目录向上最近「含台账子目录」者取其子目录。
+ *  其余按目录名升序）；current 缺（容器目录，K6）→ 锚本地：取锚自身含台账库的直接子目录（不沿祖先链上找）。
  *  **歧义根不充当项目**（轻通道轮 · 2026-10-04）：命中锚若项目解析 `ambiguous`（≥2 候选——`projectRootView`）
  *  ⇒ 该锚不可扫描（`openLedger` 歧义拒）——其键控库（先于 #828 写门的存量空壳 / 幽灵）不得遮蔽族发现；
  *  按容器形落子目录族（需求：打开容器根 ⇒ 族内合计——标记范围批 §1 原话）。 */
@@ -99,14 +98,7 @@ export function discoverFamily(anchor) {
     const siblings = ledgerChildren(dirname(current.root)).filter((p) => p.root !== current.root)
     return { current, projects: [current, ...siblings] }
   }
-  let dir = resolve(anchor)
-  for (;;) {
-    const kids = ledgerChildren(dir)
-    if (kids.length) return { current: null, projects: kids }
-    const parent = dirname(dir)
-    if (parent === dir) return { current: null, projects: [] }
-    dir = parent
-  }
+  return { current: null, projects: ledgerChildren(resolve(anchor)) }
 }
 
 /** scan 组装（SQLite 行集 + 计数单源 → scan 对象）——形状契约（设计档 §2.2）：pool/tech/aged/
@@ -185,8 +177,9 @@ export function detailScans(scans, current) {
   return out
 }
 
-// ── re-export（拆分件接口——命令面接线 = 动态 import 本档，KD-M2-3） ──
-export { ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn } from "./ledger-db.mjs"
+// ── re-export（拆分件接口——命令面接线 = 动态 import 本档，KD-M2-3；`AGING_DAYS` 常量单源 = `ledger-db.mjs`
+//    ——2026-10-07 批 ledger-tool 自本档迁入，公共面零变） ──
+export { AGING_DAYS, ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn } from "./ledger-db.mjs"
 export { ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate } from "./ledger-cmd.mjs"
 export { ledgerTool, ledgerReadTool, ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool } from "./ledger-tools.mjs"
 export { runLedgerAudit, runLedgerMigrate } from "./ledger-migrate.mjs"

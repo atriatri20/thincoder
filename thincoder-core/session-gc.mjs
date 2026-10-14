@@ -130,7 +130,7 @@ export async function gcResidue({ dir = sessionsDir(), prefix, now = Date.now(),
   return result
 }
 
-/** ② 显式面清运腿（§6.12 / §6.17 补充——存量通路）：全目录孤儿 sidecar 记录目录
+/** ② 显式面清运分支（§6.12 / §6.17 补充——存量通路）：全目录孤儿 sidecar 记录目录
  *（`{prefix}.{N}.d`——主文件不存在 ∧ 该槽非活跃）⇒ 逐条**回收**（rename 进 `sessions-trash/<批次>/`，同 ① 语义）。
  *  与 ① 两面之差：① = 自动面（单前缀 / 当前 cwd / **带 30 天保留期**——只治本前缀未来新增）；
  *  本函数 = **用户显式面**（跳前缀遍历全目录 / **不设保留期**——存量孤儿跨多前缀且多为近期孤儿，
@@ -355,7 +355,7 @@ export async function runSessionGc(args, { dir = sessionsDir(), prefix = null, c
     }
     out(`Moved ${r.deleted.length} files for ${t.hash} into the recycle bin (${r.batch})${r.skipped?.length ? ` — skipped ${r.skipped.length} (locked/racing, kept in place)` : ""}.`)
   }
-  // ② 显式面清运腿（孤儿 sidecar 记录目录——存量通路；与 ① 同语义：rename 进回收批）
+  // ② 显式面清运分支（孤儿 sidecar 记录目录——存量通路；与 ① 同语义：rename 进回收批）
   if (confirmTarget === "--all" && orphanDirs.candidates.length) {
     const moved = await sweepOrphanRecordDirs({ dir, now, probeFn, entries: loopEntries })
     out(`Orphan record dirs (.d): moved ${moved.recycled.length}/${moved.candidates.length} into the recycle bin (${trashRootFor(dir)}).`)

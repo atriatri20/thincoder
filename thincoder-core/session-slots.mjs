@@ -4,7 +4,7 @@
  * re-export 全部导出以保持既有 import 兼容）。
  *
  * init-block 批 · F-MI7 二次拆分：探测束接线后本档实读 517 行（破 490 判定线并越 500 硬限）
- * ⇒ 按 `CORE-UNIFICATION.md` §2.8.1 表第 3 行**随批**外提清单 / 认领 / 属主面至
+ * ⇒ 按 `CORE-UNIFICATION.md` §2.8.1 子表原行 3（已随 2026-10-08 批清账）**随批**外提清单 / 认领 / 属主面至
  * `session-slots-manifest.mjs`（语义原样迁移；本档 re-export 该档导出保既有 import 面——
  * 消费档 import 路径与名面不动）。本档保留 = 存储原语（cwd 哈希 / 路径 / 原子写 / 进程
  * sessionId）· 端记录（end marker）· 列表面（listSlots——条目集 = 盘面实读；扫描面住
@@ -33,14 +33,14 @@ import { join, dirname, basename } from "node:path"
 import { configDir } from "./config.mjs"
 import { migrateHashLength } from "./session-migrate.mjs"
 // §6.10 D-2（2026-09-05）：resumeSlot 决策归本文件（slot/claim 层）；data 层读（loadSlotFile/
-// legacy 过滤）属 session.mjs（500 行内不迁移）——静态环（本档 ↔ session.mjs；init-block 批起
+// legacy 过滤）属 session.mjs（800 行内不迁移）——静态环（本档 ↔ session.mjs；init-block 批起
 // 另加本档 ↔ session-slots-manifest.mjs，见头注与 L38-47）：函数声明实例化期已初始化、只函数
 // 体内运行时使用（环安全）；VS Code 端 session-slots ↔ session-io 同构镜像。
 import { loadSlotFile, isLegacyTransient } from "./session.mjs"
 // TUI-OOM-ROOTCAUSE 批（SESSION.md §6.14 生命周期联动）：删槽联动记录存储（store 零项目内依赖——无环）。
 import { unlinkRecordStore } from "./session-store.mjs"
 // 探测束（init-block 批 · F-MI7）：实现 / 判据单源住 process-probe.mjs——本档零自有 exec、
-// 零逐 pid 探测（判据面与探测面分离）；单 pid 判活 re-export 见下方「判活兼容面」。
+// 零逐 pid 探测（判据与探测面分离）；单 pid 判活 re-export 见下方「判活兼容面」。
 import { probeOwnersAsync, isProcessAlive } from "./process-probe.mjs"
 import { archivedMap } from "./session-archive.mjs" // 会话归档（fork · 2026-10-06）：listSlots 过滤 ∕ listArchivedSlots 消费
 // 清单 / 认领 / 属主面（init-block 批外提——双向静态环见头注）：本档 import 取用 + re-export

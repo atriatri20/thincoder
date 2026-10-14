@@ -5,7 +5,7 @@
  *     mime ∕ 名由核件从串推）；缺省 / 非数组 / 空数组 ⇒ **无附件径**（零落盘零注入，文本原样）。
  *  ② 落盘（项 2）：核 `savePastedImages`（`@thincoder/core/attachments.mjs`）—— 临时件
  *     `<cwd>/.thincoder/tmp/paste-<ts>-<i>.<ext>` 落盘 ⇒ 返**绝对路径数组**交核；fs 写面由本档注入
- *     （`node:fs` 同名面）。判据面（栅格四型 ∕ 15MB ∕ 条 ∕ 30MB ∕ 轮 ∕ 弃项）全在核件——本档零副本。
+ *     （`node:fs` 同名面）。判据（栅格四型 ∕ 15MB ∕ 条 ∕ 30MB ∕ 轮 ∕ 弃项）全在核件——本档零副本。
  *  ③ 交核（项 2）：`appendImagePointer`（核 `agent/setup-reminders.mjs:248`）尾附 `[Attached images: …]`
  *     指引，模型经 `read_image` 看图；核侧非多模态**抛错**（:251）—— 故项 4 的门在交核**之前**定局
  *     ⇒ 本档出口零核错抛出。

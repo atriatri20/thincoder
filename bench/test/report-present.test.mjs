@@ -1,9 +1,9 @@
 /**
- * test/report-present.test.mjs — 报告呈现面用例（§5.13 `render.3` / `render.4` / `render.5`；`report-render.test.mjs` 超 300 行 ⇒ 拆分）。
+ * test/report-present.test.mjs — 报告呈现面用例（§5.13 `render.3` / `render.4` / `render.5`；`report-render.test.mjs` 行数超线 ⇒ 拆分）。
  * `render.3` = 成本表列集（八列 · 定域反例）+ 报告零金额（md）与账目面反控（JSON 零改）+ 交叉列三列（⑦⑧⑨⑩——同源对读 / 缺数据 / 行序 / 轴子集——增补③ · #276）；
- * `render.4` = 用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控 + ⑦ 口径行两短语与已记录 `error` run 照计 / ⑧ 部分未记录腿——2026-09-24 error-duration 批 + ⑨⑩⑪ 交叉列两列——#276 + ⑫ `skipped` 排除腿——2026-09-25 bench-micro 批）；
+ * `render.4` = 用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控 + ⑦ 口径行两短语与已记录 `error` run 照计 / ⑧ 部分未记录用例——2026-09-24 error-duration 批 + ⑨⑩⑪ 交叉列两列——#276 + ⑫ `skipped` 排除用例——2026-09-25 bench-micro 批）；
  * `render.5` = 温度例外披露句（例外档在位 / 全 0 不在位 / 旧档缺字段 ≡ 全 0——2026-09-24 roster-expand 批）；
- * `render.6` = 逐档参数表（列集 / 来源两态 / 旧档缺键 `—` / 温度例外注 / note 披露腿——2026-09-24 params-judge 批 · #269）；
+ * `render.6` = 逐档参数表（列集 / 来源两态 / 旧档缺键 `—` / 温度例外注 / note 披露用例——2026-09-24 params-judge 批 · #269）；
  * `render.7` = 速度表双排序（A 升 / B 降 / 列集正控 / 脚注一份 / 轴门控——#271）；`render.8` = 能力矩阵两列（同源照搬 / 反例控制——#272）。
  * 夹具与 CLI 驱动在 `test/fixtures.mjs`；手动跑：`node --test "bench/test/*.test.mjs"`（不进 CI）。
  */
@@ -62,7 +62,7 @@ test("render.3：成本表八列 + 定域反例 + 脚注逐字 + 报告零金额
   // ⑨ 行序不变（新列不参与排序——两表排序键与交叉列取值互异）
   assert.deepEqual(orderOf(xCost), ["fx-x1", "fx-x2"], "⑨ 成本表行序 = 每通过任务成本升序（反例控制：相对倍率列序相反）")
   assert.deepEqual(orderOf(xTime), ["fx-x2", "fx-x1"], "⑨ 用时表行序 = 累计耗时升序（反例控制：相对成本列序相反）")
-  // ⑩ 轴子集腿（本收正轮）：`run.axes = ["cost"]`（无 capability / speed ⇒ 矩阵 / 用时表不出为前置）⇒ 交叉列三列照出值
+  // ⑩ 轴子集用例（本收正轮）：`run.axes = ["cost"]`（无 capability / speed ⇒ 矩阵 / 用时表不出为前置）⇒ 交叉列三列照出值
   const xCostOnly = renderReport({ ...data, models: xModels, run: { ...data.run, dims: ["speed", "cost"], axes: ["cost"] } })
   assert.equal(xCostOnly.includes("### 能力矩阵") || xCostOnly.includes("### 用时表"), false, "⑩ 源表（矩阵 / 用时表）不出为前置")
   const xCostOnlyBlock = xCostOnly.split("### 成本表")[1].split("### 逐维明细")[0]
@@ -80,7 +80,7 @@ const mkModel = (label, runs) => ({
   label, provider: "deepseek", model: "deepseek-flash", host: "api.deepseek.com", dims: ["reasoning"], note: "", aggregate: {},
   cases: runs.map((r, i) => ({ caseId: `reasoning.${i + 1}`, dim: "reasoning", class: "正常", prompt: "夹具题面", runs: [r] })),
 })
-/** 交叉列腿夹具（增补③ · #276）：显式耗时 + 计价（两档——对读非平凡；两表排序键与交叉列取值互异 ⇒ 行序腿非空转）。
+/** 交叉列用例夹具（增补③ · #276）：显式耗时 + 计价（两档——对读非平凡；两表排序键与交叉列取值互异 ⇒ 行序用例非空转）。
  *  fx-x1 = 1 通过 / 1 失败（合计 1/2）· 成本 0.001（全表最低 ⇒ 相对成本 1.0×）· 耗时 2000（⇒ 相对倍率 2.0×）；
  *  fx-x2 = 1/1 · 成本 0.002（⇒ 2.0×）· 耗时 1000（⇒ 1.0×）。 */
 const xRun = (ms, cost, over = {}) => mkRun(ms, { ...over, metrics: { ttftMs: 100, totalMs: ms, tokPerSec: 100, tokens: TOK(10, 0, 5), cost: cost == null ? null : { value: cost, currency: "CNY", pricesAsOf: "2026-09-23" } } })
@@ -98,7 +98,7 @@ test("render.4：用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采
   const heavyJudge = judgeRec("pass", "unanimous", [jRec("A", "pass", "夹具。", [jCall(TOK(300, 0, 40), big)]), jRec("B", "pass", "夹具。", [jCall(TOK(300, 0, 45), big)])])
   const heavyReview = { ...reviewRec("overturn", "夹具：翻案。"), calls: [jCall(TOK(300, 0, 40), big)] }
   const models = [
-    // fx-fast：6 run（5500）+ error run（500——照计）= 6000；skipped / null 腿不入 ⇒ 采样 7（非 9）
+    // fx-fast：6 run（5500）+ error run（500——照计）= 6000；skipped / null 用例不入 ⇒ 采样 7（非 9）
     mkModel("fx-fast", [500, 500, 1000, 1000, 1000, 1500].map((ms) => mkRun(ms))
       .concat([mkRun(500, { verdict: "error", detail: "超时（夹具）" }), mkRun(1100, { verdict: "skipped", detail: "不在该模型面" }), mkRun(null, { verdict: "error", detail: "无耗时记录" })])),
     // fx-tie：同合计 6000（分布不同）⇒ 与 fx-fast 并列第 1；fx-heavy：12000（含 999999 调用）⇒ 第 3
@@ -126,7 +126,7 @@ test("render.4：用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采
   const costOnly = renderReport({ ...data, models, run: { ...data.run, dims: ["speed", "cost"], axes: ["cost"] } })
   assert.equal(costOnly.includes("### 用时表"), false, "⑥ 轴门控 = speed（无 speed ⇒ 用时表不出）")
   assert.ok(costOnly.includes("### 成本表"), "⑥ cost 轴表仍在位")
-  // ⑦ 口径行（本批收正）+ 全部 call 已记录的 error run 照计且不入脚注（子腿 = 单 error run 模型；反例控制 = null 腿仍入脚注）
+  // ⑦ 口径行（本批收正）+ 全部 call 已记录的 error run 照计且不入脚注（子用例 = 单 error run 模型；反例控制 = null 用例仍入脚注）
   assert.ok(block.includes("error run 已记录耗时照计") && block.includes("`null` = 未记录"), "⑦ 口径行两短语（逐字 = §2.3 骨架冻结子串）")
   const cellsIn = (b, l) => b.split("\n").find((x) => x.startsWith(`| ${l} |`)).split("|").map((s) => s.trim())
   const recCall = (ms) => ({ round: 1, ttftMs: null, totalMs: ms, tokens: null, toolNames: [], finishReason: null, throttled: false })
@@ -137,7 +137,7 @@ test("render.4：用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采
   assert.deepEqual([cellsIn(errBlock, "fx-err")[2], cellsIn(errBlock, "fx-err")[3], cellsIn(errBlock, "fx-err")[4], cellsIn(errBlock, "fx-err")[5]], ["700 ms", "1.0×", "1", "1"], "⑦ 已记录 error run：累计 / 倍率 / 排名 / 采样全含")
   assert.equal(errBlock.includes("- fx-err："), false, "⑦ 全部 call 已记录的 error run 不入脚注")
   assert.ok(errBlock.includes("- fx-null2：1 个 run 无 totalMs"), "⑦ 反例控制：null 腿仍入脚注")
-  // ⑧ 部分未记录腿（run 级 = 已记录之和 ∧ 存在未记录 call ⇒ 按和入累计 + 入脚注；判定类型不受限——fail / error 同规则）
+  // ⑧ 部分未记录用例（run 级 = 已记录之和 ∧ 存在未记录 call ⇒ 按和入累计 + 入脚注；判定类型不受限——fail / error 同规则）
   const partCalls = (ms) => [recCall(ms), { ...recCall(null), round: 2 }]
   const partBlock = renderReport({ ...data, models: [
     mkModel("fx-part", [mkRun(300, { verdict: "fail", detail: "部分未记录（夹具）", calls: partCalls(300) })]),
@@ -156,17 +156,17 @@ test("render.4：用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采
   }
   assert.deepEqual([cellOf(xTime, "fx-x1", 7), cellOf(xTime, "fx-x2", 7)], ["1.0×", "2.0×"], "⑨ 相对成本 = 成本表算式同源定域（每通过任务成本 ÷ 全表最低正值）")
   assert.deepEqual(orderOf(xTime), ["fx-x2", "fx-x1"], "⑨ 用时表行序 = 累计耗时升序（新列不参与排序——反例控制：相对成本列序相反）")
-  // ⑩ 缺数据 `—`（相对成本：全缺样本 / 无价两形态；④ 行序腿不回归）
+  // ⑩ 缺数据 `—`（相对成本：全缺样本 / 无价两形态；④ 行序用例不回归）
   const xMissTime = renderReport({ ...data, models: xMissModels }).split("### 用时表")[1].split("### 成本表")[0]
   assert.deepEqual([cellOf(xMissTime, "fx-nt", 6), cellOf(xMissTime, "fx-nt", 7)], ["0/1", "—"], "⑩ 全缺样本档 ⇒ 相对成本 `—`（合计通过数照出值）")
   assert.deepEqual([cellOf(xMissTime, "fx-nc", 6), cellOf(xMissTime, "fx-nc", 7)], ["1/1", "—"], "⑩ 无价档 ⇒ 相对成本 `—`")
-  // ⑪ 轴子集腿（本收正轮）：`run.axes = ["speed"]`（无 cost ⇒ 成本表不出为前置）⇒ 交叉列两列照出值
+  // ⑪ 轴子集用例（本收正轮）：`run.axes = ["speed"]`（无 cost ⇒ 成本表不出为前置）⇒ 交叉列两列照出值
   const xSpeedOnly = renderReport({ ...data, models: xModels, run: { ...data.run, dims: ["speed", "cost"], axes: ["speed"] } })
   assert.equal(xSpeedOnly.includes("### 成本表"), false, "⑪ 源表（成本表）不出为前置")
   const xSpeedOnlyBlock = xSpeedOnly.split("### 用时表")[1].split("## 关键发现")[0]
   assert.deepEqual([cellOf(xSpeedOnlyBlock, "fx-x2", 6), cellOf(xSpeedOnlyBlock, "fx-x2", 7)],
     [cellOf(xTime, "fx-x2", 6), cellOf(xTime, "fx-x2", 7)], "⑪ 轴子集：交叉列两列照出值（与全表渲染同串）")
-  // ⑫ `skipped` 腿不入部分未记录分支（KD-47③）：构造 `skipped` run 携数值 `totalMs` + 未记录 call ⇒ 不入脚注
+  // ⑫ `skipped` 用例不入部分未记录分支（KD-47③）：构造 `skipped` run 携数值 `totalMs` + 未记录 call ⇒ 不入脚注
   const skipPart = renderReport({ ...data, models: [mkModel("fx-skip", [mkRun(900, { verdict: "skipped", detail: "不在该模型面（夹具）", calls: partCalls(900) })])] })
     .split("### 用时表")[1].split("### 成本表")[0]
   assert.equal(skipPart.includes("- fx-skip：1 个 run 部分 call 未记录"), false, "⑫ `skipped` run 不入部分未记录脚注（谓词排除——未执行 ⇒ 无「部分未记录」可言；守卫前反例 = 脚注出现）")
@@ -238,7 +238,7 @@ test("render.7：速度表双排序（A 升 / B 降 / 缺数据居末 / 列集�
   const models = [
     spModel("fx-a", [spRun({ ttftMs: 300, tokPerSec: 30, totalMs: 900 })]),
     spModel("fx-b", [spRun({ ttftMs: 100, tokPerSec: 10, totalMs: 700 })]),
-    spModel("fx-c", [spRun({})]), // 缺数据腿（TTFT / tok/s 均 null ⇒ 两表居末 + 脚注源）
+    spModel("fx-c", [spRun({})]), // 缺数据用例（TTFT / tok/s 均 null ⇒ 两表居末 + 脚注源）
   ]
   const md = renderReport({ ...data, models })
   const A = "### 速度表 A（按 TTFT 中位升序）"
@@ -267,7 +267,7 @@ test("render.8：能力矩阵两列（同源照搬 / 反例控制 / 缺数据 `�
     metrics: { ttftMs: 100, totalMs: ms, tokPerSec: 10, tokens: TOK(10, 0, 5), cost: cost == null ? null : { value: cost, currency: "CNY", pricesAsOf: "2026-09-23" } },
   })
   const models = [
-    // fx-m1：两例各 1 run（合计 2000 · 中位 1000 · 每通过任务 0.002）；fx-z9 / fx-m2 各一例（行序腿：标签字典序 ≠ 排名序）
+    // fx-m1：两例各 1 run（合计 2000 · 中位 1000 · 每通过任务 0.002）；fx-z9 / fx-m2 各一例（行序用例：标签字典序 ≠ 排名序）
     modelOf("fx-m1", [caseOf("reasoning.1", [pricedRun(1000, 0.002)]), caseOf("reasoning.2", [pricedRun(1000, 0.002)])]),
     modelOf("fx-z9", [caseOf("reasoning.1", [pricedRun(3000, 0.002)])]),
     modelOf("fx-m2", [caseOf("reasoning.1", [pricedRun(3000, 0.001)])]),

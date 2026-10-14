@@ -92,7 +92,7 @@ verify 的强制面住在完成路径，不住 verify 本体：
 | goal 完成门 | `thincoder-core/agent-tools/goal.mjs:52` | 在位 |
 | 测试 | `thincoder-cli/test/verify-redesign.test.mjs`（T-V1–V8） | 在位 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 
-### 6.2 用例面（现行）
+### 6.2 用例（现行）
 
 | 组 | 覆盖 |
 |---|---|
@@ -100,7 +100,7 @@ verify 的强制面住在完成路径，不住 verify 本体：
 | T-V5 | doc-only 快路径放行 |
 | T-V6 · T-V6b | 打回消息含改动文件 + 引 AGENTS.md；未声明 → 打回并要求声明 |
 | T-V8 | doc-only + 显式 failed → 打回（G10 双端同） |
-| VSC 对位 | VSC 侧同名测试档（端专属面 = 编辑器诊断段与可 Stop 中断执行） |
+| VSC 对位 | VSC 侧同名单元测试档（端专属面 = 编辑器诊断段与可 Stop 中断执行） |
 
 **已退场用例**：T-V9（guard 文案断言）· T-V10（提示词语义断言）——散文锚整删（见 §8.1）。
 

@@ -9,7 +9,7 @@
  * 落盘前两查位同源）——**标题先于落盘**（渲染面回合尾刷新读到即新值）；核件 `generate-title.mjs` 只接不改。
  * **点修轮（U-6 ∕ U-7）**：回合起跑落**回合代次**（`turnGate.stamp`）· 回合尾落盘前查位（`turnGate.revoked` ——
  * 会话中止径 ⇒ 零写：已删会话不得被回合尾落盘复活）；两查位同源 = 回合驱动族 `turn-driver.mjs` 中止墓碑单点。
- * **#782（本批）**：边界轮 `cap` 腿同源查位（`!revokedTurn` —— 帧 ∥ 记录同抑制；判据沿 `emitDigestEnd` 同源单点）。
+ * **#782（本批）**：边界轮 `cap` 分支同源查位（`!revokedTurn` —— 帧 ∥ 记录同抑制；判据沿 `emitDigestEnd` 同源单点）。
  * 失败**抛回调用面**：`send` 径自吞（终局事件已出）；驱动径消费核件 catch 语义（AbortError = 回合级 ⇒ 核件循环重入）。
  * **输入逻辑收正轮（Ctrl+I 同上下文续跑）**：`run` 调用收进内层续跑循环 —— 中止携 `signal.reason.interrupt + message`
  * （宿主 `interrupt` 的核 abort 面 / VSC `panel-messages-turn.mjs:129-138`）⇒ 换代 controller 并 `resume: true` 重入
@@ -140,7 +140,7 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
             if (opts.autoTurn === true) {
               // #541：消化边界轮撞帽 ⇒ cap 帧出站（部分消化不静默 —— 对位 VSC `postDigestCap`）；判据 = 边界轮
               //（`autoTurn ∧ ¬timerTurn` —— 沿 `suspension-drive.mjs` `boundary` 同判：timer 轮不冒充消化边界）。
-              // #782：墓碑查位（记录腿自带门 —— 与 `emitDigestEnd` 同源判据）——已撤销 ∥ 已删会话 ⇒ 帧 ∥ 记录同抑制。
+              // #782：墓碑查位（记录分支自带门 —— 与 `emitDigestEnd` 同源判据）——已撤销 ∥ 已删会话 ⇒ 帧 ∥ 记录同抑制。
               if (opts.timerTurn !== true && !revokedTurn(key, agent)) { // 留档批 · #719：记录与发帧同点双动作（人读线 cap 行 —— 机器线零触）
                 post("ev:digest", { key, status: "cap", mode: "stop", turns: err.turn })
                 appendRecord(agent, { kind: "digest", status: "cap", mode: "stop", turns: err.turn })
@@ -168,14 +168,14 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
     }
     /** 边界轮 `end` 出站（#719 · 修复轮 3 · 写点前移；**恰一次** —— 成功径先发 ⇒ 失败径零重发，防双份）：
      *  `ms` 单算式 ⇒ 记录 ∥ 发帧同值；非边界轮零动作（`boundary` 假 —— timer 轮 ∥ 非 autoTurn 两径；**上行轮属边界**）。
-     *  **查**回合墓碑（`revokedTurn`）：记录腿不经 `settleTurn` 门（`end` 先于结算落盘）⇒ 自带门 —— 已撤销 ∥
+     *  **查**回合墓碑（`revokedTurn`）：记录分支不经 `settleTurn` 门（`end` 先于结算落盘）⇒ 自带门 —— 已撤销 ∥
      *  已删会话 ⇒ 零帧 ∥ 零记录（`endEmitted` 不置 —— U-7 不破）。
      *  **消化账务批（2026-10-05 · 台账 #930 · §6.31.6）**：非上行轮且 > 0 才携 `unsettled`（残余行载荷——
      *  帧 ∥ 记录同源同点；判据单源 = 核 `unsettledCount`）。 */
     let endEmitted = false
     const emitDigestEnd = (ok) => {
       if (!boundary || endEmitted) return
-      if (revokedTurn(key, agent)) return // 墓碑查位（记录腿自带门 —— 已撤销 ∥ 已删会话零帧零记录）
+      if (revokedTurn(key, agent)) return // 墓碑查位（记录分支自带门 —— 已撤销 ∥ 已删会话零帧零记录）
       endEmitted = true
       const ms = Date.now() - started
       const unsettled = opts.upstreamTurn === true ? 0 : unsettledCount(agent)

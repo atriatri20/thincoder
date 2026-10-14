@@ -8,14 +8,20 @@
  * `thincoder-vscode/webview/settings-providers.js:178-193`）：
  *  ① **两行卡**（`[data-provider]` 行根纵排）：**主行**（`.settings-row-main`）= 名 + 钥面（masked ∥ 未设词）+
  *     当前标 + 动作簇（修改 ∥ ✕ 删钥 ∥ 校验 ∥ 移除名 —— 四件全保留、序恒定 = 现盘序）；**副行**（`.settings-row-sub`）
- *     = `模型 · baseURL`（串形照 VSC —— 缺段不落空分隔符）+ 不可用标 + 行尾代理开关；**第三行**（条件）=
+ *     = `baseURL`（2026-10-09 清除批：渠道条目不携模型——原 `模型 · baseURL` 两段式收为单段）+ 不可用标 + 行尾代理开关；**第三行**（条件）=
  *     不可用原因句（`!hostBusy` 时 —— S3 分档保持；锚 `[data-unavailable-reason]`）。
  *  ② **编辑态**（钥行编辑中，`deps.edit` = 本行名）= 主行换形：名 + 钥面 + 输入（伸缩）+ 存 ∥ 消；
  *     代理 ∥ 移除 ∥ 校验暂撤（取消即回 —— 沿既有 `providerRowNode` 换形；输入种子 = `deps.keyDraft`）。
  * ③ **校验反馈就地化（轮六 · 2026-10-02 · 轻通道 · 台账 #819）**：`verify` 结果携行名（`name`）——匹配行 ⇒ **本行呈现**
  *    （校验按钮态短形（`okShort` ∥ `failShort`）+ 结果明细行 = `verifyNode` 形）；段末仅作**无行渲出结果**回退（名不在列表 ∥ kind 表外——向导径等）。
+ * **首启保存面收正批（2026-10-11 · 台账 #1278）**：`verifyNode` 出导出面 —— 向导步 1 校验明细行**同源复用**（`views/onboarding.mjs`，
+ *    非复制）；`fallbackVerifyNode` 仅供段末回退（无行域绑定 —— 向导径不用）。零行为改。
  * 段内按钮（锚名 ∕ 可及名 ∕ 词面三处同源；缺 handler ⇒ `wire` 落 `disabled` —— 诚实非死控）。
- * 纪律：零 DOM（描述符树）；文案一律经 `t()`；零 `node:` ∕ 零裸包 ∕ 零 `store.mjs` import；零新词键（除轮六 2 键：`okShort` ∥ `failShort`——同域内增）。
+ * **三端对齐批增（2026-10-07 · 台账 #1027–#1029 · KD-75 ②）**：段体 = 行族 + 校验回退 + **添加钮**（词键新
+ * `settings.addProvider`；原两形常显表单退场 ⇒ 添加入口 = `settings:addProvider` 开专用弹窗）；单表改供
+ * **添加弹窗体**（`providerAddBody` —— 形状 ∥ 暂存值 ∥ 候选三源同住 `providers` 切片；`views/settings.mjs`
+ * `providerAdd` 支消费）。
+ * 纪律：零 DOM（描述符树）；文案一律经 `t()`；零 `node:` ∕ 零裸包 ∕ 零 `store.mjs` import；零新词键（除轮六 2 键：`okShort` ∥ `failShort`——同域内增；三端对齐批 1 键：`addProvider`——同域内增）。
  */
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
@@ -31,8 +37,8 @@ function keyFaceNode(row) {
   return { tag: "span", props: { class: "settings-key", "data-key": row.hasKey === true ? "masked" : "none" }, children: [word] }
 }
 
-/** 校验结果节点（两态词键；核错误串经 `deps.reasonWord` —— 表内码出词、表外原样）。 */
-function verifyNode(verify, deps) {
+/** 校验结果节点（两态词键；核错误串经 `deps.reasonWord` —— 表内码出词、表外原样）——**导出面**（首启保存面收正批 · #1278：向导步 1 明细行同源复用，零行为改）。 */
+export function verifyNode(verify, deps) {
   if (verify === null) return null
   const word = verify.kind === "ok"
     ? t("settings.providers.verify.ok", { count: Number.isFinite(verify.count) ? verify.count : 0 })
@@ -56,11 +62,11 @@ function rowButton(action, name, word, aria, handler) {
   }
 }
 
-/** 副行串（D37 项 2）：`模型 · baseURL` 串形（照 VSC `${model} · ${baseURL}` —— 缺段不落空分隔符）；
- *  两段皆空 ⇒ `null`（零节点 —— 禁假造）。 */
+/** 副行串（D37 项 2 · 2026-10-09 清除批）：`baseURL` 单段（渠道条目不携模型——原 `模型 · baseURL` 两段式收为单段）；
+ *  空 ⇒ `null`（零节点 —— 禁假造）。 */
 function subLineWord(row) {
-  const parts = [row?.model, row?.baseURL].filter((value) => typeof value === "string" && value !== "")
-  return parts.length > 0 ? parts.join(" · ") : null
+  const baseURL = typeof row?.baseURL === "string" && row.baseURL !== "" ? row.baseURL : null
+  return baseURL
 }
 
 /** 副行节点：串（省略中段）+ 不可用标 + 行尾代理开关（编辑态由调用面抽去代理件；三段皆空 ⇒ 零节点）。
@@ -240,21 +246,33 @@ function probeFace(probe, deps) {
   return null
 }
 
-/** 渠道段体：渠道行（校验结果**就地**在本行——轮六；无行渲出结果 ⇒ 段末回退）+ 两形表单（`loading` 期零表单）。**S2**：自定形随表单给
- *  `probe`（已出词状态面）∕ `draft`（暂存值回填）∕ `modelCandidates`（探通才有候选 —— 零假造）。 */
+/** 添加入口钮（KD-75 ②）：原双表单（常显内联）退场 ⇒ 段尾唯一添加入口；开径 = `settings:addProvider` 出口
+ *  （`mount-settings-exits.mjs` ⇒ 专用弹窗）。缺 handler ⇒ `wire` 落 `disabled`（诚实非死控）。 */
+function addProviderButton(handlers) {
+  const onAdd = typeof handlers?.onAddProvider === "function" ? () => handlers.onAddProvider() : undefined
+  return {
+    tag: "button",
+    props: wire({ class: "settings-submit", type: "button", "data-action": "settings:addProvider" }, onAdd),
+    children: [t("settings.addProvider")],
+  }
+}
+
+/** 渠道段体（KD-75 ②）：渠道行（校验结果**就地**在本行——轮六；无行渲出结果 ⇒ 段末回退）+ 添加钮。
+ *  **三端对齐批**：两形表单退场（`loading` 期零表单的旧闸随表单同退——钮面恒在场，读链不遮入口）。 */
 export function providersBody(section, handlers, deps) {
-  const loading = section.state === "loading"
-  const candidates = section?.probe?.state === "ok" ? listOf(section.probe.models) : []
-  const forms = loading ? [] : [
-    deps.channelForm({ shape: "preset", presets: section.presets, formats: deps.formats }, handlers),
-    deps.channelForm({
-      shape: "custom", presets: [], formats: deps.formats,
-      probe: probeFace(section?.probe ?? null, deps), draft: section?.draft ?? null, modelCandidates: candidates,
-    }, handlers),
-  ]
   return [
     ...section.rows.map((row) => providerRowNode(row, handlers, deps, section.verify ?? null)),
     fallbackVerifyNode(section, deps),
-    ...forms,
+    addProviderButton(handlers),
   ]
+}
+
+/** 添加弹窗体（KD-75 ①｜体唯一内容面——失败串 ∥ 段态词归宿主体装配）：单表（`channelFormTree`）。
+ *  三源皆住 `providers` 切片：形状 = `addShape`（选中回环）· 暂存值 = `draft`（探果重挂回填）· 探果 = `probe`
+ *  （`probeFace` 出词——弹窗面与渠行段面同形；候选 `datalist` 随 2026-10-09 清除批退场 ⇒ 探果不再入表单）。 */
+export function providerAddBody(section, handlers, deps) {
+  return [deps.channelForm({
+    shape: section?.addShape, presets: section?.presets, formats: deps.formats,
+    probe: probeFace(section?.probe ?? null, deps), draft: section?.draft ?? null,
+  }, handlers)]
 }

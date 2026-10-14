@@ -12,7 +12,7 @@
  * 载体 = 二择序：① PowerShell `Set-AuthenticodeSignature`（主——零依赖 ∥ 本机已证）② `signtool`（备——
  * 仅当可得：PATH ∥ Windows Kits）；主失败 ∥ 主不可得 ⇒ 备（§5.6「`signtool` 缺席 ⇒ 回退主载体」）。
  * 构建期要求 = UKey 在位 + SafeNet SAC 驱动 + PIN 弹窗（构建者在场）。
- * 探测 ∥ 命令构造 = 纯函数（批内件 L4 直测）；**本档不真跑签名路径**（证书事务 = 构建窗）。
+ * 探测 ∥ 命令构造 = 纯函数（单元测试档 L4 直测）；**本档不真跑签名路径**（证书事务 = 构建窗）。
  */
 import { execFileSync } from "node:child_process"
 import { globSync } from "node:fs"

@@ -1,6 +1,6 @@
 # 文档体系（DOC-SYSTEM）· 设计
 
-> 板块 = **文档体系**——`docs/` 的落点规划（core / CLI / VSC / desktop / render-core 五部分）· 命名规则 · 归属判据 · 交叉引用形态 · 机检面切分与射程。
+> 板块 = **文档体系**——`docs/` 的落点规划（core / CLI / VSC / desktop / render-core 五部分）· 命名规则 · 归属判据 · 交叉引用形态 · 机检切分与射程。
 > 需求层 = `docs/core/requirements/DOC-SYSTEM.md`（FR1–FR8 / N1–N4）。
 > 建档：2026-09-14（**eng-designer**——用户 2026-09-14 指名任务；**只做规划，不执行迁移**）。
 > **现状地图**仍以 `docs/README.md` 为准（本档 = **目标态**规划；迁移执行时同步地图）。
@@ -72,9 +72,9 @@
 
 | # | 候选 | 判据逐项评估 | 取舍 | 结论 |
 |---|---|---|---|---|
-| 1 | **档级声明**（档头面声明行） | ① 判据面简单（读档头即可）✓ ② 与「残余即示范」同向（声明随档走）✓ ③ 混写档须拆档 ✓ ④ 零报样例可给（§8.4）✓ | 代价 = 同档内既述外部又述本仓时须拆 | **选定** |
+| 1 | **档级声明**（档头面声明行） | ① 判据简单（读档头即可）✓ ② 与「残余即示范」同向（声明随档走）✓ ③ 混写档须拆档 ✓ ④ 零报样例可给（§8.4）✓ | 代价 = 同档内既述外部又述本仓时须拆 | **选定** |
 | 2 | 目录级声明（外部档集中放专目录） | ① 「挪进目录即豁免」= **例外通道化** ✗ ② 竞品分析常与本仓自评混写，目录切不干净 ✗ | — | **否决**（①②） |
-| 3 | 节级声明（按标题声明节范围） | ① 粒度最细 ✓ ② 须做**节范围跟踪**（标题 / 围栏 / 表格边界）⇒ 判据面复杂度与假阳面双增 ✗ | — | **否决**（②） |
+| 3 | 节级声明（按标题声明节范围） | ① 粒度最细 ✓ ② 须做**节范围跟踪**（标题 / 围栏 / 表格边界）⇒ 判据复杂度与假阳面双增 ✗ | — | **否决**（②） |
 
 ### 3.5 跨部分引用形态（FR4）
 
@@ -106,7 +106,10 @@ thincoder/                                  ← 合并仓根（git 仓）
 │   ├── desktop/                            ← 部分四 · desktop（桌面端壳面——Electron 宿主）
 │   │   ├── requirements/<板块>.md
 │   │   └── design/<板块>.md
-│   └── render-core/                        ← 部分五 · render-core（共享渲染核包——宿主无关）
+│   ├── render-core/                        ← 部分五 · render-core（共享渲染核包——宿主无关）
+│   │   ├── requirements/<板块>.md
+│   │   └── design/<板块>.md
+│   └── server/                             ← 部分六 · server（团队服务器面——实施批建；2026-10-13 补登）
 │       ├── requirements/<板块>.md
 │       └── design/<板块>.md
 │
@@ -125,6 +128,7 @@ thincoder/                                  ← 合并仓根（git 仓）
 | `vsc` | `docs/vsc/` | `thincoder-vscode/src` · `thincoder-vscode/webview` | `thincoder-vscode/` |
 | `desktop` | `docs/desktop/` | `thincoder-desktop/src` · `thincoder-desktop/renderer` · `thincoder-desktop/test` | `thincoder-desktop/`（已建 · 实施批建） |
 | `render-core` | `docs/render-core/` | `thincoder-render-core/**`（已建 · R1 实施批建） | ——（共享核包，非产品） |
+| `server` | `docs/server/` | `thincoder-server/src` · `thincoder-server/public` · `thincoder-server/test` | `thincoder-server/`（已建 · 实施批建；2026-10-13 补登——部分总数五 ⇒ 六） |
 
 **模块镜像（判据句）**：有独立代码目录的模块 ⇒ 独立文档部分（2026-09-27 用户裁定；先例 = desktop 2026-09-25——`thincoder-<X>/` ↔ `docs/<X>/`）。
 
@@ -306,11 +310,10 @@ thincoder/                                  ← 合并仓根（git 仓）
 
 | # | 档 | 节 | 动作 |
 |---|---|---|---|
-| 1 | `docs/core/design/prompts/discipline-engineering.md`（**正本**） | §「需求池攒批工作流」第 5 条**边界**（现第 176 行——「池只收用户需求点……不混池」） | 在「边界」条**追加判据句**（同 §10.1 文本，不加新节） |
-| 2 | `thincoder-core/prompts/discipline-engineering.md`（**运行期落地档**） | §「需求池攒批工作流」第 5 条（现第 220 行） | 按正本**回写**（双源链路：先改正本 → 回填落地档） |
+| 1 | `docs/core/design/prompts/persona-engineering.md`（**正本**） | §「台账（需求池 / 技术待办）——攒批与生命周期」第 5 条**边界**（「池只收用户需求点……不混池」） | 在「边界」条**追加判据句**（同 §10.1 文本，不加新节） |
+| 2 | `thincoder-core/prompts/persona-engineering.md`（**运行期落地档**） | §「台账（需求池 / 技术待办）——攒批与生命周期」第 5 条 | 按正本**回写**（双源链路：先改正本 → 回填落地档） |
 
-**为何落这里（实核）**：两池机制的唯一详述处 = 该节（`discipline-engineering.md` 第 169 行起）；`persona-engineering.md` 只提「台账归你」，
-不带判据 ⇒ 判据句归**纪律层**、不归人格层（归属判定四问第 3 问）。**本批只给落点与文本，不写提示词档**（提示词 = 产品代码，内容权归主 agent）。
+**为何落这里（实核）**：两池机制的唯一详述处 = `docs/core/design/prompts/persona-engineering.md` §「台账（需求池 / 技术待办）——攒批与生命周期」（该节即攒批工作流 / 附属纪律的正本）。**本批只给落点与文本，不写提示词档**（提示词 = 产品代码，内容权归主 agent）。
 
 ## 11. 受影响文件清单（FR7 含实修）
 
@@ -343,7 +346,7 @@ thincoder/                                  ← 合并仓根（git 仓）
 | 2 | 命名 = **目录即命名空间**（档名沿用板块名） | §3.2——零改名 + 判据可机判；否决部分前缀（改名风暴）· 档头声明（双源） |
 | 3 | 跨部分引用 = **仓根相对全路径** | §3.5——唯一定位 + 引擎现成支持；否决「仓别不判」（正是病根） |
 | 4 | 声明面 = **数据声明（非 JS）**——现行落点 = manifest `checkConfig`（§8.2） | §3.3——可审计 + 引擎零改；否决 JS 声明（引入执行面） |
-| 5 | 外部参照面 = **档级声明** | §3.4——判据面简单 + 声明随档走；否决目录级（例外通道化）· 节级（范围跟踪成本） |
+| 5 | 外部参照面 = **档级声明** | §3.4——判据简单 + 声明随档走；否决目录级（例外通道化）· 节级（范围跟踪成本） |
 | 6 | **`:1446` 改写为「计划档名（裸名） + 指向既有覆盖用例」** | 该锚指向 **S2 计划产物**（尚不存在），非现态事实锚；V5 判据**无「计划产物」通道**（注记标记集只覆盖已退场族）⇒ 本批不新开豁免通道（**不许豁免绕过**），改以「计划表述 + 指向现存锚 `thincoder-core/test/tool-registry.test.mjs:54`」表达；**判据缺口已登记**（§12 末注） （迁移期引文） |
 | 7 | `:1440` 的裸 basename + 坐标（`agent.mjs` `:125`——仓内两义：核 + VSC）→ `thincoder-core/agent.mjs:125` | 实核：`thincoder-core/agent.mjs:125` = `prepareRun` 唯一调用点（`const { maxTurns, …, systemPrompt } = await prepareRun(`）；裸名在仓内两义（核 + VSC） |
 | 8 | 正本落 `docs/core/design/prompts/` | 提示词正本 = core 机制（落地档 `thincoder-core/prompts/`）；否决「正本留在 `docs/design/` 根」（三部分外的孤岛） |
@@ -366,7 +369,7 @@ thincoder/                                  ← 合并仓根（git 仓）
 | **A6** | 引擎 / 路由表**逐族切分**（族 · 总行 · 引擎行 · 路由行 · 路由面逐项）；射程修法 E-1–E-4 + 零报样例（§8）——现行承接 = `docs/core/design/DOC-DISCIPLINE.md` §7 | FR6 · N2 |
 | **A7** | **两处悬空锚实修完成**：`node scripts/doc-check.mjs` **域一悬空 = 0**（原 2） | FR7 |
 | **A8** | 两池判据文本 + 两处落点给出（台账头部 / 提示词层），且**未代写台账** | FR8 |
-| **A9** | 单引擎原样读数：`node scripts/doc-check.mjs` 域一悬空 0 · exit 0（台账腿随 M2 SQLite 退役消解） | N3 |
+| **A9** | 单引擎原样读数：`node scripts/doc-check.mjs` 域一悬空 0 · exit 0（台账检查随 M2 SQLite 退役消解） | N3 |
 | **A10** | `git status` 改动集 = 纯文档（零 `src/**` · 零 `thincoder-core/**` · 零 `thincoder-cli/docs/**` 写入） | N4 |
 
 ## 14. 用例表（正常 / 边界 / 错误）
@@ -376,8 +379,8 @@ thincoder/                                  ← 合并仓根（git 仓）
 | # | 类 | 输入 | 期望输出 |
 |---|---|---|---|
 | T1 | 正常 | `node scripts/doc-check.mjs`（域一 = `docs/design` + `docs/requirements`） | 候选 ~2300 · **悬空 0** · `OK(V5)` · exit 0 |
-| T2 | 正常 | `node scripts/doc-check.mjs`（行宽腿） | 「无 >300 字符单行」+ 「一致性新增违规 0」· exit 0 |
-| T3 | 正常 | 台账面 = SQLite（`docs/core/design/LEDGER.md`）——原 `check-ledger` 机检已退役、无承接 | `/ledger` 查询六态读数正常（机检腿并入 T1） |
+| T2 | 正常 | `node scripts/doc-check.mjs`（行宽检查） | 「无 >300 字符单行」+ 「一致性新增违规 0」· exit 0 |
+| T3 | 正常 | 台账面 = SQLite（`docs/core/design/LEDGER.md`）——原 `check-ledger` 机检已退役、无承接 | `/ledger` 查询六态读数正常（机检并入 T1） |
 | T4 | 正常 | 初分类计数复核：统一面 70 / CLI 面 11 / 待核 3 / 合计 84（§5.2 表按 design + requirements 分列——列加总 = 47 / 37） | 计数与列表一致（D3） |
 | T5 | 边界 | `:1446` 改写后，该行的路径 token 抽取 | 仅 `thincoder-core/test/tool-registry.test.mjs:54` 入判且命中；`tool-face-capability.test.mjs` 为裸名无坐标 ⇒ 出射程 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | T6 | 边界 | 目标态路径（`docs/core/…`）出现在本档 | 正文形态 = 目录 / 占位——不入 V5-A 抽取面（`doc-anchors-v5.mjs:33-34` · `:146` / `:147`）；带坐标的目标态引用写具体档名时在围栏块内（整块跳过 `:209-210`）⇒ **零悬空**（域一悬空 0——A7 / T1 实证） （迁移期引文——工具已退役） |
@@ -399,6 +402,8 @@ thincoder/                                  ← 合并仓根（git 仓）
 
 **2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
 **本批（文档体系重组批（DOC-MIGRATION） · 2026-10-02）落点表** = `docs/batches/2026-10-02-doc-structure-reorg.md` §2（唯一承载面——一次性批次材料）。
+
+- 2026-10-07（**文档清账批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-07-doc-cleanup.md` §2 · 台账 #1000-②）：§10.3 落点表两行重锚至现家（攒批工作流 = `docs/core/design/prompts/persona-engineering.md` §「台账（需求池 / 技术待办）——攒批与生命周期」∥ 运行期落地档 = `thincoder-core/prompts/persona-engineering.md` 同节——旧行号锚弃）；§10「为何落这里」句随正（唯一详述处 = 现家节）。**零语义**。
 
 - 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 波 3 · 终扫轮 · eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：§4 第四部分段收正——需求侧**十档**（总览 + 九域卷，2026-10-02 波 3）；设计侧「无需求侧镜像」句按分卷后实况收正（九档有需求侧同名卷）。**零新语义**（实况枚举）。
 

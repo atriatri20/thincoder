@@ -54,7 +54,7 @@ import { assembleFor, mcpWarningReminder, validateProvider } from "./agent-assem
 import { createTurnDriver } from "./turn-driver.mjs"
 // 渲染面实况回读缓存（子代理面板批 —— `panel:state` 接收半；与 `ipc.mjs` 处理体同单例——单源）。
 import { panelLive } from "./panel-live.mjs"
-// R1 输入面板移植（桌面宿主面）：模式位四写面 ∕ @ 补全面两处理体出档（新增两面零入档 —— 拆分评审结论见档头）。
+// R1 输入面板移植（桌面宿主面）：模式位四写面 ∕ @ 补全两处理体出档（新增两面零入档 —— 拆分评审结论见档头）。
 import { createSessionFlags } from "./session-flags.mjs"
 import { createAtComplete } from "./at-complete.mjs"
 // 同名 re-export（调用面零改 —— 既有 import 路径与名面保持）。
@@ -128,7 +128,7 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   }
   /** 装配表**全清**（切项目级联 —— `turn-driver.mjs` 注入面；#515① ∕ #507 装配表清点）：语义 = `forgetKey`
    *  的全表形（三面全清）。切项目后同槽号键不再命中旧项目 agent；陈旧回合尾的「代次就地覆写」面随装配
-   *  对象更换一并消除（旧对象持旧代次 ⇒ 墓碑恒判失效——与 `dispose` 臂同型）。 */
+   *  对象更换一并消除（旧对象持旧代次 ⇒ 墓碑恒判失效——与 `dispose` 分支同型）。 */
   const forgetAll = () => {
     agents.clear()
     ensuring.clear()
@@ -240,7 +240,8 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
    *  未装配者只写盘（不隐式装配）。成功 ⇒ 族信封 + `meta`（与 `history:page` 同源投影）；失败 ⇒ 信封**无 `meta` 键** + 零写。
    *  **选定写回（#880 · 判据句 6 ∥ 项 8）**：**槽面实变**（`written.changed`）∧ `provider` + `model` 同在
    *  ⇒ `defaultModel` 同拍写回（定序 = 槽先配置后；等值零写住写回单点）；配置面失败**不反扑**（回执仍
-   *  `ok:true`——本会话已生效）+ `console.error` 记错（零静默）⇒ 回执零叠加（`providerState` 键缺席）；
+   *  `ok:true`——本会话已生效）+ `console.error` 记错（零静默）⇒ 回执**叠加失败码** `carryover:
+   *  { ok:false, reason }`（#1121 修③——渲染面据该键出同一条失败行；`providerState` 仍缺席）；
    *  写回成功 ⇒ 回执另携 `providerState`（写后核读——第四刷新点；键缺席 ⇒ 渲染面零写）。 */
   function setPrefs(key, patch) {
     const cwd = projects?.currentCwd()
@@ -255,11 +256,14 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     const receipt = { ok: true, reason: null, cwd, slot, meta: written.meta }
     // 选定写回（#880）：只认「槽面实变」——回声（会话切换 ∥ 同值回写）与档位径天然落空；`provider`+`model`
     // 同在（值串判据已由 `prefsPatchFailure` 把守）⇒ 写回单点（定序 = 槽先配置后；与下行重施互不依赖）。
-    // 失败不反扑：回执不改、记错零静默。
+    // 失败不反扑：槽面写受理不改 ∥ 回执照 `ok:true`；配置面失败码随回执叠出（#1121 修③）。
     if (written.changed === true && typeof patch.provider === "string" && typeof patch.model === "string") {
       const carried = carryoverDefaultModel(patch.provider, patch.model)
-      if (carried.ok !== true) console.error(`[agent-host] default model carryover failed: ${carried.reason}`)
-      else if (carried.providerState !== undefined) receipt.providerState = carried.providerState
+      if (carried.ok !== true) {
+        console.error(`[agent-host] default model carryover failed: ${carried.reason}`)
+        // #1121 修③：失败码随回执叠出（渲染面同一条失败行——槽写照旧不反扑，回执仍 `ok:true`）。
+        receipt.carryover = { ok: false, reason: carried.reason }
+      } else if (carried.providerState !== undefined) receipt.providerState = carried.providerState
     }
     if (agents.has(key)) {
       const agent = agents.get(key)
@@ -325,7 +329,7 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   /** 模式位写面（R1 输入面板移植 —— `session:flags`；处理体出档 `session-flags.mjs`）：`flagsOf` 为函数声明（提升）
    *  ⇒ 此处引用先于定义安全。 */
   const { setFlags } = createSessionFlags({ agents, projects, post, flagsOf })
-  /** @ 补全面（R1 输入面板移植 —— `at:complete`；文件枚举过滤出档 `at-complete.mjs`）。 */
+  /** @ 补全（R1 输入面板移植 —— `at:complete`；文件枚举过滤出档 `at-complete.mjs`）。 */
   const { atComplete } = createAtComplete({ projects })
 
   /** 子 agent 面（R3b · D20 —— 出档 `subagent-face.mjs`）：停止出口 + 存活投影起 / 停 / 清点。 */

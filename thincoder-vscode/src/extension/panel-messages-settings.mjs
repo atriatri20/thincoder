@@ -20,15 +20,31 @@
  */
 import { loadRaw } from "@thincoder/core/config-io.mjs"
 import { loadMcpServers } from "../config-mcp.mjs"
-import { addProviderFlow, removeProviderFlow, setKeyFlow, probeProviderAdmission, ui } from "./provider-flows.mjs"
-import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection, postProviderError } from "./settings.mjs"
+import { removeProviderFlow, setKeyFlow, probeProviderAdmission, ui } from "./provider-flows.mjs"
+import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection, postProviderError, pushTeamStatus } from "./settings.mjs"
 import { setSlotAdvisorGuard, setSlotEngineering } from "./session-io.mjs"
+import { teamLogin, teamLogout } from "./team.mjs"
+// F-W21（登录面补全批）：状态栏团队 item 随动（webview 登/退成拍——命令流外的第二条写径）
+import { refreshTeamSurface } from "./team-surface.mjs"
 import { _cwd } from "./panel-messages.mjs"
 
-/** 迁出自 `panel-messages.mjs` 的 case "saveProviderKey"（#695：写结果捕获——冲突 ⇒ `providers` 段失败面）。 */
+/** 迁出自 `panel-messages.mjs` 的 case "saveProviderKey"（#695：写结果捕获——冲突 ⇒ `providers` 段失败面）。
+ *  #1053：成功径发受理回执 `providerKeySaved { name }`（webview 闪徽标 / 恢复密钥行的唯一触发）；
+ *  拒径 = `providerError` + `return`——零回执 ⇒ 徽标零闪 ∥ 行不关（语义单源 = `docs/vsc/design/SETTINGS.md` §2.18）。
+ *  #1073：回执 ⟺ **真写**——写面三态（`ok` ⇒ 回执；`no-write`（空钥守卫）⇒ 零回执 + warn 一条（零静默）；
+ *  `conflict` ⇒ `providerError` 映射照旧）。 */
 export async function handleSaveProviderKey(panel, msg) {
-  const err = await panel._saveProviderKey(msg.name, msg.key)
-  if (err) postProviderError(panel, "providers", err)
+  const result = await panel._saveProviderKey(msg.name, msg.key)
+  if (result?.status === "no-write") {
+    console.warn(`[vsc] saveProviderKey "${msg.name}": empty key — no write, no receipt`)
+    return
+  }
+  if (result?.status === "conflict") {
+    postProviderError(panel, "providers", result.hint)
+    return
+  }
+  if (result?.status !== "ok") return // #1073：回执 ⟺ 真写（未知态零回执——零假成功）
+  panel._panel?.webview.postMessage({ type: "providerKeySaved", name: msg.name })
 }
 
 /** 迁出自 `panel-messages.mjs` 的 case "deleteProviderKey"（#695：同式）。 */
@@ -63,12 +79,13 @@ export function handleEditMcp(panel, msg) { panel._editMcp(msg.name, msg.config 
 /** 迁出自 `panel-messages.mjs` 的 case "testMcp"。 */
 export async function handleTestMcp(panel, msg) { await panel._testMcp(msg.name) }
 
-/** 迁出自 `panel-messages.mjs` 的 case "addProvider"。 */
+/** 迁出自 `panel-messages.mjs` 的 case "addProvider"。#1027：载荷 +`proxy` 透传核 `addProviderEntry`（`=== true` ⇒ 同批落旗）。
+ *  #1054（添加入口弹窗统一批）：无载荷支（QuickPick 增流程）退场——页脚「+ Add provider…」= webview
+ *  本地面动作（零出站）⇒ 残留分支 = 畸形载荷 ⇒ `console.error` 零动作（fail-loud）。 */
 export async function handleAddProvider(panel, msg) {
-  // Payload form (settings panel [+ Add] form): persist directly.
-  // No payload (model dropdown shortcut): interactive QuickPick flow.
+  // Payload form (settings panel add dialog): persist directly.
   if (msg.preset || msg.custom) {
-    const err = persistAddProvider({ preset: msg.preset, custom: msg.custom, key: msg.key })
+    const err = persistAddProvider({ preset: msg.preset, custom: msg.custom, key: msg.key, proxy: msg.proxy })
     if (err) {
       postProviderError(panel, "providers", err)
       panel._pushSettings()
@@ -87,7 +104,8 @@ export async function handleAddProvider(panel, msg) {
       }
     }
   } else {
-    await addProviderFlow(ui, () => panel._pushSettings())
+    // 无载荷支（QuickPick 增流程）随 #1054 退场（唯一调用点即此支）；畸形载荷 ⇒ fail-loud 零动作。
+    console.error("[addProvider] malformed payload (no preset/custom) — the no-payload QuickPick flow retired with #1054")
   }
 }
 
@@ -138,11 +156,13 @@ export function handleDeleteWebsearchKey(panel) {
   panel._pushSettingsLight()
 }
 
-/** 迁出自 `panel-messages.mjs` 的 case "testProvider"。 */
+/** 迁出自 `panel-messages.mjs` 的 case "testProvider"。③′：载荷 +`proxy` 透传（未勾 ∥ 缺省 ⇒ 直连）。
+ *  #1051（2026-10-10 vsc-consistency 批）：请求归属判据——**结果原样回显 `id`**（webview 落框前
+ *  按 id 判归属：旧框在飞果 ∥ 重放果弃）；载荷缺 `id`（无请求 id 的发送方）⇒ 结果不携。 */
 export async function handleTestProvider(panel, msg) {
   // M1 三 format 分派：format 随表单透传（anthropic/google 与 openai 端点/头不同）
-  const r = await testProviderConnection({ baseURL: msg.baseURL, apiKey: msg.apiKey, format: msg.format })
-  panel._panel?.webview.postMessage({ type: "testProviderResult", ...r })
+  const r = await testProviderConnection({ baseURL: msg.baseURL, apiKey: msg.apiKey, format: msg.format, proxy: msg.proxy })
+  panel._panel?.webview.postMessage({ type: "testProviderResult", ...r, ...(msg.id !== undefined ? { id: msg.id } : {}) })
 }
 
 /** 迁出自 `panel-messages.mjs` 的 case "buildIndex"。 */
@@ -181,7 +201,7 @@ export function handleSaveAgentSettings(panel, msg) {
 
 /** 迁出自 `panel-messages.mjs` 的 case "getAgentSettings"。
  *  F-W18（§2.11）：await 序——`indexStatus` 先落，其后快照族（含异步 shell 候选面）；
- *  两拍均 await ⇒ 回批序 = 契约序（W8-1 机检面）。 */
+ *  两拍均 await ⇒ 回批序 = 契约序（W8-1 机检）。 */
 export async function handleGetAgentSettings(panel) {
   await panel._pushIndexStatus()
   await panel._pushSettingsLight()
@@ -233,4 +253,33 @@ export function handleSaveProxySettings(panel, msg) {
 export async function handleTestProxy(panel, msg) {
   const result = await testProxyConnection(msg.uri)
   panel._panel?.webview.postMessage({ type: "proxyTestResult", result })
+}
+
+// ─── B1（团队族——登录 ∥ 退出；机制单源 = `docs/core/design/TEAM.md` §2 ∥ 端面 = `SETTINGS.md` §2.20）───
+
+/** case "teamLogin"（webview → host）：三字段 ⇒ 核 `teamLogin`（端侧零自写盘）⇒ 成 ⇒ 推 `teamStatus`
+ *  + `providerStatus`（派生条目入列表——Providers 卡随动）⇒ 回执 `teamLoginResult` `{ ok, notice? }` ∥
+ *  `{ ok:false, reason }`（码不携文——出词归 webview i18n——§2.20 回执形）。回执殿后：推送先落（卡面
+ *  转新态）⇒ 一次性提示（同名手工条目冲突）就地显于新态卡面（`teamStatus` 零提示字段）。 */
+export async function handleTeamLogin(panel, msg) {
+  const r = await teamLogin({ server: msg.server, username: msg.username, password: msg.password })
+  if (r.ok) {
+    pushTeamStatus(panel._panel)
+    panel._pushStatus()
+    refreshTeamSurface() // F-W21：团队 item 随动（设置面板 ∥ 面板外常显面同拍）
+  }
+  panel._panel?.webview.postMessage({ type: "teamLoginResult", ...r })
+}
+
+/** case "teamLogout"（webview → host）：核 `teamLogout`（吊销 best-effort——网络失败照清本地）⇒ 成 ⇒
+ *  推 `teamStatus` + `providerStatus`（派生条目退场——无 key ⇒ 列表隐藏——`TEAM.md` §2.4）⇒ 回执
+ *  `teamLogoutResult` `{ ok, revokeDelivered? }`（缺席 = true；false ⇒ webview 卡内就地提示）。 */
+export async function handleTeamLogout(panel) {
+  const r = await teamLogout()
+  if (r.ok) {
+    pushTeamStatus(panel._panel)
+    panel._pushStatus()
+    refreshTeamSurface() // F-W21：团队 item 随动（退出 ⇒ 入口态／已失效清位）
+  }
+  panel._panel?.webview.postMessage({ type: "teamLogoutResult", ...r })
 }

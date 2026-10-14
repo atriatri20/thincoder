@@ -1,7 +1,7 @@
 /**
  * pool-tree.mjs — 右列池面**纯构树族**（让位修复批预案落形 · 2026-09-29 · 台账 #603 —— 自
  * `renderer/views/activity.mjs` 出档，沿「纯构树 ∕ 薄挂载」两层分家 · `docs/desktop/design/RENDERER.md` §1.1）：
- * `poolModel`（纯模型）→ `poolTree`（纯构树 · 机检面）+ 节点族（头 ∕ 读数 ∕ 折叠控件 ∕ 三族条目）。
+ * `poolModel`（纯模型）→ `poolTree`（纯构树 · 机检）+ 节点族（头 ∕ 读数 ∕ 折叠控件 ∕ 三族条目）。
  * 零 DOM ∕ 零 `node:` ∕ 零裸包；**挂载编排（三径 ∕ 弃容器 ∕ 帧尾扫）留 `renderer/views/activity.mjs`**
  * （`mountPool` 认族壳 `data-family="subagents"` 并以常驻容器领用 ∕ 置换——键控差分面）。
  *   ① 三态 `data-state`（根描述符**恒在**）：无活动会话 ⇒ `none`（零子节点 —— 禁假数据）· 有会话三族皆空 ⇒

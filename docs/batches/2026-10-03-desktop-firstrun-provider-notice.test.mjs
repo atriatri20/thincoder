@@ -270,7 +270,8 @@ test("T4 B②③：loadModels(null) 候选负控 ∥ 步 2 步入径 ⇒ loadMod
   assert.equal(asks.length, 2, "空串同判（同径扇出——#842）")
   assert.equal(asks[1].channel, "model:catalog", "空串 ⇒ 同径")
 
-  // ② 步 2 步入径：步 1 ⇒ 步 2 ＋ 现渠候选装载（渠空 ⇒ loadModels(null)）
+  // ② 步 1 前向（#1277 · KD-79 ②③ 口径改）：步 1「下一步」支净删 —— `onNext()` 于步 1 零动作；
+  //    前向唯一径 = 表单「保存并继续」（`handlers.onSubmit` ⇒ `submitAndContinue`：空 key ⇒ 零写直进；非空 ⇒ 先存后进）。
   const loaded = []
   const calls = []
   const modelSpy = (provider, name) => { calls.push([provider, name]) }
@@ -284,11 +285,22 @@ test("T4 B②③：loadModels(null) 候选负控 ∥ 步 2 步入径 ⇒ loadMod
   }).handlers
   const handlers = mkHandlers({ useModel: modelSpy })
   handlers.onNext()
-  assert.equal(state.settings.wizard.step, 2, "步 1 ⇒ 步 2")
-  assert.deepEqual(loaded, ["p1"], "步入步 2 ⇒ loadModels(现渠)")
-  state = { settings: { wizard: { step: 1 }, model: { provider: null } } }
-  handlers.onNext()
-  assert.deepEqual(loaded, ["p1", null], "渠空 ⇒ loadModels(null)（负控同径）")
+  assert.equal(state.settings.wizard.step, 1, "步 1 `onNext()` 零动作（#1277：步 1 支净删——防双径漂移）")
+  assert.deepEqual(loaded, [], "零前进 ⇒ 零装渠")
+  const prevFormData = globalThis.FormData
+  globalThis.FormData = class { constructor(form) { this._form = form } get(k) { return this._form[k] ?? null } }
+  const formEvent = (key) => ({ currentTarget: { closest: () => ({ key }) } })
+  try {
+    handlers.onSubmit(formEvent(""))
+    await until(() => state.settings.wizard.step === 2)
+    assert.deepEqual(loaded, ["p1"], "步入步 2 ⇒ loadModels(现渠)")
+    state = { settings: { wizard: { step: 1 }, model: { provider: null } } }
+    handlers.onSubmit(formEvent(""))
+    await until(() => loaded.length === 2)
+    assert.deepEqual(loaded, ["p1", null], "渠空 ⇒ loadModels(null)（负控同径）")
+  } finally {
+    globalThis.FormData = prevFormData
+  }
 
   // ③ handlers 携 onUseModel（同一引用 —— 零第二实现；缺注入 ⇒ 零键 ⇒ 视图 `wire` 落 disabled）
   assert.equal(typeof handlers.onUseModel, "function", "注入 ⇒ 键在场")

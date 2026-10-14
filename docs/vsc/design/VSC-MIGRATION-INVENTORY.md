@@ -201,7 +201,7 @@
 | 2 | `thincoder-vscode/docs/_archive/design/AGENT-PARAMS-TUNING.md`（114）——VSC 端 explore「30 硬帽」移除现状 | `docs/core/design/AGENT-PARAMS.md` | §4「子代理轮次」+ §6.1 坐标表 | 该档 `:114` §8.2 登记「VSC 端 30 硬帽 ⇒ 归 VSC 轮」；§4 标题即「(CLI 端无专属代码)」⇒ **已并入（批 6）**——§4 注 + §6.3 坐标表 |
 | 3 | `design/ARCHITECTURE.md`（266）——VSC 模块地图 + 与 CLI 差异表 | `docs/core/design/ARCHITECTURE.md` | §3 模块地图 / §4 之后 | 该档 `:6` 明载「VSC 侧未迁——VSC 轮并入本档」⇒ **已并入（批 6）**——§3.1 壳层装配地图 + §4.1 差异表 |
 | 4 | `thincoder-vscode/docs/_archive/design/IMAGE-DOWNGRADE-VISION.md`（130）——贴图降级链 | `docs/core/design/PROVIDER.md` | 新增「图片输入与贴图降级链」节 | 该档 §6 节清单无图片 / 贴图面（实核）；VSC 侧降级链在现行代码在位 ⇒ **已并入（终收批）**——§6.18 图片输入与贴图降级链 |
-| 5 | `design/PORTABILITY.md`（458）——VSC 镜像面（分类权威 / 评审注入 / 端差） | `docs/core/design/PORTABILITY.md` | §3 接口契约之后 | 该档 `:6` / `:124` 明载「VSC 端镜像——VSC 轮并入本档」⇒ **已并入（批 6）**——§3.6 坐标表 + §5 测试面 |
+| 5 | `design/PORTABILITY.md`（458）——VSC 镜像面（分类权威 / 评审注入 / 端差） | `docs/core/design/PORTABILITY.md` | §3 接口契约之后 | 该档 `:6` / `:124` 明载「VSC 端镜像——VSC 轮并入本档」⇒ **已并入（批 6）**——§3.6 坐标表 + §5 测试 |
 | 6 | `design/SESSION.md`（520）——VSC 端会话槽 / 恢复 / GC 接线 | `docs/core/design/SESSION.md` | §6.10 端分离恢复之后 | 该档 §6 为 CLI 面；端差面未并 ⇒ **已并入（批 7）**——§6.15 VS Code 面板装配接线面（切换守卫 / turnSlot / 绑定入口 / 字段往返与 setSlot\* / 标题 A2 / 懒历史分页 / 注入序）· D-SE27–30 |
 | 7 | `design/PROVIDER.md`（463）——VSC 端接线（面板 / preset 表 / 编辑器路径） | `docs/core/design/PROVIDER.md` | §6.17 之后 | 同上（§6 为 CLI 面）⇒ **已并入（终收批）**——§6.18（图片输入）+ §6.19 VS Code 端接线 |
 | 8 | `design/MEMORY.md`（325）——VSC 文件式存储 + 向量检索 | `docs/core/design/MEMORY.md` | §6.8 之后 | 该档 §6.2 / §6.3 为 CLI（FTS5 / sqlite）；VSC 实现面未并 ⇒ **已并入（批 7）**——§6.9 VSC 端实现面（文件制现状登记 / 索引有效性 B1–B4 / 工具契约端差）· D-MEM14–15 |
@@ -211,7 +211,7 @@
 | 12 | `design/CONSULTATION.md`（161）——VSC 实现接线（digest 消费 / 端级接线） | `docs/core/design/CONSULTATION.md` | §6.4 CLI 实现接线之后 | 该档 §6.4 明标「CLI 实现接线」 ⇒ **已并入（批 7）**——§6.5 VS Code 端级实现接线表（子 agent 构建 / runner / 只读工具集与 main_history / 注册 / 容器 / digest / 驱动中止 / 动作域 / 面板）· D-CO7 |
 | 13 | 编辑工具六档（`EDIT` 79 · `EDIT-HELPERS` 72 · `HASHLINE-EDIT` 45 · `INSERT-AFTER` 35 · `APPLY-PATCH` 41 · `WRITE` 36）——VSC 坐标 + VSC 差异（编辑器路径 / range 偏移映射 / 无 dirty 护栏） | `docs/core/design/{EDIT,EDIT-HELPERS,HASHLINE-EDIT,INSERT-AFTER,APPLY-PATCH,WRITE}.md` | 各档「实现单一权威」节 | 该族六档均以 CLI 档并入；VSC 差异面未并 ⇒ **已并入（批 8）**——各档 §6「VSC 端差异」块（编辑器路径 / 偏移映射 / 无 dirty 护栏 / BOM / EOL） |
 | 14 | `design/TOOLS.md`（382）——VSC 适配增强（编辑器 / 语言服务 / webview 审批）+ 审批面 + 描述外部装载 | `docs/core/design/TOOLS.md` | §6.10 之后 | 该档 §6 为 CLI 面；VSC 适配增强未并 ⇒ **已并入（批 8）**——§6.11 VSC 端适配增强 |
-| 15 | `thincoder-vscode/docs/_archive/design/TOOL-OUTPUT-LIMITS-TUNING.md`（139）——VSC 坐标 + 双端测试面 | `docs/core/design/TOOL-OUTPUT-LIMITS.md` | §2 常量表 / §6.2 双端与测试面 | 该档 `:99` 登记「VSC 树档未迁」⇒ **已并入（批 6）**——§6.3 坐标表 |
+| 15 | `thincoder-vscode/docs/_archive/design/TOOL-OUTPUT-LIMITS-TUNING.md`（139）——VSC 坐标 + 双端测试 | `docs/core/design/TOOL-OUTPUT-LIMITS.md` | §2 常量表 / §6.2 双端与测试 | 该档 `:99` 登记「VSC 树档未迁」⇒ **已并入（批 6）**——§6.3 坐标表 |
 | 16 | `thincoder-vscode/docs/_archive/design/ENG-TOKEN-BINDING-TUNING.md`（115）——VSC slot 多槽写 / 持久化面 | `docs/core/design/ENG-TOKEN-BINDING.md` | §6.1 实现坐标 | 该档 §6.2 为 CLI 侧落地状态；VSC 载体未并 ⇒ **已并入（批 6）**——§6.3 接线表 |
 | 17 | `design/DESIGN-TOKEN-SETTLEMENT.md`（109）——VSC 根因（每 run 重建 agent / 死对象）+ D1–D6 | `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` | §6.1 实现坐标 | 该档 §6.2「双端与依赖方向」；VSC 根因面未并 ⇒ **已并入（批 6）**——§6.3 结算接线表 |
 | 18 | `requirements/AGENT-LOOP.md`（355）——**VSC 面需求节** | **D3 裁定（2026-09-15）：维持现状** | —— | 该 core 档 §5（`:129`-`:132`）显式登记「VSC 面需求节 ⇒ 归属 `docs/vsc/requirements/`」——与 §4.2 原判「落 core」冲突 ⇒ **本行销项不并**（结构变更非本批题·留在 core 档内） |
@@ -326,7 +326,7 @@ PROJECT 按父侧裁定（批次任务书）**拆分双落**；余 4 档纯新�
 
 **坐标实核与漂移收正（批 5）**：4 档纯新建 + PROJECT 双落内每条 `文件:行` 按现状实核——漂移 2 类按现状改写：
 settle 落盘块起点（advisor-async）旧档记 364 行 → 现状 363 行；index-discover 两坐标旧档记 126 / 135 行 → 现状 125 / 132 行。
-**不引跨域用例号**：6 档零 `T-` 形字面编号（测试面只引 `thincoder-vscode/test/**` 档名）。
+**不引跨域用例号**：6 档零 `T-` 形字面编号（测试只引 `thincoder-vscode/test/**` 档名）。
 
 ### 9.6 批 6（§8B 并入清单第一批 · 8 条）
 
@@ -407,7 +407,7 @@ settle 落盘块起点（advisor-async）旧档记 364 行 → 现状 363 行；
 | D-VM8 | 批 2 切面 = **按面拆三档**（结构+活动区 ∥ 协议+秩序 ∥ 输入+渲染） | §9.2——读者面不同；否决两档（首档实测超 500 硬限）· 否决按批序切（无独立语义面）；取舍详表见 `docs/vsc/design/WEBVIEW.md §9` |
 | D-VM9 | 镜像面 3 条（`VSC-PROMPTS` ×2 + `design/prompts/` ×1）**销项**：既有裁定 = 原地保留不动 | 主档 §7——出处：用户裁定「中文设计档原地保留」+「VSC 全押后」 |
 | D-VM10 | 批 5 PROJECT **拆分双落**（产品级定性 ⇒ core · VSC 专有面 ⇒ vsc） | 主档 §7.2 D4 + 批次任务书裁定；切分规则 = 跨产品契约 ⇒ core / 仅本端面 ⇒ vsc（产物档 §5.2 逐条登记）；**无判不准项** |
-| D-VM11 | `VSC-MIGRATION.md` 拆分切面 = **台账面整体移出**（§3–§5 · §8–§15 ⇒ 本档） | §13——主档只留判据 / 分批计划 / 待裁 / 变更记录；切点零交叉（台账面与判据面无互引正文）；两档均回落至 500 硬限内 |
+| D-VM11 | `VSC-MIGRATION.md` 拆分切面 = **台账面整体移出**（§3–§5 · §8–§15 ⇒ 本档） | §13——主档只留判据 / 分批计划 / 待裁 / 变更记录；切点零交叉（台账面与判据侧无互引正文）；两档均回落至 500 硬限内 |
 
 ## 12. 验收标准（逐条回指 F-M / N-M——需求 = `docs/vsc/requirements/VSC-MIGRATION.md`）
 

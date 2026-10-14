@@ -1,9 +1,9 @@
 /**
  * config.mjs — configuration loading and saving
- * Model-merge schema v2 (2026-09-10 MODEL-SELECTION): providers[] carry ONE default model
- * per channel (`providers[].model` — the new-install seed / empty-slot fallback); the
- * candidates list field models[] is gone — the available-model list is fetched from the
- * provider at runtime (`GET /models`, PROVIDER.md §16). config.defaultModel (top level,
+ * Model-merge schema v2 (2026-09-10 MODEL-SELECTION; 2026-10-09 清除批：渠道单值模型退场):
+ * providers[] carry NO channel default model (`providers[].model` retired — 渠道不是模型选择
+ * 单位); the candidates list field models[] is gone — the available-model list is fetched from
+ * the provider at runtime (`GET /models`, PROVIDER.md §16). config.defaultModel (top level,
  * "provider:model" composite) is the new-session starting point; activeProvider/activeModel
  * are gone from config (session slots keep their own double fields). Legacy fields migrate
  * on load (write-back failure never blocks startup).
@@ -42,7 +42,7 @@ export const DEFAULTS = {
   agent: {
     maxTurns: 200,
     subagentTurns: 100,
-    subagentModel: null,  // default subagent model: "provider:model" | provider name | model name (parent provider); null = inherit parent provider
+    subagentModel: null,  // default subagent model: "provider:model" | model name (parent provider); null = inherit parent provider
     subagentModels: {},   // per-type override: { explore, plan, coder, "eng-coder" } — priority: subagent tool model arg > this[role] > subagentModel > parent provider
     goalTurns: 200,
     compactThreshold: 100000,
@@ -76,6 +76,8 @@ export const DEFAULTS = {
     dbPath: join(configDir, "memory.db"),
     projectDir: ".thincoder/memory",
     team: null,
+    // 索引自维护（§6.14 面⑤ · 台账 #1096）：维护型备份保留枚数（轮转保最新 N——引擎钳 ≥ 1）
+    maintain: { backupKeep: 2 },
   },
   shell: null,            // bash tool shell executable (e.g. "C:\\Program Files\\Git\\bin\\bash.exe" or "pwsh"); null = system default (cmd on Windows, /bin/sh elsewhere)
   embedding: {
@@ -89,11 +91,14 @@ export const DEFAULTS = {
     // Structured search via Tavily when a key is set — empty apiKey → Bing RSS/HTML fallback (zero-config).
     apiKey: "",          // Tavily key (tvly-...) — optional
   },
+  // 浏览器工具（BROWSER-TOOL.md §3.2）：非空 ⇒ navigate 目标 host ∥ click/evaluate/type 的当前页 host 须命中
+  //（全等（大小写不敏感）∥ `*.` 前缀 = 子域通配）——收束面非沙箱；缺省空 = 不设限。
+  browser: { allowDomains: [] },
   traces: {
     enabled: false,  // §18.6 D-TR6 修订（2026-09-05 用户裁定——发布隐私："不希望用户那边也采集"）：轨迹存档默认 OFF——新用户零采集；本地调试分析可显式开（~/.thincoder/config.json traces.enabled:true）
     retentionHours: 24, // D-TR10：轨迹文件保留小时数——CLI 启动时删除超过该时长的文件（默认 24h）
   },
-  // 诊断开关（用户面 ① 配置键——CONFIG.md §6.2 名录）：`heapWatch` 默认开（设 false 关闭）——自愈臂
+  // 诊断开关（用户面 ① 配置键——CONFIG.md §6.2 名录）：`heapWatch` 默认开（设 false 关闭）——自愈分支
   // 遥测；`heapSnapshot` 默认关——采集 opt-in（堆转储敏感度 ≥ traces ⇒ 对齐发布隐私先例 D-TR6；
   // 2026-09-30 采集收网批；桌面端运行期热读 ∥ CLI 本进程下次启动）
   diagnostics: { heapWatch: true, heapSnapshot: false },
@@ -106,10 +111,33 @@ import { specForModel, providerSpec, specMatch, assistantToolCallMessage, setMod
 export { specForModel, providerSpec, specMatch, assistantToolCallMessage, setModelOverrides, getModelOverrides, effortDefaultFor, overrideKeyFor }
 
 
-// Window utilization threshold: compacts at 60% context, reserving 40% headroom
-// for injected context (directory tree, git context, outline, project instructions,
-// memory/doc search results) which can consume 30-50K tokens each turn.
+// Window utilization threshold: compacts at 60% of the USABLE window (window − output
+// reservation — providers require input + max_tokens ≤ window; 2026-10-06 user ruling:
+// the reservation folds into the budget so compaction fires first, never a provider
+// rejection), the remaining 40% stays as headroom for injected context (directory tree,
+// git context, outline, project instructions, memory/doc search results — 30-50K tokens
+// per turn).
 const COMPACT_RATIO = 0.6
+
+/** Output reservation the request counts against the window: explicit `provider.maxTokens`
+ *  (the value actually sent — `provider/core.mjs`) when set, else the spec `maxOutput`, else 0. */
+export function outputReserve(provider, spec) {
+  const explicit = provider?.maxTokens
+  if (Number.isFinite(explicit) && explicit > 0) return explicit
+  return spec?.maxOutput ?? 0
+}
+
+/** Usable input window = window − output reservation. Degenerate guard: a reservation
+ *  ≥ the window is non-physical (no input could ever fit — e.g. the doubao spec
+ *  `maxOutput` 524_288 > `context` 256_000 ∥ the test harness&apos;s 1K window vs the default
+ *  spec); collapsing the budget to 0 would be instant `context_limit` death — the very
+ *  failure the reservation fold exists to prevent. Fall back to half the window.
+ *  (2026-10-06——收口核验捕获：advisor-loop-split B5a 红。） */
+export function usableWindow(context, reserve) {
+  const ctx = context ?? 0
+  const usable = ctx - reserve
+  return usable > 0 ? usable : Math.floor(ctx / 2)
+}
 
 /** Derive compaction threshold; explicit is the value explicitly set in config file (takes priority), otherwise auto-computed from model.
  *  Second param accepts EITHER a model name string (pure spec lookup — legacy caller:
@@ -119,7 +147,8 @@ export function resolveCompactThreshold(explicit, modelOrProvider) {
   if (explicit != null) return { value: explicit, auto: false }
   const provider = typeof modelOrProvider === "string" ? { model: modelOrProvider } : (modelOrProvider ?? {})
   const spec = providerSpec(provider)
-  const value = Math.floor(spec.context * COMPACT_RATIO)
+  const usable = usableWindow(spec.context, outputReserve(provider, spec))
+  const value = Math.floor(usable * COMPACT_RATIO)
   return { value, auto: true }
 }
 
@@ -198,7 +227,7 @@ function warnConsultModelsFiltered(dropped, path) {
 /** #861（AGENT-LOOP-SUBAGENT.md §6.7.1）：subagent 模型覆盖加载期清洗——单源纯函数（核 loadConfig ∥ VSC 端壳 raw 读点同消费）；非法形态不 throw（`subagentModel` 非法 ⇒ null、`subagentModels` 非对象 ⇒ {}、值非法 ⇒ 剔除该键）。 */
 export function sanitizeSubagentModel(v) {
   const ok = typeof v === "string" && v.trim()
-  const dropped = ok || v == null ? [] : [`agent.subagentModel must be a non-empty string ("provider:model" | provider | model) — got ${Array.isArray(v) ? "array" : typeof v} — ignored (inherits the parent provider)`]
+  const dropped = ok || v == null ? [] : [`agent.subagentModel must be a non-empty string ("provider:model" | model) — got ${Array.isArray(v) ? "array" : typeof v} — ignored (inherits the parent provider)`]
   return { value: ok ? v : null, dropped }
 }
 export function sanitizeSubagentModels(v) {
@@ -207,7 +236,7 @@ export function sanitizeSubagentModels(v) {
   const value = {}, dropped = []
   for (const [role, val] of Object.entries(v)) {
     if (typeof val === "string" && val.trim()) { value[role] = val; continue }
-    dropped.push(`agent.subagentModels.${role} must be a non-empty string ("provider:model" | provider | model) — got ${Array.isArray(val) ? "array" : typeof val} — dropped`)
+    dropped.push(`agent.subagentModels.${role} must be a non-empty string ("provider:model" | model) — got ${Array.isArray(val) ? "array" : typeof val} — dropped`)
   }
   return { value, dropped }
 }
@@ -217,12 +246,12 @@ function warnSubagentModelsFiltered(dropped, path) {
   if (warnedSubagentModels || dropped.length === 0) return
   warnedSubagentModels = true
   console.warn(`[config] agent.subagentModel/subagentModels: ${dropped.length} invalid entr${dropped.length === 1 ? "y ignored" : "ies ignored"} (filtered — startup continues; no crash):\n` +
-    `${dropped.map((d) => `  - ${d}`).join("\n")}\n  Fix: clean it in ${path} — "provider:model" | provider | model.`)
+    `${dropped.map((d) => `  - ${d}`).join("\n")}\n  Fix: clean it in ${path} — "provider:model" | model.`)
 }
 
 /**
  * Find provider by name in providers[].
- * Throws if name is non-empty but not found — a typo in activeProvider silently falling to the first provider would use the wrong key on the wrong endpoint.
+ * Throws if name is non-empty but not found — a typo in the caller-supplied name (e.g. `defaultModel`) silently falling to the first provider would use the wrong key on the wrong endpoint.
  * Returns the first provider when name is empty.
  */
 export function findProvider(providers, name) {
@@ -230,24 +259,35 @@ export function findProvider(providers, name) {
     const found = providers.find((p) => p.name === name)
     if (found) return found
     const available = providers.map((p) => p.name).join(", ") || "(empty)"
-    throw new Error(`activeProvider "${name}" not in providers list (available: ${available}); check for a typo in: ${configPath}`)
+    throw new Error(`provider "${name}" not in providers list (available: ${available}); check for a typo in: ${configPath}`)
   }
-  return providers[0] ?? { name: "default", baseURL: "", model: "" }
+  return providers[0] ?? { name: "default", baseURL: "" }
 }
 
-/** Normalize proxy config to { uri, web, model } or undefined (uri/url both accepted; invalid types dropped) */
+/** Normalize proxy config to { uri, web } or undefined (uri/url both accepted; invalid types dropped) */
 export function normalizeProxy(proxy) {
-  if (typeof proxy === "string") return proxy ? { uri: proxy, web: true, model: false } : undefined
+  if (typeof proxy === "string") return proxy ? { uri: proxy, web: true } : undefined
   if (!proxy || typeof proxy !== "object" || Array.isArray(proxy)) return undefined
   const uri = proxy.uri || proxy.url || ""
   if (typeof uri !== "string" || !uri) return undefined
-  return { uri, web: proxy.web !== false, model: proxy.model === true }
+  return { uri, web: proxy.web !== false }
+}
+
+/** 团队登录段加载归一（B1 批——`docs/core/design/TEAM.md` §2.1 ∥ CONFIG.md §6.4）：非对象 ⇒ null（软失败
+ *  不阻启动——沿 proxy 段先例）；键级 = trim 非空字符串（非串 ∥ 空 ⇒ null）；`member` 浅形 `{ username, name }`。
+ *  **不入 `DEFAULTS`**（settings 工具面零涉——agent 不可写；`team.token` 经读面到达 = 敏感段词表遮罩）。 */
+export function normalizeTeamSection(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return null
+  const str = (v) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null)
+  const raw = value.member
+  const member = raw !== null && typeof raw === "object" && !Array.isArray(raw) ? { username: str(raw.username), name: str(raw.name) } : null
+  return { server: str(value.server), member, label: str(value.label), token: str(value.token) }
 }
 
 /**
  * Load configuration.
  * No env-var overrides — config.json is the single source of truth
- * (API keys, baseURL, model, activeProvider all come from the file).
+ * (API keys, baseURL, defaultModel all come from the file).
  */
 /** Keep only { header: "string value" } pairs from a provider's headers field — anything
  *  else (null, arrays, nested objects) is dropped so it can never reach a fetch call.
@@ -296,6 +336,7 @@ export function loadConfig() {
     agent: { ...DEFAULTS.agent, ...config.agent },
     memory: { ...DEFAULTS.memory, ...config.memory },
     embedding: { ...DEFAULTS.embedding, ...config.embedding },
+    browser: { ...DEFAULTS.browser, ...config.browser },
     traces: { ...DEFAULTS.traces, ...config.traces },
     diagnostics: { ...DEFAULTS.diagnostics },
   }
@@ -313,10 +354,9 @@ export function loadConfig() {
   const _diagRaw = config.diagnostics && typeof config.diagnostics === "object" && !Array.isArray(config.diagnostics) ? config.diagnostics : {}
   for (const key of ["heapWatch", "heapSnapshot"]) if (typeof _diagRaw[key] === "boolean") merged.diagnostics[key] = _diagRaw[key]
 
-  // providers[].model 内存归一（v2 M3：非空字符串保留；非字符串/空串归一删除）——渠道默认模型
-  // 单值；无默认模型合法（模型选择经 /models 拉取候选——准入判据见 M8/M9）。
+  // providers[].model 一律删除（2026-10-09 清除批——渠道单值模型退场：渠道不携模型，不落任何
+  // 回退；模型身份唯二 = 顶层 defaultModel 复合串 ∥ 会话槽选定——PROVIDER.md §6.16 M3）。
   for (const p of merged.providers) {
-    if (typeof p.model === "string" && p.model.trim()) continue
     if (p.model !== undefined) delete p.model
   }
 
@@ -365,9 +405,12 @@ export function loadConfig() {
     if (p.baseURL) p.baseURL = p.baseURL.replace(/\/+$/, "")
   }
 
-  // Normalize proxy: string → { uri, web:true, model:false }; object 补默认值；非法类型丢弃。
+  // Normalize proxy: string → { uri, web:true }; object 补默认值；非法类型丢弃。
   // 保证 agent.config.proxy 永远是规范形态或 undefined
   merged.proxy = normalizeProxy(merged.proxy)
+
+  // 团队登录段（B1 批——TEAM.md §2.1）：加载归一（形不符 ⇒ null——软失败不阻启动）；不入 DEFAULTS
+  merged.team = normalizeTeamSection(merged.team)
 
   // Runtime provider = 统一解析（#841——resolveProviderPlan 单源：回退序 + 三态；PROVIDER.md §6.22）。
   // 不可运行（渠表空 ∥ 全表无 key）⇒ {} + providerInvalidReason（D-S1 处置不 throw——make-agent 打
@@ -401,7 +444,7 @@ export function loadConfig() {
 /**
  * MCP.md §5 D-3 (2026-09-01): re-read config.json and replace ONLY the agent's mcp section
  * — the agent 代配 closed loop (agent edits config.json with its edit tool, /mcp picks it
- * up). Never touches other config sections (providers/activeProvider stay as loaded).
+ * up). Never touches other config sections (providers/defaultModel stay as loaded).
  *
  * Malformed disk config → memory state kept, { ok:false, error } returned (the /mcp menu
  * shows "⚠ disk config unreadable"). Never throws.

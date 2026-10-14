@@ -76,6 +76,11 @@ export function isSubagentReadonlyAction(toolName, args) {
     const action = args?.action
     return action === "list" || action === "get"
   }
+  // manifest read 只读格（`MANIFEST.md` §2.10 · 台账 #1098——settings list/get 同分类；init / write 保持侧效门）
+  if (toolName === "manifest") {
+    const action = args?.action
+    return action === "read"
+  }
   // #9（TOOLS.md §6.19）：process 动作分级——list 保持只读分类（planMode 放行/免审批/可批并行）；
   // kill 是破坏性动作（审批门 + planMode 拒）。
   if (toolName === "process") return args?.action !== "kill"
@@ -87,6 +92,9 @@ export function isSubagentReadonlyAction(toolName, args) {
   if (action === "observe") return true
   // AGENT-LOOP-SUBAGENT.md §6.7.2 panel view 面（freeze 缺省/空 = 视图请求——readonly；非空 freeze 归控制类）
   if (action === "panel" && (args.freeze === undefined || args.freeze === null || String(args.freeze) === "")) return true
+  // DESIGN-TOKEN-SETTLEMENT.md §10 F-SL1（2026-10-07 批 ledger-tool）：design-slots = 只读清点
+  // （同 status / observe——planMode 放行 / 免审批 / digest 放行；工程模式父侧门在执行器内）。
+  if (action === "design-slots") return true
   return false
 }
 export function isSubagentControlAction(toolName, args) {

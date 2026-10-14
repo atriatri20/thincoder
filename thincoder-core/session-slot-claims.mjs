@@ -16,7 +16,7 @@
  * `unknown`（探测失败 / 缺行）⇒ 不认领 / 不判死 / 不删（D-MI10）。
  */
 import { existsSync } from "node:fs"
-// 探测束（判活）+ 属主三态判据 / 死主判定（本档零自有 exec——判据面与探测面分离）。
+// 探测束（判活）+ 属主三态判据 / 死主判定（本档零自有 exec——判据与探测面分离）。
 import { probeOwnersSync, ownerState, filterDeadOwners } from "./process-probe.mjs"
 // 存储原语（路径 / 原子写 / 进程 sessionId）——静态环见头注。
 import { getSessionId, manifestPath, slotPath } from "./session-slots.mjs"
@@ -210,7 +210,7 @@ export const _releaseStats = { calls: 0 }
  *  早退面：磁盘无 manifest ⇒ `existsSync` 单条目早退**零写**（不造盘面）；本进程无认领 ⇒
  *  零写返回 false。失败容忍（F-XR1「退出恒达」）：整体 try/catch **永不抛出**，返回 boolean
  *  （true = 有释放且落盘成功；false = 早退 / 失败 / **写面拒写**——`saveManifest` 返回值透传，
- *  §6.23 判据句 3——断言面）；写失败盘面 = 认领残留 →
+ *  §6.23 判据句 3——断言）；写失败盘面 = 认领残留 →
  *  恢复走既有探测面（现状形态，数据零险）。 */
 export function releaseClaimsAll(cwd) {
   _releaseStats.calls += 1

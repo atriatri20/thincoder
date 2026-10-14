@@ -8,7 +8,7 @@
  * 起跑刻 pending 单容器）逐条补发 `ev:subagent { status:"done" }` = **主面**——`settled` 待消化块随起跑归档入流、居消费轮行族之后；
  * `hooks.reclaim` = **兜底幂等**（迟结算面；已冻结块零动作）〔对位 VSC `suspension.mjs:112-119` ∥ CLI `suspension-drive.mjs:182`〕）；
  * 冻结 ⇒ 退出兜底同型）④ 输入 ∕ 关闭路由（`pushInput` + `wake` ∕ `abort`——容量满判先行
- * 〔#625：`pending.length >= QUEUED_MAX_ITEMS` ⇒ 零受理返 `"full"`〕）+ **窗队共镜**（窗输入队投影 = 载体 `entry.pending`——核输入队列同数组，零第二写者 ∥ **五帧**出站；降级窗占位 `suspension-guard.mjs` ∕ 帧面 `window-queue.mjs`）
+ * 〔#625：`pending.length >= QUEUED_MAX_ITEMS` ⇒ 零受理返 `"full"`〕）+ **窗队共镜**（窗输入队投影 = 载体 `entry.pending`——核输入队列同数组，零第二写者 ∥ **六帧**出站；降级窗占位 `suspension-guard.mjs` ∕ 帧面 `window-queue.mjs`）
  * ⑤ 提示面触发（用户回合完成 —— 档①）⑥ **残输入兜底**（出窗残值非空 ⇒ 以普通回合续发——不静默丢）⑦ **留档记录起跑半**
  * （消化面留档批 · #719）：digest `start` 与发帧**同点双动作** ⇒ 人读线记录（`session-io.mjs` `appendRecord`）；
  * 收尾 `end` 同族写点前移入 `turn-face.mjs` 结算序（**修复轮 3** —— 先于槽落盘；本档零发）；
@@ -24,6 +24,7 @@ import { upstreamAskLabelVars } from "@thincoder/core/agent-tools/parent-channel
 import { pushReal } from "@thincoder/core/context.mjs"
 import { QUEUED_MAX_ITEMS, takeQueuedBatchItem } from "@thincoder/core/queued.mjs"
 import { cleanupTurn } from "./attachments.mjs"
+import { panelLive } from "./panel-live.mjs" // 自愈扫读面（2026-10-06——#76 残块事故；同单例，禁第二副本）
 import { appendRecord } from "./session-io.mjs"
 import { guardedDeliver } from "./suspension-guard.mjs"
 import { createSuspensionTimers } from "./suspension-timers.mjs"
@@ -38,7 +39,7 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   if (typeof runTurn !== "function") throw new Error("[suspension-drive] runTurn required (single-turn face)")
   /** 窗表：key → entry（`entry` = `{ key, agent, cwd, controller, frozen, handle, pending }`；`pending` = 残输入投影（富条目 `{ text, ts, images? }`——与忙态队同形））。 */
   const windows = new Map()
-  /** 窗队投影 ∕ 帧构造面（出档 `window-queue.mjs` —— 受理 ∕ 步边界取批 ∕ 残倾出 ∕ 清队 + 五帧定点出站）。 */
+  /** 窗队投影 ∕ 帧构造面（出档 `window-queue.mjs` —— 受理 ∕ 步边界取批 ∕ 残倾出 ∕ 清队 + 六帧定点出站）。 */
   const queue = createWindowQueue({ postQueue, prepare, degrade })
   /** 续发期键集（窗已摘、残值续发链在跑——`abort` 的第二落点，免「中止窗口期」盲区）。 */
   const resuming = new Set()
@@ -69,6 +70,30 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
     return out
   }
 
+  /** 已消化驻留块自动回收（2026-10-06——#76 digested-stuck 事故；形状 = 手动 freeze 谓词（`subagent-panel.mjs:117-155`）
+   *  的 beat 级自动化）：渲染面报块中 `awaitingDigest ∧ frozen ∧ 非 consult` ∧ 核侧不在驻留（两池 + pending 皆无）
+   *  ⇒ 判定「已消化驻留」（done 帧曾丢——帧面零持久痕为该事故的读面缺口）⇒ 补发 done（幂等：重复发射由渲染面归档闸消化）。
+   *  谓词逐 beat 现算 = 零新存储（符「位置零存储」裁）；效果 = 分钟级自愈，不再等池空 freezeAll ∥ 手动 freeze。 */
+  function sweepDigestedStuck(key, agent) {
+    const blocks = panelLive.get(key)?.blocks
+    if (!Array.isArray(blocks)) return
+    const live = resident(agent)
+    const hits = []
+    for (const b of blocks) {
+      if (!b || b.awaitingDigest !== true || b.frozen !== true || b.role === "consult") continue
+      const m = /^sub:([A-Za-z][\w-]*)#(\d+)$/.exec(String(b.key ?? ""))
+      if (!m) continue
+      const role = m[1]
+      const id = Number(m[2])
+      if (live.some((e) => e && e.role === role && e.id === id)) continue // 仍在池 ∥ 报告未达 ⇒ 不动（手动 freeze 同判）
+      hits.push({ role, id })
+    }
+    if (hits.length > 0) {
+      console.error(`[suspension-drive] sweep-digested-stuck ${key} → ${hits.map((h) => `${h.role}#${h.id}`).join(",")}`)
+      reemitDone(key, hits)
+    }
+  }
+
   /** 逐条补发 `done`（`settled` 等待消化块 ⇒ 归档入流；块回收与池空解耦——不等池空）。载荷形 = VSC 收回面同款。
    *  **会话本体零渲染行（consult）——不跳过**：按会话条目 `childIds` 逐子块补发（块键形 `consult#<N>`，
    *  consult 同族收齐批 · 台账 #748——三路径同件：起跑支 ∥ `reclaim` ∥ `freezeAll`；VSC 对位物 `remitConsultChildBlocks`（两径共用）同判）。
@@ -76,6 +101,7 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   function reemitDone(key, entries) {
     for (const e of entries) {
       if (!e || e.id === undefined || e.id === null) continue
+      console.error(`[suspension-drive] reemit-done ${key} ${e.role ?? "subagent"}#${e.id}`) // 诊断痕（2026-10-06——#76 digested-stuck 事故；起跑补发∥reclaim∥freezeAll∥自愈扫 四径共用本点）
       if (e.role === "consult") {
         // #748：会话本体无行——逐子块展开（无块子块不入表 ⇒ 表空 = 零发）；本体 id 零补发
         for (const cid of e.childIds ?? []) post("ev:subagent", { key, role: "consult", id: cid, status: "done" })
@@ -155,6 +181,7 @@ function pendingSnapshot(agent) {
       // 起跑窗复位（本批 2026-10-01 裁 A —— **主面**）：起跑刻 pending 快照逐条补发 `done` ⇒ `settled`
       // 待消化块随起跑归档入流（居消费轮行族之后）；`hooks.reclaim` = 兜底幂等。
       reemitDone(key, pendingSnapshot(agent))
+      sweepDigestedStuck(key, agent) // 已消化驻留块自愈（2026-10-06——#76 残块事故；三拍之一）
     }
     if (!timerTurn) reloadSlot?.(key, agent, cwd) // 会话钉定：回合落槽面 = 本窗键槽（非现刻 activeSession —— 切会话零影响）；
     // timer 轮零重装（#799）：该轮重装已前移入 `suspension-timers.mjs` `deliver`（先于投递）——二次重装会再吞一行。
@@ -169,7 +196,9 @@ function pendingSnapshot(agent) {
    *  零新径）+ 档①（成功径，同 `send` 判据）；续发毕回合尾接管同形（池仍 live ⇒ 新窗——池内残余自愈链的常规入口）。
    *  残值为空 ⇒ 零动作（不接管：池内自愈 = 下一回合尾，同设计失败面）。
    *  **降级窗占位**（`hold`——两调用点同判，守卫序列 `guardedDeliver`）：逐批起窗 ∕ 查位 ∕ `release`；窗后占位被摘 ⇒ 零起跑 + 本径落盘件自清 ∧ 不重投。
-   *  **中止检查点**（续发期窗已摘 ⇒ `abort` 经 `resuming` ∕ `abortTombstones` 落位）：每批起跑前 + 接管前查位——命中 ⇒ 停链（余值随会话终止——记错一行，非静默）且**不接管**（会话已亡 ⇒ 零复活窗）。 */
+   *  **中止检查点**（续发期窗已摘 ⇒ `abort` 经 `resuming` ∕ `abortTombstones` 落位）：每批起跑前 + 接管前查位——命中 ⇒ 停链（余值随会话终止——记错一行，非静默）且**不接管**（会话已亡 ⇒ 零复活窗）。
+   *  **弃件链尾帧（#912）**：两弃件出口（墓碑 `return` 前 ∥ `!stillHeld` 断点）各补一次 `queue.emitState` —— 弃余件零帧漏点消（倾出后未消费即弃 ⇒ 镜面亦恒收口；快照整置 · 幂等）；**全消费正常径零增帧**（逐条消费帧已收口）。
+   *  **弃余计数（#912）**：`!stillHeld` 分支 = **取批前**余量（含本批已取未达件）；墓碑分支 = 倾出后未被取余量。 */
   async function resumeResidual(entry) {
     const items = queue.drain(entry.pending) // 残值倾出（倾出后按核件取项分批）
     if (items.length === 0) return
@@ -178,12 +207,14 @@ function pendingSnapshot(agent) {
     try {
       for (;;) {
         if (abortTombstones.has(entry.key)) { dropped = items.length; break } // 续发期中止 ⇒ 停链
+        const before = items.length // 取批前余量（弃件计数口径 —— 含本批已取未达件）
         const { item } = takeQueuedBatchItem(items) // 核件取项（合并批 ∕ 携图退化逐条——同一取项单源）
         if (item === null) break
         const { stillHeld, consumed } = await guardedDeliver(entry.key, hold, (signal) => queue.consume(entry.key, item, entry.agent, signal))
         if (!stillHeld) { // 窗后零起跑判据：零起跑 ∧ 不重投（条目已摘——不复位；消费帧已出——不追回）
           cleanupTurn(consumed?.attached?.paths ?? []) // 本径落盘件自清（回合尾清理面不达）
-          dropped = items.length
+          dropped = before // 弃余计数 = 取批前余量（含已取未达批 —— #912 收正）
+          queue.emitState(entry.key) // 弃件出口①：链尾状态帧（镜面收口为实况 —— #912）
           break // 停链（占位被摘 ⇒ 零起跑——链径现式）
         }
         try {
@@ -198,6 +229,7 @@ function pendingSnapshot(agent) {
     }
     if (abortTombstones.delete(entry.key)) { // 续发期中止（含末轮后落位）：停链 + 零接管
       if (dropped > 0) console.error(`[suspension-drive] window ${entry.key} aborted mid-resume — ${dropped} accepted message(s) dropped with the session`)
+      queue.emitState(entry.key) // 弃件出口②：链尾状态帧（墓碑径 —— 含末轮后落位；幂等）
       return
     }
     start(entry.key, entry.agent, { cwd: entry.cwd })
@@ -225,8 +257,8 @@ function pendingSnapshot(agent) {
       injectResidual: (item) => injectResidual(agent, item),
       timerFace: timers.faceOf(key, agent, cwd), // opt-in timer 面（§6.30.10）：窗内到期 ⇒ 兑现开 timer 轮（不等池空；#799：`deliver` 内先重装后投递）
       hooks: {
-        onCounts: (counts) => postSusp(key, agent, true, counts), // 计数 ⇒ `ev:susp`（核单点直传）
-        reclaim: (consumed) => reemitDone(key, consumed), // 回收 ⇒ 兜底幂等（起跑窗漏口 ∥ 迟结算面——本批 2026-10-01）
+        onCounts: (counts) => { postSusp(key, agent, true, counts); sweepDigestedStuck(key, agent) }, // 计数 ⇒ `ev:susp`（核单点直传）+ 自愈扫拍
+        reclaim: (consumed) => { reemitDone(key, consumed); sweepDigestedStuck(key, agent) }, // 回收 ⇒ 兜底幂等（起跑窗漏口 ∥ 迟结算面——本批 2026-10-01）+ 自愈扫拍
         freezeAll: () => { // 冻结 ⇒ 退出兜底同型（残项逐条补发；abort 径用中止前快照）
           const frozen = entry.frozen ?? resident(agent)
           entry.frozen = null
@@ -300,9 +332,9 @@ function pendingSnapshot(agent) {
       timers.disarmAll() // 切项目级联 ⇒ 撤闩清点（幂等——逐键 abort 已撤，兜底无闩面）
       return n
     },
-    /** 窗数读数（诊断 ∕ 测试面）。 */
+    /** 窗数读数（诊断 ∕ 测试）。 */
     size() { return windows.size },
-    /** 闩数读数（诊断 ∕ 测试面 —— 撤闩清点断言；闩表为档内私有面）。 */
+    /** 闩数读数（诊断 ∕ 测试 —— 撤闩清点断言；闩表为档内私有面）。 */
     timerLatches() { return timers.size() },
   }
 }

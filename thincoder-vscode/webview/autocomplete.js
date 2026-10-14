@@ -1,5 +1,5 @@
 /**
- * autocomplete.js — @ 补全面 ∕ 附件采集面接线（本档原 189 行拆两档搬核：
+ * autocomplete.js — @ 补全 ∕ 附件采集面接线（本档原 189 行拆两档搬核：
  *  `composer/atmenu.mjs`（@ 下拉 ∕ 150ms 防抖 ∕ 自增 seq ∕ 键盘导航 ∕ 接受插入）+ `composer/attach.mjs`
  *  （栅格门 ∕ 文档级 paste ∕ `#file-input` ∕ `#attach-btn` ∕ 芯片条）；`atComplete` 出站亦在核内）。
  *

@@ -1,7 +1,7 @@
 # 可移植性（PORTABILITY）· 需求
 
 > 板块 = **可移植性**——工程模式机制在**任意用户项目**上的可用性（不假定项目形如本产品自研仓）。
-> 本档 = 该机制的**需求层权威**（F1–F10 / N1–N4——编号承旧档，不改号）。
+> 本档 = 该机制的**需求层权威**（F1–F11 / N1–N4——编号承旧档，不改号）。
 > 设计侧 = `docs/core/design/PORTABILITY.md`（分类权威 / 评审注入 / 端差——VSC 镜像面待并，见 `VSC-MIGRATION-INVENTORY.md §8B`）。
 > 建档：2026-09-15（**B 式迁移轮 · VSC 批 5**——`thincoder-vscode/docs/requirements/PORTABILITY.md` 内容重建入基准层；
 > 旧档原地一字不改、留作参照历史）。CLI 侧同名需求档（`thincoder-cli/docs/requirements/PORTABILITY.md`——需求组 FR10–FR15）**已并入（2026-09-15 · CLI 尾部真批）**——
@@ -35,14 +35,16 @@
 
 | **F10** | 项目状态档父侧可写（2026-10-05 · 台账 #941） | 分类器新增第五值 `state`。判定：文件名是 `project-manifest.json`（不分大小写），或路径含 `.thincoder/conventions.json` 这一段，就算状态档，不算代码。效果：主 agent 在工程模式下可以直接写这两个文件，父侧门放行，不需要令牌；唯一作者不变。优先级在 aux 之后、兜底之前，所以 `src/state/<x>.json` 这类仍然算代码。只动父侧门：eng-coder 门不动，VSC 跟着核走。判定函数 `isStatePath`，在 `thincoder-core/conventions.mjs`。 |
 
+| **F11** | 门禁辖域 = manifest 树以内（2026-10-08 · 用户裁定 · #1104） | 父侧门（CLI `dispatch.mjs`；VSC 端门已随核退役——单源）辖域判定改按**目标祖先链**：任一级祖先带 `PROJECT-MANIFEST.json` ⇒ 在辖——判据声明面 = **目标所属项目**（最近祖先，nearest wins），不再取会话 cwd；**找不到 manifest ⇒ 一律放行**。项目内判定零改（code 段 / fail-closed / aux·temp·doc·state 豁免）；**不可解析目标保守拦截不变**；未声明 hint 改指名所属项目（#1102）。 |
+
 ## 3. 非功能性需求
 
 | # | 维度 | 标准（含度量） |
 |---|---|---|
 | **N1** | 零假阳 | 默认判据（`src` 为代码面）对既有项目行为与修复前一致——专项用例零误报 + 全量回归全绿 |
 | **N2** | 降级不崩溃 | 声明损坏 / 不可读 → 默认 + `console.warn` + `logEvent`（不抛）；注入缺失 → 降级句（不抛） |
-| **N3** | 全接线 | 消费点逐处换源（评审 / 门禁 / 索引 / 提示词四族）——「修一处漏三处」在用例面反证 |
-| **N4** | 测试面 | 专项用例在位且 `npm test` 全绿：`thincoder-vscode/test/portability-vsc-classification.test.mjs` · `portability-vsc-advisor-context.test.mjs`；索引面核用例承接入 `thincoder-vscode/test/memory-index-face.test.mjs`（W8 已退役——同设计侧注） |
+| **N3** | 全接线 | 消费点逐处换源（评审 / 门禁 / 索引 / 提示词四族）——「修一处漏三处」在用例上反证 |
+| **N4** | 测试 | 专项用例在位且 `npm test` 全绿：`thincoder-vscode/test/portability-vsc-classification.test.mjs` · `portability-vsc-advisor-context.test.mjs`；索引面核用例承接入 `thincoder-vscode/test/memory-index-face.test.mjs`（W8 已退役——同设计侧注） |
 
 ## 4. 范围边界（不做）
 
@@ -101,7 +103,7 @@
 |---|---|---|
 | 旧档头注（板块行 + 「本批（2026-09-11）确立」批序 + 实施台账行号 as-of 注） | 批次语境 | 现行口径已入 §1 / §5；台账 = 父侧面 |
 | 旧档 §2 引言行（「判定句全文 = 设计档 §7 验收标准表」） | 旧树设计档节号指针 | 旧树指针形态——设计侧权威 = `docs/core/design/PORTABILITY.md` |
-| 旧档 §4 缺陷条目覆盖面（P1–P10 / P14 / P15 / P25 与后续批清单）+ §5 批次二 VSC 镜像面范围（VP-1–VP-12） | 分批执行材料 | 一次性批次材料——归批次档；VSC 镜像面结论已由本档 §2–§3 承载（P14 无对位物差异已登记 §4） |
+| 旧档 §4 缺陷条目覆盖范围（P1–P10 / P14 / P15 / P25 与后续批清单）+ §5 批次二 VSC 镜像面范围（VP-1–VP-12） | 分批执行材料 | 一次性批次材料——归批次档；VSC 镜像面结论已由本档 §2–§3 承载（P14 无对位物差异已登记 §4） |
 | 旧档 §3 尾注（「档位的运行面细节（提示词槽位 / digest 机器信号 / User stop 处理）已在纪律层提示词中生效；本条需求的确立 = 把该契约登记进需求层」） | 建档语境注 | 批次语境——落实文本已入 §5.2；提示词槽位 = 产品代码面（本档不逐字） |
 | 旧档变更记录（2026-09-11 三条） | 建档 / 修正轮流水 | 本档自有变更记录 |
 
@@ -129,3 +131,4 @@
 - 2026-09-27（**conventions.json 退役批 · 评审轮 2 收正 · 主 agent——需求档笔权**）：N4 清单收正为现行两档 + 承接入核面档（`portability-vsc-index.test.mjs` 已随 W8 退役——同设计侧注；零语义）。
 - 2026-09-28（**守卫族微修批 · 需求侧同步** · 主 agent——需求档笔权）：F9 判据句补「**项目根相对面**」限定（根外 / 根未知 ⇒ 面不可判 ⇒ 缺省不命中）——对齐设计档 `docs/core/design/PORTABILITY.md` §3.2 段匹配面（#465 收口）；零行为加码。
 - 2026-10-05（引擎面缺口批 · 需求侧同步）：新增 F10「项目状态档父侧可写」（分类器第五值 `state`）；档头计数改为 F1–F10。来源 = 批 `docs/batches/2026-10-05-engine-face-gaps.md`；台账 #941。
+- 2026-10-08（**设计闸辖域收正批 · 需求侧立案** · 主 agent——需求档笔权）：§2 增 **F11「门禁辖域 = manifest 树以内」**；档头计数 F1–F10 ⇒ **F1–F11**。来源 = 用户 2026-10-08 16:37 裁定（工作区根杂物被闸拒删实证）+ 16:38「可以，自动跑到交付」；批 = `docs/batches/2026-10-08-gate-jurisdiction.md`；台账 #1104（+ #1102 并批 ∥ #1103 同批顺落）。

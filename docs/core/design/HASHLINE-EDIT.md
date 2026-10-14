@@ -41,7 +41,7 @@ hashline_edit = **按内容哈希寻址编辑**（非字符串匹配）——**�
 
 ## 5. 测试
 
-用例住编辑工具族测试面（hash 匹配 / 歧义 / not-found 引导 / U+FFFD 警告）——逐档用例表归 **TESTING 板**（本层该档尚缺 = 后续迁移批项，见迁移台账 `docs/core/design/DOC-MIGRATION.md`）。
+用例住编辑工具族测试（hash 匹配 / 歧义 / not-found 引导 / U+FFFD 警告）——逐档用例表归 **TESTING 板**（本层该档尚缺 = 后续迁移批项，见迁移台账 `docs/core/design/DOC-MIGRATION.md`）。
 
 ## 6. 机制面（B 式迁移并入——现状路径）
 

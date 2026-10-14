@@ -123,7 +123,7 @@
 （与挂起态入队分支同款清理——`state.input` 永不被后台事件读写的不变量（§4）保持：入队是**前台**按键路径写自己的队列）。
 **挂起面入队后同款唤醒**：`state.suspended || state._suspPending` ⇒ `state._suspWake?.()`（§4 既有挂起分支同款）；
 busy 期该槽恒 null ⇒ 零动作——证据 = `thincoder-cli/src/tui/suspension-drive.mjs:122`（等待结束清理即置 null）· `:137`（仅在 `waitForSettleOrWake` 等待窗口注入；唯一调用点 `:279`）（as-of 2026-09-29）
-⇒ 轮末 driver 步骤 1 恒接走；普通 busy 面零唤醒（现状零改）。批档 §2 用例面「挂起内入槽」格断言 `wakes` 计数（= 呼叫点执行——桩注入 spy；生产 busy 期零副作用）。
+⇒ 轮末 driver 步骤 1 恒接走；普通 busy 面零唤醒（现状零改）。批档 §2 用例「挂起内入槽」格断言 `wakes` 计数（= 呼叫点执行——桩注入 spy；生产 busy 期零副作用）。
 
 **再提交与满队（容量 8）= 拒 + 提示 + 文本保留**：容量内再提交 ⇒ 连续入队（多槽——每条各占一项）；满队再提交 ⇒ 拒 + 提示 + 文本保留
 （不覆盖、不丢——违「不静默丢」纪律的反面；先例 `thincoder-cli/src/tui/suspension-drive.mjs:308-311` 中止残余转正注释）；拒 + 提示与既有队列满语义同构零新机制。

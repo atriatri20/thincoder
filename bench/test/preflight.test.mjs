@@ -1,5 +1,5 @@
 /**
- * test/preflight.test.mjs — §5.13 `preflight.1`（枚举面 · fail-closed · 六项对齐腿）+ `run.mjs` 启动门拒跑腿
+ * test/preflight.test.mjs — §5.13 `preflight.1`（枚举面 · fail-closed · 六项对齐用例）+ `run.mjs` 启动门拒跑用例
  * + `lib/params.mjs` 单源构造面（KD-32 / KD-34 · 台账 #264 / #266）。
  *
  * 判定单源 = `bench/lib/params.mjs`（**stub config + 真 spec 表** · 零网络）；实弹面（`--live`）不在测试射程
@@ -35,10 +35,10 @@ test("preflight.1：枚举面六项对齐腿（① 全合法 / ② provider 缺 
     { id: "B", provider: "p", model: "glm-5.3" },
     { id: "C", provider: "p", model: "deepseek-v4-pro" },
   ]
-  // ① 对照腿：provider 在 config · spec 命中（真 spec 表）· effort ∈ 枚举（若有） ⇒ 零阻断
+  // ① 对照用例：provider 在 config · spec 命中（真 spec 表）· effort ∈ 枚举（若有） ⇒ 零阻断
   const ok = enumerationPreflight({ entries: [entryOf({ label: "ds", model: "deepseek-flash", reasoningEffort: "high" })], slots, providers })
   assert.deepEqual(ok.blockers, [], `① 全合法 ⇒ 零阻断（实得：${ok.blockers.join("；")}）`)
-  // ⑥ thinking 面（项⑥）= **不设判定**（明示无腿）：逐行打印 thinkApi 供目检，不进任何判定集
+  // ⑥ thinking 面（项⑥）= **不设判定**（明示无用例）：逐行打印 thinkApi 供目检，不进任何判定集
   assert.ok(ok.lines.some((l) => l.startsWith("信息") && l.includes("thinkApi") && l.includes("不设判定")), "⑥ thinking 面明示不设判定（打印 thinkApi）")
   assert.equal(ok.warnings.length, 0, "⑥ thinking 面零报警")
   // ② provider 缺（项①）⇒ 阻断 + 逐条点名
@@ -53,7 +53,7 @@ test("preflight.1：枚举面六项对齐腿（① 全合法 / ② provider 缺 
   const r3 = enumerationPreflight({ entries: [entryOf({ label: "bad-effort", model: "deepseek-flash", reasoningEffort: "medium" })], providers })
   assert.equal(r3.blockers.length, 1)
   assert.match(r3.blockers[0], /reasoningEffort「medium」∉ 该档枚举 \[low, high, max\]/)
-  // ⑤ 豁免变体（项⑤ · 新腿）：路由形态名（`model` 含 `/`）⇒ ③ 判定跳过 · 零阻断 + 豁免行在位
+  // ⑤ 豁免变体（项⑤ · 新用例）：路由形态名（`model` 含 `/`）⇒ ③ 判定跳过 · 零阻断 + 豁免行在位
   const r4 = enumerationPreflight({ entries: [entryOf({ label: "router", model: "kimi/kimi-k3", reasoningEffort: "medium" })], providers })
   assert.deepEqual(r4.blockers, [], "⑤ 路由形态名 ⇒ effort 不启送 ⇒ 判定跳过")
   assert.ok(r4.lines.some((l) => l.startsWith("豁免") && l.includes("model 含 /")), "⑤ 豁免行在位（记录面按未发送处置）")
@@ -76,7 +76,7 @@ test("preflight.1：枚举面六项对齐腿（① 全合法 / ② provider 缺 
   assert.match(r7.blockers[0], /判官 B 位：reasoningEffort「medium」∉ 该档枚举/)
   const r8 = enumerationPreflight({ slots: [{ id: "A", provider: "missing", model: "glm-5.3" }], providers: judgeProviders })
   assert.match(r8.blockers[0], /判官 A 位：provider「missing」不在用户 config/)
-  // 替代池逐项同受检（§2.13 射程扩池 · 池内项腿）：provider 缺 / spec 未命中 / effort 越枚举 ⇒ 阻断；豁免档 ⇒ 判定跳过
+  // 替代池逐项同受检（§2.13 射程扩池 · 池内项用例）：provider 缺 / spec 未命中 / effort 越枚举 ⇒ 阻断；豁免档 ⇒ 判定跳过
   const r9 = enumerationPreflight({ pool: [{ id: "替代级 1", provider: "missing", model: "glm-5.3" }], providers: judgeProviders })
   assert.match(r9.blockers[0], /判官替代级 1：provider「missing」不在用户 config/, "池项 provider 缺 ⇒ 阻断")
   const r10 = enumerationPreflight({ pool: [{ id: "替代级 2", provider: "jp", model: "no-such-model-x" }], providers: judgeProviders })
@@ -108,11 +108,11 @@ test("run.mjs 启动门：枚举面零阻断 ⇒ 照跑 exit 0；有阻断（判
   let calls = 0
   globalThis.fetch = () => { calls++; throw new Error("network disabled by test") }
   try {
-    // 对照腿：真数据（真 roster + 真 judge.json + 真 spec 表）⇒ 枚举面零阻断 ⇒ dry-run 全链路照跑
+    // 对照用例：真数据（真 roster + 真 judge.json + 真 spec 表）⇒ 枚举面零阻断 ⇒ dry-run 全链路照跑
     const okRun = await runCli(["--dry-run", "--models", "mimo-v2.6-flash", "--dims", "reasoning", "--label", `pf-ok-${process.pid}`])
     assert.equal(okRun.code, 0, okRun.out)
     assert.equal(calls, 0, "对照腿零网络")
-    // 阻断腿：stub judge.json 槽位模型未在册（spec 未命中 = 项②）⇒ 启动门拒跑
+    // 阻断用例：stub judge.json 槽位模型未在册（spec 未命中 = 项②）⇒ 启动门拒跑
     const bad = join(tmpDir(), "judge-unknown-slot.json")
     writeFileSync(bad, JSON.stringify({
       version: 1,

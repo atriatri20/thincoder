@@ -1,7 +1,7 @@
 /**
  * agent/chat-call.mjs — 单回合模型调用（2026-09-29 P2 三拆：agent.mjs runAgent 段 4 逐字迁入 +
  * `streamOutputAllowed` 定义随迁——agent.mjs re-export 保 import 面）。
- * 接口 = callModelTurn(agent, ctx) → response；错误走原样：AbortError-中断臂处理完照旧 `throw e`，
+ * 接口 = callModelTurn(agent, ctx) → response；错误走原样：AbortError-中断分支处理完照旧 `throw e`，
  * 由 runAgent 的 catch/finally 收束。
  */
 import { chat } from "../provider/index.mjs"

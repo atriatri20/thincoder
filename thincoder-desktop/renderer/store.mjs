@@ -7,7 +7,9 @@
  * 会话族与活动池切片随各自批次填充。
  * 批 9 增 `settings` 切片（开合 / 四段三态 / 向导 / 校验结果 —— `docs/desktop/design/UI.md` §1 设置面行）——**值面归接线层**（`renderer/mount-settings.mjs` 只经
  * `patchSettings` 落值），本档只持槽位 + 四条纯动作；`configured` 为**三态读数**（`null` = 未知）。
- * **B10 W2 增三键**（`settings.providers` 切片 —— S1 ∕ S2 面）：`edit`（行内钥编辑态 = 渠名；写者 = 出口，`loadProviders` ∕ 关面复位）· `probe`（自定形「拉取模型」三态果 `{ state, models, reason }`）· `draft`（表单暂存值回填快照 —— 探果写切片致重挂时救回未落盘输入）。
+ * **B10 W2 增三键**（`settings.providers` 切片 —— S1 ∕ S2 面）：`edit`（行内钥编辑态 = 渠名；写者 = 出口，`loadProviders` ∕ 关面复位）· `probe`（「拉取模型」三态果 `{ state, models, reason }`）· `draft`（表单暂存值回填快照 —— 探果写切片致重挂时救回未落盘输入）。
+ * **三端对齐批增一键**（2026-10-07 · 台账 #1027–#1029 · KD-75 ③）：`addShape`（添加弹窗**形状唯一源** ——
+ *  值 = 类型选择现值：预设名 ∥ `"custom"`；缺省 `"preset"`；写者 = 出口族 `onAddShape`，开 ∥ 关弹窗 ∥ 写成功径复位）。
  * **桌面残余三轮 · 波 C 增一键**（#615② —— 改钥失败径草稿种子）：`keyDraft`（`{ name, value }` ∕ `null` —— 设 ∕ 改钥失败 ⇒ 键入值落此槽，重挂后行内输入按名回填；
  *  成功 ∕ 取消 ∕ 开面 ∕ 关面四处复位；写者 = `renderer/mount-settings-segments-providers.mjs`）。
  * R3a 增四槽（D17 状态行读数面 —— `renderer/views/statusline.mjs` 读面）：`turns` / `turnStarts` / `tokens` / `timers`（后两槽 = `ev:usage` 载荷扩）。
@@ -114,17 +116,17 @@ export function initialState() {
     settings: {
       open: false,
       notice: null,
-      modal: null, // 组弹窗切片（D39 ∥ D38 · #817：`null` ∥ 组名七值闭集；写者 = `renderer/mount-settings.mjs` `openSettingsModal` ∥ `closeSettingsModal`）
+      modal: null, // 组弹窗切片（D39 ∥ D38 · #817：`null` ∥ 组名十值闭集——七段名 + `providerAdd`（三端对齐批 · KD-75 ①②）∥ `mcpForm` ∥ `consultAdd`（添加入口弹窗统一批 · KD-77 ①②）；写者 = `renderer/mount-settings.mjs` `openSettingsModal` ∥ `closeSettingsModal`）
       configured: null,
-      defaultModel: null,
-      wizard: { step: 1, dismissed: false, notice: null },
-      providers: { state: "none", presets: [], providers: [], edit: null, probe: null, draft: null, keyDraft: null },
+      // 步初值 = 路由屏（`"route"` —— 登录面补全批：首启两路路由屏为第一屏；闭集见 `WIZARD_STEPS`）。
+      wizard: { step: "route", dismissed: false, notice: null },
+      providers: { state: "none", presets: [], providers: [], edit: null, probe: null, draft: null, keyDraft: null, addShape: "preset" },
       verify: null,
       model: { state: "none", provider: null, current: null, models: [] },
       agent: { state: "none", fields: [] },
       mcp: { state: "none", servers: [], details: {}, form: null },
       // R7 两新段（env = proxy ∕ shell；models = consult ∕ advisor 行两 picker）与 tools 段键族（R2 起自持）：
-      env: { state: "none", proxy: { uri: "", web: true, model: false }, shell: { current: null, candidates: [] }, test: null },
+      env: { state: "none", proxy: { uri: "", web: true }, shell: { current: null, candidates: [] }, test: null },
       // tools 段：`keys` 初始 `null`〔键面读数未达〕⇒ 两 key 行零节点（首读落位后成对象）；`edit` = 行内编辑态。
       tools: { state: "none", status: null, building: false, keys: null, edit: null },
       models: {
@@ -316,10 +318,14 @@ export function configuredFlag(value) {
   return null
 }
 
-/** 向导步进（步域 1..3 闭集）：越界 / 非整数 / 同值 ⇒ **原引用**（无变化零通知）。 */
+/** 向导步闭集（**登录面补全批收正** —— 步界单源 = `docs/desktop/design/SETTINGS.md` §2.6：`"route"` ∥ `"team"` ∥ 1–3；
+ *  两屏（路由 ∥ 团队表单）的**表外值回落 `"route"`** 归显示面 `renderer/views/onboarding.mjs`（本表经其导入——零第二副本）。 */
+export const WIZARD_STEPS = Object.freeze(["route", "team", 1, 2, 3])
+
+/** 向导步进（步闭集 = `WIZARD_STEPS`——表外 / 同值 ⇒ **原引用**（无变化零通知））。 */
 export function setWizardStep(state, step) {
   const wizard = state.settings?.wizard ?? {}
-  if (!Number.isInteger(step) || step < 1 || step > 3 || wizard.step === step) return state
+  if (!WIZARD_STEPS.includes(step) || wizard.step === step) return state
   return patchSettings(state, { wizard: { ...wizard, step } })
 }
 

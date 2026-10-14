@@ -57,7 +57,7 @@ export function createSuspensionTimers({ post, runTurn, busyOf = () => false, in
         runTurn: (k, a, text, opts) => { ran = true; return runTurn(k, a, text, opts) },
       })
     } finally {
-      if (ran) { if (takeOver) takeOver(key, agent); else watch.sync(key, agent) } // 接管面缺省 ⇒ 回落闩重同步（用例面）
+      if (ran) { if (takeOver) takeOver(key, agent); else watch.sync(key, agent) } // 接管面缺省 ⇒ 回落闩重同步（用例）
     }
   }
 

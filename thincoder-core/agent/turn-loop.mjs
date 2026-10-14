@@ -22,7 +22,7 @@ import {
 
 export async function runTurnLoop(agent, {
   maxTurns, threshold, toolSchemas, toolByName, systemPrompt,
-  depth, signal, autoTurn, streamOutput,
+  depth, signal, autoTurn, suspDriven, streamOutput,
   consumeInjected, consumeQueuedInput, callbacks, distillSignal,
 }) {
   let guardPushbacks = 0
@@ -105,7 +105,9 @@ export async function runTurnLoop(agent, {
     // consumeInjected 回调承载（异步子代理专属——缺省 null：主会话/阻塞子代理零开销）。
     consumeInjected?.(agent)
     // 子代理在飞消息（子 → 父；§6.27）：空队列 no-op；非空 ⇒ 恰一条合并 user 消息注入。
-    drainChildUpstream(agent)
+    // 批 async-delivery-formalize（§6.34.2 行 2）：驱动面收窄「交付轮轮首」（`turn === 0` ∧ `autoTurn`——
+    // 用户回合零 drain）；回退面（`!suspDriven`）逐字保持（每轮每步）。
+    if (!suspDriven || (turn === 0 && autoTurn === true)) drainChildUpstream(agent)
     // ③ 用户 → 主会话投递（步边界 pickup——queue-visible 批 fix 轮 2026-09-24 · F16）：循环头
     // 回合边界缝（核只给缝、不给策略——取批 / pushReal / 呈现归端侧闭包）；缺省 null，系统轮不传
     // （`AGENT-LOOP-ASYNC-POOL.md` §6.8「步边界 pickup」· 适用面 = 用户回合）。
@@ -260,7 +262,7 @@ export async function runTurnLoop(agent, {
     // Commit tool results (pairing, multimodal deferral, mutation accounting, reindex)
     await recordToolResults(agent, toolByName, results)
 
-    injectPostTurn(agent, results, recentCallSigs, callbacks, turn)
+    injectPostTurn(agent, results, recentCallSigs, callbacks, turn, { suspDriven })
   }
 
   // #417（撞帽载荷「本段零落盘轮数」）：收尾轮（撞帽轮）若零落盘同样计入——轮顶计数只

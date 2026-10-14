@@ -2,7 +2,7 @@
  * audit-block.mjs — 审计块构造器（AGENT-LOOP-SUBAGENT.md §6.26 · 台账 #23）。
  *
  * 自 `subagent-spawn.mjs` **逐字搬移**（D23-3 外提：spawn 档越 300 软线 + 块构造成纯函数
- * ⇒ 判据面可直测；D23-4：块内文本零改——含块内自指词，整块搬移不改真值）。本档承载
+ * ⇒ 判据可直测；D23-4：块内文本零改——含块内自指词，整块搬移不改真值）。本档承载
  * spawn 级固定机制性指令的第二块（审计模板 + A2 任务书摘要 + touched 快照）：
  * 装配侧只收集（`thincoder-core/agent-tools/subagent-spawn.mjs`），下发面 = system 固块
  * （`child._spawnSystemBlock` → 核 `prepareRun` 拼接——`thincoder-core/agent/setup.mjs`）。

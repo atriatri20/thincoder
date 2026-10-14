@@ -1,6 +1,7 @@
 /**
- * ipc-registry.mjs — 通道注册表族（`docs/desktop/design/IPC.md` §2「唯一入册面」）：**四十九项** =
+ * ipc-registry.mjs — 通道注册表族（`docs/desktop/design/IPC.md` §2「唯一入册面」）：**六十六项** = 
  * 白名单逐项 → 处理体映射（`HANDLERS` 表）+ 注册序（`registerIpcHandlers`）——**#28 拆点出档**
+ * （B1 批三新 —— 团队族 `team:status` ∥ `team:login` ∥ `team:logout`；登录面补全批一增 —— `team:verify`；转口档 `src/main/team.mjs`）
  * （批档 §2.5「通道注册表族出档」；纯搬零语义改 —— 表 ∕ 注册 ∕ 定序逐行沿出档前 `ipc.mjs`）。
  *
  * 单源与纪律（沿出档前同判）：
@@ -30,6 +31,8 @@ import {
   batchStatusChannel, indexBuild, indexStatusChannel, settingsEnvChannel, settingsToolsChannel, mcpToolsChannel,
   mcpUpdateChannel, mcpReconnectChannel,
 } from "./ipc-relays.mjs"
+/** 团队族四通道处理体（B1 批；登录面补全批增 `team:verify`）：核 `thincoder-core/team.mjs` 转口 —— 出档 `src/main/team.mjs`（表行逐字为映射）。 */
+import { teamLoginChannel, teamLogoutChannel, teamStatusChannel, teamVerifyChannel } from "./team.mjs"
 
 /** 通道 → 处理体（新增行即新增白名单项，两处同时动）。 */
 const HANDLERS = Object.freeze({
@@ -95,6 +98,10 @@ const HANDLERS = Object.freeze({
   "record:append": recordAppend,
   "theme:state": themeState,
   "panel:state": panelState,
+  "team:status": teamStatusChannel,
+  "team:login": teamLoginChannel,
+  "team:logout": teamLogoutChannel,
+  "team:verify": teamVerifyChannel,
 })
 
 /** 按白名单逐项注册（白名单项无处理体 ⇒ 抛——装配期即知，不静默）。 */

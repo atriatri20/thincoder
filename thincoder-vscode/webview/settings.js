@@ -8,10 +8,15 @@
 import { SS } from "./settings-state.js"
 import { t } from "./i18n.js"
 import { showConfirmPopover, closeConfirmPopover } from "./settings-widgets.js"
-import { installProviderHandlers, providersCardHtml, bindAddProviderForm, updateProviderStatus, updateTestProviderResult } from "./settings-providers.js"
+import { installProviderHandlers, providersCardHtml, bindAddProviderForm, updateProviderStatus } from "./settings-providers.js"
+import { installProviderDialogHandlers, closeAddProviderDialog, updateTestProviderResult } from "./settings-provider-dialog.js"
+import { closeMcpDialog } from "./settings-mcp-dialog.js"
+import { closeConsultDialog } from "./settings-consult-dialog.js"
 import { agentCardHtml, consultAdvisorCardHtml, bindAgentControls, updateAgentSettings } from "./settings-agent.js"
-import { installToolsKeyHandlers, toolsCardHtml, bindToolsControls, renderMcpList, updateMcpTools, updateMcpTestResult, updateWebsearchSettings, updateIndexStatus } from "./settings-tools.js"
+import { installToolsKeyHandlers, toolsCardHtml, bindToolsControls, updateWebsearchSettings, updateIndexStatus } from "./settings-tools.js"
+import { renderMcpList, updateMcpTools, updateMcpTestResult } from "./settings-mcp.js"
 import { envCardHtml, bindEnvControls, updateShellCandidates, updateProxySettings, updateProxyTestResult } from "./settings-env.js"
+import { teamCardHtml } from "./settings-team.js"
 
 // openSettings refresh (GitHub #3): one-shot callbacks waiting for the next agentSettings
 // push, plus their timeout-fallback timers (see openSettings / notifyAgentSettingsRefreshed).
@@ -33,6 +38,8 @@ export function initSettings({ onClose, getModels }) {
 
   // Expose to inline onclick handlers
   installProviderHandlers()
+  // 添加弹窗（#1029）：开框单例 ∥ 保存直呼面（表单族 = `settings-provider-dialog.js`）
+  installProviderDialogHandlers()
   installToolsKeyHandlers()
 
   window._mcpServers = {}
@@ -165,6 +172,9 @@ function closeSettings() {
   panel.style.display = "none"
   panel.setAttribute("aria-hidden", "true")
   closeConfirmPopover() // 取消路径 #4：关面板同清确认弹框 + 遮罩（零发值）
+  closeAddProviderDialog() // #1029 关五路 #5：关面板同清添加弹窗（卡 ∥ 幕两件——同拍）
+  closeMcpDialog() // #1054 关五路 #5：MCP 弹窗同清（两新档三清同拍）
+  closeConsultDialog() // #1054 关五路 #5：会诊弹窗同清（同带浮层）
   // #640 失败面销账：关 = 清槽（关后重开不复现——与「关面板不丢」互补）
   _lastFailure = null
   document.getElementById("settings-error-banner")?.remove()
@@ -175,9 +185,10 @@ function closeSettings() {
  *  Binding order matches the pre-split buildSettings exactly. */
 function buildSettings() {
   const body = document.getElementById("settings-body")
-  body.innerHTML = providersCardHtml() + agentCardHtml() + consultAdvisorCardHtml() + toolsCardHtml() + envCardHtml()
+  // 第 6 卡「团队」（B1 批——序尾追加，不重排前五卡；`SETTINGS.md` §1 六卡）
+  body.innerHTML = providersCardHtml() + agentCardHtml() + consultAdvisorCardHtml() + toolsCardHtml() + envCardHtml() + teamCardHtml()
 
-  // Bind Add-provider form controls
+  // Card-row bindings: default-model menu button + provider-row ✕ delete buttons
   bindAddProviderForm()
   // Agent/Consult/Advisor CHANGE-TO-SAVE bindings + model-menu/consult-row wiring
   bindAgentControls()
@@ -185,6 +196,8 @@ function buildSettings() {
   bindEnvControls()
   // MCP form/list, index build, MCP status request
   bindToolsControls()
+  // 团队卡 = 管理面（登录面补全批：卡内零登/退控件——登/退 = 首启板团队卡 ∥ 状态栏 item + 命令
+  // `thincoder.team`）；卡面重绘由 `updateTeamStatus` 推送驱动（无控件可绑）
   // #640：失败面补渲（关面板时落槽的一条在开面板建面后补显）
   renderSettingsError()
 }

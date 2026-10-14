@@ -10,20 +10,32 @@
  */
 import { readdir } from "node:fs/promises"
 import { join } from "node:path"
-import { SKIP_DIRS } from "./schema.mjs"
+import { SKIP_DIRS, SKIP_DIRS_FOLD, SKIP_DIR_PREFIXES } from "./schema.mjs"
+
+/** win32 fold index for the junk/product family (canonical spellings live in `SKIP_DIRS_FOLD`). */
+const SKIP_DIRS_FOLD_LOWER = new Set([...SKIP_DIRS_FOLD].map((n) => n.toLowerCase()))
 
 /** Upper guard for the walk: stop after this many matched files (runaway trees). */
 export const MAX_WALK_FILES = 20000
 
 /**
- * Shared skip predicate for project-relative paths: any SKIP_DIRS basename, or any
- * dot-prefixed segment (`.git`, `.cache`, `.thincoder`…). Accepts both separators.
+ * Shared skip predicate for project-relative paths (§6.14 面④ family split · 台账 #1081): exact
+ * basename (`SKIP_DIRS`) ∨ segment prefix (`SKIP_DIR_PREFIXES` — `bazel-*`; POSIX literal ∥ win32
+ * folded) ∨ (win32 only) folded junk/product family (`SKIP_DIRS_FOLD`); dot segments via the dot
+ * rule. `platform` is a test seam (default `process.platform`; callers keep the one-arg form).
  */
-export function isSkippedRelPath(rel) {
+export function isSkippedRelPath(rel, platform = process.platform) {
+  const fold = platform === "win32"
   return String(rel ?? "")
     .replace(/\\/g, "/")
     .split("/")
-    .some((seg) => seg !== "" && (seg.startsWith(".") || SKIP_DIRS.has(seg)))
+    .some((seg) => {
+      if (seg === "") return false
+      if (seg.startsWith(".")) return true
+      if (SKIP_DIRS.has(seg)) return true
+      if (SKIP_DIR_PREFIXES.some((p) => (fold ? seg.toLowerCase() : seg).startsWith(p))) return true
+      return fold && SKIP_DIRS_FOLD_LOWER.has(seg.toLowerCase())
+    })
 }
 
 /** Lower-cased ".ext" of a path, or "" when it has no extension. */
@@ -68,14 +80,18 @@ export function createUnlistedTally(knownExts) {
  * silently dropped.
  * @param {string} dir — project root
  * @param {Set<string>} exts — extensions to keep (lower-case, leading dot)
- * @param {{maxFiles?: number, knownExts?: Set<string>|null, isExcluded?: ((rel: string) => boolean)|null}} [opts]
+ * @param {{maxFiles?: number, knownExts?: Set<string>|null, isExcluded?: ((rel: string) => boolean)|null,
+ *   isInScope?: ((rel: string) => boolean)|null}} [opts]
  *   knownExts → also tally files whose extension is in NO index list
- *   isExcluded → caller-injected exclusion predicate (§6.14 面① 剪枝形): a hit prunes the
+ *   isExcluded → caller-injected exclusion predicate (§6.14 面① ∪ 面⑥ 剪枝形): a hit prunes the
  *   subtree (never expanded — zero readdir, no MAX_WALK_FILES budget spent) or drops the file
+ *   isInScope → caller-injected declared-scope predicate (§6.14 面⑦): a hit drops the FILE only —
+ *   never prunes (the code face matches a segment sequence at any depth, so an upper directory
+ *   carries no pruning judgement); an out-of-scope file spends no MAX_WALK_FILES budget
  * @returns {Promise<{files: {abs: string, rel: string}[], truncated: boolean,
  *   unlisted: {count: number, exts: {ext: string, count: number}[]}}>}
  */
-export async function walkProjectFiles(dir, exts, { maxFiles = MAX_WALK_FILES, knownExts = null, isExcluded = null } = {}) {
+export async function walkProjectFiles(dir, exts, { maxFiles = MAX_WALK_FILES, knownExts = null, isExcluded = null, isInScope = null } = {}) {
   const files = []
   const tally = knownExts ? createUnlistedTally(knownExts) : null
   let truncated = false
@@ -94,7 +110,8 @@ export async function walkProjectFiles(dir, exts, { maxFiles = MAX_WALK_FILES, k
         if (!isSkippedRelPath(rel) && !isExcluded?.(rel)) stack.push({ abs: join(cur.abs, ent.name), rel })
         continue
       }
-      if (!ent.isFile() || isSkippedRelPath(rel) || isExcluded?.(rel)) continue
+      // 面⑦ 范围门：只丢文件、不剪枝（段序列可命中任意深度 ⇒ 上层目录无剪枝判据）
+      if (!ent.isFile() || isSkippedRelPath(rel) || isExcluded?.(rel) || (isInScope !== null && !isInScope(rel))) continue
       const ext = extensionOf(ent.name)
       if (!ext || !exts.has(ext)) {
         tally?.note(rel)

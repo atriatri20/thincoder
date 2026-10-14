@@ -165,7 +165,7 @@ export function buildPanelCallbacks(panel, deps) {
     onPlanMode: (active) => { panel._panel?.webview.postMessage({ type: "planMode", active }); panel._setPlanMode(active).catch(() => {}) },
     // #45（WEBVIEW-PROTOCOL.md §3.3）：工具驱动的模式 / 参数变更 → 端显示同步——两回调同指
     // 单一 sink `_pushSettingsLight()`（四快照重推；**零新增消息类型**）。发射源 = `agent.mjs`
-    // 工具批后的同步 cell（mode 腿 = `eng` 工具翻转；参数腿 = 端侧 settings 包装置位）。
+    // 工具批后的同步 cell（mode 分支 = `eng` 工具翻转；参数分支 = 端侧 settings 包装置位）。
     onEngMode: () => { panel._pushSettingsLight() },
     onSettingsChanged: () => { panel._pushSettingsLight() },
     onSubagent: (info) => postSubagentStatus(panel, info),

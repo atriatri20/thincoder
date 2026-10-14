@@ -10,7 +10,7 @@ let exiting = false
 process.on("exit", () => { exiting = true })
 
 /** 测试缝（先例 `provider/rate.mjs` `_rateHooks`）：组杀 / 单进程杀 / 定时器可注入
- *  （POSIX 分流在生产 win32 机位的直驱 = 临时覆写 `process.platform`——见批内件 T-A12–A14）。 */
+ *  （POSIX 分流在生产 win32 机位的直驱 = 临时覆写 `process.platform`——见单元测试档 T-A12–A14）。 */
 export const _killHooks = {
   groupKill: (pid, sig) => process.kill(-pid, sig),
   childKill: (child, sig) => child.kill(sig),

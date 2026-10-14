@@ -14,7 +14,7 @@
  * 基线 MUST，非 `PromptCapabilities` 项——`embeddedContext` 维持 false）；**上限量级与 `read`
  * 同源**（行上限直引核 `MAX_READ_LINES`——零副本）。
  *
- * 降级标记 = 单行固定词表（11 词——机检面锚；块间独立，单块失败不影响他块）。
+ * 降级标记 = 单行固定词表（11 词——机检锚；块间独立，单块失败不影响他块）。
  */
 import { readFile, stat } from "node:fs/promises"
 import { resolve as resolvePath } from "node:path"

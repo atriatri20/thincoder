@@ -35,13 +35,14 @@ export function isDigestRound(opts) {
 }
 
 /**
- * 投递门控（§6.31.4 单点谓词）：
- * - `!_daDelivered` ⇒ 投（首次投递——任意回合，沿既有「user + auto」面）；
+ * 投递门控（§6.31.4 单点谓词；批 async-delivery-formalize 2026-10-12 · §6.34 收窄）：
+ * - `!_daDelivered` ∧ 本回合 = 系统轮（`autoTurn`）⇒ 投（首次投递——**用户回合零投递**）；
  * - `_daRetry` ∧ 本回合 = 消化轮 ⇒ 投（重投经消化轮回路）；
  * - 其余 ⇒ 跳过（防重复注入）。
+ * 注：`autoTurn` 判据由调用方（`run-start.mjs` 会话态支）传入；回退面（非会话态支）不经本谓词。
  */
-export function shouldDeliverEntry(entry, digestRound) {
-  if (entry?._daDelivered !== true) return true
+export function shouldDeliverEntry(entry, digestRound, autoTurn) {
+  if (entry?._daDelivered !== true) return autoTurn === true
   return entry._daRetry === true && digestRound === true
 }
 

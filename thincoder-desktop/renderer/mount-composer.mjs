@@ -2,7 +2,7 @@
  * mount-composer.mjs — 输入区**换装出档**（输入面板上提批 `2026-09-28-desktop-input-vsc-align.md` §2.4 Q1 ∕ §2.3
  * 桌面侧）：面板主体 = **核件工厂** `createComposerPanel(deps)`（`thincoder-render-core/composer/panel.mjs` ——
  * VSC ∕ 桌面同一文件）；本档只留三面 = **deps 构造** + **写面 deps 接线**（写面本体出档 `renderer/composer-wire.mjs`
- * —— 收正轮拆分，见下）+ **装配与提示锚面**（宿主锚；随动派生面出档 `renderer/composer-sync.mjs` —— #510 续拆，见下）。
+ * —— 收正轮拆分，见下）+ **装配与提示锚**（宿主锚；随动派生面出档 `renderer/composer-sync.mjs` —— #510 续拆，见下）。
  *
  * 槽形（`[data-slot="composer"]` 两件）：① `[data-composer-notices]`（B21 发送失败 ∕
  * B22 附件降级**两保留行**，行形不动；面板子树之前）② 核件面板子树（ids 照 VSC —— 结构单源；工厂自持）。
@@ -45,7 +45,7 @@
  * 面板样式 = 核件 `composer/composer.css` + `composer/model-menu.css`（菜单样式**静态承载** —— 收正轮：原 JS 注入形
  * 在 CSP `style-src 'self'` 下被拒；两端口径同源）。
  * **拆分注记（收正轮执行）**：本档换装后实读 466（越 300 顾问线）⇒ 在册预案「写面出档」本批执行：写面（通道往返 ∕
- * 逐类型 handler ∕ 本地先行块标记三态 ∕ B21 失败态）落 `renderer/composer-wire.mjs`（实读 177，≤300 臂内）。
+ * 逐类型 handler ∕ 本地先行块标记三态 ∕ B21 失败态）落 `renderer/composer-wire.mjs`（实读 177，≤300 内）。
  * **续拆（#510 留守拆档 · 2026-09-29）**：随动派生面（④ `state` 读面 ∕ 忙态与守卫派生 ∕ 模式位推送 ∕ 候选面 ∕
  * 提示锚窄刷 ∕ 随动总入口）再出档 `renderer/composer-sync.mjs` ⇒ 拆后本档 ≤300（实读见同批报告）。
  * 纪律：零 `node:` / 零裸包（渲染面静态闭包判据）；控制台诊断串非面向用户文案（不经 `t()`）。
@@ -84,7 +84,7 @@ const suspIdleOf = (state, key) => suspActiveOf(state, key) && !busyOf(state, ke
 const NOTICES_ANCHOR = "data-composer-notices"
 
 /** IME 组字判据（**单源一处** —— 本档导出）：组字期回车 = 选字确认（归输入法）⇒ 发送面与 `preventDefault` 面
- *  **双零**、键不吞。`keyCode 229` = 兜底臂（老 WebView 不置 `isComposing`；同族先例 = VSC 输入面）。
+ *  **双零**、键不吞。`keyCode 229` = 兜底分支（老 WebView 不置 `isComposing`；同族先例 = VSC 输入面）。
  *  消费者注（2026-09-29 实读收正）：卡族 Enter 径（P2）已随核卡内建（含 IME 门 —— `renderer/mount-cards.mjs:16`）
  *  ⇒ 本导出现无产品面消费者（导出面保留 —— 判据单源备用）。 */
 export function isComposing(event) {
@@ -156,8 +156,9 @@ export function attachComposer(host, deps = {}) {
     onLoadingReset: () => { sync.resetBusy() }, // 忙态派生缓存复位（收正轮 · 行 8）
     suspIdleOf, // 挂起空闲复位判据（挂起窗径批：窗内直发径未起跑 ⇒ loading 门禁归位）
     slotFullNotice, // #656：cap 待答径队满可见形缝（toast + 文本回注单点）
+    rollbackPrefs: (key) => sync.rollbackPrefs(key), // #1121 修③：写失败回滚钩（槽现值重派生——核 `applyModels` 单点）
     toImages, degradedCode, effortOf, withUserBlock, setAttachDegraded, applyFlags,
-    openSettings: () => openSettings?.(), // footer 三出口（A8 唯一映射点）
+    openSettings: (group) => openSettings?.(group), // footer 三出口（A8 唯一映射点；KD-77 ③：组名透传 —— 缺参 ⇒ 页）
   })
   const post = wire.post
 
@@ -193,7 +194,7 @@ export function attachComposer(host, deps = {}) {
   }
 
   const hooks = {
-    openSettings: () => openSettings?.(),
+    openSettings: (group) => openSettings?.(group), // KD-77 ③：组名透传（⚙ 无参 ⇒ 既有页；footer 添加 ⇒ 携组名）
     onUserEcho,
     confirmRemoveProvider: () => openSettings?.(), // 删除渠道 = 设置面事（确认门 ∕ 执行面皆住该面）
   }

@@ -62,11 +62,11 @@ export function patchLineType(line) {
   return "same"
 }
 
-/** 状态位族单行语法（**单源**——显示面 `toolStatusText` ∥ 判据面 `toolFailureStatus` 同引）。 */
+/** 状态位族单行语法（**单源**——显示面 `toolStatusText` ∥ 判据 `toolFailureStatus` 同引）。 */
 const STATUS_LINE = /^\((?:exit code (\d+)|killed: (.+)|spawn failed)\)$/
 
 /** 状态位族**展示文本**（显示面——#677 · I16b：含成功面 `(exit code 0)`，CLI 标尺归一）：**独立成行**的
- * 状态位 ⇒ 首个命中标记文本（`N` 含 0）；无命中 ⇒ `""`。判据面 `toolFailureStatus` 语义不变、自持扫描。 */
+ * 状态位 ⇒ 首个命中标记文本（`N` 含 0）；无命中 ⇒ `""`。判据 `toolFailureStatus` 语义不变、自持扫描。 */
 export function toolStatusText(text) {
   const t = String(text ?? "").trim()
   if (!t) return ""

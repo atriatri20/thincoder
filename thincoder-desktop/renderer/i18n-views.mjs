@@ -35,7 +35,7 @@
  * agent 段 auto-think 具名第十一键（`views/settings-agent.mjs`）—— 值逐字同 VSC `locales/{en,zh}.json` 同名键
  * （键名同形者即同名；`settings.proxyTest*` 三键 = VSC webview 内字面收归键面（en 逐字）· zh 本端拟定；
  * `settings.section.*` / `settings.consultProvider` / `settings.pickProvider` / `settings.deleteKey` /
- * `settings.effortLabel` / `settings.noneMark` / `settings.agent.autoThink` = 本端拟定（值面登记处 = 本组））。
+ * `settings.effortLabel` / `settings.noneMark` / `settings.agent.autoThink` = 本端拟定（值面登记处 = 本组）；**KD-77 ②（2026-10-07 · 台账 #1054）** 增 `settings.consultAddTitle`（会诊添加弹窗标题 —— 值逐字同 VSC 同批落地 `locales` 同名键））。
  * ⑫ **B10 W3 设置余面族**（MCP 编辑 ∕ 重连 · 子代理模型槽 · guard 开关 —— S8–S11 ∕ S14）：
  * MCP 表单结构化九键 + 两钮（值逐字同 VSC `settings.mcp.*` 同名键）· 重连两词（本端拟定）·
  * `settings.submodelGlobal`（VSC 逐字）· `settings.advisorGuard`（VSC 逐字）· `settings.reason.slotAuthority`（本端拟定）。
@@ -44,7 +44,7 @@
  * （两键——`/model` 恒受理随钮面门退场，反馈键集 −1）——值面单源 = `docs/desktop/design/UI.md` §1「本批注（slash 命令面 · 2026-10-01）」项 5
  * （en `slash.unknown` = CLI 前段逐字 + 携 `/help` 指引 ∥ 一键本端拟定）；`/plan` ENG 态拒复用在册键 `toolbar.planDisabled`（零新键）。
  * **`/help` 增量（同批 2026-10-01②）六键**（`slash.help.label` ∥ `slash.desc.{model,auto,plan,eng,help}`）——
- * 消费面 = 端装配面 `printHelp` 口经核 `formatHelp` 取词（非面板拦截段）；en 值 = CLI 同名命令 `desc` 逐字（机检面）。
+ * 消费面 = 端装配面 `printHelp` 口经核 `formatHelp` 取词（非面板拦截段）；en 值 = CLI 同名命令 `desc` 逐字（机检）。
  * 零落盘 · 零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
 export const VIEWS_DICT = Object.freeze({
@@ -63,6 +63,9 @@ export const VIEWS_DICT = Object.freeze({
     "chat.pending.more": "… [${lines} lines — shown in full once sent]",
     // ── ② 输入区（P26 发送失败 / P22 非栅格粘贴拒——`:${type}` 值逐字同 VSC）──
     "composer.send.failed": "Send failed (${reason}) — the text was kept",
+    // 切模型 ∥ 档位写失败（#1121 修③）：词面按**来源**分家（`data-notice="prefs-failed"`）；「发送失败」词不可套用
+    // （写面非发送——一词两义即失实）；`${reason}` = 回执码。消费面 = `renderer/composer-sync.mjs` `failedNotice`。
+    "composer.prefs.failed": "Model switch did not take effect (${reason})",
     // 引导形（#673）：`provider-invalid` 词 —— 值逐字同 VSC `locales/en.json` `error.provider`（基准归一——两端可见面同词）。
     "composer.send.noProvider": "No provider configured — click ⚙ to set API keys",
     // 真因分类词（#840 · 2026-10-03）：`provider-invalid` ∧ `providerKind === "defaultModel"`（缺 ∥ 无效 defaultModel）
@@ -71,6 +74,8 @@ export const VIEWS_DICT = Object.freeze({
     // fallback 明示行（轻通道轮八 · 2026-10-03）：澄清半句 —— 与 VSC `banner.defaultModelFallback` 同构（banner 版带 ⚠ 前缀）；
     // 原「逐字复用 #840 键」收正（失败词 ∥ 态词分家）。消费面 = `renderer/composer-sync.mjs` `providerNotice`。
     "composer.send.noDefaultModelFallback": "Default model missing or invalid — using an available channel",
+    // 缺档变体（2026-10-09 清除批）：载荷 `model` 缺 ⇒ 未设置变体（澄清半句换形 —— 「渠道可用、模型未定」；同键两字面）。
+    "composer.send.noDefaultModelFallbackUnset": "Default model missing — channel available, model not chosen",
     "paste.unsupportedFormat": "Only png / jpg / gif / webp images are supported (got ${type})",
     // attach 文件支持批（2026-10-05 · 台账 #948）：六拒面 toast 词——值逐字同 VSC `locales/en.json` 同名键。
     "composer.attach.tooLarge": "File too large (max 256 KB): ${name}",
@@ -193,7 +198,6 @@ export const VIEWS_DICT = Object.freeze({
     "settings.proxySection": "Proxy",
     "settings.proxyUri": "Proxy URI (http://host:port)",
     "settings.proxyWeb": "Web tools (websearch/fetch)",
-    "settings.proxyModel": "Model requests (providers with proxy: true)",
     "settings.proxyTest": "Test Connection",
     "settings.proxyTestRunning": "Testing…",
     "settings.proxyTestOk": "✓ OK (HTTP ${status})",
@@ -208,13 +212,13 @@ export const VIEWS_DICT = Object.freeze({
     "settings.websearchLabel": "Tavily API Key",
     "settings.embedKeyPlaceholder": "sk-...",
     "settings.websearchKeyPlaceholder": "tvly-...",
-    "settings.addKey": "Add Key",
+    "settings.addKey": "Add API Key",
     "settings.changeKey": "Change",
     "settings.save": "Save",
     "settings.cancel": "Cancel",
     "settings.keySet": "****",
     "settings.keyDelete": "✕",
-    "settings.deleteKey": "Delete key",
+    "settings.deleteKey": "Delete API Key",
     "settings.mcp.tools": "Tools",
     "settings.mcp.test": "Test",
     "settings.mcp.loading": "loading…",
@@ -224,6 +228,7 @@ export const VIEWS_DICT = Object.freeze({
     "settings.mcp.params": "params: ${names}",
     "settings.consultSection": "Consultation models (multi-model consult)",
     "settings.consultAdd": "+ Add consult model",
+    "settings.consultAddTitle": "Add Consult Model",
     "settings.consultRemove": "Remove",
     "settings.consultActive": "Consultation active — ${n} model(s) will analyze in parallel when stuck",
     "settings.consultInactive": "Consultation is OFF — add models below to enable multi-model consults",
@@ -242,11 +247,15 @@ export const VIEWS_DICT = Object.freeze({
     "settings.mcp.type": "Type",
     "settings.mcp.command": "Command",
     "settings.mcp.args": "Args (space-separated)",
-    "settings.mcp.env": "Env (KEY=value, comma-separated)",
+    "settings.mcp.env": "Env",
     "settings.mcp.url": "URL",
     "settings.mcp.wsUrl": "WebSocket URL",
     "settings.mcp.token": "Auth token (Bearer)",
-    "settings.mcp.headers": "Headers (KEY=value, comma-separated)",
+    "settings.mcp.headers": "Headers",
+    "settings.mcp.kvAdd": "+ Add row",
+    "settings.mcp.kvRemove": "Remove row",
+    "settings.mcp.kvKey": "KEY",
+    "settings.mcp.kvValue": "value",
     "settings.mcp.reconnecting": "reconnecting…",
     "settings.mcp.reconnectOk": "✓ Reconnected — ${count} tools",
     "settings.submodelGlobal": "Global default",
@@ -277,14 +286,19 @@ export const VIEWS_DICT = Object.freeze({
     "chat.pending.more": "… [该条共 ${lines} 行——发送后完整显示]",
     // ── ② 输入区 ──
     "composer.send.failed": "发送失败（${reason}）——文本已保留",
+    // 切模型 ∥ 档位写失败（#1121 修③）：词面按**来源**分家（`data-notice="prefs-failed"`）；「发送失败」词不可套用
+    // （写面非发送——一词两义即失实）；`${reason}` = 回执码。消费面 = `renderer/composer-sync.mjs` `failedNotice`。
+    "composer.prefs.failed": "模型切换未生效（${reason}）",
     // 引导形（#673）：`provider-invalid` 词 —— 值逐字同 VSC `locales/zh.json` `error.provider`（基准归一——两端可见面同词）。
-    "composer.send.noProvider": "未配置 API 密钥 — 点击 ⚙ 设置",
+    "composer.send.noProvider": "未配置 API Key — 点击 ⚙ 设置",
     // 真因分类词（#840 · 2026-10-03）：`provider-invalid` ∧ `providerKind === "defaultModel"`（缺 ∥ 无效 defaultModel）
     // —— 状态陈述（指向真实可修的下一步）；本端拟定（消费面 = `renderer/composer-sync.mjs` `failedNotice`）。
     "composer.send.noDefaultModel": "默认模型未设置或无效",
     // fallback 明示行（轻通道轮八 · 2026-10-03）：澄清半句 —— 与 VSC `banner.defaultModelFallback` 同构（banner 版带 ⚠ 前缀）；
     // 原「逐字复用 #840 键」收正（失败词 ∥ 态词分家）。消费面 = `renderer/composer-sync.mjs` `providerNotice`。
     "composer.send.noDefaultModelFallback": "默认模型未设置或无效 — 正在使用可用渠道",
+    // 缺档变体（2026-10-09 清除批）：载荷 `model` 缺 ⇒ 未设置变体（澄清半句换形 —— 「渠道可用、模型未定」；同键两字面）。
+    "composer.send.noDefaultModelFallbackUnset": "默认模型未设置 — 渠道可用、模型未定",
     "paste.unsupportedFormat": "仅支持 png / jpg / gif / webp 图片（收到 ${type}）",
     // attach 文件支持批（2026-10-05 · 台账 #948）：六拒面 toast 词——值逐字同 VSC `locales/zh.json` 同名键。
     "composer.attach.tooLarge": "文件过大（上限 256 KB）：${name}",
@@ -407,7 +421,6 @@ export const VIEWS_DICT = Object.freeze({
     "settings.proxySection": "代理",
     "settings.proxyUri": "代理 URI（http://host:port）",
     "settings.proxyWeb": "Web 工具（websearch/fetch）",
-    "settings.proxyModel": "模型请求（proxy: true 的 provider）",
     "settings.proxyTest": "测试连接",
     "settings.proxyTestRunning": "测试中…",
     "settings.proxyTestOk": "✓ 连接正常（HTTP ${status}）",
@@ -422,13 +435,13 @@ export const VIEWS_DICT = Object.freeze({
     "settings.websearchLabel": "Tavily API 密钥",
     "settings.embedKeyPlaceholder": "sk-...",
     "settings.websearchKeyPlaceholder": "tvly-...",
-    "settings.addKey": "添加 Key",
+    "settings.addKey": "添加 API Key",
     "settings.changeKey": "修改",
     "settings.save": "保存",
     "settings.cancel": "取消",
     "settings.keySet": "****",
     "settings.keyDelete": "✕",
-    "settings.deleteKey": "删除密钥",
+    "settings.deleteKey": "删除 API Key",
     "settings.mcp.tools": "工具",
     "settings.mcp.test": "测试",
     "settings.mcp.loading": "加载中…",
@@ -438,6 +451,7 @@ export const VIEWS_DICT = Object.freeze({
     "settings.mcp.params": "参数：${names}",
     "settings.consultSection": "会诊模型（多模型会诊）",
     "settings.consultAdd": "+ 添加会诊模型",
+    "settings.consultAddTitle": "添加会诊模型",
     "settings.consultRemove": "移除",
     "settings.consultActive": "会诊已启用 — 卡住时 ${n} 个模型并行分析",
     "settings.consultInactive": "会诊未启用 — 添加模型后即可在遇到疑难时多模型会诊",
@@ -455,11 +469,15 @@ export const VIEWS_DICT = Object.freeze({
     "settings.mcp.type": "类型",
     "settings.mcp.command": "命令",
     "settings.mcp.args": "参数（空格分隔）",
-    "settings.mcp.env": "环境变量（KEY=value，逗号分隔）",
+    "settings.mcp.env": "环境变量",
     "settings.mcp.url": "URL",
     "settings.mcp.wsUrl": "WebSocket URL",
     "settings.mcp.token": "认证令牌（Bearer）",
-    "settings.mcp.headers": "请求头（KEY=value，逗号分隔）",
+    "settings.mcp.headers": "请求头",
+    "settings.mcp.kvAdd": "+ 添加行",
+    "settings.mcp.kvRemove": "删除行",
+    "settings.mcp.kvKey": "KEY",
+    "settings.mcp.kvValue": "值",
     "settings.mcp.reconnecting": "重连中…",
     "settings.mcp.reconnectOk": "✓ 已重连 — ${count} 个工具",
     "settings.submodelGlobal": "全局默认",

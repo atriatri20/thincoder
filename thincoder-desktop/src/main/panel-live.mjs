@@ -28,7 +28,7 @@ export function createPanelLive({ now = Date.now } = {}) {
       if (key === undefined || key === null) return null
       return table.get(String(key)) ?? null
     },
-    /** 缓存键数（诊断 ∕ 测试面）。 */
+    /** 缓存键数（诊断 ∕ 测试）。 */
     size() { return table.size },
   }
 }

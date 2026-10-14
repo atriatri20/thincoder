@@ -3,12 +3,12 @@
  * 内容 = `CODE_EMBED_BATCH` ∥ `codeSearch`（FTS5(BM25) + 向量余弦，RRF 合并；无 embedder ⇒ 纯 FTS，
  * ftsQuery 空且有 embedder ⇒ 纯向量）∥ `ensureCodeEmbeddings`（并发锁 + `_runEnsureCodeEmbeddings`）
  * ∥ `codeSearchTool`——迁出块逐字；原档 `memory/code-sync.mjs` 经 `export { … } from` 转口保名
- * （消费面 / 批内件 import 面零改）。
+ * （消费面 / 单元测试档 import 面零改）。
  */
 import { embed, embedTolerant, cosine, toBlob, fromBlob } from "../embedding.mjs"
 import { scanVectors, createTopK } from "./scan.mjs"
 import { normalizeOrigin } from "./origin.mjs"
-import { declaredPublicRoots } from "../conventions.mjs"
+import { declaredPublicRoots, loadProjectDeclaration, isExcludedRelPath, declaredIndexScope, isInDeclaredScope } from "../conventions.mjs"
 import { buildFtsQuery, ensureEmbeddings, EMBED_TEXT_MAX_LEN } from "./core.mjs"
 import { safeSliceUTF16 } from "../text-budget.mjs"
 import { DESC } from "../tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/code_search.md
@@ -35,13 +35,28 @@ export async function codeSearch(memory, query, { limit = 5 } = {}) {
   const origins = searchOrigins(memory)
   const ftsOriginFilter = origins.length === 1 ? `AND c.origin = ?` : origins.length > 1 ? `AND c.origin IN (${origins.map(() => "?").join(", ")})` : ""
   const originParams = origins
+  // §6.14 读面准入过滤（FTS 列表建成后 ∥ 向量 top-K push 前；两判据并列互不吞）：排除谓词（面①∪面⑥，
+  // 行 origin 为 `base`）∪ 声明范围门（面⑦——`isInDeclaredScope(path, declaredIndexScope(origin), origin)`，
+  // 逐 origin 预载一次）⇒「批次档 ∥ 范围外路径从未入索引」等价检索；存量行不删（收尾保护位）；窗口欠额接受。
+  const declCache = new Map()
+  const scopeCache = new Map()
+  const rowHidden = (origin, path) => {
+    const d = declCache.get(origin) ?? loadProjectDeclaration(origin)
+    declCache.set(origin, d)
+    if (isExcludedRelPath(path, d, origin)) return true
+    let scope = scopeCache.get(origin)
+    if (scope === undefined) { scope = declaredIndexScope(origin); scopeCache.set(origin, scope) }
+    return !isInDeclaredScope(path, scope, origin)
+  }
+  const ftsNeedOrigin = origins.length !== 1 // 单 origin 形 SQL 零改；多 origin ∥ 无过滤形补 `origin` 列（行 origin 随行可得）
 
   const ftsList = ftsQuery ? memory.db.prepare(`
-    SELECT c.rowid, c.path, c.language, c.symbol_name, c.content, c.line_start, c.line_end, bm25(code_chunks_fts) AS rank
+    SELECT c.rowid, c.path, c.language, c.symbol_name, c.content, c.line_start, c.line_end, bm25(code_chunks_fts) AS rank${ftsNeedOrigin ? ", c.origin" : ""}
     FROM code_chunks_fts JOIN code_chunks c ON c.rowid = code_chunks_fts.rowid
     WHERE code_chunks_fts MATCH ? ${ftsOriginFilter}
     ORDER BY rank LIMIT ?
-  `).all(ftsQuery, ...originParams, Math.max(limit * 4, 20)) : []
+  `).all(ftsQuery, ...originParams, Math.max(limit * 4, 20))
+    .filter((r) => !rowHidden(origins.length === 1 ? origins[0] : r.origin, r.path)) : []
 
   if (!memory.embedder) return ftsList.slice(0, limit)
 
@@ -70,7 +85,9 @@ export async function codeSearch(memory, query, { limit = 5 } = {}) {
   for (const origin of origins.length ? origins : [null]) {
     await scanVectors(memory.db, vecSql, origin ? [origin] : [], {
       cursorKey,
-      onRow: (r) => top.push({ id: r.rowid, rowid: r.rowid, score: cosine(qvec, fromBlob(r.embedding)) }),
+      onRow: (r) => { // §6.14 面⑥∪面⑦ 准入（top-K push 前；无过滤形行 origin = 游标键 `origin` 列）
+        if (!rowHidden(origin ?? r.origin, r.path)) top.push({ id: r.rowid, rowid: r.rowid, score: cosine(qvec, fromBlob(r.embedding)) })
+      },
     })
   }
   const vecList = top.list().map((c) => ({ rowid: c.id, score: c.score }))

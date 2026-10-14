@@ -30,7 +30,7 @@ export function costTotal(runs) {
   return vals.length > 0 ? round8(vals.reduce((a, b) => a + b, 0)) : null
 }
 
-/** 实测腿（§11.7）：逐（模型 × 变体）`promptTokensMedian`（缺 usage 的 run 不计——中位剔除 null）。 */
+/** 实测用例（§11.7）：逐（模型 × 变体）`promptTokensMedian`（缺 usage 的 run 不计——中位剔除 null）。 */
 export function promptTokensMedian(runs) {
   return median(runs.map((r) => r.metrics?.tokens?.prompt ?? null))
 }

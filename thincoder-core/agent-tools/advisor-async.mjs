@@ -31,7 +31,7 @@
  *     non-stale code review marks _calledAdvisorThisRun; a passing design review
  *     issues its token under the designId slot at settle time.
  *     2026-09-11 第 11 批拆分：settle 记账 + 变更日志 + 陈旧/冻结判定迁 `advisor-settle.mjs`
- *     （本文件 500 行 = 硬帽在册）；既有 import 面经本文件 re-export 保持不变。
+ *     （本文件 500 行——2026-09-11 拆分时）；既有 import 面经本文件 re-export 保持不变。
  *
  * The sync path (depth>0 eng-coder self-review / explicit async:false) reuses
  * the same instance resolution (rounds/prior/cap) — its accounting still lands
@@ -392,7 +392,7 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
     id, role: "advisor", reviewType, run,
     reviewId: run.reviewId, designId, designToken, documents, paths, object,
     launchSeq: mutationSeqOf(parent),
-    // docAbs 产出面同源归一（2026-10-04 · #921 · A 随件）：四腿单源 resolved（裸形/前缀形
+    // docAbs 产出面同源归一（2026-10-04 · #921 · A 随件）：四分支单源 resolved（裸形/前缀形
     // 命中候选项目根即归一为绝对路径）——冻结窗/陈旧判定对**裸形受理档**照护成立（否则 A
     // 开冻结窗保护洞）；绝对形与旧 normAbs 面逐字等价。
     docAbs: reviewType === "design" && Array.isArray(documents)

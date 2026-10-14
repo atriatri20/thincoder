@@ -37,7 +37,7 @@
 
 ## 2. 接口契约（机制 / 数据流）
 
-**单源**：核内新档 `thincoder-core/shell-identity.mjs`（拟新增——本批实施轮落盘；≈70 行）——`resolveShellIdentity(configShell)` ⇒ `{ raw, name, kind, known }`：
+**单源**：核内新档 `thincoder-core/shell-identity.mjs`（已落——本批实施轮落盘；≈70 行）——`resolveShellIdentity(configShell)` ⇒ `{ raw, name, kind, known }`：
 
 - 入参 = spawn 侧同一取值（`ctx.agent?.config?.shell ?? null`，调用方传）；纯函数（不读环境外的状态；win32 分支内读 `%COMSPEC%`）；
 - 出参四键：`raw`（链终值：config.shell 原串 ∥ %COMSPEC% ∥ "cmd.exe" ∥ SHELL ∥ "/bin/sh"）· `name`（显示名）· `kind`（语法族：`cmd` ∥ `powershell` ∥ `posix` ∥ `unknown`）· `known`（是否命中知名字）；
@@ -70,7 +70,7 @@ VSC 自有 `tools/shell.mjs` 的 `SHELL_NOTES`（`:162-166`——**死常量**�
 
 ## 3. 机制设计（四处改面）
 
-### 3.1 探测单源——新档 `thincoder-core/shell-identity.mjs`（拟新增——实施轮落盘）
+### 3.1 探测单源——新档 `thincoder-core/shell-identity.mjs`（已落——实施轮落盘）
 
 §2 契约的实现体；纯函数 + 识别表；**禁平台推断**（判定永远从 `raw` 值出发，不从 `process.platform` 出发——
 win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 spawn 侧既有行为的事实镜像）。
@@ -109,19 +109,19 @@ win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 s
 
 | # | 档 | 现行数 | 增量 | 动作 |
 |---|---|---|---|---|
-| 1 | `thincoder-core/shell-identity.mjs`（拟新增——实施轮落盘） | 0 | +≈70 | 探测单源（§3.1） |
+| 1 | `thincoder-core/shell-identity.mjs`（已落——实施轮落盘） | 0 | +≈70 | 探测单源（§3.1） |
 | 2 | `thincoder-core/tool-docs/bash.md` | 38 | 0（行替换） | `:33` 死写句 → 零断言替形（§3.3） |
 | 3 | `thincoder-core/tools/bash.mjs` | 289 | +≈6 | hint 身份门（§3.3） |
 | 4 | `thincoder-cli/src/prompt-injections.mjs` | 20 | +≈4 | import 期求值（§3.2） |
 | 5 | `thincoder-desktop/src/main/prompt-injections.mjs` | 22 | +≈4 | 同上 |
 | 6 | `thincoder-vscode/src/prompt-injections.mjs` | 21 | +≈4 | 同上 + terminal 行拼接（§2） |
 | 7 | `thincoder-vscode/src/tools/shell.mjs` | 331 | −≈8 | 死常量 SHELL_NOTES 删除（§3.3） |
-| 8 | 批档归档单测件 `docs/batches/2026-10-04-bash-executor-face.test.mjs`（随批归档——不入 `thincoder-core/test/` 仓套件树） | 0 | +≈80 | 单测（§6 用例表转测——§6.10 教义：开发期工具不占仓套件） |
+| 8 | 批档归档单元测试档 `docs/batches/2026-10-04-bash-executor-face.test.mjs`（随批归档——不入 `thincoder-core/test/` 集成测试树） | 0 | +≈80 | 单元测试（§6 用例表转测——§6.10 教义：开发期工具不占集成测试树） |
 | 9 | `docs/core/design/TOOLS.md` | 1230 | +1 | §6.2 指针行（§3.4） |
 | 10 | `docs/core/design/PROMPT-SYSTEM.md` | 650 | 0（行内收正） | §6.3 处置语（§3.4） |
 | 11 | `docs/core/design/CORE-UNIFICATION.md` | 2054 | 0（行内收正） | §2.13.2 处置语（§3.4） |
 
-档位判定：新档 `shell-identity.mjs` ≈70 行 ≤300 软线 ✓；`bash.mjs` 289 +6 = ≈295 仍 ≤300 ✓；`shell.mjs` 331 −8 = ≈323（**既有超软线档——减行不触登记义务**；其登记面 = 既有拆分计划，本批零新语义）。测试档不入仓套件（批档 §5 单测面——随批归档）。
+档位判定：新档 `shell-identity.mjs` ≈70 行 ≤500 软线 ✓；`bash.mjs` 289 +6 = ≈295 仍 ≤500 ✓；`shell.mjs` 331 −8 = ≈323。单元测试档不入集成测试树（批档 §5 单元测试——随批归档）。
 
 ## 5. 关键决策记录（含否决备选）
 
@@ -146,7 +146,7 @@ win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 s
 | AC5 | `grep -r "SHELL_NOTES" thincoder-vscode/src` ⇒ 0 命中（死常量清除） | §3.3 |
 | AC6 | 三端实测取证在档（批档 §5）：CLI / VSC / 桌面各跑一次探针命令（`$PSVersionTable.PSVersion.Major` ∥ `echo %COMSPEC%`），读数与本机 config.shell 链一致（三端同链 ⇒ 同值） | 批档 §2 · 验收标准② |
 | AC7 | 探测不到路径（config.shell = 未知名——U4 夹具 `"myweirdshell"`）⇒ 注入 unknown 中性句（fail-open——不猜）；`_setComSpecForTest("")` + shell=null ⇒ `kind:"cmd"`、注入 cmd 行（链终值 = 兜底字面 `cmd.exe`——spawn 镜像，探测值 = 实际执行器） | 批档 §2 · 用户裁定③ |
-| AC8 | 核测试 `node --test`（cwd = thincoder-core）全绿；CLI/VSC `npm test` 全绿；桌面装配产物断言（AC2 同式：桌面 `applyPromptInjections(DESC("bash"))` 产物含 `Executor:` 行 ∥ 零 `{{inject:` 字面——桌面套件存在与否实施轮核：在 ⇒ 入套件跑，不在 ⇒ 装配探针直断）；`node scripts/doc-check.mjs` exit 0 | 批档 §2 · 验收标准③（设计轮 doc-check 于本设计轮已跑——见交付报告） |
+| AC8 | 核测试 `node --test`（cwd = thincoder-core）全绿；CLI/VSC `npm test` 全绿；桌面装配产物断言（AC2 同式：桌面 `applyPromptInjections(DESC("bash"))` 产物含 `Executor:` 行 ∥ 零 `{{inject:` 字面——桌面集成测试树存在与否实施轮核：在 ⇒ 入集成测试跑，不在 ⇒ 装配探针直断）；`node scripts/doc-check.mjs` exit 0 | 批档 §2 · 验收标准③（设计轮 doc-check 于本设计轮已跑——见交付报告） |
 
 ## 7. 用例表（正常 / 边界 / 错误）
 

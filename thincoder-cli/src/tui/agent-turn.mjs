@@ -82,7 +82,7 @@ export async function runAgentTurn(ctx, text, opts = {}) {
 
 /** #448② 重武装守卫（KD-6「异常径重武装——会话停 ∕ 显式撤销除外」）：**粘滞位 `_timerRearmRevoked`**
  *  = 主线（两实落点：Ctrl+C 全停 `{abortTrigger:"stop"}` 中止分支 ∕ 挂起会话中止（`_suspAborted`）复位前捕获；
- *  链头复位 ⇒ 下一链正常重入）。余两腿为**防御面**（仅在正文异常早退、控制器尚未置空时可达）：
+ *  链头复位 ⇒ 下一链正常重入）。余两分支为**防御面**（仅在正文异常早退、控制器尚未置空时可达）：
  *  `_suspAborted` 未及复位 ∥ 本链控制器 stop 语义在场 ∥ 会话 abort 句柄已中止。 */
 function timerRearmBlocked(state, agent) {
   return state?._timerRearmRevoked === true

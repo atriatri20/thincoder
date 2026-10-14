@@ -62,7 +62,7 @@ export function casesForDims(runDims) {
   return CASES.filter((c) => runDims.has(c.dim))
 }
 
-/** 判据面分层表（§2.10.2）的机检素材——派生自用例声明（单源）：
+/** 判据分层表（§2.10.2）的机检素材——派生自用例声明（单源）：
  * 判官面 = 声明 `judge` 的用例（13 例）；机械面 = 声明 `mechRubric` 的用例（20 例）；两者之差 = 纯判官面 5 例。 */
 export const JUDGE_FACE = CASES.filter((c) => c.judge).map((c) => c.id)
 export const MECH_FACE = CASES.filter((c) => c.mechRubric).map((c) => c.id)

@@ -20,7 +20,7 @@ import { allocRelay, wrapChildCallbacks, relayPrefixOf } from "../agent/spawn-ch
 // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §6.15）：子代理人读线窗口常量单源（store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 import { validateDesignToken } from "./advisor.mjs"
-import { tokenExpired, removeDesignTokenSlot, reconcileEngTokensFromSlot, persistEngTokens } from "../token-ttl.mjs"
+import { tokenExpired, removeDesignTokenSlot, reconcileEngTokensFromSlot } from "../token-ttl.mjs"
 import { resolveChildProvider, buildChildRunOpts, enqueueAsk } from "./subagent-async.mjs"
 import { nextSubagentId } from "./subagent-scheduler.mjs"
 import {
@@ -50,7 +50,7 @@ function logBatchDocRefs(parent, role, task, boundAbs) {
   const cwd = parent?.cwd ?? process.cwd()
   const text = typeof task === "string" ? task : ""
   const key = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
-  const bases = batchDocBases(cwd) // 歧义锚 ⇒ 候选项目基底并集（#828——入基底判据覆盖面随之对齐）
+  const bases = batchDocBases(cwd) // 歧义锚 ⇒ 候选项目基底并集（#828——入基底判据覆盖范围随之对齐）
   const seen = new Set()
   for (const m of text.matchAll(MD_PATH_TOKEN)) {
     const token = m[0]
@@ -125,54 +125,14 @@ export function resolveDesignSlot(parent, designIdArg) {
 
 /**
  * consume-design 动作执行器（2026-09-07 token 链终消费制——ENGINEERING-MODE.md §2.6 F1）：
- * 父侧验收核销时显式调用——读槽值 → removeDesignTokenSlot（token-ttl.mjs——移除该
- * designId 槽）→ 消费后同 designId 再 spawn = resolveDesignSlot not found 机械拒。调用
- * 形态定死（评审 #3）：参数 designId（单设计会话可省略——FR3 spawn 同款语义）；未知
- * designId 与重复消费同款 no-op 提示（幂等——不报错）。DESIGN-TOKEN-SETTLEMENT D3
- * （2026-09-08）：单值镜像 `_engDesignToken` 已退役——无镜像兼容值清/兜底读（AC3）。
- * consume 落盘对称（2026-09-08 D1 段 + AC7）：删内存槽后当场 persistEngTokens 同步
- * 落盘删除（旧台账不留盘——防 D2 门禁 miss 回读复活已消费 token）；落盘失败回滚
- * 内存槽 + 抛错（不留半消费态，可重试——D1 评审 #1 同款失败语义）。
- * dispatch 分类（评审 #7d）：非只读控制动作——depth-0 + 工程模式
- * 限定（受限变体门在 subagent.mjs 分流处；本器自持工程模式门）——planMode 拒绝
- * （dispatch 不豁免）——不入批审批分组（dispatch 免审直行——无文件写）。
+ * 父侧验收核销时显式调用——读槽值 → removeDesignTokenSlot（移除该 designId 槽）→ 消费后同
+ * designId 再 spawn = resolveDesignSlot not found 机械拒；落盘失败回滚内存槽 + 抛错
+ * （不留半消费态，可重试——D1 评审 #1 同款失败语义）。
+ * 2026-10-07 批 ledger-tool（#927 并入）：选择器扩展（designIds / expired / olderThanDays——
+ * 恰一，fail-closed）+ 清点面 `design-slots` 落 `./design-slots.mjs`（清点 / 批量选择 / 消费核
+ * 单源迁入——单枚形态拒文 / 回执逐字不变）；本处仅保本档 import 面（subagent.mjs / 既有消费点零改）。
  */
-export function executeConsumeDesignAction(args, ctx) {
-  const parent = ctx.agent
-  if (!parent?.config?.agent?.engineering) {
-    throw new Error("Engineering mode is not active — consume-design applies only to engineering-mode design tokens (spawn 同门).")
-  }
-  const designId = args?.designId ? String(args.designId) : undefined
-  const slots = parent?._engDesignTokens
-  const hasSlots = slots instanceof Map && slots.size > 0
-  // 多槽缺 designId → 拒（spawn 同款语义——不误消费任一槽）
-  if (!designId && hasSlots && slots.size > 1) {
-    throw new Error(`consume-design: Multiple approved designs in this session (${slots.size}) — pass the designId parameter (echoed with each token) to choose which design to close out.`)
-  }
-  // 读槽值：给定 designId → 精确槽（未知/已消费 → undefined）；缺省 → 唯一槽
-  let token = null
-  if (designId && hasSlots) token = slots.get(designId) ?? null
-  else if (!designId && hasSlots) token = [...slots.values()][0]
-  // 未知 designId / 已消费 / 无任何槽 → 幂等 no-op 提示（不报错——评审 #3 定死）
-  if (!token) {
-    return `consume-design: no live slot${designId ? ` for designId ${designId}` : ""} (already consumed or never issued) — idempotent no-op, nothing changed.`
-  }
-  // consume 落盘对称（DESIGN-TOKEN-SETTLEMENT D1 段 + AC7——交付 🔴 复活洞修复）：
-  // 删内存槽后当场同步落盘删除（D1 同款 persistEngTokens——空 Map → 槽文件
-  // engDesignTokens 字段删除，旧台账不留盘）。否则消费→回合尾 saveSession 窗口内
-  // spawn 门禁 miss 回读（D2）会从盘上复活已消费 token。
-  const slotId = designId ?? [...slots.keys()][0]
-  removeDesignTokenSlot(parent, designId, token)
-  try {
-    persistEngTokens(parent)
-  } catch (e) {
-    // 落盘失败 → 回滚内存槽 + 抛错（不留半消费态——盘上仍有旧台账时消费不得报
-    // 成功；可重试——D1 评审 #1 settle 同款失败语义）
-    if (slotId) parent._engDesignTokens.set(slotId, token)
-    throw new Error(`consume-design: the slot was removed in memory but could NOT be durably deleted from the slot file (${e.message}) — the slot is restored in memory; retry consume-design.`)
-  }
-  return `design slot consumed — designId ${designId ?? "(single-design session)"} is closed out; a further eng-coder spawn for this design is mechanically rejected, and any new work (including deviation fixes) requires a fresh advisor(type='design') review and token.`
-}
+export { executeConsumeDesignAction } from "./design-slots.mjs"
 
 // ── spawn 调度参数准入（AGENT-LOOP-SUBAGENT.md §6.9 D-SD1/D-SD3）────────────
 // files/dependsOn 声明即契约（v1：不做任务书文本自动解析——不可靠）。缺省（两者皆
@@ -239,6 +199,9 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 路径语义照 `files` 先例：cwd 相对或绝对均可，`\` 归一为 `/`；解析序单源 = §4.15（cwd → 项目根 →
   // 逐基底，读面取首个可读）——cwd 非项目根时根相对串不再必拒（BR-29/BR-33）。错误文案带
   // **实际角色名**（§2.15 越界文案参数化——designer 撞门时不误导）与逐字不可读后缀。
+  // §4.16（2026-10-09）：coder（普通模式）**可选**携 `batchDoc`——非强制（「spawn 强制 batchDoc」=
+  // 工程专属、不移植）；传则须可读（同评审面判据）⇒ `child._batchDoc` 绑定 §5 记录通道；
+  // 未携 ⇒ 不绑定、照常 spawn。
   let batchDocAbs = null
   if (role === "eng-coder" || role === "eng-designer") {
     const given = typeof args.batchDoc === "string" ? args.batchDoc.trim() : ""
@@ -249,6 +212,14 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     if (!batchDocAbs) throw refusal(" (given path is not a readable file)")
     // #309 形三：任务书中的他批批次档引用观测留痕（不阻断——放行不受影响）。
     logBatchDocRefs(parent, role, args.task, batchDocAbs)
+  } else if (role === "coder") {
+    const given = typeof args.batchDoc === "string" ? args.batchDoc.trim() : ""
+    if (given) {
+      batchDocAbs = resolveBatchReadPath(parent.cwd ?? process.cwd(), given)
+      if (!batchDocAbs) {
+        throw new Error("batchDoc for role='coder' — pass the batch record path (e.g. <repo>/docs/batches/<batch>-<topic>.md; relative paths resolve against the session cwd first, then candidate project roots — or absolute); when provided it must resolve to a readable file (omit batchDoc to spawn without the §5 record-write binding).")
+      }
+    }
   }
 
   // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）：任务书六强制字段门——
@@ -344,10 +315,12 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 每个 child 原先各自一份永不压缩的 _fullHistory（勘察 C2 乘数面）。
   child._historyWindow = RECORD_WINDOW_MESSAGES
 
-  // BATCH-RECORD.md §2 批次档段写入通道绑定（第 4 批）：工程角色（eng-coder/eng-designer）把批次档
-  // 绝对路径记在 child 上——setup 挂载 `batch` 时读它。无路径参数的工具靠这条
-  // 绑定决定目标档（spawn 门已保证「参数在 + 路径可读」）。
-  if (engineeringRole) child._batchDoc = batchDocAbs
+  // BATCH-RECORD.md §2 批次档段写入通道绑定（第 4 批；§4.16 扩 coder 可选分支）：工程角色
+  // （eng-coder/eng-designer）把批次档绝对路径记在 child 上——setup 挂载 `batch` 时读它；
+  // 携绑定的 coder（普通模式，可选）同点绑定。无路径参数的工具靠这条绑定决定目标档
+  // （spawn 门已保证「参数在 + 路径可读」）。
+  const batchBound = engineeringRole || (role === "coder" && !!batchDocAbs)
+  if (batchBound) child._batchDoc = batchDocAbs
 
   // Token-verified design review → child is authorized to modify files without re-reviewing
   if (role === "eng-coder") child._engDesignReviewed = true
@@ -383,8 +356,9 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // §2.11 第 1 点（FR16 载体 + FR17 铁律 #5 的机械面）：批次档**绝对路径**下发给工程角色
   // （eng-coder 实现 / eng-designer 写稿）——任务文本本身不动（批次档 §2 才是任务书本体；
   // 本行让子代理"拿到本档路径"）。行文不含 summarizeEngTaskBook 的三组段 marker
-  // （Docs involved / Files list / Acceptance criteria）——段匹配不受影响。仅工程角色注入。
-  if (engineeringRole) spawnBlocks.push(`Batch record (batchDoc): ${batchDocAbs}`)
+  // （Docs involved / Files list / Acceptance criteria）——段匹配不受影响。工程角色恒注入；
+  // 携绑定 coder（§4.16）随绑定注入（绑定 coder 要能读到本档）。
+  if (batchBound) spawnBlocks.push(`Batch record (batchDoc): ${batchDocAbs}`)
   // AGENT-LOOP-SUBAGENT.md §6.7.6 D-E2 ③ (round4 #4, T-E13/T-E15): an eng-coder audit spawn's task book is
   // the eng-coder's OWN spawn task — mechanically kept as _engTaskInput by the
   // parent spawn and injected as the D-TS5 A2 mechanical summary (design docs /

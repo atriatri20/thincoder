@@ -9,7 +9,7 @@
  * 单一 owner = 本档；`settings.mjs` ∕ `providers.mjs` 经原 import 面取（settings.mjs 同名 re-export，
  * 导出面零改）。
  * 纪律：零自写盘（写面唯一执行体 = 核 `writeConfigAtomic`）；核未导出的 helper 才端侧自持
- * （`setKeyPath`——遮罩字面已收编核 `MASKED`），判据面一律取核导出。
+ * （`setKeyPath`——遮罩字面已收编核 `MASKED`），判据一律取核导出。
  */
 import { existsSync } from "node:fs"
 import { _configPath } from "@thincoder/core/config-io.mjs"

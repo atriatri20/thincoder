@@ -2,7 +2,7 @@
  * host-floor.mjs — 宿主下限纯谓词 + `node:sqlite` 探针（PROJECT.md §2 KD-7；批档 `docs/batches/2026-09-25-desktop-impl-1.md` §2.6 D-2）。
  * **零 `electron` 导入**：`main.mjs` 顶层静态 import `electron` ⇒ 平 node 导入必炸；
  * 本档为叶子模块，自动层（`npm test`）可直接 import（拆分理由 = 批档 §2.3 末段 · R-2）。
- * 下限事实单源 = `MIN_NODE`；判据面 = 启动自检实测，不把下限压在外部档上（KD-7）。
+ * 下限事实单源 = `MIN_NODE`；判据 = 启动自检实测，不把下限压在外部档上（KD-7）。
  */
 
 /** 宿主内置 Node 下限：Node 24 主版本底线（核依赖 `node:sqlite` 免 flag 自 Node 22.13 起 ⇒ 宿主须 Electron ≥ 44.x，内置 Node 24.21.0；Electron 37 面已 EOL）。 */

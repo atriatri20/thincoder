@@ -1,0 +1,145 @@
+# ECS 测试环境运维手册（server 机 ha-proxy · 10.0.0.5 ∥ runner 机 sh-mgr · 10.0.0.6）
+
+> **一句话**：我们自己的**测试箱**（server 测试环境 + 桌面 Linux 构建机 + 沙盒 runner）——怎么上、怎么更新、怎么回滚、哪里有坑。
+> 建档 2026-10-10（用户令：「每次这么盲人摸象摸一遍不是个办法」）；内容来源 = 实跑（2026-10-09 首部署轮 + 2026-10-10 登录面更新轮 + 沙盒 runner 装机轮——本文命令逐条实跑过，读数在案）。
+> 与产品文档的分工：产品侧部署设计 = `server/design/ops/OPS.md` §5 ∥ `thincoder-server/README.md` §3（**客户**怎么部署）；本文 = **我们自己的测试箱**（内部机器 + 机器特定事实）。
+> 凭据纪律：本档**不载任何口令 / 密钥值**；访问 = 专用密钥文件（下节）。
+
+## 1. 访问面
+
+| 项 | 值 |
+|---|---|
+| 主机 | `10.0.0.5`（内网；主机名 `ha-proxy`；阿里云 ECS · Ubuntu） |
+| 账号 | `thincoder`（用户单开给 agent 的账号——部署专用；**无免密 sudo**） |
+| 密钥 | 本机 `$env:USERPROFILE\.ssh\thincoder_ecs`——**必须 `ssh -i` 显式带上**（默认钥匙链里没有它；漏掉 `-i` ⇒ `publickey,password` 被拒） |
+| 端口 | 8787（server 测试口；阿里云安全组已开 TCP 8787，来源 = 内网） |
+| 控制台 | `http://10.0.0.5:8787/`（账号由用户管理——**本档不载账号名与口令**） |
+| 连接 | `ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.5` |
+
+## 2. 机器上的布局（实读 2026-10-10）
+
+| 路径 | 内容 | 属主 |
+|---|---|---|
+| `~/thincoder` | 仓克隆（remote = `origin` = gitee） | thincoder |
+| `~/thincoder-server-deploy/` | 部署目录：`docker-compose.yml` ∥ `.env` ∥ `config/config.json` ∥ `data/gateway.db` | 目录 = thincoder；`config/` ∥ `data/` = ecs-user |
+| 镜像 | `thincoder-server:0.1.0`（**箱上本机构建、无 registry**——compose 只引用，不构建） | — |
+| 容器 | `thincoder-server-deploy-server-1`（`restart: unless-stopped`；`8787:8787`；挂载 config ∥ data） | — |
+| 旁路进程 | 内网嵌入引擎（ollama，`10.0.0.5:11434`，模型 `bge-m3`）——**已停**（2026-10-10 用户令）；server 配置里的 `embedding.baseURL` 仍指向它 | — |
+| 副用 | **桌面 Linux 构建机也在这台**（代号 ha-proxy）——别在大构建并行时做重装 | — |
+| **箱上运维 CLI**（直开库，不经 HTTP） | 镜内路径实读（2026-10-10）：`docker exec thincoder-server-deploy-server-1 node /home/node/.npm-global/lib/node_modules/@thincoder/server/src/ops/cli.mjs --config /app/config/config.json <命令>`——命令 = `member list` ∥ `member add` ∥ `member quota` ∥ `member passwd` ∥ `key list` ∥ `key issue`（全表见 `thincoder-server/README.md` §7） | — |
+
+## 3. 更新部署（一条链——逐条实跑过）
+
+顺序 = **先推、后拉、再重建**。本机（Windows PowerShell）：
+
+```
+cd d:\teamcode\thincoder
+git push origin main ; git push github main     # 箱子的 remote = gitee（origin）
+```
+
+上箱（**分步跑**——每条一行；远端命令**平铺单层**，见 §6 坑 2）：
+
+```
+$k = "$env:USERPROFILE\.ssh\thincoder_ecs"          # 本机 PowerShell：密钥路径（一次设定）
+ssh -i $k thincoder@10.0.0.5 "cd ~/thincoder && git pull --ff-only"
+ssh -i $k thincoder@10.0.0.5 "docker tag thincoder-server:0.1.0 thincoder-server:pre-<日期>"
+ssh -i $k thincoder@10.0.0.5 "docker build -f ~/thincoder/thincoder-server/Dockerfile -t thincoder-server:0.1.0 ~/thincoder"
+ssh -i $k thincoder@10.0.0.5 "cd ~/thincoder-server-deploy && docker compose up -d --force-recreate && sleep 6 && docker ps"
+```
+
+要点：
+
+1. **推在前**——箱子从 gitee 拉；本地没推 = 箱上没有。
+2. **旧镜像先打标**（`thincoder-server:pre-<日期>`）= 回滚锚（见 §5）。
+3. `docker build` 上下文 = `~/thincoder`（**仓根**——console-chat-align 批起双包 `thincoder-server/` + `thincoder-render-core/`；Dockerfile 用 `-f ~/thincoder/thincoder-server/Dockerfile`；compose **无 build 段**——镜像得手动重建）。
+4. `--force-recreate` 必有：tag 同名，靠它确保容器用新镜像重起（停机约数秒）。
+5. 数据库迁移 = **容器启动时自动跑**（无独立迁移步）。
+6. 配置 / 数据 = 卷挂载（`./config` ∥ `./data`），重建容器不动它们。
+
+## 4. 更新后自检（四条探针——期望读数口径）
+
+```
+$k = "$env:USERPROFILE\.ssh\thincoder_ecs"
+ssh -i $k thincoder@10.0.0.5 "curl -s -m 5 -o /dev/null -w 'healthz=%{http_code}\n' http://127.0.0.1:8787/healthz"
+ssh -i $k thincoder@10.0.0.5 "curl -s -m 5 -o /dev/null -w 'client/me=%{http_code}\n' http://127.0.0.1:8787/api/client/me"
+ssh -i $k thincoder@10.0.0.5 "curl -s -m 5 -X POST -H 'Content-Type: application/json' -d '{}' -o /dev/null -w 'client/login=%{http_code}\n' http://127.0.0.1:8787/api/client/login"
+```
+
+| 探针 | 期望 | 含义 |
+|---|---|---|
+| `GET /healthz` | **200** | 服务活着（体 = `{"status":"ok","db":"ok"}`） |
+| `GET /api/client/me`（无 token） | **401** | 客户面在册（缺凭据被拒） |
+| `POST /api/client/login`（空体） | **400** | 客户登录端点在册（空体被拒） |
+| 任一 **404** | ✗ | 该路由没进镜像（代码没推 ∥ 没重建） |
+
+另从**本机**再打一遍（把 `127.0.0.1` 换成 `10.0.0.5`）= 网络面自检（安全组 ∥ 内网可达）。
+
+## 5. 回滚
+
+```
+ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.5 "cd ~/thincoder-server-deploy; docker tag thincoder-server:pre-<日期> thincoder-server:0.1.0; docker compose up -d --force-recreate"
+```
+
+回滚把**镜像**退回去；数据库如需回退 = 走 §6 坑 3 的备份面（尚无成型径——按需补）。
+
+## 6. 坑（都踩过——读数在案）
+
+1. **`-i` 必须显式**：漏了 ⇒ `publickey,password` 被拒（本机默认钥匙里没有专用钥匙）。
+2. **PowerShell 里别用 `\$(...)` 嵌套命令替换**：会被 PS 抢先解析 ⇒ 远端命令碎裂（2026-10-10 实测：两处 `docker exec $(...)` 失败）。远端命令一律平铺、单层；需要内侧引号时 = **PS 用单引号包整条 ssh 命令**（内侧引号原样透传——2026-10-10 实测可行姿势）。
+3. **`deploy/backup.mjs` 以 `thincoder` 跑会失败**（`EACCES: mkdir '.../config/backups'`——`config/` 属 `ecs-user`、本箱无免密 sudo）⇒ 更新前的兜底 = **旧镜像打标**；真备份 = 待补（用 `ecs-user` 侧能力或容器内路径）。
+   - 同族：箱上直接跑仓内运维 CLI 会挂（配置里 `db` = 容器内绝对路径 `/app/data`——宿主机跑必 `EACCES`）⇒ 运维命令一律**在容器内跑**（§2 表的镜内路径）。
+4. **容器名固定** = `thincoder-server-deploy-server-1`（compose 项目名 + 服务名派生）。
+5. **`config/` 与 `data/` 属 `ecs-user`**（部署目录本身属 `thincoder`）——直接 `cp` 这两处的文件可能被拒。
+6. **别在大负载时硬上**：这台同时是桌面 Linux 构建机；历史上出现过旁路进程撑满 + sshd 饿死（须重启恢复）——重活并行时先 `uptime` ∥ `free -m` 看一眼。
+7. **盒镜像构建源慢**（runner 机）：容器内打 `deb.debian.org` = **19 kB/s**（9.4MB 用 8min13s）⇒ 直建 20min+。绕行 = **构建期换源副本**（仅改副本、产品 Dockerfile 不动）——台账 #1250。
+8. **Docker Hub 不可达**（runner 机实测 `registry-1.docker.io:443` i/o timeout）⇒ 节点机上直接 pull 必败；盒镜像在 .5 构建后搬运 = `docker save │ gzip` ⇒ scp ⇒ `docker load`（本次 111MB tgz 走 .5⇒本机⇒.6）。
+
+## 7. runner 机（sh-mgr · 10.0.0.6——沙盒执行面）
+
+| 项 | 值 |
+|---|---|
+| 连接 | `ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.6`（与 .5 同一把钥匙） |
+| 机器 | Ubuntu 22.04.5 ∥ cgroup v2 ✓ ∥ 无 IPv6 缺省路由 ✓ ∥ 盘 40G（余 ~17G）；`thincoder` 在 `sudo` 组（**需密码**）与 `docker` 组 |
+| 已装（2026-10-10） | Docker 29.1.3（apt `docker.io`）∥ quota 4.06 ∥ Node v24.21.0（nodesource）∥ nft 1.0.2（自带） |
+| 角色 | **沙盒执行节点**（runner）——按「runner = 远程 Docker API 节点」口径（2026-10-10 19:52 定）；控制台「沙盒 → 运行面」填地址 `http://10.0.0.6:2375` 即接入 |
+| 服务 | **无自驻进程**（旧 `thincoder-runner.service` 已清除——2026-10-10 20:0x：服务停 ∥ unit 移走 ∥ 包卸载 ∥ 令牌清空）；机器侧只留 **Docker 引擎** |
+| 节点前置 | Docker 引擎须监听 TCP 2375（内网、无 TLS——最小切片口径）：见下「节点接线链」；`sudo` 需先 `echo <口令> | sudo -S -v` 刷票 |
+| 盒镜像 | `thincoder-sandbox:1`——**本机拉不动 Docker Hub**（实测 i/o timeout）⇒ 在 .5 构建后搬运（坑 7/8）|
+
+**节点接线链（2026-10-10 修订——旧「装机链」随守护进程清除作废）**：
+
+```
+# ① 让 Docker 引擎监听 TCP（systemd override；改完生效 = 重启 docker）
+sudo mkdir -p /etc/systemd/system/docker.service.d
+printf '[Service]\nExecStart=\nExecStart=/usr/bin/dockerd -H fd:// -H tcp://0.0.0.0:2375\n' | sudo tee /etc/systemd/system/docker.service.d/tcp.conf
+sudo systemctl daemon-reload && sudo systemctl restart docker
+# ② 本机自证（能读版本 = 就绪）
+curl -s http://127.0.0.1:2375/version
+# ③ 回控制台：「沙盒 → 运行面 → 添加节点」填 http://10.0.0.6:2375（连通自检不过 ⇒ 不下发落库）
+```
+
+- **安全边界（如实）**：2375 = **无鉴权的 Docker 根等价口**——仅限内网（安全组放行 server 机；上 TLS/证书 = 另批——最小切片明示不做）。**现状（2026-10-11 收口走查实读）**：.6 安全组**尚未放行** 10.0.0.5 → 2375（ping ✓ ∥ 22 ✓ ∥ 2375 拒；机器本机 ufw inactive ∥ INPUT ACCEPT）——控制台「添加节点」自检 = 超时如实报错（500…「连通自检失败：节点响应超时（3000ms）」）；**安全组放行后重走方可「在线」**。
+- **验收口径（真机）**：控制台「运行面」添加节点 ⇒ 在线；容器区建/启/停/删各走一遍——读数以页面与 `docker ps` 为准（真机 = 10.0.0.6）。
+- **托管接入跑法（R53② 补——实施轮落地后按此走查）**：控制台「沙盒 → 运行面」→「托管接入」填 主机地址 + 登录方式（可选 sudo 口令）⇒ 由 server 端 agent 代做三件（探明 ∥ 执行 ∥ 登记）——成功 = 任务区「已就绪」（三态：装机中 ∥ 已就绪 ∥ 失败原因）；失败 = 停在哪步 + 逐句原因。上文手工接线链 = 降级径。
+
+**镜像源（拉像必读——2026-10-11 实核）**：
+
+| 源 | `.6` 可达 | 实拉 |
+|---|---|---|
+| `docker.1ms.run`（Hub 镜像） | ✓ 401 | **✓ 真拉成**：`docker.1ms.run/library/ubuntu:24.04` ⇒ 200 · 10.4s · 119MB；用其建容器可跑 |
+| `docker.m.daocloud.io`（Hub 镜像） | ✓ 401 | ✗ 实拉 **502**（清单/层皆挂——本机不可用） |
+| `registry.cn-hangzhou.aliyuncs.com`（ACR） | ✓ 401 | 未拉（自建镜像源用） |
+| `ghcr.io` ∥ `quay.io` | ✓ 401 | 未拉 |
+| `registry-1.docker.io`（Hub 本体） | **✗** `i/o timeout`（域名解析被污染：173.252.88.67） | — |
+| 网易 ∥ 中科大 ∥ 百度 镜像 | ✗ `000` | — |
+
+- **拉像两条路**：① 控制台拉取窗直接填**镜像源前缀的引用**（如 `docker.1ms.run/library/ubuntu:24.04`）——今天可用；② 引擎级镜像源（便利径）：`.6` **现无** `/etc/docker/daemon.json`，而 `.5` 已配三源（`docker.1panel.live` ∥ `docker.m.daocloud.io` ∥ `docker.1ms.run`——实读）⇒ `.6` 同配一条即让裸 `ubuntu:24.04` 直通（需 sudo 口令）：
+  `printf '{"registry-mirrors":["https://docker.1ms.run"]}' | sudo tee /etc/docker/daemon.json && sudo systemctl restart docker`
+  （重启不动 2375 监听 override ∥ 盒镜像 `thincoder-sandbox:1` 为本地标，不受影响。）
+- **盒镜像**（坑 8）仍走 `docker save|gzip` ⇒ scp ⇒ `docker load`——那是本机构建件；**日常基础镜像**走上面①/②。
+
+## 8. 相关档
+
+- 测试环境首部署批（来源 ∥ 授权 ∥ 安全组开放过程）= `batches/2026-10-09-server-test-env-ecs.md` §1。
+- 产品侧部署设计 = `server/design/ops/OPS.md` §5 ∥ `thincoder-server/README.md` §3。
+- 三端发布流程 = `RELEASE.md`。

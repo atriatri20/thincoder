@@ -102,7 +102,7 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
 | **N4** | 会话资源 | 每 `session/new` 一个 agent 实例；v1 不设上限 |
 | **N5** | 零语义改动面 | TUI 块路由 / 渲染语义零改——文法抽出为纯搬迁 + 再导出 |
 | **N6** | 可验证性 | 新增断言档锁定三面——前缀零泄漏 / question 不在 ACP 工具集 / 文法单一权威 |
-| **N7** | 无回归 | 既有 TUI 用例档零修改通过；ACP 工具 id 配对（FIFO）语义不变 |
+| **N7** | 无回归 | 既有 TUI 用例文件零修改通过；ACP 工具 id 配对（FIFO）语义不变 |
 | **N8** | 无 TTY 可驱动 | 认证路径不依赖交互终端：脚本化 stdio 客户端（不发 `authenticate`、无 TTY）可完成 `initialize → session/new → session/prompt`；`thincoder acp --login` 在非 TTY 下快速退出（非 0）而非挂死 |
 
 ## 4. 不做项（明确裁剪）

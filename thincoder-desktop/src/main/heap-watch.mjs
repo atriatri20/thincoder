@@ -12,7 +12,7 @@
  * 冻结门 ∕ 恢复动作不受影响）。
  * purge 核对（实施期，2026-09-30）：CLI `crash-reports.mjs` 四模式（`crash-*` ∕ `report.*` ∕ `tui-stderr-*` ∕ `Heap.*`）
  * 不含 `desktop-freeze-*.json`（且不得冒充 `crash-*`——会误触 CLI「上次运行异常终止」提示）⇒ 本档按**同策**（30 天）
- * 自清：现场 = 自名族；快照 = 与 CLI 同式 `/^Heap\..+\.heapsnapshot$/`（覆盖自名 ∥ 主臂 V8 名）。
+ * 自清：现场 = 自名族；快照 = 与 CLI 同式 `/^Heap\..+\.heapsnapshot$/`（覆盖自名 ∥ 主进程 V8 名）。
  * 纪律：全步尽力面（写盘 ∕ 探针 ∕ 动作失败不阻断宿主；失败不静默——stderr `[heap]` 行 + warn 行同走核事件
  * 日志 `logEvent`（CLI 同径；核件内建测试隔离）；`ping` 注入视为**已含超时**的探针（超时常量 = `PING_TIMEOUT_MS`）。
  */
@@ -63,7 +63,7 @@ function purgeOwnFiles(dir, nowMs) {
   try { names = readdirSync(dir) } catch { return } // 目录不可读 ⇒ 无事可做
   for (const name of names) {
     const own = (name.startsWith(SCENE_PREFIX) && name.endsWith(".json"))
-      || /^Heap\..+\.heapsnapshot$/.test(name) // 与 CLI 同式（覆盖自名 ∥ 主臂 V8 名）
+      || /^Heap\..+\.heapsnapshot$/.test(name) // 与 CLI 同式（覆盖自名 ∥ 主进程 V8 名）
     if (!own) continue
     try { if (statSync(join(dir, name)).mtimeMs < cutoff) unlinkSync(join(dir, name)) } catch { /* 单档失败不影响其余 */ }
   }
@@ -73,7 +73,7 @@ function purgeOwnFiles(dir, nowMs) {
  * 启动看门狗（返回句柄：`stop()` ∕ `checkNow()`（直驱一次采样）+ 运行期快照门 `setSnapshotEnabled(enabled)`
  * + 冻结钩族 `onUnresponsive` ∕ `onResponsive` ∕ `onGone`）。`enabled: false` ⇒ 零武装（不注册定时器 ∕
  * 不预建目录 ∕ 不武装快照）；`snapshotEnabled` = 快照门**初始值**（判定归装配面——运行期热读经句柄应用）。
- * 注入缝：`sample` ∕ `snapshot` ∕ `log` + `ping` ∕ `killRenderer` ∕ `reload` + `armMainSnapshot`（臂调用观测）；
+ * 注入缝：`sample` ∕ `snapshot` ∕ `log` + `ping` ∕ `killRenderer` ∕ `reload` + `armMainSnapshot`（该分支调用观测）；
  * 时钟 ∕ 定时器可注入（平 node 直测）。
  */
 export function createHeapWatch({
@@ -112,7 +112,7 @@ export function createHeapWatch({
   let pressureTaken = false
   let lastReading = { main: null, processes: [] }
   let seq = 0
-  let armDone = false // 近上限臂一次性安装标记（Node API 一次性 ⇒ 补装门 = `armed ∧ ¬armDone`）
+  let armDone = false // 近上限分支一次性安装标记（Node API 一次性 ⇒ 补装门 = `armed ∧ ¬armDone`）
 
   const rendererWorkingSet = () => (lastReading.processes ?? []).reduce((max, p) => (
     RENDERER_TYPES.has(p?.type) && Number.isFinite(p.workingSetMb) ? Math.max(max, p.workingSetMb) : max
@@ -170,7 +170,7 @@ export function createHeapWatch({
         const line = heapWarnLine("main", main.heapUsed, main.heapLimit, ratio)
         lines.push(line)
         log(line)
-        // 日志腿（与 CLI 同径——核事件日志；失败静默降级 NF-L1）
+        // 日志分支（与 CLI 同径——核事件日志；失败静默降级 NF-L1）
         try { logEvent("heap-warn", { kind: "heap-warn", label: "main", used: main.heapUsed, limit: main.heapLimit, ratio: Number(ratio.toFixed(3)) }) } catch { /* 日志失败不阻断 */ }
       }
     }
@@ -269,7 +269,7 @@ export function createHeapWatch({
 
   /** 运行期快照门应用（装配面两源调用——config-watch `onChange` ∥ 核 `onConfigSelfWrite` 订阅）：
    *  同值 ⇒ 零动作（幂等——不重复记过渡行）；`false` ⇒ 渲染径即时零取；`false→true` 且武装开启 ⇒
-   *  近上限臂补装恰一次（`armDone` 闸——Node 一次性 API：不可重装 ∥ 已装态不可撤）。 */
+   *  近上限分支补装恰一次（`armDone` 闸——Node 一次性 API：不可重装 ∥ 已装态不可撤）。 */
   const setSnapshotEnabled = (value) => {
     const next = value === true
     if (next === snapshotEnabled) return

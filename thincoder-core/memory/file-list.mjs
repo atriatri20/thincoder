@@ -1,12 +1,13 @@
 /**
  * memory/file-list.mjs — 项目文件清单面（自 `memory/code-sync.mjs` 迁出 · 2026-10-01 core 拆分批 #755 ∥ #786）。
  * 内容 = `indexExtensions`（内置扩展名表 ∪ 项目声明并集）∥ `listProjectFiles`（git 列面 + 非 git walk
- * 回退 + unlisted 计数；`index.excludePaths` §6.14 面① 双径过滤：git 列面筛行 ∥ walk 剪枝）——迁出块逐字。
- * 原档 `memory/code-sync.mjs` 经 `export { … } from` 转口保名（消费面 / 批内件 import 面零改）。
+ * 回退 + unlisted 计数；准入 = 排除（§6.14 面①∪面⑥——git 列面筛行 ∥ walk 剪枝）+ 声明范围门
+ * （§6.14 面⑦——双径逐文件判 ∥ walk 不剪枝））——迁出块逐字。
+ * 原档 `memory/code-sync.mjs` 经 `export { … } from` 转口保名（消费面 / 单元测试档 import 面零改）。
  */
 import { CODE_EXTS, DOC_EXTS } from "./schema.mjs"
 import { walkProjectFiles, isSkippedRelPath, extensionOf, createUnlistedTally, MAX_WALK_FILES } from "./file-walk.mjs"
-import { loadProjectDeclaration, isExcludedRelPath } from "../conventions.mjs"
+import { loadProjectDeclaration, isExcludedRelPath, declaredIndexScope, isInDeclaredScope } from "../conventions.mjs"
 import { logEvent } from "../log.mjs"
 
 /**
@@ -33,10 +34,13 @@ export function indexExtensions(dir) {
  * Returns { entries, unlisted }: `entries` = { abs, rel } pairs (rel relative to
  * dir); `unlisted` = files whose extension is in NO index list (count + sample),
  * the visible signal behind "my .xyz files are not searchable" (PORTABILITY PO-9).
- * Declared `index.excludePaths` (§6.14 面①) filters BOTH paths — git listing filters the
- * line set; the walk prunes excluded subtrees during traversal (no expansion, no budget).
+ * Both admission facets filter BOTH paths: the exclusion predicate (§6.14 面① declared
+ * `index.excludePaths` ∪ 面⑥ batch-record segments) — git listing filters the line set,
+ * the walk prunes excluded subtrees during traversal (no expansion, no budget); and the
+ * declared-scope gate (§6.14 面⑦ — un-declared ⇒ not indexed) — per-file on both paths,
+ * no pruning on the walk (a segment-sequence face may match at any depth).
  * `truncated` = the non-git walk hit its file cap (capped trees are logged, never
- * silently indexed-partial). opts.maxFiles = the walk cap (test seam).
+ * silently indexed-partial; out-of-scope files spend no budget). opts.maxFiles = the walk cap (test seam).
  */
 export async function listProjectFiles(dir, exts, { maxFiles } = {}) {
   const { execFile: _execFile } = await import("node:child_process")
@@ -44,6 +48,8 @@ export async function listProjectFiles(dir, exts, { maxFiles } = {}) {
   const { code, doc } = indexExtensions(dir)
   const decl = loadProjectDeclaration(dir)
   const excluded = (rel) => isExcludedRelPath(rel, decl, dir)
+  const scope = declaredIndexScope(dir) // §6.14 面⑦ 范围门（单源谓词；本根一份——条目集空 ⇒ 零索引）
+  const inScope = (rel) => isInDeclaredScope(rel, scope, dir)
   const tally = createUnlistedTally(new Set([...code, ...doc]))
 
   const files = []
@@ -58,7 +64,7 @@ export async function listProjectFiles(dir, exts, { maxFiles } = {}) {
     })).replace(/\\/g, "/")
   } catch {
     // Not a git repo → filesystem walk (FR15: the index must still be usable).
-    const walked = await walkProjectFiles(dir, exts, { knownExts: new Set([...code, ...doc]), isExcluded: excluded, ...(maxFiles !== undefined ? { maxFiles } : {}) })
+    const walked = await walkProjectFiles(dir, exts, { knownExts: new Set([...code, ...doc]), isExcluded: excluded, isInScope: inScope, ...(maxFiles !== undefined ? { maxFiles } : {}) })
     files.push(...walked.files)
     // The walk's cap must stay visible end-to-end (file-walk.mjs: "never silently
     // dropped") — a capped listing says so in the log, not only in a discarded flag.
@@ -78,7 +84,7 @@ export async function listProjectFiles(dir, exts, { maxFiles } = {}) {
       const p = line.trim()
       if (!p) continue
       const rel = p.replace(/\\/g, "/")
-      if (isSkippedRelPath(rel) || excluded(rel)) continue
+      if (isSkippedRelPath(rel) || excluded(rel) || !inScope(rel)) continue
       const ext = extensionOf(rel)
       if (!ext || !exts.has(ext)) { tally.note(rel); continue }
       files.push({ abs: joinPath(dir, rel), rel })

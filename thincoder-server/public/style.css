@@ -1,0 +1,385 @@
+/* style.css — 控制台样式（webui/WEBUI.md §2.5 样式族规范：变量单源 ∥ 一套刻度 ∥ 系统基线对齐——一字族 ∥
+   一字号 13px ∥ 行距 1.5 ∥ 零粗体；§4 视觉与自托管）；侧栏分组导航（§2）∥ 窄屏降级顶条（≤760px）。
+   桌面优先（宽表横滚）；零外部资源（无外链样式导入 ∥ 无外链字体 ∥ 无 CDN）∥ 零动画零过渡（口径⑤）。 */
+
+/* ── 底座（§2.5——唯一值源：色/间距/圆角/字排/线宽/布局；本块外零颜色字面量）──────────────────── */
+:root {
+  /* 色（⑥ 色板与状态色） */
+  --bg: #f5f6f8;              /* 页底 */
+  --panel: #ffffff;           /* 侧栏/卡/弹窗/钮底 */
+  --fill: #f0f2f5;            /* 静态浅底（表头/码面） */
+  --hover: #eef1f5;           /* 悬停底（列表行/中性面——唯一行悬停值） */
+  --selected: #e6efff;        /* 选中/活动底 */
+  --backdrop: rgba(15, 23, 42, 0.45); /* 弹窗遮罩 */
+  --text: #1f2430;            /* 正文 */
+  --muted: #6b7280;           /* 次级/禁用字 */
+  --border: #d9dee5;          /* 结构线 */
+  --accent: #2f6fed;          /* 主色 */
+  --accent-hover: #2a63d4;    /* 主钮/链接悬停 */
+  --accent-contrast: #ffffff; /* 主钮字 */
+  --ok: #2e9e5b;              /* 成功 */
+  --warn: #d8a013;            /* 警告 */
+  --danger: #c2372f;          /* 危险 */
+  --idle: #9aa3b0;            /* 中性（健康点缺省） */
+  --danger-fill: #fff5f5;     /* 密钥面底/危险悬停底 */
+  --warn-fill: #fff4d6;       /* 提示条底 */
+  --warn-line: #e5cf98;       /* 提示条线 */
+  --warn-ink: #6b4b00;        /* 提示条字 */
+  /* 间距（④——七级：2/4/6/8/12/16/20；归位口径 = 就近取级 ∥ 等距取小） */
+  --sp-1: 2px; --sp-2: 4px; --sp-3: 6px; --sp-4: 8px; --sp-5: 12px; --sp-6: 16px; --sp-7: 20px;
+  /* 圆角（⑦——三级） */
+  --r-1: 4px; --r-2: 6px; --r-3: 8px;
+  /* 字排（⑤——唯一族 ∥ 唯一字号 ∥ 唯一行高；--mono = ⑩ 码面登记例外） */
+  --font: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  --mono: ui-monospace, Consolas, "Courier New", monospace;
+  --fs: 13px; --lh: 1.5;
+  /* 线宽（S17——结构线/强调线） */
+  --bw: 1px; --bw-strong: 2px;
+  /* 布局（S15——宽值单源：侧栏宽 + 内容缩进 ∥ 弹窗宽三处） */
+  --nav-w: 200px; --modal-w: clamp(560px, 78vw, 1200px);
+  /* 终端（sandbox-container-terminal 批——第八组；登记例外——webui/STYLE.md §2.1 底座表「终端」行）：深底 ∥ 亮字 ∥ ANSI 16 色
+     （c0–c7 常色 ∥ c8–c15 亮色）——面内零颜色字面量（`terminal-render.mjs` 消费） */
+  --term-bg: #12161d; --term-fg: #d9dee5;
+  --term-c0: #3b4048; --term-c1: #e05252; --term-c2: #4bb36a; --term-c3: #d8a013;
+  --term-c4: #5b8def; --term-c5: #b07ce8; --term-c6: #3fb8c9; --term-c7: #c9ced6;
+  --term-c8: #6b7280; --term-c9: #ff7b72; --term-c10: #6ed08a; --term-c11: #f0c04a;
+  --term-c12: #7aa7ff; --term-c13: #d0a0ff; --term-c14: #6fd7e6; --term-c15: #ffffff;
+  /* ── 核件壳族变量桥（chat-shell-align 批——§2.1① 桥例外）：核件变量名 ⇒ 控制台既有变量（逐键 `var(--既有)`——零新值 ∥
+        零颜色字面量；同名键 `--bg`/`--border`/`--accent`/`--muted` 取既有定义，不另列）。必须 `:root` 级：核件浮层/toast 挂 `body` 层。 */
+  --fg: var(--text);
+  --input-bg: var(--panel);
+  --input-fg: var(--text);
+  --btn-fg: var(--accent-contrast);
+  --btn-hover: var(--accent-hover);
+  --hover-bg: var(--hover);
+  --hover-bg-strong: var(--selected);
+  --error-fg: var(--danger);
+  --red: var(--danger);
+  --diff-del-bg: var(--danger-fill);
+  --overlay: var(--backdrop);
+  --shadow: none; /* 核件浮层阴影 ⇒ 平（控制台零阴影族——零新值） */
+  /* ── 核件 `--vscode-*` 族桥（2026-10-12 走查实修·模型菜单黑底黑字）：核件模型菜单/输入区消费 VSC 变量名，
+        核件侧兜底为深色值（`#252526` 等）⇒ 控制台浅底下取值错位（字 `--fg` 深墨 × 底 `#252526` 深）；逐键桥到既有变量（零新值 ∥ 零颜色字面量）── */
+  --vscode-dropdown-background: var(--panel);
+  --vscode-list-hoverBackground: var(--hover);
+  --vscode-list-activeSelectionBackground: var(--selected);
+  --vscode-focusBorder: var(--accent);
+  --vscode-input-background: var(--panel);
+  --vscode-input-foreground: var(--text);
+  --vscode-input-border: var(--border);
+  --vscode-editorWarning-foreground: var(--warn);
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; } /* 隐藏语义兜底（KD-SV-150——webui/STYLE.md §2.3）：任何作者 display 不得复活 `hidden`（作者样式优先于 UA——逐点补丁已两度漏网）；全档唯一强制声明（机检计数 = 1） */
+body { margin: 0; font-family: var(--font); font-size: var(--fs); line-height: var(--lh); background: var(--bg); color: var(--text); }
+h1, h2, h3, h4, h5, h6, th { font-weight: 400; } /* 零粗体（⑤——UA 700 撤；强调 = 色通道，层级 = 结构通道） */
+
+/* ── 侧栏（① 列表面——分组导航：品牌 ∥ 组标题/项（悬停/活动态）∥ 底部 meta 槽）──────────────── */
+.sidebar { position: fixed; inset: 0 auto 0 0; width: var(--nav-w); padding: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-5); background: var(--panel); border-right: var(--bw) solid var(--border); }
+.sidebar .brand { padding: 0 var(--sp-3); }
+.nav-group { display: flex; flex-direction: column; gap: var(--sp-1); }
+.nav-group-title { font-size: var(--fs); color: var(--muted); padding: 0 var(--sp-3); }
+.nav-item { color: var(--text); text-decoration: none; padding: var(--sp-2) var(--sp-4); border-radius: var(--r-2); font-size: var(--fs); }
+.nav-item:hover { background: var(--hover); } /* ① 行悬停（中性面——导航项） */
+.nav-item.active { background: var(--selected); color: var(--accent); } /* ① 选中/活动态（底 --selected ∥ 字 --accent） */
+.nav-bottom { margin-top: auto; display: flex; flex-direction: column; gap: var(--sp-3); padding: 0 var(--sp-3); }
+.nav-bottom .meta { font-size: var(--fs); color: var(--muted); min-height: 14px; }
+body > .content { margin-left: var(--nav-w); } /* 布局（底座：--nav-w = 侧栏宽 + 内容缩进）；`body >` 限定 = 核件消息泡类亦名 `content`（views-chat.mjs:284 `"bubble content"`）——裸 `.content` 会连它一并右推 200px（2026-10-12 走查实修） */
+main { max-width: 1100px; margin: 0; padding: var(--sp-7); }
+
+/* ── 主区（⑤ 字排：页题/卡题同号同重——h2/h3 = --text ∥ h4 = --muted；层级 = 结构通道）───────── */
+h2 { margin: var(--sp-2) 0 var(--sp-6); font-size: var(--fs); } /* 含页题——一字号（UA 1.5em 撤） */
+h3 { margin: 0 0 var(--sp-5); font-size: var(--fs); }
+h4 { margin: var(--sp-5) 0 var(--sp-3); font-size: var(--fs); color: var(--muted); } /* ⑤ 层级：h4 = --muted（卡内 ∥ 弹窗体同规——单源） */
+.card { background: var(--panel); border: var(--bw) solid var(--border); border-radius: var(--r-3); padding: var(--sp-6); margin-bottom: var(--sp-6); } /* ⑦ 卡基 */
+.table-wrap { overflow-x: auto; } /* 宽表横滚（结构零动） */
+
+/* ── 表格（① 列表面：表头 --fill ∥ 行悬停单一声明 ∥ 可点行三件套：指针/焦点环/键盘）─────────── */
+table { border-collapse: collapse; width: 100%; font-size: var(--fs); }
+th, td { border: var(--bw) solid var(--border); padding: var(--sp-3) var(--sp-4); text-align: left; vertical-align: top; white-space: nowrap; line-height: var(--lh); }
+th { background: var(--fill); }
+tbody tr:hover { background: var(--hover); } /* ① 行悬停（表格数据行全覆盖——唯一表格行悬停声明） */
+.row-clickable { cursor: pointer; }
+.row-clickable:focus-visible { outline: var(--bw-strong) solid var(--accent); outline-offset: -2px; } /* ① 行内环（−2px） */
+
+/* ── 表单控件（③）∥ 钮族（②——五型 + 悬停/聚焦/禁用态面）────────────────────────────────────── */
+input:not([type="checkbox"]), select, textarea { padding: var(--sp-3) var(--sp-4); border: var(--bw) solid var(--border); border-radius: var(--r-2); font: inherit; }
+input[type="checkbox"] { accent-color: var(--accent); } /* ③ 勾选框 = 原生 + accent-color（零自绘） */
+input:focus-visible, select:focus-visible, button:focus-visible { outline: var(--bw-strong) solid var(--accent); outline-offset: 2px; } /* ④ 聚焦环单形（控件外偏 2px） */
+label { display: inline-flex; gap: var(--sp-3); align-items: center; font-size: var(--fs); color: var(--muted); }
+.stack { display: flex; flex-direction: column; gap: var(--sp-4); max-width: 380px; }
+.row-form { display: flex; flex-wrap: wrap; gap: var(--sp-4); align-items: center; }
+.row-form h3 { width: 100%; margin: 0; }
+input.tiny { padding: var(--sp-1) var(--sp-3); font-size: var(--fs); }
+input.quota { width: 90px; } /* 尺寸字面（非刻度面——原值保留；`.quota-table` 内为唯一消费面） */
+.quota-table td .hint { margin: var(--sp-2) 0 0; white-space: normal; } /* 成员弹窗·分模型配额表（§2.4②）：就地提示（表内收边——长文案可折行） */
+button { padding: var(--sp-3) var(--sp-5); border: var(--bw) solid var(--accent); border-radius: var(--r-2); background: var(--accent); color: var(--accent-contrast); cursor: pointer; font: inherit; }
+button:hover { background: var(--accent-hover); border-color: var(--accent-hover); } /* ② 主钮悬停（底/边） */
+button.tiny { padding: var(--sp-1) var(--sp-3); font-size: var(--fs); border-color: var(--border); background: var(--panel); color: var(--text); }
+button.tiny:hover { background: var(--hover); } /* ② 次钮悬停 */
+button.danger { background: var(--panel); border-color: var(--danger); color: var(--danger); } /* ② 危险 = 描边单形（面板底 ∥ 红边红字） */
+button.danger:hover { background: var(--danger-fill); } /* ② 危险悬停 */
+button.link { border: none; background: none; color: var(--accent); padding: 0; }
+button.link:hover { color: var(--accent-hover); } /* ② 链接悬停 = 字色 */
+button:disabled { color: var(--muted); background: var(--fill); cursor: default; } /* ② 禁用中性化（全型） */
+
+/* ── 公共标签页组件（tabs.mjs——webui/TABS.md §2.1；console-tabs-component 批）：页签族 = ② 型扩充 + ① 选中态 ────────── */
+.tabs { display: flex; flex-direction: column; gap: var(--sp-4); }
+.tab-list { display: flex; flex-wrap: wrap; gap: var(--sp-1); border-bottom: var(--bw) solid var(--border); } /* 页签条（底规 = 结构线） */
+button.tab { border: none; background: none; color: var(--text); border-radius: var(--r-2); padding: var(--sp-2) var(--sp-4); } /* ② 页签型（透明底） */
+button.tab:hover { background: var(--hover); } /* ② 页签悬停（② 型表在册——取 --hover 底） */
+button.tab.active { background: var(--selected); color: var(--accent); } /* ① 选中态（同 `.lang-switch .active` 款） */
+.tab-panel { display: flex; flex-direction: column; gap: var(--sp-4); }
+
+/* ── 反馈面（⑥ 色板 ∥ ⑨ 空/错/加载态——错 = `.hint error`；`.error` 独立生效）────────────────── */
+.hint { color: var(--muted); font-size: var(--fs); } /* ⑨ 加载/空（静态文案——零动画零 spinner） */
+.error { color: var(--danger); } /* ⑨ 错态（`.hint error` 面与状态行 `.error` 面同取） */
+.flash { margin: 0; padding: var(--sp-4) var(--sp-7); background: var(--warn-fill); border-bottom: var(--bw) solid var(--warn-line); color: var(--warn-ink); } /* ⑥ 全局提示（单形——零严重度分色） */
+.secret { border: var(--bw) dashed var(--danger); background: var(--danger-fill); border-radius: var(--r-3); padding: var(--sp-4) var(--sp-5); margin: var(--sp-4) 0; } /* ⑥ 密钥面 */
+.secret-label { margin: 0 0 var(--sp-3); font-size: var(--fs); color: var(--danger); }
+.secret-value { display: block; word-break: break-all; user-select: all; } /* ⑩ 密钥字面量（可全选——保留） */
+
+/* ── 码面（⑩——`--mono` 唯一族例外：同号同重）──────────────────────────────────────────────── */
+code { font-family: var(--mono); font-size: var(--fs); background: var(--fill); padding: var(--sp-1) var(--sp-2); border-radius: var(--r-1); }
+pre.snippet { font-family: var(--mono); font-size: var(--fs); margin: var(--sp-3) 0 var(--sp-4); padding: var(--sp-4); background: var(--fill); border: var(--bw) solid var(--border); border-radius: var(--r-2); overflow-x: auto; }
+.snippet code { background: none; padding: 0; } /* 块内芯片：底/内距清零（去重） */
+.detail-grid dd code + code { margin-left: var(--sp-3); } /* 码芯片并排间隔 */
+
+/* ── Provider 页与双弹窗件（§2.4④——工具条 ∥ 函数表单 ∥ 勾选清单 ∥ 段头 ∥ 危险钮行）────────── */
+.provider-form { display: flex; flex-wrap: wrap; gap: var(--sp-4); align-items: flex-end; margin-bottom: var(--sp-4); }
+.provider-form > label { display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-start; }
+.provider-form input, .provider-form textarea { min-width: 210px; } /* 尺寸字面（非刻度面——原值保留） */
+.provider-form input[type="checkbox"] { min-width: 0; } /* 勾选形豁免最小宽（210px 面向文本/数值输入——实测：勾选形落 210px 拉伸） */
+.provider-form .key-clear { flex-direction: row; align-items: center; }
+/* `.provider-form.stacked` 竖排修饰（服务配置卡 ∥ 代理页两表单；2026-10-09 走查收正——横排折行致标签/输入错位；每项 = 标题行 + 控件）*/
+.provider-form.stacked { display: block; }
+.provider-form.stacked > label { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.provider-form.stacked .key-clear { flex-direction: row; align-items: center; }
+.stack-models { margin: var(--sp-2) 0 var(--sp-4); }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-5); margin-bottom: var(--sp-6); }
+.toolbar h2 { margin: 0; }
+.pick-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); }
+.info-actions { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin-top: var(--sp-5); }
+
+/* ── 系统页（views-system.mjs）：更新提示（⑤ 强调样例 = 色通道）∥ 端清单 ─────────────────────── */
+.update-tip { margin: var(--sp-4) 0 0; color: var(--warn); }
+.end-list { margin: 0; padding-left: var(--sp-6); font-size: var(--fs); }
+.end-name { font-weight: 400; } /* 零粗体（⑤——原 600 撤；强调 = 色通道） */
+
+/* ── 语言切换器（i18n.mjs——侧栏 meta 槽 ∥ 登录卡）：两枚小钮收编 `tiny` ∥ 当前态 = 选中态 ────── */
+.lang-switch { display: flex; gap: var(--sp-3); }
+.lang-switch .active { background: var(--selected); border-color: var(--accent); color: var(--accent); } /* ① 选中态（语言钮 .active 落点） */
+.lang-switch-row { margin-top: var(--sp-1); font-size: var(--fs); }
+
+/* ── 健康状态灯（app.mjs 轮询 ∥ nav.mjs meta 槽 `#nav-health`——§2.3⑤）：三色点 + 文案 ───────── */
+.health { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs); color: var(--muted); min-height: 16px; }
+.health::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--idle); flex: none; }
+.health.ok::before { background: var(--ok); }
+.health.degraded::before { background: var(--warn); }
+.health.down::before { background: var(--danger); }
+
+/* ── 卡集与看板（views-overview.mjs ∥ views-usage.mjs——§2.3②③）：网格 ∥ 统计卡 ∥ 快捷入口 ──── */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-5); }
+.stat-grid .card { margin-bottom: 0; }
+.stat-label { font-size: var(--fs); color: var(--muted); }
+.stat-value { font-size: var(--fs); margin-top: var(--sp-2); overflow-wrap: anywhere; } /* KPI = 同号同重（⑤） */
+.stat-value.ok { color: var(--ok); } /* ⑥ KPI 三态 = 健康三态同源 */
+.stat-value.degraded { color: var(--warn); }
+.stat-value.down { color: var(--danger); }
+.stat-links { display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-5); margin-top: var(--sp-3); font-size: var(--fs); }
+.stat-link { display: inline-block; margin-top: var(--sp-3); font-size: var(--fs); }
+
+/* ── 时间趋势（纯 CSS 柱——零依赖；柱 title = 日期/请求数/tokens；轴标 = 首末日）────────────────── */
+.chart { margin-top: var(--sp-3); }
+.chart-bars { display: flex; align-items: flex-end; gap: var(--sp-1); height: 120px; border-bottom: var(--bw) solid var(--border); }
+.bar-col { flex: 1; display: flex; align-items: flex-end; height: 100%; min-width: 4px; }
+.bar { width: 100%; background: var(--accent); border-radius: var(--r-1) var(--r-1) 0 0; min-height: 2px; }
+.chart-axis { display: flex; justify-content: space-between; margin-top: var(--sp-2); font-size: var(--fs); color: var(--muted); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-5); }
+
+/* ── me 用量堆叠柱件（views-me.mjs——§2.3⑦）：段 ∥ 维度切换 ∥ 图例点（零新颜色变量——段色 = --accent + 内联透明度阶梯）── */
+.bar-stacked { width: 100%; display: flex; flex-direction: column-reverse; border-radius: var(--r-1) var(--r-1) 0 0; overflow: hidden; }
+.bar-seg { width: 100%; background: var(--accent); }
+.chart-toggle { display: flex; gap: var(--sp-3); margin-top: var(--sp-3); }
+.chart-toggle .active { background: var(--selected); border-color: var(--accent); color: var(--accent); } /* ① 选中态（.lang-switch .active 同形） */
+.bar-legend { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-5); margin-top: var(--sp-3); color: var(--muted); }
+.bar-legend > span { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.bar-swatch { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; } /* 尺寸字面（非刻度面——原值保留，同 .quota 先例） */
+
+/* ── 向量服务提示条（views-me.mjs——§2.3①）：卡 + 左强调规（⑥）────────────────────────────── */
+.tip-bar { border-left: var(--bw-strong) solid var(--accent); }
+
+/* ── 弹窗内构（⑧——modal.mjs §2.4①：壳/头/体/脚 ∥ 遮罩 ∥ 滚动锁；可点行 ∥ 详情栅格）──────────── */
+body.modal-open { overflow: hidden; }
+dialog.modal { padding: 0; border: var(--bw) solid var(--border); border-radius: var(--r-3); background: var(--panel); color: var(--text); max-width: var(--modal-w); width: min(var(--modal-w), calc(100vw - 32px)); }
+dialog.modal::backdrop { background: var(--backdrop); }
+.modal-head { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-5) var(--sp-6); border-bottom: var(--bw) solid var(--border); }
+.modal-head h3 { margin: 0; flex: 1; }
+.modal-close { border: none; background: none; color: var(--muted); font-size: var(--fs); border-radius: var(--r-2); padding: var(--sp-1) var(--sp-3); } /* ② 图符钮 */
+.modal-close:hover { background: var(--hover); color: var(--text); } /* ② 图符钮悬停 */
+.modal-body { padding: var(--sp-5) var(--sp-6); max-height: min(70vh, var(--modal-w)); overflow-y: auto; display: flex; flex-direction: column; }
+.modal-body > div { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; } /* 内容盒（调用点恒传单 div——modal.mjs 整只 append；修正：原选择器漏此层，链未接通——2026-10-07 实测复现后落） */
+.modal-body > div > * { flex: none; } /* 主信息（表单/信息格/说明）固定不收缩之一 */
+.modal-body > div > .table-wrap { flex: 1 1 auto; min-height: min-content; } /* 直挂表区（成员 key 表 ∥ 配额表）：短表保自然全高不缩；长表承缩自滚 */
+.modal-body > div > .quota-table { min-height: 140px; } /* 长表（配额）承缩下限（≈三行）——再挤 ⇒ 体滚兜底（:174） */
+.modal-body > div > .stack-models { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.stack-models > .pick-head, .stack-models > .pick-note { flex: none; }
+.stack-models > .pick-box { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.pick-box > .table-wrap { flex: 1; min-height: 0; overflow-y: auto; } /* 选择清单区自滚（表头吸附见下） */
+.modal-body .table-wrap { overflow-y: auto; }
+.modal-body .table-wrap thead th { position: sticky; top: 0; z-index: 1; } /* 弹窗内表头吸附（同壳口径——底色沿 `th` 族 `--fill`） */
+.modal-foot { display: flex; flex-wrap: wrap; gap: var(--sp-4); padding: var(--sp-5) var(--sp-6); border-top: var(--bw) solid var(--border); }
+.detail-grid { display: grid; grid-template-columns: max-content 1fr; gap: var(--sp-3) var(--sp-5); margin: 0 0 var(--sp-5); font-size: var(--fs); }
+.detail-grid dt { color: var(--muted); }
+.detail-grid dd { margin: 0; }
+
+/* ── 沙盒页·运行面与托管接入（views-sandbox.mjs——§2.8①）：状态徽标 ∥ 展开行 ∥ 容器/步骤块 ──── */
+.badge { border: var(--bw) solid var(--border); border-radius: var(--r-2); padding: 0 var(--sp-2); } /* ② 徽标（中性——在线/离线与装机三态同形） */
+.badge.ok { color: var(--ok); border-color: var(--ok); }
+.badge.off { color: var(--danger); border-color: var(--danger); }
+.detail-row > td { background: var(--panel); white-space: normal; } /* 展开行（容器区/步骤读数——长文可折行） */
+.stack-box { display: flex; flex-direction: column; gap: var(--sp-4); }
+.step-list { margin: 0; padding-left: var(--sp-6); font-size: var(--fs); }
+.step-list li { margin: var(--sp-2) 0; }
+
+/* ── 沙盒·容器详情/日志/用量与镜像族（views-sandbox-containers.mjs ∥ views-sandbox-images.mjs——§2.8①；零新变量 ∥ 零新悬停规则）── */
+.snippet.wrap { white-space: pre-wrap; overflow-wrap: anywhere; } /* 环境块：长值折行 */
+.pre-scroll { max-height: 46vh; overflow-y: auto; } /* 日志码面：纵滚（尺寸字面——非刻度面，同 .quota 先例） */
+.row-form > h4 { margin: 0; } /* 行内小标题（详情窗用量块——同 `.row-form h3` 先例） */
+
+/* ── 沙盒·镜像源族与列表过滤（views-sandbox-image-sources.mjs ∥ views-sandbox-images.mjs——§2.8①；零新变量 ∥ 零新悬停规则）── */
+.filter-row { display: flex; flex-wrap: wrap; gap: var(--sp-4); align-items: center; margin-bottom: var(--sp-4); } /* 过滤行（本地镜像表 ∥ 浏览窗两列） */
+.filter-row input { min-width: 240px; } /* 尺寸字面（非刻度面——原值保留，同 `.provider-form` 先例） */
+.browse-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-5); align-items: start; } /* 浏览窗两列（仓库 ∥ 标签） */
+
+/* ── 服务模型配置面（views-models.mjs——§2.4③）：配置区五组（A/C/F/D/E） ∥ 表单网格 ∥ 停用钮行 ∥ 元数据行 ─── */
+.config-group { margin-top: var(--sp-4); }
+.config-group h5 { margin: 0 0 var(--sp-3); font-size: var(--fs); color: var(--muted); }
+.config-row { display: flex; align-items: center; gap: var(--sp-4); }
+.config-status { font-size: var(--fs); }
+.config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-4) var(--sp-5); }
+.config-field { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2); font-size: var(--fs); }
+.config-field input { width: 100%; max-width: 420px; }
+.config-field .hint { margin: 0; }
+.config-group > .hint { margin: var(--sp-3) 0 0; }
+
+/* ── 对话页四段（views-chat.mjs ∥ views-chat-composer.mjs——§2.1；chat-shell-align 批）：会话条 sticky 顶 ∥ 消息流文档流 ∥
+   状态行 + 输入区 sticky 底（核件 `composer.css` 命中——本档零覆写）；核件发射类族补样式（零新变量值 ∥ 零新悬停规则）── */
+.chat-bar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); padding: var(--sp-4) 0; background: var(--panel); border-bottom: var(--bw) solid var(--border); } /* ① 顶会话条（底/边 = 既有族值） */
+.chat-select { min-width: 260px; max-width: 100%; } /* 尺寸字面（非刻度面——同 `.filter-row input` 先例） */
+.chat-thread { display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-6) 0; flex: 1 1 auto; } /* ② 消息流 = 文档流平铺（无卡无框——滚动归 `document.scrollingElement`）；吃余高（2026-10-13 轻通道笔 1——短会话输入区亦贴底） */
+#toolbar { position: sticky; bottom: 0; z-index: 2; } /* ④ 输入区 sticky 底（核件容器——内距/边/底沿核 `composer.css`） */
+main:has(.chat-thread) { padding-bottom: 0; } /* 对话页底沿让位贴底输入区（2026-10-13 轻通道笔 1——仅对话页，`:has` 作用域） */
+main:has(.chat-thread) > section { display: flex; flex-direction: column; min-height: calc(100vh - var(--sp-7)); } /* 页最少一屏（短会话 ⇒ 输入区亦落视口底；长会话 sticky 照旧——零新变量） */
+#status-line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); color: var(--muted); } /* ③ 状态行（输入区上方——`#toolbar` 首子） */
+#status-line:empty { display: none; }
+.status-sep { color: var(--border); }
+.status-seg { white-space: nowrap; }
+.status-warn { color: var(--warn); } /* context ≥80% 警示段（§2.1④） */
+
+/* 消息族（核 `flow/block.mjs` 发射类名——VSC 平铺形：无气泡底 ∥ 标签行 = 色通道 ∥ 时间 = 次级字） */
+.message { display: flex; flex-direction: column; gap: var(--sp-3); }
+.message.notice { padding: var(--sp-3) var(--sp-4); background: var(--fill); border-radius: var(--r-2); color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; } /* notice 灰条（控制台自持面——VSC 无对应） */
+.message.pending { color: var(--muted); } /* 待发泡（核 `markPending`） */
+.msg-label { color: var(--accent); }
+.msg-time { color: var(--muted); margin-left: var(--sp-4); }
+.bubble { white-space: pre-wrap; overflow-wrap: anywhere; }
+.message.assistant .bubble:empty { display: none; }
+
+/* 无源钮收窄（§2.1③④——CSS 隐藏 + 逐条无源实证）：四模式位（无人值守裁剪）∥ 设置（开发壳面）∥
+   模型菜单 footer 管理三项（provider 增删/密钥——控制台落点 = Provider 页）；档位钮（`#reasoning-btn`）经 KD-SV-111 解隐藏——档位通道三段补齐 */
+#auto-btn, #advisor-btn, #eng-btn, #plan-btn, #settings-btn { display: none; }
+.mm-sep, .mm-row.mm-manage { display: none; } /* 特征度升形（`.mm-row.mm-manage` ≻ 核件 `.mm-row` 0,1,0）——核件表后加载，平形同胜者会盖掉收窄（2026-10-12 走查实修） */
+
+/* ── 对话页·核件族（console-chat-align 批——§2.10；chat-shell-align 批：md 块级宿主随消息块换壳 ⇒ `.bubble`）：
+   核件发射类名（tool-call 族/码面/token）与 md 块级产物——页面补样式（零新变量 ∥ 零新悬停规则）；
+   状态色由核件内联（红/绿）——样式面不重复载体 ──── */
+.tool-call { margin: var(--sp-4) 0 0; border: var(--bw) solid var(--border); border-radius: var(--r-2); background: var(--panel); overflow: hidden; }
+.tool-call-header { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-4); cursor: pointer; }
+.tool-call-icon { width: 0; height: 0; border-left: 5px solid var(--accent); border-top: 4px solid transparent; border-bottom: 4px solid transparent; } /* 播放三角（尺寸字面——非刻度面） */
+.tool-call-icon.open { transform: rotate(90deg); }
+.tool-call-name { color: var(--accent); } /* 名 = 色通道（零粗体⑤） */
+.tool-call-args { flex: 1; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-call-status { color: var(--muted); }
+.tool-call-summary { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-call-body { display: none; padding: var(--sp-3) var(--sp-4); border-top: var(--bw) solid var(--border); max-height: 180px; overflow-y: auto; font-family: var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; } /* 尺寸字面（同 `.quota` 先例） */
+.tool-call-body.open { display: block; }
+.code-block { margin: var(--sp-3) 0 var(--sp-4); padding: 0; background: var(--fill); border: var(--bw) solid var(--border); border-radius: var(--r-2); overflow: hidden; }
+.code-block code { display: block; padding: var(--sp-4); overflow-x: auto; background: none; }
+.code-lang { display: block; padding: 0 var(--sp-4); color: var(--muted); border-bottom: var(--bw) solid var(--border); }
+.tk-comment { color: var(--muted); }
+.tk-keyword { color: var(--accent); }
+.tk-string { color: var(--ok); }
+.tk-number, .tk-type { color: var(--warn); } /* token 取色 = 既有色板（零新变量） */
+.bubble p, .bubble ul, .bubble ol, .bubble blockquote, .bubble table { margin: var(--sp-3) 0; }
+.bubble p:empty { display: none; } /* 核 md 块级置换残影（`<p>` 包 `<pre>` 被解析器隐式闭合——消空段隙） */
+.bubble h1, .bubble h2, .bubble h3, .bubble h4, .bubble h5, .bubble h6 { margin: var(--sp-4) 0 var(--sp-3); font-size: var(--fs); font-weight: 400; } /* 一字号零粗体（⑤——UA 标题字号/字重撤） */
+.bubble ul, .bubble ol { padding-left: var(--sp-7); }
+.bubble li { margin: var(--sp-1) 0; }
+.bubble th, .bubble td { white-space: normal; } /* 块内表格换行（全档 `th/td` 为数据页 `nowrap` 面——块内不携横滚壳，沿 VSC `.content th/td` 口径） */
+.bubble blockquote { padding: 0 var(--sp-4); border-left: var(--bw-strong) solid var(--border); color: var(--muted); }
+.bubble hr { border: none; border-top: var(--bw) solid var(--border); margin: var(--sp-5) 0; }
+.bubble a { color: var(--accent); }
+.bubble img { max-width: 100%; }
+.bubble :is(h1, h2, h3, h4, h5, h6, p, pre, ul, ol, table, blockquote):first-child { margin-top: 0; }
+.bubble :is(p, pre, ul, ol, table, blockquote):last-child { margin-bottom: 0; }
+
+/* ── 项目与 Git 源族（views-projects.mjs ∥ views-admin-projects.mjs ∥ views-git-sources.mjs——team-projects-permissions 批；零新变量 ∥ 零新悬停规则）── */
+.sync-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--idle); margin-right: var(--sp-2); vertical-align: middle; } /* 结果点（未同步 = 中性） */
+.sync-dot.ok { background: var(--ok); } /* 结果点·成（色板既有值） */
+.sync-dot.fail { background: var(--danger); } /* 结果点·败 */
+.badge.accent { color: var(--accent); border-color: var(--accent); } /* 徽标·读写档 */
+.badge.warn { color: var(--warn); border-color: var(--warn); } /* 徽标·负责人 */
+.cell-hint { white-space: normal; margin: var(--sp-2) 0 0; } /* 表内就地人话行（PAT/结果列——长文案可折行） */
+
+/* ── 我的·工作区（views-me-sandbox.mjs——待批提示行：⑥ 色通道同 `.flash` 族；零新变量 ∥ 零新悬停规则）── */
+.pending-line { margin: 0 0 var(--sp-4); padding: var(--sp-4) var(--sp-5); background: var(--warn-fill); border: var(--bw) solid var(--warn-line); border-radius: var(--r-3); color: var(--warn-ink); }
+.pending-line:last-child { margin-bottom: 0; }
+
+/* ── 数据表页视口高壳（§2.6②——高度链声明单源：页头固定 ∥ 表区吃剩高；表尾行计数 = 表内 tfoot〔吸附表底〕；回退见下）────── */
+body.data-shell > .content { height: 100dvh; display: flex; flex-direction: column; } /* `>` 同因（核件消息泡类撞名——2026-10-12 走查实修） */
+body.data-shell main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+body.data-shell main > section { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.page-head { flex: none; }
+.page-area { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--sp-6); } /* 多卡壳页：卡间距（单卡页零影响——me 用量图表化批） */
+.page-area > .card { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
+.page-area > .card.report-card { flex: none; max-height: 55%; overflow-y: auto; } /* 报表卡：自然高不承缩；上限 = 页区高 55%（超限卡内自滚——明细卡恒得剩余高；§2.6②） */
+.table-slot { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.table-slot > .table-wrap { flex: 1; min-height: 0; overflow-y: auto; }
+body.data-shell main thead th { position: sticky; top: 0; z-index: 1; } /* 吸附限 `main`——弹窗内表不吸附（弹窗直属 body） */
+body.data-shell main tfoot td { position: sticky; bottom: 0; z-index: 1; background: var(--fill); color: var(--muted); } /* 表尾行计数（tfoot）吸附表底——与表头呼应 */
+
+/* ── 壳回退（≤760px 宽 ∥ ≤600px 高）：撤高度链——整页滚（吸附随壳失效；§2.6②）────────────────── */
+@media (max-width: 760px), (max-height: 600px) {
+  body.data-shell > .content { height: auto; }
+}
+
+/* ── 窄屏（≤760px）：侧栏降级为顶条（单条媒体查询——非移动端适配承诺——WEBUI §2）────────────── */
+@media (max-width: 760px) {
+  .sidebar { position: static; width: auto; flex-direction: row; flex-wrap: wrap; align-items: center; border-right: none; border-bottom: var(--bw) solid var(--border); }
+  .nav-group { flex-direction: row; align-items: center; }
+  .nav-group-title { padding: 0 var(--sp-1); }
+  .nav-bottom { margin: 0 0 0 auto; flex-direction: row; align-items: center; }
+  body > .content { margin-left: 0; }
+}
+
+/* ── 终端窗（views-sandbox-terminal.mjs ∥ 核三件——`webui/SANDBOX.md` §2.1①；sandbox-container-terminal 批）：
+   终端面类族五枚（`.terminal-modal` ∥ `.terminal-surface` ∥ `.terminal-row` ∥ `.terminal-cursor` ∥ `.terminal-status`）∥
+   调色板取 `:root` 终端组（面内零颜色字面量）∥ 粗体例外（§2.1 ③——面内 cell 按 pty 语义）；零动画零过渡 ∥ 零新悬停规则
+   （面内无悬停态）∥ 行悬停声明清单不变；内距 ∈ 刻度（0 亦在表）── */
+dialog.modal.terminal-modal { width: min(1200px, calc(100vw - 32px)); height: min(720px, calc(100vh - 64px)); }
+dialog.modal.terminal-modal[open] { display: flex; flex-direction: column; } /* 仅开态改显示（`[open]` 限定——关态免显形） */
+.terminal-modal .modal-head, .terminal-modal .modal-foot { flex: none; }
+.terminal-modal .modal-body { flex: 1 1 auto; min-height: 0; max-height: none; overflow: hidden; }
+.terminal-modal .modal-body > div { flex: 1 1 auto; min-height: 0; gap: var(--sp-3); }
+.terminal-modal .terminal-surface { flex: 1 1 auto; min-height: 0; }
+.terminal-surface { position: relative; overflow-x: hidden; overflow-y: auto; padding: var(--sp-4); border-radius: var(--r-2); background: var(--term-bg); color: var(--term-fg); font-family: var(--mono); font-size: var(--fs); line-height: 1; }
+.terminal-row { white-space: pre; } /* 行 = 一行格（折行归网格折返——不靠 CSS 折行） */
+.terminal-cursor { position: absolute; background: var(--term-fg); opacity: .75; } /* 形状随模式（v1 取块形即止）；闪烁 = CSS 固定（零动画） */
+.terminal-status { margin: 0; color: var(--muted); font-size: var(--fs); }
+
+/* ── 我的·对话（views-me-chat.mjs ∥ views-me-chat-composer.mjs——`webui/CHAT.md` §2.2；member-face-chat 批）：
+   四轴类族沿管理面复用（`.chat-bar`/`.chat-select`/`.chat-thread`/`#toolbar`/`#status-line`/消息族/徽标族/待批行）；
+   本面新增两枚（工作区读数段 ∥ 四相引导块）——零新变量 ∥ 零新悬停规则 ── */
+.chat-ws { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); color: var(--muted); } /* 会话条·工作区读数（名 ∥ 盒态 ∥ 在线态） */
+.chat-guide { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-4); padding: var(--sp-6); background: var(--panel); border: var(--bw) solid var(--border); border-radius: var(--r-3); } /* 首次进入四相引导块（本页零 `.card` 面） */

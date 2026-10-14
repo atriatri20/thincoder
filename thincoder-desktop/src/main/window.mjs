@@ -3,7 +3,7 @@
  * + 窗口自身导航钩点（#389③：`will-navigate` ⇒ 外部 URL 拒——判据单源 `protocol.mjs` `isAppNavigation`）
  * + 会话维护动作宿主面（R1 · 桌面功能对位批：菜单「Maintenance」两项 + 确认 ∕ 结果两枚原生对话框——
  * 处理体（核数据面）住 `session-maintenance.mjs`，本档只做 electron 落子；**词面出档 `menu-words.mjs`**
- * ——#533：`menuLabels(locale)` 消费——zh = 语义直译值（#533 裁定）；en 表 = 回归面现值）
+ * ——#533：`menuLabels(locale)` 消费——zh = 语义直译值（#533 裁定）；en 表 = 回归基线现值）
  * + 右键编辑菜单落子（复制面对齐批 · D27 ∕ KD-43：`webContents.on("context-menu")` ⇒ 按 `params` 构模板 ⇒
  * `Menu.popup`；条目集 ∕ 空选零菜单 ∕ 文案四键 = `context-menu.mjs` 两纯函数 + `loadConfig().locale` 现读）。
  * + 更新面宿主落子（桌面发布·阶段二批 · KD-71 ∥ `docs/desktop/design/PACKAGING.md` §2.8.1：`onNative("update")` ⇒

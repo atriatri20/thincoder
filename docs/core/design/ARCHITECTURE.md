@@ -42,7 +42,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 │   ├── cli/ · vsc/                 ← 产品面板块档
 │   ├── TODO.md · TODO-archive.md   ← 项目级台账（单仓单账）
 │   └── batches/                    ← 批次档
-├── scripts/                        ← 仓根统一机检族（单引擎四档：doc-check.mjs 入口 + doc-check-anchors.mjs 锚 / doc-check-targets.mjs 采集 / doc-check-width.mjs 行宽；判据全读 manifest 声明面。台账机检腿随台账面 SQLite 化退役 · mirror-divergence 度量已退役 2026-09-17）
+├── scripts/                        ← 仓根统一机检族（单引擎四档：doc-check.mjs 入口 + doc-check-anchors.mjs 锚 / doc-check-targets.mjs 采集 / doc-check-width.mjs 行宽；判据全读 manifest 声明面。台账机检脚本随台账面 SQLite 化退役 · mirror-divergence 度量已退役 2026-09-17）
 │                                   ← **报告态两档（不入闸）**：api-contract.mjs（接口索引——生成 ∥ --check）· tool-schema-size.mjs（schema 体量读数——拟新增）
 │
 ├── thincoder-core/                 ← 核包（@thincoder/core——共享机制实现 + 共享提示词与工具描述）
@@ -108,7 +108,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | 支撑 | `thincoder-vscode/src/repomap.mjs`（余为核单源——`memory`/`embedding`/`indexer`/`mcp` 端侧镜像已退役〔W7/W8〕，现体经 `@thincoder/core` 引用） | 记忆 / 向量索引 · MCP 客户端 · 仓库大纲 | `thincoder-vscode/docs/_archive/design/MEMORY.md` · `MCP.md` · `CONTEXT-COMPACTION.md`（均归档址） |
 | Webview | `thincoder-vscode/webview/**`（chat/streaming/ui/activity/panels/send/md/…） | 前端渲染 / 交互（隔离 iframe——只经 postMessage、无共享状态） | `docs/vsc/design/WEBVIEW*.md`（三档——结构 ∥ 协议 ∥ 输入） |
 
-测试面：`thincoder-vscode/test/`（`package.json` `"test"` = `node thincoder-vscode/test/run.mjs`——**单入口全量**；显式清单 `thincoder-vscode/test/files.mjs` = 单一来源，清单↔盘上两向自检；权威 = `docs/core/design/TESTING.md` §10）。
+测试树：`thincoder-vscode/test/`（`package.json` `"test"` = `node thincoder-vscode/test/run.mjs`——**单入口（收口时跑一次）**；显式清单 `thincoder-vscode/test/files.mjs` = 单一来源，清单↔盘上两向自检；权威 = `docs/core/design/TESTING.md` §10）。
 
 ## 4. 模块接口速览
 
@@ -182,7 +182,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | 权限审批 | TUI 交互（y/n/a） | 弹窗 + 批确认 | 流内卡片 + 活动池计数 + 标签位（同一待决项三种视图） |
 | 活动渲染 | TUI 面板 | 活动面板 + 冻结入流 | 会话内右栏活动池（随会话入标签页，可折叠） |
 | 壳装配 | `assembleAgent` | `buildTopLevelAgent` | 装配序核单源（`thincoder-core/agent/assemble.mjs`）+ 端壳 adapter（余端差在册） |
-| 测试面 | 单入口 `npm test` | `node thincoder-vscode/test/run.mjs` + 显式清单 | 同形（单入口 + 显式清单） |
+| 测试树 | 单入口 `npm test` | `node thincoder-vscode/test/run.mjs` + 显式清单 | 同形（单入口 + 显式清单） |
 | 发行 | npm 包 | vsix（Marketplace / Open VSX） | 三平台安装包（win / mac / linux） |
 
 ## 5. 跨模块机制（未被板块文档分走的）

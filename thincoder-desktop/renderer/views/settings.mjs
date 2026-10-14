@@ -1,7 +1,7 @@
 /**
  * settings.mjs — 设置面 + 两导出面（批 9 · 批档 §2.12–§2.14；设计单源 = `docs/desktop/design/UI.md` §1 设置面行）。
- * 面形 = **七段**（`data-section` = `providers` / `model` / `agent` / `mcp` / `env`〔R7 增：proxy + shell〕/
- * `tools`〔R2 增：embedding ∕ websearch ∕ 索引状态〕/ `models`〔R7 增：consult ∕ advisor 行〕）
+ * 面形 = **八段**（`data-section` = `providers` / `model` / `agent` / `mcp` / `env`〔R7 增：proxy + shell〕/
+ * `tools`〔R2 增：embedding ∕ websearch ∕ 索引状态〕/ `models`〔R7 增：consult ∕ advisor 行〕/ `team`〔B1 增：登录态 ＋ 登录表单——2026-10-10 · 台账 #1212〕）
  * 各三态（`data-state` = `none` / `loading` /
  * `ready`）：`none` / `loading` ⇒ 词表提示、`ready` ⇒ 行内容；表单在 `loading` 外常在；失败面 = `notice` 节点
  * （**核错误串直传** —— `REASON_WORD` 表内码出词、表外原样，不吞、不自造码）；面头 = 标题 + **主题三态钮族**
@@ -18,13 +18,21 @@
  * 文案一律经 `t()`、零字形字面（字形住 `renderer/settings.css` content）；缺 handlers ⇒ `wire` 落 `disabled: true`。
  * **D39（设置菜单升级批 · #817）增**：`settingsModalTree`（单组弹窗树——复用档内私有 `noticeNode` ∥ `sectionStateNode`
  * ∥ `sectionBody`，零第二实现；宿主 = `renderer/settings-modal.mjs`；决策单源 = `docs/desktop/design/SETTINGS.md` §1 **KD-68**）。
+ * **三端对齐批增（2026-10-07 · 台账 #1027–#1028 · KD-75 ①②）**：`ADD_MODAL_GROUP`（`providerAdd`——弹窗面第八值，
+ * 名单源于此，`SCOPES` ∥ `MODAL_READS` ∥ 开径出口三面同领）+ `settingsModalTree` 添加支：标题词
+ * `settings.addProviderTitle`、体 = 失败串（scope = `providers` ∥ `panel`）+ 段态词（= `providers` 面态，第二闸在途判据）
+ * + 单表（`providerAddBody`——段名 ∥ 段标题不复述）；卡携 `data-initial-focus="field"`（初始焦点 = 首控件，宿主取用）。
+ * 渠道段体（`providers`）同批：两形常显表单退场 ⇒ 段尾添加钮（`settings:addProvider`）。
+ * **添加入口弹窗统一批增（2026-10-07 · 台账 #1054 · KD-77 ①②）**：`MCP_FORM_MODAL_GROUP`（`mcpForm`——MCP 表单
+ * 弹窗，新增 ∥ 编辑两态同框、标题逐态）∥ `CONSULT_ADD_MODAL_GROUP`（`consultAdd`——会诊添加弹窗，标题
+ * `settings.consultAddTitle`）；两卡皆携 `data-initial-focus="field"`；`settingsModalTree` **段态词恰一收正**（非表单支不再叠渲）。
  */
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { ACCENTS, THEMES } from "../theme.mjs"
 import { wire } from "./chat-tool.mjs"
 import { channelFormTree, verifyControl } from "./settings-controls.mjs"
-import { agentBody, envBody, mcpBody, modelBody, modelIdOf, modelsBody, providersBody, toolsBody, usageBody } from "./settings-sections.mjs"
+import { agentBody, consultAddBody, envBody, mcpBody, mcpFormBody, modelBody, modelIdOf, modelsBody, providerAddBody, providersBody, teamAdminBody, toolsBody, usageBody } from "./settings-sections.mjs"
 import { shortcutsBody } from "./settings-sections-shortcuts.mjs"
 
 // 两导出面随 R7 出档 `settings-controls.mjs`；本档 re-export ⇒ 导出面零改（消费面 = 首启向导）。
@@ -33,8 +41,9 @@ export { channelFormTree, verifyControl } from "./settings-controls.mjs"
 /** 段闭集（序固定 = 渠道 → 模型 → agent 参数 → MCP → 环境〔R7 增〕→ 工具与服务〔R2 增〕→
  *  咨询与顾问〔R7 增〕；R7 终态枚举行「providers ∕ model ∕ agent ∕ mcp ＋ env ＋ tools ＋ models」同序）：
  *  名（`data-section`）+ 词键单源。**数据段闭集** —— SCOPES ∕ 弹窗分派 ∕ 失败段标同源；导航展示域另见
- *  `NAV_SECTIONS`（2026-10-05 增两伪段：外观 ∕ 语言 —— 头部控件迁入左导航，非数据段零切片零状态词）。 */
-export const SECTIONS = Object.freeze([
+ *  `NAV_SECTIONS`（2026-10-05 增两伪段：外观 ∕ 语言 —— 头部控件迁入左导航，非数据段零切片零状态词）。
+ *  **fork 差异（2026-10-13 上游合并批）**：上游 0.10.5 增「团队」段（依赖上游服务端登录）——本 fork **隐藏**
+ *  （不入 `SECTIONS` ∥ 不入 `NAV_SECTIONS`；`teamAdminBody` ∕ `settings.team` 切片 ∕ 词键保留在场以备解冻）。 */export const SECTIONS = Object.freeze([
   { name: "providers", word: "settings.section.providers" },
   { name: "model", word: "settings.section.model" },
   { name: "agent", word: "settings.section.agent" },
@@ -53,6 +62,15 @@ export const NAV_SECTIONS = Object.freeze([
   { name: "language", word: "settings.section.language" },
   { name: "shortcuts", word: "settings.section.shortcuts" },
 ])
+
+/** 添加弹窗组名（KD-75 ①②）：**非段名** —— 弹窗体 = `providers` 段域的单表（无行族）；
+ *  **名单源在此**（`SCOPES`（`mount-settings.mjs`）∥ `MODAL_READS` ∥ 开径出口（`mount-settings-exits.mjs`）三面同领 —— 零双抄）。 */
+export const ADD_MODAL_GROUP = "providerAdd"
+
+/** 添加弹窗组名二（KD-77 ①②）：**非段名** —— `mcpForm` = MCP 表单（新增 ∥ 编辑两态同框）∥ `consultAdd` = 会诊添加；
+ *  名单源同 `ADD_MODAL_GROUP`（三面同领 —— 零双抄；常量名 = 设计原文 `MCP_FORM_MODAL_GROUP`——§2.18 项 3）。 */
+export const MCP_FORM_MODAL_GROUP = "mcpForm"
+export const CONSULT_ADD_MODAL_GROUP = "consultAdd"
 
 /** 段态出词闭集（两态：`none` / `loading`）；`ready` ⇒ 行内容（零状态词）。 */
 export const STATE_WORD = Object.freeze({
@@ -113,6 +131,9 @@ export function reasonWord(code) {
   return key === null ? String(code) : t(key)
 }
 
+/** 活校验三值闭集（登录面补全批 —— 段体投影用；表外 ⇒ `null`：禁假造）。 */
+const TEAM_VERIFY_STATES = Object.freeze(["valid", "invalid", "unreachable"])
+
 /** 段态归一（闭集三态；表外 / 缺 ⇒ `none` —— 不猜）。 */
 function stateOf(section) {
   const raw = section?.state
@@ -139,16 +160,14 @@ function guardFlagOf(state) {
 }
 
 /** advisor 推理档**归属模型**（S11 收正 · 顾问评审 🟡2——写面 ∕ 候选面同源同序；对位核 `resolveAdvisorProvider`
- *  `thincoder-core/advisor/run.mjs:26-56`「cfg.model > 渠道 model > 主 provider model」）：
- *  `advisor.model` ⇒ 该值；否则 advisor 渠条目默认模型；再缺 ⇒ 主模型段（`defaultModel`）；无 ⇒ `null`。 */
+ *  `thincoder-core/advisor/run.mjs:26-56`「cfg.model > 父解析模型单档」——**2026-10-09 清除批**：原「渠道 model」分支
+ *  随渠道单值模型退场）：`advisor.model` ⇒ 该值；再缺 ⇒ 主模型段（`defaultModel`）；无 ⇒ `null`。 */
 function advisorTargetOf(settings) {
   const advisor = settings.models?.advisor ?? {}
-  const provider = str(advisor.provider)
-  const channelModel = provider === null ? null : str(listOf(settings.providers?.providers).find((p) => p?.name === provider)?.model)
-  return str(advisor.model) ?? channelModel ?? modelSegmentOf(settings.model?.current)
+  return str(advisor.model) ?? modelSegmentOf(settings.model?.current)
 }
 
-/** 面模型（纯 · 零 DOM）：开合 + 失败面 + 七段（各段现态直读 —— 渲染面零推导）。 */
+/** 面模型（纯 · 零 DOM）：开合 + 失败面 + 八段（各段现态直读 —— 渲染面零推导）。 */
 export function settingsModel(state) {
   const settings = state?.settings ?? {}
   const notice = settings.notice !== null && typeof settings.notice === "object" ? settings.notice : null
@@ -166,6 +185,8 @@ export function settingsModel(state) {
       rows: listOf(settings.providers?.providers).filter((p) => p && typeof p.name === "string"),
       verify: settings.verify !== null && typeof settings.verify === "object" ? settings.verify : null,
       edit: str(settings.providers?.edit), probe: objOf(settings.providers?.probe), draft: objOf(settings.providers?.draft),
+      // KD-75 ③：类型选择现值（形状唯一源）——预设名 ∥ `"custom"`；缺 / 空 ⇒ `"preset"`（缺省态 = 预设形首项）。
+      addShape: str(settings.providers?.addShape) ?? "preset",
       // #615②：失败径草稿种子（`{ name, value }` ∕ `null` —— 消费面 = 渠道段钥行输入回填，`settings-sections.mjs` `keyControls`）
       keyDraft: objOf(settings.providers?.keyDraft),
       // 2026-10-10（模型参数能力批）：渠级上下文窗口编辑态（`ctxEdit` = 编辑中渠道名 ∕ null；`ctxDraft` = 失败径键入种子）
@@ -209,7 +230,6 @@ export function settingsModel(state) {
       proxy: {
         uri: typeof settings.env?.proxy?.uri === "string" ? settings.env.proxy.uri : "",
         web: settings.env?.proxy?.web !== false,
-        model: settings.env?.proxy?.model === true,
       },
       shell: {
         current: str(settings.env?.shell?.current),
@@ -254,6 +274,18 @@ export function settingsModel(state) {
       state: stateOf(settings.usage),
       period: typeof settings.usage?.period === "string" && settings.usage.period !== "" ? settings.usage.period : "today",
       stats: settings.usage?.stats !== null && typeof settings.usage?.stats === "object" ? settings.usage.stats : null,
+    },
+    // B1 批（台账 #1212）团队切片：登录态 + 三值投影（缺 ∕ 形不合 ⇒ null——禁假造）+ 当刻一次性提示。
+    // 登录面补全批（台账 #1231）：`verify` 三值入投影（`valid` ∥ `invalid` ∥ `unreachable`；表外 ⇒ `null`——禁假造），
+    // 消费面 = 首启向导团队屏（面板自取原切片——本投影同源供读数面）。
+    team: {
+      state: stateOf(settings.team),
+      loggedIn: settings.team?.loggedIn === true,
+      server: str(settings.team?.server),
+      member: objOf(settings.team?.member),
+      label: str(settings.team?.label),
+      verify: TEAM_VERIFY_STATES.includes(settings.team?.verify) ? settings.team.verify : null,
+      notice: objOf(settings.team?.notice),
     },
   }
 }
@@ -371,6 +403,8 @@ function sectionBody(name, model, handlers) {
   if (name === "language") return langBody(model, handlers)
   if (name === "shortcuts") return shortcutsBody(model.shortcuts ?? {}, handlers) // 伪段：只读参考页（2026-10-12）
   if (name === "providers") return [sectionStateNode(model.providers.state), ...providersBody(model.providers, handlers, deps)]
+  // 添加弹窗体（KD-75 ①）：零行族 —— 单表唯内容；三源（形状 ∥ 暂存值 ∥ 候选）同住 `providers` 切片。
+  if (name === ADD_MODAL_GROUP) return [sectionStateNode(model.providers.state), ...providerAddBody(model.providers, handlers, deps)]
   if (name === "model") return [sectionStateNode(model.model.state), ...modelBody(model.model, handlers)]
   if (name === "agent") {
     return [sectionStateNode(model.agent.state), ...(model.agent.state === "loading" ? [] : agentBody(model.agent, handlers))]
@@ -379,6 +413,11 @@ function sectionBody(name, model, handlers) {
   if (name === "usage") return [sectionStateNode(model.usage.state), ...(model.usage.state === "ready" ? usageBody(model.usage, handlers) : [])]
   if (name === "tools") return [sectionStateNode(model.tools.state), ...toolsBody(model.tools, handlers)]
   if (name === "models") return [sectionStateNode(model.models.state), ...(model.models.state === "ready" ? modelsBody(model.models, handlers) : [])]
+  // B1 批团队段（台账 #1212；登录面补全批收正 —— 卡降管理面）：段态词 + `ready` 才落体（详情三行；零登/退控件——见 `settings-sections-team.mjs`）。
+  if (name === "team") return [sectionStateNode(model.team.state), ...(model.team.state === "ready" ? teamAdminBody(model.team) : [])]
+  // 两新组弹窗体（KD-77 ①②）：段态词恰一（本支首件）+ 体件；`mcpForm` 载入中零表单（闸住 `mcpFormBody` 内——沿段体旧闸）；`consultAdd` = `ready` 才落体（沿 models 段门）。
+  if (name === MCP_FORM_MODAL_GROUP) return [sectionStateNode(model.mcp.state), ...mcpFormBody(model.mcp, handlers)]
+  if (name === CONSULT_ADD_MODAL_GROUP) return [sectionStateNode(model.models.state), ...(model.models.state === "ready" ? consultAddBody(model.models, handlers) : [])]
   return [sectionStateNode(model.mcp.state), ...mcpBody(model.mcp, handlers, deps)]
 }
 
@@ -486,29 +525,46 @@ export function settingsTree(model, handlers = {}) {
  *  体 = 失败串（`notice.scope` = 本组 ∨ `panel`——他组隐）+ 段态词 + 段体，段标题不复述〕；复用档内私有三件
  *  （`noticeNode` ∥ `sectionStateNode` ∥ `sectionBody`）⇒ 零第二实现；三关 handler 全在树面（背板 ∥ ✕ ∥ 卡内 Esc
  *  〔`stopPropagation` —— 不连带触 F-Esc 关页〕）；表外组 ⇒ `null`（防御档——调用面已验 `SCOPES`）。
- *  体节点携 `data-state` = 组段态（装配面第二闸在途判据面 —— 与页侧 `[data-state="loading"]` 同形）。 */
+ *  体节点携 `data-state` = 组段态（装配面第二闸在途判据 —— 与页侧 `[data-state="loading"]` 同形）。
+ *  **表单支三组（KD-75 ①② ∥ KD-77 ①②）**：`providerAdd` ∥ `mcpForm` ∥ `consultAdd` ⇒ 标题词键直取（非段名）；
+ *  段态 ∥ 失败串 scope 落同段域（`providers` ∥ `mcp` ∥ `models`）；卡携 `data-initial-focus="field"`（初始焦点 =
+ *  表单首控件——宿主 `settings-modal.mjs` 取用；他组缺省 ✕，KD-68 ⑥ 零动）；`mcpForm` 标题逐态（`form.editing` 判
+ *  ——`settings.mcp.addTitle` ∥ `settings.mcp.editTitle`）、`consultAdd` 标题 `settings.consultAddTitle`。
+ *  **段态词恰一（全支——KD-77 ④收正）**：段体分支皆自带段态词（`sectionBody` 首件）⇒ 本支不再叠渲
+ *  （修前非表单支叠渲：`env` 组 loading = 2 同词节点——六组同病）。 */
 export function settingsModalTree(state, group, handlers = {}) {
   const model = settingsModel(state)
+  const isAdd = group === ADD_MODAL_GROUP
+  const isMcpForm = group === MCP_FORM_MODAL_GROUP
+  const isConsult = group === CONSULT_ADD_MODAL_GROUP
   const section = SECTIONS.find((s) => s.name === group)
-  if (section === undefined) return null
+  if (section === undefined && !isAdd && !isMcpForm && !isConsult) return null
   const onClose = typeof handlers?.onCloseModal === "function" ? handlers.onCloseModal : undefined
   const close = () => { if (typeof onClose === "function") onClose() }
-  const notice = model.notice !== null && (model.notice.scope === group || model.notice.scope === "panel") ? model.notice : null
-  const groupState = model[group]?.state ?? "none"
+  const scope = isAdd ? "providers" : isMcpForm ? "mcp" : isConsult ? "models" : group
+  const notice = model.notice !== null && (model.notice.scope === scope || model.notice.scope === "panel") ? model.notice : null
+  const groupState = isAdd ? model.providers.state : isMcpForm ? model.mcp.state : isConsult ? model.models.state : model[group]?.state ?? "none"
+  const editing = isMcpForm && typeof model.mcp.form?.editing === "string" && model.mcp.form.editing !== ""
+  const titleWord = isAdd
+    ? "settings.addProviderTitle"
+    : isMcpForm
+      ? editing ? "settings.mcp.editTitle" : "settings.mcp.addTitle"
+      : isConsult ? "settings.consultAddTitle" : section.word
   return {
     backdrop: { tag: "div", props: { class: "settings-modal-backdrop", onClick: close }, children: [] },
     card: {
       tag: "div",
       props: {
-        class: "settings-modal", role: "dialog", "aria-modal": "true", "aria-label": t(section.word),
+        class: "settings-modal", role: "dialog", "aria-modal": "true", "aria-label": t(titleWord),
+        "data-initial-focus": isAdd || isMcpForm || isConsult ? "field" : undefined,
         onKeydown: (event) => { if (event?.key !== "Escape") return; event.stopPropagation?.(); close() },
       },
       children: [
         { tag: "header", props: { class: "settings-head" }, children: [
-          { tag: "h2", props: { class: "settings-title" }, children: [t(section.word)] },
+          { tag: "h2", props: { class: "settings-title" }, children: [t(titleWord)] },
           { tag: "button", props: wire({ class: "settings-close", type: "button", "data-action": "settings:modalClose", "aria-label": t("settings.close") }, onClose), children: [] },
         ] },
-        { tag: "div", props: { class: "settings-modal-body", "data-state": groupState }, children: [noticeNode(notice), sectionStateNode(groupState), ...sectionBody(group, model, handlers)] },
+        { tag: "div", props: { class: "settings-modal-body", "data-state": groupState }, children: [noticeNode(notice), ...sectionBody(group, model, handlers)] },
       ],
     },
   }

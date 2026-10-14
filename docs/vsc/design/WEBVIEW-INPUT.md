@@ -56,7 +56,7 @@
     · **防悬空**：已标记气泡的原文 ∉ `items` 且非本批 `merged` ⇒ 移除（已被消费且无回声面）。
     · **推送点**：受理 / **五个消费点**（**步边界 pickup** · driver 步骤 1 · 装载① splice · 装载② shift · **会话退出残余直发循环**）/ 忙分支判决（`count` 实况）/ `webviewReady` 握手重推（Reload 冷启按 `items` 重建 N 气泡——幂等快照）。
     **边界**：外部入口队满拒收 = 既有回显气泡**不带标记**（标记只随受理走；拒收提示 = 既有 `showWarningMessage`）；引用失效守卫（气泡已移除 / 清屏 ⇒ `isConnected` 假即弃引用——快照幂等重推自愈）；纯挂起等待面同款（同一规则——无另一形态）；CLI 对位 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1 + `TUI.md` §7.5（待发送块——语义同源、形态各端自落）。
-  - ⑧ **统一消费语义（计划首动作即消费——收编落定 · 2026-09-29）**：取项 ∕ 步边界 ∕ 步边界缝三面同判——`slash` ⇒ 单条（原文 · 保序 · 不合并）；取项单源 = 核 `thincoder-core/queued.mjs` `takeQueuedBatchItem` ⇒ slash 首条不再滞留队首（复现两臂 + 三用例 + 负控判红在册——源 = `docs/batches/2026-09-28-tech-debt-closeout.md` §5）；
+  - ⑧ **统一消费语义（计划首动作即消费——收编落定 · 2026-09-29）**：取项 ∕ 步边界 ∕ 步边界缝三面同判——`slash` ⇒ 单条（原文 · 保序 · 不合并）；取项单源 = 核 `thincoder-core/queued.mjs` `takeQueuedBatchItem` ⇒ slash 首条不再滞留队首（复现两路 + 三用例 + 负控判红在册——源 = `docs/batches/2026-09-28-tech-debt-closeout.md` §5）；
     落点 = `thincoder-vscode/src/extension/queued-pickup.mjs` 步边界（消费点）· 取项三处 = `panel-turn-stages.mjs` ∕ `suspension.mjs`（导入改指核件）；slash 可达且就地消费。
 
 - **Shift+Enter** 既有形态零动（核件键位面不处理——换行）。
@@ -137,7 +137,7 @@
 | D-I8 | 非历史态 · 单行 ↓ = **吞键 + no-op** | 否决放行原生 ↓（同一单行内两分语义）；与 CLI「键已消费、无 fall-through」同源 |
 | D-I9 | 历史修订在既有 `navigateInputHistory` **之上改门限**（零新状态） | 否决历史模块重构（无必要） |
 | D-I10 | 内联次序 = 字面量保护先于 Markdown 替换；恢复序 = 代码段先、反斜杠后 | 否决「代码段提取置于最前」（越界改变代码内反斜杠语义）· 否决保持原实现（代码段内容被二次解释——语料实证） |
-| D-I11 | 回归载体 = 新增测试档（纯函数直驱） | 否决并入既有渲染档（渲染契约无归属档）· 否决 happy-dom 驱动（渲染器零 DOM 依赖） |
+| D-I11 | 回归载体 = 新增单元测试档（纯函数直驱） | 否决并入既有渲染档（渲染契约无归属档）· 否决 happy-dom 驱动（渲染器零 DOM 依赖） |
 
 ## 6. 不并项与历史沿革
 
@@ -186,9 +186,9 @@
 | 2 | 输入历史与多行竖移（五态判定 · 草稿 stash · 不劫持原生竖移） | F-W6 · N-W8 |
 | 3 | 首块说明行（一次性 · 文案 · 样式 · tail-3 射程核验） | F-W1 |
 | 4 | 消息渲染契约（行内代码字面量 · 恢复序 · 全转义 · 跨界族登记） | F-W4 · N-W3 |
-| 5 | 机检面（新增档 ≤500 行 · 无 >300 字符单行 · 文档锚零悬空） | N-M3 · N-M2 |
+| 5 | 机检（新增档 ≤500 行 · 无 >300 字符单行 · 文档锚零悬空） | N-M3 · N-M2 |
 
-**用例面**：`thincoder-vscode/test/`（`webview-input-enter.test.mjs` · `webview-input-history.test.mjs` · `md-render-escape.test.mjs` · `activity-flow.test.mjs` ·
+**用例**：`thincoder-vscode/test/`（`webview-input-enter.test.mjs` · `webview-input-history.test.mjs` · `md-render-escape.test.mjs` · `activity-flow.test.mjs` ·
 `busy-injection-vsc.test.mjs` · `busy-injection-vsc-webview.test.mjs`（C-B2-6 面——含本批扩面行：会话在飞入槽 / 三支送达；「槽满跨载体」= T-V16-8——2026-09-25 file-tier-sweep 批拆分迁入）· 细则⑦ 面对拍锁 = `docs/batches/2026-09-29-parity-b2-queued.test.mjs`（单元测试档）· （机检豁免——用例退场登记）
 `chat-panel-messages.test.mjs`（busy 分流族））——用例表归测试层，本档不复制（D2）。
 

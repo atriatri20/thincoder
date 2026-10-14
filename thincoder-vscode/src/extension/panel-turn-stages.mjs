@@ -7,7 +7,7 @@
  *   · 收尾 `finalizeTurn`（原 `:311-350` finally 体）——落盘 / 标题 / 忙态归位；
  *   · 段 B `enterSuspensionTurn`（原 `:352-382`）——挂起会话接管。
  * 留主档（`panel-chat.mjs`）= 入口守卫段（`ensurePanelAgent` / `ensureMemoryHandle` 同址——
- * 结构机检 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单测树重建时回迁端侧单测档）+ 行加载 / 回调装配段 + 循环调用。
+ * 结构机检 = 单元测试档 `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单元测试树重建时回迁端侧单元测试档）+ 行加载 / 回调装配段 + 循环调用。
  *
  * 搬运契约（§12.2.1 A-1–A-5 / B-1–B-3）：
  *   · 段 A 三处提前 `return`（impl 内 = 退出并触发 finally）⇒ 判别式回传 `{ done: true }`，
@@ -81,9 +81,9 @@ export async function resolveTurnStage({ panel, turnSlot, providerName, modelOve
     return { done: true }
   }
   if (!p) { panel._panel?.webview.postMessage({ type: "error", text: t("error.failedProvider", { name: resolvedName }), needsSetup: true }); return { done: true } }
-  // MODEL-MERGE-SESSION：模型/stamp 决策收敛纯函数（resolveTurnModelAndStamp——导出供单测
+  // MODEL-MERGE-SESSION：模型/stamp 决策收敛纯函数（resolveTurnModelAndStamp——导出供单元测试
   // 锚——语义见函数头注释：真 override 单回合不落槽——无 override 落实际运行模型）
-  const baseModel = p.model ?? null // 渠道默认解析值（defaultModel 属该渠道 → 用之；否则渠道默认单值）
+  const baseModel = p.model ?? null // 解析值（defaultModel 属该渠道 → 用之；否则 null——清除批：渠道单值模型退场）
   const { runModel, stampProvider, sessionStampModel } = resolveTurnModelAndStamp({ providerName: resolvedName, modelOverride, slotRef, baseModel })
   if (runModel && runModel !== p.model) p = { ...p, model: runModel }
   const slotStamp = { activeProvider: stampProvider, activeModel: sessionStampModel }
@@ -101,7 +101,7 @@ export async function resolveTurnStage({ panel, turnSlot, providerName, modelOve
  *  忙态归位 + `loading:false`。参数化捕获变量（原 finally 体同函数作用域引用）。
  *  D7（2026-09-21 块标题行对齐批——标题链单源 · `docs/core/design/SESSION.md` §6.7）：序翻为
  *  「先标题后 save」（CLI `agent-turn.mjs:307-322` 同序）——标题值并入 extra 后随**整档
- *  save 单写**（无第二写）；写后刷会话列表。A2 腿不变：标题仍在忙态归位前（running 窗口）。 */
+ *  save 单写**（无第二写）；写后刷会话列表。A2 分支不变：标题仍在忙态归位前（running 窗口）。 */
 export async function finalizeTurn(panel, { history, fullHistory, slotStamp, turnSlot, susp, skipSession }) {
   traceStop("finally: turn complete — UI released", panel._stopClickTs)
   panel._stopClickTs = null
@@ -117,7 +117,7 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
   // 不显示计数段——计数由会话入口 postSuspension 随带）。
   // D7（§6.7 五环单源）：① 标题先于落盘（源 = 内存人读线 fullHistory——谓词单源 = 核
   // `isRealUserMsg`；触发 = **无标题即尝试**——槽 `title` 在场 ⇒ 端壳短路零触网）；生成失败
-  // 静默（返 null ⇒ 不写 title、save 照常）。A2 腿不变：标题上移至此（归位前——_turnState
+  // 静默（返 null ⇒ 不写 title、save 照常）。A2 分支不变：标题上移至此（归位前——_turnState
   // 仍 running——窗口 = busy：Stop 显 + 路由守卫入单槽）；错误不外抛——归位恒执行（评审 #2）。
   // 风险披露：标题 LLM（核超时 10s）前置于整档 save ⇒ 首次标题拍内容落盘最多延后 10s——
   // 与 CLI 同形（该风险 CLI 既有，非本批新引入）。
@@ -142,7 +142,7 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
   }
   // W8 契约②（2026-09-29 · B1 面修单）：核驱动模块动态装载——释放窗口判据前的预载点（首触 = 真
   // 装载，态 = "running" ⇒ 事件安全；此后 = 已装载 ⇒ 微任务续段）。其后 sync 出口（`poolLive` ∕
-  // `backgroundStatus`）读缓存引用（对外语义零变）。判据面与现状逐字同（下式子项序 ∕ 短路不变）。
+  // `backgroundStatus`）读缓存引用（对外语义零变）。判据与现状逐字同（下式子项序 ∕ 短路不变）。
   const prewindow = !skipSession && !susp && !panel._susp && panel._panel
   if (prewindow) await loadSuspensionCore()
   if (prewindow && poolLive(history)) {

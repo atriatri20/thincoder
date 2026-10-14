@@ -7,7 +7,7 @@
  * · `firstJsonObject` / `argValue`（**值提取容错**——KD-37③：`arguments` 严格 JSON 失败 ⇒ 取首个平衡 JSON 对象
  * 子串 / 首件取值；**值传递面**用，`toolShape` 等结构面严格语义不动）
  * · `judgeResult` / `judgeAfterMech`（判官合成分 → 用例返回形状；**不含网络**——裁决由 `lib/judge.mjs` 取）。
- * 判据的「正本」= 设计档 §5 各例「期望与判据」列；本档只提供实现原语，用例档逐例装配。
+ * 判据的「正本」= 设计档 §5 各例「期望与判据」列；本档只提供实现原语，用例文件逐例装配。
  * 判据分层（§2.10.2 冻结 · 2026-09-24 判据修复批重划）：需要「机器解释文本」的面（文本结构 / 语义）⇒ 判官；
  * 字面 / 计数 / 结构 / 执行 ⇒ 机械。已删件（零调用者）——语义词表件（keywordSet / COLOR_FAMILIES /
  * colorMatch / countEnumerations + enumerateCount 规则）+ 解释类规则件（paragraphCount / sentenceCount /

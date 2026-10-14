@@ -78,7 +78,7 @@
 | `task` | 任务分解追踪，进度显示，自动过滤已完成项 |
 | `plan` | Plan Mode：只读探索 + 设计，用户批准后实施 |
 | `goal` | 长期目标追踪，预算进度与预警 |
-| `subagent` | 子代理族——动作含 `spawn` / `status` / `observe` / `send` / `escalate` / `cancel` / `panel` / `consume-design`；角色 = explore（只读搜索）/ plan（只读设计）/ coder（实现）/ eng-coder（工程实现，需设计令牌）/ eng-designer（设计写作） |
+| `subagent` | 子代理族——动作含 `spawn` / `status` / `observe` / `send` / `escalate` / `cancel` / `panel` / `consume-design` / `design-slots`；角色 = explore（只读搜索）/ plan（只读设计）/ coder（实现）/ eng-coder（工程实现，需设计令牌）/ eng-designer（设计写作） |
 | `verify` | 见 §2.2 |
 | `timer` | 思考时间预算，超时提醒去动手 |
 | `advisor` | 独立设计 / 代码评审（只读子代理） |
@@ -99,7 +99,7 @@
 |---|---|
 | `git` | 综合工具：diff / status / log / checkpoint / add / commit / push / tag / branch / checkout / restore / stash / reset / revert / merge / cherry-pick 等动作族；快照为全量副本 |
 
-### 2.9 Slash 命令（27 个 · 实核——2026-10-01 父侧收正：26 ⇒ 27，补 `/timers`；登记面指针随动）
+### 2.9 Slash 命令（**28** 个 · 实核——2026-10-01 父侧收正：26 ⇒ 27，补 `/timers`；**2026-10-10 登录面补全批：27 ⇒ 28，补 `/team`**；登记面指针随动）
 
 登记面 = `thincoder-cli/src/tui/slash-commands.mjs:40`。
 
@@ -108,7 +108,7 @@
 | Agent | `/plan` · `/auto` · `/eng` · `/advisor` · `/model` · `/submodel` · `/goal` · `/timers` · `/think` |
 | Session | `/new` · `/session` · `/rename` · `/clear` · `/copy` · `/fold` · `/undo` |
 | Project | `/init` · `/skills` · `/mcp` · `/reindex` · `/extract` |
-| System | `/shell` · `/upgrade` · `/config` · `/restore` · `/exit` · `/help` |
+| System | `/shell` · `/upgrade` · `/config` · `/team` · `/restore` · `/exit` · `/help` |
 
 **别名**（`thincoder-cli/src/tui/slash-commands.mjs:71`）：`/h` → `/help` · `/x` → `/exit` · `/m` → `/model` · `/p` → `/plan` · `/t` → `/think` · `/c` → `/clear` · `/n` → `/new`。
 
@@ -177,6 +177,7 @@
 | N7 | 输出上限 | 工具输出超限落盘 + 预览（保头保尾） |
 | N8 | 崩溃可取证 | 异常终止落崩溃记录 + 近堆快照 + 堆预警（CLI 侧面见 `docs/cli/design/CRASH-REPORTS.md`） |
 | N9 | 对外文档契约面 | README / `USAGE` / 用户可见提示串对 slash 命令 · 子命令 · 配置键 · 机制事件的列举须与实装可达面一致（判据句见 §2.13）。**度量方式**：无机检门——对外文本面不在 V5 源域（`docs/**`）内、`scripts/doc-check-anchors.mjs` 不覆盖 ⇒ 守护 = 同批改动 + 人巡；漂移处置 = 能力在位 ⇒ 改文档（反向删实装 = 违规） |
+| N10 | 盘根启动门 | cwd = 磁盘根（`X:\` ∥ `/`；win32 大小写归一）⇒ 会话面硬拦（默认 TUI ∥ `tui` ∥ `chat` ∥ `acp`）：一行提示（先进工作目录再启动）+ 非零退出；信息维护面（`-v` ∥ `--help` ∥ `memory` ∥ `upgrade` ∥ `completion` ∥ `session *`）放行。动机 = 盘根启动 ⇒ 全盘索引（实测案：`D:/` origin 13.2 万行，2026-10-08 已清）。**无强开旗**；家目录维持软防护（#867 先例，不升硬拦） |
 
 ## 4. 不并项与历史沿革
 
@@ -214,3 +215,6 @@
   对账执行明细 = `docs/core/design/DOC-CODE-RECONCILE.md` §5.1；层 0 判据句 = `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.20。
 
 - 2026-10-05（**引擎工具面缺口批 · 需求侧同步 · 主 agent**）：§2.1 `delete` 行补「或空目录（非空拒绝，不递归）」。来源 = 批 `docs/batches/2026-10-05-engine-tools-gaps.md` §2（delete 空目录臂设计）；台账 #943。
+- 2026-10-07（**批 ledger-tool · 需求侧同步 · 主 agent 笔**——承批档上抛②）：§2.7 `subagent` 行动作清单补 `design-slots`（槽位清点只读——与 `consume-design` 并列）。批档 = `docs/batches/2026-10-07-ledger-tool.md`（台账 #998 / #927）。
+- 2026-10-08（**盘根门 ∥ 索引排除批 · 需求侧立案 · 主 agent**）：§3 增 **N10 盘根启动门**。批档 = `docs/batches/2026-10-08-diskroot-gate-index-excludes.md`（台账 #1080）；配对需求 = `docs/core/requirements/MEMORY.md` §4.11（F-S9）。
+- 2026-10-10（**登录面补全批 · 需求侧同步 · 主 agent 笔**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §5 上抛①，台账 #1212）：§2.9 命令清点 **27 ⇒ 28**（补 `/team`——登记面 `thincoder-cli/src/tui/slash-commands.mjs:54`，组 = System）；System 行同拍。零新语义（对盘收正）。

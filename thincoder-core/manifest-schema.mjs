@@ -80,7 +80,7 @@ function isLineCountsValue(v) {
 
 /**
  * 形状校验（模块设计 §2.2）——枚举 / version 数值恒做；**纯函数、零 fs**（原 `{ cwd }`
- * 指针腿已随字段整链裁撤——KD-M1-5 墓志）；不落盘。键存在性入 missingKeys（非拒）：
+ * 指针分支已随字段整链裁撤——KD-M1-5 墓志）；不落盘。键存在性入 missingKeys（非拒）：
  * 缺键 = 便利 fallback（补默认值），不是错（与整档缺失两分——KD-M1-2）。
  * 未知键（#802 / KD-M1-36）：顶层 + 四嵌套层产 `unknownKeys`（非拒——ok 定性零变；产线恰 =
  * fillDefaults 丢弃面；嵌套键用点形路径——同 missingKeys 口径）。

@@ -21,7 +21,7 @@
  * 四档结构拆分批（2026-09-18 · VSC-DEBT §12.2.1）：回合执行循环 + controller 工厂迁出至
  * `panel-turn-loop.mjs`；回合阶段三段（provider/模型解析 · 收尾落盘 · 挂起接管）迁出至
  * `panel-turn-stages.mjs`——本档留入口守卫段（`ensurePanelAgent` / `ensureMemoryHandle` 同址——
- * 结构机检 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单测树重建时回迁端侧单测档）与行加载 / 回调装配段。
+ * 结构机检 = 单元测试档 `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单元测试树重建时回迁端侧单元测试档）与行加载 / 回调装配段。
  */
 import * as vscode from "vscode"
 import { ensureMemoryHandle } from "../embed-config.mjs"
@@ -43,7 +43,7 @@ import { resolveTurnStage, finalizeTurn, enterSuspensionTurn } from "./panel-tur
 // 缝保持（KD-12 · 承 KD-13）：`newTurnController` 迁出 + 本档 re-export——消费档 import 行零改。
 export { newTurnController } from "./panel-turn-loop.mjs"
 
-/** 绑定判定（纯函数，单测锚点）：agent 仅在其 _engPersist 绑定的
+/** 绑定判定（纯函数，单元测试锚点）：agent 仅在其 _engPersist 绑定的
  *  cwd×slot 与当前面板会话一致时可复用（同 cwd 同 slot 第二轮 → 复用不销毁——AC1；换 slot/
  *  换项目 → 不匹配 → 销毁重建——AC4/F4——不跨会话串态）。 */
 export function agentSlotMatches(agent, cwd, slot) {

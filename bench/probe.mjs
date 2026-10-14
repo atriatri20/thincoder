@@ -2,11 +2,12 @@
 /**
  * bench/probe.mjs — 矛盾上抛探针入口（设计 §10.8 CLI 契约；独立 runner——不并入 `run.mjs` 的
  * `--dims` / `--n` 合同与 `SUITE_VERSION` 轴）。三条路径：真实跑批（触网 / 花钱——随批自动跑，受成本三闸）/ `--dry-run`
- * 零网络自检（真装配腿 + 脚本化假 child + 夹具判官传输）/ `--help`；退出码 0 = 跑完 ·
+ * 零网络自检（真装配用例 + 脚本化假 child + 夹具判官传输）/ `--help`；退出码 0 = 跑完 ·
  * 1 = 基建错误（参数 / 未知档 / provider 缺配置 / 夹具不合 schema / `judge.json` 不可读或不合 / 同名拒写）·
  * 130 = SIGINT（不落档）。
  */
 
+import { realpathSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { isoLocal, setResultsDir } from "./lib/output.mjs"
@@ -183,14 +184,14 @@ async function runReal(opts, entries, prices, cfg, ac, bases) {
   return { result, sandboxRoot: base }
 }
 
-/** `--dry-run` 自检（零网络）：真装配腿 + 脚本化假 child 驱动 + 夹具判官传输。 */
+/** `--dry-run` 自检（零网络）：真装配用例 + 脚本化假 child 驱动 + 夹具判官传输。 */
 async function runDryRun(opts, entries, prices, cfg, ac, bases) {
   const { slots } = resolveJudgeSlots(cfg, { providers: null, tested: entries })
   const { fixtureSlotTransport } = await import("./lib/client.mjs")
   const warnings = []
   const base = createSandbox()
   bases.current = base // 即使中途抛错，入口 finally 也清运（--dry-run 不留）
-  // ① 真装配腿（逐族：真 buildSpawnChild + prepareRun——不驱动）
+  // ① 真装配用例（逐族：真 buildSpawnChild + prepareRun——不驱动）
   for (const fid of opts.fixtures) {
     const fixture = fixtureOf(fid)
     const root = runSandbox(base, `assembly-${fid}`)
@@ -304,6 +305,6 @@ export async function main(argv = process.argv.slice(2)) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   main().then((code) => { process.exitCode = code }).catch((e) => { console.error(`[probe] ${e?.stack ?? e}`); process.exitCode = 1 })
 }

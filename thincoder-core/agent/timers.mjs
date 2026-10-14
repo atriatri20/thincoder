@@ -2,12 +2,15 @@
  * agent/timers.mjs — timer 到期件（载体①：在途 timer 的单一权威读面）+ 空闲唤醒机制（闩 ∕ 派发 ∕ 火策略）。
  *
  * 机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.2（载体定形 D-TW1）：
- * 读面三件纯函数住本档——最近到期时点 / 到期出列（幂等）/ 历史注入单点。消费面三处共用
+ * 读面纯函数住本档——最近到期时点 / 到期出列（幂等 · 含周期重排）/ 历史注入单点 / 下一到期时点
+ * （`nextFireAt`——§6.30.18）。消费面三处共用
  * 同一读点（零第二份过滤语义）：① 回合边界轮询（`agent/post-turn.mjs`——行为零变）；
  * ② 空闲闩 deadline；③ 挂起窗 deadline；显示面（状态行标记 / `/timers`）同读源。
  *
- * 载体仍在 agent 字段 `_pendingTimers`（条目形 `{ id, expiresAt, message }`）——**唯一写点** =
- * timer 工具 `thincoder-core/agent-tools/timer.mjs`；跨 run 存活 = 规范语义（D-TW3，无 per-run 复位）。
+ * 载体仍在 agent 字段 `_pendingTimers`（条目形 `{ id, expiresAt, message }` ＋ 可选 `everyMs` ∥ `daily`——§6.30.18；
+ * 绝对时刻条目另携 `at` 来源标记位（非载重——父侧裁定 2026-10-12）；一次性条目形逐字零变）；写点两处 = timer 工具 `thincoder-core/agent-tools/timer.mjs`
+ * （设 ∕ 取消）＋ 本档 `takeExpiredTimers` 内**到点重排**（出列＋重排原子——§6.30.18 D-TW10）；
+ * 跨 run 存活 = 规范语义（D-TW3，无 per-run 复位）。
  *
  * 空闲唤醒族（2026-09-28 流程批 R4 **上提核件** · 纯搬 + 转口 · 零语义改；上提源 = VSC
  * `thincoder-vscode/src/extension/timer-watch.mjs:46` ∕ `:73` ∕ `:94`——as-of 2026-09-28 R4 读数；两端现址（B3 收编后，实读 2026-09-29）=
@@ -21,6 +24,13 @@
  *  形态先例 = 队满「拒 + 提示 + 保留」）。与 CLI 排队容量 `QUEUED_MAX_ITEMS`（8）同值同形。 */
 export const TIMER_MAX_PENDING = 8
 
+/** `every` 间隔下限（毫秒——§6.30.18 D-TW16）：工具面**硬拒**低于此值（不静默钳制）；
+ *  核重排面不设界（防御 = 非有限正数 ⇒ `nextFireAt` 返 `null` 照消费——下限校验在工具面）。 */
+export const TIMER_MIN_EVERY_MS = 60_000
+
+/** 日历式 `HH:MM` 形判据（防御面——工具面为唯一生产者，两处同形）。 */
+const DAILY_RE = /^(?:[01]\d|2[0-3]):[0-5]\d$/
+
 /** 最近到期时点（毫秒）或 `null`（空在途）——端闩 / 挂起窗 deadline / 显示面共用同源（每帧活读）。 */
 export function pendingTimerDeadline(agent) {
   const timers = agent?._pendingTimers ?? []
@@ -33,13 +43,54 @@ export function pendingTimerDeadline(agent) {
   return min
 }
 
+/** 下一到期时点（毫秒）或 `null`（无重排）——§6.30.18「载体扩展 ∥ 重排」单源：
+ *  ① 固定间隔（`everyMs`）：基准 = `entry.expiresAt`（首设刻）；`k = max(1, floor((now − base) / everyMs) + 1)`；
+ *     返 `base + k × everyMs`——**零漂移** ∥ 错过任意拍直落下一格（**跳过不补投**——一次出列对一条至多一投）；
+ *  ② 日历式（`daily` = `HH:MM`）：宿主本地**严格 `> now`** 的下一 occurrence（今日该刻未过 ⇒ 今日，已过 ⇒
+ *     明日；秒位归零——DST 按宿主日历规则走，不作特例）；
+ *  ③ 一次性 ∥ 绝对时刻（无两字段）⇒ `null`；守卫：`everyMs` 非有限正数 ∥ 基准非有限 ∥ `daily` 形不合
+ *     ⇒ `null`（照消费——防御面；下限校验在工具面）。
+ *  首设换算同函数：`every` ⇒ `nextFireAt({ everyMs, expiresAt: now }, now)`（= 设时 + N）∥ `daily` ⇒
+ *  `nextFireAt({ daily }, now)`；`at` ⇒ 直解算（不经本函数）。 */
+export function nextFireAt(entry, now) {
+  const everyMs = entry?.everyMs
+  if (everyMs !== undefined && everyMs !== null) {
+    const base = entry.expiresAt
+    if (typeof everyMs !== "number" || !Number.isFinite(everyMs) || everyMs <= 0) return null
+    if (typeof base !== "number" || !Number.isFinite(base)) return null
+    const k = Math.max(1, Math.floor((now - base) / everyMs) + 1)
+    return base + k * everyMs
+  }
+  const daily = entry?.daily
+  if (daily !== undefined && daily !== null) {
+    if (typeof daily !== "string" || !DAILY_RE.test(daily)) return null
+    const [hh, mm] = daily.split(":").map(Number)
+    const at = new Date(now)
+    at.setHours(hh, mm, 0, 0) // 秒位归零（该刻整分投递）
+    if (at.getTime() <= now) {
+      at.setDate(at.getDate() + 1) // 已过 ⇒ 明日（跨日 = `Date` 日历运算承载——零特例代码）
+      at.setHours(hh, mm, 0, 0) // 跨日归一后再归零（DST 走宿主日历规则）
+    }
+    return at.getTime()
+  }
+  return null
+}
+
 /** 到期出列（**幂等**）：取走 `expiresAt <= now` 的条目并返回（在途表内移除）——二次调用零返
- *  （§6.30.3 成本闸②「到期即消费」——绝不重复投递）。未到期项原序保留。 */
+ *  （§6.30.3 成本闸②「到期即消费」——绝不重复投递）。未到期项原序保留。
+ *  携 `everyMs`/`daily` 的到期项**同 id 克隆回插**（新 `expiresAt = nextFireAt(t, now)`，严格 `> now`——
+ *  §6.30.18 重排：出列＋重排原子 ∥ 净零不触帽；重排先于交付 ⇒「到点即重排」与「交付幂等」互不依赖）；
+ *  一次性 ∥ 绝对时刻照旧被消费（无重排）。 */
 export function takeExpiredTimers(agent, now = Date.now()) {
   const timers = agent?._pendingTimers ?? []
   const expired = timers.filter((t) => t.expiresAt <= now)
   if (expired.length === 0) return []
-  agent._pendingTimers = timers.filter((t) => t.expiresAt > now)
+  const rest = timers.filter((t) => t.expiresAt > now)
+  for (const t of expired) {
+    const next = nextFireAt(t, now)
+    if (next !== null) rest.push({ ...t, expiresAt: next })
+  }
+  agent._pendingTimers = rest
   return expired
 }
 

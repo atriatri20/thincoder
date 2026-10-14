@@ -91,7 +91,7 @@ export function discoverRepos(cwd) {
  * 的目录；无 ⇒ `null`（⇒ 调用方走发现兜底）。**嵌套合法**：子内归子、根其余归根。
  * **纯 fs**（只判存在性——不解析档内容 / 不问模式）· **不跨兄弟** · **无全局优先级**。
  * **覆盖位**（`_setProjectRootForTest` 在场）⇒ **头部短路**：直接返回覆盖值（不查档存在性——
- * 保「覆盖即覆盖值」语义，回归守卫 = 本批批内件基座腿（`docs/batches/2026-10-02-manifest-resolution-fix.test.mjs`——
+ * 保「覆盖即覆盖值」语义，回归守卫 = 本批单元测试档基座用例（`docs/batches/2026-10-02-manifest-resolution-fix.test.mjs`——
  * 基座三态 + 覆盖位 + 薄委托等价逐格）+ `docs/batches/2026-09-29-structure-split-2.test.mjs` 导出枚举探针（`Object.keys` 名面核））。
  * @param {string} [target] 目标路径（目录 / 文件）
  * @returns {string|null} 最近带档祖先目录绝对路径 / null

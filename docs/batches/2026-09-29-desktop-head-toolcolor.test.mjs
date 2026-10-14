@@ -57,7 +57,7 @@ test("T2 模块面：`views/chrome.mjs` 导出集锁 ∧ `mount-head.mjs` 退役
 
 // ─── T3 词键（两语退场 ∕ 余键零动）──────────────────────────────────────────
 
-test("T3 词键：源面 `head.field.*` 零命中 ∧ 两语零 `head.` 键 ∧ 计数差 = −3", async () => {
+test("T3 词键：源面 `head.field.*` 零命中 ∧ 两语零 `head.` 键 ∧ 计数锁 349（2026-10-11 重锚）", async () => {
   const src = read("thincoder-desktop/renderer/i18n.mjs")
   assert.equal((src.match(/head\.field\./g) ?? []).length, 0, "源面 `head.field.` 零命中")
   const { HOST_DICT } = await import("../../thincoder-desktop/renderer/i18n.mjs")
@@ -66,12 +66,12 @@ test("T3 词键：源面 `head.field.*` 零命中 ∧ 两语零 `head.` 键 ∧ 
   assert.deepEqual(en.filter((key) => key.startsWith("head.")), [], "en 零 `head.` 键")
   assert.deepEqual(zh.filter((key) => key.startsWith("head.")), [], "zh 零 `head.` 键")
   assert.equal(en.length, zh.length, "两语键集同数")
-  // 计数锁：修前实读 295（2026-09-29）⇒ 修后 295 − 3 = 292；他批并发增键时读数须重核（批内件随批留存，复跑先复核）。
-  assert.equal(en.length, 292, "计数差 = −3（295 ⇒ 292）")
-  const at = en.indexOf("wizard.save")
-  assert.ok(at >= 0, "锚键 `wizard.save` 在场")
-  assert.deepEqual(en.slice(at + 1, at + 4), ["effort.auto", "effort.off", "status.usage"], "删位邻位对拍（余键零动）")
-  out("HOST_DICT 键数 en/zh", `${en.length} / ${zh.length}（修前 295 —— 差 −3）`)
+  // 计数锁：修前实读 295（2026-09-29）⇒ 292；随正重锚 2026-10-11 = 349（历批增键之累计——末批 = 首启保存面收正，−1 键 +4 键）。
+  assert.equal(en.length, 349, "计数锁 = 349（2026-10-11 重锚）")
+  const at = en.indexOf("wizard.saveAndNext")
+  assert.ok(at >= 0, "锚键 `wizard.saveAndNext` 在场（原锚 `wizard.save` 随 2026-10-11 首启保存面收正批净删）")
+  assert.deepEqual(en.slice(at + 1, at + 4), ["wizard.finishGuard", "wizard.finishGuardGo", "wizard.finishGuardExit"], "邻位对拍（余键零动）")
+  out("HOST_DICT 键数 en/zh", `${en.length} / ${zh.length}（2026-10-11 重锚）`)
 })
 
 // ─── T4 写路存续（「撤面不丢能力」机检腿 · stub 窄桥）────────────────────────

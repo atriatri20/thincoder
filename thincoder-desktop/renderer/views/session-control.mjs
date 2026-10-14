@@ -6,7 +6,7 @@
  * 三件〔项目钮 ∕ 下拉选择器 ∕ 新建钮〕，值面 = `webview/session.css`；需求句 = `docs/desktop/requirements/PROJECT.md`
  * §3.1「会话控制（面板内 · VSC 形）」行。
  *
- * 面（纯函数 —— 零 DOM；机检面 = 下拉结构锚 ∕ 条目形 ∕ 位标 ∕ 空态）：
+ * 面（纯函数 —— 零 DOM；机检 = 下拉结构锚 ∕ 条目形 ∕ 位标 ∕ 空态）：
  *   条体三件 = 项目钮（📁 当前项目 —— 桌面单活动项目 ⇒ **恒在场**〔适配 a：VSC 多根显隐 vs 桌面单项目〕，
  *   出口 `project:open`）→ 下拉选择器（标签 = 活动会话题；开合锚 = `aria-expanded` + 下拉 `data-open`；
  *   Enter ∕ Space 键触发 —— VSC `session-bar.js:20-25` 同径）→ 新建钮（出口 `session:create`）。
@@ -27,7 +27,7 @@ import { BADGE_WORD } from "./chrome.mjs"
 /** 注记合成分隔符（主句 ⇄ 附句之间 —— 按当前 locale 直取：zh「；」/ en "; "；桌面有 locale 上下文，禁内容启发式）。 */
 const NOTICE_SEP = Object.freeze({ zh: "；", en: "; " })
 
-// ─── 模型 ∕ 构树（纯函数 —— 零 DOM；机检面 = 下拉结构锚 ∕ 条目形 ∕ 位标 ∕ 空态）──────
+// ─── 模型 ∕ 构树（纯函数 —— 零 DOM；机检 = 下拉结构锚 ∕ 条目形 ∕ 位标 ∕ 空态）──────
 
 /** 本地化短日期（沿 VSC `fmtDate` 形：月 / 日 + 时:分 —— 运行时本地化）。 */
 function shortDate(ts) {
@@ -166,7 +166,7 @@ export function sessionBarTree(model, handlers = {}, face = {}) {
   }
 }
 
-/** 下拉内容树（注记首行 → 条目 ⋯ → 空态行）：`el` 形描述符 —— 机检面 = 结构锚 ∕ 条目形 ∕ 空态。
+/** 下拉内容树（注记首行 → 条目 ⋯ → 空态行）：`el` 形描述符 —— 机检 = 结构锚 ∕ 条目形 ∕ 空态。
  *  **点内不关**（VSC `session-bar.js:27-29` 同径）：下拉内任一点按吞泡 —— 选择器本体的开合 handler 在上层，
  *  不吞则条目 ∕ 换形键点按会连带 toggle（真 DOM 事件冒泡下必现）。 */
 export function sessionDropdownTree(model, handlers = {}, face = {}) {

@@ -38,6 +38,8 @@ import { getAsyncPool, tombstoneOf, writeTombstone } from "./async-settle.mjs"
 import { noteReviewDelivered } from "./review-facts.mjs"
 // #9（TOOLS.md §6.19）：后台 bash 任务注入器（digest 单点族按 role="bg" 分发到本档）。
 import { injectBgResult } from "./bash-async.mjs"
+// 批 browser-async-fix：后台浏览器动作注入器（同族——role="browser" 分发到 browser-async.mjs）。
+import { injectBrowserResult } from "./browser-async.mjs"
 
 // agent-tools 共享：并行子代理的审批/继续弹窗经 owner 上命名 promise 链串行——
 // 永不叠弹窗（返回链供调用方 .then 续接）。
@@ -131,13 +133,15 @@ export function runningPoolCount(parent, pool) {
 /**
  * Resolve the sub-agent's provider from a model override string (shared with the
  * VS Code port). Forms accepted:
- *   "provider:model"  → the named provider with the named model
- *   "provider"        → the named provider's configured model
+ *   "provider:model"  → the named provider with the named model (first-colon split —
+ *                       "a:b:c" keeps model "b:c"; multi-colon model names intact)
  *   "model"           → same provider as the parent, different model
  *   "default"         → same as null: the parent's provider unchanged (explicit
  *                       "use the default model" — 2026-09-05 user ruling; matched
  *                       case-insensitively — parser-layer alias guard)
  * null → parent's provider unchanged.
+ * Rejected: bare provider names (2026-10-09 清除批——渠道无默认模型，无渠道级 model 可派生；
+ * 可读错误「渠道无默认模型，请用 provider:model」) ∥ "provider:" 空模型段。
  * API keys come from config.json only (env vars are not a key source).
  */
 export function resolveChildProvider(parent, modelArg) {
@@ -145,29 +149,32 @@ export function resolveChildProvider(parent, modelArg) {
   // #861（AGENT-LOOP-SUBAGENT.md §6.7.1 ②）运行期防御——四消费链汇点（config ∥ tool model 参数 ∥
   // consult ∥ vision-reader）：其余非字符串（对象 ∕ 数组 ∕ 数字 ∕ 布尔）明确报错（不裸 TypeError——可自纠）。
   if (typeof modelArg !== "string") {
-    throw new Error(`subagent model override must be a string ("provider:model" | provider | model); got ${Array.isArray(modelArg) ? "array" : typeof modelArg}`)
+    throw new Error(`subagent model override must be a string ("provider:model" | model); got ${Array.isArray(modelArg) ? "array" : typeof modelArg}`)
   }
   // "default" alias (2026-09-05 user ruling — ARCHITECTURE.md 子 agent 模型指定):
   // the literal "default", matched case-insensitively, declares "no override →
   // inherit the default model" — equivalent to null/omission (parent provider
   // unchanged). Checked BEFORE the provider-name lookup so the alias is reserved
   // (≡ omission — providers are not consulted) and never falls through to the
-  // model-name swap branch. Any other single-segment value keeps the legacy
-  // semantics below.
+  // resolution branches below. Any other value runs the resolution below.
   if (String(modelArg).toLowerCase() === "default") return { ...parent.provider }
   const providers = parent.config?.providersList ?? []
   const withKey = (p) => (p.apiKey?.trim() ? { ...p, apiKey: p.apiKey.trim() } : { ...p })
-  if (modelArg.includes(":")) {
-    const [pname, mname] = modelArg.split(":")
+  // 首冒号分割（2026-10-09 清除批）：多冒号模型名不截断——`a:b:c` ⇒ provider `a` ∥ model `b:c`。
+  const sep = modelArg.indexOf(":")
+  if (sep >= 0) {
+    const pname = modelArg.slice(0, sep)
+    const mname = modelArg.slice(sep + 1)
     const p = providers.find((x) => x.name === pname)
     if (!p) throw new Error(`subagent model: unknown provider "${pname}" (available: ${providers.map((x) => x.name).join(", ") || "none"})`)
-    return { ...withKey(p), model: mname || p.model }
+    // 空 mname 一律拒（2026-10-09 清除批）：渠道不携模型，无渠道级 model 可回落。
+    if (!mname) throw new Error(`subagent model: "${modelArg}" — model part is empty (expected provider:model)`)
+    return { ...withKey(p), model: mname }
   }
   const byName = providers.find((x) => x.name === modelArg)
-  // F-2c (MODEL-400-FIX)：裸渠道名克隆须重派生 model——渠道裸克隆会丢 model 键 → 无 model 请求
-  // → serde 400。MODEL-SELECTION v2（M3④）：取渠道默认模型（`provider.model` 单值——2026-09-10
-  // 起；老 models[] 首候选形态已退场）；无默认模型 → 主 provider 的 model 兜底（T28）。
-  if (byName) return { ...withKey(byName), model: byName.model ?? parent.provider?.model }
+  // 2026-10-09 清除批（PROVIDER.md §6.16 M3）：渠道单值模型退场——裸渠名无从派生 model，
+  // 一律拒（不回落任何渠道级 model）。
+  if (byName) throw new Error("渠道无默认模型，请用 provider:model")
   return { ...parent.provider, model: modelArg }
 }
 
@@ -368,6 +375,8 @@ export async function injectAsyncResult(agent, entry) {
   // #9：后台 bash 任务族（role="bg"）单列——专用注入器（状态行 + 尾截 + 全量在 log）；
   // 本函为 digest 注入单点族成员，消费面（run-start pending / 端壳残余注入）零改。
   if (entry.role === "bg") return injectBgResult(agent, entry)
+  // 批 browser-async-fix：后台浏览器动作族（role="browser"）同式单列（摘要文法 = ack 族同源）。
+  if (entry.role === "browser") return injectBrowserResult(agent, entry)
   const body = entry.error ?? entry.report ?? "(no report)"
   // F-2（BATCH-3-STRUCTURE）+ AGENT-LOOP.md §6.14 D-DG2（群 B 批 B5）：注入前查轮累计（单源）——超限条目不
   // inline 全文，改清单行（全文经 persistOverflowReport 落盘——path 随行）。首条豁免

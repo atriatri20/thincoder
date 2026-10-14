@@ -6,7 +6,7 @@
  *  - 2026-10-04（工具路径基面根治批 · #921）：import 面扩为「node:* + manifest 发现/声明族
  *    （叶向——manifest 族零依赖 advisor 面，零新模块边；KD-2）」——`REVIEW_ROOT_KEYS` +
  *    `resolveReviewRootsFor` 判定本体自 `agent/write-gate.mjs` 迁入（write-gate 同名再出口保
- *    既有 import 面），新增 `resolveReviewDocPaths` 文档解析四腿单源。
+ *    既有 import 面），新增 `resolveReviewDocPaths` 文档解析四分支单源。
  */
 import { existsSync, statSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
@@ -50,23 +50,23 @@ function readableFile(abs) {
   try { return existsSync(abs) && statSync(abs).isFile() } catch { return false }
 }
 
-/** 会话根集（腿①判据集——既有 advisor 面 `resolveReviewTargetPaths(agent)` 目录形态的函数式封装；档内私有——零外部消费面）。 */
+/** 会话根集（分支①判据集——既有 advisor 面 `resolveReviewTargetPaths(agent)` 目录形态的函数式封装；档内私有——零外部消费面）。 */
 function sessionReviewRoots(cwd) {
   return resolveReviewRootsFor(cwd ?? process.cwd())
 }
 
 /**
- * **文档解析四腿单源**（2026-10-04 · 批档 §2.2 A 本体）：逐文档
- *   腿① 零变：normAbs(doc, cwd) 落会话根集 ⇒ 受理；腿② 零变：所属项目根集命中 ⇒ 受理；
- *   腿③ 根治面：相对形 ∧ 前两腿未中 ⇒ 候选底座逐个试探（底座 = projectRootView(cwd) 现行集 ＋
+ * **文档解析四分支单源**（2026-10-04 · 批档 §2.2 A 本体）：逐文档
+ *   分支① 零变：normAbs(doc, cwd) 落会话根集 ⇒ 受理；分支② 零变：所属项目根集命中 ⇒ 受理；
+ *   分支③ 根治面：相对形 ∧ 前两分支未中 ⇒ 候选底座逐个试探（底座 = projectRootView(cwd) 现行集 ＋
  *        cwd 祖先链全量目录——自父目录起至盘根、最近→远、去重、现行集在前）——resolve(c, doc)
- *        所属项目根集命中 = 结构命中；绝对形不进本腿（未中 = 真越界，无候选可试）；
- *   腿④ 歧义归一（KD-3）：结构命中 ≥2 ⇒ 可读文件存在性唯一化（batch-paths 读面「首个可读」
+ *        所属项目根集命中 = 结构命中；绝对形不进本分支（未中 = 真越界，无候选可试）；
+ *   分支④ 歧义归一（KD-3）：结构命中 ≥2 ⇒ 可读文件存在性唯一化（batch-paths 读面「首个可读」
  *        同款判据）：恰一可读 ⇒ 胜；≥2 可读 ⇒ fail-closed 拒（scope-doc-ambiguous 列全部
  *        可读命中）；0 可读 ⇒ not-doc 拒（诊断列全部结构命中）。
  * @returns {{ resolved: Map<string,string>, invalid: Array<{doc, attempted:string[]}>,
  *   ambiguous: {doc, hits:string[]}|null, candidates: string[] }} ambiguous = 首个歧义文档
- *   （fail-closed 首拒——消费面拒发即止）；candidates = 腿③候选集（B 文案候选提示同源）。
+ *   （fail-closed 首拒——消费面拒发即止）；candidates = 分支③候选集（B 文案候选提示同源）。
  *   非字符串 / 空白串项**静默跳过**（同 docSetKey 既有过滤语义——不进 resolved/invalid）。
  */
 export function resolveReviewDocPaths(documents, cwd) {
@@ -97,11 +97,11 @@ export function resolveReviewDocPaths(documents, cwd) {
     if (typeof doc !== "string" || !doc.trim()) continue
     const isAbs = /^[a-zA-Z]:[\\/]/.test(doc) || doc.startsWith("/") || doc.startsWith("\\\\")
     const n = normAbs(doc, cwd)
-    // 腿① 会话根集 / 腿② 所属项目根集（既有行为零变——判定序同 advisor.mjs 旧面）。
+    // 分支① 会话根集 / 分支② 所属项目根集（既有行为零变——判定序同 advisor.mjs 旧面）。
     if (under(n, sessionRoots)) { resolved.set(doc, n); continue }
     const owner = owningProject(n)
     if (owner && under(n, ownRoots(owner))) { resolved.set(doc, n); continue }
-    // 腿③ 候选项目根试探（相对形 only——绝对形未中 = 真越界，无候选可试）。
+    // 分支③ 候选项目根试探（相对形 only——绝对形未中 = 真越界，无候选可试）。
     let hits = []
     if (!isAbs && candidates.length > 0) {
       for (const c of candidates) {
@@ -110,8 +110,8 @@ export function resolveReviewDocPaths(documents, cwd) {
         if (cOwner && under(t, ownRoots(cOwner))) hits.push(t)
       }
     }
-    // 腿④ 歧义归一：结构命中 ≥2 ⇒ 可读文件存在性唯一化；恰 1 命中 ⇒ 受理（存在性仅作
-    // 歧义唯一化判据——单命中无判别力，同腿①声明根集受理面一致不查存在）。
+    // 分支④ 歧义归一：结构命中 ≥2 ⇒ 可读文件存在性唯一化；恰 1 命中 ⇒ 受理（存在性仅作
+    // 歧义唯一化判据——单命中无判别力，同分支①声明根集受理面一致不查存在）。
     if (hits.length >= 2) {
       const readable = hits.filter((h) => readableFile(h))
       if (readable.length === 1) { resolved.set(doc, readable[0]); continue }
@@ -141,7 +141,7 @@ export function noteReviewDelivered(agent, run) {
   run.historyAnchorIdx = Array.isArray(agent?.history) ? agent.history.length : 0
 }
 
-/** 腿③候选底座（`MANIFEST.md` §2.5「路径归一增量」族第四笔 · 2026-10-05 · #945）：现行
+/** 分支③候选底座（`MANIFEST.md` §2.5「路径归一增量」族第四笔 · 2026-10-05 · #945）：现行
  *  `projectRootView(cwd)` 集（ok → [root]；ambiguous → candidates 按名序；none → 空集）＋
  *  cwd 祖先链全量目录（自父目录起至盘根、最近→远、去重、现行集在前）——容器相对形在子仓锚下
  *  可解析；受理判据（目标解析位最近 manifest 声明面）∥ 围栏 ∥ 可读唯一化 ∥ fail-closed 歧义零改。 */

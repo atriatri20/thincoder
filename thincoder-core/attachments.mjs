@@ -64,7 +64,7 @@ export function isNonVisionModel(model) {
  */
 export function savePastedImages(dataUrls, cwd, { fs } = {}) {
   const list = Array.isArray(dataUrls) ? dataUrls : []
-  if (list.length === 0) return { paths: [], dropped: 0 } // 空表先于缝校验早退（零判据面 —— 缝不检）
+  if (list.length === 0) return { paths: [], dropped: 0 } // 空表先于缝校验早退（零判据 —— 缝不检）
   if (typeof fs?.mkdirSync !== "function" || typeof fs?.writeFileSync !== "function") {
     throw new TypeError("savePastedImages: fs seam missing — inject { mkdirSync, writeFileSync } (the write face must not silently drop every image)")
   }

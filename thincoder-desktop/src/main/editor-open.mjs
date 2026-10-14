@@ -4,7 +4,7 @@
  * 面：`file:open` 出口（`ipc.mjs` `fileOpen`）的**单一路径链**前半 ——
  *   ① 候选探测：`code` → `code-insiders` → `cursor` → `subl`（`where` ∕ `sh -c 'command -v'` 探存 ——
  *      沿核 `shell-candidates.mjs:46` 同式；**成功结果 memo** ∕ 在飞去重 ∕ **绝不抛出**：探测失败 = 该候选缺席）；
- *      两臂返回形 = 命中 ⇒ **回显入口路径**（`where` 命中 `.cmd` shim ⇒ 直 spawn 不可靠，全路径 + cmd 包装才是稳形）·
+ *      两分支返回形 = 命中 ⇒ **回显入口路径**（`where` 命中 `.cmd` shim ⇒ 直 spawn 不可靠，全路径 + cmd 包装才是稳形）·
  *      未命中 ⇒ `null`（调用面落 `shell.openPath` 兜底）。
  *   ② 命令行构造（**argv 数组，零 shell 拼接**）：`code` 族 = `--goto path:line`；`subl` = `path:line`
  *      （style 由入口路径 basename 判定）；`line` 缺 ∕ 非正整数 ⇒ 纯路径（零行参）。
@@ -79,7 +79,7 @@ export function detectEditorCli() {
 }
 
 /** 行参风格（纯函数）：入口路径 basename 去可执行后缀 = `subl` ⇒ `colon`（`path:line`）；余 ⇒ `goto`
- *  （`--goto path:line` —— `code` ∕ `code-insiders` ∕ `cursor` 族同形）。未知入口 ⇒ `goto`（宽臂）。 */
+ *  （`--goto path:line` —— `code` ∕ `code-insiders` ∕ `cursor` 族同形）。未知入口 ⇒ `goto`（宽松分支）。 */
 export function editorStyleOf(entry) {
   const stem = basename(String(entry ?? "")).replace(/\.(exe|cmd|bat)$/i, "").toLowerCase()
   return stem === "subl" ? "colon" : "goto"

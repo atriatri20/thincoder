@@ -36,7 +36,7 @@ export function advisorAlertText(from, rounds) {
  * 命中 ⇒ `pushChildUpstream({parent, from: _upstream.label, kind: "note", message})` + 置闩。
  * **恒零抛**（兜底捕获兑现——自动源无模型可报错；失败面静默跳过）。
  * @param {object} child 子 agent（eng-coder / eng-designer 形态；`_upstream` 由 spawn 站点装配）。
- * @returns {boolean} 是否命中推送（测试面）。
+ * @returns {boolean} 是否命中推送（测试）。
  */
 export function maybeZeroWriteAlert(child) {
   try {
@@ -65,7 +65,7 @@ export function maybeZeroWriteAlert(child) {
  * @param {object} parent 父 agent（接收方——`pushChildUpstream` 载体吸收同款）。
  * @param {string} from 来源标签（`advisor#<entry id>`）。
  * @param {number} rounds 连续无产出轮数。
- * @returns {boolean} 是否推送成功（测试面）。
+ * @returns {boolean} 是否推送成功（测试）。
  */
 export function pushAdvisorAlert(parent, from, rounds) {
   try {

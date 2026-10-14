@@ -42,7 +42,7 @@
 | AC-M3-4 | 已收口档被回改 → 拒 / 机检红 | 写冻结档 → 期望拒 |
 | AC-M3-5 | 解析序单源：四处调用点（create / append·status·close / 评审门 / spawn 门）统一经 `batch-paths.mjs`，零第二份解析实现 | grep + 调用点实核 |
 | AC-M3-6 | cwd 矩阵（项目根 / 子目录 / 上级 / 非项目目录 × {裸名 / 根相对 / cwd 相对 / 绝对}）同解；已含基底相对前缀的串不二次拼接（防嵌套 fail-closed） | 矩阵用例（BR-27–BR-35） |
-| AC-M3-7 | 既有成功路径零回归（四个既有测试档逐数绿；spawn 门 / `resolveBatchDocPath` 错误文案逐字不变） | 测试全绿 + 文案断言 |
+| AC-M3-7 | 既有成功路径零回归（四个既有测试文件逐数绿；spawn 门 / `resolveBatchDocPath` 错误文案逐字不变） | 测试全绿 + 文案断言 |
 
 ## ⑤ 依赖
 

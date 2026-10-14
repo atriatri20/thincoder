@@ -102,7 +102,7 @@ export const COMPOSER_DICT = Object.freeze({
     "model.noReasoningDesc": "关闭（不支持）",
     "model.addProvider": "+ 添加 provider…",
     "model.removeProvider": "− 移除 provider…",
-    "model.setKey": "设置密钥…",
+    "model.setKey": "设置 API Key…",
     // ── ④ 推理档位词 ──
     "reasoning.max": "最大",
     "reasoning.xhigh": "很高",

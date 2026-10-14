@@ -37,8 +37,8 @@ thincoder/                          ← 单一 git 仓（默认分支 main）
 
 | 产品 | 包 | 发布链 |
 |---|---|---|
-| CLI | npm 包 `thincoder` | `prepack` 之外无构建；发布门 = `prepublishOnly` → lint → 全量测试 → 集成集（CLI 设计档 `docs/cli/design/RELEASE.md`） |
-| VSC | vsix `thincoder-vscode` | `vscode:prepublish` = lint + 文档机检 + 全量测试 + 集成集；发布 = Marketplace + Open VSX |
+| CLI | npm 包 `thincoder` | `prepack` 之外无构建；发布门 = `prepublishOnly` → lint → 单入口 `npm test`（含集成测试集）（CLI 设计档 `docs/cli/design/RELEASE.md`） |
+| VSC | vsix `thincoder-vscode` | `vscode:prepublish` = lint + 文档机检 + 单入口 `npm test`（含集成测试集）；发布 = Marketplace + Open VSX |
 
 两产品**互不触发**：`package.json` / `package-lock.json` 各自留在子目录内（**不合并 lockfile**）；发布动作本身仍是各自的既有流程，合并只改变**执行目录**。
 
@@ -129,7 +129,7 @@ git blame thincoder-vscode/package.json                # blame 跨 graft 无需�
 
 ## 7. 跨仓机制退役面（现状）
 
-**已退役判据五名**（代码 / 脚本 / 测试面）——现状断言 = **逐个检索零命中**：
+**已退役判据五名**（代码 / 脚本 / 测试）——现状断言 = **逐个检索零命中**：
 
 | # | 退役判据 | 原作用 |
 |---|---|---|
@@ -151,7 +151,7 @@ phase 2 目标 = 「一个核 + 两个薄壳」：共享核心真正可 `import`
 - **但**实现层真分叉远大于表层——真正统一需要独立的差异分析与迁移设计，属**另一个板块**：`docs/core/design/CORE-UNIFICATION.md`（已启动，设计 + 测试；板块镜像需求档同层同名）。
 - **边界**：phase 2 若扩张，应在其板块档内进行，不在本档扩张。
 
-## 9. 现行形态的验证面（持续有效）
+## 9. 现行形态的验证（持续有效）
 
 | # | 检查 | 判据 |
 |---|---|---|

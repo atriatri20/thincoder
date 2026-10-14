@@ -4,9 +4,9 @@
  *
  * 条目形（§5 条 6）= `{ name, aliases?, group?, descKey?, rejectKey?, run(ctx) → boolean }`：
  *  · `name` ∥ `aliases` = 斜径名（**含首 `/`**——与 CLI `SLASH_COMMANDS` ∥ `SLASH_ALIASES` 同名同形；
- *    **表纪律**（不得自创命令）= 批内件机检：name ⊆ CLI 名集 ∥ aliases ⊆ CLI 别名键集）；
+ *    **表纪律**（不得自创命令）= 单元测试档机检：name ⊆ CLI 名集 ∥ aliases ⊆ CLI 别名键集）；
  *  · `group` ∥ `descKey` = `/help` 面（增量 · 2026-10-01②）：组序归核 `formatHelp` 常量；`descKey` = 词表键
- *    （en 值 = CLI 同名命令 `desc` 逐字——批内件机检）；
+ *    （en 值 = CLI 同名命令 `desc` 逐字——单元测试档机检）；
  *  · `run(ctx)` = **只调 `ctx.actions`**（零第二实现——动作 = 钮 handler 提取出的同一函数，门随函数）；
  *    返 `true` = **已受理**（已执行 ∨ 二段交互在场 ⇒ 面板清框 + 入输入历史）· 返 `false` = 未受理（门拒 ⇒
  *    面板出 `rejectKey` toast + 文本保留）；`ctx = { args, raw, post, actions }`（面板提交面拦截段给）；

@@ -20,10 +20,10 @@ export const SQLITE_BUSY_TIMEOUT = 3000
 /** WAL 回收后的文件截断上界（§6.12 修法①——防复胀；实测曾达 587 MB）。 */
 export const WAL_SIZE_LIMIT_BYTES = 64 * 1024 * 1024
 
-/** 索引行预算（§6.14 面③ P2——每 origin 库内行数 code+doc 合计）：WARN 线出**一行**可见警示
- *  （≈0.5 s 趟量级）；CAP 线起同步跳过后列文件（只停新增——存量行不失效）。B3 ∕ B4 复用 WARN 值。 */
-export const INDEX_ORIGIN_ROW_WARN = 20000
-export const INDEX_ORIGIN_ROW_CAP = 100000
+/** 索引行预算（§6.14 面③ P2——每 origin 库内行数 code+doc 合计）：WARN 线出一行中性信息
+ *  （真实行数——F-S14 ①）；CAP 线起同步跳过后列文件（只停新增——存量行不失效）。B3 ∕ B4 复用 WARN 值。 */
+export const INDEX_ORIGIN_ROW_WARN = 100000
+export const INDEX_ORIGIN_ROW_CAP = 300000
 
 // Code index: source file extensions. Curated DEFAULTS — a project can declare
 // more (union) through PROJECT-MANIFEST.json → index.codeExtensions
@@ -41,8 +41,10 @@ export const CODE_EXTS = new Set([
 // Doc index: markdown / plain text (separate index makes it easier for LLM to distinguish "design specs" from "existing code")
 // Same declaration rule as CODE_EXTS (index.docExtensions).
 export const DOC_EXTS = new Set([".md", ".mdc", ".mdx", ".txt", ".rst", ".adoc", ".org", ".wiki", ".tex"])
-// Directory names always skipped during code/doc indexing
-// NOTE: these are case-sensitive basename matches; add common platform-specific dirs
+// Directory names skipped during code/doc indexing — family split (§6.14 面④ · 台账 #1081): junk/product
+// family (`SKIP_DIRS_FOLD`) folds on win32 (that filesystem is case-insensitive — `Node_Modules` must
+// still prune); position family (user/system dirs) stays exact on every platform; POSIX is exact
+// throughout. `.git` is covered by the dot-segment rule (file-walk.mjs) — it belongs to no family.
 export const SKIP_DIRS = new Set([
   "node_modules", ".git", "dist", "build", ".turbo", "coverage",
   "__pycache__", ".venv", "venv", "target", ".next", ".nuxt", ".svelte-kit",
@@ -54,7 +56,17 @@ export const SKIP_DIRS = new Set([
   "Library", "go",
   // Other common non-code directories
   "Program Files", "Program Files (x86)", "Windows", "$Recycle.Bin",
+  // Generic ecosystem names (§6.14 面④ — exact basename, any depth; `bin` deliberately NOT included)
+  "vendor", "Pods", "bower_components", "third_party", "obj", "out",
 ])
+/** Junk/product family full list (the win32 fold subset — matched only via `isSkippedRelPath`). */
+export const SKIP_DIRS_FOLD = new Set([
+  "node_modules", "dist", "build", ".turbo", "coverage",
+  "__pycache__", ".venv", "venv", "target", ".next", ".nuxt", ".svelte-kit",
+  "vendor", "Pods", "bower_components", "third_party", "obj", "out",
+])
+/** Directory-name prefixes (Bazel convenience dirs `bazel-<workspace>` — the workspace name rules out enumeration). */
+export const SKIP_DIR_PREFIXES = ["bazel-"]
 // Files larger than these limits are skipped during bulk indexing
 // (minified bundles, test fixtures, generated code, etc.)
 export const MAX_CODE_FILE_BYTES = 1024 * 1024   // 1 MB
@@ -74,7 +86,7 @@ export function createMemory({ dbPath }) {
   // §6.12 WAL 卫生（TUI 假死批）：① `journal_size_limit` = 回收后 WAL 文件截断上界（防复胀）；
   // ② 开库**一次性** `wal_checkpoint(TRUNCATE)`——失败容忍（另一实例持读事务 ⇒ busy：静默跳过，
   // 不重试不报错）。边界写实：最坏等待上界 = 连接上的 `busy_timeout`（**不是**「不阻塞」；
-  // `wal_checkpoint` 是否走 busy handler = unverified——判据面 = 批档 §2.5 T-W2）。
+  // `wal_checkpoint` 是否走 busy handler = unverified——判据 = 批档 §2.5 T-W2）。
   db.exec(`PRAGMA journal_size_limit = ${WAL_SIZE_LIMIT_BYTES}`)
   try { db.exec(`PRAGMA wal_checkpoint(TRUNCATE)`) } catch { /* busy / 非 WAL（内存库）⇒ 保持现状 */ }
 

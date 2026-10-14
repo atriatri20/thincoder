@@ -56,6 +56,8 @@ const { peerInstancesTool } = await import(at("peer-instances.mjs"))
 push(typeof peerInstancesTool === "function" ? tryCall(peerInstancesTool, [{}], "inst:peer") : peerInstancesTool, "instance")
 const { ledgerTool } = await import(at("ledger.mjs"))
 push(typeof ledgerTool === "function" ? tryCall(ledgerTool, [{}], "inst:ledger") : ledgerTool, "instance")
+const { teamLedgerTool } = await import(at("team-ledger.mjs"))
+push(teamLedgerTool, "instance")
 
 // ── 描述面：tool-docs 外置档枚举（AC15-1 覆盖率面） ─────────────────────────────
 const docsDir = join(CORE, "tool-docs")

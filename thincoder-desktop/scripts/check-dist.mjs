@@ -1,10 +1,10 @@
 /**
  * check-dist.mjs — 打包产物校验（`docs/desktop/design/PROJECT.md` §5.5；批档 §2.3 R-4）。
- * 断言面（**平台分臂**——`docs/desktop/design/PACKAGING.md` §2.11.3）：
+ * 断言（**平台分支**——`docs/desktop/design/PACKAGING.md` §2.11.3）：
  *   `win32`（阶段一 = Windows NSIS x64）：① 核包随产物 ×2 + 版本逐字比对（R1 起保留）② 安装包名形 × 源版本
  *     ③ 预载随包 ④ 渲染面随包；另出**签名态信息行**（产物 PE 证书表读数——**不闸**）。
- *   `linux`（D42 批 · 2026-10-03）：**Linux 臂 +9**（①–⑨——见 `runLinuxChecks` 头注；两产物 = AppImage ∥ deb，无签名面）。
- *   余平台 ⇒ 显式「无断言臂」**非零退出**（零静默）。
+ *   `linux`（D42 批 · 2026-10-03）：**Linux 分支 +9**（①–⑨——见 `runLinuxChecks` 头注；两产物 = AppImage ∥ deb，无签名面）。
+ *   余平台 ⇒ 显式「无断言分支」**非零退出**（零静默）。
  * 纪律：**只读**（不写 / 不改产物）· **fail-closed**（缺产物 / 缺条目 ⇒ exit 1 + 显式提示，不静默通过）。
  * 依赖镜像纪律（打包带镜像）：`ELECTRON_MIRROR` ∥ `ELECTRON_BUILDER_BINARIES_MIRROR`——单源 = `docs/desktop/design/PROJECT.md` §5.7。
  * 用法：`node scripts/check-dist.mjs [dist 目录]`（缺省 = 包根 `dist/`；`postpackage` 自动跑 = 打包闸）。
@@ -29,7 +29,7 @@ const sourceVersion = JSON.parse(readFileSync(join(pkgRoot, "package.json"), "ut
 /** 安装包名形（`artifactName` = `ThinCoder-Setup-${version}.${ext}`——逐字对账）。 */
 const INSTALLER_NAME = `ThinCoder-Setup-${sourceVersion}.exe`
 
-/** 更新 feed 契约 URL（publish generic——win ∥ linux 两臂共用；`docs/desktop/design/PACKAGING.md` §2.8.2 ∥ §2.11.3⑦）。 */
+/** 更新 feed 契约 URL（publish generic——win ∥ linux 两分支共用；`docs/desktop/design/PACKAGING.md` §2.8.2 ∥ §2.11.3⑦）。 */
 const UPDATE_URL = "https://thincoder.com/downloads/"
 
 /** 产物面断言项（阶段一：核包 ∥ 安装包 ∥ 预载 ∥ 渲染面）。 */
@@ -69,8 +69,8 @@ if (!existsSync(distDir)) {
 }
 
 /**
- * 平台分臂（`docs/desktop/design/PACKAGING.md` §2.11.3）：`win32` 走本档既有断言链（下文原样——零动）；
- * `linux` 走 `runLinuxChecks`（Linux 臂 +9）后即出；余平台显式「无断言臂」非零退出（零静默——fail-closed）。
+ * 平台分支（`docs/desktop/design/PACKAGING.md` §2.11.3）：`win32` 走本档既有断言链（下文原样——零动）；
+ * `linux` 走 `runLinuxChecks`（Linux 分支 +9）后即出；余平台显式「无断言分支」非零退出（零静默——fail-closed）。
  */
 if (process.platform === "linux") {
   process.exit(runLinuxChecks() ? 0 : 1)
@@ -248,8 +248,8 @@ if (failures.length > 0) process.exit(1)
 console.log(`✔ dist check passed: ${distDir}（断言 ${CHECKS.length} 条 + 版本逐字 B ∕ F + 更新面 4 条）`)
 
 /**
- * Linux 臂断言（+9——`docs/desktop/design/PACKAGING.md` §2.11.3；闸 · fail-closed）：
- * ① linux-unpacked/resources/app.asar 在（读面同 win 臂）② 核包 ×2 在 ∧ 版本逐字 = 源（对位 B ∕ F——读函数沿用，路径换 linux-unpacked）
+ * Linux 分支断言（+9——`docs/desktop/design/PACKAGING.md` §2.11.3；闸 · fail-closed）：
+ * ① linux-unpacked/resources/app.asar 在（读面同 win 分支）② 核包 ×2 在 ∧ 版本逐字 = 源（对位 B ∕ F——读函数沿用，路径换 linux-unpacked）
  * ③ 预载（src/preload/preload.cjs）在 ④ 渲染面（renderer/index.html）在 ⑤ AppImage 名形 × 版本逐字 ⑥ deb 名形 × 版本逐字
  * ⑦ app-update.yml（linux-unpacked/resources——provider generic ∥ url = 契约值）
  * ⑧ latest-linux.yml（version = 源 ∧ files 恰一条 = AppImage（url ∥ path 逐字）∧ sha512 = AppImage 实算（基 64 填充不敏感）∧ 全条目不携 .deb——feed 分流判据）

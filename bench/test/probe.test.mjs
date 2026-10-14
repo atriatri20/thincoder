@@ -1,8 +1,8 @@
 /**
  * test/probe.test.mjs — 矛盾上抛探针自检（§10.10 结构级 + 行为级 · 零网络）。
  *
- * 覆盖：夹具两层机检逐字等值（AC-1）· 驱动装配腿（AC-2 实施轮腿）· 机械读数与行为类表（AC-3）·
- * 停止条件与 ask 入队时点（AC-4）· 沙箱三态（AC-5 实施轮腿）· `--dry-run` 全链路（AC-7 产物面住
+ * 覆盖：夹具两层机检逐字等值（AC-1）· 驱动装配用例（AC-2 实施轮用例）· 机械读数与行为类表（AC-3）·
+ * 停止条件与 ask 入队时点（AC-4）· 沙箱三态（AC-5 实施轮用例）· `--dry-run` 全链路（AC-7 产物面住
  * `probe-report.test.mjs`）。手动跑：`node --test "bench/test/*.test.mjs"`（不进 CI —— AC-8）。
  */
 
@@ -97,10 +97,10 @@ test("AC-2（实施轮腿）：真 buildSpawnChild 直调——异步形 / 家�
     assert.throws(() => stub.baseURL, /hard-error stub/, "baseURL 访问即抛")
     assert.throws(() => stub.apiKey, /hard-error stub/, "apiKey 访问即抛")
     assert.throws(() => stub.chat, /hard-error stub/, "chat 访问即抛")
-    // 反例腿①：batchDoc 不可读 ⇒ spawn 门机械拒
+    // 反例用例①：batchDoc 不可读 ⇒ spawn 门机械拒
     const ctx = { depth: 0, agent: parent, callbacks: {}, signal: null }
     assert.throws(() => assembleProbeChild({ parent, ctx, model: `${entry.provider}:${entry.model}`, batchDoc: "docs/batches/not-there.md", taskBook: fixture.taskBook }), /batchDoc is required/)
-    // 反例腿②：五段任务书缺段 ⇒ 机械拒
+    // 反例用例②：五段任务书缺段 ⇒ 机械拒
     assert.throws(() => assembleProbeChild({ parent, ctx, model: `${entry.provider}:${entry.model}`, batchDoc: fixture.batchDoc, taskBook: "目标与理由：只给一段。" }), /missing mandatory field/)
   })
 })

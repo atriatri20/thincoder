@@ -24,7 +24,7 @@
  *      **「对齐第三批」增十九键** = 视图面词族**第二档**（`renderer/i18n-views.mjs` —— 在册拆分落形：新增词族出第二档，
  *      本档两语展开合并 ⇒ `HOST_DICT` 单一持有点不变；四组 = 对话流 6 / 输入区 2 / 审批面 1 / 设置面 agent 具名十键）；
  *      **同批退场一键** = `chat.empty.hint`（欢迎条三行取代单行提示 —— 项 15；树面消费归零 ⇒ 键面随退）
- *      —— 计 **159 + 19 − 1 = 177**（键数链随动 = `thincoder-desktop/test/views-chrome-vocab.test.mjs` U51）；
+ *      —— 计 **159 + 19 − 1 = 177**（键数链随动 = 批次单元测试档面——原指针 `thincoder-desktop/test/views-chrome-vocab.test.mjs` 已随「单元测试随批档留存」口径归位；2026-10-13 清账轮收正）；
  *      **输入面板上提批（R1）增二十八键** = 输入面板词族**第三档**（`renderer/i18n-composer.mjs` —— 核件
  *      `composer/` 组六件取词；**键名一字不改 ∕ 两语值皆 VSC 逐字** = `thincoder-vscode/locales/*` 同名键；
  *      合并点不变 = 本档 `HOST_DICT` 两语展开）；**同批退场四键** = 自建输入树三词 + 附件条移除控件名
@@ -63,7 +63,7 @@
  *      `status.usage` 仅值改、零增退）⇒ 实读 `HOST_DICT`（**合并表**）**295 ⇒ 294**（两语同拍、键集相等；届盘实读续链）。
  *      **i18n 拆分批（2026-09-29 · 台账 #614 · 顶格消解）**：`settings.*` 族 **55** 键出档（→ `renderer/i18n-settings.mjs`
  *      （第四档））⇒ 本档自有 **142 ⇒ 87**、四档单语键数 = `HOST_DICT`（**合并表**，值零动）**294** 不变 ∕ `VIEWS_DICT` **124** ∕
- *      `COMPOSER_DICT` **28** ∕ `SETTINGS_DICT` **55**（两语同拍、键集相等；机检 = 批内件）。
+ *      `COMPOSER_DICT` **28** ∕ `SETTINGS_DICT` **55**（两语同拍、键集相等；机检 = 单元测试档）。
  *      **撤会话头批退三键**（会话头三字段标两语同退 —— 台账 #668；消费面随面退场 ⇒ 键面随退，零残键）
  *      ⇒ 实读 `HOST_DICT`（**合并表**）**295 ⇒ 292**（两语同拍、键集相等；届盘实读续链）。
  *      **S3 分档批增一键**（#673 · 2026-09-29：`settings.reason.hostBusy` 两语同增 —— 渠行行标分档词，
@@ -97,6 +97,33 @@
  *      **attach 文件支持批增六键**（#948 · 2026-10-05：`composer.attach.{tooLarge,tooMany,totalLimit,binary,unsupported,readFailed}` 两语同增 ——
  *      六拒面 toast 词（三限 ∥ 二进制 ∥ 类型不支持 ∥ 读取失败），消费面 = 核件 `composer/attach.mjs`；键面单源 = `renderer/i18n-views.mjs` ② 组）⇒
  *      `VIEWS_DICT`（第二档）**138 ⇒ 144** ∕ `HOST_DICT`（**合并表**，经合并点随动）**308 ⇒ 314**（两语同拍、键集相等；届盘实读续链——链文前值 309∕312 系滞后值：并行批增键未逐笔续计，本行按盘收正）。
+ *      **三端对齐批增三退二（2026-10-07 · 台账 #1027–#1035 · KD-75 ②③）**：`SETTINGS_DICT`（第四档）**59 ⇒ 60**
+ *      （增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` —— 添加入口两键 + 类型自定末项；
+ *      净删 `settings.providers.addCustom` ∥ `.addPreset` —— 旧双表单提交词随表单退场）+ 值改 6 键（「API Key」形统一 —— 键数不变）
+ *      ⇒ `HOST_DICT`（**合并表**，经合并点随动）**实读 319**（两语同拍、键集相等；届盘实读续链——链文前值 314 系滞后值：并行批增键未逐笔续计，本行按盘收正）。
+ *      **添加入口弹窗统一批增四键（2026-10-07 · 台账 #1054 · KD-77 ①②）**：`SETTINGS_DICT`（第四档）**60 ⇒ 63**
+ *      （增 `settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle` —— MCP 添加入口钮 + 表单两态标题）+
+ *      `VIEWS_DICT`（第二档）**144 ⇒ 149**（链文前值 144 系滞后值：MCP 键值行式输入批（#1036）四键未逐笔续计，本行按盘收正；
+ *      本批 +1 = `settings.consultAddTitle` —— 会诊添加弹窗标题）
+ *      ⇒ `HOST_DICT`（**合并表**，经合并点随动）**319 ⇒ 323**（两语同拍、键集相等；届盘实读续链）。
+ *      **provider-default-model-purge 批增一键**（2026-10-09 · 台账 #1122）：`composer.send.noDefaultModelFallbackUnset`
+ *      （fallback 行 `model` 缺档变体——两语同增；键面单源 = `renderer/i18n-views.mjs` ② 组）⇒ **实读**
+ *      `VIEWS_DICT`（第二档）**149** ∕ `HOST_DICT`（**合并表**，经合并点随动）**323**（两语同拍、键集相等；
+ *      链文前段未逐笔续计——本行按盘收正，含本批 +1）。
+ *      **provider-default-model-purge 批 fix 轮净删一键**（2026-10-09）：`SETTINGS_DICT`（第四档）**63 ⇒ 62**
+ *      （净删 `settings.providers.activeToggle` —— 向导步 1 复选退场，无消费者随实现净删）⇒ `HOST_DICT`（**合并表**，经合并点随动）
+ *      **323 ⇒ 322**（两语同拍、键集相等；届盘实读续链）。
+ *      **B1 批增十五键（2026-10-10 · 台账 #1212）**：`SETTINGS_DICT`（第四档）**62 ⇒ 77**（团队段词族：段名一 + 表单三标 +
+ *      登录 ∥ 退出两钮 + 未登录提示 + 状态行两标 + 失败四句 + 一次性提示两句 —— 未登录句 ∥ 四失败句 ∥ 两提示句三端逐字同，
+ *      单源 = `docs/core/design/TEAM.md` §2.5）⇒ `HOST_DICT`（**合并表**，经合并点随动）**323 ⇒ 338**（届盘实读——前值 323 = 链面旧值 322 +
+ *      前批未续计 1 键（`VIEWS_DICT` 实读 150）；两语同拍、键集相等）。
+ *      **登录面补全批增一键**（2026-10-10 · 台账 #1231）：`status.team.entry`（团队段未登录入口词——zh「登录团队服务器」；
+ *      已失效词 `status.team.invalid` 走**核字典投影**零副本——单源 = `thincoder-core/i18n.mjs`）⇒ **实读** `HOST_DICT`
+ *      （**合并表**，经合并点随动）**345 ⇒ 346**（两语同拍、键集相等；届盘实读续链——链文前值 338 系滞后值：并行批增键未逐笔续计，本行按盘收正）。
+ *      **首启向导保存面收正批（2026-10-11 · 台账 #1277 ∥ #1278 · KD-79）**：净删 `wizard.save`（消费归零 ⇒ 键面随退，零残键）+ 4 键 × 两语 =
+ *      `wizard.saveAndNext` ∥ `wizard.finishGuard` ∥ `wizard.finishGuardGo` ∥ `wizard.finishGuardExit`（②③ 合并钮 + 完成护栏三词；
+ *      ⑤ 校验面零新键——复用 `settings.providers.verify*` 五键）⇒ 实读 `HOST_DICT`（**合并表**，经合并点随动）**346 ⇒ 349**（两语同拍、键集相等；届盘实读续链）。
+ *      **prefs 写失败面批增一键（补链 · 2026-10-13 清账轮 · 台账 #1190 ∥ #101）**：`composer.prefs.failed`（「模型切换未生效（${reason}）」——写失败面词）两语同增——消费面 = `renderer/composer-sync.mjs`（`data-notice="prefs-failed"`）、键面单源 = `renderer/i18n-views.mjs` ② 组 ⇒ `VIEWS_DICT`（第二档）**149 ⇒ 150**（本行 = 补链登记——值已计入后续链行届盘实读 150；HOST 合并表经合并点随动已含）。
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
@@ -115,7 +142,7 @@ import { COMPOSER_DICT } from "./i18n-composer.mjs"
 import { SETTINGS_DICT } from "./i18n-settings.mjs"
 import { VIEWS_DICT } from "./i18n-views.mjs"
 
-/** 宿主 UI 专有键（两语键序同 = 对位阅读 · 键集相等 = 用例机检面）：`rail.*` = 会话控制条残余族（打开目录 ∕
+/** 宿主 UI 专有键（两语键序同 = 对位阅读 · 键集相等 = 用例机检）：`rail.*` = 会话控制条残余族（打开目录 ∕
  *  新建会话两动作词 + 会话条目三键 = 缺省题 ∕ 计数 ∕ 日期 + 账本注记两键——会话模型轮 R13：原左列元素族随左列
  *  裁撤退场，保留键 = 会话控制条 ∕ 引导面两消费面同用）·
  *  `chat.*` = 对话流（引导面两键 / 摘要块 / 药丸两态 /
@@ -124,8 +151,8 @@ import { VIEWS_DICT } from "./i18n-views.mjs"
  *  消费面 = `src/main/context-menu.mjs` `contextMenuLabels`，主进程直取本表）· `pool.*` = 活动池（标题 / 三族标 / 折叠控件两态 `aria-label` / 空态提示 ——
  *  折叠字形住 `renderer/pool.css`）· `approval.*` = 审批卡两形三出口词面 + 批形计数（`${count}` 占位；
  *  键位闭集住 `renderer/views/approval.mjs`）· `question.*` = 提问卡（文本控件 `aria-label` / 提交键 / 取消键 ——
- *  键位闭集住 `renderer/views/question.mjs`）· `settings.*` = 设置面（**59 键** —— 单源 = `renderer/i18n-settings.mjs`）·
- *  `wizard.*` = 首启向导（标题 / 退场 / 三步名 / 两推进键 / 渠道提交键 / 目录步两词）·
+ *  键位闭集住 `renderer/views/question.mjs`）· `settings.*` = 设置面（**78 键** —— 单源 = `renderer/i18n-settings.mjs`）·
+ *  `wizard.*` = 首启向导（标题 / 退场 / 三步名 / 三推进键（下一步 ∥ 保存并继续 ∥ 完成）/ 完成护栏三词 / 目录步两词）·
  *  `composer.*` = 输入区（**换装后残余两族**：B21 发送失败行 `composer.send.failed`〔住 `renderer/i18n-views.mjs`〕+
  *  B22 降级提示行两键 `composer.attach.nonvision` ∕ `composer.attach.partial`——三键皆端侧自有词，非 VSC 源；
  *  旧三词（输入框 `aria-label` ∕ 中断控件词 ∕ 满队提示行）+ 附件条移除控件名随自建树退场——核件控件词归
@@ -259,7 +286,10 @@ export const HOST_DICT = Object.freeze({
     "wizard.finish": "Finish",
     "wizard.dir.hint": "Pick a working directory — you can change it later.",
     "wizard.dir.pick": "Choose folder…",
-    "wizard.save": "Save provider",
+    "wizard.saveAndNext": "Save & continue",
+    "wizard.finishGuard": "Nothing has been saved yet — save a provider first, or exit and configure later.",
+    "wizard.finishGuardGo": "Save a provider",
+    "wizard.finishGuardExit": "Exit anyway",
     // ── 批 B 面（状态栏读数串 —— 键名本档拟定，登记面即此处）──
     "status.usage": "context ${percent}%${tokens}",
     // ── 状态行（R3a；D22 扩至承载 16 段 —— 增六键：静息词 / 输入提示静息态 / banner 四态〔代号字面 · 两语同形〕）：`views/statusline.mjs` —— 键名本档拟定，登记面即此处）──
@@ -275,6 +305,8 @@ export const HOST_DICT = Object.freeze({
     "status.queue.n": "${n} queued message(s)",
     "status.ready": "Ready",
     "status.enter.send": "Enter: send",
+    "status.team.entry": "Log in to team server",
+    "status.team.entry": "Log in to team server",
     "status.banner.plan": "PLAN",
     "status.banner.auto": "AUTO",
     "status.banner.advisor": "ADVISOR",
@@ -406,7 +438,10 @@ export const HOST_DICT = Object.freeze({
     "wizard.finish": "完成",
     "wizard.dir.hint": "选择工作目录——之后也可以更改。",
     "wizard.dir.pick": "选择目录…",
-    "wizard.save": "保存渠道",
+    "wizard.saveAndNext": "保存并继续",
+    "wizard.finishGuard": "尚未保存任何配置——请先保存渠道，或选择『仍要退出』稍后再配置",
+    "wizard.finishGuardGo": "去保存渠道",
+    "wizard.finishGuardExit": "仍要退出",
     // ── 批 B 面（状态栏读数串 —— 键名本档拟定，登记面即此处）──
     "status.usage": "上下文 ${percent}%${tokens}",
     // ── 状态行（R3a；D22 扩至承载 16 段 —— 增六键：静息词〔词形来源 = CLI 静息值 `Ready`〕/ 输入提示静息态 / banner 四态〔代号字面 · 两语同形〕）：`views/statusline.mjs` —— 键名本档拟定，登记面即此处）──
@@ -422,6 +457,7 @@ export const HOST_DICT = Object.freeze({
     "status.queue.n": "已排队 ${n} 条消息",
     "status.ready": "就绪",
     "status.enter.send": "Enter 发送",
+    "status.team.entry": "登录团队服务器",
     "status.banner.plan": "PLAN",
     "status.banner.auto": "AUTO",
     "status.banner.advisor": "ADVISOR",
@@ -449,7 +485,7 @@ export const FALLBACK_LOCALE = "en"
 let current = FALLBACK_LOCALE
 let project = {}
 let hostTable = null
-/** 核件取词注册槽（「对齐第二批」修复轮）：未注册（平 node / 用例面）⇒ `initDict` 空操作 —— 本档零依赖。 */
+/** 核件取词注册槽（「对齐第二批」修复轮）：未注册（平 node / 用例）⇒ `initDict` 空操作 —— 本档零依赖。 */
 let stringSink = null
 
 /** 核件取词注册面（注册单点 = `renderer/app.mjs` —— 浏览器专属档持核 `setStrings`；本档须保持平 node

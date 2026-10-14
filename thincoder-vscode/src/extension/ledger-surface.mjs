@@ -7,8 +7,8 @@
  * 只读台账——本面零写。
  *
  * 数据面（`@thincoder/core/ledger.mjs`）**动态 import**（KD-M2-3：`ledger.mjs` 静态链
- * `node:sqlite`——静态 import 会把 `node:sqlite` 拽进端壳静态闭包、破 W8 契约②；机检 = 批件
- * `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单测树重建时回迁端侧单测档）。
+ * `node:sqlite`——静态 import 会把 `node:sqlite` 拽进端壳静态闭包、破 W8 契约②；机检 = 单元测试档
+ * `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单元测试树重建时回迁端侧单元测试档）。
  * 载入失败 = 低宿主 / 打包缺件 → 本面降级不崩（N1），刷新拍重试。
  */
 import * as vscode from "vscode"

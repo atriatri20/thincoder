@@ -7,7 +7,7 @@
  * ——收口 `console.error = 0` 判据**保持不弱化**；供给语义其余面仍纯镜像 `protocol.mjs`（差异登记 = 批档 §5）。
  * `/` 与 `/index.html` 响应注入 host shim 行（锚缺 ⇒ 500 fail-loud——不静默出未注入页）。
  * 用法：直跑（`node tools/web-quickcheck/serve.mjs` ⇒ 端口 0 + 打印实 URL 待命——手动浏览面）
- * ∥ 被 `run.mjs` 与批内件导入（`startServer()` ⇒ `{ url, close }`）；夹具缝 = `rendererRoot` 注入（WQ-3 锚缺腿）。
+ * ∥ 被 `run.mjs` 与单元测试档导入（`startServer()` ⇒ `{ url, close }`）；夹具缝 = `rendererRoot` 注入（WQ-3 锚缺分支）。
  */
 import { realpathSync } from "node:fs"
 import { createServer } from "node:http"

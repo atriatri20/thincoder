@@ -6,7 +6,7 @@
  * - **读面** `peer-instances.mjs` `peerInstances()`：存在性判活（`batchAlive`）× 命令行身份
  *   复核（`isProductProc`）⇒ 端字段（`classifyEnd`）；
  * - **清理面** `session-slots.mjs` `cleanDeadOwners()`：pid 存在性之外加身份复核
- *   （`filterDeadOwners`——pid 复用 ⇒ 陈旧属主条目可删；判据面 = SESSION.md §6.2）。
+ *   （`filterDeadOwners`——pid 复用 ⇒ 陈旧属主条目可删；判据 = SESSION.md §6.2）。
  *
  * 成本纪律（D-MI3 / N-MI3）：判活与命令行探测**各一次 exec 拿全量**——本档只提供批量形态，
  * 调用面逐条消费同一批量结果，**不做每 pid 一次 exec**（注入缝 `cmdlineFn(pids)` 即此批量语义）。
@@ -74,7 +74,7 @@ export function classifyEnd(cmdline) {
 
 /**
  * 三态判据（**单源** · F-MI7 · SESSION.md §6.2）：`ownerState(pid, { aliveSet, cmds })`。
- * 顺序即语义（判据面唯一——调用面**不得**复刻本判据）：
+ * 顺序即语义（判据唯一——调用面**不得**复刻本判据）：
  *   ① `aliveSet == null` ⇒ `"unknown"`（**探测失败 ≠ 全死**——D-MI10）；
  *   ② pid 不在存活集 ⇒ `"dead"`（明确不存在）；
  *   ③ 存活但命令行缺行（cmdline 探测失败 / 未发）⇒ `"unknown"`（保守保留）；

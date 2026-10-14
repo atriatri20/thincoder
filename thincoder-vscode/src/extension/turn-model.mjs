@@ -1,6 +1,6 @@
 /**
  * turn-model.mjs — MODEL-MERGE-SESSION 模型/stamp 决策纯函数（panel-chat.mjs 500 行硬限
- * 拆分产物——评审修复导出——runPanelChatImpl 调用 + chat-panel.test 单测锚）。
+ * 拆分产物——评审修复导出——runPanelChatImpl 调用 + chat-panel.test 单元测试锚）。
  * 语义：
  * - 会话模型 = 槽复合（F-4——providerName 缺席时调用侧以槽渠道优先解析；keyless 槽不入参）。
  * - webview userMessage 恒带 dropdown 复合（echo——dropdown = 会话级选择，selectModel 消息已写
@@ -12,7 +12,7 @@
  * @param {string} providerName 本回合 provider
  * @param {string|null|undefined} modelOverride 显式 per-message 模型（webview echo / 试运行）
  * @param {{provider: string, model: string|null}|null} slotRef 可运行槽复合（面板回合入口恒读）
-  * @param {string|null} baseModel 该渠道默认解析值（defaultModel 属该渠道或渠道默认单值；无 → null）
+  * @param {string|null} baseModel 该渠道解析值（defaultModel 属该渠道；无 → null——清除批：渠道单值模型退场）
  * @returns {{ runModel: string|null, trialOverride: boolean, stampProvider: string,
  *            sessionStampModel: string|null }}
  */

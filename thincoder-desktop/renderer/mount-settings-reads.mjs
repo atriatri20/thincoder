@@ -14,6 +14,8 @@
  * 缺 `defaultModel` 态补设路径 · #842 ∥ `SETTINGS.md` §2.15：候选行 `{ provider, id }`，渠失败零行沿 catalog 口径）。
  * R7 两读数要点：`loadTools` 段态判据仍以**索引面**为准（R2 口径不动——`indexOk` 假 ⇒ 段归 `none`），
  * 两 key 面色随行渲染（各自失败另落 `report`）；`loadEnv` 的 `test` 结果 = 瞬时读数（复读保留原值）。
+ * **2026-10-09 清除批**：`activeModel` 两读数（激活渠道 ∥ 当前模型）改由回执 `defaultModel` 复合串直读
+ * （渠道条目不携模型——原「行 `model` 拼串」径退场）。
  * **#671 读面并持**：`loadProviders` 三写皆**并持现切片** —— 草稿四切片 `edit` ∕ `keyDraft` ∕ `probe` ∕ `draft` **读面零复位**
  * （复位权仅在出口族显式点：开 ∕ 关面 · 取消 · 钥存 ∕ 删钥成功；`state` ∕ `presets` ∕ 名单照刷）。
  * 纪律：零 `node:` / 零裸包 · 逐通道回执形单源 = IPC.md §2。
@@ -30,20 +32,15 @@ const pickerOf = (value) => ({
   model: str(value?.model),
 })
 
-/** 激活渠道读数（`provider:list` 投影）：激活名 + 该行 `model` ⇒ 复合串；缺 ⇒ 两者 `null`（**未知不造串**）。
- *  **2026-10-04 端差收正（采用按钮显示源修复）**：回执 `defaultModel`（真值复合串）在场且渠道段 = 激活名
- *  ⇒ **直取**（对齐 VSC `settings.mjs:160` 直读 `loadRaw().defaultModel`）——渠行 `model` 字段 = 建渠时
- *  播种值，采用径不回写 ⇒ 分叉时旧径「当前模型」恒滞留旧值（采用成功而界面不刷新——真机实锤）；
- *  回执键缺席（旧回执形）∥ 渠道段与激活名不一致（畸形档保守面）⇒ 落回渠行旧径（行为不变）。 */
+/** 激活渠道读数（**2026-10-09 清除批**）：由 `provider:list` 回执 `defaultModel` 复合串**直读**——
+ *  provider = 段前（首个冒号前）、current = 全串；缺 ∕ 畸形（无冒号 ∕ 段空）⇒ 两者 `null`（**未知不造串**；
+ *  渠道条目不携模型 ⇒ 原「找激活行、拼 `name:row.model`」径退场）。 */
 function activeModel(receipt) {
-  const name = typeof receipt.active === "string" && receipt.active !== "" ? receipt.active : null
-  if (name === null) return { provider: null, current: null }
-  const dm = typeof receipt.defaultModel === "string" ? receipt.defaultModel : ""
-  const sep = dm.indexOf(":")
-  if (sep > 0 && dm.slice(0, sep) === name && dm.slice(sep + 1)) return { provider: name, current: dm }
-  const row = listOf(receipt.providers).find((p) => p?.name === name)
-  const model = typeof row?.model === "string" && row.model !== "" ? row.model : null
-  return { provider: name, current: model === null ? null : `${name}:${model}` }
+  const composite = typeof receipt?.defaultModel === "string" && receipt.defaultModel !== "" ? receipt.defaultModel : null
+  if (composite === null) return { provider: null, current: null }
+  const at = composite.indexOf(":")
+  if (at <= 0 || at === composite.length - 1) return { provider: null, current: null }
+  return { provider: composite.slice(0, at), current: composite }
 }
 
 /**
@@ -55,6 +52,7 @@ export function createReads(deps = {}) {
   const { ask, store, setSettings, report } = deps
 
   /** 渠道段读数（`provider:list`：预置表 + 已配行 + 激活渠道三项直取）⇒ 模型段随动（激活渠道候选面）。
+    *  两读数（激活渠道 ∥ 当前模型）= 回执 `defaultModel` 复合串直读（2026-10-09 清除批）；
     *  `options.models` 假 ⇒ **保留同渠道候选面**（只复读渠行面 —— 零候选清空）。 */
   async function loadProviders(options = {}) {
     setSettings({ providers: { ...store.get().settings?.providers, state: "loading" } })
@@ -70,7 +68,6 @@ export function createReads(deps = {}) {
     // #671 ready 写并持现切片（草稿四切片读面零复位 —— 同失败径）；`presets` ∕ 名单两键照刷。
     setSettings({
       notice: null,
-      defaultModel: current,
       providers: { ...store.get().settings?.providers, state: "ready", presets: listOf(receipt.presets), providers: listOf(receipt.providers) },
       model: { state: held.state ?? "none", provider, current, models: kept ? listOf(held.models) : [] },
     })
@@ -138,17 +135,19 @@ export function createReads(deps = {}) {
     })
   }
 
-  /** MCP 段读数（`mcp:list`：只列已配，不连接）；展开面切片（`details`）随段态保留（复读不清展开面）。 */
+  /** MCP 段读数（`mcp:list`：只列已配，不连接）；展开面切片（`details`）随段态保留（复读不清展开面）；
+   *  **KD-77 ①（2026-10-07 · 台账 #1054）**：表单切片（`form`）同并持 —— 读面零复位（复位权仅在出口族显式点，
+   *  同 #671 口径）；不并持则弹窗读取链（`MODAL_READS.mcpForm`）落地即清掉「编辑态 = 开径后写」的值。 */
   async function loadMcp() {
     setSettings({ mcp: { ...store.get().settings?.mcp, state: "loading" } })
     const receipt = await ask("mcp:list")
     if (receipt.ok !== true) {
-      setSettings({ mcp: { state: "none", servers: [], details: {} } })
+      setSettings({ mcp: { ...store.get().settings?.mcp, state: "none", servers: [], details: {} } }) // 并持现切片（`form` 存活）
       report("mcp", receipt, "mcp:list")
       return
     }
     const held = store.get().settings?.mcp ?? {}
-    setSettings({ notice: null, mcp: { state: "ready", servers: listOf(receipt.servers), details: held.details ?? {} } })
+    setSettings({ notice: null, mcp: { ...held, state: "ready", servers: listOf(receipt.servers), details: held.details ?? {} } }) // 并持现切片（`form` 存活）
   }
 
   /** env 段读数（`settings:env` 读 = `{}` —— R7）：`proxy` / `shell` 两键直落；`test` 结果 = 瞬时读数
@@ -161,7 +160,7 @@ export function createReads(deps = {}) {
     const shell = receipt.shell !== null && typeof receipt.shell === "object" ? receipt.shell : null
     if (receipt.ok !== true || proxy === null || shell === null) {
       const reason = receipt.ok !== true ? receipt : { reason: "invalid-shape" }
-      setSettings({ env: { state: "none", proxy: { uri: "", web: true, model: false }, shell: { current: null, candidates: [] }, test: held.test ?? null } })
+      setSettings({ env: { state: "none", proxy: { uri: "", web: true }, shell: { current: null, candidates: [] }, test: held.test ?? null } })
       report("env", reason, "settings:env")
       return
     }
@@ -169,7 +168,7 @@ export function createReads(deps = {}) {
       notice: null,
       env: {
         state: "ready",
-        proxy: { uri: typeof proxy.uri === "string" ? proxy.uri : "", web: proxy.web !== false, model: proxy.model === true },
+        proxy: { uri: typeof proxy.uri === "string" ? proxy.uri : "", web: proxy.web !== false },
         shell: { current: str(shell.current), candidates: listOf(shell.candidates) },
         test: held.test ?? null,
       },

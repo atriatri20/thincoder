@@ -1,0 +1,19 @@
+# 构建上下文排除（ops/OPS.md §5.1）：上下文 = 仓根（console-chat-align 批起——双包 COPY/pack）。
+# 白名单式：放行三包目录（thincoder-server ∥ thincoder-render-core ∥ thincoder-core——成员面盒镜像
+# 核件取件，member-face-chat 批），其余整树排除（上下文最小化）。
+# 注：`thincoder-server/.dockerignore` 自上下文迁仓根后不再生效——本档即其继任（包内排除项已并入）。
+*
+!thincoder-server
+!thincoder-server/**
+!thincoder-render-core
+!thincoder-render-core/**
+!thincoder-core
+!thincoder-core/**
+# 包内排除（沿旧 thincoder-server/.dockerignore：机本地配置 ∥ 运行期数据 ∥ 依赖 ∥ env）
+thincoder-server/config.json
+thincoder-server/config/
+thincoder-server/backups/
+thincoder-server/data/
+**/node_modules
+**/.env
+**/.env.*

@@ -13,7 +13,7 @@
  *
  * 登记册**动态**载入：`agent-tools.mjs` 静态图经 consult/subagent 族可达核 agent 栈
  * （`../agent/setup.mjs` → `../memory.mjs` → `node:sqlite`）——静态引入会破端壳 W8 契约②
- * （W8 契约②判据（现载体 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`；单测树重建时回迁端侧单测档）：端壳静态链不得到达 `node:sqlite`）。
+ * （W8 契约②判据（现载体 = 单元测试档 `docs/batches/2026-09-29-residuals-round2.test.mjs`；单元测试树重建时回迁端侧单元测试档）：端壳静态链不得到达 `node:sqlite`）。
  * 核内先例 = 登记册头注「Loaded from agent.mjs via dynamic import to avoid ESM circular
  * dependencies」（本档先于 `agent/setup.mjs` 的调用点载入，同一语义）。
  */
@@ -22,14 +22,17 @@ export async function assembleFamilyTools({
   role = null,           // string   子代理角色（eng-coder / eng-designer / coder / consult / explore / …）
   engineering = false,   // boolean  depth-0 role enum 注入用（工程模式）
   consultModels = [],    // array    consult 池（[] ⇒ consult 工具不注册）
-  batchDoc = null,       // string   批次档绑定路径（eng 角色 → batchTool 绑定）
+  batchDoc = null,       // string   批次档绑定路径（eng 角色恒挂 ∥ 普通面 coder 携绑定挂——batchTool 绑定）
   decorate = null,       // object   端差面：{ subagent?, consultStart?, consultStop?, settings? }
 } = {}) {
   // CORE-UNIFICATION TOOLS #83：consult 家族随统一登记册自 `../agent-tools.mjs` 取用（单一来源）
-  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, contextTool, batchTool, consultStartTool, consultStopTool, parentChannelTool } = await import("../agent-tools.mjs")
+  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, contextTool, batchTool, manifestTool, consultStartTool, consultStopTool, parentChannelTool } = await import("../agent-tools.mjs")
   // 台账统一入口（2026-10-05 统一入口批——台账 #923）：全量变体 = depth-0 段 ∥ 只读变体 = 全部
   // depth>0 段。动态 import——ledger 链静态达 node:sqlite（W8 契约②）；两变体同名单对象、schema 窄化。
   const { ledgerTool, ledgerReadTool } = await import("../ledger.mjs")
+  // 团队台账核工具（2026-10-13 team-ledger 批——TEAM-LEDGER.md §2.5）：全量五 action = depth-0 段 ∥ 只读
+  // 变体（query/count）= 全部 depth>0 段（写三 schema 级不可达——D-TL5）。动态 import 同律（沿上条）。
+  const { teamLedgerTool, teamLedgerReadTool } = await import("../team-ledger.mjs")
 
   // withPool: decorate the consult_start description with the CURRENT candidate pool
   // so the model knows which models it can pick (CLI parity with the plugin). The
@@ -143,6 +146,11 @@ export async function assembleFamilyTools({
       ...consultTools,
       // 台账全量变体（五 action——仅主 agent 装配；fail-closed：子代理段只挂读变体 = 写面机械不可达）
       ledgerTool,
+      // 团队台账全量变体（五 action——同律：子代理段只挂读变体；登录态门在工具内）
+      teamLedgerTool,
+      // manifest 工具（`MANIFEST.md` §2.10 · 2026-10-08 · 台账 #1098）：主 agent 读写出口——
+      // **两模式同挂**（需求未设模式门）；子代理各段零挂（未装配 = 权限面第一道）。
+      manifestTool,
       // 端差（decorate.settings——VSC depth-0 主 agent 面；缺省不追加）：核默认形态里
       // settings 住**基础集**（`tools/index.mjs` `assembleBuiltinTools`），端侧自持清单
       // 无该面 ⇒ 端以 decorate 补位（收敛通道 = 将来去 decorate 项即归核位）。
@@ -160,19 +168,22 @@ export async function assembleFamilyTools({
     // BATCH-RECORD §4.3 挂载表（批次档生命周期工具化批）：eng 两分支各挂主名 `batch`
     // （绑定段 append/status；目标 = spawn 绑定 `child._batchDoc`）——BATCH-RECORD.md §4.2 的 batch_segment
     // 挂载形态已随单名化收口退役；depth-0 主 agent 同表挂载
-    // `batch`（D-BR18 扩权——create/close + append §1/§4/§6 + status §1（轮 2 裁定②：§4/§6
-    // 状态面走普通文档写），目标走可选 path / 在飞扫描）。
+    // `batch`（D-BR18 扩权——create/close + append/status 域随模式（工程面 = append §1/§4/§6 ∥ status §1；普通面 =
+    // append §1/§2/§4/§5/§6 ∥ status §1/§2/§5）（轮 2 裁定②：§4/§6 状态面走普通文档写），目标走可选 path / 在飞扫描）。
+    // §4.16（2026-10-09）：coder 分支**携绑定追加** `batchTool(batchDoc)`——未绑定不挂载
+    // （工具不在表 = 语法面不可达——同评审面先例）；绑定值 = spawn 可选绑定 `child._batchDoc`。
     // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-UPSTREAM.md §6.27.4 装配接线）：子代理上行通道
     // （`notify_parent`）随 depth>0 段**前置**——4 处携带 = eng-coder / eng-designer / coder / 兜底段
     // （未列名 depth>0 role 落同一兜底段 ⇒ 亦装配；语义 =「depth>0 且非 consult 皆装配」）；
     // 计数口径：`consult` 分支不入 ⇒ 「5 个插入点」读法已作废（实读 `thincoder-core/agent/family-tools.mjs:165-169`）。
     // consult 段不入（其角色语义 = 父发起的一次性会诊，父在其 settle 前不期望中途对话）。
-    // 台账只读变体（query / count）——全部 depth>0 角色段（含 consult ∕ 兜底；写三 schema 级不可达）
-    : engChildRole === "eng-coder" ? [parentChannelTool, ledgerReadTool, advisorTool, verifyTool, batchTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
-    : engChildRole === "eng-designer" ? [parentChannelTool, ledgerReadTool, batchTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
-    : role === "coder" ? [parentChannelTool, ledgerReadTool, verifyTool, advisorTool]
-    : role === "consult" ? [recentChangesTool, ledgerReadTool]
-    : [parentChannelTool, ledgerReadTool]
+    // 台账只读变体（query / count）——全部 depth>0 角色段（含 consult ∕ 兜底；写三 schema 级不可达）；
+    // 团队台账只读变体（team-ledger 批）同律。
+    : engChildRole === "eng-coder" ? [parentChannelTool, ledgerReadTool, teamLedgerReadTool, advisorTool, verifyTool, batchTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
+    : engChildRole === "eng-designer" ? [parentChannelTool, ledgerReadTool, teamLedgerReadTool, batchTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
+    : role === "coder" ? [parentChannelTool, ledgerReadTool, teamLedgerReadTool, verifyTool, advisorTool, ...(batchDoc ? [batchTool(batchDoc)] : [])]
+    : role === "consult" ? [recentChangesTool, ledgerReadTool, teamLedgerReadTool]
+    : [parentChannelTool, ledgerReadTool, teamLedgerReadTool]
 
   // 固定段（装配序 = agent.tools → 固定段 → 家族段 → extraTools）：timer 全模式全深度；
   // plan 随模式位——ENG-PLAN-EXCLUSION（FR31 ① · KD8 卸载而非「注册 + 报错」· KD11 全深度两端）；

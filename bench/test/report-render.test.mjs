@@ -96,7 +96,7 @@ test("render.2：逐维明细题面行 = 题面正本（>300 字符 ⇒ 渲染�
   assert.ok(caseOf("longctx.1").prompt.includes("8K 字符长文"), "构造型题面含载荷括注")
   const md2 = readFileSync(findFile(`${label}.md`), "utf8")
   assert.ok(md2.includes("> 题面：16K 字符长文"), "构造型题面照渲染")
-  // 截断腿（§5.13 render.2）：夹具显式构造 >300 字符题面 ⇒ 渲染面截断 `…`（JSON 存全额；`head(prompt, 300, true)` = 299 + `…`）
+  // 截断用例（§5.13 render.2）：夹具显式构造 >300 字符题面 ⇒ 渲染面截断 `…`（JSON 存全额；`head(prompt, 300, true)` = 299 + `…`）
   const longPrompt = `${"长题面填充。".repeat(60)}尾`
   assert.ok(longPrompt.length > 300, "夹具题面 >300 字符")
   const longData = priced()
@@ -162,7 +162,7 @@ test("D1：roster 排除的维在矩阵显示 `—`（不是 0/0）；概览维�
   const cells = matrixBlock.split("\n").filter((l) => l.startsWith("| fx-")).flatMap((l) => l.split("|").slice(2, 4).map((s) => s.trim()))
   assert.equal(cells.includes("0/0"), false, "矩阵单元格不得出现 0/0（应为 —）")
   const skipRow = matrixBlock.split("\n").find((l) => l.startsWith("| fx-skip |"))
-  // 行 = 模型 | 推理 | 视觉 | 合计 | 总耗时 | 相对成本（后两列 = 增补轮 #272；本腿只数维度格）
+  // 行 = 模型 | 推理 | 视觉 | 合计 | 总耗时 | 相对成本（后两列 = 增补轮 #272；本用例只数维度格）
   assert.deepEqual(skipRow.split("|").slice(2, 4).map((s) => s.trim()).filter((s) => s === "—").length, 1, `排除维格应为 —（实得：${skipRow}）`)
   const overviewLine = md.split("\n").find((l) => l.startsWith("| fx-skip | deepseek |"))
   assert.ok(overviewLine.includes("推理") && !overviewLine.includes("视觉"), "概览维度面 = 有效面（不含排除维）")
@@ -245,7 +245,7 @@ test("review.2 / §5.13 渲染面：全量 dry-run —— `overturn` ⇒ 改判 
   assert.ok(m.aggregate.overturns >= 1, "夹具含翻案样本（aggregate.overturns）")
   assert.ok(data.judge.disagreements >= 1 && data.judge.arbitrations >= 1, "夹具含分歧 / 仲裁样本")
   assert.equal(`${data.judge.fallbacks.reduce((n, f) => n + f.calls, 0)}|${data.judge.substitutions}`, "7|7", "替代池逐项记账合计 = substitutions（longctx.3 补判 ×1 + vision.2 全级穷尽 ×6）")
-  // AC-1 三态（第三态 = 夹具注入腿，住 `render.1`）：overturn ⇒ pass（计入通过数）；uphold ⇒ fail 维持
+  // AC-1 三态（第三态 = 夹具注入用例，住 `render.1`）：overturn ⇒ pass（计入通过数）；uphold ⇒ fail 维持
   const [t3, l2] = [runOf("tools.3"), runOf("longctx.2")]
   assert.equal(`${t3.verdict}/${t3.review.verdict}|${l2.verdict}/${l2.review.verdict}`, "pass/overturn|fail/uphold", "overturn ⇒ 改判 pass；uphold ⇒ fail 维持")
   assert.match(t3.detail, /^零工具调用但未命中 12/, "原机械断言原文留档（D2：判定与 detail 正交）")

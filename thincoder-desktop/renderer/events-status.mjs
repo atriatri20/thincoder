@@ -67,7 +67,7 @@ export function clearStatusText(state, key) {
   return { ...state, statusText: next }
 }
 
-/** 活动恢复即清判据面（主档 `reduce` 前置一行调用）：命中 ⇒ 清本键；不命中 ⇒ 原引用。 */
+/** 活动恢复即清判据（主档 `reduce` 前置一行调用）：命中 ⇒ 清本键；不命中 ⇒ 原引用。 */
 export function expireStatusText(state, channel, ev, isTail) {
   if (isTail !== true && !ACTIVITY_CLEAR.includes(channel)) return state
   return clearStatusText(state, ev?.key)

@@ -6,33 +6,36 @@
  * `docs/batches/2026-09-29-structure-split-2.md` §2.2-A。
  *
  * 装配 = `createProviderAdmin(ctx)`（ctx = `{ agent, showPicker, askQuestion, pushLine, persistRaw,
- * maskKey, confirmDelete, C, fmtContextK, defaultModelLabel }`——后两名 = 主档纯 helper，ctx 注入
+ * maskKey, confirmDelete, C, fmtContextK }`——`fmtContextK` = 主档纯 helper，ctx 注入
  * 同 `maskKey` 先例）→ `{ addProviderFlow, removeProviderFlow, setKeyFlow, setProviderKey, setContextFlow,
- * setModelParamsFlow }`；`cascadeRemoveProvider` 模块级导出（宿主 `model-picker.mjs` 尾同名再出口——
- * 历史导出面零改）。零环：本档不 import 主档（宿主 → 本档单向）。
+ * setModelParamsFlow }`；`cascadeRemoveProvider` 模块级导出（宿主 `model-picker.mjs` 尾同名再出口—— * 历史导出面零改）。零环：本档不 import 主档（宿主 → 本档单向）。
  * 语义（迁出原文照录）：四流 = provider 级 config 写——M9 配置阶段准入探一次 `/models`（不阻断保存）
  * ∥ F-4 (IKCDMR)：removeProviderFlow 级联清理悬挂引用（consultModels ∕ subagentModels ∕ advisor.provider）。
+ * 2026-10-07 三端对齐批（#1027）：添加流两支 +走 proxy 问句（写同一键 `providers[].proxy`）；
+ * 三端探针目标构造收敛核 `probeTargetOf`（③′）。
  */
 import { PROVIDER_PRESETS as PRESETS, providerSpec, specMatch, effortDefaultFor, overrideKeyFor, getModelOverrides, setModelOverrides } from "@thincoder/core/config.mjs"
+import { hasKey } from "@thincoder/core/model-ref.mjs"
+import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
 import { probeChannelModels, getProviderModels } from "./model-catalog.mjs"
 
-/** 常见档位提示串（**仅提示文本** —— 用户「还得看多少位数」；CLI 是行编辑，无 `datalist` 概念 ⇒ 把档位
- *  写进提示行。渲染端对应表 = `thincoder-desktop/renderer/context-tiers.mjs`（**端差面**：渲染面静态闭包
- *  判据禁 `@thincoder/core` 导入 ⇒ 两侧各持一份；值同源，改一处须同改另一处）。 */
-const CONTEXT_K_TIER_HINT = "32 ∕ 64 ∕ 128 ∕ 200 ∕ 256 ∕ 512 ∕ 1024"
-const CONTEXT_TOKEN_TIER_HINT = "32000 ∕ 64000 ∕ 128000 ∕ 200000 ∕ 256000 ∕ 512000 ∕ 1000000 ∕ 2000000"
-const MAX_OUTPUT_TIER_HINT = "8000 ∕ 16000 ∕ 32000 ∕ 64000 ∕ 128000 ∕ 256000 ∕ 384000"
+/** 派生条目隐藏判据（TEAM.md §2.4 ∥ PROVIDER.md §6.25）：`derived === true` ∧ 无 key ⇒ 列表/候选面
+ *  隐藏（四消费面各一处过滤——CLI 模型候选 ∥ CLI provider-admin ∥ VSC ∥ 桌面）；登录态（有 key）在场。
+ *  「持 key」判据单源 = 核 `model-ref.mjs` `hasKey`（PROVIDER.md §6.22——trim 非空）。 */
+export function isDerivedProviderHidden(provider) {
+  return provider?.derived === true && !hasKey(provider)
+}
 
 /** createProviderAdmin(ctx) → { addProviderFlow, removeProviderFlow, setKeyFlow, setProviderKey, setContextFlow } */
 export function createProviderAdmin(ctx) {
-  const { agent, showPicker, askQuestion, pushLine, persistRaw, maskKey, confirmDelete, C, fmtContextK, defaultModelLabel } = ctx
+  const { agent, showPicker, askQuestion, pushLine, persistRaw, maskKey, confirmDelete, C, fmtContextK } = ctx
 
   // ═══ 渠道管理流（provider 级 config 写——语义不变——与 /model 会话选择分离）═══
 
   /** M9 配置阶段准入探：探通 → 清标记；探不通 → 会话内存标「不可用」+ 明示原因（绝不落 config；
    *  不阻断保存——条目已保存，仅标注）。 */
   async function probeChannelFlow(cfg, label) {
-    const r = await probeChannelModels(cfg)
+    const r = await probeChannelModels(probeTargetOf(cfg)) // 探针目标构造收敛核判据（③′——三端同判定；执行体零改）
     if (r.ok) {
       delete cfg._unavailable
       pushLine(`${label}: /models 可用（${r.list.length} 个模型可候选）`, C.tool)
@@ -47,7 +50,7 @@ export function createProviderAdmin(ctx) {
     const entries = [
       { type: "header", text: "Select a preset provider" },
       ...Object.entries(PRESETS).filter(([name]) => !agent.providers.some((p) => p.name === name))
-        .map(([name, p]) => ({ type: "item", text: `${name.padEnd(10)} ${p.desc ?? ""} (${p.model ?? ""})`, name, kind: "preset" })),
+        .map(([name, p]) => ({ type: "item", text: `${name.padEnd(10)} ${p.desc ?? ""}`, name, kind: "preset" })),
       { type: "header", text: "Other" },
       { type: "item", text: "Custom (manual config)", name: "__custom__", kind: "custom" },
     ]
@@ -59,27 +62,38 @@ export function createProviderAdmin(ctx) {
       if (agent.providers.some((p) => p.name === name)) return
       const baseURL = (await askQuestion("Enter baseURL:")).replace(/\/+$/, "")
       if (!baseURL) return
-      const model = await askQuestion("Enter model name:")
-      if (!model) return
       const format = await showPicker("API format", [
         { type: "item", text: "openai", name: "openai" },
         { type: "item", text: "anthropic", name: "anthropic" },
         { type: "item", text: "google", name: "google" },
       ])
       if (!format) return // Esc/取消 → 中止流程
-      const cfg = { name, baseURL, model }
+      const cfg = { name, baseURL } // 2026-10-09 清除批：渠道条目不携 `model`（表单不设 model 输入件）
       if (format.name === "anthropic" || format.name === "google") cfg.format = format.name
       else if (format.name !== "openai") return // 防御：未知格式（理论不可达——picker 枚举）
       await persistRaw((raw) => { raw.providers ??= []; raw.providers.push(cfg) }) // D-F5a 先盘后存
       agent.providers.push(cfg)
       const key = await askQuestion(`Enter API key for ${name} (skip if none):`)
       if (key) await setProviderKey(name, key, { probe: false }) // 探统一在流尾（M9——精确一次）
+      // #1027 走 proxy 问句（key 后、流尾探针前——写同一键 providers[].proxy；No/Esc ⇒ 零键零写）
+      const route = await showPicker("Route this provider's model requests through the proxy", [
+        { type: "item", text: "No (direct)", name: "no" },
+        { type: "item", text: "Yes (proxy)", name: "yes" },
+      ])
+      if (route?.name === "yes") {
+        await persistRaw((raw) => { // D-F5a 先盘后存（代理单键补丁——不取内存 providers 整数组）
+          raw.providers ??= []
+          const t = raw.providers.find((p) => p?.name === name)
+          if (t) t.proxy = true
+        })
+        cfg.proxy = true // 会话内存镜像（cfg = agent.providers 内同一对象）
+      }
       await probeChannelFlow(cfg, name) // M9 准入探（加渠道配置写入面；保存已落——不阻断）
       return
     }
     const preset = PRESETS[se.name]
     if (!preset || agent.providers.some((p) => p.name === se.name)) return
-    const cfg = { name: se.name, baseURL: preset.baseURL, model: preset.model }
+    const cfg = { name: se.name, baseURL: preset.baseURL } // 2026-10-09 清除批：渠道条目不携 `model`（零播种）
     if (preset.thinking) cfg.thinking = preset.thinking
     if (preset.reasoningEffort) cfg.reasoningEffort = preset.reasoningEffort
     if (preset.maxTokens) cfg.maxTokens = preset.maxTokens
@@ -89,15 +103,28 @@ export function createProviderAdmin(ctx) {
     agent.providers.push(cfg)
     const key = await askQuestion(`Enter API key for ${se.name} (skip if none):`)
     if (key) await setProviderKey(se.name, key, { probe: false }) // 探统一在流尾（M9——精确一次）
+    // #1027 走 proxy 问句（key 后、流尾探针前——写同一键 providers[].proxy；No/Esc ⇒ 零键零写）
+    const route = await showPicker("Route this provider's model requests through the proxy", [
+      { type: "item", text: "No (direct)", name: "no" },
+      { type: "item", text: "Yes (proxy)", name: "yes" },
+    ])
+    if (route?.name === "yes") {
+      await persistRaw((raw) => { // D-F5a 先盘后存（代理单键补丁——不取内存 providers 整数组）
+        raw.providers ??= []
+        const t = raw.providers.find((p) => p?.name === se.name)
+        if (t) t.proxy = true
+      })
+      cfg.proxy = true // 会话内存镜像（cfg = agent.providers 内同一对象）
+    }
     await probeChannelFlow(cfg, se.name) // M9 准入探（加渠道配置写入面；保存已落——不阻断）
   }
 
   async function removeProviderFlow() {
-    const candidates = agent.providers.filter((p) => p.name !== agent.activeProvider)
+    const candidates = agent.providers.filter((p) => p.name !== agent.activeProvider && !isDerivedProviderHidden(p)) // 派生无 key ⇒ 隐藏（TEAM.md §2.4）
     if (!candidates.length) return
     const se = await showPicker("Remove Provider", [
       { type: "header", text: "Select provider to remove" },
-      ...candidates.map((p) => ({ type: "item", text: `${p.name} (${defaultModelLabel(p)})`, name: p.name })),
+      ...candidates.map((p) => ({ type: "item", text: `${p.name} (${p.baseURL})`, name: p.name })),
     ])
     if (!se) return
     if (!(await confirmDelete(`Remove provider ${se.name}?`))) return
@@ -120,7 +147,7 @@ export function createProviderAdmin(ctx) {
   async function setKeyFlow() {
     const se = await showPicker("Configure API Key", [
       { type: "header", text: "Select provider" },
-      ...agent.providers.map((p) => ({ type: "item", text: `${p.name} ${p.apiKey ? `(has key: ${maskKey(p.apiKey)})` : "(no key)"}`, name: p.name })),
+      ...agent.providers.filter((p) => !isDerivedProviderHidden(p)).map((p) => ({ type: "item", text: `${p.name} ${p.apiKey ? `(has key: ${maskKey(p.apiKey)})` : "(no key)"}`, name: p.name })),
     ])
     if (!se) return
     const key = await askQuestion(`Enter API key for ${se.name}:`)
@@ -148,7 +175,7 @@ export function createProviderAdmin(ctx) {
   async function setContextFlow() {
     const se = await showPicker("Set Context Window", [
       { type: "header", text: "Select provider" },
-      ...agent.providers.map((p) => ({
+      ...agent.providers.filter((p) => !isDerivedProviderHidden(p)).map((p) => ({
         type: "item",
         text: `${p.name} (ctx ${fmtContextK(providerSpec(p).context)})`,
         name: p.name,
@@ -255,7 +282,7 @@ export function createProviderAdmin(ctx) {
     if (!agent.providers.length) return
     const se = await showPicker("Model parameters", [
       { type: "header", text: "Select provider" },
-      ...agent.providers.map((p) => ({ type: "item", text: `${p.name} (${defaultModelLabel(p)})`, name: p.name })),
+      ...agent.providers.map((p) => ({ type: "item", text: p.name, name: p.name })),
     ])
     if (!se?.name) return
     const provider = agent.providers.find((p) => p.name === se.name)
@@ -337,7 +364,7 @@ export function removeOverrideKey(raw, key) {
 
 /** F-4 (IKCDMR) 级联清理（删渠道共享写点）：raw/merged config 移除 name 渠道后清悬挂引用——
  *  agent.consultModels 条目 / agent.subagentModels 角色值（=== name 或 "name:…" 前缀——
- *  角色值是 "provider:model" | 裸渠道名 | 裸模型名）/ agent.advisor.provider。
+ *  角色值是 "provider:model" | 裸渠道名（遗留值——清除批起解析层拒） | 裸模型名）/ agent.advisor.provider。
  *  纯 mutate（removeProviderFlow persistRaw 的 D-F5 新鲜 raw 上调用；agent.config 内存镜像
  *  子树与 raw.agent 同构可复用）。空数组/空对象键删除（规范形态）。 */
 export function cascadeRemoveProvider(raw, name) {

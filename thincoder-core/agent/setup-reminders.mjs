@@ -34,7 +34,7 @@ import { peerInstances } from "../peer-instances.mjs"
 import { specForModel } from "../config.mjs"
 import { manifestFilePath, readManifest, projectView } from "../manifest.mjs"
 
-/** env-state line builder — 对入参 + 进程端名确定（§6.20 端名缝 sessionEnd()；setSessionEnd 注入 ⇒ 单测可用）。
+/** env-state line builder — 对入参 + 进程端名确定（§6.20 端名缝 sessionEnd()；setSessionEnd 注入 ⇒ 单元测试可用）。
  *  §6.11（F1）：slot 字段入行——位置在 model 后 resumed 前（N3：无绑定 → 显式 null——
  *  不读 manifest active 共享指针——粘性 _slot 才是"本 agent 之槽"）。 */
 export function envStateLine({ mode, model, slot, resumed }) {

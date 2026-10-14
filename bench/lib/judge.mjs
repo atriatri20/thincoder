@@ -258,7 +258,7 @@ export async function callSlot({ slot, messages, allowed = VERDICTS, transport, 
   return { id: slot.id, verdict: "error", reason: `位级失败：${failure}`, attempts: 1, calls }
 }
 
-/** 复核触发判据（§2.11 冻结 · 单源）：`run.verdict === "fail"` ∧ 该 fail **非判官裁决** ∧ 用例有机械判据面。
+/** 复核触发判据（§2.11 冻结 · 单源）：`run.verdict === "fail"` ∧ 该 fail **非判官裁决** ∧ 用例有机械判据。
  *  `error` / `skipped` 不触发；判官裁决的 fail 不叠加（禁判官叠判官）。 */
 export function shouldReview(run, caseObj) {
   return run?.verdict === "fail" && run?.judge?.verdict !== "fail" && Boolean(caseObj?.mechRubric)

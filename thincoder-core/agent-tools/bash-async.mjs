@@ -56,7 +56,7 @@ const TAIL_KEEP_CHARS = 32 * 1024
 /** exit→close 宽限（同同步径后台注记面：孙进程握管道时 close 不来——`bash.mjs` 1500ms 同值）。 */
 const EXIT_GRACE_MS = 1500
 
-/** 测试缝：log 目录重定向（单测沙箱——生产从不调用；`_setDigestOffloadDirForTest` 同式）。 */
+/** 测试缝：log 目录重定向（单元测试沙箱——生产从不调用；`_setDigestOffloadDirForTest` 同式）。 */
 let _bgTaskLogDir = null
 export function _setBgTaskLogDirForTest(dir) { _bgTaskLogDir = dir }
 function bgTaskLogDir() { return _bgTaskLogDir ?? join(configDir, "tool-results") }

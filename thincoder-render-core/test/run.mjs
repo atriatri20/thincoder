@@ -8,7 +8,7 @@
  * ⇒ 其中 *.test.mjs 永不执行却零告警）——检出即 fail（不跟遍历 · 避环）；软链文件不受影响。
  * ③ 包面自检（C1 常驻机检）：零 dependencies / devDependencies；核内 import 面只含核内相对路径 +
  *   `node:`（**递归全树**——R2 起含 flow/ cards/ subblocks/ 与 test/；非递归旧形会放过嵌套目录）。
- * ④ 全档语法面（C1 机检面之 `node --check`——递归全树；无用例/无消费的构件档也只有这层常驻防线）。
+ * ④ 全档语法面（C1 机检之 `node --check`——递归全树；无用例/无消费的构件档也只有这层常驻防线）。
  */
 import { spawnSync } from "node:child_process"
 import { readFileSync, readdirSync, statSync } from "node:fs"
@@ -40,7 +40,7 @@ for (const rel of onDisk) {
   }
 }
 
-// ③ 包面自检（C1 机检面常驻化）：零依赖 + 核内 import 面只含核内相对路径 + `node:`（递归全树）
+// ③ 包面自检（C1 机检常驻化）：零依赖 + 核内 import 面只含核内相对路径 + `node:`（递归全树）
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
 for (const k of ["dependencies", "devDependencies"]) {
   const v = pkg[k]

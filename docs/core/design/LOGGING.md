@@ -46,7 +46,7 @@
 > **来源** = `thincoder-cli/docs/design/LOGGING.md`（160 行 · CLI 产品档）——根层裁定后该档 = **迁移期参照历史**（只读 · 不维护 · 不参与内容同步）。
 > **本节 = 该档中「根层所缺」内容的并入面**：(a) 机制 / 契约的实质描述 · (b) 实现细节与坐标 · (c) 关键决策依据（§7）。
 > **不并**者见 §8：一次性批次材料（受影响文件表 / 用例表 / 验收表 / 变更流水账）· 时点括注。
-> **坐标口径** = as-of 2026-09-14：**旧档路径形态为迁移前**（CLI 侧日志实现住 `src/log.mjs` / `src/agent/**`）——本节一律按**现状路径**落笔（`thincoder-core/**`；`thincoder-cli/src/tui/**` = CLI 壳体面）。符号名与档路径为契约面，**行号未逐条复核**、仅供定位。
+> **坐标口径** = as-of 2026-09-14：**旧档路径形态为迁移前**（CLI 侧日志实现住 `src/log.mjs` / `src/agent/**`）（迁移期引文——旧址）——本节一律按**现状路径**落笔（`thincoder-core/**`；`thincoder-cli/src/tui/**` = CLI 壳体面）。符号名与档路径为契约面，**行号未逐条复核**、仅供定位。
 
 ### 6.1 方案选型与理由
 
@@ -79,7 +79,7 @@
   ② **queued 取消出队点直记**（`advisor-async.mjs` / `subagent-async.mjs` 的 queued 分支——出队即终态、不经 settle ⇒ 不走 ①）；
   ③ **sync 定向取消提交点直记**（`subagent-async.mjs` `cancelSyncChild`——sync 块 ⏹ 唯一入口；机制条 = `AGENT-LOOP-SUBAGENT.md` 的 §6.7.2「日志面」）。
   三写点字段同形：`id` = `<role>#<id>`（评审族 = `advisor#<id>`）；**同一次取消恰一条**（写点互斥：queued 走 ②、running 走 ①、sync 走 ③——三种 child 形态各恰一条）。
-- **`ev:unsettled`** —— 消化账务升级留痕（`thincoder-core/agent/digest-account.mjs`（拟新增）——消化轮见账三次未覆盖 ⇒ 升级单点；恰一条/批）；字段 n / ids（消化账务批 · 2026-10-05 · 台账 #930；机制 = `AGENT-LOOP-ASYNC-POOL.md` §6.31）。
+- **`ev:unsettled`** —— 消化账务升级留痕（`thincoder-core/agent/digest-account.mjs`（已落）——消化轮见账三次未覆盖 ⇒ 升级单点；恰一条/批）；字段 n / ids（消化账务批 · 2026-10-05 · 台账 #930；机制 = `AGENT-LOOP-ASYNC-POOL.md` §6.31）。
 - **`ev:finish-missing`** —— 结束信号缺席留痕（`thincoder-core/agent/run-stages.mjs`——`finishReason` 缺席（clean ∧ 非 partial）与同面提醒同点；F-DA5 / #929）；字段 turn / auto / child（机制 = 同档 §6.31.7）。
 - **`ev:subagent-block-revived`** —— 墓碑存活闸**复活分支**留痕（`thincoder-cli/src/tui/subagent-blocks.mjs` `ensureSubTaskKey`——墓碑命中但条目**池内存活（在池 ∧ 非 done / 非 cancelled）** ⇒ 摘墓碑 + 重建块；**每次复活记一条（无去重状态）**）。
 - **`ev:queued-paint-failed`** —— 排队块刷新 relay 异常留痕（`thincoder-core/agent-tools/subagent-scheduler.mjs` `refreshQueuedTokens` catch——池状态不被破坏）。
@@ -119,7 +119,7 @@
 | D-LG5 | `llm:*` 统一落 **`chat()` 单点** | 单点 = 全覆盖（未来新增调用点自动覆盖）；否决各注入器各自实现 |
 | D-LG6 | 轮转 = **每进程每日首次写事件时机会式清理**（非仅启动时） | extension host 可长驻——启动清理覆盖不到；用户零手动维护 |
 | D-LG7 | 失败 = **静默降级**（进程内首次失败置死——不逐事件空转） | 日志不得影响主流程（fire-and-forget） |
-| D-LG8 | 测试隔离 = 进程内落点缝（`_setLogsDirForTest`）+ `NODE_TEST_CONTEXT` 写门 | 不污染真实日志；两端既有测试套件跑真实管线也零污染 |
+| D-LG8 | 测试隔离 = 进程内落点缝（`_setLogsDirForTest`）+ `NODE_TEST_CONTEXT` 写门 | 不污染真实日志；两端既有集成测试跑真实管线也零污染 |
 | D-LG9 | 两端**同事件面**（共享目录 / 同格式 / 镜像实现） | 双端同构便于合并分析；不做跨端同步依赖（差异如实登记） |
 
 > **现状注（2026-09-15 · S2 W1 后）**：D-LG9 行「镜像实现」= 迁移前形态表述（双端自持镜像已删——见 §1 表）；机制语义（同事件面 / 不做跨端同步依赖）不变。
@@ -152,7 +152,7 @@
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #42 + 四要素明细）；**语义零改**，行号沿用原编号。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（选型与理由 / 架构——事件格式·事件面·写入点·存储 / 关键决策 / 测试隔离与开发提示）· §7 **关键决策记录（D-LG1–9）** · §8 **不并项与历史沿革**；来源 = `thincoder-cli/docs/design/LOGGING.md`（**旧档一字未改**——原地作参照历史）；需求侧已并入本层 `docs/core/requirements/LOGGING.md`；首部加机制面指针一行。
-- 2026-09-15（**S2 W1 接线 · VSC 端** · eng-coder 实施轮）：§1 表两格（CLI / VSC）收正为「经 `@thincoder/core/log.mjs` 引用」——VSC 自持镜像随 W1 删档（坐标 + 状态面收正）；同格 CLI 端为 U1 已删档的滞后坐标，随本笔一并收正（实核：`thincoder-cli/src/log.mjs` 不存在）。机制条文（§6–§8）零改。
+- 2026-09-15（**S2 W1 接线 · VSC 端** · eng-coder 实施轮）：§1 表两格（CLI / VSC）收正为「经 `@thincoder/core/log.mjs` 引用」——VSC 自持镜像随 W1 删档（坐标 + 状态面收正）；同格 CLI 端为 U1 已删档的滞后坐标，随本笔一并收正（实核：`thincoder-cli/src/log.mjs` 不存在）（迁移期引文——档已删）。机制条文（§6–§8）零改。
 - 2026-09-15（**修正轮-6 · W1 上抛 1 落点 · eng-designer**）：§6.1 尾部 + §7 D-LG9 行后各加**现状注**（「同构模块 / 镜像实现」= 迁移前形态表述——双端自持镜像已删〔CLI U1 / VSC W1〕、现态 = 双端同引核单源；机制语义不变——07:08 边界：机制条文零改、形态收正）。
 - 2026-09-17（**zero-block 批 · 微 fix 轮 · eng-designer**）：§6.2 事件面补登两事件——`ev:subagent-block-revived`（墓碑存活闸复活分支留痕）/ `ev:queued-paint-failed`（排队块刷新 relay 异常留痕）；设计源 = `docs/cli/design/TUI.md` §6.8.3.2 P1；批档 `docs/batches/2026-09-17-subagent-zero-block.md` §2 出批发现 ⑤ 收口；族描述与机制条文零改。
 - 2026-09-17（**zero-block 批 · 父侧直接执行——可 revert**）：§6.2「写入点落位」枚举面补两新事件落点一句（微 fix 轮登记的伴随收正；行宽纪律——同轮折行）；机制语义零改。

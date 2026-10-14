@@ -15,7 +15,7 @@
  *  ③ 页读块携位次 `at`（= 消息全局 `idx` —— 痕面位次对位 ∥ 重建径复列锚读面）。
  * 依赖单向：本档 → `renderer/events.mjs`（`applyFlags` 模式位写点 —— 共用件单一实现零副本）· → `renderer/store.mjs`
  *（`endBackfill` 清在途）· → `renderer/events-wake.mjs`（`onDigest` —— 折叠重建直复用）；归约核心档**不引**本档（无环）。
- * 消费面两处：`renderer/session-wire.mjs`（首屏 / 回填两径）· 测试面（`test/events-page.test.mjs` /
+ * 消费面两处：`renderer/session-wire.mjs`（首屏 / 回填两径）· 测试（`test/events-page.test.mjs` /
  * `test/events-reduce.test.mjs`）。
  * 纪律：纯函数（零 DOM / 零 IPC / 零 `node:` / 零裸包 —— 渲染面静态闭包判据）。
  * 单源：`docs/desktop/design/IPC.md` §2 `history:page` 定形 / 「打开态播种注」项 4。

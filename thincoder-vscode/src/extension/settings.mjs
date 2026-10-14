@@ -10,6 +10,7 @@ import {
   providerLabel, readProviders, sanitizeConsultModels, warnConsultModelsFiltered,
 } from "./presets.mjs"
 import { loadRaw, resolveProviders, addProviderEntry, removeProviderEntry, conflictError, CONFIG_CONFLICT_HINT } from "@thincoder/core/config-io.mjs"
+import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
 import { DEFAULTS, loadConfig, normalizeProxy } from "@thincoder/core/config.mjs"
 import { loadMcpServers, addMcpServer, updateMcpServer, removeMcpServer } from "../config-mcp.mjs"
 import { vscPersistRaw, saveAgentSettingsFromPanel, saveShellSettingsFromPanel } from "./settings-panel-write.mjs"
@@ -19,6 +20,7 @@ import { MASKED } from "@thincoder/core/agent-tools/settings.mjs"
 import { effortEnumForModel } from "../specs.mjs"
 import { loadModelPrefs, loadSlot } from "./session-io.mjs"
 import { _probeWindow, _probeBatch, _retryFailed } from "./provider-probe-window.mjs"
+import { teamStatus } from "./team.mjs"
 
 /** Agent settings merged view（W16：自 config-io 迁入——本端面板/运行读面）。默认值 = 核
  *  `DEFAULTS.agent`（单一来源）；compactThreshold 保持本端**显示口径**：null = auto
@@ -57,11 +59,12 @@ export { shellCandidates, _setShellDetectForTest } from "@thincoder/core/shell-c
 
 /**
  * Status snapshot for the settings panel. Shape consumed by webview/settings.js:
- * { providers: { name: { configured, masked, baseURL, model, isActive, proxy,
+ * { providers: { name: { configured, masked, baseURL, isActive, proxy,
  *                       available?, unavailableReason? } }, custom, labels,
- *   presets: [{ name, desc, model }] (not yet added), activeProvider, providerState }.
- * MODEL-SELECTION：每渠道行显**单值默认模型** `model`（候选清单字段已退场——候选面 =
- * 运行期 `/models` 拉取，见 fullStatus）；activeProvider = resolveProviders 的 defaultModel
+ *   presets: [{ name, desc, baseURL }] (not yet added), activeProvider, providerState }.
+ * MODEL-SELECTION（2026-10-09 清除批：渠道单值模型退场——渠道不是模型选择单位）：渠道行 ∥ 预设形
+ * payload 均不携 `model`（模型身份唯二 = 顶层 `defaultModel` 复合串 ∥ 会话槽选定）；候选面 =
+ * 运行期 `/models` 拉取，见 fullStatus。activeProvider = resolveProviders 的 defaultModel
  * 渠道/首渠道回退。`available:false` = M9 配置阶段探针判定该渠道不可用（unavailableReason
  * = 失败消息本体逐字长句；UI 行内标 `不可用`）。
  * `providerState`（#841——无效渠道态逻辑归一）：核统一解析三态（`ok` ∥ `fallback` ∥ `invalid`
@@ -79,11 +82,14 @@ export function providerStatus() {
   for (const name of providerNames()) {
     const configured = isProviderConfigured(name)
     const entry = providers[name] || {}
+    // B1（隐藏判据单源 = `docs/core/design/TEAM.md` §2.4 ∥ `PROVIDER.md` §6.25）：派生条目
+    // 无 key ⇒ 从 provider 列表/模型候选面隐藏（四消费面各一处——本端 = 本处）；登录态
+    // （有 key）照常在场（key 掩码显示）；手工条目（非 derived）零涉。
+    if (entry.derived === true && !configured) continue
     const admission = admissionOf(name)
     status[name] = {
       configured, masked: configured ? MASKED : "",
       baseURL: entry.baseURL,
-      model: typeof entry.model === "string" ? entry.model : "",
       isActive: name === activeProvider,
       proxy: entry.proxy === true, // per-provider proxy flag (row checkbox, preset/custom agnostic)
       ...(admission ? { available: admission.ok === true } : {}),
@@ -94,13 +100,14 @@ export function providerStatus() {
     }
     labels[name] = providerLabel(name)
   }
-  // Presets not yet added — the panel's [+ Add] form offers these (CLI addProviderFlow parity)
+  // Presets not yet added — the panel's [+ Add] form offers these (CLI addProviderFlow parity；
+  // 2026-10-09 清除批：预设条目不携模型——投影零 `model` 键）
   const existing = new Set(providerNames())
   const presets = Object.entries(PRESETS)
     .filter(([name]) => !existing.has(name))
-    .map(([name, p]) => ({ name, desc: p.desc, model: typeof p.model === "string" ? p.model : "", baseURL: p.baseURL }))
+    .map(([name, p]) => ({ name, desc: p.desc, baseURL: p.baseURL }))
   const custom = providers.custom && typeof providers.custom === "object" && !Array.isArray(providers.custom)
-    ? { baseURL: providers.custom.baseURL || "", model: typeof providers.custom.model === "string" ? providers.custom.model : "", hasKey: isProviderConfigured("custom") }
+    ? { baseURL: providers.custom.baseURL || "", hasKey: isProviderConfigured("custom") }
     : null
   // #841：provider 态载荷（三态 + invalid 类合成式——单源 = `docs/core/design/PROVIDER.md` §6.22）：
   // 核 `loadConfig()` 三键直读（providerState ∥ providerStateReason ∥ providerInvalidReason）
@@ -180,7 +187,7 @@ export function agentSettings(session) {
 // extension host) — re-exported here to keep the panel import surface.
 export { saveAgentSettingsFromPanel, saveShellSettingsFromPanel }
 
-/** Proxy settings snapshot for the panel (normalized { uri, web, model } | null). */
+/** Proxy settings snapshot for the panel (normalized { uri, web } | null). */
 export function proxySettings() {
   const raw = loadRaw()
   return normalizeProxy(raw.proxy) ?? null
@@ -213,26 +220,30 @@ export function deleteWebsearchKeyFromPanel() {
 
 /**
  * Probe a provider's connection by listing its /models. Used by the Add-Provider
- * form: validates baseURL+key AND returns the model list so a custom provider's
- * model can be PICKED (not hand-typed). Returns { ok, models } or { ok:false, error }.
- * `format`（openai/anthropic/google）随表单下发——M1 三格式分派（缺省 = openai）。
+ * dialog: validates baseURL+key（渠道校验——2026-10-09 清除批：模型清单只作探通证据 ∥ 计数，
+ * 不再喂表单候选——model 件已退场）。
+ * `format`（openai/anthropic/google）随表单下发——M1 三格式分派（缺省 = openai）；
+ * `proxy`（可选布尔——表单「走 proxy」勾选）随表单下发——③′ 拉取路由随勾选：
+ * 勾 ⇒ 探针目标 = 核 `probeTargetOf` 同判定（条目 `proxy === true` ∧ 代理 `uri` 在案 ⇒ `proxyUri`——
+ * 逐渠独立、无全局闸，2026-10-08）；未勾 ∥ 缺省 ⇒ 直连（#1026 契约逐字不变）。
+ * 代理语义注：`config.proxy.web` 的唯一**活**消费面 = CLI `/config` 的 Test connection
+ * 探针；web 工具走逐次 `args.proxy`（`docs/core/design/PROXY.md` §4）。
+ * Returns { ok, models } or { ok:false, error }.
  */
-export async function testProviderConnection({ baseURL, apiKey, format }) {
+export async function testProviderConnection({ baseURL, apiKey, format, proxy }) {
   const url = (baseURL || "").trim().replace(/\/+$/, "")
   if (!url) return { ok: false, error: "baseURL is required" }
   if (!/^https?:\/\//.test(url)) return { ok: false, error: "baseURL must start with http:// or https://" }
-  // Route through the configured web proxy (same as websearch/fetch).
-  const px = normalizeProxy(loadRaw().proxy)
-  const proxyUri = px && px.web !== false ? px.uri : null
+  // 目标构造单源 = 核 `probeTargetOf`（判据体逐字复用，零第二份；逐渠判定组成式唯一式 = §2.16 ③′）。
   try {
-    const models = await listModels({ baseURL: url, apiKey: apiKey || "", model: "", format, proxyUri })
+    const models = await listModels(probeTargetOf({ name: "", baseURL: url, apiKey, format, proxy: proxy === true }))
     return { ok: true, models }
   } catch (e) {
     return { ok: false, error: e.message || String(e) }
   }
 }
 
-/** Persist proxy settings from the panel. payload: { uri?, web?, model? } (uri '' = clear).
+/** Persist proxy settings from the panel. payload: { uri?, web? } (uri '' = clear).
  *  P2-5（#677 I15）：URI 形态校验前置——缺 scheme ∕ 非 http(s) ⇒ 拒（零写盘），错误串回调用面。 */
 export function saveProxySettingsFromPanel(payload) {
   const uri = payload.uri !== undefined ? String(payload.uri).trim() : ""
@@ -244,13 +255,12 @@ export function saveProxySettingsFromPanel(payload) {
   }
   // 写结果归一（评审 R2 · 同族两写面同式）：并发冲突（mtime-conflict）回调用面——`env` 段失败面承载。
   return conflictError(vscPersistRaw((raw) => {
-    const current = normalizeProxy(raw.proxy) ?? { uri: "", web: true, model: false }
+    const current = normalizeProxy(raw.proxy) ?? { uri: "", web: true }
     const uri = payload.uri !== undefined ? String(payload.uri).trim() : current.uri
     if (!uri) { delete raw.proxy; return }
     raw.proxy = {
       uri,
       web: payload.web !== undefined ? !!payload.web : current.web,
-      model: payload.model !== undefined ? !!payload.model : current.model,
     }
   }))
 }
@@ -284,21 +294,22 @@ export async function testProxyConnection(uri) {
 
 /** Store a provider API key (settings provider command face — writes go through the panel write channel). */
 export async function saveProviderKey(name, key) {
-  // storeProviderKey performs the same !key || !key.trim() guard — delegate only.
-  const err = await storeProviderKey(name, key) // #695：核写结果（mtime 冲突 → 提示串）穿透返回
+  // storeProviderKey owns the empty-key guard — the write result passes through（#1073 三态：ok ∕ no-write ∕ conflict）。
+  const result = await storeProviderKey(name, key)
   // M9：设 API key = 配置写入面——探一次 GET /models（探不通 → 标不可用 + 不入候选；
   // 不阻断保存——key 已落盘）。探针失败不缓存——下次配置动作重探。
   await probeProviderAdmission(name)
-  return err
+  return result
 }
 
 export async function deleteProviderKey(name) {
   const err = await removeProviderKey(name) // #695：主写结果穿透返回（custom 清理 = 次级写——不叠回）
-  // A bare "custom" entry with no baseURL/model is useless — drop it entirely
+  // A bare "custom" entry with no baseURL is useless — drop it entirely（清除批后判据只余
+  // baseURL ∥ apiKey——渠道单值模型退场）
   if (name === "custom") {
     vscPersistRaw((raw) => {
       const entry = Array.isArray(raw.providers) ? raw.providers.find((p) => p?.name === "custom") : null
-      if (entry && !entry.baseURL && !entry.model && !entry.apiKey) {
+      if (entry && !entry.baseURL && !entry.apiKey) {
         raw.providers = raw.providers.filter((p) => p?.name !== "custom")
       }
     })
@@ -340,6 +351,13 @@ export function pushStatus(panel) {
   panel?.webview.postMessage({ type: "providerStatus", keyOk, status: s })
 }
 
+/** 团队态推送（`docs/vsc/design/SETTINGS.md` §2.20 读面——宿主 → webview）：投影四键直发
+ *  `{ loggedIn, server, member, label }`（渲染面只读）；推送点 = 打开/保存拍快照族
+ *  （`panel-settings-push.mjs`）+ 登录/退出成拍（`handleTeamLogin` / `handleTeamLogout`）。 */
+export function pushTeamStatus(panel) {
+  panel?.webview.postMessage({ type: "teamStatus", ...teamStatus() })
+}
+
 // MODEL-MERGE-SESSION：最近一次 models 载荷缓存（loadSession 复用既有 "models" 消息把
 // 会话槽复合同步给 webview 下拉——F-4 恢复 UI 面——避免空表清下拉；extension 进程内缓存）
 let _lastModelsPayload = []
@@ -359,7 +377,7 @@ export { endProbeWindow, _resetProbeWindowsForTest, _setProbeRetryDelayForTest }
 /**
  * Full status push: sync snapshot + **运行期模型清单拉取**（MODEL-SELECTION M2/R6——候选面唯一
  * 来源 = `GET /models`，无静态兜底）。每个已配置渠道探一次：
- * - 探通 → 候选行 = 拉取结果（直接可选；渠道默认单值仅在槽位/会话回退面使用）；
+ * - 探通 → 候选行 = 拉取结果（直接可选）；
  * - 探不通 → 该渠道**不可选**（无候选、无 fallback 候选行）+ 失败消息本体随载荷下发
  *   （M8 逐字长句——准入判据）；结果入准入展示态（providerStatus 行 `不可用` / `宿主繁忙`）。
  * 注：本拉取 = 候选面机制本身（R6），非 M9 新增探测点；失败不阻断任何流。

@@ -22,7 +22,7 @@ export const MAX_LINKS = 50
 /**
  * 工具结果文本 ⇒ 验存文件链接（去重 + 封顶）。`cwd` = 项目根（相对 token 的解析基）；缺 ∕ 空 ⇒ 相对 token
  * 一律不检（禁假链接）；绝对 token 与 cwd 无关，照检。`probe` = 盘面探针注入缝（`{ existsSync(p), statSync(p) }`——
- * `node:fs` 同名面；桌面端侧注入）。零文本（`""` ∕ 非串）先于探针校验早退（零判据面 —— 探针不检）。
+ * `node:fs` 同名面；桌面端侧注入）。零文本（`""` ∕ 非串）先于探针校验早退（零判据 —— 探针不检）。
  */
 export function extractFileLinks(cwd, text, probe) {
   if (typeof text !== "string" || text === "") return []

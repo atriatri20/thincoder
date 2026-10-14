@@ -4,7 +4,7 @@
  *
  * 面：`settings:env` 三支 —— 读 `{}`（proxy + shell 现值 + shell 候选面）· 写 `{ patch: { proxy?,
  * shell? } }`（**写经核 `writeConfigAtomic`**——端侧零自写盘；删键语义住 mutate 体）· TestProxy
- * `{ testProxy: { uri } }`（转口 `providers.mjs` `testProxy` —— 探针面单源，本档零第二探针）。
+ * `{ testProxy: { uri } }`（转口 `providers.mjs` `testProxy` —— 探针单源，本档零第二探针）。
  * 语义源（逐项）：proxy merge ∕ shell 清键 = VSC `settings-env.js` + `saveProxySettingsFromPanel` ∕
  * `saveShellSettingsFromPanel`（`thincoder-vscode/src/extension/settings.mjs`）；shell 候选面 = **核单源**
  * `@thincoder/core/shell-candidates.mjs`（B10 S17 收编：候选项表 ∕ 探测序 ∕ 超时 ∕ memo 单源；本档零自持候选表）。
@@ -18,25 +18,24 @@ import { _configPath, writeConfigAtomic } from "@thincoder/core/config-io.mjs"
 import { shellCandidates } from "@thincoder/core/shell-candidates.mjs"
 export { shellCandidates }
 
-/** env 读面（`{ proxy, shell }`）：proxy = 核 `normalizeProxy` 投影（缺 ∕ 非法 ⇒ 默认三键形——
- *  空 uri 即「未配置」；沿 VSC `saveProxySettingsFromPanel` 缺省形）；shell = 现值（缺 ⇒ null）+ 候选面。 */
+/** env 读面（`{ proxy, shell }`）：proxy = 核 `normalizeProxy` 投影（缺 ∕ 非法 ⇒ 默认两键形
+ *  `{ uri: "", web: true }`——空 uri 即「未配置」；沿 VSC `saveProxySettingsFromPanel` 缺省形）；shell = 现值（缺 ⇒ null）+ 候选面。 */
 async function envFace() {
   const config = loadConfig()
-  const proxy = normalizeProxy(config?.proxy) ?? { uri: "", web: true, model: false }
+  const proxy = normalizeProxy(config?.proxy) ?? { uri: "", web: true }
   const shell = typeof config?.shell === "string" && config.shell !== "" ? config.shell : null
   return { proxy, shell: { current: shell, candidates: await shellCandidates() } }
 }
 
 /** proxy 写形（merge 语义沿 VSC `saveProxySettingsFromPanel`）：`uri` 给 ⇒ 取 trim（空 ⇒ 删整节）；
- *  未给 ⇒ 沿用现值；`web` ∕ `model` 逐键覆写。 */
+ *  未给 ⇒ 沿用现值；`web` 逐键覆写。 */
 function applyProxyPatch(disk, value) {
-  const current = normalizeProxy(disk?.proxy) ?? { uri: "", web: true, model: false }
+  const current = normalizeProxy(disk?.proxy) ?? { uri: "", web: true }
   const uri = "uri" in value ? value.uri.trim() : current.uri
   if (!uri) { delete disk.proxy; return }
   disk.proxy = {
     uri,
     web: "web" in value ? value.web : current.web,
-    model: "model" in value ? value.model : current.model,
   }
 }
 
@@ -51,11 +50,10 @@ function applyShellPatch(disk, value) {
 function envPatchError(patch) {
   if ("proxy" in patch) {
     const value = patch.proxy
-    if (value === null || typeof value !== "object" || Array.isArray(value)) return "settings:env patch.proxy expects an object { uri?, web?, model? }"
-    for (const key of Object.keys(value)) if (!["uri", "web", "model"].includes(key)) return `settings:env patch.proxy: unknown field "${key}"`
+    if (value === null || typeof value !== "object" || Array.isArray(value)) return "settings:env patch.proxy expects an object { uri?, web? }"
+    for (const key of Object.keys(value)) if (!["uri", "web"].includes(key)) return `settings:env patch.proxy: unknown field "${key}"`
     if ("uri" in value && typeof value.uri !== "string") return "settings:env patch.proxy.uri expects a string"
     if ("web" in value && typeof value.web !== "boolean") return "settings:env patch.proxy.web expects a boolean"
-    if ("model" in value && typeof value.model !== "boolean") return "settings:env patch.proxy.model expects a boolean"
   }
   if ("shell" in patch && patch.shell !== null && typeof patch.shell !== "string") return "settings:env patch.shell expects a string or null"
   return null
@@ -64,7 +62,7 @@ function envPatchError(patch) {
 /**
  * `settings:env(payload)`：读 `{}` ⇒ `{ ok, reason:null, proxy, shell }`；写 `{ patch: { proxy?,
  * shell? } }` ⇒ 同形回执（**写后回读**）；TestProxy `{ testProxy: { uri } }` ⇒ 转口 `providers.mjs`
- * `testProxy`（探针面单源 —— 本档零第二探针）。
+ * `testProxy`（探针单源 —— 本档零第二探针）。
  * 三支**互斥**（`patch` 与 `testProxy` 同在 ⇒ `invalid-patch` 零动作）；写支失败 ⇒ reason 直传
  * （核 `mtime-conflict` ∕ 本档写前校验串）——**零写**。
  */

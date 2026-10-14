@@ -2,7 +2,7 @@
  * context-push.mjs — 消息双线写入单点（写缝面 · 自 `context.mjs` 迁出 · 2026-10-01 core 拆分批 #755 ∥ #786）。
  * `pushReal` = 真实消息写缝（机器线 `agent.history` + 人读线 `agent._fullHistory` 同源双写）；
  * `pushRecord` = 人读线留档记录单点（机器线零触）。迁出块逐字；原档 `context.mjs` 经
- * `export { … } from` 转口保名（消费面 / 批内件 import 面零改）。
+ * `export { … } from` 转口保名（消费面 / 单元测试档 import 面零改）。
  */
 
 /**
@@ -57,7 +57,7 @@ export function assistantRealFrame(response) {
  * pushRecord — 人读线留档记录单点（消化生命周期面 · #726；形 ∥ 写缝 ∥ 判据单源 = SESSION.md §6.26）。
  * `pushReal` 双胞（直复用——零算法副本）：`ts` 打点 ∥ 记录存储追加（`_recordStore?.append`——§6.14）∥
  * 尾窗驱逐三面同源；**机器线零触** = `history` 以一次性弃数组承接 ⇒ 记录不入 `agent.history` /
- * `contextHistory`（不喂模型）。未绑定（`_recordStore` 缺）⇒ 人读线追加照常 ∥ 存储腿空转（零抛——模式 F
+ * `contextHistory`（不喂模型）。未绑定（`_recordStore` 缺）⇒ 人读线追加照常 ∥ 存储分支空转（零抛——模式 F
  * 零回归）；载体缺位（无活跃会话）⇒ 零动作（零抛——日志归端侧）。
  */
 export function pushRecord(agent, record) {

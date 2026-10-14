@@ -1,7 +1,7 @@
 # 桌面端（DESKTOP）· 会话域（SESSIONS）
 
 > 板块 = **桌面端会话域**——会话端标识 / 会话控制面 / 会话列表读面 / 会话族动作 / 删除随动 / 标题链 / 重启自动重开——本域设计单源档。
-> 需求侧 = 需求分卷（本域卷 = `docs/desktop/requirements/SESSIONS.md`；查卷口 = `docs/desktop/requirements/PROJECT.md` §4 **D 表索引**；功能点 ∥ 验收面 ∥ 依赖面——**范围数随需求卷现文**；本域回指 = **D1** ∥ **D2** ∥ **D18** ∥ **D23** ∥ **D26**）。
+> 需求侧 = 需求分卷（本域卷 = `docs/desktop/requirements/SESSIONS.md`；查卷口 = `docs/desktop/requirements/PROJECT.md` §4 **D 表索引**；功能点 ∥ 验收 ∥ 依赖面——**范围数随需求卷现文**；本域回指 = **D1** ∥ **D2** ∥ **D18** ∥ **D23** ∥ **D26**）。
 > 同部分相关档：总览 / 决策 / 受影响文件 / 发行 / 验收 = `docs/desktop/design/PROJECT.md` · 宿主适配层 = `docs/desktop/design/SHELL.md` · 主 ↔ 渲染通道契约 = `docs/desktop/design/IPC.md` · 界面形态与交互 = `docs/desktop/design/UI.md` · 渲染面实现工艺 = `docs/desktop/design/RENDERER.md`。
 > 域档：活动池与消化面域 = `docs/desktop/design/ACTIVITY.md` · 输入区域 = `docs/desktop/design/COMPOSER.md` · 对话流域 = `docs/desktop/design/CHAT.md` · 设置域 = `docs/desktop/design/SETTINGS.md`。
 > 域档续：菜单体系 = `docs/desktop/design/MENU.md` · 打包与发行 = `docs/desktop/design/PACKAGING.md` · 端到端测试基建 = `docs/desktop/design/E2E-TESTING.md` · web 快筛 = `docs/desktop/design/WEB-QUICKCHECK.md`。
@@ -11,7 +11,7 @@
 > 本档余量：零（§6.1 ∥ §7 ∥ §10 涉行已随切片 4（终篇）迁入——见 §4/§5/§6）；§4.1 会话族行 ∥ §4.2 本域三块已迁入（2c 前置步 · 文件账分片轮 · 2026-10-02——见 §3）。
 > 波 2b 记录在册 = 批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2。
 > 建档：2026-10-02（域拆分 · 波 2b）；本档坐标 = as-of 2026-10-02 届盘实核（仓根 = `thincoder/`）。
-> **行数纪律（300 建议 ∕ 500 硬限）只对代码档**（`.mjs` ∕ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
+> **行数纪律（500 建议 ∕ 800 硬限）只对代码档**（`.mjs` ∕ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
 
 ## 1. 关键决策记录（迁自 `PROJECT.md` §2——本域行）
 
@@ -55,7 +55,7 @@
 | 3 | 活动行态 | `thincoder-vscode/webview/session.css:77-83`（`background: color-mix(in srgb, var(--accent) 10%, transparent)`；活动行标题 `color: var(--accent)`） | `.session-item.active`：`border-color: var(--accent) ⇒ background: color-mix(in srgb, var(--accent) 10%, transparent)`；`.session-item.active .session-item-title { color: var(--accent) }`（**直接值**） |
 | 4 | 行标题 | `thincoder-vscode/webview/session.css:85-93`（`font-size: 13px` · `font-weight: 500` · 省略三件） | `.session-item-title { font-size: 13px; font-weight: 500 }`（省略三件既有 · **直接值**） |
 | 5 | 元数据族 | `thincoder-vscode/webview/session.css:95-100`（`font-size: 11px` · `color: var(--fg)` · `opacity: 0.4`）；串形 = `thincoder-vscode/webview/session-bar.js:41`（`provider · Nmsgs · updated`） | `.session-item-meta { font-size: 12px ⇒ 11px; color: var(--fg-muted) ⇒ var(--fg); opacity: 0.4 }`；**分隔符机制差保留**（桌面 `[data-seg] + [data-seg]::before { content: "· " }` ≡ VSC 串内 ` · `——观感同） |
-| 6 | 行内动作钮（改名 / 删除） | `thincoder-vscode/webview/session.css:102-151`（`22px` 方 · `border-radius: 4px` · `font-size: 12px` · 静息 `opacity: 0` · 行 hover ⇒ `0.5` · 自身 hover ⇒ `1` + 底色〔改名 = `--hover-bg-strong` + `--accent` ∥ 删除 = `--diff-del-bg` + `--error-fg`〕） | `.session-rename` / `.session-delete`：`width: 22px; height: 22px; padding: 0; border-radius: 4px; font-size: 12px` + 静息 `opacity: 0` · `.session-item:hover … { opacity: 0.5 }` · 自身 `:hover { opacity: 1 }` + 底色 / 色值照落（**新增变量 2**：`--diff-del-bg` · `--error-fg`；`--hover-bg-strong` 与内容面共用）+ **键盘可达臂** `:focus-visible { opacity: 1 }`（**两端一致**——VSC 侧同臂本批补落〔批 `docs/batches/2026-09-29-hatch-clearance-2.md`〕；核档 §9 处置句） |
+| 6 | 行内动作钮（改名 / 删除） | `thincoder-vscode/webview/session.css:102-151`（`22px` 方 · `border-radius: 4px` · `font-size: 12px` · 静息 `opacity: 0` · 行 hover ⇒ `0.5` · 自身 hover ⇒ `1` + 底色〔改名 = `--hover-bg-strong` + `--accent` ∥ 删除 = `--diff-del-bg` + `--error-fg`〕） | `.session-rename` / `.session-delete`：`width: 22px; height: 22px; padding: 0; border-radius: 4px; font-size: 12px` + 静息 `opacity: 0` · `.session-item:hover … { opacity: 0.5 }` · 自身 `:hover { opacity: 1 }` + 底色 / 色值照落（**新增变量 2**：`--diff-del-bg` · `--error-fg`；`--hover-bg-strong` 与内容面共用）+ **键盘可达分支** `:focus-visible { opacity: 1 }`（**两端一致**——VSC 侧同分支本批补落〔批 `docs/batches/2026-09-29-hatch-clearance-2.md`〕；核档 §9 处置句） |
 | 7 | 字形面（两钮） | `thincoder-vscode/webview/session-bar.js:42` / `:44`（`✎` / `✕` 元素文本） | `.session-rename::before { content: "✎" }`（既有）· `.session-delete::before { content: "×" ⇒ "✕" }`（**字形仍住样式档**——「视图档零字形字面」律不变；标签条关闭控件的 `×` 不在本面射程 · 零动） |
 | 8 | 空态行 | `thincoder-vscode/webview/session-bar.js:65-70`（空项 `opacity: 0.5`） | 左列空态 = `.session-empty`（节点类 · 无 CSS 规则——观感等价）⇒ **不改**（登记） |
 | 9 | 行聚焦（键盘） | VSC 实有 `.session-item:focus-visible`（`thincoder-vscode/webview/base.css:449-457`：`outline: 2px solid var(--accent); outline-offset: -2px; background: var(--hover-bg-strong)`） | 桌面 `.session-item:focus-visible` **照落同三值** |
@@ -81,7 +81,7 @@
 **本批注（账本警示面 · 2026-09-28）**：本注补本档 §2.1「会话控制面」行的**会话账本异常警示面**；来源 = 核需求 `docs/core/requirements/SESSION.md` §4.6 **F-L4**「账本异常 ⇒ 用户可见信号」+ 批 `docs/batches/2026-09-28-ledger-reliability.md` §1.6 扩面裁定（三端齐——VSC 面同批落，桌面面本微轮落）。本注只述端侧形态与锚；契约 / 载荷 / 在场单源 = `docs/desktop/design/IPC.md` §2「会话族注」项 6。
 
 1. **触发与在场**——触发 = `refused > 0 ∨ scene`（与 CLI / VSC 同口径，**脱离会话计数条件**）；判据单源 = 核 `ledgerHealth(cwd)`（`docs/core/design/SESSION.md` §6.25 判据句 4）。
-   在场判据 = `sessions:list` 回执携 `ledger` 字段（缺席 = 正常——负断言）；`boot` 态（无项目）⇒ 不在场（无 cwd 判据对象）；`empty` 态（有项目无会话）⇒ **同样在场**（触发脱离会话计数）；**异常清 ⇒ 两腿**（单源 = 核 `ledgerHealth(cwd)`）：`scene` 腿 = 损坏现场档清 ⇒ 注记消失（零历史态）∥ `refused` 腿 = 核**本进程累计**（不清零）⇒ 进程内一旦拒写，注记持续在场**至重启**（有界）——随下一次列表刷新自见。
+   在场判据 = `sessions:list` 回执携 `ledger` 字段（缺席 = 正常——负断言）；`boot` 态（无项目）⇒ 不在场（无 cwd 判据对象）；`empty` 态（有项目无会话）⇒ **同样在场**（触发脱离会话计数）；**异常清 ⇒ 两用例**（单源 = 核 `ledgerHealth(cwd)`）：`scene` 用例 = 损坏现场档清 ⇒ 注记消失（零历史态）∥ `refused` 用例 = 核**本进程累计**（不清零）⇒ 进程内一旦拒写，注记持续在场**至重启**（有界）——随下一次列表刷新自见。
 2. **形态与锚（最小形态 = dim 行 · 非可点）**——落点 = 会话控制面**下拉首行**（开时挂选择器子位——端既有面迁位）；节点 = `div.session-ledger-notice` + 机读锚 **`data-ledger-notice`**（裸标记——在场即异常；**非 `button`** · 零 `data-action` ⇒ 不可点、零控件语义）；
    样式 = `.session-ledger-notice` 单规则（`padding: 6px 10px` · `opacity: 0.7`——dim 观感；落点 = `thincoder-desktop/renderer/session-list.css:93`〔越线档结构轮 #536 迁出后现址〕）。
 3. **词键（两语各两键 · 条件合成）**——主句键 `rail.ledger.notice` + 条件附句键 `rail.ledger.notice.scene`（住 `thincoder-desktop/renderer/i18n.mjs` `rail.*` 族；插值 = 核同形 `${reason}`）：
@@ -90,8 +90,8 @@
    计数随动：宿主键总数 **147 ⇒ 144**（147 = 实读 2026-09-28 修正轮落值〔两语同增〕；2026-09-29 撤会话头批退 `head.field.*` 3 键；键数门 = 四处同笔为纪律——测试树 2026-09-28 全清重置后承载 = 随批单元证据）。
 4. **数据链**——`refreshRail`（`thincoder-desktop/renderer/mount-sessions.mjs`——**唯一写路径**）在 `sessions:list` 回执到后写 `ledger` 切片（重挂键面 `SESSION_KEYS` = `thincoder-desktop/renderer/app.mjs:64` 含 `ledger`）；构树读切片出注记节点（`thincoder-desktop/renderer/views/session-control.mjs`——`sessionModel` 携 `ledger` ⇒ 下拉首行出注记）。
    **不做推送**：可见刷新 = 端侧下一次列表渲染自见（沿核 §6.25「行级刷新不做推送」口径）。
-5. **判据（机检）**——① 回执面：`ledger` 在场 ⇔ `refused > 0 ∨ scene`；缺席 = 正常（负断言）——用例面 = 随批单元证据；
-   ② 构树面：`ledger` 在场 ⇒ 下拉首行 = `[data-ledger-notice]`（非 `button` · 零 `data-action`）∧ 文案含 `${reason}` 值；缺席 ⇒ 零节点；`empty` 态同样在场——用例面 = 随批单元证据；③ 真机面 = **`T-DSK40`**（单源 = `docs/desktop/design/E2E-TESTING.md` §3.6 / §6）。
+5. **判据（机检）**——① 回执面：`ledger` 在场 ⇔ `refused > 0 ∨ scene`；缺席 = 正常（负断言）——用例 = 随批单元证据；
+   ② 构树面：`ledger` 在场 ⇒ 下拉首行 = `[data-ledger-notice]`（非 `button` · 零 `data-action`）∧ 文案含 `${reason}` 值；缺席 ⇒ 零节点；`empty` 态同样在场——用例 = 随批单元证据；③ 真机 = **`T-DSK40`**（单源 = `docs/desktop/design/E2E-TESTING.md` §3.6 / §6）。
 
 ### 2.6 对齐第三批 · 会话栏末项删除门（P12）
 
@@ -118,8 +118,8 @@
 | 文件 | 预估行数 | 说明 |
 |---|---|---|
 | `thincoder-desktop/renderer/session-list.css`（越线档结构轮实施产出） | **169**（实读 2026-09-30——前读 170；自 `thincoder-desktop/renderer/chrome.css` 出档：头注 6 + 迁出块 127 ∕ 37 逐字〔原 `:136-262` ∕ `:287-323`〕；批档 `docs/batches/2026-09-29-structure-split-round.md` §2.2-A） | 会话列表面（下拉 + 条目全族 + 空态 + 账本注记 + 行内动作两钮 + 条目内改名形；链序 = chrome 后 ∕ skin 前） |
-| `thincoder-desktop/src/main/session-io.mjs` | **65**（实读 2026-09-30——留档批（#719）`appendRecord` 薄壳（`:58-65`——核 `pushReal` 直复用 ∥ fail-soft）；前读 2026-09-29 = 46（R3 后）） | 会话槽 I-O 出档（自 `agent-host.mjs` 拆出——批 8 §1.14 ①②）：装载 `loadAgentSlot`（槽缺 ⇒ false；命中 ⇒ 应用槽值 + 重钉 `agent._slot`——防切会话 / 跨端切槽后落错槽）+ 回合尾落盘 `saveAgentSlot`（**不抛**——写盘失败不掀回合）· 零算法副本（`docs/desktop/design/SHELL.md` §4 项 1 / 项 4）；**R3 增**：`saveDistilledSlot`（#520 蒸馏落位）+ `saveAgentSlot(agent, label)` 单实现 + **留档批**：`appendRecord(agent, record)`（人读线记录入档薄壳——载体形半提取 ∥ 机器线零触） |
-| `thincoder-desktop/src/main/session-slots.mjs` | **259**（实读 2026-10-03——无效渠道态逻辑归一批（#841）实施落盘（235 ⇒ 259——`providerStateOf` 三回执族同形载荷单源 ∥ `pageHistory` 回执携 `providerState`）；前读 **235**（实读 2026-09-30——留档批（#719）`pageHistory` 开直通（`{ records: true }`——增派义务，设计 §2 ② 已明）；前读 2026-09-29 = 231（@ 文件引用对齐批后）；R1 会话维护线族转口五名；前史 = 残余批 180 ⇒ 194 ⇒ 195；批 B 末实读 154）） | 端壳：端名声明（`END = "desktop"` + `setSessionEnd(END)`）+ **转口八项**（marker 三项〔端参绑定〕+ 会话族五项：端参绑定 3〔`resumeSlot` / `switchToSlot` / `deleteSlot`〕· 同形转口 1〔`newSession`〕· 纯 re-export 1〔`renameSlot`〕）——零算法副本（先例 = 扩展端端壳 77 行）+ `history:page` 薄处理体（核 `loadSlotFile` + `historyWindow` 转口——零算法副本；**留档批**：`{ records: true }` 直通——记录随页入回执）；**批 B**：`effort` 槽字段落地 ⇒ `slotMeta` 的配置回落支（`?? str(loadConfig()?.provider?.reasoningEffort)`）删除 + 陈旧注释（「`effort` 槽无字段」）收正 ⇒ 槽值优先（KD-17；`loadConfig` 若成未用导入随删）；**R1**：会话维护族转口五名（`listColdCwds` ∕ `deleteColdCwd` ∕ `listStaleCwds` ∕ `scheduleSessionGC` ∕ `scheduleSessionIndexPass`——惰性包装） |
+| `thincoder-desktop/src/main/session-io.mjs` | **77**（实读 2026-10-08——届盘实读收正（表载 65 ⇒ 77；文档卫生批行数面回填）；前读 **65**（实读 2026-09-30——留档批（#719）`appendRecord` 薄壳（`:58-65`——核 `pushReal` 直复用 ∥ fail-soft）；前读 2026-09-29 = 46（R3 后）） | 会话槽 I-O 出档（自 `agent-host.mjs` 拆出——批 8 §1.14 ①②）：装载 `loadAgentSlot`（槽缺 ⇒ false；命中 ⇒ 应用槽值 + 重钉 `agent._slot`——防切会话 / 跨端切槽后落错槽）+ 回合尾落盘 `saveAgentSlot`（**不抛**——写盘失败不掀回合）· 零算法副本（`docs/desktop/design/SHELL.md` §4 项 1 / 项 4）；**R3 增**：`saveDistilledSlot`（#520 蒸馏落位）+ `saveAgentSlot(agent, label)` 单实现 + **留档批**：`appendRecord(agent, record)`（人读线记录入档薄壳——载体形半提取 ∥ 机器线零触） |
+| `thincoder-desktop/src/main/session-slots.mjs` | **271**（实读 2026-10-09——清除批 fix 轮（270 ⇒ 271——`openingSeed` 链第二档入参 `defaultModel: config.defaultModel` 补入；批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §1）；前读 **270**（实读 2026-10-08——届盘实读收正（表载 259 ⇒ 270；文档卫生批行数面回填）；前读 **259**（实读 2026-10-03——无效渠道态逻辑归一批（#841）实施落盘（235 ⇒ 259——`providerStateOf` 三回执族同形载荷单源 ∥ `pageHistory` 回执携 `providerState`）；前读 **235**（实读 2026-09-30——留档批（#719）`pageHistory` 开直通（`{ records: true }`——增派义务，设计 §2 ② 已明）；前读 2026-09-29 = 231（@ 文件引用对齐批后）；R1 会话维护线族转口五名；前史 = 残余批 180 ⇒ 194 ⇒ 195；批 B 末实读 154）） | 端壳：端名声明（`END = "desktop"` + `setSessionEnd(END)`）+ **转口八项**（marker 三项〔端参绑定〕+ 会话族五项：端参绑定 3〔`resumeSlot` / `switchToSlot` / `deleteSlot`〕· 同形转口 1〔`newSession`〕· 纯 re-export 1〔`renameSlot`〕）——零算法副本（先例 = 扩展端端壳 77 行）+ `history:page` 薄处理体（核 `loadSlotFile` + `historyWindow` 转口——零算法副本；**留档批**：`{ records: true }` 直通——记录随页入回执）；**批 B**：`effort` 槽字段落地 ⇒ `slotMeta` 的配置回落支（`?? str(loadConfig()?.provider?.reasoningEffort)`）删除 + 陈旧注释（「`effort` 槽无字段」）收正 ⇒ 槽值优先（KD-17；`loadConfig` 若成未用导入随删）；**R1**：会话维护族转口五名（`listColdCwds` ∕ `deleteColdCwd` ∕ `listStaleCwds` ∕ `scheduleSessionGC` ∕ `scheduleSessionIndexPass`——惰性包装） |
 | `thincoder-desktop/src/main/session-maintenance.mjs`（R1 会话维护线新档） | **112**（实读 2026-09-28） | 会话生命周期维护处理体三面：① `runSessionGcMaintenance`（候选并集去重 ⇒ 确认缝 ⇒ 逐组 `deleteColdCwd`〔TOCTOU 重校验〕⇒ 汇总）② `runSessionIndexMaintenance`（清四表 → 全量重扫 → 摘要；核索引面惰性载入）③ `scheduleSessionMaintenancePasses`（启动拍两枚）；**零 `electron` 依赖** ⇒ 平 node 直测；核零改（出口全在——转口经 `thincoder-desktop/src/main/session-slots.mjs` 五名） |
 | `thincoder-desktop/src/main/session-actions.mjs` | **79**（实读 2026-10-02——前读 73〔实读 2026-09-28〕） | 会话族动作层：五通道（create / switch / rename / delete / resume）+ 回执信封 `{ ok, reason: null|string, cwd, slot }`（`docs/desktop/design/IPC.md` §2 会话族注） |
 | `thincoder-desktop/src/main/sessions.mjs` | **45**（实读 2026-09-28——R3c 37 ⇒ 45〔账本警示面回执 `ledger` 投影〕） | 会话族读面：`sessions:list` 载荷投影（核 `listSlots` 条目 → 会话控制条目）——零新增算法（`docs/desktop/design/IPC.md` §2 会话族注） |
@@ -129,7 +129,7 @@
 | `thincoder-desktop/renderer/views/session-control.mjs` | **238**（实读 2026-09-29——桌面收尾批（#659 形内判源）后；R13-B 新档 ∕ RF 波 2 后） | 会话控制面纯构树三件：`sessionModel` ∕ `sessionBarTree` ∕ `sessionDropdownTree`（+ 节点助手族；import = `../i18n.mjs` ∕ `../store.mjs` ∕ `./chrome.mjs`——零 `node:` ∕ 零裸包） |
 | `thincoder-desktop/src/main/session-flags.mjs`（R1 输入面板移植新档） | **96**（实读 2026-09-29） | 模式位四写面（`session:flags`——核 `setSlot*` 四写 + 活代理重施 + `flagsOf` 回执 + ENG×PLAN 互斥） |
 
-**行数面机检**：本表迁出后，`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`）读取面 = `docs/desktop/design/PROJECT.md` §4.1（运行根单读）——本表行按同值同步；后续本域新档由落盘批在本表补行（沿 §4.1 纪律）。
+**行数面机检**：`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`，运行根单读）**逐条声明节域——本表为其一**（本域值行单源）；后续本域新档由落盘批在本表补值行，`docs/desktop/design/PROJECT.md` §4.1 同拍补指针行（沿 §4.1 纪律）。
 
 ### 3.2 现有文件改动 · 批块（本域 · 迁自 `PROJECT.md` §4.2——逐字；块内「本档」类回指已按新落点改指）
 
@@ -138,8 +138,8 @@
 | 文件 | 现行 ⇒ 预期（构成） | 批 |
 |---|---|---|
 | `thincoder-desktop/src/main/turn-face.mjs` | **129 ⇒ ≈139**（Δ ≈ +10 = `settleTurn` ≈8 行 + 核件导入 1 行 − 2 + 档头注 ≈3；组成 = 回合尾结算单实现（标题 → 落盘；中止墓碑两查位——U-7 原样）+ 两 `saveAgentSlot` 结算行改两调用——取位按符号） | 本批 |
-| `thincoder-desktop/test/files.mjs` | **3 ⇒ 3**（本批零新登记——空清单 `export default []` 原样；单元件 = 单元测试档不登记；集成件登记 = 基建重建落盘时 +1 行） | 本批 |
-| 测试面 | **单元测试档** `docs/batches/2026-09-28-desktop-session-title.test.mjs`（已建成 · 284 行——链路 ∕ 时序 ∕ 短路 ∕ 失败 + 窗内受理 E5 ∕ 窗内中止 E6 六例；零真实网络 = `globalThis.fetch` 换桩；随批留存 · 不入仓套件）+ 集成域 `thincoder-desktop/test/integration/session-title-face.test.mjs`（**T-DSK46**——本轮不重建 E2E 基建：转父侧真机冒烟闭合，集成登记待基建重建）；测试档随修随加——不占设计条目（2026-09-27 裁定） | 本批 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-desktop/test/files.mjs` | **3 ⇒ 3**（本批零新登记——空清单 `export default []` 原样；单元测试档不登记；集成测试登记 = 基建重建落盘时 +1 行） | 本批 |
+| 测试覆盖 | **单元测试档** `docs/batches/2026-09-28-desktop-session-title.test.mjs`（已建成 · 284 行——链路 ∕ 时序 ∕ 短路 ∕ 失败 + 窗内受理 E5 ∕ 窗内中止 E6 六例；零真实网络 = `globalThis.fetch` 换桩；随批留存 · 不入集成测试树）+ 集成域 `thincoder-desktop/test/integration/session-title-face.test.mjs`（**T-DSK46**——本轮不重建 E2E 基建：转父侧真机冒烟闭合，集成登记待基建重建）；测试文件随修随加——不占设计条目（2026-09-27 裁定） | 本批 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `docs/desktop/design/PROJECT.md` · `docs/core/design/SESSION.md` | 本批设计落定（本档 §1 **KD-41** ∥ `PROJECT.md` §6.1 ∕ §7 ∕ §10 ∕ 变更记录 · 核档 §6.7 第三端；§4.2 本块已迁本档 §3.2）；联动面三档（`IPC.md` ∕ `UI.md` ∕ `RENDERER.md`）零触碰 | 本批（已落） |
 
 **本批（structure-split-round · 越线档结构轮〔台账 #536〕· 实施轮 · 实读落值）拆分落形**（切点 ∕ 缝 / 行数 = 批档 `docs/batches/2026-09-29-structure-split-round.md` §2；值 = 实施轮实读 2026-09-29——设计预估值 288 ∕ 170 ∕ 245 ∕ 185 已按盘收正）：
@@ -151,7 +151,7 @@
 | `thincoder-desktop/renderer/index.html` | **55 ⇒ 56**（增 `session-list.css` link——位次 = chrome.css 之后 ∕ skin.css 之前） | 本批 |
 | `thincoder-desktop/renderer/mount-sessions.mjs` | **406 ⇒ 235**（接线面全量出档——原 `:244-406` 共 163 行逐字迁出 + import 面收 ∕ 头注收 ∕ 窄桥随迁；尾空行清理） | 本批 |
 | `thincoder-desktop/renderer/session-wire.mjs` | **— ⇒ 194**（新档：头注 + 五源 import 面 + 窄桥 + 迁出块 163 逐字；缝 = 同名再出口七名） | 本批 |
-| `thincoder-desktop/renderer/app.mjs` | **零改**（缝 = 同名再出口——import 面解析零变；批内件 C 腿同引用实证） | 本批 |
+| `thincoder-desktop/renderer/app.mjs` | **零改**（缝 = 同名再出口——import 面解析零变；单元测试档 C 用例同引用实证） | 本批 |
 | `docs/desktop/design/PROJECT.md` | 本批随动实读回填（§4.1 两新档行——`session-list.css` ∥ `session-wire.mjs` 已迁本档 §3.1；chrome ∕ mount ∕ index.html 三行收正；越层段二档除名；§4.2 本块已迁本档 §3.2 + 变更记录行） | 本批 |
 
 **本批（桌面重启自动重开 · #734 · 设计轮 · 2026-09-30 · 批 `docs/batches/2026-09-30-desktop-reopen-last-project.md`）行「现行 ⇒ 预期」**（实读 2026-09-30——内容行数口径；机制 ∕ 判据单源 = 批档 §2 ∥ `docs/desktop/design/IPC.md` §2 项目面注项 7）：
@@ -160,31 +160,31 @@
 |---|---|---|---|
 | 1 | `thincoder-desktop/src/main/projects.mjs` | **120 ⇒ ≈175**（记录面读 `lastOpenedCwd`（族标记最新 → 族数据文件 `cwd`）+ 启动恢复导出 `restoreLastProject`（纯读 ∥ `isDirectory` 门 ∥ 落位）+ 落位动作与 `openProject` 共用提取） | #734 |
 | 2 | `thincoder-desktop/src/main/main.mjs` | **183 ⇒ ≈187**（窗口创建前一次恢复调用 + 注释——单实例锁分支后、`createWindow()` 前） | #734 |
-| 3 | 批内件 | `docs/batches/2026-09-30-desktop-reopen-last-project.test.mjs`（已建成 · 215 行——五腿：命中（上次打开 ≠ 最近活跃）∕ 端分离（`.cli` ∕ `.vscode` 零影响）∕ 降级·目录已删（⇒ 冷态 + 零抛）∕ 降级·族无可读 `cwd`（标记在盘而族数据文件缺 ∕ 坏 ⇒ 冷态 + 零抛 + 不误落次新族）∕ 零记录（零写 + 冷态）；**测试腿以显式 mtime 落盘**（免粒度依赖）；随批留存 · 不进仓套件） | #734 |
+| 3 | 单元测试档 | `docs/batches/2026-09-30-desktop-reopen-last-project.test.mjs`（已建成 · 215 行——五用例：命中（上次打开 ≠ 最近活跃）∕ 端分离（`.cli` ∕ `.vscode` 零影响）∕ 降级·目录已删（⇒ 冷态 + 零抛）∕ 降级·族无可读 `cwd`（标记在盘而族数据文件缺 ∕ 坏 ⇒ 冷态 + 零抛 + 不误落次新族）∕ 零记录（零写 + 冷态）；**测试用例以显式 mtime 落盘**（免粒度依赖）；随批留存 · 不进集成测试树） | #734 |
 | 4 | 设计档随动 | `docs/desktop/design/IPC.md` §2 项目面注项 7（机制单源）+ 项 4 收正 · `docs/desktop/design/SHELL.md` §1 树两行 · 本档 §1 **KD-56** ∕ **KD-9** 两处收正 ∕ `PROJECT.md` §4.1 两行说明（`main.mjs` → `docs/desktop/design/SHELL.md` §5.1；`projects.mjs` → 本档 §3.1）∥ §6.1 **D1** ∕ §7 **T-DSK50** ∕ §8 本批边界行 ∕ §10 **CT** ∥ **CU**；§4.2 本块已迁本档 §3.2 | #734 |
 
 **值列口径**（本块）：「现行」= as-of 2026-09-30 实读（内容行数口径——文末换行不计）；「预期」= 设计预估（实施批后对账回填——与文件账行值列同源：本档 §3.1 ∥ `docs/desktop/design/SHELL.md` §5.1）。
 
 ## 4. 验收回指（本域需求条目 · 判据全文——迁自 `PROJECT.md` §6.1 本域行 · as-of 2026-10-02）
 
-| 需求 | 机检判据（点回需求卷） | 验证面 |
+| 需求 | 机检判据（点回需求卷） | 验证 |
 |---|---|---|
-| **D1** | 打开目录后按 cwd 哈希取会话路径（点名「同一状态文件」= `sessions/<sha1>.json`，核 `sessionPath`）；重启后该 cwd 的 `project:recent` 读数仍在（**通道面——最近目录列表面无渲染消费面（保留）**，R13 后；**`cwd` 面仍消费**——会话控制面项目钮读数；读面 = 槽面回读、零新存储——`docs/desktop/design/IPC.md` §2 项目面注 · 本档 §1 **KD-9**）；**重启自动重开（2026-09-30 需求扩展）**：进程全退再启 ⇒ 自动打开本端上次打开的项目目录（判据 = 本端记录面 mtime 最新——**「上次打开」≠「最近活跃」**）⇒ 随之恢复该项目下本端会话（渲染面 boot 接续门同链——`thincoder-desktop/renderer/app.mjs:230`）——单源 = 本档 §1 **KD-56**；判据面 = 批内件五腿（命中 ∕ 端分离 ∕ 降级·目录已删 ∕ 降级·族无可读 `cwd` ∕ 零记录）+ 真机 **T-DSK50**（两启程，本档 §5） | T-DSK1 / **T-DSK50** |
+| **D1** | 打开目录后按 cwd 哈希取会话路径（点名「同一状态文件」= `sessions/<sha1>.json`，核 `sessionPath`）；重启后该 cwd 的 `project:recent` 读数仍在（**通道面——最近目录列表面无渲染消费面（保留）**，R13 后；**`cwd` 面仍消费**——会话控制面项目钮读数；读面 = 槽面回读、零新存储——`docs/desktop/design/IPC.md` §2 项目面注 · 本档 §1 **KD-9**）；**重启自动重开（2026-09-30 需求扩展）**：进程全退再启 ⇒ 自动打开本端上次打开的项目目录（判据 = 本端记录面 mtime 最新——**「上次打开」≠「最近活跃」**）⇒ 随之恢复该项目下本端会话（渲染面 boot 接续门同链——`thincoder-desktop/renderer/app.mjs:230`）——单源 = 本档 §1 **KD-56**；判据 = 单元测试档五用例（命中 ∕ 端分离 ∕ 降级·目录已删 ∕ 降级·族无可读 `cwd` ∕ 零记录）+ 真机 **T-DSK50**（两启程，本档 §5） | T-DSK1 / **T-DSK50** |
 | **D2** | 新建 / 列表 / 切换 / 删除 / 重命名 / 接续六操作各有往返读数；跨端接续 = 与另两端读写同一 sessions 目录（A2）；列表条目 `createdBy` 读面 = 会话行来源端标注（缺键 ⇒ 不标注——本档 §2.7） | T-DSK3 / T-DSK12 / T-DSK20 |
 | **D18** | 会话面板对齐 VSC：元数据族**三值**（provider · N msgs · updated）逐项裁定在册（provider = 槽投影 `activeProvider` 补载——本档 §1 **KD-28**）；**多标签保留**（本端结构差异不削）；单源 = 本档 §2.2 | T-DSK34 |
 | **D23** | 列表计数不撒谎：count 不可得 ⇒ **显示不可得**——桌面 = **段缺席**（既有 `Number.isFinite` 门零改——`thincoder-desktop/renderer/views/sessions.mjs`）∥ CLI / VSC / `read_history` = 「—」；设计面单源 = `docs/core/design/SESSION.md` §6.25 判据句 4（台账可靠批）；计数面本端零改（既有 `Number.isFinite` 门）；**账本异常警示面（账本可靠批 · 桌面微轮）** = 会话控制面下拉首行 dim 注记（`div.session-ledger-notice` · `data-ledger-notice` · 非可点；触发 = `refused > 0 ∨ scene`——单源 = 本档 §2.5 / `docs/desktop/design/IPC.md` §2「会话族注」项 6） | T-DSK40 + 既有门（计数段缺席零改） |
 | **D26** | 会话标题链：标题生成 ⇒ 落盘 ⇒ 左列行 ∕ 标签条 ∕ 状态行 `title` 段三面随动（标题先于落盘 · 结算单实现）——单源 = 本档 §1 **KD-41** ∕ 核档 `docs/core/design/SESSION.md` §6.7（第三端） | T-DSK46 + 单元测试档（`docs/batches/2026-09-28-desktop-session-title.test.mjs`——已建成 · 284 行 · 随批留存） |
 
-**会话标题接线批（验收面 · 2026-09-28）**：需求回指 = **D26**「会话标题链接线」（已落——`docs/desktop/requirements/PROJECT.md:171`；同族 = **D17** 状态行 `title` 段 ∕ **D18** 会话面板）；设计单源 = 本档 §1 **KD-41** ∕ 核档 `docs/core/design/SESSION.md` §6.7（链单源——第三端）；
-机检面 = **单元测试档** `docs/batches/2026-09-28-desktop-session-title.test.mjs`（已建成 · 284 行——链路 ∕ 时序 ∕ 短路 ∕ 失败 + **E5** 窗内受理零丢失 ∕ **E6** 窗内中止零标题零写——六例；零真实网络 = `globalThis.fetch` 换桩；随批留存 · 不入仓套件）；
-真机面 = **T-DSK46**——**本轮不重建 E2E 基建**（测试面全清重置后集成域空）：转**父侧真机冒烟**闭合，集成用例（`thincoder-desktop/test/integration/session-title-face.test.mjs`）登记待基建重建；**离线不可产面**（真 provider 回合 ⇒ 标题生成 ⇒ 落盘 ⇒ 左列 ∕ 标签条 ∥ 状态行三面随动 + 失焦通知携标题）= 人工走查 + 父侧真跑闭合（D16 义务）；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
-  测试档随修随加——不占设计条目（2026-09-27 裁定）。
+**会话标题接线批（验收 · 2026-09-28）**：需求回指 = **D26**「会话标题链接线」（已落——`docs/desktop/requirements/PROJECT.md:171`；同族 = **D17** 状态行 `title` 段 ∕ **D18** 会话面板）；设计单源 = 本档 §1 **KD-41** ∕ 核档 `docs/core/design/SESSION.md` §6.7（链单源——第三端）；
+机检 = **单元测试档** `docs/batches/2026-09-28-desktop-session-title.test.mjs`（已建成 · 284 行——链路 ∕ 时序 ∕ 短路 ∕ 失败 + **E5** 窗内受理零丢失 ∕ **E6** 窗内中止零标题零写——六例；零真实网络 = `globalThis.fetch` 换桩；随批留存 · 不入集成测试树）；
+真机 = **T-DSK46**——**本轮不重建 E2E 基建**（测试覆盖全清重置后集成域空）：转**父侧真机冒烟**闭合，集成用例（`thincoder-desktop/test/integration/session-title-face.test.mjs`）登记待基建重建；**离线不可产面**（真 provider 回合 ⇒ 标题生成 ⇒ 落盘 ⇒ 左列 ∕ 标签条 ∥ 状态行三面随动 + 失焦通知携标题）= 人工走查 + 父侧真跑闭合（D16 义务）；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  测试文件随修随加——不占设计条目（2026-09-27 裁定）。
 
 （§6.1 本域行全五条已迁讫；批块一条已迁讫（上）——本域无余量。）
 
 ## 5. 用例（本域 · 全文迁自 `PROJECT.md` §7 涉行 · as-of 2026-10-02）
 
-| 用例 | 场景 | 输入 | 预期输出 | 机检面 / 落点 |
+| 用例 | 场景 | 输入 | 预期输出 | 机检 / 落点 |
 |---|---|---|---|---|
 | T-DSK1 | 正常 · 项目入口 | 打开目录 A（无既有会话） | 生成 / 命中 A 的会话路径；主界面就绪，会话控制面下拉出现 A 条目 | — |
 | T-DSK2 | 边界 · 最近目录（退场——R13 后无该面） | — | ❌ 不做（会话模型轮 R13：最近目录列表 UI 退场——开项目入口 = 会话控制面项目钮 + 主进程原生对话框；「打开即物化」由 T-DSK1 承载、「点开即续」由 T-DSK32 序列承载；通道 `project:recent` 保留（**最近目录列表面**无渲染消费面——单源 = `docs/desktop/design/IPC.md` §2 该行）） | — |
@@ -193,12 +193,12 @@
 | T-DSK20 | 边界 · 会话控制面下拉溢出 | 项目内会话数超单屏容量 | 下拉（`.session-dropdown`）可滚动（`overflow-y: auto`——`thincoder-desktop/renderer/session-list.css:16`）∧ 条目数 = 会话数；条目标题 / 元数据超宽 ⇒ 省略三件（`text-overflow: ellipsis`——同档 `:59-60` ∕ `:74-75`） | — |
 | T-DSK25 | 正常 · 会话控制面下拉点按 | ① 点非活动条目；② 点活动条目 | ① 条目激活 ⇒ 切换会话（`session:switch`——点条目同一路；点条目 ⇒ 关下拉）② 界面不变（零重复开页） | — |
 | T-DSK26 | 正常 · 删会话的页随动 | ① 删活动会话（另有邻位）② 删唯一会话 ③ 删非活动会话 ④ 确认 popover 按取消；⑤ 已删会话迟到的回执（删后到达） | ① 邻位接管：`activeSession` = 邻位 · 屏面转邻位页（删前会话块零残留）② 末项删除门：会话数 ≤ 1 ⇒ 拒 `last-session`（零动作）③ 两键皆不动 · 零 IPC ④ 零动作（页不动）；⑤ **零写**——页切片与 `sessionMeta` 零动（`sessionMeta` / `tabBadges` 仍写已删键 = 既有登记观察——`docs/desktop/design/RENDERER.md` §1.1） | — |
-| T-DSK34 | 正常 · 会话面板元数据（D18） | 项目内 ≥2 会话 | 行元数据三值在场（provider = 槽 `activeProvider` 投影；`messageCount` / `updatedAt`）；多标签结构不动（既有标签用例不缩水） | 机检面 = 单元测试档惯例（原两档随 2026-09-28 全清重置退场——行三值构树 ∕ 行投影 `activeProvider` 两向） |
-| T-DSK40 | 正常 · 账本警示面（真 Electron） | fixture 家（`{"locale":"en"}` + 第二枚临时目录作项目根〔记 `PROJ`〕+ 会话槽族档〔`cwd` = `PROJ`——沿 T-DSK32 / T-DSK39 夹具先例〕+ **损坏现场档** `{manifest}.corrupted` 一枚〔= `<临时家>/.thincoder/sessions/<cwd 哈希>.json.manifest.corrupted`——命名单源 = `docs/core/design/SESSION.md` §6.1 后缀族〕；清理 = 两枚临时目录） | ① 真点**会话控制面项目钮**（`button.session-project`——对话框夹具 `PROJ`，照 `docs/desktop/design/E2E-TESTING.md` §3.5 第 6 步）⇒ 等 `[data-guide="no-message"]`（resume 开页两况同落）② 点开会话控制面下拉 ⇒ 下拉首行 = `div.session-ledger-notice[data-ledger-notice]`（**非 `button`** ∧ 零 `data-action`——非可点）∧ `.session-item` 条目数 = 夹具族数（不打断列表）③ PNG 落 `thincoder-desktop/test/artifacts/ledger-notice.png`（存在 + magic）④ 全程零 `pageerror` | 机检面 = 单元测试档惯例（原集成档 `ledger-notice.test.mjs` 随 2026-09-28 全清重置退场）；判据载体 = 本档 §2.5 项 5；断言序单源 = `docs/desktop/design/E2E-TESTING.md` §3.6 / §6；用例号自铸披露 = §6 **AU** |
-| T-DSK46 | 正常 · 会话标题链（真 Electron） | fixture 家（`{"locale":"en"}` + 第二枚临时目录作项目根〔记 `PROJ`〕+ 会话槽族档〔`cwd` = `PROJ`；槽 `title` 在场——沿 T-DSK32 / T-DSK39 夹具先例〕） | ① 真点**会话控制面项目钮**（`button.session-project`——对话框夹具 `PROJ`，照 `docs/desktop/design/E2E-TESTING.md` §3.5 第 6 步）⇒ 开页 ② 会话控制面下拉条目标题 = 槽 `title` 值 ∧ `rail.session.untitled` **零节点**（负断言）③ 下拉选择器标签 = 同值 ④ 状态行 `title` 段词 = 同值 ⑤ PNG 落 `thincoder-desktop/test/artifacts/session-title.png`（存在 + magic） | 机检面 = 集成域 `thincoder-desktop/test/integration/session-title-face.test.mjs`（拟新增）——**本轮不重建 E2E 基建**（集成登记待基建重建；本批 = 父侧真机冒烟闭合）；**离线不可产面**（真 provider 回合 ⇒ 生成 ⇒ 落盘 ⇒ 三面随动 + 通知携标题）= 人工走查 + 父侧真跑闭合；用例号自铸披露 = §6 **BP**（留原址未迁） |
-| T-DSK50 | 正常 · 重启自动重开（真 Electron · 两启程 · D16） | 程 1：fixture 家（`{"locale":"en"}` + 第二枚临时目录作项目根〔记 `PROJ`〕——空会话族）⇒ 真点**会话控制面项目钮**（`button.session-project`——对话框夹具 `PROJ`，照 `docs/desktop/design/E2E-TESTING.md` §3.5 第 6 步）⇒ 开页 ⇒ **关窗退出**；程 2 = 同一临时家**再启动**（不点任何钮）；负控臂 = 另一临时家（从未开过项目）同法启动 | 程 1 = 既有「点开即续」面（照 T-DSK32 ∕ T-DSK39）；程 2 ① 项目已自动重开：`[data-guide="no-project"]` **零节点**（负断言）∧ 会话控制面项目读数非空 ∧ 输入框非 `disabled`；② 会话自动接上：开页在场（`[data-guide="no-message"]` 或块节点——按族内容；用户可感 = 项目 + 会话一条链）；③ 负控臂 = `[data-guide="no-project"]` 在场（无记录 ⇒ 冷态照旧）；④ 全程零 `pageerror`；PNG 落 `thincoder-desktop/test/artifacts/reopen-last-project.png` | 机检面 = 单元测试档惯例（载体 = `docs/batches/2026-09-30-desktop-reopen-last-project.test.mjs`——五腿；随批留存 · 不进仓套件）；真机面 = 父侧真跑闭合（D16 义务）；用例号自铸披露 = §6 **CT**（留原址未迁）；判据载体 = 本档 §1 KD-56 |
+| T-DSK34 | 正常 · 会话面板元数据（D18） | 项目内 ≥2 会话 | 行元数据三值在场（provider = 槽 `activeProvider` 投影；`messageCount` / `updatedAt`）；多标签结构不动（既有标签用例不缩水） | 机检 = 单元测试档惯例（原两档随 2026-09-28 全清重置退场——行三值构树 ∕ 行投影 `activeProvider` 两向） |
+| T-DSK40 | 正常 · 账本警示面（真 Electron） | fixture 家（`{"locale":"en"}` + 第二枚临时目录作项目根〔记 `PROJ`〕+ 会话槽族档〔`cwd` = `PROJ`——沿 T-DSK32 / T-DSK39 夹具先例〕+ **损坏现场档** `{manifest}.corrupted` 一枚〔= `<临时家>/.thincoder/sessions/<cwd 哈希>.json.manifest.corrupted`——命名单源 = `docs/core/design/SESSION.md` §6.1 后缀族〕；清理 = 两枚临时目录） | ① 真点**会话控制面项目钮**（`button.session-project`——对话框夹具 `PROJ`，照 `docs/desktop/design/E2E-TESTING.md` §3.5 第 6 步）⇒ 等 `[data-guide="no-message"]`（resume 开页两况同落）② 点开会话控制面下拉 ⇒ 下拉首行 = `div.session-ledger-notice[data-ledger-notice]`（**非 `button`** ∧ 零 `data-action`——非可点）∧ `.session-item` 条目数 = 夹具族数（不打断列表）③ PNG 落 `thincoder-desktop/test/artifacts/ledger-notice.png`（存在 + magic）④ 全程零 `pageerror` | 机检 = 单元测试档惯例（原集成测试档 `ledger-notice.test.mjs` 随 2026-09-28 全清重置退场）；判据载体 = 本档 §2.5 项 5；断言序单源 = `docs/desktop/design/E2E-TESTING.md` §3.6 / §6；用例号自铸披露 = §6 **AU** |
+| T-DSK46 | 正常 · 会话标题链（真 Electron） | fixture 家（`{"locale":"en"}` + 第二枚临时目录作项目根〔记 `PROJ`〕+ 会话槽族档〔`cwd` = `PROJ`；槽 `title` 在场——沿 T-DSK32 / T-DSK39 夹具先例〕） | ① 真点**会话控制面项目钮**（`button.session-project`——对话框夹具 `PROJ`，照 `docs/desktop/design/E2E-TESTING.md` §3.5 第 6 步）⇒ 开页 ② 会话控制面下拉条目标题 = 槽 `title` 值 ∧ `rail.session.untitled` **零节点**（负断言）③ 下拉选择器标签 = 同值 ④ 状态行 `title` 段词 = 同值 ⑤ PNG 落 `thincoder-desktop/test/artifacts/session-title.png`（存在 + magic） | 机检 = 集成域 `thincoder-desktop/test/integration/session-title-face.test.mjs`（拟新增）——**本轮不重建 E2E 基建**（集成登记待基建重建；本批 = 父侧真机冒烟闭合）；**离线不可产面**（真 provider 回合 ⇒ 生成 ⇒ 落盘 ⇒ 三面随动 + 通知携标题）= 人工走查 + 父侧真跑闭合；用例号自铸披露 = §6 **BP**（留原址未迁） |
+| T-DSK50 | 正常 · 重启自动重开（真 Electron · 两启程 · D16） | 程 1：fixture 家（`{"locale":"en"}` + 第二枚临时目录作项目根〔记 `PROJ`〕——空会话族）⇒ 真点**会话控制面项目钮**（`button.session-project`——对话框夹具 `PROJ`，照 `docs/desktop/design/E2E-TESTING.md` §3.5 第 6 步）⇒ 开页 ⇒ **关窗退出**；程 2 = 同一临时家**再启动**（不点任何钮）；负控 = 另一临时家（从未开过项目）同法启动 | 程 1 = 既有「点开即续」面（照 T-DSK32 ∕ T-DSK39）；程 2 ① 项目已自动重开：`[data-guide="no-project"]` **零节点**（负断言）∧ 会话控制面项目读数非空 ∧ 输入框非 `disabled`；② 会话自动接上：开页在场（`[data-guide="no-message"]` 或块节点——按族内容；用户可感 = 项目 + 会话一条链）；③ 负控 = `[data-guide="no-project"]` 在场（无记录 ⇒ 冷态照旧）；④ 全程零 `pageerror`；PNG 落 `thincoder-desktop/test/artifacts/reopen-last-project.png` | 机检 = 单元测试档惯例（载体 = `docs/batches/2026-09-30-desktop-reopen-last-project.test.mjs`——五用例；随批留存 · 不进集成测试树）；真机 = 父侧真跑闭合（D16 义务）；用例号自铸披露 = §6 **CT**（留原址未迁）；判据载体 = 本档 §1 KD-56 |
 
-（本域用例全文迁讫（T-DSK1 ∥ 2 ∥ 3 ∥ 12 ∥ 20 ∥ 25 ∥ 26 ∥ 34 ∥ 40 ∥ 46 ∥ 50）；批内件（单元测试档）随批次档留存。T-DSK17–19（长会话渲染/回填跟滚 → `docs/desktop/design/RENDERER.md`）∥ T-DSK32（提交序——SETTINGS ∥ 夹具先例）为跨档引用，不在本表。）
+（本域用例全文迁讫（T-DSK1 ∥ 2 ∥ 3 ∥ 12 ∥ 20 ∥ 25 ∥ 26 ∥ 34 ∥ 40 ∥ 46 ∥ 50）；单元测试档随批次档留存。T-DSK17–19（长会话渲染/回填跟滚 → `docs/desktop/design/RENDERER.md`）∥ T-DSK32（提交序——SETTINGS ∥ 夹具先例）为跨档引用，不在本表。）
 
 ## 6. 上抛（本域 · 迁自 `PROJECT.md` §10 涉行 · as-of 2026-10-02）
 

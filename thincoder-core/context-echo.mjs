@@ -2,7 +2,7 @@
  * context-echo.mjs — 回声安全面（D-CC18 ∥ D-CC19 恢复面归并 · 自 `context.mjs` 迁出 · 2026-10-01 core 拆分批 #755 ∥ #786）。
  * 内容 = `COMPACTION_PLACEHOLDER` ∥ 前缀器族（`prefixContent` / `withPlaceholderPrefix`）∥ 回声对归并
  * （`isAssistantEchoPair` / `contentTextOf` / `absorbEchoContent` / `mergeAdjacentAssistantEchoes`）——迁出块逐字。
- * 原档 `context.mjs` 经 `export { … } from` 转口保名（消费面 / 批内件 import 面零改）；
+ * 原档 `context.mjs` 经 `export { … } from` 转口保名（消费面 / 单元测试档 import 面零改）；
  * 跨档被引的原私有面（`COMPACTION_PLACEHOLDER` ∥ `withPlaceholderPrefix`）补 `export` 关键字。
  */
 

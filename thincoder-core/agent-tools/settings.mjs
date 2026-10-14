@@ -44,7 +44,7 @@ const _NULL_LEAF_SHAPES = {
   "memory.team": { kind: "team", expects: "object { repo: string, name?, dir? }" },
 }
 
-/** 同族/跨端形状表（**存在性断言面**——不参与完备性锁的集合相等）。W3 同族：`agent.subagentModels`
+/** 同族/跨端形状表（**存在性断言**——不参与完备性锁的集合相等）。W3 同族：`agent.subagentModels`
  *  默认 `{}` ⇒ 派生表零条目 ⇒ 零约束（字符串被静默忽略——回落 subagentModel）。 */
 const _SIBLING_SHAPES = {
   "agent.subagentModels": { kind: "roleMap", expects: "object of role→non-empty string" },

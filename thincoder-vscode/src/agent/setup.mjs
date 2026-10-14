@@ -27,7 +27,7 @@ import { mergeFileRules } from "@thincoder/core/rules.mjs" // B7 3a：规则面�
 import { composeTurnDomain } from "./turn-domains.mjs" // §2.5-A3：回合域文本组合单点（端 overlay）
 export { vscSubagentFace } from "./setup-tooltable.mjs" // 既有导出名零改（批 7 VSC-DEBT §3.3 缝）
 
-// W16：settings 工具 = 核工厂单源（`settingsTool(opts)`）；#45 参数腿（WEBVIEW-PROTOCOL.md §3.3 判据②）：
+// W16：settings 工具 = 核工厂单源（`settingsTool(opts)`）；#45 参数分支（WEBVIEW-PROTOCOL.md §3.3 判据②）：
 // 端侧**包装实例**——`execute` **返回后**置位 `ctx.agent._settingsTouched`（不做「成功」判定；读后复位）。
 export function vscSettingsFace(tool) {
   return {
@@ -227,7 +227,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // W9 端差适配——**前向镜像**（§2.3 件 1「面板推送腿」行：前向镜像落 host 装配段，每 run 一次；
   // 回填 ∕ 比对块随主循环退役迁往 `callbacks.onTurnEnd`——核 `post-turn.mjs` 每工具执行轮末恰一次）：
   // 核工具族读 CLI 载体名（agent.provider / agent.tasks / agent.planMode / agent.goal）——本端载体 =
-  // 语义同值的入参 / _tasks / _planMode / _goal；task 腿走核 `_onTaskUpdate` 缝（核 `prepareRun` 装配）。
+  // 语义同值的入参 / _tasks / _planMode / _goal；task 分支走核 `_onTaskUpdate` 缝（核 `prepareRun` 装配）。
   agent.provider = provider
   agent.tasks = agent._tasks ?? []
   agent.planMode = agent._planMode === true

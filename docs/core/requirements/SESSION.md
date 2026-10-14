@@ -37,7 +37,7 @@ VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-
 **模块目标**：多端并存下，槽认领与共享指针的纪律——**认领随绑定走**（离开即释放），**被拒操作零副作用**（四不动：不翻共享指针 / 不写端标记 / 不改认领集 / 不写解析缓存）。
 
 - **F-CR1（认领随绑定）**：任一进程成功切换 / 新建、绑定迁至槽 B 后，**释放**其对旧槽 A 的认领（判据 = A ≠ B ∧ `slotSessions[A]` = 本进程 ∧ 本进程绑定已不再指 A）；`/new` · 启动恢复 · VSC 端壳同名落点同判。边界情形（目标被占 ⇒ 不认领 + fork 面）由设计钉。
-  **释放覆盖面扩展（2026-09-22 裁 · 台账 #168①②）**：① **ACP `session/close` 关闭面**同样释放该会话槽认领；② **跨 cwd 释放**（项目切换时释放旧 cwd manifest 的认领）；③ VSC 端壳释放面（`newSlot` / `switchToSlot` 的 `release` 传参）加端壳级机判——三条实现口径 = 设计档 `SESSION.md` §6.16。
+  **释放覆盖范围扩展（2026-09-22 裁 · 台账 #168①②）**：① **ACP `session/close` 关闭面**同样释放该会话槽认领；② **跨 cwd 释放**（项目切换时释放旧 cwd manifest 的认领）；③ VSC 端壳释放面（`newSlot` / `switchToSlot` 的 `release` 传参）加端壳级机判——三条实现口径 = 设计档 `SESSION.md` §6.16。
 - **F-CR2（拒绝零副作用）**：目标槽被另一活进程占用而**拒绝切换**的路径（**作用域 = 面板路径**：受占 ⇒ 判据前置、不进入 `switchToSlot`），**共享 `active` 指针、端标记、认领集、解析缓存四不动**（VSC `handleSwitchSession` 先写后判改正 = 判据前置或回滚）；**核 / CLI 受占路径不属本面**——切换成立（警告 + 继续）：指针 / 记录按 D-6 / D-4 落点 + 保留集 = 空释放旧认领（fork 依赖该指针——设计 D-SE33）。
 - **F-CR3（零回归）**：恢复目标选择（§4.1 F1–F4）· 死主清理 · fork 防互覆 · 端分离（NF1）零回归；**ACP 语义**（`sameProcessPinned` 例外核）**除 F-CR1 的 `session/close` 释放面外**零回归。
 
@@ -159,7 +159,7 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 ④ 冷 cwd 手动 GC 无 shell 通道（只接线自动残留 GC）——**注销（2026-09-21）**：VSC 已补命令入口 `thincoder.sessionGc`（数据面 API——双端同面；见 `docs/core/design/SESSION.md` §6.17 D-SE38）
 · ⑤ 记录存储形态 = **端面事实**（本端零该机制——非端差，如实登记；**写缝 = `pushRecord` 注入面**（`thincoder-core/context.mjs`——`pushReal` 双胞）；承载 = 端面 ∥ 单源 = §4.4 F-S7）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。
 坐标（实核 · 2026-09-28 复读）＝ `thincoder-vscode/src/extension/session-slots.mjs`（76 行）· `session-io.mjs`（246 行）· `panel-session.mjs`（312 行）· `session-gc.mjs`（21 行）——原 400 / 437 / 339 为 2026-09-21 读数，端壳归核瘦身（2026-09-26）后失真。
-用例面 = `session-boot`（490 行 / 8 例，2026-09-28 复读）· `history-window`（192 行 / 8 例）· `history-restore`（236 行 / 9 例）· 集成 `scenario-04-session-recovery`（141 行 / 5 例）——**退场注**：四件随 2026-09-28 测试树全清重置退场（读数 = 退场前存档；批笔在册 = `docs/batches/2026-10-04-issue-fix-round4.md` §2.3）。
+用例 = `session-boot`（490 行 / 8 例，2026-09-28 复读）· `history-window`（192 行 / 8 例）· `history-restore`（236 行 / 9 例）· 集成 `scenario-04-session-recovery`（141 行 / 5 例）——**退场注**：四件随 2026-09-28 测试树全清重置退场（读数 = 退场前存档；批笔在册 = `docs/batches/2026-10-04-issue-fix-round4.md` §2.3）。
 
 **二态化裁定行（2026-09-25 · 台账 #339① 需求层复核）**：① = **已裁保留**（结构性不对称——端 marker 单侧存在：只写 `.manifest.vscode`、永不碰 `.cli`）；②③⑥ = **已裁保留**（形态类——显示 / 互斥面；类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）；④ = **已注销**（2026-09-21 VSC 补命令入口，双端同面——零动作）；⑤ = **端面事实**（非端差——行内改述）。
 
@@ -187,11 +187,11 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 
 | 旧档节 | 内容 | 何故不并 |
 |---|---|---|
-| §11.1「待设计澄清」段（VSC resumed 信号载体 / CLI applySession 收敛落点 / 双端测试档） | 实现级选型待定项 | **设计面**——机制与落点已入设计档 `docs/core/design/SESSION.md` §6.11 |
+| §11.1「待设计澄清」段（VSC resumed 信号载体 / CLI applySession 收敛落点 / 双端测试文件） | 实现级选型待定项 | **设计面**——机制与落点已入设计档 `docs/core/design/SESSION.md` §6.11 |
 | 各节「来源：批次 …」注 + 档首「迁移注记 + 移出清单」 | 批次来源指针与迁出记录 | 时点材料——批次档承载；迁出记录属历史留痕 |
 | §14.1 内的「设计档 §14.x」回指行 | 设计面指针 | 机制已入设计档（本档只留需求层）；指针形态随迁不逐条复制 |
 | 变更记录 | 逐批流水账 | 历史叙述——本档自有变更记录 |
-| VSC 仓档（`requirements/SESSION.md`）的「变更记录」与对位档头 | 一次性材料 + 历史流水 | VSC 端差 / 坐标 / 用例面已并 §4.5（2026-09-15 批 8）；批次档承载 |
+| VSC 仓档（`requirements/SESSION.md`）的「变更记录」与对位档头 | 一次性材料 + 历史流水 | VSC 端差 / 坐标 / 用例已并 §4.5（2026-09-15 批 8）；批次档承载 |
 
 ## 变更记录
 

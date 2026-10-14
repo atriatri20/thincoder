@@ -91,7 +91,7 @@ export function recentDirs() {
   return found.slice(0, RECENT_LIMIT).map(({ cwd, mtimeMs }) => ({ cwd, mtimeMs }))
 }
 
-/** 目录谓词（不存在 / 非目录 / 不可读 ⇒ false —— fail-soft 判据面）。 */
+/** 目录谓词（不存在 / 非目录 / 不可读 ⇒ false —— fail-soft 判据）。 */
 function isDirectory(cwd) {
   if (typeof cwd !== "string" || cwd === "") return false
   try { return statSync(cwd).isDirectory() } catch { return false }

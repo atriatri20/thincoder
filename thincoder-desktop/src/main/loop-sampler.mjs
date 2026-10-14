@@ -3,7 +3,7 @@
  * `docs/batches/2026-09-29-hatch-clearance-2.md` §2 · #673「消（补做——欠做，非能力缺失）」第三件）。
  *
  * port 源 = VSC `thincoder-vscode/src/extension/loop-sampler.mjs`（F-W19 · `docs/vsc/design/SETTINGS.md`
- * §2.12）——取落账覆盖面 `overrideAdmissionIfHostBusy`（源 `:71-77`）；VSC `probeFailureOf`（源 `:67-69`）
+ * §2.12）——取落账覆盖范围 `overrideAdmissionIfHostBusy`（源 `:71-77`）；VSC `probeFailureOf`（源 `:67-69`）
  * **不 port**（端侧探针失败分档走核「读账优先」单源 = `probeAdmission`，无该函数消费点——零死代码）。
  *
  * 唯一职责：给出「宿主（主进程）此刻是否忙」的**证据判定**（`hostBusy()`）——采样器每

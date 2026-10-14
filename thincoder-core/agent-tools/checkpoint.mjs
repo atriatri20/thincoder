@@ -59,7 +59,7 @@ export function registerTurnCapCheckpoint(child, carrier, { turn = 0, signal } =
   if (signal?.aborted) return Promise.resolve(false) // ② 已中止 ⇒ 立即降级（不进挂起）
   const key = String(carrier.id ?? "")
   const rec = { child, carrier, turn }
-  // 先臂后报请（顺序即防御）：`rec.resolve` 与中止监听在入队**前**就位——否则
+  // 先布防、后报请（顺序即防御）：`rec.resolve` 与中止监听在入队**前**就位——否则
   // `pushChildUpstream` 同步唤醒等待栓的窗口里「登记已写、resolve 未挂」，兑现假成功而挂起不收敛。
   let abortedNow = signal?.aborted === true
   const promise = new Promise((resolve) => {

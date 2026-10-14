@@ -1,7 +1,7 @@
 /**
  * chat.mjs — 对话流视图面（`docs/desktop/design/RENDERER.md` §1.1 / §2 / §3 · `docs/desktop/design/UI.md` §1 对话流行）。
  * 三档沿 RENDERER.md §1.1：`chatModel`（纯模型 · 窗出口 —— 更新纪律收核批出档 `renderer/views/chat-model.mjs`）→
- * `chatTree`（纯构树 · 机检面 —— **构树面出档 `renderer/views/chat-tree.mjs`**：留档批 · #719 拆分预案执行，
+ * `chatTree`（纯构树 · 机检 —— **构树面出档 `renderer/views/chat-tree.mjs`**：留档批 · #719 拆分预案执行，
  * 含重建径**按记录位次复列**）→ `mountChat`（薄挂载 = 本档唯一清空 / 建树处）；
  * DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 + **消化行族** + **到期触发行组** +
  * **停止痕** + **真置焦执行** · 幂等 · 无帧豁免）· 帧尾六步 `settleFrame`（**读数按动数裁剪** ·
@@ -23,7 +23,7 @@
  *   ② 块六型（`user` / `assistant` / `reasoning` / `tool` / `error` 五项页读域 + **留档块** `subagent` —— 归档入流块，
  *      单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 5 ∥ 留档批 · #719）单序列；块键单源 = `blockKey`（`data-block-id` /
  *      增量缝合 / toggle 同域）；兜底键用**全列表位序**（`hidden + i`）⇒ 窗滑动不改键；文本族块面 = **经核 Markdown**
- *      呈现（KD-RC-4 · R3c —— 单源 = `renderer/views/chat-text.mjs`；转义闸在核；原文逐字另存 `[data-raw]` 锚——就地更新判据面）；
+ *      呈现（KD-RC-4 · R3c —— 单源 = `renderer/views/chat-text.mjs`；转义闸在核；原文逐字另存 `[data-raw]` 锚——就地更新判据）；
  *      **说话人标签**（项 4）：用户块恒出 / 助手族块回合首出（判据 = `turnHeadOf` 单源 —— 活流与回放同判据）——
  *      标签为**块内子节点**（不入块序 / 不改 `data-blocks`），文本落笔归帧尾着装面；
  *   ③ 根子序 = [引导?] → [摘要块?] → **流序**（块序列 × 消化轮**按记录位次复列** —— 恢复序 ≡ 记录序 · 零配对〔本批 #765〕；位次件无 ⇒ 退化为
@@ -181,7 +181,7 @@ function refreshNode(node, block, index, model, handlers) {
   return node
 }
 
-/** 帧尾六步（非构造帧 · 判据面 = `docs/desktop/design/RENDERER.md` §1.1「流面结算步」条 ∥ §3 帧尾滚动作 ——
+/** 帧尾六步（非构造帧 · 判据 = `docs/desktop/design/RENDERER.md` §1.1「流面结算步」条 ∥ §3 帧尾滚动作 ——
  *  **读数按动数裁剪**：跟滚帧零读（贴底 = 写超值）· 非跟滚 ∧ 头段动数（摘 + 前插）> 0（补偿径）才读
  *  `t0` ∕ `t1`）：
  *  ① **尾段步**（行族出生 ∥ 刷项就地 ∥ 退流摘 ∥ 尾段 ∥ 中洞造项 —— 皆先于读数）

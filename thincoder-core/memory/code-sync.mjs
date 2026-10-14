@@ -11,7 +11,7 @@ import { ensureEmbeddings, invalidateStaleEmbeddings } from "./core.mjs"
 import { detectLanguage, _upsertCodeFile, _upsertDocFile, yieldTick } from "./code-index.mjs"
 import { isSkippedRelPath, extensionOf } from "./file-walk.mjs"
 import { createRowBudget, rowCountOfPath, sweepStaleRows } from "./sync-tail.mjs"
-import { loadProjectDeclaration, isExcludedRelPath, declaredPublicRoots } from "../conventions.mjs"
+import { loadProjectDeclaration, isExcludedRelPath, declaredPublicRoots, declaredIndexScope, isInDeclaredScope } from "../conventions.mjs"
 import { logEvent } from "../log.mjs"
 import { indexExtensions, listProjectFiles } from "./file-list.mjs"
 
@@ -53,6 +53,7 @@ export async function gitSync(memory, dir, opts = {}) {
 async function gitSyncDir(memory, dir, { onProgress } = {}) {
   const origin = normalizeOrigin(dir) // §6.11 写缝归一（git / 文件 I/O 用原样 dir；库面 origin 一律归一值）
   const decl = loadProjectDeclaration(dir)
+  const scope = declaredIndexScope(dir) // §6.14 面⑦ 范围门（diff 缝逐行判——见下）
   const { execFile: _execFile } = await import("node:child_process")
   const { code: codeExts, doc: docExts } = indexExtensions(dir)
   const gitRun = (args) => new Promise((resolve, reject) => {
@@ -95,7 +96,8 @@ async function gitSyncDir(memory, dir, { onProgress } = {}) {
     const abs = join(dir, rel)
     const ext = extensionOf(rel)
 
-    if (isSkippedRelPath(rel) || isExcludedRelPath(rel, decl, dir)) continue
+    // §6.14 准入三族同判（面④ 跳过段 ∥ 面①∪面⑥ 排除谓词 ∥ 面⑦ 声明范围）：范围外 = 不收录
+    if (isSkippedRelPath(rel) || isExcludedRelPath(rel, decl, dir) || !isInDeclaredScope(rel, scope, dir)) continue
 
     if (!codeExts.has(ext) && !docExts.has(ext)) { skipped++; continue }
 
@@ -210,8 +212,8 @@ async function codeSyncDir(memory, dir, { onProgress, yieldFn = yieldTick, nowFn
     }
   }
 
-  // §6.14 B6 ∕ M3：收尾 stale 循环（同款让出 + 面① 收尾保护位）——机制单源 = `sync-tail.mjs`
-  removed = await sweepStaleRows(memory, { table: "code_chunks", origin, indexed, seen, decl, base: dir, yieldFn, nowFn, yieldMs })
+  // §6.14 B6 ∕ M3：收尾 stale 循环（同款让出 + 收尾保护位：面①∪面⑥ 排除 ∪ 面⑦ 范围）——机制单源 = `sync-tail.mjs`
+  removed = await sweepStaleRows(memory, { table: "code_chunks", origin, indexed, seen, decl, base: dir, scope: declaredIndexScope(dir), yieldFn, nowFn, yieldMs })
 
   onProgress?.({ phase: "done", total: files.length, updated, removed, skipped, failed, overSizeSkipped, budgetSkipped: budgetSkipped.length })
   // §6.14 B7 维护口：模型键失配的失效**执行**（读面只判定降级——执行住同步尾；覆盖 /reindex ∕ 桌面 ∕ VSC 构建）
@@ -248,6 +250,7 @@ export async function reindexFile(memory, cwd, absPath) {
   if (rel === ".." || rel.startsWith("../")) return
   if (isSkippedRelPath(rel)) return
   if (isExcludedRelPath(rel, loadProjectDeclaration(cwd), cwd)) return // §6.14 面① 第三起效点（单文件缝零写）
+  if (!isInDeclaredScope(rel, declaredIndexScope(cwd), cwd)) return // §6.14 面⑦ 同址第三起效点（范围外单文件零写）
   // Declared extensions count for the single-file path too (union with built-ins).
   const { code: codeExts, doc: docExts } = indexExtensions(cwd)
 
@@ -281,6 +284,6 @@ export async function reindexFile(memory, cwd, absPath) {
 }
 
 // ─── 迁出面（2026-10-01 拆分批 · #755 ∥ #786）：检索面 → `memory/code-search.mjs`；清单面 →
-// `memory/file-list.mjs`——经本档转口保名（消费面 / 批内件 import 面零改），四起效点调用形零改。──────
+// `memory/file-list.mjs`——经本档转口保名（消费面 / 单元测试档 import 面零改），四起效点调用形零改。──────
 export { codeSearch, ensureCodeEmbeddings, codeSearchTool } from "./code-search.mjs"
 export { listProjectFiles, indexExtensions } from "./file-list.mjs"

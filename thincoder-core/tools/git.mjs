@@ -177,7 +177,7 @@ const gitActionCore = {
           : ["log", "-" + n, "--format=%h %ad %an %s", "--date=short"]
         if (args.path) cmdArgs.push("--", args.path)
         const out = await runGit(ctx.cwd, cmdArgs)
-        // #71：同上（log 腿——传了 path 且输出空 ⇒ 注记；不传 path 逐字零变）
+        // #71：同上（log 分支——传了 path 且输出空 ⇒ 注记；不传 path 逐字零变）
         const empty = args.path ? `(no commits — pathspec '${args.path}' matched nothing)` : "(no commits)"
         return truncate(filterLines(out || empty, args.filter))
       }

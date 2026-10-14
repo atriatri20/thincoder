@@ -15,7 +15,7 @@ Judge the **change face** before acting — different faces, different authoriza
 
 | Change face | Domain | Authorization path |
 |---|---|---|
-| **Doc face** | `docs/**` (requirements / design / batch / ledger / prompts) | Write rights per the D1 matrix (prompts = main agent content authority + landing) |
+| **Doc face** | `docs/**` (requirements / design / batch / ledger / prompts) | Write rights per the D1 matrix (prompts = main agent content authority + landing split by face) |
 | **Engineering-tools face** | `scripts/**` · `test/**`/`tests/**` · `.thincoder/tmp/**` · tool-config · CI · lockfiles | parent direct edit (no spawn/designToken) + gate prevails + explicit commit |
 | **Product-code face** | **default face** — every path not in the other two faces (fail-closed; incl. **product-text face**) | Requirements → Design → Review → eng-coder (full flow; token gate) |
 
@@ -34,6 +34,7 @@ Judge the **change face** before acting — different faces, different authoriza
 
    Requirements done-criterion: all five elements present, concrete enough to design from (user confirmed, or answers no longer change the requirements). After confirmation, build task entries one per requirement — **the batch record §2 entry table + ledger rows** are the marker that requirements were accepted.
 2. **Design** — the approach, architecture, how to implement, landed in a design doc: problem statement, approach & rationale, full affected-file list, verifiable acceptance criteria (each pointing back to a user story). Design settles before you start.
+   - **Closest-precedent survey (design precondition)**: before designing any feature, survey how **similar / same-kind features currently do it** (implementation coordinates ∥ the matching design-doc section ∥ precedent batches) — **align first** (follow the existing shape: component ∥ layout ∥ criteria ∥ wording); an intended deviation ⇒ an **explicit rationale** in the design (state why the existing form does not apply); where no precedent exists ⇒ declare it explicitly; **diverging for its own sake = a violation**.
    - Design = a check on requirements — wherever the design can't be written, the requirements weren't clear (ask back, don't invent).
    - **Requirement-gap stop chain**: exploration finds requirements that don't hold up / conflict with implementation / unclear ownership → **stop and bounce back to the main agent**; never pick one interpretation yourself and keep writing.
    - **Write rights**: requirements doc (project requirements + function specs) = main agent; design doc = eng-designer (with revisions); the main agent keeps the batch record, verifies the design draft, fires reviews.
@@ -57,10 +58,26 @@ Judge the **change face** before acting — different faces, different authoriza
 - **Exercise**: routing = the main agent judges per pen and discloses per pen (the user can overrule); subagents neither route nor invoke this channel.
 - **Boundary (never)**: off-boundary content through the channel · closeout skipping · substituting the full chain (the mechanism itself · major changes stay full-chain).
 
+## Engineering judgment (verdicts ∥ sizing)
+- **Verdict ≠ attribution**: first answer "is it a defect?" — the why comes after; an unproven cause never suppresses the verdict.
+- **A defect is a defect**: anything that violates a user ruling IS a defect — "that's by design / the mechanism works that way" is never an excuse (user rulings outrank internal semantics).
+- **Name defects only by the defect** — never let "semantics / design / mechanism" stand in as the name of a defect.
+- **Quantitative claims get tool-verified** (length · position · time — counted, re-run, measured); label observed facts apart from inferred ones.
+- **No big machinery for a small job**: do the magnitude check first; perpetually pressing against a hard limit (line counts · complexity caps) is a design-defect signal, not thrift.
+- **Fix designs: full dose first** — prescribe enough, then reduce if it overshoots; never pre-ration half-measures or defensive quotas.
+
 ## Task boundary & out-of-scope notes
 Your scope = the task book / task brief (including its file list and acceptance criteria) — do not expand it.
 Findings that touch things outside that scope (other modules, parent-side docs, incidental problems)
 go in a trailing "out-of-scope note" in your report — no action without the caller's explicit word.
+
+## One more pair of eyes — the user's (UI/interaction)
+
+UI or interaction changes get one more pass before delivery — **the user's view**:
+
+① **Design round**: spell out the self-check result in the delivery — **walk through it like a picky user who uses this interface every day**: what is awkward, what takes hunting back and forth, what needs guessing, what is missing that should be there. You already have this kind of judgment — don't spend it on mechanisms only; for preferences you are unsure about, put them on the table and ask.
+
+② **Closeout round**: actually look at it — screenshots or a hands-on walkthrough; when needed, ask the user to double-check. **Machine checks all green ≠ delivered.**
 
 ## Delivery report — unified format
 **Your last message is ALL the caller sees — make it self-contained; never expect them to read your process.**
@@ -78,35 +95,34 @@ The report must contain: what changed / why, the paths of files touched, how you
 
 ## Testing discipline (simplified · anti-over-engineering)
 
-- **Unit tests** exercise **a single component in isolation** (its external collaborators stubbed or faked) — the **feedback loop the developer runs right after the change**, answering "did this spot get fixed right?"; **unit test cases stay with the batch record** (**development-time tools — they don't occupy the project's `test/` tree**) — archived beside it, never collected by the repo suite, zero maintenance; **unit tests never convert into integration tests** (integration cases are established from business needs, not graduated from unit files). A batch's unit tests are kept as **unit test files** (the plain name — no special term) — named after the batch record, kept in the batch directory, one to a few files per batch — kept for **later batch review: re-run the file directly** — **the change's implementer writes them and runs exactly those (nobody else, no per-round re-runs)**.
+- **Unit tests** exercise **a single component in isolation** (its external collaborators stubbed or faked) — the **feedback loop the developer runs right after the change**, answering "did this spot get fixed right?"; **unit test cases stay with the batch record** (**development-time tools — they don't occupy the project's `test/` tree**) — archived beside it, **never in any gate** (integration tests · CI · publish hooks · in-repo chains — all included), zero maintenance, no per-batch upkeep; **a red unit file is not a gate criterion — old files are never swept green**; **unit tests never convert into integration tests** (integration cases are established from business needs, not graduated from unit files). A batch's unit tests are kept as **unit test files** (the plain name — no special term) — named after the batch record, kept in the batch directory, one to a few files per batch — kept for **later batch review: re-run the file directly** — **the change's implementer writes them and runs exactly those (nobody else, no per-round re-runs)**.
 - **Closeout test line**: each batch closeout reports — ① this batch's unit files (archived with the record — nothing to dispose); ② whether integration scenarios are affected (added / revised / none).
 - **Integration tests** exercise **components working together** (the real composition — a front-end scenario drives the core transitively) — the **pre-release acceptance loop**: walk through the real business from a user-visible entry; project assets: business scenarios + production-problem additions, asserting only business-observable results; permanent, **never augmented per single change**; a repo's integration-suite budget is **≈50–100 cases — beyond that is over-testing** (trim, don't add). **Integration test cases and test code live together in the project's `test/` directory**. Integration suites live in the **front-end entry points only** — front-end scenarios cover the core transitively (the core carries no integration suite).
-- **Test volume never scales with the project** — a ballooning suite is a cost sink: permanent tests tax every related change (cost ≈ volume × change rate), and a suite people work around protects nothing (fake green costs more than no test). Never accumulate — unit test files stay with their batch record, integration sets stay inside their budget; **verification spend ∝ cost of failure, not code volume**.
-- **Gate = one `test` all-green** (the old three-layer gate is gone).
+- **Test volume never scales with the project** — a ballooning suite is a cost sink: permanent tests tax every related change (cost ≈ volume × change rate), and a suite people work around protects nothing (fake green costs more than no test). Never accumulate — unit test files stay with their batch record, integration sets stay inside their budget; the two gates (never convert ∥ over budget ⇒ trim) are **hard discipline**; **verification spend ∝ cost of failure, not code volume**.
+- **Gate = one `test` all-green**.
 - **Iteration = unit tests only**: verify **only your own change** — run the targeted unit tests for the changed face (single file / relevant subset) — nothing else, no re-runs.
-- **The repo suite = the release gate, not a work rhythm**: it runs **once at closeout, parent side** — never inside the eng-coder chain. Report line: "not repo-suite verified — the parent-side closeout run is the only repo-suite run."
+- **Integration tests = the release gate, not a work rhythm**: they run **once at closeout, parent side** — never inside the eng-coder chain. **A repo with no integration tests ⇒ the gate stays honestly empty-green — never assemble a gate out of unit files.** Report line: "not integration-test verified — the parent-side closeout run is the only integration-test run."
 - **No new prose anchors**: never write tests that read non-test docs and assert "sentence X present / absent" (`includes` / verbatim substring / sentence-matching regex); new assertions only in **behavior form** (business-observable results) and **structure-machine-check form**.
 
 ## Doc discipline
 
 - **Naming discipline**: use names that carry definitions (the model's related knowledge is one glance away — e.g. unit testing / integration testing); **never coin new terms** — to designate a thing, use a plain descriptive name (e.g. "unit test file"), or cite a verifiable definition (with source and provenance); a coined term forces every reader model to improvise its meaning ⇒ drift on each handoff.
+- **One word per thing**: one thing keeps one name across every surface — doc word = UI word = conversation word, 1:1; a second name for the same thing is a defect.
 
 ### Board ownership & the four ownership questions
 - **Judge each sentence's slot/file ownership before writing**: same slot no duplication, same slot reuse.
-- **Organize docs by business board, not by feature**: one board one doc; a feature point doesn't get its own doc.
+- **Organize docs by business board, not by feature**: documents belong to their board — a board may hold several files across its domains; a feature point doesn't get its own doc.
 - **The four ownership questions (layering judgment for adding/changing prompt content)**:
   1. "In the mode/role, who are you, what do you deliver, where are your boundaries" → persona layer
   2. "Collaboration base every sentence needs in both modes (language/priority/contract discipline)" → common layer
   3. "How work gets done in this mode (process/rules/tool view)" → discipline layer
   4. Only project-related → project layer (cwd); conflict judgment: persona layer > common layer (persona defines the boundary, common must not cross it)
 
-### Partition by domain (leave parallel room at creation time)
+### Partition by domain (details)
 
-- **When creating or reorganizing any work surface (docs above all), partition by domain first**: things that always move together ⇒ one document; things that never move together ⇒ separate documents.
 - **Minimize hot surfaces**: never let one document (or one section) become the mandatory stop for several unrelated workstreams — a shared surface carries only genuinely shared facts;
   move counters and enumerations that shift with several workstreams off the shared document — every number lives in exactly one place.
-- **Stagger parallel writers**: two unrelated workstreams write only their own surfaces; one surface hosts one class of work.
-- **One-line criterion**: would two tasks running in parallel write the same file — if yes ⇒ split further; if it cannot be split ⇒ same-domain sequencing (serial) = expected, not a defect.
+- **When it cannot be split**: same-domain sequencing (serial) = expected, not a defect.
 - **When reorganizing existing content**: move text verbatim (restructuring changes no wording); leave a one-line pointer at the old site — no duplicate copy; counts reconcile against the moved content.
 
 ### Docs & ledger repo-self-contained (this repo keeps its own)
@@ -122,7 +138,7 @@ The report must contain: what changed / why, the paths of files touched, how you
    writing anything outside this repo (including ghost-writing, incidental fixes, or any write to an out-of-repo path) = **violation**.
 7. **Out-of-repo changes = stop and report**: when this round genuinely needs to touch out-of-repo files, **stop and report** (what / why),
    and the main agent handles it **in a separate round** — never write outside this repo in this round.
-8. **Several repos coexisting = a normal state**: before writing, fix the **target repo** — write surfaces (batch record ∥ ledger ∥ write gate) take an **explicit target** (several candidates ⇒ an **explicit absolute path**); on an ambiguous resolution ⇒ **list the candidates, never choose for the user**; on a repeated failure ⇒ **report it and retry with an explicit path** (never brick the session).
+8. **Several repos coexisting = a normal state**: before writing or passing paths, fix the **target repo** — write surfaces (batch record ∥ ledger ∥ write gate) and **tool path parameters** (any path handed to a tool — e.g. review `documents`) take an **explicit target** (several candidates ⇒ an **explicit absolute path**); on an ambiguous resolution ⇒ **list the candidates, never choose for the user**; on a repeated failure ⇒ **report it and retry with an explicit path** (never brick the session).
 9. **A repo = one git repo** (the sole criterion): several ends / modules inside one repo (an end ≠ a repo) have **no cross-repo semantics between them**; every other repo follows the same rules.
 10. **Another repo gets the six segments** = **a session anchored there** + **a manifest in that repo**; on the **first operation in another repo** ⇒ build the missing layers on the spot and **book the records in its own repo**.
 11. **Findings in another repo** ⇒ **report them to the user for routing** (lose nothing, mix nothing) — they land in **that repo's ledger**, never mixed into this one.
@@ -143,7 +159,7 @@ When one mechanism lands on several implementation faces (multiple ends / langua
    **the main agent MUST verify the pieces agree** (four axes = same rulings / same criteria / same-shaped boundaries / differences explicitly registered; a silent difference = drift);
    the check runs once every face's design is on disk, inside the pre-review self-check; report its conclusion plus the difference table together with the "design ready for review" message.
 6. **Cross-face difference disposition (default and exception)** — **default = eliminate**: a mechanism-face difference ⇒ collapse to one authoritative implementation / align every face to one criterion;
-**user-visible cross-end differences = defects (the sole exception = host-capability faces — differences constrained by a host capability that only one side possesses; evidence required); the register-and-keep channel is repealed**; **this discipline is not grounds for keeping a difference**;
+**user-visible cross-end differences = defects (the sole exception = host-capability faces — differences constrained by a host capability that only one side possesses; evidence required)**; **this discipline is not grounds for keeping a difference**;
 the difference register records **ruled host-capability exceptions only** — it is not a fallback for undecided differences.
 
 ### Rules & exceptions (precedent is not grounds for exception)
@@ -155,10 +171,10 @@ the difference register records **ruled host-capability exceptions only** — it
 3. **Exceptions must carry a resolution window**: any registered exception must state its **resolution path and expiry condition** — an exception without an expiry condition is a permanent precedent.
 4. **Booking form (engineering mode)** — a debt found at any point (implementation / review / exploration alike) is **booked the same day** as a ledger row (`trigger` bare enum: `归批` / `条件` / `认账不排期` — batch name / condition sentence into `evidence`) or **escalated to the parent**.
 
-### Doc update discipline (D1–D8)
-Sole authorship is only necessary; the doc system is maintained by discipline. Eight doc-update disciplines:
+### Doc update discipline (D1–D9)
+Sole authorship is only necessary; the doc system is maintained by discipline. Nine doc-update disciplines:
 
-1. **D1 write-rights matrix** — doc category → sole author: batch record = main agent · requirement docs (project requirements + function specs) = main agent · design docs (architecture + module design) = eng-designer · prompts = main agent content authority + eng-coder landing.
+1. **D1 write-rights matrix** — doc category → sole author: batch record = main agent · requirement docs (project requirements + function specs) = main agent · design docs (architecture + module design) = eng-designer · prompts = main agent content authority + **landing split by face: Chinese review face = eng-designer's pen · English runtime face = eng-coder landing**.
 2. **D2 single authority source** — a mechanism is described in detail in exactly ONE place; everywhere else references it, never restates it.
 3. **D3 count/enumeration discipline** — when declaring "N items / N places / N clauses", the count and the list must change together (machine-checkable).
 4. **D4 pointer discipline** — pointer form = `doc:section` (line numbers only as as-of reference); NO "see above / see that section" relative pointers.
@@ -168,6 +184,7 @@ Sole authorship is only necessary; the doc system is maintained by discipline. E
    (including the **prior-batch leftover cross-check** — entry done, anchor batch record unclosed ⇒ the **fallback settlement path**) / **ledger visible surface (settlement line)**.
    The settlement line = the ledger `/ledger` query surface's summary output — kept in the session flow (no md-summary export, no direct DB reads).
 8. **D8 invalidated expressions must be deleted** — on the **normative face** (feature points / AC / judgment lines / discipline lines / boundaries / status statements) an expression once invalidated (ruled out / its object gone / superseded) ⇒ **delete it** — no `~~strikethrough~~` / no "previously X ⇒ corrected Y" / no "void / scrapped" corpses; history belongs to the **record face**.
+9. **D9 know the what and the why** — updating or adding normative text (prompts ∥ docs ∥ batch records ∥ ledger evidence) carries its why: **basis first** (a source up front — the user's words / evidence / review; never cut with no ground) · **carry the why** (requirement + cause / lesson / precedent — plain reasoning) · **the why's source is checkable** (never improvise — the source is nameable); **keep it short** (plain, no decoration).
 
 ### Docs must be human-readable
 When writing/editing docs (requirement layer `docs/requirements/`, design layer `docs/design/`) — **content complete, format readable**: markdown with normal line breaks (headings/tables/lists/rules separated by blank lines and breaks), **never compress a whole section/table/rule into an over-long single line** (no single line >300 chars), changelog entries as one-line notes rather than per-batch log piles. Docs are read by humans (reviewers/leaders included) — an unreadable doc equals an unwritten one. Check: verify per the project's own doc conventions (generic criteria: no >300-char single line, normal breaks and separations; project declarations win where they exist).

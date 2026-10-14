@@ -6,7 +6,7 @@
  * ——runOpts 构造 + ContinueError/Ctrl+I 续跑 + 错误/中止持久化分支）+ 回合 controller 工厂
  * `newTurnController`（原 `:43-65`）。
  * 留主档（`panel-chat.mjs`）= 入口守卫段（`ensurePanelAgent` / `ensureMemoryHandle` 同址——
- * 结构机检约束 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单测树重建时回迁端侧单测档）+ 行加载 / 回调装配段 +
+ * 结构机检约束 = 单元测试档 `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单元测试树重建时回迁端侧单元测试档）+ 行加载 / 回调装配段 +
  * `runPanelChat` 包装 + `agentSlotMatches` / `ensurePanelAgent`。
  *
  * 缝保持（KD-12 · 承 KD-13）：`newTurnController` 迁出 + 主档 re-export（消费档
@@ -19,7 +19,7 @@
  * → 端壳续跑循环（resume ∕ ContinueError ∕ Ctrl+I 三段保留）**。核 `runAgent` = 动态 import（核 agent
  * 链静态达 `node:sqlite`——W8 契约②；本档静态边经闭包扫描全为净件）。三处 host 适配面：① 载体面
  * `bindCarrierFace`（件 1-⑤⑥——14 字段 `agent[f] ⇄ history[f]` 别名 + `agent.history` 访问器锚）；② 完成面
- * `callbacks.onComplete`（🔴 P4-I 断缝闭证——核 loop 零调用点 ⇒ 干净返回处补调）；③ 工具推送腿
+ * `callbacks.onComplete`（🔴 P4-I 断缝闭证——核 loop 零调用点 ⇒ 干净返回处补调）；③ 工具推送分支
  * `callbacks.onTurnEnd`（件 1「面板推送腿」行——旧循环 `agent.mjs:397-417` 逐字迁入）。
  */
 import { continueDecision } from "@thincoder/core/agent/continue-decision.mjs" // #677 · I10 续跑判定单源（#127 ④ 双写退役）
@@ -113,9 +113,9 @@ function bindCarrierFace(agent, history) {
   })
 }
 
-/** 工具推送腿（§2.3 件 1「面板推送腿」行——钉缝 = `callbacks.onTurnEnd`；核 `post-turn.mjs:65` 工具
+/** 工具推送分支（§2.3 件 1「面板推送腿」行——钉缝 = `callbacks.onTurnEnd`；核 `post-turn.mjs:65` 工具
  *  执行轮末主触，工具期中断支 `agent.mjs:439` 同触；另 `completion.mjs:41/66/84/97/112/140` 无工具调用的
- *  续跑支同触 ⇒ **超集调用**，本腿三腿皆变更门控（`!==` 比对 ∕ 读后复位）⇒ 幂等、零用户可见差）。
+ *  续跑支同触 ⇒ **超集调用**，本分支三处皆变更门控（`!==` 比对 ∕ 读后复位）⇒ 幂等、零用户可见差）。
  *  旧循环 `src/agent.mjs:397-417` 的载体镜像回填 ∕ 比对块逐字迁入：tasks ref 比 ⇒ 回写；planMode
  *  布尔比 ⇒ 回写 + `onPlanMode`；goal 状态词映射（complete/blocked → done/blocked）⇒ `onGoal`。
  *  goal 基准跨批保留（每次回调末更新——批间无 goal 写点 ⇒ 等价旧形「批前快照」）；尾接

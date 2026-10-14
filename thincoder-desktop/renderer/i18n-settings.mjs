@@ -2,10 +2,10 @@
  * i18n-settings.mjs — 设置面词族第四档（i18n 拆分批 `docs/batches/2026-09-29-i18n-split.md` §2 · 台账 #614
  * 顶格消解：主档 `renderer/i18n.mjs` 内容行 500 顶格 ⇒ 自有 `settings.*` 族 55 键整族出档，本档承接）。
  *
- * 键面（**59 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
- * 四段名 / 两段态 / 十三失败码 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
- * 当前标 · 两增键 / 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
- * 移除 · 增键 —— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）。
+ * 键面（**78 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59；**三端对齐批（2026-10-07 · 台账 #1027–#1035 · KD-75 ②③）**：增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` 三键，净删 `settings.providers.addCustom` ∥ `.addPreset` 两键（旧双表单提交词——表单退场随退）——59 ⇒ **60**；**添加入口弹窗统一批（2026-10-07 · 台账 #1054 · KD-77 ①）**：增 `settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle` 三键（MCP 添加入口 + 表单两态标题——值逐字同 VSC 同批落地 `locales` 同名键）——60 ⇒ **63**；**2026-10-09 清除批（实施期 fix 轮）**：净删 `settings.providers.activeToggle` 一键（向导步 1 复选退场——无消费者随实现净删）——63 ⇒ **62**；**B1 批（2026-10-10 · 台账 #1212）**：增团队段词族**十五键**（段名 + 表单三标 + 登录 ∥ 退出两钮 + 未登录提示 + 状态行两标 + 失败四句 + 一次性提示两句——未登录句 ∥ 四失败句 ∥ 两提示句 = 三端逐字同句，单源 = `docs/core/design/TEAM.md` §2.5）——62 ⇒ **77**；**#1247 端口提示批（2026-10-13 · 清账轮）**：增 `settings.team.serverHint` 一键（登录补端口提示——三端同拍；值逐字 = VSC `locales` 同名键）——77 ⇒ **78**）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
+ * 四段名 / 两段态 / 十三失败码 / 添加入口两键 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
+ * 当前标 · 自定项键（KD-75 ③）/ 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
+ * 移除 · 增键 · 添加入口 + 表单两态标题（KD-77 ①）—— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）。
  * S3 分档增（#673 · 2026-09-29）：失败码族补 `settings.reason.hostBusy`（渠行行标分档词 —— 消费面 =
  * `renderer/views/settings-sections.mjs`；值源 = VSC 硬编码词「宿主繁忙」同形，两语同增）。
  * 主题切换批增（#743 · 2026-09-30）：面头主题三态族四键（`settings.theme` ∥ `.system` ∥ `.light` ∥ `.dark` ——
@@ -14,10 +14,11 @@
  *
  * 值源：搬前主档原链注全述（键名 ∕ 两语值**逐字保原** —— 出档 = 纯搬零改；合并表两语键序同理零变，
  * 原位展开于 `question.cancel` 与向导注释之间）。
- * 消费面（设置面 **9** 档 · 皆 `t()` 取词、导入面零改动）：`renderer/settings-confirm.mjs`（密钥删除确认）·
+ * 消费面（设置面 **10** 档 · 皆 `t()` 取词、导入面零改动）：`renderer/settings-confirm.mjs`（密钥删除确认）·
  * `renderer/views/settings.mjs`（标题 ∕ 关闭 ∕ 语言 ∕ 段名 ∕ 态词 ∕ 失败码三表出词）·
  * `views/settings-controls.mjs` · `views/settings-sections.mjs` · `views/settings-sections-providers.mjs` · `views/settings-sections-env.mjs` ·
- * `views/settings-sections-mcp.mjs` · `views/settings-sections-models.mjs` · `views/settings-sections-tools.mjs`。
+ * `views/settings-sections-mcp.mjs` · `views/settings-sections-models.mjs` · `views/settings-sections-tools.mjs` ·
+ * `views/settings-sections-team.mjs`（B1 团队段 —— 段名 ∥ 表单 ∥ 状态行 ∥ 四失败句 ∥ 两提示句）。
  * 合并点 = `renderer/i18n.mjs` `HOST_DICT` 两语展开 —— 单一装配点仍 = `initDict`（本档零装配逻辑，纯词表）。
  * 两语键集须相等（增键两语同增、禁单语落键）；零落盘 · 零 `node:` / 零裸包 · 零 `/rc/` 静态导入
  * （渲染面静态闭包判据 —— 经合并点主档保持平 node 可装载）。
@@ -65,12 +66,14 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.reason.timeout": "Timed out",
     "settings.reason.malformed": "Malformed response",
     "settings.reason.probeFailed": "Probe failed",
+    "settings.addProvider": "+ Add",
+    "settings.addProviderTitle": "Add Provider",
     "settings.providers.nameLabel": "Name",
     "settings.providers.presetLabel": "Preset",
     "settings.providers.baseURLLabel": "Base URL",
     "settings.providers.modelLabel": "Model",
     "settings.providers.formatLabel": "Format",
-    "settings.providers.keyLabel": "API key",
+    "settings.providers.keyLabel": "API Key",
     "settings.providers.contextLabel": "Context window (K)",
     "settings.providers.contextHint": "128 = 128K — pick a common tier from the dropdown, or leave empty to use the model's built-in value",
     "settings.providers.contextPlaceholder": "e.g. 128",
@@ -78,16 +81,17 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.providers.activeToggle": "Set as active provider",
     "settings.providers.addCustom": "Add custom provider",
     "settings.providers.addPreset": "Add preset provider",
-    "settings.providers.verify": "Verify",
+
+    "settings.providers.customChoice": "Custom (manual config)",    "settings.providers.verify": "Verify",
     "settings.providers.verify.ok": "Verified · ${count} models",
     "settings.providers.verify.fail": "Verification failed: ${reason}",
     "settings.providers.verify.okShort": "Verified",
     "settings.providers.verify.failShort": "Failed",
-    "settings.providers.noKey": "No API key",
+    "settings.providers.noKey": "No API Key",
     "settings.providers.remove": "Remove ${name}",
     "settings.providers.active": "Active",
     "settings.proxyRow": "proxy",
-    "settings.proxyRowTitle": "Route this provider's model requests through the proxy (needs global proxy.model on)",
+    "settings.proxyRowTitle": "Route this provider's model requests through the proxy.",
     "settings.fetchModels": "Fetch Models",
     "settings.connecting": "Connecting…",
     "settings.connOk": "✓ Connected — ${count} models",
@@ -184,7 +188,33 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.shortcuts.cmd.renameSubmit": "Rename: confirm",
     "settings.shortcuts.cmd.renameCancel": "Rename: cancel",
     "settings.shortcuts.cmd.openFileLink": "Open file link",
-  },
+
+    "settings.mcpAdd": "+ Add Server",
+    "settings.mcp.addTitle": "Add MCP Server",
+    "settings.mcp.editTitle": "Edit MCP Server",
+    "settings.section.team": "Team",
+    "settings.team.serverLabel": "Server address",
+    "settings.team.serverHint": "e.g. http://host:8787 — include the port",
+    "settings.team.usernameLabel": "Username",
+    "settings.team.passwordLabel": "Password",
+    "settings.team.login": "Log in",
+    "settings.team.logout": "Log out",
+    "settings.team.loggedOut": "Not logged in — available after login",
+    "settings.team.memberLabel": "Member",
+    "settings.team.labelLabel": "Client label",
+    "settings.team.reason.network": "Network unreachable — check the address and port",
+    "settings.team.reason.credentials": "Wrong username or password",
+    "settings.team.reason.rateLimited": "Too many login attempts",
+    "settings.team.reason.writeFailed": "Failed to write local config",
+    "settings.team.notice.manualNameConflict": "A provider named \"team\" already exists — not added automatically; rename or delete it, then log in again",
+    "settings.team.notice.revokeNotDelivered": "Server revocation not delivered",
+    "wizard.route.teamTitle": "Log in to team server",
+    "wizard.route.teamDesc": "Sign in with an account issued by your team — models come from the server, no API key to fill in",
+    "wizard.route.localTitle": "Configure a local provider",
+    "wizard.route.localDesc": "Fill in your own API key — no team server required",
+    "wizard.route.localAction": "Set up",
+    "wizard.later": "Later",
+    "wizard.backToRoute": "← Choose another way",  },
   zh: {
     // ── 设置面（批 9：`views/settings.mjs` + `views/settings-sections.mjs`）──
     "settings.title": "设置",
@@ -227,12 +257,14 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.reason.timeout": "超时",
     "settings.reason.malformed": "响应格式畸形",
     "settings.reason.probeFailed": "探活失败",
+    "settings.addProvider": "+ 添加",
+    "settings.addProviderTitle": "添加 Provider",
     "settings.providers.nameLabel": "名称",
     "settings.providers.presetLabel": "预设",
     "settings.providers.baseURLLabel": "Base URL",
     "settings.providers.modelLabel": "模型",
     "settings.providers.formatLabel": "协议格式",
-    "settings.providers.keyLabel": "API 密钥",
+    "settings.providers.keyLabel": "API Key",
     "settings.providers.contextLabel": "上下文窗口（K）",
     "settings.providers.contextHint": "128 = 128K —— 可从下拉选常见档位；留空则用模型规格值",
     "settings.providers.contextPlaceholder": "如 128",
@@ -240,16 +272,17 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.providers.activeToggle": "设为当前渠道",
     "settings.providers.addCustom": "添加自定义渠道",
     "settings.providers.addPreset": "添加预设渠道",
-    "settings.providers.verify": "校验",
+
+    "settings.providers.customChoice": "自定义（手动配置）",    "settings.providers.verify": "校验",
     "settings.providers.verify.ok": "校验通过 · ${count} 个模型",
     "settings.providers.verify.fail": "校验失败：${reason}",
     "settings.providers.verify.okShort": "校验通过",
     "settings.providers.verify.failShort": "校验失败",
-    "settings.providers.noKey": "未配置密钥",
+    "settings.providers.noKey": "未配置 API Key",
     "settings.providers.remove": "移除 ${name}",
     "settings.providers.active": "当前",
     "settings.proxyRow": "代理",
-    "settings.proxyRowTitle": "该 provider 的模型请求走代理（需全局 proxy.model 开启）",
+    "settings.proxyRowTitle": "该 provider 的模型请求走代理。",
     "settings.fetchModels": "拉取模型",
     "settings.connecting": "连接中…",
     "settings.connOk": "✓ 连接成功 — ${count} 个模型",
@@ -346,5 +379,31 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.shortcuts.cmd.renameSubmit": "重命名：确认",
     "settings.shortcuts.cmd.renameCancel": "重命名：取消",
     "settings.shortcuts.cmd.openFileLink": "打开文件链接",
-  },
+
+    "settings.mcpAdd": "+ 添加服务器",
+    "settings.mcp.addTitle": "添加 MCP 服务器",
+    "settings.mcp.editTitle": "编辑 MCP 服务器",
+    "settings.section.team": "团队",
+    "settings.team.serverLabel": "服务器地址",
+    "settings.team.serverHint": "地址形如 http://主机:8787——含端口",
+    "settings.team.usernameLabel": "用户名",
+    "settings.team.passwordLabel": "密码",
+    "settings.team.login": "登录",
+    "settings.team.logout": "退出登录",
+    "settings.team.loggedOut": "未登录——登录后可用",
+    "settings.team.memberLabel": "成员",
+    "settings.team.labelLabel": "端标签",
+    "settings.team.reason.network": "网络不可达——请检查地址与端口",
+    "settings.team.reason.credentials": "用户名或密码错误",
+    "settings.team.reason.rateLimited": "登录尝试过于频繁",
+    "settings.team.reason.writeFailed": "本机配置写入失败",
+    "settings.team.notice.manualNameConflict": "已存在同名 provider「team」——未自动添加；请改名或删除后重登",
+    "settings.team.notice.revokeNotDelivered": "服务端吊销未达",
+    "wizard.route.teamTitle": "登录团队服务器",
+    "wizard.route.teamDesc": "用团队发的账号登录——模型由服务器提供，不用自己填 key",
+    "wizard.route.localTitle": "配置本地 provider",
+    "wizard.route.localDesc": "自己填 API key，不依赖团队服务器",
+    "wizard.route.localAction": "开始配置",
+    "wizard.later": "以后再说",
+    "wizard.backToRoute": "← 换一种方式",  },
 })

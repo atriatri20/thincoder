@@ -92,7 +92,7 @@ export function tracesDirFor(dateStr) {
   return join(tracesRoot(), dateStr)
 }
 
-// ─── 容量 / 清理策略（§2.5 #116 / A21 已裁 · 按建议——取 VSC 侧）（§6.4 判据面）─────────
+// ─── 容量 / 清理策略（§2.5 #116 / A21 已裁 · 按建议——取 VSC 侧）（§6.4 判据）─────────
 // 完整落盘：不截断、不丢行（无单消息/单记录额度，无在途丢弃）；清理 = 每写一次 prune
 // （写盘成功后顺带清理——与写盘同在 fire-and-forget 异步体内，永不阻塞 chat）。
 

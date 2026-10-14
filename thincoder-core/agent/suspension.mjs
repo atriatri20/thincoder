@@ -10,7 +10,7 @@
  *
  * 载体注入（端差面 = 池 / pending / 标志挂谁）：`ctx.carrier` = 字段集按核内异步面
  * 现行口径的对象（`_asyncSubagents` · `_asyncAdvisors` · `_consultSessions` ·
- * `_pendingAsyncResults` · `_suspended`；#9 后台 bash 任务池 `_bgTasks` 同列；
+ * `_pendingAsyncResults` · `_suspended`；#9 后台 bash 任务池 `_bgTasks` ∥ 批 browser-async-fix 池 `_browserTasks` 同列；
  * 消化账务批 · 2026-10-05 同列 `_daSession`（挂起会话标记——置位 / 复位单点）与
  * `_unsettledDigests`（升级账本——中止清场））
  * ——CLI 形 = `agent` 对象；VSC 形 = depth-0
@@ -59,12 +59,14 @@ function consultRunningChildren(carrier) {
 /** 后台池存活判据（D-S2/F5 口径——CLI 为准）：running/queued 的池条目，或已 settle 未注入
  * （pending 非空 = D-S3「未注入」），或运行中 consult children（会诊跨回合）。回合尾与每次
  * 轮末都评估退出。**#9 三域并入**：`_bgTasks`（后台 bash 任务）在途亦为 live——settle 经
- * pending 停靠驱动消化轮（`bash-async.mjs` 恒停靠）。 */
+ * pending 停靠驱动消化轮（`bash-async.mjs` 恒停靠）；**批 browser-async-fix 第四域**：
+ * `_browserTasks` 同判（`browser-async.mjs` 恒停靠）。 */
 export function poolLive(carrier) {
   const sub = carrier?._asyncSubagents
   const adv = carrier?._asyncAdvisors
   const bg = carrier?._bgTasks
-  return (sub && sub.size > 0) || (adv && adv.size > 0) || (bg && bg.size > 0)
+  const br = carrier?._browserTasks
+  return (sub && sub.size > 0) || (adv && adv.size > 0) || (bg && bg.size > 0) || (br && br.size > 0)
     || (carrier?._pendingAsyncResults?.length ?? 0) > 0
     || consultRunningChildren(carrier) > 0
 }
@@ -111,7 +113,7 @@ function consultLiveCount(carrier) {
 }
 
 /**
- * 退出清场（单点——驱动 finally 与单测共用）：
+ * 退出清场（单点——驱动 finally 与单元测试共用）：
  *  - abort：**只清已死**（§6.20 口径——增补 D：`discardAbortedPool` ∕ `discardAbortedAdvisors`
  *    单点，与核 run-stages 回合尾中止同式；存活 ∕ 已 settle 条目留池——settled 报告沿后续
  *    回合边界注入到达，不静默丢）+ pending 单容器清 + 会诊会话清理标记；
@@ -128,10 +130,11 @@ function consultLiveCount(carrier) {
  */
 export async function finishSuspension(carrier, { aborted = false, injectResidual = null } = {}) {
   if (aborted) {
-    const { discardAbortedPool, discardAbortedAdvisors, discardAbortedBgTasks } = await import("../agent-tools/async-discard.mjs")
+    const { discardAbortedPool, discardAbortedAdvisors, discardAbortedBgTasks, discardAbortedBrowserTasks } = await import("../agent-tools/async-discard.mjs")
     discardAbortedPool(carrier)
     discardAbortedAdvisors(carrier)
     discardAbortedBgTasks(carrier) // #9 收尾档②：后台 bash 任务逐条杀树 + 出池 + 墓碑（杀 ⟺ 控制器已中止）
+    discardAbortedBrowserTasks(carrier) // 批 browser-async-fix：后台浏览器动作同面（在飞中止 + 出池 + 墓碑——不杀浏览器）
     carrier._pendingAsyncResults = []
     carrier._unsettledDigests = [] // §6.31.5 清账面（消化账务批）：会话中止 ⇒ 升级账本随 pending 一并清（旧账不续）
     if (carrier._consultSessions instanceof Map) {

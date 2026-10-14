@@ -2,7 +2,7 @@ import { loadSkills, readSkill } from "../skills.mjs"
 import { escapeXml } from "../agent.mjs"
 import { DESC } from "../tools/shared.mjs"
 
-// ─── skill loader 注入缝（#88——「同步 loader 面按核内结构归一」的端侧覆盖面）──────────
+// ─── skill loader 注入缝（#88——「同步 loader 面按核内结构归一」的端侧覆盖范围）──────────
 /**
  * skill loader 注入位（**缺省不覆盖** = 核内异步 loader——CLI 语义，零行为变；端装配层
  * 可覆盖为端形态（如核内同步面 `loadSkillsSync` / `readSkillSync` 的绑定）。核内零端名分支

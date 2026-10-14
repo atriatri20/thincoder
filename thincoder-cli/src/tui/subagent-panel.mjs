@@ -36,7 +36,7 @@ import { SUBAGENT_ROLES } from "./subagent-blocks.mjs"
 /**
  * 面板行构建（纯函数）：顶部分隔线 `─` + 各运行中区块（折叠头 + tail 3 /
  * 展开全量）。maxRows = 终端行数（展开态 60% 封顶窗口化）；省略 = 不封顶
- * （单测/无终端环境）。
+ * （单元测试/无终端环境）。
  * @returns {Array<{text: string, color: string, ...}>}
  */
 export function renderSubagentPanel(state, cols, maxRows) {

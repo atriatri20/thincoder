@@ -17,7 +17,7 @@
  *   `updateRestartConfirm` 三句携 `{version}` 占位（消费面替换；括注形 = 各语言自持）。
  *   `menuLabels(locale)` = 纯函数（零 `electron` ∕ 零 `node:` ⇒ 平 node 直测）：语言经核归一（`zh-CN` ⇒ `zh`；
  *   缺 ∕ 空 ∕ 未知 ⇒ en —— 沿 `context-menu.mjs` 同款归一）；返回键集 = 全菜单与更新面键集（43 键，见 WORDS）。
- *   **zh 词值**（#533 裁定形：按 en 项语义直译；组名随译 = 是）；en 现值 = 回归面字面（组名 ∥ role 默认文案 ∥
+ *   **zh 词值**（#533 裁定形：按 en 项语义直译；组名随译 = 是）；en 现值 = 回归基线字面（组名 ∥ role 默认文案 ∥
  *   条目旧字面逐字；role 默认文案 = Electron 英文硬编码，直采即 en-only 债 ⇒ 显式覆写，单源 = D27 批实读）。
  *   窗口组（minimize/zoom）随 D36 退场，零键。
  */
@@ -25,7 +25,7 @@ import { normalizeLocale } from "@thincoder/core/i18n.mjs"
 // 词面单源：渲染面宿主表（主进程直取 —— 零第二词表，先例 = `src/main/context-menu.mjs`）。
 import { FALLBACK_LOCALE, HOST_DICT } from "../../renderer/i18n.mjs"
 
-/** 全菜单词（en 现值 = 回归面字面；zh = 语义直译值（#533 裁定形））。 */
+/** 全菜单词（en 现值 = 回归基线字面；zh = 语义直译值（#533 裁定形））。 */
 const WORDS = Object.freeze({
   en: Object.freeze({
     file: "File",
@@ -121,7 +121,7 @@ const WORDS = Object.freeze({
   }),
 })
 
-/** 设置六组名（序 = 渲染面 `views/settings.mjs` `SECTIONS` 名序**去「模型」**——收窄批 #820；投影面；跨面漂移检测 = 批内件源扫）。 */
+/** 设置六组名（序 = 渲染面 `views/settings.mjs` `SECTIONS` 名序**去「模型」**——收窄批 #820；投影面；跨面漂移检测 = 单元测试档源扫）。 */
 const SETTINGS_SECTION_KEYS = Object.freeze(["providers", "agent", "mcp", "env", "tools", "models"])
 
 /** 全菜单词读数（消费面 = `src/main/window.mjs` `buildMenu` ∥ 模板 `app-menu.mjs`）：解析序 = 当前语言 → en 回落

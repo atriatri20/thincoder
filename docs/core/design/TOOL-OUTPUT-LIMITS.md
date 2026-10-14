@@ -94,10 +94,10 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 | advisor 双端截断 | `thincoder-core/advisor/truncate.mjs:14` · 调用 `thincoder-core/advisor/loop.mjs:282` | 头/尾预算行级累加 |
 | read 双端返回 | `thincoder-core/tools/file.mjs:30`（`READ_TAIL_LINES`）· `:104`（判别）· `:111`（尾区起点） | `MAX_READ_LINES` = `thincoder-core/tools/shared.mjs:20` |
 
-### 6.2 双端与测试面
+### 6.2 双端与测试
 
 - **双端**：CLI 与 VSC 各自实现、语义同源（锁步镜像）。镜像面 = `read` 双端返回与 advisor 截断两族；VSC 端坐标已并入（批 6——§6.3），测试随 CLI 同批落。
-- **测试面**：`thincoder-cli/test/read-dual-end.test.mjs` · `thincoder-cli/test/advisor-truncation.test.mjs` · `thincoder-core/test/advisor-truncate.test.mjs` + VSC 侧同名对位 `thincoder-vscode/test/{read-dual-end,advisor-truncation}.test.mjs`。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+- **测试**：`thincoder-cli/test/read-dual-end.test.mjs` · `thincoder-cli/test/advisor-truncation.test.mjs` · `thincoder-core/test/advisor-truncate.test.mjs` + VSC 侧同名对位 `thincoder-vscode/test/{read-dual-end,advisor-truncation}.test.mjs`。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 ### 6.3 VSC 端实现坐标（B 式并入 · 实核 as-of 2026-09-15）
 
@@ -129,7 +129,7 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 | D-L4 | 两端切点均 **UTF-16 安全** | 裸 `slice` 产生孤立代理会触发严格解析器 400（deepseek 根因）；否决裸切片 |
 | D-L5 | 提示语 / 路径格式**不变**，失败回退同用双端切片 | 模型契约稳定优先；失败时也不退回纯头（否则尾部结论同样丢失） |
 | D-L6 | advisor 也**双端化**（不维持纯头） | 评审的裁决/结论行常在尾部——截掉即评审基于不完整证据；否决「主链路改、advisor 不动」 |
-| D-L7 | read 双端**条件启用**（窗口截断 且 文件 > 2000 行） | ≤ 阈值文件与全文件窗口保持字节零变化（回归面最小）；否决无条件双端 |
+| D-L7 | read 双端**条件启用**（窗口截断 且 文件 > 2000 行） | ≤ 阈值文件与全文件窗口保持字节零变化（回归最小）；否决无条件双端 |
 
 ## 8. 不并项与历史沿革
 

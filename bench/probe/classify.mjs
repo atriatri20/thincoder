@@ -2,7 +2,7 @@
  * probe/classify.mjs — 机械读数收口（§10.5 冻结）+ 行为类表（纯函数）+ 反例信号列。
  *
  * `readoutRun`：驱动的原始观测（observed）→ §10.5 字段集（11 行 / 记录面键集见 `RUN_FIELDS`）。
- * `behaviorClass`：类表纯函数（六行——含 `skipped`；判据逐字 = §10.5）。判据面上抛 = **已入队**的
+ * `behaviorClass`：类表纯函数（六行——含 `skipped`；判据逐字 = §10.5）。判据上抛 = **已入队**的
  * `kind="ask"` 队列条目（不是 `notify_parent` 调用本身——§10.3-6 判据时点 = `onToolResult` 收口）。
  * 本档零 IO 零网络（可直驱测试）。
  */
@@ -68,7 +68,7 @@ const emptyMetrics = () => ({ wallMs: null, calls: null, tokens: { prompt: null,
 /**
  * 原始观测 → §10.5 字段集。`observed` 形态 = driver 驱动面产物（脚本化假 child 同形 ⇒ 本函数两用）：
  * `{ fixtureId, terminal, asked, maxTurn, mutatorCalls, landed, report, metrics, continuation }`。
- * `targets` = 该族 `targets` 集（落盘对象判据面——§10.4）；`skipped` run = 未执行（其余字段一律 null）。
+ * `targets` = 该族 `targets` 集（落盘对象判据——§10.4）；`skipped` run = 未执行（其余字段一律 null）。
  */
 export function readoutRun(observed, { targets = [] } = {}) {
   const fields = {

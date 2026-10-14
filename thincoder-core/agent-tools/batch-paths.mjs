@@ -7,10 +7,10 @@
  * 契约（§4.15 逐字）：**候选序** = cwd → 项目根 → 逐基底（基底 = `batchDocBases` 声明面单源）；
  * **判据分野** = 读面取首个**可读**文件 / create 取首个**落基底根内**者；**锚定防嵌套** = 串以任一基底的
  * 「项目根相对前缀」打头且前缀后为**路径段边界** ⇒ 只解析项目根形（不二次拼接；不落基底内 ⇒ fail-closed）；
- * **歧义锚**（条 5 · 2026-10-02 · #828）= create 按目标所属项目落基底 ∥ 无所属显式拒；读面候选腿追加；
+ * **歧义锚**（条 5 · 2026-10-02 · #828）= create 按目标所属项目落基底 ∥ 无所属显式拒；读面候选分支追加；
  * 在飞 ∥ 写门基底集 = 候选并集（`batchDocBases`）；**零变面** = 绝对路径照旧、三个错误文案逐字、
  * 「参数在 + 路径可读」判据句、`ok` / `none` 两态。
- * **基底自有项目根腿 + 基底相对单段收窄**（条 6 · 2026-10-05 · #942）= 逐基底 `owningProject` 恰一落点收 ∥ 多落点显式拒（`ambiguousLandingError`）；基底相对腿限单段（多段串不二次拼接）。
+ * **基底自有项目根分支 + 基底相对单段收窄**（条 6 · 2026-10-05 · #942）= 逐基底 `owningProject` 恰一落点收 ∥ 多落点显式拒（`ambiguousLandingError`）；基底相对分支限单段（多段串不二次拼接）。
  *
  * 依赖（KD-4 单向）：本档为**叶档**——只 import `node:*` 与 `../manifest.mjs`；主档 re-export 保既有面。
  */
@@ -101,7 +101,7 @@ const anchoredEscapeError = (raw) => new Error(`batch: create path is anchored a
 const ambiguousCreateError = (raw, candidates) => new Error(`batch: ambiguous session anchor — create target "${raw}" belongs to no candidate project; pass an explicit project path (e.g. "${candidates[0]}/docs/batches/<file>.md"). Candidates: ${candidates.join(", ")}`)
 const ambiguousLandingError = (raw, landings) => new Error(`batch: create path resolves under more than one declared batch-record base — refusing to pick one (fail-closed); pass an explicit path (absolute preferred). Path: ${raw}. Candidates: ${landings.join(", ")}`)
 
-/** 歧义锚读面候选腿（条 5）：逐候选项目——项目根形（`resolve(candidate, p)`）∥ 声明基底形
+/** 歧义锚读面候选分支（条 5）：逐候选项目——项目根形（`resolve(candidate, p)`）∥ 声明基底形
  *  （候选按名排序、并集保序——「首个可读」在此即为确定判读）。 */
 function ambiguousReadLegs(cwd, p) {
   const amb = ambiguousCandidates(cwd)
@@ -194,7 +194,7 @@ export function resolveBatchCreatePath(cwd, given, bases) {
   }
   if (owned.length > 1) throw ambiguousLandingError(raw, owned)
   if (owned.length === 1) return owned[0]
-  // ④ 基底相对形收窄单段（归一后无 `/` 才走原基底腿——多段串不二次拼接）
+  // ④ 基底相对形收窄单段（归一后无 `/` 才走原基底分支——多段串不二次拼接）
   const leafRel = roots.length ? relative(roots[0], resolve(roots[0], p)) : ""
   if (leafRel && !leafRel.startsWith("..") && !leafRel.includes(sep)) {
     for (const b of roots) {

@@ -5,7 +5,7 @@
  * 显示面消差批（2026-09-20 · 批档 §2.2 X3/X7）：自 `ui.js` 的 `resultSummary` 整段迁出
  * （先例 = `webview/tool-card-restore.mjs`：让 `ui.js` 留在 500 行硬限内），并按**CLI 标尺**
  * 补结构化分派——字面与分派形态逐字承 `thincoder-cli/src/tui/tool-summaries.mjs`
- * （跨端等值由直驱对端纯函数对拍——现载体 = 批件 `docs/batches/2026-09-30-crossline-clearance-core.test.mjs` T-XL16b；禁复制常量当断言源）。
+ * （跨端等值由直驱对端纯函数对拍——现载体 = 单元测试档 `docs/batches/2026-09-30-crossline-clearance-core.test.mjs` T-XL16b；禁复制常量当断言源）。
  *
  * 分派（未登记工具 ⇒ 默认分支）：
  *  - `advisor`                    裁决计数 `N critical, N advisory, N style` / `passed` / 拒因首句

@@ -6,7 +6,7 @@
  * 硬限；三归约体 + 共件 `countOf` 迁入该档，本档引三件分派，无环）；
  * 位标面出档 `renderer/badges.mjs`（桌面残余批拆档产物 —— `clearQuestion` 本档 re-export 保导出名面）；
  * **页读径出档 `renderer/page-read.mjs`**（「对齐第二批」拆分产出 —— 硬限 500 顶格，在册预案本批执行：
- * `applyPage` / `blockOfMessage` 两消费面改引该档 = `renderer/session-wire.mjs` / 测试面；本档不引页读档，无环）；
+ * `applyPage` / `blockOfMessage` 两消费面改引该档 = `renderer/session-wire.mjs` / 测试；本档不引页读档，无环）；
  * **子 agent 归约径出档 `renderer/subagent-reduce.mjs`**（同批续拆 —— 子 agent 面（`ev:subagent` / `ev:subchunk`）
  * + 池读数两助手纯搬移；本档反向引该档两分派支 + 两助手，无环）；
  * **模式位归约径出档 `renderer/events-flags.mjs`**（输入面板上提批 · §2.4 Q8 ∕ §2.7「裁定②本批承接」——本档 498 行

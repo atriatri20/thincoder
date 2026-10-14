@@ -337,7 +337,8 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
    **与墓碑存活闸（§6.8.3.2 P0-a）的交互**：写入时该条目已终态（`cancelled` + `done` + 出池）⇒ 存活判据 false ⇒ 维持丢弃（不再建块）；
    若同 key 条目仍存活（未来重启路径清终态位）⇒ 闸门摘墓碑 + 重建块（`ev:subagent-block-revived` 留痕）——**不构成永久失明**。
    同一幻影的**另一面已同批封死（c1）**：补位不启动终态条目（`AGENT-LOOP-SUBAGENT.md` §6.9）——「取消后仍被 settle」的燃料族无关消失。
-- **冻结头**：`[✓ explore#1 · sync · model · done 45s]`——**图标三态互斥（M5）**：`⏸`（审批态）→ `⏹`（`stopped`）→ `✓`（其余），与动词同源（`thincoder-cli/src/tui/render-segments.mjs` `frozenSubTaskLines` 图标行；跨端标尺 = VSC `webview/activity-view.js` 的 cancelled → `⏹`；运行中面板头无 `stopped` 分支 ⇒ 不并）；
+- **冻结头**：`[✓ explore#1 · sync · model · done 45s]`——**图标三态互斥（M5）**：`⏸`（审批态）→ `⏹`（`stopped` ∪ `error`）→ `✓`（其余），与动词同源（三词 `stopped` / `error` / `done`；错误面注记 ` — <err>` 居括号外——#821 跨端归一面；
+  `thincoder-cli/src/tui/render-segments.mjs` `frozenSubTaskLines` 图标行；跨端标尺 = 核件 `thincoder-render-core/subblocks/activity-view.mjs` 冻结头——`error` 面与 stopped 面同形；运行中面板头无 `stopped` 分支 ⇒ 不并）；
   动词按状态（cancel 冻结 → `stopped`；interrupt 清场 → `interrupted` 标）；**已结算待消化中间态**（settle 一律 `⟦ev⟧settled`——挂起 ∥ 非挂起两态统一 · #746）——等待消化，面板显示 `done · awaiting digestion`。
 - **advisor 块**：运行中 = 对话流内可折叠框（key = `advisor-blocks`，单实例；头 `[advisor · review] N lines` + tail 3；
   展开 = `renderBlockTimeline` 有序块时间线——think ↔ tool 交替按发射序）；完成 → 冻结 `_frozenAdvisor` 载体；
@@ -386,7 +387,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 > 需求锚：台账技术待办 **#19**（异步子代理「零块」）；批次档 `docs/batches/2026-09-17-subagent-zero-block.md`（§2 任务书 + §2.0 复现读数）。
 > 范围：块生命周期的**墓碑存活闸**（显示面）+ 静默面留痕；**发射面零改**。
-> 本节 = 本批设计落点（canonical 基准层）；受影响文件 / 用例 / 验收面为本批**执行与验收材料**（时点值随实装漂移）。
+> 本节 = 本批设计落点（canonical 基准层）；受影响文件 / 用例 / 验收为本批**执行与验收材料**（时点值随实装漂移）。
 
 **6.8.3.1 问题陈述与根因（复现实测——非推断）**
 
@@ -481,11 +482,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | 4 | CLI·测（**拟新增**） | `thincoder-cli/test/subagent-zero-block.test.mjs` | 新 | T-ZB1–T-ZB6（§6.8.3.6）；直驱 `routeSubToken` / `freezeAllSubTasks` / `refreshQueuedTokens`——零网络、零定时器 | ~120（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | 5 | 设计档 | `docs/cli/design/TUI.md` | 555 | 本节（§6.8.3）+ §6.8.1 指针行 + 变更记录一行 | 本档已落（→ 576 行——本 fix 轮后） |
 
-**跨文件限**：三份源档预计后均 < 500 硬限（460 / 205 / 437）——**无拆分需要**。
-
-**>300 advisory 档审视结论（F-R24a——评审 #6 收正）**：
-- `subagent-blocks.mjs`：改动面 = 既有 `ensureSubTaskKey` 内一分支 + 一条摘行调用（未新增职责 / 未新增模块级函数）⇒ **无需拆分**；>300 为存量（2026-09-05 由 625 行拆出后的漂移）——档位登记（读数 / 触发）= `docs/cli/design/CLI-DEBT.md` §2.1 A9 行（数据单一活面；本档不复读读数）。
-- `subagent-scheduler.mjs`（429 → ~437）：改动面 = 既有 `catch` 内补一条 `logEvent` + 顶注 import（未新增职责）⇒ **无需拆分**；>300 为存量——登记存量债。
+**跨文件限**：三份源档预计后均 < 800 硬限（460 / 205 / 437）——**无拆分需要**。
 
 **6.8.3.5 关键决策记录（含否决备选）**
 
@@ -518,7 +515,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | AC-ZB4 | 发射面零改：域释放补位仍发 `⟦ev⟧async` + `[model]`；queued 仍不发 `[model]` | 既有断言（`advisor-pool-queue.test.mjs:86/211`——**仅 async 面**）+ T-ZB1（**`[model]` 面**落位断言）（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） | 批次档 §1.3 判据 2 |
 | AC-ZB5 | 降级面（无 `state._agent`）行为与批前逐字一致 | T-ZB5 | §6.8.1 降级路径条 |
 | AC-ZB6 | 留痕：复活分支与 relay 异常各留一条可观测痕（禁静默） | T-ZB6 | 批次档 §1.3 判据 3 |
-| AC-ZB7 | 两端全量 `npm test` 绿 | `npm test`（cli + core） | 常规门 |
+| AC-ZB7 | 两端集成测试绿（`npm test`） | `npm test`（cli + core） | 常规门 |
 
 **6.8.3.8 边界（本批不做）**
 
@@ -554,7 +551,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 |---|---|---|
 | 审批卡挂起（`state.permission`） | **计**（blocked） | agent 阻塞——不回应则零进展 |
 | 提问卡挂起（`state.question`） | **计**（blocked） | 同上 |
-| 回合结束等待输入（顶层回合链尾） | **计**（awaiting）——**除外**：在途 timer ∧ 唤醒会武装（`agent.timerWake` 开） | agent 已停、无自动续跑——「不用反复切回来」的主用例；**除外理由** = 自动续跑在途（到期 ⇒ timer 轮——`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30）⇒ 不计 awaiting（2026-09-27 timer-wake 批） |
+| 回合结束等待输入（顶层回合链尾） | **计**（awaiting）——**除外**：在途 timer ∧ 唤醒会武装（`agent.timerWake` 开） | agent 已停、无自动续跑——「不用反复切回来」的主用例；**除外理由** = 自动续跑在途（到期 ⇒ timer 轮——`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30）⇒ 不计 awaiting（2026-09-27 timer-wake 批）；**周期项在途 ⇒ 除外恒生效——有意语义**（持续自动续跑在途；timer-completeness 批 2026-10-12——`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.18） |
 | picker / wizard / search / interruptPrompt | 不计 | 用户自己发起——在场已由发起动作证明 |
 | pendingInput 队列（挂起 / busy 期；容量 8） | 不计 | 是**用户自己的**待交接输入，非 agent 需要用户 |
 | 挂起会话（池 live） | 不计 | 自动续跑中——不需要用户动作 |
@@ -573,7 +570,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **稳态（不闪烁）**：attention 色随帧派生——**无空闲重绘定时器**。
 - **负向锁（零侵入）**：attention 为 null ⇒ 输出与改动前**逐字节等价**（机判口径 = 零 `\x1b[43m` 序列 + strip-ANSI 文本无 chip）。
 - **置位（1 点——回合链尾）**：`userNeededAtTurnEnd(state, agent, skipSession)`（`agent-turn.mjs` 导出纯函数，可直测）——
-  排除 `skipSession` / 挂起两态 / 池 live / 队列非空 / processing / **在途 timer ∧ 唤醒会武装**（主 agent `_pendingTimers` 非空 ∧ `agent.timerWake` 开——§7.1 表 awaiting 行除外；唤醒会武装 ⇒ 自动续跑在途；机判 = T-TW13）；
+  排除 `skipSession` / 挂起两态 / 池 live / 队列非空 / processing / **在途 timer ∧ 唤醒会武装**（主 agent `_pendingTimers` 非空 ∧ `agent.timerWake` 开——§7.1 表 awaiting 行除外；唤醒会武装 ⇒ 自动续跑在途；**周期项在途 ⇒ 除外恒生效——有意语义**（timer-completeness 批 2026-10-12）；机判 = T-TW13）；
   命中 ⇒ `state.attentionAwaiting = true` + `render()`。
   置位点 = 顶层链尾（**非回合末 finally**——finally 后还有队列续发与挂起会话，在那之后才真正「无人接手」）。
   中断结束与错误结束同样置位（agent 已停、等用户——语义一致）。
@@ -605,7 +602,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **可见态**：idle / processing 常态在行；模态提示态（question / permission / picker / wizard / slash 提示）状态行整行让位（既有形态，零改）。
 - **VSC 对位**：顶栏常显（`#session-title`）保持、端侧零改；**列表面**（`/session` / VSC `pushSessions`）两端同字段（`title`）同回退链（`listSlots` 派生——VSC `panel-session.mjs:235-243`）；
   本段取值 = `agent.title` 活读 · 空值回退链（`sessionTitleFallback`——值同 VSC：`firstMessage` ≤40 截断 ∥ `"(empty)"`）；空窗差（生成前 / 失败期）= **消**（已落——对位 `thincoder-vscode/src/extension/panel-session.mjs:235-243`；#677 I2）。
-- **可机判**：`renderStatus` 纯函数直驱——`agent.title` 置值 / 清空两次调用，strip-ANSI 文本读「含 ` │ <title>` / 空值 ⇒ 含回退值（`"(empty)"` 形）」两段（用例 = 批内件 `docs/batches/2026-09-30-crossline-clearance-cli.test.mjs` T-XL2——单测树重建时回迁）。 （机检豁免——用例退场登记）
+- **可机判**：`renderStatus` 纯函数直驱——`agent.title` 置值 / 清空两次调用，strip-ANSI 文本读「含 ` │ <title>` / 空值 ⇒ 含回退值（`"(empty)"` 形）」两段（用例 = 单元测试档 `docs/batches/2026-09-30-crossline-clearance-cli.test.mjs` T-XL2——单元测试树重建时回迁）。 （机检豁免——用例退场登记）
 
 ### 7.5 queued 反馈面（F16 · busy-extend 批 2026-09-22 扩面 · 排队期可见 = queue-visible 批 2026-09-24）
 
@@ -692,8 +689,8 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
   只在下一次偶发重绘（用户输入 / 回合起）可见——**不承诺空闲期即时可见**（§7.2 零空闲重绘定时器纪律）。
 - **触发落流（一行）**：送达处推一行——逐字 = 既有系统提醒形态 `[System reminder: ⏰ timer — <message>]`（`C.warn`；三行 + 省略号上限同既有提醒镜像口径）。两路同形：
   ① 在飞回合 = 既有回合尾镜像（`thincoder-cli/src/tui/tool-events.mjs:434-441`——零改）；② 空闲 / 挂起窗唤醒 = 投递处直推（本批新增）。
-- **`/timers`（只读列表——最薄）**：逐条 dim 行 `⏰<i> · 剩余 <mm:ss> · <message 首行（截断）>`；零在途 ⇒ 一行 `无在途 timer`。
-  **取消面不做**（理由：取消 = 控制面（门 / 回执 / 持久化语义）——出「可见面只观测不阻塞」边界；停轮 = Ctrl+C，停机制 = `agent.timerWake` 关）。
+- **`/timers`（只读列表——最薄）**：逐条 dim 行 `⏰<i> · <kind> · 剩余 <dur> · <message 首行（截断）>`（kind 段仅非一次性项插入：`每 <N>m`（`every` 整分）∕ `每 <N>s`（非整分——秒形）∥ `每天 <HH:MM>` ∥ `于 <YYYY-MM-DD HH:MM>`；`<dur>` = `<mm:ss>`（< 1h）∥ `<h:mm:ss>`（≥ 1h——与模型 `list` 的 `next` 同形）；一次性行逐字零变）；零在途 ⇒ 一行 `无在途 timer`。
+  **取消 = 模型工具 `timer` 的 `cancel` 动作**（四端同得——核件在途表移除；`/timers` 保持只读；停轮 = Ctrl+C，停机制 = `agent.timerWake` 关）；机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.18。
 
 **负向锁（可机判）**：
 
@@ -703,7 +700,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 
 **可机判**：`renderStatus` 纯函数直驱——`_pendingTimers` 两态（在途 2 ⇒ strip-ANSI 含 `⏰2`；含过期项 ⇒ 含警示色序列；空 ⇒ 零该串 + 逐字节等价）；`/timers` handler 直驱（逐条行 / 空态行）。
 
-**VSC / 桌面对位**：本批不接（判据 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.5——唤醒面不具备或成本高）；后续接入时取本表同语义、各自实现（非 byte-identical）。
+**VSC / 桌面对位**：**已接线（阶段 2）**（`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.10–§6.30.11——核件 opt-in timer 面 ＋ 端面空闲闩 ∕ 窗内兑现 ∕ 可见面）；各端取本表同语义、各自实现（非 byte-identical）。
 
 ### 7.7 停滞轻显形（在飞回合静默读数 · 三端同口径 · 语义单源）（2026-09-29 · 批 stall-indicator · 台账 #568）
 
@@ -742,6 +739,26 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 **观察（只报 · 父侧裁）**：① CLI 语言面现无 locale（台账 #7 未决——CLI 侧核键现渲缺省 en）⇒ 本读数 CLI 侧现为 en 值；键面已备（键面单源），CLI 多语言面落定即随动。② 「已提交未起跑（回执未现）」窗不在显示域——「发送回执超时」面（#568 另一半）未覆盖，如实登记（批档 §2 上抛项）。
 
 **VSC ∕ 桌面对位**：逐端实现面 ∕ 显示位 ∕ 判据 = `docs/vsc/design/WEBVIEW.md` §4.7 · `docs/desktop/design/UI.md` §1「本批注（停滞轻显形 · 2026-09-29）」（同语义、各自实现——非 byte-identical；一致性表见上）。
+### 7.8 团队登录态段（F20 · 2026-10-10 · 登录面补全批 · 台账 #1231）
+
+> 需求 = `docs/cli/requirements/TUI.md` F20（判定句 ∥ 范围边界点名）；语义单源 = `docs/core/design/TEAM.md` §2.5「常显面」行 ∥ §2.6（校验与吊销态）。VSC ∥ 桌面对位 = `docs/vsc/design/WEBVIEW.md` §4.12 ∥ `docs/desktop/design/UI.md` §1「本批注（团队登录态段 · 2026-10-10）」（同语义、各自实现）。
+
+**形态（三态闭集）**
+
+| 态 | 判据 | 段文 | 色 |
+|---|---|---|---|
+| 未登录 | `team.token` 缺席 | **零注入**（整行逐字节等价——负控 = F20 判定句） | — |
+| 已登录 | token 在场 ∧ `verify ≠ invalid`（`unreachable` ∥ `null` 同判——离线容忍） | ` │ <成员>@<主机>`（成员 = `member.name ?? member.username`；主机 = `URL.host`——非默认端口才带端口；**不搬 URL 全串**） | dim 常色 |
+| 已失效 | `verify === invalid` | ` │ 已失效——重新登录`（核字典键 `status.team.invalid`——词形单源） | 警示色 |
+
+**段位（簇尾序定形）**：状态段簇尾**末位**——`ledgerHint` → `timerHint` → `titleHint` → **`teamHint`**（F15/F17 位例族内；落点 = `thincoder-cli/src/tui/render-frame.mjs` `buildStatusLine` return 行 `titleHint` 之后、`│ <enterHint>` 之前）。段位与 F15/F17 不冲突（三者在场序并列；宽度超限走既有 `statusMax` 截断——同簇尾口径）。
+
+**数据源与刷新（触发点制——零新定时器）**：`state.team` 切片（新——`{ loggedIn, member, server, label, verify }`；落点 = `thincoder-cli/src/tui/tui-state.mjs` 状态初始化 + `thincoder-cli/src/tui/index.mjs` 装配）。
+写者三处：① 启动读（核 `teamStatus()`——随装）；② `/team` 命令成/退 ⇒ 复读；③ 启动 `teamVerify()` 异步回填（token 在场时）+ `/team status` 活校验回填。**每帧 recompute（活读切片）· 零缓存副本**（沿 F15/F17 口径）。
+
+**可机判**：`renderStatus` 纯函数直驱——已登录桩 ⇒ strip-ANSI 状态行含成员名与主机；未登录 ⇒ **零该段 + 整行逐字节等价**（负控）；`verify = "invalid"` ⇒ 含「已失效——重新登录」+ 警示色序列。
+
+**边界**：不做团队面板（状态 = 本段；入口 = `/team` 命令族——`docs/cli/design/TUI-COMMANDS.md` §5.5）；不搬服务器 URL 全串（主机形）；零新定时器（校验触发点制——`docs/core/design/TEAM.md` §2.6）；CLI 语言面现缺省 en（台账 #7 未决——沿 §7.7 观察①同注）。
 
 ## 8. 不并项与历史沿革
 
@@ -780,6 +797,8 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 **本批（消化重放口径批（#771 ∥ #773） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-replay-choices.md` §2（唯一承载面——一次性批次材料）。
 **本批（消化行只留当轮收正 · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-row-current-only.md` §2（唯一承载面——一次性批次材料）。
 **本批（消化行自然形·两端跟正（CLI ∥ VSC） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §2（唯一承载面——一次性批次材料）。
+- 2026-10-10（**跨端对齐批 · 实施轮随动 · eng-coder**——承批档 `docs/batches/2026-10-10-cross-end-alignment.md` §2 · 台账 #821）：§6.8 冻结头句随正——图标三态第二态扩 `stopped` ∪ `error`（verb 三词 stopped/error/done；错误面注记 ` — <err>` 居括号外）；跨端标尺改指核件冻结头。**零机制改**（跨端显示面差归一面落位）。
+- 2026-10-08（**代码长度上限 500/800 口径更换批 · 实施轮 · eng-coder**——承 `docs/batches/2026-10-08-code-limit-500-800.md` §2 · 台账 #1072）：§6.8.3.4 跨文件限改数（<500 硬限 ⇒ <800）+「>300 advisory 档审视结论」块删（丙——义务前提消失）。**零新语义**（可 revert）。
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§7.4 标题段收正（空值回退链已落——#677 I2；可机判行同变）；§7.5 宽度口径收正（编号前缀预扣除已落——#677 I6；指位 `:375` → `:387`）。**零新语义**。
 
 - 2026-09-30（**跨线清零轮 · 设计档收正（修正轮 1 补落变更记录）· eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2 · 台账 #677）：§7.4 空窗差行 = 消（本段补同款回退链，对位 `thincoder-vscode/src/extension/panel-session.mjs:235-243`——实施清单 I2）；§7.5 宽度口径行 = 消（编号前缀预扣除——实施清单 I6）。**零机制改**。
@@ -796,7 +815,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - 2026-09-28（**文档回填与卫生轮**（台账 #516 · #377 面）· eng-designer）：档内「2026-09-25 本批」4 处改指名（**misc-four 批**——档头 ③ / §6.8.2 嵌套归属标 / §7.4 空窗差 ③ / §8.2 对位表）+ §6.8.2 一段按 ≤300 拆分（形式面）。**零新语义**。
 
 - 2026-09-27（**timer-wake 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-27-timer-wake.md` §2 · 台账 #444）：新增 §7.6（timer 可见面）——三态（已设 / 到期 / 触发）· 状态行 `⏰N` 派生标记（零在途零注入）· 触发落流一行 · `/timers` 只读列表。
-  `/timers` 命令束落点 = `thincoder-cli/src/tui/cmd-timers.mjs`（拟新增）；机制面零改（单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30）。
+  `/timers` 命令束落点 = `thincoder-cli/src/tui/cmd-timers.mjs`（已落）；机制面零改（单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30）。
 
 - 2026-09-27（**timer-wake 批 · 设计评审轮 1 修正轮（fix）· eng-designer**——承 `docs/batches/2026-09-27-timer-wake.md` §3 轮次 1 · 父侧逐条裁定）：§7.1 表 awaiting 行补**除外限定**（在途 timer ∧ 唤醒会武装 ⇒ 不计 awaiting）+ §7.2 置位谓词排除集同步（`userNeededAtTurnEnd`——机判 = T-TW13）；
   §7.6 收正——F13 豁免句改与本轮实际一致（§7.1 表 awaiting 行除外限定，timer 面自身零新增 signal 面）+ 补**到期态可达条件**句（有帧窗口；开关关的空闲面不承诺即时可见）。**机制语义零改**（除父侧定稿的 attention 除外）。
@@ -915,3 +934,8 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R5 行注记（「机检豁免——用例退场登记」入 §7.4 可机判行）；宽面 2 行折行（538 ∥ 539——语义零改）。**零新语义**。
 - 2026-10-05（**批 digest-accounting · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §1 · 需求 §4.15 · 台账 #930）：§6.9 增**未销账残余行**条（`digest.residue` 核字典新键——终态行之后追加；零未销账零行；记录面同携 `unsettled`）。**零新语义**（可见面落 CLI 形面；判据 / 机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31）。明细 = 批档 §2。
 - 2026-10-05（**批 digest-accounting · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §3 轮次 1 发现 13 · 父裁全收）：§6.9 补**两行同屏口径注**（终态行 N = 起跑数不扣减 ∥ 未销账数由残余行承载）；判据单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31.6。**零新语义**。明细 = 批档 §2 修正块。
+- 2026-10-10（**login-entry-completion 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §1 · 台账 #1230 ∥ #1231；用户 14:37 ∥ 14:42 提 + 14:48 点火）：新增 **§7.8 团队登录态段**（F20——三态闭集 ∥ 段位簇尾末位定形 ∥ `state.team` 切片与触发点制 ∥ 可机判 ∥ 边界）；语义单源 = `docs/core/design/TEAM.md` §2.5 ∥ §2.6。`.thincoder` 零触；同批 CLI 命令面 = `docs/cli/design/TUI-COMMANDS.md` §3 ∥ §5.5。
+
+- 2026-10-12（**timer-completeness 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-10-12-timer-completeness.md` §1 · 台账 #1321）：§7.6 `/timers` 行扩 **kind 段**（`每 <N>m` ∥ `每天 <HH:MM>` ∥ `于 <YYYY-MM-DD HH:MM>`——一次性行逐字零变）；取消面句收正 = **取消 = 模型工具 `timer` 的 `cancel` 动作**（`/timers` 保持只读）。机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.18。明细 = 批档 §2。
+
+- 2026-10-12（**timer-completeness 批 · 设计评审轮 1 修正（fix）· eng-designer**——承批档 `docs/batches/2026-10-12-timer-completeness.md` §3 轮次 1 · 评审 #282 · 父侧逐条裁收）：发现 1（🔴）§7.6 对位行收正 = **已接线（阶段 2）**（原「本批不接」句删——与 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.5 ∥ §6.30.14 现态对齐；同节同族残留自查 = 零）；发现 3 §7.1 ∥ §7.2 登记 **周期项在途 ⇒ 除外恒生效——有意语义**（口径单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.18）；发现 7 §7.6 `/timers` 行 `<dur>` 定形（`<mm:ss>` ∥ `<h:mm:ss>`）＋ `每 <N>s` 非整分秒形。**机制零改**（错述收正 ∥ 口径登记 ∥ 格式定形）。明细 = 批档 §2 fix 轮块。

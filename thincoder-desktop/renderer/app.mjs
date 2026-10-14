@@ -11,7 +11,7 @@
  * `mountChat` + 同帧态刷）∥ 结算径（`settleFrame` 六步：账 + 作业单整数结算）；窗限 `chatLimit` **只增**（`nextWindow` 收束沿 + 本页**实并入块数**）。
  * 出档面：池面一族 = `renderer/mount-pool.mjs` · 会话族 = `renderer/mount-sessions.mjs` · 输入区 = `renderer/mount-composer.mjs`
  * （面板主体 = 核件工厂 —— 输入面板上提批；发送面三件随 `renderer/composer-send.mjs` 退役入核件 ∕ 本档 deps 边）
- * · 状态行 = `renderer/mount-status.mjs`（D17 / D22 承载 17 段单点重建 + 面内差分门 + 切片键面 `STATUS_KEYS`）
+ * · 状态行 = `renderer/mount-status.mjs`（D17 / D22 承载 18 段单点重建 + 面内差分门 + 切片键面 `STATUS_KEYS`）
  * · 卡族两族 = `renderer/mount-cards.mjs`（提问 / 计划 —— 挂载 + 作答 / 取消出口）
  * · 事件归约 + 页应用 = `renderer/events.mjs` · 订阅接线 = `renderer/events-subscribe.mjs`；本档接线两处 = `attachScroll`
  * （回填 / 跟滚 / 停跟三出口 + 只读口 `guards()`；药丸回底 / 工具卡 toggle 两出口）· `attachEvents({ on })`
@@ -75,11 +75,15 @@ const panelReadout = createPanelReadout({ invoke: (channel, payload) => host?.in
 const { paintPool, handlers: poolHandlers } = attachPool(host) // 池面一族（右栏重挂 + 两出口 —— 出档 `renderer/mount-pool.mjs`）
 const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —— 挂载 + 作答 / 取消出口；出档 `renderer/mount-cards.mjs`）
 // 设置面 / 向导一族（自持订阅 —— 出档 `renderer/mount-settings.mjs`；目录出口复用项目面链）；
-// `onProvidersChanged`（全渠扇出批 · #3）= 设置面 provider 写成功 ⇒ 输入区候选面强制刷新（迟绑定：`composer` 于下行装配）。
+// `onProvidersChanged`（全渠扇出批 · #3）= 设置面 provider 写成功 ⇒ 输入区候选面强制刷新（迟绑定：`composer` 于下行装配）；
+// 返回面 `team.refresh`（登录面补全批）= 团队面启动读口（于下行触发）。
 const settingsFace = attachSettings(host, { onProjectOpened: openDir, onProvidersChanged: () => composer.refreshCandidates() })
-// 输入区一族（挂载 + deps 构造 → 核件工厂；出档 `renderer/mount-composer.mjs`）：`openSettings` = 控件行第 7 钮出口 ∕ `submit` = 直发径单副本（错误横幅重试消费）。
-const composer = attachComposer(host, { openSettings: () => settingsFace.openSettings() })
-const { paintStatus } = attachStatus() // 状态行一族（D17 / D22 承载 17 段单点重建 —— 出档 `renderer/mount-status.mjs`）
+// **fork 差异（2026-10-13 上游合并批）**：上游团队面启动读（`settingsFace.team?.refresh()`）退场——
+// 团队面（设置段 ∥ 状态栏段）本 fork 隐藏，不再触发 `team:status` ∕ `team:verify` 读（零无谓 IPC）。
+// 输入区一族（挂载 + deps 构造 → 核件工厂；出档 `renderer/mount-composer.mjs`）：`openSettings(group?)` = 控件行第 7 钮 ∥
+// footer 三出口（KD-77 ③：双口提升 —— 缺组 ⇒ 既有页 ∥ 携组名 ⇒ 组弹窗，同 `menuActions` 形）；`submit` = 直发径单副本（错误横幅重试消费）。
+const composer = attachComposer(host, { openSettings: (group) => (typeof group === "string" && group !== "" ? settingsFace.openSettingsModal(group) : settingsFace.openSettings()) })
+const { paintStatus } = attachStatus() // 状态行一族（D17 / D22 承载 18 段单点重建 —— 出档 `renderer/mount-status.mjs`）
 // 左侧工作区边栏（Codex 形大改批 · 2026-10-04 —— 出档 `renderer/mount-sidebar.mjs`；自持订阅 ∕ 折叠态内聚；
 // 出口复用既有单一实现：切会话 ∕ 新建 ∕ 开项目〔openDir = 函数声明提升，迟绑定安全〕∕ 设置面开口）。
 attachSidebar({
@@ -114,7 +118,6 @@ wireImagePreview() // 缩略图点击预览 lightbox（ZCode ImagePreviewDialog 
 wireMsgActions() // 消息操作行复制委托（ZCode MessageActions 对位 · 2026-10-12 —— 出档 `renderer/msg-actions.mjs`）
 attachChatWork()
 attachUserCollapse() // 用户长文折叠（气泡 >120px 折叠 ∕ 渐隐 ∕ 居中箭头钮——ZCode 同值） // 工作过程折叠（ZCode ConversationTurnGroup 语义移植 —— 出档 `renderer/chat-work.mjs`；DOM 后处理，块机制零涉）
-
 /** 菜单动作分派（D36 · #811 ∥ 设置菜单升级批 · #817 —— `ev:menu` 窄口消费）：六动作 ⇒ 既有单一实现（零第二份）；`searchFace` 迟绑定（装配序在下行）。 */
 const menuActions = createMenuActions({
   createSession, openDir, openSearch: () => searchFace?.openSearch(),
@@ -341,11 +344,12 @@ document.addEventListener("DOMContentLoaded", boot)
 
 /** 滚动接线（装配一次 · 批 6 + 批 8 回填档）：容器 = 对话流宿主自身（骨架 `data-slot="flow"`）；三出口 + 只读口
  *  只经 store 纯动作读写切片（`onBackfill` 判据单源 = `beginBackfill`）；容器缺位 ⇒ `null`（帧尾零写）。
+ *  **回填收束帧（#914）**：`onBackfill` 包装 = 受理动作 + 显式 `frame.flush()` —— 取页受理帧（`inFlight: true`）先落 ⇒
+ *  回执帧成**收束帧**（上帧在飞 ∧ 本帧坍落 ∧ 非跟滚 ⇒ 视口补偿门可达）；不 flush ⇒ 两态并入同帧 ⇒ 门不可判（漏补偿）。
  *  **`onScrollTick`**（E4-JS 支）：平滑窗门后每 scroll 事件 ⇒ `frame.mark(["segView"])`（**哨兵键 —— 非切片**；
  *  巨块段窗滚动作 —— 帧合并节流 ≥50ms ⇒ ≤20 拍 ∕ 秒）。 */
 chatScroll = attachScroll(document.querySelector(FLOW_SLOT), {
-  // onBackfill 退役（统一批 · fork 2026-10-06——加载唯一 = 开会话预载链；滚动只管跟滚两态）
-  onFollow: () => store.set(setFollowing(store.get(), true)),
+  // onBackfill 退役（统一批 · fork 2026-10-06——加载唯一 = 开会话预载链；滚动只管跟滚两态）  onFollow: () => store.set(setFollowing(store.get(), true)),
   onUnfollow: () => store.set(setFollowing(store.get(), false)),
   guards: () => ({ hasOlder: store.get().history?.hasOlder === true, inFlight: store.get().history?.inFlight === true }),
   onScrollTick: () => frame.mark(["segView"]),

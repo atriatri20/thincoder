@@ -13,7 +13,8 @@
  * 缺省 ⇒ 零复位）· `slotFullNotice(message)`（#656 · cap 待答径队满可见形 —— 核件 toast `input.slotFull` +
  * 文本回注输入框，零丢失；回注缝 = 挂载面注入小口；缺省 ⇒ 零动作）· 映射 ∕ 纯动作件（`toImages` 载荷投影 ∕ `degradedCode` 降级码过闸 ∕ `effortOf`
  * 档位写向映射（与 mount 侧读向 `reasoningOf` 同表）∕ `withUserBlock` 用户块单源写（mount 侧同取 —— 出泡不变式）∕
- * `setAttachDegraded` ∕ `applyFlags`）· `openSettings()`（footer 三出口 —— A8 唯一映射点）。
+ * `setAttachDegraded` ∕ `applyFlags`）· `openSettings(group?)`（footer 三出口 —— A8 唯一映射点；KD-77 ③：添加出口携组名
+ * ⇒ 宿主双口直开弹窗，缺 ⇒ 既有页面）。
  *
  * 纪律（沿 mount 侧）：零 `node:` / 零裸包（渲染面静态闭包判据）；控制台诊断串非面向用户文案（不经 `t()`）。
  * **#597（发送忙态时机）+ #596（回执超时）**：`sendDirect` 三增 —— ① 失败回执 `started === false`（宿主未受理）⇒
@@ -29,11 +30,13 @@
  * `sendQueued` ∥ `healLate`——键缺席 ⇒ 零写）；单源 = `docs/desktop/design/IPC.md` §2「provider 态投影注」。
  * **#880（选定写回径回执）**：`session:prefs` 成功回执另携条件性 `providerState`（第四刷新点）⇒ `writePrefs`
  * 同规则切片写（键缺席 ⇒ 零写——`setProviderState` 负向锁；提示带 `paintNotices` 重派生）。
+ * **#1121 修③（写失败零乐观写）**：`session:prefs` 失败 ⇒ B21 行（`source` 分量携来源通道——渲染面按
+ * 来源分「切换未生效」行）+ **回滚钩** `rollbackPrefs(key)`（挂载面注入；缺省 ⇒ 零动作）；写成功而配置面
+ * 写回失败（回执 `carryover:{ ok:false, reason }`）⇒ 同一条失败行（槽写不反扑）。
  */
 import { clearRunning } from "./badges.mjs"
 import { clearTurnTraces, convergeBlockText, setProviderState, withFlowOp } from "./store.mjs"
-
-/** 回执 `reason` 归一（缺 ∕ 非串 ∕ 空串 ⇒ `fallback`）—— 诊断串单源（mount 侧候选面同引）。 */
+import { ADD_MODAL_GROUP } from "./views/settings.mjs" // KD-77 ③：添加弹窗组名单源（零双抄 —— 沿「不引视图面向下依赖」例外注：本档仍 node 可装载）/** 回执 `reason` 归一（缺 ∕ 非串 ∕ 空串 ⇒ `fallback`）—— 诊断串单源（mount 侧候选面同引）。 */
 export function reasonOf(receipt, fallback = "unknown") {
   return typeof receipt?.reason === "string" && receipt.reason !== "" ? receipt.reason : fallback
 }
@@ -54,6 +57,7 @@ export function createComposerWire(deps = {}) {
     store, activeKey, call, push, panelOf, repaint, onLoadingReset, suspIdleOf = null,
     toImages, degradedCode, effortOf, withUserBlock, setAttachDegraded, applyFlags, openSettings,
     slotFullNotice = null, // #656：cap 待答径队满可见形缝（toast + 文本回注 —— 挂载面注入；缺省 ⇒ 零动作）
+    rollbackPrefs = null, // #1121 修③：偏好写失败回滚钩（挂载面注入 —— 槽现值重派生；缺省 ⇒ 零动作）
     sendTimeoutMs = 120000, // 发送回执超时界（#596 并入 —— 工厂注入缝；装配面零传 = 生产缺省）
   } = deps
 
@@ -62,12 +66,13 @@ export function createComposerWire(deps = {}) {
   let atSeq = 0 // @ 面请求 seq（迟到回执丢弃判据 —— VSC `autocomplete.js:29-34` 同式）
   const inFlight = new Map() // 本键最新发送尝试登记（key → 尝试令牌 —— 陈旧回执 ∕ 陈旧超时守卫单点 · #597）
 
-  /** 失败态记录（B21）：`{ reason, kind }` 入态 + 记错 + 提示行重挂。`kind` = `provider-invalid` 回执真因
+  /** 失败态记录（B21）：`{ reason, kind, source }` 入态 + 记错 + 提示行重挂。`kind` = `provider-invalid` 回执真因
    *  分类（`providerKind` 键透传 —— 缺 ∕ 非串 ∕ 空 ⇒ `null`；批 #840 —— 渲染面按类出词）；其余失败径
-   *  `kind` 恒 `null`（负向锁）。**console 行逐字保持**（`${reason}` —— E2E 锚 `provider-invalid`）。 */
-  function recordFailure(channel, receipt) {
+   *  `kind` 恒 `null`（负向锁）。`source` = 失败来源通道（#1121 修③ —— 渲染面据此分行：切模型写、发送）；
+   *  `fallback` = 回执 `reason` 缺席时的诊断串（按调用径给）。**console 行逐字保持**（`${reason}` —— E2E 锚 `provider-invalid`）。 */
+  function recordFailure(channel, receipt, fallback = "unknown") {
     const kind = typeof receipt?.providerKind === "string" && receipt.providerKind !== "" ? receipt.providerKind : null
-    failed = { reason: reasonOf(receipt), kind }
+    failed = { reason: reasonOf(receipt, fallback), kind, source: channel }
     console.error(`[composer] ${channel} failed: ${failed.reason}`)
     repaint()
   }
@@ -213,6 +218,9 @@ export function createComposerWire(deps = {}) {
 
   /** 会话级偏好写（D3 —— 输入区控件行 = 三值唯一居所）：回执 `ok` 真 ∧ `meta` 面 ⇒
    *  `sessionMeta[key]` 写（本档候选面读面随动）；失败 ⇒ 记错零写（零乐观写）。
+   *  **#1121 修③**：失败径 ⇒ B21 行（来源 = 本通道）+ 回滚钩 `rollbackPrefs(key)`（钮 ∥ 本地选中态由槽现值
+   *  重派生——本键切片未写 ⇒ 乐观态零留影）；写成功后**配置面**写回失败（回执 `carryover:{ ok:false }`）
+   *  ⇒ 同一条失败行（槽写照旧**不反扑**）。
    *  **#880**：选定写回径成功回执另携条件性 `providerState`（第四刷新点）⇒ 同规则切片写
    *  （键缺席 ⇒ 零写——`setProviderState` 负向锁）⇒ 提示带明示行重派生。 */
   async function writePrefs(key, patch) {
@@ -220,8 +228,9 @@ export function createComposerWire(deps = {}) {
     const receipt = await call("session:prefs", { key, patch })
     const meta = receipt?.meta
     if (receipt.ok !== true || meta === null || typeof meta !== "object") {
-      console.error(`[composer] session:prefs failed: ${reasonOf(receipt, "invalid-shape")}`)
+      recordFailure("session:prefs", receipt, "invalid-shape")
       if (receipt.ok === true) console.error("[composer] session:prefs: success receipt without meta")
+      rollbackPrefs?.(key) // 写失败零乐观写：槽现值重派生（同步 ∥ 异步径皆过此处——零第二条）
       return
     }
     const table = store.get().sessionMeta
@@ -232,6 +241,9 @@ export function createComposerWire(deps = {}) {
       store.set({ sessionMeta: { ...(table !== null && typeof table === "object" ? table : {}), [key]: meta } })
     }
     store.set(setProviderState(store.get(), receipt.providerState)) // #880：键缺席 ⇒ 原引用（零写）
+    const carried = receipt.carryover
+    // #1121 修③：槽写已受理（回执 `ok:true`——本会话已生效，不反扑），配置面写回失败码仍须可见：同一条失败行。
+    if (carried !== null && typeof carried === "object" && carried.ok === false) recordFailure("session:prefs", { reason: carried.reason })
   }
 
   /** 模式位写（D4）：回执成功径携 `flags` 活值 ⇒ 切片写（`applyFlags` —— 与页读 ∕ 出站两径同点）。 */
@@ -258,8 +270,10 @@ export function createComposerWire(deps = {}) {
       case "setPlanMode": return void writeFlags(key, flag("planMode"))
       case "setAdvisorGuard": return void writeFlags(key, flag("advisorGuard"))
       case "setEngineeringEnabled": return void writeFlags(key, flag("engineering"))
-      // footer 三出口 ⇒ 设置面（A8 唯一映射点）：渠道增 / 删 / 密钥三事皆住设置面（本端零第二实现）
-      case "addProvider": case "removeProvider": case "setKey": return void openSettings?.()
+      // footer 三出口 ⇒ 设置面（A8 唯一映射点）：渠道删 / 密钥两事开设置页（本端零第二实现）；
+      // 添加 ⇒ 直开添加弹窗（KD-77 ③ —— 组名单源 = 视图档 `ADD_MODAL_GROUP`；宿主双口：缺组 ⇒ 页）。
+      case "addProvider": return void openSettings?.(ADD_MODAL_GROUP)
+      case "removeProvider": case "setKey": return void openSettings?.()
       default: return void console.error(`[composer] unknown post type: ${String(type)}`)
     }
   }

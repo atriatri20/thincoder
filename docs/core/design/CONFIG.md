@@ -14,9 +14,9 @@
 
 | 面 | CLI 档（现体） | VSC 档（现体） |
 |---|---|---|
-| 装载器 / 默认值 | `thincoder-core/config.mjs`（U14 已迁核） | `thincoder-core/config-io.mjs` + `thincoder-core/config.mjs`（W16 已迁核——端侧镜像 `src/config-io.mjs` 已删；端壳读面 = `src/extension/presets.mjs`） |
+| 装载器 / 默认值 | `thincoder-core/config.mjs`（U14 已迁核） | `thincoder-core/config-io.mjs` + `thincoder-core/config.mjs`（W16 已迁核——端侧镜像 `src/config-io.mjs` 已删；端壳读面 = `thincoder-vscode/src/extension/presets.mjs`） |
 | 迁移 | `thincoder-core/config-migrate.mjs`（U14 已迁核） | `thincoder-core/config-migrate.mjs`（W16 已迁核——端侧 VS Code glue = `src/extension/migrate-settings.mjs`） |
-| 分段配置 | （内联于核 `config.mjs`） | `thincoder-core/config-presets.mjs`（W16 已迁核——VSC `config-presets.mjs` 已删）· 端壳段 = `config-mcp.mjs` · `embed-config.mjs` · 端侧 consult 读面 = `extension/presets.mjs` |
+| 分段配置 | （内联于核 `config.mjs`） | `thincoder-core/config-presets.mjs`（W16 已迁核——VSC `config-presets.mjs` 已删）· 端壳段 = `config-mcp.mjs` · `embed-config.mjs` · 端侧 consult 读面 = `thincoder-vscode/src/extension/presets.mjs` |
 | 写盘面 / 面板 | `src/cli/`（TUI 侧） | `src/extension/settings-panel-write.mjs`（`$schema` 缝供值）· `thincoder-vscode/src/extension/settings.mjs` · `config-watch.mjs` · `migrate-settings.mjs` |
 | settings 工具 | `thincoder-core/agent-tools/settings.mjs`（U14 已迁核） | 同核面（W16 已迁核——端侧实例化于 `thincoder-vscode/src/agent/setup.mjs`；类型表 = 核全量 DEFAULTS 派生，A5） |
 | 路径展开 | `thincoder-core/expand-home.mjs`（U14 已迁核） | `@thincoder/core/expand-home.mjs`（W4 已迁核） |
@@ -31,20 +31,20 @@
 
 | # | 相对路径 / 对位 | 面 | 相似度 · 逐字节 | 分类 | 目标 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|---|---|---|
-| 74 | `proxy.mjs` | 同路径 | 0.7570 · 异 | ② | 进核 | 融合：取 CLI（abort 来源标注）+ VSC 的坏代理串友好报错并入 | 分叉 ＝ 错误形态（VSC 包 try/catch 报「Invalid proxy URI」`src/proxy.mjs:189,236` / CLI 抛原生）；配置格式与双开关语义同 | — | S1（建核补齐） |
+| 74 | `proxy.mjs` | 同路径 | 0.7570 · 异 | ② | 进核 | 融合：取 CLI（abort 来源标注）+ VSC 的坏代理串友好报错并入 | 分叉 ＝ 错误形态（VSC 包 try/catch 报「Invalid proxy URI」`src/proxy.mjs:189,236`（迁移期引文——VSC 该档已拆入核） / CLI 抛原生）；配置格式与双开关语义同 | — | S1（建核补齐） |
 | 77 | `expand-home.mjs` | 同路径 | 0.2308 · 异 | ② | 进核 | 融合：取一侧、逐字随迁 | 分叉 ＝ 仅注释出处（CLI 引记忆子系统规范档的 §9.3a / VSC 引本端设置档的 §2.7） | — | S1（建核补齐） |
 | 79 | `config-migrate.mjs` | 同路径 | 0.0802 · 异 | ② | 进核 | 融合：取并集——核内保留 VSC 的 VS Code 旧设置 / 密钥库迁移遍（`src/config-migrate.mjs:112-184`） | 分叉 ＝ VSC 多一条老用户升级通道（VSC 独有迁移遍，不迁即丢密钥）；模型字段迁移两端同规则（CLI `src/config-migrate.mjs:20-63`） | — | S1（建核补齐） |
-| 80 | `config.mjs` | 同路径 | 0.0471 · 异 | ③ | 进核（**同名不同物**：对位 = CLI `config.mjs` ↔ VSC `config-io.mjs`；VSC 的 `config.mjs` 实为模型规格表 ↔ CLI `model-specs.mjs`） | 以 CLI 为准（装载器）+ VSC 的 `$schema` 注入与配置监视面按端注入；默认值 / 校验覆盖面取 CLI 全量表 | 分叉 ＝ 组织结构（VSC 拆 8 档）+ 两处差异（`$schema` 注入 VSC `src/config-io.mjs:108`（as-of 2026-09-29）；VSC 校验表只覆盖 agent/traces `src/agent-tools/settings.mjs:43`）；前提（同一 `~/.thincoder/config.json`、同一 v2 架构）仍成立 | **①②** | S1（建核补齐） （迁移期引文） |
-| 87 | `thincoder-core/agent-tools/settings.mjs` | 同路径 | 0.5546 · 异 | ③ | 进核 | 以 CLI 为准（类型表由全量 DEFAULTS 派生 `src/agent-tools/settings.mjs:58`） | 分叉 ＝ 校验覆盖面（VSC 只派生 agent/traces `:43,61` ⇒ `websearch` / `mcp` / `memory` / `embedding` / `shell` 错类型可静默写入两端共享的 `config.json`）；前提（同一 config.json）仍成立 | **①②** | S1（建核补齐） （迁移期引文） |
+| 80 | `config.mjs` | 同路径 | 0.0471 · 异 | ③ | 进核（**同名不同物**：对位 = CLI `config.mjs` ↔ VSC `config-io.mjs`；VSC 的 `config.mjs` 实为模型规格表 ↔ CLI `model-specs.mjs`） | 以 CLI 为准（装载器）+ VSC 的 `$schema` 注入与配置监视面按端注入；默认值 / 校验覆盖范围取 CLI 全量表 | 分叉 ＝ 组织结构（VSC 拆 8 档）+ 两处差异（`$schema` 注入 VSC `src/config-io.mjs:108`（as-of 2026-09-29）；VSC 校验表只覆盖 agent/traces `src/agent-tools/settings.mjs:43`）；前提（同一 `~/.thincoder/config.json`、同一 v2 架构）仍成立 | **①②** | S1（建核补齐） （迁移期引文） |
+| 87 | `thincoder-core/agent-tools/settings.mjs` | 同路径 | 0.5546 · 异 | ③ | 进核 | 以 CLI 为准（类型表由全量 DEFAULTS 派生 `src/agent-tools/settings.mjs:58`） | 分叉 ＝ 校验覆盖范围（VSC 只派生 agent/traces `:43,61` ⇒ `websearch` / `mcp` / `memory` / `embedding` / `shell` 错类型可静默写入两端共享的 `config.json`）；前提（同一 config.json）仍成立 | **①②** | S1（建核补齐） （迁移期引文） |
 
 ### 2.2 语义对位遍行（原 §2.5（四）行集——同职责但相对路径不同）
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
-| 128 | `src/config.mjs`（装载器 + DEFAULTS）↔ `src/config-io.mjs` | ② | 融合：以 CLI 装载器为准 + `$schema` 注入按端差注入 | 分叉 ＝ 拆分（VSC 拆 8 档）；同一 `~/.thincoder/config.json`、同一 v2 架构 ⇒ 前提成立；**承 §2.5 #80** | —（承 #80） | S1（建核补齐） |
-| 129 | `src/config.mjs`（`PROVIDER_PRESETS`）↔ `src/config-presets.mjs` | ② | 融合：取一侧（逐条同值） | 分叉 ＝ 拆档；VSC 头注自述「mirrors CLI PROVIDER_PRESETS…双端逐条同值」（`:2,7`）⇒ 前提成立 | — | S1（建核补齐） |
+| 128 | `src/config.mjs`（装载器 + DEFAULTS）↔ `src/config-io.mjs` | ② | 融合：以 CLI 装载器为准 + `$schema` 注入按端差注入 | 分叉 ＝ 拆分（VSC 拆 8 档）；同一 `~/.thincoder/config.json`、同一 v2 架构 ⇒ 前提成立；**承 §2.5 #80** | —（承 #80） | S1（建核补齐） （迁移期引文——档已迁核） |
+| 129 | `src/config.mjs`（`PROVIDER_PRESETS`）↔ `src/config-presets.mjs` | ② | 融合：取一侧（逐条同值） | 分叉 ＝ 拆档；VSC 头注自述「mirrors CLI PROVIDER_PRESETS…双端逐条同值」（`:2,7`）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文——档已迁核） |
 | 130 | `src/config.mjs`（consult / mcp / embedding 三段）↔ `src/config-consult.mjs`（W16 已删——端侧 consult 读面现体 = `thincoder-vscode/src/extension/presets.mjs`） · `config-mcp.mjs` · `embed-config.mjs` | ② | 融合：核内单一 DEFAULTS + 三段的端侧消费面按端注入 | 分叉 ＝ 拆档；三段均以同一 `config.json` 为源（VSC `config-consult.mjs:8` 自述「镜像 CLI config.mjs 同规则」）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
-| 131 | `src/config.mjs`（写盘面）↔ `src/extension/settings-panel-write.mjs` · `thincoder-vscode/src/extension/settings.mjs` | ② | 融合：核内单一读写 + 面板写面按端注入；**MCP 配置留 VS Code 设置** ＝ 端特有段 | 分叉 ＝ 写入口（VSC 设置面板 / CLI TUI）；写盘产物同一 `config.json`（VSC `thincoder-vscode/src/extension/settings.mjs:2` 自述「Backed by the shared ~/.thincoder/config.json」）⇒ 前提成立 | — | S1（建核补齐） |
+| 131 | `src/config.mjs`（写盘面）↔ `src/extension/settings-panel-write.mjs` · `thincoder-vscode/src/extension/settings.mjs` | ② | 融合：核内单一读写 + 面板写面按端注入；**MCP 配置留 VS Code 设置** ＝ 端特有段 | 分叉 ＝ 写入口（VSC 设置面板 / CLI TUI）；写盘产物同一 `config.json`（VSC `thincoder-vscode/src/extension/settings.mjs:2` 自述「Backed by the shared ~/.thincoder/config.json」）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文——档已迁核） |
 | 132 | （CLI 无监视面）↔ `thincoder-vscode/src/extension/config-watch.mjs` · `thincoder-vscode/src/extension/migrate-settings.mjs` | ④ | 端特有段（**判词收窄 · 2026-09-29**）：配置监视**宿主接线**（`workspace` 事件——端壳；纯逻辑已上提核 `thincoder-core/config-watch.mjs`）+ VS Code 旧设置 / 密钥库迁移 | 结构性不对称 = **依赖壳能力**（宿主文件监视 / `SecretStorage`）——CLI 无对应宿主面（B17）；依据是「**只在单侧存在**」，**非**「差异」（A9） | — | S1（建核补齐） |
 | 177 | `src/cli/setup-wizard.mjs` + `src/tui/model-picker.mjs` ↔ `thincoder-vscode/src/extension/settings.mjs` + `provider-flows.mjs` + `presets.mjs` | ② | 融合：provider 增删 / 密钥 / 激活的**纯持久化函数**取一侧 + UI 壳按端注入 | 分叉 ＝ UI 壳（QuickPick / TUI picker）+ 目录；持久化语义两端同（`config.json` `providers[]` + 单值 `model`——VSC `thincoder-vscode/src/extension/provider-flows.mjs:10` 自述「identical to the CLI」）⇒ 前提成立 | — | S1（建核补齐） |
 
@@ -130,7 +130,7 @@
 
 **写门**：`NODE_TEST_CONTEXT`（node:test 自设——外部约定，不在拔除面）下，日志 / 轨迹**只写显式缝指向的落点**；未设缝 ⇒ 跳过写盘（不污染真实 `~/.thincoder`）。
 
-**argv 门的副作用免害**：显式 argv 标志不受宿主 env 透传影响——旧 env 门的「宿主 TUI 会话把门透传给套件 ⇒ 假红」类问题随拔除消失。
+**argv 门的副作用免害**：显式 argv 标志不受宿主 env 透传影响——旧 env 门的「宿主 TUI 会话把门透传给集成测试树 ⇒ 假红」类问题随拔除消失。
 
 **保留集 = 外部约定**（非「我们的配置」——不属本纪律、不拔）：`NODE_TEST_CONTEXT` · `ELECTRON_RUN_AS_NODE` · `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` / `NO_PROXY` 一族 · CI 与 `npm_*` 系 · 系统原语（`HOME` / `USERPROFILE` / `LOCALAPPDATA` / `PATH` / `LC_ALL` / `LANG`）· 外部工具契约（`GIT_EDITOR` · `VSCE_PAT` / `OVSX_PAT`）。
 
@@ -165,7 +165,7 @@
 | # | 决策 | 理由 / 否决备选 |
 |---|---|---|
 | D-CF5 | 自有配置 / 行为输入**只经四类通道**——**禁 env 回退** | 用户裁定「不用环境变量做配置……存量的也直接拔掉」；env = 隐式全局态（不可枚举 / 不可见 / 宿主与子进程串扰）；否决「保留旧名兼容读」（= 存量不拔）。**2026-09-29 补注**：值位显式引用（`${env:VAR}`——§6.3）≠ 通道 ∕ 回退；缺失即抛错，无隐式分支 |
-| D-CF6 | 退场后**按原受众定型**：用户面开关 ⇒ 配置键；测试隔离落点 ⇒ 进程内缝；子进程测试钩 ⇒ argv 标志 | 等价能力以最小面承接——用户面仍有可关通道、测试面零污染、生产零路径不进命令解析；否决「一律升为配置键」（测试钩进产品配置面 = 面膨胀） |
+| D-CF6 | 退场后**按原受众定型**：用户面开关 ⇒ 配置键；测试隔离落点 ⇒ 进程内缝；子进程测试钩 ⇒ argv 标志 | 等价能力以最小面承接——用户面仍有可关通道、测试零污染、生产零路径不进命令解析；否决「一律升为配置键」（测试钩进产品配置面 = 面膨胀） |
 
 ### 6.3 配置值 `${env:VAR}` 引用（消费侧解析 · 2026-09-29 provider-config-family 批 · 台账 #57）
 
@@ -225,6 +225,14 @@ UI = 渠道表单「上下文窗口（K）」字段 + 渠道行副行 `ctx 128K`
 **纪律**：端侧零自写盘、零自建类型白名单（真清洗在核）；UI 首版只暴露六叶（`context` ∕ `maxOutput` ∕
 `thinking` ∕ `thinkAlwaysOn` ∕ `reasoningEffortEnum` ∕ `reasoningEffortDefault`）——其余叶手改 `config.json` 生效。
 
+### 6.5 团队登录配置面（`team` 段——2026-10-10 B1 批 · 台账 #1212）
+
+- **键面**：顶层 `team` 段 = `{ server, member{username,name}, label, token }`（形与语义**全文** = `docs/core/design/TEAM.md` §2.1——本档不复制）；派生 provider 条目（`providers[].derived`）= `docs/core/design/PROVIDER.md` §6.25。
+- **通道归属**：① 配置键通道（本档 §6.2 名录第 ① 类）——`loadConfig` 归一（形不符 ⇒ null——软失败不阻启动；沿 `proxy` 段先例）；**不入 `DEFAULTS`**（沿 `providers` / `proxy` 先例——settings 工具面零涉 ∥ agent 不可写）。
+- **写面**：唯一写者 = `thincoder-core/team.mjs`（已落——登录/退出流程；`writeConfigAtomic` 一次 mutate；端侧零自写盘）。
+- **登录态判据**：`team.token`（trim 非空）——= 团队功能开关（口径④）；消费面 = 三端 + 后续团队面（各面设计轮）。
+- **边界**：不做 team 段的手工编辑入口（写面 = 登录/退出流程单源）∥ 不做多套登录态并存 ∥ 不写 `DEFAULTS`。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 现有决策面见 §3.1 A4 / A5 与 §4.1 第 1–4 行。**2026-09-15 批 5 并入**（自 `POOL-CONFIG-UNIFIED`）：
@@ -273,3 +281,4 @@ UI = 渠道表单「上下文窗口（K）」字段 + 渠道行副行 `ctx 128K`
 - 2026-09-29（**provider-config-family 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-29-provider-config-family.md` §3 轮次 1 发现 1 ∕ 2）：§6.3 解析点集**五处 → 六处**（补「会话标题生成径」+ 标题径非致命兜底句）；§6.2 补**值位显式引用 ≠ 配置通道**边界句 + D-CF5 补注（与 §6.3 双向指）。**零新语义**（= 评审发现的直接导出项）。
 - 2026-09-30（**doc-sweep 批 · 行宽收正 · eng-designer**——承 `docs/batches/2026-09-30-doc-sweep.md` §2 · 台账 #664）：provider-config-family 设计轮条（原单行 332 字符）**折行**（仅换行 ∕ 语义零改——doc-check 行宽闸收正）。**零新语义**。
 - 2026-09-30（**采集收网批 · eng-designer**——承 `docs/batches/2026-09-30-heap-snapshot-switch.md` §2）：§6.2 名录 `THINCODER_HEAP_SNAPSHOT` 行**默认值收正**（`true` ⇒ `false`——采集隐私默认关〔D-TR6 同族〕；桌面端运行期热读＝本批新机制）。**四类通道 ∥ D-CF5 ∥ D-CF6 零改**。
+- 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212）：新增 **§6.4 团队登录配置面（`team` 段）**——键面指针（全文 = `docs/core/design/TEAM.md` §2.1）∥ 通道归属（① 配置键 ∥ 不入 `DEFAULTS`）∥ 写面单源 ∥ 登录态判据（口径④）；机制单源 = `TEAM.md`（本档不复制——D2）。**四类通道 ∥ D-CF5 ∥ D-CF6 零改**。

@@ -2,8 +2,8 @@
 
 > 板块 = **只读数据接口**——台账与批次档数据对外暴露的**只读出口**：CLI 命令面（`thincoder ledger list --json`）∥ ACP 协议面（`ledger/list` · `ledger/count` · `batch/list` + 数据变更通知）。
 > 配对需求档 = `docs/cli/requirements/READ-DATA-INTERFACE.md`（FR1–FR3 ∥ N1–N3——逐条承接；判定句回指 = 本档 §6）。
-> 论域文件 = `thincoder-core/ledger-db.mjs`（只读开库 ∥ 版本标记）· `thincoder-core/ledger-read.mjs`（拟新增——统一序列化 + 命令 runner）
-> · `thincoder-core/agent-tools/batch-read.mjs`（拟新增——批次档读面）· `thincoder-cli/src/acp/read-data.mjs`（拟新增——ACP 方法族 ∥ 变更观察）
+> 论域文件 = `thincoder-core/ledger-db.mjs`（只读开库 ∥ 版本标记）· `thincoder-core/ledger-read.mjs`（已落——统一序列化 + 命令 runner）
+> · `thincoder-core/agent-tools/batch-read.mjs`（已落——批次档读面）· `thincoder-cli/src/acp/read-data.mjs`（已落——ACP 方法族 ∥ 变更观察）
 > · `thincoder-cli/src/command-table.mjs`（`list` 分发）· `thincoder-cli/src/completions.mjs` · `thincoder-cli/bin/thincoder.mjs`（USAGE）。
 > 建档：2026-10-03（read-data-interface 批 · 设计轮 · eng-designer——承批档 `docs/batches/2026-10-03-read-data-interface.md` §1 · 台账 #886 ∥ #887）。
 
@@ -58,7 +58,7 @@
 
 ### 2.6 ACP 面（FR3）
 
-- 新模块 `thincoder-cli/src/acp/read-data.mjs`（拟新增）：工厂 `createReadDataHandlers(ctx, { intervalMs })` → `{ handlers, watcher }`；在 `thincoder-cli/src/acp.mjs:116-122` 邻位展开（与 `checkpoint/*` · `memory/*` 工厂同法；`ext` 档零触）。
+- 新模块 `thincoder-cli/src/acp/read-data.mjs`（已落）：工厂 `createReadDataHandlers(ctx, { intervalMs })` → `{ handlers, watcher }`；在 `thincoder-cli/src/acp.mjs:116-122` 邻位展开（与 `checkpoint/*` · `memory/*` 工厂同法；`ext` 档零触）。
 - 三方法（params / result 见 §3）：`ledger/list` ∥ `ledger/count` ∥ `batch/list`。
 - 凭据门 `requireConfigured()`——与既有四族同门（统一访问策略；只读性不改通道门；§5 D-8）。
 - 版本面零动：`SUPPORTED_PROTOCOL_VERSIONS` 不变（`thincoder-cli/src/acp/client-caps.mjs:15`）；`initialize` 响应形状零动（方法为附加面，不进能力字段——先例 `checkpoint/*` · `memory/*` 未进能力面；§5 D-9）。
@@ -141,11 +141,11 @@ thincoder ledger list --json [--full] [--family] [--cwd <dir>]
 |---|---|
 | `thincoder-core/ledger-db.mjs` | + `LEDGER_SCHEMA_VERSION`；`openLedger(cwd, { create, readOnly })` |
 | `thincoder-core/ledger-cmd.mjs` | 读面两函数切只读开库（签名零变） |
-| `thincoder-core/ledger-read.mjs`（拟新增） | `ledgerExport` · `runLedgerList` |
+| `thincoder-core/ledger-read.mjs`（已落） | `ledgerExport` · `runLedgerList` |
 | `thincoder-core/agent-tools/batch-skeleton.mjs` | + `readSectionStatusWord` |
 | `thincoder-core/agent-tools/batch-lifecycle.mjs` | `collectMarkdownFiles` 转导出（零行为变） |
-| `thincoder-core/agent-tools/batch-read.mjs`（拟新增） | `listBatchRecords` |
-| `thincoder-cli/src/acp/read-data.mjs`（拟新增） | `createReadDataHandlers` · `WATCH_INTERVAL_MS` |
+| `thincoder-core/agent-tools/batch-read.mjs`（已落） | `listBatchRecords` |
+| `thincoder-cli/src/acp/read-data.mjs`（已落） | `createReadDataHandlers` · `WATCH_INTERVAL_MS` |
 
 ## 4. 受影响文件与行数预算
 
@@ -155,20 +155,20 @@ thincoder ledger list --json [--full] [--family] [--cwd <dir>]
 |---|---|---|---|---|---|
 | `thincoder-core/ledger-db.mjs` | M2 | 134 | +31 | ~165 | `openLedger:108` 增 readOnly 态 + items 探针 + 常量 + 落标 |
 | `thincoder-core/ledger-cmd.mjs` | M2 | 140 | +4 | ~144 | `:21` / `:34` 两读点切只读 |
-| `thincoder-core/ledger-read.mjs`（拟新增） | M2 | — | ~150 | ≤300 | 序列化 + 三口径 + `runLedgerList` |
+| `thincoder-core/ledger-read.mjs`（已落） | M2 | — | ~150 | ≤300 | 序列化 + 三口径 + `runLedgerList` |
 | `thincoder-core/agent-tools/batch-skeleton.mjs` | M3 | 174 | +22 | ~196 | `:113` 邻位增 `readSectionStatusWord` |
-| `thincoder-core/agent-tools/batch-read.mjs`（拟新增） | M3 | — | ~90 | ≤300 | 记录列举 + sections 组装 |
-| `thincoder-core/agent-tools/batch-lifecycle.mjs` | M3 | 332 | 0 | 332 | `:62` 收集器转导出（存量越顾问线——本批零增） |
+| `thincoder-core/agent-tools/batch-read.mjs`（已落） | M3 | — | ~90 | ≤300 | 记录列举 + sections 组装 |
+| `thincoder-core/agent-tools/batch-lifecycle.mjs` | M3 | 332 | 0 | 332 | `:62` 收集器转导出（本批零增） |
 | `thincoder-core/ledger.mjs` | M2 | 241 | 0 | 241 | 零编辑——只 import `discoverFamily`（规避在飞写域；§5 D-11） |
-| `thincoder-cli/src/acp/read-data.mjs`（拟新增） | — | — | ~150 | ≤300 | 三方法 + 观察器 |
+| `thincoder-cli/src/acp/read-data.mjs`（已落） | — | — | ~150 | ≤300 | 三方法 + 观察器 |
 | `thincoder-cli/src/acp.mjs` | — | 143 | +13 | ~156 | `:116-122` 工厂接线 + watcher 出参 + 启动 |
 | `thincoder-cli/src/command-table.mjs` | — | 185 | +8 | ~193 | `:154` 分支 + `:162` usage 行 |
 | `thincoder-cli/src/completions.mjs` | — | 140 | +6 | ~146 | 三套脚本 `list` 词（`:26` / `:73` / `:136`） |
 | `thincoder-cli/bin/thincoder.mjs` | — | 178 | +3 | ~181 | `:137` 邻位 USAGE 两行 |
-| `docs/batches/2026-10-03-read-data-interface.test.mjs`（拟新增） | — | — | ~300 | 超即拆 | 批内单测（§7） |
+| `docs/batches/2026-10-03-read-data-interface.test.mjs`（已落） | — | — | ~300 | 超即拆 | 单元测试档（§7） |
 | `docs/README.md` | — | ≈154 | 0（本轮已落） | ≈154 | §1 计数收正 + 变更记录（**本轮已落**） |
 | `docs/cli/design/CLI-ENTRY.md` | — | 80 | +3 | ~83 | §2 行 + 变更记录（**随动**：实施轮） |
-| `docs/cli/design/ACP-CLIENT.md` | — | 650 | +9 | ~659 | §2.1 / §2.2 行 + §3 枚举（`:76` ∥ `:84` 四 ⇒ 五 handler 模块，+ `thincoder-cli/src/acp/read-data.mjs`（拟新增））+ §3.5 模块表（+ 行）+ 变更记录（**随动**：实施轮） |
+| `docs/cli/design/ACP-CLIENT.md` | — | 650 | +9 | ~659 | §2.1 / §2.2 行 + §3 枚举（`:76` ∥ `:84` 四 ⇒ 五 handler 模块，+ `thincoder-cli/src/acp/read-data.mjs`（已落））+ §3.5 模块表（+ 行）+ 变更记录（**随动**：实施轮） |
 | `docs/core/design/LEDGER.md` | M2 | 509 | +~6 | 515 | §2 / §7.1 登记（**协调**：#882 在飞写域让渡后——上抛） |
 
 **L7 复核（模块数——口径 = `docs/core/design/BATCH-RECORD.md` §5.1）：** 模块列去重 = **2**（M2 台账 SQLite ∥ M3 批次档生命周期）≤ 2——不拆批（§2 表落表后复核）。
@@ -205,9 +205,9 @@ thincoder ledger list --json [--full] [--family] [--cwd <dir>]
 | N2 `schemaVersion` 标记 | 写后 = 1 ∥ 旧库读 = 0 | RDI-4 |
 | N3 族同源 | family 输出 = `discoverFamily` 逐项 | RDI-5 |
 
-## 7. 用例表（批内单测件——先红后绿）
+## 7. 用例表（单元测试档——先红后绿）
 
-全例先红（面未存在）；RDI-4 红 = 现行读即改库（负向锁）。夹具 = 临时项目树 + `_setLedgerDirForTest` 注入；CLI 子进程 = HOME ∥ USERPROFILE 沙箱（先例 = 批内件同法）。
+全例先红（面未存在）；RDI-4 红 = 现行读即改库（负向锁）。夹具 = 临时项目树 + `_setLedgerDirForTest` 注入；CLI 子进程 = HOME ∥ USERPROFILE 沙箱（先例 = 单元测试档同法）。
 
 | # | 类 | 输入 | 期望 | 先红点 |
 |---|---|---|---|---|
@@ -239,12 +239,14 @@ thincoder ledger list --json [--full] [--family] [--cwd <dir>]
   1. 与在飞批零撞车（`thincoder-core/ledger.mjs` · `ledger-surface.mjs` 在飞改动）——本批对 `ledger.mjs` 零编辑（D-11）；
   2. 文档随动 = 实施轮同步落（CLI-ENTRY · ACP-CLIENT 词面行；`docs/README.md` 本轮已随档登记）；
   3. `docs/core/design/LEDGER.md` 登记（§2 版本标记 / §7.1 导出面）= #882 写域让渡后随动——上抛排期；
-  4. 单测先红后绿（§7）——实施者跑批内件即反馈环（零入仓套件）。
+  4. 单元测试先红后绿（§7）——实施者跑单元测试档即反馈环（零入集成测试树）。
 
 ## 变更记录
 
 **2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
 **本批（read-data-interface · 2026-10-03）落点表** = `docs/batches/2026-10-03-read-data-interface.md` §2（唯一承载面——一次性批次材料）。
+
+- 2026-10-08（**代码长度上限 500/800 口径更换批 · 实施轮 · eng-coder**——承 `docs/batches/2026-10-08-code-limit-500-800.md` §2 · 台账 #1072）：§4 `batch-lifecycle` 行「存量越顾问线」注删（丙——行留守 · 义务格删）；§4 三处预算格 ≤300 = 闭合批叙述面（B 史实保留 ⇒ 零动）。**零语义外扩**（可 revert）。
 
 - 2026-10-04（**read-data-interface 批 · 修复轮（设计评审 #41 · pass · 🔴0 ∥ 🟡3 ∥ 🔵6 · 九条全采纳）· eng-designer**——承批档 `docs/batches/2026-10-03-read-data-interface.md` §3 轮次 1）：① §1 口径厘清补第二处（`docs/core/design/LEDGER.md:453` §9 边界 + 「不监听文件系统」= 非 `fs.watch` 监听）+ 引用精度收正（「§7.8 不变量 ⑤」= `docs/core/design/LEDGER.md:361`）；② §2.6 ∥ §3.4 写死通知观察域（服务进程 cwd——每轮 `ctx.getCwd()` 求值，与 `params.cwd` 缺省同取值；非观察项目不通知）；③ §3.2 写死 `root` / `name` 派生（与库键同源解析项目根 + basename）；④ §3.3 `ledger/count` 补语义（未决四态计数）；⑤ §4 表增模块列（M2 ∥ M3 · 余 `—`）+ L7 复核行（去重 = 2 ≤ 2——不拆批）+ `docs/README.md` ∥ `docs/cli/design/ACP-CLIENT.md` 两行收正（已落 ∥ 随动落点补 §3 枚举、§3.5 模块表两处）；⑥ §7 RDI-4 补一腿（文件在盘但非台账库 ⇒ `projects: []` ∧ 文件零改）。文档面收正（零语义外扩）。
 

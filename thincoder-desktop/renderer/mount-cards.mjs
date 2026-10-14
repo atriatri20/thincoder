@@ -47,7 +47,7 @@ function focusNode(node) {
 }
 
 /** 回焦输入区（P3② —— 核卡 `deps.onAnswered` 注入点），落点 = 核件输入框 `#input`（结构单源 = VSC ids ——
- *  输入面板上提批换装后锚面；面缺 ⇒ 零动作）。 */
+ *  输入面板上提批换装后锚；锚缺 ⇒ 零动作）。 */
 function focusComposer() {
   if (typeof document === "undefined" || typeof document.querySelector !== "function") return
   focusNode(document.querySelector("#input"))

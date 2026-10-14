@@ -26,7 +26,7 @@ function probeOf(probe) {
 }
 
 /** Scan text for @path references and replace with inline file content.
- *  零文本（非串 ∥ 空串）先于探针校验早退（零判据面——探针不检，同序沿核 `file-links.mjs:28`）。 */
+ *  零文本（非串 ∥ 空串）先于探针校验早退（零判据——探针不检，同序沿核 `file-links.mjs:28`）。 */
 export function injectAtRefs(text, cwd, probe) {
   if (typeof text !== "string" || text === "") return text
   const io = probeOf(probe)

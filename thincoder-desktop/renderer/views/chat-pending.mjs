@@ -15,7 +15,7 @@ import { t } from "../i18n.mjs"
 /** 逐条原文上限行数（CLI `QUEUED_ITEM_MAX_LINES` 同值 —— 超限 ⇒ 尾标记行）。 */
 const ITEM_MAX_LINES = 3
 
-/** 队镜面切片（判据面 —— 宿主权威快照，未过滤；本档只读不写）。 */
+/** 队镜面切片（判据 —— 宿主权威快照，未过滤；本档只读不写）。 */
 export function pendingOf(state) {
   const key = state?.activeSession ?? null
   const list = key === null ? null : state?.pending?.[key]

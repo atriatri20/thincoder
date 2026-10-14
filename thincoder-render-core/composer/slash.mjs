@@ -6,7 +6,7 @@
  *  · 触发判据 = 提交文本 `trim()` 后首字符 `/`（`"foo /model"` 形 = 非斜径 ⇒ `null`——照普通消息径）；
  *  · 首 token（**含首 `/`**）小写归一（大小写不敏感）；余串 = `args`（无余 ⇒ `""`）；
  *  · 条目形（**端侧构造、本档零持表**）= `{ name, aliases?, group?, descKey?, rejectKey?, run(ctx) → boolean }`——
- *    `name` / `aliases` 含首 `/`（与 CLI `SLASH_COMMANDS` ∥ `SLASH_ALIASES` 同名同形——表纪律机检面）；
+ *    `name` / `aliases` 含首 `/`（与 CLI `SLASH_COMMANDS` ∥ `SLASH_ALIASES` 同名同形——表纪律机检）；
  *    `group` ∥ `descKey` = `/help` 面（`formatHelp` 消费——组序归本档常量 ∥ 描述经词键取）；
  *  · 返值域 = `{ kind:"command", cmd, args }` ∥ `{ kind:"unknown", name }` ∥ `null`（非斜径）。
  *

@@ -4,7 +4,7 @@
  * → 4 骨架六槽 → 5 引导面 `no-project` 链 → 6 会话条 + 输入面板装配 → 7 真事件径（会话下拉开 ∥ 关）
  * → 8 真 CSS ∥ 布局读数 → 9 截图 + 收口三零（`pageerror` ∥ `console.error` ∥ `__quickcheck.unstubbed`）。
  * 浏览器 = 系统 channel（缺省 `msedge`，`--browser=` 覆盖；不引浏览器下载）：启动失败 ⇒ 明示退出（不静默回退）。
- * 任一断言败 ⇒ 逐条列报 + exit 1；全绿 ⇒ `segments=9/9 … failed=0` + exit 0。入口 = `npm run quickcheck`（非套件）。
+ * 任一断言败 ⇒ 逐条列报 + exit 1；全绿 ⇒ `segments=9/9 … failed=0` + exit 0。入口 = `npm run quickcheck`（非集成测试）。
  */
 import { mkdirSync } from "node:fs"
 import { readFile, rm } from "node:fs/promises"

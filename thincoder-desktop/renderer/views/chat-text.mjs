@@ -10,7 +10,7 @@
  *   ④ `labelNode(role)` / `paintSpeakerLabels(root)` —— 说话人标签容器与帧尾落笔（项 4：用户块 = 核 `paintLabel`
  *      原语；助手回合首块 = 端侧同字面〔核无原语 —— 端差登记〕）；
  *   ⑤ `pinReasoning(node)` —— 推理块新建即落底（首帧钉底；增量钉底归核画笔）。
- * `data-raw` = **原文逐字**（**就地更新判据面** —— KD-22「块文本逐字（不经渲染面解析）」：渲染面 markdown 后 DOM
+ * `data-raw` = **原文逐字**（**就地更新判据** —— KD-22「块文本逐字（不经渲染面解析）」：渲染面 markdown 后 DOM
  * 文本已非原文 ⇒ 原文另存锚上；`patchTextBlock` 值变比较消费 —— 复制面 = 核件代码块 Copy 钮唯一）。
  * 边界（KD-RC 各端在册机制不夺）：滚动 / 回填 / 窗口裁剪留端；**文件链接着装不在本档**（相抵② 承面 = 结果区
  * `views/chat-tool.mjs` `linkifyResult` —— 核件 `linkifyPaths` 消费单点，历史卡零链接）。零 `node:` / 零裸包；

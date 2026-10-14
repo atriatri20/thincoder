@@ -52,7 +52,7 @@ export const V1_ENUM_BLOCKS = {
 - 行号可能漂移 / 空白噪声大 ⇒ hashline_edit`,
 }
 
-/** 逐块**点名工具名**（§11.11 机检腿：点名名 ⊆ 载荷面——载荷外工具名零命中）。 */
+/** 逐块**点名工具名**（§11.11 机检用例：点名名 ⊆ 载荷面——载荷外工具名零命中）。 */
 export const V1_BLOCK_NAMES = {
   read: ["read", "grep", "glob", "ls", "tree", "read_image"],
   grep: ["grep", "glob", "read"],
@@ -61,11 +61,10 @@ export const V1_BLOCK_NAMES = {
   edit: ["edit", "write", "insert_after", "apply_patch", "hashline_edit"],
 }
 
-/** 载荷外工具名候选表（§11.10-②：实例绑定族 + depth 绑定族）——枚举块文本内**零命中**（§11.11 机检腿）。 */
+/** 载荷外工具名候选表（§11.10-②：实例绑定族 + depth 绑定族 + consult 族）——枚举块文本内**零命中**（§11.11 机检用例）。 */
 export const OFF_PAYLOAD_TOOL_NAMES = [
-  "memory", "memory_search", "memory_put", "code_search", "doc_search", "repo_outline",
-  "settings", "peer_instances", "ledger_query", "ledger_count", "ledger_add", "ledger_update", "ledger_close",
-  "subagent", "advisor", "consult",
+  "memory", "ledger", "code_search", "doc_search", "repo_outline", "settings",
+  "peer_instances", "subagent", "advisor", "consult_start", "consult_stop", "main_history",
 ]
 
 /** V1 参数面唯一缺口补齐（§11.4：`edit.edits[].*` 逐项 `description`——恰 7 项，多一处即红）。 */
@@ -90,7 +89,7 @@ export function routeHead(description) {
 
 /** dry-run 夹具响应（§11.11 行为级六形态：命中 / 误选近邻 / 无调用 / 多调用 / `arguments` 非 JSON / schema 违规）。
  *  形态分配 = 逐（用例 × 重复序号）确定性取表：特例表命中 ⇒ 该形态，否则 = 该用例的命中响应。
- *  `tokens.prompt` = **合成值**（逐变体给值，便于自检「实测腿 / Δ vs V0」链路——非测量、不得读作 token 估算）。 */
+ *  `tokens.prompt` = **合成值**（逐变体给值，便于自检「实测用例 / Δ vs V0」链路——非测量、不得读作 token 估算）。 */
 const PROMPT_TOKENS = { V0: 9012, V1: 10034, V2: 6180 }
 
 const call = (name, args) => ({ name, arguments: JSON.stringify(args) })
@@ -119,15 +118,15 @@ const HIT_RESPONSES = {
 const SPECIAL_RESPONSES = {
   // ① schema 违规 · 缺 required（read 缺 `path`）；② 误选近邻（read↔grep）
   "tool.1": { 1: one("read", { offset: 10, limit: 5 }), 2: one("grep", { pattern: "docs/a.txt" }) },
-  // arguments 非 JSON（parseFail 腿）
+  // arguments 非 JSON（parseFail 用例）
   "tool.5": { 1: { toolCalls: [{ name: "bash", arguments: "{command: node --test" }] } },
-  // 多调用（两条调用面均合法——`multiCall` 单列计数腿）
+  // 多调用（两条调用面均合法——`multiCall` 单列计数用例）
   "tool.6": { 1: many(["git", { action: "status" }], ["read", { path: "docs/a.txt" }]) },
   // 误选近邻（delete↔bash：单文件删除走了 bash）
   "tool.9": { 1: one("bash", { command: "del tmp/scratch.txt" }) },
   // schema 违规 · enum 越界（git.tagAction ∉ enum）
   "tool.11": { 1: one("git", { action: "tag", tagAction: "remove", name: "v1.2.0" }) },
-  // 缺 usage（`tokens` 缺记 ⇒ 成本记 `null` + warning——KD-6 腿）
+  // 缺 usage（`tokens` 缺记 ⇒ 成本记 `null` + warning——KD-6 用例）
   "tool.12": { 1: { ...HIT_RESPONSES["tool.12"], noUsage: true } },
 }
 

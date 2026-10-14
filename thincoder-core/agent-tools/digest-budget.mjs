@@ -55,7 +55,7 @@ export function digestBudgetOver(agent, size) {
   return over
 }
 
-/** Test seam: 落盘目录重定向（单测沙箱——生产从不调用）。 */
+/** Test seam: 落盘目录重定向（单元测试沙箱——生产从不调用）。 */
 let _digestOffloadDirOverride = null
 export function _setDigestOffloadDirForTest(dir) { _digestOffloadDirOverride = dir }
 

@@ -21,7 +21,7 @@
  *   工具事件不记 args；URL 不入事件（llm/tool 事件从不携带 URL；err 文本经形态扫描）。
  * - 摘要截断（B 方案，2026-09-03 用户裁定）：截断处带 "…" 标记（截后仍 ≤上限）。
  * - 测试隔离：node --test 进程（NODE_TEST_CONTEXT）默认不写盘——防测试事件污染真实
- *   诊断日志（两端测试套件都会跑真实 agent 管线）；显式测试缝（_setLogsDirForTest）
+ *   诊断日志（两端测试都会跑真实 agent 管线）；显式测试缝（_setLogsDirForTest）
  *   强制写入该目录（log.test.mjs 用它隔离临时目录——refinement #6）。
  * - 轮转清理（refinement #3——长驻进程覆盖）：非仅启动时——每进程每日**首次写事件**
  *   时顺带清理 >1 天的 agent-*.log（extension host 可长驻数月，启动清理覆盖不到）。

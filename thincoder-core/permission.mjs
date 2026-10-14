@@ -13,6 +13,7 @@
  * dispatch 内；本档只管「问一次 + 拿到布尔」。
  */
 import { createInterface } from "node:readline"
+import { lastPageUrl } from "./browser/session.mjs"
 
 /** CLI tool arg summary (truncated long JSON) */
 export function summarize(toolArgs) {
@@ -41,6 +42,38 @@ export function formatPermission(name, args) {
     if (action === "delete") return args.id ? `id=${args.id}${args.layer ? ` layer=${args.layer}` : ""}` : `batch delete layer=${args.layer ?? ""} type=${args.type ?? ""} keyword=${args.keyword ?? ""} confirm=${args.confirm}`
     if (action === "clear") return `clear layer=${args.layer ?? ""} confirm=${args.confirm}`
     return cap(summarize(args), 300)
+  }
+  if (base === "browser") {
+    // BROWSER-TOOL.md §3.1/§10.1/§10.5：`<action> ref=<ref> @ <最近页 URL>`；扩展动作逐动作细节（§10.5）
+    const action = String(args.action ?? "")
+    const detail = (() => {
+      const coordText = args.ref ?? `${args.x ?? ""},${args.y ?? ""}`
+      if (action === "press") {
+        const mods = Array.isArray(args.modifiers) ? args.modifiers.filter((m) => m !== undefined && m !== null && String(m) !== "") : []
+        return [...mods, args.key ?? ""].filter((s) => s !== undefined && s !== null && String(s) !== "").join("+") + (args.ref ? ` → ${args.ref}` : "")
+      }
+      if (action === "clipboard") {
+        const op = String(args.op ?? "")
+        if (op === "write") return `${op} ${cap(String(args.text ?? ""), 80)}`
+        return args.ref ? `${op} ${args.ref}` : op
+      }
+      if (action === "mouse") return `${args.button ?? "left"} ${args.phase ?? "click"} ${coordText}`
+      if (action === "drag") return `${args.from ?? ""} → ${args.to ?? ""}`
+      if (action === "touch") {
+        const gesture = String(args.gesture ?? "tap")
+        if (gesture === "swipe") return `swipe ${args.from ?? ""} → ${args.to ?? ""}`.trim()
+        if (gesture === "pinch") return `pinch ×${args.scale ?? ""} ${coordText}`
+        return `${gesture} ${coordText}`
+      }
+      if (action === "wheel") return `Δ(${args.deltaX ?? 0},${args.deltaY ?? 0})`
+      if (action === "hover") return String(coordText)
+      if (action === "insert") return `${String(args.text ?? "").length} chars${args.ime ? " (ime)" : ""}`
+      return null
+    })()
+    const fallback = args.ref ? `ref=${args.ref}` : String(args.url ?? args.expression ?? "").slice(0, 80)
+    const shown = detail ?? fallback
+    const at = lastPageUrl() ? ` @ ${lastPageUrl()}` : ""
+    return cap(`${action}${shown ? ` ${shown}` : ""}${at}`, 300)
   }
   return cap(summarize(args), 300)
 }

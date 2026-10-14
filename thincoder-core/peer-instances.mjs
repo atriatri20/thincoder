@@ -6,7 +6,7 @@
  * ——不认领、不写 manifest——本模块结构化上没有任何 fs 写调用）。
  *
  * - 探测族（`batchAlive` / `probeCmdlines` / `classifyEnd`）住 `process-probe.mjs`
- *   （批 1 CORE-DEFECT-FIXES 外提——探测与身份判据单源，判据面 = §3.1 F-MI6 / V3）；
+ *   （批 1 CORE-DEFECT-FIXES 外提——探测与身份判据单源，判据 = §3.1 F-MI6 / V3）；
  *   `batchAlive` 本档 **re-export**（既有 import 面零破——`peer-domains.mjs` 零改，
  *   其域残留清理保持**纯存在性**语义）。
  * - peerInstances(cwd)：读 manifest slotSessions → 按 sessionId 去重分组 → 一次批量判活

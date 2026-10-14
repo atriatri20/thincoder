@@ -43,10 +43,11 @@ export async function beginRun(agent, input, callbacks, {
       const { injectAsyncResult } = await import("../agent-tools/subagent.mjs")
       const { injectConsultResult } = await import("../agent-tools/consult.mjs")
       const digestRound = isDigestRound({ autoTurn, upstreamTurn, timerTurn })
-      // 投递门控两态（§6.31.4）：首投任意回合 ∥ 重投仅消化轮；注入后**留容器**（不 splice）。
+      // 投递门控两态（§6.31.4 · §6.34 收窄）：首投**仅系统轮**（`autoTurn`——用户回合零注入）∥ 重投仅消化轮；
+      // 注入后**留容器**（不 splice）。
       // 注入抛错 ⇒ 未投条目（`_daDelivered` 未置）留容器待下轮——收窄既有「splice 先取尽」的丢失窗。
       for (const e of [...pendingAsync]) {
-        if (!shouldDeliverEntry(e, digestRound)) continue
+        if (!shouldDeliverEntry(e, digestRound, autoTurn)) continue
         if (e.role === "consult") await injectConsultResult(agent, e)
         else await injectAsyncResult(agent, e)
         e._daDelivered = true

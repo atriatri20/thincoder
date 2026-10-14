@@ -4,10 +4,10 @@
 > 本档 = 该板块的**引擎级接口契约面**——源域与目标域 / 引擎与入口布局 / 预处理与注记形态 / 两态与计数口径 / 假阳类 / 外部参照面（载体 = 实装坐标）。
 > **判据句单一权威源 = `docs/core/design/DOC-DISCIPLINE.md` §4**（V5 判据规格：抽取 / 射程 / 存在性域 / 注记 / 假阳类 / 两态 / 清账 / 反查与巡检）。
 > `scripts/doc-check-anchors.mjs`（单锚引擎——原 CLI / VSC 双引擎已收敛）**以 `docs/core/design/DOC-DISCIPLINE.md` §4 为判据权威**；本档 §3 只登记域 / 宿主 / 导出面接口事实（D2 单一权威源——不重述判据句）。
-> **在途对齐（2026-09-16 · 批2 CHECK-TOOLING-DEBT 登记）**：本档 §3 的判据面**引用切换**（重述句 → 引用）执行时点 = **本档下次实质修订**；本批只落地**同步对齐**——两档在**坐标尾判据句**上零漂移（当前 A3 坐标尾形态与 `docs/core/design/DOC-DISCIPLINE.md` §3.5 同义）；**用例号面（A1）**判据句现由本档 §3.3 自持——**切换前置检查**（并入 `DOC-DISCIPLINE.md` §4 或显式豁免）已登记于该档 §4（评审轮 1 #9）。
+> **在途对齐（2026-09-16 · 批2 CHECK-TOOLING-DEBT 登记）**：本档 §3 的判据**引用切换**（重述句 → 引用）执行时点 = **本档下次实质修订**；本批只落地**同步对齐**——两档在**坐标尾判据句**上零漂移（当前 A3 坐标尾形态与 `docs/core/design/DOC-DISCIPLINE.md` §3.5 同义）；**用例号面（A1）**判据句现由本档 §3.3 自持——**切换前置检查**（并入 `DOC-DISCIPLINE.md` §4 或显式豁免）已登记于该档 §4（评审轮 1 #9）。
 > 需求侧 = `docs/core/design/DOC-DISCIPLINE.md` §4 的 V5 判据规格（文档↔实装对账面 F15–F20 / N6–N9——v1 需求档 `ENGINEERING-MODE-MECHANISM.md` §1.20 已归档 `_archive/`）。
 > 相邻权威 = `docs/core/design/DOC-SYSTEM.md`（文档体系 / 归属判据 / 射程修法）· `docs/core/design/DOC-DISCIPLINE.md`（文档纪律与对账）·
-> `docs/core/design/TESTING.md`（测试面）· `docs/core/design/LEDGER.md`（台账机检 L1–L4）。
+> `docs/core/design/TESTING.md`（测试覆盖）· `docs/core/design/LEDGER.md`（台账机检 L1–L4）。
 > 建档：2026-09-15（**B 式迁移轮 · VSC 批 4**——`thincoder-vscode/docs/design/DOC-CODE-RECONCILE.md` 内容重建入基准层；
 > 旧档原地一字不改、留作参照历史）。
 > 坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。**跨仓面整类退役**（两仓合并 S4）——见 §8.1。
@@ -17,7 +17,7 @@
 设计 / 需求档的「事实句」会落后于代码与测试现态（同一类残量在排查中反复出现）。机检 V1–V4 管**形态**
 （段引用可解析 / 计数与枚举 / 批档轮次 / 跨仓形态），**无一判「句子说的还是不是真的」**。
 
-本板块补齐「**事实锚存在性**」这一判据面（V5），并给它配**清账路径**与**防回潮装置**（反查脚本 + 常驻闸 + 人巡语义）。
+本板块补齐「**事实锚存在性**」这一判据（V5），并给它配**清账路径**与**防回潮装置**（反查脚本 + 常驻闸 + 人巡语义）。
 定位边界：不改 V1–V4 既有判据语义；不承诺「无锚语义句」清零（机器判不了——归人巡）。
 
 ## 2. 方案选型对比（现行有效者）
@@ -73,7 +73,7 @@
   派生面三类 = Node 内置模块导出族 / DOM 接口 / 扩展宿主命名空间；载体 = 引擎导出常量，`scripts/doc-check-anchors.mjs`）；
   ④ 平台码形态；⑤ 通用词与字面量（长度 < 3 · 纯小写单词 · 布尔 / 空值字面量等）。
 - **在册判据**：token（或点径首段）在**合并仓代码面**以**词界**命中 ⇒ 通过（`:191` 域集）。
-- **假阴面（如实登记）**：在册判据读代码面全树 ⇒ 测试档内以字面量驻留的**夹具名 / 旁注提及**同计「在册」——
+- **假阴面（如实登记）**：在册判据读代码面全树 ⇒ 测试文件内以字面量驻留的**夹具名 / 旁注提及**同计「在册」——
   真仓清单可能被自我遮蔽。处置形态 = 夹具 / 引例名**不落字面量**（片段拼装书写），与 P4 互为镜像面。
 
 ### 3.5 A3 路径锚
@@ -231,14 +231,14 @@ run_in_background（外部产品工具名）· CLAUDE.md（外部产品配置档
 
 #### 5.1.4 逐条判定表（①A1–A7 · ②B1–B4）
 
-**① 面（README ↔ 实装，7 条）**（US-DOC1 全命令覆盖面 = §5.1.12 映射判定表；本表只收漂移条目）
+**① 面（README ↔ 实装，7 条）**（US-DOC1 全命令覆盖范围 = §5.1.12 映射判定表；本表只收漂移条目）
 
 | # | 漂移点（evidence） | 形态 | 哪边为准 | 为什么 | 处置 | 实核状态 |
 |---|---|---|---|---|---|---|
 | A1 | `thincoder-cli/README.md:71` · `:97` 现态列举 `/provider`（另 `:373` / `:412` 系 release note 历史句——白名单保留）∥ 命令字面量共 3 处提示串（`thincoder-cli/src/tui/index.mjs:52` 镜像注释 · `:63` · `src/cli/distill-command.mjs:10`——3a 步收正；导入路径 `@thincoder/core/provider/…` 不计） | 命令列举漂移 | **文档改**（改指 `/model` 两级选择器） | 能力在位（`model-picker.mjs`）且 `/provider` 非实装命令 ⇒ 对外契约以实装可达面为准（层 0-3 ②）；「恢复别名」被裁-E 否 | README 现态句（`:71` / `:97`）+ `TUI-COMMANDS.md:22` + `src` 三处串收正（`:71` 并入 3a 步） | **已实核** |
 | A2 | `thincoder-cli/README.md:97` 括注「`/config set` for parameters」∥ 实装子面仅 `embedkey`（`src/tui/cmd-config.mjs:169` `Usage: /config [embedkey]`） | 配置面描述漂移 | **文档改** | 实装为准（层 0-3 ②）——无 `set` 子面；参数设置走无参**交互菜单**（`:345` `config.defaultModel` 项 · `:352` embedding key 项 · `:397` / `:402` 分派）；README 括注收正为交互菜单形态（`/config embedkey` 保留） | README `:97` `/config` 括注收正（执行步 = §2.7 补正 3b）；验收 = ACC-7 ① | **已实核（修正轮）** |
-| A3 | `thincoder-cli/README.md:107` 示例围栏标 `jsonc` ∥ 实装 = 严格 `JSON.parse`（`thincoder-core/config-io.mjs:68` / `:122`；`config.mjs:233` / `:387`——无注释剥离器） | 文件格式描述漂移 | **文档改** | 实装为准（层 0-3 ②）——围栏改 `json` + `:105` 句补「严格 JSON（示例内注释仅说明用）」⇒ 一并消除「照抄带注释样例不可解析」隐患 | README `:105` / `:107` 收正（执行步 3b）；验收 = ACC-7 ② | **已实核（修正轮）** |
-| A4 | `thincoder-cli/README.md:123` 仍写 `activeProvider`（旧字段名） | 字段名漂移 | **文档改** | 实装为准——现行形态 = 每渠道 `providers[].model` + 顶层 `defaultModel`（`thincoder-core/config-migrate.mjs:10`–`:11` 迁移 `activeProvider/activeModel` → `defaultModel` 复合 · `:44` `delete raw.activeProvider`；`cmd-config.mjs:321` 写 `"provider:model"`；`config-io.mjs:143`：`activeProvider` 现为**派生面**语义 = `defaultModel` 的渠道） | README `:123` 收正（示例键 → `defaultModel`，形如 `"provider:model"`；执行步 3b）；验收 = ACC-7 ③ | **已实核（修正轮）** |
+| A3 | `thincoder-cli/README.md:107` 示例围栏标 `jsonc` ∥ 实装 = 严格 `JSON.parse`（`thincoder-core/config-io.mjs:68` / `:122`；`thincoder-core/config.mjs:233` / `:387`——无注释剥离器） | 文件格式描述漂移 | **文档改** | 实装为准（层 0-3 ②）——围栏改 `json` + `:105` 句补「严格 JSON（示例内注释仅说明用）」⇒ 一并消除「照抄带注释样例不可解析」隐患 | README `:105` / `:107` 收正（执行步 3b）；验收 = ACC-7 ② | **已实核（修正轮）** |
+| A4 | `thincoder-cli/README.md:123` 仍写 `activeProvider`（旧字段名） | 字段名漂移 | **文档改** | 实装为准——现行形态 = 顶层 `defaultModel`（复合串 `provider:model`；渠道单值模型已退场——2026-10-09 清除批）（`thincoder-core/config-migrate.mjs:10`–`:11` 迁移 `activeProvider/activeModel` → `defaultModel` 复合 · `:44` `delete raw.activeProvider`；`cmd-config.mjs:321` 写 `"provider:model"`；`config-io.mjs:143`：`activeProvider` 现为**派生面**语义 = `defaultModel` 的渠道） | README `:123` 收正（示例键 → `defaultModel`，形如 `"provider:model"`；执行步 3b）；验收 = ACC-7 ③ | **已实核（修正轮）** |
 | A5 | `bin/thincoder.mjs:300` = 拆档前坐标——现体 = `thincoder-cli/src/command-table.mjs:93-94` 在册 ∥ `bin/thincoder.mjs:99`–`:121` `USAGE` 未列 · `src/completions.mjs` 未列 | 子命令漏列 | **文档面补列** | 用户可达入口（与 TUI 启动包装 `bin/thincoder.mjs:42` 同源命令字面量）⇒ 对外描述以实装可达面为准。**反转判据**：分支体实读判「内部 / 保留入口」⇒ 改判 README 列举、不补 `USAGE` | `USAGE` + 补全词表各补 `tui` | **已实核**（方向待 U3 终定） |
 | A6 | `thincoder-cli/README.md:114` 注释「or leave empty to use env vars」∥ 实装**无配置类 env 回退**（`src/tui/model-picker.mjs:37` 明示 env vars are not a key source；`src/**` 无配置 env 读取路径——空 key = 无 key，选中该渠道时内联提示） | 环境变量描述漂移 | **文档改（一处）**——`:99` 主体保留 | 实装为准（层 0-3 ②）：`:99`「no environment-variable configuration」成立；`:114` 注释失实 ⇒ 收正为「或留空——选中该渠道时 TUI 提示补 key」。**边界**：`THINCODER_*` 系**运行时开关**（`bin/thincoder.mjs:42` · `:94`–`:95` · `src/tui/render-loop.mjs:125`——TUI 包装 / 测试 / 渲染调试开关），非配置通道、不构成 `:99` 反例 | README `:114` 注释收正（执行步 3b）；验收 = ACC-7 ④ | **已实核（修正轮）** |
 | A7 | `docs/core/design/TOOLS.md:179` hooks 段**三错** · `thincoder-cli/README.md:306` hooks 段**两错** | 机制描述漂移 | **文档改** | 权威 = `thincoder-core/hooks.mjs`：四事件含 `Stop`（`:7`–`:11`）· 配置位 = `config.json` 的 `hooks` 键（`:5`）· 阻断判据 = 退出码（`:20`）；与需求档 `docs/core/requirements/AGENT-LOOP.md` 一致 | 两档 hooks 段收正 | **已实核** |
@@ -347,7 +347,7 @@ run_in_background（外部产品工具名）· CLAUDE.md（外部产品配置档
 
 **显式无**——本批无 UI / 交互决策。`USAGE` / 补全词表 / 提示串属**用户可见文本面**，非 UI 结构决策；`tui` 子命令补列不引入新交互路径。
 
-#### 5.1.12 README 列举 ↔ 实装映射判定表（US-DOC1 覆盖面 · 修正轮）
+#### 5.1.12 README 列举 ↔ 实装映射判定表（US-DOC1 覆盖范围 · 修正轮）
 
 **判据句**：README 现态列举的 slash 命令 ⊆ 实装可达面（层 0-3 ②——能力在位即应收正文档）。**口径**：命令级（别名另计；括注语义面仅 A2 / S5 已登记项在判）。
 **实装可达面** = `thincoder-cli/src/tui/slash-commands.mjs` `SLASH_COMMANDS`（`:39`–`:66`，26 条）+ `SLASH_ALIASES`（`:69`）+ `HANDLERS` 挂接（`:73`–`:98`，26 条一一在接）+ 分派（`:110`–`:127`，含别名解析与未知命令兜底）；`/help` 清单同源（`:108`）。
@@ -370,7 +370,7 @@ run_in_background（外部产品工具名）· CLAUDE.md（外部产品配置档
 
 **别名**（README `:97` 尾列 7 条 ∥ `SLASH_ALIASES:69`）：`/h` `/x` `/m` `/p` `/t` `/c` `/n`——**7/7 在位**。
 **漏列面**（不判漂移——⊆ 方向）：实装 26 条中 README 未列 14 条（`/plan` `/auto` `/eng` `/advisor` `/goal` `/upgrade` `/new` `/rename` `/copy` `/fold` `/undo` `/init` `/skills` `/mcp`）⇒ §5.1.9 登记。
-**结论**：13/13 逐条有判定（12 ✅ + 1 收正 ✖）——US-DOC1 覆盖面清零。
+**结论**：13/13 逐条有判定（12 ✅ + 1 收正 ✖）——US-DOC1 覆盖范围清零。
 
 #### 5.2 本批对账执行（批 10 · DOC-RECONCILE · as-of 2026-09-16）
 
@@ -397,7 +397,7 @@ run_in_background（外部产品工具名）· CLAUDE.md（外部产品配置档
 
 | # | 决策 | 理由 / 否决备选 |
 |---|---|---|
-| D-DR16 | 本批**执行明细落批次档 §2**，本档只落 §5.2 判据 / 决策 / 结论形态 | §9 拆分面 1 判据当批即用；否决「照 §5.1 形态再落一节施工材料」（本档已近 500 硬限——再落一节即触线） |
+| D-DR16 | 本批**执行明细落批次档 §2**，本档只落 §5.2 判据 / 决策 / 结论形态 | §9 拆分面 1 判据当批即用；否决「照 §5.1 形态再落一节施工材料」 |
 | D-DR17 | 「判不出」= **合法终态**（须留痕：写清为何不判 + 重锚落点） | 设计期无法判的项逼成二值 ⇒ 静默取舍；否决「一律判仍漂」（假账） |
 | D-DR18 | 新发现漂移 = **登记一行 + 停下上报**，不当场改 | §1 边界 ②（不做未登记普查、不扩批）；否决「顺手改」 |
 
@@ -418,7 +418,7 @@ run_in_background（外部产品工具名）· CLAUDE.md（外部产品配置档
 
 | # | 决策 | 理由 / 否决备选 |
 |---|---|---|
-| D-R1 | 判据面 = **存在性**（三类锚），与 V1–V4 的**形态**面互不重复 | 形态机检管不了「句子是否仍为真」；否决「把存在性塞进既有宽度 / 台账检查器」（面不同 + 撞硬限） |
+| D-R1 | 判据 = **存在性**（三类锚），与 V1–V4 的**形态**面互不重复 | 形态机检管不了「句子是否仍为真」；否决「把存在性塞进既有宽度 / 台账检查器」（面不同） |
 | D-R2 | A3 判序 = **复用台账机检同一函数** | 两套定位语义必漂移；否决「自造宽松复解析」·「新档内再建一份五态实现」 |
 | D-R3 | 批次档**不入源域** | 前指是结构性的（§2 第 1 行）；否决入域（阈值不可达） |
 | D-R4 | 注记**必须携带消解信息**才通过 | 防「已废」二字变相豁免 |
@@ -471,3 +471,4 @@ run_in_background（外部产品工具名）· CLAUDE.md（外部产品配置档
 - 2026-09-18（**失效表达清理批 · 本批直接执行 · 可 revert**——承用户 2026-09-18 裁定「修订式表达很害人，失效的表达一定要删掉」）：§3.9 **E-3 判据句**去「（同「域外」口径）」括注（指点对象随两仓合并**整类退场**——见 §8.1 沿革行；判据句本体 = 「独立计数不入阈值判定」照留）。历史沿革 = 本档既有历史段 + 批档 `docs/batches/2026-09-18-stale-expression-purge.md`。
 
 - 2026-10-02（**文档清账轮 · 执行轮 1（core/design 前段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 2 处 R1 改指（`slash-commands.mjs` 补 `thincoder-cli/` 前缀——S5 行 ∥ §5.1.12 判据句；S5 行坐标随回读收正 `:45 ⇒ :46`）。**零新语义**。
+- 2026-10-09（**provider-default-model-purge 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §3 轮次 1 · 台账 #1122）：§5.1.4 A4 行注记携批名（渠道单值模型退场——2026-10-09 清除批）。**零新语义**（记录面补记）。明细 = 批档 §2 修复轮块。

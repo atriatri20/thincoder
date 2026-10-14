@@ -215,7 +215,7 @@ export function patchToolCard(node, block, key, handlers = {}) {
       else node.insertBefore(fresh, body0)
     } else changesRow.replaceWith(fresh)
   }
-  // 结果区（#605 判据面 —— 跨 chunk 同一元素：scrollTop ∕ 选区保真）
+  // 结果区（#605 判据 —— 跨 chunk 同一元素：scrollTop ∕ 选区保真）
   const result = typeof block?.result === "string" ? block.result : ""
   let body = node.querySelector("[data-tool-result]")
   if (result === "" || !isExpanded(block)) {
@@ -256,7 +256,7 @@ export function linkifyResult(node, block, linkify = linkifyPaths) {
   try {
     linkify(body, links)
   } catch (error) {
-    // 核件 `linkifyPaths` 依赖浏览器面（`window.NodeFilter` / `document.createTreeWalker`）——平 node 用例面缺两件
+    // 核件 `linkifyPaths` 依赖浏览器面（`window.NodeFilter` / `document.createTreeWalker`）——平 node 用例缺两件
     // ⇒ **一行诊断 + 零链接**（响亮 · 不拆帧；禁静默）；生产面（真 DOM）不触本支。
     console.error("[chat] file-link dressing unavailable:", error)
     return node

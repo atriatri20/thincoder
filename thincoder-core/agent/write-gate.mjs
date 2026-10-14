@@ -18,8 +18,8 @@
  *    M6 的 `advisor.mjs` design-review 分类分支消费本导出
  *    （KD-M6-1——同源不重复实现；落 dispatch.mjs 会让 advisor 反向 import 门禁簇成环）。
  * 2. `freezeWindowConflict(agent, absPaths)` —— D5 冻结窗口判据组装：被审文件集 =
- *    声明文档集（`inflightDesignReviewConflict` 同源 docAbs 腿）+ 批次档（`run.batchDoc`
- *    腿——评审绑定批档在途时，写批档同样致 stale）。dispatch.mjs
+ *    声明文档集（`inflightDesignReviewConflict` 同源 docAbs 分支）+ 批次档（`run.batchDoc`
+ *    分支——评审绑定批档在途时，写批档同样致 stale）。dispatch.mjs
  *    只 import 消费，不再各自直连 `advisor-settle.mjs`。
  * 3. `batchRecordWriteConflict(agent, depth, absPaths)` —— 批次档写门判据组装（#309 ·
  *    `AGENT-LOOP-SUBAGENT.md` §6.29.1）：判据与拒绝文案同址（文案字面只出本档）。
@@ -62,9 +62,9 @@ export function resolveReviewTargetPaths(agent) {
 /**
  * D5 冻结窗口判据组装（M4 §2.1#2）：评审在途（点火 → 结算）期间父侧对被审文件集
  * （声明文档集 + 批次档）的写入 → 返回冲突 { id, path }；无冲突 → null。
- * 声明文档集腿 = `inflightDesignReviewConflict`（同 docAbs / 同 normAbs，仅 running
- * 未取消的设计条目）；批次档腿 = 同池条目 `run.batchDoc`（评审绑定批档在途时写批档
- * 同样致 stale——被审文件集合流点）。两腿同形返回，消费端拒绝文案零改。
+ * 声明文档集分支 = `inflightDesignReviewConflict`（同 docAbs / 同 normAbs，仅 running
+ * 未取消的设计条目）；批次档分支 = 同池条目 `run.batchDoc`（评审绑定批档在途时写批档
+ * 同样致 stale——被审文件集合流点）。两分支同形返回，消费端拒绝文案零改。
  * @param {Object} agent
  * @param {string[]} absPaths — 本次写将触碰的路径（ABS——调用方 resolve(agent.cwd, p)）
  * @returns {{id: string, path: string}|null} 命中评审 id + 冲突路径（ABS），无冲突 null
@@ -132,10 +132,10 @@ function isOwnBatchCompanion(targetKey, boundKey) {
 /**
  * 批次档写门判据（#309 · `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.29.1——containment；
  * 2026-09-29 收窄 · 台账 #545）：
- * 工程角色子代理（`depth > 0` ∧ `agent._batchDoc` 在场）对**批次档文件**的写 ⇒ 目标 ≠ 绑定档
+ * 携绑定的子代理（`depth > 0` ∧ `agent._batchDoc` 在场——工程角色 ∥ 普通面 coder，`BATCH-RECORD.md` §4.16）对**批次档文件**的写 ⇒ 目标 ≠ 绑定档
  * **且非绑定批次的伴随件**（见 `isOwnBatchCompanion`）⇒ 冲突（fail-closed；写自己绑定的档 ∥
  * 自身批次伴随件 = 正常面放行）。比较键 = 绝对路径 + win32 大小写归一。
- * 界面：depth 0（主 agent——跨档处置是父侧职责）· 无 `_batchDoc`（非工程绑定族）· 主基底外的
+ * 界面：depth 0（主 agent——跨档处置是父侧职责）· 无 `_batchDoc`（未携绑定族——普通面 coder 亦入绑定面）· 主基底外的
  * 普通文件写 —— 三种形态均不进本门（返回 null，行为零变）。判据集由调用方限定 = `FILE_MUTATORS`
  * （`file_ops` / 读类不在门内——§6.29.1 边界）。
  * 拒绝文案**单源 = 本档**（两端直取 `message`——零字面副本）。

@@ -11,7 +11,7 @@
  * 持久化 = 渲染面 `localStorage`（键 `thincoder.desktop.poolWidth` · 整数 px）——读 ∥ 写皆捕获 + `console.error`（零静默）；
  * 读失败 ∥ 值非法（非正有限数）⇒ 视同未拖过（降级默认）；写失败 ⇒ 本次会话内照常生效（fail-soft）。
  * 注入缝 `{ doc, win, storage, root }`（缺省 = `document` / `window` / `localStorage` ∕ 锚查询）⇒ 平 node 直测。
- * 零 `store` ∥ 零 `events` 依赖（宽度零自动源——仲裁负控腿）；零 `node:` / 零裸包（渲染面静态闭包判据）。
+ * 零 `store` ∥ 零 `events` 依赖（宽度零自动源——仲裁负控分支）；零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
 import { t } from "./i18n.mjs"
 

@@ -91,7 +91,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   try {
     return await runTurnLoop(agent, {
       maxTurns, threshold, toolSchemas, toolByName, systemPrompt,
-      depth, signal, autoTurn, streamOutput, consumeInjected, consumeQueuedInput, callbacks, distillSignal,
+      depth, signal, autoTurn, suspDriven, streamOutput, consumeInjected, consumeQueuedInput, callbacks, distillSignal,
     })
   } catch (e) {
     thrownError = e
