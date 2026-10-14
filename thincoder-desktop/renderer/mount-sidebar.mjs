@@ -173,18 +173,20 @@ ${item.usageShort}` : item.title,
       item.time
         ? { tag: "span", props: { class: "sidebar-item-time" }, children: [item.time] }
         : null,
-      isCurrentProject && typeof handlers.onMenuOpen === "function"
+      // 行内操作钮 = **仅归档**（2026-10-13 用户裁定 · ZCode `TaskListItem` 同形）：悬停时**时间让位**、
+      // 归档钮就位（CSS 同排切换——`.sidebar-item:hover .sidebar-item-time { display:none }`）。
+      // 重命名 ∕ 删除仍走右键菜单（`onContextMenu` 上行）；⋯ 全功能钮退场（用户「只保留归档功能」）。
+      isCurrentProject && typeof handlers.onArchive === "function"
         ? {
           tag: "button",
           props: {
-            class: "sidebar-item-more",
+            class: "sidebar-item-archive",
             type: "button",
-            "aria-label": t("sidebar.menu"),
-            title: t("sidebar.menu"),
+            "aria-label": t("sidebar.archive"),
+            title: t("sidebar.archive"),
             onClick: (event) => {
               event.stopPropagation()
-              const rect = event.currentTarget.getBoundingClientRect()
-              openMenuAt(rect.right, rect.top)
+              void handlers.onArchive?.(item.key)
             },
           },
           children: [],

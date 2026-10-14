@@ -1575,3 +1575,34 @@ body.pool-collapsed .pool-collapse { left: 4px; }
 }
 .shortcut-plus { font-size: 11px; color: var(--fg-muted); }
 .shortcut-empty { padding: 18px 2px; font-size: 13px; color: var(--fg-muted); }
+
+/* ── 侧栏会话行：行内操作钮 = 仅归档（ZCode TaskListItem 同形 · 2026-10-13）──────────────
+   悬停 ⇒ 时间让位、归档钮就位（同排同宽切换——零布局跳动）；重命名 ∕ 删除走右键菜单。
+   字形住本档 `content`（零字形字面进 JS——全档纪律）。 */
+.sidebar-item:hover .sidebar-item-time { display: none; }
+.sidebar-item-archive {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+.sidebar-item-archive::before { content: "⊟"; }
+.sidebar-item:hover .sidebar-item-archive,
+.sidebar-item-archive:focus-visible { opacity: 1; }
+.sidebar-item-archive:hover { background: var(--hover-bg-strong); color: var(--fg); }
