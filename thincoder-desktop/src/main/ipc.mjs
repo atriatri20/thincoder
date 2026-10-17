@@ -173,8 +173,15 @@ function sessionRename(payload) {
  *  需 agent 装配键化 `${cwd}::${slot}`，挂账另批）。 */
 function sessionOpenWindow(payload) {
   // 回执可序列化（BrowserWindow 对象不可跨 IPC——返回建窗结果旗标即可；建窗失败 ⇒ 抛错直传）。
-  const win = createSessionWindow(Number(payload?.slot), String(payload?.title ?? ""))
+  // cwd 携行（会话窗 cwd 钉扎批 · 2026-10-17）：开窗时点项目钉在窗上（`win._swinCwd`）——窗域动作按发窗解析。
+  const win = createSessionWindow(Number(payload?.slot), String(payload?.title ?? ""), typeof payload?.cwd === "string" ? payload.cwd : null)
   return { ok: true, slot: Number(payload?.slot) }
+}
+/** 发窗 cwd 解析（会话窗 cwd 钉扎批 · 2026-10-17）：会话窗 ⇒ 开窗时点钉扎值；主窗 ∕ 缺 ⇒ `null`
+ *  （调用面回退 `currentCwd()`——主窗行为零改）。 */
+function cwdOf(ctx) {
+  const cwd = ctx?.senderWindow?._swinCwd
+  return typeof cwd === "string" && cwd !== "" ? cwd : null
 }
 function sessionArchive(payload) {
   // 右键全项目化（2026-10-13）：载荷携行 cwd（跨项目行可归档——与 rename ∕ delete ∕ unarchive 同形）；缺省回退当前项目。
@@ -215,8 +222,8 @@ async function sessionResume() {
  *  **模式位投影叠加（状态栏对齐批 · `docs/desktop/design/IPC.md` §2「模式位投影注」· 合并口径）**：agent 在场
  *  ⇒ 以**活值**四布尔（宿主 `flagsOf`）置顶（转口读面已携槽投影兜底值 —— `session-slots.mjs` `slotFlags`）；
  *  agent 不在场 ⇒ 槽投影照旧（键仍在场）；槽读不出（失败回执）⇒ 无 `flags` 键（零写 —— 禁假造）。 */
-function historyPage(payload) {
-  const receipt = pageHistory(currentCwd(), payload)
+function historyPage(payload, ctx) {
+  const receipt = pageHistory(cwdOf(ctx) ?? currentCwd(), payload)
   const live = receipt?.ok === true && agentHost ? agentHost.flagsOf(payload?.key) : null
   const merged = receipt?.ok === true ? { ...receipt, queue: agentHost ? agentHost.queueSnapshot(payload?.key) : [] } : receipt
   return live === null ? merged : { ...merged, flags: live }
@@ -224,7 +231,7 @@ function historyPage(payload) {
 
 /** `session:prefs(payload)` ⇒ 族信封 + `meta`（成功携 · 失败缺键）：载荷 `{ key, patch }`（键闭集
  *  `provider` / `model` / `effort`）—— 转口宿主写面（KD-19 单点：写盘 → 重施；`reason` 四档在动作侧（`busy` 随 2026-10-04 解锁批退役））。 */
-function sessionPrefs(payload) { return requireAgentHost().setPrefs(payload?.key, payload?.patch) }
+function sessionPrefs(payload, ctx) { return requireAgentHost().setPrefs(payload?.key, payload?.patch, cwdOf(ctx)) }
 
 /** `msg:send(payload)` ⇒ `{ ok:true }`（**立即回** —— 过程走 `ev:*` 出站；**例外 = 非视觉带图径**：降级窗内读图毕
  *  再回 —— `IPC.md` §2「附件注」项 4）∥ `{ ok:true, degraded }`（附件弃项两态 —— `IPC.md` §2「附件注」项 5）
@@ -236,7 +243,7 @@ function sessionPrefs(payload) { return requireAgentHost().setPrefs(payload?.key
  *  **#841（「provider 态投影注」）**：成功回执另携 `providerState`（发送时点刷新 —— 第二刷新点；供面 =
  *  `turn-input.mjs`）；失败径零叠加；第三刷新点 = 设置写回执（`settings:agent` ∥ `provider:save` ——
  *  处理体住 `settings.mjs` ∥ `providers.mjs`，同携 `providerState`）。 */
-function msgSend(payload) { return requireAgentHost().send(payload?.key, payload?.text, payload?.images) }
+function msgSend(payload, ctx) { return requireAgentHost().send(payload?.key, payload?.text, payload?.images, cwdOf(ctx)) }
 
 /** `msg:interrupt(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason }`（`idle` / `bad-key` / `queue-full`〔#656 · KD-52 ②：
  *  cap 询问待答 ∧ 携文 ∧ 忙态队满——**零中止 ∕ 零入队**（询问在场 ∕ 回合照旧）；文本由端侧回注输入框〕）：
@@ -308,12 +315,12 @@ function liveAgents() {
  *  —— 转口宿主模式位写面（处理体出档 `session-flags.mjs`：核 `setSlot*` 四写 + 活代理重施 + ENG×PLAN 互斥；
  *  成功径 `flags` = `flagsOf` 活值，agent 不在场 ⇒ 键缺席）。宿主未注入 ⇒ fail-loud 直抛
  *  （沿 `session:prefs` ∕ `approval:respond` 先例）。 */
-function sessionFlags(payload) { return requireAgentHost().setFlags(payload?.key, payload?.patch) }
+function sessionFlags(payload, ctx) { return requireAgentHost().setFlags(payload?.key, payload?.patch, cwdOf(ctx)) }
 
 /** `at:complete(payload)` ⇒ `{ ok, matches, seq }`（R1 输入面板移植）：载荷 `{ query, seq }` —— 转口宿主
  *  @ 补全（处理体出档 `at-complete.mjs`：项目树枚举过滤，排除面 ∕ 封顶照 VSC；**`seq` 原样回携** ——
  *  迟到丢弃 = 消费面判据）。宿主未注入 ⇒ fail-loud 直抛。 */
-function atComplete(payload) { return requireAgentHost().atComplete(payload?.query, payload?.seq) }
+function atComplete(payload, ctx) { return requireAgentHost().atComplete(payload?.query, payload?.seq, cwdOf(ctx)) }
 
 /** `record:append(payload)` ⇒ `{ ok, reason }`（**留档记录追加** —— 消化面留档批 · #719）：载荷 `{ key, record }`
  *  —— 转口宿主记录面（处理体住 `agent-host.mjs`：装配表命中门 + `appendRecord`；reason 闭集 = `bad-key` ∥

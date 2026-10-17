@@ -675,8 +675,9 @@ function openSessionMenu(pane, handlers, { key, title, x, y, cwd = null, isCurre
     menuEl.append(item(pinned ? t("sidebar.unpin") : t("sidebar.pin"), "", () => { handlers.onTogglePin?.(cwd, key) }))
   }
   if (isCurrent && typeof handlers.onOpenWindow === "function") {
-    // 在独立窗口打开（当前项目行 · v1 限当前项目——跨项目开窗需 agent 装配键化，挂账 SHORTCUTS-PLAN 同族档）
-    menuEl.append(item(t("sidebar.openWindow"), "", () => { void handlers.onOpenWindow?.(key, title) }))
+    // 在独立窗口打开（当前项目行 · v1 限当前项目——跨项目开窗需 agent 装配键化，挂账 SHORTCUTS-PLAN 同族档）。
+    // cwd 携行（会话窗 cwd 钉扎批 · 2026-10-17）：开窗时点项目钉主侧窗上——主窗后切项目不漂移。
+    menuEl.append(item(t("sidebar.openWindow"), "", () => { void handlers.onOpenWindow?.(key, title, cwd) }))
   }
   menuEl.append(item(t("sidebar.rename"), "", () => startRename(pane, handlers, { key, title, cwd })))
   if (typeof handlers.onArchive === "function") {

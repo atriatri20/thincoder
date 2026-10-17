@@ -188,8 +188,10 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
    *  `loadAgentSlot` 命中本键渠条目）⇒ 清两标 ⇒ 本次发送放行；槽无效 ⇒ 标照旧（下一径拦）。
    *  **MCP 警告消费（KD-70）**：装配尾入队 —— 装载后（`applySession` 重设 `_pendingReminders`）∥ 装配一次
    *  推送一次（同 key 复用不重推）；词面 = `agent-assemble.mjs` `mcpWarningReminder`（首两段逐字同 CLI）。 */
-  async function assembleAndLoad(key, slot) {
-    const cwd = projects.currentCwd()
+  async function assembleAndLoad(key, slot, cwdOverride) {
+    // cwd 源（会话窗 cwd 钉扎 · 2026-10-17）：显式（发窗钉扎）优先——主窗单指针漂移后窗域装配不得跨项目解析
+    //（错项目装配 = 读错会话档 + 用量误归属，双毒）。
+    const cwd = typeof cwdOverride === "string" && cwdOverride !== "" ? cwdOverride : projects.currentCwd()
     const agent = await assemble({ cwd, slot, key, deps })
     agent._usageCwd = cwd // 用量台账归属固化（2026-10-06 —— 装配时点快照，防切项目后回合尾误归属）
     loadAgentSlot(agent, cwd, slot)
@@ -205,9 +207,9 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     return agent
   }
 
-  async function ensure(key, slot) {
+  async function ensure(key, slot, cwdOverride) {
     if (agents.has(key)) return agents.get(key)
-    if (!ensuring.has(key)) ensuring.set(key, assembleAndLoad(key, slot))
+    if (!ensuring.has(key)) ensuring.set(key, assembleAndLoad(key, slot, cwdOverride))
     const pending = ensuring.get(key)
     try {
       const agent = await pending
@@ -243,8 +245,8 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
    *  `ok:true`——本会话已生效）+ `console.error` 记错（零静默）⇒ 回执**叠加失败码** `carryover:
    *  { ok:false, reason }`（#1121 修③——渲染面据该键出同一条失败行；`providerState` 仍缺席）；
    *  写回成功 ⇒ 回执另携 `providerState`（写后核读——第四刷新点；键缺席 ⇒ 渲染面零写）。 */
-  function setPrefs(key, patch) {
-    const cwd = projects?.currentCwd()
+  function setPrefs(key, patch, cwdOverride) {
+    const cwd = typeof cwdOverride === "string" && cwdOverride !== "" ? cwdOverride : projects?.currentCwd()
     const slot = slotOfKey(key)
     const fail = (reason) => ({ ok: false, reason, cwd: typeof cwd === "string" ? cwd : null, slot: null })
     if (slot === null) return fail("bad-key")

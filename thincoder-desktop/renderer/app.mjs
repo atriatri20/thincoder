@@ -95,7 +95,7 @@ attachSidebar({
   onDelete: deleteSession,
   // 会话归档（fork · 2026-10-06）：⋯ 菜单「归档」+ 归档视图（入口钮 ∕ 恢复 ∕ 删除 ∕ 开归档会话）。
   onArchive: (key, cwd) => archiveSession(key, cwd), // 右键全项目化（2026-10-13）：携行 cwd
-  onOpenWindow: (key, title) => void openInWindow(key, title), // 在独立窗口打开（当前项目行 · 2026-10-13）
+  onOpenWindow: (key, title, cwd) => void openInWindow(key, title, cwd), // 在独立窗口打开（当前项目行 · 2026-10-13）；cwd 携行钉主侧窗上
   onUnarchive: unarchiveSession,
   // 归档会话点击 = 当前项目直接切会话；非当前项目先切项目上下文（openDir 接续该项目活跃会话）。
   onOpenArchived: (key, cwd) => {

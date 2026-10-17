@@ -337,7 +337,7 @@ export function createWindow(onError) {
  *  侧栏 ∕ 会话选择 ∕ 新建 ∕ Header 菜单钮）。**不占 `activeWin`**（主窗保持菜单 ∕ `refreshMenu` 焦点目标；
  *  应用级菜单加速键对全窗生效）；事件出站广播化（main.mjs `emit` ⇒ 全窗口）⇒ 本窗照收本会话流
  *  （渲染端按 activeSession 自滤）。关窗不杀回合（agent 宿主按会话键存活——主窗列表照常）。 */
-export function createSessionWindow(slot, title) {
+export function createSessionWindow(slot, title, cwd = null) {
   const win = new BrowserWindow({
     width: 1080, height: 720, minWidth: 640, minHeight: 480,
     backgroundColor: THEME_COLORS[resolveTheme()],
@@ -347,6 +347,10 @@ export function createSessionWindow(slot, title) {
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: PRELOAD_PATH,
       backgroundThrottling: false },
   })
+  // cwd 钉扎（会话窗 cwd 钉扎批 · 2026-10-17）：窗域会话动作（prefs ∕ flags ∕ send ∕ history ∕ @ 补全）的
+  // cwd = 开窗时点项目——主窗单指针（`projects.currentCwd()`）随主窗切项目漂移，窗域动作按指针解析会跨项目
+  // 读写（同号槽 = 静默写错会话；无槽 = `slot-missing`——用户实测「切模型不生效」）。IPC 边界按发窗取 `_swinCwd`。
+  win._swinCwd = typeof cwd === "string" && cwd !== "" ? cwd : null
   bindWindowStatePush(win) // 自绘三钮图标随态（会话窗同款 Header——窗口控制钮在本窗自绘）
   win.webContents.on("context-menu", (_event, params) => {
     let labels

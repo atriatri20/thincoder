@@ -61,10 +61,11 @@ async function findMatches(cwd, pattern) {
 export function createAtComplete({ projects } = {}) {
   /** `atComplete(query, seq)` ⇒ `{ ok, matches, seq }`：`query` 非串 ⇒ 按空 pattern；未开项目（cwd 无源）⇒
    *  空候选（无项目无枚举对象 —— 回执形不缺 ∕ 零假造）。 */
-  async function atComplete(query, seq) {
+  async function atComplete(query, seq, cwdOverride) {
     const raw = typeof query === "string" ? query : ""
     const pattern = raw.startsWith("@") ? raw.slice(1) : raw
-    const cwd = projects?.currentCwd()
+    // cwd 源（会话窗 cwd 钉扎 · 2026-10-17）：显式（发窗钉扎）优先——同 `setPrefs` 判。
+    const cwd = typeof cwdOverride === "string" && cwdOverride !== "" ? cwdOverride : projects?.currentCwd()
     const receipt = (matches) => ({ ok: true, matches, seq: seq ?? null })
     if (pattern === "" || typeof cwd !== "string" || cwd === "") return receipt([])
     return receipt(await findMatches(cwd, pattern))

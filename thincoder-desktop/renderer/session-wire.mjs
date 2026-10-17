@@ -198,10 +198,12 @@ export function openSessionLocal(key) {
   return true
 }
 
-/** 在独立窗口打开（会话行右键 · 当前项目行）：`session:openWindow` ⇒ 主侧建会话窗（`?swin=<slot>`）。 */
-export async function openInWindow(key, title = "") {
+/** 在独立窗口打开（会话行右键 · 当前项目行）：`session:openWindow` ⇒ 主侧建会话窗（`?swin=<slot>`）。
+ *  cwd 携行（会话窗 cwd 钉扎批 · 2026-10-17）：行所属项目钉主侧窗上（`win._swinCwd`）——窗域会话动作
+ *  （切模型 ∕ 档位 ∕ 发送 ∕ 历史 ∕ @ 补全）按发窗解析，主窗后切项目不漂移。 */
+export async function openInWindow(key, title = "", cwd = null) {
   try {
-    return await host.invoke("session:openWindow", { slot: slotOf(key), title })
+    return await host.invoke("session:openWindow", { slot: slotOf(key), title, ...(typeof cwd === "string" && cwd !== "" ? { cwd } : {}) })
   } catch (error) {
     console.error("[renderer] session:openWindow failed:", error)
     return false

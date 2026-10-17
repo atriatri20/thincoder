@@ -51,9 +51,11 @@ export function createTurnInput({ post, ensure, flights, queued, chain, suspensi
    *  弃项 ∕ 降级码经回执 `degraded` 浮出（零静默）；落盘件随三径结算在 `executeTurn` finally 清理
    *  （**先释放锁**再清理 —— 清理由本档自吞错，锁必释放）；**降级窗后复查在飞占位**（占位已摘 ⇒
    *  `aborted` 零起跑，落盘件随闸自清 —— 裁定 (i) · #515② 同不变量）。 */
-  async function send(key, text, images) {
+  async function send(key, text, images, cwdOverride) {
     const slot = slotOfKey(key)
     if (slot === null) return { ok: false, reason: "bad-key" }
+    // cwd 源（会话窗 cwd 钉扎 · 2026-10-17）：显式（发窗钉扎）优先——主窗单指针漂移后窗域动作不得跨项目解析。
+    const cwd = typeof cwdOverride === "string" && cwdOverride !== "" ? cwdOverride : projects?.currentCwd()
     if (suspension.active(key)) { // 挂起窗口头（KD-34）：窗内输入 ⇒ 驱动器队列 + 唤醒（用户输入优先序沿核件）
       const routed = suspension.pushInput(key, String(text ?? ""), images) // 三态：受理 ∕ "full"（#625 容量拒）∕ false（未入窗）
       if (routed === "full") return { ok: false, reason: "queue-full" } // 同忙态径码（渲染面失败径承接）
@@ -77,7 +79,7 @@ export function createTurnInput({ post, ensure, flights, queued, chain, suspensi
     }
     let agent = null
     try {
-      agent = await ensure(key, slot)
+      agent = await ensure(key, slot, cwd)
     } catch (err) {
       release() // 装配抛先摘本键在飞（否则本键永锁 `busy`）——非吞回执：原文案随 `reason` 浮出（渲染面据 `started:false` 清位）
       return { ok: false, reason: String(err?.message ?? err), started: false }
@@ -92,12 +94,12 @@ export function createTurnInput({ post, ensure, flights, queued, chain, suspensi
     // 附件装配（项 1–4）：文本 / 路径 / 弃项 / 降级码四件——`cwd` = 项目根、`model` = 本回合实跑模型、
     // `locale` = 装配实例配置（`createAgent` 存本 —— 零二次 `loadConfig`），非视觉说明词面随之就地定局。
     let attached = prepareTurnAttachments(text, images, {
-      cwd: projects?.currentCwd(), model: agent.provider?.model, locale: agent.config?.locale,
+      cwd, model: agent.provider?.model, locale: agent.config?.locale,
     })
     // 非视觉降级窗（W2 · §2.2 径①）：占位仍在（`release` 前 —— 降级窗内 `flights` 占位在）⇒ 窗内 `interrupt`
     // 命中本占位 ⇒ 降级信号 abort（读图 fail-fast）；成功 = 描述注文 ∕ 失败 = 说明行（`degraded` 随回执浮出）。
     attached = await degradeTurnAttachments(attached, {
-      model: agent.provider?.model, cwd: projects?.currentCwd(), parentAgent: agent, locale: agent.config?.locale,
+      model: agent.provider?.model, cwd, parentAgent: agent, locale: agent.config?.locale,
       signal: controller.signal,
     })
     // 窗后查位（裁定 (i) · #515② 同不变量）：降级窗内 `dispose` ∕ 切项目级联 ⇒ 占位已摘 ⇒ 零起跑

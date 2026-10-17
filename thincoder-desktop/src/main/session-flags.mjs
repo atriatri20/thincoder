@@ -60,12 +60,13 @@ export function createSessionFlags({ agents, projects, post, flagsOf } = {}) {
 
   /** `setFlags(key, patch)` ⇒ `{ ok:true, flags? }` ∥ `{ ok:false, reason }`（reason 闭集 = `bad-key` ∕
    *  `invalid-patch` ∕ `slot-missing` ∕ `apply-failed`）。判序 = 键 → 载荷 → cwd 源 → 逐键写 → 重施 → 回执。 */
-  function setFlags(key, patch) {
+  function setFlags(key, patch, cwdOverride) {
     const slot = slotOfKey(key)
     if (slot === null) return fail("bad-key")
     const bad = patchFailure(patch)
     if (bad !== null) return fail(bad) // 零写（未触盘）
-    const cwd = projects?.currentCwd()
+    // cwd 源（会话窗 cwd 钉扎 · 2026-10-17）：显式（发窗钉扎）优先——同 `setPrefs` 判。
+    const cwd = typeof cwdOverride === "string" && cwdOverride !== "" ? cwdOverride : projects?.currentCwd()
     if (typeof cwd !== "string" || cwd === "") return fail("slot-missing") // 零写（未触盘）
 
     for (const field of FLAG_KEYS) {
