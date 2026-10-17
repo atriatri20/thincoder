@@ -169,6 +169,12 @@ ${item.usageShort}` : item.title,
     },
     children: [
       { tag: "span", props: { class: "sidebar-item-title" }, children: [item.title] },
+      isSlotPinned(opts.cwd, item.key)
+        ? { tag: "span", props: { class: "pin-ico sidebar-item-pin", "aria-hidden": "true" }, children: [] }
+        : null,
+      opts.projTag
+        ? { tag: "span", props: { class: "sidebar-item-proj" }, children: [opts.projTag] }
+        : null,
       item.badge
         ? { tag: "span", props: { class: "sidebar-item-badge" }, children: [item.badge] }
         : null,
@@ -467,6 +473,9 @@ function sessionsTree(model, handlers) {
     })
     return parts
   }
+  // 已置顶节（2026-10-13 · 用户裁定「置顶独立于所有项目」——ZCode `WorkspacePinnedTasksSection` 同形）：
+  // pinned 会话**从项目组移出**，顶部独立一节跨项目陈列（行携项目名标注 ∕ 行 cwd——动作照常）；取消置顶即回原组。
+  const pinnedRows = []
   let any = false
   for (const project of projects) {
     const sessions = project.sessions
@@ -474,14 +483,34 @@ function sessionsTree(model, handlers) {
       .filter((s) => matched(s.display) || matched(project.cwd))
       .map((s) => ({ ...s, born: bornOf(slotBorn, SLOT_BORN_KEY, `${project.cwd}::${s.slot}`, s.updatedAt) }))
       .sort((a, b) => b.born - a.born)
-      // 置顶优先（2026-10-13 · 用户对照 ZCode「置顶任务」）：组内浮顶，稳定序保持出生序（Array.sort 稳定）。
-      .sort((a, b) => (isSlotPinned(project.cwd, b.slot) ? 1 : 0) - (isSlotPinned(project.cwd, a.slot) ? 1 : 0))
-    if (filter !== "" && sessions.length === 0) continue
+    const loose = sessions.filter((s) => !isSlotPinned(project.cwd, s.slot))
+    for (const s of sessions) {
+      if (isSlotPinned(project.cwd, s.slot)) pinnedRows.push({ ...s, cwd: project.cwd, isCurrent: project.isCurrent, proj: baseName(project.cwd) })
+    }
+    if (filter !== "" && loose.length === 0 && sessions.length === loose.length) continue
+    if (filter !== "" && loose.length === 0 && pinnedRows.some((r) => r.cwd === project.cwd)) continue
     any = true
     const collapsed = collapsedProjects.has(project.cwd)
     parts.push(projectRowNode(project, handlers))
     if (collapsed) continue
-    parts.push(...sessions.map((s) => sessionItemNode({ key: s.slot, title: s.display, badge: null, time: s.time, usageShort: s.usageShort ?? null }, handlers, { cwd: project.cwd, isCurrentProject: project.isCurrent })))
+    parts.push(...loose.map((s) => sessionItemNode({ key: s.slot, title: s.display, badge: null, time: s.time, usageShort: s.usageShort ?? null }, handlers, { cwd: project.cwd, isCurrentProject: project.isCurrent })))
+  }
+  if (pinnedRows.length > 0) {
+    // 整块置顶节（头 + 行）**按序**插顶 —— 先行后头再整块 unshift（顺序反了 = 头落在行后，2026-10-13 修）。
+    const pinnedBlock = [
+      { tag: "div", props: { class: "sidebar-section-head sidebar-pinned-head" }, children: [
+        { tag: "span", props: { class: "pin-ico", "aria-hidden": "true" }, children: [] },
+        t("sidebar.pinned"),
+      ] },
+      ...pinnedRows
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .map((s) => {
+          const node = sessionItemNode({ key: s.slot, title: s.display, badge: null, time: s.time, usageShort: s.usageShort ?? null }, handlers, { cwd: s.cwd, isCurrentProject: s.isCurrent, projTag: s.proj })
+          node.props.class += " pinned"
+          return node
+        }),
+    ]
+    parts.unshift(...pinnedBlock)
   }
   if (!any) parts.push({ tag: "div", props: { class: "sidebar-empty-filter" }, children: [t("sidebar.empty")] })
   return parts

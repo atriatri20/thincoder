@@ -1585,3 +1585,17 @@ body.pool-collapsed .pool-collapse { left: 4px; }
 .sidebar-item:hover .sidebar-item-archive,
 .sidebar-item-archive:focus-visible { opacity: 1; }
 .sidebar-item-archive:hover { background: var(--hover-bg-strong); color: var(--fg); }
+
+/* 置顶节行：项目名标注（跨项目陈列可辨属——沿归档行项目标注族） */
+.sidebar-item-proj { font-size: 11px; color: var(--fg-muted); flex: none; }
+.sidebar-item.pinned .sidebar-item-title { font-weight: 500; }
+
+/* 置顶图标（ZCode 同源 lucide Pin · SVG mask currentColor——非字符字形） */
+.pin-ico {
+  display: inline-block; width: 12px; height: 12px; flex: none;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 17v5'/%3E%3Cpath d='M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 17v5'/%3E%3Cpath d='M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+.sidebar-pinned-head { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--fg); }
+.sidebar-item-pin { width: 11px; height: 11px; margin-left: 6px; opacity: 0.75; }

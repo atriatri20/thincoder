@@ -46,7 +46,9 @@ test("③ 置顶态：模块集 ∕ 持久 ∕ 组内浮顶 ∕ 行标记", () =
   assert.ok(src.includes('const SLOT_PINNED_KEY = "thincoder.slots.pinned"'), "localStorage 键")
   assert.ok(src.includes("function isSlotPinned(cwd, slot)"), "判读函数")
   assert.ok(src.includes("function toggleSlotPinned(cwd, slot)"), "切换函数")
-  assert.ok(src.includes("isSlotPinned(project.cwd, b.slot) ? 1 : 0"), "组内浮顶排序（稳定序保出生序）")
+  assert.ok(src.includes("pinnedRows.push"), "置顶会话收集（跨项目）")
+  assert.ok(src.includes('parts.unshift'), "已置顶节顶部独立陈列（用户裁定：独立于所有项目）")
+  assert.ok(src.includes('isSlotPinned(project.cwd, s.slot)'), "项目组排除置顶件（移出语义，非复制）")
   assert.ok(src.includes('isSlotPinned(opts.cwd, item.key) ? " pinned"'), "行标记类")
 })
 
