@@ -1618,7 +1618,7 @@ body.pool-collapsed .pool-collapse { left: 4px; }
    窗即会话）。侧栏 ∕ 活动池 ∕ 会话选择 ∕ 新建 ∕ Header 五菜单钮全隐；保留 品牌 ∕ 会话标题 ∕
    窗口控制钮 ∕ 对话流 ∕ 输入区 ∕ 状态行。 */
 body.session-window .app { grid-template-columns: minmax(0, 1fr); }
-body.session-window.pool-open .app { grid-template-columns: minmax(0, 1fr) clamp(16rem, 26rem); }
+body.session-window.pool-open .app { grid-template-columns: minmax(0, 1fr) clamp(16rem, 30vw, 26rem); }
 body.session-window [data-slot="sidebar"],
 body.session-window [data-slot="pool"],
 body.session-window [data-pool-collapse],
