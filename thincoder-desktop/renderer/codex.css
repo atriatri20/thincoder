@@ -1599,3 +1599,18 @@ body.pool-collapsed .pool-collapse { left: 4px; }
 }
 .sidebar-pinned-head { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--fg); }
 .sidebar-item-pin { width: 11px; height: 11px; margin-left: 6px; opacity: 0.75; }
+
+/* ── 会话窗模式（在独立窗口打开 · 2026-10-13）────────────────────────────────
+   `body.session-window` = 独立会话小窗（WorkBuddy 同形：无侧栏 ∕ 无会话切换 ∕ 无项目池——
+   窗即会话）。侧栏 ∕ 活动池 ∕ 会话选择 ∕ 新建 ∕ Header 五菜单钮全隐；保留 品牌 ∕ 会话标题 ∕
+   窗口控制钮 ∕ 对话流 ∕ 输入区 ∕ 状态行。 */
+body.session-window .app { grid-template-columns: minmax(0, 1fr); }
+body.session-window [data-slot="sidebar"],
+body.session-window [data-slot="pool"],
+body.session-window [data-pool-collapse],
+body.session-window .session-new,
+body.session-window .header-menu-btn { display: none !important; }
+/* 会话标题住 `.session-selector` 内 ⇒ 选择器**可见但禁点**（标题照显 ∕ 下拉不可开——窗即会话，无切换）；
+   箭头随禁点隐藏（免「可切换」暗示）。 */
+body.session-window .session-selector { pointer-events: none; }
+body.session-window .session-arrow { display: none !important; }
