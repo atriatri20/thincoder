@@ -159,14 +159,19 @@ function sessionArchived(payload) {
 function sessionCreate() { return createSession(currentCwd()) }
 function sessionSwitch(payload) { return switchSession(currentCwd(), payload?.slot) }
 function sessionRename(payload) {
-  const receipt = renameSession(currentCwd(), payload?.slot, payload?.title)
+  // 右键全项目化（2026-10-13）：载荷携行 cwd（非当前项目的会话改名）；缺省回退当前项目（同 delete ∕ unarchive 形）。
+  const cwd = typeof payload?.cwd === "string" && payload.cwd !== "" ? payload.cwd : currentCwd()
+  const receipt = renameSession(cwd, payload?.slot, payload?.title)
   // #525：成功径 ⇒ 已装配实例 `agent.title` 随动（否则回合尾 `saveSession` 全量覆盖把盘面新标题写回旧值）：
   if (receipt?.ok === true) agentHost?.syncTitle(payload?.slot, payload?.title)
   return receipt
 }
 /** `session:archive({ slot })`（归档软删除 · fork 2026-10-06）：转口动作层；**不 dispose 宿主**
  *  （归档保数据，异于删除——取消归档即原样回表；活动会话装配实例照活在表）。 */
-function sessionArchive(payload) { return archiveSession(currentCwd(), payload?.slot) } // 归档仅当前项目 ⋯ 菜单触发（跨项目行不可归档）
+function sessionArchive(payload) {
+  // 右键全项目化（2026-10-13）：载荷携行 cwd（跨项目行可归档——与 rename ∕ delete ∕ unarchive 同形）；缺省回退当前项目。
+  return archiveSession(typeof payload?.cwd === "string" && payload.cwd !== "" ? payload.cwd : currentCwd(), payload?.slot)
+}
 /** `session:unarchive({ slot, cwd? })`（取消归档回默认列表 · 归档视图行可属**非当前项目** ⇒
  *  渲染面传行 `cwd`，缺省回退当前项目）。 */
 function sessionUnarchive(payload) { return unarchiveSession(typeof payload?.cwd === "string" && payload.cwd !== "" ? payload.cwd : currentCwd(), payload?.slot) }

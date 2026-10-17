@@ -82,9 +82,10 @@ export async function refreshArchived() {
 
 /** 归档（fork · 2026-10-06 —— ⋯ 菜单出口）：`session:archive` 成功 ⇒ 刷 rail（本槽从默认列表消失）
  *  + 刷归档列（若视图开着）；失败 ⇒ 记错 + toast（沿 rename/delete 失败面 R9 同律）。 */
-export async function archiveSession(key) {
+export async function archiveSession(key, cwd = null) {
   try {
-    const receipt = await host.invoke("session:archive", { slot: slotOf(key) })
+    // 跨项目归档（2026-10-13 右键全项目化批）：传行 cwd（缺省 null = 当前项目，主侧回退 currentCwd）。
+    const receipt = await host.invoke("session:archive", { slot: slotOf(key), ...(typeof cwd === "string" && cwd !== "" ? { cwd } : {}) })
     if (receipt?.ok !== true) {
       console.error("[renderer] session:archive failed:", receipt?.reason, "slot:", key)
       showToast(t("session.archiveFailed", { reason: reasonOf(receipt) }))
@@ -224,9 +225,10 @@ export async function createSession() {
 /** 改名出口（下拉条目 ✎ 换形后的确认键 —— 通道既有）：`ok` 真 ⇒ 列表刷新（新标题可见）+ 回 `true`（面收形）；
  *  `ok:false`（核拒：`invalid-slot` ∕ `mtime-conflict` 等四值闭集直传）∕ 抛 ⇒ **零写零收形**（草稿不丢）+ 记错
  *  + **可见提示**（toast —— #556：对位 VSC `panel-messages-session.mjs:96` 改名失败提示；词面同 `session.openFailed` 族）。 */
-export async function confirmRename(key, text) {
+export async function confirmRename(key, text, cwd = null) {
   try {
-    const receipt = await host.invoke("session:rename", { slot: slotOf(key), title: text })
+    // 跨项目改名（2026-10-13 右键全项目化批）：传行 cwd（缺省 null = 当前项目，主侧回退 currentCwd）。
+    const receipt = await host.invoke("session:rename", { slot: slotOf(key), title: text, ...(typeof cwd === "string" && cwd !== "" ? { cwd } : {}) })
     if (receipt?.ok !== true) {
       console.error("[renderer] session:rename failed:", receipt?.reason, "slot:", key)
       showToast(t("session.renameFailed", { reason: reasonOf(receipt) })) // #556：失败面可见（回执拒径）

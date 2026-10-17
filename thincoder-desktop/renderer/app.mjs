@@ -91,10 +91,10 @@ attachSidebar({
   onNew: createSession,
   onOpenProject: (path) => openDir(path),
   onOpenSettings: () => settingsFace.openSettings(),
-  onRename: confirmRename, // 会话管理（右键菜单 · 2026-10-05）—— session-wire 单一实现转口
+  onRename: (key, text, cwd) => confirmRename(key, text, cwd), // 会话管理（右键菜单 · 2026-10-05）—— session-wire 单一实现转口；跨项目携行 cwd
   onDelete: deleteSession,
   // 会话归档（fork · 2026-10-06）：⋯ 菜单「归档」+ 归档视图（入口钮 ∕ 恢复 ∕ 删除 ∕ 开归档会话）。
-  onArchive: archiveSession,
+  onArchive: (key, cwd) => archiveSession(key, cwd), // 右键全项目化（2026-10-13）：携行 cwd
   onUnarchive: unarchiveSession,
   // 归档会话点击 = 当前项目直接切会话；非当前项目先切项目上下文（openDir 接续该项目活跃会话）。
   onOpenArchived: (key, cwd) => {

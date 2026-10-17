@@ -140,12 +140,12 @@ function groupKeyOf(ts) {
  *  cwd 取主进程当前项目）。`opts.cwd` = 所属项目路径；`opts.isCurrentProject` 缺省 = 当前项目。 */
 function sessionItemNode(item, handlers, opts = {}) {
   const isCurrentProject = opts.isCurrentProject !== false
-  const openMenuAt = (x, y) => handlers.onMenuOpen?.({ key: item.key, title: item.title, x, y })
+  const openMenuAt = (x, y) => handlers.onMenuOpen?.({ key: item.key, title: item.title, x, y, cwd: opts.cwd ?? null })
   const activate = () => (isCurrentProject ? handlers.onSwitch?.(item.key) : handlers.onOpenProject?.(opts.cwd))
   return {
     tag: "div",
     props: {
-      class: item.active === true ? "sidebar-item active" : "sidebar-item",
+      class: (item.active === true ? "sidebar-item active" : "sidebar-item") + (isSlotPinned(opts.cwd, item.key) ? " pinned" : ""),
       role: "button",
       tabindex: "0",
       "data-action": "sidebar:switch",
@@ -160,7 +160,9 @@ ${item.usageShort}` : item.title,
         }
       },
       onContextMenu: (event) => {
-        if (!isCurrentProject || typeof handlers.onMenuOpen !== "function") return
+        // 右键全项目化（2026-10-13 · 用户裁定）：动作携行 cwd（主侧转口缺省回退当前项目）——
+        // 重命名 ∕ 归档 ∕ 删除对任意项目的会话可用；非当前项目行**无行内钮**的旧门同步放开。
+        if (typeof handlers.onMenuOpen !== "function") return
         event.preventDefault()
         openMenuAt(event.clientX, event.clientY)
       },
@@ -176,7 +178,7 @@ ${item.usageShort}` : item.title,
       // 行内操作钮 = **仅归档**（2026-10-13 用户裁定 · ZCode `TaskListItem` 同形）：悬停时**时间让位**、
       // 归档钮就位（CSS 同排切换——`.sidebar-item:hover .sidebar-item-time { display:none }`）。
       // 重命名 ∕ 删除仍走右键菜单（`onContextMenu` 上行）；⋯ 全功能钮退场（用户「只保留归档功能」）。
-      isCurrentProject && typeof handlers.onArchive === "function"
+      typeof handlers.onArchive === "function"
         ? {
           tag: "button",
           props: {
@@ -186,7 +188,7 @@ ${item.usageShort}` : item.title,
             title: t("sidebar.archive"),
             onClick: (event) => {
               event.stopPropagation()
-              void handlers.onArchive?.(item.key)
+              void handlers.onArchive?.(item.key, opts.cwd ?? null) // 右键全项目化同批：携行 cwd
             },
           },
           children: [],
@@ -292,7 +294,42 @@ let hiddenProjects = new Set((() => {
   } catch { return [] }
 })())
 function persistHiddenProjects() {
-  try { globalThis.localStorage?.setItem(PROJECT_HIDDEN_KEY, JSON.stringify([...hiddenProjects])) } catch { /* fail-soft */ }
+  try { globalThis.localStorage?.setItem(PROJECT_HIDDEN_KEY, JSON.stringify([...hiddenProjects])) }
+  catch (e) { console.error("[sidebar] persist hidden projects failed:", e?.message ?? e) }
+}
+
+// 置顶会话集（2026-10-13 · 用户对照 ZCode「置顶任务」）：键 = `${cwd}::${slot}`（跨项目不撞号——
+// agent 装配表按项目级联清空 ∕ 侧栏树按项目分组，槽号跨项目重复无歧义）；localStorage 持久（同族）。
+const SLOT_PINNED_KEY = "thincoder.slots.pinned"
+let pinnedSlots = new Set((() => {
+  try {
+    const raw = globalThis.localStorage?.getItem(SLOT_PINNED_KEY)
+    const arr = raw ? JSON.parse(raw) : []
+    return Array.isArray(arr) ? new Set(arr.filter((x) => typeof x === "string" && x.includes("::"))) : new Set()
+  } catch {
+    return new Set()
+  }
+})())
+
+function persistPinnedSlots() {
+  try {
+    globalThis.localStorage?.setItem(SLOT_PINNED_KEY, JSON.stringify([...pinnedSlots]))
+  } catch (e) {
+    console.error("[sidebar] persist pinned slots failed:", e?.message ?? e)
+  }
+}
+
+const slotPinnedKey = (cwd, slot) => `${cwd ?? ""}::${slot ?? ""}`
+
+function isSlotPinned(cwd, slot) {
+  return pinnedSlots.has(slotPinnedKey(cwd, slot))
+}
+
+function toggleSlotPinned(cwd, slot) {
+  const k = slotPinnedKey(cwd, slot)
+  if (pinnedSlots.has(k)) pinnedSlots.delete(k)
+  else pinnedSlots.add(k)
+  persistPinnedSlots()
 }
 
 /** 解隐（app.mjs `openDir` 成功径调用）：打开 = 出席 ⇒ 从隐藏集移除（幂等——不在集 ⇒ 零写）。 */
@@ -437,6 +474,8 @@ function sessionsTree(model, handlers) {
       .filter((s) => matched(s.display) || matched(project.cwd))
       .map((s) => ({ ...s, born: bornOf(slotBorn, SLOT_BORN_KEY, `${project.cwd}::${s.slot}`, s.updatedAt) }))
       .sort((a, b) => b.born - a.born)
+      // 置顶优先（2026-10-13 · 用户对照 ZCode「置顶任务」）：组内浮顶，稳定序保持出生序（Array.sort 稳定）。
+      .sort((a, b) => (isSlotPinned(project.cwd, b.slot) ? 1 : 0) - (isSlotPinned(project.cwd, a.slot) ? 1 : 0))
     if (filter !== "" && sessions.length === 0) continue
     any = true
     const collapsed = collapsedProjects.has(project.cwd)
@@ -585,7 +624,7 @@ function closeMenu() {
 }
 
 /** 右键菜单（重命名 ∕ 删除；定位贴光标 + 视口夹取）。 */
-function openSessionMenu(pane, handlers, { key, title, x, y }) {
+function openSessionMenu(pane, handlers, { key, title, x, y, cwd = null }) {
   closeMenu()
   menuEl = document.createElement("div")
   menuEl.className = "sidebar-menu"
@@ -600,11 +639,17 @@ function openSessionMenu(pane, handlers, { key, title, x, y }) {
     })
     return button
   }
-  menuEl.append(item(t("sidebar.rename"), "", () => startRename(pane, handlers, { key, title })))
-  if (typeof handlers.onArchive === "function") {
-    menuEl.append(item(t("sidebar.archive"), "", () => { void handlers.onArchive?.(key) }))
+  // 置顶（2026-10-13 · 用户对照 ZCode「置顶任务」）：组内首置——态住本档模块集（localStorage 持久，
+  // 与 `hiddenProjects` ∕ `slotBorn` 同族）；行面标记 = `.sidebar-item.pinned`。
+  const pinned = isSlotPinned(cwd, key)
+  if (typeof handlers.onTogglePin === "function") {
+    menuEl.append(item(pinned ? t("sidebar.unpin") : t("sidebar.pin"), "", () => { handlers.onTogglePin?.(cwd, key) }))
   }
-  menuEl.append(item(t("sidebar.delete"), "danger", () => confirmDelete(pane, handlers, { key, title })))
+  menuEl.append(item(t("sidebar.rename"), "", () => startRename(pane, handlers, { key, title, cwd })))
+  if (typeof handlers.onArchive === "function") {
+    menuEl.append(item(t("sidebar.archive"), "", () => { void handlers.onArchive?.(key, cwd) }))
+  }
+  menuEl.append(item(t("sidebar.delete"), "danger", () => confirmDelete(pane, handlers, { key, title, cwd })))
   document.body.append(menuEl)
   const rect = menuEl.getBoundingClientRect()
   menuEl.style.left = `${Math.max(8, Math.min(x, window.innerWidth - rect.width - 8))}px`
@@ -625,7 +670,7 @@ function bindMenuDismiss() {
 
 /** 行内改名形（条目原位换形 —— 沿 session-list 改名形同律）：Enter 提交 ∕ Esc 取消 ∕ 两枚小键；
  *  成功 ⇒ refreshRail（session-wire 内）→ 边栏重绘自收形；失败 ⇒ 形保留（草稿不丢，toast 已由 wire 出）。 */
-function startRename(pane, handlers, { key, title }) {
+function startRename(pane, handlers, { key, title, cwd = null }) {
   const host = document.querySelector(SIDEBAR_SLOT)
   const itemButton = host?.querySelector(`.sidebar-item[data-key="${CSS.escape(key)}"]`) ?? null
   if (itemButton === null) return
@@ -642,7 +687,7 @@ function startRename(pane, handlers, { key, title }) {
       itemButton.style.display = ""
       return
     }
-    void Promise.resolve(handlers.onRename?.(key, value)).then((okFlag) => {
+    void Promise.resolve(handlers.onRename?.(key, value, cwd)).then((okFlag) => {
       if (okFlag !== true) return
       form.remove()
       itemButton.style.display = ""
@@ -723,6 +768,12 @@ export function attachSidebar(handlers = {}) {
       if (typeof cwd !== "string" || cwd === "") return
       hiddenProjects.add(cwd)
       persistHiddenProjects()
+      paintSidebarFace()
+    },
+    // 置顶切换（2026-10-13 · 用户对照 ZCode「置顶任务」）：态住本档模块集（localStorage）——渲染期
+    // `sessionsTree` 组内置顶排序；就地重绘沿 onRemoveProject 先例。
+    onTogglePin: (cwd, slot) => {
+      toggleSlotPinned(typeof cwd === "string" ? cwd : null, slot)
       paintSidebarFace()
     },
   }
