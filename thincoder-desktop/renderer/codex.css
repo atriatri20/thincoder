@@ -1270,6 +1270,9 @@ select optgroup::before { color: var(--fg-muted); font-weight: 500; }
   color: var(--fg-muted);
   font: 12px/1 var(--font);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .pool-collapse::before { content: "»"; }
 .pool-collapse:hover { color: var(--fg); border-color: color-mix(in srgb, var(--fg) 30%, transparent); }
