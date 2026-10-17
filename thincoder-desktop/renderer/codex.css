@@ -1626,7 +1626,7 @@ body.session-window [data-slot="sidebar"],
 body.session-window [data-slot="pool"],
 body.session-window .session-new,
 body.session-window .header-menu-btn { display: none !important; }
-body.session-window.pool-open [data-slot="pool"] { display: flex !important; } /* 池 = 顶部图标开关（WorkBuddy 同形 · 2026-10-13） */
+body.session-window.pool-open:not(.pool-collapsed) [data-slot="pool"] { display: block !important; } /* 池 = 顶部图标开关（WorkBuddy 同形 · 2026-10-13）；重显 = 宿主缺省 block（flex 会把头 ∕ 块族横排拆列——头不坐顶）；收轨态让位 `body.pool-collapsed` 的 none */
 body.session-window.pool-open.pool-collapsed .app { grid-template-columns: minmax(0, 1fr) 30px; }
 body.session-window.pool-open [data-pool-collapse] { display: inline-flex !important; } /* 折叠把手随池显（收成 30px 轨） */
 /* 会话标题住 `.session-selector` 内 ⇒ 选择器**可见但禁点**（标题照显 ∕ 下拉不可开——窗即会话，无切换）；
