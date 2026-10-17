@@ -36,7 +36,7 @@ import { archivedSessions, listSessions, catalogSessions } from "./sessions.mjs"
 import {
   archiveSession, createSession, deleteSession, renameSession, resumeSession, switchSession, unarchiveSession,
 } from "./session-actions.mjs"
-import { pageHistory, scheduleSessionGC } from "./session-slots.mjs"
+import { pageHistory, scheduleSessionGC, hostKeyOf } from "./session-slots.mjs"
 // 设置族 ∕ 索引面 ∕ 台账相位 ∕ 配置写的处理体转口群随 #685 出档 `ipc-relays.mjs`（本档只取核心面值件）。
 import { isConfigured } from "./settings.mjs"
 import { pushLedgerLines } from "./project-info.mjs"
@@ -133,10 +133,12 @@ function recentProjects() {
   return { cwd: currentCwd(), recent: recentDirs() }
 }
 
-/** `sessions:list`（无入参）⇒ `{ cwd, sessions }`：`cwd` 取主进程当前项目内存态；读面转口 `sessions.mjs`（零算法副本）。
+/** `sessions:list`（无入参）⇒ `{ cwd, sessions }`：cwd = 发窗解析（会话窗 = 钉扎 `_swinCwd`——窗内 rail ∕
+ *  选择器标题须按**本窗会话**出，主窗指针列表对跨项目窗是错源（标题回退成主窗当前会话——用户实测）；
+ *  主窗 ∕ 缺 ctx ⇒ 当前项目，行为零改）；读面转口 `sessions.mjs`（零算法副本）。
  *  **A8 键名收正 = handler 重映射（源档零改）**：出站键 `rows ⇒ sessions`（VSC 回执键同形 —— `panel-session.mjs:262`）。 */
-function sessionList() {
-  const { rows, ...receipt } = listSessions(currentCwd())
+function sessionList(payload, ctx) {
+  const { rows, ...receipt } = listSessions(cwdOf(ctx) ?? currentCwd())
   return { ...receipt, sessions: rows }
 }
 
@@ -163,7 +165,8 @@ function sessionRename(payload) {
   const cwd = typeof payload?.cwd === "string" && payload.cwd !== "" ? payload.cwd : currentCwd()
   const receipt = renameSession(cwd, payload?.slot, payload?.title)
   // #525：成功径 ⇒ 已装配实例 `agent.title` 随动（否则回合尾 `saveSession` 全量覆盖把盘面新标题写回旧值）：
-  if (receipt?.ok === true) agentHost?.syncTitle(payload?.slot, payload?.title)
+  // 装配键化（2026-10-17）——agents 表按限定键，改名携行 cwd ⇒ 同键查表（查不中 ⇒ 零动作，语义不变）。
+  if (receipt?.ok === true) agentHost?.syncTitle(hostKeyOf(cwd, payload?.slot ?? "") ?? payload?.slot, payload?.title)
   return receipt
 }
 /** `session:archive({ slot })`（归档软删除 · fork 2026-10-06）：转口动作层；**不 dispose 宿主**
@@ -195,7 +198,7 @@ function sessionDelete(payload) {
   const receipt = deleteSession(typeof payload?.cwd === "string" && payload.cwd !== "" ? payload.cwd : currentCwd(), payload?.slot)
   // R3b（D20 数据链「会话关闭 / 删除 / 宿主退出 ⇒ 该键投影清」）：删除成功 ⇒ 装配实例出表（宿主 `dispose`
   //  ⇒ 存活投影**清点**：已删会话不随 2s 拍重投）；未装配宿主 / 零键 ⇒ 软跳过（零抛 —— 删除面不受累）。
-  if (receipt?.ok === true && payload?.slot != null) agentHost?.dispose(String(payload.slot))
+  if (receipt?.ok === true && payload?.slot != null) agentHost?.dispose(hostKeyOf(typeof payload?.cwd === "string" && payload.cwd !== "" ? payload.cwd : currentCwd(), String(payload.slot)) ?? String(payload.slot))
   return receipt
 }
 async function sessionResume() {
@@ -224,14 +227,23 @@ async function sessionResume() {
  *  agent 不在场 ⇒ 槽投影照旧（键仍在场）；槽读不出（失败回执）⇒ 无 `flags` 键（零写 —— 禁假造）。 */
 function historyPage(payload, ctx) {
   const receipt = pageHistory(cwdOf(ctx) ?? currentCwd(), payload)
-  const live = receipt?.ok === true && agentHost ? agentHost.flagsOf(payload?.key) : null
-  const merged = receipt?.ok === true ? { ...receipt, queue: agentHost ? agentHost.queueSnapshot(payload?.key) : [] } : receipt
+  const hk = hostKey(ctx, payload?.key)
+  const live = receipt?.ok === true && agentHost ? agentHost.flagsOf(hk) : null
+  const merged = receipt?.ok === true ? { ...receipt, queue: agentHost ? agentHost.queueSnapshot(hk) : [] } : receipt
   return live === null ? merged : { ...merged, flags: live }
+}
+
+/** 发窗宿主键（装配键化 · 2026-10-17）：`cwdOf(ctx)`（会话窗钉扎 ∕ 主窗指针）+ 载荷键 ⇒ `${cwd}::${slot}`
+ *  ——宿主内各表（agents ∕ flights ∕ 队 ∕ 挂起 ∕ 面板回读）按键分域，跨项目同号槽不碰撞；
+ *  cwd 无源 ∕ 坏键 ⇒ 原键（回退纯槽号形 = 既有单指针语义）。 */
+function hostKey(ctx, key) {
+  const hk = hostKeyOf(cwdOf(ctx) ?? currentCwd(), key)
+  return hk ?? (typeof key === "string" ? key : null)
 }
 
 /** `session:prefs(payload)` ⇒ 族信封 + `meta`（成功携 · 失败缺键）：载荷 `{ key, patch }`（键闭集
  *  `provider` / `model` / `effort`）—— 转口宿主写面（KD-19 单点：写盘 → 重施；`reason` 四档在动作侧（`busy` 随 2026-10-04 解锁批退役））。 */
-function sessionPrefs(payload, ctx) { return requireAgentHost().setPrefs(payload?.key, payload?.patch, cwdOf(ctx)) }
+function sessionPrefs(payload, ctx) { return requireAgentHost().setPrefs(hostKey(ctx, payload?.key), payload?.patch, cwdOf(ctx)) }
 
 /** `msg:send(payload)` ⇒ `{ ok:true }`（**立即回** —— 过程走 `ev:*` 出站；**例外 = 非视觉带图径**：降级窗内读图毕
  *  再回 —— `IPC.md` §2「附件注」项 4）∥ `{ ok:true, degraded }`（附件弃项两态 —— `IPC.md` §2「附件注」项 5）
@@ -243,12 +255,12 @@ function sessionPrefs(payload, ctx) { return requireAgentHost().setPrefs(payload
  *  **#841（「provider 态投影注」）**：成功回执另携 `providerState`（发送时点刷新 —— 第二刷新点；供面 =
  *  `turn-input.mjs`）；失败径零叠加；第三刷新点 = 设置写回执（`settings:agent` ∥ `provider:save` ——
  *  处理体住 `settings.mjs` ∥ `providers.mjs`，同携 `providerState`）。 */
-function msgSend(payload, ctx) { return requireAgentHost().send(payload?.key, payload?.text, payload?.images, cwdOf(ctx)) }
+function msgSend(payload, ctx) { return requireAgentHost().send(hostKey(ctx, payload?.key), payload?.text, payload?.images, cwdOf(ctx)) }
 
 /** `msg:interrupt(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason }`（`idle` / `bad-key` / `queue-full`〔#656 · KD-52 ②：
  *  cap 询问待答 ∧ 携文 ∧ 忙态队满——**零中止 ∕ 零入队**（询问在场 ∕ 回合照旧）；文本由端侧回注输入框〕）：
  *  载荷 `{ key, message? }` —— `message` 非空串 ⇒ Ctrl+I 同上下文续跑（宿主下传核 abort 面 `{ interrupt: true, message }`）；缺 ∕ 空 ⇒ 停回合。 */
-function msgInterrupt(payload) { return requireAgentHost().interrupt(payload?.key, payload?.message) }
+function msgInterrupt(payload, ctx) { return requireAgentHost().interrupt(hostKey(ctx, payload?.key), payload?.message) }
 
 /** `approval:respond(payload)` ⇒ 审批出口：载荷 `{ promptId, verdict }`（形已在册，本批接线**语义**面）。
  *  转口宿主待决表（`agent-host.mjs`）：未知 id / 跨形 verdict / 表外 verdict 皆有 `{ok:false}` 档，且
@@ -256,7 +268,15 @@ function msgInterrupt(payload) { return requireAgentHost().interrupt(payload?.ke
  *  （不吞 / 不落假成功 / 本档零假成功字面 —— 沿 `docs/desktop/design/IPC.md` §2 会话族注项 5 与「禁假数据」）。 */
 function approvalRespond(payload) {
   if (!agentHost) throw new Error("[ipc] approval:respond: approval source not assembled")
-  return agentHost.respond(payload)
+  return stripReceiptKey(agentHost.respond(payload))
+}
+
+/** 回执键剥回（装配键化 · 2026-10-17）：宿主回执 `key` = 限定键（`${cwd}::${slot}`）⇒ 渲染端键域 =
+ *  纯槽号 ⇒ 剥尾段（非限定键原样）。`approval:respond` 成功径叠加 `{ key, flags }` 消费。 */
+function stripReceiptKey(receipt) {
+  if (receipt === null || typeof receipt !== "object" || typeof receipt.key !== "string") return receipt
+  const idx = receipt.key.lastIndexOf("::")
+  return idx > 0 && /^\d+$/.test(receipt.key.slice(idx + 2)) ? { ...receipt, key: receipt.key.slice(idx + 2) } : receipt
 }
 
 /** `question:respond(payload)` ⇒ 作答出口（`question` 工具真作答面）：载荷 `{ promptId, answer }`
@@ -265,13 +285,13 @@ function approvalRespond(payload) {
  *  （挂起保留）；宿主未注入 ⇒ fail-loud 直抛（不吞 / 不落假成功）。 */
 function questionRespond(payload) {
   if (!agentHost) throw new Error("[ipc] question:respond: question source not assembled")
-  return agentHost.respond(payload)
+  return stripReceiptKey(agentHost.respond(payload))
 }
 
 /** `subagent:stop(payload)` ⇒ `{ ok, reason }`（reason 闭集 = `unknown-sub` / `bad-key`）：载荷 `{ key, id, role? }`
  *  （`id` = 实例号——与 `ev:subagent` 同源同值）—— 转口宿主子 agent 面（核既有取消出口 —— 零算法副本；
  *  `thincoder-desktop/src/main/subagent-face.mjs`）；宿主未注入 ⇒ fail-loud 直抛（沿 `approval:respond` 先例）。 */
-function subagentStop(payload) { return requireAgentHost().stopSubagent(payload?.key, payload?.id, payload?.role) }
+function subagentStop(payload, ctx) { return requireAgentHost().stopSubagent(hostKey(ctx, payload?.key), payload?.id, payload?.role) }
 
 /** `file:open(payload)` ⇒ `{ ok, reason }`（「对齐第三批」相抵② · KD-39；行定位消解 = 端差清算轮 #627）：
  *  载荷 `{ path, line? }` —— `path` = 盘上绝对路径（宿主 `extractFileLinks` 产物 = **验存件**）；`line` = 正整数
@@ -315,7 +335,7 @@ function liveAgents() {
  *  —— 转口宿主模式位写面（处理体出档 `session-flags.mjs`：核 `setSlot*` 四写 + 活代理重施 + ENG×PLAN 互斥；
  *  成功径 `flags` = `flagsOf` 活值，agent 不在场 ⇒ 键缺席）。宿主未注入 ⇒ fail-loud 直抛
  *  （沿 `session:prefs` ∕ `approval:respond` 先例）。 */
-function sessionFlags(payload, ctx) { return requireAgentHost().setFlags(payload?.key, payload?.patch, cwdOf(ctx)) }
+function sessionFlags(payload, ctx) { return requireAgentHost().setFlags(hostKey(ctx, payload?.key), payload?.patch, cwdOf(ctx)) }
 
 /** `at:complete(payload)` ⇒ `{ ok, matches, seq }`（R1 输入面板移植）：载荷 `{ query, seq }` —— 转口宿主
  *  @ 补全（处理体出档 `at-complete.mjs`：项目树枚举过滤，排除面 ∕ 封顶照 VSC；**`seq` 原样回携** ——
@@ -325,7 +345,7 @@ function atComplete(payload, ctx) { return requireAgentHost().atComplete(payload
 /** `record:append(payload)` ⇒ `{ ok, reason }`（**留档记录追加** —— 消化面留档批 · #719）：载荷 `{ key, record }`
  *  —— 转口宿主记录面（处理体住 `agent-host.mjs`：装配表命中门 + `appendRecord`；reason 闭集 = `bad-key` ∥
  *  `unknown-key`）。宿主未注入 ⇒ fail-loud 直抛（沿 `subagent:stop` 先例）。 */
-function recordAppend(payload) { return requireAgentHost().recordAppend(payload?.key, payload?.record) }
+function recordAppend(payload, ctx) { return requireAgentHost().recordAppend(hostKey(ctx, payload?.key), payload?.record) }
 
 /** `window:control(payload)` ⇒ `{ ok, reason }`（统一 Header 自绘三钮 · fork 2026-10-06）：载荷
  *  `{ action }` 闭集 = minimize ∕ maximize（toggle）∕ close——转口 `window.mjs` `winControl`
@@ -345,7 +365,7 @@ function themeState(payload) { return setMenuTheme(payload?.theme) }
 
 /** `panel:state(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason }`（**渲染面实况回读上报** —— 子代理面板批 · 白名单末位 48；形判两档 `invalid-key` ∥ `invalid-blocks` —— 防御档，表外零变更 + 记错）：
  *  载荷 `{ key, blocks }`（块形 = 判别六键 + `role`/`id` 随行；单源 = `PANEL-READBACK.md` §2.1）——渲染 → 主单向 ⇒ 读数缓存（`panel-live.mjs`，后报覆前报）⇒ 核 `panel` 工具 view ∥ freeze 读源；**限度 = 报告缓存**（报告未达 ⇒ 工具侧回落降级链）。 */
-function panelState(payload) {
+function panelState(payload, ctx) {
   const { key, blocks } = payload ?? {}
   const shaped = Array.isArray(blocks) && blocks.every((b) => b !== null && typeof b === "object" && typeof b.key === "string" && b.key !== "")
   if (typeof key !== "string" || key === "" || !shaped) {
@@ -353,7 +373,7 @@ function panelState(payload) {
     console.error(`[ipc] panel:state refused malformed payload (reason=${reason})`)
     return { ok: false, reason }
   }
-  panelLive.report(key, blocks)
+  panelLive.report(hostKey(ctx, key), blocks)
   return { ok: true }
 }
 
@@ -365,8 +385,8 @@ function usageStatsChannel(payload) { return usageStats(payload) }
 /** `session:export({ key })` ⇒ `{ ok, path, count }` ∥ `{ ok:false, reason }`（**会话导出** —— fork 2026-10-07 ·
  *  白名单末位 50；载荷 = 活动会话键。md 拼装 ∕ 整会话读单源 = `session-export.mjs`（平 node 可直测）；
  *  本档只做**保存对话框 + 落盘**（`dialog` 注入同 `project:open` 先例；取消 ⇒ `canceled` 零静默——渲染面 toast）。 */
-async function sessionExportChannel(payload) {
-  const read = sessionToMarkdown(currentCwd(), payload?.key)
+async function sessionExportChannel(payload, ctx) {
+  const read = sessionToMarkdown(cwdOf(ctx) ?? currentCwd(), payload?.key)
   if (read.ok !== true) return read
   const { filePath, canceled } = await dialog.showSaveDialog({
     defaultPath: exportFileName(read.title),

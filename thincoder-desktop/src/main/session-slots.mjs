@@ -116,10 +116,22 @@ export const deleteSlot = (cwd, slot) => coreDeleteSlot(cwd, slot, { end: END })
 // ─── 历史页读面（本批增 —— `docs/desktop/design/IPC.md`:52 / §2 会话族）──────────────
 
 /** 会话键 → 槽号（`String(slot)` —— 十条 `ev:*` 通道与 `msg:*` / `history:page` / `session:prefs` 同键面）：十进制串才认；
- *  坏键 ⇒ null（调用面转 `{ok:false,reason:"bad-key"}`）。**单源**：`agent-host.mjs` 引本导出。 */
+ *  坏键 ⇒ null（调用面转 `{ok:false,reason:"bad-key"}`）。**单源**：`agent-host.mjs` 引本导出。
+ *  **装配键化（2026-10-17）**：宿主内键 = `${cwd}::${slot}`（同号槽跨项目不碰撞）——取**尾段**十进制；
+ *  纯槽号键（渲染端键域）照旧直认 ⇒ 渲染端零改。 */
 export function slotOfKey(key) {
   const raw = typeof key === "string" ? key.trim() : ""
-  return /^\d+$/.test(raw) ? Number(raw) : null
+  const tail = raw.includes("::") ? raw.slice(raw.lastIndexOf("::") + 2) : raw
+  return /^\d+$/.test(tail) ? Number(tail) : null
+}
+
+/** cwd + 会话键 → 宿主键（装配键化单点）：`${cwd}::${slot}`；cwd 无源 ∕ 坏键 ⇒ null（调用面回退纯键 =
+ *  既有单指针形）。**消费面**：ipc 边界（`ipc.mjs`）——宿主入口全部吃限定键，内部各表（agents ∕ flights ∕
+ *  队 ∕ 挂起 ∕ 面板回读）自然按键分域；事件出站由 `main.mjs` emit 按窗 cwd 路由并剥回纯槽号。 */
+export function hostKeyOf(cwd, key) {
+  const slot = slotOfKey(key)
+  if (typeof cwd !== "string" || cwd === "" || slot === null) return null
+  return `${cwd}::${slot}`
 }
 
 /** 会话元信息（回执面）：**三键** = 会话级三值（`provider` / `model` / `effort`）**只落非空串**

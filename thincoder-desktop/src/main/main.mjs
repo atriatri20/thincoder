@@ -134,8 +134,27 @@ async function main() {
   const emit = (channel, payload) => {
     // 多窗口广播（在独立窗口打开 · 2026-10-13）：会话窗与主窗同源渲染端，各自按 activeSession 自滤；
     // 主题 ∕ 菜单 ∕ 窗口态类广播对所有窗本就无差。零窗（建窗前）⇒ 丢弃（既有口径）。
+    // **会话键 cwd 路由（装配键化 · 2026-10-17）**：宿主事件键 = `${cwd}::${slot}`（限定键）⇒ 只投
+    // 「cwd 匹配」的窗（会话窗 = 钉扎 `_swinCwd`；主窗 = 当前指针），键**剥回纯槽号**（渲染端键域不变）；
+    // cwd 不匹配的窗不投——跨项目同号槽事件互串断根。非限定键（项目级 ∕ 窗口态 ∕ 主题）照旧全窗广播。
+    let routed = null
+    if (payload !== null && typeof payload === "object" && typeof payload.key === "string") {
+      const idx = payload.key.lastIndexOf("::")
+      if (idx > 0) {
+        const cwd = payload.key.slice(0, idx)
+        const slot = payload.key.slice(idx + 2)
+        if (/^\d+$/.test(slot)) routed = { cwd, slot }
+      }
+    }
     for (const w of BrowserWindow.getAllWindows()) {
-      if (!w.isDestroyed()) w.webContents.send(channel, payload)
+      if (w.isDestroyed()) continue
+      if (routed === null) {
+        w.webContents.send(channel, payload)
+        continue
+      }
+      const winCwd = typeof w._swinCwd === "string" && w._swinCwd !== "" ? w._swinCwd : currentCwd()
+      if (winCwd !== routed.cwd) continue
+      w.webContents.send(channel, { ...payload, key: routed.slot })
     }
   }
   // 宿主装配（出站 emit 注入）——先于通道注册（处理体取宿主）。

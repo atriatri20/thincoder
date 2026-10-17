@@ -9,6 +9,19 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createTurnInput } from "../../thincoder-desktop/src/main/turn-input.mjs"
 import { createAtComplete } from "../../thincoder-desktop/src/main/at-complete.mjs"
+import { slotOfKey, hostKeyOf } from "../../thincoder-desktop/src/main/session-slots.mjs"
+
+test("键解析单源：限定键取尾段槽号 ∕ 纯键直认 ∕ 坏键 null ∕ hostKeyOf 派生", () => {
+  assert.equal(slotOfKey("2"), 2)
+  assert.equal(slotOfKey("F:\\重构\\stock_screener::2"), 2)
+  assert.equal(slotOfKey("  F:\\x y::12 "), 12)
+  assert.equal(slotOfKey("abc"), null)
+  assert.equal(slotOfKey("F:\\x::abc"), null)
+  assert.equal(slotOfKey(null), null)
+  assert.equal(hostKeyOf("F:\\p", "3"), "F:\\p::3")
+  assert.equal(hostKeyOf(null, "3"), null)
+  assert.equal(hostKeyOf("F:\\p", "bad"), null)
+})
 
 test("send 穿透：显式 cwd 优先于 projects.currentCwd()，缺省回退指针", async () => {
   const seen = []

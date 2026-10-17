@@ -103,8 +103,12 @@ export function sessionModel(state = {}) {
   })
   const active = items.find((item) => item.active === true) ?? null
   const cwd = typeof state?.project?.cwd === "string" && state.project.cwd !== "" ? state.project.cwd : null
+  // 标题按 activeSession 键取（会话窗标题对位 · 2026-10-17）：会话窗的 rail 列表 = 本窗钉扎项目，但其
+  // `isActive` 行 = 主窗指针会话——原取 `active.title` 让会话窗永远显示主窗当前会话的标题（用户实测
+  // 「弹出的都是主窗口的当前会话」）。主窗 activeSession 与 isActive 行恒同值 ⇒ 行为零改；会话窗 ⇒ 本窗会话。
+  const own = items.find((item) => item.key === String(state?.activeSession ?? "")) ?? null
   return {
-    title: active === null ? t("session.title") : active.title,
+    title: own !== null ? own.title : (active === null ? t("session.title") : active.title),
     items,
     canDelete: items.length > 1,
     ledger: state?.ledger !== null && typeof state?.ledger === "object" ? state.ledger : null,
