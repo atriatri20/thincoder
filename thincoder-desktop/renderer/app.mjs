@@ -35,7 +35,7 @@ import { attachComposer } from "./mount-composer.mjs"
 import { POOL_SLOT, attachPool } from "./mount-pool.mjs"
 import { attachStatus } from "./mount-status.mjs"
 import {
-  SESSION_SLOT, activateSession, archiveSession, confirmRename, createSession, deleteSession, mountSessionBar,
+  SESSION_SLOT, activateSession, archiveSession, confirmRename, createSession, deleteSession, mountSessionBar, openInWindow, openSessionLocal,
   refreshArchived, refreshRail, resumeOpened, unarchiveSession,
 } from "./mount-sessions.mjs"
 import { attachSettings } from "./mount-settings.mjs"
@@ -95,6 +95,7 @@ attachSidebar({
   onDelete: deleteSession,
   // 会话归档（fork · 2026-10-06）：⋯ 菜单「归档」+ 归档视图（入口钮 ∕ 恢复 ∕ 删除 ∕ 开归档会话）。
   onArchive: (key, cwd) => archiveSession(key, cwd), // 右键全项目化（2026-10-13）：携行 cwd
+  onOpenWindow: (key, title) => void openInWindow(key, title), // 在独立窗口打开（当前项目行 · 2026-10-13）
   onUnarchive: unarchiveSession,
   // 归档会话点击 = 当前项目直接切会话；非当前项目先切项目上下文（openDir 接续该项目活跃会话）。
   onOpenArchived: (key, cwd) => {
@@ -311,6 +312,11 @@ function settleBoot(value, reason) {
 /** 引导：窄桥 ⇒ `config:read` 往返 ⇒ 词表置位 + 数据面刷新 ⇒ **重载补启**（D9 —— 项目在场 ⇒ 恰一次
  *  `session:resume`）⇒ `boot = "ok"`（任一不合 ⇒ `"error"`）+ 首屏引导层随动（R1 —— 见 `settleBoot`）。 */
 async function boot() {
+  // 会话窗模式（在独立窗口打开 · 2026-10-13）：`?swin=<slot>` ⇒ body 类早落（CSS 隐藏侧栏 ∕ 会话选择 ∕
+  // 新建 ∕ Header 菜单钮——零闪）；boot 尾本地激活目标会话（openSessionLocal——**不走 switch ∕ resume**，
+  // 不动持久指针 ⇒ 主窗会话零扰；v1 限当前项目 ⇒ `history:page` cwd 同源）。
+  const swinSlot = new URLSearchParams(globalThis.location?.search ?? "").get("swin")
+  if (swinSlot !== null && swinSlot !== "") document.body.classList.add("session-window")
   if (!host || typeof host.invoke !== "function") {
     const reason = "preload bridge missing: window.thincoder.invoke unavailable"
     console.error(`[renderer] ${reason}`)
@@ -332,6 +338,11 @@ async function boot() {
     // 重载补启（D9 · 批档 §2.14a）：主进程仍持项目（`cwd` 非空串）⇒ 活跃会话自动接续 —— 复用「点开即续」同路
     // （`session:resume` ⇒ 端记录判据 ⇒ `openPage` + `refreshRail`）；冷启（`cwd` 空 ∥ 读面失败）零触发；失败沿既有
     // R9 toast 面 —— `resumeOpened` 自持 catch（不抛 ∥ 不抬高 boot 判据）。
+    if (swinSlot !== null && swinSlot !== "") {
+      // 会话窗：本地激活目标会话（不 resume ∕ 不切持久指针）。
+      openSessionLocal(String(swinSlot))
+      return settleBoot("ok")
+    }
     if (typeof store.get().project?.cwd === "string" && store.get().project.cwd !== "") await resumeOpened()
     return settleBoot("ok")
   } catch (error) {

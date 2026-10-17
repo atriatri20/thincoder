@@ -321,6 +321,47 @@ export function createWindow(onError) {
   return win
 }
 
+/** 会话窗（在独立窗口打开 · 2026-10-13）：同渲染端 ∕ 同预载的**小窗**——`?swin=<slot>` 由渲染端 boot
+ *  消费（本地激活目标会话，**不动持久指针**——主窗会话零扰）；`body.session-window` 由渲染端落（CSS 隐藏
+ *  侧栏 ∕ 会话选择 ∕ 新建 ∕ Header 菜单钮）。**不占 `activeWin`**（主窗保持菜单 ∕ `refreshMenu` 焦点目标；
+ *  应用级菜单加速键对全窗生效）；事件出站广播化（main.mjs `emit` ⇒ 全窗口）⇒ 本窗照收本会话流
+ *  （渲染端按 activeSession 自滤）。关窗不杀回合（agent 宿主按会话键存活——主窗列表照常）。 */
+export function createSessionWindow(slot, title) {
+  const win = new BrowserWindow({
+    width: 1080, height: 720, minWidth: 640, minHeight: 480,
+    backgroundColor: THEME_COLORS[resolveTheme()],
+    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
+    title: (title || "ThinCoder").slice(0, 80),
+    show: false,
+    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: PRELOAD_PATH,
+      backgroundThrottling: false },
+  })
+  bindWindowStatePush(win) // 自绘三钮图标随态（会话窗同款 Header——窗口控制钮在本窗自绘）
+  win.webContents.on("context-menu", (_event, params) => {
+    let labels
+    try {
+      labels = contextMenuLabels(loadConfig()?.locale)
+    } catch (error) {
+      labels = contextMenuLabels("en")
+    }
+    const template = contextMenuTemplate(params, labels)
+    if (template.length === 0) return
+    Menu.buildFromTemplate(template).popup({ window: win })
+  })
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url)
+    return { action: "deny" }
+  })
+  win.webContents.on("will-navigate", (event, url) => {
+    if (isAppNavigation(url)) return
+    event.preventDefault()
+    console.error(`[window] navigation refused: ${url}`)
+  })
+  win.loadURL(`${SCHEME}://${HOST}/index.html?swin=${encodeURIComponent(String(slot))}`)
+  win.once("ready-to-show", () => win.show())
+  return win
+}
+
 /** 冒烟读回：等首载（`loaded`）→ 探针表逐项 → 引导位读回；返回 `{ loaded, protocol, boot }`。 */
 export async function runSmoke(win, onError) {
   const loaded = await firstLoad(win, onError)

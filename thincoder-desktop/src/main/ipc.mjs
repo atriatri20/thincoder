@@ -30,7 +30,7 @@ import { dialog, shell } from "electron"
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
 import { releaseClaimsAll } from "@thincoder/core/session-slots-manifest.mjs"
-import { PRELOAD_PATH, confirmRecycle, popupAppMenu, refreshMenu, setMenuTheme, winControl } from "./window.mjs"
+import { PRELOAD_PATH, confirmRecycle, createSessionWindow, popupAppMenu, refreshMenu, setMenuTheme, winControl } from "./window.mjs"
 import { currentCwd, openProject, recentDirs } from "./projects.mjs"
 import { archivedSessions, listSessions, catalogSessions } from "./sessions.mjs"
 import {
@@ -104,7 +104,7 @@ function readConfig() {
  *  单向供 `ipc-relays.mjs` 取用，零环）。 */
 export {
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCatalog, sessionCreate, sessionSwitch,
-  sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
+  sessionRename, sessionDelete, sessionResume, sessionOpenWindow, approvalRespond, historyPage, msgSend, msgInterrupt,
   questionRespond, sessionPrefs, subagentStop, fileOpen, shellOpenPath, sessionFlags, atComplete, recordAppend, themeState, menuPopup, windowControl, sessionArchive, sessionUnarchive, sessionArchived,
   panelState,
   sessionGc, sessionIndex, liveAgents, usageStatsChannel, sessionExportChannel,
@@ -168,6 +168,12 @@ function sessionRename(payload) {
 }
 /** `session:archive({ slot })`（归档软删除 · fork 2026-10-06）：转口动作层；**不 dispose 宿主**
  *  （归档保数据，异于删除——取消归档即原样回表；活动会话装配实例照活在表）。 */
+/** `session:openWindow({ slot, title? })`（在独立窗口打开 · 2026-10-13）：主侧建会话窗（同渲染端
+ *  小窗 ∕ `?swin=<slot>` boot 本地激活）；v1 限**当前项目**的会话（cwd = currentCwd——跨项目开窗
+ *  需 agent 装配键化 `${cwd}::${slot}`，挂账另批）。 */
+function sessionOpenWindow(payload) {
+  return createSessionWindow(Number(payload?.slot), String(payload?.title ?? ""))
+}
 function sessionArchive(payload) {
   // 右键全项目化（2026-10-13）：载荷携行 cwd（跨项目行可归档——与 rename ∕ delete ∕ unarchive 同形）；缺省回退当前项目。
   return archiveSession(typeof payload?.cwd === "string" && payload.cwd !== "" ? payload.cwd : currentCwd(), payload?.slot)

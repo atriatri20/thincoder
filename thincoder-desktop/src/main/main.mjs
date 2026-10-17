@@ -10,7 +10,7 @@
  * 策略面零 electron 住 `update.mjs`。
  * stdout 只许一行 JSON（读数面；日志与栈一律 stderr）——`process.stdout.write` 仅本档一处。
  */
-import { app, dialog, Notification } from "electron"
+import { app, BrowserWindow, dialog, Notification } from "electron"
 import { createRequire } from "node:module" // 自动更新（KD-71）：CJS 互操作——`require("electron-updater")` 取 `autoUpdater`
 import { existsSync } from "node:fs"
 import { join } from "node:path"
@@ -34,7 +34,7 @@ import { onConfigSelfWrite } from "@thincoder/core/config-io.mjs" // 快照门�
 // 台账刷新面收尾（R8 —— 拍面随开项目链重锚；窗口关 = 退出径同点——`stopLedgerRefresh` 幂等、核 interval 已 unref）。
 import { stopLedgerRefresh } from "./project-info.mjs"
 import {
-  NEGATIVE_PROBE_COUNT, createWindow, probesSatisfied, refreshMenu, runSmoke,
+  NEGATIVE_PROBE_COUNT, createWindow, createSessionWindow, probesSatisfied, refreshMenu, runSmoke,
   setUpdateFace, updateConfirmDialog, updateResultDialog,
 } from "./window.mjs"
 import { menuLabels } from "./menu-words.mjs" // 更新面词表现读注入（KD-71——语言随动；值面单源 = 同档）
@@ -132,7 +132,11 @@ async function main() {
   startSampler()
   // 出站面（webContents 发送单点）：宿主 emit 与台账读数出站共用（建窗晚于注入 ⇒ 闭包读 `win`；建窗前零事件 ⇒ 丢弃；#913 收口措辞随正——流尾行组已退役、保留面 = 读数）。
   const emit = (channel, payload) => {
-    if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
+    // 多窗口广播（在独立窗口打开 · 2026-10-13）：会话窗与主窗同源渲染端，各自按 activeSession 自滤；
+    // 主题 ∕ 菜单 ∕ 窗口态类广播对所有窗本就无差。零窗（建窗前）⇒ 丢弃（既有口径）。
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed()) w.webContents.send(channel, payload)
+    }
   }
   // 宿主装配（出站 emit 注入）——先于通道注册（处理体取宿主）。
   setAgentHost(createAgentHost({

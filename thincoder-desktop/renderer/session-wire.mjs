@@ -190,6 +190,24 @@ async function openResult(channel, receipt, context) {
   return true
 }
 
+/** 会话窗本地激活（在独立窗口打开 · 2026-10-13）：`openPage` + rail 刷新——**不走 `session:switch` ∕
+ *  `session:resume`**（不动持久指针——主窗会话零扰；v1 会话窗限当前项目 ⇒ `history:page` cwd 同源）。 */
+export function openSessionLocal(key) {
+  openPage(String(key))
+  void refreshRail()
+  return true
+}
+
+/** 在独立窗口打开（会话行右键 · 当前项目行）：`session:openWindow` ⇒ 主侧建会话窗（`?swin=<slot>`）。 */
+export async function openInWindow(key, title = "") {
+  try {
+    return await host.invoke("session:openWindow", { slot: slotOf(key), title })
+  } catch (error) {
+    console.error("[renderer] session:openWindow failed:", error)
+    return false
+  }
+}
+
 /** 点开即续（`project:open` 成功后自动一次 —— 该通道恒 `ok`：核判据兜底分配新槽）。 */
 export async function resumeOpened() {
   try {

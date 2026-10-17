@@ -4,7 +4,7 @@
  * 整块落装配函数体内；守卫谓词写死 = `typeof window !== "undefined"`（沙箱预载处为渲染进程上下文 ⇒ 装配；
  * 主进程 `createRequire` 读取与平 node 测试无 `window` ⇒ 零装配、不触 `electron`）。
  * 白名单 `CHANNELS` **单源**（主侧经 `createRequire` 读之据以注册——`src/main/ipc-registry.mjs`）；非白名单通道**立即 reject**（不入 IPC）。
- * 请求白名单 = **六十六项**（R7 五十二项基线 ∪ fork 增项：独立打包批 `shell:openPath` ∕ 统一 Header 批
+ * 请求白名单 = **六十七项**（R7 五十二项基线 ∪ fork 增项：独立打包批 `shell:openPath` ∕ 统一 Header 批
  *  `menu:popup` ∥ `window:control` ∕ 会话归档批三 ∕ 模型参数能力批 `provider:setContext` ∥ `model:spec` ∥
  *  `model:specSave` ∥ `model:specReset` ∕ 图文消息批 `image:read` ∕ 用量与导出批 `usage:stats` ∥
  *  `session:export` ∥ **B1 团队族四** `team:status` ∥ `team:login` ∥ `team:logout` ∥ `team:verify`）（三十五 ⇒
@@ -38,7 +38,7 @@
 const CHANNELS = Object.freeze([
   "config:read", "project:open", "project:recent", "sessions:list", "sessions:catalog", "sessions:archived",
   "session:create", "session:switch", "session:rename", "session:delete", "session:resume",
-  "session:archive", "session:unarchive",
+  "session:archive", "session:unarchive", "session:openWindow",
   "approval:respond", "history:page", "msg:send", "msg:interrupt",
   "provider:list", "provider:save", "provider:remove", "provider:verify",
   "model:list", "settings:agent", "mcp:list", "mcp:save", "mcp:remove",

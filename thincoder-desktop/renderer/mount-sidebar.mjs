@@ -140,7 +140,7 @@ function groupKeyOf(ts) {
  *  cwd 取主进程当前项目）。`opts.cwd` = 所属项目路径；`opts.isCurrentProject` 缺省 = 当前项目。 */
 function sessionItemNode(item, handlers, opts = {}) {
   const isCurrentProject = opts.isCurrentProject !== false
-  const openMenuAt = (x, y) => handlers.onMenuOpen?.({ key: item.key, title: item.title, x, y, cwd: opts.cwd ?? null })
+  const openMenuAt = (x, y) => handlers.onMenuOpen?.({ key: item.key, title: item.title, x, y, cwd: opts.cwd ?? null, isCurrent: isCurrentProject })
   const activate = () => (isCurrentProject ? handlers.onSwitch?.(item.key) : handlers.onOpenProject?.(opts.cwd))
   return {
     tag: "div",
@@ -653,7 +653,7 @@ function closeMenu() {
 }
 
 /** 右键菜单（重命名 ∕ 删除；定位贴光标 + 视口夹取）。 */
-function openSessionMenu(pane, handlers, { key, title, x, y, cwd = null }) {
+function openSessionMenu(pane, handlers, { key, title, x, y, cwd = null, isCurrent = false }) {
   closeMenu()
   menuEl = document.createElement("div")
   menuEl.className = "sidebar-menu"
@@ -673,6 +673,10 @@ function openSessionMenu(pane, handlers, { key, title, x, y, cwd = null }) {
   const pinned = isSlotPinned(cwd, key)
   if (typeof handlers.onTogglePin === "function") {
     menuEl.append(item(pinned ? t("sidebar.unpin") : t("sidebar.pin"), "", () => { handlers.onTogglePin?.(cwd, key) }))
+  }
+  if (isCurrent && typeof handlers.onOpenWindow === "function") {
+    // 在独立窗口打开（当前项目行 · v1 限当前项目——跨项目开窗需 agent 装配键化，挂账 SHORTCUTS-PLAN 同族档）
+    menuEl.append(item(t("sidebar.openWindow"), "", () => { void handlers.onOpenWindow?.(key, title) }))
   }
   menuEl.append(item(t("sidebar.rename"), "", () => startRename(pane, handlers, { key, title, cwd })))
   if (typeof handlers.onArchive === "function") {
