@@ -12,7 +12,7 @@
  *   跨档引用面 = 两档表位处 `export { … }` 列。
  * - `channels` 读数口径 = 本次运行**实际分发集合**（顺序去重 —— 批档 §2.11 收正⑦）。
  */
-import { ipcMain } from "electron"
+import { BrowserWindow, ipcMain } from "electron"
 import { imageRead } from "./attachments.mjs"
 import {
   CHANNELS, ipcStats,
@@ -112,7 +112,10 @@ export function registerIpcHandlers() {
     if (typeof handler !== "function") throw new Error(`[ipc] whitelisted channel without handler: ${channel}`)
     ipcMain.handle(channel, (_event, payload) => {
       if (!ipcStats.channels.includes(channel)) ipcStats.channels.push(channel)
-      return handler(payload)
+      // 发起窗上下文（会话窗批 · 2026-10-13）：多窗口后，窗口族动作（window:control）必须作用于
+      // **发起窗**而非 `activeWin`（主窗）——会话窗点 ✕ 曾关掉主窗（用户实测）。其余处理体忽略第二参。
+      const senderWindow = BrowserWindow.fromWebContents(_event.sender)
+      return handler(payload, { senderWindow })
     })
   }
 }

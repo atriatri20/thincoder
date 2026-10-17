@@ -415,6 +415,19 @@ select.settings-field { min-inline-size: 12rem; }
 .win-btn:hover::before { color: var(--fg); }
 .win-btn.win-close:hover { background: #e81123; }
 .win-btn.win-close:hover::before { color: #fff; }
+
+/* 会话窗两钮（在独立窗口打开批 · 2026-10-13）：活动池开关 ∕ 窗口置顶——非会话窗隐藏。 */
+body:not(.session-window) .win-btn[data-win="pool-toggle"],
+body:not(.session-window) .win-btn[data-win="pin"] { display: none; }
+.win-btn[data-win="pool-toggle"]::before { content: "◫"; }
+.win-btn[data-win="pin"]::before {
+  content: ""; width: 14px; height: 14px;
+  background: var(--fg-muted);
+  -webkit-mask: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 17v5'/%3E%3Cpath d='M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 17v5'/%3E%3Cpath d='M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+.win-btn[data-win="pin"]:hover::before { background: var(--fg); }
+.win-btn[data-win="pin"][data-pinned]::before { background: var(--accent); }
 /* 会话控制条留守对话区（fork 2026-10-06 回迁——用户反馈「标题栏显乱 ∕ 展开选择 ∕ 新建会话功能没了」）：
    Header 只承载品牌 ∕ 全局菜单 ∕ 拖拽；条形本貌（chrome.css）原样留在 .session 首位。 */
 
@@ -1605,11 +1618,13 @@ body.pool-collapsed .pool-collapse { left: 4px; }
    窗即会话）。侧栏 ∕ 活动池 ∕ 会话选择 ∕ 新建 ∕ Header 五菜单钮全隐；保留 品牌 ∕ 会话标题 ∕
    窗口控制钮 ∕ 对话流 ∕ 输入区 ∕ 状态行。 */
 body.session-window .app { grid-template-columns: minmax(0, 1fr); }
+body.session-window.pool-open .app { grid-template-columns: minmax(0, 1fr) clamp(16rem, 26rem); }
 body.session-window [data-slot="sidebar"],
 body.session-window [data-slot="pool"],
 body.session-window [data-pool-collapse],
 body.session-window .session-new,
 body.session-window .header-menu-btn { display: none !important; }
+body.session-window.pool-open [data-slot="pool"] { display: flex !important; } /* 池 = 顶部图标开关（WorkBuddy 同形 · 2026-10-13） */
 /* 会话标题住 `.session-selector` 内 ⇒ 选择器**可见但禁点**（标题照显 ∕ 下拉不可开——窗即会话，无切换）；
    箭头随禁点隐藏（免「可切换」暗示）。 */
 body.session-window .session-selector { pointer-events: none; }

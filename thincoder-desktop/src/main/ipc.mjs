@@ -172,7 +172,9 @@ function sessionRename(payload) {
  *  小窗 ∕ `?swin=<slot>` boot 本地激活）；v1 限**当前项目**的会话（cwd = currentCwd——跨项目开窗
  *  需 agent 装配键化 `${cwd}::${slot}`，挂账另批）。 */
 function sessionOpenWindow(payload) {
-  return createSessionWindow(Number(payload?.slot), String(payload?.title ?? ""))
+  // 回执可序列化（BrowserWindow 对象不可跨 IPC——返回建窗结果旗标即可；建窗失败 ⇒ 抛错直传）。
+  const win = createSessionWindow(Number(payload?.slot), String(payload?.title ?? ""))
+  return { ok: true, slot: Number(payload?.slot) }
 }
 function sessionArchive(payload) {
   // 右键全项目化（2026-10-13）：载荷携行 cwd（跨项目行可归档——与 rename ∕ delete ∕ unarchive 同形）；缺省回退当前项目。
@@ -321,7 +323,7 @@ function recordAppend(payload) { return requireAgentHost().recordAppend(payload?
 /** `window:control(payload)` ⇒ `{ ok, reason }`（统一 Header 自绘三钮 · fork 2026-10-06）：载荷
  *  `{ action }` 闭集 = minimize ∕ maximize（toggle）∕ close——转口 `window.mjs` `winControl`
  *  （activeWin 单例；终态经 `ev:win-max` 异步推送，回执只证受理）。 */
-function windowControl(payload) { return winControl(payload?.action) }
+function windowControl(payload, ctx) { return winControl(payload?.action, ctx) }
 
 /** `menu:popup(payload)` ⇒ `{ ok, reason }`（统一 Header 批 · fork 2026-10-06）：载荷
  *  `{ name, x, y }`——五顶层项尾段（file ∕ edit ∕ view ∕ settings ∕ help）+ 触发钮**内容坐标**

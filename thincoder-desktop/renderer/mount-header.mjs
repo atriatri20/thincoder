@@ -75,7 +75,10 @@ function wireWinControls() {
     btn.addEventListener("click", () => {
       const action = btn.getAttribute("data-win")
       if (host?.invoke === undefined) return // web 平测
-      void Promise.resolve(host.invoke("window:control", { action })).catch((error) => console.error("[header] window:control failed:", error))
+      if (action === "pool-toggle") { document.body.classList.toggle("pool-open"); return } // 会话窗活动池开关（纯渲染端 · 2026-10-13）
+      void Promise.resolve(host.invoke("window:control", { action })).then((receipt) => {
+        if (action === "pin") btn.toggleAttribute("data-pinned", receipt?.pinned === true) // 置顶态随回执切钮亮
+      }).catch((error) => console.error("[header] window:control failed:", error))
     })
   }
   if (host?.on === undefined) return

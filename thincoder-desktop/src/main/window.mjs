@@ -155,11 +155,22 @@ export function setMenuTheme(theme) {
 /** 窗口控制出口（统一 Header 自绘三钮 · fork 2026-10-06 —— `window:control` 处理体）：
  *  闭集 `minimize` ∕ `maximize`（toggle—— maximize ∕ unmaximize 按现态）∕ `close`；终态经
  *  `ev:win-max` 推送（渲染面切图标 ❐∕▣——toggle 后系统事件异步，UI 态以推送为准）。 */
-export function winControl(action) {
-  if (activeWin === null || activeWin.isDestroyed()) return { ok: false, reason: "no-window" }
-  if (action === "minimize") activeWin.minimize()
-  else if (action === "maximize") activeWin.isMaximized() ? activeWin.unmaximize() : activeWin.maximize()
-  else if (action === "close") activeWin.close()
+export function winControl(action, ctx = {}) {
+  // 目标窗路由（会话窗批 · 2026-10-13）：窗口族动作作用于**发起窗**——会话窗的 ─ ❐ ✕ 曾恒落主窗
+  // （原实现 = `activeWin.close()` ⇒ 会话窗点 ✕ 关掉主窗——用户实测）；主窗发起 = `activeWin`
+  // （既有语义零变）。`senderWindow` 已毁 ∕ 缺 ⇒ 回落 `activeWin`（fail-open 沿既有口径）。
+  const candidate = ctx?.senderWindow ?? null
+  const win = candidate !== null && !candidate.isDestroyed() ? candidate : activeWin
+  if (win === null || win === undefined || win.isDestroyed()) return { ok: false, reason: "no-window" }
+  if (action === "minimize") win.minimize()
+  else if (action === "maximize") win.isMaximized() ? win.unmaximize() : win.maximize()
+  else if (action === "close") win.close()
+  else if (action === "pin") {
+    // 窗口置顶（用户对照 WorkBuddy 图钉）：toggle `alwaysOnTop`；回执携态（渲染面切钮亮）。
+    const next = !win.isAlwaysOnTop()
+    win.setAlwaysOnTop(next)
+    return { ok: true, reason: null, pinned: next }
+  }
   else return { ok: false, reason: "unknown-action" }
   return { ok: true, reason: null }
 }
