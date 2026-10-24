@@ -93,18 +93,31 @@ function execFileP(cmd, args, timeout) {
  * **纯存在性**：身份判据不在此层（D-MI11——过滤落点在读面 `peerInstances()` 与清理面
  * `filterDeadOwners`；`peer-domains.mjs` 的域残留清理语义保持零变）。
  */
+/** Windows 判活快路径（fork · 2026-10-24 用户实测「多余会话 + 被其他进程使用」）：`process.kill(pid, 0)`
+ *  （Node 映射 OpenProcess 探针）**零 exec**、逐 pid 精确——ESRCH = 不存在（权威「死」）∥ EPERM =
+ *  存在但无权限（他户进程——「活」）∥ 成功 = 活。替代原 `tasklist` 全量枚举：慢机（AV 拦截 ∕ 进程数大）
+ *  全量 >15s ⇒ 2s 预算（`ALIVE_EXEC_TIMEOUT_MS`）恒超时 ⇒ null ⇒ 属主全 unknown 保守保留 ⇒
+ *  强杀实例（taskkill -F 无优雅释放）的死认领永不清 ⇒ 每次启动「被占」判定 → 次存 fork 派生空壳槽堆积。
+ *  Unix 路径（ps）逐字保留（上游语义）。 */
+function aliveBySignal0(pids) {
+  const alive = new Set()
+  for (const pid of pids) {
+    try {
+      process.kill(pid, 0)
+      alive.add(pid)
+    } catch (error) {
+      if (error?.code === "EPERM") alive.add(pid) // 存在但不可信号（他户）——活
+    }
+  }
+  return alive
+}
+
 export function batchAlive(pids, { timeoutMs = ALIVE_EXEC_TIMEOUT_MS } = {}) {
   const uniq = uniqPids(pids)
   if (uniq.length === 0) return new Set()
   if (_testImpl?.aliveFn) return _testImpl.aliveFn(uniq)
   try {
-    if (process.platform === "win32") {
-      const output = execFileSync("tasklist", ["/FO", "CSV", "/NH"], {
-        encoding: "utf8", timeout: timeoutMs, stdio: ["ignore", "pipe", "ignore"],
-      })
-      const alive = parseTasklistPids(output)
-      return new Set(uniq.filter((pid) => alive.has(pid)))
-    }
+    if (process.platform === "win32") return aliveBySignal0(uniq)
     const output = execFileSync("ps", ["-eo", "pid="], {
       encoding: "utf8", timeout: timeoutMs, stdio: ["ignore", "pipe", "ignore"],
     })
@@ -126,10 +139,7 @@ export async function batchAliveAsync(pids) {
   if (uniq.length === 0) return new Set()
   if (_testImpl?.aliveFn) return _testImpl.aliveFn(uniq)
   try {
-    if (process.platform === "win32") {
-      const alive = parseTasklistPids(await execFileP("tasklist", ["/FO", "CSV", "/NH"], ALIVE_EXEC_TIMEOUT_MS))
-      return new Set(uniq.filter((pid) => alive.has(pid)))
-    }
+    if (process.platform === "win32") return aliveBySignal0(uniq) // fork 判活快路径（同步版同注）
     const alive = parsePsPids(await execFileP("ps", ["-eo", "pid="], ALIVE_EXEC_TIMEOUT_MS))
     return new Set(uniq.filter((pid) => alive.has(pid)))
   } catch {

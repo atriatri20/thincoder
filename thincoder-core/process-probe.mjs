@@ -133,10 +133,14 @@ export function isProcessAlive(pid) {
   const n = Number(pid)
   try {
     if (process.platform === "win32") {
-      const output = execFileSync("tasklist", ["/FO", "CSV", "/FI", `PID eq ${n}`, "/NH"], {
-        encoding: "utf8", timeout: SYNC_PROBE_MS, stdio: ["ignore", "pipe", "ignore"],
-      })
-      return parseTasklistPids(output).has(n)
+      // fork 判活快路径（2026-10-24 · 同 `process-probe-exec.mjs` aliveBySignal0 注）：
+      // `process.kill(pid, 0)` 零 exec——慢机 tasklist 恒超时 ⇒ 未知堆积。
+      try {
+        process.kill(n, 0)
+        return true
+      } catch (error) {
+        return error?.code === "EPERM" // 存在但不可信号（他户）——活；ESRCH = 死
+      }
     }
     process.kill(n, 0)
     return true
