@@ -4,7 +4,7 @@
  * （DOM 查询 ∕ 事件注册 ∕ `vscode.*` 直调）搬进工厂体 + 注入面，语义零变）。
  *
  * 面：① 结构（`#at-dropdown` ∕ `#input-row`（`#file-input` ∕ `#input` ∕ `#attach-btn` ∕ `#send-btn` ∕
- * `#abort-btn`）∕ `#paste-bar>#paste-badge` ∕ `#controls-row`——ids ∕ 类名照 VSC `index.html:42-63` 输入段，
+ * `#abort-btn`）∕ `#paste-bar>#paste-badge` ∕ `#controls-row`——ids ∕ 类名照 VSC `index.html` 输入段，
  * 结构单源 = 该骨架；`#status-line` 属状态行面（A12 本批外）不建）② 键位 B1–B7（Enter ∕ IME 门 ∕ Ctrl+C ∕
  * Ctrl+I 中断模态 ∕ Ctrl+U ∕ ↑↓ 历史 ∕ 自增高）③ 提交面（直发 ∕ 忙态排队出泡（B12 本地先行）∕ 满队 toast ∕ 附件内联（KD-RC-13——`withAttachedFiles` 两径同式））④ 忙态派生
  * （占位符三态 守卫>busy>常态 ∕ 两钮显隐）⑤ 推送接线（五类经 ③ `state.subscribe`）
@@ -32,14 +32,14 @@
  *     `actions` 由本档装配（「斜径面装配」段 = 钮 handler 提取出的同一函数，同钮同门）。
  *
  * 忙态 ∕ 队列面触发点（端接线）：`loading` 推送 ⇒ `setLoading(on)`；`turnState` ∕ `suspension` 推送 ⇒
- * `setLoading()`（缺省 = 现刻 `isRunning`——VSC `panels.js:95,114` `setLoading(ctx, ctx.isRunning)` 同式）；
- * `workspaceGuard` 推送 ⇒ `applyBusyLock()`（VSC `chat-messages.js:99` 同式）。
+ * `setLoading()`（缺省 = 现刻 `isRunning`——VSC `panels.js` `setLoading(ctx, ctx.isRunning)` 同式）；
+ * `workspaceGuard` 推送 ⇒ `applyBusyLock()`（VSC `chat-messages.js` 同式）。
  *
  * **行数读数**：本档 **470 行**（口径 = 内容行数；2026-10-05 attach 文件支持批按盘复核——`send()` 两径内联 +7；2026-10-08 500/800 口径更换批按盘复核——义务句删 −2）。
  *
- * 回合起点钩的相对序（对 VSC 逐行的唯一近似，见 `send.js:62-72`）：`onTurnStart` 置于 `setLoading` **之前**——
- * 取「`_turnStart` 先于状态行刷新落位」（VSC `:62` 早于 `:68` 的同点，elapsed 段首帧即新回合）；其 `clearPanels`
- * 支随之提前（`send.js:72` 原序在 `setLoading` 后——面板清面与状态行刷新无相互依赖，逐帧不可辨）。
+ * 回合起点钩的相对序（对 VSC 逐行的唯一近似，见 `send.js`）：`onTurnStart` 置于 `setLoading` **之前**——
+ * 取「`_turnStart` 先于状态行刷新落位」（VSC `send.js` 同点，elapsed 段首帧即新回合）；其 `clearPanels`
+ * 支随之提前（`send.js` 原序在 `setLoading` 后——面板清面与状态行刷新无相互依赖，逐帧不可辨）。
  */
 import { t } from "../i18n.mjs"
 import { showToast } from "../toast.mjs"
@@ -79,27 +79,22 @@ export function createComposerPanel(deps = {}) {
   const busyState = () => state.turnState?.() ?? "idle"
   const workspaceRequired = () => state.workspaceRequired?.() === true
 
-  // ── 结构（照 VSC `index.html:43-49`；`#at-dropdown`（:42）由 atmenu 造）──
+  // ── 结构（照 VSC `index.html`；`#at-dropdown`（:42）由 atmenu 造）──
   const inputRow = document.createElement("div")
   inputRow.id = "input-row"
 
+  // 词面（placeholder ∥ title ∥ aria ∥ textContent）= 创建期由下方 `applyWords()` **单源**置位——挂载先于词表时
+  // 回落键名，端侧（desktop ∥ VSC）词表到位后调用 `applyWords` 重派生补面。
   const inputEl = document.createElement("textarea")
   inputEl.id = "input"
   inputEl.rows = 1
-  inputEl.placeholder = "Ask ThinCoder... (Shift+Enter for new line)"
-  inputEl.setAttribute("aria-label", "Message input")
 
   const sendBtn = document.createElement("button")
   sendBtn.id = "send-btn"
-  sendBtn.title = "Send (Enter)"
-  sendBtn.setAttribute("aria-label", "Send message")
 
   const abortBtn = document.createElement("button")
   abortBtn.id = "abort-btn"
-  abortBtn.title = "Stop"
-  abortBtn.setAttribute("aria-label", "Stop generation")
   abortBtn.style.display = "none"
-  abortBtn.textContent = "Stop"
 
   // 元素入 ctx（VSC `ctx.inputEl` ∕ `sendBtn` ∕ `abortBtn` 三字段同形——档内引用面）
   ctx.inputEl = inputEl
@@ -247,7 +242,7 @@ export function createComposerPanel(deps = {}) {
     ctx.inputEl.style.height = Math.min(ctx.inputEl.scrollHeight, 150) + "px"
   }
 
-  // ── ② @ 面（注册序前提：本档键位监听先于本调用——见 `input.js:79-83` 序注）──
+  // ── ② @ 面（注册序前提：本档键位监听先于本调用——见 `input.js` 序注）──
   const atMenu = createAtMenu({ post, inputEl: ctx.inputEl })
 
   // ── ③ 附件面（共享图列 = ctx._pastedImages——send 径 length=0 保身份）──
@@ -268,9 +263,26 @@ export function createComposerPanel(deps = {}) {
   })
   ctx.reasoningDropdown = modelMenu.reasoningDropdown
 
-  // ── 装配（序 = VSC `index.html:42-63`：at-dropdown → input-row → paste-bar → controls-row）──
+  // ── 装配（序 = VSC `index.html`：at-dropdown → input-row → paste-bar → controls-row）──
   inputRow.append(attach.fileInput, ctx.inputEl, attach.attachBtn, sendBtn, abortBtn)
   root.append(atMenu.el, inputRow, attach.pasteBar, controls.el)
+
+  /** 词面重派生（**单源**——本档创建期取词面合集 + 四子件 applyWords；调用面 = 端侧词表到位后一次：
+   *  desktop `mount-composer.refresh` ∥ VSC `chat-messages` i18n 到达点；幂等——可安全重入）。 */
+  function applyWords() {
+    ctx.inputEl.placeholder = t("input.placeholder")
+    ctx.inputEl.setAttribute("aria-label", t("input.messageLabel"))
+    ctx.sendBtn.title = t("toolbar.send")
+    ctx.sendBtn.setAttribute("aria-label", t("toolbar.sendMessage"))
+    ctx.abortBtn.title = t("toolbar.stop")
+    ctx.abortBtn.setAttribute("aria-label", t("toolbar.stopGeneration"))
+    ctx.abortBtn.textContent = t("toolbar.stop")
+    attach.applyWords()
+    controls.applyWords()
+    modelMenu.applyWords()
+    atMenu.applyWords()
+  }
+  applyWords()
 
   // ── 斜径面装配（§5 条 6 动作句柄表——**同钮同门 ∥ 单一实现**）：各 = 钮 handler 提取出的同一函数（落点 = 两工厂
   // 实例导出面 `model-menu.mjs` `open` ∥ `controls.mjs` 三 toggle；门随函数）；消费面 = `cmd.run` 的 `ctx.actions`。
@@ -286,7 +298,7 @@ export function createComposerPanel(deps = {}) {
   // 队列计数（读面 = ③ `state.queue()`——宿主镜像**如实单读**：端侧零影子态、零本地增量——提交受理时
   // 不改写）。满队门 = 该计数直读（同 tick 空窗〔镜像未及更新〕以宿主权威兜底——宿主满队拒收回执
   // `queue-full` ⇒ 端侧可见形在场：桌面失败行 ∥ VSC `showWarningMessage` + 重推实况）。
-  // `_busyQueuedPending` 镜像位（VSC `send.js:41`）= 保留派生位（`state.js:130` 自注「保留字段」——
+  // `_busyQueuedPending` 镜像位（VSC `send.js`）= 保留派生位（`state.js` 自注「保留字段」——
   // VSC 全树零读者）：端侧 queued-mark 面（`S` 镜像写者）照旧维护；核侧无消费点 ⇒ 不自持（禁假造）。
   function queueCount() {
     return state.queue?.()?.count ?? 0
@@ -311,7 +323,7 @@ export function createComposerPanel(deps = {}) {
     if (slashCommands !== null && handleSlash(text)) return
     // C-B2-6（busy-injection 批 2026-09-21 · busy-extend 批 2026-09-22 扩面 · queue-visible 批 2026-09-24
     // 多槽 + 待发送标记 · `WEBVIEW-INPUT.md` §1）：busy 提交**一律排队**——判据 = `running`（`_suspended`
-    // 不再分流：挂起会话内与普通回合同判据）⇒ 本地气泡先行（送达时即该消息 user 回声面）+ 出泡即标记
+    // 不再分流：挂起会话内与普通回合同判据）⇒ 端侧 hooks.onUserEcho 自落（VSC 忙态零泡——待发送带；桌面按端面）+ 出泡即标记
     // （「待发送」态）+ `queuedUserMessage` 上行（host 队列两载体，容量 8；不 setLoading 不清面板
     // ——回合仍跑在既有流上）；回合态簿记（`_turnStart`）归下一回合起点——零触碰。
     if (busyState() === "running") {
@@ -452,18 +464,20 @@ export function createComposerPanel(deps = {}) {
   }
   state.subscribe?.(applyPush)
 
-  // ── 两钮点击（VSC `chat.js:47-48` 的输入区绑定面——随工厂化内生）──
+  // ── 两钮点击（VSC `chat.js` 的输入区绑定面——随工厂化内生）──
   sendBtn.addEventListener("click", send)
   abortBtn.addEventListener("click", () => post("abort"))
 
-  // 返回面（端侧接线**最小面**——逐项各有设计消费点）：`inputEl`（回焦锚——VSC `chat.js:61,105` ∕
+  // 返回面（端侧接线**最小面**——逐项各有设计消费点）：`inputEl`（回焦锚——VSC `chat.js` ∕
   // 桌面 `#input` 查询面）· `setLoading` ∕ `applyBusyLock`（宿主忙态 ∕ 守卫推送后的重派生点——VSC
-  // `panels.js:95,114` ∕ `chat-messages.js:99` 同址保位）· `isRunning()`（重派生惯用式的读数）·
-  // `models()`（候选缓存读面——VSC `getModels` 接线面 `chat.js:61`）。`send` 出入两钮已内生，不出面。
+  // `panels.js` ∕ `chat-messages.js` 同址保位）· `applyWords`（**词面重派生单源**——挂载先于
+  // 词表的面：端侧词表到位后调用；幂等）· `isRunning()`（重派生惯用式的读数）·
+  // `models()`（候选缓存读面——VSC `getModels` 接线面 `chat.js`）。`send` 出入两钮已内生，不出面。
   return {
     inputEl: ctx.inputEl,
     setLoading,
     applyBusyLock,
+    applyWords,
     isRunning: () => ctx.isRunning,
     models: () => modelMenu.models(),
   }

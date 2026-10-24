@@ -20,7 +20,7 @@
  * #34 adds the per-turn value refresh (mtime-gated re-read — §2.6 ③b / KD-M1-17..M1-19):
  * the line always carries the CURRENT on-disk phase, not the assembly-time snapshot.
  * 2026-09-21（#188）：**状态选行**（③' `projectView(agent.cwd)` —— KD-M1-26）——`ok` ⇒ 相位行
- * （逐字零改）；`no-project` / `ambiguous` ⇒ 报明行；`missing` / `invalid` ⇒ 有既往好值保守沿用、
+ * （逐字零改）；`no-project` / `workspace` ⇒ 报明行；`missing` / `invalid` ⇒ 有既往好值保守沿用、
  * 无 ⇒ 报明行；无锚 ⇒ **零 I/O / 零报明**（KD-M1-27）。报明行构造 = `manifestReportLine` 四态。
  *
  * #113（S1 续轮第二批——VSC 侧并入 ④ 段）：`pushInjections`（机器行专用注入——编辑器上下文
@@ -76,11 +76,12 @@ export function manifestStateLine({ phase }) {
 }
 
 /**
- * 报明行构造 — pure, unit-testable（**本批新增**——`docs/core/design/MANIFEST.md` §2.6 条 1b /
- * KD-M1-26）：`projectView` 四非 ok 态各自的行文，**逐字**（同族前缀 `MANIFEST_LINE_PREFIX`——
- * 报明行与相位行共用单活体机制）。歧义行按 `matched` **两变体**（`manifest` = 带档级「marker
- * directories」/ `git` = 裸仓档「repositories … (none carries …)」——同口径 = `TOOLS.md` §6.13 A22）；
- * `candidates` 按名排序（判据同 `discoverProjects`）、`<abs…>` 以「、」连接；`errors` 逐条以「；」连接。
+ * 报明行构造 — pure, unit-testable（`docs/core/design/MANIFEST.md` §2.6 条 1b / KD-M1-26）：
+ * `projectView` 四非 ok 态各自的行文，**逐字**（同族前缀 `MANIFEST_LINE_PREFIX`——报明行与相位行
+ * 共用单活体机制）。工作区行按 `matched` **两变体**（`manifest` = 带档级「<N> projects」/ `git` =
+ * 裸仓档「<N> repositories (none carries …)」——同口径 = `TOOLS.md` §6.13 A22）；`candidates` 按名
+ * 排序（判据同 `discoverProjects`）、`<abs…>` 以「、」连接；`errors` 逐条以「；」连接。行文口径 =
+ * **信息行，非错误行**（如实播报、不替它挑；措辞不含 `ambiguous` / 候选二义框定）。
  * `ok` / 未知态 ⇒ `null`（无报明行——相位行归 `manifestStateLine`）。
  * @param {{state?:string, cwd?:string, root?:string|null, path?:string|null, candidates?:string[], errors?:string[], matched?:string|null}} p 行素材（= `projectView` 返回面 + 锚）
  * @returns {string|null} 行文 / null（非报明态）
@@ -90,12 +91,12 @@ export function manifestReportLine({ state, cwd, root, path, candidates, errors,
     return `${MANIFEST_LINE_PREFIX}none — no project at ${cwd} (no manifest on the ancestor chain, none below). ` +
       `Parameters fall back to defaults. Create PROJECT-MANIFEST.json here to land a project (git optional).]`
   }
-  if (state === "ambiguous") {
+  if (state === "workspace") {
     const list = candidates ?? []
-    const head = matched === "git"
-      ? `ambiguous — ${list.length} candidate repositories under ${cwd} (none carries PROJECT-MANIFEST.json):`
-      : `ambiguous — ${list.length} candidate marker directories under ${cwd}:`
-    return `${MANIFEST_LINE_PREFIX}${head} ${list.join("、")} — target the intended one explicitly (the mechanism never picks).]`
+    const holding = matched === "git"
+      ? `${list.length} repositories (none carries PROJECT-MANIFEST.json)`
+      : `${list.length} projects`
+    return `${MANIFEST_LINE_PREFIX}workspace — ${cwd} is a workspace holding ${holding}: ${list.join("、")} — pass an explicit target path to act on one of them.]`
   }
   if (state === "missing") {
     return `${MANIFEST_LINE_PREFIX}missing — the resolved project root ${root} has no PROJECT-MANIFEST.json; ` +
@@ -165,8 +166,8 @@ export function pushManifestStateReminder(agent, { depth = 0 } = {}) {
     if (view.state === "ok") {
       const phase = (agent.manifest ?? view.manifest)?.phase
       line = phase === undefined ? null : manifestStateLine({ phase })
-    } else if (view.state === "no-project" || view.state === "ambiguous") {
-      line = manifestReportLine({ ...view, cwd: resolve(agent.cwd) }) // 本批新报明格（无项目 / 歧义）
+    } else if (view.state === "no-project" || view.state === "workspace") {
+      line = manifestReportLine({ ...view, cwd: resolve(agent.cwd) }) // 本批新报明格（无项目 / 工作区）
     } else if (agent.manifest) {
       line = manifestStateLine({ phase: agent.manifest.phase }) // missing / invalid：有既往好值 ⇒ 保守沿用
     } else {

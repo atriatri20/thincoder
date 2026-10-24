@@ -37,7 +37,7 @@ import { configDir } from "./config.mjs"
 import { sessionPath, ownerPid } from "./session-slots.mjs"
 import { probeOwnersAsync, ownerState } from "./process-probe.mjs"
 import { listStaleCwds, deleteStaleCwd, recycleGroup, sweepStale, trashRootFor } from "./session-stale.mjs"
-// sidecar 记录目录后缀常量（单源 = `session-segments.mjs:13`——本档经该常量判后缀形态；
+// sidecar 记录目录后缀常量（单源 = `session-segments.mjs` 的 `RECORD_DIR_SUFFIX`——本档经该常量判后缀形态；
 // 两处名形匹配式（`classifyResidue` / `sweepOrphanRecordDirs`）按 `{prefix}.{N}` + 后缀内联，不构成第二单源）。
 import { RECORD_DIR_SUFFIX } from "./session-segments.mjs"
 

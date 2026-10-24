@@ -16,7 +16,7 @@
 
 import { existsSync, readFileSync } from "node:fs"
 import { basename, resolve } from "node:path"
-import { CASES, SUITE_VERSION } from "../cases/index.mjs"
+import { CASES, SUITE_VERSION } from "../suites/index.mjs"
 import { buildProviderEntry, enumerationPreflight } from "./params.mjs"
 import { judgeConfigPath, judgeSnapshot, loadJudgeConfig, resolveJudgeSlots } from "./judge.mjs"
 import { applyPricesToResult, loadPrices, pricesPath } from "./prices.mjs"

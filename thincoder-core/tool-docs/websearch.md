@@ -1,4 +1,4 @@
-Search the web via Bing. Returns result titles, URLs, and snippets. Use for looking up current information, docs, error messages.
+Search the web (DeepSeek Search when a DeepSeek provider is configured; otherwise Tavily with a key, else Bing). Returns result titles, URLs, and snippets — DeepSeek results also carry a date · authority (0–4) · rerank (0–3) line and a long summary. Use for looking up current information, docs, error messages.
 
 Parameters:
 - query (required): Search query
@@ -14,3 +14,5 @@ Notes:
 - Follow up with `fetch` to read full pages from the results
 - **Weak engine warning**: Bing's index is noisy for technical queries — if a first websearch returns irrelevant/townhall-grade results, DO NOT retry the same query. Configure a search MCP tool (e.g. `glm-websearch` via the MCP config) for technical lookups; websearch is the fallback.
 - Proxy: NOT auto-applied from config.json (2026-08-31 ruling). Pass `proxy: "http://host:port"` explicitly when the target needs one; omit for domestic targets.
+- Backend priority: DeepSeek (auto — a providers[] entry with baseURL host api.deepseek.com and a key) → Tavily → Bing. websearch.backend: "local" disables the DeepSeek backend.
+- DeepSeek query operators: site:, lang:, after:/before:, and quoted phrases pass through as-is; limit maps to count (1–20).

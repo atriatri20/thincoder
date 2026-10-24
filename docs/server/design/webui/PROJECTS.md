@@ -1,16 +1,14 @@
 # Thincoder Server · 团队项目与权限·界面（webui/PROJECTS）
 
-> 板块 = server ∥ 本档 = webui 域·面档（团队项目与权限——页面族/导航位/入口；2026-10-12 B2 批新立）；板总览 = `PROJECT.md`（文档地图 = §3）。
+> 板块 = server ∥ 本档 = webui 域·面档（团队项目与权限——页面族/导航位/入口）；板总览 = `PROJECT.md`（文档地图 = §3）。
 > 机制单源 = `project/PROJECTS.md`（对象/权限/同步——本档不复述，只落界面承载）；页集单源 = `webui/WEBUI.md` §2（本档回指）。
-> 建档：2026-10-12（批 `docs/batches/2026-10-12-team-projects-permissions.md` 设计轮——B2 批；台账 #1216）。
-> 2026-10-13（批 `docs/batches/2026-10-13-project-sources-merge.md`——功能点 48 ∥ AC-48）：管理·项目 ∥ 管理·Git 源 ⇒ **一页两标签**（KD-SV-149——§2.3 ∥ §2.4）；Git 源页转面板件（页题 h2 撤）。
 
 ## 1. 关键决策（本面）
 
-| # | 决策 | 理由 | 被否候选与何故否 |
-|---|---|---|---|
-| KD-SV-124 | **两入口 + 共用件单实现（2026-10-13）**：`#/me/projects`（我的·项目——全体）∥ `#/admin/projects`（管理·项目——admin；**一页两标签**「项目」∥「Git 源」——KD-SV-149）；项目详情弹窗（权限感知）与「添加仓」对话框 = **共用构建器单源住 `views-projects.mjs`**（三入口调用：我的页 ∥ 管理页 ∥ 源面板行「拉列表」）；导航位 = 我的组追加末位 ∥ 管理组「成员」之后一项 | 一页一职责（KD-SV-20；管理组两入口 ⇒ 一入口 = 功能点 48①——用户「不要分两个入口，否则很快入口就耗尽了」）；源表与项目实体面仍为两个管理对象（同页两标签分离）；共用件单源 = 一份交互两处消费（弹窗三态先例——`modal.mjs` 家族）；「拉列表」挂源行 = 需求 44⑤ 逐字（对话框预选源） | 详情/对话框各页各写（两实现漂移）；我的组插入中位（既有项序churn——追加末位最小变动）；管理组追加末尾（团队实体面与成员面分离——语义邻接优先）；原「管理组两页分列」= 功能点 48 按用户裁定作废（入口耗尽之虞） |
-| KD-SV-149 | **单入口合并形（功能点 48①——2026-10-13）**：壳 = `views-admin-projects.mjs`（`renderAdminProjects(ctx, mount, sub)`——页题 + 两标签）；面板①「项目」= 原项目表件（搜索 ∥ 添加仓钮 ∥ 表卡）；面板②「Git 源」= `views-git-sources.mjs` `renderGitSources(ctx, mount)` **转面板形（导出名不变——删页题 h2）**；零新档；标签 id = 子段名 `projects` ∥ `git-sources`（`#/admin/projects/<tab>`）；旧址 `#/admin/git-sources` = 静态别名 ⇒ `/admin/projects/git-sources`（重定向带子段）；标签懒读 ∥ 切换 `replaceState` 零重渲 ∥ 卡层零改造（四件沿 `webui/TABS.md` §2.2 四岔口——本批 = 组件第二消费面） | 用户 16:07「项目和gitee源放一个页面用标签页区分」；壳住项目页 = 用户点名的管理·项目；导出名不变 ⇒ 既有消费面（Git 源行「拉列表」∥ 测试件直调）零改；零新档 ⇒ `public/` 文件集不动（跨批结构快照件零改）；旧址别名 = 旧书签可达（`ROUTE_ALIASES` 现成机制） | 新开合并档（多一档多一 import——无收益）；我的·项目页扩面（用户点名 = 管理面两入口）；标签词新造文案键（复用既有 nav 键——键集零动）；面板各写详情对话框（漂移） |
+| # | 决策 | 理由 |
+|---|---|---|
+| KD-SV-124 | **两入口 + 共用件单实现**：`#/me/projects`（我的·项目——全体）∥ `#/admin/projects`（管理·项目——admin；**一页两标签**「项目」∥「Git 源」——KD-SV-149）；项目详情弹窗（权限感知）与「添加仓」对话框 = **共用构建器单源住 `views-projects.mjs`**（三入口调用：我的页 ∥ 管理页 ∥ 源面板行「拉列表」）；导航位 = 我的组追加末位 ∥ 管理组「成员」之后一项 | 一页一职责（KD-SV-20；管理组两入口 ⇒ 一入口 = 功能点 48①——用户「不要分两个入口，否则很快入口就耗尽了」）；源表与项目实体面仍为两个管理对象（同页两标签分离）；共用件单源 = 一份交互两处消费（弹窗三态先例——`modal.mjs` 家族）；「拉列表」挂源行 = 需求 44⑤ 逐字（对话框预选源） |
+| KD-SV-149 | **单入口合并形（功能点 48①）**：壳 = `views-admin-projects.mjs`（`renderAdminProjects(ctx, mount, sub)`——页题 + 两标签）；面板①「项目」= 原项目表件（搜索 ∥ 添加仓钮 ∥ 表卡）；面板②「Git 源」= `views-git-sources.mjs` `renderGitSources(ctx, mount)` **转面板形（导出名不变——删页题 h2）**；零新档；标签 id = 子段名 `projects` ∥ `git-sources`（`#/admin/projects/<tab>`）；旧址 `#/admin/git-sources` = 静态别名 ⇒ `/admin/projects/git-sources`（重定向带子段）；标签懒读 ∥ 切换 `replaceState` 零重渲 ∥ 卡层零改造（四件沿 `webui/TABS.md` §2.2 四岔口——= 组件第二消费面） | 用户「项目和gitee源放一个页面用标签页区分」；壳住项目页 = 用户点名的管理·项目；导出名不变 ⇒ 既有消费面（Git 源行「拉列表」∥ 测试件直调）零改；零新档 ⇒ `public/` 文件集不动（跨批结构快照件零改）；旧址别名 = 旧书签可达（`ROUTE_ALIASES` 现成机制） |
 
 ## 2. 机制
 
@@ -34,9 +32,9 @@
 
 - **壳**：`views-admin-projects.mjs` `renderAdminProjects(ctx, mount, sub = null)` = 页题（`admin.projects.title`）+ `createTabs`（组件 = `public/tabs.mjs`——KD-SV-102）+ 两面板；`sub` = 初始标签（`projects` ∥ `git-sources`——非法 ∥ 缺省回落标签①）。
   **壳面归属 = 非壳页**（不入 `SHELL_PAGES` 五路径——沿沙盒页先例；表格随页整页滚；高度链（`webui/STYLE.md` §2.2 直子门 `.page-area > .card`）不启用——`.tab-panel` 夹层无补法需求）。
-- **地址栏**：子段形 `#/admin/projects/<tab>`；切换 = `history.replaceState`（不触发 hashchange——零重渲；沿 `webui/TABS.md` §2.2 四岔口——本批 = 组件第二消费面）。
+- **地址栏**：子段形 `#/admin/projects/<tab>`；切换 = `history.replaceState`（不触发 hashchange——零重渲；沿 `webui/TABS.md` §2.2 四岔口——= 组件第二消费面）。
 - **懒读**：面板首激活建 ⇒ 数据随建读（面板① = 项目列表；面板② = 源清单）；未激活面板零读。
-- **旧址**：`#/admin/git-sources` = 静态别名（`nav.mjs` `ROUTE_ALIASES` ⇒ `/admin/projects/git-sources`）；**解析序现成**（`resolveRoute` 实读 2026-10-13——别名先行、别名目标再走子段裁分 ⇒ `sub` 回传 ⇒ `{ path: "/admin/projects", sub: "git-sources", redirect: true }`；nav 侧仅 +1 别名行，零额外改）；
+- **旧址**：`#/admin/git-sources` = 静态别名（`nav.mjs` `ROUTE_ALIASES` ⇒ `/admin/projects/git-sources`）；**解析序现成**（`resolveRoute` 实读——别名先行、别名目标再走子段裁分 ⇒ `sub` 回传 ⇒ `{ path: "/admin/projects", sub: "git-sources", redirect: true }`；nav 侧仅 +1 别名行，零额外改）；
   重定向 = `app.mjs` 带 `sub` 跳转（`resolved.path ∥ sub` 拼回）⇒ 落点/刷新/直打均达标签②；user 角色 ⇒ 重定向先行 ⇒ 落 `/admin/projects` 后 `denied` 块（页面级——服务端仍判据）。
 - **零回归**：两面板件 = 原样（面板① 项目表件 ∥ 面板② `renderGitSources`——导出名不变）；弹窗全族 ∥ `closeActiveModal` 路由收口（切换不重渲 ⇒ 不误关窗）∥ 其余页面零改。
 - **添加仓对话框**（共用构建器；两区）：
@@ -65,28 +63,28 @@
 
 ## 3. 文件账（本面文件行 ∥ 键族登记）
 
-| 档 | 行数（设计估——实施实读为准） | 职责 |
+| 档 | 行数 | 职责 |
 |---|---|---|
-| `thincoder-server/public/views-projects.mjs`（已落盘） | **415**（估 ≈220） | 我的·项目页 + 共用构建器（项目详情弹窗（权限感知 + 删除钮/确认窗）∥ 添加仓对话框——导出） |
-| `thincoder-server/public/views-admin-projects.mjs`（已落盘） | **41**（估 ≈120）⇒ 实读 **69**（2026-10-13 实施后回填；估 ≈86——本批：两标签壳——`sub` 第三参 ∥ `createTabs` ∥ 面板①②建） | 管理·项目页（两标签壳——面板①全量表 + 「添加仓」入口 ∥ 面板② `renderGitSources`） |
-| `thincoder-server/public/views-git-sources.mjs`（已落盘） | **278**（估 ≈300）⇒ 实读 **278**（2026-10-13 实施后回填；估 ≈276——本批：页题 h2 撤——面板形；导出名不变）⇒ ≈**+30**（2026-10-13 gitee-namespace-kinds 批——三态选择器 ∥ 范围门 ∥ 同步结果列 message 优先） | Git 源面板（源表 + 添/编/删/确认三窗 + 行动作五钮 + 事件块） |
-| `thincoder-server/public/i18n-zh-project.mjs`（已落盘） | **169**（键 154 ⇒ **162**——gitee-namespace-kinds 批 +8 键；估 ≈140）⇒ ≈**+8**（8 新键/表；实施实读为准） | 文案表·zh·项目面（新部件） |
-| `thincoder-server/public/i18n-en-project.mjs`（已落盘） | **169**（键 154 ⇒ **162**——gitee-namespace-kinds 批 +8 键；估 ≈140）⇒ ≈**+8**（8 新键/表；实施实读为准） | 文案表·en·项目面（新部件；零 CJK） |
-| `thincoder-server/public/nav.mjs`（已落盘） | 实读 **101**（B2 批）⇒ **现读 104**（2026-10-13 设计轮实核）⇒ **±0** ⇒ 实读 **105**（2026-10-13 实施后回填；本批：删 `gitSources` 项 −1 ∥ 别名 +1 行——解析序现成：别名先行、别名目标再走子段裁分 ⇒ `sub` 回传，零额外改；档头注随正；管理 11 ⇒ **10**） | IA 单源随正 |
-| `thincoder-server/public/app.mjs`（已落盘） | 实读 **202**（B2 批）⇒ **现读 206**（2026-10-13 设计轮实核）⇒ ≈**204**（本批：删 `renderGitSources` import + `PAGES` 行 −2 ∥ 重定向带子段（同行改）） | 页面挂载 |
-| `thincoder-server/public/views-audit.mjs`（已落盘） | 实读 **206**（型表 + `project_event` + 详情支（kind 族）） | 审计面随正 |
-| `thincoder-server/public/i18n.mjs`（已落盘） | 实读 **137**（原「+≈4」陈值收正——实施面 = 门面两档 `i18n-{zh,en}.mjs` 各 +2 行） | 部件装配随正 |
-| `thincoder-server/public/style.css`（已落盘） | 实读 **352**（B2 批）⇒ **现读 358**（2026-10-13 设计轮实核）⇒ 净 **−1**（本批：+1 全局 `[hidden]` 兜底 ∥ −2 按例补丁删——`webui/STYLE.md` §2.3） | 样式随正 |
-| 跨批单元测试档 `docs/batches/2026-10-08-server-public-structure.test.mjs`（已落盘 · 实读 **168**——2026-10-13 实核） | **B2 面已办**（守卫现盘含 `project` 域——与 team-ledger 批随正同盘：`ledger` 域 ∥ 指纹 zh `7ba6415a…` ∥ en `3d1a4cc7…` ⇒ **实读 zh `3a3cdf31…` ∥ en `1d8e1612…`**（2026-10-13 sandbox-container-actions 批随正——父侧直笔）∥ 键数 **959 ∥ 964** ⇒ **实读 962 ∥ 967** ⇒ **实读 970 ∥ 975**（gitee-namespace-kinds 批 +8/表——父侧直笔 2026-10-13；指纹两枚同拍随正）；复跑 6/6 绿——`webui/LEDGER.md` §3 在案）∥ **本批零新档**（零新档 ⇒ PARTS/DOMAINS 零动 ∥ 键数/指纹随本批 +8/表 收正——见前）；行数核清单在册者 = `app.mjs`（≤300——本批 ≈204，绿） ∥ `views-admin-projects.mjs` ∥ `views-git-sources.mjs`（三视图 ≤500——≈86 ∥ ≈276，绿）；`nav.mjs` ∥ `style.css` 零在册 | 结构守卫随正（本批零改） |
+| `thincoder-server/public/views-projects.mjs`（已落盘） | **415** | 我的·项目页 + 共用构建器（项目详情弹窗（权限感知 + 删除钮/确认窗）∥ 添加仓对话框——导出） |
+| `thincoder-server/public/views-admin-projects.mjs`（已落盘） | **69** | 管理·项目页（两标签壳——面板①全量表 + 「添加仓」入口 ∥ 面板② `renderGitSources`） |
+| `thincoder-server/public/views-git-sources.mjs`（已落盘） | **278** | Git 源面板（源表 + 添/编/删/确认三窗 + 行动作五钮 + 事件块） |
+| `thincoder-server/public/i18n-zh-project.mjs`（已落盘） | **169** | 文案表·zh·项目面（新部件） |
+| `thincoder-server/public/i18n-en-project.mjs`（已落盘） | **169** | 文案表·en·项目面（新部件；零 CJK） |
+| `thincoder-server/public/nav.mjs`（已落盘） | **105** | IA 单源 |
+| `thincoder-server/public/app.mjs`（已落盘） | **204** | 页面挂载 |
+| `thincoder-server/public/views-audit.mjs`（已落盘） | **271**（型表 + `project_event` + 详情支（kind 族）） | 审计面 |
+| `thincoder-server/public/i18n.mjs`（已落盘） | **137**（门面两档 `i18n-{zh,en}.mjs` 各 2 行） | 部件装配 |
+| `thincoder-server/public/style.css`（已落盘） | **358**（+1 全局 `[hidden]` 兜底 ∥ −2 按例补丁删——`webui/STYLE.md` §2.3） | 样式 |
+| 跨批单元测试档 `2026-10-08-server-public-structure.test.mjs`（已落盘 · 实读 **168**） | **在册**（守卫现盘含 `project` 域：`ledger` 域 ∥ 指纹 zh `3a3cdf31…` ∥ en `1d8e1612…` ∥ 键数 **970 ∥ 975**；复跑 6/6 绿）；**零新档**（PARTS/DOMAINS 零动）；行数核清单在册者 = `app.mjs`（≤300——204，绿） ∥ `views-admin-projects.mjs` ∥ `views-git-sources.mjs`（三视图 ≤500——69 ∥ 278，绿）；`nav.mjs` ∥ `style.css` 零在册 | 结构守卫（零改） |
 
-**面小计**：≈965（设计行和）⇒ 实施实读 **≈1126**（新档五件 1072 ∥ 随动净增 ≈54：nav +2 ∥ app +5 ∥ audit +41 ∥ style +7 ∥ i18n.mjs −1——逐件见上行）⇒ **≈1172**（本批 gitee-namespace-kinds +≈46——`views-git-sources.mjs` ≈+30 ∥ `i18n-{zh,en}-project.mjs` 各 ≈+8；以实施实读为准）。
+**面小计**：≈1172（本面档行和）。
 
-**键族登记**（两表逐键同步——`i18n-{zh,en}-project.mjs` 新部件）：
+**键族登记**（两表逐键同步——`i18n-{zh,en}-project.mjs` 部件）：
 
-- 新部件键（≈+120/表——R63/R64 面 +≈20）：`me.projects.*`（≈22——页题/列头/空态/详情字段/成员表列头/档位三值/动作/提示）∥ `admin.projects.*`（≈40——页题/列头/添加入口/对话框（源选单/读取/勾选/过滤/提交/重复项）/手输区 + 删除钮/确认窗/后果句）∥ `admin.gitSources.*`（≈55——页题/列头/状态词/同步方式两值/结果分类人话六分/五钮/添编窗字段/删除确认/防护句 + 事件块（地址/密钥/生成/一次性/登记说明））。
-- 既有部件随动：shell 两部件 +3 键（`nav.page.me.projects` ∥ `nav.page.admin.projects` ∥ `nav.page.admin.gitSources`）∥ system 两部件 +1 键（`audit.type.project_event`）。
-- 本批新键（+8/表——gitee-namespace-kinds 批；全在 `admin.gitSources.*`）：`scopeKind`（label）∥ `scopeKind.personal` ∥ `scopeKind.org` ∥ `scopeKind.enterprise` ∥ `scopeKindPh`（「请选择」）∥ `scopeGitee`（「组织名 / 企业名」）∥ `scopePhEnterprise` ∥ `kindNotePersonal`。
-- 表体量：新部件 ≈140/档；键数总账（守卫件指纹/键数）随实施实读收正。
+- 部件键（≈120/表）：`me.projects.*`（≈22——页题/列头/空态/详情字段/成员表列头/档位三值/动作/提示）∥ `admin.projects.*`（≈40——页题/列头/添加入口/对话框（源选单/读取/勾选/过滤/提交/重复项）/手输区 + 删除钮/确认窗/后果句）∥ `admin.gitSources.*`（≈55——页题/列头/状态词/同步方式两值/结果分类人话六分/五钮/添编窗字段/删除确认/防护句 + 事件块（地址/密钥/生成/一次性/登记说明））。
+- 随动键：shell 两部件 3 键（`nav.page.me.projects` ∥ `nav.page.admin.projects` ∥ `nav.page.admin.gitSources`）∥ system 两部件 +1 键（`audit.type.project_event`）。
+- `admin.gitSources.*` 范围三态八键（两表逐键同步）：`scopeKind`（label）∥ `scopeKind.personal` ∥ `scopeKind.org` ∥ `scopeKind.enterprise` ∥ `scopeKindPh`（「请选择」）∥ `scopeGitee`（「组织名 / 企业名」）∥ `scopePhEnterprise` ∥ `kindNotePersonal`。
+- 表体量：部件 ≈140/档；键数总账 = 守卫件指纹/键数。
 
 ## 4. 验收（本面 AC 行）
 
@@ -96,11 +94,11 @@
 | AC-44 ②（拉列表勾选批量 + 手输保底 + 可搜索）· 控制台面 | 添加仓对话框在册（源选单 ∥ 读取自含形六分类 ∥ 勾选 + 客户端过滤 ∥ 已在册标（服务端 `known`——跨形归一命中）+ 禁提交 ∥ 手输区）∥ 我的/管理两列表搜索输入（`?q=`）∥ i18n 两表同步（en 零 CJK） | 单元测试档 + 收口轮（浏览器实走） |
 | AC-44 ④⑤（三档权限 + 负责人边界）· 控制台面 | 详情弹窗权限感知（`my` 读数显隐：成员操作列 ∥ 加成员控件 ∥ 改显示名 ∥ 改地址（admin）∥ 更换负责人（admin）∥ **删除钮（admin——`can.delete`）+ 确认窗**）∥ 负责人行保护（无移除/降档控件）∥ 直打端点仍服务端判（页面不是判据） | 单元测试档 + 收口轮（浏览器实走） |
 | AC-44 ⑦⑨（能同步的同步 + 手动钮永在 ∥ 源表）· 控制台面 | 源表七列在册（名字/平台/PAT 掩码/状态/同步方式/上次结果/操作）∥ 「立即同步」恒显 + 进行中禁 + 终态刷新 ∥ 「拉列表」预选源 ∥ 「体检」+ 失效标红 + 人话 ∥ 「删源防护」400 就地呈 ∥ 添/编窗字段逐件（含自建基址条件显）+ 同步方式两值 + 平台门（`event` 仅 github 可选）∥ 事件块（地址/密钥/登记说明；密钥一次性明文） | 单元测试档 + 收口轮（浏览器实走） |
-| AC-12（IA）· 本批随正 | `nav.mjs` 直测：我的 6（零改）∥ 管理 **10**（`#/admin/git-sources` 项退场——并入 `#/admin/projects` 两标签；功能点 48①）∥ 别名集 +1（`/admin/git-sources` ⇒ `/admin/projects/git-sources`）∥ admin 组仅 admin ∥ 其余重定向/角色默认/子段容许零改 ∥ 静态档目随正（单源 = `webui/WEBUI.md` §1） | 单元测试档 |
-| AC-14（多语言）· 本批随正 | 新部件 `i18n-{zh,en}-project.mjs` 两表键集相等 ∥ en 零 CJK ∥ 键引用闭合 ∥ 域界归属（`project` 部件：`admin.projects` ∥ `admin.gitSources` ∥ `me.projects`）∥ 指纹/键数随正 | 单元测试档 |
-| AC-19/AC-20（样式与壳）· 零回归 | 零新颜色变量 ∥ 零新悬停规则 ∥ **非壳页定论**（2026-10-13——本面两页三表不入视口高壳；`SHELL_PAGES` 五路径零改；沿 key 表非壳先例） | 单元测试档 + 收口轮 |
-| R63/R64 补面（用户 2026-10-12 授权——`project/PROJECTS.md` §13/§14）· 控制台面 | 事件块（选单平台门 ∥ 地址/密钥/登记说明 ∥ 密钥一次性明文）∥ 删除钮 + 确认窗（`can.delete` 渲 ∥ 服务端 `confirm` 同判） | 单元测试档 + 收口轮（浏览器实走） |
-| AC-44 ⑬（gitee 范围三态——2026-10-13 入册） | 弹窗三态选择器（仅 gitee 显 ∥ 创建无默认 + 必选门 ∥ 个人 ⇒ 范围隐 ∥ 组织/企业 ⇒ 显且必填 ∥ 跨态切换：切「个人」⇒ 范围置空并提交 ∥ 切非 gitee ⇒ `scopeKind` 不携/置空）∥ 编辑态逐值回填 ∥ 不符报错显示面（拉列表窗内原文 + 同步结果列 message）∥ 键族 +8/表（zh/en 对位——en 零 CJK）∥ 用例 U1（选择器/范围门/跨态切换）∥ U2（编辑态回填/不符报错显示面） | 单元测试档 + 收口轮（浏览器实走——建企业源 ⇒ 拉列表） |
+| AC-12（IA） | `nav.mjs` 直测：我的 6（零改）∥ 管理 **10**（功能点 48①）∥ 别名集 +1（`/admin/git-sources` ⇒ `/admin/projects/git-sources`）∥ admin 组仅 admin ∥ 其余重定向/角色默认/子段容许零改 ∥ 静态档目随正（单源 = `webui/WEBUI.md` §1） | 单元测试档 |
+| AC-14（多语言） | 新部件 `i18n-{zh,en}-project.mjs` 两表键集相等 ∥ en 零 CJK ∥ 键引用闭合 ∥ 域界归属（`project` 部件：`admin.projects` ∥ `admin.gitSources` ∥ `me.projects`）∥ 指纹/键数随正 | 单元测试档 |
+| AC-19/AC-20（样式与壳）· 零回归 | 零新颜色变量 ∥ 零新悬停规则 ∥ **非壳页定论**（本面两页三表不入视口高壳；`SHELL_PAGES` 五路径零改；沿 key 表非壳先例） | 单元测试档 + 收口轮 |
+| R63/R64 补面（用户授权——`project/PROJECTS.md` §13/§14）· 控制台面 | 事件块（选单平台门 ∥ 地址/密钥/登记说明 ∥ 密钥一次性明文）∥ 删除钮 + 确认窗（`can.delete` 渲 ∥ 服务端 `confirm` 同判） | 单元测试档 + 收口轮（浏览器实走） |
+| AC-44 ⑬（gitee 范围三态） | 弹窗三态选择器（仅 gitee 显 ∥ 创建无默认 + 必选门 ∥ 个人 ⇒ 范围隐 ∥ 组织/企业 ⇒ 显且必填 ∥ 跨态切换：切「个人」⇒ 范围置空并提交 ∥ 切非 gitee ⇒ `scopeKind` 不携/置空）∥ 编辑态逐值回填 ∥ 不符报错显示面（拉列表窗内原文 + 同步结果列 message）∥ 键族 +8/表（zh/en 对位——en 零 CJK）∥ 用例 U1（选择器/范围门/跨态切换）∥ U2（编辑态回填/不符报错显示面） | 单元测试档 + 收口轮（浏览器实走——建企业源 ⇒ 拉列表） |
 
 ## 5. 边界（本面不做面）
 
@@ -108,22 +106,10 @@
 - 不做三端（CLI/VSC/桌面）端侧面（需求沉默——R65）。
 - 不做 webhook 自动登记（登记 = 手动步——零反向出站；§13）∥ 不做接收端独立配置页（密钥/地址 = 添编窗事件块内）∥ 不做非 github 平台「事件」项可用（平台门——选中即禁 + 括注理由）。
 - 不做仓级协作者档位面（KD-SV-117）；不做成员邀请/通知面；不做列表分页（体量级 = 数十——超量另裁）。
-- 合并批不做面（2026-10-13——功能点 48）：管理组其余入口的标签化（逐页点名——不预设）；两面板跨标签共享数据（各自读——懒读口径）；标签拖拽/收纳/多实例（组件边界 = `webui/TABS.md` §5）；`#/me/projects` 零触；Git 源后端零触；两页入壳化（视口高壳）——定论 = 非壳页（沿沙盒页先例）。
-- gitee-namespace-kinds 批不做面（2026-10-13——功能点 44 ⑫）：不做自动探测/回退（三态 = 用户声明——KD-SV-151）∥ 源表列面不加范围类型列（载体 = 弹窗内）∥ 非 gitee 平台零范围类型面。
+- 合并形不做面（功能点 48）：管理组其余入口的标签化（逐页点名——不预设）；两面板跨标签共享数据（各自读——懒读口径）；标签拖拽/收纳/多实例（组件边界 = `webui/TABS.md` §5）；`#/me/projects` 零触；Git 源后端零触；两页入壳化（视口高壳）——定论 = 非壳页（沿沙盒页先例）。
+- gitee 范围三态不做面（功能点 44 ⑫）：不做自动探测/回退（三态 = 用户声明——KD-SV-151）∥ 源表列面不加范围类型列（载体 = 弹窗内）∥ 非 gitee 平台零范围类型面。
 
 ## 6. 上抛/余项
 
-- 本面无独立上抛；随动项 = 需求档计数回笔（`project/PROJECTS.md` §12 R70——主 agent 笔；B2 面已办在案）∥ 跨批守卫件 = **本批零改**（零新档 ∥ 键集零动——本档 §3 行；实施轮复核）。
-
-## 变更记录
-
-- 2026-10-12（**team-projects-permissions 批（B2）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-12-team-projects-permissions.md` §1 · 台账 #1216；需求 44 ∥ AC-44）：建档——KD-SV-124（三页承载 + 共用件单源 + 导航位）∥ 三页机制（我的·项目 ∥ 管理·项目 ∥ 管理·Git 源——页形/弹窗/对话框/五钮/PAT 红标/防护）∥ 文件账 + 键族登记 ∥ 验收六行 ∥ 边界 ∥ 上抛。**产品码零触（设计轮）。**
-- 2026-10-12（**team-projects-permissions 批（B2）· 设计修订轮（fix）· eng-designer**——承批档 `docs/batches/2026-10-12-team-projects-permissions.md` §3（评审 #277）∥ 用户 2026-10-12 授权两件）：§2.1 详情弹窗增「删除项目」钮 + 确认窗（`can.delete` 渲）+ 措辞收正（`can` 场）；§2.2 已在册标改服务端 `known` 读数（跨形归一）；§2.3 同步方式两值改（事件 = 近实时 + 定时对账）+ 添编窗增事件块（地址/密钥/登记说明）∥ §3 行账随正（视图三档/键族/面小计按行和收正）+ 守卫件现读 163 ∥ §4 行随正（②④⑤⑦⑨ + 增 R63/R64 补面行）+ 措辞收正（三页三表）∥ §5 边界随正。**产品码零触（设计轮）。**
-- 2026-10-12（**team-projects-permissions 批（B2）· 设计修订轮 2（fix）· eng-designer**——承批档 `docs/batches/2026-10-12-team-projects-permissions.md` §3 轮次 2（评审 #280 之 1/4））：§2.1 渲法源句收正（服务端 `my` 读数——`can` 六键 ∥ `admin` 布尔）+ §4 行随拍（`my` 读数显隐）∥ §3 五随动行补现读（nav **99** ∥ app **197** ∥ views-audit **165** ∥ i18n **138** ∥ style **345**）。**零新语义**（评审发现直接导出项）。
-- 2026-10-12（**B2 批 · 实施后回填 · 主 agent 直接执行 · 机械 · 可 revert**——承批档 §5（webui 面交付）上抛 3/4）：§3 文件账实施实读收正（`views-projects` **415** ∥ `views-admin-projects` **41** ∥ `views-git-sources` **278** ∥ 两 project 表 **169 ∥ 169**（键 154）∥ nav **101** ∥ app **202** ∥ `views-audit` **206** ∥ `i18n.mjs` **137**（「+≈4」陈值收正——实施面 = 门面两档各 +2 行）∥ `style.css` **352**）+ 面小计 ⇒ **≈1126**；「15 件跨批档未录」项随 2026-10-12 用户裁作废（批内件不入任何门、零维护——父侧扫尾单不再维护）。**零新语义**（实读收正）。
-- 2026-10-13（**project-sources-merge 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-13-project-sources-merge.md` §2 · 功能点 48 ∥ AC-48；用户 2026-10-13 16:07 两条）：§1 KD-SV-124 收正（两入口——原「三页承载」合并后作废）+ 增 KD-SV-149（单入口合并形）；§2.2 改面板①页形 ∥ **增 §2.3 合并形**（壳/子段/别名/懒读/零回归）∥ §2.3（原）⇒ **§2.4 Git 源面板**（页题 h2 撤 ∥ 基址门条入册）；§3 文件账随正（nav/app/壳/源档/style 五行——预估 Δ）∥ §4 增 AC-48 行 + AC-12 收正（管理 11 ⇒ 10）∥ §5 增合并批不做面行。同源随动 = `webui/WEBUI.md` §1/§2/§2.12/§5/§6/§7 ∥ `webui/STYLE.md` §2.3/§3/§4 ∥ `webui/TABS.md` §5。**产品码零触（设计轮）。**
-- 2026-10-13（**project-sources-merge 批 · 设计评审轮 1 修复（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-13-project-sources-merge.md` §3 轮次 1 之 1/2/3/4/5/7/8：§2.2 面板①页形措辞收正（「添加仓」钮 = 面板①内）∥ §2.3 增壳面归属条（非壳页）+ 旧址条补解析序（别名先行、别名目标再走子段裁分 ⇒ `sub` 回传）∥ §2.4 卡题去重坐标收正（`webui/TABS.md` §2.2）∥ §3 nav 行补解析序注（Δ ±0 校正）+ 守卫件行改写（本批零改 ∥ 行数核清单在册者逐项 ∥ 实读 **168**）∥ §4 AC-19/AC-20 行收为定论（非壳页）∥ §5 边界补非壳定论 ∥ §6 随动句收为定论 ∥ §1 KD-SV-124 行去废标（D8——「原『三页承载』合并后作废」删；历史 = 本记录）。**零新语义**（评审发现直接导出项）；产品码零触。
-- 2026-10-13（**project-sources-merge 批 · 实施后行账回填 · 主 agent 直接执行 · 机械 · 可 revert**——承 #44 交付报告未做项②）：§3 三行按实施实读收正（`views-admin-projects` ≈86 ⇒ **69** ∥ `views-git-sources` ≈276 ⇒ **278** ∥ `nav.mjs` 104 ⇒ **105**）∥ 守卫件行两值随正（键数 959 ∥ 964 ⇒ **962 ∥ 967**；指纹 zh `3a3cdf31…` ∥ en `1d8e1612…`——2026-10-13 sandbox-container-actions 批随正）。**零新语义**（实读收正）。
-- 2026-10-13（**gitee-namespace-kinds 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-13-gitee-namespace-kinds.md` §1 · 台账 #1365；需求功能点 44 ⑫ ∥ AC-44 ⑬）：§2.4 添源/编辑弹窗条目增 **gitee 范围三态选择器 + 范围门**（仅 gitee 显 ∥ 创建无默认 + 必选 ∥ 个人 ⇒ 范围隐 ∥ 组织/企业 ⇒ 必填）+ **不符报错显示条**（拉列表窗内原文 ∥ 同步结果列 message 优先）；§3 行账（源档 ≈+30 ∥ 两 project 表键 154 ⇒ 162）+ 键族登记 +8 键；§4 增 AC-44 ⑬ 行；§5 增不做面条。同源随动 = `project/PROJECTS.md` §2/§4/§8/§9/§10/§11/§12（KD-SV-151） ∥ `store/STORE.md` §2 v21 ∥ `gateway/API.md` §2.9。**产品码零触（设计轮）。**
-- 2026-10-13（**gitee-namespace-kinds 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-13-gitee-namespace-kinds.md` §3 轮次 1 之 2/3/5/6）：§2.4 弹窗条增**跨态切换行为**（切「个人」⇒ 范围清空并提交 `scope: ""` ∥ 切非 gitee ⇒ `scopeKind` 不携/置空）∥ §3 两 i18n 行补行数注（⇒ ≈+8）∥ 面小计随正（≈1126 ⇒ **≈1172**——本批 +≈46 = `views-git-sources` ≈+30 ＋ 两 i18n 档各 ≈+8）∥ §4 AC-44 ⑬ 行补跨态切换 + 用例 U1/U2。**零新语义**（评审发现直接导出项）；产品码零触（设计轮）。
+- 本面无独立上抛；随动项 = 需求档计数回笔（`project/PROJECTS.md` §12 R70——主 agent 笔）∥ 跨批守卫件 = **零改**（零新档 ∥ 键集零动——本档 §3 行）。
 

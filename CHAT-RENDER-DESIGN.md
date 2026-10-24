@@ -42,7 +42,7 @@
 1. `session-wire.mjs`：预载链预算无限化（删 12 页帽）——加载器唯一。
 2. `chat-scroll.mjs`：`scrollAction` 退役 backfill 出口（三出口 → 两出口）。
 3. `chat.mjs` ∕ `chat-chrome.mjs` ∕ `app.mjs`：摘要钮 ∕ onBackfill 接线退役。
-4. `codex.css`：`.block` 原生虚拟化（`content-visibility: auto` + `contain-intrinsic-size: auto 320px`）。
+4. `beauty.css`：`.block` 原生虚拟化（`content-visibility: auto` + `contain-intrinsic-size: auto 320px`）。
 5. `user-collapse.mjs`：折叠判定改 IntersectionObserver（进视口才评——避免 content-visibility
    未渲染块的估计高度误判短文折叠）。
 

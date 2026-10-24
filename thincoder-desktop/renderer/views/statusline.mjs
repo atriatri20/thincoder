@@ -184,8 +184,8 @@ function alertNode(alert) {
 }
 
 /** 目标徽标节点（**非段位元素** —— 修正 1 定形①：不入 `STATUS_SEGMENTS` 闭集；沿 `data-alert` 先例）：字形 = `🎯`
- *  （VSC `status-bar.js:24` 逐字；字形非词表项）；可及名经词表（`status.goal`）；**点击面 = 本地开合**（#554② ——
- *  VSC `status-bar.js:74-83` 切 `#goal-panel` 的桌面对位：零新通道，开合态住 `views/goal.mjs`；键面沿桌面可点
+ *  （VSC `renderStatusBar` 逐字；字形非词表项）；可及名经词表（`status.goal`）；**点击面 = 本地开合**（#554② ——
+ *  VSC `renderStatusBar` 切 `#goal-panel` 的桌面对位：零新通道，开合态住 `views/goal.mjs`；键面沿桌面可点
  *  节点通则 —— 点按 + Enter ∕ Space）。 */
 function goalNode() {
   return {

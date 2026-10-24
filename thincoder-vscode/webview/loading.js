@@ -1,7 +1,7 @@
 /**
  * loading.js — 忙态派生接线（派生面 ∕ 忙态门单源 = 核 `composer/panel.mjs`；本档原 96 行整体搬核）。
  *
- * 端侧保留两导出面（调用面零改：`panels.js:95,114` ∕ `streaming.js:157` ∕ `chat-messages.js:94,99`）：
+ * 端侧保留两导出面（调用面零改：`handleSuspensionMessage` ∕ `finish` ∕ `initMessageLoop`）：
  *  `setLoading(ctx, on)` ⇒ 核 `setLoading(on)`（`ctx` 形参保留 = 调用签名不变；`on` 缺省 = 核内现刻标记，
  *  `panels.js` 的 `setLoading(ctx, ctx.isRunning)` 惯用式经 `ctx.isRunning` 活代理同源）；
  *  `applyBusyLock()` ⇒ 核同名面。回写门谓词（`writebackBlocked`）随核内单点派生 —— 经核 model-menu

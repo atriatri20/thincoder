@@ -1,14 +1,14 @@
 /**
  * agent/live-beat.mjs — 存活投影心跳（拍间隔 ∕ 单拍 ∕ 起 ∕ 停 —— 幂等 · 清点）——「桌面处理流 · VSC 对齐」批 R6 上提产物。
  *
- * 上提源（迁移前坐标）= VSC `thincoder-vscode/src/extension/panel-messages.mjs:45`（`LIVE_HEARTBEAT_MS = 2000`）
- * `:50`（单拍 `liveHeartbeatBeat`）`:62-75`（起 ∕ 停 `startLiveHeartbeat` ∕ `stopLiveHeartbeat`）；
+ * 上提源（迁移前坐标）= VSC `thincoder-vscode/src/extension/panel-messages.mjs`（`LIVE_HEARTBEAT_MS = 2000`）
+ * （单拍 `liveHeartbeatBeat`）·（起 ∕ 停 `startLiveHeartbeat` ∕ `stopLiveHeartbeat`）；
  * 桌面先例 = `thincoder-desktop/src/main/subagent-face.mjs`（拍体逐键清点）。**纯搬 + 转口，零语义改**：
  * 拍间隔 ∕ 单拍 ∕ 起停 ∕ 幂等 ∕ 清点入核。两处 VSC 端面判据**随拍体留端**（非本档语义）：
  * 「未就绪不拍」前置（`panel._wvReady`）与拍日志（`ev:subreassert`）。
  *
  * 拍体（`beat` 注入）= 各端存活再断言本体：VSC = `reassertLiveChildren(panel)`（`thincoder-vscode/src/
- * extension/suspension.mjs:148` 投影面）；桌面 = 逐键 `bridge(key).reassertLive(agent)`（只发在飞实例）。
+ * extension/suspension.mjs` 的 `reassertLiveChildren` 投影面）；桌面 = 逐键 `bridge(key).reassertLive(agent)`（只发在飞实例）。
  * 回值 = 本拍投递条数（**清点**读数 —— 拍体自清点，本档原样透传）。
  * **`setInterval` ∕ `unref` 转注入缝**：`timer(fn, ms) ⇒ handle` ∕ `clear(handle)` 由调用方注入
  * （缺省 = 平台 `setInterval` ∕ `clearInterval`；句柄 `unref` = 可选面 —— 在场即调，不阻进程退出）。
@@ -16,7 +16,7 @@
  * 迁移轮改指本档（2026-09-29，双写窗口收口；两处 VSC 端面判据随拍体留端）。
  */
 
-/** 拍间隔（毫秒）——单源（VSC 同值 `panel-messages.mjs:45`）：起拍即按此周期。 */
+/** 拍间隔（毫秒）——单源（VSC 同值 `panel-messages.mjs` 的 `LIVE_HEARTBEAT_MS`）：起拍即按此周期。 */
 export const LIVE_HEARTBEAT_MS = 2000
 
 /**

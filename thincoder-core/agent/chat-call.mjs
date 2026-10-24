@@ -5,6 +5,7 @@
  * 由 runAgent 的 catch/finally 收束。
  */
 import { chat } from "../provider/index.mjs"
+import { healImageRejection, clearImageFailStreak } from "./image-heal.mjs"
 
 /** 流式输出门（§2.5 #78 并入——VSC 三态门，纯函数可直驱测试）：depth 0 恒通；
  *  consult 子代理豁免（其输出进会诊面板）；其余经 `streamOutput` 显式选择进入。 */
@@ -24,32 +25,36 @@ export async function callModelTurn(agent, {
     await classifyAndApply(agent, turn).catch(() => {})
   }
 
-  try {      response = await chat(agent.provider, {
-      messages, tools: toolSchemas,
-      // §2.5 #78 并入（VSC onToken 三态门）：depth 0 恒通；consult 子代理豁免（其输出进
-      // 会诊面板）；escalate 等经 opts.streamOutput 显式选择进入；其余子代理不流式。
-      onToken: streamOutputAllowed(depth, agent._role, streamOutput) ? callbacks.onToken : null,
-      onReasoning: callbacks.onReasoning,
-      onWait: callbacks.onWait,
-      signal,
-      streamRules: agent.config.agent?.streamRules ?? [],
-      firedPatterns: streamRuleFired,
-      // LOGGING（LOGGING.md）：llm:* 事件的语义上下文（stage=turn 主循环回合——含
-      // digest 消化轮 auto=true；child=子代理 id（spawn 时 stamp 于 child._logId））
-      // TRACES.md §6.1 D-TR4：轨迹元数据增补（role/depth/kind/session/cwd——trace-store 只读
-      // logCtx，签名不变）；kind：depth>0 = subagent（consult 孩子 = consult）——子代理
-      // 对回靠 role+depth+child id（children 无 _sessionStart——不经 depth-0 设置——
-      // session 字段对子代理轨迹为 null——见 trace-store/agent.mjs 注释）。
-      logCtx: {
-        stage: "turn", turn: turn + 1, auto: autoTurn, child: agent._logId,
-        role: agent._role ?? null,
-        depth,
-        kind: depth > 0 ? (agent._role === "consult" ? "consult" : "subagent") : "turn",
-        session: agent._sessionStart ?? null,
-        cwd: agent.cwd,
-        traces: agent.config?.traces?.enabled !== false,
-      },
-    })
+  // 发送选项（首送 ∥ §6.26 自愈重发共用——两送除 messages 外逐字同参）
+  const sendOpts = {
+    tools: toolSchemas,
+    // §2.5 #78 并入（VSC onToken 三态门）：depth 0 恒通；consult 子代理豁免（其输出进
+    // 会诊面板）；escalate 等经 opts.streamOutput 显式选择进入；其余子代理不流式。
+    onToken: streamOutputAllowed(depth, agent._role, streamOutput) ? callbacks.onToken : null,
+    onReasoning: callbacks.onReasoning,
+    onWait: callbacks.onWait,
+    signal,
+    streamRules: agent.config.agent?.streamRules ?? [],
+    firedPatterns: streamRuleFired,
+    // LOGGING（LOGGING.md）：llm:* 事件的语义上下文（stage=turn 主循环回合——含
+    // digest 消化轮 auto=true；child=子代理 id（spawn 时 stamp 于 child._logId））
+    // TRACES.md §6.1 D-TR4：轨迹元数据增补（role/depth/kind/session/cwd——trace-store 只读
+    // logCtx，签名不变）；kind：depth>0 = subagent（consult 孩子 = consult）——子代理
+    // 对回靠 role+depth+child id（children 无 _sessionStart——不经 depth-0 设置——
+    // session 字段对子代理轨迹为 null——见 trace-store/agent.mjs 注释）。
+    logCtx: {
+      stage: "turn", turn: turn + 1, auto: autoTurn, child: agent._logId,
+      role: agent._role ?? null,
+      depth,
+      kind: depth > 0 ? (agent._role === "consult" ? "consult" : "subagent") : "turn",
+      session: agent._sessionStart ?? null,
+      cwd: agent.cwd,
+      traces: agent.config?.traces?.enabled !== false,
+    },
+  }
+
+  try {
+    response = await chat(agent.provider, { messages, ...sendOpts })
   } catch (e) {
     // User interrupt (Ctrl+I): controller.abort({ interrupt: true, message }).
     // Inject into history; the outer loop recreates the controller and resumes.
@@ -61,8 +66,16 @@ export async function callModelTurn(agent, {
         agent.history.push({ role: "user", content: msg })
       }
     }
-    throw e
+    // §6.26 图片拒绝自愈（判定 ∥ 剥除 ∥ 注记 ∥ 记账 = agent/image-heal.mjs 单源）：
+    // 未愈 ⇒ 原错照抛（非图像错误零误伤）；已愈 ⇒ 载荷已修（历史无图 + 机读注记）单次重发。
+    const { healed } = healImageRejection(agent, e)
+    if (!healed) throw e
+    // 重建消息（§6.26 步 4——剥除后的 agent.history 含注记）：再发一次（非重试——同请求
+    // 重发对图像拒绝恒无效）；再败 ⇒ 本行抛新错（不循环、不二次剥除，历史保持已剥除态）。
+    response = await chat(agent.provider, { messages: [{ role: "system", content: systemPrompt }, ...agent.history], ...sendOpts })
   }
+  // §6.26 清零调用点（记账单源 = image-heal.mjs）：任一次成功调用清零（含自愈重发成功）
+  clearImageFailStreak(agent)
 
   return response
 }

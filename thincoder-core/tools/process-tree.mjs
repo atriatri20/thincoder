@@ -1,8 +1,8 @@
 /**
  * tools/process-tree.mjs — 平台感知树杀单源（自 `execute.mjs` 抽出——TOOLS.md §6.14 落位表行 2）。
- * 抽出理由 = **断环**：`shared → git-run → execute → shared` 会 TDZ（`execute.mjs:29` 在模块求值期
+ * 抽出理由 = **断环**：`shared → git-run → execute → shared` 会 TDZ（`execute.mjs` 在模块求值期
  * 调 `DESC`（`const`））⇒ 树杀须住两不依赖档。行为逐字同（win32 `taskkill /T /F` · POSIX 组杀 + 直杀兜底）。
- * `execute.mjs` 保持再导出面（`test/tool-seams.test.mjs:26` 消费）。
+ * `execute.mjs` 保持再导出面。
  */
 import { execFileSync } from "node:child_process"
 

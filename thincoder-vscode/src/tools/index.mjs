@@ -6,7 +6,7 @@
  * 单源引用（核内零改动）；本档保留 = VSC 登记表（宿主工具 `ide/focus/shell/code` +
  * 自持 `builtinTools` 清单）+ **两处端壳增量**（同一份登记面，不另立档）：
  *   ① `gitTool` 动作级只读分类装饰（`isReadonlyAction`——核动作级分类消费 =
- *      `agent/dispatch-gates.mjs:130` 谓词 + `dispatch.mjs` 两门禁位（权限短路 ∕ planMode）；核 git 工具无此概念）；
+ *      `isSubagentEscalateAction` 谓词 + `dispatch.mjs` 两门禁位（权限短路 ∕ planMode）；核 git 工具无此概念）；
  *   ② LSP 宿主语言服务桥（`configureLspHost` 供值：VS Code 语言服务直用，零自起进程——
  *      原 `src/tools/lsp.mjs` 端实现随删旧迁入本档）。
  */
@@ -20,6 +20,10 @@ import { lintTool } from "@thincoder/core/tools/linter.mjs"
 import { lspTool, configureLspHost } from "@thincoder/core/tools/lsp.mjs"
 import { executeTool } from "@thincoder/core/tools/execute.mjs"
 import { questionTool } from "@thincoder/core/tools/question.mjs"
+// SSH 会话工具族（批 ssh-session · 台账 #1436 · 设计单源 = `docs/core/design/TOOLS.md` §6.22）——
+// 端装配清单行（零实现副本）：实现在核（`@thincoder/core/tools/ssh.mjs`），凭据窗经
+// `ctx.onSecretInput` 缝落本端卡片（`src/extension/panel-callbacks.mjs` `makeAskSecretInPanel`）。
+import { sshTool } from "@thincoder/core/tools/ssh.mjs"
 import { gitTool as coreGitTool } from "@thincoder/core/tools/git.mjs"
 import { websearchTool, fetchTool } from "@thincoder/core/tools/web.mjs"
 import { fileOpsTool, processTool, getCurrentTimeTool, waitForTool } from "@thincoder/core/tools/ops.mjs"
@@ -36,8 +40,8 @@ import { focusTool } from "./focus.mjs"
 import { peerInstancesTool } from "../extension/peer-instances.mjs" // R10 L2（MULTI-INSTANCE-COLLAB D-L2b）只读工具
 
 /**
- * git 工具 + 端只读分类装饰（迁自删除档 `src/tools/git.mjs:81-93`，逐字同语义）。
- * 核动作级分类消费（`agent/dispatch-gates.mjs:130` 谓词 + `dispatch.mjs` 两门禁位：权限短路 ∕
+ * git 工具 + 端只读分类装饰（迁自删除档 `src/tools/git.mjs`，逐字同语义）。
+ * 核动作级分类消费（`isSubagentEscalateAction` 谓词 + `dispatch.mjs` 两门禁位：权限短路 ∕
  * planMode 门）按 `tool.isReadonlyAction(args)` 判动作级只读——核 git 工具无该钩子（核内零端名/零端概念），
  * 故端侧以装饰面承载：只读动作免审批免拦，写动作（commit/push/rm/reset…）照常询问。
  */
@@ -162,7 +166,7 @@ export { globTool, grepTool }
 export { bashTool }
 export { websearchTool, fetchTool }
 export { insertAfterTool, applyPatchTool, lsTool, deleteTool }
-export { lintTool, lspTool, executeTool, questionTool, readImageTool }
+export { lintTool, lspTool, executeTool, questionTool, sshTool, readImageTool }
 export { codeSearchTool, docSearchTool }
 export { ideTool, focusTool, fileOpsTool, processTool, getCurrentTimeTool, waitForTool, treeTool }
 export { toOpenAISchema }
@@ -175,7 +179,7 @@ export const builtinTools = [
   lintTool, lsTool, deleteTool,
   globTool, grepTool, bashTool,
   gitTool,
-  websearchTool, fetchTool, questionTool,
+  websearchTool, fetchTool, questionTool, sshTool,
   repoOutlineTool, codeSearchTool, docSearchTool,
   lspTool, executeTool,
   memoryTool,

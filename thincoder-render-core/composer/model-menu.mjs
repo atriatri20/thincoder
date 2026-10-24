@@ -1,18 +1,18 @@
 /**
  * model-menu.mjs — 模型两级菜单 + 推理下拉工厂（核化 VSC `webview/model-picker.js`(152) + `webview/model-menu.js`(272)
  * ——上提批 `2026-09-28-desktop-input-vsc-align.md` §2.3 ∕ §2.4 P6+P7；含 `effortSelection` 纯归一自
- * `webview/settings-state.js:44-56` 搬核——VSC 侧改指本档 ∕ 留 re-export，§2.7）。
+ * `webview/settings-state.js` 搬核——VSC 侧改指本档 ∕ 留 re-export，§2.7）。
  *
  * 导出面（四件 · 单源）：`effortSelection` ∕ `createModelMenu`（工厂）∥ **`openModelMenu` ∕ `closeModelMenu`**（模块级——
- * `model-menu.js:76-271` 逐字：全屏 overlay 收外点 ∕ 定位于触发钮视口矩形（下无位翻上）· provider 行 = **分组/展开控件**
+ * `model-menu.js` 逐字：全屏 overlay 收外点 ∕ 定位于触发钮视口矩形（下无位翻上）· provider 行 = **分组/展开控件**
  * （`role=button` + `aria-expanded` 随组体开合；点击 = 展开⇄收起，菜单层恒不因行点击而关）· 悬停 flyout（事件驱动
  * 零 timer——row ∪ flyout 内陆保持）· 过滤框（子串 ∕ ↑↓ 高亮 ∕ Enter 取）· footer 管理三项；`onPick({ provider,
  * model, row })` ∕ `footer` 由调用方给）。独立导出与工厂**共用同一份实现**（禁两份）——消费面三处：本档两钮接线 ∕ VSC 设置族两档
- * （`settings-models.js:6` ∕ `settings-providers.js:10`——经 `model-menu.js` re-export shim）∥ 桌面。
+ * （`settings-models.js` ∕ `settings-providers.js`——经 `model-menu.js` re-export shim）∥ 桌面。
  *
  * 面：
- *  - 两钮接线（`model-picker.js:13-36`）：模型钮 ⇒ `openModelMenu`（`up: true`）；推理钮 ⇒ 推理下拉开关（`:38-69` 档位列表 + ✓ 选中态 + 空档位两行说明）。
- *  - 候选推送面（`:111-151` handleModelsMessage 逐字）：`models` 推送 ⇒ 缓存 + 现值标记（忙态零回写——回写门 · 2026-10-04 收窄）·
+ *  - 两钮接线（`model-picker.js`）：模型钮 ⇒ `openModelMenu`（`up: true`）；推理钮 ⇒ 推理下拉开关（`model-picker.js` 档位列表 + ✓ 选中态 + 空档位两行说明）。
+ *  - 候选推送面（`model-picker.js` handleModelsMessage 逐字）：`models` 推送 ⇒ 缓存 + 现值标记（忙态零回写——回写门 · 2026-10-04 收窄）·
  *    表外 prefs 复合 ⇒ 只显不写槽（M10 v2）· `rollback` 位（写失败回滚重推 —— #1121 修③）∧ 槽复合缺 ⇒ 钮回「未选」空态。
  *  - `mm-*` 样式 = **静态承载** `./model-menu.css`（2026-09-28 输入逻辑收正轮：原 JS 注入形在桌面侧依 CSP
  *    （`style-src 'self'`）被拒 ⇒ 注入路径撤，样式落静态资产；两端各以自身静态装载形引入 —— VSC = `webview/controls.css`
@@ -23,12 +23,15 @@
  * ④ 取词 = 核 `../i18n.mjs`。回写门判据（`panel.mjs` `writebackBlocked`——只治 `models` 推送自动回写）由调用方以
  * `blocked()` 注入——判据单点在 `panel.mjs`；钮面零门（2026-10-04 解锁批——任意忙态可点可开）。
  *
- * 推理下拉解散面（点外关 ∕ Esc 关）＝ VSC `chat.js:97-110,121-127` 本件部分（设置面 ∕ 会话下拉两段留端）；工厂化后本件自持（两端同形）。
+ * 推理下拉解散面（点外关 ∕ Esc 关）＝ VSC `chat.js` 本件部分（设置面 ∕ 会话下拉两段留端）；工厂化后本件自持（两端同形）。
  */
 import { t } from "../i18n.mjs"
+import { shortName } from "./model-menu-labels.mjs"
+import { computePlacement } from "./model-menu-place.mjs"
+import { menuStateOf } from "./model-menu-state.mjs"
 
 /**
- * 归一链单源（`settings-state.js:44-56` 搬核——设置面板 ∕ 聊天面板 picker / advisor 读面三面共用同一个 value）：
+ * 归一链单源（`settings-state.js` 搬核——设置面板 ∕ 聊天面板 picker / advisor 读面三面共用同一个 value）：
  *  ⓪ off 哨兵避支（§16.5 · 2026-09-25 收尾批并入）：`current === "none"`（读面 off 形字面）∧ 枚举
  *     不含 `"none"` ⇒ **中性档**（**不经 ② 支**）——off 形式不得降级为档位（用户从未选过）；
  *  ① 已存值 ∈ 枚举 ⇒ 取之；② 否则注册默认（**须 ∈ 枚举**）⇒ 取之；③ 否则 ⇒ `null`（中性档）。
@@ -43,20 +46,7 @@ export function effortSelection(levels, current, registeredDefault) {
   return null
 }
 
-/** Short display names for menu rows — the preset desc strings are long annotations
- *  (key-compatibility notes etc.) meant for the add-provider form, not menus. */
-const PROVIDER_SHORT = {
-  deepseek: "DeepSeek", kimi: "Kimi", "kimi-code": "Kimi Code", glm: "GLM", "glm-code": "GLM Coding",
-  qwen: "Qwen", qwenplan: "Qwen Plan", minimax: "MiniMax", openai: "OpenAI",
-  claude: "Claude", gemini: "Gemini", grok: "Grok", mistral: "Mistral",
-  volcengine: "Volcengine", hunyuan: "Hunyuan", siliconflow: "SiliconFlow",
-  openrouter: "OpenRouter", groq: "Groq",
-}
-function shortName(provider, group) {
-  return PROVIDER_SHORT[provider] || (group && group.length > 22 ? provider : group) || provider
-}
-
-// ─── 菜单实现（模块级单例 + 独立导出——VSC `model-menu.js:76-271` 逐字；工厂与独立导出共用同一份，单源）──
+// ─── 菜单实现（模块级单例 + 独立导出——VSC `model-menu.js` 逐字；工厂与独立导出共用同一份，单源）──
 
 /** The current open menu's overlay element (or null). */
 let _openOverlay = null
@@ -89,11 +79,12 @@ export function openModelMenu({ anchorEl, models, value, onPick, footer = [], up
   panel.className = "mm-panel"
   overlay.appendChild(panel)
 
-  // ── content ──
-  if (!models || models.length === 0) {
+  // ── content（三态：候选未到 ⇒ 加载行 ∥ 已到且空 ⇒ 无可用模型行、不渲分组 ∥ 有候选 ⇒ 分组行——判定单源 `menuStateOf`）──
+  const menuState = menuStateOf(models)
+  if (menuState !== "list") {
     const d = document.createElement("div")
     d.className = "mm-loading"
-    d.textContent = t("model.loading") || "…"
+    d.textContent = menuState === "empty" ? (t("model.empty") || "No models available") : (t("model.loading") || "…")
     panel.appendChild(d)
   } else {
     const byProvider = new Map()
@@ -119,14 +110,17 @@ export function openModelMenu({ anchorEl, models, value, onPick, footer = [], up
     }
   }
 
-  // ── positioning: viewport rect, flip up when no room below ──
+  // ── positioning: viewport rect, flip up when no room below（落位单源 = `computePlacement`；零矩形 ⇒ 视口居中）──
   const place = () => {
-    const r = anchorEl.getBoundingClientRect()
     const ph = Math.min(panel.offsetHeight || 200, 340)
-    const below = window.innerHeight - r.bottom - 4
-    const openUp = up || below < Math.min(ph, 180)
-    panel.style.left = Math.max(4, Math.min(r.left, window.innerWidth - 270)) + "px"
-    panel.style.top = openUp ? Math.max(4, r.top - ph - 4) + "px" : (r.bottom + 4) + "px"
+    const pos = computePlacement({
+      anchorRect: anchorEl.getBoundingClientRect(),
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      panelHeight: ph,
+      up,
+    })
+    panel.style.left = pos.left + "px"
+    panel.style.top = pos.top + "px"
   }
 
   overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModelMenu() })
@@ -277,29 +271,34 @@ function closeFlyout(overlay) {
  *  - `post(type, payload)`（② 出站）· `state`（③ `models()` 初值读面）· `hooks.confirmRemoveProvider(onConfirm)` ∕
  *    `hooks.closeSiblingDropdowns()`（⑤ 跨面）· `blocked()`（回写门判据——单点在 `panel.mjs`；钮面零门）；
  *  - `modelBtn` ∕ `reasoningBtn` ∕ `controlsRow` = 控件行调用方已建的元素与容器（两浮层由本档建 + 挂入）。
- * 返回：`{ open, close, closeReasoning, applyModels, models, selection, reasoningDropdown, modelDropdown }`——
+ * 返回：`{ open, applyWords, close, closeReasoning, applyModels, models, selection, reasoningDropdown, modelDropdown }`——
  * `open` = 模型钮 handler 提取件（斜径 `/model` 同钮同函数消费；见其函数注）。
  */
 export function createModelMenu(deps) {
   const { post, state = {}, hooks = {}, modelBtn, reasoningBtn, controlsRow, blocked = () => false } = deps
 
-  // ── 结构（照 VSC `index.html:61-62`：两 `.dropdown` 位于控件行内七钮之后）──
+  // ── 结构（照 VSC `index.html`：两 `.dropdown` 位于控件行内七钮之后）──
   // `#model-dropdown` = 骨架面（VSC `ctx.dropdown` 零消费者——旧 dropdown 族遗留；结构单源锁同携 ⇒ 保留）
   const modelDropdown = document.createElement("div")
   modelDropdown.id = "model-dropdown"
   modelDropdown.className = "dropdown"
   modelDropdown.setAttribute("role", "listbox")
-  modelDropdown.setAttribute("aria-label", "Model list")
   modelDropdown.style.display = "none"
 
   const reasoningDropdown = document.createElement("div")
   reasoningDropdown.id = "reasoning-dropdown"
   reasoningDropdown.className = "dropdown"
   reasoningDropdown.setAttribute("role", "listbox")
-  reasoningDropdown.setAttribute("aria-label", "Reasoning levels")
   reasoningDropdown.style.display = "none"
 
   controlsRow.append(modelDropdown, reasoningDropdown)
+
+  /** 词面重派生（创建期取词 ∕ 挂载先于词表的面——端侧词表到位后调用；幂等）：两浮层 aria-label。 */
+  function applyWords() {
+    modelDropdown.setAttribute("aria-label", t("model.listLabel"))
+    reasoningDropdown.setAttribute("aria-label", t("model.reasoningLevels"))
+  }
+  applyWords()
 
   // ── 面板态（`ctx` 内生面：候选缓存 + 三现值）──
   let _models = typeof state.models === "function" ? (state.models() ?? []) : []
@@ -307,7 +306,7 @@ export function createModelMenu(deps) {
   let selectedProvider = ""
   let selectedReasoning = "max"
 
-  // ── 两钮接线（`model-picker.js:13-36` 逐字；DOM 查询 → 调用方给的元素引用）──
+  // ── 两钮接线（`model-picker.js` 逐字；DOM 查询 → 调用方给的元素引用）──
 
   /**
    * 模型钮 handler **提取件**（`docs/render-core/design/RENDER-CORE.md` §5 条 6 动作句柄面）：斜径 `/model`
@@ -330,7 +329,7 @@ export function createModelMenu(deps) {
         { label: t("model.addProvider"), onClick: () => post("addProvider") },
         { label: t("model.removeProvider"), onClick: () => hooks.confirmRemoveProvider?.(() => post("removeProvider")) },
         // ↑ F-W17 确认门（SETTINGS.md §2.10 入口册 #6——删条即失 apiKey 原文）；VSC 绑 = `window._confirmSecretDelete(null, cb)`
-        // （settings.js:47）+ footer onClick 被 model-menu.js:132 调用时不传参 ⇒ 无元素可给（btn=null 口径随注入面）。
+        // （settings.js）+ footer onClick 被 model-menu.js 调用时不传参 ⇒ 无元素可给（btn=null 口径随注入面）。
         { label: t("model.setKey"), onClick: () => post("setKey") },
       ],
       up: true,
@@ -388,7 +387,7 @@ export function createModelMenu(deps) {
     post("selectModel", { model: m.id, provider: m.provider || "" })
     const levels = m.reasoning || []
     // 归一 = 单源 `effortSelection`（§15.4-1）：已存值∈枚举 > 注册默认∈枚举 > **中性档 `""`**
-    // （不显式 effort ⇒ 回合侧 `if (reasoning)` 假值不 patch——`panel-turn-stages.mjs:98`）。
+    // （不显式 effort ⇒ 回合侧 `if (reasoning)` 假值不 patch——`panel-turn-stages.mjs`）。
     // 不得回落 `levels[0]`：effort 型新档（qwen3.7/3.8-flash 族）首项 = `"none"` ⇒ 换模型即静默关思考。
     if (levels.length > 0) selectedReasoning = effortSelection(levels, selectedReasoning, m.effortDefault) ?? ""
     const visible = levels.length > 0 ? selectedReasoning : "off"
@@ -404,7 +403,7 @@ export function createModelMenu(deps) {
     // Close all dropdowns first
     closeModelMenu()
     reasoningDropdown.style.display = "none"
-    hooks.closeSiblingDropdowns?.() // VSC `:97-98`：`ctx.sessionDropdown` ∕ `ctx.sessionSelector` 两行 = 会话面（本批外）⇒ 注入
+    hooks.closeSiblingDropdowns?.() // VSC `chat.js`：`ctx.sessionDropdown` ∕ `ctx.sessionSelector` 两行 = 会话面（本批外）⇒ 注入
     el.style.display = open ? "none" : "block"
     if (!open) build()
     // Update aria-expanded on the trigger button
@@ -443,7 +442,9 @@ export function createModelMenu(deps) {
       if (match) {
         selectedModel = match.id; selectedProvider = match.provider
         modelBtn.textContent = match.id
-        selectedReasoning = prefs.reasoning || "off"
+        // 未设（`prefs.reasoning` 无值）⇒ 中性哨兵 `""`（**∉ 档位枚举**）——不得用 `"none"`：含 `none`
+        // 族经 ① 命中即被静默关思考（#330 收口判据 ∥ `MODEL-SPECS.md` §15.4-1 中性档；car2 修复轮）。
+        selectedReasoning = prefs.reasoning || ""
         const levels = match.reasoning || []
         // 归一（单源 = `effortSelection`，同 `selectModel` 内注释）：已存值∈枚举 > 注册默认∈枚举 >
         // 中性档 `""`——不得回落 `levels[0]`（§15.4；`levels[0] === "none"` 族两径都不再被静默关思考）。
@@ -469,8 +470,8 @@ export function createModelMenu(deps) {
       } else if (prefs.model) {
         // M10 MODEL-SELECTION v2 (2026-09-11 scope add-on, user ruling): a prefs composite
         // NOT in the pulled list must never silently write the session slot. Display AND
-        // state fall back to the slot composite (turn-echo parity: send.js:47 →
-        // turn-model.mjs:22); slot writes stay explicit-click only — zero selectModel /
+        // state fall back to the slot composite (turn-echo parity: send.js →
+        // turn-model.mjs); slot writes stay explicit-click only — zero selectModel /
         // selectReasoning posts (selectModel = the only slot writer; selectReasoning only
         // writes workspaceState). selectedReasoning stays untouched.
         selectedModel = prefs.model
@@ -491,7 +492,7 @@ export function createModelMenu(deps) {
     }
   }
 
-  // ── 推理下拉自身解散面（点外关 ∕ Esc 关——源 = VSC `chat.js:97-110,121-127` 本件部分，见件头注）──
+  // ── 推理下拉自身解散面（点外关 ∕ Esc 关——源 = VSC `chat.js` 本件部分，见件头注）──
   document.addEventListener("click", (e) => {
     if (!reasoningDropdown.contains(e.target) && e.target !== reasoningBtn) reasoningDropdown.style.display = "none"
   })
@@ -501,6 +502,7 @@ export function createModelMenu(deps) {
 
   return {
     open,
+    applyWords,
     close: closeModelMenu,
     closeReasoning: () => { reasoningDropdown.style.display = "none" },
     applyModels,

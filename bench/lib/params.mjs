@@ -3,12 +3,12 @@
  * provider 条目构造（config clone + 覆写）+ 枚举面判定。
  *
  * 构造面（§2.9-1 冻结）：请求参数只住**条目**——核从条目读 `maxTokens` / `temperature` / `reasoningEffort`，
- * 且请求体模型名取条目（`provider/core.mjs:178` / `:184` / `:185` / `:196`）⇒ 覆写不落条目会**静默失效**。
+ * 且请求体模型名取条目（`chatImpl`）⇒ 覆写不落条目会**静默失效**。
  * 本档 = 四处（`pipeline.mjs` 条目构造 · `run.mjs` 启动门 · `bench/preflight.mjs` · 测试）共用单源
  * ——防「预检一套、跑批另一套」漂移（KD-34 被否候选 ②）。
  *
  * 思考强度（KD-32 中档口径）：档位字段 `reasoningEffort` 优先；缺省沿用户 config 条目原值；两者皆无 ⇒
- * **不发该字段**（键不落条目）。豁免面（核守卫同判 · `provider/core.mjs:196-197`）：`model` 含 `/`
+ * **不发该字段**（键不落条目）。豁免面（核守卫同判 · `chatImpl`）：`model` 含 `/`
  * （路由形态名）或 `format ∈ {anthropic, google}` ⇒ effort 不启送 ⇒ 记录面按「未发送」语义处置
  * （§2.2-13 两键不写）。
  *
@@ -33,7 +33,7 @@ export function buildProviderEntry(base, { model, maxTokens, temperature, reason
   return entry
 }
 
-/** 路由 / format 豁免面（核守卫同判——`provider/core.mjs:196-197`）：命中 ⇒ effort 不启送（§2.13-⑤）。
+/** 路由 / format 豁免面（核守卫同判——`chatImpl`）：命中 ⇒ effort 不启送（§2.13-⑤）。
  *  `format` 随用户 config 条目派生（本机实际发送面；spec 行自带的 format 是同一事实的另一登记面）。 */
 export function isEffortExempt(model, user) {
   if (String(model ?? "").includes("/")) return true
@@ -48,7 +48,7 @@ export function effortFace(entry, user) {
   return { value, from: entry.reasoningEffort != null ? "models.json" : "config" }
 }
 
-/** 温度裁剪对账（报警腿 · §2.13-④）：核按 `spec.tempRange` 归一裁剪（`provider/core.mjs:187-190`）——
+/** 温度裁剪对账（报警腿 · §2.13-④）：核按 `spec.tempRange` 归一裁剪（`chatImpl`）——
  *  裁剪后 ≠ 档位值 ⇒ 该档入档温度 ≠ 实发温度。返回实发值（无 tempRange ⇒ 原值）。 */
 export function clampedTemperature(spec, value) {
   if (typeof value !== "number" || !spec?.tempRange) return value

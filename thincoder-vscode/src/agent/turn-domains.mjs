@@ -18,7 +18,7 @@
 import { AUTO_TURN_DIGEST_DOMAIN, AUTO_TURN_DIGEST_DOMAIN_ENG, UPSTREAM_TURN_DOMAIN, TIMER_TURN_DOMAIN } from "./setup-reminders.mjs"
 
 /** 端 overlay（端特有呈递纪律——逐字搬迁自端侧既有变体的端特有部分：advisor / consult /
- *  escalate 三族呈递规则；零新撰 / 零改写；源 as-of = 原 `thincoder-vscode/src/agent.mjs:29-30`
+ *  escalate 三族呈递规则；零新撰 / 零改写；源 as-of = 原 `thincoder-vscode/src/agent.mjs`
  *  变体的端特有段，逐字见 §6.27.12.12 ④ 块）。 */
 export const VSC_TURN_OVERLAY =
   "(async advisor review reports: present the findings and suggested fixes verbatim — do not apply them; consultation reports: present each reply verbatim with your per-reply adoption judgment as text — do not apply anything; escalate reports: summarize the merged post-op work — further changes need a user message)"

@@ -1,32 +1,33 @@
 /**
- * team-command.mjs — `thincoder team` 命令族（login ∥ logout ∥ status；CLI-ENTRY.md §2 `team` 行 ·
- * 2026-10-10 B1 批 · 台账 #1212）。
+ * team-command.mjs — `thincoder team` 命令族（login ∥ logout ∥ rotate ∥ status；CLI-ENTRY.md §2 `team` 行 ·
+ * 2026-10-10 B1 批 · 台账 #1212；rotate = team-token-rotation 批 · 台账 #1238）。
  *
  * 机制单源 = 核 `@thincoder/core/team.mjs`（登录 ∥ 退出 ∥ 状态 ∥ 地址归一 ∥ 端标签 ∥ 派生条目写面）——
  * 本档 = 命令面壳（旗标解析 ∥ 问句收集 ∥ 出词）；**端侧零自写盘**（一切写经核单源）。
  * 输入形（D-TM6）：地址/用户名可旗标注入（`--server <url>` ∥ `--user <name>`——空格形，缺 ⇒ 问句）；
  * 密码恒问句（零旗标——零命令历史）——TTY = 隐藏回显（原始模式逐键，零回显）∥ 非 TTY = stdin 行读。
- * 文案（TEAM.md §2.5——三端逐字同句）：未登录「未登录——登录后可用」；失败四句（理由域四值单源 =
- * 核 `reason` 闭集）；两条一次性提示（同名冲突（登录当刻）∥ 吊销未达（退出当刻））——读面零提示字段。
+ * 文案（TEAM.md §2.5——三端逐字同句）：未登录「未登录——登录后可用」；失败五句（理由域五值单源 =
+ * 核 `reason` 闭集）；三条一次性提示（同名冲突（登录当刻）∥ 吊销未达（退出当刻）∥ 轮换（确认句 + 成句））——读面零提示字段。
  * 输出流：结果行 = stdout；问句 ∥ 失败句 ∥ 一次性提示 = stderr（问句先例 = setup-wizard.mjs `ask`）。
  * 返回 = 退出码（0 成 ∥ 1 败）；未知参 ∥ 缺子命令 ⇒ usage + 1（fail-closed，先例 ledger-read.mjs）。
- * 词面导出面（登录面补全批 · 2026-10-10）：四句闭集表 ∥ 未登录句 ∥ 两条一次性提示 ∥ 结果行首句
+ * 词面导出面（登录面补全批 · 2026-10-10）：五句闭集表 ∥ 未登录句 ∥ 三条一次性提示 ∥ 结果行
  *  ∥ `renderState`——TUI 面（`src/tui/cmd-team.mjs`）逐字同源消费（判据「CLI = 单语直出同句」），
  *  本档行为零变（导出关键字与常量收拢；出词 ∥ 退出码 ∥ 旗标面逐字不动）。
  */
 import { createInterface } from "node:readline"
 
-import { teamLogin, teamLogout, teamStatus, NOTICE_MANUAL_NAME_CONFLICT } from "@thincoder/core/team.mjs"
+import { teamLogin, teamLogout, teamRotate, teamStatus, NOTICE_MANUAL_NAME_CONFLICT } from "@thincoder/core/team.mjs"
 
 /** 命令面 usage（未知参 / 缺子命令 ⇒ stderr + 退出 1）。 */
-const TEAM_USAGE = "Usage: thincoder team login [--server <url>] [--user <name>] | thincoder team logout | thincoder team status"
+const TEAM_USAGE = "Usage: thincoder team login [--server <url>] [--user <name>] | thincoder team logout | thincoder team rotate | thincoder team status"
 
-/** 失败出词四句（TEAM.md §2.5 失败理由域；核 `reason` 四值闭集 ⇔ 四句——三端逐字同句）。 */
+/** 失败出词五句（TEAM.md §2.5 失败理由域；核 `reason` 五值闭集 ⇔ 五句——三端逐字同句）。 */
 export const FAILURE_TEXT = {
   network: "网络不可达——请检查地址与端口",
   credentials: "用户名或密码错误",
   rate_limited: "登录尝试过于频繁",
   write_failed: "本机配置写入失败",
+  invalid: "已失效——重新登录",
 }
 
 /** 未登录提示（§2.5 未登录行——三端逐字同句）+ 指引进登录。 */
@@ -41,15 +42,47 @@ export const TEXT_LOGGED_OUT = "Logged out."
 export const TEXT_MANUAL_CONFLICT = "已存在同名 provider「team」——未自动添加；请改名或删除后重登"
 export const TEXT_REVOKE_UNDELIVERED = "服务端吊销未达"
 
+/** 轮换两串（§2.7——三端逐字同句）：确认句（后果句一步——确认 ∥ 取消）∥ 成句（结果行直出）。 */
+export const TEXT_ROTATE_CONFIRM = "轮换将立即吊销当前登录 token（旧 token 失效），本机随即改用新 token。继续？"
+export const TEXT_ROTATED = "已轮换——本机已改用新 token"
+
 /** 命令入口（`bin/thincoder.mjs` → command-table 分发）：返回退出码（0 成 ∥ 1 败）。 */
 export async function teamCommand(args) {
   const argv = Array.isArray(args) ? args : []
   const sub = argv[0]
   if (sub === "login") return runLogin(argv.slice(1))
   if (sub === "logout") return runLogout(argv.slice(1))
+  if (sub === "rotate") return runRotate(argv.slice(1))
   if (sub === "status") return runStatus(argv.slice(1))
   console.error(TEAM_USAGE)
   return 1
+}
+
+/** `team rotate`（§2.7）：未登录 ⇒ 未登录提示（幂等——退出码 0）；确认一步（后果句 ⇒ y/N）⇒ 核
+ *  `teamRotate`（写盘单源）；取消 ∥ 未确认（非 y ∥ EOF）⇒ 零动作（零请求零写盘）；成 ⇒ 成句直出。 */
+async function runRotate(rest) {
+  if (rest.length > 0) {
+    console.error(TEAM_USAGE)
+    return 1
+  }
+  if (teamStatus().loggedIn !== true) {
+    printNotLoggedIn()
+    return 0
+  }
+  const input = createInput()
+  try {
+    const answer = await input.ask(`${TEXT_ROTATE_CONFIRM} [y/N] `)
+    if (answer.trim().toLowerCase() !== "y") return 0 // 取消 ∥ 未确认（非 y 应答 ∥ EOF）⇒ 零请求零写盘
+    const result = await teamRotate()
+    if (result.ok !== true) {
+      console.error(FAILURE_TEXT[result.reason] ?? FAILURE_TEXT.network) // 401 ⇒ `invalid` ⇔「已失效——重新登录」
+      return 1
+    }
+    console.log(TEXT_ROTATED) // 结果行 = 成句直出（同句集；`Rotated.` 径弃用）
+    return 0
+  } finally {
+    input.close()
+  }
 }
 
 /** `team login`：收集（旗标 ∥ 问句）⇒ 核 `teamLogin`（写盘单源）⇒ 出词。 */

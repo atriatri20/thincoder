@@ -137,9 +137,9 @@ export async function handleAdvisorCommand(ctx) {
         pushLabel("❯ Advisor", ansi.bold + C.tool)
         pushLine("Thinking: OFF", C.tool)
       } else if (c.action === "effort_none") {
-        // 归一（镜像 `cmd-think.mjs:104` 归一式 / `:127` 删档 / `:82` 回执）：档位 `none` 不是
+        // 归一（镜像 `cmd-think.mjs` 归一式 / 删档 / 回执）：档位 `none` 不是
         // 「强度零」而是**关思考**——与菜单 off 项同语义。不归一则残留 `reasoningEffort:"none"`
-        // 被载荷层当强度档送（`provider/core.mjs:197-204`）⇒ 与 off 形矛盾同发、服务端仍思考。
+        // 被载荷层当强度档送（`provider/core.mjs`）⇒ 与 off 形矛盾同发、服务端仍思考。
         delete cfg.reasoningEffort
         await applyThinkOff()
         await persist()
@@ -147,7 +147,7 @@ export async function handleAdvisorCommand(ctx) {
         pushLine("Thinking: OFF", C.tool)
       } else if (c.action.startsWith("effort_")) {
         // #346-①（§16.4 表末行）：选档 = 要思考 ⇒ 先清 `thinking === null` 标记（对齐
-        // `cmd-think.mjs:119-120` 先例 / §15.4-2 末句）；`{type:"disabled"}` 不动（同先例；
+        // `cmd-think.mjs` 先例 / §15.4-2 末句）；`{type:"disabled"}` 不动（同先例；
         // 残余登记 = §16.6-⑸——type 族 off ⇒ 选档 后该标记保持）。
         if (cfg.thinking === null) delete cfg.thinking
         cfg.reasoningEffort = c.action.slice(7)

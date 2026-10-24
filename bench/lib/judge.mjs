@@ -11,7 +11,7 @@
 import { readFileSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { SUITE_VERSION } from "../cases/index.mjs"
+import { SUITE_VERSION } from "../suites/index.mjs"
 import { usageTokens } from "./metrics.mjs"
 import { head, isoLocal } from "./output.mjs"
 
@@ -35,8 +35,8 @@ let _judgeConfigPath = null
 export const judgeConfigPath = () => _judgeConfigPath ?? join(BENCH_DIR, "judge.json")
 
 /** 判官档路径缝（③ 成对）：`--judge-config` 经入口落此；测试 set / reset 复原。 */
-export function _setJudgeConfigPathForTest(p) { _judgeConfigPath = resolve(p) }
-export function _resetJudgeConfigPathForTest() { _judgeConfigPath = null }
+export function _setJudgeConfigPathForCheck(p) { _judgeConfigPath = resolve(p) }
+export function _resetJudgeConfigPathForCheck() { _judgeConfigPath = null }
 
 function slotAt(raw, at) {
   if (!raw || typeof raw !== "object") throw new Error(`judge.json：${at} 不是对象`)

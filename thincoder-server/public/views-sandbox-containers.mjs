@@ -22,6 +22,9 @@ const CONTAINER_STATE_KEYS = { created: "admin.sandbox.stateCreated", running: "
 /** 日志 tail 选项（服务端界 1–2000——§2.5；缺省 200）。 */
 const LOG_TAIL_OPTIONS = [100, 200, 500, 1000, 2000]
 
+/** 日志窗「操作记录」取数上限（服务端 `limit` 夹在 1..500——`accounts/audit.mjs`；取满 ⇒ cap 提示行）。 */
+const OPS_LIMIT = 200
+
 /** 容器态文案（纯函数——单元测试档直测）。 */
 export function containerStateLabel(state) {
   const key = CONTAINER_STATE_KEYS[state]
@@ -264,13 +267,14 @@ export function openContainerLogsModal(ctx, { runner, container }) {
   const { h } = ctx
   const pre = h("pre", { class: "snippet pre-scroll" })
   const marker = h("p", { class: "hint", hidden: true, text: t("admin.sandbox.logsTruncated") })
+  const opsMarker = h("p", { class: "hint", hidden: true, text: t("admin.sandbox.logsOpsTruncated", { limit: OPS_LIMIT }) }) // cap 诚实提示（取满上限 ⇒ 更早的行未取）
   const note = h("p", { class: "hint error", hidden: true })
   const tailSelect = h("select", {}, ...LOG_TAIL_OPTIONS.map((count) => h("option", { value: String(count), text: String(count) })))
   tailSelect.value = "200"
   const refresh = h("button", { type: "button", class: "tiny", text: t("admin.sandbox.logsRefresh"), onclick: () => { load(); loadOps() } })
   openModal({
     title: t("admin.sandbox.logsTitle", { name: container.name }),
-    body: h("div", {}, h("div", { class: "row-form" }, field(h, "admin.sandbox.logsTail", tailSelect), refresh), pre, marker, note),
+    body: h("div", {}, h("div", { class: "row-form" }, field(h, "admin.sandbox.logsTail", tailSelect), refresh), pre, marker, opsMarker, note),
   })
   tailSelect.addEventListener("change", () => load())
 
@@ -286,7 +290,8 @@ export function openContainerLogsModal(ctx, { runner, container }) {
 
   let outputLines = []
   let opRows = []
-  /** 并流渲染（时间升序；操作行带 `[操作]` 标；全空 ⇒ 空态文案）。 */
+  /** 并流渲染（时间升序；操作行带 `[操作]` 标；全空 ⇒ 空态文案）。
+   *  无时标输出行（首 token 非时标）⇒ 次序未知 ⇒ **不作时间参照物**——比较仅在操作行与**可解析时标行**间进行（`sandbox/SANDBOX.md` §3 日志行）。 */
   function renderStream() {
     const rows = []
     let i = 0
@@ -306,14 +311,17 @@ export function openContainerLogsModal(ctx, { runner, container }) {
     pre.textContent = rows.length === 0 ? t("admin.sandbox.logsEmpty") : rows.join("\n")
   }
 
-  /** 读一次操作记录（该容器审计行——接口倒序 ⇒ 本地升序；容器 id 全等过滤）。 */
+  /** 读一次操作记录（**该容器审计行——服务端 `containerId` 过滤，查询/截取前施加**；接口倒序 ⇒ 本地升序）。
+   *  取满上限（`events.length >= limit`）⇒ cap 诚实提示行在场（过滤后集合已不再被他会话行挤掉——台账 #1306）。 */
   async function loadOps() {
     try {
-      const data = await ctx.api(`/api/audit?type=sandbox_event&limit=200`)
-      const events = (data?.events ?? []).filter((event) => event?.detail?.containerId === container.id)
+      const data = await ctx.api(`/api/audit?type=sandbox_event&containerId=${encodeURIComponent(container.id)}&limit=${OPS_LIMIT}`)
+      const events = data?.events ?? []
       opRows = events.map((event) => ({ ts: Number(event.ts), text: sandboxKindLabel(event.detail?.kind) })).sort((a, b) => a.ts - b.ts)
+      opsMarker.hidden = events.length < OPS_LIMIT
     } catch (error) {
       opRows = []
+      opsMarker.hidden = true
       if (note.hidden) showNote(note, mapError(error)) // 不覆主读错（日志失败优先呈）
     }
     renderStream()

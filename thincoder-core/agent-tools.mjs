@@ -13,7 +13,7 @@ export { recentChangesTool } from "./agent-tools/recent-changes.mjs"
 export { timerTool } from "./agent-tools/timer.mjs"
 export { advisorTool } from "./agent-tools/advisor.mjs"
 export { engTool } from "./agent-tools/eng.mjs"
-export { manifestTool } from "./agent-tools/manifest.mjs"
+export { manifestTool, manifestReadTool } from "./agent-tools/manifest.mjs"
 export { readHistoryTool } from "./agent-tools/read-history.mjs"
 // 模型主动整理上下文（CONTEXT-COMPACTION.md §6.16 · F-CC5）：单工具三操作 stats / prune / compact
 // ——depth-0 段挂载（子代理面裁见 §6.16.6 `family-tools.mjs` `depthOnly`）。
@@ -22,9 +22,10 @@ export { batchTool } from "./agent-tools/batch.mjs"
 // 批次档生命周期工具（BATCH-RECORD §4.3 挂载表——主名 `batch` 单工具四 action：depth-0 主 agent
 // create/close + append/status 域随模式（工程面 = append §1/§4/§6 ∥ status §1；普通面 = append §1/§2/§4/§5/§6 ∥ status §1/§2/§5）（轮 2 裁定②：§4/§6 状态面走普通文档写）（D-BR18）；
 // eng 子代理 eng 分支绑定段写入；评审 §3。
-// CORE-UNIFICATION TOOLS #83（统一登记册——VSC `agent-tools/index.mjs:15` 含 consult 家族；
-// CLI 原把 consult 另挂 `agent/setup.mjs:173` ⇒ 归位：登记册即单一来源，装配方只读本档）。
+// CORE-UNIFICATION TOOLS #83（统一登记册——VSC `agent-tools/index.mjs` 含 consult 家族；
+// CLI 原把 consult 另挂 `agent/setup.mjs` 的家族段装配 ⇒ 归位：登记册即单一来源，装配方只读本档）。
 export { consultStartTool, consultStopTool } from "./agent-tools/consult.mjs"
 // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-UPSTREAM.md §6.27.4 装配接线）：子代理上行通道工具
 // （depth>0 段装配——`agent/family-tools.mjs`；depth-0 / consult 不装配）。
 export { parentChannelTool } from "./agent-tools/parent-channel.mjs"
+export { docCheckTool } from "./agent-tools/doc-check.mjs" // 文档纪律机检（DOC-DISCIPLINE.md §3.20 条目 S——产品内建 · 报告态 · 非门禁）

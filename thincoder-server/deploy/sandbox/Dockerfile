@@ -1,7 +1,8 @@
-# deploy/sandbox/Dockerfile — 盒镜像（缺省 tag `thincoder-sandbox:1`——sandbox/RUNNER.md §3；KD-SV-73）
+# deploy/sandbox/Dockerfile — 盒镜像（缺省 tag `thincoder-sandbox:1`——sandbox/EXECUTION.md §8 件位契约；KD-SV-73）
 #
 # 构建（**上下文 = 仓根**——member-face-chat 批 · `sandbox/EXECUTION.md` §8 件位契约；核/壳离线取件）：
 #   docker build -f thincoder-server/deploy/sandbox/Dockerfile -t thincoder-sandbox:1 .
+#   可选换源（官方 `deb.debian.org` 慢/卡死时——台账 #1250）：追加 `--build-arg APT_MIRROR=<镜像主机>`（值 = 主机[:端口]，如 mirrors.aliyun.com）；缺省不传 = 官方源零改。
 #
 # 面（§3 参数表）：非 root（node:24-slim 内置 `node` 用户 = uid/gid 1000——容器以 `--user 1000:1000` 落形，
 # 与卷属主对齐）；工具链 = git/curl（默认单 github/gitee/registry.npmjs.org 拉取与调试刚需；ca-certificates = curl 的
@@ -15,7 +16,13 @@
 # 派生取件（KD-SV-185）= `COPY --from=<标准镜像> /opt/thincoder/app /opt/thincoder/app`（零第二核源）。
 FROM node:24-slim
 
-RUN apt-get update \
+# 换源（可选——值 = 主机[:端口]；缺省空 = 官方源零改；见档头）
+ARG APT_MIRROR=
+RUN if [ -n "$APT_MIRROR" ]; then \
+      MIRROR="${APT_MIRROR#http://}"; MIRROR="${MIRROR#https://}"; \
+      sed -i "s|deb.debian.org|$MIRROR|g" /etc/apt/sources.list.d/debian.sources; \
+    fi \
+ && apt-get update \
  && apt-get install -y --no-install-recommends git curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 

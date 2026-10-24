@@ -127,7 +127,7 @@ function _checkShape(path, spec, value) {
     }
     return
   }
-  // nonEmptyString —— defaultModel 另加 provider:model 形态面（与 model-ref.mjs:25-36 同判据；
+  // nonEmptyString —— defaultModel 另加 provider:model 形态面（与 model-ref.mjs 的 `parseModelRef` 同判据；
   // 存在性面不查——D-S2.5）
   if (typeof value !== "string" || !value.trim()) throw _expectsError(path, spec.expects, value)
   if (spec.providerModel) {

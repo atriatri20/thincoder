@@ -155,15 +155,14 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
       }
     }
 
-    // Engineering mode: the project's DECLARED standards document
-    // (advisor.standardsDoc) — undeclared degrades visibly (PO-2).
+    // Engineering mode: the project standards section — the declaration face is gone with the
+    // manifest `advisor` key, so this is always an explicit degradation (PO-2).
     if (agent.config?.agent?.engineering) {
       injectProjectStandards(agent, parts, guideRoot)
     }
 
-    // Document map: declared path wins, the built-in fallback probe (docs/README.md
-    // → docs/design/README.md) stays; neither → explicit degradation sentence
-    // (never the old silent skip).
+    // Document map: derived from the manifest `docRoot` (declared roots' README, then their common
+    // ancestor); neither → explicit degradation sentence (never a silent skip).
     injectDocumentMap(agent, parts, guideRoot ?? agent.cwd)
 
     parts.push("## Instructions")

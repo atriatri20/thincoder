@@ -132,7 +132,7 @@ export function fetchEntry(memory, uid) {
   const lastColon = uid.lastIndexOf(":")
   const origin = lastColon > layer.length ? uid.slice(layer.length + 1, lastColon) : ""
   const path = lastColon > layer.length ? uid.slice(lastColon + 1) : uid.slice(layer.length + 1)
-  const projectOrigin = normalizeOrigin(memory.projectOrigin) // §6.11 读缝归一（uid 解析面零改——`:131` 余量兜底仍在）
+  const projectOrigin = normalizeOrigin(memory.projectOrigin) // §6.11 读缝归一（uid 解析面零改——`fetchEntry` 余量兜底仍在）
   if (layer === "project" && projectOrigin) {
     const r = memory.db.prepare(`SELECT type, title, content, tags, author FROM files WHERE layer = ? AND origin = ? AND path = ?`).get(layer, origin || projectOrigin, path)
     if (r) return { ...r, layer, id: uid }

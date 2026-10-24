@@ -2,22 +2,22 @@
  * project-info.mjs — 项目级信息两通道（`ledger:read` / `batch:status`）：**项目一份、不随会话走**
  * （通道载荷一律**不携会话 `key`**——`docs/desktop/design/IPC.md` §1 键面）。
  *
- * 台账读 = 核 `buildScan`（`thincoder-core/ledger.mjs:118`）——**动态 import**（W8 契约②：
+ * 台账读 = 核 `buildScan`——**动态 import**（W8 契约②：
  * `ledger-db.mjs` 静态 import `node:sqlite` ⇒ 消费侧禁静态 import）；端侧**不直读核内表**，
  * 只取三计数 + 阈值读数（行集不下发——批档 §2.10 项 1）。
- * 项目相位 = 核 `readManifest(cwd)` 回执 `manifest.phase`（`thincoder-core/manifest.mjs:334`；
- * **无顶层 `phase`**——批档 §2.10 项 2）——非 ENOENT 读错**上抛**（`:342`）⇒ invoke 拒绝直传（不吞）。
+ * 项目相位 = 核 `readManifest(cwd)` 回执 `manifest.phase`（核 `readManifest`；
+ * **无顶层 `phase`**——批档 §2.10 项 2）——非 ENOENT 读错**上抛** ⇒ invoke 拒绝直传（不吞）。
  * **歧义锚（#831）**：`buildScan` 链 `solveProjectRoot` 抛「项目不可解析」（容器根多候选）⇒ 本档**不吞**——
  * invoke 拒绝直传（诚实拒）；两域界限明写：锚不可解析 ⇒ 拒（本条）∥ cwd 可解析而库缺 ⇒ 三计数 0 空读（上段）。
  *
  * **台账刷新面（R8 · 桌面功能对位批「台账周期刷新 + L2 明细」——推解 `docs/desktop/design/UI.md`
  * open 行）**：`pushLedgerLines` = 开项目成功链起（`ipc.mjs` `session:resume` 成功径）——
- * **消费核拍面** `startLedgerSurface`（`thincoder-core/ledger-surface.mjs:29`：首拍 `setImmediate`
- * ∕ 周期 `REFRESH_MS`（核 `ledger.mjs:32` = 120000）∕ `dispose`）；**端零第二扫描实现**
+ * **消费核拍面** `startLedgerSurface`（首拍 `setImmediate`
+ * ∕ 周期 `REFRESH_MS`（核 `REFRESH_MS` = 120000）∕ `dispose`）；**端零第二扫描实现**
  * （族扫描 ∕ 判活 ∕ 标记归约全在核——KD-T2；扫描失败 = 核面尽力自吞，与 VSC `refreshLedger`
  * 同口径 N1；出站失败 = 本档 `console.error`，零静默）。两条出站面共用通道 `ev:ledger`：
  *   ① `detailLines`（R8 · 状态行 tooltip 载波）：核 `detailScans` ∕ `formatDetailLine` 直取
- *      （VSC `src/extension/ledger-surface.mjs:58` 对位——除该两件外仅 compose 核族扫描导出，
+ *      （VSC `startLedgerSurface` 对位——除该两件外仅 compose 核族扫描导出，
  *      零本地扫描实现；行文本核产逐字、端零行构造）；每拍重算、同值零出站；空集照出（清 tooltip
  *      —— 禁假造）。
  *   ② `marker`（状态行段 11 常驻标记载波）：核状态位转发（`{ text, warn }` ∕ `null`
@@ -52,11 +52,11 @@ export async function ledgerRead(payload) {
 
 /** 台账机制状态位载体（核 `runLedgerScan` 写 `state.ledger` 标记位——本端**只作转发载体**：拍尾经
  *  `ledgerMarkerOf` 投影出站 `ev:ledger` `marker` 键（状态行段 11 消费）；端零重算 ∕ 零判位）。
- *  核拍面 `processing` 避让门（`ledger-surface.mjs:35`）本端无该态 ⇒ 恒不触发（与 VSC 同形——登记）。 */
+ *  核拍面 `processing` 避让门（`runLedgerScan`）本端无该态 ⇒ 恒不触发（与 VSC 同形——登记）。 */
 const LEDGER_STATE = { ledger: null }
 
 /** 台账状态位出站投影（纯函数 —— 用例缝）：核拍面写的 `state.ledger`（`{ marker, warn, scannedAt }` ——
- *  `ledger-surface.mjs:22`）⇒ 出站值 `{ text, warn }` ∕ `null`：`text` = 核 `formatMarker` 逐字（端零构造）；
+ *  `runLedgerScan`）⇒ 出站值 `{ text, warn }` ∕ `null`：`text` = 核 `formatMarker` 逐字（端零构造）；
  *  未扫 ∕ 无当前项目（`marker` 空）⇒ `null`（出站 `null` = 清渲染面残影 —— 段 11 在场判据 = `text` 非空串）。 */
 export function ledgerMarkerOf(ledger) {
   const text = ledger !== null && typeof ledger === "object" && typeof ledger.marker === "string" && ledger.marker !== ""
@@ -81,7 +81,7 @@ export function stopLedgerRefresh() {
   _refresh = null
 }
 
-/** L2 明细行集（VSC `ledger-surface.mjs:58` 对位）：核 `discoverFamily` ∕ `buildScan` ∕
+/** L2 明细行集（VSC `startLedgerSurface` 对位）：核 `discoverFamily` ∕ `buildScan` ∕
  *  `resolveExecutorStates` ∕ `detailScans` ∕ `formatDetailLine` 组合直取——行文本核产逐字
  *  （端零行构造 ∕ 零本地扫描实现）；不可读项目跳过（核面同口径——余者照常）。动态 import 同
  *  `ledgerRead`（W8 契约②）。 */

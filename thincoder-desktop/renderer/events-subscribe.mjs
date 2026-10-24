@@ -1,10 +1,10 @@
 /**
- * events-subscribe.mjs — 渲染面事件订阅接线（二十四通道表 · `attachEvents` · 回合尾标题刷新 + `onTurnTail` ∕ `onConfig` ∕ `onMenu` 三窄口）：
+ * events-subscribe.mjs — 渲染面事件订阅接线（二十五通道表 · `attachEvents` · 回合尾标题刷新 + `onTurnTail` ∕ `onConfig` ∕ `onMenu` 三窄口）：
  * 自 `renderer/events.mjs` 拆出（300 行拆分层落形 —— 批档 §5 登记）；归约纯函数与值面写者仍在核心档
  * （`reduce` / `openSession` / `clearApproval`；模式位归约径（`applyFlags` / `sameRecord`）另档 =
  * `renderer/events-flags.mjs` · 页读径另档 = `renderer/page-read.mjs`）——本档单向依赖核心档，无环。
  *
- * 导出面一：`attachEvents({ on, store, invoke, onTurnTail, onConfig, onMenu })`（二十四通道订阅 ⇒ 退订句柄）；回合尾判据 = 核心档导出
+ * 导出面一：`attachEvents({ on, store, invoke, onTurnTail, onConfig, onMenu })`（二十五通道订阅 ⇒ 退订句柄）；回合尾判据 = 核心档导出
  * `isTurnTail` **单源**（三径 —— 批 A 修正轮）；回合尾（判据命中）⇒ 标题刷新 ∧ `onTurnTail(key)` **窄口**
  * （**输入区 flush 携行随「回合中插入」批退场** —— 窄口**存续**：调用面可接（缺 / 非函数 ⇒ 零动作），
  * 队列消费改宿主驱动（步边界注入 ∕ 回合尾续发）；携回合尾事件键 —— 接线面自持纪律）。
@@ -20,7 +20,7 @@
 import { isTurnTail, reduce } from "./events.mjs"
 import { store as defaultStore } from "./store.mjs"
 
-/** 二十四通道（订阅面闭集 —— 单源 = `docs/desktop/design/IPC.md` §1「白名单 = 本表」；除 `ev:config` ∥ `ev:menu`（纯信号·归约面零写者）外皆有归约面写者）。
+/** 二十五通道（订阅面闭集 —— 单源 = `docs/desktop/design/IPC.md` §1「白名单 = 本表」；除 `ev:config` ∥ `ev:menu`（纯信号·归约面零写者）外皆有归约面写者）。
  *  R3b 增 `ev:subagent`（子 agent 块面）；R3c 增 `ev:reasoning`（推理块增量 —— D19）；「对齐第二批」增 `ev:subchunk`
  *  （子 agent 内容增量 —— 项 3）；**桌面空闲唤醒批增 `ev:susp` ∕ `ev:digest`**（挂起计数面 ∕ 消化轮边界面 —— 宿主自产）；
  *  **「对齐第三批」增 `ev:ledger`**（台账明细 ∕ 状态位 —— 归约面写者 `renderer/events.mjs` `onLedger`）；
@@ -36,10 +36,12 @@ import { store as defaultStore } from "./store.mjs"
  *  **纯信号 ∕ 归约面零写者**（默认支原引用）——消费 = 订阅面窄口 `onConfig` ⇒ 设置面复读）；
  *  **D36（菜单体系批）增 `ev:menu`**（菜单动作 —— 主→渲染单向纯信号（六动作闭集——#817 收正）；**归约面零写者**——消费 =
  *  订阅面窄口 `onMenu` ⇒ `renderer/menu-actions.mjs` 分派）；
- *  序同桥面表 —— `thincoder-desktop/src/preload/preload.cjs` `EVENT_CHANNELS` —— 13 ⇒ 19 ⇒ 21 ⇒ 22 ⇒ 23 ⇒ 24（D36 增 `ev:menu`）。 */
+ *  **SSH 会话批增 `ev:secret`**（凭据门 —— SSH 会话工具族 `ctx.onSecretInput` 缝；归约面写者 = `renderer/secret-prompt.mjs`
+ *  `onSecretRequest`——弹窗切片；弹窗面 = 同档；**值不入本表**：载荷只携描述面 `fields` / `keys`，值只在返回路）；
+ *  序同桥面表 —— `thincoder-desktop/src/preload/preload.cjs` `EVENT_CHANNELS` —— 13 ⇒ 19 ⇒ 21 ⇒ 22 ⇒ 23 ⇒ 24（D36 增 `ev:menu`）⇒ 25（SSH 会话批增 `ev:secret`）。 */
 const CHANNELS = [
   "ev:token", "ev:reasoning", "ev:activity", "ev:subagent", "ev:subchunk", "ev:tool-call", "ev:tool-output", "ev:tool-result",
-  "ev:approval", "ev:question", "ev:task", "ev:susp", "ev:digest", "ev:usage", "ev:error", "ev:ledger", "ev:timer",
+  "ev:approval", "ev:question", "ev:secret", "ev:task", "ev:susp", "ev:digest", "ev:usage", "ev:error", "ev:ledger", "ev:timer",
   "ev:queue", "ev:flags",
   "ev:statusText", "ev:compress",
   "ev:goal",
@@ -52,7 +54,7 @@ function callNarrowBridge(name, payload) {
   return globalThis.thincoder.invoke(name, payload)
 }
 
-/** 订阅二十四通道 ⇒ 退订句柄（二十四路全退；`off` 非函数 ⇒ 该路不退订，余路照退）。
+/** 订阅二十五通道 ⇒ 退订句柄（二十五路全退；`off` 非函数 ⇒ 该路不退订，余路照退）。
  *  `store` 缺省 = 单例（档形 `{ on }`）；`on` 非函数 ⇒ 记错 + 空句柄（不静默死订阅）；
  *  回合尾（判据单源 = 核心档 `isTurnTail`）⇒ 标题刷新 ∧ `onTurnTail(key)` 窄口（缺 / 非函数 ⇒ 零动作 —— 未接线调用面合法）；
  *  `ev:config`（纯信号）⇒ `onConfig(ev)` 窄口（缺 / 非函数 ⇒ 零动作 —— 设置面复读归调用面装配）；

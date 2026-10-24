@@ -62,6 +62,7 @@ export class ChatPanel {
     // it on every invocation because runAgent's startup snapshot cannot change.
     this._autoApprove = false
     this._questionQueue = []  // pending inline question-tool prompts (panel, not native popups)
+    this._secretQueue = []    // pending secret-input cards (`ctx.onSecretInput`——凭据窗；§6.22 ⑧)
     this._statusBar = null    // status-bar run indicator (idle/running/waiting)
     // C2（SESSION-FLOW-C F-C2a——忙态单来源）：_turnState 枚举 {idle, running, susp}——
     // running = 回合（含会话内 digest/用户回合）执行中；susp = 挂起会话活跃（或释放窗口
@@ -241,7 +242,7 @@ export class ChatPanel {
     this._statusBar.show()
   }
 
-  /** running = agent turn active; waiting = permission/question prompt pending. */
+  /** running = agent turn active; waiting = permission / question / secret-input prompt pending. */
   _setStatus(state) {
     if (!this._statusBar) return
     if (state === "running") {
@@ -280,9 +281,9 @@ export class ChatPanel {
   }
 
   /** Waiting prompts beat running; without pending prompts, fall back to turn state.
-   *  F-W13（§4.4）：waiting 判据 = 权限 / 批权限 / question 三队列；释放 ⇒ 必刷（单源 = `releasePermission`）。 */
+   *  F-W13（§4.4）：waiting 判据 = 权限 / 批权限 / question / 凭据窗四队列；释放 ⇒ 必刷（单源 = `releasePermission`）。 */
   _refreshStatus() {
-    if (this._permissionQueue.length > 0 || this._questionQueue.length > 0 || this._batchPermissionQueue?.length > 0) { this._setStatus("waiting"); return }
+    if (this._permissionQueue.length > 0 || this._questionQueue.length > 0 || this._secretQueue.length > 0 || this._batchPermissionQueue?.length > 0) { this._setStatus("waiting"); return }
     this._setStatus(this.turnBusy() ? "running" : "idle")
   }
 
@@ -298,9 +299,12 @@ export class ChatPanel {
     // 单一判据）一律队列受理（容量 8）——挂起会内 busy 拒收守卫随本批撤销（同面受理：回显先决 + 下方
     // `routeUserTurn` 两载体分流——会话在飞入会话队列 / 无会话入 `_busyQueued`；C-B2-6 细则③）。
     if (this._panel) {
-      // Echo FIRST — the quick-input command renders its own user bubble（排队气泡面同款）；
-      // F（SESSION-RESTORE-PARITY）：echo 补真实时间戳——气泡时间 = 发出时刻（非回退"现在"）。
-      this._panel.webview.postMessage({ type: "userMessage", text, timestamp: Date.now() })
+      // 回显只走真回合（C-B2-6 ③⑦ ∕ `WEBVIEW-PROTOCOL.md` §4.1）：忙态（`turnBusy()` = running ∨ susp）
+      // ⇒ 零 `userMessage` post——排队面 = 待发送带（快照驱动），消费时刻出块；idle 直发保留回显
+      // （F SESSION-RESTORE-PARITY：echo 补真实时间戳——气泡时间 = 发出时刻，非回退"现在"）。
+      if (!this.turnBusy()) {
+        this._panel.webview.postMessage({ type: "userMessage", text, timestamp: Date.now() })
+      }
       // A1（SESSION-FLOW-A F-A1——修 R6 残留——sendMessage 曾是唯一绕过 routeUserTurn 的
       // 入口——回合中 Ask ThinCoder/发送命令直呼 _chat 杀当前回合）：命令直发并入
       // userMessage/retry 的单一入口——busy 单槽受理（C-B2-6；susp 两态 D-S5 分流不变）；idle 直发。

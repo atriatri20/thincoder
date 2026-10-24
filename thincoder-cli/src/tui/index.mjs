@@ -11,7 +11,8 @@
  *   pickers.mjs       — generic list picker + model picker
  *   wizard.mjs        — first-launch config wizard
  *   slash-commands.mjs — slash command dispatch
- *   config-helpers.mjs — persistRaw / syncProviderField / maskKey
+ *   config-helpers.mjs — persistRaw / syncProviderField / maskKey + /config value & display helpers
+ *   cmd-config.mjs    — /config command spine；cmd-config-menus.mjs — its four sub-menus
  *   clipboard.mjs     — clipboard image paste
  *   distill-cmd.mjs   — /distill command
  *   mouse.mjs         — SGR mouse parsing + dispatch assembly (createMouseDispatch)
@@ -61,7 +62,7 @@ export async function promptProviderIfInvalid(agent, openModelPicker, pushLine) 
   const cfg = agent.config ?? {}
   // invalid 类（合成式——单源 = PROVIDER.md §6.22）：`state === "invalid"` ∨ `providerInvalidReason`
   // 非空（核 provider 不完整面快照）；`!agent.provider`（`{}` 已被上游清成 null）同判。
-  // 结构不全（缺 baseURL 等）不在本门——归发送失败面（#840 `provider` 类词）；负向锁 = PROVIDER.md:437。
+  // 结构不全（缺 baseURL 等）不在本门——归发送失败面（#840 `provider` 类词）；负向锁 = PROVIDER.md §6.22。
   const invalidClass = cfg.providerState === "invalid"
     || (typeof cfg.providerInvalidReason === "string" && cfg.providerInvalidReason !== "")
     || !agent.provider

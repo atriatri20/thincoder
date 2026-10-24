@@ -3,11 +3,6 @@
 > 板块 = **verify 完成前门禁**（声明式门）。
 > 本档 = 该机制的**需求层权威**（F1–F5 / N1–N4——编号承旧档，不改号）。
 > 设计侧 = `docs/core/design/VERIFY-REDESIGN.md`（门禁判定 / 快路径 / 提示面——本档不重述，D2）。
-> 本端实现 = `thincoder-vscode/src/agent-tools/verify.mjs`（311 行——as-of 2026-09-15 实核）。
-> 建档：2026-09-15（**B 式迁移轮 · VSC 批 5**——`thincoder-vscode/docs/requirements/VERIFY-REDESIGN.md` 内容重建入基准层；
-> 旧档原地一字不改、留作参照历史）。CLI 侧同名需求档（`thincoder-cli/docs/requirements/VERIFY-REDESIGN.md`）**已并入（2026-09-15 · CLI 尾部真批）**——
-> 逐节对账**零实质缺口**（§总体 ⇒ §1 · 四条用户故事 ⇒ F1–F3 · 非功能三条 ⇒ N1–N3 全覆——本档编号承旧档）；
-> **落点裁定（2026-09-15 用户）**：并入本档（同名根档）——CLI 台账原登记「并入 `req/TOOLS.md`」**作废**（当年登记时同名档不存在）。
 
 ## 1. 总体定位
 
@@ -38,34 +33,3 @@ verify 是**语言无关、框架无关、项目无关**的通用编程 agent �
 - 不内置语言 / 框架 / 项目私有逻辑（N1——通用工具不 hardcode 项目私有结构）。
 - 不替模型执行验证（N2——verify 只验收状态声明）。
 - 提示面（诊断 / 清单）不作门禁（F5）。
-
-## 5. 不并项与历史沿革
-
-### 5.1 历史沿革（(d) 类——**不并**）
-
-> 来源档 `thincoder-vscode/docs/requirements/VERIFY-REDESIGN.md`——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
-
-| 旧档位置 | 内容 | 何故不并 |
-|---|---|---|
-| 旧档头注「部分承载 = `docs/design/AGENT-LOOP.md` verify guard 节」 | 旧树内设计指针 | 旧树指针形态——设计侧权威 = `docs/core/design/VERIFY-REDESIGN.md`（VSC 接线面待并，见 `VSC-MIGRATION-INVENTORY.md §8B`） |
-| 旧档 §4 变更记录（2026-09-12 建档行） | 建档流水 | 本档自有变更记录 |
-
-> **CLI 侧来源档** `thincoder-cli/docs/requirements/VERIFY-REDESIGN.md`（2026-09-15 CLI 尾部真批对账并入——零新增正文）——原地保留作参照历史。下列内容不并入本档：
-
-| 旧档位置 | 内容 | 何故不并 |
-|---|---|---|
-| 旧档头注（板块行 + 状态行「已实现（**终验收待核销**）」+ 来源注「2026-09-10 自设计档抽取」） | 时点状态 / 批次语境 | 现行态已入 §1–§3；「终验收待核销」= 台账面事项（核销状态归 `docs/TODO.md` 父侧面——本档不承载，已上报） |
-
-### 5.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
-
-| 旧档面 | 内容 | 何故不并（去向 / 触发） |
-|---|---|---|
-| CLI 侧同名需求档（`thincoder-cli/docs/requirements/VERIFY-REDESIGN.md`） | CLI 产品需求正文 | **已并入（2026-09-15 CLI 尾部真批）**——零实质缺口，(d) 类入 §5.1；落点经用户裁定（并入本档，不并入 TOOLS.md） |
-
-## 变更记录
-
-- 2026-09-15（**CLI 尾部真批 · 并入既有 · eng-designer**）：`thincoder-cli/docs/requirements/VERIFY-REDESIGN.md` 逐节对账——**零实质缺口**
-  （总体段逐字已在 §1 · 四条用户故事 ⇒ F1–F3 · 非功能三条 ⇒ N1–N3），零新增正文；**落点裁定落地**（并入本档——原「并入 TOOLS.md」登记作废）；
-  (d) 类（状态行 / 来源注）入 §5.1。旧档原地一字不改。
-- 2026-09-15（**B 式迁移轮 · VSC 批 5**）：建档——`thincoder-vscode/docs/requirements/VERIFY-REDESIGN.md` 内容重建入基准层
-  （旧档一字未改、原地作参照历史）；实现坐标改仓根相对路径并实核（`verify.mjs` 311 行）；旧树设计指针入 §5.1。

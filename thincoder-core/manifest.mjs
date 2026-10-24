@@ -10,9 +10,9 @@
  *    未知键（#802 / KD-M1-36）→ 产 unknownKeys + 一行可见告警（console.warn + logEvent；
  *    同档同键集去重、读到零未知键清该档 memo）——非拒定性零变。
  *  - validateManifest(obj) → { ok, errors, missingKeys, unknownKeys }：枚举 / version 数值 /
- *    docRoot 子键值形态（串 | 数组 | null（本面无——KD-M1-37），F7）+ checkConfig.lineCounts 元素层形态——**纯函数、零 fs**；不落盘。
- *  - 三族声明键（`codePaths` / `index.{codeExtensions,docExtensions,publicRepos}` / `advisor.{docMap,standardsDoc}`——
- *    KD-M1-31 / M1-32）：缺键补默认；形态错 = 档非法（fail-closed，与 docRoot 子键同款）；
+ *    docRoot 子键值形态（串 | 数组 | null（本面无——KD-M1-37），F7）——**纯函数、零 fs**；不落盘。
+ *  - 两族声明键（`codePaths` / `index.{codeExtensions,docExtensions,publicRepos}`——KD-M1-31 / M1-32）：
+ *    缺键补默认；形态错 = 档非法（fail-closed，与 docRoot 子键同款）；
  *    读向 = `declaration.mjs`（2026-10-01 自 `conventions.mjs` 迁出——经其转口可达）经 `readManifest` /
  *    `manifestFilePath` 投影（单向——KD-M1-33）；`index.publicRepos` 绝对根集 = `declaredPublicRoots`（§6.15）。
  *  - isValidDocRootValue(value) / docRootPaths(value, cwd)（F7 判据单源 KD-M1-8）：值形态谓词
@@ -25,17 +25,17 @@
  *  - projectView(target) → { state, root, path, manifest?, candidates?, errors?, matched }：**按用点解析**
  *    的读侧单点（归属 ∨ 发现兜底 / 五态 / 非抛错 / **零写**——KD-M1-24）。
  *  - resolveProjectRoot(cwd)：项目根（归属 ∨ 发现——KD-M1-30）= `projectRootView(cwd).root`（薄委托）；
- *    projectRootView(cwd) → { state: ok|ambiguous|none, root, candidates }：歧义直读形（判定单点——§2.2）。
+ *    projectRootView(cwd) → { state: ok|workspace|none, root, candidates }：项目根直读形（判定单点——§2.2）。
  *  - resolveEngineeringManifest(cwd, { writer, init }) → 入口决策树（**非抛错**——KD-M1-20）：
  *    两端入口钩子与翻转面（拒翻）共用同一张树（判据单源；§2.8 F1）——失败码五枚
- *    `missing` / `invalid` / `no-project` / `ambiguous` / `init-failed`（KD-M1-28）。名中 `Engineering` = 历史命名（沿用不改名）；消费面 = 两端入口钩子 + 翻转面——**非**「模式拥有本模块」。
+ *    `missing` / `invalid` / `no-project` / `workspace` / `init-failed`（KD-M1-28）。名中 `Engineering` = 历史命名（沿用不改名）；消费面 = 两端入口钩子 + 翻转面——**非**「模式拥有本模块」。
  *  - manifestFilePath(cwd) → 数据档绝对路径（档路径单源 KD-M1-18——读 / 写 / mtime 门控三处同源）。
  *  - initManifest(cwd, { writer = 'subagent' } = {}) → 经写门写 DEFAULT_MANIFEST，缺省拒。
  *  - writeManifest(cwd, manifest, { writer = 'subagent' } = {}) → 落盘前先校验（ok:false 拒
  *    落盘）；仅 writer === 'main' 落盘（fail-closed 缺省拒）。
  *
  * N1 零依赖：仅 node:fs / node:path + 标准库 JSON.parse——无第三方解析器、无 node:sqlite。
- * N3 可迁移：本模块不硬编码任何本仓路径（docRoot / checkConfig 由被开发项目声明）。
+ * N3 可迁移：本模块不硬编码任何本仓路径（docRoot 由被开发项目声明；机检参数不在 manifest 面——住引擎内置常量）。
  */
 import { readFileSync, writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
@@ -53,14 +53,14 @@ export { DEFAULT_MANIFEST, MANIFEST_SCHEMA, isValidDocRootValue, validateManifes
  * · **归属（第一段——§⑥ 归属形）**：`owningProject(target)` 沿祖先链取最近带档目录
  *   （子优于根 / 不跨兄弟 / 无全局优先级）⇒ 读该档 ⇒ `ok` / `invalid`。
  * · **发现兜底（第二段——§⑥ 发现规则，纯向下）**：祖先链无档 ⇒ `discoverProjects(target)` ⇒ 命中
- *   （`self` / `unique`）⇒ 读其档（带档 ⇒ `ok` / `invalid`；缺档 ⇒ `missing`）；`ambiguous` ⇒
- *   `ambiguous`（+ `candidates`）；`none` ⇒ `no-project`。
+ *   （`self` / `unique`）⇒ 读其档（带档 ⇒ `ok` / `invalid`；缺档 ⇒ `missing`）；`workspace` ⇒
+ *   `workspace`（+ `candidates`）；`none` ⇒ `no-project`。
  * 写侧（建档）**不在**此函数（归入口决策树——KD-M1-25 / M1-29）⇒ 注入器 / 只读消费面不会变写点。
  * `matched` 契约：归属段命中 ⇒ `'manifest'`；发现段 ⇒ `discoverProjects.matched` 逐字；
- * `no-project`（/ 覆盖位短路）⇒ `null`——报明行歧义变体按它分野（§2.6 条 1b）。
+ * `no-project`（/ 覆盖位短路）⇒ `null`——报明行工作区变体按它分野（§2.6 条 1b）。
  * 读错（非 ENOENT——权限 / 目录等）收为 `invalid`（非抛错契约；`readManifest` 语义零改）。
  * @param {string} [target] 目标路径（目录 / 文件——动作作用于哪个项目的路径）
- * @returns {{state:'ok'|'missing'|'no-project'|'ambiguous'|'invalid', root:string|null, path:string|null,
+ * @returns {{state:'ok'|'missing'|'no-project'|'workspace'|'invalid', root:string|null, path:string|null,
  *   manifest?:object, candidates?:string[], errors?:string[], matched:'manifest'|'git'|null}}
  */
 export function projectView(target) {
@@ -68,7 +68,7 @@ export function projectView(target) {
   const owning = owningProject(anchor)
   if (owning) return viewAtRoot(owning, "manifest")
   const d = discoverProjects(anchor)
-  if (d.kind === "ambiguous") return { state: "ambiguous", root: null, path: null, candidates: d.candidates, matched: d.matched }
+  if (d.kind === "workspace") return { state: "workspace", root: null, path: null, candidates: d.candidates, matched: d.matched }
   if (d.kind === "none") return { state: "no-project", root: null, path: null, matched: null }
   return viewAtRoot(d.root, d.matched)
 }
@@ -187,6 +187,16 @@ export function requireManifest(cwd) {
   return readManifest(cwd)
 }
 
+/** 建档（init 支）成功后的同步通知位（#1376——**反向注册**：`declaration.mjs` 已向依赖本模块，
+ *  订阅方由对侧注册 ⇒ 本模块保持零出边（MANIFEST.md KD-M1-33）；形同 `config-io.mjs` `onConfigSelfWrite`
+ *  ——返回退订函数；订阅方失败不影响建档）。 */
+const manifestInitFns = new Set()
+export function onManifestInit(fn) {
+  if (typeof fn !== "function") return () => {}
+  manifestInitFns.add(fn)
+  return () => { manifestInitFns.delete(fn) }
+}
+
 /**
  * 入口决策树（**非抛错**形态——KD-M1-20；docs/core/design/MANIFEST.md §2.8 F1）：三面共用——
  * ① CLI 装配 / 重估薄包装 ② VSC `hydrateRun` 钩子块 ③ 翻转面（`eng` 工具 / `/eng` /
@@ -196,22 +206,22 @@ export function requireManifest(cwd) {
  * 分支（两分支六出口——§2.8 F1 树）：
  *   档合法         → { ok:true, manifest, created:false }（manifest = 补默认值后的档内容）
  *   缺档 + init    → 梯②④⑤（锚 = 裸仓 / 裸仓命中 / 无项目）⇒ `initManifest(cwd, { writer })`
- *                    （抛错 → `init-failed`）；歧义（≥2 候选）⇒ `{ ok:false, code:'ambiguous',
- *                    message, candidates }`（**不建 / 不猜**）
+ *                    （抛错 → `init-failed`）；工作区（锚自身无档 ∧ 下辖 ≥2 项目）⇒
+ *                    `{ ok:false, code:'workspace', message, candidates }`（**不建 / 不猜**）
  *   缺档 + !init   → 梯⑤（无项目）⇒ `{ ok:false, code:'no-project' }`（KD-M1-28；`init:false` 面）；
- *                    梯②④（裸仓可解析、档缺）⇒ `{ ok:false, code:'missing' }`；歧义 ⇒ 同上
+ *                    梯②④（裸仓可解析、档缺）⇒ `{ ok:false, code:'missing' }`；工作区 ⇒ 同上
  *   档非法         → { ok:false, code:'invalid', message, errors }
  *
  * `writer` 由调用点**显式**传（生产调用点全传 `'main'`）：缺省 `'subagent'` 是写门 fail-closed
  * 缺省（KD-M1-3），误用缺省 ⇒「缺档 + 梯②④⑤」退化为 `init-failed`（拒翻——与 §2.8 F2 /
  * AC-20② 语义相反；T38 反证格）。
- * 失败码两态文案不同（KD-M1-28）：无项目 ⇒ 可在锚处落地 / 歧义 ⇒ 列候选不猜；文案族 =
- * 「项目不可解析」（稳定锚句 `/项目不可解析/`——拒翻面与报明面共用）。
+ * 失败码文案分野（KD-M1-28）：无项目 ⇒ 可在锚处落地 / 工作区 ⇒ 报明事实 + 点名项目根；文案族 =
+ * 「项目不可解析」（稳定锚句 `/项目不可解析/`）——**仅「档非法」格**（§2.8 F2 拒翻面唯一拒格）。
  * 边界：`readManifest` 的非 ENOENT 读错（权限 / 目录等）由 `projectView` 收为 `invalid`（非抛错
  * 契约——`readManifest` 返回语义零改）；本树只承诺上列六出口。
  * @param {string} [cwd] 会话锚（缺省 → 进程 cwd）
  * @returns {{ok:true, manifest:object, created:boolean}
- *   | {ok:false, code:'missing'|'invalid'|'no-project'|'ambiguous'|'init-failed',
+ *   | {ok:false, code:'missing'|'invalid'|'no-project'|'workspace'|'init-failed',
  *      message?:string, errors?:string[], candidates?:string[]}}
  */
 export function resolveEngineeringManifest(cwd, { writer = "subagent", init = true } = {}) {
@@ -223,24 +233,29 @@ export function resolveEngineeringManifest(cwd, { writer = "subagent", init = tr
       message: `项目不可解析：${MANIFEST_REL} 非法（fail-closed）：${(view.errors ?? []).join("；")}`,
     }
   }
-  if (view.state === "ambiguous") {
-    return { ok: false, code: "ambiguous", candidates: view.candidates, message: ambiguousProjectMessage(cwd, view.candidates) }
+  if (view.state === "workspace") {
+    return { ok: false, code: "workspace", candidates: view.candidates, message: workspaceProjectMessage(cwd, view.candidates) }
   }
   // 缺档（梯②④⑤）：init ⇒ 就地建档（内容 = DEFAULT_MANIFEST，经写门 writer:'main'）；!init ⇒ 归码。
   if (!init) return { ok: false, code: view.state === "no-project" ? "no-project" : "missing" }
   try {
-    return { ok: true, manifest: initManifest(cwd, { writer }), created: true }
+    const manifest = initManifest(cwd, { writer })
+    // #1376：建档支成功 ⇒ 同步广播（进程内声明 ∥ 范围缓存即刻随动——如 eng 翻转面结束后
+    // 同进程的声明复读；订阅方失败不阻断建档；失败路径不广播）。
+    for (const fn of manifestInitFns) { try { fn() } catch (e) { console.warn(`[manifest] init subscriber failed: ${e?.message ?? e}`) } }
+    return { ok: true, manifest, created: true }
   } catch (e) {
     return { ok: false, code: "init-failed", message: e?.message ?? String(e) }
   }
 }
 
-/** 歧义消息（文案族「项目不可解析」——KD-M1-28）：候选**全列**（绝对路径、按名排序）+ 指引
- *  显式指定目标——**不猜**（与报明行同族；拒翻面经 F3 明示面逐字转发）。 */
-function ambiguousProjectMessage(cwd, candidates) {
+/** 工作区消息（**事实行**——§2.5「单项目解析律」条 / §2.8 F2 工作区行）：念明下辖项目**全列**
+ *  （绝对路径、按名排序）+ 可执行下一步（点名项目根 / 目标路径）——报明事实，非错误框定
+ *  （不书「项目不可解析」/ 候选二义）。 */
+function workspaceProjectMessage(cwd, candidates) {
   const list = (candidates ?? []).map((c) => `- ${c}`).join("\n")
-  return `项目不可解析：会话锚 ${cwd} 下候选项目不是恰好一个（下列 ${(candidates ?? []).length} 个）——` +
-    `每个项目一份 ${MANIFEST_REL}；请显式指定目标项目（机制不猜）：\n${list}`
+  return `工作区：会话锚 ${cwd} 自身无 ${MANIFEST_REL}，下辖 ${(candidates ?? []).length} 个项目（下列全部）——` +
+    `每个项目一份 ${MANIFEST_REL}；请显式给出目标项目根或目标路径（动作按用点路径解析）：\n${list}`
 }
 
 /**
@@ -262,7 +277,7 @@ export function writeManifest(cwd, manifest, { writer = "subagent" } = {}) {
 }
 
 /**
- * 初始化 = 写默认八键档（模块设计 §2.2）：只提供机制，不包交互问答（问答归壳面）。
+ * 初始化 = 写默认五键档（模块设计 §2.2）：只提供机制，不包交互问答（问答归壳面）。
  * 落盘走同一写门（内部 writeManifest(cwd, DEFAULT_MANIFEST, { writer })）——与 AC-M1-5
  * 同一闸，无第二条写路径（KD-M1-4 / 评审 #12）。
  * @returns {object} 写入的默认 manifest

@@ -8,7 +8,7 @@
  *     （`resolveProviders()` 单源）合成最小父面；记忆句柄 = 宿主单源（`ensureMemoryHandle()`，
  *     禁用 ∕ 建败 ⇒ null ⇒ 跑者原样兜底——不造假面）。
  * 消费面：`savePastedImages` = `panel-messages.mjs` 三处（取 `.paths`）；`downgradeNonVisionImages` =
- * `panel-messages.mjs`（idle 面）∕ `panel-turn-stages.mjs:191/:237`（返形逐行保旧 ⇒ 后两档零改）。
+ * `panel-messages.mjs`（idle 面）∕ `enterSuspensionTurn`（返形逐行保旧 ⇒ 后两档零改）。
  */
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
@@ -20,7 +20,7 @@ import { ensureMemoryHandle } from "../embed-config.mjs"
 
 /** 落盘管线（核件 + 端 fs 探针 + 写时扫除）：dataURL 串列 ⇒ `{ paths, dropped }`（调用点消费 `.paths`）。
  *  写时扫除（#735 · 2026-09-30 批 · 机制单源 `PROVIDER.md` §6.18）：落盘前对 `<cwd>/.thincoder/tmp` 发核
- *  `cleanupOldToolResults`（3 天窗单源；fire-and-forget 免 await 窗，失败静默）——闸 = 非空表 ∧ 有效 cwd（同形对位 = 核 `attachments.mjs:71`，改动须同拍）。 */
+ *  `cleanupOldToolResults`（3 天窗单源；fire-and-forget 免 await 窗，失败静默）——闸 = 非空表 ∧ 有效 cwd（同形对位 = 核 `savePastedImages`，改动须同拍）。 */
 export function savePastedImages(dataUrls, cwd) {
   if (Array.isArray(dataUrls) && dataUrls.length > 0 && typeof cwd === "string" && cwd !== "") {
     cleanupOldToolResults(join(cwd, ".thincoder", "tmp")).catch(() => { /* 扫除失败不得影响落盘 */ })

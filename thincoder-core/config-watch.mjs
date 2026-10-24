@@ -1,13 +1,13 @@
 /**
  * config-watch.mjs — config.json 外部写盘感知·**纯逻辑面**（R8 · 桌面功能对位批「上提」KD-T2——
- * 自 `thincoder-vscode/src/extension/config-watch.mjs:35-77` 逐字随迁：去抖 300ms ∕ stat 元组
+ * 自 `thincoder-vscode/src/extension/config-watch.mjs` 的 `startConfigWatch` 逐字随迁：去抖 300ms ∕ stat 元组
  * （`mtimeMs:size`）比对 ∕ 自写抑制；原批 = 第 21 批 B5 · `docs/design/SETTINGS.md` §2.6）。
  *
  * `~/.thincoder/config.json` 为多端共享单文件：CLI（`/advisor`、`settings set`）或手工编辑写盘后，
  * 常开面板原本零感知（只在打开面板/保存时拉快照）。机制（零语义改）：
  *   宿主 fs 事件 →（端落子）`onEvent` → 去抖 → 元组比对 → 变化才 `onChange`（事件驱动零空转）。
  * 自写抑制：本端自身写盘同样改元组 ⇒ 裸推送会在用户编辑中被快照重建；写盘成功后核 `config-io`
- * `saveRaw` 同步回调 `onConfigSelfWrite`（`config-io.mjs:107`）⇒ `noteSelfWrite()` 把基线刷到当前
+ * `saveRaw` 同步回调 `onConfigSelfWrite`（`config-io.mjs`）⇒ `noteSelfWrite()` 把基线刷到当前
  * 元组 ⇒ 事件到达时元组已等于基线 ⇒ 零推送；外部写无回调 ⇒ 元组异于基线 ⇒ 推送。
  *
  * 平台面两注入（核内零宿主绑定）：① `attach`（fs 事件源工厂——端落子：VSC = `createFileSystemWatcher`、

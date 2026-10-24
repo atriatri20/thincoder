@@ -1,46 +1,15 @@
 /**
- * doc-check-targets.mjs — M8 采集面（源域 + 在册判据域）。
+ * doc-check-targets.mjs — M8 采集面（在册判据域）。
  * 权威设计 = M8 机检引擎模块设计（ENGINEERING-MODE-V2-MODULE-MACHINE-CHECK）§2.2
- * 由 doc-anchors-targets.mjs 继承；源域读声明面：扫描目录 = checkConfig.scanDirs、
- * 豁免段 = checkConfig.anchors.exclude——判据不硬编码任何路径。
- * ① 源域（被检文档）：scanDirs × exclude 全量 .md − 台账两档（L 专判面已迁 M2 SQLite，
- *    不入机检源域——档名判，无路径硬编码）；
- * ② 在册判据域：代码面标识符（collectCodeTokens——根树全深走，产品树与核树两制并容）·
- *    用例标题（collectCaseTitles——域根下全部 `test` 树（collectTestTrees）顶层 test(/slow( 首参字面量）。
- * 导出：collectSourceDomain / collectTestTrees / collectCaseTitles / collectCodeTokens。
+ * 在册判据域：代码面标识符（collectCodeTokens——根树全深走，产品树与核树两制并容）·
+ * 用例标题（collectCaseTitles——域根下全部 `test` 树（collectTestTrees）顶层 test(/slow( 首参字面量）。
+ * 源域采集不住本档（2026-10-22 FR42：声明面（扫描目录 / 豁免段）随声明面整支退场——扫描根由引擎入口显式给出）。
+ * 导出：collectTestTrees / collectCaseTitles / collectCodeTokens。
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 
 const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", ".turbo", ".thincoder"]);
-/** 台账两档（L 专判面迁 M2 SQLite——不入机检源域；档名判，无路径硬编码）。 */
-const LEDGER_NAMES = ["TODO.md", "TODO-archive.md"];
-
-/** 递归列 .md（跳过 SKIP_DIRS 与声明面 exclude 段——exclude = checkConfig.anchors.exclude，逐层生效）。 */
-function walkMd(dir, exclude, out = []) {
-  let names = [];
-  try { names = readdirSync(dir); } catch { return out; }
-  for (const n of names) {
-    if (SKIP_DIRS.has(n) || n.startsWith("dist-") || exclude.includes(n)) continue;
-    const p = join(dir, n);
-    let st;
-    try { st = statSync(p); } catch { continue; }
-    if (st.isDirectory()) walkMd(p, exclude, out);
-    else if (n.endsWith(".md")) out.push(p);
-  }
-  return out;
-}
-
-/** 源域（被检文档）：scanDirs × exclude（声明面）下的 .md 全集 − 台账两档。 */
-export function collectSourceDomain(base, scanDirs, exclude = []) {
-  const out = [];
-  for (const d of scanDirs) {
-    for (const f of walkMd(join(base, d), exclude)) {
-      if (!LEDGER_NAMES.includes(basename(f))) out.push(f);
-    }
-  }
-  return out.sort();
-}
 
 /** 读一个字面量串（" / ' / ` 起始；未闭合 → null）。 */
 function readLiteral(text, i) {

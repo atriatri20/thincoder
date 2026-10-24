@@ -38,7 +38,7 @@ export const ENV_TOOL_FAMILIES = Object.freeze([
   { family: "会话", tools: Object.freeze(["read_history"]) },
 ])
 
-/** 限幅取值（§14.3）：缺省 = 核 `BASH_TIMEOUT_MS`（`thincoder-core/tools/shared.mjs:26`——**镜像常量，核值变更须同拍**）∥ 无上限（自造 600s 顶已撤——用户 2026-10-12 15:00）。 */
+/** 限幅取值（§14.3）：缺省 = 核 `BASH_TIMEOUT_MS`（`thincoder-core/tools/shared.mjs`——**镜像常量，核值变更须同拍**）∥ 无上限（自造 600s 顶已撤——用户 2026-10-12 15:00）。 */
 export const ENV_BASH_TIMEOUT_DEFAULT_MS = 120_000
 
 let coreToolsCache = null // 懒载缓存（真核八件 + 形转换 + 投递/中止两读面）
@@ -68,7 +68,7 @@ export async function loadCoreEnvTools() {
   if (coreToolsError !== null) throw coreToolsError
   try {
     const [ops, timer, search, file, bash, shared, timers, readHistory, bashAsync, settle, discard] = await Promise.all([
-      import("@thincoder/core/tools/ops.mjs"), // get_current_time ∥ process（`:51`/`:140`）
+      import("@thincoder/core/tools/ops.mjs"), // get_current_time ∥ process
       import("@thincoder/core/agent-tools/timer.mjs"), // timer
       import("@thincoder/core/tools/search.mjs"), // ls ∥ grep
       import("@thincoder/core/tools/file.mjs"), // read
@@ -156,7 +156,12 @@ export async function createEnvTools({ coreTools = null } = {}) {
     }
   }
 
-  return { names: ENV_TOOL_NAMES, schemas, invoke }
+  /** 判类维（KD-SV-225——环境族 = 核工具 `readonly` 旗逐字：`true` = 读类零弹 ∥ `false`/缺旗 = 写类弹卡）。 */
+  function readonlyOf(name) {
+    return toolOf[name]?.readonly === true
+  }
+
+  return { names: ENV_TOOL_NAMES, schemas, readonlyOf, invoke }
 }
 
 /** 端池参数处置（§14.2/§16.1）：`read_history.path` 拒（本会话作用域）∥ `bash` 超时取值校验（仅拒非有限值/小于 1——无上限）；过 ⇒ `null`。 */
@@ -201,8 +206,18 @@ export function subjectOf(name, args = {}) {
     return args.name !== undefined && args.name !== null && args.name !== "" ? `list ${text(args.name)}` : "list"
   }
   if (name === "timer") {
-    const seconds = args.seconds === undefined || args.seconds === null ? 180 : Number(args.seconds)
+    // 逐式主语（工具解算序：cancel → list → at → every → daily → 缺省一次性）；一次性式（含缺省 ∥ `message` 缀）逐字零变。
     const message = typeof args.message === "string" && args.message !== "" ? ` ${args.message}` : ""
+    const present = (value) => value !== undefined && value !== null
+    if (present(args.cancel)) return `cancel ${text(args.cancel)}`
+    if (args.list === true) return "list"
+    if (present(args.at)) return `at ${text(args.at)}${message}`
+    if (present(args.every)) {
+      const every = Number(args.every)
+      return `every ${Number.isFinite(every) ? `${every}s` : text(args.every)}${message}`
+    }
+    if (present(args.daily)) return `daily ${text(args.daily)}${message}`
+    const seconds = args.seconds === undefined || args.seconds === null ? 180 : Number(args.seconds)
     return `set ${Number.isFinite(seconds) ? seconds : text(args.seconds)}s${message}`
   }
   if (name === "read_history") {

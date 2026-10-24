@@ -148,7 +148,7 @@ export async function newSlot(cwd) {
   writeSessionFile(p, data)
   m.slotSessions ??= {}
   m.slotSessions[slot] = mySessionId
-  // 摘要 `ts` 地板（#677 I12——对位核 `session-slot-verify.mjs:99` / `session-slot-write.mjs:112` 同族）：写后 mtime（读失败 ⇒ `0` = 不可得）。
+  // 摘要 `ts` 地板（#677 I12——对位核 `runPass` / `clearSlotEngDesignToken` 同族）：写后 mtime（读失败 ⇒ `0` = 不可得）。
   const wroteMtime = (() => { try { return statSync(p).mtimeMs } catch { return 0 } })()
   m.slots[slot] = slotDigest(data, wroteMtime)
   m.active = slot

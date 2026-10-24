@@ -3,7 +3,7 @@
  *
  * **惰性转口**：核维护链（`thincoder-core/memory/maintain.mjs`）静态引 `node:sqlite`（经
  * `memory/sweep.mjs` ∥ `memory/schema.mjs`）——端壳静态闭包不得到达它（护栏契约 = VSC
- * `session-index-command.mjs:38-43` ∥ 本端 `session-slots.mjs:262-270` 索引拍转口同款）。
+ * `scheduleSessionIndexPassSafe` ∥ 本端 `scheduleSessionIndexPass` 索引拍转口同款）。
  * 不可得 ⇒ `false` + stderr 一行（维护 = 派生品：fail-soft，不成红、不假造）。
  *
  * 判据与算法全在核（本档零算法副本）；`options` 透传——`dbPath` 缺省由核侧现读

@@ -107,7 +107,7 @@ async function finalizeTools(baseTools, { cwd, config, excludeTools, warnings })
  *
  * 模式门（判据单源 = 会话权威值，槽优先 + config 回退——KD-M1-12 / KD-M1-13）：
  * 「恢复槽带 `engineering` 字段 ? 槽值 : `agent.config.agent.engineering`」（槽字段在场判据
- * 与 `applySession` 同款——`thincoder-core/session.mjs:314-317`）。普通会话 → **装配钩子
+ * 与 `applySession` 同款——`thincoder-core/session.mjs`）。普通会话 → **装配钩子
  * 零 manifest I/O**（不读 / 不拒 / 不建档）+ `agent.manifest = null`（清残留附着——复用
  * agent 跨模式防陈旧）。
  *

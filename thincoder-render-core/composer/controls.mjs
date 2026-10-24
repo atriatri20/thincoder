@@ -1,24 +1,24 @@
 /**
  * controls.mjs — 控件行七钮 + 模式钮两态 + AUTO 确认工厂（核化 VSC `webview/mode-buttons.js`(131) +
- * `index.html:53-63` 控件行结构——上提批 `2026-09-28-desktop-input-vsc-align.md` §2.3 ∕ §2.4 P8；
+ * `index.html` 控件行结构——上提批 `2026-09-28-desktop-input-vsc-align.md` §2.3 ∕ §2.4 P8；
  * 模块级副作用（DOM 查询 ∕ 事件注册 ∕ `vscode.*` 直调）搬进工厂体，语义零变）。
  *
  * 面：
  *  - 结构七钮（`#model-btn` ∕ `#reasoning-btn` ∕ `#auto-btn` ∕ `#advisor-btn` ∕ `#eng-btn` ∕ `#plan-btn` ∕
  *    `#settings-btn`——title ∕ aria-label ∕ 静止字面照 `index.html` 逐字；`Send` ∕ `Stop` 族静态字面口径 = C4）。
  *    模型 ∕ 推理两钮的接线与两浮层归 `model-menu.mjs`（本档只造钮 + 给出引用）。
- *  - 模式钮两态（`mode-buttons.js:19-50` 逐字）：advisor ∕ eng 两态类；ENG×PLAN 互斥（工程态 ⇒ plan 钮
+ *  - 模式钮两态（`mode-buttons.js` 逐字）：advisor ∕ eng 两态类；ENG×PLAN 互斥（工程态 ⇒ plan 钮
  *    `disabled` + `toolbar.planDisabled` 题注 + 不亮 active）；plan 点击守卫兜底。
- *  - AUTO 两态 + 内联确认（`:52-111` 逐字）：关无确认；开走 popover（背板 + alertdialog，焦点默认落取消）；
- *    两出口 = yes 置位 + `⚠ AUTO` / no 关；Esc 关（源 = `chat.js:107-108` 本件部分——确认在场期注册监听）。
- *  - 推送面（`:106-130` 三 handler 逐字）：`autoApprove` ∕ `agentSettings` ∕ `planMode` ⇒ 镜像 + 重绘
+ *  - AUTO 两态 + 内联确认（`mode-buttons.js` 逐字）：关无确认；开走 popover（背板 + alertdialog，焦点默认落取消）；
+ *    两出口 = yes 置位 + `⚠ AUTO` / no 关；Esc 关（源 = `chat.js` 本件部分——确认在场期注册监听）。
+ *  - 推送面（`mode-buttons.js` 三 handler 逐字）：`autoApprove` ∕ `agentSettings` ∕ `planMode` ⇒ 镜像 + 重绘
  *    （`planMode` 兼 `#input-row.plan-active` 与状态行刷新）。
  *
  * 注入面（五项之局部）：② `post`（`setAdvisorGuard` ∕ `setEngineeringEnabled` ∕ `setPlanMode` ∕
  * `setAutoApprove` 出站）；③ `state`（模式位读面：`flags()`——**构造期初值即落面**：`paintFlags()` 同点重绘，
  * 缺省 flags 下与 VSC 静态 HTML 起始面逐字同形）；⑤ `hooks`（`openSettings` 第 7 钮出口 ·
- * `syncModeState` 跨面状态同步（status-bar 同面读 `_planActive`）· `onStatusRefresh`（`:129`）·
- * `onAgentSettings`（`:117-118`——VSC 绑设置面板刷新的 `updateAgentSettings`））；④ 取词 = 核 `../i18n.mjs`。
+ * `syncModeState` 跨面状态同步（status-bar 同面读 `_planActive`）· `onStatusRefresh`（`mode-buttons.js`）·
+ * `onAgentSettings`（`mode-buttons.js`——VSC 绑设置面板刷新的 `updateAgentSettings`））；④ 取词 = 核 `../i18n.mjs`。
  */
 import { t } from "../i18n.mjs"
 
@@ -32,27 +32,24 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
   const row = document.createElement("div")
   row.id = "controls-row"
 
-  const ctrlBtn = (id, extraClass, title, ariaLabel, text, aria) => {
+  const ctrlBtn = (id, extraClass, text, aria) => {
     const btn = document.createElement("button")
     btn.id = id
     btn.className = extraClass ? `ctrl-btn ${extraClass}` : "ctrl-btn"
-    btn.title = title
-    btn.setAttribute("aria-label", ariaLabel)
     if (aria) btn.setAttribute("aria-haspopup", aria)
     btn.textContent = text
     row.appendChild(btn)
     return btn
   }
-  const modelBtn = ctrlBtn("model-btn", "", "Change model", "Change model", "...", "listbox")
-  const reasoningBtn = ctrlBtn("reasoning-btn", "active", "Reasoning effort", "Reasoning effort", "max", "listbox")
-  const autoBtn = ctrlBtn("auto-btn", "", "Auto-approve tools", "Toggle auto-approve", "AUTO")
-  const advisorBtn = ctrlBtn("advisor-btn", "", "Advisor review", "Toggle advisor review", "ADVISOR")
-  const engBtn = ctrlBtn("eng-btn", "", "Engineering mode", "Toggle engineering mode", "ENG")
-  const planBtn = ctrlBtn("plan-btn", "", "Plan mode (read-only exploration)", "Toggle plan mode", "PLAN")
-  const settingsBtn = ctrlBtn("settings-btn", "", "Settings", "Open settings", "⚙")
-
-  /** plan 按钮缺省 title（静态 HTML——i18n-dom 不管 plan 面）：非工程态回填用。 */
-  const planDefaultTitle = planBtn.title
+  // 词面（title ∥ aria-label）= 下方 `applyWords()` **单源**置位（创建期 ∥ 词表到位重派生——挂载先于词表时
+  // t() 回落键名；端侧在词表到位后调用）。钮文本（"…" ∥ "max" ∥ 模式符号）= 非词面符号，创建期即定。
+  const modelBtn = ctrlBtn("model-btn", "", "...", "listbox")
+  const reasoningBtn = ctrlBtn("reasoning-btn", "active", "max", "listbox")
+  const autoBtn = ctrlBtn("auto-btn", "", "AUTO")
+  const advisorBtn = ctrlBtn("advisor-btn", "", "ADVISOR")
+  const engBtn = ctrlBtn("eng-btn", "", "ENG")
+  const planBtn = ctrlBtn("plan-btn", "", "PLAN")
+  const settingsBtn = ctrlBtn("settings-btn", "", "⚙")
 
   // ── 模式位（读面初值 → 面内核态；变更经 `syncModeState` 回端）──
   const init = state.flags?.() ?? {}
@@ -86,8 +83,28 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
     planBtn.classList.toggle("active", planActive)
     planBtn.classList.toggle("warning", planActive)
     planBtn.disabled = _engOn === true
-    planBtn.title = _engOn === true ? t("toolbar.planDisabled") : planDefaultTitle
+    planBtn.title = _engOn === true ? t("toolbar.planDisabled") : t("toolbar.planMode")
   }
+
+  /** 词面重派生单源（创建期取词 ∕ 挂载先于词表的面——端侧词表到位后调用；幂等）：七钮 title ∥ aria-label
+   *  两层 + plan 标题随内态（`applyModeButtons` 收口——工程态 ⇒ `toolbar.planDisabled`）。 */
+  const WORDS = [
+    [modelBtn, "toolbar.model", "toolbar.model"],
+    [reasoningBtn, "toolbar.reasoning", "toolbar.reasoning"],
+    [autoBtn, "toolbar.autoApprove", "toolbar.autoApproveToggle"],
+    [advisorBtn, "toolbar.advisor", "toolbar.advisorToggle"],
+    [engBtn, "toolbar.engineering", "toolbar.engineeringToggle"],
+    [planBtn, "toolbar.planMode", "toolbar.planToggle"],
+    [settingsBtn, "toolbar.settings", "toolbar.settingsOpen"],
+  ]
+  function applyWords() {
+    for (const [btn, titleKey, ariaKey] of WORDS) {
+      btn.title = t(titleKey)
+      btn.setAttribute("aria-label", t(ariaKey))
+    }
+    applyModeButtons()
+  }
+  applyWords()
 
   advisorBtn.addEventListener("click", () => {
     _advisorOn = !_advisorOn
@@ -167,7 +184,7 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
       backdrop.remove()
       inputEl.focus()
     }
-    // Esc 关（B18 第二出口；源 = VSC `chat.js:107-108` 的 auto-confirm 段）：在场期注册，关即摘。
+    // Esc 关（B18 第二出口；源 = VSC `chat.js` 的 auto-confirm 段）：在场期注册，关即摘。
     const onKeydown = (e) => { if (e.key === "Escape") close() }
     document.addEventListener("keydown", onKeydown)
 
@@ -207,7 +224,7 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
     inputRow.classList.toggle("plan-active", _planActive)
     applyModeButtons()
     syncModeState()
-    hooks.onStatusRefresh?.() // VSC `:129` renderStatusBar（唯一 writer）——状态行刷新归端（本条无相位变化）
+    hooks.onStatusRefresh?.() // VSC `mode-buttons.js` renderStatusBar（唯一 writer）——状态行刷新归端（本条无相位变化）
   }
 
   // 构造期初绘一次（③ `flags()` 读面 → 钮面 ∥ AUTO 面同点落位）：VSC 侧不可达「内态与钮面分离」态（其
@@ -215,5 +232,5 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
   // 初值 ⇒ 同点补绘。缺省 flags（全假）下与 VSC 静态 HTML 起始面逐字同形（零差）；无跨面同步（构造非状态变更）。
   paintFlags()
 
-  return { el: row, modelBtn, reasoningBtn, applyModeButtons, applyAutoApprove, applyAgentSettings, applyPlanMode, syncModeState, toggleAuto, togglePlan, toggleEng }
+  return { el: row, modelBtn, reasoningBtn, applyWords, applyModeButtons, applyAutoApprove, applyAgentSettings, applyPlanMode, syncModeState, toggleAuto, togglePlan, toggleEng }
 }

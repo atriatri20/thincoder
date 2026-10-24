@@ -4,7 +4,7 @@
  * SSE parsing → provider/sse.mjs
  */
 
-import { providerSpec, resolveEnableThinking } from "../config.mjs"
+import { providerSpec, requestBudget, resolveEnableThinking } from "../config.mjs"
 import { resolveProviderSecrets } from "../env-ref.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { escapeMessages, stripLocalMessageFields } from "../escape.mjs"
@@ -193,7 +193,9 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   }
   // 保守抑制（非能力断言）：带 `noUsageStream` 的行 = 核不主动发 stream_options.include_usage（glm 族已实测带该参数全 200）；逐族等级 = MODEL-SPECS.md §15.2
   if (!spec.noUsageStream) body.stream_options = { include_usage: true }
-  if (provider.maxTokens) body.max_tokens = provider.maxTokens
+  // §6.17 发送面同源：max_tokens = requestBudget().maxTokens（显式才发——spec.maxOutput 是预留面非合同值）
+  const budget = requestBudget(provider, spec)
+  if (budget.maxTokens !== undefined) body.max_tokens = budget.maxTokens
   if (provider.temperature != null) {
     let t = provider.temperature
     if (spec.tempRange) {

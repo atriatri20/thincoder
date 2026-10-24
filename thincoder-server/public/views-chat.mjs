@@ -29,6 +29,7 @@ import { createStreamRenderer } from "/rc/flow/stream.mjs"
 import { applyPin, createPinWatch, nearBottom } from "/rc/scroll.mjs"
 import { setStrings } from "/rc/i18n.mjs"
 import { createChatComposer } from "./views-chat-composer.mjs"
+import { createAskCards } from "./views-chat-cards.mjs"
 import { ZH_CORE } from "./i18n-zh-core.mjs"
 import { EN_CORE } from "./i18n-en-core.mjs"
 import { argsText, messageNodes, noticeText, parseFrame, resultText, splitLines } from "./views-chat-messages.mjs"
@@ -106,6 +107,7 @@ export async function renderChat(ctx, mount) {
   let liveTools = new Map()
   let turnLabeled = false // 一回合一个助手标签（本回合已画 ⇒ 真）
   let reasoningWrite = null // 在飞档位写（单变量串行——发送前 await；选中即改 ⇒ 下回合生效——KD-SV-110）
+  let liveReader = null // 在途读流（切会话 ⇒ cancel——服务端 res close 同拍结算在决 ask，KD-SV-227）
 
   mount.append(h("h2", { text: t("admin.chat.title") }))
 
@@ -123,6 +125,15 @@ export async function renderChat(ctx, mount) {
   // ── ② 消息流（文档流平铺——无卡无框）────────────────────────────────────────
   const threadBox = h("div", { class: "chat-thread" }, h("p", { class: "hint", text: t("admin.chat.noChatSelected") }))
   mount.append(threadBox)
+
+  // 审批卡族（§2.1 审批卡面条——`ask` 帧 ⇒ 页卡 ∥ 应答 = `POST …/asks/:promptId`；卡挂消息流尾）
+  const askCards = createAskCards(ctx, {
+    thread: () => threadBox,
+    sessionId: () => activeId,
+    respond: (path, body) => ctx.api(path, { method: "POST", body }),
+    onFail: (error) => ctx.fail(error),
+    onAnswered: () => composer.panel.inputEl?.focus?.(), // 应答成功 ⇒ 回焦输入区（核面板 inputEl——惰性引用，构造序在后）
+  })
 
   // ── ③④ 状态行 + 输入区（核件全件消费——`views-chat-composer.mjs`；`#toolbar` 随建随挂）──
   const composer = createChatComposer(ctx, {
@@ -178,10 +189,13 @@ export async function renderChat(ctx, mount) {
     composer.syncModel() // 当刻会话模型 ⇒ 核模型钮面字（显示面重派生——零槽写）
   }
 
-  /** 选中会话（选择器随正 + 取详情——读时读）。 */
+  /** 选中会话（选择器随正 + 取详情——读时读；残留卡全摘 + 读流中止 ⇒ 服务端在决 ask 同拍拒值）。 */
   function selectChat(chatId) {
     activeId = chatId
     detail = null
+    askCards.clear() // 切会话 ⇒ 残留卡全摘（CHAT.md §2.1 审批卡面条）
+    void liveReader?.cancel?.().catch(() => {})
+    liveReader = null // 先清引用（主动取消不弹「流中断」）
     renderSelector()
     loadDetail(chatId)
   }
@@ -279,6 +293,7 @@ export async function renderChat(ctx, mount) {
     if (frame.type === "delta") { appendDelta(frame.text); return }
     if (frame.type === "call") { appendCall(frame); return }
     if (frame.type === "result") { applyResult(frame); return }
+    if (frame.type === "ask") { askCards.append(frame); return } // 审批卡（§11.5——挂消息流尾）
   }
 
   // ── 装配面（composer 回调——输入区 ∥ 队列 ∥ 状态行）──────────────────────────
@@ -318,6 +333,7 @@ export async function renderChat(ctx, mount) {
     }
     let reader = null
     try { reader = response.body.getReader() } catch { ctx.flash(t("admin.chat.streamBroken")); return { accepted: true, ended: false } } // 200 无流体（角落）⇒ 就地人话
+    liveReader = reader // 在途读流（切会话主动取消 —— 服务端 res close 同拍结算在决 ask）
     const decoder = new TextDecoder()
     let buffer = ""
     let ended = null
@@ -326,12 +342,13 @@ export async function renderChat(ctx, mount) {
       const frame = parseFrame(line)
       if (frame === null) return
       composer.applyFrame(frame)
-      if (frame.type === "end") { ended = frame; return }
+      if (frame.type === "end") { ended = frame; askCards.clear(); return } // 回合收尾 ⇒ 残留卡全摘（服务端同拍拒值）
       if (activeId === chatId) applyFrame(frame)
     }
     try {
       for (;;) {
         if (generation !== renderGeneration || mount.isConnected === false) { // 重渲/离页 ⇒ 读流中止（回合照跑）
+          liveReader = null
           try { await reader.cancel() } catch { /* 已关 */ }
           return { accepted: true, ended: false }
         }
@@ -344,9 +361,10 @@ export async function renderChat(ctx, mount) {
       for (const line of splitLines(buffer, "").lines) land(line) // 末帧无换行收尾
     } catch {
       streamRenderer.flush() // 断连：已到文本落地（尾帧兜底——已画者零重复）
-      ctx.flash(t("admin.chat.streamBroken")) // 断连——读流中止（零未押异常；回合已在服务端）
+      if (liveReader !== null) ctx.flash(t("admin.chat.streamBroken")) // 断连——读流中止（切会话的主动取消静默）
       return { accepted: true, ended: false }
     }
+    liveReader = null
     streamRenderer.flush() // 回合尾同步尾帧（rAF 未及——重读置换前必须画出）
     if (ended !== null && activeId === chatId) await loadDetail(chatId) // `end` ⇒ 重读（读时单源；切走 ⇒ 不抳——避免把视图换成另一会话）
     return { accepted: true, ended: ended !== null }
@@ -359,13 +377,14 @@ export async function renderChat(ctx, mount) {
     catch (error) { ctx.fail(error) }
   }
 
-  /** 换模型（KD-SV-108——明选即换、下回合生效）：`PATCH …/:id`；失败 ⇒ 就地人话 + 钮面回退（`composer` 面重派生）。 */
+  /** 换模型（KD-SV-108——明选即换、下回合生效）：`PATCH …/:id`；失败 ⇒ 就地人话 + 钮面回退（`composer` 面重派生）。
+   *  回执会话卫（B70 同款一行式）：会话 id 随拾取捕获；在飞期切走 ⇒ 回执零写他会话。 */
   async function onSelectModel(model) {
     if (activeId === null || model === "") return false
+    const chatId = activeId // 会话 id 随拾取捕获（链式调用晚于拾取——不可迟读 `activeId`）
     try {
-      const data = await ctx.api(`/api/admin/agent/chats/${activeId}`, { method: "PATCH", body: { model } })
-      if (detail !== null && data?.chat) detail.chat = data.chat
-      renderSelector()
+      const data = await ctx.api(`/api/admin/agent/chats/${chatId}`, { method: "PATCH", body: { model } })
+      if (activeId === chatId && detail !== null && data?.chat) { detail.chat = data.chat; renderSelector() }
       return true
     } catch (error) { ctx.fail(error); return false }
   }
@@ -402,6 +421,7 @@ export async function renderChat(ctx, mount) {
       if (generation !== renderGeneration) return
       detail = data
       renderThread()
+      askCards.remount() // 重读装配不动在决卡表：置换摘走卡体 ⇒ 重挂区尾（旧卡不失答）
       renderSelector()
     } catch (error) {
       if (generation !== renderGeneration) return

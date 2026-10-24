@@ -2,11 +2,11 @@
  * lib/client.mjs — 调模型（复用核 provider 路径，KD-1）+ 工具环 + per-call 计时（设计 §2.9）。
  *
  * provider 条目构造面（冻结）：调用方**克隆用户 config 条目 + 覆写 `maxTokens` / `temperature` / `.model`**
- * ——核从条目读这两个字段（provider/core.mjs:184-192）且请求体模型名取条目（:178），`chat` 的 opts（:117）
+ * ——核从条目读这两个字段（`chatImpl`）且请求体模型名取条目（:178），`chat` 的 opts（:117）
  * 无这两位 ⇒ 不落条目会静默失效。
  *
  * 计时口径（§1.3-3）：TTFT = 首个**非空** delta（onToken / onReasoning 先到者）− 调用发起——核的流读面
- * 只在非空 delta 时回调（provider/sse.mjs:142-149）。工具回合的 assistant 消息按 `assistantToolCallMessage`
+ * 只在非空 delta 时回调（`handleEvent`）。工具回合的 assistant 消息按 `assistantToolCallMessage`
  * 构造（reasoning 回显策略随核规格）。失败调用亦落 `totalMs` = 发起 → 失败墙钟（成功 = 传输面实测；
  * `ttftMs` / `tokens` 照实缺记 `null`）——失败执行也是执行（KD-30）。失败路径的记录式与成功路径**同源单点**
  * （`toCallRecord` 单形状函数）；`throttled` 失败观测通道 = `markFailureObservation`（§2.9-4 / KD-47② / KD-48）。
@@ -86,7 +86,7 @@ export function fixtureTransport(script) {
 
 /** 判官 / 复核夹具传输（§5.13 测试策略①：不触网）：按位次（`slot` = A / B / C / review）回放固定裁决脚本。
  *  脚本条目 = `{ text, tokens?, finishReason?, totalMs?, fail?: "throw" }`；逐位独立游标（同一位可多次调用）。
- *  dry-run 夹具与 `bench/test/judge.test.mjs` 桩传输共用本函数。 */
+ *  dry-run 夹具与 `bench/check/judge.check.mjs` 桩传输共用本函数。 */
 export function fixtureSlotTransport(scripts) {
   const cursors = {}
   return {

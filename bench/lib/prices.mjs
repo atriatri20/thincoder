@@ -26,8 +26,8 @@ let _pricesPath = null
 export const pricesPath = () => _pricesPath ?? join(BENCH_DIR, "prices.json")
 
 /** 价格表路径缝（③ 成对）：`--prices` 经入口落此；测试 set / reset 复原。 */
-export function _setPricesPathForTest(p) { _pricesPath = resolve(p) }
-export function _resetPricesPathForTest() { _pricesPath = null }
+export function _setPricesPathForCheck(p) { _pricesPath = resolve(p) }
+export function _resetPricesPathForCheck() { _pricesPath = null }
 
 export function loadPrices(path) {
   let raw

@@ -58,8 +58,12 @@ export function authHeaders(platform, token) {
 }
 
 /** 单次读（GET——零反向出站）：超时/网络 ⇒ 分类；401/403 ⇒ `auth`；余非 2xx ⇒ `http_error`；非 JSON ⇒ `bad_response`。
- *  `notFoundMessage` = 404 专用人话（范围径——`§4`；缺省 null ⇒ 通用消息）。 */
-async function readJSON(url, { headers, fetchImpl = fetch, timeoutMs = READ_TIMEOUT_MS, notFoundMessage = null } = {}) {
+ *  `notFoundMessage` = 404 专用人话（范围径——`§4`；缺省 null ⇒ 通用消息）。
+ *  `timeoutMs` = **必传**（#1369——去死缺省 + 卫兵：缺 ∥ 非有限数 ⇒ 抛，零静默推断——未来漏传不再静默落 `READ_TIMEOUT_MS`）。 */
+async function readJSON(url, { headers, fetchImpl = fetch, timeoutMs, notFoundMessage = null } = {}) {
+  if (typeof timeoutMs !== "number" || !Number.isFinite(timeoutMs)) {
+    throw new Error(`readJSON：缺 timeoutMs（读类超时须显式传——零静默推断；实收 ${timeoutMs}）`)
+  }
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
@@ -154,9 +158,9 @@ function giteeScopeNotFound(scopeKind, scope) {
   return `「${scope}」在${what}端点不存在——请核对范围类型/编辑源改选`
 }
 
-/** 仓列表入参（§4）：github = `affiliation` ∥ gitlab/自建 = `membership=true` ∥ gitee = 无。 */
-function reposQuery(platform, scope, { orgOnly = false } = {}) {
-  if (orgOnly) return {}
+/** 仓列表入参（§4）：github = `affiliation` ∥ gitlab/自建 = `membership=true` ∥ gitee = 无。
+ *  （#1369：原两个死面已去——一个死布尔参（if 支恒返 `{}`）∥ 一个未被函数体消费的参。） */
+function reposQuery(platform) {
   if (platform === "github") return { affiliation: "owner,collaborator,organization_member" }
   if (platform === "gitlab" || platform === "selfhosted") return { membership: "true" }
   return {}
@@ -174,7 +178,7 @@ export async function listRepos({ platform, baseURL = null, token, scope = null,
   const main = await readPages({
     base,
     path: reposPath(platform),
-    query: reposQuery(platform, scope),
+    query: reposQuery(platform),
     headers,
     fetchImpl,
     timeoutMs: timeout,

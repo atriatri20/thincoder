@@ -2,27 +2,63 @@
  * specs.mjs — VSC 端模型规格面（W16 接线：数据源 = 核单一规格表）。
  *
  * 单一来源 = `@thincoder/core/model-specs.mjs`（MODEL_SPECS 表 + 前缀查找 + provider 级
- * context 覆盖 + **档位默认表 `effortDefaultFor`**），本档只保**端差面**（CORE-UNIFICATION §2.13.4 #143
- * 裁定「端侧自有 · 非缺位」）：
- *  - `reasoningEffortDefault`（推理强度下拉默认档）：**2026-10-10 起改为转口核** —— 该字段的数据面
- *    （`EFFORT_DEFAULT_PREFIXES` 表 + `effortDefaultFor`）已上提进核（桌面 ∕ CLI 原无此表 ⇒ 档位钮
- *    恒显中性；上提后三端同源，且核侧还能吃到用户 `modelOverrides.reasoningEffortDefault`）。
- *    本档保留 `specForModel` 的**附加形**（核表 + 本字段）以维持导出面零改——消费链 =
- *    `src/extension/provider-probe-window.mjs:67` → `webview/settings-state.js` `effortSelectView`。
- *    （旧 `src/config.mjs` 规格表随 W16 删旧，该字段的数据面曾迁入本档覆盖表。）
+ * context 覆盖），本档只保**端差面**（CORE-UNIFICATION §2.13.4 #143 裁定「端侧自有 ·
+ * 非缺位」）：
+ *  - `reasoningEffortDefault`（推理强度下拉默认档——CLI 规格行无此字段，端侧扩展；
+ *    旧 `src/config.mjs` 规格表随 W16 删旧，该字段的数据面迁入本档覆盖表）；
  *  - `ctxPercentForModel`（面板上下文占比派生——面板消费面，随 config 面收拢入驻）；
  *  - `ctxPercentForHistory`（M2 · 显示面消差批：同标签双口径消差——分子改核 `estimateTokens(history)`，
  *    与 CLI 状态行同源；`ctxPercentForModel` 保留给 provider 报告值消费面）。
  */
-import { specForModel as coreSpecForModel, providerSpec, assistantToolCallMessage, effortDefaultFor } from "@thincoder/core/model-specs.mjs"
+import { specForModel as coreSpecForModel, providerSpec, assistantToolCallMessage } from "@thincoder/core/model-specs.mjs"
 // M2（显示面消差批）：分子 = 核 `estimateTokens`——与 CLI 状态行**同源同式**（零依赖纯函数，静态引入安全）
 import { estimateTokens } from "@thincoder/core/context.mjs"
 
 export { providerSpec, assistantToolCallMessage }
 
-/** 规格查找（核表单源 + 端差字段附加——命中端差行时返回拷贝，未命中 = 核返回值原样）。
- *  `effortDefaultFor` = 核单源（2026-10-10 上提：原本档 `EFFORT_DEFAULT_PREFIXES` 表已删——双源退场）；
- *  核侧同时消费用户 `modelOverrides.reasoningEffortDefault`（本档零感知，自动受益）。 */
+/** 端差字段表（`reasoningEffortDefault`）：前缀匹配、最长优先；未命中且 ID 含 `vendor/` 命名空间
+ *  时按末段重试（链式网关可叠多段）（与核 `lookupSpec` 命名空间剥离同法——聚合网关惯例 `vendor/model`）；仍未命中 → undefined
+ *  （webview 侧 `effortSelectView` 落占位「—」——`webview/settings-state.js`，不再取枚举首项回落）。行为 = 旧 VSC 规格表逐行同值。 */
+const EFFORT_DEFAULT_PREFIXES = [
+  ["deepseek-v4-flash-vision-exp", "high"],
+  ["deepseek-v4-flash", "high"],
+  ["deepseek-flash", "high"],
+  ["deepseek-v4-pro", "high"],
+  ["kimi", "max"],
+  ["k3-256k", "high"],
+  ["k3", "max"],
+  ["glm-5", "max"],
+  ["qwen3.7-max", "xhigh"],
+  ["qwen3.8-max", "xhigh"],
+  ["qwen3.7-flash", "high"],
+  ["qwen3.8-flash", "high"],
+  ["qwen3.8-omni-flash", "high"],
+  ["qwen3.8-27b", "high"],
+  ["qwen3.6-flash", "high"],
+  ["qwen3.6-plus", "high"],
+  ["qwen3.6-max-preview", "high"],
+  ["qwen3.6-27b", "high"],
+  ["qwen3.6-35b-a3b", "high"],
+]
+
+function effortDefaultFor(model) {
+  // 非串 model（外端脏载 ∕ 手工档）归一等价空串——与核 `lookupSpec` 同法（#638 查表全性；#1177 收口——清账轮 3 轻通道笔）
+  const m = (typeof model === "string" ? model : "").toLowerCase()
+  const scan = (s) => {
+    let best = null
+    for (const [prefix, value] of EFFORT_DEFAULT_PREFIXES) {
+      if (s.startsWith(prefix) && (best === null || prefix.length > best[0].length)) best = [prefix, value]
+    }
+    return best ? best[1] : undefined
+  }
+  const hit = scan(m)
+  if (hit !== undefined) return hit
+  // 聚合网关惯例 `vendor/model`：原文未命中 ⇒ 按末段重试（链式网关可叠多段）（与核 `lookupSpec` 剥离同法）
+  const slash = m.lastIndexOf("/")
+  return slash >= 0 ? scan(m.slice(slash + 1)) : undefined
+}
+
+/** 规格查找（核表单源 + 端差字段覆盖——命中端差行时返回拷贝，未命中 = 核返回值原样）。 */
 export function specForModel(model) {
   const spec = coreSpecForModel(model)
   const d = effortDefaultFor(model)
@@ -31,7 +67,7 @@ export function specForModel(model) {
 
 /** Effort 枚举面单源（I7 · #677）：在册枚举 ⇒ 原样；思考开关族（无枚举 ∧ `thinking` 在场）⇒
  *  `["enabled"]` 单档（§16.6-⑴ 零变）；其余（未在册 ∕ 无能力位名）⇒ 回退全档 `["high","max"]`
- *  （对齐 CLI `cmd-think.mjs:19` 托底形——「VSC 档位空」端差消）。 */
+ *  （对齐 CLI `handleThinkCommand` 托底形——「VSC 档位空」端差消）。 */
 export function effortEnumForModel(model) {
   const s = specForModel(model)
   return s.reasoningEffortEnum || (s.thinking ? ["enabled"] : ["high", "max"])
@@ -49,8 +85,8 @@ export function ctxPercentForModel(promptTokens, provider) {
 
 /**
  * Context usage pair — CLI-parity ruler (显示面消差批 M2 ∕ I16a): numerator = core
- * `estimateTokens(history)`, the SAME estimate the CLI status line renders (`thincoder-cli/src/tui/
- * render-frame.mjs:388-389` over the `render-loop.mjs:89-91` ctxCache —— 分子分母两端同源),
+ * `estimateTokens(history)`, the SAME estimate the CLI status line renders (
+ * `inputBoxStyle` over the `createRenderLoop` ctxCache —— 分子分母两端同源),
  * denominator = the provider-aware window (`providerSpec(provider).context`). The provider-reported
  * `prompt_tokens` numerator (ctxPercentForModel above) double-reported: one session showed two
  * percentages under the same `context X%` label (端差 M2). `pct` = null when the estimate is 0；

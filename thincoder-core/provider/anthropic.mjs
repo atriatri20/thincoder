@@ -4,7 +4,7 @@
  * Docs: https://docs.anthropic.com/en/api/messages
  */
 
-import { specForModel } from "../config.mjs"
+import { specForModel, requestBudget } from "../config.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { effectiveFetchTimeoutMs } from "./core.mjs"
@@ -53,7 +53,9 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     model: provider.model,
     messages: chatMessages,
     stream: true,
-    max_tokens: provider.maxTokens || (spec.maxOutput || 8192),
+    // §6.17 发送面同源：anthropic 恒发 max_tokens（显式 ?? 规格 maxOutput——原第三级兜底不可达已随本批删净，
+    // §6.17「装配面不留第二算式」）
+    max_tokens: requestBudget(provider).maxTokens,
   }
   if (systemMessages.length > 0) body.system = systemMessages.join("\n\n")
   if (tools?.length) body.tools = tools

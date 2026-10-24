@@ -24,7 +24,7 @@ import { setSlotEngineering } from "../extension/session-slot-write.mjs"
 // ─── W9（2026-09-15）：batch 记账面注入（核缝 #84 —— `configureBatchSegment`）──────────
 // VSC 特有增量随删旧迁入端壳（四步协议 ②）：核 `agent-tools/batch.mjs` 的写入回调默认
 // no-op；本端在装配层注册 = 写入成功即记绑定档绝对路径入 `agent._touchedFiles`（与删除前
-// `src/agent-tools/batch-segment.mjs:184` 逐字同语义——Array.isArray 守卫 + includes 去重）——
+// 逐字同语义——Array.isArray 守卫 + includes 去重）——
 // 冻结窗口 / 子代理合入记账（核 `agent/record-results.mjs` 的 `_touchedFiles` mutation 记账同一载体）行为不变。
 configureBatchSegment({
   onWrite: (agent, abs) => {
@@ -36,8 +36,8 @@ configureBatchSegment({
 // 端侧供值随删旧迁入装配层（同 W9 先例）：① `configureSkillLoader` —— 本端 loader = 核单源转口
 // （`src/extension/skills.mjs` 纯再导出 `@thincoder/core/skills.mjs` 的 loadSkillsSync ∕ readSkillSync）；② `configureEngMirror` ——
 // 工程模式翻转后的槽写（**会话槽唯一权威**，无 config.json 镜像；迁自删除档
-// `src/agent-tools/eng.mjs:92-105`）；③ `configureVerifyDiagnostics` —— 编辑器诊断
-// 段（advisory——迁自删除档 `src/agent-tools/verify.mjs:250-275`，逐字同语义）。
+// `src/agent-tools/eng.mjs`）；③ `configureVerifyDiagnostics` —— 编辑器诊断
+// 段（advisory——迁自删除档 `src/agent-tools/verify.mjs`，逐字同语义）。
 // skill / eng 两缝**动态**载入（核 `agent-tools/skill.mjs` / `eng.mjs` 静态链经核 agent 栈可达
 // `node:sqlite`——W8 契约②机判；verify 闭包 4 档零 sqlite ⇒ 静态面安全）。
 

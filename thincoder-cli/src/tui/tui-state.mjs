@@ -31,6 +31,7 @@ export function createTuiState({ cols, rows, agent }) {
     pendingNotice: null, // 后台更新提示：有 picker 打开时挂起，picker 全部关闭后再弹
     wizard: null, // first-launch config wizard { step, index, scroll, selectedLine, fields, error, lines }——登录面补全批：step="route" 首屏 + 团队三问步（step = server/username/password）+ `team` 字段留存 + `teamFocusBack` 回退行焦点位 + `busy` 提交闸
     teamAsk: null, // 团队问句面（会话内 `/team login`——模态族第三支）: { step, fields, error, busy, scroll, lines }——cmd-team.mjs 持有；overlay 第三支 ∥ 键面序 2b ∥ modalOpen 计入
+    secretPrompt: null, // SSH 凭据窗（SSH-SESSION 批 · TOOLS.md §6.22 ⑧——模态族第四支）: { kind, sessionId, host, user, port, keys, fields, index, values, lines, scroll }——secret-prompt.mjs 持有；overlay 第四支 ∥ 键面序 2c；掩码值零留面体态（值只走回调返回路）
     team: { loggedIn: false, member: null, server: null, label: null, verify: null }, // 团队登录态切片（TUI.md §7.8 五键）——写者 = cmd-team.mjs（启动读 ∥ `/team` 成退复读 ∥ 活校验回填）；render-frame 每帧活读零缓存
     tasks: agent.tasks ?? [], // task list from task tool (progress shown in status bar); carried over on session restore, auto-collapsed when all done
     dims: makeDimsState({ cols: startupCols, rows: startupRows }), // terminal dims single source (Windows ConPTY instability, 2026-08-30) — seeded pre-raw-mode, re-sampled by event hooks only (startup retry / resize / idle watchdog)

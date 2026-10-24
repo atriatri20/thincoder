@@ -14,7 +14,7 @@ import { resolveProviderSecrets } from "./env-ref.mjs"
 // （`isRealUserMsg`——纯函数零依赖，无环）。
 import { isRealUserMsg } from "./history-window.mjs"
 // #632（缺面族批补 · @ 文件引用对齐 · 2026-09-29）：标题源剥离单源——注入形不得进标题请求（核件
-// `file-refs.mjs`；CLI 无注入 ⇒ 零动作；VSC 同位转口 = `panel-session-write.mjs:139`）。
+// `file-refs.mjs`；CLI 无注入 ⇒ 零动作；VSC 同位转口 = `panel-session-write.mjs` 的 `generateTitle`）。
 import { stripAtRefs } from "./file-refs.mjs"
 // #363③（off 形族单源——MODEL-SPECS.md §16.2 / §16.4）：禁思考形与「是否可禁」一律引核
 // （`thinkOffShape` / `thinkOffPath`——本档零副本）；spec 查表同单源（`specForModel`）。

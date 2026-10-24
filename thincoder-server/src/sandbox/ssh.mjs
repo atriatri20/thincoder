@@ -1,11 +1,11 @@
 /**
- * ssh.mjs — SSH 传输（sandbox/SANDBOX.md §3「托管接入」∥ §14 KD-SV-85；runner-admin-console 批——台账 #1236）：
+ * ssh.mjs — SSH 传输（sandbox/SANDBOX.md §3 主机凭据块（传输单源）∥ §14 KD-SV-85；runner-admin-console 批——台账 #1236）：
  * spawn 系统 openssh（密钥 `-i <0600 文件>` ∥ 密码 `sshpass -e`——环境变量口径，不入 argv/ps）∥ keyfile/known_hosts 落数据目录
- * ∥ 主机指纹 TOFU（`accept-new` + 首见记录；变更 ⇒ 停 + 「重新信任」重试）∥ 超时/输出截断；`execImpl` 注入 = 测试。
+ * ∥ 主机指纹 TOFU（`accept-new` + 首见记录；变更 ⇒ 停 + 如实报（重发命令即重新信任））∥ 超时/输出截断；`execImpl` 注入 = 测试。
  *
  * 无人值守口径：密钥径 = `BatchMode=yes`（不弹交互）∥ 口令径 = 不带 `BatchMode`（带了直接弃用口令面——真机 A/B 核 2026-10-11），
  * 改 `NumberOfPasswordPrompts=1` + `PreferredAuthentications=password` ∥ `PubkeyAuthentication=no`（单提示、仅口令面——KD-SV-85）∥ `ConnectTimeout=10`；逐条命令、非交互；sudo 口令经 stdin（`sudo -S`——§3）。
- * 零第三方运行期依赖（系统 openssh——KD-SV-85）；本档只做传输，决定/重试/步骤 = 上层（agent 环 ∥ 任务面）。
+ * 零第三方运行期依赖（系统 openssh——KD-SV-85）；本档只做传输，决定/重试/步骤 = 上层（chat 回合环 ∥ 主机凭据面）。
  */
 import { spawn } from "node:child_process"
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
@@ -36,7 +36,7 @@ function ensureSshDir(baseDir) {
   return dir
 }
 
-/** 私钥落盘（0600——用完即弃面：任务收尾清理；§3）。 */
+/** 私钥落盘（0600——用完即弃面：命令用毕清理；§3）。 */
 export function writeKeyFile(baseDir, name, content) {
   const dir = ensureSshDir(baseDir)
   const file = join(dir, `${name}.key`)
@@ -45,16 +45,16 @@ export function writeKeyFile(baseDir, name, content) {
   return file
 }
 
-/** 私钥清理（任务收尾——尽力而为）。 */
+/** 私钥清理（命令用毕——尽力而为）。 */
 export function removeKeyFile(file) {
   try {
     if (file && existsSync(file)) rmSync(file, { force: true })
   } catch {
-    /* 清理尽力而为——任务终态已定 */
+    /* 清理尽力而为——命令终态已定 */
   }
 }
 
-/** 指纹变更后清 stale 条目（「重新信任并重试」的机器面——重交任务即重信任；免人工翻文件——提议⑬）。
+/** 指纹变更后清 stale 条目（「重新信任并重试」的机器面——重发命令即重信任；免人工翻文件）。
  *  known_hosts 行形：`<名> <算法> <指纹>`——非 22 端口 = `[host]:port` 前缀。 */
 export function forgetHost(baseDir, host, port = 22) {
   const file = join(sshDir(baseDir), "known_hosts")
@@ -119,12 +119,6 @@ export function spawnSsh(cmd, args, { env = process.env, input = null, timeoutMs
   })
 }
 
-/** 本机 `sshpass` 在场检查（密码认证前置——§3 宿主前提；缺 ⇒ S2 停 + 报因）。 */
-export async function hasSshpass({ execImpl = spawnSsh } = {}) {
-  const res = await execImpl("sshpass", ["-V"], { timeoutMs: 5000 })
-  return !res.spawnError && res.code === 0
-}
-
 /** 截断（尾保留——错误尾最有诊断价值）。 */
 function truncate(text) {
   const value = String(text ?? "")
@@ -135,7 +129,7 @@ function truncate(text) {
 function classifyFailure(stderr, host) {
   const text = String(stderr ?? "")
   if (/REMOTE HOST IDENTIFICATION HAS CHANGED|Host key verification failed/i.test(text)) {
-    return new SshError("fingerprint_changed", "主机指纹已变更——确认后重试（重交任务即重新信任）")
+    return new SshError("fingerprint_changed", "主机指纹已变更——确认后重试（重发命令即重新信任）")
   }
   if (/Permission denied|Too many authentication failures|Authentication failed/i.test(text)) {
     return new SshError("auth", `无法登录：认证被拒（检查用户名/密钥/口令——${host}）`)
@@ -148,7 +142,7 @@ function classifyFailure(stderr, host) {
 
 /**
  * SSH 执行器（§3）：`exec({ host, port, user, authKind, secret, sudoSecret, command, stdin, timeoutS })` ⇒ `{ exitCode, stdout, stderr }`。
- * `stdin` = 命令体（`nft -f -` ∥ `tar xzf -`；缺省 `null`——与 `sudo -S` 口令行拼合，口令在前）；
+ * `stdin` = 命令体（`tar xzf -`；缺省 `null`——与 `sudo -S` 口令行拼合，口令在前）；
  * 传输级失败 ⇒ 抛 `SshError`（auth ∥ unreachable ∥ fingerprint_changed ∥ host_missing_binary ∥ timeout）；命令非零退出 = 正常返回（读数面）。
  * 注入口径：`execImpl`（spawn 替身——测试）∥ `baseDir`（数据目录——keyfile/known_hosts 落点）。
  */
@@ -172,7 +166,7 @@ export function createSshExecutor({ baseDir, execImpl = spawnSsh, defaultTimeout
     let args
     let env = process.env
     if (authKind === "key") {
-      const file = keyFile ?? writeKeyFile(baseDir, `onboarding-${process.pid}-${Math.random().toString(16).slice(2, 8)}`, String(secret ?? ""))
+      const file = keyFile ?? writeKeyFile(baseDir, `ssh-${process.pid}-${Math.random().toString(16).slice(2, 8)}`, String(secret ?? ""))
       if (keyFile && !keyWritten) {
         writeKeyFile(baseDir, keyName, String(secret ?? ""))
         keyWritten = true
@@ -193,8 +187,8 @@ export function createSshExecutor({ baseDir, execImpl = spawnSsh, defaultTimeout
     } else {
       throw new SshError("spawn", `认证方式仅收 key ∥ password：${String(authKind)}`)
     }
-    // stdin 两段同喂（§3）：`sudo -S` 口令行在前 ∥ 命令体（`stdin`）在后——`nft -f -` ∥ `tar xzf -` 收体（sandbox-exec-rebuild 批：
-    // 闸下发 ∥ 恢复 SSH 备径）；命令不含 `sudo -S` ⇒ 只喂命令体；缺省 null = 既有行为逐字零变。
+    // stdin 两段同喂（§3）：`sudo -S` 口令行在前 ∥ 命令体（`stdin`）在后——`tar xzf -` 收体（sandbox-exec-rebuild 批：
+    // 恢复 SSH 备径）；命令不含 `sudo -S` ⇒ 只喂命令体；缺省 null = 既有行为逐字零变。
     const wantsSudo = Boolean(sudoSecret) && /sudo\s+-S/.test(command)
     let input = null
     if (wantsSudo || (stdin !== null && stdin !== undefined)) {
@@ -212,9 +206,10 @@ export function createSshExecutor({ baseDir, execImpl = spawnSsh, defaultTimeout
     if (result.timedOut) throw new SshError("timeout", `命令超时（${timeoutS}s——${host}）：${truncate(result.stderr)}`)
     // 分类门限：只吃 ssh 自身失败（exit 255）的 stderr——远程命令级 stderr（如 EACCES「Permission denied」）不分类、原样上抛
     // （2026-10-14 修：命令级 EACCES 曾被误报「认证被拒」——诊断失真，实证见台账 #1408）
+    // 残余口径：远程命令自身以 255 退出时无法与 ssh 失败区分（ssh 保留码语义）——已接受，不另设判据。
     const failure = result.code === 255 ? classifyFailure(result.stderr, host) : null
     if (failure) {
-      if (failure.kind === "fingerprint_changed") forgetHost(baseDir, host, port) // 重交任务 = 重新信任（提议⑬）
+      if (failure.kind === "fingerprint_changed") forgetHost(baseDir, host, port) // 重发命令 = 重新信任
       throw failure
     }
     if (result.code === 255) throw new SshError("unreachable", `无法登录：连接失败（${host}）——${truncate(result.stderr).slice(0, 300)}`)

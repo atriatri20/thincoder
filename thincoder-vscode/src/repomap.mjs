@@ -117,7 +117,7 @@ async function buildDepGraph(cwd) {
   return { deps, importers, fileCount: deps.size }
 }
 
-// ─── buildSummary（D-CI1——依赖大纲注入体；cli tools/repomap.mjs:185-257 同构）─────
+// ─── buildSummary（D-CI1——依赖大纲注入体；cli 同构）─────
 
 /**
  * Build the dependency-outline summary pushed as a per-run context injection

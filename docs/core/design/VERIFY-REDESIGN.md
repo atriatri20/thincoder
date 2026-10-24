@@ -4,19 +4,9 @@
 > 本档 = verify 机制设计的**唯一权威**（契约 / 判定 / 坐标）。
 > 工具契约要点 = `docs/core/design/TOOLS.md`（§6.7 verify 行 · 元工具族）；`verify` 与 coding 语境的边界 = `docs/core/design/AGENT-LOOP.md`；本档不复制其内容（D2）。
 > 双端：CLI `thincoder-core/agent-tools/verify.mjs` · VSC `thincoder-vscode/src/agent-tools/verify.mjs`（同机制、各自实现）。
-> 需求侧 = `docs/core/requirements/`（根层**无**对应档）；CLI 树需求档 `thincoder-cli/docs/requirements/VERIFY-REDESIGN.md` **未迁**（后续批——部分面已由 `TOOLS.md` D-V5 快路径接管）。
-> 建档：2026-09-15（**B 式迁移轮 · 第 3 批**——`thincoder-cli/docs/design/VERIFY-REDESIGN.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
-> 本档坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
+> 需求侧 = `docs/core/requirements/`（根层**无**对应档）；CLI 树需求档 `thincoder-cli/docs/requirements/VERIFY-REDESIGN.md`（部分面已由 `TOOLS.md` D-V5 快路径接管）。
 
-## 1. 定位与问题
-
-verify 原把**项目特定逻辑硬编码进通用工具**：
-
-1. `MODULE_TO_TEST`——src 模块 → 测试文件的硬编码映射（本仓私有结构，任何其他项目无意义）；
-2. 「改动无测试则强制拦 done」——与「测试不强制、按需加」的理念冲突；
-3. `npm test` / `node --check` 自动执行——锁死 JS/npm 生态。
-
-后果：verify 只适用于特定 JS 项目；测试文件一变映射即悬空；通用 agent 面对非 JS / 无测试项目逻辑失效或误拦。
+## 1. 定位
 
 **现行定位**：verify = **语言 / 框架 / 项目无关的完成前门禁**。它**不替模型跑任何测试/验证命令**，只对模型的**声明**做机械裁定。
 
@@ -25,14 +15,14 @@ verify 原把**项目特定逻辑硬编码进通用工具**：
 模型调用 verify 时**声明验证状态**（`verification` 参数，`thincoder-core/agent-tools/verify.mjs:82`–`:92`）：
 
 ```text
-verification: { status: "passed" | "failed" | "skipped", command?, summary?, basis? }   // status 必填；basis 可选（「根据」维 · #848）
+verification: { status: "passed" | "failed" | "skipped", command?, summary?, basis? }   // status 必填；basis 可选（「根据」维）
 ```
 
 - `command` / `summary` 可选；**`summary` 在 `skipped` 时为必填**（须给具体理由）。
-- **`basis`（可选 · 2026-10-04 · #848 · gitee IKJKHH）**：判据源 ∥ 实读坐标（`file:line`）∥ 显式 `unverified`——「根据」维**声明式**（格式零校验 · 零机检）。`passed` / `skipped` 缺 `basis` ⇒ 报告附**提示行**（advisory——不阻断 · 不改判定）；`failed` 面零提示（已阻断）；`skipped` 无 `summary` 的打回支同零提示（阻断面不叠加——提示仅随放行面出现）。
+- **`basis`（可选）**：判据源 ∥ 实读坐标（`file:line`）∥ 显式 `unverified`——「根据」维**声明式**（格式零校验 · 零机检）。`passed` / `skipped` 缺 `basis` ⇒ 报告附**提示行**（advisory——不阻断 · 不改判定）；`failed` 面零提示（已阻断）；`skipped` 无 `summary` 的打回支同零提示（阻断面不叠加——提示仅随放行面出现）。
 - verify **不执行** `command`——它是模型的自述证据。
 - 参数面保留 `workdir`（定位项目根 / doc-only 判定）。
-- 参数面**已删** `full` / `testNamePattern` / `filter` 及其拒绝分支（无「自动跑测试」后语义消亡）。
+- 参数面无 `full` / `testNamePattern` / `filter` 及其拒绝分支（无「自动跑测试」后语义消亡）。
 
 ## 3. 判定门与打回引导
 
@@ -48,7 +38,7 @@ verification: { status: "passed" | "failed" | "skipped", command?, summary?, bas
 - **doc-only 快路径**：全部改动为文档 → 早退（无需验证）；**但不得吞显式 `failed`**——模型显式声明 `verification.status = "failed"` 时**恒打回**（双端同）。
 - **可选语法提示**：仅改动为 `.js` / `.mjs` 且 node 存在时给 `node --check` **软提示**（**不进门禁**）。
 - 另报：改动文件清单（git diff）、task 清单、自审 checklist。
-- **`basis` 与判定零耦合（#848）**：三判定行为逐字不变——`basis` 仅为报告附加维（缺失 ⇒ 提示；`skipped` 的 `summary` 必填判据不因 `basis` 替代）。
+- **`basis` 与判定零耦合**：三判定行为逐字不变——`basis` 仅为报告附加维（缺失 ⇒ 提示；`skipped` 的 `summary` 必填判据不因 `basis` 替代）。
 
 ## 4. 完成守卫（guard）与 goal 门禁
 
@@ -71,17 +61,17 @@ verify 的强制面住在完成路径，不住 verify 本体：
 | guard 重试 | `thincoder-core/agent/completion.mjs:94` | `thincoder-vscode/src/agent/run-stages.mjs:99` |
 | guard 耗尽 | `thincoder-core/agent/completion.mjs:109` | `thincoder-vscode/src/agent/run-stages.mjs:113` |
 | code-mutations 层 | `thincoder-core/agent/completion.mjs:80`（`hasCodeMutations`） | `thincoder-vscode/src/agent/run-helpers.mjs:71` |
-| 打回报告 | `thincoder-core/agent-tools/verify.mjs` | `thincoder-vscode/src/agent-tools/verify.mjs:142`（as-of 2026-09-29）（`rejectionReport`） |
-| goal 门禁 | `thincoder-core/agent-tools/goal.mjs:52` | `thincoder-vscode/src/agent-tools/goal.mjs:38` （迁移期引文——档已迁核） |
+| 打回报告 | `thincoder-core/agent-tools/verify.mjs` | `thincoder-vscode/src/agent-tools/verify.mjs:142`（`rejectionReport`） |
+| goal 门禁 | `thincoder-core/agent-tools/goal.mjs:52` | `thincoder-vscode/src/agent-tools/goal.mjs:38` |
 
-- **提示词面**：测试执行职责**已从 verify 挪回模型**——模型从项目 `AGENTS.md` 读验证方式，自决跑哪一层（迭代期只跑本任务面单元测试；全量 ∕ 集成 = 收口恰一次、父侧——见 `requirements/TESTING.md` §2 F1–F4），verify 只**收声明**。提示词正本 = `docs/core/design/prompts/**`（本档只留机制边界，D2）。
+- **提示词面**：测试执行职责**在模型**——模型从项目 `AGENTS.md` 读验证方式，自决跑哪一层（迭代期只跑本任务面单元测试；全量 ∕ 集成 = 收口恰一次、父侧——见 `requirements/TESTING.md` §2 F1–F4），verify 只**收声明**。提示词 = `thincoder-core/prompts/**`（唯一副本；本档只留机制边界，D2）。
 - **测试纪律不进 verify 代码**：纪律靠 `AGENTS.md` / 提示词自然语言指导，不硬编码进工具。
 
-## 6. 机制面（B 式迁移并入——现状路径）
+## 6. 机制面（现状路径）
 
-### 6.1 实现坐标（as-of 2026-09-15 实核）
+### 6.1 实现坐标
 
-| 面 | 落点 | 实核 |
+| 面 | 落点 | 状态 |
 |---|---|---|
 | 工具对象 / 描述派生 | `thincoder-core/agent-tools/verify.mjs:75`（`verifyTool`）· `:78`（description） | 在位 |
 | `verification` schema | `thincoder-core/agent-tools/verify.mjs:82`–`:92` | 在位 |
@@ -90,7 +80,6 @@ verify 的强制面住在完成路径，不住 verify 本体：
 | 未知 status 拒 | `thincoder-core/agent-tools/verify.mjs:258` | 在位 |
 | guard 强制端 | `thincoder-core/agent/completion.mjs:73`–`:74`（opt-in）· `:81` · `:94` · `:109` | 在位 |
 | goal 完成门 | `thincoder-core/agent-tools/goal.mjs:52` | 在位 |
-| 测试 | `thincoder-cli/test/verify-redesign.test.mjs`（T-V1–V8） | 在位 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 
 ### 6.2 用例（现行）
 
@@ -102,57 +91,16 @@ verify 的强制面住在完成路径，不住 verify 本体：
 | T-V8 | doc-only + 显式 failed → 打回（G10 双端同） |
 | VSC 对位 | VSC 侧同名单元测试档（端专属面 = 编辑器诊断段与可 Stop 中断执行） |
 
-**已退场用例**：T-V9（guard 文案断言）· T-V10（提示词语义断言）——散文锚整删（见 §8.1）。
+## 7. 关键决策记录
 
-## 7. 并入的关键决策记录（含否决备选）
-
-| # | 决策 | 理由 / 否决备选 |
+| # | 决策 | 理由 |
 |---|---|---|
-| D-V1 | verify 收**声明**（`verification`），不代跑命令 | 通用 agent 不得锁死 JS/npm 生态；模型自述证据 + 机械门。否决「自动跑项目测试」 |
-| D-V2 | `skipped` **须带理由** | 无理由跳过 = 假装跑过；否决「skipped 一律放行」 |
-| D-V3 | 打回消息**给引导**（列改动文件 + 引 AGENTS.md） | 只说「没验证」模型无从下手；否决空泛打回 |
-| D-V4 | 删 `MODULE_TO_TEST` / 模块映射 / related-tests / `npm test` 自动跑 / 无测试拦 done | 项目私有逻辑不得进通用工具（测试一变即悬空，已实证）；否决「保留但可关」 |
+| D-V1 | verify 收**声明**（`verification`），不代跑命令 | 通用 agent 不得锁死 JS/npm 生态；模型自述证据 + 机械门 |
+| D-V2 | `skipped` **须带理由** | 无理由跳过 = 假装跑过 |
+| D-V3 | 打回消息**给引导**（列改动文件 + 引 AGENTS.md） | 只说「没验证」模型无从下手 |
+| D-V4 | 删 `MODULE_TO_TEST` / 模块映射 / related-tests / `npm test` 自动跑 / 无测试拦 done | 项目私有逻辑不得进通用工具（测试一变即悬空，已实证） |
 | D-V5 | **保留** doc-only 快路径 + 语法软提示 + task/checklist + git diff 报告 | 这些是语言无关的机械面；语法提示**不进**门禁（避免锁生态） |
-| D-V6 | 双端**同输入同判定** | 门禁语义分叉会让同一模型行为在两个壳里结果不同；否决「各端各自裁定」 |
-| D-V7 | 参数清理：删 `full` / `testNamePattern` / `filter`，留 `workdir` | 无自动跑测试后这些参数语义消亡；否决「留着兼容」 |
-| D-V8 | doc-only 快路径**不吞**显式 declared failed | 快路径是省事通道，不是绕过模型明示失败的通道；VSC 行为为对、CLI 已对齐（G10） |
-| D-VR9 | **「根据」维 = 声明式（`basis` 可选字段 + 缺省提示），零机检**（2026-10-04 · #848） | 判定「一句有没有根据」需语义理解 ⇒ 硬机检必假阳（gitee IKJKHH 明确否「机检」候选——采纳）；`basis` 可选 ⇒ 向后兼容（老会话零破）；提示不阻断（`passed` / `skipped` 放行语义零变）。否决：必填（假阳 ∥ 阻断回归）· 机检「结论句带根据标记」（语义判定不可控）· 改「自报」本体（自报形态 = 有意设计——保留） |
-
-## 8. 不并项与历史沿革
-
-### 8.1 历史沿革（(d) 类——**不并**）
-
-> 来源档 `thincoder-cli/docs/design/VERIFY-REDESIGN.md`（CLI 产品档）——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
-
-| 旧档位置 | 内容 | 何故不并 |
-|---|---|---|
-| 旧档状态行（相 1 / 相 2 交付状态 + DOC-SWEEP 核验注 + 背景注） | 时点状态行与一次性核验注 | 批次语境——现行态已入 §2–§5 |
-| 旧档 §「相 2 缺口收口设计」的 G1–G14 清单 | 一次性审计编号与会话内修复流水（G5–G9 旧提示词文件清单、G14 归属注等） | 审计材料——现行约束已分别入 §4 / §5；非机制正文 |
-| 旧档 T-V9 / T-V10 两行（「已退场」） | 散文锚用例退场记录 | 一次性退场材料——删除记录 = CLI 树 `docs/design/TESTING.md` §11.3（PROSE-ANCHOR-RETIRE） |
-| 旧档 §5 验收行 AC1–AC5 | 一次性验收清单 | 批次材料——现行用例面入 §6.2 |
-| 旧档 §「前身吸收」（`VERIFY-DOCONLY.md` 归档） | 前身档吸收流水 | 历史叙述——doc-only 机制已入 §3 |
-| 旧档变更记录（五条逐批流水 + 「背景注」同步评审说明） | 2026-09-07 / 09-08 批次流水 | 历史叙述——本档自有变更记录 |
-
-### 8.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
-
-| 旧档面 | 内容 | 何故不并（去向 / 触发） |
-|---|---|---|
-| 提示词文件逐条清单（旧 eng-coder / engineering-sub / system / discipline / main） | 已退役文件坐标 | **提示词面 = 产品代码**；宿主映射为现行 prompts 档——本档只留机制边界（§5） |
-| guard 文案全文（三句逐字） | 提示词句子 | 提示词面——落点 = 提示词正本 / 产品代码；本档只留语义判据 |
-| VSC 端专属面（编辑器诊断段、可中断执行） | 端特有实现 | 归 VSC 文档面（本批不含）——触发 = VSC 轮 |
-| 需求侧正文 | CLI 树需求档 | 需求档未迁——后续批并入既有档 |
-
-## 变更记录
-
-**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
-**本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
-
-- 2026-10-04（**issue 修复批·五 · 登记/回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §2.8（父侧裁定）：§2 `basis` 条补 **`skipped` 无 `summary` 打回支零提示**句（阻断面不叠加——按现实现形明书）。**机制语义零改**（文本边界收正）。
-- 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #848 · gitee IKJKHH）：§2 增 **`basis` 可选字段**（「根据」维——声明式；缺省提示行，不阻断）+ §3 补「`basis` 与判定零耦合」句 + §7 增 **D-VR9**。提示词对应面（出口条件第 9 条）= `docs/core/design/prompts/persona-engineering.md`（EN 落地 = 实施轮）。**机制本体零改**（自报形态保留）。明细 = 批档 §2。
-
-- 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R1 改指（`goal.mjs` 补 `thincoder-core/agent-tools/` 前缀）。**零新语义**。
-
-- 2026-09-28（**测试按层收口·设计对齐轮 · eng-designer**——承 `docs/batches/2026-09-28-test-layer-prompts.md` §1.4 派单 + 父侧裁定（声明外追加 · 父侧已裁））：
-  §5 提示词面句回收正——旧分层列举（L0 即时验证 ∕ L1 项目快测试 ∕ L2 全量）退场，改「迭代期只跑本任务面单元测试；全量 ∕ 集成 = 收口恰一次、父侧」（指针 = 需求 `requirements/TESTING.md` §2 F1–F4）；同行「verify 三层都」→「verify 只」（去旧轴字面）。**机制条文零改**。
-
-- 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/VERIFY-REDESIGN.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标改写为现状路径并实核（`agent-tools/verify.mjs` · `agent/completion.mjs` · `thincoder-core/agent-tools/goal.mjs` · VSC 对位四档）；「相 1 / 相 2」批次流水与 G 编号审计清单入 §8；同一事实只详述一处（guard 文案只留语义判据，逐字文案归提示词面）。
+| D-V6 | 双端**同输入同判定** | 门禁语义分叉会让同一模型行为在两个壳里结果不同 |
+| D-V7 | 参数清理：删 `full` / `testNamePattern` / `filter`，留 `workdir` | 无自动跑测试后这些参数语义消亡 |
+| D-V8 | doc-only 快路径**不吞**显式 declared failed | 快路径是省事通道，不是绕过模型明示失败的通道 |
+| D-VR9 | **「根据」维 = 声明式（`basis` 可选字段 + 缺省提示），零机检** | 判定「一句有没有根据」需语义理解 ⇒ 硬机检必假阳；`basis` 可选 ⇒ 向后兼容（老会话零破）；提示不阻断（`passed` / `skipped` 放行语义零变）。 |

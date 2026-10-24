@@ -80,16 +80,18 @@ function subagentMetaPayload(path, ev) {
 /**
  * Build the runAgent callbacks for an ACP session.
  * @param {{ sessionId: string, agent?: object, notify: (m, p) => void, request: (m, p, o?) => Promise<any>, log?: (s) => void,
- *           clientCaps?: { fs?: { readTextFile?: boolean, writeTextFile?: boolean } } }} deps
+ *           clientCaps?: { fs?: { readTextFile?: boolean, writeTextFile?: boolean } },
+ *           onSecretInput?: Function }} deps
  *   `agent` = 会话的活引用（§2.4——`set_config_option` 切模型后 `usage_update.size` 随动；
  *   不得在构造期固化数值）；`clientCaps` = the §3.4 snapshot (taken at `session/new`); capabilities omitted by the
- *   client are UNSUPPORTED ⇒ the fs reverse-RPC face stays local (§11.4 — never 30s 干等).
+ *   client are UNSUPPORTED ⇒ the fs reverse-RPC face stays local (§11.4 — never 30s 干等)；
+ *   `onSecretInput` = 凭据窗注入缝（SSH-SESSION 批 §6.22 ⑧——无 UI 通道由装配侧给拒件；缺省零注入）。
  */
-export function buildAcpCallbacks({ sessionId, agent, notify, request, log = () => {}, clientCaps = {} }) {
+export function buildAcpCallbacks({ sessionId, agent, notify, request, log = () => {}, clientCaps = {}, onSecretInput = null }) {
   const update = (sessionUpdate, extra = {}) =>
     notify("session/update", { sessionId, update: { sessionUpdate, ...extra } })
   // §11.4 fs 能力位（默认 false——文档「MUST treat all capabilities omitted … as UNSUPPORTED」）；
-  // 判据同构 = kimi server.ts:626-636。edit 桥需读回 + 写回 ⇒ 两位皆真才路由。
+  // 判据同构 = kimi server.ts。edit 桥需读回 + 写回 ⇒ 两位皆真才路由。
   const canReadFile = clientCaps?.fs?.readTextFile === true
   const canWriteFile = clientCaps?.fs?.writeTextFile === true
   let toolSeq = 0
@@ -220,7 +222,7 @@ export function buildAcpCallbacks({ sessionId, agent, notify, request, log = () 
       // D7 + 批 1 B2/D13（ACP-CLIENT.md §7.2）：剥离判据 = **形态**（`⟦ev⟧<小写名>` + RS
       // 终止符同现）——枚举是漏项发生器（`queued` / `cancelled` 发射点在位而白名单未跟 ⇒
       // 随 agent_message_chunk 泄漏给客户端）。终止符约束 load-bearing：放宽为无终止符形态
-      // 会吞真实正文（先例教训见 src/tui/render.mjs:250-252）。
+      // 会吞真实正文（先例教训见 src/tui/render.mjs）。
       // 判据单源 = 核模块 `subagent-event.mjs`（2026-10-04 批统一——桥内联式退役，剥离语义
       // 零改）：`parseSubagentEvent` 非空 ⇒ 剥；§12 结构化发射 = 同一调用取投影载荷。
       const ev = parseSubagentEvent(payload)
@@ -321,6 +323,13 @@ export function buildAcpCallbacks({ sessionId, agent, notify, request, log = () 
         return false
       }
     },
+
+    /**
+     * SSH 凭据窗（SSH-SESSION 批 · TOOLS.md §6.22 ⑧——无 UI 场合）：注入侧给拒件（可读句 + 指引——
+     * 不挂起、不静默；装配 = `acp.mjs` `refuseSecretInput`）；缺省零注入 ⇒ 核工具自身抛句
+     * （同 `question.mjs` 无 UI 例）。
+     */
+    ...(onSecretInput ? { onSecretInput: (payload) => onSecretInput(payload) } : {}),
 
     /**
      * fs reverse-RPC router (dispatch.mjs toolRouter, M2) — 能力位 + 工具形态双判（§11.4）：

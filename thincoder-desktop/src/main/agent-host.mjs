@@ -2,7 +2,7 @@
  * agent-host.mjs — 宿主装配桥（`docs/desktop/design/SHELL.md` §4 装配第三份 · `docs/desktop/design/IPC.md` §1 桥面）。
  * 六职责（**R3 拆后**：回合驱动族出档 `turn-driver.mjs` —— `docs/desktop/design/PROJECT.md` §10 **BL** 行）：
  * ① 装配（懒 · 按需 · 同键复用）② 回调桥（协议行解析 ⇒ `ev:*` 出站 · R3a 增 `onUsage` 入会话累计令牌表 ·
- * R3 增 `onDistilled` 蒸馏落位〔非通道〕）③ 待决表（三门形：审批逐项 / 审批批次 / 提问 —— 兼撞帽续跑询问载体）
+ * R3 增 `onDistilled` 蒸馏落位〔非通道〕）③ 待决表（四形：审批逐项 / 审批批次 / 提问 / 凭据（`secret` —— SSH 会话批增） —— 兼撞帽续跑询问载体）
  * ④ **回合驱动族装配**（出档 `turn-driver.mjs`：单回合执行面 · 在飞表 · 中止墓碑 · `send` ∕ `interrupt` ∕ `dispose`
  *    ∕ `abortSuspensions` —— 本档只供注入面并暴露其返回面）
  * ⑤ 会话级偏好写面（`setPrefs`：写盘 → 重施；在飞受理 ∥ 施加顺延 —— 批次档 KD-19 单点）。**#880 增 选定写回**：
@@ -83,7 +83,7 @@ function prefsPatchFailure(patch) {
 }
 
 /** advisor 轮次 / 模型**只读采样**（「对齐第三批」项 14 —— `docs/desktop/design/UI.md` §1 本批注项 14）：值 = 核
- *  `agent._advisorRound` 活读 **+1**（CLI `tool-events.mjs:145` / VSC `panel-callbacks.mjs:113` 同式）· `provider.model`；
+ *  `agent._advisorRound` 活读 **+1**（CLI `buildToolCallbacks` / VSC `statusTextPayload` 同式）· `provider.model`；
  *  **agent 不在场 ⇒ `null`**（零载波 —— 不携两键，禁假造）。纯函数、零抛。 */
 export function advisorMeta(agent) {
   if (!agent) return null
@@ -134,13 +134,14 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     ensuring.clear()
     usageTally.clear()
   }
-  /** 待决门（表 + 五操作 —— 出档 `suspensions.mjs`；`table` 随宿主面继续暴露）。 */
-  const { table, askSingle, askBatch, askQuestion, denyGates, respond } = createGates({ post, agents })
+  /** 待决门（表 + 六操作 —— 出档 `suspensions.mjs`；`table` 随宿主面继续暴露；`askSecret` = 凭据门 ——
+   *  SSH 会话批增，`onSecretInput` 缝的落地端）。 */
+  const { table, askSingle, askBatch, askQuestion, askSecret, denyGates, respond } = createGates({ post, agents })
   /** 回调桥（出档 `agent-bridge.mjs`）⊕「对齐第三批」两采样面（`advisorOf` / `extractLinks` —— 见档头）
    *  ⊕ R3 蒸馏落位注入面（`persistDistilled` —— `onDistilled` 时点按本键取装配实例重落盘，见 `session-io.mjs`）
    *  ⊕ R5 目标面采样面（`goalOf` —— goal 工具结果时点读核载体 `agent.goal` 单源；agent 缺席 ⇒ `undefined` 不可判）。 */
   const bridge = createBridge({
-    post, askSingle, askBatch, askQuestion, tokensOf,
+    post, askSingle, askBatch, askQuestion, askSecret, tokensOf,
     syncLiveOf: (key, head) => agents.get(key)?._syncChildAborts?.has(head) === true,
     advisorOf: (key) => advisorMeta(agents.get(key)),
     extractLinks: (text) => extractFileLinks(projects?.currentCwd(), text),
@@ -172,7 +173,7 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
    *  `usage` = 本键会话累计（桥面 `onUsage` 累加 ·
    *  五键 = VSC 键面 · CLI 同源映射）· `timers` = 核 `_pendingTimers` 活读（空在途 ⇒ 零值——显示面自持「非正 ⇒ 零节点」）。
    *  **三径同点调用**：落盘之后、终局事件之前 · **不抛前提** = `agent.history` 恒数组
-   *  （核装配缺省 `thincoder-core/agent.mjs:54` · 接续恒置 `thincoder-core/session-lifecycle.mjs:113`）⇒ 本读数不改结算链。 */
+   *  （核装配缺省 `createAgent` · 接续恒置 `applySession`）⇒ 本读数不改结算链。 */
   function postUsage(key, agent) {
     const ctxPct = historyPercent(agent?.history ?? [], agent?.provider)
     const ctxTokens = estimateTokens(agent?.history ?? [])
@@ -183,7 +184,7 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
 
   /** 装配 + 装载本键槽：`loadAgentSlot` 在**宿主内**（假 `assemble` 注入同走装载 —— §1.14 ① 的语义面
    *  是「装配出的代理必须持槽值」，不在装配函数里）；槽缺 ⇒ 新建形（代理原样）。
-   *  **KD-8 槽复验**（批 §2 补录 3 ∥ CLI 同型 `thincoder-cli/src/command-interactive.mjs:149`）：装载后
+   *  **KD-8 槽复验**（批 §2 补录 3 ∥ CLI 同型 `tuiCommand`）：装载后
    *  `_providerInvalid` 仍在 ⇒ `validateProvider(agent, agent.config)` 幂等复验——槽值有效（凡
    *  `loadAgentSlot` 命中本键渠条目）⇒ 清两标 ⇒ 本次发送放行；槽无效 ⇒ 标照旧（下一径拦）。
    *  **MCP 警告消费（KD-70）**：装配尾入队 —— 装载后（`applySession` 重设 `_pendingReminders`）∥ 装配一次
@@ -278,7 +279,7 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   }
 
   /** 模式位**活值**投影（`docs/desktop/design/IPC.md` §2「模式位投影注」项 2 · 状态栏对齐批）：四布尔逐项 ——
-   *  与 CLI banner 判定同源 = `thincoder-cli/src/tui/render-frame.mjs:233-236`（`planMode` / `autoApprove` /
+   *  与 CLI banner 判定同源 = `renderRows`（`planMode` / `autoApprove` /
    *  `advisor.guard === true` / `agent.engineering === true`，零算法副本）。
    *  **agent 不在场 ⇒ `null`**（禁假造）：页读供面以槽投影兜底（`session-slots.mjs` `slotFlags` —— 合并口径），
    *  调用面按「键缺席 / 零写」处置。 */
@@ -297,7 +298,7 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   /** 改名**内存标题**同步（R1 · #525 —— `session:rename` 成功径调用，见 `ipc.mjs`）：装配表命中 ⇒ 写
    *  `agent.title`（盘面已由核 `renameSlot` 写就 —— 本面只同步内存，零第二写径）；不在场 ⇒ 零动作
    *  （不隐式装配：下次装配自读盘上新标题）。依据 = 回合尾 `saveSession` 全量覆盖 ⇒ 内存旧标题会把盘面
-   *  新标题写回；CLI 先例 `thincoder-cli/src/tui/cmd-session.mjs:35`（改名成功后置 `agent.title`）。 */
+   *  新标题写回；CLI 先例 `handleRenameCommand`（改名成功后置 `agent.title`）。 */
   function syncTitle(slot, title) {
     const agent = agents.get(String(slot))
     if (agent) agent.title = title

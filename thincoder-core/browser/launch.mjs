@@ -1,10 +1,10 @@
 /**
  * browser/launch.mjs — 浏览器发现 ∥ profile 锁 ∥ 启动 ∥ 杀树（BROWSER-TOOL.md §4）。
  *
- * 候选表与启动参数沿 `scripts/console-walkthrough.mjs:33-44`（Edge 先于 Chrome）∥ `:123`
+ * 候选表与启动参数沿 `scripts/console-walkthrough.mjs`（Edge 先于 Chrome）∥ 同档启动参数段
  * （`--headless=new` ∥ `--remote-debugging-port=0` ∥ `stdio:"ignore"` ∥ POSIX `detached`）——
  * 本档不 import 该脚本，只内化其形。
- * profile = `~/.thincoder/browser/profile`（`configDir` 同源——`config-io.mjs:32`）= **持久**
+ * profile = `~/.thincoder/browser/profile`（`configDir` 同源——`config-io.mjs`）= **持久**
  * （F-BT6：有头登录一次 ⇒ 后续含无头复用登录态）。
  *
  * 注入缝（N-BT6）：`resolveBrowser({platform, env, pathExists, which})` 与 `acquireProfileLock`
@@ -96,12 +96,56 @@ export function releaseProfileLock(lockPath, io = {}) {
   removeText(lockPath)
 }
 
+/** 同 profile 残留进程列表（平台分支——一次 exec 取全表；失败 ⇒ []——尽力面零抛）：win32 = 一次
+ *  Get-CimInstance（PowerShell——wmic 已从新系统移除）；POSIX = 一次 ps（自持列表面：既有
+ *  `process-probe-exec.mjs` 那条链按已知 pid 查 cmdline，本面是反查——零第三方依赖）。 */
+function defaultListProfileProcs(platform = process.platform) {
+  try {
+    if (platform === "win32") {
+      const out = execFileSync("powershell.exe",
+        ["-NoProfile", "-NonInteractive", "-Command",
+          "Get-CimInstance Win32_Process | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress"],
+        { encoding: "utf8", timeout: 15_000, stdio: ["ignore", "pipe", "ignore"] })
+      const rows = JSON.parse(out.trim() || "[]")
+      return (Array.isArray(rows) ? rows : [rows]).filter((r) => r && Number.isInteger(r.ProcessId)).map((r) => ({ pid: Number(r.ProcessId), cmdline: r.CommandLine ?? "" }))
+    }
+    const out = execFileSync("ps", ["-eo", "pid=,args="], { encoding: "utf8", timeout: 15_000, stdio: ["ignore", "pipe", "ignore"] })
+    return out.split(/\r?\n/).map((l) => l.match(/^\s*(\d+)\s+(.*)$/)).filter(Boolean).map((m) => ({ pid: Number(m[1]), cmdline: m[2] }))
+  } catch { return [] }
+}
+
+/** 同 `--user-data-dir` 残留浏览器进程树回收（#1304——启动序在 spawn 前调用）：陈旧实例占住
+ *  profile ⇒ 新实例自退 + `DevToolsActivePort` 永不落盘 = 起不动；回收后再 spawn。
+ *  锁空闲判据同 `acquireProfileLock`（活 pid 持•非本进程 ⇒ 不回收——既有错由 acquire 支照抛）；
+ *  `io` = 注入缝（`platform` ∥ `readText`/`isAlive`/`pid` ∥ `list` ⇒ [{pid, cmdline}] ∥ `kill(pid)`）；
+ *  平台分支 + 尽力面零抛（列表 ∥ 单杀失败均不阻断启动）；`close` 路径既有杀树（`killBrowser`）零改
+ *  ——默认杀器即复用它（pid 形）。 */
+export function reclaimProfileOrphans(profile, io = {}) {
+  try {
+    const platform = io.platform ?? process.platform
+    const readText = io.readText ?? ((p) => { try { return readFileSync(p, "utf8") } catch { return "" } })
+    const isAlive = io.isAlive ?? defaultPidAlive
+    const pid = io.pid ?? process.pid
+    const held = Number(String(readText(join(dirname(profile), "session.lock")) ?? "").trim())
+    if (Number.isInteger(held) && held > 0 && held !== pid && isAlive(held)) return // 锁被活 pid 持 ⇒ 不回收
+    const list = io.list ?? (() => defaultListProfileProcs(platform))
+    const kill = io.kill ?? ((target) => killBrowser({ pid: target, kill: (signal) => process.kill(target, signal) }, { platform }))
+    const marker = `--user-data-dir=${profile}`
+    for (const row of list() ?? []) {
+      const target = Number(row?.pid)
+      if (!Number.isInteger(target) || target <= 0 || target === pid) continue
+      if (!String(row?.cmdline ?? "").replace(/"/g, "").includes(marker)) continue
+      try { kill(target) } catch { /* 单条失败不阻断其余 */ }
+    }
+  } catch { /* 回收失败不阻断启动（尽力面零抛） */ }
+}
+
 /**
  * 启动浏览器（spawn + `DevToolsActivePort` 轮询 ≤12s）。
  * 持久 profile ⇒ 启动前清陈旧端口文件（否则旧值被当本次读数——发现即失效）。
  * @returns {Promise<{child: import("node:child_process").ChildProcess, port: number, profile: string}>}
  */
-export async function launchBrowser({ exe, headless = true, profile, timeoutMs = START_TIMEOUT_MS, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
+export async function launchBrowser({ exe, headless = true, profile, timeoutMs = START_TIMEOUT_MS, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), reclaimIo = undefined } = {}) {
   const args = [
     ...(headless ? ["--headless=new"] : []),
     "--disable-gpu", "--no-first-run", "--hide-scrollbars",
@@ -109,6 +153,8 @@ export async function launchBrowser({ exe, headless = true, profile, timeoutMs =
     "--window-size=1440,900", "about:blank",
   ]
   mkdirSync(profile, { recursive: true })
+  // #1304：锁空闲（调用序保证——`acquireProfileLock` 在前）⇒ 先回收同 profile 残留进程树，再 spawn。
+  reclaimProfileOrphans(profile, reclaimIo)
   const portFile = join(profile, "DevToolsActivePort")
   rmSync(portFile, { force: true })
   const child = spawn(exe, args, { stdio: "ignore", detached: process.platform !== "win32" })
@@ -131,7 +177,7 @@ export async function launchBrowser({ exe, headless = true, profile, timeoutMs =
   return { child, port, profile }
 }
 
-/** 杀整棵进程树（win32 `taskkill /T /F`；POSIX 组杀 + 单杀兜底——walkthrough `:192-193` 同式）。 */
+/** 杀整棵进程树（win32 `taskkill /T /F`；POSIX 组杀 + 单杀兜底——walkthrough 同式）。 */
 export function killBrowser(child, { platform = process.platform, exec = execFileSync } = {}) {
   if (!child || typeof child.pid !== "number") return
   if (platform === "win32") {

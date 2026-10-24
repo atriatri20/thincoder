@@ -9,6 +9,7 @@ export const EN_SHELL = Object.freeze({
   "app.title": "Thincoder Server Console",
   "app.httpFailed": "Request failed (HTTP {status})",
   "app.requestFailed": "Request failed: {reason}",
+  "app.networkFailed": "Network request failed — please retry (common right after a server restart; if it persists, hard-refresh with Ctrl+Shift+R).",
   "app.loggedOut": "Signed out",
   "common.loading": "Loading…",
   "common.quotaUnlimited": "Unlimited",

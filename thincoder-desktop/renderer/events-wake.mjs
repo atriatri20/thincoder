@@ -77,7 +77,7 @@ export function onDigest(state, ev) {
   if (prev === undefined) return state // 无轮 ⇒ 零写（防守档——可达面 = 起跑帧未及；自该轮起跑帧在连 ⇒ 不可达）
   let record = null
   if (ev.status === "cap") {
-    // 撞帽事实（渲染面 cap 行 —— 对位 VSC `chat-status.js:97-105`）：`mode` 归一（表外 ⇒ `auto` —— 两分支
+    // 撞帽事实（渲染面 cap 行 —— 对位 VSC `digestCapEl`）：`mode` 归一（表外 ⇒ `auto` —— 两分支
     // 逐字镜像）；`turns` 非数 ⇒ `null`（词面 `?` 兜底归渲染面）。
     record = {
       ...prev, status: prev.status === "end" ? "end" : "cap", // 终态守卫：已 `end` 轮不被 cap 帧回退（cap 事实照落）

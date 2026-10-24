@@ -1,7 +1,7 @@
 /**
  * browser/cdp.mjs — CDP 传输客户端（零第三方——N-BT1：Node ≥ 24 原生 WebSocket）。
  *
- * 形沿 `scripts/console-walkthrough.mjs:133-141` 的实证客户端（id 派发 ∥ 事件派发）——本文档把它
+ * 形沿 `scripts/console-walkthrough.mjs` 的实证客户端（id 派发 ∥ 事件派发）——本文档把它
  * 拆成类以承载多动作会话（connect / call / on / close），并加 HTTP 面 `/json/new` 取标签页。
  * `WebSocketImpl` = 注入缝（缺省 `globalThis.WebSocket`；单元测试注假传输——缺省回落真实现，`??`）。
  *
@@ -135,7 +135,7 @@ export async function connectCdp(wsUrl, { WebSocketImpl, openTimeoutMs = CONNECT
   return new CdpClient(ws)
 }
 
-/** 开一张标签页并取其调试地址（`PUT /json/new`，GET 兜底——walkthrough `:131-132` 同式；fetch 帽 5s）。 */
+/** 开一张标签页并取其调试地址（`PUT /json/new`，GET 兜底——walkthrough 同式；fetch 帽 5s）。 */
 export async function newTabWebSocketUrl(port, { host = "127.0.0.1", fetchImpl = globalThis.fetch, timeoutMs = NEWTAB_TIMEOUT_MS } = {}) {
   const url = `http://${host}:${port}/json/new?about:blank`
   let timer = null

@@ -45,6 +45,7 @@ export function chatView(db, row) {
     id: row.id,
     model: row.model,
     reasoning: row.reasoning ?? null, // 会话级思考档位（v16——`null` = 未设；KD-SV-110）
+    autoApprove: row.auto_approve === 1, // 审批免问旗（v25——`always` ∥ PATCH 两写径；KD-SV-226）
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

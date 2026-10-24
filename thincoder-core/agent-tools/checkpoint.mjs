@@ -21,13 +21,16 @@ import { getAsyncPool } from "./async-settle.mjs"
  * 段数 / 累计轮次二元文本（§4 留痕口径——两值同读一次）：
  * `_continueSegments`（链内段数，首段 1）· `_turnSeq`（链内累计轮次，跨段不重置）。
  * 两值均挂子 agent 本体。
- * #417 追加第三元「本段零落盘轮数」（`_zeroWriteTurns`——核回合环采集，与 `_turnSeq` 同源面）：
- * **只报数**（零阈值 / 零自动动作——父侧据此判断「在推进」还是「在原地读」）。缺该字段的
- * 执行面（端侧自有回合环、未跟踪）不渲染该元——缺省不冒充 `0`（「未跟踪」不得读作「零消耗」）。
+ * #417 追加第三元「本段零落盘轮数」，#934 收正后带分母（`_zeroWriteTurns` of `_segmentTurns`）：
+ * **只报数**（零阈值 / 零自动动作——父侧据此判断「在推进」还是「在原地读」）。分子分母任一缺字段
+ * 或非整数的执行面（端侧自有回合环、未跟踪）不渲染该元——缺省不冒充 `0`（「未跟踪」不得读作「零消耗」）。
  */
 function traceText(child) {
   const base = `segments ${child?._continueSegments ?? 1} · accumulated ${child?._turnSeq ?? 0} turns`
-  return Number.isInteger(child?._zeroWriteTurns) ? `${base} · zero-write rounds this segment: ${child._zeroWriteTurns}` : base
+  const zw = child?._zeroWriteTurns, seg = child?._segmentTurns
+  return Number.isInteger(zw) && Number.isInteger(seg)
+    ? `${base} · ${zw} of this segment's ${seg} rounds produced no file write`
+    : base
 }
 
 /** 留痕片段（§3.1 池条目留痕行）：挂池条目摘要**文本**面（status / observe）——桥字段零新增。 */
@@ -45,7 +48,7 @@ function replyHint(parent, carrier, key) {
 
 /**
  * 登记检查点并挂起（异步族 askContinue 的唯一实现——逃逸 ①②③）：
- * 登记 `carrier._turnCapRec` + 父侧 ask（载荷 = 段数 / 累计轮次 + 去向一句话）——
+ * 登记 `carrier._turnCapRec` + 父侧 ask（载荷 = 段数 / 累计轮次 / 本段零落笔读数 + 职责句 + 去向一句话）——
  * ask 入队即唤醒父侧挂起驱动（`pushChildUpstream`）。
  * @param {object} child   撞帽的子 agent（`_upstream` 携父与来源标签）。
  * @param {object} carrier 兑现载体：池条目（子代 / 飞刀）或会诊 session。
@@ -72,7 +75,7 @@ export function registerTurnCapCheckpoint(child, carrier, { turn = 0, signal } =
     const onAbort = () => finish(false)
     rec.resolve = finish
     signal?.addEventListener?.("abort", onAbort, { once: true })
-    // 注册后复检（`permission-gate.mjs:80-81` 同款序）：监听只认注册后的状态转移，
+    // 注册后复检（`permission-gate.mjs` 的 `permissionGate` 同款序）：监听只认注册后的状态转移，
     // 窗口内已中止 ⇒ 监听不落地，此处兜住。
     if (signal?.aborted) { abortedNow = true; onAbort() }
   })
@@ -83,7 +86,9 @@ export function registerTurnCapCheckpoint(child, carrier, { turn = 0, signal } =
     from: child._upstream.label,
     kind: "ask",
     message: `[turn cap] ${traceText(child)} — this child hit its per-segment turn cap and is suspended `
-      + `(history kept, no re-dispatch). ${replyHint(parent, carrier, key)}`,
+      + `(history kept, no re-dispatch). `
+      + `Check for a non-writing loop before you grant or stop: inspect (subagent action:'observe'), then steer or cancel. `
+      + replyHint(parent, carrier, key),
   })
   return promise
 }

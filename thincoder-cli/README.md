@@ -178,7 +178,9 @@ may hold a `${env:VAR}` reference, resolved at use time — the value is then ta
     // optional: Tavily structured search (stable JSON API, no HTML scraping).
     // Empty apiKey → silently falls back to Bing HTML extraction (zero-config).
     "apiKey": "tvly-...", // https://tavily.com — has a free monthly tier
+    "backend": "auto", // "auto" = DeepSeek when a DeepSeek provider is configured; "local" = skip DeepSeek
   },
+  "fetch": { "backend": "auto" }, // same values — "local" = fetch locally (skip DeepSeek)
 }
 ```
 
@@ -230,6 +232,12 @@ Code conventions: pure `.mjs`, no semicolons, no third-party npm dependencies al
 - More builtin skills
 
 ## Changelog
+
+### 0.12.75 (2026-10)
+- **Core `^0.10.8`** — builtin `doc_check` (document-discipline machine check as a product tool: anchors + line width, report-only) and ledger root derivation (single read/write criterion) ride in with the core.
+- Prompt-face corrections: Chinese = design docs / English = code split landed; runtime face doc-reference removal; online-verification guidance; S1/S2 tuning.
+- Login-time model candidate refresh (all three ends).
+- Doc-discipline round: line-width criterion fixed, stale references swept, C-family line-count statements retired, R2 citation landing, no-line-number-citation discipline.
 
 ### 0.12.74 (2026-10)
 - **Core `^0.10.7`** — document index scoping: `docs/batches/**` excluded by default; index scope is now declared by manifest (declared dirs ∪ first-level subdirectory manifests).

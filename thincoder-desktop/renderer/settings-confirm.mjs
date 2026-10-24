@@ -1,7 +1,7 @@
 /**
  * settings-confirm.mjs — 设置面删除确认件（B10 W2 · S6）：**不可复得类删除的前置确认弹层**。
  *
- * 形对位 VSC `settings-widgets.js:77-105`（`showConfirmPopover`：背板 + 弹框 + 两键 + 默认焦点取消 +
+ * 形对位 VSC `showConfirmPopover`（背板 + 弹框 + 两键 + 默认焦点取消 +
  * 框内 Escape 拦截 ⇒ 不连带关面）+ 桌面先例 `renderer/mount-sessions.mjs` `showDeleteConfirm`
  * （`.auto-confirm` 族 —— 复用既有 CSS，**零新样式**；挂 `document.body` ⇒ 出面板溢出裁面）。
  * 词面固定（同 VSC `_confirmSecretDelete` 包装）：正文 `settings.secretDeleteConfirm` · 确认 `session.delete` ·
@@ -75,6 +75,6 @@ export function confirmSecretDelete(onConfirm) {
   body.append(backdrop)
   body.append(popover)
   face = { backdrop, popover }
-  // 安全默认：焦点落「取消」（VSC `settings-widgets.js:104` 同径：+50ms）
+  // 安全默认：焦点落「取消」（VSC `showConfirmPopover` 同径：+50ms）
   setTimeout(() => popover.querySelector?.(".auto-confirm-no")?.focus?.(), 50)
 }

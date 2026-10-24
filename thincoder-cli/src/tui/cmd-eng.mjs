@@ -1,7 +1,7 @@
 /** /eng command: toggle engineering mode.
- *  No retired-concept prerequisites (FR11 收正口径 — `docs/core/requirements/PORTABILITY.md:62`):
- *  no methodology file, no docs tree. The **repo-root anchor（git）= E2 既有入口前提**：
- *  非锚 cwd 上 ON = fail-closed 拒翻 + 明示原因、模式保持 OFF（#41 —
+ *  No retired-concept prerequisites (FR11 收正口径 — `docs/core/requirements/PORTABILITY.md` §5.1):
+ *  no methodology file, no docs tree. **可拒面 = 仅「档非法」一格**（工作区 `workspace` 放行）：
+ *  该格上 ON = 拒翻 + 明示原因、模式保持 OFF（#41 —
  *  `docs/core/design/MANIFEST.md` §2.8 F2/F3；判定面 = 入口决策树单源）。
  *  ctx: { agent, pushLine, pushLabel } */
 import { readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from "node:fs"
@@ -37,16 +37,18 @@ export async function handleEngCommand(ctx) {
   //
   // #41 先判后翻（MANIFEST.md §2.8 F2/F3 · KD-M1-21）：**ON 方向**先走入口决策树单源
   // （resolveEngineeringManifest——KD-M1-20），判据通过才写态；OFF 方向零改（F2 表 OFF 行）。
+  // **可拒面 = 仅「档非法」格**（工作区 `workspace` ⇒ 放行——放行 ⇒ **零附着**，模式照开）。
   // 拒 ⇒ warn 行 + **零标签**（标签 = 成功回显——拒时零标签防假成功）+ 零副作用
   // （模式未翻 / token 未清 / `_advisorRuns` 未重置 / 提醒未入列 / 槽未写）。
   // 准 ⇒ 缺档格就地建档（writer:'main'）+ `agent.manifest` ← 结果（相位行当回合起活）。
   if (!agent.config.agent.engineering) {
     const r = resolveEngineeringManifest(agent.cwd ?? process.cwd(), { writer: "main" })
-    if (!r.ok) {
+    if (!r.ok && r.code !== "workspace") {
       pushLine(`Engineering mode not enabled — ${r.message} (mode unchanged)`, C.warn)
       return
     }
-    agent.manifest = r.manifest
+    if (r.ok) agent.manifest = r.manifest
+    else agent.manifest = null // 工作区放行 ⇒ 零附着（显式置 null——§2.8 F2 放行行）
   }
   agent.config.agent.engineering = !agent.config.agent.engineering
   // FR31 ③ / KD10（翻转点②·CLI `/eng`）：ON ⇒ 清 plan 残留（内存位 + 未注入的 plan 提示语）；

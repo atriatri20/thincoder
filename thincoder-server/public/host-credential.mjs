@@ -9,7 +9,7 @@
 import { mapError, t } from "./i18n.mjs"
 import { confirmModal, field, openModal, showNote, submitThen } from "./modal.mjs"
 
-/** 认证形选项（键 = 既有 onboarding 两键——同词同表）。 */
+/** 认证形选项（键 = 凭据面两键——同词同表）。 */
 const AUTH_OPTIONS = [["key", "admin.sandbox.authKey"], ["password", "admin.sandbox.authPassword"]]
 
 /** 凭据状态文案（三值——枚举外 ⇒ 原值兜底）。 */
@@ -46,7 +46,7 @@ export function openHostCredentialPicker(ctx, { onSaved = null } = {}) {
       tr.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); pick() } })
       return tr
     })
-    const headers = [t("admin.sandbox.name"), t("admin.sandbox.address"), t("admin.sandbox.onboardingUser"), t("admin.sandbox.hostCredState")]
+    const headers = [t("admin.sandbox.name"), t("admin.sandbox.address"), t("admin.sandbox.hostCredUser"), t("admin.sandbox.hostCredState")]
     box.replaceChildren(h("div", { class: "table-wrap" },
       h("table", {}, h("thead", {}, h("tr", {}, ...headers.map((label) => h("th", { text: label })))), h("tbody", {}, ...body))))
   }).catch((error) => box.replaceChildren(h("p", { class: "hint error", text: mapError(error) })))
@@ -57,8 +57,8 @@ function metaTable(ctx, ssh, state) {
   const { h } = ctx
   const kindKey = AUTH_OPTIONS.find(([value]) => value === ssh.authKind)
   const rows = [
-    [t("admin.sandbox.onboardingUser"), ssh.user ?? "—"],
-    [t("admin.sandbox.onboardingPort"), ssh.port === null || ssh.port === undefined ? "—" : String(ssh.port)],
+    [t("admin.sandbox.hostCredUser"), ssh.user ?? "—"],
+    [t("admin.sandbox.hostCredPort"), ssh.port === null || ssh.port === undefined ? "—" : String(ssh.port)],
     [t("admin.sandbox.authKind"), kindKey ? t(kindKey[1]) : "—"],
     [t("admin.sandbox.hostCredState"), t(STATE_KEYS[state] ?? state)],
     [t("admin.sandbox.hostCredUpdated"), ssh.credential?.updatedAt ? ctx.fmtTs(ssh.credential.updatedAt) : "—"],
@@ -91,8 +91,8 @@ export function openHostCredentialModal(ctx, { runner, onSaved = null } = {}) {
   })
 
   const form = h("form", { class: "provider-form stacked", novalidate: true, onsubmit: submit },
-    field(h, "admin.sandbox.onboardingPort", portInput),
-    field(h, "admin.sandbox.onboardingUser", userInput),
+    field(h, "admin.sandbox.hostCredPort", portInput),
+    field(h, "admin.sandbox.hostCredUser", userInput),
     field(h, "admin.sandbox.authKind", kindSelect),
     h("label", {}, secretTitle, secretInput),
     field(h, "admin.sandbox.sudoSecret", sudoInput),
@@ -136,7 +136,7 @@ export function openHostCredentialModal(ctx, { runner, onSaved = null } = {}) {
     note.hidden = true
     const sshUser = userInput.value.trim()
     const secret = secretInput.value
-    if (sshUser === "") return showNote(note, t("admin.sandbox.fieldRequired", { field: t("admin.sandbox.onboardingUser") }))
+    if (sshUser === "") return showNote(note, t("admin.sandbox.fieldRequired", { field: t("admin.sandbox.hostCredUser") }))
     if (secret === "") return showNote(note, t("admin.sandbox.fieldRequired", { field: secretTitle.textContent }))
     const payload = { sshUser, auth: { kind: kindSelect.value, secret } }
     const port = portInput.value.trim()

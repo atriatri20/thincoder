@@ -19,12 +19,12 @@
 import { realpathSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { CAPABILITY_SELECTOR, DIMENSIONS, MANUAL_DIM } from "./cases/index.mjs"
+import { CAPABILITY_SELECTOR, DIMENSIONS, MANUAL_DIM } from "./suites/index.mjs"
 import { recomputeMain, runMain } from "./lib/pipeline.mjs"
 import { rejudgeMain } from "./lib/rejudge.mjs"
 import { setResultsDir } from "./lib/output.mjs"
-import { _setJudgeConfigPathForTest } from "./lib/judge.mjs"
-import { _setPricesPathForTest } from "./lib/prices.mjs"
+import { _setJudgeConfigPathForCheck } from "./lib/judge.mjs"
+import { _setPricesPathForCheck } from "./lib/prices.mjs"
 
 const BENCH_DIR = dirname(fileURLToPath(import.meta.url))
 
@@ -286,8 +286,8 @@ export async function main(argv = process.argv.slice(2)) {
   }
   // ② 参数 → ③ 缝（CONFIG.md §6.2 混合形）：子进程面经 CLI 参数落到进程内落点
   if (opts.resultsDir) setResultsDir(opts.resultsDir)
-  if (opts.judgeConfig) _setJudgeConfigPathForTest(opts.judgeConfig)
-  if (opts.prices) _setPricesPathForTest(opts.prices)
+  if (opts.judgeConfig) _setJudgeConfigPathForCheck(opts.judgeConfig)
+  if (opts.prices) _setPricesPathForCheck(opts.prices)
   try {
     if (opts.recompute) return await recomputeMain(opts)
     if (opts.rejudge) return await rejudgeMain(opts) // 跑后补判（触网——§2.14；缺省标签 = <原标签>-rejudged）

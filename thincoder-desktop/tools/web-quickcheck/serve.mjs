@@ -1,7 +1,7 @@
 /**
  * serve.mjs — web 快筛静态服务（设计单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.1）：
  * 三根映射（`/__quickcheck/` 工具资产 ∥ `/rc/` 核包根 ∥ `/` renderer/）——供给语义镜像
- * `thincoder-desktop/src/main/protocol.mjs`（双根 `:34-37` ∥ MIME 表 `:24-31` ∥ 逃逸 ∥ 点段门 `:53-61`），
+ * `thincoder-desktop/src/main/protocol.mjs`（双根 ∥ MIME 表 ∥ 逃逸 ∥ 点段门），
  * 但**不同源**（本机开发工具——`127.0.0.1` 唯一入口；安全门语义本职在 Electron 侧）；
  * 登记外特例（父侧裁 2026-10-01 · 裁=A）：真浏览器自动取 `/favicon.ico`（页面零参与）⇒ 回 204（无图标）
  * ——收口 `console.error = 0` 判据**保持不弱化**；供给语义其余面仍纯镜像 `protocol.mjs`（差异登记 = 批档 §5）。
@@ -16,12 +16,12 @@ import { createRequire } from "node:module"
 import { dirname, extname, isAbsolute, relative, resolve, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 
-/** 工具资产根（本档目录）∥ renderer 根；核包根 = `createRequire` 解析（沿 `protocol.mjs:21` 同法——缺包 ⇒ 装载期 fail-loud）。 */
+/** 工具资产根（本档目录）∥ renderer 根；核包根 = `createRequire` 解析（沿 `protocol.mjs` 同法——缺包 ⇒ 装载期 fail-loud）。 */
 export const TOOLS_ROOT = import.meta.dirname
 export const RENDERER_ROOT = resolve(import.meta.dirname, "../../renderer")
 export const CORE_ROOT = dirname(createRequire(import.meta.url).resolve("@thincoder/render-core/package.json"))
 
-/** 扩展名白名单 + MIME 表（同 `protocol.mjs:24-31`；表外 ⇒ 404）。 */
+/** 扩展名白名单 + MIME 表（同 `protocol.mjs`；表外 ⇒ 404）。 */
 const MIME = Object.freeze({
   ".html": "text/html; charset=utf-8",
   ".mjs": "text/javascript; charset=utf-8",
@@ -65,7 +65,7 @@ export async function startServer({ port = 0, rendererRoot = RENDERER_ROOT } = {
   }
 }
 
-/** 请求处理（判定序沿 `protocol.mjs:50-69`：逃逸门 ⇒ 点段门 ⇒ 扩展名门 ⇒ 存在性；fail-closed ⇒ 404）。 */
+/** 请求处理（判定序沿 `protocol.mjs`：逃逸门 ⇒ 点段门 ⇒ 扩展名门 ⇒ 存在性；fail-closed ⇒ 404）。 */
 async function handle(request, response, site) {
   const pathname = decodePath(request) ?? ""
   if (pathname === "/favicon.ico") { // 浏览器面产物特例（父侧裁 · 见档头）：无图标 ⇒ 204
@@ -82,7 +82,7 @@ async function handle(request, response, site) {
   try {
     body = await readFile(target)
   } catch {
-    return notFound(response) // 门③：缺失 ⇒ 404（沿 `protocol.mjs:63-68`）
+    return notFound(response) // 门③：缺失 ⇒ 404（沿 `protocol.mjs`）
   }
   if (target === resolve(site.rendererRoot, "index.html")) return inject(response, body)
   response.writeHead(200, { "content-type": mime, "cache-control": "no-store" })
@@ -97,7 +97,7 @@ function routeRoot(pathname, roots) {
   return { root, subPath: pathname.slice(prefix.length - 1) }
 }
 
-/** 请求 pathname（畸形百分号编码 ⇒ null——落扩展名门 fail-closed，沿 `protocol.mjs:109-116`）。 */
+/** 请求 pathname（畸形百分号编码 ⇒ null——落扩展名门 fail-closed，沿 `protocol.mjs`）。 */
 function decodePath(request) {
   try {
     return decodeURIComponent(new URL(request.url ?? "", "http://127.0.0.1").pathname)
@@ -106,12 +106,12 @@ function decodePath(request) {
   }
 }
 
-/** 逃逸判定（**段界**——非裸前缀）：`..` 整段 ∥ `..${sep}` 开头 ⇒ 出根（沿 `protocol.mjs:92-95`）。 */
+/** 逃逸判定（**段界**——非裸前缀）：`..` 整段 ∥ `..${sep}` 开头 ⇒ 出根（沿 `protocol.mjs`）。 */
 function isEscape(relativePath) {
   return isAbsolute(relativePath) || relativePath === ".." || relativePath.startsWith(`..${sep}`)
 }
 
-/** URL 形收紧：pathname 任一段为 `.` / `..` ⇒ 拒（沿 `protocol.mjs:97-100`）。 */
+/** URL 形收紧：pathname 任一段为 `.` / `..` ⇒ 拒（沿 `protocol.mjs`）。 */
 function hasDotSegment(pathname) {
   return pathname.split("/").some((segment) => segment === "." || segment === "..")
 }

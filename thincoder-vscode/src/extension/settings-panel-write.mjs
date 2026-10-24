@@ -2,7 +2,7 @@
  * settings-panel-write.mjs — ChatPanel 面板写面（MODEL-MERGE-SESSION 拆分产物）+
  * VSC 端写盘通道（W16：`$schema` 注入缝供值)。
  * 纯 Node——无 vscode import——单元测试可在 extension host 外运行。
- * 面板写面 = saveAgentSettingsFromPanel（agent.* + defaultModel 顶层单写通道）+
+ * 面板写面 = saveAgentSettingsFromPanel（`agent.*` 单写通道——载荷 `defaultModel` 支随设置面「默认模型」行撤场净删，消费面归零）+
  * saveShellSettingsFromPanel；
  * 会话选定写回单点 = carryoverDefaultModel（SESSION.md §6.21 判据句 6——选定实变 ⇒ defaultModel
  * 同拍写回；端侧契约 = WEBVIEW.md §4.10）；
@@ -28,8 +28,7 @@ export function vscPersistRaw(mutate) {
 }
 
 /** 单写通道：agent.* 键合并语义 = config-io saveAgentSettings（delete on
- *  undefined/null/""/空对象）——同文件内联执行（defaultModel 顶层 + agent 一次落盘——
- *  防两次写间 mtime 窗）。 */
+ *  undefined/null/""/空对象）——同文件内联执行（一次落盘——防两次写间 mtime 窗）。 */
 function applyAgentPatch(raw, patch) {
   raw.agent = raw.agent && typeof raw.agent === "object" ? raw.agent : {}
   for (const [k, v] of Object.entries(patch ?? {})) {
@@ -60,9 +59,7 @@ function probeDefaultModelChannel(dm) {
 }
 
 /** Panel persistence: build the agent.* patch from a webview payload (CLI-parity field names).
- *  MODEL-MERGE-SESSION：payload.defaultModel = 顶层 config 键（"provider:model" 复合——
- *  空串/非串删除——新会话起点专用入口）。其余语义 verbatim（单写通道——所有字段经一次
- *  persistRaw——冲突提示同 saveAgentSettings）。 */
+ *  语义 verbatim（单写通道——所有字段经一次 persistRaw——冲突提示同 saveAgentSettings）。 */
 export function saveAgentSettingsFromPanel(payload) {
   const patch = {}
   if (payload.maxTurns != null) patch.maxTurns = Number(payload.maxTurns) || undefined
@@ -80,6 +77,10 @@ export function saveAgentSettingsFromPanel(payload) {
   if (payload.compactThreshold !== undefined) patch.compactThreshold = payload.compactThreshold === "" ? undefined : (Number(payload.compactThreshold) || undefined)
   if (payload.verifyGuard !== undefined) patch.verifyGuard = !!payload.verifyGuard
   if (payload.autoThink !== undefined) patch.autoThink = !!payload.autoThink // 显式布尔写（false 亦写——同 verifyGuard 式）
+  // #1420 #1465（PROMPT-SYSTEM.md §6.24 §6.27）：注入开关三键——显式布尔写（false 亦写；默认 true）
+  if (payload.injectProjectRules !== undefined) patch.injectProjectRules = !!payload.injectProjectRules
+  if (payload.injectDocs !== undefined) patch.injectDocs = !!payload.injectDocs
+  if (payload.injectMemories !== undefined) patch.injectMemories = !!payload.injectMemories
   if (payload.consultTurns != null) patch.consultTurns = Number(payload.consultTurns) || undefined
   if (payload.consultTimeoutMs != null) patch.consultTimeoutMs = Number(payload.consultTimeoutMs) || undefined
   // Consultation models (CONSULTATION.md): array of {provider, model}, ≤5, validated.
@@ -142,7 +143,7 @@ export function saveAgentSettingsFromPanel(payload) {
     if (typeof adv.timeoutMs === "number" && adv.timeoutMs > 0) merged.timeoutMs = adv.timeoutMs
     if (!Number.isFinite(merged.timeoutMs) || merged.timeoutMs <= 0) delete merged.timeoutMs
     // §15.4-6（台账 #331——死键接线）：写键 = `advisor.reasoningEffort`（单源 = 核读取键
-    // `thincoder-core/advisor/run.mjs:48/:64`——as-of 本批实施，与 CLI `/advisor` 菜单同键）。三态写语义
+    // `resolveAdvisorProvider`——as-of 本批实施，与 CLI `/advisor` 菜单同键）。三态写语义
     // = **核单源** `applyAdvisorEffort`（B10 S11 上提：none ⇒ 族别 off 形 + 删键；档 ⇒ 字面值 + 清 off 形
     // 残记；空 ⇒ 删键 + 清 off 形残记 —— 桌面主侧同引，跨端零副本）。spec 取形源 = payload 内 `adv.model`
     // （off 档只在 select 已渲染时可达 ⇒ spec 可解；未给名 ⇒ 查表兜底 DEFAULT_SPEC）。
@@ -161,16 +162,8 @@ export function saveAgentSettingsFromPanel(payload) {
     patch.advisor = merged
   }
   const r = vscPersistRaw((raw) => {
-    // defaultModel = 顶层键（F-5 VSC 面板入口——provider:model 复合）
-    if ("defaultModel" in payload) {
-      const v = payload.defaultModel
-      if (typeof v === "string" && v.trim()) raw.defaultModel = v.trim()
-      else delete raw.defaultModel
-    }
     applyAgentPatch(raw, patch)
   })
-  // M9：设默认模型 = 配置写入面——写后探一次 /models（探不通标不可用，不阻断保存）
-  if ("defaultModel" in payload) probeDefaultModelChannel(payload.defaultModel)
   return conflictError(r)
 }
 

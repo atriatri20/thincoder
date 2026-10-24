@@ -9,11 +9,11 @@
  *  ② 存活投影（出生自愈）= 拍体逐键调桥面挂点 `reassertLive`（只发在飞实例；语义单源 =
  *     `docs/render-core/design/RENDER-CORE.md` §5「存活投影变体」）。
  * **R6 上提随动（处理流批 · 2026-09-28）**：拍机制（拍间隔 ∕ 起 ∕ 停 ∕ 幂等 ∕ 清点）单源 = 核件
- * `@thincoder/core/agent/live-beat.mjs`（上提源 = VSC `panel-messages.mjs:45` `:50` `:62-75`；
+ * `@thincoder/core/agent/live-beat.mjs`（上提源 = VSC `panel-messages.mjs`；
  * `setInterval` ∕ `unref` 注入缝在核）——端档零本地拍间隔 ∕ 零本地定时器；只留端面 = 拍体
  * （`reassertLive` 桥接键集）+ `subagent:stop`。
  * 清点语义（设计 = 「会话关闭 / 删除 / 宿主退出 ⇒ 该键投影清」）：拍体只枚举**装配表在场键**（`agents`）——
- *  `dispose(key)` 摘表即出拍（旧会话块不随拍重投——沿 `thincoder-vscode/src/extension/panel-session.mjs:123-126`
+ *  `dispose(key)` 摘表即出拍（旧会话块不随拍重投——沿 VSC `loadSession`
  * 「心跳源新鲜度」清点口径）；停拍 = 宿主退出面（`stopHeartbeat`）。
  * 依赖面 = 注入 + 核件（零宿主依赖 ⇒ 平 node 直测）：`agents`（装配表）· `bridge(key)`（回调桥——投影投递
  * 与 queued 取消的 `⟦ev⟧cancelled` 转口两用）。
@@ -23,7 +23,7 @@ import { getAsyncPool } from "@thincoder/core/agent-tools/async-settle.mjs"
 import { cancelSyncChild, executeCancelAction } from "@thincoder/core/agent-tools/subagent-async.mjs"
 import { slotOfKey } from "./session-slots.mjs"
 
-/** 出生自愈拍体周期（re-export 核件单源 —— 值同源 = VSC `panel-messages.mjs:45` `LIVE_HEARTBEAT_MS`）。 */
+/** 出生自愈拍体周期（re-export 核件单源 —— 值同源 = VSC `LIVE_HEARTBEAT_MS`）。 */
 export { LIVE_HEARTBEAT_MS }
 
 /** 子 agent 面（装配期一次）：`agents` = 宿主装配表（键 → agent）· `bridge(key)` = 回调桥取值面。
@@ -58,7 +58,7 @@ export function createSubagentFace({ agents, bridge }) {
     if (!agent) return { ok: false, reason: "unknown-sub" }
     const subId = id === undefined || id === null || String(id) === "" ? null : String(id)
     if (subId === null) return { ok: false, reason: "unknown-sub" }
-    // 同步族：registry 命中（键 = relay 前缀去尾 `role#id` —— 核 `agent-tools/subagent.mjs:78` 写点）
+    // 同步族：registry 命中（键 = relay 前缀去尾 `role#id` —— 核 `armSyncChildAbort` 写点）
     if (typeof role === "string" && role !== "" && agent._syncChildAborts?.has(`${role}#${subId}`)) {
       const result = cancelSyncChild(agent, `${role}#${subId}`)
       return result.status === "cancelled" ? { ok: true, reason: null } : { ok: false, reason: "unknown-sub" }

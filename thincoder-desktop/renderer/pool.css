@@ -6,8 +6,8 @@
    ⇒ 本档选择器一律以宿主为根；条目操作区锚 `.approval-actions` 与卡面**共用**（样式单源 = `chat.css`）。
    **R10（E1 ∕ E6 · 2026-09-28）**：① 封顶自滚 —— 封顶 = 池列高（骨架：`.pool` `min-height:0` + 栅格行
    `minmax(0,1fr)`；VSC 横带 32vh = 布局骨架差异在册 —— 位置已裁归右列）；自滚 = 宿主 `overflow:auto`
-   （`chrome.css`）+ 本档 `overscroll-behavior: contain`（VSC `base.css:103-107` 同值角色）；② 出生计数贴钮
-   （`.activity-new-btn` —— VSC `base.css:113-117` 照搬；粘性由池头带承载，见该条注）。 */
+   （`chrome.css`）+ 本档 `overscroll-behavior: contain`（VSC `#subagent-activity` 同值角色）；② 出生计数贴钮
+   （`.activity-new-btn` —— VSC `.activity-new-btn` 照搬；粘性由池头带承载，见该条注）。 */
 
 /* 宿主（`[data-slot="pool"]` = 池滚动容器自身）：自滚链断裂（VSC `#subagent-activity`
    `overscroll-behavior: contain` 同值角色 —— 池滚不波及页面 / 对话流）。 */
@@ -53,7 +53,7 @@
 .pool-toggle:not(:disabled) {
   cursor: pointer;
 }
-/* 出生计数贴（R10 E6 ∕ U-2 —— VSC `webview/base.css:113-117` 照搬）：类名 / 字面（`↓ ${n} …` 随词键
+/* 出生计数贴（R10 E6 ∕ U-2 —— VSC `.activity-new-btn` 照搬）：类名 / 字面（`↓ ${n} …` 随词键
    `sub.newBlocks`）/ 行为逐件同 VSC；**桌面 chassis 适配**：钮居池头带首子 ⇒ 粘性由 `[data-pool-head]`
    （已 sticky）承载 —— VSC 单元素 `position: sticky` 的等效形；皮肤沿 D24 律（静息描边归零 + 交互态三值
    —— 见档尾交互态组；VSC `--border` 可见描边 ∕ `button-secondaryBackground` ⇒ 本域 `--line` ∕ `--hover-bg`

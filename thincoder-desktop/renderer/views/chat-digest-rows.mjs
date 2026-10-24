@@ -26,7 +26,7 @@ function countOf(value) {
 }
 
 /** 起跑标签行文（两档 —— 单源 = 核字典 `digest.*`：`tier === "ask"` ⇒ `digest.turnLabelAsk` 携 `from` / `msg`；
- *  余 ⇒ `digest.turnLabel`；缺参回落 `?` / `…` —— 沿 VSC `chat-status.js:74-78` 同式；行出生即定型 ∥ 标签行恒在）。 */
+ *  余 ⇒ `digest.turnLabel`；缺参回落 `?` / `…` —— 沿 VSC `handleStatusText` 同式；行出生即定型 ∥ 标签行恒在）。 */
 function digestLabel(round) {
   return round.tier === "ask"
     ? t("digest.turnLabelAsk", { from: round.from ?? "?", msg: round.msg ?? "…" })
@@ -39,7 +39,7 @@ function digestCount(round) {
 }
 
 /** 终态行文（状态分档 —— 单源）：`ok === false` ⇒ `digest.aborted` 携 `seconds`；余 ⇒ `digest.done` 携 `n` ∕
- *  `seconds`（`seconds` = `ms` ∕ 1000 一位小数 —— 沿 VSC `chat-status.js:112-120` 同判）。 */
+ *  `seconds`（`seconds` = `ms` ∕ 1000 一位小数 —— 沿 VSC `digestTerminalEl` 同判）。 */
 function endRowText(round) {
   const seconds = (countOf(round.ms) / 1000).toFixed(1)
   return round.ok === false ? t("digest.aborted", { seconds }) : t("digest.done", { n: countOf(round.n), seconds })
@@ -50,7 +50,7 @@ function endRowClass(round) {
   return round.ok === false ? "digest-status digest-failed" : "digest-status digest-done"
 }
 
-/** 撞帽行文（两档 —— 核字典 `digest.capStop` ∕ `digest.capAuto` 直取，零新键；`turns` 缺 ⇒ `?`）—— 对位 VSC `:99-102`。 */
+/** 撞帽行文（两档 —— 核字典 `digest.capStop` ∕ `digest.capAuto` 直取，零新键；`turns` 缺 ⇒ `?`）—— 对位 VSC `digestCapEl`。 */
 function capText(cap) {
   return cap.mode === "stop" ? t("digest.capStop", { turns: cap.turns ?? "?" }) : t("digest.capAuto")
 }
@@ -60,7 +60,7 @@ function capRowClass(cap) {
   return cap.mode === "stop" ? "digest-cap digest-cap-stop" : "digest-cap"
 }
 
-/** 起跑标签行（**恒在** —— 行序首位；对位 VSC `chat-status.js:79`）。 */
+/** 起跑标签行（**恒在** —— 行序首位；对位 VSC `digestTurnEl`）。 */
 function digestLabelRow(round) {
   return { tag: "div", props: { class: "chat-digest digest-turn", "data-digest": "", "data-digest-label": "" }, children: [digestLabel(round)] }
 }
@@ -94,7 +94,7 @@ function digestResidueRow(round) {
 }
 
 /** 单轮行集（行序 = 起跑标签行 → `n > 0` 计数行 → cap 行 → `n > 0` 终态行 → `unsettled > 0` 残余行）——**行元素 = 流内并列兄弟**（无轮容器：
- *  逐行直挂、不做每轮包裹元素；对位 VSC `chat-status.js:72-89` 逐行 `appendChild`）。行集随轮态**只增不减**：
+ *  逐行直挂、不做每轮包裹元素；对位 VSC `handleStatusText` 逐行 `appendChild`）。行集随轮态**只增不减**：
  *  起跑帧出 [标签行]（`n > 0` 携计数行）∥ cap 帧增 cap 行 ∥ `end` 帧**增终态行**（**`n = 0` 守句**：零计数行 ∥ 零终态行——
  *  禁幻影行；三端同守）＋ 携 `unsettled > 0` 时增残余行（消化账务批 · 2026-10-05）；未结轮照出已有行（零终态行）——行不改 ∥ 不删。末轮归属过滤（活流侧优先）住并入点
  *  `renderer/page-read.mjs` `withFoldedDigest`；清点 `clearDigest` 维持现行「未结末轮保」。 */

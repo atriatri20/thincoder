@@ -1,6 +1,6 @@
 /**
  * compress-status.mjs — 流内**压缩状态行**（R4 · 桌面功能对位批 —— 单元素四态：start ∕ done ∕ fallback ∕ failed；
- * 单源 = `thincoder-vscode/webview/chat-status.js:17-44`）。
+ * 单源 = `showCompressStatus`）。
  *
  * 四态词面 = 核字典 `compress.*` 经 `t()` 投影直取（`compress.start` ∕ `compress.starting` ∕ `compress.done` ∕
  * `compress.fallback` ∕ `compress.failed` —— **零新键**，值同源零复制）；缺值回落 `?` ∕ `0.0s`（沿 VSC 同式）。
@@ -20,7 +20,7 @@ function numOrNull(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : null
 }
 
-/** 四态文案（VSC `chat-status.js:26-41` 同式：start 两形〔摘要 N 条 ∕ 无 N〕/ done 两值 / fallback 截断数 / failed 错误串）。 */
+/** 四态文案（VSC `showCompressStatus` 同式：start 两形〔摘要 N 条 ∕ 无 N〕/ done 两值 / fallback 截断数 / failed 错误串）。 */
 export function compressText(slice) {
   if (slice?.status === "start") {
     return numOrNull(slice.messages) === null ? t("compress.starting") : t("compress.start", { n: slice.messages })
@@ -39,7 +39,7 @@ export function compressText(slice) {
   return t("compress.failed", { error: typeof slice?.error === "string" ? slice.error : "" })
 }
 
-/** class 面（VSC 同名类：done ⇒ `compress-done`；fallback ∕ failed ⇒ `compress-failed`——VSC `:37` 同式）。 */
+/** class 面（VSC 同名类：done ⇒ `compress-done`；fallback ∕ failed ⇒ `compress-failed`——VSC `showCompressStatus` 同式）。 */
 export function compressClass(slice) {
   if (slice?.status === "done") return "compress-status compress-done"
   if (slice?.status === "fallback" || slice?.status === "failed") return "compress-status compress-failed"

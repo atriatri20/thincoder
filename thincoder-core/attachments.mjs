@@ -5,9 +5,9 @@
  * 上提源（迁移前坐标）= VSC `thincoder-vscode/src/extension/image-handler.mjs`（`parseDataUrl` :34 ·
  * `savePastedImages` :49 · `downgradeNonVisionImages` :109）；预算语义（合计 30MB ∕ 轮 · 溢出项弃后
  * **继续扫**「其余照发」）与配额单位 = 桌面同档 `thincoder-desktop/src/main/attachments.mjs`
- * （15MB ∕ 条 —— 与核 `read_image` 内闸同值同单位：`tools/file.mjs:26` `MAX_IMAGE_BYTES = 15_000_000`，
+ * （15MB ∕ 条 —— 与核 `read_image` 内闸同值同单位：`tools/file.mjs` `MAX_IMAGE_BYTES = 15_000_000`，
  * 接纳面不得宽于该闸）。本档 = 单源（消费面 = 桌面 `src/main/attachments.mjs`；VSC 自持副本已随本批（parity-b4）迁移改指本档）。
- * 指引行（`[Attached images: …]`）不迁 —— 单源 = `agent/setup-reminders.mjs:248` `appendImagePointer`（原位）。
+ * 指引行（`[Attached images: …]`）不迁 —— 单源 = `agent/setup-reminders.mjs` `appendImagePointer`（原位）。
  *
  * 与 VSC 自持副本的在册差异（双写窗口）**收正已毕**（迁移轮 parity-b4 —— 逐条处置见批档 §2.3）：① 阈单位 ∕
  * ② 弃项索引 ∕ ③ 合计预算闸 ∕ ④ 降级成功判据 = **两端同源单值**（收正方向——VSC 侧本地字面 ∕ 过滤后下标 ∕ 无预算 ∕
@@ -28,7 +28,7 @@
 import { join } from "node:path"
 import { specForModel } from "./model-specs.mjs"
 
-/** 单项上限 15MB（与 `read_image` 内闸同值同单位 —— `tools/file.mjs:26` `MAX_IMAGE_BYTES = 15_000_000`：
+/** 单项上限 15MB（与 `read_image` 内闸同值同单位 —— `tools/file.mjs` `MAX_IMAGE_BYTES = 15_000_000`：
  *  超阈件交核也读不进 ⇒ 接纳面不得宽于该闸）。 */
 export const IMAGE_MAX_BYTES = 15_000_000
 
@@ -73,7 +73,7 @@ export function savePastedImages(dataUrls, cwd, { fs } = {}) {
     return { paths: [], dropped: list.length }
   }
   const tmpDir = join(cwd, ".thincoder", "tmp")
-  const runId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6) // 命名先例 = image-handler.mjs:56
+  const runId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6) // 命名先例 = `image-handler.mjs` 的 `downgradeNonVisionImages`
   const paths = []
   let dropped = 0
   let budget = TURN_MAX_BYTES

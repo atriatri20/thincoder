@@ -17,6 +17,9 @@ import { runSessionIndexCommand, scheduleSessionIndexPassSafe } from "./src/exte
 // F-XR1 退出释放（EXIT-CLAIM-RELEASE · SESSION.md §6.18 F-XR4）：端壳纯转口——workspace
 // 判据在本侧解析（import vscode 侧——评审 #3 参数形钉死），包装保持 vscode-free。
 import { releaseClaimsOnExit } from "./src/extension/session-io.mjs"
+// #1193②（2026-10-15 car3）：面板域 cwd 直引面板消息档单源（EXIT-CLAIM-RELEASE 释放面同源）；
+// 原本档镜像不读 override（已删）；环核 = 全树零档 import 本入口（grep 0 命中）⇒ 新增 import 不成环。
+import { _cwd } from "./src/extension/panel-messages.mjs"
 import { VSC_PROMPT_INJECTIONS } from "./src/prompt-injections.mjs"
 // F-W21（登录面补全批 · `WEBVIEW.md` §4.12）：团队常显 item + 命令 `thincoder.team`（登/退直达流）。
 import { initTeamSurface, disposeTeamSurface, runTeamCommand } from "./src/extension/team-surface.mjs"
@@ -202,10 +205,4 @@ export async function deactivate() {
   disposeTeamSurface() // F-W21：团队 item 随停用（幂等——重载后 init 可重建）
   closeAllMcp()
   _panel?.dispose()
-}
-
-/** 面板域 cwd（EXIT-CLAIM-RELEASE：与 `panel-messages._cwd` 同域——认领落点一致）。
- *  本侧局部镜像 = 环避让（chat-panel → panel-messages 静态环不因本档新增 import 扩环）。 */
-function _cwd() {
-  return vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath || process.cwd()
 }

@@ -15,7 +15,7 @@ import { renderToolHistory } from "./tool-card.mjs"
 
 // ─── 顾问块（advisor / 子代理块共用的块容器与内容面）──
 
-/** 顾问 / 子代理块容器（承 `ui.js:19-30` 逐字）：`details.advisor-block[open]` + summary + `.advisor-content`。 */
+/** 顾问 / 子代理块容器（承 `ui.js` 逐字）：`details.advisor-block[open]` + summary + `.advisor-content`。 */
 export function buildAdvisorBlock(roundLabel) {
   const details = document.createElement("details")
   details.className = "advisor-block"
@@ -37,7 +37,7 @@ function appendIntoLastTextNode(parent, str) {
   else parent.appendChild(document.createTextNode(str))
 }
 
-/** 顾问块内容追加（承 `ui.js:45-85` 逐字——合并判据 / 冻结守卫 / §5.6 toolOutput RAW 拼接语义全同）。
+/** 顾问块内容追加（承 `ui.js` 逐字——合并判据 / 冻结守卫 / §5.6 toolOutput RAW 拼接语义全同）。
  *  `block` = 块元素（含 `.advisor-content`）；返回零值（DOM 原地追加）。 */
 export function appendAdvisorChunk(block, kind, text, sub, meta) {
   // §27.1 F3（缺陷①）: 冻结块不接受追加（advisor 块无 _subMeta——不受影响）
@@ -60,7 +60,7 @@ export function appendAdvisorChunk(block, kind, text, sub, meta) {
     line.className = "advisor-tool-line"
     if (face) line.dataset.face = face; if (tool) line.dataset.tool = tool
     if (subLabel) line.dataset.sub = subLabel
-    line.textContent = str
+    appendLineText(line, str, subLabel)
     content.appendChild(line)
     return
   }
@@ -76,19 +76,31 @@ export function appendAdvisorChunk(block, kind, text, sub, meta) {
     div.className = "advisor-text" + (k === "think" ? " advisor-think" : "")
     div.dataset.kind = k
     if (subLabel) div.dataset.sub = subLabel
-    div.textContent = str
+    appendLineText(div, str, subLabel)
     content.appendChild(div)
   }
 }
 
+/** 行内容写入：嵌套子代理行（`sub` 在场）⇒ 行首 dim 子标 `<sub> · ` + 正文；无子标行 ⇒ 纯文本。
+ *  子标形 = 2026-09-07 用户批准的「块内子标」（`explore#1 · read — …`）：块头 = 父的，身份挂行；
+ *  子标只影响首段，后续续写走 `appendIntoLastTextNode`（末子即正文文本节点）。 */
+function appendLineText(el, str, subLabel) {
+  if (!subLabel) { el.textContent = str; return }
+  const tag = document.createElement("span")
+  tag.className = "advisor-sub"
+  tag.textContent = `${subLabel} · `
+  el.appendChild(tag)
+  el.appendChild(document.createTextNode(str))
+}
+
 // ─── 消息块（user / assistant 帧 / 恢复面）──
 
-/** 历史用户消息气泡（承 `ui.js:136-145`；`ctx` 入参未用——去参）。时间只显真实 ts
+/** 历史用户消息气泡（承 `ui.js`；`ctx` 入参未用——去参）。时间只显真实 ts
  *  （缺失不显示——无 `fmtTime(new Date())` 误导回退）；`dataset.raw` = 待发送标记面锚定源。 */
 export function buildUserMessage(text, timestamp, idx) {
   const el = document.createElement("div")
   el.className = "message user"
-  el.dataset.raw = String(text) // 待发送标记面锚定源（`queued-mark.js`——快照按原文匹配气泡）
+  el.dataset.raw = String(text) // 待发送标记 ∕ 带面锚定源（原文逐字——快照按原文匹配）
   const ts = timestamp ? fmtTime(new Date(timestamp)) : ""
   if (timestamp) el.dataset.ts = String(timestamp) // 清标重建标签行用（无 ts 不显示纪律保持）
   if (idx !== undefined) el.dataset.idx = String(idx)
@@ -96,16 +108,16 @@ export function buildUserMessage(text, timestamp, idx) {
   return el
 }
 
-/** 恢复助手帧容器（承 `ui.js:160-174`——live-DOM parity：label（turnStart 才画）→ thinking 块
+/** 恢复助手帧容器（承 `ui.js`——live-DOM parity：label（turnStart 才画）→ thinking 块
  *  → content bubble → 嵌套工具卡 ×n；data-idx = 帧原始全局 idx——分页锚只外层消息）。
- *  #875（2026-10-04）：推理块恢复径默认折叠（`open` 属性删——与 live 径 `flow/reasoning.mjs` 同拍）。 */
+ *  推理块默认展开（2026-10-19 用户裁定：折叠态看不出模型在跑还是在卡——携 `open`，与 live 径同拍；推翻 #875 · 2026-10-04，仅作 as-of 出处）。 */
 export function buildAssistantRestore(msg) {
   const el = document.createElement("div")
   el.className = "message assistant"
   if (msg.idx !== undefined) el.dataset.idx = String(msg.idx)
   let html = ""
   if (msg.turnStart) html += `<div class="msg-label">❯ ${coreT("msg.assistant")}:</div>`
-  if (msg.reasoning) html += `<details class="reasoning-block"><summary>${escHtml(coreT("status.thinking"))}...</summary><div class="reasoning-content">${md(msg.reasoning)}</div></details>`
+  if (msg.reasoning) html += `<details class="reasoning-block" open><summary>${escHtml(coreT("status.thinking"))}...</summary><div class="reasoning-content">${md(msg.reasoning)}</div></details>`
   if (typeof msg.text === "string" && msg.text.trim() !== "") html += `<div class="bubble content">${md(msg.text)}</div>`
   el.innerHTML = html
   for (const tc of msg.tools || []) {
@@ -115,7 +127,7 @@ export function buildAssistantRestore(msg) {
   return el
 }
 
-/** 空助手块容器（承 `ui.js:176-189` newBlock 的 DOM 面——`withLabel` = 本回合首块（未画过 label）；
+/** 空助手块容器（承 `ui.js` newBlock 的 DOM 面——`withLabel` = 本回合首块（未画过 label）；
  *  `_nextIdx` 分配、`assistantLabeled` 翻转、append 与窗口裁剪留端）。 */
 export function renderBlock({ idx, withLabel = false } = {}) {
   const block = document.createElement("div")
@@ -126,7 +138,7 @@ export function renderBlock({ idx, withLabel = false } = {}) {
   return block
 }
 
-/** 懒加载历史元素分派（承 `ui.js:396-402`；返回 null = 该 kind 不渲）。 */
+/** 懒加载历史元素分派（承 `ui.js`；返回 null = 该 kind 不渲）。 */
 export function buildHistoryMessage(msg) {
   if (!msg) return null
   if (msg.kind === "user") return buildUserMessage(msg.text, msg.timestamp, msg.idx)
@@ -137,7 +149,7 @@ export function buildHistoryMessage(msg) {
 
 // ─── 错误横幅 ──────────────────────────────────
 
-/** 错误横幅（承 `ui.js:404-417`；唯一出站 `retry`（`:413`）经 `deps.emit("retry", {})` 注入；
+/** 错误横幅（承 `ui.js`；唯一出站 `retry` 经 `deps.emit("retry", {})` 注入；
  *  `currentBlock` 建块与 scrollDown 留端）。 */
 export function renderErrorBanner(text, techInfo, deps = {}) {
   const t = deps.t ?? coreT

@@ -4,23 +4,20 @@
 > （picker / wizard / question 三面契约）以及 agent ↔ 用户之间的**交互桥**（权限 / 提问）。
 > 配对需求档 = `docs/cli/requirements/TUI.md`（本板块三档设计共用一份需求档——层归属不对称，理由见该档 §1 注）。
 > 同板块其余两档 = `docs/cli/design/TUI.md`（界面核心）· `docs/cli/design/TUI-SESSION-VIEW.md`（会话视图 / 回合 / 内存）。
-> 对位档 = `docs/vsc/design/WEBVIEW*.md`（VSC webview——无 picker / wizard 面）——**已裁保留（A9 · 复核 = 2026-09-25 misc-four 批）**：结构性不对称 = picker / wizard 交互面仅 CLI 侧存在（VSC 宿主面走 webview 控件）；证据 = 两实现树（本档 §2 / §3 面集 ∥ `WEBVIEW*.md`）；显式裁定 = CORE-UNIFICATION §2.5 端特有桶族（2026-09-13）+ misc-four 批确认。
-> 建档：2026-09-15（**B 式迁移轮 · 第 6 批**——`thincoder-cli/docs/design/TUI.md` 的 §9 / §12 / §13 面重建入本档；
-> 旧档原地一字不改、留作参照历史）。
-> 本档坐标与行数 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
+> 对位档 = `docs/vsc/design/WEBVIEW*.md`（VSC webview——无 picker / wizard 面）——**已裁保留（A9）**：结构性不对称 = picker / wizard 交互面仅 CLI 侧存在（VSC 宿主面走 webview 控件）；证据 = 两实现树（本档 §2 / §3 面集 ∥ `WEBVIEW*.md`）；显式裁定 = CORE-UNIFICATION §2.5 端特有桶族。
 
 ## 1. 定位与模块地图
 
-> 本表是**结构性快照**——新增 / 改名 / 删除文件时同批回写。**行数列不并**（as-of 数值随实现漂移）。
+> 本表是**结构性快照**——新增 / 改名 / 删除文件时同批回写。**行数列不并**（数值随实现漂移）。
 
 ### 命令层
 
 | 文件 | 职责 |
 |---|---|
 | `thincoder-cli/src/tui/slash-commands.mjs` | `SLASH_COMMANDS` 表 + `SLASH_ALIASES` + `HANDLERS` 分派（handler 异常统一拦截成 `[error]` 行——不击穿 TUI 主循环）+ `completions` / Tab 循环 |
-| `thincoder-cli/src/tui/cmd-*.mjs`（单命令档族） | 每个命令实现独立成档：`cmd-auto` / `cmd-clear` / `cmd-config` / `cmd-copy` / `cmd-eng` / `cmd-exit` / `cmd-extract`+`distill-cmd` / `cmd-fold` / `cmd-goal` / `cmd-help` / `cmd-init` / `cmd-mcp` / `cmd-mcp-form` / `cmd-model` / `cmd-new` / `cmd-plan` / `cmd-reindex` / `cmd-restore` / `cmd-session` / `cmd-shell` / `cmd-skills` / `cmd-submodel` / `cmd-team`（登录面补全批增） / `cmd-think` / `cmd-undo` / `cmd-upgrade` / `cmd-advisor` |
+| `thincoder-cli/src/tui/cmd-*.mjs`（单命令档族） | 每个命令实现独立成档：`cmd-auto` / `cmd-clear` / `cmd-config` / `cmd-copy` / `cmd-eng` / `cmd-exit` / `cmd-extract`+`distill-cmd` / `cmd-fold` / `cmd-goal` / `cmd-help` / `cmd-init` / `cmd-mcp` / `cmd-mcp-form` / `cmd-model` / `cmd-new` / `cmd-plan` / `cmd-reindex` / `cmd-restore` / `cmd-session` / `cmd-shell` / `cmd-skills` / `cmd-submodel` / `cmd-team` / `cmd-think` / `cmd-undo` / `cmd-upgrade` / `cmd-advisor` |
 | `thincoder-cli/src/tui/model-picker.mjs` | 模型两级选择器（provider → model，可 fetch `/models`；拉取失败 ⇒ 该渠道不可用——无预设回退）+ `pickModelForSlot`（子模型槽位）；渠道管理流族 = 调用点（流体住 `provider-admin.mjs`） |
-| `thincoder-cli/src/tui/provider-admin.mjs` | 渠道管理流族（`/model` Add / Remove / key 流程——2026-09-29 结构拆分自 `model-picker.mjs` 迁出）+ `cascadeRemoveProvider` |
+| `thincoder-cli/src/tui/provider-admin.mjs` | 渠道管理流族（`/model` Add / Remove / key 流程）+ `cascadeRemoveProvider` |
 | `thincoder-cli/src/tui/model-catalog.mjs` | 模型清单目录面（供选择器构造条目） |
 | `thincoder-cli/src/tui/ledger-surface.mjs` | 台账状态位胶水（动态 import 核 `@thincoder/core/ledger-surface.mjs` 转口——`state.ledger` = 状态行 L1 标记源；W8 契约②） |
 
@@ -29,8 +26,8 @@
 | 文件 | 职责 |
 |---|---|
 | `thincoder-cli/src/tui/pickers.mjs` | 通用列表选择器（标题 / 条目 / filter / 位置指示 / 栈式嵌套）+ **`showPicker` 入口契约守卫**（§5.2）+ **删除类二次确认件 `confirmDelete`**（§5.4） |
-| `thincoder-cli/src/tui/wizard.mjs` | 首启配置向导：**首屏两路**（登录团队服务器 ∥ 配置本地 provider ∥ 以后再说——登录面补全批 · §3.1）→ provider 菜单（existing / preset / custom）→ 文本步 → 落盘 → 模型选择；团队路 = 三问步 → 核 `teamLogin` → 模型选择；Esc 全步可跳（无半配置落盘） |
-| `thincoder-cli/src/tui/ask-steps.mjs`（登录面补全批增） | 问句步进小件（步定义 ∥ 校验 ∥ 推进 ∥ 问句行构造 ∥ 掩码位）——wizard 文本步与 `/team login` 两消费方共用（单源：掩码与提交语义一处） |
+| `thincoder-cli/src/tui/wizard.mjs` | 首启配置向导：**首屏两路**（登录团队服务器 ∥ 配置本地 provider ∥ 以后再说——§3.1）→ provider 菜单（existing / preset / custom）→ 文本步 → 落盘 → 模型选择；团队路 = 三问步 → 核 `teamLogin` → 模型选择；Esc 全步可跳（无半配置落盘） |
+| `thincoder-cli/src/tui/ask-steps.mjs` | 问句步进小件（步定义 ∥ 校验 ∥ 推进 ∥ 问句行构造 ∥ 掩码位）——wizard 文本步与 `/team login` 两消费方共用（单源：掩码与提交语义一处） |
 | `thincoder-cli/src/tui/interaction.mjs` | 权限确认 / 批量确认 / 自由提问（question 工具桥）+ 权限内容预览 |
 | `thincoder-cli/src/tui/config-helpers.mjs` | 配置落盘收口（`persistRaw` / `syncProviderField` / `maskKey`） |
 
@@ -63,13 +60,15 @@
   wizard 候选 ≤ 十余项且为首启一次性流程；question 选项 = 模型给的少量候选项 + 输入框足迹。**不给两面补齐这些能力**（属加戏）。
 - **未定项**：无（三面交互决策全落档）。
 
-### 3.1 首启向导两路（F19 · 2026-10-10 · 登录面补全批 · 台账 #1229）
+### 3.1 首启向导两路（F19）
 
-> 需求 = `docs/cli/requirements/TUI.md` F19；机制单源 = `docs/core/design/TEAM.md` §2.2 ∥ §2.5。首屏形态 = 用户 2026-10-10 14:49 裁定（终端 = 列表形；三端皮不同、语义逐字同源；不预选；「以后再说」第三态保留）。
+> 需求 = `docs/cli/requirements/TUI.md` F19；机制单源 = `docs/core/design/TEAM.md` §2.2 ∥ §2.5。首屏形态 = 用户裁定（终端 = 列表形；三端皮不同、语义逐字同源；不预选；「以后再说」第三态保留）。
 
 - **首屏（`step = "route"`）**：标题行 + **三行列表** + 选中行说明（dim 行随光标）：①「登录团队服务器」（说明 = 团队卡文案逐字「用团队发的账号登录——模型由服务器提供，不用自己填 key」）②「配置本地 provider」（说明 = 「自己填 API key，不依赖团队服务器」）③「以后再说」。**都不预选**（光标 = 首行——终端惯例高亮，无常选态）；Esc 恒可跳（既有语义）。
 - **换取（同屏内——不叠层）**：
-  - 选 ① ⇒ 团队问句步 `server → username → password`（逐问：问句行 + 输入框提交；**密码步 = 掩码回显**（每字符显示 `•`——显示层变换；提交值原样））；提交 ⇒ 核 `teamLogin`；成 ⇒ 结果行（同名冲突 `notice` ⇒ 就地提示·逐字同句）+ **模型选定**（`defaultModel` 未设 ⇒ `openModelPicker()`——同本地路尾；候选含 `team` 派生条目）；败 ⇒ **四句逐字**（`docs/core/design/TEAM.md` §2.5）就地出 + 停留可重试。
+  - 选 ① ⇒ 团队问句步 `server → username → password`（逐问：问句行 + 输入框提交；**密码步 = 掩码回显**（每字符显示 `•`——显示层变换；提交值原样））；提交 ⇒ 核 `teamLogin`；成 ⇒ 结果行（同名冲突 `notice` ⇒ 就地提示·逐字同句）+ **模型选定**
+    （`defaultModel` 未设 ⇒ `openModelPicker()`——同本地路尾；候选含 `team` 派生条目）；败 ⇒ **四句逐字**（`docs/core/design/TEAM.md` §2.5）就地出 + 停留可重试。
+    （成经 `completeTeamLogin` 共用件——两复读 ⇒ 模型候选面当刻含 `team` 派生条目；`thincoder-cli/src/tui/wizard.mjs:311` 调同件——§5.5）
   - 选 ② ⇒ **既有 provider 步零改**（existing / preset / custom → 文本步 → 落盘 → 模型选择）。
   - 「← 换一种方式」行（团队步 ∥ 本地步 1 皆在场）⇒ 回 route 屏；**键盘激活**：provider 步 = 该行作列表**末行**（↑↓ 选中 + Enter——与列表步同键，零新键）；团队三问步 = **↑ 聚焦该行 + Enter**（输入框 Enter=提交 ∥ Esc=取消 语义零改）；行文本**须含可见提示**（不得藏键）。
 - **保真判据（设计定——用户裁定⑤委托）**：回退 ∥ 换路 ⇒ **已填保留**（地址 ∥ 用户名 ∥ provider 字段——同会话内）；**密码恒不保留**（回退即清——沿 B1 密码不保真口径）。
@@ -102,7 +101,7 @@
   当前清点（命令与分组的完整清单）= `docs/cli/requirements/FEATURES.md` §2.9。
 - **分两类**：**即时反馈**（`/plan` `/auto` `/fold` 等本地状态切换）与**菜单循环**（`/config` `/think` `/mcp` `/provider` 等 picker 驱动）。
 - **执行路径**：非 busy 期（含挂起空闲）经 submit 直执行（`handleSlash`——控制通道不排队）；busy 期命令全部禁发
-  （Enter 提交吞——白名单已删；退出靠 Ctrl+C 终端层通道）。**handler 异常统一拦截成 `[error]` 行**——不击穿 TUI 主循环。
+  （Enter 提交吞；退出靠 Ctrl+C 终端层通道）。**handler 异常统一拦截成 `[error]` 行**——不击穿 TUI 主循环。
 - **`completions(input)`**：按命令 / 参数补全；Tab 循环候选。
 
 ### 5.2 `showPicker(title, entries)` 入口契约
@@ -111,13 +110,12 @@
   非数组 ⇒ **同步抛 `TypeError`**（含 `entries must be an array`；Promise 输入附 `await` 提示）——不静默、不裸抛下游 `entries.filter is not a function`。
 - **守卫落点** = `showPicker` 入口**首行**（在 `closePicker()` **之前**——参数校验先行，非法输入不改变 picker 栈状态）：
   入口是全部 picker 调用的单一收口；事后防御（如 `rebuildLines` 内）的错误信息不指向调用点，诊断价值归零。
-- **否决备选**：空集返回（静默不打开）——**静默吞掉编程错误**，菜单「打不开」无诊断，正是该缺陷的体验；否决。
 - **不做静态源码断言锁**（如「grep `await <fn>(`」）：行为锁已足（修前红 / 修后绿）；内部实现锁属过度测试。
 - **零触达核对**：既有调用点全部传数组字面量 / 数组变量 ⇒ 守卫零触达；`0-item` 保护与 picker 渲染 / 导航语义零改。
 
 ### 5.3 关键命令要点
 
-- **`/model`**（2026-10-04 · 台账 #883 · 实现 = 本批实施轮）：会话模型切换（两级 picker ∥ `/model provider:model` 直参——写会话槽）。
+- **`/model`**：会话模型切换（两级 picker ∥ `/model provider:model` 直参——写会话槽）。
   **会话级模型面实变 ⇒ 同拍写回 `config.defaultModel`**（会话选定写回——判据单源 = `docs/core/design/SESSION.md` §6.21 判据句 6；写面单点 = `thincoder-cli/src/tui/config-helpers.mjs` `carryoverDefaultModel`；等值 ∥ 回声零写；写回失败不反扑会话写、记错零静默；端差 = 不设写后探——无准入展示面）。
   候选 = 运行期 `/models` 拉取（拉不通 = 该渠道不可选）；config 默认模型显式设置走 `/config → 默认模型`。
 - **`/submodel`**：子 agent 模型设置入口——与 `/model`（主会话模型）对称。5 种子 agent 类型（explore / plan / coder / eng-coder / eng-designer）
@@ -134,19 +132,20 @@
   生效 = 立即（bash 工具每次调用实时读配置）；持久化走 `persistRaw`；VSC 扩展共享同一 `config.json` 字段。
 - **`/config`**：embedding 三件套落盘（补写 baseURL / model——已有值保留、缺省引用默认配置**不硬编码字面量**；
   存量仅 apiKey 的配置再次保存自动补齐）/ 代理 / 轮次 / 阈值等菜单循环。数值项手输属合理自由文本（非枚举）。
+  **数值项可写回 auto（限 `agent.compactThreshold`）**：输入 `auto` ⇒ 删键（压缩线回模型窗口派生值，显示回 `(auto)`）；空输入 = 取消，非数值非 `auto` = 报错零落盘。三档落值 = `CONTEXT-COMPACTION.md` §6.17（本档不重述）；与 VSC 面板「置空 = auto」写盘结果同为删键。
 - **`/mcp`**：MCP 服务器管理（add / remove / connect / list / edit / test、token 一等字段、headers / env 键值对合并与 `k=` 删除语义、
   `✓ Save & test` 探活确认环、失败回同一表单）——**字段表单机制权威 = `docs/core/design/MCP.md` §5 / §8**，本档不重述。
 - **`/advisor`**：评审模型 / 思考配置 + guard 开关（交互菜单循环）；Thinking 子菜单以**真实条目列表**打开。
-- **`/undo`**（2026-10-04 · #863 补）：文件写操作快照回退——快照单点 = `thincoder-core/undo-stack.mjs` `snapshotForUndo`（调用点 = `thincoder-core/agent/dispatch-run.mjs`——非只读工具有参即拍）；
-  **双上界**（本批）：单条 = 备份超 `MAX_UNDO_BYTES`（10MB——read 守卫同值先例）⇒ 入栈 **oversize 占位**（列表可见 · 不可回退——不得与「文件创建」态混判）；总量 = `MAX_UNDO_TOTAL_BYTES`（64MB）超限逐最旧驱逐（条数上限 `MAX_UNDO`=50 保留）；
-  命令面 `handleUndoCommand`（`cmd-undo.mjs`）增 oversize 分支（选中 ⇒ 提示 + 不回退）；CLI 侧旧 `snapshotForUndo` 死副本清除（单源 = 核档——CORE-UNIFICATION §2.5 #149 计划态落定）。实现 = 本批实施轮。
+- **`/undo`**：文件写操作快照回退——快照单点 = `thincoder-core/undo-stack.mjs` `snapshotForUndo`（调用点 = `thincoder-core/agent/dispatch-run.mjs`——非只读工具有参即拍）；
+  **双上界**：单条 = 备份超 `MAX_UNDO_BYTES`（10MB——read 守卫同值先例）⇒ 入栈 **oversize 占位**（列表可见 · 不可回退——不得与「文件创建」态混判）；总量 = `MAX_UNDO_TOTAL_BYTES`（64MB）超限逐最旧驱逐（条数上限 `MAX_UNDO`=50 保留）；
+  命令面 `handleUndoCommand`（`cmd-undo.mjs`）增 oversize 分支（选中 ⇒ 提示 + 不回退）；快照单源 = 核档（CORE-UNIFICATION §2.5）。
 - **其余命令**：见 §5.1 登记面与会话层文档；菜单循环类命令的 picker / 问答细节见各 `cmd-*.mjs` 文件头注释。
 
 ### 5.4 删除类入口显式确认门
 
 **判据句**：删除类入口，若其副作用**销毁不可复得的原文或整条配置**（渠道 `apiKey` / MCP `token`）⇒ 用户选中目标后、
 **落盘与生效之前**必须有一次**显式确认**——确认 ⇒ 原语义执行；**取消 ⇒ 零落盘 ∧ 零内存变更**。
-判据源 = 用户 2026-09-19 08:21 逐字「应该补。」；与 VSC 端 `docs/vsc/requirements/WEBVIEW.md` **F-W17** 同判据、
+判据源 = 用户逐字「应该补。」；与 VSC 端 `docs/vsc/requirements/WEBVIEW.md` **F-W17** 同判据、
 **两端各自实现**（VSC 侧弹框面属另链，本档不涉及）。
 
 **确认件（单源）** = `thincoder-cli/src/tui/pickers.mjs` 的 `confirmDelete`（picker 层通用绑定，与 `showPicker` / `closePicker`
@@ -161,16 +160,16 @@
   即**零落盘 ⇒ 零内存变更**（无 ghost、无半删）。
 - **默认落点（反误触）**：`defaultIndex: 1` = Cancel ⇒ 直接按 Enter 不会删除；确认须显式移到 Yes 行。
 
-**入口册（实核 · 域 = `thincoder-cli/src/tui/**`）**：
+**入口册（域 = `thincoder-cli/src/tui/**`）**：
 
 | 入口 | 门位（载体） | 状态 |
 |---|---|---|
-| 渠道删除（`/model` → Remove provider…） | `thincoder-cli/src/tui/provider-admin.mjs:88` `removeProviderFlow`（`persistRaw` 之前） | ✅ 本批过门（单一调用点 `model-picker.mjs:77`） |
-| MCP server 删除（`/mcp` 菜单 → Remove） | `thincoder-cli/src/tui/cmd-mcp.mjs:84` `removeServer`（`persistRaw` 之前） | ✅ 本批过门（调用点 `:389`） |
-| MCP server 删除（`/mcp remove <name>` 直参） | 同上——`removeServer` 是两条路径的单一收口 | ✅ 本批过门（调用点 `:331`） |
+| 渠道删除（`/model` → Remove provider…） | `thincoder-cli/src/tui/provider-admin.mjs:88` `removeProviderFlow`（`persistRaw` 之前） | ✅ 过门（单一调用点 `model-picker.mjs:77`） |
+| MCP server 删除（`/mcp` 菜单 → Remove） | `thincoder-cli/src/tui/cmd-mcp.mjs:84` `removeServer`（`persistRaw` 之前） | ✅ 过门（调用点 `:389`） |
+| MCP server 删除（`/mcp remove <name>` 直参） | 同上——`removeServer` 是两条路径的单一收口 | ✅ 过门（调用点 `:331`） |
 | 会话冷 GC（`thincoder session gc --confirm`） | 非 TUI 面（`thincoder-cli/bin/thincoder.mjs` → 核 `thincoder-core/session-gc.mjs`） | 已覆盖（`--confirm` 显式旗标——端面不同，不入 TUI 域） |
 
-- **独立「删 key」入口 = 不存在**（实核）：`setKeyFlow`（`thincoder-cli/src/tui/provider-admin.mjs:113`）是**设** key；
+- **独立「删 key」入口 = 不存在**：`setKeyFlow`（`thincoder-cli/src/tui/provider-admin.mjs:113`）是**设** key；
   `/config` 的 embedding key 同为设 key（`thincoder-cli/src/tui/cmd-config.mjs:38-41`——空输入直接返回、不写盘）。
   key 原文消失的路径**只有**上表两条已入册入口（渠道删除 / MCP server 删除）——无第三入口待门。
 
@@ -178,88 +177,24 @@
 
 - **表单清空保存类**（MCP `token` / `headers` / `env` 字段清空后 `✓ Save & test` 保存）不设本门——它是**编辑面**
   （预览 + 探活两步，非「选中即生效」的删除入口），语义归核 `docs/core/design/MCP.md` §5 / §8；
-- `/clear` 与 `/new` 的确认件（同形先例）**不是删除类**——不并入本门、本批零改；
+- `/clear` 与 `/new` 的确认件（同形先例）**不是删除类**——不并入本门、零改；
 - **可复得类**不做门（context 清空 / 子模型槽位 reset 等：值可重填）——判据是**不可复得**，不是「凡是删」。
 
-**机检**：本门的结构对账 = 域内删除类入口逐名过门（fail-closed：未登记入口 ⇒ 红 + 点名）——用例表见批次档。
+**机检**：本门的结构对账 = 域内删除类入口逐名过门（fail-closed：未登记入口 ⇒ 红 + 点名）——用例表随本档。
 
-### 5.5 `/team` 命令族（会话内登录入口 · F20 边界句 · 2026-10-10 · 登录面补全批 · 台账 #1230）
+### 5.5 `/team` 命令族（会话内登录入口 · F20 边界句）
 
-> 需求 = `docs/cli/requirements/TUI.md` F20 范围边界（入口 = `/team` 命令族）；机制单源 = `docs/core/design/TEAM.md` §2。**与 argv 命令族同名同序**（login ∥ logout ∥ status——一词一事）。
+> 需求 = `docs/cli/requirements/TUI.md` F20 范围边界（入口 = `/team` 命令族）；机制单源 = `docs/core/design/TEAM.md` §2。**与 argv 命令族同名同序**（login ∥ logout ∥ status ∥ rotate——一词一事）。
 
-- **登记**：`SLASH_COMMANDS` + `HANDLERS` + 新档 `thincoder-cli/src/tui/cmd-team.mjs`（登录面补全批增——各命令实现独立成档：§1 同族先例）。
+- **登记**：`SLASH_COMMANDS` + `HANDLERS` + 新档 `thincoder-cli/src/tui/cmd-team.mjs`（各命令实现独立成档：§1 同族先例）。
 - **子命令面**：
   - `/team`（裸 ∥ `status`）——状态面：未登录 ⇒ 「未登录——登录后可用」（逐字）∥ 已登录 ⇒ server + member + label 三行（argv `team status` 同形）+ **活校验**（`teamVerify()`——`invalid` ⇒ 追「已失效——重新登录」句；`unreachable` ⇒ 照显本地态——离线容忍）。
-  - `/team login` —— 三问步（地址 → 账号 → 密码；**掩码回显**——同 §3.1 团队步）+ 核 `teamLogin`；成 ⇒ 结果行（argv 同形——同名冲突 `notice` ⇒ 就地提示·逐字同句）+ `state.team` 复读 +（`defaultModel` 未设 ⇒ 追开模型 picker——「登录成即用」兜现；已设 ⇒ 零打断）；败 ⇒ **四句逐字**（`TEAM.md` §2.5）。
+  - `/team login` —— 三问步（地址 → 账号 → 密码；**掩码回显**——同 §3.1 团队步）+ 核 `teamLogin`；成 ⇒ 结果行（argv 同形——同名冲突 `notice` ⇒ 就地提示·逐字同句）
+    + **两复读**（`state.team` 复读 ∥ `syncProvidersFromDisk`——`agent.providers` 换盘面 ⇒ 模型 picker 候选当刻含 `team` 派生条目：`TEAM.md` §2.8）+（`defaultModel` 未设 ⇒ 追开模型 picker——「登录成即用」兜现；已设 ⇒ 零打断）；败 ⇒ **四句逐字**（`TEAM.md` §2.5）。
   - `/team logout` —— 未登录 ⇒ 未登录句（幂等——零动作）；已登录 ⇒ 核 `teamLogout`；成 ⇒ 结果行 + 一次性提示（吊销未达 ⇒ 「服务端吊销未达」逐字）+ `state.team` 复读。
+  - `/team rotate` —— 未登录 ⇒ 未登录句（幂等——零动作）；已登录 ⇒ 确认一步（后果句 + 确认 ∥ 取消；默认取消）——取消 ∥ 未确认 ⇒ 零请求零写盘 ⇒ 核 `teamRotate`（写盘单源 = 核）；成 ⇒ 结果行 + 两复读（`syncProvidersFromDisk` ∥ `refreshTeamState`）+ `verify` 清；败（`invalid`）⇒ 当场置「已失效」。机制单源 = `docs/core/design/TEAM.md` §2.7。
   - 表外子命令 ⇒ 用法行（fail-closed——沿 argv 同口径）。
-- **问句载体**：模态族第三支（团队问句面在场 ⇒ 键路由至问句步——Esc 取消 ∥ Enter 提交）；步进机制 = `ask-steps.mjs` 共享小件（§1——wizard 文本步与 `/team login` 共用；含掩码位）。
-- **可机判**：单元测试档直驱——`/team` 注册面（两表各含 team 行）；三层子命令行为（临时 config + HTTP 桩：成/败四句/未登录句/吊销未达句）；`/team login` 掩码位；状态段切片随动。
+- **问句载体**：模态族第三支（团队问句面在场 ⇒ 键路由至问句步——Esc 取消 ∥ Enter 提交）；**第四支 = SSH 凭据窗**（面体 `thincoder-cli/src/tui/secret-prompt.mjs` ∥ 键面序 2c）；步进机制 = `ask-steps.mjs` 共享小件（§1——wizard 文本步与 `/team login` 共用；含掩码位）。
+- **可机判**：单元测试档直驱——`/team` 注册面（两表各含 team 行）；四子命令行为（临时 config + HTTP 桩：成/败四句/未登录句/吊销未达句/轮换确认 ∥ 成句）；`/team login` 掩码位；状态段切片随动。
+- **登录入口逐径（本批零改的适用范围）**：argv `team login`（`thincoder-cli/src/cli/team-command.mjs`——进程即止、无会话内存 ⇒ 零随动对象：候选面取数 = 下次启动）∥ 首启向导团队路（`thincoder-cli/src/tui/wizard.mjs:311` 调 `completeTeamLogin`——与会话内**同件** ⇒ 两复读随拍）∥ 会话内 `/team login`（`:192` 两复读）。三径本批零改（机制单源 = `docs/core/design/TEAM.md` §2.8）。
 - **边界**：不做团队面板；不改 argv `team` 命令面（零变）；登/退不经设置面（无设置卡——命令族即管理面）。
-
-## 6. 不并项与历史沿革
-
-### 6.1 历史沿革（(d) 类——**不并**）
-
-> 来源档 `thincoder-cli/docs/design/TUI.md`（1529 行）的 §9 / §12 / §13 面——**原地保留作参照历史**（保留 ≠ 维护）。
-> 下列内容不并入本档：
-
-| 旧档位置 | 内容 | 何故不并 |
-|---|---|---|
-| 旧档 §12.2 三面现状表（as-of 实测 + `file:line` 键位证据） | 时点现状与行号锚 | 现状已按本档 §3 契约重写；行号随实现漂移 |
-| 旧档 §12.3 方案选型对比（全面统一 / 分工保留 / 仅落档三候选） | 一次性选型材料 | 选定结论「分工保留」已入 §3；被否决候选理由提炼为一句 |
-| 旧档 §12.6 决策 D-SS1–D-SS7 · §13.4 D-B1-1–D-B1-3 | 批次编号决策表 | 结论已并入 §3 / §4 / §5.2 |
-| 旧档 §12.7 / §13.5 受影响文件表 · §12.8 / §13.6 用例表 · §12.9 / §13.7 验收标准 · §12.10 / §13.8 边界 | 批次执行 / 验收 / 边界材料 | 一次性——用例宿主 = `CLI tui-selection-surfaces 用例档` 等；边界语义已入 §3 |
-| 旧档 §13.1 问题陈述（根因：漏 `await` → `entries.filter` 抛错；39 处调用点清点） | 批次勘察材料 | 结论已落为 §5.2 契约；勘察行号为时点证据 |
-| 旧档 §9 交互层与命令层的部分叙述（`/submodel` `/shell` 的决策理由段落） | 与现行正文重复的决策叙述 | 结论已入 §5.3；逐条理由不再复述 |
-| 旧档变更记录中本面相关行 | 逐批流水 | 历史叙述——本档自有变更记录 |
-
-### 6.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
-
-| 旧档面 | 内容 | 何故不并（去向 / 触发） |
-|---|---|---|
-| 需求层条目 | F9 / F10 / F12 + N7 等 | 需求面——`docs/cli/requirements/TUI.md`（本档只留设计层） |
-| picker / wizard 的渲染与键位实现细节 | 渲染函数内部结构 | 实现面——落点 `thincoder-cli/src/tui/pickers.mjs` · `wizard.mjs`（本档只留契约） |
-| question 工具协议面 | 提问工具契约 / 哨兵定义 / 工具集 | `docs/core/design/TOOLS.md` + `docs/cli/design/ACP-CLIENT.md` §7.1（headless 剔除） |
-| MCP 字段表单机制 | 表单循环 / token / 探活 | `docs/core/design/MCP.md` §5 / §8 |
-| 配置落盘机制 | 原子写 / mtime 门控 / 并发冲突 | `docs/core/design/CONFIG.md`（本档只留入口与纪律） |
-| VSC 侧对位面 | webview 无 picker / wizard 面 | 登记「无镜像面」；VSC 轮 |
-
-## 变更记录
-
-**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
-**本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
-**本批（CLI ∥ VSC 会话选定写回 · 2026-10-04）落点表** = `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §2（唯一承载面——一次性批次材料）。
-**本批（流尾台账行组退役 · 2026-10-04）落点表** = `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2（唯一承载面——一次性批次材料）。
-**本批（login-entry-completion · 2026-10-10）落点表** = `docs/batches/2026-10-10-login-entry-completion.md` §2（唯一承载面——一次性批次材料）。
-
-- 2026-10-10（**login-entry-completion 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §1 · 台账 #1229 ∥ #1230；用户 14:33–14:49 裁定链）：新增 **§3.1 首启向导两路**（F19——route 屏三行 ∥ 同屏换取 ∥ 已填保真 ∥ 以后再说 ∥ 可机判）∥ **§5.5 `/team` 命令族**（三子命令 ∥ 活校验 ∥ 掩码 ∥ 边界）∥ §1 模块地图两行（`cmd-team.mjs` 入册 ∥ `ask-steps.mjs` 新行 ∥ wizard 行随正）。语义单源 = `docs/core/design/TEAM.md` §2 ∥ §2.6。
-- 2026-10-10（**login-entry-completion 批 · 设计评审轮 1 修正（fix 轮 · 发现 4）· eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §3 轮次 1 · 台账 #1229–#1230）：§3.1 ∥ §5.5 补同名冲突 `notice` 就地提示落点（结果行位——逐字同句；一次性事件）。**零新语义**（评审发现的直接导出项）。
-- 2026-10-10（**login-entry-completion 批 · 交互细节补（父侧轻通道笔 · 可 revert）**——承 #150 设计缺口上抛：CLI 首启向导「← 换一种方式」的键盘激活未点名）：§3.1 该行补**键盘激活**口径——provider 步 = 行作列表**末行**（↑↓ 选中 + Enter）；团队三问步 = **↑ 聚焦该行 + Enter**（输入框 Enter=提交 ∥ Esc=取消 语义零改）；行文本**须含可见提示**。**零新语义**（键位 ∥ 提示文案级；被否 = 专属键 ∥ 仅显示不可激活——后者等于给用户一个谎）。
-- 2026-10-10（**login-entry-completion 批 · 设计档回填轮（fix · 三端交卷后）· eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §5（#150 CLI 交卷）· 台账 #1242）：§1 `ask-steps.mjs` 行 ∥ §5.5 登记行去「（拟新增）」标记（两档已落——登录面补全批增）。**零新语义**（标记随实读收正）。
-
-- 2026-10-09（**provider-default-model-purge 批 · 实施期收正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §5 舱2（上抛④）· 台账 #1122）：§4 示例行收正——渠级模型段退场（L1 渠行显示回退 = `baseURL` 同全域口径；`model-picker.mjs` `buildProviderEntries` 模型段只随会话槽值）；**零新语义**（示例随正）。
-
-- 2026-10-04（**#905 §1 表归属收正 · 主 agent 直接执行 · 可 revert**——承 #883 修复轮 #10 号外观察 ∥ 台账 #905）：§1 命令层表——`model-picker.mjs` 行「+ `/model` Add / Remove / key 流程」归属收正（该流族自 2026-09-29 结构拆分迁出）+ 增 `provider-admin.mjs` 行（渠道管理流族 + `cascadeRemoveProvider`）。**零新语义**（结构快照对盘）。
-- 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 修正轮（评审轮次 1 · 发现 2）· eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §3 轮次 1 · 台账 #883）：§5.4 入口册两坐标对盘收正（`thincoder-cli/src/tui/provider-admin.mjs:88` ∥ `:113`；调用点 `model-picker.mjs:77`）+ §1 `model-picker.mjs` 行括注收正（拉取失败 ⇒ 该渠道不可用——无预设回退）。**零新语义**（坐标与描述对盘）。
-
-- 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #863）：§5.3 增 **`/undo` 条**（快照双上界 + oversize 态 + 死副本清除）。实现 = 本批实施轮。
-
-- 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §2 · 台账 #883）：§5.3 增 **`/model` 条**（会话选定写回——判据句 6；写面单点 ∥ 等值/回声零写 ∥ 失败不反扑；端差 = 不设写后探）。实现 = 本批实施轮。
-
-- 2026-09-28（**文档回填与卫生轮**（台账 #516 · #377 面）· eng-designer）：档头对位行「2026-09-25 本批」改指名（**misc-four 批**）——消同日多批「本批」两义。**零新语义**。
-
-- 2026-09-25（**misc-four 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §2 · 台账 #185）：档头对位行裸读法收正——补 A9 三件（结构性不对称 / 证据 / 裁定）。**零新机制**。
-
-- 2026-09-19（**CLI 端删除二次确认批（台账 #96）· 设计轮 · eng-designer**）：新增 **§5.4 删除类入口显式确认门**——判据句（不可复得 ⇒ 一次显式确认）·
-  确认件单源 `confirmDelete`（形态 = 既有二次确认 picker，先例 `cmd-clear.mjs:6-9` / `cmd-new.mjs:30-33`）· 入口册 4 行（渠道删除 / MCP 删除 ×2 路 / 冷 GC 已覆盖）·
-  独立「删 key」入口实核 = 不存在 · 判据域边界三条 · 机检面。§1 模块地图 `pickers.mjs` 行同批登记确认件。其余各节零改。
-
-- 2026-09-17（**zero-block 批 · 微 fix 轮 · eng-designer**）：变更记录 2026-09-15 条①内**悬空节号收正**——原引节号在 canonical 界面核心档无此节，收正为「§8 不并项与历史沿革」（拆分沿革登记现住 §8）；批档 `docs/batches/2026-09-17-subagent-zero-block.md` §2 出批发现 ⑥ 收口。
-- 2026-10-04（**流尾台账行组退役批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2 · 台账 #913）：§1 命令层表 `ledger-surface.mjs` 行职责按实收正（台账状态位胶水——行推线面退役随动）。**零新语义**。明细 = 批档 §2。
-
-- 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/TUI.md` 的 §9（交互层与命令层）/ §12（选择面收口）/
-  §13（输入面小修 B1）三面内容重建入本档（旧档一字未改、原地作参照历史）。
-  ① 落点 = `docs/cli/design/TUI-COMMANDS.md`（P2 板块内的**读者面拆分档**——由 `docs/cli/design/TUI.md` §8 拆分沿革登记）；
-  ② 模块地图按**现文件结构**重建（cmd-* 族逐档入表——旧档为「其余单命令小件」汇总行）；行数列不并；
-  ③ §12 / §13 的机制结论并入 §3 / §4 / §5.2，批次材料入 §6.1；④ 坐标全量改**现状路径**并实核；⑤ 命令清点不复制（挂 `docs/cli/requirements/FEATURES.md` §2.9 指针——D2）。

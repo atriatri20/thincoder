@@ -277,7 +277,7 @@ export function persistEngTokens(agent) {
   data.updatedAt = Date.now()
   writeSessionFile(p, data)
   // 记录我们刚写的 mtime——下次保存/守卫跳过重复解析（saveSession 同款；缓存按路径命中 #386）
-  // + 摘要 `ts` 地板入参（#503：保存面写后取 mtime——同族先例 session-slot-verify.mjs:99）。
+  // + 摘要 `ts` 地板入参（#503：保存面写后取 mtime——同族先例 `session-slot-verify.mjs` 的 `runPass`）。
   let wroteMtimeMs
   try {
     wroteMtimeMs = statSync(p).mtimeMs

@@ -37,6 +37,8 @@ import { handleFoldCommand } from "./cmd-fold.mjs"
 import { handleUndoCommand } from "./cmd-undo.mjs"
 import { handleEngCommand } from "./cmd-eng.mjs"
 import { handleTeamCommand } from "./cmd-team.mjs" // 团队登录（登录面补全批——/team login ∥ logout ∥ status）
+// 派生条目隐藏判据单源（TEAM.md §2.4——#1223：/model·/submodel Tab 补全面过滤）
+import { isDerivedProviderHidden } from "./provider-admin.mjs"
 
 export const SLASH_COMMANDS = [
   { name: "/plan", group: "Agent", desc: "toggle plan mode (design first, then implement)" },
@@ -148,10 +150,10 @@ export function createSlashCommands(ctx) {
     const head = parts.slice(0, -1).join(" ")
     const argIndex = parts.length - 2 // which parameter is being typed (0-based)
     const match = (cands) => cands.filter((c) => c.startsWith(last)).map((c) => `${head} ${c}`)
-    if (cmd === "/model" && argIndex === 0) return match(agent.providers.map((p) => p.name))
+    if (cmd === "/model" && argIndex === 0) return match(agent.providers.filter((p) => !isDerivedProviderHidden(p)).map((p) => p.name)) // 派生无 key ⇒ 隐藏（TEAM.md §2.4）
     if (cmd === "/submodel") {
       if (argIndex === 0) return match(["explore", "plan", "coder", "eng-coder", "eng-designer", "reset"])
-      if (parts[1] && !["reset"].includes(parts[1]) && argIndex === 1) return match(agent.providers.map((p) => p.name))
+      if (parts[1] && !["reset"].includes(parts[1]) && argIndex === 1) return match(agent.providers.filter((p) => !isDerivedProviderHidden(p)).map((p) => p.name)) // 派生无 key ⇒ 隐藏（TEAM.md §2.4）
     }
     if (cmd === "/think") {
       if (argIndex === 0) return match(["on", "off", "effort"])

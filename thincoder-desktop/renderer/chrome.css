@@ -280,10 +280,10 @@ body.pool-resizing .pool-resizer::before { background: var(--accent); }
 }
 
 /* 状态行面（D17 十五段裁定「承载 12」—— 本批 R3a）：段 = 横排 `span[data-seg]`（段锚 = 机读面；段内件 = `data-part`）；警示色四段（注意力 / 台账超阈 / 计时到期 / 上下文 ≥ 80%）；四段外置位面（告警）见上 `.status-alert`。
-   **R11 状态行 ⇒ CLI 对齐（屏面为准 · 2026-09-28）**：段间分隔 = CLI 形 `段 │ 段`（形源 = `thincoder-cli/src/tui/render-frame.mjs:344-427`：每段自携 ` │ ` 前导；banner 四位 ∕ banner→后段 = 竖线紧贴前词 `PLAN│ AUTO`）；字形住本档（视图档零字形字面），分隔归 CSS 本条（相邻段选择器 ⇒ 缺席段不落空分隔 —— 沿 `.session-item-meta > [data-seg] + [data-seg]::before` 先例；竖线居段距带内 ⇒ 两侧各 6px）。
-   字色：base = CLI `dim` 基色（`thincoder-cli/src/tui/ansi.mjs:31` `ESC[2m` 低强调）⟷ `--fg` 50% 强度（终端 dim = 前景半强度）；警示段 = CLI 黄（同档 `:46`）⟷ `--warn`（调色板值 = VSC 警告黄默认）。
-   **banner 四位字色（R11 补轮 · 2026-09-28 · 用户「字色全对齐」）**：四段字色 = CLI 逐段常量实形（`render-frame.mjs:233-236` 现读〔2026-09-29 按盘重锚〕）：`auto` = `C.warn`（`ansi.mjs:46` `fg(3)` 黄）· `plan` = `C.tool`（同档 `:43` `fg(6)` 青）· `advisor` ∕ `eng` = `C.advisor`（同档 `:47` `ESC[92m` 亮绿 —— 两段同常量）；落法 = `auto` **复用 `--warn`**（与警示段同槽：CLI 同一常量 ⇒ 不裂双黄），`plan` ∕ `advisor+eng` **槽新增** `--mode-plan` ∕ `--mode-advisor`（值 = VSC 终端 ANSI 同码亮 ∕ 暗默认 —— `terminalColorRegistry.ts` `ansiColorMap`；两套值住 `theme.css`）。
-   **分隔两边缘面裁定（R11 补轮）**：① 换行时行首悬空 `│` —— **不采用**（由：分隔 = 段自携前导 `::before`（CLI「每段自携」同构）⇒ `flex-wrap` 换行后行首段仍带前导；纯 CSS 无「行首」选择器 ⇒ 修需 JS 测行 ∕ 改布局 = 越「段集 ∕ 段序 ∕ 段读数逻辑零改」边界；孤竖线与段间分隔同形同色、仅窄窗换行边缘可见 —— 无误读风险）。② `.status-alert`（非段位）无条 —— **采用**（由：段链逐项已 `│` 分隔、告警位紧随段链 ⇒ 断链观感；CLI 非段位席位（注意力 chip）亦携 `│`（`render-frame.mjs:245` `chip + " │ "`）—— 补条仅落「段 ∕ 告警位之后」，行首零前导（同「缺席段不落空分隔」纪律））。 */
+   **R11 状态行 ⇒ CLI 对齐（屏面为准 · 2026-09-28）**：段间分隔 = CLI 形 `段 │ 段`（形源 = `thincoder-cli/src/tui/render-frame.mjs`：每段自携 ` │ ` 前导；banner 四位 ∕ banner→后段 = 竖线紧贴前词 `PLAN│ AUTO`）；字形住本档（视图档零字形字面），分隔归 CSS 本条（相邻段选择器 ⇒ 缺席段不落空分隔 —— 沿 `.session-item-meta > [data-seg] + [data-seg]::before` 先例；竖线居段距带内 ⇒ 两侧各 6px）。
+   字色：base = CLI `dim` 基色（`ansi.dim` `ESC[2m` 低强调）⟷ `--fg` 50% 强度（终端 dim = 前景半强度）；警示段 = CLI 黄（`C.warn`）⟷ `--warn`（调色板值 = VSC 警告黄默认）。
+   **banner 四位字色（R11 补轮 · 2026-09-28 · 用户「字色全对齐」）**：四段字色 = CLI 逐段常量实形（`renderRows` 现读〔2026-09-29 按盘重锚〕）：`auto` = `C.warn`（`ansi.fg(3)` 黄）· `plan` = `C.tool`（`ansi.fg(6)` 青）· `advisor` ∕ `eng` = `C.advisor`（`ESC[92m` 亮绿 —— 两段同常量）；落法 = `auto` **复用 `--warn`**（与警示段同槽：CLI 同一常量 ⇒ 不裂双黄），`plan` ∕ `advisor+eng` **槽新增** `--mode-plan` ∕ `--mode-advisor`（值 = VSC 终端 ANSI 同码亮 ∕ 暗默认 —— `terminalColorRegistry.ts` `ansiColorMap`；两套值住 `theme.css`）。
+   **分隔两边缘面裁定（R11 补轮）**：① 换行时行首悬空 `│` —— **不采用**（由：分隔 = 段自携前导 `::before`（CLI「每段自携」同构）⇒ `flex-wrap` 换行后行首段仍带前导；纯 CSS 无「行首」选择器 ⇒ 修需 JS 测行 ∕ 改布局 = 越「段集 ∕ 段序 ∕ 段读数逻辑零改」边界；孤竖线与段间分隔同形同色、仅窄窗换行边缘可见 —— 无误读风险）。② `.status-alert`（非段位）无条 —— **采用**（由：段链逐项已 `│` 分隔、告警位紧随段链 ⇒ 断链观感；CLI 非段位席位（注意力 chip）亦携 `│`（`renderRows` `chip + " │ "`）—— 补条仅落「段 ∕ 告警位之后」，行首零前导（同「缺席段不落空分隔」纪律））。 */
 .status-bar {
   display: flex;
   flex-wrap: wrap;

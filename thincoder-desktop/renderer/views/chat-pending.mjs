@@ -1,6 +1,6 @@
 /**
  * chat-pending.mjs — 排队期「待发送块」（**输入区上方带 · 派生** —— 输入逻辑收正轮 B12 新口径 · 参照 CLI
- * `thincoder-cli/src/tui/render-conversation.mjs:359-385` + `docs/cli/design/TUI.md` §7.5 形态）：
+ * `buildConvLines` + `docs/cli/design/TUI.md` §7.5 形态）：
  *   **载体 = 派生**（判据 = 队镜面非空，渲染期现算 —— 零块序写入 ∕ 零生命周期簿记；消费 ∕ 中止随判据消失）；
  *   **落位 = 输入行上方带**（消费面 = `renderer/mount-composer.mjs` `paintNotices` —— 贴输入框上沿 ⇒
  *     与输入面板**恒定邻接**（任意内容高度 ∕ 任意滚动位置下间距恒定 —— 硬验收：短会话不得浮在会话区上方）；
@@ -47,7 +47,7 @@ export function pendingGroupNode(model) {
   return { tag: "div", props: { class: "chat-pending", "data-pending": "" }, children }
 }
 
-/** 逐条超限尾标记（帧尾量面 —— CLI `:379-384` 对位）：正文折行高 ÷ 行高 > 上限 ⇒ 摘 `hidden` ∧ 填行数词；
+/** 逐条超限尾标记（帧尾量面 —— CLI `buildConvLines` 对位）：正文折行高 ÷ 行高 > 上限 ⇒ 摘 `hidden` ∧ 填行数词；
  *  平 node ∕ 零版式面（`scrollHeight` / 行高缺）⇒ 早返零写。 */
 export function paintPendingOverflow(root) {
   if (typeof root?.querySelectorAll !== "function") return

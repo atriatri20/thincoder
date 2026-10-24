@@ -142,11 +142,11 @@ export function noteReviewDelivered(agent, run) {
 }
 
 /** 分支③候选底座（`MANIFEST.md` §2.5「路径归一增量」族第四笔 · 2026-10-05 · #945）：现行
- *  `projectRootView(cwd)` 集（ok → [root]；ambiguous → candidates 按名序；none → 空集）＋
+ *  `projectRootView(cwd)` 集（ok → [root]；workspace → candidates 按名序；none → 空集）＋
  *  cwd 祖先链全量目录（自父目录起至盘根、最近→远、去重、现行集在前）——容器相对形在子仓锚下
  *  可解析；受理判据（目标解析位最近 manifest 声明面）∥ 围栏 ∥ 可读唯一化 ∥ fail-closed 歧义零改。 */
 function candidateRoots(view, cwd) {
-  const current = view.state === "ok" ? [view.root] : view.state === "ambiguous" ? view.candidates : []
+  const current = view.state === "ok" ? [view.root] : view.state === "workspace" ? view.candidates : []
   const ancestors = []
   for (let d = dirname(resolve(cwd)); ; ) {
     ancestors.push(d)

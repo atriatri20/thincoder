@@ -25,6 +25,10 @@ export function agentCardHtml() {
   html += `<label class="switch" title="${t("settings.verifyGuardHelp")}"><input type="checkbox" id="ag-verifyguard" ${as.verifyGuard ? "checked" : ""}> ${t("settings.verifyGuard")}</label>`
   // #17：autoThink 档位开关（verifyGuard 后位；两态 = `SS.agentSettings.autoThink` 驱动——键面 ∕ 控型与桌面同）
   html += `<label class="switch"><input type="checkbox" id="ag-autothink" ${as.autoThink ? "checked" : ""}> ${t("settings.agent.autoThink")}</label>`
+  // #1420 #1465 注入开关（PROMPT-SYSTEM.md §6.24 §6.27——全局；默认开 ⇒ 判勾 `!== false`）
+  html += `<label class="switch" title="${t("settings.injectProjectRulesHelp")}"><input type="checkbox" id="ag-injectprojectrules" ${as.injectProjectRules !== false ? "checked" : ""}> ${t("settings.injectProjectRules")}</label>`
+  html += `<label class="switch" title="${t("settings.injectDocsHelp")}"><input type="checkbox" id="ag-injectdocs" ${as.injectDocs !== false ? "checked" : ""}> ${t("settings.injectDocs")}</label>`
+  html += `<label class="switch" title="${t("settings.injectMemoriesHelp")}"><input type="checkbox" id="ag-injectmemories" ${as.injectMemories !== false ? "checked" : ""}> ${t("settings.injectMemories")}</label>`
   html += `<div class="settings-subtitle">${t("settings.submodelSection")}</div>`
   html += `<div class="key-field"><label title="${t("settings.submodelHelp")}">${t("settings.submodelGlobal")}</label><span id="submodel-slot-global" class="submodel-slot" data-value="${escHtml(as.subagentModel || "")}"></span></div>`
   html += `${["explore", "plan", "coder", "eng-coder", "eng-designer"].map((role) => `
@@ -121,6 +125,10 @@ export function bindAgentControls() {
         consultTimeoutMs: (() => { const m = get("consult-timeout"); return m ? String(Math.round(Number(m) * 60000)) : undefined })(),
         verifyGuard: chk("ag-verifyguard"),
         autoThink: chk("ag-autothink"),
+        // #1420 #1465 注入开关（恒携布尔——默认开）
+        injectProjectRules: chk("ag-injectprojectrules"),
+        injectDocs: chk("ag-injectdocs"),
+        injectMemories: chk("ag-injectmemories"),
         advisor: {
           // null (not undefined) for empty slots: JSON serialization drops undefined
           // keys, so "slot missing" and "explicitly cleared" would arrive identical —
@@ -144,6 +152,8 @@ export function bindAgentControls() {
   const EDIT_FIELDS = {
     "ag-maxturns": ["maxTurns"], "ag-subturns": ["subagentTurns"], "ag-compact": ["compactThreshold"],
     "ag-verifyguard": ["verifyGuard"], "ag-autothink": ["autoThink"], "ag-pool-engcoder": ["poolLimits"],
+    "ag-injectprojectrules": ["injectProjectRules"],
+    "ag-injectdocs": ["injectDocs"], "ag-injectmemories": ["injectMemories"],
     "ag-pool-other": ["poolLimits"], "ag-pool-advisor": ["poolLimits"],
     "consult-turns": ["consultTurns"], "consult-timeout": ["consultTimeoutMs"], "adv-effort": ["advisor"],
   }

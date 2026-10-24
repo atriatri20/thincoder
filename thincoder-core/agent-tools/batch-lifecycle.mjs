@@ -15,15 +15,30 @@
  * （eng-designer → §2 · 评审 → §3 · eng-coder → §5 · coder → §5【普通模式分支增表】· 主 agent →
  * 工程 §1 ∥ 普通 §1/§2/§5【取段——§4.16】——§4/§6 状态面走普通文档写）；depth-0 的 status/path 面
  * 按 D-BR21（可选 path，缺省 = 在飞批唯一时取）。
+ *
+ * 文档机检门（§3.20「结构兜底」②）：`close` 与 `status` 值余核「已收口」两路写盘前跑
+ * `runBatchGate({ scope: "close" })`——`REFUSED`（K ≥ 1）∥ `ERROR` ⇒ throw（§1 状态行字节不变）；
+ * `PASS` / 未跑（无声明面）⇒ 落盘 + 回执明示。门单源住 `batch-gate.mjs`（判据零改）。
+ *
+ * 链完整性门（§4.18-A）：`close` ∥ `status` 写「已收口」两路在写盘前同过 `assertCloseoutChainComplete`
+ * ——§2/§3/§4/§6 各段有内容 ∥ §1 声明不适用（仅 §2/§3/§4 可声明；§6 不可声明 · §5 段号豁免）；
+ * 缺段 ⇒ 点名拒（门位 = 冻结拒写之后、文档机检门之前）。重开径（§4.18-B）：已收口档
+ * `status` §1 → 进行中 + `note` 非空 ⇒ 状态行改写 + §1 段尾追记行（只追加，其余行字节不变）。
+ *
+ * 收口重锚（§6.2 · C · AC-M2-30）：收口有两条通路——`close` ∥ `status` 写 §1「已收口」——两路都冻结档、
+ * 都让批「收口了」，故**两路同调**单源 `reanchorOnClose`（本档下方），调点均在状态行写盘之后。
+ * 一次收口只出一份 `[ledger reanchor]` 回执段（判据 = 前态未冻结：已冻结档在两路都被冻结门早拒）。
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
-import { dirname, resolve } from "node:path"
+import { dirname, relative, resolve } from "node:path"
 
 import {
   SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, DEPTH0_SEGMENTS, STATUS_WORDS, STATUS_LINE_RE, readBatchStatusLine, sectionHasStatusLine, sectionHeaderRe, batchSkeleton,
   TEMPLATE_PLACEHOLDERS, findPlaceholderResidue, placeholderResidueError,
+  sectionContentState, malformedInapplicableLine, inapplicableDeclarationError,
 } from "./batch-skeleton.mjs"
 import { resolveBatchCreatePath } from "./batch-paths.mjs"
+import { gateReceiptLine, gateRefusalMessage, runBatchGate } from "./batch-gate.mjs"
 
 /** 可读文件判据（存在且为文件——目录/缺失同判不可读；与主档同名 helper 同型——KD-4 单向
  *  依赖下各自持有，三行谓词不构成第二权威源）。 */
@@ -202,21 +217,10 @@ function updateSectionStatusLine(src, seg, value) {
   return src.slice(0, hdr.index) + parts.join("") + src.slice(endIdx)
 }
 
-/** §6 段体非空白内容判据（#422①——close 前闸：段头行余文（标题文本）不计入内容；
- *  §6 段头缺失同判空——create 是骨架唯一权威入口）。 */
-function sectionSixHasContent(src) {
-  const hdr = sectionHeaderRe(6).exec(src)
-  if (!hdr) return false
-  const nextRe = /^## §\d/gm
-  nextRe.lastIndex = hdr.index + hdr[0].length
-  const next = nextRe.exec(src)
-  const body = src.slice(hdr.index + hdr[0].length, next ? next.index : src.length)
-  const nl = body.indexOf("\n") // 跳过段头行余文（`## §6 …` 的标题部分）
-  return (nl >= 0 ? body.slice(nl + 1) : "").trim() !== ""
-}
-
-/** §6 空闸拒绝句（#422①——空 ⇒ 拒 + 提示先写 §6；防「append 被拒 ⇒ close 照常 ⇒ §6 永久为空」
- *  复发——2026-09-26 dispatch-sizing 批实证）。 */
+/** §6 空闸拒句（#422①——空 ⇒ 拒 + 提示先写 §6；防「append 被拒 ⇒ close 照常 ⇒ §6 永久为空」
+ *  复发——2026-09-26 dispatch-sizing 批实证）：**§6 为唯一缺段时**拒串取本函数（§4.18-A J2——
+ *  「非空门」文案逐字零回归）；判据本体 = 单源谓词 `sectionContentState(src, 6)`（`batch-skeleton.mjs`），
+ *  旧谓词函数已随判据单源退场（不留第二套）。 */
 function emptySectionSixError() {
   return "batch: §6 收口段为空（non-empty gate）— close refuses: the closeout section (§6) has no content, and closing would freeze the record with that section permanently empty. Write the section first (append §6: the closeout / verification summary), then call close again. Nothing was written."
 }
@@ -231,6 +235,99 @@ function assertGateOpen(src) {
   if (gate === "unknown") {
     throw new Error("batch: 状态行不可解析或缺失 — the record has no §1 `**状态行**：` line whose value contains 已收口 or 进行中 (fail-closed: the write is refused as if frozen). Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close).")
   }
+}
+
+// ─── 链完整性门（§4.18-A——close ∥ status 写「已收口」两路收口前置；D-BR30）──────────
+
+/** 链判段集（§2/§3/§4/§6——§5 段号豁免恒不判；§1 主 agent 自述段不设前置）。 */
+const CHAIN_SEGMENTS = [2, 3, 4, 6]
+
+/** 链门拒绝句（§4.18-A J1——缺段非仅 §6 时；逐字文本 = `TOOLS.md` §6.24 J1。`missing` = 点名串，
+ *  形如 `§2 / §3 / §4`——按段号升序列出）。 */
+function closeoutChainError(missing) {
+  return "batch: 收口链未跑完（closeout chain gate）— close refuses: the record's closeout chain has not run, and closing would freeze it that way. " +
+    `Missing: ${missing}. Each named section must carry content (append it) or be declared inapplicable in §1 as ` +
+    "`> 不适用：§N —— <reason>` (§2 / §3 / §4 only). §6 must carry its verification (never declarable) and §5 is exempt (a light-channel round has no implementation section). " +
+    "Nothing was written."
+}
+
+/**
+ * 链完整性门（§4.18-A——**收口前置**）：`close` ∥ `status` 写「已收口」两路在写盘前同过本门。
+ * 判据：§2 / §3 / §4 / §6 每段须 `sectionContentState(src, seg) !== "empty"`（有内容 ∥ 声明不适用）；
+ * 不满足 ⇒ throw 并点名缺段（拒串 = J1——点名串按段号升序 `§2 / §3 / §4` 形）。**§6 为唯一缺段时
+ * 拒串 = 旧串逐字**（`emptySectionSixError()`——J2，零回归）。门位 = 既有拒因之后、文档机检门之前
+ * （§4.9 门清单第 ③ 道）；门不判内容质量、不做自动修复、不判 §1 / §5。
+ * @param {string} src — 档全文（写盘前只读）
+ */
+function assertCloseoutChainComplete(src) {
+  // 声明形不合先行（J3——不静默当作无声明）：§1 内「不适用」打头而完整形不合 ⇒ 拒
+  const badDecl = malformedInapplicableLine(src)
+  if (badDecl !== null) throw new Error(inapplicableDeclarationError(badDecl))
+  const missing = CHAIN_SEGMENTS.filter((n) => sectionContentState(src, n) === "empty")
+  if (missing.length === 0) return
+  if (missing.length === 1 && missing[0] === 6) throw new Error(emptySectionSixError()) // J2——零回归
+  throw new Error(closeoutChainError(missing.map((n) => `§${n}`).join(" / "))) // J1
+}
+
+// ─── 重开路径（§4.18-B——已收口档带审计的逆向流转；D-BR31）─────────────────────────
+
+/** 重开缺理由拒绝句（§4.18-B J4——触发合取缺 note；逐字文本 = `TOOLS.md` §6.24 J4）。 */
+function reopenReasonError() {
+  return "batch: 重开需理由（reopen requires a reason）— reopening a frozen record reverses a recorded decision, so the reason must be stated: pass it as `note` (it lands verbatim in the §1 reopen record). Nothing was written."
+}
+
+/**
+ * 重开（§4.18-B——已收口档 status(进行中, note 非空)）：一次写盘、两处落笔——
+ * ① §1 状态行 → `进行中（重开 <YYYY-MM-DD>）`（updateSectionStatusLine 既有单行豁免）；
+ * ② §1 **段尾追加**追记行 `**重开记录**：<日期> · 原收口 <旧日期> · 理由 = <note> · 操作者 = 主 agent`
+ *    （appendLineToSection——只追加；原收口 = 改写前状态行的收口日期字面，无日期字面 ⇒ `未标日期`）。
+ * 只追加判据：行数 +1、仅状态行原位替换、余行逐字节不变。EOL = §1 段头行自身行尾（CRLF 档 ⇒ CRLF）。
+ * @param {string} src — 档全文（closed 态）
+ * @param {string} note — 重开理由（调用面已验非空单行）
+ * @returns {string} 写盘用新全文
+ */
+function rewriteAsReopen(src, note) {
+  // 原收口 = 改写前 §1 状态行的收口日期字面（先取后改——重开后该行不再携带它）
+  const prevLine = (readBatchStatusLineRaw(src) ?? "").trim()
+  const prevDate = /已收口\s*(\d{4}-\d{2}-\d{2})/.exec(prevLine)?.[1] ?? "未标日期"
+  const date = todayLocal()
+  const withStatus = updateSectionStatusLine(src, 1, `进行中（重开 ${date}）`)
+  return appendLineToSection(withStatus, 1, `**重开记录**：${date} · 原收口 ${prevDate} · 理由 = ${note} · 操作者 = 主 agent`)
+}
+
+/** §1 状态行值原文（改写前的读取面——readBatchStatusLine 只给三态，日期字面须自己读）。 */
+function readBatchStatusLineRaw(src) {
+  const s1 = /^## §1(?=\s|$)/m.exec(src)
+  if (!s1) return null
+  const nextRe = /^## §\d/gm
+  nextRe.lastIndex = s1.index + s1[0].length
+  const next = nextRe.exec(src)
+  const body = src.slice(s1.index + s1[0].length, next ? next.index : src.length)
+  return body.split(/\r?\n/).map((line) => STATUS_LINE_RE.exec(line)).find(Boolean)?.[1] ?? null
+}
+
+/**
+ * §N 段尾追加一行（§4.18-B——重开追记行载体；append-only：只追加，既有行字节零变）。
+ * 位置 = 段体尾部（下一 `## §` 段头之前 ∥ 文末）；追加行 EOL = §1 段头行自身行尾
+ * （`\r\n` ⇒ CRLF ∥ 其余 ⇒ `\n`——探测窗 = 段头行整体〔含行尾〕，`/^## §N[^\r\n]*\r?\n/` 一次取形）。
+ * 段标题缺失 ⇒ throw（create 是骨架唯一权威入口——同 append 面 fail-closed）。
+ */
+function appendLineToSection(src, seg, line) {
+  const hdr = sectionHeaderRe(seg).exec(src)
+  if (!hdr) {
+    throw new Error(`batch: the batch record has no "## §${seg}" section header — cannot append to its tail (create is the skeleton's only authoritative entry). Nothing was written.`)
+  }
+  const headerLine = /^## §\d[^\r\n]*\r?\n/m.exec(src.slice(hdr.index))
+  const eol = headerLine?.[0].endsWith("\r\n") ? "\r\n" : "\n"
+  const nextRe = /^## §\d/gm
+  nextRe.lastIndex = hdr.index + hdr[0].length
+  const next = nextRe.exec(src)
+  const endIdx = next ? next.index : src.length
+  let before = src.slice(0, endIdx)
+  const after = src.slice(endIdx)
+  // 只保证「行自成行」：段尾无换行 ⇒ 补一个段头行行尾；已有换行零补（不插空行——只追加判据 = 行数 +1）
+  if (!before.endsWith(eol)) before += eol
+  return before + line + eol + after
 }
 
 /** 全词表去重并集（各段项——value 命中判据与 note 零命判据共用同一口径）。 */
@@ -268,13 +365,20 @@ function assertStatusValue(seg, value) {
   }
 }
 
+/** note 单行判据（两径共用——非重开径落状态行括注、重开径落 §1 追记行，两者都是一行；
+ *  重开径不取 `assertStatusNote` 的另两条判据〔词表零命中 / 死占位〕——理由允许携词表关键字，
+ *  而追记行不是状态行形态、不参与 gate 判读（§4.18-B 理由校验）。 */
+function assertSingleLineNote(note) {
+  if (/\r?\n/.test(note)) {
+    throw new Error("batch: status note must be a single line — a multi-line note would break the one-line status-line form. Nothing was written.")
+  }
+}
+
 /** status `note` 字段校验（F11-A——落盘形态 = 状态行行内括注）：单行 + **全词表零命中**
  *  （括注永不误触冻结门——§1 判定是子串包含；已收口优先误冻结防线的第二道）+ 死占位判据零命中
  *  （括注不得成为骨架占位的新驻留面）。 */
 function assertStatusNote(note) {
-  if (/\r?\n/.test(note)) {
-    throw new Error("batch: status note must be a single line — a multi-line note would break the one-line status-line form. Nothing was written.")
-  }
+  assertSingleLineNote(note)
   const hits = statusVocabulary().filter((w) => note.includes(w))
   if (hits.length) {
     throw new Error(`batch: status note must not contain any STATUS_WORDS keyword (${hits.join(" + ")}) — a parenthetical carrying a keyword would be read as gate truth (§1 substring predicate). Put the keyword in value, the prose in note. Nothing was written.`)
@@ -293,9 +397,11 @@ function assertStatusNote(note) {
  * path 参数 = 仅 depth-0（D-BR21）——子代理/评审传 path ⇒ 拒（目标 = spawn/实例注入，语法上
  * 写不到别处）。F11-C 挂点 = 写盘前（assertStatusValue 后）：档头结构行含骨架死占位 ⇒ 拒
  * （段体引用豁免；close 不拦——收口是主 agent 终态动作）。
- * @returns {string} 成功消息
+ * **收口第二通路**：值余核 = §1「已收口」时本 action 同样收口（链门 + 机检门 + 冻结与 close 同序）⇒
+ * 状态行写盘后同调 `reanchorOnClose`（单源——不复制 close 径逻辑），回执携同一 `[ledger reanchor]` 段。
+ * @returns {Promise<string>} 成功消息
  */
-export function statusBatchRecord({ args, ctx, review, pickTarget, onWritten }) {
+export async function statusBatchRecord({ args, ctx, review, pickTarget, onWritten }) {
   const depth0 = isDepthZero(ctx)
   // 模式位执行期实读（§4.16——同款先例 = task.mjs execute 门；翻转即时生效——D-BR26）。
   // 写域：评审 → §3 · 子代理 → 身份段（普通模式分支合并 coder 增表——工程模式分支不查）·
@@ -332,44 +438,118 @@ export function statusBatchRecord({ args, ctx, review, pickTarget, onWritten }) 
   if (/\r?\n/.test(value)) {
     throw new Error("batch: status value must be a single line — a multi-line value would break the one-line status-line form. Nothing was written.")
   }
-  // note（可选）：散文说明的承载面——落状态行行内括注（value 内散文不再容忍）。缺省 / 空串 = 无括注。
+  // note（可选）：散文说明的承载面——落状态行行内括注（value 内散文不再容忍）；缺省 / 空串 = 无括注。
+  // **重开径例外（§4.18-B）**：值关键词 = 进行中 ∧ §1 门态 = closed ⇒ note = 重开理由（J4 缺则拒），
+  // 不进状态行括注（落 §1 追记行）；`assertStatusNote` 不取——理由允许携词表关键字（常写「误标已收口」）。
   const note = typeof args?.note === "string" ? args.note.trim() : ""
   assertStatusValue(seg, value)
-  if (note) assertStatusNote(note)
-  const lineValue = note ? `${value}（${note}）` : value
   const abs = pickTarget(args?.path)
   const src = readFileSync(abs, "utf8")
-  assertGateOpen(src)
+  // 重开合取（§4.18-B）：段 = §1 · depth-0（非评审）· 值关键词 = 进行中 · 门态 = closed——
+  // 先于冻结拒写判定（门②的唯一例外）；note = 重开理由（J4 缺则拒）。
+  const reopen = seg === 1 && depth0 && !review && stripDecorations(value) === STATUS_WORDS[1].open && readBatchStatusLine(src) === "closed"
+  if (reopen && !note) throw new Error(reopenReasonError()) // J4——重开必须带理由
+  // 重开径理由校验（§4.18-B）：单行 + 非空（非空已由 J4 判）；**不取 `assertStatusNote`**——理由
+  // 允许携状态词表关键字（常写「误标已收口」：追记行不是状态行形态、不参与 gate 判读）。
+  if (reopen) assertSingleLineNote(note)
+  else if (note) assertStatusNote(note)
+  const lineValue = note && !reopen ? `${value}（${note}）` : value
+  if (!reopen) assertGateOpen(src) // 冻结拒写——重开合取是唯一越过点（§4.9 门②例外；其余逐字零变）
   // F11-C（写盘前）：档头结构行死占位残留 ⇒ 拒（段体引用豁免——判据可辨性收正，`TOOLS.md` §6.20）
   const residues = findPlaceholderResidue(src)
   if (residues.length) throw new Error(placeholderResidueError(residues))
+  if (reopen) {
+    // 重开（§4.18-B）：一次写盘、两处落笔（状态行改写 + §1 段尾追记行）——不跑链门 / 机检门
+    //（值非「已收口」；写后门态 = open，后续 append/status 恢复放行）。
+    writeFileSync(abs, rewriteAsReopen(src, note))
+    onWritten?.(ctx?.agent ?? {}, abs)
+    return `batch: §1 reopened — status line → 「进行中（重开 ${todayLocal()}）」 + reopen record appended to §1 (reason lands verbatim in the record line). Append/status are writable again (BR-64); the closeout chain gate still applies at the next close.`
+  }
+  // ③ 链完整性门（§4.18-A——门位 = 冻结拒写之后、文档机检门之前）：链未跑完先报结构缺口，不先跑机检
+  // 收口判据（本笔把 §1 写成「已收口」）单点——链门 ∥ 机检门 ∥ 重锚合取三处共消费，段号守卫只写这一次
+  // （`STATUS_WORDS[1].closed` 只属 §1 项，`assertStatusValue` 亦拒他段该值；显式 `seg === 1` 让不变量不靠巧合）。
+  const closingValue = seg === 1 && stripDecorations(value) === STATUS_WORDS[1].closed
+  if (closingValue) assertCloseoutChainComplete(src)
+  // ④ 文档机检门（§3.20「结构兜底」②——门位 = 链门之后、状态行改写之前）：值余核 =「已收口」时同门；
+  // REFUSED（K ≥ 1）∥ ERROR ⇒ throw（§1 状态行字节不变）；其余值零挂（回执逐字旧形）。
+  const gate = closingValue ? runBatchGate({ abs, cwd: ctx?.agent?.cwd ?? process.cwd(), agent: ctx?.agent ?? {}, scope: "close" }) : null
+  if (gate && (gate.state === "refused" || gate.state === "error")) throw new Error(gateRefusalMessage(gate, "status"))
   const written = updateSectionStatusLine(src, seg, lineValue)
   writeFileSync(abs, written)
   onWritten?.(ctx?.agent ?? {}, abs)
-  return `batch: §${seg} status line updated to ${JSON.stringify(lineValue)} — the freeze gate (§1) is a read-only domain for non-§1 writes (frozen truth stays = the §1 line).`
+  // 收口重锚（§6.2 · C · AC-M2-30）：值余核 = §1「已收口」⇒ 本 action 就是收口（上两道门与 close 同序、
+  // 同样冻结档）⇒ 同调单源 `reanchorOnClose`（不复制 close 径逻辑）；次序位 = 状态行写盘之后（与 close 径一致）
+  // ——本笔被任一拒因拒 ⇒ 上面各门早 throw，台账零写（被拒的收口没有收口）。
+  // **一次收口只出一份清单**：触发 = `closingValue` ∧ 前态未冻结；`batch` 一次调用只分派一个 action
+  // （close ∥ status 不会同拍）⇒ 同一拍至多一次重锚、至多一份 `[ledger reanchor]`。前一合取项 =
+  // **defensive-only**：前态 closed 已被冻结门（`assertGateOpen`，本函数上方）早拒，正常路径跑不到这里。
+  const reanchor = closingValue && readBatchStatusLine(src) !== "closed" ? await reanchorOnClose(abs) : null
+  return `batch: §${seg} status line updated to ${JSON.stringify(lineValue)} — the freeze gate (§1) is a read-only domain for non-§1 writes (frozen truth stays = the §1 line).${gateReceiptLine(gate)}${reanchorReceiptLine(reanchor)}`
 }
 
 /**
  * close——收口冻结（§4.13，仅 depth-0）。§1 状态行 →「已收口 <YYYY-MM-DD>」；此后该档
- * append/status 全拒（冻结判据唯一真值 = §1 行——§4.9 零语义变）。对已收口档再 close ⇒ 拒
- * （close 本身是对冻结档的写）。不代写 §6 内容、不替代台账核销事务。
- * 前提三规则（#422）：① §6 非空闸（空 ⇒ 拒 + 提示先写 §6）；② 拒句含「失败 ⇒ 勿 close」
- * （append/status 面——见 batch.mjs 与上方 assertGateOpen）；③ 无状态行档 ⇒ 自建机读位
- * （updateSectionStatusLine 缺失即插——同路收口；「有行但不可解析」仍 fail-closed）。
- * @returns {string} 成功消息
+ * append/status 全拒（冻结判据唯一真值 = §1 行——§4.9 零语义变；唯一例外 = 重开合取 §4.18-B）。
+ * 对已收口档再 close ⇒ 拒（close 本身是对冻结档的写）。不代写 §6 内容、不替代台账核销事务。
+ * 前提规则（#422 + 本批 A 链门 §4.18-A）：① 链完整性门（收口前置——§2/§3/§4/§6 各段有内容 ∥ 声明
+ * 不适用；§6 唯一缺段时拒串 = 旧 §6 串逐字零回归）；② 拒句含「失败 ⇒ 勿 close」（append/status 面
+ * ——见 batch.mjs 与上方 assertGateOpen）；③ 无状态行档 ⇒ 自建机读位（updateSectionStatusLine
+ * 缺失即插——同路收口；「有行但不可解析」仍 fail-closed）。
+ * @returns {Promise<string>} 成功消息
  */
-export function closeBatchRecord({ args, ctx, review, pickTarget, onWritten }) {
+export async function closeBatchRecord({ args, ctx, review, pickTarget, onWritten }) {
   assertMainAgentOnly(ctx, "close", review)
   const abs = pickTarget(args?.path)
   const src = readFileSync(abs, "utf8")
   // #422③：§1 无状态行档 ⇒ 自建机读位（下行走 updateSectionStatusLine 缺失即插——同路收口）；
   // 「有行但不可解析」维持 fail-closed（assertGateOpen 拒——防误冻结）。
   if (readBatchStatusLine(src) !== "open" && sectionHasStatusLine(src, 1)) assertGateOpen(src)
-  // #422①：§6 非空闸（空 ⇒ 拒 + 提示先写 §6）——防「append 被拒 ⇒ close 照常 ⇒ §6 永久为空」复发。
-  if (!sectionSixHasContent(src)) throw new Error(emptySectionSixError())
+  // 链完整性门（§4.18-A——门位 = 既有拒因之后、文档机检门之前）：§2/§3/§4/§6 各段有内容 ∥ 声明
+  // 不适用；缺段 ⇒ 拒并点名（§6 唯一缺段 = J2 旧串逐字）。含声明形不合判（J3——不静默当作无声明）。
+  assertCloseoutChainComplete(src)
+  // 文档机检门（§3.20「结构兜底」②——门位 = 链门之后、状态行改写之前）：REFUSED（K ≥ 1）∥ ERROR
+  // ⇒ throw（fail-closed，不落「已收口」）；PASS / 未跑（无声明面）⇒ 落盘 + 回执明示。
+  const gate = runBatchGate({ abs, cwd: ctx?.agent?.cwd ?? process.cwd(), agent: ctx?.agent ?? {}, scope: "close" })
+  if (gate.state === "refused" || gate.state === "error") throw new Error(gateRefusalMessage(gate, "close"))
   const date = todayLocal()
   const written = updateSectionStatusLine(src, 1, `已收口 ${date}`)
   writeFileSync(abs, written)
   onWritten?.(ctx?.agent ?? {}, abs)
-  return `batch: §1 status line → 「已收口 ${date}」 — the record is frozen: append/status are refused from now on (整档冻结；改 = 新批新档; §6 内容与台账核销仍走既有通道).`
+  // 收口重锚（§6.2 · C · AC-M2-30）：顺序位 = 全部拒因通过、§1 状态行写盘**之后**（上两行）——close 被拒
+  //（身份 ∥ 冻结 ∥ 链完整性门 ∥ 文档机检门）⇒ 台账零写（被拒的 close 没有收口，「原批已收口」那时是假事实）。
+  const reanchor = await reanchorOnClose(abs)
+  return `batch: §1 status line → 「已收口 ${date}」 — the record is frozen: append is refused from now on, and status is refused except the reopen conjunction (§1 → 进行中 with a note) (整档冻结；改 = 新批新档; §6 内容与台账核销仍走既有通道).${gateReceiptLine(gate)}${reanchorReceiptLine(reanchor)}`
+}
+
+/** 收口重锚（设计档 §6.2 · C）——收口两条通路（`close` ∥ `status` 写 §1「已收口」）共调本函数（同一单源，
+ *  不复制逻辑）；写入单源 = `ledgerReanchorBatch`（本档只供 `cwd` 基准与回执形；工具层零 SQL）。
+ *  `cwd` = **批档所属项目根** = `resolveLedgerRoot(dirname(<batchDoc>))?.root`（§6.1 口径 2 同一子表达式）——
+ *  **不用会话锚**：会话锚为工作区 ∥ 容器时可能收到别的项目根 ⇒ 选行零命中 ⇒ 唯一的机器写静默失效。
+ *  无根 ⇒ 传 `null`（核心不取行、不重锚，`failed` 点名——不落兜底基准）。
+ *  `batch` = 项目根相对路径（复启句的 `<批名>` 即其文件部分；绝对路径同样可解析，但句内会带整条绝对路径）。
+ *  失败**不抛**（台账忙 ∥ 无根均不否决收口——档面写与台账库分属两存储，不做分布式事务）。 */
+async function reanchorOnClose(abs) {
+  try {
+    const { ledgerReanchorBatch, resolveLedgerRoot } = await import("../ledger.mjs") // 动态 import：ledger-db 静态引 node:sqlite（W8 契约②）
+    const root = resolveLedgerRoot(dirname(abs))?.root ?? null
+    // 句内路径统一正斜杠（与 `task_book` 列值同形——`<批名>` 是给人读的事实句，不是平台路径）
+    return ledgerReanchorBatch({ cwd: root, batch: root ? relative(root, abs).replace(/\\/g, "/") : abs })
+  } catch (e) {
+    // 非预期异常（模块加载失败 ∥ 根推导内读声明抛）同样不得否决收口——降为同一返回形（台账零写）
+    return { batch: abs, reanchored: [], alreadyAnchored: [], failed: String(e?.message ?? e) }
+  }
+}
+
+/** 重锚回执段（回执单源 = `ledgerReanchorBatch` 返回形——本档不另调选行再拼一次）：无未落行 ⇒ 无该段；
+ *  失败 ⇒ 点名失败因（台账零写、冻结照常）；非空不覆盖形（复启句入 `evidence`）逐行点名。 */
+function reanchorReceiptLine(result) {
+  if (!result) return ""
+  if (result.failed) return `\n[ledger reanchor] 未重锚：${result.failed}——台账零写；记录冻结照常完成`
+  const line = (r) => `#${r.id} ${r.status} 「${r.title}」`
+  const anchored = result.reanchored.map((r) => `${line(r)}→ 条件${r.sentenceTo === "evidence" ? "（resume_when 现值非空——原值保留，复启句追加 evidence）" : ""}`)
+  const skipped = result.alreadyAnchored.map((r) => line(r))
+  return [
+    anchored.length ? `\n[ledger reanchor] 本批未落行 → 条件 ${anchored.length} 行：${anchored.join("；")}` : "",
+    skipped.length ? `\n[ledger reanchor] 已是 条件（幂等跳过，零写）${skipped.length} 行：${skipped.join("；")}` : "",
+  ].join("")
 }

@@ -59,8 +59,8 @@ export function updateWelcomeStatus(ctx) {
  *  `fallback` ⇒ **两字面按载荷 `model` 在场分**（在场 ⇒ 现字面 `banner.defaultModelFallback` ∥ 缺 ⇒
  *  未定变体 `banner.defaultModelFallbackNoModel`——2026-10-09 清除批：渠道单值模型退场，「模型未定」
  *  态独立成句）+ 动作钮「选择默认模型」（`banner.chooseDefaultModel`）；
- *  `ok` ⇒ 现键 `banner.configured`。`onChoose` = 动作钮出口（chat-messages 注入 `openSettings`）——
- *  钮不开会话级模型菜单（真修口 = 设置面默认模型段；避死端同 #840 KD-3）。 */
+ *  `ok` ⇒ 现键 `banner.configured`。`onChoose` = 动作钮出口（注入点 = `webview/chat-messages.js`）——
+ *  开**会话级模型菜单**（= 模型钮同径；钮重指决策单源 = `docs/desktop/design/SETTINGS.md` §1 KD-80 ⑤）。 */
 export function showBanner(ctx, ps, onChoose) {
   let banner = document.getElementById("provider-banner")
   if (!banner) {
@@ -110,7 +110,7 @@ export function addUser(ctx, text, timestamp, idx) {
   ctx.messagesEl.appendChild(el)
   trimOldMessages(ctx)
   scrollDown(ctx)
-  return el // 标记面（`queued-mark.js`）需持有气泡引用
+  return el // 调用方按需持有气泡引用（核 composer 忙态 `markPending` 原语；VSC 忙态零本地气泡——带面在 `pending-band.js`）
 }
 
 /** Restored assistant FRAME container（核 `buildAssistantRestore`——live-DOM parity 同形）。 */
@@ -131,7 +131,7 @@ export function newBlock(ctx) {
   trimOldMessages(ctx)
 }
 
-/** X2（显示面消差批 §2.1）：advisor 卡头轮次标签（字面 = CLI `tool-events.mjs:152` `roundTag` 逐字）
+/** X2（显示面消差批 §2.1）：advisor 卡头轮次标签（字面 = CLI `buildToolCallbacks` `roundTag` 逐字）
  *  `(round N · model)`；无 model ⇒ 降级形 `(round N)`（不显 `null`）；无 round ⇒ `""`（零改面——
  *  非 advisor / 无轮次载荷逐字节同修前）。状态行同用（`chat.js`：`advisor review${tag}`）。 */
 export function advisorRoundTag(round, model) {
@@ -192,7 +192,7 @@ export function buildHistoryMessage(ctx, msg) {
   return null
 }
 
-/** 错误横幅：唯一出站 `retry`（`:413`）经 `ctx.vscode.postMessage` 绑定注入（判别式字面量须在
+/** 错误横幅：唯一出站 `retry` 经 `ctx.vscode.postMessage` 绑定注入（判别式字面量须在
  *  发射位可提取——§13 发面机检）；建块 / append / 跟滚留端。 */
 export function showError(ctx, text, techInfo) {
   if (!ctx.currentBlock) newBlock(ctx)

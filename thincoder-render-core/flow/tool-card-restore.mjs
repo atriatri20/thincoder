@@ -12,6 +12,7 @@
 import { capText, isToolFailure } from "../lib.mjs"
 import { esc } from "../md.mjs"
 import { t } from "../i18n.mjs"
+import { formatToolSummary } from "../tool-summary.mjs"
 
 /** One restored tool card from a historyWindow tools[] entry ({ id, name, args, result }).
  *  - args（评审 #5 槽位定）：header 恒 raw slice 80 + title 全（live :209 对齐——live 显示
@@ -37,16 +38,24 @@ export function buildFinishedToolCard(tc) {
   h.tabIndex = 0
   h.setAttribute("role", "button")
   h.setAttribute("aria-expanded", "false")
+  // #1343（car2 批 · 2026-10-15）：卡头补 `.tool-call-summary` 槽——摘要单源 `formatToolSummary`，
+  // 条件 ∥ 字面 ∥ truncated 分支逐字同活卡（`tool-card.mjs` `finishToolCard`）——消两径形态失配。
+  const summary = formatToolSummary(name, result)
+  const truncated = tc.resultTruncated === true
+  const summaryHtml = (summary || truncated)
+    ? `<span class="tool-call-summary">→ ${esc([summary, truncated ? t("tool.truncated") : ""].filter(Boolean).join(" "))}</span>`
+    : ""
   h.innerHTML =
     `<span class="tool-call-icon"></span>` +
     `<span class="tool-call-name">${esc(name)}</span>` +
     `<span class="tool-call-args" title="${esc(rawArgs)}">${esc(rawArgs.slice(0, 80))}</span>` +
-    `<span class="tool-call-status" style="color:${isError ? "#f14c4c" : "#4ec9b0"}">${isError ? t("tool.error") : t("tool.done")}</span>`
+    `<span class="tool-call-status" style="color:${isError ? "#f14c4c" : "#4ec9b0"}">${isError ? t("tool.error") : t("tool.done")}</span>` +
+    summaryHtml
 
   const b = document.createElement("div")
   b.className = "tool-call-body"
   b.setAttribute("role", "region")
-  b.setAttribute("aria-label", `Output of ${name}`)
+  b.setAttribute("aria-label", t("tool.outputOf", { name }))
 
   let pretty = null
   try {

@@ -33,7 +33,7 @@ export const GIT_NET_TIMEOUT_MS = 300_000
 /** 网路面五动作（300s 档——合法耗时可远超本地；依据 = 需求档 §4.7 TTY-DRIVE N3 候选参照值）。 */
 const GIT_NET_ACTIONS = new Set(["push", "fetch", "pull", "clone", "ls-remote"])
 
-/** 测试态缝（模块级 · 缺省 null = 生产零行为变——先例 `manifest-discovery.mjs:15-20` · `session-gc.mjs:186`）。
+/** 测试态缝（模块级 · 缺省 null = 生产零行为变——先例 `manifest-discovery.mjs` 的 `_setProjectRootForTest` · `session-gc.mjs` 的 `_setSessionGcDelayForTest`）。
  *  用例 `finally` 复位；不经用户参数面（边界：不新增参数 / 用户选项）。 */
 let gitTimeoutOverride = null
 export function _setGitTimeoutForTest(ms) { gitTimeoutOverride = ms }
@@ -100,7 +100,7 @@ export function spawnGit(cwd, args, { timeout, maxBuffer } = {}) {
     }
     const treeKill = () => { try { killProcessTree(child) } catch { /* 尽力而为 */ } }
     // 超时动作序（§6.14）：① 直接子 → ② 逾 1.5s 树杀（`killProcessTree`，尽力而为）→ ③ 逾 1.5s 未 `close`
-    // 亦 settle（kick——孙进程持管道时 `close` 永不触发，`bash.mjs:200-217` 同款）。上界 = timeout + 3s。
+    // 亦 settle（kick——孙进程持管道时 `close` 永不触发，`bash.mjs` 的 `runBash` 同款）。上界 = timeout + 3s。
     // 平台分岔（§6.14 平台注的后果）：win32 上 SIGTERM 实为硬终止且**不连带子进程**——父一死，
     // `taskkill /PID <父> /T` 就够不到孙进程（实测：helper 孤儿存活、管道不放 ⇒ 只能等 kick）⇒
     // win32 直接走树杀（须在树仍可寻址时执行）；POSIX 保留宽限序（组杀在头进程死后仍可达全组）。

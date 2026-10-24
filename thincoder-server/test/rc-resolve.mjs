@@ -1,6 +1,6 @@
 /**
  * rc-resolve.mjs — `/rc/` 解析钩子（**非用例文件** ⇒ 不入 `prepublishOnly` 链 ∥ 不入 `files` 白名单——不打包；
- * 由 `prepublishOnly` 链行以 `--import` 预载 —— `node --test` 的测试文件进程同生效）。
+ * `node --test` 的测试文件进程同生效）。
  * 控制台渲染面经 `/rc/**` **第二根**取核件（同源绝对路径 —— `docs/server/design/agent/ADMIN-AGENT.md` §11「复用形」；
  * 生产面 = `src/webui/static.mjs` 根表）。平 node 无该 origin ⇒ 本钩子把 `/rc/<子路径>` 解析到
  * `@thincoder/render-core` 包根（**包名解析单源** = `package.json`，与生产 `static.mjs` 的

@@ -113,8 +113,8 @@ export async function applyThink(e, agent, syncProviderField, spec, isEffortOnly
   // `effort` 档位取 `"none"` = **关思考**（非“强度零”）：与本面 off 动作同语义 ⇒ 归一到 off 路径
   // （各族取其原生 off 形：effort 型 = `thinking:null`＋删 effort；type 型 = `{type:"disabled"}`）。
   // 不归一的两处违约：① 菜单头同拍显示「Thinking: ON | Effort: none」自相矛盾（off 标记缺失）；
-  // ② 残留 `reasoningEffort:"none"` 会被载荷层当强度档送（`provider/core.mjs:197-204`），与百炼
-  // qwen 侧 off 判据（`config.mjs:133-139` 的 `thinking === null ⇒ false`）错位 ⇒ 服务端仍思考。
+  // ② 残留 `reasoningEffort:"none"` 会被载荷层当强度档送（`provider/core.mjs`），与百炼
+  // qwen 侧 off 判据（`config.mjs` 的 `thinking === null ⇒ false`）错位 ⇒ 服务端仍思考。
   if (e.action === "effort" && e.level === "none") e = { action: "off" }
   if (e.action === "auto") {
     const cfg = agent.config.agent ??= {}
@@ -152,7 +152,7 @@ export async function applyThink(e, agent, syncProviderField, spec, isEffortOnly
         cur.thinking = { type: thinkOnValue }
         if (!cur.reasoningEffort) cur.reasoningEffort = "high"
       } else {
-        // off 取形 = 单源 `thinkOffShape`（§15.4-2 / §16.2 生产者表第 2 行）：非 effort 族 ⇒
+        // off 取形 = 单源 `thinkOffShape`（§15.4-2 / §16.2 生产者表「`applyThink` off 支」行）：非 effort 族 ⇒
         // `{type:"disabled"}`——自定义开值族随 §15.4-2 表改判由 `undefined`（不发字段 = 服务端
         // 默认 = 想）改本形（达载荷层 = 真 off）。
         cur.thinking = thinkOffShape(spec)

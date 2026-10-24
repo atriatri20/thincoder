@@ -91,7 +91,8 @@ ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.5 "cd ~/thincoder-se
 4. **容器名固定** = `thincoder-server-deploy-server-1`（compose 项目名 + 服务名派生）。
 5. **`config/` 与 `data/` 属 `ecs-user`**（部署目录本身属 `thincoder`）——直接 `cp` 这两处的文件可能被拒。
 6. **别在大负载时硬上**：这台同时是桌面 Linux 构建机；历史上出现过旁路进程撑满 + sshd 饿死（须重启恢复）——重活并行时先 `uptime` ∥ `free -m` 看一眼。
-7. **盒镜像构建源慢**（runner 机）：容器内打 `deb.debian.org` = **19 kB/s**（9.4MB 用 8min13s）⇒ 直建 20min+。绕行 = **构建期换源副本**（仅改副本、产品 Dockerfile 不动）——台账 #1250。
+7. **盒镜像构建源慢**（runner 机）：容器内打 `deb.debian.org` = **19 kB/s**（9.4MB 用 8min13s）⇒ 直建 20min+。已固化 = 构建期换源（`--build-arg APT_MIRROR=<镜像主机>`；值 = 主机[:端口]，缺省不传 = 官方源零改）——台账 #1250：
+   盒镜像构建（上下文 = 仓根）：`docker build -f thincoder-server/deploy/sandbox/Dockerfile --build-arg APT_MIRROR=mirrors.aliyun.com -t thincoder-sandbox:1 .`
 8. **Docker Hub 不可达**（runner 机实测 `registry-1.docker.io:443` i/o timeout）⇒ 节点机上直接 pull 必败；盒镜像在 .5 构建后搬运 = `docker save │ gzip` ⇒ scp ⇒ `docker load`（本次 111MB tgz 走 .5⇒本机⇒.6）。
 
 ## 7. runner 机（sh-mgr · 10.0.0.6——沙盒执行面）
@@ -140,6 +141,6 @@ curl -s http://127.0.0.1:2375/version
 
 ## 8. 相关档
 
-- 测试环境首部署批（来源 ∥ 授权 ∥ 安全组开放过程）= `batches/2026-10-09-server-test-env-ecs.md` §1。
+- 测试环境首部署的来源 ∥ 授权 ∥ 安全组开放过程 = 见该次部署执行记录（过程面，不入本档）。
 - 产品侧部署设计 = `server/design/ops/OPS.md` §5 ∥ `thincoder-server/README.md` §3。
 - 三端发布流程 = `RELEASE.md`。

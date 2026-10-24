@@ -1,5 +1,6 @@
 /**
- * settings-sections-team.mjs — 团队段体族（B1 批 · 2026-10-10 · 台账 #1212；**登录面补全批收正** —— 台账 #1231）：
+ * settings-sections-team.mjs — 团队段体族（B1 批 · 2026-10-10 · 台账 #1212；**登录面补全批收正** —— 台账 #1231；
+ *   **team-token-rotation 批增段「轮换」控件** —— 台账 #1238）：
  *   `teamAdminBody` = 设置面「团队」段体（**管理面** —— 详情三行 server ∥ member ∥ label，**零登/退控件**）；
  *   `teamBody` = 登/退面段体（**状态段就地面板**消费 —— 单一实现；未登录 = 表单 ∥ 已失效 = 失效行 + 重登面 ∥ 已登录 = 状态行 + 退出钮）；
  *   `fieldPair` ∥ `noticeNode` 入导出面（首启向导团队表单复用 —— 三字段 ∥ 结果行单一 owner）。
@@ -7,8 +8,9 @@
  * 面形（单源 = `docs/desktop/design/SETTINGS.md` §2.22 ∥ `docs/core/design/TEAM.md` §2.5 ∥ §2.6）：
  *   未登录（`loggedIn` 假）= 表单（服务器地址 ∥ 用户名 ∥ 密码 三字段 + 登录钮）+ 提示行「未登录——登录后可用」；
  *   已失效（`loggedIn` 真 ∧ `verify === "invalid"`）= 失效行（核字典键 `status.team.invalid` —— 经核字典投影直取，零副本）+ 重登面（同表单 —— 预填留存值）；
- *   已登录 = 状态行三读（服务器地址 ∥ 成员 ∥ 端标签）+ 「退出登录」钮；
- *   段内结果行（**当刻一次性**——`team:status` 复读不携提示字段）：登录失败四句（逐字同句）∥ 同名冲突 ∥ 吊销未达（两句逐字同句）。
+ *   已登录 = 状态行三读（服务器地址 ∥ 成员 ∥ 端标签）+ 「轮换」控件（确认一步——确认/取消两键就地）+ 「退出登录」钮；
+ *   段内结果行（**当刻一次性**——`team:status` 复读不携提示字段）：登录失败五句（逐字同句）∥ 同名冲突 ∥ 吊销未达 ∥ 轮换成句
+ *   （「已轮换——本机已改用新 token」）—— 该两包逐字同句。
  * 草稿保真（#604 口径）：地址 ∥ 用户名携 `data-draft`（重建保真）；**密码恒不保真**（不申报 ⇒ 重建即清空——安全面有意）。
  * 纪律：零 DOM（描述符树）· 文案一律经 `t()`、零字形字面 · 零 `node:` ∕ 零裸包 ∕ 零 `store.mjs` import。
  */
@@ -23,19 +25,21 @@ function memberOf(member) {
   return str(member?.name) ?? str(member?.username)
 }
 
-/** 团队失败码 → 词键（**四值闭集**——单源 = `docs/core/design/TEAM.md` §2.5）；表外 ⇒ 原样直传（零吞 —— 沿失败面词表通则）。 */
+/** 团队失败码 → 词键（**五值闭集**——单源 = `docs/core/design/TEAM.md` §2.5）；表外 ⇒ 原样直传（零吞 —— 沿失败面词表通则）。 */
 const TEAM_REASON_WORD = Object.freeze({
   network: "settings.team.reason.network",
   credentials: "settings.team.reason.credentials",
   rate_limited: "settings.team.reason.rateLimited",
   write_failed: "settings.team.reason.writeFailed",
+  invalid: "settings.team.reason.invalid",
 })
 
-/** 段内结果行文字（`notice` 切片三形；缺 ∥ 形不合 ⇒ `null` ⇒ 零节点）：失败句 ∥ 同名冲突 ∥ 吊销未达。 */
+/** 段内结果行文字（`notice` 切片四形；缺 ∥ 形不合 ⇒ `null` ⇒ 零节点）：失败句 ∥ 同名冲突 ∥ 吊销未达 ∥ 轮换成句。 */
 function noticeWord(notice) {
   if (notice === null || typeof notice !== "object") return null
   if (notice.kind === "manualConflict") return t("settings.team.notice.manualNameConflict")
   if (notice.kind === "revokeFailed") return t("settings.team.notice.revokeNotDelivered")
+  if (notice.kind === "rotateDone") return t("settings.team.rotateDone")
   if (notice.kind === "failure") {
     const code = str(notice.reason)
     if (code === null) return null
@@ -114,14 +118,33 @@ function statusNode(section, handlers) {
   ]
 }
 
+/** 段「轮换」控件 ∥ 确认一步（就地两键——非原生弹窗）：`section.notice.kind === "rotateConfirm"` ⇒ 确认段
+ *  （确认句 + 「轮换」/「取消」两键）；否则 = 「轮换」入口件（`handlers.onTeamRotateStart` 开确认）。 */
+function rotateControlNode(section, handlers) {
+  if (section?.notice?.kind === "rotateConfirm") {
+    const onYes = typeof handlers?.onTeamRotateConfirm === "function" ? handlers.onTeamRotateConfirm : undefined
+    const onNo = typeof handlers?.onTeamRotateCancel === "function" ? handlers.onTeamRotateCancel : undefined
+    return [
+      { tag: "div", props: { class: "settings-notice", "data-team-rotate-confirm": "" }, children: [t("settings.team.rotateConfirm")] },
+      { tag: "button", props: wire({ class: "settings-submit", type: "button", "data-action": "settings:teamRotateConfirm" }, onYes), children: [t("settings.team.rotate")] },
+      { tag: "button", props: wire({ class: "settings-submit", type: "button", "data-action": "settings:teamRotateCancel" }, onNo), children: [t("question.cancel")] },
+    ]
+  }
+  const onStart = typeof handlers?.onTeamRotateStart === "function" ? handlers.onTeamRotateStart : undefined
+  return [{ tag: "button", props: wire({ class: "settings-submit", type: "button", "data-action": "settings:teamRotate" }, onStart), children: [t("settings.team.rotate")] }]
+}
+
 /** 管理面段体（**登录入口补全批收正** —— 卡降：label ∥ 详情；零登/退控件：登/退 = 状态段就地面板 ∥ 首启两路；
- *  「轮换」= 另裁项 ⇒ 本批零控件；段态门归分派面）：详情三行 = server ∥ member ∥ label（末行词键 `settings.team.labelLabel`）。
+ *  段态门归分派面）：结果行 + 详情三行 = server ∥ member ∥ label（末行词键 `settings.team.labelLabel`）+
+ *  「轮换」控件（已登录在场——team-token-rotation 批）。
  *  值缺 ⇒ 该行零节点（禁假造——沿 `statusRowNode` 同判；未登录 ∥ 从未登录 ⇒ 零空壳）。 */
-export function teamAdminBody(section) {
+export function teamAdminBody(section, handlers = {}) {
   return [
+    noticeNode(section?.notice ?? null),
     statusRowNode("team-server", "settings.team.serverLabel", str(section?.server)),
     statusRowNode("team-member", "settings.team.memberLabel", memberOf(section?.member)),
     statusRowNode("team-label", "settings.team.labelLabel", str(section?.label)),
+    ...(section?.loggedIn === true ? rotateControlNode(section, handlers) : []),
   ]
 }
 

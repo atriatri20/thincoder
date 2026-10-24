@@ -1,7 +1,6 @@
 {
   "name": "@thincoder/render-core",
   "version": "0.1.0",
-  "private": true,
   "description": "ThinCoder shared render core — host-agnostic render modules (pure functions + DOM components: markdown / highlight / diff / lib / tool-summary / i18n / toast · conversation-flow blocks, tool cards, reasoning, stream stitching · approval, question, plan cards · subagent block state machine) shared by the VS Code extension webview and the desktop renderer.",
   "keywords": [
     "ai",
@@ -30,6 +29,9 @@
   },
   "exports": {
     "./*": "./*"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
     "*.mjs",

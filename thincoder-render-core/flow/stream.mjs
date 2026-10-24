@@ -1,6 +1,6 @@
 /**
- * stream.mjs — 流式增量渲染的 rAF 降频缝合（核化 `webview/streaming.js:36-79` / `:112` /
- * `:218-231`——判定表 §3 行 47「拆」）。
+ * stream.mjs — 流式增量渲染的 rAF 降频缝合（核化 `webview/streaming.js` 三处——
+ * 判定表 §3 行 47「拆」）。
  *
  * 缝合语义（逐字承源档）：reasoning/token chunk 千级/秒到达，逐 chunk 全量 md() + innerHTML
  * 是 O(n²) 且堵塞主线程（2026-08-16 "Stop won't stop while thinking" 缺陷治本）——rAF 降频
@@ -24,14 +24,14 @@ export function paintStreamTarget(el, raw) {
   paintLiveMd(el, raw)
 }
 
-/** 推理目标重渲（+ 追加滚动到底——源档 `:50` 行为）。 */
+/** 推理目标重渲（+ 追加滚动到底——源档 `streaming.js` 行为）。 */
 export function paintReasoningTarget(el, raw) {
   paintStreamTarget(el, raw)
   if (el) el.scrollTop = el.scrollHeight
 }
 
 /** 工具输出 O(1) 追加原语（**更新纪律收核** —— 单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-9；
- *  逻辑自 VSC `webview/chat-messages.js:77-96` toolOutput 支上提，VSC 改指零行为变更；桌面工具卡结果区消费）：
+ *  逻辑自 VSC `webview/chat-messages.js` toolOutput 支上提，VSC 改指零行为变更；桌面工具卡结果区消费）：
  *   ① 占位清：`deps.initial` 给（非 `undefined`）且现读数恒等 ⇒ 清空（首 chunk 落位）；
  *   ② 追加：`textContent += text`（成本 ∝ 本次 chunk —— 禁 ∝ 累计文本）；
  *   ③ 截断：超 `MAX_TOOL_OUTPUT` ⇒ `capText` 截断（**注字面 = `capText` 缺省注单源**）+ `_capped` 停收
@@ -113,7 +113,7 @@ export function createStreamRenderer(deps = {}) {
   }
 }
 
-/** 给容器内全部代码块挂复制钮（承 `streaming.js:218-231` 逐字；已挂者跳过，2000ms 复位标签）。 */
+/** 给容器内全部代码块挂复制钮（承 `streaming.js` 逐字；已挂者跳过，2000ms 复位标签）。 */
 export function attachCopyButtons(container, deps = {}) {
   if (!container) return
   const t = deps.t ?? coreT

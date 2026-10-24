@@ -1,7 +1,8 @@
 /**
  * panel-callbacks.mjs — runAgent 回调装配（webview 桥接面——2026-09-05 实践轮自
  * panel-chat.mjs runPanelChatImpl 按「骨干—细节两层」提取：回调工厂是独立决策
- * （25 个 onX 的 webview 桥协议——白名单字段/超时截断/压缩生命周期/子代理载荷），
+ * （25 个 onX 的 webview 桥协议——迁出时点数，今 28（含 ssh-session 批 `onSecretInput`）；
+ * 白名单字段/超时截断/压缩生命周期/子代理载荷），
  * 从 405 行回合驱动器提出后，impl 主干 = 阶段调用序列。闭包变量参数化：桥接目标
  * panel + 阶段产物（cwd/p/lines/槽位/autoTurn）作 deps——verbatim 移动，语义零变。
  * 四档结构拆分批（2026-09-18 · VSC-DEBT §12.2.3）：relay 中继面 + 任务可见性族投递队列迁出至
@@ -13,7 +14,7 @@ import { ctxUsageForHistory } from "../specs.mjs"
 // X6（显示面消差批 §2.2）：sync 完成注记锚（turn-cap / stopped-by-user）——核零依赖叶
 // （`child-marks.mjs`；静态引入安全：该叶零 import ⇒ 端壳静态闭包不达 node:sqlite——W8 契约②）。
 import { TURN_CAP_MARK, STOPPED_MARK } from "@thincoder/core/agent/child-marks.mjs"
-// X2（显示面消差批 §2.1）：advisor 生效模型解析——核单源（CLI `tool-events.mjs:131` 同函数；try/catch 降 null；静态链不达 node:sqlite）。
+// X2（显示面消差批 §2.1）：advisor 生效模型解析——核单源（CLI `buildToolCallbacks` 同函数；try/catch 降 null；静态链不达 node:sqlite）。
 import { resolveAdvisorProvider } from "@thincoder/core/advisor/run.mjs"
 import { extractFileLinks } from "./file-links.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
@@ -32,9 +33,9 @@ import { makeChildPermission } from "@thincoder/core/agent-tools/child-permissio
 // relay 中继面 + 任务可见性族投递队列迁出至 `panel-subagent-relay.mjs`（逐字搬迁 + 1-hop
 // 解析面结构约定 R-1–R-6）；此处只 import 回调装配面消费件（`buildPanelCallbacks`）。
 import { relaySubagentEventToken, relaySubagentContentChunk, emitToolPanel, postSubagentStatus, postSubagentApproval } from "./panel-subagent-relay.mjs"
-// 消费档 import 行逐字不变（KD-12）：`relaySubagentEventToken`（消费面 = `panel-messages-turn.mjs:24`
-// ——`cancelSubagent` 合成 callbacks `:123` 调用）· `postSubagentEvent` / `queuedInfoOf`（`suspension.mjs:38`
-// ——重生投影 `:94` 调用 · #118 R2）· `flushSubagentOutbox`（`panel-messages.mjs:35`——`:328` 调用）·
+// 消费档 import 行逐字不变（KD-12）：`relaySubagentEventToken`（消费面 = `panel-messages-turn.mjs`
+// ——`cancelSubagent` 合成 callbacks 调用）· `postSubagentEvent` / `queuedInfoOf`（`suspension.mjs`
+// ——重生投影调用 · #118 R2）· `flushSubagentOutbox`（`panel-messages.mjs` 调用）·
 // `emitToolPanel` / `relaySubagentContentChunk`（外部零消费）· `WV_OUTBOX_MAX`（外部零消费——机器面已随 2026-09-28 测试全清退役）。
 export { relaySubagentEventToken, relaySubagentContentChunk, emitToolPanel, postSubagentEvent, flushSubagentOutbox, WV_OUTBOX_MAX, queuedInfoOf } from "./panel-subagent-relay.mjs"
 
@@ -69,6 +70,34 @@ export function makeAskInPanel(panel) {
   })
 }
 
+/**
+ * Ask for a secret in the panel (persistent in-chat card, never auto-dismisses) — the VSC seat of the
+ * core `ctx.onSecretInput` injection seam（设计单源 = `docs/core/design/TOOLS.md` §6.22 ⑧）。
+ * `makeAskInPanel` 同族：队列条目按 `promptId` 配对（迟到 / 错序响应不误 resolve 队头）；
+ * Stop / abort ⇒ 摘卡 + resolve null（工具侧得可读句——不挂起）。返回该卡的按问函数。
+ * 值面纪律（NS4）：本函数只透传载荷与返回值——零日志 ∥ 零端面留存。
+ */
+export function makeAskSecretInPanel(panel) {
+  return (payload) => new Promise((resolve) => {
+    panel._secretSeq = (panel._secretSeq ?? 0) + 1
+    const id = panel._secretSeq
+    const entry = { id, resolve }
+    panel._secretQueue = panel._secretQueue ?? []
+    panel._secretQueue.push(entry)
+    panel._setStatus("waiting")
+    panel._panel?.webview.postMessage({ type: "secretInput", payload, promptId: id })
+    // Stop must release the waiting turn（同 makeAskInPanel）：无人应答的凭据卡不得让回合永久悬挂。
+    const onAbort = () => {
+      const i = panel._secretQueue.indexOf(entry)
+      if (i >= 0) panel._secretQueue.splice(i, 1)
+      panel._panel?.webview.postMessage({ type: "secretInputCancelled", promptId: id })
+      resolve(null)
+    }
+    if (panel._abortController?.signal.aborted) onAbort()
+    else panel._abortController?.signal.addEventListener("abort", onAbort, { once: true })
+  })
+}
+
 // ─── 状态文本 / digest cap 发射面（2026-09-12 活动区收口批——WEBVIEW.md §14 C-12/C-10）──
 /** onWait → `statusText` 结构化载荷（C-12#1——纯函数，测试直驱面）：rate = TPM 限流等待（CLI
  *  相名 `gate` 一并映射——对位保留）；overloaded = 5xx 重试等待；retry = 429 限流；quota = 配额耗尽；`warn`（前置告警）与未知 → null。 */
@@ -81,7 +110,7 @@ export function statusTextPayload(info) {
   return null
 }
 
-/** digest turn-cap 行发射（C-10）：auto = AUTO 档续跑（CLI agent-turn.mjs:188）、stop = 手动档停止（:192）。
+/** digest turn-cap 行发射（C-10）：auto = AUTO 档续跑（CLI `runAgentTurnBody`）、stop = 手动档停止。
  *  #726（2026-10-01 · 跨端消化面恢复批）：同点双动作——行帧 + 留档记录（全调用面同收；形单源 §6.26——
  *  载体 = 活行载体人读线对象，不绑记录存储 ∥ `history` 弃数组；载体缺位⇒零动作 + 日志一行，零抛）。 */
 export function postDigestCap(panel, mode, turns) {
@@ -101,7 +130,7 @@ function settleSyncSubagent(panel, key, note) {
   postSubagentStatus(panel, { status: "done", role: path.head.slice(0, hash), id, note: note ?? null })
 }
 
-/** X6（显示面消差批 §2.2 · 判据与 CLI `tool-events.mjs:217` 同源同序）：sync 完成注记——
+/** X6（显示面消差批 §2.2 · 判据与 CLI `buildToolCallbacks` 同源同序）：sync 完成注记——
  *  turn-cap 锚 ⇒ `turn cap reached — work may be partial`；停面锚 ⇒ `stopped by user — work may be partial`；
  *  否则 null（零注记——**不伪造**）。锚常量 = 核单源（`child-marks.mjs`），禁字面复制。 */
 function syncNoteOf(result) {
@@ -111,8 +140,8 @@ function syncNoteOf(result) {
   return null
 }
 
-/** X2（显示面消差批 §2.1）：advisor 卡头 / 状态行补充字段——字面与判据同源 CLI `tool-events.mjs:131` /
- *  `:145` `:152`（`round = _advisorRound + 1`）；非 advisor 不调用 ⇒ 零字段。 */
+/** X2（显示面消差批 §2.1）：advisor 卡头 / 状态行补充字段——字面与判据同源 CLI `buildToolCallbacks` /
+ *  （`round = _advisorRound + 1`）；非 advisor 不调用 ⇒ 零字段。 */
 function advisorMeta(panel) {
   const agent = panel?._agent
   let model = null
@@ -138,6 +167,8 @@ export function buildPanelCallbacks(panel, deps) {
   // Agent state captured at onComplete, reused by the async onDistilled save — agent.mjs calls
   // onDistilled without args, so the persisted engineering fields ride the closure.
   let lastAgentState = {}
+  // 凭据卡按问函数（`makeAskInPanel` 同族——`onSecretInput` 注入缝的端侧供给）。
+  const askSecretInPanel = makeAskSecretInPanel(panel)
   const cbs = {
     onToken: (tok) => {
       // W15（事件中继面）：核 relay ⟦ev⟧ 事件 token → webview 活动区协议消息（识别即消费
@@ -195,7 +226,7 @@ export function buildPanelCallbacks(panel, deps) {
       totalUsage.prompt_cache_hit_tokens += u.prompt_cache_hit_tokens ?? 0
       totalUsage.prompt_cache_miss_tokens += u.prompt_cache_miss_tokens ?? 0
       totalUsage.reasoning_tokens += u.reasoning_tokens ?? 0 // C-12#6：✦ 段（transports 映射补全）
-      // M2（§2.1）：分子 = 核 `estimateTokens(history)`（与 CLI 状态行同源同式——`render-frame.mjs:388-389`）。
+      // M2（§2.1）：分子 = 核 `estimateTokens(history)`（与 CLI 状态行同源同式——`inputBoxStyle`）。
       // I16a（#677）：`ctxTokens` 同点产出——webview `context X% Yk` 尾串源（两值单次估算）。
       const { tokens: ctxTokens, pct: ctxPct } = ctxUsageForHistory(history, p)
       // §6.30.11（协议 §3.2 行 18）：timer 计数随载荷（webview `⏰N` 段源——核 `_pendingTimers` 活读投影）
@@ -210,7 +241,7 @@ export function buildPanelCallbacks(panel, deps) {
       panel._panel?.webview.postMessage({ type: "toolCall", name: n, args: JSON.stringify(a, null, 2), id, ...(meta ?? {}) })
     },
     onToolResult: (n, r, id, subKey) => {
-      // ⑥（2026-09-19）第 4 参 `_subagentKey` = sync 子代理完成锚（核 `dispatch-run.mjs:137` 传入；
+      // ⑥（2026-09-19）第 4 参 `_subagentKey` = sync 子代理完成锚（核 `runPreparedItem` 传入；
       // 仅 sync 成功 / 折叠路径设置）⇒ 该参在即补 `done`（块冻结 + 归档落流——CLI `finishSubTaskKey`
       // 对位）；无该参（async ack / 普通工具）零动作。与内容面分流互不排斥（两事同点）。
       if (subKey) settleSyncSubagent(panel, subKey, syncNoteOf(r))
@@ -226,8 +257,8 @@ export function buildPanelCallbacks(panel, deps) {
     // Live output streaming (bash etc.) — chunks append to the running tool card.
     onToolOutput: (n, chunk, id) => {
       if (relaySubagentContentChunk(panel, "toolOutput", n, chunk)) return
-      // M3（§2.2）：`[object Object]` —— 核 sync 评审 chunk = `{ kind, text }` 对象（`advisor/timeline.mjs:21`
-      // emit），无 relay 前缀 ⇒ 直通至此 ⇒ 对象入载荷。端边界归一（CLI 逐字先例 `tool-events.mjs:322-324`）：
+      // M3（§2.2）：`[object Object]` —— 核 sync 评审 chunk = `{ kind, text }` 对象（`createTimelineRecorder`
+      // emit），无 relay 前缀 ⇒ 直通至此 ⇒ 对象入载荷。端边界归一（CLI 逐字先例 `buildToolCallbacks`）：
       // 非串取 `.text`；`kind` 随行保留为可选字段（webview 现只消费 `text`——不新增消费面）。
       const text = typeof chunk === "string" ? chunk : String(chunk?.text ?? "")
       panel._panel?.webview.postMessage({ type: "toolOutput", name: n, text, kind: chunk?.kind ?? null, id })
@@ -257,6 +288,9 @@ export function buildPanelCallbacks(panel, deps) {
     // D-B1: same-response non-readonly tools ask ONCE (approveAll / oneByOne / deny).
     onBatchPermissionRequest: batchPermissionGate(panel),
     onQuestion: (question, options) => askInPanel(question, options),
+    // §6.22 ⑧（ssh-session 批 · VSC 腿）：凭据 / 秘密输入卡（`makeAskInPanel` 同族）——
+    // 载荷 = 核结构化字段（值只在返回路上）；返回 `{ <name>: <值> }` ∥ null（取消）。
+    onSecretInput: (payload) => askSecretInPanel(payload),
     // AGENT-LOOP-ASYNC-POOL.md §6.8: async settle events wake the suspension driver (no-op when it isn't parked —
     // panel._suspWake is set only while the driver waits for the next settle).
     // C2 (SESSION-FLOW-C F-C2e——触发点补)：挂起会话活跃期间（digest 间——轮末 282/300
@@ -271,14 +305,14 @@ export function buildPanelCallbacks(panel, deps) {
   }
   // ─── F1（2026-09-16 缺陷修复——承批次档 §2 F1）：child 权限通道**端侧供给** ─────────────
   // 核 spawn / escalate / continue 三族经 `ctx.onPermissionRequest(name, args)` 询问（缝契约 =
-  // `CORE-UNIFICATION.md` §2.13.3）：name = `${key}/${tool}`（子代写——`subagent-spawn.mjs:318`；
+  // `CORE-UNIFICATION.md` §2.13.3）：name = `${key}/${tool}`（子代写——`buildSpawnChild`；
   // key = relayPrefix 去尾 = `<role>#<id>`）· `escalate#<id>/${tool}`（飞刀写）· `continue`
   // （撞帽续跑——归属键在 args.agent）。形态 = 按次解析归属键 ⇒ `makeChildPermission` 按次构造
   // （announce → ask → 清态 + owner 归属——面板卡带 `<role>#<id>` 归属、与活动块同源）；
   // 键不符（嵌套 relay 等）⇒ 回退面板 gate **原样名**询问（卡可达 · 无归属标签）；
   // AUTO（live）⇒ 直返 true 零卡——**`continue` 名除外**（续期恒须人答：两分支皆携 gate 豁免）。
   // 核分支：缺失本供给 ⇒ 核 spawn 分支静默 `return false`、
-  // 不出卡（`subagent-spawn.mjs:308`——手动档子代写症状源）。
+  // 不出卡（`buildSpawnChild`——手动档子代写症状源）。
   // 残环批（2026-09-16——承 `docs/batches/2026-09-16-subagent-panel-residual-rings.md` §2）：
   // ① 条目级 signal 接回——按归属键 id 读池条目（与 ⏹ 路由同源同式：`panel._liveLines ??
   //    panel._susp?.lines` → `history._asyncSubagents.get(String(id))`）⇒ `signal: entry.controller.signal`

@@ -2,11 +2,17 @@ import { DESC, truncate, stripTags, htmlToText, isPrivateHost } from "./shared.m
 import { URL } from "node:url";
 import { proxyFetch } from "../proxy.mjs";
 import { resolveEnvRefs } from "../env-ref.mjs";
+import { backendMode, deepseekSearch, deepseekFetch } from "./web-deepseek.mjs";
 
 export const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 const FETCH_TIMEOUT = 15_000
 // D-TF3：网络失败错误文本追加 proxy 提示——纯文本提示，不自动路由（2026-08-31 裁定：proxy 显式传不自动应用）
 const PROXY_HINT = "network failure — retry with proxy: 'http://host:port' if the target is blocked"
+// WEB-BACKEND-DEEPSEEK（TOOLS.md §6.23 ④）：DeepSeek 未出结果 ⇒ 回落腿承接后结果末尾恰一行（按返回态分叉）。
+// fetch 腿两态零提示（D-WB6）；`unavailable` ∥ `local` 零提示（零回归）。
+const deepseekNote = (status, leg) => status === "empty"
+  ? `(deepseek returned no results — results from ${leg})`
+  : `(deepseek backend unavailable — results from ${leg})`
 
 // ── Web search (Bing; direct by default, through proxy when configured and web toggle on) ──
 
@@ -107,18 +113,29 @@ export const websearchTool = {
     // 2026-08-31 ruling: proxy is a PER-CALL decision (args.proxy), never the config.json
     // fixed configuration. Model picks by target: github/foreign → pass proxy; gitee/domestic → omit.
     const proxyUri = args.proxy ?? null
+    // DeepSeek first when a qualifying provider is configured (TOOLS.md §6.23 ②) — `local`,
+    // no channel, or a query over 128 chars ⇒ zero calls, and the chain below runs verbatim.
+    let dsNote = null
+    if (backendMode(ctx?.agent?.config, "websearch") !== "local"
+      && typeof args.query === "string" && args.query.length <= 128) {
+      const ds = await deepseekSearch({ cfg: ctx?.agent?.config, query: args.query, limit, proxy: proxyUri, agent: ctx?.agent })
+      if (ds.status === "ok") return ds.text
+      if (ds.status === "empty" || ds.status === "failed") dsNote = ds.status
+    }
+    // A DeepSeek outcome only adds a line once a fallback leg actually carries results.
+    const withNote = (text, leg) => (dsNote ? `${text}\n\n${deepseekNote(dsNote, leg)}` : text)
     // Structured search first when a Tavily key is configured — stable, dated,
     // no HTML scraping. Falls back to Bing silently.
     const tavily = await fetchTavily(args.query, limit, ctx, proxyUri)
     if (tavily && tavily.results.length > 0) {
-      return truncate(tavily.results.slice(0, limit).map((r, i) => `${i + 1}. [tavily] ${r.title}\n   ${r.href}\n   ${r.snippet}`).join("\n\n"))
+      return withNote(truncate(tavily.results.slice(0, limit).map((r, i) => `${i + 1}. [tavily] ${r.title}\n   ${r.href}\n   ${r.snippet}`).join("\n\n")), "tavily")
     }
     if (args.engine) {
       const engine = ENGINES.find(e => e.name === args.engine)
       if (!engine) return `Unknown engine '${args.engine}'. Available: ${ENGINE_NAMES.join(", ")}`
       const fetched = await fetchEngine(engine, args.query, page, proxyUri)
       if (!fetched || fetched.results.length === 0) return "(no results)"
-      return truncate(fetched.results.slice(0, limit).map((r, i) => `${i + 1}. [${engine.label}] ${r.title}\n   ${r.href}\n   ${r.snippet}`).join("\n\n"))
+      return withNote(truncate(fetched.results.slice(0, limit).map((r, i) => `${i + 1}. [${engine.label}] ${r.title}\n   ${r.href}\n   ${r.snippet}`).join("\n\n")), engine.name)
     }
     const promises = ENGINES.map(e => fetchEngine(e, args.query, 1, proxyUri))
     const fetched = (await Promise.all(promises)).filter(Boolean)
@@ -135,7 +152,9 @@ export const websearchTool = {
         }
       }
     }
-    return truncate(merged.slice(0, limit).map((r, i) => `${i + 1}. [${r._engine}] ${r.title}\n   ${r.href}\n   ${r.snippet}`).join("\n\n"))
+    // Note only when a leg actually carried results — an empty merge keeps today's output.
+    const mergedText = truncate(merged.slice(0, limit).map((r, i) => `${i + 1}. [${r._engine}] ${r.title}\n   ${r.href}\n   ${r.snippet}`).join("\n\n"))
+    return merged.length > 0 ? withNote(mergedText, fetched[0].engine) : mergedText
   },
 }
 
@@ -193,9 +212,15 @@ export const fetchTool = {
     required: ["url"],
   },
   readonly: true,
-  async execute(args, _ctx) {
+  async execute(args, ctx) {
     if (!/^https?:\/\//.test(args.url)) throw new Error("url must start with http:// or https://")
     if (isPrivateUrl(args.url)) throw new Error("fetch blocked: internal/private/metadata addresses are not allowed")
+    // DeepSeek returns Markdown (W3); `empty` ∥ `failed` fall through to the local fetch,
+    // both without a result note (D-WB6 — the content face stays verbatim).
+    if (backendMode(ctx?.agent?.config, "fetch") !== "local") {
+      const ds = await deepseekFetch({ cfg: ctx?.agent?.config, url: args.url, proxy: args.proxy ?? null, agent: ctx?.agent })
+      if (ds.status === "ok") return ds.text
+    }
     try {
       // 2026-08-31 ruling: per-call decision — args.proxy when passed, direct otherwise.
       const proxyUri = args.proxy ?? null

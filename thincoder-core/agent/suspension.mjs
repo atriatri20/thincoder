@@ -130,11 +130,12 @@ function consultLiveCount(carrier) {
  */
 export async function finishSuspension(carrier, { aborted = false, injectResidual = null } = {}) {
   if (aborted) {
-    const { discardAbortedPool, discardAbortedAdvisors, discardAbortedBgTasks, discardAbortedBrowserTasks } = await import("../agent-tools/async-discard.mjs")
+    const { discardAbortedPool, discardAbortedAdvisors, discardAbortedBgTasks, discardAbortedBrowserTasks, discardAbortedSshSessions } = await import("../agent-tools/async-discard.mjs")
     discardAbortedPool(carrier)
     discardAbortedAdvisors(carrier)
     discardAbortedBgTasks(carrier) // #9 收尾档②：后台 bash 任务逐条杀树 + 出池 + 墓碑（杀 ⟺ 控制器已中止）
     discardAbortedBrowserTasks(carrier) // 批 browser-async-fix：后台浏览器动作同面（在飞中止 + 出池 + 墓碑——不杀浏览器）
+    discardAbortedSshSessions(carrier) // 批 ssh-session：SSH 会话同面（逐条杀树 + 出池 + 墓碑）
     carrier._pendingAsyncResults = []
     carrier._unsettledDigests = [] // §6.31.5 清账面（消化账务批）：会话中止 ⇒ 升级账本随 pending 一并清（旧账不续）
     if (carrier._consultSessions instanceof Map) {

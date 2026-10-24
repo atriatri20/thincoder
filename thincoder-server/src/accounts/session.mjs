@@ -27,9 +27,16 @@ export function createSession(db, memberId, { now = Date.now() } = {}) {
   return { token, expiresAt }
 }
 
-/** 会话 cookie（7 天绝对过期——Max-Age 由 TTL 派生）。 */
-export function serializeSessionCookie(token) {
-  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL_MS / 1000}`
+/** 会话 cookie（7 天绝对过期——Max-Age 由 TTL 派生）；`secure` = 仅经 TLS 的请求附 `Secure`
+ *  （判据 = 连接是否 TLS，见 `isSecureRequest`；明文内网/测试不附——浏览器会丢弃明文下的 `Secure` cookie）。 */
+export function serializeSessionCookie(token, { secure = false } = {}) {
+  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL_MS / 1000}${secure ? "; Secure" : ""}`
+}
+
+/** 请求是否经 TLS（`node:https` 的 socket 带 `encrypted: true`）；前置可信代理终止 TLS 时后端为明文 ⇒ 假
+ *  （那条部署形要附 `Secure` 须显式开关，本批不做——KD-PN-11）。 */
+export function isSecureRequest(req) {
+  return req?.socket?.encrypted === true
 }
 
 /** 清 cookie（登出——值清空 + Max-Age=0）。 */

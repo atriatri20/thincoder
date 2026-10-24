@@ -8,7 +8,7 @@
 
 import { median } from "../lib/metrics.mjs"
 import { refuseIfExists, writePair } from "../lib/output.mjs"
-import { CASES } from "./cases.mjs"
+import { CASES } from "./prompts.mjs"
 import { aggregateBlock, denominators } from "./grade.mjs"
 
 /** 标签前缀强制（§11.8）：非 `toolcall-` 起 ⇒ 报错（退出码 1）。 */

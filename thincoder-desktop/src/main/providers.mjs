@@ -60,7 +60,7 @@ function isHiddenDerived(entry) {
 }
 
 /**
- * 预设候选面（端侧零表 · KD-10）：逐条取自核表 `PROVIDER_PRESETS`（`thincoder-core/config-presets.mjs:16`）
+ * 预设候选面（端侧零表 · KD-10）：逐条取自核表 `PROVIDER_PRESETS`
  * ——转发三字段 `{ name, desc, baseURL }`（**S7 增 `desc`**：候选项标签 `name — desc` 串形归渲染面；
  * 值直取核表 ⇒ 端侧零表、零自持文案；`model` 键随 2026-10-09 清除批退场 —— 核表零该键）。
  */
@@ -127,7 +127,7 @@ export function providerList() {
 }
 
 /**
- * 写径后准入探（S3 · M9 同律 —— 先例 = VSC `settings-panel-write.mjs:43-57`）：**fire-and-forget** —— 探针绝不
+ * 写径后准入探（S3 · M9 同律 —— 先例 = VSC `vscPersistRaw`）：**fire-and-forget** —— 探针绝不
  * 抛出 ∕ 绝不阻断写；结果经核落账（`probeChannelModels` → `admissionOf`），供 `provider:list` 行面两键读数。
  * 三写径共用：加渠道 ∕ 改钥 ∕ defaultModel 写。渠已不在配置 ⇒ 零探；读档畸形 ⇒ 兜底吞。
  */
@@ -187,7 +187,7 @@ export function providerSave(payload) {
 }
 
 /** `provider:remove(payload)` ⇒ `{ ok:true, reason:null }` ∥ `{ ok:false, reason }`（核错误串直传——
- *  激活渠道保护文案由核 `config-io.mjs:270` 出）。条目撤除即在同一对象内带走其 `apiKey`（密钥随条目落删）。 */
+ *  激活渠道保护文案由核 `addProviderEntry` 出）。条目撤除即在同一对象内带走其 `apiKey`（密钥随条目落删）。 */
 export function providerRemove(payload) {
   const name = String(payload?.name ?? "").trim()
   if (!name) return { ok: false, reason: "invalid-shape" }
@@ -327,7 +327,7 @@ export async function providerModels(payload) {
   return { ok: true, models: Array.isArray(probe.models) ? probe.models : [] }
 }
 
-/** 代理探针目标（VSC `testProxyConnection` 同址——`thincoder-vscode/src/extension/settings.mjs:291`）。 */
+/** 代理探针目标（VSC `testProxyConnection` 同址）。 */
 const PROXY_TEST_URL = "https://www.gstatic.com/generate_204"
 
 /**
@@ -335,7 +335,7 @@ const PROXY_TEST_URL = "https://www.gstatic.com/generate_204"
  * `{ ok:false, status }`（连通但非 2xx）∥ `{ ok:false, error }`（形态非法 ∕ 连接失败 ∕ 超时）。
  * 探针 = 核 `proxyFetch`（**零第二 HTTP 客户端** —— 全端同一条代理链）；空 uri = 直连（VSC 同判据）。
  * 形态前置校验（同 VSC：非法 URI 不探、给可读句）；5s 超时（同 VSC）——超时径 `abort()` 中止底层请求
- * （核 `proxyFetch` 支持 `opts.signal`：`thincoder-core/proxy-transport.mjs:27` ∥ `:39-55` ∥ `:177-186`；关 socket，不留后台在飞）。
+ * （核 `proxyFetch` 支持 `opts.signal`；关 socket，不留后台在飞）。
  */
 export async function testProxy(payload) {
   const uri = typeof payload?.uri === "string" ? payload.uri.trim() : ""

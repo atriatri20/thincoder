@@ -6,7 +6,7 @@
  * （钮内容坐标 ⇒ `menu.popup` 窗口相对弹出——主侧现建现弹，recent ∕ 主题勾 ∕ 更新态每次现读）。
  * 词面 = `i18n-views.mjs` `header.menu.*`（值 = `menu-words.mjs` 同文——五名 UI 词，主侧菜单条已退场
  * ⇒ 双语各一份字面可容忍）；`locale` 切片订阅 ⇒ 词随动。web 平测（quickcheck）⇒ host 缺 ⇒ 零动作
- * （按钮在，点击静默——可及面诚实）。拖拽面 = CSS `-webkit-app-region`（codex.css）。
+ * （按钮在，点击静默——可及面诚实）。拖拽面 = CSS `-webkit-app-region`（beauty.css）。
  * 纪律：零 `node:` ∕ 零裸包；文案一律经 `t()`。
  */
 import { build, clear } from "./dom.mjs"

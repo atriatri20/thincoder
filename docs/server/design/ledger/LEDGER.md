@@ -1,10 +1,9 @@
 # Thincoder Server · 团队台账（ledger/LEDGER）
 
-> 板块 = server ∥ 本档 = ledger 域（团队台账——团队共享工作台账：数据形 ∥ 两面族端点 ∥ 判权 ∥ 老化 ∥ 审计 ∥ 上送；2026-10-13 team-ledger 批新立）；板总览 = `PROJECT.md`（文档地图 = §3）。
+> 板块 = server ∥ 本档 = ledger 域（团队台账——团队共享工作台账：数据形 ∥ 两面族端点 ∥ 判权 ∥ 老化 ∥ 审计 ∥ 上送）；板总览 = `PROJECT.md`（文档地图 = §3）。
 > 需求单源 = `docs/server/requirements/PROJECT.md`（功能点 32 ∥ AC-32）；本域回指 = `PROJECT.md` §7（AC-32 判据 = 本档 §10 ∥ `webui/LEDGER.md` §4 ∥ `docs/core/design/TEAM-LEDGER.md` §6）。
 > 权限模型单源 = `project/PROJECTS.md` §3（能力矩阵——团队账 = `can.write` 的首个端到端消费者，兑现其 §12 R67）；端点单源 = `gateway/API.md` §2.10（本档 §5 = 摘要 + 指针）；控制台面 = `webui/LEDGER.md`；端侧面 = `docs/core/design/TEAM-LEDGER.md`。
-> 最近先例 = `project/PROJECTS.md` §3（B2 能力矩阵——KD-SV-115–128）∥ `docs/core/design/LEDGER.md` §3/§13.4（本机台账六态与老化判据）；对齐 = 判权与状态语汇逐字沿先例；偏离 = 数据形自持（服务端单表 + 全局编号 + 零离线——需求裁）∥ 仓 = 归一地址（B2 `projects.address` 同形）。
-> 建档：2026-10-13（批 `docs/batches/2026-10-13-team-ledger.md` 设计轮 · eng-designer · 台账 #1206）——团队协同首刀。
+> 最近先例 = `project/PROJECTS.md` §3（B2 能力矩阵——KD-SV-115–128）∥ `docs/core/design/LEDGER.md` §3/§5（本机台账六态与老化判据）；对齐 = 判权与状态语汇逐字沿先例；偏离 = 数据形自持（服务端单表 + 全局编号 + 零离线——需求裁）∥ 仓 = 归一地址（B2 `projects.address` 同形）。
 
 ## 1. 定位与形态
 
@@ -16,17 +15,17 @@
 
 ## 2. 关键决策（本域）
 
-| # | 决策 | 理由 | 被否候选与何故否 |
-|---|---|---|---|
-| KD-SV-139 | **新立 `ledger` 域**（代码 `src/ledger/` ∥ 档 = 本档；否并入 `project` ∥ `client` 域） | 职责独立（台账本体 ∥ 两族端点 ∥ 老化 ∥ 判权消费——与「项目与权限自身」「客户端接入骨架」不同层）；文档热面隔离（`project/PROJECTS.md` 多批共触——新域 = 新并发隔离单元）；端点面自成一族（`/api/ledger*` + `/api/client/ledger*`） | 并入 project 域（账 ≠ 项目实体；`PROJECTS.md` 续胀）· 并入 client 域（该域 = 接入骨架「login/logout/me」——数据面域各自立，沿其 KD-SV-62「后续团队面各面设计轮落」）· 并入 store（store = 库/DDL 域，非业务域） |
-| KD-SV-140 | **数据形 = 单表 `team_ledger_items`**：全局自增编号 ∥ 仓 = 归一地址（B2 `projects.address` 同形）∥ 行形十列（§3） | 「全局一本」（需求 ①：数据层无分本）⇒ 单表 + `AUTOINCREMENT` = **全队一号空间**（跨本引用可解析）；仓 = 跨形归一（`http/https/ssh/scp` 同键——「跨机同仓共享」成立）；行形覆盖需求面点名五件：状态 ∥ 仓 ∥ 归属 ∥ 老化 ∥ 标题+正文 | 分本（按仓一表——「全局编号」「跨本引用」皆不成立）· 编号按仓分段（作用域泄漏进编号——用户裁「各本独立编号不好」）· 仓存原始 URL（同仓跨形两键——跨机不共享） |
-| KD-SV-141 | **状态机 ∥ 老化判据 = 沿本机台账逐字**（六态 + `ALLOWED_MIGRATIONS` + `aged = 未决四态 ∧ 行龄(updated_at ?? created_at) > 30 天`） | AC-32 点名「未决/在途/老化」= 本机台账既有词汇（同判据在 `docs/core/design/LEDGER.md` §13.4）——同一团队两处账共用一套状态语汇（认知迁移零成本 ∥ 上送无翻译层）；**存储与代码独立**（本域零 import 本机台账模块——「禁混同」靠结构不靠约定） | 团队账自造状态集（两套语汇——上送/对照皆需映射层）· 老化另定阈值（两处口径分裂）· 条目携本机 `kind`（需求未点名类型轴；且诱使「两账等价」误读——上送时类型信息可由上送者写入正文） |
-| KD-SV-142 | **两面族**：控制台面 `/api/ledger*`（会话 cookie——能力矩阵）+ 端侧面 `/api/client/ledger*`（Bearer 登录 token）——**共享域模块单源**（拟新增——`src/ledger/items.mjs`） | 判权分族沿全站口径（`/v1` Bearer ∥ `/api/*` cookie ∥ `/api/client/*` Bearer——B1 KD-SV-62 三分；端侧命名空间 B1 已钉「后续团队面同空间扩端点」）；两面 = 薄适配器（校验/判权/序列化），语义单源在域模块 | 单一双门族（cookie ∥ Bearer 同族双门——判权分族乱）· 控制台复调 `/api/client/*`（cookie 无 Bearer 语义；且该面 = 端侧专属） |
-| KD-SV-143 | **判权 = B2 项目能力矩阵**（读 = `can.view` ∥ 写 = `can.write`；未授权即不可见——列表零出现 ∥ 直取 404 不辨）+ **未登记仓 ⇒ 拒写** | 需求 §1 前置件（权限与可见性 = 跨面统一判据，含台账）+ `project/PROJECTS.md` §3 判据 3（`can.write` 消费者 = 团队台账——本批兑现其 §12 R67 的端到端写动作）；仓 = B2 项目实体 ⇒ 加仓 = admin 专属（AC-44①）——**团队账不为未登记仓建档**（否则绕过项目准入层） | 全成员无差别可见/可写（与前置件裁定相抵）· 未登记仓自动建档（绕过 B2「只 admin 能加」）· 新建独立权限表（两套判据——前置件明令统一） |
-| KD-SV-144 | **端侧仓标记 = 自动派生**（会话项目根 ⇒ `git rev-parse --show-toplevel` + `git config --get remote.origin.url` ⇒ **原文上送** ⇒ **服务端归一**） | 需求 ①「写时自动带上，不手挑」；**归一单源** = `project/projects.mjs` `normalizeAddress`（域外直引——零复制；触发条件：将来拆域独立 ⇒ 提升为共享件）；端侧零归一实现 ⇒ 两处不可能漂移 | 端侧自持归一函数（两份实现——同仓两键的高危缝）· 端侧送归一后形（端侧仍须归一实现——同一缝）· 手挑仓入口（需求明禁——「不手挑」） |
-| KD-SV-145 | **上送 = 工具面组合（零跨账代码路径）**：agent 读本机账 ⇒ `team_ledger` 写团队账（两步显式动作） | 需求 ⑤（显式 ∥ 单向一次性 ∥ 禁自动映射/双向/合并）——**结构保障**：团队模块零 import 本机台账模块（`import` 面机检）；零回写 ∥ 零链接（无 `local_id` 族字段）∥ 零去重（需求 ②）；两账键不同（本地目录 vs git 源）本无自动对应 | 工具内 `import` 动作（读本机库——跨账代码路径 = 「混同」的实现面缝）· 后台同步/映射表（需求明禁）· 来源列（暗示可追溯链接——诱发双向期待） |
-| KD-SV-146 | **审计 = 新增一型 `ledger_event`**（四 kind：`create` ∥ `edit` ∥ `close` ∥ `withdraw`；v20 CHECK 重建——十四 ⇒ **十五型**） | 写时零门槛 + 共享账 ⇒ 过程留痕是唯一追溯面（谁改的 ∥ 谁撤回的）；沿全站审计纪律（各域状态变更落审计行）；detail 携 `id`/`repo` + `surface`（`console` ∥ `client`——两面写入可辨） | 零审计（争议无可查；与全站纪律不一致）· 复用 `project_event`（主体 = 账条目，非项目——详情语义混装） |
-| KD-SV-147 | **项目删除 × 团队账 = 不级联**（账保留；可见性 = 现存项目行判定） | 账 = 记录（B2 §14 删「项目」≠ 删「该仓的工作记录」）；可见性自然收敛（无项目行 ⇒ 非 admin 不可判 ⇒ 不显示；admin 恒可见）；仓 = 文本键非 FK（沿 B2「无 FK」先例——零孤儿面） | 级联删条目（工作记录随项目消失——削账的语义）· 条目转「孤儿仓」对全员可见（越出可见性模型） |
+| # | 决策 | 理由 |
+|---|---|---|
+| KD-SV-139 | **新立 `ledger` 域**（代码 `src/ledger/` ∥ 档 = 本档；否并入 `project` ∥ `client` 域） | 职责独立（台账本体 ∥ 两族端点 ∥ 老化 ∥ 判权消费——与「项目与权限自身」「客户端接入骨架」不同层）；文档热面隔离（`project/PROJECTS.md` 多域共触——新域 = 新并发隔离单元）；端点面自成一族（`/api/ledger*` + `/api/client/ledger*`） |
+| KD-SV-140 | **数据形 = 单表 `team_ledger_items`**：全局自增编号 ∥ 仓 = 归一地址（B2 `projects.address` 同形）∥ 行形十列（§3） | 「全局一本」（需求 ①：数据层无分本）⇒ 单表 + `AUTOINCREMENT` = **全队一号空间**（跨本引用可解析）；仓 = 跨形归一（`http/https/ssh/scp` 同键——「跨机同仓共享」成立）；行形覆盖需求面点名五件：状态 ∥ 仓 ∥ 归属 ∥ 老化 ∥ 标题+正文 |
+| KD-SV-141 | **状态机 ∥ 老化判据 = 沿本机台账逐字**（六态 + `ALLOWED_MIGRATIONS` + `aged = 未决四态 ∧ 行龄(updated_at ?? created_at) > 30 天`） | AC-32 点名「未决/在途/老化」= 本机台账既有词汇（同判据在 `docs/core/design/LEDGER.md` §3/§5）——同一团队两处账共用一套状态语汇（认知迁移零成本 ∥ 上送无翻译层）；**存储与代码独立**（本域零 import 本机台账模块——「禁混同」靠结构不靠约定） |
+| KD-SV-142 | **两面族**：控制台面 `/api/ledger*`（会话 cookie——能力矩阵）+ 端侧面 `/api/client/ledger*`（Bearer 登录 token）——**共享域模块单源**（`src/ledger/items.mjs`） | 判权分族沿全站口径（`/v1` Bearer ∥ `/api/*` cookie ∥ `/api/client/*` Bearer——B1 KD-SV-62 三分；端侧命名空间 B1 已钉「后续团队面同空间扩端点」）；两面 = 薄适配器（校验/判权/序列化），语义单源在域模块 |
+| KD-SV-143 | **判权 = B2 项目能力矩阵**（读 = `can.view` ∥ 写 = `can.write`；未授权即不可见——列表零出现 ∥ 直取 404 不辨）+ **未登记仓 ⇒ 拒写** | 需求 §1 前置件（权限与可见性 = 跨面统一判据，含台账）+ `project/PROJECTS.md` §3 判据 3（`can.write` 消费者 = 团队台账——兑现其 §12 R67 的端到端写动作）；仓 = B2 项目实体 ⇒ 加仓 = admin 专属（AC-44①）——**团队账不为未登记仓建档**（否则绕过项目准入层） |
+| KD-SV-144 | **端侧仓标记 = 自动派生**（会话项目根 ⇒ `git rev-parse --show-toplevel` + `git config --get remote.origin.url` ⇒ **原文上送** ⇒ **服务端归一**） | 需求 ①「写时自动带上，不手挑」；**归一单源** = `project/projects.mjs` `normalizeAddress`（域外直引——零复制；触发条件：将来拆域独立 ⇒ 提升为共享件）；端侧零归一实现 ⇒ 两处不可能漂移 |
+| KD-SV-145 | **上送 = 工具面组合（零跨账代码路径）**：agent 读本机账 ⇒ `team_ledger` 写团队账（两步显式动作） | 需求 ⑤（显式 ∥ 单向一次性 ∥ 禁自动映射/双向/合并）——**结构保障**：团队模块零 import 本机台账模块（`import` 面机检）；零回写 ∥ 零链接（无 `local_id` 族字段）∥ 零去重（需求 ②）；两账键不同（本地目录 vs git 源）本无自动对应 |
+| KD-SV-146 | **审计 = 新增一型 `ledger_event`**（四 kind：`create` ∥ `edit` ∥ `close` ∥ `withdraw`；v20 CHECK 重建——**十五型**） | 写时零门槛 + 共享账 ⇒ 过程留痕是唯一追溯面（谁改的 ∥ 谁撤回的）；沿全站审计纪律（各域状态变更落审计行）；detail 携 `id`/`repo` + `surface`（`console` ∥ `client`——两面写入可辨） |
+| KD-SV-147 | **项目删除 × 团队账 = 不级联**（账保留；可见性 = 现存项目行判定） | 账 = 记录（B2 §14 删「项目」≠ 删「该仓的工作记录」）；可见性自然收敛（无项目行 ⇒ 非 admin 不可判 ⇒ 不显示；admin 恒可见）；仓 = 文本键非 FK（沿 B2「无 FK」先例——零孤儿面） |
 
 ## 3. 数据形（单表 · 全局编号 · 仓标记）
 
@@ -83,24 +82,24 @@
 ## 8. 界面承载与端侧承载
 
 - **控制台（周知面）** = `#/me/ledger`（列表 ∥ 按仓/状态/负责人筛 ∥ 新建/编辑/收口/撤回）——全文 = `webui/LEDGER.md`。
-- **端侧（三端）** = 核工具 `team_ledger`（读写经 `/api/client/ledger*`）——三端同批由**核单源**保障（全文 = `docs/core/design/TEAM-LEDGER.md`）。
-- **本批不做逐端独立面板**（CLI 状态行 ∥ VSC 面板 ∥ 桌面卡片）——承载分工与理由 = `docs/core/design/TEAM-LEDGER.md` §4；如需 ⇒ 另批三端同批。
+- **端侧（三端）** = 核工具 `team_ledger`（读写经 `/api/client/ledger*`）——三端由**核单源**保障（全文 = `docs/core/design/TEAM-LEDGER.md`）。
+- **不做逐端独立面板**（CLI 状态行 ∥ VSC 面板 ∥ 桌面卡片）——承载分工与理由 = `docs/core/design/TEAM-LEDGER.md` §4；如需 ⇒ 另轮三端同做。
 
 ## 9. 本域文件与行数预算（本域族行）
 
-| 档 | 行数（设计估——实施实读为准） | 职责 |
+| 档 | 行数 | 职责 |
 |---|---|---|
-| `thincoder-server/src/ledger/items.mjs`（已落盘——实读 **309**） | ≈200 ⇒ **实读 309** | 域逻辑：入参归一 ∥ 六态迁移校验 ∥ 老化计算 ∥ 可见/写权判定（消费 B2 能力矩阵）∥ 四动作 + 审计行 |
-| `thincoder-server/src/ledger/routes.mjs`（已落盘——实读 **59**） | ≈120 ⇒ **实读 59** | 控制台面（会话 + 能力矩阵；`repos[]` 派生） |
-| `thincoder-server/src/ledger/client-routes.mjs`（已落盘——实读 **59**） | ≈95 ⇒ **实读 59** | 端侧面（Bearer——复用 `requireApiKey`；`repo` 原文归一） |
-| `thincoder-server/src/store/db.mjs`（已落盘——实读 631） | 631 ⇒ **≈675**（v20 段 ≈+44：建表 ≈14 ∥ 两索引 2 ∥ 审计 CHECK 重建（十五型）≈22 ∥ 迁移段 ≈4 ∥ 注释） | v20 段（DDL 单源 = `store/STORE.md` §2 v20 段） |
-| `thincoder-server/bin/thincoder-server.mjs`（已落盘——实读 209） | 209 ⇒ **≈213**（+2 import +2 注册行） | 装配面（注册行制） |
-| `thincoder-server/src/agent/run.mjs`（已落盘——实读 137） | **±0**（`TRIMMED_FACES` 表项同行扩——数组单行；注释同拍——服务端 admin agent 零团队登录 ⇒ 工具不可用；裁剪 = 零 token 税 + 结构不可达） | 服务端 agent 工具裁剪面 |
-| `thincoder-server/src/project/projects.mjs`（已落盘——实读 360） | **±0**（`normalizeAddress` 域外直引——零复制零改） | 归一单源（KD-SV-144） |
-| `thincoder-server/src/accounts/audit.mjs`（已落盘——实读 118） | 118 ⇒ **≈119**（`AUDIT_TYPES` += `ledger_event`——十四 ⇒ 十五型；头注计数同拍） | 审计型目录（型面单源——`accounts/ACCOUNTS.md` §2.1 随正） |
-| 单元测试档 `docs/batches/2026-10-13-team-ledger.test.mjs`（已落盘——实读 **1206**） | ≈300 ⇒ **实读 1206** | 服务端面用例（§11）+ 控制台面断言 + 核工具面（`docs/core/design/TEAM-LEDGER.md` §6 用例指入同档） |
+| `thincoder-server/src/ledger/items.mjs` | 309 | 域逻辑：入参归一 ∥ 六态迁移校验 ∥ 老化计算 ∥ 可见/写权判定（消费 B2 能力矩阵）∥ 四动作 + 审计行 |
+| `thincoder-server/src/ledger/routes.mjs` | 59 | 控制台面（会话 + 能力矩阵；`repos[]` 派生） |
+| `thincoder-server/src/ledger/client-routes.mjs` | 59 | 端侧面（Bearer——复用 `requireApiKey`；`repo` 原文归一） |
+| `thincoder-server/src/store/db.mjs` | 631 | v20 段（DDL 单源 = `store/STORE.md` §2 v20 段） |
+| `thincoder-server/bin/thincoder-server.mjs` | 209 | 装配面（注册行制） |
+| `thincoder-server/src/agent/run.mjs` | **±0**（`TRIMMED_FACES` 表项同行扩——数组单行；注释同拍——服务端 admin agent 零团队登录 ⇒ 工具不可用；裁剪 = 零 token 税 + 结构不可达） | 服务端 agent 工具裁剪面 |
+| `thincoder-server/src/project/projects.mjs` | **±0**（`normalizeAddress` 域外直引——零复制零改） | 归一单源（KD-SV-144） |
+| `thincoder-server/src/accounts/audit.mjs` | 118（`AUDIT_TYPES` += `ledger_event`——十五型；头注计数同拍） | 审计型目录（型面单源——`accounts/ACCOUNTS.md` §2.1 随正） |
+| 单元测试档 `2026-10-13-team-ledger.test.mjs` | 1206 | 服务端面用例（§11）+ 控制台面断言 + 核工具面（`docs/core/design/TEAM-LEDGER.md` §6 用例指入同档） |
 
-- **db.mjs 软线提示**：v20 落地后 ≈675（软线 500 已越、硬限 800 未触）；`store/STORE.md` §4 既定触发 = 实读 >700 ⇒ 起「迁移段外拆」轮——**本批不触发，登记为观察项**（§13）。
+- **db.mjs 软线提示**：≈675（软线 500 已越、硬限 800 未触）；`store/STORE.md` §4 既定触发 = 实读 >700 ⇒ 起「迁移段外拆」轮——**不触发，登记为观察项**（§13）。
 
 ## 10. 验收判据（AC-32 ①–⑥ 对位）
 
@@ -144,8 +143,8 @@
 - **不做离线缓存**（需求 ③④ 明禁）；**不做「换后端」路径**（个人账/团队账无共享代码路径）。
 - 不做**分页 ∥ 导出 ∥ 全文检索**（体量级数十；超量另裁）。
 - 不做**看板/统计/趋势/图表**（报表面属 metering 域；如需另立）。
-- 不做**评论/附件/@提及/通知**（在场与通知 = 需求 34，另批）；不做**条目间依赖/父子关系**。
-- 不做**逐端独立面板**（CLI 状态行 ∥ VSC 面板 ∥ 桌面卡片——本批承载 = 核工具 + 控制台页；需另批三端同批）。
+- 不做**评论/附件/@提及/通知**（在场与通知 = 需求 34，另轮）；不做**条目间依赖/父子关系**。
+- 不做**逐端独立面板**（CLI 状态行 ∥ VSC 面板 ∥ 桌面卡片——承载 = 核工具 + 控制台页；需另轮三端同做）。
 - 不做**服务端管理面 agent 的台账工具**（admin agent 工具面裁剪面 += `team_ledger`——服务端零团队登录，结构不可达）。
 - 不做**跨账迁移/导入向导**（上送 = agent 两步动作——无专用导入器）；不做**团队账 → 本机账**回送（需求 ⑤ 明禁双向）。
 - 不做**权限模型改造**（判权 = B2 能力矩阵逐字——零新档位/零新表）。
@@ -154,10 +153,4 @@
 
 | # | 项 | 类型 | 处置建议 |
 |---|---|---|---|
-| R74 | **team-ledger 批（本批）——披露 + 随动件 + 需求档回笔**：① **披露（判权读法）**：团队账可见/可写 = B2 项目能力矩阵（`can.view`/`can.write`）——「控制台全队」读法 = 数据层一本 + 权限过滤（非「全员可见全量」；非成员项目条目不显示）；仓须先经 B2 登记（加仓 = admin）⇒ 团队账不为未登记仓建档；如用户本意 = 全员无差别可见 ⇒ 翻案点（与需求 §1 前置件裁定相抵面需重裁）∥ ② **随动件（逐项标注——2026-10-13 收口核）**：`store/STORE.md` §2 v20 段入盘（**已办**） ∥ `gateway/API.md` §2.10 八行（**已办**） ∥ `accounts/ACCOUNTS.md` §2.1 `ledger_event` 行（**已办**） ∥ `webui/WEBUI.md` §2/§5/§6（**已办**——我的 6；静态档目 +3） ∥ `webui/I18N.md` §2.1 域界登记（`ledger` 新部件对）+ §3 行随正（**已办**——UI 席） ∥ 板档 `PROJECT.md` §1–§7（**已办**） ∥ 跨批守卫件 `docs/batches/2026-10-08-server-public-structure.test.mjs`（**已办**——PARTS/DOMAINS + `ledger` 域 + 指纹/键数 959∥964；复跑绿） ∥ `docs/README.md` §1 档数（server 设计 22 ⇒ 24；总 76 ⇒ 79——**父侧笔——收口轮落**）∥ ③ **需求档回笔建议**（主 agent 笔——**已办**：2026-10-13 回笔在档 `docs/server/requirements/PROJECT.md:661`）：AC-12 静态档目链/页数链尾随正（我的 ⇒ **6**）∥ AC-14 档目链随正 ∥ AC-28 审计型数（十四 ⇒ **十五型**）∥ ④ 观察项：`src/store/db.mjs` v20 后 ≈675（既定触发 = >700 ⇒ 迁移段外拆轮——本批不触发）∥ ⑤ **收口回填（2026-10-13）**：判权三态裁决已落（仓不存 ⇒ 400 人话 ∥ 仓存而无 `can.view` ⇒ 404 不辨（措辞 = 「项目不存在或不可见」）∥ 可见而无 `can.write` ⇒ 403——设计面 = `gateway/API.md` §2.10/§3 ∥ 本档 §11 B9）∥ i18n 键数实读 **959 ∥ 964**（ledger 部件 **65 键/表**） | 披露（上抛——如无异议按设计实施） | 评审/用户复核 |
-
-## 变更记录
-
-- 2026-10-13（**team-ledger 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-13-team-ledger.md` §1 · 台账 #1206；需求功能点 32 ∥ AC-32）：建档——定位与形态 ∥ KD-SV-139–147 ∥ 数据形（单表/全局编号/仓标记/老化）∥ 写路径与读路径 ∥ 上送（零跨账代码路径）∥ 审计（`ledger_event`）∥ 承载指针（控制台 ∥ 端侧）∥ 文件与行数预算 ∥ AC-32 ①–⑥ 对位 ∥ 用例 N1–N5/B1–B8/E1–E4 ∥ 边界 ∥ 上抛 R74。**产品码零触（设计轮）。**
-- 2026-10-13（**team-ledger 批 · 设计评审轮 1 修复（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-13-team-ledger.md` §3 轮次 1 之 1/2/4/5/7/8/11/12）：§9 增 `accounts/audit.mjs` 行（`AUDIT_TYPES` += `ledger_event`——实读 118 ⇒ ≈119）∥ §9 两行现状实读补实（run **137** ⇒ **±0**（表项同行扩——+1 陈值收正）∥ projects **360**）∥ §5 判权列改指 KD-SV-143（142/141 陈指收正）∥ 头注 AC-32 判据改指（§6/§5 ⇒ **§10/§6**）+ 补最近先例行 ∥ §10 补条序映射行 ∥ §13 R74② 随动件补 `webui/I18N.md` + 板档 `PROJECT.md` ∥ 变更记录段号陈值 139–145 ⇒ **139–147** 收正。**零新语义**（评审发现直接导出项）；产品码零触（设计轮）。
-- 2026-10-13（**team-ledger 批 · 收口随正轮（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-13-team-ledger.md` §2 · 台账 #1206）：§9 文件表实读回填（`items.mjs` **309** ∥ `routes.mjs` **59** ∥ `client-routes.mjs` **59** ∥ 批单测档 **1206**——各带原估对照）∥ §11 增 **B9** 用例行（非成员 `add` ⇒ 404 不辨——判权三态父裁落点）∥ §13 R74② 逐项标注「已办」（README = 父侧笔——收口轮）∥ R74③ 标「已办」（回笔在档）+ R74 增 ⑤ 收口回填句（判权三态 ∥ 键数实读 959 ∥ 964 ∥ ledger 65 键/表）。**零新语义**（收口随正——实读与父裁原文）；产品码零触。
+| R74 | **团队台账——披露**：① **披露（判权读法）**：团队账可见/可写 = B2 项目能力矩阵（`can.view`/`can.write`）——「控制台全队」读法 = 数据层一本 + 权限过滤（非「全员可见全量」；非成员项目条目不显示）；仓须先经 B2 登记（加仓 = admin）⇒ 团队账不为未登记仓建档；如用户本意 = 全员无差别可见 ⇒ 翻案点（与需求 §1 前置件裁定相抵面需重裁）∥ ② 观察项：`src/store/db.mjs` ≈675（既定触发 = >700 ⇒ 迁移段外拆轮——不触发）∥ ③ 判权三态：仓不存 ⇒ 400 人话 ∥ 仓存而无 `can.view` ⇒ 404 不辨（措辞 = 「项目不存在或不可见」）∥ 可见而无 `can.write` ⇒ 403——设计面 = `gateway/API.md` §2.10/§3 ∥ 本档 §11 B9。 | 披露（上抛——如无异议按设计实施） | 评审/用户复核 |

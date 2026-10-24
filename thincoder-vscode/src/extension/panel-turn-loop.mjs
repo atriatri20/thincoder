@@ -2,15 +2,15 @@
  * panel-turn-loop.mjs — 回合执行循环面（自 `panel-chat.mjs` 拆出——VSC 四档结构拆分批
  * 2026-09-18 · 设计 `docs/vsc/design/VSC-DEBT.md` §12.2.1）。
  *
- * 迁出段（逐字搬迁 · 既有注释一并随迁）：回合执行循环 `runTurnLoop`（原 `panel-chat.mjs:385-498`
+ * 迁出段（逐字搬迁 · 既有注释一并随迁）：回合执行循环 `runTurnLoop`（原 `runPanelChatImpl`
  * ——runOpts 构造 + ContinueError/Ctrl+I 续跑 + 错误/中止持久化分支）+ 回合 controller 工厂
- * `newTurnController`（原 `:43-65`）。
+ * `newTurnController`。
  * 留主档（`panel-chat.mjs`）= 入口守卫段（`ensurePanelAgent` / `ensureMemoryHandle` 同址——
  * 结构机检约束 = 单元测试档 `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单元测试树重建时回迁端侧单元测试档）+ 行加载 / 回调装配段 +
  * `runPanelChat` 包装 + `agentSlotMatches` / `ensurePanelAgent`。
  *
  * 缝保持（KD-12 · 承 KD-13）：`newTurnController` 迁出 + 主档 re-export（消费档
- * `chat-panel-messages.test.mjs:24` import 行零改）；`runTurnLoop` 原即模块私有（新档导出、
+ * import 行零改）；`runTurnLoop` 原即模块私有（新档导出、
  * 主档 import——对外缝零变化）。
  * 依赖单向：`panel-chat → panel-turn-loop`（本档零 import 主档、零 import `panel-turn-stages.mjs`）。
  *
@@ -20,7 +20,7 @@
  * 链静态达 `node:sqlite`——W8 契约②；本档静态边经闭包扫描全为净件）。三处 host 适配面：① 载体面
  * `bindCarrierFace`（件 1-⑤⑥——14 字段 `agent[f] ⇄ history[f]` 别名 + `agent.history` 访问器锚）；② 完成面
  * `callbacks.onComplete`（🔴 P4-I 断缝闭证——核 loop 零调用点 ⇒ 干净返回处补调）；③ 工具推送分支
- * `callbacks.onTurnEnd`（件 1「面板推送腿」行——旧循环 `agent.mjs:397-417` 逐字迁入）。
+ * `callbacks.onTurnEnd`（件 1「面板推送腿」行——旧循环 `src/agent.mjs` 逐字迁入）。
  */
 import { continueDecision } from "@thincoder/core/agent/continue-decision.mjs" // #677 · I10 续跑判定单源（#127 ④ 双写退役）
 import { hydrateRun, setupAgentRun } from "../agent/setup.mjs"
@@ -72,7 +72,7 @@ export function bindPanelAgent(panel, holder) {
 }
 
 /** 载体字段表（16 款——`docs/core/design/AGENT-LOOP.md` §2.3 绑定不变式：核写侧以父对象字段为入口，只绑
- *  两池会让 settle 的 pending ∕ 墓碑 ∕ 队列 ∕ 唤醒数组落在 per-run agent 上；表源 = 旧端 `agent.mjs:39-43`。
+ *  两池会让 settle 的 pending ∕ 墓碑 ∕ 队列 ∕ 唤醒数组落在 per-run agent 上；表源 = 旧端 `src/agent.mjs`。
  *  消化账务批 · 2026-10-05 · 台账 #930：+2 款——`_unsettledDigests`（升级账本）∥ `_daSession`（会话标记）
  *  ——两者皆为跨 run 存活面（agent per-run 重建，写面经本表别名落 `history`）。 */
 const CARRIER_FIELDS = [
@@ -82,10 +82,10 @@ const CARRIER_FIELDS = [
   "_unsettledDigests", "_daSession",
 ]
 
-/** 载体面装配（每 run 一次——`hydrateRun` 之后；旧端 `src/agent.mjs:142-159` 逐字同法）：① 六容器先在共享
+/** 载体面装配（每 run 一次——`hydrateRun` 之后；旧端 `src/agent.mjs` 逐字同法）：① 六容器先在共享
  *  `history` 侧建齐（核写的是父对象字段，访问器别名下与 `history` 同一容器——端壳读面同源）；② 16 字段
  *  访问器别名（非快照——容器替换两向同步；消化账务批 · 2026-10-05 前为 14 款，见表上注）；③ `agent.history` 访问器锚（KD-3）：核替换点（`context.mjs`
- *  `:219/:227/:242/:426` ∕ `explore-distill.mjs:143` ∕ `agent/setup.mjs:53`）以 `agent.history = <新数组>`
+ *  `summarizeRunExplorations` ∕ `prepareRun`）以 `agent.history = <新数组>`
  *  表达 ⇒ setter 原位回收，面板 ∕ 挂起会话持有的数组引用跨替换稳定。 */
 function bindCarrierFace(agent, history) {
   if (!(history._asyncSubagents instanceof Map)) history._asyncSubagents = new Map()
@@ -113,10 +113,10 @@ function bindCarrierFace(agent, history) {
   })
 }
 
-/** 工具推送分支（§2.3 件 1「面板推送腿」行——钉缝 = `callbacks.onTurnEnd`；核 `post-turn.mjs:65` 工具
- *  执行轮末主触，工具期中断支 `agent.mjs:439` 同触；另 `completion.mjs:41/66/84/97/112/140` 无工具调用的
+/** 工具推送分支（§2.3 件 1「面板推送腿」行——钉缝 = `callbacks.onTurnEnd`；核 `injectPostTurn` 工具
+ *  执行轮末主触，工具期中断支 `src/agent.mjs` 同触；另 `handleCompletion` 无工具调用的
  *  续跑支同触 ⇒ **超集调用**，本分支三处皆变更门控（`!==` 比对 ∕ 读后复位）⇒ 幂等、零用户可见差）。
- *  旧循环 `src/agent.mjs:397-417` 的载体镜像回填 ∕ 比对块逐字迁入：tasks ref 比 ⇒ 回写；planMode
+ *  旧循环 `src/agent.mjs` 的载体镜像回填 ∕ 比对块逐字迁入：tasks ref 比 ⇒ 回写；planMode
  *  布尔比 ⇒ 回写 + `onPlanMode`；goal 状态词映射（complete/blocked → done/blocked）⇒ `onGoal`。
  *  goal 基准跨批保留（每次回调末更新——批间无 goal 写点 ⇒ 等价旧形「批前快照」）；尾接
  *  `syncToolDrivenDisplayState`（#45 原样调用）。 */
@@ -229,7 +229,7 @@ export async function runTurnLoop(panel, deps) {
       }
       const content = await runAgent(agent, turnInput, callbacks, coreOpts)
       traceStop("runAgent: turn ended normally", panel._stopClickTs)
-      // 完成面（P4-I 断缝闭证）：核 loop 干净返回处补调（旧端 `agent.mjs:354` 同点同参）——干净回合槽回写
+      // 完成面（P4-I 断缝闭证）：核 loop 干净返回处补调（旧端 `src/agent.mjs` 同点同参）——干净回合槽回写
       // （`agentState`）+ webview `complete` 帧 + 会话列表刷新 +（非 digest）完成通知。
       callbacks.onComplete?.(content, agentState(agent))
       break

@@ -11,6 +11,7 @@ import {
   foldTailLines, isExpanded, renderBlockTimeline, renderExpandedBlock, renderFoldedHead, renderMathAndMarkdown,
 } from "./fold-block.mjs"
 import { SUBAGENT_ROLES } from "./subagent-blocks.mjs"
+import { t } from "@thincoder/core/i18n.mjs" // 可见终结词面单源（SESSION.md §6.26）：冻结头动词键——t() 出词（零自铸字面）
 
 const _toolSegCache = new WeakMap()
 const _frozenSubCache = new WeakMap()
@@ -23,8 +24,8 @@ function buildToolBlockSeg(state, l, i, cols, maxRows) {
   const foldKey = `tool-${l._lineId ?? i}`
   const out = []
   const status = !b.done
-    ? "running"
-    : `${b.elapsed !== null ? b.elapsed + "ms" : ""}${b.summary ? (b.elapsed !== null ? " · " : "") + sliceByWidth(b.summary, 50) : ""}`.trim() || "done"
+    ? t("tool.running")
+    : `${b.elapsed !== null ? b.elapsed + "ms" : ""}${b.summary ? (b.elapsed !== null ? " · " : "") + sliceByWidth(b.summary, 50) : ""}`.trim() || t("tool.done")
   if (isExpanded(state, foldKey)) {
     const body = []
     const pushWrapped = (raw, color) => {
@@ -67,6 +68,14 @@ export function toolSeg(state, l, i, cols, maxRows) {
   return rows
 }
 
+/** done 面注记整形（#1188——跨端同式：空白折叠 + 140 上限；核件标尺 = `subblocks/activity-view.mjs`）：
+ *  折叠后为空 ⇒ 零注记（负向锁——逐字节等价）。 */
+function noteSuffix(note) {
+  const flat = typeof note === "string" ? note.replace(/\s+/g, " ").trim() : ""
+  if (flat === "") return ""
+  return ` — ${flat.length > 140 ? flat.slice(0, 139) + "…" : flat}`
+}
+
 /** 冻结子agent 活动块渲染（docs/cli/design/TUI.md §6.8 D4）：state.lines 载体 {_frozenSubTask: sub}（subagent-blocks.mjs
  *  freezeSubTaskLines 推入）。折叠 = 身份头 + tail 3；展开 = 共享组件（60% 屏幕封顶 + 底部可达
  *  折叠控制）。折叠键 `sub-${key}`——与运行中面板区块同键，折叠态跨冻结边界无缝延续。
@@ -85,18 +94,20 @@ function frozenSubTaskLines(state, sub, cols, maxRows) {
     : ""
   const modelPart = sub.model ? ` · ${sub.model}` : ""
   const turnPart = sub.maxTurns > 0 ? ` · turn ${sub.turn}/${sub.maxTurns}` : ""
-  const errPart = sub.lastError ? ` — ${sub.lastError}` : ""
   // 图标三态互斥（2026-09-20 端差·显示面消差批 M5）：修前 stopped 冻结头 `✓` 与 verb 相抵
-  // ⇒ 补齐 VSC `webview/activity-view.js:46-49` 已成的 cancelled → `⏹` 形态（VSC 标尺；#821 起
+  // ⇒ 补齐 VSC `webview/activity-view.js` 已成的 cancelled → `⏹` 形态（VSC 标尺；#821 起
   // error 面同归 `⏹`——见下）。
-  // #821（跨端显示面差归一 · 2026-10-10）：错误面并入 `⏹`（`errored` 事实两路同判——冻结单点 ∥
-  // 合成件）；verb 三词 stopped/error/done；错误面注记移出括号——与核件 `subblocks/activity-view.mjs:88-91`
-  // 同形 `[…] — <err>`；stopped ∥ done ∥ queued 三面注记位逐字不变（负控）。
   const errored = sub.errored === true
   const icon = sub.approval ? "⏸" : (sub.stopped || errored) ? "⏹" : "✓"
-  const verb = sub.stopped ? "stopped" : errored ? "error" : "done" // AGENT-LOOP-SUBAGENT.md §6.7.2: cancel 冻结标题 "stopped"
-  const head = `[${icon} ${sub.key}${modePart}${modelPart} · ${verb} ${elapsed}s${turnPart}`
-  const header = errored ? `${head}]${errPart}` : `${head}${errPart}]`
+  const verb = sub.stopped ? t("sub.stopped") : errored ? t("sub.error") : t("sub.done") // AGENT-LOOP-SUBAGENT.md §6.7.2: cancel 冻结标题 "stopped"（SESSION.md §6.26 词面单源——en 缺省逐字 = stopped/error/done）
+  const head = `[${icon} ${sub.key}${modePart}${modelPart} · ${verb} ${elapsed}s${turnPart}]`
+  // 注记整形（#1175 ∥ #1188 · SESSION.md §6.26 注记整形单源；核件标尺 = `thincoder-render-core/subblocks/activity-view.mjs`）：
+  // ① error 面 = 尾接 ` — <error>`（过 `noteSuffix`——空白折叠 + trim + 140 上限，随本批由「原串·零折叠零截断」收正）；
+  // ② done 面 = 尾接 ` — <note>`（同过 `noteSuffix`——error ∥ done 两类注记同式）；
+  // ③ stopped 面 = **零注记**（原因词与 verb 重复——对齐核件 `cancelled` 面）。
+  const header = errored ? `${head}${noteSuffix(sub.lastError)}`
+    : sub.stopped ? head
+    : `${head}${noteSuffix(sub.note)}`
   const out = []
   if (isExpanded(state, foldKey)) {
     // Expanded: shared component renders blank + ▼ control + full timeline,

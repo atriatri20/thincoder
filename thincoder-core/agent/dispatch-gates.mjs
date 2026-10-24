@@ -11,6 +11,7 @@ import { writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { homedir } from "node:os"
 import { toolTouchPaths } from "./helpers.mjs"
+import { redactArgs } from "../log.mjs" // #1432：args 落痕前过遮蔽链（单源 redactSecret 族；log.mjs 为叶——零环）
 // fix A（2026-09-07）：FILE_MUTATORS 的 mutation-seq 记账从
 // 批后提交（record-results noteMutations）移到执行成功即刻——唯一记账点（取代批后段
 // + agent.mjs 中断分支记账——不双计）——同消息 [写 + async advisor launch] 时 launch 前
@@ -32,10 +33,11 @@ export function logToolError(toolName, args, error) {
     const dir = join(ERRORS_DIR, ymd)
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
     const file = join(dir, `${ts}-${toolName.replace(/[/\\]/g, "_")}.log`)
+    const argsText = JSON.stringify(redactArgs(args), null, 2) // #1432：遮蔽先于截断（≤2000 截断零改）
     const entry = [
       `time: ${now.toISOString()}`,
       `tool: ${toolName}`,
-      `args: ${JSON.stringify(args, null, 2).slice(0, 2000)}${JSON.stringify(args, null, 2).length > 2000 ? "… (truncated)" : ""}`,
+      `args: ${argsText.slice(0, 2000)}${argsText.length > 2000 ? "… (truncated)" : ""}`,
       `error: ${error?.message ?? String(error)}`,
       error?.stack ? `stack:\n${error.stack}` : "",
     ].filter(Boolean).join("\n") + "\n"
@@ -60,8 +62,9 @@ export function logToolError(toolName, args, error) {
  * AGENT-LOOP-SUBAGENT.md §6.7.2 panel (round1 #5): view 面归只读类（同 status——planMode 放行、免
  * 审批、可批并行）；freeze 面归控制类（同 cancel——planMode 放行、免权限审批、
  * 批审批不入组、digest 内放行）。freeze 存在（非空 key）即控制类——否则只读类。
+ * #1178：泛化改名（原「子代理专用」谓词 ⇒ 通用动作级只读谓词——语义零改，旧标识符零余）——第二消费面 = agent/record-results.mjs 的 verify 失效链（动作级只读 ⇒ 不清 `_verifiedThisRun`）。
  */
-export function isSubagentReadonlyAction(toolName, args) {
+export function isReadonlyAction(toolName, args) {
   // §6 memory 工具面重构（MEMORY.md §6 D-M5）：memory search/list 是只读动作——与
   // subagent status 同分类（planMode 放行/免审批——Phase-2 批并行只认工具级
   // readonly/parallel，memory 无 parallel → 按非只读串行，见 MEMORY.md §6.4 实现注）。
@@ -92,7 +95,7 @@ export function isSubagentReadonlyAction(toolName, args) {
   if (action === "observe") return true
   // AGENT-LOOP-SUBAGENT.md §6.7.2 panel view 面（freeze 缺省/空 = 视图请求——readonly；非空 freeze 归控制类）
   if (action === "panel" && (args.freeze === undefined || args.freeze === null || String(args.freeze) === "")) return true
-  // DESIGN-TOKEN-SETTLEMENT.md §10 F-SL1（2026-10-07 批 ledger-tool）：design-slots = 只读清点
+  // DESIGN-TOKEN-SETTLEMENT.md §9 F-SL1（2026-10-07 批 ledger-tool）：design-slots = 只读清点
   // （同 status / observe——planMode 放行 / 免审批 / digest 放行；工程模式父侧门在执行器内）。
   if (action === "design-slots") return true
   return false
@@ -127,7 +130,7 @@ export function isSubagentEscalateAction(toolName, args) {
  *  由此保形；核内工具零钩子 ⇒ CLI ∕ desktop 逐字零变（`undefined ?? 核谓词`）。
  *  两谓词 = 上列两门禁位（planMode ∕ 权限短路）的公共输入（同址同用，防两处漂移）。 */
 export function readonlyActionOf(tool, toolName, args) {
-  return tool?.isReadonlyAction?.(args) ?? isSubagentReadonlyAction(toolName, args)
+  return tool?.isReadonlyAction?.(args) ?? isReadonlyAction(toolName, args)
 }
 export function controlActionOf(tool, toolName, args) {
   return tool?.isControlAction?.(args) ?? isSubagentControlAction(toolName, args)

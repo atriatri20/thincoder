@@ -56,7 +56,7 @@ export async function setAutoApprove(panel, value) {
  *  toolbar button and the model's own plan tool stay in sync across turns.
  *  ENG-PLAN-EXCLUSION（FR31 ② / AC13/T11）：工程模式 ⇒ **开方向拒绝**——不写槽 + 回弹
  *  `{type:"planMode", active:false}`（真值 = 槽权威面 `agentSettings(_agentSettingsSession())`
- *  ——`_agentSettingsSession` 先例同档 `:359-364`；不读 `_agent`，恢复后的工程会话首回合前也不
+ *  ——`_agentSettingsSession` 先例；不读 `_agent`，恢复后的工程会话首回合前也不
  *  fail-open）。关方向（value:false）是归零语义（`handleSetEngineeringEnabled` ON 时就地调它），
  *  照常走既有契约（槽写 + 回推）——工程态下它只会把残留半状态清干净。 */
 export async function setPlanMode(panel, value) {

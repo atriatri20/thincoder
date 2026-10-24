@@ -84,7 +84,7 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
     onCompleted: (resp) => { result.finishReason = "stop"; seal(resp) }, // §6.31.7 F-DA5：completed ⇒ stop（原恒 null ⇒ agent 面缺席）
     onIncomplete: (resp) => {
       seal(resp)
-      // 非长度原因（content_filter 等）不能报成 "length"——agent 层按原因给用户提示（`agent/run-stages.mjs:43`）
+      // 非长度原因（content_filter 等）不能报成 "length"——agent 层按原因给用户提示（`agent/run-stages.mjs` 的 `injectResponseReminders`）
       result.finishReason = resp?.incomplete_details?.reason === "content_filter" ? "content_filter" : "length"
     },
     onFailed: (resp) => {
@@ -252,7 +252,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   } catch (chainErr) {
     if (!isChainInvalidError(chainErr?.status)) throw chainErr
     // 链失效（404/400）：先清残留链再重建——D6 语义是真·全量重发（body.input=items）。
-    // 不清链会走 buildBody 的增量分支（`responses-request.mjs:220-227`）：body.input = 裸 function_call_output 且
+    // 不清链会走 buildBody 的增量分支（`responses-request.mjs` 的 `buildBody`）：body.input = 裸 function_call_output 且
     // previousResponseId 未随 fullBody 带走 → 服务端 call_id 无归属 → 二次 400（2026-08-31 评审 #1）
     provider._responsesChain = null
     const fresh = buildBody(provider, messages, tools, { toolChoice, stateful, forceStateful: true })

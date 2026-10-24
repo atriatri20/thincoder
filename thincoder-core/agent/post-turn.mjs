@@ -10,6 +10,31 @@ export const STALL_WINDOW_SIZE = 5
 export const STALL_THRESHOLD = 3
 export const GOAL_BUDGET_WARN_RATIO = 0.75
 
+// 设计轮轮数注入阈值（AGENT-LOOP.md §6.6「设计轮轮数注入」· 台账 #1661）：
+// 5 = 在 persona 判定点（过 7 轮未落盘 ⇒ 降级）之前 3 轮给出计数；8 = 与 persona 同一判定点；
+// 15 = persona 的首版预算（注入串里的 15 一律由它插值——改常量即改注入文本，不另留字面）。
+export const DESIGN_TURN_NOTICE_AT = 5
+export const DESIGN_TURN_SKELETON_AT = 8
+export const DESIGN_FIRST_VERSION_TURNS = 15
+
+/**
+ * 设计轮轮数提醒（纯函数——注入串 | `null`；判据源 = 链内累计轮号 + 本设计轮是否落过盘）。
+ * 逐字注入形 = `AGENT-LOOP.md` §6.6「注入形逐字」；角色表当前一行（`eng-designer`），
+ * `eng-coder` 零注入（其零落笔面另由零落笔看门狗兜）。
+ * @param {{role?:string|null, turn?:number, wrote?:boolean}} o `turn` = 链内累计轮号（1 起）
+ * @returns {string|null}
+ */
+export function designTurnReminder({ role, turn, wrote } = {}) {
+  if (role !== "eng-designer") return null
+  const used = Number(turn ?? 0)
+  if (!Number.isFinite(used) || used < DESIGN_TURN_NOTICE_AT) return null
+  const budget = DESIGN_FIRST_VERSION_TURNS
+  if (used >= DESIGN_TURN_SKELETON_AT && !wrote) {
+    return `[System reminder: design round turn ${used}/${budget} — nothing has been written to disk yet. The 7-turn mark has passed with nothing landed: degrade the delivery NOW — write the skeleton (design doc + batch record §2) plus an unresolved list, then refine in place.]`
+  }
+  return `[System reminder: design round turn ${used}/${budget} — ${wrote ? "something has been written to disk" : "nothing has been written to disk yet"}. First version budget is ${budget} turns; past 7 turns with nothing landed the rule is a skeleton + unresolved list.]`
+}
+
 /**
  * Inject all post-turn events into agent history.
  * Must be called after every tool-execution turn within runAgent's loop.
@@ -65,6 +90,15 @@ export function injectPostTurn(agent, results, recentCallSigs, callbacks, turn, 
         `Blocked audit: report blocked only after the same condition persists across 3 genuine attempts (the goal tool counts).]`,
     })
   }
+
+  // 设计轮轮数注入（AGENT-LOOP.md §6.6 · 台账 #1661）：轮号取 `_currentTurn`（链内累计、续跑不重置），
+  // 写入痕迹取 `_touchedFiles`（在 resume 保留集内 ⇒ 续跑段沿用前段痕迹）；段内 `turn` 形参不参与判据。
+  const designReminder = designTurnReminder({
+    role: agent._role,
+    turn: agent._currentTurn ?? 0,
+    wrote: (agent._touchedFiles ?? []).length > 0,
+  })
+  if (designReminder) agent.history.push({ role: "user", content: designReminder })
 
   callbacks.onTurnEnd?.(agent, turn)
 }

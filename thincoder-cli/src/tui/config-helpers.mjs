@@ -1,11 +1,61 @@
-/** persistRaw / syncProviderField / maskKey: config read/write helpers.
- *  Extracted from index.mjs for shared use by slash-commands, wizard, and pickers.
- *  createConfigHelpers(agent) returns { persistRaw, syncProviderField, maskKey }；模块级另导出
- *  carryoverDefaultModel（会话选定写回单点——SESSION.md §6.21 判据句 6；见下方定义）。
+/** config-helpers.mjs — `/config` value/display helpers.
+ *  Two groups:
+ *  ① createConfigHelpers / carryoverDefaultModel / maskKey — config read/write helpers
+ *     (extracted from index.mjs for shared use by slash-commands, wizard, and pickers;
+ *     carryoverDefaultModel = the session-selection write-back single point — SESSION.md §6.21).
+ *     Disk writes go through the core's single write executor `writeConfigAtomic` (mtime-gated);
+ *     this module never writes a second way.
+ *  ② embeddingPatch / poolCur / effortMenuLevels / compactThresholdSuffix / compactThresholdHint
+ *     — pure config-value and display-string helpers (zero ctx, zero I/O), moved here from
+ *     cmd-config.mjs (CONTEXT-COMPACTION.md §6.16.9 — C2 split: value helpers ∥ sub-menu
+ *     rendering ∥ command spine).
  *  R10 F5（D-F5b）：persistRaw 全链（磁盘新鲜读→mutate→写）收口进 config.mjs
  *  writeConfigAtomic——mtime 门控 + .bak + 冲突放弃（见 MULTI-INSTANCE-COLLAB.md §2a.2）。
  *  createConfigHelpers(agent, opts)：opts.configPath 为测试注入缝（默认 configPath——
  *  生产 index.mjs 单参调用零变化）。 */
+
+/** Merge an embedding-key save into the raw config, backfilling baseURL/model from defaults.
+ *  Keeps existing custom values (Ollama/local embedding); defaults are the single source
+ *  (TUI.md §9.3D — NF1). Exported for unit tests. */
+export function embeddingPatch(raw, embKey, defaults) {
+  const prev = raw?.embedding ?? {}
+  return {
+    ...prev,
+    apiKey: embKey,
+    baseURL: prev.baseURL ?? defaults.baseURL,
+    model: prev.model ?? defaults.model,
+  }
+}
+
+/** 并发池三键当前值读取（POOL-CONFIG-UNIFIED F-3——2026-09-09）：配置值合法（≥1 整数）
+ *  读配置——非法/缺省回退 DEFAULTS（agent.poolLimits 三键——/config 并发池子菜单/
+ *  主菜单/view 三面共用同一读取）。 */
+export function poolCur(pl, defaults) {
+  return (k) => (Number.isInteger(pl?.[k]) && pl[k] >= 1 ? pl[k] : defaults.agent.poolLimits[k])
+}
+
+/** Effort 菜单档位构造（#16 双 `none` 去重——枚举自带 `none` 的族如 qwen3.8-flash 时原来出两行）：
+ *  `none` 恒为首项且唯一，其余档序保持（`filter` 保序）。语义面零改——`none` = 清档，
+ *  消费点（会诊子菜单两支）只认 `=== "none"`；空枚举在取档处已早退 null、不经本函数。 */
+export function effortMenuLevels(enumList) {
+  return ["none", ...(enumList ?? []).filter((l) => l !== "none")]
+}
+
+/** `/config` 压缩阈值显示后缀（§6.17 显示面）：auto 派生 ⇒ `" (auto)"`；显式 ⇒ `""`。
+ *  三处显示路径（header / 主菜单项 / View full config）共用本函数——后缀文案单源。 */
+export function compactThresholdSuffix(auto) {
+  return auto ? " (auto)" : ""
+}
+
+/** `/config` 压缩阈值提问行后缀（§6.17 写回面——台账 `#1679`）：按 `compactThresholdAuto` 二选一。
+ *  两档要的指令相反——auto 档「输数值会锁死派生线」、显式档「怎么回 auto」——只给其中一档，
+ *  另一档的人就看不到自己该看的那半句；逐字恒发两句则其中一句必为空操作。
+ *  非 compact 数值项传 `null` ⇒ 空串（= 该项无后缀）。分隔符自带（空格 + `—` + 空格）。 */
+export function compactThresholdHint(auto) {
+  if (auto == null) return ""
+  return auto ? " — 输入数值即固定为显式阈值" : " — 输入 auto 回到自动派生（删键）"
+}
+
 export function createConfigHelpers(agent, opts = {}) {
   const cfgPath = opts.configPath ?? null // null → 默认 configPath（动态 import 解）
 

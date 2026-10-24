@@ -50,14 +50,14 @@ function kindText(t) {
   if (typeof everyMs === "number" && Number.isFinite(everyMs) && everyMs > 0) return `every ${everyMs / 1000}s`
   const daily = t?.daily
   if (typeof daily === "string" && DAILY_RE.test(daily)) return `daily ${daily}`
-  if (t?.at === true) return `at ${localText(t.expiresAt)}`
+  if (t?.at === true && Number.isFinite(t.expiresAt)) return `at ${localText(t.expiresAt)}`
   return "one-shot"
 }
 
 /** `list` 行第三槽：到期未投 ⇒ `due now`；否则 `next <dur>`（剩余现算）。 */
 function nextText(t, now) {
   const at = Number(t?.expiresAt)
-  return at > now ? `next ${durText(at - now)}` : "due now"
+  return Number.isFinite(at) && at > now ? `next ${durText(at - now)}` : "due now"
 }
 
 /** `message` 首行（`list` 行第四槽——逐字原样，不截断）。 */
@@ -135,6 +135,12 @@ export const timerTool = {
     const hasDaily = args.daily !== undefined && args.daily !== null
     const hasCancel = args.cancel !== undefined && args.cancel !== null
     const wantsList = args.list === true
+    // `list` 键在场须恰为 `true`——否则显式拒（防 `{list:false}` 静默落缺省 180s：无义键触发真实副作用）。
+    if (args.list !== undefined && args.list !== null && args.list !== true) {
+      throw new Error(
+        `timer: list accepts only true (got: ${String(args.list)}) — omit list to set a timer; pass { list: true } to list pending timers`,
+      )
+    }
     const forms = [hasSeconds && "seconds", hasAt && "at", hasEvery && "every", hasDaily && "daily"].filter((v) => v !== false)
     if (forms.length > 1 || (forms.length > 0 && (hasCancel || wantsList)) || (hasCancel && wantsList)) {
       const given = [...forms, hasCancel && "cancel", wantsList && "list"].filter((v) => v !== false).join(" / ")

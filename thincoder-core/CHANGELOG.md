@@ -3,6 +3,39 @@
 All notable changes to the core package are documented here.
 Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs/RELEASE.md` §4）。
 
+## [Unreleased]
+
+## [0.10.10] — 2026-10-22
+
+### Added
+
+- **子代理 `manifest` 只读面**：同名工具、`action` 枚举只剩 `read`（schema 级不可达 + execute 入口再拒一次），挂全部 depth>0 角色段；写面仍归主 agent——`init` / `write` 不在其装配，只读位也不落在全量变体上，审批门不被绕过。`readAction` 增 `canInit`：子代理侧缺档 / 无项目两态的引导行不再指向它调不到的 `init`。
+- **`common.md` 新增「动手前先查文档」一节**：代码只记形状，理由与后果住在文档里；一次会话只完成大任务的一步、上下文只是项目已知内容的一小部分，不先查就是拿局部当整体。
+
+### Changed
+
+- **提示词面 16 档重写（一条规则一行）**：`>300` 字符行 290 → **0**（最长 1,486 → 300，为未改动原行）；整句加粗 / 回查指代 / 出处括注 / 写死配置值 / 本仓路径 / 中文评审面六类残留清零。判据 = 「换个仓还成立吗」——规则只写行为，不写归属、不写配置值、不写本仓路径（配置值改教模型用 `settings` 读，路径改教用 `manifest` 取 `docRoot`）。
+- **`tool-docs` 计数随动**：53 → 54 档（枚举工具 52 → 53）。
+
+## [0.10.9] — 2026-10-19
+
+### Removed
+
+- **`design-slots` 的 `reveal` 开关与掩蔽（token-visibility-simplify 批 2026-10-17）**：清点面改**直读**——逐槽行恒携 `designToken`（过期照列、`status` 自标态；记录畸形 ⇒ `—`）；删净 `reveal` 开关 / 掩蔽 / 一次一槽限制（用户裁定「没必要把 token 藏起来，agent 要就告诉他」）；签发链（mint / settle / TTL / persist）零改。
+
+## [0.10.8] — 2026-10-16
+
+> 0.10.7 → 0.10.8（月内 +1——发布时定号）
+
+### Added
+
+- **MCP 探活具名读数（#1431——2026-10-14 走查轮）**：`probeMcpServer` 返回值增 `tools`（工具名数组——原 `mcpTools` 到手即弃，控制台探活只见计数）；服务端页面随正（具名读数形，缺名回落计数形——零回归）。
+- **注入开关（#1420——injection-switches 批 2026-10-14）**：`agent.injectDocs` ∥ `agent.injectMemories` 两枚全局开关（DEFAULTS `true`；判据 `!== false`）；关 = 阻断三块自动注入（项目指令文件块 ∥ 文档检索块 ∥ 记忆检索块——检索调用不执行），不删数据；`settings` 工具 + CLI `/config` 热应用（写后下一次组装生效）；VSC/桌面设置界面各落两开关。
+- **SSH 会话工具（#1436——ssh-session 批 2026-10-14）**：`ssh` 工具（`connect`/`send`/`read`/`secret_input`/`close`/`list`——多往返会话、状态保持、设备提示符与分页驱动）；密钥 / agent 优先，需要密码走凭据弹窗（**值零入上下文**——`onSecretInput` 注入缝 + askpass 链）；**零第三方依赖**（系统 openssh + `ssh -tt` 远端 PTY + `SSH_ASKPASS`）；三端（CLI / VSC / 桌面）界面在位。
+- **`design-slots` 回收读口（#1384——design-token-recovery 批 2026-10-14）**：`designId` 过滤单槽（trim 精确匹配；未知 ⇒ 拒 + 列在场 id）∥ `reveal:true` 揭值（必携 `designId`；只揭活槽——过期/畸形槽掩蔽注因；`null` 视同缺省——零揭值不 fail-open）；`log.mjs` `SECRET_FORM` 增 token 值形（`uuid:epoch`）。
+- **产品内建 `doc_check` 工具（#1586——builtin-doc-check 批 2026-10-16）**：文档纪律机检内建为产品工具（只读 · 报告态 · **非门禁**）——起步两条判据：锚（档 token ± `§N` ⇒ 档缺 ∥ 节缺；行号不作节指）∥ 行宽（>300 字符；四类谓词 + 区带豁免）；声明面 = `PROJECT-MANIFEST.json` `checkConfig`（零硬编码路径）；项目自建脚本退出判据链。
+- **台账工具项目根读写同一推导（#1588——ledger-root-derivation 批 2026-10-16）**：`resolveLedgerRoot` 判据单源（自目标路径沿祖先链取最近「已注册」= 带档 ∨ 自身路径键控库在盘；工作区态不立为根）；族发现取祖先支；无根契约 = 读面空账 ∥ 写面抛（零落盘）；写面「抛错列候选」退场。
+
 ## [0.10.7] — 2026-10-14
 
 > 0.10.6 → 0.10.7（月内 +1——发布时定号）

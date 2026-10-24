@@ -34,7 +34,7 @@ export async function chatCommand(args, ctx) {
   // 与 TUI 面同式）：**invalid 类**（`state === "invalid"` ∨ `providerInvalidReason` 非空——无渠/key
   // ⇒ 不可运行）⇒ 可读错误 + 退出码 1（不弹 UI、不崩溃）；**fallback**（无有效 defaultModel 但可运行）
   // ⇒ stderr 一行明示 + 继续运行（不退出——D-S2 同态同解）。条目结构不全不在本门（负向锁 =
-  // PROVIDER.md:437）——归运行期失败径（stderr + 非 0 退出）。
+  // PROVIDER.md §6.22）——归运行期失败径（stderr + 非 0 退出）。
   const headlessCfg = agent.config ?? {}
   const invalidClass = headlessCfg.providerState === "invalid"
     || (typeof headlessCfg.providerInvalidReason === "string" && headlessCfg.providerInvalidReason !== "")
@@ -136,7 +136,8 @@ export async function tuiCommand(ctx) {
   if (agent.config?.providerState === "invalid") agent.provider = null
   const config = loadConfig()
   if (data) {
-    // applySession 内部已按槽复合重算 compactThreshold（auto 时）——不再需要 switched 分支
+    // applySession 内部已按槽复合刷新显示面 compactThresholdResolved（auto 时）——判定阈值由
+    // setup.mjs 每 run 现算（§6.17），此处不再需要 switched 分支
     // TUI-OOM-ROOTCAUSE（SESSION.md §6.14）：传 slot → 绑定记录存储（身份核验 + 对账）
     // ——人读线 = 尾窗（磁盘为准）；未传 = 模式 F（全量数组）
     applySession(agent, data, { slot })

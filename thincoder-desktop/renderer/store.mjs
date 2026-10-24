@@ -1,5 +1,5 @@
 /**
- * store.mjs — 渲染面单状态树（`docs/desktop/design/SHELL.md:32` · `docs/desktop/design/RENDERER.md:17`）：
+ * store.mjs — 渲染面单状态树（`SHELL.md` §1 · `RENDERER.md` §1）：
  * 单一持有点 + 订阅（**变更触发** · 等值零通知 · 通知中再变更不递归）。
  * 面域 = 会话 / 块与历史 / 活动池 / 设置族 —— 数据面切片 = 块 / 历史回填 / 跟滚（会话模型轮 R13：
  * 标签族三切片 `tabs` ∕ `activeTab` ∕ `pendingClose`＋关闭确认四纯动作、左列行形态 `railForm` 两纯动作随会话模型

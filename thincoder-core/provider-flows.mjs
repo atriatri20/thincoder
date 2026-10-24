@@ -70,7 +70,7 @@ export function customFieldsError(fields) {
 }
 
 /**
- * M9 探针目标构造（上提源 = VSC `provider-flows.mjs:38` 的实参面 `presets.mjs` `probeTargetFromEntry`——
+ * M9 探针目标构造（上提源 = VSC `provider-flows.mjs` 的实参面 `presets.mjs` `probeTargetFromEntry`——
  * 逐条随迁）：渠道条目 ⇒ `listModels` 可消费的探针目标。代理链与 chat 请求同规则（per-provider `proxy: true`
  * ∧ `proxy.uri` 在案 ⇒ 探针也走该代理；无全局闸——2026-10-08 批落）；apiKey 归一（trim；缺 ⇒ 空串——探针会
  * 如实失败 ⇒ 渠道标「不可用」——准入判据 M8）。`headers` 字段面（#1048①）：仅 plain-object 才携；缺 ∥ 非法 ⇒

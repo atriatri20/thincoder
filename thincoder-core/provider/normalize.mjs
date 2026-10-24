@@ -18,6 +18,9 @@ export const IMAGE_HISTORY_BYTES_BUDGET = 32 * 1024 * 1024
 /** 图片驱逐占位文本（D-PR32 逐字）。 */
 const IMAGE_BUDGET_PLACEHOLDER = "[image omitted — dropped to keep the request under the history image budget]"
 
+/** 图片拒绝剥除占位文本（PROVIDER.md §6.26 逐字——逐图原位替换）。 */
+export const IMAGE_REJECTED_PLACEHOLDER = "[image omitted — the provider rejected the image payload; dropped from history so the session can continue. Re-read a smaller copy if the image is still needed.]"
+
 /** 单 part 的 base64 载荷长度（仅 data URL；非 data 引用不过请求体、零计账）。 */
 function imagePartBytes(p) {
   if (p?.type !== "image_url") return 0
@@ -27,14 +30,31 @@ function imagePartBytes(p) {
   return comma >= 0 ? url.length - comma - 1 : 0
 }
 
+/** 图像 part 替换核（D-PR32 字节驱逐 ∥ §6.26 拒绝剥除共用——`drop` = `${mi}:${pi}` 键集；
+ *  命中 part 原位换 `placeholder`；copy-on-write：未命中消息原引用返回）。 */
+function replaceImageParts(messages, drop, placeholder) {
+  return messages.map((m, mi) => {
+    const parts = m?.content
+    if (!Array.isArray(parts)) return m
+    let changed = false
+    const next = parts.map((p, pi) => {
+      if (!drop.has(`${mi}:${pi}`)) return p
+      changed = true
+      return { type: "text", text: placeholder }
+    })
+    return changed ? { ...m, content: next } : m
+  })
+}
+
 /**
  * 历史图片累计字节预算（D-PR32）：全部 image part 的 base64 载荷和超 budgetBytes 时，
  * 从**最老**图起替换为占位文本，直到剩余 ≤ 预算。纯函数 + 拷贝语义（未改动时返回原引用；
  * 改动时仅重建涉及的消息对象）——发送前对消息副本用；注入面对 `history` 本体回写（同函数同预算）。
  * @param {Array} messages
  * @param {number} [budgetBytes]
+ * @param {string} [placeholder] 占位文本（缺省 = D-PR32 逐字原文——§6.26 新增参零扰）
  */
-export function capHistoryImages(messages, budgetBytes = IMAGE_HISTORY_BYTES_BUDGET) {
+export function capHistoryImages(messages, budgetBytes = IMAGE_HISTORY_BYTES_BUDGET, placeholder = IMAGE_BUDGET_PLACEHOLDER) {
   if (!Array.isArray(messages)) return messages
   const hits = []
   let total = 0
@@ -56,17 +76,27 @@ export function capHistoryImages(messages, budgetBytes = IMAGE_HISTORY_BYTES_BUD
     drop.add(`${hit.mi}:${hit.pi}`)
     remaining -= hit.bytes
   }
-  return messages.map((m, mi) => {
-    const parts = m?.content
-    if (!Array.isArray(parts)) return m
-    let changed = false
-    const next = parts.map((p, pi) => {
-      if (!drop.has(`${mi}:${pi}`)) return p
-      changed = true
-      return { type: "text", text: IMAGE_BUDGET_PLACEHOLDER }
-    })
-    return changed ? { ...m, content: next } : m
-  })
+  return replaceImageParts(messages, drop, placeholder)
+}
+
+/**
+ * 图片拒绝剥除（PROVIDER.md §6.26）：全部 image part 一次原位换 `IMAGE_REJECTED_PLACEHOLDER`
+ * （全剥——单图归因信息不存在；只剥最新 ⇒ 二连败）。copy-on-write：仅重建含图消息对象
+ * （两线共享消息对象——人读线 `_fullHistory` 内图不动）；无图 ⇒ 原引用返回。
+ * @param {Array} messages
+ */
+export function stripRejectedImages(messages) {
+  if (!Array.isArray(messages)) return messages
+  const drop = new Set()
+  for (let mi = 0; mi < messages.length; mi++) {
+    const parts = messages[mi]?.content
+    if (!Array.isArray(parts)) continue
+    for (let pi = 0; pi < parts.length; pi++) {
+      if (parts[pi]?.type === "image_url") drop.add(`${mi}:${pi}`)
+    }
+  }
+  if (drop.size === 0) return messages
+  return replaceImageParts(messages, drop, IMAGE_REJECTED_PLACEHOLDER)
 }
 
 export function stripImagesForTextModel(messages, spec) {

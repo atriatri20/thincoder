@@ -14,7 +14,7 @@
  *   ⑦ **并源队列视图 `queueView`（挂起窗径批 ∥ 窗队列批 · KD-40 ⑥）**：`snapshot` = 忙态队 ∪ 窗输入队合并快照
  *      （链 `postQueue` 全帧 ∥ `queueSnapshot` 同源单点）；取批三件（`plan` ∕ `peek` ∕ `take`）恒指忙态队单源——两载体不合并
  * **R3（#505）**：单回合执行面增**撞帽续跑询问缝**（`askQuestion` 注入 ⇒ `askContinue` —— 薄形复用既有待决门，
- * KD-T8；文案随 VSC `panel-turn-loop.mjs:144-147` 原文）。
+ * KD-T8；文案随 VSC `bindPanelAgent` 原文）。
  * **#543（裁定 A · 用户输入零丢失）**：撞帽询问**待答期携消息**中断 ⇒ 消息入宿主忙态队（`queued-input` 原语）；
  * 消费 = 下一回合边界（接管续发链同点）。**#656（KD-52）**：入队单点前移 = `interrupt` 入口（cap 待答 ∧ 携文
  * ⇒ 先执 `queued.add` 权威判；满 ⇒ 整调用回执 `queue-full` **零中止**——询问在场 ∕ 回合照旧 ∕ 零丢失）；
@@ -93,7 +93,7 @@ export function createTurnDriver({
   /** 撞帽待答登记（#656 · KD-52 ②）：key → 登记令牌 —— `interrupt` 入口预检判据（cap 待答 ∧ 携文）；
    *  询问结算（作答 ∥ 打断拒结算）即清（`.finally`；守卫 = 本次令牌 —— 防迟到清位误抹后次待答）。 */
   const capPending = new Map()
-  /** 撞帽续跑询问（R3 · #505 · KD-T8 薄形 —— 载体 = 既有待决门）：文案随 VSC `panel-turn-loop.mjs:144-147`
+  /** 撞帽续跑询问（R3 · #505 · KD-T8 薄形 —— 载体 = 既有待决门）：文案随 VSC `bindPanelAgent`
    *  原文（词面内容权 = 主 agent —— 沿 R1 先例登记）；缺注入 ⇒ `null`（turn-face 按拒绝收口）。
    *  #656：待答态按会话键登记（`capPending` —— `interrupt` 入口预检判据，落点 = 本包装）。 */
   const askContinue = typeof askQuestion === "function"

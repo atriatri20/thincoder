@@ -15,7 +15,7 @@
 }
 
 /* 块（六型单序列）：文本面经**核 Markdown**呈现（R3c · KD-RC-4 —— 渲染面单源 = `renderer/views/chat-text.mjs`；核产出面样式 = `renderer/core.css`）；
-   块壳 = **透明无卡壳**（无边框 ∕ 无底 ∕ 零内边距 —— VSC `webview/chat.css:20-48` `.message` 族逐值：面宽全型 100%〔基础行 90% 被 user ∕ assistant 两覆盖行落至 100%——有效值〕· 块距：块块相连 + 带签 8 ∕ 盒块 8 两例外〔扁平化 ∥ 间距批 2026-09-30 ⇒ 轻通道轮四归一 8px；单源 = `docs/desktop/design/UI.md`「流内竖向间距」注〕；文本内边距 user `0` ∕ assistant `8px 0`）；
+   块壳 = **透明无卡壳**（无边框 ∕ 无底 ∕ 零内边距 —— VSC `.message` 族逐值：面宽全型 100%〔基础行 90% 被 user ∕ assistant 两覆盖行落至 100%——有效值〕· 块距：块块相连 + 带签 8 ∕ 盒块 8 两例外〔扁平化 ∥ 间距批 2026-09-30 ⇒ 轻通道轮四归一 8px；单源 = `docs/desktop/design/UI.md`「流内竖向间距」注〕；文本内边距 user `0` ∕ assistant `8px 0`）；
    面内件各自携盒值（本档 = 工具卡 ∕ 错误横幅；推理块 = `renderer/core.css` ② 核类名映射面）；`pre-wrap` 保留（核 md 产出无裸换行 · 行内块件自持 `white-space`），流式游标住 `.block-assistant[data-streaming="1"]`。 */
 .block {
   white-space: pre-wrap;
@@ -29,7 +29,7 @@
 /* 件级外边距：块距 = 0 通管（扁平化 · 用户 2026-09-30 裁决）。 */
 
 /* 盒块间呼吸（轻通道 #716 · 用户 2026-09-30「工具和思考块之间都没间隔……你觉得呢」——父侧建议小间隔；CLI 参照 =
-   `render-conversation.mjs:375` 块前空行；桌面盒块（思考/错误/归档）非带签者获 8px 上距——扁平化前工具块历史值）。
+   `buildConvLines` 的块前空行；桌面盒块（思考/错误/归档）非带签者获 8px 上距——扁平化前工具块历史值）。
    **工具块出列**（轻通道轮二 · 用户 2026-09-30 15:13「工具块之间的间距也没必要了」——去底后同灰板并底前提消失 ⇒ 工具块零距相连）。 */
 .block + .block:is(.block-reasoning, .block-error, .block-subagent):not(:has(> .msg-label)) {
   margin-top: 8px;
@@ -72,7 +72,7 @@
 .block-assistant > .block-text {
   padding: 8px 0;
 }
-/* 错误横幅 = VSC `webview/chat.css:417-427` `.error-banner` 逐值（无边框；红底 ∕ 错误色；内边距 6px 10px ∕ 圆角 0〔扁平化 2026-09-30〕；字号 = D29 排版统一归基线 `var(--fs)`）。 */
+/* 错误横幅 = VSC `.error-banner` 逐值（无边框；红底 ∕ 错误色；内边距 6px 10px ∕ 圆角 0〔扁平化 2026-09-30〕；字号 = D29 排版统一归基线 `var(--fs)`）。 */
 .block-error {
   padding: 6px 10px;
   border-radius: 0;
@@ -92,9 +92,9 @@
   color: var(--fg-muted);
 }
 
-/* 工具卡（三行：头行（可折叠 ⇒ `button` 形）· 改动摘要行 · 展开结果区）：盒 = VSC `.tool-call`（`webview/chat.css:179-187`）逐值 ——
+/* 工具卡（三行：头行（可折叠 ⇒ `button` 形）· 改动摘要行 · 展开结果区）：盒 = VSC `.tool-call` 逐值 ——
    边框 0 ∕ 圆角 0〔扁平化 2026-09-30〕 ∕ 字号（D29 归基线 `var(--fs)`） ∕ `overflow: hidden`；盒底 = **透明**（轻通道笔 · 用户 2026-09-30「不要背景了，只要hover上去有反应就行了」）；
-   hover 反馈 = 头行既有面（`.tool-head:hover`——本档 `:158` 邻位）。件级外边距由块级模型通管
+   hover 反馈 = 头行既有面（`.tool-head:hover`——本档 `.tool-head [data-seg="summary"]` 邻位）。件级外边距由块级模型通管
    （现值 = 盒块规则 `.block + .block:is(…) { margin-top: 8px }`——扁平化 ∥ 间距批 2026-09-30）。 */
 .block-tool {
   border: 0;
@@ -121,17 +121,17 @@
   font: inherit;
   text-align: left;
 }
-/* 头行色 = VSC 逐值（值源 = VSC 内联 `flow/tool-card.mjs:111/:114`）：两态色归 **status 段**。 */
+/* 头行色 = VSC 逐值（值源 = VSC 内联 `finishToolCard`）：两态色归 **status 段**。 */
 .tool-head[data-status="error"] [data-seg="status"] {
   color: #f14c4c;
 }
 .tool-head[data-status="done"] [data-seg="status"] {
   color: #4ec9b0;
 }
-/* 头行段样式四组 = VSC `webview/chat.css:216-244` 逐值（段面 = 桌面 `[data-seg]` 子节点）——
+/* 头行段样式四组 = VSC `.tool-call-name` 段 逐值（段面 = 桌面 `[data-seg]` 子节点）——
    **D29 排版统一（2026-09-30）**：字号 ∥ 字重段值归基线（name 600 ⇒ 400；三处 11px ⇒ `var(--fs)`）；余省略 ∥ 降显值与 VSC 同：
-   name `:216-219` 字重 600 + `color: var(--accent)` ∕ args `:221-228` `color: var(--fg)` + 省略四值 + 降显 .5 ∕
-   status `:230-233` 11px + .6 ∕ summary `:235-244` 11px + .75 + `margin-left: 8px` + `max-width: 45%` +
+   name `.tool-call-name` 字重 600 + `color: var(--accent)` ∕ args `.tool-call-args` `color: var(--fg)` + 省略四值 + 降显 .5 ∕
+   status `.tool-call-status` 11px + .6 ∕ summary `.tool-call-summary` 11px + .75 + `margin-left: 8px` + `max-width: 45%` +
    `flex-shrink: 1` + 省略三值；耗时段（`time` —— 段产出面 = `views/chat-tool.mjs`）11px ∕ .6（#25 裁①）随落。 */
 .tool-head [data-seg="name"] {
   font-weight: 400;
@@ -191,7 +191,7 @@
 .tool-file [data-del]::before {
   content: "−";
 }
-/* 结果区 = VSC `.tool-call-body`（`webview/chat.css:257-272`）逐值（等宽栈 ∕ 字号 ∥ 行高 D29 归基线 ∕ `opacity: .75` ∕ 封顶 180px 自滚）。 */
+/* 结果区 = VSC `.tool-call-body` 逐值（等宽栈 ∕ 字号 ∥ 行高 D29 归基线 ∕ `opacity: .75` ∕ 封顶 180px 自滚）。 */
 .tool-result {
   padding: 0 10px; /* 笔 5：上下 6 撤——并入行律。 */
   border-left: 2px solid var(--fg-muted); /* 展开体左流线（笔 6 落形 ∥ 笔 7 加粗加深 3px ∥ 笔 8 细回 2px——线心仍 ≈14px；margin 12.5 ⇒ 13 随宽校正）。 */
@@ -253,7 +253,7 @@
   color: var(--fg-muted);
 }
 
-/* 说话人标签行（「对齐第二批」项 4；值源 = VSC webview `chat.css:3-18`）：用户块 = 核 `paintLabel` 落 HTML
+/* 说话人标签行（「对齐第二批」项 4；值源 = VSC `.msg-label`）：用户块 = 核 `paintLabel` 落 HTML
    （含 `❯` / `:` / 时间 span）；助手回合首块 = 端侧同字面 —— 两字形（`❯` / `:`）住本档 `content`
    （视图档零字形字面）；`data-label` 分色（用户 / 助手两面同 accent） */
 .msg-label {
@@ -312,7 +312,7 @@
 
 /* 消化行族（桌面空闲唤醒批 · 流内落位批改**逐轮行族 · 流内就地**〔**无轮容器**——#747：行元素 = 流内并列兄弟·族标逐行承载〕
      —— 流内非块节点 `[data-digest]`；落点 = 流内就地 ——
-    单源 = `docs/desktop/design/RENDERER.md` §1.1 两条纪律；形 = VSC `webview/base.css:203-258` 逐值 —— turn 行 = 纯行（无边 ∕ 无底）· status 行 = 盒行）：
+    单源 = `docs/desktop/design/RENDERER.md` §1.1 两条纪律；形 = VSC `.compress-status` / `.digest-status` 类族 逐值 —— turn 行 = 纯行（无边 ∕ 无底）· status 行 = 盒行）：
     ① 起跑态（起跑标签行 + `n > 0` 计数行 —— 计数行同形于状态条，标签行同族小字；**标签行恒在**（零摘除——#768）∥ **计数行恒起跑文**）∥
     ② 终态（`end` ⇒ **追加终态行**（锚 `data-digest-end`——词 = `digest.done` ∕ `digest.aborted`，复用本节两底色；**不动原 digesting 行**）；行入流（与内容同生态）；
     重建按记录位次复列（段界可辨；刷新 ∥ 重载 ∥ 切走切回均在——留档批 · #719）；`digest-failed` = 错误色显形〔opacity 不覆盖 —— 沿 VSC 继承 0.85〕，`digest-done` = 信息色显形）；
@@ -341,7 +341,7 @@
   color: var(--error-fg);
 }
 
-/* 撞帽行（#541 —— 对位 VSC `webview/base.css:248-258` 逐值：auto = dim〔同族观感〕、stop = warn〔部分消化——用户需知〕；
+/* 撞帽行（#541 —— 对位 VSC `.digest-cap` 逐值：auto = dim〔同族观感〕、stop = warn〔部分消化——用户需知〕；
     角色对位 = `--fg-muted` ∕ `--warn`）。 */
 .chat-digest.digest-cap {
   font-size: var(--fs);

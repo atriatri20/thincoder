@@ -259,7 +259,7 @@ export async function updateResultDialog({ kind, title, message, detail } = {}) 
 
 /** 菜单维护出口（R1 · 会话维护线）：处理体（核数据面）住 `session-maintenance.mjs`（零 electron）——
  *  本档只做宿主面两枚对话框（确认 + 结果）；结果句单源 = 同档两枚 formatter。
- *  **结果面三径同 VSC 先例**（`session-gc-command.mjs:36-46/:66-68`）：无候选 ⇒ 一句「nothing to clean」；
+ *  **结果面三径同 VSC 先例**（VSC `runSessionGcCommand`）：无候选 ⇒ 一句「nothing to clean」；
  *  真回收 ⇒ 汇总句；**用户驳回 ⇒ 零弹框**（沿先例驳回径静默返回同形——回执面（`session:gc` 通道）不受影响）。
  *  异常 ⇒ stderr 一行（不吞、不假成功 —— 菜单回调无 invoke 拒绝面兜底）。 */
 async function runMaintenance(action) {
@@ -397,7 +397,7 @@ function firstLoad(win, onError) {
   })
 }
 
-/** 单探针读数（`net.fetch` 直取 `app://`）：正探针 `{ id, status, mime }` / 负探针 `{ id, status }`（契约 `:325` —— 负探针无 `mime` 键）；取不到 ⇒ status 0 + 记错。 */
+/** 单探针读数（`net.fetch` 直取 `app://`）：正探针 `{ id, status, mime }` / 负探针 `{ id, status }`（探针契约 —— 负探针无 `mime` 键）；取不到 ⇒ status 0 + 记错。 */
 async function runProbe(probe, onError) {
   try {
     const response = await net.fetch(`${SCHEME}://${HOST}/${probe.path}`)

@@ -40,7 +40,7 @@ const W = {
 
 /** Identity/status header line:
  *  live   → "[▶ eng-coder#3 · async · glm-5.3 · 12s · turn 3/100]" + 状态词
- *  queued → "[⏳ eng-coder#4 · queued|waiting]"（#118 R4：`kind` 判词——CLI `:73` 对位）
+ *  queued → "[⏳ eng-coder#4 · queued|waiting]"（#118 R4：`kind` 判词——CLI `subagent-panel.mjs` 对位）
  *           + 状态区排队信息（C-11②：位置/原因）
  *  frozen → "[✓ eng-coder#3 · async · glm-5.3 · done 15s · turn 4/100]"
  *  awaiting（settled 待消化）→ "[✓ eng-coder#3 · async · glm-5.3 · 15s] done · awaiting digestion"
@@ -53,7 +53,7 @@ const W = {
  *  Parts are conditional on what the events actually carried（turn 只在真实计数值时）。 */
 function headerText(meta, now) {
   const frozen = meta.frozen
-  // #118 R4：排队头状态词（判据 = 载荷 `kind`——CLI `subagent-panel.mjs:73` 同形）：`kind === "slot"`
+  // #118 R4：排队头状态词（判据 = 载荷 `kind`——CLI `subagent-panel.mjs` 同形）：`kind === "slot"`
   // ⇒ queued；其余（含 `kind` 缺省 = 降级态）+ 与 R5 降级形同一判据 ⇒ waiting。
   if (!frozen && meta.status === "queued") {
     return `[⏳ ${meta.label} · ${meta.queueInfo?.kind === "slot" ? W.queued() : W.waiting()}]`
@@ -78,7 +78,7 @@ function headerText(meta, now) {
   if (FAMILY_ROLES.includes(meta.role) && meta.pool != null && !meta.queued) {
     head += " · " + (meta.pool ? W.async() : W.sync())
   }
-  // 模型段：#677 · I16c（B7 族 `WEBVIEW-PROTOCOL.md:243` 裁定）——consult/escalate 同携（端侧键不含
+  // 模型段：#677 · I16c（B7 族 `WEBVIEW-PROTOCOL.md` §6.2 裁定）——consult/escalate 同携（端侧键不含
   // 模型段——模型经 `[model]` token 达 `meta.model`；与 CLI 标尺同形）。
   if (meta.model) head += " · " + meta.model
   if (verb && !meta.awaitingDigest) head += ` · ${verb} ${sec}s` // awaiting：括号去 verb（C-2）
@@ -96,7 +96,7 @@ function headerText(meta, now) {
  *  - awaitingDigest 驻留（C-2）→ `t("sub.awaitingDigest")`（en 逐字 `done · awaiting digestion`）
  *  - approval（C-8）→ `t("sub.awaitingApproval", { tool })`（child ask 在途——最高优先级；
  *    清态（tool:null）即回落）
- *  - queued（C-11②/#118 R5）→ **`kind` 优先**（CLI `thincoder-cli/src/tui/subagent-panel.mjs:100-102`
+ *  - queued（C-11②/#118 R5）→ **`kind` 优先**（CLI `thincoder-cli/src/tui/subagent-panel.mjs`
  *    同形）：`kind === "slot"` ⇒ `t("sub.queueSlot", {n: position})`；其余（含 `kind` 缺省）⇒
  *    `reason` 原文零改写；无 `reason` ⇒ 中性回落 `t("sub.queued")`（= CLI `queued.detail || "queued"`）
  *  - live running → 结构化工具行（C-11①：`${name} — ${cmd ≤60}` / 工具名）/ `思考中…`
@@ -145,7 +145,7 @@ export function refreshBlock(block) {
   summary.appendChild(hdr)
   // Folded context: tail-N dim lines under the header（N = 缝值 `_tailLines`——缺省 3 ∥ 允许 0；
   // live 折叠态或冻结态——终态折叠后块 = header + tail-N——内容保留可展开——无报告 preview 元素）；
-  // 行文 = `│ ` 前缀独立行（CLI `render-segments.mjs:103-109` 同形——D4 消：tail-3 行文归一）。
+  // 行文 = `│ ` 前缀独立行（CLI `render-segments.mjs` 同形——D4 消：tail-3 行文归一）。
   if (meta.frozen || !block.open) {
     const lines = tailLines(block, _tailLines)
     if (lines.length) {
@@ -190,25 +190,43 @@ function updateStopButton(block) {
   }
 }
 
-/** Chunk-level state-word tracking（状态区取值源 = 闭枚举——`WEBVIEW.md` §5.2）：写点恰两处
+/** Chunk-level state-word tracking（状态区取值源 = 闭枚举——`WEBVIEW.md` §5.2）：**写点恰一处**
  *  ——结构化工具行（`${name} — ${cmd ≤60}` / 工具名；嵌套 name = `sub/tool`，CLI
- *  `subagent-blocks.mjs:337` 同构）与 think（`思考中…`）。
- *  **输出面永不入状态区**：`face === "toolOutput"` 的 chunk 与无结构化 `tool` 字段的旧形态
- *  一律不改写状态区（输出 / 结果只进块体行——CLI `currentTool` 语义 §14 C-11①）。 */
+ *  `subagent-blocks.mjs:341` 同构）。**think 不改写已有状态词**（CLI：工具行不被思考顶掉，
+ *  `subagent-blocks.mjs:308` / `:323`）；**唯一例外** = 状态词还空且 `sub` 在场时，think 写入
+ *  `<sub>/<think 词>`——否则子代理刚起、先思考时标题只剩裸 think 词，名字被吃掉（用户 2026-10-20 16:32 ∥
+ *  2026-10-21 17:44 两次裁定）。
+ *  **输出面不入状态区**：`face === "toolOutput"` 的 chunk 与无结构化 `tool` 字段的旧形态
+ *  不改写状态区（输出 / 结果只进块体行——CLI `currentTool` 语义 §14 C-11①）。
+ *  **唯一例外 = 顾问名支**（下支 `toolOutput ∧ tool === "advisor"`）：只写「本块正被 advisor 占用」
+ *  这个名字，不写输出文本——名字是事实，正文是内容，两者不进同一个面。 */
 export function noteChunk(block, kind, text, m) {
   if (!block?._subMeta || block._subMeta.frozen) return
   const meta = block._subMeta
   if (kind === "tool") {
     // 结构化工具字段（C-11①）：`${name} — ${cmd ≤60}`（无 cmd 仅 name）；label 段 = relay
-    // 折出的全路径（`panel-subagent-relay.mjs:176` `path.inner.join("/")`）。
+    // 折出的全路径（`panel-subagent-relay.mjs` `path.inner.join("/")`）。
     if (typeof m?.tool === "string" && m.tool && m.face !== "toolOutput") {
       const name = (typeof m.sub === "string" && m.sub) ? `${m.sub}/${m.tool}` : m.tool
       const cmd = typeof m.cmd === "string" ? m.cmd.replace(/\s+/g, " ").trim() : ""
       meta.stateWord = cmd ? `${name} — ${cmd.length > 60 ? cmd.slice(0, 59) + "…" : cmd}` : name
+    } else if (m?.face === "toolOutput" && m?.tool === "advisor") {
+      // 顾问评审（子代理内部 `advisor` 工具）的产出以 **toolOutput** 回传（`advisor.mjs:237`
+      // `onOutput: ctx.onOutput` ⇒ `onToolOutput`），而输出面从不入状态词 ⇒ 顾问跑着的整段时间
+      // 标题停在裸 think 词（用户 2026-10-21 18:01 现象）。这里只写「它现在在跑 advisor」这个名字，
+      // 不写输出文本：名字 = 事实（本块正被 advisor 占用），输出仍只进块体行。
+      const who = (typeof m.sub === "string" && m.sub) ? `${m.sub}/` : ""
+      meta.stateWord = `${who}advisor`
     }
     refreshBlock(block)
   } else if (kind === "think") {
-    meta.stateWord = W.thinking()
-    refreshBlock(block)
+    // think **不改写已有状态词**（CLI 对齐：`currentTool` 只由工具 call 写）。
+    // 唯一例外 = 还没有状态词时：由它带上当前干活的嵌套子代理身份（`explore#1/思考中…`）——
+    // 否则标题只剩思考词，子代理名被吃掉（用户 2026-10-20 16:32 ∥ 2026-10-21 17:44 两次裁定）。
+    if (meta.stateWord == null && typeof m?.sub === "string" && m.sub) {
+      meta.stateWord = `${m.sub}/${W.thinking()}`
+      refreshBlock(block)
+    }
+    return
   }
 }

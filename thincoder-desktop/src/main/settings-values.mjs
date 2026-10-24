@@ -20,7 +20,7 @@ export const MASK = MASKED
 
 /**
  * **端侧遮罩单点**：敏感键 ⇒ 遮罩字面量，否则原值直通。判据复用核**导出**的
- * `isSensitiveKey`（`thincoder-core/agent-tools/settings.mjs:22`——段名判据）；遮罩字面同取核
+ * `isSensitiveKey`（段名判据）；遮罩字面同取核
  * `MASKED`（B10 S13 转 export——端侧零副本）。
  * 通道载荷**只回遮罩后值**：`provider:list` 的 `maskedKey` 与 `settings:agent` 的 `fields`
  * 均经本函数出口（明文密钥零下发）。

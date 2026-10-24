@@ -6,7 +6,7 @@
  * 本档 = 概览 / 方法 / 关键发现 / 局限声明 / 附录 + 骨架装配。关键发现只由数据 + 固定句式生成（禁主观评价词）。
  */
 
-import { AXES, CAPABILITY_SELECTOR, DIMENSIONS, DIM_LABELS, MANUAL_DIM, SUITE_VERSION } from "../cases/index.mjs"
+import { AXES, CAPABILITY_SELECTOR, DIMENSIONS, DIM_LABELS, MANUAL_DIM, SUITE_VERSION } from "../suites/index.mjs"
 import {
   EVAL_SPLIT_NOTE, allRuns, costSection, detailSection, dimsOf, fmtMoney, fmtMs, fmtRate,
   manualSection, matrixSection, modelStats, rate,

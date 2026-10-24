@@ -10,7 +10,8 @@
  * 〔零回声〕∥ 修复跳过 ∥ 压缩跳过）——**回合不阻断**（一面一条警告）。核件原文复用（不收窄 schema、不二次包装——KD-SV-113）。
  * 压缩垫片（§17.3 A3.2）＝ `{ history, provider, config: { traces: { enabled: false } }, cwd, tasks: [] }`——**专用垫片**，
  * 勿与 env 垫片混用；`tasks: []` = `applyCompression` 读 `agent.tasks.length` 的注入面（服务面零任务重注入）。
- * 阈值 = 核缺省镜像常量 `DEFAULT_COMPACT_THRESHOLD`（`thincoder-core/agent/setup.mjs:26`；核变同拍）。
+ * 阈值口径 = **本档自持** `DEFAULT_COMPACT_THRESHOLD`（= 100_000，服务端独立于核的 auto 现算面）。
+ * 2026-10-18（父侧直接执行 · 可 revert）：核已删同名常量（`setup.mjs` 改每 run `resolveCompactThreshold` 现算），原「核缺省镜像」表述失效。
  * 落库单源 = 压缩标记行（`role="user"` ∥ `data.kind="compaction"` ∥ `data.covers=[seq首, seq尾]` ∥ 内容 = 压缩产物文本）——
  * 回放面解析 = `chat-store.mjs`（覆盖区间以标记行代；嵌套标记自然消解）；**原行不删**（审计面原文留存）。
  * 覆盖区间 = 压缩前后差分求（首变点 ⇒ 尾重合段前沿——`applyCompression` 实读口径：head ＋ 注记〔＋占位 ∥ 并入尾首相邻助手〕＋ tail；
@@ -19,7 +20,7 @@
  * 降级 `compressFallback`（确定性截断——同出标记面）；中断（`AbortError` ∥ signal 已中止）⇒ 零计数跳过（回合环自收尾）。
  * 缩减路径（核 `shrinkOversized`——`_lastCompressInfo` 缺席）⇒ 机器线已缩（逐回合瞬态）但零摘要产物 ⇒ **零标记**（回放面零动）。
  */
-/** 压缩阈值（核缺省镜像常量——`thincoder-core/agent/setup.mjs:26` `DEFAULT_COMPACT_THRESHOLD` = 100_000；核变同拍）。 */
+/** 压缩阈值（**服务端自持**常量；核已改为每 run `resolveCompactThreshold` 现算——两者不同源，核变不自动同步）。 */
 export const DEFAULT_COMPACT_THRESHOLD = 100_000
 
 /** 压缩标记行判别值（`data.kind`——落库形单源；回放解析 = `chat-store.mjs` `compactionCoversOf`）。 */

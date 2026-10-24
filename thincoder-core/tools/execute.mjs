@@ -61,7 +61,7 @@ function applyFilter(output, filter) {
 }
 
 /** 树杀单源 = `tools/process-tree.mjs`（TOOLS.md §6.14 落位表行 2：自本档抽出以断
- *  `shared → git-run → execute → shared` 环）；**再导出面保留**（`test/tool-seams.test.mjs:26` 消费，
+ *  `shared → git-run → execute → shared` 环）；**再导出面保留**（
  *  `configureProcessTreeKill` 缺省径零改）。 */
 export { killProcessTree }
 

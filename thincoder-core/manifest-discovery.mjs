@@ -1,6 +1,6 @@
 /**
  * manifest-discovery.mjs — **发现 ∕ 归属族**出档（2026-09-29 structure-split-2 · 台账 #620）：自 `manifest.mjs`
- * 全量迁出〔原 `:39-143`〕——`MANIFEST_REL` · 测试注入位（`_setProjectRootForTest` / `_resetProjectRootForTest`）·
+ * 全量迁出——`MANIFEST_REL` · 测试注入位（`_setProjectRootForTest` / `_resetProjectRootForTest`）·
  * `scanChildren`（两条梯表共用 walk 内核）· `discoverProjects`（项目梯）· `discoverRepos`（仓梯）·
  * `owningProject`（归属形）· `resolveProjectRoot`（归属 ∨ 发现）；**结构拆分零语义**（面不变 ∕ 判据不变，
  * 只换宿主档；切点 ∕ 缝单源 = 批档 `docs/batches/2026-09-29-structure-split-2.md` §2.2-C）。
@@ -41,13 +41,14 @@ function scanChildren(anchor, isHit) {
 /**
  * **项目发现**（项目梯五级——KD-M1-23 / 设计 `docs/core/design/MANIFEST.md` §2.2；**git 非前提**，
  * 2026-09-21 用户裁定）：① 锚自身带 `MANIFEST_REL` ⇒ 锚；② 锚含 `.git` ⇒ 锚（缺档 = 建档机会）；
- * ③ 直接子目录中**带档**者优先（非空即只看此级：恰一 ⇒ `unique` / ≥2 ⇒ `ambiguous`）；
- * ④ 零带档才看含 `.git` 的**裸仓**（同判）；⑤ 均无 ⇒ `none`（⇒ 建档流，落点 = 会话锚）。
+ * ③ 直接子目录中**带档**者优先（非空即只看此级：恰一 ⇒ `unique` / ≥2 ⇒ `workspace`——下辖多项目
+ * = 工作区常态，非错误态）；④ 零带档才看含 `.git` 的**裸仓**（同判）；⑤ 均无 ⇒ `none`（⇒ 建档流，
+ * 落点 = 会话锚）。
  * `candidates` 一律**按名排序**（`self` / `none` ⇒ `[]`）；`matched` ∈ `manifest` / `git` / `null`
- * 记命中（或歧义）出自哪一级。**纯 fs**（只判存在性——不解析档内容）· **不抛** · **不向上** · **不递归**。
+ * 记命中（或工作区）出自哪一级。**纯 fs**（只判存在性——不解析档内容）· **不抛** · **不向上** · **不递归**。
  * **覆盖位**（`_setProjectRootForTest` 在场）⇒ **头部短路**（测试注入面——先于真判据，同 `discoverRepos`）。
  * @param {string} [cwd] 会话锚（缺省 → 进程 cwd）
- * @returns {{kind:'self'|'unique'|'none'|'ambiguous', root:string|null, candidates:string[], matched:'manifest'|'git'|null}}
+ * @returns {{kind:'self'|'unique'|'none'|'workspace', root:string|null, candidates:string[], matched:'manifest'|'git'|null}}
  */
 export function discoverProjects(cwd) {
   if (_projectRootOverride) return { kind: "self", root: resolve(_projectRootOverride), candidates: [], matched: null }
@@ -55,10 +56,10 @@ export function discoverProjects(cwd) {
   if (existsSync(join(anchor, MANIFEST_REL))) return { kind: "self", root: anchor, candidates: [], matched: "manifest" }
   if (existsSync(join(anchor, ".git"))) return { kind: "self", root: anchor, candidates: [], matched: "git" }
   const withManifest = scanChildren(anchor, (d) => existsSync(join(d, MANIFEST_REL)))
-  if (withManifest.length > 1) return { kind: "ambiguous", root: null, candidates: withManifest, matched: "manifest" }
+  if (withManifest.length > 1) return { kind: "workspace", root: null, candidates: withManifest, matched: "manifest" }
   if (withManifest.length === 1) return { kind: "unique", root: withManifest[0], candidates: [...withManifest], matched: "manifest" }
   const bareRepos = scanChildren(anchor, (d) => existsSync(join(d, ".git")))
-  if (bareRepos.length > 1) return { kind: "ambiguous", root: null, candidates: bareRepos, matched: "git" }
+  if (bareRepos.length > 1) return { kind: "workspace", root: null, candidates: bareRepos, matched: "git" }
   if (bareRepos.length === 1) return { kind: "unique", root: bareRepos[0], candidates: [...bareRepos], matched: "git" }
   return { kind: "none", root: null, candidates: [], matched: null }
 }
@@ -66,21 +67,22 @@ export function discoverProjects(cwd) {
 /**
  * **仓发现**（仓梯——KD-M1-23 / `docs/core/design/TOOLS.md` §6.13；**单源** KD-M1-22——`git` 工具
  * 经此符号接线，禁第二份实现）：① 锚含 `.git` ⇒ 锚；② 直接子目录中 `.git` **∧** 带档者恰一 ⇒ 命中
- * （≥2 ⇒ 歧义）；③ **零个此类时才看**含 `.git` 的裸仓（恰一 ⇒ 命中 / ≥2 ⇒ 歧义）；④ 均无 ⇒ `none`。
+ * （≥2 ⇒ `workspace`——下辖多仓 = 常态）；③ **零个此类时才看**含 `.git` 的裸仓（恰一 ⇒ 命中 /
+ * ≥2 ⇒ `workspace`）；④ 均无 ⇒ `none`。
  * 与 `discoverProjects` = **同一 walk 内核**（`scanChildren`）的两种梯表——差异只在谓词与级序。
  * `candidates` 按名排序；`matched` 记档位；纯 fs / 不抛 / 不递归 / 不向上；覆盖位 ⇒ 头部短路。
  * @param {string} [cwd] 会话锚（缺省 → 进程 cwd）
- * @returns {{kind:'self'|'unique'|'none'|'ambiguous', root:string|null, candidates:string[], matched:'manifest'|'git'|null}}
+ * @returns {{kind:'self'|'unique'|'none'|'workspace', root:string|null, candidates:string[], matched:'manifest'|'git'|null}}
  */
 export function discoverRepos(cwd) {
   if (_projectRootOverride) return { kind: "self", root: resolve(_projectRootOverride), candidates: [], matched: null }
   const anchor = resolve(cwd ?? ".")
   if (existsSync(join(anchor, ".git"))) return { kind: "self", root: anchor, candidates: [], matched: "git" }
   const scoped = scanChildren(anchor, (d) => existsSync(join(d, ".git")) && existsSync(join(d, MANIFEST_REL)))
-  if (scoped.length > 1) return { kind: "ambiguous", root: null, candidates: scoped, matched: "manifest" }
+  if (scoped.length > 1) return { kind: "workspace", root: null, candidates: scoped, matched: "manifest" }
   if (scoped.length === 1) return { kind: "unique", root: scoped[0], candidates: [...scoped], matched: "manifest" }
   const bare = scanChildren(anchor, (d) => existsSync(join(d, ".git")))
-  if (bare.length > 1) return { kind: "ambiguous", root: null, candidates: bare, matched: "git" }
+  if (bare.length > 1) return { kind: "workspace", root: null, candidates: bare, matched: "git" }
   if (bare.length === 1) return { kind: "unique", root: bare[0], candidates: [...bare], matched: "git" }
   return { kind: "none", root: null, candidates: [], matched: null }
 }
@@ -107,23 +109,24 @@ export function owningProject(target) {
   }
 }
 
-/** **项目根解析的歧义直读形**（判定单点——设计 `MANIFEST.md` §2.2 `projectRootView` 契约行 / §2.5
- *  「多档解析消费面收口」条）：`ok`（唯一解析：归属命中 ∥ 发现 `self` / `unique`）/ `ambiguous`
- *  （≥2 候选 ⇒ `root` null + 候选全列**按名排序**）/ `none`（无项目 ⇒ 双空）；覆盖位在场 ⇒
- *  头部短路（`ok` + 覆盖值）。**非抛错 / 零写**；`resolveProjectRoot` 薄委托本函数（行为逐字零变）。
- *  @returns {{state:'ok'|'ambiguous'|'none', root:string|null, candidates:string[]}} */
+/** **项目根解析的直读形**（判定单点——设计 `MANIFEST.md` §2.2 `projectRootView` 契约行 / §2.5
+ *  「单项目解析律与四处会话级缺省收口」条）：`ok`（唯一解析：归属命中 ∥ 发现 `self` / `unique`）/
+ *  `workspace`（锚自身无档 ∧ 下辖 **≥2** 项目 ⇒ `root` null + 下辖项目全列**按名排序**——工作区
+ *  常态，非错误态）/ `none`（无项目 ⇒ 双空）；覆盖位在场 ⇒ 头部短路（`ok` + 覆盖值）。
+ *  **非抛错 / 零写**；`resolveProjectRoot` 薄委托本函数（行为逐字零变）。
+ *  @returns {{state:'ok'|'workspace'|'none', root:string|null, candidates:string[]}} */
 export function projectRootView(cwd) {
   const owning = owningProject(cwd)
   if (owning) return { state: "ok", root: owning, candidates: [] }
   const d = discoverProjects(cwd)
   if (d.root) return { state: "ok", root: d.root, candidates: [] }
-  if (d.kind === "ambiguous") return { state: "ambiguous", root: null, candidates: d.candidates }
+  if (d.kind === "workspace") return { state: "workspace", root: null, candidates: d.candidates }
   return { state: "none", root: null, candidates: [] }
 }
 
 /** 项目根解析（**归属 ∨ 发现**——KD-M1-30 / M1-24）：**薄委托** `projectRootView(cwd).root`（判定
  *  单点见上——#828）。带档路径与批前**逐字同**；变更面两条（设计 §2.2 同条）：① 项目树内路径
- *  （祖先带档）⇒ 该项目根；② 裸仓恰一 ⇒ 该仓根（零档降级 = 建档机会）。`none` / `ambiguous` ⇒
+ *  （祖先带档）⇒ 该项目根；② 裸仓恰一 ⇒ 该仓根（零档降级 = 建档机会）。`none` / `workspace` ⇒
  *  `null`。调用方零改（行为随语义变更——设计 §2.5 键面条 / 错层条）。
  *  @returns {string|null} 项目根绝对路径 / null */
 export function resolveProjectRoot(cwd) {

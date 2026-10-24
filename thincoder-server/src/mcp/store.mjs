@@ -142,7 +142,8 @@ export function toCoreConfig(row, { config = {} } = {}) {
   })
 }
 
-/** 清单行读数（§3.2 GET 行形——`target` = 非秘密寻址形；凭据零下发，唯一信号 = `hasSecrets` 布尔）。 */
+/** 清单行读数（§3.2 GET 行形——`target` = 非秘密寻址形；`args` = stdio 明文参数（http/ws 行 `args_json` 为 NULL ⇒ null，零涉）；
+ *  凭据零下发，唯一信号 = `hasSecrets` 布尔）。 */
 export function mcpServerView(row) {
   const target = row.transport === "stdio" ? row.command : row.transport === "http" ? row.url : row.ws_url
   return {
@@ -150,6 +151,7 @@ export function mcpServerView(row) {
     name: row.name,
     transport: row.transport,
     target: target ?? null,
+    args: parseArgsJson(row.args_json),
     enabled: row.enabled === 1,
     hasSecrets: row.secret_cipher !== null,
     createdAt: row.created_at,

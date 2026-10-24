@@ -93,14 +93,14 @@ async function createConnectedTransport(rawConfig, serverName) {
  *  零副作用：不进 _sessions、不动 agent.tools、无 onDead 挂钩；finally close
  *  （closed=true 使 onDead 重连不会触发）。initialize 与 tools/list 同受
  *  INIT_TIMEOUT_MS 约束（见 doInitialize）。不复用 connectMcpServer（避免污染
- *  session 幂等表）。 */
+ *  session 幂等表）。读数 = `{ ok, toolCount, tools, latencyMs }`（`tools` = 工具名数组——控制台具名读数，2026-10-14 走查轮增补）。 */
 export async function probeMcpServer(config) {
   const start = Date.now()
   let transport
   let mcpTools
   try {
     ;({ transport, mcpTools } = await createConnectedTransport(config, config.name ?? config.command ?? config.url ?? config.wsUrl))
-    return { ok: true, toolCount: mcpTools.length, latencyMs: Date.now() - start }
+     return { ok: true, toolCount: mcpTools.length, tools: mcpTools.map((t) => (typeof t?.name === "string" ? t.name : "")).filter((n) => n !== ""), latencyMs: Date.now() - start }
   } catch (error) {
     return { ok: false, error: error?.message ?? String(error) }
   } finally {

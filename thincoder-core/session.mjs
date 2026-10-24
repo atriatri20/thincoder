@@ -186,7 +186,7 @@ export function saveSession(agent, opts = {}) {
   if (agent._recordStore) saveProjectedSlot(agent, p, fields, contextHistory)
   else writeSessionFile(p, { ...fields, history: legacyHistory(agent), contextHistory })
   // 记录我们刚写的 mtime——下次保存跳过解析（缓存 = `{p, mtimeMs}` 按路径命中：#386）+
-  // 摘要 `ts` 地板入参（#503：保存面**写后取** mtime——同族先例 session-slot-verify.mjs:99）。
+  // 摘要 `ts` 地板入参（#503：保存面**写后取** mtime——同族先例 `session-slot-verify.mjs` 的 `runPass`）。
   let wroteMtimeMs
   try {
     wroteMtimeMs = statSync(p).mtimeMs

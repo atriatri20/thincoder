@@ -29,6 +29,8 @@ import {
 // 第 27 批：前缀正则换名 + import 源改文法模块（纯换名——语义零改）。
 import { RELAY_PREFIX_RE } from "@thincoder/core/agent/relay-prefix.mjs"
 import { TURN_CAP_MARK, STOPPED_MARK } from "@thincoder/core/agent/spawn-child.mjs"
+// SSH 凭据窗无 UI 拒件（SSH-SESSION 批 §6.22 ⑧/E6——端面单源单句）
+import { refuseSecretInput } from "./secret-prompt.mjs"
 // 批 1 CORE-DEFECT-FIXES B3：onWait 相位值域 + 文案单源（消费面禁各自枚举——PROVIDER.md §6.20）
 import { waitStatusText } from "@thincoder/core/provider/wait-status.mjs"
 // 2026-09-05 module-split：ticks/maps/sweep/slim/settle/探测/find 族迁 tool-display.mjs——
@@ -57,9 +59,9 @@ function trimOutputChars(block) {
 }
 
 /** Build the agent callbacks + the shared flushStream for one turn.
- *          askPermission, askQuestion, saveSessionImpl } */
+ *          askPermission, askQuestion, askSecretInput, saveSessionImpl } */
 export function buildToolCallbacks(deps) {
-  const { agent, state, pushLine, render, scheduleRender, ensureAssistantLabel, askPermission, askBatchPermission, askQuestion, saveSessionImpl } = deps
+  const { agent, state, pushLine, render, scheduleRender, ensureAssistantLabel, askPermission, askBatchPermission, askQuestion, askSecretInput, saveSessionImpl } = deps
   // 行集总量对账便捷式（§5.3——冻结锚点平移交 subagent 族函数）
   const budgetSync = () => syncLineBudget(state, { onTrim: (st, n) => shiftFreezeAnchors(st, n) })
   /** Advisor 有序块累积 + 额度（§5.1 ADVISOR_TEXT_MAX_CHARS——头 32K/尾 96K/中段标记）。 */
@@ -216,15 +218,17 @@ export function buildToolCallbacks(deps) {
           // ③ subKey undefined 非错误（老回调/测试直调——成功路径未知工具）→ 不冻结
           //    任何块（CLI-ACTIVITY-DEBLOAT F-2 收窄：finishSubTask 恒 no-op——无 key
           //    无从精确归属，宁可 no-op 不误冻；块由回合尾 freezeAllSubTasks 兜底清场）。
-          // SYNC-CANCEL（R6）：⏹ 折叠报告带 STOPPED_MARK——块冻结标 stopped 而非 done
-          // （lastError 注记 + 事件定格——兜底竞态窗口的 dispatch 精确冻路径）
-          const lastError = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : result.includes(STOPPED_MARK) ? "stopped by user — work may be partial" : null
+          // SYNC-CANCEL（R6）∥ #1175（car2 批 · SESSION.md §6.26）：折叠报告带 TURN_CAP_MARK /
+          // STOPPED_MARK ⇒ **非错终结**——写面 done + `note`（文本 = 锚常量族原文；与 VSC
+          // `syncNoteOf` 同串同判——真异常不走本径）；块冻结标 done 走精确 key 通道
+          // （事件定格——兜底竞态窗口的 dispatch 精确冻路径）
+          const note = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : result.includes(STOPPED_MARK) ? "stopped by user — work may be partial" : null
           const hasSubKey = subKey !== undefined && subKey !== null && subKey !== ""
           if (hasSubKey) {
-            finishSubTaskKey(state, String(subKey), lastError)
+            finishSubTaskKey(state, String(subKey), note)
             freezeDoneSubTasks(state)
           } else if (!isSpawnErrorResult(result)) {
-            finishSubTask(state, SUBAGENT_ROLES, lastError)
+            finishSubTask(state, SUBAGENT_ROLES, note)
             freezeDoneSubTasks(state)
           }
           // CLI-ACTIVITY-DEBLOAT F-1 (2026-09-10): the conversation-stream report
@@ -245,12 +249,12 @@ export function buildToolCallbacks(deps) {
           // 失败/老回调无 subKey → 不冻结任何块（F-2 收窄——finishSubTask 恒 no-op，
           // 块由回合尾 freezeAllSubTasks 兜底清场）。
           // SYNC-CANCEL（R6）：同上——escalate 路径同款扩展（sync escalate 无 registry——
-          // 恒不折叠——扩展仅口径一致——零行为变化）
-          const lastError = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : result.includes(STOPPED_MARK) ? "stopped by user — work may be partial" : null
+          // 恒不折叠——扩展仅口径一致——零行为变化；#1175：同落 note 通道）
+          const note = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : result.includes(STOPPED_MARK) ? "stopped by user — work may be partial" : null
           if (subKey !== undefined && subKey !== null && subKey !== "") {
-            finishSubTaskKey(state, String(subKey), lastError)
+            finishSubTaskKey(state, String(subKey), note)
           } else {
-            finishSubTask(state, ["escalate"], lastError)
+            finishSubTask(state, ["escalate"], note)
           }
           freezeDoneSubTasks(state)
         }
@@ -375,6 +379,10 @@ export function buildToolCallbacks(deps) {
     // the verdict string; approveAll is batch-scope only, never the AUTO flag).
     ...(askBatchPermission ? { onBatchPermissionRequest: (req) => askBatchPermission(req) } : {}),
     ...(askQuestion ? { onQuestion: (text, options) => askQuestion(text, options) } : {}),
+    // SSH 凭据窗（SSH-SESSION 批 §6.22 ⑧）：注入面 = 交互面 askSecretInput；未注入（无人值守档 /
+    // headless 装配）⇒ 端面显式拒（可读句 + 指引——不挂起、不静默；核工具侧同族兜底句单源 =
+    // secret-prompt.mjs `SECRET_NO_UI_TEXT`）。
+    onSecretInput: askSecretInput ? (payload) => askSecretInput(payload) : () => refuseSecretInput(),
     // Compression lifecycle (CONTEXT-COMPACTION.md §7 D-C2): the compression session
     // renders as a subagent-style panel block — start → running panel ("Compressing
     // context…" + "summarizing N messages" + elapsed ticker), fail → error text only,

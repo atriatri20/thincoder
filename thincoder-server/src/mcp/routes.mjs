@@ -126,6 +126,7 @@ export function registerMcpRoutes(routes, { db, config = {}, log = null, now = D
       sendJson(res, 200, {
         ok: true,
         toolCount: Number.isInteger(result.toolCount) ? result.toolCount : 0,
+        tools: Array.isArray(result.tools) ? result.tools.filter((n) => typeof n === "string" && n !== "") : [],
         latencyMs: Number.isFinite(result.latencyMs) ? result.latencyMs : 0,
       })
       return

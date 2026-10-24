@@ -73,8 +73,8 @@ export function removeMcpServer(name) {
   return conflictError(r)
 }
 
-// ─── 装配面第二源（#701 · 2026-09-30 · 台账 #701——对齐 CLI `make-agent.mjs:61-79` ∕ 桌面
-// `agent-assemble.mjs:58-79`；机制单源 = `docs/core/design/MCP.md` §6.4）：MCP **装配面**
+// ─── 装配面第二源（#701 · 2026-09-30 · 台账 #701——对齐 CLI `finalizeTools` ∕ 桌面
+// `projectMcpJsonServers`；机制单源 = `docs/core/design/MCP.md` §6.4）：MCP **装配面**
 // （会话 ro 载荷）另并项目根 `.mcp.json`；**管理面**（列表 ∕ 增删改 ∕ 重连 ∕ 探活）仍 config
 // 单源（`loadMcpServers` 零改——文件源条目不进管理列表，沿 CLI `/mcp` 口径）。
 

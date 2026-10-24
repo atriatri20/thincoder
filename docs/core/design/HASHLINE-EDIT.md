@@ -3,10 +3,9 @@
 > 板块 = **编辑工具**；本档 = **hashline_edit 语义的权威源**（逐工具权威档之一）。
 > 地图与契约要点 = `docs/core/design/TOOLS.md` §6.6 · §8.2——本档不复制其内容（D2）。
 > 共享底层 = `docs/core/design/EDIT-HELPERS.md`（hash 域 / EOL 写回 / U+FFFD 常量——本档只指不述）。
-> 双端：CLI `thincoder-core/tools/file.mjs`（`hashlineEditTool` · `hashLine`）· VSC `thincoder-vscode/src/tools/hashline-edit.mjs`（同机制，各自实现；另含 BOM 处理 / 编辑器路径）（W14 已迁核——自持镜像已删，现体同指核 `thincoder-core/tools/file.mjs`；编辑器路径经写路径缝注入）。 （迁移期引文）
+> 双端：CLI `thincoder-core/tools/file.mjs`（`hashlineEditTool` · `hashLine`）。
 > 模型可见描述 = `thincoder-core/tool-docs/hashline_edit.md`（提示词面 / 产品代码）。
 > 需求侧 = `docs/core/requirements/TOOLS.md`（工具系统板块；CLI 树无逐工具需求档）。
-> 建档：2026-09-15（**B 式迁移轮 · 第 1 批**——`thincoder-cli/docs/design/HASHLINE-EDIT.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
 
 ## 1. 定位
 
@@ -16,7 +15,7 @@ hashline_edit = **按内容哈希寻址编辑**（非字符串匹配）——**�
 
 **不是**：插入新行（→ insert_after）、内容定位（→ edit）、整文件重写（→ write）。
 
-**定位判定**：**保留独立工具**（2026-09-08 用户裁定「先保留」）——唯一差异点 = 位置无关哈希寻址，写入两端描述。
+**定位判定**：**保留独立工具**——唯一差异点 = 位置无关哈希寻址，写入两端描述。
 
 ## 2. 参数与 schema
 
@@ -41,11 +40,11 @@ hashline_edit = **按内容哈希寻址编辑**（非字符串匹配）——**�
 
 ## 5. 测试
 
-用例住编辑工具族测试（hash 匹配 / 歧义 / not-found 引导 / U+FFFD 警告）——逐档用例表归 **TESTING 板**（本层该档尚缺 = 后续迁移批项，见迁移台账 `docs/core/design/DOC-MIGRATION.md`）。
+**测试**：用例面（hash 匹配 / 歧义 / not-found 引导 / U+FFFD 警告）= §3 语义（单一权威源）；行为验证 = 单元测试档（用后即删——零留存；批档 §5 留读数行；复跑 = 单档直跑）。
 
-## 6. 机制面（B 式迁移并入——现状路径）
+## 6. 机制面
 
-### 6.1 实现坐标（as-of 2026-09-15 实核）
+### 6.1 实现坐标
 
 | 面 | 落点 | 实核 |
 |---|---|---|
@@ -53,45 +52,17 @@ hashline_edit = **按内容哈希寻址编辑**（非字符串匹配）——**�
 | hash 计算 | `thincoder-core/tools/file.mjs:380`（`hashLine`） | 导出在位 |
 | U+FFFD 常量 | `thincoder-core/tools/shared.mjs` `:162`（`FFFD_WARNING`） | 导出在位（逐字与 `EDIT-HELPERS.md` §5 同） |
 | 描述面（模型可见） | `thincoder-core/tool-docs/hashline_edit.md` | 在位（`DESC()` 加载） |
-| VSC 对位实现 | `thincoder-vscode/src/tools/hashline-edit.mjs`（W14 已迁核——自持镜像已删，现体 = 核 `thincoder-core/tools/file.mjs`） | 同名机制 · 独立实现 （迁移期引文） |
 
-**VSC 端差异（并入 · 批 8）**：VSC 端 `hashline-edit.mjs` 另含——① **BOM 处理**（磁盘写回带 BOM、编辑器分支不带——防双 BOM；hash 域 = stripBom + normalizeEOL 与 CLI 同）② **编辑器路径分支**（doc 已打开 → range 编辑，偏移经 `lfOffsetToRaw`——`docs/core/design/EDIT-HELPERS.md` §6）③ 工具壳 2026-09-08 自 `file-edit.mjs` 迁出（500 硬帽拆分——`file-edit.mjs` re-export）。
+**VSC 端差异**：VSC 端 `hashline-edit.mjs` 另含——① **BOM 处理**（磁盘写回带 BOM、编辑器分支不带——防双 BOM；hash 域 = stripBom + normalizeEOL 与 CLI 同）② **编辑器路径分支**（doc 已打开 → range 编辑，偏移经 `lfOffsetToRaw`——`docs/core/design/EDIT-HELPERS.md` §6）。
 
 ### 6.2 与 edit 的差异化定位（现行口径）
 
-D1–D3（edit 自获 `line:` 与模糊匹配）后，hashline_edit 的差异面收窄为**位置无关哈希寻址**一项——该差异点即其保留理由（§1 末）；路由段两端描述同此口径。
+hashline_edit 的差异面 = **位置无关哈希寻址**一项——该差异点即其保留理由（§1 末）；路由段两端描述同此口径。
 
-## 7. 并入的关键决策记录（含否决备选）
+## 7. 关键决策记录
 
-| # | 决策 | 理由 / 否决备选 |
+| # | 决策 | 理由 |
 |---|---|---|
-| D-H1 | **保留独立工具**（不并入 edit） | 唯一差异点（位置无关 hash 寻址）在长会话多轮编辑下不可由行号形态替代；否决「并入 edit」（丢掉漂移免疫） |
+| D-H1 | **保留独立工具**（不并入 edit） | 唯一差异点（位置无关 hash 寻址）在长会话多轮编辑下不可由行号形态替代 |
 | D-H2 | hash 域做 **stripBom + normalizeEOL** | 否则 BOM / CRLF 尾字符使「同一行」哈希失配——假 not-found |
 | D-H3 | U+FFFD → **警告不阻断** | 编码损坏时仍给模型一次尝试机会；阻断会令损坏文件整体不可编辑 |
-
-## 8. 不并项与历史沿革
-
-### 8.1 历史沿革（(d) 类——**不并**）
-
-> 来源档 `thincoder-cli/docs/design/HASHLINE-EDIT.md`（CLI 产品档）——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
-
-| 旧档位置 | 内容 | 何故不并 |
-|---|---|---|
-| 旧档状态行 | 时点状态行（含定位判定注） | 批次语境——现行态已入 §1 末与 §6.2 |
-| 旧档「阶段 2 预告（EDIT-TOOLS-REVIEW.md）」注 | 旧结构（单节时代）的预告与已废档名 | 现行形态已落（§4 路由 + §6.2 差异口径）；被引档名属旧结构 |
-| 旧档「变更记录」节（2026-09-08 文档重组） | 文档重组流水 | 历史叙述——本档自有变更记录 |
-| 旧档括注的 `TOOLS.md` §6.3 节号 | 旧节号 | 现行地图节号 = `TOOLS.md` §6.6 |
-
-### 8.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
-
-| 旧档面 | 内容 | 何故不并（去向 / 触发） |
-|---|---|---|
-| 描述面正文（参数说明 / 反模式） | 模型可见文本 | **提示词面 = 产品代码**——落点 `thincoder-core/tool-docs/hashline_edit.md` |
-| 旧档「阶段 2」所引 `EDIT-TOOLS-REVIEW.md` | 批次评估档 | 一次性批次材料——已归档 CLI 树 `_archive/`（参照历史） |
-| VSC 档（`thincoder-vscode/docs/design/HASHLINE-EDIT.md`）的批次材料 / 变更记录 | 一次性材料 + 历史流水 | VSC 差异面已并 §6.1（VSC 端差异块）；批次档承载 |
-
-## 变更记录
-
-- 2026-09-15（**B 式迁移轮 · 第 1 批**）：建档——`thincoder-cli/docs/design/HASHLINE-EDIT.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标改写为现状路径；批次材料 / 状态行 / 变更流水不并（§8）。
-- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：§6.1 增 **VSC 端差异块**（BOM 处理 / 编辑器路径分支 / 500 硬帽拆分史）；§8.2 登记 VSC 源档批次材料。
-- 2026-09-15（**S2 W14 落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：双端行 + §6.1「VSC 对位实现」行补迁核注（VSC 自持档已删——现体 = 核 `thincoder-core/tools/file.mjs`；编辑器路径经写路径缝注入）；机制条文零改。

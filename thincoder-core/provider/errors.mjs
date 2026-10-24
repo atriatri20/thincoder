@@ -53,6 +53,14 @@ export function isNonRetryableError(status, text) {
   return false
 }
 
+/** 图像语义拒绝词表（PROVIDER.md §6.26——词表可扩 = 一处改）。 */
+export const IMAGE_REJECTION_RE = /image|图片|图像|视觉|vision|multimodal/i
+
+/** 错误文本具图像语义否（§6.26 T1 判据件——纯函数；未知文本 ⇒ false）。 */
+export function looksLikeImageRejection(text) {
+  return IMAGE_REJECTION_RE.test(String(text ?? ""))
+}
+
 export function betaBaseURL(baseURL) {
   // DeepSeek prefix continuation uses /beta endpoint; only handle /v1 suffix, append /beta when /v1 is missing
   if (/\/v1$/.test(baseURL)) return baseURL.replace(/\/v1$/, "/beta")

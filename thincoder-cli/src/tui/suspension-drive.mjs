@@ -108,7 +108,7 @@ export async function digestTurn(ctx, upstream = false) {
   const tail = state.lines.length
   freezeStartSnapshot(state, agent, tail)
   const digestCtx = manual
-    ? { ...ctx, askPermission: null, askBatchPermission: null, askQuestion: null }
+    ? { ...ctx, askPermission: null, askBatchPermission: null, askQuestion: null, askSecretInput: null }
     : ctx
   const d0 = Date.now()
   logEvent("digest:start", { pendingN: pend0, ...(upstream ? { upstream: true } : {}) })
@@ -159,7 +159,7 @@ function driveTurn(ctx, item, opts = {}) {
 }
 
 /** 取项缝（核 `ctx.takeInput`——缺省 shift）：按合并计划取批 + 消费回执行（TUI.md §7.5）；
- *  `/cmd` 首动作 = 不可达支（斜杠 busy 禁发——`key-handler-busy.mjs:24` ∕ `key-handler-edit.mjs:59`
+ *  `/cmd` 首动作 = 不可达支（斜杠 busy 禁发——`key-handler-busy.mjs` ∕ `key-handler-edit.mjs`
  *  双门禁）⇒ null 零动作（条目不消费，落核第 2 步）。 */
 function takeTurnInput(ctx, queue) {
   const action = planQueuedInput(queue)[0]

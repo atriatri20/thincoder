@@ -9,10 +9,10 @@
  *   ③ `syncSubagentEcho(root, model)` —— 全根扫描补装（**重挂径**消费 —— `renderer/views/chat.mjs` `mountChat`；
  *      帧尾径 = 逐块 `fillSubagentEcho`（`chat.mjs` `dressNode`）；两径同件）；冻结块**静态** —— 不重放第二遍。
  *   ④ **归档位置 ∕ 裁剪面（R10 E4 ∕ E10 判据 —— 逐值对表结论）**：归档块 = 流内**尾追块**（入块序；序 = 归档序
- *      —— 块恒居尾组（消化行组等）之前 ⇒ 与 VSC `activity.js:104-110`「本轮边界前插入 ∕ 失效尾追」同位，零消差项）；
+ *      —— 块恒居尾组（消化行组等）之前 ⇒ 与 VSC `archiveBlock`「本轮边界前插入 ∕ 失效尾追」同位，零消差项）；
  *      **窗口 ∕ 裁剪 = 留档块记账（留档批 · #719 收正 —— 与五型同规）**：退窗 ⇒ 计 `data-hidden` ∥ 折摘要块 ∥ 可回填
  *      （留档件 —— 页读有源；原「运行期块」三账（出窗即弃 ∕ 不计 `data-hidden` ∕ 非回填对象）退场）；
- *      两机制**别名登记**（VSC `ui.js:199-206` 150 块 DOM 裁剪 ⇄ 桌面 150 块渲染窗 —— 值差在册，
+ *      两机制**别名登记**（VSC `MAX_MESSAGE_BLOCKS` 150 块 DOM 裁剪 ⇄ 桌面 150 块渲染窗 —— 值差在册，
  *      `docs/render-core/design/RENDER-CORE.md` 行 13「各自 · 数值差登记」）；归档块**两窗口皆含**
  *      （VSC 裁剪集含 `.sub-block` ⇄ 桌面 `visibleWindow` 全型计数）。
  *   ⑤ **展开集捕获 ∕ 复填协作件**（#606④⑤ —— `echoOpenSet` ∕ `applyEchoOpen`；重挂径消费 = `renderer/views/chat.mjs`

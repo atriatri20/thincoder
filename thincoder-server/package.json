@@ -10,11 +10,13 @@
     "start": "node bin/thincoder-server.mjs --config config.json",
     "dev": "node --watch bin/thincoder-server.mjs --config config.json",
     "admin": "node src/ops/cli.mjs --config config.json",
-    "prepublishOnly": "node --check bin/thincoder-server.mjs && node --check src/ops/update.mjs && node --check deploy/converge.mjs"
+    "prepack": "node deploy/pack-box-shell.mjs",
+    "prepublishOnly": "node --check bin/thincoder-server.mjs && node --check src/ops/update.mjs && node --check deploy/converge.mjs && npm test",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
-    "@thincoder/core": "^0.10.4",
-    "@thincoder/render-core": "file:../thincoder-render-core"
+    "@thincoder/core": "^0.10.7",
+    "@thincoder/render-core": "^0.1.0"
   },
   "engines": {
     "node": ">=24"

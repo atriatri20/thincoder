@@ -17,7 +17,7 @@
  * （例外 = `opts.forceAsk`——本询 AUTO 豁免（续期恒须人答）；置位点唯一，见 `permissionGate` JSDoc。）
  *
  * P2 批 docs/batches/2026-09-20-mechanism-parity-batch.md §2.20（#165 落点）：**闸语义 / 请示流程改经核单源**——`askPermission`
- * （`@thincoder/core/permission.mjs:60-64`）的 `io.ask` 缝；本端只供**展示面**
+ * 的 `io.ask` 缝；本端只供**展示面**
  * （面板卡片 / 队列 / 释放三路）——卡片形态与载荷零改。
  */
 import { askPermission } from "@thincoder/core/permission.mjs"
@@ -94,7 +94,7 @@ export function permissionGate(panel) {
  * D-B1 batch permission gate: one merged ask for a same-response batch of non-readonly
  * tools. Returns "approveAll" / "oneByOne" / "deny" (deny → the whole batch is refused,
  * no second ask; oneByOne → the caller falls back to the per-item channel).
- * No handler → 核 dispatch 落逐项通道（`agent/dispatch.mjs:188` ∕ `:200`——NF-B1: ACP bridge /
+ * No handler → 核 dispatch 落逐项通道（`executeToolCalls`——NF-B1: ACP bridge /
  * headless / old versions are never blocked by the batch).
  * AGENT-LOOP-SUBAGENT.md §6.7.6 C-1/Q1：批合并保持 depth-0（child 不入批合并——逐项卡）。
  * @param {{ _autoApprove: boolean, _batchPermissionQueue: {resolve: Function}[], _panel?: { webview: { postMessage: Function } } }} panel

@@ -16,7 +16,9 @@ services:
       # - NPM_CONFIG_REGISTRY=http://<内网镜像>/          # 更新源（选填——§5.4）
     ports:
       - "8787:8787"
+      - "8443:8443"                           # TLS 追加段（ops/OPS.md §5.7）——HTTP→HTTPS 重定向监听（tls.redirectPort）
     volumes:
       - ./config:/app/config                    # 配置目录（目录级 rw——写面原子写（同目录 tmp ⇒ `rename`）须之；须 chown 1000:1000）
       - ./data:/app/data                        # SQLite 库（db 写 `/app/data/gateway.db`）；须 chown 1000:1000（部署清单 ③）
+      - ./certs:/app/certs:ro                   # 证书目录（TLS 追加段：fullchain.pem ∥ privkey.pem——只读挂载）
     env_file: .env

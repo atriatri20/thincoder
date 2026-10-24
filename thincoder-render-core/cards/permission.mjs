@@ -20,7 +20,7 @@ function renderPatch(patch) {
   return renderDiff(lines)
 }
 
-/** 逐项审批卡体内 HTML（内部面——逐字承 `permission.js:28-56`；卡壳 / 事件接线见 `renderApprovalCard`）。
+/** 逐项审批卡体内 HTML（内部面——逐字承 `permission.js`；卡壳 / 事件接线见 `renderApprovalCard`）。
  *  `m` = `{ tool, args?, diff?, owner?, promptId? }`。 */
 function approvalCardHtml(m = {}, deps = {}) {
   const t = deps.t ?? coreT
@@ -55,7 +55,7 @@ function approvalCardHtml(m = {}, deps = {}) {
   return html
 }
 
-/** 逐项审批卡（承 `permission.js:21-77` 构树；`promptId` 落 `data-prompt-id`——host 按 id 路由 /
+/** 逐项审批卡（承 `permission.js` 构树；`promptId` 落 `data-prompt-id`——host 按 id 路由 /
  *  释放清扫按 id 移除）。返回卡元素（append / scrollIntoView / deny 聚焦留端）。 */
 export function renderApprovalCard(m = {}, deps = {}) {
   const t = deps.t ?? coreT
@@ -85,7 +85,7 @@ export function renderApprovalCard(m = {}, deps = {}) {
   return el
 }
 
-/** 合并批审批卡体内 HTML（内部面——逐字承 `permission.js:93-102`）。`m` = `{ count?, tools?, promptId? }`。 */
+/** 合并批审批卡体内 HTML（内部面——逐字承 `permission.js`）。`m` = `{ count?, tools?, promptId? }`。 */
 function batchApprovalCardHtml(m = {}, deps = {}) {
   const t = deps.t ?? coreT
   const names = (m.tools ?? []).map((x) => escHtml(x?.name ?? "?")).join(", ")
@@ -101,7 +101,7 @@ function batchApprovalCardHtml(m = {}, deps = {}) {
   return html
 }
 
-/** 合并批审批卡（承 `permission.js:86-122`；§16 D-B1）。三按钮载荷同携 `promptId`（逐项卡同形）。 */
+/** 合并批审批卡（承 `permission.js`；§16 D-B1）。三按钮载荷同携 `promptId`（逐项卡同形）。 */
 export function renderBatchApprovalCard(m = {}, deps = {}) {
   const t = deps.t ?? coreT
   const el = document.createElement("div")

@@ -4,7 +4,7 @@
  * 还得看多少位数」+「下拉框要和别的统一样式」）。
  *
  * **形态 = 快填 `select` + 值持有 `input` 两件**（五轮改形 —— 原 `datalist` 废）：
- *   - `datalist` 的弹层由浏览器原生绘制，**CSS 无法着色** ⇒ 与全站 `select`（`renderer/codex.css`
+ *   - `datalist` 的弹层由浏览器原生绘制，**CSS 无法着色** ⇒ 与全站 `select`（`renderer/beauty.css`
  *     `select { appearance: base-select }` + `::picker(select)` 卡形）不同族，用户裁定打回。
  *   - 改 `select` ⇒ 自动吃全站统一样式（零本档样式）；但 `select` 不能承载任意值，而上下文有大量
  *     **非整档实值**（`1_050_000` ∕ `1_048_576` ∕ `524_288`…）⇒ 故 **`select` 只当快填菜单、`input` 仍是

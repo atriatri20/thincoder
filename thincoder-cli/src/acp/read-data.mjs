@@ -73,7 +73,8 @@ export function createReadDataHandlers(ctx, { intervalMs = WATCH_INTERVAL_MS } =
       const c = resolveCwd(params, ctx)
       if (c.error) return c.error
       const { ledgerCmd } = await core()
-      try { return { count: ledgerCmd.ledgerCount({ cwd: c.cwd }) } } catch (e) { return badParams(e?.message ?? String(e)) }
+      // `ledgerCount` 出参 = 对象形 `{ count, overdue, evidenceOversize }`（设计档 §7.1）——直传核对象，零包装
+      try { return ledgerCmd.ledgerCount({ cwd: c.cwd }) } catch (e) { return badParams(e?.message ?? String(e)) }
     },
 
     "batch/list": async (params) => {
@@ -90,6 +91,7 @@ export function createReadDataHandlers(ctx, { intervalMs = WATCH_INTERVAL_MS } =
   let last = null
   let timer = null
   let inflight = false // 重叠防衛（先例 = 核 ledger-surface.mjs）：上一拍未落定 ⇒ 跳过本拍
+  let lastError = null // 上次失败比较键（同因连续 ⇒ 不重复；`check()` resolve 当拍复位）
 
   async function check() {
     if (inflight) return []
@@ -97,7 +99,10 @@ export function createReadDataHandlers(ctx, { intervalMs = WATCH_INTERVAL_MS } =
     try {
       const cwd = ctx.getCwd()
       const { ledgerDb, batchRead } = await core()
-      const ledgerSig = fileSig(ledgerDb.ledgerDbPath(cwd))
+      // 观察域根 = 判据单源 `resolveLedgerRoot`（与写入面同源）：根 ⇒ 其键控库指纹；无根 ⇒ 该域无台账库、
+      // 指纹恒 "0"（观察域照常上报——键控库在盘 / 变动即报 `ledger/changed`）。
+      const root = ledgerDb.resolveLedgerRoot(cwd)?.root
+      const ledgerSig = root ? fileSig(ledgerDb.ledgerDbPath(root)) : "0"
       const batchSig = batchRead.listBatchRecords({ cwd }).batches.map((b) => `${b.path}:${fileSig(b.path)}`).join("|")
       if (!last || last.cwd !== cwd) { last = { cwd, ledgerSig, batchSig }; return [] } // 首查 / 观察域切换 ⇒ 立基线（静默）
       const fired = []
@@ -109,11 +114,25 @@ export function createReadDataHandlers(ctx, { intervalMs = WATCH_INTERVAL_MS } =
     } finally { inflight = false }
   }
 
+  /** 拍包装（失败可见——同因不刷屏）：`check()` reject ⇒ 比较键（`code` 优先、无则 `message`、再无则 `String(e)`）；
+   *  与上次同键 ⇒ 不重复，异键 ⇒ 记键 + `ctx.log` 一行（`acp.mjs` 注入口 = stderr——协议面零触）；resolve ⇒ 复位。 */
+  function runCheck() {
+    return check().then(
+      () => { lastError = null },
+      (e) => {
+        const key = String(e?.code ?? e?.message ?? e)
+        if (key === lastError) return
+        lastError = key
+        ctx.log?.("[acp] read-data watcher check failed:", key)
+      },
+    )
+  }
+
   /** 启动：立即首查（立基线——静默）+ 周期轮询；unref 定时器（不阻塞进程退出）。 */
   function start() {
     if (timer) return
-    void check().catch(() => {})
-    timer = setInterval(() => { void check().catch(() => {}) }, intervalMs)
+    void runCheck()
+    timer = setInterval(() => { void runCheck() }, intervalMs)
     timer.unref?.()
   }
 

@@ -5,7 +5,7 @@
  * Config source: ~/.thincoder/config.json (shared with CLI) — env vars are NOT a key source.
  * (Legacy VS Code SecretStorage keys are migrated into config.json by migrate-settings.mjs)
  *
- * Guard contract（W8 引擎护栏接线契约②——`extension.mjs:47` 消费契约）：核记忆面说
+ * Guard contract（W8 引擎护栏接线契约②——`engineFloorMet` 消费契约）：核记忆面说
  * `node:sqlite`，故本档**只经动态 `import()`** 载入它——此处（或端壳静态闭包内任何一处）
  * 静态引入 ⇒ 低宿主模块加载期硬失败（`extension.mjs` 加载即败 · `activate()` 未及执行 ·
  * 护栏静默失效）。机判 = W8 契约②判据（现载体 = 单元测试档 `docs/batches/2026-09-29-residuals-round2.test.mjs`；
@@ -65,7 +65,7 @@ let _pending = null
 // ——本档不 import 入口（否则 tools/index 读 `memoryTool` 时形成 TDZ 环），门面 = 活访问器，
 // 仍在“造记忆面前读”的时序上；未接线（未过 activate 图）⇒ fail-closed。
 let _faceGate = null
-/** Wire the engine-floor accessor (`isMemoryFaceEnabled` — `extension.mjs:46`). */
+/** Wire the engine-floor accessor (`isMemoryFaceEnabled`). */
 export function setMemoryFaceGate(fn) { _faceGate = typeof fn === "function" ? fn : null }
 
 /** true when the floor guard allows the memory face (fail-closed before wiring). */
@@ -87,7 +87,7 @@ export async function loadMemoryFace() {
 
 /** Memory DB path: shared config.json `memory.dbPath` when set (CLI default =
  *  `<configDir>/memory.db` — one DB per machine, both ends), else next to the config file.
- *  `~` 展开 = 核 config 单点同形（`thincoder-core/config.mjs:263`——不展开则 cwd 下落字面 `~` 树、与 CLI 不同库）。 */
+ *  `~` 展开 = 核 config 单点同形（`findProvider`——不展开则 cwd 下落字面 `~` 树、与 CLI 不同库）。 */
 export function memoryDbPath() {
   try {
     const p = loadRaw()?.memory?.dbPath
@@ -98,14 +98,14 @@ export function memoryDbPath() {
 
 /** Project-layer memory directory for one project root: shared config.json
  *  `memory.projectDir` (core default `.thincoder/memory`), absolute or cwd-relative —
- *  same resolution as the core tool face (`memory/docs.mjs:242`). */
+ *  same resolution as the core tool face (`docSearchTool`). */
 export function projectMemoryDir(cwd) {
   let p = ".thincoder/memory"
   try {
     const v = loadRaw()?.memory?.projectDir
     if (typeof v === "string" && v.trim()) p = v.trim()
   } catch { /* unreadable config → core default */ }
-  p = expandHome(p) // 核 config 单点同形（`thincoder-core/config.mjs:264`）
+  p = expandHome(p) // 核 config 单点同形（`findProvider`）
   return isAbsolute(p) ? p : join(cwd ?? process.cwd(), p)
 }
 
@@ -162,7 +162,7 @@ export async function ensureMemoryHandle() {
  * ① `codeOrigin` = the core face's per-project filter — code/doc reads only see this
  *    project's rows (`memory/code-sync.mjs` / `memory/docs.mjs` read it at call time);
  * ② first call per project syncs the project-layer markdown dir into `files`
- *    (`syncDir` — CLI startup parity, `cli/make-agent.mjs:52-55`), so on-disk project
+ *    (`syncDir` — CLI startup parity, `assembleAgent`), so on-disk project
  *    entries are searchable instead of list-only.
  * Returns null while the memory face is disabled / creation failed.
  */

@@ -24,7 +24,7 @@ export function timerWakeArmed(agent) {
 }
 
 /** 触发落流形态（TUI.md §7.6）：逐字 = 系统提醒原文；三行 + 省略号上限同既有提醒镜像口径
- *  （`tool-events.mjs:434-441`，`REMINDER_CAP` 单源）。 */
+ *  （`tool-events.mjs`，`REMINDER_CAP` 单源）。 */
 export function reminderDisplay(text) {
   const lines = String(text).split("\n")
   return lines.length > REMINDER_CAP ? lines.slice(0, REMINDER_CAP).join("\n") + "\n…" : text

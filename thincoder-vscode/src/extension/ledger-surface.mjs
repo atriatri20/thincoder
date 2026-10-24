@@ -72,7 +72,7 @@ export async function refreshLedger(panel) {
 /** item 建立 + 周期注册（幂等——`_initStatusBar` 每次 resolve 调用）。 */
 export async function initLedgerSurface(panel) {
   if (!_item) {
-    _item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99) // 先例 = chat-panel.mjs:156（主 item priority 100）
+    _item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99) // 先例 = `ChatPanel`（主 item priority 100）
     _item.name = "ThinCoder Ledger"
   }
   await refreshLedger(panel)

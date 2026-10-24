@@ -38,7 +38,7 @@ const KEEP_HEAD = 0 // No dedicated head: earliest messages may be a COMPLETED e
 // Tail count formula (D4): window-adaptive (~30 msgs per 100K — old fixed 10 too thin on 1M), capped
 // at 40% of history; §6.4④ D-T1/D-T2 make the count only a CANDIDATE — a token budget (TAIL_BUDGET_FRACTION
 // × window − SUMMARY_TOKEN_ESTIMATE ≈1K, §6.9) tightens it over pair-safe boundaries when compaction runs,
-// never below TAIL_FLOOR_MESSAGES; ordinary sessions never reach it (D-T4: trigger 0.6 untouched).
+// never below TAIL_FLOOR_MESSAGES; ordinary sessions never reach it (D-T4: the trigger ratio lives in `config.mjs` — untouched here).
 const TAIL_BUDGET_FRACTION = 0.15
 const SUMMARY_TOKEN_ESTIMATE = 1000 // §6.9: summary output target ~1K tokens — reserved from the 15%
 const TAIL_FLOOR_MESSAGES = 10 // §6.4④ D-T2: the tail keeps ≥10 verbatim messages — floor beats budget

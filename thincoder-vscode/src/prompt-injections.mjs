@@ -24,7 +24,7 @@
 import { resolveShellIdentity, executorLine } from "@thincoder/core/shell-identity.mjs"
 import { loadConfig } from "@thincoder/core/config.mjs"
 
-// 配置读容错（先例 = `bin/thincoder.mjs:54` 同式「配置缺失/损坏 ⇒ 各向默认」）：激活期读取失败不阻断
+// 配置读容错（先例 = `bin/thincoder.mjs` 同式「配置缺失/损坏 ⇒ 各向默认」）：激活期读取失败不阻断
 // 激活；读失败 ⇒ null ⇒ 默认链（fail-open——探测面不猜）。
 function configShell() {
   try { return loadConfig()?.shell ?? null } catch { return null }
@@ -37,6 +37,6 @@ export const VSC_PROMPT_INJECTIONS = {
     executorLine(resolveShellIdentity(configShell())) +
     "\n" +
     "- terminal: \"visible\" runs the command in the user's OWN visible terminal via shell integration — it inherits the user's shell state (current dir, activated venv/conda, env vars) that an isolated child process lacks. \"inject\" fills the command into the terminal WITHOUT running it — the user reviews and presses Enter (use for commands the user should inspect first). Omit for the default isolated child process.",
-  // question 面板可用性行（替换位——原 `src/tools/question.md:11`）
+  // question 面板可用性行（替换位——核 `tool-docs/question.md` 的 Notes 段）
   "question-ui-face": "- Availability: this tool renders in the chat panel (inline question card). Subagent children (depth>0) never get it — the depth>0 tool table excludes it; put the question in your reply text instead.",
 }

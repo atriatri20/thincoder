@@ -1,6 +1,6 @@
 /**
  * settings-sections.mjs — 设置面段体档（批 9 · 批档 §2.12–§2.13；自 `renderer/views/settings.mjs` 拆出
- * —— 300 行层拆分，零语义变化）：模型段体 + 拆档族 re-export 面（渠道 / agent / 工具 / env / models /
+ * —— 300 行层拆分，零语义变化）：模型辅助面（`modelIdOf` / `modelHeadNode` / `modelChoicesTree`——向导步 2 与 agent 段候选面共用）+ 拆档族 re-export 面（渠道 / agent / 工具 / env / models /
  * MCP —— 各段体自立出档，本档 re-export ⇒ 分派面零改）。
  *   - 渠道族（行族 + 段体）随 D37 设置面样式收正批（2026-10-02 · 台账 #812）出档
  *     `renderer/views/settings-sections-providers.mjs`（**先拆后改** · 越层消解 —— 本档 309 ⇒ 回线）；
@@ -65,7 +65,7 @@ export function modelHeadNode(model) {
 
 /** 候选行（**导出面** —— 同上）：行 + 空态词（`ready` 而零候选 ⇒ 禁假造）。行形 = 行自带渠 `{ id, provider }`
  *  （全渠扇出面 · #842）∥ 纯 id（常规面 —— 渠落段级）。
- *  **2026-10-04 卡片网格**：行族包进 `.model-grid`（CSS 网格 —— `codex.css` 多列紧凑卡；原单行通栏占用过大）。 */
+ *  **2026-10-04 卡片网格**：行族包进 `.model-grid`（CSS 网格 —— `beauty.css` 多列紧凑卡；原单行通栏占用过大）。 */
 export function modelChoicesTree(model, handlers = {}) {
   const rows = listOf(model?.models).map((row) => modelRowNode(row, model, handlers))
   if (model?.state !== "ready" || rows.length > 0) {
@@ -80,7 +80,7 @@ export function modelChoicesTree(model, handlers = {}) {
  *  ②其后加**编辑图标钮** ⇒ 开「编辑模型配置」弹窗（`onEditModel(id)` —— 覆写键 = 模型 ID，与渠道无关）；
  *  ③行携上下文 K 徽标（ZCode 模型列表同形 —— `qd/qfmodel 200K`），规格来源 = 主侧 `modelEntry` 投影；
  *  ④**已覆写**行（`source === "override"`）⇒ 编辑钮染主题色（`data-overridden` 锚 —— 一眼可辨自定模型）。
- *  字形住 `renderer/codex.css` `content`（零字形字面 —— 纪律同全档）；`aria-label` ∕ `title` 保留可及名。 */
+ *  字形住 `renderer/beauty.css` `content`（零字形字面 —— 纪律同全档）；`aria-label` ∕ `title` 保留可及名。 */
 function modelRowNode(row, model, handlers) {
   const id = modelIdOf(row) ?? ""
   const own = row !== null && typeof row === "object" && typeof row.provider === "string" && row.provider !== "" ? row.provider : null

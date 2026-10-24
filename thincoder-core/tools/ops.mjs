@@ -60,7 +60,7 @@ export const processTool = {
       id: { type: "number", description: "kill target: background task id — a bash#N (bash async ack) or browser#N (browser async ack): bash ⇒ its process tree is terminated; browser ⇒ a queued task is dropped, a running one is aborted (the browser itself is not killed); either way the entry leaves the pool and no digest will arrive." },
     },
   },
-  // #9：动作分级——list 保持只读分类（dispatch-gates `isSubagentReadonlyAction`：planMode 放行/
+  // #9：动作分级——list 保持只读分类（dispatch-gates `isReadonlyAction`：planMode 放行/
   // 免审批）；kill 是破坏性动作（审批门）。`parallel` 保既有调度形（list 恒可批并行）。
   readonly: false,
   parallel: true,

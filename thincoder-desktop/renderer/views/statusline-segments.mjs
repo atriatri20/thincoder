@@ -27,7 +27,7 @@ function numOf(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0
 }
 
-/** 计数缩写（CLI 同形 = `thincoder-cli/src/tui/render-frame.mjs:396` `fmtK`：≥ 10k ⇒ 整数 k · ≥ 1k ⇒ 一位小数 k）。 */
+/** 计数缩写（CLI 同形：≥ 10k ⇒ 整数 k · ≥ 1k ⇒ 一位小数 k）。 */
 function fmtK(n) {
   if (n >= 10000) return `${Math.round(n / 1000)}k`
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
@@ -50,7 +50,7 @@ export function attentionSegment(codes) {
  *  `docs/desktop/design/IPC.md` §1「挂起 ∕ 消化词键注」）：N = `running + queued`（主体句 = `susp.running`）·
  *  M = `pending + done`（附句 = `susp.digesting`）；取词链 = N > 0 ⇒ `susp.running`〔M > 0 ⇒ 附 `susp.digesting`〕·
  *  N = 0 ∧ M > 0 ⇒ `susp.digesting` · N = 0 ∧ M = 0 ⇒ `susp.winding`（值 zh = CLI 逐字 ∥ en = VSC 逐字；
- *  ` · ` 分隔 = VSC `status-bar.js:58` 同式）。 */
+ *  ` · ` 分隔 = VSC `renderStatusBar` 同式）。 */
 function suspSegment(record) {
   const n = numOf(record.running) + numOf(record.queued)
   const m = numOf(record.pending) + numOf(record.done)
@@ -60,7 +60,7 @@ function suspSegment(record) {
   return { code: "state", parts: [{ text }] }
 }
 
-/** 状态文本 **kind 五值表**（R4 · 状态面 —— 五 kind 表单源 = VSC `webview/status-bar.js:101-112`；
+/** 状态文本 **kind 五值表**（R4 · 状态面 —— 五 kind 表单源 = VSC `renderStatusBar`；
  *  词面：四 kind（rateWait ∕ rateLimited ∕ overloaded ∕ quota）= 核 `provider/wait-status.mjs` `status.*` 键经核字典
  *  投影 `t()` 直取（**零自铸词**）· `index` 两形 = VSC locales 逐字（宿主表两键 `status.indexScan` ∕ `status.indexProgress`）；
  *  缺值回落 `?` / `""` 沿 VSC 同式；未知 kind / 非载体 ⇒ `null`（**不渲染** —— 禁假造）。 */
@@ -162,7 +162,7 @@ export function tokensSegment(tokens, key) {
 
 /** 段 9 · 上下文读数（`usage[key]` 切片 —— 数字 ∧ `> 0` ⇒ 读数节点；读数域 0–100 整数直传，端零重算 · 零上界判）。
  *  **本批改形（状态行 ⇒ CLI 补漏批 · 2026-09-29）**：读数 = `context <pct>% <tokens>`（en 逐字 = CLI
- *  `thincoder-cli/src/tui/render-frame.mjs:413-416`；zh 对位译形）；令牌 = `tokens[key]` 切片（数字 ∧ `> 0`
+ *  字面；zh 对位译形）；令牌 = `tokens[key]` 切片（数字 ∧ `> 0`
  *  ⇒ 尾串 `␣<fmtK>`，否则空串 ⇒ 半态 `context <pct>%`——CLI 同门；≤ 0 ∕ 缺 ∕ 非数 ⇒ 禁假造）。 */
 export function contextSegment(usage, tokens, key) {
   const slice = usage !== null && typeof usage === "object" ? usage : {}

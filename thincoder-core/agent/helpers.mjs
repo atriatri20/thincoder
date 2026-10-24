@@ -275,6 +275,12 @@ export function turnFrame(seq, turn, maxTurns) {
   return { turn: seq, maxTurns: seq - turn - 1 + maxTurns }
 }
 
+/** #934（零落笔看门狗——AGENT-LOOP-UPSTREAM.md §6.32.2 ① 判据式）：上轮结账至今写序是否推进；非整数（未跟踪面 / NaN）⇒ true 记「有落笔」不判（不用 `?? 0` 兜底——未跟踪面当零落笔正是本收正要消除的误报方向）。 */
+export function wroteSince(agent, mark) {
+  const seq = agent._mutationSeq
+  return Number.isInteger(seq) ? seq !== mark : true
+}
+
 /** Repair malformed conversation history: remove orphan tool messages and fill missing tool results */
 export function repairHistory(history) {
   const out = []
@@ -370,12 +376,14 @@ export function readonlyToolNames(tools) {
 }
 
 /** Depth>0 tool exclusions — subagents never get the interactive main-session tools (`question`:
- *  no user to ask; the routing guidance already lives in every persona file). Single source for
- *  the repo: the shell-side depth>0 filter consumes this set (design = TOOLS.md §6.16 / D-TO11). */
-export const SUBAGENT_TOOL_EXCLUSIONS = new Set(["question"])
+ *  no user to ask; `ssh`: the credential window is a user-facing event AND the session pool
+ *  belongs to the main session — no UI at depth>0 and no session to hand back; the routing
+ *  guidance already lives in every persona file). Single source for the repo: the shell-side
+ *  depth>0 filter consumes this set (design = TOOLS.md §6.16 / D-TO11 + §6.22). */
+export const SUBAGENT_TOOL_EXCLUSIONS = new Set(["question", "ssh"])
 
 /** Apply the depth>0 exclusion set — always returns a NEW array (parent table untouched).
- *  #9（TOOLS.md §6.19）：`bash` 的 `async` 参仅 depth-0——子代副本删参（照 `family-tools.mjs:98`
+ *  #9（TOOLS.md §6.19）：`bash` 的 `async` 参仅 depth-0——子代副本删参（照 `family-tools.mjs` 的 `engChildSubagent`
  *  先例；返回值仍恒新数组、未命中条目原对象直传）。运行期第二道在 `tools/bash.mjs` execute
  *  （照 `read_image`「schema 门 + 运行期第二道」双线先例）；批 browser-async-fix（#1045）同线
  *  扩至 `browser` 的 `async` 参（运行期第二道在 `tools/browser.mjs` execute）。 */
@@ -449,14 +457,14 @@ export const AUTO_TURN_DIGEST_DOMAIN =
 /** Engineering-mode auto-turn digest domain variant (mode = `agent.config.agent.engineering`;
  *  clause 2 drops the task-tool pointer — F10: the task tool is disabled in engineering mode,
  *  the batch record + ledger are the tracking authority). Single line, verbatim from the
- *  design doc (TOOLS.md §6.15.3); mechanism = AGENT-LOOP-ASYNC-POOL.md §6.8. Content authority = parent side. */
+ *  design doc (TOOLS.md §6.15.3); mechanism = AGENT-LOOP-ASYNC-POOL.md §6.8. Content basis = the mechanism doc; landing = eng-coder. */
 export const AUTO_TURN_DIGEST_DOMAIN_ENG =
   "[System reminder: auto-turn — background async subagents finished while there was no user message, and this turn runs automatically to digest their reports (the finished-report reminders above). No one is waiting for this reply, so organize only: 1) summarize each finished report's key points into this conversation for the user to read later; 2) (engineering mode: the task tool is disabled — no task-list update is expected this turn; the batch record + ledger are the tracking authority and are updated in real user turns); 3) write decision points with a suggested next step as text — do not execute it. FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the summaries are written.]"
 
 /** Up-stream wake-turn domain (AGENT-LOOP-UPSTREAM.md §6.27.12.8): a running subagent sent
  *  an in-flight message and is waiting for the reply — the digest domain's "No one is waiting
  *  for this reply" is the opposite of the truth, so the wake turn gets its own text.
- *  Verbatim from the design doc (single line — no newlines). Content authority = parent side. */
+ *  Verbatim from the design doc (single line — no newlines). Content basis = the mechanism doc; landing = eng-coder. */
 export const UPSTREAM_TURN_DOMAIN =
   "[System reminder: auto-turn — a running subagent sent you an in-flight message (shown below). No user message is waiting. Decide it now and reply with subagent action:'send' (id + message) — the child consumes the reply at its next turn boundary and keeps working on the unaffected parts; if the message needs no answer, say so in one line and move on. If finished subagent reports are also present above, summarize them as usual in the same turn. Do not start new work: FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the reply is sent.]"
 
@@ -464,16 +472,16 @@ export const UPSTREAM_TURN_DOMAIN =
  *  expired while the session was idle and the end's latch opened this turn automatically —
  *  neither the digest domain ("no one is waiting", organize-only) nor the up-stream domain
  *  (a subagent waiting for a reply) fits: the timer's own semantics is "act on what the
- *  timer was for". Verbatim from the parent-side final text (single line — no newlines).
- *  Content authority = parent side. */
+ *  timer was for". Verbatim from the mechanism doc (single line — no newlines).
+ *  Content basis = the mechanism doc; landing = eng-coder. */
 export const TIMER_TURN_DOMAIN =
   "[System reminder: auto-turn — a timer you set earlier has expired (reminder above). No user message is waiting. Act on what the timer was for now: pull the data or run the check rather than continuing to reason in the abstract. Stay within the work that was in flight when the timer was set; do not open unrelated new work. Wrap up as soon as the action is done or blocked.]"
 
 /** Digest-accounting requirement line (AGENT-LOOP-ASYNC-POOL.md §6.31.3 · batch digest-accounting ·
  *  2026-10-05)：消化轮账目要求——两档同发（手动 / AUTO）；manual 域文本只覆盖手动档 ⇒ 要求行
  *  独立常量承载，避免 AUTO 轮无要求。`<ids>` = 未销账 id 清单占位（动态拼 = digest-account.mjs
- *  `digestAccountRequirement`）；注入面 = transient（机器线独有）。Verbatim from the parent-side
- *  final text (single line — no newlines); content authority = parent side. */
+ *  `digestAccountRequirement`）；注入面 = transient（机器线独有）。Verbatim from the mechanism doc
+ *  (single line — no newlines). Content basis = the mechanism doc; landing = eng-coder. */
 export const DIGEST_ACCOUNT_DOMAIN =
   "[System reminder: digest accounting — for every report listed below as not yet accounted, emit exactly one line: \"[digest-ack #<id>] digested — <key points>\" (handled) or \"[digest-ack #<id>] deferred — <reason>\" (not handled). Not yet accounted: <ids>. Do not omit any.]"
 

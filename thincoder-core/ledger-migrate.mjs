@@ -3,7 +3,8 @@
  * ② `ledger migrate --dry-run | --confirm`：变体键库一次性合并——三件套 = dry-run 零写 / 先备份（拷贝 + 读回同计数）/ 幂等（全字段等值）；
  *   六步 = 备份 → 源就绪与列集判 → 单事务迁入（事务内读回核验）→ 回收源（rename 进 `ledger-trash`，不 unlink）→ 报告 → 汇总。执行主体 = 父侧 ops（KD-LN6）。
  * ③ `ledger audit`：逐 `*.db` 定性（目标库 / 变体源 / 空库 / 不可归因（有行）/ 不可读（坏档）；stat 失败 ⇒ 读取失败态）+ 候选根集合归因；只报告零动作。
- * 铁律：**12 数据列逐字复制（不含 id）+ id 重发**（两库 id 空间重叠）；备份 / 回收目录 = `ledgerDirPath()` 的**兄弟位**（§2.11#6 ⇒ 夹具根外零写）；
+ * 铁律：**13 数据列逐字复制（不含 id）+ id 重发**（两库 id 空间重叠；列集单源 = `DATA_COLUMNS`——`resume_when`
+ * 落地后 12 ⇒ 13，设计档 §3.4）；备份 / 回收目录 = `ledgerDirPath()` 的**兄弟位**（§2.11#6 ⇒ 夹具根外零写）；
  * 迁移走直接 SQL（§6.1 写门不拦迁移本身 ⇒ 风险行出旗不拦截）；本档静态 import node:sqlite ⇒ 消费侧一律动态 import（W8 契约②——同 ledger-db.mjs）。
  */
 import { createHash } from "node:crypto"
@@ -12,14 +13,17 @@ import { basename, dirname, join, resolve } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 
 import { resolveDeclaredRef } from "./declaration.mjs"
-import { ledgerDirPath, ledgerKey, openLedger } from "./ledger-db.mjs"
+import { ledgerDirPath, ledgerKey, openLedger, resolveLedgerRoot } from "./ledger-db.mjs"
 import { resolveProjectRoot } from "./manifest.mjs"
 
-/** 12 数据列（**等值比对列集**——不含 id：id 重发，§2.2 语义保全 / AC-M2-12）。 */
+/** 13 数据列（**等值比对列集**——不含 id：id 重发，§2.2 语义保全 / AC-M2-12；`resume_when` 落地后\n *  12 ⇒ 13——设计档 §3.4）。 */
 export const DATA_COLUMNS = [
   "kind", "status", "title", "board", "req_doc", "task_book",
-  "evidence", "trigger", "executor", "created_at", "updated_at", "closed_at",
+  "evidence", "trigger", "executor", "created_at", "updated_at", "closed_at", "resume_when",
 ]
+/** 旧库可缺列容忍集（缺则按 NULL 映射照迁）：`executor`（F-LX1 前的旧 DDL）∥ `resume_when`
+ *  （P5 落地前的旧 DDL——设计档 §3.4）。其余任一数据列缺 ⇒ 列集不可归因，拒（fail-closed）。 */
+const TOLERATED_MISSING = ["executor", "resume_when"]
 /** 备份面根 / 回收面根（`ledgerDirPath()` 的**兄弟位**——同派生于可覆盖基，§2.11#6）。 */
 export function ledgerBackupRoot() { return join(dirname(ledgerDirPath()), "ledger-backup") }
 export function ledgerTrashRoot() { return join(dirname(ledgerDirPath()), "ledger-trash") }
@@ -48,7 +52,7 @@ function batchStamp(date) {
   const p = (n) => String(n).padStart(2, "0")
   return `${date.getFullYear()}${p(date.getMonth() + 1)}${p(date.getDate())}-${p(date.getHours())}${p(date.getMinutes())}${p(date.getSeconds())}`
 }
-/** 行集读取（id + 12 数据列；缺失列按 NULL 映射——旧 DDL 源的 `executor` 正常态，KD-LN10）。 */
+/** 行集读取（id + `DATA_COLUMNS` 全列；缺失列按 NULL 映射——旧 DDL 源的 `executor` / `resume_when` 正常态，KD-LN10）。 */
 function readRows(db, missing = []) {
   const cols = DATA_COLUMNS.filter((c) => !missing.includes(c))
   return db.prepare(`SELECT id, ${cols.join(", ")} FROM items ORDER BY id`).all()
@@ -62,7 +66,7 @@ function describeSource(file) {
     const cols = itemColumns(db)
     if (!cols.length) return { rows: 0, missing: [], refusal: "不可开为台账库（无 items 表）" }
     const missing = DATA_COLUMNS.filter((c) => !cols.includes(c))
-    const bad = missing.filter((c) => c !== "executor")
+    const bad = missing.filter((c) => !TOLERATED_MISSING.includes(c))
     const rows = readRows(db, missing)
     return { rows: rows.length, missing, dist: byStatus(rows), refusal: bad.length ? `缺数据列（列集不可归因）：${bad.join(" / ")}` : null }
   } catch (e) { return { error: e.message, refusal: `不可读（${e.message}）` } } finally { db.close() }
@@ -72,7 +76,9 @@ function readRowsOf(file, missing = []) {
   const db = openRead(file)
   try { return readRows(db, missing) } finally { db.close() }
 }
-/** 写门风险旗（§2.2 表）：迁入行属 `在途 / 待核销` 且 `task_book` 不可解析 / 指向档不存在 ⇒ 该行后续更新将拒于 §6.1 写门；只出旗，不拦截（判面与写门同源·#834——共享解析单点 `resolveDeclaredRef`：① 仓根解析 → ② 声明源前缀解析序）。 */
+/** 指针读数旗（§2.2 表 · §6.1 口径 5）：迁入行属 `在途 / 待核销` 且 `task_book` 不可解析 / 指向档不存在 ⇒ 出旗；
+ *  **读数非门**——不拦任何写入（该行迁入照旧、后续更新按 §6.1 本笔写入面判）。判面与写门同源·#834
+ *  （共享解析单点 `resolveDeclaredRef`：① 仓根解析 → ② 声明源前缀解析序）。 */
 function writeGateFlag(values, projectRoot) {
   const tb = values[5]
   if ((values[1] !== "在途" && values[1] !== "待核销") || tb == null || tb === "") return null
@@ -92,9 +98,9 @@ function fromKeyRefusal(fromKeys, dir) {
   return null
 }
 
-/** 迁移计划（dry-run / confirm 共用）。cwd 口径 = 写门口径 2 同一子表达式（`resolveProjectRoot` ∨ 兜底）。 */
+/** 迁移计划（dry-run / confirm 共用）。cwd 口径 = 写门口径 2 同一子表达式（根推导单源 `resolveLedgerRoot(cwd)?.root` ∨ 兜底）——与实开库（`openLedger`）同源。 */
 export function planLedgerMigration(cwd, { fromKeys = [] } = {}) {
-  const projectRoot = resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")
+  const projectRoot = resolveLedgerRoot(cwd)?.root ?? resolve(cwd ?? ".")
   const dir = ledgerDirPath()
   const targetKey = ledgerKey(projectRoot)
   const targetPath = join(dir, `${targetKey}.db`)
@@ -116,7 +122,7 @@ export function planLedgerMigration(cwd, { fromKeys = [] } = {}) {
   return { projectRoot, targetKey, targetPath, targetDesc, sources, flags, migrate }
 }
 
-/** dry-run 计划行（零写报告：目标 / 变体源候选 / 计划动作 / 写门风险旗）。 */
+/** dry-run 计划行（零写报告：目标 / 变体源候选 / 计划动作 / 指针读数旗（非门））。 */
 function printPlan(plan, out) {
   const t = plan.targetDesc
   const dist = (d) => (d.dist ? Object.entries(d.dist).map(([k, v]) => `${k} ${v}`).join(" · ") : `unreadable: ${d.error}`)
@@ -127,13 +133,13 @@ function printPlan(plan, out) {
     `Variant sources (${plan.sources.length}):${plan.sources.length ? "" : " none（无待迁源）"}`,
     ...plan.sources.map((s) => `  ${s.key}  ${s.path}  rows ${s.desc.rows ?? "?"}  mtime ${s.mtime}\n    ${dist(s.desc)}${s.refusal ? `  ⚠ ${s.refusal}（confirm 面将拒跑）` : ""}`),
     `Plan: backup → ${join(ledgerBackupRoot(), "<批次>")}/ ; migrate ${plan.migrate} rows → target (post-migration count = ${t.error ? "?" : (t.rows ?? 0) + plan.migrate})`,
-    `Write-gate risk flags: ${plan.flags.length}${plan.flags.length ? "（不拦截——迁入后在途 / 待核销行的后续更新仍受写入时门约束）" : ""}`,
+    `Pointer reading flags: ${plan.flags.length}${plan.flags.length ? "（读数非门——不拦任何写入：行照迁，后续更新按本笔写入面判）" : ""}`,
     ...plan.flags.map((f) => `  ⚠ ${f.source} #${f.id}: ${f.flag}`),
     'Run "thincoder ledger migrate --confirm" to execute (backup first, then single-transaction import, then sources are recycled into ledger-trash).',
   ].join("\n"))
 }
 
-/** 事务内读回核验（§2.2 步 3）：逐插入行按新 id 回读 12 数据列与源等值 ∧ 目标既有行零动；不等 ⇒ throw（ROLLBACK ⇒ 目标零行变、源零动——新建档可能残留）。 */
+/** 事务内读回核验（§2.2 步 3）：逐插入行按新 id 回读 `DATA_COLUMNS` 全列与源等值 ∧ 目标既有行零动；不等 ⇒ throw（ROLLBACK ⇒ 目标零行变、源零动——新建档可能残留）。 */
 function verifyImported(db, inserted, existingById) {
   const get = db.prepare(`SELECT ${DATA_COLUMNS.join(", ")} FROM items WHERE id = ?`)
   for (const { key, id, values } of inserted) {

@@ -124,7 +124,7 @@ export const advisorTool = {
         if (ambiguous) {
           // 歧义拒（KD-4 独立判据——不混入 not-doc；列全部可读命中——fail-closed 不静默挑一）。
           return withIdentityLine(
-            `Advisor: design review document is ambiguous — "${ambiguous.doc}" matches several candidate projects: ${ambiguous.hits.join(", ")}. Pass a project-root-relative or absolute path.`,
+            `Advisor: design review document "${ambiguous.doc}" matches several projects: ${ambiguous.hits.join(", ")}. Pass an absolute path to select one.`,
             { type: reviewType, scope: scopeSummary(documents), round: "—", criterion: "scope-doc-ambiguous" },
           )
         }

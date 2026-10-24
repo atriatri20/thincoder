@@ -6,13 +6,13 @@
  * 装配序本体与团队层取值随上提归核，本档 `assembleFor`（核调用 + 后处理）+ 四名**同名转口**。
  * **端差两项已消（2026-09-29 · 批 `docs/batches/2026-09-29-hatch-clearance-2.md` §2 · #673「消（补做）」）**：
  * ① **MCP 合入** —— 经核 `toolsFinalize` 缝（位次 = 工具装配后、`createAgent` 前；与 CLI 同位次同缝 =
- *    `thincoder-cli/src/cli/make-agent.mjs:39 ∕ :53`；核缝 = `thincoder-core/agent/assemble.mjs:61-63 ∕ :105`）；
- * ② **M1 装配钩子附着** —— `attachManifest`（形对齐 CLI `make-agent.mjs:46 ∕ :127`；决策树机制单源 = 核
+ *    `assembleAgent`；核缝 = `validateProvider`）；
+ * ② **M1 装配钩子附着** —— `attachManifest`（形对齐 CLI `assembleAgent` ∕ `attachManifest`；决策树机制单源 = 核
  *    `resolveEngineeringManifest` ∕ `projectView`，本档 = 端薄壳，零第二实现）。
  * 取值面一项保持：`cwd` = 项目根（注入的 `projects.currentCwd()`）——**非** `process.cwd()`。
  * **R3 执行面缝（#523②）**：档尾**模块装配期一次接线** —— `installExecRunSeams()`（出档 `exec-run.mjs`：
  * `configureExecRun` ← 核上提件 `runInterruptible` ∕ `configureProcessTreeKill` ← 核 `killProcessTree` 转口；
- * VSC `tools/shared.mjs:104-105` 同形）。
+ * VSC `majorityEol` 同形）。
  * 零宿主依赖：核函数全部经 `deps` 取值（缺省 = 核单源）⇒ 平 node 直测（零 `electron`）。
  */
 import { assembleAgent as coreAssemble, DEFAULT_DEPS, gitAuthor, teamConfig, validateProvider } from "@thincoder/core/agent/assemble.mjs"
@@ -21,11 +21,11 @@ import { loadSlotFile } from "@thincoder/core/session.mjs"
 // 执行面两缝（R3 · #523② —— 核件转口，零副本；接线在本档尾）。
 import { installExecRunSeams } from "./exec-run.mjs"
 
-// 四名转口（核单源**恒等绑定**；调用面 import 路径与名面零改 —— `agent-host.mjs:55`）。
+// 四名转口（核单源**恒等绑定**；调用面 import 路径与名面零改 —— `agent-host.mjs`）。
 export { DEFAULT_DEPS, gitAuthor, teamConfig, validateProvider }
 
 /** MCP 合入缝体（#673 —— 核 `toolsFinalize` 缝；位次 = 工具装配后、`createAgent` 前）。两源 = 本装配 **config**
- *  的 `mcp.servers`（优先）∥ **项目根 `.mcp.json`**（#691 第二源——对齐 CLI `make-agent.mjs:61-79`，helper 见下）⇒ 逐条核
+ *  的 `mcp.servers`（优先）∥ **项目根 `.mcp.json`**（#691 第二源——对齐 CLI `assembleAgent`，helper 见下）⇒ 逐条核
  *  `connectMcpServer`（幂等——同 name 活连接复用 ⇒ 与 `mcp-servers.mjs` 随动面共用核件，零副本）⇒ 工具并入 `baseTools`；
  *  **失败落警告不抛**（沿 CLI `_mcpWarnings` 同形——死服务器不阻装配；下次装配自然重连）。`deps.connectMcpServer` 可注入
  *  （缺省 = 核单源动态 import）——装配序可机验（假连接器）。**非变异**——不回写 `config.mcp.servers`。 */
@@ -52,7 +52,7 @@ async function finalizeTools(baseTools, { config, cwd }, deps, warnings) {
   return merged.length === 0 ? baseTools : [...baseTools, ...merged] // 零并入 ⇒ 原数组原样（恒等）
 }
 
-/** 项目文件第二源（#691 · 对齐 CLI `make-agent.mjs:61-79`）：`join(cwd, ".mcp.json")` 单层读取（零上溯）——
+/** 项目文件第二源（#691 · 对齐 CLI `assembleAgent`）：`join(cwd, ".mcp.json")` 单层读取（零上溯）——
  *  `mcpServers` 须对象形（数组形 ⇒ 跳过 + 记录）；条目 = 键名注入 `{ name, ...server }`（非对象 ∕ 数组跳过）；
  *  `configNames` 同名跳过（config 优先）；读 ∕ 解析失败非致命（仅记录——`_mcpWarnings` 零增，沿 CLI 判）。 */
 async function projectMcpJsonServers(cwd, configNames) {
@@ -79,7 +79,7 @@ async function projectMcpJsonServers(cwd, configNames) {
 }
 
 /** M1 装配钩子（`docs/core/design/MANIFEST.md` §2.2 两端装配钩子 —— 桌面端；形对齐 CLI
- *  `thincoder-cli/src/cli/make-agent.mjs:127`，决策树 = 核单源 `resolveEngineeringManifest`，本档零副本）：
+ *  `attachManifest`，决策树 = 核单源 `resolveEngineeringManifest`，本档零副本）：
  *  模式门 = 会话权威值（槽值优先 + config 回退）；普通会话 ⇒ **装配钩子零 manifest I/O**（不读 ∕ 不拒 ∕
  *  不建档）+ `agent.manifest = null`（清残留附着）；工程模式 ⇒ **非 fatal**（档合法 ∕ 缺档就地建档
  *  〔`writer:'main'`〕⇒ 附着；歧义 ∕ 档非法 ∕ 建档失败 ⇒ **不抛**——`agent.manifest = null` +
@@ -127,7 +127,7 @@ export async function assembleFor({ cwd, slot, deps = {} }) {
 }
 
 /** MCP 连接失败提醒构造（KD-70 —— 桌面消费词面；装配尾经 `agent-host.mjs` `assembleAndLoad` 入队）。
- *  首两段逐字同 CLI（`thincoder-cli/src/command-interactive.mjs:151-155`：计数 + 逐条）；末行指路
+ *  首两段逐字同 CLI（`tuiCommand`：计数 + 逐条）；末行指路
  *  **桌面可达出口**（设置面 MCP 段「重连」——CLI 的 `/mcp connect <name>` 桌面不存在，逐字照搬即误导）。
  *  零警告 ⇒ `null`（**零写** —— 调用方零入队）；纯函数、零副作用。 */
 export function mcpWarningReminder(warnings) {
@@ -138,5 +138,5 @@ export function mcpWarningReminder(warnings) {
     "\nYou can try reconnecting from the Settings panel (MCP section → Reconnect).]"
 }
 
-// ─── 装配期缝接线（R3 · #523② —— 模块装配期一次；VSC `tools/shared.mjs:104-105` 同形）────────
+// ─── 装配期缝接线（R3 · #523② —— 模块装配期一次；VSC `majorityEol` 同形）────────
 installExecRunSeams()

@@ -18,6 +18,7 @@ import {
   turnFrame, // 第 19 批（TURN-ACROSS-SEGMENTS）：跨段累计编号帧（设计 TURN-CAP-CONTINUE.md §4）
   ContinueError,
   FILE_MUTATORS, toolTouchPaths,
+  wroteSince, // #934（§6.32.2 ① 判据式）：写序是否推进——轮顶 ∥ 撞帽收尾两处判据点共用
 } from "./helpers.mjs"
 
 export async function runTurnLoop(agent, {
@@ -49,7 +50,7 @@ export async function runTurnLoop(agent, {
 
   // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-UPSTREAM.md §6.27.4 消费点）：子 → 父在飞消息的
   // 回合边界注入单点取用一次（模块缓存 ⇒ 每 run 一次代价）；动态 import = 零新增静态边
-  // （同款先例 = run-start.mjs:43 ∥ :66——injectAsyncResult 动态 import）。
+  // （同款先例 = `run-start.mjs` 的 `injectAsyncResult` 动态 import）。
   const { drainChildUpstream } = await import("../agent-tools/parent-channel.mjs")
   // #934（零落笔看门狗——AGENT-LOOP-UPSTREAM.md §6.32）：连续零写越阈 ⇒ 自动上行提醒（只推——
   // 不杀 / 不转向）；单源叶 = zero-write-watch.mjs，动态 import 沿上条同款（零新增静态边）。
@@ -57,9 +58,10 @@ export async function runTurnLoop(agent, {
   // §6.31.5 落痕写点门（#939）：载体吸收经 `carrierField` 单点（§6.31.4 同式）；动态 import = 零新增静态边（沿上方两条同款）。
   const { carrierField } = await import("../agent-tools/async-settle.mjs")
 
-  // #417（撞帽载荷「本段零落盘轮数」——只报数：零阈值 / 零自动动作）：计数基线——回合环逐轮
-  // 比对 `_touchedFiles` 增量（轮顶对上一轮结账；撞帽收尾轮在环外单结）。
-  agent._turnFilesMark = agent._touchedFiles.length
+  // #417（撞帽载荷「本段零落盘轮数」——只报数：零阈值 / 零自动动作）∥ #934（零落笔看门狗）：计数基线——
+  // 判据物 = 写序（每次写事件 +1，不去重）；`_touchedFiles` 是去重路径集，同档重写长度不变 ⇒ 旧判据在
+  // 此读成零落笔（本收正要消除的误报方向）。环内逐轮结账、撞帽收尾轮在环外单结（同一谓词）。
+  agent._mutSeqMark = agent._mutationSeq
 
   for (let turn = 0; turn < maxTurns; turn++) {
     // #793（核面小修批——AGENT-LOOP.md §6.2 环边界中止前置 ∥ 需求 F5）：环头检查点——中止恒以
@@ -73,21 +75,23 @@ export async function runTurnLoop(agent, {
     const frame = turnFrame(++agent._turnSeq, turn, maxTurns)
     agent._currentTurn = frame.turn
     agent._maxTurns = frame.maxTurns
-    // #417（撞帽载荷「本段零落盘轮数」——采集点与 `_turnSeq` 同源面）：上一轮至今 `_touchedFiles`
-    // 零增 ⇒ 上一轮零落盘，计数 +1；mark 前移（收尾轮在环外结账——见下方 ContinueError 前）。
-    // #934（零落笔看门狗——§6.32.2 ① 单点采集）：streak 与越阈判定同点——上轮零写 ⇒ +1 并判越阈；
-    // 有写 ⇒ streak 归零 + 清闩（写后重臂——每连续零写段恰一条）。#417 计数语义逐字保持。
+    // #934 B 面读数分母（§6.32.4）：本段轮数逐轮 +1——段起点复位见 run-start.mjs（与零落笔计数同点）。
+    agent._segmentTurns = (agent._segmentTurns ?? 0) + 1
+    // #417（撞帽载荷「本段零落盘轮数」——采集点与 `_turnSeq` 同源面）：上一轮至今写序未推进
+    // ⇒ 上一轮零落笔，计数 +1；写序标每轮前移（撞帽收尾轮在环外结账——见下方 ContinueError 前）。
+    // #934（零落笔看门狗——§6.32.2 ① 单点采集）：streak 与越阈判定同点——上轮零落笔 ⇒ +1 并判越阈；
+    // 有落笔 ⇒ streak 归零 + 清闩（写后重臂——每连续零落笔段恰一条）。#417 计数与 streak 同源同谓词。
     if (turn > 0) {
-      if (agent._touchedFiles.length === agent._turnFilesMark) {
+      if (!wroteSince(agent, agent._mutSeqMark)) {
         agent._zeroWriteTurns += 1
         agent._zeroWriteStreak += 1
-        maybeZeroWriteAlert(agent) // #934：连续零写越阈 ⇒ 自动上行提醒（只推——§6.32）
+        maybeZeroWriteAlert(agent) // #934：连续零落笔越阈 ⇒ 自动上行提醒（只推——§6.32）
       } else {
         agent._zeroWriteStreak = 0
         agent._zeroWriteAlerted = false // 写后重臂
       }
     }
-    agent._turnFilesMark = agent._touchedFiles.length
+    agent._mutSeqMark = agent._mutationSeq
     // D2 (AGENT-LOOP-SUBAGENT.md §6.7.2): depth>0 children emit a ⟦ev⟧turn progress token each turn —
     // single emit point covering all three spawn tools; phase=llm (tool/done progress rides
     // the onToolCall/onToolResult relay — no token for those). 第 19 批：载荷取上方帧值
@@ -180,6 +184,12 @@ export async function runTurnLoop(agent, {
 
     if (response.usage) {
       callbacks.onUsage?.(response.usage)
+      // Core-side cumulative cache tally (batch 2026-10-18-context-cache-visibility):
+      // every agent (parent or child) keeps its own hit/miss so `context` can report
+      // cache efficiency instead of the terminal faces being the only tally holders.
+      agent._cacheHitTokens = (agent._cacheHitTokens ?? 0) + (response.usage.prompt_cache_hit_tokens ?? 0)
+      agent._cacheMissTokens = (agent._cacheMissTokens ?? 0) + (response.usage.prompt_cache_miss_tokens ?? 0)
+      agent._usageTurns = (agent._usageTurns ?? 0) + 1
       if (response.usage.prompt_tokens != null) {
         agent._lastPromptTokens = response.usage.prompt_tokens
         agent._usageAtLen = agent.history.length
@@ -265,9 +275,9 @@ export async function runTurnLoop(agent, {
     injectPostTurn(agent, results, recentCallSigs, callbacks, turn, { suspDriven })
   }
 
-  // #417（撞帽载荷「本段零落盘轮数」）：收尾轮（撞帽轮）若零落盘同样计入——轮顶计数只
-  // 覆盖到倒数第二轮（maxTurns ≤ 0 时环未跑，不虚计）。
-  if (maxTurns > 0 && agent._touchedFiles.length === agent._turnFilesMark) agent._zeroWriteTurns += 1
+  // #417（撞帽载荷「本段零落盘轮数」）：收尾轮（撞帽轮）单结——与环内同一谓词（不另作 alert ∥ streak
+  // 判定，链尾无下一轮可推报）；轮顶计数只覆盖到倒数第二轮（maxTurns ≤ 0 时环未跑，不虚计）。
+  if (maxTurns > 0 && !wroteSince(agent, agent._mutSeqMark)) agent._zeroWriteTurns += 1
   // #793（核面小修批——AGENT-LOOP.md §6.2 环边界中止前置 ∥ 需求 F5）：环尾检查点——中止恒以
   // AbortError 收束（不落 ContinueError——用户 Stop 优先于继续提示；消费契约 = 外层按 reason 判定）。
   if (signal?.aborted) throw abortError(signal, "agent", "turn-tail")

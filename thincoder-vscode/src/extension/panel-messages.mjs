@@ -19,8 +19,8 @@ import { handleNewSession, handleSwitchSession, handleDeleteSession, handleRenam
 // 四档拆分批（2026-09-18 · VSC-DEBT §12.2.2）：回合交互族 10 case / 设置族 28 case 的 handler 迁出
 // ——本档分发表按**同名 case 标签**转发行分发（case 标签集合零变化；两新档名带 `panel-messages`
 // 前缀以落在 reverse 机检的 `HOST_DISPATCH` 扫描域内）。
-import { handleAbort, handleCancelSubagent, handleInterrupt, handleOpenFile, handleOpenDiff, handleQuestionResponse, handleSetAutoApprove, handleAtComplete, handlePermissionResponse, handleBatchPermissionResponse } from "./panel-messages-turn.mjs"
-import { handleSaveProviderKey, handleDeleteProviderKey, handleSaveMcpServer, handleDeleteMcpServer, handleReconnectMcp, handleEditMcp, handleTestMcp, handleAddProvider, handleRemoveProvider, handleSetProviderProxy, handleSetKey, handleSaveEmbedKey, handleDeleteEmbedKey, handleSaveWebsearchKey, handleDeleteWebsearchKey, handleTestProvider, handleBuildIndex, handleGetMcpStatus, handleMcpTools, handleSaveAgentSettings, handleGetAgentSettings, handleSetAdvisorGuard, handleSetEngineeringEnabled, handleSetPlanMode, handleGetShellCandidates, handleSaveShellSettings, handleSaveProxySettings, handleTestProxy, handleTeamLogin, handleTeamLogout } from "./panel-messages-settings.mjs"
+import { handleAbort, handleCancelSubagent, handleInterrupt, handleOpenFile, handleOpenDiff, handleQuestionResponse, handleSecretInputResponse, handleSetAutoApprove, handleAtComplete, handlePermissionResponse, handleBatchPermissionResponse } from "./panel-messages-turn.mjs"
+import { handleSaveProviderKey, handleDeleteProviderKey, handleSaveMcpServer, handleDeleteMcpServer, handleReconnectMcp, handleEditMcp, handleTestMcp, handleAddProvider, handleRemoveProvider, handleSetProviderProxy, handleSetKey, handleSaveEmbedKey, handleDeleteEmbedKey, handleSaveWebsearchKey, handleDeleteWebsearchKey, handleTestProvider, handleBuildIndex, handleGetMcpStatus, handleMcpTools, handleSaveAgentSettings, handleGetAgentSettings, handleSetAdvisorGuard, handleSetEngineeringEnabled, handleSetPlanMode, handleGetShellCandidates, handleSaveShellSettings, handleSaveProxySettings, handleTestProxy, handleTeamLogin, handleTeamLogout, handleTeamRotate } from "./panel-messages-settings.mjs"
 // C-B2-6 细则⑥（busy-injection 批 fix 轮 2026-09-22）：F-1 降级判决函数已迁 `image-handler.mjs`
 // ——本档只留触发（`downgradeNonVisionImages` + `visionReader` per-call 缝）。
 import { savePastedImages, downgradeNonVisionImages } from "./image-handler.mjs"
@@ -100,24 +100,23 @@ export function clearProjectOverride() {
 }
 
 /**
- * C-B2-6 细则①⑦（busy-injection 批 fix 轮 2026-09-22 · busy-extend 2026-09-22 · queue-visible 批
- * 2026-09-24 多槽）：busy 队列快照推送——webview 二次提交守卫判据源 + 「待发送」气泡面（逐条标记 /
- * 清标 / 多批合泡）；判据 = host 队列实况——**两载体合计**（无会话 `_busyQueued` ∪ 会话在飞
- * `susp.pendingInput`，权威面）；推送点 = 受理 / **五个消费点**（步边界 pickup · driver 步骤 1 ·
- * 装载① 预填 splice · 装载② 归位 shift · 会话退出残余直发循环）/ 忙分支判决（count 实况）与
- * `webviewReady` 握手重推（Reload 冷启重建——幂等快照；字段面 = `WEBVIEW-PROTOCOL.md` §3.2 行 17）。
+ * C-B2-6 细则①⑦（busy-injection 批 fix 轮 2026-09-22 · busy-extend 2026-09-22 · queue-band 批
+ * 2026-10-20）：busy 队列快照推送——webview 二次提交守卫判据源 + 待发送带（输入区上沿派生面：
+ * `items` 全量重绘 / `merged` 消费出块）；判据 = host 队列实况——**两载体合计**（无会话
+ * `_busyQueued` ∪ 会话在飞 `susp.pendingInput`，权威面）；推送点 = 受理 / **五个消费点**
+ * （步边界 pickup · driver 步骤 1 · 装载① 预填 splice · 装载② 归位 shift · 会话退出残余直发循环）/
+ * 忙分支判决（count 实况）与 `webviewReady` 握手重推（Reload 冷启重建——幂等快照；字段面 =
+ * `WEBVIEW-PROTOCOL.md` §3.2 行 17：`{ pending, count, items, merged? }`——`text` 已退役）。
  * @param {object} panel 面板（两载体）
- * @param {string} [merged] 本批消费的合并文本（仅消费推送携——webview 清标 / 合泡成形源）
+ * @param {string} [merged] 本批消费文本（仅消费推送携——webview 恰一枚 user 块之源；单条 = 原文，多条 = 合并文本）
  */
 export function pushBusyQueued(panel, merged) {
   const items = busyQueueItems(panel)
-  const text = items.length > 0 ? String(items[items.length - 1]?.text ?? "") : undefined
   panel._panel?.webview.postMessage({
     type: "busyQueued",
     pending: items.length > 0,
     count: items.length,
     items: items.map((q) => String(q?.text ?? "")),
-    ...(text !== undefined ? { text } : {}),
     ...(merged !== undefined ? { merged } : {}),
   })
 }
@@ -208,9 +207,13 @@ export async function routeUserTurn(panel, { text, modelOverride, reasoning, pro
     saved = d.images
     visionAbort = d.visionAbort
   }
-  // C-B2-6 细则①（fix 轮收敛补全——判据源不变式「host 推送权威收敛」不留死角）：复位推已
-  // **前移**至本函数入口（见上——含降级 await 前；跨工作区早退口）——本处不再重复推。
+  // C-B2-6 细则①（fix 轮收敛补全——判据源不变式「host 推送权威收敛」不留死角）：入口复位推已
+  // **前移**至本函数入口（见上——含降级 await 前；跨工作区早退口）。
   panel._chat(text, modelOverride, reasoning, providerName, saved)
+  // C-B2-6 ⑦（queue-band 批 2026-10-20）：挂起窗受理补推——`_chat` 的会话在飞分支已把本条放入
+  // `susp.pendingInput`（driver 步骤 1 消费）；此处立推快照 ⇒ 待发送带即时可见。idle 直发面照推
+  // （队空 ⇒ `count:0`——幂等零副作用）。
+  pushBusyQueued(panel)
   // C-MA12-4（停止语义 = 启动即中止）：窗内被 Stop → 用户消息照常入 history（at-most-half-
   // a-turn）但回合建立即 abort——置位序必须在 _chat 调用**之后**（其入口清陈旧闩，置前
   // 会被清掉）；newTurnController 消费。
@@ -227,8 +230,8 @@ export async function handlePanelMessage(panel, msg) {
       routeUserTurn(panel, { text: msg.text || "", modelOverride: msg.model, reasoning: msg.reasoning, providerName: msg.provider, images: msg.images })
       break
     case "queuedUserMessage":
-      // C-B2-6（busy-injection 2026-09-21）：普通回合 busy 面排队上行——同入口同判据同槽
-      // （webview 本地气泡已先行上屏；此处只做 host 侧单槽装载——送达由回合尾装载两分支）。
+      // C-B2-6（busy-injection 2026-09-21 · queue-band 2026-10-20）：普通回合 busy 面排队上行——同入口
+      // 同判据同槽（webview 忙态零本地气泡——可见面 = 待发送带；此处只做 host 侧装载，消费点出块）。
       routeUserTurn(panel, { text: msg.text || "", modelOverride: msg.model, reasoning: msg.reasoning, providerName: msg.provider, images: msg.images })
       break
     case "selectModel": {
@@ -293,6 +296,8 @@ export async function handlePanelMessage(panel, msg) {
     case "openDiff": await handleOpenDiff(panel, msg); break
     case "loadOlder": await handleLoadOlder(panel, msg); break
     case "questionResponse": handleQuestionResponse(panel, msg); break
+    // 凭据 / 秘密输入卡应答径（ssh-session 批 · VSC 腿——`questionResponse` 同构；handler 住 panel-messages-turn.mjs）
+    case "secretInputResponse": handleSecretInputResponse(panel, msg); break
     case "setAutoApprove": await handleSetAutoApprove(panel, msg); break
     case "atComplete": await handleAtComplete(panel, msg); break
     case "permissionResponse": await handlePermissionResponse(panel, msg); break
@@ -339,7 +344,8 @@ export async function handlePanelMessage(panel, msg) {
       panel._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(panel._agentSettingsSession?.() ?? null) })
       pushUiPrefs(panel, vscode) // #875：视图偏好三键（Reload 冷启重同步——幂等；变更重推 = chat-panel 订阅）
       panel._pushStatus()
-      pushBusyQueued(panel) // C-B2-6 细则①：Reload 冷启握手重同步（单槽未消费态镜像——对位 workspaceGuard 先例；排四件握手之后——交握序列零改）
+      // C-B2-6 ⑦（queue-band 批 2026-10-20）：Reload 冷启的带面重推不在此处——`openSessionContent`
+      // 内含 `clearMessages`（webview 带面复位），先推必被抹掉（重推点在该段之后）。
       // #219（hygiene-sweep 批）：冷启镜像补推——挂起会话在场 ⇒ `suspension{active:true}` 重推
       // （webview `handleSuspensionMessage` = `_suspended` 唯一驱动源；Reload 冷启动镜像恒 false ⇒
       // 提交守卫 / 状态行误判为普通 idle）。webview 零改（复用既有消息族）；`_susp` 缺席 ⇒ 零推。
@@ -352,6 +358,9 @@ export async function handlePanelMessage(panel, msg) {
       // cb——不同 tick 保留）。槽绑定随之顺延至此——webviewReady 前无 slot 读者（安全）。
       // F-MI7：快段 = async（认领束 awaited——本 case 已 async ✓）
       await openSessionContent(panel)
+      // C-B2-6 ⑦（queue-band 批 2026-10-20）：Reload 冷启按 `items` 重建带面——推点必须在上面这拍
+      // **之后**：`openSessionContent` 内的 `clearMessages` 会复位带面（`chat-messages.js` 清屏分支）。
+      pushBusyQueued(panel)
       // 2026-09-11 第 10 批（§5.1.4 第 2 条——两拍，排在 openSessionContent 之后）：
       // ① flush 暗窗口队列（保持入队序）→ ② 再断言存活（存活投影——只发 running/queued）。
       // 后置理由：openSessionContent 内部含 clearMessages（抹块 + resetActivity 清簿记）——
@@ -385,5 +394,6 @@ export async function handlePanelMessage(panel, msg) {
     // 读面 = `teamStatus` 推送（无上行请求——推送点 = 快照族 + 登录/退出成拍））
     case "teamLogin": await handleTeamLogin(panel, msg); break
     case "teamLogout": await handleTeamLogout(panel); break
+    case "teamRotate": await handleTeamRotate(panel); break
   }
 }

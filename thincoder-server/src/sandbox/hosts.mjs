@@ -121,7 +121,7 @@ export async function execOnHost(row, { command, timeoutS = SSH_COMMAND_TIMEOUT_
       sudoSecret,
       command,
       timeoutS,
-      stdin, // 命令体透传（sandbox-exec-rebuild 批：`nft -f -` ∥ `tar xzf -` 收体——盒链 ③/恢复备径用；缺省 null = 现状零变）
+      stdin, // 命令体透传（sandbox-exec-rebuild 批：`tar xzf -` 收体——恢复备径用；缺省 null = 现状零变）
     })
     const secrets = [secret, sudoSecret].filter((value) => typeof value === "string" && value.length > 0)
     const stdout = maskSecrets(out.stdout, secrets)

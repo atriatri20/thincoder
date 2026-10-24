@@ -34,7 +34,7 @@
  * 两端共用的提示行携参（队首 ask 的 `from` + 单行归一截断的 `message`）；两端各持一份 = 漂移源（D2）。
  *
  * 模块图：静态 import 核单点 `async-settle.mjs`（`carrierField` / `getAsyncPool` /
- * `tombstoneOf` / `wakeAsyncWaiters`——同层既有导出，同 `async-discard.mjs:35` 先例；唤醒走
+ * `tombstoneOf` / `wakeAsyncWaiters`——同层既有导出，同 `async-discard.mjs` 的 `async-settle.mjs` 静态导入先例；唤醒走
  * 既有静态边，零新增）+ `../context.mjs`（`pushReal`）
  * / `../agent/helpers.mjs`（`escapeXml`）/ `../log.mjs`（`logEvent`）；单向、叶子向、无环。
  * 登记册导出（`agent-tools.mjs`）→ 家族矩阵装配（`agent/family-tools.mjs` depth>0 段）。
@@ -55,7 +55,7 @@ export const UPSTREAM_ASK_MAX_INFLIGHT = 1
 
 /** 工具返回注（异步形——sync: false；答复按普通指令在下回合边界到达）。 */
 const ASYNC_NOTE =
-  "delivered to your parent's queue — consumed at the parent's next turn boundary (non-blocking). " +
+  "delivered to your parent's queue — consumed at the parent's next delivery round (idle wake or suspension window; not during a user turn), non-blocking. " +
   "Keep working on the unaffected parts; a reply arrives as an ordinary instruction at your next turn boundary. " +
   "If your run ends first, report the unanswered part as not done."
 
@@ -73,7 +73,7 @@ const refused = (error) => JSON.stringify({ status: "error", error })
  *   ① 父字段在场 ⇒ 父对象（CLI 形主容器——写侧不变）；
  *   ② 缺 ⇒ `carrierField` 回退 `history` 命中 ⇒ **借用同一容器**（不另建分叉）；
  *   ③ 两者皆无 ⇒ 建在父字段 + **载体别名**（`parent.history._childUpstream = parent._childUpstream`
- *      ——同 `writeTombstone` 借用规则扩张句的既有形态，`agent-tools/async-settle.mjs:73-83`）。
+ *      ——同 `writeTombstone` 借用规则扩张句的既有形态，`agent-tools/async-settle.mjs` 的 `writeTombstone`）。
  */
 function upstreamHolder(parent) {
   if (!Array.isArray(parent._childUpstream)) {

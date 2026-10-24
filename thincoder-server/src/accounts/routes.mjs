@@ -24,6 +24,7 @@ import {
   createSession,
   deleteExpiredSessions,
   deleteSession,
+  isSecureRequest,
   requireSession,
   revokeMemberSessions,
   serializeSessionCookie,
@@ -101,7 +102,7 @@ export function registerAccountRoutes(routes, { db, guard = defaultLoginGuard } 
         recordAudit(db, { type: "key_issue", actor: member.name, actorId: member.id, detail: { keyHint: ensured.key.hint, surface: "admin_agent" } })
       }
     }
-    res.setHeader("Set-Cookie", serializeSessionCookie(token))
+    res.setHeader("Set-Cookie", serializeSessionCookie(token, { secure: isSecureRequest(req) })) // TLS 连接才附 `Secure`（KD-PN-11）
     sendJson(res, 200, { ok: true, member: { id: member.id, name: member.name, username: member.username, role: member.role } })
   })
 

@@ -23,9 +23,11 @@
  */
 export function summarizeEngTaskBook(taskInput) {
   if (!taskInput) return "(unavailable)"
+  // 五项拼装形下，`designPoints` 一段同时承载「设计档落点」与「受影响文件清单」——
+  // 前两段同取该块是有意的（语义都在其中）；代价 = 摘要里该块出现两次，不是抽取失败。
   const SECTIONS = [
-    { name: "Design docs involved", markers: [/Docs? involved/i, /涉及文档/] },
-    { name: "Affected-file list", markers: [/Files? (?:list|to (?:modify|change)|modified)/i, /受影响文件/, /文件清单/, /涉及文件/] },
+    { name: "Design docs involved", markers: [/Docs? involved/i, /涉及文档/, /^Design points/i] },
+    { name: "Affected-file list", markers: [/Files? (?:list|to (?:modify|change)|modified)/i, /受影响文件/, /文件清单/, /涉及文件/, /^Design points/i] },
     { name: "Acceptance criteria", markers: [/Acceptance(?: criteria)?/i, /验收标准/] },
   ]
   const lines = taskInput.split("\n")
@@ -60,7 +62,7 @@ export function summarizeEngTaskBook(taskInput) {
 }
 
 /**
- * 审计块（spawn 级固定 ⇒ system 固块——§6.26 分类裁定表第 2 行）：纯函数——touched 快照
+ * 审计块（spawn 级固定 ⇒ system 固块——§6.26 分类裁定表「审计块」行）：纯函数——touched 快照
  * （`ctx.agent._touchedFiles`——机制面证据，非 eng-coder 自述）+ A2 任务书摘要
  * （`summarizeEngTaskBook(ctx.agent._engTaskInput)`）+ 指令 / 范围 / 零 git 权威 / 预算 /
  * 报告格式五段模板**逐字**。零副作用（只读 ctx）；块内文本与搬移前逐字节一致。

@@ -35,7 +35,6 @@ export const DEFAULT_SETTINGS = Object.freeze({
   wallclockTtlHours: 24,                // 墙钟 TTL（§3 定时器）
   checkpointEveryMinutes: 15,           // WIP 快照周期（§5）
   checkpointKeep: 5,                    // 快照保留份数（§5）
-  pendingTimeoutSeconds: 60,            // 待批挂起窗（§6）
   tmpfsMb: 256,                         // tmpfs /tmp 容积（披露 D1）
   image: "thincoder-sandbox:1",         // 盒镜像（§3「镜像 = 控制台预填设置」缺省值）
   maxBoxesPerRunner: 8,                 // 单节点盒数上限（放置容量——KD-SV-171）
@@ -348,7 +347,7 @@ export async function boxStateOf(workspace, runner, { client = null } = {}) {
   }
 }
 
-/** 服务基址（盒内 env `OPENAI_BASE_URL`——config.host/port 组成；取值点单源 = 网段自动带入同址）。 */
+/** 服务基址（盒内 env `OPENAI_BASE_URL`——config.host/port 组成）。 */
 export function sandboxPublicBase(config = {}) {
   const host = typeof config.host === "string" && config.host.trim() !== "" ? config.host.trim() : "127.0.0.1"
   const port = Number(config.port) > 0 ? Number(config.port) : 80

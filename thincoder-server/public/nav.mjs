@@ -1,7 +1,6 @@
 /**
- * nav.mjs — 控制台导航单源（webui/WEBUI.md §2 ∥ KD-SV-20）：组/项数据（我的 7 ∥ 管理 11——2026-10-10 代理回迁批去代理项 ∥ 沙盒运行面批 +「沙盒」项 ∥ admin-agent-chat 批 +「对话」项〔总览后〕 ∥ team-projects-permissions 批 +三项〔我的·项目末位 ∥ 管理·项目 ∥ 管理·Git 源——「成员」后〕
- * ∥ sandbox-outbound-member-face 批 +「我的工作区」项〔我的·项目后〕 ∥ team-ledger 批 +「团队台账」项〔我的·末位〕 ∥ project-sources-merge 批：「管理·Git 源」项退场〔并入管理·项目页标签②——管理 11 ⇒ 10〕 ∥ member-face-chat 批 +「对话」项〔我的·首位〕 ∥ server-mcp 批 +「MCP 服务器」项〔管理·模型后〕）∥ `resolveRoute` 纯函数
- * （无 DOM——单元测试档直测：别名重定向 ∥ 角色默认 ∥ admin 面 `denied` ∥ 子段容许——console-tabs-component 批）∥ 侧栏渲染（品牌 ∥ 组标题/项/活动态 ∥
+ * nav.mjs — 控制台导航单源（webui/WEBUI.md §2 ∥ KD-SV-20）：组/项数据（我的 7 ∥ 管理 11）∥ `resolveRoute` 纯函数
+ * （无 DOM——单元测试档直测：别名重定向 ∥ 角色默认 ∥ admin 面 `denied` ∥ 子段容许）∥ 侧栏渲染（品牌 ∥ 组标题/项/活动态 ∥
  * 底部 meta 槽（健康状态灯 + 版本行 + 语言切换器）+ 退出登录）。
  *
  * 文案单源 = 文案表（`i18n-zh.mjs` ∥ `i18n-en.mjs`）——本档数据持 `labelKey`（键——非字面量），渲染经 `t()` 取值

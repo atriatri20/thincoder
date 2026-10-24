@@ -163,6 +163,93 @@ export function readSectionStatusWord(src, seg) {
 }
 
 /**
+ * 「不适用」声明行形态单源（§4.18-A——**一行一档**）：`> 不适用：§N —— <理由>`，§N ∈ {2,3,4}、
+ * 理由非空（`\S.*` = 至少一个非空白字符起头）。识别域 = §1 段体内（声明住 §1——D-BR30：工程模式
+ * 主 agent 的 append 域 = §1/§4/§6，写不进 §2/§3，而声明恰发生在 designer / 评审本轮不跑时 ⇒
+ * 段内声明形在需要的场合不可写）。声明 = 链门（`sectionContentState`）的合法满足面。
+ */
+const INAPPLICABLE_RE = /^>\s*不适用[：:]\s*§(\d+)\s*——\s*(\S.*)$/
+/** 可声明的段号集（§5 段号豁免——免声明；§6 不可声明——收口段必须带验证内容）。 */
+export const INAPPLICABLE_SEGMENTS = [2, 3, 4]
+/** §1 声明行的识别前缀（形不合扫描的宽网——行首命中它而完整形不合 ⇒ 拒，不静默当作无声明）。 */
+const INAPPLICABLE_PREFIX_RE = /^>\s*不适用/
+
+/** §N 段体行集（段头缺失 ⇒ null——create 是骨架唯一权威入口；行切分 = /\r?\n/——EOL 形态无关）。 */
+function sectionBodyLines(src, seg) {
+  const hdr = sectionHeaderRe(seg).exec(src)
+  if (!hdr) return null
+  const nextRe = /^## §\d/gm
+  nextRe.lastIndex = hdr.index + hdr[0].length
+  const next = nextRe.exec(src)
+  const body = src.slice(hdr.index + hdr[0].length, next ? next.index : src.length)
+  const nl = body.indexOf("\n") // 跳过段头行余文（`## §N …` 的标题部分）
+  return (nl >= 0 ? body.slice(nl + 1) : "").split(/\r?\n/)
+}
+
+/**
+ * 段内容判据**单源**（§4.18-A closeout chain gate 的判空口径；D-BR30 判据单源——**不许两套**；
+ * §4.13 的 §6 旧判据 `sectionSixHasContent` 改由本谓词承担——§6 为唯一缺段时拒串仍取旧函数）。
+ * 返回三态：`content`（段体至少一行非排除类）∥ `not-applicable`（§1 声明该段不适用且理由非空——
+ * 仅 §2/§3/§4）∥ `empty`。排除类（判空依据——「标题在、正文零行」判空）：空行 ∥ 标题行
+ * （`^#{1,6}\s`）∥ `**状态行**：` 行 ∥ `<§N 模板占位：…>` 行 ∥ 「不适用」声明行。
+ * 口径收正注：旧 `sectionSixHasContent` 对「只有子标题（`### …`）」判非空；本谓词按 §4.18-A 判空
+ * （子标题属排除类标题行）——设计档 §4.18-A 明文收窄。
+ * @param {string} src — 档全文
+ * @param {number|string} seg — 段号（§1–§6；§1 恒 `content`——主 agent 自述段不设前置）
+ * @returns {"content"|"not-applicable"|"empty"} 段内容三态
+ */
+export function sectionContentState(src, seg) {
+  const n = Number(seg)
+  if (n === 1) return "content"
+  const lines = sectionBodyLines(src, n)
+  if (lines === null) return "empty" // 段头缺失 = 空（骨架由 create 一次预写；缺失即无内容）
+  if (lines.some((l) => NONEMPTY_RE.test(l) && !EXCLUDED_LINE_RE.test(l))) return "content"
+  // 段体无实质内容 ⇒ 查 §1 声明（仅 §2/§3/§4 可声明；理由非空——INAPPLICABLE_RE 的 (\S.*) 已保证）
+  if (INAPPLICABLE_SEGMENTS.includes(n)) {
+    for (const l of sectionBodyLines(src, 1) ?? []) {
+      const m = INAPPLICABLE_RE.exec(l)
+      if (m && Number(m[1]) === n) return "not-applicable"
+    }
+  }
+  return "empty"
+}
+
+/** 非空白行谓词（空行排除）。 */
+const NONEMPTY_RE = /\S/
+/** 排除类行判据：标题行（`^#{1,6}\s`）∥ `**状态行**：` 行 ∥ `<§N 模板占位：…>` 行 ∥ 「不适用」声明行
+ *  （空行由 NONEMPTY_RE 单独排除——四类合一次判定）。 */
+const EXCLUDED_LINE_RE = /^#{1,6}\s|^\s*\*\*状态行\*\*[：:]|^<§\d+ 模板占位[：:]|^>\s*不适用/
+
+/**
+ * 声明形不合拒绝句（§4.18-A J3——形不合 ⇒ 拒，**不静默当作无声明**）：行首命中
+ * `^>\s*不适用` 却不满足完整形（缺 `——` ∥ 缺理由 ∥ § 号 ∉ {2,3,4}）。
+ * 逐字文本 = `TOOLS.md` §6.24 J3。
+ * @param {string} line — 违规行原文
+ * @returns {string} 完整拒绝句（调用方 throw new Error(...)）
+ */
+export function inapplicableDeclarationError(line) {
+  return "batch: 「不适用」声明形不合（malformed inapplicability declaration）— one line per section: " +
+    "`> 不适用：§N —— <reason>` with a non-empty reason, §N ∈ {2,3,4} (§5 needs no declaration; §6 is never declarable). " +
+    `Offending line: ${line}. Nothing was written.`
+}
+
+/**
+ * §1 声明行机械扫描（链门前置判据——形不合 ⇒ 拒，不静默）：识别域 = §1 段体。行首命中
+ * `^>\s*不适用` 而完整形不合（INAPPLICABLE_RE 不中 ∥ § 号 ∉ {2,3,4}）⇒ 返回违规行原文；
+ * § 号 ∈ {2,3,4} 且理由非空 ⇒ 合法。无违规 ⇒ null。
+ * @param {string} src — 档全文
+ * @returns {string|null} 首个形不合声明行原文 / null
+ */
+export function malformedInapplicableLine(src) {
+  for (const l of sectionBodyLines(src, 1) ?? []) {
+    if (!INAPPLICABLE_PREFIX_RE.test(l)) continue
+    const m = INAPPLICABLE_RE.exec(l)
+    if (!m || !INAPPLICABLE_SEGMENTS.includes(Number(m[1]))) return l
+  }
+  return null
+}
+
+/**
  * §N 段内「`**状态行**：` 行存在性」判据（#422③——close 对无状态行档自建机读位的**采集面**：
  * 与 readBatchStatusLine 的「值可解析」正交——无行 ⇒ 可自建；有行而值不可解析 ⇒ 仍 fail-closed）。
  * 段界定消费 sectionHeaderRe（同单源——`## §20` 不误命中 `§2`）。

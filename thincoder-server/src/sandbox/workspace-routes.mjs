@@ -57,11 +57,6 @@ export function workspaceView(db, workspace, box, { now = Date.now } = {}) {
   const runner = workspace.runner_id === null ? null : db.prepare("SELECT * FROM sandbox_runners WHERE id = ?").get(workspace.runner_id)
   const owner = findMemberById(db, workspace.owner_member_id)
   const key = getKeyById(db, workspace.key_id)
-  let pending = null
-  const open = db
-    .prepare("SELECT * FROM sandbox_pending WHERE workspace_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1")
-    .get(Number(workspace.id))
-  if (open) pending = { host: open.host, since: open.first_seen_at }
   return {
     id: workspace.id,
     name: workspace.name,
@@ -73,7 +68,6 @@ export function workspaceView(db, workspace, box, { now = Date.now } = {}) {
     boxState: box?.boxState ?? "stopped",
     stopReason: workspace.stop_reason ?? box?.stopReason ?? null,
     checkpointCount: checkpointCount(db, workspace.id),
-    pending,
     keyHint: key?.key_hint ?? null,
     keyStatus: key?.status ?? null,
     baseImage: workspace.base_image ?? null,
@@ -87,7 +81,7 @@ export function workspaceView(db, workspace, box, { now = Date.now } = {}) {
 /** 注册工作区面（§2.5 六端点）。注入口径 = `routes.mjs` 同拍（`now`/`fetchImpl`/`requestImpl`/`config`/`deps`）。 */
 export function registerWorkspaceRoutes(routes, { db, config = {}, log = null, now = Date.now, fetchImpl = fetch, requestImpl = null, deps = {} } = {}) {
   if (!db) throw new Error("registerWorkspaceRoutes：缺少 db")
-  const boxDeps = { db, config, log, now, fetchImpl, requestImpl, dnsGate: deps.dnsGate ?? null, ...deps }
+  const boxDeps = { db, config, log, now, fetchImpl, requestImpl, ...deps }
 
   // ── ① 列表（读时读引擎——按节点批量；零审计）────────────────────────────────
   routes.add("GET", "/api/admin/sandbox/workspaces", async (req, res) => {

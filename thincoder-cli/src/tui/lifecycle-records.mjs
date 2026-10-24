@@ -41,7 +41,9 @@ export function digestEndRecord({ ok, ms, unsettled = 0 }) {
 }
 
 /** subagent 归档快照记录（冻结载体行插入同点）：meta = 冻结时点块头事实（含 `pool`/`queued?`——§6.26）
- *  ∥ rows = 块内容行集（保尾 ≤500）。#790：`key` 写面归一 = 规范形 `sub:<role>#<id>`。 */
+ *  ∥ rows = 块内容行集（保尾 ≤500）。#790：`key` 写面归一 = 规范形 `sub:<role>#<id>`。
+ *  #1175（car2 批 · §6.26 判据①）：非错终结三类（interrupted ∥ turn-cap ∥ stopped-by-user）随
+ *  `note` 单字段写出——status 三式字面零改、语义随载体收窄（真异常才落 `error`）。 */
 export function subagentRecord(sub) {
   const localKey = String(sub.key ?? "")
   const meta = {
@@ -56,7 +58,9 @@ export function subagentRecord(sub) {
   }
   if (sub.queued) meta.queued = true // 排队（未启动）⇒ 重建面 waiting 标注（`pool` 不写——未知）
   else meta.pool = sub.async === true // 非排队显式两写（VSC 头段在场性判据 = `pool != null`——缺省会藏段）
-  if (sub.lastError) meta.error = sub.lastError // §6.26 meta `error?`（块头事实——重建面还原冻结头 errPart）
+  if (sub.lastError) meta.error = sub.lastError // §6.26 meta `error?`（真异常块头事实——重建面还原冻结头 errPart）
+  // §6.26 判据①：非错终结注记（载体 = `meta.note` 单字段）；停止面 §② ∥ 错误面 §③ 注记零在场
+  if (sub.note && !sub.lastError && !sub.stopped) meta.note = sub.note
   return { kind: "subagent", meta, rows: boundRows(rowsOf(sub)).map(({ kind, text }) => ({ kind, text })) }
 }
 
@@ -130,7 +134,8 @@ export function digestTraceLines(rec, startN = null) {
 // ─── ③ 重建（读面）：subagent 记录 ⇒ 合成件 ────────────────────────────────
 
 /** subagent 记录 ⇒ `_frozenSubTask` 合成件（重建面；渲染端零改消费——折叠头 + tail-3 原式）。
- *  meta 块头事实逐项回填（渲染端读面：started→elapsed ∥ turn/maxTurns ∥ stopped ∥ errored ∥ error→errPart）；
+ *  meta 块头事实逐项回填（渲染端读面：started→elapsed ∥ turn/maxTurns ∥ stopped ∥ errored ∥ error→errPart ∥
+ *  note→done 面注记——#1175）；
  *  #790：`pool`/`queued` ⇒ CLI 本地两事实（`async`/`queued`）∥ `key` 剥 `sub:` 前缀（显示 = 本地无前缀形）。 */
 export function synthSubTask(rec) {
   const meta = rec?.meta ?? {}
@@ -156,6 +161,7 @@ export function synthSubTask(rec) {
     // 缺 status ∥ 未知词照 done）；显示面 = `⏹` + `error` + 括号外注记（与活流冻结面同判）。
     errored: meta.status === "error" || meta.status === "failed",
     lastError: typeof meta.error === "string" ? meta.error : null,
+    note: typeof meta.note === "string" ? meta.note : null, // #1175：非错终结注记（他端无该字段 ⇒ 缺省 null）
     blocks,
     _charCount: blocks.reduce((n, b) => n + b.text.length, 0), // 行集字符和（§5.4 账实一致——恢复直算同源）
   }

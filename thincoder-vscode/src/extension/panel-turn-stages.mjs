@@ -3,9 +3,9 @@
  * 2026-09-18 · 设计 `docs/vsc/design/VSC-DEBT.md` §12.2.1）。
  *
  * 迁出段（逐字搬迁 · 既有注释一并随迁 · 控制流翻译按 §12.2.1 契约）：
- *   · 段 A `resolveTurnStage`（原 `panel-chat.mjs:178-235`）——provider / 模型解析；
- *   · 收尾 `finalizeTurn`（原 `:311-350` finally 体）——落盘 / 标题 / 忙态归位；
- *   · 段 B `enterSuspensionTurn`（原 `:352-382`）——挂起会话接管。
+ *   · 段 A `resolveTurnStage`（原 `runPanelChatImpl`）——provider / 模型解析；
+ *   · 收尾 `finalizeTurn`（原 finally 体）——落盘 / 标题 / 忙态归位；
+ *   · 段 B `enterSuspensionTurn`——挂起会话接管。
  * 留主档（`panel-chat.mjs`）= 入口守卫段（`ensurePanelAgent` / `ensureMemoryHandle` 同址——
  * 结构机检 = 单元测试档 `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单元测试树重建时回迁端侧单元测试档）+ 行加载 / 回调装配段 + 循环调用。
  *
@@ -100,7 +100,7 @@ export async function resolveTurnStage({ panel, turnSlot, providerName, modelOve
 /** 迁出自 `panel-chat.mjs`（本批逐字搬迁——`b.mjs` 收尾段）：回合收尾——标题 + 落盘 +
  *  忙态归位 + `loading:false`。参数化捕获变量（原 finally 体同函数作用域引用）。
  *  D7（2026-09-21 块标题行对齐批——标题链单源 · `docs/core/design/SESSION.md` §6.7）：序翻为
- *  「先标题后 save」（CLI `agent-turn.mjs:307-322` 同序）——标题值并入 extra 后随**整档
+ *  「先标题后 save」（CLI `runAgentTurnBody` 同序）——标题值并入 extra 后随**整档
  *  save 单写**（无第二写）；写后刷会话列表。A2 分支不变：标题仍在忙态归位前（running 窗口）。 */
 export async function finalizeTurn(panel, { history, fullHistory, slotStamp, turnSlot, susp, skipSession }) {
   traceStop("finally: turn complete — UI released", panel._stopClickTs)
@@ -202,8 +202,9 @@ export async function enterSuspensionTurn(panel, { turnSlot, distillSlot, histor
         if (visionAbort?.signal.aborted) panel._abortRequested = true
       }
       // ① 队内容随会话入口移交（splice 消费——driver 消费清队，避免二次装载）
+      // C-B2-6 ⑦（queue-band 批 2026-10-20）：推送先于 splice——快照读迁移前队列（行 ③「带面原样」；splice 后推恒空）。
+      if (busyQueued.length > 0) pushBusyQueued(panel)
       const seeded = busyQueued.length > 0 ? busyQueued.splice(0) : null
-      if (seeded) pushBusyQueued(panel) // C-B2-6 细则①⑦：快照重推（实况——两载体合计；载体迁移零清标）
       await suspensionSession(panel, {
         turnSlot, distillSlot,
         // lines 双键形：driver 用 lines.history/lines.fullHistory；会话内回合（runPanelChat

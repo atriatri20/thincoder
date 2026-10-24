@@ -51,7 +51,7 @@ export const STEPS = Object.freeze([
 
 /** 导览模型（纯 · 零 DOM）：占槽判据 + 步（闭集归一——表外 ⇒ 路由屏）+ 两复用面 + 团队表单读数 + 校验投影 + 护栏旗 + 失败串。
  *  `team` = 段体投影（`settingsModel` 同源 —— server ∥ member ∥ notice 供团队表单预填与就地提示）；
- *  `verify` = `settings.verify` 切片投影（同源 = `views/settings.mjs:172` —— 缺 ⇒ `null`）；`finishBlocked` = 完成护栏旗投影。 */
+ *  `verify` = `settings.verify` 切片投影（同源 = `renderer/views/settings.mjs` —— 缺 ⇒ `null`）；`finishBlocked` = 完成护栏旗投影。 */
 export function wizardModel(state) {
   const settings = state?.settings ?? {}
   const wizard = settings.wizard !== null && typeof settings.wizard === "object" ? settings.wizard : null

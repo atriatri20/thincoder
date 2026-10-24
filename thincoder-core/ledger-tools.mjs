@@ -10,11 +10,20 @@
  * 接线：族出口 = `ledger.mjs`（re-export——消费面 agent/family-tools.mjs；旧读二装配面已清零）；
  * 消费侧一律动态 import（`ledger-db.mjs` 静态 import node:sqlite ⇒ W8 契约②）。
  */
-import { ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate } from "./ledger-cmd.mjs"
+import { ledgerAdd, ledgerClose, ledgerCloseBatch, ledgerCount, ledgerQuery, ledgerUpdate, ledgerUpdateBatch } from "./ledger-cmd.mjs"
+import { resolveLedgerRoot } from "./ledger-db.mjs"
 import { DESC } from "./tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/ledger.md（DESC 单解析面）
 
-/** 工具 cwd 供值面（缺省 → 当前项目根）。 */
+/** 工具 cwd 供值面（缺省 → 当前会话锚——「动作目标路径」；项目根由核 `resolveLedgerRoot` 推导）。 */
 const cwdOf = (ctx) => ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
+
+/** 根推导**报明面**（设计档 §3.8「报明形态」）：向下发现（`basis === 'descendant'`——容器锚收敛序）⇒
+ *  对象形回执增 `root` 键；祖先支（自明路径）⇒ `null`（展开零键——回执逐字零改）。供值面 = 核同一
+ *  单源 `resolveLedgerRoot`（工具层零自算根；单实现、多调用点）。 */
+const reportedRoot = (cwd) => {
+  const derived = resolveLedgerRoot(cwd)
+  return derived && derived.basis === "descendant" ? { root: derived.root } : null
+}
 
 // ── 工具层参数守卫（设计档 §3.2 · 2026-09-27 快车道修复 · Gitee #IKIQGK / 台账 #472） ──
 
@@ -28,37 +37,47 @@ const argPreview = (v) => {
 /** 枚举取值域文本（P3 / P5 文案同源）。 */
 const enumText = (values) => `{${values.join(", ")}}`
 
-/** P3 后缀（声明派生）：枚举字段带取值域 / 非枚举必填串带「非空字符串」/ 数字字段仅「必填」。 */
-const requiredSuffix = (spec) => (spec.enum ? `；取值 ∈ ${enumText(spec.enum)}` : spec.type === "string" ? "；非空字符串" : "")
+/** P3 后缀（声明派生）：枚举字段带取值域 / 非枚举必填串带「非空字符串」/ 数字字段仅「必填」
+ *  （`domain` = 按形条件判据给出的取值域——`whenPresent.enum` 优先于基本形）。 */
+const requiredSuffix = (spec, domain) => (domain ? `；取值 ∈ ${enumText(domain)}` : spec.type === "string" ? "；非空字符串" : "")
+
+/** 值非空字段（P6 字段级：空串 / 全空白 ⇒ 拒——声明面不表达值级判据，与 `title` 同源一处）。 */
+const NON_EMPTY_FIELDS = ["title", "resume_when"]
 
 /**
- * 工具层参数守卫（设计档 §3.2 · Gitee #IKIQGK / 台账 #472）：判序 P1–P6，文案逐字 = §3.2 模板；
- * 消费工具自身 `parameters` 声明派生（`required` / `type` / `enum`——枚举 / 必填 / 类型不在守卫内复写）；
- * 只判不改（零缺省填充 / 零类型转换 / 零文本改写），返回入参对象（唯一归一 = 判序① 的缺省 / `null`
- * ⇒ `{}`）。非法 ⇒ throw——判于核函数之前（零写、零库动作）。
+ * 工具层参数守卫（设计档 §3.2 · Gitee #IKIQGK / 台账 #472）：判序 P1–P7，文案逐字 = §3.2 模板；
+ * 消费工具自身声明派生（`required` / `type` / `enum` / `oneOfRequired` / `whenPresent`——枚举 / 必填 /
+ * 类型 / 组判据不在守卫内复写）；只判不改（零缺省填充 / 零类型转换 / 零文本改写），返回入参对象
+ * （唯一归一 = 判序① 的缺省 / `null` ⇒ `{}`）。非法 ⇒ throw——判于核函数之前（零写、零库动作）。
+ * 按形条件判据（`whenPresent`）：`when` 字段在本笔入参**在场**（非 `null`）⇒ 该条生效（`required` 按
+ * P3 判、`enum` 按 P5 判并取代基本形取值域）；不在场 ⇒ 本条不生效、按基本形判。
  */
 function assertToolArgs(tool, args) {
   const name = tool.name
   const decl = tool.parameters ?? {}
   const props = decl.properties ?? {}
   const fields = Object.keys(props)
+  // 组判据两键居声明条目顶层（不入 `parameters`——自定义键不随声明交模型 / provider）
+  const conditional = tool.whenPresent ?? []
   // P1：入参缺省 / `null` ⇒ 视作 `{}`；非对象（数组 / 标量）⇒ 拒
   if (args == null) args = {}
   else if (typeof args !== "object" || Array.isArray(args)) throw new Error(`${name}：参数须为对象（收到 ${argPreview(args)}）`)
   // P2：未知键 ⇒ 拒（判序先于缺参——typo 键先给可用参数集）
   const unknown = Object.keys(args).filter((k) => !Object.hasOwn(props, k))
   if (unknown.length > 0) throw new Error(`${name}：未知参数：${unknown.join(" / ")}（可用参数 = ${fields.join(" / ")}）`)
-  // P3–P6：逐字段（声明序）——缺失（必填；显式 `null` 同判）→ 类型 / 枚举 → `title` 空串 / 全空白
+  // P3–P6：逐字段（声明序）——缺失（必填；显式 `null` 同判）→ 类型 / 枚举 → 值非空
   for (const field of fields) {
     const spec = props[field]
     const value = args[field]
-    const required = (decl.required ?? []).includes(field)
+    const rule = conditional.find((c) => c.field === field && args[c.when] != null)
+    const required = rule?.required ?? (decl.required ?? []).includes(field)
+    const domain = rule?.enum ?? spec.enum
     if (value === undefined || value === null) {
-      if (required) throw new Error(`${name}：${field} 缺失（必填${requiredSuffix(spec)}）`)
+      if (required) throw new Error(`${name}：${field} 缺失（必填${requiredSuffix(spec, domain)}）`)
       continue // 可空字段 `null` ⇒ 放行（≡ 略去——与 `patch.x ?? 行值` 既有语义同源）
     }
-    if (spec.enum) {
-      if (!spec.enum.includes(value)) throw new Error(`${name}：${field} 非法：${argPreview(value)}（取值 ∈ ${enumText(spec.enum)}）`)
+    if (domain) {
+      if (!domain.includes(value)) throw new Error(`${name}：${field} 非法：${argPreview(value)}（取值 ∈ ${enumText(domain)}）`)
     } else if (spec.type === "string" && typeof value !== "string") {
       throw new Error(`${name}：${field} 非法：${argPreview(value)}（应为字符串）`)
     } else if (spec.type === "number" && typeof value !== "number") {
@@ -66,9 +85,15 @@ function assertToolArgs(tool, args) {
     } else if (spec.type === "boolean" && typeof value !== "boolean") {
       throw new Error(`${name}：${field} 非法：${argPreview(value)}（应为布尔）`)
     }
-    if (field === "title" && typeof value === "string" && value.trim() === "") {
+    if (NON_EMPTY_FIELDS.includes(field) && typeof value === "string" && value.trim() === "") {
       throw new Error(`${name}：${field} 为空（${required ? "必填；" : ""}非空字符串）`)
     }
+  }
+  // P7：组判据（声明派生 `oneOfRequired`）——组内恰携其一 ⇒ 过；同携 / 双缺 ⇒ 拒
+  for (const group of tool.oneOfRequired ?? []) {
+    if (group.filter((f) => args[f] != null).length === 1) continue
+    const received = Object.fromEntries(group.map((f) => [f, args[f] ?? null]))
+    throw new Error(`${name}：${group.join(" ∥ ")} 须恰携其一（收到 ${argPreview(received)}）`)
   }
   return args
 }
@@ -80,70 +105,92 @@ const FULL_ACTIONS = ["add", "update", "close", "query", "count"]
 const READ_ACTIONS = ["query", "count"]
 
 /** cwd 参数描述（五前身声明同文——文本单点）。 */
-const CWD_DESC = "项目根目录——台账按项目根关联存储于用户数据目录（工作树外、不进 git）。相对路径按当前工作目录解析；查/写别的项目请给绝对路径。缺省 = 当前会话项目根"
+const CWD_DESC = "本次动作的目标路径——项目根由它推导：沿祖先链最近的项目目录（带 PROJECT-MANIFEST.json 或已有台账库）；容器目录下收敛到子项目。台账按项目根关联存储于用户数据目录（工作树外、不进 git）。相对路径按当前工作目录解析；查/写别的项目请给绝对路径。缺省 = 当前会话锚"
 
-/** 各 action 声明条目（= 前身旧工具 `parameters` 逐字；伪工具对象守卫 + 弃用壳共用单源）。 */
+/** 各 action 声明条目（= 前身旧工具 `parameters` 逐字；伪工具对象守卫 + 弃用壳共用单源）。
+ *  `parameters` 内的键 = 交模型 / provider 的那一份声明；**组判据两键（`oneOfRequired` / `whenPresent`）
+ *  居本条条目顶层、不入 `parameters`**——自定义键不随声明外泄（provider 面零风险），守卫仍只读声明。 */
 const ACTION_SPECS = {
   add: {
-    type: "object",
-    required: ["kind", "title"],
-    properties: {
-      cwd: { type: "string", description: CWD_DESC },
-      kind: { type: "string", enum: ["requirement", "tech_todo"], description: "类别" },
-      title: { type: "string", description: "条目标题" },
-      board: { type: "string", description: "归属板块（需求档文档名，可空）" },
-      req_doc: { type: "string", description: "需求档指针（可空）" },
-      task_book: { type: "string", description: "任务书指针（可空；在途 / 待核销必填——咬合 CHECK）" },
-      evidence: { type: "string", description: "最小证据行（可空）" },
-      trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "技术待办触发（可空）" },
+    parameters: {
+      type: "object",
+      required: ["kind", "title"],
+      properties: {
+        cwd: { type: "string", description: CWD_DESC },
+        kind: { type: "string", enum: ["requirement", "tech_todo"], description: "类别" },
+        title: { type: "string", description: "条目标题" },
+        board: { type: "string", description: "归属板块（需求档文档名，可空）" },
+        req_doc: { type: "string", description: "需求档指针（可空）" },
+        task_book: { type: "string", description: "任务书指针（可空；在途 / 待核销必填——咬合 CHECK）" },
+        evidence: { type: "string", description: "最小证据行（可空）" },
+        trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "技术待办触发（可空）" },
+        resume_when: { type: "string", description: "复启条件句（可空；`trigger=条件` 行的一句话条件 + 可选锚 `@YYYY-MM-DD` ∥ `@事件件名`）——值非空：空串 / 全空白 ⇒ 拒" },
+      },
+      additionalProperties: false,
     },
-    additionalProperties: false,
   },
   update: {
-    type: "object",
-    required: ["id"],
-    properties: {
-      cwd: { type: "string", description: CWD_DESC },
-      id: { type: "number", description: "条目 id" },
-      status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "目标状态（六态之一，缺省 = 不变）" },
-      title: { type: "string", description: "标题（缺省 = 不变）" },
-      board: { type: "string", description: "归属板块（缺省 = 不变）" },
-      req_doc: { type: "string", description: "需求档指针（缺省 = 不变）" },
-      task_book: { type: "string", description: "任务书指针（缺省 = 不变）" },
-      evidence: { type: "string", description: "证据（缺省 = 不变；传入 = 追加——旧值非空 ⇒ 拼 `旧｜新`（「｜」零空格）、旧空直写；新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传）" },
-      evidenceReplace: { type: "boolean", description: "覆盖旗（布尔）：与 evidence 同传 = 整段替换（旧文零保留）；缺省 / false = 追加；旗独传（无新文）⇒ 拒" },
-      trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "触发（缺省 = 不变）" },
-      executor: { type: "string", description: "执行者 sessionId（可选——接手改写归属用；缺省 = 按状态迁移语义：进入待设计 / 在途自动写本会话；出在途 / 撤回清空）" },
+    parameters: {
+      type: "object",
+      properties: {
+        cwd: { type: "string", description: CWD_DESC },
+        id: { type: "number", description: "条目 id（与 batch 恰携其一）" },
+        batch: { type: "string", description: "批档指针（与 id 恰携其一）——批级批量：一次结算该批的行；携 status ⇒ 逐行按迁移表重判，不携 status ⇒ 纯字段补丁（status 零写）" },
+        status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "目标状态（六态之一，缺省 = 不变）" },
+        title: { type: "string", description: "标题（缺省 = 不变）" },
+        board: { type: "string", description: "归属板块（缺省 = 不变）" },
+        req_doc: { type: "string", description: "需求档指针（缺省 = 不变）" },
+        task_book: { type: "string", description: "任务书指针（缺省 = 不变）" },
+        evidence: { type: "string", description: "证据（缺省 = 不变；传入 = 追加——旧值非空 ⇒ 拼 `旧｜新`（「｜」零空格）、旧空直写；新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传）" },
+        evidenceReplace: { type: "boolean", description: "覆盖旗（布尔）：与 evidence 同传 = 整段替换（旧文零保留）；缺省 / false = 追加；旗独传（无新文）⇒ 拒" },
+        trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "触发（缺省 = 不变）" },
+        resume_when: { type: "string", description: "复启条件句（缺省 = 不变；值非空——空串 / 全空白 ⇒ 拒）" },
+        executor: { type: "string", description: "执行者 sessionId（可选——接手改写归属用；缺省 = 按状态迁移语义：进入待设计 / 在途自动写本会话；出在途 / 撤回清空）" },
+      },
+      additionalProperties: false,
     },
-    additionalProperties: false,
+    oneOfRequired: [["id", "batch"]],
   },
   close: {
-    type: "object",
-    required: ["id", "status"],
-    properties: {
-      cwd: { type: "string", description: CWD_DESC },
-      id: { type: "number", description: "条目 id" },
-      status: { type: "string", enum: ["已核销", "已废弃"], description: "目标态（勾销 / 追认核销 / 撤回）" },
-      evidence: { type: "string", description: "最小证据行（可选；传入 = 追加缺省——旧值非空 ⇒ 拼 `旧｜新`（「｜」零空格）、旧空直写；新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传。追认核销面判结果值须非空：缺 / 全空白 ⇒ 拒）" },
-      evidenceReplace: { type: "boolean", description: "覆盖旗（布尔）：与 evidence 同传 = 整段替换（旧文零保留）；缺省 / false = 追加；旗独传（无新文）⇒ 拒" },
+    parameters: {
+      type: "object",
+      required: ["status"],
+      properties: {
+        cwd: { type: "string", description: CWD_DESC },
+        id: { type: "number", description: "条目 id（与 batch 恰携其一）" },
+        batch: { type: "string", description: "批档指针（与 id 恰携其一）——批级批量结算：只销已到 待核销 的行；待讨论 / 待设计 点名跳过（追认核销不入批量面）" },
+        status: { type: "string", enum: ["已核销", "已废弃"], description: "目标态（勾销 / 追认核销 / 撤回）——携 batch 时可不给（缺省 = 勾销单值），给了只能是 已核销" },
+        evidence: { type: "string", description: "最小证据行（可选；传入 = 追加缺省——旧值非空 ⇒ 拼 `旧｜新`（「｜」零空格）、旧空直写；新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传。追认核销面判结果值须非空：缺 / 全空白 ⇒ 拒）" },
+        evidenceReplace: { type: "boolean", description: "覆盖旗（布尔）：与 evidence 同传 = 整段替换（旧文零保留）；缺省 / false = 追加；旗独传（无新文）⇒ 拒" },
+      },
+      additionalProperties: false,
     },
-    additionalProperties: false,
+    oneOfRequired: [["id", "batch"]],
+    whenPresent: [{ when: "batch", field: "status", required: false, enum: ["已核销"] }],
   },
   query: {
-    type: "object",
-    properties: {
-      cwd: { type: "string", description: CWD_DESC },
-      status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "按状态过滤（六态之一，缺省 = 不过滤）" },
-      kind: { type: "string", enum: ["requirement", "tech_todo"], description: "按类别过滤" },
-      board: { type: "string", description: "按归属板块过滤（需求档文档名）" },
-      trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "按技术待办触发过滤（三枚举，缺省 = 不过滤——无触发（NULL）不过滤）" },
+    parameters: {
+      type: "object",
+      properties: {
+        cwd: { type: "string", description: CWD_DESC },
+        status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "按状态过滤（六态之一，缺省 = 不过滤）" },
+        kind: { type: "string", enum: ["requirement", "tech_todo"], description: "按类别过滤" },
+        board: { type: "string", description: "按归属板块过滤（需求档文档名）" },
+        trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "按技术待办触发过滤（三枚举，缺省 = 不过滤——无触发（NULL）不过滤）" },
+        task_book: { type: "string", description: "按任务书指针过滤（原值等值——批→行反查；缺省 = 不过滤）" },
+      },
+      additionalProperties: false,
     },
-    additionalProperties: false,
   },
   count: {
-    type: "object",
-    properties: { cwd: { type: "string", description: CWD_DESC } },
-    additionalProperties: false,
+    parameters: {
+      type: "object",
+      properties: {
+        cwd: { type: "string", description: CWD_DESC },
+        task_book: { type: "string", description: "按任务书指针过滤（原值等值）" },
+      },
+      additionalProperties: false,
+    },
   },
 }
 
@@ -162,8 +209,10 @@ const UNION_PARAMETERS = {
     evidence: { type: "string", description: "最小证据行（add 可空；update / close 传入 = 追加缺省——旧空直写、旧非空拼 `旧｜新`（「｜」零空格）、新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传；update 缺省 = 不变 / close 缺省 = 判行值；追认核销须非空）" },
     evidenceReplace: { type: "boolean", description: "覆盖旗（布尔）：与 evidence 同传 = 整段替换；缺省 / false = 追加；旗独传（无新文）⇒ 拒（update / close）" },
     trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "技术待办触发（add / update 可空 / query 过滤）" },
-    id: { type: "number", description: "条目 id（update / close 必填）" },
-    status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "状态（close 必填 ∈ {已核销, 已废弃}；update 迁移 / query 过滤——六态之一）" },
+    resume_when: { type: "string", description: "复启条件句（add / update 可空；值非空——空串 / 全空白 ⇒ 拒；`trigger=条件` 行的一句话条件 + 可选锚 `@YYYY-MM-DD` ∥ `@事件件名`）" },
+    id: { type: "number", description: "条目 id（update / close：与 batch 恰携其一）" },
+    batch: { type: "string", description: "批档指针（update / close：与 id 恰携其一）——批级批量：一次结算该批的行（update 携 status ⇒ 逐行迁移表重判；不携 status ⇒ 纯字段补丁；close 只销 待核销 行、status 可空）" },
+    status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "状态（单行 close 必填 ∈ {已核销, 已废弃}；close 携 batch 时可空、给了只能是 已核销；update 迁移 / query 过滤——六态之一）" },
     executor: { type: "string", description: "执行者 sessionId（update 可选——接手改写归属；缺省 = 按状态迁移语义：进入待设计 / 在途自动写本会话；出在途 / 撤回清空）" },
   },
   additionalProperties: false,
@@ -201,31 +250,43 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
       // ② 入口级 action 判（P3 缺失 / P5 非法——消费 action；取值域 = 本装配面枚举）
       const { action, ...rest0 } = args
       assertToolArgs(entryTool, { action })
-      // ③ 余键喂该 action 伪工具对象（声明源 = 前身工具 parameters 逐字——`action` 键不入 P2 域）
-      const rest = assertToolArgs({ name: `ledger(${action})`, parameters: ACTION_SPECS[action] }, rest0)
+      // ③ 余键喂该 action 伪工具对象（声明源 = 前身工具 parameters 逐字——`action` 键不入 P2 域；
+      //   组判据两键在条目顶层，与 `parameters` 同送守卫）
+      const spec = ACTION_SPECS[action]
+      const rest = assertToolArgs({ name: `ledger(${action})`, ...spec }, rest0)
       // ④ 路由既有核函数（包装细节携自原工具 execute 逐字保留：cwd 缺省 / JSON 缩进 / getSessionId 动态 import）
       switch (action) {
         case "add": {
           const { cwd, ...row } = rest
-          const id = ledgerAdd({ cwd: cwd ?? cwdOf(ctx), row })
-          return JSON.stringify({ id, status: "待讨论" })
+          const target = cwd ?? cwdOf(ctx)
+          const id = ledgerAdd({ cwd: target, row })
+          return JSON.stringify({ id, status: "待讨论", ...reportedRoot(target) })
         }
         case "update": {
-          const { cwd, id, ...patch } = rest
+          const { cwd, id, batch, ...patch } = rest
+          const target = cwd ?? cwdOf(ctx)
           let executorSessionId
           if (patch.executor == null) {
             // 显式 `null` ≡ 略去（§3.1 `null` 口径 · #474——与缺省同分支）；动态 import——零新静态边（K-LX1）
             const { getSessionId } = await import("./session-slots.mjs")
             executorSessionId = getSessionId()
           }
-          return JSON.stringify(ledgerUpdate({ cwd: cwd ?? cwdOf(ctx), id, patch, executorSessionId }))
+          // 批级批量（§3.3）——`batch` 与 `id` 恰携其一（守卫 P7 已先裁）
+          if (batch != null) return JSON.stringify({ ...ledgerUpdateBatch({ cwd: target, batch, patch, executorSessionId }), ...reportedRoot(target) })
+          return JSON.stringify({ ...ledgerUpdate({ cwd: target, id, patch, executorSessionId }), ...reportedRoot(target) })
         }
-        case "close":
-          return JSON.stringify(ledgerClose({ cwd: rest.cwd ?? cwdOf(ctx), id: rest.id, status: rest.status, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace }))
+        case "close": {
+          const target = rest.cwd ?? cwdOf(ctx)
+          // 批级批量结算（§3.3——勾销径）
+          if (rest.batch != null) return JSON.stringify({ ...ledgerCloseBatch({ cwd: target, batch: rest.batch, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace }), ...reportedRoot(target) })
+          return JSON.stringify({ ...ledgerClose({ cwd: target, id: rest.id, status: rest.status, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace }), ...reportedRoot(target) })
+        }
         case "query":
-          return JSON.stringify(ledgerQuery({ cwd: rest.cwd ?? cwdOf(ctx), status: rest.status, kind: rest.kind, board: rest.board, trigger: rest.trigger }), null, 2)
-        case "count":
-          return JSON.stringify({ count: ledgerCount({ cwd: rest.cwd ?? cwdOf(ctx) }) })
+          return JSON.stringify(ledgerQuery({ cwd: rest.cwd ?? cwdOf(ctx), status: rest.status, kind: rest.kind, board: rest.board, trigger: rest.trigger, task_book: rest.task_book }), null, 2)
+        case "count": {
+          const target = rest.cwd ?? cwdOf(ctx)
+          return JSON.stringify({ ...ledgerCount({ cwd: target, task_book: rest.task_book }), ...reportedRoot(target) })
+        }
         default:
           // 不可达（② 枚举守门已先拒）——fail-loud 兜底（防未来变体增量 drift）
           throw new Error(`ledger：action 非法：${argPreview(action)}（取值 ∈ ${enumText(actions)}）`)
@@ -247,7 +308,7 @@ const deprecatedLine = (old, action) => `${old} 已退役（本名不再装配�
 const deprecatedShell = (old, action, readonly) => ({
   name: old,
   description: deprecatedLine(old, action),
-  parameters: ACTION_SPECS[action],
+  parameters: ACTION_SPECS[action].parameters,
   readonly,
   async execute() { throw new Error(deprecatedLine(old, action)) },
 })

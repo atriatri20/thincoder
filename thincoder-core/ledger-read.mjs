@@ -10,19 +10,18 @@
  * （列集单源 = `DATA_COLUMNS`——D-10 直引，不另立副本；`evidence` 仅 full 入行）；缺列（旧库）按
  * null 归一；`schemaVersion` = 库 `PRAGMA user_version` 如实回读（旧库未标 = 0）；库不在 / 非台账库
  * ⇒ 项目不出项（空集）。
- * 范围（§2.4）：单范围 = 解析后项目根一项（`resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`——与库键
- * 同源）；`--family` = `discoverFamily` 发现序逐项（不可读跳过——既有语义）。
+ * 范围（§2.4）：单范围 = 推导所得项目根一项（`resolveLedgerRoot(cwd)`——与库键同源；无根 ⇒ 空集）；
+ * `--family` = `discoverFamily` 发现序逐项（不可读跳过——既有语义）。
  *
  * W8 契约②：本档静态入 `ledger-db.mjs`（node:sqlite）⇒ 消费侧一律**动态 import** 本档。
  * D-11：`ledger.mjs` 零编辑——族发现只 import `discoverFamily`。
  */
-import { basename, resolve } from "node:path"
+import { basename } from "node:path"
 
 import { ledgerQuery } from "./ledger-cmd.mjs"
 import { discoverFamily } from "./ledger.mjs"
 import { DATA_COLUMNS } from "./ledger-migrate.mjs"
-import { resolveProjectRoot } from "./manifest.mjs"
-import { openLedger } from "./ledger-db.mjs"
+import { openLedger, resolveLedgerRoot } from "./ledger-db.mjs"
 
 /** 行出形（§3.2）：`id` + 数据列序（`evidence` 仅 full）；缺列按 null 归一。 */
 function exportRow(r, full) {
@@ -50,8 +49,8 @@ function readProject(root, full) {
 export function ledgerExport({ cwd, family = false, full = false } = {}) {
   const anchor = cwd ?? process.cwd()
   if (!family) {
-    const root = resolveProjectRoot(anchor) ?? resolve(anchor)
-    const item = readProject(root, full)
+    const derived = resolveLedgerRoot(anchor)
+    const item = derived ? readProject(derived.root, full) : null
     return { projects: item ? [item] : [] }
   }
   const projects = []

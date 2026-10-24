@@ -21,7 +21,8 @@ export const ZH_MCP = Object.freeze({
 
   // ── 探活三态（读数形对位 CLI `/mcp test`——`mcp/MCP.md` §3.3） ─────────────────
   "admin.mcp.probeRunning": "探活中……",
-  "admin.mcp.probeOk": "✓ {toolCount} tools, {latencyMs}ms",
+  "admin.mcp.probeOk": "✓ {toolCount} 个工具，{latencyMs}ms",
+  "admin.mcp.probeOkNamed": "✓ {toolCount} 个工具：{tools}，{latencyMs}ms",
   "admin.mcp.probeFail": "✗ {error}",
 
   // ── 增/改弹窗（同窗体两态——三传输字段组切换 ∥ 秘密零回填） ─────────────────────

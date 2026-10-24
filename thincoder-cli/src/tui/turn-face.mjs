@@ -9,7 +9,8 @@ import { pasteClipboardImage as pasteClipboardImageImpl } from "./clipboard.mjs"
  *  index.mjs 在命令层之后原址回填 `turnCtx.handleSlash`。
  *  @param {object} ctx
  *  @returns {{ submit: Function, turn: Function, turnCtx: object, askPermission: Function,
- *              askQuestion: Function, askBatchPermission: Function, pasteClipboardImage: Function }} */
+ *              askQuestion: Function, askBatchPermission: Function, askSecretInput: Function,
+ *              pasteClipboardImage: Function }} */
 export function createTurnFace(ctx) {
   const { agent, state, pushLine, pushLabel, render, ensureAssistantLabel, summarize, handleSlash, conversation } = ctx
   async function submit() {
@@ -44,7 +45,8 @@ export function createTurnFace(ctx) {
   }
 
   // Interaction primitives: permission approval + Q&A input, implemented in interaction.mjs
-  const { askPermission, askQuestion, askBatchPermission } = createInteraction({
+  // （SSH-SESSION 批：`askSecretInput` = 凭据窗——同族第五件）
+  const { askPermission, askQuestion, askBatchPermission, askSecretInput } = createInteraction({
     agent, state, pushLine, pushLabel, render, summarize,
   })
 
@@ -54,7 +56,7 @@ export function createTurnFace(ctx) {
   // Agent loop: implemented in agent-turn.mjs
   const turnCtx = {
     agent, state, pushLine, pushLabel, render, scheduleRender: render, ensureAssistantLabel,
-    askPermission, askQuestion, askBatchPermission, handleSlash: null,
+    askPermission, askQuestion, askBatchPermission, askSecretInput, handleSlash: null,
     // AGENT-LOOP-ASYNC-POOL.md §6.30.5 载体②：空闲 idle deadline 闩（index.mjs 装配后回填——同 handleSlash 惰性回填法）
     timerWatch: null,
     get assistantLabeled() { return conversation.assistantLabeled },
@@ -63,5 +65,5 @@ export function createTurnFace(ctx) {
   // opts 透传（timer 空闲唤醒轮 = `{ autoTurn: true, timerTurn: true }`——§6.30.3 开轮两处①）
   const turn = (text, opts) => runAgentTurn(turnCtx, text, opts)
 
-  return { submit, turn, turnCtx, askPermission, askQuestion, askBatchPermission, pasteClipboardImage }
+  return { submit, turn, turnCtx, askPermission, askQuestion, askBatchPermission, askSecretInput, pasteClipboardImage }
 }

@@ -122,7 +122,7 @@ export function refreshResizerLabel({ doc = document, root = doc?.querySelector?
   root.setAttribute("aria-label", t("pool.resize"))
 }
 
-/* ─── 活动池整列折叠（Codex 形大改批 · 2026-10-05 —— chrome 级直写面，沿本档宽度拖动同律）────────
+/* ─── 活动池整列折叠（美化形大改批 · 2026-10-05 —— chrome 级直写面，沿本档宽度拖动同律）────────
  *  体 = body 类（`body.pool-collapsed` —— CSS 单源：栅格池列收 30px 竖条 ∕ 池体 ∕ 拖柄退场）+ 把手钮
  *  （骨架 `data-pool-collapse`，贴池左缘垂直居中，「»」收 ∕ 「«」开）。持久 = localStorage
  *  （键 `thincoder.desktop.poolCollapsed` = "1"）——读失败 ⇒ 展开（默认）；写失败 ⇒ 会话内生效（fail-soft）。 */

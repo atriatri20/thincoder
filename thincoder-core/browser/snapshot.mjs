@@ -263,7 +263,7 @@ export function renderSnapshot({ url, title, rows = [], total = rows.length }) {
   return truncateText(lines.join("\n"), MAX_SNAPSHOT_CHARS, "pass selector to narrow")
 }
 
-/** 截断（`truncate` 同款标记形态——`tools/shared.mjs:190-193`）。 */
+/** 截断（`truncate` 同款标记形态——`tools/shared.mjs`）。 */
 export function truncateText(text, max, note = "narrow the request") {
   if (text.length <= max) return text
   return `${text.slice(0, max)}\n[... truncated: ${text.length - max} chars omitted — ${note}]`

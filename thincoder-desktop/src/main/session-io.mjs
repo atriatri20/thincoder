@@ -3,20 +3,20 @@
  * 单源 = 核（`@thincoder/core/session.mjs`）：读 = `loadSlotFile` · 应用 = `applySession` · 写 = `saveSession`。
  * 本档零算法副本，只做端层四件事：
  *   ① 槽缺 ⇒ `false`（新建形：不动装配出的代理 —— 首次会话无槽文件是正常态）；
- *   ② **装载后重钉 `agent._slot`**：核 `applySession` 按切换语义清 `_slot`（`session-lifecycle.mjs:132`
+ *   ② **装载后重钉 `agent._slot`**：核 `applySession` 按切换语义清 `_slot`（核 `applySession`
  *      「粘性缓存清空」），而回合尾 `saveSession` 取槽走 `agent._slot ??= activeSlot(cwd)` ——
  *      `activeSlot` = manifest 的**共享**活动指针（`ensureActive` 认领写），故不重钉则切会话 / 跨端切槽后
  *      本键回合落错槽（active = 最后一次 switch 的槽）。本键槽号由 `slotOfKey(key)` 已知 ⇒ 装载即钉回；
  *   ③ 落盘**不抛**（`saveAgentSlot` 自吞 + stderr 一行）：回合已跑完，写盘失败不得把回合掀成 error 面
- *      （CLI 先例 = `agent-turn.mjs:326-331` 回合 finally 尾部 `try { saveSession(agent) } catch {}`）；
+ *      （CLI 先例 = `runAgentTurn` 回合 finally 尾部 `try { saveSession(agent) } catch {}`）；
  *   ④ **记录追加**（消化面留档批 · #719）：`appendRecord(agent, record)` —— 人读线记录（`digest` ∥ `subagent`
  *      两族）入档薄壳，复用核 `pushReal`（零算法副本）；静默纪律同 ③（追加失败不掀回合）。
  *
  * 取 `loadSlotFile` 而非 `resumeSlot`（对 §1.14 ① 字面的实现层替换 —— 见批档 §5）：后者取「活动槽」
- * 并含认领写 / end-marker 写 / 会话 GC 调度（`session-lifecycle.mjs:43-46`）——桌面端槽号 = 会话键
+ * 并含认领写 / end-marker 写 / 会话 GC 调度（核 `session-lifecycle.mjs`）——桌面端槽号 = 会话键
  * （`String(slot)`），本键槽号已知，装载不得另起认领竞争。
  * 副作用两面（核既有语义，非本档新增）：`applySession` 绑定记录存储时可能**物化 `.d/` 段**
- * （`session-store.mjs:73-76` 计数对账路径）；sidecar 身份不符 ⇒ `_quarantine()` 改名 `.stale-<ms>`。
+ * （核 `storeTotal` 计数对账路径）；sidecar 身份不符 ⇒ `_quarantine()` 改名 `.stale-<ms>`。
  */
 import { applySession, loadSlotFile, saveSession } from "@thincoder/core/session.mjs"
 // 记录追加面复用件（留档批 · #719 —— 人读线单点；本档零算法副本）。
@@ -44,8 +44,8 @@ export function saveAgentSlot(agent, label = "session") {
 }
 
 /** 蒸馏落位（R3 · #520 —— `callbacks.onDistilled` 时点：机器行已被压缩版替换，回合尾 `saveSession` 持的是
- *  压缩前快照 ⇒ **立即重落盘**，盘面不留未压缩版；CLI 先例 `thincoder-cli/src/tui/tool-events.mjs:397-399` ∕
- *  VSC 先例 `thincoder-vscode/src/extension/panel-callbacks.mjs:242-246`）。静默纪律同 `saveAgentSlot`
+ *  压缩前快照 ⇒ **立即重落盘**，盘面不留未压缩版；CLI 先例 `trimmed` ∕
+ *  VSC 先例 `buildPanelCallbacks`）。静默纪律同 `saveAgentSlot`
  *  （N3 —— 回合已返回，写盘失败不得浮面；实现 = 同函数 + `distilled` 标签，零副本）∥ 落盘语义同携
  *  `prefsSeedOnly`（2026-10-04 解锁批——蒸馏落盘同不携三键 · R2）。 */
 export function saveDistilledSlot(agent) {

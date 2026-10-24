@@ -8,6 +8,9 @@
  */
 
 import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "../context.mjs"
+// §6.17/D-CC32 溢出守卫（兜底，非主修）：预算面单源 requestBudget ∥ 再估面 contextUsage（与压缩判定同一函数）
+import { requestBudget } from "../config.mjs"
+import { contextUsage } from "../token-window.mjs"
 import { ensureAutoReminder, injectEngineeringReminder, ContinueError, snapshotGuard } from "./helpers.mjs"
 import { pushManifestStateReminder } from "./setup-reminders.mjs"
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
@@ -18,7 +21,7 @@ import { carrierField, getAsyncPool, releaseSettledEntry } from "../agent-tools/
 import { accountDigestRound, isDigestRound } from "./digest-account.mjs"
 // 批 4 CLI-ASYNC-DISCARD（AGENT-LOOP-ASYNC-POOL.md §6.20）：中止分支「只清已死」收尾单点
 // （#9：+ 后台 bash 任务族——逐条杀树 + 出池 + 墓碑）
-import { discardAbortedPool, discardAbortedAdvisors, discardAbortedBgTasks, discardAbortedBrowserTasks } from "../agent-tools/async-discard.mjs"
+import { discardAbortedPool, discardAbortedAdvisors, discardAbortedBgTasks, discardAbortedBrowserTasks, discardAbortedSshSessions } from "../agent-tools/async-discard.mjs"
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3a)：回合末域登记 flush（写工具钩子累积 →
 // 整写一次本实例 peers 文件——无写入跳过；失败容忍不抛）
 import { flushPeerDomains } from "../peer-domains.mjs"
@@ -84,6 +87,16 @@ export async function runCompactionCheck(agent, ctx) {
   // 其余全同（同 splitHistory / 同尾部预算 / 同摘要链 / 同回注 / 同基线失效）。
   const pending = agent._pendingCompact
   agent._pendingCompact = null
+  // 成功记账（§6.17：成功记账段抽局部——阈值面与守卫面共用同一段，零复制）
+  const bookkeepCompaction = () => {
+    agent._compressFailures = 0
+    agent._planReminderAtLen = 0 // After compression history shrinks, reset cadence so reminders resume
+    recentCallSigs.length = 0 // After compression history is rebuilt, reset stall detection counter
+    // Completion info (CONTEXT-COMPACTION §7 D-C2): { mode, tokensFreed, elapsedMs } —
+    // the TUI panel renders it; callers that ignore the arg keep prior onCompress semantics.
+    callbacks.onCompress?.(agent._lastCompressInfo ?? {})
+    ensureAutoReminder(agent)
+  }
   try {
     let compacted = await compressIfNeeded(
       agent, threshold, callbacks,
@@ -96,15 +109,7 @@ export async function runCompactionCheck(agent, ctx) {
       agent.history.push({ role: "user", content: compactNoopNote(), transient: true })
       compacted = await compressIfNeeded(agent, threshold, callbacks, compactionOverhead, signal)
     }
-    if (compacted) {
-      agent._compressFailures = 0
-      agent._planReminderAtLen = 0 // After compression history shrinks, reset cadence so reminders resume
-      recentCallSigs.length = 0 // After compression history is rebuilt, reset stall detection counter
-      // Completion info (CONTEXT-COMPACTION §7 D-C2): { mode, tokensFreed, elapsedMs } —
-      // the TUI panel renders it; callers that ignore the arg keep prior onCompress semantics.
-      callbacks.onCompress?.(agent._lastCompressInfo ?? {})
-      ensureAutoReminder(agent)
-    }
+    if (compacted) bookkeepCompaction()
   } catch (compressError) {
     // AbortError must not be swallowed: user cancellation must propagate
     if (compressError?.name === "AbortError" || signal?.aborted) throw compressError
@@ -120,6 +125,35 @@ export async function runCompactionCheck(agent, ctx) {
     if (agent._compressFailures >= COMPRESS_FAILURE_LIMIT) {
       agent._compressFailures = 0
       if (compressFallback(agent)) callbacks.onCompress?.(agent._lastCompressInfo ?? {})
+    }
+  }
+
+  // 溢出守卫（CONTEXT-COMPACTION.md §6.17 / D-CC32——兜底，非主修；本缝 = catch 闭合后、返回前）。
+  // 判据 = maxTokensSource !== "absent" ∧ prompt 估算 > limit（limit = window − reserve，恒为数）。
+  // **判据不用 maxTokens**：未发时为 undefined ⇒ NaN ⇒ 守卫静默失效（§6.17）；absent 档客户端未预留
+  // ⇒ 守卫不覆盖（服务端 400 兜——把规格 maxOutput 当实发判会让 doubao 三行永久发不出去）。
+  // 真 ⇒ 以 force 强制压缩一次（先压再判）；再估仍超 ⇒ 抛三实数、回合请求零发。不截断、不静默削输出。
+  const budget = requestBudget(agent.provider)
+  if (budget.maxTokensSource !== "absent") {
+    let usage = contextUsage(agent, compactionOverhead)
+    if (usage.total > budget.limit) {
+      const compacted = await compressIfNeeded(
+        agent, threshold, callbacks, { ...compactionOverhead, force: true }, signal,
+      )
+      if (compacted) bookkeepCompaction()
+      usage = contextUsage(agent, compactionOverhead)
+      if (usage.total > budget.limit) {
+        const remedy = budget.limit < 0
+          ? `max_tokens ${budget.maxTokens} alone exceeds the window — lower provider.maxTokens or switch to a larger-window model`
+          : "reduce the conversation (/compact or prune) before retrying"
+        const overflow = new Error(
+          `context overflow: prompt ~${usage.total} tokens + max_tokens ${budget.maxTokens} > window ${budget.window}` +
+          ` (limit ${budget.limit}) — forced compaction ran but the prompt still exceeds the window; ${remedy}`,
+        )
+        overflow.kind = "context_overflow"
+        overflow.retryable = false
+        throw overflow
+      }
     }
   }
 }
@@ -216,6 +250,7 @@ export async function finalizeAgentTurn(agent, ctx) {
     discardAbortedAdvisors(agent)
     discardAbortedBgTasks(agent)
     discardAbortedBrowserTasks(agent) // 批 browser-async-fix：后台浏览器动作同面（不杀浏览器）
+    discardAbortedSshSessions(agent) // 批 ssh-session：SSH 会话同面（逐条杀树——远端连接该断）
     // R17: the consult family dies with the user stop (marked stopped — no digest).
     cleanupConsultSessions(agent)
     // ASYNC-RESULT-CONTAINER.md D2：pending 单容器——中止丢弃 consult/escalate 族停靠

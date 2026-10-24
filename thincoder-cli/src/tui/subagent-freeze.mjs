@@ -47,11 +47,11 @@ export function computePanelBlocks(state) {
  *  先启动时 explore 完成会误冻其块）。评审 #4 路线定死：签名保留、函数体收窄为精确
  *  匹配校验——本签名无 key 参数，无从精确归属 → 恒 no-op 返 null，不再猜任何块
  *  （宁可 no-op 不误冻——被否决备选"保留兜底加告警日志"：冻错块是错动作，日志救不回）。
- *  finishSubTaskKey 为唯一完成路径；roles/lastError 仅签名兼容保留（老调用面 import
+ *  finishSubTaskKey 为唯一完成路径；roles/note 仅签名兼容保留（老调用面 import
  *  不断——误冻面归零，无 key 窗口的块由回合尾 freezeAllSubTasks 兜底清场）。
  *  @returns {null} 恒 null（无精确 key 命中面——无从归属不归属）。 */
-export function finishSubTask(state, roles, lastError = null) {
-  void state; void roles; void lastError // 收窄后零副作用——参数仅签名兼容
+export function finishSubTask(state, roles, note = null) {
+  void state; void roles; void note // 收窄后零副作用——参数仅签名兼容
   return null
 }
 
@@ -61,15 +61,18 @@ export function finishSubTask(state, roles, lastError = null) {
  *  dispatch 沿 ctx._subagentKey（relayPrefix 去尾 = `role#N`）把 key 传进 onToolResult——
  *  有 key 即精确标 done（冻结载体进流 + 删条目由调用方 freezeDoneSubTasks 承接——与
  *  finishSubTask 同一契约）；无匹配块（已冻结 tombstone/不存在）返回 null——调用方不得
- *  落启发式兜底（精确 key 无匹配 = 无从归属——不误冻他块）。 */
-export function finishSubTaskKey(state, key, lastError = null) {
+ *  落启发式兜底（精确 key 无匹配 = 无从归属——不误冻他块）。
+ *  #1175（2026-10-15 car2 批——SESSION.md §6.26）：第三参 = **非错终结注记**（`note`）——
+ *  interrupted ∥ turn-cap ∥ stopped-by-user 三类终结写面 = `status:"done"` + `note`（与 VSC
+ *  写面同形）；真异常不走本参（块对象 `lastError` 自携）。 */
+export function finishSubTaskKey(state, key, note = null) {
   const sub = state.subTasks?.[key]
   if (!sub) return null
   sub.done = true
   sub.doneAt = Date.now()
   sub.currentTool = null
   sub.approval = null
-  if (lastError) sub.lastError = lastError
+  if (note) sub.note = note
   sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
   return sub
 }
@@ -91,6 +94,8 @@ export function freezeSubTaskLines(state, sub, anchor = undefined) {
   // #821（跨端显示面差归一 · 2026-10-10）：冻结单点补**错误面事实**（与写面 status 推导同式——
   // lifecycle-records.mjs `subagentRecord` `stopped ? stopped : lastError ? error : done`）：非停止 ∧
   // 携 lastError ⇒ errored（显示面 `⏹` + `error` + 括号外注记；重建面 errored 同判 = `synthSubTask`）。
+  // #1175（car2 批）：lastError 自此 = **真异常**专属面（非错终结三类——interrupted ∥ turn-cap ∥
+  // stopped-by-user——已改道 `note`——§6.26 判据①／②）；本判据字面零改、语义随载体收窄。
   // 显示层瞬时事实（随冻结块对象生存）——记录形 ∥ 载荷零触（记录 status 仍由上式推导）。
   if (!sub.stopped && sub.lastError) sub.errored = true
   state._frozenSubKeys ??= new Set()
@@ -132,7 +137,7 @@ export function shiftFreezeAnchors(state, removedCount) {
 /** 存活查询（P0-a/P0-b 共用单点——与墓碑写点 `freezeSubTaskLines` 同址：墓碑条件 /
  *  墓碑写入 / 载体行增删单一权威）。key 形 = `role#id`（`_frozenSubKeys` / `subTasks`
  *  同命名空间）；**存活判据（逐字 = §6.8.3.3）**：**条目在池 ∧ `entry.done !== true` ∧
- *  `entry.cancelled !== true`（running/queued）**（判据先例 = `thincoder-core/agent-tools/async-discard.mjs:55`
+ *  `entry.cancelled !== true`（running/queued）**（判据先例 = `thincoder-core/agent-tools/async-discard.mjs`
  *  ——零新谓词；仅「键在池内」会把 done-in-pool 误判为存活）。
  *  映射（写死 = §6.8.3.3）：最后 `#` 切分 → role + id；命中 = `pool.has(String(id))` ∧
  *  `entry.role === role`；非池键（`compress#N` 等）恒 false（维持既有丢弃语义）。
@@ -149,7 +154,7 @@ export function livePoolHas(state, key) {
   const id = k.slice(i + 1)
   for (const pool of [agent._asyncSubagents, agent._asyncAdvisors]) {
     if (!(pool instanceof Map)) continue
-    const entry = pool.get(id) // 池键 = String(id)（subagent-run.mjs:187 / advisor-async.mjs:410）
+    const entry = pool.get(id) // 池键 = String(id)（subagent-run.mjs / advisor-async.mjs）
     if (!entry || entry.role !== role) continue
     if (entry.done === true || entry.cancelled === true) continue // 已终态（含 done-in-pool）
     return true
@@ -197,7 +202,8 @@ export function freezeDoneSubTasks(state) {
 
 /** 回合尾/挂起退出清扫（runAgentTurn finally / suspensionSession finally）：冻结全部
  *  剩余块——中断（Ctrl+C/错误）不留下钉住输入框的 ghost；未 done 者
- *  lastError="interrupted"（Ready 态跳过）。AGENT-LOOP-ASYNC-POOL.md §6.8：挂起自然退出时本函数只兜底
+ *  记 note="interrupted"（非错终结 ⇒ 写面 done+note——SESSION.md §6.26 判据①；Ready 态跳过）。
+ *  AGENT-LOOP-ASYNC-POOL.md §6.8：挂起自然退出时本函数只兜底
  *  **未消化残项**（已消化块由 freezeReclaimDigestedBlocks 逐条先行回收——块回收与
  *  池空解耦）。锚点降序同 freezeDoneSubTasks（挂起期 settle 锚点交错批次各按其
  *  settle 位置落位）。
@@ -213,7 +219,7 @@ export function freezeAllSubTasks(state) {
     if (!sub.done) {
       sub.done = true
       sub.doneAt = Date.now()
-      if (!sub.lastError && state.status !== "Ready") sub.lastError = "interrupted"
+      if (!sub.lastError && !sub.note && state.status !== "Ready") sub.note = "interrupted"
     }
     freezeSubTaskLines(state, sub)
     delete state.subTasks[sub.key]

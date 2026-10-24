@@ -69,7 +69,7 @@ export function discoverRules(projectRoot) {
 // ─── A 面：stream 规则装配合并（`.thincoder/rules`——B7 3a 自核装配内联块抽取单源）────────
 
 /** 装配合并：`.thincoder/rules/` 文件规则**置前**，config 规则按 `pattern` 去重（文件侧优先；
- *  逐字镜像原 CLI `make-agent.mjs:44-48` 语义）。文件规则为空 ⇒ 归一数组原样返回（零拷贝零改）。
+ *  逐字镜像原 CLI `make-agent.mjs` 语义）。文件规则为空 ⇒ 归一数组原样返回（零拷贝零改）。
  *  `discover` 可注入（核装配 `DEFAULT_DEPS.discoverRules` 缝——U79 装配序可机验；VSC 端壳同取本件）。 */
 export function mergeFileRules(configRules, cwd, discover = discoverRules) {
   const rules = Array.isArray(configRules) ? configRules : []
@@ -79,7 +79,7 @@ export function mergeFileRules(configRules, cwd, discover = discoverRules) {
   return [...fileRules, ...rules.filter((r) => !filePatterns.has(r.pattern))]
 }
 
-// ─── B 面：作用域规则读取面（`.cursor/rules`——R10 上提；纯搬自 VSC `src/extension/rules.mjs:28-81`）──
+// ─── B 面：作用域规则读取面（`.cursor/rules`——R10 上提；纯搬自 VSC 端壳）──
 
 /**
  * Load all scoped rules from `.cursor/rules/`.
@@ -171,8 +171,8 @@ export function scopedRulesBlock(agent, cwd) {
   return `\n\nProject rules (.cursor/rules):\n${rules.always.map((r) => `- ${r.name}: ${r.content}`).join("\n")}`
 }
 
-/** 文件路径 glob 匹配（简单 `*` / `**` / `?` 通配——无完整 glob 库；纯搬自 VSC
- *  `src/extension/rules.mjs:37-74`，零语义改）。 */
+/** 文件路径 glob 匹配（简单 `*` / `**` / `?` 通配——无完整 glob 库；纯搬自 VSC 端壳，零语义改）。
+ *  */
 export function matchesGlob(filePath, patterns) {
   if (!patterns || patterns.length === 0) return false
   // Normalize to forward slashes

@@ -2,11 +2,11 @@
  * views-me.mjs — 我的三页（webui/WEBUI.md §2）：`#/me/keys`（API Key 表六列——多把并存 ∥ 签发/逐把吊销双弹窗 ∥
  * 页级一次性秘密区 ∥ 接入指南卡（`accessCard` 成员变体——同源复用）——`webui/ME.md` §2.1）∥
  * `#/me/usage`（图表化——概览卡行 ∥ 筛选行四控件 ∥ KPI 行 ∥ 按日堆叠柱主图（维度切换 端点/模型）∥ 分模型区 ∥ 明细表——`webui/ME.md` §2.2）
- * ∥ `#/me/account`（基本信息 + 自助改密）；
+ * ∥ `#/me/account`（基本信息 + 自助改密 + **Git 凭据卡**——`webui/ME.md` §2.3；密文零回显 ∥ 值只进不出）；
  * 自 views.mjs 拆档（一页一职责）。
  *
  * 数据全经 /api/*（契约 = accounts/ACCOUNTS.md §3 ∥ metering/METERING.md §3；key 行形 = `memberView`——名称/`hint`/
- * 签发时间/最后使用/近 30 天）；一次性秘密（key 明文）只回显一次（ctx.showSecret——复制钮三路回退住 dom.mjs:63）；
+ * 签发时间/最后使用/近 30 天）；一次性秘密（key 明文）只回显一次（ctx.showSecret——复制钮三路回退住 `dom.mjs` 的 `copyText`）；
  * 轮换（全换）按钮下架（多把并存下与逐把模型相抵——端点保留，`webui/ME.md` §2.1）；提示条模型名经 `/api/system` 的
  * `embedding.model` 下发（零地址——`webui/READINGS.md` §2.1①）；渲染一律节点 + textContent；文案经 `t()` 取值（`webui/I18N.md` §2.1）。
  */
@@ -294,4 +294,105 @@ export function renderMeAccount(ctx, mount) {
     } catch (error) { ctx.fail(error) }
   })
   mount.append(passwordForm)
+  mount.append(gitCredCard(ctx)) // Git 凭据卡（§2.3——拉取/推送私有仓用；绑一次复用）
+}
+
+/** Git 凭据卡（§2.3——KD-SV-204）：表 = 主机 ∥ 用户名 ∥ 更新时间 ∥ 改/删；添加/改 = 同弹窗（密文零回显——值只进不出）；
+ *  数据面 = `/api/me/git-credentials*` 三端点（响应零秘密字段——视图 = `member-cred.mjs:credentialView`）。 */
+function gitCredCard(ctx) {
+  const { h } = ctx
+  const tableBox = h("div", {}, h("p", { class: "hint", text: t("common.loading") }))
+  const renderTable = (credentials) => {
+    tableBox.replaceChildren(credentials.length === 0
+      ? h("p", { class: "hint", text: t("me.gitCred.empty") })
+      : ctx.table(
+          [t("me.gitCred.colHost"), t("me.gitCred.colUser"), t("me.gitCred.colUpdated"), t("me.gitCred.colActions")],
+          credentials.map((credential) => [
+            credential.host,
+            credential.username,
+            credential.updatedAt ? ctx.fmtTs(credential.updatedAt) : "—",
+            h("span", { class: "row-form" },
+              h("button", { type: "button", class: "tiny", text: t("me.gitCred.edit"), onclick: () => openGitCredModal(ctx, { credential, reload }) }),
+              h("button", { type: "button", class: "tiny danger", text: t("admin.sandbox.remove"), onclick: () => openGitCredDelete(ctx, { credential, reload }) })),
+          ])))
+  }
+  const reload = async () => {
+    try {
+      const data = await ctx.api("/api/me/git-credentials")
+      renderTable(Array.isArray(data?.credentials) ? data.credentials : [])
+    } catch (error) { tableBox.replaceChildren(h("p", { class: "hint error", text: mapError(error) })) }
+  }
+  void reload()
+  return h("section", { class: "card" },
+    h("h3", { text: t("me.gitCred.title") }),
+    h("p", { class: "hint", text: t("me.gitCred.hint") }),
+    h("div", { class: "row-form" }, h("button", { type: "button", text: t("me.gitCred.add"), onclick: () => openGitCredModal(ctx, { credential: null, reload }) })),
+    tableBox)
+}
+
+/** 添加/改（同弹窗——改 = 覆写密文；非秘密列回填 ∥ 秘密列恒空——沙盒私有仓卡先例同形）。 */
+function openGitCredModal(ctx, { credential, reload }) {
+  const { h } = ctx
+  const editing = credential !== null
+  const hostInput = h("input", { placeholder: t("me.gitCred.hostPh"), value: editing ? String(credential.host ?? "") : "" })
+  const userInput = h("input", { placeholder: t("me.gitCred.userPh"), value: editing ? String(credential.username ?? "") : "" })
+  const secretInput = h("input", { type: "password", autocomplete: "new-password", placeholder: t("me.gitCred.secretPh") })
+  const status = h("p", { class: "hint error", hidden: true })
+  const submit = async () => {
+    status.hidden = true
+    try {
+      await ctx.api("/api/me/git-credentials", { method: "PUT", body: { host: hostInput.value.trim(), username: userInput.value.trim(), secret: secretInput.value } })
+      modal.close()
+      await reload()
+      ctx.flash(t("me.gitCred.saved", { host: hostInput.value.trim() }))
+    } catch (error) {
+      if (error?.status === 401 && error?.code !== "invalid_credentials") { ctx.fail(error); return } // 会话失效 ⇒ 照常踢登录
+      status.textContent = mapError(error)
+      status.hidden = false
+    }
+  }
+  const modal = openModal({
+    title: t(editing ? "me.gitCred.editTitle" : "me.gitCred.addTitle"),
+    body: h("div", { class: "stack" },
+      h("label", {}, t("me.gitCred.hostLabel"), hostInput),
+      h("label", {}, t("me.gitCred.userLabel"), userInput),
+      h("label", {}, t("me.gitCred.secretLabel"), secretInput),
+      h("p", { class: "hint", text: t("me.gitCred.secretHint") }),
+      status),
+    footer: h("div", { class: "row-form" },
+      h("button", { type: "button", text: t("me.gitCred.submit"), onclick: submit }),
+      h("button", { type: "button", class: "tiny", text: t("common.cancel"), onclick: () => modal.close() })),
+  })
+  hostInput.focus() // 焦点入窗首选（视线起点 = 主机）
+  return modal
+}
+
+/** 删除（弹窗确认——即撤销；成事 ⇒ 审计 `credential_revoke`）。 */
+function openGitCredDelete(ctx, { credential, reload }) {
+  const { h } = ctx
+  const status = h("p", { class: "hint error", hidden: true })
+  const remove = async () => {
+    status.hidden = true
+    try {
+      await ctx.api(`/api/me/git-credentials/${encodeURIComponent(credential.host)}`, { method: "DELETE" })
+      modal.close()
+      await reload()
+      ctx.flash(t("me.gitCred.deleted", { host: credential.host }))
+    } catch (error) {
+      if (error?.status === 401 && error?.code !== "invalid_credentials") { ctx.fail(error); return } // 会话失效 ⇒ 照常踢登录
+      status.textContent = mapError(error)
+      status.hidden = false
+    }
+  }
+  const modal = openModal({
+    title: t("me.gitCred.deleteTitle"),
+    body: h("div", { class: "stack" },
+      h("p", {}, credential.host, " ", h("code", { text: credential.username })),
+      h("p", { class: "hint", text: t("me.gitCred.deleteConfirm") }),
+      status),
+    footer: h("div", { class: "row-form" },
+      h("button", { type: "button", class: "danger", text: t("me.gitCred.deleteSubmit"), onclick: remove }),
+      h("button", { type: "button", class: "tiny", text: t("common.cancel"), onclick: () => modal.close() })),
+  })
+  return modal
 }

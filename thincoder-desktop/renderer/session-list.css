@@ -1,5 +1,5 @@
 /* session-list.css — 会话**列表面**（自 `renderer/chrome.css` 出档 —— 越线档结构轮 · 台账 #536；切点 ∕ 缝单源 = 批档
-   `docs/batches/2026-09-29-structure-split-round.md` §2.2-A：原 `:136-262` ∕ `:287-323` 全量逐字迁出 —— 零重排 ∕ 零规则增删）。
+   `docs/batches/2026-09-29-structure-split-round.md` §2.2-A：原 `renderer/chrome.css` 两段全量逐字迁出 —— 零重排 ∕ 零规则增删）。
    链序（`renderer/index.html`）= theme → chrome → **session-list** → skin → chat → chat-cards → chat-composer → chat-fixes → core-markdown → core → /rc/search.css → pool → settings
    （位次 = chrome.css 之后 ∕ skin.css 之前 —— 级联序零变）。
    面 = 下拉面（开合单源 = `data-open`）+ 条目全族（标题 ∕ 元数据三值 ∕ 位标 ∕ 行内 ✎ ∕ ✕）+ 空态 + 账本注记 + 条目内改名形；
@@ -37,7 +37,7 @@
 .session-item:hover {
   background: var(--hover-bg);
 }
-/* 条目聚焦（VSC `base.css:449-457` 同三值 —— 键盘可达面；沿原左列行聚焦先例）。 */
+/* 条目聚焦（VSC `webview/base.css` 同三值 —— 键盘可达面；沿原左列行聚焦先例）。 */
 .session-item:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
@@ -88,7 +88,7 @@
   opacity: 0.5;
   cursor: default;
 }
-/* 账本警示注记（下拉首行 · 非可点 —— 端既有面迁位；值 = VSC `session-bar.js:33-44` 同款）。 */
+/* 账本警示注记（下拉首行 · 非可点 —— 端既有面迁位；值 = VSC `.session-ledger-notice` 同款）。 */
 .session-ledger-notice {
   padding: 6px 10px;
   opacity: 0.7;

@@ -3,18 +3,18 @@
  *
  * 面：`file:open` 出口（`ipc.mjs` `fileOpen`）的**单一路径链**前半 ——
  *   ① 候选探测：`code` → `code-insiders` → `cursor` → `subl`（`where` ∕ `sh -c 'command -v'` 探存 ——
- *      沿核 `shell-candidates.mjs:46` 同式；**成功结果 memo** ∕ 在飞去重 ∕ **绝不抛出**：探测失败 = 该候选缺席）；
+ *      沿核 `shell-candidates.mjs` 同式；**成功结果 memo** ∕ 在飞去重 ∕ **绝不抛出**：探测失败 = 该候选缺席）；
  *      两分支返回形 = 命中 ⇒ **回显入口路径**（`where` 命中 `.cmd` shim ⇒ 直 spawn 不可靠，全路径 + cmd 包装才是稳形）·
  *      未命中 ⇒ `null`（调用面落 `shell.openPath` 兜底）。
  *   ② 命令行构造（**argv 数组，零 shell 拼接**）：`code` 族 = `--goto path:line`；`subl` = `path:line`
  *      （style 由入口路径 basename 判定）；`line` 缺 ∕ 非正整数 ⇒ 纯路径（零行参）。
- *   ③ spawn 形（沿核 `mcp/transport-stdio.mjs:30` 先例）：Windows 且非 `.exe` ⇒ `cmd.exe /d /s /c` 包装
+ *   ③ spawn 形（沿核 `quoteArg` 先例）：Windows 且非 `.exe` ⇒ `cmd.exe /d /s /c` 包装
  *      （`windowsVerbatimArguments` + 核 `quoteArg` 单源引用）；否则直 spawn。fire-and-forget：`detached` +
  *      `unref`，只认 spawn ∕ error 事件（spawn 失败 ⇒ 调用面兜底恰一次）。
  */
 import { execFile, spawn } from "node:child_process"
 import { basename } from "node:path"
-// 命令行引用单源（零第二实现——核 `mcp/transport-stdio.mjs:30` 同份 `quoteArg`）。
+// 命令行引用单源（零第二实现——核 `quoteArg` 同份 `quoteArg`）。
 import { quoteArg } from "@thincoder/core/mcp/helpers.mjs"
 
 /** 候选表（表序 = 探测优先序，首命中即取——`code` 族先于 `subl`）。 */
@@ -94,7 +94,7 @@ export function buildEditorArgs(entry, filePath, line) {
 }
 
 /** spawn 形（纯函数）：Windows 且非 `.exe` ⇒ `cmd.exe /d /s /c` 包装（`where` 命中的 `.cmd` shim 直 spawn
- *  不可靠 —— 沿核 `mcp/transport-stdio.mjs:30` 先例；引用 = 核 `quoteArg` 单源）；否则直 spawn。 */
+ *  不可靠 —— 沿核 `quoteArg` 先例；引用 = 核 `quoteArg` 单源）；否则直 spawn。 */
 export function spawnSpecOf(entry, args, platform = process.platform) {
   const argv = Array.isArray(args) ? args : []
   if (platform === "win32" && !/\.exe$/i.test(entry)) {

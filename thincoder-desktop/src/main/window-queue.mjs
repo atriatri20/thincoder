@@ -36,10 +36,18 @@ const hasImages = (q) => Array.isArray(q?.images) && q.images.length > 0
 /** 窗队工厂：`postQueue(key, delivered?)` = `ev:queue` 出站（链 `postQueue` 注入 —— 快照源 = 两源合并读面）·
  *  `prepare(text, images, agent)` = 送达面附件装配转口（`prepareTurnAttachments`）· `degrade(attached, agent, signal)`
  *  = 非视觉降级转口（`degradeTurnAttachments` —— 两件皆与 `turn-chain.mjs` 同源单点，缺省 ⇒ 无附件径）。
- *  返回 `{ accept, stepPickup, drain, consume, clear, emitState, snapshot }`。 */
+ *  返回 `{ accept, stepPickup, emitDelivery, drain, consume, clear, emitState, snapshot }`。 */
 export function createWindowQueue({ postQueue = null, prepare = null, degrade = null } = {}) {
   /** 帧出站（`delivered` 缺 ⇒ 状态形；帧形构造单点住链 —— 本档只定点）。 */
   const emit = (key, delivered = null) => { if (typeof postQueue === "function") postQueue(key, delivered) }
+
+  /** 步边界消费回执帧出站点（`picked` = `stepPickup` 返回值）：载荷恰形 `{ text, ts }`——`ts` 非有限 ⇒ 键缺席（禁假造，
+   *  沿 `deliveredOf` 守）；出站经 `emit`（守卫恒在 ⇒ 缺省 ⇒ 零出站）。 */
+  const emitDelivery = (key, picked) => {
+    const delivered = { text: picked?.text }
+    if (Number.isFinite(picked?.ts)) delivered.ts = picked.ts
+    emit(key, delivered)
+  }
 
   /** 消费回执载荷（`delivered` 形单源 = `docs/desktop/design/IPC.md` §1）：`text` = **送达终文**（2026-10-11
    *  图文条批收正——指引行 ∕ 非视觉注文在送达面装配，入流用户块须与落盘历史同文；送达面违约〔非串〕⇒ 条目
@@ -77,11 +85,12 @@ export function createWindowQueue({ postQueue = null, prepare = null, degrade = 
       const { item, merged } = takeQueuedBatchItem(list) // 核件取项（就地消费 —— 单源）
       return item === null ? null : { text: merged, ts: entryTimeOf(item) }
     },
+    emitDelivery, // 步边界消费回执帧出站（`picked` = `stepPickup` 返回值 —— 驱动组合线调用）
     /** 残输入倾出（出窗残值续发链 —— 倾出后按核件取项分批路由，逐批消费帧）。 */
     drain(pending) { return pending.splice(0) },
     /** 消费（窗内消费 ∕ 残续发两同点）：送达面（`prepare` 判决 ⇒ `degrade` 定局）⇒ 消费帧（`delivered` 单写者
      *  入流恰一枚的宿主半）；返回回合入参 `{ text, attached }`（`text` = 送达文本——无附件径 ∕ 送达面违约（非串）
-     *  ⇒ 该条文本逐字；判据与链径 `turn-chain.mjs:94` 同式）。
+     *  ⇒ 该条文本逐字；判据与链径 `createTurnChain` 同式）。
      *  **时序面（占位 ∕ 中断语义）**：`signal` = 调用方占位信号（`hold.signal`——缺缝 ∥ 零占位 ⇒ `null`，沿链径缺省式）；
      *  窗内 `msg:interrupt` 命中占位 ⇒ 降级信号 abort（读图 fail-fast）——起窗 ∕ 查位 ∕ `release` 与窗后零起跑
      *  判据住守卫件 `suspension-guard.mjs`（两调用点 `driveTurn` ∕ `resumeResidual` 经其守卫）。 */

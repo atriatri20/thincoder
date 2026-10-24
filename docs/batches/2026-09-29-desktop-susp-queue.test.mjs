@@ -348,10 +348,10 @@ test("W10 AC-8 其余可见面零动（QUEUE_MAX ∕ 段 14 源 ∕ 通道表 24
   assert.match(statusline, /pending: state\?\.pending \?\? \{\}/, "段 14 源 = 待发送镜面（两源共镜随动）")
   const subscribe = text("thincoder-desktop/renderer/events-subscribe.mjs")
   const channels = subscribe.match(/const CHANNELS = \[[\s\S]*?\]/)[0].match(/"[^"]+"/g) ?? []
-  assert.equal(channels.length, 24, "通道表 24 项（原 23——菜单体系批 +1 = ev:menu；父侧重锚 2026-10-04）")
+  assert.equal(channels.length, 25, "通道表 25 项（原 23——菜单体系批 +1 = ev:menu；上游 SSH 批 +1 = ev:secret；父侧重锚 2026-10-24 合并批）")
   const preload = text("thincoder-desktop/src/preload/preload.cjs")
   const allow = preload.match(/EVENT_CHANNELS = Object\.freeze\(\[[\s\S]*?\]\)/)[0].match(/"[^"]+"/g) ?? []
-  assert.equal(allow.length, 25, "preload 白名单 25 项（原 24——+1 = ev:win-max；窗口三钮批随册）")
+  assert.equal(allow.length, 26, "preload 白名单 26 项（原 24——+1 = ev:win-max；上游 SSH 批 +1 = ev:secret；重锚 2026-10-24 合并批）")
   // 词键零新退：实施面四档引用之词键皆可解析（缺键回落键名 ⇒ `t(key) === key` 即缺键）
   const i18n = await mod("thincoder-desktop/renderer/i18n.mjs")
   const faces = [

@@ -20,7 +20,7 @@
 
 /* 面 2 段落留白（VSC 首件保留自身上边距）。**容器臂收窄（2026-09-29 · 批
    `docs/batches/2026-09-29-hatch-clearance-2.md` · #673）**：`> :last-child { margin-bottom: 0 }` ⇒
-   **`p:last-child` 单条**（逐字对齐 VSC `chat.css:68-69`——非 p 尾件〔代码块 ∕ 表格〕底距两端同；
+   **`p:last-child` 单条**（逐字对齐 VSC `.content p:last-child`——非 p 尾件〔代码块 ∕ 表格〕底距两端同；
    收窄前该臂把非 p 尾件自携底距也归零 ⇒ 尾件底距小于 VSC）。 */
 .block-text p,
 .reasoning-content p {

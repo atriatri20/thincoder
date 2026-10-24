@@ -15,7 +15,7 @@
  * 折叠映射 + 备份路径 + 写后回读判据）。
  * **折叠规则单源 = §6.11 步 2**（同归一键内 `(path, line_start)`（`files` = `(layer, path)`）恰一行——
  * 保留 `mtime_ms` 最大者，并列取 `rowid` 最小者；FTS 由既有触发器随行同步）。
- * 探针 fail-safe：**仅 ENOENT 判亡**，其余错误（权限 / 非法路径）⇒ 保留（先例 `session-stale.mjs:124-127`）。
+ * 探针 fail-safe：**仅 ENOENT 判亡**，其余错误（权限 / 非法路径）⇒ 保留（先例 = `session-stale.mjs` 的 `pathExists`）。
  * 执行分工：真实库写 = 父侧 ops；本档只在传入的库句柄上作业，写闸 = `confirm` 单一入参。
  */
 import { existsSync, statSync } from "node:fs"

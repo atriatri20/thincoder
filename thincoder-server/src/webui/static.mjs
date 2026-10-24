@@ -5,7 +5,7 @@
  *
  * 分派优先级归服务层（gateway/server.mjs）：注册路由（`/v1/*` ∥ `/api/*`）先命中；本档只收
  * 「路由未命中且方法为 GET/HEAD」的请求——命中 ⇒ 200 直发并返回 true；未命中 ∥ 路径非法 ⇒ false（调用方按 404 收口）。
- * 第二根同构于桌面 `app://` 双根（`thincoder-desktop/src/main/protocol.mjs:19-37` 根表同形）：缺核包 ⇒ 装载期 fail-loud
+ * 第二根同构于桌面 `app://` 双根（`thincoder-desktop/src/main/protocol.mjs` 的 `ROOTS` 根表同形）：缺核包 ⇒ 装载期 fail-loud
  * （包名解析单源 = `package.json`——沿桌面 `CORE_ROOT` 先例；不静默白屏）；运行期 `/rc/*` 无档 ⇒ false（调用方 404——不吞）。
  */
 import { createReadStream, statSync } from "node:fs"

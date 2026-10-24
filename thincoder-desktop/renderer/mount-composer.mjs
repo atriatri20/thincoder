@@ -40,7 +40,7 @@
  * **输入行上方带**（+ `views/chat-pending.mjs` 构树 —— 派生：判据 = 队镜面非空，渲染期现算；贴输入框上沿 ⇒ 恒定邻接；非真块 ⇒ `data-blocks` 不变式零破）——
  * 四径机检锁 = 集成域 `test/integration/input-echo-converge.test.mjs`（随 2026-09-28 测试树全清重置不在盘 —— 集成面重建时恢复）。
  * 忙态门（收正轮 · ③）：`turnState` 三值域 = `running` ∕ `susp` ∕ `idle` —— `ev:susp` 置位标 ⇒ `susp` 期
- * 模型 ∕ 推理钮禁用（核件派生点，防旧快照覆写 —— VSC `chat-panel.mjs:55-59` 同域）。
+ * 模型 ∕ 推理钮禁用（核件派生点，防旧快照覆写 —— VSC `ChatPanel` 同域）。
  * B21 行源 = 回执写（`ok` 假 ⇒ `reason` 入态，**受理径清** —— 直发 ∕ 队径两点；队径两点见收正轮 · 行 1）；文本保全随 VSC 径（提交时刻清条）。通道形单源 = `docs/desktop/design/IPC.md` §2。
  * 面板样式 = 核件 `composer/composer.css` + `composer/model-menu.css`（菜单样式**静态承载** —— 收正轮：原 JS 注入形
  * 在 CSP `style-src 'self'` 下被拒；两端口径同源）。
@@ -85,7 +85,7 @@ const NOTICES_ANCHOR = "data-composer-notices"
 
 /** IME 组字判据（**单源一处** —— 本档导出）：组字期回车 = 选字确认（归输入法）⇒ 发送面与 `preventDefault` 面
  *  **双零**、键不吞。`keyCode 229` = 兜底分支（老 WebView 不置 `isComposing`；同族先例 = VSC 输入面）。
- *  消费者注（2026-09-29 实读收正）：卡族 Enter 径（P2）已随核卡内建（含 IME 门 —— `renderer/mount-cards.mjs:16`）
+ *  消费者注（2026-09-29 实读收正）：卡族 Enter 径（P2）已随核卡内建（含 IME 门 —— `renderer/mount-cards.mjs`）
  *  ⇒ 本导出现无产品面消费者（导出面保留 —— 判据单源备用）。 */
 export function isComposing(event) {
   return event?.isComposing === true || event?.keyCode === 229
@@ -138,7 +138,7 @@ export function attachComposer(host, deps = {}) {
   // 通道往返 ∕ 逐类型 handler ∕ 本地先行块标记三态 ∕ B21 失败态皆住该档；本档只注入 deps 并取回 `post`。
 
   /** cap 待答径队满可见形（#656 · KD-52 ③ —— 回注缝 = 挂载面注入小口）：核件 toast（词键复用 `input.slotFull`
-   *  —— i18n 零增；先例 = 忙态径 `thincoder-render-core/composer/panel.mjs:304-306`）+ 文本回注输入框（零丢失）。
+   *  —— i18n 零增；先例 = 忙态径 `queueCount`）+ 文本回注输入框（零丢失）。
    *  回注形 = 空框直置 ∕ 非空框尾并换行（零覆盖 —— 用户已续键入的稿不吞）；`panel` 装配后置位 ⇒ 惰性取用。 */
   function slotFullNotice(text) {
     showToast(t("input.slotFull"))
@@ -290,10 +290,11 @@ export function attachComposer(host, deps = {}) {
     return true
   }
 
-  /** 词面到位重派生（调用面 = `renderer/app.mjs` `boot`：`initDict` 之后一次 —— **注册面后到**：面板挂载先于
-   *  词表下发，缺本次重派生 ⇒ 占位符 ∕ 忙态门题注停留为**键名**（危而未错）；幂等（全派生面重走一遍））。 */
+  /** 词面到位重派生（调用面 = `renderer/app.mjs`：`boot` `initDict` 之后一次 + 帧分派 `locale` 支 —— **注册面后到**：
+   *  面板挂载先于词表下发，缺本次重派生 ⇒ 占位符 ∕ 钮标签 ∥ 题注停留为**键名**（危而未错）；幂等（全派生面重走一遍））。 */
   function refresh() {
     sync.syncPanel()
+    if (panel !== null) panel.applyWords()
   }
 
   return { submit, refresh, keys: COMPOSER_KEYS, detach, refreshCandidates: sync.refreshCandidates, printHelp }

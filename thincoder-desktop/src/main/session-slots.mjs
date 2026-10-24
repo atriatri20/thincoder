@@ -33,8 +33,8 @@
  *   ⑧ 会话维护族转口（R1 · 桌面功能对位批 · 本节末）：GC ∕ 存量组 ∕ 索引拍五名的核出口转口——
  *      判据与算法全在核（本档零副本）；`dir` 由调用面按端侧派生注入（`sessionsDir()`）。
  *
- * 载入序不变量（批档 §2.4（a））：核 `newSlotData(cwd)` 的 `createdBy = sessionEnd()`
- * （`thincoder-core/session-slot-write.mjs:46`）⇒ 端名声明必须先于任何物化写。本档声明是模块级
+ * 载入序不变量（批档 §2.4（a））：核 `newSlotData(cwd)` 的 `createdBy = sessionEnd()` ⇒ 端名声明必须先于任何物化写。
+ * 本档声明是模块级
  * 副作用（求值期一次）；凡经顶层静态 import 链抵达本档的进程都已完成声明（链 =
  * `main.mjs → ipc.mjs → projects.mjs → session-slots.mjs`）。
  * 端差注销：本端记录 = 本端单写者文件（`{manifest}.desktop`）——与 `.cli` / `.vscode` 互不触碰（NF1）。
@@ -46,8 +46,8 @@ import {
   endMarkerPath as coreEndMarkerPath, readEndMarker as coreReadEndMarker,
   writeEndMarker as coreWriteEndMarker, resumeSlot as coreResumeSlot,
 } from "@thincoder/core/session-slots.mjs"
-// 会话族核门（本批增 —— 三名皆在 `@thincoder/core/session.mjs` re-export：`:41` / `:52`；`renameSlot` 见下 re-export 面）。
-// 打开态读数（桌面残余批 · §6.24）：同一 re-export 面 `:52`——端层只装配入参。
+// 会话族核门（本批增 —— 三名皆在 `@thincoder/core/session.mjs` re-export：`newSession` / `switchToSlot` / `deleteSlot`；`renameSlot` 见下 re-export 面）。
+// 打开态读数（桌面残余批 · §6.24）：同一 re-export 面——端层只装配入参。
 import {
   newSession as coreNewSession, switchToSlot as coreSwitchToSlot, deleteSlot as coreDeleteSlot,
   loadSlotFile, sessionReading,
@@ -101,15 +101,15 @@ export const writeEndMarker = (cwd, slot) => coreWriteEndMarker(cwd, slot, END)
  *  兜底 `allocateFresh`）。**async**（核入口一次异步束）—— 调用面须 `await`。 */
 export const resumeSlot = (cwd) => coreResumeSlot(cwd, { end: END })
 
-/** 新建会话（同形转口）：核 `newSession` 的 marker 写（核 `session-lifecycle.mjs:245`）**无端参** ⇒ 端名由
- *  本档声明（`:41`）覆盖 —— 端层不传端参。**async**（核入口一次异步束）；返回 = 新槽号。 */
+/** 新建会话（同形转口）：核 `newSession` 的 marker 写**无端参** ⇒ 端名由
+ *  本档声明覆盖 —— 端层不传端参。**async**（核入口一次异步束）；返回 = 新槽号。 */
 export const newSession = (cwd) => coreNewSession(cwd)
 
-/** 槽切换（端参绑定）：核 `switchToSlot` 的 marker 写（核 `session-lifecycle.mjs:306`）走末位端参 ⇒ 绑 `END`。
- *  同步；返回体 = 槽数据 ∥ `null`（非整数槽 / 清单无项 / 数据文件不可读 —— 核 `:291-293` 三因同档）。 */
+/** 槽切换（端参绑定）：核 `switchToSlot` 的 marker 写（核 `session-lifecycle.mjs`）走末位端参 ⇒ 绑 `END`。
+ *  同步；返回体 = 槽数据 ∥ `null`（非整数槽 / 清单无项 / 数据文件不可读 —— 核 `switchToSlot` 三因同档）。 */
 export const switchToSlot = (cwd, slot) => coreSwitchToSlot(cwd, slot, { end: END })
 
-/** 槽删除（端参绑定）：核 `deleteSlot`（核 `session-slots.mjs:225`）→ bool；`:239` 读本端记录命中即显式
+/** 槽删除（端参绑定）：核 `deleteSlot` → bool；`deleteSlot` 读本端记录命中即显式
  *  置空（写端参）⇒ 端层绑 `END`（NF1：本端记录 = 本端单写者文件）。 */
 export const deleteSlot = (cwd, slot) => coreDeleteSlot(cwd, slot, { end: END })
 
@@ -213,7 +213,7 @@ export function pageHistory(cwd, payload) {
   //（形 ∥ 在场 ∥ 判据单源 = `docs/desktop/design/RENDERER.md` §1.1「留档记录」条；页尺 = 核常量 —— 零字面量）。
   const { messages: rawMessages, hasOlder } = historyWindow(history, before, HISTORY_PAGE_SIZE, { records: true })
   // #632（缺面族批补 · @ 文件引用对齐）：恢复面显示边界 —— user 消息文本过核件剥离（同位 = VSC
-  // `panel-session.mjs:184-185`；assistant ∕ tool 零动）；盘面零触碰（注入形 = 落盘形，只剥离显示面）。
+  // `sendHistoryPage`；assistant ∕ tool 零动）；盘面零触碰（注入形 = 落盘形，只剥离显示面）。
   const messages = rawMessages.map((m) => (m.kind === "user" ? { ...m, text: stripAtRefs(m.text) } : m))
   const total = history.length
   const end = before == null ? total : Math.max(0, Math.min(before, total))
@@ -271,7 +271,7 @@ export { listStaleCwds } from "@thincoder/core/session-stale.mjs"
 export { scheduleSessionGC } from "@thincoder/core/session-gc.mjs"
 
 /** 索引启动拍转口（核 §6.19 触发点②）——**惰性**（核索引链静态导入 `node:sqlite`；端壳静态闭包须零
- *  sqlite，VSC 纪律①同款 `session-index-command.mjs:38-43`）。不可得 ⇒ `false` + stderr 一行
+ *  sqlite，VSC 纪律①同款 `scheduleSessionIndexPassSafe`）。不可得 ⇒ `false` + stderr 一行
  *  （索引 = 派生品：fail-soft，不成红、不假造）。异步：调用面 `await` ∕ `void`。 */
 export async function scheduleSessionIndexPass(options = {}) {
   try {

@@ -12,7 +12,7 @@
  *   ⑤ 共享导出面（**消费零副本** —— `views/approval.mjs`（审批卡）/ `views/activity.mjs`（活动池）复用）：
  *      `STATUS_WORD`（状态词**闭枚举 8 词**中本表七键——单源 = `docs/desktop/design/UI.md` §1 状态词行；就绪词形单列 = CLI 静息值、桌面无码位；含「对齐第三批」项 5 增词 `interrupted`）+ 降级阈值两常数 + `changeTotals` / `toolChanges`（改动摘要降级形）；
  *   ⑥ **「对齐第三批」面**（本档）：头行**摘要段**（项 1 —— `→ ` + 核 `formatToolSummary` 直取）+ **轮次段**
- *      （项 14 —— advisor `(round N · model)` 同 VSC `ui.js:104-107` 式）+ 运行期展开（项 3）+ 中止词（项 5）
+ *      （项 14 —— advisor `(round N · model)` 同 VSC `buildUserMessage` 式）+ 运行期展开（项 3）+ 中止词（项 5）
  *      + 结果区**链接着装 / 委托**（相抵② 渲染半 —— 核 `linkifyPaths` + `data-path` 锚 + 点按 / Enter 出口）。
  *   ⑦ **就地更新面（更新纪律收核批 —— #605 消）**：`patchToolCard`（帧界 `patch` 档 —— 头行分段刷 ∕ 改动摘要行增替 ∕ 结果区 `appendToolOutput` O(1) 追加；**节点身份不变** —— 跨 chunk 结果区自滚位 ∕ 选区保真）。
  * 文案一律经 `t()`（零硬编码；`+` / `−` 字形住 `renderer/chat.css`）；零 `node:` / 零裸包。
@@ -72,7 +72,7 @@ function isExpanded(block) {
   return typeof block?.expanded === "boolean" ? block.expanded : block?.status === "error" || block?.status === "running"
 }
 
-/** advisor 轮次标签（「对齐第三批」项 14 —— 字面 = VSC `webview/ui.js:104-107` 同式）：`(round N · model)`；
+/** advisor 轮次标签（「对齐第三批」项 14 —— 字面 = VSC `buildUserMessage` 同式）：`(round N · model)`；
  *  无 `model` ⇒ 降级形 `(round N)`（不显空）；`round` 缺 / 非数 ⇒ `""`（零段 —— 非 advisor / 无载荷逐字同修前）。
  *  逐字面向用户文案（格式串 —— 同 VSC 内联串；核 / VSC 两源皆无此键）。 */
 function roundTag(block) {
@@ -97,7 +97,7 @@ export function changeTotals(changes) {
 function headSegments(block) {
   const word = STATUS_WORD[block?.status]
   const timed = TIMED_STATUS.includes(block?.status) && Number.isFinite(block?.durationMs)
-  // #631（摘要半截补齐）：清扫后（`interrupted`）⇒ 摘要槽值 = 逐字 `(interrupted)`（值源 = VSC `webview/streaming.js:111` 清扫覆盖；覆盖 `formatToolSummary` 派生——已结算卡零改写）。
+  // #631（摘要半截补齐）：清扫后（`interrupted`）⇒ 摘要槽值 = 逐字 `(interrupted)`（值源 = VSC `onTurnBreak` 清扫覆盖；覆盖 `formatToolSummary` 派生——已结算卡零改写）。
   const summary = block?.status === "interrupted" ? "(interrupted)" : hasText(block?.result) ? formatToolSummary(block?.name, block.result) : null
   return [
     { code: "name", value: block?.name },

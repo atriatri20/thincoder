@@ -7,7 +7,7 @@
  * 功能面（ZCode 同表）：居中大图（object-contain）· 缩放 50%–300%（底部药丸 −∕百分比∕+ · 滚轮 ±25%
  * · 双指捏合）· 拖拽平移（pointer capture + 视口钳制——`clampImagePreviewOffset` 同式）· 多图左右切
  * 换（箭头钮 ∕ ←→ 键，循环）· 下载（`<a download>`——dataURL 直落）· 关闭（钮 ∕ Esc ∕ 点遮罩空白）。
- * 字形纪律：钮面字形住 `codex.css` `content`（零字形字面——`.settings-icon-btn` 同式）；可及名走词表
+ * 字形纪律：钮面字形住 `beauty.css` `content`（零字形字面——`.settings-icon-btn` 同式）；可及名走词表
  * （`preview.*` 六键——`i18n-composer.mjs` 两语同增）。
  * 纪律：零 `node:` ∕ 零裸包；单例遮罩挂 `document.body`（对话流重绘零扰——不进 flow 容器）。
  */

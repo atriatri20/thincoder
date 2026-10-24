@@ -16,7 +16,7 @@ import { revealSegmentAt } from "./views/chat-segment-reveal.mjs"
 
 const FLOW_SLOT = '[data-slot="flow"]' // 对话流容器锚（字面同 `renderer/app.mjs` `FLOW_SLOT`）
 
-/** 挂载搜索面（`renderer/app.mjs:288` 接线；返回核件工厂面 —— 端侧消费 = `app.mjs:74` `openSearch` 分派〔菜单动作面〕）。
+/** 挂载搜索面（`renderer/app.mjs` 接线；返回核件工厂面 —— 端侧消费 = `app.mjs` `openSearch` 分派〔菜单动作面〕）。
  *  槽缺 ⇒ 记错一次 + `null`（零静默；沿 `renderer/mount-composer.mjs` 装配面同式）。 */
 export function attachSearch() {
   const root = document.querySelector(FLOW_SLOT)

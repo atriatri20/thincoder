@@ -9,6 +9,7 @@ export const ZH_SHELL = Object.freeze({
   "app.title": "Thincoder Server 控制台",
   "app.httpFailed": "请求失败（HTTP {status}）",
   "app.requestFailed": "请求失败：{reason}",
+  "app.networkFailed": "网络请求失败——请重试（服务器刚重启后常见；仍失败就强刷页面 Ctrl+Shift+R）。",
   "app.loggedOut": "已退出登录",
   "common.loading": "加载中……",
   "common.quotaUnlimited": "不限",

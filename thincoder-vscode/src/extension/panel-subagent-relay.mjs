@@ -31,8 +31,8 @@
  *
  * 缝保持（KD-12）：`panel-callbacks.mjs` 按**既有导出名** re-export 本档导出件（六件 + #118 新增
  * `queuedInfoOf`）⇒ 消费档 import 面零改（`relaySubagentEventToken` 消费面：`panel-messages.mjs`
- * （`flushSubagentOutbox`）· `panel-messages-turn.mjs:24`（`cancelSubagent` 合成 callbacks——`:123`
- * 调用）· `suspension.mjs:38`（`queuedInfoOf`——重生投影 `:94` 调用））。
+ * （`flushSubagentOutbox`）· `relaySubagentEventToken`（`cancelSubagent` 合成 callbacks
+ * 调用）· `queuedInfoOf`——重生投影调用））。
  * 依赖单向：本档零 import 主档（`panel-callbacks → panel-subagent-relay`——无环）。
  */
 import { createRelayScope, relayEventToSubPatch, relayPathOf, relaySubContentChunk,
@@ -42,9 +42,9 @@ import { logEvent } from "@thincoder/core/log.mjs"
 
 // ─── W15（2026-09-15 · R5「⏹ queued 等待头回收」+ W13 观察项收口）事件中继面 ───────────
 // 核异步族（spawn/settle/cancel）经 `ctx.callbacks.onToken` 发 **relay 前缀 ⟦ev⟧ 事件 token**
-// （TUI routeSubToken 消费面；`subagent-run.mjs:163` `⟦ev⟧async` · `subagent-scheduler.mjs:356`
-// `⟦ev⟧queued` · `subagent-async.mjs:281` `⟦ev⟧cancelled` · `async-settle.mjs:239/273/275`
-// `⟦ev⟧stopped/⟦ev⟧settled/⟦ev⟧done` · 核 `agent/turn-loop.mjs:77`（2026-09-29 拆分后重锚·父侧随动）子代 `⟦ev⟧turn`）。VSC 消费面 =
+// （TUI routeSubToken 消费面；`executeAsyncSpawn` `⟦ev⟧async` · `refreshQueuedTokens`
+// `⟦ev⟧queued` · `executeCancelAction` `⟦ev⟧cancelled` · `settleAsyncEntry`
+// `⟦ev⟧stopped/⟦ev⟧settled/⟦ev⟧done` · 核 `runTurnLoop`（2026-09-29 拆分后重锚·父侧随动）子代 `⟦ev⟧turn`）。VSC 消费面 =
 // `{type:"subagent", …}` 状态消息（webview `activity.js` `applySubagentStatus`）。
 //
 // `relaySubagentEventToken` = 转换单点：识别（relay 前缀 + ⟦ev⟧/[model] 形态）即**消费**
@@ -75,7 +75,7 @@ export function queuedInfoOf(panel, key) { return scopeQueuedInfoOf(relayScopeOf
 /** X10（显示面消差批 §2.10.5 #4）：sync 块 ⏹ 门控**事实**——核 sync registry
  *  `agent._syncChildAborts`（核写点 `subagent.mjs` `armSyncChildAbort`；键 = relay 前缀去尾 `role#id`）
  *  **只读**消费（禁第二套 registry——§2.7 边界）。谓词与 ⏹ 路由（`panel-messages-turn.mjs`
- *  cancelSubagent 面）及 CLI 门控逐字同源（`thincoder-cli/src/tui/subagent-panel.mjs:123`：
+ *  cancelSubagent 面）及 CLI 门控逐字同源（`renderSubagentPanel`：
  *  `state._agent?._syncChildAborts?.has(sub.key) === true`）。registry 不可达（无面板 agent /
  *  headless / 面板 agent 未绑定窗口）⇒ false——**不伪造可中止**（可见但不可中止违 D-M7）。 */
 function syncLiveOf(panel, key) {
@@ -109,7 +109,7 @@ export function relaySubagentEventToken(panel, tok) {
 }
 
 // ─── W15 内容中继面（2026-09-16 子代理面板通道恢复批——子代理内容回流 `sub:` 块）────────
-// 核迁移版子代回调（`wrapChildCallbacks`——`thincoder-core/agent/spawn-child.mjs:131-148`）带
+// 核迁移版子代回调（`wrapChildCallbacks`——`stripEventToken`）带
 // relay 前缀（`role#id/`）到达端壳；事件面（`relaySubagentEventToken`）只吃 `⟦ev⟧`/`[model]`，
 // 其余前缀 chunk（text / think / tool 调用行 / tool 输出行）原走主流 ⇒ 面板通道缺生产者
 //（迁前端侧自持面丢失——子代理内容被塞进主会话流）。本面 = **内容分流单点**：前缀 chunk →

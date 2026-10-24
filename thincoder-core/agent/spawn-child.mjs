@@ -32,7 +32,7 @@ const RS = "\x1e"
 // 报告文本锚点（turn-cap / stopped-by-user）2026-09-20 下沉零依赖叶 `child-marks.mjs`（端壳
 // 需**静态**导入锚点做块头注记判定，而本档静态链经核 agent 栈可达 `node:sqlite` ⇒ 端壳静态
 // 闭包禁达，W8 契约②；先例 = `relay-prefix.mjs` 同因下沉）。本行再导出 ⇒ 既有 import 面
-// （核 agent-tools 族 / CLI `tool-events.mjs:31`）零改。
+// （核 agent-tools 族 / CLI `tool-events.mjs` 的 `TURN_CAP_MARK` ∕ `STOPPED_MARK` 导入）零改。
 export { TURN_CAP_MARK, STOPPED_MARK } from "./child-marks.mjs"
 
 /**

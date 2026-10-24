@@ -1,6 +1,6 @@
 # electron-builder.yml — ThinCoder 桌面端打包配置（Windows NSIS x64 安装包 · 阶段一；Linux AppImage + deb · D42——§2.11.2）。
 # 单源 = docs/desktop/design/PACKAGING.md §2.1（配置契约——逐值照抄）；构建序列 = §2.2；签名 = §2.3；图标 = §2.4。
-# 构建 = `npm run package`（prepackage 物化 → electron-builder → postpackage = check-dist 闸）；镜像纪律 = §2.7。
+# 构建 = `npm run package`（prepackage 物化 → electron-builder → postpackage = check-dist 产物闸 → `../scripts/dev-link.mjs --force --win32-only` 开发链自愈腿）；镜像纪律 = §2.7。
 appId: com.thincoder.desktop
 productName: ThinCoder
 

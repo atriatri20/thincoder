@@ -5,7 +5,7 @@
  * 成本 = Σ 成功返回的 call 成本；`—` 一律表示「不在该模型面 / 数据缺失」，绝不编码为 0。
  */
 
-import { DIMENSIONS, DIM_LABELS } from "../cases/index.mjs"
+import { DIMENSIONS, DIM_LABELS } from "../suites/index.mjs"
 import { aggregateVerdict, speedMedians, sumPresent } from "./metrics.mjs"
 import { head } from "./output.mjs"
 import { MIXED_NOTE, isMixedOverturn, judgeMark, reviewMark } from "./report-review.mjs"
@@ -283,6 +283,6 @@ export function manualSection(data) {
     const m = rec.metrics ?? {}
     out.push(`| ${rec.label ?? "—"} | ${rec.promptId} | ${rec.prompt} | ${rec.responseHead ? codeSpan(rec.responseHead) : "—"} | ${fmtMs(m.ttftMs)} | ${fmtRate(m.tokPerSec)} | ${tokensCell(m.tokens)} | ${money(m.cost)} | ${relOf(rec.promptId, m.cost?.value)} |`)
   }
-  out.push("", "说明：本 lane 的成本只作单项展示，不进入成本表的成本归一化（AC-6）。", "")
+  out.push("", "说明：本 lane 的成本只作单项展示，不进入成本表的成本归一化（§2.3-④）。", "")
   return out
 }

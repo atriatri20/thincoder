@@ -2,12 +2,15 @@
  * views-audit.mjs — 管理·审计（webui/READINGS.md §2.1④——`#/admin/audit`）：过滤三轴（类型/成员/时段）∥
  * 事件表（时间 ∥ 类型 ∥ 操作者 ∥ 对象 ∥ 详情——按型模板渲染）∥ 空态；`GET /api/audit` 取数（倒序，新在前）。
  *
- * 类型枚举与 detail 形 = accounts/ACCOUNTS.md §2.1（型面十七型——全型收编；本表十六型在册——`member_event` 待落（他批登记）；server-mcp 批 + `mcp_event`）；
+ * 类型枚举与 detail 形 = accounts/ACCOUNTS.md §2.1（型面十八型——全型收编；本表十八型在册）；
  * 详情字段（IP ∥ 维度 ∥ key 提示形 ∥ 角色 ∥ `keys`（配置变更键名清单） ∥ `summary`（agent_event 会话动作摘要——`agent/ADMIN-AGENT.md` §11）
  * ∥ agent 行（`agent_event`——tool · subject · 成败 ·〔截断〕· summary；KD-SV-114） ∥ 沙盒 kind 族（`sandbox_event`——走查轮 2026-10-11）
+ * ∥ 沙盒规则行（`sandbox_rule`——动作词 + 允许/拒绝 + target（`port` 在场 ⇒ `:port`）；`kind` 不入）
  * ∥ project 行（`project_event`——kind 族 + 源/项目/成员三面逐值；team-projects-permissions 批（B2））
- * ∥ ledger 行（`ledger_event`——kind 族 + id/repo/两面逐值；team-ledger 批））
+ * ∥ ledger 行（`ledger_event`——kind 族 + id/repo/两面逐值；team-ledger 批）
+ * ∥ 安全事件行（`security_event`——四 kind 三文案键 + ip/端口/成败/计数；publicnet 批））
  * 按在场渲染；对象与操作者同名 ⇒「—」（名快照口径——改/删后记录自足）。渲染一律节点 + textContent；文案经 `t()` 取值。
+ * 沙盒规则行模板 `sandboxRuleDetailText`（纯函数——`t` 显式入参；导出供单元测试档直测）。
  */
 import { t } from "./i18n.mjs"
 import { countsText, levelLabel, readKindLabel } from "./views-projects.mjs"
@@ -29,7 +32,9 @@ const AUDIT_TYPES = [
   ["sandbox_rule", "audit.type.sandbox_rule"],
   ["project_event", "audit.type.project_event"],
   ["ledger_event", "audit.type.ledger_event"],
+  ["member_event", "audit.type.member_event"],
   ["mcp_event", "audit.type.mcp_event"],
+  ["security_event", "audit.type.security_event"],
 ]
 
 export async function renderAudit(ctx, mount) {
@@ -81,7 +86,7 @@ function eventsTable(ctx, events) {
     typeLabel(event.type),
     event.actor,
     event.target && event.target !== event.actor ? event.target : "—",
-    event.type.startsWith("sandbox_") ? sandboxDetailText(event.detail) : event.type === "agent_event" ? agentDetailText(event.detail) : event.type === "project_event" ? projectDetailText(event.detail) : event.type === "ledger_event" ? ledgerDetailText(event.detail) : detailText(event.detail),
+    event.type === "sandbox_rule" ? sandboxRuleDetailText(event.detail, t) : event.type.startsWith("sandbox_") ? sandboxDetailText(event.detail) : event.type === "agent_event" ? agentDetailText(event.detail) : event.type === "project_event" ? projectDetailText(event.detail) : event.type === "ledger_event" ? ledgerDetailText(event.detail) : event.type === "security_event" ? securityDetailText(event.detail) : detailText(event.detail),
   ])
   return ctx.table([t("audit.col.time"), t("audit.col.type"), t("audit.col.actor"), t("audit.col.target"), t("audit.col.detail")], rows, { foot: true })
 }
@@ -114,6 +119,32 @@ export function agentDetailText(detail) {
   if (detail?.resultCode !== undefined && detail?.resultCode !== null) parts.push(Number(detail.resultCode) === 0 ? t("audit.agentOk") : t("audit.agentFail"))
   if (detail?.truncated === true) parts.push(t("audit.agentTruncated"))
   if (typeof detail?.summary === "string" && detail.summary !== "") parts.push(detail.summary)
+  return parts.length === 0 ? "—" : parts.join(" · ")
+}
+
+/** 安全事件 kind 文案键（`security_event` detail.kind——四 kind、三键：两个证书 kind 共键；枚举外 ⇒ 原值兜底）。 */
+const SECURITY_KIND_KEYS = {
+  tls_start: "audit.securityTls",
+  cert_reload: "audit.securityCert",
+  cert_reload_failed: "audit.securityCert",
+  rate_limit_burst: "audit.securityBurst",
+}
+
+/** 安全事件行详情（`security_event`——kind · ip/端口 · 成败 · 〔详情〕）：
+ *  `cert_reload_failed` ⇒ 附「失败」+ `reason`；`rate_limit_burst` ⇒ 端点类/计数/重试等待；`tls_start` ⇒ 端口/重定向端口。
+ *  零字段行 ⇒ 「—」；导出 = 单元测试档断言（同 `agentDetailText` 先例）。 */
+export function securityDetailText(detail) {
+  const parts = []
+  const kind = typeof detail?.kind === "string" ? detail.kind : ""
+  if (kind !== "") parts.push(SECURITY_KIND_KEYS[kind] === undefined ? kind : t(SECURITY_KIND_KEYS[kind]))
+  if (kind === "cert_reload_failed") parts.push(t("audit.securityFailed"))
+  if (detail?.ip) parts.push(`${t("audit.ip")}: ${detail.ip}`)
+  if (typeof detail?.ruleClass === "string" && detail.ruleClass !== "") parts.push(`${t("audit.securityClass")}: ${detail.ruleClass}`)
+  if (detail?.count !== undefined && detail?.count !== null) parts.push(`${t("audit.securityCount")}: ${detail.count}`)
+  if (detail?.retryAfterS !== undefined && detail?.retryAfterS !== null) parts.push(`${t("audit.retryAfter")}: ${detail.retryAfterS}s`)
+  if (detail?.port !== undefined && detail?.port !== null) parts.push(`${t("audit.securityPort")}: ${detail.port}`)
+  if (detail?.redirectPort !== undefined && detail?.redirectPort !== null) parts.push(`${t("audit.securityRedirectPort")}: ${detail.redirectPort}`)
+  if (typeof detail?.reason === "string" && detail.reason !== "") parts.push(detail.reason)
   return parts.length === 0 ? "—" : parts.join(" · ")
 }
 
@@ -206,32 +237,49 @@ const SANDBOX_KIND_KEYS = {
   box_start: "audit.sandboxKind.box_start",
   box_stop: "audit.sandboxKind.box_stop",
   box_destroy: "audit.sandboxKind.box_destroy",
-  onboarding_start: "audit.sandboxKind.onboarding_start",
-  onboarding_exec: "audit.sandboxKind.onboarding_exec",
-  onboarding_done: "audit.sandboxKind.onboarding_done",
-  onboarding_failed: "audit.sandboxKind.onboarding_failed",
-  onboarding_credential_revoke: "audit.sandboxKind.onboarding_credential_revoke",
   host_credential_set: "audit.sandboxKind.host_credential_set",
   host_credential_revoke: "audit.sandboxKind.host_credential_revoke",
   terminal_open: "audit.sandboxKind.terminal_open",
   terminal_close: "audit.sandboxKind.terminal_close",
-  approval: "audit.sandboxKind.approval",
   workspace_base: "audit.sandboxKind.workspace_base", // sandbox-exec-rebuild 批 · 修订轮增补「底座可换」（四 kind——系统部件两表同拍）
   image_derive: "audit.sandboxKind.image_derive",
   registry_credential_set: "audit.sandboxKind.registry_credential_set",
   registry_credential_revoke: "audit.sandboxKind.registry_credential_revoke",
   runner_connection: "audit.sandboxKind.runner_connection", // sandbox-exec-rebuild 批 · 增补 #2（连接面 TLS 档）
-  workspace_destroy: "audit.sandboxKind.workspace_destroy", // sandbox-exec-rebuild 批 · 执行面动作/失败族（服务端实发全量对齐——工作区拆 ∥ 快照 ∥ 闸/配额下发）
+  workspace_destroy: "audit.sandboxKind.workspace_destroy", // sandbox-exec-rebuild 批 · 执行面动作/失败族（服务端实发全量对齐——工作区拆 ∥ 快照 ∥ 配额下发）
   checkpoint: "audit.sandboxKind.checkpoint",
   checkpoint_fail: "audit.sandboxKind.checkpoint_fail",
-  egress_apply_failed: "audit.sandboxKind.egress_apply_failed",
+  quota_recovered: "audit.sandboxKind.quota_recovered", // loopback 自愈（重接 ∥ 重建 ∥ 降级——健康径零行）
   quota_apply_failed: "audit.sandboxKind.quota_apply_failed",
-  placement_failed: "audit.sandboxKind.placement_failed", // sandbox-exec-rebuild 批 · 收口修复轮（B 裁——补放置失败审计 kind）
+  placement_failed: "audit.sandboxKind.placement_failed", // 补放置失败（外环——与步级行不互斥）
+  box_step_failed: "audit.sandboxKind.box_step_failed", // 建盒链步级失败（专用优先——② 配额步走 quota_apply_failed）
 }
 
 /** 沙盒 kind 文案（导出——日志窗「操作记录」块同源消费；走查轮 2026-10-11）。 */
 export function sandboxKindLabel(kind) {
   return SANDBOX_KIND_KEYS[kind] ? t(SANDBOX_KIND_KEYS[kind]) : String(kind ?? "—")
+}
+
+/** 沙盒规则动作词文案键（`sandbox_rule` detail.action——枚举外 ⇒ 原值兜底）。 */
+const SANDBOX_RULE_ACTION_KEYS = { add: "audit.sandboxRuleAdd", remove: "audit.sandboxRuleRemove" }
+
+/** 沙盒规则裁定词文案键（detail.rule——枚举外 ⇒ 原值兜底）。 */
+const SANDBOX_RULE_VERDICT_KEYS = { allow: "audit.sandboxRuleAllow", deny: "audit.sandboxRuleDeny" }
+
+/** 沙盒规则行详情（`sandbox_rule`）：动作词（新增/删除——枚举外原值兜底）+ 允许/拒绝 + `target`（`port` 在场 ⇒ `:port` 接尾）；
+ *  `kind` 不入（target 形自明）；无在场字段 ⇒ 「—」。`t` = 文案取件显式入参（保纯函数可直测——设计拍）。导出 = 单元测试档直测。 */
+export function sandboxRuleDetailText(detail, t) {
+  const parts = []
+  const action = typeof detail?.action === "string" ? detail.action : ""
+  if (action !== "") parts.push(SANDBOX_RULE_ACTION_KEYS[action] === undefined ? action : t(SANDBOX_RULE_ACTION_KEYS[action]))
+  const rule = typeof detail?.rule === "string" ? detail.rule : ""
+  if (rule !== "") {
+    const verdict = SANDBOX_RULE_VERDICT_KEYS[rule] === undefined ? rule : t(SANDBOX_RULE_VERDICT_KEYS[rule])
+    let host = typeof detail?.target === "string" ? detail.target : ""
+    if (host !== "" && detail?.port !== undefined && detail?.port !== null) host = `${host}:${detail.port}`
+    parts.push(host === "" ? verdict : `${verdict} ${host}`)
+  }
+  return parts.length === 0 ? "—" : parts.join(" · ")
 }
 
 /** 沙盒事件详情（`sandbox_event`——kind 文案 + 在场字段逐值；走查轮 2026-10-11）。 */

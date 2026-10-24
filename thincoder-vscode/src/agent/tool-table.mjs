@@ -3,7 +3,7 @@
  * 「工具表」行 + 父侧 2026-09-29 裁定①）。结构沿用 #365 拆分（`MANIFEST.md` §2.3 拆分注 行 29）：
  *   ① 端装饰体 `vscSubagentFace`——经 `opts.toolDecorate` 供核 `assembleFamilyTools({ decorate })`
  *      （替换核 `filteredSubagent` ⇒ **端侧自带 role 面**：role enum ∕ suffix ∕ escalate 候选池
- *      文案 = 取核拷贝（核 `family-tools.mjs:46-56/:69-74`）；端特有面 = panel 动作剔除（VSC 无面板
+ *      文案 = 取核拷贝（核 `assembleFamilyTools`）；端特有面 = panel 动作剔除（VSC 无面板
  *      镜像）· C-5 终态回声 · 动作级谓词 `isReadonlyAction/isControlAction`（核 dispatch 分类面消费）。
  *   ② `buildToolTable` —— **基础集**装配（`baseSet` → `agent.tools`；家族段由核 `prepareRun` 追加
  *      ——§2.3 件 1「装配取核」）。旧拷贝项 `withPool` ∕ `modeRoleField` ∕ 家族段装配 ∕
@@ -22,7 +22,7 @@ import { SUBAGENT_TOOL_EXCLUSIONS } from "@thincoder/core/agent/helpers.mjs"
 /**
  * VSC subagent 工具面装饰（原 W13 端侧装饰 + 本批 role 面取核合并——**装饰体单点**）。
  * 面清单：
- *   ① `modeRoleField` 等价 role 面（取核拷贝——核 `family-tools.mjs:46-56`）：模式互斥 role enum +
+ *   ① `modeRoleField` 等价 role 面（取核拷贝——核 `assembleFamilyTools`）：模式互斥 role enum +
  *      suffix（工程模式 advertises eng-coder/eng-designer；普通模式 advertises coder）。
  *   ② #99（CORE-UNIFICATION §2.13.4 / AGENT-LOOP-SUBAGENT.md §6.7.2 AC-P4）：核登记册的工具面含 `panel`
  *      动作（CLI TUI 面板镜像），VSC 载荷面不存在 ⇒ **装配层剔除**（端侧过滤、零核改动）——
@@ -30,7 +30,7 @@ import { SUBAGENT_TOOL_EXCLUSIONS } from "@thincoder/core/agent/helpers.mjs"
  *   ③ 动作级分类（`isReadonlyAction` status/observe/design-slots · `isControlAction` cancel/send）——端旧消费者
  *      （已删 `execute-tools` ∕ `tool-gates`）随取核退役；**E1 已落**（2026-09-29 parity-b1 P4-II：核
  *      `dispatch-gates.mjs` 两谓词 + `dispatch.mjs` 两门禁位消费——钩子优先；本面 = 核分类的端装饰供体）。
- *   ④ escalate 候选池（取核拷贝——核 `family-tools.mjs:69-74` 同位同文案；非工程模式 + 池非空才挂）。
+ *   ④ escalate 候选池（取核拷贝——核 `assembleFamilyTools` 同位同文案；非工程模式 + 池非空才挂）。
  *   ⑤ C-5 终态回显（AGENT-LOOP-ASYNC-POOL.md §6.20）：核 `status` 不读墓碑（未命中即 unknown），
  *      端契约要求 discarded/cancelled/consumed/failed 四态回显 ⇒ 装配面接管 `execute`（仅在核
  *      输出为 unknown-错误时查核墓碑单点 `tombstoneOf` 补回显——其余输出原样透传）。

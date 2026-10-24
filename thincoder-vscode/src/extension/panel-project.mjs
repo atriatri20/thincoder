@@ -125,7 +125,10 @@ export async function pickProject(panel) {
         await cfg.update?.("followActiveEditor", !followActive, vscode.ConfigurationTarget?.Global)
         continue  // re-open the picker so the new toggle state is visible
       }
-      if (sel.folder.uri.fsPath === _cwd()) return
+      if (sel.folder.uri.fsPath === _cwd()) { // 同根弹拍 = 视同显式选定（三笔照写——同根 ⇒ `_cwd()` 零变）
+        setProjectFolder(sel.folder.uri.fsPath); rememberProjectFolder(panel, sel.folder.uri.fsPath); pushProject(panel)
+        return
+      }
       await applyProjectSwitch(panel, sel.folder.uri.fsPath)
       return
     }

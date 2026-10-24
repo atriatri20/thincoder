@@ -161,7 +161,7 @@ ZCode 的方案是**两层规则 + 一张兜底**，与 thincoder 的「硬表 +
 | L2 覆写表 | 同档 `setModelOverrides` / `getModelOverrides` / `overrideKeyFor` / `sanitizeOverride`；`thincoder-core/config.mjs` `DEFAULTS.modelOverrides` + `loadConfig` 装载期注册 | 核测试 + `loadConfig` 端到端（覆写驱动 `compactThreshold` = 600000 实测） |
 | L3 默认档上提 | 同档 `EFFORT_DEFAULT_PREFIXES` + `effortDefaultFor`（用户覆写优先） | 核测试；桌面 `modelEntry` 投影 `effortDefault` |
 | L4a 投影 + 接线 | `thincoder-desktop/src/main/settings.mjs` `modelEntry` **扩五键**（`effortDefault` ∕ `context` ∕ `maxOutput` ∕ `thinking` ∕ `source`）；`renderer/composer-sync.mjs` `modelRowOf` 透传 `effortDefault`（**render-core 零改**） | 桌面快筛 9/9 |
-| L4b 设置面 | **用户裁定改形（2026-10-10 二轮）：不作独立段** —— 模型段每行加「编辑」图标钮 + 「采用」同拍改图标钮（原文字胶囊占宽）+ 上下文 K 徽标；弹窗体 = `renderer/views/settings-sections-modelparams.mjs`（宿主 = 既有 `settings-modal.mjs` 单例，与设置组弹窗同宿主不同源、按 `settings.modelParams.open` 二选一）；`mount-settings-reads.mjs` `loadModelParams`（切片 `{open,id,spec}`，读成就地改写行六键）；`mount-settings-exits.mjs` 四出口（开 ∕ 关 ∕ 保存 ∕ 重置）+ Esc 闸；`codex.css` 图标钮 ∕ 徽标 ∕ 弹窗体样式；`i18n-settings.mjs` 24 键 × 两语 | 视图树探针；**真机浏览器驱动**（playwright-core + 既有 web 快筛 serve 端）：行徽标 `1M ∕ 256K ∕ 128K`、图标钮 26×26 且 glyph 出自 CSS `content`、已覆写行编辑钮染主题色、弹窗 `role=dialog` ∕ 字段 ∕ 草稿键 ∕ 出口锚全对、保存载荷 `{id,patch}` 逐叶正确（`thinking:always` ⇒ `thinkAlwaysOn:true`）、重置载荷 `{key}`、三关关窗、保存钮 accent 实底 ∕ 读数行去盒 |
+| L4b 设置面 | **用户裁定改形（2026-10-10 二轮）：不作独立段** —— 模型段每行加「编辑」图标钮 + 「采用」同拍改图标钮（原文字胶囊占宽）+ 上下文 K 徽标；弹窗体 = `renderer/views/settings-sections-modelparams.mjs`（宿主 = 既有 `settings-modal.mjs` 单例，与设置组弹窗同宿主不同源、按 `settings.modelParams.open` 二选一）；`mount-settings-reads.mjs` `loadModelParams`（切片 `{open,id,spec}`，读成就地改写行六键）；`mount-settings-exits.mjs` 四出口（开 ∕ 关 ∕ 保存 ∕ 重置）+ Esc 闸；`beauty.css` 图标钮 ∕ 徽标 ∕ 弹窗体样式；`i18n-settings.mjs` 24 键 × 两语 | 视图树探针；**真机浏览器驱动**（playwright-core + 既有 web 快筛 serve 端）：行徽标 `1M ∕ 256K ∕ 128K`、图标钮 26×26 且 glyph 出自 CSS `content`、已覆写行编辑钮染主题色、弹窗 `role=dialog` ∕ 字段 ∕ 草稿键 ∕ 出口锚全对、保存载荷 `{id,patch}` 逐叶正确（`thinking:always` ⇒ `thinkAlwaysOn:true`）、重置载荷 `{key}`、三关关窗、保存钮 accent 实底 ∕ 读数行去盒 |
 | L4c IPC | `model:spec` ∕ `model:specSave` ∕ `model:specReset`（preload `CHANNELS` + `ipc-registry` `HANDLERS` + `ipc-relays` 转口）；写后 `refreshOverrides` 重注册核表 | 通道三处同拍；handler 实测 |
 | L5 CLI | `thincoder-cli/src/tui/provider-admin.mjs` `setModelParamsFlow` + `promptModelParamPatch` + 纯 helper `setOverrideFields` / `removeOverrideKey`；`model-picker.mjs` 菜单项 + 分派 + 导出面 | `check-syntax` 121 档 OK；纯 helper 六径探针（建 ∕ 并 ∕ 清叶 ∕ 删键收口 ∕ 前缀键 ∕ 畸形表归一） |
 | L6 文档 | `docs/core/design/MODEL-SPECS.md` §17；`docs/core/design/CONFIG.md` §6.4 | doc-check EXIT 0（悬空 0 ∕ 行宽 0） |
@@ -219,7 +219,7 @@ ZCode 的方案是**两层规则 + 一张兜底**，与 thincoder 的「硬表 +
 
 上下文窗口 ∕ 最大输出 Token 两输入挂档位 `select`。**形态 = 快填 `select` + 值持有 `input` 两件**
 （四轮原用 `datalist`，五轮打回改形）：`datalist` 弹层由浏览器原生绘制、**CSS 无法着色** ⇒ 与全站 `select`
-（`codex.css` `select { appearance: base-select }` + `::picker(select)` 卡形）不同族；改 `select` 自动吃全站
+（`beauty.css` `select { appearance: base-select }` + `::picker(select)` 卡形）不同族；改 `select` 自动吃全站
 统一样式（零本档样式），而 `select` 不能承载任意值 —— 上下文有大量非整档实值（`1_050_000` ∕ `1_048_576` ∕
 `524_288`）⇒ **`select` 只当快填菜单（选完自复位、不持有值）、`input` 仍是唯一值持有者**。
 **邻接不变量**：档位 `select` 恒为其值输入框的紧邻后继兄弟（出口族 `onPickTier` 按 `previousElementSibling`

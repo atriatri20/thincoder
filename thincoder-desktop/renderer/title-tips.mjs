@@ -1,9 +1,9 @@
 /**
  * title-tips.mjs — 原生 title tooltip 全局接管（fork 2026-10-05 —— 用户反馈「浮选窗还是旧样式，
- * 可以考虑小地图的样式」）：`title` 属性的原生 tooltip = 系统旧样式（灰盒白字，与 codex 面不合）。
+ * 可以考虑小地图的样式」）：`title` 属性的原生 tooltip = 系统旧样式（灰盒白字，与美化面不合）。
  * 本档 = **单点接管**：① `setAttribute("title", …)` 拦截（`Element.prototype.setAttribute` 微包裹——
  * 值入 `WeakMap` 册子后**移除属性** ⇒ 原生 tooltip 永不失锚；`getAttribute("title")` 同步回读册值
- * ⇒ 既有读面零感知）；② `document` 级 mouseover/mouseout 委托显示 codex 卡（小地图 `.minimap-tip`
+ * ⇒ 既有读面零感知）；② `document` 级 mouseover/mouseout 委托显示 美化面卡（小地图 `.minimap-tip`
  * 同形：12px 圆角 ∕ 描边 ∕ pop 阴影 ∕ 13px 字）。纯 chrome 面：零 store ∕ 零 IPC ∕ 零 node。
  * 装配 = `app.mjs` 装配期一次（先于首绘——否则首帧 title 原生弹）；读 `title` 而不改写值的既有面
  * （chrome-words 汉化改写 ∕ 测试断言）经 `getAttribute` 回读仍得原值。
@@ -14,7 +14,7 @@
 /** 册子（元素 → title 值）：WeakRef 不需要——元素亡则条目随 GC（WeakMap 语义）。 */
 const tips = new WeakMap()
 
-/** 卡节点（懒建 · 单例）：`.title-tip` —— 形 = `.minimap-tip` 同构（codex.css）。 */
+/** 卡节点（懒建 · 单例）：`.title-tip` —— 形 = `.minimap-tip` 同构（beauty.css）。 */
 let tip = null
 function tipNode() {
   if (tip !== null) return tip

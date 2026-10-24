@@ -1,10 +1,10 @@
 /* controls.css — 工具栏面留守段（`#toolbar` 输入段样式已迁核件）。
- * 输入段样式（原 `:17-349` ∕ `:373-388` ∕ `:459-499` ∕ `:582-658` 四区间——上提批 §2.4 P10）
+ * 输入段样式（四区间——上提批 §2.4 P10）
  * 单源 = 核件 `composer/composer.css`（`@import` 须先于全部规则）；`#status-line`（A12 状态行面）
  * 与 P10 区间外各段留守本档。
  * 模型菜单 / 推理下拉样式同源核件 `composer/model-menu.css`（2026-09-28 输入逻辑收正轮：原 JS 注入形
  * 撤 —— 静态资产两端口径同源；桌面侧同档经 `mount-composer.mjs` 注 `<link>`）。
- * 会话内搜索样式段（原 `:48-99`）单源 = 核件 `search.css`（「桌面功能对位」批 §2.2 R6 上提——同 `@import` 面；
+ * 会话内搜索样式段 单源 = 核件 `search.css`（「桌面功能对位」批 §2.2 R6 上提——同 `@import` 面；
  * 桌面侧同档经 `renderer/index.html` 链入 `/rc/search.css`）。 */
 @import url("../node_modules/@thincoder/render-core/composer/composer.css");
 @import url("../node_modules/@thincoder/render-core/composer/model-menu.css");

@@ -14,7 +14,7 @@
   包内容 = `bin/` ∥ `src/` ∥ `public/` ∥ `config.example.json` ∥ `README.md`（`deploy/` 为仓内部署面，不入包）。
   - 前缀式装机（自升前提）：`NPM_CONFIG_PREFIX` 指**服务账号可写目录**（建议与配置/数据同根——见 §3）；装机与自升同前缀、免 sudo 重写。
 - **Docker 路**：`docker build -f thincoder-server/Dockerfile -t <registry>/thincoder-server:<tag> .`（构建上下文 = 仓根——含 `thincoder-server/` + `thincoder-render-core/` 双包）；镜像 = **壳**
-  （`node:24-slim` + 引导层——App 代码由 npm 取装，镜像不自带版本身份；构建期以上下文双包体预装兜底，离线可构建）；
+  （`node:24-slim` + 引导层——App 代码由 npm 取装，镜像不自带版本身份；构建期以上下文双包体预装兜底，`@thincoder/core` 不在上下文 ⇒ 随包解析须 registry——非离线）；
   运行样例 = `docker-compose.yml`——版本由 `TC_SERVER_VERSION` 收敛（见 §8）。
 
 ## 2. 配置（`config.json`）
@@ -90,7 +90,7 @@
 ### Docker 路（7 步）
 
 1. 装 Docker
-2. `docker build -f thincoder-server/Dockerfile -t <registry>/thincoder-server:<tag> .`（构建上下文 = 仓根——双包；壳 + 构建期预装——离线可构建）
+2. `docker build -f thincoder-server/Dockerfile -t <registry>/thincoder-server:<tag> .`（构建上下文 = 仓根——双包；壳 + 构建期预装；`@thincoder/core` 须 registry——非离线）
 3. 备 `config/`（内含 `config.json`——目录须可写：控制台保存落盘须之（`chown 1000:1000 ./config`）；`db` 写绝对形 `/app/data/gateway.db`）
    + `data/`（`chown 1000:1000`——容器内 node 账号）+ `.env`（`TC_SERVER_VERSION` 可选——见 §8）
 4. `docker compose up -d`
@@ -243,12 +243,12 @@ server {
 
 ## 12. 排障（健康检查）
 
-- 探活：`curl -i http://127.0.0.1:8787/healthz` ⇒ 200 `{ status:"ok", version, uptime, db:"ok" }`
+- 探活：`curl -i http://<host>:<port>/healthz` ⇒ 200 `{ status:"ok", version, uptime, db:"ok" }`（`<host>`/`<port>` = `config.json` 同名字段；缺省 `:8787`）
   （无鉴权只读——零凭据可直调；`Cache-Control: no-store`）。
 - **503** `{ status:"degraded", db:"error" }` = 库探活（`SELECT 1`）失败——查库文件权限/磁盘空间/进程持有。
 - 容器路：`docker compose ps` 看 `(healthy)`（镜像自带 HEALTHCHECK：interval 30s ∥ timeout 5s ∥ start-period 120s ∥ retries 3）。
 - `unhealthy` = **标注态**：restart 策略只按进程退出动作——healthcheck 不触发重起（「不健康即重起」须外部工具）。
-- 端口改非缺省（`port ≠ 8787`）⇒ 同步改 Dockerfile `HEALTHCHECK` 行与上面的 curl 端口。
+- `host`/`port` 改值**零同步**：容器 HEALTHCHECK **按配置取址**（读 `/app/config/config.json`——`host` = `0.0.0.0` ∥ 空 ⇒ 探 `127.0.0.1`；`port` 缺省 `8787`）。
 
 ## 13. 边界（不含）
 

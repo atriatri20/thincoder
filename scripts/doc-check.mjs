@@ -1,53 +1,32 @@
 #!/usr/bin/env node
 /**
- * doc-check.mjs — M8 机检引擎 · 单引擎入口（锚 + 行宽）。
+ * doc-check.mjs — M8 机检引擎 · V5 专用面（非 gate 判据源；gate 只读 `thincoder-core/doc-check/index.mjs`）。
  * 权威设计 = `docs/core/design/DOC-DISCIPLINE.md` §7（机器可检纪律）（2026-09-22 hygiene 批改指旧归档模块名 · 父侧直接执行 · 可 revert）
- * 单引擎：锚检查 + 行宽检查 + 行数面同一 main 驱动、同一报告；台账一致性不并入（由 M2 SQLite schema 承接，
- * check-ledger* 家族随单引擎作废——无文件）。
- * 声明面：判据全部读 manifest checkConfig（scanDirs / lineWidth / anchors.domain / anchors.exclude /
- * exemptions / lineCounts / widthExemptZones）——无硬编码路径 / 阈值；整档缺失 fail-closed（readManifest 拒，不静默 fallback）。
+ * 2026-10-18（父侧直接执行 · 可 revert——doc-check-gate 批判据源唯一化）：本脚本与 `thincoder-core/doc-check/`
+ * 判据集不同形（V5 三锚 + 六键 vs 起步两判据），保留在盘但不参与任何 gate verdict，读数不可互换。
+ * 2026-10-22（FR42 · 工程工具面）：参数源改读**工具内置常量** `DOC_CHECK_BUILTINS`——删 manifest 读取、
+ * 删目录发现：扫描根 = `--root` 必带（`--domain` 显式给时才收窄到该子目录），缺 `--root` ⇒ `FAIL(root)`。
  * 本档不写 manifest（写门 = M1 writeManifest，writer:'main' 专权——唯一写 manifest 的路径）。
- * 用法：node scripts/doc-check.mjs [--root <仓根>] [--domain <产品域>]
+ * 用法：node scripts/doc-check.mjs --root <仓根> [--domain <产品域>]（`--root` 必带——零发现/零探测；缺 ⇒ `FAIL(root)` + exit 1）
+ * 2026-10-13（父侧直接执行 · 可 revert——#101 上抛闭环）：--domain 指不存在路径 ⇒ fail-closed（原落空扫「0 悬空」假绿；域路径 = 仓根相对解析，机制不猜）。
  * 导出：main / formatReport。
  */
-import { existsSync, readdirSync, realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { readManifest } from "../thincoder-core/manifest.mjs";
-import { declaredPublicRoots } from "../thincoder-core/declaration.mjs";
+import { DOC_CHECK_BUILTINS } from "../thincoder-core/doc-check/index.mjs";
 import { checkAnchors } from "./doc-check-anchors.mjs";
-import { checkDocWidths, discoverDomains } from "./doc-check-width.mjs";
-import { checkLineCounts } from "./doc-check-linecounts.mjs";
+import { checkDocWidths } from "./doc-check-width.mjs";
 
-/** 仓根探测（#822 · 父侧直接执行）：--root 缺省时自 cwd 探根——
- *  ① **祖先最近者胜**（向上取最近携带 PROJECT-MANIFEST.json 的祖先——与 manifest 归属同律）⇒ 子目录内直跑不再落「0 档假绿」（原缺省 = cwd ⇒ scanDirs 相对 cwd 解析 ⇒ 扫空还 EXIT 0）；
- *  ② 无祖先 ⇒ 查直接子目录携带者：恰一 ⇒ 用之；多 ⇒ 显式拒（列候选——机制不猜）；零 ⇒ 回退 cwd（fail-closed 语义零变）。 */
-export function detectRoot(cwd) {
-  let dir = resolve(cwd);
-  for (;;) {
-    if (existsSync(resolve(dir, "PROJECT-MANIFEST.json"))) return { root: dir };
-    const up = resolve(dir, "..");
-    if (up === dir) break;
-    dir = up;
-  }
-  const base = resolve(cwd);
-  const kids = [];
-  try {
-    for (const e of readdirSync(base, { withFileTypes: true })) {
-      if (e.isDirectory() && existsSync(resolve(base, e.name, "PROJECT-MANIFEST.json"))) kids.push(resolve(base, e.name));
-    }
-  } catch { /* 不可读 ⇒ 视为零候选 */ }
-  if (kids.length === 1) return { root: kids[0] };
-  if (kids.length > 1) return { root: base, ambiguous: kids.sort() };
-  return { root: base };
-}
+/** 判据项（D3 计数纪律：清单 = 单一数组，计数 = 列表长度——加键时改一处，计数自动同改）。 */
+const CRITERIA_KEYS = ["lineWidth", "widthExemptZones", "exemptions"];
 
 /** 锚报告（报告段逐条 + 汇总 + 两态固定句）。
  * 逐条行族标（§4.2.9 / §4.2.10）：拟新增 / 迁移期引文 = 列报 · 不入闸；标记失据 = 违规行行尾标；
  * 标记并置 = 并置行报告面标；标记冗余 = 报告行（行式同 V5-C 宽形态行）。 */
 export function formatReport(r) {
   const sum = (o) => Object.values(o).reduce((a, b) => a + b, 0);
-  const out = [`机检·锚：扫描域 ${r.scanDirs.join(" + ")} · ${r.files} 档`];
+  const out = [`机检·锚：扫描根 ${r.scanRoot} · ${r.files} 档`];
   for (const x of r.rows) {
     const fam = x.pending ? "·拟新增——列报 · 不入闸" : (x.citation ? "·迁移期引文——列报 · 不入闸" : "");
     const note = x.groundless ? "·标记失据" : (x.conflict ? "·标记并置" : "");
@@ -55,8 +34,7 @@ export function formatReport(r) {
   }
   for (const x of r.wideRows) out.push(`报告 ${x.file}:${x.line} ${x.anchor}（${x.clazz}——报告面，不入闸）`);
   for (const x of r.redundantRows ?? []) out.push(`报告 ${x.file}:${x.line} ${x.anchor}（标记冗余——报告面，不入闸）`);
-  for (const x of r.unverifiedRows ?? []) out.push(`报告 ${x.file}:${x.line} ${x.anchor}（声明源缺位——未核 · 不入闸）`);
-  out.push(`汇总：候选 ${sum(r.cand)} · 悬空 ${r.danglingTotal} · 注记豁免 ${sum(r.exempt)} · 拟新增 ${r.pendingTotal} · 迁移期引文 ${r.citationTotal} · 声明源缺位 ${r.unverifiedTotal ?? 0}`);
+  out.push(`汇总：候选 ${sum(r.cand)} · 悬空 ${r.danglingTotal} · 注记豁免 ${sum(r.exempt)} · 拟新增 ${r.pendingTotal} · 迁移期引文 ${r.citationTotal}`);
   out.push(`  用例号：候选 ${r.cand.case} · 悬空 ${r.dang.case} · 注记豁免 ${r.exempt.case}`);
   out.push(`  路径/坐标：候选 ${r.cand.path} · 悬空 ${r.dang.path} · 注记豁免 ${r.exempt.path}`);
   out.push(`  符号·窄：候选 ${r.cand.symbol} · 悬空 ${r.dang.symbol} · 注记豁免 ${r.exempt.symbol}`);
@@ -67,57 +45,32 @@ export function formatReport(r) {
   return out;
 }
 
-/** CLI 主行程（单引擎 + 声明面）：--root 默认 cwd；--domain 显式产品域；退出码 0/1。 */
-export function main(argv = process.argv.slice(2), { cwd = process.cwd(), log = console.log } = {}) {
+/** CLI 主行程（单引擎 + 内置常量）：`--root` **必带**（零发现 ∥ 零探测——与核发现面解耦）；--domain 显式产品域；退出码 0/1。 */
+export function main(argv = process.argv.slice(2), { log = console.log } = {}) {
   const argOf = (f) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] ? argv[i + 1] : null; };
   const explicitRoot = argOf("--root");
-  let root; let ambiguous = null;
-  if (explicitRoot) { root = resolve(explicitRoot); }
-  else { const d = detectRoot(cwd); root = d.root; ambiguous = d.ambiguous ?? null; }
-  if (ambiguous !== null) {
-    log(`FAIL(manifest): 缺省 cwd 下候选项目不唯一（${ambiguous.length} 个）——显式给 --root <仓根>（机制不猜）：\n${ambiguous.map((c) => `- ${c}`).join("\n")}`);
+  if (!explicitRoot) {
+    log("FAIL(root): 缺 --root——显式给 --root <仓根>（机制不猜；不做发现/探测）。");
     return 1;
   }
+  const root = resolve(explicitRoot);
   const domainArg = argOf("--domain");
-  const read = readManifest(root);
-  if (!read.ok) {
-    log(`FAIL(manifest): ${read.reason ?? read.errors.join("；")}——整档缺失拒绝进入（fail-closed）。`);
+  const base = domainArg ? resolve(root, domainArg) : root;
+  if (domainArg && !existsSync(base)) {
+    log(`FAIL(domain): 域路径不存在——${base}（--domain = 仓根相对路径；机制不猜，不落空扫假绿）。`);
     return 1;
   }
-  const cfg = read.manifest.checkConfig;
-  const declaredRoots = declaredPublicRoots(root); // §6.15 单一声明源根集（#832——声明源候选入参；缺省 [] ⇒ 零行为）
-  // D3 计数纪律：判据键清单 = 单一数组（计数 = 列表长度——加键时改一处，计数自动同改）。
-  // 派生自 checkConfig 实际键面：scanDirs / lineWidth / anchors.domain / anchors.exclude / exemptions / lineCounts / widthExemptZones。
-  const CRITERIA_KEYS = ["scanDirs", "lineWidth", "anchors.domain", "anchors.exclude", "exemptions", "lineCounts", "widthExemptZones"];
-  log(`判据项 ${CRITERIA_KEYS.length} 项（${CRITERIA_KEYS.join(" / ")} = checkConfig 声明面——D3）`);
-  const bases = domainArg ? [resolve(root, domainArg)] : discoverDomains(root);
-  if (!bases.length) bases.push(root);
-  const zones = (Array.isArray(cfg.widthExemptZones) ? cfg.widthExemptZones : []).filter((z) => typeof z === "string" && z !== "");
+  log(`判据项 ${CRITERIA_KEYS.length} 项（${CRITERIA_KEYS.join(" / ")} = 工具内置常量——D3）`);
+  const zones = [...DOC_CHECK_BUILTINS.widthExemptZones];
   const zoneNote = zones.length ? `（区带豁免在效——${zones.join(" ∥ ")}；区带内超宽行不计）` : "";
-  let fail = 0;
-  for (const base of bases) {
-    const r = checkAnchors(base, cfg, { gate: true, root, declaredRoots });
-    for (const line of formatReport(r)) log(line);
-    const widths = checkDocWidths(base, { lineWidth: cfg.lineWidth, scanDirs: cfg.scanDirs, exclude: cfg.anchors.exclude ?? [], exemptZones: zones });
-    for (const h of widths) log(`✗ 行宽 ${relative(root, h.file).replace(/\\/g, "/")}:${h.line}（${h.len} 字符）`);
-    log(widths.length
-      ? `FAIL(行宽): ${widths.length} 行超 ${cfg.lineWidth} 字符${zoneNote}——文档人类可读判据。`
-      : `OK(行宽): 源域全部 .md 无 >${cfg.lineWidth} 字符单行${zoneNote}。`);
-    if (r.danglingTotal > 0 || widths.length) fail = 1;
-  }
-  // —— 行数面（#546）：声明读取面 = 运行根单读；执行域 = 运行根一次；差异 = 报告态（KD-2）——
-  for (const base of bases) {
-    if (resolve(base) === root) continue;
-    const sub = readManifest(base);
-    if (sub.ok && (sub.manifest.checkConfig.lineCounts ?? []).length) {
-      log(`✗ 行数面声明面错误：子域 ${relative(root, base).replace(/\\/g, "/")} 持 checkConfig.lineCounts 声明——声明读取面 = 运行根单读（fail-closed）。`);
-      fail = 1;
-    }
-  }
-  const lc = checkLineCounts(cfg.lineCounts ?? [], { root });
-  for (const line of lc.lines) log(line);
-  log(`行数面：差异 ${lc.diffCount} 条（比对 ${lc.compared} 行 · 跳过 ${lc.skipped.est + lc.skipped.nonnum} 行〔预估 ${lc.skipped.est} ∕ 非数 ${lc.skipped.nonnum}〕）——报告态，回填工单即本清单`);
-  return fail ? 1 : 0;
+  const r = checkAnchors(base, DOC_CHECK_BUILTINS, { gate: true, root });
+  for (const line of formatReport(r)) log(line);
+  const widths = checkDocWidths({ lineWidth: DOC_CHECK_BUILTINS.lineWidth, exemptZones: zones, files: r.fileList });
+  for (const h of widths) log(`✗ 行宽 ${relative(root, h.file).replace(/\\/g, "/")}:${h.line}（${h.len} 字符）`);
+  log(widths.length
+    ? `FAIL(行宽): ${widths.length} 行超 ${DOC_CHECK_BUILTINS.lineWidth} 字符${zoneNote}——文档人类可读判据。`
+    : `OK(行宽): 源域全部 .md 无 >${DOC_CHECK_BUILTINS.lineWidth} 字符单行${zoneNote}。`);
+  return (r.danglingTotal > 0 || widths.length) ? 1 : 0;
 }
 
 const isMain = process.argv[1] && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url;

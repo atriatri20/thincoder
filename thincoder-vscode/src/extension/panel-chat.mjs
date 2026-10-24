@@ -226,10 +226,10 @@ async function runPanelChatImpl(panel, opts = {}) {
   const askInPanel = makeAskInPanel(panel)
   // Callbacks shared by the initial run and the interrupt-resume run (extracted so
   // they can't drift apart). 2026-09-05 实践轮 module-split：回调工厂（webview 桥接
-  // 面——token/reasoning/tool 流/压缩生命周期/落盘/权限/问答 25 个 onX）verbatim 迁
+  // 面——token/reasoning/tool 流/压缩生命周期/落盘/权限/问答/凭据窗 28 个 onX（迁出时 25））verbatim 迁
   // panel-callbacks.mjs buildPanelCallbacks——总用量累计与 lastAgentState 随工厂闭包。
   const callbacks = buildPanelCallbacks(panel, { cwd, p, fullHistory, history, providerName, turnSlot, distillSlot, autoTurn, askInPanel, slotStamp })
-  // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S7 (manual tier): digest turns must not pop permission/question UI — an
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S7 (manual tier): digest turns must not pop permission/question/secret-input UI — an
   // unattended digest may neither hang on a panel prompt nor be interrupted by one.
   // The VS Code dispatch executes un-gated when no handler is present (unlike the CLI's
   // "no handler = denied"), so explicit deny stubs replace the panel prompts — the
@@ -238,6 +238,9 @@ async function runPanelChatImpl(panel, opts = {}) {
     callbacks.onPermissionRequired = async () => false
     callbacks.onBatchPermissionRequest = async () => "deny"
     callbacks.onQuestion = async () => null
+    // 凭据窗 = 用户面事件（§6.22 ⑧）：无人值守 digest 不得弹卡 / 挂起——显式取消桩（同 question 形；
+    // 系统侧→可读句（不挂起、不重弹）。
+    callbacks.onSecretInput = async () => null
   }
 
   // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6 guard-carry bookkeeping: auto-turn end-state guard marks (mutations,

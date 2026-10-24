@@ -4,7 +4,7 @@
  * 2026-09-28 流程批 R4 上提后：闩 ∕ 派发 ∕ 火策略住核 `thincoder-core/agent/timers.mjs`（单源——本档零自持闩实现），
  * 本档只留端面两件（+ 开关判据 re-export）：① **键面表壳**（键 ⇒ 核闩；同键至多一闩、跨键独立——桌面多会话宿主属性）② **`ev:timer` 出词**
  * + `runTurn` 触发面（形 = CLI ∕ VSC 同档——端面表壳 · 机制同源；两端自持副本随其迁移轮退场）。
- * 门（§6.30.3）：① 唤醒源 = 核 `_pendingTimers`（唯一写点 = timer 工具）——只读到期件、**不看 history**；
+ * 门（§6.30.3）：① 唤醒源 = 核 `_pendingTimers`（写点两处 = timer 工具（设 ∕ 取消）＋ 核出列重排面（到点重排回插——§6.30.18 D-TW10））——只读到期件、**不看 history**；
  * ② 成本闸 = 到期批合并一轮 + 出列幂等（核 `takeExpiredTimers`）；③ 开关 `agent.timerWake`（默认开；关 ⇒ `sync()` 零注册并撤旧）。
  * 零宿主依赖（`post` / `runTurn` / `timer` / `clear` / `now` 皆注入）⇒ 平 node 直测。
  */

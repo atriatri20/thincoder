@@ -47,6 +47,14 @@ export function askMaskActive(state) {
   return face != null && teamAskStepAt(face.step)?.mask === true
 }
 
+/** 掩码族在场判据（三面：凭据窗整面 ∥ 团队问句面整面 ∥ 密码步 `askMaskActive`）——搜索层让位
+ *  单源（#1437 自 `key-handler-search.mjs` 本地件迁入：键路由 ∥ 显示面两用同引——两处分开写
+ *  必然漂移，故收敛一档）。消费点 = `key-handler-search.mjs`（逐键重判）∥ `layout.mjs` 输入框
+ *  内容式 ∥ `render-frame.mjs` 框题式（判据单源 = `docs/cli/design/TUI.md` §4 掩码守卫）。 */
+export function maskSurfacePresent(state) {
+  return state.secretPrompt != null || state.teamAsk != null || askMaskActive(state)
+}
+
 /** 问句屏行构造（两消费方共用）：已填两值（地址 ∥ 账号——密码恒不示）作 dim 上下文行 +
  *  加粗问句行 + 输入提示行。`fields` 缺省 = 零上下文行。 */
 export function teamAskLines(step, fields = {}) {

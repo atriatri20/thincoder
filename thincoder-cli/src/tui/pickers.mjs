@@ -110,7 +110,7 @@ export function createPickers(ctx) {
   function renderPickerLines() { rebuildLines() }
 
   /** 删除类入口二次确认件（单源——TUI-COMMANDS.md §5.4）：形态 = 既有二次确认 picker
-   *  （与 cmd-clear.mjs:6-9 · cmd-new.mjs:30-33 先例逐字同形，禁新造模态）。
+   *  （与 cmd-clear.mjs · cmd-new.mjs 先例逐字同形，禁新造模态）。
    *  defaultIndex 恒指 Cancel（反误触——直接 Enter 不会删除）；Esc / Cancel ⇒ false
    *  ⇒ 调用方零动作（取消先于落盘发生）。入口 ctx 缺此绑定 ⇒ 调用方报错（fail-closed）。 */
   async function confirmDelete(question = "Delete?") {

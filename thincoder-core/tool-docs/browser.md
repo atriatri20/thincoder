@@ -45,4 +45,4 @@ Notes:
 - Session assumptions: the session may be closed externally or timed out — never assume it is alive; on `closed externally`, just run the action again (fresh session, login kept).
 - When not to use it: static page / API → `fetch`; a link needing no interaction → just produce the URL; a step needing a human (2FA, payment) → ask the user to do it in a headed session.
 
-CLI, VS Code and desktop share this description verbatim (single source: core `tool-docs/`).
+CLI, VS Code and desktop share this description verbatim.

@@ -45,7 +45,7 @@ function fieldPair(name, type, labelWord, extra = {}) {
   ]
 }
 
-/** 预设项标签（S7 · 串形对位 VSC `settings-providers.js:204` —— `name — desc`）：缺段不落空后缀
+/** 预设项标签（S7 · 串形对位 VSC `updateProviderStatus` —— `name — desc`）：缺段不落空后缀
  *  （禁假造；`(model)` 段随 2026-10-09 清除批退场——核表零该键）。 */
 export function presetLabel(preset) {
   const name = typeof preset?.name === "string" ? preset.name : ""

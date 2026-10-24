@@ -7,7 +7,7 @@
  *      （⇒ `renderer/mount-cards.mjs` `submitAnswer` —— `question:respond` 回执径保留：**卡退场非乐观**，回执 `ok` 真
  *      才清切片 ⇒ 帧挂载摘卡；核零摘除 ∥ 失败 ⇒ 零 DOM 写（卡恒在场可重试））；
  *   ③ 作答后回焦输入区（P3② 归核面注入点 `deps.onAnswered` —— 核卡作答 ∕ 取消同一路回调；落点 = `handlers.onAnswered`）。
- *   **P2（Enter 提交）随核卡内建**（`cards/question.mjs:46-51` —— 组字门 = 核件小修，组合期回车归输入法）；
+ *   **P2（Enter 提交）随核卡内建**（`cards/question.mjs` —— 组字门 = 核件小修，组合期回车归输入法）；
  *   **P3①（新卡聚焦）** = 端壳挂载面插入时聚焦核卡作答控件（`renderer/mount-cards.mjs`）。
  * 出口动作 `respondQuestion(host, promptId, answer)`：窄桥 `question:respond`；invoke 抛 / 拒绝 ⇒ `console.error`
  * （**不静默**）+ 回执 `null`（调用面零分支）。

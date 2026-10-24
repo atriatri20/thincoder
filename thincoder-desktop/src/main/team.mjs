@@ -1,7 +1,7 @@
 /**
- * team.mjs — 团队族四通道处理体（B1 批 · 2026-10-10 · 台账 #1212；**登录面补全批增 `team:verify`** —— 台账 #1231）：
- * `team:status` ∥ `team:login` ∥ `team:logout` ∥ `team:verify` ——核 `thincoder-core/team.mjs` **转口**
- * （**唯一写者 = 核**：本档零自写盘、零第二实现；主进程只是转发）。
+ * team.mjs — 团队族**五通道**处理体（B1 批 · 2026-10-10 · 台账 #1212；**登录面补全批增 `team:verify`** —— 台账 #1231；
+ * **team-token-rotation 批增 `team:rotate`** —— 台账 #1238）：`team:status` ∥ `team:login` ∥ `team:logout` ∥ `team:verify` ∥ `team:rotate`
+ * ——核 `thincoder-core/team.mjs` **转口**（**唯一写者 = 核**：本档零自写盘、零第二实现；主进程只是转发）。
  *
  * 回执形（单源 = `docs/desktop/design/IPC.md` §2 团队族行）：
  *   ① `team:status`（无载荷）⇒ `{ ok, loggedIn, server, member, label }`（核 `teamStatus()` 投影——登录态 = `token` 在场）；
@@ -10,12 +10,14 @@
  *      条目冲突时在场（**码不携文**——文本归渲染面 i18n）；
  *   ③ `team:logout`（无载荷）⇒ `{ ok, revokeDelivered? }`（缺席 = true（服务端吊销已送达）；`false` ⇒ 渲染面就地提示）；
  *   ④ `team:verify`（无载荷）⇒ `{ ok, state }`（`state` = `valid` ∥ `invalid` ∥ `unreachable`——核 `teamVerify()` 直传）；
- *      未登录 ⇒ `{ ok:false }` **零调核**（端侧切片口径 = `verify` 落 `null`——按未登录渲染）。
+ *      未登录 ⇒ `{ ok:false }` **零调核**（端侧切片口径 = `verify` 落 `null`——按未登录渲染）；
+ *   ⑤ `team:rotate`（无载荷）⇒ `{ ok }` ∥ `{ ok:false, reason }`（`reason` 本流程子集 = `network` ∥ `invalid`（401）∥
+ *      `write_failed`——核 `teamRotate()` 直传）；端侧零自写盘（写面 = 核一次 mutate）。
  * 机制单源 = `docs/core/design/TEAM.md` §2（配置形 ∥ 登录流程 ∥ 派生 provider 条目 ∥ 提示条 ∥ 活校验三值）。
  * 纪律：零自写盘（写面 = 核 `writeConfigAtomic` 一次 mutate）· 畸形档不吞（核 `loadConfig` 抛 ⇒ invoke 拒绝直传——
  * 沿 provider 族同口径）· 端侧零 catch 吞 · 活校验只读（触发点制——零周期轮询）。
  */
-import { teamLogin, teamLogout, teamStatus, teamVerify } from "@thincoder/core/team.mjs"
+import { teamLogin, teamLogout, teamRotate, teamStatus, teamVerify } from "@thincoder/core/team.mjs"
 
 /** `team:status`（无载荷）⇒ `{ ok, loggedIn, server, member, label }`——`loggedIn` ⇔ 核 `team.token` 在场（权威源 = 核）。 */
 export function teamStatusChannel() {
@@ -43,4 +45,10 @@ export async function teamVerifyChannel() {
   if (teamStatus().loggedIn !== true) return { ok: false }
   const { state } = await teamVerify()
   return { ok: true, state }
+}
+
+/** `team:rotate()`（无载荷）⇒ `{ ok }` ∥ `{ ok:false, reason }`（核 `teamRotate()` 直传——TEAM.md §2.7）：
+ *  核吊销当枚 + 同标签重签 + **一次写盘**；端侧零自写盘（写面 = 核一次 mutate）。 */
+export function teamRotateChannel() {
+  return teamRotate()
 }

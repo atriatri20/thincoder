@@ -13,7 +13,7 @@
  * 输出：① 变更面（文件 + 符号候选）② 反查命中档清单（`docs/{design,requirements}` 内——每档一行 + 命中词 + 命中数）
  * ③ 一行提示（建议录入批次档 §2 受影响文件表）。输出**不自动**写批次档（写权归作者）。
  * 实现形态（单源）：纯函数 `docImpact({changedFiles, changedSymbols, docsRoot})`（直驱可测）+
- * 薄 git 包装（子进程——`slow()` 归册）+ CLI。扫描域取**声明面** `checkConfig.scanDirs`（D2 单源——manifest；2026-09-18 判据面批收正）。
+ * 薄 git 包装（子进程——`slow()` 归册）+ CLI。反查目录 = 本仓固定常量 `DOC_DIRS`（2026-10-22 FR42：声明面 `checkConfig` 退场——manifest 不再承载工具参数）。
  * 导出：isStrongSymbol / changedTokensFromDiff / docImpact / gitChangedSurface / main（`test/doc-impact.test.mjs` 消费）。
  */
 import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
@@ -21,7 +21,9 @@ import { spawnSync } from "node:child_process";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { extractAnchors } from "../../scripts/doc-check-anchors.mjs"; // 抽取面单源（旧 doc-anchors 已随 v2 收敛撤除）
-import { readManifest } from "../../thincoder-core/manifest.mjs"; // 扫描域单源 = 声明面 checkConfig.scanDirs（D2）
+
+/** 反查目录（本仓固定常量——不读 manifest，不留「可配即会漂」的参数面）。 */
+const DOC_DIRS = ["docs"];
 
 /** 字面量 / 伪标识符停止集（强形态过滤保留的残余面——`NaN` 类会撞 camelCase 形态）。 */
 const LITERALS = new Set(["NaN", "Infinity", "constructor", "prototype"]);
@@ -72,7 +74,7 @@ function walkDocs(dir, out = []) {
 }
 
 /** 反查纯函数：变更面 × `docs/{design,requirements}` 全文 → 命中档清单（每档一行 + 命中词 + 命中数）。 */
-export function docImpact({ changedFiles = [], changedSymbols = [], docsRoot, scanDirs = [] }) {
+export function docImpact({ changedFiles = [], changedSymbols = [], docsRoot, dirs = DOC_DIRS }) {
   const files = [...new Set(changedFiles.map((f) => f.replace(/\\/g, "/").replace(/^\.\//, "")))].sort();
   const symbols = [...new Set(changedSymbols)].sort();
   const seen = new Set(), words = [];
@@ -84,7 +86,7 @@ export function docImpact({ changedFiles = [], changedSymbols = [], docsRoot, sc
   }
   const hits = [];
   let scanned = 0;
-  for (const dir of scanDirs) {
+  for (const dir of dirs) {
     for (const abs of walkDocs(join(docsRoot, dir))) {
       scanned++;
       const found = [];
@@ -124,18 +126,15 @@ export function main(argv = process.argv.slice(2), { cwd = process.cwd() } = {})
   let surface;
   try { surface = gitChangedSurface({ base, extraFiles, cwd }); }
   catch (e) { console.log(`反查跳过（不阻断）：git 不可用 / 基准不可读（base = ${base}）——${String(e.message).split("\n")[0]}`); return 0; }
-  const man = readManifest(cwd);
-  if (!man.ok) { console.log(`反查跳过（不阻断）：manifest 不可读（${man.reason ?? "invalid"}）——扫描域取声明面 checkConfig.scanDirs（D2 单源）。`); return 0; }
-  const scanDirs = man.manifest.checkConfig.scanDirs;
-  const r = docImpact({ changedFiles: surface.files, changedSymbols: surface.symbols, docsRoot: cwd, scanDirs });
+  const r = docImpact({ changedFiles: surface.files, changedSymbols: surface.symbols, docsRoot: cwd });
   if (argv.includes("--json")) { console.log(JSON.stringify({ base, ...r }, null, 2)); return 0; }
   console.log(`文档影响面反查（base = ${base}）`);
   console.log(`变更面：文件 ${r.changedFiles.length} 个 · 符号候选 ${r.changedSymbols.length} 个`);
   if (r.changedFiles.length) console.log(`  文件：${r.changedFiles.join(" · ")}`);
   if (r.changedSymbols.length) console.log(`  符号：${r.changedSymbols.join(" · ")}`);
   console.log(r.hits.length
-    ? `反查命中 ${r.hits.length} 档（${scanDirs.join(" + ")}）：`
-    : `反查命中 0 档（${scanDirs.join(" + ")}——变更面未被设计/需求档引用）`);
+    ? `反查命中 ${r.hits.length} 档（${DOC_DIRS.join(" + ")}）：`
+    : `反查命中 0 档（${DOC_DIRS.join(" + ")}——变更面未被设计/需求档引用）`);
   for (const h of r.hits) console.log(`${h.doc} — 命中 ${h.count} 处：${h.words.map((w) => `${w.word}(${w.count})`).join(" · ")}`);
   console.log("以上档建议录入批次档 §2 受影响文件表");
   return 0;

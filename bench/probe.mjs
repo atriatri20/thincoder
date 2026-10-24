@@ -11,15 +11,15 @@ import { realpathSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { isoLocal, setResultsDir } from "./lib/output.mjs"
-import { loadPrices, matchPrice, pricesPath, _setPricesPathForTest } from "./lib/prices.mjs"
+import { loadPrices, matchPrice, pricesPath, _setPricesPathForCheck } from "./lib/prices.mjs"
 import { loadRoster, selectEntries } from "./lib/roster.mjs"
-import { judgeConfigPath, loadJudgeConfig, resolveJudgeSlots, _setJudgeConfigPathForTest } from "./lib/judge.mjs"
+import { judgeConfigPath, loadJudgeConfig, resolveJudgeSlots, _setJudgeConfigPathForCheck } from "./lib/judge.mjs"
 import { buildProbeParent, installProbeProvider, probeProviderEntry, promptsDigest, runProbeRun, assemblyLeg } from "./probe/driver.mjs"
 import { readoutRun } from "./probe/classify.mjs"
 import { classifyReportFace, shouldClassifyReport } from "./probe/judge-report.mjs"
 import { assertProbeLabel, buildProbeResult, runCostCny, writeProbeReport } from "./probe/report.mjs"
 import { createSandbox, diffSnapshots, materialize, removeSandbox, runSandbox, sandboxDisplay, snapshot } from "./probe/sandbox.mjs"
-import { DRY_RUN_FIXTURE, FIXTURES, FIXTURE_IDS, PROBE_VERSION, validateFixtures } from "./probe/fixtures.mjs"
+import { DRY_RUN_FIXTURE, FIXTURES, FIXTURE_IDS, PROBE_VERSION, validateFixtures } from "./probe/data.mjs"
 
 const BENCH_DIR = dirname(fileURLToPath(import.meta.url))
 
@@ -101,7 +101,7 @@ async function executeRun({ base, index, entry, user, config, model, fixture, op
   const parent = buildProbeParent({ cwd: root, config, model: entry.model })
   installProbeProvider(parent, probeProviderEntry({ entry, user, maxTokens: opts.maxTokens }).providerEntry)
   const { observed } = await runProbeRun({
-    parent, model, batchDoc: fixture.batchDoc, taskBook: fixture.taskBook,
+    parent, model, batchDoc: fixture.batchDoc, taskBookParams: fixture.taskBookParams,
     fixtureId: fixture.id, timeoutSec: opts.timeoutSec, baseSignal: ac.signal,
   })
   observed.landed = diffSnapshots(before, snapshot(root))
@@ -198,7 +198,7 @@ async function runDryRun(opts, entries, prices, cfg, ac, bases) {
     materialize(root, fixture.sandboxFiles)
     const parent = buildProbeParent({ cwd: root, config: { agent: { subagentTurns: opts.maxTurns } }, model: entries[0].model })
     installProbeProvider(parent, probeProviderEntry({ entry: entries[0], user: null, maxTokens: opts.maxTokens }).providerEntry)
-    const { facts } = await assemblyLeg({ parent, model: `${entries[0].provider}:${entries[0].model}`, batchDoc: fixture.batchDoc, taskBook: fixture.taskBook })
+    const { facts } = await assemblyLeg({ parent, model: `${entries[0].provider}:${entries[0].model}`, batchDoc: fixture.batchDoc, taskBookParams: fixture.taskBookParams })
     const bad = Object.entries(facts).filter(([k, v]) => k !== "relayPrefix" && v !== true).map(([k]) => k)
     if (bad.length > 0) throw new Error(`dry-run 装配腿（${fid}）断言失败：${bad.join(", ")}`)
     console.log(`[dry-run] 装配腿 ${fid}：异步形 ✓ · notify_parent ✓ · eng-designer 人格 ✓ · batchDoc 绑定 ✓（${facts.relayPrefix}）`)
@@ -275,8 +275,8 @@ export async function main(argv = process.argv.slice(2)) {
   if (opts.help) { console.log(USAGE); return 0 }
   // ② 参数 → ③ 缝（CONFIG.md §6.2 混合形）：子进程面经 CLI 参数落到进程内落点
   if (opts.resultsDir) setResultsDir(opts.resultsDir)
-  if (opts.judgeConfig) _setJudgeConfigPathForTest(opts.judgeConfig)
-  if (opts.prices) _setPricesPathForTest(opts.prices)
+  if (opts.judgeConfig) _setJudgeConfigPathForCheck(opts.judgeConfig)
+  if (opts.prices) _setPricesPathForCheck(opts.prices)
   const ac = new AbortController()
   const onSigint = () => ac.abort(new Error("SIGINT"))
   process.once("SIGINT", onSigint)

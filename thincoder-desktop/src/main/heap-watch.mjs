@@ -23,7 +23,7 @@ import { configDir } from "@thincoder/core/config.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 
 export const SAMPLE_INTERVAL_MS = 60_000
-export const HEAP_RATIOS = Object.freeze([0.7, 0.85]) // 与 CLI 同值（thincoder-cli/src/heap-watch.mjs:43）
+export const HEAP_RATIOS = Object.freeze([0.7, 0.85]) // 与 CLI 同值（`startHeapWatch`）
 export const RENDERER_WORKING_SET_MB = 800 // 发现 3 定值（两冻结案下沿 933MB × 0.85 ⇒ 圆整）
 export const SNAPSHOT_VOLUME_CAP_MB = 2500 // 体积门（上限——超阈跳过 + 记录；父裁 2026-09-30）
 export const FREEZE_GRACE_MS = 15_000 // D9 宽限

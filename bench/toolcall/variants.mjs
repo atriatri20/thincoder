@@ -3,15 +3,15 @@
  *
  * V0 = 产品面实面逐字：`builtinTools` × `toOpenAISchema`（`thincoder-core/tools/index.mjs` × `shared.mjs`），
  * 能力位 `read_image` 随档（判据 `specForModel(model)?.multimodal`——同 `index.mjs` 注册面）；
- * V1 = 5 档枚举块（`fixture.mjs` 逐字）+ V0 文本逐字 + `edit.edits[].*` 7 项参数描述补齐；
- * V2 = 路由句（`fixture.mjs` `routeHead` 取句规则）+ 实面 schema 逐字。
+ * V1 = 5 档枚举块（`data.mjs` 逐字）+ V0 文本逐字 + `edit.edits[].*` 7 项参数描述补齐；
+ * V2 = 路由句（`data.mjs` `routeHead` 取句规则）+ 实面 schema 逐字。
  * 变换只在**载荷副本**上做——产品描述文本零触（探针不改写产品面）。
  */
 
 import { createHash } from "node:crypto"
 import { specForModel } from "../../thincoder-core/config.mjs"
 import { builtinTools, readImageTool, toOpenAISchema } from "../../thincoder-core/tools/index.mjs"
-import { V1_ENUM_BLOCKS, V1_PARAM_DESCRIPTIONS, routeHead } from "./fixture.mjs"
+import { V1_ENUM_BLOCKS, V1_PARAM_DESCRIPTIONS, routeHead } from "./data.mjs"
 
 /** 变体 id 序（CLI `--variants` 取值域与报告列序）。 */
 export const VARIANT_IDS = ["V0", "V1", "V2"]

@@ -10,7 +10,7 @@
  * advisor-loop-split 批：loop 的压缩检查点归位本档（`compactContextIfNeeded`——`context_limit` 尾串生成点同迁；时间线面 ⇒ `advisor/timeline.mjs`）。
  */
 
-import { providerSpec, outputReserve, usableWindow } from "../config.mjs" // 第 25 批：预算派生（与 loop.mjs:12 同源导入）；`outputReserve`/`usableWindow` = 2026-10-06 预留裁定（#975）
+import { providerSpec, outputReserve, usableWindow } from "../config.mjs" // 第 25 批：预算派生（与 loop.mjs 的 providerSpec 同源导入）；`outputReserve`/`usableWindow` = 2026-10-06 预留裁定（#975）
 // B4（群 B 批，ADVISOR-GUARDS.md §9——F32）：CJK 加权单源（provider/rate.mjs 叶子向无环）
 import { estimateText } from "../provider/rate.mjs"
 

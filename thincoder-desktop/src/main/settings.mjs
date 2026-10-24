@@ -13,7 +13,7 @@
  * = `settings-env.mjs`；tools 族（embedding ∕ websearch key 读写）= `settings-tools.mjs`。
  *
  * 纪律（批档 §2.3/§2.5）：
- * - **写面唯一执行体** = 核 `writeConfigAtomic`（`thincoder-core/config-io.mjs:59`，
+ * - **写面唯一执行体** = 核 `writeConfigAtomic`（
  *   内含 mtime 冲突护栏 → 回执 `{ ok:false, reason:"mtime-conflict" }` + `.bak-{ts}`）；
  *   端侧**零自写盘**（不 fs.writeFile）。
  * - **畸形档不吞**：核 `loadRaw` 抛 ⇒ 本档零 catch ⇒ invoke 拒绝直传（渲染面落 error 档）。
@@ -112,7 +112,7 @@ const modelEntry = (id) => {
 }
 
 /** 渠条目持密钥判据（全渠扇出前的**渠滤**单点）—— 对位 VSC `isProviderConfigured` 的 `resolveKey` 口径
- *  （`presets.mjs:97-99`：key **非空白**）；纯空白 key 边缘档与 `provider:list` 行面 `hasKey`（`length > 0`）
+ *  （key **非空白**）；纯空白 key 边缘档与 `provider:list` 行面 `hasKey`（`length > 0`）
  *  不同判 —— 本批渠滤以 VSC 对位为准。 */
 const hasKeyOf = (entry) => typeof entry?.apiKey === "string" && entry.apiKey.trim() !== ""
 
@@ -169,7 +169,7 @@ const ADVISOR_EFFORT_PATH = "agent.advisor.reasoningEffort"
 
 /** advisor 推理档的 spec 取形模型（S11 收正 · 顾问评审 🟡2）：与渲染面候选面同源同序——
  *  `advisor.model` ⇒ 该值；再缺 ⇒ `defaultModel` 模型段（父解析模型单档）；无 ⇒ `""`。
- *  对位核运行期 `resolveAdvisorProvider`（`thincoder-core/advisor/run.mjs:26-56`：cfg.model > 父解析模型单档
+ *  对位核运行期 `resolveAdvisorProvider`（cfg.model > 父解析模型单档
  *  —— **2026-10-09 清除批**：原「渠道 model」分支随渠道单值模型退场，链上该分支删）
  *  —— 判据 = 写后投影恒等 ∕ 族别 off 形真有效（旧式 `advisor.model ?? ""` 在无覆写时落 DEFAULT_SPEC ⇒
  *  effort 族主模型下写 `{type:"disabled"}` ⇒ 核档自注「关思考静默失效」）。 */
@@ -184,7 +184,7 @@ function advisorSpecModel(disk) {
 /**
  * `index:status`（无入参）⇒ `{ ok, status }`（R2 · 桌面功能对位批）：状态读数**装配** —— 计数 = 核只读
  * 出口（转口 `index-status.mjs`，**端侧零 SQL ∕ 零表名**）；`hasEmbedder` = 配置面判据（`embedding.apiKey`
- * 在场 —— 同 `thincoder-core/agent/assemble.mjs:76` 装配判据）；`built` = 本项目 code + doc 文件数 > 0（核出口 `indexed`
+ * 在场 —— 同 `assembleAgent` 装配判据）；`built` = 本项目 code + doc 文件数 > 0（核出口 `indexed`
  * 同源）。**P1 两键（KD-69）**：`dbBytes` ∥ `origins` 随 `counts` 透传（设置面两读行消费）。
  * 无本项目 ⇒ 零计数（读数仍成回执 —— 「未建」态非错误；跨项目读全库不授权）。
  */
@@ -202,7 +202,7 @@ export function indexStatus({ dir = null } = {}) {
 }
 
 /**
- * defaultModel 写后探（S3 · M9 同律 —— 先例 = VSC `settings-panel-write.mjs:186` → `:43-57`）：复合串
+ * defaultModel 写后探（S3 · M9 同律 —— 先例 = VSC `saveShellSettingsFromPanel` → `vscPersistRaw`）：复合串
  * provider 段 ⇒ 对彼渠 fire-and-forget 探一次（探针绝不阻断写面）。**动态解引用**（`providers.mjs` 反向取
  * 本档值面 ⇒ 静态 import 成环；沿 `settings-env.mjs` 转口先例）；空串 ∕ 无模型段 ⇒ 零探。
  * 该点与另两径（加渠道 ∕ 改钥）同探（`probeAfterWrite` —— 核落账 `admissionOf` 供行面读数）。

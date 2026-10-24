@@ -108,6 +108,7 @@ export function applySlotSessionState(agent, { slot, engState, planModeOverride 
     // 记录绝不因 cfg 缺键意外开启）。settings 工具 hot-apply（setKeyPath → config 对象）
     // 对 traces.enabled 同键生效。
     traces: cfg.traces ? { ...cfg.traces } : { ...DEFAULTS.traces },
+    fetch: cfg.fetch ? { ...cfg.fetch } : { ...DEFAULTS.fetch },
   }
   // ENG-PLAN-EXCLUSION（FR31 ③ / KD10——恢复点②·VSC）：工程模式 ⇒ `_planMode` 恒 false
   // （生效值收正——优先于槽 `planMode` 与 `planModeOverride`）；纯函数面零 IO——槽值回写

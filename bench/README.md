@@ -73,7 +73,7 @@ node bench/run.mjs --rejudge --from bench/results/<档>.json
 
 ## 五口径冻结（统一标准的核心）
 
-1. **题集**：题面与用例逐字冻结（含隐藏用例）；`SUITE_VERSION`（整数）为版本标识（`bench/cases/index.mjs`）。
+1. **题集**：题面与用例逐字冻结（含隐藏用例）；`SUITE_VERSION`（整数）为版本标识（`bench/suites/index.mjs`）。
    逐维明细先列**题面**（`cases[].prompt` 正本逐字；构造型用例含载荷括注、载荷不入档），便于只看回答即可判读。
 2. **判分**：**混合三层**——① 确定性断言（数字独立成词 / vm 实跑 + 隐藏断言 / 整串 JSON / 工具结构 / 字面·计数文本约束）；
    ② **语义·语用面 = 判官对（A / B 双判 · 同一冻结 rubric；位级失败经替代判级联换模型补判）**，分歧样本经**第三判（仲裁 C）多数决**
@@ -88,7 +88,7 @@ node bench/run.mjs --rejudge --from bench/results/<档>.json
 
 任一变化（题面 / 判据 / rubric / **任一位判官身份（A / B / 仲裁 C）** / 提示模板 / 复核触发面 / **判分合成 · 复核处置规则** /
 **结果数值构成规则（分账 · 归一化 · 聚合口径）** / 计时口径）⇒ `SUITE_VERSION + 1`
-（`bench/cases/index.mjs`；判官侧机检闸 = `judge.json.frozenAtSuiteVersion`），跨版本不严格可比；
+（`bench/suites/index.mjs`；判官侧机检闸 = `judge.json.frozenAtSuiteVersion`），跨版本不严格可比；
 **价格变动不 bump 版本号**（另记 `prices.asOf`）；**呈现面变化（段位增删 / 表列集 / 排序 / 图例与脚注文案）不 bump**——在档报告可由 `--recompute` 以现行形态重出。
 现行 `SUITE_VERSION` = **7**（判分合成规则变化——替代判级联 / 单判定判 + 判官身份面扩替代池，共用一次）；**参数面**（档位覆写 / 参数披露）
 与**呈现面**不入版本轴。
@@ -226,7 +226,7 @@ node bench/toolcall.mjs --models mimo-v2.6-flash --dry-run --label toolcall-self
 - 复核翻案**改判 `pass`**（原机械断言留档 · 承接照出 · 修毕销账）；判官对的同向误判不设外部复核；不另立判据演进清单档（承接 = 报告《复核翻案》承接清单 + 台账，销账人工确认）。
 - 不自动定时跑；不自动抓取价格（手动维护，来源必标）。
 - 不存模型完整原始响应（只存 ≤300 字符摘要）；不做跨时点 diff 工具；不做汇率换算。
-- 不进 CI / 发布门 / 三端产物白名单；`bench/test/*.test.mjs` 手动跑（`node --test bench/test/*.test.mjs`）。
+- 不进 CI / 发布门 / 三端产物白名单；`bench/check/**` = 这套评估工具自身的测试代码（不是测试体系的单元 / 集成测试）——`node bench/check/run.mjs` 全跑。
 - `bench/results/` 存报告对留档（**入库**）；`--dry-run` 产物为夹具自检，非真实测量（命令串里可见 `--dry-run`）。
 
 ## 目录
@@ -238,8 +238,8 @@ bench/
   models.json        参测清单（配置文件）
   prices.json        价格表（手动维护 · asOf + source）
   judge.json         判官配置（判官对 A / B + 分歧仲裁 C + 替代池 fallbacks · 必备）
-  cases/             题集（一维度一档 + 注册表 index.mjs = SUITE_VERSION）
+  suites/            题集（一维度一档 + 注册表 index.mjs = SUITE_VERSION）
   lib/               判分器族 / 判官与复核 / 计时聚合 / 价格 / 清单 / 落档脱敏 / 长文与 PNG 生成 / 编排 / 重算 / 落档 / 报告
-  test/              自检（手动跑，不进 CI）
+  check/             评估工具自身的测试代码（node bench/check/run.mjs；不进 CI）
   results/           报告对留档（<日期>-<标签>.{md,json}）
 ```

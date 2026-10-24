@@ -2,7 +2,7 @@
  * i18n-settings.mjs — 设置面词族第四档（i18n 拆分批 `docs/batches/2026-09-29-i18n-split.md` §2 · 台账 #614
  * 顶格消解：主档 `renderer/i18n.mjs` 内容行 500 顶格 ⇒ 自有 `settings.*` 族 55 键整族出档，本档承接）。
  *
- * 键面（**78 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59；**三端对齐批（2026-10-07 · 台账 #1027–#1035 · KD-75 ②③）**：增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` 三键，净删 `settings.providers.addCustom` ∥ `.addPreset` 两键（旧双表单提交词——表单退场随退）——59 ⇒ **60**；**添加入口弹窗统一批（2026-10-07 · 台账 #1054 · KD-77 ①）**：增 `settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle` 三键（MCP 添加入口 + 表单两态标题——值逐字同 VSC 同批落地 `locales` 同名键）——60 ⇒ **63**；**2026-10-09 清除批（实施期 fix 轮）**：净删 `settings.providers.activeToggle` 一键（向导步 1 复选退场——无消费者随实现净删）——63 ⇒ **62**；**B1 批（2026-10-10 · 台账 #1212）**：增团队段词族**十五键**（段名 + 表单三标 + 登录 ∥ 退出两钮 + 未登录提示 + 状态行两标 + 失败四句 + 一次性提示两句——未登录句 ∥ 四失败句 ∥ 两提示句 = 三端逐字同句，单源 = `docs/core/design/TEAM.md` §2.5）——62 ⇒ **77**；**#1247 端口提示批（2026-10-13 · 清账轮）**：增 `settings.team.serverHint` 一键（登录补端口提示——三端同拍；值逐字 = VSC `locales` 同名键）——77 ⇒ **78**）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
+ * 键面（**88 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59；**三端对齐批（2026-10-07 · 台账 #1027–#1035 · KD-75 ②③）**：增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` 三键，净删 `settings.providers.addCustom` ∥ `.addPreset` 两键（旧双表单提交词——表单退场随退）——59 ⇒ **60**；**添加入口弹窗统一批（2026-10-07 · 台账 #1054 · KD-77 ①）**：增 `settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle` 三键（MCP 添加入口 + 表单两态标题——值逐字同 VSC 同批落地 `locales` 同名键）——60 ⇒ **63**；**2026-10-09 清除批（实施期 fix 轮）**：净删 `settings.providers.activeToggle` 一键（向导步 1 复选退场——无消费者随实现净删）——63 ⇒ **62**；**B1 批（2026-10-10 · 台账 #1212）**：增团队段词族**十五键**（段名 + 表单三标 + 登录 ∥ 退出两钮 + 未登录提示 + 状态行两标 + 失败四句 + 一次性提示两句——未登录句 ∥ 四失败句 ∥ 两提示句 = 三端逐字同句，单源 = `docs/core/design/TEAM.md` §2.5）——62 ⇒ **77**；**#1247 端口提示批（2026-10-13 · 清账轮）**：增 `settings.team.serverHint` 一键（登录补端口提示——三端同拍；值逐字 = VSC `locales` 同名键）——77 ⇒ **78**；**team-token-rotation 批（2026-10-16 · 台账 #1238）**：团队段增轮换四键（控件词 ∥ 确认句 ∥ 成句 ∥ `invalid` 失效句——确认句/成句/失效句值逐字同 VSC `locales` 同名键）——78 ⇒ **82**；**模型选择归位批（2026-10-16 · 台账 #1516 · KD-80）**：净退 `settings.section.model` 一键（设置页「模型」段撤场——消费面归零 ⇒ 键面随退）⇒ 实读 **88**（两语同拍、键集相等；链文前值 82 系滞后值——并行批增键未逐笔续计，本行按盘收正））：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
  * 四段名 / 两段态 / 十三失败码 / 添加入口两键 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
  * 当前标 · 自定项键（KD-75 ③）/ 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
  * 移除 · 增键 · 添加入口 + 表单两态标题（KD-77 ①）—— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）。
@@ -208,6 +208,11 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.team.reason.writeFailed": "Failed to write local config",
     "settings.team.notice.manualNameConflict": "A provider named \"team\" already exists — not added automatically; rename or delete it, then log in again",
     "settings.team.notice.revokeNotDelivered": "Server revocation not delivered",
+    "settings.team.rotate": "Rotate",
+    "settings.team.rotateConfirm": "Rotating revokes your current login token immediately (the old token stops working), and this machine switches to the new token right away. Continue?",
+    "settings.team.rotateDone": "Rotated — this machine now uses the new token",
+    "settings.team.reason.invalid": "Session expired — log in again",
+    // ── 登录面补全批（2026-10-10 · 台账 #1230）首启路由屏词族（消费 = `views/onboarding.mjs`——两卡四句复用团队段两键）──
     "wizard.route.teamTitle": "Log in to team server",
     "wizard.route.teamDesc": "Sign in with an account issued by your team — models come from the server, no API key to fill in",
     "wizard.route.localTitle": "Configure a local provider",
@@ -399,6 +404,11 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.team.reason.writeFailed": "本机配置写入失败",
     "settings.team.notice.manualNameConflict": "已存在同名 provider「team」——未自动添加；请改名或删除后重登",
     "settings.team.notice.revokeNotDelivered": "服务端吊销未达",
+    "settings.team.rotate": "轮换",
+    "settings.team.rotateConfirm": "轮换将立即吊销当前登录 token（旧 token 失效），本机随即改用新 token。继续？",
+    "settings.team.rotateDone": "已轮换——本机已改用新 token",
+    "settings.team.reason.invalid": "已失效——重新登录",
+    // ── 登录面补全批（2026-10-10 · 台账 #1230）首启路由屏词族（消费 = `views/onboarding.mjs`——两卡四句复用团队段两键）──
     "wizard.route.teamTitle": "登录团队服务器",
     "wizard.route.teamDesc": "用团队发的账号登录——模型由服务器提供，不用自己填 key",
     "wizard.route.localTitle": "配置本地 provider",

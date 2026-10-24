@@ -8,7 +8,7 @@
  * 拉取 = 同步 10 分钟超时 + 失败两形皆收（非 2xx ∥ 200 流内 `error`——`findStreamError`；KD-SV-94）∥ 镜像引用形校验（`parseImageRef`/`normalizeImageRef`）。
  * 本批增补（sandbox-volumes 批——§3 卷族 ∥ KD-SV-104）：卷列表（`GET /volumes`——读时读）∥ 删卷（`DELETE /volumes/<名>`——动作类 15s；名形 = 路由侧前置校验，本档直入路径段）。
  *
- * 本批增补（sandbox-exec-rebuild 批——执行面重做）：`networks`（create ∥ inspect ∥ delete——`Options` 携桥名 `com.docker.network.bridge.name`，闸匹配锚）∥
+ * 本批增补（sandbox-exec-rebuild 批——执行面重做）：`networks`（create ∥ inspect ∥ delete——`Options` 直通）∥
  * `archive`（get ∥ put——快照/恢复流式，专用长超时）∥ `containerState`（引擎 `State` 三值——墙钟判据 ∥ 探针读数）∥ `buildImage`/`imageDetail`（底座可换派生——KD-SV-185）∥
  * 拉取 `auth` 参（`X-Registry-Auth`——KD-SV-188）。
  * **连接面 TLS 档（增补 #2——KD-SV-192…195）**：地址归一按档（`normalizeDockerAddress(raw, { tls })`——裸 host 补 scheme + 缺省端口 2375/2376；显式 scheme 与档相抵 ⇒ 抛）；
@@ -200,12 +200,15 @@ export function parseImageRef(raw) {
   return { image: text, tag: "latest" }
 }
 
-/** 删除形（§3 KD-SV-95：`ref` = 镜像 id 或 `名:标签`——字符集 `[A-Za-z0-9][A-Za-z0-9._:/@-]*`，禁空白/`?`/`#`/`%`；含 `/`/`:` 故走请求体）。 */
+/** 删除形（§3 KD-SV-95：`ref` = 镜像 id 或 `名:标签`——字符集 `[A-Za-z0-9][A-Za-z0-9._:/@-]*`，禁空白/`?`/`#`/`%`；含 `/`/`:` 故走请求体）。
+ *  **段级边界（#1271）**：单点 `.`、`/`、`:` 许可（正常形零回归）；按 `/` 拆段含 `..` ⇒ 抛（`ref` 直入引擎删除路径——失败零外呼，路由转 400 人话）。
+ *  拉取径 `parseImageRef` 同族**未加固**（走 query 非 path——射程外）。 */
 export function normalizeImageRef(raw) {
   const text = typeof raw === "string" ? raw.trim() : ""
   if (text === "") throw new Error("镜像引用不可为空（ref = 镜像 id 或 名:标签）")
   if (text.length > IMAGE_REF_MAX) throw new Error(`镜像引用超长（≤ ${IMAGE_REF_MAX} 字符；实长 ${text.length}）`)
   if (!/^[A-Za-z0-9][A-Za-z0-9._:/@-]*$/.test(text)) throw new Error(`镜像引用形非法（禁空白 ∥ ? ∥ # ∥ % ∥ 首字符须字母/数字）：${text}`)
+  if (text.split("/").includes("..")) throw new Error(`镜像引用禁 .. 段（形 = 镜像 id 或 名:标签）：${text}`)
   return text
 }
 
@@ -306,7 +309,7 @@ export function createDockerClient({ baseUrl, apiVer = null, fetchImpl = fetch, 
         },
       }
     },
-    /** 网络（§3 底座）：建 ∥ 查 ∥ 删（建/删 = 动作类 15s；`Options.com.docker.network.bridge.name` = 闸锚 `tcws<id>`）。 */
+    /** 网络（§3 底座）：建 ∥ 查 ∥ 删（建/删 = 动作类 15s）。 */
     createNetwork: (body) => request("POST", `${prefix()}/networks/create`, { body, timeoutMs: actionTimeoutMs }),
     inspectNetwork: (id) => request("GET", `${prefix()}/networks/${encodeURIComponent(id)}`),
     deleteNetwork: (id) => request("DELETE", `${prefix()}/networks/${encodeURIComponent(id)}`, { timeoutMs: actionTimeoutMs }),

@@ -1,7 +1,7 @@
 /**
  * events.mjs — 渲染面事件归约核心（事件通道 → 切片写者**单源** · 批档 §2.2(e) / §2.11⑧ · `docs/desktop/design/IPC.md` §1）：
  * 切片写者的**单源**——主进程只产事件 / 回执，值面落树全在本档；订阅接线面出档 `renderer/events-subscribe.mjs`
- *（二十三通道表 · `attachEvents` · 回合尾窄口携键 —— 300 行拆分层落形）；问题 / 任务切片面出档 `renderer/questions.mjs`、
+ *（二十五通道表 · `attachEvents` · 回合尾窄口携键 —— 300 行拆分层落形）；问题 / 任务切片面出档 `renderer/questions.mjs`、
  * **宿主唤醒面三切片**（挂起 ∕ 消化 ∕ 到期）= **出档 `renderer/events-wake.mjs`**（R5 先拆后改 —— 本档触 500
  * 硬限；三归约体 + 共件 `countOf` 迁入该档，本档引三件分派，无环）；
  * 位标面出档 `renderer/badges.mjs`（桌面残余批拆档产物 —— `clearQuestion` 本档 re-export 保导出名面）；
@@ -21,6 +21,8 @@
  * 值形对齐核卡渲染预期）+ 三处态机接线（函数住 `renderer/subagent-reduce.mjs`，本档只接 —— 零第二实现）：
  * 回合尾 `stopped` ∧ 本键非挂起 ⇒ **本键表复位**（`resetSubBlocks`）· `openSession` 键变 ⇒ 复位新键表 ·
  * `ev:susp` 出窗帧 ⇒ **退出兜底归档**（`freezeAllSubBlocks` —— 住 `events-wake.mjs`）。
+ * **SSH 会话批增 `ev:secret`**：凭据弹窗切片（归约体两件住 `renderer/secret-prompt.mjs` —— 本档只接；
+ *  `stopped` 终局与提问族同点出场；值不入切片 —— 载荷只携描述面 `fields` / `keys`）。
  *
  * 导出面（`docs/desktop/design/RENDERER.md` §1.1 事件归约面条 —— 订阅接线一发已拆出同源档）：
  *   `reduce(state, ev, now)`   纯归约（零 DOM / 零 IPC ⇒ 平 node 直测）；无变化 ⇒ **原引用**
@@ -28,7 +30,7 @@
  *                              回执三径同点；`flags` 非载体 ⇒ 零写）——**re-export 自 `renderer/events-flags.mjs`**
  *   `sameRecord(a, b)`         读数同值判（浅比 —— 页读径与归约面读数槽共用 —— 单一实现零副本）——同上 re-export
  *   `openSession(state, key)`  `activeSession` 写者（置键 / `null` 关页 + 清本键 `done` 位标）
- *   `clearApproval(state, promptId)`  出站成功后摘项（写者表隐含 —— 见 §2.11⑦；调用面 = `renderer/mount-pool.mjs`；**清码判据 = 两族皆清**）
+ *   `clearApproval(state, promptId)`  出站成功后摘项（写者表隐含 —— 见 §2.11⑦；调用面 = `renderer/mount-pool.mjs`；**清码判据 = 全族皆清**）
  *   `clearQuestion(state, key)`  提问出场 ⇒ 摘本键项 + 清本键 `approval` 位（两调用面 = 出站 `ok` 真 ∥ `stopped` 终局；
  *                              住 `renderer/questions.mjs`——本档 re-export 保名面）
  *   `isTurnTail(ev)`           回合尾判据**单源**（**三径** = `ev:activity` 无 `fields` 的 `done` / `stopped` ∥ `ev:error` —— `onActivity` / `onError` 与订阅面 `events-subscribe.mjs` 同用）
@@ -47,6 +49,9 @@ import { appendBlock } from "./store.mjs"
 // 问题 / 任务切片面（桌面残余批拆档产物）：两归约体归 `reduce` 分派；`clearQuestion` 两调用面同源。
 import { clearQuestion, onQuestion, onTask } from "./questions.mjs"
 export { clearQuestion }
+// 凭据弹窗面（SSH 会话批增）：归约体两件入本档分派（弹窗 ∥ 宿主 ∥ 出站 = 同档 —— `renderer/secret-prompt.mjs`；
+// 值不入切片：`ev:secret` 载荷与切片只携描述面）。
+import { clearSecret, onSecretRequest } from "./secret-prompt.mjs"
 // 位标面单源（同批拆出——`events.mjs` 500 行硬限顶格）；本档 `onApproval` / `onActivity` / `onError` /
 // `openSession` / `clearApproval` 与 `renderer/questions.mjs` 同引。
 import { badgeStamps, hasPendingFor } from "./badges.mjs"
@@ -94,7 +99,7 @@ function withPool(state, { approvals = null, running = null } = {}) {
   return { ...state, pool: { ...pool, approvals: nextApprovals, approval: nextApprovals.length, running: nextRunning } }
 }
 
-// ─── 纯归约（二十二通道 → 切片；`ev:config` = 纯信号窄口不入归约）────────────
+// ─── 纯归约（二十三通道 → 切片；`ev:config` = 纯信号窄口不入归约）────────────
 
 /** `ev:approval`——待决项入池（载荷白名单 `APPROVAL_KEYS` + 去 `undefined` ⇒ 零新载荷键；条目另携**起源键**
  *  `item.key = ev.key ?? null` —— 内部簿记，消费面读取集零扩）· `pool.approval` = 待决数 ·
@@ -116,7 +121,7 @@ function onApproval(state, ev) {
 /** 回合尾判据**单源**（三径 = §2.16②/④ + 批 A 修正轮 —— `docs/desktop/design/RENDERER.md` §1.1「回合尾三径」条）：
  *  吃**两通道形**：`ev:activity` ∧ `fields` 键**不在场** ∧ `event ∈ {done, stopped}` ∥ `ev:error`（该通道**单义** = 宿主回合结算
  *  〔错误径〕—— 工具级错误不经本通道 ⇒ 全收）∥ 余 ⇒ 假；值面 `onActivity` / `onError` 与订阅面（回合尾 ⇒ 标题刷新 · 输入区 flush）同用。
- *  判据按**键在场**判（设计字面 = `IPC.md:31`「`fields` 键在场 ⇒ 内联形」）：内联形 `fields` 值可为 `null`（核 ⟦ev⟧ 段无分隔符）或串 ⇒ 零回合尾。 */
+ *  判据按**键在场**判（设计字面 = `IPC.md` §1「`fields` 键在场 ⇒ 内联形」）：内联形 `fields` 值可为 `null`（核 ⟦ev⟧ 段无分隔符）或串 ⇒ 零回合尾。 */
 export function isTurnTail(ev) {
   const channel = ev?.channel
   if (channel === "ev:error") return true
@@ -142,7 +147,7 @@ function withStopMark(state, key) {
  *  ③ 无 `fields` ∧ `isTurnTail` ⇒ **唯一回合尾**（去 `running` + 置 `done`；`stopped` 兼摘本键提问项 + 清本键 `approval` 位 ——
  *  中断径各门按取消结算 ⇒ 卡随事件面出场；`done` 径不摘 —— `docs/desktop/design/RENDERER.md` §1.1）；
  *  **`turnBreak` 形（「对齐第三批」项 7）** = 宿主接核 `onTurnEnd` 的子回合边界：**清游标**（尾块追加态收束 ⇒
- *  下片文本起新块 —— VSC `streaming.js:71-88` 复位语义）；**非回合尾**（三径判据不含本形）· 键门同块面诸写者；
+ *  下片文本起新块 —— VSC `onTurnBreak` 复位语义）；**非回合尾**（三径判据不含本形）· 键门同块面诸写者；
  *  **`stopped` 兼两事（「对齐第三批」项 5 / 6）**：未结算工具块清扫（`interrupted`）+ 停止痕切片写（任意键 ——
  *  痕面非块面，不设键门）；
  *  **回合尾三径皆兼游标清点**（#459 ① 族 —— 尾块追加态结束 ⇒ 游标不得常驻；**键门同 `onError` / `onToolCall`** ——
@@ -176,8 +181,10 @@ function onActivity(state, ev, now) {
       ...(stamps.changed ? { tabBadges: stamps.badges } : {}),
     }
   }
-  const tail = ev.event === "stopped" ? clearQuestion(state, ev.key) : state
-  // R5（#522①）：会话中止 ⇒ **本键表复位**（VSC `streaming.js:156` 同义 —— `aborted && !suspended`）：
+  // 回合尾 `stopped`：两待答族同清（提问卡 ∥ **凭据弹窗** —— 门侧按取消结算（`suspensions.mjs` `denyGates`），
+  // 端面项随终局出场；清码判据 = 全族皆清）。
+  const tail = ev.event === "stopped" ? clearSecret(clearQuestion(state, ev.key), ev.key) : state
+  // R5（#522①）：会话中止 ⇒ **本键表复位**（VSC `streaming.js` 同义 —— `aborted && !suspended`）：
   // 回合尾 `stopped` ∧ 本键非挂起（挂起窗内回合尾不动池 —— children 持会话信号）⇒ 池子随回合死。
   const reset = ev.event === "stopped" && state.susp?.[ev.key]?.active !== true ? resetSubBlocks(tail, ev.key) : tail
   const swept = ev.event === "stopped" && forActive(state, ev) ? sweepRunningTools(reset) : reset
@@ -222,6 +229,7 @@ export function reduce(state, ev, now = Date.now()) {
     case "ev:activity": return onActivity(state, ev, now)
     case "ev:error": return onError(state, ev)
     case "ev:question": return onQuestion(state, ev)
+    case "ev:secret": return onSecretRequest(state, ev)
     case "ev:task": return onTask(state, ev)
     case "ev:susp": return onSusp(state, ev, now)
     case "ev:digest": return onDigest(state, ev)
@@ -249,7 +257,7 @@ export function openSession(state, key) {
   const next = key == null ? null : String(key)
   const cleared = next === null ? { badges: state.tabBadges ?? {}, changed: false } : badgeStamps(state.tabBadges ?? {}, next, "done", false)
   if (next === state.activeSession && !cleared.changed) return state
-  // R5（#522① · 清屏径）：键变 ⇒ **复位新键表**（VSC `clearMessages` ⇒ `resetActivity` 同义 —— `chat-messages.js:120`）：
+  // R5（#522① · 清屏径）：键变 ⇒ **复位新键表**（VSC `clearMessages` ⇒ `resetActivity` 同义 —— `chat-messages.js`）：
   // 历史会话重现不留旧代行账（活块由 2s 存活投影自愈重投）；同键重开（零键变）不复位。
   const swapped = next !== null && next !== state.activeSession ? resetSubBlocks(state, next) : state
   const base = cleared.changed
@@ -273,7 +281,7 @@ export function clearApproval(state, promptId) {
   const next = withPool(state, { approvals: remaining })
   const key = hit.key ?? null
   if (key === null) return next // 无起源键 ⇒ 零位标写（保位）
-  if (hasPendingFor(next, key)) return next // 本键任一族尚有项 ⇒ 零位标写（#780：清码 = 两族皆清）
+  if (hasPendingFor(next, key)) return next // 本键任一族尚有项 ⇒ 零位标写（#780：清码 = 全族皆清）
   const cleared = badgeStamps(next.tabBadges ?? {}, key, "approval", false)
   return cleared.changed ? { ...next, tabBadges: cleared.badges } : next
 }

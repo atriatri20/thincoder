@@ -30,7 +30,7 @@ export function printCompletion(shell) {
         list)    COMPREPLY=( $(compgen -W "--json --full --family --cwd" -- "$cur") ) ;;
       esac ;;
     team) case "$prev" in
-        team)  COMPREPLY=( $(compgen -W "login logout status" -- "$cur") ) ;;
+        team)  COMPREPLY=( $(compgen -W "login logout rotate status" -- "$cur") ) ;;
         login) COMPREPLY=( $(compgen -W "--server --user" -- "$cur") ) ;;
       esac ;;
     distill) COMPREPLY=( $(compgen -W "--yes --layer=" -- "$cur") ) ;;
@@ -65,7 +65,7 @@ _thincoder() {
         'completion[Generate shell completion script]' \\
         'session[Session dir GC: session gc --dry-run|--confirm]' \\
         'ledger[Ledger variants: migrate / audit / list]' \\
-        'team[Team login: login / logout / status]'
+        'team[Team login: login / logout / rotate / status]'
       ;;
     args)
       case "$words[1]" in
@@ -105,7 +105,7 @@ complete -c thincoder -a completion -d 'Shell completion'
 complete -c thincoder -a session -d 'Session dir GC (session gc --dry-run|--confirm)'
 complete -c thincoder -a ledger -d 'Ledger variants: migrate / audit / list'
 complete -c thincoder -a acp -d 'Agent Client Protocol server for IDEs'
-complete -c thincoder -a team     -d 'Team login: login / logout / status'
+complete -c thincoder -a team     -d 'Team login: login / logout / rotate / status'
 
 # Flags
 complete -c thincoder -s v -l version -d 'Print version'
@@ -148,7 +148,7 @@ complete -c thincoder -n '__fish_seen_subcommand_from ledger' -l dry-run -l conf
 complete -c thincoder -n '__fish_seen_subcommand_from ledger; and __fish_seen_subcommand_from list' -l json -l full -l family -l cwd -d 'Ledger list flags'
 
 # team subcommands / flags
-complete -c thincoder -n '__fish_seen_subcommand_from team' -a 'login logout status' -d 'Team login commands'
+complete -c thincoder -n '__fish_seen_subcommand_from team' -a 'login logout rotate status' -d 'Team login commands'
 complete -c thincoder -n '__fish_seen_subcommand_from team; and __fish_seen_subcommand_from login' -l server -d 'Team server URL'
 complete -c thincoder -n '__fish_seen_subcommand_from team; and __fish_seen_subcommand_from login' -l user -d 'Team user name'
 `)

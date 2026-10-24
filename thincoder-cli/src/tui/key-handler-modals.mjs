@@ -1,6 +1,8 @@
 import { computeLayout } from "./layout.mjs"
 import { C } from "./ansi.mjs"
 import { teamAskStepAt } from "./ask-steps.mjs"
+// SSH 凭据窗（SSH-SESSION 批 §6.22 ⑧——模态族第四支）：提交 / 取消转口（面体单源 = secret-prompt.mjs）
+import { secretPromptCancel, secretPromptSubmit } from "./secret-prompt.mjs"
 
 /** 模态族之一（2026-09-22 structure-debt §2.1 分族 2 · #226）：通用列表 picker——
  *  ↑↓/PgUp/PgDn/Home/End 导航 + 输入即过滤 + Enter 选中 + Esc 取消；块体自 key-handler.mjs
@@ -61,10 +63,23 @@ export function handleTeamAskKeys(str, key, ctx) {
   const { state, teamAskSubmit, teamAskCancel } = ctx
   if (state.teamAsk == null) return false
   if (key.name === "escape") { teamAskCancel(); return true }
-  if (key.name === "return") {
+  if (key.name === "return" || key.name === "enter" || str === "\r") {
     Promise.resolve(teamAskSubmit()).catch((e) => ctx.pushLine(`[error] ${e?.message ?? e}`, C.error))
     return true
   }
+  return true // ↑↓/PgUp/PgDn：吞（面内无滚动/历史——PgUp 不触发 loadOlder）
+}
+
+/** 模态族第四支（SSH-SESSION 批 · `docs/core/design/TOOLS.md` §6.22 ⑧）：SSH 凭据窗——Esc 整窗
+ *  取消 ∥ Enter 提交当前字段（必填空 ⇒ 面内驻留；判据含 `return` / `enter` / 裸 `\r` 三形——同 picker
+ *  族，防终端 LF 上报时落编辑族）；↑↓/PgUp·PgDn 吞（面内零历史 ∥ 零滚动穿透）；可打印键回落编辑族
+ *  （输入框编辑——掩码回显走 `layout.mjs` `secretMaskActive`）。
+ *  路由 = 分派器 createKeyHandler（守卫 = 面在场 + 上列键）。 */
+export function handleSecretPromptKeys(str, key, ctx) {
+  const { state } = ctx
+  if (state.secretPrompt == null) return false
+  if (key.name === "escape") { secretPromptCancel(ctx); return true }
+  if (key.name === "return" || key.name === "enter" || str === "\r") { secretPromptSubmit(ctx); return true }
   return true // ↑↓/PgUp/PgDn：吞（面内无滚动/历史——PgUp 不触发 loadOlder）
 }
 

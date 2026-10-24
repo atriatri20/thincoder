@@ -8,7 +8,8 @@
 import { embed, embedTolerant, cosine, toBlob, fromBlob } from "../embedding.mjs"
 import { scanVectors, createTopK } from "./scan.mjs"
 import { normalizeOrigin } from "./origin.mjs"
-import { declaredPublicRoots, loadProjectDeclaration, isExcludedRelPath, declaredIndexScope, isInDeclaredScope } from "../conventions.mjs"
+import { declaredPublicRoots } from "../conventions.mjs"
+import { createReadGate } from "./read-gate.mjs" // 面⑥∪面⑦ 读面准入单源（#1372 抽件——两档原各持一份逐字相同的 rowHidden）
 import { buildFtsQuery, ensureEmbeddings, EMBED_TEXT_MAX_LEN } from "./core.mjs"
 import { safeSliceUTF16 } from "../text-budget.mjs"
 import { DESC } from "../tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/code_search.md
@@ -35,19 +36,9 @@ export async function codeSearch(memory, query, { limit = 5 } = {}) {
   const origins = searchOrigins(memory)
   const ftsOriginFilter = origins.length === 1 ? `AND c.origin = ?` : origins.length > 1 ? `AND c.origin IN (${origins.map(() => "?").join(", ")})` : ""
   const originParams = origins
-  // §6.14 读面准入过滤（FTS 列表建成后 ∥ 向量 top-K push 前；两判据并列互不吞）：排除谓词（面①∪面⑥，
-  // 行 origin 为 `base`）∪ 声明范围门（面⑦——`isInDeclaredScope(path, declaredIndexScope(origin), origin)`，
-  // 逐 origin 预载一次）⇒「批次档 ∥ 范围外路径从未入索引」等价检索；存量行不删（收尾保护位）；窗口欠额接受。
-  const declCache = new Map()
-  const scopeCache = new Map()
-  const rowHidden = (origin, path) => {
-    const d = declCache.get(origin) ?? loadProjectDeclaration(origin)
-    declCache.set(origin, d)
-    if (isExcludedRelPath(path, d, origin)) return true
-    let scope = scopeCache.get(origin)
-    if (scope === undefined) { scope = declaredIndexScope(origin); scopeCache.set(origin, scope) }
-    return !isInDeclaredScope(path, scope, origin)
-  }
+  // §6.14 读面准入过滤（FTS 列表建成后 ∥ 向量 top-K push 前）——判据与逐 origin 预载单源 = `./read-gate.mjs`；
+  // 存量行不删（收尾保护位）；窗口欠额接受。
+  const { rowHidden } = createReadGate()
   const ftsNeedOrigin = origins.length !== 1 // 单 origin 形 SQL 零改；多 origin ∥ 无过滤形补 `origin` 列（行 origin 随行可得）
 
   const ftsList = ftsQuery ? memory.db.prepare(`

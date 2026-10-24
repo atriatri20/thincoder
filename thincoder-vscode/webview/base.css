@@ -376,6 +376,68 @@ body {
 }
 .question-input:focus { border-color: var(--accent); }
 
+/* ─── Inline Secret Input Prompt（`onSecretInput` 凭据卡 —— question 卡同族） ───── */
+
+/* 卡壳沿用 question 卡尺寸 / 描边 / 底色；字段行 = 标签 + 输入纵排（掩码字段 `type=password`
+   由端壳 `secret-input.js` 设定，回显形式归宿主）。 */
+.secret-card {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-size: var(--vscode-editor-font-size, 14px);
+  line-height: 1.5;
+}
+
+.secret-card .secret-title {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.secret-card .secret-prompt {
+  color: var(--fg);
+  margin-bottom: 8px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.secret-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.secret-field label {
+  color: var(--fg);
+  opacity: 0.85;
+}
+
+.secret-input {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--fg);
+  background: var(--vscode-input-background, transparent);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  outline: none;
+}
+.secret-input:focus { border-color: var(--accent); }
+
+.secret-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.secret-card .perm-btn {
+  font-size: var(--vscode-editor-font-size, 14px);
+  font-weight: 400;
+}
+
+
 
 /* ─── Syntax highlighting tokens ─────────────────── */
 

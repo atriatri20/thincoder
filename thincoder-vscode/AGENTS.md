@@ -88,7 +88,7 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 | extension → webview | `turnBreak` | — (machine-only sub-turn boundary: advisor/verify/pending-task guard pushback → the webview resets its block pointers so the next reasoning/content starts a fresh block; covers non-thinking models) |
 | extension → webview | `toolCall` / `toolResult` | `{ name, args? / text }` |
 | extension → webview | `complete` / `loading` / `aborted` / `error` | `{ text? }` |
-| extension → webview | `providerStatus` | `{ keyOk, status }` — provider 配置态与状态快照（`status.providerState` = 核统一解析三态投影，`keyOk := 非 invalid 类`——#841；开面板拍回批序末段：`indexStatus → providerStatus → proxySettings → websearchSettings → shellCandidates → agentSettings`；`settings.mjs:340` 发射） |
+| extension → webview | `providerStatus` | `{ keyOk, status }` — provider 配置态与状态快照（`status.providerState` = 核统一解析三态投影，`keyOk := 非 invalid 类`——#841；开面板拍回批序末段：`indexStatus → providerStatus → proxySettings → websearchSettings → shellCandidates → agentSettings`；`pushStatus` 发射） |
 | extension → webview | `autoApprove` | `{ value }` (session-level AUTO state, pushed on session load and on approve-all) |
 | extension → webview | `models` | `[{ id, label, provider, group, reasoning[] }]` |
 | extension → webview | `sessions` | `{ sessions: [{ name, title, count, active, updated }], active, ledger? }` — `ledger` = session-ledger anomaly notice (`{ refused, reason, scene }`, carried only when anomalous — `../docs/vsc/design/WEBVIEW-PROTOCOL.md` §2) |
@@ -97,6 +97,9 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 | extension → webview | `question` | `{ question, options, promptId }` — inline question-tool card (option buttons or free-text input + submit/cancel), NOT a native VS Code popup; card carries a host-generated monotonic `promptId` — `questionResponse` matches by it (C1, WEBVIEW.md §8) |
 | webview → extension | `questionResponse` | `{ answer, promptId }` — null = cancelled → tool returns "(user cancelled)"; host resolves the queue entry BY promptId (never an unconditional head shift — C1, see WEBVIEW.md §8) |
 | extension → webview | `questionCancelled` | `{ promptId }` — an unanswered question card was released by abort/Stop; the webview removes the matching card (C1, see WEBVIEW.md §8) |
+| extension → webview | `secretInput` | `{ payload, promptId }` — inline secret-input card（核注入缝 `ctx.onSecretInput`——凭据 / 秘密输入；设计单源 = `docs/core/design/TOOLS.md` §6.22 ⑧）：`payload = { kind, sessionId, host, user, port, fields: [{ name, masked, required, prefill }], keys: { title, prompt } }`——词面 = i18n 键（端投影走本端字典）；**值只走返回路**（卡面零日志 ∥ 零状态留存；掩码字段 `type=password` 渲染） |
+| webview → extension | `secretInputResponse` | `{ values: { <name>: <值> } \| null, promptId }` — null = cancelled（工具侧得可读句——不挂起 ∥ 不重弹）；host 按 `promptId` 精确匹配队列条目（非无条件 shift——迟到 / 错序响应不误 resolve） |
+| extension → webview | `secretInputCancelled` | `{ promptId }` — an unanswered secret-input card was released by abort/Stop; the webview removes the matching `.secret-card`（`questionCancelled` 同构） |
 | extension → webview | `turnState` | `{ state, counts? }` — single busy-state broadcast: `state` ∈ `idle`/`running`/`susp`; `counts` = `{ running, queued, pending, done }` background-pool numbers riding the susp publishes (C2 — authoritative prose in WEBVIEW.md §8, mirrored here without duplication) |
 | extension → webview | `userMessage` | `{ text }` (history replay; also the quick-input `sendMessage` command echo) |
 | extension → webview | `clearMessages` | — |

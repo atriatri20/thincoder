@@ -49,7 +49,7 @@ function errorNode(block, key, handlers, withLabel, canRetry) {
     children.push({
       tag: "details",
       props: { class: "error-details" },
-      // `summary` 字面 = 核横幅同字面（`thincoder-render-core/flow/block.mjs:138` —— 核 / VSC 两源无此词键）
+      // `summary` 字面 = 核横幅同字面（核 `renderErrorBanner` —— 核 / VSC 两源无此词键）
       children: [{ tag: "summary", props: {}, children: ["Details"] }, { tag: "pre", props: {}, children: [block.techInfo] }],
     })
   }
@@ -59,7 +59,7 @@ function errorNode(block, key, handlers, withLabel, canRetry) {
   return { tag: "div", props: { class: "block block-error", "data-block-id": key, "data-block-kind": "error" }, children }
 }
 
-/** 思考耗时投影（Codex 形大改批 · 2026-10-04）：`startedAt` 两端齐备且顺序合理 ⇒ 秒差；否则 `null`
+/** 思考耗时投影（美化形大改批 · 2026-10-04）：`startedAt` 两端齐备且顺序合理 ⇒ 秒差；否则 `null`
  *  （尾块在途 ∕ 旧会话无时刻面 ∕ 时钟回拨 —— **零假造**）。端点单源 = `events-blocks.mjs` 建块 `startedAt`
  *  （`onReasoning` ∕ `onToken` ∕ `onToolCall` 三径同拍 —— `reduce` 帧时刻）。 */
 function reasoningDurationOf(block, next) {
@@ -119,7 +119,7 @@ export function blockNode(block, index, hidden, handlers, prev, canRetry = false
 
 /** 消息操作行（复制钮单枚 —— 形与核件代码块复制钮同族：图标钮 + 成功态打勾 1200ms）。
  *  文案（`title` ∕ `aria-label`）= 既有词键 `msg.copy`（复制成功态词面由委托面就地刷 `msg.copied`——
- *  值逐字同核件代码块复制钮，零新键）；字形住 `codex.css` `content`（零字形字面）。 */
+ *  值逐字同核件代码块复制钮，零新键）；字形住 `beauty.css` `content`（零字形字面）。 */
 function msgActionsNode() {
   return {
     tag: "div",

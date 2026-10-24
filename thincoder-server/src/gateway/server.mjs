@@ -1,16 +1,22 @@
 /**
  * server.mjs — http 服务 ∥ 路由注册表 ∥ 静态面兜底 ∥ 写端点 JSON 型门 ∥ body 读限（32 MiB；快照路由 200 MiB——§2.6） ∥ 逐请求日志（含断连行）
- * （gateway/API.md §1 ∥ §4；型门口径 = accounts/ACCOUNTS.md §3 ∥ metering/METERING.md §3 前言）。
+ * ∥ 匿名入口 IP 限流判点（`limits.mjs`——路由之前；429 + `Retry-After`）
+ * ∥ TLS 终止层（内置 `node:https`——证书材料读取 ∥ 重定向监听 308）
+ * （gateway/API.md §1 ∥ §4；型门口径 = accounts/ACCOUNTS.md §3 ∥ metering/METERING.md §3 前言；TLS 面 = gateway/PUBLICNET.md §2）。
  *
  * 分派 = 「method + path → 处理函数」注册行制（扩展点 G1）：新端点 = 注册一行 + 新处理模块，
  * 不塞主干 if-else。处理函数签名 `(req, res, ctx)`，ctx = `{ config, log, routes, params }`。
  * 静态面（webui——`public/` 直发） = 注册路由之后的 GET/HEAD 兜底：`/v1/*` ∥ `/api/*` 不走（优先级 = API.md §1）。
  *
  */
+import { readFileSync } from "node:fs"
 import { createServer } from "node:http"
+import { createServer as createHttpsServer } from "node:https"
+import { createSecureContext } from "node:tls"
 
 import { HttpError, sendError } from "./errors.mjs"
 import { refuseUpgrade } from "./ws.mjs"
+import { clientIp } from "../accounts/login-guard.mjs"
 
 /** 请求体上限（gateway/API.md §3——413 `payload_too_large`；超限不转发）。 */
 export const MAX_BODY_BYTES = 32 * 1024 * 1024
@@ -49,11 +55,15 @@ export function createRouteTable() {
   }
 }
 
-/** 建 http 服务（未 listen——监听归入口）。逐请求一行日志（method ∥ path ∥ status ∥ ms）。
+/** 建 http 服务（未 listen——监听归入口）。`tls` 缺省 null ⇒ `node:http`（现行为零变）；
+ *  `tls = { key, cert }`（已读入内存的内容——`loadTlsMaterial` 产物）⇒ `node:https`（监听/升级/静态面同形复用）。
+ *  `limits`（`limits.mjs` 产物）缺省 null ⇒ 不限；在场 ⇒ 路由之前判一次（超限 ⇒ 429 `rate_limited` + `Retry-After`，
+ *  并调 `noteBurst` 落审计——同窗聚合）。
+ *  逐请求一行日志（method ∥ path ∥ status ∥ ms）。
  *  `staticSite` = `createStaticSite()` 产物（webui/static.mjs）——缺省 null（纯 API 面，测试友好）。 */
-export function createGatewayServer({ config = {}, routes, log = null, staticSite = null, upgrade = null } = {}) {
+export function createGatewayServer({ config = {}, routes, log = null, staticSite = null, upgrade = null, tls = null, limits = null } = {}) {
   if (!routes) throw new Error("createGatewayServer：缺少路由表（routes = createRouteTable()）")
-  const server = createServer((req, res) => {
+  const handler = (req, res) => {
     const started = Date.now()
     const pathname = safePathname(req.url)
     // 逐请求一行（D3 接线补断连面）：正常 = `finish`；中途断连 = `close`（`aborted: true`——未发响应头时
@@ -72,6 +82,17 @@ export function createGatewayServer({ config = {}, routes, log = null, staticSit
     }
     res.on("finish", () => logRequest())
     res.on("close", () => logRequest(!res.writableEnded))
+    // 匿名入口限流判点（gateway/PUBLICNET.md §2——路由之前）：IP 口径与登录防爆破同源（`clientIp` + `trustProxy`）
+    if (limits !== null) {
+      const ip = clientIp(req, { trustProxy: config?.trustProxy === true })
+      const verdict = limits.check(req.method, pathname, ip)
+      if (verdict.limited) {
+        limits.noteBurst({ ip, ruleClass: verdict.ruleClass, retryAfterS: verdict.retryAfterS }) // 审计聚合行（同 IP 同窗一次）
+        req.resume() // 请求体排空（POST 携体时早退——不排会被 keep-alive 直接断，客户端读不到 429 体；同 createRedirectServer）
+        sendError(res, "rate_limited", `请求过于频繁（${verdict.ruleClass} 类端点限流，${verdict.retryAfterS}s 后可重试）`, { headers: { "Retry-After": String(verdict.retryAfterS) } })
+        return
+      }
+    }
     const route = routes.resolve(req.method, pathname)
     if (!route) {
       if (servesStatic(staticSite, req, pathname) && staticSite.serve(req, res, pathname)) return
@@ -95,22 +116,22 @@ export function createGatewayServer({ config = {}, routes, log = null, staticSit
     Promise.resolve()
       .then(() => route.handler(req, res, { config, log, routes, params: route.params }))
       .catch((err) => failRequest(res, err, log))
+  }
+  const server = tls ? createHttpsServer({ key: tls.key, cert: tls.cert }, handler) : createServer(handler)
+  // 升级路挂点（sandbox-container-terminal 批；gateway/API.md §4）：`upgrade` 处理件**直挂、不套包装**——
+  // `server.listeners("upgrade")` 恰一条且身份 = 传入手（装配断言逐条对得上——OPS.md §4.1 A5）；
+  // 未接线 ⇒ 一律「未匹配」口径（404 后断开——错误形同上）。socket 错误面挂连接层（拒绝/断开后对端强断——零噪声；
+  // 语义收口归各层）——挂在升级监听内会多一层包装、断掉身份可比性。
+  server.on("upgrade", typeof upgrade === "function" ? upgrade : (req, socket) => {
+    refuseUpgrade(socket, "not_found", `无此升级路由：${req?.method} ${safePathname(req?.url)}`)
   })
-  // 升级路挂点（本批——sandbox-container-terminal；gateway/API.md §4）：`server.on("upgrade", …)` 全量交 `upgrade` 处理件
-  //（路径匹配/判权/404 归其内）；未接线 ⇒ 一律「未匹配」口径（404 后断开——错误形同上）。
-  server.on("upgrade", (req, socket, head) => {
-    socket.on("error", () => { /* 升级 socket 错误面：拒绝/断开后对端强断——零噪声（语义收口归各层） */ })
-    if (typeof upgrade !== "function") {
-      refuseUpgrade(socket, "not_found", `无此升级路由：${req?.method} ${safePathname(req?.url)}`)
-      return
-    }
-    try {
-      upgrade(req, socket, head)
-    } catch (e) {
-      log?.error("upgrade_handler_error", { message: e?.message ?? String(e) })
-      socket.destroy()
-    }
+  server.on("connection", (socket) => {
+    socket.on("error", () => { /* 对端强断——零噪声（升级 socket 同覆盖） */ })
   })
+  // 空闲连接超时（2026-10-14 走查笔 5——用户「Failed to fetch」根因）：Node 默认 5s 太短——弹窗填表 >5s 后
+  // 浏览器在已关闭的 keep-alive 连接上发 POST 必败（浏览器不重试 POST；GET 会静默换连接不掉线）；提到 5 分钟。
+  server.keepAliveTimeout = 300000
+  server.headersTimeout = 306000
   return server
 }
 
@@ -199,6 +220,40 @@ export function readStreamBody(req, { limit = MAX_BODY_BYTES, onChunk } = {}) {
     req.on("data", onData)
     req.on("end", onEnd)
     req.on("error", onError)
+  })
+}
+
+/** 读 TLS 材料（证书 ∥ 私钥 → 内存）并校验可建上下文（启动期 ∥ `SIGHUP` 轮换共用）。
+ *  读不到 ∥ 非 PEM ∥ 两件不成对 ⇒ 抛（启动径 ⇒ 拒启；轮换径 ⇒ 保旧上下文继续服务）。 */
+export function loadTlsMaterial({ certPath, keyPath }) {
+  const key = readFileSync(keyPath)
+  const cert = readFileSync(certPath)
+  createSecureContext({ key, cert }) // 校验：私钥与证书须成对且为合法 PEM（失败即抛）
+  return { key, cert }
+}
+
+/** 重定向 `Location`：主机与端口只取配置（`tls.publicHost` ∥ `tls.publicPort`——`443` 省略端口位），
+ *  请求 `Host` 头不参与（读头 = 开出站外重定向面）；路径 = 请求目标解析后的 pathname + query
+ *  （绝对形请求目标的主机部分同样丢弃——不拼入原始串）。 */
+export function redirectLocation(tls, url) {
+  let path = "/"
+  try {
+    const parsed = new URL(typeof url === "string" && url !== "" ? url : "/", "http://redirect.invalid")
+    path = `${parsed.pathname}${parsed.search}`
+  } catch {
+    path = "/" // 畸形目标 ⇒ 回落根路径（不炸）
+  }
+  const port = tls.publicPort === 443 ? "" : `:${tls.publicPort}`
+  return `https://${tls.publicHost}${port}${path}`
+}
+
+/** HTTP→HTTPS 重定向监听（任何请求 ⇒ `308` + `Location`；请求体丢弃、不挂路由表）。
+ *  用 `308` 不用 `301`：`301` 允许客户端把 POST 改写成 GET（浏览器历史行为），webui 登录表单与 API 直连都需要方法保形。 */
+export function createRedirectServer({ tls }) {
+  return createServer((req, res) => {
+    req.resume() // 请求体丢弃（连接不悬停——本面不读体）
+    res.writeHead(308, { Location: redirectLocation(tls, req.url) })
+    res.end()
   })
 }
 

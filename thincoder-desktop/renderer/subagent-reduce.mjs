@@ -30,8 +30,8 @@ import { appendBlock } from "./store.mjs"
 /** 子 agent 状态闭集（**单源** = `docs/render-core/design/RENDER-CORE.md` §5 token → patch 全表：核 relay 谱
  *  `started` / `queued` / `turn` / `done` / `settled` / `cancelled` —— `⟦ev⟧stopped` ⇒ `cancelled` 先例兼容 ·
  *  `error` 有意不载）；**`approval` = R10 补入**（child permission gate —— 非 relay 谱来路：宿主
- *  `src/main/agent-bridge.mjs:261-265` `onSubagentApproval` ⇒ `ev:subagent { status: "approval", tool }`；
- *  核态机支 = `subblocks/state.mjs:190-201`；VSC 对位 = `activity.js:133-136` `applySubagentApproval` ——
+ *  `createBridge` `onSubagentApproval` ⇒ `ev:subagent { status: "approval", tool }`；
+ *  核态机支 = `subBlocksReduce`；VSC 对位 = `applySubagentApproval` ——
  *  白名单漏收则该态桌面永不可见（⏸ ∕ `sub.awaitingApproval` 死面）；表外码 ⇒ **零写**（禁假造 —— 沿池面「表外码零节点」纪律）。 */
 const SUB_STATUS = ["started", "queued", "turn", "done", "settled", "cancelled", "approval"]
 /** `ev:subagent` 载荷键白名单（核 patch 全表字段集：身份三 + 随行九 + 审批面 `tool`〔R10 补〕+ **注记
@@ -85,11 +85,11 @@ function withSubBlocks(state, table, key) {
 }
 
 /** 记录行集上界（留档批 · #719 —— 沿核件尾环既有一致口径：CLI N2 500 显示行 ∕ 子，
- *  `thincoder-cli/src/tui/subagent-children.mjs:26` `SUB_BLOCK_LINE_LIMIT`；超界 ⇒ 保尾截断 + 省略标记行，
+ *  `SUB_BLOCK_LINE_LIMIT`；超界 ⇒ 保尾截断 + 省略标记行，
  *  **明示** —— 行数真值不静默（N6 同义））。 */
 export const RECORD_ROWS_MAX_LINES = 500
 
-/** 省略标记行（行数真值 —— CLI 省略计数同义；数据面非用户文案 —— 字面沿 CLI 先例 `thincoder-cli/src/distill.mjs:114`
+/** 省略标记行（行数真值 —— CLI 省略计数同义；数据面非用户文案 —— 字面沿 CLI 先例 `historyToTranscript`
  *  `...[... omitted ...]...`：核 ∕ 宿主词表无此键，故不走 `t()`）。 */
 const rowsTruncMarker = (lines) => `… [rows truncated: ${lines} lines omitted]`
 
@@ -188,7 +188,7 @@ export function onSubagent(state, ev, now) {
   // 核态机 deps：`now` 为**读钟函数**（`state.mjs` 每迁现刻取值 —— 出生起刻 / 冻结 `doneAt`）。
   const { effects } = subBlocksReduce(list, patch, {
     now: () => now,
-    // 桌面诊断面接线（`state.mjs:39`「给由」的到期兑现 · 2026-10-06——#76 digested-stuck 事故）：
+    // 桌面诊断面接线（`subblocks/state.mjs`「给由」的到期兑现 · 2026-10-06——#76 digested-stuck 事故）：
     // 丢弃径（drop-frozen ∥ drop-tombstone ∥ late-terminal-stub ∥ reassert-hit 等）零静默 ⇒ 有痕；
     // 本端无上行面 ⇒ 落 devtools 控制台（最小可见面；上行面出现后改路由）。
     trace: (name, bkey) => console.error(`[subagent-trace] ${name} ${bkey}`),
@@ -224,7 +224,7 @@ export function onSubchunk(state, ev, now = Date.now()) {
   return withSubBlocks(state, { ...table, [key]: next }, key)
 }
 
-/** `resetActivity` 语义接（R5 · #522① —— VSC `webview/activity.js:180-189` 同义）：**键级复位** ——
+/** `resetActivity` 语义接（R5 · #522① —— VSC `subagentSnapshotOf` 同义）：**键级复位** ——
  *  会话中止（回合尾 `stopped` ∧ 本键非挂起 —— 池子随回合死）/ 清屏（`openSession` 键变）⇒ 该键切片整删
  *  （live + 等待消化 + 墓碑全清；流内归档块 = 会话历史不动）＋活动键 ⇒ 折叠头 `running` 读数归 0（**池面 +
  *  表复位**）。他键零扰（切片级动作）；该键本就不在场 ⇒ **原引用**（幂等）。复位只清**存量** —— 迟来事件按核
@@ -237,7 +237,7 @@ export function resetSubBlocks(state, key) {
   return withSubBlocks(state, next, key)
 }
 
-/** `subBlocksFreezeAll`（R5 · #522② —— **退出兜底**；VSC `webview/activity.js:141-144` 同义）：挂起窗
+/** `subBlocksFreezeAll`（R5 · #522② —— **退出兜底**；VSC `rowsOf` 同义）：挂起窗
  *  退出帧（`ev:susp {active:false}`）⇒ 本键**全体归档** —— live ⇒ 折叠（核 `freezeMeta`；`interrupted`
  *  注记只随载荷真值落 —— 出窗帧今携该键（`suspension-drive.mjs` `postSuspEnd` 端帧 · #554①），
  *  键缺 ∕ 假 ⇒ 恒零注记，不假造）· 等待消化（`awaitingDigest`）⇒ 清态标 +

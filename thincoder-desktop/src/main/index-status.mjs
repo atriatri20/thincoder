@@ -1,8 +1,8 @@
 /**
  * index-status.mjs — 语义索引面处理体（R2 · 桌面功能对位批 · 批档 §2.4 R2 #3）：构建入口 + 状态读数。
  *
- * 两面（源 = VSC `thincoder-vscode/src/extension/panel-index.mjs:146/:180/:186-187`；核出口 =
- * `thincoder-core/memory/code-sync.mjs:192`（`codeSync`）· `memory/docs.mjs:25`（`docSync`）· 同档 `gitSync`）：
+ * 两面（源 = VSC `thincoder-vscode/src/extension/panel-index.mjs`；核出口 =
+ * `codeSync` · `docSync`· 同档 `gitSync`）：
  *   ① `runIndexBuild` —— 构建入口：先 `gitSync`（增量径；**无锚 ∕ 非 git 仓 ∕ git 不可得 ⇒ `null`**）⇒ 落
  *      全量 `codeSync` ∥ `docSync`（不同表 —— 核内注释「SQLite WAL 支持并行」；VSC ∕ CLI 同律）。回执 =
  *      计数摘要 ∥ 失败句（**不抛** —— 失败落 `{ ok:false, reason }`，失败面端侧可见；沿
@@ -14,7 +14,7 @@
  *
  * 纪律：**零 `electron` 依赖**（宿主面 = 回执 —— 平 node 可直测）；**无本项目 ⇒ 读数零计数 ∕ 构建
  * `no-project`**（禁假造：不跨项目读全库、不落假计数）；**库不在盘 ⇒ 读数零计数且不建库**（读面零副作用
- * —— 建库归构建 ∕ 装配径）；句柄 ∕ embedder 装配形沿 `thincoder-core/agent/assemble.mjs:74-79`（配置 `memory.dbPath` +
+ * —— 建库归构建 ∕ 装配径）；句柄 ∕ embedder 装配形沿 `assembleAgent`（配置 `memory.dbPath` +
  * 有 `embedding.apiKey` 才附 embedder —— 装配面单形）。
  */
 import { existsSync } from "node:fs"
@@ -22,7 +22,7 @@ import { loadConfig } from "@thincoder/core/config.mjs"
 import { createEmbedder } from "@thincoder/core/embedding.mjs"
 import { codeSync, createMemory, docSync, gitSync, memoryStatus } from "@thincoder/core/memory.mjs"
 
-/** 句柄装配（形 = `thincoder-core/agent/assemble.mjs:74-79` —— 同一配置面取值；有 embedding key 才附 embedder）。 */
+/** 句柄装配（形 = `assembleAgent` —— 同一配置面取值；有 embedding key 才附 embedder）。 */
 function openMemory(config) {
   const memory = createMemory({ dbPath: config.memory.dbPath })
   if (config.embedding?.apiKey) memory.embedder = createEmbedder(config.embedding)

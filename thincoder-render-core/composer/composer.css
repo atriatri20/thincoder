@@ -1,13 +1,11 @@
-/* composer.css — composer 输入区样式（VSC `webview/controls.css` 输入段**原样**——上提批 `2026-09-28-desktop-input-vsc-align.md` §2.4 P10）。
-   修正区间（评审轮 1 #5）= `:17-349` + `:373-388` + `:459-499` + `:582-658` —— 四区间逐字切片（零改）；
-   排除段与归属（同 §2.4 P10 行）：`:1-15`（#status-line ∕ .status-sep——状态行面 · §3.6-① 轮）· `:351-372`（#panels goal ∕ task）·
-   `:389-441`（会话内搜索）· `:442-458`（#status-line loading dots——状态行面）· `:500-581`（task ∕ goal items）。
+/* composer.css — composer 输入区样式（VSC `webview/controls.css` 输入段**原样**）。
+   修正区间（评审轮 1 #5）= VSC `webview/controls.css` 输入段四区间 —— 逐字切片（零改）；
+   排除段与归属：`#status-line` ∕ `.status-sep`（状态行面）· `#panels` goal ∕ task 段 ·
+   `#search-bar` 会话内搜索段 · `#status-line` loading dots（状态行面）· task ∕ goal items 段。
    `Send` ∕ `Stop` 静止字面（`#send-btn::after { content: "Send" }`）与 HTML 静态串口径 = C4（照搬；含 zh 环境英文两钮）。
    变量别名块（`--border → --line` 等——C2）归**端侧**（值 = 端调色板）；本档零变量声明（只用 `var()`）。
-   `#toolbar` ∕ `#toolbar:has(#input-row.plan-active)` 两条随区间原样在档——容器锚命名归端（VSC = `index.html#toolbar`；桌面槽锚见 §2.4 Q4）。
-   **拆分债注记**：本档 **482 行**（四区间 467 + 头注 15；口径 = `read` 工具行数，同设计 §2.7 表头注），距 500
-   硬限余 **18**（设计估值 ≈470 ∕ 余 ≈30）——越线前触发拆分（候选面 = 下拉族出档：`.dropdown*` ∕ `#at-dropdown` 段）。
-   锁：核 `test/composer.test.mjs` 断言本档（去本头注）= VSC `controls.css` 四区间逐字（防两端漂移）。 */
+   `#toolbar` ∕ `#toolbar:has(#input-row.plan-active)` 两条随区间原样在档——容器锚命名归端（VSC = `index.html#toolbar`）。
+   **拆分债注记**：本档 **480 行**（头注 8 + 空行 1 + 正文 471；口径 = `read` 工具行数），距 500 **顾问线**余 **20**——越线前触发拆分（候选面 = 下拉族出档：`.dropdown*` ∕ `#at-dropdown` 段）。 */
 
 /* ─── Input Area ─────────────────────────────── */
 

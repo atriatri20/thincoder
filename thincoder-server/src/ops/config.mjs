@@ -1,6 +1,6 @@
 /**
  * config.mjs — 配置加载与校验（ops/OPS.md §1）：读档 ∥ `env:` 前缀解析 ∥ 预设形展开（presets.mjs） ∥ 缺省值
- * （`autoUpdate` 档位 §5.4(b) ∥ `trustProxy` ∥ `usageRetentionDays`） ∥ 启动校验（fail-closed）。
+ * （`autoUpdate` 档位 §5.4(b) ∥ `trustProxy` ∥ `usageRetentionDays` ∥ `tls` 段六键 ∥ `rateLimits` 段三键） ∥ 启动校验（fail-closed）。
  *
  * 校验不过 ⇒ 抛（入口转非零退出 + 明确报错）；告警（如 host = 0.0.0.0 ∥ 代理两条 ∥ 嵌入未配置）逐条返回，入口打印。
  * 归一出参：`{ config, warnings, baseDir, configPath }`——`config.db` 已按配置档所在目录解析为绝对路径。
@@ -21,6 +21,11 @@ export const MIN_PASSWORD_LENGTH = 8
 export const DEFAULT_AUTO_UPDATE = "notify" // 更新档位缺省（可见不越权——§5.4(b)）
 export const UPDATE_MODES = Object.freeze([false, "notify", "auto"])
 export const DEFAULT_USAGE_RETENTION_DAYS = 90 // 用量保留窗缺省（天——KD-SV-22：`null` = 不限）
+export const DEFAULT_TLS_PUBLIC_PORT = 443 // 重定向 `Location` 的对外端口缺省（gateway/PUBLICNET.md §2——只被重定向消费）
+export const TLS_KEYS = Object.freeze(["enabled", "certPath", "keyPath", "publicHost", "publicPort", "redirectPort"]) // `tls` 段六键（单源——校验 ∥ 写面白名单）
+export const DEFAULT_RATE_LIMITS = Object.freeze({ enabled: true, authPerMin: 20, publicPerMin: 120 }) // `rateLimits` 缺省（KD-PN-9——缺位 = 缺省开，公网化口径有意选择）
+export const RATE_LIMIT_KEYS = Object.freeze(["enabled", "authPerMin", "publicPerMin"]) // `rateLimits` 段三键（单源——校验 ∥ 写面白名单）
+export const RATE_LIMIT_MAX_PER_MIN = 10000 // 每分钟阈值上限（两档同取——越界拒启）
 export const SETTINGS_SUB_FIELDS = Object.freeze(["rpm", "tpm", "costIn", "costOut", "note", "quotaTokens"]) // 模型设置子字段（v4 + 配额批 quotaTokens——gateway/API.md §2.2）
 export const SETTINGS_NOTE_MAX = 200 // 「说明」字符上限（≤200 字——§2.2 D 组手填）
 
@@ -45,6 +50,11 @@ export function loadConfig(configPath, { env = process.env } = {}) {
   const baseDir = dirname(configPathAbs)
   const config = validateConfig(resolveEnvRefs(raw, env))
   config.db = resolveDatabasePath(config.db, baseDir)
+  if (config.tls !== null) {
+    // 证书 ∥ 私钥路径相对 = 配置档所在目录（同 `db` 口径）；绝对路径原样
+    if (config.tls.certPath !== null) config.tls.certPath = resolve(baseDir, config.tls.certPath)
+    if (config.tls.keyPath !== null) config.tls.keyPath = resolve(baseDir, config.tls.keyPath)
+  }
   const warnings = []
   if (config.host === "0.0.0.0") warnings.push("host = 0.0.0.0：监听全部接口（仅单接口机可接受——ops/OPS.md §1）")
   // 零 embedding = 允许态（§8 KD-SV-57——2026-10-09 embed 解耦批）：嵌入面禁用 + 警告一条；服务照常起。
@@ -106,6 +116,10 @@ export function validateConfig(raw) {
   // 顶层 proxy 段（KD-SV-55——上游出口代理；配置面 = ops/OPS.md §1）：缺省/缺位 ⇒ null（零代理）；
   // 在场 ⇒ 严格校验（fail-closed——与客户端「非对象一律丢弃」差异在案）；生效 = 重启（文件不热载）。
   const proxy = raw.proxy === undefined ? null : validateProxyConfig(raw.proxy)
+  // `tls` 段（gateway/PUBLICNET.md §2——内置 TLS 终止）：缺位 ⇒ null（明文 HTTP，现行为零变）；在场严格校验（fail-closed）。
+  const tls = raw.tls === undefined ? null : validateTlsConfig(raw.tls, { port })
+  // `rateLimits` 段（gateway/PUBLICNET.md §2——匿名入口 IP 限流）：缺位 ⇒ 内建缺省（缺省开——KD-PN-9）；在场严格校验（fail-closed）。
+  const rateLimits = raw.rateLimits === undefined ? { ...DEFAULT_RATE_LIMITS } : validateRateLimits(raw.rateLimits)
   // providers[] = 首启种子（可缺/可空——零 provider 允许态；控制台 = 常态管理面——ops/OPS.md §1）
   const providers = raw.providers === undefined ? [] : validateProviderEntries(raw.providers)
 
@@ -123,7 +137,7 @@ export function validateConfig(raw) {
     bootstrap = { username, password }
   }
 
-  return { host: host.trim(), port, db, autoUpdate, trustProxy, usageRetentionDays, proxy, bootstrap, providers, embedding }
+  return { host: host.trim(), port, db, autoUpdate, trustProxy, usageRetentionDays, proxy, tls, rateLimits, bootstrap, providers, embedding }
 }
 
 /** `embedding` 段归一（**校验单源**——配置载入 ∥ PATCH 门两径；§8 KD-SV-57）：在场须为对象——`baseURL` http(s) ∥
@@ -137,6 +151,70 @@ function normalizeEmbedding(value) {
     model: requireString(value.model, "embedding.model"),
     apiKey: optionalString(value.apiKey, "embedding.apiKey"),
   }
+}
+
+/** `tls` 段校验（**校验单源**——配置载入径 ∥ 控制台 PATCH 门；gateway/PUBLICNET.md §2）：六键 = `enabled` ∥
+ *  `certPath` ∥ `keyPath` ∥ `publicHost` ∥ `publicPort` ∥ `redirectPort`；出 = 归一形（缺省已回填）。
+ *  判据（fail-closed——抛）：非对象 ∥ 数组 ⇒ 拒；`enabled` 非布尔 ⇒ 拒；`certPath` / `keyPath` 非非空串 ⇒ 拒
+ *  （`enabled: true` 时缺 ⇒ 拒）；`publicHost` 非非空串 ⇒ 拒（`redirectPort` 在场时缺 ⇒ 拒），且**形判 = 主机名**：
+ *  含 `://`（协议）∥ 含 `:`（端口）⇒ 拒（端口另有 `publicPort`；拼进 `Location` 必然拼坏——必然失败不是可容忍输入）；
+ *  `publicPort` 非 1–65535 整数（缺省 `443`）⇒ 拒；`redirectPort` 非 1–65535 整数 ∥ `null`（缺省 `null` = 不开重定向）⇒ 拒，
+ *  且不得等于 `port`（同端口无法再监听）。证书文件本身的可读性 ∥ 可建上下文 = 启动期（`loadTlsMaterial`），不在本层。 */
+export function validateTlsConfig(value, { port } = {}) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`tls 段须为对象（${TLS_KEYS.join(" ∥ ")}）——现 ${JSON.stringify(value)}；拒启`)
+  }
+  const enabled = value.enabled === undefined ? false : value.enabled
+  if (typeof enabled !== "boolean") throw new Error(`tls.enabled 须为布尔（现 ${JSON.stringify(value.enabled)}；拒启）`)
+  const certPath = optionalTrimmedString(value.certPath, "tls.certPath")
+  const keyPath = optionalTrimmedString(value.keyPath, "tls.keyPath")
+  if (enabled && certPath === null) throw new Error("tls.enabled: true 时 tls.certPath 必填（PEM 证书路径——相对 = 配置档目录；拒启）")
+  if (enabled && keyPath === null) throw new Error("tls.enabled: true 时 tls.keyPath 必填（PEM 私钥路径——相对 = 配置档目录；拒启）")
+  const publicHost = optionalTrimmedString(value.publicHost, "tls.publicHost")
+  if (publicHost !== null && (publicHost.includes("://") || publicHost.includes(":"))) {
+    throw new Error(`tls.publicHost 须为主机名（不含协议 ∥ 端口——端口用 tls.publicPort）：${publicHost}；拒启`)
+  }
+  const publicPort = value.publicPort === undefined ? DEFAULT_TLS_PUBLIC_PORT : value.publicPort
+  if (!Number.isInteger(publicPort) || publicPort < 1 || publicPort > 65535) {
+    throw new Error(`tls.publicPort 非法：${JSON.stringify(value.publicPort)}（须为 1–65535 的整数，缺省 ${DEFAULT_TLS_PUBLIC_PORT}；拒启）`)
+  }
+  const redirectPort = value.redirectPort === undefined || value.redirectPort === null ? null : value.redirectPort
+  if (redirectPort !== null && (!Number.isInteger(redirectPort) || redirectPort < 1 || redirectPort > 65535)) {
+    throw new Error(`tls.redirectPort 非法：${JSON.stringify(value.redirectPort)}（须为 1–65535 的整数 ∥ null（不开）；拒启）`)
+  }
+  if (redirectPort !== null && publicHost === null) {
+    throw new Error("tls.redirectPort 在场时 tls.publicHost 必填（Location 主机名只取配置——不读请求 Host；拒启）")
+  }
+  if (redirectPort !== null && redirectPort === port) {
+    throw new Error(`tls.redirectPort 不得等于 port（${port}——同一端口无法再监听重定向面；拒启）`)
+  }
+  return { enabled, certPath, keyPath, publicHost, publicPort, redirectPort }
+}
+
+/** `rateLimits` 段校验（**校验单源**——配置载入径 ∥ 控制台 PATCH 门；gateway/PUBLICNET.md §2）：三键 = `enabled` ∥
+ *  `authPerMin` ∥ `publicPerMin`；出 = 归一形（缺省已回填）。判据（fail-closed——抛）：非对象 ∥ 数组 ⇒ 拒；`enabled`
+ *  非布尔 ⇒ 拒；两阈值非 1–`RATE_LIMIT_MAX_PER_MIN` 整数 ⇒ 拒（整数判据同时挡掉小数与字符串数字）。
+ *  阈值随部署规模变（KD-PN-7）——缺省值只在整段缺位时生效（KD-PN-9：缺省开）。 */
+export function validateRateLimits(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`rateLimits 段须为对象（${RATE_LIMIT_KEYS.join(" ∥ ")}）——现 ${JSON.stringify(value)}；拒启`)
+  }
+  const enabled = value.enabled === undefined ? DEFAULT_RATE_LIMITS.enabled : value.enabled
+  if (typeof enabled !== "boolean") throw new Error(`rateLimits.enabled 须为布尔（现 ${JSON.stringify(value.enabled)}；拒启）`)
+  return {
+    enabled,
+    authPerMin: rateLimitThreshold(value.authPerMin, "rateLimits.authPerMin", DEFAULT_RATE_LIMITS.authPerMin),
+    publicPerMin: rateLimitThreshold(value.publicPerMin, "rateLimits.publicPerMin", DEFAULT_RATE_LIMITS.publicPerMin),
+  }
+}
+
+/** 限流阈值（缺省回填 ∥ 越界拒——`1`–`RATE_LIMIT_MAX_PER_MIN` 整数）。 */
+function rateLimitThreshold(value, where, fallback) {
+  const threshold = value === undefined ? fallback : value
+  if (!Number.isInteger(threshold) || threshold < 1 || threshold > RATE_LIMIT_MAX_PER_MIN) {
+    throw new Error(`${where} 非法：${JSON.stringify(value)}（须为 1–${RATE_LIMIT_MAX_PER_MIN} 的整数，缺省 ${fallback}；拒启）`)
+  }
+  return threshold
 }
 
 /** 顶层 `proxy` 段校验（**校验单源**——配置载入径；gateway/API.md §6 KD-SV-55 ∥ ops/OPS.md §1）：
@@ -337,6 +415,15 @@ function optionalNote(value, where) {
   if (typeof value !== "string") throw new Error(`${where} 须为字符串（≤${SETTINGS_NOTE_MAX} 字符）∥ null`)
   if (value.length > SETTINGS_NOTE_MAX) throw new Error(`${where} 超过 ${SETTINGS_NOTE_MAX} 字符（现 ${value.length} 字符——拒）`)
   return value
+}
+
+/** 非空串 ∥ 缺省（`undefined`/`null` ⇒ null）；空串 ∥ 非字符串 ⇒ 抛。 */
+function optionalTrimmedString(value, where) {
+  if (value === undefined || value === null) return null
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new Error(`${where} 须为非空字符串 ∥ 缺省（现 ${JSON.stringify(value)}；拒启）`)
+  }
+  return value.trim()
 }
 
 function optionalString(value, where) {

@@ -2,6 +2,30 @@
 
 All notable changes to ThinCoder VS Code are documented here.
 
+## [Unreleased]
+
+## [0.10.10] — 2026-10-22
+
+### Changed
+
+- **随核 0.10.10**：提示词面 16 档重写 + 子代理 `manifest` 只读面。本端代码零改。
+
+## [0.10.9] — 2026-10-19
+
+### Added
+
+- **网络工具接入 DeepSeek 后端**：`websearch` / `fetch` 自动复用 `providers[]` 中 `api.deepseek.com` 渠道的 key（零新增配置）——搜索得结构化结果（date ∥ authority ∥ rerank + 长摘要），抓取得 Markdown 正文；后端失败软着陆（401/402/403/404 熔断 ∥ 408/429/5xx 退避一次 ∥ 工具永不失败）；新增逃生口键 `websearch.backend` ∥ `fetch.backend`（∈ auto/local，缺省 auto；无该渠道的用户行为逐字不变）；`fetch` 配置段随 `agent.config` 整建（VSC 端逃生口生效）。
+
+## [0.10.8] — 2026-10-16
+
+> 0.10.7 → 0.10.8（月内 +1——发布时定号）
+
+### Changed
+
+- **核依赖升级**：`@thincoder/core` `^0.10.7` → `^0.10.8`（vsix 内嵌核 = 本次号；内建 `doc_check` ∥ 台账根读写同一推导随核生效）。
+- **提示词面收正**：中文 = 设计文档 ∥ 英文 = 代码 口径落地；运行面去文档引用；联网查证指导入册；S1/S2 优化。
+- **登录成拍模型候选面即时刷新**（三端同拍）。
+
 ## [0.10.7] — 2026-10-14
 
 > 0.10.6 → 0.10.7（月内 +1——发布时定号）

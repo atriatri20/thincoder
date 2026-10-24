@@ -13,9 +13,9 @@
   --fg-muted: light-dark(#5c6672, #9aa4b2);
   --line: light-dark(#dfe3e8, #2a2f37);
   --accent: light-dark(#2f6feb, #5b8def);
-  --warn: light-dark(#8a6100, #cca700); /* 警示 = CLI 黄（`thincoder-cli/src/tui/ansi.mjs:46` `fg(3)`）⟷ 色相源 = VSC 警告黄默认（`editorWarning.foreground`——核件 ∕ `--vscode-editorWarning-foreground` 同一角色）；亮值 = 同色相暗化（#578② · 2026-09-29：原值对 `--bg` 对比 2.93:1 不达 4.5:1 ⇒ 现 **5.21:1** ∕ 白底 5.54）；暗值逐字保原（第二值位——VSC 暗默认）。 */
-  --mode-plan: light-dark(#047990, #11a8cd); /* 状态行 banner「PLAN」字色 —— CLI `C.tool` = `fg(6)` 青（`thincoder-cli/src/tui/ansi.mjs:43`）；色相源 = VSC 终端 ANSI 青亮默认（`terminal.ansiCyan`——microsoft/vscode `terminalColorRegistry.ts` `ansiColorMap`）；亮值 = 同色相暗化（#578② · 2026-09-29：原值对 `--bg` 对比 3.18:1 不达 4.5:1 ⇒ 现 **4.77:1** ∕ 白底 5.07）；暗值逐字保原（第二值位——VSC 暗默认）。 */
-  --mode-advisor: light-dark(#0a7b0a, #23d18b); /* 状态行 banner「ADVISOR ∕ ENG」字色 —— CLI `C.advisor` = `ESC[92m` 亮绿（同档 `:47`；两段同常量）；色相源 = VSC 终端 ANSI 亮绿亮默认（`terminal.ansiBrightGreen` `#14ce14`）；亮值 = 同色相暗化（#534 · 2026-09-29：原值对 `--bg` 对比 2.00:1 不可读 ⇒ 现 **5.13:1** ∕ 白底 5.45）；暗值逐字保原（第二值位——VSC 暗默认）。 */
+  --warn: light-dark(#8a6100, #cca700); /* 警示 = CLI 黄（`C.warn` = `ansi.fg(3)`）⟷ 色相源 = VSC 警告黄默认（`editorWarning.foreground`——核件 ∕ `--vscode-editorWarning-foreground` 同一角色）；亮值 = 同色相暗化（#578② · 2026-09-29：原值对 `--bg` 对比 2.93:1 不达 4.5:1 ⇒ 现 **5.21:1** ∕ 白底 5.54）；暗值逐字保原（第二值位——VSC 暗默认）。 */
+  --mode-plan: light-dark(#047990, #11a8cd); /* 状态行 banner「PLAN」字色 —— CLI `C.tool` = `ansi.fg(6)` 青；色相源 = VSC 终端 ANSI 青亮默认（`terminal.ansiCyan`——microsoft/vscode `terminalColorRegistry.ts` `ansiColorMap`）；亮值 = 同色相暗化（#578② · 2026-09-29：原值对 `--bg` 对比 3.18:1 不达 4.5:1 ⇒ 现 **4.77:1** ∕ 白底 5.07）；暗值逐字保原（第二值位——VSC 暗默认）。 */
+  --mode-advisor: light-dark(#0a7b0a, #23d18b); /* 状态行 banner「ADVISOR ∕ ENG」字色 —— CLI `C.advisor` = `ESC[92m` 亮绿（两段同常量）；色相源 = VSC 终端 ANSI 亮绿亮默认（`terminal.ansiBrightGreen` `#14ce14`）；亮值 = 同色相暗化（#534 · 2026-09-29：原值对 `--bg` 对比 2.00:1 不可读 ⇒ 现 **5.13:1** ∕ 白底 5.45）；暗值逐字保原（第二值位——VSC 暗默认）。 */
   --radius: 0; /* 扁平化（用户 2026-09-30 裁决）：圆角归零——全族 `var(--radius)` 一处收口。 */
   --gap: 12px;
   /* 右栏宽（D30 · 台账 #742）：默认值 ∥ 用户值经内联覆写（CSSOM 变量写 —— `renderer/pool-width.mjs`）；界 = 消费点单源（`chrome.css` 栅格行 `clamp`——本档值零改）。 */
@@ -42,7 +42,7 @@
   --syn-atrule: light-dark(#af00db, #d7ba7d);
   --diff-add-bg: light-dark(rgba(16,137,62,0.12), rgba(34,187,51,0.14));
   --diff-add-fg: light-dark(#0d6b30, #a5d6a7);
-  --diff-del-bg: light-dark(rgba(201,37,37,0.12), rgba(244,71,71,0.14)); /* diff 四变量族（「对齐第三批」相抵① 三新 + 在册一）值源 = VSC `webview/base.css`（亮 = `:58-61` ∥ 暗 = `:35-38`）。 */
+  --diff-del-bg: light-dark(rgba(201,37,37,0.12), rgba(244,71,71,0.14)); /* diff 四变量族（「对齐第三批」相抵① 三新 + 在册一）值源 = VSC `webview/base.css`（亮 = `body.vscode-light` 段；暗 = 默认段）。 */
   --diff-del-fg: light-dark(#b91a1a, #ef9a9a);
   --error-fg: #f44747; /* 两态同值 ⇒ 单值直书（不入值对）。 */
 }

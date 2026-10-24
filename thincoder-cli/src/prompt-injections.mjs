@@ -23,7 +23,7 @@
 import { resolveShellIdentity, executorLine } from "@thincoder/core/shell-identity.mjs"
 import { loadConfig } from "@thincoder/core/config.mjs"
 
-// 配置读容错（先例 = `bin/thincoder.mjs:54` 同式「配置缺失/损坏 ⇒ 各向默认」）：读取失败不阻断进程，
+// 配置读容错（先例 = `bin/thincoder.mjs` 同式「配置缺失/损坏 ⇒ 各向默认」）：读取失败不阻断进程，
 // 读失败 ⇒ null ⇒ 默认链（fail-open——探测面不猜）。
 function configShell() {
   try { return loadConfig()?.shell ?? null } catch { return null }

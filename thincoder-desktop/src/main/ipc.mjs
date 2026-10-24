@@ -1,9 +1,9 @@
 /**
  * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**六十六项**白名单面（菜单体系批 · D36 落 `theme:state`；消化面留档批 · #719 落 `record:append`；子代理面板批落 `panel:state`；
- *  fork 增项：独立打包 ∕ 统一 Header ∕ 会话归档 ∕ 模型参数 ∕ 图文 ∕ 用量导出；B1 批落团队族四 —— `team:status` ∥ `team:login` ∥ `team:logout` ∥ `team:verify`）= 
+ *  fork 增项：独立打包 ∕ 统一 Header ∕ 会话归档 ∕ 模型参数 ∕ 图文 ∕ 用量导出 ∕ 会话窗（cwd 钉扎 ∕ 装配键化）；上游 0.10.9 落 `secret:respond`（凭据门出口——SSH 会话批））= 
  * 本档（配置读取 + 项目面 `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` /
  * `session:switch` / `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` +
- * 作答响应 `question:respond` —— `question` 工具真作答面 + 历史页 `history:page` + 回合驱动 `msg:send` /
+ * 作答响应 `question:respond` —— `question` 工具真作答面 + **凭据响应 `secret:respond`**（`ctx.onSecretInput` 缝的返回路）+ 历史页 `history:page` + 回合驱动 `msg:send` /
  * `msg:interrupt`（宿主未注入 ⇒ fail-loud）+ 会话级偏好写面 `session:prefs` + 子 agent 停止出口 `subagent:stop`
  * （R3b 落）+ 文件链接打开 `file:open`（「对齐第三批」相抵② · KD-39 —— 编辑器 CLI 探测 ⇒ spawn
  * (`editor-open.mjs`)；兜底 `shell.openPath`；纯判据住 `file-links.mjs`）+ R1 输入面板两项 `session:flags` /
@@ -105,7 +105,7 @@ function readConfig() {
 export {
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCatalog, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, sessionOpenWindow, approvalRespond, historyPage, msgSend, msgInterrupt,
-  questionRespond, sessionPrefs, subagentStop, fileOpen, shellOpenPath, sessionFlags, atComplete, recordAppend, themeState, menuPopup, windowControl, sessionArchive, sessionUnarchive, sessionArchived,
+  questionRespond, questionRespond as secretRespond, sessionPrefs, subagentStop, fileOpen, shellOpenPath, sessionFlags, atComplete, recordAppend, themeState, menuPopup, windowControl, sessionArchive, sessionUnarchive, sessionArchived,
   panelState,
   sessionGc, sessionIndex, liveAgents, usageStatsChannel, sessionExportChannel,
 }
@@ -282,9 +282,10 @@ function stripReceiptKey(receipt) {
 /** `question:respond(payload)` ⇒ 作答出口（`question` 工具真作答面）：载荷 `{ promptId, answer }`
  *  （`answer` = 串（给答项原样 ∥ 自由作答）∥ `null`（取消 ⇒ 取消串））。转口宿主待决表（同
  *  `approval:respond`）：表外 id / 跨 kind 载荷 / 假「作答」形皆有 `{ok:false}` 档且**不 resolve**
- *  （挂起保留）；宿主未注入 ⇒ fail-loud 直抛（不吞 / 不落假成功）。 */
+ *  （挂起保留）；宿主未注入 ⇒ fail-loud 直抛（不吞 / 不落假成功）。**别名面**：`secret:respond`（SSH 会话批凭据门 ——
+ *  载荷 `{ promptId, values }`，值面零转写 / 零记 / 零日志）经导出别名指向本函数（同表同判：按 `promptId` 判门）。 */
 function questionRespond(payload) {
-  if (!agentHost) throw new Error("[ipc] question:respond: question source not assembled")
+  if (!agentHost) throw new Error("[ipc] question:respond / secret:respond: respond source not assembled")
   return stripReceiptKey(agentHost.respond(payload))
 }
 

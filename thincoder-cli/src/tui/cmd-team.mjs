@@ -1,7 +1,7 @@
 /**
- * cmd-team.mjs — `/team` 命令族 + 会话内团队问句面（登录面补全批 · 2026-10-10 · 台账 #1229）。
- * 设计单源 = `docs/cli/design/TUI-COMMANDS.md` §5.5（三子命令 ∥ 问句面）∥ §1（模块地图）；
- * 机制单源 = `docs/core/design/TEAM.md` §2.2（登录）∥ §2.3（退出）∥ §2.6（活校验 ∥ verify 清位）。
+ * cmd-team.mjs — `/team` 命令族 + 会话内团队问句面（登录面补全批 · 2026-10-10 · 台账 #1229；rotate = team-token-rotation 批 · 台账 #1238）。
+ * 设计单源 = `docs/cli/design/TUI-COMMANDS.md` §5.5（四子命令 ∥ 问句面）∥ §1（模块地图）；
+ * 机制单源 = `docs/core/design/TEAM.md` §2.2（登录）∥ §2.3（退出）∥ §2.6（活校验 ∥ verify 清位）∥ §2.7（轮换）。
  * 词面 = argv 面逐字同源（`src/cli/team-command.mjs` 导出面——判据「CLI = 单语直出同句」；
  * 本档零第二份字面）。两消费方：① 本档 `handleTeamCommand`（注册 = `slash-commands.mjs` 两表）；
  * ② `wizard.mjs` 团队路（`completeTeamLogin` ∥ `syncProvidersFromDisk` ∥ `refreshTeamState` 三件共用）。
@@ -11,20 +11,20 @@
  * Enter 提交；可打印键回落编辑族）；render 面 = `layout.mjs` overlay 第三支（掩码步经 `ask-steps.mjs`
  * `askMaskActive`）；模态判据 = `timer-watch.mjs` `modalOpen`（#448① 模态期抑制 ∥ 关闭后补评估同谓词）。
  *
- * ctx（两调用面同源字段）：{ agent, state, pushLine, render, openModelPicker, onModalClose }
+ * ctx（两调用面同源字段；`showPicker` 由 `slash-commands` handlerCtx 注入——`/team rotate` 确认步）：{ agent, state, pushLine, render, showPicker, openModelPicker, onModalClose }
  */
 import { t } from "@thincoder/core/i18n.mjs"
-import { teamLogin, teamLogout, teamStatus, teamVerify, NOTICE_MANUAL_NAME_CONFLICT } from "@thincoder/core/team.mjs"
+import { teamLogin, teamLogout, teamRotate, teamStatus, teamVerify, NOTICE_MANUAL_NAME_CONFLICT } from "@thincoder/core/team.mjs"
 
 import { C } from "./ansi.mjs"
 import { teamAskLines, teamAskStepAt, nextTeamAskStep } from "./ask-steps.mjs"
 import {
   FAILURE_TEXT, NOT_LOGGED_IN, TEXT_MANUAL_CONFLICT, TEXT_REVOKE_UNDELIVERED,
-  TEXT_LOGGED_IN, TEXT_LOGGED_OUT, renderState,
+  TEXT_LOGGED_IN, TEXT_LOGGED_OUT, TEXT_ROTATE_CONFIRM, TEXT_ROTATED, renderState,
 } from "../cli/team-command.mjs"
 
 /** 用法行（表外子命令 ∥ 多余参数 ⇒ 零动作 + 用法——沿 argv 面 fail-closed 同口径；词面改指 TUI 入口）。 */
-export const TEAM_USAGE = "Usage: /team login | /team logout | /team status"
+export const TEAM_USAGE = "Usage: /team login | /team logout | /team rotate | /team status"
 
 /** 模型选定引导行（本地路尾同句——`wizard.mjs` finishWizard 与本档两处消费，单源）。 */
 export const MODEL_SELECT_HINT = "Select a model (选定即成为默认模型；Esc 跳过——之后可用 /model 选定)"
@@ -32,11 +32,11 @@ export const MODEL_SELECT_HINT = "Select a model (选定即成为默认模型；
 // ─── 命令族（TUI-COMMANDS.md §5.5）────────────────────────────────────────────────────────────
 
 /** `/team` 入口（注册 = `SLASH_COMMANDS` + `HANDLERS`）：
- *  `/team` ∥ `/team status` = 状态面（活校验）；`/team login` = 三问面；`/team logout` = 退出；
+ *  `/team` ∥ `/team status` = 状态面（活校验）；`/team login` = 三问面；`/team logout` = 退出；`/team rotate` = 轮换（确认步）；
  *  表外子命令 ∥ 多余参数 ⇒ usage（fail-closed——零动作）。 */
 export async function handleTeamCommand(ctx, args = []) {
   const [sub] = args
-  const known = sub === undefined || sub === "status" || sub === "login" || sub === "logout"
+  const known = sub === undefined || sub === "status" || sub === "login" || sub === "logout" || sub === "rotate"
   if (!known || args.length > 1) {
     ctx.pushLine(TEAM_USAGE, C.warn)
     ctx.render()
@@ -44,6 +44,7 @@ export async function handleTeamCommand(ctx, args = []) {
   }
   if (sub === undefined || sub === "status") return runTeamStatus(ctx)
   if (sub === "login") return startTeamAsk(ctx)
+  if (sub === "rotate") return runTeamRotate(ctx)
   return runTeamLogout(ctx)
 }
 
@@ -148,6 +149,37 @@ export function teamAskCancel(ctx) {
   state.cursor = 0
   render()
   ctx.onModalClose?.()
+}
+
+/** `/team rotate`（§2.7）：未登录 ⇒ 未登录句（幂等——零动作）；确认一步（后果句 + 确认/取消两键——沿
+ *  TUI 既有二次确认 picker，默认 Cancel）⇒ 核 `teamRotate`（写盘单源）；取消 ∥ 未确认 ⇒ 零动作；
+ *  成 ⇒ 成句 + 两复读（`syncProvidersFromDisk` ∥ `refreshTeamState` + verify 清——§2.6 同拍）；
+ *  败（`invalid`）⇒ 当场置「已失效」。 */
+async function runTeamRotate(ctx) {
+  const { agent, state, pushLine, render, showPicker } = ctx
+  if (teamStatus().loggedIn !== true) {
+    pushLine(NOT_LOGGED_IN, C.dim)
+    return
+  }
+  const entry = await showPicker(TEXT_ROTATE_CONFIRM, [
+    { type: "item", text: "Yes, rotate", action: "yes" },
+    { type: "item", text: "Cancel", action: "no" },
+  ], { defaultIndex: 1 })
+  if (entry?.action !== "yes") return // 取消 ∥ 未确认 ⇒ 零请求零写盘
+  const result = await teamRotate()
+  if (result.ok !== true) {
+    pushLine(FAILURE_TEXT[result.reason] ?? FAILURE_TEXT.network, C.error) // 401 ⇒ `invalid` ⇔「已失效——重新登录」
+    if (result.reason === "invalid") {
+      refreshTeamState(state) // 当场活校验结果：转「已失效」显示（§2.6）
+      state.team.verify = "invalid"
+    }
+    render()
+    return
+  }
+  pushLine(TEXT_ROTATED, C.tool) // 结果行 = 成句直出（同句集）
+  refreshTeamState(state, { clearVerify: true }) // 新 token 新判（§2.6 同拍）
+  await syncProvidersFromDisk(agent) // 派生条目新 `apiKey` 入会话内存（模型面照常）
+  render()
 }
 
 /** `/team logout`：未登录 ⇒ 未登录句（幂等——零动作）；已登录 ⇒ 核 `teamLogout` ⇒ 结果行 +

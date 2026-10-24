@@ -42,8 +42,8 @@ export function detectRestoredSession({ depth, resume, autoTurn, fullHistory }) 
 
 // ─── MCP 失败提醒（#823 · 2026-10-04 issue 修复批·三——三端同形消费；机制单源 = `MCP.md` §6.4）───
 // 装配尾调用（晚于每轮 `resetRunState` 清队 ∥ 槽回填）：失败集非空 ⇒ 提醒入 `_pendingReminders`
-// （下一条 user 消息注入——核 `agent/setup.mjs:172-176`）；首两段逐字同 CLI
-// （`thincoder-cli/src/command-interactive.mjs:163-166`——同桌面 `agent-assemble.mjs` `mcpWarningReminder`），
+// （下一条 user 消息注入——核 `prepareRun`）；首两段逐字同 CLI
+// （`tuiCommand`——同桌面 `agent-assemble.mjs` `mcpWarningReminder`），
 // 末行 = 本端可达出口（设置面 MCP 段 Reconnect——CLI `/mcp connect <name>` 本端不存在）。
 // 指纹去重（`warnings.join("\n")`——同失败集不重推）；零警告 ⇒ 零写（队不写）+ 指纹清（复失败可再推）。
 

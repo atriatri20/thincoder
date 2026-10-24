@@ -23,7 +23,7 @@ import { loadMcpServers } from "../config-mcp.mjs"
 import { removeProviderFlow, setKeyFlow, probeProviderAdmission, ui } from "./provider-flows.mjs"
 import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection, postProviderError, pushTeamStatus } from "./settings.mjs"
 import { setSlotAdvisorGuard, setSlotEngineering } from "./session-io.mjs"
-import { teamLogin, teamLogout } from "./team.mjs"
+import { teamLogin, teamLogout, teamRotate } from "./team.mjs"
 // F-W21（登录面补全批）：状态栏团队 item 随动（webview 登/退成拍——命令流外的第二条写径）
 import { refreshTeamSurface } from "./team-surface.mjs"
 import { _cwd } from "./panel-messages.mjs"
@@ -258,28 +258,43 @@ export async function handleTestProxy(panel, msg) {
 // ─── B1（团队族——登录 ∥ 退出；机制单源 = `docs/core/design/TEAM.md` §2 ∥ 端面 = `SETTINGS.md` §2.20）───
 
 /** case "teamLogin"（webview → host）：三字段 ⇒ 核 `teamLogin`（端侧零自写盘）⇒ 成 ⇒ 推 `teamStatus`
- *  + `providerStatus`（派生条目入列表——Providers 卡随动）⇒ 回执 `teamLoginResult` `{ ok, notice? }` ∥
- *  `{ ok:false, reason }`（码不携文——出词归 webview i18n——§2.20 回执形）。回执殿后：推送先落（卡面
- *  转新态）⇒ 一次性提示（同名手工条目冲突）就地显于新态卡面（`teamStatus` 零提示字段）。 */
+ *  + `panel._pushSettings()`（全状态链——同步先发 `providerStatus`，`models` 随探针拍落 ⇒ 候选面含 team
+ *  渠——`TEAM.md` §2.8）⇒ 回执 `teamLoginResult` `{ ok, notice? }` ∥ `{ ok:false, reason }`（码不携文——
+ *  出词归 webview i18n——§2.20 回执形）。回执殿后：同步推送先落（卡面转新态）⇒ 一次性提示就地显。 */
 export async function handleTeamLogin(panel, msg) {
   const r = await teamLogin({ server: msg.server, username: msg.username, password: msg.password })
   if (r.ok) {
     pushTeamStatus(panel._panel)
-    panel._pushStatus()
+    panel._pushSettings()
     refreshTeamSurface() // F-W21：团队 item 随动（设置面板 ∥ 面板外常显面同拍）
   }
   panel._panel?.webview.postMessage({ type: "teamLoginResult", ...r })
 }
 
 /** case "teamLogout"（webview → host）：核 `teamLogout`（吊销 best-effort——网络失败照清本地）⇒ 成 ⇒
- *  推 `teamStatus` + `providerStatus`（派生条目退场——无 key ⇒ 列表隐藏——`TEAM.md` §2.4）⇒ 回执
+ *  推 `teamStatus` + `providerStatus`（派生条目退场——无 key ⇒ 列表隐藏——`TEAM.md` §2.4）+ `_pushSettings()`
+ *  （全状态链——渠 key 已失效 ⇒ 候选面整表作废，空表早退径照发；`TEAM.md` §2.8）⇒ 回执
  *  `teamLogoutResult` `{ ok, revokeDelivered? }`（缺席 = true；false ⇒ webview 卡内就地提示）。 */
 export async function handleTeamLogout(panel) {
   const r = await teamLogout()
   if (r.ok) {
     pushTeamStatus(panel._panel)
     panel._pushStatus()
+    panel._pushSettings() // 登出成 ⇒ 全状态链（`models` 随探针拍落——不推则界面挂着过期候选表；`TEAM.md` §2.8）
     refreshTeamSurface() // F-W21：团队 item 随动（退出 ⇒ 入口态／已失效清位）
   }
   panel._panel?.webview.postMessage({ type: "teamLogoutResult", ...r })
+}
+
+/** case "teamRotate"（webview → host；TEAM.md §2.7）：核 `teamRotate`（吊销当枚 + 同标签重签 + **一次写盘**）
+ *  ⇒ 成 ∥ 失效（`reason === "invalid"`）⇒ 推 `teamStatus` + `providerStatus`（派生条目 `apiKey` 同步——列表随动）
+ *  + 团队常显面随动 ⇒ 回执 `teamRotateResult` `{ ok }` ∥ `{ ok:false, reason }`（码不携文——出词归 webview i18n）。 */
+export async function handleTeamRotate(panel) {
+  const r = await teamRotate()
+  if (r.ok || r.reason === "invalid") {
+    pushTeamStatus(panel._panel)
+    panel._pushStatus()
+    refreshTeamSurface() // 成（新 token 新判）∥ 失效（token 已死——常显面复读）
+  }
+  panel._panel?.webview.postMessage({ type: "teamRotateResult", ...r })
 }

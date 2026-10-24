@@ -129,7 +129,7 @@ export function createBaseSection(ctx) {
   return { baseCard, credCard }
 }
 
-/** 设底座弹窗（镜像引用输入 + 形提示；「恢复标准」= `baseImage: null`——两径同窗）：成 ⇒ 关窗 + 提示 + 重取；败 ⇒ 窗内就地人话（库零变）。 */
+/** 设底座弹窗（镜像引用输入 + 形提示；「恢复标准」= `baseImage: null`——两径同窗，同闩集）：成 ⇒ 关窗 + 提示 + 重取；败 ⇒ 窗内就地人话（库零变）；在飞 ⇒ 双钮禁（连点零第二 PATCH）。 */
 function openBaseModal(ctx, { workspace, reload }) {
   const { h } = ctx
   const name = String(workspace?.name ?? "")
@@ -137,6 +137,8 @@ function openBaseModal(ctx, { workspace, reload }) {
   if (typeof workspace?.baseImage === "string" && workspace.baseImage !== "") input.value = workspace.baseImage
   const note = h("p", { class: "hint error", hidden: true })
   const submitBtn = h("button", { type: "submit", text: t("admin.sandbox.baseSet") })
+  // 恢复钮提为件级引用——并入 `save` 闩集（在飞 ⇒ 双钮禁；败 ⇒ 双复）——连点零第二 PATCH
+  const restoreBtn = h("button", { type: "button", class: "tiny", text: t("admin.sandbox.baseRestore"), onclick: () => save({ baseImage: null }, t("admin.sandbox.baseRestoreOk", { name })) })
   const modal = openModal({
     title: t("admin.sandbox.baseSet"),
     body: h("form", { class: "provider-form stacked", novalidate: true, onsubmit: submit },
@@ -144,7 +146,7 @@ function openBaseModal(ctx, { workspace, reload }) {
       h("p", { class: "hint", text: t("admin.sandbox.baseRefHint") }),
       note, submitBtn),
     footer: h("div", { class: "row-form" },
-      h("button", { type: "button", class: "tiny", text: t("admin.sandbox.baseRestore"), onclick: () => save({ baseImage: null }, t("admin.sandbox.baseRestoreOk", { name })) }),
+      restoreBtn,
       h("button", { type: "button", class: "tiny", text: t("common.cancel"), onclick: () => modal.close() })),
   })
 
@@ -159,6 +161,7 @@ function openBaseModal(ctx, { workspace, reload }) {
   async function save(body, flashText) {
     note.hidden = true
     submitBtn.disabled = true
+    restoreBtn.disabled = true // 在飞 ⇒ 双钮禁（恢复钮并入同闩集——连点零第二 PATCH）
     try {
       await ctx.api(`/api/admin/sandbox/workspaces/${workspace.id}`, { method: "PATCH", body })
       ctx.flash(flashText)
@@ -166,6 +169,7 @@ function openBaseModal(ctx, { workspace, reload }) {
       await reload()
     } catch (error) {
       submitBtn.disabled = false
+      restoreBtn.disabled = false // 败 ⇒ 双复（可重试）
       showNote(note, mapError(error)) // 形非法 ⇒ 400 逐句人话（库零变）；草稿不丢
     }
   }

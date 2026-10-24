@@ -41,7 +41,7 @@ export function clearCursor(state) {
 
 /** `ev:reasoning`——推理块增量（R3c · D19 · `docs/desktop/design/IPC.md` §1 该行）：续写判据 = **尾块 `kind === "reasoning"`**（与正文同形）；
  *  否则起新推理块；键门同 `onToken`（非活动会话零落）。
- *  **思考耗时统计（Codex 形大改批 · 2026-10-04）**：新块携 `startedAt`（`reduce` 帧时刻）——视图耗时 =
+ *  **思考耗时统计（美化形大改批 · 2026-10-04）**：新块携 `startedAt`（`reduce` 帧时刻）——视图耗时 =
  *  下一块 `startedAt` − 本块（`views/chat-tree.mjs` 投影；尾块在途 ⇒ 无值 ⇒ 摘要恒「思考中」口径不变）。 */
 export function onReasoning(state, ev, now = Date.now()) {
   if (!forActive(state, ev)) return state
@@ -100,7 +100,7 @@ export function onToolOutput(state, ev) {
 
 /** `ev:tool-result`——按 `id` 定位后**重建**（`status` 收束 · `durationMs` = 现刻 − 起刻 · 丢 `startedAt`）；
  *  `status` 由载荷 `ok` 定（`ok === true` ⇒ `done`，否则 `error`）——判据串归宿主侧单源
- *  （`docs/desktop/design/IPC.md:34` 载荷定形 · 批档 §2.16⑪：本端不另立判据、不解析正文）；载荷缺该键 ⇒ 不判成功。 */
+ *  （`IPC.md` §1「主 → 渲染（事件推送）」 载荷定形 · 批档 §2.16⑪：本端不另立判据、不解析正文）；载荷缺该键 ⇒ 不判成功。 */
 export function onToolResult(state, ev, now) {
   if (!forActive(state, ev)) return state
   const blocks = state.blocks ?? []

@@ -3,7 +3,7 @@
  * Returns [{type:"same"|"add"|"del", text}]
  */
 
-import { esc as escHtml } from "./md.mjs" // R1 迁移注：原 import "./ui.js"（ui.js:419-421 escHtml ≡ md.mjs esc——核内单源）
+import { esc as escHtml } from "./md.mjs" // R1 迁移注：原 import "./ui.js"（ui.js escHtml ≡ md.mjs esc——核内单源）
 
 
 /**

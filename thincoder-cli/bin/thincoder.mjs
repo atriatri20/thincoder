@@ -150,6 +150,7 @@ Usage:
   thincoder completion <sh>  Generate shell completion script (bash / zsh / fish)
   thincoder team login [--server <url>] [--user <name>]  Log in to a team server (password prompt — hidden echo)
   thincoder team logout | status                         Log out (revoke the team token) / show login state
+  thincoder team rotate                                  Rotate the team token (revoke the current one + reissue; asks y/N)
   thincoder -v, --version   Print version
 
 Config: ~/.thincoder/config.json — providers[] (one default model per channel) + defaultModel (new-session starting point); the available-model list is fetched from the provider at runtime (GET /models); manage via /config → 默认模型 and /model (session-level) in TUI

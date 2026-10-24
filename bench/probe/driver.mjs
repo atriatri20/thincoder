@@ -62,7 +62,7 @@ export function stubParentProvider({ name = "probe-parent", model = "probe-paren
   })
 }
 
-/** 父面工具表（§10.3-1）：`builtinTools` 静态表 + 按模型多模态位补 `read_image`（判据同 `tools/index.mjs:64`）。
+/** 父面工具表（§10.3-1）：`builtinTools` 静态表 + 按模型多模态位补 `read_image`（判据同 `assembleBuiltinTools`）。
  *  memory 绑定工具族 / 家族工具均不装（§10.9-①；家族段由 child 侧装配）。 */
 export function probeParentTools(model) {
   return specForModel(model)?.multimodal ? [...builtinTools, readImageTool] : [...builtinTools]
@@ -94,15 +94,15 @@ export function installProbeProvider(parent, providerEntry) {
 }
 
 /** child 装配（`buildSpawnChild`——`wantAsync = true` ⇒ 异步形返回注；spawn 门照走——§10.3-2）。 */
-export function assembleProbeChild({ parent, ctx, model, batchDoc, taskBook }) {
-  const args = { task: taskBook, round: "initial", batchDoc, model }
+export function assembleProbeChild({ parent, ctx, model, batchDoc, taskBookParams }) {
+  const args = { ...taskBookParams, round: "initial", batchDoc, model }
   return buildSpawnChild(parent, ctx, args, PROBE_ROLE, true, [], [], null)
 }
 
 /** 装配腿（§10.10 结构级 / `--dry-run`）：真 `buildSpawnChild` + `prepareRun`（人格与家族段装配）——**不驱动**。 */
-export async function assemblyLeg({ parent, model, batchDoc, taskBook }) {
+export async function assemblyLeg({ parent, model, batchDoc, taskBookParams }) {
   const ctx = { depth: 0, agent: parent, callbacks: {}, signal: null, onPermissionRequest: undefined }
-  const built = assembleProbeChild({ parent, ctx, model, batchDoc, taskBook })
+  const built = assembleProbeChild({ parent, ctx, model, batchDoc, taskBookParams })
   const { tools, systemPrompt } = await prepareRun(built.child, built.input, built.childOpts, { depth: 1 })
   const names = tools.map((t) => t.name)
   const marker = personaMarker()
@@ -173,7 +173,7 @@ export function parseTurnFrame(text, relayPrefix) {
  * 撞帽拒绝降级 partial）。返回 `{ observed, built }`——`observed.landed` 由编排面填（沙箱 diff）。
  * 超时 = `--timeout` 墙钟（定向 abort 该 run）；`baseSignal` = 进程级信号（SIGINT）合并面。
  */
-export async function runProbeRun({ parent, model, batchDoc, taskBook, fixtureId, timeoutSec, baseSignal = null }) {
+export async function runProbeRun({ parent, model, batchDoc, taskBookParams, fixtureId, timeoutSec, baseSignal = null }) {
   const obs = {
     fixtureId, terminal: null, errorText: null, asked: null, maxTurn: null,
     toolCalls: [], mutatorCalls: [], report: null,
@@ -219,7 +219,7 @@ export async function runProbeRun({ parent, model, batchDoc, taskBook, fixtureId
       },
     },
   }
-  const built = assembleProbeChild({ parent, ctx, model, batchDoc, taskBook })
+  const built = assembleProbeChild({ parent, ctx, model, batchDoc, taskBookParams })
   state.relayPrefix = built.relayPrefix
   state.label = built.relayPrefix.slice(0, -1)
   state.child = built.child

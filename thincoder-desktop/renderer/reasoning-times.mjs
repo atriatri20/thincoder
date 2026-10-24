@@ -1,5 +1,5 @@
 /**
- * reasoning-times.mjs — 思考摘要回写（耗时 + 流式走马灯 + 边界自动收起）（Codex 形大改批 · 2026-10-04；
+ * reasoning-times.mjs — 思考摘要回写（耗时 + 流式走马灯 + 边界自动收起）（美化形大改批 · 2026-10-04；
  * 走马灯 = ZCode `ai-elements/reasoning.tsx` `ReasoningTrigger` 同构 —— 折叠态摘要携带思考最新一行，
  * 单行 ∕ 边缘渐隐 ∕ 视口恒滚到最新；源参照用户点单）：
  * ① 耗时：端点 = 建块 `startedAt`（`events-blocks.mjs` 三径 —— `reduce` 帧时刻），建节点投影 `data-started`

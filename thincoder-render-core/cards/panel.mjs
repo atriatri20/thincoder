@@ -1,5 +1,5 @@
 /**
- * panel.mjs — 任务 / 目标面板构件（核化 `webview/panels.js:16` / `:39` 的面板体与显隐判据——
+ * panel.mjs — 任务 / 目标面板构件（核化 `webview/panels.js` 的面板体与显隐判据——
  * 判定表 §3 行 27「拆」；§4 行 20 机制「计划 / 任务面板」）。挂起 / 回合态 / 目标消息分流与
  * DOM 写入（`panel.replaceChildren` / `style.display`）留端。
  *
@@ -12,7 +12,7 @@
 import { esc as escHtml } from "../md.mjs"
 import { t as coreT } from "../i18n.mjs"
 
-/** 任务面板显隐判据（纯函数——承 `panels.js:18-26`）：无 items ⇒ 不显示；全 done 且当前未显示
+/** 任务面板显隐判据（纯函数——承 `panels.js`）：无 items ⇒ 不显示；全 done 且当前未显示
  *  ⇒ 不新示（badge 已表达 ✓N/N）；全 done 且已在显示 ⇒ 照常重渲。 */
 export function taskPanelVisible(progress, shown = false) {
   const items = progress?.items
@@ -22,12 +22,12 @@ export function taskPanelVisible(progress, shown = false) {
   return true
 }
 
-/** 目标面板显隐判据（纯函数——承 `panels.js:41`）：`goal` 空 ⇒ 不显示。 */
+/** 目标面板显隐判据（纯函数——承 `panels.js`）：`goal` 空 ⇒ 不显示。 */
 export function goalPanelVisible(goal) {
   return !!goal
 }
 
-/** 任务面板体 HTML（内部面——逐字承 `panels.js:28-36`）；`progress` = taskProgress 消息
+/** 任务面板体 HTML（内部面——逐字承 `panels.js`）；`progress` = taskProgress 消息
  *  （`{ items, total, … }`）。 */
 function taskPanelHtml(progress, t) {
   const icons = { pending: "○", in_progress: "◉", done: "✓" }
@@ -41,7 +41,7 @@ function taskPanelHtml(progress, t) {
   ).join("")
 }
 
-/** 目标面板体 HTML（内部面——逐字承 `panels.js:44-53`）。 */
+/** 目标面板体 HTML（内部面——逐字承 `panels.js`）。 */
 function goalPanelHtml(goal, t) {
   const statusCls = goal.status === "active" ? "active" : goal.status === "done" ? "done" : "cancelled"
   return `<div class="panel-desc">${t("panel.goalDesc") || "Long-running objective — runs until complete or cancelled"}</div>

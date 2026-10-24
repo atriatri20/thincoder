@@ -98,7 +98,7 @@ async function runOneHook(event, hook, ctx) {
     // Timeout guard（#135-④：`timeout` ms 到点杀掉子进程 + 放行——原由 spawn 的 `timeout`
     // 选项承担，见上）。句柄捕获 + `unref()`：进程存活期间守卫照常触发（真 CLI 运行事件循环
     // 另有 handle），但不再单独维持事件循环存活 ⇒ 子进程钩子用例的测试进程零尾挂；
-    // 任一出口经 `done` 收尾 clearTimeout（house 先例 = mcp/transport-stdio.mjs:20）。
+    // 任一出口经 `done` 收尾 clearTimeout（house 先例 = `mcp/transport-stdio.mjs` 的 `killTree`）。
     guard = setTimeout(() => {
       try { proc.kill() } catch { /* already gone */ }
       done(0)

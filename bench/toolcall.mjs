@@ -13,10 +13,10 @@ import { fileURLToPath, pathToFileURL } from "node:url"
 import { fixtureTransport, liveTransport, runCase } from "./lib/client.mjs"
 import { isoLocal, setResultsDir } from "./lib/output.mjs"
 import { buildProviderEntry, effortFace } from "./lib/params.mjs"
-import { costOf, loadPrices, matchPrice, pricesPath, _setPricesPathForTest } from "./lib/prices.mjs"
+import { costOf, loadPrices, matchPrice, pricesPath, _setPricesPathForCheck } from "./lib/prices.mjs"
 import { loadRoster, selectEntries } from "./lib/roster.mjs"
-import { CASES, casesDigest, validateCases } from "./toolcall/cases.mjs"
-import { SYSTEM_BASE, TOOL_PROBE_VERSION, dryRunResponse } from "./toolcall/fixture.mjs"
+import { CASES, casesDigest, validateCases } from "./toolcall/prompts.mjs"
+import { SYSTEM_BASE, TOOL_PROBE_VERSION, dryRunResponse } from "./toolcall/data.mjs"
 import { gradeRun, pickObserved, skippedRun } from "./toolcall/grade.mjs"
 import { assertToolcallLabel, buildResult, costTotal, promptTokensMedian, writeToolcallReport } from "./toolcall/report.mjs"
 import { VARIANT_IDS, buildVariants, payloadDigest } from "./toolcall/variants.mjs"
@@ -225,7 +225,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (opts.help) { console.log(USAGE); return 0 }
   // ② 参数 → ③ 缝（CONFIG.md §6.2 混合形）：本面无判官档面（--results-dir / --prices）
   if (opts.resultsDir) setResultsDir(opts.resultsDir)
-  if (opts.prices) _setPricesPathForTest(opts.prices)
+  if (opts.prices) _setPricesPathForCheck(opts.prices)
   const ac = new AbortController()
   const onSigint = () => ac.abort(new Error("SIGINT"))
   process.once("SIGINT", onSigint)

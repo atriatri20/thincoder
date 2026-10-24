@@ -6,17 +6,17 @@
  * （`ipc.mjs` 注入原生 `dialog`；测试注入假函数）。
  * 零新存储（`docs/desktop/design/PROJECT.md` §2 KD-9 ∥ KD-56）：最近目录 ∥ 重启自动重开 = `sessionsDir()`
  * 的族事实回读 —— 不建列表文件、不加配置字段。族判据/分组/最新 mtime 单源 = 核纯函数 `groupSessionEntries`
- * （`thincoder-core/session-stale.mjs:56`；`:46` 的族正则为该档模块内常量，不可 import）。
+ * （其族正则为该档模块内常量，不可 import）。
  * 载入序不变量（批档 §2.4（a））：本档顶层静态 import 端壳 ⇒ 端名 `"desktop"` 先于任何物化写声明。
  * 读数面 = **同步扫描**（`readdirSync` / `statSync` / `readFileSync` 主进程内联、不异步化）：与核同类
- * 扫面（异步 · `thincoder-core/session-stale.mjs:5-6` D-SE34）取向不同，族量级大时阻塞主进程 —— 记于批档 §5。
+ * 扫面（异步 · 核 `session-stale.mjs` D-SE34）取向不同，族量级大时阻塞主进程 —— 记于批档 §5。
  */
 import { readdirSync, readFileSync, statSync } from "node:fs"
 import { basename, join } from "node:path"
 import { groupSessionEntries } from "@thincoder/core/session-stale.mjs"
 import { END, newSlotData, sessionPath, sessionsDir, writeSessionFile } from "./session-slots.mjs"
 
-/** 最近列表上限（`docs/desktop/design/IPC.md:50`：前 10）。 */
+/** 最近列表上限（`IPC.md` §2 项目面注 项 4：前 10）。 */
 export const RECENT_LIMIT = 10
 
 /** 本端记录文件后缀（`.manifest.{end}` —— 端名单源 = 端壳 `END`，本档零 `"desktop"` 字面）：重启自动重开的读面族（KD-56）。 */
@@ -110,7 +110,7 @@ async function pickCwd(pick) {
   try { return await pick() } catch { return null }
 }
 
-/** 物化（`docs/desktop/design/IPC.md:47` 裸路径 `sessionPath(cwd)`）：族内有任一数据文件
+/** 物化（`IPC.md` §2 项目面注 项 1 裸路径 `sessionPath(cwd)`）：族内有任一数据文件
  *  ⇒ 命中、零写；无 ⇒ 核 `writeSessionFile` + `newSlotData` 落空槽数据文件。**不认领**槽
  *  （不写 `slotSessions` / 不建 manifest / 不动 active —— 认领属 `newSlot` / `resumeSlot` 职责）。 */
 function materialize(cwd) {

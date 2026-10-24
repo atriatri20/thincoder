@@ -24,7 +24,7 @@ export { NEAR_BOTTOM_PX as FOLLOW_PX } from "/rc/scroll.mjs"
    滚动中途自动加载同语义。落地续链见 chat.mjs 帧尾补偿点）。 */
 export const BACKFILL_PX = 480
 export const SMOOTH_MS = 420
-/* 首屏渲染窗 —— 对齐 VSC `MAX_MESSAGE_BLOCKS`（`webview/ui.js:204` = 150）逐值（2026-09-29 · 批
+/* 首屏渲染窗 —— 对齐 VSC `MAX_MESSAGE_BLOCKS`（`webview/ui.js` = 150）逐值（2026-09-29 · 批
    `docs/batches/2026-09-29-hatch-clearance-2.md` · #673 · E10 端差消：VSC 150 = 防卡顿硬约束，
    桌面 200 为初始窗、改值零语义损失；回填链已在 ⇒ 更早块经摘要块按页回填、窗限随并入增）。 */
 export const MAX_RENDER_BLOCKS = 150

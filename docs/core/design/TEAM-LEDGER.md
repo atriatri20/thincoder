@@ -1,15 +1,14 @@
 # Thincoder Core · 团队台账（端侧面——核工具 `team_ledger`）
 
-> 板块 = core ∥ 本档 = 端侧团队面（团队台账——核工具 ∥ 仓标记派生 ∥ 登录态门 ∥ 三端承载分工；2026-10-13 team-ledger 批新立）。
+> 板块 = core ∥ 本档 = 端侧团队面（团队台账——核工具 ∥ 仓标记派生 ∥ 登录态门 ∥ 三端承载分工）。
 > 服务端机制单源 = `docs/server/design/ledger/LEDGER.md`（数据形/判权/端点——本档不复述）；登录态与 token 单源 = `docs/core/design/TEAM.md` §2.1/§2.6（本档不复述）。
 > 最近先例 = 本机台账工具面（`thincoder-core/agent/family-tools.mjs`——`ledgerTool`/`ledgerReadTool`：五 action ∥ 深度变体）∥ 三端登录态（`docs/core/design/TEAM.md` §2.1——`teamStatus()`）；对齐 = 工具面与登录判据逐字沿先例；偏离 = 零跨账代码路径 + 仓标记自动派生（需求 ①⑤）。
 > 需求单源 = `docs/server/requirements/PROJECT.md`（功能点 32 ∥ AC-32 ∥ §3 端侧同批纪律）。
-> 建档：2026-10-13（批 `docs/batches/2026-10-13-team-ledger.md` 设计轮 · eng-designer · 台账 #1206）。
 
 ## 1. 定位与边界
 
 - **一句话**：给三端 agent 一条**读写团队台账**的工具面（`team_ledger`）——团队账 = 服务端一本（登录后可用），端侧零本地副本。
-- **单源**：工具住核（拟新增——`thincoder-core/team-ledger.mjs`）——三端同 import 即同得（端侧零逐端改动，§4）。
+- **单源**：工具住核（`thincoder-core/team-ledger.mjs`）——三端同 import 即同得（端侧零逐端改动，§4）。
 - **不承载**：控制台维护面（= `docs/server/design/webui/LEDGER.md`）∥ 本机台账（= `docs/core/design/LEDGER.md`——两账独立，零共享代码路径）。
 - **纪律**：需求 §3 端侧同批——三端 + 控制台页同批落齐（本档 §4 承载分工表）。
 
@@ -17,7 +16,7 @@
 
 ### 2.1 工具面（名 ∥ action ∥ 参数 ∥ 出参）
 
-- **名**：`team_ledger`；描述文本单点 = `thincoder-core/tool-docs/team_ledger.md`（拟新增——`DESC` 加载面）。
+- **名**：`team_ledger`；描述文本单点 = `thincoder-core/tool-docs/team_ledger.md`（`DESC` 加载面）。
 - **action**（五件）：`query` ∥ `count` ∥ `add` ∥ `update` ∥ `close`——镜像本机台账工具面（认知迁移零成本）。
 - **参数**（并集 schema；按 action 收窄）：
 
@@ -59,18 +58,18 @@
 
 ## 3. 关键决策记录（本档）
 
-| # | 决策 | 理由 | 被否候选与何故否 |
-|---|---|---|---|
-| D-TL1 | 端侧承载 = **核工具 `team_ledger`**（三端共享单源）——三端零逐端改动 | 端侧同批纪律（需求 §3）由**核单源**结构性保障：三端同引 `@thincoder/core`（`thincoder-cli/package.json:23` ∥ `thincoder-vscode/package.json:33` ∥ `thincoder-desktop/package.json:20`），家族段由核 `prepareRun` 追加（`thincoder-vscode/src/agent/tool-table.mjs:8-9`）——「先行后补」结构上不可能 | 逐端各写工具（三份实现——漂移面 + 成本×3）；逐端面板先行（「先行后补」明禁） |
-| D-TL2 | 工具面**零跨账代码路径**（零 import 本机台账模块） | 上送 = agent 两步显式动作（读本机账 ⇒ 写团队账）——「禁混同」（需求 ⑤）由结构保障而非约定；import 面机检可判 | 工具内 `import` 动作（跨账代码路径）；共享本机账模块（两账耦合面） |
-| D-TL3 | 仓标记 = **会话项目根自动派生**（`rev-parse --show-toplevel` + `config --get remote.origin.url`）∥ 原文上送 ∥ 服务端归一 | 需求 ①「写时自动带上，不手挑」；端侧零归一实现 ⇒ 归一单源（两处不可能漂移） | 端侧自持归一（两份实现——同仓两键的缝）；`repo` 参数（手挑——需求明禁） |
-| D-TL4 | 登录态门 = `teamStatus().loggedIn`（`team.token` 在场）——未登录零网络 + 明示 | 登录态单源（TEAM.md §2.1）——工具不自建第二判据；「未登录 ⇒ 团队各面不启用」在工具面的落点 | 首次调用再判（未登录也发请求——多余往返 + 措辞分裂） |
-| D-TL5 | 子代理面 = **只读变体**（写三 action schema 级不可达） | 沿本机台账先例；子代理写共享账 = 噪声面（无归属边界） | 全角色全量（子代理可写团队账） |
-| D-TL6 | **本批不做逐端独立面板**（CLI 状态行 ∥ VSC 面板 ∥ 桌面卡片）；人机面 = agent 对话 + 控制台页 | 能力面（读写团队账）经核工具在三端**同批到齐**（无「先行后补」）；需求 ⑥ 的承载面裁量 = 控制台维护面（列表/筛选/四动作）；逐端面板 = 三处 UI + 三套交互（成本×3，需求未点名） | 逐端面板同批（成本×3——用户未点名）；只做 CLI（明禁） |
+| # | 决策 | 理由 |
+|---|---|---|
+| D-TL1 | 端侧承载 = **核工具 `team_ledger`**（三端共享单源）——三端零逐端改动 | 端侧同批纪律（需求 §3）由**核单源**结构性保障：三端同引 `@thincoder/core`（`thincoder-cli/package.json:23` ∥ `thincoder-vscode/package.json:33` ∥ `thincoder-desktop/package.json:20`），家族段由核 `prepareRun` 追加（`thincoder-vscode/src/agent/tool-table.mjs:8-9`）——「先行后补」结构上不可能 |
+| D-TL2 | 工具面**零跨账代码路径**（零 import 本机台账模块） | 上送 = agent 两步显式动作（读本机账 ⇒ 写团队账）——「禁混同」（需求 ⑤）由结构保障而非约定；import 面机检可判 |
+| D-TL3 | 仓标记 = **会话项目根自动派生**（`rev-parse --show-toplevel` + `config --get remote.origin.url`）∥ 原文上送 ∥ 服务端归一 | 需求 ①「写时自动带上，不手挑」；端侧零归一实现 ⇒ 归一单源（两处不可能漂移） |
+| D-TL4 | 登录态门 = `teamStatus().loggedIn`（`team.token` 在场）——未登录零网络 + 明示 | 登录态单源（TEAM.md §2.1）——工具不自建第二判据；「未登录 ⇒ 团队各面不启用」在工具面的落点 |
+| D-TL5 | 子代理面 = **只读变体**（写三 action schema 级不可达） | 沿本机台账先例；子代理写共享账 = 噪声面（无归属边界） |
+| D-TL6 | **不做逐端独立面板**（CLI 状态行 ∥ VSC 面板 ∥ 桌面卡片）；人机面 = agent 对话 + 控制台页 | 能力面（读写团队账）经核工具在三端**同批到齐**（无「先行后补」）；需求 ⑥ 的承载面裁量 = 控制台维护面（列表/筛选/四动作）；逐端面板 = 三处 UI + 三套交互（成本×3，需求未点名） |
 
-## 4. 三端承载分工（本批——需求 §3 纪律对位）
+## 4. 三端承载分工（需求 §3 纪律对位）
 
-| 端 | 承载面 | 本批工作 | 同批判据 |
+| 端 | 承载面 | 落地工作 | 同批判据 |
 |---|---|---|---|
 | CLI | agent 工具面（`team_ledger`——经核家族段装配）；人机面 = 对话 | **零端侧改动**（核单源） | 工具在装配表（`family-tools.mjs` depth-0 段） |
 | VSC | 同上（家族段由核 `prepareRun` 追加——端侧零自持表项） | **零端侧改动** | 同上 |
@@ -78,19 +77,19 @@
 | 控制台 | `#/me/ledger` 页（列表/筛选/新建/编辑/收口/撤回） | 新页（= `docs/server/design/webui/LEDGER.md`） | 页面在册 + 键族在册 |
 
 - **「同批」的含义**：能力面（三端读写团队账）一次性到齐（核单源）；维护面（控制台页）同批落齐——**无端侧滞后项**。
-- **不做面**：逐端独立面板/状态行/命令行族（本批外；如用户点名 ⇒ 三端同批另开批）。
+- **不做面**：逐端独立面板/状态行/命令行族（不在本档；如用户点名 ⇒ 三端同批另开批）。
 
 ## 5. 受影响文件与行数预算
 
-| 档 | 行数（设计估——实施实读为准） | 职责 |
+| 档 | 行数 | 职责 |
 |---|---|---|
-| `thincoder-core/team-ledger.mjs`（已落盘——实读 **282**） | ≈180 ⇒ **实读 282** | 工具声明 + 五 action 执行器 + 仓派生 + 登录态门 + 请求 |
-| `thincoder-core/tool-docs/team_ledger.md`（已落盘——实读 **9**） | ≈15 ⇒ **实读 9** | 工具描述文本单点（`DESC` 加载面） |
-| `thincoder-core/agent/family-tools.mjs`（已落盘——实读 193） | 193 ⇒ **≈197 ⇒ 实读 198**（+动态 import ∥ depth-0 段 + `teamLedgerTool` ∥ 子代理段 + `teamLedgerReadTool`——沿 `ledgerTool`/`ledgerReadTool` 同位） | 家族段装配 |
-| `thincoder-core/team.mjs`（已落盘——实读 224） | **±0**（传输/登录态现形复用——零改） | 登录态/token 单源 |
+| `thincoder-core/team-ledger.mjs` | **282** | 工具声明 + 五 action 执行器 + 仓派生 + 登录态门 + 请求 |
+| `thincoder-core/tool-docs/team_ledger.md` | **9** | 工具描述文本单点（`DESC` 加载面） |
+| `thincoder-core/agent/family-tools.mjs` | **198**（+动态 import ∥ depth-0 段 + `teamLedgerTool` ∥ 子代理段 + `teamLedgerReadTool`——沿 `ledgerTool`/`ledgerReadTool` 同位） | 家族段装配 |
+| `thincoder-core/team.mjs` | **224**（传输 / 登录态现形复用） | 登录态/token 单源 |
 
 - 三端（CLI ∥ VSC ∥ 桌面）**零改动**（D-TL1）；服务端侧裁剪随动 = `docs/server/design/ledger/LEDGER.md` §9。
-- 单元测试档 = `docs/batches/2026-10-13-team-ledger.test.mjs`（与 server 面同档——§7 用例指入）。
+- 单元测试档 = 本册件（与 server 面同档——§7 用例指入）。
 
 ## 6. 验收判据（AC-32 端侧面对位）
 
@@ -119,9 +118,3 @@
 - 不做逐端独立面板/状态行/命令行族（D-TL6）；不做端侧缓存/离线队列/自动重发；不做自动上送/映射/同步（需求 ⑤ 明禁）。
 - 不承载控制台面（server 侧）∥ 不触本机台账模块 ∥ 不改 `team.mjs` 登录/凭据面。
 - 不做服务端 admin agent 的团队账工具（服务端零团队登录——其裁剪面随动 = `docs/server/design/ledger/LEDGER.md` §9）。
-
-## 变更记录
-
-- 2026-10-13（**team-ledger 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-13-team-ledger.md` §1 · 台账 #1206；需求功能点 32 ∥ AC-32 ∥ §3 端侧同批纪律）：建档——工具面（五 action/参数/出参）∥ 仓标记派生 ∥ 登录态门 ∥ 传输 ∥ 深度变体 ∥ D-TL1–D-TL6 ∥ 三端承载分工表 ∥ 文件与行数预算 ∥ 验收判据 ∥ 用例。**产品码零触（设计轮）。**
-- 2026-10-13（**team-ledger 批 · 设计评审轮 1 修复（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-13-team-ledger.md` §3 轮次 1 之 8/9）：头注补最近先例行；§2.1 出参补 `repoName` 定音（**零 `repoName`**——端侧仓面展示 = 归地址；显示名 = 控制台 `repos[]` 回填）。**零新语义**（评审发现直接导出项）；产品码零触（设计轮）。
-- 2026-10-13（**team-ledger 批 · 收口随正轮（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-13-team-ledger.md` §2 · 台账 #1206）：§5 `team-ledger.mjs` 行实读回填（≈180 ⇒ **实读 282**——父侧手单值）。**零新语义**（实读）；产品码零触。

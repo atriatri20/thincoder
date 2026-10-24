@@ -1,11 +1,12 @@
 /**
  * suspensions.mjs — 待决门出档（批 8 §1.14 ③：宿主档触行数拉线拆分；档名实施舱定）。
  * 单源（原 `agent-host.mjs` 同名面逐字搬运）：① 两门 verdict 闭集 `ITEM_VERDICTS`（逐项 = `once` /
- * `always` 放行 · `reject` 拒绝）与 `BATCH_VERDICTS`（批门三值逐字 —— 核 `dispatch.mjs:281-289`）；
- * ② 待决表（挂起表 · 唯一持有点）与其**五操作** `askSingle` / `askBatch` / `askQuestion` / `denyGates` /
- * `respond`（`createGates`）——表项形状 `promptId → { kind, shape?, key, resolve }`：`kind` 两值
- * （`approval` / `question`）判出站通道与载荷族，`shape` 两值（`single` / `batch`）判审批门 verdict
- * 闭集（提问门无 verdict ⇒ 无 `shape` 键）。出站 respond ∨ 门 resolve 皆清表。
+ * `always` 放行 · `reject` 拒绝）与 `BATCH_VERDICTS`（批门三值逐字 —— 核 `executeToolCalls`）；
+ * ② 待决表（挂起表 · 唯一持有点）与其**六操作** `askSingle` / `askBatch` / `askQuestion` / `askSecret` /
+ * `denyGates` / `respond`（`createGates`）——表项形状 `promptId → { kind, shape?, key, resolve }`：`kind` 三值
+ * （`approval` / `question` / **`secret`** —— SSH 会话批增凭据门）判出站通道与载荷族，`shape` 两值
+ * （`single` / `batch`）判审批门 verdict 闭集（提问 / 凭据两门无 verdict ⇒ 无 `shape` 键）。出站 respond ∨ 门
+ * resolve 皆清表。**凭据门值面**：入参零值（`askSecret` 载荷七键皆非密描述面），值只在 `secret:respond` 返回路。
  * 依赖面 = 注入：`post`（出站）· `agents`（装配表 —— `always` 放行需置会话位 `agent.autoApprove`；
  * 本档只读该表、不改表）。`summarizeArgs` 取 `agent-bridge.mjs`（同口径，不复制）。
  * **对齐第三批（`docs/desktop/design/UI.md` §1 本批注 B1 / 相抵① · `docs/desktop/design/IPC.md` §1 `ev:approval` 行）**：
@@ -15,7 +16,7 @@
 import { randomUUID } from "node:crypto"
 import { summarizeArgs } from "./agent-bridge.mjs"
 
-/** 两门 verdict 闭集：逐项 = `once` / `always` 放行 · `reject` 拒绝；批门 = 三值逐字（核 `dispatch.mjs:281-289`）。 */
+/** 两门 verdict 闭集：逐项 = `once` / `always` 放行 · `reject` 拒绝；批门 = 三值逐字（核 `executeToolCalls`）。 */
 export const ITEM_VERDICTS = Object.freeze(["once", "always", "reject"])
 export const BATCH_VERDICTS = Object.freeze(["approveAll", "deny", "oneByOne"])
 
@@ -23,8 +24,9 @@ export const BATCH_VERDICTS = Object.freeze(["approveAll", "deny", "oneByOne"])
  *  面向用户的「已取消」文案走渲染面词表（两域分离 —— `docs/desktop/design/IPC.md`:59）。 */
 export const QUESTION_CANCELLED = "(user cancelled)"
 
-/** 门 `kind` → 出站通道（两值闭集 · 单一映射点 —— 核 `docs/desktop/design/IPC.md` §1 出站表）。 */
-const GATE_CHANNELS = Object.freeze({ approval: "ev:approval", question: "ev:question" })
+/** 门 `kind` → 出站通道（三值闭集 · 单一映射点 —— 核 `docs/desktop/design/IPC.md` §1 出站表；
+ *  `secret` = 凭据门 —— SSH 会话批增，核 `ctx.onSecretInput` 缝）。 */
+const GATE_CHANNELS = Object.freeze({ approval: "ev:approval", question: "ev:question", secret: "ev:secret" })
 
 /** 审批载荷**行外两键**（「对齐第三批」B1 / 相抵①）：有值才携键（传入体缺项 ∥ `null` ⇒ 键缺席）；
  *  非对象 ⇒ 零键（表外形零担）。 */
@@ -36,7 +38,7 @@ function extraKeys(extra) {
   }
 }
 
-/** 造待决门：返回 `{ table, askSingle, askBatch, askQuestion, denyGates, respond }`。 */
+/** 造待决门：返回 `{ table, askSingle, askBatch, askQuestion, askSecret, denyGates, respond }`。 */
 export function createGates({ post, agents }) {
   /** 待决表（挂起表 · 唯一持有点）：promptId → `{ kind, shape?, key, resolve }`；清表 = 出站 respond ∨ 门 resolve。 */
   const table = new Map()
@@ -77,13 +79,36 @@ export function createGates({ post, agents }) {
     return suspend(key, "question", payload, promptId)
   }
 
+  /** 凭据门（`onSecretInput` —— SSH 会话工具族；设计定形 = `docs/core/design/TOOLS.md` §6.22 ⑧）：载荷 = 七键
+   *  **逐项白名单**（`kind` / `sessionId` / `host` / `user` / `port` / `fields` / `keys` —— 表外键不入出站；
+   *  `fields` 非数组 ⇒ `[]`、`keys` 非载体 ⇒ `{}`）；解除 = `secret:respond`（`values` = `{ <name>: <值> }`
+   *  ∥ `null` ⇒ 取消）。**值只在返回路**：本门入参零值（`fields` 只携 `{ name, masked, required, prefill }`
+   *  描述面），字段值由端面 UI 产出、经 `secret:respond` 直达结算 —— 门零转写 ∥ 零落盘 ∥ 零入日志。 */
+  function askSecret(key, req) {
+    const promptId = randomUUID()
+    const payload = {
+      key, promptId,
+      kind: req?.kind ?? null,
+      sessionId: req?.sessionId ?? null,
+      host: req?.host ?? null,
+      user: req?.user ?? null,
+      port: req?.port ?? null,
+      fields: Array.isArray(req?.fields) ? req.fields : [],
+      keys: req?.keys !== null && typeof req?.keys === "object" && !Array.isArray(req?.keys) ? req.keys : {},
+    }
+    return suspend(key, "secret", payload, promptId)
+  }
+
   /** 本键待决门结算（打断 / 会话关闭路径 —— 门挂起时 abort 不解除 await）：审批门按「拒」（逐项 ⇒ `false` ∥
-   *  批门 ⇒ `deny`）；提问门 ⇒ 取消串（与 `answer: null` 同判）。 */
+   *  批门 ⇒ `deny`）；提问门 ⇒ 取消串（与 `answer: null` 同判）；**凭据门 ⇒ `null`**（与窗内取消同判 ——
+   *  调用面按「未提供」径走，零值面残留）。 */
   function denyGates(key) {
     for (const [promptId, entry] of table) {
       if (entry.key !== key) continue
       table.delete(promptId)
-      entry.resolve(entry.kind === "question" ? QUESTION_CANCELLED : entry.shape === "batch" ? "deny" : false)
+      if (entry.kind === "question") entry.resolve(QUESTION_CANCELLED)
+      else if (entry.kind === "secret") entry.resolve(null)
+      else entry.resolve(entry.shape === "batch" ? "deny" : false)
     }
   }
 
@@ -97,17 +122,31 @@ export function createGates({ post, agents }) {
     return { ok: true }
   }
 
+  /** 凭据门出口：`values` = 字段值对象（`{ <name>: <串> }` 原样 —— 值直达门结算，本档零转写 / 零记）∥
+   *  `null`（窗内取消）；假形（非对象且非 `null` ∥ 数组）⇒ `bad-values` —— **不 resolve**（挂起保留，可重交）。 */
+  function answerSecret(entry, promptId, payload) {
+    const { values } = payload
+    if (values !== null && (typeof values !== "object" || Array.isArray(values))) return { ok: false, reason: "bad-values" }
+    table.delete(promptId)
+    entry.resolve(values)
+    return { ok: true }
+  }
+
   /** 出口（按命中门 `kind` 分派）：表外 id ⇒ `unknown-prompt`；跨 `kind` 载荷 ⇒ `bad-kind`（审批载荷打
-   *  提问门 ∥ 作答载荷打审批门 —— 两向）；跨形 / 表外 verdict ⇒ `bad-verdict`；非串且非 `null` 作答 ⇒
-   *  `bad-answer`。**四档皆不 resolve**（挂起保留）。命中 ⇒ 删表项 + resolve（逐项 ⇒ bool；`always` 另置
-   *  会话放行；批门 ⇒ 三值逐字；提问门 ⇒ 作答串 ∥ 取消串）。`"answer" in payload` = 作答意向判据。 */
+   *  提问 ∥ 凭据门 —— 两向）；跨形 / 表外 verdict ⇒ `bad-verdict`；非串且非 `null` 作答 ⇒ `bad-answer`；
+   *  非载体且非 `null` 值包 ⇒ `bad-values`。**五档皆不 resolve**（挂起保留）。命中 ⇒ 删表项 + resolve
+   *  （逐项 ⇒ bool；`always` 另置会话放行；批门 ⇒ 三值逐字；提问门 ⇒ 作答串 ∥ 取消串；凭据门 ⇒ 值对象 ∥ `null`）。
+   *  `"answer" in payload` = 作答意向判据；`"values" in payload` = 凭据提交意向判据。 */
   function respond(payload = {}) {
     const entry = table.get(payload.promptId)
     if (!entry) return { ok: false, reason: "unknown-prompt" }
     if (entry.kind === "question") {
       return "answer" in payload ? answerQuestion(entry, payload.promptId, payload) : { ok: false, reason: "bad-kind" }
     }
-    if ("answer" in payload) return { ok: false, reason: "bad-kind" }
+    if (entry.kind === "secret") {
+      return "values" in payload ? answerSecret(entry, payload.promptId, payload) : { ok: false, reason: "bad-kind" }
+    }
+    if ("answer" in payload || "values" in payload) return { ok: false, reason: "bad-kind" }
     const { verdict } = payload
     const legal = entry.shape === "single" ? ITEM_VERDICTS.includes(verdict) : BATCH_VERDICTS.includes(verdict)
     if (!legal) return { ok: false, reason: "bad-verdict" }
@@ -124,5 +163,5 @@ export function createGates({ post, agents }) {
     return { ok: true }
   }
 
-  return { table, askSingle, askBatch, askQuestion, denyGates, respond }
+  return { table, askSingle, askBatch, askQuestion, askSecret, denyGates, respond }
 }

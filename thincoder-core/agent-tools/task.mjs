@@ -51,7 +51,7 @@ export const taskTool = {
   },
   readonly: true,
   async execute(args, ctx) {
-    // F10（工程模式机械停用——双层门的 **execute 层兜底**；先例 = escalate `subagent-actions.mjs:349`）：
+    // F10（工程模式机械停用——双层门的 **execute 层兜底**；先例 = escalate `subagent-actions.mjs` 的 `executeEscalateAction`）：
     // 前置位 = 本行以下全部副作用之前（alias 归一 / `_taskPushbacks` 归零 / `_onTaskUpdate` / 轻推）
     // ⇒ 零副作用（列表不变）；装配层已摘（`agent/family-tools.mjs` 工程分支不入表，KD8）。
     // 普通模式（engineering 非真）逐字走原路径。

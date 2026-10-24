@@ -43,7 +43,7 @@ export function routeSlash(text, commands) {
   return { kind: "command", cmd, args: parsed.args }
 }
 
-/** `/help` 组序常量（**CLI 同序** —— `thincoder-cli/src/tui/cmd-help.mjs:10`；组缺者跳过 ∥ 无组条目跳过）。 */
+/** `/help` 组序常量（**CLI 同序** —— `thincoder-cli/src/tui/cmd-help.mjs`；组缺者跳过 ∥ 无组条目跳过）。 */
 const HELP_GROUPS = Object.freeze(["Agent", "Session", "Project", "System"])
 
 /** `/help` 行集（纯函数 —— 对位 CLI `cmd-help.mjs` 实盘三段形：标签 → 组行 → 命令行逐行）：
@@ -51,7 +51,7 @@ const HELP_GROUPS = Object.freeze(["Agent", "Session", "Project", "System"])
  *  出 `{ kind, text }[]`：`label` = 标签行（词键 `slash.help.label`）→ `group` = 组行（`${group}:`——`HELP_GROUPS`
  *  序；**组缺者跳过**）→ `cmd` = 命令行（`名字 (别名)  描述` —— 别名括注（多别名逗号分隔）、**双空格分隔**
  *  （**零 padEnd**：比例字体下列对齐为终端渲染机制，非形本体）；`descKey` 缺 ⇒ 尾空）。
- *  条目无 `group` ⇒ 跳过（CLI `cmd-help.mjs:13` 同判 —— 零假面：不在册不进清单）。 */
+ *  条目无 `group` ⇒ 跳过（CLI `cmd-help.mjs` 同判 —— 零假面：不在册不进清单）。 */
 export function formatHelp(commands, t) {
   const list = Array.isArray(commands) ? commands : []
   const rows = [{ kind: "label", text: t("slash.help.label") }]

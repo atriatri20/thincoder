@@ -40,6 +40,22 @@ export const CHAT_TOOL_OPS = Object.freeze({
   runners: Object.freeze(["list", "add", "remove", "revoke_credential"]),
 })
 
+/** 只读判类（KD-SV-225——管理族逐动词只读表；免 = 各读类动词，余问；`docker`/`exec`/未知件 ⇒ 写类）。 */
+export const CHAT_READONLY_OPS = Object.freeze({
+  members: Object.freeze(["list"]),
+  providers: Object.freeze(["list"]),
+  models: Object.freeze(["list"]),
+  usage: Object.freeze(["summary", "rows"]),
+  audit: Object.freeze(["query"]),
+  runners: Object.freeze(["list"]),
+})
+
+/** 工具面判类维（审批门挡单源——§11.5∥KD-SV-225）：`true` = 读类（零弹）∥ `false` = 写类（弹卡）。 */
+export function readonlyOf(name, args = {}) {
+  const ops = CHAT_READONLY_OPS[name]
+  return ops !== undefined && ops.includes(String(args?.op ?? ""))
+}
+
 /** 用法面限制（§12）：`usage.rows` limit ≤ 100（控制台账为 ≤500——工具面收窄）。 */
 export const TOOL_USAGE_LIMIT_MAX = 100
 
@@ -557,6 +573,7 @@ export function createChatTools({ db, runtime = null, config = {}, env = process
     names: CHAT_TOOL_NAMES,
     ops: CHAT_TOOL_OPS,
     schemas,
+    readonlyOf, // 判类维（§11.5——写类工具走审批门）
     invoke,
   }
 }

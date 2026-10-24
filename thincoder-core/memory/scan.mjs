@@ -90,7 +90,7 @@ export function createTopK(k) {
   }
 }
 
-/** 末行键值元组：任一键列缺失（`undefined` / `null`）⇒ `null`（防呆①：等价现 `:90`）。 */
+/** 末行键值元组：任一键列缺失（`undefined` / `null`）⇒ `null`（防呆①：等价现 `createTopK` 的 `list()`）。 */
 function cursorValues(keys, row) {
   if (!row) return null
   const out = []

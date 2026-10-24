@@ -105,6 +105,7 @@ export async function beginRun(agent, input, callbacks, {
   // #417（撞帽载荷「本段零落盘轮数」——只报数：零阈值常量 / 零自动动作）：段起点复位（首段 /
   // 续跑新段——与 `_continueSegments` 同点）；段内累加，采集点在回合环（与 `_turnSeq` 同源面）。
   agent._zeroWriteTurns = 0
+  agent._segmentTurns = 0 // #934 B 面读数分母（§6.32.4）：同点复位——同段同源（分子 ≤ 分母）
   if (!resume) {
     // 第 19 批（TURN-ACROSS-SEGMENTS——设计 TURN-CAP-CONTINUE.md §4）：链内累计编号
     // 只在链起点复位——续跑（resume:true）不重置、不回退（编号帧公式见 helpers.mjs

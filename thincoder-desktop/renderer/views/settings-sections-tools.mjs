@@ -8,12 +8,12 @@
  *     名 + 键面（配置 ⇒ `****`〔键值恒不下发〕∕ 未配 ⇒ 「—」）—— 键行只在**键面读数在场**时落（`keys` 缺位
  *     〔读数未达 ∕ 失败〕⇒ **两行零节点**，段态词 + 段级失败面承载 —— 零假造）—— + 静止态两控件
  *     （`Add Key` ∕ `Change` + 删除；未配 ⇒ 零删除控件）+ 编辑态（密码输入 + `Save` ∕ `Cancel`）；
- *  ② **索引族行**（源 = VSC `settings-tools.js:330-350`（`renderIndexStatus`）· `:148-153`（构建钮绑定））：
+ *  ② **索引族行**（源 = VSC `renderIndexStatus`）：
  *     名（`settings.indexSection`）+ 状态词 + 构建钮（两标：构建 ∕ 重新构建）—— VSC 同形同判据序：
  *     `built` 真 ⇒ 计数行 + 「重新构建」；否则 ⇒ 「未构建」+ 「构建索引」；**无 embedding key ⇒ 不可构建**
- *     （S12 落：`settings.indexNoKey` 词 + 钮禁用 —— VSC `settings-tools.js:337-341` 同判）。
+ *     （S12 落：`settings.indexNoKey` 词 + 钮禁用 —— VSC `updateIndexStatus` 同判）。
  * 态机（段级状态为异步回执）：① `building` ⇒ 「构建中…」+ 钮禁用（VSC 点按即禁同律）；② 无 embedding key
- *  ⇒ `no-key`（`settings.indexNoKey` 词 + 钮禁用 —— S12：VSC `settings-tools.js:337-341` 同判；键面读数缺位
+ *  ⇒ `no-key`（`settings.indexNoKey` 词 + 钮禁用 —— S12：VSC `updateIndexStatus` 同判；键面读数缺位
  *  ⇒ 不可证假，沿下一判）；③ **索引状态缺位**（首开在途 ∕ 读数回执失败）⇒ **索引行零节点**（段态词 +
  *  段级失败面承载 —— 零假造）；④ 有状态 ⇒ built ∕ not-built 两词面。
  * 纪律：零 DOM（描述符树）；文案一律经 `t()`；缺 handlers ∥ 禁用态 ⇒ `wire` 落 `disabled: true`
@@ -24,7 +24,7 @@ import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
 
 /** 态判据（VSC `renderIndexStatus` 同判据序；`null` = 状态缺位 —— 零节点，禁假造）。
- *  **S12 增 `no-key`**：embedding 键面读数在场且 `hasKey` 假 ⇒ 该态（对位 VSC `settings-tools.js:337-341`：
+ *  **S12 增 `no-key`**：embedding 键面读数在场且 `hasKey` 假 ⇒ 该态（对位 VSC `updateIndexStatus`：
  *  无 key ⇒ `settings.indexNoKey` 词 + 构建钮禁用）——键面读数缺位（`keys` 非对象）⇒ 不可证假，沿旧判。 */
 function indexState(section) {
   if (section?.building === true) return "building"

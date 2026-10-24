@@ -34,6 +34,8 @@ import { createRequireConfigured, createSessionHandlers, createSlotReleaser } fr
 import { createSlotsHandlers } from "./acp/handlers-slots.mjs"
 import { createExtHandlers } from "./acp/ext.mjs"
 import { createReadDataHandlers } from "./acp/read-data.mjs"
+// SSH 凭据窗无 UI 拒件（SSH-SESSION 批 · TOOLS.md §6.22 ⑧/E6——端面单源单句：secret-prompt.mjs）
+import { refuseSecretInput } from "./tui/secret-prompt.mjs"
 
 const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version
 
@@ -72,10 +74,13 @@ export const ACP_EXCLUDED_TOOLS = ["question"]
  *  `id` is the ACP session id — it is baked into the callbacks at construction time
  *  (buildAcpCallbacks closure), so it must be known BEFORE createAcpSession runs.
  *  `request` is the transport's reverse-RPC channel (permissions + fs routing).
- *  `clientCaps` = the §3.4 snapshot taken at `session/new` time (fs gate, §11.4). */
+ *  `clientCaps` = the §3.4 snapshot taken at `session/new` time (fs gate, §11.4).
+ *  SSH-SESSION 批（TOOLS.md §6.22 ⑧）：ACP = 无 UI 通道——ssh 凭据窗无人可问 ⇒ 注入显式拒
+ *  （可读句 + 指引——不挂起、不静默）；**ssh 工具本体不剔除**（密钥 / agent 径照常可用——S1–S4），
+ *  仅密码径经该句失败（E6）。 */
 export async function defaultCreateSession({ id, notify, request, log, clientCaps }) {
   const agent = await assembleAgent({ excludeTools: ACP_EXCLUDED_TOOLS })
-  return createAcpSession({ id, agent, notify, request, log, clientCaps })
+  return createAcpSession({ id, agent, notify, request, log, clientCaps, onSecretInput: refuseSecretInput })
 }
 
 /**

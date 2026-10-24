@@ -1,38 +1,24 @@
 # ACP 协议面合规收正（ACP-PROTOCOL-COMPLIANCE）· CLI 面 · 设计
 
-> 论域 = `thincoder-cli/src/acp/**` 与 ACP v1 schema 的逐字段对位收正——本批 4 条（#870 ∥ #871 ∥ #872 ∥ #873 实施；#862 = 拆批裁定，见 §6）。
-> 承批档 = `docs/batches/2026-10-04-issue-fix-round2.md` §1（5 条清单 + 证据锚）；条目源 = 2026-10-03 分诊（gitee/GitHub → 台账 #862 ∥ #870 ∥ #871 ∥ #872 ∥ #873）。
-> 配对长期档 = `docs/cli/design/ACP-CLIENT.md`（通道机制单源——本批收正的目标文本见 §5，实施轮同拍落）；配对需求档 = `docs/cli/requirements/ACP-CLIENT.md`（F8 / R-A5——合规核对见 §1.3）。
-> 规范基准 = 官方 schema v1（本设计轮复取 as-of 2026-10-04——SHA256 与 2026-09-18 记值逐字同 ⇒ 字段级结论同 as-of 有效；摘录见 §4）。
-> 建档：2026-10-04（issue 修复批·二 · 设计轮 · eng-designer）。
+> 论域 = `thincoder-cli/src/acp/**` 与 ACP v1 schema 的逐字段对位收正——本次 4 条（#870 ∥ #871 ∥ #872 ∥ #873 实施；#862 = 拆批裁定，见 §6）。
+> 配对长期档 = `docs/cli/design/ACP-CLIENT.md`（通道机制单源——本次收正的目标文本见 §5，实施轮同拍落）；配对需求档 = `docs/cli/requirements/ACP-CLIENT.md`（F8 / R-A5——合规核对见 §1.3）。
+> 规范基准 = 官方 schema v1（摘录见 §4）。
 
 ## 1. 定位与归属
 
 ### 1.1 设计档落点与归属理由
 
-- 长期机制面（ACP 通道）的**单源** = `docs/cli/design/ACP-CLIENT.md`；本批 4 条 = 该面内的 schema 对位收正 ⇒ 其判据与目标形最终归位该档（实施轮同拍收正——落点表与目标文本 = §5）。
-- 本轮该档属 **#51（read-data-interface 实施）在飞写域** ⇒ 不可写（零触在飞写域）。本批设计独立成档（本档）——承先例 = `docs/cli/design/READ-DATA-INTERFACE.md`（批设计独立成档 + owning 档随动）。
+- 长期机制面（ACP 通道）的**单源** = `docs/cli/design/ACP-CLIENT.md`；本次 4 条 = 该面内的 schema 对位收正 ⇒ 其判据与目标形最终归位该档（落点表与目标文本 = §5）。
 - 分界（D2 单一权威源）：本档只写「收正目标形 / schema 对位 / 判据 / 用例 / 同拍落点」；**不重述通道机制**（传输 / 模块划分 / 能力快照 / 通知通道 / 会话生命周期——单源仍在 `docs/cli/design/ACP-CLIENT.md`）。
-- **收口后定位**：本档冻结为**本批设计记录 + schema 对位基准**（不再自动扩展——后续同类收正归 `docs/cli/design/ACP-CLIENT.md` 活面）。
-- **实施前置**：本批实施须**待 #51 收口后派发**（`thincoder-cli/src/**` 与 `docs/cli/design/ACP-CLIENT.md` 写域让渡——派发前核）。
+- **收口后定位**：本档冻结为**本次设计记录 + schema 对位基准**（不再自动扩展——后续同类收正归 `docs/cli/design/ACP-CLIENT.md` 活面）。
 
-### 1.2 复验结论（本设计轮逐条实读 · as-of 2026-10-04）
+### 1.3 需求面合规核对（需求档 = `docs/cli/requirements/ACP-CLIENT.md`）
 
-| 台账 | 分诊所述 | 本轮实读 | 裁决 |
-|---|---|---|---|
-| #871 | 3.3 已修；3.1 / 3.2 存活或半修 | 3.3 确认已修（`acp/client-caps.mjs:57-61` agentCapabilities 全形 ∥ `handlers-session.mjs:49-69` 凭据门即时判据）；3.1 存活 = `acp/bridge.mjs:208` `usage_update` 仅带 `usage`；3.2 半修 = `acp/handlers-slots.mjs:48` `sessionId` 键已正 ∥ `:50` `updatedAt: s.updatedAt ?? 0` 仍发 epoch 数 | 3.1 / 3.2 **存活**——入本批（§2.1 / §2.2） |
-| #873 | 1.2 / 1.4 已修；1.1 存活、1.3 半修 | 1.2 确认已修（`acp/client-caps.mjs:28-37` authMethods 对象数组 + 门控）；1.4 确认已修（`handlers-session.mjs:204` 读 `params.prompt`）；1.1 存活 = `handlers-session.mjs:268` `set_config_option` 仍返 `{}`；1.3 半修 = `:191` `sessionId` 已正 ∥ `:32-36` `CONFIG_OPTIONS` 元素仍 `{id,name}` 无 `type` | 1.1 / 1.3 **存活**——入本批（§2.3） |
-| #872 | 2.1 / 2.2 / 2.3 均存活 | 2.1 = `handlers-slots.mjs:79-80,108-114`（load）∥ `:139-140,161-164`（resume）仍 `allocSessionId()` 新分配且响应只回 `{configOptions}`（响应形状本身合规——Load/ResumeSessionResponse 无 sessionId 字段）；2.2 = `acp.mjs:101,108` 计数器 + `handlers-session.mjs:167`；2.3 = `handlers-session.mjs:287` `mode:` ∥ `:266` `{configId,value}` | 三条**存活**——入本批（§2.4） |
-| #870 | 全仓 `resource_link` 零命中（thincoder 侧）；`handlers-session.mjs:204-206` 仅取首个 text 块 | 确认零命中（`.thincoder/tmp/gh-issues.json` 分诊件除外）；`handlers-session.mjs:204-206` 实读同上；schema 基线句「All agents **MUST** support resource links in prompts」（§4.2） | **存活**（基线 MUST 未达）——入本批（§2.5） |
-| #862 | ② 结构化子代理事件未见实现（`bridge.mjs:194-195` 仍注「另行跟踪」） | 确认：`bridge.mjs:190-197` 现为**形态剥离**（剥即弃——零结构化映射）；结构化所依赖的状态源 = `⟦ev⟧` 事件族（8 名），现状为**显示面消费**（CLI TUI / VSC / 桌面三处各自解析，无核内机读单源） | **存活**——裁定 = **拆批**（§6） |
-
-### 1.3 需求面合规核对（需求档 = `docs/cli/requirements/ACP-CLIENT.md`——只读核对，笔在主 agent）
-
-- 现状判定句面 = F1–F8 / R-A1–A5 / N1–N8。本批 4 条中：
+- 现状判定句面 = F1–F8 / R-A1–A5 / N1–N8。本次 4 条中：
   - **#873 与 R-A5.4 相抵（欠述）**：该行现文「`configOptions` 条目含 `id` + `name`」——未含判别键 `type` 与现值字段（收正后形状见 §3.3）。需补述（需求面补笔 = 主 agent）。
   - **#871a / #872 / #870 在需求档无对应判定句**（F8 未覆盖 usage_update 形状 / 会话 id 持久身份 / resource_link 基线内容块）——缺口登记（补笔 = 主 agent；设计侧目标形已在本档 §2 给全）。
-  - 其余判定句（R-A5.1/2/3/5/6/7 ∥ N1–N8）与本批**零冲突**（本批不改协议版本 / 不新增方法 / `initialize` 形状零动）。
-- 五要素（本批条目层）：**目标** = 外部编排器（Zed 等）对 ACP v1 的字段级兼容；**功能点** = §2.1–§2.5 五条；**边界** = §11；**验收** = §9（可机检）；**依赖** = 官方 schema v1（§4）+ 核 `providerSpec` / `model-specs` 单源 + #51 写域让渡。
+  - 其余判定句（R-A5.1/2/3/5/6/7 ∥ N1–N8）与本节**零冲突**（不改协议版本 / 不新增方法 / `initialize` 形状零动）。
+- 五要素（条目层）：**目标** = 外部编排器（Zed 等）对 ACP v1 的字段级兼容；**功能点** = §2.1–§2.5 五条；**边界** = §11；**验收** = §9（可机检）；**依赖** = 官方 schema v1（§4）+ 核 `providerSpec` / `model-specs` 单源。
 
 ## 2. 机制设计（逐条：现盘坐标 → 目标形 → 验收判据）
 
@@ -46,15 +32,14 @@
     size: providerSpec(agent?.provider).context,
   }),
   ```
-  - `used` = 本轮请求 prompt + 生成 completion（近似「当前在上下文中的 token」——量级近似，客户端进度条允许偏差，如实登记）。
+  - `used` = 该轮请求 prompt + 生成 completion（近似「当前在上下文中的 token」——量级近似，客户端进度条允许偏差，如实登记）。
   - `size` = **模型上下文窗口**（schema 逐字「Total context window size in tokens」）。取值单源 = `providerSpec(agent.provider).context`（`@thincoder/core/config.mjs` 再导出；含 `providers[].context` 覆写，K→×1024 换算单源）——未知模型 ⇒ `DEFAULT_SPEC.context = 128_000` 兜底（函数全量，零 undefined）。
   - **agent 传递**：`buildAcpCallbacks` 增入参 `agent`（`bridge.mjs:62` 签名 + `thincoder-cli/src/acp/session.mjs:22` 调用点）；**活引用**（`session/set_config_option` 切模型后 size 随动——不得在构造期固化数值）。
-  - 被否：`agent?.provider?.maxTokens`（= **输出上限**，与「上下文窗口」语义相抵——issue 自注）；被否：构造期快照数值（切模型后失真）。
 - **验收判据**：任一次 `usage_update` 通知含整数 `used ≥ 0` 与 `size ≥ 0`；`used` = prompt+completion 之和；模型可知时 `size` = 其规格 context（如 `kimi-k3` → 1_000_000），未知 ⇒ 128_000。用例 T1–T3。
 
 ### 2.2 #871b · `session/list` 条目 `updatedAt` 收正 + `messageCount` 剔除
 
-- **现盘坐标**：`thincoder-cli/src/acp/handlers-slots.mjs:47-53`——`:50` `updatedAt: s.updatedAt ?? 0`（epoch 数——schema 要 ISO 8601 字符串，见 §4.2）；`:52` `messageCount`（非 SessionInfo 字段——多余键收敛，同 09-18 批「多余键收敛为契约形态」原则）。
+- **现盘坐标**：`thincoder-cli/src/acp/handlers-slots.mjs:47-53`——`:50` `updatedAt: s.updatedAt ?? 0`（epoch 数——schema 要 ISO 8601 字符串，见 §4.2）；`:52` `messageCount`（非 SessionInfo 字段——多余键收敛）。
 - **目标形**：
   ```js
   sessions: slots.map((s) => ({
@@ -96,7 +81,6 @@
   - `model` 不可解析 ⇒ 该项**缺席**（select 的 `currentValue` 必填——无值不可虚构；余两项照常）。
   - 响应点四处同源：`session/set_config_option` `:268` → `{ configOptions: sessionConfigOptions(found.session.agent) }`；`session/new` `:191`、`session/load` `handlers-slots.mjs:114`、`session/resume` `:164` → 同函数（替换 `[...CONFIG_OPTIONS]`）。
   - 通知面（`config_option_update` 全量数组）归 §2.4。
-  - 被否：`options` 列全量候选模型（候选集语义未定——spec 表 ∥ 配置渠道 ∥ 用户偏好；登记 §11）；`currentValue` 缺席时虚构占位值（硬造现值 = 假造）。
 - **验收判据**：`set_config_option` 响应 = `{configOptions: [...]}`；每项含 `id`/`name`/`type`；select 项含 `currentValue` + `options[]`（元素 `{value,name}`）；boolean 项含 `currentValue`（布尔）；四处响应同形。用例 T6–T8。
 
 ### 2.4 #872 · 会话身份与状态同步（G5 收正）
@@ -109,7 +93,7 @@
   - **失败回滚（new 的新序引入的孤儿面——必处置）**：`createSession` 抛错 ∥ `_providerInvalid` 分支 ⇒ `deleteSlot(getCwd(), slot)`（既有函数——文件 + manifest 条目 + 认领由 `session-slots.mjs` 单点清理；回滚以 `committed` 旗标守卫：仅在未 `sessions.set` 前生效）。
   - **同 id 在存 ⇒ 处置（new/load/resume 三途同法）**：按 `session/close` 同法处置旧实例（动作 = `cancel()` ∥ `sessions.delete(id)` ∥ 认领释放），再装载——共性理由：防旧实例成为不可达孤儿（同 id 在 Map 上唯一）；load/resume 另：旧实例的钉槽不再计入 `sameProcessPinned`（重载同槽 ⇒ 可正常钉回原槽，不误 fork）。位次按途钉定（下两条）。
     - **load/resume 途替换点钉定（拒载安全）**：替换在既有前置判据（`loadSlotFile` 缺失 `handlers-slots.mjs:64-67` ∥ 工程模式拒载 `:72-77`）**之后**、`createSession` **之前**——拒载路径零副作用（旧实例保留：不 `cancel`、不释放认领——不误杀在飞回合）。
-    - **new 途处置点钉定（delete→new 槽号回收面）**：`session/delete` 删档后槽号回流（`thincoder-core/session-slots.mjs:226-229`），`session/new` 复得同号时 `sessions.set(id, session)` 撞**同键在存实例**——旧回合不 cancel、通知串流（D-4 被否类经 delete→new 入口）。
+    - **new 途处置点钉定（delete→new 槽号回收面）**：`session/delete` 删档后槽号回流（`thincoder-core/session-slots.mjs:226-229`），`session/new` 复得同号时 `sessions.set(id, session)` 撞**同键在存实例**——旧回合不 cancel、通知串流（同 id 在存不处置类经 delete→new 入口）。
       触发条件：键 = 槽号串而 `_slot` 已与键分离（fork/换钉）的旧实例不受 delete 重钉环处置（`handlers-slots.mjs:211-213` 按 `_slot` 匹配）。
       处置点 = `sessions.set(id, session)` **直前**（`createSession` 成功与 `_providerInvalid` 排除之后）：`const stale = sessions.get(id); if (stale) { stale.cancel(); sessions.delete(id) }`——此前任何一步失败均不改动旧实例。
     - **new 途认领释放位次**：`if (stale) releaseClosedSlot()` 置于 `sessions.set` 与 `committed` 置位**之后**——保留集须含新会话槽（`createSlotReleaser` 保留集 = 在存 Map 槽——`handlers-session.mjs:64-72`）：
@@ -121,7 +105,6 @@
     - `session/set_config_option` → `update: { sessionUpdate: "config_option_update", configOptions: sessionConfigOptions(found.session.agent) }`（`ConfigOptionUpdate.required = ["configOptions"]`——**全量数组**，非增量 `{configId,value}`）。
   - **不变量（可直接写成断言）**：`session/new` 返回的 id **必定**出现在随后 `session/list` 的条目集（newSession 即写槽文件 + digest）；load/resume 后以原 id 发 `prompt` / `cancel` / `close` / `set_*` 命中该会话（无 `unknown session`）。
   - **边界（如实登记）**：① fork 角——载入遇他进程占用槽 ⇒ 既有 fork 语义（`newSession` 新槽）保持，本次存续期 id 与落盘槽号分离（重载后 list 显示 fork 槽号）；② 未 load 的档位直喂 `prompt` 仍 `unknown session`（语义正解——prompt 认在存会话）；③ 客户端 id 存续期格式假设（`"008"` 类非规范字面按原文注册——同字面读回即可命中）。
-  - 被否：保留计数器 + 映射表（双命名空间 = G5 缺陷本体）；被否：load 遇同 id 直接覆盖不处置旧实例（旧实例成不可达孤儿——回合在飞、token 空烧）；被否：load 沿用 fork 分支不做替换（同 id 无法双注册）。
 - **验收判据**：§2.4 不变量两条机检（T9–T12）；两处通知字段形状（T13–T14）。
 
 ### 2.5 #870 · `session/prompt` 支持 `resource_link`（基线内容块）
@@ -151,7 +134,7 @@
      `binary (NUL byte)` / `too many lines (>2000)` / `too long (>100000 chars)` / `invalid selection` / `lines out of range`；
      块间独立——单块失败不影响他块。
 - **语义裁定（三条）**：
-  - **无 cwd confine**：用户显式 @ 引用可读任意绝对路径——与 `read` 工具同界（`thincoder-core/tools/shared.mjs:291-302`：confinement 已于 2026-09-02 撤除；trust model + 审批门为界——读操作只读，不触发审批）。
+  - **无 cwd confine**：用户显式 @ 引用可读任意绝对路径——与 `read` 工具同界（`thincoder-core/tools/shared.mjs:291-302`；trust model + 审批门为界——读操作只读，不触发审批）。
   - **无需能力位**：`resource_link` 属基线 MUST（非 `PromptCapabilities` 项）——零门控、零声明变更；`embeddedContext` 维持 `false`（`resource` / image / audio 块丢弃照旧）。
   - **上限量级与 `read` 同源**：行上限直引 `MAX_READ_LINES`（`@thincoder/core/tools/shared.mjs:21` = 2000）；字节 10MB / 字符 100k = 本面常量（同量级，常量住 §2.5 落点新档）。
 - **接线（handlers-session.mjs）**：
@@ -165,7 +148,7 @@
 
 ## 3. 接口契约（收正后形状）
 
-### 3.1 `session/update` 通知（本批触及项）
+### 3.1 `session/update` 通知（本次触及项）
 
 | 通知 | 收正后形状 |
 |---|---|
@@ -203,15 +186,14 @@
 - `text` → 首个合法块取其 `text`；`resource_link` → §2.5 解析（内联 ∥ 降级标记）；其他类型（image/audio/resource）→ 丢弃（能力位与基线语义不变）。
 - 聚合空 ⇒ `-32602`。逐块失败降级**不中断**整体（对模型可见「引用过」。
 
-## 4. 规范依据（本批复取 · 逐字摘录）
+## 4. 规范依据（本次复取 · 逐字摘录）
 
 ### 4.1 复取与复核
 
-- 来源 = `agentclientprotocol/agent-client-protocol` · `main` 分支 · `schema/v1` 目录的 v1 schema（`gh-proxy.com` 镜像，命令同 `docs/batches/2026-09-18-acp-external-drivers.md` §2.8）。
-- **本批复取（2026-10-04）：247168 字节 · SHA256 `3c17bd6385d90cf672d8a661fddc359d73422cf8b8ce6865213d25cfd4c0eca7` · 170 `$defs`**——与 2026-09-18 记值**逐字相同** ⇒ 字段级结论同 as-of 有效（16 日零漂移）。
-- 复核方式：按上行命令复取 → sha256 逐字比对；不一致 ⇒ 字段面按新 as-of 重核后再实施。
+- 来源 = `agentclientprotocol/agent-client-protocol` · `main` 分支 · `schema/v1` 目录的 v1 schema（`gh-proxy.com` 镜像）。
+- **schema 读数：247168 字节 · SHA256 `3c17bd6385d90cf672d8a661fddc359d73422cf8b8ce6865213d25cfd4c0eca7` · 170 `$defs`**。
 
-### 4.2 相关 `$def` 摘录（本批结论依赖面——逐字）
+### 4.2 相关 `$def` 摘录（本次结论依赖面——逐字）
 
 ```text
 UsageUpdate — required = ["used","size"]；used:「Tokens currently in context.」（integer uint64 ≥0）；size:「Total context window
@@ -234,7 +216,7 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 
 ## 5. 同拍收正面（`docs/cli/design/ACP-CLIENT.md`——实施轮，落点 = 落笔时读回；此处给目标文本）
 
-| # | 现落点（as-of 本设计轮） | 目标文本（要点逐字） |
+| # | 现落点 | 目标文本（要点逐字） |
 |---|---|---|
 | R1 | `:37` §2.1 session/new 行 | 返回 `{ sessionId, configOptions }`；`sessionId` = 本进程内该会话的持久槽位号（G5 收正）；`configOptions` = 全形（§11.3） |
 | R2 | `:114` §3.3 list 行 | `{ sessionId, cwd, updatedAt(ISO 8601), title }`（`messageCount` 已剔——非 SessionInfo 字段）；`sessionId` 取值 = 持久化槽位号——即**全族统一身份**（§11.3） |
@@ -247,22 +229,21 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 | R9 | `:525-527` §11.3 id 命名空间段 | 改述为**统一现态**：id = 持久槽位号（G5 已收正——load/new 同命名空间）；同 id 重载替换；fork 角如实注 |
 | R10 | `:619` / `:620` / `:631` §11.9 | G5 行删、G6 行删（无效化表述即删）；`:631` 登记项 3 改述：resource_link 已接；余多块 text 合流待立批 |
 
-- 变更记录（`docs/cli/design/ACP-CLIENT.md`）同轮补一行（日期 + 收正点）。
 - **API-CONTRACT 再生**（导出面变动：`CONFIG_OPTIONS` 撤、`sessionConfigOptions` / `createSlotReleaser` / `resolveResourceLink` 增）：`node scripts/api-contract.mjs --write`（生成区机械笔）。
 
 ## 6. #862 裁定：拆批（含后续批 scope 草案）
 
-- **裁定 = 拆出另批**（本批不实施）。理由四条：
-  1. **面在新机制不在修补**：结构化子代理事件 = ACP **契约外的扩展契约**（`session/update` 载荷 `_meta` 通道——候选形；非标 `sessionUpdate` 枚举值已否：严格客户端反序列化风险）——「新机制 ⇒ 全链」，且形状决策需要独立设计轮与用户可见契约文档。
-  2. **跨层依赖**：状态源（`⟦ev⟧` 事件族 8 名——`async ∥ queued ∥ turn ∥ cancelled ∥ stopped ∥ settled ∥ done ∥ approval`）现状为显示面消费（CLI TUI / VSC / 桌面桥三处各自解析）——提升为**核内机读单源**是前置件（本批声明面 = `src/acp/**`，不含核面）。
+- **裁定 = 拆出另批**（不在本面实施）。理由四条：
+  1. **面在新机制不在修补**：结构化子代理事件 = ACP **契约外的扩展契约**（`session/update` 载荷 `_meta` 通道——候选形）——「新机制 ⇒ 全链」，且形状决策需要独立设计轮与用户可见契约文档。
+  2. **跨层依赖**：状态源（`⟦ev⟧` 事件族 8 名——`async ∥ queued ∥ turn ∥ cancelled ∥ stopped ∥ settled ∥ done ∥ approval`）现状为显示面消费（CLI TUI / VSC / 桌面桥三处各自解析）——提升为**核内机读单源**是前置件（本节声明面 = `src/acp/**`，不含核面）。
   3. **客户端契约在外**：需求本义 = ACP 客户端侧活动面板前置件——服务端交付物含面向客户端（Zed 侧）的接口说明（跨仓消费者）。
   4. **体量档不同**：其余四条 = schema 逐键对位小件；混批会拉长评审/验证。
-- **后续批 scope 草案（供另批设计轮起点——非本批承诺）**：`_meta.subagent = { role, id, state?, progress? }` 候选形（role/id 自 relay 前缀 `parseRelayPath`；state 自事件族状态机；progress 自 `⟦ev⟧turn` 轮号形）；前置件 = 事件文法机读单源 + `_meta` 契约文档；被否候选 = ① 非标 `sessionUpdate` 新枚举值 ② 结构化与文本剥离同轮改（本批剥离语义零改）。
-- **登记去向**：台账 #862 维持「待设计」；另批由父侧排程（批名建议 `acp-subagent-events`）。
+- **后续批 scope 草案（供另批设计轮起点——非本次承诺）**：`_meta.subagent = { role, id, state?, progress? }` 候选形（role/id 自 relay 前缀 `parseRelayPath`；state 自事件族状态机；progress 自 `⟦ev⟧turn` 轮号形）；前置件 = 事件文法机读单源 + `_meta` 契约文档。
+- **登记去向**：维持「待设计」；另批由父侧排程（批名建议 `acp-subagent-events`）。
 
 ## 7. 受影响文件与行数预算
 
-口径 = 行数实读（as-of 2026-10-04 本设计轮）；Δ = 预期增量（实施轮按盘回填）。
+口径 = 行数实读；Δ = 预期增量。
 
 | 文件 | 现行 | Δ | 预算 | 改动点 |
 |---|---|---|---|---|
@@ -273,26 +254,25 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 | `thincoder-cli/src/acp/resource-link.mjs` | 新 | ~130 | ≤300 | §2.5 判定树全量（已落） |
 | `thincoder-cli/src/acp.mjs` | 151 | −2 | ~149 | `:100-108` 计数器与 ctx 键撤除；ctx 增 `releaseClosedSlot` |
 | `docs/cli/design/ACP-CLIENT.md` | 655 | +~15 | ~670 | §5 表十处 + 变更记录（随动——实施轮） |
-| `docs/cli/design/ACP-PROTOCOL-COMPLIANCE.md` | 本档 | — | — | 本批设计（已落） |
+| `docs/cli/design/ACP-PROTOCOL-COMPLIANCE.md` | 本档 | — | — | 本次设计（已落） |
 | `docs/core/design/API-CONTRACT.md` | 2961 | 重生成 | — | `node scripts/api-contract.mjs --write` |
-| `docs/batches/2026-10-04-issue-fix-round2.test.mjs` | 新 | ~290 | ≤300 | 单元测试档（§10；拟新增） |
 | `docs/cli/requirements/ACP-CLIENT.md` | 151 | 补笔 | — | R-A5.4 补述 + 新判定句——**主 agent 笔**（§1.3） |
 
-## 8. 关键决策记录（含被否）
+## 8. 关键决策记录
 
-- **D-1 `size` = `providerSpec(agent.provider).context`**（上下文窗口；含 provider 级 `context` 覆写）∥ 被否：`provider.maxTokens`（输出上限——语义相抵）∥ 被否：`specForModel().context`（漏 `providers[].context` 覆写单源）∥ 被否：硬编码 131072。
-- **D-2 `used` = prompt + completion 之和**（issue 参考值）∥ 被否：仅 prompt（低估当前上下文）。
-- **D-3 session id = 持久槽位号**（单一命名空间）∥ 被否：计数器 + 双命名空间（G5 缺陷本体）∥ 被否：UUID 类新身份（与槽位族两张皮）。
-- **D-4 load/resume 同 id 在存 ⇒ 替换（close 同法）**∥ 被否：静默覆盖（旧实例成不可达孤儿）∥ 被否：报错拒载（双开 UX 破坏）。
-- **D-5 new 先认领、失败 `deleteSlot` 回滚**（id 构造期依赖槽号，顺序不可逆）∥ 被否：认领留孤儿（槽被占、清单污染）∥ 被否：仅释放认领不删档（空档文件残留）。
-- **D-6 `configOptions` 单源投影函数**（四处响应 + 两处通知同源）∥ 被否：静态常量补 `type`（无法投影现值——`currentValue` 就地失真）。
-- **D-7 model 项不可解析 ⇒ 缺席**（`currentValue` 必填不可虚构）∥ 被否：占位值 ∥ 被否：空串现值。
-- **D-8 `resource_link` 内联**（读文件进 prompt）∥ 被否：仅给路径文本（kimi 式——本仓取 issue 建议的内联形：模型立即可见内容）∥ 被否：XML 包装（kimi 非 file 面——另形混入）。
-- **D-9 上限三态 = 拒绝降级**（超限不发内容发标记）∥ 被否：截断（模型误以为全文）；字节闸 = 文件级 ∥ 行/字符闸 = 载荷级（选区小文件大 ⇒ 仍可内联）。
-- **D-10 降级标记固定词表**（`[File reference: … — <reason>]`）∥ 被否：自由文案（机检失锚）。
-- **D-11 `resource_link` 零能力门控**（基线 MUST）∥ 被否：挂 `embeddedContext`（张冠李戴——该位管 `resource` 嵌入式）。
-- **D-12 `messageCount` 删除**（契约形状收敛）∥ 被否：保留（无 schema 位——收敛原则）。
-- **D-13 #862 拆批**（§6 四理由）∥ 被否：本批做 role/id 半切片（冻结半契约——状态/进度词表未定）。
+- **D-1 `size` = `providerSpec(agent.provider).context`**（上下文窗口；含 provider 级 `context` 覆写）。
+- **D-2 `used` = prompt + completion 之和**（issue 参考值）。
+- **D-3 session id = 持久槽位号**（单一命名空间）。
+- **D-4 load/resume 同 id 在存 ⇒ 替换（close 同法）**。
+- **D-5 new 先认领、失败 `deleteSlot` 回滚**（id 构造期依赖槽号，顺序不可逆）。
+- **D-6 `configOptions` 单源投影函数**（四处响应 + 两处通知同源）。
+- **D-7 model 项不可解析 ⇒ 缺席**（`currentValue` 必填不可虚构）。
+- **D-8 `resource_link` 内联**（读文件进 prompt）。
+- **D-9 上限三态 = 拒绝降级**（超限不发内容发标记）；字节闸 = 文件级 ∥ 行/字符闸 = 载荷级（选区小文件大 ⇒ 仍可内联）。
+- **D-10 降级标记固定词表**（`[File reference: … — <reason>]`）。
+- **D-11 `resource_link` 零能力门控**（基线 MUST）。
+- **D-12 `messageCount` 删除**（契约形状收敛）。
+- **D-13 #862 拆批**（§6 四理由）。
 
 ## 9. 验收对照（回指批条目）
 
@@ -303,12 +283,12 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 | AC-3（#873） | `set_config_option` / `new` / `load` / `resume` 响应 `configOptions` 全形（判别键 + 现值 + select `options`） | T6–T8 |
 | AC-4（#872） | new id ∈ 随后 list；load/resume 原 id 全方法命中；同 id 在存处置（load/resume/new 三途）；两通知字段收正 | T9–T14 |
 | AC-5（#870） | 整文 ∥ 选区内联形；降级词表；上限三态；无文本仅引用可走；无 confine | T15–T20 |
-| AC-6（面） | 单元测试档全绿（先红后绿）+ `node scripts/doc-check.mjs` exit 0 + 语法检查 | 命令面 |
+| AC-6（面） | 单元测试档全绿（先红后绿）+ `node scripts/doc-check.mjs --root .` exit 0 + 语法检查 | 命令面 |
 | AC-7（#862） | 拆批裁定在档（§6）+ 台账维持待设计 | 记录面 |
 
 ## 10. 用例表（单元测试档——先红后绿）
 
-宿主 = `docs/batches/2026-10-04-issue-fix-round2.test.mjs`（已落；自 `thincoder/` 仓根跑 `node --test`；不入集成测试树）。夹具 = 临时 cwd 沙箱（`_setSessionsDirForTest` 邻位缝 + USERPROFILE/HOME 隔离——先例 = 单元测试档同法）。
+宿主 = 单元测试档（已落；自 `thincoder/` 仓根跑 `node --test`；不入集成测试树）。夹具 = 临时 cwd 沙箱（`_setSessionsDirForTest` 邻位缝 + USERPROFILE/HOME 隔离——先例 = 单元测试档同法）。
 
 | # | 类 | 输入 | 期望 |
 |---|---|---|---|
@@ -333,7 +313,7 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 | T19 | 上限 | >2000 行 ∥ >100k 字符 ∥ 含 NUL ∥ >10MB（sparse 造件） | 各出对应上限标记 |
 | T20 | 错误 | 空 prompt ∥ 仅 image 块 | `-32602`（文案收正）；仅 resource_link（无 text）**可走**（并入 T15 用例） |
 
-## 11. 边界（本批不做）
+## 11. 边界（不做）
 
 - 不改协议版本 / 不新增方法 / `initialize` 形状零动（不新增能力字段）。
 - prompt 多块 text 合流（首块策略仍存——残登记）；image / audio / `resource`（嵌入式）丢弃照旧（`embeddedContext` 维持 `false`）。
@@ -350,21 +330,9 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 
 ## 12. 落定与实施注意
 
-1. **前置** = #51 收口后派发（写域让渡——`thincoder-cli/src/**` ∥ `docs/cli/design/ACP-CLIENT.md`）。
-2. 实施轮首步 = §4.1 复取 schema 复核（SHA 不一致 ⇒ 停下重核字段面）。
-3. 单元测试档先红后绿；`node scripts/doc-check.mjs` 复跑 exit 0 为验收项。
+3. 单元测试档先红后绿；`node scripts/doc-check.mjs --root .` 复跑 exit 0 为验收项。
 4. 同拍收正 `docs/cli/design/ACP-CLIENT.md`（§5 表十处）+ `node scripts/api-contract.mjs --write`（生成区再生）。
 5. 需求面补笔 = 主 agent 笔（§1.3 / §7 表末行）——实施轮零触需求档。
 6. 边界登记（§11 各项）随收口入台账（父侧）。
 7. **修正轮实施令（交付登记 号 1 ∥ 号 2 收正——本档定形）**：① `session/new` 同键处置（§2.4——处置点 = `sessions.set` 直前；认领释放随 `sessions.set`/`committed` 之后）；② `session/list` `updatedAt` 值域钳（§2.2）；单元测试档随补 T5 超域用例 + T12 delete→new 用例（先红后绿）。
 
-## 变更记录
-
-**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
-**本批（issue 修复批·二 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round2.md` §2（唯一承载面——一次性批次材料）。
-
-- 2026-10-08（**代码长度上限 500/800 口径更换批 · 实施轮 · eng-coder**——承 `docs/batches/2026-10-08-code-limit-500-800.md` §2 · 台账 #1072）：§7「拆分评审」块删（丙——两档现读 ≤500，义务前提消失；含 `bridge.mjs` 同注）；§7 表两处 ≤300 预算格 = 闭合批叙述面（B 史实保留 ⇒ 零动）。**零协议语义**（文档面 · 可 revert）。
-
-- 2026-10-04（**issue 修复批·二 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round2.md` §1 · 台账 #870 ∥ #871 ∥ #872 ∥ #873）：建档——① 复验 5/5 在档（§1.2）；② 四条收正目标形（usage_update ∥ list updatedAt ∥ configOptions 全形 ∥ 会话 id = 持久槽号 + 两通知字段）+ resource_link 基线支持（新档拟新增）；③ schema 复取复核（SHA 逐字同 2026-09-18）；④ ACP-CLIENT.md 同拍落点表；⑤ #862 拆批裁定 + 后续批 scope 草案。
-- 2026-10-04（**fix 轮 · 设计评审 #66 号 1–5 收正 · eng-designer**）：§1.2 行锚收正（`acp.mjs:101,108`）∥ §2.2 判据改发射值往返恒等 ∥ §2.4 增「替换点钉定（拒载安全）」+ §10 T12 拒载腿 ∥ §7 增拆分评审（本批不拆 + 后续拆分点；`bridge.mjs` 同注）∥ §11 增 thinking 语义登记。号 6 = 判据降级限制声明（保持）。
-- 2026-10-04（**fix 轮 · 交付登记四条（#75）收正 · eng-designer**——父侧裁定：① ② 就地修 ∥ ③ 记录接受 ∥ ④ 逐条登记）：§2.2 增**值域钳**（非法 ∥ 超域 ⇒ 键缺席 = null 语义）∥ §2.4 增 new 途处置点钉定 + 认领释放位次 ∥ §2.5 增两形行为（裸盘符 ∥ 非 URL 形带片段）∥ §11 增三登记行 ∥ §3.2 / §9 / §10 / §12 随动。

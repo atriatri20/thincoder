@@ -8,8 +8,8 @@
 import { HttpError } from "../gateway/errors.mjs"
 import { DEFAULT_USAGE_RETENTION_DAYS } from "../ops/config.mjs"
 
-/** 事件目录（十七型——与 `audit_events.type` CHECK 同集；v10 扩 `config_update`——配置控制台批；
- *  v11 扩 `sandbox_rule`（规则增删——detail = { action, rule }）∥ `sandbox_event`（沙盒事件——detail.kind：审批三态/超时 ∥
+/** 事件目录（十八型——与 `audit_events.type` CHECK 同集；v10 扩 `config_update`——配置控制台批；
+ *  v11 扩 `sandbox_rule`（规则增删——detail = { action, rule }）∥ `sandbox_event`（沙盒事件——detail.kind：
  *  盒起停拆 ∥ runner 注册/排空/删除 ∥ join 失败 ∥ 快照——server-exec-sandbox 批）；
  *  v14 扩 `agent_event`（管理面 agent 会话——detail.kind：chat_start ∥ chat_call ∥ chat_stop——admin-agent-chat 批 · KD-SV-91）；
  *  v17 扩 `project_event`（团队项目与权限——十一 kind：source_* 五 ∥ project_* 三 ∥ member_* 三——team-projects-permissions 批 · KD-SV-119/127/128；
@@ -18,7 +18,9 @@ import { DEFAULT_USAGE_RETENTION_DAYS } from "../ops/config.mjs"
  *  v23 扩 `member_event`（成员面会话——六 kind：chat_start ∥ chat_call ∥ chat_stop ∥ pull ∥ credential_set ∥ credential_revoke；
  *  detail = { kind, sessionId?, host?, username?, tool?, resultCode?, summary?, reason? }——member-face-chat 批 · 台账 #1215）；
  *  v24 扩 `mcp_event`（MCP 服务器清单变更——三 kind：server_add（detail 键集 = kind+id+name+transport）∥ server_update（+ `keys`——变更键名，值永不入）
- *  ∥ server_remove（detail 键集 = kind+id+name）；零秘密——server-mcp 批 · 台账 #1379）。 */
+ *  ∥ server_remove（detail 键集 = kind+id+name）；零秘密——server-mcp 批 · 台账 #1379）；
+ *  v26 扩 `security_event`（安全生命周期与异常——四 kind：tls_start（detail = port+redirectPort）∥ cert_reload ∥ cert_reload_failed（+ reason）
+ *  ∥ rate_limit_burst（detail = ip+ruleClass+count+windowMs+retryAfterS）；actor 恒 = `server`（无人类行为人——与 `scheduler`／`webhook` 同法）——publicnet 批 · 台账 #1243）。 */
 export const AUDIT_TYPES = Object.freeze([
   "login_success",
   "login_failure",
@@ -37,6 +39,7 @@ export const AUDIT_TYPES = Object.freeze([
   "ledger_event",
   "member_event",
   "mcp_event",
+  "security_event",
 ])
 
 export const AUDIT_LIMIT_DEFAULT = 100 // 列表缺省行数（沿用量口径——METERING §3）
@@ -45,7 +48,7 @@ export const AUDIT_LIMIT_MAX = 500     // 列表上限（同上）
 const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
- * 落一条审计事件（事件目录 = §2.1 十七型——调用侧显式传型/主体）：返回行 id。
+ * 落一条审计事件（事件目录 = §2.1 十八型——调用侧显式传型/主体）：返回行 id。
  * `{ type, actor, actorId = null, target = "", targetId = null, detail = {}, ts = Date.now() }`。
  */
 export function recordAudit(db, { type, actor, actorId = null, target = "", targetId = null, detail = {}, ts = Date.now() } = {}) {
@@ -61,11 +64,14 @@ export function recordAudit(db, { type, actor, actorId = null, target = "", targ
 }
 
 /**
- * 列表查询（`GET /api/audit` 数据面——倒序新在前）：过滤 `type`（十七型枚举——非法 ⇒ 400）∥ `memberId`
- * （解析后 = 成员 id——匹配 actor_id ∥ target_id，同 usage 口径）∥ `from`/`to`（unix ms）。
+ * 列表查询（`GET /api/audit` 数据面——倒序新在前）：过滤 `type`（十八型枚举——非法 ⇒ 400）∥ `memberId`
+ * （解析后 = 成员 id——匹配 actor_id ∥ target_id，同 usage 口径）∥ `from`/`to`（unix ms）∥ `containerId`
+ * （等值匹配 `detail.containerId`——沙盒日志窗「操作记录」按容器取数，见 `webui/SANDBOX.md` §2.1①；
+ *  `json_valid` 卫 = 一行坏 detail 不拖垮带参查询——沿 `decodeDetail` 容错口径）。
+ * 过滤一律入 `WHERE`（**先于 limit 截取**——cap 提示对过滤后集合生效）。
  * `limit` 夹在 1..`AUDIT_LIMIT_MAX`（缺省 100——沿用量口径）。
  */
-export function queryAudit(db, { type = null, memberId = null, from = null, to = null, limit = AUDIT_LIMIT_DEFAULT } = {}) {
+export function queryAudit(db, { type = null, memberId = null, from = null, to = null, containerId = null, limit = AUDIT_LIMIT_DEFAULT } = {}) {
   if (type !== null && !AUDIT_TYPES.includes(type)) {
     throw new HttpError("invalid_request_error", `审计类型非法：${type}（${AUDIT_TYPES.join(" ∥ ")}）`)
   }
@@ -78,6 +84,10 @@ export function queryAudit(db, { type = null, memberId = null, from = null, to =
   if (memberId !== null) {
     where.push("(actor_id = ? OR target_id = ?)")
     args.push(memberId, memberId)
+  }
+  if (containerId !== null) {
+    where.push("(json_valid(detail) AND json_extract(detail, '$.containerId') = ?)")
+    args.push(containerId)
   }
   if (from !== null) {
     where.push("ts >= ?")

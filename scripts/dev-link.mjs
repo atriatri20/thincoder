@@ -16,12 +16,16 @@
  * 类（class）：ok 规范 · case-variant 同路径异拼写 · wrong-target 异路径 · missing 缺失 ·
  * materialized 物化副本（真目录——缺省不替换；`RELEASE.md` §5.3 物化纪律）。
  * 判定面 = win32 开发链（junction 目标为绝对串）；非 win32（`"dir"` symlink——npm 相对目标形态）不入判定。
- * 用法：node scripts/dev-link.mjs [--check] [--json] [--force]
+ * **`--win32-only` 平台门**（构建链自愈腿 —— `thincoder-desktop/package.json` `postpackage`）：非 win32 ⇒
+ * 跳过行 + exit 0 + 链操作面零触（判在 `repoRoot()` 之前——本工具的链读写均在其后）；构建机 = Linux
+ * （`docs/desktop/design/PACKAGING.md` §2.11.1）⇒ 本机 no-op。
+ * 用法：node scripts/dev-link.mjs [--check] [--json] [--force] [--win32-only]
  *   缺省      apply：missing ⇒ 建 ∕ case-variant ∕ wrong-target ⇒ 修（重建规范链）∕ ok ⇒ no-op ∕
  *             materialized ⇒ 跳过报出；退出码 0 = 终态全规范 ∕ 1 = 有未收敛 ∕ 2 = 参数错。
  *   --check   只读判：逐链报类；退出码 0 = 全规范 ∕ 1 = 漂移。
  *   --json    只读（同 --check 判定）：stdout 输出契约 `{ links: [{ product, link, target, class }], ok }`。
  *   --force   仅 apply 面、仅 materialized 类：允许替换真目录（破坏性——显式；本批不入判据）。
+ *   --win32-only  平台门：非 win32 平台 ⇒ 跳过 + exit 0 + 零 fs 动作（其余旗照旧；win32 面零影响）。
  * 零依赖（全 `node:` 面）；纯函数面（classify ∕ canonicalTarget）可直测（单元测试档 T4 ∕ T6）。
  */
 import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, rmSync, symlinkSync, unlinkSync } from "node:fs";
@@ -31,7 +35,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 /** 产品目录（覆盖范围宿主——五链 = cli:core ∕ vsc:core+render-core ∕ desktop:core+render-core）。 */
 const PRODUCTS = ["thincoder-cli", "thincoder-vscode", "thincoder-desktop"];
 
-const USAGE = "用法：node scripts/dev-link.mjs [--check] [--json] [--force]";
+const USAGE = "用法：node scripts/dev-link.mjs [--check] [--json] [--force] [--win32-only]";
 const CLASS_LABEL = { ok: "规范", "case-variant": "同路径异拼写", "wrong-target": "异路径", missing: "缺失", materialized: "物化副本" };
 
 /** 仓根（工具住所的父目录——`<仓根>/scripts/dev-link.mjs`；native 规范化，判据基座）。 */
@@ -140,13 +144,22 @@ export function applyLinks(root, { force = false } = {}) {
 }
 
 /** CLI 主行程：`--check` ∕ `--json` = 只读判定；缺省 = apply；退出码 0 ∕ 1（判定）/ 2（参数）。 */
-export function main(argv = process.argv.slice(2), { log = console.log, errorLog = console.error } = {}) {
-  const known = new Set(["--check", "--json", "--force"]);
+export function main(argv = process.argv.slice(2), { log = console.log, errorLog = console.error, platform = process.platform } = {}) {
+  const known = new Set(["--check", "--json", "--force", "--win32-only"]);
   const unknown = argv.filter((a) => !known.has(a));
   if (unknown.length) { errorLog(`dev-link: 未知参数 ${unknown.join(" ")}`); errorLog(USAGE); return 2; }
   const flags = new Set(argv);
   const readonly = flags.has("--check") || flags.has("--json");
   if (readonly && flags.has("--force")) { errorLog("dev-link: --force 仅 apply 面；--check ∕ --json 为只读判定。"); errorLog(USAGE); return 2; }
+  // `--win32-only` 平台门：非 win32 ⇒ 跳过 + exit 0 + 零 fs 动作（判在 `repoRoot()` 之前——链操作面零触）。
+  if (flags.has("--win32-only") && platform !== "win32") {
+    const skipped = `dev-link：平台 = ${platform}（非 win32）—— --win32-only ⇒ 跳过（零 fs 动作；退出 0）`;
+    if (!flags.has("--json")) { log(skipped); return 0; }
+    // `--json` = 只读契约面（stdout 恰一段 JSON——`:26`）：跳过行属诊断 ⇒ stderr；stdout 出跳过投影（零链 + ok:true——不改契约形）。
+    errorLog(skipped);
+    log(JSON.stringify({ links: [], ok: true }));
+    return 0;
+  }
   const root = repoRoot();
   const rel = (p) => p.slice(root.length + 1);
   if (readonly) {

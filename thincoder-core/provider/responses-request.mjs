@@ -1,6 +1,6 @@
 /**
  * provider/responses-request.mjs — Responses **请求构造面**出档（2026-09-29 structure-split-2 · 台账 #620）：自
- * `provider/responses.mjs` 全量迁出〔原 `:22-245`〕——host 白名单判定（`isStatefulHost` ∕ `isStoreRequiredHost` ∕
+ * `provider/responses.mjs` 全量迁出——host 白名单判定（`isStatefulHost` ∕ `isStoreRequiredHost` ∕
  * `isNonStatefulHost`）· `chainKey` · `builtinToolsFor` · `toItems` / `toTools` / `normalizeUsage` · `buildBody`；
  * **结构拆分零语义**（面不变 ∕ 判据不变，只换宿主档；切点 ∕ 缝单源 = 批档 `docs/batches/2026-09-29-structure-split-2.md` §2.2-B）。
  *
@@ -9,7 +9,7 @@
  * 零环：本档不引宿主（方向单行）；档外依赖 = `../config.mjs`（`specForModel` ∥ `isBailianHost`）。
  * 链语义（双轨 ∕ 白名单 ∕ store 必开 ∥ 链重置）详述见宿主档头；本档 = 请求侧构造 ∥ 链状态机决策。
  */
-import { specForModel, isBailianHost } from "../config.mjs"
+import { specForModel, isBailianHost, requestBudget } from "../config.mjs"
 
 /** 白名单：已实证 previous_response_id 的官方端（2026-08-31 真机验证：
  *  百炼 store:true 全链路 ✅；GLM（open.bigmodel.cn/api/v1）store:true 全链路 ✅）。 */
@@ -198,7 +198,8 @@ export function buildBody(provider, messages, tools, opts = {}) {
     ...(toolsFlat ? { tools: toolsFlat } : {}),
     // 显式才发（#907-D5）：仅 provider.maxTokens 显式设定时发送——spec.maxOutput 是规格侧
     // 保守猜测非渠道合同值，恒发 = 渠道口径漂移 400 风险；无显式值 ⇒ 服务端默认（模型上限兜底）。
-    ...(provider.maxTokens != null ? { max_output_tokens: provider.maxTokens } : {}),
+    // §6.17 发送面同源：requestBudget().maxTokens 未发 ⇒ undefined ⇒ 字段不落。
+    ...(requestBudget(provider).maxTokens !== undefined ? { max_output_tokens: requestBudget(provider).maxTokens } : {}),
   }
   // 内置工具声明追加（2026-08-31 用户拍板）：web_search 与本地 function 工具共存
   const builtin = builtinToolsFor(provider.baseURL, provider.builtinTools)

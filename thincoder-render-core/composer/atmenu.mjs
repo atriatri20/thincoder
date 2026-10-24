@@ -1,35 +1,39 @@
 /**
- * atmenu.mjs — @ 补全下拉工厂（核化 VSC `webview/autocomplete.js:10-121` 的 @ 面——上提批
+ * atmenu.mjs — @ 补全下拉工厂（核化 VSC `webview/autocomplete.js` 的 @ 面——上提批
  * `2026-09-28-desktop-input-vsc-align.md` §2.3 ∕ §2.4 P5；拆面 = @ 归本档、采集∕栅格门∕芯片条归 `attach.mjs`）。
  *
  * 面（逐字搬移，模块级状态 → 工厂体）：
- *  - `#at-dropdown` 结构（照 VSC `index.html:42` 静态形：`class="dropdown"` ∕ `role="listbox"` ∕ 默认隐）；
- *  - 句柄（`:19-35`）：`@` 定位（`lastIndexOf("@")` + 空白门）· `_atBase` 记位 · 150ms 防抖 ·
- *    自增 `seq` 请求（`:29-34` C1 注：host 只回显最新——迟到返回不覆盖新下拉）；
- *  - 建议渲染（`:37-48`）：两列（`.at-file-name` ∕ `.at-file-path`），`escHtml` = 核 `../md.mjs` `esc`（先例 `diff.mjs:6`）；
- *  - 键盘导航（`:75-108`）：Esc 关 ∕ ↑↓ 高亮环转 + `scrollIntoView` ∕ Enter·Tab 接受（组合期归输入法）；
- *  - 接受插入（`:58-66`）：`_atBase + "@" + path + " "` + 光标定于 `path` 后一位。
+ *  - `#at-dropdown` 结构（照 VSC `index.html` 静态形：`class="dropdown"` ∕ `role="listbox"` ∕ 默认隐）；
+ *  - 句柄（`autocomplete.js`）：`@` 定位（`lastIndexOf("@")` + 空白门）· `_atBase` 记位 · 150ms 防抖 ·
+ *    自增 `seq` 请求（`autocomplete.js` C1 注：host 只回显最新——迟到返回不覆盖新下拉）；
+ *  - 建议渲染（`autocomplete.js`）：两列（`.at-file-name` ∕ `.at-file-path`），`escHtml` = 核 `../md.mjs` `esc`（先例 `diff.mjs`）；
+ *  - 键盘导航（`autocomplete.js`）：Esc 关 ∕ ↑↓ 高亮环转 + `scrollIntoView` ∕ Enter·Tab 接受（组合期归输入法）；
+ *  - 接受插入（`autocomplete.js`）：`_atBase + "@" + path + " "` + 光标定于 `path` 后一位。
  *
- * 注册序不变量（VSC `input.js:79-83` 序注）：本档 `inputEl` 监听器**须晚于** `panel.mjs` 键位监听器注册——
+ * 注册序不变量（VSC `input.js` 序注）：本档 `inputEl` 监听器**须晚于** `panel.mjs` 键位监听器注册——
  * Enter 让位 = panel 侧 `isOpen()` 判定（本档接受面只在 active 项在场时 `preventDefault`，让位侧自带防默认兜住间隙）。
  *
- * 注入面（五项之局部）：② `post`（`atComplete` 出站——`:33`）。推送入口：`atResults`（经 ③ `state.subscribe`
- * → 调用方转 `showAtDropdown`）。取词：无（本档零文案）。
+ * 注入面（五项之局部）：② `post`（`atComplete` 出站——`autocomplete.js`）。推送入口：`atResults`（经 ③ `state.subscribe`
+ * → 调用方转 `showAtDropdown`）。取词 = 核 `../i18n.mjs`（`input.fileSuggestions`——car2 批）。
  */
 import { esc as escHtml } from "../md.mjs"
+import { t } from "../i18n.mjs"
 
 /**
  * @ 面工厂。`inputEl` = 输入框元素（键位 ∕ 输入监听宿主）；`post(type, payload)` = 出站归一
- * （`atComplete` 载荷 = `{ query, cwd: "", seq }`——VSC `autocomplete.js:33` 逐字，`cwd: ""` 保留）。
- * 返回：`{ el, showAtDropdown, closeAtDropdown, isOpen, handleAtInput }`——`el` 由调用方装配（VSC 序：`#at-dropdown` 在 `#input-row` 之前）。
+ * （`atComplete` 载荷 = `{ query, cwd: "", seq }`——VSC `autocomplete.js` 逐字，`cwd: ""` 保留）。
+ * 返回：`{ el, applyWords, showAtDropdown, closeAtDropdown, isOpen, handleAtInput }`——`el` 由调用方装配（VSC 序：`#at-dropdown` 在 `#input-row` 之前）。
  */
 export function createAtMenu({ post, inputEl } = {}) {
   const dropdown = document.createElement("div")
   dropdown.id = "at-dropdown"
   dropdown.className = "dropdown"
   dropdown.setAttribute("role", "listbox")
-  dropdown.setAttribute("aria-label", "File suggestions")
   dropdown.style.display = "none"
+
+  /** 词面重派生（创建期取词 ∕ 挂载先于词表的面——端侧词表到位后调用；幂等）。 */
+  function applyWords() { dropdown.setAttribute("aria-label", t("input.fileSuggestions")) }
+  applyWords()
 
   let _atTimer = null, _atActive = false, _atBase = "", _atSeq = 0
 
@@ -82,7 +86,7 @@ export function createAtMenu({ post, inputEl } = {}) {
     inputEl.focus()
   }
 
-  /** 下拉是否打开（panel 键位让位判据——VSC `input.js:135-138` 同式；C-B2-3 的缺元素支随工厂化退场：元素恒在）。 */
+  /** 下拉是否打开（panel 键位让位判据——VSC `input.js` 同式；C-B2-3 的缺元素支随工厂化退场：元素恒在）。 */
   function isOpen() {
     return dropdown.style.display !== "none"
   }
@@ -141,5 +145,5 @@ export function createAtMenu({ post, inputEl } = {}) {
     }
   })
 
-  return { el: dropdown, showAtDropdown, closeAtDropdown, isOpen, handleAtInput }
+  return { el: dropdown, applyWords, showAtDropdown, closeAtDropdown, isOpen, handleAtInput }
 }

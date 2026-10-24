@@ -15,10 +15,8 @@
  *
  * W8 契约②：ledger-db.mjs 静态 import node:sqlite ⇒ 消费侧一律**动态 import** 本档（禁止静态 import）。
  */
-import { opendirSync, statSync } from "node:fs"
-import { basename, dirname, join, resolve } from "node:path"
-import { projectRootView } from "./manifest.mjs"
-import { ledgerDbPath, PENDING_STATUSES, AGING_DAYS } from "./ledger-db.mjs"
+import { basename, dirname, resolve } from "node:path"
+import { AGING_DAYS, PENDING_STATUSES, ledgerChildren, ledgerDbPath, resolveLedgerRoot } from "./ledger-db.mjs"
 import { ledgerQuery } from "./ledger-cmd.mjs"
 import { executorTail } from "./ledger-executors.mjs"
 
@@ -45,55 +43,20 @@ export function entryTitle(text) {
   return norm.length > 20 ? norm.slice(0, 20) + "…" : norm
 }
 
-const isFile = (p) => { try { return statSync(p).isFile() } catch { return false } }
-
-/** 向上（含自身）最近的已注册台账项目根 → {root, ledger} / null（F4——CLI 锚 = cwd；
- *  标记 = 用户数据目录里以该项目路径为键的台账库——项目目录内不落任何标记文件）。 */
+/** 向上（含自身）最近的**已注册**项目根 → {root, ledger} / null（F4——CLI 锚 = cwd）。
+ *  薄委托 `resolveLedgerRoot(anchor, { descend: false })`（设计档 §3.8——**取祖先支**）：`root` = 推导所
+ *  得项目根（非锚）；容器 ∥ 工作区锚 ⇒ `null` ⇒ 族发现按容器形（族求和——§7.2 / AC-M2-18 / AC-M2-19）。 */
 export function findProject(anchor) {
-  let dir = resolve(anchor)
-  for (;;) {
-    const ledger = ledgerDbPath(dir)
-    if (isFile(ledger)) return { root: dir, ledger }
-    const parent = dirname(dir)
-    if (parent === dir) return null
-    dir = parent
-  }
+  const derived = resolveLedgerRoot(anchor, { descend: false })
+  return derived ? { root: derived.root, ledger: ledgerDbPath(derived.root) } : null
 }
 
-/** 同级枚举上限（N2 成本有界：父目录超此规模 = 缓存 / 临时等非仓族形态 → 退化空集，只显当前项目）。 */
-export const MAX_SIBLING_SCAN = 100
-
-/** 目录下已注册台账的直接子目录（目录名升序；不可读 → []；**惰性枚举 + 上限**——大目录零全量扫描）。
- *  导出面 = 族发现（本档）∥ 轻通道闸候选枚举（`agent/light-round.mjs`——同级判据单源）。 */
-export function ledgerChildren(dir) {
-  const out = []
-  let handle
-  try { handle = opendirSync(dir) } catch { return out }
-  try {
-    let n = 0
-    for (;;) {
-      const ent = handle.readSync()
-      if (!ent) break
-      if (++n > MAX_SIBLING_SCAN) return []
-      if (!ent.isDirectory()) continue
-      const root = join(dir, ent.name)
-      const ledger = ledgerDbPath(root)
-      if (isFile(ledger)) out.push({ root, ledger })
-    }
-  } catch { /* 读中断 → 已得子集（尽力而为） */ }
-  finally { try { handle.closeSync() } catch { /* 已关 */ } }
-  return out.sort((a, b) => (a.root < b.root ? -1 : a.root > b.root ? 1 : 0))
-}
-
-/** 项目族发现：{current, projects}——projects = current + 其同级含台账库目录（**发现序：current 在前**，
- *  其余按目录名升序）；current 缺（容器目录，K6）→ 锚本地：取锚自身含台账库的直接子目录（不沿祖先链上找）。
- *  **歧义根不充当项目**（轻通道轮 · 2026-10-04）：命中锚若项目解析 `ambiguous`（≥2 候选——`projectRootView`）
- *  ⇒ 该锚不可扫描（`openLedger` 歧义拒）——其键控库（先于 #828 写门的存量空壳 / 幽灵）不得遮蔽族发现；
- *  按容器形落子目录族（需求：打开容器根 ⇒ 族内合计——标记范围批 §1 原话）。 */
+/** 项目族发现：{current, projects}——current = `findProject`（**祖先支**：容器 ∥ 工作区锚 ⇒ `null` ⇒ 按
+ *  容器形落子目录族）；projects = current + 其**同级已注册**目录（**发现序：current 在前**，其余按目录
+ *  名升序）；current 缺（容器目录，K6）→ **锚本地**：取锚自身**已注册**的直接子目录（不沿祖先链上找）。
+ *  「工作区根不充当项目」的判据单源 = `resolveLedgerRoot` 的库臂排除（§2.1）——本函数零自持判据。 */
 export function discoverFamily(anchor) {
-  const hit = findProject(anchor)
-  // 歧义根跳过（键控库存在 ≠ 可作项目——扫描面 `buildScan` 对歧义锚必拒；遮蔽则标记静默缺席）。
-  const current = hit && projectRootView(hit.root).state === "ambiguous" ? null : hit
+  const current = findProject(anchor)
   if (current) {
     const siblings = ledgerChildren(dirname(current.root)).filter((p) => p.root !== current.root)
     return { current, projects: [current, ...siblings] }
@@ -102,13 +65,21 @@ export function discoverFamily(anchor) {
 }
 
 /** scan 组装（SQLite 行集 + 计数单源 → scan 对象）——形状契约（设计档 §2.2）：pool/tech/aged/
- *  agedKeys/agedTitles/thresholdReached/boards/actionable/root/name/ledger。行龄 = 时间戳
+ *  agedKeys/agedTitles/overdue/thresholdReached/boards/actionable/root/name/ledger。行龄 = 时间戳
  *  （updated_at ?? created_at 距今 > days；未知不计——零假阳降级，同 v1 行龄未知口径）。
  *  `now`/`days` = 注入面（确定性用例——替代 v1 ageOf git 注入面）。
+ *  **`days` 只作用于展示面 `aged`**（本函数局部阈值）；`overdue`（出口态）恒按核常量 `AGING_DAYS`
+ *  （`overdueOf` 单源）——故 `days` 调小时 `aged` 会先于 `overdue` 涨（两数口径不同，非矛盾）。
+ *  **根推导**（设计档 §3.8）：`root` / `name` / `ledger` = `resolveLedgerRoot(anchor)` 推导所得项目根（非锚
+ *  ——容器 ∥ 工作区锚取收敛序之根）——与行集读取同一单源；无根 ⇒ `ledger` = `null`（不落兜底根——
+ *  该态下 `root` / `name` 回落锚、行集为空，且该 scan 不进族枚举（`discoverFamily` 容器支只列已注册子目录））。
  *  `inflightExecutors`（F-LX1 · sync 零变——K-LX2）：在途且 executor 非空行集原样携带
  *  {executor, updated_at, created_at}——判活解析由 `resolveExecutorStates` async 单源负责，本函数零探测。 */
 export function buildScan({ cwd, days = AGING_DAYS, now = Date.now() } = {}) {
-  const rows = ledgerQuery({ cwd })
+  const anchor = resolve(cwd)
+  const derived = resolveLedgerRoot(anchor)
+  const root = derived ? derived.root : anchor
+  const rows = ledgerQuery({ cwd: anchor, now }) // `now` 透传（两读数同时钟——`overdue` 的行键由核同一 `now` 算）
   const pending = rows.filter((r) => PENDING_STATUSES.includes(r.status))
   const poolEntries = pending.filter((r) => r.kind === "requirement")
   const techEntries = pending.filter((r) => r.kind === "tech_todo")
@@ -123,13 +94,13 @@ export function buildScan({ cwd, days = AGING_DAYS, now = Date.now() } = {}) {
     if (key) boards.set(key, (boards.get(key) ?? 0) + 1)
   }
   const thresholdReached = poolEntries.length >= THRESHOLD_POOL || [...boards.values()].some((n) => n >= THRESHOLD_BOARD)
-  const root = resolve(cwd)
   const inflightExecutors = pending
     .filter((r) => r.status === "在途" && r.executor)
     .map((r) => ({ executor: r.executor, updated_at: r.updated_at ?? null, created_at: r.created_at ?? null }))
   return {
-    name: basename(root), root, ledger: ledgerDbPath(root),
+    name: basename(root), root, ledger: derived ? ledgerDbPath(root) : null,
     pool: poolEntries.length, tech: techEntries.length, aged: aged.length,
+    overdue: pending.filter((r) => r.overdue != null).length, // 待处置（§3.7——机判单源 = 行集 `overdue` 键，行值与 `now` 均同源）
     agedKeys: aged.map((r) => normalizeEntry(r.title)), agedTitles: aged.map((r) => entryTitle(r.title)),
     thresholdReached, boards, actionable: aged.length > 0 || thresholdReached,
     inflightExecutors,
@@ -145,8 +116,8 @@ export function formatMarker(scan) {
  *  `root` = `family.current.root` 的 scan（命中但不在 `scans`——不可读 ⇒ 空范围，不掺兄弟）；
  *  `current` 缺席（容器根锚）⇒ 范围 = `scans` 全体（族内已读项目——构建期不可读已跳过）。
  *  空范围 ⇒ `{ marker: null, warn: false }`（不落 `0·0`）；范围非空 ⇒ `marker` = `formatMarker`
- *  逐字（两池分列求和——F1）；`warn` = 范围内任一项 `aged>0 ∨ deadExecutors>0`（端零重算）。
- *  消费面 = 核拍面（`ledger-surface.mjs`）∥ VSC item——端零自算单源。 */
+ *  逐字（两池分列求和——F1）；`warn` = 范围内任一项 `overdue>0 ∨ deadExecutors>0`（§3.7——`aged ⊂
+ *  overdue` ⇒ 警示色不缩；端零重算）。消费面 = 核拍面（`ledger-surface.mjs`）∥ VSC item。 */
 export function scopeMarkerOf(scans, family) {
   const list = Array.isArray(scans) ? scans : []
   const currentRoot = family?.current?.root ?? null
@@ -158,15 +129,15 @@ export function scopeMarkerOf(scans, family) {
   for (const s of range) {
     pool += s.pool
     tech += s.tech
-    if (s.aged > 0 || s.deadExecutors > 0) warn = true
+    if (s.overdue > 0 || s.deadExecutors > 0) warn = true
   }
   return { marker: formatMarker({ pool, tech }), warn }
 }
 
-/** L2 明细行（逐字——`（老化 <n>）` 恒显；阈值达成加 ` — 可开批`；判活尾段 = executorTail 三态——
- *  在途 executor 缺席时尾段空串，既有逐字断言零破）。 */
+/** L2 明细行（逐字——`（老化 <n> · 待处置 <m>）` 两数恒显（含 0——§3.7 出口面恒显位扩）；
+ *  阈值达成加 ` — 可开批`；判活尾段 = executorTail 三态——在途 executor 缺席时尾段空串）。 */
 export function formatDetailLine(scan) {
-  return `台账 ${scan.name}：需求池 ${scan.pool} · 技术待办 ${scan.tech}（老化 ${scan.aged}）${scan.thresholdReached ? " — 可开批" : ""}${executorTail(scan)}`
+  return `台账 ${scan.name}：需求池 ${scan.pool} · 技术待办 ${scan.tech}（老化 ${scan.aged} · 待处置 ${scan.overdue}）${scan.thresholdReached ? " — 可开批" : ""}${executorTail(scan)}`
 }
 
 /** 明细行集 = {current} ∪ {可动作项目}（发现序——current 在前，其余按目录名升序；同项去重）。 */
@@ -178,9 +149,10 @@ export function detailScans(scans, current) {
 }
 
 // ── re-export（拆分件接口——命令面接线 = 动态 import 本档，KD-M2-3；`AGING_DAYS` 常量单源 = `ledger-db.mjs`
-//    ——2026-10-07 批 ledger-tool 自本档迁入，公共面零变） ──
-export { AGING_DAYS, ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn } from "./ledger-db.mjs"
-export { ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate } from "./ledger-cmd.mjs"
+//    ——2026-10-07 批 ledger-tool 自本档迁入，公共面零变；`ledgerChildren` / `MAX_SIBLING_SCAN` / `resolveLedgerRoot`
+//    ——2026-10-16 批 ledger-root-derivation 随迁 / 新增，公共面形零改） ──
+export { AGING_DAYS, ALLOWED_MIGRATIONS, EVIDENCE_SOFT_LIMIT, MAX_SIBLING_SCAN, ledgerChildren, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, resolveLedgerRoot, _setLedgerDirForTest, _resetLedgerDirForTest, ensureColumn, ensureExecutorColumn } from "./ledger-db.mjs"
+export { ledgerAdd, ledgerBatchRows, ledgerClose, ledgerCloseBatch, ledgerCount, ledgerEvidenceOversize, ledgerQuery, ledgerReanchorBatch, ledgerUpdate, ledgerUpdateBatch, overdueOf } from "./ledger-cmd.mjs"
 export { ledgerTool, ledgerReadTool, ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool } from "./ledger-tools.mjs"
 export { runLedgerAudit, runLedgerMigrate } from "./ledger-migrate.mjs"
 export { resolveExecutorStates, executorTail, _setExecutorProbeTtlForTest } from "./ledger-executors.mjs"

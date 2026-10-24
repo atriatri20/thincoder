@@ -333,6 +333,7 @@
 }
 
 .advisor-think { opacity: 0.55; }
+.advisor-sub { opacity: 0.55; margin-right: 2px; }
 /* §5.6（渲染粒度对齐批）：tool 行携 RAW 拼接的输出（零分隔符）⇒ 输出自带换行结构无损还原 */
 .advisor-tool-line { color: var(--accent); opacity: 0.8; margin-top: 2px; white-space: pre-wrap; }
 
@@ -496,3 +497,35 @@
   animation: tc-spin 0.9s linear infinite;
 }
 @keyframes tc-spin { to { transform: rotate(360deg); } }
+
+/* ─── Pending band（忙态待发送带 · queue-band 批 2026-10-20）──────────────
+   输入区上沿派生带（**非流内**）：`webview/pending-band.js` 装配期创建 `#pending-band` 并插到输入行之前
+   （`#toolbar` 内），此后按 `busyQueued.items` 快照重绘；判据空 ⇒ `hidden` 零高（不占布局）。形态对齐桌面
+   `renderer/views/chat-pending.mjs`：标签行两形 + 逐条原文 clamp 3 行 + 超限尾标记。
+   契约单源 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6 ⑦。 */
+#pending-band {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 96px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 0 6px;
+  font-size: 12px;
+}
+#pending-band[hidden] { display: none; }
+.chat-pending-label { color: var(--fg); opacity: 0.75; }
+.chat-pending-item { padding-left: 8px; border-left: 2px solid var(--border); }
+.chat-pending-body {
+  color: var(--fg);
+  opacity: 0.55;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.chat-pending-more { color: var(--fg); opacity: 0.45; font-size: 11px; }
+.chat-pending-more[hidden] { display: none; }

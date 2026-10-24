@@ -18,14 +18,14 @@
  *   · `#search-bar` 插入锚 = 源 `document.getElementById("toolbar")` 同字面（VSC 静态骨架 id；桌面
  *     输入区槽 id 由 `thincoder-desktop/renderer/mount-composer.mjs` 同字面赋——核件样式规则命中物）；
  *   · 关闭置焦 = 源 `ctx.inputEl.focus()` ⇒ 本档 `document.getElementById("input")`（VSC `webview/index.html`
- *     ∕ 桌面核件输入面板 `composer/panel.mjs:79` 同 id）。
+ *     ∕ 桌面核件输入面板 `composer/panel.mjs` 同 id）。
  *
- * Ctrl+F 入口（源 `:159-165` 文档级 keydown）= **工厂内注册**：两端同件 ⇒ 键位单源、端侧零副本
+ * Ctrl+F 入口（源 `webview/search.js` 文档级 keydown）= **工厂内注册**：两端同件 ⇒ 键位单源、端侧零副本
  * （VSC 端壳「既有宿主键位」即本注册——键名 ∕ 三修饰键守卫 ∕ `preventDefault` 逐字不变）。
  * 取词 = 核 i18n（`./i18n.mjs` `t`）——源档 `./i18n.js` 即本模块的再出口（VSC 同实例，零改）；桌面供给面 =
  * `renderer/app.mjs` 单点注册 `setStringsSink(setStrings)`（键族 `search.*` 由宿主词表供给）。
  *
- * 返回面：`{ openSearch, closeSearch, performSearch, jumpSearch }`——端壳消费 = 桌面 `renderer/app.mjs:288` 捕获 + `:74` `openSearch` 分派（菜单批接线）∥ VSC 既有宿主键位注册（同件零副本）；
+ * 返回面：`{ openSearch, closeSearch, performSearch, jumpSearch }`——端壳消费 = 桌面 `renderer/app.mjs` 捕获 + `openSearch` 分派（菜单批接线）∥ VSC 既有宿主键位注册（同件零副本）；
  * 探针 ∕ 后续程序化驱动可及（工厂化面，非源档新增语义）。
  */
 import { t } from "./i18n.mjs"
@@ -186,7 +186,7 @@ export function createSearch(deps = {}) {
     document.getElementById("input")?.focus() // 源 `ctx.inputEl.focus()`（两端 `#input` 同字面；缺 id ⇒ 零动作）
   }
 
-  // Ctrl+F opens in-conversation search (webview's native find does nothing here) —— 源 `:159-165` 逐字。
+  // Ctrl+F opens in-conversation search (webview's native find does nothing here) —— 源 `webview/search.js` 逐字。
   document.addEventListener("keydown", (e) => {
     if (e.key === "f" && e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
       e.preventDefault()

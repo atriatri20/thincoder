@@ -149,11 +149,13 @@ export const S = {
   // （拒发出口守卫 = send.js / 占位符第三态 = loading.js `applyBusyLock`——优先级 守卫 > busy > 常态；
   //  机制单源 = `PROJECT-SWITCHER.md` §4.1）。
   _workspaceRequired: false,
-  // C-B2-6 细则①（busy-injection 批 fix 轮 2026-09-22 · queue-visible 批 2026-09-24 多槽）：host
-  // `busyQueued { count }` 镜像——队列未消费条数（webview 二次提交守卫判据 = `count >= QUEUED_MAX_ITEMS`
-  // ⇒ 满队不出泡 / 不清框 / toast）；镜像 = host 快照如实写（端侧零本地增量——提交受理时不改写）
-  // （机制单源 = `WEBVIEW-INPUT.md` §1 C-B2-6；待发送标记面 = webview/queued-mark.js）。
+  // C-B2-6 细则①⑦（busy-injection 批 fix 轮 2026-09-22 · queue-visible 批 2026-09-24 · queue-band 批
+  // 2026-10-20）：host `busyQueued { pending, count, items, merged? }` 镜像——队列未消费条数（webview
+  // 二次提交守卫判据 = `count >= QUEUED_MAX_ITEMS` ⇒ 满队不出泡 / 不清框 / toast）；镜像 = host 快照
+  // 如实写（端侧零本地增量——提交受理时不改写）（机制单源 = `WEBVIEW-INPUT.md` §1 C-B2-6；
+  // 待发送带 = webview/pending-band.js）。
   _busyQueuedCount: 0,
   _busyQueuedPending: false, // 派生镜像（= count > 0——保留字段）
+  _busyQueuedItems: [], // 带面数据源（队列剩余项原文——按队列序）
 }
 

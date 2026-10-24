@@ -105,6 +105,7 @@ export async function runPreparedItem(item, agent, depth, signal, callbacks) {
       _toolCallId: item.toolCall.id,
       onOutput: (chunk) => callbacks.onToolOutput?.(item.toolCall.name, chunk, item.toolCall.id),
       onQuestion: callbacks.onQuestion,
+      onSecretInput: callbacks.onSecretInput,
       onPermissionRequest: callbacks.onPermissionRequest,
     }
     try {

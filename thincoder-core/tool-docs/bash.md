@@ -10,7 +10,7 @@ Execute a shell command and return stdout+stderr. Use for running commands, buil
 
 Parameters:
 - command (required): Shell command to execute
-- timeout: Timeout in milliseconds (default 120000, max ~300000)
+- timeout: Timeout in milliseconds (default 120000 for synchronous runs; background runs have no default — an explicit timeout still applies; no upper bound)
 - filter: Optional — a regex; only output lines matching it are returned (case-insensitive). Use instead of hand-writing a pipe into `findstr`/`grep`.
 - async: Run in the background (default false) — returns an ack at once (bash#<id>, log path); the result arrives as a digest when the process exits. Depth-0 only.
 {{inject:bash-terminal-face}}

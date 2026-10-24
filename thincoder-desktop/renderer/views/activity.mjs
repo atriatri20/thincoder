@@ -203,7 +203,7 @@ export function mountPool(root, state, handlers = {}) {
       applySubBlockFollow(family) // 帧尾复核（让位修复批 · KD-RC-8 应用点③——任何位面被抹 ⇒ 下一帧自愈）
     }
   }
-  // #518 池区帧尾钉底（R10 E6 帧尾径补齐）：跟底 ⇒ 写 `scrollTop`（VSC `streaming.js:32` `frameEnd` 对位）；
+  // #518 池区帧尾钉底（R10 E6 帧尾径补齐）：跟底 ⇒ 写 `scrollTop`（VSC `subScroll` `frameEnd` 对位）；
   // 未跟底 ⇒ 零写（不夺阅读位）。
   maybePinPool(root)
   return model

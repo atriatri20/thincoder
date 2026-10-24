@@ -170,7 +170,7 @@ export function createExits(deps = {}) {
     const composite = `${provider}:${name}`
     const receipt = await ask("settings:agent", { patch: { defaultModel: composite } })
     if (receipt.ok !== true) {
-      report("model", receipt, "settings:agent")
+      report("panel", receipt, "settings:agent")
       return
     }
     store.set(setProviderState(store.get(), receipt.providerState)) // #841：设置写回执 providerState 落切片（第三刷新点；键缺席 ⇒ 零写）

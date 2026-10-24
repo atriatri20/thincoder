@@ -8,7 +8,7 @@
  * 文案经 `t()` 取值（`webui/I18N.md` §2.1）；导出经 fetch ⇒ blob ⇒ 临时链接（400 走错误映射——不用裸链接导航）。
  */
 import { t } from "./i18n.mjs"
-// 卡件单源（概览卡行共用形——本页原本地件已并，§2.2）
+// 卡件单源（概览卡行共用形——本页原本地件已并 ⇒ `views-overview.mjs`）
 import { statCard } from "./views-overview.mjs"
 
 /** 端点过滤两值（明细 ∥ summary ∥ export 同门——`usage.col.endpoint` 列值即此词汇）。 */
@@ -28,7 +28,7 @@ export async function renderAdminUsage(ctx, mount) {
   const filterLimit = h("input", { type: "number", min: "1", max: "500", value: "100", class: "tiny" })
 
   /** 过滤面（同参数集——明细 ∥ 报表 ∥ 导出三读共用；limit 仅明细面另加）。
-   *  查询键以模板字面量书写（先例沿续：引号形 `from` 键会撞单元测试档依赖面扫描正则——该件冻结零改；行为等价）。 */
+   *  查询键以模板字面量书写（先例沿续；行为等价）。 */
   const filterParams = () => {
     const params = new URLSearchParams()
     if (filterMember.value.trim()) params.set("member", filterMember.value.trim())

@@ -3,12 +3,12 @@
  * 上提源 = VSC `thincoder-vscode/src/extension/file-refs.mjs` 自持档（逐字搬——regex ∕ 4000 截断 ∕
  * `[File: …]` 围栏 ∕ 摘要块格式零语义改良）；本档 = **单源**；两端各持薄壳（端侧 `node:fs` 探针注入）：
  * VSC `thincoder-vscode/src/extension/file-refs.mjs` ∥ 桌面 `thincoder-desktop/src/main/file-refs.mjs`。
- * 消费面：VSC 注入 `panel-chat.mjs:187` ∕ 恢复剥离 `panel-session.mjs:185` ∕ 标题剥离
- * `panel-session-write.mjs:139`；桌面注入缝 = `turn-driver.mjs`（起跑前单点，`turn-face.mjs`）∥
- * 恢复剥离 = `session-slots.mjs` `pageHistory` ∥ 标题剥离 = 核 `generate-title.mjs:132`（读源处）。
- * 文本形逐字冻结（`docs/vsc/design/WEBVIEW.md:154`「落线文本逐字不变」契约）：上提不携任何行为面改动。
+ * 消费面：VSC 注入 `panel-chat.mjs` 的 `injectAtRefs` ∕ 恢复剥离 `panel-session.mjs` 的 `stripAtRefs` ∕ 标题剥离
+ * `panel-session-write.mjs` 的 `generateTitle`；桌面注入缝 = `turn-driver.mjs`（起跑前单点，`turn-face.mjs`）∥
+ * 恢复剥离 = `session-slots.mjs` `pageHistory` ∥ 标题剥离 = 核 `generate-title.mjs` 的 `ensureSessionTitle`（读源处）。
+ * 文本形逐字冻结（`docs/vsc/design/WEBVIEW.md` §4.4「落线文本逐字不变」契约）：上提不携任何行为面改动。
  * 判据 = **盘面探针注入缝**（`probe = { readFileSync, existsSync, statSync }` —— `node:fs` 同名面；
- * 缺 ∕ 形违 ⇒ 抛 —— fail-loud：盘面闸未接线不得静默扮成「零引用」，沿 `file-links.mjs:29-31` 先例）。
+ * 缺 ∕ 形违 ⇒ 抛 —— fail-loud：盘面闸未接线不得静默扮成「零引用」，沿 `file-links.mjs` 的 `extractFileLinks` 先例）。
  * `stripAtRefs` = 注入语法的逆变换：fail-closed 判据逐字依赖注入输出格式 —— 语法与其逆变换同住一处，
  * 零第二实现（本档为唯一产者）。
  */
@@ -26,7 +26,7 @@ function probeOf(probe) {
 }
 
 /** Scan text for @path references and replace with inline file content.
- *  零文本（非串 ∥ 空串）先于探针校验早退（零判据——探针不检，同序沿核 `file-links.mjs:28`）。 */
+ *  零文本（非串 ∥ 空串）先于探针校验早退（零判据——探针不检，同序沿核 `file-links.mjs` 的 `extractFileLinks`）。 */
 export function injectAtRefs(text, cwd, probe) {
   if (typeof text !== "string" || text === "") return text
   const io = probeOf(probe)

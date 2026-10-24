@@ -4,19 +4,11 @@
 > 本档 = 该机制族的**唯一权威**（常量 / 语义 / 坐标）。
 > 地图指针 = `docs/core/design/AGENT-LOOP.md` §6.16（指针表登记「结果落盘阈值 → 工具输出上限系（CLI 仓·设计）」——本档即其落点）；工具契约 = `docs/core/design/TOOLS.md`（本档不复制其内容，D2）。
 > 双端：本形态 = 核内共享实现 `thincoder-core/**`（双壳同用）；VSC 对位坐标见 §6。
-> 需求侧 = `docs/core/requirements/TOOLS.md` §4.3 N5（资源上限条目）· §4.5（工具输出上限系——批 5 并入 CLI 树需求档内容；旧档 `thincoder-cli/docs/requirements/TOOL-OUTPUT-LIMITS.md` 留参照历史）。
-> 建档：2026-09-15（**B 式迁移轮 · 第 3 批**——`thincoder-cli/docs/design/TOOL-OUTPUT-LIMITS.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
-> 本档坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
+> 需求侧 = `docs/core/requirements/TOOLS.md` §4.3 N5（资源上限条目）· §4.5（工具输出上限系）。
 
-## 1. 定位与问题
+## 1. 定位
 
-统一额度：工具结果 **超过 64K 字符**才落盘；落盘后内联 preview 采**保头保尾**。三条原始痛点（首版立项依据，现行处置一并列出）：
-
-| # | 问题 | 现行处置 |
-|---|---|---|
-| P1 | 阈值过小（原 16K）——advisor 评审输出 / 大文件读取 / grep 大仓库频繁落盘，模型被迫 read 回全文 | 落盘阈值提至 64K |
-| P2 | preview 过小且**纯头**——结果在尾部的输出（测试统计 / 错误尾 / 结论句）被截掉 ⇒ 读不回结果 | preview 改**双端**：头 + 中间省略注 + 尾，总预算 ≤ 64K |
-| P3 | advisor 评审循环内工具结果 12K 即截断（比主链路更紧）——评审可能基于不完整证据 | advisor 上限对齐 64K，并**双端化** |
+统一额度：工具结果 **超过 64K 字符**才落盘；落盘后内联 preview 采**保头保尾**。
 
 ## 2. 常量与预算（`thincoder-core/agent/helpers.mjs`）
 
@@ -57,7 +49,7 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 
 - 调用点：`thincoder-core/agent/dispatch.mjs:428`——非 multimodal 工具结果统一过落盘守卫（函数内部行为改、调用点零改）。
 
-## 4. advisor 结果截断（P3）
+## 4. advisor 结果截断
 
 - 上限常量 `MAX_RESULT_CHARS = 64 * 1024`（`thincoder-core/advisor/compaction.mjs:38`，与主链路对齐）。
 - **双端化截断**（DUAL-END-TRUNCATION）：工具结果回填由「保头弃尾」改为**头尾双保**——头行累加至预算约 **60%**（`ADVISOR_HEAD_RATIO = 0.6`，`thincoder-core/advisor/truncate.mjs:14`）→ 中段切 → 尾行累加至剩余预算（**裁决 / 结论行可见**）。
@@ -77,9 +69,9 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
   - hashes 模式照常（头尾行 hash 与 hashline_edit 同域）。
 - 双端返回结果**不再套纯头 `truncate()`**（会二次切尾）——超 64K 由主链路 offload 双端 preview 兜底（同保尾）。
 
-## 6. 机制面（B 式迁移并入——现状路径）
+## 6. 机制面
 
-### 6.1 实现坐标（as-of 2026-09-15 实核）
+### 6.1 实现坐标
 
 | 面 | 落点 | 实核 |
 |---|---|---|
@@ -96,12 +88,11 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 
 ### 6.2 双端与测试
 
-- **双端**：CLI 与 VSC 各自实现、语义同源（锁步镜像）。镜像面 = `read` 双端返回与 advisor 截断两族；VSC 端坐标已并入（批 6——§6.3），测试随 CLI 同批落。
-- **测试**：`thincoder-cli/test/read-dual-end.test.mjs` · `thincoder-cli/test/advisor-truncation.test.mjs` · `thincoder-core/test/advisor-truncate.test.mjs` + VSC 侧同名对位 `thincoder-vscode/test/{read-dual-end,advisor-truncation}.test.mjs`。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+- **双端**：CLI 与 VSC 各自实现、语义同源（锁步镜像）。镜像面 = `read` 双端返回与 advisor 截断两族；VSC 端坐标已并入（§6.3），测试随 CLI 同批落。
 
-### 6.3 VSC 端实现坐标（B 式并入 · 实核 as-of 2026-09-15）
+### 6.3 VSC 端实现坐标（实核）
 
-> 来源 = `thincoder-vscode/docs/_archive/design/TOOL-OUTPUT-LIMITS-TUNING.md`（VSC 产品档——旧档一字未改、留参照历史）。与 CLI / 核面**同阈值同构成、各自独立实现**（锁步镜像——单边改动会造成行为漂移，须两端同步）。
+> 与 CLI / 核面**同阈值同构成、各自独立实现**（锁步镜像——单边改动会造成行为漂移，须两端同步）。
 
 | 面 | VSC 落点（实核） |
 |---|---|
@@ -114,47 +105,19 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 | 实时显示同宽 | `thincoder-vscode/src/extension/panel-callbacks.mjs:203`（`onToolResult` `slice(0, 64 * 1024)`） |
 | 历史页工具卡同宽 | `thincoder-vscode/src/extension/panel-session.mjs:195`（tool 卡）· `:199`（tool 结果数组同限） |
 | webview DOM 上限 | `thincoder-vscode/webview/lib.js:27`（`MAX_TOOL_OUTPUT` = 64 × 1024）· `:30`（`capText`） |
-| read 双端返回 | （W14 已迁核——VSC 自持 `thincoder-vscode/src/tools/file.mjs` 与 `tools/shared.mjs` 已删，现体 = 核 `thincoder-core/tools/file.mjs`：`READ_TAIL_LINES` / 双端返回形态；`MAX_READ_LINES` = 核 `thincoder-core/tools/shared.mjs`） （迁移期引文） |
+| read 双端返回 | （现体 = 核 `thincoder-core/tools/file.mjs`：`READ_TAIL_LINES` / 双端返回形态；`MAX_READ_LINES` = 核 `thincoder-core/tools/shared.mjs`） |
 | 失败回退 | `thincoder-vscode/src/agent/run-helpers.mjs:196`（双端切片 + 无路径 + 原文总长——`offload to disk failed`） |
 
 **VSC 侧差异注**：提示语 / 路径格式与 CLI 契约**同形**（`[Large output saved. Read the full result with the read tool: …]`——模型契约稳定需双端一致）；`tail` **绝不硬编码**（实际 = 预算余量）两端同律。
 
-## 7. 并入的关键决策记录（含否决备选）
+## 7. 关键决策记录
 
-| # | 决策 | 理由 / 否决备选 |
+| # | 决策 | 理由 |
 |---|---|---|
-| D-L1 | 阈值与 preview 预算同取 **64K** | 单一数字省一层心智；否决「阈值 / preview 各自独立取值」 |
-| D-L2 | preview **保头保尾**（头 16K + 注 + 尾余量） | 结果/统计/错误天然落在尾部——纯头截断会把结论切掉；否决纯头 64K |
-| D-L3 | tail 从常量**推导**，禁止硬编码 | 注长随省略位数浮动——硬编码会破总预算；否决把 48K 写死进切片 |
-| D-L4 | 两端切点均 **UTF-16 安全** | 裸 `slice` 产生孤立代理会触发严格解析器 400（deepseek 根因）；否决裸切片 |
+| D-L1 | 阈值与 preview 预算同取 **64K** | 单一数字省一层心智 |
+| D-L2 | preview **保头保尾**（头 16K + 注 + 尾余量） | 结果/统计/错误天然落在尾部——纯头截断会把结论切掉 |
+| D-L3 | tail 从常量**推导**，禁止硬编码 | 注长随省略位数浮动——硬编码会破总预算 |
+| D-L4 | 两端切点均 **UTF-16 安全** | 裸 `slice` 产生孤立代理会触发严格解析器 400 |
 | D-L5 | 提示语 / 路径格式**不变**，失败回退同用双端切片 | 模型契约稳定优先；失败时也不退回纯头（否则尾部结论同样丢失） |
-| D-L6 | advisor 也**双端化**（不维持纯头） | 评审的裁决/结论行常在尾部——截掉即评审基于不完整证据；否决「主链路改、advisor 不动」 |
-| D-L7 | read 双端**条件启用**（窗口截断 且 文件 > 2000 行） | ≤ 阈值文件与全文件窗口保持字节零变化（回归最小）；否决无条件双端 |
-
-## 8. 不并项与历史沿革
-
-### 8.1 历史沿革（(d) 类——**不并**）
-
-> 来源档 `thincoder-cli/docs/design/TOOL-OUTPUT-LIMITS.md`（CLI 产品档）——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
-
-| 旧档位置 | 内容 | 何故不并 |
-|---|---|---|
-| 旧档状态行（「已实现 2026-08-24 首版 + 09-04 §5 修订」） | 时点状态行 | 批次语境——现行态已入 §1–§5 |
-| 旧档 §4「验收标准（核销参考）」 | 一次性验收清单（含测试用例名与核销注） | 批次材料——现行约束已入 §2–§5，测试面入 §6.2 |
-| 旧档 §3「实现落点与兼容性」 | 单次改动的受影响文件清单 | 一次性材料——现行坐标入 §6.1 |
-| 旧档档头「关联：`docs/TODO.md`（C 方案核销）」 | 台账指针（已核销） | 一次性台账指针——非机制正文 |
-| 旧档变更记录（四条逐批流水） | 2026-08-24 / 09-04 / 09-07 / 09-09 批次流水 | 历史叙述——本档自有变更记录 |
-
-### 8.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
-
-| 旧档面 | 内容 | 何故不并（去向 / 触发） |
-|---|---|---|
-| 工具描述文本 | 模型可见的 offload 提示语之外的描述面 | **提示词面 = 产品代码**——落点 `thincoder-core/tool-docs/*.md` |
-| VSC 侧设计档与测试 | VSC 树对应文档 | **已并入（批 6）**——§6.3 坐标 + §6.2 测试面（VSC 保持独立实现、锁步镜像） |
-| VSC 旧档 §3 实现落点与兼容性清单 · §4 AC1–AC11 · 变更记录流水 | 单次改动清单 / 一次性验收 / 批次流水 | **不并**——现行坐标入 §6.3；约束已入 §2–§5 + VSC 需求侧（(d) 类） |
-| 需求侧正文 | CLI 树需求档 | 需求档未迁——后续批并入 `docs/core/requirements/TOOLS.md` |
-
-## 变更记录
-
-- 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/TOOL-OUTPUT-LIMITS.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标改写为现状路径并实核（`thincoder-core/agent/helpers.mjs` · `advisor/compaction.mjs` · `advisor/truncate.mjs` · `tools/file.mjs` · `text-budget.mjs`）；批次材料 / 状态行 / 变更流水不并（§8）。
-- 2026-09-15（**B 式迁移轮 · VSC 第 6 批 · 并入 · eng-designer**）：新增 §6.3 VSC 端实现坐标——自 `thincoder-vscode/docs/_archive/design/TOOL-OUTPUT-LIMITS-TUNING.md` 并入（常量 / 落盘 / advisor 截断 / 显示 / 历史页 / read 双端 / 失败回退逐项实核）；§6.2 双端测试面补 VSC 对位；§8.2 补 VSC 批次材料不并（(d) 类）；需求侧头注随批 5 并入收正。
+| D-L6 | advisor 也**双端化**（不维持纯头） | 评审的裁决/结论行常在尾部——截掉即评审基于不完整证据 |
+| D-L7 | read 双端**条件启用**（窗口截断 且 文件 > 2000 行） | ≤ 阈值文件与全文件窗口保持字节零变化（回归最小） |

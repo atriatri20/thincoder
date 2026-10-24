@@ -2,13 +2,13 @@
  * at-complete.mjs — `at:complete` 文件枚举过滤出档（R1 输入面板移植 · 桌面宿主面；Q11 定档 ——
  * **不扩 `file-links.mjs`**：该档判据 = 链接验存 ∕ 打开目标，非枚举；本档零改该档）。
  *
- * 语义同源 = VSC `panel-index.mjs:58-86`（多实现面各自落地 —— 端侧自有实现，非逐字拷贝）：
+ * 语义同源 = VSC `pushIndexStatus`（多实现面各自落地 —— 端侧自有实现，非逐字拷贝）：
  * `@` 前缀剥离 → 项目树枚举 → 过滤 → 封顶 20 → `{ name, path }`（`path` = 项目根相对 **posix** 串）。
  * 排除面照 VSC 逐字 = `node_modules` ∕ `.git` ∕ `dist` 三目录不入遍历；软链一律跳过（**安全裁定** —— 防环；
  * VSC 同档未见显式排除软链的设定 —— 端侧保守自定，收正轮注记保位）。过滤 = **名字段前缀**（末段 `startsWith`，
  * 大小写不敏感 —— 对位 VSC `findFiles("**∕<pattern>*")` 的名字段语义；路径前缀 ∕ 路径中段两支**退场**）。
  * 回执 `{ ok, matches, seq }`：**`seq` 原样回携**（宿主不改写 ∕ 不重编号 —— 迟到丢弃判据 = 消费面，
- * VSC `autocomplete.js:29-34` 同式）；空 query ∕ 空 pattern ∕ 零命中 ⇒ `matches: []`（⇒ 消费面关下拉）。
+ * VSC `closeAtDropdown` 同式）；空 query ∕ 空 pattern ∕ 零命中 ⇒ `matches: []`（⇒ 消费面关下拉）。
  * 读面纪律：只读盘（`node:fs/promises` 异步遍历 —— 主进程不阻塞）；不可读目录 = 零贡献（不抛 —— 沿
  * `file-links.mjs` 验存面「不可达 ≠ 错误」同款）；命中满 `AT_MAX_MATCHES` 即止（沿 VSC `maxResults` 语义）。
  */

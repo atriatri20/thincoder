@@ -3,7 +3,7 @@
  * `docs/batches/2026-09-29-hatch-clearance-2.md` §2 · #673「消（补做——欠做，非能力缺失）」第三件）。
  *
  * port 源 = VSC `thincoder-vscode/src/extension/loop-sampler.mjs`（F-W19 · `docs/vsc/design/SETTINGS.md`
- * §2.12）——取落账覆盖范围 `overrideAdmissionIfHostBusy`（源 `:71-77`）；VSC `probeFailureOf`（源 `:67-69`）
+ * §2.12）——取落账覆盖范围 `overrideAdmissionIfHostBusy`（源 = VSC 同名）；VSC `probeFailureOf`
  * **不 port**（端侧探针失败分档走核「读账优先」单源 = `probeAdmission`，无该函数消费点——零死代码）。
  *
  * 唯一职责：给出「宿主（主进程）此刻是否忙」的**证据判定**（`hostBusy()`）——采样器每
@@ -62,7 +62,7 @@ export function hostBusy() {
   return _lags.some((r) => now - r.at >= 0 && now - r.at <= WINDOW_MS)
 }
 
-/** 宿主忙证据覆盖（源 `:71-77` 逐字 port —— 核 `deps.hostBusyOverride` 缝对位）：核探针已落账失败
+/** 宿主忙证据覆盖（源 `overrideAdmissionIfHostBusy` 逐字 port —— 核 `deps.hostBusyOverride` 缝对位）：核探针已落账失败
  *  （raw 分类 timeout ∕ malformed）后，按宿主证据改写落账分类为 `hostBusy`（**`reason` 逐字不动**——
  *  失败句面零改；核零宿主事件循环观测）。返回 true = 已覆盖落账（调用点 = `providers.mjs` 两探径失败支）。 */
 export function overrideAdmissionIfHostBusy(name, reason) {

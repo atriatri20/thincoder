@@ -22,6 +22,7 @@ export const EN_MCP = Object.freeze({
   // ── Probe three states (readout mirrors CLI `/mcp test` — mcp/MCP.md §3.3) ───
   "admin.mcp.probeRunning": "Probing…",
   "admin.mcp.probeOk": "✓ {toolCount} tools, {latencyMs}ms",
+  "admin.mcp.probeOkNamed": "✓ {toolCount} tools: {tools}, {latencyMs}ms",
   "admin.mcp.probeFail": "✗ {error}",
 
   // ── Add / edit modal (one form, two states — transport field groups switch) ──

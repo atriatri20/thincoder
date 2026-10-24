@@ -12,7 +12,7 @@ import { visibleWindow } from "../store.mjs"
 import { MAX_RENDER_BLOCKS } from "./chat-scroll.mjs"
 import { guideOf } from "./chat-guide.mjs"
 
-/** 帧模型：三态 + 窗出口（`visible` / `hidden` 单源 = `renderer/store.mjs:53`）+ 四标量读数 + 待决项（卡面）
+/** 帧模型：三态 + 窗出口（`visible` / `hidden` 单源 = `renderer/store.mjs`）+ 四标量读数 + 待决项（卡面）
  *  + 引导码（`guide` —— 判据转调 `chat-guide.mjs` 的 `guideOf`）。
  *  `none` ⇒ `blocks` 空 ∧ `hidden` 0 ∧ `approval` 空（守 `data-blocks` = DOM 块节点数不变式 —— 不落 stale 块 / 卡）。 */
 export function chatModel(state, limit = MAX_RENDER_BLOCKS) {

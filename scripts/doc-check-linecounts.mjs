@@ -1,5 +1,5 @@
 /**
- * doc-check-linecounts.mjs — M8 机检 · 行数面（#546 · 第五判据：声明面 checkConfig.lineCounts）。
+ * doc-check-linecounts.mjs — M8 机检 · 行数面（#546 · 第五判据：调用方传入的行数声明行——manifest 不带该参数面）。
  * 权威设计 = `docs/batches/2026-09-29-doc-check-face.md` §2.4（+ `docs/core/design/DOC-DISCIPLINE.md` §7 行数面随落）。
  * 语义：声明（doc + section）⇒ 节域内表格行「文件 ⇒ 表值」逐对与实读内容行数比对；
  * 差异 = 报告态（不入闸——KD-2）；行式异常不静默丢（D3）。

@@ -1,5 +1,5 @@
 /**
- * declaration.mjs — 声明装载面（PROJECT-MANIFEST.json 三族 `codePaths` / `index.*` / `advisor.*`）
+ * declaration.mjs — 声明装载面（PROJECT-MANIFEST.json 两族 `codePaths` / `index.*`）
  * · 自 `conventions.mjs` 迁出 · 2026-10-01 core 拆分批 #755 ∥ #786。
  * 投影单源 = `manifest.mjs`（ONE reader / ONE root resolution——`readManifest` + `manifestFilePath`；
  * name / shape / defaults = schema 面 `docs/core/design/MANIFEST.md` §2.2）。迁出块逐字；
@@ -7,7 +7,7 @@
  */
 import { existsSync, readdirSync, statSync } from "node:fs"
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path"
-import { DEFAULT_MANIFEST, MANIFEST_REL, docRootPaths, manifestFilePath, owningProject, readManifest } from "./manifest.mjs"
+import { DEFAULT_MANIFEST, MANIFEST_REL, docRootPaths, manifestFilePath, onManifestInit, owningProject, readManifest } from "./manifest.mjs"
 import { isSkippedRelPath } from "./memory/file-walk.mjs" // 面⑦ 子目录扫描的跳过段谓词单源（零环：file-walk 不引本档）
 import { logEvent } from "./log.mjs"
 
@@ -62,11 +62,7 @@ function normalizePathList(v) {
   return out
 }
 
-function normalizeString(v) {
-  return typeof v === "string" && v.trim() ? v.trim() : ""
-}
-
-/** Project the manifest three families into the frozen declaration object.
+/** Project the manifest two families into the frozen declaration object.
  *  `declared` = VALUE comparison against the defaults — at least one family deviates
  *  (a key written with its default value still counts as NOT declared; the design-gate
  *  hint reads it to decide whether to point at the manifest, PORTABILITY §3.1).
@@ -80,11 +76,9 @@ function buildDeclaration(m, root = null) {
   const excludePaths = normalizePathList(m?.index?.excludePaths)
   const publicRepos = normalizePathList(m?.index?.publicRepos)
   const batchRecords = batchSegments(m?.docRoot?.batches) // §6.14 面⑥ 声明值投影（`declared` 旗不涉——docRoot 族现状零改）
-  const docMap = normalizeString(m?.advisor?.docMap)
-  const standardsDoc = normalizeString(m?.advisor?.standardsDoc)
   const defaults = normalizeCodePaths(DEFAULT_MANIFEST.codePaths) ?? []
   const pathsDiffer = codePaths.length !== defaults.length || codePaths.some((p, i) => p !== defaults[i])
-  const declared = pathsDiffer || codeExtensions.length > 0 || docExtensions.length > 0 || excludePaths.length > 0 || publicRepos.length > 0 || Boolean(docMap) || Boolean(standardsDoc)
+  const declared = pathsDiffer || codeExtensions.length > 0 || docExtensions.length > 0 || excludePaths.length > 0 || publicRepos.length > 0
   return Object.freeze({
     declared,
     codePaths: Object.freeze(codePaths),
@@ -95,7 +89,6 @@ function buildDeclaration(m, root = null) {
       excludePaths: Object.freeze(excludePaths),
       publicRepos: Object.freeze(publicRepos),
     }),
-    advisor: Object.freeze({ docMap, standardsDoc }),
     root,
   })
 }
@@ -311,9 +304,13 @@ export function clearDeclarationCache() {
   _scopeCache.clear()
 }
 
+// #1376：eng 建档路（`manifest.mjs` `resolveEngineeringManifest` init 支）成功 ⇒ 同清两缓存——
+// 反向注册（本档已向依赖 manifest.mjs，其侧零出边保持——KD-M1-33）；失败路径不广播、文件面零变。
+onManifestInit(clearDeclarationCache)
+
 /** Retired-carrier warning (existence check only — zero content parsing, zero fallback). */
 function warnRetiredCarrier(root) {
-  console.warn(`[declaration] ${RETIRED_REL_PATH} is retired and no longer read — move codePaths / index.*Extensions / advisor.{docMap,standardsDoc} into PROJECT-MANIFEST.json`)
+  console.warn(`[declaration] ${RETIRED_REL_PATH} is retired and no longer read — move codePaths / index.*Extensions into PROJECT-MANIFEST.json`)
   logEvent("declaration:retired-file", { cwd: root })
 }
 
@@ -330,7 +327,7 @@ function warnRetiredCarrier(root) {
  * @param {string} cwd — project dir / anchor (root resolved by manifest.mjs)
  * @returns {Readonly<{declared: boolean, codePaths: readonly string[], batchRecords: readonly (readonly string[])[],
  *   index: {codeExtensions: string[], docExtensions: string[], excludePaths: string[], publicRepos: string[]},
- *   advisor: {docMap: string, standardsDoc: string}, root: string|null}>}
+ *   root: string|null}>}
  */
 export function loadProjectDeclaration(cwd) {
   const file = manifestFilePath(cwd) // data-file path (single source — manifest.mjs KD-M1-18)

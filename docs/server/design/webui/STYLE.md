@@ -1,14 +1,14 @@
 # Thincoder Server · 样式与版式（webui/STYLE.md）
 
-> 本档迁自 `webui/WEBUI.md` §2.5 ∥ §2.6 及三表归位行（2026-10-11 域内拆分；as-of）。域总览与壳面 = `webui/WEBUI.md`。
+> 本档迁自 `webui/WEBUI.md` §2.5 ∥ §2.6 及三表归位行（域内拆分）。域总览与壳面 = `webui/WEBUI.md`。
 
 ## 1. 关键决策（本面）
 
-| # | 决策 | 理由 | 被否候选与何故否 |
-|---|---|---|---|
-| KD-SV-36 | **控制台样式族 = 变量单源 + 一套刻度 + 系统基线对齐**（功能点 19——用户 22:00/22:01）：族目 = ①列表 ②按钮 ③表单 ④间距 ⑤字排 ⑥色板状态 ⑦卡片 ⑧弹窗 ⑨空错态 ⑩码面（勘误：新增 ⑩ ∥ 变量单源重定位为底座）；一字族 ∥ 一字号 13px ∥ 行距 1.5 ∥ 零粗体（强调 = 色通道）；悬停底同值（列表行/中性面——`--hover`） ∥ 可点行 = 三件套（指针/焦点环/键盘） ∥ 收束不重设计（骨架/类名沿用——死类删净 ∥ 零新档零动画） | 用户 22:00「hover 行的背景色会不一样，有的还没有」+ 22:01 扩裁；系统基线 = 用户 2026-09-30 排版裁定（`docs/desktop/requirements/UI.md` D29 同口径——一字族/一字号/无粗体·颜色区分）；需求 §2:19 | 保留多字号/字重（违系统基线）· 逐组件一次性样式（散置复现——无单源）· 新 CSS 档/框架（违 KD-SV-9 零依赖零构建）· 过渡动画（超收束范围）· 暗色主题（未裁）· 14px 单号（桌面值——控制台以表格密面为主，13px = 现盘主值） |
-| KD-SV-150 | **隐藏切换语义 = 全局 `[hidden]` 兜底（`style.css`：`[hidden] { display: none !important; }`）+ 删按例补丁**（2026-10-13 project-sources-merge 批——功能点 48②；机制与核对表 = 本档 §2.3） | 根因 = **类**非点：UA `[hidden]` 被任何作者 `display` 压过（作者样式优先于 UA——与特异性无关）；按例补丁已铺两处仍漏两处（本批实锤 = 基址 label ∥ github 事件块）——一次性闭合（铁律 2「撞错结构当场修，不叠最小补丁盖症状」）；`!important` 编码语义本身（`hidden` = 不渲染，布局不得复活——非覆盖布局）；净效果 = 增 1 行删 2 行 | 按例补（先例 `:71`/`:126`——已两度漏网；`.provider-form.stacked > label` 与补丁同特异性、靠源序决胜——脆）· 组件侧（`field()` 加包层 ∥ 改内联 `style.display`——动 DOM 形/动 17+ 切换点）· 全局 `[hidden]` 无 `!important`（特异性 (0,1,0) 仍输 `.provider-form > label` (0,1,1)——**无效**） |
-| KD-SV-37 | **控制台布局收正 = 数据表五页视口高壳 + 左对齐 + 弹窗列表表格化**（功能点 20）：壳面钉五页（`#/me/usage` 为「用量明细」= 我的·用量页；`#/admin/usage` 看板页排除——报表区无界）；两段壳（`.page-head`/`.page-area`）+ 高度链（`body.data-shell` ⇒ `100dvh` flex 链 ⇒ `.table-slot` ⇒ `.table-wrap` 滚区）+ `thead th` 吸附（限 `main`）；**表尾 tfoot「共 N 项」**（`common.rowCount`——吸附表底）；弹窗内表自滚（单滚动面伸缩链本档 §2.2⑤ + 表头吸附——2026-10-07 轻笔/走查收正）；回退 = ≤760px 宽 ∥ ≤600px 高 ⇒ 撤链整页滚；`main` 撤 auto；弹窗三列表 = 表格形（勾选表 = 列式五列——首格 `label`（勾选 + 模型名）；点题名同切换保持） | 用户 07:24–07:32 走查四条（需求 §2:20——父侧 07:4x 第五页裁定在案）；零新档 ∥ 零新端点 ∥ 零新变量（AC-19 canon 不破）；行计数纯前端派生 | 看板页入壳（报表区无界——不相容）· 每页自写壳结构（机制散置——违单源）· 全局冻结布局（非壳页受害）· grid/双列勾选表（丢点题名切换 ∥ 触旧件断言之形）· 分页（面外）· 服务端出计数（违背纯前端派生口径） |
+| # | 决策 | 理由 |
+|---|---|---|
+| KD-SV-36 | **控制台样式族 = 变量单源 + 一套刻度 + 系统基线对齐**（功能点 19——用户 22:00/22:01）：族目 = ①列表 ②按钮 ③表单 ④间距 ⑤字排 ⑥色板状态 ⑦卡片 ⑧弹窗 ⑨空错态 ⑩码面（勘误：新增 ⑩ ∥ 变量单源重定位为底座）；一字族 ∥ 一字号 13px ∥ 行距 1.5 ∥ 零粗体（强调 = 色通道）；悬停底同值（列表行/中性面——`--hover`） ∥ 可点行 = 三件套（指针/焦点环/键盘） ∥ 收束不重设计（骨架/类名沿用——死类删净 ∥ 零新档零动画） | 用户 22:00「hover 行的背景色会不一样，有的还没有」+ 22:01 扩裁；系统基线 = 用户 2026-09-30 排版裁定（`docs/desktop/requirements/UI.md` D29 同口径——一字族/一字号/无粗体·颜色区分）；需求 §2:19 |
+| KD-SV-150 | **隐藏切换语义 = 全局 `[hidden]` 兜底（`style.css`：`[hidden] { display: none !important; }`）+ 删按例补丁**（功能点 48②；机制与核对表 = 本档 §2.3） | 根因 = **类**非点：UA `[hidden]` 被任何作者 `display` 压过（作者样式优先于 UA——与特异性无关）；按例补丁已铺两处仍漏两处（实锤 = 基址 label ∥ github 事件块）——一次性闭合（铁律 2「撞错结构当场修，不叠最小补丁盖症状」）；`!important` 编码语义本身（`hidden` = 不渲染，布局不得复活——非覆盖布局）；净效果 = 增 1 行删 2 行 |
+| KD-SV-37 | **控制台布局收正 = 数据表五页视口高壳 + 左对齐 + 弹窗列表表格化**（功能点 20）：壳面钉五页（`#/me/usage` 为「用量明细」= 我的·用量页；`#/admin/usage` 看板页排除——报表区无界）；两段壳（`.page-head`/`.page-area`）+ 高度链（`body.data-shell` ⇒ `100dvh` flex 链 ⇒ `.table-slot` ⇒ `.table-wrap` 滚区）+ `thead th` 吸附（限 `main`）；**表尾 tfoot「共 N 项」**（`common.rowCount`——吸附表底）；弹窗内表自滚（单滚动面伸缩链本档 §2.2⑤ + 表头吸附——2026-10-07 轻笔/走查收正）；回退 = ≤760px 宽 ∥ ≤600px 高 ⇒ 撤链整页滚；`main` 撤 auto；弹窗三列表 = 表格形（勾选表 = 列式五列——首格 `label`（勾选 + 模型名）；点题名同切换保持） | 用户 07:24–07:32 走查四条（需求 §2:20——父侧 07:4x 第五页裁定在案）；零新档 ∥ 零新端点 ∥ 零新变量（AC-19 canon 不破）；行计数纯前端派生 |
 
 ## 2. 机制
 
@@ -16,20 +16,20 @@
 
 用户 22:00 列表起意（「不同的列表样式会有区别，比如 hover 行的背景色会不一样，有的还没有，我希望你统一规划一下列表样式」）→ 22:01 扩裁（「还有哪些你觉得应该统一规划的样式也都一起规划一下」）⇒ 全控制台族目收束。落点 = `thincoder-server/public/style.css`（单档重排——**零新档**）+ 各视图档类串微改；**边界** = 版式/结构/数据/交互语义零动（骨架沿用）；与「系统基线统一」（一字族/一字号/无粗体·颜色区分）对齐。
 
-**族目勘误（父侧拟十族目——设计轮实读后）**：① 列表面 ∥ ② 按钮族 ∥ ③ 表单控件 ∥ ④ 间距刻度 ∥ ⑤ 字排 ∥ ⑥ 色板与状态色 ∥ ⑦ 卡片/容器 ∥ ⑧ 弹窗内构 ∥ ⑨ 空/错/加载态——**九族维持**；**增「码面」= 第 10 族**（`code` 芯片 ∥ `snippet` 块 ∥ 密钥/标识字面量——现盘跨 ⑤⑦ 无主）；**「变量单源」由并列族重定位为底座**（全族值源——机制面）。
+**族目勘误（父侧拟十族目）**：① 列表面 ∥ ② 按钮族 ∥ ③ 表单控件 ∥ ④ 间距刻度 ∥ ⑤ 字排 ∥ ⑥ 色板与状态色 ∥ ⑦ 卡片/容器 ∥ ⑧ 弹窗内构 ∥ ⑨ 空/错/加载态——**九族维持**；**增「码面」= 第 10 族**（`code` 芯片 ∥ `snippet` 块 ∥ 密钥/标识字面量——现盘跨 ⑤⑦ 无主）；**「变量单源」由并列族重定位为底座**（全族值源——机制面）。
 
 **口径（五条——族面通则）**：
 
 ① **变量单源**（底座）：`style.css` `:root` = 色/间距/圆角/字排/线宽/布局唯一值源；`:root` 块外零颜色字面量。
-  **桥例外（chat-shell-align 批——2026-10-11）**：核件壳族变量名（`--fg`/`--muted`/`--input-bg`/`--red`/`--error-fg`/`--diff-del-bg`/`--shadow`/`--overlay`/`--hover-bg`/`--btn-*` 一族）入 `:root` **别名块**——逐键 = 既有控制台变量引用（零新值 ∥ 零颜色字面量；单源不破——值仍一处）；**必须 `:root` 级**（核件确认层/toast 挂 body 层，不可限 `#toolbar` 作用域）。
+  **桥例外**：核件壳族变量名（`--fg`/`--muted`/`--input-bg`/`--red`/`--error-fg`/`--diff-del-bg`/`--shadow`/`--overlay`/`--hover-bg`/`--btn-*` 一族）入 `:root` **别名块**——逐键 = 既有控制台变量引用（零新值 ∥ 零颜色字面量；单源不破——值仍一处）；**必须 `:root` 级**（核件确认层/toast 挂 body 层，不可限 `#toolbar` 作用域）。
 ② **一套刻度**（④）：间距七级 ∥ 圆角三级（值表 = 下）；归位口径 = 就近取级、等距取小（保守——不放大）。
-③ **系统基线对齐**（⑤）：**一字族 ∥ 一字号（13px） ∥ 行距 1.5 ∥ 自有文字零粗体**——强调 = 颜色通道；层级 = 结构通道（位置 ∥ 间距 ∥ 底色 ∥ 边框 ∥ 线宽）。**终端面例外（sandbox-container-terminal 批——登记）**：终端窗内 cell 按 pty 语义渲染（`font-weight` 可用——仿真面，非「自有文字」）；其余面零粗体不变。
+③ **系统基线对齐**（⑤）：**一字族 ∥ 一字号（13px） ∥ 行距 1.5 ∥ 自有文字零粗体**——强调 = 颜色通道；层级 = 结构通道（位置 ∥ 间距 ∥ 底色 ∥ 边框 ∥ 线宽）。**终端面例外**：终端窗内 cell 按 pty 语义渲染（`font-weight` 可用——仿真面，非「自有文字」）；其余面零粗体不变。
 ④ **态面齐备**（①⑨）：悬停/聚焦/禁用/空·错·加载态逐族在册；**悬停底同值——限定列表行/中性面**（`--hover`：表格数据行 ∥ 导航项；「有的还没有」收口）；钮/链接等交互件悬停取值逐型在表（②——非同值面）。
 ⑤ **收束不重设计**：类名骨架沿用（仅删死类 ∥ 新增态修饰 `.error`）；零动画/过渡；零依赖零构建不变（KD-SV-9）。
 
-**散置/不一致清单（改前实读——2026-10-06 盘面；行号 = `thincoder-server/public/style.css`）**：
+**散置/不一致清单（行号 = `thincoder-server/public/style.css`）**：
 
-| # | 散置/不一致项 | 改前实读 | 收束 |
+| # | 散置/不一致项 | 盘面实读 | 收束 |
 |---|---|---|---|
 | S1 | 悬停底分歧 + 零悬停面（用户原句） | `:27` `#eef1f5`（导航项）∥ `:129` `#f3f6fb`（可点行）∥ 非可点表行零悬停 | `--hover`（`#eef1f5`）列表行/中性面单值 |
 | S2 | 表头/码底两值 | `:39` `#eef1f5` ∥ `:40` `:69` `#f0f2f5` | `--fill`（`#f0f2f5`） |
@@ -64,9 +64,9 @@
 | 字排（⑤） | `--font`＝系统 UI 栈（现值） ∥ `--mono`＝`ui-monospace, Consolas, "Courier New", monospace` ∥ `--fs`＝13px ∥ `--lh`＝1.5 | UI 唯一族 ∥ 码唯一族（⑩ 码面——登记例外） ∥ 唯一字号 ∥ 唯一行高 |
 | 线宽 | `--bw`＝1px ∥ `--bw-strong`＝2px | 结构线 ∥ 强调线（提示条左规 ∥ 聚焦环） |
 | 布局 | `--nav-w`＝200px ∥ `--modal-w`＝`clamp(560px, 78vw, 1200px)`（视口比例式三段：小屏保底 560 ∥ 比例段 78vw ∥ 大屏封顶 1200——2026-10-07 用户走查令） | 侧栏宽+内容缩进 ∥ 弹窗宽（三处口径） |
-| 终端（sandbox-container-terminal 批——第八组；登记例外） | `--term-bg`＝深底 ∥ `--term-fg`＝亮字 ∥ `--term-c0..c7`（ANSI 八色——常色系） ∥ `--term-c8..c15`（对应亮色系）——**共 18 枚**；落地值以实施实读为准 | 终端面调色板（`terminal-render.mjs` 消费；面内零颜色字面量——§2.1 ① 不破） |
+| 终端（第八组；登记例外） | `--term-bg`＝深底 ∥ `--term-fg`＝亮字 ∥ `--term-c0..c7`（ANSI 八色——常色系） ∥ `--term-c8..c15`（对应亮色系）——**共 18 枚**；落地值以实施实读为准 | 终端面调色板（`terminal-render.mjs` 消费；面内零颜色字面量——§2.1 ① 不破） |
 
-**族值表 + 套用表（①–⑩——逐族；「随其落地」= #87/#88 新面，本批实施轮按当刻盘面并入）**：
+**族值表 + 套用表（①–⑩——逐族；「随其落地」= #87/#88 新面，实施轮按当刻盘面并入）**：
 
 **① 列表面**（数据表 ∥ 侧栏导航 ∥ key 清单）：
 
@@ -77,14 +77,14 @@
 | 表头吸附（壳内——本档 §2.2②） | `position: sticky` + `top: 0` + `z-index: 1`（滚区 = `.table-slot > .table-wrap`）；底色 = `--fill`（上行单源）；弹窗内表自滚（单滚动面伸缩链——本档 §2.2⑤）+ 表头吸附（2026-10-07 走查收正） |
 | 单元格 `td` | 内距 `--sp-3 --sp-4` ∥ 线 `--bw solid --border` ∥ 行高 `--lh` |
 | 行悬停（可点 ∥ 不可点——表格数据行） | `--hover`（`tbody tr:hover` 单一声明——表格数据行全覆盖） |
-| key 表（me-keys 批——`#/me/keys`） | 表格族 canon 同源（`.table-wrap > table`——本档 §2.2⑤ 同构 ∥ 行悬停 = `tbody tr:hover` 上行单一声明）；`ul.key-list`/`.key-item`/`.key-meta` 族随页重做**删净**（零死类——S14 口径） |
+| key 表（`#/me/keys`） | 表格族 canon 同源（`.table-wrap > table`——本档 §2.2⑤ 同构 ∥ 行悬停 = `tbody tr:hover` 上行单一声明）；`ul.key-list`/`.key-item`/`.key-meta` 族随页重做**删净**（零死类——S14 口径） |
 | 可点行 `.row-clickable` | `cursor: pointer` ∥ `:focus-visible` 行内环（−2px） ∥ 键盘可达（`tabindex` + Enter/Space——视图档口径现状保持） |
-| 选中/活动 | `--selected` 底 + `--accent` 字（现落点 = 导航活动态 ∥ 语言钮 `.active` ∥ 页签活动态 `.tab.active`——标签页批） |
+| 选中/活动 | `--selected` 底 + `--accent` 字（现落点 = 导航活动态 ∥ 语言钮 `.active` ∥ 页签活动态 `.tab.active`） |
 | 导航项 `.nav-item` | 内距 `--sp-2 --sp-4` ∥ 圆角 `--r-2` ∥ 悬停 `--hover` |
 | 空态 | `.hint`（⑨） |
-| 套用面 | 侧栏导航 ∥ 成员表 ∥ Provider 表（#87——随其落地） ∥ 服务模型表（#88——随其落地） ∥ 用量明细/排行 ∥ 审计 ∥ 账户 ∥ key 表（me-keys 批） |
+| 套用面 | 侧栏导航 ∥ 成员表 ∥ Provider 表（#87——随其落地） ∥ 服务模型表（#88——随其落地） ∥ 用量明细/排行 ∥ 审计 ∥ 账户 ∥ key 表 |
 
-**② 按钮族**（六型 + 态面——本批（console-tabs-component）增「页签」型）：
+**② 按钮族**（六型 + 态面——（console-tabs-component）增「页签」型）：
 
 | 型 | 类（现名） | 常态 | 悬停 |
 |---|---|---|---|
@@ -93,7 +93,7 @@
 | 危险 | `button.danger`（含 `.tiny.danger`） | `--panel` 底 ∥ `--danger` 边/字 | `--danger-fill` 底 |
 | 链接 | `button.link` | 无边底 ∥ `--accent` 字 | 字 `--accent-hover` |
 | 图符 | `.modal-close` | `--muted` 字 ∥ `--r-2` | `--hover` 底 + `--text` 字 |
-| 页签 | `button.tab`（公共标签页组件 `tabs.mjs`（已落）——本批） | 透明底 ∥ `--text` 字 ∥ `--r-2` ∥ 内距 `--sp-2 --sp-4`（活动态 = `--selected` 底 + `--accent` 字——① 选中/活动同款） | `--hover` 底 |
+| 页签 | `button.tab`（公共标签页组件 `tabs.mjs`（已落）） | 透明底 ∥ `--text` 字 ∥ `--r-2` ∥ 内距 `--sp-2 --sp-4`（活动态 = `--selected` 底 + `--accent` 字——① 选中/活动同款） | `--hover` 底 |
 
 - 禁用 = `--muted` 字 ∥ `--fill` 底 ∥ `cursor: default`；聚焦 = 统一环（②③⑦ 同）。
 - 语言钮收编：`.lang-switch button` 专用规则并入 `tiny`（padding 微差归刻度）；`.active` = `--selected` 底 + accent 边/字。
@@ -185,30 +185,30 @@
 | 口径 | 码族 = **唯一族例外**（字面量对齐/可读——桌面排版先例同款：码面独立于 UI 族）；同号同重（一字号口径不破） |
 | 套用面 | 表内标识/密钥提示形 ∥ 系统页/用量页 snippet ∥ 密钥明文区 ∥ #87 模型清单（随其落地） ∥ #88 快照值（随其落地） |
 
-**#87/#88 接续标注**：本节 = 全域样式单源——**后续新增面按本节族表套用**；#87（Provider 重做——工具条 ∥ 添加/详情双弹窗 ∥ 候选勾选列表） ∥ #88（服务模型配置——配置四组 ∥ 停用流 ∥ 元数据行）之新面已列各族套用面并标「随其落地」——本批实施轮以当刻盘面为准并入；
-两批产品面落地晚于本批 ⇒ 由其落地轮按本节套用（本批不代改其面）；#87 旧内联面撤除 ⇒ 其表单族类（`.provider-form`/`.key-clear`/`.stack-models`）随双弹窗复用——零死类（S14 零登记）；`.model-picks` 随布局收正批（本档 §2.2⑤）退役——规则与字面删净。
+**#87/#88 接续标注**：本节 = 全域样式单源——**后续新增面按本节族表套用**；#87（Provider 重做——工具条 ∥ 添加/详情双弹窗 ∥ 候选勾选列表） ∥ #88（服务模型配置——配置四组 ∥ 停用流 ∥ 元数据行）之新面已列各族套用面并标「随其落地」——实施轮以当刻盘面为准并入；
+两批产品面落地晚于本节 ⇒ 由其落地轮按本节套用（本节不代改其面）；#87 旧内联面撤除 ⇒ 其表单族类（`.provider-form`/`.key-clear`/`.stack-models`）随双弹窗复用——零死类（S14 零登记）；`.model-picks` 随布局收正批（本档 §2.2⑤）退役——规则与字面删净。
 
-**me 用量图表化批（2026-10-07）新面登记**：`.bar-stacked`/`.bar-seg`/`.bar-swatch`/`.chart-toggle`/`.bar-legend`/`.report-card`——按族套用（段色 = `--accent` 透明度阶梯〔⑥ 色板单源不破〕 ∥ 切换钮活动态 = `.lang-switch .active` 同形〔① 选中态〕 ∥ 内距/间距/圆角 ∈ 各族刻度；零新 `:root` 变量 ∥ 零新悬停规则）；实施轮以当刻盘面并入。
+**me 用量图表化新面登记**：`.bar-stacked`/`.bar-seg`/`.bar-swatch`/`.chart-toggle`/`.bar-legend`/`.report-card`——按族套用（段色 = `--accent` 透明度阶梯〔⑥ 色板单源不破〕 ∥ 切换钮活动态 = `.lang-switch .active` 同形〔① 选中态〕 ∥ 内距/间距/圆角 ∈ 各族刻度；零新 `:root` 变量 ∥ 零新悬停规则）；实施轮以当刻盘面并入。
 
-**标签页批（2026-10-11）新面登记**：`.tabs`（标签容器） ∥ `.tab-list`（页签条） ∥ `.tab`/`.tab.active`（页签钮——② 型扩充） ∥ `.tab-panel`（面板——`hidden` 切换）——按族套用（悬停 `--hover` ∥ 选中 `--selected`/`--accent` ∥ 内距/圆角 ∈ 各族刻度；零新 `:root` 变量 ∥ 行悬停声明清单不变 ∥ 钮族悬停 = ② 型表在册（页签取 `--hover` 底））；实施轮以当刻盘面并入。
+**标签页新面登记**：`.tabs`（标签容器） ∥ `.tab-list`（页签条） ∥ `.tab`/`.tab.active`（页签钮——② 型扩充） ∥ `.tab-panel`（面板——`hidden` 切换）——按族套用（悬停 `--hover` ∥ 选中 `--selected`/`--accent` ∥ 内距/圆角 ∈ 各族刻度；零新 `:root` 变量 ∥ 行悬停声明清单不变 ∥ 钮族悬停 = ② 型表在册（页签取 `--hover` 底））；实施轮以当刻盘面并入。
 
-**对话页壳批（chat-shell-align——2026-10-11）新面登记**：**核件发射类族**（核 `thincoder-render-core/flow/block.mjs`/`composer/` 发射——控制台补样式）：
+**对话页壳新面登记**：**核件发射类族**（核 `thincoder-render-core/flow/block.mjs`/`composer/` 发射——控制台补样式）：
   - 消息面：`.message`（`.user`/`.assistant`——平铺无底） ∥ `.msg-label`（`--accent` 字）∥ `.msg-time`（`--muted` 字）∥ `.bubble`（无底无框——VSC 平铺形）∥ `.message.pending`（待发泡：`--muted` 字）；
   - 输入区：`#toolbar`/`#input-row`/`#controls-row`/`#paste-bar`/`.paste-toast`（核 `composer.css` 命中，本档零覆写）；
   - 自持新增：`#status-line`/`.status-sep`（状态行——`--muted` 字 ∥ 段间距 ∈ ④ 刻度）∥ `.chat-bar`（会话条——sticky 顶 ∥ `--panel` 底 ∥ 下边 `--border`）∥ `.chat-thread`（文档流平铺）∥ 输入区 sticky 底；
   - **无源钮隐藏**（`#auto-btn`/`#advisor-btn`/`#eng-btn`/`#plan-btn`/`#settings-btn` = `display:none`——无源实证 = `webui/CHAT.md` §2.1③④；`#reasoning-btn` 经 KD-SV-111 出列——档位钮启用〔2026-10-13 收正——评审 #43 发现 1〕）；内距/间距/圆角 ∈ 各族刻度；零新悬停规则（AC-19 canon）；**别名桥 = §2.1① 桥例外**。
 
-**实施面（本批）**：`style.css` 重排（值源化 + 态面 + 死规则删） ∥ `views-admin.mjs` ∥ `views-me.mjs` ∥ `views-models.mjs` ∥ `views-usage.mjs` ∥ `views-audit.mjs` ∥ `views-providers.mjs`（`.hint error` 共 7 处） ∥ `views-providers-modals.mjs`（#87 段内错误面 ⇒ `.hint error`——随其落地并入） ∥ `views-system.mjs`（诊断失败面 2 处——`.error` 修饰） ∥
+**实施面**：`style.css` 重排（值源化 + 态面 + 死规则删） ∥ `views-admin.mjs` ∥ `views-me.mjs` ∥ `views-models.mjs` ∥ `views-usage.mjs` ∥ `views-audit.mjs` ∥ `views-providers.mjs`（`.hint error` 共 7 处） ∥ `views-providers-modals.mjs`（#87 段内错误面 ⇒ `.hint error`——随其落地并入） ∥ `views-system.mjs`（诊断失败面 2 处——`.error` 修饰） ∥
   `views-overview.mjs` ∥ `app.mjs`（死类串删——`stat` 2 处 ∥ `view` 2 处）；`nav.mjs` ∥ `modal.mjs` ∥ i18n 两表 = 零触（零新文案）。
 
 ### 2.2 数据表页视口高壳与布局收正（功能点 20——2026-10-07）
 
-用户 07:24–07:32 走查四条（表格适应视口高 ∥ 主内容左对齐 ∥ provider 弹窗模型列表表格化 ∥ 成员弹窗 key 列表表格化）⇒ 本条。**边界**：不动列/数据语义 ∥ 分页/筛选不入本批 ∥ 零依赖/零构建不变（KD-SV-9）。
+用户 07:24–07:32 走查四条（表格适应视口高 ∥ 主内容左对齐 ∥ provider 弹窗模型列表表格化 ∥ 成员弹窗 key 列表表格化）⇒ 本条。**边界**：不动列/数据语义 ∥ 分页/筛选不入 ∥ 零依赖/零构建不变（KD-SV-9）。
 
 **① 套用面（钉表）与排除面**：
 
-- 壳面 = 数据表五页：成员 `#/admin/members` ∥ Provider `#/admin/providers` ∥ 服务模型 `#/admin/models` ∥ 审计 `#/admin/audit` ∥ 用量明细 `#/me/usage`（我的·用量页——父侧 07:4x 裁定；批 `docs/batches/2026-10-07-console-layout.md` §1 补记）。
-- 排除面：`#/admin/usage` 看板页（报表卡无界——与有界壳不相容；如需并入另轮）∥ 布局/信息表（系统页四表 ∥ 账户页表 ∥ 我的用量页报表卡（分模型表——随卡自滚；非壳表链））∥ key 表（页级——`#/me/keys`；非壳数据表——钉表五页不扩（2026-10-07 me-keys 批在案）；入壳 = 另议）∥ 项目面两页（`#/admin/projects` 两标签 ∥ 其 Git 源面板——2026-10-13 project-sources-merge 批定论：非壳页；表格随页整页滚——沿 key 表非壳先例）。
+- 壳面 = 数据表五页：成员 `#/admin/members` ∥ Provider `#/admin/providers` ∥ 服务模型 `#/admin/models` ∥ 审计 `#/admin/audit` ∥ 用量明细 `#/me/usage`（我的·用量页——父侧 07:4x 裁定）。
+- 排除面：`#/admin/usage` 看板页（报表卡无界——与有界壳不相容；如需并入另轮）∥ 布局/信息表（系统页四表 ∥ 账户页表 ∥ 我的用量页报表卡（分模型表——随卡自滚；非壳表链））∥ key 表（页级——`#/me/keys`；非壳数据表——钉表五页不扩——入壳 = 另议）∥ 项目面两页（`#/admin/projects` 两标签 ∥ 其 Git 源面板——定论：非壳页；表格随页整页滚——沿 key 表非壳先例）。
 
 **② 机制——两段壳与高度链（表尾计数 = 表内 tfoot）**：
 
@@ -224,14 +224,14 @@
 | `.page-head` | `flex: none` |
 | `.page-area` | `flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--sp-6)`（多卡壳页——卡间距；单卡页零影响） |
 | `.page-area > .card` | `flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0` |
-| `.page-area > .card.report-card` | `flex: none; max-height: 55%; overflow-y: auto`（报表卡——自然高不承缩；上限 = 页区高 55%（超限卡内自滚——滚动条仅超限时出）；明细卡仍走上行承缩链、恒得剩余高——me 用量图表化批。与本档 §2.2① 判否理由〔报表卡无界——与有界壳不相容〕对齐：本页报表卡经上限界定，入壳相容） |
+| `.page-area > .card.report-card` | `flex: none; max-height: 55%; overflow-y: auto`（报表卡——自然高不承缩；上限 = 页区高 55%（超限卡内自滚——滚动条仅超限时出）；明细卡仍走上行承缩链、恒得剩余高。与本档 §2.2① 判否理由〔报表卡无界——与有界壳不相容〕对齐：本页报表卡经上限界定，入壳相容） |
 | `.table-slot` | `flex: 1; min-height: 0; display: flex; flex-direction: column` |
 | `.table-slot > .table-wrap` | `flex: 1; min-height: 0; overflow-y: auto` |
 | `body.data-shell main thead th` | `position: sticky; top: 0; z-index: 1` |
 | `body.data-shell main tfoot td` | `position: sticky; bottom: 0; z-index: 1; background: var(--fill); color: var(--muted)` |
 
 - 吸附口径：表头吸附在滚区上沿、**表尾 `tfoot` 吸附滚区下沿**（底色 = `--fill`——① 族单源）；**弹窗内表 = 自滚 + 表头吸附**（壳吸附选择器限 `main` 不命中弹窗；弹窗侧规则 = 2026-10-07 走查收正——本档 §2.2⑤）。
-- 挂载前提①（弹窗挂载点——壳吸附不命中弹窗可核）：`<dialog>` 直属 `document.body`（`modal.mjs` 实读 2026-10-07——`document.body.append(root)`；不在 `main` 内）⇒ 吸附选择器 `body.data-shell main thead th` 不命中弹窗内表。
+- 挂载前提①（弹窗挂载点——壳吸附不命中弹窗可核）：`<dialog>` 直属 `document.body`（`modal.mjs` 实读——`document.body.append(root)`；不在 `main` 内）⇒ 吸附选择器 `body.data-shell main thead th` 不命中弹窗内表。
 - 挂载前提②（壳挂载点——高度链落点）：视图根 `<section>` 直属 `main#app`（`app.mjs` 路由实读——`h("section")` ⇒ `appEl.replaceChildren(mount)`；`index.html` `<main id="app">`）——`ctx.dataShell` 的 `mount` = 该 section ⇒ 高度链 `main > section` 命中视图根。
 - 回退：`@media (max-width: 760px), (max-height: 600px)` ⇒ `body.data-shell .content { height: auto }`——撤高度链（整页滚；吸附随壳失效）；阈值 = 设计取值。
 - 零新 `:root` 变量 ∥ 零新悬停规则——本档 §2.1 canon 不破（新声明全数纳入其判据）。
@@ -243,7 +243,7 @@
 **⑤ 弹窗内列表 = 表格形**（风格随全站表格族——`.table-wrap > table` 同构 ∥ 既有表样式零新族；**清单序 = 名称升序**〔候选 ∥ 预设清单〕——2026-10-07 走查收正：长清单可找）：
 
 - **Provider 详情弹窗·勾选段**：**列式表五列**（表头 = `admin.models.colModel` ∥ `admin.providers.colDisplayName` ∥ `colContext` ∥ `metaVision` ∥ `colStatus`）——首格 = `label`（勾选 + 模型名）⇒ 点题名同切换保持（交互零改）；
-  逐格 = `hint` span（缺则空、零占位；退役格 = `hint error`——有则示；功能点 24 = `webui/ADMIN.md` §2.1④）；空态 = `.hint` ∥ 加载 = `.hint`（`candidatesLoading`——#984）∥ 发现失败 = `.hint error`（`webui/ADMIN.md` §2.1④ 不变量）。
+  逐格 = `hint` span（缺则空、零占位；退役格 = `hint error`——有则示；功能点 24 = `webui/ADMIN.md` §2.1④）；空态 = `.hint` ∥ 加载 = `.hint`（`candidatesLoading`）∥ 发现失败 = `.hint error`（`webui/ADMIN.md` §2.1④ 不变量）。
 - **添加弹窗·预设信息段**：模型清单 = 单列表（表头 = `admin.models.colModel`——行 = `code` 芯片）；地址行与 apiKey 面零动。
 - **成员详情弹窗·key 表**：四列 = 密钥（`code` hint） ∥ 最后使用（本地化 ∥ `neverUsed`） ∥ 近 30 天（`windowTokensCell`——既有窗口口径） ∥ 操作（表头 `admin.members.colActions`；吊销钮行内）；空态 = `.hint`（`admin.members.noKeys`）。
 - **弹窗内表自滚**（2026-10-07 走查收正 ∥ 同日实测修正——主信息不随表滚 ∥ **单滚动面**：伸缩链 = `.modal-body` flex 列 ⇒ **内容盒（`.modal-body > div`——modal.mjs 整只 append 的调用层盒）** flex 列 `min-height: 0` ⇒ 固定块 `flex: none` ∥ 清单区（`.pick-box`）`flex: 1 1 auto; min-height: 0` 自滚 ∥
@@ -251,21 +251,17 @@
 外层 `overflow-y: auto` 仅极端兜底；Edge headless 同构实测红→绿在案）+ 表头吸附（`.modal-body .table-wrap thead th` sticky——同壳口径）。
 - `.model-picks` 退役——规则与字面删净（S14 零登记口径）。
 
-### 2.3 隐藏切换语义（`hidden` 兜底规则——2026-10-13 project-sources-merge 批；功能点 48② ∥ AC-48 ④⑤）
-
-**根因（实锤——2026-10-13 实读）**：UA 样式 `[hidden] { display: none }` 被**任何作者 `display` 声明**压过（作者样式优先于 UA 样式——与特异性无关）；
-  本控制台多族值规则带 `display`（全局 `label` `style.css:102` ∥ `.provider-form > label` `:144` ∥ `.provider-form.stacked > label` `:150` ∥ `.stack-box` `:235` ∥ `.sidebar` `:70` ∥ `.tab-panel` `:125`）⇒ 挂在这些元素上的 `hidden` 切换**永不生效**；
-  触发面 = 添加源弹窗基址门（`views-git-sources.mjs:223` `baseField.hidden`——基址对任何平台永远显）与 github 事件块（`:228` `eventBox.hidden`）。
+### 2.3 隐藏切换语义（`hidden` 兜底规则；功能点 48② ∥ AC-48 ④⑤）
 
 **规则（KD-SV-150）**：`style.css` 底座区增一条 **`[hidden] { display: none !important; }`** ——全站隐藏语义单源；**原两处按例补丁（`.sidebar[hidden]` `:71` ∥ `.tab-panel[hidden]` `:126`）删净**（职能被全局规则吸收——不留冗余）。边界：`!important` 全档**仅此一条**（可点名机检）；组件侧零改（`hidden` 切换写法不动——修的是 CSS 侧）。
 
-**核对表（全控制台 `hidden` 切换点——逐处核对 `display`；2026-10-13 实读）**：
+**核对表（全控制台 `hidden` 切换点——逐处核对 `display`）**：
 
 | # | 切换点（实读） | 元素 | 作者 display 源 | 判定 |
 |---|---|---|---|---|
-| 1 | `views-git-sources.mjs:223`（基址门） | `<label>`（`field()` 产物） | `label` `:102` ∥ `.provider-form > label` `:144` ∥ `.provider-form.stacked > label` `:150` | **受压——本批修**（全局规则接管） |
-| 2 | `views-git-sources.mjs:228`（github 事件块） | `div.stack-box` | `.stack-box` `:235` | **受压——本批修** |
-| 3 | `thincoder-server/public/app.mjs:154/168`（侧栏——2026-10-13 随正：project-sources-merge 批 app.mjs 净 −1 行后指针移 1；父侧直笔） | `aside.sidebar` | `.sidebar` `:70` | 受压——原补丁 `:71` 已覆（本批删补丁，全局规则接管） |
+| 1 | `views-git-sources.mjs:223`（基址门） | `<label>`（`field()` 产物） | `label` `:102` ∥ `.provider-form > label` `:144` ∥ `.provider-form.stacked > label` `:150` | **受压——修**（全局规则接管） |
+| 2 | `views-git-sources.mjs:228`（github 事件块） | `div.stack-box` | `.stack-box` `:235` | **受压——修** |
+| 3 | `thincoder-server/public/app.mjs:154/168`（侧栏） | `aside.sidebar` | `.sidebar` `:70` | 受压——原补丁 `:71` 已覆（删补丁，全局规则接管） |
 | 4 | `tabs.mjs:38/60`（标签面板） | `div.tab-panel` | `.tab-panel` `:125` | 受压——原补丁 `:126` 已覆（同接管） |
 | 5 | `thincoder-server/public/dom.mjs:115/117`（提示条） | `p.flash` | 无（`.flash` 无 `display`） | 结构性安全 |
 | 6 | 余各档（`hidden` 字面全扫——`thincoder-server/public/dom.mjs:57` ∥ `modal.mjs` ∥ `host-credential.mjs` ∥ `views-admin.mjs` ∥ `views-chat.mjs` ∥ `views-ledger.mjs` ∥ `views-me.mjs` ∥ `views-me-sandbox.mjs` ∥ `views-models.mjs` ∥ `views-projects.mjs` ∥ `views-providers-modals.mjs` ∥ `views-sandbox*.mjs`（四档）∥ `views-system*.mjs`（两档）） | `p/span.hint`·`.error`·`.secret`·无类 div | 无（族值规则无 `display`） | 结构性安全（面上全列；「安全」= 命中规则集内无 `display` 声明，非逐点实测） |
@@ -275,49 +271,33 @@
 
 ## 3. 文件账（本面文件行 ∥ 键族登记）
 
-| 档 | 行数（实读——设计估） | 职责 |
+| 档 | 行数（实读） | 职责 |
 |---|---|---|
-| `thincoder-server/public/style.css`（已落盘） | **83**（实读 2026-10-06——设计估 ≈95；#962 侧栏/分组/活动态/窄屏；#963 +8 = 系统页样式（`.snippet` ∥ `.card h4` ∥ `.update-tip` ∥ `.end-list`/`.end-name`））**⇒ 89 ⇒ ≈122**（i18n 叠加 +6 = 切换器钮样式；二轮 +≈33 = 灯（三色点） ∥ 图（柱列/轴标） ∥ 卡集网格 ∥ 提示条）**⇒ ≈152**（弹窗批 +≈30 = 弹窗（遮罩 ∥ 头/体/脚 ∥ 滚动锁） ∥ 行点击 ∥ 详情栅格）**⇒ 139**（实读——弹窗批后）**⇒ ≈165**（本批 +≈26 = 配置组 ∥ 表单网格 ∥ 停用钮 ∥ 元数据行）**⇒ +≈25**（provider 重做批另计 = 工具条 ∥ 勾选段 ∥ 危险钮行）**⇒ ≈216**（样式族批估——+≈26 = `:root` 变量族 +≈20 ∥ 态面（悬停/聚焦/禁用/错态）+≈9 ∥ 死规则 −2；三批全落地后以实读为准）**⇒ 实读 198（2026-10-07——样式族批落地后）⇒ ≈222（本批 +≈24 = 高度链 ∥ 表槽 ∥ 吸附 ∥ 页脚 ∥ 回退媒体查询 ∥ `main` 撤 auto ∥ `.model-picks` 删）⇒ 实读 224（2026-10-07——配额批/配额 v2 批落地后；分模型表区/输入列宽复用为主）**⇒ ≈219（me-keys 批：`ul.key-list` 族删净 −5——零死类；实施实读为准）⇒ 实读 218 ⇒ ≈240（本批：堆叠段件 `.bar-stacked`/`.bar-seg`/`.bar-swatch` ∥ 切换 `.chart-toggle`（活动态） ∥ `.page-area` gap ∥ `.page-area > .card.report-card` ——+≈22；零新颜色变量 ∥ 零新悬停规则）⇒ 实读 228（2026-10-07——本批落地后；实际 +10——低于估 12）⇒ ≈232（本批：配置卡表单复用既有族——+≈4）⇒ 实读 **229**（2026-10-09 配置控制台批落地后）⇒ 实读 **233**（2026-10-09 走查收正笔：`.provider-form.stacked` 注释 + 三规则 = +4）⇒ ≈240（沙盒运行面批：+≈7——`webui/SANDBOX.md` §2.1①）⇒ ≈246（托管接入增补：+≈6）⇒ ≈256（admin-agent-chat 批：对话族 +≈10 = 气泡/工具行/notice/输入区——零新变量 ∥ 零新悬停规则）⇒ ≈266（sandbox-docker-admin 批：+≈10——容器详情/日志/用量块；零新变量 ∥ 零新悬停规则）⇒ ≈271（沙盒余面批：+≈5；零新变量）⇒ 实读 **261**（2026-10-11——sandbox-image-sources 批现读）⇒ ≈**265**（sandbox-image-sources 批：过滤行/源卡/浏览窗 +≈4；零新变量 ∥ 零新悬停规则）⇒ 实读 **266**（sandbox-image-sources 落地后）⇒ ≈**268**（本批（sandbox-image-quick-pull）：行动作格/选单 +≈2；零新变量 ∥ 零新悬停规则）⇒ **实读 267（2026-10-11——零改；对设计轮记 266：split 口径差 1；估 ≈268——差 −1——低于估 = 复用既有类族）**⇒ ≈310（console-chat-align 批：核类名族样式（码面/`pre.code-block`/`.tk-*`/工具卡）——零新变量 ∥ 零新悬停规则）⇒ 实读 296（2026-10-11——实施落盘；估 ≈310——差 −14）⇒ ≈**314**（本批（console-tabs-component）：页签族 +≈18——零新变量 ∥ 行悬停声明清单不变 ∥ 钮族悬停 = ② 型表在册（页签取 `--hover` 底））⇒ ≈**420**（chat-shell-align 批（本批）：别名块 ≈+22（逐键 `var(--既有)`——零新值） ∥ 消息族（`.message`/`.msg-label`/`.msg-time`/`.bubble`）≈+30 ∥ 状态行族 ≈+16 ∥ 会话条/输入区 sticky ≈+20 ∥ 无源钮隐藏六 id ≈+8 ∥ notice/待发泡 ≈+10；零新变量值 ∥ 零新悬停规则）⇒ **实读 344（2026-10-12——console-reasoning-levels 批现读）** ⇒ **±0（本批：无源钮收窄——六 id ⇒ 五 id；零新变量值 ∥ 零新悬停规则）** ⇒ **实读 358（2026-10-13 设计轮实核——project-sources-merge 现读；链序注：本笔 +2 已落、此读已含 ∥ 下环 −1 未落）** ⇒ **净 −1（2026-10-13 project-sources-merge 批：+1 全局 `[hidden]` 兜底规则 ∥ −2 按例补丁删（`.sidebar[hidden]` ∥ `.tab-panel[hidden]`）——本档 §2.3；以实施实读为准）** ⇒ **净 +2（2026-10-13 轻通道笔 1——对话页输入区短会话不贴底）：`:264` 行内补 `flex: 1 1 auto`（行数 ±0） ∥ `:266-267` 新增两行（`main:has(.chat-thread)` 作用域——对话页最少一屏；机制 = `webui/CHAT.md` §2.1①；零新变量 ∥ 零新悬停规则）；笔前 356 ⇒ 笔后 **实读 358**（本笔现读——文末换行不计；split 计法 359；与 sources-merge 现读同值——本笔两行含于其中）** ⇒ +≈40（本批（sandbox-container-terminal）：终端调色板 18 变量入 `:root`（值单源——面内零颜色字面量） ∥ 终端面类族（`.terminal-modal` ∥ `.terminal-surface` ∥ `.terminal-row` ∥ `.terminal-cursor` ∥ `.terminal-status`）≈+22 ∥ **粗体例外**（终端面 `font-weight`——§2.1 ③ 登记）；零动画零过渡 ∥ 零新悬停规则（面内无悬停态）；以实施实读为准** | 系统字体 ∥ 表格/表单 ∥ 桌面优先（宽表横滚） |
+| `thincoder-server/public/style.css`（已落盘） | ≈**398**（终端面增补：调色盘 18 变量入 `:root` ∥ 终端面类族 ≈+22 ∥ 粗体例外登记） | 系统字体 ∥ 表格/表单 ∥ 桌面优先（宽表横滚） |
 
-**面小计**：**实读 358（2026-10-13 设计轮实核——project-sources-merge 现读）**（本面档行现读和——上记 ≈420 为 2026-10-11 chat-shell-align 设计轮估值，已为实读取代；域合计 = 各面之和——不单列）。
+**面小计**：**358**（本面档行现读和；域合计 = 各面之和——不单列）。
 
-**键族登记**：本面零键族行（样式族批「i18n 两表 = 零触——零新文案」在案）。
+**键族登记**：本面零键族行（i18n 两表 = 零触——零新文案）。
 
 ## 4. 验收（本面 AC 行）
 
 | 需求 | 设计级判据 | 载体 |
 |---|---|---|
-| AC-19（功能点 19——样式族总体统一；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 本档 §2.1 在册：口径五条 ∥ 散置/不一致清单（改前实读——S1–S17） ∥ 变量族底座（`:root` 单源——色/间距/圆角/字排/线宽/布局） ∥ 族值表 + 逐族套用表（①列表 ②按钮 ③表单 ④间距 ⑤字排 ⑥色板 ⑦卡片 ⑧弹窗内构 ⑨空错态 ⑩码面——含 #87/#88 新面「随其落地套用」） ∥ 可点行/不可点行判据 ∥ 空/错/加载态 | 单元测试档 + 收口轮 |
-| AC-19（续·机检口径） | `thincoder-server/public/style.css`：`:root` 块外零颜色字面量（hex/rgba） ∥ 行悬停声明清单（`.nav-item:hover` ∥ `tbody tr:hover`——同取 `var(--hover)`；清单外零行悬停声明；`li.key-item:hover` 随 ul 清单退役删净——me-keys 批） ∥ padding/margin/gap 取值 ∈ `--sp-*` ∪ {0, auto} ∪ 布局组变量（`--nav-w`——S15 ∥ 底座布局行；尺寸类白名单除外） ∥ `font-weight` 全 ≤400（**终端面除外**——§2.1 ③ 例外登记：终端面 cell 按 pty 语义；`webui/TERMINAL.md` §2.4） ∥ `font-size` 全 = `var(--fs)`（缺省撤销） ∥ 聚焦环单形（`--bw-strong solid var(--accent)`） ∥ 类名双向闭合（档面字面类 ⊆ `style.css` 类选择器 ∥ `style.css` 类选择器 ⊆ 档面字面类 ∪ 态类）；视觉收口轮浏览器实走（悬停/聚焦/空·错·加载态/弹窗/两语言） | 单元测试档 + 收口轮 |
-| AC-20（功能点 20——控制台布局收正；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① 视口高壳在册：壳面五页钉表（成员 `#/admin/members` ∥ Provider `#/admin/providers` ∥ 服务模型 `#/admin/models` ∥ 审计 `#/admin/audit` ∥ 用量明细 `#/me/usage`——本档 §2.2①）；页头固定 ∥ 表头吸附 ∥ 行区滚动 ∥ 表尾行计数（tfoot——吸附表底；声明表 = 本档 §2.2②）∥ 矮视口回退整页滚 ∥ ② 表尾行计数在册（表内 tfoot「共 N 项」= 渲染行数真值——空/错 = 无表无 tfoot；纯前端派生 ∥ 零新端点） ∥ ③ 内容左对齐（`main` 无 auto 居中——`max-width` 沿用） ∥ ④ 弹窗内列表 = 表格形（Provider 勾选 ∥ 预设信息段模型清单 ∥ 成员 key 表——本档 §2.2⑤）；排除面在册（`#/admin/usage` 看板页 ∥ 布局/信息表 ∥ key 表页级（非壳——本档 §2.2① me-keys 批在案）） | 单元测试档 + 收口轮（浏览器实走） |
-| AC-20（续·机检口径） | 单元测试档用例：`dom.mjs`——`dataShell` 在册（`.page-head`/`.page-area` 两段）+ 表尾计数在册（`table(…, { foot: true })` 与三自建构建器 tfoot 同形 + `common.rowCount` 引用） ∥ `app.mjs`——`SHELL_PAGES` 五路径逐条钉表 ∥ `route()` 切换 `data-shell`（登录/登出径清除） ∥ 五页逐档 `dataShell(` 调用 + 表内 tfoot 计数（成功 = 行数 ∥ 空/错 = 无表） ∥ `style.css`——高度链声明表逐条在册 ∥ `position: sticky` + `top: 0`（表头）∥ `bottom: 0`（tfoot）在册 ∥ 回退媒体查询在册（`height: auto`） ∥ `main` 规则 margin 无 `auto` ∥ 弹窗三处表格形（结构/列头/空错态不变量——含勾选表 `label` 形） ∥ `.model-picks` 零残留（规则与字面两向） ∥ AC-19 canon 不破（零新 `:root` 变量 ∥ 零新悬停规则 ∥ 内距 ∈ 刻度 ∥ 类名双向闭合） ∥ 档目随正——单源 = `webui/WEBUI.md` §1 ∥ 门禁清单添布局收正批单元测试档（十七 ⇒ 十八——以实施盘面为准） ∥ 旧件随正：stub ctx 补 `dataShell` 三件 + 门禁计数两件 | 单元测试档 + 收口轮 |
+| AC-19（功能点 19——样式族总体统一；`docs/server/requirements/PROJECT.md` 验收表） | 本档 §2.1 在册：口径五条 ∥ 散置/不一致清单（改前实读——S1–S17） ∥ 变量族底座（`:root` 单源——色/间距/圆角/字排/线宽/布局） ∥ 族值表 + 逐族套用表（①列表 ②按钮 ③表单 ④间距 ⑤字排 ⑥色板 ⑦卡片 ⑧弹窗内构 ⑨空错态 ⑩码面——含 #87/#88 新面「随其落地套用」） ∥ 可点行/不可点行判据 ∥ 空/错/加载态 | 单元测试档 + 收口轮 |
+| AC-19（续·机检口径） | `thincoder-server/public/style.css`：`:root` 块外零颜色字面量（hex/rgba） ∥ 行悬停声明清单（`.nav-item:hover` ∥ `tbody tr:hover`——同取 `var(--hover)`；清单外零行悬停声明；`li.key-item:hover` 随 ul 清单退役删净） ∥ padding/margin/gap 取值 ∈ `--sp-*` ∪ {0, auto} ∪ 布局组变量（`--nav-w`——S15 ∥ 底座布局行；尺寸类白名单除外） ∥ `font-weight` 全 ≤400（**终端面除外**——§2.1 ③ 例外登记：终端面 cell 按 pty 语义；`webui/TERMINAL.md` §2.4） ∥ `font-size` 全 = `var(--fs)`（缺省撤销） ∥ 聚焦环单形（`--bw-strong solid var(--accent)`） ∥ 类名双向闭合（档面字面类 ⊆ `style.css` 类选择器 ∥ `style.css` 类选择器 ⊆ 档面字面类 ∪ 态类）；视觉收口轮浏览器实走（悬停/聚焦/空·错·加载态/弹窗/两语言） | 单元测试档 + 收口轮 |
+| AC-20（功能点 20——控制台布局收正；`docs/server/requirements/PROJECT.md` 验收表） | ① 视口高壳在册：壳面五页钉表（成员 `#/admin/members` ∥ Provider `#/admin/providers` ∥ 服务模型 `#/admin/models` ∥ 审计 `#/admin/audit` ∥ 用量明细 `#/me/usage`——本档 §2.2①）；页头固定 ∥ 表头吸附 ∥ 行区滚动 ∥ 表尾行计数（tfoot——吸附表底；声明表 = 本档 §2.2②）∥ 矮视口回退整页滚 ∥ ② 表尾行计数在册（表内 tfoot「共 N 项」= 渲染行数真值——空/错 = 无表无 tfoot；纯前端派生 ∥ 零新端点） ∥ ③ 内容左对齐（`main` 无 auto 居中——`max-width` 沿用） ∥ ④ 弹窗内列表 = 表格形（Provider 勾选 ∥ 预设信息段模型清单 ∥ 成员 key 表——本档 §2.2⑤）；排除面在册（`#/admin/usage` 看板页 ∥ 布局/信息表 ∥ key 表页级（非壳——本档 §2.2① 在案）） | 单元测试档 + 收口轮（浏览器实走） |
+| AC-20（续·机检口径） | 单元测试档用例：`dom.mjs`——`dataShell` 在册（`.page-head`/`.page-area` 两段）+ 表尾计数在册（`table(…, { foot: true })` 与三自建构建器 tfoot 同形 + `common.rowCount` 引用） ∥ `app.mjs`——`SHELL_PAGES` 五路径逐条钉表 ∥ `route()` 切换 `data-shell`（登录/登出径清除） ∥ 五页逐档 `dataShell(` 调用 + 表内 tfoot 计数（成功 = 行数 ∥ 空/错 = 无表） ∥ `style.css`——高度链声明表逐条在册 ∥ `position: sticky` + `top: 0`（表头）∥ `bottom: 0`（tfoot）在册 ∥ 回退媒体查询在册（`height: auto`） ∥ `main` 规则 margin 无 `auto` ∥ 弹窗三处表格形（结构/列头/空错态不变量——含勾选表 `label` 形） ∥ `.model-picks` 零残留（规则与字面两向） ∥ AC-19 canon 不破（零新 `:root` 变量 ∥ 零新悬停规则 ∥ 内距 ∈ 刻度 ∥ 类名双向闭合） ∥ 档目随正——单源 = `webui/WEBUI.md` §1 ∥ 门禁清单添布局收正批单元测试档（十八——以实施盘面为准） ∥ 旧件随正：stub ctx 补 `dataShell` 三件 + 门禁计数两件 | 单元测试档 + 收口轮 |
 | AC-48 ⑤（功能点 48——同族扫描闭合；样式侧） | 本档 §2.3 在册：核对表逐点（全控制台 `hidden` 切换点 ∥ 受压者 = 基址 label + github 事件块 + 原两处补丁位） ∥ 全局规则 `[hidden] { display: none !important; }` 在册 ∥ `!important` 计数 = 1 ∥ 旧两处按例补丁零残留 ∥ 零新 `:root` 变量 ∥ 零新悬停规则（AC-19 canon 不破） | 单元测试档 + 收口轮（浏览器实走：建源弹窗两平台两态） |
-| 容器终端（sandbox-container-terminal 批——样式侧；功能点 51——已入册（2026-10-13）） | 终端调色板 **18 枚变量入 `:root`**（登记例外——§2.1 底座表「终端」行；面内零颜色字面量） ∥ 终端面类族五枚（`.terminal-modal`/`.terminal-surface`/`.terminal-row`/`.terminal-cursor`/`.terminal-status`）∥ **粗体例外登记**（§2.1 ③——终端面 cell 按 pty 语义；全局 `font-weight ≤400` 判据在本面留白、余面不破） ∥ 零动画零过渡 ∥ 零新悬停规则（面内无悬停态） ∥ 行悬停声明清单不变 ∥ 内距 ∈ 刻度；判据全文 = `webui/TERMINAL.md` §2.4/§4 ∥ `webui/SANDBOX.md` §2.1① | 单元测试档 + 收口轮（浏览器实走：终端面/光标/滚动） |
+| 容器终端（样式侧；功能点 51） | 终端调色板 **18 枚变量入 `:root`**（登记例外——§2.1 底座表「终端」行；面内零颜色字面量） ∥ 终端面类族五枚（`.terminal-modal`/`.terminal-surface`/`.terminal-row`/`.terminal-cursor`/`.terminal-status`）∥ **粗体例外登记**（§2.1 ③——终端面 cell 按 pty 语义；全局 `font-weight ≤400` 判据在本面留白、余面不破） ∥ 零动画零过渡 ∥ 零新悬停规则（面内无悬停态） ∥ 行悬停声明清单不变 ∥ 内距 ∈ 刻度；判据全文 = `webui/TERMINAL.md` §2.4/§4 ∥ `webui/SANDBOX.md` §2.1① | 单元测试档 + 收口轮（浏览器实走：终端面/光标/滚动） |
 
 ## 5. 边界（本面不做面）
 
-- 样式族批不做面：版式/结构重设计（骨架沿用——卡片/表格/侧栏/弹窗结构零动）∥ 类名体系改名（沿用——仅删死类 ∥ 新增 `.error` 态修饰）∥ 动画/过渡（零——保持零依赖零动画）∥ 主题化/暗色（不做——未裁）∥ 自绘控件（checkbox 等原生 + `accent-color`）∥ 移动端适配（不做承诺不变——窄屏单条媒体查询保持）。
-- 布局收正批不做面：`#/admin/usage` 看板页入壳（报表区无界——另轮如需）∥ 布局/信息表与 key 清单（页级）壳化 ∥ 弹窗内表吸附/分页/筛选 ∥ 分页/虚拟滚动 ∥ 主题化/暗色（不变）。
-- 标签页批不做面（console-tabs-component 批——样式侧）：零新 `:root` 变量 ∥ 行悬停声明清单不变 ∥ 钮族悬停 = ② 型表在册（页签取 `--hover` 底） ∥ 不改版式/结构（页签族 = ② 型扩充 + ① 选中态复用）；其余不做面 ⇒ 见 `webui/TABS.md` §5（as-of 2026-10-11）。
-- 对话页壳批不做面（chat-shell-align 批——样式侧）：核件样式（`composer.css`/`model-menu.css`——核内单源，控制台零覆写；其自带过渡/动画 = 核件行为，非本档新动画）∥ 控制台自有档零动画（KD-SV-36 不破）∥ 别名块不引入新值（逐键 `var(--既有)`——AC-19 ① canon 不破）；其余不做面 ⇒ `webui/CHAT.md` §5。
+- 样式族不做面：版式/结构重设计（骨架沿用——卡片/表格/侧栏/弹窗结构零动）∥ 类名体系改名（沿用——仅删死类 ∥ 新增 `.error` 态修饰）∥ 动画/过渡（零——保持零依赖零动画）∥ 主题化/暗色（不做——未裁）∥ 自绘控件（checkbox 等原生 + `accent-color`）∥ 移动端适配（不做承诺不变——窄屏单条媒体查询保持）。
+- 布局收正不做面：`#/admin/usage` 看板页入壳（报表区无界——另轮如需）∥ 布局/信息表与 key 清单（页级）壳化 ∥ 弹窗内表吸附/分页/筛选 ∥ 分页/虚拟滚动 ∥ 主题化/暗色（不变）。
+- 标签页不做面（console-tabs-component——样式侧）：零新 `:root` 变量 ∥ 行悬停声明清单不变 ∥ 钮族悬停 = ② 型表在册（页签取 `--hover` 底） ∥ 不改版式/结构（页签族 = ② 型扩充 + ① 选中态复用）；其余不做面 ⇒ 见 `webui/TABS.md` §5。
+- 对话页壳不做面（chat-shell-align——样式侧）：核件样式（`composer.css`/`model-menu.css`——核内单源，控制台零覆写；其自带过渡/动画 = 核件行为，非本档新动画）∥ 控制台自有档零动画（KD-SV-36 不破）∥ 别名块不引入新值（逐键 `var(--既有)`——AC-19 ① canon 不破）；其余不做面 ⇒ `webui/CHAT.md` §5。
 
 ## 6. 上抛/余项
 
 - 本面无独立上抛/余项。
 
-## 变更记录
-
-- 2026-10-11（**server-doc-split 批 · 域内拆分（迁移）· eng-designer**——承批档 `docs/batches/2026-10-11-server-doc-split.md` §2）：本档自 `webui/WEBUI.md` §2.5 ∥ §2.6 及三表归位行逐字迁入（零语义）；文内 § 引用改指（§2.5→本档 §2.1 ∥ §2.6①⑤②→本档 §2.2①⑤② ∥ §2.4④→`webui/ADMIN.md` §2.1④ ∥ §2.1→`webui/SYSTEM.md` §2.1 等）；AC 行内档目链去重 ⇒ 单源句（`webui/WEBUI.md` §1）；原址保位 stub 在 `webui/WEBUI.md`。**产品码零触。**
-- 2026-10-11（**console-tabs-component 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-11-console-tabs-component.md` §1 · 台账 #1286；岔口㈣ = 零新变量——当轮呈用户）：§2.1 ② 按钮族增「页签」型（`button.tab`——常态/悬停/活动态逐值；五型 ⇒ **六型**）+ ① 选中/活动行增页签活动态落点 + ② 套用面增公共标签页组件 + **新面登记段**（`.tabs`/`.tab-list`/`.tab`/`.tab-panel`——按族套用 ∥ 零新 `:root` 变量 ∥ 零新悬停规则）；§3 `style.css` 行增本批增量（296 ⇒ ≈314）；§5 增本批不做面行。**产品码零触（设计轮）。**
-- 2026-10-11（**console-tabs-component 批 · 设计定稿轮（fix）· eng-designer**——承批档 `docs/batches/2026-10-11-console-tabs-component.md` §2 ∥ 用户 2026-10-11 21:24 裁定（㈣ 零新变量——四项全取）：本面随裁定定稿（§2.1 ② 按钮族「页签」型 / ① 选中活动句 / 新面登记段 / §3 `style.css` 增量 ≈314——文本零改）；变更记录历史行形式收正（零语义）。**零新语义；产品码零触。**
-- 2026-10-11（**chat-shell-align 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-11-chat-shell-align.md` §1 · 台账 #1292；用户 21:55 裁「全套 ∥ 补后端一件不藏 ∥ VSC 式」）：§2.1 ① 增**别名桥例外句**（核件壳族变量名入 `:root` 别名块——逐键 `var(--既有)`，零新值）∥ **新面登记段**（核件发射类族 + 状态行族 + 会话条 + 无源钮隐藏六 id——零新悬停规则）∥ §3 `style.css` 行 + 面小计随正（296 ⇒ ≈420）∥ §5 增本批不做面行。同源随动 = `webui/CHAT.md` §2.1/§3/§4 ∥ `webui/WEBUI.md` §1/§5。**产品码零触（设计轮）。**
-- 2026-10-11（**console-tabs-component 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-11-console-tabs-component.md` §3 轮次 1 之 7（父侧受理）：#7 悬停判据收为机检形（§2.1 标签页批新面登记段 ∥ §3 `style.css` 行注 ∥ §5 本批不做面——「零新悬停规则」⇒「行悬停声明清单不变 ∥ 钮族悬停 = ② 型表在册（页签取 `--hover` 底）」——消「行悬停 vs 钮族逐型悬停」两种读法）。**零新语义（评审发现直接导出项）；产品码零触。**
-- 2026-10-11（**chat-shell-align 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-11-chat-shell-align.md` §3 轮次 1 之 6；父侧受理全单）：§3 `style.css` 行本批分项复算收正（状态行族 ≈+12 ⇒ ≈+16——分项和 = 步进 +106）。**零新语义**（评审发现直接导出项）。
-- 2026-10-13（**project-sources-merge 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-13-project-sources-merge.md` §2 · 功能点 48② ∥ AC-48 ④⑤；用户 2026-10-13 16:07「在添加源页面，选择了类型还让我填基址，你是认真的吗？」）：§1 增 KD-SV-150（隐藏切换语义——全局 `[hidden]` 兜底 + 删按例补丁）∥ **增 §2.3**（根因实锤 ∥ 规则 ∥ 全控制台核对表 ∥ 机检形）∥ §3 `style.css` 行补本批净 −1∥ §4 增 AC-48 ⑤ 行（样式侧）。同源随动 = `webui/PROJECTS.md` §1/§2.4/§3/§4/§5。**产品码零触（设计轮）。**
-- 2026-10-13（**project-sources-merge 批 · 设计评审轮 1 修复（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-13-project-sources-merge.md` §3 轮次 1 之 1/5/10）：§2.2① 排除面补项目面两页（非壳定论——沿 key 表先例）∥ §2.3 机检补第 ⑤ 条（核对表穷尽性集合断言——`public/**` 含 `hidden` 档集 ⊆ 在册档集）∥ §3 style 行基线收正（实读 **358**）+ 面小计同拍。**零新语义**（评审发现直接导出项）；产品码零触。
-
-- 2026-10-13（**console-walkthrough-light 批（管理面走查·轻通道轮）· 设计归档（收尾链）· eng-designer**——承批档 `docs/batches/2026-10-13-console-walkthrough-light.md` §1 笔 1 · 台账 #1359）：§3 `style.css` 行账随正（本笔净 **+2** = `:264` 行内补 `flex: 1 1 auto`（行数 ±0） ∥ `:266-267` 新增两行——对话页最少一屏（页纵列最少一屏 ∥ 消息区吃余高 ⇒ 短会话输入区亦落视口底）；实读 **358**（文末换行不计；split 计法 359）；机制 = `webui/CHAT.md` §2.1①）。**产品码零触（设计归档）。**
-- 2026-10-13（**sandbox-container-terminal 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-13-sandbox-container-terminal.md` §1 · 台账 #1374）：§2.1 ③ 增**终端面粗体例外**（登记——仿真面；余面不破）∥ 变量底座增「终端」组（18 枚——调色板；面内零颜色字面量）∥ §3 `style.css` 行 +≈40（调色板 18 变量 + 终端面类族五枚；零动画 ∥ 零新悬停规则）∥ §4 增判据行（样式侧）。**产品码零触（设计轮）。**
-- 2026-10-13（**project-sources-merge 批 · 实施后随正 · 主 agent 直接执行 · 机械 · 可 revert**——承 #44 交付报告列报）：§2.3 核对表行 3 指针随正（`thincoder-server/public/app.mjs:155/169` ⇒ `:154/168`——app.mjs 净 −1 行后同一切换点移位）。**零新语义**（指针随正）。
-
-- 2026-10-13（**sandbox-container-terminal 批 · 设计评审轮 1 修复（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-13-sandbox-container-terminal.md` §3 轮次 1（评审 #92 之 8 ∥ 3 连带）：§4 AC-19 续行补**终端面例外限定**（`font-weight ≤400` 判据——终端面除外；沿 §2.1 ③ 登记——评审 8）∥ §4 容器终端行「功能点 51——拟入册」⇒ **已入册（2026-10-13）**（同族扫面补漏——评审 3）。**零新语义（评审发现直接导出项）；产品码零触（设计轮）。**

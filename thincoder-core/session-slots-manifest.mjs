@@ -68,7 +68,7 @@ export function slotDigest(data, mtimeMs) {
 const isNum = (v) => typeof v === "number" && Number.isFinite(v)
 
 /** 摘要 `ts` 打点（**单源** · #503 地板）：`max(墙钟, mtimeMs)`；`mtimeMs` 不可得（缺省 / 非数）⇒
- *  裸墙钟回溯。沿先例 `session-slot-verify.mjs:99`（回写面地板）：**平台文件时间戳可领先
+ *  裸墙钟回溯。沿先例 `session-slot-verify.mjs` 的 `runPass`（回写面地板）：**平台文件时间戳可领先
  *  `Date.now()` 数 ms**——无地板则保存面刚写的摘要会被 `needsVerify`（`ts < mtime`）判「陈旧」
  *  一次（有界自纠，非数据面）；地板后 `ts ≥ mtime` 恒成立（同一 stat 值即比较对象）。 */
 export function digestTs(mtimeMs) {

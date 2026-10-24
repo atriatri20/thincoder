@@ -4,8 +4,8 @@
  * - `run(input)` serializes prompts through a per-session FIFO promise chain
  *   (concurrent prompts queue; each runs after the previous turn's end_turn).
  * - `cancel()` aborts the in-flight turn via a REAL AbortController — the
- *   provider layer composes `AbortSignal.any([signal, timeout])` (core.mjs:280,
- *   anthropic.mjs:67, google.mjs:98), which requires a real AbortSignal; a
+ *   provider layer composes `AbortSignal.any([signal, timeout])` (core.mjs,
+ *   anthropic.mjs, google.mjs), which requires a real AbortSignal; a
  *   plain object would throw TypeError on every LLM call.
  * - The controller is rebuilt after every turn, so one cancel only affects the
  *   in-flight turn; the next queued prompt starts with a clean signal.
@@ -17,9 +17,10 @@ import { runAgent } from "@thincoder/core/agent.mjs"
 import { saveSession } from "@thincoder/core/session.mjs"
 import { buildAcpCallbacks } from "./bridge.mjs"
 
-export function createAcpSession({ id, agent, notify, request = async () => { throw new Error("no request channel") }, log = () => {}, run = runAgent, save = saveSession, clientCaps = {} }) {
+export function createAcpSession({ id, agent, notify, request = async () => { throw new Error("no request channel") }, log = () => {}, run = runAgent, save = saveSession, clientCaps = {}, onSecretInput = null }) {
   let controller = new AbortController()
-  const callbacks = buildAcpCallbacks({ sessionId: id, agent, notify, request, log, clientCaps })
+  // onSecretInput（SSH-SESSION 批 §6.22 ⑧）：无 UI 显式拒由装配侧给（acp.mjs）；缺省零注入
+  const callbacks = buildAcpCallbacks({ sessionId: id, agent, notify, request, log, clientCaps, onSecretInput })
   let queue = Promise.resolve()
   let busy = false
 

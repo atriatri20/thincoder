@@ -130,7 +130,7 @@ export function applyConfigOption(agent, configId, value) {
       // on 侧同引核（thinkEnabledValue——自定义开值族 MiniMax = "adaptive"）。
       const spec = providerSpec(agent.provider)
       agent.provider.thinking = value ? { type: spec.thinkEnabledValue ?? "enabled" } : thinkOffShape(spec)
-      // effort 族：`null` 标记在载荷层由「无显式档」门控（provider/core.mjs:193 显式档优先会
+      // effort 族：`null` 标记在载荷层由「无显式档」门控（provider/core.mjs 显式档优先会
       // 跳过标记）⇒ off 清档位（与 CLI `/think off` 同法——cmd-think.mjs `applyThink` off 支）。
       if (!value) delete agent.provider.reasoningEffort
       return true

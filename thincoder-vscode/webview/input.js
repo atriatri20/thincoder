@@ -86,7 +86,7 @@ ctx.reasoningBtn = root.querySelector("#reasoning-btn")
 ctx.dropdown = root.querySelector("#model-dropdown")
 ctx.reasoningDropdown = root.querySelector("#reasoning-dropdown")
 // `ctx.isRunning` = 核 loading 标记的活代理（读 ⇒ `composer.isRunning()`；写 ⇒ `composer.setLoading()`）——
-// `panels.js:95,114` 的 `setLoading(ctx, ctx.isRunning)` 重派生惯用式须读活值（否则重派生会清标记）。
+// `handleSuspensionMessage` 的 `setLoading(ctx, ctx.isRunning)` 重派生惯用式须读活值（否则重派生会清标记）。
 Object.defineProperty(ctx, "isRunning", {
   get: () => composer.isRunning(),
   set: (on) => composer.setLoading(on),
@@ -95,34 +95,36 @@ Object.defineProperty(ctx, "isRunning", {
 
 // ⑤ hooks 端侧绑定（逐条 = §2.3 四条跨面依赖 + 源档逐字搬移）
 composerHooks.onTurnStart = () => {
-  // 回合起点动作（`send.js:62-63,69,72` 同点并钩）：簿记归零 + 工具结果位清
+  // 回合起点动作（`send` 同点并钩）：簿记归零 + 工具结果位清
   // （#642：面板清已退场——重置点归位会话边界；#643：死计数行清）
   S._turnStart = Date.now()
   S._lastOutputAt = S._turnStart // 停滞轻显形：回合起刻 = 静默初始锚（WEBVIEW.md §4.7——`_turnStart` 邻位同置）
   ctx.hadToolResult = false
 }
-composerHooks.onUserEcho = (text, ts) => addUser(ctx, text, ts) // `send.js:54,73`——本地气泡（返回元素供待发送标记）
-composerHooks.onWelcomeDismiss = () => { // `send.js:46-47,64-65`
+// `send`——忙态（running ∨ susp）零本地气泡（可见面 = 待发送带；消费时刻由 `busyQueued.merged` 出块）；
+// idle 直发 = 本地气泡（零回归）。
+composerHooks.onUserEcho = (text, ts) => (S._turnState === "idle" ? addUser(ctx, text, ts) : null)
+composerHooks.onWelcomeDismiss = () => { // `send`
   const w = ctx.messagesEl.querySelector(".welcome")
   if (w) w.remove()
 }
-composerHooks.onTitleHint = () => { // `send.js:85-87`（会话标题生成提示）
+composerHooks.onTitleHint = () => { // `send`（会话标题生成提示）
   if (/^Session \d+$/.test(ctx.sessionTitle.textContent)) {
     ctx.sessionTitle.textContent = ctx.sessionTitle.textContent + " — " + t("session.generatingTitle")
   }
 }
-composerHooks.onStatusRefresh = (status) => { // `loading.js:94` ∕ `mode-buttons.js:129`（状态行唯一 writer）
+composerHooks.onStatusRefresh = (status) => { // `setLoading` ∕ `handlePlanMode`（状态行唯一 writer）
   if (status) S._phase = status.phase // 相位快照随行（`setLoading` 径给；`planMode` 径无相位变化）
   renderStatusBar()
 }
-composerHooks.syncModeState = (flags) => { // 跨面状态同步（`status-bar.js:23` 同面读 `S._planActive`）
+composerHooks.syncModeState = (flags) => { // 跨面状态同步（`renderStatusBar` 同面读 `S._planActive`）
   S._autoApprove = flags.autoApprove
   S._advisorOn = flags.advisorGuard
   S._engOn = flags.engineering
   S._planActive = flags.planMode
 }
-composerHooks.closeSiblingDropdowns = () => { // `model-picker.js:96-98`（会话下拉让位）
+composerHooks.closeSiblingDropdowns = () => { // `handleModelsMessage`（会话下拉让位）
   ctx.sessionDropdown.style.display = "none"
   ctx.sessionSelector?.setAttribute("aria-expanded", "false")
 }
-composerHooks.confirmRemoveProvider = (onConfirm) => window._confirmSecretDelete(null, onConfirm) // 核 `model-menu.mjs:304`（footer 出口——F-W17 确认门）
+composerHooks.confirmRemoveProvider = (onConfirm) => window._confirmSecretDelete(null, onConfirm) // 核 `createModelMenu`（footer 出口——F-W17 确认门）

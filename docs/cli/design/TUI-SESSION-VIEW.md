@@ -4,23 +4,20 @@
 > **回合驱动**（`runAgentTurn` / 挂起会话驱动器）· **显示层内存有界**（字符维度额）。
 > 配对需求档 = `docs/cli/requirements/TUI.md`（本板块三档设计共用一份需求档——层归属不对称，理由见该档 §1 注）。
 > 同板块其余两档 = `docs/cli/design/TUI.md`（界面核心）· `docs/cli/design/TUI-COMMANDS.md`（命令层与选择面）。
-> 对位档 = **无**（VSC webview 的历史窗口显示面独立——**已裁保留（A9 · 复核 = 2026-09-25 misc-four 批）**：结构性不对称 = 历史窗口显示面各随宿主渲染（VSC webview 分页容器 ∥ CLI 终端窗口）；证据 = 两端实现树；显式裁定 = CORE-UNIFICATION §2.5 端特有桶族（2026-09-13）+ misc-four 批确认）。
-> 建档：2026-09-15（**B 式迁移轮 · 第 6 批**——`thincoder-cli/docs/design/TUI.md` 的 §7 / §8 / §15 面重建入本档；
-> 旧档原地一字不改、留作参照历史）。
-> 本档坐标与行数 = **as-of 2026-09-16 实核**（仓根 = `thincoder/`）。
+> 对位档 = **无**（VSC webview 的历史窗口显示面独立——**已裁保留**：结构性不对称 = 历史窗口显示面各随宿主渲染（VSC webview 分页容器 ∥ CLI 终端窗口）；显式裁定 = CORE-UNIFICATION §2.5 端特有桶族）。
 
 ## 1. 定位与模块地图
 
-> 本表是**结构性快照**——新增 / 改名 / 删除文件时同批回写。**行数列不并**（as-of 数值随实现漂移）。
+> 本表是**结构性快照**——新增 / 改名 / 删除文件时同批回写。
 
 | 文件 | 职责 |
 |---|---|
-| `thincoder-cli/src/tui/startup.mjs` | 启动屏 + 会话恢复（`historyToLines` 从 history 重建——**display 快照已废弃，恢复唯一路径**；行形态复刻 live）+ 懒加载历史窗口（`restoreLines` / `createLoadOlder`）+ 后台索引 + 崩溃提示 |
+| `thincoder-cli/src/tui/startup.mjs` | 启动屏 + 会话恢复（`historyToLines` 从 history 重建——**恢复唯一路径**；行形态复刻 live）+ 懒加载历史窗口（`restoreLines` / `createLoadOlder`）+ 后台索引 + 崩溃提示 |
 | `thincoder-cli/src/tui/agent-turn.mjs` | `runAgentTurn({ autoTurn, skipSession })` 回合驱动器：状态复位 / `runAgent` 循环（flushStream、AbortError 中断区分、ContinueError）/ finally 收尾（挂起决策、sweep、标题、落盘）/ 交接消息单条续发；`userNeededAtTurnEnd` 谓词（attention 置位——见 `docs/cli/design/TUI.md` §7.2） |
 | `thincoder-cli/src/tui/suspension-drive.mjs` | 挂起会话驱动器（`suspensionSession`）——状态机行表以 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8 为权威 |
 | `thincoder-cli/src/tui/display-budget.mjs` | 显示层字符额度：常量单源 + `lineChars` + `syncLineBudget` 对账（§5） |
 | `thincoder-cli/src/tui/tool-events.mjs` | 工具事件 → TUI 状态（回合期回调装配点——显示面契约见 `docs/cli/design/TUI-TOOL-OUTPUT.md`） |
-| `thincoder-cli/src/tui/lifecycle-records.mjs` | 消化生命周期记录承载件（#726）：记录形构建（`digest` 痕三型 ∥ `subagent` 快照）∥ 痕行文本 live ∥ 重建同调（单一实现）∥ rows 保尾 ∥ 终态行回扫——写点三处 + 恢复面同调（§6） |
+| `thincoder-cli/src/tui/lifecycle-records.mjs` | 消化生命周期面记录承载件：记录形构建（`digest` 痕三型 ∥ `subagent` 快照）∥ 痕行文本 live ∥ 重建同调（单一实现）∥ rows 保尾 ∥ 终态行回扫——写点三处 + 恢复面同调（§6） |
 
 **不在本档**：界面骨架（渲染 / 按键 / 折叠）→ `docs/cli/design/TUI.md`；命令与选择面 → `docs/cli/design/TUI-COMMANDS.md`。
 
@@ -28,7 +25,7 @@
 
 - **恢复唯一路径 = `history` 重建**（`historyToLines`）：user / assistant / tool 逐条渲染，行形态复刻 live
   （工具参数摘要 + 全量 JSON dim 行 + 结果全文、思考单条、`_kind` 标记同 live——同一判定代码）。
-  **`display` 快照已废弃**（曾 WYSIWYG 原样恢复，与 VSC 写历史漂移出同步）——**不得再写回该路径**。
+  **恢复径唯一**——`display` 快照路径**不得写回**。
 - **跨页回合态保持**：页首前一条是 assistant / tool 则页内不再发 `❯ ThinCoder:` 标签（一个回合只一个标签）。
 - **多模态 user 消息**（图片注入后无文本）渲染无标签无内容（无内容标签是噪音）。
 - **恢复渲染过滤 `[System reminder:` 前缀的机读消息**（人读线本就不含——过滤是纵深防御）；markdown 表格 / 行内渲染同样生效。
@@ -42,7 +39,7 @@
   → **自动加载更早一页**（`createLoadOlder`，`HISTORY_PAGE_MESSAGES`（20）——与 VSC 端页大小 parity）；
   滚轮 / PgUp 双入口同一判别式（`convMaxScroll` 单源导出复用）；加载后 scroll 补偿保持锚定；
   头部分页标记行 `… N more earlier messages …` 维护。
-- **分页数据源下沉**：数据源 = 会话记录存储（磁盘为准）——绝对序号锚定；内存层不再驻留全量。
+- **分页数据源下沉**：数据源 = 会话记录存储（磁盘为准）——绝对序号锚定；内存层不驻留全量。
   机制契约 = `docs/core/design/SESSION.md`（§6.14 段）；**本节只落 TUI 面落点**（交互语义不变，逐条见 §5）。
 
 **性能根治——三层缓存**
@@ -51,8 +48,7 @@
   ② **行级 `wrapRowsCached`**（键 = 行对象 + cols + 加工后 text + 颜色）；
   ③ **段级 `_lineSegCache`**（行对象 WeakMap → conv 行数组；签名 = `textRef` 引用比较 + 短字段拼接）——
   普通行在 `render-conversation.mjs`、tool / frozen 三段在 `render-segments.mjs` 各自独立 WeakMap。
-- **动机**：`buildConvLines` 全量重建 O(总行数) 是卡顿真凶（真实 200 条历史 → 987 conv 行 94ms；loadOlder 后缓存失效 111ms）；
-  三层缓存后 loadOlder 只算新增行，rebuild **111ms → 25.7ms（行缓存）→ 5-8ms 平坦**（段缓存，不随已加载历史增长）；
+- **动机**：`buildConvLines` 全量重建 O(总行数) 是卡顿真凶（真实 200 条历史 → 987 conv 行）；三层缓存后 loadOlder 只算新增行（段缓存不随已加载历史增长）；
   toggle / 翻窗 / 流式 append 只失效该块段。行级 `_lineId` 在恢复 / 加载时统一分配（折叠键稳定——`docs/cli/design/TUI.md` §6.6）。
 
 **工具参数可见性（恢复路径）**：参数全量落 dim 行（TUI 无悬停——全量必须落行；超长由连续 dim 折叠收纳）；
@@ -79,7 +75,7 @@
    **释放窗口守卫**（willSuspend 判定后、挂起会话启动前——期间 `processing = false` 且 `suspended` 未置位，
    无守卫会并发开第二个 `runAgentTurn`——双驱动器竞态）；`sweepToolBlocks`；`ensureSessionTitle`；
    distill flush 有界等待（超时上限——退出路径不挂死）→ `saveSession` 增量落盘。
-6. **交接消息按批合并续发**：busy 提交入队列（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1——吞面收敛四）+ **合并消费**（R15 恢复：`planQueuedInput` 攒批——连续非 `/` 且 ≤8 条 ∧ 合并 ≤2000 字符 ⇒ 合并为一条、一次回合；超批截批先行；单条 > 2000 字符直发；`/cmd` 逐条保序）——
+6. **交接消息按批合并续发**：busy 提交入队列（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1——吞面收敛四）+ **合并消费**（`planQueuedInput` 攒批——连续非 `/` 且 ≤8 条 ∧ 合并 ≤2000 字符 ⇒ 合并为一条、一次回合；超批截批先行；单条 > 2000 字符直发；`/cmd` 逐条保序）——
    `state.queue` 为**残项单容器**（释放窗口兜底池空转正 / 挂起中止残余——零丢失）；回合尾按批直发（**残项路径**——队列主消费 = **步边界 pickup**：机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8「步边界 pickup」）；
    释放窗口期入 `pendingInput` 的条目在池已空时按计划转回队列。
 7. **挂起会话**（`suspension-drive.mjs`——状态机行表以 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8 为权威，本档不复制）：
@@ -124,7 +120,7 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 - 纯函数本体（`capText` / `appendCappedText`）住 `thincoder-core/text-budget.mjs`（零依赖）——与 agent 侧捕获共用（单一来源）；
   本模块只承载 TUI 面常量与 `lineChars` / `syncLineBudget` 对账。
 - `state._linesChars`（TUI state 内部账）为唯一新增状态位；agent 状态对象零新增语义字段。
-- **裁剪策略（2026-09-16 修订）**：超限按**最小步进**裁剪——只裁至额度内所需的最少行数（非固定 1000 行颗粒）；
+- **裁剪策略**：超限按**最小步进**裁剪——只裁至额度内所需的最少行数（非固定 1000 行颗粒）；
   且不得使 `lines.length` 低于 `LINES_TRIM_FLOOR`——触底仍未脱额即停（接受超额，上界 = 保底 × 单行上限）。
   收据行文本与计数口径不变（`N` = 裁后 `lines.length`——插收据前）。
 
@@ -152,21 +148,19 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 - **不做**：显示层按需回读交互（截断全文在会话记录——回读面另案）；渲染期裁剪 / 虚拟滚动；不改折叠 / 展开 / 锚定语义；
   不改对话缓存结构（其随 `state.lines` 有界化自然有界）；VSC webview 面零改动。
 
-### 5.5 保底与视口语义（2026-09-16 修订）
+### 5.5 保底与视口语义
 
-- **保底修订**：旧裁剪颗粒（`take = min(1000, lines.length − 1)`）在行数 ≤1001 且字符超额时**一轮裁到 1 行**
-  （收据「1 lines remaining」——用户实测 2026-09-16）；最小步进下常规内容稳态窗口 ≈ 额度/行宽 ≈ 1000 行，
+- **保底**：最小步进下常规内容稳态窗口 ≈ 额度/行宽 ≈ 1000 行，
   胖行场景下限 = `LINES_TRIM_FLOOR`（200 行——≥8 屏@24 行制）。
-- **恢复 / 翻页记账**：恢复 / 切槽 / 清空路径全部经既有对账（直算重对账或逐行入账 + 重跑对账 / 同步归零）——
-  「恢复路径绕过记账」不成立；**例外 = 翻页路径的占位行移除**（见下条限定——本批修复面）；「裁了又回来」的循环 = 每次恢复 / 翻页 materialize 后立即对账裁剪，旧颗粒下每次裁到近空。
-- **记账口径（2026-09-16 批 8 修订）**：`state.lines` 的一切增删都必须过账——
+- **恢复 / 翻页记账**：恢复 / 切槽 / 清空路径全部经既有对账（直算重对账或逐行入账 + 重跑对账 / 同步归零）——**例外 = 翻页路径的占位行移除**（见下条限定）；每次恢复 / 翻页 materialize 后立即对账裁剪。
+- **记账口径**：`state.lines` 的一切增删都必须过账——
   增 = 逐行 `accountLine`（`thincoder-cli/src/tui/display-budget.mjs:137`）/ 批算 `accountAll`（同档 `:146`）；
   **删 = 同额负向出账**（新增导出 `releaseLine(state, l)` = `state._linesChars -= lineChars(l)`，钳 0）——`:170` `loadOlder` 移除占位行即归此列。
   不变式 = `state._linesChars === Σ lineChars(l)`（`:147` 恢复路径的直算对账即该式）。
-  **复用不可（实读）**：既有 `accountLine` 以行对象 `_budgetChars` 为基、幂等（`display-budget.mjs:137-143`）——行已从 `state.lines` 脱落后再调用，增量值恒 0 ⇒ 不产生负向出账，故本批需新增导出。
-- **限定（2026-09-16 批 8 修订）**：`loadOlder` 占位行移除（`thincoder-cli/src/tui/startup.mjs:170`）此前**未出账** ⇒ 直算账对 Σ 有高估（数十码元 / 页）；`thincoder-cli/src/tui/display-budget.mjs:175` 的 `!Number.isFinite(_linesChars)` 守卫对该路径不触发（账仍有限）⇒ 不重算、漂移逐页累积。**本批修复**（选定选型 ① = `shift()` 处补同额出账；对比表紧随本节）。
+  **复用不可**：既有 `accountLine` 以行对象 `_budgetChars` 为基、幂等（`display-budget.mjs:137-143`）——行已从 `state.lines` 脱落后再调用，增量值恒 0 ⇒ 不产生负向出账，故需新增导出。
+- **限定**：`loadOlder` 占位行移除（`thincoder-cli/src/tui/startup.mjs:170`）不出账 ⇒ 直算账对 Σ 有高估（数十码元 / 页）；`thincoder-cli/src/tui/display-budget.mjs:175` 的 `!Number.isFinite(_linesChars)` 守卫对该路径不触发（账仍有限）⇒ 不重算、漂移逐页累积。**处置 = `shift()` 处补同额出账**（对比表紧随本节）。
 
-**选型对比（2026-09-16 批 8）**：占位行移除的记账处置两候选——
+**选型对比**：占位行移除的记账处置两候选——
 
 | # | 候选方案 | 判据逐项评估 | 取舍（选定代价 / 权衡） | 结论 |
 |---|---|---|---|---|
@@ -176,7 +170,7 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
   scrollback 不承载会话（退出即弃）；滚轮 / 键面滚动全走内层 `state.lines` ⇒ **单层可见历史**。视口 = 内层自底偏移
   （增长补偿 + clamp，`thincoder-cli/src/tui/render-loop.mjs`）——不改、不加外层锚定 / 提示。
 
-## 6. 消化生命周期面（痕 ∥ 冻结块）记录与恢复（2026-09-30 · #726）
+## 6. 消化生命周期面（痕 ∥ 冻结块）记录与恢复
 
 > 机制（记录形 ∥ 写缝 ∥ 读缝 ∥ 重建义务 ∥ 容差）单源 = `docs/core/design/SESSION.md` §6.26；需求 = `docs/cli/requirements/TUI.md` **F18**（node = core §4.4 F-S7）。本档 = **CLI 侧承接细则**：写点 ∥ 恢复重建 ∥ 翻页 ∥ 容差。
 
@@ -184,112 +178,20 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
   - 痕起跑 ∥ 收尾 = `thincoder-cli/src/tui/suspension-drive.mjs` `digestTurn`：起跑（`:101` 两行同点）⇒ `{ kind:"digest", status:"start", n:pend0, tier:upstream?"ask":"digest", ...(ask ?? {}) }`；
     收尾（`:116`）⇒ `{ kind:"digest", status:"end", ok:outcome==="ok", ms }`（`ms` 与行文案 `seconds` **同值单算式**——`(ms/1000).toFixed(1)`）。
   - cap = `thincoder-cli/src/tui/agent-turn.mjs:233-235`（`cap-stop` 分支——`:235` 行同点）⇒ `{ kind:"digest", status:"cap", mode:"stop", turns:error.turn }`（CLI 现无 auto 档产者——读取面按契约前向兼容）。
-  - 归档快照 = `thincoder-cli/src/tui/subagent-freeze.mjs` `freezeSubTaskLines`（冻结载体行插入同点）⇒ `{ kind:"subagent", meta, rows }`：`meta` = 冻结时点块头事实（`key`（写面归一 = 规范形 `sub:<role>#<id>`——#790）
+  - 归档快照 = `thincoder-cli/src/tui/subagent-freeze.mjs` `freezeSubTaskLines`（冻结载体行插入同点）⇒ `{ kind:"subagent", meta, rows }`：`meta` = 冻结时点块头事实（`key`（写面归一 = 规范形 `sub:<role>#<id>`）
     ∥ `role ∥ model ∥ startedAt(=sub.started) ∥ doneAt ∥ turn ∥ maxTurns ∥ status` ∥ `pool?` ∥ `queued?`——`stopped` ⇒ `"stopped"` ∥ `lastError` 在场 ⇒ `"error"` ∥ 其余 `"done"`；
     `pool` = `sub.async === true` 显式两写（非排队）∥ 排队 ⇒ `queued:true` 且 `pool` 不写；字段文法单源 = core `SESSION.md` §6.26）；`rows` = `sub.blocks` 行集（条目形 `{kind,text}` 同备）+ `sub.dropped > 0` ⇒ 前置省略标记行（行数真值）。
   - 追加失败不阻断（核尽力面）；`state._agent` ∥ `ctx.agent` 缺席（headless / 子代理内）⇒ 零动作。
   - **承载件** = `thincoder-cli/src/tui/lifecycle-records.mjs`（记录形构建 ∥ 痕行文本（live ∥ 重建同调——单一实现零副本）∥ rows 保尾 ∥ 终态行回扫——三写点 + 恢复面同调）。
 - **恢复重建**（`thincoder-cli/src/tui/startup.mjs` `historyToLines` 增记录分支——渲染面零改）：
-  - **复列 = 全量**（2026-10-01 自然形跟正 · 台账 #768）：多轮 `digest` 记录逐轮按其记录位次复列——**记录序 ≡ 恢复序**（零截点；未结轮照现（无 `end` 记录 ⇒ 起跑行 ∥ 计数行 ∥ cap 行照出；三端同判——消化重放口径批 · 2026-10-01 · 台账 #771））。
+  - **复列 = 全量**：多轮 `digest` 记录逐轮按其记录位次复列——**记录序 ≡ 恢复序**（零截点；未结轮照现——无 `end` 记录 ⇒ 起跑行 ∥ 计数行 ∥ cap 行照出；三端同判）。
   - `digest` 记录 ⇒ 痕行：`start` ⇒ 标签行（`tier==="ask"` 携 `from`/`msg` 取 `digest.turnLabelAsk` ∥ `digest.turnLabel`）+ `n>0` 计数行（`digest.start`）；`cap` ⇒ `digest.capStop`（`turns`）；`end` ⇒ 终态行（`ok!==false` ⇒ `digest.done`（`n` + `seconds`）∥ `digest.aborted`（`seconds`）——**文案与活流同算式**）。
   - **终态行 `n` 解析**：页内（含 ±1 页沿）有本轮 `start` ⇒ 直用；缺席（跨页分裂）⇒ **存储回扫**（`store.page` 向更早逐段回读，至命中本轮 `start` 止）⇒ **跨页零损（容差①于 CLI 不成立——绑定态；模式 F 未绑 ⇒ 不适用——模式 F = 未绑定，单源 = `docs/core/design/SESSION.md` §6.26）**。解析由调用面（`restoreLines` ∥ `createLoadOlder`——持有存储读口）预完成；`historyToLines` 仅增分支（形零改）。
   - `subagent` 记录 ⇒ 冻结载体行 `{ text:"subagent activity: <key>", color:C.dim, _frozenSubTask: 合成件 }`——合成件 = 由 `meta`/`rows` 构建（`key`（剥 `sub:` 前缀——显示 = 本地无前缀形；行文取值同源自合成件 `key`）
     ∥ `role ∥ model ∥ done:true ∥ doneAt ∥ blocks(=rows 行集) ∥ stopped ∥ errored ∥ _charCount(=行集字符和——账实一致 §5.4）` ∥ `async(= meta.pool === true)` ∥ `queued(= meta.queued === true)`），**渲染端零改**（`render-segments.mjs` 折叠头 + tail-3 原式消费——模式词 waiting/async/sync 三态照出）。
-    **停面词判据（#795）**：合成件 `stopped` = 记录 `status` 停止面词集（词面判据单源 = `docs/core/design/SESSION.md` §6.26——本档不复述）。
-    **错误面词判据（#821）**：合成件 `errored` = 记录 `status` 错误面词集（词面判据单源 = `docs/core/design/SESSION.md` §6.26——本档不复述）。
+    **停面词判据**：合成件 `stopped` = 记录 `status` 停止面词集（词面判据单源 = `docs/core/design/SESSION.md` §6.26——本档不复述）。
+    **错误面词判据**：合成件 `errored` = 记录 `status` 错误面词集（词面判据单源 = `docs/core/design/SESSION.md` §6.26——本档不复述）。
   - 负控 = 记录缺 ⇒ 恢复面逐字等价；未绑（模式 F）⇒ 既有径零改（无 sidecar 存储侧——记录入人读线、落盘随既有保存链）。
 - **翻页**：数据源零改（`store.page`——记录已在存储、随页自然可见）；「N more earlier messages」与「N messages」口径含记录（与桌面 KD-55 ⑤ 同口径容忍）。
 - **容差（CLI 侧状态）**：① 跨页分裂 = **消**（上「`n` 解析」）；② 归档快照晚一拍 = **消**（产生面 = 进程内冻结点，先于回合落盘 ∥ 读径 = 存储直读——追加即达）；③ 复活径双记录（墓碑复活 ⇒ 同键两代冻结 ⇒ 重建面双块 ∥ 活流单块）——**在册**（低频异常修复径 ∥ 数据零损；重开条件 = 实测走查命中 ⇒ 另批）。
-- **验收回指**：F18 判定句（重启 ∥ `/session` 重建含痕行族 + 冻结载体 ∥ 负控）；机检用例 ∥ 真机项 = 批档 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2。
-
-## 7. 不并项与历史沿革
-
-### 7.1 历史沿革（(d) 类——**不并**）
-
-> 来源档 `thincoder-cli/docs/design/TUI.md`（1529 行）的 §7 / §8 / §15 面——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
-
-| 旧档位置 | 内容 | 何故不并 |
-|---|---|---|
-| 旧档 §15.1 问题陈述（十条绕过路径逐条 `file:line` 实测） | 勘察证据表 | 结论已落为 §5 契约；行号为时点证据 |
-| 旧档 §15.2 选型对比（计量口径 / 执行点 / 超限处置三表） | 一次性选型材料 | 选定结论入 §5.4（口径 = UTF-16 码元 / 单点包装 + 载体自记账 / 截断 + 标记） |
-| 旧档 §15.4 决策 D-TB1–D-TB6 | 批次编号决策表 | 结论已并入 §5.1–§5.4 |
-| 旧档 §15.5 受影响文件表（含「实现后同步」补行） | as-of 行数与增量快照 | 时点快照（实装后已漂移） |
-| 旧档 §15.6 用例表 · §15.7 验收标准 · §15.8 边界 | 批次验收材料 | 一次性——用例宿主 = `CLI tui-memory-budget 用例档`；边界已入 §5.4 末条 |
-| 旧档 §8 各步叙述中的批次注入括注（如「R15 攒批删」「D-C2」） | 批次编号 | 机制语义已入 §4；批次编号不入活档 |
-| 旧档变更记录中本面相关行 | 逐批流水 | 历史叙述——本档自有变更记录 |
-
-### 7.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
-
-| 旧档面 | 内容 | 何故不并（去向 / 触发） |
-|---|---|---|
-| 需求层条目 | F6（修订）/ N10–N11 等 | 需求面——`docs/cli/requirements/TUI.md`（本档只留设计层） |
-| 分页源下沉的机制契约 | 记录存储 / 序号锚定 / 描述符口径 | `docs/core/design/SESSION.md`（本节只落 TUI 面落点） |
-| 挂起会话状态机 / settle 时序 / 池管理 | 编排语义 | `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8（本档只留 TUI 侧驱动行为） |
-| 回合内工具事件与显示 | 工具载体 / 新区块 / 参数可见性 | `docs/cli/design/TUI-TOOL-OUTPUT.md`（本档只留回调装配点） |
-| attention 置位谓词 | `userNeededAtTurnEnd` 的语义与清位 | `docs/cli/design/TUI.md` §7.2（本档只标调用点） |
-| 显示层额度的常量数值来源 | 常量本体 | `thincoder-cli/src/tui/display-budget.mjs`（单源——本档引用不复制数值之外的口径） |
-
-## 变更记录
-
-**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
-**本批（消化重放口径批（#771 ∥ #773） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-replay-choices.md` §2（唯一承载面——一次性批次材料）。
-**本批（消化行自然形·两端跟正（CLI ∥ VSC） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §2（唯一承载面——一次性批次材料）。
-**本批（零语义清账批 #2 · 2026-10-01）落点表** = `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §2（唯一承载面——一次性批次材料）。
-**本批（记录形残项批（#795） · 2026-10-02）落点表** = `docs/batches/2026-10-02-record-shape-residuals.md` §2（唯一承载面——一次性批次材料）。
-
-- 2026-10-10（**跨端对齐批 · 实施轮随动 · eng-coder**——承批档 `docs/batches/2026-10-10-cross-end-alignment.md` §2 · 台账 #821）：§6 合成件字段句补 `errored` + **错误面词判据句**（`errored` = 记录 `status` 错误面词集——词面判据单源 = `docs/core/design/SESSION.md` §6.26）。**零新语义**（判据单源落位）。
-
-- 2026-10-02（**记录形残项批（#795）· 设计档随动轮 · eng-designer**——承批档 `docs/batches/2026-10-02-record-shape-residuals.md` §2 随动表）：§6 合成件补**停面词判据句**（`stopped` = 记录 `status` 停止面词集——词面判据单源 = `docs/core/design/SESSION.md` §6.26）。**零新语义**（判据单源落位）。
-
-- 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 2 行折行（187 ∥ 194——语义零改）。**零新语义**。
-
-- 2026-10-01（**消化重放口径批 · 修复轮（评审轮 1 · 发现 9）· eng-designer**——承批档 `docs/batches/2026-10-01-digest-replay-choices.md` §3 轮次 1 · 台账 #771 ∥ #773）：§6 名义随动（「复列口径统一批」⇒「消化重放口径批」——随批档题名）。**零新语义**（名随动）。明细 = 批档 §2 修复轮块。
-
-- 2026-10-01（**零语义清账批 #2 · 修复轮（评审轮 1 · 发现 3 ∕ 5）· eng-designer**——承批档 `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §3 轮次 1 · 台账 #791）：§6 `:193`「模式 F」补单源指针（未绑定括注 + 单源 = `docs/core/design/SESSION.md` §6.26——与单源句同拍）。**零新语义**（指针补）。明细 = 批档 §2 修复轮块。
-
-- 2026-10-01（**消化重放口径批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-01-digest-replay-choices.md` §1 ∥ §2 · 台账 #771 ∥ #773）：§6 复列句「未结末轮照现（沿现行口径）」⇒ 统一口径（未结轮照现——起跑 ∥ 计数 ∥ cap 照出；三端同判）。**零新语义**（口径收正）。明细 = 批档 §2。
-
-- 2026-10-01（**零语义清账批 #2 · 文档面轮 · eng-designer**——承批档 `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §2 · 台账 #791）：§6 cap 坐标对盘收正（`agent-turn.mjs:226-232`/`:230` ⇒ `:233-235`/`:235`——实盘 ∥ 批档 `2026-09-30-cross-end-digest-recovery.md` :357 ∥ :413 单源）+ 「容差①于 CLI 不成立」补**绑定态限定**（模式 F 未绑 ⇒ 不适用）。**零新语义**（坐标 ∥ 限定句收正）。明细 = 批档 §2。
-
-- 2026-10-01（**消化行自然形 · 两端跟正批（CLI 面）· 实施后随动轮 · eng-designer**——承批档 `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §5）：§6 写点坐标对盘收正——起跑 `thincoder-cli/src/tui/suspension-drive.mjs:90-91 ⇒ :101` ∥ 收尾 `:99-100 ⇒ :116`（实施净删后实读）。**零新语义**。明细 = 批档 §2 随动块。
-
-- 2026-10-01（**消化行自然形 · 两端跟正批（CLI 面）· 修复轮（评审轮 1 · 发现 8）· eng-designer**——承批档 `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §3 轮次 1）：§1 模块地图行 ∥ §6 承载件句**撤「拟新增」/「新档」标记**（实读：`thincoder-cli/src/tui/lifecycle-records.mjs` 在盘——写点三处 ∥ 恢复面接线在位）。**零新语义**。明细 = 批档 §2 修复轮块。
-
-- 2026-10-01（**消化行自然形 · 两端跟正批（CLI 面）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §1 ∥ §2 · 台账 #768）：§6 增**复列 = 全量**句（记录序 ≡ 恢复序——零截点；未结末轮照现沿现行口径）。**零新语义**（桌面判据随正）。明细 = 批档 §2。
-
-- 2026-09-30（**跨端消化面恢复批 · 修正轮（评审轮 1 · 发现 6 ∥ 11）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §3 轮次 1）：§1 模块地图补新档行 `thincoder-cli/src/tui/lifecycle-records.mjs`（**拟新增**——同批回写义务）；§6 负控措辞收正（记录入人读线、落盘随既有保存链——消「仅内存形」误读）。**零既有语义改**。
-
-- 2026-09-30（**跨端消化面恢复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2 · 台账 #726）：新增 **§6**（消化生命周期面记录与恢复——写点三处 ∥ 恢复重建记录分支 ∥ 终态行回扫 ∥ 容差）；原 §6 不并项与历史沿革**顺延 §7**（子节 7.1 ∥ 7.2 同拍）。机制单源 = `docs/core/design/SESSION.md` §6.26；需求 = `docs/cli/requirements/TUI.md` F18。**零既有语义改**（承接新增）。
-
-- 2026-09-28（**文档回填与卫生轮**（台账 #516 · #377 面）· eng-designer）：档头对位行「2026-09-25 本批」改指名（**misc-four 批**）——消同日多批「本批」两义。**零新语义**。
-
-- 2026-09-25（**misc-four 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §2 · 台账 #185）：档头对位行裸读法收正——补 A9 三件（结构性不对称 / 证据 / 裁定）。**零新机制**。
-
-- 2026-09-24（**queue-visible 批 · fix 轮（步边界 pickup）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.11）：§4 第 6 条收正——回合尾直发句限定为**残项路径**，队列主消费 = **步边界 pickup**（机制单源回指 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8）。**回合驱动其余步 / 恢复 / 分页 / 额度零变**。
-
-- 2026-09-24（**queue-visible 批 · 需求裁定升级轮（多槽 + 合并消费）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.10）：§4 第 6 / 7 条改**多槽 + 合并消费**口径（交接消息按批合并续发 / 残余按计划转回队列；机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8）。**回合驱动其余步 / 恢复 / 分页 / 额度零变**。
-- 2026-09-22（**hygiene-sweep 批 · 文档卫生轮 · eng-designer**——承 `docs/batches/2026-09-22-hygiene-sweep.md` §2 · 台账 #225）：规范面修订式标记清理——记账限定条去「原「存量漂移、本批零改」撤」对照语（留现行限定）。**语义零改**。
-
-
-- 2026-09-22（**busy-extend 批 · 同族扩面轮 · eng-designer**——承 `docs/batches/2026-09-22-busy-extend.md` §1 裁定 · 父侧并入本批）：§4 两处旧口径收正——第 6 条「busy 提交吞」→ **入单槽**（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1）；第 7 条「进入挂起态——busy 提交吞」→ **挂起内 busy 与普通 busy 同判据入槽**（键面契约回指同处）。机制条文零改。
-
-- 2026-09-22（**busy-extend 批 · 设计评审轮 2 修正** · eng-designer——承 `docs/batches/2026-09-22-busy-extend.md` §3 轮次 2 发现 #3）：
-  §1 模块地图行与 §6.2 不并项登记行的节号收正（`docs/core/design/AGENT-LOOP.md` §9 → **`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8**——挂起状态机 / settle 时序 / 池管理的现住档）。**条文语义零变**。
-
-- 2026-09-20（**卫生族二批 · 台账 #141 · eng-designer**——承 `docs/batches/2026-09-20-hygiene-sweep-2-batch.md` §2.1）：§3 分页数据源下沉条机制契约指称收正——`docs/core/design/SESSION.md` 节号改指现核档 `§6.14`；零新语义。
-
-- 2026-09-20（**显示面消差批 · 批 4 随轮收正 · eng-designer**——承 `docs/batches/2026-09-20-display-parity-batch.md` §2.3 X8）：§4 第 4 条「其他错误 → `[error] …` 一行」按实现面收正为三件形（脱敏首行 + 诊断两行 + Retry 询问），面细节挂 `docs/cli/design/TUI.md` §4.3（D2 不重述）。
-
-- 2026-09-17（**zero-block 批 · 微 fix 轮 · eng-designer**）：变更记录 2026-09-15 条①内**悬空节号收正**——原引节号在 canonical 界面核心档无此节，收正为「§8 不并项与历史沿革」（拆分沿革登记现住 §8）；批档 `docs/batches/2026-09-17-subagent-zero-block.md` §2 出批发现 ⑥ 收口。
-
-- 2026-09-16（**批 8 ENGINE-DEBT · 设计轮 · eng-designer**——承 `docs/batches/2026-09-16-engine-debt.md` §2 ED-3）：§5.5 修订——「`loadOlder` 占位行移除未入账」由**存量漂移（本批零改）**改判为**本批修复**；新增**记账口径**条（增删均须过账——不变式 `_linesChars === Σ lineChars`）+ **选型对比**表（补出账 vs 占位行不入账）；
-  需求侧同批新增 `docs/cli/requirements/TUI.md` **N11**（显示层字符账账实一致；**N10 文本零改**）。
-
-- 2026-09-16（**TUI-HISTORY-TRIM 批 · 设计轮**）：§5 裁剪策略修订——新增 `LINES_TRIM_FLOOR`（保底 200 行）+ **最小步进裁剪**
-  （超限只裁至额度内所需最少行数；保底触底即停——接受超额）；新增 §5.5（保底与视口语义：恢复 / 翻页记账在册、单层可见历史）。
-  动机 = 旧颗粒在行数 ≤1001 且超额时一轮裁到 1 行（用户实测收据「1 lines remaining」）。
-- 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/TUI.md` 的 §7（会话恢复与懒加载）/ §8（回合驱动与挂起会话）/
-  §15（长会话内存有界）三面内容重建入本档（旧档一字未改、原地作参照历史）。
-  ① 落点 = `docs/cli/design/TUI-SESSION-VIEW.md`（P2 板块内的**读者面拆分档**——由 `docs/cli/design/TUI.md` §8 拆分沿革登记）；
-  ② §15 的两块（分页源下沉 / 显示层额度）按归属分置：A 块只留 TUI 落点、机制挂 `docs/core/design/SESSION.md`；B 块全量承载（§5）；
-  ③ 模块地图按**现文件结构**重建（行数列不并）；④ 坐标全量改**现状路径**并实核；⑤ 批次材料（选型 / 用例 / AC / 受影响文件 / 决策编号）入 §6.1。
+- **验收回指**：F18 判定句（重启 ∥ `/session` 重建含痕行族 + 冻结载体 ∥ 负控）；机检用例 ∥ 真机项 = 收口轮（含痕行族重建 ∥ 冻结载体 ∥ 负控）。

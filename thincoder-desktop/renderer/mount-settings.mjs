@@ -56,16 +56,16 @@ export const SETTINGS_KEYS = Object.freeze(["settings", "locale", "theme", "acce
  *  **三端对齐批（KD-75 ①②）**：七 ⇒ 八 —— 增添加弹窗组名 `ADD_MODAL_GROUP`（`providerAdd`——非段名，
  *  名单单源 = 视图档导出，本档 ∥ `MODAL_READS` ∥ 开径出口三面同领）。
  *  **添加入口弹窗统一批（KD-77 ①②）**：八 ⇒ **十** —— 增 `MCP_FORM_MODAL_GROUP` ∥ `CONSULT_ADD_MODAL_GROUP`（同径同领）。
- *  **B1 批（台账 #1212）**：十 ⇒ **十一** —— 团队段入段名序（`SECTIONS` 追尾，本档零枚举改）。 */
+ *  **B1 批（台账 #1212）**：十 ⇒ **十一** —— 团队段入段名序（`SECTIONS` 追尾，本档零枚举改）。
+ *  **模型选择归位批（KD-80）**：十一 ⇒ **十** —— 「模型」段撤场（`SECTIONS` 去项，本档零枚举改）。 */
 const SCOPES = Object.freeze([...SECTIONS.map((section) => section.name), ADD_MODAL_GROUP, MCP_FORM_MODAL_GROUP, CONSULT_ADD_MODAL_GROUP])
 
-/** 弹窗读取链（KD-68 ③ 逐组指名表：`model` 随渠道面（含模型候选随动）∥ `models` 随 agent 面（models 块 —— R7 同拍）；
+/** 弹窗读取链（KD-68 ③ 逐组指名表：`models` 随 agent 面（models 块 —— R7 同拍）；
  *  **添加弹窗**（KD-75 ②）随 `providers` 面 —— 体 = 单表，预设 ∥ 候选项两源皆 `provider:list` 回执；
  *  **两新组**（KD-77 ①②）：`mcpForm` 随 `mcp` 面（表单预填取行 `config` —— `mcp:list` 回执）∥ `consultAdd` 随 agent 面
  *  （models 块 —— 两 picker 与行族同源）；**B1 批**：`team` 随团队段（`loadTeam` —— 团队状态读）。 */
 const MODAL_READS = Object.freeze({
   providers: "loadProviders",
-  model: "loadProviders",
   agent: "loadAgent",
   mcp: "loadMcp",
   env: "loadEnv",
@@ -81,7 +81,7 @@ const MODAL_READS = Object.freeze({
 /**
  * 设置族接线：装配两族（读数供给 / 出口）+ 挂载（一挂载面：设置 / 向导两树互斥）+ 向导接线 + 自持重绘订阅。
  * `host` = preload 窄桥（只 `invoke`）；`deps.onProjectOpened` = 装配面项目面链注入（缺 ⇒ 目录出口零动作）；
- * `deps.onProvidersChanged` = provider 写成功随动注入（全渠扇出批 —— 缺 ⇒ 零动作）。
+ * `deps.onProvidersChanged` = 输入区候选面随动注入（provider 写成功 ∥ 登录成 ∥ 登出成 —— 全渠扇出批 ∥ `TEAM.md` §2.8；缺 ⇒ 零动作）。
  * 返回 `{ paintSettings, openSettings, openSettingsModal, closeSettingsModal, refreshSettings, handlers,
  * wizardHandlers, keys, detach, setTheme }`（消费面只 `attachSettings(host, …)`；`refreshSettings` 出句柄面 =
  * config 写盘感知复读口（R8 · `ev:config` 窄口 —— `renderer/app.mjs` `attachEvents` 消费）；`setTheme` = 菜单
@@ -151,10 +151,11 @@ export function attachSettings(host, deps = {}) {
     else console.error("[renderer] invalidateDrafts dropped: missing draft scope")
   }
 
-  /** 团队面接线族（登录面补全批 —— 状态读 ∥ 活校验 ∥ 登录 ∥ 退出；出档 `mount-team.mjs`；写成功径复读两调用点住该族）：
+  /** 团队面接线族（登录面补全批 —— 状态读 ∥ 活校验 ∥ 登录 ∥ 退出；出档 `mount-team.mjs`；写成功径两复读 + 候选面随动住该族）：
    *  `loadTeam` 经装配并入 `reads` 检索面（`MODAL_READS.team` + 开面随读 + `refreshSettings` 复读口），
    *  出口经装配并入单一 handlers 表（对外零改）；面板宿主（`div.team-pop`）同拍接线。 */
-  const team = createTeam({ ask, store, setSettings, report, loadProviders: reads.loadProviders, invalidateDrafts })
+  const team = createTeam({ ask, store, setSettings, report, loadProviders: reads.loadProviders, invalidateDrafts,
+    onProvidersChanged })
   /** 状态段就地面板（装配三件：施用面注册 ∥ 文档级关两路 ∥ 自持重绘；返回面 `refresh` = 启动读口——`renderer/app.mjs` 触发）。 */
   const teamPanel = attachTeamPanel({ store, team })
   /** 读数面全表（基础族 + 团队状态读 —— 检索面单源）。 */
@@ -299,7 +300,7 @@ export function attachSettings(host, deps = {}) {
     return opened
   }
 
-  /** config 写盘感知复读（R8 · `ev:config` 窄口 —— 接线 = `renderer/app.mjs`）：设置 ∕ 向导面**在场** ⇒ 八段读数
+  /** config 写盘感知复读（R8 · `ev:config` 窄口 —— 接线 = `renderer/app.mjs`）：设置 ∕ 向导面**在场** ⇒ 七段读数
    *  复读（providers ∕ agent〔携 models〕 ∕ mcp ∕ env ∕ tools ∕ team —— 与 `openSettings` 同批同源；R7 随段闭集扩：
    *  `loadIndex` 更名 `loadTools` + 增 `loadEnv`；B1 增 `loadTeam`）；**D39：组弹窗在场（`modal != null`）同复读**；关态 ⇒ 零动作
    *  （下次开面自读 —— 免空转）。返回是否复读（读数 ∕ 走查面）。 */

@@ -1,7 +1,7 @@
 /**
  * config-admin.mjs — 配置面（控制台——仅 admin；gateway/API.md §2.4 ∥ ops/OPS.md §1 ∥ KD-SV-56）：
  * `GET /api/admin/config`（**文件面读**——有效值（文件在场值 ∥ 缺省回填） ∥ 密钥掩码 ∥ `bootstrap.password` 面零列）
- * ∥ `PATCH /api/admin/config`（白名单五键写 ∥ 成功 ⇒ `{ ok: true }`）。
+ * ∥ `PATCH /api/admin/config`（白名单七键写（含 `tls` / `rateLimits` 子键级） ∥ 成功 ⇒ `{ ok: true }`）。
  *
  * 写路径五步（ops/OPS.md §1）：① 白名单（未知键 ∥ 空提交 ⇒ 400）→ ② 合并原档（**保未知键**；
  * `proxyUri: ""` ⇒ 删 `proxy` 段）→ ③ 门 = `resolveEnvRefs` + `validateConfig`（**载入面等价两跳**——
@@ -13,24 +13,32 @@
  * `embedding` 子键级 = 缺省 = 不动 ∥ 明填 = 替换（`apiKey: ""` = 显式空——§2.4）；**掩码回显形不作明传值**——
  * `apiKey` 三态 = 未编辑 ⇒ 不携（= 不变） ∥ 编辑 ⇒ 明传 ∥ 清除勾 ⇒ `""`；回显形误送回 ⇒ 按「不携」处置
  * （掩码永不落盘）。`env:` 引用 = 明传值（写前经载入面门——缺位 ⇒ 400）。**生效 = 重启**（配置文件不热载——
- * `ops/OPS.md` §10 不破；统一标注）。
+ * `ops/OPS.md` §10 不破；统一标注）。`tls` 子键级同 `embedding` 形，额外一道**写面防自锁预检**（启用 ⇒ 证书/私钥可读且上下文可建——
+ * `gateway/PUBLICNET.md` §9；不过 ⇒ 400 原报文 + 文件零变）。
  *
  * 判权 = `requireAdmin`（`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401）；错误码全沿用（零新码）；写端点 JSON 型门 = 服务层径。
  */
 import { readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs"
+import { dirname, resolve } from "node:path"
 
 import { recordAudit } from "../accounts/audit.mjs"
 import { requireAdmin } from "../accounts/session.mjs"
-import { DEFAULT_AUTO_UPDATE, DEFAULT_DB, DEFAULT_PORT, DEFAULT_USAGE_RETENTION_DAYS, resolveEnvRefs, validateConfig } from "../ops/config.mjs"
+import { DEFAULT_AUTO_UPDATE, DEFAULT_DB, DEFAULT_PORT, DEFAULT_RATE_LIMITS, DEFAULT_TLS_PUBLIC_PORT, DEFAULT_USAGE_RETENTION_DAYS, RATE_LIMIT_KEYS, TLS_KEYS, resolveEnvRefs, validateConfig } from "../ops/config.mjs"
 import { HttpError, sendJson } from "./errors.mjs"
 import { maskApiKey } from "./provider-admin.mjs"
-import { readJsonBody } from "./server.mjs"
+import { loadTlsMaterial, readJsonBody } from "./server.mjs"
 
 /** 写白名单（§2.4——出现的键 = 应用，未出现 = 不动；未知键 ⇒ 400）。 */
-export const CONFIG_WRITABLE_KEYS = Object.freeze(["autoUpdate", "trustProxy", "usageRetentionDays", "proxyUri", "embedding"])
+export const CONFIG_WRITABLE_KEYS = Object.freeze(["autoUpdate", "trustProxy", "usageRetentionDays", "proxyUri", "embedding", "tls", "rateLimits"])
 
 /** `embedding` 子键白名单（§2.4——子键级：缺省 = 不动 ∥ 明填 = 替换）。 */
 export const CONFIG_EMBEDDING_KEYS = Object.freeze(["baseURL", "model", "apiKey"])
+
+/** `tls` 子键白名单（单源 = `TLS_KEYS`；PUBLICNET.md §2——六键，子键级同 `embedding` 形）。 */
+export const CONFIG_TLS_KEYS = TLS_KEYS
+
+/** `rateLimits` 子键白名单（单源 = `RATE_LIMIT_KEYS`；PUBLICNET.md §2——三键，子键级同 `tls` 形）。 */
+export const CONFIG_RATE_LIMITS_KEYS = RATE_LIMIT_KEYS
 
 /** fs 面（缺省 = node:fs 四件；单元测试档替身经注册参数覆盖——写失败分支注入）。 */
 const FS = { readFileSync, writeFileSync, renameSync, unlinkSync }
@@ -75,7 +83,47 @@ export function configView(raw) {
       model: embedding.model ?? null,
       apiKey: maskApiKey(embedding.apiKey ?? ""), // 掩码回显（§2.2 规则——明文不出响应）
     },
+    tls: tlsView(raw.tls), // 只回路径（证书内容永不出响应——PUBLICNET.md §2）
+    rateLimits: rateLimitsView(raw.rateLimits), // 限流段（阈值两档可界面调——KD-PN-7）
     bootstrap: bootstrap === null ? null : { username: typeof bootstrap.username === "string" ? bootstrap.username : null },
+  }
+}
+
+/** `tls` 段读数（§2.4——有效值：文件在场值 ∥ 缺省回填；只回路径，证书内容永不出响应）。 */
+export function tlsView(value) {
+  const tls = isObject(value) ? value : {}
+  return {
+    enabled: tls.enabled === true,
+    certPath: typeof tls.certPath === "string" ? tls.certPath : null,
+    keyPath: typeof tls.keyPath === "string" ? tls.keyPath : null,
+    publicHost: typeof tls.publicHost === "string" ? tls.publicHost : null,
+    publicPort: Number.isInteger(tls.publicPort) ? tls.publicPort : DEFAULT_TLS_PUBLIC_PORT,
+    redirectPort: Number.isInteger(tls.redirectPort) ? tls.redirectPort : null,
+  }
+}
+
+/** `rateLimits` 段读数（§2.4——有效值：文件在场值 ∥ 缺省回填——KD-PN-9 缺位 = 缺省开）。 */
+export function rateLimitsView(value) {
+  const rateLimits = isObject(value) ? value : {}
+  const pick = (key, fallback) => (Number.isInteger(rateLimits[key]) && rateLimits[key] >= 1 ? rateLimits[key] : fallback)
+  return {
+    enabled: rateLimits.enabled !== false,
+    authPerMin: pick("authPerMin", DEFAULT_RATE_LIMITS.authPerMin),
+    publicPerMin: pick("publicPerMin", DEFAULT_RATE_LIMITS.publicPerMin),
+  }
+}
+
+/** 写面防自锁（PUBLICNET.md §9）：`tls` 启用时证书/私钥须可读且能建出上下文——不过 ⇒ 抛（调用方转 400 原报文 + 文件零变）。
+ *  理由：配错后重启起不来，而控制台恰跑在起不来的服务上；预检把错误挡在保存前。相对路径 = 配置档目录（同载入口径）。 */
+export function assertTlsPrecheck(tls, { baseDir }) {
+  if (!isObject(tls) || tls.enabled !== true) return
+  try {
+    loadTlsMaterial({
+      certPath: resolve(baseDir, String(tls.certPath ?? "")),
+      keyPath: resolve(baseDir, String(tls.keyPath ?? "")),
+    })
+  } catch (e) {
+    throw new Error(`TLS 证书预检失败：${e.message}——启用 TLS 前证书/私钥须可读且成对（文件零变）`)
   }
 }
 
@@ -83,7 +131,7 @@ export function configView(raw) {
  *  未知键 ∥ 空提交 ∥ 无键生效 ⇒ 抛（调用方转 400 原报文——文件零变）；入档不被改动。
  *  值判据不在本层先行（除 `proxyUri: ""` 的删段分叉）——归载入面门（校验单源）。 */
 export function mergeConfigPatch(raw, patch) {
-  if (!isObject(patch)) throw new Error(`配置写提交体须为 JSON 对象（白名单五键：${CONFIG_WRITABLE_KEYS.join(" ∥ ")}）`)
+  if (!isObject(patch)) throw new Error(`配置写提交体须为 JSON 对象（写白名单：${CONFIG_WRITABLE_KEYS.join(" ∥ ")}）`)
   const carried = Object.keys(patch)
   if (carried.length === 0) throw new Error("空提交（未携任何键——出现的键 = 应用，未出现 = 不动）")
   for (const key of carried) {
@@ -113,6 +161,28 @@ export function mergeConfigPatch(raw, patch) {
         keys.push(`embedding.${sub}`)
       }
       config.embedding = next
+      continue
+    }
+    if (key === "tls") { // 子键级：缺省 = 不动 ∥ 明填 = 替换（同 `embedding` 形——PUBLICNET.md §2）
+      if (!isObject(value)) throw new Error(`tls 须为对象（子键：${CONFIG_TLS_KEYS.join(" ∥ ")}）`)
+      const subs = Object.keys(value)
+      if (subs.length === 0) throw new Error("空提交：tls 未携任何子键（缺省 = 不动）")
+      for (const sub of subs) {
+        if (!CONFIG_TLS_KEYS.includes(sub)) throw new Error(`未知键：tls.${sub}（合法子键：${CONFIG_TLS_KEYS.join(" ∥ ")}）`)
+      }
+      config.tls = { ...(isObject(config.tls) ? config.tls : {}), ...value } // 原档未知子键保形（同 embedding）
+      for (const sub of subs) keys.push(`tls.${sub}`)
+      continue
+    }
+    if (key === "rateLimits") { // 子键级：缺省 = 不动 ∥ 明填 = 替换（同 `tls` 形——PUBLICNET.md §2）
+      if (!isObject(value)) throw new Error(`rateLimits 须为对象（子键：${CONFIG_RATE_LIMITS_KEYS.join(" ∥ ")}）`)
+      const subs = Object.keys(value)
+      if (subs.length === 0) throw new Error("空提交：rateLimits 未携任何子键（缺省 = 不动）")
+      for (const sub of subs) {
+        if (!CONFIG_RATE_LIMITS_KEYS.includes(sub)) throw new Error(`未知键：rateLimits.${sub}（合法子键：${CONFIG_RATE_LIMITS_KEYS.join(" ∥ ")}）`)
+      }
+      config.rateLimits = { ...(isObject(config.rateLimits) ? config.rateLimits : {}), ...value } // 原子键保形（同 tls）
+      for (const sub of subs) keys.push(`rateLimits.${sub}`)
       continue
     }
     config[key] = value
@@ -166,7 +236,11 @@ export function registerConfigAdminRoutes(routes, { db, configPath, log = null, 
       throw new HttpError("invalid_request_error", e.message) // 400 原报文（文件零变）
     }
     try {
-      validateConfig(resolveEnvRefs(merged.config, env)) // ③ 门 = 载入面等价两跳（写入的文件必可载入）
+      const resolved = resolveEnvRefs(merged.config, env) // ③ 门 = 载入面等价两跳（写入的文件必可载入）
+      validateConfig(resolved)
+      // ③† 写面防自锁（§9）：本次提交携 `tls` 子键且合并后 `enabled: true` ⇒ 预检（设计 §2:54 口径——
+      // 「`tls` 在场且 `enabled: true` ⇒ 校验」；控制台每次保存都携六键，故启用态下每次保存都会预检）
+      if (merged.keys.some((key) => key.startsWith("tls."))) assertTlsPrecheck(resolved.tls, { baseDir: dirname(configPath) })
     } catch (e) {
       throw new HttpError("invalid_request_error", e.message) // 400 原报文（文件零变）
     }

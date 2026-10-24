@@ -12,17 +12,17 @@
  * **#782（本批）**：边界轮 `cap` 分支同源查位（`!revokedTurn` —— 帧 ∥ 记录同抑制；判据沿 `emitDigestEnd` 同源单点）。
  * 失败**抛回调用面**：`send` 径自吞（终局事件已出）；驱动径消费核件 catch 语义（AbortError = 回合级 ⇒ 核件循环重入）。
  * **输入逻辑收正轮（Ctrl+I 同上下文续跑）**：`run` 调用收进内层续跑循环 —— 中止携 `signal.reason.interrupt + message`
- * （宿主 `interrupt` 的核 abort 面 / VSC `panel-messages-turn.mjs:129-138`）⇒ 换代 controller 并 `resume: true` 重入
- * （核已提交部分输出 + `[User interrupt: …]` 已落历史 —— VSC `panel-turn-loop.mjs:114-129` ∕ CLI `agent-turn.mjs:159-179` 同式）。
- * 提示面档①（用户回合完成）**不在本档**：判据在调用面（`!autoTurn` 且成功径 —— VSC `panel-callbacks.mjs:233` 同源）。
+ * （宿主 `interrupt` 的核 abort 面 / VSC `handleCancelSubagent`）⇒ 换代 controller 并 `resume: true` 重入
+ * （核已提交部分输出 + `[User interrupt: …]` 已落历史 —— VSC `bindPanelAgent` ∕ CLI `runAgentTurn` 同式）。
+ * 提示面档①（用户回合完成）**不在本档**：判据在调用面（`!autoTurn` 且成功径 —— VSC `buildPanelCallbacks` 同源）。
  * 零宿主依赖（注入面清单见工厂注）⇒ 平 node 直测。
  * **对齐第三批（`docs/desktop/design/UI.md` §1 本批注项 9 / KD-37）**：错误径 `ev:error` 携 `techInfo`
  * （宿主 `err.stack` —— 缺 ⇒ 键缺席；错误横幅 `details` 载波）；落点说明 = 结算三径实现体住本档
  * （自 `agent-host.mjs` 提取后为 `ev:error` 唯一出站点）。
- * **R3（#505 · 撞帽续跑 —— KD-T8）**：续跑循环接纳**撞帽三径**（核 `agent/helpers.mjs:237` `ContinueError`；
- * 抛出点 `agent.mjs:451`）：`autoTurn`（消化 ∕ 上行 ∕ timer 轮——无人值守档）⇒ **cap 即收口**（核 D-TC15 同支，
+ * **R3（#505 · 撞帽续跑 —— KD-T8）**：续跑循环接纳**撞帽三径**（核 `ContinueError`；
+ * 抛出点 `runAgent`）：`autoTurn`（消化 ∕ 上行 ∕ timer 轮——无人值守档）⇒ **cap 即收口**（核 D-TC15 同支，
  * 零自续）；**#541**：边界轮（`autoTurn ∧ ¬timerTurn`）撞帽另出 `ev:digest { status:"cap", mode, turns }` 帧
- * （留档批 · #719：记录同点双动作 ⇒ 人读线 cap 行；渲染面 cap 行 —— 对位 VSC `panel-turn-loop.mjs:251` ⇒
+ * （留档批 · #719：记录同点双动作 ⇒ 人读线 cap 行；渲染面 cap 行 —— 对位 VSC `runTurnLoop` ⇒
  *  `postDigestCap(panel, "stop", e.turn)`；timer 轮不冒充消化边界 —— 沿 `suspension-drive.mjs` `boundary` 同判）；
  * 用户回合 ⇒ **「继续？」薄形询问**（`askContinue` 注入面 —— 载体 = 既有待决门，不造第二交互面）⇒
  * 同意 = 重建 controller + `resume: true` 重入同回合（历史已在 ⇒ 不重推用户消息）∕ 拒绝（∥ 缺注入 ∥ 会话已中止
@@ -106,11 +106,11 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
     //（沿 VSC 分流 `panel-turn-loop.mjs` —— `autoTurn ? null : …`；系统轮不接步边界 pickup）。
     const pickup = opts.autoTurn === true || typeof queuedPickup !== "function" ? null : queuedPickup(key)
     // #632（缺面族批补 · @ 文件引用对齐）：用户回合 ⇒ 起跑前单点注入（**恰一次**——`body` 住循环外，
-    // resume 复用同一 body；核 `resume` 不重推用户消息 `agent/setup.mjs:134`）；系统轮（`autoTurn`）不扫
+    // resume 复用同一 body；核 `resume` 不重推用户消息 `prepareRun`）；系统轮（`autoTurn`）不扫
     //（判据同上「pickup 分流」）；缺缝 ⇒ 原样（向后兼容）。
     const body = opts.autoTurn === true || typeof injectUserText !== "function" ? text : injectUserText(text)
     /** 续跑循环（内层 —— 两族同环：Ctrl+I 同上下文续跑 ∕ 撞帽续跑）：判据源 = **本代 controller 的
-     *  `signal.reason`**（核 `annotateAbort` 不保 `err.reason` ⇒ 以信号面为准 —— CLI `agent-turn.mjs:166-167` 同取法）；
+     *  `signal.reason`**（核 `annotateAbort` 不保 `err.reason` ⇒ 以信号面为准 —— CLI `runAgentTurn` 同取法）；
      *  `interrupt` 真 ∧ `message` 非空串 ⇒ 换代（新 controller 重绑会话信号 + 落 `flights`）并
      *  `resume: true` 重入（核已提交部分输出 + 注入消息已落历史 —— 输入不重推）。其余中止（普通 stop ∕
      *  会话中止）与一切错误照旧上抛 —— 结算径零变。**返回结算态** `"done"` ∥ `"stopped"`（撞帽收口两径 —— R3）。 */
@@ -124,7 +124,7 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
             upstreamTurn: opts.upstreamTurn === true,
             timerTurn: opts.timerTurn === true, // 旗标仅供域文本选择（核 opts 四件 ⇒ 五件 —— §6.30.11 透传）
             suspDriven: true,
-            ...(pickup === null ? {} : { consumeQueuedInput: pickup }), // 核循环头缝（`thincoder-core/agent.mjs:247` —— 只接不改）
+            ...(pickup === null ? {} : { consumeQueuedInput: pickup }), // 核循环头缝（核 `runAgent` —— 只接不改）
           })
           return "done"
         } catch (err) {
@@ -135,7 +135,7 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
             flights.set(key, live) // 换代（后续 Stop ∕ 会话中止命中新代 —— 单在飞表不变量保位）
             continue
           }
-          // 撞帽三径（R3 · #505 —— 核 `ContinueError(maxTurns)` 抛出点 `agent.mjs:451`）：
+          // 撞帽三径（R3 · #505 —— 核 `ContinueError(maxTurns)` 抛出点 `runAgent`）：
           if (err instanceof ContinueError) {
             if (opts.autoTurn === true) {
               // #541：消化边界轮撞帽 ⇒ cap 帧出站（部分消化不静默 —— 对位 VSC `postDigestCap`）；判据 = 边界轮
@@ -160,7 +160,7 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
             }
             live = bindSession(new AbortController()) // 同意 ⇒ 重建 controller（同 Ctrl+I 换代式：终局同释新代）
             flights.set(key, live)
-            continue // 重入同回合（核 `agent.mjs:150`：resume 不重推用户消息）
+            continue // 重入同回合（核 `runAgent`：resume 不重推用户消息）
           }
           throw err
         }

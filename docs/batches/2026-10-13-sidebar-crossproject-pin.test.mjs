@@ -32,7 +32,7 @@ test("① 行节点：右键 ∕ 归档钮全项目开放且携 cwd（⋯ 旧门
 
 test("② 菜单：置顶互斥项 + cwd 贯通（rename ∕ archive ∕ delete ∕ 改名形）", () => {
   const src = read("thincoder-desktop/renderer/mount-sidebar.mjs")
-  assert.ok(src.includes("{ key, title, x, y, cwd = null }"), "菜单载荷收 cwd")
+  assert.ok(src.includes("{ key, title, x, y, cwd = null, isCurrent = false }"), "菜单载荷收 cwd")
   assert.ok(src.includes("isSlotPinned(cwd, key)"), "菜单读置顶态（互斥词）")
   assert.ok(src.includes("handlers.onTogglePin?.(cwd, key)"), "置顶切换出口")
   assert.ok(src.includes("startRename(pane, handlers, { key, title, cwd })"), "改名携 cwd")

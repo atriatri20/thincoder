@@ -38,3 +38,4 @@ thincoder-server/data/
 thincoder-server/config.json
 thincoder-server/config/
 thincoder-server/backups/
+thincoder-server/public/box-shell/

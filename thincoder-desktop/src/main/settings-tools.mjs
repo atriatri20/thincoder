@@ -6,7 +6,7 @@
  * 密钥纪律）· 写 `{ patch: { embedding?: { apiKey }, websearch?: { apiKey } } }`（**写经核
  * `writeConfigAtomic`**；空串 = 清键 ⇒ 摘键，节点空 ⇒ 删节点）。
  * 语义源：embedding merge（置键回填 `baseURL` ∕ `model`——既有自定义值优先、缺位取核
- * `DEFAULTS.embedding`）= CLI `cmd-config.mjs:6` `embeddingPatch`（默认值单源 = 核）；websearch
+ * `DEFAULTS.embedding`）= CLI `embeddingPatch`（默认值单源 = 核）；websearch
  * 单键写 = VSC `saveWebsearchKeyFromPanel`。
  * **热应用（2026-10-12 · 方案 A）**：写盘成功后同笔把补丁刷进**在装配 agent 的活配置对象**
  * （`agent.config`）——此前只写盘 ⇒ 运行中 agent 的 `config.websearch.apiKey` 恒空 ⇒ 核
@@ -28,7 +28,7 @@ function toolsFace() {
   }
 }
 
-/** embedding key 写形（merge 语义源 = CLI `cmd-config.mjs:6` `embeddingPatch`：置键并回填
+/** embedding key 写形（merge 语义源 = CLI `embeddingPatch`：置键并回填
  *  `baseURL` ∕ `model`（既有自定义值优先、缺位取核 `DEFAULTS.embedding`——**默认值单源 = 核**）；
  *  空 key ⇒ **摘键**，节点空 ⇒ 删节点）。 */
 function applyEmbeddingKey(disk, apiKey) {

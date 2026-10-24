@@ -56,7 +56,7 @@ export function numEquals(text, n) {
   return new RegExp(`(^|[^0-9])${lit}([^0-9]|$)`).test(String(text ?? ""))
 }
 
-// ── 代码题：node:vm 实跑 + 隐藏断言（AC-5：隐藏断言只住判分器，题面零泄漏） ──────────────
+// ── 代码题：node:vm 实跑 + 隐藏断言（§2.6：隐藏断言只住判分器，题面零泄漏） ──────────────
 
 /** 代码块提取：末个围栏内容，无围栏则整段（设计 §2.6 vmRun）。 */
 export function extractCode(text) {

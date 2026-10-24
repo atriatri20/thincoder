@@ -32,6 +32,7 @@ import { readFileSync, writeFileSync } from "node:fs"
 import { DESC } from "../tools/shared.mjs"
 import { SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, DEPTH0_SEGMENTS, readBatchStatusLine, sectionHeaderRe, findPlaceholderResidue, placeholderResidueError } from "./batch-skeleton.mjs"
 import { batchDocBases, resolveBatchDocPath } from "./batch-paths.mjs"
+import { gateReceiptLine, gateRefusalMessage, runBatchGate } from "./batch-gate.mjs"
 import { closeBatchRecord, createBatchRecord, findInFlightBatch, statusBatchRecord } from "./batch-lifecycle.mjs"
 
 export { SEGMENT_BY_ROLE, batchDocBases, resolveBatchDocPath }
@@ -154,7 +155,8 @@ function insertIntoSection(src, seg, text) {
  *    eng-coder → §5 · coder（普通模式分支增表）→ §5（迁移错误面，"batch_segment:" 前缀**逐字保持**）；
  *  - 目标定位（D-BR21）：depth-0 path 可选（缺省 = findInFlightBatch 唯一在飞批）；子代理/评审
  *    传 path ⇒ 拒，目标 = spawn/实例绑定；
- *  - 其余（gate / text 校验 / 剥凭证 / 骨架保护 / **死占位机检（F11-C）** / 插入 / 记账 / 回执）逐字保持原语义。
+ *  - 其余（gate / text 校验 / 剥凭证 / 骨架保护 / **死占位机检（F11-C）** / **文档机检门（§3.20 结构兜底 ①——
+ *    子代理写 §2 / §5：REFUSED ⇒ 拒写，ERROR ⇒ 写 + 回执明示）** / 插入 / 记账 / 回执）逐字保持原语义。
  */
 function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const agent = ctx?.agent ?? {}
@@ -228,11 +230,17 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   // （段体引用豁免——判据可辨性收正，`TOOLS.md` §6.20；骨架枚举单源 = skeleton 档 TEMPLATE_PLACEHOLDERS）。
   const residues = findPlaceholderResidue(src)
   if (residues.length) throw new Error(placeholderResidueError(residues))
+  // 文档机检门（§3.20「结构兜底」①——门位 = 既有拒因全部之后、insertIntoSection / 写盘之前）：
+  // 只挂子代理写 §2 / §5（depth-0 与评审不检）；REFUSED ⇒ throw；PASS ⇒ 照写；ERROR / 门自身异常 ⇒ 写 + 回执明示。
+  const gate = !depth0 && !review && (n === 2 || n === 5)
+    ? runBatchGate({ abs, cwd, agent, scope: "writer" })
+    : null
+  if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "append"))
   const { written, roundN } = insertIntoSection(src, n, body)
   writeFileSync(abs, written)
   // #84：记账面按端注入（缺省 no-op = CLI 语义零行为变——端装配经 configureBatchSegment 覆盖）。
   onWritten?.(agent, abs)
-  return `batch_segment: appended ${body.length} characters to §${n} of the batch record${roundN ? ` (### 轮次 ${roundN}（评审子代理）)` : ""}.`
+  return `batch_segment: appended ${body.length} characters to §${n} of the batch record${roundN ? ` (### 轮次 ${roundN}（评审子代理）)` : ""}.${gateReceiptLine(gate)}`
 }
 
 /**
@@ -271,7 +279,7 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
         },
         note: {
           type: "string",
-          description: "status only — prose that lands as a parenthetical on the status line (`**状态行**：进行中（note）`). Single line; must carry no STATUS_WORDS keyword (those go in `value`) and no skeleton placeholders. Omit for a plain value.",
+          description: "status only — prose that lands as a parenthetical on the status line (`**状态行**：进行中（note）`). Single line; must carry no STATUS_WORDS keyword (those go in `value`) and no skeleton placeholders. Omit for a plain value. On the reopen path (a frozen record, §1 → 进行中) `note` is REQUIRED and lands verbatim in the §1 reopen record instead of the status-line parenthetical (it may name the frozen keyword there).",
         },
         topic: {
           type: "string",

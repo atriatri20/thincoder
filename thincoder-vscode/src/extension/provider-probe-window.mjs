@@ -63,7 +63,7 @@ async function _probeChannelInto(w, name) {
   if (!prov) { w.models.set(name, []); return }
   const row = (id) => {
     const spec = specForModel(id)
-    const r = effortEnumForModel(id) // I7（#677）：未在册名回退全档（对齐 CLI `cmd-think.mjs:19` 托底）
+    const r = effortEnumForModel(id) // I7（#677）：未在册名回退全档（对齐 CLI `handleThinkCommand` 托底）
     return { id, label: id, provider: name, group: providerLabel(name), reasoning: r, effortDefault: spec.reasoningEffortDefault || null }
   }
   try {

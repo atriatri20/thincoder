@@ -7,7 +7,7 @@
  *   · `configureProcessTreeKill`← `killProcessTree`（核 `tools/process-tree.mjs` 单源 —— 转口，零第二实现；
  *                                 消费面 = 核 `execute` 工具超时 ∕ 中止树杀）
  * 接线点 = **模块装配期一次**（`agent-assemble.mjs` 档尾调用 `installExecRunSeams()` —— VSC
- * `thincoder-vscode/src/tools/shared.mjs:104-105` 同形）。**回退面**：需核缺省径（execFileSync CLI 语义）的
+ * `majorityEol` 同形）。**回退面**：需核缺省径（execFileSync CLI 语义）的
  * 进程 ∕ 用例调核 `resetExecRun()` ∕ `resetProcessTreeKill()`（本档只供接线，不另设回退入口）。
  * 零宿主依赖（纯核件转口）⇒ 平 node 直测。
  */

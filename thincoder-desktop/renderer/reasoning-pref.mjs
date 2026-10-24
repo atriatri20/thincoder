@@ -1,5 +1,5 @@
 /**
- * reasoning-pref.mjs — 思考链**批量动作瞬时态**（Codex 形大改批 · 2026-10-04；第六轮 ZCode 语义对齐重定义）：
+ * reasoning-pref.mjs — 思考链**批量动作瞬时态**（美化形大改批 · 2026-10-04；第六轮 ZCode 语义对齐重定义）：
  * 块级默认态 = **恒收起**（`chat-text.mjs` `reasoningNode` `open: false` —— ZCode `Reasoning` `defaultOpen=false`
  * 同口径：流式 ∕ 完成皆默认收起，边界自动收起见 `reasoning-times.mjs`）；本档 = 线程头「思考」钮的
  * **总折叠 ∕ 总展开目标态**（瞬时不持久 —— 不落 localStorage：粘性偏好会让后续所有新块按展开构建，

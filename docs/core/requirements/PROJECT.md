@@ -2,11 +2,8 @@
 
 > 板块 = **产品定性**——ThinCoder 产品族的定位与跨产品共享契约（三独立产品 / 共享配置与会话 / Provider 契约）。
 > 本档 = 产品级定性面的**需求层权威**（决策表 + 共享契约——承旧 VSC 档 `PROJECT.md` 的产品级定性面）。
-> VSC 专有面（界面 / 入口 / 审批 / webview 形态 / 会话流时序）= `docs/vsc/requirements/PROJECT.md`（本批同 split——切分规则见 §5.2）。
-> CLI 侧同名档（`thincoder-cli/docs/requirements/PROJECT.md`——产品定性更完整）**已并入（2026-09-15 · CLI 尾部真批 · 按其档头自注对账合并）**——
-> 产品级定性面（品类 / 用户 / 核心承诺 / 产品边界 / 定位坐标 / 两种工作模式 / 总体需求 / v1 范围 / v2 团队记忆 / 技术与质量约束）入 §5；(d) 类入 §6.1。
-> 建档：2026-09-15（**B 式迁移轮 · VSC 批 5**——`thincoder-vscode/docs/requirements/PROJECT.md` 拆分重建：产品级定性面 ⇒ 本档；
-> 旧档原地一字不改、留作参照历史）。
+> VSC 专有面（界面 / 入口 / 审批 / webview 形态 / 会话流时序）= `docs/vsc/requirements/PROJECT.md`（切分规则见 §5.2）。
+> 产品级定性面（品类 / 用户 / 核心承诺 / 产品边界 / 定位坐标 / 两种工作模式 / 总体需求 / v1 范围 / v2 团队记忆 / 技术与质量约束）= §5。
 
 ## 1. 总体定位
 
@@ -25,12 +22,12 @@ ThinCoder 产品族 = **三个独立产品**（终端 CLI + VS Code 扩展 + 桌
 
 | # | 契约 | 内容 |
 |---|---|---|
-| **C1** | 配置共享 | 各端读写 `~/.thincoder/config.json`（`providers[]` + 顶层 `defaultModel`——`provider:model` 复合，新会话起点）；`activeProvider` = 派生读面（迁移期旧字段，迁移即删——非存储契约）；敏感值位可携 `${env:VAR}` **显式引用**（消费侧解析——未设 ∕ 空串即抛错，**无隐式回退**）；旧 VS Code settings 一次性迁移后停用 |
+| **C1** | 配置共享 | 各端读写 `~/.thincoder/config.json`（`providers[]` + 顶层 `defaultModel`——`provider:model` 复合，新会话起点）；`activeProvider` = 派生读面（非存储契约）；敏感值位可携 `${env:VAR}` **显式引用**（消费侧解析——未设 ∕ 空串即抛错，**无隐式回退**）；旧 VS Code settings 一次性迁移后停用 |
 | **C2** | 会话共享 | `~/.thincoder/sessions/`（完整 sha1(cwd) + 槽位）——各端互读，可无缝接续同一会话 |
-| **C3** | Provider 预设权威 | preset 表以核 `thincoder-core/config-presets.mjs` 的 `PROVIDER_PRESETS` 为唯一权威（当前全集 **25** 个，含 `kimi-code` / `glm-code` / `mimo` / `mimoplan` / `claude`（format: anthropic）/ `gemini`（format: google）/ `huawei` / `opencode-go` ∥ `opencode-go-anthropic`（OpenCode Go 双协议侧——同 key，模型按侧选））——各端不再各自硬编码（避免漂移）。〔2026-09-20 渠道接入批同步：旧述权威路径 `thincoder-cli/src/config.mjs` 已不存在（#129 融合后表体住核）；计数 20→21 与 `thincoder-core/config-presets.mjs` 同变〕〔2026-09-29 provider-config-family 批同步：计数 21→22（+ `huawei`——华为云 MaaS；批档 `docs/batches/2026-09-29-provider-config-family.md`）〕〔2026-10-04 opencode-go-preset 批同步：计数 22→24（+ `opencode-go` / `opencode-go-anthropic`——OpenCode Go 订阅网关双协议预设；批档 `docs/batches/2026-10-04-opencode-go-preset.md`）〕〔2026-10-09 server 代理批（gemini-openai）同步：计数 24→25（+ `gemini-openai`——OpenAI 形；批档 `docs/batches/2026-10-09-server-gemini-openai-preset.md`）〕（迁移期引文——档已删） |
-| **C4** | custom 三协议 | 手动输入 name / baseURL（**不携模型**——2026-10-09 清除批），并选 API format：`openai`（默认）/ `anthropic` / `google`，写入 `provider.format`；三协议均有 transport |
-| **C5** | 模型选择两级结构 | 渠道行 → 模型条目 两级菜单（**选取单位 = 模型条目——渠道行非可选**；2026-10-09 清除批）+ add / remove / key 管理项（对齐 CLI `openModelPicker → openModelListForProvider`）；各端按各自界面形态实现（VSC 端形态见 `docs/vsc/requirements/PROJECT.md`） |
-| **C6** | 添加 / 删除 provider 流程 | 对齐 CLI `addProviderFlow` / `removeProviderFlow` / `setKeyFlow`：添加 = 选 preset（过滤已添加）→ 自动填 `baseURL`（不携模型——2026-10-09 清除批）→ 输入 API key（custom 走 C4 手动流程）；删除 = 列出非 active 的 provider；key 管理 = 单独入口 |
+| **C3** | Provider 预设权威 | preset 表以核 `thincoder-core/config-presets.mjs` 的 `PROVIDER_PRESETS` 为唯一权威（当前全集 **25** 个，含 `kimi-code` / `glm-code` / `mimo` / `mimoplan` / `claude`（format: anthropic）/ `gemini`（format: google）/ `huawei` / `opencode-go` ∥ `opencode-go-anthropic`（OpenCode Go 双协议侧——同 key，模型按侧选））——各端不各自硬编码（避免漂移）。 |
+| **C4** | custom 三协议 | 手动输入 name / baseURL（**不携模型**），并选 API format：`openai`（默认）/ `anthropic` / `google`，写入 `provider.format`；三协议均有 transport |
+| **C5** | 模型选择两级结构 | 渠道行 → 模型条目 两级菜单（**选取单位 = 模型条目——渠道行非可选**）+ add / remove / key 管理项（对齐 CLI `openModelPicker → openModelListForProvider`）；各端按各自界面形态实现（VSC 端形态见 `docs/vsc/requirements/PROJECT.md`） |
+| **C6** | 添加 / 删除 provider 流程 | 对齐 CLI `addProviderFlow` / `removeProviderFlow` / `setKeyFlow`：添加 = 选 preset（过滤已添加）→ 自动填 `baseURL`（不携模型）→ 输入 API key（custom 走 C4 手动流程）；删除 = 列出非 active 的 provider；key 管理 = 单独入口 |
 | **C7** | 多 Provider 默认选择 | 自动选第一个有 key 的 provider（用户配 key 本身就是选择行为；配了多个按列表顺序取第一个） |
 | **C8** | API Key 存储 | Key 落 `~/.thincoder/config.json` 明文，各端共享同一份配置（决策动因：各端共享配置 > 密钥链隔离）；旧版 SecretStorage 仅用于一次性迁移，迁移后清除 |
 | **C9** | 与 CLI 记忆互通 | **暂不处理**——VSC 文件式记忆（`.thincoder/memory/` markdown + frontmatter）与 CLI 条目格式兼容；自动互通 / 合并检索未做，决策保留 |
@@ -47,9 +44,9 @@ ThinCoder 产品族 = **三个独立产品**（终端 CLI + VS Code 扩展 + 桌
 
 三端同级独立产品。用户只装哪一个都行；同时装则共享配置与会话，切换无感。
 
-## 5. 产品定性（单产品面——CLI 侧同名档并入 · 2026-09-15）
+## 5. 产品定性（单产品面）
 
-> 来源 = `thincoder-cli/docs/requirements/PROJECT.md`（原地留参照）。三观（`docs/core/requirements/PHILOSOPHY.md`）回答「agent 是谁、信什么」；
+> 三观（`docs/core/requirements/PHILOSOPHY.md`）回答「agent 是谁、信什么」；
 > 本节回答**产品层**问题：ThinCoder 作为一件产品是什么、给谁用、靠什么立足、明确不做什么。
 > **本节是全部需求的上游**——任何需求 / 设计 / 代码与本节冲突时，改它们或走需求变更改本节。
 
@@ -57,7 +54,7 @@ ThinCoder 产品族 = **三个独立产品**（终端 CLI + VS Code 扩展 + 桌
 
 - **品类**：**通用 AI 编码智能体**——能读写代码、与人协作完成软件开发任务。CLI/TUI、VS Code 扩展、桌面端、ACP 接入是接入面，不是定性。
 - **用户**：**把代码交给 agent 负责、自己保留决策权的开发者与团队**——人定方向、agent 写代码。
-  不假设用户在中国、不假设用户用 Node、不假设用户项目的目录形状（见 `docs/core/requirements/PORTABILITY.md` §2——FR10 正文随 v1 需求档归档待搬迁归位）。
+  不假设用户在中国、不假设用户用 Node、不假设用户项目的目录形状（见 `docs/core/requirements/PORTABILITY.md` §2）。
 
 ### 5.2 核心承诺（立身之本）
 
@@ -71,7 +68,7 @@ ThinCoder 产品族 = **三个独立产品**（终端 CLI + VS Code 扩展 + 桌
 
 ### 5.3 明确不做什么（产品边界）
 
-- **不做通用编辑器 / IDE**——不重造编辑器；IDE 内以扩展 / ACP 接入（接入面属形态，不属定性）；桌面端同受此限——不含文件视图与编辑器（2026-09-25 用户裁定，暂缓）；
+- **不做通用编辑器 / IDE**——不重造编辑器；IDE 内以扩展 / ACP 接入（接入面属形态，不属定性）；桌面端同受此限——不含文件视图与编辑器；
 - **不做云服务 / 托管平台**——本地运行、本地存储；团队记忆用 git 同步而非自建云；
 - **不做模型 / 推理服务**——只做 agent 层，直连各家 API（原生 fetch）；
 - **不做工作流引擎**——v2+ 也不当成重心；
@@ -93,21 +90,21 @@ ThinCoder 产品族 = **三个独立产品**（终端 CLI + VS Code 扩展 + 桌
 | 什么时候用 | 默认；日常绝大多数任务 | 改动有规模、要留痕、值得先想清楚再动手的任务（多文件 / 跳模块 / 需评审） |
 | 什么时候不用 | —— | 小探索、即改即验的小修——**流程开销大过收益**，用普通模式 |
 
-两模式的**差别只在约束强度**（机械门的有无）；**管理工作的逻辑同一套**——批次档 + 台账 + 收口（2026-10-09 用户裁定；详细 = `docs/core/requirements/NORMAL-MODE.md` §5.6）。
+两模式的**差别只在约束强度**（机械门的有无）；**管理工作的逻辑同一套**——批次档 + 台账 + 收口（详细 = `docs/core/requirements/NORMAL-MODE.md` §5.6）。
 
 **详细需求**：工程模式 → `docs/core/requirements/ENGINEERING-MODE-V2.md`；普通模式 → `docs/core/requirements/NORMAL-MODE.md` §5–§6。
 
 ### 5.6 总体需求与功能范围
 
-**终极差异化目标 =「团队记忆」**——一人学到、全队皆知（继 teamcode 合作尝试之后的第二次尝试）。
+**终极差异化目标 =「团队记忆」**——一人学到、全队皆知。
 v1 不需要团队记忆、先把 agent 主干做薄做扎实；存储 / 记忆接口为团队记忆**预留扩展位**。
 
-- **v1 功能范围（已全部超额交付）**：Agent 主循环、基础工具集、上下文压缩、TUI、三层记忆体系（超原计划）、
-  Agent 自律工具链（task / plan / goal / verify / recent_changes / question / checkpoint）、子 agent 并行 / MCP / checkpoint 断点恢复（提前交付）；
+- **v1 功能范围**：Agent 主循环、基础工具集、上下文压缩、TUI、三层记忆体系（超原计划）、
+  Agent 自律工具链（task / plan / goal / verify / recent_changes / question / checkpoint）、子 agent 并行 / MCP / checkpoint 断点恢复；
   明确不做（留 v2+）：工作流引擎。
 - **v2 团队记忆（远期——核心原则：存储 / 同步与检索性能分层解耦）**：真相源 = Git 仓库（markdown 条目）；本地索引 = SQLite（`node:sqlite`，可重建易失品）；
   全文检索 = SQLite FTS5（BM25）；语义检索 = embedding 向量存 sqlite BLOB + JS 余弦；混合排序 = FTS5 + 向量 RRF；远期升级位 = pgvector / 中心化服务端（接口预留）。
-  架构方向细化 = `thincoder-cli/docs/design/_archive/ARCHITECTURE-v2.md`（旧树历史档，就地留参照——v2 未启动，以其为输入）。
+  架构方向细化 = `thincoder-cli/docs/design/_archive/ARCHITECTURE-v2.md`（v2 未启动，以其为输入）。
   **已细化的需求决策**：共享内容范围全都要（项目知识 / 架构决策 / 调试经验 / 代码规范）；沉淀双轨制（手动立规矩 + 自动萃取调试经验）；
   embedding = SiliconFlow BAAI/bge-m3（Ollama 本地为离线备选）；git 同步层 A+B 分层且 B 可选（Team 层可选独立仓库 `~/.thincoder/teams/` + Project 层 `.thincoder/memory/`）；
   条目格式 = Markdown + frontmatter；冲突策略 = 结构规避 + 诚实报错；索引重建 = 增量为主、重建兜底；自动提取 = 手动触发、自动候选、人工把关（`thincoder distill` / TUI `/distill`）。
@@ -126,53 +123,5 @@ v1 不需要团队记忆、先把 agent 主干做薄做扎实；存储 / 记忆�
 | 国际化 | **面向全球，不做中文限定** | 提示词 / TUI / 系统消息均英文；不因团队在中国假设用户也是 |
 | LLM 调用 | 原生 `fetch` 直连 OpenAI 兼容接口 | 不引 SDK |
 
-**质量约束（硬约束——来自 teamcode 反面教材）**：交付必须实测可跑（生成后不实际运行验证 = 类型错误 / 依赖错位 / API 混用）；
-文档不得超出实现（PPT 项目教训）；依赖面零引入；死代码随批清理。
-
-## 6. 不并项与历史沿革
-
-### 6.1 历史沿革（(d) 类——**不并**）
-
-> 来源档 `thincoder-vscode/docs/requirements/PROJECT.md`——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
-
-| 旧档位置 | 内容 | 何故不并 |
-|---|---|---|
-| 旧档头注「归位注记」（自旧树设计层的 REQUIREMENTS 档归位——原档已不存在；原 v1 功能范围节拆出至 `FEATURES（VSC 侧）`） | 旧树内归位史 | 旧树批次语境——本档即基准层权威登记 |
-| 旧档「待决策」节头注（「原列各议题均已标记决策态」） | 决策过程注记 | 决策态已全部落定——结论入 §2–§3，过程注记不并 |
-| 旧档「独立产品，不依赖 thincoder CLI。零外部依赖（npm + 文件系统）」散行 | 定性重述 | 已并入本档 §2（同一事实只详述一处——D2） |
-
-> **CLI 侧来源档** `thincoder-cli/docs/requirements/PROJECT.md`（2026-09-15 CLI 尾部真批对账并入——§5）——原地保留作参照历史。下列内容不并入本档：
-
-| 旧档位置 | 内容 | 何故不并 |
-|---|---|---|
-| 旧档头注（板块行 + 状态行「v1 已交付（2026-08）；v2 规划中」+ 归位注「2026-09-10 自旧树设计档迁入——三层重排」） | 时点状态 / 旧树归位史 | 批次语境——现行态已入 §1–§3 / §5；「v1 已交付」事实面已入 §5.6 |
-| 旧档 §0 引言行 / 旧节号的「详见」指针（旧树相对路径） | 旧树指针形态 | 已改指基准层档（§5 段头与 §5.5） |
-| 旧档 §3.1「模型兼容」行的渠道枚举（「支持 DeepSeek/Kimi/GLM/Qwen/MiniMax 等最新一代」） | 时点渠道枚举 | 易漂移枚举不并——定性句「只跟顶流、只跟最新」已入 §5.7；现行渠道清单 = 产品代码面（预设表） |
-
-### 6.2 不并项登记（拆分去向——逐项登记）
-
-**切分规则（本批裁定——承批次任务书）**：跨产品契约（与 CLI 共享磁盘文件 / 协议 / 行为对齐）⇒ 本档（core）；仅本端实现 / 界面 / 宿主面 ⇒ `docs/vsc/requirements/PROJECT.md`。
-
-| 旧档面 | 内容 | 去向 |
-|---|---|---|
-| 「已确定的决策」表的 界面 / 入口 / LLM 调用 / 工具审批 / 模型能力 / Session 标题 六行 | VSC 端实现与界面定性 | `docs/vsc/requirements/PROJECT.md` |
-| 模型选择契约的 webview 实现形态（hover flyout 子菜单）· 协议 transport 实现登记 | VSC 端实现形态 | 同上（契约本体 = 本档 C5 / C4） |
-| 「待决策」节：安全边界 / Multi-root 策略 / Webview 技术选型 / 国际化 | VSC 端产品决策 | 同上 |
-| 「会话流时序对齐 CLI」节（2026-09-09 需求点——待设计） | webview 面需求（owning board = panel/webview） | 同上（待设计登记） |
-| CLI 侧同名档（`thincoder-cli/docs/requirements/PROJECT.md`） | CLI 产品定性正文（更完整） | **已并入（2026-09-15 CLI 尾部真批——按其档头自注对账合并）**——产品级定性面入 §5；(d) 类入 §6.1；VSC 专有面本就不在该档（CLI 档无 VSC 面） |
-
-## 变更记录
-
-- 2026-10-09（**server 代理批（gemini-openai）· 需求侧随动 · 主 agent——需求档笔权**——承批档 `docs/batches/2026-10-09-server-gemini-openai-preset.md` · 台账 #1128+#1129）：§3 C3 计数 24⇒25（+ `gemini-openai`——OpenAI 形预设（Google OpenAI 兼容端点）；server 端预设子集 20⇒21 随动）。
-- 2026-10-09（**普通模式工作管理统一批 · 需求侧随动 · 主 agent——需求档笔权**——承批档 `docs/batches/2026-10-09-normal-work-management.md` · 台账 #1111）：§5.5「两种工作模式」表两处滞后收正——「是什么」普通侧补「批次档 + 台账，收口一次走文档规范化 + 独立评审」、「质量靠什么」普通侧补「收口一次独立评审」；表后新增定性句「差别只在约束强度（机械门的有无）；管理工作的逻辑同一套——批次档 + 台账 + 收口」。依据 = 用户 2026-10-09 连述（`docs/core/requirements/NORMAL-MODE.md` §5.6）。
-- 2026-10-09（**清除批 · 需求档同拍 · 主 agent**〔自动跑完授权 · 可 revert〕——承批 `docs/batches/2026-10-09-provider-default-model-purge.md` · 台账 #1122）：§3 C4 收正（custom 表单**不携模型**——手动输入仅 name / baseURL + format）∥ C5 收正（两级菜单——**选取单位 = 模型条目**，渠道行非可选）∥ C6 收正（添加流只自动填 `baseURL`——预设不携模型）。**零新语义**（收正 + 口径统一）。
-- 2026-09-30（**doc-sweep 批 · C1 收正** · 主 agent——需求档笔权）：§3 C1 行按现盘收正——① `providers[]` + **顶层 `defaultModel`**（`provider:model` 复合，新会话起点；`thincoder-core/config.mjs:34`）替旧述「`activeProvider`」（= 派生读面 ∕ 迁移期旧字段，迁移即删——`config-io.mjs:143/:167-173` · `config-migrate.mjs:33-44`）；② 「`apiKey` 缺省回退环境变量」⇒ 敏感值位 **`${env:VAR}` 显式引用**（消费侧解析——未设 ∕ 空串即抛错，无隐式回退；设计 CONFIG §6.2 ∕ §6.3 · D-CF5）。依据 = `docs/batches/2026-09-30-doc-sweep.md` §2.4-1（转出项 1）。
-
-- 2026-09-25（**桌面端立项** · 需求面实施轮 · 主 agent——需求档笔权）：产品族由两产品扩为三产品——§1 产品族句 · §2 依赖行补桌面端宿主 · §3 契约主体改「各端」（C1 / C2 / C8）· §4 改「三端关系」表（原 CLI↔VSC 双端图）；§5.1 品类接入面枚举补「桌面端」；§5.3 边界补「桌面端不含文件视图与编辑器（暂缓）」；§5.6 撤「桌面 GUI」不做项（用户裁定立项）。新档 = `docs/desktop/requirements/PROJECT.md`（第四部分首档）。
-
-- 2026-09-15（**CLI 尾部真批 · 并入既有（对账合并——用户裁定②）· eng-designer**）：`thincoder-cli/docs/requirements/PROJECT.md` 逐节对账并入——
-  产品级定性面入新增 §5（品类 / 用户 / 核心承诺 C1–C5 / 产品边界 / 定位坐标 / 两种工作模式 / 总体需求与 v1 范围 / v2 团队记忆分层与已细化决策 /
-  技术约束九项 / 质量约束四条）；既有「不并项」「体量」两节顺延为 §6 / §7；v2 架构指针改现状全路径（`thincoder-cli/docs/design/_archive/ARCHITECTURE-v2.md`——历史档留参照）；
-  (d) 类（状态行 / 旧树归位注）入 §6.1。旧档原地一字不改。
-- 2026-09-15（**B 式迁移轮 · VSC 批 5**）：建档——`thincoder-vscode/docs/requirements/PROJECT.md` **拆分重建**：
-  产品级定性面 ⇒ 本档；VSC 专有面 ⇒ `docs/vsc/requirements/PROJECT.md`（切分规则见 §5.2——承 §7.2 D4 归属疑变的父侧裁定）。
+**质量约束（硬约束）**：交付必须实测可跑（生成后不实际运行验证 = 类型错误 / 依赖错位 / API 混用）；
+文档不得超出实现；依赖面零引入；死代码随批清理。

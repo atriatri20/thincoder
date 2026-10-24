@@ -3,8 +3,8 @@
  * 数据目录派生 `dataDir` ∥ 键文件路径派生 `credentialKeyPath` ∥ 键加载/生成 `loadOrCreateCredentialKey` ∥
  * AES-256-GCM 加/解密 `encryptSecret` ∥ `decryptSecret`。
  *
- * 单一出处（两消费方同址：sandbox 托管接入 + project 域 git 源 PAT）——防第二份路径规则（两份 `credentials.key`）。
- * 本件自 `sandbox/onboarding.mjs` 逐字抽出（零行为变）；后者同名再导出（零改调用方）。
+ * 单一出处（消费方同址：沙盒主机凭据 ∥ 私有仓凭据 ∥ 连接材料 ∥ 成员面凭据 ∥ MCP 凭据 ∥ project 域 git 源 PAT）——防第二份路径规则（两份 `credentials.key`）。
+ * 本件自沙盒任务面逐字抽出（KD-SV-119——零行为变；任务面 2026-10-14 随任务式装机退场删净，本件存续为各消费方单源）。
  * 包形 = `iv|tag|ct` base64 三段；键文件 = 32 字节随机 ∥ 首用生成 ∥ 0600 ∥ 不落库。
  */
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
@@ -17,7 +17,7 @@ export function dataDir(config = {}) {
   return dirname(dbPath) === "." ? "data" : dirname(dbPath)
 }
 
-/** 凭据键文件路径（KD-SV-119 单源——= `join(<db 档所在目录 ∥ 缺省 data>, "credentials.key")`；与 onboarding 现口径逐字同值）。 */
+/** 凭据键文件路径（KD-SV-119 单源——= `join(<db 档所在目录 ∥ 缺省 data>, "credentials.key")`）。 */
 export function credentialKeyPath(config = {}) {
   return join(dataDir(config), "credentials.key")
 }
@@ -45,7 +45,7 @@ export function encryptSecret(plaintext, key) {
   return [iv.toString("base64"), cipher.getAuthTag().toString("base64"), ciphertext.toString("base64")].join("|")
 }
 
-/** AES-256-GCM 解密（形不合/篡改 ⇒ 抛——调用方转任务失败）。 */
+/** AES-256-GCM 解密（形不合/篡改 ⇒ 抛——调用侧转工具级错误人话；消费面 = 主机凭据 ∥ 私有仓凭据 ∥ 连接材料 ∥ 成员/MCP 凭据 ∥ project 域 git 源）。 */
 export function decryptSecret(payload, key) {
   const parts = String(payload ?? "").split("|")
   if (parts.length !== 3) throw new Error("凭据密文形非法（iv|tag|ct）")

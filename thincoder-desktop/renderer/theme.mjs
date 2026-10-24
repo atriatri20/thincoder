@@ -88,7 +88,7 @@ export function setTheme(value, { doc = globalThis.document, storage = defaultSt
  *  `documentElement` 的 `data-accent`（缺省 "blue" —— theme.css `--accent` 即蓝，零覆写）；
  *  单写者 = 本档（`initAccent` 装配期一次 ∕ `setAccent` 出口）；持久化 = `localStorage`
  *  （键 `thincoder.accent`——沿 theme 键同族）；读 ∥ 写皆捕获 + console.error（零静默）。
- *  预设色值（浅 ∕ 深两枚 —— 每预设一对 `light-dark()` 覆写住 codex.css；消费面 = `var(--accent)` 全域联动）。 */
+ *  预设色值（浅 ∕ 深两枚 —— 每预设一对 `light-dark()` 覆写住 beauty.css；消费面 = `var(--accent)` 全域联动）。 */
 export const ACCENTS = Object.freeze([
   { id: "blue", light: "#2f6feb", dark: "#5b8def" },
   { id: "teal", light: "#0e8a80", dark: "#3ec1b3" },
@@ -136,7 +136,7 @@ function accentWriteStored(storage, value) {
  *  HSL 亮度钳制（色相 ∕ 饱和保留）派生两枚 inline 变量，恒伴 --accent 落地：
  *  --accent-text —— accent 混色**文字**的亮度上限（浅色主题 L ≤ 0.52；深色主题 L ≥ 0.66 —— 深底要够亮）；
  *  --accent-solid —— 白前景**实心钮底**的钳制（浅色 L ≤ 0.55；深色 L ∈ [0.50, 0.66]）。
- *  消费面（codex.css）：气泡 ∕ 行内代码 ∕ code-lang ∕ 各 active 文字 → text；发送钮底 → solid。
+ *  消费面（beauty.css）：气泡 ∕ 行内代码 ∕ code-lang ∕ 各 active 文字 → text；发送钮底 → solid。
  *  表面（气泡底 ∕ 色板圆 ∕ 焦点环 ∕ 描边）仍读真 --accent ——「选什么显示什么」。 */
 function hexToRgb(hex) {
   const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex)

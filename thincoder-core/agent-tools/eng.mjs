@@ -12,6 +12,7 @@
  * (subagent-spawn.mjs). See docs/design/ENG-TOKEN-BINDING-TUNING.md §5/§5.1 (F-R16).
  * #41（2026-09-18）：enter 分支改「先判后翻」——判据 = 入口决策树单源
  * `resolveEngineeringManifest`（docs/core/design/MANIFEST.md §2.8 F2 / KD-M1-20/21）；
+ * **可拒面 = 仅「档非法」一格**（工作区 `workspace` 放行——零附着，模式照开）；
  * 拒翻 ⇒ 返回原因串 + **零副作用**（模式保持 OFF）。OFF 方向与幂等 enter 零改。
  */
 import { ENG_ON_REMINDER, ENG_OFF_REMINDER } from "../agent.mjs"
@@ -74,15 +75,16 @@ export const engTool = {
         return "Engineering mode already active. Existing design tokens stay valid."
       }
       // #41 先判后翻（MANIFEST.md §2.8 F2 / KD-M1-21）：判据 = 入口决策树**单源**
-      // （resolveEngineeringManifest——KD-M1-20），判据通过才写态。拒翻 ⇒ 返回原因串 +
+      // （resolveEngineeringManifest——KD-M1-20），判据通过才写态。**可拒面 = 仅「档非法」格**
+      // （工作区 `workspace` ⇒ 放行——**零附着**：无项目档可附，模式照开）；拒翻 ⇒ 返回原因串 +
       // **零副作用**（不清 token / 不重置 _advisorRuns / 不入列 ENG_ON_REMINDER /
       // 不动 _lastEngState / 不触镜像缝）；准 ⇒ 缺档格就地建档（writer:'main'）+
       // agent.manifest ← 结果（翻转面唯一赋值点——相位行当回合起活，§2.8 F2 放行行）。
       const r = resolveEngineeringManifest(ctx.agent.cwd ?? ctx.cwd ?? process.cwd(), { writer: "main" })
-      if (!r.ok) {
+      if (!r.ok && r.code !== "workspace") {
         return `Error: cannot enter engineering mode — ${r.message} (mode unchanged)`
       }
-      ctx.agent.manifest = r.manifest
+      ctx.agent.manifest = r.ok ? r.manifest : null // 工作区放行 ⇒ 零附着（显式置 null——§2.8 F2 放行行）
       ctx.agent.config.agent.engineering = true
       // FR31 ③ / KD10（翻转点①）：工程模式 ⇒ planMode 恒 false——中途开模式时清残留
       //（planMode 位 + reminder 计数 + 未注入的 plan 提示语），半状态（工程纪律 × plan 只读）不产生。

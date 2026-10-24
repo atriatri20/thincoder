@@ -3,10 +3,9 @@
 > 板块 = **编辑工具**；本档 = **apply_patch 语义的权威源**（逐工具权威档之一）。
 > 地图与契约要点 = `docs/core/design/TOOLS.md` §6.6 · §8.2——本档不复制其内容（D2）。
 > 共享底层 = `docs/core/design/EDIT-HELPERS.md`（EOL 写回 / 新建随目录多数派——本档只指不述）。
-> 双端：CLI `thincoder-core/tools/patch.mjs`（`applyPatchTool`）· VSC `thincoder-vscode/src/tools/more-file.mjs`（同机制，各自实现）（VSC 自持镜像已删——W14 已迁核，现体同指 `thincoder-core/tools/patch.mjs`）。 （迁移期引文）
+> 双端：CLI `thincoder-core/tools/patch.mjs`（`applyPatchTool`）· VSC `thincoder-vscode/src/tools/more-file.mjs`——VSC 现体同指 `thincoder-core/tools/patch.mjs`。
 > 模型可见描述 = `thincoder-core/tool-docs/apply_patch.md`（提示词面 / 产品代码）。
 > 需求侧 = `docs/core/requirements/TOOLS.md`（工具系统板块；CLI 树无逐工具需求档）。
-> 建档：2026-09-15（**B 式迁移轮 · 第 1 批**——`thincoder-cli/docs/design/APPLY-PATCH.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
 
 ## 1. 定位
 
@@ -42,9 +41,9 @@ hunk 按**上下文 / 删除行定位，非行号**——但上下文必须与�
 
 跨文件 / 多文件 / 整块 / 新建多个 → apply_patch（一次授权）；单文件小改 → edit；加新行 → insert_after；整文件重写 → write。（路由权威 = AGENT-LOOP 板。）
 
-## 6. 机制面（B 式迁移并入——现状路径）
+## 6. 机制面
 
-### 6.1 实现坐标（as-of 2026-09-15 实核）
+### 6.1 实现坐标
 
 | 面 | 落点 | 实核 |
 |---|---|---|
@@ -54,41 +53,14 @@ hunk 按**上下文 / 删除行定位，非行号**——但上下文必须与�
 | 返回文案 | `thincoder-core/tools/patch.mjs:243`（`Applied patch to N file(s)`） | 在位 |
 | 注册面 | `thincoder-core/tools/index.mjs:5`（import）· `:21`（注册表） | patch 组（apply_patch / delete） |
 | 描述面（模型可见） | `thincoder-core/tool-docs/apply_patch.md` | 在位（`DESC()` 加载） |
-| VSC 对位实现 | `thincoder-vscode/src/tools/more-file.mjs:239`（`apply_patch`）（W14 已迁核——自持镜像已删，现体 = 核 `thincoder-core/tools/patch.mjs`） | 同名机制 · 独立实现 （迁移期引文） |
+| VSC 对位实现 | `thincoder-vscode/src/tools/more-file.mjs:239`（`apply_patch`）——现体 = 核 `thincoder-core/tools/patch.mjs` | 同名机制 |
 
-**VSC 端差异（并入 · 批 8）**：VSC 端 `more-file.mjs:239`（`apply_patch`）——同机制独立实现；EOL 写回 / 新建随目录多数派（F1 / F2）同口径（`docs/core/design/EDIT-HELPERS.md` §4）；**无编辑器路径分支**（apply_patch = 整文件域、不进编辑器 range——见 §1）；宽容格式三处（§2）双端同。（W14 已迁核——VSC 自持镜像已删，现体 = 核 `thincoder-core/tools/patch.mjs`） （迁移期引文）
+**VSC 端差异（编辑器路径面）**：VSC 端 `more-file.mjs:239`（`apply_patch`）——同机制；EOL 写回 / 新建随目录多数派（F1 / F2）同口径（`docs/core/design/EDIT-HELPERS.md` §4）；**无编辑器路径分支**（apply_patch = 整文件域、不进编辑器 range——见 §1）；宽容格式三处（§2）双端同。
 
-## 7. 并入的关键决策记录（含否决备选）
+## 7. 关键决策记录
 
-| # | 决策 | 理由 / 否决备选 |
+| # | 决策 | 理由 |
 |---|---|---|
 | D-P1 | **hunk 按锚序列定位**（无坐标 hunk 须含 ≥1 `-` 行） | 上下文/删除行是唯一可靠锚；纯 `+` 无锚 = 位置不明（宁可拒，不许猜） |
-| D-P2 | **多文件原子**（全有或全无） | 半应用的多文件补丁留下不自洽工作树；否决「逐文件提交部分成功」 |
-| D-P3 | 文件头**容缺但特报**（新建名缺 `+++` 显式拒） | 新文件名不可推导——特报优于笼统语法错；否决「按 `---` 侧推名」 |
-| D-P4 | 删文件**不做**（专用 delete 工具承担） | 删除是闸控动作，混入 patch 会把审批面变宽 |
-
-## 8. 不并项与历史沿革
-
-### 8.1 历史沿革（(d) 类——**不并**）
-
-> 来源档 `thincoder-cli/docs/design/APPLY-PATCH.md`（CLI 产品档）——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
-
-| 旧档位置 | 内容 | 何故不并 |
-|---|---|---|
-| 旧档状态行 | 时点状态行 | 批次语境——现行态已入 §1–§5 |
-| 旧档「变更记录」节（2026-09-08 文档重组） | 文档重组流水 | 历史叙述——本档自有变更记录 |
-| 旧档括注的 `TOOLS.md` §6.4 节号与 `AGENT-LOOP.md:140-141` 旧坐标 | 旧节号 / 迁移前行号 | 现行地图节号 = `TOOLS.md` §6.6；路由指针见 §5（不引旧行号） |
-
-### 8.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
-
-| 旧档面 | 内容 | 何故不并（去向 / 触发） |
-|---|---|---|
-| 描述面正文（参数描述全文） | 模型可见文本 | **提示词面 = 产品代码**——落点 `thincoder-core/tool-docs/apply_patch.md` |
-| delete 工具语义 | 删除面契约 | 非编辑工具——归 `docs/core/design/TOOLS.md` §6.7 逐工具契约 |
-| VSC 档（`thincoder-vscode/docs/design/APPLY-PATCH.md`）的批次材料 / 变更记录 | 一次性材料 + 历史流水 | VSC 差异面已并 §6.1（VSC 端差异块）；批次档承载 |
-
-## 变更记录
-
-- 2026-09-15（**B 式迁移轮 · 第 1 批**）：建档——`thincoder-cli/docs/design/APPLY-PATCH.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标改写为现状路径（`thincoder-core/tools/patch.mjs` · VSC `more-file.mjs`）；批次材料 / 状态行 / 变更流水不并（§8）。
-- 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：§6.1 增 **VSC 端差异块**（同机制 / EOL 同口径 / 无编辑器路径分支）；§8.2 登记 VSC 源档批次材料。
-- 2026-09-15（**S2 W14 落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：双端行 + §6.1「VSC 对位实现」行 + VSC 端差异块补迁核注（VSC 自持档已删——现体 = 核 `thincoder-core/tools/patch.mjs`）；机制条文零改。
+| D-P2 | **多文件原子**（全有或全无） | 半应用的多文件补丁留下不自洽工作树 |
+| D-P3 | 文件头**容缺但特报**（新建名缺 `+++` 显式拒） | 新文件名不可推导——特报优于笼统语法错 |

@@ -190,7 +190,7 @@ export function mountSessionBar(root, state, handlers = {}) {
 }
 
 /** 面接线（面内态 ∘ 注入 handlers 合流；**唯一装配点** —— 树面只认这一层）：开合 ∕ 选择 ∕ 换形三键 ∕ 删除请求。
- *  `onToggleReasoning` 透传（Codex 形大改批 · 2026-10-04 —— 思考链总折叠钮出口；本档零实现，单源在 `app.mjs`）。 */
+ *  `onToggleReasoning` 透传（美化形大改批 · 2026-10-04 —— 思考链总折叠钮出口；本档零实现，单源在 `app.mjs`）。 */
 function wireFace(root, handlers) {
   return {
     onToggleReasoning: handlers.onToggleReasoning,
@@ -228,7 +228,7 @@ function render(root, handlers) {
   mountSessionBar(root, store.get(), handlers)
 }
 
-/** 点外关（VSC `chat.js:116-121` 对位 · 文档级一枚 —— 选择器全体〔含下拉〕内点按不关 ⇒ 条内零误关）。
+/** 点外关（VSC `chat.js` 对位 · 文档级一枚 —— 选择器全体〔含下拉〕内点按不关 ⇒ 条内零误关）。
  *  判据 = **类名祖链**（非节点引用）：开合处理器先于本监听器重挂树 ⇒ 旧节点已离树，节点引用判据必假。 */
 function bindOutsideClose(root) {
   const doc = docOf(root)
@@ -278,7 +278,7 @@ function submitRename(root, key, handlers) {
     .catch((error) => console.error("[renderer] session:rename failed:", error))
 }
 
-/** 确认面单例（同一刻至多一枚 —— VSC `session-bar.js:103-104` 同径）。 */
+/** 确认面单例（同一刻至多一枚 —— VSC `showSessionDeleteConfirm` 同径）。 */
 let confirmFace = null
 
 /** 关闭确认面（两键 ∕ 背板共用尾）。 */
@@ -315,6 +315,6 @@ function showDeleteConfirm(root, item, handlers) {
   holder.append(backdrop)
   holder.append(popover)
   confirmFace = { popover, backdrop }
-  // 安全默认：焦点落「取消」（VSC `session-bar.js:126` 同径：+50ms）
+  // 安全默认：焦点落「取消」（VSC `showSessionDeleteConfirm` 同径：+50ms）
   setTimeout(() => popover.querySelector?.(".auto-confirm-no")?.focus?.(), 50)
 }

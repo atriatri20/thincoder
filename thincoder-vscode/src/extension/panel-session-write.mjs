@@ -10,9 +10,9 @@
  * `status`。
  *
  * 缝保持（KD-12）：`panel-session.mjs` 按**既有导出名** re-export 本档两件 ⇒ 消费档 import
- * 面零改（`chat-panel.mjs:20` 静态 · `agent-lifecycle-singleton.test.mjs:36` ·
- * `config-io-panel.test.mjs:84` / `provider-model-guard.test.mjs:175,184,194`（动态）·
- * `at-refs-restore.test.mjs:19`）。
+ * 面零改（`chat-panel.mjs` 静态）。
+ *
+ *
  *
  * 环 import（同 `panel-messages ↔ panel-session` 先例）：本档反向 import 主档的 `ensureSlot`
  * / `ensureSlotAsync`——两件均**只在本档函数体内**解引用（延迟解引用）⇒ 两模块顶层零跨环读取
@@ -88,7 +88,7 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
     display: [], tasks: extra.tasks ?? existing.tasks ?? [],
     planMode: existing.planMode ?? false,
     // §11.7（2026-09-08）：tasks/goal/pendingReminders 会话级三字段随 agentState 回写槽
-    // （onComplete {...agentState} spread 携入——CLI saveSession session.mjs:131/137 同款）。
+    // （onComplete {...agentState} spread 携入——CLI `saveSession` 同款）。
     // 键缺席（undefined——abort/finally 保存只带 activeProvider）→ 保留槽值；键在场（干净
     // 完成回合）→ 内存即权威（空态 []/null 如实写——含 goal 工具完成/取消的显式清空）。
     goal: extra.goal !== undefined ? extra.goal : (existing.goal ?? null),

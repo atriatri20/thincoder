@@ -16,7 +16,7 @@
  *   ② 步 3 目录出口走装配面项目面链（`onProjectOpened` = `app.mjs` `openDir`，含刷新 + 「点开即可续」）
  *      —— 本档零算法副本。
  *   ③ 收尾复读配置闸（`config:read` ⇒ 三态归一）⇒ 落槽；仍未配 ⇒ 退场旗（会话内幂等，下次冷启动重新过闸）；
- *      成功判据 = 回执携布尔 `configured`（该通道无 `ok` 旗标——读失败 fail-loud 抛出；形源 = `thincoder-desktop/src/main/ipc.mjs:103-104`）。
+ *      成功判据 = 回执携布尔 `configured`（该通道无 `ok` 旗标——读失败 fail-loud 抛出；形源 = `thincoder-desktop/src/main/ipc.mjs`）。
  *   ④ 失败面零静默：目录钩缺 / 收尾读失败 ⇒ `deps.report` 落面串（表内码 / 核错误串直传，词面归视图 `reasonWord`）。
  * 纪律：零 `node:` / 零裸包 · 本档 import 面 = `store.mjs` 纯动作 ∥ 视图常量（`views/onboarding.mjs`）∥ 团队面档
  * （`mount-team.mjs`——同名冲突码字面单源；**零反向** —— 装配面单向往回，无环）。

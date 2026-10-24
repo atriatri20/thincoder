@@ -30,7 +30,7 @@ function postIndexProgress(panel, p) {
 }
 
 /** 核库读数（本项目 origin）——files = code+doc 的 `COUNT(DISTINCT path)`，chunks = 行数。
- *  CLI `backgroundIndex` 同形（`tui/startup.mjs:263-289`）；本端按 origin 限定项目。
+ *  CLI `backgroundIndex` 同形（`showStartup`）；本端按 origin 限定项目。
  *  origin 键 = **归一形**（TUI 假死批 2026-09-18 · 核 `MEMORY.md` §6.11：核内写入面已归一，
  *  本读数点按 `normalizeOrigin` 取同形键——否则 Windows 反斜杠 cwd 读不到本项目行）。 */
 function readIndexCounts(memory, cwd) {

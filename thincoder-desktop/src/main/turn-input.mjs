@@ -19,7 +19,7 @@ import { providerStateOf, slotOfKey } from "./session-slots.mjs"
  *   ② `defaultModel` 非空而解析未过（未知渠 ∕ 模型段空 ∕ 形态非法）⇒ `defaultModel`；
  *   ③ `defaultModel` 缺 ∥ 空 ⇒ **有持 key 渠道** ? `defaultModel` : `provider`（#841 判据换源：
  *      「渠表非空」⇒「有持 key 渠道」——全无 key 态出真·无 key 词；持 key 判据 = `apiKey` trim 非空，
- *      与核 `hasKey` 同判（`thincoder-core/model-ref.mjs:78-81`）、env 变量不是密钥源）；
+ *      与核 `hasKey` 同判（核 `defaultModelReason`）、env 变量不是密钥源）；
  *   ④ `config` 不可用（测试桩 ∥ 缺）⇒ `provider`（保守——落回现词）。
  *  纯函数、零副作用（`renderer/composer-sync.mjs` 词路由按类出词）。 */
 export function providerKindOf(agent) {
@@ -129,7 +129,7 @@ export function createTurnInput({ post, ensure, flights, queued, chain, suspensi
   }
 
   /** `msg:interrupt`：无在飞 ⇒ `idle`；在飞 ⇒ abort（**携核 abort 面**：`message` 非空串 ⇒ `{ interrupt: true, message }`
-   *  —— Ctrl+I 同上下文续跑，核 `agent.mjs:295-304,417-424` 读 `signal.reason`；缺 ∕ 空 ⇒ 裸 abort = 停回合不续跑）
+   *  —— Ctrl+I 同上下文续跑，核 `runAgent` 读 `signal.reason`；缺 ∕ 空 ⇒ 裸 abort = 停回合不续跑）
    *  + 本键待决门按拒结算（**含撞帽续跑询问门**：待答中中止 ⇒ 询问按取消结算 ⇒ 收口）。
    *  **#656（KD-52 ②）**：cap 询问待答 ∧ 携文 ⇒ **入口预检**（`queued.add` 权威判）——满 ⇒ 整调用回
    *  `{ ok: false, reason: "queue-full" }` 且**零中止**（不 abort ∕ 不 `denyGates`——询问在场 ∕ 回合照旧 ∕

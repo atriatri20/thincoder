@@ -22,7 +22,7 @@ test("① 行内钮 = 归档（⋯ 全功能钮退场；右键菜单保留）", 
   const src = read("thincoder-desktop/renderer/mount-sidebar.mjs")
   assert.ok(src.includes("sidebar-item-archive"), "归档钮在场")
   assert.ok(src.includes('t("sidebar.archive")'), "可及名 ∕ title = 归档词键")
-  assert.ok(src.includes("handlers.onArchive?.(item.key)"), "点击接 onArchive（与右键菜单同出口）")
+  assert.ok(src.includes("handlers.onArchive?.(item.key, opts.cwd ?? null)"), "点击接 onArchive（与右键菜单同出口）")
   // ⋯ 钮退场（判据 = 可执行行，注释里记沿革不算）
   const offenders = src.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l) && l.includes("sidebar-item-more"))
   assert.deepEqual(offenders, [], "零 `sidebar-item-more` 残留")
@@ -30,7 +30,7 @@ test("① 行内钮 = 归档（⋯ 全功能钮退场；右键菜单保留）", 
 })
 
 test("② CSS：悬停时间让位 ∕ 归档钮就位（同排切换）", () => {
-  const css = read("thincoder-desktop/renderer/codex.css")
+  const css = read("thincoder-desktop/renderer/beauty.css")
   assert.ok(/\.sidebar-item:hover\s+\.sidebar-item-time\s*\{\s*display:\s*none/.test(css), "悬停隐藏时间")
   assert.ok(/\.sidebar-item:hover\s+\.sidebar-item-archive[\s\S]{0,80}opacity:\s*1/.test(css), "悬停显现归档钮")
   assert.ok(/\.sidebar-item-archive::before\s*\{\s*content:/.test(css), "字形住 CSS content（零字形字面）")

@@ -1,7 +1,7 @@
 /**
  * plan.mjs — 计划卡面（`docs/desktop/design/UI.md` §1 计划面行）：**核件直消费 + 端壳**
  * （「桌面处理流 · VSC 对齐」批 R1 #3 · KD-F1）——面板体与**显隐判据**单源 = 核包 `cards/panel.mjs`
- * （`renderTaskPanel` / `taskPanelVisible` —— VSC ∕ 桌面同一文件；VSC 壳 = `webview/panels.js:15-17`）。
+ * （`renderTaskPanel` / `taskPanelVisible` —— VSC ∕ 桌面同一文件；VSC 壳 = `panels.js` 的 `taskPanelVisible` / `renderTaskPanel`）。
  *   **纯呈现 · 零出口**（`ev:task` 消费 —— 挂载面 = `thincoder-desktop/renderer/mount-cards.mjs`）。
  *   ① 核 `renderTaskPanel(progress, { shown })` ⇒ `{ el, visible }` 两态：`visible` 真 ⇒ 端以核体元素装卡
  *      （卡根 = 端壳装饰 `div.plan-card[data-card="task"]` —— 核体为 `DocumentFragment`，无根元素可挂锚）；

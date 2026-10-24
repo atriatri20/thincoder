@@ -20,7 +20,7 @@ export const EVENT_SENTINEL = "⟦ev⟧"
 
 /** 形态判据（**单源——唯一表达式**）：`⟦ev⟧<小写名>` + RS 终止符同现。
  *  D13 负向边界（load-bearing）：放宽为无终止符形态会吞真实正文（先例教训见
- *  `thincoder-cli/src/tui/render.mjs:250-252`）。形态域 = 开集——未知名同判（客户端
+ *  `thincoder-cli/src/tui/render.mjs` 的 `sanitizeDisplay`）。形态域 = 开集——未知名同判（客户端
  *  SHOULD 容忍未知 state；新增事件名不破坏契约）。 */
 const EVENT_FORM_RE = /^⟦ev⟧([a-z]+)\x1e/
 const RS = "\x1e"

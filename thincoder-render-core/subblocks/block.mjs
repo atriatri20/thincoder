@@ -47,7 +47,7 @@ export function renderSubDesc() {
 
 /** 子代理 chunk 入块构图（核化自 VSC `webview/streaming.js` `subagentChunk` 的块侧两面——内容追加 + 状态词写点；
  *  出生闸本体 = 核 `ensureSubBlock`（`state.mjs`）；其调用序 / 丢弃痕迹 / 跟滚脏集 / 帧调度留端）。`kind` 单点
- *  默认 `"text"`（R4 埋雷归一——与桥 `panel-toolpanel.mjs:15` 及 CLI `tool-events.mjs:324` 同值）。让位期新行到达
+ *  默认 `"text"`（R4 埋雷归一——与桥 `panel-toolpanel.mjs` 及 CLI `tool-events.mjs` 同值）。让位期新行到达
  *  （旗标假）⇒ 置 `_subFollowNew`（出口钮两态「新内容」判据——KD-RC-8）。 */
 export function renderSubagentChunk(block, m) {
   const kind = m?.kind ?? "text"

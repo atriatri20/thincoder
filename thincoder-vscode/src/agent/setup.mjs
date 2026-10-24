@@ -121,11 +121,17 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // TRACE-STORE-VSC（D-TR6 镜像——核 config.mjs DEFAULTS.traces 合并同语义）：traces 段
   // 默认 OFF（2026-09-05 发布隐私裁定）——agent.config.traces 由此整建——每轮拾取外部变更
   let cfgTraces = { ...DEFAULTS.traces }
+  let cfgFetch = { ...DEFAULTS.fetch } // WEB-BACKEND-DEEPSEEK（CONFIG.md §6.5）：fetch 段随 config 读入——核读点 = `agent.config.fetch.backend`（形同 traces）
   // #175（W15 · a 半）：autoThink 键随 config 归一（默认 false——核 DEFAULTS）；timer-wake 阶段 2：
   // `agent.timerWake` 键随 config 归一（默认 true；消费 = 核 `timers.mjs` `timerWakeEnabled` 活读——VSC 端经 `extension/timer-watch.mjs` 闩装配，B3 收编）——
   // 两者皆「显式键优先、缺省 = 核 DEFAULTS」。
   let cfgAutoThink = DEFAULTS.agent?.autoThink === true
   let cfgTimerWake = DEFAULTS.agent?.timerWake !== false
+  // #1420（PROMPT-SYSTEM.md §6.24）：注入开关随 config 归一（默认 true——判据 `!== false`）——缺则
+  // 面板 ∕ config.json 对该键关不掉（timer-wake 阶段 2 三处穿透先例）。
+  let cfgInjectDocs = DEFAULTS.agent?.injectDocs !== false
+  let cfgInjectProjectRules = DEFAULTS.agent?.injectProjectRules !== false // #1465（§6.27）：① 项目指令块独立键
+  let cfgInjectMemories = DEFAULTS.agent?.injectMemories !== false
   let cfgStreamRules = [] // #130 A-1/A-2：stream 规则（`.thincoder/rules` 文件规则并入 config 规则）
   try {
     const raw = loadRaw()
@@ -151,9 +157,13 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgWebsearch = raw.websearch ?? { apiKey: "" }
     cfgHooks = raw.hooks ?? null
     cfgTraces = { ...DEFAULTS.traces, ...(raw.traces ?? {}) }
+    cfgFetch = { ...DEFAULTS.fetch, ...(raw.fetch ?? {}) }
     cfgAutoThink = raw.agent?.autoThink ?? cfgAutoThink // #175a：显式键优先（缺省 = 核 DEFAULTS）
     cfgTimerWake = raw.agent?.timerWake ?? cfgTimerWake // 显式键优先（缺省 = 核 DEFAULTS——默认开；判据 `!== false`）
-    cfgStreamRules = mergeFileRules(raw.agent?.streamRules ?? [], cwd) // #130 A-1：与 CLI make-agent.mjs:44-48 同语义
+    cfgInjectDocs = raw.agent?.injectDocs ?? cfgInjectDocs // 显式键优先（缺省 = 核 DEFAULTS——默认开；判据 `!== false`）
+    cfgInjectProjectRules = raw.agent?.injectProjectRules ?? cfgInjectProjectRules // #1465：同式
+    cfgInjectMemories = raw.agent?.injectMemories ?? cfgInjectMemories
+    cfgStreamRules = mergeFileRules(raw.agent?.streamRules ?? [], cwd) // #130 A-1：与 CLI `assembleAgent` 同语义
   } catch { /* config unreadable — defaults */ }
 
   // 槽 reconcile：顶层会话绑定（opts.engPersist）每轮读权威槽（hydrate = 唯一 reconcile 点）；
@@ -170,12 +180,15 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
       maxTurns: cfgMaxTurns, verifyGuard: cfgVerifyGuard, compactThreshold: cfgCompactThreshold,
       consultModels: cfgConsultModels, consultTurns: cfgConsultTurns, consultTimeoutMs: cfgConsultTimeoutMs,
       waitForTimeoutMs: cfgWaitForTimeoutMs, poolLimits: cfgPoolLimits, autoThink: cfgAutoThink, timerWake: cfgTimerWake,
+      // #1420 #1465：注入开关三键（默认开——判据 `!== false`；消费点 = 核 `agent/setup.mjs` 判点）
+      injectProjectRules: cfgInjectProjectRules, injectDocs: cfgInjectDocs, injectMemories: cfgInjectMemories,
       goalTurns: cfgGoalTurns,
       streamRules: cfgStreamRules, // #130 A-2：经 agentFields → agent.config.agent.streamRules（消费 = 核 chat）
     },
     proxy: cfgProxy, shell: cfgShell, providersList: cfgProviders, websearch: cfgWebsearch,
     hooks: cfgHooks,
     traces: cfgTraces,
+    fetch: cfgFetch,
   }
   const { engineering, droppedExpired } = applySlotSessionState(agent, {
     slot: sessionData,
@@ -206,10 +219,10 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // B 类 run 绑定（每轮重指——复用 agent 不残留上轮引用）+ opts 派生字段
   agent._role = role
   // autoApprove 字段接线（2026-09-16 缺陷修复——承 `docs/batches/2026-09-16-vsc-autoapprove-misalign.md`
-  // §2 A′）：核读点 = **父对象字段** `parent.autoApprove`（spawn 门 `subagent.mjs:271` ∕ escalate 门
-  // `:194` ∕ 子代权限继承 `subagent-spawn.mjs:304` · 读点族 `subagent-async.mjs:291` 等）；
+  // §2 A′）：核读点 = **父对象字段** `parent.autoApprove`（spawn 门 `subagentTool` ∕ escalate 门
+  // `subagentTool` ∕ 子代权限继承 `buildSpawnChild` · 读点族 `executeCancelAction` 等）；
   // 形态 = **访问器**（每轮重定义——取值恒 live；无 setter ⇒ 面板 flag 为唯一来源，fail-loud）。
-  const autoProbe = typeof getAuto === "function" ? getAuto : () => false // 归一（同核 `agent.mjs:69`）
+  const autoProbe = typeof getAuto === "function" ? getAuto : () => false // 归一（同核 `createAgent`）
   Object.defineProperty(agent, "autoApprove", { configurable: true, enumerable: true, get: () => autoProbe() === true })
   agent._depth = depth // TRACE-STORE-VSC（D-TR4）：compress/distill 等内嵌 chat 调用点的 depth 归属
   agent._provider = provider
@@ -273,7 +286,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   if (depth === 0) agent._fullHistory = fullHistory
 
   // §2.6 表注处置（裁定①）：记忆 ∕ 索引句柄随 host 装配补齐——核注入组读点 = `agent.memory`
-  // （依赖大纲 ∕ 文档召回 ∕ 记忆召回三块——核 `agent/setup.mjs:91/:103`）；端句柄 = `memoryFor(cwd)`
+  // （依赖大纲 ∕ 文档召回 ∕ 记忆召回三块——核 `prepareRun`）；端句柄 = `memoryFor(cwd)`
   // （形兼容 `createMemory({dbPath})` + `.db`；停用 ∕ 未建 ⇒ null ⇒ 核静默跳过 = 旧端同形，同 I/O）。
   if (depth === 0) {
     try { agent.memory = await memoryFor(cwd) } catch { agent.memory = null /* 记忆面不可用 ⇒ 三块静默跳过（核同形） */ }

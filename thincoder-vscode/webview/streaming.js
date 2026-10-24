@@ -23,7 +23,7 @@ import { renderSubagentChunk } from "../node_modules/@thincoder/render-core/subb
 
 export { attachCopyButtons }
 
-/** 流式重渲器（核实例态 = 源档模块级脏位；帧尾 = 双区 pin——源档 `:62-63` 同面；子代理块
+/** 流式重渲器（核实例态 = 源档模块级脏位；帧尾 = 双区 pin——源档同面；子代理块
  *  跟滚脏集经 `subScroll` 逐块应用——§13 C-LU2）。`ctx` 指针帧内现取（与源档同形）。 */
 const renderer = createStreamRenderer({
   reasoning: () => (ctx.currentReasoning ? { el: ctx.currentReasoning, raw: ctx.currentReasoningRaw } : null),
@@ -90,7 +90,7 @@ export function onTurnBreak() {
 
 /** M1 回合尾清扫（显示面消差批 §2.1——VSC 无清扫 ⇒ 中止后工具卡永停「执行中…」）：
  *  未结算（`ref.done !== true`）的工具卡 ⇒ 状态词 `tool.interrupted` + 摘要 `→ (interrupted)`
- *  （CLI 标尺 = `thincoder-cli/src/tui/tool-display.mjs:60-72` `sweepToolBlocks`：`b.done = true`
+ *  （CLI 标尺 = `sweepToolBlocks`：`b.done = true`
  *  （清扫即结算——同形保留）+ `b.summary = "(interrupted)"` + 独立 interrupted 旗标；**不套错误色**
  *  （非 error 面）、正文（流内输出）原样保留）。已结算卡零改写（`finishToolCard` 首行置 `done`）。 */
 function sweepUnsettledToolCards(ctx) {
@@ -120,7 +120,7 @@ export function finish(aborted) {
   // the tail of the reply/reasoning never renders.
   renderer.flush()
   // M1：回合尾清扫**无条件**执行（complete / aborted 两路径同规 = CLI 回合 `finally` 恒清扫
-  // ——`agent-turn.mjs:265`）；必须先于下方 `ctx._toolRefs = {}` 复位。
+  // ——`runAgentTurnBody`）；必须先于下方 `ctx._toolRefs = {}` 复位。
   sweepUnsettledToolCards(ctx)
   // A turn end without an answer leaves a stale inline question card — drop it
   // (aborted/error paths; the card is removed by the shell on the answered path
@@ -179,6 +179,6 @@ export function subagentChunk(m) {
     else if (entry && !entry.isConnected) traceSubOnce("drop-tombstone", name)
     return
   }
-  renderSubagentChunk(block, m) // kind 单点默认 `"text"`（R4 埋雷归一——与桥 `panel-toolpanel.mjs:15` 及 CLI `tool-events.mjs:324` 同值）
+  renderSubagentChunk(block, m) // kind 单点默认 `"text"`（R4 埋雷归一——与桥 `toolPanelPayload` 及 CLI `buildToolCallbacks` 同值）
   renderer.markSubScroll(block) // 块级跟滚随 rAF 帧应用（§13——节流帧不丢：重排条件含脏集）
 }

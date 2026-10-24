@@ -1,17 +1,17 @@
 # Thincoder Server · 我的面（webui/ME.md）
 
-> 本档迁自 `webui/WEBUI.md` §2.3⑥⑦ 及三表归位行（2026-10-11 域内拆分；as-of）。域总览与壳面 = `webui/WEBUI.md`。
+> 域总览与壳面 = `webui/WEBUI.md`。
 
 ## 1. 关键决策（本面）
 
-| # | 决策 | 理由 | 被否候选与何故否 |
-|---|---|---|---|
-| KD-SV-47 | **「我的·key 与签发」页 = 多把并存工作台**（功能点 25）：API Key 表六列（名称 ∥ API Key ∥ 签发时间 ∥ 最后使用 ∥ 近 30 天 ∥ 操作）+ 页首「签发新 API Key」（弹窗——名称可空）+ 行内「吊销」（弹窗——后果文案；零原生 `confirm`）+ 页级一次性秘密区（复制钮——`showSecret` 全局随动）+ 接入卡成员面（`accessCard` 同源复用——admin 面零改）+ 空态引导；**「轮换」页面下架**（端点保留——全断操作与逐把模型相抵；需求 ① 留否 = 否）；页面非壳（钉表五页不扩）∥ `ul.key-list` 族退役（死类删净） | 用户 16:06「太草率」+ 16:08「可以」+ 附加两令（名称 ∥ 多把）；多把模型 = 加一把/吊销一把（全换无位）；秘密面复用 `showSecret`（一处随动三处受益）；接入卡单源（防两卡漂移） | 轮换保留在页面（须弹窗 + 后果——误读面仍在；与逐把模型重复）· 原生 confirm（用户 2 令：后果明示须可见——非原生）· key 页入壳（钉表五页 = 功能点 20 已钉——扩表 = 另议）· ul 清单保留（表格化 = 功能点 25③）· 新档拆接入卡组件（档目计数连锁——导出复用已足） |
-| KD-SV-49 | **「我的·用量」页 = 本人面轻量图表**（me 用量图表化批——用户 22:03 令）：页形 = 本档 §2.2（概览卡 ∥ 筛选行四控件 ∥ KPI ∥ 按日堆叠柱主图（维度切换 = 端点/模型——零依赖柱件复用；段色 = `--accent` 透明度阶梯）∥ 分模型区（请求数 ∥ tokens ∥ 本月已用）∥ 明细表）；**导出不设**；壳面五页钉表维持（报表卡不承缩 + 明细承缩——高度链 +2 行）；管理面专属面收窄 = 跨成员过滤/排行 ∥ CSV 导出 ∥ 看板页 | 用户 22:03「单薄……更多的图表」；数据面本人过滤复用（`usageSummary({memberId})` 既有 + 新端点 = KD-SV-50）；零依赖柱件既有（KD-SV-29 机制不破）；零新档（档目 19 ∥ 20 不动） | 图表库/CDN（违 KD-SV-9）· 金额/余额族（无此面——`metering/METERING.md` §8）· 小时/周粒度（日/月两键为限）· 本人面导出（金额语境无对应 ∥ 放宽 admin 端点 = 翻 AC-15② 三态 ∥ 新端点无对应收益）· 前端拉明细自算（KD-SV-27 在案）· 出壳改自由滚动页（需求 §2:20 五页钉表在案——另轮如裁） |
+| # | 决策 | 理由 |
+|---|---|---|
+| KD-SV-47 | **「我的·key 与签发」页 = 多把并存工作台**（功能点 25）：API Key 表六列（名称 ∥ API Key ∥ 签发时间 ∥ 最后使用 ∥ 近 30 天 ∥ 操作）+ 页首「签发新 API Key」（弹窗——名称可空）+ 行内「吊销」（弹窗——后果文案；零原生 `confirm`）+ 页级一次性秘密区（复制钮——`showSecret` 全局随动）+ 接入卡成员面（`accessCard` 同源复用——admin 面零改）+ 空态引导；**「轮换」页面下架**（端点保留——全断操作与逐把模型相抵；需求 ① 留否 = 否）；页面非壳（钉表五页不扩） | 用户「太草率」+「可以」+ 附加两令（名称 ∥ 多把）；多把模型 = 加一把/吊销一把（全换无位）；秘密面复用 `showSecret`（一处随动三处受益）；接入卡单源（防两卡漂移） |
+| KD-SV-49 | **「我的·用量」页 = 本人面轻量图表**：页形 = 本档 §2.2（概览卡 ∥ 筛选行四控件 ∥ KPI ∥ 按日堆叠柱主图（维度切换 = 端点/模型——零依赖柱件复用；段色 = `--accent` 透明度阶梯）∥ 分模型区（请求数 ∥ tokens ∥ 本月已用）∥ 明细表）；**导出不设**；壳面五页钉表维持（报表卡不承缩 + 明细承缩——高度链 +2 行）；管理面专属面收窄 = 跨成员过滤/排行 ∥ CSV 导出 ∥ 看板页 | 用户「单薄……更多的图表」；数据面本人过滤复用（`usageSummary({memberId})` 既有 + 新端点 = KD-SV-50）；零依赖柱件既有（KD-SV-29 机制不破）；零新档（档目 19 ∥ 20 不动） |
 
 ## 2. 机制
 
-### 2.1 ⑥ 「我的·key 与签发」页重做（功能点 25——me-keys 批；用户 2026-10-07 16:06「太草率」+ 16:08「可以」+ 附加两令「key最好有个名称」 ∥「一个用户可能会有多个Key」）
+### 2.1 ⑥ 「我的·key 与签发」页重做（功能点 25；用户「太草率」+「可以」+ 附加两令「key最好有个名称」 ∥「一个用户可能会有多个Key」）
 
 - **页形**（`#/me/keys`；非壳页——`webui/STYLE.md` §2.2① 排除面在册）：页题「我的 API Key」+ 页首「签发新 API Key」钮（`me.keys.issue`）∥ 页级一次性秘密区（`ctx.showSecret`——签发成功后明文落此，含复制钮）∥ API Key 表卡（卡题 = `me.keys.listTitle`——「提示形」黑话下架）∥ 接入卡（成员面——素材复用，见下）。
 - **API Key 表（六列——表格族 canon `webui/STYLE.md` §2.1①）**：名称（`key.name`——签发时命名 ∥ 空名默认 `key-N`） ∥ API Key（`code` 提示形） ∥ 签发时间（`fmtTs(createdAt)`） ∥ 最后使用（`fmtTs(lastUsedAt)`——空值 ⇒ `me.keys.neverUsed`「从未使用」） ∥ 近 30 天（`{tokens} tokens`） ∥ 操作（行内「吊销」= `tiny danger`）。
@@ -20,11 +20,11 @@
 - **吊销流**（公共弹窗）：体 = API Key 名 + 提示形 + **后果文案**（`me.keys.revokeConsequence`——吊销立即失效 ∥ 客户端即断 ∥ 不可撤销）；脚区 = 「吊销」（危险）+「取消」；成功 ⇒ 关窗 + 表刷新（行离列）+ flash「已吊销」；失败 ⇒ 窗内状态行。**零原生 `confirm`**（`window.confirm` 页面零调用——机检扫描面）。
 - **复制钮（`showSecret` 全局随动）**：秘密区 = 明文 + 「复制」钮（`common.copy`）；复制三路 = ① `navigator.clipboard.writeText`（安全上下文）⇒ ② 选中明文 + `document.execCommand("copy")` ⇒ ③ 仍失败 ⇒ 保持选中 + flash 手动提示（`common.copyManual`）；成功反馈 = 钮文案「已复制」（`common.copied`——2s 复位）。三处秘密面（新 key ∥ 新建成员初始密码 ∥ 重置密码）同随动。
 - **接入卡（成员面——⑤）**：与 admin 接入卡**同源复用**（`views-system.mjs` 导出的同构件——`accessCard(ctx, variant)`；admin 面 = 现行零改）；成员变体 = 措辞三键（`me.keys.accessTitle`/`accessHint`/`accessKeyRow`+`accessKeyValue`）+ 同四端字段/baseURL/curl 素材键。
-- **轮换（全换）处置（设计轮裁——本档 §1 KD-SV-47）**：**页面不保留**（按钮下架——多把并存下「全换」= 全断操作，与逐把模型相抵；需求 ①「留否 = 设计轮定」⇒ 否）；HTTP 端点 `/api/me/keys/rotate` **保留**（API 契约与既有单元测试档零动——非页面面；契约 = `accounts/ACCOUNTS.md` §3）。
+- **轮换（全换）处置（本档 §1 KD-SV-47）**：**页面不保留**（按钮下架——多把并存下「全换」= 全断操作，与逐把模型相抵；需求 ①「留否 = 设计轮定」⇒ 否）；HTTP 端点 `/api/me/keys/rotate` **保留**（API 契约与既有单元测试档零动——非页面面；契约 = `accounts/ACCOUNTS.md` §3）。
 - **壳面口径**：本页非壳页（功能点 20 钉表五页不扩——key 表行数量级小、页内含接入卡静态长内容；入壳 = 另议）；表不带 tfoot 计数（tfoot = 壳面 canon）。
 - **数据/权**：全经 `/api/*`（契约 = `accounts/ACCOUNTS.md` §3）；判权仍在服务端（本人面——无 webui 侧新增判据）。
 
-### 2.2 ⑦ 「我的·用量」页图表化（功能点 26——me 用量图表化批；用户 2026-10-07 22:03「我的用量那个界面感觉单薄……更多的图表」）
+### 2.2 ⑦ 「我的·用量」页图表化（功能点 26；用户「我的用量那个界面感觉单薄……更多的图表」）
 
 - **页形**（`#/me/usage`——壳面五页在册不动〔`webui/STYLE.md` §2.2①〕；页头固定 + 页区承缩）：
   - **页头**（`.page-head`）：页题 ∥ 向量提示条（现件——`webui/READINGS.md` §2.1①）∥ 概览卡行 ∥ 筛选行。
@@ -63,65 +63,58 @@
 | ⑥ 主柱图 + 图例切换（模型 ∥ API Key） | 按日堆叠柱 + 维度切换（端点 ∥ 模型）——零依赖柱件复用 |
 | ⑦ 分模型区（逐模型 请求数面积图 ∥ Tokens 柱图） | 分模型表（逐模型 请求数 ∥ tokens ∥ 本月已用）——逐模型出图不采（页肥；表形等价） |
 
-- **不做（本页批）**：成本/金额/余额（`metering/METERING.md` §8 不变）∥ 小时/周粒度（日/月两键为限）∥ 图表库/CDN（零依赖——KD-SV-29 机制不破）∥ 本人面导出（判否）∥ key 维度过滤（数据面无此轴）∥ 数字千分位（站内口径不引）∥ 模型 top-N 归并（全模型分段——色阶下限 0.3 在案）∥ 总览/管理面零改。
+- **不做**：成本/金额/余额（`metering/METERING.md` §8 不变）∥ 小时/周粒度（日/月两键为限）∥ 图表库/CDN（零依赖——KD-SV-29 机制不破）∥ 本人面导出（判否）∥ key 维度过滤（数据面无此轴）∥ 数字千分位（站内口径不引）∥ 模型 top-N 归并（全模型分段——色阶下限 0.3 在案）∥ 总览/管理面零改。
 
-### 2.3 「我的·账户」页增 Git 凭据卡（member-face-chat 批 · 裁定修订轮——题三补；KD-SV-204）
+### 2.3 「我的·账户」页增 Git 凭据卡（KD-SV-204）
 
-- **定位**：成员本人的 git 凭据（拉取/推送共用）绑定面——**绑一次复用**（盒内助手按次取件）；落点 = 账户页（`#/me/account`——`views-me.mjs` 三页之账户页）；**不进沙盒页**（成员面 vs 管理面分面——`sandbox/SANDBOX.md` §8）。
+- **定位**：成员本人的 git 凭据（拉取/推送共用）绑定面——**绑一次复用**（盒内助手按次取件）；**入径 = 拉取流内就地绑**（缺凭据/无效 ⇒ 拉取窗内录入——`webui/CHAT.md` §2.2；`agent/MEMBER-AGENT.md` KD-SV-215）；**本卡 = 管理面**（改/删/多主机——保留）；落点 = 账户页（`#/me/account`——`views-me.mjs` 三页之账户页）；**不进沙盒页**（成员面 vs 管理面分面——`sandbox/SANDBOX.md` §8）。
 - **卡形**：表（主机 ∥ 用户名 ∥ 更新时间 ∥ 操作：改/删）+「添加凭据」钮（弹窗：主机 ∥ 用户名 ∥ 口令/令牌——**密文零回显**；成事 ⇒ 审计 `member_event`/`credential_set`；删 ⇒ `credential_revoke`）；源表式副作用（与私有仓凭据卡同形——两面分面：成员自有凭据 ∥ 平台私有仓凭据）。
 - **数据面**：`/api/me/git-credentials*` 三端点（`gateway/API.md` §2.11）；密列读写单点（`credential-crypto.mjs` 复用）；错误形沿族（400 形非法 ∥ 404 不存在）。
 - **边界**：值只进不出（查看/导出无面——改 = 覆写）∥ 三面零秘密回显（响应/日志/审计）∥ 凭据测试连接钮不设（拉取失败即验证径——零专项件）。
 
 ## 3. 文件账（本面文件行 ∥ 键族登记）
 
-| 档 | 行数（实读——设计估） | 职责 |
+| 档 | 行数 | 职责 |
 |---|---|---|
-| `thincoder-server/public/views-auth.mjs`（已落盘） | **无 ⇒ 29**（实读 2026-10-06——#962 设计估 ≈30；登录；自 `views.mjs` 拆）**⇒ 31**（i18n 叠加 +2 = 文案键化 ∥ 登录卡切换行）；实读 31（2026-10-07——本批零动） | 登录视图 |
-| `thincoder-server/public/views-me.mjs`（已落盘） | **无 ⇒ 86 ⇒ 87 ⇒ ≈122 ⇒ 117**（实读——本 fix 轮复核 2026-10-06；#962 设计估 ≈150；key ∥ 用量 ∥ 账户设置三页；自 `views.mjs` 拆；i18n 叠加 +1 = 文案键化；二轮 +≈35 = key 行细节（最后使用/窗口用量） ∥ 端点过滤 ∥ 向量提示条）**⇒ ≈125（本批 +≈8 = 我的用量页壳化——key/账户两页零动）⇒ 实读 122 ⇒ ≈126**（配额批：配额行 = 覆盖计数 +≈4）**⇒ ≈211**（me-keys 批：key 页重做 +≈85 = 表六列 ∥ 双弹窗 ∥ 接入卡 ∥ 空态——本档 §2.1；实施实读为准）**⇒ 实读 194（2026-10-07——本设计轮复读；在册估 ≈211 高 17——实读收正）⇒ ≈279（本批：用量页图表化重写 +≈85；194+85≈279——未越 500 软线）⇒ **⇒ ≈355（member-face-chat 批 · 裁定修订轮：账户页「Git 凭据」卡 +≈60——本档 §2.3；以实施当刻实读为准）** | 我的三页 |
-| `thincoder-server/public/i18n-zh-me.mjs`（已落盘） | **≈69**（键 58 + 注释 2 + ≈9；`usage.*`/`me.*`）**⇒ 实读 68**（2026-10-09——结构轮落地后首读）**⇒ ≈82（沙盒余面批：`me.sandbox.*` +≈14 键——`webui/SANDBOX.md` §3）⇒ ≈137（member-face-chat 批 · 裁定修订轮：+≈48——`me.chat.*` ≈35 ＋ `me.gitCred.*` ≈13——本档 §2.3；零新档）**⇒ 实读 **89**（2026-10-14 现读；`me.sandbox.colDirty`/`dirtyYes`/`dirtyNo` 三键随 sandbox-exec-rebuild 批收口修复轮退役 −3 键/表——D 裁）** | 文案表·zh·我的面 |
-| `thincoder-server/public/i18n-en-me.mjs`（已落盘） | **≈70**（键 59 + 注释 2 + ≈9）**⇒ 实读 69**（2026-10-09——结构轮落地后首读）**⇒ ≈83（沙盒余面批：`me.sandbox.*` +≈14 键——`webui/SANDBOX.md` §3）⇒ ≈138（member-face-chat 批 · 裁定修订轮：+≈48——`me.chat.*` ≈35 ＋ `me.gitCred.*` ≈13——本档 §2.3；零新档）**⇒ 实读 **90**（2026-10-14 现读；三键退役同 zh 行）** | 文案表·en·我的面 |
+| `thincoder-server/public/views-auth.mjs` | **31** | 登录视图 |
+| `thincoder-server/public/views-me.mjs` | **398** | 我的·key/用量/账户三页 |
+| `thincoder-server/public/i18n-zh-me.mjs` | **184** | 文案表·zh·我的面 |
+| `thincoder-server/public/i18n-en-me.mjs` | **185** | 文案表·en·我的面 |
 
-**面小计**：≈491（本面档行现读和——估值面，实施实读为准；域合计 = 各面之和——不单列）。
+**面小计**：≈798（域合计 = 各面之和——不单列）。
 
-**键族登记**（自 `webui/WEBUI.md` §2.2 归位——逐字）：
+**键族登记**：
 
-- **键族登记（me-keys 批——两表逐键同步；本批）**：新增 **25 键**——表六列（`me.keys.colName` ∥ `colKey` ∥ `colCreated` ∥ `colLastUsed` ∥ `colWindow` ∥ `colActions`） ∥
+- **键族登记（两表逐键同步）**：新增 **25 键**——表六列（`me.keys.colName` ∥ `colKey` ∥ `colCreated` ∥ `colLastUsed` ∥ `colWindow` ∥ `colActions`） ∥
   签发流（`issue` ∥ `issueTitle` ∥ `nameLabel` ∥ `namePh` ∥ `nameHint` ∥ `issueHint` ∥ `issueSubmit` ∥ `capHint`） ∥ 吊销流（`revokeTitle` ∥ `revokeConsequence` ∥ `revokeSubmit` ∥ `revoked`） ∥
   接入卡成员面（`accessTitle` ∥ `accessHint` ∥ `accessKeyRow` ∥ `accessKeyValue`） ∥ 复制钮（`common.copy` ∥ `common.copied` ∥ `common.copyManual`）；
-  **改值 4 键**——`me.keys.listTitle`（「key 清单（提示形）」 ⇒ 「API Key 清单」——黑话下架） ∥ `me.keys.empty`（重写——「签发新 API Key」指引） ∥ `me.keys.lastUsed` ∥ `me.keys.windowTokens`（去前缀——列内形 `{time}` ∥ `{tokens} tokens`）；
-  **退役 2 键**——`me.keys.rotate` ∥ `me.keys.rotateConfirm`（轮换按钮下架——零消费者删净）；表体量：zh 352 ⇒ ≈374 ∥ en 355 ⇒ ≈377（估——实施实读为准）。
-  **复用 1 键（零新增）**——`me.keys.neverUsed`（「从未使用」——本档 §2.1 表「最后使用」空值文案；成员弹窗 key 表同键——`webui/STYLE.md` §2.2⑤；两表在盘，本批零改）。
-  **词汇口径（统一现状——2026-10-10 本批）：四面 + 本页统一 = 「API Key」**：本页实体名 = 「API Key」（需求 §2:25③ 字面——列头/按钮/弹窗；zh 保留英文原形 ∥ en = "API key"；用户 2026-10-07 16:41/16:43 定音（B——批档 §1.3 术语门））；
+  `me.keys.listTitle`（「API Key 清单」） ∥ `me.keys.empty`（「签发新 API Key」指引） ∥ `me.keys.lastUsed` ∥ `me.keys.windowTokens`（列内形 `{time}` ∥ `{tokens} tokens`）；
+  表体量：zh ≈374 ∥ en ≈377。
+  **复用 1 键**——`me.keys.neverUsed`（「从未使用」——本档 §2.1 表「最后使用」空值文案；成员弹窗 key 表同键——`webui/STYLE.md` §2.2⑤；两表在盘，零改）。
+  **词汇口径（统一现状）**：四面 + 本页统一 = 「API Key」**：本页实体名 = 「API Key」（需求 §2:25③ 字面——列头/按钮/弹窗；zh 保留英文原形 ∥ en = "API key"；用户定音（B，术语门））；
   `nav.page.me.keys`（「API Key 与签发」） ∥ 管理面（`admin.members.tableTitle`/`colKeys`/`colKeyCount`/`colKey`） ∥ 审计型（`audit.type.key_issue`/`key_revoke`/`key_rotate`） ∥ 接入卡（`system.accessHint`）；
-  页题 `me.keys.title` ∥ `me.keys.secretLabel` 亦随统一（2026-10-10 本批——台账 #1025 已办；指别 = 成员 API Key；provider 凭证三键 ∥ `vector.clearApiKey` = 上游/引擎凭证实体——非本口径面，零触）。
-- **键族登记（me 用量图表化批——两表逐键同步；本批）**：新增 **8 键**——`me.usage.range`（时间维度） ∥ `me.usage.range7`（近 7 天） ∥ `me.usage.range30`（近 30 天） ∥ `me.usage.rangeMonth`（本月） ∥
+  页题 `me.keys.title` ∥ `me.keys.secretLabel` 亦随统一（指别 = 成员 API Key；provider 凭证三键 ∥ `vector.clearApiKey` = 上游/引擎凭证实体——非本口径面，零触）。
+- **键族登记（两表逐键同步）**：新增 **8 键**——`me.usage.range`（时间维度） ∥ `me.usage.range7`（近 7 天） ∥ `me.usage.range30`（近 30 天） ∥ `me.usage.rangeMonth`（本月） ∥
   `me.usage.clear`（清除筛选条件） ∥ `me.usage.modelPh`（模型——输入占位） ∥ `me.usage.used`（本月已用——概览卡 ∥ 分模型列头同键） ∥ `me.usage.kpiSplit`（`prompt {prompt} · completion {completion}`——KPI 注行）；
-  **退役 1 键**——`me.usage.summary`（「本月摘要」——摘要表重做后零消费者，删净）；表体量（本设计轮实读）：zh 375 ⇒ 实读 382 ∥ en 378 ⇒ 实读 385（2026-10-07——本批落地后）。
+  表体量：zh 382 ∥ en 385。
 
 ## 4. 验收（本面 AC 行）
 
 | 需求 | 设计级判据 | 载体 |
 |---|---|---|
-| AC-25（功能点 25——「我的·key 与签发」页重做；已落需求档） | ① 多把并存（签发 ⇒ 新把在场 ∥ 旧把照常可用；吊销 ⇒ 即断；他人 key 操作 ⇒ 404——端点契约判据 = `accounts/ACCOUNTS.md` §5 AC-25 行） ∥ ② 命名（签发携名落库 ∥ 表列显 ∥ 空名默认 `key-N`） ∥ ③ 表六列（名称 ∥ API Key ∥ 签发时间 ∥ 最后使用 ∥ 近 30 天 ∥ 操作——签发时间 = 新暴露字段 `createdAt`） ∥ ④ 弹窗化（签发/吊销 = `modal.mjs`——吊销后果文案在场 ∧ 页面零 `window.confirm`）+ 复制钮（`showSecret`——三秘密面随动） ∥ ⑤ 接入卡成员面（baseURL ∥ curl ∥ 四端——与 admin 接入卡同源复用） ∥ ⑥ 「提示形」零残留（页面文案与两表值） + 空态引导（含「签发新 API Key」指引）；页面非壳（`webui/STYLE.md` §2.2① 排除面在册） | 单元测试档 + 收口轮（浏览器实走） |
+| AC-25（功能点 25——「我的·key 与签发」页重做） | ① 多把并存（签发 ⇒ 新把在场 ∥ 旧把照常可用；吊销 ⇒ 即断；他人 key 操作 ⇒ 404——端点契约判据 = `accounts/ACCOUNTS.md` §5 AC-25 行） ∥ ② 命名（签发携名落库 ∥ 表列显 ∥ 空名默认 `key-N`） ∥ ③ 表六列（名称 ∥ API Key ∥ 签发时间 ∥ 最后使用 ∥ 近 30 天 ∥ 操作——签发时间 = 新暴露字段 `createdAt`） ∥ ④ 弹窗化（签发/吊销 = `modal.mjs`——吊销后果文案在场 ∧ 页面零 `window.confirm`）+ 复制钮（`showSecret`——三秘密面随动） ∥ ⑤ 接入卡成员面（baseURL ∥ curl ∥ 四端——与 admin 接入卡同源复用） ∥ ⑥ 「提示形」零残留（页面文案与两表值） + 空态引导（含「签发新 API Key」指引）；页面非壳（`webui/STYLE.md` §2.2① 排除面在册） | 单元测试档 + 收口轮（浏览器实走） |
 | AC-25（续·机检口径） | `views-me.mjs`——六列表头逐键在场 ∥ 行 = key 行映射（名称/提示形/签发时间/最后使用/近 30 天/吊销钮） ∥ 空态分支 ↺ 两弹窗 = `openModal` 调用（签发：名称输入 + 提交路径 `/api/me/keys/issue`；吊销：后果文案键引用 + 提交路径含 keyId） ∥ 页面零 `window.confirm`（档面扫描） ∥ `showSecret` 复制钮 + 三路回退（`navigator.clipboard` stub 直测三路） ∥ 接入卡成员面 = `accessCard` 导出复用（admin 面行断言回归——零改） ∥ i18n：新 25 键两表同步（en 零 CJK ∥ 占位符一致）∥ 死键 `me.keys.rotate`/`rotateConfirm` 零残留 ∥ 改值键列内形（`lastUsed`/`windowTokens`）∥ `style.css` 类名双向闭合（`key-list`/`key-item`/`key-meta` 零残留）+ 行悬停清单 = 2 条（`li.key-item:hover` 删净——AC-19 续行同拍）∥ 档目随正——单源 = `webui/WEBUI.md` §1；迁移 v8 判据 = `store/STORE.md` §3 | 单元测试档 |
-| AC-26（功能点 26——「我的·用量」页图表化；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① 页形在册（概览卡行（本月已用 ∥ 分模型配额）∥ 筛选行四控件（时间维度三档 ∥ 端点 ∥ 模型 ∥ 清除）∥ KPI 行（请求数 ∥ tokens+拆分注）∥ 主图（按日堆叠柱——维度切换 端点/模型 两态）∥ 分模型区（逐模型 请求数 ∥ tokens ∥ 本月已用）∥ 明细表（现件 + tfoot——含 key 名称列）——本档 §2.2） ∥ ② 零依赖（堆叠柱 = 纯 CSS 件——`.bar-stacked`/`.bar-seg`；零新库 ∥ 零外部引用扫描不破） ∥ ③ 数据面（`/api/me/usage/summary` + `/api/me/usage` 同过滤面同拍；`memberView.modelUsage` 消费（分模型「本月已用」列——缺 = 0）） ∥ ④ 壳面不破（`SHELL_PAGES` 五路径不动；高度链 +2 行在册（`webui/STYLE.md` §2.2②）；报表卡上限自滚（明细卡恒得剩余高）+ 明细卡承缩（表槽自滚 + tfoot 计数在册）；矮视口回退既有口径） ∥ ⑤ i18n（新 8 键两表同步 ∥ `me.usage.summary` 退役零残留——本档 §3） ∥ ⑥ 空/错态（全零窗 ⇒ KPI 0 + 主图 `usageReport.trendEmpty` ∥ 分模型空 ⇒ `usage.empty` ∥ 失败 ⇒ `.hint error` 两区——零错） ∥ ⑦ 导出 = 不设（判否——本档 §2.2）；admin CSV 零动 ∥ ⑧ 段色 = `--accent` 透明度阶梯（零新颜色变量）；弹窗/原生 `confirm` 零涉 | 单元测试档 + 收口轮（浏览器实走） |
+| AC-26（功能点 26——「我的·用量」页图表化；`docs/server/requirements/PROJECT.md` 验收表） | ① 页形在册（概览卡行（本月已用 ∥ 分模型配额）∥ 筛选行四控件（时间维度三档 ∥ 端点 ∥ 模型 ∥ 清除）∥ KPI 行（请求数 ∥ tokens+拆分注）∥ 主图（按日堆叠柱——维度切换 端点/模型 两态）∥ 分模型区（逐模型 请求数 ∥ tokens ∥ 本月已用）∥ 明细表（现件 + tfoot——含 key 名称列）——本档 §2.2） ∥ ② 零依赖（堆叠柱 = 纯 CSS 件——`.bar-stacked`/`.bar-seg`；零新库 ∥ 零外部引用扫描不破） ∥ ③ 数据面（`/api/me/usage/summary` + `/api/me/usage` 同过滤面同拍；`memberView.modelUsage` 消费（分模型「本月已用」列——缺 = 0）） ∥ ④ 壳面不破（`SHELL_PAGES` 五路径不动；高度链 +2 行在册（`webui/STYLE.md` §2.2②）；报表卡上限自滚（明细卡恒得剩余高）+ 明细卡承缩（表槽自滚 + tfoot 计数在册）；矮视口回退既有口径） ∥ ⑤ i18n（新 8 键两表同步 ∥ `me.usage.summary` 退役零残留——本档 §3） ∥ ⑥ 空/错态（全零窗 ⇒ KPI 0 + 主图 `usageReport.trendEmpty` ∥ 分模型空 ⇒ `usage.empty` ∥ 失败 ⇒ `.hint error` 两区——零错） ∥ ⑦ 导出 = 不设（判否——本档 §2.2）；admin CSV 零动 ∥ ⑧ 段色 = `--accent` 透明度阶梯（零新颜色变量）；弹窗/原生 `confirm` 零涉 | 单元测试档 + 收口轮（浏览器实走） |
 | AC-26（续·机检口径） | `views-me.mjs`：`renderMeUsage` 结构（概览卡 2 枚 ∥ 筛选控件 4（select×2 + input + 钮）∥ KPI 2 枚 ∥ `.chart-toggle` 两钮 + `.bar-seg` 段容器 ∥ 分模型表五列 ∥ 明细 = `usageTable(rows, { withMember: false, foot: true })`）∥ 两跳取数（`Promise.all`——`/api/me/usage/summary` + `/api/me/usage`）∥ 三档窗换算（近 7/30/本月 ⇒ `from` ms）∥ 维度切换 = 本地重画（零重取） ∥ `views-overview.mjs`：`statCard` 导出在场 ∥ `style.css`：`.bar-stacked`/`.bar-seg`/`.bar-swatch`/`.chart-toggle` 在册 ∥ `.page-area` gap + `.page-area > .card.report-card`（`flex: none` + 上限自滚——`webui/STYLE.md` §2.2②）在册（表随正） ∥ AC-19 canon（类名双向闭合 ∥ `:root` 零新颜色字面量 ∥ 悬停规则零新 ∥ 内距 ∈ 刻度） ∥ i18n 键集（+8 ∥ −1；两表同步 ∥ en 零 CJK） ∥ 档目随正——单源 = `webui/WEBUI.md` §1（me 用量图表化批零新档） ∥ 旧件随正 = `2026-10-07-console-layout.test.mjs`（me 页用例：路由桩补 summary ∥ 页头断言改点） | 单元测试档 |
 | AC-15（续·⑥） | ⑥ key 表（六列——名称/API Key/签发时间/最后使用/近 30 天/操作；最后使用 ∥ 近 30 天 = 真值 ∥ 从未使用文案；多把并存——本档 §2.1） | 单元测试档 + 收口轮 |
 
 ## 5. 边界（本面不做面）
 
 - 成员面接入卡（接入成文 = README；系统页卡 = admin 面——`webui/SYSTEM.md` §2.1）。
-- member-face-chat 批不做面（凭据卡）：值回显/查看/导出（只进不出）∥ 多主机批量导入 ∥ 凭据测试连接钮（拉取失败即验证径——零专项件）∥ 成员面列平台私有仓凭据（管理面专属）。
-- me-keys 批不做面：轮换按钮回页面（下架——端点保留）∥ 改名/排序/搜索（名称 = 签发时标签——签发后只读）∥ key 用量明细/趋势（面外——`#/me/usage` 已有）∥ admin 面 key 表加列（名称不进管理表——另议）∥ 壳化/分页/筛选（`webui/STYLE.md` §2.2① 排除面）∥ 独立「key 详情」弹窗（行即全信息）∥ 成员面接入卡的 README 成文删改（README 仍为成文面）；`#/me/keys` 独立加载态（数据随 `/api/me` 同拍——无独立拉取）。
-- me 用量图表化批不做面：成本/金额/余额（`metering/METERING.md` §8 不变）∥ 小时/周粒度（日/月两键为限）∥ 图表库（零依赖手绘——KD-SV-29 机制不破）∥ 本人面导出（判否——本档 §2.2）∥ key 维度过滤（数据面无此轴）∥ 数字千分位（站内口径不引）∥ 模型 top-N 归并（全模型分段——色阶下限在案）∥ 总览/管理面零改 ∥ 出壳/自由滚动版式（壳面五页钉表维持——另轮如裁）。
+- 凭据卡不做面：值回显/查看/导出（只进不出）∥ 多主机批量导入 ∥ 凭据测试连接钮（拉取失败即验证径——零专项件）∥ 成员面列平台私有仓凭据（管理面专属）。
+- key 页不做面：轮换按钮回页面（下架——端点保留）∥ 改名/排序/搜索（名称 = 签发时标签——签发后只读）∥ key 用量明细/趋势（面外——`#/me/usage` 已有）∥ admin 面 key 表加列（名称不进管理表——另议）∥ 壳化/分页/筛选（`webui/STYLE.md` §2.2① 排除面）∥ 独立「key 详情」弹窗（行即全信息）∥ 成员面接入卡的 README 成文删改（README 仍为成文面）；`#/me/keys` 独立加载态（数据随 `/api/me` 同拍——无独立拉取）。
+- 用量页不做面：成本/金额/余额（`metering/METERING.md` §8 不变）∥ 小时/周粒度（日/月两键为限）∥ 图表库（零依赖手绘——KD-SV-29 机制不破）∥ 本人面导出（判否——本档 §2.2）∥ key 维度过滤（数据面无此轴）∥ 数字千分位（站内口径不引）∥ 模型 top-N 归并（全模型分段——色阶下限在案）∥ 总览/管理面零改 ∥ 出壳/自由滚动版式（壳面五页钉表维持——另轮如裁）。
 
 ## 6. 上抛/余项
 
 - 本面无独立上抛/余项。
-
-## 变更记录
-
-- 2026-10-14（**sandbox-exec-rebuild 批 · 收口修复轮（设计面）· eng-designer**——承批档 `docs/batches/2026-10-13-sandbox-exec-rebuild.md` §6 D 裁）：§3 两 i18n 行补实读（**89 ∥ 90**）+ 三键退役注（`me.sandbox.colDirty`/`dirtyYes`/`dirtyNo`——成员表 dirty 列删，−3 键/表）。**产品码零触（设计轮）。**
-
-- 2026-10-11（**server-doc-split 批 · 域内拆分（迁移）· eng-designer**——承批档 `docs/batches/2026-10-11-server-doc-split.md` §2）：本档自 `webui/WEBUI.md` §2.3⑥⑦ 及三表归位行逐字迁入（零语义；⑥⑦ 行内粗体文入节标题——结构动作）；文内 § 引用改指（§2.6①⑤②→`webui/STYLE.md` §2.2①⑤② ∥ §2.5①→`webui/STYLE.md` §2.1① ∥ §2.3①→`webui/READINGS.md` §2.1① ∥ §2.3⑥⑦→本档 §2.1/§2.2 等）；AC-15 行三拆之 ⑥ 片段入本档；档目链去重 ⇒ 单源句（`webui/WEBUI.md` §1）；原址保位 stub 在 `webui/WEBUI.md`。**产品码零触。**
-- 2026-10-13（**member-face-chat 批 · 裁定修订轮（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-13-member-face-chat.md` §1（用户裁定：题三补——成员本人凭据））：**增 §2.3 账户页 Git 凭据卡**（定位/卡形/数据面/边界）∥ §3 `views-me.mjs` 行 +≈60（⇒ ≈355）+ 两 i18n me 表行 +≈48/表（⇒ ≈137 ∥ ≈138）∥ §5 增本批不做面行。同源随动 = `gateway/API.md` §2.11 ∥ `agent/MEMBER-AGENT.md` §3.6 ∥ `webui/SANDBOX.md` §2.1①（同形跨面） ∥ `webui/WEBUI.md` §5。**产品码零触（设计轮）。**

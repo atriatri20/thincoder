@@ -75,10 +75,11 @@ export function createSlotsHandlers(ctx) {
       // 2026-08-31 会诊 deepseek 🟡（搬迁保留）：读槽走 session.mjs 共享 `loadSlotFile`（校验/
       // 保现场/.tmp 回退与主路径一致）——本地实现此前无 .unreadable/.corrupted 保留。
       // #41 先判（F3 合值 / F4 装配期判据）：目标槽合值 === true ⇒ 判据前置于 `createSession`
-      // （拒 ⇒ 走既有 ACP 错误通道、**不建会话**——无半态）；准 ⇒ 既有装载 + 下方重估。
+      // （**可拒面 = 仅「档非法」格**；工作区 `workspace` ⇒ 放行，零附着——F2 表工作区行）。
+      // 拒 ⇒ 走既有 ACP 错误通道、**不建会话**——无半态；准 ⇒ 既有装载 + 下方重估。
       if (slotEngineering(data)) {
         const r = resolveEngineeringManifest(getCwd(), { writer: "main" })
-        if (!r.ok) {
+        if (!r.ok && r.code !== "workspace") {
           return { error: { code: ACP_ERRORS.INTERNAL.code, message: `failed to load session ${slot}: ${r.message}` } }
         }
       }
@@ -147,10 +148,11 @@ export function createSlotsHandlers(ctx) {
       if (!data) {
         return { error: { ...ACP_ERRORS.INVALID_PARAMS, message: `session ${slot} not found (corrupt or deleted)` } }
       }
-      // #41 先判（同 session/load——合值判据前置于 `createSession`；拒 ⇒ 不建会话）。
+      // #41 先判（同 session/load——合值判据前置于 `createSession`；**可拒面 = 仅「档非法」**；
+      // 工作区 `workspace` ⇒ 放行——拒 ⇒ 不建会话）。
       if (slotEngineering(data)) {
         const r = resolveEngineeringManifest(getCwd(), { writer: "main" })
-        if (!r.ok) {
+        if (!r.ok && r.code !== "workspace") {
           return { error: { code: ACP_ERRORS.INTERNAL.code, message: `failed to resume session ${slot}: ${r.message}` } }
         }
       }

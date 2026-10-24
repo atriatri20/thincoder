@@ -16,8 +16,10 @@
  *   ① 字段名精确匹配黑名单（apiKey/designToken/password/secret/token，大小写不敏感；
  *      另加防御性名称 authorization/proxy/proxyUri——防凭据型 URL/头字段泄漏——§2.5）
  *      → 整个字段丢弃；
- *   ② 内容只扫密钥形态（sk-xxx / Bearer xxx / key=… 等）→ 截断到形态之前
+ *   ② 内容只扫密钥形态（sk-xxx / Bearer xxx / key=… / token 值形等）→ 截断到形态之前
  *      ——宁可丢信息不漏密钥。
+ *      token 值形（`uuid:epoch`——2026-10-14 批并入）：工具结果经 `tool:done` head 落盘
+ *      时在形态前截断、不落值（与 batch.mjs 凭据第三形同判据）。
  *   工具事件不记 args；URL 不入事件（llm/tool 事件从不携带 URL；err 文本经形态扫描）。
  * - 摘要截断（B 方案，2026-09-03 用户裁定）：截断处带 "…" 标记（截后仍 ≤上限）。
  * - 测试隔离：node --test 进程（NODE_TEST_CONTEXT）默认不写盘——防测试事件污染真实
@@ -37,8 +39,8 @@ import { join } from "node:path"
 export const MAX_LINE = 512
 /** 字段名精确黑名单（NF-L3/§2.4——2026-09-03 评审 refinement #7：与 §2.4 词表一致含 token） */
 const BLACKLIST_FIELDS = new Set(["apikey", "designtoken", "password", "secret", "token", "authorization", "proxyuri", "proxy"])
-/** 内容密钥形态扫描（大小写不敏感）——命中即截断到形态前 */
-const SECRET_FORM = /(\bsk-[A-Za-z0-9_-]{6,}|\bBearer\s+[A-Za-z0-9._~+/=-]{6,}|\b(?:api[_-]?key|key|token|secret|password|pwd|passwd)\s*[=:]\s*['"]?[A-Za-z0-9._~+/=-]{6,})/i
+/** 内容密钥形态扫描（大小写不敏感）——命中即截断到形态前（含 token 值形 `uuid:epoch`——同 batch.mjs 凭据第三形判据） */
+const SECRET_FORM = /(\bsk-[A-Za-z0-9_-]{6,}|\bBearer\s+[A-Za-z0-9._~+/=-]{6,}|\b(?:api[_-]?key|key|token|secret|password|pwd|passwd)\s*[=:]\s*['"]?[A-Za-z0-9._~+/=-]{6,}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:\d{10,16})/i
 /** 字符串字段长度兜底：head ≤300 / err ≤200 / 其余 ≤120 */
 const FIELD_CAPS = { head: 300, err: 200 }
 
@@ -152,6 +154,18 @@ export function redactSecret(fieldKey, value) {
   if (BLACKLIST_FIELDS.has(String(fieldKey).toLowerCase())) return "[REDACTED]"
   const hit = s.match(SECRET_FORM)
   return hit ? s.slice(0, hit.index) + "[redacted]" : s
+}
+
+/** 结构面遮蔽（#1432——tool-errors args 落痕前过同一链）：键级 ∥ 内容级复用 `redactSecret`；嵌套对象 ∥ 数组递归；
+ *  非串值仅在键名命中黑名单时整键遮蔽（否则原样 ∥ 递归）——「宁可丢信息不漏密钥」同判据。 */
+export function redactArgs(value) {
+  if (Array.isArray(value)) return value.map(redactArgs)
+  if (value && typeof value === "object") {
+    const out = {}
+    for (const [k, v] of Object.entries(value)) out[k] = typeof v === "string" || BLACKLIST_FIELDS.has(String(k).toLowerCase()) ? redactSecret(k, v) : redactArgs(v)
+    return out
+  }
+  return typeof value === "string" ? redactSecret("", value) : value
 }
 
 /** 内容级净化：密钥形态截断到形态前（②）；超长截断 + "…" 标记。 */

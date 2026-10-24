@@ -26,9 +26,9 @@ import { nextSubagentId } from "./subagent-scheduler.mjs"
 import {
   normalizeFileList, describeBlockers, assertNoDepCycle, depInfo,
 } from "./subagent-scheduler.mjs"
-// M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.3）：任务书六强制字段校验本体落
+// M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.3）：任务书 round 枚举 + 五项结构化参数校验/拼装本体落
 // spawn-gates.mjs（纯谓词零依赖）——本处只加 import 调用。
-import { validateTaskBookFields } from "./spawn-gates.mjs"
+import { validateRoundParam, validateTaskBookParams, composeTaskBookBrief } from "./spawn-gates.mjs"
 // 台账 #23（AGENT-LOOP-SUBAGENT.md §6.26 · D23-3）：审计块构造器外提（`summarizeEngTaskBook`
 // + `buildAuditBlock` 纯函数）——spawn 档只做「收集 + 绑定」；块文本逐字搬移（D23-4）。
 import { buildAuditBlock } from "./audit-block.mjs"
@@ -37,6 +37,14 @@ import { buildAuditBlock } from "./audit-block.mjs"
 import { resolveBatchReadPath, batchDocBases } from "./batch-paths.mjs"
 // LOGGING（LOGGING.md）：#309 形三观测留痕走同一事件通道。
 import { logEvent } from "../log.mjs"
+
+/** 任务书播报文本：该角色名集拼装 + 可选 task 自由文本（拼装空 ⇒ 原 task 逐字——旧形零变）。 */
+function taskBriefOf(args, role) {
+  const composed = composeTaskBookBrief(args, role)
+  if (!composed) return args.task
+  const extra = typeof args.task === "string" ? args.task.trim() : ""
+  return extra ? `${composed}\n\n${extra}` : composed
+}
 
 /** #309 任务书 token 判据（`AGENT-LOOP-SUBAGENT.md` §6.29.3）：`.md` 结尾的连续路径型字面
  *  （含盘符形态——裸名 `AGENTS.md` 无分隔符且非绝对，见调用点过滤）。 */
@@ -120,7 +128,7 @@ export function resolveDesignSlot(parent, designIdArg) {
     throw new Error(`Multiple approved designs in this session (${size}) — pass the designId parameter (echoed with each token) to choose which design this eng-coder spawn belongs to. Held design ids: ${heldIds}`)
   }
   if (size === 1) return { token: [...slots.values()][0] }
-  throw new Error("Invalid or missing design token — run advisor with type='design' first and pass the returned token as designToken.")
+  throw designTokenRefusal("missing")
 }
 
 /**
@@ -211,7 +219,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     batchDocAbs = resolveBatchReadPath(parent.cwd ?? process.cwd(), given)
     if (!batchDocAbs) throw refusal(" (given path is not a readable file)")
     // #309 形三：任务书中的他批批次档引用观测留痕（不阻断——放行不受影响）。
-    logBatchDocRefs(parent, role, args.task, batchDocAbs)
+    logBatchDocRefs(parent, role, taskBriefOf(args, role), batchDocAbs)
   } else if (role === "coder") {
     const given = typeof args.batchDoc === "string" ? args.batchDoc.trim() : ""
     if (given) {
@@ -222,33 +230,18 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     }
   }
 
-  // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）：任务书六强制字段门——
-  // 工程角色（eng-coder/eng-designer）必带 round（initial|fix）+ 五段任务书字段；
-  // 落点 = batchDoc 门之后、token 门之前（§2.2 数据流契约同序）。判据只到「字段在场」——
-  // 内容够不够由执行者拒收兜底（需求 §1.14 #9 行为面）。explore/plan/coder 豁免。
-  if (role === "eng-coder" || role === "eng-designer") {
-    validateTaskBookFields(args)
-  }
+  // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）：任务书参数门——**所有 spawn 角色**。
+  // 工程角色：round 枚举（initial|fix）+ 四项核心 + `designPoints`；explore / plan / coder：
+  // 四项核心 + `scope`。判据三条零改（存在 ∧ string ∧ trim 非空）；落点 = batchDoc 门之后、
+  // token 门之前（门序 = AGENT-LOOP-SUBAGENT.md §6.22）。
+  if (role === "eng-coder" || role === "eng-designer") validateRoundParam(args)
+  validateTaskBookParams(args, role)
 
-  // eng-coder token gate: the design review must have passed and the caller must
-  // present the exact token advisor issued — otherwise the child is not authorized to code.
-  // 2026-09-01: multi-design slots — the token is located by designId (exact slot,
-  // single-slot fallthrough); token validation itself is unchanged (2026-09-06:
-  // HMAC removed — validateDesignToken now checks format + TTL only).
+  // eng-coder token gate（TOOLS.md §6.25 ④）：判定本体 = gateDesignToken（本档模块尾）——
+  // missing / mismatch / expired / invalid 四态各出互异拒句；拒绝集合与旧三条件合取全等。
+  // 返回值 = 槽内令牌，必须落回 issuedToken：下方 `child._engDesignId` 回写依赖它。
   let issuedToken
-  if (role === "eng-coder") {
-    issuedToken = resolveDesignSlot(parent, args.designId).token
-    // R16 D-R16c ③ — spawn-gate cleanup: only an EXPIRY rejection removes the slot
-    // (the caller passed the slot's own token and it is past TTL — 长跑不重启也清);
-    // mismatch / format rejections never delete — the slot's own token may still be
-    // valid and a caller error must not destroy it (T-R16d). 单值镜像已退役（D3）——
-    // 无镜像同步清。
-    const expiredReject = !!issuedToken && args.designToken === issuedToken && tokenExpired(issuedToken)
-    if (!issuedToken || args.designToken !== issuedToken || !validateDesignToken(args.designToken)) {
-      if (expiredReject) removeDesignTokenSlot(parent, args.designId, issuedToken)
-      throw new Error("Invalid or missing design token — run advisor with type='design' first and pass the returned token as designToken.")
-    }
-  }
+  if (role === "eng-coder") issuedToken = gateDesignToken(parent, args)
 
   // Filter tool set by role: explore/plan are read-only (plan is a planning agent, its deliverable is the plan itself)
   let tools
@@ -345,7 +338,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 审计/探索（"status 里这个文件算不算超清单？"）。注入分支整体删除（B 方案
   // git 只读变体亦随裁定废弃——D-AG5）。顶层主 agent 注入保留（§3 prepareRun——
   // setup.mjs depth===0——D-AG7 范围边界）。
-  let input = args.context ? `Context:\n${args.context}\n\nTask:\n${args.task}` : args.task
+  let input = args.context ? `Context:\n${args.context}\n\nTask:\n${taskBriefOf(args, role)}` : taskBriefOf(args, role)
   // 台账 #23（AGENT-LOOP-SUBAGENT.md §6.26 · D23-1）：**spawn 级固定机制性指令改走 system 固块**——
   // 两处（批次档路径行 + 审计模板块）原随 user 首条下发，压缩把首条并入摘要即丢（长任务中后期
   // 既看不到批次档路径、也看不到审计模板 ⇒ 过度勘察的真病根）；固块值在 child 生命周期内恒定
@@ -409,4 +402,33 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   }
   const childRunOpts = buildChildRunOpts(ctx)
   return { child, input, childOpts, childRunOpts, relayPrefix, childProvider }
+}
+
+// ── design-token 门（TOOLS.md §6.25 ③④——四态互异拒句；拒绝集合与旧三条件合取全等） ──
+
+/** 四态拒句（逐字 = TOOLS.md §6.25 ③）：missing / mismatch / expired / invalid。
+ *  mismatch 可携 designId（非凭证）；四句均零令牌值回显。 */
+export function designTokenRefusal(kind, designId) {
+  if (kind === "missing") return new Error("designToken missing — the eng-coder spawn is refused: no usable token for an approved design slot came with this spawn. Pass the designToken parameter with the exact value from the subagent action:'design-slots' row (the text after designToken=), copied verbatim; if that list is empty, no design review has been approved in this session yet — run advisor with type='design' first. No token value is echoed here.")
+  if (kind === "mismatch") return new Error("designToken mismatch — the eng-coder spawn is refused: the value passed does not equal the token held for this design slot. Re-read the subagent action:'design-slots' row and pass the value after designToken= verbatim, unchanged. No token value is echoed here." + (designId ? ` (designId: ${designId})` : ""))
+  if (kind === "expired") return new Error("designToken expired — the eng-coder spawn is refused: the token matches this design slot but is past its TTL. The expired slot has been removed; run advisor with type='design' again on the current design and pass the newly issued token — an expired authorization cannot be retried. No token value is echoed here.")
+  return new Error("designToken invalid — the eng-coder spawn is refused: the value passed equals this design slot's stored token, but that stored value is not a well-formed token, so no expiry can be judged and the slot was left in place. Run advisor with type='design' to issue a fresh token for this design; a malformed record never passes the gate. No token value is echoed here.")
+}
+
+/** eng-coder spawn 的令牌门（TOOLS.md §6.25 ④）：resolveDesignSlot 的既有两条 designId
+ *  诊断零改 → 参数在场 → 值相等 → 值有效。槽删除只在 tokenExpired(given) 成立时发生
+ *  （D-R16c ③）；mismatch / invalid 不删槽（T-R16d）。返回槽内令牌（调用方回写 designId
+ *  依赖它）；sync / async 两路共经 buildSpawnChild——一处判定双路生效。 */
+export function gateDesignToken(parent, args) {
+  const issuedToken = resolveDesignSlot(parent, args?.designId).token
+  // 非字符串 ⇒ 空串 ⇒ missing（本意——T9 锁定）
+  const given = typeof args?.designToken === "string" ? args.designToken : ""
+  if (!issuedToken || !given.trim()) throw designTokenRefusal("missing")
+  if (given !== issuedToken) throw designTokenRefusal("mismatch", args?.designId)
+  if (!validateDesignToken(given)) {
+    const expired = tokenExpired(given)
+    if (expired) removeDesignTokenSlot(parent, args?.designId, given)
+    throw designTokenRefusal(expired ? "expired" : "invalid")
+  }
+  return issuedToken
 }

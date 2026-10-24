@@ -47,7 +47,7 @@ function replayRows(element, entry) {
 }
 
 /** 冻结着装（终态折叠 —— 核 fold 效果逐值同形：`sub-live ⇒ sub-frozen` + 折叠 + ⏹ 移除）。R10 E4：
- *  `settled`（`awaitingDigest`）与其余终态**同折**（VSC `activity.js:80-86` fold 效果无 awaiting 分支 ——
+ *  `settled`（`awaitingDigest`）与其余终态**同折**（VSC `applyEffects` fold 效果无 awaiting 分支 ——
  *  等待消化态词 `sub.awaitingDigest` 由核 `refreshBlock` 照常落头行）。幂等（已着装重复调用零新写）。 */
 function foldIfFrozen(element, entry) {
   if (entry?.frozen !== true) return
@@ -77,8 +77,8 @@ function updateSubBlock(element, entry) {
   refreshBlock(element)
 }
 
-/** 新块出生（族尾 append）：说明行（**挂载根级旗标** `root._subDescShown` —— #630 对齐 VSC `webview/state.js:42` `_subDescShown` 面板级判据；插 `.advisor-content` 之前 ∕ 元素形零改）；
- *  出生点判据（R10 E6 —— VSC `activity.js:60-63` 同点：跟底 ⇒ 区钉底；未跟底 ⇒ 计数贴 +1）；
+/** 新块出生（族尾 append）：说明行（**挂载根级旗标** `root._subDescShown` —— #630 对齐 VSC `webview/state.js` 的 `_subDescShown` 面板级判据；插 `.advisor-content` 之前 ∕ 元素形零改）；
+ *  出生点判据（R10 E6 —— VSC `buildBlockEl` 同点：跟底 ⇒ 区钉底；未跟底 ⇒ 计数贴 +1）；
  *  挂 DOM 后重刷（⏹ 门控读 `isConnected` —— 核首刷发生在挂载前）。 */
 function createSubBlock(root, family, entry) {
   const element = subElementOf(entry)

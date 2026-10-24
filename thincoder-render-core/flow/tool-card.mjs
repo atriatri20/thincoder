@@ -3,7 +3,7 @@
  * 建卡（`addTool`）/ 结算（`finishToolCard`）/ 历史卡（`buildToolHistory`）+ 文件链接包裹
  * （`linkifyPaths`——§4 行 12「核 linkify」；桌面不消费 = KD-RC-5）。
  *
- * 非逐字登记（两处）：① 源档两次取时（`ui.js:208` dataset 与 `:239` ref）收成单次
+ * 非逐字登记（两处）：① 源档两次取时（`ui.js` dataset ∕ ref 两处）收成单次
  * `startedAt = now()`（`now` 可注入 = 测试缝；差 ≤ 数 ms，语义等价）；② `window.NodeFilter`
  * 直用（源档同形；`links` 缺省早退 ⇒ 无 DOM 夹具亦可安全 import）。
  *
@@ -18,7 +18,7 @@ import { t as coreT } from "../i18n.mjs"
 
 /** Wrap verified file paths in clickable spans (text-node level — never inside
  *  attributes). One link per text node is enough; paths repeat across output.
- *  （承 `ui.js:247-276` 逐字；`links` = `[{ raw, path, line? }]`——来源端。） */
+ *  （承 `ui.js` 逐字；`links` = `[{ raw, path, line? }]`——来源端。） */
 export function linkifyPaths(bodyEl, links) {
   if (!links?.length) return
   const NF = window.NodeFilter
@@ -50,7 +50,7 @@ export function linkifyPaths(bodyEl, links) {
   }
 }
 
-/** 建工具卡（承 `ui.js:203-243` `addTool` 的 DOM 面；`roundTag`（X2，可选）= advisor 轮次标签
+/** 建工具卡（承 `ui.js` `addTool` 的 DOM 面；`roundTag`（X2，可选）= advisor 轮次标签
  *  ——非空才加一格 span）。返回 `{ el, ref }`：`el` = 卡元素（调用方 append 到 currentBlock），
  *  `ref` = 结算面簿记 `{ h, b, name, id, startTime, done:false }`（`done` = 已结算唯一写点）。 */
 export function renderToolCard({ name, args, id, roundTag, t = coreT, now = Date.now } = {}) {
@@ -74,7 +74,7 @@ export function renderToolCard({ name, args, id, roundTag, t = coreT, now = Date
   const b = document.createElement("div")
   b.className = "tool-call-body"
   b.setAttribute("role", "region")
-  b.setAttribute("aria-label", `Output of ${name}`)
+  b.setAttribute("aria-label", t("tool.outputOf", { name }))
   b.textContent = t("tool.initial")
 
   h.addEventListener("click", () => {
@@ -90,7 +90,7 @@ export function renderToolCard({ name, args, id, roundTag, t = coreT, now = Date
   return { el: c, ref }
 }
 
-/** 结算工具卡（承 `ui.js:281-327` `finishToolCard`）：耗时 ms / 结果摘要 / 折叠与展开 / 失败色。
+/** 结算工具卡（承 `ui.js` `finishToolCard`）：耗时 ms / 结果摘要 / 折叠与展开 / 失败色。
  *  `ref` = `renderToolCard` 返回的簿记（DOM-回落路径可只给 `{ h, b, startTime }`）。 */
 export function finishToolCard(ref, name, text, links, truncated, deps = {}) {
   const t = deps.t ?? coreT
@@ -142,7 +142,7 @@ export function finishToolCard(ref, name, text, links, truncated, deps = {}) {
   }
 }
 
-/** 历史工具卡（承 `ui.js:355-388` `buildToolHistory`——从人类行渲染的折叠只读卡；`ctx` 入参未用
+/** 历史工具卡（承 `ui.js` `buildToolHistory`——从人类行渲染的折叠只读卡；`ctx` 入参未用
  *  ——去参）。`idx` 在场 ⇒ 落 `data-idx`（lazy-load paging 锚）。 */
 export function renderToolHistory(name, text, idx) {
   const c = document.createElement("div")
@@ -165,7 +165,7 @@ export function renderToolHistory(name, text, idx) {
   const b = document.createElement("div")
   b.className = "tool-call-body"
   b.setAttribute("role", "region")
-  b.setAttribute("aria-label", `Output of ${name}`)
+  b.setAttribute("aria-label", coreT("tool.outputOf", { name }))
   b.textContent = text || ""
 
   h.addEventListener("click", () => {

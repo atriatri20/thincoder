@@ -2,8 +2,8 @@
  * queued.mjs — busy 排队消息的合并消费纯函数族（核件——「桌面处理流 · VSC 对齐」批 R3 上提产物）。
  *
  * 机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8（「合并消费」条 + 「步边界 pickup」块）。
- * 上提源 = VSC `thincoder-vscode/src/extension/queued-merge.mjs:15-36`（容量常量 ∕ 合并串 ∕ 批计划）
- * + `queued-pickup.mjs:49`（`takeQueuedBatchItem` 取项）——**纯搬 + 转口，零语义改**（常量名 / 值 /
+ * 上提源 = VSC `thincoder-vscode/src/extension/queued-merge.mjs`（容量常量 ∕ 合并串 ∕ 批计划）
+ * + `queued-pickup.mjs`（`takeQueuedBatchItem` 取项）——**纯搬 + 转口，零语义改**（常量名 / 值 /
  * 形态文案 / 批语义逐字）；对拍锚 = CLI 副本 `thincoder-cli/src/tui/queued-merge.mjs`（同名同值）。
  *
  * 消费面：计划面（常量 ∕ 合并串 ∕ 计划）由桌面排队面消费（`thincoder-desktop/src/main/queued-input.mjs`）；

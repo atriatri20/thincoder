@@ -3,7 +3,7 @@
  * **R8 · 桌面功能对位批：去抖 ∕ stat 元组比对 ∕ 自写抑制上提核件** —— 本档 = 平台落子壳：
  * VS Code 文件监视器 `createFileSystemWatcher`，其余全在核件 `@thincoder/core/config-watch.mjs`）。
  *
- * 契约不变（`extension.mjs:12/:128` 调用面零改）：`startConfigWatch({ onChange, debounceMs = 300, configPath })
+ * 契约不变（`startConfigWatch` 调用面零改）：`startConfigWatch({ onChange, debounceMs = 300, configPath })
  * → { dispose, noteSelfWrite }`；`configPath` 缺省 = config-io `_configPath()` 当前值（测试缝同源）；
  * 降级（宿主 API 缺失 ∕ 构造抛错 ∕ 监视器不可得）⇒ no-op（不阻断激活——面板打开拉新的既有路径兜底）。
  * 三事件（change ∕ create ∕ delete）同缝 `onEvent`（去抖 ∕ 比对 ∕ 自写抑制归核）。

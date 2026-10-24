@@ -13,9 +13,9 @@
  *  - `write`(`write_file`)        `wrote N bytes` / 首行（兜底）
  *  - `grep`(`search`)             `N matches` / `1 match` / `no matches`
  *  - `glob`                       `N files` / `1 file` / `no files`
- *  - `verify`                     `verify: <Changed files …> — N syntax error(s) — ✓ Tests passed. — Task list: …`（CLI `:92-113` 同规）
- *  - `bash`                       `bash: <末行> (exit code N)`（含成功面 `(exit code 0)`——#677 · I16b 归一；末行提取 = CLI `:60-68`）
- *  - 默认（未登记工具）            `name: <首个非空行>`（CLI `:15-17` 同规）
+ *  - `verify`                     `verify: <Changed files …> — N syntax error(s) — ✓ Tests passed. — Task list: …`（CLI `tool-summaries.mjs` 同规）
+ *  - `bash`                       `bash: <末行> (exit code N)`（含成功面 `(exit code 0)`——#677 · I16b 归一；末行提取 = CLI `tool-summaries.mjs`）
+ *  - 默认（未登记工具）            `name: <首个非空行>`（CLI `tool-summaries.mjs` 同规）
  *
  * 端差与判据（不并核 —— 重复形态登记：核单源化 = 跨批结构面，批档 §2.8 #6）：
  *  - **状态位族**（`(exit code N)` / `(killed: …)` / `(spawn failed)`）显示文本由 `lib.js
@@ -28,7 +28,7 @@
 
 import { toolStatusText } from "./lib.mjs"
 
-/** bash 包装行（CLI `:61` 同规）：`[stdout]:` / `[stderr]:` / `(exit code …` / `(killed…`。 */
+/** bash 包装行（CLI `tool-summaries.mjs` 同规）：`[stdout]:` / `[stderr]:` / `(exit code …` / `(killed…`。 */
 const BASH_MARKER = /^\[(?:stdout|stderr)\]:$|^\((?:exit code|killed)/
 
 /** 一行式摘要（无摘要 ⇒ `null` / `""` ——消费面按 falsy 处理，与 `resultSummary` 同规）。 */
@@ -44,7 +44,7 @@ export function formatToolSummary(name, text) {
   return _defaultSummary(name, s)
 }
 
-/** 未知工具：首个非空行（CLI `tool-summaries.mjs:15-17` 同规——含 `name:` 前缀）。 */
+/** 未知工具：首个非空行（CLI `tool-summaries.mjs` 同规——含 `name:` 前缀）。 */
 function _defaultSummary(name, text) {
   const first = text.split("\n").find((l) => l.trim())
   return first ? `${name}: ${first.slice(0, 100)}` : null
@@ -81,7 +81,7 @@ function _globSummary(text) {
 
 /**
  * bash 结果形（`[stdout]:\n<out>\n\n(exit code 0)`）：首行恒为 `[stdout]:` 包装标记 ⇒ 摘要取末条
- * 输出行（CLI `:60-68` 同规）+ `bash: ` 前缀（CLI 字面）。状态位 = `lib.js toolStatusText` 单源
+ * 输出行（CLI `tool-summaries.mjs` 同规）+ `bash: ` 前缀（CLI 字面）。状态位 = `lib.js toolStatusText` 单源
  * （显示面——含成功面 `(exit code 0)`；拼接与 CLI 标尺归一：#677 · I16b）；失败面 `(empty)` 占位
  * 不入内容位（F-W16：卡不读作 `(empty)` 而无信号）；无状态位时末行原样（与 CLI 同形）。
  */
@@ -98,7 +98,7 @@ function _bashSummary(text) {
   return brief ? `bash: ${brief}` : null
 }
 
-/** verify 裁决摘要（CLI `tool-summaries.mjs:92-113` 同规——#677 · I16b 补落）：`Changed files…` 行归一 ∕
+/** verify 裁决摘要（CLI `tool-summaries.mjs` 同规——#677 · I16b 补落）：`Changed files…` 行归一 ∕
  * 语法错误计数 ∕ 测试结论行 ∕ `Task list:` 行按 ` — ` 连接；无段 ⇒ `""`。 */
 function _verifySummary(text) {
   const lines = text.split("\n")
@@ -115,7 +115,7 @@ function _verifySummary(text) {
 }
 
 /**
- * advisor 裁决摘要（CLI `:70-90` 同规）：拒因形 `Advisor: <首句>` ⇒ `advisor: <首句>`；
+ * advisor 裁决摘要（CLI `tool-summaries.mjs` 同规）：拒因形 `Advisor: <首句>` ⇒ `advisor: <首句>`；
  * 评审表按 🔴/🟡/🔵 列计数 ⇒ `advisor: N critical, N advisory, N style`；零 🔴 且表 / 通过
  * 措辞在场 ⇒ `advisor: passed`；无计数 ⇒ `null`。
  */

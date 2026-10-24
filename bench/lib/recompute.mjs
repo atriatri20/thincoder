@@ -1,5 +1,5 @@
 /**
- * lib/recompute.mjs — 离线重算分支（设计 §2.7 / AC-10）：读结果 JSON → 以**当前** prices.json 重算成本 → 落新报告对。
+ * lib/recompute.mjs — 离线重算分支（设计 §2.7）：读结果 JSON → 以**当前** prices.json 重算成本 → 落新报告对。
  *
  * 与 `lib/output.mjs` 一并从 `pipeline.mjs` 拆出（设计档 §3 拆分触发条件）。**结构保证**：本档不 import
  * `lib/client.mjs`（构造性零网络）；判定用例 = 毒化 `globalThis.fetch` 后全流程仍成功（§5.13 `recompute.4`）。
@@ -30,7 +30,7 @@ export function validateResultShape(data) {
   }
 }
 
-/** 离线重算（§2.7 / AC-10）：只读结果 JSON + 当前 prices.json；不调模型、不重判分、不触网。 */
+/** 离线重算（§2.7）：只读结果 JSON + 当前 prices.json；不调模型、不重判分、不触网。 */
 export async function recomputeMain(opts) {
   const fromPath = resolve(process.cwd(), opts.from)
   if (!existsSync(fromPath)) throw new Error(`--from 文件不存在：${basename(fromPath)}`)

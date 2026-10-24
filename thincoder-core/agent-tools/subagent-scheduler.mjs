@@ -43,7 +43,7 @@ import { carrierField, getAsyncPool, tombstoneOf } from "./async-settle.mjs"
  *  大小写不敏感（todo.md/changelog.md 精确——路径任意层含 docs/、根、.thincoder/）——
  *  命中 → throw（fail-closed——先于调度器准入——无排队残留——错误即工具结果）；
  *  提示列出全部违规条目——英文模板逐字定稿（AGENT-LOOP-SUBAGENT.md §6.9「父侧文件拦截（R26）」）。
- *  M5 F6（2026-09-17）：黑名单随同迁入 spawn-gates.mjs（rejectEngineeringFilePaths——族 = ledger.db / CHANGELOG + scripts/**；老台账 md 族随 M2 退役）——本函数只留调用（错误文案逐字保留）。 */
+ *  M5 F6（2026-09-17——2026-10-15 口径随正）：黑名单随同迁入 spawn-gates.mjs（rejectEngineeringFilePaths——族 = 过程档（CHANGELOG）+ 工程工具面（`scripts/*`——层级锚定：仅仓根与直接子层；目录名在深层不携带 face 信息）；老台账 md 族随 M2 退役）——本函数只留调用（错误文案逐字保留）。 */
 export function normalizeFileList(files, cwd) {
   const out = []
   for (const f of Array.isArray(files) ? files : []) {
@@ -57,10 +57,10 @@ export function normalizeFileList(files, cwd) {
     }
     if (!out.includes(abs)) out.push(abs)
   }
-  // M5 F6（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）：scripts/** + 过程档拦截——
+  // M5 F6（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2——2026-10-15 口径随正）：`scripts/*`（仅仓根/直接子层）+ 过程档拦截——
   // 谓词本体落 spawn-gates.mjs（rejectEngineeringFilePaths 收集全部违规 + 抛合并错误）；
   // 循环内目录声明先行（错误序不变——目录错误先于过程档错误）。父侧维护文件
-  // basename 族（ledger.db / CHANGELOG）随同迁入谓词——错误文案逐字保留。
+  // basename 族（CHANGELOG——`ledger.db` 随 M2 退役）随同迁入谓词——错误文案逐字保留。
   if (files !== undefined && files !== null) rejectEngineeringFilePaths(files)
   return out
 }
@@ -398,14 +398,15 @@ export function maybeRefillAsync(parent) {
  * spawn（subagent-spawn.mjs async 分支）、escalate（escalate-async.mjs）、async-advisor
  * 池（advisor-async.mjs——§6.10 跨池共号）、**后台 bash 任务池**（bash-async.mjs——#9：
  * `_bgTasks` 同入扫描域——VSC 形计数器不随 run 存活，缺此扫描会与在途 bg 条目撞号）、
- * **后台浏览器动作池**（browser-async.mjs——批 browser-async-fix：`_browserTasks` 同入）共用；
+ * **后台浏览器动作池**（browser-async.mjs——批 browser-async-fix：`_browserTasks` 同入）、
+ * **SSH 会话池**（ssh-session.mjs——批 ssh-session：`_sshSessions` 同入——同因）共用；
  * executeAsyncSpawn 直读 counter（分配与
  * 消费同步——无 await 间隙）。CLI 两池键均为字符串（set(String(id))——解析分支防御保留）。
  * @returns {number} 全池唯一的下一 id（单调——进程内）
  */
 export function nextSubagentId(parent) {
   let poolMax = 0
-  for (const pool of [carrierField(parent, "_asyncSubagents"), carrierField(parent, "_asyncAdvisors"), carrierField(parent, "_bgTasks"), carrierField(parent, "_browserTasks")]) {
+  for (const pool of [carrierField(parent, "_asyncSubagents"), carrierField(parent, "_asyncAdvisors"), carrierField(parent, "_bgTasks"), carrierField(parent, "_browserTasks"), carrierField(parent, "_sshSessions")]) {
     if (!pool || pool.size === 0) continue
     for (const k of pool.keys()) {
       const n = typeof k === "number" ? k : Number.parseInt(k, 10)

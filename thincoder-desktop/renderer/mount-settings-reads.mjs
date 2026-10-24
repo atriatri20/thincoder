@@ -87,7 +87,7 @@ export function createReads(deps = {}) {
       const current = store.get().settings?.model?.current ?? null
       if (receipt.ok !== true) {
         setSettings({ model: { state: "none", provider: null, current, models: [] } })
-        report("model", receipt, "model:catalog")
+        report("panel", receipt, "model:catalog")
         return
       }
       setSettings({ notice: null, model: { state: "ready", provider: null, current, models: listOf(receipt.models) } })
@@ -98,7 +98,7 @@ export function createReads(deps = {}) {
     const current = store.get().settings?.model?.current ?? null
     if (receipt.ok !== true) {
       setSettings({ model: { state: "none", provider: active, current, models: [] } })
-      report("model", receipt, "model:list")
+      report("panel", receipt, "model:list")
       return
     }
     setSettings({ notice: null, model: { state: "ready", provider: active, current, models: listOf(receipt.models) } })

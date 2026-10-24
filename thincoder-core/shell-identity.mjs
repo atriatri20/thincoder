@@ -10,7 +10,7 @@
  *
  * memo（进程生命周期 + 按配置值键控）先例 = `shell-candidates.mjs`（「shell 路径不热变化」同判据）；
  * 配置值变化 ⇒ memo 未命中重探（K2 配置变更刷新 ∥ 裁定①零静态同时成立）。
- * 测试缝 `_setComSpecForTest` 先例 = `shell-candidates.mjs:34` `_setShellDetectForTest`。
+ * 测试缝 `_setComSpecForTest` 先例 = `shell-candidates.mjs` `_setShellDetectForTest`。
  */
 
 // 识别表（raw 尾段词 → 显示名 + 语法族）。匹配大小写不敏感，尾段词先剥 `.exe` 后缀（U3——

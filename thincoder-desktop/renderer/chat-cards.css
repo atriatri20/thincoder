@@ -3,11 +3,11 @@
    面 = 卡族三类（**皆流内非块节点** —— `docs/desktop/design/UI.md` §1 审批呈现 / 提问呈现 / 计划面行）：
      ① **池面审批操作区**（`views/activity.mjs` 池条目 —— `approvalExits` 描述符消费面；卡面出口已归核卡自带）；
      ② **审批卡**（核 `cards/permission.mjs` 产出 —— R1 直消费）：类名面 = 核产（`.permission-prompt*`），
-        值源 = VSC `webview/base.css:190-291`（口径三律同 `renderer/core.css`：宿主主题色角色对位 / 语义常量值照搬 /
+        值源 = VSC `.permission-prompt` 族（口径三律同 `renderer/core.css`：宿主主题色角色对位 / 语义常量值照搬 /
         盒层单层律）；端壳增量唯二 = 置焦锚高亮（`[data-autofocus="1"]` —— `views/approval.mjs` 产出）与
         `[data-autofocus]` 键位面；
      ③ **提问卡 / 计划卡**（核 `cards/question.mjs` ∕ `cards/panel.mjs` 产出 —— R1 直消费）：提问族类名面 = 核产
-        （`.question-card` / `.question-*`，值源 = VSC `base.css:296-366`）；计划族 = 端壳包壳 `.plan-card` + 核体
+        （`.question-card` / `.question-*`，值源 = VSC `.question-card` 族）；计划族 = 端壳包壳 `.plan-card` + 核体
         （核体类名面 `.panel-desc` / `.task-*` 归 `renderer/core.css` ⑤ 核卡族段）。
    `.perm-btn` 族（提问卡三钮/选项共用，核产）亦归 `renderer/core.css` ⑤ —— 与核控件族同列。
    卡间 / 卡块相邻留白 = 核卡自带 margin（`12px 0`，块流页边距折叠）⇒ 本档零相邻补足规则。 */
@@ -32,7 +32,7 @@
   cursor: pointer;
 }
 
-/* ── 审批卡（核 `cards/permission.mjs` 产出；值源 = VSC `base.css:190-291`）──────────────────────
+/* ── 审批卡（核 `cards/permission.mjs` 产出；值源 = VSC `.permission-prompt` 族）──────────────────────
    卡壳 / 首行 / 出口行三段逐值照搬（三态：逐项 / 批同壳）；`--vscode-inputValidation-warning*` = 警告角色
    别名（未声明 ⇒ 回退 VSC 默认值 —— 与 VSC 无主题变量时同形）。 */
 .permission-prompt {
@@ -54,7 +54,7 @@
   gap: 8px;
 }
 /* 卡内出口钮 = 核卡裸类按钮（`.approve` ∕ `.approve-all` ∕ `.deny` ∕ `.one-by-one`）：VSC 两源（`base.css` 与
-   VS Code webview 默认样式表）皆**无按钮规则** ⇒ 实形 = UA 默认；VSC `base.css:1-5` 的 `* { margin:0; padding:0 }`
+   VS Code webview 默认样式表）皆**无按钮规则** ⇒ 实形 = UA 默认；VSC `*` 复位规则 的 `* { margin:0; padding:0 }`
    全局 reset 为其唯一形塑 ⇒ 本档等效映射该两值（`margin` ∕ `padding` —— 零自造盒值）。
    **D29 排版统一（2026-09-30）**：字体通道（族 ∥ 号 ∥ 行高）归基线（`font: inherit`——原承 UA 控件字体）；盒值零动。 */
 .permission-prompt button {
@@ -72,7 +72,7 @@
   border-color: var(--accent);
 }
 
-/* ── 提问卡（核 `cards/question.mjs` 产出；值源 = VSC `base.css:296-366`）──────────────────────
+/* ── 提问卡（核 `cards/question.mjs` 产出；值源 = VSC `.question-card` 族）──────────────────────
    卡面沿审批卡同族同形（内边距 / 圆角 / 决策面强调色边）；选项列 / 作答行 / 文本控件逐值照搬（**字体通道 = D29 归基线**——族 ∥ 号 ∥ 行高；盒值 ∥ 布局零动）。 */
 .question-card {
   margin: 0;

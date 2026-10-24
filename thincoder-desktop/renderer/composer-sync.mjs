@@ -148,7 +148,7 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
   const state = {
     /** 忙态（P23 判据单源 = `views/chrome.mjs` `busyOf`）+ **挂起窗**（收正轮 · ③）：位标含 `running` ⇒ `running`；
      *  本键挂起窗活跃（`ev:susp` 置位标）⇒ `susp`；余 ⇒ `idle`。核件忙态门谓词 = 非 `idle` ⇒ `susp` 期两信息钮禁用
-     *  （防旧快照覆写 —— VSC `chat-panel.mjs:55-59` `_turnState` 三值同域；`loading.js` 两钮显隐仍只认 `running`）。 */
+     *  （防旧快照覆写 —— VSC `ChatPanel` `_turnState` 三值同域；`loading.js` 两钮显隐仍只认 `running`）。 */
     turnState: () => {
       const held = store.get()
       const key = held?.activeSession ?? null

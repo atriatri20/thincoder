@@ -96,7 +96,7 @@ function normSubagentMeta(meta) {
 }
 
 /** 核 message → 块数组（未知型 ⇒ `[]`；助手条目序 = `[reasoning?, assistant?, ...tools]` —— **「对齐第三批」项 8 收正**：
- *  推理先于正文（序单源 = 核 `thincoder-render-core/flow/block.mjs:97-105`；旧序 `[text, reasoning, ...tools]` 退场）。
+ *  推理先于正文（序单源 = 核 `buildAssistantRestore`；旧序 `[text, reasoning, ...tools]` 退场）。
  *  **说话人时间面载波**（「对齐第二批」项 4）：`user` 块携 `ts`（核 message `timestamp` —— 缺 / 非数 ⇒ 键缺席，
  *  「无 ts 不显示」纪律由核 `paintLabel` 同判据承接）。
  *  **留档批 · #719**：`subagent` 记录 ⇒ 留档块（**与活流归档同一形状** —— `{ kind, meta, rows }` 单源）；

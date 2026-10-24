@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 /**
- * sandbox-probe.mjs — 红队探针执行器（P1–P14；判据表 = `docs/server/design/sandbox/SANDBOX.md` §11 ∥ 机制全文 = `sandbox/EXECUTION.md` §10；sandbox-exec-rebuild 批）.
+ * sandbox-probe.mjs — 红队探针执行器（留守腿 P1 ∥ P5–P10 ∥ P13 ∥ P14；判据表 = `docs/server/design/sandbox/SANDBOX.md` §11 ∥ 机制全文 = `sandbox/EXECUTION.md` §10；sandbox-exec-rebuild 批）.
  *
- * 跑法（server 机侧）：`node deploy/sandbox-probe.mjs --server <base> --admin <user:pass> [--node <名|址>] [--repo <仓址>] [--target <域:端口>] [--p14]`
- * 前置：一在线节点 + 闸已下发。 读数三径：
- *   ① 服务端 = HTTP（登录/总览/工作区/待批/规则——`--admin` 会话）；
+ * 跑法（server 机侧）：`node deploy/sandbox-probe.mjs --server <base> --admin <user:pass> [--node <名|址>] [--repo <仓址>] [--p14]`
+ * 前置：一在线节点。 读数三径：
+ *   ① 服务端 = HTTP（登录/总览/工作区——`--admin` 会话）；
  *   ② 盒内 = **一次性探针容器**（同镜像/同网络/同挂载/同资源限制——克隆盒容器；`Cmd` = 探针命令；读 `logs` + `State.ExitCode`；用毕即删——**零 `docker exec`**）；
  *   ③ 宿主文件 = 一次性容器 + 宿主文件只读挂载（P1 对照读数——零 SSH 凭据依赖；设计句「宿主读数 = SSH」的意图 = 取得宿主同一读数）；
- *      本形**读不到**的读数（宿主**活态**类——如内核 nft 规则表/进程态）**不静默略过**：P 表内无此类行（P1 宿主面 = `/etc/passwd` 文件读数、P2/P3/P4 为行为读数）；后续如新增此类行 ⇒ 经既有服务端通道取，否则输出如实标「此形不可读 ⇒ SKIP」（父侧 2026-10-14 回裁条件 a）。
- * 闸就位「下发步」= 建盒/启动链的前置复核（§5）；执行器自建探针工作区（无 ⇒ 建）即完成该步。本器不手改规则——唯二例外 = P11 的两条临时规则（用毕即删）。
+ *      本形**读不到**的读数（宿主**活态**类——如内核/进程态读数）**不静默略过**：P 表内无此类行（P1 宿主面 = `/etc/passwd` 文件读数）；后续如新增此类行 ⇒ 经既有服务端通道取，否则输出如实标「此形不可读 ⇒ SKIP」（父侧 2026-10-14 回裁条件 a）。
+ * 执行器自建探针工作区（无 ⇒ 建）。
  * 出：逐条 PASS/FAIL/SKIP + 汇总；**退出码 = 0（无 FAIL）∥ 1（有 FAIL）∥ 2（环境级错误——服务端不可达/登录失败）**。SKIP 如实（缺节点/缺前置——零假 PASS）。
  * 纪律：秘密面结构形（形态扫描——真值不下行）∥ 探针容器用毕即删（含失败路径）∥ 自建工作区不自动销毁（破坏性动作归人）。
  */
 import { createDockerClient } from "../src/sandbox/docker.mjs"
 
-const USAGE = "用法：node deploy/sandbox-probe.mjs --server <base> --admin <user:pass> [--node <名|址>] [--repo <仓址>] [--target <域:端口>] [--p14]"
+const USAGE = "用法：node deploy/sandbox-probe.mjs --server <base> --admin <user:pass> [--node <名|址>] [--repo <仓址>] [--p14]"
 
 // ── 探针脚本（容器内 `node -e`；输出末行 `__PROBE__{json}`——`{ ok, skip?, detail }`）────────────
 
@@ -47,26 +47,6 @@ else {
   const hits = hostHuman.filter((a) => boxNames.has(a.name));
   emit({ ok: hits.length === 0, detail: 'hostHuman=[' + hostHuman.map((a) => a.name + ':' + a.uid).join(',') + '] boxWindow=[' + window(box).map((a) => a.name + ':' + a.uid).join(',') + '] hits=[' + hits.map((a) => a.name).join(',') + ']' });
 }
-`
-
-/** P2：盒 → 宿主 22 口（宿主 = 容器默认网关——`/proc/net/route`）⇒ 拒；网关不可解析 ⇒ 该形读不到 ⇒ 如实 SKIP。 */
-const SCRIPT_P2 = `${SCRIPT_CONNECT_HELPERS}
-const fs = require('node:fs');
-const gw = (() => { try { const line = fs.readFileSync('/proc/net/route', 'utf8').split('\\n')[1]; const hex = line.trim().split(/\\s+/)[2]; return hex && hex.length === 8 ? [hex.slice(6, 8), hex.slice(4, 6), hex.slice(2, 4), hex.slice(0, 2)].map((h) => parseInt(h, 16)).join('.') : null } catch (e) { return null } })();
-(async () => {
-  if (gw === null) { emit({ ok: false, skip: '宿主地址不可得（/proc/net/route 不可解析——此形读不到）', detail: 'gateway=null' }); return }
-  const r = await tryConnect(gw, 22, 3000); emit({ ok: !r.ok, detail: 'gateway=' + gw + ' port=22 => ' + r.code });
-})()
-`
-
-/** P3：`169.254.169.254`（云元数据/链路本地）⇒ 恒拒。 */
-const SCRIPT_P3 = `${SCRIPT_CONNECT_HELPERS}
-(async () => { const started = Date.now(); const r = await tryConnect('169.254.169.254', 80, 3000); emit({ ok: !r.ok, detail: '169.254.169.254:80 => ' + r.code + ' ms=' + (Date.now() - started) }) })()
-`
-
-/** P4：非白名单出站 ⇒ 拒（目标 = `1.1.1.1:443`——「放行态可达」为假设，2026-10-10 真机同径；如需换目标改此常量）。 */
-const SCRIPT_P4 = `${SCRIPT_CONNECT_HELPERS}
-(async () => { const r = await tryConnect('1.1.1.1', 443, 3000); emit({ ok: !r.ok, detail: '1.1.1.1:443 => ' + r.code }) })()
 `
 
 /** P5：fork 炸弹 ⇒ 被杀（pids 限到位 = 派生报 EAGAIN/ENOMEM；cap 内全成 ⇒ 限未生效）。 */
@@ -170,45 +150,6 @@ else {
 }
 `
 
-/** P11：连通窗口试（`TC_PROBE_WANT` = open（期望连通）∥ closed（期望不通）——规则增/删后各跑一次）。 */
-const SCRIPT_P11 = `${SCRIPT_CONNECT_HELPERS}
-(async () => {
-  const host = process.env.TC_PROBE_TARGET_HOST; const port = Number(process.env.TC_PROBE_TARGET_PORT);
-  const want = process.env.TC_PROBE_WANT === 'open';
-  const deadline = Date.now() + Number(process.env.TC_PROBE_WINDOW_MS || 45000);
-  let last = null; let n = 0;
-  while (Date.now() < deadline) {
-    n++; last = await tryConnect(host, port, 3000);
-    const good = want ? last.ok : !last.ok;
-    if (good) break;
-    await new Promise((r) => setTimeout(r, 2000));
-  }
-  const good = last ? (want ? last.ok : !last.ok) : false;
-  emit({ ok: good, detail: 'target=' + host + ':' + port + ' want=' + (want ? 'open' : 'closed') + ' attempts=' + n + ' last=' + JSON.stringify(last) });
-})()
-`
-
-/** P12：DNS 问询（新域持答 ⇒ 裁定 deny ⇒ REFUSED；L1 目标 ⇒ 即时拒 + 零待批行）。 */
-const SCRIPT_P12 = `
-const dgram = require('node:dgram');
-const server = process.env.TC_PROBE_DNS_SERVER; const host = process.env.TC_PROBE_DNS_NAME;
-const query = (name) => {
-  const parts = name.split('.');
-  const labels = parts.map((p) => Buffer.concat([Buffer.from([p.length]), Buffer.from(p)]));
-  return Buffer.concat([Buffer.from([0x12, 0x34, 0x01, 0x00, 0, 1, 0, 0, 0, 0, 0, 0]), ...labels, Buffer.from([0, 0, 1, 0, 1])]);
-};
-const started = Date.now();
-const sock = dgram.createSocket('udp4');
-sock.on('message', (msg) => {
-  const rcode = msg[3] & 0x0f;
-  const answers = msg[6] * 256 + msg[7];
-  console.log('__PROBE__' + JSON.stringify({ ok: rcode === 5, detail: 'name=' + host + ' rcode=' + rcode + ' answers=' + answers + ' ms=' + (Date.now() - started) }));
-  sock.close();
-});
-setTimeout(() => { console.log('__PROBE__' + JSON.stringify({ ok: false, detail: 'name=' + host + ' no-answer-in-window ms=' + (Date.now() - started) })); try { sock.close() } catch (e) {} }, Number(process.env.TC_PROBE_WINDOW_MS || 80000));
-sock.send(query(host), 53, server);
-`
-
 /** P13：键面（`mode=once` = 单次取状态（期望 200）∥ `mode=hold` = 轮询至 401（吊销即断））。 */
 const SCRIPT_P13 = `
 (async () => {
@@ -233,23 +174,22 @@ const SCRIPT_P13 = `
 
 // ── 探针脚本表面（批内单测档语法机检缝——逐条 vm 编译；无则改一处漏一处只能等真机跑才现）──
 
-/** 探针脚本表（P1–P14 内嵌命令体——P14 走服务端 HTTP，无脚本）。 */
+/** 探针脚本表（P1 ∥ P5–P10 ∥ P13 内嵌命令体——P14 走服务端 HTTP，无脚本）。 */
 export const PROBE_SCRIPTS = Object.freeze({
-  P1: SCRIPT_P1, P2: SCRIPT_P2, P3: SCRIPT_P3, P4: SCRIPT_P4, P5: SCRIPT_P5, P6: SCRIPT_P6, P7: SCRIPT_P7,
-  P8: SCRIPT_P8, P9: SCRIPT_P9, P10: SCRIPT_P10, P11: SCRIPT_P11, P12: SCRIPT_P12, P13: SCRIPT_P13,
+  P1: SCRIPT_P1, P5: SCRIPT_P5, P6: SCRIPT_P6, P7: SCRIPT_P7,
+  P8: SCRIPT_P8, P9: SCRIPT_P9, P10: SCRIPT_P10, P13: SCRIPT_P13,
 })
 
 // ── 执行器 ──────────────────────────────────────────────────────────────────
 
 function parseArgs(argv) {
-  const args = { server: null, admin: null, node: null, repo: null, target: null, p14: false }
+  const args = { server: null, admin: null, node: null, repo: null, p14: false }
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === "--server") args.server = argv[++i] ?? null
     else if (arg === "--admin") args.admin = argv[++i] ?? null
     else if (arg === "--node") args.node = argv[++i] ?? null
     else if (arg === "--repo") args.repo = argv[++i] ?? null
-    else if (arg === "--target") args.target = argv[++i] ?? null
     else if (arg === "--p14") args.p14 = true
     else throw new Error(`未知参数：${arg}\n${USAGE}`)
   }
@@ -411,7 +351,7 @@ async function waitBox(ctx, workspaceId, { timeoutMs = 90000, running = false } 
   return null
 }
 
-/** 确保一个探针工作区（无 ⇒ 经控制台 API 自建——建盒链即闸就位「下发步」；不自动销毁：破坏性动作归人）。 */
+/** 确保一个探针工作区（无 ⇒ 经控制台 API 自建；不自动销毁：破坏性动作归人）。 */
 async function ensureWorkspace(ctx, { exclude = null } = {}) {
   const list = await api(ctx, "GET", "/api/admin/sandbox/workspaces")
   const rows = Array.isArray(list.json?.workspaces) ? list.json.workspaces : []
@@ -424,7 +364,7 @@ async function ensureWorkspace(ctx, { exclude = null } = {}) {
   if (created.status !== 200) throw new Error(`自建探针工作区失败（HTTP ${created.status}）：${created.text.slice(0, 300)}`)
   const workspace = created.json.workspace
   const box = await waitBox(ctx, workspace.id, { timeoutMs: 120000 })
-  if (!box) throw new Error(`探针工作区已建（#${workspace.id}）但盒未到位——建盒链前置未就绪（配额/闸/镜像）`)
+  if (!box) throw new Error(`探针工作区已建（#${workspace.id}）但盒未到位——建盒链前置未就绪（配额/镜像）`)
   return { workspace, box, created: true }
 }
 
@@ -492,11 +432,11 @@ async function main() {
   const boxReady = ctx.box !== null && ctx.client !== null
   const boxSkip = boxReady ? null : args.p14 === true ? "--p14 专跑（节点面不跑）" : "无可用盒（前置：一在线明文节点 + 探针工作区）"
 
-  // ── P1–P8（盒内面；无盒 ⇒ SKIP 如实）─────────────────────────────────────────
+  // ── P1 ∥ P5–P8（盒内面；无盒 ⇒ SKIP 如实）─────────────────────────────────────────
   if (!boxReady) {
     for (const [id, title] of [
-      ["P1", "宿主真实账号零命中盒内 /etc/passwd"], ["P2", "盒 → 宿主 22 口 ⇒ 拒"], ["P3", "169.254.169.254 ⇒ 恒拒"],
-      ["P4", "非白名单出站 ⇒ 拒"], ["P5", "fork 炸弹 ⇒ 被杀"], ["P6", "根只读"], ["P7", "填盘 ⇒ ENOSPC"], ["P8", "注入面 + 秘密零命中"],
+      ["P1", "宿主真实账号零命中盒内 /etc/passwd"],
+      ["P5", "fork 炸弹 ⇒ 被杀"], ["P6", "根只读"], ["P7", "填盘 ⇒ ENOSPC"], ["P8", "注入面 + 秘密零命中"],
     ]) report.add(id, title, "skip", boxSkip)
   } else {
     const run = async (id, title, script, { extraBinds = [], extraEnv = [], timeoutMs = 60000 } = {}) => {
@@ -508,9 +448,6 @@ async function main() {
       }
     }
     await run("P1", "宿主真实账号零命中盒内 /etc/passwd", SCRIPT_P1, { extraBinds: ["/etc/passwd:/host-passwd:ro"] })
-    await run("P2", "盒 → 宿主 22 口 ⇒ 拒", SCRIPT_P2)
-    await run("P3", "169.254.169.254 ⇒ 恒拒", SCRIPT_P3)
-    await run("P4", "非白名单出站 ⇒ 拒", SCRIPT_P4)
     await run("P5", "fork 炸弹 ⇒ 被杀", SCRIPT_P5, { timeoutMs: 120000 })
     await run("P6", "根只读", SCRIPT_P6)
     const diskMb = Number(ctx.settings?.diskMb ?? 0)
@@ -542,85 +479,6 @@ async function main() {
   else {
     const out = await runProbe(ctx, { cmd: ["/usr/local/bin/node", "-e", SCRIPT_P10], extraEnv: [`TC_PROBE_REPO=${args.repo}`] }, { timeoutMs: 420000 })
     report.add("P10", "正常开发链（拉仓 ∥ 装依赖 ∥ 跑测试）", out.skip ? "skip" : out.ok ? "pass" : "fail", out.skip ?? out.detail ?? "")
-  }
-
-  // ── P11：规则增删 ⇒ 即生效 ∥ 不重建盒（前置 --target）──────────────────────────
-  if (!boxReady) report.add("P11", "规则增删 ⇒ 即生效 ∥ 不重建盒", "skip", boxSkip)
-  else if (args.target === null) report.add("P11", "规则增删 ⇒ 即生效 ∥ 不重建盒", "skip", "缺前置 --target（域:端口）")
-  else {
-    const [targetHost, targetPortRaw] = args.target.split(":")
-    const targetPort = Number(targetPortRaw)
-    if (!targetHost || !Number.isInteger(targetPort)) report.add("P11", "规则增删 ⇒ 即生效 ∥ 不重建盒", "skip", `--target 形 = <域:端口>：${args.target}`)
-    else {
-      const before = ctx.box
-      const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(targetHost)
-      const ruleBody = isIp
-        ? { kind: "cidr", action: "allow", target: `${targetHost}/32`, port: targetPort, protocol: "tcp", note: "sandbox-probe P11（临时——用毕即删）" }
-        : { kind: "domain", action: "allow", target: targetHost, port: targetPort, protocol: "tcp", note: "sandbox-probe P11（临时——用毕即删）" }
-      let ruleId = null
-      try {
-        const added = await api(ctx, "POST", "/api/admin/sandbox/rules", ruleBody)
-        ruleId = added.json?.rule?.id ?? null
-        if (added.status !== 200 || ruleId === null) throw new Error(`规则增失败（HTTP ${added.status}）：${added.text.slice(0, 200)}`)
-        const openProbe = await runProbe(ctx, {
-          cmd: ["/usr/local/bin/node", "-e", SCRIPT_P11],
-          extraEnv: [`TC_PROBE_TARGET_HOST=${targetHost}`, `TC_PROBE_TARGET_PORT=${targetPort}`, "TC_PROBE_WANT=open", "TC_PROBE_WINDOW_MS=45000"],
-        }, { timeoutMs: 90000 })
-        await api(ctx, "DELETE", `/api/admin/sandbox/rules/${ruleId}`)
-        ruleId = null
-        const closedProbe = await runProbe(ctx, {
-          cmd: ["/usr/local/bin/node", "-e", SCRIPT_P11],
-          extraEnv: [`TC_PROBE_TARGET_HOST=${targetHost}`, `TC_PROBE_TARGET_PORT=${targetPort}`, "TC_PROBE_WANT=closed", "TC_PROBE_WINDOW_MS=45000"],
-        }, { timeoutMs: 90000 })
-        const after = await findBox(ctx, ctx.workspace.id)
-        const sameBox = after !== null && before !== null && after.Id === before.Id && after.State?.StartedAt === before.State?.StartedAt
-        report.add("P11", "规则增删 ⇒ 即生效 ∥ 不重建盒", openProbe.ok && closedProbe.ok && sameBox ? "pass" : "fail", `增后连通=${openProbe.ok}（${openProbe.detail}）∥ 删后不通=${closedProbe.ok}（${closedProbe.detail}）∥ 盒零重建=${sameBox}`)
-      } catch (e) {
-        report.add("P11", "规则增删 ⇒ 即生效 ∥ 不重建盒", "fail", `${e?.message ?? e}`)
-      } finally {
-        if (ruleId !== null) await api(ctx, "DELETE", `/api/admin/sandbox/rules/${ruleId}`).catch(() => {}) // 用毕即删（失败路径同收）
-      }
-    }
-  }
-
-  // ── P12：新域 ⇒ 挂起 ⇒ 裁定拒（+ L1 半支：即时拒 + 零待批行）──────────────────
-  const dnsServer = boxReady ? (ctx.box.HostConfig?.Dns ?? [])[0] ?? null : null
-  if (!boxReady || !dnsServer) report.add("P12", "新域挂起 ⇒ 裁定拒（+ L1 半支）", "skip", boxReady ? "盒无 DNS 注入（HostConfig.Dns 缺）" : "无可用盒")
-  else {
-    let id = null
-    try {
-      const fresh = `probe-${rand(8)}.example.com`
-      id = await startProbe(ctx, {
-        cmd: ["/usr/local/bin/node", "-e", SCRIPT_P12],
-        extraEnv: [`TC_PROBE_DNS_SERVER=${dnsServer}`, `TC_PROBE_DNS_NAME=${fresh}`, "TC_PROBE_WINDOW_MS=80000"],
-      })
-      let pending = null
-      for (let i = 0; i < 30 && pending === null; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        const list = await api(ctx, "GET", "/api/admin/sandbox/pending")
-        const rows = Array.isArray(list.json?.pending) ? list.json.pending : Array.isArray(list.json) ? list.json : []
-        pending = rows.find((row) => row.host === fresh) ?? null
-      }
-      if (pending === null) {
-        report.add("P12", "新域挂起 ⇒ 裁定拒（+ L1 半支）", "fail", `新域 ${fresh} 未进待批（挂起腿缺）——裁定行续跑`)
-      } else {
-        await api(ctx, "POST", `/api/admin/sandbox/pending/${pending.id}/resolve`, { decision: "deny" })
-        const out = await readProbe(ctx, id, { timeoutMs: 90000 }).then(parseProbeOutput)
-        // L1 半支：`localhost`（解析归回环 ⇒ L1 命中）⇒ 即时拒 + 零待批行
-        const l1 = await runProbe(ctx, {
-          cmd: ["/usr/local/bin/node", "-e", SCRIPT_P12],
-          extraEnv: [`TC_PROBE_DNS_SERVER=${dnsServer}`, "TC_PROBE_DNS_NAME=localhost", "TC_PROBE_WINDOW_MS=10000"],
-        }, { timeoutMs: 30000 })
-        const list = await api(ctx, "GET", "/api/admin/sandbox/pending")
-        const rows = Array.isArray(list.json?.pending) ? list.json.pending : Array.isArray(list.json) ? list.json : []
-        const l1Pending = rows.some((row) => row.host === "localhost")
-        report.add("P12", "新域挂起 ⇒ 裁定拒（+ L1 半支）", out.ok && !l1Pending ? "pass" : "fail", `新域裁定拒=${out.ok}（${out.detail}）∥ L1 即时拒=${l1.ok}（${l1.detail}）∥ L1 零待批行=${!l1Pending}`)
-      }
-    } catch (e) {
-      report.add("P12", "新域挂起 ⇒ 裁定拒（+ L1 半支）", "fail", `${e?.message ?? e}`)
-    } finally {
-      if (id !== null) await deleteProbe(ctx, id) // 用毕即删（含失败路径——头部纪律）
-    }
   }
 
   // ── P13：吊销 ⇒ 旧 key 即断 ∥ 新 key 可用 ─────────────────────────────────────

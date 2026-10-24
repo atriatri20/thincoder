@@ -8,7 +8,7 @@
  * 原样再导出 ⇒ 既有 import 面（核 agent-tools 族 / CLI `tool-events.mjs`）零改。
  *
  * 语义：消费端用 `includes()` 检出锚点 ⇒ 合成块头注记（"work may be partial"）——两端各一处：
- * CLI = `thincoder-cli/src/tui/tool-events.mjs:217`；端壳 = `thincoder-vscode/src/extension/
+ * CLI = `thincoder-cli/src/tui/tool-events.mjs` 的 `onToolResult`；端壳 = `thincoder-vscode/src/extension/
  * panel-callbacks.mjs`（onToolResult）。文案演进只改这里（与检测判据单源——消除文案/判据漂移面）。
  *
  * 零 import——任意层可引、无环。

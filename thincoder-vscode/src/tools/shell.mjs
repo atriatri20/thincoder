@@ -89,7 +89,7 @@ async function runInVisibleTerminal(command, timeout, ctx) {
       finish(`(killed: timeout ${timeout || BASH_TIMEOUT_MS}ms)\n[stdout]:\n${out.trim() || "(empty)"}`)
     }, timeout || BASH_TIMEOUT_MS)
     if (ctx.signal) {
-      // 中止面对齐核形（#677 I3：`killed: user interrupted` = 核 `bash.mjs:222` 同词；旧自报形退场）
+      // 中止面对齐核形（#677 I3：`killed: user interrupted` = 核 `runBash` 同词；旧自报形退场）
       const onAbort = () => { interrupt(); finish(`(killed: user interrupted)\n[stdout]:\n${out.trim() || "(empty)"}`) }
       if (ctx.signal.aborted) onAbort()
       else ctx.signal.addEventListener("abort", onAbort, { once: true })
@@ -134,7 +134,7 @@ const GIT_DESTRUCTIVE_RE = /\bgit\s+(?:checkout\s+(?:[\w./-]+\s+)?--(?!\w)|check
 
 /**
  * Auto-snapshot current uncommitted work as a FULL-COPY checkpoint — parity with the core
- * gitGuardSnapshot (@thincoder/core/tools/bash.mjs:96，CHECKPOINT.md D4 两端 guard 对齐：
+ * gitGuardSnapshot (@thincoder/core/tools/bash.mjs，CHECKPOINT.md D4 两端 guard 对齐：
  * 不再是 git stash)。快照覆盖 `git checkout -- .` / `restore` / `reset --hard` / `clean -f`
  * 会毁掉的一切（含 untracked）；恢复入口 = checkpoint 工具 checkpointAction=rewind。
  * Returns { id, notice } or null. Never throws.

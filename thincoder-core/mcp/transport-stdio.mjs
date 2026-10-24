@@ -5,7 +5,7 @@ import { spawn, spawnSync } from "node:child_process"
 import { rpcId, CALL_TIMEOUT_MS, withTimeout, quoteArg } from "./helpers.mjs"
 
 /** 退出相位标志（D-MC19）：模块加载期注册的 exit 钩子置位——退出相位无事件循环，
- *  只同步操作可落地（注册序恒早于宿主 cleanup——`thincoder-cli/src/tui/index.mjs:125`）。 */
+ *  只同步操作可落地（注册序恒早于宿主 cleanup——`thincoder-cli/src/tui/index.mjs` 的 `createExitCleanup`）。 */
 let exiting = false
 process.on("exit", () => { exiting = true })
 

@@ -7,7 +7,7 @@
  * 判决与边界（KD-SV-55）：
  * - 判定 = 逐渠旗 ∧ uri 在案（调用方入场——本档只收 `proxyUri`；无全局闸）；
  * - loopback 目标恒直连（NO_PROXY 语义——D-PX9：`localhost` ∥ `*.localhost` ∥ `127.0.0.0/8` ∥ `::1`）；
- * - 超时族 = CONNECT/TLS 15s ∥ 响应头阶段 600s（所沿先例 = 客户端 provider 面 `fetchTimeoutMs`——`docs/core/design/PROVIDER.md:114`）
+ * - 超时族 = CONNECT/TLS 15s ∥ 响应头阶段 600s（所沿先例 = 客户端 provider 面 `fetchTimeoutMs`——`docs/core/design/PROVIDER.md` §6.3）
  *   ∥ body 空闲 120s（看门狗——流式中途停摆断流不挂起）；
  * - TLS 默认全量校验（`rejectUnauthorized: true`——无 `insecureTls` 通道，§8 不做项）；
  * - 每请求独立连接（一次性 agent——无连接池；请求携 `Connection: close`）；

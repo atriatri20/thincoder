@@ -11,7 +11,7 @@
  */
 
 import { readFileSync } from "node:fs"
-import { DIMENSIONS, MANUAL_DIM } from "../cases/index.mjs"
+import { DIMENSIONS, MANUAL_DIM } from "../suites/index.mjs"
 import { EFFORT_VALUES } from "./params.mjs"
 
 const LABEL_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/ // 文件名安全（英文/数字/连字符/点）

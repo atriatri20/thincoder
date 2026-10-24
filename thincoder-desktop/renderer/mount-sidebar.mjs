@@ -1,5 +1,5 @@
 /**
- * mount-sidebar.mjs — 左侧工作区边栏（Codex 形大改批 · 2026-10-04）：
+ * mount-sidebar.mjs — 左侧工作区边栏（美化形大改批 · 2026-10-04）：
  * 面 = 品牌行（折叠钮 ∕ 产品名）+ 动作行（新聊天 ∕ 打开目录）+ 项目段（当前项目名 + 会话树 —— `sessionModel`
  * 单源复用）+ 最近项目段（`project.recent` 切片投影，当前 cwd 除外 —— 点项 = 切工作区）+ 底部设置出口。
  * 数据零新通道：`project` ∕ `sessions` 两切片 = `refreshRail` 既有单源（`session-wire.mjs`），本档零第二读路；
@@ -9,7 +9,7 @@
  * 会话内仍生效）；展开收窄为图标列（重展钮常在 —— 折叠面不失出口）。
  * 订阅键 `SIDEBAR_KEYS`（project ∕ sessions ∕ catalog ∕ tabBadges ∕ locale）⇒ 整树重挂（构树面纯读现态；树小 —— 条目
  * ≤ 最近 10 ∖ 当前项目会话数，零键控差分成本）。纪律：零 `node:` ∕ 零裸包；文案一律经 `t()`；字形面
- * （+ ∕ ⌂ ∕ ⚙ ∕ ☰ ∕ 徽标点）住 `codex.css` `content`（视图档零字形字面 —— 沿 `chrome.css` 纪律）。
+ * （+ ∕ ⌂ ∕ ⚙ ∕ ☰ ∕ 徽标点）住 `beauty.css` `content`（视图档零字形字面 —— 沿 `chrome.css` 纪律）。
  */
 import { build, clear, el } from "./dom.mjs"
 import { t } from "./i18n.mjs"

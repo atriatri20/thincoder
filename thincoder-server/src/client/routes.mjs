@@ -1,5 +1,5 @@
 /**
- * routes.mjs — 客户端接入面（`/api/client/*`——client/CLIENT.md §1/§2；KD-SV-62）：login ∥ logout ∥ me 三处理。
+ * routes.mjs — 客户端接入面（`/api/client/*`——client/CLIENT.md §1/§2；KD-SV-62）：login ∥ logout ∥ rotate ∥ me 四处理。
  *
  * login = 端侧直登（公开）：登录守卫（复用 login-guard——双维锁；锁定期 ⇒ 429 `too_many_attempts` +
  * `Retry-After`，不跑散列）→ 散列校验（复用 members——同措辞同耗时，防枚举）→ 签发一枚**具名**
@@ -8,6 +8,10 @@
  * logout ∥ me = 登录 token 鉴权（`requireApiKey`——与 /v1 同校验单源；无 ∥ 无效 ⇒ 401 `invalid_api_key`，
  * 三态不区分）；logout = 吊销当枚（软删——`revokeKey`；逐请求查库 ⇒ 下一请求即 401；已吊销再调 ⇒ 401——
  * 端侧视同「已失效」）。
+ * rotate = **单把换发**（KD-SV-63）：吊销当枚（`revokeKey`——旧 token 下一请求即 401）+ 同标签重签一枚
+ * （`issueKey`——`name` = 原值；免 20 上限沿客户端面先例）⇒ 200 `{ ok:true, token }`（新明文一次性——同登录回显
+ * 语义）；零体（不读体——写端点 JSON 型门归分派层）；审计单行 `key_rotate`（detail 携 `surface:"client"`）；
+ * 无 ∥ 无效 ⇒ 401（零变更——审计零行）。
  * 零新错误码（error 全码复用）；`sessions` 表零涉（客户端 token 落 `api_keys`）；零迁移（结构版本保持 v10）。
  */
 import { recordAudit } from "../accounts/audit.mjs"
@@ -67,6 +71,15 @@ export function registerClientRoutes(routes, { db, guard = defaultLoginGuard } =
       detail: { keyHint: key?.key_hint ?? "", surface: "client" },
     })
     sendJson(res, 200, { ok: true })
+  })
+
+  routes.add("POST", "/api/client/rotate", (req, res) => {
+    const { keyId, member } = requireApiKey(db, req) // 无 ∥ 无效（含已吊销）⇒ 401（零变更——审计零行）
+    const key = getKeyById(db, keyId)
+    revokeKey(db, keyId) // 软删当枚（行保留）；逐请求查库 ⇒ 旧 token 下一请求即 401
+    const issued = issueKey(db, member.id, { name: key?.name ?? null }) // 同标签重签（原值——免 20 上限，KD-SV-61）
+    recordAudit(db, { type: "key_rotate", actor: member.name, actorId: member.id, detail: { keyHint: issued.hint, surface: "client" } })
+    sendJson(res, 200, { ok: true, token: issued.plain }) // 新明文一次性（同登录回显语义）
   })
 
   routes.add("GET", "/api/client/me", (req, res) => {

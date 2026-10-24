@@ -1,6 +1,6 @@
 /**
  * relay.mjs — relay 事件 token → 子代理状态 patch（**映射单源**——设计 §5「状态机族」）。
- * 先例 = `thincoder-vscode/src/extension/panel-subagent-relay.mjs:101-147`（逐字搬迁：
+ * 先例 = `thincoder-vscode/src/extension/panel-subagent-relay.mjs`（逐字搬迁：
  * 识别 → 剥除 → 映射 / pending 集 / queued 缓存 / 终态词全表；R2 交接项由 B7 2a 收口
  * ——该档事件面 ∕ 内容构形面换接本件取值（W2 落地后为真）。内容 chunk 构形单源 =
  * `relaySubContentChunk`（B7 2a ∕ KD-7——desk ∕ VSC 双消费；宿主副作用留端，见其处注释）。
@@ -18,10 +18,10 @@
  */
 
 /** `role#id/` prefix router — hyphen included since the eng-coder fix (2026-08-21).
- *  （逐字承 `thincoder-core/agent/relay-prefix.mjs:10`） */
+ *  （逐字承 `thincoder-core/agent/relay-prefix.mjs`） */
 export const RELAY_PREFIX_RE = /^([\w-]+)#(\d+)\//
 
-/** 嵌套 relay 前缀通用解析（循环解析任意深度——逐字承 `relay-prefix.mjs:16-32`）：
+/** 嵌套 relay 前缀通用解析（循环解析任意深度——逐字承 `relay-prefix.mjs`）：
  *  `eng-coder#2/explore#1/read` → { head（块路由）, inner[], label（inner 链）, rest }。
  *  单层 = inner[]/label ""；无前缀 → null。 */
 export function relayPathOf(text) {
@@ -54,7 +54,7 @@ export function queuedInfoOf(scope, key) {
   return scope?.queued?.get(key) ?? null
 }
 
-/** 快筛：本面形态（含 `⟦ev⟧` / `[model]` 字面 ∧ relay 前缀）——调用方消费判据（先例 `:85-87` 两判据同形）。 */
+/** 快筛：本面形态（含 `⟦ev⟧` / `[model]` 字面 ∧ relay 前缀）——调用方消费判据（先例 `panel-subagent-relay.mjs` 两判据同形）。 */
 export function isRelayToken(token) {
   const text = String(token ?? "")
   if (!text.includes("⟦ev⟧") && !text.includes("[model]")) return false

@@ -5,10 +5,6 @@
 > 相邻权威 = `docs/core/design/SESSION.md`（§6.2 槽位认领 / 判活 / slotOccupancy——本机制上游存储层基建，复用不重造）·
 > `docs/core/design/WORKSPACE.md`（工作区面）· `docs/core/design/SETTINGS-TOOL.md`（settings 工具走 `writeConfigAtomic` 原子写盘）。
 > 需求侧 = `docs/core/requirements/MULTI-INSTANCE-COLLAB.md`（F-MI1–F-MI5 / N-MI1–N-MI5）。
-> 建档：2026-09-15（**CLI 尾部真批 · 纯新建**——`thincoder-cli/docs/design/MULTI-INSTANCE-COLLAB.md` 内容重建入基准层；
-> 旧档原地一字不改、留作参照历史；VSC 端按双端镜像纪律同构实现——逐字锚 = §3.2 L1 注入文案 + §3.3 schema + §4.3 软提示文案 + §4.4 认领软提示文案，
-> VSC 侧实现坐标归 VSC 轮（P2），本档只保留机制原则与 CLI / 核侧坐标）。
-> 本档坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
 
 ## 1. 定位与范围边界
 
@@ -18,7 +14,7 @@ agent 自主知道「有同伴在」，写前避让文件域竞争，无需用�
 - **不做**：跨实例实时聊天 / 任务编排 / 冲突自动合并；文件域感知是**软提示**（不阻止写，非文件锁）。
 - 判断标准 = **写入语义**：共享单一文件（读-改-写竞态 → 需 mtime 门控 / 合并）vs 追加独立快照 / 分文件（天生无冲突）。
 
-## 2. 共享状态四分类（as-of 2026-09-06 完整梳理）
+## 2. 共享状态四分类
 
 ### A 类：已有防护（复用存储层基建）
 
@@ -42,7 +38,7 @@ checkpoints（追加式独立快照目录——ID 随机后缀防碰撞 + 清理
 
 ### D 类：工作区本身（L1/L2/L3 主战场）
 
-repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互相覆盖（实况曾靠口头回避）。
+repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互相覆盖。
 
 ## 3. 感知面：L1 回合注入 / L2 查询工具
 
@@ -54,67 +50,66 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
 - **一次批量判活**（`batchAlive(pids)`——`thincoder-core/process-probe-exec.mjs:96`，单次 tasklist/ps 全量比对）；探测失败（null）≠ 全死——按「无活伴」降级（不显示幽灵同伴）；
 - self = `sessionId === getSessionId()`（本进程恒活不查）；
 - **端字段**：`probeCmdlines(pids)`（`thincoder-core/process-probe-exec.mjs:146`）一次 exec 拿全部 pid+cmdline，`VSC_END_RE`（extensionHost 族）命中 → `vscode`；
-  桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段 ∥ `node_modules/electron/dist/` 段〔2026-09-30 缺陷修复批 #707 扩〕）命中 → `desktop`；其余 → `cli`〔2026-09-29 parity-b1 收正轮〕；失败 → end 缺省；
-- **惰性缓存（TUI 假死批收正 · 2026-09-18）**：命中判据 = **manifest mtime 未变 ∨ 快照年龄 < `PEER_PROBE_TTL_MS = 5000` ms** ⇒ 直接返回缓存快照（零 exec 零读）；
+  桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段 ∥ `node_modules/electron/dist/` 段）命中 → `desktop`；其余 → `cli`；失败 → end 缺省；
+- **惰性缓存**：命中判据 = **manifest mtime 未变 ∨ 快照年龄 < `PEER_PROBE_TTL_MS = 5000` ms** ⇒ 直接返回缓存快照（零 exec 零读）；
   缺失 / 损坏 → `[]`（不缓存空结果）；缓存上限 `CACHE_MAX = 64`；快照记 `probedAt`（上次实探时刻）。
   **可测缝（TTL 两侧）**：模块级 `nowFn`（缺省 `Date.now`——经 `_setPeerInstancesTestImpl` 注入、`??` 兜底、测试 finally 恢复）
   ⇒ 「TTL 内命中 / TTL 外重探」两侧均可**确定性**断言，免真实 ≥ 5 s 等待。
   **修因**：`saveSession` 每回合重写 manifest（`thincoder-core/session.mjs:163-172`）⇒ 纯 mtime 判据**每回合自击穿**，
   每回合重跑 `tasklist` + `Get-CimInstance`（1–3 s **同步 exec**，独占事件循环——主 agent 回合假死源之一）。
-  TTL 只影响**新鲜度**（同伴来去在人类时标），不影响正确性；TTL 内不重探 = 与 T-L1c「零 exec」同向。 （机检豁免——用例退场登记）
-- **探测异步化（同批）**：`thincoder-core/process-probe.mjs` 增 `batchAliveAsync` / `probeCmdlinesAsync`（`execFile` promise 化；
+  TTL 只影响**新鲜度**（同伴来去在人类时标），不影响正确性；TTL 内不重探 = 与 T-L1c「零 exec」同向。
+- **探测异步化**：`thincoder-core/process-probe.mjs` 增 `batchAliveAsync` / `probeCmdlinesAsync`（`execFile` promise 化；
   **同一注入缝** `_setProcessProbeTestImpl`——测试注入的同步函数经 `await` 消费，零新缝）；
   读面 `peerInstances` → **async**，`pushPeerReminder` → **async**（装配点 `prepareRun` 已 async——`await pushPeerReminder(agent)`）。
-  **清理面形态（2026-09-18 · F-MI7）**：`cleanDeadOwners` / `usableSlot` / `allocateFresh` / `ensureActive` **零自有探测**——判据 = 「入口一次束 + 查表」形态（`probeOwnersAsync` / `probeOwnersSync`，见下条）；`resumeSlot` 整链 **async**（会话起点 / 认领路径零同步 exec）。
+  **清理面形态（F-MI7）**：`cleanDeadOwners` / `usableSlot` / `allocateFresh` / `ensureActive` **零自有探测**——判据 = 「入口一次束 + 查表」形态（`probeOwnersAsync` / `probeOwnersSync`，见下条）；`resumeSlot` 整链 **async**（会话起点 / 认领路径零同步 exec）。
   同步面仅剩**两处有界同步消费**（同束 `probeOwnersSync`，`SYNC_PROBE_MS` = 2 s 紧界）：① `activeSlot` 冷路径；② 占用判定 `slotOccupancy`（`thincoder-core/session.mjs`，拆分后随 `session-lifecycle.mjs`）。
   两处均带**零探测早退**（粘性早退 / 无属主或本进程属主）——详面 = `SESSION.md` §6.2；测试锚 = 本档「判据（测试层 · F-MI7）」条 ③。
-- **活判定身份校验（本批 · F-MI6 / N-MI6 · 2026-09-16 · 评审 #3 落点澄清）**：身份过滤**不进 `batchAlive`**（保持**纯存在性**——`thincoder-core/peer-domains.mjs` 死文件清理语义零变、**零改**）；过滤落点 = **读面 `peerInstances()`**（存在性结果 × 命令行复核）+ **清理面 `filterDeadOwners`**（详面见下条判据单源）。命令行命中**本产品标记族**才计为活同伴。
-  标记族 = ① CLI 入口族（命令行含 `thincoder.cjs` / `thincoder.mjs` / `thincoder-cli` 路径段）· ② VSC 宿主族（既有 `VSC_END_RE`——extensionHost）· ③ 桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段 ∥ `node_modules/electron/dist/` 段〔2026-09-30 缺陷修复批 #707 实测扩入——桌面 dev 相对路径启动形〕；2026-09-29 parity-b1 收正轮初入）；
-  命令**明确可得且不命中** ⇒ 不列为同伴（消除 pid 复用假阳性——台账实测 `docs/TODO.md:27`）；命令探测失败 / 该 pid 缺行 ⇒ **保守保留**（探测失败 ≠ 死；既有降级语义不变）。
+- **活判定身份校验（F-MI6 / N-MI6）**：身份过滤**不进 `batchAlive`**（保持**纯存在性**——`thincoder-core/peer-domains.mjs` 死文件清理语义零变、**零改**）；过滤落点 = **读面 `peerInstances()`**（存在性结果 × 命令行复核）+ **清理面 `filterDeadOwners`**（详面见下条判据单源）。命令行命中**本产品标记族**才计为活同伴。
+  标记族 = ① CLI 入口族（命令行含 `thincoder.cjs` / `thincoder.mjs` / `thincoder-cli` 路径段）· ② VSC 宿主族（既有 `VSC_END_RE`——extensionHost）· ③ 桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段 ∥ `node_modules/electron/dist/` 段）；
+  命令**明确可得且不命中** ⇒ 不列为同伴（消除 pid 复用假阳性）；命令探测失败 / 该 pid 缺行 ⇒ **保守保留**（探测失败 ≠ 死；既有降级语义不变）。
 - **判据单源**：身份判据实现住 **`thincoder-core/process-probe.mjs`**——`batchAlive` / `probeCmdlines` / `isProductProc(cmdline)` / `classifyEnd` / `filterDeadOwners`；
   **感知面（读）与陈旧记录清理面（写）调用同一实现**，零第二套标记正则（清理面 = `thincoder-core/session-slot-claims.mjs` `cleanDeadOwners`（定义 `:78`；转口 = `thincoder-core/session-slots.mjs:48`；调用 `:305`）（机制面 = `SESSION.md` §6.2）——`isProcessAlive` 之外加身份复核，pid 活 + 身份不符 ⇒ 条目可删）。
   注入缝（R6 形态）= `process-probe.mjs` 模块级 `_setProcessProbeTestImpl({ aliveFn, cmdlineFn })` + `??` 默认 + 测试 finally 恢复；
   清理面 API = `filterDeadOwners(pid, { alive, cmdline }) → boolean`——**`alive` 三态**（`true` 活 / `false` 死 / `undefined` 未知，**缺省 = 未知**）：
   `false` ⇒ `true`（可删，pid 死语义原样）；`true` ⇒ 命令明确可得且非本产品 ⇒ `true`；**未知 / 缺行 ⇒ `false`（保守保留，D-MI10）**。
   三态判据单源 = `ownerState(pid, { aliveSet, cmds }) → "dead" | "alive" | "unknown"`（`filterDeadOwners` 与占用 / 空闲判定同源消费——`SESSION.md` §6.2）。
-- **清理面扫描形态（本批 · 复审 #2）**：清理面与读面**同形态**——**单次批量**取命令行（一次 `probeCmdlines` 覆盖全量待判 pid，`filterDeadOwners` 逐条消费该批量结果），**不做每 pid 一次 exec**（对齐 §8 `D-MI3` 否决口径与需求档 `N-MI3` 批量判活；R6 注入缝 `cmdlineFn` 即此批量语义）。
+- **清理面扫描形态**：清理面与读面**同形态**——**单次批量**取命令行（一次 `probeCmdlines` 覆盖全量待判 pid，`filterDeadOwners` 逐条消费该批量结果），**不做每 pid 一次 exec**（对齐 §8 `D-MI3` 口径与需求档 `N-MI3` 批量判活；R6 注入缝 `cmdlineFn` 即此批量语义）。
 - **探测束与有界形态（2026-09-18 · F-MI7）**：探针族两形态各增**束 API**——`probeOwnersSync(pids) → { aliveSet, cmds }` / `probeOwnersAsync(pids) → { aliveSet, cmds }`（每束 ≤1 批量判活 + ≤1 批量 cmdline；异步形态两 exec **并发**）。
   同步形态超时 = `SYNC_PROBE_MS = 2000`（阻塞事件循环 ⇒ **紧界**）；异步形态沿用 10 s / 15 s（不阻塞，量级不变）。
   cmdline 一发**仅在存在非自身存活属主时**必需（无活外人 ⇒ 省发）——束内自决，调用面零探测零判据。
   **失败 ⇒ `aliveSet = null`（未知）**：判据层按「保留 / 不可认领」降级（三态判据），**任何调用面不得把 `null` 当「全死」**。
-- **已知局限（本批登记）**：manifest 记录不含 cwd、进程 cwd 无跨平台可移植获取面 ⇒ 被他 cwd 的**真实** thincoder 实例（或他窗口 VS Code 宿主）复用 pid 时仍可能误报——根因 = 身份判据不含 cwd（§8 D-MI9 已否决 cwd 匹配）；处置方向 = **保守保留**（D-MI10 不对称）；**消解路径未定**（登记为已知局限，非本批可解）。
-- **已知局限（误删方向 · 本批登记 · 复审 #3）**：标记族**假阴性**——真实本产品实例命令行不含 `thincoder.cjs` / `thincoder.mjs` / `thincoder-cli` 路径段且非 extensionHost（如包装器 / 新入口形态）⇒ 清理面会删**活**属主槽条目——正是 `D-SE3` 要防的「双进程同槽」方向（`D-MI10` 不对称只护「探测失败 / 缺行」）。
-  接受边界 = 入口族命中面（CLI 入口段 / extensionHost）内无此方向；族外残差接受（放宽标记族 = 复引入 pid 复用误报——`D-MI11` 判据零改）；消解路径 = 实测出现该形态时按形态补进标记族（单源改点 = `isProductProc`）。**2026-09-30 兑现（#707）**：桌面 dev 相对路径启动形按此路径补入桌面族；同批含「误删风险面」负控用例（活属主 + 该形 ⇒ 不判死 / 不删）。
-- **判据（测试层 · 需求档 F-MI6 / N-MI6）**：读面 = `thincoder-core/test/peer-instances.test.mjs`（注入缝 `:37/:44` 首用——身份不符 ⇒ **不列为同伴**；身份符 / 探测失败 / 缺行 ⇒ **保留**）；清理面 = `thincoder-core/test/session-slot-write.test.mjs`（同判据：不符 ⇒ 删，不确定 ⇒ 不删）；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
-  本批受影响文件（当前行数 / 增量）= 批次档 `docs/batches/2026-09-18-init-block.md` §2.3 + 同档 §2「fix 轮附录」（实施面受影响文件；F-MI6 侧沿革 = 批次档 `docs/batches/2026-09-15-core-defect-fixes.md` §四）。
-- **判据（测试层 · 需求档 F-MI7 · 本批锚 · 2026-09-18）**：单元测试档 = `thincoder-core/test/process-probe.test.mjs`（束 API / 三态 / 注入缝计数 / 零同步 exec 扫描——核半）· `thincoder-core/test/session-slot-write.test.mjs`（扩——有界同步例外锚）·（已随 2026-09-28 测试树全清退场）（迁移期引文）
-  `thincoder-vscode/test/zero-sync-exec.test.mjs`（零同步 exec 扫描——端半；随 2026-09-28 测试树全清重置退场——重建时恢复）；四路锚：（迁移期引文）
+- **已知局限（登记）**：manifest 记录不含 cwd、进程 cwd 无跨平台可移植获取面 ⇒ 被他 cwd 的**真实** thincoder 实例（或他窗口 VS Code 宿主）复用 pid 时仍可能误报——处置方向 = **保守保留**（D-MI10 不对称）；**消解路径未定**（登记为已知局限，非本档可解）。
+- **已知局限（误删方向 · 登记）**：标记族**假阴性**——真实本产品实例命令行不含 `thincoder.cjs` / `thincoder.mjs` / `thincoder-cli` 路径段且非 extensionHost（如包装器 / 新入口形态）⇒ 清理面会删**活**属主槽条目——正是 `D-SE3` 要防的「双进程同槽」方向（`D-MI10` 不对称只护「探测失败 / 缺行」）。
+  接受边界 = 入口族命中面（CLI 入口段 / extensionHost）内无此方向；族外残差接受（放宽标记族 = 复引入 pid 复用误报——`D-MI11` 判据零改）；消解路径 = 实测出现该形态时按形态补进标记族（单源改点 = `isProductProc`）。
+- **判据（测试层 · 需求档 F-MI6 / N-MI6）**：读面 = `thincoder-core/test/peer-instances.test.mjs`（注入缝 `:37/:44` 首用——身份不符 ⇒ **不列为同伴**；身份符 / 探测失败 / 缺行 ⇒ **保留**）；清理面 = `thincoder-core/test/session-slot-write.test.mjs`（同判据：不符 ⇒ 删，不确定 ⇒ 不删）；
+- **判据（测试层 · 需求档 F-MI7）**：单元测试档 = `thincoder-core/test/process-probe.test.mjs`（束 API / 三态 / 注入缝计数 / 零同步 exec 扫描——核半）· `thincoder-core/test/session-slot-write.test.mjs`（扩——有界同步例外锚）
+  `thincoder-vscode/test/zero-sync-exec.test.mjs`（零同步 exec 扫描——端半）；四路锚：
   ① **零同步 exec 扫描（两域分档）**：核域 = `thincoder-core/session-slots.mjs` · `thincoder-core/session.mjs` · `session-lifecycle.mjs` · 端域（零同步 exec 扫描域）= `thincoder-vscode/src/extension/session-slots.mjs` · `thincoder-vscode/src/extension/peer-instances.mjs`；
-  **端侧探测消费面** = `thincoder-vscode/src/extension/peer-instances.mjs` · `thincoder-vscode/src/extension/session-io.mjs`（`session-slots.mjs` 副本已注销归核 ⇒ 零自有探测——2026-09-25 SLOT-END-PARAM 批；名册机检 = `thincoder-vscode/test/zero-sync-exec.test.mjs`（随 2026-09-28 测试树全清重置退场——重建时恢复））；（迁移期引文）
-  分档 = N3 门禁（`thincoder-core/test/core-hygiene.test.mjs:96-107`）；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
-  域内零 `execSync` / `execFileSync` / `spawnSync` 直引（形态先例 = `thincoder-core/test/tool-seams.test.mjs:289-299`——核 / 端两半同形；域完整性对账先例 = `thincoder-vscode/test/settings-open-snapshots.test.mjs:163-185`）；`thincoder-core/process-probe.mjs` = 探针族单点落点（豁免——不在零域）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  **端侧探测消费面** = `thincoder-vscode/src/extension/peer-instances.mjs` · `thincoder-vscode/src/extension/session-io.mjs`（零自有探测；名册机检 = `thincoder-vscode/test/zero-sync-exec.test.mjs`）；
+  分档 = N3 门禁（`thincoder-core/test/core-hygiene.test.mjs:96-107`）；
+  域内零 `execSync` / `execFileSync` / `spawnSync` 直引（形态先例 = `thincoder-core/test/tool-seams.test.mjs:289-299`——核 / 端两半同形；域完整性对账先例 = `thincoder-vscode/test/settings-open-snapshots.test.mjs:163-185`）；`thincoder-core/process-probe.mjs` = 探针族单点落点（豁免——不在零域）。
   ② **束 exec 上界**（注入缝计数）：每束 ≤1 批量判活 + ≤1 批量 cmdline、零逐 pid——经 `_setProcessProbeTestImpl({ aliveFn, cmdlineFn })` 计数断言（越出即红）。
   ③ **有界同步例外锚**（`activeSlot` / `slotOccupancy` 两面）：零探测早退命中（粘性 / 无属主 / 本进程属主）⇒ 计数断言零探测；探测失败 / 超时（注入形——零真实 2 s 等待）⇒ 未知保守保留（占用判定 ⇒ `{ occupied: true, unknown: true }`）；
   界值单源 = `SYNC_PROBE_MS = 2000`（探针族一份常量）。
-  ④ **初始化窗口静默读数**（< 2 s）：取值单源 = `docs/vsc/design/SETTINGS.md` §2.11 三路（静态扫描 / 注入式时序断言 / 实机读数）；实机读数承批次档 `docs/batches/2026-09-18-init-block.md` §1.5（实测 C）→ §6 收口。
-- 测试注入缝：`_setPeerInstancesTestImpl({ aliveFn, cmdlineFn, nowFn })` / `_resetPeerInstancesTestImpl()`（`:48` / `:55`——注入即清缓存；`nowFn` 同批新增——TTL 面见上）。
-- **VSC 镜像面收正（2026-09-18 · init-block 批 · F-MI6）**：端侧 `thincoder-vscode/src/extension/peer-instances.mjs` 判活 / 标记正则 / 批量 cmdline **本地副本删除**（本地副本 = `:39` `batchAlive` · `:74` `classifyEnd` · `:88` `probeCmdlines`）——判据**引核**（经 `@thincoder/core/process-probe.mjs` 引用，单源不变）；
+  ④ **初始化窗口静默读数**（< 2 s）：取值单源 = `docs/vsc/design/SETTINGS.md` §2.11 三路（静态扫描 / 注入式时序断言 / 实机读数）；实机读数承当下实机测量（实测 C）。
+- 测试注入缝：`_setPeerInstancesTestImpl({ aliveFn, cmdlineFn, nowFn })` / `_resetPeerInstancesTestImpl()`（`:48` / `:55`——注入即清缓存；`nowFn` 新增——TTL 面见上）。
+- **VSC 镜像面收正（F-MI6）**：端侧 `thincoder-vscode/src/extension/peer-instances.mjs` 判活 / 标记正则 / 批量 cmdline **本地副本删除**（本地副本 = `:39` `batchAlive` · `:74` `classifyEnd` · `:88` `probeCmdlines`）——判据**引核**（经 `@thincoder/core/process-probe.mjs` 引用，单源不变）；
   端侧只留 **END / 命名空间薄壳**；注入缝转口——端侧 `_setAliveProbeForTest` 转注入核缝 `_setProcessProbeTestImpl`（同缝语义——测试免双缝）。
-  **（2026-09-29 parity-b1-vsc-core 收编后现态：端侧整档 = 核单源转口——SWR 同步壳 ∕ 异步对偶 ∕ 预热实现 ∕ 端探针缝名全量退役；见批档 `docs/batches/2026-09-29-parity-b1-vsc-core.md` §2.9 与 §5.P2）**
+  **（端侧整档 = 核单源转口）**
   验收：既有同伴用例行为零变（引核后同一判据）+ 端侧本地判活 / 标记正则 / cmdline 副本零残留（扫描判据 = 本档「判据（测试层 · F-MI7）」条 ①）。
-- **聚合半段单源（2026-09-25 · peer 收口批 · 台账 #302）**：manifest → 按 sessionId 分组（`groupSlotSessions`——`thincoder-core/peer-instances.mjs:85` **具名导出**）**归核**；端侧**引核**（`thincoder-vscode/src/extension/peer-instances.mjs` 零本地副本）——共享面 = 纯函数分组半段。
-  端壳自持的**壳形**（SWR 快照读 + 异步对偶 / 预热——§3.1「端读面形态与缓存判据」条）零变：共享分组半段 ≠ 委托整面（端 `peerInstances` 仍自持）。**（2026-09-29 parity-b1-vsc-core 收编后现态：壳形随取核退役——端 `peerInstances` = 核单源转口；`prewarmPeerInstances` = 核缓存预热薄转口）**
+- **聚合半段单源**：manifest → 按 sessionId 分组（`groupSlotSessions`——`thincoder-core/peer-instances.mjs:85` **具名导出**）**归核**；端侧**引核**（`thincoder-vscode/src/extension/peer-instances.mjs` 零本地副本）——共享面 = 纯函数分组半段。
+  **（端 `peerInstances` = 核单源转口；`prewarmPeerInstances` = 核缓存预热薄转口）**
   判据：① 结构（机检）= 端档零本地 `groupSlotSessions` 定义 ∧ 具名 import 自核；② 行为（对拍）= 同 manifest（多槽同 sessionId / 非数字槽 / 空 sessionId / pid 不可解析）⇒ 两端分组集合逐字段相等。
-- **端读面形态与缓存判据（2026-09-18 · init-block 批 · 2026-09-25 二态化；2026-09-29 parity-b1 收编后现态 = 核读面单源 · async）**：VSC 侧读形 = **核读面直取**（`@thincoder/core/peer-instances.mjs`——async · mtime ∨ TTL 惰性缓存 · 探针族单源）；原 **SWR 快照壳**（TTL 到期先返旧快照 + 后台异步重探）· 异步对偶 · 端探针缝名随取核**退役**；
-  **预热落点（父侧裁定 2026-09-19）**：启动期异步预热的落点 = **panel resolve 面**（键 = **panel cwd**）——对齐 SWR 缓存键；`activate()` 无 per-cwd 键，多根工作区会预热错键。
-  **形态面（非登记项——2026-09-29 收编后为「核读面单源」）**：预热 = 核缓存预热薄转口（`prewarmPeerInstances`——先起一次核读面落缓存）；端壳读形自持面退场（N-MI2「各端自持——独立性指行为语义面」射程内——零端差）。
-  **缓存判据差（2026-09-25 A9 核查 = ① 不成立 ⇒ 消解路径）**：**已消解**（2026-09-29 parity-b1-vsc-core 收编——端读形整档转口核件：核 `mtime ∨ TTL` 双判据单源，端 TTL 单判据差退场；原消解路径「端缓存判据并核」随取核一步到位）。`N-MI2` lockstep 不受影响——同伴清单**不入**认领 / 占用判定（判定面单源 = 核束 + `ownerState`）。
+- **端读面形态与缓存判据（核读面单源 · async）**：VSC 侧读形 = **核读面直取**（`@thincoder/core/peer-instances.mjs`——async · mtime ∨ TTL 惰性缓存 · 探针族单源）；
+  **预热落点**：启动期异步预热的落点 = **panel resolve 面**（键 = **panel cwd**）；`activate()` 无 per-cwd 键，多根工作区会预热错键。
+  **形态面（非登记项）**：预热 = 核缓存预热薄转口（`prewarmPeerInstances`——先起一次核读面落缓存）。
+  `N-MI2` lockstep 不受影响——同伴清单**不入**认领 / 占用判定（判定面单源 = 核束 + `ownerState`）。
 
 ### 3.2 L1 回合注入（`pushPeerReminder`）
 
 装配 = `thincoder-core/agent/setup-reminders.mjs`；时序（`setup.mjs`，depth-0）= env-state 之后、time reminder 之前（time 保持 LAST——prefix-cache 契约）。
 形态 = **depth-0、transient:true**（同 env-state 纪律）；无同伴零开销（惰性缓存）；任何感知失败静默跳过（注入绝不打断回合）。
-**异步形态（TUI 假死批 · 2026-09-18）**：`pushPeerReminder` = async（内部 await 读面）——装配点 `prepareRun` 为
+**异步形态（TUI 假死 · 2026-09-18）**：`pushPeerReminder` = async（内部 await 读面）——装配点 `prepareRun` 为
 depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零变**（env-state 后、time reminder 前）。
 
 **注入文案（逐字契约，双端一致）**：
@@ -138,7 +133,6 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 
 ### 4.1 选型结论
 
-① sessions 目录受 cwd 分片限（登记域是任意文件路径——装不下）；② manifest 扩展被否决（条目级合并只认已知字段、旧版整对象写丢未知字段）；
 ③ **选定：每实例独立登记文件 + 目录扫描聚合**——end marker 单写者模式同型（写失败容忍 + 损坏按缺失降级 + 崩溃残留判活可清）→ `thincoder-core/peer-domains.mjs`。
 
 ### 4.2 登记存储（D-L3a）
@@ -169,17 +163,16 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 > `[peer-collab] ${target} — another live instance (${who}) registered writing it within the last 5 minutes; concurrent edits may overwrite each other. Write not blocked — coordinate before proceeding.`
 
 `who` = 各 `{end} pid={pid}` 以 ", " 连接。无冲突 / 无目标 / 降级 → null（调用方零附加）。
-- **分隔符 = 核形 `\n`（2026-09-29 parity-b1 收编后单源）**：多行提示的行间分隔符不属逐字契约——核逐行 `\n`（`thincoder-core/peer-domains.mjs`）；原端块内空行 `\n\n`（`peerNotes` 块拼接）随取核退场；单行文案本体不受影响。
-- **字面规范面（2026-09-25 · peer 收口批 · 台账 #291 裁定；2026-09-29 parity-b1 收编后现态）**：本字面 = **规范面单源**——核实现（`thincoder-core/peer-domains.mjs`）与核测试逐字锁之；**端侧按本字面逐 target 出行**（形态面：行间分隔符 = 核形 `\n` 单源（2026-09-29 收编——「各端自持」退场）；**非端差登记项**；见上条）。
+- **分隔符 = 核形 `\n`**：多行提示的行间分隔符不属逐字契约——核逐行 `\n`（`thincoder-core/peer-domains.mjs`）；单行文案本体不受影响。
+- **字面规范面**：本字面 = **规范面单源**——核实现（`thincoder-core/peer-domains.mjs`）与核测试逐字锁之；**端侧按本字面逐 target 出行**（形态面：行间分隔符 = 核形 `\n` 单源；**非端差登记项**；见上条）。
   **F-MI9 读法**：需求档 F-MI9「仅足迹命中 ⇒ 既有文案零变」的「既有文案」= 本条规范面字面本体——端侧改形 = 聚合单行 → 逐 target（行形态），文案串零变。
   判据：① 结构（机检 · **扫描口径单源 = 本行**）：扫描面 = 核 / 端两包（`thincoder-core/**` · `thincoder-vscode/**`）+ 书写面（`docs/**/design/**` · `docs/**/requirements/**`）排除三面后零命中——
-  ⒜ 定义性引用行（本档 §4.3「字面规范面」条内载该字面的判据行——`[peer conflict notice]` 作为被判对象唯此一处被引）· ⒝ 记录面 / 归档面（`docs/batches/**` · `**/_archive/**`）· ⒞ `.thincoder/tmp/**`；② 行为（对拍）= 同（target × 属主集）输入 ⇒ 端 `peerNotes` 足迹行与核 `peerCollabNote` 足迹行**逐行字面相等**（比较按行拆分——分隔符端差不入锚）；③ 多目标 ⇒ 逐 target 各一行（零聚合单行）。
-- **端 `conflicts` 判据（2026-09-25 · 批 single-source-closeout · 台账 #344）**：与核**同判据**——`pathsOverlap`（相等或互为目录包含）+ 同 cwd 过滤 + hot 窗口 + self 排除；
+  ⒜ 定义性引用行（本档 §4.3「字面规范面」条内载该字面的判据行——`[peer conflict notice]` 作为被判对象唯此一处被引）· ⒝ 记录面 / 归档面（`**/_archive/**`）· ⒞ `.thincoder/tmp/**`；② 行为（对拍）= 同（target × 属主集）输入 ⇒ 端 `peerNotes` 足迹行与核 `peerCollabNote` 足迹行**逐行字面相等**（比较按行拆分——分隔符端差不入锚）；③ 多目标 ⇒ 逐 target 各一行（零聚合单行）。
+- **端 `conflicts` 判据**：与核**同判据**——`pathsOverlap`（相等或互为目录包含）+ 同 cwd 过滤 + hot 窗口 + self 排除；
   端谓词落点 = 端 `claimsOverlap`（`thincoder-vscode/src/extension/peer-claims.mjs:33`——与核 `pathsOverlap` 同判据）。
-  **端差保留核查（A9 三件）= 不成立**：端同时具备同 cwd 过滤（端 `sameCwd`）与重叠谓词（端 `claimsOverlap`）两件，无结构性强不对称 ⇒ 按「端差默认 = 消」并核。
-- **判据（测试层 · 足迹面 · 2026-09-25 背填 · 台账 #290）**：两端各一新单元测试档——核 `thincoder-core/test/peer-domains.test.mjs` + 端 `thincoder-vscode/test/peer-domains.test.mjs`（端档须入册 `thincoder-vscode/test/files.mjs`）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+- **判据（测试层 · 足迹面）**：两端各一新单元测试档——核 `thincoder-core/test/peer-domains.test.mjs` + 端 `thincoder-vscode/test/peer-domains.test.mjs`（端档须入册 `thincoder-vscode/test/files.mjs`）。
   核半覆盖（D-L3a / D-L3b 行为组）：目标解析 / 写工具集 / hot 窗口两侧界 / 路径重叠与 self·cwd 过滤 / 保守不删与死清理 / 回合累积与整写一次 / 无写回合零写 ∧ 去重集先清 / 失败容忍保账 / dispatch 钩点端到端 / 收尾接线。
-  端半覆盖：登记累积与整写 / 冲突查询（**与核同判据**——端 `peer-domains.test.mjs` T-L3v2 对位核 T-L3e：目录包含 ⇒ 命中 · 他 cwd ⇒ 零命中）与聚合缓存 / 死清理 / 预检门控 / 逐 target 足迹行与混合合成；两侧沙箱 = peers / sessions 目录注入缝 + 判活注入缝（真目录零触）；逐例清单与用例号族 = 本批档 `docs/batches/2026-09-25-peer-closeout.md` §2.3。 （机检豁免——用例退场登记）
+  端半覆盖：登记累积与整写 / 冲突查询（**与核同判据**——端 `peer-domains.test.mjs` T-L3v2 对位核 T-L3e：目录包含 ⇒ 命中 · 他 cwd ⇒ 零命中）与聚合缓存 / 死清理 / 预检门控 / 逐 target 足迹行与混合合成；两侧沙箱 = peers / sessions 目录注入缝 + 判活注入缝（真目录零触）；逐例清单与用例号族 = 长期测试树（单元测试档）。
 
 ### 4.4 意图认领面（claims · TTL 租约 · P1）
 
@@ -188,7 +181,7 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 > 认领**非锁、非预留、非承诺**：零阻断（D-MI6 不动——写照发）；覆盖边界同 L3（仅结构化写工具——bash 大通道不管，诚实边界）。
 > 术语注意：本面「认领 / claims」= **意图认领**（文件域级 · 租约）——与 `docs/core/design/SESSION.md` §6.2 的**槽位认领**（slot claim——会话存储隔离）**无关**，两概念不联动。
 > 需求档同词两用：N-MI3「不认领**槽位**」/ F-MI7「认领路径」= **槽位面**；F-MI8 / F-MI9 / N-MI7 的「认领 / 认领面」= **本面**（意图认领）。
-> 触发面证据（as-of 2026-09-25 · 设计轮实读）：长回合足迹空窗真实存在——足迹 flush 只在 run 收尾落一次（`thincoder-core/agent/run-stages.mjs:154`；端侧更窄 = 仅 depth-0 收尾，
+> 触发面证据：长回合足迹空窗真实存在——足迹 flush 只在 run 收尾落一次（`thincoder-core/agent/run-stages.mjs:154`；端侧更窄 = 仅 depth-0 收尾，
 > `thincoder-vscode/src/agent/run-stages.mjs:418-419`），而一次实施 run 可达数十分钟 ⇒ 期间对端零信号。
 > 「子代理收尾 flush 足迹」变体 = **已在机制内**（子代理走同一 run 收尾、同点零缺）⇒ 认领面补的是**回合内即时性**，与变体不重叠。
 
@@ -198,8 +191,8 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 
 | 字段 | 属面 | 语义 |
 |---|---|---|
-| `claims` | 认领面（本批新增） | `[{ target, claimedAt, expiresAt }]`——target = 与写目标同源的绝对路径（文件 / 目录皆可）；两时间戳 = epoch ms |
-| `claimsUpdatedAt` | 认领面（本批新增） | 认领字段上次落盘时刻（与足迹面 `updatedAt` 分属两面） |
+| `claims` | 认领面 | `[{ target, claimedAt, expiresAt }]`——target = 与写目标同源的绝对路径（文件 / 目录皆可）；两时间戳 = epoch ms |
+| `claimsUpdatedAt` | 认领面 | 认领字段上次落盘时刻（与足迹面 `updatedAt` 分属两面） |
 | `domains` · `updatedAt` | 足迹面（D-MI5——零改） | 既有语义原样（hot 窗口判据只读本面时间戳） |
 
 - **认领对象形态 = 与写目标同源的绝对路径**（`peerWriteTargets` 解析产物——`thincoder-core/peer-domains.mjs:79`）：文件级写记文件、目录级操作（`file_ops`）记目录；**不自动上扩**为目录（精度优先）。
@@ -210,7 +203,7 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 - **落盘原语 = 原子写（`.tmp + rename`）——单一实现**：核 `writeSessionFile`（`thincoder-core/session-slots.mjs:154`——会话 / 足迹 / 认领三面同一原语）；**端侧引核**（经端壳 `thincoder-vscode/src/extension/session-slots.mjs` 的单源转口——端档零本地原子写实现）。原语含**末级兜底支**：二次 rename 失败 ⇒ 以 tmp 内容直写目标（非原子，最后手段）。
   **理由**：两侧聚合缓存以 peers 目录 mtime 为键（核 `thincoder-core/peer-domains.mjs:152-168`；端 `thincoder-vscode/src/extension/peer-domains.mjs:90-107` + 头注 `:9-10`）——rename 翻目录 mtime ⇒ 对端缓存失效、认领**回合内可见**；就地重写（同名单）不动目录 mtime ⇒ 对端不可见（本层立项动因落空）。
 - **兼容（双向）**：旧读者忽略新字段（两侧扫描器只校验既有必填字段——`thincoder-core/peer-domains.mjs:109-116`）；旧记录无 `claims` ⇒ 认领面零命中（按缺失降级，不炸）。
-- **测试沙箱**：核侧 peers 目录此前零缝 ⇒ 随本批增 `_setPeersDirForTest` / `_resetPeersDirForTest`（形态先例 = 端侧同名缝，`thincoder-vscode/src/extension/peer-claims.mjs:36-37`）。
+- **测试沙箱**：核侧 peers 目录此前零缝 ⇒ 随本机制增 `_setPeersDirForTest` / `_resetPeersDirForTest`（形态先例 = 端侧同名缝，`thincoder-vscode/src/extension/peer-claims.mjs:36-37`）。
 
 #### 4.4.2 租约语义（D-MI18）
 
@@ -243,7 +236,6 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
   三态（逐字形态）：纯足迹 ⇒ 逐 target 足迹行；纯认领 ⇒ 仅认领行；混合 ⇒ 认领行 + 足迹行（逐 target，互不相叠）。
 - **降级**：聚合失败 / 目录缺失 / 记录损坏 / 探测失败 ⇒ 零提示、零抛错（工具主流程永不受认领面影响）。
 - **零阻断**：认领命中绝不改变工具执行与结果（写照发——D-MI6 不动）。
-- **端同步调用族登记（#298 转档 · 2026-09-29）**：端侧写前 L3 预检 = **同步调用链**（历史观测——原端半档 `thincoder-vscode/src/agent/execute-tools.mjs:187-195` **已迁核**、现盘零命中；现态 = 核 `thincoder-core/agent/dispatch-run.mjs:52` 写前 `peerCollabNote`）；2026-09-18 诊断批**未取证实害**；**条件** = 写路径冻结再现观测归批评估（观测点 = 核写前预检面；台账 #298 转档核销）。 （迁移期引文——档已迁核）
 
 #### 4.4.5 成本与降级（N-MI7）
 
@@ -256,33 +248,22 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 |---|---|
 | 核 · 认领逻辑 | `thincoder-core/peer-claims.mjs`（认领存储 / 租约 / 命中判据 / 文案 / 合并写 / 节流 / `nowFn` 与重置缝；peers 路径与 `pathsOverlap` 归口于此） |
 | 核 · 接线 | `thincoder-core/peer-domains.mjs`（`peerCollabNote` 组合认领行 · `recordPeerWrites` 调认领登记 · `flushPeerDomains` 字段级合并写 + `_peerNoted` 首步清空 · 聚合载荷增 `claims`） |
-| 核 · 钩点 | `thincoder-core/agent/dispatch-run.mjs`（写前 / 写后两处——既有钩子内接线，只换调用行 + 3 行；**读数**：2026-09-28 拆分后 `dispatch.mjs` **254** ∕ `dispatch-run.mjs` **167**——原 498 ∕ 499 贴硬限面已消解） |
+| 核 · 钩点 | `thincoder-core/agent/dispatch-run.mjs`（写前 / 写后两处——既有钩子内接线） |
 | 端 | `thincoder-vscode/src/extension/peer-domains.mjs`（就地扩；落盘若越 500 软线 ⇒ 认领块外提 `thincoder-vscode/src/extension/peer-claims.mjs`）· 钩点 = 核 `thincoder-core/agent/dispatch-run.mjs` · 去重集清空 = 核 `thincoder-core/agent/run-stages.mjs`（端已取核） |
-| 常量 / 文案锚 | `CLAIM_TTL_MS` · `CLAIM_RENEW_FLUSH_MS` · 认领软提示文案——双端各持副本，**测试对拍等值 / 逐字同串**（N-MI2 各端自持；跨端读取比对形态先例 = `thincoder-vscode/test/prompts-mirror-anchors.test.mjs:40-44`；常量 / 文案同串面 = AC-IC11） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| 常量 / 文案锚 | `CLAIM_TTL_MS` · `CLAIM_RENEW_FLUSH_MS` · 认领软提示文案——双端各持副本，**测试对拍等值 / 逐字同串**（N-MI2 各端自持；跨端读取比对形态先例 = `thincoder-vscode/test/prompts-mirror-anchors.test.mjs:40-44`；常量 / 文案同串面 = AC-IC11） |
 
 #### 4.4.7 判据（测试层）
 
-单元测试档 = `thincoder-core/test/peer-claims.test.mjs`（核半）+ `thincoder-vscode/test/peer-claims.test.mjs`（端半）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+单元测试档 = `thincoder-core/test/peer-claims.test.mjs`（核半）+ `thincoder-vscode/test/peer-claims.test.mjs`（端半）。
 沙箱 = 核 `_setPeersDirForTest` / 端同名缝 + 时钟缝 `_setPeerClaimsTestImpl({ nowFn })` + 判活注入 `_setProcessProbeTestImpl`（`thincoder-core/process-probe-exec.mjs:26`）。
 四路锚：① 写入 / 续约 / 节流（落盘计数断言——零真实等待）；② 过期 / 死属主 / 崩溃残留 / 旧记录兼容（注入时钟与判活）；③ 命中 / 文案逐字 / 去重 / 优先级 / 端侧混合命中合成 / 降级；④ 分存回归（认领落盘不改 `domains` / `updatedAt`；足迹落盘不改 `claims`；既有足迹面行为零变）。
 
-## 5. checklist 并发同步（F4）——**已废（历史沿革）**
-
-> **本节描述的对象已消失**（2026-09-18 判据面收正批收正）：checklist 工具族随 **M7 废除批**删除——工具本体 / 同步机 / `tool-docs` 提示词档三处载体**全仓零命中**（核 `tools/` 下无该族）⇒ 原「F4 同步机」（写前门控 + 合并 + 序列化 / 基线规则 / ID union 合并 / 写前门控测试缝）**整节作废**。**原 5.1 基线规则 · 5.2 语义与合并规则 · 5.3 测试缝三小节内容随载体删除一并撤除**（本节只留本历史条）。
-> **史实存** = 本文档变更记录 + git 历史；**真值依据** = 退场族 N5 在册（`docs/core/design/ANCHOR-DEBT-REPAIR.md` §3-Q6 六形表——全仓零命中）。
-> **现行承接**：待办总账 = **台账**（SQLite 单一权威源——`docs/core/design/LEDGER.md`；机制单源）；多实例并发面余项 = §3 感知面 / §4 域面 / §6 config 原子写（F5——在役）。
-
 ## 6. config.json 原子写（F5）
-
-### 6.1 根因
-
-CLI 多处**整节内存写回**（读入内存的 providers / mcp.servers 整数组写回磁盘）——进程 A 快照常驻 → B 改了 → A 任一操作把 B 的改动整体抹掉。
-VSC 侧无此形态（各路径现用现读）。
 
 ### 6.2 双管齐下（D-F5a + D-F5b）
 
-- **D-F5a 消灭整节内存写回**：原 7 处整节写回全部改为「在磁盘新鲜 raw 上执行单操作」语义（单字段补丁 / fresh raw 上 push·splice·改单字段）——双进程并发改不同 provider 都保留；
-- **D-F5b 收口函数 `writeConfigAtomic(path, mutate)`**（`thincoder-core/config.mjs:29` export）——持「新鲜读 → mutate 单操作 → 写前重 stat → 写」全链，所有 config.json 写点（config-helpers persistRaw / cmd-config / setup-wizard / settings writeDisk）都经它落盘。
+- **D-F5a 消灭整节内存写回**：全部 config.json 写点改为「在磁盘新鲜 raw 上执行单操作」语义（单字段补丁 / fresh raw 上 push·splice·改单字段）——双进程并发改不同 provider 都保留；
+- **D-F5b 收口函数 `writeConfigAtomic(path, mutate)`**（`thincoder-core/config.mjs:28` export）——持「新鲜读 → mutate 单操作 → 写前重 stat → 写」全链，所有 config.json 写点（config-helpers persistRaw / cmd-config / setup-wizard / settings writeDisk）都经它落盘。
 
 ### 6.3 writeConfigAtomic 语义
 
@@ -292,11 +273,11 @@ VSC 侧无此形态（各路径现用现读）。
 - 文件缺失（首写）→ t0 = null；对端在本端读后创建 → 冲突放弃；
 - 畸形文件**拒写**（throw，绝不静默覆盖）；写后 chmod 0600 尽力而为（config 含 API key）。
 
-## 7. 机制面坐标（核 / CLI · as-of 2026-09-15 实核）
+## 7. 机制面坐标（核 / CLI）
 
 | 面 | 落点 |
 |---|---|
-| 感知面 L1/L2 | `thincoder-core/peer-instances.mjs`（`peerInstances` · `peerInstancesTool` · `groupSlotSessions`（具名导出——端侧引核，§3.1） · 测试缝 `:48/:55`）+ **`thincoder-core/process-probe.mjs`（探测与判据单源）**：`batchAlive` / `probeCmdlines` 及其 `*Async` 对偶 · `probeOwnersSync` / `probeOwnersAsync` 束（2026-09-18 增） · `ownerState` / `isProductProc` / `classifyEnd` / `filterDeadOwners` · **`isProcessAlive`（2026-09-18 自 `session-slots.mjs` 移居——单 pid 兼容面，同步有界 2 s）**；陈旧清理面 = `thincoder-core/session-slot-claims.mjs`（`cleanDeadOwners`——定义 `:78`；转口 = `thincoder-core/session-slots.mjs` `:48`；探针入参化，零自有 exec） |
+| 感知面 L1/L2 | `thincoder-core/peer-instances.mjs`（`peerInstances` · `peerInstancesTool` · `groupSlotSessions`（具名导出——端侧引核，§3.1） · 测试缝 `:48/:55`）+ **`thincoder-core/process-probe.mjs`（探测与判据单源）**：`batchAlive` / `probeCmdlines` 及其 `*Async` 对偶 · `probeOwnersSync` / `probeOwnersAsync` 束（2026-09-18 增） · `ownerState` / `isProductProc` / `classifyEnd` / `filterDeadOwners` · **`isProcessAlive`（单 pid 兼容面，同步有界 2 s）**；陈旧清理面 = `thincoder-core/session-slot-claims.mjs`（`cleanDeadOwners`——定义 `:78`；转口 = `thincoder-core/session-slots.mjs` `:48`；探针入参化，零自有 exec） |
 | 域面 L3 | `thincoder-core/peer-domains.mjs`（`HOT_WINDOW_MS:37` · `peerWriteTargets:79` · `peerDomains:175` · `conflicts:186` · `peerCollabNote:214` · `recordPeerWrites:254` · `flushPeerDomains:273` · 测试缝 `:50/:58`；`pathsOverlap` 归口 `thincoder-core/peer-claims.mjs:74`——本档 re-export `:34`） |
 | 意图认领面 | `thincoder-core/peer-claims.mjs`（认领存储 / 租约 / 命中 / 文案 / 合并写 / `nowFn` 缝；peers 路径与 `pathsOverlap` 归口于此）· 接线 = `thincoder-core/peer-domains.mjs` §4.4.6 · 端 = `thincoder-vscode/src/extension/peer-domains.mjs` + `thincoder-vscode/src/extension/peer-claims.mjs`（认领块——越 500 软线外提）+ 钩点 = 核 `thincoder-core/agent/dispatch-run.mjs`（端已取核） |
 | L1 注入装配 | `thincoder-core/agent/setup-reminders.mjs`（`pushPeerReminder`）· `thincoder-core/agent/setup.mjs`（注入时序：env-state 后 time 前） |
@@ -304,33 +285,33 @@ VSC 侧无此形态（各路径现用现读）。
 | L2 工具装配（CLI） | `thincoder-cli/src/cli/make-agent.mjs` |
 | F5 原子写 | `thincoder-core/config.mjs`（`writeConfigAtomic`——`:29` export · `:242` 自用迁移面）；写点收口 = `thincoder-cli/src/tui/{config-helpers,pickers,cmd-mcp,cmd-config}.mjs` + `src/cli/setup-wizard.mjs` + `thincoder-core/agent-tools/settings.mjs` |
 
-## 8. 关键决策记录（含否决备选）
+## 8. 关键决策记录
 
-| # | 决策 | 理由 / 否决备选 |
+| # | 决策 | 理由 |
 |---|---|---|
-| D-MI1 | F5 冲突处置 = **放弃 + 提示重试** | 用户显式操作，重试成本低。否决「自动合并」（猜测合并不如重试安全） |
-| D-MI3 | L1/L2 端字段 = **批量 cmdline 探测** | 一次 Get-CimInstance/ps 拿全部 pid+cmdline。否决「每 pid 一次 exec」（成本） |
+| D-MI1 | F5 冲突处置 = **放弃 + 提示重试** | 用户显式操作，重试成本低 |
+| D-MI3 | L1/L2 端字段 = **批量 cmdline 探测** | 一次 Get-CimInstance/ps 拿全部 pid+cmdline |
 | D-MI4 | L1 注入频率 = **每回合**（有同伴时） | 一致可预期；成本 = 回合一次 stat + **探测触发判据见 D-MI13（mtime ∨ TTL）** |
-| D-MI5 | L3 语义 = **写后登记 + hot 窗口**（5 分钟） | 记录真实足迹；bash 大通道本就不可拦（诚实边界）。否决「写前预登记」（假足迹） |
+| D-MI5 | L3 语义 = **写后登记 + hot 窗口**（5 分钟） | 记录真实足迹；bash 大通道本就不可拦（诚实边界） |
 | D-MI6 | L3 冲突反馈 = **工具结果附软提示**（不阻止） | 范围边界——避让是建议非锁 |
-| D-MI7 | L3 存储 = 每实例独立登记文件 + 目录扫描聚合 | §4.1——否决 sessions 目录受 cwd 分片限 / manifest 扩展（未知字段丢失） |
+| D-MI7 | L3 存储 = 每实例独立登记文件 + 目录扫描聚合 | §4.1 |
 | D-MI8 | 感知面**纯只读** + 惰性缓存 + 批量判活 | N-MI3——不新建平行存储，复用 `SESSION.md` §6.2 基建 |
-| D-MI9 | 活判定身份判据 = **命令行命中本产品标记族** | 「能拿到的证据里唯一区分本产品与他进程」的信号。否决 **cwd 匹配**（manifest 记录不含 cwd；进程 cwd 无跨平台可移植获取面——Windows/CIM 不提供）；否决**命令行全等**（启动形态多：`node bin/x.cjs` / `--inspect` / 卷路径大小写） |
-| D-MI10 | 探测失败 / 缺行 ⇒ **保守保留**（不剔除、不删） | 方向性不对称：误保留 = 噪音（可忍）；误删 = 活实例失槽（破坏存储隔离，高危）。否决「探测失败即视为死」 |
-| D-MI11 | 清理面 **同判据单源**（实现住 `process-probe.mjs`，`session-slots.mjs` 只调一行） | pid 死 ⇒ 删（既有）；pid 活 + 命令明确可得 + 身份不符 ⇒ 删（pid 复用即台账实测案）；其余保守不删。否决「只修读面不修清理面」（manifest 永久膨胀 + 台账修法要求未满足） |
-| D-MI13 | 读面缓存判据 = **mtime 未变 ∨ 快照年龄 < TTL(5 s)**；探测函数 **异步化**（同一注入缝）；写面（manifest）频率零改 | 纯 mtime 判据被 `saveSession` 每回合重写自击穿；同步 `execFileSync` 在回合路径上独占事件循环（假死源）。否决「改 manifest 写频率」（槽摘要新鲜度契约——/session 列表预览每回合更新，与探测解耦）·「后台异步刷新（stale-while-revalidate）」（首回空结果语义变化 + 时序依赖）。**边界**：TTL 只关新鲜度不关正确性；探测失败 / 缺行仍保守保留（D-MI10 零变） |
-| D-MI14 | 清理 / 认领面 = **入口一次探测束 + 判据查表**；`resumeSlot` 整链 **async**（2026-09-18 裁定） | 原逐 pid `isProcessAlive` 形态 = 1 发批量 cmdline + N 发逐 pid 判活 ⇒ 初始化窗口叠 2–3 轮 = 8–12 s 同步独占（批档 `2026-09-18-init-block` §1.1 实测）。现形态：`probeOwnersAsync`（会话起点 / 认领）/ `probeOwnersSync`（**两处同步消费面**——① `activeSlot` 冷路径；② 占用判定 `slotOccupancy`）各 ≤1+≤1 exec；`SYNC_PROBE_MS` = 2 s 紧界 + 零探测早退；例外锚 = 本档 §3.1「判据（测试层 · F-MI7）」条 ③，到期条件随需求档 `MULTI-INSTANCE-COLLAB.md` F-MI7 例外句（本批登记 · 不重述）。被拒备选：① 全链 async（`activeSlot` 有 4 处同步消费面——`session.mjs` `saveSession` · `token-ttl` · CLI 三条命令；`slotOccupancy` 调用面同形——`session.mjs` 切换链 + CLI TUI / ACP 命令 + VSC 会话切换消息面，await 化需逐面传播）；② 维持逐 pid（成本不除） |
-| D-MI12 | **常态各面独立实现 → 本批双面同改（同源缺陷冻结级特例 · 2026-09-18 裁定）**：本批（`2026-09-18-init-block`）核 + VSC 镜像**同批落地**；此后批次回常态（各面独立实现） | 同源缺陷为冻结级（初始化窗口 8–12 s 同步独占）且两面对**同一 manifest**——单面修则另一端仍旧形态（用户裁定面 = 批档 §1.2③ 明列两实现面同批落地）。**另注**：VSC 宿主族命中面天然包含他窗口 VS Code 宿主 ⇒ 该局限与 D-MI10 同向（宁可多留）。**VSC 面处置**：镜像 `cleanDeadOwners` / `usableSlot` / `resumeSlot` 同批 async + 束化；`peer-instances.mjs` 本地同步副本（`batchAlive` · `probeCmdlines` · `classifyEnd` 复本——实核坐标 `:39` / `:74` / `:88`）**单源化**（引核 `thincoder-core/process-probe.mjs`，本地副本删）；`pushPeerReminder` 改**只读缓存 + 启动期异步刷新**（每回合零同步 exec）。核面判据 = D-MI13 |
-| D-MI15 | **任何探测必有界**：同步形态 `SYNC_PROBE_MS = 2000`（逐 pid 兼容面 `isProcessAlive` 同）；异步形态 10 s / 15 s（不阻塞，不变量级）；**无 timeout 的 `execSync` 为禁形** | 本机实测 `tasklist` 单发 >10 s 且 31 个 stuck 实例存活 40–220 s+（父进程已死——批档 §1.1 证据 5）：无界同步 exec = 事件循环无界冻结。紧界 + 失败降级（未知 ⇒ 保留）是唯一安全组合。否决「维持 10 s 同步界」（同步独占的代价比异步高一级——10 s 冻结已达用户可感级） |
-| D-MI16 | 探测**失败**（束 / 批量返回 `null`）在认领 / 占用面 = **未知**：条目保留 · 槽不可认领/不判空闲；仅显示面（L1/L2 同伴列表）可降级为空 | 「探测失败 ⇒ 全死」的实际后果 = 清理面**删活属主条目** + 恢复面**认领活属主的槽** = 双进程同槽（本批 root cause；批档 §2 finding F-3）；两方向代价不对称（D-MI10 同源）。否决「失败 ⇒ 全死」（原实现方向——正是本批修因） |
-| D-MI17 | 认领存储 = **同实例文件分字段**（`claims` / `claimsUpdatedAt` 与足迹 `domains` / `updatedAt` 各守其字段——落盘为字段级合并写） | 复用单写者实例文件 + 一次聚合扫描供两面（N-MI1 不新建平行存储）。否决「独立第二文件」：目录扫描与死清理各增一套（且旧读者会把它当损坏件）；否决「仅内存」：跨进程不可见（本层目的落空） |
-| D-MI18 | 认领时机 = **结构化写成功即登记**；落盘 = 新目标即刻 + 续约节流（`CLAIM_RENEW_FLUSH_MS = 60000`）；TTL = `CLAIM_TTL_MS = 30 * 60 * 1000` | 零新手工动作（写钩子既有）；租约以真实写为锚（零假足迹——D-MI5 否决「写前预登记」的口径不变）。否决「随足迹 run 收尾 flush」（长回合空窗未消——本层立项动因）；否决「每次写都落盘」（无谓 IO——节流窗内零 IO） |
-| D-MI19 | 释放 = **租约到期 / 属主进程死亡 / 死清理**——无显式释放面 | 否决「批收口显式释放」（批与文件非一一对应 + 需新动作 + 早释隐藏活认领）；否决「轮末释放」（长回合中段即失信号——正是本层要补的窗） |
-| D-MI20 | 命中反馈 = **认领级软提示**（逐字锚）+ 每（目标 × 属主）每 run 一次去重；认领行**抑制同目标足迹行** | 同频道升级（D-MI6 零阻断不动）；去重防刷行（30 min 租约下每写都提示 = 噪音）。否决「新开第二提示通道」（双通道难辨、噪声翻倍） |
-| D-MI21 | 双端 = **语义同源 · 各端自持**（核拆 `thincoder-core/peer-claims.mjs`；端就地扩——越 500 软线再拆） | N-MI2 实现各自独立；文案 / 两常量逐字对拍（测试断言）。否决「两端同构同拆」（端侧行数余量足够——拆档徒增面） |
-| D-MI22 | 足迹软提示**字面规范面 = §4.3 单源**；端侧按本字面**逐 target 出行**（单一形态） | 设计档逐字锚 + 核实现 / 核测试已逐字锁 ⇒ 端为唯一漂移点；多实现面默认消差（端侧聚合无结构性不对称——两端钩点同为多目标列表）；与认领面同族（逐 target / 同 tag `[peer-collab]`）；消差后逐字锚与 N-MI2 lockstep 由**跨端逐行对拍**机检（先例 = AC-IC11 认领文案对拍）。否决「改档采端聚合形态」（核实现 + 核测试 + §4.4.4 逐 target 抑制语义 + 认领行同族形态连带迁移）；否决「只统一 tag、保留端聚合体」（双形态并存 ⇒ 逐字锚不成立、对拍不可机检） |
-| D-MI23 | 端 L3 落盘原语 = **引核 `writeSessionFile`**（端档零本地原子写实现） | 单一实现 + **末级兜底支**随核原语到位（端侧自持版二次 rename 失败 ⇒ 旧记录已删、内容只存 `.tmp`——NF2 静默丢一次登记）。否决「端侧就地补兜底」（留第二实现、两形态继续并存） |
-| D-MI24 | 分组半段 `groupSlotSessions` = **核具名导出 + 端引核**（消端侧逐字镜像） | 纯函数、零端差；端壳自持的 SWR 壳形（形态面——§3.1「端读面形态与缓存判据」条）不受影响（**共享半段 ≠ 委托整面**——端 `peerInstances` 仍自持）。单源化射程 = 纯函数与原语（无端差面）；壳形 / 行为语义面仍各端自持（D-MI21 不变）。**N-MI2 读法（射程口径单源 = 本行）**：『实现各自独立』射程 = 行为语义面；无端差纯函数 / 落盘原语（D-MI23）共享不属该射程——不构成独立性违反。否决「端侧续持镜像」（逐字复制件无守卫，核侧改则端静默漂移） |
+| D-MI9 | 活判定身份判据 = **命令行命中本产品标记族** | 「能拿到的证据里唯一区分本产品与他进程」的信号 |
+| D-MI10 | 探测失败 / 缺行 ⇒ **保守保留**（不剔除、不删） | 方向性不对称：误保留 = 噪音（可忍）；误删 = 活实例失槽（破坏存储隔离，高危） |
+| D-MI11 | 清理面 **同判据单源**（实现住 `process-probe.mjs`，`session-slots.mjs` 只调一行） | pid 死 ⇒ 删（既有）；pid 活 + 命令明确可得 + 身份不符 ⇒ 删（pid 复用案）；其余保守不删 |
+| D-MI13 | 读面缓存判据 = **mtime 未变 ∨ 快照年龄 < TTL(5 s)**；探测函数 **异步化**（同一注入缝）；写面（manifest）频率零改 | 纯 mtime 判据被 `saveSession` 每回合重写自击穿；同步 `execFileSync` 在回合路径上独占事件循环（假死源）。**边界**：TTL 只关新鲜度不关正确性；探测失败 / 缺行仍保守保留（D-MI10 零变） |
+| D-MI14 | 清理 / 认领面 = **入口一次探测束 + 判据查表**；`resumeSlot` 整链 **async** | 原逐 pid `isProcessAlive` 形态 = 1 发批量 cmdline + N 发逐 pid 判活 ⇒ 初始化窗口叠 2–3 轮 = 8–12 s 同步独占（实测）。现形态：`probeOwnersAsync`（会话起点 / 认领）/ `probeOwnersSync`（**两处同步消费面**——① `activeSlot` 冷路径；② 占用判定 `slotOccupancy`）各 ≤1+≤1 exec；`SYNC_PROBE_MS` = 2 s 紧界 + 零探测早退；例外锚 = 本档 §3.1「判据（测试层 · F-MI7）」条 ③，到期条件随需求档 `MULTI-INSTANCE-COLLAB.md` F-MI7 例外句（已登记 · 不重述） |
+| D-MI12 | **常态各面独立实现 → 双面同改（同源缺陷冻结级特例）** | 同源缺陷为冻结级（初始化窗口 8–12 s 同步独占）且两面对**同一 manifest**——单面修则另一端仍旧形态。**另注**：VSC 宿主族命中面天然包含他窗口 VS Code 宿主 ⇒ 该局限与 D-MI10 同向（宁可多留）。核面判据 = D-MI13 |
+| D-MI15 | **任何探测必有界**：同步形态 `SYNC_PROBE_MS = 2000`（逐 pid 兼容面 `isProcessAlive` 同）；异步形态 10 s / 15 s（不阻塞，不变量级）；**无 timeout 的 `execSync` 为禁形** | 本机实测 `tasklist` 单发 >10 s 且 31 个 stuck 实例存活 40–220 s+（父进程已死——本机实测证据）：无界同步 exec = 事件循环无界冻结。紧界 + 失败降级（未知 ⇒ 保留）是唯一安全组合 |
+| D-MI16 | 探测**失败**（束 / 批量返回 `null`）在认领 / 占用面 = **未知**：条目保留 · 槽不可认领/不判空闲；仅显示面（L1/L2 同伴列表）可降级为空 | 「探测失败 ⇒ 全死」的实际后果 = 清理面**删活属主条目** + 恢复面**认领活属主的槽** = 双进程同槽；两方向代价不对称（D-MI10 同源） |
+| D-MI17 | 认领存储 = **同实例文件分字段**（`claims` / `claimsUpdatedAt` 与足迹 `domains` / `updatedAt` 各守其字段——落盘为字段级合并写） | 复用单写者实例文件 + 一次聚合扫描供两面（N-MI1 不新建平行存储） |
+| D-MI18 | 认领时机 = **结构化写成功即登记**；落盘 = 新目标即刻 + 续约节流（`CLAIM_RENEW_FLUSH_MS = 60000`）；TTL = `CLAIM_TTL_MS = 30 * 60 * 1000` | 零新手工动作（写钩子既有）；租约以真实写为锚（零假足迹——D-MI5 口径不变） |
+| D-MI19 | 释放 = **租约到期 / 属主进程死亡 / 死清理**——无显式释放面 | — |
+| D-MI20 | 命中反馈 = **认领级软提示**（逐字锚）+ 每（目标 × 属主）每 run 一次去重；认领行**抑制同目标足迹行** | 同频道升级（D-MI6 零阻断不动）；去重防刷行（30 min 租约下每写都提示 = 噪音） |
+| D-MI21 | 双端 = **语义同源 · 各端自持**（核拆 `thincoder-core/peer-claims.mjs`；端就地扩——越 500 软线再拆） | N-MI2 实现各自独立；文案 / 两常量逐字对拍（测试断言） |
+| D-MI22 | 足迹软提示**字面规范面 = §4.3 单源**；端侧按本字面**逐 target 出行**（单一形态） | 设计档逐字锚 + 核实现 / 核测试已逐字锁 ⇒ 端为唯一漂移点；多实现面默认消差（端侧聚合无结构性不对称——两端钩点同为多目标列表）；与认领面同族（逐 target / 同 tag `[peer-collab]`）；消差后逐字锚与 N-MI2 lockstep 由**跨端逐行对拍**机检（先例 = AC-IC11 认领文案对拍） |
+| D-MI23 | 端 L3 落盘原语 = **引核 `writeSessionFile`**（端档零本地原子写实现） | 单一实现 + **末级兜底支**随核原语到位（端侧自持版二次 rename 失败 ⇒ 旧记录已删、内容只存 `.tmp`——NF2 静默丢一次登记） |
+| D-MI24 | 分组半段 `groupSlotSessions` = **核具名导出 + 端引核**（消端侧逐字镜像） | 纯函数、零端差；端壳自持的 SWR 壳形（形态面——§3.1「端读面形态与缓存判据」条）不受影响（**共享半段 ≠ 委托整面**——端 `peerInstances` 仍自持）。单源化射程 = 纯函数与原语（无端差面）；壳形 / 行为语义面仍各端自持（D-MI21 不变）。**N-MI2 读法（射程口径单源 = 本行）**：『实现各自独立』射程 = 行为语义面；无端差纯函数 / 落盘原语（D-MI23）共享不属该射程——不构成独立性违反 |
 
 ## 9. 与既有机制的关系
 
@@ -338,110 +319,3 @@ VSC 侧无此形态（各路径现用现读）。
 |---|---|
 | `SESSION.md` §6.2 slotSessions / isProcessAlive / slotOccupancy | **上游基建**——L1/L2 直接读它，不重造 |
 | `SESSION.md` §6.11（R5/R8/R9 家族） | 相邻但独立——家族管「agent 自知环境身份 / 模式」，本机制管「agent 知同伴」 |
-
-## 10. 不并项与历史沿革
-
-### 10.1 历史沿革（(d) 类——**不并**）
-
-> 来源档 `thincoder-cli/docs/design/MULTI-INSTANCE-COLLAB.md`（CLI 产品档）——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
-
-| 旧档位置 | 内容 | 何故不并 |
-|---|---|---|
-| 旧档状态行（「已实现（CLI 端 2026-09-06 落地并提交…）」） | 时点状态行 | 批次语境——现行态已入 §1–§7 |
-| 旧档 §7 测试覆盖表（T-L1a..T-F5d + 验收段） | 用例编号集 + 单批验收清单 | 批次材料——行为面由现行测试族覆盖 |
-| 旧档 §10 受影响文件表（实现时点 · 含 VSC 镜像行） | 单批文件清单与 VSC 实现坐标 | 一次性材料 + VSC 面坐标（P2 ⇒ VSC 轮）——CLI / 核侧现行坐标已入 §7 |
-| 旧档变更记录（2026-09-06 / 2026-09-07） | 历史叙述（评审建议 1–8 全采纳等批序） | 本档自有变更记录；决策结论已入 §8 |
-
-**旧锚映射（死锚 · 2026-09-19）**：旧档锚 ID `D-L1a` / `D-L2a` / `D-L2b` 未并入本档；代码 / 测试注释中的旧锚引点按语义归位：`D-L1a` → §3.2 · `D-L2a` → §3.1 · `D-L2b` → §3.3——**不复活旧 ID**（代码侧引点改否 = 父侧另行处置）。
-
-### 10.2 不并项登记（跨板块——**不并**，逐项登记）
-
-| 旧档面 | 内容 | 何故不并（去向 / 触发） |
-|---|---|---|
-| VSC 端同构实现的逐文件坐标 | VSC 产品面实现面 | P2 ⇒ VSC 轮（需求侧 VSC 坐标已入 `docs/core/requirements/MULTI-INSTANCE-COLLAB.md` 判定句）；双端逐字锚（§3.2 / §3.3 / §4.3 文案）本档在留 |
-
-## 变更记录
-
-- 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 4 处处置（R1 改指 3 处——`session-slots.mjs` 转口坐标补 `thincoder-core/` 前缀〔§3.1 ∥ §7 ∥ 变更记录〕；R3 裸名化 1 处——端档已删 `execute-tools.mjs`）；宽面 1 行折行（56——语义零改）。**零新语义**。
-
-- 2026-09-18（**init-block 批 · eng-designer**——承 `docs/batches/2026-09-18-init-block.md` §1）：§3.1 清理面形态收正为**入口一次探测束**
-  （`probeOwnersSync` / `probeOwnersAsync` + `ownerState` 三态判据——`cleanDeadOwners` / `usableSlot` / `allocateFresh` / `ensureActive` 零自有 exec）；
-  坐标 as-of 更新（`isProcessAlive` 移居 `process-probe.mjs`）；`:74` 行面 `filterDeadOwners` 判据三态化；新增「探测束与有界形态」块；§7 感知面行改指 `process-probe.mjs`；
-  **D-MI14 重写**（入口束 + `resumeSlot` async + 两被拒备选）· **D-MI12** 改「本批双面同改」· 新增 **D-MI15**（任何探测必有界 `SYNC_PROBE_MS=2000`）/ **D-MI16**（探测失败 = 未知 ⇒ 保守）。
-
-- 2026-09-18（**判据面收正批（#66）· eng-designer**——承 `docs/batches/2026-09-18-arbiter-face.md` §1）：
-  **§5（F4 同步机）整节收正为历史条**（载体三处随 M7 废除全仓零命中——原 5.1 / 5.2 / 5.3 三小节随载体撤除）；**F4 关联行全数删除**（档头括注 · §7 坐标表 F4 行 · §8 D-MI2 行 · §2 B 类清单 checklist 行与标题括注——D8：对象消失 ⇒ 删，历史归本记录与 §5 历史条；**档头项 = 修正轮 2 补收**——评审 id=72 发现 8 余项）。
-  语义零改（余面 = §3 / §4 / §6 / §7 其余行）。
-
-- 2026-09-15（**CLI 尾部真批 · 纯新建 · eng-designer**）：建档——`thincoder-cli/docs/design/MULTI-INSTANCE-COLLAB.md` 内容重建入基准层
-  （旧档一字未改、原地作参照历史）；坐标改写为现状路径并逐条实核（`thincoder-core/{peer-instances,peer-domains,config}.mjs` ·
-  `thincoder-core/tools/checklist-sync.mjs` · `thincoder-core/agent/{setup-reminders,setup,dispatch,run-stages}.mjs` · `thincoder-cli/src/cli/make-agent.mjs`）； （迁移期引文——机制已废）
-  VSC 实现坐标不并（P2 ⇒ VSC 轮——§10.2）；批次材料 / 状态行 / 用例编号集不并（§10.1）。
-- 2026-09-18（**TUI 假死批 · 修正轮-2（设计评审轮 1 的 12 条）· eng-designer**——承 `docs/batches/2026-09-18-tui-freeze.md` §3 轮次 1）：
-  §3.1 补 TTL 可测缝（`nowFn` 入同一注入缝）；段内陈旧坐标收正为现状值（`peerInstances` / `batchAlive` / `probeCmdlines` / `peerInstancesTool` 四处）；
-  §8 D-MI4 理由列加探测触发判据指针（mtime ∨ TTL → D-MI13）。语义零改。
-- 2026-09-18（**TUI 假死修复批 · eng-designer**——承 `docs/batches/2026-09-18-tui-freeze.md` 的 §1）：§3.1 缓存判据收正（mtime ∨ TTL）
-  + 探测异步化（`batchAliveAsync` / `probeCmdlinesAsync`，同一注入缝；读面 / `pushPeerReminder` → async）；
-  §3.2 补异步形态行；§8 补 D-MI13–D-MI14；判据（身份 / 批量 / 保守保留）与文案零变。
-- 2026-09-29（**微收正（父侧直接执行 · 可 revert）**）：§3.1 端字段 ∕ 标记族两处补 **③ 桌面族**（`DESKTOP_END_RE`——`thincoder-desktop` 路径段；parity-b1 收正轮真机捕获）。零新语义。
-
-- 2026-09-16（**批 1 CORE-DEFECT-FIXES · eng-designer · 含复审修正轮**）：§3.1 补 **F-MI6 / N-MI6 判定句**（身份校验——标记族命中才计活 · 探测失败保守保留 ·
-  判据单源 `thincoder-core/process-probe.mjs`）与判据单源行；§8 补 **D-MI9–D-MI12**；体量读数 232 → 238。复审修正轮：§3.1 再补清理面探测**单次批量**形态（复审 #2）
-  与标记族**假阴性误删方向**已知局限（复审 #3）；**签名收正**（2026-09-16）：§3.1 清理面 API = `filterDeadOwners(pid, { alive, cmdline })`（随实现同步——参数具名对齐 `thincoder-core/process-probe.mjs`）。
-- 2026-09-18（**TUI 假死批 · 实施后收正轮（fix）· eng-designer**——承 `docs/batches/2026-09-18-tui-freeze.md` §5 与父侧派单）：
-  §8 D-MI12 补 **VSC 端差登记**——面③（探测 TTL + 异步化）在 VSC 自持复本
-  （`thincoder-vscode/src/extension/peer-instances.mjs` · `thincoder-vscode/src/agent/setup-reminders.mjs`）**未落地**（同步 · 无 TTL），处置归 VSC 轮（不修）。语义零改。
-- 2026-09-18（**init-block 批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承 `docs/batches/2026-09-18-init-block.md` §3 发现 6 / 7 / 10）：
-  §3.1 补 **VSC 镜像面收正**（判活 / 标记正则本地副本删除 → 引核 `process-probe.mjs`；端侧只留 END / 命名空间薄壳；注入缝转口）与**端侧缓存端差**（TTL 到期 stale-while-revalidate + 启动期异步预热；TTL = 新鲜度上界；`N-MI2` 不受影响）——兑现 2026-09-18「处置归 VSC 轮」登记；
-  删修订式表达（清理面形态行「收正 / 改」· 判据单源行「本批新增」）。**零新语义**（VSC 面 = 评审发现 7 的直接导出项）。
-- 2026-09-18（**init-block 批 · 设计评审轮 2 修正** · eng-designer——fix 轮 2；承 `docs/batches/2026-09-18-init-block.md` §3 轮次 2 发现 1 / 3 / 5）：
-  §3.1 补 **F-MI7 核侧锚**判据条（测试档 + 四路锚：零同步 exec 扫描 / 束 exec 上界 / 有界同步例外锚 / 初始化窗口静默读数）· 同步消费面登记**两处**（`activeSlot` + 占用判定 `slotOccupancy`——`:68` 句与 D-MI14 自述同改）· 本地副本枚举三件套取并统一（实核坐标入 §3.1 副本清单句 `:97` 与 D-MI12 `:213`）· 本批受影响文件指针行改指本批档 §2.3（评审所引 `:86`——现值 `:88`）。
-  **零新语义**（= 评审轮次 2 发现的直接导出项；需求档 F-MI7 例外句扩面 = 拟改文交父侧）。
-- 2026-09-19（**init-block 批 · fix 轮 3 · eng-designer**——父侧 2026-09-19 裁定落地）：§3.1 端侧缓存端差行补**预热落点**（= panel resolve 面 · 键 = panel cwd——对齐 SWR 缓存键；`activate()` 无 per-cwd 键，多根工作区会预热错键）。
-- 2026-09-19（**init-block 批 · fix 轮 · eng-designer**——承批次档 §6）：§3.1 判据条收正——测试档补端半 `zero-sync-exec.test.mjs` · 核 / 端两域分档登记（N3 门禁）· 扫描形态补 `spawnSync`；§10.1 补旧锚映射（`D-L1a` / `D-L2a` / `D-L2b` 语义归位——不复活旧 ID）。**零新语义**。
-- 2026-09-22（**措辞退场批（wording-retire）· 点修轮（发现 1 语族补扫）· eng-designer**——承用户 2026-09-22 裁定（措辞退场 · 语族补扫）；批档 = `docs/batches/2026-09-22-wording-retire.md`）：§8 D-MI12 行——「面间不追赶」旧名从活面退场（改「常态各面独立实现 / 本批双面同改 = 同源缺陷冻结级特例」平实措辞）；**零新语义**；旧字面仅存记录面 / 归档面。
-- 2026-09-22（**措辞退场批（wording-retire）· 评审轮 1 发现 #4 · 父侧直接执行裁定 · eng-designer**——承 `docs/batches/2026-09-22-wording-retire.md` §3 轮次 1 发现 #4）：§8 D-MI14 / D-MI12 两行去日期式修订标记——「收正」式标记转裁定语；D-MI12 特例括注同转 + 「核 + VSC 镜像同步收正」改「同批落地」+ 理由列引文改间接述。决策语义 / 锚值零改（常态 / 双面同改特例并存）。同族更大面（全仓修订式表达清理）= 台账 #225。
-- 2026-09-25（**intent-claims 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-intent-claims.md` §1.1 · 台账 #23）：新增 **§4.4 意图认领面（claims · TTL 租约 · P1）**——存储分字段 / 租约 30 min 与续约节流 /
-  写成功即认领 / 写前命中软提示升级（逐字锚）/ 成本与降级 / 模块落点与双端对位 / 测试判据（§4.4.1–§4.4.7）；§4 标题与档头逐字锚清单同改；§7 坐标表增「意图认领面」行；§8 增 **D-MI17–D-MI21**。
-- 2026-09-25（**intent-claims 批 · 设计评审轮 1 修正 · eng-designer**——fix 轮；承 `docs/batches/2026-09-25-intent-claims.md` §3 轮次 1 发现 1–9）：
-  §4.4.1 补**落盘原语 = 原子写**（核 `writeSessionFile` / 端 tmp+rename——两侧目录 mtime 缓存失效理由）与**覆盖去冗方向性判据**（`covers` 三分支 + 集内无被覆盖项不变式）；
-  §4.4.2 续约对象对齐；§4.4.3 落盘句加原语指针；§4.4.4 补**核侧 `_peerNoted` 清空落点**（`flushPeerDomains` 首步）与**端侧混合命中合成**（过滤聚合列表）；
-  §4.4.6 常量行先例指针改引跨端读取比对形态；§4.2 / §4.3 各补认领面指针；术语注意扩到需求档用法（N-MI3 / F-MI7 = 槽位面）。**零新语义**。
-- 2026-09-25（**intent-claims 批 · 实施后收正轮（fix）· eng-designer**——承 `docs/batches/2026-09-25-intent-claims.md` §5 上抛 2 / 父侧派单）：
-  文档面 re-anchor——§4.2 / §4.3 / §4.4 / §7 各坐标随实施落盘逐锚实读重指（核 `thincoder-core/peer-domains.mjs` · 端 `execute-tools.mjs` / `thincoder-vscode/src/extension/peer-domains.mjs`）；
-  `peerCollabNote` 签名按实现收正为 `(agent, tool, args)`；`pathsOverlap` 归口指针改指 `thincoder-core/peer-claims.mjs`；
-  两新档 / 两测试档「拟新增」标记去除；§4.3 / §4.4.4 明写**分隔符不属逐字锚**（端块内 `\n\n` vs 核 `\n`——端差登记）。
-  **零新语义**（锚 / 口径 / 实态同步面）。
-- 2026-09-25（**peer 收口批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-peer-closeout.md` §1 · 台账 #291/#302/#296/#290）：
-  §4.3 补**字面规范面裁定**（本字面 = 规范面单源——核实现 / 核测试逐字锁；**端侧按本字面逐 target 出行**）与三项判据；§4.4.4 端侧混合命中合成改写为「与核同形」（端侧足迹行 = 逐 target，聚合单行形态退场）；§4.4.1 落盘原语改「**单一实现**」（核 `writeSessionFile`，端侧引核端壳转口——端档零本地原子写实现；末级兜底支明写）；
-  §3.1 补**聚合半段单源**条（`groupSlotSessions` 核具名导出 + 端侧引核 + 结构 / 对拍两项判据）· §4.3 补**测试层判据**（足迹面背填 = 核 / 端两新测试档与用例号族）；§7 坐标行随改；§8 增 **D-MI22–D-MI24**。
-- 2026-09-25（**peer 收口批 · 设计评审轮 1 修正 · eng-designer**——fix 轮；承 `docs/batches/2026-09-25-peer-closeout.md` §3 轮次 1 发现 1–7）：§4.3 字面规范面条判据① 收正为**扫描口径单源**（扫描面 + 三排除：定义性引用行 / 记录面与归档面 / tmp）；
-  同条补 **F-MI9 读法**（「既有文案」= 规范面字面本体）与 `conflicts(cwd, targets, { now })` 签名（实读 `thincoder-core/peer-domains.mjs:190`）；§8 D-MI24 补 **N-MI2 射程读法**（无端差纯函数 / 落盘原语共享不属「实现各自独立」射程）。**零新语义**（评审 7 条直接导出项）。
-- 2026-09-25（**peer 收口批 · 收正轮（fix）· eng-designer**——承本批实施轮实测（2026-09-25）· 父侧派单 · 台账 #344）：
-  §4.3 补**冲突判据端差**登记（端 `conflicts` = 归一后精确匹配 + 与 cwd 无关 ∥ 核 = `pathsOverlap` + 同 cwd 过滤——四态实测；本批零改；消解裁定待另批）。**零新语义**（登记面补登）。
-- 2026-09-25（**single-source-closeout 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-single-source-closeout.md` §1 · 台账 #333 / #344）：
-  ① §4.2 目标解析行收正——`file_ops` 按**动作感知**（`copy` ⇒ 只 `dest`；`move` / `rename` ⇒ `source` + `dest`；未知 / 缺失 `action` ⇒ 保守双算），动作感知规则住单源谓词 `toolTouchPaths`（规格 = `TOOLS.md` §6.17）；
-  ② §4.3 补**端 `conflicts` 判据**条（与核同判据 = `pathsOverlap` + 同 cwd 过滤 + hot 窗口 + self 排除；端差保留核查 A9 三件 = 不成立），同节判据（测试层）端半补**与核同判据**对位（端 T-L3v2 ↔ 核 T-L3e）； （机检豁免——用例退场登记）
-  ③ **冲突判据端差登记条随对齐删除**（判据并单源后无该端差）。**零新语义**（#333 = 用户裁定谓词规格落地；#344 = 端差默认 = 消）。
-- 2026-09-25（**end-diff-registry 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §1 · 台账 #338 / #345）：
-  ① §3.1「端读面形态与缓存判据」条二态化——读形（SWR 壳 / 预热 / 异步对偶）= **形态面自持**（非登记项；N-MI2 射程）；缓存判据差（端 TTL 单判据 ∥ 核 `mtime ∨ TTL`）A9 核查 = ① 不成立 ⇒ 转**消解路径 + 到期条件**（端判据并核——读形零变）；
-  ② 全档坐标 re-anchor（核 `peer-domains.mjs`：`peerDomains:179→177` · `conflicts:190→188` · `peerCollabNote:218→216` · `recordPeerWrites:258→256` · `flushPeerDomains:277→275` · 文案行 `:245→243` · 分隔符行 `:250→248`；
-  核 `peer-instances.mjs`：`peerInstances:112→113` · `groupSlotSessions:84→85` · `peerInstancesTool:166→167`）；
-  ③ §4.3 括注限定（行间分隔符 = 形态面、非端差登记项）。**零新语义**（#338 = 端差默认 = 消；#345 = 坐标重锚）。
-- 2026-09-25（**single-source-closeout 批 · 设计评审轮 1 修正轮（fix）· eng-designer**——承 `docs/batches/2026-09-25-single-source-closeout.md` §3 轮次 1 发现 2 / 4 · 父侧裁定）：
-  ① 全档 `thincoder-core/peer-domains.mjs` 坐标逐条实读复核——实改一处：§4.4.1 聚合缓存区 `:156-172` → `:154-170`（§4.2 / §4.3 / §7 各行与现盘一致——零改）；
-  ② §4.4.6 钩点行行数收正：`thincoder-core/agent/dispatch.mjs` 499 行贴硬限——距 500 余 1 行（零改结论不动）。**零新语义**（坐标 / 读数收正）。
-
-- 2026-09-25（**single-source-closeout 批 · 实施后重锚（fix）· eng-designer**——承 `docs/batches/2026-09-25-single-source-closeout.md` §5 漂移清单 · 父侧派单）：
-  全档 `thincoder-core/peer-domains.mjs` 坐标随实施落盘逐锚实读重锚（`recordPeerWrites:256→254` · `flushPeerDomains:275→273` · `peerDomains:177→175` · `conflicts:188→186` · `peerCollabNote:216→214` · 文案行 `:243→241` · 分隔符行 `:248→246`；
-  端 `thincoder-vscode/src/extension/peer-domains.mjs` 侧 `:90-111→:90-107` + 头注 `:8-9→:9-10`；§4.4.1 聚合缓存区 `:154-170→:152-168` · 兼容区块 `:111-118→:109-116`）；零漂锚（`:37` / `:79` / `:34` / `:50/:58`）复核实读。**零新语义**（实施后坐标同步）。
-- 2026-09-29（**doc-sync-residuals 批 · 设计面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-28-tech-debt-closeout.md` §5 三登记句 · 台账 #298）：§4.4.4 补**端同步调用族登记**（写前 L3 预检同步链 + 条件句：写路径冻结再现观测 ⇒ 归批评估）。**零新语义**（转档登记）。
-- 2026-09-29（**parity-b1-vsc-core 批 · 收口轮 · eng-coder**——承批档 `docs/batches/2026-09-29-parity-b1-vsc-core.md` §2.9）：**取核后事实收正**——§3.1 镜像面 ∕ 聚合半段单源两 dated 条目补**收编后现态注**（端侧整档 = 核单源转口；SWR 壳 ∕ 异步对偶 ∕ 端探针缝名退役）；
-  §3.1 端读面形态与缓存判据条目改**核读面单源 · async**（缓存判据差「已消解」）；§4.3 分隔符句与字面规范面条目按**核形 `\n` 单源**收正（端块内空行 ∕ 「各端自持」 phrasing 退场）。**机制语义零改**（端差句退场 ∕ 取核事实直落）。
-- 2026-09-29（**doc-sync-residuals 批 · 修正轮（评审 #202 发现 2）· eng-designer**）：§4.4.4 端同步调用族登记句定性收正为历史观测（原端半档已迁核——现盘零命中；现态 = 核 `thincoder-core/agent/dispatch-run.mjs:52` 写前 `peerCollabNote`）；§4.4.3 ∕ §4.4.4 钩点坐标两处同拍重锚（⇒ `thincoder-core/agent/dispatch-run.mjs:65` ∕ `:115` ∕ `:52`）。**零新语义**。
-
-- 2026-09-29（**doc-backfill 批 · 波 1 · eng-designer**——承 `docs/batches/2026-09-29-doc-backfill.md` §2 · 台账 #612）：档名收正——`agent/dispatch.mjs` 引用六处改指现体 `agent/dispatch-run.mjs`（2026-09-28 拆分；写前 `:52` ∕ 写后 `:65` ∕ `:115`）；
-  §4.4.6 钩点行读数收正（拆分后 `dispatch.mjs` **254** ∕ `dispatch-run.mjs` **167**——原 499 贴硬限面已消解）；零同步 exec 扫描端半档两处补退场标注（随 2026-09-28 测试树全清重置退场——重建时恢复）。**零新语义**（坐标 ∕ 读数 ∕ 退场标注）。
-- 2026-09-30（**缺陷修复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-defect-fixes.md` §2 ∥ 台账 #707）：§3.1 桌面族成员扩（+ `node_modules/electron/dist/` 段——桌面 dev 相对路径启动形实测消解；端字段行同拍）；「已知局限（误删方向）」条落**兑现注**（已登记消解路径「实测补族」执行 + 负控腿登记）。判据（`ownerState` 三态 ∕ `D-MI10` 不对称）零改。
-- 2026-10-01（**缺陷修复批 · 评审后修复轮 1 · eng-designer**——承 `docs/batches/2026-09-30-defect-fixes.md` §3 轮次 1 发现 7）：§3.1 ∕ §7 `cleanDeadOwners` 坐标收正（定义现体 = `session-slot-claims.mjs:78`；转口 = `thincoder-core/session-slots.mjs:48`；调用 = `:305`）。**零新语义**（坐标收正）。
-

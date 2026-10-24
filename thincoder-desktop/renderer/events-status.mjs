@@ -10,9 +10,9 @@
  *      （`renderer/views/statusline-segments.mjs` —— 五 kind 取值表）。
  *   ② `onCompress(state, ev)` —— **压缩状态行切片**（按会话键）：载荷 `{ status, … }` 四态
  *      （start ∕ done ∕ fallback ∕ failed —— 宿主产 = 桥 `onCompressStart` ∕ `onCompress` ∕ `onCompressFail`，
- *      形 = VSC `panel-callbacks.mjs:175-183` 同式）；表外 status ⇒ 零写。读面 = 流内压缩状态行
+ *      形 = VSC `buildPanelCallbacks` 同式）；表外 status ⇒ 零写。读面 = 流内压缩状态行
  *      （`renderer/views/compress-status.mjs`；生命期 = 首屏页读整置即失 —— `renderer/page-read.mjs`）。
- *   ③ `expireStatusText(state, channel, ev, isTail)` —— **活动恢复即清**（VSC `chat-messages.js:54-107` 同清单：
+ *   ③ `expireStatusText(state, channel, ev, isTail)` —— **活动恢复即清**（VSC `initMessageLoop` 同清单：
  *      token ∕ reasoning ∕ toolCall ∕ toolResult ∕ complete ∕ aborted ∕ error ⇒ 七时点；本端映射 = `ev:token` ∕
  *      `ev:reasoning` ∕ `ev:tool-call` ∕ `ev:tool-result` ＋ 回合尾两形与错误径（`isTail` —— 判据单源
  *      `renderer/events.mjs` `isTurnTail`，由主档传入，本档零第二判据））；命中 ⇒ 清本键（无键 ⇒ 原引用）。

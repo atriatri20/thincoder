@@ -1,5 +1,5 @@
 /**
- * i18n.mjs — 词表面（`docs/desktop/design/SHELL.md:31` · 批 2 档 §2.4（g）· 本批 §2.1 E-5 / §2.5 U44）：
+ * i18n.mjs — 词表面（`SHELL.md` §1「进程与目录形态」 · 批 2 档 §2.4（g）· 本批 §2.1 E-5 / §2.5 U44）：
  *   ① 核域键 = `config:read` 语言面**下发投影**（核 `projectDictionary(locale)` 已扁平投影
  *      ⇒ 渲染面零核导入、零第二词表源）；
  *   ② 宿主 UI 专有键 = `HOST_DICT`（左列 17 键 + 标签条 4 键 + 对话流 10 键 + 活动池 7 键 + 审批卡 7 键
@@ -37,7 +37,7 @@
  *      随标签裁撤退场；`tab.badge.approval` 保留 —— 位标词键沿 `tab.badge.*` 族）；**同拍增五键入第二档**
  *      （`session.title` ∕ `session.empty` ∕ `session.rename` ∕ `session.delete` ∕ `session.deleteConfirm`——
  *      值 = VSC 逐字）—— 计 **201 − 13 + 5 = 193**（增 / 退两语同拍）；
- *      **R10 增一键 ∕ 退一键** = 增 `sub.newBlocks`（池面出生计数贴 —— 两语值逐字同 VSC `locales/{en,zh}.json:170`；
+ *      **R10 增一键 ∕ 退一键** = 增 `sub.newBlocks`（池面出生计数贴 —— 两语值逐字同 VSC `locales/{en,zh}.json` 的 `sub.newBlocks`；
  *      消费面 = `renderer/views/activity-new.mjs`）+ 退 `pool.empty.hint`（空态提示面随 E2 区域退场 —— 消费面归零
  *      ⇒ 键面随退，零残键）—— 计 **203 + 1 − 1 = 203**（两语同拍；实读基 = 本次改动前 `HOST_DICT` 两语各
  *      203 键；链前段（至 193）后另有批次未逐笔续计 —— 本节自本次起以实读续链）；
@@ -124,10 +124,11 @@
  *      `wizard.saveAndNext` ∥ `wizard.finishGuard` ∥ `wizard.finishGuardGo` ∥ `wizard.finishGuardExit`（②③ 合并钮 + 完成护栏三词；
  *      ⑤ 校验面零新键——复用 `settings.providers.verify*` 五键）⇒ 实读 `HOST_DICT`（**合并表**，经合并点随动）**346 ⇒ 349**（两语同拍、键集相等；届盘实读续链）。
  *      **prefs 写失败面批增一键（补链 · 2026-10-13 清账轮 · 台账 #1190 ∥ #101）**：`composer.prefs.failed`（「模型切换未生效（${reason}）」——写失败面词）两语同增——消费面 = `renderer/composer-sync.mjs`（`data-notice="prefs-failed"`）、键面单源 = `renderer/i18n-views.mjs` ② 组 ⇒ `VIEWS_DICT`（第二档）**149 ⇒ 150**（本行 = 补链登记——值已计入后续链行届盘实读 150；HOST 合并表经合并点随动已含）。
+ *      **car2 批增二十三键（2026-10-15 · 三面键集对齐 · 台账 #1488）**：`COMPOSER_DICT`（第三档）**28 ⇒ 51**（+9 现键 +14 新键——族明细 = `renderer/i18n-composer.mjs` 头注；值逐字同 VSC `locales/*`）⇒ 届盘实读（2026-10-16）：`HOST_DICT`（**合并表**）**383** ∕ `VIEWS_DICT`（第二档）**156** ∕ `COMPOSER_DICT`（第三档）**51** ∕ `SETTINGS_DICT`（第四档）**89**（两语同拍、键集相等；其间并行批增键未逐笔续计——本行按盘收正）。
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
- *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
- *   ④ 语言归一：**与核 `normalizeLocale` 同形同终态**（`thincoder-core/i18n.mjs:75-81`）—— BCP-47 取
+ *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs`「两端同约定」），缺参原样保留；
+ *   ④ 语言归一：**与核 `normalizeLocale` 同形同终态** —— BCP-47 取
  *      基语言（`zh-CN` ⇒ `zh`）；缺 / 非串 / 未知 ⇒ `"en"`；值域同核 `SUPPORTED_LOCALES`。
  *   ⑤ **核件取词单点接线**（「对齐第二批」项 3 / 修复轮收正 —— 接线点外移）：核构件族内取词走核 i18n
  *      （模块级 `t`）⇒ 端侧经**注册面** `setStringsSink(fn)` 注入 —— 注册单点 = `renderer/app.mjs`
@@ -174,7 +175,7 @@ export const HOST_DICT = Object.freeze({
     "rail.session.usageTip": "Session tokens: input ${input} · output ${output} · reasoning ${reasoning} · cache hit ${pct}",
     "rail.ledger.notice": "Session ledger anomaly (${reason}) — opening a session self-heals it",
     "rail.ledger.notice.scene": "Corrupted-scene files kept 30 days",
-    // ── 左侧工作区边栏（Codex 形大改批 · 2026-10-04 —— 面单 = `renderer/mount-sidebar.mjs`；六键两语同拍）──
+    // ── 左侧工作区边栏（美化形大改批 · 2026-10-04 —— 面单 = `renderer/mount-sidebar.mjs`；六键两语同拍）──
     "sidebar.newChat": "New chat",
     "sidebar.projects": "Projects",
     "sidebar.recent": "Recent",
@@ -207,7 +208,7 @@ export const HOST_DICT = Object.freeze({
     "sidebar.accentCustom": "Custom color",
     "pool.collapse": "Collapse activity panel",
     "pool.expand": "Expand activity panel",
-    // ── 思考链折叠 ∕ 耗时（Codex 形大改批 · 2026-10-04 —— 四键）──
+    // ── 思考链折叠 ∕ 耗时（美化形大改批 · 2026-10-04 —— 四键）──
     "reasoning.label": "Thinking",
     "reasoning.done": "Thought for ${n}s",
     "reasoning.doneUnknown": "Thought",
@@ -232,7 +233,7 @@ export const HOST_DICT = Object.freeze({
     "menu.edit.paste": "Paste",
     "menu.edit.selectAll": "Select All",
     // ── 核件复制钮两键（R3c：核 `flow/stream.mjs` `attachCopyButtons` 词键 —— **端供给面**，树面零消费；
-    //    词值同 VSC 同键（`thincoder-vscode/locales/en.json:34-35`）—— 同一控件同词）──
+    //    词值同 VSC 同键（`en.json` 的 `toolbar.model` 等同名键）—— 同一控件同词）──
     "msg.copy": "Copy",
     "msg.copied": "Copied!",
     // ── 核件子 agent 词键 + 说话人 / 待发送三键（「对齐第二批」项 3 / 4：核构件族内取词经**注册端**注入
@@ -316,7 +317,7 @@ export const HOST_DICT = Object.freeze({
     "status.banner.advisor": "ADVISOR",
     "status.banner.eng": "ENG",
     // ── 挂起句三键（桌面空闲唤醒批 —— 核 i18n 无同源键；值单源 = `docs/desktop/design/IPC.md` §1「挂起 ∕ 消化词键注」：
-    //    en = VSC 逐字（`thincoder-vscode/locales/en.json:259-261` 同名键）· zh = CLI 逐字；消费 = 状态行段 3 支①）──
+    //    en = VSC 逐字（`en.json` 的 `settings.inherit` 等同名键）· zh = CLI 逐字；消费 = 状态行段 3 支①）──
     "susp.running": "${n} background subagent(s) running",
     "susp.digesting": "${n} awaiting digestion",
     "susp.winding": "background subagents finishing…",
@@ -335,7 +336,7 @@ export const HOST_DICT = Object.freeze({
     "rail.session.usageTip": "会话用量：输入 ${input} · 输出 ${output} · 思考 ${reasoning} · 缓存命中 ${pct}",
     "rail.ledger.notice": "会话账本异常（${reason}）——打开会话即自动补回",
     "rail.ledger.notice.scene": "损坏现场档保留 30 天",
-    // ── 左侧工作区边栏（Codex 形大改批 · 2026-10-04 —— 六键两语同拍）──
+    // ── 左侧工作区边栏（美化形大改批 · 2026-10-04 —— 六键两语同拍）──
     "sidebar.newChat": "新聊天",
     "sidebar.projects": "项目",
     "sidebar.recent": "最近项目",
@@ -393,7 +394,7 @@ export const HOST_DICT = Object.freeze({
     "menu.edit.paste": "粘贴",
     "menu.edit.selectAll": "全选",
     // ── 核件复制钮两键（R3c：核 `flow/stream.mjs` `attachCopyButtons` 词键 —— **端供给面**，树面零消费；
-    //    词值同 VSC 同键（`thincoder-vscode/locales/zh.json:34-35`）—— 同一控件同词）──
+    //    词值同 VSC 同键（`zh.json` 的 `toolbar.model` 等同名键）—— 同一控件同词）──
     "msg.copy": "复制",
     "msg.copied": "已复制！",
     // ── 核件子 agent 词键 + 说话人 / 待发送三键（「对齐第二批」项 3 / 4：值逐字同 VSC locales）──
@@ -502,7 +503,7 @@ export function setStringsSink(fn) {
   stringSink = typeof fn === "function" ? fn : null
 }
 
-/** 归一（**镜像核同形** `thincoder-core/i18n.mjs:75-81`：BCP-47 取基语言 `zh-CN` ⇒ `zh`；
+/** 归一（**镜像核同形** `normalizeLocale`：BCP-47 取基语言 `zh-CN` ⇒ `zh`；
  *  缺 / 空 / 非串 / 未知 ⇒ 缺省）。 */
 export function normalizeLocale(value) {
   const raw = String(value ?? "").trim()
@@ -530,7 +531,7 @@ export function initDict({ locale, dict, host } = {}) {
 export function locale() { return current }
 
 /** 插值：**核同形同语义** —— `${name}` 占位、逐参首发替换（镜像核 `t` 的替换面，
- *  `thincoder-core/i18n.mjs:91-93`）；缺参 / 参不匹配 ⇒ 占位原样保留（不吞、不抛）。 */
+ *  `normalizeLocale`）；缺参 / 参不匹配 ⇒ 占位原样保留（不吞、不抛）。 */
 function interpolate(template, params) {
   if (params === null || typeof params !== "object") return template
   let out = template

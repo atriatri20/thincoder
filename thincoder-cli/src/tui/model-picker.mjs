@@ -16,7 +16,7 @@
  *      closePicker, renderPickerLines, confirmDelete }（后四者为 pickers.mjs 通用 picker 绑定——闭包入参，环安全）。
  */
 import { sliceByWidth } from "./render.mjs"
-import { providerSpec, specMatch } from "@thincoder/core/config.mjs"
+import { providerSpec, specMatch, resolveCompactThreshold } from "@thincoder/core/config.mjs"
 import { saveSession, loadSlotFile } from "@thincoder/core/session.mjs"
 import { carryoverDefaultModel } from "./config-helpers.mjs"
 import { getProviderModels, modelListFailureText, dedupeModels } from "./model-catalog.mjs"
@@ -241,16 +241,16 @@ export function createModelPicker(ctx) {
     agent.activeModel = item.model
     agent.provider = { ...target }
     agent.provider.model = item.model
+    // §6.17：auto 派生线随模型跟手——只刷新显示面 compactThresholdResolved，显式键 agent.compactThreshold 永不被改写
     if (agent.config?.agent?.compactThresholdAuto) {
-      const { resolveCompactThreshold } = await import("@thincoder/core/config.mjs")
-      agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
+      agent.config.agent.compactThresholdResolved = resolveCompactThreshold(null, agent.provider).value
     }
     // 写会话槽（saveSession——槽双字段恒非空）——写回单点在其后（槽先配置后）
     saveSession(agent)
     // 选定写回（判据句 6——定序槽先配置后；失败不反扑会话写、记错零静默）
     const carried = await carryoverDefaultModel({ provider: target.name, model: item.model, slotBefore })
     if (carried.ok !== true) console.error(`[model] default model carryover failed: ${carried.reason}`)
-    else if (carried.written === true && agent.config) agent.config.defaultModel = `${target.name}:${item.model}` // 内存镜像（/config 显示面新鲜——wizard.mjs:210-211 先例）
+    else if (carried.written === true && agent.config) agent.config.defaultModel = `${target.name}:${item.model}` // 内存镜像（/config 显示面新鲜——wizard.mjs 先例）
     // M6 切换回显：规格来源一行（DEFAULT 兜底 → 警示色 + /config 提示）
     const { matched } = specMatch(agent.provider.model)
     const spec = providerSpec(agent.provider)

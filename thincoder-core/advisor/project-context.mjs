@@ -12,13 +12,14 @@
  * absent — in a project with a different layout the reviewer still scored the
  * dimension it could no longer check (silent failure, the worst class: invisible
  * and unfixable by the user). Missing pieces now say so, and the reviewer is told
- * to state the limitation in its findings. Projects can point at their own files
- * through the project manifest (advisor.docMap / advisor.standardsDoc).
+ * to state the limitation in its findings. The document map is derived from the
+ * manifest's `docRoot` (the one place that says where the docs live); the standards
+ * face has no derivable convention name and is therefore an explicit degradation.
  */
 import { readFileSync, existsSync } from "node:fs"
 import { resolve, join, relative, dirname, sep } from "node:path"
 import { providerSpec } from "../config.mjs"
-import { loadProjectDeclaration } from "../conventions.mjs"
+import { DEFAULT_MANIFEST, docRootPaths, readManifest } from "../manifest.mjs"
 
 /** Project guide (AGENTS.md) injection budget — decision 2026-08-08:
  *  NO fixed truncation; long-context models (1M+) get up to 5% of their context
@@ -32,8 +33,8 @@ const PROJECT_GUIDE_FRACTION = 0.05 // 5% of the reviewer model's context window
 export const NO_GUIDE_NOTICE = "(No AGENTS.md found — neither at the working directory root nor in any review-scope subdirectory. Judge the user's requirements from the conversation background, and say so explicitly if the requirements are unclear.)"
 
 /** Explicit degradation sentences (PORTABILITY design §4.4 — verbatim). */
-export const NO_DOC_MAP_NOTICE = "(No document map found under the project root, and none is declared — the Document ownership criterion is degraded: check placement against the Project Guide where present, and state the limitation in your findings.)"
-export const NO_STANDARDS_NOTICE = "(No project standards document was declared — judge methodology compliance from the Project Guide (when present) and the review criteria above; state the limitation in your findings.)"
+export const NO_DOC_MAP_NOTICE = "(No document map found — no README.md under the declared document roots and none at their common ancestor — the Document ownership criterion is degraded: check placement against the Project Guide where present, and state the limitation in your findings.)"
+export const NO_STANDARDS_NOTICE = "(No project standards document — nothing in the project declares one — judge methodology compliance from the Project Guide (when present) and the review criteria above; state the limitation in your findings.)"
 export const NO_GIT_NOTICE = "(No git repository detected — change-set context is unavailable; read the review-scope files directly.)"
 
 /**
@@ -126,25 +127,66 @@ export function injectProjectGuide(agent, parts, scopeFiles = []) {
   return root // guide injected — requirement-fit criteria apply (truthy root)
 }
 
+/** `docRoot` probe order: the face a reviewer needs first (design) → down to the batch records. */
+const DOC_ROOT_ORDER = ["design", "requirements", "specs", "modules", "batches"]
+
+/** Declared document roots as ABSOLUTE paths, in declaration order (`null` / missing face ⇒ no root). */
+function declaredDocRoots(base) {
+  const read = readManifest(base)
+  const docRoot = (read.ok && read.manifest ? read.manifest : DEFAULT_MANIFEST).docRoot ?? {}
+  const out = []
+  for (const key of DOC_ROOT_ORDER) {
+    for (const p of docRootPaths(docRoot[key], base)) if (!out.includes(p)) out.push(p)
+  }
+  return out
+}
+
+/** Common ancestor of every root (segment-wise — `docs/design` and `docs/designX` are not siblings).
+ *  A lone drive root is no map home ⇒ null. */
+function commonAncestor(paths) {
+  if (paths.length === 0) return null
+  const split = (p) => p.split(/[\\/]+/)
+  let acc = split(paths[0])
+  for (const p of paths.slice(1)) {
+    const segs = split(p)
+    let i = 0
+    while (i < acc.length && i < segs.length && acc[i] === segs[i]) i++
+    acc = acc.slice(0, i)
+  }
+  if (acc.length === 0) return null
+  const joined = acc.join(sep)
+  return /^[A-Za-z]:$/.test(joined) ? null : joined
+}
+
 /**
- * Inject the project document map (PO-1). Resolution: the DECLARED path
- * (`advisor.docMap`, project-root-relative) wins; the built-in probe
- * (`docs/README.md` → `docs/design/README.md`) stays as a fallback for projects
- * laid out that way. Neither usable → an explicit degradation sentence — never a
- * silent skip: the reviewer must know the Document-ownership criterion is unchecked.
+ * Discover the document map from the manifest's `docRoot` — a pure fs probe, no index generation
+ * (the map is a hand-maintained register; a generated one would be a second index, and a second
+ * index is exactly the duplicate pointer the retired declaration face used to create).
+ * Ladder: ① `README.md` under each declared doc root (declaration order) ② `README.md` at the common
+ * ancestor of every declared root. Neither ⇒ null (caller injects `NO_DOC_MAP_NOTICE` — no silent skip).
+ * @param {string} base project root (or any dir inside it — `docRoot` resolves against the project root)
+ * @returns {string|null} absolute path of the map file, or null when degraded
+ */
+export function findDocumentMap(base) {
+  const roots = declaredDocRoots(base)
+  for (const r of roots) {
+    const p = join(r, "README.md")
+    if (existsSync(p)) return p
+  }
+  const ancestor = commonAncestor(roots)
+  if (!ancestor) return null
+  const p = join(ancestor, "README.md")
+  return existsSync(p) ? p : null
+}
+
+/**
+ * Inject the project document map (PO-1), derived from `docRoot`. Degrades visibly: the reviewer
+ * must know the Document-ownership criterion is unchecked — never a silent skip.
  * @returns {string|null} the injected map path, or null when degraded
  */
 export function injectDocumentMap(agent, parts, root) {
   const base = root ?? agent.cwd
-  const conv = loadProjectDeclaration(agent.cwd)
-  let mapPath = null
-  if (conv.advisor.docMap) {
-    const declared = resolve(base, conv.advisor.docMap)
-    if (existsSync(declared)) mapPath = declared
-  } else {
-    mapPath = [resolve(base, "docs", "README.md"), resolve(base, "docs", "design", "README.md")]
-      .find((p) => existsSync(p)) ?? null
-  }
+  const mapPath = findDocumentMap(base)
   parts.push("## Document Map")
   let text = null
   if (mapPath) {
@@ -166,32 +208,15 @@ export function injectDocumentMap(agent, parts, root) {
 }
 
 /**
- * Inject the project standards document (PO-2). DECLARATION ONLY
- * (`advisor.standardsDoc`, project-root-relative): the old hardcoded
- * `METHODOLOGY.md` probe injected a file most projects do not have — and its
- * absence was silent. Undeclared (or unreadable) → explicit degradation sentence.
- * @returns {string|null} the injected standards path, or null when degraded
+ * Inject the project standards section (PO-2). The declaration face is gone with the manifest
+ * `advisor` key, and no standards file name is derivable from what the project does declare (the old
+ * `METHODOLOGY.md` probe was deleted exactly because most projects have none). The section stays so the
+ * reviewer is TOLD the dimension is unchecked — visible degradation, not a silent skip.
+ * @returns {null} always degraded
  */
-export function injectProjectStandards(agent, parts, root) {
-  const base = root ?? agent.cwd
-  const conv = loadProjectDeclaration(agent.cwd)
-  const declared = conv.advisor.standardsDoc ? resolve(base, conv.advisor.standardsDoc) : null
+export function injectProjectStandards(_agent, parts, _root) {
   parts.push("## Project Standards")
-  let text = null
-  if (declared && existsSync(declared)) {
-    try {
-      text = readFileSync(declared, "utf8")
-    } catch (e) {
-      console.warn(`[advisor] project standards unreadable at ${declared}: ${e.message}`)
-    }
-  }
-  if (text === null) {
-    parts.push(NO_STANDARDS_NOTICE) // degraded — visible by contract
-    parts.push("")
-    return null
-  }
-  parts.push("The project declares these standards for this review. Judge the design/changes against them:")
-  parts.push(text)
+  parts.push(NO_STANDARDS_NOTICE) // degraded — visible by contract
   parts.push("")
-  return declared
+  return null
 }

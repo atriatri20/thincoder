@@ -1,6 +1,8 @@
 import { ansi, C } from "./ansi.mjs"
 import { detectDanger } from "@thincoder/core/tools/shared.mjs"
 import { askPermission as coreAskPermission } from "@thincoder/core/permission.mjs"
+// SSH 凭据窗（SSH-SESSION 批 · TOOLS.md §6.22 ⑧）：面体单源 = secret-prompt.mjs（本档只做 Promise 转口）
+import { runSecretPrompt } from "./secret-prompt.mjs"
 
 /** Interaction primitives: permission approval + question input.
  *  Extracted from index.mjs, receives closure dependencies via createInteraction(ctx).
@@ -140,5 +142,15 @@ export function createInteraction(ctx) {
     })
   }
 
-  return { askPermission, askQuestion, formatPermission, askBatchPermission }
+  /** SSH 凭据窗（SSH-SESSION 批 · `docs/core/design/TOOLS.md` §6.22 ⑧——`ctx.onSecretInput` 的 CLI
+   *  面实现）：一次一面（重入守卫同 `askQuestion` 语义——后到者显式拒，不得覆盖先到者：先到者的
+   *  Promise 会永挂）；返回 `{<name>:<值>} | null`（取消）。值零入会话状态 / 对话行 / 日志（NS4）。 */
+  function askSecretInput(payload) {
+    if (state.secretPrompt) {
+      return Promise.reject(new Error("another credential prompt is already pending - answer or cancel it first"))
+    }
+    return runSecretPrompt({ state, render }, payload)
+  }
+
+  return { askPermission, askQuestion, formatPermission, askBatchPermission, askSecretInput }
 }

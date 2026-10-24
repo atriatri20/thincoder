@@ -1,7 +1,8 @@
 /**
- * box-routes.mjs — 盒接入面（`gateway/API.md` §2.12 ∥ `agent/MEMBER-AGENT.md` §3.3；KD-SV-153/154）：盒**出向**五端点
+ * box-routes.mjs — 盒接入面（`gateway/API.md` §2.12 ∥ `agent/MEMBER-AGENT.md` §3.3；KD-SV-153/154）：盒**出向**七端点
  * ——`GET /api/box/events`（SSE 下行）∥ `POST /api/box/sessions/:id/turns`（流式 NDJSON 体——纯转发）∥
- * `POST /api/box/commands/:cmdId/result`（命令结果）∥ `POST /api/box/ping`（保活应答 ⇒ 204）∥ `POST /api/box/credential`（git 凭据取件）。
+ * `POST /api/box/commands/:cmdId/result`（命令结果）∥ `POST /api/box/ping`（保活应答 ⇒ 204）∥ `POST /api/box/credential`（git 凭据取件）∥
+ * `GET /api/box/mcp`（MCP 工具表——零秘密）∥ `POST /api/box/mcp/call`（MCP 调用——server 执行；`mcp/MCP.md` §6.2）。
  *
  * 判权 = **每工作区 key**（`Authorization: Bearer`——与 `/v1` 同校验单源 `verifyKey`；键 → `sandbox_workspaces.key_id` 行 →
  * 工作区 + 负责人；吊销 ⇒ 401 即断）。**连接发起方恒为盒**（server 零拨盒路径——AC-50③ 判据）。
@@ -12,6 +13,7 @@ import { HttpError, sendJson } from "../gateway/errors.mjs"
 import { readJsonBody, readStreamBody } from "../gateway/server.mjs"
 import { verifyKey } from "../accounts/keys.mjs"
 import { credentialForHost } from "./member-cred.mjs"
+import { boxMcpCallHandler, boxMcpListHandler } from "../mcp/member-bridge.mjs"
 
 /** 工作区 key 判权（第二门——`/api/box/*`）：键 → 工作区行（吊销 ⇒ 401 即断；非工作区键同判无效）。 */
 export function boxWorkspaceOf(db, req) {
@@ -56,7 +58,7 @@ export function createLineReader() {
   }
 }
 
-/** 注册盒接入面（五端点）。注入口径 = `deps`（单元测试档替身——透传无用项为零）；`relay` = `member-relay.mjs` 实例。 */
+/** 注册盒接入面（七端点——见头注）。注入口径 = `deps`（单元测试档替身——透传无用项为零）；`relay` = `member-relay.mjs` 实例。 */
 export function registerBoxRoutes(routes, { db, config = {}, log = null, relay, now = Date.now, deps = {} } = {}) {
   if (!db) throw new Error("registerBoxRoutes：缺少 db")
   if (!relay) throw new Error("registerBoxRoutes：缺少 relay（createMemberRelay 产物）")
@@ -118,7 +120,7 @@ export function registerBoxRoutes(routes, { db, config = {}, log = null, relay, 
       failure = e // 体异常不得洩在途态（回合登记不回收 ⇒ 工作区级门恒闭）——统一由 finally 收口
     } finally {
       // 体从未自称回合（首帧缺 begin / 行非 JSON）⇒ 按工作区 + 槽号取在途回合收口（在途态残留 = 工作区级门恒闭）；
-      // `begin` 对位失败径（`:98`）则零副作用——不回收（未知 cmdId / 会话不符 = 拒绝该流，不动在途回合）
+      // `begin` 首帧对位失败径则零副作用——不回收（未知 cmdId / 会话不符 = 拒绝该流，不动在途回合）
       const active = turn ?? (claimed ? null : relay.turnOfSession(workspace.id, target.slot))
       if (active !== null) relay.finishTurnStream(active.cmdId) // 无 `end` 帧收口 ⇒ 按失败收尾（如实补帧——幂等）
     }
@@ -163,4 +165,8 @@ export function registerBoxRoutes(routes, { db, config = {}, log = null, relay, 
     }
     sendJson(res, 200, found)
   })
+
+  // 上行：MCP 桥（`mcp/MCP.md` §6.2——工具表零秘密 ∥ 调用回 server 执行；判权/体读沿族；两处理器住 `mcp/member-bridge.mjs`）。
+  routes.add("GET", "/api/box/mcp", boxMcpListHandler({ db, config, deps, log, now, workspaceOf: boxWorkspaceOf }))
+  routes.add("POST", "/api/box/mcp/call", boxMcpCallHandler({ db, config, deps, log, now, workspaceOf: boxWorkspaceOf }))
 }

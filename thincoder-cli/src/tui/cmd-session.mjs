@@ -96,7 +96,8 @@ export async function handleSessionCommand(ctx) {
   // 会话写回目标槽 = 跨槽覆盖）。预读 = `loadSlotFile`（**纯读**——无认领副作用）。
   // 触发条件 = 合值（遗留槽（无 `engineering` 字段）自工程会话切入时合值 = true ⇒ 预判据
   // 照触发——F3 触发条件口径）；槽不可读（preview null）不判：该次切换本就以「Slot not
-  // found」收场（switchToSlot 返回 null），无半态面。拒 ⇒ 切槽整体不发生（switchToSlot /
+  // found」收场（switchToSlot 返回 null），无半态面。**可拒面 = 仅「档非法」格**（工作区
+  // `workspace` ⇒ 放行——放行 ⇒ **零附着**）。拒 ⇒ 切槽整体不发生（switchToSlot /
   // applySession 均不调——零副作用）+ 原因行；准 ⇒ 既有切换 + applySession 之后一行附着。
   const preview = loadSlotFile(agent.cwd, e.slot)
   const slotEng = preview?.engineering
@@ -104,11 +105,11 @@ export async function handleSessionCommand(ctx) {
   let manifestAfterSwitch = null
   if (targetEng) {
     const r = resolveEngineeringManifest(agent.cwd, { writer: "main" })
-    if (!r.ok) {
+    if (!r.ok && r.code !== "workspace") {
       pushLine(`Cannot switch to slot ${e.slot} — ${r.message} (slot unchanged)`, C.warn)
       return
     }
-    manifestAfterSwitch = r.manifest
+    manifestAfterSwitch = r.ok ? r.manifest : null // 工作区放行 ⇒ 零附着（显式 null）
   }
   const data = switchToSlot(agent.cwd, e.slot)
   if (!data) {
@@ -119,8 +120,9 @@ export async function handleSessionCommand(ctx) {
     pushLine(`⚠ Slot ${e.slot} is being used by another live process (${occ.owner}) — continuing here will create a new copy on the next save`, C.warn)
   }
   applySession(agent, data, occ.occupied ? {} : { slot: e.slot })
-  // #41 准翻列：附着动作 = 翻转面自己赋值（`agent.manifest` ← 判据结果——相位行当回合起活）。
-  if (manifestAfterSwitch) agent.manifest = manifestAfterSwitch
+  // #41 准翻列：附着动作 = 翻转面自己赋值（`agent.manifest` ← 判据结果——相位行当回合起活；
+  // 工作区放行 ⇒ 显式置 `null` = 零附着）。
+  if (targetEng) agent.manifest = manifestAfterSwitch
   // Rebuild from history (lazy) — the display snapshot is deprecated.
   // SESSION.md §6.14：描述符 { history（尾窗+±1）, total, base }——标签口径 = total（非窗口长度）；
   // 未绑定（占用分支——模式 F）回退全量数组。

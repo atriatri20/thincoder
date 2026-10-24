@@ -1,6 +1,7 @@
 /**
  * routes-admin.mjs — 管理端点（accounts/ACCOUNTS.md §3——admin）：members 列表/建 ∥ key 吊销 ∥ 密码重置
- * ∥ 模型禁用集（`POST /api/members/:id/model-disables`——§2.2）∥ 审计列表（`GET /api/audit`——§2.1）。
+ * ∥ 模型禁用集（`POST /api/members/:id/model-disables`——§2.2）∥ 审计列表（`GET /api/audit`——§2.1；
+ * 过滤面 = type ∥ member ∥ containerId ∥ from/to ∥ limit——`containerId` 供沙盒日志窗按容器取操作记录）。
  *
  * 角色判定在服务端（requireAdmin——页面显隐非判据）；`user` ⇒ 403；无 ∥ 过期会话 ⇒ 401。
  * 成员不存在 ∥ key 不属该成员 ⇒ 404 `not_found`；吊销已有 key 幂等（行保留——软删纪律）。
@@ -26,7 +27,7 @@ function resolveMemberFilter(db, raw) {
   return member ? member.id : -1
 }
 
-/** 审计列表查询参数装配（`GET /api/audit`）：type（枚举校验归 `queryAudit`）∥ member ∥ from ∥ to ∥ limit。
+/** 审计列表查询参数装配（`GET /api/audit`）：type（枚举校验归 `queryAudit`）∥ member ∥ containerId ∥ from ∥ to ∥ limit。
  *  注：查询键以模板字面量书写——from 键的双引号形会撞单元测试档依赖面扫描的采集正则（该扫描件按令零改）误报。 */
 function auditQueryOf(db, url) {
   const params = new URL(url, "http://localhost").searchParams
@@ -34,6 +35,7 @@ function auditQueryOf(db, url) {
   return queryAudit(db, {
     type: key(`type`) || null,
     memberId: resolveMemberFilter(db, key(`member`)),
+    containerId: key(`containerId`) || null,
     from: parseUsageTime(key(`from`), `from`),
     to: parseUsageTime(key(`to`), `to`),
     limit: parseUsageLimit(key(`limit`)),

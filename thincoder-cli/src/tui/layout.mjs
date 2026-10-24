@@ -14,7 +14,9 @@
 import { layoutInput, wrapText } from "./render.mjs"
 import { QUESTION_CUSTOM } from "./interaction.mjs"
 import { renderSubagentPanel } from "./subagent-panel.mjs"
-import { askMaskActive, maskEcho } from "./ask-steps.mjs"
+import { askMaskActive, maskEcho, maskSurfacePresent } from "./ask-steps.mjs"
+// SSH 凭据窗掩码判据（SSH-SESSION 批 §6.22 ⑧——回显变换 maskEcho 共用，判据各面自持）
+import { secretMaskActive } from "./secret-prompt.mjs"
 
 /** 防御：question options 声明为 string[]，但 LLM 可能误传对象；取 label/text/title 兜底，避免渲染 "[object Object]"。 */
 function optText(opt) {
@@ -55,9 +57,15 @@ export function computeLayout(state, { cols, rows }) {
   const ip = state.interruptPrompt
   // 掩码步（登录面补全批 · TUI-COMMANDS.md §3.1 ∥ §5.5）：向导团队 password 步 ∥ `/team login`
   // password 步——回显每字符 `•`（显示层变换；提交值 = `state.input` 原值不动）。单源 = ask-steps.mjs。
-  const inputBuf = state.search ? [...state.search.query]
-    : (ip ? ip.chars : (askMaskActive(state) ? maskEcho(state.input) : state.input))
-  const inputCursor = state.search ? inputBuf.length : (ip ? Math.max(0, Math.min(ip.cursor ?? inputBuf.length, inputBuf.length)) : state.cursor)
+  // SSH 凭据窗（SSH-SESSION 批 §6.22 ⑧）：当前字段 masked ⇒ 同一显示层变换。
+  const maskActive = askMaskActive(state) || secretMaskActive(state)
+  // #1437（TUI.md §4 掩码守卫·显示面同归）：掩码三面在场（含搜索框已开时弹出）⇒ 输入框内容
+  // 归掩码面——搜索面让位（判据单源 = ask-steps.mjs `maskSurfacePresent`；框题侧同判据 =
+  // render-frame.mjs `inputBoxStyle`；键路由侧 = key-handler-search.mjs——键归谁、面显谁）。
+  const searchFace = state.search != null && !maskSurfacePresent(state)
+  const inputBuf = searchFace ? [...state.search.query]
+    : (ip ? ip.chars : (maskActive ? maskEcho(state.input) : state.input))
+  const inputCursor = searchFace ? inputBuf.length : (ip ? Math.max(0, Math.min(ip.cursor ?? inputBuf.length, inputBuf.length)) : state.cursor)
   const inputLayout = layoutInput(inputBuf, inputCursor, inputW)
   let inputOffset = 0
   if (inputLayout.lines.length > MAX_INPUT_LINES) {
@@ -95,8 +103,8 @@ export function computeLayout(state, { cols, rows }) {
 
   // --- conditional panels ---
   // overlay 三支（登录面补全批）：picker ∥ wizard ∥ 团队问句面（`state.teamAsk`——模态族第三支；
-  // overlay 行契约 = { lines, scroll } 同前两支）
-  const overlay = state.picker ?? state.wizard ?? state.teamAsk
+  // overlay 行契约 = { lines, scroll } 同前两支）；SSH 凭据窗 = 第四支（SSH-SESSION 批 §6.22 ⑧——同契约）
+  const overlay = state.picker ?? state.wizard ?? state.teamAsk ?? state.secretPrompt
   const pickerH = overlay ? Math.min(overlay.lines.length + 1, Math.max(6, rows - 12)) : 0
 
   // Todo

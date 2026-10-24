@@ -6,11 +6,11 @@
  * 三面：
  *   ① `runSessionGcMaintenance` —— 候选列举（冷 cwd 90 天面 ∪ 三合取存量组面，**并集去重**：同一组两判据
  *      可达 ⇒ 逐组恰回收一次）⇒ 计数 ⇒ **确认**（注入缝 `confirm({ count })`；缺失 ∕ 非 `true` ⇒ 零删除
- *      —— 先例 VSC `session-gc-command.mjs:29-70` 同律）⇒ 逐组 `deleteColdCwd`（**内部 TOCTOU 重校验**：
+ *      —— 先例 VSC `runSessionGcCommand` 同律）⇒ 逐组 `deleteColdCwd`（**内部 TOCTOU 重校验**：
  *      期间变活 ∕ 出窗 ⇒ 拒绝该组，其余组继续）⇒ 汇总。
  *   ② `runSessionIndexMaintenance` —— 清四表 → 全量重扫会话档 → 摘要（`runSessionIndex --rebuild` 形；
- *      先例 VSC `session-index-command.mjs:16-43`）。**核索引面一律惰性载入**：`node:sqlite` 不得进入端壳
- *      静态闭包（VSC 纪律①同款 —— `session-index-command.mjs:6-7`）。
+ *      先例 VSC `runSessionIndexCommand`）。**核索引面一律惰性载入**：`node:sqlite` 不得进入端壳
+ *      静态闭包（VSC 纪律①同款 —— `session-index-command.mjs`）。
  *   ③ `scheduleSessionMaintenancePasses` —— 启动拍供面（GC + 索引两枚；核侧启动窗外 3s 延迟拍、
  *      每进程一次、异步非阻塞、失败静默）。
  *

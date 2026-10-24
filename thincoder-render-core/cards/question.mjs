@@ -7,7 +7,7 @@
 import { esc as escHtml } from "../md.mjs"
 import { t as coreT } from "../i18n.mjs"
 
-/** 提问卡（承 `question.js:10-89` 构树）。`model` = `{ question, options?, promptId? }`；
+/** 提问卡（承 `question.js` 构树）。`model` = `{ question, options?, promptId? }`；
  *  返回卡元素。作答（选项 / 自由文本 / 取消）⇒ `emit("questionResponse", { answer, promptId? })`
  *  （取消 ⇒ `answer: null`）+ `deps.onAnswered(value)`；**卡去留 = 端侧**——核零摘除。 */
 export function renderQuestionCard(model = {}, deps = {}) {
@@ -44,7 +44,7 @@ export function renderQuestionCard(model = {}, deps = {}) {
     input.placeholder = placeholder
     input.addEventListener("keydown", (e) => {
       // IME 组字门（R1 小修——父侧裁 2026-09-28）：组合期回车 = 选字确认（归输入法）⇒ 零提交零防默认
-      // （判据同族 = composer/panel.mjs:179 两分支：`isComposing` ∕ `keyCode 229` 兜底）。
+      // （判据同族 = composer/panel.mjs 两分支：`isComposing` ∕ `keyCode 229` 兜底）。
       if (e.isComposing || e.keyCode === 229) return
       if (e.key === "Enter" && input.value.trim()) answer(input.value.trim())
     })

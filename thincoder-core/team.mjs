@@ -1,8 +1,9 @@
 /**
  * team.mjs — 团队登录机制（TEAM.md §2——三端共用单源：CLI ∥ VSC ∥ 桌面同 import）。
  *
- * 面：登录 ∥ 退出 ∥ 登录态读面 ∥ 活校验（`teamVerify`——只读三值，登录面补全批增）∥ 端标签（自动生成）∥
- * 派生 provider 条目（登录写入 / 退出停用）∥ 服务地址归一 ∥ 失败分类。**写面单源** = 本档（`writeConfigAtomic`
+ * 面：登录 ∥ 退出 ∥ 轮换（`teamRotate`——team-token-rotation 批增）∥ 登录态读面 ∥ 活校验（`teamVerify`——只读三值，
+ * 登录面补全批增）∥ 端标签（自动生成）∥ 派生 provider 条目（登录写入 / 退出停用 / 轮换同步）∥ 服务地址归一 ∥
+ * 失败分类。**写面单源** = 本档（`writeConfigAtomic`
  * 一次 mutate——经 `persistRaw`；端侧零自写盘，三端同源）——`teamVerify` **只读**（零写盘、零状态）。
  *
  * 形（TEAM.md §2.1）：顶层 `team` 段 `{ server, member{username,name}, label, token }`——`token` 在场 ⇔
@@ -14,9 +15,11 @@
  * 返回形（B1 批端侧契约——父侧裁定 2026-10-10）：
  *   `teamLogin`  ⇒ `{ ok:true, notice?:"manual-name-conflict" }` ∥ `{ ok:false, reason }`
  *   `teamLogout` ⇒ `{ ok:true, revokeDelivered:boolean }` ∥ `{ ok:false, reason }`
+ *   `teamRotate` ⇒ `{ ok:true }` ∥ `{ ok:false, reason }`（子集：`network` ∥ `invalid`（401——旧 token 已失效）∥
+ *   `write_failed`——TEAM.md §2.7）
  *   `reason` 取值域：`network`（不可达 ∥ DNS/TLS ∥ 超时 ∥ 非 401/429 应答——服务不符合预期面）∥
- *   `credentials`（401——同措辞）∥ `rate_limited`（429——锁定期）∥ `write_failed`（服务端已应答、本地
- *   写盘失败——mtime 冲突 ∥ 畸形档拒写）。`notice` 携**码**不携文（文本归端侧 i18n）；
+ *   `credentials`（401——登录流程同措辞）∥ `invalid`（401——轮换流程：旧 token 已失效）∥ `rate_limited`（429——锁定期）∥
+ *   `write_failed`（服务端已应答、本地写盘失败——mtime 冲突 ∥ 畸形档拒写）。`notice` 携**码**不携文（文本归端侧 i18n）；
  *   `revokeDelivered:false` = 服务端吊销未达（网络失败——本地照清）。
  */
 import { hostname } from "node:os"
@@ -82,7 +85,8 @@ export function teamStatus() {
  * （Bearer = `team.token`）⇒ **三值闭集**：`{ state: "valid" }`（200——token 有效）∥ `{ state: "invalid" }`（401——
  * 被吊销 ∥ 无效）∥ `{ state: "unreachable" }`（网络不可达 ∥ 其他非 401 失败——**不判失效**：离线容忍）。
  * **只读**——零写盘、零状态（调用面持结果）；零周期轮询（触发点制 = 启动一次 ∥ 登/退面开合 ∥ CLI `/team status`）。
- * token ∥ 地址缺席（未登录 ∥ 畸形档）⇒ `unreachable`（无从校验——不假报失效；端侧未登录面零调本函数）。
+ * token ∥ 地址缺席（已登录但缺 token 或缺地址）⇒ `unreachable`（无从校验——不假报失效；端侧未登录面零调本函数）。
+ * **畸形档不到本函数**：`loadConfig()` 畸形即抛，端侧拒绝直传（零 catch 吞）——故本行不列畸形档。
  */
 export async function teamVerify() {
   const team = loadConfig().team
@@ -102,6 +106,60 @@ export async function teamVerify() {
   if (res.status === 200) return { state: "valid" }
   if (res.status === 401) return { state: "invalid" }
   return { state: "unreachable" } // 其余（403 ∥ 404 地址非本服务 ∥ 5xx）⇒ 不判失效
+}
+
+/**
+ * 轮换（TEAM.md §2.7；三端同构——team-token-rotation 批）：`POST <server>/api/client/rotate`（Bearer = `team.token`；
+ * 体 `{}`——写端点 JSON 门照常）⇒ 成 ⇒ **一次写盘**：`team.token` = 新明文（替换）+ 派生条目 `apiKey` 同步
+ * （条目缺失 ∥ 同名手工 ⇒ 仅落 token——沿登录不覆盖口径）；败 ⇒ 零写盘 + 出词。**非 best-effort**：网络败 ⇒
+ * 服务端零变更（旧 token 仍有效——重试即复原）；401 ⇒ `invalid`（旧 token 已失效——端侧转「已失效」）。
+ * 无 token ∥ 无地址 ⇒ `network`（零请求旁路——端侧管理面本应已登录门）；服务端语义单源 = CLIENT.md §2 rotate 行。
+ */
+export async function teamRotate() {
+  const team = loadConfig().team
+  const token = typeof team?.token === "string" && team.token !== "" ? team.token : null
+  const server = typeof team?.server === "string" && team.server !== "" ? team.server : null
+  if (token === null || server === null) return { ok: false, reason: "network" } // 无凭据/无地址 ⇒ 兜底归类（零请求）
+  let res
+  try {
+    res = await fetch(`${server}/api/client/rotate`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: "{}",
+      signal: AbortSignal.timeout(TEAM_FETCH_TIMEOUT_MS),
+    })
+  } catch {
+    return { ok: false, reason: "network" } // 不可达 ∥ DNS ∥ TLS ∥ 超时（服务端零变更——旧 token 仍有效）
+  }
+  if (!res.ok) {
+    await res.text().catch(() => {}) // 错误体零消费面（分类只看状态——零新码）
+    if (res.status === 401) return { ok: false, reason: "invalid" } // 旧 token 已失效（端侧转「已失效」）
+    return { ok: false, reason: "network" } // 404（地址不是本服务）∥ 5xx 等——服务不符合预期面
+  }
+  let body = null
+  try {
+    body = await res.json()
+  } catch {
+    body = null
+  }
+  const next = typeof body?.token === "string" && body.token !== "" ? body.token : null
+  if (next === null) return { ok: false, reason: "network" } // 200 而形不符（代理 ∥ 非本服务应答）
+  try {
+    const result = persistRaw((raw) => {
+      assertWritableRoot(raw)
+      const section = raw.team
+      if (section === null || typeof section !== "object" || Array.isArray(section)) throw new Error("team 段缺失——拒写")
+      section.token = next // 新明文替换（一次写盘）
+      if (Array.isArray(raw.providers)) {
+        const entry = raw.providers.find((p) => p !== null && typeof p === "object" && p.name === TEAM_PROVIDER_NAME && p.derived === true)
+        if (entry !== undefined) entry.apiKey = next // 派生条目同步；缺失 ∥ 同名手工 ⇒ 仅落 token（零覆盖）
+      }
+    })
+    if (result !== null && result.ok === false) return { ok: false, reason: "write_failed" } // mtime 冲突（不自动合并）
+  } catch {
+    return { ok: false, reason: "write_failed" } // 畸形档拒写等（writeConfigAtomic fail-closed）
+  }
+  return { ok: true }
 }
 
 /**

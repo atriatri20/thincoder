@@ -5,7 +5,7 @@
  *
  * 行形（单源 = `docs/desktop/design/PROJECT.md` §2 KD-66 ∥ `docs/desktop/design/UI.md` §1
  * 「本批注（设置面样式收正 · D37 · 2026-10-02）」项 2；值源 = VSC 实读
- * `thincoder-vscode/webview/settings-providers.js:178-193`）：
+ * `updateProviderStatus`）：
  *  ① **两行卡**（`[data-provider]` 行根纵排）：**主行**（`.settings-row-main`）= 名 + 钥面（masked ∥ 未设词）+
  *     当前标 + 动作簇（修改 ∥ ✕ 删钥 ∥ 校验 ∥ 移除名 —— 四件全保留、序恒定 = 现盘序）；**副行**（`.settings-row-sub`）
  *     = `baseURL`（2026-10-09 清除批：渠道条目不携模型——原 `模型 · baseURL` 两段式收为单段）+ 不可用标 + 行尾代理开关；**第三行**（条件）=

@@ -45,7 +45,7 @@ import { startConfigWatch } from "./config-watch.mjs"
 import { configurePromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { DESKTOP_PROMPT_INJECTIONS } from "./prompt-injections.mjs"
 
-// 提示锚注册：**进程入口、任何装配之前**一次性（先例 = CLI `bin/thincoder.mjs:32` ∕ VSC `extension.mjs:92`）——
+// 提示锚注册：**进程入口、任何装配之前**一次性（先例 = CLI `configurePromptInjections` ∕ VSC `activate`）——
 // 调用期应用（工具表装配晚于本行）⇒ 无导入序要求；漏配 ⇒ 锚字面静默进模型工具描述。
 configurePromptInjections(DESKTOP_PROMPT_INJECTIONS)
 
@@ -96,7 +96,7 @@ async function main() {
     // 非主实例（2026-10-03 轻通道轮）：**明示原因**（原生框——从「静默退出」改起）+ 交棒主实例
     // （下方 `second-instance` ⇒ 唤醒既有窗口）；不开窗 · 零分发（原判据保持）。`--smoke` = 纯 JSON（零弹框）。
     if (!SMOKE) {
-      // 语言 = 核 `normalizeLocale` 单源（BCP-47 取基 ∥ 缺 ∕ 空 ∕ 未知 ⇒ en——`thincoder-core/i18n.mjs:77-83`；
+      // 语言 = 核 `normalizeLocale` 单源（BCP-47 取基 ∥ 缺 ∕ 空 ∕ 未知 ⇒ en；
       // 同 `ipc.mjs` ∥ `menu-words.mjs` 口径）；读抛 = 记错 + en 回落（与下方 `menuLabels("en")` 同向，零静默）。
       let en = true
       try { en = normalizeLocale(loadConfig()?.locale) === "en" } catch (error) { console.error("[main] locale readback failed:", error) }
@@ -176,7 +176,7 @@ async function main() {
   setLedgerEmit(emit)
   registerIpcHandlers()
   // 重启自动重开（KD-56 · 台账 #734）：窗口创建前一次恢复 —— 本端记录面回读「上次打开」的项目
-  // ⇒ `project:recent` 的 `cwd` 非空 ⇒ 渲染面 boot 既有接续门（`renderer/app.mjs:230`）自动一次
+  // ⇒ `project:recent` 的 `cwd` 非空 ⇒ 渲染面 boot 既有接续门（`renderer/app.mjs`）自动一次
   // `session:resume`（项目 + 会话一条链；渲染面零改）。降级三档同归冷态 —— 见 `projects.mjs`。
   restoreLastProject()
   win = createWindow(recordError)

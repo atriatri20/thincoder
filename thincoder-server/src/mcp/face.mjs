@@ -135,7 +135,12 @@ export async function createMcpToolFace({ db, deps = {}, log = null, now = Date.
       return { ok: false, subject: entry.server, summary: message, message } // 工具级错误回灌（回合不停）
     }
   }
-  return { names, schemas, invoke }
+  /** 判类维（KD-SV-225——MCP 件恒写类：核件 `readonly:false`，逐件同成员面——`true` = 读类 ∥ `false` = 写类）。 */
+  function readonlyOf() {
+    return false
+  }
+
+  return { names, schemas, readonlyOf, invoke }
 }
 
 /** 关闭靶快照（核 `agent` 参形——持 `tools` 数组的对象；核 `removeMcpTools`/`closeAllMcp` 单源入参）。 */

@@ -1,8 +1,8 @@
 /**
  * vision-reader.mjs — 非多模态降级读图跑者（上提核件 —— parity-b4 W0 · 2026-09-29）。
  *
- * 上提源 = VSC `thincoder-vscode/src/extension/vision-channel.mjs:14`（`findVisionChannel` 逐字）
- * + `image-handler.mjs:70-95`（`runVisionReader` 逐字）；VSC 自持跑者 ∕ 渠道副本已随迁移轮（parity-b4）删。
+ * 上提源 = VSC `thincoder-vscode/src/extension/vision-channel.mjs`（#1127 已删档；`findVisionChannel` 逐字）
+ * + `image-handler.mjs`（`runVisionReader` 逐字）；VSC 自持跑者 ∕ 渠道副本已随迁移轮（parity-b4）删。
  * 消费面 = VSC `image-handler.mjs`（已改指本档）· 桌面 `src/main/attachments.mjs`
  * （降级适配器缺省 = 本档 —— `visionReader` 缝的核默认实现）。
  *
@@ -19,13 +19,13 @@
  *
  *  W8 契约②（2026-09-29 断链）：`agent.mjs` ∕ `agent-tools/subagent-async.mjs` 静态链达 `node:sqlite`
  *  （`agent.mjs` → `agent/setup.mjs` → `memory.mjs` → `memory/schema.mjs`）⇒ 两端一律**函数体内动态 import**
- *  （约定源 = `ledger.mjs:16`；实例 = `tools/index.mjs:63`）；本档静态边只留闭包净件（`config-io.mjs` ∕
+ *  （约定源 = `ledger.mjs`；实例 = `tools/index.mjs` 的 `assembleBuiltinTools`）；本档静态边只留闭包净件（`config-io.mjs` ∕
  *  `tools/index.mjs`）。
  */
 import { resolveProviders } from "./config-io.mjs"
 import { assembleBuiltinTools } from "./tools/index.mjs"
 
-/** 读图墙钟上限（VSC `image-handler.mjs:70` 同值——一次性子代理的成功径上限）。 */
+/** 读图墙钟上限（VSC `image-handler.mjs` 的 `runVisionReader` 同值——一次性子代理的成功径上限）。 */
 export const VISION_READ_TIMEOUT_MS = 60_000
 
 /** 找可跑视觉读图的渠道：`{ provider, model }` ∥ `null`。

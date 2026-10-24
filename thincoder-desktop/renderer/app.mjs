@@ -53,9 +53,10 @@ import { attachChatWork } from "./chat-work.mjs"
 import { attachUserCollapse } from "./user-collapse.mjs" // 用户长文折叠（ZCode ConversationUserInputBody 移植）
 import { attachSidebar, unhideProject } from "./mount-sidebar.mjs" // unhideProject：重开目录解隐（移除=隐藏 · fork 2026-10-06）
 import { reasoningBulkExpanded, setReasoningBulkExpanded } from "./reasoning-pref.mjs"
+import { attachSecretPrompt } from "./secret-prompt.mjs" // 凭据弹窗族（SSH 会话批 —— `ev:secret` 待答项 ⇒ 弹窗；值只在返回路）
 import { configuredFlag, patchSettings, returnToBottom, setFollowing, store } from "./store.mjs"
 import { attachHeader } from "./mount-header.mjs" // 统一 Header（fork 2026-10-06——全局菜单五钮 ∕ 词面随动）
-import { initTitleTips } from "./title-tips.mjs" // title 浮窗接管（fork 2026-10-05——原生 tooltip 旧样式 → codex 卡）
+import { initTitleTips } from "./title-tips.mjs" // title 浮窗接管（fork 2026-10-05——原生 tooltip 旧样式 → 美化面卡）
 import { initAccent, initTheme } from "./theme.mjs" // 主题三态 + 主题色（D33 · #743 · fork 主题色批 —— chrome 级状态直写面；装配期一次 + 切片播种）
 import { MAX_RENDER_BLOCKS, attachScroll, compensateTop, nextWindow } from "./views/chat-scroll.mjs" // #910：compensateTop = 回填全重建视口补偿
 import { chatModel, retrySourceOf } from "./views/chat-model.mjs"
@@ -74,6 +75,9 @@ const panelReadout = createPanelReadout({ invoke: (channel, payload) => host?.in
 // 重挂触发切片（`SESSION_KEYS` / `CHAT_KEYS` …… 各面自持处为单源）随分派体出档 `renderer/frame-dispatch.mjs`（更新纪律收核批 —— 键面 = 分派语义；装配面只留帧接线与面回调表）。
 const { paintPool, handlers: poolHandlers } = attachPool(host) // 池面一族（右栏重挂 + 两出口 —— 出档 `renderer/mount-pool.mjs`）
 const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —— 挂载 + 作答 / 取消出口；出档 `renderer/mount-cards.mjs`）
+// 凭据弹窗一族（SSH 会话批 —— 自持订阅：活动会话有待答凭据项 ⇒ 开 ∥ 无 ⇒ 退场；出档 `renderer/secret-prompt.mjs`；
+// 值只在返回路 —— 不入 store ∥ 不入日志）。装配一次；退订句柄本档无消费点（页面生命周期 = 进程生命周期）。
+attachSecretPrompt(host)
 // 设置面 / 向导一族（自持订阅 —— 出档 `renderer/mount-settings.mjs`；目录出口复用项目面链）；
 // `onProvidersChanged`（全渠扇出批 · #3）= 设置面 provider 写成功 ⇒ 输入区候选面强制刷新（迟绑定：`composer` 于下行装配）；
 // 返回面 `team.refresh`（登录面补全批）= 团队面启动读口（于下行触发）。
@@ -84,7 +88,7 @@ const settingsFace = attachSettings(host, { onProjectOpened: openDir, onProvider
 // footer 三出口（KD-77 ③：双口提升 —— 缺组 ⇒ 既有页 ∥ 携组名 ⇒ 组弹窗，同 `menuActions` 形）；`submit` = 直发径单副本（错误横幅重试消费）。
 const composer = attachComposer(host, { openSettings: (group) => (typeof group === "string" && group !== "" ? settingsFace.openSettingsModal(group) : settingsFace.openSettings()) })
 const { paintStatus } = attachStatus() // 状态行一族（D17 / D22 承载 18 段单点重建 —— 出档 `renderer/mount-status.mjs`）
-// 左侧工作区边栏（Codex 形大改批 · 2026-10-04 —— 出档 `renderer/mount-sidebar.mjs`；自持订阅 ∕ 折叠态内聚；
+// 左侧工作区边栏（美化形大改批 · 2026-10-04 —— 出档 `renderer/mount-sidebar.mjs`；自持订阅 ∕ 折叠态内聚；
 // 出口复用既有单一实现：切会话 ∕ 新建 ∕ 开项目〔openDir = 函数声明提升，迟绑定安全〕∕ 设置面开口）。
 attachSidebar({
   onSwitch: activateSession,
@@ -112,7 +116,7 @@ attachSidebar({
 })
 attachHeader() // 统一 Header（菜单钮 ∕ 词面；toggle 接线在 mount-sidebar——折叠逻辑单源）
 attachChromeWords() // 核件控件行静态字面语言补丁（中文模式收正批 —— 出档 `renderer/chrome-words.mjs`；序须在 `attachComposer` 后）
-attachMinimap() // 对话小地图（Codex 形大改批 —— 出档 `renderer/minimap.mjs`；自持三观察，零帧路径涉入）
+attachMinimap() // 对话小地图（美化形大改批 —— 出档 `renderer/minimap.mjs`；自持三观察，零帧路径涉入）
 attachReasoningTimes() // 思考耗时摘要增量回写（同批 —— 出档 `renderer/reasoning-times.mjs`；补增量挂载径的摘要缝）
 attachChatImages() // 用户消息图文缩略图回填（模型参数批 · 2026-10-10 —— 出档 `renderer/chat-images.mjs`）
 wireImagePreview() // 缩略图点击预览 lightbox（ZCode ImagePreviewDialog 对位 · 2026-10-12 —— 出档 `renderer/image-preview.mjs`）
@@ -334,7 +338,7 @@ async function boot() {
     composer.refresh() // 词面到位 ⇒ 输入面板重派生（面板挂载先于词表下发 —— 注册面后到，缺 ⇒ 占位符停留为键名）
     refreshResizerLabel() // 同因（词面到位 ⇒ 拖柄可及名注入 —— en 首启等值零通知窗不达 locale 支，父侧 2026-09-30 裁决 B）
     refreshPoolCollapseLabel()
-    await refreshRail() // 会话列表数据面（读失败不改 boot 判据 —— 读面自持错误面，不抬高引导位）
+    await refreshRail()
     // 重载补启（D9 · 批档 §2.14a）：主进程仍持项目（`cwd` 非空串）⇒ 活跃会话自动接续 —— 复用「点开即续」同路
     // （`session:resume` ⇒ 端记录判据 ⇒ `openPage` + `refreshRail`）；冷启（`cwd` 空 ∥ 读面失败）零触发；失败沿既有
     // R9 toast 面 —— `resumeOpened` 自持 catch（不抛 ∥ 不抬高 boot 判据）。
@@ -383,7 +387,7 @@ const searchFace = attachSearch()
 
 /** 右栏宽度拖动（D30 · 台账 #742 —— 出档 `renderer/pool-width.mjs`）：装配期一次（读存储 ⇒ 内联 `--pool-w` ⇒ 拖柄接线；先于首绘可及面 —— 引导层在场期完成 ⇒ 零可见跳变）；词面注入两处 = boot 词表置位点 + 帧分派 `locale` 支。 */
 initPoolWidth()
-initPoolCollapse() // 活动池整列折叠（Codex 形大改批 —— chrome 级直写面，沿宽度拖动同律）
+initPoolCollapse() // 活动池整列折叠（美化形大改批 —— chrome 级直写面，沿宽度拖动同律）
 
 /** 主题三态（D33 · 台账 #743 —— 出档 `renderer/theme.mjs`）：装配期一次（读存储 ⇒ 归一 ⇒ 写 `data-theme` ⇒ 切片播种
  *  —— 先于首绘可及面，同 `initPoolWidth` 位）；`dataset.theme` 写仍同步不经帧（设置面重绘键 = `SETTINGS_KEYS` 含 `theme`）。 */
@@ -418,6 +422,7 @@ function applyFrame(dirtyKeys) {
     document.documentElement.dataset.locale = state.locale
     refreshResizerLabel()
     refreshPoolCollapseLabel()
+    composer.refresh() // 词面重派生（沿拖柄两处先例：boot 词表置位点 + 帧分派 locale 支）
   }
   const painted = dispatchFrame({ dirtyKeys, state, faces })
   // 实况回读上报（子代理面板批 —— 帧出口尾：五面分派后 DOM 已落；签名去重 ⇒ 状态迁转 ∥ 出生 ∥ 归档 ∥

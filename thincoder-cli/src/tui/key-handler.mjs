@@ -3,7 +3,7 @@ import { handleSearchKey } from "./key-handler-search.mjs"
 import { countConvLines } from "./render-conversation.mjs"
 import { handlePermissionMode, handleQuestionMode, handleInterruptMode } from "./key-modes.mjs"
 import { handleCtrlCFamily } from "./key-handler-ctrlc.mjs"
-import { handlePickerKeys, handleWizardKeys, handleTeamAskKeys } from "./key-handler-modals.mjs"
+import { handlePickerKeys, handleWizardKeys, handleTeamAskKeys, handleSecretPromptKeys } from "./key-handler-modals.mjs"
 import { handleScrollKeys, handleHistoryKeys, handleCursorKeys } from "./key-handler-scroll.mjs"
 import { handleBusyEnter } from "./key-handler-busy.mjs"
 import { handleEditKeys } from "./key-handler-edit.mjs"
@@ -111,6 +111,15 @@ export function createKeyHandler(ctx) {
     if (state.teamAsk && (key.name === "escape" || key.name === "return" ||
         key.name === "up" || key.name === "down" || key.name === "pageup" || key.name === "pagedown")) {
       handleTeamAskKeys(str, key, ctx)
+      return
+    }
+    // 序 2c：SSH 凭据窗（模态族第四支——SSH-SESSION 批 §6.22 ⑧）：Esc 取消 ∥ Enter 提交；↑↓/PgUp·PgDn 吞；
+    // 可打印键落空至编辑族（输入框编辑——同序 2b 形）。Enter 判据含变体（`enter` ∥ 裸 `\r`——同 picker
+    // 族：否则终端 LF 上报时落编辑族，掩码缓冲会被插 `\n`）。
+    if (state.secretPrompt && (key.name === "escape" || key.name === "return" ||
+        key.name === "enter" || str === "\r" || key.name === "up" || key.name === "down" ||
+        key.name === "pageup" || key.name === "pagedown")) {
+      handleSecretPromptKeys(str, key, ctx)
       return
     }
 

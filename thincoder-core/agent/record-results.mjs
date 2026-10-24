@@ -32,8 +32,15 @@ import { advisorRuns, stripApprovedSuffix } from "../agent-tools/advisor-async.m
 import { looksLikeReviewOutput, advisorIncompleteMarker } from "../advisor/run.mjs"
 // #949（评审 history 串台面）：同步面投递水印单点（叶档——零环）。
 import { noteReviewDelivered } from "../agent-tools/review-facts.mjs"
+// #1178：动作级只读分类（settings get ∥ manifest read 类）不失效 verify——谓词单源 = dispatch-gates。
+import { isReadonlyAction } from "./dispatch-gates.mjs"
 
 let _reindexFile = null
+
+/** 动作级只读分类的入参（畸形 ⇒ null——谓词自守；解析口径同 dispatch 相位一）。 */
+function actionArgsOf(toolCall) {
+  try { return JSON.parse(toolCall.arguments || "{}") } catch { return null }
+}
 
 export async function recordToolResults(agent, toolByName, results) {
   // Multimodal user messages (injected images / not-injected reminders) must NOT be pushed
@@ -88,7 +95,7 @@ export async function recordToolResults(agent, toolByName, results) {
         agent._calledAdvisorThisRun = false
         agent._verifiedThisRun = false
         agent._verifyPassed = undefined
-      } else if (!tool.readonly && !tool.sideEffectExempt) {
+      } else if (!tool.readonly && !isReadonlyAction(toolCall.name, actionArgsOf(toolCall)) && !tool.sideEffectExempt) {
         // Non-mutating side-effect tools (bash, git): do NOT invalidate the
         // advisor review — a review is triggered by CODE MUTATIONS only
         // (user decision 2026-08-08: the guard rule is "review after code
@@ -96,6 +103,7 @@ export async function recordToolResults(agent, toolByName, results) {
         // barred from writing files, so it cannot change the reviewed code).
         // Verify IS invalidated: its state snapshot (git diff, file list)
         // may be stale after git/shell operations.
+        // #1178：动作级只读（settings get ∥ manifest read 一类）非侧效——verify 保持有效。
         if (agent._verifiedThisRun) {
           agent._verifiedThisRun = false
           agent._verifyPassed = undefined

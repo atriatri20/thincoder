@@ -108,7 +108,7 @@ export function saveSlotData(cwd, slot, data) {
   if (data.createdBy === undefined && !existsSync(p)) data.createdBy = sessionEnd()
   writeSessionFile(p, data)
   // 写后取 mtime 单次采集（读失败 ⇒ `0` = 不可得）：缓存（本档路径键）+ 摘要 `ts` 地板入参
-  // （#503——保存面写后取 mtime，同族先例 `session-slot-verify.mjs:99`）。
+  // （#503——保存面写后取 mtime，同族先例 `session-slot-verify.mjs` 的 `runPass`）。
   const wroteMtime = (() => { try { return statSync(p).mtimeMs } catch { return 0 } })()
   slotMtimeCache.set(p, wroteMtime)
   try {
@@ -214,7 +214,7 @@ export function resolveEffortPatch(level, model) {
  * `activeModel`（不新增字段；`null` = 缺键语义——`provider` / `model` 无「未设」态）；`effort` 经
  * `resolveEffortPatch` 归一（`model` 取 `patch.model ?? 槽现值 activeModel`），归一 `null` = 未设
  * （回落配置面 / 渠道默认）——**值置 `null` 不删键**（与 `newSlotData` 规范结构同源）。
- * 只写盘：不碰当前内存态（施加面唯一 = `applySession`——§6.21 判据句 4 / 边界表第 5 行）。
+ * 只写盘：不碰当前内存态（施加面唯一 = `applySession`——§6.21 判据句 4 / 边界表「写非活动槽」行）。
  *
  * **值域面（#441② 明文——核侧有意不校）**：本出口只校**键闭集**，**不校值域**——`provider` /
  * `model` 传 `null`（或表外字面）按**缺键语义**零改（不报错；`null` 仅对 `effort` 有「未设」

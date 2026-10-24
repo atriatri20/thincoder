@@ -3,7 +3,7 @@
  * 落档面 → `lib/output.mjs` · 离线重算面 → `lib/recompute.mjs`——设计档 §3 拆分触发条件）。
  *
  * `runMain`：真实运行 / dry-run 自检（夹具表由 run.mjs 传入——夹具落点仍住 run.mjs）。
- *   **动态** `import("./client.mjs")` 只发生在本函数内 ⇒ `--recompute` 分支构造性零网络（AC-10）。
+ *   **动态** `import("./client.mjs")` 只发生在本函数内 ⇒ `--recompute` 分支构造性零网络（§2.7）。
  * 判官面（§2.10 / §2.11）：槽位解析（冻结绑定 + provider 校验 + 与被测重合明示）→ 用例 `ctx.judge()`（判官对 + 分歧仲裁）→ 逐 run 记录；
  *   机械 fail ⇒ 复核（第二只眼 · `overturn` ⇒ **改判 `pass`**——§2.11 处置，落点 = 编排面）；成本由 `prices.mjs` 后置逐位记账（不进被测成本面）。
  *
@@ -12,7 +12,7 @@
 
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { CASES, CLASS_LABELS, MANUAL, SUITE_VERSION } from "../cases/index.mjs"
+import { CASES, CLASS_LABELS, MANUAL, SUITE_VERSION } from "../suites/index.mjs"
 import { effectiveDims, loadRoster, selectEntries } from "./roster.mjs"
 import { applyPricesToResult, loadPrices, pricesPath } from "./prices.mjs"
 import { runMetrics } from "./metrics.mjs"

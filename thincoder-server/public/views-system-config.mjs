@@ -1,10 +1,11 @@
 /**
  * views-system-config.mjs — 系统页「服务配置」卡（webui/SYSTEM.md §2.1——`#/admin/system` 五节之四）：只读三行
- * （`host` ∥ `port` ∥ `db`——部署拓扑项；定则「任何配置项必须有配置界面」之例外显式说明）∥ 可写四项（`autoUpdate`
- * ∥ `trustProxy` ∥ `usageRetentionDays` ∥ `proxy.uri`——2026-10-10 代理回迁批：自「代理」页放回本卡）∥ 连通测试块
+ * （`host` ∥ `port` ∥ `db`——部署拓扑项；定则「任何配置项必须有配置界面」之例外显式说明）∥ 可写五项（`autoUpdate`
+ * ∥ `trustProxy` ∥ `usageRetentionDays` ∥ `proxy.uri`——2026-10-10 代理回迁批：自「代理」页放回本卡；`tls` 六键
+ * 子键级——TLS 内置批；`rateLimits` 三键子键级——publicnet 批）∥ 连通测试块
  * （代理地址**真打**——目标预填首个 provider `baseURL`；按表单当前值（所见即所测——未保存亦可先验）；读数 = 状态 +
  * 耗时 ∥ 失败就地错态）∥ 指针行（`providers` ∥ `bootstrap`——各归其面）∥
- * 保存 = `PATCH /api/admin/config`（可写四项提交——所见即所存）⇒ flash「已保存——重启服务后生效」；
+ * 保存 = `PATCH /api/admin/config`（可写项提交——所见即所存）⇒ flash「已保存——重启服务后生效」；
  * 非法 ⇒ 就地提示（前端先行（保留天数）= 自校 ∥ 服务端复核 400——`mapError` 落卡内）。
  *
  * 值渲染 = 文件面（`GET /api/admin/config`——**有效值**（在场值 ∥ 缺省回填）；读档失败 ⇒ 就地错态）；
@@ -49,16 +50,33 @@ function configCard(ctx, config) {
   const unlimitedBox = h("input", { type: "checkbox", checked: config.usageRetentionDays === null })
   const daysInput = h("input", { type: "number", min: "1", step: "1", value: config.usageRetentionDays === null ? "" : String(config.usageRetentionDays) })
   const proxyInput = h("input", { placeholder: t("proxy.uriPh"), value: config.proxyUri ?? "" }) // 测试块「所见即所测」读取面（表单当前值）
+  // TLS 段（gateway/PUBLICNET.md §9——六键子键级；留空 = 不开；证书内容不回显——只有路径）
+  const tls = config.tls ?? {}
+  const tlsEnabled = h("input", { type: "checkbox", checked: tls.enabled === true })
+  const tlsCert = h("input", { placeholder: "certs/fullchain.pem", value: tls.certPath ?? "" })
+  const tlsKey = h("input", { placeholder: "certs/privkey.pem", value: tls.keyPath ?? "" })
+  const tlsHost = h("input", { placeholder: t("system.cfgTlsPublicHostPh"), value: tls.publicHost ?? "" })
+  const tlsPublicPort = h("input", { type: "number", min: "1", max: "65535", step: "1", value: String(tls.publicPort ?? 443) })
+  const tlsRedirect = h("input", { type: "number", min: "1", max: "65535", step: "1", value: tls.redirectPort === null || tls.redirectPort === undefined ? "" : String(tls.redirectPort) })
+  // 限流段（gateway/PUBLICNET.md §9——三键子键级；缺省开——KD-PN-9）
+  const limits = config.rateLimits ?? {}
+  const limitsEnabled = h("input", { type: "checkbox", checked: limits.enabled !== false })
+  const limitsAuth = h("input", { type: "number", min: "1", max: "10000", step: "1", value: String(limits.authPerMin ?? 20) })
+  const limitsPublic = h("input", { type: "number", min: "1", max: "10000", step: "1", value: String(limits.publicPerMin ?? 120) })
   const invalidHint = h("span", { class: "hint error", hidden: true })
+  const tlsInvalidHint = h("p", { class: "hint error", hidden: true }) // TLS 段自己的错态位（不借用保留天数那颗）
+  const limitsInvalidHint = h("p", { class: "hint error", hidden: true }) // 限流段自己的错态位
   const saveNote = h("p", { class: "hint error", hidden: true })
 
   daysInput.disabled = unlimitedBox.checked // 「不限」勾 ⇒ 天数输入退场
   unlimitedBox.addEventListener("change", () => { daysInput.disabled = unlimitedBox.checked })
 
-  /** 保存（可写四项提交——所见即所存）：保留天数 = 前端先行自校（非法 ⇒ 就地提示不提交）；失败 ⇒ 卡内提示。 */
+  /** 保存（可写项提交——所见即所存）：保留天数 ∥ TLS 两端口 = 前端先行自校（非法 ⇒ 就地提示不提交）；失败 ⇒ 卡内提示。 */
   const save = async (event) => {
     event.preventDefault()
     invalidHint.hidden = true
+    tlsInvalidHint.hidden = true
+    limitsInvalidHint.hidden = true
     saveNote.hidden = true
     let days = null
     if (!unlimitedBox.checked) {
@@ -76,6 +94,49 @@ function configCard(ctx, config) {
       usageRetentionDays: days,
       proxyUri: proxyInput.value.trim(), // "" ⇒ 删段（服务端口径——WEBUI §2.7）
     }
+    // TLS 段（六键子键级——留空 = null（未设）∥ 重定向端口留空 = 不开）
+    const tlsBody = {
+      enabled: tlsEnabled.checked,
+      certPath: tlsCert.value.trim() === "" ? null : tlsCert.value.trim(),
+      keyPath: tlsKey.value.trim() === "" ? null : tlsKey.value.trim(),
+      publicHost: tlsHost.value.trim() === "" ? null : tlsHost.value.trim(),
+      publicPort: tlsPublicPort.value.trim() === "" ? 443 : Number(tlsPublicPort.value.trim()),
+      redirectPort: tlsRedirect.value.trim() === "" ? null : Number(tlsRedirect.value.trim()),
+    }
+    // 端口前端先行自校（非法 ⇒ 就地提示不提交；其余判据归服务端门——400 落卡内）
+    const portOk = (value) => Number.isInteger(value) && value >= 1 && value <= 65535
+    if (!portOk(tlsBody.publicPort)) {
+      tlsInvalidHint.textContent = t("system.cfgTlsPortInvalid")
+      tlsInvalidHint.hidden = false
+      tlsPublicPort.focus()
+      return
+    }
+    if (tlsBody.redirectPort !== null && !portOk(tlsBody.redirectPort)) {
+      tlsInvalidHint.textContent = t("system.cfgTlsPortInvalid")
+      tlsInvalidHint.hidden = false
+      tlsRedirect.focus()
+      return
+    }
+    body.tls = tlsBody
+    // 限流段（三键子键级；阈值前端先行自校——1–10000 整数，其余判据归服务端门）
+    const limitsBody = {
+      enabled: limitsEnabled.checked,
+      authPerMin: Number(limitsAuth.value.trim()),
+      publicPerMin: Number(limitsPublic.value.trim()),
+    }
+    if (!portOk(limitsBody.authPerMin) || limitsBody.authPerMin > 10000) {
+      limitsInvalidHint.textContent = t("system.cfgRateLimitInvalid")
+      limitsInvalidHint.hidden = false
+      limitsAuth.focus()
+      return
+    }
+    if (!portOk(limitsBody.publicPerMin) || limitsBody.publicPerMin > 10000) {
+      limitsInvalidHint.textContent = t("system.cfgRateLimitInvalid")
+      limitsInvalidHint.hidden = false
+      limitsPublic.focus()
+      return
+    }
+    body.rateLimits = limitsBody
     try {
       await ctx.api("/api/admin/config", { method: "PATCH", body })
       ctx.flash(t("system.cfgSaved"))
@@ -101,6 +162,21 @@ function configCard(ctx, config) {
       h("label", {}, h("span", { text: t("system.cfgRetention") }), daysInput, invalidHint),
       h("label", { class: "key-clear" }, unlimitedBox, t("system.cfgRetentionUnlimited")),
       h("label", {}, h("span", { text: t("proxy.uriLabel") }), proxyInput),
+      h("h4", { text: t("system.cfgTlsTitle") }),
+      h("label", { class: "key-clear" }, tlsEnabled, t("system.cfgTlsEnabled")),
+      h("label", {}, h("span", { text: t("system.cfgTlsCertPath") }), tlsCert),
+      h("label", {}, h("span", { text: t("system.cfgTlsKeyPath") }), tlsKey),
+      h("label", {}, h("span", { text: t("system.cfgTlsPublicHost") }), tlsHost),
+      h("label", {}, h("span", { text: t("system.cfgTlsPublicPort") }), tlsPublicPort),
+      h("label", {}, h("span", { text: t("system.cfgTlsRedirectPort") }), tlsRedirect),
+      tlsInvalidHint,
+      h("p", { class: "hint", text: t("system.cfgTlsHint") }),
+      h("h4", { text: t("system.cfgRateLimitsTitle") }),
+      h("label", { class: "key-clear" }, limitsEnabled, t("system.cfgRateLimitsEnabled")),
+      h("label", {}, h("span", { text: t("system.cfgRateLimitAuth") }), limitsAuth),
+      h("label", {}, h("span", { text: t("system.cfgRateLimitPublic") }), limitsPublic),
+      limitsInvalidHint,
+      h("p", { class: "hint", text: t("system.cfgRateLimitHint") }),
       h("button", { type: "submit", text: t("common.save") })),
     h("p", { class: "hint", text: t("proxy.hint") }),
     h("p", { class: "hint", text: t("system.cfgRestartNote") }),

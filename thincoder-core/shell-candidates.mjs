@@ -1,6 +1,6 @@
 /**
- * shell-candidates.mjs — 平台 shell 候选探测**单源**（B10 S17 收编：桌面 `settings-env.mjs:27-62` ∥
- * VSC `src/extension/settings.mjs:72-115` 两造 ≈逐字 ⇒ 候选表 ∕ 探测序 ∕ 超时 ∕ memo 上提本档；
+ * shell-candidates.mjs — 平台 shell 候选探测**单源**（B10 S17 收编：桌面 `settings-env.mjs` ∥
+ * VSC `src/extension/settings.mjs` 两造 ≈逐字 ⇒ 候选表 ∕ 探测序 ∕ 超时 ∕ memo 上提本档；
  * 两端薄壳只留 re-export —— 端侧零自持候选表）。
  *
  * 面：`shellCandidates()` ⇒ `Promise<{ name, value }[]>`——「System default」恒首 + 平台候选

@@ -1,7 +1,7 @@
 /**
  * mount-team.mjs — 团队面接线族（登录面补全批 · 2026-10-10 · 台账 #1231；`createTeam` 自 `mount-settings-team.mjs`
- * 迁入 —— 单实现，旧档净删）：状态读（`loadTeam`——`team:status`）∥ 活校验（`verify`——`team:verify`）∥
- * 出口（登录 ∥ 退出两件）∥ **状态段就地面板宿主**（`div.team-pop`——`position: fixed`·状态行上方·就地；
+ * 迁入 —— 单实现，旧档净删；team-token-rotation 批增轮换出口 —— 台账 #1238）：状态读（`loadTeam`——`team:status`）∥ 活校验（`verify`——`team:verify`）∥
+ * 出口（登录 ∥ 退出 ∥ 轮换三件，轮换含确认一步）∥ **状态段就地面板宿主**（`div.team-pop`——`position: fixed`·状态行上方·就地；
  * **零背板 ∥ 零遮罩**）∥ 面板开合桥（视图档 `renderer/views/statusline.mjs` `toggleTeamPanel` ⇄ 本档施用面
  * `setTeamPanelApplier`）。
  *
@@ -10,8 +10,8 @@
  *   ① 三态（判序写死）= 未登录 ∥ 已失效（`verify === "invalid"`）∥ 已登录（`valid` ∥ `null` ∥ `unreachable`
  *      同判 —— **离线容忍**，不判失效）；面板内容 = `teamBody`（单一 owner = `views/settings-sections-team.mjs`）。
  *   ② 活校验**触发点制**（零周期轮询）：启动一次 ∥ 面板开（本档 `refresh` 两处同一实现）；他端点 = CLI `/team status`。
- *   ③ 写成功径复读两调用点（`team:status` + `loadProviders`——派生条目随动）；`verify` 清位两处（退出落盘后状态复读
- *      见 token 缺席 ⇒ 清 ∥ 重登成 ⇒ 清——新 token 新判）。
+ *   ③ 写成功径两复读（`team:status` + `loadProviders`）+ **登录 ∥ 登出成径**候选面随动（`onProvidersChanged`——`TEAM.md` §2.8；登出径同随动 ∥ 轮换径零改——轮换只换签 token、渠道集合不变，下次打开/切会话拍自然刷新）；`verify` 清位两处（退出落盘后状态复读
+ *      见 token 缺席 ⇒ 清 ∥ 重登成 ∥ 轮换成 ⇒ 清——新 token 新判）。
  *   ④ 关三路 = 段再点（视图档翻转）∥ Esc ∥ 面板外点击；**Esc 优先序写死**：面板在场 ⇒ 仅关面板（文档级**捕获相**
  *      截获 —— 不连带既有 document 级 Esc 面：F-Esc 关页 ∥ 弹窗专指 ∥ 会话控制选择器）；开面复位 = 当刻一次性提示清。
  *   ⑤ 重绘 = 本档自持订阅（面板在场才响应；`settings` ∥ `locale` 两键）＋**面内差分门**（签名等价 ⇒ 零写 ——
@@ -41,11 +41,12 @@ const reasonOf = (receipt) => (typeof receipt?.reason === "string" && receipt.re
 /** 团队切片读（缺 ⇒ 空表 —— 不猜）。 */
 const teamOf = (state) => state?.settings?.team ?? {}
 
-/** 团队面工厂（`deps.loadProviders` = 写成功径派生条目随动复读口；`deps.report` = 面级失败串落位）。
- *  返回 `{ loadTeam, verify, refresh, handlers, resetNotice }`。 */
+/** 团队面工厂（`deps.loadProviders` = 写成功径派生条目随动复读口；`deps.onProvidersChanged` = 同拍输入区候选面刷新口
+ *  ——`TEAM.md` §2.8；`deps.report` = 面级失败串落位）。返回 `{ loadTeam, verify, refresh, handlers, resetNotice }`。 */
 export function createTeam(deps = {}) {
   const { ask, store, setSettings, report, invalidateDrafts } = deps
   const loadProviders = typeof deps.loadProviders === "function" ? deps.loadProviders : null
+  const onProvidersChanged = typeof deps.onProvidersChanged === "function" ? deps.onProvidersChanged : null
 
   /** 段切片局部写（合并 —— 读面并持 `notice`：一次性提示不随复读清）。 */
   const setTeamSlice = (patch) => {
@@ -116,7 +117,8 @@ export function createTeam(deps = {}) {
 
   /** 登录出口（`team:login`）：表单自读（`server` ∥ `username` ∥ `password`）——不全 ⇒ **端侧表单门**（零发送；
    *  分类同核兜底面：无地址 ⇒ `network` ∥ 凭据不全 ⇒ `credentials`）；成 ⇒ 两提示当刻就地（`IPC.md` §2、码不携文）
-   *  + `verify` 清（重登成 ⇒ 新 token 新判）+ **回执后复读两调用点**（`team:status` 段转登录态 + `loadProviders` 派生条目随动）。 */
+   *  + `verify` 清（重登成 ⇒ 新 token 新判）+ **回执后两复读 + 候选面随动**（`team:status` ∥ `loadProviders` ∥
+   *  `onProvidersChanged` 输入区候选面刷新——`TEAM.md` §2.8）。 */
   async function login() {
     const form = teamFormNode()
     if (form === null) {
@@ -144,6 +146,7 @@ export function createTeam(deps = {}) {
     setTeamSlice({ notice: receipt.notice === MANUAL_NAME_CONFLICT ? { kind: "manualConflict" } : null, verify: null })
     await loadTeam()
     if (loadProviders !== null) await loadProviders()
+    onProvidersChanged?.() // 登录成 ⇒ 输入区候选面全渠重取（`composer.refreshCandidates()`——`TEAM.md` §2.8）
   }
 
   /** 退出出口（`team:logout`）：成 ⇒ 两提示当刻就地（`revokeDelivered === false`——缺席 = true ⇒ 「服务端吊销未达」）
@@ -159,12 +162,40 @@ export function createTeam(deps = {}) {
     setTeamSlice({ notice: receipt.revokeDelivered === false ? { kind: "revokeFailed" } : null })
     await loadTeam()
     if (loadProviders !== null) await loadProviders()
+    onProvidersChanged?.() // 登出成 ⇒ 输入区候选面全渠重取（渠 key 已失效 ⇒ 候选表整表作废；`TEAM.md` §2.8）
   }
 
   /** 段出口族表（锚名逐字 = 视图 `data-action` 同域；面板体消费）。 */
   const handlers = {
     onTeamLogin: () => void login(),
     onTeamLogout: () => void logout(),
+    onTeamRotateStart: () => rotateConfirmStart(),
+    onTeamRotateConfirm: () => void rotate(),
+    onTeamRotateCancel: () => rotateConfirmCancel(),
+  }
+
+  /** 轮换确认段入场 ∥ 取消（段内就地两键——`notice.kind = "rotateConfirm"` 驱动视图；取消 = 零动作）。 */
+  function rotateConfirmStart() {
+    setTeamSlice({ notice: { kind: "rotateConfirm" } })
+  }
+  function rotateConfirmCancel() {
+    setTeamSlice({ notice: null })
+  }
+
+  /** 轮换出口（`team:rotate`；TEAM.md §2.7）：核吊销当枚 + 同标签重签 + **一次写盘** ⇒ 成 ⇒ 成句结果行
+   *  + 复读两调用点（`team:status` 段转续用态 ∥ `loadProviders` 派生条目 `apiKey` 同步）+ `verify` 清（新 token
+   *  新判）；败 ⇒ 失败出词（含 `invalid` ⇒「已失效——重新登录」）。 */
+  async function rotate() {
+    const receipt = await ask("team:rotate")
+    if (receipt?.ok !== true) {
+      const reason = reasonOf(receipt)
+      console.error(`[renderer] team:rotate failed: ${reason}`)
+      setTeamSlice({ notice: { kind: "failure", reason } })
+      return
+    }
+    setTeamSlice({ notice: { kind: "rotateDone" }, verify: null })
+    await loadTeam()
+    if (loadProviders !== null) await loadProviders()
   }
 
   /** 段面态复位（**本组面态复位**——开面三径调用：当刻一次性提示随开面清（切片余键并持——值面非面态）；

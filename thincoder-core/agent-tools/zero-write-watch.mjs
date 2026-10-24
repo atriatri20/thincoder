@@ -22,12 +22,12 @@ const WATCH_ROLES = new Set(["eng-coder", "eng-designer"])
 
 /** 子代理族文案（§6.32.4 逐字——父侧定稿；`from` = `_upstream.label`，形 `role#id`）。 */
 export function zeroWriteAlertText(from, rounds) {
-  return `[zero-write watchdog] ${from}: ${rounds} consecutive rounds with no file write — take a look (subagent action:'status' for the live view).`
+  return `[zero-write watchdog] ${from}: ${rounds} consecutive rounds with no file write — check for a non-writing loop: inspect (subagent action:'observe'), then steer or cancel.`
 }
 
 /** 评审族文案（§6.32.4 逐字——父侧定稿；`from` = `advisor#<entry id>`）。 */
 export function advisorAlertText(from, rounds) {
-  return `[zero-write watchdog] ${from}: ${rounds} consecutive rounds with no review output — take a look (subagent action:'status' / 'cancel').`
+  return `[zero-write watchdog] ${from}: ${rounds} consecutive rounds with no review output — check for a stalled review: inspect (subagent action:'status'), then cancel.`
 }
 
 /**

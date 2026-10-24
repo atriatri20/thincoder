@@ -1,10 +1,10 @@
 /* model-menu.css — 模型菜单 / 推理下拉样式（**静态承载** —— 2026-09-28 输入逻辑收正轮：
  * 原 JS 注入形（`model-menu-css.mjs` 的 `createElement("style")` + `textContent`）在 VSC 侧可过（CSP 含
- * `unsafe-inline`），在桌面侧**依 CSP 语义被拒**（`renderer/index.html:7` `style-src 'self'` + 
+ * `unsafe-inline`），在桌面侧**依 CSP 语义被拒**（`renderer/index.html` `style-src 'self'` + 
  * `test/guard-closure.test.mjs` U7 显式禁 `unsafe-*`）⇒ 收正为静态资产：两端各以自身静态装载形引入本档
  * （VSC = `webview/controls.css` `@import`；桌面 = `renderer/mount-composer.mjs` 注 `<link>`）。
  *
- * 规则体 = 原注入串**逐字**（`webview/model-menu.js:30-74` 自 VSC 原件出档的同一份 CSS 字面，语义零改）；
+ * 规则体 = 原注入串**逐字**（`webview/model-menu.js` 自 VSC 原件出档的同一份 CSS 字面，语义零改）；
  * 变量族 = 桌面 C2 别名块（`renderer/chat.css`）覆盖的近 VSC 键 + `--vscode-*` 回退值（同 `composer.css` 口径）。
  */
 

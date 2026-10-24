@@ -33,8 +33,8 @@ const MODEL_SPECS = [
   ["deepseek-flash",    { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2], multimodal: true }],
 // deepseek-v4.1-flash = qwen-plan channel name for DeepSeek V4.1-Flash (token-plan GET /models verified 2026-09-15) — same fields as the row above; ".1" ≠ "-" so plain prefix lookup misses the existing rows (D-PR25)
   ["deepseek-v4.1-flash", { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2], multimodal: true }],
-  // deepseek-v4-pro (V4-Pro-0813): fields unchanged — 视觉面 **未探**（不声明 multimodal——保守；
-  // 补探登记见 MODEL-SPECS.md §13.4）. From 2026-09-14 12:00 Beijing all requests route to V4.1-Flash.
+  // deepseek-v4-pro (V4-Pro-0813): fields unchanged — 视觉面 **未探**（不声明 multimodal——保守）.
+  // From 2026-09-14 12:00 Beijing all requests route to V4.1-Flash.
   ["deepseek-v4-pro",   { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2] }],
   // deepseek-v4-flash: RETIRED name — still accepted, served by V4.1-Flash today → aligned row
   ["deepseek-v4-flash", { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2], multimodal: true }],
@@ -63,7 +63,7 @@ const MODEL_SPECS = [
   // GLM series
   // GLM-5.3: thinking always-on (no "disabled"); effort converges to low/high/max — NOT the
   //          7-level glm-5.2 enum (verified vs docs.bigmodel.cn GLM-5.3 page, 2026-08).
-  //          视觉面 **未探**（不声明 multimodal——保守；补探登记见 MODEL-SPECS.md §13.4）。
+  //          视觉面 **未探**（不声明 multimodal——保守）。
   //          该事实 = 机制位 `thinkAlwaysOn`（单源 = `docs/core/design/MODEL-SPECS.md` §16.3）——**官方口径**
   //          （智谱 GLM-5.3 文档：thinking always-on、无 `disabled`）。
   ["glm-5.3",           { context: 1_000_000, maxOutput: 128_000, thinking: true,  thinkAlwaysOn: true, thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
@@ -199,9 +199,9 @@ const MODEL_SPECS = [
   // （多源网络转述级，本机无该渠道——行值 + 行注即标级）；thinking「always-on adaptive」= 弱源读数 ⇒ 零口径不落字段（§14.3）。
   ["claude-fable-5.1",  { context: 1_000_000, maxOutput: 128_000 }],
   // Gemini series (Google)
-  ["gemini-3-pro",      { context: 1_000_000, maxOutput: 64_000,  thinking: false, multimodal: true, format: "google", noUsageStream: true }],
-  ["gemini-2.5-pro",    { context: 2_000_000, maxOutput: 64_000,  thinking: false, multimodal: true, format: "google", noUsageStream: true }],
-  ["gemini-2.5-flash",  { context: 1_000_000, maxOutput: 64_000,  thinking: false, multimodal: true, format: "google", noUsageStream: true }],
+  ["gemini-3-pro",      { context: 1_000_000, maxOutput: 64_000,  thinking: true, multimodal: true, format: "google", noUsageStream: true }],
+  ["gemini-2.5-pro",    { context: 2_000_000, maxOutput: 64_000,  thinking: true, multimodal: true, format: "google", noUsageStream: true }],
+  ["gemini-2.5-flash",  { context: 1_000_000, maxOutput: 64_000,  thinking: true, multimodal: true, format: "google", noUsageStream: true }],
   // gemini-3.1-pro（2026-09-25 批 §14.2 #2-6 · §1.7.1 父侧交付）：**尺寸行**——context 1_048_576 / maxOutput 65_536（多源
   // 网络转述级，本机无该渠道——行值 + 行注即标级）；thinking「有·计入输出预算」= 弱源读数 ⇒ 零口径不落字段（§14.3）。
   ["gemini-3.1-pro",    { context: 1_048_576, maxOutput: 65_536 }],
@@ -527,7 +527,7 @@ export function providerSpec(provider) {
  *
  * Callers (as-of 2026-10-10): thincoder-core/agent/turn-loop.mjs (main loop) · thincoder-core/advisor/loop.mjs
  * (review mirror) · bench/lib/client.mjs (bench client) — each passes its own spec face; VSC 转口
- * (thincoder-vscode/src/specs.mjs:13/:17) 零调用点（父侧收口机械笔 · 可 revert）。
+ * (`thincoder-vscode/src/specs.mjs` 的 `providerSpec` ∕ `assistantToolCallMessage` 再导出) 零调用点（父侧收口机械笔 · 可 revert）。
  */
 export function assistantToolCallMessage(response, spec) {
   const msg = {

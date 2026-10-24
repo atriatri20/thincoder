@@ -1,6 +1,6 @@
 /**
  * settings.mjs — 设置面 + 两导出面（批 9 · 批档 §2.12–§2.14；设计单源 = `docs/desktop/design/UI.md` §1 设置面行）。
- * 面形 = **八段**（`data-section` = `providers` / `model` / `agent` / `mcp` / `env`〔R7 增：proxy + shell〕/
+ * 面形 = **七段**（`data-section` = `providers` / `agent` / `mcp` / `env`〔R7 增：proxy + shell〕/
  * `tools`〔R2 增：embedding ∕ websearch ∕ 索引状态〕/ `models`〔R7 增：consult ∕ advisor 行〕/ `team`〔B1 增：登录态 ＋ 登录表单——2026-10-10 · 台账 #1212〕）
  * 各三态（`data-state` = `none` / `loading` /
  * `ready`）：`none` / `loading` ⇒ 词表提示、`ready` ⇒ 行内容；表单在 `loading` 外常在；失败面 = `notice` 节点
@@ -11,7 +11,7 @@
  * **两导出面（单一 owner —— 首启向导复用，零副本，批档 §2.3）**：`channelFormTree` ∕ `verifyControl`——
  * **R7 先拆后改**：随 `fieldPair` 出档 `renderer/views/settings-controls.mjs`（本档同名 re-export ⇒ 导出面零改）；
  * 段体经 `deps` 注入取用。兄弟档：段体 = `renderer/views/settings-sections.mjs`（300 行层拆分 ——
- * 渠道 / 模型 / MCP 三形；agent 段 = `-agent.mjs`；tools 段 = `-tools.mjs`；env 段 = `-env.mjs`；
+ * 渠道 / MCP 两形；agent 段 = `-agent.mjs`；tools 段 = `-tools.mjs`；env 段 = `-env.mjs`；
  * models 段 = `-models.mjs`——后两者 R7 增，前两者本档 re-export 面零改）。**共用面 `syncHostProps`** = 宿主属性面复位表
  * （薄挂载属性应收单源 —— 向导档取用，零副本；判据 = `docs/desktop/design/RENDERER.md` §1 退场口径 · 属性面）。
  * 纪律：零 DOM（构造点 = `dom.mjs` `build`）；
@@ -45,7 +45,6 @@ export { channelFormTree, verifyControl } from "./settings-controls.mjs"
  *  **fork 差异（2026-10-13 上游合并批）**：上游 0.10.5 增「团队」段（依赖上游服务端登录）——本 fork **隐藏**
  *  （不入 `SECTIONS` ∥ 不入 `NAV_SECTIONS`；`teamAdminBody` ∕ `settings.team` 切片 ∕ 词键保留在场以备解冻）。 */export const SECTIONS = Object.freeze([
   { name: "providers", word: "settings.section.providers" },
-  { name: "model", word: "settings.section.model" },
   { name: "agent", word: "settings.section.agent" },
   { name: "mcp", word: "settings.section.mcp" },
   { name: "env", word: "settings.section.env" },
@@ -160,21 +159,21 @@ function guardFlagOf(state) {
 }
 
 /** advisor 推理档**归属模型**（S11 收正 · 顾问评审 🟡2——写面 ∕ 候选面同源同序；对位核 `resolveAdvisorProvider`
- *  `thincoder-core/advisor/run.mjs:26-56`「cfg.model > 父解析模型单档」——**2026-10-09 清除批**：原「渠道 model」分支
+ *  `resolveAdvisorProvider`「cfg.model > 父解析模型单档」——**2026-10-09 清除批**：原「渠道 model」分支
  *  随渠道单值模型退场）：`advisor.model` ⇒ 该值；再缺 ⇒ 主模型段（`defaultModel`）；无 ⇒ `null`。 */
 function advisorTargetOf(settings) {
   const advisor = settings.models?.advisor ?? {}
   return str(advisor.model) ?? modelSegmentOf(settings.model?.current)
 }
 
-/** 面模型（纯 · 零 DOM）：开合 + 失败面 + 八段（各段现态直读 —— 渲染面零推导）。 */
+/** 面模型（纯 · 零 DOM）：开合 + 失败面 + 七段（各段现态直读 —— 渲染面零推导）。 */
 export function settingsModel(state) {
   const settings = state?.settings ?? {}
   const notice = settings.notice !== null && typeof settings.notice === "object" ? settings.notice : null
   const scope = notice !== null && Object.hasOwn(SCOPE_WORD, notice.scope) ? notice.scope : "panel"
   return {
     open: settings.open === true,
-    nav: str(settings.nav) ?? SECTIONS[0].name, // 侧边栏导航选中段（Codex 形设置页 · 2026-10-04 —— 表外 ⇒ 首段，不猜）
+    nav: str(settings.nav) ?? SECTIONS[0].name, // 侧边栏导航选中段（美化形设置页 · 2026-10-04 —— 表外 ⇒ 首段，不猜）
     lang: langOf(state),
     accent: (typeof state?.accent === "string" && state.accent !== "" && (ACCENTS.some((a) => a.id === state.accent) || /^#[0-9a-f]{3}|#[0-9a-f]{6}$/i.test(state.accent))) ? state.accent : "blue",
     theme: themeOf(state),
@@ -405,7 +404,6 @@ function sectionBody(name, model, handlers) {
   if (name === "providers") return [sectionStateNode(model.providers.state), ...providersBody(model.providers, handlers, deps)]
   // 添加弹窗体（KD-75 ①）：零行族 —— 单表唯内容；三源（形状 ∥ 暂存值 ∥ 候选）同住 `providers` 切片。
   if (name === ADD_MODAL_GROUP) return [sectionStateNode(model.providers.state), ...providerAddBody(model.providers, handlers, deps)]
-  if (name === "model") return [sectionStateNode(model.model.state), ...modelBody(model.model, handlers)]
   if (name === "agent") {
     return [sectionStateNode(model.agent.state), ...(model.agent.state === "loading" ? [] : agentBody(model.agent, handlers))]
   }
@@ -414,7 +412,7 @@ function sectionBody(name, model, handlers) {
   if (name === "tools") return [sectionStateNode(model.tools.state), ...toolsBody(model.tools, handlers)]
   if (name === "models") return [sectionStateNode(model.models.state), ...(model.models.state === "ready" ? modelsBody(model.models, handlers) : [])]
   // B1 批团队段（台账 #1212；登录面补全批收正 —— 卡降管理面）：段态词 + `ready` 才落体（详情三行；零登/退控件——见 `settings-sections-team.mjs`）。
-  if (name === "team") return [sectionStateNode(model.team.state), ...(model.team.state === "ready" ? teamAdminBody(model.team) : [])]
+  if (name === "team") return [sectionStateNode(model.team.state), ...(model.team.state === "ready" ? teamAdminBody(model.team, handlers) : [])]
   // 两新组弹窗体（KD-77 ①②）：段态词恰一（本支首件）+ 体件；`mcpForm` 载入中零表单（闸住 `mcpFormBody` 内——沿段体旧闸）；`consultAdd` = `ready` 才落体（沿 models 段门）。
   if (name === MCP_FORM_MODAL_GROUP) return [sectionStateNode(model.mcp.state), ...mcpFormBody(model.mcp, handlers)]
   if (name === CONSULT_ADD_MODAL_GROUP) return [sectionStateNode(model.models.state), ...(model.models.state === "ready" ? consultAddBody(model.models, handlers) : [])]
@@ -585,7 +583,7 @@ export function syncHostProps(root, tree) {
 }
 
 /** 薄挂载：props 应收进宿主（`syncHostProps` —— `data-slot` 等骨架属性保留 + 前任所加属性摘除）+ `clear` + `append`；容器缺位 ⇒ 空转。
- *  **2026-10-05 弹窗化**：`.settings` 包装层**保留入树**（弹窗卡片宿主 —— codex.css 卡面样式锚）——
+ *  **2026-10-05 弹窗化**：`.settings` 包装层**保留入树**（弹窗卡片宿主 —— beauty.css 卡面样式锚）——
  *  原扁平化（children 直挂宿主）使卡片无处附着；closed 态仍清容器（`:empty` 退场不变，wrapper 不 append）。 */
 export function mountSettings(root, state, handlers = {}) {
   const model = settingsModel(state)

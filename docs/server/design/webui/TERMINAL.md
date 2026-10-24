@@ -1,16 +1,15 @@
 # Thincoder Server · 终端核（webui/TERMINAL.md）
 
 > 板块 = server ∥ 本档 = webui 域·终端核面（**可复用件**——自搓真终端三件）；本期唯一落地点 = 管理页容器行「终端」钮（消费面 = `webui/SANDBOX.md` §2.1①；服务端会话链/帧协议单源 = `sandbox/SANDBOX.md` §3「容器终端」块——本档不复制）。
-> 用户判据（2026-10-13 21:17）：终端核按**可复用件**做（原话「可能不止这一处用，没准将来也会让用户能用终端方式连接他的工作区」）——复用边界 = §2.6；自搓 = 零外部前端件（控制台「零框架 · 零构建 · 零外部资源」惯例——KD-SV-9 同源）。
-> 建档：2026-10-13（批 `docs/batches/2026-10-13-sandbox-container-terminal.md` 设计轮 · eng-designer · 台账 #1374）。
+> 用户判据：终端核按**可复用件**做（原话「可能不止这一处用，没准将来也会让用户能用终端方式连接他的工作区」）——复用边界 = §2.6；自搓 = 零外部前端件（控制台「零框架 · 零构建 · 零外部资源」惯例——KD-SV-9 同源）。
 
 ## 1. 关键决策（本面）
 
-| # | 决策 | 理由 | 被否候选与何故否 |
-|---|---|---|---|
-| KD-SV-181 | **终端核 = 三件**（`terminal-core.mjs`＝解析器+字符网格 ∥ `terminal-render.mjs`＝DOM 渲染+输入捕获 ∥ `terminal-link.mjs`＝WebSocket 传输+心跳）；**三件零控制台依赖**（不 import `i18n.mjs`/`modal.mjs`/`dom.mjs`——文案与壳归消费件）；消费件一件（`views-sandbox-terminal.mjs`——本期唯一落地点） | 用户「可复用件」判据；零依赖 ⇒ 新宿主（成员面 ∥ 桌面 ∥ VSC 届时另裁）复制或 import 三件即可落地，宿主自备壳/文案/入口；文件账红线（≤500 软线 ∥ ≤800 硬线）下按职责三分——单件塞全量必越线 | 单档核件（用户判据落空 + 越线）；核件内嵌控制台文案（复用即拖走控制台——否）；引第三方终端库（违零外部件——用户 21:13 明令「自己搓」） |
-| KD-SV-182 | **渲染 = DOM 行渲染**（每行一 `div`，按 SGR 段切 `span`；**脏行重渲**）+ **等宽 cell 网格量宽**（cols/rows 由容器像素尺寸 ÷ 单字格实测尺寸换算）；光标 = 独立绝对定位元素；**终端调色板 = 18 枚变量**（bg/fg + ANSI 16，`:root` 唯一值源——`webui/STYLE.md` §2.1 底座登记）；**粗体例外**：终端面内 cell 允许 `font-weight`（终端语义按 pty 输出渲染——STYLE 零粗体规则的显式例外，登记在册） | 零框架下 DOM 行渲 = 最小可维护形（脏行重渲避免整屏重建）；宽字符与光标定位必须走实测 cell 尺寸（不然 vim/top 满屏错位）；调色板入 `:root` = 变量单源不破（`:root` 外零颜色字面量） | canvas 渲染（文本选择/复制/无障碍全自建——本批不值）；整屏重建（TUI 每帧全重渲 = 卡顿与 DOM 抖动）；cell 宽高写死常量（字体/缩放不同即错位——否） |
-| KD-SV-183 | **能力表 v1 = TUI 级**（§2.2——`vim`/`top`/`bash` 行编辑覆盖）：SGR 16/256/真彩 ∥ 光标系列 ∥ 擦除/插删系列 ∥ 滚动区+备用屏 ∥ 自动换行/制表位 ∥ DEC 线绘字符集 ∥ 键盘全套（含 IME 中文）；**不做**（登记）：鼠标协议 ∥ 图片协议 ∥ 文件传输 ∥ 会话持久化/重放 ∥ 组合字符（combining）∥ reflow | 验收 = 能跑 `vim`/`top` 一类全屏 TUI + 敲命令/行编辑 + 中文经 pty 正常（批档 §1 范围句）——实测基线 = 本设计轮真机探针（`bash -i` 实测序列：`\r` ∥ `ESC[K` ∥ `ESC[?2004h` ∥ OSC 0 题头；`vim`/`top` 走 CUP/SGR/备用屏/滚动区）；不做面 = 用户禁项（鼠标/图片/文件传输）+ v1 不值项（reflow 在 TUI 下无实益——应用收 SIGWINCH 自绘） | 全量 VT 兼容档（工作量与验证面失控——v1 不值）；只做 ANSI 基本档（无备用屏/滚动区 ⇒ vim/top 出残影——验收不达）；鼠标/图片协议（用户明令不做） |
+| # | 决策 | 理由 |
+|---|---|---|
+| KD-SV-181 | **终端核 = 三件**（`terminal-core.mjs`＝解析器+字符网格 ∥ `terminal-render.mjs`＝DOM 渲染+输入捕获 ∥ `terminal-link.mjs`＝WebSocket 传输+心跳）；**三件零控制台依赖**（不 import `i18n.mjs`/`modal.mjs`/`dom.mjs`——文案与壳归消费件）；消费件一件（`views-sandbox-terminal.mjs`——本期唯一落地点） | 用户「可复用件」判据；零依赖 ⇒ 新宿主（成员面 ∥ 桌面 ∥ VSC 届时另裁）复制或 import 三件即可落地，宿主自备壳/文案/入口；文件账红线（≤500 软线 ∥ ≤800 硬线）下按职责三分——单件塞全量必越线 |
+| KD-SV-182 | **渲染 = DOM 行渲染**（每行一 `div`，按 SGR 段切 `span`；**脏行重渲**）+ **等宽 cell 网格量宽**（cols/rows 由容器像素尺寸 ÷ 单字格实测尺寸换算）；光标 = 独立绝对定位元素；**终端调色板 = 18 枚变量**（bg/fg + ANSI 16，`:root` 唯一值源——`webui/STYLE.md` §2.1 底座登记）；**粗体例外**：终端面内 cell 允许 `font-weight`（终端语义按 pty 输出渲染——STYLE 零粗体规则的显式例外，登记在册） | 零框架下 DOM 行渲 = 最小可维护形（脏行重渲避免整屏重建）；宽字符与光标定位必须走实测 cell 尺寸（不然 vim/top 满屏错位）；调色板入 `:root` = 变量单源不破（`:root` 外零颜色字面量） |
+| KD-SV-183 | **能力表 v1 = TUI 级**（§2.2——`vim`/`top`/`bash` 行编辑覆盖）：SGR 16/256/真彩 ∥ 光标系列 ∥ 擦除/插删系列 ∥ 滚动区+备用屏 ∥ 自动换行/制表位 ∥ DEC 线绘字符集 ∥ 键盘全套（含 IME 中文）；**不做**（登记）：鼠标协议 ∥ 图片协议 ∥ 文件传输 ∥ 会话持久化/重放 ∥ 组合字符（combining）∥ reflow | 验收 = 能跑 `vim`/`top` 一类全屏 TUI + 敲命令/行编辑 + 中文经 pty 正常（实测基线 = 本设计轮真机探针（`bash -i` 实测序列：`\r` ∥ `ESC[K` ∥ `ESC[?2004h` ∥ OSC 0 题头；`vim`/`top` 走 CUP/SGR/备用屏/滚动区）；不做面 = 用户禁项（鼠标/图片/文件传输）+ v1 不值项（reflow 在 TUI 下无实益——应用收 SIGWINCH 自绘） |
 
 ## 2. 机制
 
@@ -18,10 +17,10 @@
 
 | 件 | 职责 | 依赖 |
 |---|---|---|
-| `thincoder-server/public/terminal-core.mjs`（拟新增） | **解析器 + 字符网格模型**：VT 序列解析（CSI/ESC/OSC 子集——§2.2 能力表）∥ 网格（单元格 = 码点 + SGR 属性）∥ 宽字符占位（`wcwidth` 简表——东亚宽/全角 = 2 列）∥ 备用屏 ∥ 滚动区（DECSTBM）∥ 卷回环（1000 行）∥ 光标态与模式位（`?1`/`?6`/`?7`/`?25`/`?47`/`?1047`/`?1049`/`?2004`）∥ 增量 UTF-8 解码 ∥ 键盘编码（`encodeKey` 纯函数） | 零（纯件——Node 可 import 直测：喂字节 ⇒ 网格快照） |
-| `thincoder-server/public/terminal-render.mjs`（拟新增） | **DOM 渲染 + 输入捕获**：脏行重渲（行节点 + SGR 段 `span`）∥ 光标元素（形状随模式；闪烁 = CSS 固定）∥ 卷回视口映射（滚轮 ∥ Shift+PageUp/PageDown ∥ 输入即回底）∥ 尺寸观测（`ResizeObserver` ⇒ cell 量宽 ⇒ cols/rows ⇒ `onResize`）∥ 隐藏输入区（`keydown` 特殊键码 + IME 组合 + `paste` 事件 ∥ 选区非空时 Ctrl+Shift+C 复制不发给 pty） | 仅 `terminal-core.mjs` |
-| `thincoder-server/public/terminal-link.mjs`（拟新增） | **传输客户端**：WebSocket 建链 ∥ 二进制帧 = pty 字节（双向）∥ 文本帧 = JSON 控制（收 `ready`/`exit`/`error`/`pong`；发 `resize`/`ping`）∥ 心跳（30s 文本 ping；60s 无下行 ⇒ 本地判死）∥ 断开态上抛（回调——文案归宿主） | 仅 `terminal-core.mjs`（增量 UTF-8 复用） |
-| `thincoder-server/public/views-sandbox-terminal.mjs`（拟新增） | **控制台消费件（本期唯一落地点）**：终端窗（`modal.mjs` 壳——大窗类）∥ 状态行（连接中/已连接 `cols×rows`/已断开/退出码）∥ 重连钮（新会话）∥ i18n 文案 ∥ 关窗收口 | `modal.mjs` ∥ `i18n.mjs` ∥ 核三件 |
+| `thincoder-server/public/terminal-core.mjs` | **解析器 + 字符网格模型**：VT 序列解析（CSI/ESC/OSC 子集——§2.2 能力表）∥ 网格（单元格 = 码点 + SGR 属性）∥ 宽字符占位（`wcwidth` 简表——东亚宽/全角 = 2 列）∥ 备用屏 ∥ 滚动区（DECSTBM）∥ 卷回环（1000 行）∥ 光标态与模式位（`?1`/`?6`/`?7`/`?25`/`?47`/`?1047`/`?1049`/`?2004`）∥ 增量 UTF-8 解码 ∥ 键盘编码（`encodeKey` 纯函数） | 零（纯件——Node 可 import 直测：喂字节 ⇒ 网格快照） |
+| `thincoder-server/public/terminal-render.mjs` | **DOM 渲染 + 输入捕获**：脏行重渲（行节点 + SGR 段 `span`）∥ 光标元素（形状随模式；闪烁 = CSS 固定）∥ 卷回视口映射（滚轮 ∥ Shift+PageUp/PageDown ∥ 输入即回底）∥ 尺寸观测（`ResizeObserver` ⇒ cell 量宽 ⇒ cols/rows ⇒ `onResize`）∥ 隐藏输入区（`keydown` 特殊键码 + IME 组合 + `paste` 事件 ∥ 选区非空时 Ctrl+Shift+C 复制不发给 pty） | 仅 `terminal-core.mjs` |
+| `thincoder-server/public/terminal-link.mjs` | **传输客户端**：WebSocket 建链 ∥ 二进制帧 = pty 字节（双向）∥ 文本帧 = JSON 控制（收 `ready`/`exit`/`error`/`pong`；发 `resize`/`ping`）∥ 心跳（30s 文本 ping；60s 无下行 ⇒ 本地判死）∥ 断开态上抛（回调——文案归宿主） | 仅 `terminal-core.mjs`（增量 UTF-8 复用） |
+| `thincoder-server/public/views-sandbox-terminal.mjs` | **控制台消费件（本期唯一落地点）**：终端窗（`modal.mjs` 壳——大窗类）∥ 状态行（连接中/已连接 `cols×rows`/已断开/退出码）∥ 重连钮（新会话）∥ i18n 文案 ∥ 关窗收口 | `modal.mjs` ∥ `i18n.mjs` ∥ 核三件 |
 
 ### 2.2 能力表 v1（真终端声明 = `TERM=xterm-256color`；覆盖判据 = `vim`/`top`/`bash` 行编辑实走）
 
@@ -73,45 +72,37 @@
 
 - **复用面 = 三件**（`terminal-core.mjs`〔落地实拆三档——+ `terminal-vt.mjs` ∥ `terminal-codec.mjs`，逻辑一件〕 ∥ `terminal-render.mjs` ∥ `terminal-link.mjs`）：零控制台依赖、零外部资源、零构建（ESM 直载）；宿主契约 = ① 一个尺寸可测的挂载元素 ② `onData(bytes)` ③ `url`（WS 端点）④ 自备壳与文案。
 - **本期唯一落地点** = 管理页容器行「终端」钮（`views-sandbox-terminal.mjs` + `views-sandbox-containers.mjs` 第七钮接线；消费面 = `webui/SANDBOX.md` §2.1①）。
-- **将来面（登记，不实施）**：成员工作区终端（用户 21:17 预告方向）∥ 桌面/VSC 端接入（各端自建宿主壳——核三件届时按端侧装配面另裁）∥ 多终端并置/多标签。
-- **不做的复用形态**：不做 npm 包化 ∥ 不做跨端共享包（`@thincoder/render-core` 式抽取）——v1 不值（核族合计实读 **1195** 行，复制成本低于包化机械）。
+- **将来面（登记，不实施）**：成员工作区终端（用户预告方向）∥ 桌面/VSC 端接入（各端自建宿主壳——核三件届时按端侧装配面另裁）∥ 多终端并置/多标签。
+- **不做的复用形态**：不做 npm 包化 ∥ 不做跨端共享包（`@thincoder/render-core` 式抽取）——v1 不值（核族合计 **1195** 行，复制成本低于包化机械）。
 
-### 2.7 最近先例（本批）
+### 2.7 最近先例
 
 - **窗与组件先例**：弹窗族 `modal.mjs`（控制台公共弹窗件——KD-SV-31：原生 `<dialog>` 基座 ∥ 单例；`webui/ADMIN.md` §2.1①）——终端窗（`views-sandbox-terminal.mjs`）沿同壳同单例 ∥ **两挂载件先例** = `host-credential.mjs`（一件两页挂载——沙盒页 ∥ 对话页；`webui/SANDBOX.md` §2.1①）；对齐 = 独立 `.mjs` 件 + 挂载点接线；**偏离 = Esc 不关窗**（终端要用 Esc——唯一偏离点，理由在册）。
-- **无先例两件（显式声明）**：自搓 WS 服务端（`gateway/ws.mjs`（拟新增）——仓库内无 WS 服务端先例；服务端会话链单源 = `sandbox/SANDBOX.md` §3）∥ VT 解析/字符网格（`terminal-core.mjs`——无终端核先例）；两件设计判据 = 本档 §2 ∥ `sandbox/SANDBOX.md` §3（无先例坐标可沿用）。
+- **无先例两件（显式声明）**：自搓 WS 服务端（`gateway/ws.mjs`——仓库内无 WS 服务端先例；服务端会话链单源 = `sandbox/SANDBOX.md` §3）∥ VT 解析/字符网格（`terminal-core.mjs`——无终端核先例）；两件设计判据 = 本档 §2 ∥ `sandbox/SANDBOX.md` §3（无先例坐标可沿用）。
 
 ## 3. 文件账（本面文件行）
 
-| 档 | 行数（设计估） | 职责 |
+| 档 | 行数 | 职责 |
 |---|---|---|
-| `thincoder-server/public/terminal-core.mjs`（已落——sandbox-container-terminal 批） | 实读 **495**（实施实读 ≤500 软线——**越线拆案已触发落地**，拆出 `terminal-vt.mjs` ∥ `terminal-codec.mjs` 两档——见下行；硬线 800 无险） | 网格模型 + 装配（§2.1） |
-| `thincoder-server/public/terminal-vt.mjs`（已落——本批拆案） | 实读 **117** | VT 解析面（§2.1） |
-| `thincoder-server/public/terminal-codec.mjs`（已落——本批拆案） | 实读 **89** | 编解码面（§2.1） |
-| `thincoder-server/public/terminal-render.mjs`（已落——本批） | 实读 **361**（设计估 ≈300——差 +61） | DOM 渲染 + 输入捕获（§2.1） |
-| `thincoder-server/public/terminal-link.mjs`（已落——本批） | 实读 **133**（设计估 ≈210——差 −77） | WS 传输 + 心跳（§2.1/§2.5） |
-| `thincoder-server/public/views-sandbox-terminal.mjs`（已落——本批） | 实读 **125**（设计估 ≈200——差 −75） | 控制台消费件（终端窗——本期唯一落地点） |
-| **面小计** | **≈1230 ⇒ 实读 1320**（六档：495 ∥ 117 ∥ 89 ∥ 361 ∥ 133 ∥ 125——设计四档/实拆六档，越估 ≈90） | —— |
+| `thincoder-server/public/terminal-core.mjs` | **495** | 网格模型 + 装配（§2.1） |
+| `thincoder-server/public/terminal-vt.mjs` | **117** | VT 解析面（§2.1） |
+| `thincoder-server/public/terminal-codec.mjs` | **89** | 编解码面（§2.1） |
+| `thincoder-server/public/terminal-render.mjs` | **361** | DOM 渲染 + 输入捕获（§2.1） |
+| `thincoder-server/public/terminal-link.mjs` | **133** | WS 传输 + 心跳（§2.1/§2.5） |
+| `thincoder-server/public/views-sandbox-terminal.mjs` | **125** | 控制台消费件（终端窗——本期唯一落地点） |
+| **面小计** | **1320**（六档：495 ∥ 117 ∥ 89 ∥ 361 ∥ 133 ∥ 125） | —— |
 
 ## 4. 验收（本面 AC 行）
 
 | 需求 | 设计级判据 | 载体 |
 |---|---|---|
-| 容器终端 v1（功能点 51 ∥ AC-51——已入册（2026-10-13）；判据落点 = 批档 §2 ∥ 本行） | **终端核三件在册且零控制台依赖**（三件 import 面无 `i18n.mjs`/`modal.mjs`/`dom.mjs`——机检 import 行）∥ 能力表 v1 逐面在册（§2.2：SGR 16/256/真彩 ∥ 光标系列 ∥ 擦除/插删 ∥ 滚动区+备用屏 ∥ 模式位 ∥ 线绘字符集 ∥ 键盘全套）；**`vim`/`top` 全屏 TUI + `bash` 行编辑 + 中文（IME 提交）实走通过** ∥ 键盘编码表逐键断言（§2.3——含应用光标键两态）∥ 宽字符占两列 + 边界折行断言 ∥ 卷回 1000 行 ∥ 调色板 18 变量 `:root` 单源（面内零颜色字面量）+ 粗体例外登记 ∥ 尺寸链路（`ResizeObserver` ⇒ 量宽 ⇒ `resize` 帧）∥ 断开态 = 文案 + 重连钮（新会话语义）∥ 复用边界句在册（§2.6）；判据全文 = 本档 §2 ∥ `sandbox/SANDBOX.md` §3 容器终端块 ∥ `webui/SANDBOX.md` §2.1①/§4 | 单元测试档（终端核纯件直测）+ 收口轮（浏览器实走） |
+| 容器终端 v1（功能点 51 ∥ AC-51；判据落点 = 本行） | **终端核三件在册且零控制台依赖**（三件 import 面无 `i18n.mjs`/`modal.mjs`/`dom.mjs`——机检 import 行）∥ 能力表 v1 逐面在册（§2.2：SGR 16/256/真彩 ∥ 光标系列 ∥ 擦除/插删 ∥ 滚动区+备用屏 ∥ 模式位 ∥ 线绘字符集 ∥ 键盘全套）；**`vim`/`top` 全屏 TUI + `bash` 行编辑 + 中文（IME 提交）实走通过** ∥ 键盘编码表逐键断言（§2.3——含应用光标键两态）∥ 宽字符占两列 + 边界折行断言 ∥ 卷回 1000 行 ∥ 调色板 18 变量 `:root` 单源（面内零颜色字面量）+ 粗体例外登记 ∥ 尺寸链路（`ResizeObserver` ⇒ 量宽 ⇒ `resize` 帧）∥ 断开态 = 文案 + 重连钮（新会话语义）∥ 复用边界句在册（§2.6）；判据全文 = 本档 §2 ∥ `sandbox/SANDBOX.md` §3 容器终端块 ∥ `webui/SANDBOX.md` §2.1①/§4 | 单元测试档（终端核纯件直测）+ 收口轮（浏览器实走） |
 
 ## 5. 边界（本面不做）
 
-- **鼠标/图片/文件传输**（用户明令——本批不做）∥ 组合字符渲染 ∥ reflow（重排）∥ 会话持久化/重放（tmux 语义）∥ 多标签 ∥ OSC 52 剪贴板读写 ∥ 终端内搜索 ∥ 字号缩放控件。
+- **鼠标/图片/文件传输**（用户明令——不做）∥ 组合字符渲染 ∥ reflow（重排）∥ 会话持久化/重放（tmux 语义）∥ 多标签 ∥ OSC 52 剪贴板读写 ∥ 终端内搜索 ∥ 字号缩放控件。
 - **跨端共享包化**（核三件 npm 化/抽取——§2.6）∥ 桌面/VSC/成员面接入（登记——届时另裁）。
 
 ## 6. 上抛/余项
 
-- 无独立上抛项（需求档入册 + 服务端随正 + 部署收尾 = `sandbox/SANDBOX.md` §16 R85）。
-
-## 变更记录
-
-- 2026-10-13（**sandbox-container-terminal 批 · 实施后回填 · 主 agent 直接执行 · 机械 · 可 revert**——承批档 §5 披露③（设计档随正归父侧）：§3 件表翻「已落」+ 六行实读（core **495**〔拆案落地——+ `terminal-vt` **117** ∥ `terminal-codec` **89** 两行入表〕∥ render **361** ∥ link **133** ∥ 终端窗件 **125**）∥ 面小计 ≈1230 ⇒ **实读 1320**（六档）∥ §2.6 复用面句收正（核族物理五档/逻辑三件 ∥ 合计 1195）。containers/style 行与 i18n 读数行 = 收口轮终随正。**产品码零触（回填——读数与状态）。**）
-
-- 2026-10-13（**sandbox-container-terminal 批 · 设计评审轮 1 修复（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-13-sandbox-container-terminal.md` §3 轮次 1（评审 #92——十条）：§2.1 光标措辞收窄（形状随模式；闪烁 = CSS 固定——评审 10）∥ §2.7 增**最近先例**（弹窗族 ∥ 两挂载件 ∥ 窗单例；Esc 偏离在册；WS/VT 两件 = 无先例声明——评审 6）∥ §3 核件行补**越线拆案触发点**（实读为准 + 拆案句——评审 5）∥ §4 AC 行翻**已入册**（评审 3）。**零新语义（评审发现直接导出项）；产品码零触（设计轮）。**
-
-- 2026-10-13（**sandbox-container-terminal 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-13-sandbox-container-terminal.md` §1 · 台账 #1374；用户 21:11/21:13/21:17 三句）：建档——终端核三件（解析/网格 ∥ DOM 渲染 ∥ WS 传输）+ 消费件一件；能力表 v1；键盘编码表；渲染与调色板（18 变量 + 粗体例外）；传输与断开态；复用边界（KD-SV-181/182/183）。**产品码零触（设计轮）。**
+- 无独立上抛项。

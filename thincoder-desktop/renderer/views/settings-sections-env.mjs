@@ -17,7 +17,7 @@
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
 
-/** 自定义哨兵（VSC `settings-env.js:33` 同值 —— 切换输入意图，非写意图）。 */
+/** 自定义哨兵（VSC `shellEchoState` 同值 —— 切换输入意图，非写意图）。 */
 const CUSTOM_SENTINEL = "__custom__"
 
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */

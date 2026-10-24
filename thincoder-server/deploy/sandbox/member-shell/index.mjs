@@ -4,21 +4,25 @@
  * 职责（`agent/MEMBER-AGENT.md` §3.10）：连挂 server（下行 SSE）∥ 接指令与回合（上行 NDJSON）∥
  * 执行拉仓命令——**不是第二套 agent**（循环/会话/提示词/工具一律取核件，见 `core-run.mjs`）。
  *
- * 协议面（§3.3——逐值）：下行 `GET /api/box/events` = SSE 六事件 hello ∥ run ∥ abort ∥ pull ∥
- * cmd ∥ ping；上行 `POST /api/box/sessions/:id/turns`（NDJSON 帧流：begin ⇒ 六帧 ⇒ end）∥
- * `POST /api/box/commands/:cmdId/result`（`{ state, detail }`）∥ `POST /api/box/ping`（应答）
+ * 协议面（§3.3/§3.11(1)——逐值）：下行 `GET /api/box/events` = SSE 七事件 hello ∥ run ∥ abort ∥
+ * pull ∥ cmd ∥ ping ∥ **answer**（member-face-parity 批——ask 应答回程；`abort` 体扩 `key` = 停单件）；
+ * 上行 `POST /api/box/sessions/:id/turns`（NDJSON 帧流：begin ⇒ 六帧词表 + 本批增补七型 ⇒ end）∥
+ * `POST /api/box/commands/:cmdId/result`（`{ state, detail }`——读指令族 kind 七值：
+ * `sessions.list` ∥ `session.read` ∥ `session.create` ∥ `session.update` ∥ `session.delete` ∥
+ * `session.rename` ∥ `files.list`）∥ `POST /api/box/ping`（应答）
  * ——凭据 = 工作区 key（`OPENAI_API_KEY`，第二门 KD-SV-154）；基址 = `TC_SERVER_URL`。
  *
  * 掉线/重连（§3.4 收尾三径②——**盒侧对称**）：上行失败 ⇒ **中止本地回合**；重连 = 指数退避
  * （1s → 30s 封顶）；**重连后零对齐动作**（真源在盒内——槽文件即事实；`hello.redeliver` 的
- * 未收尾命令由 server 重派，盒侧零动作）。在途单飞 = 工作区级（服务端门之外的盒侧兜底——
- * 收到第二回合 ⇒ 立即回 failed 流）。
+ * 未收尾命令由 server 重派，盒侧零动作）。在途单飞 = **会话级**（KD-SV-223——同会话第二回合 ⇒
+ * 立即回 `failed/busy` 流；跨会话并行放开：`state.running` = 会话键表，服务端门之外的盒侧兜底）。
  *
  * 本档 = 可注入骨架（`fetchImpl`/`coreRun`/`pull`/`sleep`/`now`）——单元测试以假件驱动；
  * 生产过程装配在档尾 `main()`（仅直跑时执行）。
  */
 import { realpathSync } from "node:fs"
 import { pathToFileURL } from "node:url"
+import { runBootstrap, versionLine } from "./bootstrap.mjs"
 import { createCoreRun, loadCore, slotOf } from "./core-run.mjs"
 import { createPull } from "./pull.mjs"
 import { beginFrame, createSseParser, encodeFrame, endFrame } from "./protocol.mjs"
@@ -48,12 +52,12 @@ export function createShell({
   const state = {
     stopped: false,
     shutdown: new AbortController(),
-    running: null, // { cmdId, sessionId, controller }——工作区级在途（单飞）
+    running: new Map(), // sessionId ⇒ { cmdId, sessionId, controller, host }——会话键表（KD-SV-223：跨会话并行放开）
     connections: 0,
     events: 0,
     reconnects: 0,
   }
-  const runningSlot = () => (state.running ? slotOf(state.running.sessionId) : null)
+  const runningSlots = () => new Set([...state.running.values()].map((turn) => slotOf(turn.sessionId)).filter((slot) => slot !== null))
   const warn = (message) => { try { log.warn?.(message) } catch { /* 日志面尽力 */ } }
 
   // ========== 上行 ==========
@@ -145,46 +149,70 @@ export function createShell({
   // ========== 下行处理 ==========
 
   async function handleRun(evt) {
-    const { cmdId, sessionId, content } = evt
-    if (state.running) {
-      // 盒侧防御（工作区级单飞——服务端在途门之外的兜底）：立即回失败流，不排第二回合
+    const { cmdId, sessionId, content, images } = evt
+    const key = String(sessionId)
+    if (state.running.has(key)) {
+      // 盒侧防御（会话级单飞——服务端在途门之外的兜底）：立即回失败流，不排第二回合
       const sink = openTurnStream(sessionId, cmdId, new AbortController())
-      sink.frame(endFrame({ status: "failed", reason: "busy", message: "该工作区正在执行另一回合" }))
+      sink.frame(endFrame({ status: "failed", reason: "busy", message: "该会话正在执行另一回合" }))
       sink.close()
       await sink.ready
       return
     }
     const controller = new AbortController()
     const sink = openTurnStream(sessionId, cmdId, controller)
-    state.running = { cmdId, sessionId, controller }
+    const host = coreRun.createHost() // ask 待决表 ∥ 停单件 ∥ 兜底收口（answer / abort{key} 两入口的结算面）
+    state.running.set(key, { cmdId, sessionId: key, controller, host })
     try {
       const end = await coreRun.runTurn({
         sessionId,
         content,
+        images: Array.isArray(images) ? images : [],
         signal: controller.signal,
         onFrame: (frame) => sink.frame(frame),
+        host,
       })
       sink.frame(end)
     } catch (e) {
       sink.frame(endFrame({ status: "failed", reason: e?.kind ?? "internal", message: String(e?.message ?? e) }))
     } finally {
       sink.close()
-      state.running = null
+      state.running.delete(key)
       await sink.ready
+      host.close() // 收口兜底（回合已结 ⇒ 未决 ask 全量解绕——迟到应答零副作用）
     }
   }
 
-  /** 中止事件：只中止在途回合（**零结果回呈**——abort 事件携的 `cmdId` 是**回合** cmdId，不在 server `pending` 表；
-   *  终态回呈 = 该回合流的 `end { failed, aborted }`——`MEMBER-AGENT.md` §3.4）。 */
+  /** 中止事件（`{ cmdId, sessionId, key? }`——§3.4）：`key` 在场 = **停单个子代理**（盒按池条目中止——不终回合）；
+   *  缺 = 中止该会话在途回合（**零结果回呈**——abort 事件携的 `cmdId` 是**回合** cmdId，不在 server `pending` 表；
+   *  终态回呈 = 该回合流的 `end { failed, aborted }`）。`sessionId` 缺省 = 全部在途回合（容错面）。 */
   function handleAbort(evt) {
-    const { sessionId } = evt
-    const running = state.running
-    const aborted = Boolean(running && (sessionId === undefined || String(running.sessionId) === String(sessionId)))
-    if (aborted) {
-      try { running.controller.abort() } catch { /* 回合已结 */ }
-    } else {
-      warn(`[shell] abort 无对位在途回合（sessionId=${sessionId}）——零动作`)
+    const { sessionId, key } = evt
+    if (key !== undefined && key !== null) {
+      const turn = sessionId === undefined ? null : state.running.get(String(sessionId))
+      if (turn && turn.host.cancelKey(String(key))) return
+      warn(`[shell] abort 停单件未命中（sessionId=${sessionId} key=${key}）——零动作`)
+      return
     }
+    const targets = sessionId === undefined ? [...state.running.values()] : [state.running.get(String(sessionId))].filter(Boolean)
+    if (targets.length === 0) {
+      warn(`[shell] abort 无对位在途回合（sessionId=${sessionId}）——零动作`)
+      return
+    }
+    for (const turn of targets) {
+      try { turn.controller.abort() } catch { /* 回合已结 */ }
+    }
+  }
+
+  /** ask 应答回程（`answer { promptId, kind, verdict? ∥ answer? ∥ values? }`——§3.11(2)）：按 promptId 对位
+   *  在途回合宿主的待决表 ⇒ 结算核回调承诺；未命中 ∥ 体不合 ⇒ 零动作（服务端侧已 400 零副作用）。 */
+  function handleAnswer(evt) {
+    const promptId = String(evt?.promptId ?? "")
+    if (promptId === "") return
+    for (const turn of state.running.values()) {
+      if (turn.host.settleAnswer(evt)) return
+    }
+    warn(`[shell] answer 未命中在途 ask（promptId=${promptId}）——零动作`)
   }
 
   async function handlePull(evt) {
@@ -202,9 +230,9 @@ export function createShell({
     const args = evt.args && typeof evt.args === "object" ? evt.args : {}
     try {
       if (kind === "sessions.list") {
-        await postCommandResult(cmdId, "done", { sessions: coreRun.listSessions({ runningSlot: runningSlot() }) })
+        await postCommandResult(cmdId, "done", { sessions: coreRun.listSessions({ runningSlots: runningSlots() }) })
       } else if (kind === "session.read") {
-        const out = coreRun.readSession(args.slot ?? args.sessionId ?? args.id, { runningSlot: runningSlot() })
+        const out = coreRun.readSession(args.slot ?? args.sessionId ?? args.id, { runningSlots: runningSlots() })
         if (!out) await postCommandResult(cmdId, "failed", { notFound: true, kind: "not_found", message: "会话不存在" })
         else await postCommandResult(cmdId, "done", out)
       } else if (kind === "session.create") {
@@ -213,6 +241,16 @@ export function createShell({
         const out = coreRun.updateSession(args)
         if (!out) await postCommandResult(cmdId, "failed", { notFound: true, kind: "not_found", message: "会话不存在" })
         else await postCommandResult(cmdId, "done", out)
+      } else if (kind === "session.rename") {
+        const out = coreRun.renameSession(args)
+        if (!out) await postCommandResult(cmdId, "failed", { notFound: true, kind: "not_found", message: "会话不存在" })
+        else await postCommandResult(cmdId, "done", out)
+      } else if (kind === "session.delete") {
+        const out = coreRun.deleteSession(args)
+        if (!out) await postCommandResult(cmdId, "failed", { notFound: true, kind: "not_found", message: "会话不存在" })
+        else await postCommandResult(cmdId, "done", out)
+      } else if (kind === "files.list") {
+        await postCommandResult(cmdId, "done", coreRun.listFiles(args))
       } else {
         await postCommandResult(cmdId, "failed", { kind: "invalid_request", message: `未知指令：${kind}` })
       }
@@ -231,6 +269,7 @@ export function createShell({
       log.info?.(`[shell] hello——重派清单 ${Array.isArray(data.redeliver) ? data.redeliver.length : 0} 条`)
     } else if (name === "run") void handleRun(data)
     else if (name === "abort") handleAbort(data)
+    else if (name === "answer") handleAnswer(data)
     else if (name === "pull") void handlePull(data)
     else if (name === "cmd") void handleCmd(data)
     else warn(`[shell] 未知事件：${name}`)
@@ -289,8 +328,8 @@ export function createShell({
       if (state.stopped) return
       state.stopped = true
       try { state.shutdown.abort() } catch { /* 已中止 */ }
-      if (state.running) {
-        try { state.running.controller.abort() } catch { /* 回合已结 */ }
+      for (const turn of state.running.values()) {
+        try { turn.controller.abort() } catch { /* 回合已结 */ }
       }
     },
   }
@@ -306,6 +345,14 @@ async function main() {
     process.exitCode = 1
     return
   }
+  // 启动引导（§8 壳更新面块——先于核装载）：自判 / 自取 / 自验 / 自换；换执行径本进程 = 引导父进程
+  // （只回传退出码，不落版本行——版本行由承接进程落）。
+  const boot = await runBootstrap({ env })
+  if (boot.mode === "parent") {
+    process.exitCode = boot.exitCode
+    return
+  }
+  console.log(versionLine(boot)) // 版本读音——先于核装载（核装载失败亦可读）
   const core = await loadCore()
   const shell = createShell({ env, coreRun: createCoreRun({ env, core }) })
   const shutdown = () => {

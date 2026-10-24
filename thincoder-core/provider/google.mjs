@@ -9,6 +9,7 @@ import { requestWithRetry } from "./retry.mjs"
 import { effectiveFetchTimeoutMs } from "./core.mjs"
 import { abortError, timeoutError } from "../abort-provenance.mjs"
 import { terminateBody } from "../stream-destroy.mjs"
+import { requestBudget } from "../config.mjs"
 
 /** OpenAI 语义 tool_choice → Gemini FunctionCallingConfig（2026-08-31 能力层）。 */
 function mapFunctionCallingConfig(choice) {
@@ -83,7 +84,13 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     contents,
     generationConfig: {
       ...(provider.temperature != null ? { temperature: provider.temperature } : {}),
-      ...(provider.maxTokens ? { maxOutputTokens: provider.maxTokens } : {}),
+      // §6.17 发送面同源：显式才发（requestBudget().maxTokens——无显式 ⇒ undefined ⇒ 字段不落）
+      ...(requestBudget(provider).maxTokens !== undefined
+        ? { maxOutputTokens: requestBudget(provider).maxTokens }
+        : {}),
+      // #1200（MODEL-SPECS.md §18.8）：off 形在场 ⇒ 禁思考形——载荷逐字同标题径先例
+      // （`generate-title.mjs` 的 `generateTitle`）；其余值（缺 ∥ on 形 ∥ null）⇒ 零发（误发 none = 反向禁用）。
+      ...(provider.thinking?.type === "disabled" ? { thinkingConfig: { thinkingLevel: "none" } } : {}),
     },
     safetySettings: [
       { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },

@@ -66,7 +66,7 @@ function handleStatusText(m) {
 // ——归档落点；C-4）+ `assistantLabeled` 复位（本轮 assistant 输出带一次回合标签）；`digest end` →
 // **追加终态元素**（`.digest-status` + `digest-done` ∕ `digest-failed`——不动原计数元素 ∥ 零就地换文；
 // **+ 消化账务批（2026-10-05 · 台账 #930）：`unsettled > 0` ⇒ 终态后再落残余元素**）；
-// `digest cap` → `.digest-cap` 行（auto dim / stop warn——CLI agent-turn.mjs:188/:192 对位）。旧轮元素
+// `digest cap` → `.digest-cap` 行（auto dim / stop warn——CLI `runAgentTurnBody` 对位）。旧轮元素
 // 留置原位（不改 ∥ 不删 ∥ 不退场——零清理机器）；复列 = 全量（未结轮照现——重放逐轮 ⇒ 逐轮追加；消化重放口径批 · 2026-10-01 收正）。
 // **#726 构形件化（2026-10-01 · 跨端消化面恢复批）**：四类元素构形提为导出构形件（下方四函数；消化账务批 ·
 // 2026-10-05 ＋残余元素一件 ⇒ 五函数）—— live（`showDigestStatus`）∥ 重建（`record-restore.js`）**单一实现零副本**；`data-idx` 归重建径独占。

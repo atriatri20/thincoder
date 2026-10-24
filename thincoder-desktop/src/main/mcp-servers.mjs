@@ -5,7 +5,7 @@
  * S9 行重连）。
  *
  * 纪律（§2.3 写面条款）：写面 = 核 `writeConfigAtomic`（唯一写盘执行体）改 `mcp.servers` 节；
- * 端侧零自写盘。**增径先探活后落盘**：核 `probeMcpServer`（`thincoder-core/mcp.mjs:82`，
+ * 端侧零自写盘。**增径先探活后落盘**：核 `probeMcpServer`（
  * `{ ok, toolCount, latencyMs }` ∥ `{ ok:false, error }`，零副作用）不通 ⇒ **零写盘**（同 CLI
  * `/mcp add` 口径）——**编辑径零探活**（B10 W3 裁「探活归属」：编辑 = 配置修正径，探活会阻断「把坏
  * 配置改好」；沿 VSC `updateMcpServer` 仅落盘口径——本裁记录见批次档 §5）。

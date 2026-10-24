@@ -78,7 +78,7 @@ export function renderStatusBar(m) {
   }
   // timer-wake 阶段 2（协议 §3.2 行 18 · §6.1 计时器段）：在途 timer 计数段——源 = `usage` 载荷
   // `timers { count, expired }` 槽镜像（`handleUsageMessage` 落槽）；零在途 ⇒ 段零节点；含过期项 ⇒
-  // 警示色（CLI `render-frame.mjs:422` 同判——⏰N 语义 = 计数形态，不显倒计时）。
+  // 警示色（CLI `inputBoxStyle` 同判——⏰N 语义 = 计数形态，不显倒计时）。
   if (S._timerCount > 0) parts.push(S._timerExpired > 0
     ? `<span style="color:var(--vscode-editorWarning-foreground, #cca700)">${t("status.timer", { n: S._timerCount })}</span>`
     : t("status.timer", { n: S._timerCount }))

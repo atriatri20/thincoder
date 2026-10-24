@@ -6,7 +6,7 @@
  *   ② 该指针指向的轮次批档：`§1` 状态行 = 「进行中」（判定器单源 = `readBatchStatusLine`）。
  * 查找面（纯向下）= 会话锚 + 其直接子目录一层（候选枚举单源 = `ledgerChildren`——与族发现同级判据
  * 同源；不递归 ∥ 不取同胞）：逐候选查行 ∥ 以各候选为基解析指针（台账写门同式）。歧义候选
- * （`projectRootView` 判 `ambiguous`——如工作区锚自身）⇒ 跳过该候选、照查其余（既定观察态，非读错）；
+ * （`projectRootView` 判 `workspace`——如工作区锚自身）⇒ 跳过该候选、照查其余（既定观察态，非读错）；
  * 候选读错 ∥ 不可判 ⇒ 停本候选（总判不因他候选读错而失——开路凭据仍是「两件校验全过」）。
  * 语义：开门动作 ≡ 开轮两件落盘（「启动即挂账」本体——无独立于账的开门面）；单件不放行
  * （轮档独在 ∥ 行独在 ∥ 无标记 ∥ 行非在途 ∥ 指针失据 ∥ 档已收口 ⇒ 皆 false）；收口即自闭
@@ -38,9 +38,9 @@ export async function lightRoundOpen(agent) {
     // 候选面 = 锚自身 + 直接子目录一层（纯向下；子项枚举单源 = `ledgerChildren`）。
     const candidates = [anchor, ...ledgerChildren(anchor).map((p) => p.root)]
     for (const cand of candidates) {
-      // 歧义候选（≥2 候选项目——`projectRootView`）⇒ 跳过、照查其余（歧义锚不充当项目 = AC-M2-19 同判；
-      // `openLedger` 歧义拒 = AC-M2-17——既定观察态，非读错）。
-      if (projectRootView(cand).state === "ambiguous") continue
+      // 工作区候选（下辖 ≥2 项目——`projectRootView`）⇒ 跳过、照查其余（工作区锚不充当项目 = AC-M2-19 同判；
+      // 该态判据 = 根推导单源「已注册」的库臂排除（键控库在盘 ≠ 可作项目）——既定观察态，非读错）。
+      if (projectRootView(cand).state === "workspace") continue
       let rows
       try { rows = ledgerQuery({ cwd: cand, status: "在途" }) } catch { continue } // 候选读错 ⇒ 停本候选
       if (!Array.isArray(rows) || rows.length === 0) continue

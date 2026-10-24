@@ -90,10 +90,10 @@ export function execUpgradeTransportFor(runner, { config = {}, httpRequestImpl =
 
 /**
  * 终端 hub（装配件——`bin` 创建并经 `gateway` `upgrade` 挂点接线；`closeAll` = 停机全收口）。
- * 注入口径（单元测试档）：`now`（时钟）∥ `fetchImpl`（Docker HTTP）∥ `httpRequestImpl`（升级劫持——明文行注入缝；TLS 行 = `execUpgradeTransportFor` 材料化）∥
+ * 注入口径（单元测试档）：`now`（时钟）∥ `fetchImpl`（Docker HTTP）∥ `httpRequestImpl`（升级劫持——明文行注入缝；TLS 行 = `execUpgradeTransportFor` 材料化）∥ `httpsRequestImpl`（TLS 升级腿假件缝——缺省 `node:https` 本尊）∥
  * `heartbeatMs`/`deadMs`/`resizeRetryMs`（心跳/判死/就绪重试——生产缺省 = §3 值）。
  */
-export function createTerminalHub({ db, log = null, now = Date.now, fetchImpl = fetch, config = {}, requestImpl = null, httpRequestImpl, heartbeatMs = TERMINAL_HEARTBEAT_MS, deadMs = TERMINAL_DEAD_MS, resizeRetryMs = TERMINAL_RESIZE_RETRY_MS, readTimeoutMs, actionTimeoutMs } = {}) {
+export function createTerminalHub({ db, log = null, now = Date.now, fetchImpl = fetch, config = {}, requestImpl = null, httpRequestImpl, httpsRequestImpl, heartbeatMs = TERMINAL_HEARTBEAT_MS, deadMs = TERMINAL_DEAD_MS, resizeRetryMs = TERMINAL_RESIZE_RETRY_MS, readTimeoutMs, actionTimeoutMs } = {}) {
   if (!db) throw new Error("createTerminalHub：缺少 db（openDatabase 产物）")
   const sessions = new Map()
   let seq = 0
@@ -326,7 +326,7 @@ export function createTerminalHub({ db, log = null, now = Date.now, fetchImpl = 
       resizeTimer: null,
     }
     // 升级腿传输按行择（TLS 行 ⇒ 材料感知 `https.request`；明文行 ⇒ 既有注入/缺省 `node:http`——零行为变化）
-    const upgradeTransport = execUpgradeTransportFor(runner, { config, httpRequestImpl })
+    const upgradeTransport = execUpgradeTransportFor(runner, { config, httpRequestImpl, httpsRequestImpl })
     session.execOps = createExecOps({ client: session.client, ...(upgradeTransport ? { httpRequestImpl: upgradeTransport } : {}), ...(readTimeoutMs ? { readTimeoutMs } : {}), ...(actionTimeoutMs ? { actionTimeoutMs } : {}) })
     sessions.set(session.id, session)
     const conn = createWsConnection(socket, {
@@ -350,7 +350,23 @@ export function createTerminalHub({ db, log = null, now = Date.now, fetchImpl = 
   }
 
   return {
-    handleUpgrade,
+    /** 升级入口（**对外暴露形**——装配面直挂后 `listeners("upgrade")[0] === 本件`，身份可比）：
+     *  同步抛兜底（记日志 + 断链）——直挂不再经网关包装，本件自持这层保护，钩子异常不落进程。 */
+    handleUpgrade: (req, socket, head) => {
+      try {
+        handleUpgrade(req, socket, head)
+      } catch (e) {
+        log?.error("upgrade_handler_error", { message: e?.message ?? String(e) })
+        // 孤儿会话收口：内层在 `sessions.set` 之后才建 conn——同步抛可留下无 conn 的行（单线程无并发构建）。
+        // 自带 try/catch：收口路径会写审计（`finishSession` → `recordAudit`），库已关时可能再抛——不得逃进事件发射栈。
+        try {
+          for (const session of [...sessions.values()]) if (session.conn === null) finishSession(session, "error")
+        } catch (cleanupError) {
+          log?.error("upgrade_handler_cleanup_failed", { message: cleanupError?.message ?? String(cleanupError) })
+        }
+        try { socket.destroy() } catch { /* 已断 */ }
+      }
+    },
     /** 停机全收口（`reason='server_stop'`——N85）：在飞会话逐一收口 ⇒ 表清空。 */
     closeAll(reason = "server_stop") {
       for (const session of [...sessions.values()]) finishSession(session, reason)

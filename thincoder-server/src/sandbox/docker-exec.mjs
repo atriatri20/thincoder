@@ -72,7 +72,7 @@ function engineMessage(text) {
 
 /**
  * 升级 start（③ ——`node:http` 劫持）：出 = `{ socket, head }`（101 + 裸双工）。
- * 失败：连不上 ⇒ `unreachable` ∥ 超时 ⇒ `timeout` ∥ 非 101（引擎拒）⇒ `api`（携状态码与引擎原文）。
+ * 失败：地址缺端口 ⇒ `unreachable`（#1485——显式拒，零静默兜底；**不按 URL scheme 判传输**——TLS 腿 = 同函数另一请求实现） ∥ 连不上 ⇒ `unreachable` ∥ 超时 ⇒ `timeout` ∥ 非 101（引擎拒）⇒ `api`（携状态码与引擎原文）。
  * `httpRequestImpl` = 注入口（单元测试档——缺省 `node:http` `request`；生产行为不变）。
  */
 export function startExecTransport({ client, execId, body = buildStartBody(), httpRequestImpl = httpRequest, timeoutMs = ACTION_TIMEOUT_MS } = {}) {
@@ -92,13 +92,20 @@ export function startExecTransport({ client, execId, body = buildStartBody(), ht
       reject(new DockerError("unreachable", `节点地址非法：${client?.baseUrl}`))
       return
     }
+    // #1485：缺端口 ⇒ 显式拒（零静默推断——沿 `docker.mjs` 归一档口径；不再按 80 兜底）。
+    // 归一地址（`normalizeDockerAddress`）恒携端口；**不按 URL scheme 判传输**——TLS 腿 = 同一传输函数的另一请求实现
+    // （`terminal-routes.mjs` `execUpgradeTransportFor` 注入 https 请求件；scheme ⇔ 材料 不变式由归一档单源保证）。
+    if (url.port === "") {
+      finish(reject, new DockerError("unreachable", `exec 升级面：节点地址缺端口（归一地址恒携端口）：${client?.baseUrl}`))
+      return
+    }
     const payload = JSON.stringify(body)
     const path = `/v${client.apiVer}/exec/${encodeURIComponent(execId)}/start`
     let req
     try {
       req = httpRequestImpl({
         host: url.hostname,
-        port: url.port === "" ? 80 : Number(url.port),
+        port: Number(url.port),
         method: "POST",
         path,
         headers: {

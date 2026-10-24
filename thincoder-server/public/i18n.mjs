@@ -91,11 +91,14 @@ export function langSwitch(h, onChange) {
 }
 
 /** 错误本地化（纯函数——node 直测）：可达码 ⇒ `err.<code>`（参数码句末附服务端原文 ∥ 429 秒数注入）；
- *  未知码 ⇒ 服务端原文兜底（新码/上游透传零遗漏）。 */
+ *  未知码 ⇒ 服务端原文兜底（新码/上游透传零遗漏）；fetch 网络级失败 ⇒ 人话（可重试——服务器重启后旧连接上首个 POST 必失败，浏览器不重试 POST——2026-10-14 走查笔 4）。 */
 export function mapError(error) {
   const code = error?.code ?? null
   if (code !== null && ERROR_CODES.has(code)) {
     return t(`err.${code}`, { detail: error.message ?? "", seconds: error.retryAfter ?? "" })
+  }
+  if (error?.name === "TypeError" && String(error?.message ?? "").includes("fetch")) {
+    return t("app.networkFailed")
   }
   return error?.message ?? t("app.requestFailed", { reason: String(error) })
 }

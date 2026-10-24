@@ -9,13 +9,13 @@
  * 写面 = **核单点**（`@thincoder/core/session-slot-write.mjs` `setSlot*` 四写：键闭集 / 读-改-写 / 轮转 /
  * manifest 摘要皆在核）——本档只做三件端层事：
  *   ① 判据两档（`bad-key` ∕ `invalid-patch`）—— 判序沿 `setPrefs`：键 → 载荷 → cwd 源；
- *   ② **ENG×PLAN 互斥口径**（照 VSC `panel-messages-settings.mjs:169-179` 逐字）：`engineering: true` ⇒
+ *   ② **ENG×PLAN 互斥口径**（照 VSC `handleBuildIndex` 逐字）：`engineering: true` ⇒
  *      **先清 plan**（槽 `planMode=false` —— 清在工程位写槽**之前**）⇒ 槽 `{engineering:true, planMode:true}`
  *      半状态不可落（同 patch 双 ON ⇒ 工程位胜 —— 清位在工程位写点前执行）；关方向（`engineering:false`）
  *      零连带（VSC `if (on)` 同判）；
  *   ③ 活代理重施（`loadAgentSlot` —— 活动会话内存即生效；未装配 ⇒ 只写盘、不隐式装配 —— 沿 `setPrefs`）。
  * 回执（单源 = 批档 §2.5）：成功径携 `flagsOf` **活值**（沿 `approval:respond` 成功径叠加先例
- * `agent-host.mjs:323-329`）；agent 不在场 ⇒ **键缺席**（禁假造 —— 页读供面槽投影兜底）；失败径
+ * `createAgentHost`）；agent 不在场 ⇒ **键缺席**（禁假造 —— 页读供面槽投影兜底）；失败径
  * `{ ok:false, reason }` + **零写**（判据档未触盘；槽写档 = 核写未发生 —— 槽值不变）。
  * 出站：成功径 ∧ 活值在场 ⇒ `ev:flags { key, flags }`（**写回执后** —— 批档 §2.5「新事件」行；渲染面归约 =
  * `sessionFlags` 切片，订阅面入册 = 批档 §2.7 `renderer/events-subscribe.mjs` 行）。

@@ -6,8 +6,8 @@
  *
  * 契约 = `gateway/API.md` §2.13（五端点）：清单 = `GET /api/admin/mcp`；启用勾选即时写 = `PATCH …/:id { enabled }`；
  * 探活两入口（行内体 `{ id }`——零副作用 ∥ 窗内「测试」= 草稿体）= `POST /api/admin/mcp/probe`；提交 = `POST`/`PATCH`
- * （PATCH 字段缺席 = 不动）；删 = `DELETE`。编辑态非秘密字段回填 = 清单行 `target`（command ∥ url/wsUrl——`args` 清单行
- * 不下发 ⇒ 参数留空 = 不变）；秘密字段恒零回填（只进不出）。判权全在后端（admin 面——服务端 403 为准）；渲染一律节点 +
+ * （PATCH 字段缺席 = 不动）；删 = `DELETE`。编辑态非秘密字段回填 = 清单行 `target`（command ∥ url/wsUrl）**+ stdio 行 `args`**
+ * （与 `command`/`url` 同类 = 明文列——披露在案；提交 = 与原值不同（含清空 ⇒ `[]`）才携键）；秘密字段恒零回填（只进不出）。判权全在后端（admin 面——服务端 403 为准）；渲染一律节点 +
  * textContent；文案经 `t()` 取值（`webui/I18N.md` §2.1）。
  */
 import { mapError, t } from "./i18n.mjs"
@@ -55,6 +55,13 @@ export async function renderMcp(ctx, mount) {
   await load()
 }
 
+/** 探活成读数（2026-10-14 走查轮）：有工具名 ⇒ 具名形；无名（零工具 ∥ 缺字段）⇒ 计数形（零回归——旧读数形逐字保留）。 */
+function probeReadoutText(result) {
+  const names = Array.isArray(result.tools) ? result.tools.filter((n) => typeof n === "string" && n !== "") : []
+  if (names.length === 0) return t("admin.mcp.probeOk", { toolCount: result.toolCount, latencyMs: result.latencyMs })
+  return t("admin.mcp.probeOkNamed", { toolCount: result.toolCount, tools: names.join(", "), latencyMs: result.latencyMs })
+}
+
 /** 清单表（五列——名称 ∥ 传输 ∥ 目标 ∥ 启用 ∥ 操作（探活/改/删）+ 行内探活读数行；行 = [数据行, 读数行] 成对入 `<tbody>`）。 */
 function mcpTable(ctx, servers, { reload }) {
   const { h } = ctx
@@ -71,7 +78,7 @@ function mcpTable(ctx, servers, { reload }) {
       readout.textContent = t("admin.mcp.probeRunning")
       try {
         const result = await ctx.api("/api/admin/mcp/probe", { method: "POST", body: { id: row.id } }) // 行内径 = 体 `{ id }`（零副作用——不进会话 ∥ 不动库）
-        if (result.ok === true) readout.textContent = t("admin.mcp.probeOk", { toolCount: result.toolCount, latencyMs: result.latencyMs })
+        if (result.ok === true) readout.textContent = probeReadoutText(result)
         else { readout.className = "hint error"; readout.textContent = t("admin.mcp.probeFail", { error: result.error ?? "" }) }
       } catch (error) {
         readout.className = "hint error"
@@ -129,7 +136,7 @@ export function openMcpForm(ctx, { server = null, reload = () => {} }) {
   transportSelect.value = isEdit ? String(server.transport) : TRANSPORTS[0]
   const enabledCheck = h("input", { type: "checkbox", checked: isEdit ? server.enabled === true : true }) // 缺省勾（新建——与 v24 DDL ∥ 服务端 `enabled` 缺省同拍）
   const commandInput = h("input", { value: isEdit && server.transport === "stdio" ? String(server.target ?? "") : "", placeholder: t("admin.mcp.commandPh") })
-  const argsArea = h("textarea", { rows: "3" }) // 清单行不含 `args`（无回填面）——留空 = 不变
+  const argsArea = h("textarea", { rows: "3", value: isEdit && server.transport === "stdio" && Array.isArray(server.args) ? server.args.join("\n") : "" }) // 编辑态回填（明文列——与 command/url 同类）；新建态恒空
   const envArea = h("textarea", { rows: "3" })
   const urlInput = h("input", { value: isEdit && server.transport !== "stdio" ? String(server.target ?? "") : "", placeholder: t("admin.mcp.urlPh") })
   const headersArea = h("textarea", { rows: "3" })
@@ -147,7 +154,9 @@ export function openMcpForm(ctx, { server = null, reload = () => {} }) {
       const command = commandInput.value.trim()
       if (command !== "") body.command = command
       const args = argsArea.value.split("\n").map((line) => line.trim()).filter((line) => line !== "")
-      if (args.length > 0) body.args = args
+      // args = 明文列：与原值不同（含清空）⇒ 携键（空 ⇒ `[]` = 服务端清）；同 ⇒ 不携键（库零变）
+      const original = (isEdit && Array.isArray(server.args) ? server.args : []).map((line) => line.trim()).filter((line) => line !== "") // 比较在归一化域（窗面每行 trim + 过空行）——未改动保存 ⇒ 零键、库零变
+      if (JSON.stringify(args) !== JSON.stringify(original)) body.args = args
       const env = parseKvLines(envArea.value)
       if (env === false) { showNote(note, t("admin.mcp.kvInvalid")); return null }
       if (Object.keys(env).length > 0) body.env = env
@@ -200,7 +209,7 @@ export function openMcpForm(ctx, { server = null, reload = () => {} }) {
     showNote(note, t("admin.mcp.probeRunning"), false)
     try {
       const result = await ctx.api("/api/admin/mcp/probe", { method: "POST", body })
-      if (result.ok === true) showNote(note, t("admin.mcp.probeOk", { toolCount: result.toolCount, latencyMs: result.latencyMs }), false)
+      if (result.ok === true) showNote(note, probeReadoutText(result), false)
       else showNote(note, t("admin.mcp.probeFail", { error: result.error ?? "" }))
     } catch (error) {
       showNote(note, t("admin.mcp.probeFail", { error: mapError(error) }))

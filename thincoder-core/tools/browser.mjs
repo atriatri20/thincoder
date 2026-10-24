@@ -6,7 +6,7 @@
  * `clipboard` 全量；免审 = `navigate` ∥ `type` ∥ `snapshot` ∥ `screenshot` ∥ `wait` ∥ `close` +
  * `hover` ∥ `wheel` ∥ `insert` ∥ `touch` 手势（swipe / pinch）——同一钩子按参数分类，机制零新增。
  * 失败回执**返回**（不 throw）——首行 `Error: …` = 模型面失败形（`bash`/`execute` 既例；dispatch 侧按该前缀
- * 判失败——`agent/dispatch-run.mjs:77` ∥ `:129` ∥ `:135`）。
+ * 判失败——`agent/dispatch-run.mjs` 的 `runPreparedItem`（三处））。
  * 异步面（§2.11——批 browser-async-fix）：`async:true`（depth-0 专项）⇒ `agent-tools/browser-async.mjs`
  * 起跑（ack 即返——本档薄接线；depth 第二道在此，schema 删参在 `agent/helpers.mjs` `excludeSubagentTools`）。
  */

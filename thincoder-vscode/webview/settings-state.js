@@ -42,7 +42,7 @@ export function effortEnumFor(modelId) {
   return (SS.agentSettings?.effortEnums?.[modelId] || []).filter((x) => x !== "enabled")
 }
 // 归一链单源（§15.4-1——设置面板 / 聊天面板 picker / advisor 读面三面共用同一个 value）已搬核：
-// `composer/model-menu.mjs`（上提批 `2026-09-28-desktop-input-vsc-align.md` §2.7 P7——VSC `:44-56` 原地）。
+// `composer/model-menu.mjs`（上提批 `2026-09-28-desktop-input-vsc-align.md` §2.7 P7——`effortSelection` 原地）。
 // 本档保留 import ∕ re-export 两行：消费面（`effort-select-views.test.mjs` E-6..E-8 直驱）不断。
 import { effortSelection } from "../node_modules/@thincoder/render-core/composer/model-menu.mjs"
 export { effortSelection }
@@ -51,7 +51,7 @@ export { effortSelection }
  *  `levels` = 「—」+ 枚举（「—」恒首项、不落盘 effort）；`selected` = `effortSelection` 三支结果
  *  （非成员 / 无注册默认 ⇒ 中性档「—」——不再取枚举首项：四新档首项 = `"none"` ⇒ 会静默关思考）。
  *  枚举空 ⇒ `null`（调用方不渲染控件）。注册默认 = 模型条目的 `effortDefault`
- *  （spec `reasoningEffortDefault` 直读，来源 `src/extension/provider-probe-window.mjs:67`）。 */
+ *  （spec `reasoningEffortDefault` 直读，来源 `_probeChannelInto`）。 */
 export function effortSelectView(model, current) {
   const levels = model ? effortEnumFor(model) : []
   if (levels.length === 0) return null

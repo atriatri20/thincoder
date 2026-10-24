@@ -3,8 +3,6 @@
 > 板块 = **功能清单**（CLI 产品当前提供的能力——功能性需求现状）。
 > **配对设计档 = 无**——本条目不设设计档（能力清单不承载机制设计；逐能力的契约与实现坐标见各自板块设计档，本档只作**清点与回指**）。层归属 = **CLI 面**（P2——含 CLI 专有的终端界面 / slash 命令面）。
 > 本档基于**现行实现**梳理（`thincoder-core/**` 共享面 + `thincoder-cli/src/**` 壳面）——**代码 / 提示词与本清单不符时：要么改实现，要么走需求变更改本档，不允许两边各说各的**。
-> 建档：2026-09-15（**B 式迁移轮 · 第 2 批**——`thincoder-cli/docs/requirements/FEATURES.md` 内容重建入基准层；旧档原地一字不改、留作参照历史）。
-> 本档坐标与清点 = **as-of 2026-09-15 实核**（登记面 = `thincoder-core/tools/index.mjs` · `thincoder-core/agent-tools.mjs` · `thincoder-cli/src/tui/slash-commands.mjs`）。
 
 ## 1. 总体需求
 
@@ -91,7 +89,7 @@
 | `consult_start` / `consult_stop` | 多模型并行会诊（只读顾问；需配置 `agent.consultModels`） |
 | `peer_instances` | 列出同工作区的其它实例（多实例协作面） |
 
-**escalate（飞刀）现状**：不再是独立工具——已并入 `subagent` 的 `action:"escalate"`（把实现交给更强的会诊模型亲自操刀，候选池同 `consultModels`）。
+**escalate（飞刀）现状**：已并入 `subagent` 的 `action:"escalate"`（把实现交给更强的会诊模型亲自操刀，候选池同 `consultModels`）。
 
 ### 2.8 版本控制
 
@@ -99,7 +97,7 @@
 |---|---|
 | `git` | 综合工具：diff / status / log / checkpoint / add / commit / push / tag / branch / checkout / restore / stash / reset / revert / merge / cherry-pick 等动作族；快照为全量副本 |
 
-### 2.9 Slash 命令（**28** 个 · 实核——2026-10-01 父侧收正：26 ⇒ 27，补 `/timers`；**2026-10-10 登录面补全批：27 ⇒ 28，补 `/team`**；登记面指针随动）
+### 2.9 Slash 命令（**28** 个 · 实核）
 
 登记面 = `thincoder-cli/src/tui/slash-commands.mjs:40`。
 
@@ -160,7 +158,7 @@
 | 2 | 历史流水句不受现态判据约束 | release note / 沿革句记述旧流程——保留原样 |
 | 3 | **改文档不改能力面** | 反向「删实装以对齐文档」= 能力回归，一律判违规 |
 
-**落点坐标（as-of 2026-09-16）**：`thincoder-cli/README.md` · `thincoder-cli/bin/thincoder.mjs`（`USAGE`）· `thincoder-cli/src/completions.mjs`（补全词表）· `thincoder-cli/src/**` 用户可见提示串。机制面权威 = `thincoder-core/hooks.mjs` + `docs/core/requirements/AGENT-LOOP.md`。
+**落点坐标**：`thincoder-cli/README.md` · `thincoder-cli/bin/thincoder.mjs`（`USAGE`）· `thincoder-cli/src/completions.mjs`（补全词表）· `thincoder-cli/src/**` 用户可见提示串。机制面权威 = `thincoder-core/hooks.mjs` + `docs/core/requirements/AGENT-LOOP.md`。
 
 **与本节对应的对账执行**（层 0 重锚 + 逐条判定 + 验收用例）= `docs/core/design/DOC-CODE-RECONCILE.md` §5.1（单一权威源——本节只给需求面，不重述对账明细）。
 
@@ -177,44 +175,5 @@
 | N7 | 输出上限 | 工具输出超限落盘 + 预览（保头保尾） |
 | N8 | 崩溃可取证 | 异常终止落崩溃记录 + 近堆快照 + 堆预警（CLI 侧面见 `docs/cli/design/CRASH-REPORTS.md`） |
 | N9 | 对外文档契约面 | README / `USAGE` / 用户可见提示串对 slash 命令 · 子命令 · 配置键 · 机制事件的列举须与实装可达面一致（判据句见 §2.13）。**度量方式**：无机检门——对外文本面不在 V5 源域（`docs/**`）内、`scripts/doc-check-anchors.mjs` 不覆盖 ⇒ 守护 = 同批改动 + 人巡；漂移处置 = 能力在位 ⇒ 改文档（反向删实装 = 违规） |
-| N10 | 盘根启动门 | cwd = 磁盘根（`X:\` ∥ `/`；win32 大小写归一）⇒ 会话面硬拦（默认 TUI ∥ `tui` ∥ `chat` ∥ `acp`）：一行提示（先进工作目录再启动）+ 非零退出；信息维护面（`-v` ∥ `--help` ∥ `memory` ∥ `upgrade` ∥ `completion` ∥ `session *`）放行。动机 = 盘根启动 ⇒ 全盘索引（实测案：`D:/` origin 13.2 万行，2026-10-08 已清）。**无强开旗**；家目录维持软防护（#867 先例，不升硬拦） |
+| N10 | 盘根启动门 | cwd = 磁盘根（`X:\` ∥ `/`；win32 大小写归一）⇒ 会话面硬拦（默认 TUI ∥ `tui` ∥ `chat` ∥ `acp`）：一行提示（先进工作目录再启动）+ 非零退出；信息维护面（`-v` ∥ `--help` ∥ `memory` ∥ `upgrade` ∥ `completion` ∥ `session *`）放行。动机 = 盘根启动 ⇒ 全盘索引。**无强开旗**；家目录维持软防护（不升硬拦） |
 
-## 4. 不并项与历史沿革
-
-### 4.1 历史沿革（(d) 类——**不并**）
-
-> 来源档 `thincoder-cli/docs/requirements/FEATURES.md`（CLI 产品需求档）——**原地保留作参照历史**（保留 ≠ 维护）。下列内容不并入本档：
-
-| 旧档位置 | 内容 | 何故不并 |
-|---|---|---|
-| 旧档档头 | 「本档是什么（2026-09-10）」时点界定 + 格式债清理批注 | 批次语境——本档自有档头界定 |
-| 旧档 §十 | 「支持 17 家供应商预设、30+ 模型」的具体计数 | 计数随时点漂移——现行清点面以预设 / 规格表实现为准（§2.10） |
-| 旧档 `verify` 行的设计档指针 | `VERIFY-REDESIGN.md`（迁移前址） | 现行落点见 §2.2 / 迁移台账 `docs/core/design/DOC-MIGRATION.md` |
-| 旧档各行的迁移前路径 | `src/` 形坐标 | 迁移前仓形态——§2 已按现状清点面重写 |
-
-**清点面收正（本批 · 实核）**：旧档清单基于 2026-09-07 时点，与现行登记面相比**缺列现行能力**——
-`lsp` · `execute` · `file_ops` · `process` · `get_current_time` · `wait_for` · `tree` ·
-`settings` · `peer_instances` · `read_history` · `batch`；且 `escalate` 已并入 `subagent` 动作（不再独立成工具）。
-本批按**现行登记面**清点（§2），逐项坐标 = `thincoder-core/tools/index.mjs` · `thincoder-core/agent-tools.mjs`。
-
-### 4.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）
-
-| 旧档面 | 内容 | 何故不并（去向 / 触发） |
-|---|---|---|
-| 各能力的机制设计 | 工具契约 / 注册 / 调度细节 | 各板块设计档（`docs/core/design/TOOLS.md` 等）——本档只清点（D2） |
-| 工具描述文本 | 模型可见描述 | **产品代码**——落点 `thincoder-core/tool-docs/**` |
-| VSC 侧同名档 | `thincoder-vscode/docs/requirements/FEATURES.md` | VSC 轮（`docs/vsc/`）——本档只收 CLI 面 |
-
-## 变更记录
-
-- 2026-09-15（**迁移批 · 第 6 批收口同步 · eng-designer**）：§3 N8 的崩溃取证指针按**同批迁移结果**改指（`thincoder-cli/docs/design/CRASH-REPORTS.md`「未迁」→ `docs/cli/design/CRASH-REPORTS.md`——该档已由第 6 批迁入基准层）。纯指针收正、零语义。
-- 2026-09-15（**B 式迁移轮 · 第 2 批**）：建档——`thincoder-cli/docs/requirements/FEATURES.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
-  ① 落点 = `docs/cli/requirements/`（P2：含 CLI 专有的终端界面 / slash 命令面）；② 清点面按**现行登记面**实核收正（补列现行能力、`escalate` 并入 `subagent` 动作、slash 命令表按实核重排、工具/命令坐标改现状路径）；
-  ③ 新增 §3 非功能性需求（安全与护栏——旧档「安全与护栏」节升为 NFR 面）、§4 不并项与历史沿革、§5 体量。
-- 2026-09-16（**批 5 · DOC-CONTRACT-RECONCILE** · eng-designer）：新增 **§2.13 对外文档契约面（README ↔ 实装）**（用户故事 US-DOC1–4 + 范围边界 + 三条单向判定规则 + 落点坐标）；§3 增 **N9** 行（口径 = 对外文本面无机检门、守护 = 同批改动 + 人巡）；§5 体量收正。
-  对账执行明细 = `docs/core/design/DOC-CODE-RECONCILE.md` §5.1；层 0 判据句 = `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.20。
-
-- 2026-10-05（**引擎工具面缺口批 · 需求侧同步 · 主 agent**）：§2.1 `delete` 行补「或空目录（非空拒绝，不递归）」。来源 = 批 `docs/batches/2026-10-05-engine-tools-gaps.md` §2（delete 空目录臂设计）；台账 #943。
-- 2026-10-07（**批 ledger-tool · 需求侧同步 · 主 agent 笔**——承批档上抛②）：§2.7 `subagent` 行动作清单补 `design-slots`（槽位清点只读——与 `consume-design` 并列）。批档 = `docs/batches/2026-10-07-ledger-tool.md`（台账 #998 / #927）。
-- 2026-10-08（**盘根门 ∥ 索引排除批 · 需求侧立案 · 主 agent**）：§3 增 **N10 盘根启动门**。批档 = `docs/batches/2026-10-08-diskroot-gate-index-excludes.md`（台账 #1080）；配对需求 = `docs/core/requirements/MEMORY.md` §4.11（F-S9）。
-- 2026-10-10（**登录面补全批 · 需求侧同步 · 主 agent 笔**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §5 上抛①，台账 #1212）：§2.9 命令清点 **27 ⇒ 28**（补 `/team`——登记面 `thincoder-cli/src/tui/slash-commands.mjs:54`，组 = System）；System 行同拍。零新语义（对盘收正）。

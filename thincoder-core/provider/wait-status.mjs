@@ -20,7 +20,7 @@
  */
 import { t } from "../i18n.mjs"
 
-/** 发射面回显前缀（`provider/retry.mjs:60` 的 `quota exhausted: `）——由 i18n 模板去占位符
+/** 发射面回显前缀（`provider/retry.mjs` 的 `requestWithRetry` 的 `quota exhausted: `）——由 i18n 模板去占位符
  *  派生（核内零第二套文案字面）；发射侧恒为 en 字面，故剥前缀不随 locale 变。 */
 const QUOTA_ECHO_PREFIX = t("status.quota", { msg: "" })
 

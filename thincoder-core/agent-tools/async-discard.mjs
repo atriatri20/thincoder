@@ -19,15 +19,17 @@
  * interrupt 豁免不中止控制器 ⇒ 本面零动作（F2 同款豁免——池保留）。
  * 批 browser-async-fix（2026-10-07）：browser 后台动作族同面并入（`BROWSER_SPEC`——dispose = 条目
  * 控制器 abort ⇒ 动作展开 / 排队丢队；**不杀浏览器**）。
+ * 批 ssh-session（2026-10-14）：SSH 会话族同面并入（`SSH_SPEC`——dispose = `killSshTree` 杀树：
+ * 会话中止 ⟺ 远端连接该断（零静默残留）；无队列面——超限 = 起跑显式拒）。
  *
  * 判据口径（D-AD6）：两接线点**均不传 `ctx`** ⇒ 实走 controller 支（`parentAborted(null, entry)`）
  * ——与对侧有效判据同判（对侧传入的 `ctx` 为死参）；`ctx` 保留为签名备用面（直调用例 / 对侧收敛）。
- * 「controller 已中止 = 条目真死」由 `bindChildController` 单点保证（`async-settle.mjs:88-98`
+ * 「controller 已中止 = 条目真死」由 `bindChildController` 单点保证（`async-settle.mjs` 的 `bindChildController`
  * 双路：基信号已中止 ⇒ 立即 abort；未来中止 ⇒ 带活监听逐链传播；interrupt 不逐链）。
  *
  * 动作序（§6.20.3）：每条目 = 写 `discarded` 墓碑（**载体吸收单点** `writeTombstone`——父对象无
  * 自有 `_asyncTombstones` 而 `history` 有 ⇒ 借用同一 Map，不另建分叉）→ 出池 → 队列剔除（存活
- * 条目 `position` 重编号——与 cancel 出队 `subagent-async.mjs:190` 同式；ED-4 后 advisor 族
+ * 条目 `position` 重编号——与 cancel 出队 `subagent-async.mjs` 的 `cancelAsyncSubagent` 同式；ED-4 后 advisor 族
  * 同样剔除其独立队列 `_asyncAdvisorQueue`）→ 汇总；整批（有丢弃才发生）= **一次** `pushReal`
  * 模型可见提醒（user 角色——escapeXml 转义插值）+ **一条** `ev:discarded`（零丢弃 ⇒ 零注入、
  * 零事件）。
@@ -45,8 +47,10 @@ import { escapeXml } from "../agent/helpers.mjs"
 import { logEvent } from "../log.mjs"
 // #9（后台 bash 任务族——收尾档②）：杀单点（树杀）经 `bash-async.mjs` 落面。
 import { killBgTree } from "./bash-async.mjs"
+// 批 ssh-session：SSH 会话族杀单点经 `ssh-session.mjs` 落面。
+import { killSshTree } from "./ssh-session.mjs"
 
-/** 提醒模板（verbatim 同源 = 对侧 `async-discard.mjs:37-44`；测试断关键子串，不逐行断）。 */
+/** 提醒模板（verbatim 同源 = 对侧实现；测试断关键子串，不逐行断）。 */
 const subagentReminderText = (n, list) =>
   `[System reminder: ${n} background subagent(s) were discarded by the user's Stop — their reports will NOT arrive: ${list}. ` +
   "Partial changes from discarded children stay unmerged/unaudited; re-spawn if the work is still needed.]"
@@ -65,6 +69,11 @@ const bgReminderText = (n, list) =>
 const browserReminderText = (n, list) =>
   `[System reminder: ${n} background browser task(s) were cancelled by the user's Stop — no digest will arrive: ${list}. ` +
   "The browser session itself was not killed (run `close` to reset it).]"
+
+/** SSH 会话族提醒模板（同族形态——远端连接已断：会话池条目全部出池，句柄无残留）。 */
+const sshReminderText = (n, list) =>
+  `[System reminder: ${n} ssh session(s) were closed by the user's Stop — their remote connections are gone: ${list}. ` +
+  "Open a new session (action:'connect') if you still need them.]"
 
 /** 列表词（wasStatus 数据源）：queued → "(was queued — never started)"；其余 "(was running)"。 */
 const wasPhrase = (wasStatus) => (wasStatus === "queued" ? " (was queued — never started)" : " (was running)")
@@ -123,7 +132,7 @@ function discardRole(parent, spec, ctx) {
   return out
 }
 
-/** subagent 族 spec（对侧 `:90-96` 同形；队列剔除 = 本族 `_asyncQueue`——queueKey 参数化面）。 */
+/** subagent 族 spec（对侧实现同形；队列剔除 = 本族 `_asyncQueue`——queueKey 参数化面）。 */
 const SUBAGENT_SPEC = {
   pool: "subagent",
   describe: (entry) => ({ id: entry.id, role: entry.role, wasStatus: entry.status === "queued" ? "queued" : "running" }),
@@ -133,7 +142,7 @@ const SUBAGENT_SPEC = {
   pruneQueue: (parent, ids) => pruneQueue(parent, ids, "_asyncQueue"),
 }
 
-/** 评审族 spec（对侧 `:99-105` 同形；ED-4 后含排队面：wasStatus 读条目 status——queued →
+/** 评审族 spec（对侧实现同形；ED-4 后含排队面：wasStatus 读条目 status——queued →
  *  "(was queued — never started)"；队列剔除 = 评审独立队列 `_asyncAdvisorQueue`）。 */
 const ADVISOR_SPEC = {
   pool: "advisor",
@@ -170,6 +179,20 @@ const BROWSER_SPEC = {
   dispose: (entry) => {
     entry.discarded = true
     entry.controller?.abort?.({ abortTrigger: "discard" })
+  },
+}
+
+/** SSH 会话族 spec（批 ssh-session——收尾档同面）：dispose = 杀树（杀单点 `killSshTree`——会话
+ *  中止 ⟺ 远端连接该断）+ 标记 discarded；无队列面（帽 = 起跑显式拒）。 */
+const SSH_SPEC = {
+  pool: "ssh",
+  describe: (entry) => ({ id: entry.id, role: "ssh", host: entry.host, user: entry.user ?? null }),
+  roleOf: () => "ssh",
+  listPhrase: (d) => `ssh#${d.id} (${d.user ? `${d.user}@` : ""}${d.host})`,
+  reminder: sshReminderText,
+  dispose: (entry) => {
+    entry.discarded = true
+    killSshTree(entry)
   },
 }
 
@@ -217,4 +240,16 @@ export function discardAbortedBgTasks(parent, ctx = null) {
  */
 export function discardAbortedBrowserTasks(parent, ctx = null) {
   return discardRole(parent, BROWSER_SPEC, ctx)
+}
+
+/**
+ * 中止收尾（SSH 会话族——批 ssh-session 同面并入）：只清已死条目——逐条杀树（判据成立 ⟺ 条目
+ * 控制器已中止；杀单点经 `killSshTree`）+ `discarded` 墓碑 + 出池 + 整批一次提醒；回合中断
+ * （Ctrl+I）不中止控制器 ⇒ 本面零动作（池保留——与 bg / browser 同豁免）。
+ * @param parent agent 形态
+ * @param ctx 判据 ctx（接线点不传——controller 支，同上）
+ * @returns {{discarded: Array<{id, role: "ssh", host, user}>, kept: number}}
+ */
+export function discardAbortedSshSessions(parent, ctx = null) {
+  return discardRole(parent, SSH_SPEC, ctx)
 }

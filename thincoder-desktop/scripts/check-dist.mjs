@@ -9,12 +9,13 @@
  * 依赖镜像纪律（打包带镜像）：`ELECTRON_MIRROR` ∥ `ELECTRON_BUILDER_BINARIES_MIRROR`——单源 = `docs/desktop/design/PROJECT.md` §5.7。
  * 用法：`node scripts/check-dist.mjs [dist 目录]`（缺省 = 包根 `dist/`；`postpackage` 自动跑 = 打包闸）。
  *
- * 断言项三形态（本表单源）：
+ * 断言项四形态（本表单源）：
  *   `{ rel, note }` —— 产物树相对路径存在性（安装包——名形携源版本）；
  *   `{ asar, entry, note }` —— asar 应用包内条目存在（核包随产物 R1 落；预载 ∥ 渲染面本批落）；
  *   更新面块（+4 · 2026-10-03 桌面发布·阶段二批——`docs/desktop/design/PACKAGING.md` §2.8.2）——latest.yml 两读 ∥ sha512 对盘 ∥ app-update.yml；基 64 填充不敏感（形 = 实施窗钉定）。
  * 版本面（P1 · 对位 check-vsix 断言 B ∕ F——父侧 2026-09-29）：两包内嵌版本逐字 = 源 `thincoder-core` ∕`thincoder-render-core` package.json；
- * D 族（prompts ∕ tool-docs 集合 + sha256）= 另轮登记（KD-B10-3 裁窄）。
+ * D 族（提示词面完备性——#616 批 · 2026-10-15；对位 `check-vsix` 断言 D）：asar 内 `node_modules/@thincoder/core/` 下 `prompts` ∕ `tool-docs` 两目录——
+ *   ① 档数硬等口径（16 ∥ 54）；② 档名集合逐字 = 源树同名目录；③ 逐档 sha256 = 源档字节；win ∥ linux 两分支**同 helper 同判**（`docs/desktop/design/PACKAGING.md` §2.5 ∥ §2.11.3）。
  */
 import { createHash } from "node:crypto"
 import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync } from "node:fs"
@@ -121,6 +122,76 @@ function readAsarEntry({ header, dataStart }, fd, entry) {
   return buf
 }
 
+/** D 族口径（档数硬等——`prompts` 16 ∥ `tool-docs` 54；同源 = `thincoder-vscode/scripts/check-vsix.mjs` `EXPECT`——两处硬等，改一改二；实读 2026-10-22）。 */
+const PROMPT_FACE_EXPECT = { prompts: 16, "tool-docs": 54 }
+
+/** 源树提示词面（档名 → sha256；单源 = `thincoder-core/<dir>/*.md`）。 */
+function repoPromptFace(dir) {
+  const base = join(
+    pkgRoot,
+    "..",
+    "thincoder-core",
+    dir,
+  )
+  return new Map(
+    readdirSync(base)
+      .filter((f) => f.endsWith(".md"))
+      .map((f) => [f, createHash("sha256").update(readFileSync(join(base, f))).digest("hex")]),
+  )
+}
+
+/** asar 内目录枚举（按目录路径下钻；叶件 **名 → 节点**（含 size/offset/unpacked）——缺目录 ⇒ null）。 */
+function asarListDir(record, dirPath) {
+  let node = record.header
+  for (const segment of dirPath.split("/")) {
+    node = node?.files?.[segment]
+    if (node === undefined) return null
+  }
+  const out = new Map()
+  const walk = (current, rel) => {
+    for (const [name, child] of Object.entries(current.files ?? {})) {
+      if (child.files !== undefined) walk(child, `${rel}${name}/`)
+      else out.set(`${rel}${name}`, child)
+    }
+  }
+  walk(node, "")
+  return out
+}
+
+/** D 族断言（档数 + 名集 + 逐档 sha256——win ∥ linux 同 helper；返回读数行，失败入 `failures`）。 */
+function checkPromptFaces(record, fd, asarLabel, failures) {
+  const lines = []
+  for (const dir of ["prompts", "tool-docs"]) {
+    const repo = repoPromptFace(dir)
+    const packed = asarListDir(record, `node_modules/@thincoder/core/${dir}`) ?? new Map()
+    const packedMd = new Map([...packed].filter(([n]) => n.endsWith(".md")))
+    const missing = [...repo.keys()].filter((k) => !packedMd.has(k))
+    const extra = [...packedMd.keys()].filter((k) => !repo.has(k))
+    const differs = []
+    const unpacked = []
+    for (const name of repo.keys()) {
+      const node = packedMd.get(name)
+      if (node === undefined) continue
+      if (node.unpacked === true) { unpacked.push(name); continue }
+      try {
+        const got = createHash("sha256")
+          .update(readAsarEntry(record, fd, `node_modules/@thincoder/core/${dir}/${name}`))
+          .digest("hex")
+        if (got !== repo.get(name)) differs.push(name)
+      } catch (error) {
+        differs.push(`${name}（不可读：${error.message}）`)
+      }
+    }
+    const label = `D 族/${dir}（${asarLabel} · 仓内 ${repo.size} 档 · 口径 ${PROMPT_FACE_EXPECT[dir]}）`
+    if (repo.size === PROMPT_FACE_EXPECT[dir] && !missing.length && !extra.length && !differs.length && !unpacked.length) {
+      lines.push(`${label}：档数达标 + 名集逐字 + sha256 逐档相同`)
+    } else {
+      failures.push(`${label}：仓内侧档数不符 [${repo.size}] · 缺 [${missing.join(",")}] · 多 [${extra.join(",")}] · 内容异 [${differs.join(",")}] · unpacked 守卫 [${unpacked.join(",")}]`)
+    }
+  }
+  return lines
+}
+
 /** PE 证书表读数（`IMAGE_DIRECTORY_ENTRY_SECURITY` = DataDirectory[4].Size）：>0 已签 ∥ 0 未签 ∥ null 不可解析。 */
 function peCertificateTableSize(file) {
   const fd = openSync(file, "r")
@@ -186,6 +257,16 @@ if (existsSync(MAIN_ASAR)) {
   }
 }
 
+// ── D 族（提示词面完备性——`PACKAGING.md` §2.5 · #616；win ∥ linux 同 helper 同判）──
+if (existsSync(MAIN_ASAR)) {
+  let record = null
+  try { record = readAsarHeader(MAIN_ASAR) } catch { /* 上段 unreadable asar 已报 */ }
+  if (record) {
+    const fd = openSync(MAIN_ASAR, "r")
+    try { for (const line of checkPromptFaces(record, fd, "win-unpacked", failures)) console.log(`✔ ${line}`) } finally { closeSync(fd) }
+  }
+}
+
 // ── 版本不匹配（§5.6 失败面「旧构建残留」）：dist 根其余 `ThinCoder-Setup-<号>.exe` ⇒ 判红 ──
 try {
   for (const name of readdirSync(distDir)) {
@@ -245,7 +326,7 @@ if (existsSync(join(distDir, INSTALLER_NAME))) {
 for (const failure of failures) console.error(`✖ ${failure}`)
 if (failures.length > 0) process.exit(1)
 
-console.log(`✔ dist check passed: ${distDir}（断言 ${CHECKS.length} 条 + 版本逐字 B ∕ F + 更新面 4 条）`)
+console.log(`✔ dist check passed: ${distDir}（断言 ${CHECKS.length} 条 + 版本逐字 B ∕ F + 更新面 4 条 + D 族 2 条）`)
 
 /**
  * Linux 分支断言（+9——`docs/desktop/design/PACKAGING.md` §2.11.3；闸 · fail-closed）：
@@ -280,6 +361,8 @@ function runLinuxChecks() {
             if (got !== want) failures.push(`version mismatch: ${entry}（产物 ${got} ≠ 源 ${want}——旧构建打包？）（§2.11.3②）`)
           } catch (error) { failures.push(`unreadable asar entry: ${entry}（${error.message}；§2.11.3②）`) }
         }
+        // D 族（提示词面完备性——win ∥ linux 同 helper 同判；`PACKAGING.md` §2.5 · #616）
+        for (const line of checkPromptFaces(record, fd, "linux-unpacked", failures)) console.log(`✔ ${line}`)
       } finally { closeSync(fd) }
       // ③④ 预载 ∥ 渲染面
       if (!asarHasEntry(record.header, "src/preload/preload.cjs")) failures.push("missing asar entry: linux-unpacked/resources/app.asar!src/preload/preload.cjs（§2.11.3③）")
@@ -339,6 +422,6 @@ function runLinuxChecks() {
 
   for (const failure of failures) console.error(`✖ ${failure}`)
   if (failures.length > 0) return false
-  console.log(`✔ dist check passed: ${distDir}（Linux 臂断言 9 条）`)
+  console.log(`✔ dist check passed: ${distDir}（Linux 臂断言 9 条 + D 族 2 条）`)
   return true
 }

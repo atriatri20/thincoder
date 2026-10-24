@@ -37,7 +37,7 @@ export function resolveAdvisorProvider(agent) {
       // chat 前 `assertProviderModel` fail-fast（不静默）。
       const result = cfg.model ? { ...provider, model: cfg.model } : { ...provider, model: agent.provider?.model }
       // 台账 #329 / `MODEL-SPECS.md §15.4-3`：off 形须**活着到达载荷层**——载荷层 off 门首款 = `provider.thinking === null`
-      // （`thincoder-core/provider/core.mjs:213-219`）；归一为 `undefined` 会让该门永不开（effort 族 advisor
+      // （`thincoder-core/provider/core.mjs` 的 `chatImpl`）；归一为 `undefined` 会让该门永不开（effort 族 advisor
       // 关思考静默失效）。显式 off 同清**继承档**（渠条目自带 / 主 provider 的 `reasoningEffort` 不得随行——
       // 随行则显式档支先命中、off 意图作废）。`false`（非法原值）仍归一 `undefined`（零变）。
       if (cfg.thinking === null) {
