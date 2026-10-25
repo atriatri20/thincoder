@@ -77,43 +77,40 @@ function objectKeys(block) {
   return keys
 }
 
-test("用例 1 · 段闭集七段（`SECTIONS` 名序 ∧ 树面段节点锚零 `model`）", async () => {
+test("用例 1 · 段闭集（fork 裁定保「模型」段 · 2026-10-24 恢复——上游 KD-80 撤段与本 fork 面冲突，段行 ∕ 分派俱回）", async () => {
   const { SECTIONS, settingsModel, settingsTree } = await import(url(VIEWS))
-  assert.deepEqual(SECTIONS.map((section) => section.name), ["providers", "agent", "mcp", "env", "tools", "models", "team"])
+  assert.deepEqual(SECTIONS.map((section) => section.name), ["providers", "model", "agent", "mcp", "env", "tools", "models", "usage"])
   const anchors = sectionAnchors(settingsTree(settingsModel({ settings: { open: true }, locale: "en" }), {}))
-  assert.deepEqual(anchors, ["providers", "agent", "mcp", "env", "tools", "models", "team"])
-  assert.ok(!anchors.includes("model"), "`[data-section=\"model\"]` 节点应在场判失败")
+  assert.ok(anchors.includes("model"), "「模型」段节点应在场（fork 恢复）")
 })
 
-test("用例 2 · `SCOPES` 十（`SECTIONS` 七名 + 三添加弹窗组常量）", async () => {
+test("用例 2 · `SCOPES` 十一（`SECTIONS` 八名 + 三添加弹窗组常量）", async () => {
   const { SECTIONS } = await import(url(VIEWS))
   const line = text(MOUNT).split(/\r?\n/).find((row) => row.includes("const SCOPES = "))
   assert.ok(line !== undefined, "未找到 `SCOPES` 声明")
   const constants = [...line.matchAll(/\b([A-Z][A-Z_0-9]*_MODAL_GROUP)\b/g)].map((m) => m[1]).sort()
   assert.deepEqual(constants, ["ADD_MODAL_GROUP", "CONSULT_ADD_MODAL_GROUP", "MCP_FORM_MODAL_GROUP"])
-  assert.equal(SECTIONS.length + constants.length, 10)
+  assert.equal(SECTIONS.length + constants.length, 11, "fork 8 段（含 model）+ 3 添加弹窗组")
 })
 
-test("用例 3 · `MODAL_READS` 十行（逐组指名表去 `model` 行）", () => {
+test("用例 3 · `MODAL_READS` 行集（fork 面——含 `model` 行）", () => {
   const keys = objectKeys(objectBlock(text(MOUNT), "const MODAL_READS = "))
-  assert.equal(keys.length, 10, `MODAL_READS 行数应十：${keys.join(",")}`)
-  assert.ok(!keys.includes("model"), "`MODAL_READS` 残留 `model` 行")
-  assert.deepEqual(keys.filter((key) => /^[a-z]+$/.test(key)), ["providers", "agent", "mcp", "env", "tools", "models", "team"])
+  assert.ok(!keys.includes("model"), "MODAL_READS = 弹窗读取映射（模型段非弹窗）——零 `model` 行（fork 面同上游）")
 })
 
-test("用例 4 · 段体分派零 `model` 支（源面锁）", () => {
+test("用例 4 · 段体分派含 `model` 支（fork 源面锁 · 2026-10-24）", () => {
   const source = text(VIEWS)
-  assert.ok(!/\bmodelBody\b/.test(source), "`modelBody` 残引")
-  assert.ok(!/name\s*===\s*"model"/.test(source), "`model` 分派支残存")
-  assert.ok(!/settings\.section\.model(?!\w)/.test(source), "`model` 段名词键残存")
+  assert.ok(/\bmodelBody\b/.test(source), "`modelBody` 应在场")
+  assert.ok(/name\s*===\s*"model"/.test(source), "`model` 分派支应在场")
+  assert.ok(/settings\.section\.model(?!\w)/.test(source), "`model` 段名词键应在场")
 })
 
-test("用例 5 · 词键零残（两语零命中 ∧ 两语键集相等）", async () => {
+test("用例 5 · 词键（fork 恢复 `settings.section.model` ∧ 两语键集相等）", async () => {
   const { SETTINGS_DICT } = await import(url(I18N))
   const en = Object.keys(SETTINGS_DICT.en)
   const zh = Object.keys(SETTINGS_DICT.zh)
-  assert.ok(!en.includes("settings.section.model"), "en 残留 `settings.section.model`")
-  assert.ok(!zh.includes("settings.section.model"), "zh 残留 `settings.section.model`")
+  assert.ok(en.includes("settings.section.model"), "en 应有 `settings.section.model`")
+  assert.ok(zh.includes("settings.section.model"), "zh 应有 `settings.section.model`")
   assert.deepEqual(en, zh)
 })
 

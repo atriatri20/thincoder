@@ -45,6 +45,7 @@ export { channelFormTree, verifyControl } from "./settings-controls.mjs"
  *  **fork 差异（2026-10-13 上游合并批）**：上游 0.10.5 增「团队」段（依赖上游服务端登录）——本 fork **隐藏**
  *  （不入 `SECTIONS` ∥ 不入 `NAV_SECTIONS`；`teamAdminBody` ∕ `settings.team` 切片 ∕ 词键保留在场以备解冻）。 */export const SECTIONS = Object.freeze([
   { name: "providers", word: "settings.section.providers" },
+  { name: "model", word: "settings.section.model" },
   { name: "agent", word: "settings.section.agent" },
   { name: "mcp", word: "settings.section.mcp" },
   { name: "env", word: "settings.section.env" },
@@ -404,6 +405,8 @@ function sectionBody(name, model, handlers) {
   if (name === "providers") return [sectionStateNode(model.providers.state), ...providersBody(model.providers, handlers, deps)]
   // 添加弹窗体（KD-75 ①）：零行族 —— 单表唯内容；三源（形状 ∥ 暂存值 ∥ 候选）同住 `providers` 切片。
   if (name === ADD_MODAL_GROUP) return [sectionStateNode(model.providers.state), ...providerAddBody(model.providers, handlers, deps)]
+  // 模型段（fork 恢复 · 2026-10-24——上游 0.10.10 KD-80 撤段删行被合并静默采纳，段体 ∕ 切片 ∕ 词键俱在场，仅闭集行 ∕ 分派支丢失）：复合选定 + 候选行 + 自定义 ID。
+  if (name === "model") return [sectionStateNode(model.model.state), ...modelBody(model.model, handlers)]
   if (name === "agent") {
     return [sectionStateNode(model.agent.state), ...(model.agent.state === "loading" ? [] : agentBody(model.agent, handlers))]
   }
