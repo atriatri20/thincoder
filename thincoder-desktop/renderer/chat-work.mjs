@@ -48,13 +48,33 @@ const num = (value) => {
 const isBlockEl = (el) => typeof el.hasAttribute === "function" && el.hasAttribute("data-block-kind")
 const isFoldRow = (el) => typeof el.matches === "function" && el.matches(FOLD_ROW_SEL)
 
+/** digest-ack 回执行判据（核 `digest-account.mjs` 同标记族——`[digest-ack #<id>] digested/deferred`）：
+ *  后台子代理报告消化链会在**真输出之后**尾追 `chat-digest` 状态行 ∕ subagent 归档卡 ∕ 模型的 ack 单行
+ *  （assistant 块）——按「最后一块」取 final 时 ack 抢位，真输出被折进工作区（用户实测：报告整段消失，
+ *  只余 ack 行）。final 候选跳过 ack 行回退真输出。 */
+const isDigestAckBlock = (el) => /\[digest-ack\b/.test(String(el.textContent ?? ""))
+
+/** 轮尾最终正文选取（纯函数——`applySpan` 消费 ∕ 批档直测）：
+ *  ① 尾块非 assistant ⇒ `null`（全折——轮被砍无正文）；② 尾块 = 真输出 ⇒ 即 final；
+ *  ③ 尾块 = digest-ack 回执行 ⇒ 回退**前一个**非 ack 的 assistant 块；整轮全 ack ⇒ `null`。 */
+export function finalOf(blocks) {
+  const last = blocks[blocks.length - 1] ?? null
+  if (last === null || last.getAttribute("data-block-kind") !== "assistant") return null
+  if (isDigestAckBlock(last) !== true) return last
+  for (let i = blocks.length - 2; i >= 0; i -= 1) {
+    const el = blocks[i]
+    if (el.getAttribute("data-block-kind") !== "assistant" || isDigestAckBlock(el) === true) continue
+    return el
+  }
+  return null
+}
+
 /** 单 span 落形：工作头在场对位 ∕ 折叠类应用 ∕ 时长词刷新（全幂等——值变才写）。
  *  `turnKey` = 用户块 id ∥ `head-<首块 id>`（头段——用户块已被窗限摘出）。 */
 function applySpan(flow, span, turnKey, busy) {
   if (turnKey === "") return
   const blocks = span.els.filter(isBlockEl)
-  const last = blocks[blocks.length - 1] ?? null
-  const final = last !== null && last.getAttribute("data-block-kind") === "assistant" ? last : null
+  const final = finalOf(blocks)
   const work = span.els.filter((el) => el !== final)
   // 无实际工作块（工具 ∕ 思考 ∕ 归档）的轮次不出折叠头——纯问答 ∕ 仅尾台账行的轮次保持原样
   // （状态行是收尾注记不是「工作」；折叠头挂在最终正文之后 = 孤头，真机实测）。
