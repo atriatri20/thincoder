@@ -160,6 +160,13 @@ async function loadPage(key, before) {
  *  + **后台预载预算重置**（12 页——全史 ≤2400 行的会话开会话即全部挂载）。 */
 function openPage(key) {
   store.set(openSession(store.get(), key))
+  // 快照还原径（会话切换批 · 2026-10-24）：blocks ∕ 游标已从快照回位 + 离场积压事件已回放 ⇒ 免重拉
+  // （page-0 整置会把在飞流面打回磁盘态——用户实测「切回来重新加载一遍，还在跑的内容没了」）。
+  // 显式刷新路径（回执 openPage 同键 ∕ 页游标回填）不受此门。
+  if (store.get().snapRestored === key) {
+    store.set({ snapRestored: null })
+    return
+  }
   void loadPage(key, null)
 }
 

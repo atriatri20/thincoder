@@ -209,6 +209,12 @@ function onError(state, ev) {
   return { ...blocks, tabBadges: marked.badges }
 }
 
+/** 流面通道集（会话切换批 · 2026-10-24）：块面写者键门（`forActive`）所辖七通道——非活动会话的这些
+ *  事件入**积压队列**（原语义 = 直接弃写 ⇒ 切回后磁盘整置，在飞尾全丢），切回时 `openSession` 回放。 */
+const BLOCK_CHANNELS = new Set(["ev:token", "ev:reasoning", "ev:tool-call", "ev:tool-output", "ev:tool-result", "ev:error", "ev:activity"])
+/** 积压队列帽（保尾）：单会话离场期事件上限（token 级事件 ~200B —— 4000 ≈ 800KB 上界）。 */
+const PENDING_CAP = 4000
+
 /** 纯归约出口：`ev` = `{ channel, ...载荷 }`（载荷携 `key`）。未知通道 / 形不合 ⇒ 原引用（逐通道一写者 —— 含 `ev:queue`）。 */
 export function reduce(state, ev, now = Date.now()) {
   const channel = typeof ev?.channel === "string" ? ev.channel : null
@@ -218,6 +224,13 @@ export function reduce(state, ev, now = Date.now()) {
   // 停滞轻显形（UI.md §1 本批注项 2）：可见输出通道集 ⇒ `lastOutputAt[<会话键>]` 置现刻（重置单点 ——
   // 逐事件恒变：「无变化 ⇒ 原引用」对时间戳切片自然不适用）。
   if (OUTPUT_CHANNELS.has(channel)) state = withOutputAt(state, ev.key, now)
+  // 离场积压（会话切换批 · 2026-10-24）：流面事件 ∧ 非活动键 ⇒ 入队（帽内保尾）——切回回放，
+  // 在飞内容不再丢。statusText ∕ lastOutputAt 两键面（非块面）先行已写 ⇒ 停滞显形照常。
+  if (BLOCK_CHANNELS.has(channel) && typeof ev.key === "string" && ev.key !== "" && ev.key !== state.activeSession) {
+    const table = state.pendingEvents ?? {}
+    const queued = [...(table[ev.key] ?? []), ev].slice(-PENDING_CAP)
+    return { ...state, pendingEvents: { ...table, [ev.key]: queued } }
+  }
   switch (channel) {
     case "ev:token": return onToken(state, ev, now)
     case "ev:reasoning": return onReasoning(state, ev, now)
@@ -257,15 +270,43 @@ export function openSession(state, key) {
   const next = key == null ? null : String(key)
   const cleared = next === null ? { badges: state.tabBadges ?? {}, changed: false } : badgeStamps(state.tabBadges ?? {}, next, "done", false)
   if (next === state.activeSession && !cleared.changed) return state
-  // R5（#522① · 清屏径）：键变 ⇒ **复位新键表**（VSC `clearMessages` ⇒ `resetActivity` 同义 —— `chat-messages.js`）：
+  // 离场快照（会话切换批 · 2026-10-24）：blocks ∕ history 游标按离场键存（浅引用 O(1)）——切回免重载；
+  // 帽 6（LRU——键序删最旧）。
+  const prev = state.activeSession
+  let swapped = state
+  if (prev !== null && prev !== next) {
+    const flowSnaps = { ...(state.flowSnaps ?? {}), [prev]: { blocks: state.blocks, history: state.history } }
+    const keys = Object.keys(flowSnaps)
+    if (keys.length > 6) delete flowSnaps[keys[0]]
+    swapped = { ...swapped, flowSnaps }
+  }
+  // R5（#522① · 清屏径）：键变 ⇒ **复位新键表**（VSC `clearMessages` ⇒ `resetActivity` 同义 —— `chat-messages.js:120`）：
   // 历史会话重现不留旧代行账（活块由 2s 存活投影自愈重投）；同键重开（零键变）不复位。
-  const swapped = next !== null && next !== state.activeSession ? resetSubBlocks(state, next) : state
+  swapped = next !== null && next !== state.activeSession ? resetSubBlocks(swapped, next) : swapped
   const base = cleared.changed
     ? { ...swapped, activeSession: next, tabBadges: cleared.badges }
     : { ...swapped, activeSession: next }
-  const running = liveCount(next === null ? [] : swapped.subBlocks?.[next])
-  const pool = poolOf(swapped)
-  return pool.running === running ? base : { ...base, pool: { ...pool, running } }
+  let out = base
+  // 切回还原 + 积压回放（会话切换批 · 2026-10-24）：快照（blocks ∕ 游标）先归位，离场期积压的流面
+  // 事件按序回放（此刻 activeSession = next ⇒ 键门放行，写者语义零改）⇒ 在飞内容原样续显 ∕ 免重拉。
+  const snap = out.flowSnaps?.[next]
+  let restored = false
+  if (snap !== undefined) {
+    out = { ...out, blocks: snap.blocks, history: snap.history }
+    restored = true
+  }
+  const queued = out.pendingEvents?.[next]
+  if (Array.isArray(queued) && queued.length > 0) {
+    const table = { ...(out.pendingEvents ?? {}) }
+    delete table[next]
+    out = { ...out, pendingEvents: table }
+    for (const ev of queued) out = reduce(out, ev)
+    restored = true
+  }
+  const running = liveCount(next === null ? [] : out.subBlocks?.[next])
+  const pool = poolOf(out)
+  out = pool.running === running ? out : { ...out, pool: { ...pool, running } }
+  return { ...out, snapRestored: restored ? next : null }
 }
 
 /** 出站回执**成功** ⇒ 摘项（§2.11⑦：失败零摘除 —— 调用面以回执 `ok === true` 为唯一判据，禁乐观摘除）：

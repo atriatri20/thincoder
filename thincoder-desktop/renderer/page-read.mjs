@@ -265,6 +265,14 @@ export function applyPage(state, receipt, { key, before } = {}) {
   const folded = foldDigest(messages, key, before == null) // 留档记录折叠（复列全量——未结轮照现：末页判据 = 本页为首屏 · 携位次）
   const page = messages.flatMap((msg) => blockOfMessage(msg)) // 块序 = 记录序（普通块原位 —— 零配对；本批 #765）
   if (before == null) {
+    // 首屏整置 = 权威刷新（会话切换批 · 2026-10-24）：该键离场快照作废（防陈旧快照在后续切回时
+    // 覆盖本次刷新面）。
+    let flowSnaps = flagged.flowSnaps
+    if (flowSnaps !== null && typeof flowSnaps === "object" && flowSnaps[key] !== undefined) {
+      const table = { ...flowSnaps }
+      delete table[key]
+      flowSnaps = table
+    }
     const stopMark = clearStopMark(flagged.stopMark, key)
     const timerNotice = clearTimerNotice(flagged.timerNotice, key)
     const compress = clearCompress(flagged.compress, key)
@@ -273,6 +281,7 @@ export function applyPage(state, receipt, { key, before } = {}) {
     const first = {
       ...flagged, ...(stopMark === flagged.stopMark ? {} : { stopMark }), ...(timerNotice === flagged.timerNotice ? {} : { timerNotice }),
       ...(compress === flagged.compress ? {} : { compress }), ...(digest === flagged.digest ? {} : { digest }), ...(helpLines === flagged.helpLines ? {} : { helpLines }),
+      ...(flowSnaps === flagged.flowSnaps ? {} : { flowSnaps }),
       ...seedPatch(flagged, key, receipt.seed), blocks: page, sessionMeta, history, following: true, pendingNew: 0,
     }
     // 排队镜面重建（仅首屏读 —— 回填读不重建：防在途快照覆盖活镜面）；键缺 / 非数组 ⇒ `applyQueue` 拒收（零写）。
