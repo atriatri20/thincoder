@@ -18,6 +18,7 @@ import {
   MIN_REPORT_CHARS, REPORT_CONTINUATION, DEFAULT_SUBAGENT_TURNS,
 } from "../agent.mjs"
 import { runWithContinue, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
+import { stripProviderPrefix } from "../model-ref.mjs"
 import { pushReal } from "../context.mjs"
 import { offloadToolResult } from "../agent/helpers.mjs"
 import { logEvent } from "../log.mjs"
@@ -167,9 +168,12 @@ export function resolveChildProvider(parent, modelArg) {
     const mname = modelArg.slice(sep + 1)
     const p = providers.find((x) => x.name === pname)
     if (!p) throw new Error(`subagent model: unknown provider "${pname}" (available: ${providers.map((x) => x.name).join(", ") || "none"})`)
+    // 渠道自指前缀剥离（2026-10-24 · 复合串落盘形修复）：consult 入参 = `${m.provider}:${m.model}`——
+    // m.model 自身携复合形（`"GLM:glm-5.3-flash"`）⇒ 分割后 mname 仍带「渠名:」段 ⇒ 裸串直通 wire 400。
+    const modelName = stripProviderPrefix(mname, p.name)
     // 空 mname 一律拒（2026-10-09 清除批）：渠道不携模型，无渠道级 model 可回落。
-    if (!mname) throw new Error(`subagent model: "${modelArg}" — model part is empty (expected provider:model)`)
-    return { ...withKey(p), model: mname }
+    if (!modelName) throw new Error(`subagent model: "${modelArg}" — model part is empty (expected provider:model)`)
+    return { ...withKey(p), model: modelName }
   }
   const byName = providers.find((x) => x.name === modelArg)
   // 2026-10-09 清除批（PROVIDER.md §6.16 M3）：渠道单值模型退场——裸渠名无从派生 model，

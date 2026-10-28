@@ -160,3 +160,18 @@ export function resolveProviderPlan({ providers, defaultModel, slot } = {}) {
     reason,
   }
 }
+
+/** 渠道自指前缀剥离（2026-10-24 · advisor 复合串 400 批）：model 串首段与**已解析渠道名**同名（大小写
+ *  不敏感）⇒ 剥离该段——`resolveAdvisorProvider` ∕ `resolveChildProvider` 的 model 面历史上有复合串
+ *  落盘形（设置页写径 ∕ AI 配置径：`"GLM:glm-5.3-flash"` ∕ `"workbuddy:global:deepseek-v4.1-flash"`），
+ *  裸串直通 wire ⇒ 网关白名单无此形态（3006 model not allowed ∕ 400）。剥离只认**已解析渠道自己的
+ *  名字**——他渠前缀（跨渠误配）不在此消解（该走解析报错，不静默改写）。网关真以「渠道名:模型」为
+ *  全名的自指形态被视为同义（唯一合理读法）。 */
+export function stripProviderPrefix(model, providerName) {
+  const m = typeof model === "string" ? model : ""
+  const name = typeof providerName === "string" ? providerName : ""
+  if (!m || !name) return m
+  const sep = m.indexOf(":")
+  if (sep <= 0) return m
+  return m.slice(0, sep).toLowerCase() === name.toLowerCase() ? m.slice(sep + 1) : m
+}

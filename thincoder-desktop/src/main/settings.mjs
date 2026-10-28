@@ -30,6 +30,7 @@ import { SUPPORTED_LOCALES, normalizeLocale, projectDictionary } from "@thincode
 import { channelUnavailableMessage, probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
 import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
 import { specForModel, specMatch, effortDefaultFor, getModelOverrides, overrideKeyFor } from "@thincoder/core/model-specs.mjs"
+import { stripProviderPrefix } from "@thincoder/core/model-ref.mjs"
 import { thinkOffPath, applyAdvisorEffort } from "@thincoder/core/think-off.mjs"
 import { _checkKnownKeyValue } from "@thincoder/core/agent-tools/settings.mjs"
 import { readIndexCounts } from "./index-status.mjs"
@@ -77,11 +78,14 @@ export function modelsFace(config) {
       effortEnum: specForModel(m.model).reasoningEffortEnum ?? [],
     }))
   const adv = config?.agent?.advisor ?? {}
+  const advProvider = typeof adv.provider === "string" && adv.provider !== "" ? adv.provider : null
   return {
     consult,
     advisor: {
-      provider: typeof adv.provider === "string" && adv.provider !== "" ? adv.provider : null,
-      model: typeof adv.model === "string" && adv.model !== "" ? adv.model : null,
+      provider: advProvider,
+      // 渠道自指前缀剥离（2026-10-24 · 复合串落盘形修复）：显示面回**裸 id**（与候选面同域）——
+      // 重存即自愈为裸形；运行期归一单源 = 核 `resolveAdvisorProvider`。
+      model: typeof adv.model === "string" && adv.model !== "" ? stripProviderPrefix(adv.model, advProvider) : null,
     },
   }
 }
@@ -175,7 +179,10 @@ const ADVISOR_EFFORT_PATH = "agent.advisor.reasoningEffort"
  *  effort 族主模型下写 `{type:"disabled"}` ⇒ 核档自注「关思考静默失效」）。 */
 function advisorSpecModel(disk) {
   const adv = disk?.agent?.advisor !== null && typeof disk?.agent?.advisor === "object" ? disk.agent.advisor : {}
-  if (typeof adv.model === "string" && adv.model.trim()) return adv.model.trim()
+  if (typeof adv.model === "string" && adv.model.trim()) {
+    const bare = stripProviderPrefix(adv.model.trim(), typeof adv.provider === "string" ? adv.provider : "")
+    return bare.trim()
+  }
   const composite = typeof disk.defaultModel === "string" ? disk.defaultModel : ""
   const at = composite.indexOf(":")
   return at > 0 ? composite.slice(at + 1) : ""

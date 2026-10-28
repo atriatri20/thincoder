@@ -5,6 +5,7 @@
  * run.mjs 原 498/500；既有 import 面经 re-export 保持不变）。
  */
 import { findProvider } from "../config.mjs"
+import { stripProviderPrefix } from "../model-ref.mjs"
 import { prepareAdvisorMessages } from "../advisor.mjs"
 import { buildObjectDeclarationBlock, buildDesignApprovalBlock } from "./messages.mjs"
 import { appendCitationReport } from "./citations.mjs"
@@ -35,7 +36,9 @@ export function resolveAdvisorProvider(agent) {
       // 2026-10-09 清除批（与 CLI `cmd-advisor` 同族收正）：模型面 = **父解析单档**——渠条目不携
       // 模型（渠道单值模型退场）⇒ 无 cfg.model 取父运行模型 `agent.provider?.model`；两者皆无 →
       // chat 前 `assertProviderModel` fail-fast（不静默）。
-      const result = cfg.model ? { ...provider, model: cfg.model } : { ...provider, model: agent.provider?.model }
+      // 渠道自指前缀剥离（2026-10-24 · 复合串落盘形修复）：cfg.model 历史有 `"GLM:glm-5.3-flash"` 落盘形
+      // ——裸串直通 wire ⇒ 网关白名单无此形态（3006 ∕ 400——用户实测三串全中）。剥「已解析渠名:」段。
+      const result = cfg.model ? { ...provider, model: stripProviderPrefix(cfg.model, provider.name) } : { ...provider, model: agent.provider?.model }
       // 台账 #329 / `MODEL-SPECS.md §15.4-3`：off 形须**活着到达载荷层**——载荷层 off 门首款 = `provider.thinking === null`
       // （`thincoder-core/provider/core.mjs` 的 `chatImpl`）；归一为 `undefined` 会让该门永不开（effort 族 advisor
       // 关思考静默失效）。显式 off 同清**继承档**（渠条目自带 / 主 provider 的 `reasoningEffort` 不得随行——
@@ -53,7 +56,7 @@ export function resolveAdvisorProvider(agent) {
     }
   }
   const provider = { ...agent.provider }
-  if (cfg?.model) provider.model = cfg.model
+  if (cfg?.model) provider.model = stripProviderPrefix(cfg.model, provider.name)
   // thinking off: null = NF1 显式 off 标记（保形——同自定义渠道分支；`MODEL-SPECS.md §15.4-3`），a raw `false`
   // value is invalid for providers that expect undefined or an object.
   if (cfg?.thinking === null) {
