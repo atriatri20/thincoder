@@ -136,9 +136,18 @@ export function createTurnInput({ post, ensure, flights, queued, chain, suspensi
    *  零丢失；文本由端侧回注输入框）；成功 ⇒ 该条即本代入队（入队单点前移——`onCapCancelled` 退为结算通知）。 */
   function interrupt(key, message) {
     if (slotOfKey(key) === null) return { ok: false, reason: "bad-key" }
-    const controller = flights.get(key)
-    if (!controller) return { ok: false, reason: "idle" }
     const text = typeof message === "string" && message !== "" ? message : null
+    const controller = flights.get(key)
+    if (!controller) {
+      // 挂起窗回合（停止面接窗 · 2026-10-24 用户实测「停止按键没反应」）：消化 ∕ timer ∕ 上行轮**不占
+      // flights**——原判据落 `idle` ⇒ 停止钮对窗内（卡死在网关 TTFB 的）回合无效。窗在场且无携文（停止
+      // 钮）⇒ 窗中止面承接（abort 路径 = 挂起驱动结算：窗摘 ∕ 冻结快照 ∕ 墓碑；signal 链达挂死的模型
+      // 调用；待消化项留池，下回合边界重新消化）。携文续跑（Ctrl+I）窗内语义未定义 ⇒ 本批零扩（维持 idle）。
+      if (text === null && suspension.active(key)) {
+        return suspension.abort(key) ? { ok: true } : { ok: false, reason: "idle" }
+      }
+      return { ok: false, reason: "idle" }
+    }
     if (text !== null && capPending.has(key)) { // cap 待答径预检（#656 · KD-52 ②④）：先执入队权威判——满 ⇒ 零中止零入队
       const entry = { text, ts: Date.now() }
       if (queued.add(key, entry).ok !== true) return { ok: false, reason: "queue-full" }
