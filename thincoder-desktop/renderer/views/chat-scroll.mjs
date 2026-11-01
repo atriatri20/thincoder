@@ -23,6 +23,9 @@ export { NEAR_BOTTOM_PX as FOLLOW_PX } from "/rc/scroll.mjs"
    一次 IPC + 头段重建的可见停顿；480px = 提前一屏多预取，页边界隐入滚动途中——ZCode loadOlder
    滚动中途自动加载同语义。落地续链见 chat.mjs 帧尾补偿点）。 */
 export const BACKFILL_PX = 480
+/* 上滚增长阈（2026-10-24 · 会话切换卡顿批）：近真顶（≤60px）∧ state 有窗外块 ⇒ 渲染窗增长（app.mjs
+   onNearTop——纯挂载无 IPC，预载链数据面已就绪）。独立于 BACKFILL_PX（那是 IPC 页读预取阈）。 */
+export const TOP_GROW_PX = 60
 export const SMOOTH_MS = 420
 /* 首屏渲染窗 —— 对齐 VSC `MAX_MESSAGE_BLOCKS`（`webview/ui.js` = 150）逐值（2026-09-29 · 批
    `docs/batches/2026-09-29-hatch-clearance-2.md` · #673 · E10 端差消：VSC 150 = 防卡顿硬约束，
@@ -100,7 +103,10 @@ export function attachScroll(root, deps = {}) {
   root.addEventListener("scroll", () => {
     if (!smoothWindowOpen(Date.now(), handle.lastAt)) return
     if (typeof deps.onScrollTick === "function") deps.onScrollTick() // 滚动拍（巨块段窗信号 —— 帧合并节流）
-    const action = scrollAction(metricsOf(root), guards())
+    const metrics = metricsOf(root)
+    // 上滚增长出口（近真顶 ∧ 窗外有块）：渲染窗按需扩（挂载自 state——零 IPC）；先于贴底判（顶部不可能近底）。
+    if (metrics.scrollTop <= TOP_GROW_PX && typeof deps.onNearTop === "function") deps.onNearTop()
+    const action = scrollAction(metrics, guards())
     const outlet = action === "follow" ? deps.onFollow : deps.onUnfollow
     if (typeof outlet === "function") outlet()
   }, { passive: true })

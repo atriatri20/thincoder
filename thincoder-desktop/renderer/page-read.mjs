@@ -290,8 +290,10 @@ export function applyPage(state, receipt, { key, before } = {}) {
   }
   const digest = withFoldedDigest(flagged.digest, key, folded) // 并入零算术（未结轮归属过滤住本件；行族随整置按记录序复列——回填落位批）
   // 结构作业（流面作业单）：`build` —— 回填并入（整置：删档 + 新写——记录序重放；帧出口走构造径）。
+  // build op 携 `source: "backfill"`（2026-10-24 · 会话切换卡顿批）：paintChat 同尾跳过判据的
+  // 精确标识——只有**预载 ∕ 回填**的整置可跳（尾不变）；回合尾整置（消化折叠 ∕ 中途重列）不可跳。
   return withFlowOp(
     { ...flagged, blocks: [...page, ...(flagged.blocks ?? [])], sessionMeta, history, ...(digest === flagged.digest ? {} : { digest }) },
-    { kind: "build" },
+    { kind: "build", source: "backfill" },
   )
 }

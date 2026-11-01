@@ -260,9 +260,24 @@ function paintChat(state = store.get()) {
   const inFlight = state.history?.inFlight === true
   const prev = chatFrame?.state ?? null
   const added = (state.blocks?.length ?? 0) - (prev?.blocks?.length ?? 0) // 并入量 = 本帧净增块数（整置 ⇒ 非正 ⇒ 零增）
-  chatLimit = nextWindow({ limit: chatLimit, inFlight: prev?.history?.inFlight === true }, inFlight, added)
+  // 会话切换复位窗（2026-10-24 · 卡顿批）：切回快照 ∕ 页读都从初始窗挂（原 chatLimit 跨会话残留 =
+  // 大会话切回即全量挂 4700+ 块——快照径也被拖慢）。
+  if (prev !== null && state.activeSession !== prev.activeSession) chatLimit = MAX_RENDER_BLOCKS
+  const following = state.following === true
+  // 增长门（卡顿批）：跟滚（贴底）时预载链并入的头侧块**不进渲染窗**（DOM 恒 ≤ 窗限）——
+  // 非跟滚（用户上滚读旧）才随并入增。流式尾追加不经此门（inFlight 不翻 → 原样零增，尾侧天然在窗内）。
+  chatLimit = nextWindow({ limit: chatLimit, inFlight: prev?.history?.inFlight === true }, inFlight, following ? 0 : added)
   const model = chatModel(state, chatLimit)
   const ops = Array.isArray(state.flowOps) ? state.flowOps : []
+  // 同尾跳过（卡顿批 · ZCode「suppress adjustment during restore」同义）：跟滚 ∧ 预载 ∕ 回填整置 ∧
+  // 尾指纹不变 ⇒ 窗内容逐字相同 ⇒ 零 DOM 作业整帧退（原 = 每页一次 O(窗) 全重建——O(n²) 卡顿源）。
+  const tailFp = (b) => (Array.isArray(b) && b.length > 0 ? `${b.at(-1)?.kind ?? ""}:${String(b.at(-1)?.text ?? "").length}:${String(b.at(-1)?.text ?? "").slice(-24)}` : "")
+  const backfillBuild = ops.some((op) => op?.kind === "build" && op.source === "backfill")
+  if (following && backfillBuild && !ops.some((op) => op?.kind === "build" && op.source !== "backfill") && chatFrame !== null && tailFp(prev?.blocks) === tailFp(state.blocks) && state.blocks.length >= (prev?.blocks?.length ?? 0)) {
+    chatFrame = { state, mounted: chatFrame.mounted, hidden: chatFrame.hidden, tailKey: tailFp(state.blocks) }
+    if (root !== null) store.set({ flowOps: [] }) // 清账（跳过径同清——stale build 不滞留）
+    return
+  }
   const handlers = {
     onReturn: returnToLatest, onToggleTool: toggleTool, onApprove: poolHandlers.onApprove,
     onOpenDir: () => openDir(), // 引导面（批 B 追加轮）：与会话控制条项目钮同出口（`project:open` 单一实现）
@@ -275,7 +290,8 @@ function paintChat(state = store.get()) {
   let mounted
   if (construct) {
     // 构造帧出口补偿（回填收束帧 —— 回填落位批 · 2026-10-04）：读门 = 上帧在飞 ∧ 本帧坍落 ∧ 非跟滚（收束沿先例 = `nextWindow`）；写门 = 高度净增 ΔH ≠ 0；根 ∥ handle 缺位 ⇒ 零读零写；算式单源 = `views/chat-scroll.mjs` `compensateTop`。
-    const sealFrame = root !== null && chatScroll !== null && prev?.history?.inFlight === true && state.history?.inFlight !== true && state.following !== true
+    const limitGrew = chatLimit > (chatFrame?.limit ?? chatLimit)
+    const sealFrame = root !== null && chatScroll !== null && prev !== null && state.following !== true && ((prev?.history?.inFlight === true && state.history?.inFlight !== true) || limitGrew)
     const t0 = sealFrame ? chatScroll.readMetrics() : null
     mounted = mountChat(root, state, handlers, chatLimit).mounted
     syncChrome(root, model, handlers)
@@ -291,7 +307,7 @@ function paintChat(state = store.get()) {
   // 帧尾真置焦（F-置焦 —— 两径同点，卡族由 `paintCards` 后到 ⇒ 补一拍；幂等记账不夺已移焦）
   focusAutofocus(root)
   if (root !== null && ops.length > 0) store.set({ flowOps: [] }) // 清账（两径同清；root 缺位不清）
-  chatFrame = { state, mounted, hidden: model.hidden }
+  chatFrame = { state, mounted, hidden: model.hidden, limit: chatLimit }
 }
 
 /** 首屏引导层随动（R1 —— 静态件住 `renderer/index.html`）：`ok` ⇒ 撤层（零残留）；`error` ⇒ 错误面
@@ -368,6 +384,15 @@ chatScroll = attachScroll(document.querySelector(FLOW_SLOT), {
   onUnfollow: () => store.set(setFollowing(store.get(), false)),
   guards: () => ({ hasOlder: store.get().history?.hasOlder === true, inFlight: store.get().history?.inFlight === true }),
   onScrollTick: () => frame.mark(["segView"]),
+  // 上滚增长（2026-10-24 · 卡顿批）：近真顶 ∧ state 有窗外块 ⇒ 渲染窗 +300 重挂（挂载自 state——
+  // 预载链数据面已就绪，零 IPC；非跟滚态，帧补偿 = sealFrame limitGrew 支）。帽 = blocks.length。
+  onNearTop: () => {
+    const s = store.get()
+    if (s.history?.inFlight === true) return
+    if ((s.blocks?.length ?? 0) <= chatLimit) return
+    chatLimit = Math.min(chatLimit + 300, s.blocks.length)
+    paintChat(s)
+  },
 })
 
 /** 事件面接线（装配一次 · 批 8 · 批档 §2.11）：多通道订阅 ⇒ 值面写者单源 = `renderer/events.mjs`（归约）+ `renderer/events-subscribe.mjs`
