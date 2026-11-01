@@ -83,10 +83,12 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 ### 6.2 chat() 主流程
 
 按序：① **净化（分派前）**——`providerSpec(provider)` 取带 provider 级 context 覆盖的 spec；`stripImagesForTextModel` 防图片毒化；`stripLocalMessageFields` 剥离仅本地消息字段（ts / transient）；② **format 分派**——`anthropic` / `google` / `responses` 各走原生 transport，缺省 OpenAI 兼容（body 组装内联）；③ **OpenAI body 组装**——
+
 `model` / `messages` / `stream: true`；`stream_options`（非 `noUsageStream` 模型）；`max_tokens` 按 `provider.maxTokens`；
 `temperature` 按 `spec.tempRange` 钳位；`thinking` 按 `spec.thinkApi` 注入；`reasoning_effort` 校验进 enum 后注入（router 模型 ID 含 `/` 时不发）；
 + **off 补发支**（`thinking:null` ∧ effort 族 ∧ 枚举行含 `"none"` ∧ 无显式档 ⇒ 发 `"none"`，同受 `!isRouter` 门——机制单源 = §6.12）；`enable_thinking`（Qwen）；
 `tools` / `tool_choice` / `parallel_tool_calls`；④ **token 估算与闸门**（`rateGate`）；⑤ **请求**（`requestWithRetry` → `readSSE` → 用实测 usage 修正记账）；⑥ **结果短路**——`ruleTriggered` / `interrupted` / `partial` **立即返回**；⑦ **overload 重试**（`insufficient_system_resource` → 最多 1 次）；⑧ **截断续写**；
+
 ⑨ 返回结果（续写失败注入 `_warnings`，不整轮飞出）。
 
 ### 6.3 重试、超时与错误分类
@@ -98,7 +100,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 - **413 可操作化（D-PR32）**：请求体超限（HTTP 413——长会话图片累积的高频形态）⇒ 错误文本携带处置提示（`/compact` 压缩历史 ∥ 移除历史图片；图片累计预算机制见 §6.7）——从裸 HTTP 码变为可执行指引。
 - **400 图像语义 = 剥除自愈（非「立抛」）**：HTTP 400 ∧ 错误文本命中图像语义词表 ∧ 历史含 image part ⇒ 不就此收束——剥除历史图像 + 机读注记 + **重发一次**（触发 / 处置全文 = §6.26——本行不重述）；既有 `isNonRetryableError` 判据零改（自愈发生在错误已抛至 agent 层之后，由 agent 层承接）。
 - **超时语义（废弃绝对墙钟）**：**响应头阶段**用 `fetchTimeoutMs`（默认 600s，`agent.fetchTimeoutMs` 可配，`effectiveFetchTimeoutMs(provider)` 计算；四 transport 经 opts `_headerTimeoutMs` 携带）——**消费面 = 代理分支**（`proxyFetch` 两分支：https 目标 `tunnelHttps` ∥ http 目标 `tcpConnectProxy`+`streamHttpResponse`）；
-  **直连面（无 `proxyUri`）无本仓头阶段超时**（纳入 = 设计轮面——在册）；**body 阶段**用读侧**空闲**超时 `READ_IDLE_MS = 120s`（有数据流动就永不超时，连续无新 chunk 才判死）；`AbortError` 透传（用户 Ctrl+I 取消，不吞）。
+  **直连面（无 `proxyUri`）无本仓头阶段超时**（纳入 = 设计轮面——在册）；**body 阶段**用读侧**空闲**超时 `agent.bodyIdleTimeoutMs`（默认 120s，`effectiveBodyIdleMs(provider)` 计算，八处消费点同源；有数据流动就永不超时，连续无新 chunk 才判死；机制单源 = `docs/core/design/TIMEOUT-DIGEST.md` §2.1）；`AbortError` 透传（用户 Ctrl+I 取消，不吞）。
 - **abort / 超时来源标注**：超时 / 中止产生点的错误对象自带结构化 `abortInfo`（trigger / layer / detail）——词汇表与判定归 AGENT-LOOP 板（本档只指针）。
 - **body 终止守卫（崩溃族）**：读侧空闲断流（`readSSE` ∥ `parseGeminiStream`）经单点 `terminateBody` 以错误终止 body——可 destroy 形态走 `destroyBody`（先挂永久兜底 `'error'` 监听者，防未处理 `'error'` 杀进程）；
   **web `ReadableStream`（直连 fetch）走内部 abort 通道**（`IDLE_ABORT`——建设点 = `proxyFetch` 直连分支单点〔两条流式直连链同经〕；看门狗不再 no-op）。机制单源 = `doc:PROXY.md:§2`。消费面语义零变（含 google 的 partial 保留径）。
@@ -144,7 +146,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 
 ### 6.8 原生 transport（anthropic / google）
 
-- **Anthropic**（`format: "anthropic"`）：POST `/v1/messages`，头 `anthropic-version: 2023-06-01`，key 走 `x-api-key`；system 消息抽离到顶层 `system`；tool 用 `tool_use` / `tool_result` block；
+- **Anthropic**（`format: "anthropic"`）：POST `/v1/messages`，头 `anthropic-version: 2023-06-01`，key 走 `x-api-key`；system 消息抽离到顶层 `system`；OpenAI 形态历史在 transport 内转成 Messages API 形态（`tool_calls` ⇒ `tool_use`、`role:"tool"` ⇒ `tool_result`；规则全集 = §6.27）；
 事件流解析（`message_start` / `content_block_start` / `content_block_delta`（`text_delta` / `thinking_delta` / `input_json_delta`）/ `message_delta` / `message_stop`）；usage `cache_read` / `cache_creation_input_tokens` → 内部 cache 字段；`tool_choice` 映射；接入 rateGate / recordRate + 通用退避链。
 - **Gemini**（`format: "google"`）：`generateContent` / `streamGenerateContent?alt=sse`（key 走 query 参数）；role 映射 `assistant → model`（system 抽到顶层 `systemInstruction`）；相邻同 role 合并；图像 data URL → `inlineData`；`generationConfig`；safetySettings 全 BLOCK_NONE；
 事件流解析（`usageMetadata` / `part.thought` → reasoning / `part.functionCall` → toolCalls，同名去重合并、id 合成 `name_N`）；接入闸门 + 退避链。
@@ -152,10 +154,25 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 ### 6.9 规格表（MODEL_SPECS）与能力位
 
 规格表中枢 = `thincoder-core/model-specs.mjs`：所有模型能力差异在此声明——`context` / `maxOutput` / `thinking` / `partialMode` / `prefixMode` / `multimodal` / `thinkApi`（`type` = thinking.type 字段 / `effort` = reasoning_effort）/ `thinkEnabledValue` / `reasoningEcho`（required = 必须回传）
+
 / `thinkAlwaysOn`（服务端强制思考标记——语义单源 = `doc:MODEL-SPECS.md:§16.3`）/ `reasoningEffortEnum` / `tempRange` / `noUsageStream`；VSC 侧每行多 `reasoningEffortDefault`。
 
 - 新模型只加一行 spec，transport / 续写 / thinking 全自动适配；未知模型保守 `DEFAULT_SPEC`（128K 上下文 / 32K 输出）+ warn once。
-- **厂商前缀剥离**：完整名未命中且含 `/` 时取**最后一个** `/` 之后的段再匹配一次（`qwen/ZHIPU/GLM-5.3 → glm-5.3`；单段名同判——`ZHIPU/GLM-5.3 → glm-5.3`）。末段形 = 用户裁定「只取最后一段」（测试服务器外标 `provider/上游名` 链式叠加所致；VSC 端差面同判——详 `doc:MODEL-SPECS.md:§17`）；显式 alias 行保留；只影响 spec 查询，不改 `provider.model`。
+- **模型名匹配 = 末段唯一**（用户 2026-10-23 17:34 裁定：「匹配 / 拆分以后的最后一段，跟前面没关系」）：先按 `/` 拆分取最后一段（单段名末段 = 自身）、小写归一，**不再先扫完整名**；末段为空（`foo/`）⇒ 未命中（空串不做匹配）。
+  **归一只有一套（末段 + 小写）；比较算子按面各写一次**——这是本规则的单源表：
+
+  | 面 | 算子 | 判别例 |
+  |---|---|---|
+  | `MODEL_SPECS` 静态表（`lookupSpec`） | 段内**前缀**（`bare.startsWith(行名)`） | `glm-5.3-flashx` 命中 `glm-5.3` 行；未登记的族内长名靠它兜住 |
+  | `providers[].modelContext` 用户键（§6.15） | 末段**相等** | 键 `glm-5.3` × 模型 `glm-5.3-flashx` ⇒ **不命中**（声明不继承给同族长名——R29③） |
+  | `/v1/models` 返回 id（§6.15） | 末段**相等** | 列表 `qwen/ZHIPU/GLM-5.3` 与请求 `glm-5.3` ⇒ 命中 |
+
+  **算子差不得越面**：两个相等面若按前缀实现，`glm-5.3` 的声明会被错挂到 `glm-5.3-flashx`（继承 = R29③ 禁止的发散）；静态表若按相等实现，未登记的族内变体全部落 `DEFAULT_SPEC`（能力位静默退化）。
+  `qwen/ZHIPU/GLM-5.3 → glm-5.3` 命中；`glm-5.3/zzz → zzz` ⇒ 未命中 ⇒ `DEFAULT_SPEC` + 告警（旧实现先扫完整名，会误命中 `glm-5.3` 行）。
+  **三面共用本节这一张表**：其余面只写「末段 + 小写 + 本面算子」，不出现第二套归一语义。
+
+  只影响查表，不改 `provider.model`。`kimi/kimi-k3` 显式 alias 行**退役**：末段 `kimi-k3` 已达同值行（`thincoder-core/model-specs.mjs:44` 与 `:46` 逐值相同），含 `/` 的键永远不可能是末段 ⇒ 该行不可达，留行即死行。
+  VSC 端 `thincoder-vscode/src/specs.mjs:44-59` `effortDefaultFor` 同尺（去「先扫完整名」一跳）。
 - **规格来源可判定**：`specMatch(model) → { spec, matched }`（与 `specForModel` 共享同一查表实现——单次查表）；`matched: false` = `DEFAULT_SPEC` 兜底。
 - **退役 / 路由名是否保留成行按服务端状态判**：服务端**仍受理**旧名时删行 → 旧配置降 `DEFAULT_SPEC`（压缩阈值 / 窗口显示错）——故默认**保留为独立行**；
   仅当服务端**已 404**（名真退役）或用户明令退役时删行，且**须逐名认账退化后果**（不得静默）。参数与能力位**是否随新模型按「当下合同」判**
@@ -163,12 +180,13 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 - **qwen 族无泛前缀托底行**（裁定 · 待落）：`qwen` 行删除后，任何 `qwen*` 未命中名退 `DEFAULT_SPEC` + 一次性告警；不建「保守族底行」
   （理由与逐名后果 = `docs/core/design/MODEL-SPECS.md` §2.4，本档不重述）。**约束：以后不得以蹭泛前缀的方式给新 qwen 档配能力**——
   音/视频能力在 schema 上**未表达且未接入**（`multimodal` 仅承载「可收图像 part」），新档声明只写实测到的字段。
-- **re-export 契约**：`config.mjs` re-export `specForModel` / `providerSpec` / `specMatch`；`providerSpec` = spec + provider 级 context 覆盖。
+- **re-export 契约**：`config.mjs` re-export `specForModel` / `providerSpec` / `specMatch`；`providerSpec` = spec + 上下文解析链（§6.15）。
 - **`noUsageStream` 语义 = 「核不主动发 `stream_options.include_usage`」（保守抑制，**非**服务端能力断言）**：唯一消费点 = 载荷组装段的 OpenAI 兼容支（`thincoder-core/provider/core.mjs:179`；`format:"google"` 行走原生 transport ⇒ 对 gemini 行为**惰性声明**）。逐族裁据与保留裁定 = `doc:MODEL-SPECS.md:§15.2`（本档不复述数值/名单）。
 
 ### 6.10 畸形 tool_calls 防御解析
 
 OpenAI 兼容 SSE 流中畸形 `tool_calls`（数组含 null 元素、缺 `function` / `name` / `id` / `index`）不再崩溃或静默丢工具——槽选择优先级：① `index` 有效 → 按 index 取槽；② 缺 index 但有 `id` → 按 id 在既有槽中查找归并；③ 缺 index 无 id 但有 `function.name` → 新建尾部槽；④ 其余（纯 arguments 增量）→ 延续最后一个槽，无槽可延续则丢弃并计数。流结束收尾（`finalizeToolCalls`）：稀疏 hole 剔除、
+
 name 空槽丢弃并计数、缺 id 合成 `call_N`。告警（`droppedToolCalls > 0`）进**机读线** `_warnings`（`malformed-tool-calls`）——模型需知道其工具调用未执行；agent 层零改动。只防御与降级，不替模型修复语义。**槽附加字段**（`extra_content`——Gemini 思考签名透传）机制单源 = §6.24。
 
 ### 6.11 模型支持与预设（PROVIDER_PRESETS）
@@ -186,28 +204,34 @@ name 空槽丢弃并计数、缺 id 合成 `call_N`。告警（`droppedToolCalls
   key 制——`opencode.ai/zen` 取 `sk-` key，**无 OAuth 模式**；收录 = §6.21 三判据齐）。**协议混装 ⇒ 拆双预设**（单体
   `format` 架构内零机制改解）：`opencode-go`（OpenAI 兼容 `/chat/completions` 侧）+ `opencode-go-anthropic`
   （Anthropic `/messages` 侧，`format: "anthropic"`；同 key）。字段集 = 最小面：`thinking` ∕ `reasoningEffort`
+
   **不设 = 不发**（D-13 同口径）；`maxTokens` 仅 anthropic 侧设 `65536`（该 transport 必发 `max_tokens`——不设即落规格行值 `131072`，
   超渠道口径）；**待验（无 key——未实拉 `/models` ∕ 载荷未实测；接入后复核）**；`x-opencode-session` 头 = 可选遥测——**不发**（§6.17 域外与端面）。
   逐模型协议分侧表（官方档快照）。
 - **Gemini OpenAI 兼容侧入表**：`gemini-openai` = Google 官方 OpenAI 兼容端点
   （`baseURL` `https://generativelanguage.googleapis.com/v1beta/openai`；与 `gemini`（原生 `format:"google"`）**同 key、两形态并存**——本键 = OpenAI `/chat/completions` 侧）；
   `thinking` / `reasoningEffort` / `maxTokens` **不带**（载荷面未测——「不设 = 不发」）；**待验（无 key——未实拉 `/models`；接入后按实拉复核）**。收录依据 = §6.21 三判据
+
   （① 官方文档载明 OpenAI 兼容端点与鉴权形；② 可自助实测；③ 用户点名）；server 面同拍（`thincoder-server/src/ops/presets.mjs`）。
 - **预置 `maxTokens` ⇄ 规格行对齐**：六对超限已逐对对齐（真行三对降行值 / 无行三对降生效基准——对齐对象 = 各预置当时的默认模型），`OVER_LIMIT` 白名单 → **空名单**。逐对表与覆盖缺口（挂 `#11`） = `doc:MODEL-SPECS.md:§15.3`。
-- 能力差异全走规格表；`kimi/kimi-k3`（router 前缀）与 `k3` 保留显式 alias 行；未知模型保守 `DEFAULT_SPEC`。
+- 能力差异全走规格表；未知模型保守 `DEFAULT_SPEC`（`kimi/kimi-k3` 行已退役——规则单源 §6.9）。
 - **DeepSeek V4.1-Flash 行集**：新行 `deepseek-flash`（1M 上下文 / 384K 输出 / thinking 默认开 / 前缀补全 Beta / 磁盘缓存默认开 / `multimodal: true`）；
 qwen-plan 渠道同名模型以 `deepseek-v4.1-flash` 提供（`token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`——实测 GET /models 含该名 · chat 200）——独立行、字段逐字对齐 `deepseek-flash`（`.1` ≠ `-` ⇒ 纯前缀查表不命中既有行）；
+
 两退役名 `deepseek-v4-flash` / `deepseek-v4-flash-vision-exp` 保留独立行、参数与能力位随新行（旧配置钉旧名仍查得真规格）；`deepseek-v4-pro` 保留 + 行注释（限期路由——**不预支视觉**：预支的硬失败风险不排除）。
 
 ### 6.12 Qwen 思考关闭（`enable_thinking`）
 
 qwen 系列（百炼**混合思考**模式，默认开启）需能**真正关闭**思考（缺陷：reasoning off 时原请求体不含任何思考控制字段 → 服务端按默认开启 → off 静默失效）。纯函数 `resolveEnableThinking(provider, spec)`（`config.mjs`，两端同构造）：白名单双条件 = 模型名 `qwen` 开头（排除 `qwen3-coder` 前缀）**且** provider 指向百炼 host（`isBailianHost`）；
+
 `provider.thinking === null` 是两端统一的**显式 off 唯一标记**（唯一例外 = effort 档位在场且非 `"none"`——见下条一致性分支）。**不受 router 门控**（白名单键控模型前缀 + host，非模型 ID 斜杠）。**选档位 / 开 auto = 隐含 thinking on**：清 `thinking: null` off 标记；
+
 on 分支默认 effort 契约 = 取 `spec.reasoningEffortEnum` 的**首个非 `"none"` 档**——枚举首项为 `none` 的族（qwen 全族）不得拿首项当 on 默认，否则 = 「开了个关着的思考」；
 `none` 不在枚举时两者等价 ⇒ 对其余族零回归。（`/think on` 取档实现 = `doc:MODEL-SPECS.md:§2.8`，A-16 / T-14。）
 
 **一致性分支（百炼互斥约束——`thincoder-core/config.mjs:143-156`）**：服务端约束 = `enable_thinking:false` 时 `reasoning_effort` 必须为 `"none"`，互斥即 400；
 ⇒ `provider.reasoningEffort` 有值且非 `"none"` ⇒ `resolveEnableThinking` 返 `true`（effort 赢），该判**先于** `thinking === null` 的显式 off 判。
+
 压缩下行（`{...agent.provider, thinking:null}` + 继承 effort——v3 同源，`doc:CONTEXT-COMPACTION.md:§6.14`）因此发 `{enable_thinking:true, reasoning_effort:<档>}` = 合法对（无 effort 档位时仍落 `false`）。
 
 **两机制并存（不混同）**：关思考有两条独立路径——本节的名字 + 主机白名单（管**请求体字段**）
@@ -218,17 +242,22 @@ on 分支默认 effort 契约 = 取 `spec.reasoningEffortEnum` 的**首个非 `"
 **effort 族渠道的 off 补发（AC-9——本节 = 谓词单源）**：host 白名单只覆盖百炼（`resolveEnableThinking`）；
 **effort 族**（`spec.thinkApi === "effort"`——spec 行自携该位，如 hy3 / doubao-seed / qwen3.7-flash）的 `thinking: null` 不能靠
 `enable_thinking` 生效，需在载荷组装层补发 `reasoning_effort: "none"`（实测唯一有效 off 路径：tok=0、`reasoning_content` 消失）。
+
 **谓词（单源，其余面引用本节）**：`provider.thinking === null` ∧ `spec.thinkApi === "effort"` ∧ `spec.reasoningEffortEnum?.includes("none")` ∧
 `provider.reasoningEffort == null` ∧ `!provider.model.includes("/")`（末款复用 §6.2 router 门）。
+
 **零变面五 guard**：无枚举名 / 显式档在场（档位优先）/ 枚举不含 `none` / 百炼 qwen（`enable_thinking:false` 照发 + 同义多携该字段）/ 
 路由形态名（含 `/`）；后台调用路径（`context.mjs` / `explore-distill.mjs` 的 `{...provider, thinking:null}`）同命 = 有意认账
+
 （不再空想，与 qwen 侧同方向）。判据 = `doc:MODEL-SPECS.md:§9.6`（D-14）+ 用例 B-5；落点 = `thincoder-core/provider/core.mjs` 载荷组装段（+~5 行）。
 
 **off 形不得在解析链上被抹（本节谓词的前置条件单源）**：谓词首款 `provider.thinking === null` 要求 **off 标记活着到达载荷层**——
 advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdvisorProvider`）**须保形**（`cfg.thinking === null` ⇒ 结果对象 `thinking` 保持 `null`，不得归一为 `undefined`）
+
 **且**显式 off 时不得携继承档（渠条目 / 主 provider 的 `reasoningEffort` 一律清出）。两分支（自定义渠道 / 主 provider 兜底）同判据；
 `cfg.thinking === false`（非法原值）仍归一为 `undefined`（零变）。载荷层谓词本体**零改**（只补解析链前置）；用例 = `doc:MODEL-SPECS.md:§15.7` AD-1..AD-4。
 无 off 路径的族（effort 型枚举不含 `none` / 服务端强制思考族）不受本条影响——谓词 guard ④ 照旧不命中（无该字段、不抛错）。
+
 **生产者面**（off 形的族别取形——effort 族须落 `thinking: null`；CLI `/advisor` 与 VSC 面板写面两处同式）单源 = `doc:MODEL-SPECS.md:§15.4-2`。
 **「有效 off 路径」判据与回执可宣称性**（生产者全表 · 单源实现 `thincoder-core/think-off.mjs`）= `doc:MODEL-SPECS.md:§16`——谓词本体（本节）零改。
 
@@ -246,12 +275,14 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
     标准 `type:"error"` 帧（`handleEvent` 专案——**不得静默 default 跳过**）。
     分界判据 = 是否已有流出：无流出 ⇒ 抛错（消息含服务端 `error.message` + 码级标注——同 `response.failed` 形）；
     已有流出 ⇒ `partial: true` + `_warnings`（`responses-error-frame`）+ `errorDetail`（服务端 message 截 300）——
+
     同构 `sse.mjs:262-271` ∥ `google.mjs:248-255` 网络部分出口；`partial` 消费 = `thincoder-core/provider/core.mjs:242-247` 出口表既有面，agent 层零改。
     partial 返回 ⇒ seal 无 responseId ⇒ 链重置（下轮全量——正确性优先）。
   - **错误码级映射（最小集）**——单源 = `errors.mjs`
     `classifyResponsesErrorCode(code) → { kind, retryable, hint } | null`：
     `context_length_exceeded` → context_overflow / false / 「/compact」指引（D-PR32 同语义）·
     `insufficient_quota` → quota / false · `invalid_prompt` → invalid_request / false ·
+
     `server_is_overloaded` ∥ `server_error` → server / **true**。
     未列码 → `null`（服务端消息原样透传，不发明分类）；`usage_not_included` 不收（ChatGPT 订阅语境特有）。
     消费点 = `onFailed` + 流内 error 帧抛错支——错误消息拼 hint、`e.errorKind` / `e.retryable` 结构化挂载、`e.status` 仅数值时赋值。
@@ -261,6 +292,7 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
     判据 = 参考面双例（opencode `openai-responses.ts:493` 显式才发 + codex 强制不发）+
     本仓同病实锤（opencode-go-anthropic `max_tokens` 未设落规格行值超渠道口径——§6.11 在案）+ 规格值非渠道合同值。
     认账：无显式值时输出上限 = 服务端默认；responses 面无续写循环，截断面零变。
+
     **回退形态预置**：真机读数推翻（不发即 400 ∥ 无限输出实锤）⇒ 回退恒发 `provider.maxTokens ?? spec.maxOutput` + 渠道级覆盖。
     **真机验证项在册**（不阻塞实施、阻塞核销）。
 - **已知边界**：responses 格式**不接 `agent.streamRules`**（配置了 abort/warn 规则的 responses 用户该保护不生效）；`response.failed` 中途到达时已流出内容被丢弃（onFailed 无条件抛——与 D9 partial 抢救**不对称**，观察登记另批裁定）。
@@ -270,11 +302,397 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 **止损** = §6.5 的 prefix 精简历史；
 修复两层 = **防御**（`escape.mjs` v5 `sanitizeLoneSurrogates`）+ **源头**（`safeSliceUTF16` 截断点前收一个码元）。`escapeMessages = stripLocalMessageFields(messages).map(escapeMessageContent)`。
 
-### 6.15 模型上下文可配置（`providerSpec` context）
+### 6.15 模型上下文解析（`providerSpec` 五级链 · 含旧键过渡层）
 
-问题：`MODEL_SPECS` 的 `context` 写死；私有端点真实上下文与 spec 不符时压缩阈值偏高 → 溢出风险。
-机制：**config 字段** `providers[].context`（**K 单位**正整数；非法值忽略 + 警告一次）+ **解析覆盖**（`providerSpec(provider)` = spec 的**拷贝覆盖** `{...spec, context: provider.context * 1024}`，**不污染共享 spec 对象**——跨 provider 串扰防护）+ **调用方改造**（需要 provider 感知处用 `providerSpec`；纯模型查表处保持 `specForModel`）+ 配置界面 + 显示跟随覆盖值。
-**关键决策**：provider 级而非模型级；K 单位整数；拷贝覆盖不污染。
+**问题**：`MODEL_SPECS` 的 `context` 是快照；同一端点的 `/models` 自报更接近运行时事实；渠道级 `providers[].context`（K）只能给整条渠道一个值，且 K 单位已现场出错两次（写成 token ⇒ ×1024 后 2.68 亿 / 10.7 亿）。
+**机制**：`providerSpec(provider)` 按固定优先级取**第一个可得值**，仍是同步纯函数——缓存未命中即落下一层，不因 IO 变形。
+
+**先例（closest-precedent）**：对位 = 同档 §6.22（运行时渠道/模型统一解析 · 三端同源 · U3「宽松 + 明示」）。**对齐** = 判定函数住核单源、消费面只读一个出口、混合态显式明示（§6.22 = 明示节点；本节 = 告警 + `windowSource` 来源串）；**偏离** = 本节引入模块级 `baseURL` 缓存（理由 = D1/D2：列表是只能由网络拉的运行时事实，纯函数拿不到；§6.22 的输入全在配置对象里，故零缓存）。
+
+**survey-evidence**：查过 `PROJECT-MANIFEST.json` 的 `index.publicRepos`（实读 = `[]`——本仓未声明独立公共源文档仓）、本仓需求 §4.8 与设计 §6.9 / §6.22、
+实现坐标（解析乘点 `thincoder-core/model-specs.mjs:379` ∥ 展示换算 `:323` ∥ `:358-405` `providerSpecResolution` ∥ `:271-280` `lookupSpec` ∥ `thincoder-core/config.mjs:97` `requestBudget`）；
+
+**none relevant**（无外部源文档可对位，机制取形全部来自本仓在册设计 + 用户裁定）。
+
+**解析链（自上而下，取第一个可得值）**
+
+| 层 | 来源 | 单位 | 读点 |
+|---|---|---|---|
+| L1 | **99**（收口轮 `wc -l` 实读） | K，**×1024** | `thincoder-core/model-context.mjs` `manualContextK`（名带单位，取 K 原值）→ 解析乘点 `thincoder-core/model-specs.mjs:379` |
+| L2 | `providers[].context`（旧键，仅未被 L1 点名的模型） | K，**×1024** | `thincoder-core/model-specs.mjs:379`（**解析乘点唯一**——L1 ∥ L2 共用）；展示换算另列一处 —— `:323` `formatDeclaredContextK`（只出词，不回写解析值） |
+| L3 | 模型列表自报（三字段名任一） | token，不乘 | `thincoder-core/model-context.mjs` `listedContextTokens`（名带单位） |
+| L4 | `MODEL_SPECS` 静态表 | token，不乘 | `thincoder-core/model-specs.mjs` `lookupSpec`（`:271-280`，末段唯一——§6.9） |
+| L5 | `DEFAULT_SPEC`（128K） | token，不乘 | `thincoder-core/model-specs.mjs:250` |
+
+L2 位于 L3 之上：旧键也是人工声明，按 2026-10-23 17:30 裁定「人工声明 > 列表」；它只是粒度不对，不是优先级不对。`modelContext` 点名的模型一律走 L1，L2 不参与。
+
+**落点形态：模块级只读缓存（不是预取注入，不是 async）**
+
+- `thincoder-core/model-context.mjs`（新）= 缓存 + 键归一 + 取值校验；只 import 标准库，零 import 环。
+- 写面 = `thincoder-core/provider/list-models.mjs`：`openai` 分支解析 `data[]` 时顺带收集 `id → 窗口`，`listModels` 返回前写缓存（**返回形态不变**——仍 `string[]`）。
+- 读面 = `thincoder-core/model-specs.mjs` `providerSpec`：同步 `Map` 查表，未命中返回 `null`，落下一层。
+- **为什么不是预取注入**：`provider` 对象在全仓被反复浅拷贝（`thincoder-core/config.mjs:218` `{ ...p }`、探针目标 `{ name: "", baseURL, … }`、测试 `{ ...providers[0] }`），注入字段会在拷贝处丢失，并让解析依赖对象身份。
+- **为什么不是 async**：`providerSpec` 在请求热路径上（`thincoder-core/provider/core.mjs:132` 每请求算预算；`thincoder-core/token-window.mjs:50` 每次渲染）——async 等于把 IO 塞进请求路径。
+
+**缓存：触发、键、失效、失败**
+
+- **触发 = 既有拉取，零新增请求**：缓存只由 `listModels` 成功返回时写入。六个消费面（CLI 模型选择器 / `/model` 目录 / `/advisor` / VSC 设置探针 / VSC 探针窗 / 服务端列表面）本来就要拉列表，现在顺带把窗口留在核里。
+  **本批不新增任何拉取触发**：会话启动网络依赖是 §6.16 M8/M9 的既有边界，新增请求还要另付单飞 / 负缓存 / 代理超时一整套成本。
+  代价（认账）：一次会话若从不打开任何列表面，L3 缺席、落 L4——与改前逐字相同，R28 因此天然成立。
+- **键 = 归一后的 `baseURL`**（去尾部 `/`，`thincoder-core/provider/list-models.mjs:101` 既有归一）：列表是端点的事实，不是本地别名的事实；探针目标常缺 `name`（`thincoder-vscode/src/extension/settings.mjs:243` `{ name: "", baseURL, … }`），用 `name + baseURL` 会写读错位。
+- **失效**：每次成功拉取**整条替换**该端点的 `id → 值` 表（不合并）——列表不再报某模型 ⇒ 该模型回到 L4；`baseURL` 改动 ⇒ 键变、旧条目自然失配；拉取失败**不清空**上次成功值（上次自报比静态表更接近事实）。
+- **失败**：`listModels` 照旧抛出（六个消费面的错误面零变）；`providerSpec` 只读缓存，永不抛、永不等待，未命中即落下一层（R28）。
+
+**`modelContext` 键形与查表规则**
+
+键 = 模型 ID（用户手写形，与 `/v1/models` 的 id 同源），值 = 正整数 **K**（128 = 128K，与旧键同口径）。查表 = **§6.9 尺子表的本面行**：末段 + 小写归一，**算子 = 末段相等**（不是前缀）——用户键 `glm-5.3` × 模型 `glm-5.3-flashx` ⇒ **不命中**（声明不继承给同族长名——R29③）。
+
+| 面 | 归一 | 例 |
+|---|---|---|
+| `modelContext` 用户键 | 末段 + 小写 | 键 `qwen/ZHIPU/GLM-5.3` ⇒ `glm-5.3` |
+| 请求名（`provider.model`） | 末段 + 小写 | `glm-5.3` ⇒ `glm-5.3` |
+| `/v1/models` 列表 id | 末段 + 小写 | `qwen/ZHIPU/GLM-5.3` ⇒ `glm-5.3` |
+
+- 为什么要三面归一：同一个模型在本仓有三种写法——列表 id（聚合网关带命名空间）、请求体 `provider.model`（可能是裸名）、用户手写键。只认逐字会让三者错位；`GLM-5.3` / `glm-5.3` 的大小写差会静默失效。
+- **两条键归一后相同 = 同一个模型的两种写法**（如 `qwen/glm-5.3` 与 `zhipu/glm-5.3`）⇒ **命中同一条，取该条即用**——不拒写、不告警、不落下一层；取哪条不作判据（不排序、不比较——两条都是用户自己写的值，R29④）。列表侧同形：同端点两个 id 末段相撞 ⇒ 取**列表序第一条**即用（不排序、不比较），不告警、不落 L4。
+- 值非法（0 / 负 / 非数 / 非整 / 布尔）⇒ 该键视为未声明（落 L2），装载期告警一次（`thincoder-core/config.mjs` 归一，同 `providers[].context` 先例）。
+- 未点名的模型落到 L2（R29③）——不发散，不继承同渠道其它模型的值。
+- R29②「键与 id 逐字」在本尺子下自动成立：键写成列表原样 id（含命名空间）时末段相同 ⇒ 命中；写裸名同样命中。
+
+**列表三字段与取值序**
+
+`context_window` > `context_length` > `max_model_len`，**取第一个合法值**（不是「取首字段」）：
+
+- 逐字段按下标试：字段缺失 ∥ 值非法 ⇒ 跳过该字段、试下一个；三字段都不可得 ⇒ L3 缺席。
+- 这样 R25（多字段并存按序取首）与 R26（非法值等同缺席）同时成立：全合法 ⇒ 序首；序首非法 ⇒ 序中第一个合法值，而不是整层作废。
+- 只从 **openai 形态**的列表载荷（`data[]`）取；anthropic / google 两分支不取（本轮零实测，需求 §4.8 范围边界在册）。
+- 值域校验单点：`model-context.mjs` `positiveInt(v)` = `typeof v === "number" && Number.isInteger(v) && v > 0 ? v : null`，L1（K）与 L3（token）共用谓词——**单位差只在乘点**：L1 ∥ L2 乘 1024，L3 不乘。
+  **单位进函数名**：L1 入口 = `manualContextK`（返 K）、L3 入口 = `listedContextTokens`（返 token）——读函数名即知单位，乘点上的错配在 review 时可见（历史两起 ×1024 事故就出在无单位的值上）。
+- **为什么 L1 也用 K**（用户 2026-10-23 17:43 裁定）：人按「128K / 1M」想窗口；现场两起 ×1024 事故的根因是字段没有单位提示，不是 K 不好用——由界面提示 + **核内量级守卫**解决，不靠换单位（守卫住核、端侧零守卫：见「人工声明的量级守卫（L1 ∥ L2 · R32）」）。单位换两次，人就错两次。
+
+**非法值与异常值**
+
+- 非法（0 / 负 / 非数 / 非整）⇒ 视为未报，落下一层；不抛、不落 0（R26）。
+- 异常（列表值 > 静态表 ×4；表无行时 > 4 × 128K）⇒ **照用 + 告警一次**，不截断（R27）。静态值取 `lookupSpec` 命中行，未命中用 `DEFAULT_SPEC.context`；去重键 = `baseURL + "\0" + 模型 ID + "\0" + 值`（换值算新事实，重新告一次）。文案逐字：
+  `[config] model "<id>" on <baseURL> reports context <value>, over 4x the spec value <static> — using the reported value as-is (not truncated)`
+- 为什么照用：超限值也可能为真（1M / 2M 窗口已存在）；截断是把真事实改小，那才是静默改写。告警负责让人看见。
+
+**人工声明的量级守卫（L1 ∥ L2 · R32）**
+
+- **判点 = 核**：`thincoder-core/model-specs.mjs:380`（L1 ∥ L2 合流后换算值的比较；换算本身在 `:379`）——与 L3 的判点（`thincoder-core/model-specs.mjs:392`）对称。**端侧零守卫**：三端写面只判正整数 K，不判量级。
+- **阈值**：K 值 × 1024 后 > 静态表 ×4（`lookupSpec` 命中行的 `context`；表无行时以 `DEFAULT_SPEC.context` = 128000 为基数 ⇒ 512000）⇒ **照用 + 告警一次**，**不截断、不拒写**。
+- **为什么在核不在端**：值可能来自**手改 JSON**（不经任何界面）——端上守不到；同一条渠道同一个值，手改 JSON 与三端界面必须同判。守卫住核只写一处，四条来源（手改 / CLI / VSC / 桌面）自然同判。
+- **去重键 = `provider 名 + "\0" + 模型 ID + "\0" + K 值`**（换值算新事实，重新告一次）：声明是渠道条目的属性，与 L2 迁移告警同用 provider 名。
+- 文案逐字：
+  `[config] model "<model>" on provider "<name>" declares context <K>K (= <tokens> tokens), over 4x the spec value <static> — using the declared value as-is (not truncated)`
+
+**旧键 `providers[].context`（K）退役形态**
+
+按 A7 对外契约兼容（`docs/core/design/CORE-UNIFICATION.md` §2.12 A7：旧格式可读 + 迁移说明 + CHANGELOG）：
+
+- **仍读**：仅作 L2（未被 `modelContext` 点名的模型的渠道级兜底），与 L1 共用解析乘点 `thincoder-core/model-specs.mjs:379`。
+- **不再写入新配置**：CLI `/model` 的 K 单位编辑命令退役（`thincoder-cli/src/tui/provider-admin.mjs:174-221` 删除）；**同批替代且三端齐**（见下「写面：`modelContext` 编辑（三端同形 · 同批齐）」——单位 K、写 `modelContext`，不产出旧键）：CLI 命令 + VSC 设置面板 providers 卡 + 桌面设置 providers 段，三端同一交互形。
+- **告警一次**（迁移提示）。触发点 = `providerSpec` **实际用到 L2 的那一次**（装载期告警会在 L1 已完全覆盖时误报）；去重键 = provider 名；文案逐字：
+  `[config] provider "<name>" uses the legacy context override (K units) for models not listed in modelContext — migrate to modelContext: { "<model>": <K> } (K units, same as this key)`
+- **CHANGELOG**：迁移说明一条（旧键仍可读、单位仍为 K；新键 `modelContext` 单位也是 K——同一口径）。
+
+**写面：`modelContext` 编辑（三端同形 · 同批齐）**
+
+旧 K 命令退役后的唯一人工声明写面。R31 要求退役与替代**同批**，且**三端齐**——只退役 = 这个配置项全平台没有写入口；只补一端 = 另两端永远设不了（产品常识：任何配置项必须在每个端有配置界面）。
+
+**同一交互形（三端一把尺子，五步，顺序与语义逐字相同）**
+
+1. **选渠道**：列非派生渠道；行文本带已声明模型数（`declared: N` ∥ `declared: none`）。
+2. **选模型**：候选 = 该渠道**已经到手**的模型切片（载体见下「候选载体」）；**该渠无候选 ⇒ 该步换文本输入模型 id**（不区分「无模型」与「探测失败」——两者都只能手填），探测失败时另明示失败信息。写面只写人工声明，不以列表存在为前提。
+3. **输 K 值**：提示文案带 K 示例与现有值（现有值经核出词：已声明 `128` ⇒ `current: 128K`、`1024` ⇒ `current: 1M`）——单位写进提示，不靠用户记（旧命令的现场单位事故不得随替代命令复现）。空输入 ⇒ 进入第 4 步的清除路径，本步不直接删键。
+4. **清除路径分岔**（仅第 3 步空输入时进入）：
+   - **有已声明值 ⇒ 先确认再删（三端同形，各用本端既有确认层——落点见下「清除确认落点」）**：确认框正文 = `contextClearConfirm`（带当前值；CLI 内联英文，VSC ∥ 桌面用该键），默认焦点落「取消」；取消 ∥ 框内 Esc ∥ 背板点击 ⇒ 零动作、盘上零变。
+     为什么三端都必须有这一步：CLI 的自由文本问句把 Esc 与空回车同返空串（`thincoder-cli/src/tui/key-modes.mjs:145` `q.resolve("")` ∥ `:152-153` `q.resolve(answer || "")`），而框内提示写 `Esc: cancel`（`thincoder-cli/src/tui/render-frame.mjs:140`）——不设确认时，用户按 Esc 想取消，结果静默删掉一个已声明的值。
+
+     VSC ∥ 桌面的「输入框留空 + 提交」是**同一条未确认的删除路径**——用户清空想重填、手滑回车即删。**同一个动作在三端语义必须一致**：不能一端问一句、另两端直接删（本项目刚因「一端有、另两端没有」返工过一次）。
+   - **无已声明值 ⇒ 空操作**：回 `Nothing to clear for <model>`（`contextNothingToClear`），盘上零变；**不得**回「已清除」收据——没删却说删了是假收据。
+5. **落盘 + 回显**：写入路径回显核出词串（已声明 `128` ⇒ `128K`、`1024` ⇒ `1M`）；清除路径的回执分工 = 「文案登记」末条（CLI 内联 `Context cleared for <model>`；VSC ∥ 桌面以卡面行复读 `未声明` / `Not declared`）。**不同时给 token 数**——两个数并排又把人绕回单位问题。
+
+**共同语义（三端同判，不许各端自写一套）**
+
+- **值校验 = 先 parse 再判**：交互输入是**字符串**⇒ `Number(String(v).trim())` 后过读面同一个谓词 `positiveInt`（`typeof x === "number" && Number.isInteger(x) && x > 0`）。直接拿字符串喂 `positiveInt` 会全量拒绝（`typeof "128" === "string"`）——旧命令的单位事故不得换个形状重现。
+  边界输入：`"128"` ⇒ **收**（128K）；`"128K"` / `"1.5"` / `"-1"` / `"abc"` / `"0"` ⇒ **拒** + 报错行（字面见「文案登记」表），盘上零变。空串不走校验分支（走第 4 步清除路径）。
+  量级守卫**不在端侧**：写面只判「正整数 K」（`positiveInt`）这一条值域判据；量级判定全部由核 `providerSpecResolution` 承担（R32——值可能来自手改 JSON，不经任何界面，端上守不到；手改 JSON 与三端界面同判，见「人工声明的量级守卫（L1 ∥ L2 · R32）」）。
+- **键处理**：按本节「`modelContext` 键形与查表规则」的末段尺子找既有键——命中则改写该键（不新增第二种拼写）；**命中多条（归一后相等 = 同一模型）⇒ 这几条键一并改写为同一新值**（R29⑤）——不选键、不排序、不比较（全写同一值 ⇒ 无需选），不拒写、不告警；未命中则用模型 id 原样作键（列表 id ∥ 手填原样）。
+- **清除语义**：「已声明值」的判据 = 该模型在本渠道 `modelContext` 里有归一后相等的键（键存在即算——值非法的条目同样要能删掉，确认行 current 段回 `Not declared`）。确认通过后 ⇒ **删除全部归一相等的键**（R29⑤——同一模型的多种写法一并清掉；只删一条会留下仍归一相等的残键——卡面继续显示已声明，清除看起来不生效）；删除后对象无键 ⇒ `delete providers[].modelContext`（不留空对象）。零匹配键 ⇒ 第 4 步即空操作，不删、不留收据。
+- **不预填任何非声明值**：L3 列表值 ∥ L4 静态值都不进输入框——一次回车就会把参考值固化成人工声明；输入框只回显该模型的**合法已声明值**（值非法 ⇒ 空，见「非法声明值的展示」）。
+- **读面回显取值 = 已声明值**（R31 ④）：三端读该渠道 `modelContext` 的原值（K）交核出词——**展示入口 ∥ 收 K 换算 ∥ 端侧禁令单源 = 本节「读面载荷（三端同源）」，不在此重述**。
+  **不取 `providerSpec(provider).context`**：渠道条目不携模型（`thincoder-core/config-io.mjs:154` `delete p.model`），而 L1 的键取 `provider.model`（`thincoder-core/model-specs.mjs:345` `provider?.model ?? ""`）⇒ 渠道条目上 L1 永不命中；无旧键时解析落到 L5 的 128000，显示成 `125K`——把声明的 `128` 显示成 `125K`，是错的读数。
+
+  卡片行形：逐条 `模型: <N>`；单条即 `<N>`（`<N>` = 核出词串，如 `128K` / `1M`；模板不补 `K` 见「文案登记」）；无声明 ⇒ `未声明` / `Not declared`。
+- **非法声明值的展示 = 与「无键」同面**（父侧裁定）：卡面走与读链**同一个合法性谓词**（`positiveInt` = 正整数 K）——条目值非法（手写 `"128"` 字符串 ∥ `0` ∥ `1.5` ∥ `true`）⇒ 显示 `settings.providers.contextNotDeclared`（`未声明` / `Not declared`），**不回显非法原值**；照原值出数 = 展示一个数、运行判另一个数。
+  编辑弹窗输入框**空**（回填门只认合法正整数）：**取数口不存在**——装载归一在 `thincoder-core/config.mjs:272-289` 已把非法条目从内存镜像删掉（`:286` `delete p.modelContext[key]`），载荷（`providerStatus` / `provider:list`）从内存构建 ⇒ 端侧拿不到该原值；要回填盘上原文得三端各自再读一次盘（CLI 有 `loadRaw` 读口，VSC ∥ 桌面没有）。
+
+  非法原值的出口 = **装载期告警**逐字带原值（`:284-285` `… must be a positive integer in K units … — got …`）——弹窗复述是重复。**盘上零改写**：展示 ∥ 编辑都不静默清掉用户的声明。
+  两个核导出的分工：`formatContextK(tokens)`（收 token，本批由 CLI 私有 `fmtContextK` 上提）服务 L3/L4 值的展示（如切模型回显）；`formatDeclaredContextK(k)`（收 K）服务已声明值的展示。一个换算方向一个入口，不混用。
+- 卡面只把 `modelContext` 原值交给 `formatDeclaredContextK` 出词（禁令与判缺陷写法单源 = 本节「读面载荷（三端同源）」，不在此重述）；各端自算 = 三份会漂的实现（旧命令的 ×1024 显示行就是端侧自算的后果）。
+
+**三端落点**
+
+| 端 | 入口 | 交互载体 | 宿主写面 | 写后回显 |
+|---|---|---|---|---|
+| CLI | `/model` 管理项 `Set context window (K)…`（`thincoder-cli/src/tui/model-picker.mjs` 装配 `action:"model-context"`） | `setModelContextFlow`（`thincoder-cli/src/tui/provider-admin.mjs` `createProviderAdmin` 增，与 `setContextFlow`（`:174-221`）同位，后者删除）：`showPicker` 选渠道 → `showPicker` 选模型 → `askQuestion` 输值 →（空输入）`confirmDelete` 确认 | `persistRaw` 单键补丁（D-F5a 先盘后存）+ 内存镜像就地改键 | `pushLine` 回显 `128K` |
+| VSC | providers 卡渠道行动作簇新增 `Context…` 钮（`thincoder-vscode/webview/settings-providers.js:87-90` 同簇） | 设置面弹窗（族 = `thincoder-vscode/webview/settings-provider-dialog.js`）：渠道 → 模型 → 值 →（空输入）确认层（见下「清除确认落点」） | 新消息 `saveProviderModelContext`（分发落 `thincoder-vscode/src/extension/panel-messages-settings.mjs`，形沿 `handleSaveProviderKey` `:36-48`）→ 新宿主函数 `saveProviderModelContext`（`thincoder-vscode/src/extension/settings.mjs`，经 `vscPersistRaw` 写盘，形沿 `:309-322`） | 成功 ⇒ `pushStatus` 重推 `providerStatus`（`:349-356`）；卡面行内显示已声明值 |
+| 桌面 | 渠道行动作簇新增 `Context…` 钮（`thincoder-desktop/renderer/views/settings-sections-providers.mjs:114-135` `keyControls` 同级，`rowButton` 同锚名形） | 专用弹窗体（`settings-sections-providers.mjs` 增 `providerContextBody` + `thincoder-desktop/renderer/views/settings.mjs` 弹窗支）：渠道 → 模型 → 值 →（空输入）确认层（见下「清除确认落点」） | `ask("provider:setModelContext", { name, model, k })`（`thincoder-desktop/renderer/mount-settings-segments-providers.mjs:150-158` handlers 表增编辑 ∥ 保存出口；写形沿 `saveProviderKey` `:61-81`） | 成功 ⇒ `loadProviders()` 复读行面（`mount-settings-reads.mjs:57-74`） |
+
+行内入口（VSC ∥ 桌面）的「选渠道」一步 = 点该渠道行；其余三步与 CLI 逐字同形——不是第二套交互。
+
+**清除确认落点（第 4 步 · 三端同形，载体各异）**
+
+| 端 | 确认载体 | 默认焦点 ∥ 取消径 |
+|---|---|---|
+| CLI | `confirmDelete` picker（`thincoder-cli/src/tui/pickers.mjs:116-122`：`Yes, delete` ∥ `Cancel`） | `defaultIndex: 1` ⇒ 直接回车落 `Cancel`；Esc ∥ `Cancel` ⇒ 零动作 |
+| VSC | 面板内确认层 `showConfirmPopover`（`thincoder-vscode/webview/settings-widgets.js:77-105`；`_confirmSecretDelete` 同件，`thincoder-vscode/webview/settings.js:57-64`） | `:104` 焦点落「取消」；框内 Esc（`:98-102`）∥ 背板 ⇒ 零动作（不连带关设置面） |
+| 桌面 | 既有确认弹层 `confirmSecretDelete`（`thincoder-desktop/renderer/settings-confirm.mjs:65-80`） | `:78-79` 焦点落「取消」；框内 Esc（`:50-54`）∥ 背板 ⇒ 零动作（设置面保持开） |
+
+三端确认框正文同一键 = `contextClearConfirm`（带当前值，字面见「文案登记」）；桌面既有件正文固定为 `secretDeleteConfirm`（`thincoder-desktop/renderer/settings-confirm.mjs:57`），需加正文参数以带当前值（形沿 VSC `showConfirmPopover` 的 `text` 参）。三个载体 = 同一判据，不是三套语义。
+
+**候选载体（载荷键 · 零新增请求）**：候选 = **打开面板时已经到手**的模型切片，不新增任何请求。
+- VSC：`fullStatus` 下发的 `{ type: "models", models }`（`thincoder-vscode/src/extension/settings.mjs:426`；逐渠探针结果的合集，行携 `provider`——`thincoder-vscode/src/extension/provider-probe-window.mjs:67`）。
+- 桌面：渲染面已有的 `settings.model.models` 切片——由 `model:list` ∥ `model:catalog` 回执写就（`thincoder-desktop/renderer/mount-settings-reads.mjs:97` 取数，`:72` · `:93` · `:104` 落切片）。
+  **`provider:list` 回执没有 `models` 键**（`thincoder-desktop/src/main/providers.mjs:89-119`：回执 = `presets` ∥ `active` ∥ `defaultModel` ∥ `providers[]`），不得作为候选载体。
+- 弹窗打开时取**所选渠道**已在切片里的候选，**不新拉**（与 D2 同向；运行期零探测不变）。切片只装激活渠候选（`model:list`）∥ 全渠扇出行（`model:catalog`，行携 `provider`——`mount-settings-reads.mjs:79`）——所选渠不在切片里 ⇒ 按「该渠无候选」走手填。
+- **该渠无候选 ⇒ 该步换文本输入**（模型 id → K 值，两步同弹窗；CLI = `askQuestion` 两问）——**不区分「无模型」与「探测失败」**：两种情形都只能手填，探测失败时另明示失败信息。文案：`No candidates (type the model ID)` / `无候选（可手填模型 ID）`。
+  候选在场时只从候选行选（不设手填行——避免两套输入面）。手填路径不新增键（标题复用 `settings.providers.context`）。
+
+**读面载荷（三端同源）**
+
+**展示入口写死 = 核 `formatDeclaredContextK(k)`（收 K）**：三端凡渲染窗口串处——卡片行 ∥ 写面 current 段 ∥ 清除确认正文的 current 段 ∥ 保存回执——一律经该入口出词。端侧**零拼串、零 K→token 换算、零格式化器副本**。
+入口内部 = `formatContextK(k * 1024)`——K→token 的展示换算**只此一处**；展示串形随 `formatContextK` 既有舍入：`128K`，token ≥ 1000000 出 `1M`（声明 `1024` = 1048576 token ⇒ `1M`）。
+
+判缺陷的两种写法：`String(k) + "K"`（漏舍入——声明 `1024` 出 `1024K`，核出 `1M`）· 端侧先 `k * 1024` 再喂 `formatContextK`（三个换算点会漂；且 `formatContextK` **收 token**——拿 K 直喂得 `0K`，`formatContextK(128)` = `Math.round(128 / 1024)` = `0`）。
+**`128` 不出舍入 ⇒ 自拼串与核出词同串（都 `128K`），判别力为零，不能当验收样本**；判别样本取 `1024 ⇒ 1M`（W-9b）。
+
+三问：`existing: thincoder-core/model-specs.mjs:323 · name: "formatDeclaredContextK"`。
+
+consumers = `thincoder-cli/src/tui/provider-admin.mjs`（`declaredContextText` 与写面三处回显）· `thincoder-vscode/src/extension/provider-context.mjs`（宿主投影 `modelContextText`）· `thincoder-desktop/src/main/providers.mjs:78`（`modelContextTextOf`）。
+
+本批零新机制，只把端侧自拼串换成该入口。先例 = 桌面（主进程出词、回执 `modelContextText`、渲染面零拼串）；偏离 = 无。
+
+**为什么 VSC 由宿主出词**：webview 当前零 `@thincoder/core` 引用（`thincoder-vscode/webview/**` 实读；取词面只走 `@thincoder/render-core`，如 `thincoder-vscode/webview/i18n.js:2`）——把核整张 `MODEL_SPECS` 表打进面板不值得；宿主已引核（`thincoder-vscode/src/specs.mjs:13`）⇒ 展示串在宿主算，面板只渲染（与桌面同形）。
+
+- **VSC 载荷**：`providerStatus()`（`thincoder-vscode/src/extension/settings.mjs:83-135`）每渠道条目三键。
+  `modelContext` = 已声明映射（K 原值，卡面与编辑面都读它）。
+  `modelContextText` = 同键的展示串（`providerContextFields` 经核 `formatDeclaredContextK` 出词；只投影合法正整数，非法值条目不投影——同桌面 `modelContextTextOf`）。
+  `context` = `providerSpec(entry).context` 解析值（留给用量百分比面）。
+  行面 ∥ 编辑弹窗的 current 段只渲染 `modelContextText`，不拼串。
+
+  展示数值**不读** `context`：渠道条目不携模型（`thincoder-core/config-io.mjs:154` `delete p.model`）⇒ L1 永不命中 ⇒ 落 L5 的 128000，显示成 `125K`。
+
+  **保存回执**：宿主发 `providerContextSaved { name, model, k, kText }`——`kText` = 宿主出词 `formatDeclaredContextK(k)`（`panel-messages-settings.mjs` 既引核 ⇒ 出词在宿主，webview 零换算）；行内保存行模板 `<N>` 取 `kText`（模板不补 `K`）。清除径 `k === null` ⇒ 零回执文案（行面转 `未声明`，见「清除回执分工」）。
+- **桌面载荷**：`provider:list` 回执按同一形供 `modelContext` + `modelContextText`（`thincoder-desktop/src/main/providers.mjs:78` 出词 · `:150` 入回执 · `thincoder-desktop/renderer/mount-settings-reads.mjs:57-74` 装载处透传），视图零派生、零拼串。
+  **桌面不出保存回执行**：写后回显 = `loadProviders()` 复读行面（`:420`）；`contextSaved` 键在本端删除（无消费者 = 死键），回显由 `modelContextText` 承载。
+- **CLI 出口**：`declaredContextText`（`thincoder-cli/src/tui/provider-admin.mjs:367-371`）内调 `formatDeclaredContextK`——同一出口服务 `/model` 渠道行（`thincoder-cli/src/tui/model-picker.mjs:124`）∥ 写面选渠道行（`thincoder-cli/src/tui/provider-admin.mjs:225`）；写面另有 current 段（`:243`）· 清除确认正文（`:272`）· 保存回执（`:328`）三处同调该入口。
+- 三端同一渠道同一模型 ⇒ 显示同一个**已声明值**串（R31 ④ · R33 ④）：同一配置、同一 `modelContext` 原值、同一个 `formatDeclaredContextK` 出词。
+
+**文案登记（i18n 落点）**
+
+- CLI：**无 i18n 档**（实读：`thincoder-cli/src/tui/` 无 i18n 模块，旧命令文案 `thincoder-cli/src/tui/provider-admin.mjs:189` 即内联英文）⇒ 新命令文案内联（用下表 en 列字面）。
+- VSC：`thincoder-vscode/webview/i18n.js`（`settings-providers.js:7` 唯一取词入口；实现单源 = `thincoder-render-core/i18n.mjs`）新增八键；字面落 `thincoder-vscode/locales/{zh,en}.json`。
+- 桌面：`thincoder-desktop/renderer/i18n-settings.mjs`（`settings-sections-providers.mjs:26` 取词入口）**七键**（与 VSC 同名，无 `contextSaved`——桌面不出回执行，见「读面载荷」；zh ∥ en 两字面）。
+
+| 键 | en 字面 | zh 字面 |
+|---|---|---|
+| `settings.providers.context` | `Context…` | `上下文…` |
+| `settings.providers.contextPrompt` | `Context window for <provider>:<model> in K (current: <N> — e.g. 128 = 128K; empty to clear):` | `上下文窗口 <provider>:<model>，单位 K（当前: <N> — 例：128 = 128K；留空清除）：` |
+| `settings.providers.contextInvalid` | `Invalid context: "<v>" — must be a positive integer in K (e.g. 128 = 128K)` | `上下文值非法："<v>" — 须为正整数 K（例：128 = 128K）` |
+| `settings.providers.contextSaved` | `Context saved: <provider>:<model> = <N>` | `上下文已保存：<provider>:<model> = <N>` |
+| `settings.providers.contextClearConfirm` | `Clear context for <provider>:<model> (currently <N>)?` | `清除 <provider>:<model> 的上下文声明（当前 <N>）？` |
+| `settings.providers.contextNothingToClear` | `Nothing to clear for <model>` | `无可清除的上下文声明：<model>` |
+| `settings.providers.contextNoCandidates` | `No candidates (type the model ID)` | `无候选（可手填模型 ID）` |
+| `settings.providers.contextNotDeclared` | `Not declared` | `未声明` |
+
+未声明态（卡面行 ∥ 编辑面 current 段）= `settings.providers.contextNotDeclared`（en = `Not declared` ∥ zh = `未声明`）；三端同句，单位提示不得改写。
+模板里的 `<N>` = 核出词串（`formatDeclaredContextK` 结果：`128K` / `1M`），**模板不补 `K`**——补了超 1M 的声明会出 `1MK`。
+
+**清除回执分工（登记，不新增键）**：CLI = 内联英文 `Context cleared for <model>`（`thincoder-cli/src/tui/provider-admin.mjs`；CLI 无 i18n 档）；VSC ∥ 桌面 = 卡面行随状态重推复读 `settings.providers.contextNotDeclared`（`未声明` / `Not declared`）作回执，清除径不另出提示行。
+
+分工理由 = CLI 无卡面行可复读（会话流是唯一回执面），两端有卡面行；VSC 实读：`thincoder-vscode/webview/settings-providers.js:81-85` 清除径 `k === null` ⇒ 零提示，行面转 `未声明`。
+判据：清除成功必须留下可见结果——CLI 见句、两端见行面转 `未声明`；两端行面不变 ≡ 无回执，属缺陷。
+
+| 情形 | 输入 | 预期 |
+|---|---|---|
+| W-1 正常 | 渠道 A、模型 `glm-5.3`、`128` | 盘上 `modelContext["glm-5.3"] = 128`（K）；解析 L1 = 131072（128 × 1024——同一件事的两个口径） |
+| W-2 改写 | 已声明键 `qwen/ZHIPU/GLM-5.3`，列表选 `glm-5.3`，输 `256` | 改写原键（不新增第二个键），值 = 256K |
+| W-3 清除（含三端） | 该模型已有声明，空输入 + 确认「删除」（CLI 词面 `Yes, delete`，VSC ∥ 桌面 `session.delete`） | 该键消失；对象空 ⇒ `modelContext` 键整体消失；CLI 回显 `Context cleared for <model>`，VSC ∥ 桌面行面转 `未声明` |
+| W-4 非法 | `0` ∥ `-1` ∥ `1.5` ∥ `abc` ∥ `128K` | 报错行（`settings.providers.contextInvalid` 字面），盘上零变 |
+| W-5 列表不报窗口 | qwen 渠道选模型 | 流程照常，写入生效 |
+| W-6 列表不可达 | `/models` 抛错 | 明示失败信息 + 「选模型」一步换文本输入（文案 `No candidates (type the model ID)`）；提交前盘上零变 |
+| W-7 VSC 写入 | providers 卡 `Context…` → 渠道 → 模型 → `128` | 盘上 128（K）；行面回显 `128K`；再开输入框 current = `128K` |
+| W-8 桌面写入 | 渠道行 `Context…` → 同形三步 | 盘上 128（K）；复读行面回显 `128K` |
+| W-9 三端一致（非判别样本） | 同渠道同模型已声明 `128`（该渠无其它声明），三端各开一次 | 三处都显示 `128K`；不得显示 `125K`（`providerSpec().context` 的 L5 值）。**此样本判别力为零**——自拼串也出 `128K`（无舍入） |
+| W-9b **判别形**（R33 ①） | 同渠道同模型已声明 `1024`（= 1M），三端各开一次（卡片行 ∥ 写面 current 段 ∥ 保存回执都看） | 三处都显示 `1M`。自拼 `String(k) + "K"` 出 `1024K` ⇒ 本形能把「经核出词」与「端侧拼串」分开；三端同串 |
+| W-10 无候选 | 该渠列表可达但返回空 ∥ 该渠无候选切片 | 「选模型」一步换文本输入 + 文案 `No candidates (type the model ID)` / `无候选（可手填模型 ID）`；写入照常（如 `128`） |
+| W-11 无声明 | 该渠道 `modelContext` 无键（含只有旧键 `context` 的渠道） | 卡面行显示 `未声明` / `Not declared`；编辑面 current 段同词；不显示任何数值 |
+| W-12 清除取消（有值 · CLI 载体） | 该模型已有声明，CLI 空输入回车 ∥ Esc（两者同返空串） | 弹 `confirmDelete` 确认框；直接回车（默认 `Cancel`）∥ 框内按 Esc ⇒ 盘上零变（该键仍在）、无「已清除」回执 |
+| W-13 清除空操作（无值） | 该模型零匹配键（含只有旧键 `context` 的渠道），空输入回车 ∥ Esc | 回 `Nothing to clear for <model>`；盘上零变；无「已清除」回执 |
+| W-14 清除取消（有值 · VSC 载体） | 该模型已有声明，VSC 弹窗输入框留空 + 提交 | 弹确认层（正文 `contextClearConfirm` 带当前值，默认焦点「取消」）；回车（默认「取消」）∥ 框内 Esc ∥ 背板 ⇒ 盘上零变（该键仍在）、行面仍显原值、无「已清除」回执 |
+| W-15 清除取消（有值 · 桌面载体） | 同 W-14（桌面确认弹层 `confirmSecretDelete`） | 同 W-14（正文 `contextClearConfirm` 带当前值；默认焦点「取消」；回车 ∥ 框内 Esc ∥ 背板 ⇒ 盘上零变、行面仍显原值） |
+| W-16 声明异常大值（R32 守卫触发） | **手改 JSON** 写 `modelContext["glm-5.3"] = 262144`（整型 K，不经任何界面）；静态表行 `glm-5.3` = 1000000 | 解析 = 268435456（262144 × 1024），**未被截断**；量级告警恰一次；同值重复解析不重告、改成另一超限值再告一次 |
+| W-17 声明正常值（R32 不误报） | **手改 JSON** 写 `modelContext["glm-5.3"] = 128`；同一静态表行 | 解析 = 131072；**零**量级告警（131072 < 1000000 × 4） |
+| W-18 | 非法声明值展示 | **手改 JSON** 写 `modelContext["glm-5.3"] = "128"`（字符串）∥ `0`（各一例） | 卡面显示 `未声明` / `Not declared`（与 W-11 同面）；编辑弹窗输入框**空**（装载归一已把非法条目从内存镜像剔除 ⇒ 回填门只认合法值）；盘上字节不变（零改写、零清除）。**非法原值由装载期告警明示**（`[config] provider … must be a positive integer in K units`），不在弹窗里复述 |
+| W-19 | 边界（撞键清除） | 该模型有两条归一相等的键（`qwen/glm-5.3` ∥ `zhipu/glm-5.3`），空输入 + 确认删除 | 两条键**一并删除**（同一模型的两种写法）；对象空 ⇒ `modelContext` 整键消失；零报错行 |
+| W-20 | 边界（撞键改写） | 同 W-19 的两条键，输 `256` | 两条键的值都改为 256（不选键、不排序、不比较）；盘上仍两条键、无新增第三种拼写；零报错行、零告警 |
+
+W-12 / W-14 / W-15 = **同一判据的三端各一例**（留空提交 ⇒ 先确认；默认 `Cancel` ⇒ 盘上零变），不是三套语义。
+W-16 / W-17 = R32 的两端（守卫生效 ∥ 不误报）；两例的输入都是**手改 JSON 直接落盘**——不经任何界面也能同判，即「守卫在核」的判别形（R32③）。
+W-18 = 非法声明值的展示口径（父侧裁定取「空」）：卡面判据与读链同一个谓词（值非法 = 未声明）；编辑弹窗输入框**空**——回填门只认合法正整数，且非法原值已被装载归一从内存镜像剔除（端侧载荷无此值，回填取数口不存在）；原值由装载期告警明示；盘上零改写。
+
+W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经谁出词」——`128` 不经舍入，自拼串与核出词同串。
+
+**派生面：`requestBudget().windowSource`**
+
+`thincoder-core/config.mjs:93-109` 现按 `provider.context` 二值判来源（`provider-override` ∥ `spec`）——新链下 L1 / L3 命中都会误报成 `spec`。
+改读 `providerSpecResolution(provider)` 的 `source`，闭集五值：`modelContext`（L1）∥ `provider-override`（L2）∥ `list`（L3）∥ `spec`（L4）∥ `default`（L5）。
+
+唯一消费点 = `thincoder-core/agent-tools/context.mjs:101` 的 `Request budget: window <n> (<source>)`：**映射 = 恒等**（五个枚举值原样入括号；现文案就是原样插值枚举），**不并类**——并成「人工声明 / 列表 / 静态」会丢掉 L1/L2 的分辨力，而该行的用途正是判来源。该档入受影响文件表（Δ = ±0：只换来源取值，零新分支）。
+
+**未知模型告警的口径**
+
+`warnUnknownModel` 只在**链落到 L4/L5** 时触发：L1 / L2 / L3 供值时不再警告（原文案「using default spec (128K context)」在此时为假）。L4/L5 路径的文案与去重键逐字不变（`thincoder-core/model-specs.mjs:289-296`）。
+
+**消费面与零波及面**
+
+- `providerSpec` 的签名、同步性、返回形状不变：无 L1-L3 值时仍返回共享 spec 对象（零拷贝热路径）；有值时返回 `{ ...spec, context }` 拷贝（T-C1 不污染共享对象）。
+- 新增导出 `providerSpecResolution(provider) → { spec, source }`（同一遍历实现的两层出口；`providerSpec` = `resolution.spec`）。
+- **`listModels` 返回形态不变**（`string[]`、本端排序）：六个消费面零改动。
+- L1 / L3 命中时 `maxOutput` 仍取静态表 ∥ `DEFAULT_SPEC`（需求边界：不改 maxOutput 来源）。
+
+**已知边界（认账）**
+
+- 同 `baseURL`、不同 `apiKey` ∥ `headers` 的两个渠道条目共用一个缓存条目（后成功者覆盖）——列表是端点自报，跨凭据的元数据差不在本批判据内。
+- 会话从不触发列表拉取 ⇒ L3 缺席、落 L4（已知代价，见「触发」）。
+- anthropic / google 两端的列表形态不取窗口（零实测）。
+- L3 列表值是**进程内**缓存，跨进程不同步（VSC 扩展宿主 / 桌面主进程各一份）——三端回显判据（R31④）只覆盖 `modelContext` 的**已声明值**，不覆盖 L3；旧键仍作 L2 参与解析（执行面），但卡面行不展示它（只有旧键的渠道显示 `未声明`——卡面口径见「读面回显」）。
+- 列表值在会话中途由无到有 ⇒ 窗口变大、压缩阈值随之上移；与改配置同性质，不另设钳制。
+- 同侧两条键归一相同（如手改 JSON 写出两种命名空间写法）：读面取其中一条（按对象键序，不排序、不比较），写面把这几条一并改写为新值，清除面一并删除——取哪条不构成判据（R29④ · R29⑤）。
+- 两条归一相等的键携带**不同值**（只有手改 JSON 造得出）：读面静默取对象键序第一条、**零告警**——手改出值不等的用户不会再收到任何提示；写面一次改写即把两条拉平为新值（值是否相等不作判据——R29④ · R29⑤）。现网迄今一次未撞（读数与来源见 D4）。
+
+**关键决策**
+
+| # | 决策 | 理由 | 否决项 |
+|---|---|---|---|
+| D1 | 模块级 `baseURL` 缓存 + 同步只读 | 热路径零 IO；provider 对象被反复浅拷贝，注入字段会丢 | 预取注入（拷贝丢字段）· async `providerSpec`（IO 进请求路径） |
+| D2 | 写面收在 `listModels` | 六个消费面本来就要拉，零新增请求 / 零新增失败面 | 会话启动预取（与 §6.16 M8/M9 启动零探测冲突） |
+| D3 | L2 旧键位于 L3 之上 | 旧键也是人工声明；17:30 裁定人工声明 > 列表 | 置于列表之下（用户确认过的事实输给上游一句话） |
+| D4 | 三面同一把尺子 = 末段归一相等；两条键归一相同 ⇒ 同一模型，命中取该条即用 | 用户 17:34 裁定（末段归一）+ 2026-10-23 20:15「删！」：撞键只是同一模型的两种写法，用户写哪条都是他写的值（R29④） | 完整名先扫（`glm-5.3/zzz` 误命中）· 逐字匹配（命名空间形静默失效）· 把撞键判成「未提供」+ 告警 + 三端拒写（对不存在场景的防御：用户本机 19 个渠道 `modelContext` 全空、一次未撞——读数来源 = 用户 2026-10-23 20:15 现场说明，设计轮未复核本机配置） |
+| D5 | 三字段取第一个**合法**值 | R25 与 R26 同时成立 | 取首字段（首字段非法时整层作废，丢真值） |
+| D6 | 异常值照用 + 告警，不截断 | R27 + R32 明示（L3 列表值 ∥ L1 · L2 人工声明同判）；截断 = 静默改写真事实 | 截断 / 丢弃 |
+| D7 | K 单位编辑命令退役 **+ 同批三端替代**（CLI 命令 · VSC 设置面板 providers 卡 · 桌面设置 providers 段，同一交互形） | R31③：只退役不替代 = 配置项全平台无写面；只补一端 = 另两端永远设不了（产品常识：任何配置项必须在每个端有配置界面）；旧命令的单位事故不得随替代命令复现 | 保留旧命令（继续生产单位事故）· 只退役不替代（配置项失去写入口）· 只补 CLI（VSC / 桌面留欠账） |
+| D8 | 清除前确认（**三端同形**，各用本端既有确认层，默认焦点 `Cancel`）；无声明值时空操作 | 破坏动作必须可取消：CLI 自由文本问句的 Esc 与空回车同返空串（`key-modes.mjs:145` ∥ `:152-153`），不设确认即「取消 = 删除」；VSC ∥ 桌面「留空 + 提交」同是一条未确认的删除路径；同一动作三端语义必须一致 | 改平台键位层 `key-modes.mjs` 的 Esc 语义（全 CLI 的 Esc 都要重验）· 空输入直删（Esc 静默删值）· 只落 CLI（一端问、另两端直删——同一动作两种语义）· 无值也回「已清除」（假收据） |
+| D9 | 量级守卫住核（`providerSpecResolution` 的 L1 ∥ L2 合流点），端侧零守卫 | 值可能来自手改 JSON（不经界面）⇒ 端上守不到；住核只写一处，四条来源自然同判（R32③） | 端侧各判（四条来源四份判据，手改 JSON 漏判）· 只在界面上拦（绕界面即绕过守卫） |
+
+**验收回指（R24–R33）**
+
+| 需求 | 判定行（可机判） | 用例 |
+|---|---|---|
+| R24 | 五源各不相同 ⇒ L1；去 L1 ⇒ L2；去 L1/L2 ⇒ L3；无 L3 ⇒ L4；表无行且无 L3 ⇒ 128K | P-1..P-5 |
+| R25 | 三字段各造一例均命中；同条目三字段异值 ⇒ 序首合法值 | P-6 |
+| R26 | 0 / 负 / 非数 / 非整各一例 ⇒ 与字段缺席逐字同判 | P-7 |
+| R27 | 8× 值 ⇒ 采用原值（未改写）+ 告警恰一次 | P-8 |
+| R28 | 既有模型在「列表不报」路径下 context 逐值不变 | P-9 |
+| R29 | 两模型各值各自生效；末段相等命中；未点名落 L2；`glm-5.3` × `glm-5.3-flashx` 不命中；两条键归一相同 ⇒ 取对象键序第一条即用、零告警、不落下一层；同一模型的多种写法 ⇒ 写面一并改写为新值、清除面一并删除 | P-10 · P-11 · W-19 · W-20 |
+| R30 | 写 `128` ⇒ 解析 131072；旧键同判 + 告警一次；回显 `128K` | W-1 · W-9 · P-2 |
+| R31① | `/model` 菜单无 K 旧项；`grep setContextFlow thincoder-cli/src` 零命中 | G-1 |
+| R31② | 写者枚举见下；生产面零写 `providers[].context` | G-2 |
+| R31③ | 三端各写 `128` ⇒ 盘上 128、解析 131072；空 ⇒ 确认后删（无声明 ⇒ 空操作）；无候选时经手填照写 | W-1 · W-7 · W-8 · W-10 · W-12 · W-13 · W-14 · W-15 |
+| R31④ | 三端同渠道同模型显示同一**已声明值** K 串，且不显示 `providerSpec().context` 的 L5 值（L3 跨进程不同步 = 已知边界，不纳入判据）；值非法 ⇒ 三端同显 `未声明` | W-9 · W-11 · W-18 |
+| R31⑤ | 旧键只读仍在（= R30 ②） | P-2 |
+| R32 | 声明 K 值 ×1024 后 > 静态表 ×4 ⇒ 采用原值（未截断）+ 告警恰一次；`128` ⇒ 零告警；手改 JSON 与三端界面同判（守卫在核，端侧零守卫） | W-16 · W-17 |
+| R33 | ① `1024` ⇒ 三端 `1M`（不是 `1024K`）；② `128` ⇒ 三端 `128K`（判别力为零——不作验收样本）；③ 五档源扫 `* 1024` 零命中；④ 三端同渠道同模型同串 | W-9b · W-9 · 源扫（见下「R33③ 源扫」） |
+
+**用例表（读链 · 批内单元档，收口删）**
+
+| id | 类 | 输入 | 期望 |
+|---|---|---|---|
+| P-1 | 正常 | L1 `modelContext["glm-5.3"]=128` · L2 `context=64` · 列表报 200000 · 表行 1_000_000 | 131072（L1 胜） |
+| P-2 | 正常 | 去 L1（未点名）⇒ L2 旧键 64 | 65536 + 迁移告警一次（provider 名去重） |
+| P-3 | 正常 | 去 L1/L2 ⇒ 列表 200000 | 200000（不乘） |
+| P-4 | 正常 | 无列表 ⇒ 表行 1_000_000 | 1_000_000 |
+| P-5 | 边界 | 表无行 + 无列表 | 128000（`DEFAULT_SPEC`） |
+| P-6 | 正常 | 列表单条目三字段：`context_window: 0` · `context_length: 200000` · `max_model_len: 300000` | 200000（第一个合法值，不是首字段） |
+| P-7 | 边界/错误 | 列表值 `0` / `-1` / `"abc"` / `1.5` 各一例 | 与字段缺席同判（落下一层）；不抛、不落 0 |
+| P-8 | 边界 | 列表值 = 表值 ×8 | 采用原值（未改写）+ 告警恰一次；同值重拉不重告；换值再告一次 |
+| P-9 | 回归 | qwen / glm / mimo 既有模型，列表不报窗口 | `providerSpec(...).context` 逐值 = 批前 |
+| P-10 | 边界 | 用户键 `glm-5.3` ∧ 模型 `glm-5.3-flashx` | **不命中**（L1 缺席 ⇒ 落下一层）——末段相等算子（§6.9 尺子表） |
+| P-11 | 边界 | `modelContext` 两键归一后相同（`qwen/glm-5.3` ∥ `zhipu/glm-5.3`）且**值不同**：`{"qwen/glm-5.3": 128, "zhipu/glm-5.3": 256}`（手改 JSON，对象键序如上） | 取**对象键序第一条**的值 ⇒ 131072（`qwen/glm-5.3` 的 128K；不排序、不比较）；L1 生效、不落下一层；**零**撞键告警、**零**量级告警 |
+| P-12 | 边界 | 列表同端点两 id 末段相撞且**值不同**（载荷序如下）：`qwen/glm-5.3`（`context_window: 200000`）∥ `zhipu/glm-5.3`（`context_window: 300000`） | 取**列表序第一条**的值 ⇒ 200000（不排序、不比较）；L3 生效、不落 L4；**零**撞键告警、**零**量级告警（200000 < 静态表 ×4） |
+| P-13 | 边界 | `modelContext["x"] = 0` ∥ `"128"`（字符串）∥ `true` | 该键视为未声明（落 L2）+ 装载期告警一次 |
+
+**R31② 凭据（写者枚举 + grep 判据）**——本轮 `grep` 入仓码面实读（2026-10-23）：
+
+| # | 写 `providers[].context` 的代码路径 | 坐标 | 处置 |
+|---|---|---|---|
+| ① | CLI K 编辑命令 `setContextFlow` | `thincoder-cli/src/tui/provider-admin.mjs:205` · `:208` · `:211` | 随 D7 **删除**（G-1 零命中） |
+| ② | v1→v2 配置迁移（旧元数据透传） | `thincoder-core/config-migrate.mjs:113` | **保留**：只读旧盘面、不产新键（R31② 射程 = 不写入**新**配置） |
+| ③ | 装载归一（数字字符串 → Number） | `thincoder-core/config.mjs:252` | **保留**：只归一已有值，零新键 |
+
+**G-1**：`grep -rn "setContextFlow" thincoder-cli/src` ⇒ 零命中。**G-2**：`grep -rn --include=*.mjs --include=*.js "\.context *= " thincoder-cli/src thincoder-vscode thincoder-desktop thincoder-server` ⇒ 零命中（核面只留 ②③ 两处非产键写者）。
+
+**受影响文件（行数口径 = `wc -l`；读数日期 = 2026-10-23）**
+
+| 文件 | 现量 | Δ | 性质 |
+|---|---|---|---|
+| `thincoder-core/model-context.mjs` | **99**（收口轮 wc -l 实读） | +~100；本批 **净删 12**（111 → 99） | 缓存 ∥ 键归一 ∥ `manualContextK` ∥ `listedContextTokens`；本批净删 = 两处撞键分支与告警文案（`:78-84` · `:97-103`）及文件头/注释里的撞键描述；读面撞键 ⇒ 取一条 |
+| `thincoder-core/model-specs.mjs` | **442**（`wc -l` 实读 · 2026-10-23） | 本批 ±0 | 上一批已落链 ∥ 量级守卫（L1 ∥ L2）∥ `providerSpecResolution` ∥ `formatContextK` ∥ `formatDeclaredContextK`；本批零改（入口本体）。拆点判定：442 ≤ 500 软线 ⇒ **拆点未触发**（零表块位移、零结构重整——§13.6 口径） |
+| `thincoder-core/provider/list-models.mjs` | **199** | +~15 | openai 分支收集 id→窗口，返回前写缓存 |
+| `thincoder-core/config.mjs` | **438** | +~20 | `modelContext` 装载归一 ∥ `requestBudget` 改读 `providerSpecResolution().source` |
+| `thincoder-core/agent-tools/context.mjs` | **181** | ±0 | `:101` 只换来源枚举值（恒等映射，零新分支） |
+| `thincoder-core/CHANGELOG.md` | **311**（批后 `wc -l`） | +6 条（`:10-18`，含 A7 迁移说明一条） | §「旧键 `providers[].context`（K）退役形态」末条要求该档 |
+| `thincoder-cli/src/tui/provider-admin.mjs` | **417** （本轮 `wc -l` 实读） | 展示串批 +2；本批 **净删 ~14** | `setModelContextFlow` 新增（含第 4 步清除确认，`confirmDelete` 复用）∥ `setContextFlow`（`:174-221`）删除；四处窗口串经核 `formatDeclaredContextK`（`:243` · `:272` · `:328` · `:370`）；本批净删 = 三处撞键拒写径（`:237-241` 预检 · `:266-269` 清除前判 · `:280`/`:289`/`:300-303` 盘面写窗）与相关注释；清除径删全部命中键 |
+| `thincoder-cli/src/tui/model-picker.mjs` | **322** | +~6 ∥ −5 | L1 管理项改 `Set context window (K)…` / `action:"model-context"`；`fmtContextK`（`:39`）上提核 |
+| `thincoder-vscode/webview/settings-providers.js` | **180** | +~35；展示串批 −12 | 渠道行动作簇 `Context…` 钮 + 弹窗装配；展示串批：行面改渲染宿主 `modelContextText`，删自拼串与其旧理由注释 |
+| `thincoder-vscode/webview/settings-provider-dialog.js` | **499**（`wc -l` 实读 · 2026-10-23） | 本批 **±0**（不碰该档） | 上下文编辑弹窗体（既有件）；撞键拒写径在宿主 `provider-context.mjs` 与三端写面，本档无守卫代码（`blocked` 与撞键拒写标识零命中）⇒ 不在本批射程；拆点判定：499 ≤ 500 软线 ⇒ **拆点未触发**（口径同 `model-specs.mjs` 行） |
+| `thincoder-vscode/src/extension/settings.mjs` | **444** （本轮 `wc -l`） | +~25；展示串批 ±0 | 转口 + 两键入载荷：`providerStatus()` 增 `modelContext` + `context`；`saveProviderModelContext` 按设计坐标 re-export——实现体已迁 `provider-context.mjs`（理由 = 本档经 `provider-flows.mjs` 引 `vscode`，Node 里不可 import、单测无法跑）；展示串批：`modelContextText` 随 `providerContextFields(entry)` 展开进载荷，本档零改 |
+| `thincoder-vscode/src/extension/panel-messages-settings.mjs` | **326** | +~12；展示串批 +1 | 新 case `saveProviderModelContext`；展示串批：回执载荷增 `kText`（宿主 `formatDeclaredContextK(k)` 出词） |
+| `thincoder-vscode/locales/zh.json` · `en.json` | **361** · **361**（`wc -l` 实读 · 2026-10-23） | +8 键 / 端；展示串批 ±0 | 八键 zh ∥ en 字面；展示串批：两键（`contextSaved` · `contextClearConfirm`）× zh ∥ en 去模板尾 `K`（值改用核出词串） |
+| `thincoder-vscode/src/extension/provider-context.mjs` | **97** （新；本轮 `wc -l`） | +88；本批 **净删 ~9** | 读面两键（`providerContextFields`）∥ 写面体（`saveProviderModelContext`：值校验 · 末段尺子改写）；纯 Node、零 `vscode` 依赖（可单测）；本批净删 = 撞键拒写径（`:64` 报错串 · `:71-72` 预检 · `:82` 写窗复判 · `blocked` 管路）与相关注释；清除径改删全部命中键 |
+| `thincoder-vscode/src/extension/panel-messages.mjs` | **400**（本轮 `wc -l`） | +~2 | 分发 `case "saveProviderModelContext"`（`:318`） |
+| `thincoder-vscode/webview/chat-messages.js` | **301**（本轮 `wc -l`） | +~3；展示串批 ±0 | 回执消费 `providerContextSaved`（`:170`——转发行内保存行，`kText` 原样透传） |
+| `thincoder-vscode/webview/settings.js` | **204**（本轮 `wc -l`） | +~2 | 关面板同清上下文弹窗族（含确认族遮罩——`:176`） |
+| `thincoder-desktop/renderer/views/settings-sections-providers.mjs` | **308** | +~30 | 渠道行 `Context…` 钮 + `providerContextBody` 弹窗体 |
+| `thincoder-desktop/renderer/views/settings.mjs` | **463** | +~10 | `providerContext` 弹窗支 |
+| `thincoder-desktop/renderer/mount-settings-segments-providers.mjs` | **330** | +~30 | handlers 增编辑 ∥ 保存出口 |
+| `thincoder-desktop/renderer/settings-confirm.mjs` | **83** | +~5 | 既有确认弹层增正文参数（清除确认带当前值；默认焦点 ∥ 框内 Esc ∥ 背板语义零改） |
+| `thincoder-desktop/renderer/mount-settings-reads.mjs` | **222** | +~8 | `provider:list` 回执透传两键；候选切片 `settings.model.models` 只读（零改） |
+| `thincoder-desktop/src/main/providers.mjs` | **405**（收口轮 `wc -l` 实读） | +~10；本批 **净删 1**（406 → 405） | `provider:list` 行面增 `modelContext` + `context` 两键（**不加 `models` 键**——候选不从此回执取）；本批净删 = 撞键预检与拒写（`:286` 注 · `:299` 预检 · `:308` 写窗复判 · `:319` `reason:"ambiguous"`）；写面撞键全改写、清除删全部命中键 |
+| `thincoder-desktop/renderer/i18n-settings.mjs` | **230** | 展示串批 −1 键 | 七键（`contextSaved` 死键已删）；本批零改 |
+| `thincoder-server/public/model-specs-snapshot.mjs` | **102** | ±0（一 token + 注改） | 第三载体随正（§17） |
+| 单元测试档（新增，收口删） | 0 | +~185 | P-1..P-13 ∥ W-1..W-20 ∥ G-1..G-2 |
+| 单元测试档（**展示串批**新增，收口删） | 0 | +~60 | W-9 ∥ W-9b ∥ R33③ 源扫（五档判据见下「R33③ 源扫」） |
+
+`thincoder-core/model-specs.mjs` 入口本体零改；桌面 i18n 七键（`contextSaved` 死键已删）、展示面已接 `modelContextText` ⇒ 本批只动 `thincoder-desktop/src/main/providers.mjs`（撞键守卫回收）。
+
+本表读数 = `ReadAllLines().Length` 实读（2026-10-23，与 `wc -l` 同值）；标注「本轮」的六行为 VSC 面交付后复测值，其余为设计轮读数；标注「展示串批」的 Δ 为展示串统一批的预估值；标注「本批净删」的 Δ 为撞键守卫回收批的预估删量。
+
+**R33③ 源扫（机检判据 · 五档射程）**
+
+| # | 档 | 文件 |
+|---|---|---|
+| ① | CLI | `thincoder-cli/src/tui/provider-admin.mjs` |
+| ② | VSC 行面 | `thincoder-vscode/webview/settings-providers.js` |
+| ③ | VSC 弹窗 | `thincoder-vscode/webview/settings-provider-dialog.js` |
+| ④ | VSC 宿主投影 | `thincoder-vscode/src/extension/provider-context.mjs` |
+| ⑤ | 桌面主进程 | `thincoder-desktop/src/main/providers.mjs` |
+
+- 表达式 = `\*\s*1024`（`*` 转义；命中即该档出现 K→token 乘算）。
+- 期望 = 五档各 **0 命中**（2026-10-23 实读：①②③④ 各 0；⑤ 唯一命中为注释行 `providers.mjs:71` ⇒ 按排除项①剔除后 0）。
+- 排除项：① 注释行（`^\s*(//|\*)`）不计；② 五档之外的全文其他字节算术不在射程（需求 R33③ 射程 = 窗口展示面五档）。
+
+**既有件三问**
+
+| 新增件 | 答复 |
+|---|---|
+| `providers[].context`（既有配置键） | **existing but unusable**：坐标 = `thincoder-core/config.mjs:257-265`（装载归一）∥ 乘点 `thincoder-core/model-specs.mjs:379`；失败面 = ① 粒度 = 渠道级（用户 17:31 裁定按模型）② 单位事故两起（K 当 token 填 ⇒ ×1024 后 2.68 亿 / 10.7 亿 token）⇒ 不复用为 L1，退居 L2 |
+| `modelContext`（既有键名） | **existing**: `thincoder-core/config.mjs:272-289`（装载归一）∥ `thincoder-core/model-context.mjs` `manualContextK`（L1 取值）∥ 三端写面 ∥ 载荷（受影响文件表在册） |
+| `model-context.mjs`（既有模块） | **existing**: `thincoder-core/model-context.mjs`（111 行——缓存 ∥ 键归一 ∥ `manualContextK` ∥ `listedContextTokens`） |
+| `providerSpecResolution` / `formatDeclaredContextK`（既有导出） | **existing**: `thincoder-core/model-specs.mjs:358` `providerSpecResolution` · `:323` `formatDeclaredContextK`（收 K）；token 口径另为 `:314` `formatContextK`（收 token）——两导出分工见「读面回显」节末 |
+| 八键 i18n / `Context…` 钮文案 | **existing**: `thincoder-vscode/locales/zh.json:129-136` 八键已落（`:132` `contextSaved` · `:133` `contextClearConfirm`，模板尾不带 `K`）；桌面 `thincoder-desktop/renderer/i18n-settings.mjs:73-80` 同名键七键（`contextSaved` 死键已删） |
 
 ### 6.16 模型清单 provider 化与放行语义
 
@@ -315,23 +733,33 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 
 **图片输入链（VSC）**：粘贴 / 拖拽 / 附加按钮 → webview 传 dataURL → `thincoder-vscode/src/extension/panel-messages.mjs` `routeUserTurn`（`:59`）内
 `savePastedImages`（`:82`）落盘 `<cwd>/.thincoder/tmp/paste-<id>-<i>.<ext>`（`src/extension/image-handler.mjs`；raster png / jpg / gif / webp 白名单 + >15MB 跳过）→
+
 `thincoder-vscode/src/agent/setup-reminders.mjs:22` `appendImagePointer` 给真实 user 消息追加 `[Attached images: …] — use the read_image tool to view them before answering.`（**非多模态模型直接 throw**——可见错误不静默丢）→
+
 模型调 `read_image` 带图进载荷。历史内容保持字符串（不回放 images）；贴图临时件清理 = 端侧时序面（核件零回收）：桌面 = 回合尾 `cleanupTurn` ∥ CLI ∥ VSC = 贴图落盘写时 mtime 扫除（3 天窗——核 `thincoder-core/agent/helpers.mjs` `cleanupOldToolResults` 单源）。
 
 **贴图降级链（非视觉模型自动降级）**：非视觉模型贴图不再硬报错——自动降级为视觉模型子代理读图、文本描述注入主会话——用户无感换模型（VSC 主；CLI 镜像软引导）。触发点 = `routeUserTurn`（savePastedImages 后、主回合 LLM 请求前）：
+
 非视觉模型（`specForModel(provider.model).multimodal` 假）+ images 非空 + depth-0 → ① 视觉渠道查找（核 `thincoder-core/vision-reader.mjs` `findVisionChannel`——**判定源（渠道单值模型）退场 ⇒ 恒 `null` ⇒ 走 F-IDG-2 可读报错径（不静默丢图）——本态 = `#1125` 落 B（**明书不恢复**：无替代载体，零网络约束下无逐渠模型源可扫——父裁）：「非视觉模型 + 贴图 ⇒ 可读报错」即常规态**）：
+
 ② extension 内直跑一次性视觉子代理读图（`runVisionReader`——`thincoder-core/vision-reader.mjs:47`，复用 runAgent / runChild 换渠道模式；**超时 60s**（`VISION_READ_TIMEOUT_MS` `:30`）；seam = `visionReader ?? runVisionReader` 参数注入 `panel-messages.mjs:128`）
+
 ③ 描述注入：text 改 `[图片 <路径> 描述: <视觉子代理描述>]`、images 清空（appendImagePointer throw 路径不达）④ fallback：
 无视觉渠道 / spawn 失败 / 超时 / 空返回 → 保留现可读报错（不静默丢图）。
 
 **降级窗 Stop 契约**：窗内 await 期间 ⏹ 必须有效（原两路皆静默无效：僵尸 controller 交付无效 / 闩被无条件清）。契约 =
+
 ① 窗前建 `AbortController` 挂 `panel._visionAbort`（`:90` · `finally` 幂等清理 `:93`）② 取消缝——`runVisionReader({ …, signal })` 内 `signal?.addEventListener("abort", () => ac.abort(), { once: true })` 桥接内部超时 controller（既有 catch → `null` 语义复用——零新返回形态）
+
 ③ abort 定向——面板 abort case 的 running 分支**优先**判 `panel._visionAbort`（`:236-237` → `abort()` 后跳出，不再落僵尸交付路径）
 ④ 停后语义 = **启动即中止**——
+
 await 快速返 `null` → 照常 `_chat`（用户消息入 history——at-most-half-a-turn）→ `_chat` 调用后置 `panel._abortRequested = true`（`:104`）——`newTurnController`（`panel-chat.mjs:44` / `:224`）消费 → 回合建立即 abort ⑤ **零新增布尔状态**（stopped 判定 = `signal.aborted`；唯一新字段 = `panel._visionAbort`——窗生命周期）⑥ 边界：
+
 Ctrl+I（interrupt）面与视觉模型 / 无图路径零动；`maxTurns` 不改。
 
 **关键决策与边界**：① **返回形态 = 文本描述替换 images**（与现机制完全兼容——无图污染）② **引擎级新 spawn 通道不建**（勘察确认不存在——降级 = extension 内 runAgent 一次性直跑，不走 agent-tools 池）③ CLI 镜像 = 软引导（read_image 工具错误文案追加「可 spawn 视觉模型子代理读图」；硬自动 CLI 不做）④ UI 前置（模型下拉 vision 标记）= UX 增强**移出面**（后批）⑤ 边界：
+
 视觉模型路径零动 · 非 raster（svg / heic）现 toast 不变 · **depth>0 子代理回合非视觉贴图沿用现报错（不降级）** · retry 不回带 images（另行登记）⑥ `maxTurns` 固定 10——大贴图 / 多图可能超限落 fallback——**观察登记不改**（按图数伸缩候选在 TODO 在案）。
 
 ### 6.19 VS Code 端接线（面板 / 预设 / 配置存储 / transport 端差 · 终收批并入）
@@ -339,44 +767,60 @@ Ctrl+I（interrupt）面与视觉模型 / 无图路径零动；`maxTurns` 不改
 > 机制正文（chat 主流程 / 重试超时 / SSE / 续写 / 闸门 / 净化 / 规格表 / 预设 / enable_thinking / Responses / providerSpec / 模型清单 / 请求头装配）已住 §6.1–§6.17——本节只收 **VSC 端接线与端差**（同一事实不重述，D2）。
 
 **配置存储端差**（`thincoder-vscode/src/config-io.mjs`）：与 CLI 共享 `~/.thincoder/config.json`（`resolveProviders` `:167`）——差异点 = ① `resolveKey` **只读 config.json `entry.apiKey`**（env 不是密钥源——与 CLI env 回退语义不同）；空 → provider 不可用（`providerFromConfig` 返回 null；模型选择走 onboarding）
+
 ② 代理 = provider 级 `proxy: true` **且** 代理 `uri` 在案（`injectProxy` 语义——**逐渠独立、无全局闸**：裁「2b」；VSC 第二注入点 = `presets.mjs` `providerFromConfig`）→ 请求经代理；
 **写面**：添加表单勾选 ∥ 渠道管理入口写同一键（`providers[].proxy`——`true` 写 ∕ `false` 删键）；
+
 **探针 ∥ 拉取同判定单源 = `probeTargetOf`（`thincoder-core/provider-flows.mjs:79-90`）**——表单拉取携勾选也走同式（勾 ⇒ 逐渠判定；未勾 ∥ 未落盘 ⇒ 直连缺省；`headers` 字段面随行）；
 **口径单源 = `docs/core/design/PROXY.md` §4**（端侧落点 = `docs/vsc/design/SETTINGS.md` §2.16 ∥ `docs/desktop/design/SETTINGS.md` §2.16）。
+
 ③ **并发写防冲突（F5b）**：`loadRaw` 记 mtimeMs + size 基线、`saveRaw` 写前重 stat 不符 → 放弃 `{reason: "mtime-conflict"}` + `.bak-{ts}` 轮转（副本不自动合并）+ `CONFIG_CONFLICT_HINT` 提示重试 ④ 旧版迁移：
+
 VS Code settings 的 `thincoder.providers` + SecretStorage 一次性迁入 config.json（`thincoder-vscode/src/config-migrate.mjs` `migrateCore`——不覆盖已有 apiKey、preset 名自动重建）后清 legacy 存储；嵌入 key 一并迁移 ⑤ `resolveDefaultModel`（`thincoder-vscode/src/extension/presets.mjs:106`）回退链 =
+
 ① defaultModel 复合属本渠道 ② `null`——**不回退渠道单值 / `models[0]`**（渠道单值模型退场；§6.16 M7 同源 · **核转口**）；v2 迁移 `delete p.models` / `delete p.model`。
 
 **Preset 预设表（核单源）**：`PROVIDER_PRESETS` 表 = **核单源**（`thincoder-core/config-presets.mjs`），
 VSC 侧取一侧复用（`thincoder-vscode/src/extension/presets.mjs:9` 注 + `:21` re-export；端壳无镜像文件）——**25 preset**（deepseek / kimi / kimi-code /
+
 glm / glm-code / qwen / qwenplan / mimo / mimoplan / minimax / openai / claude / gemini / gemini-openai / grok / mistral / volcengine / hunyuan / siliconflow /
 openrouter / groq / **tokenhub** / **huawei** / **opencode-go** / **opencode-go-anthropic**）；
+
 claude / gemini 携 `format: "anthropic" / "google"`；`opencode-go-anthropic` 携 `format: "anthropic"`（§6.11 同源）；
 minimax 携 `chatPath: "/text/chatcompletion_v2"`；`presetToEntry`（核单源 = `thincoder-core/config-presets.mjs:57`）剥离 `desc` 余下发成 provider 条目
 （**不产 `model` 键**——单值默认模型退场，§6.11 同源）。
 
 **模型选择 UI（面板接线）**：主下拉列 provider 行（名 + `›`——行 = 分组/展开控件，零选中语义；渠道行显示回退 = `baseURL`；§6.16 行）+ hover ∕ 点击 flyout 子菜单（组体 = 该渠模型候选；webview 无键盘导航）；条目拾取 = 写当前会话槽（拾取单点 = `click`；写失败 ⇒ 失败行 + 钮回滚槽现值）；设置面板「默认模型」项 = provider →
+
 运行期拉取候选两级（写 `raw.defaultModel`）。Add / Remove / Key 流 = 核单源 `thincoder-core/provider-flows.mjs`（`addProviderFlow` `:137`——QuickPick preset 过滤已添加或 Custom 手输 name / baseURL + format → `addProviderEntry` → 问 key → `setProviderKey`）；
+
   VSC 薄壳 `thincoder-vscode/src/extension/provider-flows.mjs` 住 Remove ∥ Key 两流程 + 探针转口）；
 `settings.mjs` `fullStatus`（`:308`）单源拉取
+
 （逐已配置渠道各探一次——探通 → 候选行直接可选；探不通 → 不可选 + 失败消息随载荷）。**M9 准入探针（配置阶段）** = 收敛于核 `@thincoder/core/provider/list-models.mjs`（消费面 = `thincoder-vscode/src/extension/{provider-flows,settings,settings-panel-write}.mjs` 经核面引用）
+
 （探针目标由核 `thincoder-core/provider-flows.mjs` `probeTargetOf` 组装——三端同源；桌面 ∕ VSC 写面同取该件）；探通 / 探不通两态 + **不阻断保存**；`defaultModel` 写面探针 fire-and-forget（写面为同步契约——探针绝不 reject）；**运行期零探测**（启动 / 发请求 / 面板打开不做 `/models` 探测）。候选未命中 = 保持当前选择显示与状态
+
 （回落会话槽复合）+ 零 `selectModel` / `selectReasoning` post（§6.16 M10 语义同源 · 独立实现）。
 **探针落账与有界重试（F-W19）**：端侧详面 = `docs/vsc/design/SETTINGS.md` §2.12（采样器 / 重试窗口 / 展示面分档 / 机检）；核语义 = §6.16 M8/M9 补行（载荷与分类）——双向指，**不重述**。
 
 **transport 端差**：VSC 经 `@thincoder/core/provider/core.mjs` 引用——调用链 = 核单实现（§6.2 不重述）；下列端差登记：
 ① **超时相位**——现体 = 核 §6.3 超时制度（sse / google 读侧 idle + `effectiveFetchTimeoutMs`）；
 VSC 调用面无相位传参点——相位参数由核 chat 装配（核 `thincoder-core/provider/core.mjs:414-415`）；端侧用例 `provider-timeout-semantics` 锁该跨端契约（相位参数在位）；
+
 ② **Responses 实现差异注**（链元数据 / usage 归一 / `responseId` / `builtinToolResults`）——现体 = 核 §6.13；
 本地接线不变 = responses provider 经 config.json 手写 `format: "responses"` 或预设扩展启用（custom 表单 format 下拉未加 responses 项——显式 opt-in，CLI parity）；
 finishReason 区分（`response.incomplete` 非长度原因不得报成 `length`）**保留为端侧验收**。
 
-**能力适配端差**（语义同源不重并——坐标即指）：`specForModel` / `providerSpec` / `resolveEnableThinking` / `isBailianHost`（`thincoder-core/model-specs.mjs:290` / `:323` ∥ `thincoder-core/config.mjs:143` / `:126`）·
+**能力适配端差**（语义同源不重并——坐标即指）：`specForModel` / `providerSpec` / `resolveEnableThinking` / `isBailianHost`（`thincoder-core/model-specs.mjs:294` / `:407` ∥ `thincoder-core/config.mjs:150` / `:133`）·
+
 reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 真 off；**载荷形随 `doc:MODEL-SPECS.md:§16.2` 按族取形**）· escape v5 与 UTF-16 安全截断（核 `escape.mjs` + 端 `src/agent/run-helpers.mjs` `safeSliceUTF16`——§6.7 同构）·
 畸形 tool_calls 防御（现体 = 核 `provider/sse.mjs`；§6.10 同构）· 前缀剥离与 `DEFAULT_SPEC` 兜底（§6.9 同构）；
+
 规格表每行多 `reasoningEffortDefault`（§6.9 已登记端差）。**`provider.headers`：VS Code 端无 `providers[].headers` 概念**（§6.17 域外与端面已登记——对位引入属新需求）。
 
 **LLM 标题生成**（`thincoder-vscode/src/extension/generate-title.mjs:15`；`panel-chat.mjs:334` 触发）：会话第一条 user 消息后 agent 完成回复——取首条文本（多模态 part 数组取 text）→ 用该 provider 发简短 prompt（"Generate a concise title (max 40 chars…)"），**非流式** + `max_tokens: 100` + **逐 format 禁 thinking**
+
 （openai `thinking:{type: "disabled"}` / anthropic 同 / google `thinkingConfig: {thinkingLevel: "none"}`——`:57`——否则 reasoning_content 吃光输出预算内容空 IK9UZ8）。失败静默降级返回 null（首条消息截断作标题兜底）；10s 超时；标题 trim 截 40 字符。headers 展开消费点已列 §6.17（⑤ 会话标题生成）。
 
 ### 6.20 onWait 相位 → 状态文案（核内单源映射）
@@ -390,6 +834,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 | ACP 日志 `thincoder-cli/src/acp/bridge.mjs:196` | 无相位分支（原样 log） | 无渲染契约（不产生 `undefined`，但相位语义随载荷） |
 
 **触发可达性**：`warn` 发射点 = `thincoder-core/provider/rate.mjs:96` / `:110`——**`estimated > tpm`（或 `effectiveTpm`）即发**（配了 `tpm` 且单请求估算超预算）⇒ 两消费点的 `undefined` 文案在真实使用中可达。
+
 `quota` 相：值域与渲染契约已由核 i18n（`thincoder-core/i18n.mjs:44`）与 VSC 映射面（下文）双面声明，**发射点已定位** = `thincoder-core/provider/retry.mjs:60`（`:68` 同 onWait 家族——`retry` 相）。
 
 **映射表（单源实现 = `thincoder-core/provider/wait-status.mjs`，新增）**：
@@ -409,8 +854,10 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - **VSC 面（多实现面）**：`thincoder-vscode/src/extension/panel-callbacks.mjs:72` `statusTextPayload()` 五相已完备（`warn` / 未知 → `null` = 不发射；用例 `thincoder-vscode/test/status-line.test.mjs:62-70`）——**语义同源、各面独立实现**（不以任一面产物回改另一面）。
 - **复现与判据（测试层 · 需求档 F-PV1）**：
   ① 单元测试直驱三消费点回调：`{ phase: "warn", message: "estimated 5000 tokens > tpm 1000 — request proceeds and may hit a server 429" }` ⇒ TUI 状态行 / headless stderr **不出现** `undefined`（现态必现）；
+
   ② `{ phase: "quota", message: "quota exhausted: x" }` ⇒ 显示 `quota exhausted: x`（**不双前缀**——剥前缀后插值）；`{ phase: "quota", message: "x" }` ⇒ 显示 `quota exhausted: x`；
   ③ `{ phase: "overloaded", seconds: 3 }` ⇒ 显示 `Server overloaded, retrying in 3s`（**不得**落 429 文案）；
+
   ④ 未知相位（`{ phase: "zzz" }`）/ 秒缺失（`{ phase: "retry" }`）⇒ 不显示（旧文案不得残留）；
   ⑤ 单源不变量：逐相 `waitStatusText(ev)` 与 `t("status." + kind, …)` deepEqual。
 
@@ -432,6 +879,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 
 **长尾渠道自助路径（判据外的兜底）**：任意 OpenAI 兼容端点（含区域端点变体，如华为云区域形 `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`）
 无需预设即可接入——CLI `/model` 菜单「add provider → custom」或 VSC `Add provider… → Custom`（name + baseURL + model [+ format]），或手写 `providers[]` 自由字段；
+
 用户指引条 = `thincoder-cli/README.md`（自定义渠道一条；VSC README 已有「+ custom OpenAI-compatible endpoint」覆盖）。
 
 ### 6.22 运行时渠道/模型统一解析（三端同源 · U3「宽松 + 明示」）
@@ -447,6 +895,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
   source: "slot" | "defaultModel" | "registry" | null,   // 入选来源
   channel: string | null, model: string | null,           // 解析出的运行渠道/模型
   provider: object,                                       // {...entry, model}；不可运行 ⇒ {}
+
   reason: string | null }                                 // state≠ok 的原因（语义源；非契约，禁串嗅探——KD-2 同源）
 ```
 
@@ -468,6 +917,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - `invalid` —「**无 provider/key**」类：渠表空 ∥ 全表无 key ⇒ **真无效 + 引导配置**。
 
 **端面「invalid 类」合成式（U-4 裁：两字段并存，不合并）**：`providerState`（key 面）∥ `providerInvalidReason`（**name 面**——`thincoder-core/config.mjs:301-303` 产出：入选渠道具名 ⇒ null ∕ 无入选渠道 ⇒ 非空；语义不变）为**两字段并存**；端面「invalid 类」（= 出导引节点的类）判据 = **`state === "invalid"` ∨ `providerInvalidReason` 非空**（三端同一合成式 · 单判据）。
+
 「持 key 但结构不全」（缺 `baseURL` 等）**不在合成式内**——该角归**发送 ∕ 装配失败面**（装配标记 `_providerInvalid` 载体：桌面发送门〔`provider` 类词〕∥ ACP `session/new` 装配后检查；CLI ∥ VSC 落发送期失败面），非导引节点——与断言③负向锁互洽。
 
 `loadConfig` 落三键：`provider` = `plan.provider`；`providerState`（三值：`ok` ∥ `fallback` ∥ `invalid`）+ `providerStateReason`（state≠ok 时非空）；`providerInvalidReason` 语义不变（无入选渠道时非空——`thincoder-core/config.mjs:301-303` 产出，装配校验 `validateProvider` 消费面照旧〔reason 优先源〕）。
@@ -479,16 +929,19 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 | 端 | 明示面 | `fallback` | `invalid` | 动作 |
 |---|---|---|---|---|
 | CLI | 启动提示行（TUI）∥ stderr 一行（headless） | 新行两字面（按 `model` 在场分）：在场 ⇒ 「尚未设置默认模型：本次使用 `<渠道>:<模型>`——/config → 默认模型 设置一次（或 /model 选定即成为默认模型）」；`model` 缺 ⇒ 「尚未设置默认模型：渠道 `<渠道>` 已就绪、模型未定——/config → 默认模型 设置一次（或 /model 选定即成为默认模型）」 | invalid 类（合成式）⇒ D-S2 picker + 提示行（措辞 = 渠道/密钥）；headless = D-S4（stderr 一行 + exit 1） | 选择器（invalid 类）· `/model` ∥ `/config` 入口（fallback） |
-| VSC | 横幅 `#provider-banner` | 新键 `banner.defaultModelFallback`（zh ∥ en 字面 = `doc:WEBVIEW.md:§4.8`；**含 `model` 缺档变体——同键两字面**）+ 动作钮「选择默认模型」→ 设置面 | 现词 `banner.notConfigured`（逐字不变——invalid 类合成式命中） | 钮 → 设置面默认模型段 |
+| VSC | 横幅 `#provider-banner` | 新键 `banner.defaultModelFallback`（zh ∥ en 字面 = `doc:docs/vsc/design/WEBVIEW.md:§4.8`；**含 `model` 缺档变体——同键两字面**）+ 动作钮「选择默认模型」→ 设置面 | 现词 `banner.notConfigured`（逐字不变——invalid 类合成式命中） | 钮 → 设置面默认模型段 |
 | 桌面 | composer 提示带行 | 新键 `composer.send.noDefaultModelFallback`（澄清半句两字面按 `model` 在场分：在场「— 正在使用可用渠道」∥ 缺「— 渠道可用、模型未定」；词面-only；失败词 ∥ 态词分家——与 VSC `banner.defaultModelFallback` 同构） | 发送失败行现词 | —（零动作面） |
 
 **VSC 端接线（可用性不得降）**：`resolveTurnStage` 的接入面自建链改调核函数（`slot` = 显式 `providerName` ∥ 槽复合——key 门在核内）；`presets.mjs` `resolveDefaultModel` 改核转口。「渠道 + key 已配」在三端仍**直接可发**——事实标准不回退。
 
 **第四消费面（ACP）注（明写边界）**：`thincoder-cli/src/acp.mjs` 门判据（`defaultIsConfigured` = `loadConfig().provider?.apiKey?.trim()`）随核取值切换而变——「持 key ∧ 无有效 `defaultModel`」（`fallback` 类）由「拒（携 reason）」变「**放行**」，协议面**零提示行**（明示射程 = 三端 UI 面；ACP = 外部编排器协议面，无既有提示通道）。
-此变 = U3 判据的**自然导出**（可运行 ⇒ 放行——**已认账行为变更，非缺陷**）；结构不全角仍由装配后检查兜底（`handlers-session.mjs` `session/new`：`_providerInvalid` ⇒ `-32000` + 真因）。协议面是否补提示通道 = **已定形：不立**（判由四条与备选支 = `doc:ACP-CLIENT.md:§13`；协议面零提示行 = 设计行为，非缺口）。
+
+此变 = U3 判据的**自然导出**（可运行 ⇒ 放行——**已认账行为变更，非缺陷**）；结构不全角仍由装配后检查兜底（`handlers-session.mjs` `session/new`：`_providerInvalid` ⇒ `-32000` + 真因）。协议面是否补提示通道 = **已定形：不立**（判由四条与备选支 = `doc:docs/cli/design/ACP-CLIENT.md:§13`；协议面零提示行 = 设计行为，非缺口）。
 
 **可机检断言形**：① 解析一致（**运行面 + config 级两侧**）——夹具矩阵每行（临时配置路径缝 `_setConfigPathForTest`）：**运行面** = 三端同喂**同一假槽**（VSC `resolveTurnStage` 核读 ∥ 桌面核装配读 ∥ 核 `resolveProviderPlan` 直读）按 `{state, source, channel, model, provider.name, provider.model}` **逐字段相等**；
+
 **config 级**（`loadConfig()` 无槽入参——KD-841-3 状态 = config 级）= **只比 `state`**；含槽行（S9）单列口径 = config 级 `state` 断言（`ok`）∥ 运行渠道断言归假槽用例（三端同喂）；② 单源——VSC 树零自建扫描链（源码判据）+ CLI ∥ 桌面取值点唯一 = `loadConfig().provider`；
+
 ③ 明示必达——`state === "fallback"` ⇒ 各端明示节点在场（`model` 在场 ⇒ 现行句；`model === null` ⇒ **未设置变体（禁「本次使用」句）**——各端同键两字面，按载荷 `model` 判）；
 `state === "ok"` ∧ `providerInvalidReason` 空 ⇒ 零节点（负向锁）；invalid 类（合成式）⇒ 端面导引节点（CLI picker ∥ VSC 现词 ∥ 桌面发送失败面）。机检件 = 批档单元测试档（随批留存）。
 
@@ -509,7 +962,9 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 
 1. **保存 = 单写原子 + 错误透传**：落条与设钥合并为**一次** `persistRaw`——同一 mutate 回调内 `push(entry)` 后**直接对 `entry` 引用置 `apiKey = (key || "").trim()`**（非空才置；不再二次读改写、不再按名重查）；
 返回值 = 该单写的 `conflictError(r)`。语义保留：空 ∥ 全空白 `key` ⇒ 不落 `apiKey` 键；F5b 冲突 ⇒ 返回提示串且**零落盘**（条目 ∥ 钥俱不落——半状态不可达）；成功 ⇒ `null`。
+
 **persistRaw 失败契约（实读 `config-io.mjs:59-99`）**：非 ok 返回的 reason **唯一** = `mtime-conflict`（`:79`——`conflictError` 恰此非空，`:97-99`）；其余失败（配置不可解析 `:70` ∥ 读/建目录/写盘异常——`:64` ∥ `:81` ∥ `:83` 抛出）**不经返回值**，走**异常通道**向调用面抛（`addProviderEntry` 不捕——沿现行）。
+
 即「错误透传」= **冲突 + 异常两通道**；`conflictError(r) === null` 即 `r.ok === true`（返回 `null` 恒意味着盘面已落——成功回执不虚）。
 消费面返回值语义（`null`=ok ∥ 串=err）**零改**：VSC `panel-messages-settings.mjs:72` ∥ 桌面 `thincoder-desktop/src/main/providers.mjs:145` ∥ CLI 流程面——`err` 含义 = 「俱未落」。
 2. **缺钥 = 前置守卫**：核 `thincoder-core/provider/core.mjs` `chatImpl` 在 `resolveProviderSecrets`（`:122`）之后、格式分派之前**单点前置校验**——`apiKey`（trim 后）空 ⇒ 抛可读错误（前缀锁定 `API key missing for provider "<name>"`；尾句 = 配置指引）；
@@ -670,6 +1125,128 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - **图持久化体积**（session 落盘随图膨胀）∥ **请求体总量**（网络层）——不同问题域，不在射程。
 - **引擎级图降尺寸**（自动 resize）= 未立（零第三方依赖约束下无图像处理管线；指引形 = 注记内「re-read a smaller copy」）。
 
+### 6.27 Anthropic 消息适配层（OpenAI 形态历史 → Messages API）
+
+**问题面**：会话历史是 OpenAI 形态的持久表示——`agent/record-results.mjs:62` 与 `:90` 推 `{ role: "tool", tool_call_id, name, content }`，assistant 带 `tool_calls`。Anthropic Messages API 不认 `role:"tool"`；原样透传 ⇒ 用过工具的会话下一轮必被上游 400 拒（`Unexpected role "tool"`，GitHub #20 ∥ Gitee IKKJEE）。本层 = 该通道进入请求体前的唯一转换点。
+
+**位置与顺序**：`provider/core.mjs:151` 的 anthropic 分支先跑 `normalizeToolPairing(messages)`（`:155`），再交 `provider/anthropic.mjs` 的 `chat()`（`:156`）；`chat()` 完成 system 抽离（`anthropic.mjs:157-166`）后调 `convertMessages(messages)`（导出纯函数，`anthropic.mjs:97`；调用点 `:169`），结果写入请求体 `messages`（`:174`）。
+
+**返回契约（定死签名）**：`convertMessages(messages) → { messages, warnings }`。
+
+- `messages` = 转换后的新消息数组；
+- `warnings` = 数组，元素 `{ name, message }`——R7 触发时 `name = "anthropic-tool-args-malformed"`、`message` 带工具名与截断原文；零触发 ⇒ `[]`。
+- **告警投递点**：`anthropic.mjs` 的 `chat()` 在 `finishAnthropic(result)`（`:232`）之后合并 `result._warnings = [...(result._warnings ?? []), ...warnings]`（`:234`）；消费面 = `agent/run-stages.mjs:44-45`（按 `name` 去重后进机读线）。请求失败时告警不投递——错误本身可见（D-PR42：不静默），不另开通道。
+- **告警码唯一发射点** = `convertMessages` 的 R7 分支。
+
+复用 `normalizeToolPairing`（`provider/normalize.mjs:127`）的理由：缺回执的 `tool_call` 在 Anthropic 侧表现为 `tool_use` 无对应 `tool_result`，上游同样拒收；该函数已实现「tool 消息钉回 owner assistant / 缺失结果合成占位 / 孤儿丢弃」，输出正是本层需要的前置形态，且是纯函数 + 拷贝语义。另写一份 = 同一协议修复两份实现（违 D2）。
+
+**copy-on-write 契约（硬约束）**：`convertMessages` 只读入参，返回新数组；未改动的消息可原引用复用，内容块一律新建。`agent.history` 本体零写——历史是四条通道共用的持久表示，就地改写会让 OpenAI / responses / google 三径读出 Anthropic 块而崩。
+
+**转换规则全集**（按角色分组；输入形 → 输出形 → 场景 / 依据）：
+
+| # | 组 | 输入（OpenAI 形） | 输出（Messages API 形） | 场景 / 依据 |
+|---|---|---|---|---|
+| R1 | system | `role:"system"` | 抽到顶层 `system`，多条以 `\n\n` 连接（现状不变） | 既有实现（`anthropic.mjs:157-166` ∥ `:180`），本层不动 |
+| R2 | user | `content` 为字符串 | `[{type:"text", text}]` | 仓内产出点：`record-results.mjs:75-81`（非视觉模型的「图未注入」提醒，role = user） |
+| R3 | user | `content` 为 part 数组 | text part ⇒ `{type:"text"}`；`image_url` ⇒ image 块（R12）；按原序成块 | 仓内主路径：`record-results.mjs:67-69` 多模态 `read_image` 每次推 `[{type:"text"}, ...images]`（role = user）——缺这一行则工具文本在 Anthropic 通道静默消失 |
+| R4 | assistant | `content` 为字符串 ∥ 文本 part | `[{type:"text", text}]` | 产出点 `model-specs.mjs:431`（`content: response.content \|\| null`）；文本是两协议共有的无损块 |
+| R5 | assistant | `tool_calls:[{id, function:{name, arguments}}]` | 追加 `{type:"tool_use", id, name, input}`；文本块在前、`tool_use` 块在后 | 用户报告：`role:"tool"` 被上游 400（GitHub #20 ∥ Gitee IKKJEE）；产出点 `model-specs.mjs:432-436` |
+| R6 | 参数 | `arguments` 缺 ∥ 空串 ∥ `null` | `input:{}` | 真实形态：Anthropic 侧无参工具调用零 `input_json_delta` ⇒ `arguments:""`（`anthropic.mjs:290` 初值、`:302-304` 推入）⇒ 落史（`model-specs.mjs:434`）⇒ 下一轮重放入本支；无参调用是合法形态 |
+| R7 | 参数 | `arguments` 非法 JSON ∥ 解析结果非普通对象（数组 / 数字 / 字符串 / `null`） | `input:{}` + 告警 `anthropic-tool-args-malformed`（工具名 + 截断原文），**不抛** | 仓内已按「畸形会出现」防御：`record-results.mjs:44` 对 `toolCall.arguments` 逐个 try/catch。复现径：会话档 `tool_calls[].arguments` 改成 `"{"` 后重放 ⇒ 不处置则原串成为 `input`，上游按类型拒收（400）。历史持久 ⇒ 抛错会让该会话此后每轮必死；真实结果仍在 `tool_result` 里（D-PR42） |
+| R8 | tool | `role:"tool"` + `tool_call_id` + `content` | user 消息内 `{type:"tool_result", tool_use_id, content}`；`content` 字符串原样，空 ∥ 缺失 ⇒ `"(no output)"` | 官方文档原句「the tool_result blocks must come FIRST in the content array」（platform.claude.com 检索摘要实读）。空输出可达：`record-results.mjs:90` 原样推 `content: result`（无归一），无 stdout 的成功调用 = `""` |
+| R9 | tool | 连续多条 `role:"tool"`（并行调用） | 并进**同一条** user 消息，每条形一个 `tool_result`；`tool_result` 恒在其它块之前 | 仓内产出点：`record-results.mjs:54-90` 并行结果循环——N 个并行工具调用 ⇒ N 条连续 `role:"tool"`（`:49-51` 注释即此场景） |
+| R10 | 合并 | 转换后相邻同 role | 合并为一条，块按原序拼接；user 消息内 `tool_result` 恒在前 | 仓内产出点：`record-results.mjs:52` `deferredUserMsgs`——并行工具轮的多模态 user 消息延后于工具消息落史 ⇒ 历史呈 `… assistant, tool×N, user(图)` ⇒ 转换后两条相邻 user |
+| R11 | 首条 | 首条为 assistant ∥ 无 user 在前 | 前置 `{role:"user", content:[{type:"text", text:"[conversation continued from the history below]"}]}` | 产出点：截断续写精简历史 `core.mjs:331-336`（`prefixMode` 取末 N 条非 system 消息，可 assistant 开头；切片 `:335`），该子请求走同一 `chat()`（`core.mjs:292`）。上游「首条须 user」原文未取得（unverified——见真机验证项） |
+| R12 | 图像 | `image_url.url` 为 data URL ∥ http(s) 引用 | data URL ⇒ `{type:"image", source:{type:"base64", media_type, data}}`；http(s) ⇒ `{type:"image", source:{type:"url", url}}` | 仓内产出点：`read_image` 图像 part（`record-results.mjs:69` 的 `...parsed.images`，data URL 形）；官方 Vision 文档检索摘要实读（base64 与 url 两种 source 合法） |
+| R13 | 空 | 转换后无块的消息（任何 role；含 `content` 为 `null` ∥ 空串且无 `tool_calls` 的 assistant） | 丢弃该消息 | 空块数组上游拒收（I3）；assistant 的 `null` 产出点 = `model-specs.mjs:431`（`content: response.content \|\| null`）；带 `tool_calls` 的 `null` content 不丢——`tool_use` 块填充 |
+
+**表外默认**：未列出的 part 类型原样直通（上游按类型拒收 = 显式失败），本层不静默丢弃——仓内 part 产出点只有 `text` / `image_url`（`record-results.mjs:67-69`），出现别型即调用方契约破坏。
+
+**输出不变量**（可机检，批内单测逐条断言）：
+
+- I1 输出首条为 `role:"user"`；`role ∈ {user, assistant}`；输入全部为空消息（R13 全丢）⇒ 输出空数组——本层不造占位消息，空 `messages` 由上游显式拒绝。
+- I2 相邻消息 role 不同。
+- I3 每条 `content` 为非空块数组。
+- I4 无 OpenAI 残留字段：`tool_calls` / `tool_call_id` / `image_url` / `function`。
+- I5 copy-on-write：入参深比较前后相等（`JSON.stringify(messages)` 相同），且 `out.messages !== messages`；未改动消息可原引用复用。
+- I6 R7 触发 ⇒ `out.warnings` 恰一条（`name = "anthropic-tool-args-malformed"`、`message` 含工具名与截断原文）且该 `input` 为 `{}`；零触发 ⇒ `warnings = []`。
+- I7 text part 零丢弃：输入的全部文本（`content` 字符串 ∥ part 数组内的 `{type:"text"}`，user 与 assistant 同判）在输出中逐字出现。
+
+**用例表（批内单测——正常 / 边界 / 错误）**：
+
+| # | 规则 | 夹具（输入） | 期望 |
+|---|---|---|---|
+| T-1 | R1 | system 两条 + user 一条 | 请求体 `system` = 两文本 `\n\n` 连接；`messages` 无 system |
+| T-2 | R2 ∥ I7 | `{role:"user", content:"hi"}` | `[{type:"text",text:"hi"}]` |
+| T-3 | R3 ∥ R12 ∥ I7 | `{role:"user", content:[{type:"text",text:"图已读"},{type:"image_url",image_url:{url:"data:image/png;base64,AAA"}}]}`（= `record-results.mjs:67-69` 形） | 两块：text 逐字 = `图已读`、image base64 source；text 不丢 |
+| T-4 | R4 | assistant `content:"done"` | `[{type:"text",text:"done"}]` |
+| T-5 | R5 | assistant `content:null` + 一条 `tool_calls` | `[{type:"tool_use", id, name, input}]`；无 text 块；无 `tool_calls` 残留 |
+| T-6 | R6 | `arguments` ∈ {`""`, 缺, `null`} | `input:{}`；零告警 |
+| T-7 | R7 ∥ I6 | `arguments` ∈ {`"{"`, `"[1]"`, `"null"`, `"42"`} | `input:{}`；`warnings` 恰 1 条（name = `anthropic-tool-args-malformed`，message 含工具名）；不抛 |
+| T-8 | R8 | `{role:"tool", tool_call_id:"t1", name:"read_file", content:"ok"}` | user 内 `{type:"tool_result", tool_use_id:"t1", content:"ok"}` |
+| T-9 | R8 空输出 | 同上 `content:""` ∥ 缺 `content` | `content:"(no output)"` |
+| T-10 | R9 | assistant（`tool_calls` ×2）+ 连续两条 tool | 一条 user 消息、两个 `tool_result` 按原序；`tool_result` 在数组最前 |
+| T-11 | R10 | `… assistant, tool, tool, user(图)`（= `record-results.mjs:52` 落史形） | 转换后相邻 user 合并为一条；`tool_result` 块在 text ∥ image 块之前 |
+| T-12 | R11 | 首条 assistant（= `core.mjs:334-335` 精简历史形） | 首条 user 占位（文案逐字）、第二条原 assistant |
+| T-13 | R13 | `{role:"assistant", content:null}` 无 `tool_calls`；`{role:"user", content:[]}` | 两条均丢；输出无空块消息 |
+| T-14 | I1–I4 | 混合历史（assistant 开头 ∥ 连续 tool ∥ 图文混排） | 四条不变量全成立 |
+| T-15 | I5 | 任意夹具 | 入参 `JSON.stringify` 前后相等；`out.messages !== messages` |
+| T-16 | 告警投递 | T-7 夹具直调 + 假 fetch 驱动 `chat()` | `result._warnings` 含该条；`run-stages.mjs:44-45` 消费（桩断言） |
+
+**受影响文件清单（行数口径 = `read` 行号；`wc -l` 读数各差 1——末尾换行计一行，Δ 与结论不变）**：
+
+| # | 文件 | 现量（实施后实读） | 动作 ∥ 本层增量 |
+|---|---|---|---|
+| 1 | `thincoder-core/provider/anthropic.mjs` | 363 | 新增 `convertMessages`（`:97`，R1–R13）+ `chat()` 接转换（`:169`）与告警并入 `_warnings`（`:234`）；批前 240 ⇒ +123 |
+| 2 | `thincoder-core/provider/core.mjs` | 479 | anthropic 分支（`:151`）加 `messages = normalizeToolPairing(messages)`（`:155`）——本层两行 |
+| 3 | `thincoder-core/test/anthropic-message-adapt.test.mjs`（新档） | 229 | 批内单测（T-1–T-16；closeout 删除可执行档） |
+
+tier 判定：363 ∥ 479，均在 500 行软线内，不触发拆分；`normalize.mjs` 零改（复用既有函数）。
+
+**与工具定义的关系**：不新增「有工具块但 `tools` 为空」的守卫。工具块与 tools 定义同源同调用（同一个 `chat()` 入参），仓内不存在带工具链历史却不带 tools 的调用点；将来若出现属调用方契约破坏，不在本层静默修补（降级成文本会让模型以为工具从未被调用）。
+
+**先例与公开来源**：
+
+- **三问行（既有件核对）**：`existing: thincoder-core/provider/google.mjs:42 · name: "convertMessages" · consumers: google.mjs:82`（`chat()` 内唯一调用点；无跨档消费者）。
+  处置 = 名沿用、语义按本通道另立：骨架对齐（纯函数 ∥ transport 内转换 ∥ 相邻同 role 合并 ∥ 图像 data URL → 原生块），工具协议无仓内先例、按 Messages API 定义。
+  导出面 = transport 自持（`anthropic.mjs` 导出供批内单测直调；核内调用点仅本档 `chat()`）。
+- **最近先例（改正）**：`provider/google.mjs:42-76` 的 `convertMessages`——骨架可对齐；**工具协议不可对齐**：该函数 `:51-63` 只搬 text / `image_url`，`tool_calls` 全文零读（grep 零命中），`role:"tool"` 按 `:48` 一律映射 user ⇒ 压成 user 文本 part；assistant `content` 为 `null` 且带 `tool_calls` 时零 part ⇒ 在 `:65` 整条丢弃。故 R5 ∥ R8 ∥ R9 无仓内先例，按 Messages API 形态定义（偏离理由由此更强：google 通道工具轮语义不进历史）。
+- **公开来源核查**：docs.anthropic.com ∥ platform.claude.com 正文在本机被区域拦（页面实读返回「App unavailable in region」）；可得的官方片段经检索取到两处原文：① tool_result 必须位于 user content 数组最前、文本在其后；② image block 的 source 类型含 base64 与 url。
+- **真机验证项（不阻塞实施，阻塞核销）**：两条未取得原文页的约束——① 首条须 user；② assistant 文本块置于 `tool_use` 之前——按保守形态落地（R11 ∥ R5）；真机 Anthropic 端点各发一请求验证，被拒 ⇒ 按错误文案改形（如文本后置）并重跑 T-12 ∥ T-5，读数回填批档 §6。
+
+**边界（不做）**：
+
+- 不做 Anthropic → OpenAI 方向转换（响应侧已是原生解析，`anthropic.mjs:248-362`）。
+- 不回带 extended-thinking 块：本 transport 的请求体从不携带 thinking 参数（`anthropic.mjs:172-192`），历史里不存在 thinking 块。
+- 不动另外三条通道：`core.mjs:173` responses 径、`:186` OpenAI 径、google 径。
+- 不引入第三方依赖、不新增 config 项。
+- 不做 prompt caching（`cache_control`）与文档 ∥ PDF 块：仓内无此形态产出点。
+- **google 通道同类缺陷（观察项 · 另批）**：`google.mjs:42-76` 不读 `tool_calls`、`role:"tool"` 压成 user 文本 part、assistant `null` content 带 `tool_calls` 整条丢弃——与本层同族但不在本批射程；登记为观察项，另批处置。
+
+### 6.28 集成测试设计（Anthropic 消息适配层）
+
+依据 = `docs/core/requirements/TESTING.md` §6.1 的 F34（集成测试设计 = 设计交付物必项）∥ F28（端到端用例落 `test/integration/` 类落点、由发布门执行）。
+业务可观察点 = 用户在配了 Anthropic 原生通道的会话里，用过工具之后还能继续对话。
+
+本节用例从该入口驱动整条链（会话 → agent 循环 → transport → 上游端点），断言只落在业务结果上：会话流里出现工具调用与结果、模型给出下一段回复、不出现 `400 Unexpected role "tool"` ∥ 502。
+内部形态（块结构 ∥ 告警计数）由 §6.27 用例表 T-1–T-16 在单元层断言；两层不重复持有同一断言。
+
+| # | 场景 | 业务可观察入口 | 判据（业务可观察结果） | 指回 |
+|---|---|---|---|---|
+| G1 | 带一次工具调用的会话继续（正常） | CLI 起一个配 Anthropic 原生通道的会话，让它调一次工具（`read` 读一个内容已知的小文件），工具结果回灌后继续对话 | 会话流出现该工具调用与结果，模型随后给出引用该结果的回复；全程无 `400 Unexpected role "tool"`、无 502 | #20 ∥ IKKJEE（生产报告：带工具的会话下一轮被拒） |
+| G2 | 一轮多个工具调用后继续（边界 · R9 ∥ R10 历史形） | 同一会话里让模型一轮发起 ≥2 个工具调用，结果回灌后继续对话 | 两个工具的结果都出现在会话流里，模型下一段回复正常；无 400 | #20 ∥ IKKJEE |
+| G3 | 用过工具的会话重开后继续（边界 · 持久历史回放） | 关掉 CLI 进程、重开同一会话（历史从盘上回放），再发一句话 | 会话接上原上下文继续，回复正常；无 400 | #20 ∥ IKKJEE |
+
+**夹具（确定性）**：模型侧 = 本地脚本化假 Anthropic 端点，按 Messages API 回两个回合（第一回合 `tool_use`、第二回合文本），并对「请求体含 `role:"tool"`」按上游语义回 `400 Unexpected role "tool"`。
+该拒收规则是 G1–G3 的可证伪点：请求体残留 `role:"tool"` 即红。零外网、零付费端点；真端点 smoke 不属本套件。
+
+**落点**：`test/integration/anthropic-tool-roundtrip.test.mjs`（仓根常驻档），由仓根 `test/run.mjs` 的单层 glob 收集（`test/integration/*.test.mjs`）随发布门跑——不是批内单测档（单元与集成两类永不互转）。
+
+**边界**：只落 CLI 实例（本档持有的业务入口）；VSC ∥ desktop 的实例化按 F14 各端原文自持，不在本档单源。
+R7 畸形参数的处置只在单元层断言（T-7）——它不是生产报过的场景，集成层不复制。
+
+**窗口读数**：`thincoder-cli/test/` 实读现量 = `run.mjs` ∥ `session-observability.test.mjs` ∥ `slow.mjs`，无 `integration/` 目录 ⇒ 集成集 0 例，本表 3 例为其首批；50–100 为上限约束（超窗裁减旧场景）。
+
 ## 7. 关键决策记录
 
 | # | 决策 | 理由 |
@@ -679,7 +1256,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 | D-PR3 | **发送前净化而非改历史** | 历史是模型上下文真相；净化只作用于线上载荷、可逆 |
 | D-PR4 | 429 **双通道**（闸门 + 退避） | 闸门防患于未然，退避兜底（未配置预算也安全） |
 | D-PR5 | 流规则 abort 后**重试**（注入提醒让模型自修正） | 比事后清洗更可靠——内容合规是硬需求 |
-| D-PR6 | 超时拆两段（响应头 `fetchTimeoutMs` + body 读侧空闲 `READ_IDLE_MS`） | 原绝对墙钟 600s 会把长上下文子代理腰斩；废弃绝对墙钟 |
+| D-PR6 | 超时拆两段（响应头 `fetchTimeoutMs` + body 读侧空闲 `agent.bodyIdleTimeoutMs`，默认 120000） | 原绝对墙钟 600s 会把长上下文子代理腰斩；废弃绝对墙钟 |
 | D-PR7 | prefix 续写**精简历史**（过滤工具链消息，保留最近 8 条非工具文本） | 网关约束的直接解法 |
 | D-PR8 | 续写 400 **失败可见**（注入 `_warnings`，不静默吞） | 静默吞 = 长回合期间 deepseek 直接报错飞出的表象源 |
 | D-PR9 | **escape v5 双层**（发送前 sanitize + 源头 safeSliceUTF16） | 孤立代理是 400 根因；只做一层会在其他截断点复发 |
@@ -714,3 +1291,6 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 | D-PR38 | **原生路回带**（functionCall parts 复建）= 边界外（捕获在位 · 回带缓） | 原生路现不复建 functionCall parts（工具轮历史压平为文本）⇒ 不触本 400；补建 = 新机制（functionResponse 配对 + 修复前历史无签名 ⇒ 直接补发反引新 400）。 |
 | D-PR39 | 图片拒绝自愈 = **agent 层全剥 + 单次重发**（T1 图像语义 ∥ T2 同态重复；copy-on-write 只动机读线） | 四环缺一即烧死（图进史 ⇒ 400 立抛 ⇒ 毒图留场 ⇒ 每回合重发、零自愈）；自愈须持久改史 ⇒ 不能住净化面（D-PR3 契约：净化只改副本、可逆；副本面改不了历史）。 |
 | D-PR40 | 兜底面（压缩 ∥ 降级）**零改**；用户知会 = 机读注记（模型转述）+ `llm:image-heal` 落账；端侧主动提示不立 | 压缩只跟 token 阈值走（与「剂量无关的拒绝」不同域——阈值不触 ⇒ 不愈）；降级面只触 `role:"tool"` / string 内容（图消息不在判据内）。 |
+| D-PR41 | Anthropic 消息适配 = **transport 内纯函数 `convertMessages`** + **anthropic 分支内、转换前**复用 `normalizeToolPairing`；copy-on-write | 格式知识归 transport（同一协议的全部形变在一个文件）；配对修复已有单源（D2），另写一份 = 两份实现必然漂移。copy-on-write 是 D-PR3「净化只改副本」在本层的延伸——历史是四条通道共用的持久表示 |
+| D-PR42 | 畸形 `arguments` ⇒ `input:{}` + 机读告警，**不抛** | 历史持久：抛错会把一次畸形固化成此后每轮必死（毒化）；真实结果已在 `tool_result` 里，重放只需结构合法。静默不是选项——告警走 `_warnings`（#30 教训：外部形状不可信，处置要写死） |
+| D-PR43 | 首条非 user ⇒ 前置中性 user 占位；相邻同 role 合并；user 内 `tool_result` 恒在前 | 上游要求首条 user；连续同 role 的容忍度因网关而异 ⇒ 两者都在转换层收口。不在 agent 层补消息：那会改动四条通道共用的历史形态（本批明令不改 history 本体） |

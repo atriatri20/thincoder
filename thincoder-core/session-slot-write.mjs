@@ -18,7 +18,9 @@
  *
  * token 台账字段（`engDesignTokens`）的**槽 I/O 面**不在本档——单源 = `token-ttl.mjs`
  * （settle 落盘 / 门禁回读 / 链终清理三面齐备）；本档只承载其**保存面合并规则**
- * （`mergeEngTokensForSave`——空态保留 + 并集 + 新铸者胜，纯函数）。槽标题写面同样不在
+ * （`mergeEngTokensForSave`——空态保留 + 并集 + 新铸者胜，纯函数）。批次归属旁列
+ * （`engDesignTokenBatches`）同款分层：槽 I/O 在 `token-ttl.mjs`，本档只持其保存面合并规则
+ * （`mergeEngTokenBatchesForSave`）。槽标题写面同样不在
  * 本档——单源 = `session-rename.mjs` 的 `renameSlot`（同 `{ok, reason}` 契约 + mtime 门控）。
  */
 
@@ -26,6 +28,8 @@ import { existsSync, readFileSync, renameSync, statSync } from "node:fs"
 
 import { getSessionId, loadManifest, saveManifest, slotDigest, slotPath, writeSessionFile, sessionEnd } from "./session-slots.mjs"
 import { loadSlotFile, isLegacyTransient } from "./session.mjs"
+// 槽事件（docs/core/design/SESSION-OBSERVABILITY.md §3.1）：走核日志单一通道 `logEvent`。
+import { logEvent } from "./log.mjs"
 // token 形态单源（格式校验 + 到期时刻）——本档的保存面合并规则复用同一判定。
 import { tokenExpiryMs } from "./token-ttl.mjs"
 // 会话级偏好写面（§6.21 判据句 3）的判据单源——档位值域（`specForModel(...).reasoningEffortEnum`）
@@ -77,9 +81,11 @@ function rotateIfForeign(p, slot, data) {
     const diskLonger = Array.isArray(disk?.history) && Array.isArray(data?.history) &&
       disk.history.filter((m) => !isLegacyTransient(m)).length > data.history.length
     if (!(diskIsNewer || diskForeign || (diskStart && diskStart !== myStart) || diskLonger)) return null
+    const reason = diskIsNewer ? "newer-version" : diskForeign ? "foreign-cwd" : diskLonger ? "longer-record" : "other-session"
     const bak = `${p}.bak-${Date.now()}`
     renameSync(p, bak)
     console.error(`[session] slot ${slot} holds ${diskIsNewer ? `a newer-version file (v${disk.version})` : diskForeign ? `a foreign-cwd file (${disk.cwd})` : diskLonger ? `a longer record (${disk.history.length} > ${data.history.length} messages — concurrent append)` : `another session (start ${diskStart}, ours ${myStart})`} — preserved as ${bak}`)
+    logEvent("slot:rotate", { slot, reason, bak: true, via: "write" })
     return bak
   } catch (e) {
     // 文件存在但不可读（损坏 / 半写）：改名保留现场，不覆盖
@@ -89,6 +95,8 @@ function rotateIfForeign(p, slot, data) {
     }
     // 排障面：区分「现场不可读」与「轮转失败」——静默会让半写/占用现场无从定位。
     console.error(`[session] slot ${slot}: pre-write rotation check failed (${e?.message ?? e}) —${preserved ? " preserved as .corrupted" : " the scene could NOT be preserved"}`)
+    // 判别式（设计档 §3.1）：已保全 ⇒ unreadable；未保全 ⇒ rotate-failed（同一个 catch 的两个现场）。
+    logEvent("slot:rotate", { slot, reason: preserved ? "unreadable" : "rotate-failed", bak: false, via: "write" })
     return null
   }
 }
@@ -185,6 +193,24 @@ export function mergeEngTokensForSave(incoming, existing) {
     if (!(key in out) || expiry(tok) > expiry(out[key])) out[key] = tok
   }
   return out
+}
+
+/**
+ * 保存面「批次归属旁列」合并规则（DESIGN-TOKEN-SETTLEMENT §10 / KD-BG7——纯函数）：
+ *  沿用 `mergeEngTokensForSave` 的「槽独有项保留」半边（忙时保存不得把内存快照的缺席当成删除），
+ *  同 key 冲突**以新写者胜**——旁列值是路径，无 mint 时刻可比，不比 `expiresAt`。
+ *  - `incoming === undefined`（调用方未携带该字段）⇒ 保留槽值；
+ *  - incoming 空值 ⇒ 槽有值则保留槽、槽也空 ⇒ null（写 null = 清字段）；
+ *  - 两端都有 ⇒ 并集：槽独有项保留、incoming 覆盖同 key。
+ *  理由：忙时保存把归属写丢 ⇒ 收口 no-op ⇒ 凭证留存，正是 §10 要消的窗口。
+ */
+export function mergeEngTokenBatchesForSave(incoming, existing) {
+  if (incoming === undefined) return existing ?? null
+  const hasNew = incoming && typeof incoming === "object" && !Array.isArray(incoming) && Object.keys(incoming).length > 0
+  const slotHas = existing && typeof existing === "object" && !Array.isArray(existing) && Object.keys(existing).length > 0
+  if (!hasNew) return slotHas ? existing : null
+  if (!slotHas) return incoming
+  return { ...existing, ...incoming }
 }
 
 /** 会话级偏好（§6.21）键闭集——表外键 = 整 patch 拒（写未发生）。 */

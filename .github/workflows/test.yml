@@ -11,11 +11,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
-      # S2 期间（核发布前）：核依赖经本地链接解析——见 docs/design/CORE-UNIFICATION.md §2.6.1
+      # S2 期间（核发布前）：核依赖经本地链接解析——见 docs/core/design/CORE-UNIFICATION.md §2.6.1
       - run: cd ../thincoder-core && npm link
       - run: npm link @thincoder/core
       - run: npm install
-      - run: npm test
+      # 集成测试集已归仓根 test/integration/（TESTING.md §12）——跑仓根单 runner
+      - run: cd .. && node test/run.mjs
       - run: npm run lint
   vscode:
     name: thincoder-vscode (extension)
@@ -27,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
-      # S2 期间（核发布前）：核依赖经本地链接解析——见 docs/design/CORE-UNIFICATION.md §2.6.1
+      # S2 期间（核发布前）：核依赖经本地链接解析——见 docs/core/design/CORE-UNIFICATION.md §2.6.1
       - run: cd ../thincoder-core && npm link
       - run: npm link @thincoder/core
       - run: npm install
@@ -43,7 +44,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
-      - run: npm test
+      - run: npm run prepublishOnly
 
   core-node22:
     name: thincoder-core (kernel · Node 22.13 floor)
@@ -55,7 +56,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: "22.13" }
-      - run: npm test
+      - run: npm run prepublishOnly
   server:
     name: thincoder-server (gateway)
     runs-on: ubuntu-latest
@@ -76,5 +77,5 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
       # 单引擎（声明面驱动——设计档 DOC-DISCIPLINE.md §7；2026-09-18 判据面批收正：旧三档 doc-anchors / check-doc-width / check-ledger 已随 v2 收敛撤除）
-      # 停用（2026-10-16 · 父侧直改 · 可 revert）：用户 2026-10-15 12:10 令禁调 doc-check——一切轮次、一切角色，不再跑、不再引其读数、不再以其红 / 绿作任何判据；本步（非零退出即构建判据）在禁令射程内。恢复条件 = 该令撤销。
+      # 停用（2026-10-16 · 父侧直改 · 可 revert）：用户 2026-10-15 12:10 令禁调 doc-check 作为 CI 构建判据；2026-10-18 更晚裁定要求 doc_check 作为交付门必跑（工具面），但未明令恢复 CI 步。恢复条件 = 用户明令把 doc-check 接回 CI。
       # - run: node scripts/doc-check.mjs --root .

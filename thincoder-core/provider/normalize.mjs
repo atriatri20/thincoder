@@ -4,8 +4,7 @@
  * Split from core.mjs (TODO #2: 420 lines, past the 300 advisory). These two
  * pure functions sanitize the message array right before it hits the wire;
  * no dependency on chat()/retry logic. core.mjs re-exports them so
- * provider/index.mjs and tool-pairing.test.mjs keep their import paths.
- * The caller passes the spec (providerSpec from core.mjs — provider-aware).
+ * provider/index.mjs keeps its import paths.
  */
 
 import { crc32 as pngCrc32, inflateSync } from "node:zlib"
@@ -243,6 +242,7 @@ export function normalizeToolPairing(messages) {
     out.push(m)
     if (m.role !== "assistant" || !m.tool_calls?.length) continue
     for (const tc of m.tool_calls) {
+      if (!tc || typeof tc !== "object") continue // 空元素不携带 id：跳过，不让整个回合崩（#31）
       const t = toolById.get(tc.id)
       if (t) {
         toolById.delete(tc.id)

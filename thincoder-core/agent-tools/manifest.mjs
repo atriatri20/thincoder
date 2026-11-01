@@ -19,7 +19,7 @@
  *
  * 目标面（KD-M1-39——判据复用零新解析器）：`read` = `projectView`；`init` / `write` =
  * `projectRootView`（工作区 ⇒ 拒 + 下辖项目全列 + 显式 `target` 指引）；`resolveProjectRoot` 对
- * 工作区塌缩 `null` 再回落 cwd ⇒ 写 / 建两动作**不得**直用。
+ * 工作区塌缩 `null`（**回落发生在调用方 `writeRoot`，非本函数**）⇒ 写 / 建两动作**不得**直用。
  *
  * 写路径复用（零新写路径）：落盘恒经 `writeManifest` / `initManifest`——`writer` 恒显式 `'main'`
  * （缺省 `'subagent'` = 写门 fail-closed 缺省，KD-M1-3 / AC-M1-5 零改）。
@@ -102,10 +102,9 @@ function readAction(target, { canInit = true } = {}) {
   const lines = [`state=${view.state}`]
   if (view.path) lines.push(`path=${view.path}`)
   if (view.state === "ok") {
-    const m = readManifest(view.root) // 细节面：missingKeys / unknownKeys / errors（非空才出）
+    const m = readManifest(view.root) // 细节面：missingKeys / errors（非空才出）
     lines.push(`manifest=${JSON.stringify(m.manifest)}`)
     if (m.missingKeys?.length) lines.push(`missingKeys=${m.missingKeys.join(", ")}`)
-    if (m.unknownKeys?.length) lines.push(`unknownKeys=${m.unknownKeys.join(", ")}`)
     if (m.errors?.length) lines.push(`errors=${m.errors.join("；")}`)
   } else if (view.state === "missing") {
     lines.push(canInit
@@ -113,8 +112,8 @@ function readAction(target, { canInit = true } = {}) {
       : "hint: no manifest here — report it; creating one is a main-agent action")
   } else if (view.state === "no-project") {
     lines.push(canInit
-      ? "hint: no project on the ancestor chain and none below — manifest action=init can create one at the target"
-      : "hint: no project on the ancestor chain and none below — report it; creating one is a main-agent action")
+      ? "hint: no project at this directory and none in the direct children — manifest action=init can create one at the target"
+      : "hint: no project at this directory and none in the direct children — report it; creating one is a main-agent action")
   } else if (view.state === "workspace") {
     lines.push(`projects (${(view.candidates ?? []).length}):`)
     for (const c of view.candidates ?? []) lines.push(`- ${c}`)

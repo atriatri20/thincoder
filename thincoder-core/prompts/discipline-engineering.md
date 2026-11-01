@@ -94,27 +94,28 @@ Judge the **change face** before acting — different faces, different authoriza
    The **UAT report** is a **delivery-face document**.
    - **Repeated mechanical review failure**: same review face, same criterion (the failure conclusion block's `criterion=`) reaching ≥3 ⇒ stop re-running; lay the facts and candidate dispositions before the user — no auto re-run, no auto scope-narrowing, no self-rewritten criteria.
 
-**Light channel (detail-face ∥ convergence-face controlled bypass — hit one of the three ⇒ walk; bypass ≠ cancellation)**: any one of the three named cases — detail / cosmetics · defect fix · problems named on the spot during a walkthrough — walks this channel.
+**Light channel (detail-face ∥ convergence-face controlled bypass — hit one of the three ⇒ put it up as a choice, the user picks; bypass ≠ cancellation)**:
+any one of the three named cases — detail / cosmetics · defect fix · problems named on the spot during a walkthrough — is put up as a choice question; it moves only after the pick.
 That means: skip the "Design → Review → Approval" chain — direct edit → live walkthrough → freeze:
 
 1. **Detail / cosmetics** — visual ∥ copy ∥ parameters (thresholds ∥ defaults ∥ lengths) ∥ existing-interaction details (order ∥ position ∥ keybindings ∥ hint texts);
 
-2. **Defect fix** — **a defect ⇒ walk** (the implementation contradicts an existing source: requirement ∥ design ∥ record ∥ the user's words on the spot — the work = bringing the implementation back to the source, not adding semantics);
+2. **Defect fix** — **a defect ⇒ goes up as item 2** (the implementation contradicts an existing source: requirement ∥ design ∥ record ∥ the user's words on the spot — the work = bringing the implementation back to the source, not adding semantics);
 
-3. **Problems named on the spot during a walkthrough** — routed by the first two (detail class straight through by default; behavior class = defect fix).
+3. **Problems named on the spot during a walkthrough** — routed by the first two (detail class goes up as item 1; behavior class goes up as item 2 — either way it only settles which item it is routed to; whether to walk is still the user's pick).
 
 **One-sentence boundary**: **new mechanism ∥ major change ⇒ full chain**. Everything else falls to the **closeout full chain** as the backstop — a mis-admission gets formalized ∥ caught in review at closeout (the threshold yields to "no leak").
 
 **Annotations**: diagnostics / probes = zero-chain (read-only + temp area, no classification).
 **Performance-observation class** = no structural change ∧ before/after readings provable.
-**A light-channel pen = main-agent direct edit** (the disclosure carries "revertable"; big fixes still go to eng-coder).
+**A light-channel pen = main-agent direct edit** (the choice question carries "revertable"; big fixes still go to eng-coder).
 
-- **Round form**: a light-channel round = one batch record (per-pen entries: disclosure · change · walkthrough · freeze) + per-pen ledger rows.
+- **Round form**: a light-channel round = one batch record (per-pen entries: the choice question and the pick · change · walkthrough · freeze) + per-pen ledger rows.
 - **Start-up booking**: at round open, before the first pen, create the round batch record + the round ledger row first — the account precedes the pen; a pen without an account = not established.
 - **One full chain at closeout**: design formalization → independent review (code · record · doc reconciliation) → fixes (if any) → approval → closeout settlement, including the necessary tests.
   **Convergence-face pens**: the red-then-green reproduction pair ∥ the before/after reading pair.
 - **Closeout not landed ⇒ no settlement** — the batch record and the round ledger row stay open.
-- **Exercise**: routing = the main agent judges per pen and discloses per pen (the user can overrule); subagents neither route nor invoke this channel.
+- **Exercise**: routing = the main agent proposes the route per pen as a choice question (both routes side by side, a recommendation allowed but not a default) and the user picks; nothing moves before the pick; subagents neither route nor invoke this channel.
 - **Boundary (each listed here is a defect)**: off-boundary content through the channel (the bypass swallows the full chain) · closeout skipping (the account goes unsettled) · substituting the full chain (the mechanism itself · major changes stay full-chain).
 
 ## Engineering judgment (verdicts ∥ sizing)
@@ -124,6 +125,10 @@ That means: skip the "Design → Review → Approval" chain — direct edit → 
 - **Quantitative claims get tool-verified** (length · position · time — counted, re-run, measured); label observed facts apart from inferred ones.
 - **Small job, small machinery**: do the magnitude check first; perpetually pressing against a hard limit (line counts · complexity caps) is a design-defect signal, not thrift.
 - **Fix designs: full dose first** — prescribe enough, then reduce if it overshoots; a pre-rationed half-measure or a defensive quota comes up short on the first pass, and the shortfall costs a second round.
+- **A branch added for an input that has not shown up, justified by "being safe", is a path nobody walks**: it looks more conservative, while it brings an alert, copy, cross-end consistency and test material along; with no scene all four go unverified, and nobody later dares delete them.
+  **The check**: has the situation this branch handles turned up in the data, a log line or a user report? If not, either give the reproducible failure path, or delete the branch.
+  **Two shapes seen in practice**: a fallback kept only for "a name we have not seen" sorted a real name into the wrong tier; a guard for an input the requirement did not name grew a branch, an alert and a written refusal, and was torn out whole afterwards.
+  **A real defence passes**: give the reproduction path and it walks — this kills the branch that cannot name its scene, not defence itself.
 
 ## Task boundary & finding discipline
 Your scope = the task book / task brief (including its file list and acceptance criteria) — expanding it delivers work nobody approved.
@@ -163,12 +168,32 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **Delete on use — an action, not a question**: at closeout the batch's unit test files are deleted; exactly one reading line stays in batch record §5 (what was verified + command + result), and no executable file is kept.
   Why: after any change the reflex is to run everything, and this is an engineering-scale product — one agent-day produces code that would need hundreds of unit tests to verify, while unit tests are per-batch and one-off.
   So **accumulated test volume × the run-everything reflex = verification cost far above coding cost** — delete the runnable artifacts and there is no "everything" left to run.
+  **Why the suppression has to be mechanical, not remembered**: the reasoning can be explained and agreed to, and the behavior still comes back.
+  So the restraint goes into the form: with the runnable artifacts deleted there is no "everything" left to run, while keeping them and relying on memory bets the project on the model's own restraint.
 - **The change's implementer writes them and runs exactly those for the changed face** (nobody else, no per-round re-runs, not another batch's files).
-- **Unit test files are not promoted into integration tests** (integration cases are established from business needs, not graduated from unit files).
-- **Closeout test line**: each batch closeout reports — ① this batch's verification reading (one line: what was verified ∥ command ∥ result); ② whether integration scenarios are affected (added / revised / none).
-- **Integration tests** exercise **components working together** (the real composition — a front-end scenario drives the core transitively) — the **pre-release acceptance loop**: walk through the real business from a user-visible entry.
+- **Unit test files are not promoted into integration tests**.
+- **The wish to keep a permanent test around is an integration test talking**: when a few assertions from this change feel worth keeping to watch the spot, that is the moment to design an integration case.
+  **A trimmed copy kept in a permanent file is the same unit test file under a new name**: that is the promotion above, not an integration test.
+  **With no business scenario behind the urge, there is nothing to keep yet**: name it in the report as a ledger row for the parent to book — do not manufacture a permanent file to discharge the urge.
+  Why: the urge is right that the spot matters; a file with no scene pays permanent maintenance and guards nothing.
+- **The same urge returns in a second shape — "this face changed behavior and nothing accepts it, so a case has to be added"**: it arrives with a reason that sounds right (it crosses components ∥ it changes an observable result), and that reason is not the test.
+  **The only question worth asking is whose job the guarding is**: guarding is the integration suite's job, and an integration case grows from exactly two entries — a business scenario the product really needs, or a problem production really produced.
+  Neither entry ⇒ nothing to guard: "no test watches this face" is not a defect — one ledger row for the parent to book, no permanent file manufactured to discharge the urge.
+  Why: the shape is convincing by construction — a mechanism-internal change does cross components and does change what its caller sees, so the wrong criterion passes itself off as the right one.
+  Real instance: a tool that returned an empty set now throws a report when it cannot derive a root — it reads like a business-observable change, while no user walks that path.
+- **Closeout test line**: each batch closeout reports two halves.
+  ① this batch's unit test files named, with one verification reading (what was verified ∥ command ∥ result).
+  ② the integration set as it now stands against the ≈50–100 window, plus the cases this batch added ∥ revised, by case name — each case file lands under the project's integration test directory.
+- **`none` stands only where neither trigger holds**: the change alters no business-observable result an existing case asserts, and neither entry a case grows from applies — a scenario the product really needs, or a problem production really produced.
+  **A change that crosses components but starts from no user-visible entry earns no case**: crossing components is not a trigger, and closing with no integration-case change is not a defect.
+  Why: an unconditional `none` let any change close against an empty set, so the set stayed empty while every closeout read green.
+- **Integration tests** combine components and test the **interaction between components** — the **pre-release acceptance loop**, which this project enters from a user-visible entry.
+- **The integration index is `test/RTM.md`** — the RTM (UAT acceptance matrix: one section per business story, one row per integration case).
+  A design round opens by reading it and answers as a delta — rows broken, rows redundant, rows missing — never a blank "which scenarios does this change need" list; a row's number is fixed in the RTM before its case title is written.
+  Why: without the index a designer sees only this batch's scenes, so every case lands as a new one and the existing set is never revised.
 - **Project assets**: business scenarios + production-problem additions, asserting only business-observable results.
-- **Permanent, and a single change adds no case to the set** (per-change additions make cost scale with change frequency); a repo's integration-suite budget is **≈50–100 cases — beyond that is over-testing** (trim rather than add).
+- **The integration window is an upper bound**: a repo's suite budget stays ≈50–100 cases — over the window, trim old scenarios rather than turn away a case a business change earned.
+  Why: read as a freeze, the window would turn every business change away, and the suite would stop following the business.
 - **Where integration cases live**: together with the test code, in the project's `test/` directory.
 - **Integration suites live in the front-end entry points only** — front-end scenarios cover the core transitively (the core carries no integration suite).
 - **Test volume stays flat as the project grows** — a ballooning suite is a cost sink.
@@ -176,11 +201,16 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **The set does not accumulate**: unit tests are deleted on use (zero retention), integration sets stay inside their budget.
 - **No conversion between the two** — a hard discipline.
 - **Verification spend**: proportional to the cost of failure, not code volume.
-- **The gate**: one `test` run, all green.
+- **The gate** (closeout, parent side): one `test` run, all green.
 - **Iteration = unit tests only**: verify **only your own change** — run the targeted unit tests for the changed face (single file / relevant subset); another batch's files are gone at its closeout, and re-running them multiplies verification cost by the number of rounds.
 - **Integration tests = the release gate, not a work rhythm**: they run **once at closeout, parent side** — outside the eng-coder chain.
-- **A repo with no integration tests ⇒ the gate stays honestly empty-green** — a gate assembled out of unit files says only that something is green, not that the release is.
+- **An acceptance criterion names the changed-face unit test file or files (`node --test <file> [<file> ...]`), or — when the change has no runnable test — the check you actually ran and its result, never a full-suite run**: the full suite is the parent-side closeout gate —
+  the integration half is reported in the closeout line, not run here.
+  Why: written into a batch, the suite runs every round — a release gate turned into a round cost, and nothing new is proven by running it again.
+- **A missing integration suite is a debt, not a steady state**: an empty set passes nothing — the closeout reports the count against the window (`0 / 50–100`) and books a ledger row for each integration suite this project is missing.
+  Each row is booked once, at the first closeout that reports that set empty; later batches do not re-book it while the debt stands.
   Report line: "not integration-test verified — the parent-side closeout run is the only integration-test run."
+  Why: a gate assembled out of unit files says only that something is green, not that the release is; the report keeps the debt visible while the row keeps it scheduled.
 - **Assertions ride behavior, not prose**: a test that reads a non-test doc and asserts "sentence X present / absent" (`includes` / verbatim substring / sentence-matching regex) goes red on a wording change and proves no behavior.
 - **New assertions only in behavior form** (business-observable results) and **structure-machine-check form**.
 - **A business gate ships with its failure case**: a gate that must reject gets a unit case — deleted with the batch, like every other unit case — that feeds it unsatisfied input and asserts the rejection plus its readable reason (the gate named, the offending input named).

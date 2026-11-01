@@ -1,6 +1,31 @@
+## [0.10.12] — 2026-10-26
+
+### Changed
+
+- **升级核到 `0.10.12`**：承载「台账无根抛明（不再静默空集）」与「多根工作区下建批档报明项目」两项行为变化。
+
+## [0.10.11] — 2026-10-25
+
+### Changed
+
+- **`modelContext` 撞键不再报错**：同一渠道里两条键按末段归一后相同（如 `qwen/glm-5.3` ∥ `zhipu/glm-5.3`）等于同一个模型的两种写法——读面取其中一条即用、不再告警也不再当作未声明；写面会把这几种写法一并改成新值，清除面一并删掉。
+
+### Added
+
+- **设置 → providers 段可按模型设上下文窗口（K）**：渠道行新增 `Context…` 入口——选模型（候选取已到手的切片，开弹窗零新增 IPC）→ 输 K → 保存写 `providers[].modelContext`；清除走确认弹层（默认取消，带当前值）。八键 zh ∥ en。
+- **`provider:setModelContext` 通道 + `provider:list` 回执三键**（`modelContext` / `modelContextText` / `context`）：窗口展示串由主进程经核 `formatDeclaredContextK` 单点出词，渲染面零拼串。
+
+### Changed
+
+- **渠道行窗口值改读已声明值**：不取 `providerSpec().context`（渠道条目不携模型，写 128 会显示 125K）。
+
 # Changelog
 
 All notable changes to ThinCoder Desktop are documented here.
+
+### Changed
+
+- **上下文窗口展示串统一由核出词**：声明 `1024`（= 1M）此前显示 `1024K`，现显示 `1M`；`128` 仍是 `128K`。三端（CLI / VSC / 桌面）同源，端侧不再自拼单位。
 
 ## [0.10.10] — 2026-10-22
 

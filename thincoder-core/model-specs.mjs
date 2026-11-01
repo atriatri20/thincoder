@@ -7,8 +7,10 @@
  * config-presets.mjs — the core's single preset face, re-exported by config.mjs.)
  */
 
+import { listedContextTokens, manualContextK, warnContextOnce } from "./model-context.mjs"
+
 /**
- * Known model capability spec table (prefix match, longer first).
+ * Known model capability spec table (prefix match within the model's last "/"-segment, longer first).
  * Used for compaction threshold derivation, continuation protocol selection, and capability-aware optimization.
  *
  * context:           context window (tokens)
@@ -42,8 +44,14 @@ const MODEL_SPECS = [
   ["deepseek-v4-flash-vision-exp", { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2], multimodal: true }],
   // Kimi series
   ["kimi-k3",           { context: 1_000_000, maxOutput: 131_072, thinking: true,  partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
-  // Qwen router prefixes model IDs with provider namespace: kimi/kimi-k3 → kimi-k3 (IK7K4V)
-  ["kimi/kimi-k3",      { context: 1_000_000, maxOutput: 131_072, thinking: true,  partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
+  // kimi-k3.1-pro / kimi-k3.1-pro-highspeed（2026-10-23 发布；官方 quickstart 实读 2026-10-25）：
+  // context = 1_048_576（官方 1M）；maxOutput = 131_072（官方 max_completion_tokens 默认档，上限 1_048_576 不取）；
+  // **思考始终开启**（官方原文「K3.1 Pro 始终开启思考模式」· FAQ「目前关不了」）⇒ thinkAlwaysOn；推理强度走顶层
+  // reasoning_effort low/high/max（默认 max）⇒ thinkApi "effort"；多轮 / 工具调用须原样回传完整 assistant message
+  // ⇒ reasoningEcho "required"；partialMode ✓；视觉 ✓（content 必须是对象数组，图走 base64 ∥ ms://，**不接受公网 URL**）。
+  // Highspeed = 同规格、输出约 2~3 倍速（官方「同等智能」）—— 分值分行，靠前缀长度降序先命中。
+  ["kimi-k3.1-pro",           { context: 1_048_576, maxOutput: 131_072, thinking: true, thinkAlwaysOn: true, partialMode: true, multimodal: true, thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
+  ["kimi-k3.1-pro-highspeed", { context: 1_048_576, maxOutput: 131_072, thinking: true, thinkAlwaysOn: true, partialMode: true, multimodal: true, thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
   // Kimi For Coding endpoint uses the short model ID "k3" (same specs as kimi-k3) — IK5VGJ
   ["k3",                { context: 1_000_000, maxOutput: 131_072, thinking: true,  partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
   // kimi-for-coding / k3-256k / kimi-for-coding-highspeed（Kimi For Coding 端点三名 · 2026-09-25 批 §14.2 #7-9 · 活测 = §1.4 服务端 200 /models）：
@@ -81,8 +89,7 @@ const MODEL_SPECS = [
   ["glm-5.3-flashx",    { context: 1_000_000, maxOutput: 131_072, thinking: true,  thinkAlwaysOn: true, multimodal: true,  thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-5.2",           { context: 1_000_000, maxOutput: 128_000, thinking: true,  thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["max", "xhigh", "high", "medium", "low", "minimal", "none"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-5",             { context: 1_000_000, maxOutput: 128_000, thinking: true,  thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["max", "xhigh", "high", "medium", "low", "minimal", "none"], tempRange: [0, 1], noUsageStream: true }],
-  ["glm-4",             { context: 128_000,   maxOutput: 32_000,  thinking: true,  thinkApi: "type", reasoningEcho: "optional", tempRange: [0, 1], noUsageStream: true }],
-  // glm-4.5-air（智谱轻档 · 2026-09-24 bench 名单批）：temperature 0 受理 = **实测**（roster-expand §2.2）；其余 = **族沿用 glm-4 行**
+  // glm-4.5-air（智谱轻档 · 2026-09-24 bench 名单批）：temperature 0 受理 = **实测**（roster-expand §2.2）；取值以本行**显式声明**为准
   // （逐名官方口径未取证）；枚举 / 视觉面 = **未探**（不声明）。medium 直发实测受理（batch-params-judge §1.5）。
   ["glm-4.5-air", { context: 128_000, maxOutput: 32_000, thinking: true, thinkApi: "type", reasoningEcho: "optional", tempRange: [0, 1], noUsageStream: true }],
   // GPT series
@@ -91,11 +98,10 @@ const MODEL_SPECS = [
   ["gpt-4.1",           { context: 1_000_000, maxOutput: 128_000, thinking: false }],
   ["gpt-4o",            { context: 128_000,   maxOutput: 16_000,  thinking: false, multimodal: true }],
   // Qwen series
-  // qwen-flash / qwen-vl-max（2026-09-25 批 §14.2 #2-6 · §1.7.1 父侧实测）：**尺寸行**——maxOutput 32_768 = **实测**
+  // qwen-flash（2026-09-25 批 §14.2 #2-6 · §1.7.1 父侧实测）：**尺寸行**——maxOutput 32_768 = **实测**
   // （服务端直报「Range of max_tokens should be [1, 32768]」；131072 / 262144 均 400）。context 未取到 ⇒ 零口径——取兜底值
   // 128_000（与建行前生效值同值，§14.3 兜底语义续效）；thinking / 视觉有读数（默认关可开 / 不支持）但不落字段（§14.3 五名口径）。
   ["qwen-flash",        { context: 128_000, maxOutput: 32_768 }],
-  ["qwen-vl-max",       { context: 128_000, maxOutput: 32_768 }],
   // qwen3.7-max：**实测拒图像**（DashScope 400 "Unexpected item type in content"——真值彩图探针，2026-09-20）
   // ⇒ 无视觉 = **不声明**（T-7 语义单一：multimodal 仅 true / undefined；补探已毕，无需再探）
   ["qwen3.7-max",       { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true,  thinkApi: "effort", reasoningEffortEnum: ["xhigh", "high"], tempRange: [0, 2] }],
@@ -137,8 +143,6 @@ const MODEL_SPECS = [
   ["qwen3.6-flash",     { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
   // qwen3.6-plus：同形行（共享证据块见 flash 行上）——校验级 maxOutput / 六档枚举、官方口径 context、族沿用机制位。
   ["qwen3.6-plus",      { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
-  // qwen3.6-max-preview：同形行——校验级 maxOutput / 六档枚举、官方口径 context、族沿用机制位；视觉通道实测 ✓ 但纯红图答「黑色」（抽样波动，如实记）。
-  ["qwen3.6-max-preview", { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
   // qwen3.6-27b：同形行——校验级 maxOutput / 六档枚举、官方口径 context（未探边）、族沿用机制位。
   ["qwen3.6-27b",        { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
   // qwen3.5-27b（2026-09-24 bench 名单批）：context 262_144 = **官方口径（定价页分档佐证——[128K, 256K) 档在售；规格页未逐名核）**；
@@ -155,8 +159,6 @@ const MODEL_SPECS = [
   // always echo); 2026-09-22 re-probe: value / missing field / empty string all 200 — the
   // 2026-09-20 "must be passed back" 400 was NOT reproduced. v2.5 rows aligned 2026-09-22:
   // maxOutput 131_072 = **校验级**.
-  ["mimo-v2.5-pro",     { context: 1_000_000, maxOutput: 131_072, thinking: true,  thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
-  ["mimo-v2.5",         { context: 1_000_000, maxOutput: 131_072, thinking: true,  multimodal: true,  thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
   // MiMo V2.6 series (2026-09-22 launch — three independent rows, each probed individually).
   // maxOutput 131_072 / tempRange [0, 1.5] = **校验级** (400 "at most 131072 completion tokens" /
   // "temperature must be within [0, 1.5]", per model); thinking = **实测** (bare request carries
@@ -175,10 +177,9 @@ const MODEL_SPECS = [
   // minimax-m3（小写前缀行——与上方 MiniMax-M3 行同值，同族两写法）：effort 同按**无生效面**处置
   // （**实测**：effort 被忽略；off 路径 = `thinking:{type:"disabled"}` ✓ rc=0——batch-params-judge §1.2 / KD-32④）。
   ["minimax-m3",        { context: 1_000_000, maxOutput: 128_000, thinking: true,  multimodal: true,  thinkApi: "type", thinkEnabledValue: "adaptive", tempRange: [0, 2], noUsageStream: true }],
-  ["minimax-m1",        { context: 256_000,   maxOutput: 128_000, thinking: false, noUsageStream: true }],
   // MiniMax-M2.7（前缀行——覆盖标准档与 -highspeed · 2026-09-24 bench 名单批）：thinking = **实测**（裸请求 rc 在场）；off 路径 **未找到**
   // （`thinking:{type:"disabled"}` 不生效——如实，不声明 thinkApi）；effort 被忽略 ⇒ **无生效面**（枚举不声明；medium 照发仅口径统一）；
-  // 尺寸 / noUsageStream = **族沿用 minimax-m1 行**；视觉面 = **未探**（不声明）。
+  // 尺寸 / noUsageStream = 本行**显式声明**（逐名官方口径未取证）；视觉面 = **未探**（不声明）。
   ["MiniMax-M2.7", { context: 256_000, maxOutput: 128_000, thinking: true, noUsageStream: true }],
   // Grok series (xAI — OpenAI-compatible)
   // grok-4.x: 500K context per xAI Grok 4.6 spec (corrected 2026-08; earlier entries said 1M)
@@ -220,9 +221,6 @@ const MODEL_SPECS = [
   // 答 "Unknown"（对照组明说不识图）⇒ 实测无视觉。尺寸位两级逐条标（AC-2）：maxOutput 128_000 =
   // **参考实配**（网关对 max_tokens 不硬拒 ⇒ 上限未证）；context 256_000 = **网络口径**（他仓/文档 256K，未本渠道实测）。
   ["hy3",               { context: 256_000, maxOutput: 128_000, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
-  // hy3-preview（在场实测：/models + 401 前验活；能力位**未探针**）——**尺寸行**：仅登记尺寸位，取值 =
-  // hy3 **同族沿用**（maxOutput 参考实配 / context 网络口径）。D-11（2026-09-25 收窄现口径）：能力位**无族据**一律不声明 ⇒ 该名无族据 ⇒ thinking / 枚举 / 视觉全不声明。
-  ["hy3-preview",       { context: 256_000, maxOutput: 128_000 }],
   // hy4-preview（在场实测：/models + 401；能力位**未探针**）——尺寸行：取值 = hy3 族**同族沿用**
   // （maxOutput 参考实配级取值 / context 网络口径；批次档 §1.2 未给该名尺寸行 ⇒ 上报清单 2，行注即标级）。
   ["hy4-preview",       { context: 256_000, maxOutput: 128_000 }],
@@ -249,6 +247,38 @@ const MODEL_SPECS = [
 ]
 const DEFAULT_SPEC = { context: 128_000, maxOutput: 32_000 }
 
+/** 查表规则（单源 = PROVIDER.md §6.9 · 用户 2026-10-23 17:34 裁定「匹配 / 拆分以后的最后一段」）：
+ *
+ * 模型名匹配 = **末段唯一**：按 "/" 拆开只拿最后一段查表（单段名末段 = 自身），段内仍按前缀匹配
+ * （`glm-5.3-flashx` 命中 `glm-5.3` 行）。完整名**不再先扫**——旧法把 `glm-5.3/zzz` 误判成
+ * `glm-5.3`（1M 上下文 ⇒ 压缩永不触发 ⇒ 溢出）；新法取末段 `zzz` ⇒ 未命中 ⇒ DEFAULT_SPEC + 告警。
+ * 聚合网关惯例 `vendor/model`（roapi/new-api/one-api/aiproxy）因此天然命中：`zhipu/glm-5.3` /
+ * 链式 `qwen/ZHIPU/GLM-5.3` ⇒ `glm-5.3`。末段为空（`foo/`）⇒ 未命中（空串不做匹配）。 */
+const warnedModels = new Set() // warn once per model name — spec lookup runs on every request (hot path)
+// Pre-sorted once at module scope — spec lookup runs on every request (agent, provider core,
+// context, auto-think, TUI rendering); re-sorting per call was wasteful.
+const SORTED_SPECS = [...MODEL_SPECS].sort((a, b) => b[0].length - a[0].length)
+
+/** Single table lookup shared by specForModel / specMatch — prefix match (case-insensitive) on the
+ *  model's LAST "/"-segment only (末段唯一 · PROVIDER.md §6.9). The full name is NOT scanned first:
+ *  `glm-5.3/zzz` takes `zzz` and misses (the old full-name-first scan mis-hit `glm-5.3`).
+ * 模型名匹配 = **末段唯一** ∪ **冒号边界**（fork 并集 · 2026-10-24）：末段切分的边界集 = "/" ∪ ":"——
+ * realm 前缀（`cn:` ∕ `global:` ∕ `workbuddy:`）是命名空间非模型名段（`cn:deepseek-v4-flash` ⇒ `deepseek-v4-flash`
+ * 命中内置行）；上游「末段唯一」的误命中守卫（`glm-5.3/zzz` ⇒ `zzz` 未命中）语义保持。
+ *  下游无类型门——`.toLowerCase` 只认串，非串归一后本函数恒 total，同 providerSpec 文档句）。 */
+function lookupSpec(model) {
+  const m = (typeof model === "string" ? model : "").toLowerCase()
+  const cut = Math.max(m.lastIndexOf("/"), m.lastIndexOf(":"))
+  const bare = cut >= 0 ? m.slice(cut + 1) : m   // 末段唯一；单段名 = 自身
+  if (!bare) return null                             // 末段为空 ⇒ 未命中（空串不做前缀匹配）
+  for (const [prefix, spec] of SORTED_SPECS) {
+    if (bare.startsWith(prefix.toLowerCase())) return spec
+  }
+  return null
+}
+
+/** Unknown model: warn ONCE (not per request) so a typo'd ID or a missing alias surfaces
+
 /** 命名空间前缀剥离的**边界候选**（2026-10-10 泛化——原「剥第一个 `/` 一次」）。
  *
  * 第三方 token 市场 / 反代聚合网关在模型名前加**路由前缀**，分隔符不止 `/`：
@@ -267,41 +297,6 @@ function prefixCandidates(m) {
     }
   }
   return out
-}
-
-const warnedModels = new Set() // warn once per model name — spec lookup runs on every request (hot path)
-// Pre-sorted once at module scope — spec lookup runs on every request (agent, provider core,
-// context, auto-think, TUI rendering); re-sorting per call was wasteful.
-const SORTED_SPECS = [...MODEL_SPECS].sort((a, b) => b[0].length - a[0].length)
-
-/** 单串前缀匹配（长名优先）→ { prefix, spec } | null（SORTED_SPECS 已按前缀长度降序 ⇒ 首个命中即最长）。 */
-function matchPrefix(s) {
-  for (const [prefix, spec] of SORTED_SPECS) {
-    if (s.startsWith(prefix.toLowerCase())) return { prefix, spec }
-  }
-  return null
-}
-
-/** Single table lookup shared by specForModel / specMatch — prefix match (case-insensitive)
- *  with namespace-boundary stripping. Returns null on a miss (DEFAULT_SPEC is the caller-side
- *  fallback and is deliberately NOT returned here — `matched` needs the miss itself).
- *  非串 model（外端脏载 / 手工档）归一等价空串 ⇒ 未命中 ⇒ 调用侧 DEFAULT_SPEC（#638 查表全性：
- *  下游无类型门——`.toLowerCase` 只认串，非串归一后本函数恒 total，同 providerSpec 文档句）。
- *
- *  匹配序：①全名前缀命中直接返回（既有语义零变）；②未命中 ⇒ 逐边界候选重试，取**命中前缀最长者**
- *  （最具体），并列取候选最长者（迭代自长至短 + 严格大于替换 ⇒ 天然成立）。 */
-function lookupSpec(model) {
-  const m = (typeof model === "string" ? model : "").toLowerCase()
-  if (!m) return null
-  const direct = matchPrefix(m)
-  if (direct) return direct.spec
-  let best = null
-  for (const cand of prefixCandidates(m)) {
-    if (cand === m) continue
-    const hit = matchPrefix(cand)
-    if (hit && (best === null || hit.prefix.length > best.prefix.length)) best = hit
-  }
-  return best ? best.spec : null
 }
 
 // ─── 用户覆写表（modelOverrides · 2026-10-10）───────────────────────────────────────────────
@@ -435,6 +430,19 @@ export function specMatch(model) {
   return { spec: DEFAULT_SPEC, matched: false, source: "default" }
 }
 
+export function formatContextK(tokens) {
+  if (tokens >= 1_000_000) return `${Math.round(tokens / 1_048_576)}M`
+  return `${Math.round(tokens / 1024)}K`
+}
+
+/** 人工声明上下文的展示串，**收 K**（`modelContext` ∥ 旧键 `context` 的存储单位）：`128` ⇒ `128K`、
+ *  `1024` ⇒ `1M`。K→token 的展示换算**只此一处**（内部转 token 再交给 `formatContextK`）——三端读面
+ *  把已声明原值直接交进来，不自己换算、不自己拼 K 串（PROVIDER.md §6.15「读面回显」· R31④）。
+ *  前提：`k` 是先过 `positiveInt` 的正整数（与读链同一谓词）——非法值本函数不复判。 */
+export function formatDeclaredContextK(k) {
+  return formatContextK(k * 1024)
+}
+
 // ─── 推理强度注册默认档（端差面上提 · 2026-10-10）────────────────────────────────────────────
 // 原 = VSC 端差表 `thincoder-vscode/src/specs.mjs` `EFFORT_DEFAULT_PREFIXES`（CORE-UNIFICATION
 // §2.13.4 #143「端侧自有」裁定）。桌面与 CLI 无此表 ⇒ 有档位枚举但无默认档时，思考强度钮恒显中性
@@ -505,11 +513,103 @@ export function effortDefaultFor(model) {
  * 生效序（低 → 高）：DEFAULT_SPEC < MODEL_SPECS 命中 < `modelOverrides`（模型级）< `providers[].context`
  * （渠道级最具体——本函数）。同一模型在不同端点的真实窗口差异由渠道级承载。
  */
+
+/**
+ * providerSpec(provider) — spec with the context resolution chain (PROVIDER.md §6.15, 2026-10-23
+ * 五级链). `providerSpecResolution` = the single traversal; `providerSpec` = `resolution.spec`.
+ *
+ * Chain (first available wins) — 单位差只在这里乘一次，且**解析乘点**全仓唯一（本函数内 L1 ∥ L2 共用；
+ * 展示面的另一次在 `formatDeclaredContextK`，不回写解析值）：
+ *   L1 `providers[].modelContext[模型]`（人工声明，K）       → ×1024
+ *   L2 `providers[].context`（旧键，K；仅未被 L1 点名的模型） → ×1024（同一乘点）
+ *   L3 `/models` 自报（三字段任一，token）                   → 不乘
+ *   L4 `MODEL_SPECS` 静态表（token）                          → 不乘
+ *   L5 `DEFAULT_SPEC`（128K，token）                          → 不乘
+ *
+ * L2 位于 L3 之上：旧键也是人工声明（2026-10-23 17:30 裁定「人工声明 > 列表」），只是粒度不对、
+ * 单位事故出过两次；`modelContext` 点名的模型一律走 L1，L2 不参与。L2 实际被用到时告警一次
+ * （provider 名去重——装载期告警会在 L1 已完全覆盖时误报）。
+ *
+ * 量级守卫（R32）：L1 ∥ L2 的 K 值换算后 > 静态表 ×4（表无行时 = 4 × 128K）⇒ 照用 + 告警一次，
+ * 不截断、不拒写——与 L3 的 4× 守卫对称。守卫住在核里：值可能来自手改 JSON（不经任何界面），
+ * 端上守不到；手改 ∥ CLI ∥ VSC ∥ 桌面四条来源在这里同判。
+ *
+ * 同步纯函数、零 IO：L3 读 `model-context.mjs` 的模块级只读缓存（写面在 listModels 成功拉取时），
+ * 未命中即落下一层——providerSpec 在请求热路径上（每请求算预算），async 等于把 IO 塞进请求路径。
+ *
+ * Returns a COPY ({ ...spec, context }) when L1 / L2 / L3 supplies the window — the shared spec
+ * object from SORTED_SPECS ∥ DEFAULT_SPEC must never be mutated, or the override would leak across
+ * providers (T-C1). No L1-L3 value ⇒ the shared spec object itself (zero-copy hot path). `maxOutput`
+ * 与其余能力位仍取静态表 ∥ DEFAULT_SPEC（需求边界：不改 maxOutput 来源）。
+ *
+ * `source` 闭集五值（`windowSource` 的唯一来源，不并类）：`modelContext` ∥ `provider-override` ∥
+ * `list` ∥ `spec` ∥ `default` ∥ `override`（fork 模型级覆写）。`warnUnknownModel` 只在链落到 L4/L5 时触发（L1-L3 供值时 128K 告警为假）。
+ */
+export function providerSpecResolution(provider) {
+  const model = provider?.model ?? ""
+  const hit = lookupSpec(model)
+  const base = hit ?? DEFAULT_SPEC
+  // L1 — 人工声明（按模型，K 单位）；L2 — 旧键（渠道级，K 单位）。两种「人工声明」粒度在这里合流：
+  // **解析面的 ×1024 只出现在合流后的那一次换算上**（L3 起是 token，不乘）——加第二个解析乘点 = 下一次单位事故。
+  // （展示面的 K→token 换算另在 `formatDeclaredContextK`，只出词、不回写解析值。）
+  const manualK = manualContextK(provider)
+  const legacyRaw = Number(provider?.context) // Number() 接受数字字符串（"128"）——旧键既有口径（code review #1）
+  const legacyK = Number.isInteger(legacyRaw) && legacyRaw > 0 ? legacyRaw : null
+  const kUnit = manualK ?? legacyK
+  if (kUnit !== null) {
+    if (manualK === null) {
+      warnContextOnce(
+        `legacy-context\0${provider?.name ?? ""}`,
+        `[config] provider "${provider?.name}" uses the legacy context override (K units) for models not listed in modelContext — migrate to modelContext: { "${model}": ${legacyK} } (K units, same as this key)`,
+      )
+    }
+    // R32 — 人工声明的量级守卫（L1 ∥ L2，与 L3 的守卫对称）：换算后 > 静态表 ×4 ⇒ 照用 + 告警一次，
+    // **不截断、不拒写**（异常值也可能为真；截断 = 静默改写真事实）。守卫住核——值可能来自手改 JSON
+    // （不经任何界面），端上守不到；四条来源（手改 / CLI / VSC / 桌面）在这里同判。去重键 = 渠道 + 模型 + K 值。
+    const declaredTokens = kUnit * 1024
+    if (declaredTokens > base.context * 4) {
+      warnContextOnce(
+        `declared-over-4x\0${provider?.name ?? ""}\0${model}\0${kUnit}`,
+        `[config] model "${model}" on provider "${provider?.name ?? ""}" declares context ${kUnit}K (= ${declaredTokens} tokens), over 4x the spec value ${base.context} — using the declared value as-is (not truncated)`,
+      )
+    }
+    return { spec: { ...base, context: declaredTokens }, source: manualK !== null ? "modelContext" : "provider-override" }
+  }
+  // L1.5 — fork 模型级覆写（全局 modelOverrides · 2026-10-24 重植）：context 叶在场 ⇒ 用之（源 = "override"）。
+  // 层序 = L1（provider+model 最具体）> L2（渠道级旧键）> 本层（model 全局）。composeSpec 的浅合并管 spec 其余叶，
+  // context 的层级仲裁在此（谁更具体谁赢——与 L1 ∕ L2 的合流判据同式）。
+  const ovEntry = overrideFor(model)
+  if (ovEntry && Number.isInteger(ovEntry.context) && ovEntry.context > 0) {
+    const declaredTokens = ovEntry.context
+    if (declaredTokens > base.context * 4) {
+      warnContextOnce(
+        `override-over-4x ${provider?.name ?? ""} ${model} ${declaredTokens}`,
+        `[config] model "${model}" (modelOverrides key "${overrideKeyFor(model)}") declares context ${declaredTokens}, over 4x the spec value ${base.context} — using the declared value as-is (not truncated)`,
+      )
+    }
+    return { spec: { ...base, context: declaredTokens }, source: "override" }
+  }
+  // L3 — 列表自报（token，不乘）；异常大值照用 + 告警一次（R27——截断 = 静默改写真事实）
+  const listedTokens = listedContextTokens(provider)
+  if (listedTokens !== null) {
+    const staticValue = base.context
+    if (listedTokens > staticValue * 4) {
+      const endpoint = String(provider?.baseURL ?? "").replace(/\/+$/, "")
+      warnContextOnce(
+        `listed-over-4x\0${endpoint}\0${model}\0${listedTokens}`,
+        `[config] model "${model}" on ${endpoint} reports context ${listedTokens}, over 4x the spec value ${staticValue} — using the reported value as-is (not truncated)`,
+      )
+    }
+    return { spec: { ...base, context: listedTokens }, source: "list" }
+  }
+  // L4 — 静态表命中；L5 — DEFAULT_SPEC 兜底（未知模型告警只在这里）
+  if (hit) return { spec: hit, source: "spec" }
+  warnUnknownModel(model)
+  return { spec: DEFAULT_SPEC, source: "default" }
+}
+
 export function providerSpec(provider) {
-  const spec = specForModel(provider?.model ?? "")
-  const k = Number(provider?.context) // Number() 接受数字字符串（"128"）——两端语义统一（code review #1）
-  if (Number.isInteger(k) && k > 0) return { ...spec, context: k * 1024 }
-  return spec
+  return providerSpecResolution(provider).spec
 }
 
 /**

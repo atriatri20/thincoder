@@ -50,3 +50,17 @@ test("④ 未知渠仍报错（跨渠误配不静默改写）", () => {
   const providers = [{ name: "GLM", baseURL: "http://g/v1", apiKey: "k" }]
   assert.throws(() => resolveChildProvider(parentWith(providers), "nosuch:m"), /unknown provider/)
 })
+
+test("⑤ 五级链 ∕ 覆写层级序（0.10.12 合并批——L1 modelContext > L2 渠旧键 > 覆写 > L3 list > spec ∕ default）", async () => {
+  const { setModelOverrides, providerSpecResolution } = await import("../../thincoder-core/model-specs.mjs")
+  setModelOverrides({ "global:deepseek-v4.1-flash": { context: 1000000, maxOutput: 384000, thinking: true } })
+  const a = providerSpecResolution({ name: "GLM", model: "global:deepseek-v4.1-flash", baseURL: "http://x/v1" })
+  assert.equal(a.source, "override")
+  assert.equal(a.spec.context, 1000000)
+  const b = providerSpecResolution({ name: "GLM", model: "global:deepseek-v4.1-flash", modelContext: { "global:deepseek-v4.1-flash": 2000 }, baseURL: "http://x/v1" })
+  assert.equal(b.source, "modelContext")
+  assert.equal(b.spec.context, 2048000)
+  const c = providerSpecResolution({ name: "GLM", model: "global:deepseek-v4.1-flash", context: 500, baseURL: "http://x/v1" })
+  assert.equal(c.source, "provider-override")
+  assert.equal(c.spec.context, 512000)
+})

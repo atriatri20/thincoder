@@ -32,7 +32,7 @@ import { t } from "../i18n.mjs"
 import { ACCENTS, THEMES } from "../theme.mjs"
 import { wire } from "./chat-tool.mjs"
 import { channelFormTree, verifyControl } from "./settings-controls.mjs"
-import { agentBody, consultAddBody, envBody, mcpBody, mcpFormBody, modelBody, modelIdOf, modelsBody, providerAddBody, providersBody, teamAdminBody, toolsBody, usageBody } from "./settings-sections.mjs"
+import { agentBody, consultAddBody, envBody, mcpBody, mcpFormBody, modelBody, modelIdOf, modelsBody, providerAddBody, providerContextBody, providersBody, teamAdminBody, toolsBody, usageBody } from "./settings-sections.mjs"
 import { shortcutsBody } from "./settings-sections-shortcuts.mjs"
 
 // 两导出面随 R7 出档 `settings-controls.mjs`；本档 re-export ⇒ 导出面零改（消费面 = 首启向导）。
@@ -66,6 +66,10 @@ export const NAV_SECTIONS = Object.freeze([
 /** 添加弹窗组名（KD-75 ①②）：**非段名** —— 弹窗体 = `providers` 段域的单表（无行族）；
  *  **名单源在此**（`SCOPES`（`mount-settings.mjs`）∥ `MODAL_READS` ∥ 开径出口（`mount-settings-exits.mjs`）三面同领 —— 零双抄）。 */
 export const ADD_MODAL_GROUP = "providerAdd"
+
+/** 上下文编辑弹窗组名（2026-10-23 · 台账 #1739 · `PROVIDER.md` §6.15「写面」）：**非段名** ——
+ *  渠道行 `Context…` 入口开专用弹窗（渠道行已定 → 模型 → K 值）；名单源同 `ADD_MODAL_GROUP`。 */
+export const PROVIDER_CONTEXT_MODAL_GROUP = "providerContext"
 
 /** 添加弹窗组名二（KD-77 ①②）：**非段名** —— `mcpForm` = MCP 表单（新增 ∥ 编辑两态同框）∥ `consultAdd` = 会诊添加；
  *  名单源同 `ADD_MODAL_GROUP`（三面同领 —— 零双抄；常量名 = 设计原文 `MCP_FORM_MODAL_GROUP`——§2.18 项 3）。 */
@@ -191,6 +195,8 @@ export function settingsModel(state) {
       keyDraft: objOf(settings.providers?.keyDraft),
       // 2026-10-10（模型参数能力批）：渠级上下文窗口编辑态（`ctxEdit` = 编辑中渠道名 ∕ null；`ctxDraft` = 失败径键入种子）
       ctxEdit: str(settings.providers?.ctxEdit), ctxDraft: objOf(settings.providers?.ctxDraft),
+      // 上下文写面批（`PROVIDER.md` §6.15）：弹窗体状态切片 `{ name, models, model, current, value, error }` —— 缺 ⇒ null。
+      context: objOf(settings.providers?.context),
     },
     model: {
       state: stateOf(settings.model),
@@ -407,6 +413,8 @@ function sectionBody(name, model, handlers) {
   if (name === ADD_MODAL_GROUP) return [sectionStateNode(model.providers.state), ...providerAddBody(model.providers, handlers, deps)]
   // 模型段（fork 恢复 · 2026-10-24——上游 0.10.10 KD-80 撤段删行被合并静默采纳，段体 ∕ 切片 ∕ 词键俱在场，仅闭集行 ∕ 分派支丢失）：复合选定 + 候选行 + 自定义 ID。
   if (name === "model") return [sectionStateNode(model.model.state), ...modelBody(model.model, handlers)]
+  // 上下文编辑弹窗体（`PROVIDER.md` §6.15「写面」）：渠道行已定 → 模型 → K 值；切片 = `providers.context`。
+  if (name === PROVIDER_CONTEXT_MODAL_GROUP) return [sectionStateNode(model.providers.state), ...providerContextBody(model.providers, handlers)]
   if (name === "agent") {
     return [sectionStateNode(model.agent.state), ...(model.agent.state === "loading" ? [] : agentBody(model.agent, handlers))]
   }
@@ -536,28 +544,31 @@ export function settingsTree(model, handlers = {}) {
 export function settingsModalTree(state, group, handlers = {}) {
   const model = settingsModel(state)
   const isAdd = group === ADD_MODAL_GROUP
+  const isContext = group === PROVIDER_CONTEXT_MODAL_GROUP
   const isMcpForm = group === MCP_FORM_MODAL_GROUP
   const isConsult = group === CONSULT_ADD_MODAL_GROUP
   const section = SECTIONS.find((s) => s.name === group)
-  if (section === undefined && !isAdd && !isMcpForm && !isConsult) return null
+  if (section === undefined && !isAdd && !isContext && !isMcpForm && !isConsult) return null
   const onClose = typeof handlers?.onCloseModal === "function" ? handlers.onCloseModal : undefined
   const close = () => { if (typeof onClose === "function") onClose() }
-  const scope = isAdd ? "providers" : isMcpForm ? "mcp" : isConsult ? "models" : group
+  const scope = isAdd || isContext ? "providers" : isMcpForm ? "mcp" : isConsult ? "models" : group
   const notice = model.notice !== null && (model.notice.scope === scope || model.notice.scope === "panel") ? model.notice : null
-  const groupState = isAdd ? model.providers.state : isMcpForm ? model.mcp.state : isConsult ? model.models.state : model[group]?.state ?? "none"
+  const groupState = isAdd || isContext ? model.providers.state : isMcpForm ? model.mcp.state : isConsult ? model.models.state : model[group]?.state ?? "none"
   const editing = isMcpForm && typeof model.mcp.form?.editing === "string" && model.mcp.form.editing !== ""
   const titleWord = isAdd
     ? "settings.addProviderTitle"
-    : isMcpForm
-      ? editing ? "settings.mcp.editTitle" : "settings.mcp.addTitle"
-      : isConsult ? "settings.consultAddTitle" : section.word
+    : isContext
+      ? "settings.providers.context"
+      : isMcpForm
+        ? editing ? "settings.mcp.editTitle" : "settings.mcp.addTitle"
+        : isConsult ? "settings.consultAddTitle" : section.word
   return {
     backdrop: { tag: "div", props: { class: "settings-modal-backdrop", onClick: close }, children: [] },
     card: {
       tag: "div",
       props: {
         class: "settings-modal", role: "dialog", "aria-modal": "true", "aria-label": t(titleWord),
-        "data-initial-focus": isAdd || isMcpForm || isConsult ? "field" : undefined,
+        "data-initial-focus": isAdd || isContext || isMcpForm || isConsult ? "field" : undefined,
         onKeydown: (event) => { if (event?.key !== "Escape") return; event.stopPropagation?.(); close() },
       },
       children: [
