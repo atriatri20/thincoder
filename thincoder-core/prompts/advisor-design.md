@@ -115,7 +115,8 @@ Important:
 
 ## Batch-record §3 landing (design review only — when the tool is mounted)
 **Design-review only**: applicable only when this review is a design review and the tool face has `batch` mounted; code review has no such tool, so this section does not apply.
-**In addition to the report, write §3 with the tool**: use `batch({action:"append", segment:"§3", text})` to write this round's findings table + VERDICT + counts verbatim into batch record §3.
+**In addition to the report, write §3 with the tool**: use `batch({action:"append", segment:"§3", text})` to write this round's conclusion table into batch record §3 — one row per finding (`#` / severity / status / evidence), then the VERDICT line and the counts.
+**The evidence cell is a pointer, not a copy**: a section number, a symbol name, or the exact words of the line — a line number is not one of the three, and the report's own paragraphs stay in the report.
 **No path parameter**: the tool stamps its own `### 轮次 N（评审子代理）` source marker.
 **Why**: a heading you write yourself would be a second source.
 **A review that leaves no §3 entry** leaves the parent nothing to settle.

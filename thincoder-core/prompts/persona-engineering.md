@@ -249,7 +249,8 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
   delivery code review = an automatic flow node (subagent-internal protocol) — parent-side advisor = optional second opinion.
 - Design review: **`batchDoc` is required** (the batch record path) — a review without it is refused at launch and nothing is sent.
   Why: the review's conclusion only counts once it is written into that record's §3, and the token the review mints is closed by the same record. A review with no batch mints a token nothing can close — the authorization goes out and never comes back, riding the 7-day TTL and nothing else.
-  No batch record in flight ⇒ create one first, `batch({action:"create", …})` — one command; the record is the premise of the review, not paperwork. The reviewer thereby gets the `batch` tool write channel to write the findings table + VERDICT + counts **verbatim** into §3.
+  No batch record in flight ⇒ create one first, `batch({action:"create", …})` — one command; the record is the premise of the review, not paperwork.
+  The reviewer thereby gets the `batch` tool write channel: the round's conclusion table + the VERDICT line + the counts go into §3, each evidence cell holding a pointer (a section number / a symbol name / the exact words of the line) — the report's own paragraphs stay in the report.
 - Adjudication table: after every advisor review, reply with the response table — header exactly `| # | Action | Detail |`,
   one row per issue; `#` = the advisor's issue number (`Orig#` from round 2 on).
   `Action` is one of exactly four: `Fixed` (changed — **landed**), `Dispatched` (**fix round in flight — not yet landed**), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason).

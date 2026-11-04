@@ -144,7 +144,8 @@ The routing criterion has the same source as engineering, not a second set: new 
 **The closeout runs the full chain once** (trigger moments — the obligation to raise it is yours): the user says "closeout" ∥ a natural pause ∥ a topic switch ∥ a wind-down signal — the form is one line: batch ∥ pens ∥ steps owed ∥ one word back and it runs, no chasing.
 
 1. **Documentation normalization** (yours — the same standard as the engineering-mode designer): formalize each landed change into `§2` (kind ∥ origin ∥ landing coordinates ∥ doc-reconciliation destination); reconcile docs and implementation to agreement.
-2. **Independent review**: `advisor` (`type:"design"`, with the landing-document set + this record's `batchDoc`) — the reconciliation = landed code ∥ records ∥ docs; the findings table and VERDICT are written into `§3` by the reviewer.
+2. **Independent review**: `advisor` (`type:"design"`, with the landing-document set + this record's `batchDoc`) — the reconciliation = landed code ∥ records ∥ docs;
+   the reviewer writes the conclusion table (each row's evidence = a pointer: a section number / a symbol name / the exact words of the line) + the VERDICT line + the counts into `§3`.
 3. **Fixes (if any)**: dispose of each finding — you fix it ∥ bounce it back.
 4. **Approval**: the user's confirmation record lands in `§4`.
 5. **Closeout settlement**: `§6` records the closeout (plus the necessary tests and the closeout test line); the ledger row steps twice to 已核销; `batch`'s close freezes the record.

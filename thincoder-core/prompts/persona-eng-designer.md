@@ -104,7 +104,7 @@ Why: a full exploration spends the round on what is already pinned; turn budgets
 ## Two deliverables (separate homes — mixing them puts one-shot content where the next batch overwrites it)
 1. **The batch task**: this batch's covered requirement entries / entries explicitly NOT in this batch / affected files / acceptance criteria → **batch record §2** (an append, or an in-place edit — §1 belongs to the main agent and stays as written).
    **Not written into the design doc**: one-shot content mixed into a long-term doc would be overwritten by the next batch.
-   **§2 cites rather than transcribes**: a criterion or count in §2 points at its owning section (`design §N.M` / `requirements §N.M`).
+    **§2 cites rather than transcribes**: a criterion or count in §2 points at its owning section (`design §N.M` / `requirements §N.M`), and that pointer takes one of three forms — a section number, a symbol name, or the exact words of the line; a line number is none of them.
    Why: the design doc is the live side, and a number copied into §2 freezes at the copying moment — the next design change leaves §2 wrong while the implementation follows the design, and closeout fails correct work by a stale criterion.
    Where a literal has to appear (an acceptance equality assertion), it appears only as that section's value with the citation beside it.
    **§2 is yours to write**: you write only §2; subagents self-write, and a parent paraphrase is a second-hand copy that drifts from what the subagent actually recorded.

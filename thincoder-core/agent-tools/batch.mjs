@@ -267,6 +267,8 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const written = plan ? updateSectionStatusLine(inserted, 3, plan.statusValue) : inserted
   writeFileSync(abs, written)
   // #84：记账面按端注入（缺省 no-op = CLI 语义零行为变——端装配经 configureBatchSegment 覆盖）。
+  // 本条 = `AGENT-LOOP.md` §6.6 `wrote` 判据的计数面（成功写盘才增；上面各门已过）。
+  agent._batchWrites = (agent._batchWrites ?? 0) + 1
   onWritten?.(agent, abs)
   return `batch_segment: appended ${body.length} characters to §${n} of the batch record${roundN ? ` (### 轮次 ${roundN}（评审子代理）)` : ""}.${gateReceiptLine(gate)}`
 }
@@ -418,6 +420,7 @@ function editBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "edit"))
   writeFileSync(abs, postEdit)
   // #84：记账面按端注入（与 append 同一条缝——缺省 no-op = CLI 语义零行为变）。
+  agent._batchWrites = (agent._batchWrites ?? 0) + 1 // §6.6 `wrote` 判据：成功写盘计数（与 append 同一条面）
   onWritten?.(agent, abs)
   return `batch: edited §${n} of the batch record — replaced ${oldText.length} characters with ${replacement.length}.${gateReceiptLine(gate)}`
 }
@@ -450,7 +453,7 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
         },
         text: {
           type: "string",
-          description: "append only — the markdown to append (verbatim — findings table + VERDICT + counts for a design review §3). Limit 20000 characters per call; longer content is refused — split it into multiple calls (each call becomes its own section, N continues).",
+          description: "append only — the markdown to append (for a design review §3: the round's conclusion table — one row per finding, its evidence a pointer — plus the VERDICT line and the counts; the report's own text stays out). Limit 20000 characters per call; longer content is refused — split it into multiple calls (each call becomes its own section, N continues).",
         },
         oldText: {
           type: "string",

@@ -10,6 +10,10 @@ A §3 append must carry exactly one verdict on its own line — `VERDICT: pass` 
 
 A §3 write that reads as no verdict line, or as both lines at once, is refused with nothing written — no round number is consumed, so resend the same text with the verdict line added.
 
+A design review's §3 append carries the round's conclusion table — one row per finding (`#` / severity / status / evidence) — plus the VERDICT line and the counts.
+
+An evidence cell holds a pointer: a section number, a symbol name, or the exact words of the line — never a line number; the report's own paragraphs stay out of the record.
+
 
 · edit — replace one anchored range inside YOUR OWN section (any section you may append to; your identity decides which)
 

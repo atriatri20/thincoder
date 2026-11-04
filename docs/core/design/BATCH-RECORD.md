@@ -59,7 +59,7 @@
 |---|---|
 | **append/status 无路径参数（子代理）** | 子代理（eng-designer / eng-coder / 评审）的 append / status 不接收目标路径；**目标批次档路径由 spawn 时注入**——**语法上就写不到别处**。两个有意破例（均绑 depth-0——D-BR17 / D-BR21）：create 有 `path`（主代理建新档必须指定位置）；depth-0 的 append / status 有可选 `path`（无 spawn 绑定、多批在飞——无 path 无从定位；缺省 = 在飞批唯一时取该批，复数时必传） |
 | **段白名单（按身份 · 模式感知）** | 工程面（逐字不变）：`eng-designer → §2` · `设计评审子代理 → §3` · `eng-coder → §5` · `主 agent → §1/§4/§6`（§1 方案行绑定——D-BR18）；普通面（2026-10-09 新增——§4.16）：`主 agent → §1/§2/§4/§5/§6` · `coder（携绑定）→ §5`；**越段写入即拒**——「一段一作者」从纪律升为**机械事实**（`edit` 段域同表同判——段域一处单源） |
-| **段内一个写面（作者改自己那一段）** | **六段各自只有一个作者**；作者对本段可 `append` 在段尾加内容、可 `edit` 就地改写既有行 / 删区间（判据与边界 = §4.19）——§2 与 §1/§3/§5/§6 **同一处置**，差别只在段的内容性质、不在写面。**非作者一概拒**（段白名单仍是机械事实）。**状态行单行改写**（status / close）是唯一被单独划出的行级写面（§4.12 / §4.13）；`append §3` 带打回裁定时由工具同笔把 `§3` 状态行重置为 `进行中（第 N 轮打回）`（判据 / 形态单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5） |
+| **段内一个写面（作者改自己那一段）** | **六段各自只有一个作者**；作者对本段可 `append` 在段尾加内容、可 `edit` 就地改写既有行 / 删区间（判据与边界 = §4.19）——§2 与 §1/§3/§5/§6 **同一处置**，差别只在段的内容性质、不在写面。**非作者一概拒**（段白名单仍是机械事实）。**状态行单行改写**（status / close）是唯一被单独划出的行级写面（§4.12 / §4.13）；`append §3` 带打回裁定时由工具同笔把 `§3` 状态行重置为 `进行中（第 N 轮打回）`（判据 / 形态单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5）；**反向同笔** = `append §3` 命中 pass 裁定行且不命中打回行、写前 `§3` 状态行 ≠ `评审通过` ⇒ 工具把该行置成 `评审通过`（三合取各判各的，实现 = `statusPassPlan`，落点 `thincoder-core/agent-tools/batch.mjs` 的「通过即置位」条）——两条靠各自的三合取天然互斥，状态行仍只经 `updateSectionStatusLine` 一个函数改写 |
 | **来源戳（工具生成）** | 写入 §3 时由**工具**加盖 `### 轮次 N（评审子代理）`；N 只数**工具写入过的**轮次行（固定骨架行 `### 轮次与发现（…）` **不计**）；调用方自带同名标题被忽略 |
 | **凭证剥除（工具做）** | 写入前过滤 token / designId 形态行——**模型可能忘，机械不能忘**；工具用**自有正则**（自有冒号态形态），**不复用**凭证巡检正则（后者要求参数名后接空白，匹配不到冒号态）。**形态 = 三形**：① 闭括号形（`[DESIGN-TOKEN:…]`）② 键形（`designId:` + 值）③ 无标两段值形（`⟨uuid⟩:⟨epoch⟩`——Approved 后缀逐字携带）∥ **裸 uuid 不剥**（id 非凭证 ∥ 批侧无 token 上下文不可精确） |
 | **fail-closed** | 目标段标题缺失 / 越段 / 骨架行冲突（写入文本含 `## §N` 标题形态）/ 超量（单次 text 超上限）/ 死占位残留拒（F11-C——判据 = `TOOLS.md` §6.20）/ **已收口档回改 / 状态行不可解析**（§4.9——**唯一例外 = 重开合取**：段 = §1 · depth-0 · 值关键词 = 进行中 · `note` 非空，§4.18-B）/ **`append §3` 无裁定行 ∥ 两者同携**（`R-G3`——判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.6.1；`edit §3` **不在此判据内**——它改的是既有块内的字，裁定行闸只挂 `append`，§4.19） / **收口链未跑完**（§4.18-A——`close` ∥ `status` 写「已收口」）/ **`edit` 锚判据**（零命中 ∥ ≥2 命中 ∥ 锚越段界 ∥ 锚或替换触及状态行——§4.19）⇒ **throw**；失败**明示报告「§× 未写入」**；回退父侧代写**必须打标** |
@@ -103,9 +103,11 @@
 - **`create` 的首判** = `assertMainAgentOnly`（`thincoder-core/agent-tools/batch-ledger-bind.mjs`，注释逐字「main-agent-only 门（BR-19/BR-24）：create 仅 depth-0 放行（eng 子代理 / 评审皆拒）」）；`close` 的同一道门 = BR-24（§4.13）。
 - **段域判** = `allowedSegment`。**上面括注里的「append / edit / status 可用」不是文案，就是这两处判据的读数。**
 
-### 4.4 §3 内容 = 评审结论全文
+### 4.4 §3 内容 = 每轮一块结论表 + 裁定行 + 计数
 
-每轮追加附录节：**`### 轮次 N（评审子代理）`（标题由工具生成）+ 该轮发现表（逐字 markdown 表）+ VERDICT 行 + 计数**；多轮各自成节（append）。**逐字不转述**（父侧不得代润色/缩减）。
+每轮一个轮次块（`### 轮次 N（评审子代理）` 由工具生成）：**裁定结论表**（每行 = `#` ∥ 严重度 ∥ 状态 ∥ **一行依据**）+ `VERDICT` 行 + 计数；多轮各自成节（append）。
+
+**一行依据写指针，不抄评审原文**——依据格用指针（三形闭集 = §4.20，本条不复述），**行号不入指针**（理由同源）。**评审回执全文不进档**：每条发现的详细论证住评审回执与本批 git，档内只留结论与去哪查——整份回执搬进档 = 同一批字句两处各存一份，改一处漏一处。
 
 §3 写在**批次档**——**§3 段不在评审对象清单内**（B9 只含批次档 **§2**）；追加 §3 **不改变被审内容**，故与冻结窗口不冲突。
 **每一笔追加都自带裁定行**：`§3` 的追加若读成「无裁定行」∥「两者同携」，**写不进去**；判打回的一笔照写。
@@ -114,7 +116,7 @@
 
 这不是纪律，是拒面：裁定行只在评审的回复里、没进块正文时，`§5` 门会拒而唯一能补的人已经结算离场。
 
-**承载面分工**：内容性（表全文 + VERDICT + 计数、逐字）由**提示词层**承载（grep 断言）；机械面 V3 只保证**底线**（§3 非空 + 含工具写入轮次行）——V3 不看内容，这是有意的（内容判定无法机判，强判会假阳）。
+**承载面分工**：内容性（结论表 + 裁定行 + 计数）由**提示词层**承载（grep 断言）；机械面 V3 只保证**底线**（§3 非空 + 含工具写入轮次行）——V3 不看内容，这是有意的（内容判定无法机判，强判会假阳）。**结论表的形态同样不机判**：「行号不入指针」是判读面判据（评审同轮核 + 收口对账），不新增机检（§4.20「判据不机判的部分」）。
 
 ### 4.5 提示词侧
 
@@ -122,8 +124,15 @@
 
 - 六段自写句 → 改为「用 `batch({action:"append"})` 加内容 · 用 `batch({action:"edit"})` 就地改己段 · 建批用 `batch({action:"create"})`」（designer / coder 各自 persona + 纪律层——prompt 面 7 处随批改）。
 - **调用侧**：设计评审**一律必传 `batchDoc`**（`type:"design"`——含普通面收口评审，§4.16）。没有批次档在飞 ⇒ 先 `batch create` 再发起评审；「只想让人看一眼某份档」的代价就是先建一本账，这是本判据明示接受的代价。
-- **评审层三条提示词全覆盖**（round 1 + round 2 + round 3 档）：均指示评审者在报告之外**调工具把表与 VERDICT 写进批次档 §3**；
+- **评审层三条提示词 + 主 agent 调用句 + 普通面纪律档**（`advisor-design` · `advisor-round2` · `advisor-round3` · `persona-engineering` · `discipline-normal`）：均指示评审者在报告之外**调工具把本轮结论写进批次档 §3**。换写后的块形 = 写本轮**结论表**（`#` ∥ 严重度 ∥ 状态 ∥ 一行依据）+ `VERDICT` + 计数，依据用指针、**回执全文不进档**（判据单源 = §4.4 / §4.20）。
+
+  **改前基线（检索锚，不是现行指令）**：「write this round's findings table + VERDICT + counts **verbatim** into batch record §3」——这是换写前的原样，留作 grep 对照。
+
+  现行目标形 = §4.20 围栏块（唯一副本，实施席照落、不自行改英文）。
+
+  **原位保留其形**：「写进 §3」这件事一字不减——§3 轮次块存在与否是机械判据（§4.3 / `docs/core/design/ADVISOR-GUARDS.md` §2 判据 1），换写只换块内写什么。
   **适用范围限定**：round2/3 为**设计 + 代码评审共用**——该句必须限定「**仅设计评审、且工具已挂载时**」（否则每轮代码评审会被引导报假“§3 未写入”）。
+- **designer 侧一句**（`thincoder-core/prompts/persona-eng-designer.md`）：§2 = 任务书最薄形（条目 / 落点节号 / 受影响文件 / 验收行），与既有的只引不抄句同一处；指针闭集 = §4.20。
 - **失败明示句**：「写不进去 → 报告里明说‘§× 未写入’；父侧代写**必须打标**」。
 
 ### 4.6 机械校验 V3（零假阳口径）
@@ -236,6 +245,10 @@
 | BR-86 | 边界 | 设计评审 `edit §3`，`newText` 含 `### 轮次 N（评审子代理）` 行 | 该行被丢弃（同 append 的 `sanitizeText(text, true)`）——来源戳只能由工具盖；其余文本落盘 |
 | BR-87 | 边界 | `§3` 状态行 = `进行中` 时 `edit §5` ∥ `append §5` | 前者成功（`edit` 须有既有锚 ⇒ 造不出「先实施」；段序门只挂 append）；后者拒（`§5` 段序门串逐字不变） |
 | BR-88 | 边界 | 机检判集两类各一拍（同一本夹具档）：① 段体里有早先就在的超长段，`edit` 一处无关字；② 档里有一条失效引文（`引缺`），`edit` 一处无关字 | ① 门 PASS（段长类只判 `newText`）；② REFUSED 且点名该 `引缺`（锚类判整档——§4.9 门 ④ 判集分两类） |
+| BR-89 | 正常 | 设计评审 `append §3`，块 = 结论表（`#` ∥ 严重度 ∥ 状态 ∥ 依据）+ `VERDICT: pass` + 计数；依据格 = 节号 / 符号名 / 逐字锚 | 成功；裁定行闸照判、`§3` 状态行照置位（机械面零变——§4.4 / §4.20） |
+| BR-90 | 错误 | 同形块但无裁定行 ∥ 两者同携 | 拒（`R-G3` 串逐字——瘦身不动拒面） |
+| BR-91 | 正常 | designer 写 §2：条目表 + 落点 `design §4.20` + 受影响文件 + 验收行，不重述机制 | 成功；机制叙述不在 §2（判读面 = 评审同轮核） |
+| BR-92 | 边界 | §2 / §3 的依据格写 `batch-skeleton.mjs:306` ∥ 「见上文」 ∥ 「见设计档」 | 机检不拦（无此项门）；判读 = 评审同轮核 + 收口对账（§4.19 D7 两半）——命中即判不合、重写该格 |
 
 ### 4.9 状态行冻结拒写 + `docRoot.batches` 双基底（v2——M3 增量）
 
@@ -302,6 +315,8 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 **§2 段体内的引用形态约定（2026-10-19 · FR35 · 格式归属登记）**：§2 段体里的判据 / 计数以引用为形——`design §N.M` / `requirements §N.M`（同号不同档由档名前缀区分）。
 它是 §2 正文里的写法约定：不是新段、不改六段结构、不进 create 骨架（本节模板逐字零改）。
 承载机制（只引不抄 / 设计变更传播 / 收口对账）单源 = `docs/core/design/PROMPT-SYSTEM.md` §6.37；本条只登记格式归属。
+
+指针形态的**闭集与行号禁入** = §4.20；§2 的最薄形（条目 / 落点节号 / 受影响文件 / 验收行）= 同节（本条不重述）。
 
 **实参替换注（2026-10-05）**：`date` / `topic` / `source` / `prev` = 已知实参；`ledger` / `board` = 可选参（给则台账行实参化、未给保持占位字面——填充时点 = 建档后、本档首个 append/status 之前）。
 
@@ -686,6 +701,150 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 
 **UI / 交互决策**：本批无 UI / 交互面（拒句与描述面为模型可见文本，逐字在本条与 §4.1 定形）；**无 open 项**。
 
+### 4.20 批次档瘦身：结论 + 归因指针（§2 任务书 · §3 结论表 · §6 照旧）
+
+**判据句**：批次档记**结论与归因**，不搬正文。§2 与 §3 各取自己的最薄合法形；§6 照旧（那一段本就是给对账用的读数）。
+
+**依据**：用户 2026-11-05 03:18 逐字「批档瘦身可以考虑，不过指针你别又写成行号哦。」——两句各落一端：瘦身 = 结论 + 归因指针；指针形态 = 节号 ∥ 符号名 ∥ 逐字锚，**行号除外**。
+
+**为什么行号除外**：设计轮写下的指针指向的是**还在动或还不存在**的坐标。行号是**位置寻址**——任何一次插入都把下游整体下移，档越长漂得越多；节号 / 符号名 / 原文锚是**内容寻址**，搬动不失效。
+
+**指针形态闭集（单源——§2 / §3 的依据格只能用这三种）**：
+
+| 形态 | 写法 | 例 |
+|---|---|---|
+| 节号 | `<档名> §N.M` | `design §4.19` · `requirements §7` |
+| 符号名 | 函数 / 常量 / 字段名，逐字不改写 | `verdictGapOf` · `STATUS_WORDS` |
+| 逐字锚 | 引目标档或代码原文一句（逐字） | 「一段一作者」那句原句 |
+
+三形是同一把尺子的三种精度：节号粗、符号名中、逐字锚落到一行字；一格里能落多细按需取，不必凑齐。
+
+**与 §4.10 两形枚举的关系（示例，不取代）**：§4.10「§2 段体内的引用形态约定」列的 `design §N.M` / `requirements §N.M` = 本条闭集里**节号形的两种前缀写法**——它是写法示例，不是第二套判据。合规一律按本条三形判：两形之外的写法（符号名、逐字锚）照样合规，两形之内写出行号照样不合规。
+
+**禁入形**：`<path>:<line>` / `<path>:<line>-<line>`（行号——`docs/batches/<x>.md:120` 同判）· 「见上文」「见前述」（相对指针）· 无落点的「见设计档」（读者不知道翻哪节）。
+
+**射程**：闭集只判**批次档** §2 / §3 的依据格。设计档里的实现坐标照旧携 `:line`（那是落笔当刻实读的读数，形态 = `docs/core/design/DOC-SYSTEM.md` §1 的 implementation coordinate）——两个面判据不同，别互推：批档是**派单前**写的，设计档是**实读时**写的。
+
+**§2 任务书最薄形**：条目表 + 落点节号 + 受影响文件 + 验收行。机制与设计正文住设计档（既有只引不抄句，承载 = `docs/core/design/PROMPT-SYSTEM.md` §6.37）；§2 只写派单需要的东西——照 §2 能开工，机制为什么这样不在 §2 里找。
+
+**§6 照旧**：不压——读数与未做项本就是收口对账的输入。
+
+**机械面零改（有意）**：裁定行闸（§4.4 `R-G3`）· 轮次块计数 · V3 判据 · token 签发判据全读「块在不在 + 裁定行是什么」，与块内写多少字无关 ⇒ 瘦身不动一行代码判据，改的是提示词与工具描述的措辞。
+
+**判据不机判的部分（如实写下）**：「行号不入指针」不新增机检——正则会把合法内容误判（一句原文锚里带 `:12`、一个文件名带版本号），判据本身也在语义面（这一格指向的东西对不对）。判读点 = 评审同轮核（评审自己写依据格）+ 收口对账（D7 两半）；机检候选登记 = D-BR39 被否条。
+
+**逐字目标形（英文围栏块 · 唯一副本 = 本条）**
+
+八档 = 六处提示词（五形，`advisor-round2` ∥ `advisor-round3` 同形）+ 两处描述面。实施席**整行（整句）照落**，行首缩进**以围栏块为准**（块内写几个就几个），不自行改英文。依据：验收判据是「落盘行与围栏块逐字相等」——两句相左时，机器判的那一条赢，否则实施席只能猜。形制照 `docs/core/design/PROMPT-SYSTEM.md` §6.70（围栏块 + 唯一副本住设计档）。
+
+① `thincoder-core/prompts/advisor-design.md` —— 含 `write this round's findings table + VERDICT + counts` 的那一行整行替换为：
+
+```text
+**In addition to the report, write §3 with the tool**: use `batch({action:"append", segment:"§3", text})` to write this round's conclusion table into batch record §3 — one row per finding (`#` / severity / status / evidence), then the VERDICT line and the counts.
+**The evidence cell is a pointer, not a copy**: a section number, a symbol name, or the exact words of the line — a line number is not one of the three, and the report's own paragraphs stay in the report.
+```
+
+② `thincoder-core/prompts/advisor-round2.md` · `thincoder-core/prompts/advisor-round3.md` —— 两档同形，各把含 `write this round's findings table + VERDICT + counts` 的那一行整行替换为（**首句带适用范围限定**）：
+
+```text
+**In addition to the report, write §3 with the tool** (design reviews only, and only when the `batch` tool is mounted): use `batch({action:"append", segment:"§3", text})` to write this round's conclusion table into batch record §3.
+One row per finding (`#` / severity / status / evidence), then the VERDICT line and the counts.
+**The evidence cell is a pointer, not a copy**: a section number, a symbol name, or the exact words of the line — a line number is not one of the three, and the report's own paragraphs stay in the report.
+```
+
+③ `thincoder-core/prompts/persona-engineering.md` —— 含 `write the findings table + VERDICT + counts` 的那一句整句替换为：
+
+```text
+The reviewer thereby gets the `batch` tool write channel: the round's conclusion table + the VERDICT line + the counts go into §3, each evidence cell holding a pointer (a section number / a symbol name / the exact words of the line) — the report's own paragraphs stay in the report.
+```
+
+④ `thincoder-core/prompts/discipline-normal.md` —— 含 `the findings table and VERDICT are written into` 的那一句整句替换为：
+
+```text
+the reviewer writes the conclusion table (each row's evidence = a pointer: a section number / a symbol name / the exact words of the line) + the VERDICT line + the counts into `§3`.
+```
+
+⑤ `thincoder-core/prompts/persona-eng-designer.md` —— 含 `§2 cites rather than transcribes` 的那一行整行替换为：
+
+```text
+    **§2 cites rather than transcribes**: a criterion or count in §2 points at its owning section (`design §N.M` / `requirements §N.M`), and that pointer takes one of three forms — a section number, a symbol name, or the exact words of the line; a line number is none of them.
+```
+
+⑥ `thincoder-core/agent-tools/batch.mjs` 的 append `text` 参数描述 —— 其中 `(verbatim — findings table + VERDICT + counts for a design review §3)` 一段替换为：
+
+```text
+(for a design review §3: the round's conclusion table — one row per finding, its evidence a pointer — plus the VERDICT line and the counts; the report's own text stays out)
+```
+
+⑦ `thincoder-core/tool-docs/batch.md` —— 在 `A §3 write that reads as no verdict line` 那一段之后**新增两段**（既有段零删）：
+
+```text
+A design review's §3 append carries the round's conclusion table — one row per finding (`#` / severity / status / evidence) — plus the VERDICT line and the counts.
+
+An evidence cell holds a pointer: a section number, a symbol name, or the exact words of the line — never a line number; the report's own paragraphs stay out of the record.
+```
+
+**`docs/core/design/PROMPT-SYSTEM.md` §6.37 条 1 的定性**：那一句 = **现行规范**（不是改前基线、不是历史记录），上一轮本席已落笔；它的闭集半句**只指路**，单源住本条 ⇒ 闭集的新形态只在本条写一次，§6.37 一处不再复述。
+
+**新名三问（逐名——既有件 ∥ 新造）**
+
+- **结论表**：`existing` = `thincoder-core/prompts/advisor-design.md` 的 `findings table` 句 · name 逐字 `findings table` · consumers = 评审三档 + 主 agent 调用句 + 普通面纪律档 ⇒ 换写后进 §3 的那个名；逐字映射 = 中文「结论表」↔ 英文 `conclusion table`。**`findings table` 不退役**——它仍是评审**回执内**那张全表的名称（列 = `#` / Category / Severity / Issue / Suggestion），与 §3 结论表是两件东西；本批退役的是「把它逐字抄进 §3」这条指令，不是这个词。
+- **一行依据**：`existing` = 同句的依据格 · name 逐字 `evidence` · consumers 同上 ⇒ 中文「一行依据」↔ 英文 `evidence` / `evidence cell`（格内只放指针）。
+- **归因指针**：`existing` = 本条闭集三形（节号 ∥ 符号名 ∥ 逐字锚）· name = 无第二个英文名 ⇒ 中文「归因指针」只作三形的统称，提示词面不新造英文词。
+- **任务书最薄形**：`existing` = `docs/core/design/PROMPT-SYSTEM.md` §6.37 规则 1 · name 逐字 `§2 只引不抄` ⇒ 本条的「最薄形」= 那条规则的形态展开（条目表 + 落点节号 + 受影响文件 + 验收行），不是第二个规则。
+- **`none found`** = `conclusion table` ∥ `evidence cell`：`thincoder-core/` 全档实扫各 **0**（本席本轮 `node` 实算 2026-11-05）⇒ 两个英文名本批新造，映射已在上两条登记。
+
+**先例行（逐项——对齐 ∥ 偏离）**
+
+- **`docs/core/design/PROMPT-SYSTEM.md` §6.70（派单动作表第四格）**：对齐 = 逐字英文围栏块 + 唯一副本住设计档 + 实施席整行照落 + 验收按行相等；偏离 = 本条围栏块覆盖 **八档 / 七形**（§6.70 = 一档两行），且 ⑦ 是真·新增段（该档无原句可换）。
+- **§4.19（段内就地改）**：对齐 = 判据句 / 先例行 / 勘察证据行 / 验收回指 / UI 决策的同一节形制；偏离 = 本条不新增动作、不新增参数、不新增机检门——改的是文案与档内写法。
+- **§4.10（§2 段体内引用形态约定）**：对齐 = 同一件事（§2 只引不抄）；偏离 = §4.10 只列两形示例、不判合规，本条给闭集与禁入形（判据落本条，§4.10 只指路）。
+
+**勘察证据行**：查过 = 本仓公共源档 —— `docs/core/design/DOC-DISCIPLINE.md` §1 D4（引用形态）∥ `docs/core/design/PROMPT-SYSTEM.md` §6.37（§2 只引不抄）∥ 同档 §6.70（逐字围栏块形制）∥ 本档 §4.4 / §4.10 / §4.19（现状）——**相关**。声明源 = `PROJECT-MANIFEST.json` `index.publicRepos` = **`[]`** ⇒ **无仓外声明源可查**（照记）。
+
+**问题体量实测（本席本轮 `node` 实算 2026-11-05）**
+
+**量法 = 本批验收串本身**（不量裸词）：域 = `thincoder-core/prompts/` 全 **17** 档 + `thincoder-core/tool-docs/` 全 **54** 档，UTF-8 逐档 `node` 实扫 2026-11-05；下面只列非零档，域内其余各档两项皆 **0**。
+
+- `verbatim into batch record §3`（验收串 = 替换目标）：`thincoder-core/prompts/advisor-design.md` **1** · `thincoder-core/prompts/advisor-round2.md` **1** · `thincoder-core/prompts/advisor-round3.md` **1** ⇒ 域内合计 **3**、落 **3** 档——这三处就是围栏块 ①② 换写的原句。
+- `findings table`：`thincoder-core/prompts/advisor-design.md` **2**（两处**不同行**——`Suggestion` 列判据的 `Why` 句 ∥ §3 落笔句）· `thincoder-core/prompts/advisor-round2.md` **1** · `thincoder-core/prompts/advisor-round3.md` **1** · `thincoder-core/prompts/discipline-normal.md` **1** · `thincoder-core/prompts/persona-engineering.md` **1** ⇒ 域内合计 **6**、落 **5** 档；`thincoder-core/agent-tools/batch.mjs` **1**（围栏块 ⑥ 换）。
+- **落笔后的目标读数**：`verbatim into batch record §3` ⇒ **0**；`findings table` ⇒ 域内 **1**（只剩 `advisor-design` 回执侧那句 `Why`——它说的是评审**回执**的全表，不退役）；提示词五档里其余四档 ⇒ **0**（各自唯一命中就是被换写的落笔句）。
+- **邻档基线（评审轮 2 #5 点名）**：`thincoder-core/prompts/advisor-round1.md` ∥ `thincoder-core/prompts/consult-base.md` 按验收串实测各 **0**（既无原句、也不含 `findings table`）⇒ 本批零触；两档进验收域的理由是「评审槽族漏检即残留」，不是它们有原句要换。
+
+**受影响面（路径 · 落笔归实施轮）**：
+
+- **提示词**（模型可见文案，句子换写 · 逐字目标形 = 本条围栏块 ①–⑤）：`thincoder-core/prompts/advisor-design.md` · `thincoder-core/prompts/advisor-round2.md` · `thincoder-core/prompts/advisor-round3.md` · `thincoder-core/prompts/persona-engineering.md` · `thincoder-core/prompts/discipline-normal.md` · `thincoder-core/prompts/persona-eng-designer.md`。
+- **工具描述面**（模型可见文案）：`thincoder-core/agent-tools/batch.mjs` 的 append `text` 参数描述（围栏块 ⑥）∥ `thincoder-core/tool-docs/batch.md`（围栏块 ⑦）。
+- **零改面**：裁定行锚 ∥ `verdictGapOf` ∥ 轮次块计数 ∥ V3 ∥ 段白名单 ∥ 冻结门 ∥ 链门 ∥ 段序门——判据一行不动。
+- **描述面预算读数**：`docs/core/design/PROMPT-SYSTEM.md` §6.11 是描述面预算读数的唯一权威处；`batch` 描述换写会改该读数 ⇒ 实施轮跑 `node scripts/tool-schema-size.mjs` 后回填（先例 = 本档 §4.18 同款条）。
+- **跨仓**：VSC 侧锚句族 A5 / A6 / A8（§6.2）须同步，**落笔归 VSC 轮**（跨仓写禁——本仓只出机制与锚句）。
+
+**分层结论**：无 schema 变更、无数据迁移——六处提示词 + 两处描述面是文案换写，`thincoder-core/agent-tools/batch.mjs` 只改一条 description 字符串、动作分派零动。**贴线判（层档读数）**：该档现行 **541** 行（本席 `node` 实读 2026-11-05）——**在 500 软线之上、拆分触发（650）之下、硬限（800）之下** ⇒ **零拆分义务**（阈值与触发判据单源 = §4.18 贴线判）。
+
+**集成测试设计（`test/RTM.md` 读面 → 本批增量 = 0）**：本批改的是档内写法与模型可见文案，不改任何业务可观察结果 ⇒ **零破 / 零冗余 / 零缺行**：不长集成用例、不改既有行。
+
+**RTM 读数（本席本轮 `node` 实算 2026-11-05）**：`test/RTM.md` **425** 行 / `^## ` **5** 段 / `^### ` **33** 个业务故事节 / `^\|` 表行 **197**。
+
+**近邻四行（在盘实读）**：14-1 · 14-8 · 17-1 · 27-1 —— 四条在 `test/RTM.md` 内各命中（本席本轮 `node` 实算）；四行断言的机械对象（`§3` 写入闸 / 状态行置位 / 评审记录完整性）本批零动 ⇒ 不长新行、不改既有行。
+
+**不做**：不自动压缩历史批档；已收口旧档不回改（§8 边界 17）。
+
+**验收回指（条目 → 判据 → 机检形）**：
+
+| 条目 | 判据落点 | 机检形 |
+|---|---|---|
+| §3 = 结论表 + 指针，回执全文不进档 | §4.4 头段 + 本条闭集 + 围栏块 ①–④ | BR-89（块形）· BR-90（裁定行闸零变）· 围栏块逐行相等（`node` 逐行 `===`） |
+| §2 = 任务书最薄形 | 本条「§2 任务书最薄形」+ §4.10 §2 引用形态行 | BR-91 · 围栏块 ⑤ 逐行相等 |
+| 指针闭集 / 行号禁入 | 本条闭集表 + 禁入形 + 「与 §4.10 两形的关系」 | BR-92（判读面；机检不拦——评审同轮核 + 收口对账） |
+| 机械面零改 | 本条「机械面零改」行 | BR-90 · BR-1 / BR-5 零回归 |
+| 适用范围限定句在位 | 围栏块 ② 首句 | 两档扫 `design reviews only, and only when the \`batch\` tool is mounted` ⇒ 各 **1** |
+| 各落行行宽 ≤ 300 | 围栏块 ①–⑦（含 ② 拆后的两行） | 落盘后逐行实算 `[...line].length ≤ 300` 全过（判据 = `docs/core/design/PROMPT-SYSTEM.md` §6.70 A3「行宽」项）；② 首行 **拆前 328 → 拆后 231 ∥ 95**（本席 `node` 实算 2026-11-05：设计档块内两行与 `thincoder-core/prompts/advisor-round2.md` ∥ `thincoder-core/prompts/advisor-round3.md` 的落盘两行同宽）⇒ 已按句边界拆两行——拆行不碰英文（A3 同口径：只拆行，不改字） |
+| 换写面清零（评审槽族邻档一并扫） | 围栏块 ①–⑦ | 域 = `thincoder-core/prompts/` **全 17 档** + `thincoder-core/tool-docs/` **全 54 档**（UTF-8 `node` 逐档扫）：`verbatim into batch record §3` ⇒ **0**；`conclusion table` 五档各 ≥ **1** —— `advisor-design` · `advisor-round2` · `advisor-round3` · `persona-engineering` · `discipline-normal`（`persona-eng-designer` 无该串：围栏块 ⑤ 换的是 §2 句） |
+| `findings table` 只从 §3 落笔句退场 | 围栏块 ①–④ ∥ 本条「新名三问」`findings table` 条 | 同域扫 `findings table` ⇒ **1**，且必须是 `thincoder-core/prompts/advisor-design.md` 回执侧那句 `Why`（说的是回执全表，不退役）；`thincoder-core/agent-tools/batch.mjs` 扫 `findings table + VERDICT` ⇒ **0** |
+| 描述面换写 | 围栏块 ⑥ ⑦ | `thincoder-core/agent-tools/batch.mjs` 扫 `findings table + VERDICT` ⇒ **0**；`thincoder-core/tool-docs/batch.md` 扫 `An evidence cell holds a pointer` ⇒ **1** |
+
+**UI / 交互决策**：本批无 UI / 交互面（改的是模型可见文案与档内写法）；**无 open 项**。
+
 ## 5. 行为纪律（提示词层，EN 单份）
 
 | 纪律 | 内容 | 落点 |
@@ -696,6 +855,7 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 | **澄清必经主 agent** | 子代理撞到需用户决定的事 → 打回主代理（无旁路） | 纪律层 |
 | **三方条目一致** | 批次档 §2 条目 = 设计档验收回指 = 需求档条目 | 纪律层 |
 | **批次档生命周期** | 一次实现轮的界 / 长度·轮次护栏 / 闭合退役（收口前置 = 链门 §4.18-A ∥ 已收口档重开径 §4.18-B） / 新档↔旧档接续 / 判定权 = 主 agent / **条目在别处完成的结账依据记录**（§5.2） | `thincoder-core/prompts/persona-engineering.md`「批次档生命周期（五条）」+ `thincoder-core/prompts/persona-eng-coder.md`「批次档纪律」（执行者侧）+ 本档 §5.1 / §5.2 |
+| **结论 + 归因指针** | §3 每轮 = 结论表（依据格用指针）+ 裁定行 + 计数，回执全文不进档；§2 = 任务书（条目 / 落点节号 / 受影响文件 / 验收行），不重述设计正文；指针走 §4.20 的三形闭集，**行号不入指针** | 评审三档 + `persona-engineering` 评审调用句 + `discipline-normal` + `persona-eng-designer`；判据单源 = §4.20 |
 
 **锚断言口径**：关键句进 **fail-when-unchanged** 家族（提示词内容断言）；**新增的 persona 文件必须进断言清单**，否则首行格式断言与表行宽断言**不覆盖它**（漏覆盖即漏防）。
 
@@ -855,6 +1015,8 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 | D-BR35 | **已收口档六段一律不可就地改**；修 = 重开径（§4.18-B，带追记行）或另起新批 | 收口 = 这一轮的账已经结过；照那一轮之外的新规则改它，账里就出现一件从没跑过的事。与 D-BR11（整档冻结、外部记忆不删）同源 |
 | D-BR36 | **段级文件写门（拦「用文件工具直写本档别人段」）不在本批**，登记为候选扩展 | 现有机械面两道：跨批档写门（写别批）+ 工具通道段白名单（用工具写别段），覆盖两个方向；第三方向无实测案，且需 diff 段归属判定（改一字也要判它落在哪段）——先登记，不立空护栏。**处置 = 登记即终局**（不补门、不另裁）：文件工具仍在被正当使用（档头改写、工具未建模的一次性修字面），段级门要放行它们就得先判「这处改动落在谁的段」，而那条判据只在工具通道里有；档级写门只给批档加门、对设计档 / 需求档同样零拦 = 假安全 |
 | D-BR37 | **「改 §2 不追认实施」的判据 = 收口对账的两半**（§2 ↔ 设计档 · §2 ↔ §5），不取改时拦截 | 洗账的形是「§2 改成与设计一致、§5 记着另一套实现」——只比 §2 ↔ 设计档时它原样通过（本批评审抓出的设计缺口）。取两半 = 判的对象是两处记录是否对得上，机检与人都可读；不取改时拦截的理由 = 实施开始后改 §2 正当且常见（设计变更传播、口径补清），拦住它等于把正路关掉、写者绕去文件工具直写。**被否** = 只比设计档（洗账从下面过）· 靠写者自觉（同一道口子换成纪律句） |
+| D-BR38 | **批次档记结论与归因，不搬正文**：§3 每轮 = 结论表 + 裁定行 + 计数（回执全文不进档）· §2 = 任务书最薄形 · §6 照旧 | 用户 2026-11-05 03:18 逐字「批档瘦身可以考虑，不过指针你别又写成行号哦。」+ 本批 §1 病面（评审全文进档 ⇒ 档体量随轮数线性长；§2 重述设计正文 ⇒ 同一事实两处、改一处漏一处）。**被否** = 继续逐字（档与回执重复）· 连 §6 一起压（那一段是收口对账的输入） |
+| D-BR39 | **指针形态闭集 = 节号 ∥ 符号名 ∥ 逐字锚；行号不入指针** | 同上原话后半句 + 行号是位置寻址（设计轮写下的指针指向还在动的坐标；本批评审表已实漂）。**被否** = 行号 · 「见上文」相对指针 · 新建机检门（正则会把原文锚里的 `:12` 误判，判据本身在语义面；判读 = 评审同轮核 + 收口对账） |
 
 ## 8. 边界（本档不做）
 
@@ -876,4 +1038,5 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 14. 不做段体整段替换（`edit` = 锚定区间替换；整段替换另有超量与丢内容风险——§4.19）。
 15. 不做「改写追认既有记录」的**改时拦截**（`edit` 只改自己那一段，别人的段零触）——判据落在收口对账的 §2 ↔ §5 半项上（§4.19「改写不追认既有记录」∥ §7 D-BR37）：改过的判据与 §5 记下的实现对得上 = 澄清，对不上 = 差异记 §6、不改 §2 收场。
 16. 不做段级文件写门（拦「用文件工具直写本档别人段」）——现有两道机械门覆盖「写别批」「用工具写别段」，第三方向登记为候选扩展（D-BR36）。
+17. 不做「自动压缩历史批档」这类机制；已收口旧档不回改（用户 2026-11-01 裁定）。不做「行号不入指针」的机检门（判读面 = 评审同轮核 + 收口对账——D-BR39）。
 

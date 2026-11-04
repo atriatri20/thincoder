@@ -504,11 +504,11 @@
 | 项 | 读数 |
 |---|---|
 | 基线 | 103,529 字符（口径 = 逐档 `JSON.stringify({description, parameters})` 字符和——与机检同式） |
-| 当前 | **168,171** 字符（= **1.624 × 基线**；分面 = builtin 78,673 · builtin(gated) 1,375 · meta 73,233 · instance 14,890；枚举 53 档，其中 tool-docs 54 档 · 110,094 字符） |
+| 当前 | **172,947** 字符（= **1.671 × 基线**；分面 = builtin 82,830 · builtin(gated) 1,375 · meta 73,852 · instance 14,890；枚举 53 档，其中 tool-docs 54 档 · 113,784 字符） |
 | 目标 | ≤ 0.75 × 基线——**未达 · 报告态**（依「准比短重要 · 信息完整优先于字数」不硬削，读数上抛父侧裁） |
-| 单档帽 | ≤ 8,000 字符——超限六档（报告态在册）= `subagent` **19,182** ∥ `batch` **12,663** ∥ `browser` **11,927** ∥ `doc_check` **9,523** ∥ `git` **8,886** ∥ `ssh` **8,367**。两档有在册理由（`subagent` 契约事实保真下限 ∥ `browser` 交互面契约保真下限——16 动作族 + 引用/回执语义 + 权限门 + 错误面逐条在册；收身即丢模型可操作细节）；其余四档未削，读数上抛父侧裁 |
+| 单档帽 | ≤ 8,000 字符——超限六档（报告态在册）= `subagent` **19,182** ∥ `batch` **13,109** ∥ `ssh` **12,524** ∥ `browser` **11,927** ∥ `doc_check` **9,523** ∥ `git` **8,886**。两档有在册理由（`subagent` 契约事实保真下限 ∥ `browser` 交互面契约保真下限——16 动作族 + 引用/回执语义 + 权限门 + 错误面逐条在册；收身即丢模型可操作细节）；其余四档未削，读数上抛父侧裁 |
 | 面专属帽 | `thincoder-core/tool-docs/manifest.md` 面专属读数——帽值与算式住 `docs/core/design/MANIFEST.md` §2.10 尾「字段语义达用点」块；本表只挂指针，不载数值（D2） |
-| top5 | `subagent` **19,182** ∥ `batch` **12,663** ∥ `browser` **11,927** ∥ `doc_check` **9,523** ∥ `git` **8,886** |
+| top5 | `subagent` **19,182** ∥ `batch` **13,109** ∥ `ssh` **12,524** ∥ `browser` **11,927** ∥ `doc_check` **9,523** |
 | 机检 | `node scripts/tool-schema-size.mjs`（报告态 v1——只读读数，不入闸；复测 = 同式读数对读数） |
 
 **边界**：表为读数与目标面——零机械门（预算不入闸）；描述逐字文本 = 内容依据机制文档、落笔 eng-coder；动态装配装饰面不在本表射程。
@@ -1742,7 +1742,7 @@ C. `thincoder-core/prompts/discipline-engineering.md` 步骤 1 内、收束段�
 
 **机制（三条规则 · 单源 = 本节；提示词面只持最短动作锚）**：
 
-1. **§2 只引不抄**：批次档 §2（任务书）里的判据 / 计数按 `design §N.M` / `requirements §N.M` 引用，不重述数字；必须出现字面值（验收等值断言）时，它只作为该节所陈述的值出现，引用紧贴其旁。§2 不造第二判据。
+1. **§2 只引不抄**：批次档 §2（任务书）里的判据 / 计数按 `design §N.M` / `requirements §N.M` 引用，不重述数字；必须出现字面值（验收等值断言）时，它只作为该节所陈述的值出现，引用紧贴其旁。§2 不造第二判据。指针形态（闭集 ∥ 禁入形 ∥ 行号禁入的理由）不在此复述——单源 = `docs/core/design/BATCH-RECORD.md` §4.20，§2 / §3 依据格同判。
 2. **设计变更传播**：触发 = 设计变更落地（修正轮落地 / 评审通过后的设计定稿）。动作 = 父侧扫在途批次档 §2 中引用到被改节的行，**同轮**就地改那几行（`batch({action:"edit", segment:"§2", oldText, newText})`——锚定区间替换；被换掉的旧行**删掉**，不留「以本段为准」指针）或当日挂债（台账行点名批次与节）。责任面按 D1：扫描与派单 = 父侧；§2 的笔 = eng-designer（父侧不代笔，更正走 designer 修正轮）。**为什么不 append 一行更正**：§2 是**规范面**（实施席照着做的东西）——新旧两行都在，就是两种读法，照着任一行做都可能错（现场 = `docs/batches/2026-11-02-review-requires-batch.md` 收口前 §2 验收表留着一行已作废判据）；旧值住 git，不住文档。判据单源 = `docs/core/design/BATCH-RECORD.md` §4.19。
 3. **收口对账**：D7 收口清单加一项「§2 判据 / 计数 ↔ 当前设计档：一致，或差异已记 §6」+ 同项半句「**§2 ↔ §5（实施记录）**：§2 改过的判据与 §5 记下的实现是否还对得上——对得上 = 澄清，照此收口；对不上 = 差异记 §6，不许再改 §2 收场」。
 
@@ -3728,7 +3728,7 @@ B6 — 同档 `:194` 整行整替为两行（落笔后 `:194`–`:195`）：
 B7 — `thincoder-core/prompts/persona-eng-designer.md` 第 9 项现行 `:137-141` 五行整替为六行（落笔后 `:137`–`:142`）：
 
 ```text
-9. **Integration test design — start from the index**: `test/RTM.md` is the RTM (UAT acceptance matrix: one section per business story, one row per integration case, 8 columns).
+9. **Integration test design — start from the index**: `test/RTM.md` is the RTM (UAT acceptance matrix: one section per business story, one row per integration case, 5 columns).
    Read it before designing, then answer as a delta: which rows this change breaks (rewrite them), which rows are redundant (delete them), which rows are missing (new rows) —
    with each row naming the **interaction between components** it evaluates, the business-observable result it asserts, the requirement it serves, and this project's entry (where a user enters the business — a business-observable point).
    A new row's number is fixed in the RTM before its case title is written — `test('1-1 …')`, the same number verbatim.
@@ -3937,7 +3937,7 @@ B4 — `thincoder-core/prompts/common.md:9` 整行替换为两行：
 B5 — `thincoder-core/prompts/persona-eng-designer.md:136` 整行替换（同一元素同一名 + 同一句注解）：
 
 ```text
-9. **Integration test design — start from the index**: `test/RTM.md` is the RTM (UAT acceptance matrix: one section per business story, one row per integration case, 8 columns).
+9. **Integration test design — start from the index**: `test/RTM.md` is the RTM (UAT acceptance matrix: one section per business story, one row per integration case, 5 columns).
 ```
 
 **中文复核面（与英文面同一语义 · 供人复核，不入提示词）**
@@ -5902,8 +5902,8 @@ D 组现在合规是时点判断，不是豁免：它说明此刻没有要改的
 
 | 面 | 现状 | 读数出处 |
 |---|---|---|
-| 参数描述 | **有**——十三把工具（写盘七件 + `bash` · `execute` · `git` · `manifest` · `memory` · `ssh`）的 `ledger` 参数各带用法句 | 十三份工具描述同一句首（`the in-flight ledger row this call serves`），收尾分两类：**九份逐字同句**、**四份按 action 另写**（`git` · `manifest` · `memory` · `ssh`）；引文见「勘察证据行」 |
-| 工具描述 | **有**——九档逐字含「a call that does not say which row it serves is refused」（`write` 领头 + 另八档；`bash` / `execute` 该句之后另带只读判一句）；其余四档按 action 另写收尾——`git` · `manifest` · `memory` · `ssh` ⇒ **九 + 四 = 十三份**，不重不漏 | 同上 |
+| 参数描述 | **有**——十二把工具（写盘七件 + `bash` · `execute` · `manifest` · `memory` · `ssh`）的 `ledger` 参数各带用法句 | 十二份工具描述同一句首（`the in-flight ledger row this call serves`），收尾分两类：**九份逐字同句**、**三份按 action 另写**（`manifest` · `memory` · `ssh`）；引文见「勘察证据行」 |
+| 工具描述 | **有**——九档逐字含「a call that does not say which row it serves is refused」（`write` 领头 + 另八档；`bash` / `execute` 该句之后另带只读判一句）；其余三档按 action 另写收尾——`manifest` · `memory` · `ssh` ⇒ **九 + 三 = 十二份**，不重不漏 | 同上 |
 | 拒文 | **有**——点名缺什么 + 当前在途哪几个号 | 父侧本批实跑三条，引文见「勘察证据行」 |
 | 提示词面 | **零句教怎么用**——`write gate` 字样 8 行全是「绕门 / 开门 / 门在哪」的提及；`ledger:"#N"` 3 行全属 `batch` 工具的「接手该行」义 | `thincoder-core/prompts/` 16 档实扫（本席本轮 `node` 实算 2026-11-03） |
 
@@ -5913,7 +5913,7 @@ D 组现在合规是时点判断，不是豁免：它说明此刻没有要改的
 
 **落点**：`thincoder-core/prompts/persona-engineering.md` 的 `## Ledger (requirement pool / tech todos) — batching & lifecycle` 节内、`**Lifecycle (event → action — …)**` 块之前，新增一块（既有节内增块 ⇒ 零 `##` 块计数连带、零 `###` 连带）。
 
-- **为什么落人格层、不落纪律层**：受众 = 父侧（十三份工具描述都把这一笔指为工程模式的门——十二份逐字写「the parent agent must pass it」，`ssh` 档按 action 另写「required for `get` in engineering mode」）；形态 = 每一笔怎么写（落笔），不是怎么判。同轴先例 = §6.68 K1：落笔形态落人格档，判据落纪律档。两处都常驻，同写即同一规则两个活描述（D2）。
+- **为什么落人格层、不落纪律层**：受众 = 父侧（十二份工具描述都把这一笔指为工程模式的门——十一份逐字写「the parent agent must pass it」，`ssh` 档按 action 另写「required for `get` in engineering mode」）；形态 = 每一笔怎么写（落笔），不是怎么判。同轴先例 = §6.68 K1：落笔形态落人格档，判据落纪律档。两处都常驻，同写即同一规则两个活描述（D2）。
 - **为什么落台账节**：写门要的号就是台账行号——「这一笔服务哪一行」与「行怎么从待讨论走到在途」是同一条链的两端，读在一起才答得出「手上一行都没有时怎么办」。
 - **落地形取节内既有块形**：加粗题眼行 + 顶格 `- **题眼**: …` 条目（落点节的形态读数见「勘察证据行」末条）。齐头散文段与该节形态分叉，实施席也不能靠自行缩进对齐——A1 判整行相等，形态一改即红。
 
@@ -5921,13 +5921,13 @@ D 组现在合规是时点判断，不是豁免：它说明此刻没有要改的
 
 ```text
 **The write gate — every write call names the row it serves and the project it lands in.**
-- **Reach**: every tool that can land bytes — `write` · `edit` · `insert_after` · `apply_patch` · `delete` · `hashline_edit` · `file_ops` · `bash` · `execute` · `git` · `manifest` · `memory` · `ssh` (only `get` lands a local file and carries the number; `put` writes the remote host and needs none).
+- **Reach**: every tool that can land bytes — `write` · `edit` · `insert_after` · `apply_patch` · `delete` · `hashline_edit` · `file_ops` · `bash` · `execute` · `manifest` · `memory` · `ssh` (only `get` lands a local file and carries the number; `put` writes the remote host and needs none).
 - **The row**: in engineering mode such a call carries `ledger:"#N"`, and `#N` must be a row of the declared project's ledger in 在途; the gate judges the row's state, so a row still in 待讨论 is refused the same way a missing one is.
 - **Why the row**: the number is the attribution — it says which debt this write pays; a command's content cannot be parsed afterwards, so the number is the way back to why it ran.
 - **The project**: `bash` · `execute` · `memory` (project layer) carry `project:<absolute project root>` as well — what a command acts on is not parsed either, so the call has to say it.
 - **`memory`'s edge**: it carries both only when it writes into the project layer. A single delete routes by the id prefix — `project:` lands in the project layer, so it carries the number and the project; `personal:` and `team:` stay outside this gate.
 - **No exemption by content**: `bash` carries the number whatever it runs, `git` inside it included — command content is not parsed, so nothing inside a command is exempt.
-- **Action decides, not the tool**: `git` and `manifest` are judged by their action — a read-only `git` action and `manifest`'s `read` land no bytes, so they carry no number, while `git`'s write actions and `manifest`'s `write` carry one like any other write.
+- **Action decides, not the tool**: `manifest` is judged by its action — its `read` lands no bytes, so it carries no number, while its `write` carries one like any other write.
 - **`manifest`'s `init` is exempt only where it bootstraps a new project**: outside any project there is no ledger to ask, so no number; inside an existing project the call is gated and needs the number, and where the landing point has a manifest the tool itself refuses (`init never overwrites`).
 - **A batch's first write is always reachable**: with no row in 在途, `ledger({action:"add"})` then `update` that row to 在途, or `batch({action:"create"})`.
 - **Why that is not a deadlock**: neither of those two is a write, so the gate cannot block the step that satisfies it.
@@ -5940,7 +5940,7 @@ D 组现在合规是时点判断，不是豁免：它说明此刻没有要改的
 | # | 验收 | 跑什么 / 期望什么 |
 |---|---|---|
 | A1 | 块在盘且逐行相等 | 硬判 = `node` 逐行 `===`：`thincoder-core/prompts/persona-engineering.md` 落地块与本节围栏块**整行相等**（首末行含，`- ` 前缀与加粗一并比）；快判 = 全档扫 `The write gate — every write call names the row it serves` ⇒ **1** |
-| A2 | 射程枚举齐（十三把 · `ssh` 两半） | 扫描面 = 块内**射程行**（行首 `- **Reach**` 那一行，不是整块）；判法 = **带反引号的整 token**（`edit` 带反引号算，题眼行的裸词 `write` 不算，`hashline_edit` 里的 `edit` 不算）⇒ `write` · `edit` · `insert_after` · `apply_patch` · `delete` · `hashline_edit` · `file_ops` · `bash` · `execute` · `git` · `manifest` · `memory` · `ssh` 各 **1**；`memory` 的入程条件句（`when it writes into the project layer`，在 `memory` 的 edge 行上）块内 ⇒ **1**；`ssh` 两半 = `lands a local file and carries the number` ⇒ **1** ∧ `writes the remote host and needs none` ⇒ **1**（只列工具名 = 红：单写 `ssh` 会教出「`put` 也要号」的反向错） |
+| A2 | 射程枚举齐（十二把 · `ssh` 两半） | 扫描面 = 块内**射程行**（行首 `- **Reach**` 那一行，不是整块）；判法 = **带反引号的整 token**（`edit` 带反引号算，题眼行的裸词 `write` 不算，`hashline_edit` 里的 `edit` 不算）⇒ `write` · `edit` · `insert_after` · `apply_patch` · `delete` · `hashline_edit` · `file_ops` · `bash` · `execute` · `manifest` · `memory` · `ssh` 各 **1**；`memory` 的入程条件句（`when it writes into the project layer`，在 `memory` 的 edge 行上）块内 ⇒ **1**；`ssh` 两半 = `lands a local file and carries the number` ⇒ **1** ∧ `writes the remote host and needs none` ⇒ **1**（只列工具名 = 红：单写 `ssh` 会教出「`put` 也要号」的反向错） |
 | A3 | `project` 参数齐 | 块内扫 `project:<absolute project root>` ⇒ **1**；同句含 `bash` · `execute` · `memory` 三词 |
 | A4 | 无在途行不死锁 | 块内扫 `A batch's first write is always reachable` ⇒ 1 · `ledger({action:"add"})` ⇒ 1 · `batch({action:"create"})` ⇒ 1 · `neither of those two is a write` ⇒ 1 |
 | A5 | 被拒读拒文 | 块内扫 `read the refusal` ⇒ 1 · `no project on this call` ⇒ 1 · `only a 在途 row carries writes` ⇒ 1 |
@@ -5958,14 +5958,14 @@ D 组现在合规是时点判断，不是豁免：它说明此刻没有要改的
 |---|---|---|---|
 | C1 | 正常 · 有在途行 | 父侧 `write` 带 `ledger:"#2021"` | 放行 |
 | C2 | 正常 · 批内第一笔 | 手上无在途行 | 先 `ledger({action:"add"})` → `update` 到在途（或 `batch({action:"create"})`），再写；不死锁 |
-| C3 | 边界 · 只读 `git` | `git({action:"status"})` 不带 `ledger` | 放行——场景 = 父侧 2026-11-03 05:05 本会话实跑：回 121 个改动 + 22 个未跟踪（引文见「勘察证据行」） |
+| C3 | 边界 · `git` 不在射程 | `git({action:"commit"})` ∥ `git({action:"status"})` 不带 `ledger` | 放行——射程行不含 `git`；写型 `commit` 与只读 `status` 同判（提交不落新字节，归属由提交信息 ∥ 交付记录 ∥ 台账 `evidence` 三处持） |
 | C4 | 边界 · 子代理写盘 | eng-coder 的 `write` | 本块不落子代理档（被拦面 = 父侧，父侧 2026-11-03 05:14 已裁）；门若扩到子代理，同一块随迁（上抛项 1） |
 | C5 | 错误 · 无号硬写 | `write` 不带 `ledger` | 被拒，拒文点名缺什么；读者照 C2 挂行，而不是换工具绕 |
 | C6 | 错误 · 号不在途 | `ledger:"#2020"`（待讨论） | 被拒 `row #2020 is "待讨论" — only a 在途 row carries writes`；先推状态再写 |
 | C7 | 错误 · 拿 `batch` 的义读本块 | 把写盘调用上的 `ledger:"#N"` 读成「接手该行」 | 判违规：射程句把语境锁在写盘工具上，两义分流（K5） |
 | C8 | 边界 · `manifest init` | ① 祖先链无 manifest 的新目录自举；② 既有项目内的子目录自举 | ① 不带号即合规（无账可问）；② 照判要号——不带号拒（`no ledger number on this call`）；带在途号时门过后由工具自身拒（`init never overwrites`），manifest 字节零改 |
 | C9 | 边界 · `memory` 落 personal ∥ team | `memory({action:"put", layer:"personal"})` ∥ 单条删除 `id:"personal:…"` / `id:"team:…"` | 不进本门：不带号、不带 `project` |
-| C10 | 边界 · `bash` 里跑只读 `git` | `bash("git status")` 带号 | 带号——命令内容不解析，C3 的豁免不延伸到 `bash` |
+| C10 | 边界 · `bash` 里跑 `git` | `bash("git status")` 带号 | 带号——命令内容不解析；`git` 直调不带号，这一形不外延到 `bash` |
 | C11 | 边界 · `memory` 按 `project:` 前缀单条删除 | `memory({action:"delete", id:"project:…"})`（`layer` 省略） | 要号 + 要 `project`——前缀把这一笔路由到 project 层，与 `layer:"project"` 同判 |
 
 **关键决策**
@@ -6000,22 +6000,21 @@ D 组现在合规是时点判断，不是豁免：它说明此刻没有要改的
 - 写门对 `memory` 的判法（父侧转引已收口的 `#2019` 判据点表，逐字）：「memory 落 project 层 ⇒ 要 ledger:"#N" ∧ 要 project」「memory 的 personal ∥ team（含按 id 前缀的单条删除）⇒ 不进本门」。
 - `memory` 按 id 前缀的单条删除判法（本席本轮 read 2026-11-03）：依据 thincoder-core/agent/write-gate.mjs「return typeof id === "string" && id.startsWith(MEMORY_PROJECT_UID_PREFIX)」——同档 `const MEMORY_PROJECT_UID_PREFIX = "project:"` ⇒ `project:` 前缀的单条删除落 project 层 ⇒ 要号 + 要 `project`；`personal:` ∥ `team:` 前缀不进本门。
 - 台账取根（本席本轮 read 2026-11-03）：依据 thincoder-core/agent/write-gate.mjs「只有两个来源，都来自调用方」——`bash` ∥ `memory` 走 `return onlyDeclared()`（读 `project` 声明），其余工具按自身定位参数取根；拒文逐字 `row #999999 does not exist in this project's ledger` ⇒ 门查的是**声明 ∥ 写盘目标所属项目**的台账，不是会话所在仓。
-- 十三份工具描述都讲同一件事（`ledger` = 这一笔服务哪一行），其中九份逐字含同一句，逐字：依据 thincoder-core/tool-docs/write.md「**`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it — a call that does not say which row it serves is refused.」
-- 同句另见 `thincoder-core/tool-docs/` 下另八档：`apply_patch` · `bash` · `delete` · `edit` · `execute` · `file_ops` · `hashline_edit` · `insert_after`（本席本轮逐档命中，连同 `write` 共九份；`bash` / `execute` 该句后另带只读判一句）⇒ **九份逐字同句 + 四份按 action 另写 = 十三份**（下四条即那四份的收尾逐字）。
-  - `git` 档收尾逐字：依据 thincoder-core/tool-docs/git.md「In engineering mode the parent agent must pass it for a write action; omitted = refused.」
+- 十二份工具描述都讲同一件事（`ledger` = 这一笔服务哪一行），其中九份逐字含同一句，逐字：依据 thincoder-core/tool-docs/write.md「**`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it — a call that does not say which row it serves is refused.」
+- 同句另见 `thincoder-core/tool-docs/` 下另八档：`apply_patch` · `bash` · `delete` · `edit` · `execute` · `file_ops` · `hashline_edit` · `insert_after`（本席本轮逐档命中，连同 `write` 共九份；`bash` / `execute` 该句后另带只读判一句）⇒ **九份逐字同句 + 三份按 action 另写 = 十二份**（下三条即那三份的收尾逐字）。
   - `manifest` 档收尾逐字：依据 thincoder-core/tool-docs/manifest.md「In engineering mode the parent agent must pass it for `write`; for `init`, only when the target sits inside an existing project (a `PROJECT-MANIFEST.json` exists on its ancestor chain) — a bootstrap outside any project needs none; omitted when required = refused. `read` does not need it.」
   - `memory` 档收尾逐字：依据 thincoder-core/tool-docs/memory.md「In engineering mode the parent agent must pass it for any write that lands in the project layer」
   - `ssh` 档收尾逐字：依据 thincoder-core/tool-docs/ssh.md「required for `get` in engineering mode (the same write gate `write` goes through; `put` writes the remote host and needs no number)」
 - 提示词 16 档实扫（本席本轮 `node` 实算 2026-11-03）：`write gate` 字样 **8 行**——`thincoder-core/prompts/` 下 `advisor-design` · `consult-base` · `discipline-engineering` 三行 · `persona-coder` · `persona-eng-designer` · `persona-engineering` 各一行，共六档。
 - 同一次扫描：`ledger:"#N"` **3 行**，全在 `thincoder-core/prompts/persona-engineering.md` 的 `batch` 工具一支；含 `in-flight row` / `project:<absolute` 的行在提示词 16 档 = **0**。
 - 射程枚举原语实扫（本席本轮 `node` 实算 2026-11-04）：「唯一副本」的判据是**枚举原语本身**，不是 `write gate` 字样。`thincoder-core/prompts/` 现 **17 档**（2026-11-03 那次为 16 档，新增档 = `thincoder-core/prompts/persona-tester.md`）逐档扫 ⇒ `every tool that can land bytes` **1 行**（`thincoder-core/prompts/persona-engineering.md` 的射程行）；「一行内含 ≥6 把带反引号工具名」的枚举行 **仅此 1 行**；`hashline_edit` 5 行 ∥ `insert_after` 4 行逐行读过，全是单工具用法句与工具表列（`thincoder-core/prompts/common.md` 工具表 · `thincoder-core/prompts/discipline-normal.md` 的读后写纪律 · `thincoder-core/prompts/persona-eng-coder.md` 的授权名单），无一处在列写盘射程。另有一处列六把工具的授权句（`thincoder-core/prompts/persona-eng-coder.md` 的设计 token 名单 `write/edit/apply_patch/hashline_edit/insert_after/delete`，无 `file_ops` · `bash` · `execute` · `git` · `manifest` · `memory` · `ssh`），义在设计 token 不写盘，不是写门射程 ⇒ 不构成第二副本。
-- 入口集与 action 判（本席本轮 read 2026-11-03）：依据 thincoder-core/agent/write-gate.mjs「`git` 只对写型 action 要号（只读名单 = 核钩子，决策 37）；`manifest` 的 `init` ∥ `write` 都要号」——同档 `const MANIFEST_WRITE_ACTIONS = new Set(["init", "write"])` · 入口集十三把 = `"write", "edit", "insert_after", "apply_patch", "delete", "hashline_edit", "file_ops",` + `"bash", "execute", "git", "manifest", "memory", "ssh",`。
+- 入口集与 action 判（本席本轮 read 2026-11-05）：依据 thincoder-core/agent/write-gate.mjs「`manifest` 的 `init` ∥ `write` 都要号」——同档 `const MANIFEST_WRITE_ACTIONS = new Set(["init", "write"])` · 入口集十二把 = `"write", "edit", "insert_after", "apply_patch", "delete", "hashline_edit", "file_ops",` + `"bash", "execute", "manifest", "memory", "ssh",`。
 - `ssh` 的 action 分支（本席本轮 read 2026-11-04）：依据 thincoder-core/agent/write-gate.mjs「if (toolName === "ssh") return String(args?.action ?? "") === "get"」——`ssh` 收在入口集内，只有 `get` 落本地档 ⇒ 射程行只写工具名会把 `put` 教成要号；工具描述同拍（逐字见上条）。
 - 条件形判据（本席本轮实读 2026-11-04）：依据 thincoder-core/agent/write-gate.mjs「if (String(args?.action ?? "") === "init") return null」——`init` 留在 `MANIFEST_WRITE_ACTIONS`，豁免支开在门体取根步；依据 docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md「目标沿祖先链取不到项目根 ⇒ 不进本门（无账可问）；取得到根（含既有项目内的子目录自举）⇒ 本门照判」。工具描述同拍（逐字见上条）。
 - 结构读数（改前基线）：`thincoder-core/prompts/persona-engineering.md` = 469 行 / `##` 17 / `###` 5 / 最长行 300 / `>300` = 0（本席设计时刻 `node` 实算 2026-11-03）。
 - 拒文三条（父侧本批实跑输出，本席转引）：`no project on this call` ∥ `row #999999 does not exist in this project's ledger` ∥ `row #2020 is "待讨论" — only a 在途 row carries writes`。
 - `init` 落既有项目内的拒文出处（本席本轮 read 2026-11-04）：依据 thincoder-core/agent/write-gate.mjs「const CASE_NO_NUMBER = "no ledger number on this call"」——同档「if (parsed.case === "missing") return ledgerRefusal(CASE_NO_NUMBER, at.rows)」⇒ 不带号即落此拒文；取根步的 `init` 豁免同档「if (String(args?.action ?? "") === "init") return null」只在沿祖先链取不到根时生效 ⇒ 既有项目内照落本门，用例 C8 ② 的字面有出处。
-- 只读 `git` 实测（父侧 2026-11-03 05:05 本会话实跑，本席转引）：`git({action:"status"})` 不带 `ledger` 跑通，回 121 个改动 + 22 个未跟踪——块内「只读 `git` 在射程外」这条分支的场景。
+- `git` 直调实测（父侧 2026-11-03 05:05 本会话实跑，本席转引）：`git({action:"status"})` 不带 `ledger` 跑通，回 121 个改动 + 22 个未跟踪 ⇒ 射程行不含 `git` 的实读场景。
 - 落点节形态读数（本席本轮 read 2026-11-03）：`## Ledger (requirement pool / tech todos) — batching & lifecycle` 节 = 节首一段散文 + `1.`–`5.` 编号条（子条两空格缩进 `-`）；其后 `**Lifecycle (event → action — …)**:` 块 = 加粗题眼行 + `1.`–`5.` 编号条及其 `-` 子条；再后 `**Booking scope (main-agent version)**:` 块 = 加粗题眼行 + 顶格 `- **…**:` 条目 ⇒ 落地形取后者（加粗题眼行 + 顶格 `- **题眼**:` 条目），与节内既有块同构、无需缩进对齐。
 - 公共源勘察：项目 manifest 的 `index.publicRepos` = `[]`（本席本轮 `manifest read` 实读）⇒ 无跨仓公共源可查——已查，无相关。
 - RTM 读数（本席本轮 `node` 实算 2026-11-04）：`test/RTM.md` **401** 行 / `^## ` **5** 段 / `^### ` **31** 个业务故事节 / `^\|` 表行 **187**。
