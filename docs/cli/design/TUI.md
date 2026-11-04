@@ -699,10 +699,10 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 
 **端差（登记 · 宿主能力例外）**：VSC ∥ 桌面 ∥ 服务端保留符号形 `⏰N`——webview 面字形齐备。差异成因是终端字体缺该字形，属跨端差异纪律的宿主能力例外，不属实现漂移（回指 = `docs/cli/requirements/TUI.md` F17「端差（登记）」行）。
 
-**不动位**：触发落流行 `[System reminder: ⏰ timer — <message>]` 逐字保持——模型可见的契约文本（机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30）。
+**定形（逐字）**：触发落流行 = `[System reminder: timer — <message>]`；前缀段不携任何非 ASCII 字符（`/^[\x20-\x7E]+$/` 覆盖到 `timer —` 之前）——该行以 `C.warn` 进会话流，用户可见；缺字形的图标字符不入该行。模型可见的契约文本（机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30）。
 
 - **该行同时进会话流（用户可见）**：回合尾镜像分支按 `last.content.startsWith("[System reminder:")` 以 `C.warn` 推入会话流（`thincoder-cli/src/tui/tool-events.mjs` 的 `onTurnEnd` 回调）。
-- **后果**：Linux 终端缺 U+23F0 字形时，此行同样呈豆腐块——状态行 ∥ `/timers` 两处换文字形不消这一处。
+- **字符面判据（机检）**：该行前缀段不携任何缺字形的装饰字符——`/^[\x20-\x7E]+$/` 覆盖到 `timer —` 之前；理由 = 该行以 `C.warn` 进会话流，用户在终端直接读到它，而终端字体覆盖没有可靠探针（故按字符面判，不做运行时探测分支）。
 - **归属**：改这行即改模型历史文本，归机制档单源（`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30）处置，本面不改。
 
 **落点与形态**：
@@ -711,7 +711,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - 取值 = `agent._pendingTimers` **活读**（每帧 recompute——零缓存副本 / 零推送链，同 §7.3 / §7.4 纪律）；**不显倒计时**（空闲无重绘定时器 = §7.2 既有负向锁；剩余时间只在 `/timers` 列表按需现算）。
   **到期态可达条件**：警示色需有帧窗口——以处理中 / 挂起期为主（空闲期零重绘 ⇒ 到期到送达间可能零帧）；`agent.timerWake` 关的空闲面 = 无闩、无空闲重绘 ⇒
   只在下一次偶发重绘（用户输入 / 回合起）可见——**不承诺空闲期即时可见**（§7.2 零空闲重绘定时器纪律）。
-- **触发落流（一行）**：送达处推一行——逐字 = 既有系统提醒形态 `[System reminder: ⏰ timer — <message>]`（`C.warn`；三行 + 省略号上限同既有提醒镜像口径）。两路同形：
+- **触发落流（一行）**：送达处推一行——逐字 = 既有系统提醒形态 `[System reminder: timer — <message>]`（`C.warn`；三行 + 省略号上限同既有提醒镜像口径）。两路同形：
   ① 在飞回合 = 既有回合尾镜像（`thincoder-cli/src/tui/tool-events.mjs:434-441`——零改）；② 空闲 / 挂起窗唤醒 = 投递处直推（新增）。
 - **`/timers`（只读列表——最薄）**：逐条 dim 行 `timer <i> · <kind> · 剩余 <dur> · <message 首行（截断）>`（`<i>` = 1 起序号；kind 段仅非一次性项插入：`每 <N>m`（`every` 整分）∕ `每 <N>s`（非整分——秒形）∥ `每天 <HH:MM>` ∥ `于 <YYYY-MM-DD HH:MM>`；`<dur>` = `<mm:ss>`（< 1h）∥ `<h:mm:ss>`（≥ 1h——与模型 `list` 的 `next` 同形）；一次性行逐字零变）；零在途 ⇒ 一行 `无在途 timer`。
   **取消 = 模型工具 `timer` 的 `cancel` 动作**（四端同得——核件在途表移除；`/timers` 保持只读；停轮 = Ctrl+C，停机制 = `agent.timerWake` 关）；机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.18。
