@@ -21,6 +21,8 @@
  */
 import { writeFile, unlink, rename, cp, rm, rmdir } from "node:fs/promises"
 
+import { runDocWriteGate } from "./doc-write-gate.mjs"
+
 /** apply_patch 两段式的暂存后缀（单点定义——阶段一落暂存档、阶段二提交、失败清理均用它）。 */
 export const TMP_SUFFIX = ".thincoder-tmp"
 
@@ -244,9 +246,14 @@ async function defaultPath(abs, content, meta) {
  *   `via:"editor"` 与 `meta.stage` 组合 = 编辑器径已直接提交目标档（无暂存档）
  */
 export async function writeThroughPath(abs, content, meta = {}) {
+  const op = meta.op ?? "write"
+  // **写前文档机检门**（`docs/core/design/DOC-DISCIPLINE.md` §3.26 条目 Z）：只挂内容写点，且写在两条落盘径
+  // 之前——命中即 throw，于是目标档与暂存档都还是零字节。其余 op（commit ∥ delete ∥ rmdir ∥ copy ∥ move ∥
+  // rename）不写文档内容 ⇒ 零门调用。`apply_patch` 两段式的第一段（`op:"write"` + `stage`）判，提交段不判。
+  if (op === "write") await runDocWriteGate({ abs, content })
   // `op="commit"` = 默认径两段式的收尾（暂存档 → 目标）——编辑器径是即时提交、不产生暂存
   // 档 ⇒ 无端侧载体，不再问注入面（避免无意义的门禁调用；目标档的门禁已在 staging 问过）。
-  if ((meta.op ?? "write") !== "commit") {
+  if (op !== "commit") {
     const handled = await tryInjectedPath(abs, content, meta)
     if (handled) return handled
   }
