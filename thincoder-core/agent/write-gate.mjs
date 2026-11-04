@@ -29,12 +29,15 @@
  *    判据 = 「**本笔报的** `#N` 是目标所属项目台账里一条 `status = 在途` 的行」（笔-账绑定——用户
  *    2026-11-03 02:02 裁「甲 · 逐笔带号」）。判据函数 `ledgerRowAt` 住本档模块内（不导出）。
  *    2026-11-03 不分面批：文档面 / 项目状态档 / 产品面 / 产品测面读同一条判据；面在判据里退场。
- *    2026-11-03 笔-账绑定批：入口集扩到十二把（写盘七件 + `bash` ∥ `execute` + `git` + `manifest` ∥ `memory`），
- *    `git` 只对写型 action 要号（枚举可判，不猜命令字面），拒文成为唯一教学面（`ledger` 不进 `required`）。
+ *    2026-11-03 笔-账绑定批：入口集扩到十二把（写盘七件 + `bash` ∥ `execute` + `manifest` ∥ `memory` + `git`），
+ *    拒文成为唯一教学面（`ledger` 不进 `required`）。
  *    2026-11-03 项目声明面批：**判据点从会话锚换成调用方声明的项目**（决策 40 ∥ 41）——定位参数优先，
  *    `project` 补位；会话锚永不充当判据点（`no project on this call` ∥ `declared project is not a project`）。
  *    2026-11-04 ssh 传输面批：入口集扩到十三把（+ `ssh`——只有 `get` 往本地落盘，按 action 判要号：
  *    `connect` / `send` / `read` / `list` 不写项目内档，不得被本门问到）。
+ *    2026-11-05 `git` 免号批：`git` **整把退出入口集**（十三把 ⇒ 十二把）——提交不落新字节，它记录的
+ *    是已被本门缴过账的内容；同一件活被收两次费，而给提交加门等于让人少提交（把兜底做成了阻力）。
+ *    判据与理由全文 = 设计档 §2.3「`git` 不进写门」（决策 37 改判）。
  *
  * 继承零改面（本档不碰）：token 门资格判据（anyLiveDesignSlot / validateDesignToken）、
  * 代码路径判定（conventions.mjs 单一权威分类——KD-M4-1 保留为代码路径判定用）。
@@ -50,9 +53,6 @@ import { batchDocBases } from "../agent-tools/batch-paths.mjs"
 // 项目根推导 + manifest 读面（写锁判据 · 2026-11-03 笔-账绑定批）：判据按**调用方声明的项目**问该根台账（§2.3）。
 // `MANIFEST_REL` = 「自身即带 manifest」那一支的判据（决策 41 的 (a) 支）。
 import { MANIFEST_REL, readManifest, resolveProjectRoot } from "../manifest.mjs"
-// 动作级只读谓词（`git` 写型 ∥ 只读的判法单源 = 既有 `readonlyActionOf`，决策 37——不新写一套分类）。
-// 钩子优先 ∥ 核名面谓词回落：`git` 的名单落 `tools/git.mjs` 的 `isReadonlyAction`（单源，端覆写同笔删）。
-import { readonlyActionOf } from "./dispatch-gates.mjs"
 // 工具自报触达面单源谓词（写锁的路径集由判据函数自己算——§2.3；与门禁 / 变更记账同一枚谓词）。
 import { toolTouchPaths } from "./helpers.mjs"
 export { normAbs }
@@ -191,14 +191,16 @@ export function batchRecordWriteConflict(agent, depth, absPaths) {
 
 // ─── 写锁（第三道门 · 2026-11-03 笔-账绑定批 · 设计档 §2.3）───────────────────────────
 
-/** 写门入口集（设计档 §2.3）：判据 = 「凡能把字节落到项目内的工具」。十三把 = 写盘七件 +
- *  三把命令工具 + 两把结构化 action 工具（`manifest` ∥ `memory` 按各自的枚举判——决策 39）+ `ssh`
- *  （只有 `get` 落盘，按 action 判）。
+/** 写门入口集（设计档 §2.3）：判据 = 「凡能把字节落到项目内的工具」。十二把 = 写盘七件 +
+ *  两把命令工具（`bash` ∥ `execute`）+ 两把结构化 action 工具（`manifest` ∥ `memory` 按各自的枚举判——
+ *  决策 39）+ `ssh`（只有 `get` 落盘，按 action 判）。
+ *  `git` **不在集内**（2026-11-05 免号批 · 决策 37 改判）：它不落新字节，提交记录的是已被本门缴过账的
+ *  内容——写型与只读型在这里同判，两者都不问。
  *  `settings`（写 `~/.thincoder/config.json`）∥ `browser`（自有 profile 与截图目录）不写项目内档 ⇒ 不进。
  *  `ledger` ∥ `batch` 也不进——挂行与开档不经过写面，「没号就挂不了账」的锁死因此不存在。 */
 const LEDGER_ENTRY_TOOLS = new Set([
   "write", "edit", "insert_after", "apply_patch", "delete", "hashline_edit", "file_ops",
-  "bash", "execute", "git", "manifest", "memory", "ssh",
+  "bash", "execute", "manifest", "memory", "ssh",
 ])
 /** 结构化 action 工具的写型枚举（按值判，不解析内容——决策 37 ∥ 39 同法）。 */
 const MANIFEST_WRITE_ACTIONS = new Set(["init", "write"])
@@ -365,13 +367,10 @@ function underKey(root, child) {
 }
 
 /** 本笔的判据点（设计档 §2.3「判据点怎么来」· 决策 40）：**只有两个来源，都来自调用方**——
- *  ① 该工具自带的定位参数：写盘七件的目标路径（`toolTouchPaths`）· `execute.workdir` · `git.path` ∥ `workdir`
- *  （`path` 相对 `workdir`——`thincoder-core/tools/git.mjs` 的 `resolveBaseDir` 同源；设计档要求「`toolTouchPaths`
- *  再补 `path` ∥ `workdir`」，而 `git` 无 `touchedPaths` 钩子 ⇒ `toolTouchPaths` 的回落形正是 `[args.path]`，
- *  不用它是因为它按会话 cwd 归一，而 `git` 的 `path` 相对 `workdir`）· `manifest.target`；
+ *  ① 该工具自带的定位参数：写盘七件的目标路径（`toolTouchPaths`）· `execute.workdir` · `manifest.target`；
  *  ② 新参数 `project`（项目根绝对路径，纯声明）。**定位参数优先**，`project` 只在定位参数缺位时被读。
  *  **会话锚永不充当判据点**（决策 41）：`bash` ∥ `memory` 没有定位参数，缺 `project` 即拒；
- *  `execute` ∥ `git` ∥ `manifest` 缺定位参数时同样不回落到 cwd。
+ *  `execute` ∥ `manifest` 缺定位参数时同样不回落到 cwd。
  *  三种结果：`{ paths }`（按路径所属项目判）· `{ declared }`（按声明取根）· `{ none: true }`（无判据点 ⇒ 拒）；
  *  写盘工具连路径都没有 ⇒ null（工具自己拒，本门不问）。 */
 function ledgerGateTargets(agent, toolName, tool, args) {
@@ -382,12 +381,6 @@ function ledgerGateTargets(agent, toolName, tool, args) {
   if (toolName === "bash" || toolName === "memory") return onlyDeclared()
   if (toolName === "execute") {
     const wd = asAbs(args?.workdir)
-    return wd ? { paths: [wd] } : onlyDeclared()
-  }
-  if (toolName === "git") {
-    const wd = asAbs(args?.workdir)
-    const p = typeof args?.path === "string" && args.path.trim() ? resolve(wd ?? cwd, args.path) : null
-    if (p) return { paths: wd ? [p, wd] : [p] } // 两个都在 ⇒ 两个项目都要带号（§2.3「一笔写跨两个项目」）
     return wd ? { paths: [wd] } : onlyDeclared()
   }
   if (toolName === "manifest") {
@@ -401,13 +394,13 @@ function ledgerGateTargets(agent, toolName, tool, args) {
 }
 
 /** 本笔是否需要号（工具自己的枚举判写型——不解析命令字面，决策 36 的禁令不碰）：
- *  `git` 只对写型 action 要号（只读名单 = 核钩子，决策 37）；`manifest` 的 `init` ∥ `write` 都要号——
+ *  `manifest` 的 `init` ∥ `write` 都要号——
  *  `init` 的豁免是条件形（决策 43：目标沿祖先链取不到项目根时在取根步跳过本门），不是摘出要号集；
  *  `memory` 只对落 project 层档的写型 action 要号（`layer:"project"` ∥ 单条删除的 `project:` 前缀——
  *  后者不带 `layer` 也能删 project 层档，只看 `layer` 就漏了那条路）；`ssh` 只对 `get` 要号（`put` 写的是
- *  远端主机，其余动作不写项目内档——缺此分支则整个会话面都要号，把会话面整条打死）。 */
+ *  远端主机，其余动作不写项目内档——缺此分支则整个会话面都要号，把会话面整条打死）。
+ *  `git` 没有分支（它不在入口集——写型与只读同为不要号，故无需按 action 分判）。 */
 function ledgerGateApplies(toolName, tool, args) {
-  if (toolName === "git") return !readonlyActionOf(tool, "git", args)
   if (toolName === "manifest") return MANIFEST_WRITE_ACTIONS.has(String(args?.action ?? ""))
   if (toolName === "memory") return memoryTargetsProjectLayer(args)
   if (toolName === "ssh") return String(args?.action ?? "") === "get"
@@ -473,7 +466,7 @@ function ledgerRowRefusal(parsed, at) {
  *
  * @param {Object} agent — 会话 agent（读 `config.agent.engineering` / `cwd`）
  * @param {number} depth — 执行深度（只在 depth 0 生效；子代理走既有 token 门，本门不核它）
- * @param {Object} tool — 工具对象（`toolTouchPaths` 的钩子源 ∥ `readonlyActionOf` 的动作谓词钩子源）
+ * @param {Object} tool — 工具对象（`toolTouchPaths` 的钩子源——写盘七件的目标路径从它取）
  * @param {string} toolName — 工具名（= `toolCall.name`；决定入口集与各工具的判法）
  * @param {Object} args — 本次调用入参（判据点、`args.project` ∥ `args.ledger` 都由本函数自己取）
  * @returns {Promise<{target: string, message: string}|null>} 命中 = 拒文 + 首个被拒目标；否则 null

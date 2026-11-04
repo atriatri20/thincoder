@@ -60,7 +60,7 @@
 
 **判据点 = 调用方声明的项目，不从会话锚推**（用户 2026-11-03 02:58 裁「调用时要同时提供项目和台帐号」）。声明面复用各工具既有的定位参数，只有 `bash` ∥ `memory` 没有定位参数、各补一个 `project`（逐工具对照见下节）。
 
-**入口集** = `FILE_MUTATORS` 六件 + `file_ops` + `bash` + `execute` + `git` + `manifest` + `memory`（共十二把；问法分别见「`bash` ∥ `execute` 怎么问」·「`git` 怎么问」·「`manifest` ∥ `memory` 怎么问」；`settings` ∥ `browser` 不写项目内档，逐项答案见末节扫描表）。
+**入口集** = `FILE_MUTATORS` 六件 + `file_ops` + `bash` + `execute` + `manifest` + `memory` + `ssh`（共十二把；问法分别见「`bash` ∥ `execute` 怎么问」·「`manifest` ∥ `memory` 怎么问」；`ssh` 的 `get` 支归 `docs/core/design/TOOLS.md`，本档不复试；`git` 整把不在集内——见本节「`git` 不进写门」；`settings` ∥ `browser` 不写项目内档，逐项答案见末节扫描表）。
 
 **位次不变**：跨批档写 → D5 冻结窗 → 本锁；本锁**替换**原「有在途行即放行」判据，不是并列加一道。
 
@@ -84,14 +84,9 @@
 | `bash` ∥ `execute` · 缺号 / 号非在途 | 拒（同上四情形），命令零执行 |
 | `bash` ∥ `memory` · 缺 `project` | 拒 —— `no project on this call` |
 | 声明路径上溯无 `PROJECT-MANIFEST.json` | 拒 —— `declared project is not a project (no PROJECT-MANIFEST.json at this path or within the session anchor): "<path>"` |
-| `git` · 写型 action（`commit` / `push` / `rm` / `checkout` / `reset` / …）· 号在途 | 放行 |
-| `git` · 写型 action · 缺号 / 号非行号形 / 号不在盘 / 号非在途 | 拒（同上四情形），仓库零动 |
-| `git` · 只读 action（六项平铺：`diff` / `status` / `log` / `show` / `ls-remote` / `blame`） | 放行，不要号 |
-| `git` · 子动作分支判只读（`checkpoint` 的 `list` ∥ `cat`；`tag` / `branch` / `stash` / `remote` / `worktree` 各自 `list`） | 放行，不要号——六条分支与六项平铺一起按端装饰体逐条抄齐（见「`git` 怎么问」） |
-| `git` · 子动作分支判写型（`checkpoint` 的 `create` / `rewind` / `versions`；`tag` / `branch` / `stash` / `remote` / `worktree` 的 `create` / `delete` / `switch` / `push` / `pop` / `add` / `remove` …） | 要号，同四情形 |
-| `git` · 带 `path` ∥ `workdir` · 目标所属项目台账里没有这个在途号 | 拒 —— 号要看在**目标项目**的账上，不是会话的账上 |
+| `git` · 任意 action（写型与只读型同判） | 本门不问（不在入口集）——`git` 不落新字节，提交记录的是已被本门缴过账的内容（见「`git` 不进写门」） |
 | 声明路径不是项目（上溯无 manifest，如容器根 `D:\teamcode`） | 拒 —— `declared project is not a project (no PROJECT-MANIFEST.json at this path or within the session anchor): "<path>"` |
-| 未声明项目（`bash` ∥ `memory` 缺 `project`；`execute` ∥ `git` ∥ `manifest` 既无定位参数又无 `project`——不回落到会话 cwd） | 拒 —— `no project on this call` |
+| 未声明项目（`bash` ∥ `memory` 缺 `project`；`execute` ∥ `manifest` 既无定位参数又无 `project`——不回落到会话 cwd） | 拒 —— `no project on this call` |
 | 声明项目在、该号不在它账上（号属另一个项目） | 拒 —— `row #N does not exist in this project's ledger`；不换项目再找 |
 | 一笔写跨两个项目 | 同一号要在两个项目的台账里各查到才放行；任一查不到 ⇒ 整笔拒、字节零动 |
 | 台账读不到（库不可开 / 根推得出而 manifest 不可用） | 拒 —— `<case>` = `no ledger can be read for this project`，另起 `(ledger unreadable — <原错>)` 行 |
@@ -106,11 +101,10 @@
 | `bash` | 只有 `project`——**纯声明，不改进程工作目录**（命令仍在会话 cwd 执行） | 拒（`no project on this call`） |
 | `memory` | 只有 `project`（只在该笔落 project 层时要） | 落 project 层而不给 ⇒ 拒（`no project on this call`）；`personal` ∥ `team` 不判 |
 | `execute` | 定位参数 `workdir`（既有；真改子进程工作目录）优先；缺位时读 `project` | 两者都无 ⇒ 拒（`no project on this call`），不回落到会话 cwd |
-| `git` | 定位参数 `path` ∥ `workdir`（既有）优先；都缺时读 `project` | 两者都无 ⇒ 拒（同上），不回落到会话 cwd |
 | `manifest` | 定位参数 `target`（既有）优先；缺位时读 `project` | 两者都无 ⇒ 拒（同上），不回落到会话 cwd；`action:"init"` 的豁免 = 条件形（决策 43） |
 
-- **判据点只有两个来源，都来自调用方**：① 该工具自带的定位参数（它本就说着「这一笔落在哪儿」）；② `project`（项目根绝对路径）。**会话锚不是来源**——它只用于解析相对路径与判相关性；`execute` ∥ `git` ∥ `manifest` 缺定位参数时同样不许回落到 cwd（决策 41）。
-- **定位参数优先于 `project`**：两者同时在时以定位参数为准（它决定字节落在哪），`project` 只补位；`project` 在这五把上一律是纯声明，不改执行目录（`execute` ∥ `git` 的 `workdir` 才是改执行目录的那个）。
+- **判据点只有两个来源，都来自调用方**：① 该工具自带的定位参数（它本就说着「这一笔落在哪儿」）；② `project`（项目根绝对路径）。**会话锚不是来源**——它只用于解析相对路径与判相关性；`execute` ∥ `manifest` 缺定位参数时同样不许回落到 cwd（决策 41）。
+- **定位参数优先于 `project`**：两者同时在时以定位参数为准（它决定字节落在哪），`project` 只补位；`project` 在这四把上一律是纯声明，不改执行目录（`execute` 的 `workdir` 才是改执行目录的那个）。
 - **名字只为被读的地方存在**：写盘七件的目标路径恒在，`project` 在它们身上永不被读 ⇒ 不加（决策 40）。
 
 - **声明的形态**：项目 = **项目根绝对路径**（带 `PROJECT-MANIFEST.json` 的那个目录）——台账按项目根算键（`thincoder-core/ledger-db.mjs` 逐字 `sha1(normalizeCwd(root))[:16]`），所以「传项目」就是把根传进来，不做名字映射、不另立概念。相对路径按会话 cwd 解析。
@@ -118,27 +112,34 @@
 - **两个分支的落法（实施席照此写）**：(b) 支 = 既有单源 `resolveLedgerRoot(声明, agent.cwd)`（起点在锚之内 ⇒ 沿祖先链上溯到最近带 manifest 的目录）；(a) 支 = 声明路径**自身即带 manifest**，且 `agent.cwd` 在它之下 ⇒ 根 = 声明路径（`basis = self`，不上溯）。两条都取不到 ⇒ `declared project is not a project`，无一放行。
   为什么 (a) 支要门自己判一次：`resolveLedgerRoot` 的上溯界就是会话锚，起点落在界之上时它取不到根——而「会话 cwd 在项目子目录」正是项目指南记录的启动形（`cd thincoder/thincoder-cli && node bin/thincoder.cjs`），不认这一支，那种会话里 `bash` ∥ `memory` 声明根也被拒、声明子目录也被拒＝无解。
 - **`bash` 的 `project` 不改执行目录**：该工具没有 cwd 参数，本批也不给它加 shell `cd` 语义。它是**声明即承诺**——命令内容不解析（决策 36），门只问「这笔替哪个项目的那条账服务」。想在别的目录里跑，仍用命令自己的路径（`bash -c "cd … && …"`），那一笔照样要写声明。
-- **`execute` ∥ `git` ∥ `manifest` 的 `project` 只在定位参数缺位时被读**：`workdir` ∥ `target` 本就说着「写哪儿」，有它们时 `project` 不参与判定；没有时它是唯一来源（决策 40）。写盘七件不加——目标路径恒在。
+- **`execute` ∥ `manifest` 的 `project` 只在定位参数缺位时被读**：`workdir` ∥ `target` 本就说着「写哪儿」，有它们时 `project` 不参与判定；没有时它是唯一来源（决策 40）。写盘七件不加——目标路径恒在。
 
 - **`manifest` 的 `init` 豁免开在取根步（决策 43）**：`manifest({action:"init"})` ∧ 目标沿祖先链取不到项目根 ⇒ 不进本门（无账可问）；目标沿祖先链取得到根（含既有项目内的子目录自举）⇒ 本门照判（要项目、要号），目标自身已有 manifest 时门过后由工具自身拒（`init never overwrites`）；`write` 仍照判（要项目、要号）。
   为什么：`init` 的合法落点恰是「尚无 manifest 的目录」，而判据点要那个项目的账——那个项目还不存在 ⇒ 不豁免则工程模式父侧永远建不出新项目；而走不通的机制迟早被整条废掉。豁免开在取根步而非把 `init` 摘出要号集：既有项目内的子目录自举取得到根，那一笔落在既有项目内、账就在那个项目上，无条件豁免会让它逃门。边界 = 只覆盖 `init` 一个 action，且它只写 `PROJECT-MANIFEST.json` 一个文件。
 
-**`git` 怎么问（决策 37）**
+**`git` 不进写门（决策 37 改判）**
 
-`git` 的写面是**声明式 action**（`args.action` 的枚举值），不是 shell 字符串 —— 所以它与 `bash` ∥ `execute` 不冲突：用户 02:03 禁的是按命令字面猜（`grep -q 'rm '` 那类），而 `git` 的分类读的是一个枚举值，零猜测。
+`git` **整把不在入口集**：写型 action 不要号、`path` ∥ `workdir` 不参与取根、`project` 不读（该参数随 `ledger` 一并从 schema 删掉——名字只为被读的地方存在，决策 40）。口径 = 用户 2026-11-05 03:56「git那个按照a处理吧」。
 
-- **只对写型 action 要号**，只读型不要号、门不问。
-- **判法 = 既有谓词 `readonlyActionOf(tool, "git", args)`**（`thincoder-core/agent/dispatch-gates.mjs:133` 逐字 `return tool?.isReadonlyAction?.(args) ?? isReadonlyAction(toolName, args)`），不新写一套分类。
-- **分类单源落核 = 端装饰体逐条抄齐**（`thincoder-vscode/src/tools/index.mjs:52`–`:60`，2026-11-03 实读；核 `thincoder-core/tools/git.mjs` 今日只有 `:92` 的 `readonly: false`、无 `isReadonlyAction`）：
+- **理由三条**（按分量）：① **同一件活被收两次费**——提交不落新字节，它记录的是已被本门缴过账的内容；归属由提交信息 ∥ 批档 `§6` ∥ 台账 `evidence` 三处持，提交再报一次不产生新的可查性。② **与安全哲学相反**——本仓的真防线是「工作随时已提交」（快照 ∥ 提交是兜底，不是审批）；给提交加门等于让人少提交，把兜底做成了阻力。③ **实机证据**——台账 `#2049` 一落 `已核销`，`git add` 即被拒（`only a 在途 row carries writes`），只能重开批档 + 新开 `#2056`；`#2056` 不记任何债，只记「这次提交」——一行由门造出来的账。
+- **`isReadonlyAction` 钩子保留**（`thincoder-core/tools/git.mjs:108` 逐字 `isReadonlyAction(args) {`）：它是**审批面**的判据，两个消费面 = planMode 放行（`thincoder-core/agent/dispatch.mjs:63` 逐字 `if (agent.planMode && !tool.readonly && !readonlyActionOf(tool, toolCall.name, args) && !controlActionOf(tool, toolCall.name, args)) {`）∥ 免审批短路（同档 `:185` 逐字 `if (tool.readonly || readonlyActionOf(tool, toolCall.name, args) || controlActionOf(tool, toolCall.name, args) || ...`）。名单本体（六项平铺 + 六条子动作分支）与其 `CHECKPOINT.md` F6/D3 口径注零改——**写门不再读它，不等于把它删掉**。
+- **`bash` 跑 `git status` 仍要号**（决策 36 零改）：`bash` 的命令字面无法静态分类，与 `git` 的枚举可判是两件事——本批不因 `git` 免号而放宽 `bash` ∥ `execute`。
+- **不新造替代门槛**：不加「提交必须带提交信息」之类的写门替代物，也不因 `git` 免号给别的工具加限制——那是交换条件，不是收回一笔重复计费。
+- **提交信息仍要写清这一笔属哪批**：免号免的是门的判定，不是归因——提交信息写「这批是什么」（批名 + 做了什么），归属才追得回来。这条靠纪律与交付记录持，不加机械门：门判得出「有号无号」，判不出「写清了没有」，硬加一道文本匹配只是假门，匹配不上也驳不回那笔提交，只教人绕开它。
+
+**只读名单本体（`isReadonlyAction` 钩子 · 审批面单源）**
+
+- **判法 = 既有谓词 `readonlyActionOf(tool, name, args)`**（`thincoder-core/agent/dispatch-gates.mjs:133` 逐字 `return tool?.isReadonlyAction?.(args) ?? isReadonlyAction(toolName, args)`）——核钩子优先、核名面谓词回落，不新写一套分类。
+- **分类单源落核**（`thincoder-core/tools/git.mjs:108`；端 `thincoder-vscode/src/tools/index.mjs` 的覆写已删，`...coreGitTool` 展开保留）：
   - 六项平铺 ⇒ 只读：`["diff", "status", "log", "show", "ls-remote", "blame"]`；
   - `checkpoint` ⇒ 只读集 = `["list", "cat"]`（该档 `:53`–`:55`，逐字 `if (args.action === "checkpoint") return ["list", "cat"].includes(args.checkpointAction)`；`:54` 的注逐字「但清的是 commit 后已失去意义的过期快照——保留只读分类免审批（CHECKPOINT.md F6/D3 设计意图）」）；
   - `tag` / `branch` / `stash` / `remote` / `worktree` ⇒ 各以 `*Action === "list"` 判只读（`:56`–`:60` 五行逐字同形），其余值判写型；
   - 其余 action ⇒ 写型（该档 `:61` 注逐字 `// add/rm/commit/push/fetch/pull/reset/revert/merge/cherry-pick/checkout/restore + tag/branch/stash 写操作`）。
-- **取「抄齐」，不取「明示偏离」**：偏离会让核钩子与端装饰体答案相反，而端装饰体同时是权限短路 ∥ planMode 的判据（`thincoder-core/tools/git.mjs` 旁 `dispatch.mjs` 两处经 `tool.isReadonlyAction` 判），改它 = 改审批行为并推翻 `CHECKPOINT.md` F6/D3 的既有裁定，须用户另裁；本门的题目是「这笔写替哪条账服务」，不是重划只读面。
+- **取「抄齐」，不取「明示偏离」**：偏离会让核钩子与端答案相反，而它们同时是权限短路 ∥ planMode 的判据（`dispatch.mjs` 两处经 `tool.isReadonlyAction` 判），改它 = 改审批行为并推翻 `CHECKPOINT.md` F6/D3 的既有裁定，须用户另裁。
 - **端装饰体随核钩子落地一并删**：`thincoder-vscode/src/tools/index.mjs` 里那个 `isReadonlyAction` 覆写删掉、`...coreGitTool` 展开保留（`CHECKPOINT.md` F6/D3 的口径注随名单搬进核钩子，语义不改）。理由：核有钩子后，端覆写是同一份名单的第二份拷贝，而 `tool?.isReadonlyAction?.(args) ?? …` 的优先级让端覆写吃掉核答案 ⇒ 两份必然漂移；删后 CLI ∥ desktop ∥ vscode 三面同答案，单源 = 核钩子。
-- **缺钩子的面**回落核名面谓词得 `false` ⇒ 写型 ⇒ 要号，fail-closed，不出洞。
-- **同一条命令经两把工具答案不同，这是有意的**：`bash` 跑 `git status` 要号（命令字面无法静态分类，决策 36），`git({action:"status"})` 不要号（枚举可判，决策 37）。不是不一致，是两把工具的证据面不同——下一轮不要来「统一」它们。
-- **根取法**：`git` 的路径集 = `toolTouchPaths(tool, args)` 再补 `args.path` ∥ `args.workdir` —— `workdir` 是「在这个子目录里跑」（`thincoder-core/tools/git.mjs:96` 逐字 `if (args.workdir) ctx = { ...ctx, cwd: resolveBaseDir(ctx.cwd, args.workdir) }`）；两者都不带 ⇒ 拒（`no project on this call`），不回落到会话 cwd（决策 41）。若 `toolTouchPaths` 已覆盖 `path`，不重复计入（实施轮实读定，判据 = 一笔 `git commit` 带 `workdir` 判在 `workdir` 所属项目的根上）。
+- **缺钩子的面**回落核名面谓词（审批面默认判写型 ⇒ 要审批），fail-closed，不出洞。
+- **同一条命令经两把工具答案不同，这是有意的**：`bash` 跑 `git status` 要号（命令字面无法静态分类，决策 36），`git({action:"status"})` 不要号（不在入口集）。不是不一致，是两把工具的证据面不同——下一轮不要来「统一」它们。
+- **`git` 的根取法整条退场**：它不再有判据点——`path` ∥ `workdir` 仍是该工具自己的执行目录语义（`thincoder-core/tools/git.mjs` 逐字 `if (args.workdir) ctx = { ...ctx, cwd: resolveBaseDir(ctx.cwd, args.workdir) }`），与写门无关。
 
 **`manifest` ∥ `memory` 怎么问（入口集扫描域的两处补入）**
 
@@ -191,11 +192,11 @@
 
 - **只在工程模式生效**：开关 = `agent.config?.agent?.engineering`（与设计门同一枚）。普通模式按 `docs/core/requirements/NORMAL-MODE.md` 的「纪律自持」不动——挂成两模式通用 = 改普通模式的产品行为，没人裁过（决策 18）。
 
-**工具 schema 面**：`bash` ∥ `memory` ∥ `execute` ∥ `git` ∥ `manifest` 的 `parameters.properties` 各加 `project`（`type: "string"`，描述 = `PROJECT_PARAM_DESC`）；写盘七件不加（目标路径恒在）；`ledger` 面十二把不动。
+**工具 schema 面**：`bash` ∥ `memory` ∥ `execute` ∥ `manifest` 的 `parameters.properties` 有 `project`（`type: "string"`，描述 = `PROJECT_PARAM_DESC`）；写盘七件不加（目标路径恒在）；`ledger` 面十二把各一格（入口集十二把逐一，含 `ssh`）——`git` 的 `ledger` ∥ `project` 两格随本批删（不在入口集 ⇒ 两格永不被读）。
 
-- `project` 描述单源 = `thincoder-core/tools/shared.mjs` 的 `PROJECT_PARAM_DESC`，逐字：「本笔调用服务的项目根——带 `PROJECT-MANIFEST.json` 的那个目录（绝对路径，或相对会话 cwd）；工程模式下父侧 `bash` ∥ `memory` 必带，`execute` ∥ `git` ∥ `manifest` 在定位参数缺位时必带。纯声明：不改执行目录（`bash` 仍在会话 cwd 执行，`workdir` 才是改执行目录的那个）。」
+- `project` 描述单源 = `thincoder-core/tools/shared.mjs` 的 `PROJECT_PARAM_DESC`；本批把 `git` 从该句摘出，目标逐字：「本笔调用服务的项目根——带 `PROJECT-MANIFEST.json` 的那个目录（绝对路径，或相对会话 cwd）；工程模式下父侧 `bash` ∥ `memory` 必带，`execute` ∥ `manifest` 在定位参数缺位时必带。纯声明：不改执行目录（`bash` 仍在会话 cwd 执行，`workdir` 才是改执行目录的那个）。」（单源档一处改，零手写副本）
 - `project` ∥ `ledger` 都**不进 `required`**（决策 35 同款理由：静态 `required` 会让普通模式与子代理读到一条没人核的要求）；机械强制在门。
-- 写盘七件沿用目标路径、不加字段（决策 40）；`execute` ∥ `git` ∥ `manifest` 先认各自定位参数（`workdir` ∥ `path` ∥ `target`），缺位时读 `project`，两者都无 ⇒ 拒。
+- 写盘七件沿用目标路径、不加字段（决策 40）；`execute` ∥ `manifest` 先认各自定位参数（`workdir` ∥ `target`），缺位时读 `project`，两者都无 ⇒ 拒。
 
 - **代价 = 拒文是唯一教学面（决策 38）**：不传号 ⇒ 撞拒 ⇒ 读拒文才知道要传。所以拒文不是「顺手加的好东西」，它与 schema 同属判据面，必须写全三件：缺什么（`<case>`）、要带什么（`Pass ledger:"#N"`）、当下有哪些号可带（`In-flight rows in this project's ledger right now: …`），无在途行时给挂号两步。删掉这一段，工具面就没有任何地方告诉模型「有这个参数、该带什么」。
 
@@ -217,7 +218,7 @@ write refused — ledger row not bound: <case>. Pass project:<the project root t
 | 号在盘 · status ≠ `在途` | `row #<N> is "<status>" — only a 在途 row carries writes` |
 | 未声明项目 | `no project on this call` |
 | 声明路径上溯无 manifest | `declared project is not a project (no PROJECT-MANIFEST.json at this path or within the session anchor): "<path>"` |
-| 定位参数形式下某个目标不在任何项目里（逐目标各自沿祖先链取根：写盘七件的目标路径 ∥ `execute.workdir` ∥ `git.path` ∥ `git.workdir` ∥ `manifest.target`） | `declared project is not a project (no PROJECT-MANIFEST.json at this path or within the session anchor): "<path>"`（清单单位 = `unknown — no project owns this write's target`） |
+| 定位参数形式下某个目标不在任何项目里（逐目标各自沿祖先链取根：写盘七件的目标路径 ∥ `execute.workdir` ∥ `manifest.target`） | `declared project is not a project (no PROJECT-MANIFEST.json at this path or within the session anchor): "<path>"`（清单单位 = `unknown — no project owns this write's target`） |
 | 台账读不到（不属上述情形：号对不对都判不了） | `no ledger can be read for this project` |
 
 **各支拒文的出处（决策 6b：每支要么有实机出处，要么并支）**
@@ -226,7 +227,7 @@ write refused — ledger row not bound: <case>. Pass project:<the project root t
 |---|---|
 | 缺号 | 实机：2026-11-03 02:01 父侧 VSC 端那笔 `write` 不含任何台账号（批档 §1 现象条），正是本门今天拦不住的那一笔 |
 | 非行号形 | 实机形 = 照抄档头：批档档头逐字 `> 台账 = #2016（core · 归批）`，整行照抄即非纯数字。既有同形在 `thincoder-core/ledger-write-ops.mjs:304` 逐字 `id = Number(ledgerNo)` ⇒ 非数字成 `NaN`、行查不到，报错指向不了人；本门把它提前成一句点名的拒文 |
-| 号不在盘 | 实机形 = 跨项目引用：台账按项目根隔离（同一夹具档 `test/integration/batch-live-batch-lock.test.mjs` 用 `ledgerKey(root)` 建库位），A 项目的号在 B 项目的账上查不到；同一场景 = 臂⑬ 的 `git workdir` |
+| 号不在盘 | 实机形 = 跨项目引用：台账按项目根隔离（同一夹具档 `test/integration/batch-live-batch-lock.test.mjs` 用 `ledgerKey(root)` 建库位），A 项目的号在 B 项目的账上查不到；同一场景 = 本档判据表「一笔写跨两个项目」那一行（A 项目的号写 B 项目目标 ⇒ 整笔拒） |
 | 号非在途 | 实机：档头 `> 台账 = #N` 那行不随行状态变——收口后该行落 `待核销`、勾销后落 `已核销`（六态见 `docs/core/design/LEDGER.md`），照抄档头的旧号即撞此支；`<status>` 点名是该支的全部价值 |
 | 未声明项目 | 实机：2026-11-03 02:53 重启后 `bash` 不带 `ledger` 照放行——会话锚 = `D:\teamcode`（容器根，祖先链无 manifest）⇒ 旧判据「推不出 ⇒ 门不管」。新形下同一笔落 `no project on this call` |
 | 声明路径不是项目 | 实机形 = 把容器根 `D:\teamcode` 当项目传进来（两个项目在它下面，它自己不是项目）：界内上溯无 manifest ⇒ 拒并点名该路径——「不是项目」与「不是这个项目」是两种拒，不是两种放行 |
@@ -948,21 +949,41 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 
 ## 3. 受影响文件
 
-**档位结论**：`thincoder-core/agent-tools/batch-skeleton.mjs` 现盘已越软线（508 行；拆单见下表第二行）· `thincoder-core/agent/write-gate.mjs` 改后越线（510 行；本批不拆，切法见该行）· `thincoder-core/tools/shared.mjs` 本批改动后仍在软线内（496 行，余 4 行，触线即拆）——其余各档在软线内。
+**档位结论（本批 · 2026-11-05 实量）**：
+
+- `thincoder-core/agent/write-gate.mjs` = **522 行**——在 500 软线之上、650 拆分触发线之下；本批在其上是**净负行**（删 `git` 分支 ∥ 取根支与一个 import `readonlyActionOf`），拆分义务已有承接批在册 ⇒ **不新增**，切法见下表该行。
+- `thincoder-core/agent-tools/batch-skeleton.mjs` = 508 行（2026-11-03 该轮读数）——越软线，拆单见下表第二行。
+- `thincoder-core/tools/shared.mjs` = **497 行**——余 3，触 500 即拆。
+- 其余各档在软线内。
+
+**本批 2026-11-05 实量**（量法 = `readFileSync(p,'utf8').split(/\r?\n/).length`，末行空行计入）：
+
+- `thincoder-core/agent/write-gate.mjs` = **522**
+- `thincoder-core/tools/git.mjs` = **429**
+- `test/integration/batch-live-batch-lock.test.mjs` = **415**
+- `thincoder-core/tools/shared.mjs` = **497**
+
+表内行数凡标日期的按该日期取，未标的是 2026-11-03 该轮读数。
+
+- **`write-gate.mjs` = 522 ⇒ 已过 500 软线**：在软线之上、650 拆分触发线之下；本批在其上净负，拆分义务另有承接批在册 ⇒ 本批不新增拆分义务。
+- **`git.mjs` = 429**、`shared.mjs` = 497 ⇒ 两档软线内；本批各为净负（删两格 + 两个 import ∥ 删一条常量导出、改一句描述）。
+- **`test/integration/batch-live-batch-lock.test.mjs` = 415**：测试档不进档位判定（软线判源档），该读数只为「本批改动是净负一格」留证。
+- **本批单测档 `docs/batches/2026-11-05-git-exempt-write-gate.test.mjs` 设计时刻未落盘 ⇒ 不进档位判定**（随批删，见 `docs/core/design/TESTING.md` 的零留存口径）。
+- **不拿估数代替复量**：量法与结果必须同处，读数才可复现；行数按上列量法当场复量一次，不引用记忆里的旧值。
 
 `thincoder-core/agent-tools/batch-lifecycle.mjs` 已拆，现盘 368 行、软线内（拆出的三档在盘：`batch-ledger-bind.mjs` ∥ `batch-closeout.mjs` ∥ `batch-reopen.mjs`）。
 
-**`thincoder-core/agent/write-gate.mjs` 已越 500 行软线**（改后实测 510 行）。本批判据点改动不是净负，原「净负 ⇒ 不拆」的前提不成立 ⇒ **本批不拆**（父侧 2026-11-03 04:37 裁：本批目标是判据点换面，拆单是另一件事；实施已交付并全绿，插入拆分会把一批两件事混在一起），切法与结论见下表该行。
+**`thincoder-core/agent/write-gate.mjs` 已越 500 行软线**（本批实量 522 行；2026-11-03 该轮读数 510）。本批在其上是**净负**（删 `git` 分支 ∥ 取根支 ∥ 一个 import `readonlyActionOf`），而净负回不到线下（522 > 500）⇒ 拆单义务不因本批产生，且已有承接批在册 ⇒ **本批不拆**，切法与结论见下表该行。
 
-本批涉及的各档行数（2026-11-03 实读；方法 = 逐档按行切分计数、含空行，等价 `wc -l`。旧表用的 `Get-Content | Measure-Object -Line` 跳空行，旧读数因此系统性偏低）：
+本批涉及的各档行数（各行自标日期；未标 = 2026-11-03 该轮读数。量法 = `readFileSync(p,'utf8').split(/\r?\n/).length`，末行空行计入。`Get-Content | Measure-Object -Line` 跳空行、`Get-Content .Count` 与本量法仍不等——两者都复现不了本表）：
 
 | 档 | 行数 | 档位结论 |
 |---|---|---|
-| `thincoder-core/tools/shared.mjs` | 496 | 软线内（余 4）；本批加 `PROJECT_PARAM_DESC` 一条常量 + 导出。触线判据 = 实施后 >500 则把参数描述常量（`LEDGER_PARAM_DESC` 及其 `_GIT` ∥ `_MANIFEST` ∥ `_MEMORY` 后缀 + `PROJECT_PARAM_DESC`）整体迁到新档 `thincoder-core/tools/param-desc.mjs`，`shared.mjs` 改再导出（描述仍单源、消费面零改） |
+| `thincoder-core/tools/shared.mjs` | **497**（2026-11-05 实量） | 软线内（余 3）；**2026-11-03 那笔**加 `PROJECT_PARAM_DESC` 一条常量 + 导出，**本批 2026-11-05** 是净负（删 `LEDGER_PARAM_DESC_GIT` 那条导出、`PROJECT_PARAM_DESC` 句内摘掉 `git`）。触线判据 = 实施后 >500 则把参数描述常量（`LEDGER_PARAM_DESC` 及其 `_GIT` ∥ `_MANIFEST` ∥ `_MEMORY` 后缀 + `PROJECT_PARAM_DESC`）整体迁到新档 `thincoder-core/tools/param-desc.mjs`，`shared.mjs` 改再导出（描述仍单源、消费面零改） |
 | `thincoder-core/agent-tools/batch-skeleton.mjs` | 508 | **已越软线**；本批改动是删行（净负），净负回不到线下 ⇒ **拆单**：把裁定行锚与两条计划（`ROUND_HEADING_RE` ∥ `countRoundBlocks` ∥ `lastRoundBlock` ∥ `nextRoundNumber` ∥ `_V_PRE` ∥ `_V_SUF` ∥ `VERDICT_CHANGES_LINE` ∥ `VERDICT_PASS_LINE` ∥ `verdictGapOf` ∥ `statusResetPlan` ∥ `statusPassPlan`）整体迁到新档 `thincoder-core/agent-tools/batch-verdict.mjs`，`batch-skeleton.mjs` 改再导出；判据 = 拆后 ≤500 ∧ 十一件导出名逐条仍在、导出面零变 |
 | `thincoder-core/tools/file.mjs` | 453 | 软线内（余 47）；本批只加 `ledger` 一个参数 ⇒ 不拆 |
-| `thincoder-core/tools/git.mjs` | 428 | 软线内；本批加 `ledger` + `project` + 只读钩子 ⇒ 不拆 |
-| `thincoder-core/agent/write-gate.mjs` | 510 | **已越软线**（改动前 413）：删放行臂与 `faceDetail` import 是净负的，但新增 `resolveDeclaredRoot` ∥ `ledgerGateTargets` 三态 ∥ `ledgerRowRefusal` ∥ `ledgerNoProjectRefusal` 与三句清单单位把这行数加上去了 —— 净效果是净增。**本批不拆**（父侧 2026-11-03 04:37 裁：一条目标换面不混拆单）；切法 = 写锁段（`ledgerRowAt` ∥ 拒文组装 ∥ `resolveDeclaredRoot` ∥ `ledgerGateTargets`）整体搬进新档 `thincoder-core/agent/write-gate-ledger.mjs`，`write-gate.mjs` 改 re-export（`ledgerBindWriteConflict` 导出名与调用面零变）；拆单归另一批 |
+| `thincoder-core/tools/git.mjs` | **429**（2026-11-05 实量，量法见上） | 软线内（余 71）；本批净负——删 `ledger` ∥ `project` 两格 + 清两个 import（`LEDGER_PARAM_DESC_GIT` ∥ `PROJECT_PARAM_DESC`）；`readonlyActionOf` 不在本档（它是 `write-gate.mjs` 的 import，该档随本批删这一个）；`isReadonlyAction` 钩子零改 ⇒ 不拆 |
+| `thincoder-core/agent/write-gate.mjs` | **522**（2026-11-05 实量；2026-11-03 该轮 510） | **已越 500 软线、未到 650 拆分触发线**：本批在其上是净负（删 `git` 分支 ∥ 取根支 ∥ 一个 import `readonlyActionOf`），净负回不到线下 ⇒ 拆分义务不因本批新增（承接批已在册）。**本批不拆**；切法 = 写锁段（`ledgerRowAt` ∥ 拒文组装 ∥ `resolveDeclaredRoot` ∥ `ledgerGateTargets`）整体搬进新档 `thincoder-core/agent/write-gate-ledger.mjs`，`write-gate.mjs` 改 re-export（`ledgerBindWriteConflict` 导出名与调用面零变）；拆单归另一批 |
 | `thincoder-core/tools/ops.mjs` | 347 | 软线内（`ledger` 一行） |
 | `thincoder-vscode/src/tools/shell.mjs` | 334 | 软线内（端 schema 副本补 `ledger` ∥ `project` 两行） |
 | `thincoder-core/tools/patch.mjs` | 307 | 软线内（`ledger` 一行） |
@@ -985,15 +1006,15 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 | `thincoder-core/tools/search.mjs` | 改造 | 三处 `IGNORED_DIRS` → `SKIP_DIRS`（改名） |
 | `thincoder-core/tools/tree.mjs` | 改造 | 删本地 `SKIP_DIRS`、改引单源 |
 | `thincoder-core/agent/live-batch.mjs` | **删档** | 判据改读台账在途行（`§2.3`）后 `liveBatchOpen` 零消费面 ⇒ 整档删（不留空壳、不留备用导出）；台账判据入住 `agent/write-gate.mjs` 的模块内函数 `ledgerRowAt`（不导出） |
-| `thincoder-core/agent/write-gate.mjs` | 改造 | 写锁 = `ledgerBindWriteConflict`（判据 = 本笔报的 `#N` 是目标项目台账里的 `在途` 行）+ 模块内判据函数 `ledgerRowAt`（项目根推导 ∥ `ledgerQuery({cwd, boundary})` 取行集 ∥ 按 `id` 找行判 `status`；`ledger` 动态 import——W8 契约②，不导出）+ 四情形拒文；`faceDetail` import 删除（面在判据里退场）；导出名与模块内判据函数旧名 `ledgerOpenWriteConflict` ∥ `ledgerOpenAt` 一并换掉；入口集补 `bash` ∥ `execute` ∥ `git` ∥ `manifest` ∥ `memory`（`bash` 只认 `project` 声明——无定位参数，缺则拒（`no project on this call`）；`git` 按 `path` ∥ `workdir` 推根、`execute` 按 `workdir` 推根，缺位时读 `project`，仍无则同拒——不回落会话 cwd（决策 41）；`git` 的只读 action 按核钩子判；`manifest` 按 `action`、`memory` 按 `layer` ∥ `project:` id 前缀判；拒文清单上限 10 条 + 读不到那支的 `<case>`） |
-| `thincoder-core/agent/dispatch.mjs` | 改造 | Phase 1 写面冲突块：`bash` ∥ `execute` ∥ `git` 也进（写锁那一道的门内），调形传 `tool` + `toolName` + `args`（路径集与 `args.ledger` 由判据函数自己取）；`reason` 改 `ledger binding`（旧串 `no in-flight ledger row` 退场）；既有两道（跨批档写 · D5 冻结窗）位次与判据零改 |
+| `thincoder-core/agent/write-gate.mjs` | 改造 | 写锁 = `ledgerBindWriteConflict`（判据 = 本笔报的 `#N` 是目标项目台账里的 `在途` 行）+ 模块内判据函数 `ledgerRowAt`（项目根推导 ∥ `ledgerQuery({cwd, boundary})` 取行集 ∥ 按 `id` 找行判 `status`；`ledger` 动态 import——W8 契约②，不导出）+ 四情形拒文；`faceDetail` import 删除（面在判据里退场）；导出名与模块内判据函数旧名 `ledgerOpenWriteConflict` ∥ `ledgerOpenAt` 一并换掉；入口集补 `bash` ∥ `execute` ∥ `manifest` ∥ `memory`（`bash` 只认 `project` 声明——无定位参数，缺则拒（`no project on this call`）；`execute` 按 `workdir` 推根，缺位时读 `project`，仍无则同拒——不回落会话 cwd（决策 41）；`manifest` 按 `action`、`memory` 按 `layer` ∥ `project:` id 前缀判；拒文清单上限 10 条 + 读不到那支的 `<case>`） |
+| `thincoder-core/agent/dispatch.mjs` | 改造 | Phase 1 写面冲突块：`bash` ∥ `execute` 也进（写锁那一道的门内），调形传 `tool` + `toolName` + `args`（路径集与 `args.ledger` 由判据函数自己取）；`reason` 改 `ledger binding`（旧串 `no in-flight ledger row` 退场）；既有两道（跨批档写 · D5 冻结窗）位次与判据零改 |
 | `thincoder-core/agent/dispatch-run.mjs` | 改造 | 拒因串消费点：`denied` 分支按 `item.reason` 选回显串，旧串 `no in-flight ledger row` 随判据退场 ⇒ `"ledger binding"` 与既有两道同支，回 `Error: ${item.hint}`。不同笔改这里，拒文会掉进兜底串（模型看不到真拒因） |
-| `thincoder-core/tools/file.mjs` ∥ `patch.mjs` ∥ `ops.mjs` ∥ `bash.mjs` ∥ `execute.mjs` ∥ `git.mjs` | 改造 | 各工具 `parameters.properties` 加 `ledger`（不进 `required`，决策 35）；`execute.mjs` ∥ `git.mjs` 另加 `project`（描述 = `PROJECT_PARAM_DESC`，只在定位参数缺位时被读）；`git.mjs` 另补 `isReadonlyAction` 钩子（名单 = `thincoder-vscode/src/tools/index.mjs:52`–`:60` 六项平铺 + 六条子动作分支逐条抄齐，决策 37；钩子成为单源后该端覆写删除，见下行） |
+| `thincoder-core/tools/file.mjs` ∥ `patch.mjs` ∥ `ops.mjs` ∥ `bash.mjs` ∥ `execute.mjs` | 改造 | 各工具 `parameters.properties` 加 `ledger`（不进 `required`，决策 35）；`execute.mjs` 另加 `project`（描述 = `PROJECT_PARAM_DESC`，只在定位参数缺位时被读）。`git.mjs` ∥ `manifest.mjs` ∥ `memory-tool.mjs` ∥ `ssh.mjs` 的 `ledger`（及 `manifest` ∥ `memory` 的 `project`）沿用既有——本批只删 `git` 那两格 |
 | `thincoder-vscode/src/tools/index.mjs` | 改造 | 删 `gitTool` 的 `isReadonlyAction` 覆写（`:50`–`:62`），保留 `...coreGitTool` 展开；`CHECKPOINT.md` F6/D3 的口径注搬进核钩子——核有钩子后端覆写就是同一份名单的第二份拷贝，且优先级让端覆写吃掉核答案 |
 | `thincoder-vscode/src/tools/shell.mjs` | 改造 | 端自持的 `bash` 是独立 schema 副本（非核工具展开）⇒ 同一行 `ledger` 参数（描述引 `LEDGER_PARAM_DESC`）+ 同一行 `project`（描述引 `PROJECT_PARAM_DESC`）；不补则该端 schema 面上没有这两个参数，只有拒文能教它 |
 | `thincoder-core/agent-tools/manifest.mjs` | 改造 | `parameters.properties` 加 `ledger`（不进 `required`）与 `project`（`target` 缺位时被读）；`init` ∥ `write` 进本门（`init` 的豁免支在门体取根步——决策 43）、`read` 不进（决策 39） |
 | `thincoder-core/memory/memory-tool.mjs` | 改造 | `parameters.properties` 加 `ledger`（不进 `required`）+ `project`（`PROJECT_PARAM_DESC`，不进 `required`——该工具没有定位参数，判据点只能靠声明，决策 40）；落 project 层的写型 action 进本门——`layer:"project"`，或单条删除且 id 前缀 = `project:`（决策 39） |
-| `thincoder-core/tool-docs/` 十二个工具描述档（`write` / `edit` / `insert_after` / `apply_patch` / `delete` / `hashline_edit` / `file_ops` / `bash` / `execute` / `git` / `manifest` / `memory` 各一档，同目录） | 改造 | 各补一行用法：`ledger:"#N"` = 本笔服务的那条在途台账行；工程模式下缺它 = 拒（描述面是模型真正读到的那一面）。`git` 档另写一句「只读 action 不要号」（含 `checkpoint` 的 `list` ∥ `cat`）；`manifest` 档写「`write` 要号；`init` 仅当目标在既有项目内（祖先链上有 `PROJECT-MANIFEST.json`）才要——祖先链无 manifest 的自举不要；`read` 不要」；`memory` 档写「落 project 层就要号——`layer:"project"` 或 `project:` id 前缀」；`bash` ∥ `execute` ∥ `git` ∥ `manifest` ∥ `memory` 五档另写一行 `project` 用法与那句「纯声明，不改执行目录」（`execute` ∥ `git` ∥ `manifest` 写明「定位参数缺位时才用」） |
+| `thincoder-core/tool-docs/` 入口集工具描述档——**改前十三份 ∥ 改后十二份**（`write` / `edit` / `insert_after` / `apply_patch` / `delete` / `hashline_edit` / `file_ops` / `bash` / `execute` / `manifest` / `memory` / `ssh` / `git` 各一档，同目录：`thincoder-core/tool-docs/git.md` ∥ `thincoder-core/tool-docs/ssh.md` 都在其中。`git` 退出入口集 ⇒ 其档不再教要号 ⇒ 十二份。`ssh` 的 `get` 支机制归 `docs/core/design/TOOLS.md`——那是机制归属，不是描述档落点） | 改造 | 各补一行用法：`ledger:"#N"` = 本笔服务的那条在途台账行；工程模式下缺它 = 拒（描述面是模型真正读到的那一面）。**`git` 档反着做——三处一并删**（`ledger` 行 ∥ `project` 行 ∥ 「Read-only actions do not need it: …」那一句）：本批之后写型与只读不再分判，留着就是教「写动作要号」；`checkpoint` 的 `list` ∥ `cat` 判只读归审批面，由 `thincoder-core/tools/git.mjs` 的钩子持，教学面不复述；`manifest` 档写「`write` 要号；`init` 仅当目标在既有项目内（祖先链上有 `PROJECT-MANIFEST.json`）才要——祖先链无 manifest 的自举不要；`read` 不要」；`memory` 档写「落 project 层就要号——`layer:"project"` 或 `project:` id 前缀」；`bash` ∥ `execute` ∥ `manifest` ∥ `memory` 四档另写一行 `project` 用法与那句「纯声明，不改执行目录」（`execute` ∥ `manifest` 写明「定位参数缺位时才用」） |
 | `thincoder-core/agent/dispatch.mjs` | 改造 | Phase 1 写面冲突块接第三道门（既有两道 = 跨批档写 · D5 冻结窗）+ `:115` 设计门换判源 `isCodePath` → `faceOf`（`§2.1`） |
 | `thincoder-core/agent-tools/batch-skeleton.mjs` | 改造 | 词表改 `评审通过` + 别名表；`§2.5` 新增导出 `statusPassPlan`，`VERDICT_PASS_LINE` 定义迁入锚块；`§2.6` `INAPPLICABLE_SEGMENTS` 清空（`[]`——声明机制整条退役） |
 | `thincoder-core/agent-tools/batch-lifecycle.mjs` | 改造 | 拆分 + 改链门 + 重开回收调点（`§2.13`；见下）；`readBatchStatusLine` 的消费面五处（`findInFlightBatch` · `assertGateOpen` · 重开合取 · 收口重锚触发 · close 前置存在性网）调形零变，逐处符号 + 调用形见下表（本轮零改，判据 = `§1` 现量 0） |
@@ -1015,7 +1036,7 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 
 **上表 34 行**（2026-11-03 逐行实测：新档 5 · 改造 26 · 删档 1 · 零改 2；行数不等于档数—— `thincoder-core/agent/dispatch.mjs` 占两行，同一档两处改动）。
 
-**判据点改动的档位结论**：逐档读数与结论见上表——越线的两档 = `thincoder-core/agent-tools/batch-skeleton.mjs`（508 行，归段头区收窄那一笔，拆单见上表第二行）与 `thincoder-core/agent/write-gate.mjs`（510 行，本批不拆，切法见该行）；其余受触档在软线内，最高 `shared.mjs` = 496（余 4）。
+**判据点改动的档位结论**：逐档读数与结论见上表——越线的两档 = `thincoder-core/agent-tools/batch-skeleton.mjs`（508 行，归段头区收窄那一笔，拆单见上表第二行）与 `thincoder-core/agent/write-gate.mjs`（522 行，本批不拆，切法见该行）；其余受触档在软线内，最高 `shared.mjs` = 497（余 3）。
 
 **档位结论（本轮定位面收窄）**：受触档 `thincoder-core/agent-tools/batch-skeleton.mjs` **已越软线（508 行）**——落法是写面与读面共用同一条段头区判定（`§2.5` 的单源表），读面不再有第二个取值区；行数靠拆单回到软线内（拆法与判据 = 上表第二行）。
 
@@ -1161,7 +1182,7 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 34. **写门判据从「有在途行」改成「这笔写报的号是在途行」**（用户 2026-11-03 02:02 裁定，`§2.3`）：一条在途行放行该根下任何一笔写，门看不见「谁在写、替什么写」。
      形状取**逐笔带号**，被拒 = 轮内绑定——同一轮里父侧可能异步在做好几项任务，轮内绑定把几件事压成一条账；被拒 = 维持「有在途行即放行」、只在拒文里提醒带号（提醒不是判据）。
 35. **`ledger` 入入口集十二把工具的 `properties`，不进 `required`**（`§2.3`）：`required` 是静态字面，而这十二把工具在两模式、子代理、未声明项目的调用下共用。
-     - 入口集 = `FILE_MUTATORS` 六件 + `file_ops` + `bash` ∥ `execute` ∥ `git` ∥ `manifest` ∥ `memory`（决策 36 ∥ 37 ∥ 39 的补入）。
+      - 入口集 = `FILE_MUTATORS` 六件 + `file_ops` + `bash` ∥ `execute` ∥ `manifest` ∥ `memory` + `ssh`（**共十二把，逐一各一格**；决策 36 ∥ 39 的补入；`ssh` 的 `get` 支归 `docs/core/design/TOOLS.md`；`git` 不在集内——决策 37 ⇒ 它的 `ledger` ∥ `project` 两格随本批删）。
      - 旧口径「七把写盘工具」= `FILE_MUTATORS` 六件 + `file_ops`——入口集的一半。
      被拒 = 静态 `required`：它让普通模式读到「必须传号」而写门在普通模式不挂（决策 18），也让子代理读到一条没人核的要求；机械强制在门（缺即拒），schema 只负责让模型知道有这个参数。
      被拒 = 按模式动态 `required`：`toOpenAISchema(tool)`（`thincoder-core/tools/shared.mjs:170`）没有 agent 入参，做成按模式变要改这个公共函数与它两个调用点的签名——为一条提示改公共面不值。
@@ -1174,12 +1195,12 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 **40 · 判据点 = 调用方声明的项目**（用户 2026-11-03 02:58 裁「调用时要同时提供项目和台帐号」，`§2.3`）：`agent.cwd` 是会话锚，而会话锚可以是容器根 / 工作区根——容器根本身不带 manifest，旧判据于是在那种形态下永不设防（实机：2026-11-03 02:53 重启后 `bash` 不带 `ledger` 照放行）。
 
     - **「项目」就是项目根**，不是新概念：台账按项目根算键、项目 = 带 `PROJECT-MANIFEST.json` 的目录，一个判据（`thincoder-core/ledger-db.mjs`）。所以参数值 = 根绝对路径，零映射表。
-    - **声明面优先复用既有定位参数**：`execute` ∥ `git` 有 `workdir`（`git` 另有 `path`）、`manifest` 有 `target`、写盘七件有目标路径——它们本就说着「写哪儿」。只有定位参数**可能缺位**的 `bash` ∥ `memory` ∥ `execute` ∥ `git` ∥ `manifest` 五把加 `project`，且写明定位参数优先；写盘七件的目标路径恒在，`project` 在那里永不被读 = 第二个名字。
+     - **声明面优先复用既有定位参数**：`execute` 有 `workdir`、`manifest` 有 `target`、写盘七件有目标路径——它们本就说着「写哪儿」。只有定位参数**可能缺位**的 `bash` ∥ `memory` ∥ `execute` ∥ `manifest` 四把有 `project`，且写明定位参数优先；写盘七件的目标路径恒在，`project` 在那里永不被读 = 第二个名字。`git` 本批不再有任何参数（决策 37）。
     - **`bash` 的 `project` 是纯声明**：不改执行目录（该工具没有 cwd 参数，本批也不给它加 shell `cd` 语义）。声明即承诺——命令内容不解析（决策 36），门只问「这笔替哪个项目的那条账服务」。
     - 被拒 = 继续从会话锚推、只把「推不出」改成拒：判据点仍不是调用方给的，「换个 cwd 就变判据」原样留着。
     - 被拒 = 十二把工具（含写盘七件）统一加 `project`：目标路径恒在，`project` 在那里永不被读；且两值不一致时「以谁为准」要再立一条判据。五把加 `project` 并写明定位参数优先，正是为了不让它变成第二个判据。
 
-**41 · 声明无效 ⇒ 拒**（用户 2026-11-03 02:58 裁 ④，`§2.3`）：项目由调用方声明，**会话锚永不充当判据点**（全覆盖：入口集十二把无一回落 cwd，含 `execute` ∥ `git` ∥ `manifest`）——声明缺位（既无定位参数又无 `project`）⇒ `no project on this call`；声明与会话锚无关键，或相关但取不到带 manifest 的根 ⇒ `declared project is not a project`。判据的输入缺失时，门只会拒，不会放行。
+**41 · 声明无效 ⇒ 拒**（用户 2026-11-03 02:58 裁 ④，`§2.3`）：项目由调用方声明，**会话锚永不充当判据点**（全覆盖：入口集十二把无一回落 cwd，含 `execute` ∥ `manifest`）——声明缺位（既无定位参数又无 `project`）⇒ `no project on this call`；声明与会话锚无关键，或相关但取不到带 manifest 的根 ⇒ `declared project is not a project`。判据的输入缺失时，门只会拒，不会放行。
 
     **相关性 = 界的判据**（`§2.3`）：声明根含会话锚（会话 cwd 在项目子目录里）∥ 声明根在会话锚之内（沿祖先链上溯）——两者之外一律拒。会话锚仍用于解析相对路径与判相关性，只是不再是「判哪个项目的账」的答案。被拒的替代 = 允许「推定不出来就不管」：容器根锚下每一笔写都不设防，就是那条臂的产物（实机：2026-11-03 02:53 `bash` 不带号照放行）。
 
@@ -1193,28 +1214,32 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 
     被拒 = 让 `init` 也带一个「假项目」声明：那要在门槛值里递一个不存在项目的账，等于给「项目外写」开后门（决策 41 的代价面同源）。
 
-    **最近先例**：同档决策 37（`git` 按枚举 action 判写型，`§2.3`）。**对齐**：要号/豁免都判工具自己的枚举值，不新增判据面。**偏离**：37 的两值都在门内（写型要号 ∥ 只读不要号），43 的 `init` 有一格真正走出门外（取不到根 ⇒ 无账可问）——豁免落在门体取根步，不是把枚举值摘出要号集。
+    **最近先例**：同档决策 37（`git` 不在入口集，`§2.3`）。**对齐**：豁免/退回都判工具自己的枚举值，不新增判据面。**偏离**：43 的 `init` 有一格真正走出门外（取不到根 ⇒ 无账可问）——豁免落在门体取根步，不是把枚举值摘出要号集。
 
     **调研证据**：查无相关——该判据面（工程模式写锁对 `init` 的豁免形）无外部规范可引；本批调研面 = 档级 `§1` 调研证据块（仓外声明源 = 无）∥ 本档 `§2.3` 判据表与 `thincoder-core/agent-tools/manifest.mjs` 实读坐标。
 
-**37 · `git` 纳入写锁，只读名单单源落核**（用户 2026-11-03 裁「`bash` **之类的工具**」⇒ `git` 在「之类」里）
+**37 · `git` 不进写门；只读名单留作审批面单源**（用户 2026-11-05 03:56 裁「git那个按照a处理吧」）
 
-`git` 的写面是声明式 action（枚举值），不是 shell 字符串 —— 同日那条禁令禁的是按命令字面猜（本身是第二个洞），`git` 不碰它。判法用既有 `readonlyActionOf`，不新写分类。
+`git` **整把退出入口集**（`§2.3`）：写型 action 不要号、`path` ∥ `workdir` 不参与取根、`ledger` ∥ `project` 两格从 schema 删。理由三条（同一件活被收两次费 ∥ 把兜底做成阻力 ∥ 实机 `#2049` → `#2056`）逐字见 `§2.3`「`git` 不进写门」。
 
-**名单 = 端装饰体逐条抄齐，核钩子成为单源**（`thincoder-vscode/src/tools/index.mjs:52`–`:60`，2026-11-03 实读）。
+**名单本体保留，因为它另有判据消费者**：`isReadonlyAction`（`thincoder-core/tools/git.mjs:108`）判的是**审批面**——planMode 放行（`thincoder-core/agent/dispatch.mjs:63`）∥ 免审批短路（同档 `:185`）。本批只摘掉写门那一个消费者，名单一字不改。
 
 - **六项平铺判只读**：`diff` / `status` / `log` / `show` / `ls-remote` / `blame`。
 - **六条子动作分支**：`checkpoint` 的 `list` ∥ `cat`；`tag` / `branch` / `stash` / `remote` / `worktree` 各自 `list`。
-- **`checkpoint` 的 `list` ∥ `cat` 判只读**：该档 `:54` 逐字「保留只读分类免审批（CHECKPOINT.md F6/D3 设计意图）」—— F6 的清理副作用是已知且已裁下的。
-
-- **为什么取「抄齐」而不取「明示偏离」**：偏离会让核钩子与端装饰体答案相反，而端装饰体同时是权限短路 ∥ planMode 的判据（`dispatch.mjs` 两处经 `tool.isReadonlyAction`）——改它就改了审批行为、并推翻 `CHECKPOINT.md` F6/D3 的既有裁定，那是用户的裁量；本门的题目是「这笔写替哪条账服务」。
-- **端覆写同笔删**：核有钩子后，端覆写是同一份名单的第二份拷贝，而 `tool?.isReadonlyAction?.(args) ?? …` 的优先级让端覆写吃掉核答案 ⇒ 两份必然漂移。删后 CLI ∥ desktop ∥ vscode 三面同答案（同一机制多面：差要消掉，不留一个面另判）。
+- **`checkpoint` 的 `list` ∥ `cat` 判只读**：`CHECKPOINT.md` F6/D3 的裁定照旧——F6 的清理副作用（`lazyClearIfCommitted`）是已知且已裁下的。
+- **端覆写已删、核钩子单源**：`tool?.isReadonlyAction?.(args) ?? …` 的优先级让端覆写吃掉核答案 ⇒ 两份必然漂移；删后 CLI ∥ desktop ∥ vscode 三面同答案。
 
 **被拒的替代**（三条）：
 
-- 只在门里硬编码一份名单 —— 第二份单源，端间立刻漂移。
-- 对 `git` 一律要号 —— 只读命令也挂号，代价白付；且它与 `bash` 的「无法静态分类」前提不同，有枚举可判就不要猜。
-- 只抄六项平铺、漏掉六条子动作分支 —— `checkpoint rewind` / `branch delete` / `stash pop` 会按只读放行而不挂号（名单不完整的洞）。
+- **只把 `commit` ∥ `push` 摘出要号集**（`add` / `rm` / `reset` 仍要号）：`add` 不落提交，而 `rm` ∥ `reset` 恰恰是**会丢工作**的动作——给它们加一道「先挂号」的门，把人挡在正确操作外面，同时把口子做在最容易出事的那两个上。摘一半比不摘更坏。
+- **给 `git` 加替代门槛**（必须写提交信息 ∥ 必须带批档号）：那是把一笔重复计费换成另一笔；「不新造拦截」是用户本批的边界。
+- **维持原状、只在拒文里提醒**：提醒不是判据；今晚的 `#2056` 证明门会自己造账。
+
+**最近先例**：同档决策 43（`manifest` 的 `init` 豁免开在门体取根步，`§2.3`）∥ 同档决策 32（零消费的判据整条退场）。
+
+**对齐**：三者都判工具自己的枚举值 ∥ 入口集成员资格，不新立判据、不新增导出、不动词表；退场的都是零消费件。
+
+**偏离**：43 让一个枚举值**有条件地**走出门外（豁免落在取根步，走不走的判据在门体）；本决策让一整把工具**无条件**出集，代价面因此多出三处零消费件——schema 两格 ∥ 零消费的 import 三处（决策 32 只管判据本体）。取舍也不同：43 答「那个项目还不存在」，本决策答「这一笔不落新字节」。
 
 **38 · `ledger` 不进 `required` ⇒ 拒文是唯一教学面**（决策 35 的代价面，用户 2026-11-03 认下）：模型不传号就撞拒，拒文是它唯一会看到的那一面。故拒文必须写全三件 —— 缺什么（`<case>`）、要带什么（`Pass ledger:"#N"`）、当下有哪些号可带（`In-flight rows in this project's ledger right now: …`），无在途行时给挂号两步。拒文与 schema 同属判据面：删掉这段，这个参数就没有任何可发现路径。
 
@@ -1229,12 +1254,12 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 
 每条回到批档 `§2` 的批次条目（R1–R25）；机检判据如下：
 
-**可跑面（本批验收的入口）**：本批单测档 = `docs/batches/2026-11-03-write-gate-project-and-ledger.test.mjs`（与批档同名同目录，随本批收口删除），跑法 = `node --test docs/batches/2026-11-03-write-gate-project-and-ledger.test.mjs`。R2 的 ①–⑮ 与 R2 ⑫ 的白盒格全落在该档；集成面（12-x / 14-6）由父侧收口跑，不在本档。
+**可跑面（本批验收的入口）**：本批单测档 = `docs/batches/2026-11-03-write-gate-project-and-ledger.test.mjs`（与批档同名同目录，随本批收口删除），跑法 = `node --test docs/batches/2026-11-03-write-gate-project-and-ledger.test.mjs`。R2 的 ①–⑬ 全落在该档；集成面（12-x / 14-6）由父侧收口跑，不在本档。
 
 | 条目 | 判据（可机检） |
 |---|---|
 | R1 建档=建台账 | 不传 `ledger` 建一档 ⇒ 台账多一行 `在途` 且 `task_book` = 该档；传已存在 `待讨论` 号 ⇒ 该行变 `在途`；传 `已核销` 号 ⇒ 拒且档未落盘、行零改（终态判据；事务内步序 = `§2.4`） |
-| R2 写锁（笔-账绑定） | **判据 = 本笔报的 `#N` 是目标项目台账里的 `在途` 行**（`§2.3` 表）：① 未传 `ledger` ⇒ 拒，拒文含 `no ledger number on this call` 与用法句（`Pass project:` ∧ `ledger:"#N"`，两个输入一次点出），文件字节零改；② `ledger` 非行号形（`"abc"` / `"#"`）⇒ 拒，原值带进拒文；③ 号不在盘（`"#999999"`）⇒ 拒，含 `does not exist`；④ 号在盘而 status ∈ {`已核销`, `已废弃`, `待讨论`, `待设计`, `待核销`} ⇒ 拒，拒文点名该状态词；⑤ 号在途 ⇒ 放行，`"#N"` 与 `"N"` 同判，文档面与产品面同判（面不参与判据）；⑥ **未声明项目 ⇒ 拒**（`bash` ∥ `memory` 缺 `project`；`execute` ∥ `git` ∥ `manifest` 既无定位参数又无 `project`——不回落到会话 cwd）拒文含 `no project on this call`；**声明路径不是项目**（与会话锚无关键 ∥ 相关但取不到带 manifest 的根，含容器根 `D:\teamcode`）⇒ 拒、含 `declared project is not a project`；`memory` 的 `personal` ∥ `team` 落用户数据目录 ⇒ 不判（只有落 project 层才要 `project`）；写盘工具目标在任一项目之外 ⇒ 同拒；⑦ 台账读不到 / manifest 在而不可用 ⇒ 拒 + `(ledger unreadable — <原错>)`；⑧ 普通模式与 `depth > 0` 零改；⑨ 子代理带号不被本门核（拒因若现，只来自 token 门）；⑩ **`bash` ∥ `execute` 同判**：台账无在途行时跑一条只读命令（`git status`）⇒ 拒、命令零执行、拒文含 `no ledger number on this call`；带在途号跑同一条 ⇒ 执行并回输出；⑪ **`git` 写型要号**：台账无在途行时 `git({action:"commit", message, path})` ⇒ 拒、`git log` 输出不变、拒文含 `no ledger number on this call`；带在途号同笔 ⇒ 提交生效；⑫ **`git` 只读不要号**：同一会话、台账无在途行时 `git({action:"status"})` ⇒ 照跑回输出；白盒断言核钩子落地后 `readonlyActionOf(gitTool, "git", {action:"status"})` = `true` ∧ `{action:"commit"}` = `false` ∧ `{action:"checkpoint", checkpointAction:"list"}` = `true` ∧ `{action:"checkpoint", checkpointAction:"rewind"}` = `false` ∧ `{action:"branch", branchAction:"list"}` = `true` ∧ `{action:"branch", branchAction:"delete"}` = `false`（六项平铺与六条子动作分支各抽一格；白盒与本臂的行为半都落本批单测档）；⑭ **`manifest` 写型要号、读型不要、`init` 条件豁免**：`manifest({action:"write", key, value})` 不带号 ⇒ 拒、manifest 字节零改；`manifest({action:"read"})` 不带号 ⇒ 照跑；`init` 条件豁免（豁免支在门体取根步——决策 43，断言格 = R33 init 自举面）；⑮ **`memory` 按层判（`layer` ∥ id 前缀）**：`memory({action:"put", layer:"project", title, content})` 不带号 ⇒ 拒、`<项目>/.thincoder/memory/` 零写；`memory({action:"put", layer:"personal", title, content})` 不带号 ⇒ 照跑——同一个 action 两答案，分界在 `layer`；**单条 `delete` 不带 `layer`、id 带 `project:` 前缀 ⇒ 同样拒、文件仍在**（该层由前缀定，只看 `layer` 就漏掉这条删项目内档的路）；带号单删放行；⑬ **`git` 的根 = `path` ∥ `workdir`**：本仓有在途号、`workdir` 指到另一个无在途行的项目仓跑 `commit` ⇒ 拒（号必须在目标项目台账里）；同笔把号换成那个仓的在途号 ⇒ 放行；两者都不带 ⇒ 拒（`no project on this call`），不回落到会话 cwd |
+| R2 写锁（笔-账绑定） | **判据 = 本笔报的 `#N` 是目标项目台账里的 `在途` 行**（`§2.3` 表）：① 未传 `ledger` ⇒ 拒，拒文含 `no ledger number on this call` 与用法句（`Pass project:` ∧ `ledger:"#N"`，两个输入一次点出），文件字节零改；② `ledger` 非行号形（`"abc"` / `"#"`）⇒ 拒，原值带进拒文；③ 号不在盘（`"#999999"`）⇒ 拒，含 `does not exist`；④ 号在盘而 status ∈ {`已核销`, `已废弃`, `待讨论`, `待设计`, `待核销`} ⇒ 拒，拒文点名该状态词；⑤ 号在途 ⇒ 放行，`"#N"` 与 `"N"` 同判，文档面与产品面同判（面不参与判据）；⑥ **未声明项目 ⇒ 拒**（`bash` ∥ `memory` 缺 `project`；`execute` ∥ `manifest` 既无定位参数又无 `project`——不回落到会话 cwd）拒文含 `no project on this call`；**声明路径不是项目**（与会话锚无关键 ∥ 相关但取不到带 manifest 的根，含容器根 `D:\teamcode`）⇒ 拒、含 `declared project is not a project`；`memory` 的 `personal` ∥ `team` 落用户数据目录 ⇒ 不判（只有落 project 层才要 `project`）；写盘工具目标在任一项目之外 ⇒ 同拒；⑦ 台账读不到 / manifest 在而不可用 ⇒ 拒 + `(ledger unreadable — <原错>)`；⑧ 普通模式与 `depth > 0` 零改；⑨ 子代理带号不被本门核（拒因若现，只来自 token 门）；⑩ **`bash` ∥ `execute` 同判**：台账无在途行时跑一条只读命令（`git status`）⇒ 拒、命令零执行、拒文含 `no ledger number on this call`；带在途号跑同一条 ⇒ 执行并回输出；⑪ **`git` 不在入口集**：台账无在途行时 `git({action:"add", path})` 与 `git({action:"commit", path, message})` 都照常生效（`git log` 出现该 message）、`git({action:"status"})` 照跑回输出；白盒 `grep -c '"git"' thincoder-core/agent/write-gate.mjs` = 0（入口集无他）；⑫ **`manifest` 写型要号、读型不要、`init` 条件豁免**：`manifest({action:"write", key, value})` 不带号 ⇒ 拒、manifest 字节零改；`manifest({action:"read"})` 不带号 ⇒ 照跑；`init` 条件豁免（豁免支在门体取根步——决策 43，断言格 = R33 init 自举面）；⑬ **`memory` 按层判（`layer` ∥ id 前缀）**：`memory({action:"put", layer:"project", title, content})` 不带号 ⇒ 拒、`<项目>/.thincoder/memory/` 零写；`memory({action:"put", layer:"personal", title, content})` 不带号 ⇒ 照跑——同一个 action 两答案，分界在 `layer`；**单条 `delete` 不带 `layer`、id 带 `project:` 前缀 ⇒ 同样拒、文件仍在**（该层由前缀定，只看 `layer` 就漏掉这条删项目内档的路）；带号单删放行 |
 | R3 §3 词表 | `status` §3 值 `评审通过` ⇒ 通过；值 `评审完成` ⇒ 拒（词表外）；旧档读侧 `评审完成` ⇒ 等义 pass |
 | R4 §5 段序门 | `§3` 无 `评审通过` 时 `append §5` ⇒ 拒，拒文逐字 = `§2.6` 的 `R-G2` 串；`§3` pass 后追加照写；`§1` 写 `> 不适用：§3` ⇒ 照拒（声明不再是出路） |
 | R5 收口门 | `§3` 无 pass 时 `close` ⇒ 拒，拒文含 `§3 状态行 = <value>`；既有四段内容臂**照判**（`§2`/`§4`/`§6` **各须有内容**——声明已停用）；收口后本批零 `在途` 行（重锚落 `待核销`） |
@@ -1264,10 +1289,10 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 | R28 核销边只留一条（`§2.14`） | `node --test test/integration/ledger-close-proof.test.mjs`：`待讨论` 行跑 `ledger close{status:"已核销"}` ⇒ 拒（拒文逐字含 `核销仅限 待核销（现态 待讨论）` 与**该现态的**出路句 `先 update 到 在途 认领`）、行状态仍 `待讨论`、`closed_at` 仍空；`待设计` 行同形同拒（现态点名 `待设计`、出路句同 `待讨论`）；`在途` 行同形同拒，**出路句 = `先 update 到 待核销（做完才结账），再 close 勾销`**（不是认领句）；归档态行同拒、出路句 = `该行已归档（<X>），不在核销面`；`待核销` 行仍通过（既有 a 档断言零改）；同档 `update` 到 `在途` → `待核销` → `close` 三步全过（「条目在别处完成」的走法）；零改读数 = `grep -c "追认核销" thincoder-core/ledger-write-ops.mjs` / `thincoder-core/ledger-cmd.mjs` / `thincoder-core/ledger-tools.mjs` / `thincoder-core/tool-docs/ledger.md` 四值全 0 |
 | R29 零消费判据退场 | `thincoder-core/agent/live-batch.mjs` 不在盘（`ls thincoder-core/agent` 读数无该档）；`grep -rn "liveBatchOpen" thincoder-core` = 0 命中；`grep -rn "agent/live-batch" thincoder-core` = 0 命中（路径前缀形 = 还有人 import / require 已删模块；裸串 `live-batch` 会命中用例档名 `batch-live-batch-lock.test.mjs`——档名不是消费者）；判据函数住模块内且不导出：`grep -n "ledgerRowAt" thincoder-core/agent/write-gate.mjs` ≥ 1 命中 ∧ `grep -n "^export.*ledgerRowAt" thincoder-core/agent/write-gate.mjs` = 0 命中 ∧ 旧名全清 `grep -rn "ledgerOpenAt\|ledgerOpenWriteConflict" thincoder-core test` = 0 命中；本档 `grep -c "活批档"` = 1（唯一命中 = 本行判据句自身）· **扫描面 = `thincoder-core` + `test`（代码与测试面；设计档与本批档要逐字写这条判据，字面必然在，不进来）**：`grep -rn "liveBatchOpen" thincoder-core test` = 0 命中 · `grep -rn "agent/live-batch" thincoder-core test` = 0 命中 · `grep -rn "no live batch record" thincoder-core test` = 0 命中（旧拒文两条英文串随 `§2.10` 单源化同清；实测触发面 = `test/integration/batch-live-batch-lock.test.mjs` 三条断言与头注） |
 
-| R30 项目声明面（`§2.3` · 决策 40） | `bash` ∥ `memory` ∥ `execute` ∥ `git` ∥ `manifest` 五把的 `parameters.properties` 有 `project`（描述 = `PROJECT_PARAM_DESC`，`required` 里没有它）；写盘七件的 schema 无 `project` 字段（目标路径即是声明）；`execute` ∥ `git` ∥ `manifest` 带定位参数（`workdir` ∥ `path` ∥ `target`）时 `project` 不参与判定（白盒：两者同给且指向不同项目 ⇒ 按定位参数判）；`grep -rn "PROJECT_PARAM_DESC" thincoder-core thincoder-vscode/src` 的镜像点 = `tools/bash.mjs` · `tools/execute.mjs` · `tools/git.mjs` · `agent-tools/manifest.mjs` · `memory/memory-tool.mjs` · `vscode/src/tools/shell.mjs` 六处 + `tools/shared.mjs` 定义处（描述单源，零手写副本） |
+| R30 项目声明面（`§2.3` · 决策 40） | `bash` ∥ `memory` ∥ `execute` ∥ `manifest` 四把的 `parameters.properties` 有 `project`（描述 = `PROJECT_PARAM_DESC`，`required` 里没有它）；写盘七件的 schema 无 `project` 字段（目标路径即是声明）；**`git` 的 schema 同时无 `project` 与 `ledger` 两格**（不在入口集——决策 37）；`execute` ∥ `manifest` 带定位参数（`workdir` ∥ `target`）时 `project` 不参与判定（白盒：两者同给且指向不同项目 ⇒ 按定位参数判）；`grep -rn "PROJECT_PARAM_DESC" thincoder-core thincoder-vscode/src` 的镜像点 = `tools/bash.mjs` · `tools/execute.mjs` · `agent-tools/manifest.mjs` · `memory/memory-tool.mjs` · `vscode/src/tools/shell.mjs` 五处 + `tools/shared.mjs` 定义处（描述单源，零手写副本） |
 | R31 判据点 = 声明，无效即拒（`§2.3` · 决策 41） | 见 R2 ⑥；另：项目声明解析的四态——路径不存在 ∥ 与会话锚无关键（平级目录 / 不含锚的更远祖先）∥ 相关但取不到带 manifest 的根 ∥ 根在而 manifest 不可用（后者落 ⑦ 那支）——都落 `declared project is not a project`，无一放行；**相关性两支各一格**：(a) 会话 cwd = `<本仓>/thincoder-cli`、声明 = 本仓根 + 在途号 ⇒ 放行；(b) 会话 cwd = 本仓根、声明 = `<本仓>/thincoder-core` ⇒ 归到本仓根放行；`grep -c 'scope: "out"' thincoder-core/agent/write-gate.mjs` = 0（放行臂不在盘） |
 | R32 声明语义（`§2.3`） | `bash` 带 `project:<另一项目>` 跑 `process.cwd()` ⇒ 打印会话 cwd（执行目录未变）；`project:"<本仓>/thincoder-core/agent"`（项目内子目录）⇒ 归到本仓、放行；`project` 相对路径按会话 cwd 解析 |
-| R33 教学面同拍（`§2.3` · 决策 42） | 拒文含 `Pass project:` ∧ `ledger:"#N"` ∧ `In-flight rows in this project's ledger right now:` 三件；`thincoder-core/tool-docs/bash.md` ∥ `thincoder-core/tool-docs/execute.md` ∥ `thincoder-core/tool-docs/git.md` ∥ `thincoder-core/tool-docs/manifest.md` ∥ `thincoder-core/tool-docs/memory.md` 各含 `project` 一行与「纯声明」句；`test/RTM.md` 故事 12 含 12-12 / 12-13 / 12-14 三行；**无项目三形的清单单位**（各一句、与 `none` 互斥）= `unknown — no project on this call` ∥ `unknown — the declared project is not a project` ∥ `unknown — no project owns this write's target`；**`manifest` 的 `init` 自举面**：`manifest({action:"init", target:"<无 manifest 的新目录>"})` 不带项目、不带号 ⇒ 照跑、`PROJECT-MANIFEST.json` 落盘（不进本门）；另带有效 `project` 而祖先链仍取不到根 ⇒ 结果不变（照跑落盘——定位参数在场时 `project` 不参与判定，定位参数优先）；目标已有 manifest ⇒ 拒、拒文 = 工具自身那句 `init never overwrites`（不是本门拒文，清单单位不出现）；`init` 的 target 落在既有项目内（祖先链有 manifest）而 target 自身无 manifest ⇒ 本门照判（要号）——不带号 ⇒ 拒（`no ledger number on this call`）；`manifest({action:"write", …})` 不带号 ⇒ 仍拒（`no ledger number on this call`） |
+| R33 教学面同拍（`§2.3` · 决策 42） | 拒文含 `Pass project:` ∧ `ledger:"#N"` ∧ `In-flight rows in this project's ledger right now:` 三件；`thincoder-core/tool-docs/bash.md` ∥ `thincoder-core/tool-docs/execute.md` ∥ `thincoder-core/tool-docs/manifest.md` ∥ `thincoder-core/tool-docs/memory.md` 各含 `project` 一行与「纯声明」句；**`thincoder-core/tool-docs/git.md` 三处逐字不在**：`ledger` 行 ∥ `project` 行 ∥ 「Read-only actions do not need it: …」那一句（不在入口集 ⇒ 写型与只读不再分判，那一句留着就是教「写动作要号」）；**`thincoder-core/tools/git.mjs` 的 `parameters.properties` 无 `ledger` ∥ `project` 两键 ∧ `PROJECT_PARAM_DESC` 句内无 `git` ∧ `thincoder-core/tools/shared.mjs` 已无 `LEDGER_PARAM_DESC_GIT`**（零消费的判据整条退场，决策 32）；`test/RTM.md` 故事 12 含 12-12 / 12-13 / 12-14 三行；**无项目三形的清单单位**（各一句、与 `none` 互斥）= `unknown — no project on this call` ∥ `unknown — the declared project is not a project` ∥ `unknown — no project owns this write's target`；**`manifest` 的 `init` 自举面**：`manifest({action:"init", target:"<无 manifest 的新目录>"})` 不带项目、不带号 ⇒ 照跑、`PROJECT-MANIFEST.json` 落盘（不进本门）；另带有效 `project` 而祖先链仍取不到根 ⇒ 结果不变（照跑落盘——定位参数在场时 `project` 不参与判定，定位参数优先）；目标已有 manifest ⇒ 拒、拒文 = 工具自身那句 `init never overwrites`（不是本门拒文，清单单位不出现）；`init` 的 target 落在既有项目内（祖先链有 manifest）而 target 自身无 manifest ⇒ 本门照判（要号）——不带号 ⇒ 拒（`no ledger number on this call`）；`manifest({action:"write", …})` 不带号 ⇒ 仍拒（`no ledger number on this call`） |
 
 ## 6. 用例表
 
@@ -1276,17 +1301,16 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 | 正常 | `create{topic,source}` 无 `ledger` | 档落盘 + 行 `在途` + 档头 `#N` |
 | 正常 | `create{ledger:"#1830"}` 且该行 `待讨论` | 行 → `在途`、`task_book` = 本档 |
 | 边界 | 两条 `在途` 行并存，先带 `#A` 写一笔、再带 `#B` 写同一目标 | 两次都放行——本门判「报的号在途」，与并存数无关；两笔各自是独立的记账声明 |
-| 正常 | `git({action:"commit", …})` 带本仓在途号 | 提交生效 |
-| 错误 | 台账无在途行时 `git({action:"commit", …})` | 拒，仓库零动 |
-| 正常 | `git({action:"status"})` 不带号 | 照跑（只读 action 不要号） |
-| 正常 | `git({action:"checkpoint", checkpointAction:"list"})` 不带号 | 照跑（子动作分支判只读——端装饰体 `:55` 的裁定） |
-| 错误 | `git({action:"checkpoint", checkpointAction:"rewind", checkpointId:"…"})` 不带号 | 拒（子动作分支判写型），仓库零动 |
+| 正常 | 台账无在途行时 `git({action:"add", path})` + `git({action:"commit", path, message})` | 提交生效——`git log` 出现该 message（`git` 不在入口集，本门不问） |
+| 正常 | `git({action:"status"})` 不带号 | 照跑（本门不问 `git`） |
+| 正常 | `git({action:"checkpoint", checkpointAction:"list"})` 不带号 | 照跑（审批面判只读免审批；写门不问） |
+| 正常 | `git({action:"checkpoint", checkpointAction:"rewind", checkpointId:"…"})` 不带号 | 照跑（审批面按写型询问，仓库动作照做——写门不问） |
 | 正常 | `manifest({action:"read"})` 不带号 | 照跑（不落盘） |
 | 错误 | `manifest({action:"write", key, value})` 不带号（工程模式父侧） | 拒，manifest 字节零改 |
 | 边界 | `memory({action:"put", layer:"personal", …})` 不带号 | 照跑（落用户数据目录，不是项目内档） |
 | 错误 | `memory({action:"put", layer:"project", …})` 不带号 | 拒，`<项目>/.thincoder/memory/` 零写 |
 | 错误 | `memory({action:"delete", id:"project:abc"})` 不带 `layer`、不带号 | 拒（单条删除的层由 id 前缀定，`project:` 前缀 ⇒ 项目内档），文件仍在 |
-| 错误 | 带本仓在途号跑 `git({action:"commit", workdir:"<另一项目仓>"})`，该仓无在途行 | 拒，拒文指向该项目（号看目标项目的账） |
+| 边界 | `git({action:"commit", workdir:"<另一项目仓>"})` 不带号 | 照跑（`workdir` 是 git 自己的执行目录语义，与项目声明 ∥ 写门无关） |
 | 错误 | `execute({code, workdir:"<另一项目仓>"})` 带本仓在途号，该仓无在途行 | 拒，脚本零执行（`execute` 的根按 `workdir` 取，与会话同法的是不带 `workdir` 那支） |
 | 边界 | 行 `在途` 但 `task_book` 指另一档 | 拒（`R-C2`） |
 | 错误 | 行号不存在 / 已归档 | 拒（`R-C1` / `R-C3`），档不落盘 |
@@ -1364,7 +1388,7 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 
 - **设计门的判据点不动**：仍是会话锚（`thincoder-core/agent/dispatch.mjs` 的出辖放行零改）；本批只换写锁的判据点。
 - **不给 `bash` 加 cwd 语义**：`project` 是纯声明，不改执行目录。
-- **不给写盘七件加 `project`**：它们的目标路径即是声明，且恒在。`execute` ∥ `git` ∥ `manifest` 的 `project` 只在定位参数缺位时被读（定位参数优先）；`project` 在这五把上一律是纯声明，不改执行目录。
+- **不给写盘七件加 `project`**：它们的目标路径即是声明，且恒在。`execute` ∥ `manifest` 的 `project` 只在定位参数缺位时被读（定位参数优先）；`project` 在这四把上一律是纯声明，不改执行目录。
 - **不动**：`depth > 0` 守卫、普通模式、设计门位次、跨批档写锁与 D5 冻结窗。
 
 - 不做存量档回填（`§3` 词面 / 档头台账行）：已冻结档字节不动。
@@ -1541,21 +1565,20 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 - **改的行 = 12-5**（判据点改成「调用方声明」后重新定杯）：旧期望「项目外目标 ⇒ 放行」建立在「推不出 ⇒ 门不管」上，新形下失效——项目之外没有判据点。改写为两条：写仓外目标 ⇒ 拒（`declared project is not a project`）；声明容器根 `D:\teamcode` ⇒ 同拒。断言对象不变（判据点合不合法）。原文里「放行的是判据作用域」那段理由随之退场。
 - **借行 = 12-6**（保留，迁出触发条件写明）：它服务的条目是 R14（排除名单单源），业务入口是 `search` / 索引，与故事 12「写盘准入」不是同一件事。
   迁出需要一个新故事节，而新开业务面属范围扩充 ⇒ 本批保留并标「借行」；迁出触发条件 = 排除名单有独立故事节那一轮。
-**`git` 纳入写的 RTM 答复——破 0 / 冗余 0 / 增 5**（编号先定在 `test/RTM.md`，再写用例标题 `test('<编号> …')`）
+**`git` 纳入写的 RTM 答复——破 1 / 冗余 1 / 增 4**（编号先定在 `test/RTM.md`，再写用例标题 `test('<编号> …')`。本块记「`git` 进写门」那一轮的 delta；本批之后的现行读数只在 `test/RTM.md` 与本节末「`git` 退出写门」块，本块不复述）
 
 | 编号 | 交互（哪两个组件） | 业务可观察结果（断言） | 进入口 | 服务条目 |
 |---|---|---|---|---|
-| 12-9 | `git` 工具 ↔ 笔-账绑定判定（写型 action） | 无在途号跑 `git commit` ⇒ 拒、`git log` 输出不变；带在途号同笔 ⇒ 提交生效 | 父侧 `git` 工具 | R2 ⑪ |
-| 12-10 | `git` 工具 ↔ 笔-账绑定判定（只读 action） | 无在途号跑 `git status` ⇒ 照跑回输出——同一笔门在写型与只读型上答案不同 | 父侧 `git` 工具 | R2 ⑫ |
-| 12-11 | `git` 工具 ↔ 项目根推导（`path` ∥ `workdir`） | 本仓有号、`workdir` 指向无在途行的项目仓跑 `commit` ⇒ 拒并点该项目 | 父侧 `git` 工具 | R2 ⑬ |
+| 12-9 | `git` 工具 ↔ 写门 | 台账无在途行时 `git add` + `git commit` 照常生效（`git log` 出现该 message）——同一会话里写盘工具缺号仍拒，而 `git` 不拒 | 父侧 `git` 工具 | R2 ⑪ |
+| 12-10 | `git` 工具 ↔ 审批面只读名单 | `git({action:"status"})` 不带号照跑回输出；`git({action:"checkpoint", checkpointAction:"rewind"})` 不带号照跑但走审批询问——名单只判审批，与写门无关 | 父侧 `git` 工具 | 决策 37 |
 | 12-12 | `bash` ∥ `memory` ↔ 笔-账绑定判定（项目声明输入） | 会话 cwd = 容器根（祖先链无 manifest）、台账无在途行：`bash` 跑 `git status` 不带 `project` ⇒ 拒（含 `no project on this call`）、命令零执行；带 `project:<本仓>` 仍不带号 ⇒ 拒（含 `no ledger number on this call`）；再带本仓在途号 ⇒ 执行并回输出 | 父侧 `bash` ∥ `memory` 工具 | R31 · R32 |
 | 12-13 | 工具 ↔ 项目声明与台账对不上 | `project:"D:\\teamcode"`（自身无 manifest）+ 本仓在途号 ⇒ 拒（含 `declared project is not a project`）；声明 A 项目、号取自 B 项目 ⇒ 拒（含 `does not exist in this project's ledger`）；两条拒文都同时点出 `project` 与 `ledger` 两个输入 | 父侧工具调用 | R31 · R33 |
 
-- **破的行 = 0**：既有 12-7 断的是「`bash` ∥ `execute` 的只读命令也要号」，`git` 只读型断的是反面 —— 两行不重叠：前者的命令无法静态分类，后者有枚举。
-- **冗余的行 = 0**：无一行断言过 `git` 落盘。
+- **破的行 = 12-9**：该轮把它的结果列由「`git` 不在写门 ⇒ 不带号照跑」翻成「写型要号」——只改结果列，断言对象不变；反面控制由 12-1 ∥ 12-7 持，不新立行。
+- **冗余的行 = 1 = 12-11**：它断「号看在 `workdir` 所属项目的账上」——本批让 `git` 出集后这个差异不存在（删法与理由见本节末「`git` 退出写门」块）。
 - **为什么只读型要单独一行**：它是本批唯一一处「同一把工具、两种判据」的业务可观察结果；并进 12-9 会让「只读命令不要号」这条在零断言下存在，下一次收窄它一格也不会红。
 
-- **套件规模**：本表五行（12-9 … 12-13，前三条是 `git` 的，后两条是项目声明面的）全部已在册 ⇒ 该块新增计 **5 行**；现盘读数 = **108 行**，已越 ≈50–100 的上界 8 行。上界是上界不是平均值：下一笔业务变更应裁旧场景，不再加行。
+- **套件规模**：本表四行（12-9 ∥ 12-10 ∥ 12-12 ∥ 12-13；前两条是 `git` 的，后两条是项目声明面的）全部已在册 ⇒ 该块新增计 **4 行**；本批之后 RTM 的现行读数只在 `test/RTM.md` 与本节末「`git` 退出写门」块，本块不复述。
 
 **项目声明面（R30–R33）的 RTM 答复——破 0 / 冗余 0 / 增 1 / 改 2**（编号先定在 `test/RTM.md`，再写用例标题 `test('<编号> …')`）
 
@@ -1579,3 +1602,12 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 - **冗余的行 = 0**：无一行断言过 `init` 的落盘行为（R33 的 init 自举面是 §5 判据文本，不是 RTM 行）。
 - **为什么另立一行**：入口（`manifest` 工具）与观测面（manifest 落盘 ∥ 两级拒文）在既有行里零出现——并进任何一行都会让「自举不进本门」在零断言下存在。
 - **套件规模**：增 1 行（现盘读数 109 ⇒ 110；上界处置同上块末句——下一笔业务变更裁旧场景）。
+
+**`git` 退出写门的 RTM 答复——破 2 / 冗余 1 / 缺 0**
+
+- **破的行 = 12-9**（`test/integration/batch-live-batch-lock.test.mjs`）：原断言「无在途号跑 `commit` ⇒ 拒」建在「`git` 在入口集」上，现期望翻面——台账无在途行时 `git add` + `git commit` 照常生效（`git log` 出现该 message，`git status` 照跑）。断言对象不变（`git` 写型动作与写门的关系），只改结果列。
+- **破的行 = 12-10**（`test/integration/batch-live-batch-lock.test.mjs`）：`test/RTM.md` 现盘尾句逐字「同一把工具在写型与只读型上答案不同」——它教的是「写型要号」，`git` 出集后不再成立。改后断言 = 「名单只判审批，与写门无关」：台账无在途行时 `git({action:"status"})` 照跑回输出（读到已暂存的 1 个文件），依据是「`git` 整把不在写门」，不是「只读型」。断言对象不变（`git` 与写门的关系），只改结果列；用例标题（现逐字 `12-10 git 只读 action：无在途号跑 git status ⇒ 照跑回输出`）与断言串（现逐字 `同一把工具两种判据：只读不要号`）同步改。
+- **冗余的行 = 12-11（删）**：它断「号看在 `workdir` 所属项目的账上」——`git` 出集后这个差异不存在。`test/RTM.md` 故事 12 节注随之由十五态改**十四态**（15 − 1 = 14）。12-10 仍在册，改写（见上）——「`git` 照跑」这条业务结果没消失，仍要有人断。
+- **缺的行 = 0**：反向控制已在册——写盘工具缺号仍拒（12-1）∥ `bash` ∥ `execute` 缺号仍拒（12-7 ∥ 12-12），「没把整道门拆掉」由这两条承担。
+- **只读名单的剩余消费者不进集成面**：planMode 放行 ∥ 免审批短路是审批行为，不是写盘结果；名单单源由 R30 的白盒格与 `thincoder-core/tools/git.mjs` 实读判。
+- **套件规模**：现盘读数 **120 行**（改前 121，删 12-11 一行 ⇒ 120；12-9 ∥ 12-10 是改写、不计行数）。**量法** = 正则 `^\|\s*\d+-\w+\s*\|` 数 `test/RTM.md` 的用例行（含 `7-5a` 这类字母子号），2026-11-05 实量；同一档只数纯数字子号（`^\|\s*\d+-\d+\s*\|`）得 118——两种量法都不出「110 ∥ 109」那对旧读数。

@@ -162,8 +162,9 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // 写锁（第三道 · 2026-11-03 笔-账绑定批 · 设计档 §2.3）：本笔报的 `ledger:"#N"` 必须是**目标所属项目**
     // 台账里一条 `status = 在途` 的行。位次 = 既有两道之后（既有拒因先报）；判序 = 先判目标所属项目
     // （出辖 ⇒ 门不管），再按号查该根台账；台账读不到 ⇒ 拒（业务门）。
-    // 入口集 = 十三把（写盘七件 + `bash` ∥ `execute` + `git` + `manifest` ∥ `memory` + `ssh`）——`bash` ∥ `execute`
-    // 与写盘工具同一判据、不按命令内容分类（决策 36）；`git` 只对写型 action 要号（决策 37）；`ssh` 只对 `get` 要号。
+    // 入口集 = 十二把（写盘七件 + `bash` ∥ `execute` + `manifest` ∥ `memory` + `ssh`）——`bash` ∥ `execute`
+    // 与写盘工具同一判据、不按命令内容分类（决策 36）；`ssh` 只对 `get` 要号。`git` **不在集内**（决策 37 改判）：
+    // 它不落新字节，写型与只读同为不要号 ⇒ 本门不问它的 action。
     // 只在工程模式生效（`agent.config.agent.engineering`）∥ 只在 depth 0（子代理走既有 token 门）。
     // 路径集与 `args.ledger` 由判据函数自己取（调形只传 tool + toolName + args）。
     const ledgerConflict = await ledgerBindWriteConflict(agent, depth, tool, toolCall.name, args)

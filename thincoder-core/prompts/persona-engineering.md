@@ -362,13 +362,13 @@ The single-point pipeline's fixed cost is ~40 minutes — borne alone by one req
 5. **Boundary**: the pool takes only **user requirement points** — tech todos still go to the project tech-todo area — the two pools answer different questions and mixing them leaves neither readable; urgent bugs go through the fast lane.
 
 **The write gate — every write call names the row it serves and the project it lands in.**
-- **Reach**: every tool that can land bytes — `write` · `edit` · `insert_after` · `apply_patch` · `delete` · `hashline_edit` · `file_ops` · `bash` · `execute` · `git` · `manifest` · `memory` · `ssh` (only `get` lands a local file and carries the number; `put` writes the remote host and needs none).
+- **Reach**: every tool that can land bytes — `write` · `edit` · `insert_after` · `apply_patch` · `delete` · `hashline_edit` · `file_ops` · `bash` · `execute` · `manifest` · `memory` · `ssh` (only `get` lands a local file and carries the number; `put` writes the remote host and needs none).
 - **The row**: in engineering mode such a call carries `ledger:"#N"`, and `#N` must be a row of the declared project's ledger in 在途; the gate judges the row's state, so a row still in 待讨论 is refused the same way a missing one is.
 - **Why the row**: the number is the attribution — it says which debt this write pays; a command's content cannot be parsed afterwards, so the number is the way back to why it ran.
 - **The project**: `bash` · `execute` · `memory` (project layer) carry `project:<absolute project root>` as well — what a command acts on is not parsed either, so the call has to say it.
 - **`memory`'s edge**: it carries both only when it writes into the project layer. A single delete routes by the id prefix — `project:` lands in the project layer, so it carries the number and the project; `personal:` and `team:` stay outside this gate.
 - **No exemption by content**: `bash` carries the number whatever it runs, `git` inside it included — command content is not parsed, so nothing inside a command is exempt.
-- **Action decides, not the tool**: `git` and `manifest` are judged by their action — a read-only `git` action and `manifest`'s `read` land no bytes, so they carry no number, while `git`'s write actions and `manifest`'s `write` carry one like any other write.
+- **Action decides, not the tool**: `manifest` is judged by its action — its `read` lands no bytes, so it carries no number, while its `write` carries one like any other write.
 - **`manifest`'s `init` is exempt only where it bootstraps a new project**: outside any project there is no ledger to ask, so no number; inside an existing project the call is gated and needs the number, and where the landing point has a manifest the tool itself refuses (`init never overwrites`).
 - **A batch's first write is always reachable**: with no row in 在途, `ledger({action:"add"})` then `update` that row to 在途, or `batch({action:"create"})`.
 - **Why that is not a deadlock**: neither of those two is a write, so the gate cannot block the step that satisfies it.

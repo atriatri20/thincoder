@@ -1241,8 +1241,8 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 - **① 钩子**（`thincoder-core/tools/ssh.mjs`）：补 `touchedPaths(args)`——`action === "get"` ∧ `localPath` 非空串 ⇒ `[expandHome(args.localPath)]`（**绝对形**；`~` 展开单源 = `thincoder-core/expand-home.mjs`），其余动作与缺参 ⇒ `[]`。钩子契约 = `thincoder-core/agent/helpers.mjs` 逐字 `const hook = tool?.touchedPaths`。
   - **形差（如实记）**：钩子契约只收 `args`、拿不到 `ctx` ⇒ 钩子不做 `resolve(ctx.cwd, …)`。等价依据 = 门对钩子回值本就 `.map((p) => resolve(cwd, p))` 归一 ⇒ 绝对形过 `resolve` 恒等，判据点与真实落点同址。
   - **为何必须绝对形**：回原样形（`[args.localPath]`）时，`get` 到 `~/.thincoder/tmp/x` 被判成 `<项目>/~/.thincoder/tmp/x` 这条虚构路径——工程模式无故要号，而 `~` 正是备份最常见的落点。
-- **② 入口集**（`write-gate.mjs`）：`LEDGER_ENTRY_TOOLS` += `"ssh"`。现集逐字 `const LEDGER_ENTRY_TOOLS = new Set([ "write", "edit", "insert_after", "apply_patch", "delete", "hashline_edit", "file_ops", "bash", "execute", "git", "manifest", "memory", ])`（十二把）——`ssh` 不在内，而门逐字 `if (!LEDGER_ENTRY_TOOLS.has(name)) return null // 入口集之外 ⇒ 本门不问` ⇒ 门在读到钩子之前就返回。集注释的计数随之改「十二把」→「十三把」（D3 计数随表）。
-- **③ 要号判据**（`write-gate.mjs` 的 `ledgerGateApplies`）：加分支 `if (toolName === "ssh") return String(args?.action ?? "") === "get"`。**此分支必须带**：该函数对未列工具回落逐字 `return true`（`git` / `manifest` / `memory` 各一分支之后），只加入口集不判 action ⇒ `connect` / `send` / `read` / `list` 全部变成要号，把会话面整条打死。
+- **② 入口集**（`write-gate.mjs`）：门上入口集 = `write` / `edit` / `insert_after` / `apply_patch` / `delete` / `hashline_edit` / `file_ops` / `bash` / `execute` / `manifest` / `memory` / `ssh`（**十二把**，集注释同数）；`ssh` 在集内，门才读得到它的 `touchedPaths` 钩子——门逐字 `if (!LEDGER_ENTRY_TOOLS.has(name)) return null // 入口集之外 ⇒ 本门不问` ⇒ 集外工具在读到钩子之前就返回。`git` 整把不在集内（写型与只读都不要号）：机制与理由归 `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.3「`git` 不进写门」，本节不复述。
+- **③ 要号判据**（`write-gate.mjs` 的 `ledgerGateApplies`）：加分支 `if (toolName === "ssh") return String(args?.action ?? "") === "get"`。**此分支必须带**：该函数对未列工具回落逐字 `return true`（`manifest` / `memory` / `ssh` 三个分支之后），只加入口集不判 action ⇒ `connect` / `send` / `read` / `list` 全部变成要号，把会话面整条打死。
 
 判据点仍走既有链：`ledgerGateTargets` 对写盘族回落 `toolTouchPaths(tool, args)`，`ssh` 的钩子对 `get` 回 `expandHome` 绝对形（见 ①）、其余回 `[]`——空 ⇒ `null` ⇒ 「没有可判的目标」，本门不问。
 

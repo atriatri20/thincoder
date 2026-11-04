@@ -3,8 +3,6 @@ import {
   truncate,
   runGit,
   gitFailureMessage,
-  LEDGER_PARAM_DESC_GIT,
-  PROJECT_PARAM_DESC,
 } from "./shared.mjs";
 import { spawnGit } from "./git-run.mjs";
 import { resolve } from "node:path";
@@ -88,22 +86,21 @@ export const gitTool = {
       create: { type: "boolean", description: "(switch) create the branch then switch (-c)" },
       dest: { type: "string", description: "(mv) destination path (file or directory)" },
       worktreeAction: { type: "string", enum: ["list", "add", "remove"], description: "(worktree) list / add (path, ref) / remove (path)" },
-      ledger: { type: "string", description: LEDGER_PARAM_DESC_GIT },
-      // 项目声明面（决策 40）：`path` ∥ `workdir` 缺位时才被读（定位参数优先）；纯声明，不改执行目录。
-      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["action"],
   },
   readonly: false,
   /**
    * 动作级只读分类（决策 37 · 2026-11-03 笔-账绑定批——**本钩子是单源**）。
-   * 消费面两处：`thincoder-core/agent/dispatch-gates.mjs` 的 `readonlyActionOf(tool, "git", args)`
-   * （planMode 门 ∥ 权限短路 ∥ 写门的 `git` 写型/只读判定）——三面（CLI ∥ desktop ∥ vscode）同答案。
+   * 消费面 = **审批面**：`thincoder-core/agent/dispatch-gates.mjs` 的 `readonlyActionOf(tool, "git", args)`
+   * （planMode 门 ∥ 免审批短路，调用点 = `thincoder-core/agent/dispatch.mjs`）——三面（CLI ∥ desktop ∥ vscode）同答案。
+   * 写门那个消费者随 2026-11-05 免号批退场：`git` 整把不在写门入口集，写型与只读在门上同判（都不要号）；
+   * 名单照留——谁消费谁负责，一处不用不是删它的理由（设计档 §2.3「只读名单本体」）。
    * 名单与 `thincoder-vscode/src/tools/index.mjs` 原端装饰体逐条同形（该覆写随本钩子同笔删除）：
    * 六项平铺 + 六条子动作分支。`checkpoint` 的 `list` ∥ `cat` 判只读——`checkpoint list` 有 F6 清理副作用
    * （`lazyClearIfCommitted` 可能删除整个 checkpoint 目录），但清的是 commit 后已失去意义的过期快照 ⇒
    * 保留只读分类免审批（`docs/core/design/CHECKPOINT.md` F6/D3 设计意图）。
-   * 缺此钩子的面回落到核名面谓词（无 `git` 分支 ⇒ false ⇒ 写型 ⇒ 要号），fail-closed，不出洞。
+   * 缺此钩子的面回落到核名面谓词（无 `git` 分支 ⇒ false ⇒ 写型 ⇒ 走审批），fail-closed，不出洞。
    */
   isReadonlyAction(args) {
     if (!args || typeof args.action !== "string") return false

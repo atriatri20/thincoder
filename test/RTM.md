@@ -141,7 +141,7 @@
 ### 12. 写盘与跑命令都要报它替哪条台账行服务（不分面、不分类命令）
 
 > 目的：工程模式下父侧的每一次落盘、每一次 `bash` / `execute` 都要带 `ledger:"#N"`，且同时给出项目（`bash` ∥ `memory` 用 `project`，其余用各自的定位参数）；该号是**声明项目**台账里一条 `status = 在途` 的行；门不判批档状态，也不判命令内容——`git status` 与 `rm -rf` 同判；`init` 自举一格见 12-15。
-> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.3 ∥ §2.10 ∥ §2.12；交互组件 = 写盘 / 跑命令的工具面 ↔ 笔-账绑定判定 ↔ 台账库；进入口 = 父侧工具调用（工程模式 depth-0）。十五态（行序）= 12-1 错误 · 12-2 正常 · 12-3 错误 · 12-4 错误 · 12-5 错误 · 12-6 借行（服务 R14 排除名单单源；迁出触发条件 = 该名单有独立故事节那一轮） · 12-7 错误 · 12-8 边界 · 12-9 错误 · 12-10 正常 · 12-11 错误 · 12-12 错误 · 12-13 错误 · 12-14 边界 · 12-15 边界。
+> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.3 ∥ §2.10 ∥ §2.12；交互组件 = 写盘 / 跑命令的工具面 ↔ 笔-账绑定判定 ↔ 台账库；进入口 = 父侧工具调用（工程模式 depth-0）。十四态（行序）= 12-1 错误 · 12-2 正常 · 12-3 错误 · 12-4 错误 · 12-5 错误 · 12-6 借行（服务 R14 排除名单单源；迁出触发条件 = 该名单有独立故事节那一轮） · 12-7 错误 · 12-8 边界 · 12-9 正常 · 12-10 正常 · 12-12 错误 · 12-13 错误 · 12-14 边界 · 12-15 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -153,9 +153,8 @@
 | 12-6 | 在 `vendor/` · `node_modules/` · `dist/` 各放一份含标记文本的 `.mjs`，用 `grep` 搜该标记；再在普通目录放同文本 | 首次零命中（名单合并后三处都被剪）；普通目录那份命中——证明剪枝生效而非搜索坏了 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-7 | 台账无在途行时（工程模式父侧）跑 `bash` 一条只读命令（`git status`，带 `project:<本仓>`）；挂一条在途行后带同样的 `project` 与号跑同一条 | 第一次拒（拒文含 `no ledger number on this call`），命令零执行、无输出；第二次执行并回输出——只读命令与写命令同判 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-8 | 子代理（`depth > 0`）用 `write` 不传 `ledger`；同一子代理带号再写一次 | 两态都不被本门拒（拒因若现，只来自它自己的 token 门）——子代理的号来自绑定的批档档头，本门不核 | — | `test/integration/batch-live-batch-lock.test.mjs` |
-| 12-9 | 仓库有暂存、台账无在途行时用 `git` 跑 `commit`（带 `path`）；挂一条在途行后带号重跑同笔 | 第一次拒（拒文含 `no ledger number on this call`）、`git log` 输出不变（零提交）；第二次提交生效——`git log` 出现该 commit message | — | `test/integration/batch-live-batch-lock.test.mjs` |
-| 12-10 | 同一会话、台账无在途行时用 `git` 跑 `status`（不传号） | 照跑回输出（读到已暂存的 1 个文件）——同一把工具在写型与只读型上答案不同 | — | `test/integration/batch-live-batch-lock.test.mjs` |
-| 12-11 | 本仓有在途号，用 `git` 带 `workdir` 指向另一个无在途行的项目仓跑 `commit`；再把号换成那个仓的在途号重跑 | 第一次拒且拒文点该项目缺这个号（`does not exist in this project's ledger`）、目标仓零动；换成目标仓的在途号 ⇒ 提交生效 | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-9 | 仓库有暂存、台账无在途行时用 `git` 跑 `add` + `commit`；同一会话再用 `write` 写产品码（不带号） | `git add` + `commit` 照常生效——`git log` 出现该 message；同一会话里写盘工具缺号仍拒（拒文含 `no ledger number on this call`）、文件零改（门没被拆） | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-10 | 同一会话、台账无在途行时用 `git` 跑 `status`（不传号） | 照跑回输出（读到已暂存的 1 个文件）——名单只判审批，与写门无关 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-12 | 会话 cwd = 容器根（祖先链无 manifest）、台账无在途行：`bash` 跑 `git status` 不带 `project`；再带 `project:<本仓>` 但仍不带号；再带 `project` + 本仓在途号 | 第一次拒（含 `no project on this call`）、命令零执行；第二次拒（含 `no ledger number on this call`）；第三次执行并回输出；另：`memory({action:"put", layer:"project"})` 不带 `project` ⇒ 拒、项目内 memory 目录零写 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-13 | `bash` 的 `project` 指到容器根 `D:\teamcode`（自身无 manifest）并带本仓在途号；再声明 A 项目、号取自 B 项目 | 两条都拒：分别含 `declared project is not a project` 与 `does not exist in this project's ledger`；两条拒文都同时点出 `project` 与 `ledger` 两个输入 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-14 | 会话 cwd = `<本仓>/thincoder-cli`（项目子目录）：`bash` 带 `project:"<本仓根>"` + 本仓在途号跑一条命令；同一会话再跑同一条但不带 `project` | 第一次放行、命令执行并回输出（声明根含会话锚 ⇒ 相关）；第二次拒（含 `no project on this call`）、命令零执行 | — | `test/integration/batch-live-batch-lock.test.mjs` |

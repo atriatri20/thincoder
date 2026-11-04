@@ -1,6 +1,6 @@
 /**
- * batch-live-batch-lock.test.mjs — 集成用例 12-1 … 12-14（RTM CLI 端故事 12「写盘与跑命令都要报它替哪条
- * 台账行服务（不分面、不分类命令）」）。
+ * batch-live-batch-lock.test.mjs — 集成用例 12-1 … 12-15（无 12-11——该格随 2026-11-05 `git` 免号批删除）；RTM CLI 端故事 12「写盘与跑命令都要报它替哪条
+ * 台账行服务（不分面、不分类命令）」。
  *
  * 判据原文 = `test/RTM.md` 第 12 节；机制 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.3。
  * **进入口 = 父侧工具面**（`write` / `bash` / `git` / `batch` / `ledger` 走 `executeToolCalls` 的 Phase 1
@@ -255,48 +255,34 @@ test("12-8 子代理（depth > 0）不带号 ∥ 带号写同一目标 ⇒ 本�
   assert.equal(second.ok, true, "子代理带一个不存在的号：本门也不核")
 })
 
-test("12-9 git 写型 action：无在途号 commit ⇒ 拒、仓库零动；带在途号同笔 ⇒ 提交生效", async () => {
+test("12-9 git 整把不在写门：台账无在途行 add + commit 照常生效；同一会话里写盘工具缺号仍拒", async () => {
   const root = makeProject("12-9")
   makeRepo(root, "a.txt")
   const agent = agentOf(root)
-  const denied = await run(agent, toolMapOf(root), "git", { action: "commit", message: "rtm probe", path: "a.txt" })
-  assert.equal(denied.ok, false)
-  assert.match(denied.result, /no ledger number on this call/)
-  assert.equal(hasCommit(root), false, "仓库零动：无提交产生")
+  assert.equal(ledgerQuery({ cwd: root, boundary: root }).length, 0, "夹具：台账里确实没有任何行")
 
-  const live = rowWithStatus(root, "在途")
-  const ok = await run(agent, toolMapOf(root), "git", { action: "commit", message: "rtm probe", path: "a.txt", ledger: `#${live}` })
-  assert.equal(ok.ok, true, ok.result)
+  const added = await run(agent, toolMapOf(root), "git", { action: "add", path: "a.txt" })
+  assert.equal(added.ok, true, added.result)
+  const committed = await run(agent, toolMapOf(root), "git", { action: "commit", message: "rtm probe", path: "a.txt" })
+  assert.equal(committed.ok, true, committed.result)
   assert.equal(hasCommit(root), true, "提交生效")
   const log = await run(agent, toolMapOf(root), "git", { action: "log", count: 5 })
-  assert.match(log.result, /rtm probe/)
+  assert.match(log.result, /rtm probe/, "git log 出现该 message")
+
+  const target = join(root, "thincoder-core/agent/x.mjs")
+  const denied = await writeTo(agent, target)
+  assert.equal(denied.ok, false, "同一会话：写盘工具缺号仍拒（门没被拆）")
+  assert.match(denied.result, /no ledger number on this call/)
+  assert.equal(existsSync(target), false, "文件零改")
 })
 
-test("12-10 git 只读 action：无在途号跑 git status ⇒ 照跑回输出", async () => {
+test("12-10 名单只判审批，与写门无关：台账无在途行跑 git status ⇒ 照跑回输出", async () => {
   const root = makeProject("12-10")
   makeRepo(root, "a.txt")
   const status = await run(agentOf(root), toolMapOf(root), "git", { action: "status" })
   assert.equal(status.ok, true, status.result)
-  assert.match(status.result, /Staged \(1\)/, "同一把工具两种判据：只读不要号")
+  assert.match(status.result, /Staged \(1\)/, "名单只判审批，与写门无关")
   assert.equal(ledgerQuery({ cwd: root, boundary: root }).length, 0, "本夹具台账里确实没有任何行")
-})
-
-test("12-11 git 的根 = path ∥ workdir：号必须在目标项目的账上", async () => {
-  const a = makeProject("12-11a")
-  const b = makeProject("12-11b")
-  makeRepo(a, "a.txt")
-  makeRepo(b, "b.txt")
-  const liveA = rowWithStatus(a, "在途")
-  const agent = agentOf(a)
-  const denied = await run(agent, toolMapOf(a), "git", { action: "commit", message: "wrong ledger", path: "b.txt", workdir: b, ledger: `#${liveA}` })
-  assert.equal(denied.ok, false, "号看目标项目的账，不是会话的账")
-  assert.match(denied.result, new RegExp(`row #${liveA} does not exist in this project's ledger`))
-  assert.equal(hasCommit(b), false, "目标仓零动")
-
-  const liveB = rowWithStatus(b, "在途")
-  const ok = await run(agent, toolMapOf(a), "git", { action: "commit", message: "right ledger", path: "b.txt", workdir: b, ledger: `#${liveB}` })
-  assert.equal(ok.ok, true, ok.result)
-  assert.match((await run(agent, toolMapOf(a), "git", { action: "log", workdir: b })).result, /right ledger/, "换成目标仓的在途号 ⇒ 放行")
 })
 
 test("12-12 会话 cwd = 容器根：不带 project ⇒ 拒、命令零执行；带 project 仍缺号 ⇒ 拒；带 project + 在途号 ⇒ 执行", async () => {
