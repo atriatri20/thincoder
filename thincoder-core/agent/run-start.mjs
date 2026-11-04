@@ -141,6 +141,10 @@ export async function beginRun(agent, input, callbacks, {
       agent._advisorSession = null // advisor session is per-run: discard when the task ends, next task starts fresh
       agent._emptyRetries = 0 // empty-response retry budget is per-run: a fresh user turn restarts from zero
       agent._compressFailures = 0 // compaction summary-failure counter is per-run: a fresh user turn restarts from zero
+      // §6.6（AGENT-LOOP.md）两个载体与 `_emptyRetries` 同点复位（链起点）：`wrote` 判据（`_batchWrites`）与注入帽计数
+      // （`_designTurnNotices`）均按整流累计读——续跑不重置，否则「已落过盘」与「已告知过」的痕迹会被抹掉。
+      agent._batchWrites = 0
+      agent._designTurnNotices = 0
       // F-CC2（§6.16.2）：模型主动压缩的排队槽也是回合级——上一回合末尾未被安全点消费的请求不得跨回合生效
       agent._pendingCompact = null
     }

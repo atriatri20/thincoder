@@ -17,7 +17,7 @@ import {
 export { timerWakeEnabled } from "@thincoder/core/agent/timers.mjs"
 
 /** 到期批交付（**两路共用**：空闲闩 fire ∥ 挂起窗 `timerFace.deliver`）：核派发（出列幂等 → 注入单点）+ `ev:timer`
- *  逐条落流。返回交付条数（0 = 无到期项——零注入零行）。`text` = 交付原文逐字（`[System reminder: ⏰ timer — …]`）；
+ *  逐条落流。返回交付条数（0 = 无到期项——零注入零行）。`text` = 交付原文逐字（`[System reminder: timer — …]`）；
  *  显示裁 = 渲染面（≤3 行 + `…`——§6.30.11）。`now` = 注入缝（默认 `Date.now`）。 */
 export function deliverExpiredTimers(agent, key, { post, now = Date.now } = {}) {
   return coreDeliverExpiredTimers(agent, { now: now(), onLine: (text) => post("ev:timer", { key, status: "fired", text }) }).length

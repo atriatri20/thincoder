@@ -103,6 +103,9 @@
 - 守卫统一 `!parentAborted`（严格版：ctx.signal aborted 或条目 controller aborted）；族特有段作 `onAccounting` hook（advisor 陈旧判定 / token 落盘记账；escalate 三分类 merge 决策）；
 - **pending 单容器** `_pendingAsyncResults` + role；**done-in-pool 统一表示** = 留池 `done: true` + pending 单容器（`_inPending` 标记防重复移交）；
 - **池 accessor** = `getAsyncPool(parent, role)`；**`buildChildSignal`** = `_sessionSignal ?? ctx.signal ?? null` 单点。
+**撞帽后的现行行为（async 族）**：后台子代理跑到 turn 上限 ⇒ **注册父侧检查点并挂起**（不弹面板、不重派），出路三条 = 父侧 `send` 兑现 ∥ 中止 ∥ 不可答；**AUTO 一档同样不自动续跑**（需求面 = `docs/core/requirements/TURN-CAP-CONTINUE.md` F8）。接线 = `thincoder-core/agent-tools/subagent-run.mjs` 的 `askContinue: registerTurnCapCheckpoint`。
+
+**注释面纪律（裁定号不悬空）**：核内注释引裁定一律指**节**（`<档路径> §N.M`），不写 `D-Ax` 这类批档时代的裁定号——状态档不携它们，写上就是一个查不到的出处。理由 = 读者按注释去核规则时，节能打开、裁定号打不开。
 
 ### 6.7.4 子代理零 git
 

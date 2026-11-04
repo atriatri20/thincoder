@@ -390,7 +390,9 @@ I1 → 集成用例（扩）。
 
 ### 6.30.3 接口契约（投递形态 · 消费入口 · 门三件）
 
-**投递形态（D-TW2）**：到期 ⇒ `history.push({ role: "user", content: "[System reminder: ⏰ timer — <message>]" })`——逐字 = 既有注入单源（`injectTimerReminders`）；机器线独有（`[System reminder:` 前缀不入 fullHistory / 页面投影——两端同判）。
+**投递形态（D-TW2）**：到期 ⇒ `history.push({ role: "user", content: "[System reminder: timer — <message>]" })`——逐字 = 既有注入单源（`injectTimerReminders`）；机器线独有（`[System reminder:` 前缀不入 fullHistory / 页面投影——两端同判）。
+
+**字符面（D-TW2 的约束面）**：该行前缀段不携任何非 ASCII 字符——`/^[\x20-\x7E]+$/` 覆盖到 `timer —` 之前；缺字形的图标字符一律不入本行。理由 = 该行以 `C.warn` 进 CLI 会话流，用户在终端直接读到（显示形态单源 = `docs/cli/design/TUI.md` §7.6）。
 
 **消费入口（D-TW4）**：开一轮 **auto-turn 第三变体 `timerTurn`**——`runAgent` opts 增 `timerTurn`（与 `upstreamTurn` 同族，**仅作域文本选择**；域文本 = `TIMER_TURN_DOMAIN`（已落常量 · `thincoder-core/agent/helpers.mjs`））。
 
@@ -426,7 +428,7 @@ I1 → 集成用例（扩）。
 | # | 决策 | 裁定 | 理由 |
 |---|---|---|---|
 | D-TW1 | 载体 = 核到期件 + CLI 一次性 deadline 闩（空闲）+ 挂起窗第三兑现态 | 采纳 | 空转期在既有管线中**无载体**（零 ticker：CLI 空闲期仅 heap-watch 60s / ledger 120s 两条 `unref` 采样，非回合驱动）⇒ deadline 闩为最小必要新增 |
-| D-TW2 | 投递形态 = `[System reminder: ⏰ timer — …]`（机器线独有） | 采纳 | 逐字沿用既有注入单源；零新增消息类 |
+| D-TW2 | 投递形态 = `[System reminder: timer — …]`（机器线独有） | 采纳 | 逐字沿用既有注入单源；零新增消息类 |
 | D-TW3 | 在途跨 run 存活 = 规范语义（核不复位） | 采纳 | 到期语义要求（用户报告锚）；VSC 端差**已消解（跨 run timer 两端同存活；见 §6.30.1）** |
 | D-TW4 | 消费入口 = auto-turn 第三变体 `timerTurn` + 普通权限面 | 采纳 | — |
 | D-TW5 | 开关默认 `true` | 采纳 | §6.30.3 门三件 ③ 三条理由 |
@@ -449,7 +451,7 @@ I1 → 集成用例（扩）。
 | # | 场景 | 输入 | 预期 |
 |---|---|---|---|
 | T-TW1 | 正常·核到期件 | 在途两项（一到期一未到期）——`takeExpiredTimers` / `pendingTimerDeadline` 直驱 | 恰取到期项并出列；二次调用零返（幂等）；deadline = 最近时点；空在途 ⇒ `null` |
-| T-TW2 | 正常·post-turn 回归 | `injectPostTurn` 直驱（到期项 / 未到期项） | 到期 ⇒ history 尾 = `[System reminder: ⏰ timer — <msg>]`（逐字）；未到期 ⇒ 零注入；行为与改前逐字等价 |
+| T-TW2 | 正常·post-turn 回归 | `injectPostTurn` 直驱（到期项 / 未到期项） | 到期 ⇒ history 尾 = `[System reminder: timer — <msg>]`（逐字）；未到期 ⇒ 零注入；行为与改前逐字等价 |
 | T-TW3 | 正常·空闲闩武装 | 假 timer + 在途一项（+N ms）——`sync()` | timer 恰注册一次 · 延迟 = 最早到期差 · `unref()` 被调；无在途 ⇒ 零注册（并撤旧） |
 | T-TW4 | 正常·空闲自唤醒（可复现） | 空闲态（`processing` / `suspended` / `_suspPending` 全假）+ 假 timer 触发 | 到期出列 + history 注入恰一条 + 触发落流恰一行 + 开轮调用恰一次（桩收 `{autoTurn:true, timerTurn:true}`） |
 | T-TW5 | 边界·busy 期触发零动作 | `state.processing = true` ⇒ 假 timer 触发 | 零注入 / 零开轮 / 在途不动（交链尾收束——窗口 ∥ 空闲闩空闲面交付；§6.34） |
@@ -674,7 +676,7 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
   - **非有限 `expiresAt`（`NaN` ∥ `±Infinity`）⇒ `at` 段不插、落 `one-shot · due now`**（守卫 = `thincoder-core/agent-tools/timer.mjs:53`/`:60`）。
   - **一次性式逐字零变**（`Timer set for <N> seconds. A reminder will appear when time is up.`）且不携 id（零回归口径；其取消可经 `list` 寻址）。
 
-**默认 `message`（`message` 未传时——逐式 · 评审轮 1 #4 收正）**：`⏰ Time's up (<槽>). Have you tried running the code, adding a console.log, or checking the output? Thinking more without data is guessing.`
+**默认 `message`（`message` 未传时——逐式 · 评审轮 1 #4 收正）**：`Time's up (<槽>). Have you tried running the code, adding a console.log, or checking the output? Thinking more without data is guessing.`
 
   槽逐式 = `${seconds}s`（一次性式——逐字零变）∕ `at ${YYYY-MM-DD HH:MM}`（`at`——解析刻宿主本地）∕ `every ${N} seconds`（N = `every` 秒值）∕ `daily at ${HH:MM}`；显式 `message` ⇒ 逐字原样（既有语义零变）。
 - **描述面（`thincoder-core/tool-docs/timer.md` · 6 行）**：扩述三式 ＋ 下限 ＋ `cancel`/`list`；**逐字文本 = 机制文档定稿**（D-TW8 同口径；草稿位 = 本节，落 = 实施轮 · eng-coder）。

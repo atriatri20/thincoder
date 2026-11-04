@@ -18,9 +18,11 @@
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 const HOME = mkdtempSync(join(tmpdir(), "tc-int-browser-home-"))
 const SAVED = {
@@ -40,7 +42,8 @@ after(() => {
     if (value === undefined) delete process.env[key]
     else process.env[key] = value
   }
-  rmSync(HOME, { recursive: true, force: true })
+  // 尽力面（并行负载下浏览器仍占着 profile 目录 ⇒ `EPERM`）：失败写一行 stderr，不把全绿的档判红。
+  removeTempDirBestEffort(HOME)
 })
 
 const ctx = { agent: { config: {} } }

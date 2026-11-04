@@ -141,6 +141,7 @@ export async function createBatchRecord({ args, ctx, review, cwd, bases, onWritt
       throw e
     }
     created.flag = true
+    if (ctx?.agent) ctx.agent._batchWrites = (ctx.agent._batchWrites ?? 0) + 1 // §6.6 `wrote` 判据（建档写盘成功才增）
     onWritten?.(ctx?.agent ?? {}, abs)
   }
 

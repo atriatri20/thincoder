@@ -166,7 +166,7 @@ export const timerTool = {
         throw new Error(`timer at must be a local clock time "YYYY-MM-DDTHH:MM[:SS]" (e.g. "2026-10-13T09:00"), got: ${String(raw)}`)
       }
       expiresAt = ts // 过时点 ⇒ 所给刻（delay ≤ 0 ⇒ 即时投递——AC-45① 口径；不重排）
-      message = `⏰ Time's up (at ${localText(ts)})${DEFAULT_TAIL}`
+      message = `Time's up (at ${localText(ts)})${DEFAULT_TAIL}`
     } else if (hasEvery) {
       form = "every"
       everySec = Number(args.every)
@@ -175,14 +175,14 @@ export const timerTool = {
       }
       everyMs = everySec * 1000
       expiresAt = nextFireAt({ everyMs, expiresAt: now }, now) // 首投 = 设时 + N（非立即——防「设置即投」双投感）
-      message = `⏰ Time's up (every ${everySec} seconds)${DEFAULT_TAIL}`
+      message = `Time's up (every ${everySec} seconds)${DEFAULT_TAIL}`
     } else if (hasDaily) {
       form = "daily"
       if (typeof args.daily !== "string" || !DAILY_RE.test(args.daily)) {
         throw new Error(`timer daily must be a local "HH:MM" time (24-hour, e.g. "09:00"), got: ${String(args.daily)}`)
       }
       expiresAt = nextFireAt({ daily: args.daily }, now) // 今日该刻未过 ⇒ 今日；已过 ⇒ 明日（非即时）
-      message = `⏰ Time's up (daily at ${args.daily})${DEFAULT_TAIL}`
+      message = `Time's up (daily at ${args.daily})${DEFAULT_TAIL}`
     } else {
       // D15.3#1：默认 180；非法值（非数字/非正数）显式报错——静默 NaN 定时器永不触发的坑
       const seconds = Number(args.seconds ?? 180)
@@ -190,7 +190,7 @@ export const timerTool = {
         throw new Error(`timer seconds must be a positive number, got: ${args.seconds}`)
       }
       expiresAt = now + seconds * 1000
-      message = `⏰ Time's up (${seconds}s)${DEFAULT_TAIL}`
+      message = `Time's up (${seconds}s)${DEFAULT_TAIL}`
       oneShotSec = seconds
     }
 

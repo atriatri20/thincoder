@@ -49,9 +49,9 @@ export function buildAuditBlock(ctx) {
     "Zero-git scope authority: this audit task receives NO git context — nothing is injected. " +
     "The evidence base is the design documents, the current disk state (read/glob/grep), and the _touchedFiles list above. " +
     "Workspace changes NOT listed in _touchedFiles are unrelated to this delivery — they are NOT grounds for an out-of-file-list finding." +
-    // §6.7.6 D-A1.2：审计预算句——A1 指令模板 + 批档指向块之后、A3 报告模板之前（定序——评审 #7）。
-    // 逐字设计锚（D-A1.2 代码块）：只读该读的——10 轮机械预算——超时报 PROBLEM 下结论。
-    // 前导 \n 与 A3 同款块分隔约定（上一句 Zero-git 句末无换行——不触碰既有句）。
+    // §6.7.6（AGENT-LOOP-SUBAGENT.md）：审计预算句——审计指令模板 + 批档指向块之后、审计报告模板之前（定序——评审 #7）。
+    // 逐字设计锚（§6.7.6 的「审计效率」行）：只读该读的——10 轮机械预算——超时报 PROBLEM 下结论。
+    // 前导 \n 与审计报告模板同款块分隔约定（上一句 Zero-git 句末无换行——不触碰既有句）。
     `\n[Audit budget — mechanical]: read ONLY the touched files listed above and the design-doc sections the parent task book names (affected-files table, acceptance criteria, status line). Do NOT read whole documents. Budget = 10 tool rounds max — if you cannot conclude within it, report PROBLEM (inconclusive) rather than continuing to explore.\n` +
     // §6.7.6 D-TS6 A3：审计输出报告格式模板（三态——字段化行——不让模型自由发挥）。
     `\n[Audit report format — mechanical template:]\n` +

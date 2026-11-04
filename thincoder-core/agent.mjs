@@ -76,6 +76,9 @@ export function createAgent({
     _tok: null, _tokRatio: 1, // §6.17 估算自校准池化比（{key,num,den}；采样 = turn-loop，清空 = /new）
     _compressFailures: 0,
     _emptyRetries: 0, // empty-response retry budget (per-run; reset on a fresh user turn)
+    // §6.6 `wrote` 判据与注入帽的载体（AGENT-LOOP.md §6.6 · §6.2 resume 保留集）：
+    // `_batchWrites` = `batch` 工具成功写盘的累计数（`onWritten` 各汇聚点自增）；`_designTurnNotices` = 本链已注入的设计轮提醒条数。
+    _batchWrites: 0, _designTurnNotices: 0,
     _runStartHistoryLen: 0, // machine-line length at the start of the current run — end-of-run exploration distillation slices from here
     _pendingDistill: null, // in-flight end-of-run exploration distillation (SEND-STALL-DISTILL §2.1) — awaited at next run start / TUI exit flush
     _currentTurn: 0, _maxTurns: DEFAULT_MAX_TURNS, // turn counter for status bar display

@@ -247,7 +247,7 @@ export async function finalizeAgentTurn(agent, ctx) {
   // resumes); the Ctrl+C abort branch below is the only path that aborts them
   // (cleanupConsultSessions — marked stopped → no digest), and the suspension
   // driver aborts them on its own abort unwind.
-  // Async subagent turn-end handling (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A3 + AGENT-LOOP-ASYNC-POOL.md §6.8 D-S1). Lifecycle:
+  // Async subagent turn-end handling (AGENT-LOOP-SUBAGENT.md §6.7.3 + AGENT-LOOP-ASYNC-POOL.md §6.8 D-S1). Lifecycle:
   // - Ctrl+C (plain abort): children were aborted with the parent signal — discard dead
   //   entries (tombstone/out-of-pool/notice — AGENT-LOOP-ASYNC-POOL.md §6.20; no stale
   //   errors injected — user explicitly stopped); consultation sessions are cross-turn

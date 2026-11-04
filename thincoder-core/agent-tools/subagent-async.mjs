@@ -50,7 +50,7 @@ export function enqueueAsk(owner, key, ask) {
 }
 
 // Async pool limits per role domain (AGENT-LOOP-ASYNC-POOL.md §6.10 — R14, 2026-09-06):
-// the old single cap (ASYNC_SUBAGENT_LIMIT = 4, AGENT-LOOP-SUBAGENT.md §6.7.3 D-A4) evolved into two
+// the old single cap (ASYNC_SUBAGENT_LIMIT = 4, AGENT-LOOP-SUBAGENT.md §6.7.3) evolved into two
 // independent pools — eng-coder 4 / other roles 4 (user ruling "eng-coder 四路，
 // 其他 4 路") — a full engCoder pool never blocks an explore spawn and vice versa
 // (same-domain cap still 4, cross-domain total up to 8). The per-turn check
@@ -123,7 +123,7 @@ function warnPoolFallback(what, sig) {
   console.warn(`[config] agent.poolLimits: ${what} — must be a positive integer ≥1 — falling back to default ${JSON.stringify(ASYNC_POOL_LIMITS)}`)
 }
 
-/** Running count within ONE pool domain (口径同 AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1/T6: queued 与已完成不计入；
+/** Running count within ONE pool domain (口径同 AGENT-LOOP-SUBAGENT.md §6.7.3 T6: queued 与已完成不计入；
  *  条目带 _pool 域字段——spawn 时 poolDomainOf(role) 落位；缺字段（手工/旧条目）按
  *  other——既有 coder 域测试语义不变)。 */
 export function runningPoolCount(parent, pool) {
@@ -314,10 +314,10 @@ export function executeCancelAction(args, ctx) {
 }
 
 /**
- * 共享 post-spawn 管线（阻塞与 async 同一条——AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1 "全不变"）：turn-cap continue
+ * 共享 post-spawn 管线（阻塞与 async 同一条——AGENT-LOOP-SUBAGENT.md §6.7.3 "全不变"）：turn-cap continue
  * 循环 → 拒绝降级 partial 返回 → MIN_REPORT_CHARS 扩写 → eng-coder mutation merge →
  * designId 后缀。onDeclined 在此（两路同一形态）——只有 askContinue 不同：阻塞经权限
- * 面板询问；async 永不弹面板（自动拒绝；engineering && AUTO 自动 resume——§6.7.3 D-A3）。
+ * 面板询问；async 永不弹面板（自动拒绝；撞帽即注册父侧检查点、挂起等父 `send` / `cancel`，AUTO 档亦不自动续跑——§6.7.3）。
  */
 export async function runChildPipeline(child, input, childOpts, childRunOpts, { parent, role, args, askContinue }) {
   const declined = { partial: null }

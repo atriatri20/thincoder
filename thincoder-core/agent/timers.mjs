@@ -94,12 +94,14 @@ export function takeExpiredTimers(agent, now = Date.now()) {
   return expired
 }
 
-/** 历史注入单点（逐字形态 = 既有注入单源）：逐条 `[System reminder: ⏰ timer — <message>]` 落历史，
- *  返回注入的原文（显示面复用同一串——零第二份字面）。 */
+/** 历史注入单点（逐字形态 = 既有注入单源）：逐条 `[System reminder: timer — <message>]` 落历史，
+ *  返回注入的原文（显示面复用同一串——零第二份字面）。
+ *  **字符面（AGENT-LOOP-ASYNC-POOL.md §6.30.3）**：前缀段全落在 `/^[\x20-\x7E]+$/`（至 `timer —` 之前）——
+ *  缺字形的图标字符不入本行（该行以 `C.warn` 进 CLI 会话流，用户在终端直接读到）。 */
 export function injectTimerReminders(agent, entries) {
   const lines = []
   for (const t of entries ?? []) {
-    const line = `[System reminder: ⏰ timer — ${t.message}]`
+    const line = `[System reminder: timer — ${t.message}]`
     agent.history.push({ role: "user", content: line })
     lines.push(line)
   }

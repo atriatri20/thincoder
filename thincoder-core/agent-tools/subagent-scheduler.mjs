@@ -374,7 +374,7 @@ export function dependentLabels(parent, depId) {
 /** §6.9 D-SD3b 排队态面板刷新（⟦ev⟧queued 事件族——TUI routeSubToken 消费）：对全部
  *  queued 条目重算等待态并发射变化（去重 sig——kind/position/detail 全变才发）——
  *  调用点 = 一切队列突变与等待态变迁（spawn 入队 / settle 后补位与依赖转移 / cancel
- *  出队 / 自动通道消费）。position = 队列序（D-A1 既有——cancel 前移同源）。
+ *  出队 / 自动通道消费）。position = 队列序（§6.7.3 既有——cancel 前移同源）。
  *  P1 禁静默（zero-block 批 §6.8.3.2②）：relay 异常不再静默——留痕一条
  *  `ev:queued-paint-failed`（**池状态不被破坏**语义不变——catch 不重抛）。 */
 export function refreshQueuedTokens(parent, onToken) {
@@ -396,7 +396,7 @@ export function refreshQueuedTokens(parent, onToken) {
 }
 
 /**
- * Slot-queue refill (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1/D-A6 + §6.9 D-SD4 + AGENT-LOOP-ASYNC-POOL.md §6.10 D-24a/R14 分域):
+ * Slot-queue refill (AGENT-LOOP-SUBAGENT.md §6.7.3 + §6.9 D-SD4 + AGENT-LOOP-ASYNC-POOL.md §6.10 D-24a/R14 分域):
  * start queue heads while a running slot is free — called from every settle
  * (completion frees a slot) and from the turn-end collection's refill loop. 队列现可混合 waiting-deps 与 slot-queued——扫描选"依赖全满足 + 域无冲突"的最早
  * 条目启动（waiting 越行不阻塞槽位；多任务同时解除按 queued 序逐个启动）。

@@ -231,7 +231,7 @@ runAgent(agent, input, callbacks, { depth, signal, maxTurns, resume, autoTurn, s
 
    → 响应后处理（流规则 abort / warn · 用户中断 · usage 基线 · 异常 / 缺席 `finishReason` 提醒）
    → 有 toolCalls ⇒ `executeToolCalls`（§6.4）回喂重入；无 ⇒ `handleCompletion`（§6.5）→ done / continue。
-4. **超 turn 上限 → 抛 `ContinueError`**（中止态除外——`signal.aborted` ⇒ 抛 `abortError`，不落 ContinueError）。续跑规则：`engineering && autoApprove → 自动 resume`，否则询问是否续跑。规则适用所有回合（depth-0 用户回合 / auto-turn / depth>0 子代理）。
+4. **超 turn 上限 → 抛 `ContinueError`**（中止态除外——`signal.aborted` ⇒ 抛 `abortError`，不落 ContinueError）。续跑规则：`engineering && autoApprove → 自动 resume`，否则询问是否续跑。射程 = **depth-0 主会话回合**（用户回合 / auto-turn）；**depth>0 子代理不自动续跑**——撞帽即注册父侧检查点并挂起，出路三条 = 父 `send` 兑现 ∥ 中止 ∥ 不可答，AUTO 档同此（`AGENT-LOOP-SUBAGENT.md` §6.7.3 · 需求面 = `docs/core/requirements/TURN-CAP-CONTINUE.md` F8）。
 
 **循环头（回合边界）注入族（三成员——同址、各自方向，互不干扰）**：每轮迭代开头（`chat()` 之前——核侧落点 = `thincoder-core/agent/turn-loop.mjs:87-93`）依次 —
 
@@ -243,7 +243,12 @@ VSC 端壳自有 depth-0 循环同址（`thincoder-vscode/src/agent.mjs:197` 邻
 
 **`autoTurn`（无输入回合——digest 用）**：`{ autoTurn: true }` = 不 push input + per-run 状态重置 + history 尾 = 已注入的 reminder user 消息；复用 resume 的「不 push input」机制，但不绑 `ContinueError` 语义。
 
-**`resume` 保留集**：`_mutatedThisRun` / `_verifiedThisRun` / `_verifyRetries` / `_touchedFiles` / `_advisorRound` 保留（guard 连续性与收敛预算不被续跑重置）；`_emptyRetries` 保留（续跑不是实质响应 ⇒ 不得借续跑清零——清零判据见 §6.5 ①）；`_compressFailures` 亦保留（跨段失败计数，防刷）。
+**`resume` 保留集**（续跑不重置；逐项理由随行）：
+
+- `_mutatedThisRun` / `_verifiedThisRun` / `_verifyRetries` / `_touchedFiles` / `_advisorRound` —— guard 连续性与收敛预算不被续跑重置；
+- `_emptyRetries` —— 续跑不是实质响应 ⇒ 不得借续跑清零（清零判据见 §6.5 ①）；
+- `_compressFailures` —— 跨段失败计数，防刷；
+- `_batchWrites` / `_designTurnNotices` —— §6.6 的 `wrote` 判据与注入帽按整轮累计读：续跑一重置，就把「已落过盘」与「已告知过」的痕迹抹掉。
 
 **中断语义（`AbortController` + `signal.reason`）**：
 
@@ -407,19 +412,23 @@ PreToolUse hooks → 阻断
   - **为什么不取 `injectPostTurn` 的 `turn` 形参**（`thincoder-core/agent/post-turn.mjs:42`）：`turn` = **段内轮号**（0 起，`turn-loop.mjs:64` 的循环变量）——续跑段从 0 重数；persona 的预算（「首版 ≤15 回合」）是**整个设计轮**的量、不按段重置 ⇒ 取累计轮号才与预算同口径（且 1 起 ⇒ `turn ≥ 5` 即第 5 轮）。
   - **判据源（二）是否落过盘**：`wrote = (agent._touchedFiles ?? []).length > 0 || (agent._batchWrites ?? 0) > 0`。
     - `_touchedFiles` = 六件写工具的记账（`write` / `edit` / `insert_after` / `apply_patch` / `delete` / `hashline_edit`）。
-    - `_batchWrites` = `batch` 工具**成功写盘**的计数器（append / status / create / close 五处 `onWritten` 汇聚点单点自增；被拒绝的调用不增）。设计轮落 §2 的唯一通道是 `batch append`，不计它则「§2 已落盘」仍被判成未落盘——注入句与盘面相反（台账 `#1677`）。
+     - `_batchWrites` = `batch` 工具**成功写盘**的计数器（`onWritten` 各汇聚点单点自增——**实读六处**：`thincoder-core/agent-tools/batch.mjs:271` ∥ `:423` ∥ `batch-lifecycle.mjs:252` ∥ `:266` ∥ `:298` ∥ `batch-ledger-bind.mjs:144`；被拒绝的调用不增）。
     - 两集合都在 resume 保留集内（§6.2「resume 保留集」）⇒ **续跑段沿用上一段痕迹**，`wrote` 按整轮累计读。
     - **`_batchWrites` 不并入 `_touchedFiles`**：后者有五个下游消费者（`verify` 改动清单 / advisor 默认范围 / `doc_check` 默认受检文档 / `recent_changes` / 子代理合入父域），且 `hasCodeMutations` 会把「只写了批档」判成「代码有变更」；计数器只动本注入的判据面。
-  - **续跑段后果（如实登记）**：续跑段起手即带前段轮数与写入痕迹 ⇒ 可能首轮就出常行、或直接命中 `turn ≥ 8` 触发降级句（前段已写过文件则降级句不出现）——这是设计轮预算的累计语义，不是漏判。
+  - **续跑段后果（如实登记）**：计数与轮号都跨段存活 ⇒ 前段已用尽两档（`notices = 2`）时续跑段**静默**——不是漏判，是已经告知过两次；前段未用尽则按剩余档位继续（`turn 12` 且 `notices = 0` ⇒ 常行，轮号印 12 而非 5）。
   - **边界**：机器看得见「写过文件」与「写过批次档」，仍看不见「写的内容是不是设计本体」——判据只回答「有没有落盘」，不回答「落得对不对」。
-  - **纯函数（单源）**：`designTurnReminder({ role, turn, wrote })` → 注入串 | `null`（`thincoder-core/agent/post-turn.mjs`，与 goal 预算同一函数体内、`callbacks.onTurnEnd` 之前）；
-    常量 `DESIGN_TURN_NOTICE_AT = 5` · `DESIGN_TURN_SKELETON_AT = 8` · `DESIGN_FIRST_VERSION_TURNS = 15`。角色表当前一行（`eng-designer`）。
+  - **纯函数（单源）**：`designTurnReminder({ role, turn, wrote, notices })` → 注入串 | `null`（`thincoder-core/agent/post-turn.mjs`，与 goal 预算同一函数体内、`callbacks.onTurnEnd` 之前）；
+    常量 `DESIGN_TURN_NOTICE_AT = 5` · `DESIGN_TURN_SKELETON_AT = 8` · `DESIGN_FIRST_VERSION_TURNS = 15` · **`DESIGN_TURN_NOTICE_MAX = 2`**。角色表当前一行（`eng-designer`）。
+  - **何时发（有上限、有去重）**：一条**里程碑**加一条**帽**——`notices >= DESIGN_TURN_NOTICE_MAX` ⇒ `null`；`notices === 0 ∧ turn >= 5` ⇒ 常行；`notices === 1 ∧ turn >= 8` ⇒ 降级行（未落盘）∥ 常行（已落盘）；其余 `null`。
+    **理由**：注入的唯一作用是让模型看见「已用轮次 + 是否落过盘」，而这个信息只在 5 轮与 8 轮各改一次判断；此后逐轮重发只是 token 与噪声（实测长链 600 轮 ⇒ 600+ 条同形句）。
+  - **载体与自增**：`agent._designTurnNotices`（计数，初值 0，落 `thincoder-core/agent.mjs` 状态工厂）——复位点 = `thincoder-core/agent/run-start.mjs` 的 `if (!resume)` 块内、与 `_emptyRetries` 同点；`resume` 保留（续跑不重置）。自增紧跟注入点 `push` 之后一处，判据与自增同址，不写第二份。
   - **`eng-coder` 不在本批**：其零落笔面已由 `AGENT-LOOP-UPSTREAM.md` §6.32 看门狗兜（父侧提醒、连续 50 轮）；模型面计数要先定它的预算数，另裁——加一行即扩展，不改函数体。
-  - **注入形逐字**（`turn ≥ 5` 起，每工具轮末；两串里的 `15` 一律由常量 `DESIGN_FIRST_VERSION_TURNS` 插值——改常量即改注入文本，不另留字面；`7` = persona 判定点 `turn > 7`）：
+  - **注入形逐字**（跨档后各发一次——`turn ≥ 5` 首条、`turn ≥ 8` 第二条，每链至多两条；两串里的 `15` 一律由常量 `DESIGN_FIRST_VERSION_TURNS` 插值——改常量即改注入文本，不另留字面；`7` = persona 判定点 `turn > 7`）：
     - 常行：`[System reminder: design round turn ${turn}/15 — ${wrote ? "something has been written to disk" : "nothing has been written to disk yet"}. First version budget is 15 turns; past 7 turns with nothing landed the rule is a skeleton + unresolved list.]`
     - 降级行（`turn ≥ 8` 且未落盘，替代常行）：`[System reminder: design round turn ${turn}/15 — nothing has been written to disk yet. The 7-turn mark has passed with nothing landed: degrade the delivery NOW — write the skeleton (design doc + batch record §2) plus an unresolved list, then refine in place.]`
   - **阈值理由**：5 = 在「过半（>7）」判据之前 3 轮给出计数（模型还有 3 轮可动手）；8 = 与 persona「过 7 轮」同一判定点（`turn > 7`）。`turn < 5` 静默——早期注入只是噪声。
-  - **机判（纯函数五断言）**：`designTurnReminder` 五断言（`turn 4` ⇒ `null`；`turn 5` 且未落盘 ⇒ 常行、不含降级句；`turn 8` 且未落盘 ⇒ 降级句、含 `skeleton`；`turn 8` 且已落盘 ⇒ 常行、不含降级句；`role` = `eng-coder` / `null` ⇒ `null`）。
+  - **机判（纯函数）**：`turn 4` ⇒ `null`；`turn 5` ∧ `notices 0` ∧ 未落盘 ⇒ 常行、不含降级句；`turn 8` ∧ `notices 1` ∧ 未落盘 ⇒ 降级句、含 `skeleton`；`turn 8` ∧ `notices 1` ∧ 已落盘 ⇒ 常行、不含降级句；`notices 2` ⇒ `null`（任何 `turn`）；`role` = `eng-coder` / `null` ⇒ `null`。
+  - **机判（长链不刷屏）**：连驱 30 个工具轮（`_currentTurn` 1→30、未落盘）⇒ history 内该形态**恰 2 条**。
   - **机判（`batch` 写面，台账 `#1677`）**：`batch append` 成功后 `agent._batchWrites` 自增（两次追加 ⇒ 2）；被拒的 append（空文本 / 段白名单外）⇒ 不增；`_touchedFiles` 空 ∧ `_batchWrites = 1` ∧ `turn 8` ⇒ 常行、含 `something has been written`、不含降级句。
   - **机判（续跑 + 接线）**：续跑断言一条（`turn 12` ∧ `_touchedFiles:["x"]` ⇒ 常行、含 `turn 12/15` 与 `something has been written`、不含降级句）；接线一条（fake agent 调 `injectPostTurn` ⇒ `history` 末条为注入串；`turn` 实参传段内值、`_currentTurn` 传累计值——二者故意不同，取后者）。
 

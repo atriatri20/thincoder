@@ -283,7 +283,7 @@ export function initMessageLoop(deps) {
 }
 
 /** timer 触发落流行（`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.11 VSC 可见面 · 协议 §3.2 行 19）：
- *  `text` = 交付原文逐字（`[System reminder: ⏰ timer — …]`）；显示裁 = ≤3 行 + `…`（CLI `timer-watch.mjs`
+ *  `text` = 交付原文逐字（`[System reminder: timer — …]`）；显示裁 = ≤3 行 + `…`（CLI `timer-watch.mjs`
  *  `reminderDisplay` 同规）；逐行落子节点 = 免依赖样式面（同桌面 `timerGroupNode` 口径）。
  *  未登记 status / 非非空串 ⇒ 零动作（fail-closed——禁假造空行）。 */
 function addTimerLine(ctx, m) {

@@ -249,6 +249,7 @@ export async function statusBatchRecord({ args, ctx, review, pickTarget, onWritt
     // 重开（§4.18-B · §2.13）：一次写盘、两处落笔（状态行改写 + §1 段尾追记行）——不跑收口门
     //（值非「已收口」；写后门态 = open，后续 append/status 恢复放行）。
     writeFileSync(abs, rewriteAsReopen(src, note))
+    if (ctx?.agent) ctx.agent._batchWrites = (ctx.agent._batchWrites ?? 0) + 1 // §6.6 `wrote` 判据（写盘成功才增）
     onWritten?.(ctx?.agent ?? {}, abs)
     // ② 台账回收（§2.13 位次：写盘之后）：失败不否决重开——回执点名失败原文 + 后果 + 出路。
     const reclaim = await reclaimOnReopen(abs, ctx?.agent?.cwd)
@@ -262,6 +263,7 @@ export async function statusBatchRecord({ args, ctx, review, pickTarget, onWritt
   const designTokens = closingValue ? consumeBatchDesignTokens(ctx?.agent ?? {}, abs) : null
   const written = updateSectionStatusLine(src, seg, lineValue)
   writeFileSync(abs, written)
+  if (ctx?.agent) ctx.agent._batchWrites = (ctx.agent._batchWrites ?? 0) + 1 // §6.6 `wrote` 判据（写盘成功才增）
   onWritten?.(ctx?.agent ?? {}, abs)
   // 收口重锚（§6.2 · C · AC-M2-30）：值余核 = §1「已收口」⇒ 本 action 就是收口 ⇒ 同调单源
   // `reanchorOnClose`（不复制 close 径逻辑）；次序位 = 状态行写盘之后。本笔被任一拒因拒 ⇒ 上面各门
@@ -293,6 +295,7 @@ export async function closeBatchRecord({ args, ctx, review, pickTarget, onWritte
   const date = todayLocal()
   const written = updateSectionStatusLine(src, 1, `已收口 ${date}`)
   writeFileSync(abs, written)
+  if (ctx?.agent) ctx.agent._batchWrites = (ctx.agent._batchWrites ?? 0) + 1 // §6.6 `wrote` 判据（写盘成功才增）
   onWritten?.(ctx?.agent ?? {}, abs)
   // 收口重锚（§6.2 · C · AC-M2-30）：顺序位 = 全部拒因通过、§1 状态行写盘**之后**——close 被拒 ⇒ 台账零写。
   const reanchor = await reanchorOnClose(abs, ctx?.agent?.cwd)

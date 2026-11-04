@@ -152,7 +152,7 @@ export function launchEscalateAsync(parent, ctx, launch) {
   const { task, provider, tag, effortNote } = launch
   parent._asyncSubagents ??= new Map()
   parent._asyncQueue ??= []
-  // Async id allocation (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1 precedent): reserve the relay
+  // Async id allocation (AGENT-LOOP-SUBAGENT.md §6.7.3 precedent): reserve the relay
   // counter at launch — the returned id stays stable while the entry sits queued.
   // The [model] token (TUI block creation) is DEFERRED to actual start so queued
   // flights don't paint an empty panel block (subagent-parity).

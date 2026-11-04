@@ -89,11 +89,11 @@
 
 | N72 | 正常 | 假模型（一轮调 `get_current_time` ＋ 一轮纯文本）＋ 环境工具面核真件（仓内直引）＋ 假 db（一节点 ∥ 一成员 ∥ 一 provider） | 四块行在场（时间 ∥ 环境身份 ∥ 现况计数逐值）＋ 简报含能力段；`end(succeeded)`；`chat_call` 行 `tool="get_current_time"`、`resultCode=0`；工具结果含 `Date:` 读数；回放零含实况行（瞬态不落库） |
 | N73 | 正常 | 同一会话连发两条；两条之间新增一个节点（库写） | 第二条现况行计数 +1（读源变更 ⇒ 下回合行变——值随实况） |
-| B70 | 边界 | ① 现况读源抛错（替身抛）∥ ② timer 到期（设 1s 项 ⇒ 到期时空闲）∥ ③ timer 未到期 | ① 该行缺席、回合照跑 `succeeded`（块级降级——其余行在场）∥ ② 唤醒径（§15.1）：送达行落库（`user` 行 + `data.kind="reminder"`——行文 = `[System reminder: ⏰ timer — …]` 逐字）＋ 自唤醒一轮；出列幂等——只投一次 ∥ ③ 零 timer 行（在途保留） |
+| B70 | 边界 | ① 现况读源抛错（替身抛）∥ ② timer 到期（设 1s 项 ⇒ 到期时空闲）∥ ③ timer 未到期 | ① 该行缺席、回合照跑 `succeeded`（块级降级——其余行在场）∥ ② 唤醒径（§15.1）：送达行落库（`user` 行 + `data.kind="reminder"`——行文 = `[System reminder: timer — …]` 逐字）＋ 自唤醒一轮；出列幂等——只投一次 ∥ ③ 零 timer 行（在途保留） |
 | B71 | 边界 | `bash`：`timeout` 非有限值/小于 1 ∥ `timeout: 700000`（受理形）∥ `async:true`（受理形）∥ 输出超 4000 字 | 首形 ⇒ 工具级错误人话（`ok:false`，回合不停）；`async:true` ⇒ 受理 ⇒ 回执（`bash#N started (running) — log: <path>`——回执即工具结果）；`700000` ⇒ 调用完成（无上限——核件本无量程约束）；超长 ⇒ 落库形截断（≤4000 字含注记）＋ 审计行 `truncated:true` |
 | E55 | 错误 | `read` 路径不存在 ∥ `grep` 非法正则 ∥ `bash` 非零退出（`node -e "process.exit(3)"`） | 前两形 ⇒ `ok:false` 人话回灌（回合不停）；非零退出 ⇒ 调用完成（`ok:true`——退出码在输出文本内 `(exit code 3)`）；三形各落 `chat_call` 行（`subject` = 路径/正则/命令原文） |
 
-| N74 | 正常 | 假模型 + 假钟 + `timer` 真件：设 1s 项 ⇒ 到期 ⇒ 空闲（无在途回合） | 送达行落库（`user` 行 + `data.kind="reminder"` ∥ 行文 = `[System reminder: ⏰ timer — …]` 逐字）＋ 自动开一轮（模型出口一次；域文本 = `TIMER_TURN_DOMAIN` 逐字）＋ 助手回复落库；会话回 `idle`；同件不二投 |
+| N74 | 正常 | 假模型 + 假钟 + `timer` 真件：设 1s 项 ⇒ 到期 ⇒ 空闲（无在途回合） | 送达行落库（`user` 行 + `data.kind="reminder"` ∥ 行文 = `[System reminder: timer — …]` 逐字）＋ 自动开一轮（模型出口一次；域文本 = `TIMER_TURN_DOMAIN` 逐字）＋ 助手回复落库；会话回 `idle`；同件不二投 |
 | N75 | 正常 | 假模型 + `bash` 真件（`async: true` + 即退命令） | 回执 = `bash#N started (running) — log: <path>`（`tool` 行逐字）；结算 ⇒ 钩子触发唤醒轮 ⇒ 摘要行落库（核件原文 `[System reminder: background bash#N finished — … (exit code 0, …s) — full log: …]`）＋ 助手回复；池空 |
 | B72 | 边界 | 闩到点但在途回合（`running`）∥ 未到期 ∥ 零交付（件已由回合边界投递） | 三者皆零动作（零投递 ∥ 零开轮）——回合尾链尾再武装；件不丢（下一回合边界兜底投递） |
 | B73 | 边界 | 帽满（池 4 在途 ⇒ 第 5 件）∥ `timeout` 到点 ∥ `kill id:N` 两态 | 帽满 ⇒ 工具级错误人话（零起跑）；timeout ⇒ 杀树 + 摘要行（`killed: timeout`）；kill 在途 ⇒ 杀树 + 确认句（零摘要投递）∥ 已完成 ⇒ 人话错误 |
@@ -442,7 +442,7 @@
 - **③ 在线性读面**（父侧裁）：v12 已撤心跳（`sandbox_runners.status` = active/disabled；「在线」只能读时逐节点探活——`thincoder-server/src/sandbox/routes.mjs:128-145` 每节点现打 `/info` 3s）
   ⇒ 不便宜且慢节点会误读离线 ⇒ 本行取**注册态分布**；**在线性/容器数走工具按需探**（`runners.list` / `docker version`——需求同句「明细仍走工具」）。
 - **降级（需求 43② 字面）**：块级——该块任一读失败 ⇒ **整行略去**（无半真值上屏），其余行照常、回合不阻断（不抛、不 notice）。
-- **timer 到期行**：随三行同落（行文 = 核件单源 `[System reminder: ⏰ timer — {消息}]`）——见 §14.4。
+- **timer 到期行**：随三行同落（行文 = 核件单源 `[System reminder: timer — {消息}]`）——见 §14.4。
 - **不做对位**：git 上下文 ∥ 项目档注入 ∥ 同目录实例（三端有、服务端无对应物——需求 43 边界句；三项以「cwd 锚定的项目」为前提）；**cwd 本身在册**（②行 `cwd:` 字段 + §14.3 工作目录限幅）。
 
 ### 14.2 环境工具面（六族八件——核件复用）

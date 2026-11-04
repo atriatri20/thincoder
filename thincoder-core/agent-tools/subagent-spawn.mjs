@@ -412,7 +412,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // pipeline (AGENT-LOOP-SUBAGENT.md §6.7.2 D3). Prefix includes a unique id: parallel child agents
   // with the same role stay independent and don't overwrite each other.
   // Format: role#id/  →  onToken("coder#2/writing..."), onToolCall("coder#2/read", args)
-  // Async id allocation (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1): reserve the relay counter at
+  // Async id allocation (AGENT-LOOP-SUBAGENT.md §6.7.3): reserve the relay counter at
   // spawn time — the returned id must be stable while the item sits in the queue.
   // The [model] token (TUI block creation) is DEFERRED to actual start so queued
   // children don't paint an empty panel block ("queued 态不显示").
