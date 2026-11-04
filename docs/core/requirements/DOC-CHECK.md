@@ -61,4 +61,4 @@
 
 - **上游**：`thincoder-core/doc-check/`（引擎，已修准——约定文件名豁免 / 占位符豁免 / 尖括号模板不抽）
 - **下游**：eng-designer 与 eng-coder 的交付协议；父侧收口流程（批次档 §6）；**batch 工具**（`thincoder-core/agent-tools/batch.mjs`——F9 结构兜底落点）
-- **关联档**：`docs/core/design/DOC-DISCIPLINE.md`（判据口径单源）· `ENGINEERING-MODE-V2.md` §13.1（D1–D9 文档更新纪律）
+- **关联档**：`docs/core/design/DOC-DISCIPLINE.md`（判据口径单源）· `ENGINEERING-MODE-V2.md` §13.1（D1–D12 文档更新纪律）

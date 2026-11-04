@@ -284,8 +284,8 @@ the difference register records **ruled host-capability exceptions only** — it
 4. **Booking form (engineering mode)**: a debt found at any point (implementation / review / exploration alike) within scope is **booked the same day** as a ledger row (`trigger` bare enum: `归批` / `条件` / `认账不排期` — batch name / condition sentence into `evidence`) or escalated to the parent.
    **Out-of-scope items are not booked** (scope test: only findings inside this task book's scope are booked; anything beyond it is a suspicion, not a fact).
 
-### Doc update discipline (D1–D9)
-Each doc category has one landing route, and the doc system is maintained by discipline. Nine doc-update disciplines:
+### Doc update discipline (D1–D12)
+Each doc category has one landing route, and the doc system is maintained by discipline. Twelve doc-update disciplines:
 
 1. **D1 dispatch routing** — a change by doc category goes to: batch record → the main agent · requirement docs (project requirements + function specs) → the main agent · design docs (architecture + module design) → eng-designer.
    Prompts → content from the main agent, **landing by eng-coder** (product code; content basis = the mechanism doc).
@@ -293,7 +293,8 @@ Each doc category has one landing route, and the doc system is maintained by dis
 3. **D3 count/enumeration discipline** — when declaring "N items / N places / N clauses", the count and the list must change together (machine-checkable).
 4. **D4 pointer discipline** — pointer form = `doc:section`; NO "see above / see that section" relative pointers.
    **What this pointer-form rule reaches = pointers** (a citation into another doc's section).
-   **Implementation coordinates** (a code / tool-face location) carry **their own form**: the full path from the repo root with `:line` — a bare directory segment without the repo-root part resolves ambiguously and is judged dangling.
+   **Implementation coordinates** (a code / tool-face location) carry **their own form**: name the thing by **symbol name** (function / constant / export name); a path never takes a line number after it — a bare directory segment without the repo root is judged dangling.
+- **Name a document by its full path from the repo root**: a bare name resolves only inside its own directory, so a cross-directory one is judged missing and refused on the spot — the refusal then lists the same-name files on disk.
 5. **D5 freeze window** — a doc under review is closed to edits (editing it = the review object changed → stale, no token issued); gather the changes and enter them in one pass.
 6. **D6 read-back check** — after any write, **read back and verify** before reporting done (silent write failures and edit-swallowed-headers have both been proven real).
 7. **D7 settlement sync** — every batch settlement runs a fixed **settlement sync checklist**:
@@ -318,6 +319,21 @@ Each doc category has one landing route, and the doc system is maintained by dis
    **Carry the why**: requirement + cause / lesson / precedent — plain reasoning.
    **The why's source is checkable**: an improvised reason has no source to name.
    **Keep it short**: plain, no decoration.
+10. **D10 process-plane coordinates stay out of deliverables** — a deliverable (a client-signed document, or a spec that stays readable for a long time) cites only what outlives it: a requirement number, a design section name, a code symbol name.
+   **The three that die**: a ledger row number (the row is settled and archived) · a batch-record path · a batch-record section number (the record itself is deleted whole) — each is a pointer certain to go dead, and the "why" it carried goes with it.
+   **What to write instead**: the rule's own sentence, or the section / symbol it lives in — a pointer that still resolves after the batch closes.
+   **A line number belongs to D4** (a position drifts the moment anything is inserted above it); a batch record citing another batch record is out of scope — the two are deleted together.
+   Why: the deliverable outlives the record, so a pointer into the record dies first, taking the reason it stood for with it — and nothing at the far end reports the loss.
+11. **D11 a rule changes in every layer the same round** — one rule usually lives in several layers at once: the requirement doc, the design doc, the prompt, the tool description.
+   **Compliant = one sweep**: find every place that states the rule — its literal sentence, its number and closed enumeration, the symbol name it lands on in code — and change them in the same batch.
+   **A layer left behind becomes the next round's instruction**: the model reads the prompt, the human the requirement, the implementer the design — whoever meets the stale layer does the old thing, and no check reports the disagreement.
+   **Cannot land it this round** ⇒ escalate, naming which layer and which sentence; marking it "baseline, pre-change" is the opening through which the first batch after the rule lands circumvents it.
+   **Not a restatement duty**: D2 keeps the detail in one place, this one keeps every place that states the rule in step — what keeps pace is the rule's sentence, not a second copy of its explanation.
+12. **D12 a reading: how it is taken, where it lives** — a reading is a machine-run result carrying its measuring method and its date, written under one of three fixed prefixes: `改前 <value>（<method> · <date>）` (before) · `目标：<value>` (target) · `当刻 <value>（<method> · <date>）` (now).
+   **Why the prefixes**: the three states carry different numbers, and only the prefix says which one a number is — a bare `0` reads as a measured fact while it may still be the goal, and the wrong one gets used as truth.
+   **Counted by hand is not a reading**: a hand count says 231 where the machine says 234, and a prefix match folds `11-4a` / `11-4b` into `11-4`, inventing a row that does not exist.
+   **Where it lives**: a requirement or design doc carries the relation (what changes, not the measured number); the absolute lives in the batch record and the command output, where the next reader can re-run it.
+   **Why there**: a spec outlives any one reading — a number left in it is read as current long after it stopped being true.
 
 ### Docs must be human-readable
 When writing/editing docs (requirement layer / design layer — roots are `docRoot.requirements` / `docRoot.design`, read with `manifest read`) — **content complete, format readable**: markdown with normal line breaks (headings/tables/lists/rules separated by blank lines and breaks).
