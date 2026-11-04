@@ -625,11 +625,11 @@ spawning subagents, asking questions — those need a real user message. End the
 | U2 | 核挂起面用例全绿（含 T23 / T24——假 carrier / 假 runTurn 纯 Node 驱动，不加载端模块） | 条目 2 |
 | U3 | CLI 输入锁用例全绿（含 T-CL-U1 / U2——`driveRig` 直驱 `suspensionSession`，不触网） | 条目 4 |
 | U4 | 结构机检（ASCII 令牌，单行 `node -e`；四查：两定义点 + 两调用点）：`node -e "const fs=require('fs');const f=(p,s)=>{if(!fs.readFileSync(p,'utf8').includes(s))throw new Error(p+' missing: '+s)};f('thincoder-core/agent-tools/parent-channel.mjs','export function upstreamWaiting');f('thincoder-core/agent-tools/async-settle.mjs','export function wakeAsyncWaiters');f('thincoder-core/agent/suspension.mjs','upstreamWaiting(');f('thincoder-core/agent-tools/parent-channel.mjs','wakeAsyncWaiters(')"` | 条目 1 / 2 |
-| U5 | 零回归（**按包拆分**；仓根无 `package.json`）：cwd = `D:\teamcode\thincoder` ⇒ `cd thincoder-core && npm test` + `cd thincoder-cli && npm test` **双绿**——重点族落点：核包 = `core-hygiene` / `family-tools`；CLI 包 = `async-settle` / `queued-stop` / `input-lock` / `attention-state` / `subagent-observe-send` / `doc-check`（机检本体仍 = 仓根 `node scripts/doc-check.mjs --root .`——U8） | 不变量 ⑤ |
+| U5 | 零回归（**按包拆分**；仓根无 `package.json`）：cwd = `D:\teamcode\thincoder` ⇒ 核 ∥ cli 两包包级 `npm test` 均非门（核 = exit 1 + `requirement N20` 说明；cli = 空集说明器）——零回归读数走单档直跑 `node --test <档>` + 核语法门 `npm run prepublishOnly`——重点族落点：核包 = `core-hygiene` / `family-tools`；CLI 包 = `async-settle` / `queued-stop` / `input-lock` / `attention-state` / `subagent-observe-send` / `doc-check`（机检本体仍 = 仓根 `node scripts/doc-check.mjs --root .`——U8） | 不变量 ⑤ |
 | U6 | 零新增计数 / 上限：`parent-channel.mjs` 导出常量集不变（3 个）；三驱动第 2 步**无新增数值常量** | 不变量 ③ |
 | U7 | 提示词面零行：`git diff --stat -- thincoder-core/prompts` 输出为空（主分支不需改承诺） | 批档禁触面 |
 | U9 | VSC 载体检修：VSC 上游对位用例（T-VS-U1–U7）+ 子代理生命周期集成用例全绿（含夹具同步） | 条目 7 / 8 / 9 |
-| U10 | VSC 零回归：`cd thincoder-vscode && npm test` 全绿（单元 + 集成两清单；启动自检含无漏登记反查） | 不变量 ⑤ |
+| U10 | VSC 零回归：`cd thincoder-vscode && npm test` 全绿 = **单元清单面**（本包显式清单；启动自检含无漏登记反查）；集成门另判 = 仓根 `node test/run.mjs` | 不变量 ⑤ |
 | U11 | 端壳静态闭包不破：`node --test` 端侧单元测试档（W8 契约②判据；单元测试树重建时回迁）全绿（`node:sqlite` 不入静态链） | 不变量 ① / ⑤ |
 | U12 | 端侧结构机检（ASCII 令牌，单行 `node -e`；四查 + 一否定）：`node -e "const fs=require('fs');const f=(p,s)=>{if(!fs.readFileSync(p,'utf8').includes(s))throw new Error(p+' missing: '+s)};const g=(p,s)=>{if(fs.readFileSync(p,'utf8').includes(s))throw new Error(p+' must not contain: '+s)};f('thincoder-vscode/src/agent.mjs','drainChildUpstream(agent)');f('thincoder-vscode/src/extension/suspension.mjs','upstreamWaiting(');f('thincoder-vscode/src/agent/turn-domains.mjs','composeTurnDomain');f('thincoder-vscode/src/agent.mjs','composeTurnDomain(');g('thincoder-vscode/src/agent/turn-domains.mjs','[System reminder: auto-turn')"`（在 `thincoder` 根跑；末项 = 核单源守护——新档零核基座文本字面） | 条目 7 / 9 |
 | U13 | 行数门（N-P3 硬限）：`find /c /v "" thincoder-vscode\src\agent.mjs` ≤ 800（预测 ~487）；报告行数口径 = `wc -l`（≡ `find /c /v ""` 实测） | 拆分计划已落地（行 21） |
@@ -844,9 +844,9 @@ export function upstreamAskLabelVars(carrier) {
 
 | # | 判据 | 回指 |
 |---|---|---|
-| U-SL1 | `cd thincoder-core && npm test` 全绿（含 T-SL1–T-SL4 + A4 导出面 +1 名） | 条 1 / 2 |
-| U-SL2 | `cd thincoder-cli && npm test` 全绿（含 T-SL-C1 / C2 / C3 + `input-lock` 四格收正） | 条 1 / 2 / 3 |
-| U-SL3 | `cd thincoder-vscode && npm test` 全绿（含 T-SL-V1 / V2 + 协议档坐标面重出） | 条 4 |
+| U-SL1 | 核零回归读数 = 单档直跑 `node --test <档>`（含 T-SL1–T-SL4 + A4 导出面 +1 名）+ 语法门 `npm run prepublishOnly`；包级 `npm test` 非门（exit 1 + `requirement N20` 说明） | 条 1 / 2 |
+| U-SL2 | cli 零回归读数 = 单档直跑 `node --test <档>`（含 T-SL-C1 / C2 / C3 + `input-lock` 四格收正）；包级 `npm test` = 空集说明器（非门） | 条 1 / 2 / 3 |
+| U-SL3 | VSC 零回归：`cd thincoder-vscode && npm test` 全绿 = **单元清单面**（含 T-SL-V1 / V2 + 协议档坐标面重出）；集成门 = 仓根 `node test/run.mjs` | 条 4 |
 | U-SL4 | 结构机检（ASCII 令牌，单行 `node -e`；四查 + 两否定）：核容器含 `"digest.turnLabelAsk"` ∧ `${from}` ∧ **不含** `digest.turnLabelAuto`；`suspension-drive.mjs` 含 `t("digest.turnLabel` ∧ `digest.start` ∧ **不含** `[auto-turn:`；`suspension.mjs` 含 `upstreamAskLabelVars(`；`chat.js` 不含 `digest.turnLabelAuto` | 条 1 / 4 |
 
 **⑨ 边界（不做）**

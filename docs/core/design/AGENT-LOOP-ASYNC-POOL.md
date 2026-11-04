@@ -344,7 +344,7 @@ I1 → 集成用例（扩）。
 | A3 | 接线点①② 生效（中止路径产出 A1 / A2 结果）；`thincoder-core/agent/suspension.mjs` 零改动 | F3 |
 | A4 | `depInfo` 对 `discarded` 墓碑不再返 `ok`；非 AUTO 依赖者 depc、AUTO 可启动 | F4 |
 | A5 | 文案 / 动作序 / 事件名与对侧同源；判据口径 = controller 支（与对侧同判——D-AD6）；端差清单已登记（D-AD8a·b·c）· 重复实现登记（D-AD7——已收口） | N1 |
-| A6 | 用例表逐条有对应断言；核用例入口 = `npm run prepublishOnly`（语法门——核仓无集成测试集，CI 同式 `.github/workflows/test.yml`）；`lint` / 各包 `npm test`（单入口）全绿 | N2 |
+| A6 | 用例表逐条有对应断言；核用例入口 = `npm run prepublishOnly`（语法门——核仓无集成测试集，CI 同式 `.github/workflows/test.yml`）；`lint` 全绿；包级 `npm test` 各归其面（核 ∥ cli = exit 1 + 说明，非门；VSC = 单元清单面）；集成门 = 仓根 `node test/run.mjs`（收口时父侧跑一次） | N2 |
 | A7 | 触碰源档 ≤800 硬限；越软线档在档内登记（含拆分计划） | N3 |
 
 ### 6.20.8 边界（不做）

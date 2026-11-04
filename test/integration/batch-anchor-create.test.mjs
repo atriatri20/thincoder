@@ -9,9 +9,11 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { batchTool } from "../../thincoder-core/agent-tools/batch.mjs"
 
@@ -33,7 +35,7 @@ const MANIFEST = JSON.stringify({
 /** 夹具：锚目录（无档） + 下辖 1 个带档项目 `only`。返回锚绝对路径。 */
 function workspaceFixture(t) {
   const box = mkdtempSync(join(tmpdir(), "tc-int-batch-anchor-"))
-  t.after(() => rmSync(box, { recursive: true, force: true }))
+  t.after(() => removeTempDirBestEffort(box))
   mkdirSync(join(box, "only"), { recursive: true })
   writeFileSync(join(box, "only", "PROJECT-MANIFEST.json"), MANIFEST)
   return box

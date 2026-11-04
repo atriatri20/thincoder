@@ -195,7 +195,7 @@ offload / 预览族住 `thincoder-core/agent/offload.mjs`：导出面三件 = `o
 | A6 | ② 落盘失败不吞报告 | 把落盘目录指向不可写路径（指向一个已存在的文件）⇒ 注入文本仍含正文（≤64K 原样）或双端预览（>64K），尾注 `offload to disk failed`，不抛错 |
 | A7 | ③ 池在飞时门不触发 | `agent.tasks=[pending]`、`_asyncSubagents` 非空 ⇒ `handleCompletion` 返回非 `continue`（放行）；池空后同状态 ⇒ 返回 `continue` 一次 |
 | A8 | ③ 归零不再拖回合 | 池在飞时连调 `task` 更新 N 次 + `handleCompletion` N 次 ⇒ `_taskPushbacks` 恒 0 且零推回 |
-| A9 | 不回归 | `node thincoder-core/test/run.mjs` 全绿（单入口——`test/run.mjs:2-4` 单层收集 `test/*.test.mjs`）；既有 digest / 完成门用例零改 |
+| A9 | 不回归 | 核的零回归读数 = 单档直跑 `node --test <档>` 全绿 + 语法门 `npm run prepublishOnly` exit 0（核 `test/run.mjs` 恒 exit 1 + `requirement N20` 说明，非门；集成门 = 仓根 `node test/run.mjs`）；既有 digest / 完成门用例零改 |
 | A10 | ③ 轮预算仍约束本族 | 同一轮第二条报告使 `digestBudgetOver` 为真 ⇒ 注入体为清单行 + 路径（正文不进请求体），落盘文件全量 = 原文 |
 | A11 | 条目 E1（首 chunk 与流中途分窗） | 假 SSE 端点（响应头立刻回、首帧延迟 1.5s），`agent.bodyIdleTimeoutMs=800`、`agent.fetchTimeoutMs` 缺省 ⇒ 请求跑完拿到正文；同一夹具首帧 100ms 后停摆 1.5s ⇒ 按 `SSE idle timeout: no data for 0.8s` 判死（首 chunk 之后仍按 `idleMs`） |
 | A12 | 条目 E1 · E3（首 chunk 窗可配 + 相位串） | `agent.fetchTimeoutMs=2000` ⇒ `effectiveFetchTimeoutMs` 回 2000；同一夹具首帧永不发 ⇒ 按 `SSE first-chunk timeout: no data for 2s` 判死，相位串 `sse-first-chunk`，用时 ≈2s |

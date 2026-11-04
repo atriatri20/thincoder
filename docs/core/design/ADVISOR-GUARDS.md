@@ -40,28 +40,28 @@
 
 ### 1.1 结算点记录面判据（§3 落地门——同族：未完成即不签发）
 
-**最相近先例**：同一函数的两道既有拒签闸——§5.2 裁定闸（`thincoder-core/agent-tools/design-token.mjs:220-224`）∥ 未完成闸（同档 `:167-174`）。对齐 = 同一返回形 `{passed:false, output}`、同一恒定标记形态、同一「槽零写 + 实例保持 open」处置；偏差 = 本闸要读一次批档（前两闸只用手上已有的回执文本），因此把「读的失败」也纳入判据（`batch-unreadable`）。
+**最相近先例**：同一函数的两道既有拒签闸——§5.2 裁定闸（`verdictGateFailure`）∥ 未完成闸（`settleDesignReview` 的 `incomplete` 支）。对齐 = 同一返回形 `{passed:false, output}`、同一恒定标记形态、同一「槽零写 + 实例保持 open」处置；偏差 = 本闸要读一次批档（前两闸只用手上已有的回执文本），因此把「读的失败」也纳入判据（`batch-unreadable`）。
 
 **公开源核查**：项目声明 `PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]` ⇒ 无公开源档可查（已查无）。
 
 **触发条件（两件，都写在判据前置上，不靠实现时记得跳过）**——两件之前另有三条早退，顺序即判据位置：① 参数守卫（同档 `:163-165`：无 token ∥ 非串）② 未完成闸（`:167-174`）③ 回显闸（`:180-183`）。任一早退 ⇒ 本门零判、不 throw、零签发——「宿主截断 + 未绑」这一形因此是正常的「评审未完成」拒签，不是接线故障。
 
 1. **绑了批档（程序不变量——不是拒发分支）**——`run.batchDoc` 非空（`batchDoc` 参数经 `resolveBatchDocPath` 解析出的绝对路径，落在 `resolved.run.batchDoc`）。设计评审必携 `batchDoc`（准入门，判据 = §2 第 6 条）⇒ 结算面上「未绑」不再是可达调用形，只能是绑定没传到实例的接线故障 ⇒ `settleDesignReview` 在 `boundBatch` 判定处断言并 **throw**（串点名设计评审实例无批档绑定 + designId；位置见下条——不是函数首行：未回显时既有 M1 先判，触发条件 2 在前），零槽写、不返回判决、**不设对外拒因值**。为什么不是带拒文的拒发分支：没有场景的拒发分支就是给没发生过的情形配文案（本批 🔴1 裁定）——接线 bug 该炸得响，不该伪装成一条给用户看的拒因。
-   - **断言位置 = 槽写之前**：判据在 `boundBatch` 判定处，早于写槽——`thincoder-core/agent-tools/design-token.mjs:188` `const boundBatch = typeof run?.batchDoc === "string" && run.batchDoc.trim() ? run.batchDoc : null`；写槽在 `:240` `agent._engDesignTokens.set(run.designId, designToken)`。异常落在槽写之后 = 没拦：token 已在槽里，授权照发。
-   - **异常不许在结算面被接住后继续**：结算调用点 `thincoder-core/agent-tools/advisor-settle.mjs:155` `const settled = settleDesignReview(agent, run, entry.designToken, result, { incomplete })` 外面没有 `try/catch`（邻近唯一的 try 包的是 `:166` 的 `persistEngTokens(agent)`）。实现若补一个 catch 后继续 ⇒ 控制流落到 `set(...)` ⇒ token 照签、不报错、只留一条日志：机制成空壳，且比跳门更隐蔽。
-   - **异步轨的后果 = 进程退出，不是一条回给调用方的报错**：`settleAsyncEntry` 在 `thincoder-core/agent-tools/advisor-async.mjs:445-453` 的 `.finally(...)` 回调里调 `onAccounting`（→ `settleAdvisorRun` → `settleDesignReview`）；`thincoder-core/agent-tools/async-settle.mjs:293` 的 `onAccounting?.(parent, entry)` 外层无 `try/catch`，且该 `.finally` 派生的 promise 无处理器 ⇒ throw 变 `unhandledRejection` ⇒ `thincoder-cli/bin/thincoder.mjs:107-108` 的 `process.on("unhandledRejection", …)` → `handleFatal` 写崩溃记录 + `exitSoon(1)`（`:103`）。**这是有意的**：接线故障要炸得响；紧邻就有 catch-and-continue 先例（`thincoder-core/agent-tools/advisor-settle.mjs:165-169` 的 catch → `logEvent` 后继续），照抄即空壳。
+   - **断言位置 = 槽写之前**：判据在 `boundBatch` 判定处，早于写槽——`design-token.mjs` 的 `const boundBatch = …` 那一行；写槽在 `agent._engDesignTokens.set(run.designId, designToken)`。异常落在槽写之后 = 没拦：token 已在槽里，授权照发。
+   - **异常不许在结算面被接住后继续**：结算调用点 = `advisor-settle.mjs` 的 `const settled = settleDesignReview(agent, run, entry.designToken, result, { incomplete })`，外层无 `try/catch`（邻近唯一的 try 包的是 `persistEngTokens(agent)` 那一处）。实现若补一个 catch 后继续 ⇒ 控制流落到 `set(...)` ⇒ token 照签、不报错、只留一条日志：机制成空壳，且比跳门更隐蔽。
+   - **异步轨的后果 = 进程退出，不是一条回给调用方的报错**：`settleAsyncEntry` 在 `advisor-async.mjs` 的 `.finally(...)` 回调里调 `onAccounting`（→ `settleAdvisorRun` → `settleDesignReview`）；`async-settle.mjs` 的 `onAccounting?.(parent, entry)` 外层无 `try/catch`，且该 `.finally` 派生的 promise 无处理器 ⇒ throw 变 `unhandledRejection` ⇒ `thincoder-cli/bin/thincoder.mjs` 的 `process.on("unhandledRejection", …)` → `handleFatal` 写崩溃记录 + `exitSoon(1)`。**这是有意的**：接线故障要炸得响；紧邻就有 catch-and-continue 先例（`advisor-settle.mjs` 的 catch → `logEvent` 后继续），照抄即空壳。
 2. **回显有效 token**——结算已过回显闸（同档 `:180-183`）。未回显 ⇒ 走既有 M1 拒签，记录面零判（连凭据本身都没有，报「记录不合格」会把真因盖掉）。
 
 **判据（两条，第二条只在签发路径上判）**：
 
 1. **§3 写进了本轮的轮次块**（**无条件**——两种判决都判）——§3 段内轮次块数 **> 点火基线**。基线 = 评审实例绑定批档时读该档记下的 `run.section3BlocksAtStart`；块计数与模板正则单源 = `countRoundBlocks(src)` ∥ `ROUND_HEADING_RE`（`thincoder-core/agent-tools/batch-skeleton.mjs` 导出；写入面 `thincoder-core/agent-tools/batch.mjs` 的私有 `ROUND_HEADING_RE` ∥ `roundCount` 改取同一导出）。块数不增 ⇒ 本轮一字未写进 §3。**changes-required 轮同判**：打回的评审，其发现正是修正轮的输入——比 pass 轮更需要落在档上。
-2. **§3 状态行 = `评审通过`**（只在签发路径上判——裁定闸判 pass 之后）——读**段级**状态行 `readSectionStatusWord(src, 3)`（`batch-skeleton.mjs:194`；词表 `STATUS_WORDS[3].done`；旧字面 `评审完成` **只在读侧等义**（`STATUS_WORD_ALIASES[3]`——`batch-skeleton.mjs:49` 注释：写侧词表零别名，旧字面写不进去、词表外拒）——同档 `:42-55`）。**读面与写面同形**：状态行只有段级一处写面（`updateSectionStatusLine`，同档 `:164-182`——段内首个 `**状态行**：` 行原位改写，缺则插在段头之后）——写这个字的是工具：`append §3` 那一笔随裁定行置位 ∥ 重置（单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5）；`status` 动作是同面上的可选手写口，评审身份不必用。轮次块只由工具戳 `### 轮次 N（评审子代理）` 标题、块内无状态行落点 ⇒ 读「块内状态行」是读一行没人写的字，判据会退化成永假。该段级读也**正是下游判据读的那一处**（`§5` 写入门 `thincoder-core/agent-tools/batch-closeout.mjs:105`）——另读一处即成第二真源（D2）。
+2. **§3 状态行 = `评审通过`**（只在签发路径上判——裁定闸判 pass 之后）——读**段级**状态行 `readSectionStatusWord(src, 3)`（`batch-skeleton.mjs` 的 `readSectionStatusWord`；词表 `STATUS_WORDS[3].done`；旧字面 `评审完成` **只在读侧等义**（`STATUS_WORD_ALIASES[3]`——同档词表注释：写侧词表零别名，旧字面写不进去、词表外拒）——同档词表区）。**读面与写面同形**：状态行只有段级一处写面（`updateSectionStatusLine`——段内首个 `**状态行**：` 行原位改写，缺则插在段头之后）——写这个字的是工具：`append §3` 那一笔随裁定行置位 ∥ 重置（单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5）；`status` 动作是同面上的可选手写口，评审身份不必用。轮次块只由工具戳 `### 轮次 N（评审子代理）` 标题、块内无状态行落点 ⇒ 读「块内状态行」是读一行没人写的字，判据会退化成永假。该段级读也**正是下游判据读的那一处**（`§5` 写入门 `thincoder-core/agent-tools/batch-closeout.mjs:105`）——另读一处即成第二真源（D2）。
 
-**判定位置**：`settleDesignReview`（`thincoder-core/agent-tools/design-token.mjs:162`）——**两次评估、一次读档**。
+**判定位置**：`settleDesignReview`（`thincoder-core/agent-tools/design-token.mjs`）——**两次评估、一次读档**。
 
-读档 + 判据 1 嵌在回显闸（`:180-183`）之后、裁定闸（`:220-224`）之前。判据 2 用同一次读档的结果，嵌在裁定闸之后、写槽（`:239-240`）、`run.open = false`（`:256`）、`settleAdvisorRun` 落盘之前。本节行号 = as-of 2026-11-02 实读；落笔以符号锚为准（`const boundBatch` ∥ `agent._engDesignTokens.set(` ∥ `run.open = false`）。
+读档 + 判据 1 嵌在回显闸（`NO_VALID_ECHO_MARK` 那一支）之后、裁定闸（`verdictGateFailure`）之前。判据 2 用同一次读档的结果，嵌在裁定闸之后、写槽（`agent._engDesignTokens.set(`）、`run.open = false`、`settleAdvisorRun` 落盘之前。本节坐标一律以符号锚为准（`const boundBatch` ∥ `agent._engDesignTokens.set(` ∥ `run.open = false`）。
 
-同步轨与异步轨同调此函数（`advisor.mjs` 结算调用点 ∥ `advisor-settle.mjs:155`），无第二处实现。
+同步轨与异步轨同调此函数（`advisor.mjs` 结算调用点 ∥ `advisor-settle.mjs` 的 `settleDesignReview(` 调用），无第二处实现。
 
 **失败形态**：`{passed:false}` + 恒定标记（机器可 grep；reason 三值）：
 
@@ -71,15 +71,15 @@
 证据：{evidence}
 ```
 
-**第三行条件在**——`evidence` 非空才出（单源 `thincoder-core/agent-tools/design-token.mjs:136` `REVIEW_RECORD_MARK`）；空 ⇒ 整行不出。各判据的证句：`no-section3-block` = 「§3 轮次块 N 块、点火基线 M 块——本轮未写进 §3」（`:209`）· `batch-unreadable` = `批档读不到: <code>`（`:197`）或「点火基线缺失（批档在点火时不可读）」（`:203`）· `status-not-passed` 同形携当前状态词。
+**第三行条件在**——`evidence` 非空才出（单源 `REVIEW_RECORD_MARK`）；空 ⇒ 整行不出。各判据的证句：`no-section3-block` = 「§3 轮次块 N 块、点火基线 M 块——本轮未写进 §3」（`RECORD_NO_BLOCK` 支）· `batch-unreadable` = `批档读不到: <code>`（读失败支）或「点火基线缺失（批档在点火时不可读）」（基线缺失支）· `status-not-passed` 同形携当前状态词。
 
 槽零写、`run.open` 不翻（补写 §3 后可重评——块与状态行同轮到位）。`settlementCriterion`（§7）不新增判据值——本闸与裁定闸同形：标记即回执，不进失败结论块。**两拒的射程**：`no-section3-block` 与 `batch-unreadable` 落在裁定闸之前 ⇒ changes-required 轮也会拿到它们；`status-not-passed` 只在签发路径上出现。
 
 **拒因命名三问**：`no-section3-block` ∥ `status-not-passed` ∥ `batch-unreadable` —— **none found**：查 `thincoder-core/**` 的既有拒因词表（`settlementCriterion` 值集 `no-pass-line` ∥ `changes-required` ∥ 六 kind；`criterion=` 枚举；`_advisorRefusals` 判据名），无同义既有名可复用 ⇒ 三个新字面，形态沿既有英短横分词，落 `reason=` 位、不进 `criterion` 枚举。
 
-**pass 与 changes-required 由谁给出**：判决值来自结算侧已有的裁定闸 `verdictGateFailure`——对回执里的 `VERDICT:` 行做整行逐字判定（`thincoder-core/agent-tools/design-token.mjs:109-117`），**不解析评审正文**，与 F-A13「不解析评审正文判定 pass」同向。本门只读**状态行字面**，不产生第二处判决。
+**pass 与 changes-required 由谁给出**：判决值来自结算侧已有的裁定闸 `verdictGateFailure`——对回执里的 `VERDICT:` 行做整行逐字判定（`thincoder-core/agent-tools/design-token.mjs` 的 `verdictGateFailure`），**不解析评审正文**，与 F-A13「不解析评审正文判定 pass」同向。本门只读**状态行字面**，不产生第二处判决。
 
-**词表不补 changes-required 字面**：§3 只留一个完成词 `评审通过`——`changes-required` 不写状态词（「评审没通过」= 评审未完成，`batch-skeleton.mjs:50-52` 逐字登记）。
+**词表不补 changes-required 字面**：§3 只留一个完成词 `评审通过`——`changes-required` 不写状态词（「评审没通过」= 评审未完成，`batch-skeleton.mjs` 词表注释逐字登记）。
 
 **changes-required 的结算形态**：判据 1 照判（未写 §3 ⇒ `no-section3-block` 拒签，回执点名）；判据 2 不参与。裁定闸早退 ⇒ 槽零写、实例保持 open ⇒ 修正轮在同一实例上推进轮次（F-A1 / F-A2 零改）。
 
@@ -99,9 +99,9 @@
 
 - **兜底来源只供归属派生，不供本门触发**：批归属可由 `docSetKey` 里的批档兜底派生（单源 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §10），而本门只认 `run.batchDoc`——需求 F-A13 的字面即 `batchDoc`，把 `documents` 里的批档也算触发面 = 同一事实两个触发判据。
 - 原「批档写进 `documents`、不传 `batchDoc` ⇒ 本门不适用」的残余面**已由准入门关闭**：该调用形在 `advisor` 入参门即被拒发（§2 第 6 条）⇒ 不存在「绑定的门开、槽却带归属」的可达情形。
-- **段级状态行不携带「哪一轮写的」——由打回重置收口（2026-10-28）**：判据 2 仍读段级字面，但打回那一轮不再把上一轮的 `评审通过` 留在档里——`batch` 的 `append §3` 带打回裁定行且写之前状态行 = `评审通过` ⇒ 同一笔写盘里重置为 `进行中（第 N 轮打回）` + 本轮块首留痕行。对称的另一半 = 通过那一轮：同一笔 `append §3` 只携 pass 裁定行且写前状态行 ≠ `评审通过` ⇒ 同一笔置成 `评审通过`，无留痕行（块自己就是那条记录）。下游 `§5` 写入门（`thincoder-core/agent-tools/batch-closeout.mjs:105`）因此读到的是「评审未完成」。判据 / 形态单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5。
-- **无裁定行的那一笔（拒面判据已定，代码随本批落）**：打回那一轮的文本连裁定行都没有（设计凭证侧判 `no-pass-line`）⇒ 打回重置不触发，`§3` 留上一轮的 `评审通过`。触发面**不**扩——工具手上只有文本，无从区分「打回」与「补记散文」，扩面就是按意图猜。
-  洞由 `§5` 写入门堵上（判据 / 拒文已定，代码随本批落）：门除状态词外，还要求 `§3` 最近一轮轮次块**自己**携 pass 裁定（判据 2 / 拒文 `R-G2b` = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.6）。
+- **段级状态行不携带「哪一轮写的」——由打回重置收口（2026-10-28）**：判据 2 仍读段级字面，但打回那一轮不再把上一轮的 `评审通过` 留在档里——`batch` 的 `append §3` 带打回裁定行且写之前状态行 = `评审通过` ⇒ 同一笔写盘里重置为 `进行中（第 N 轮打回）` + 本轮块首留痕行。对称的另一半 = 通过那一轮：同一笔 `append §3` 只携 pass 裁定行且写前状态行 ≠ `评审通过` ⇒ 同一笔置成 `评审通过`，无留痕行（块自己就是那条记录）。下游 `§5` 写入门（`batch-closeout.mjs` 的 §5 写入门）因此读到的是「评审未完成」。判据 / 形态单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5。
+- **无裁定行的那一笔**：打回那一轮的文本连裁定行都没有（设计凭证侧判 `no-pass-line`）⇒ 打回重置不触发，`§3` 留上一轮的 `评审通过`。触发面**不**扩——工具手上只有文本，无从区分「打回」与「补记散文」，扩面就是按意图猜。
+  洞由 `§5` 写入门堵上：门除状态词外，还要求 `§3` 最近一轮轮次块**自己**携 pass 裁定（判据 2 / 拒文 `R-G2b` = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.6）。
   所以「写 `§3` 要带裁定行」是任何一笔的必做，补记与打回同一条处置——写一行裁定的代价与补记一段散文相同。
 
 ### 1.3 集成验收（起点 = `test/RTM.md` 故事 17「评审没写进批档就不算过」——delta 三答）
@@ -773,7 +773,7 @@ export function outputReserve(provider, spec) {
 | A-AG20 | 受理面 = 项目内现存 `.md`：仓根级文档与 `docRoot` 树外仓内文档均受理；项目外 / 非 `.md` / 不存在 ⇒ 拒（`criterion=scope-not-doc` ∥ `reason=outside-project` ∥ `not-doc-file`），文案载「解析后路径 ∥ 拒因」+ 期望形两句，零实例 / 零 token / 零 LLM | 收面放宽 |
 | A-AG21 | 零试探残留：`thincoder-core/**` 源内 `candidateRoots` / `sessionReviewRoots` / `scope-doc-ambiguous` 零命中；返回形属性访问 `\.attempted\b` 零命中（口径命令见 §12「消费点与编辑点」）；返回形无 `ambiguous` / `candidates` 键；冻结窗 `docAbs` 仍取 `resolved`（放宽受理的文档在冻结面内） | 路径解析 |
 | A-AG22 | §3 落地门（F-A13）：绑 `batchDoc` 且结算已过回显闸 ⇒ ① **无条件**判 §3 轮次块数 > 点火基线（changes-required 轮同判）② 走签发路径时判段级状态行 = `评审通过`；不满足 ⇒ `{passed:false}` + 恒定标记（`no-section3-block` ∥ `status-not-passed`），槽零写、实例不翻 open、补写 §3 块（携 `VERDICT: pass`——状态行随块由工具置位）后同实例可重评 | F-A13 |
-| A-AG23 | 门的前置：结算时实例无批档绑定（`run.batchDoc` 空）= 程序不变量违反 ⇒ `settleDesignReview` **throw**（串点名接线故障 + designId），零槽写、不返回判决、**无对外拒因值**（准入门已保证该调用形不可达——§2 第 6 条）；**断言在槽写之前**（`boundBatch` 判定处，早于 `agent._engDesignTokens.set(...)`——落其之后 = 没拦）、**异常外逸不接**（结算调用点 `thincoder-core/agent-tools/advisor-settle.mjs:155` 零 `try/catch`，实现不得补 catch-and-continue——那会落回 `set(...)`，token 照签、零报错）；**异步轨同判**：结算跑在 `thincoder-core/agent-tools/advisor-async.mjs:445-453` 的 `.finally` 回调内，`thincoder-core/agent-tools/async-settle.mjs:293` 的 `onAccounting?.(parent, entry)` 零 `try/catch`、派生 promise 无处理器 ⇒ throw = `unhandledRejection` ⇒ `thincoder-cli/bin/thincoder.mjs:107-108` → `handleFatal` → `exitSoon(1)`，进程退出而非一条回给调用方的报错；紧邻的 catch-and-continue 先例 = `thincoder-core/agent-tools/advisor-settle.mjs:165-169`，照抄即空壳；**机检形**：已点火实例的 `run.batchDoc` 置 `null` 后结算 ⇒ 异常外逸（错串含 designId）+ `agent._engDesignTokens?.size ?? 0` 前后相等（字段无初值——`thincoder-core/agent.mjs:64-66` 逐字「no field initializer」，创建点在 throw 点 `:188` 之后的 `:239`）；未回显有效 token ⇒ 走既有 M1（记录面零判）；裁定非 pass（changes-required ∥ no-pass-line）⇒ 判据 1 照判、判据 2 不参与（结算在裁定闸早退，实例保持 open、轮次照常进位） | F-A13 |
+| A-AG23 | 门的前置：结算时实例无批档绑定（`run.batchDoc` 空）= 程序不变量违反 ⇒ `settleDesignReview` **throw**（串点名接线故障 + designId），零槽写、不返回判决、**无对外拒因值**（准入门已保证该调用形不可达——§2 第 6 条）；**断言在槽写之前**（`boundBatch` 判定处，早于 `agent._engDesignTokens.set(...)`——落其之后 = 没拦）、**异常外逸不接**（结算调用点（`advisor-settle.mjs` 的 `const settled = settleDesignReview(`）零 `try/catch`，实现不得补 catch-and-continue——那会落回 `set(...)`，token 照签、零报错）；**异步轨同判**：结算跑在 `advisor-async.mjs` 的 `.finally` 回调内，`async-settle.mjs` 的 `onAccounting?.(parent, entry)` 零 `try/catch`、派生 promise 无处理器 ⇒ throw = `unhandledRejection` ⇒ `thincoder-cli/bin/thincoder.mjs` → `handleFatal` → `exitSoon(1)`，进程退出而非一条回给调用方的报错；紧邻的 catch-and-continue 先例 = `advisor-settle.mjs` 的 catch → `logEvent`，照抄即空壳；**机检形**：已点火实例的 `run.batchDoc` 置 `null` 后结算 ⇒ 异常外逸（错串含 designId）+ `agent._engDesignTokens?.size ?? 0` 前后相等（字段无初值——`thincoder-core/agent.mjs` 逐字「no field initializer」，创建点在 throw 点（`const boundBatch`）之后的 `set(` 那一笔）；未回显有效 token ⇒ 走既有 M1（记录面零判）；裁定非 pass（changes-required ∥ no-pass-line）⇒ 判据 1 照判、判据 2 不参与（结算在裁定闸早退，实例保持 open、轮次照常进位） | F-A13 |
 | A-AG24 | `batch-unreadable`：点火时批档不可读（基线 `null`）∥ 结算时批档不可读 ⇒ 照拒、零签发、槽零写；恢复该档后同实例重评可过 | F-A13 |
 | A-AG25 | 批归属「批」列派生（`thincoder-core/agent-tools/design-slots.mjs:61` 的 `batchOf`）：旁列有值 ⇒ 取该批档绝对路径的 basename；旁列缺失（旁列启用前签发的旧槽）⇒ 会话内评审实例注册表按 designId 命中的 run 逆序取最近一个能派生出批档的（`run.batchDoc` 优先、`docSetKey` 段档兜底）；皆不可得（跨重启 ∥ 模式重进 ∥ 注册表回收）⇒ `—`（如实降级，不猜一个批名）；与 settle 写旁列同一派生 `batchAbsPathOfRun`——清点面不拿另一个派生读同一事实 | 批归属 · 清点显名（U-7 ∥ U-8） |
 | A-AG27 | 账链门（§2 第 7 条）：`type="design"` ∧ `batchDoc` 可读 ⇒ 本档须有 ≥1 行 ∈ `PENDING_STATUSES`（选行 = `resolveBatchRows` 同址，台账 `thincoder-core/ledger-write-ops.mjs:185`；未决 = `thincoder-core/ledger-db.mjs:134`）；不满足 ⇒ 拒发（`criterion=batchdoc-no-ledger`，`reason` 三值 `no-pending-row` ∥ `no-ledger-root` ∥ `ledger-unreadable`）+ `_advisorRefusals` 登记，零实例 / 零 token / 零槽 / 零 LLM；**失败路径全落拒、零路径落放行**（`if (!db)` 放行与 throw 外逸都不算答案）；**零模式位**（新增代码对 `agent.engineering` 零命中）⇒ 普通模式同判；结算面（`settleDesignReview`）零台账读 | E1 / E2 / E3 / E4 |

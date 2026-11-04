@@ -32,16 +32,11 @@ import { dirname, join, parse, relative, resolve } from "node:path"
 
 import { owningProject } from "../manifest.mjs"
 import { DOC_CLASS, PARA_DISPOSE, runDocCheck } from "../doc-check/index.mjs"
-import { fenceMark, isFenceClose, isListItem, isQuoteLine, isTableRow } from "../doc-check/paragraph.mjs"
+import { fenceMark, headingMark, isFenceClose, isListItem, isQuoteLine, isTableRow } from "../doc-check/paragraph.mjs"
 import { faceDetail } from "../agent/write-face.mjs"
 
 /** 片段档前缀：与批档门（`agent-tools/batch-gate.mjs` 的 `.gate-`）分开——两门各清各的残留，互不误报。 */
 export const DOCGATE_PREFIX = ".docgate-"
-
-/** 标题行式（段划法单源在 `../doc-check/paragraph.mjs` 的谓词族；标题只此一式，与引擎逐字同形）。
- *  引擎**没有**导出标题谓词（该档导出面 = 表格行 ∥ 围栏 ∥ 引文 ∥ 列表项 ∥ 可执行行 ∥ 段判据），故本门按 §3.26
- *  写明的同一字面使用、不新造第二套「什么算标题」：段边界仍由引擎那一族定，这里只是缺一个可借的名字。 */
-const HEADING_RE = /^(#{1,6})\s/
 
 /** 显示形（正斜杠——跨平台同形，与引擎报面一致）。 */
 const relDisplay = (root, abs) => relative(root, abs).replace(/\\/g, "/")
@@ -55,7 +50,7 @@ const isBodyLine = (l) => {
     !isListItem(line) &&
     !isQuoteLine(line) &&
     fenceMark(line) === null &&
-    !HEADING_RE.test(line)
+    headingMark(line) === null
   )
 }
 

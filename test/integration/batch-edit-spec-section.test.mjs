@@ -12,9 +12,11 @@
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { batchTool } from "../../thincoder-core/agent-tools/batch.mjs"
 import { batchSkeleton } from "../../thincoder-core/agent-tools/batch-skeleton.mjs"
@@ -25,7 +27,7 @@ const REPLACEMENT = "A11 判据已并入 §2.3（单源 = design §4.4）"
 
 const projects = []
 after(() => {
-  for (const p of projects) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  for (const p of projects) removeTempDirBestEffort(p)
 })
 
 /** 在飞批档夹具：项目声明 + 骨架原形批档 + 一段带「已作废判据」的 §2 段体。 */

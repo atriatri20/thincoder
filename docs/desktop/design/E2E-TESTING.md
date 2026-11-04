@@ -230,6 +230,6 @@ _electron.launch({
 | 用例模块 | — | 单元 = 单元测试档（名随批次档 · 住 `docs/batches/` · 不登记 · 随批留存）；集成件 = 落盘时登记 +1 |
 | `thincoder-desktop/.gitignore` | **9** | 忽略 `thincoder-desktop/test/artifacts/`（运行期产物不进 git——KD 单源 = 本档 KD-10）∥ `.thincoder/`（代理运行期状态）∥ `dist/` ∥ `dist-*/`（打包产物不进 git） |
 
-**行数面机检**：`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`，运行根单读）**逐条声明节域——本表为其一**（本域值行单源）；后续本域新档由落盘批在本表补值行，`docs/desktop/design/PROJECT.md` §4.1 同拍补指针行（沿 §4.1 纪律）。
+**值行单源 = 本节表**，行数面不设机检；口径 = 本档 §8 第 9 条「计数面口径」（行数面值单源 = 各域文件账 · 口径 = 内容行数）。后续本域新档由落盘批在本表补值行，`docs/desktop/design/PROJECT.md` §4.1 同拍补指针行（沿 §4.1 纪律）。
 **原址指针**：本族各行在 `docs/desktop/design/PROJECT.md` §4.1 已改一行指针。
 

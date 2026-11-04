@@ -148,7 +148,7 @@ guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 
 | R2 · 切槽 A(0)→B(2) | 返回 0 且零新行（负向锁） |
 | R2 · 过期项不计 | A 槽 1 个未过期 + 1 个已过期，切到 B(0) ⇒ 返回 1 |
 | R3 | 判据 = `docs/cli/design/TUI.md` §7.4「可机判」行（`title="a\nb"` ⇒ `a b`、行高不变；41 列截断逐字节相同） |
-| 通用 | `npm test`（`thincoder-cli/test/run.mjs` 收集 `test/*.test.mjs`）全绿；`doc_check` gate PASS |
+| 通用 | cli 包级 `npm test`（收集面 = `thincoder-cli/test/*.test.mjs`）恒 exit 1 + 说明（非门——集成层在仓根）；集成门 = 仓根 `node test/run.mjs`（收口时父侧跑一次）；`doc_check` gate PASS |
 
 ## 7. 用例表
 

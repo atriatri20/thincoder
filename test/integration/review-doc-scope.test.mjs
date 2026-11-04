@@ -22,10 +22,12 @@
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, parse, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { advisorTool } from "../../thincoder-core/agent-tools/advisor.mjs"
 import { owningProject, projectRootView } from "../../thincoder-core/manifest-discovery.mjs"
@@ -40,7 +42,7 @@ const LEDGER_DIR = mkdtempSync(join(tmpdir(), "tc-int-ledger-"))
 _setLedgerDirForTest(LEDGER_DIR)
 after(() => {
   _resetLedgerDirForTest()
-  rmSync(LEDGER_DIR, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  removeTempDirBestEffort(LEDGER_DIR)
 })
 
 /** 假 OpenAI SSE 端点：一个完整文本回合，请求体留档（不落任何真实模型）。 */
@@ -74,7 +76,7 @@ function fakeProvider(text = "No findings — clean pass.") {
  *  内容不参与本档断言（假端点不读它），但它必须是一个可读文件；绝对路径形：任何锚态（含 workspace）都照用。 */
 function batchRecordFixture(t, root, tag) {
   const dir = mkdtempSync(join(root, `.tc-int-batch-${tag}-`))
-  t.after(() => rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 }))
+  t.after(() => removeTempDirBestEffort(dir))
   const abs = join(dir, "fixture-batch.md")
   writeFileSync(abs, [
     "# 夹具批 · 设计评审受理面",
@@ -172,7 +174,7 @@ test('6-2 项目内代码文件 ⇒ 当场拒发（not-doc-file），零实例 /
 
 test('6-3 项目外绝对路径 ⇒ 当场拒发（outside-project），零实例', { timeout: 60_000 }, async (t) => {
   const outside = mkdtempSync(join(tmpdir(), "tc-int-outside-"))
-  t.after(() => rmSync(outside, { recursive: true, force: true }))
+  t.after(() => removeTempDirBestEffort(outside))
   const doc = join(outside, "outside", "x.md")
   mkdirSync(dirname(doc), { recursive: true })
   writeFileSync(doc, "# outside\n")
@@ -193,7 +195,7 @@ test('6-3 项目外绝对路径 ⇒ 当场拒发（outside-project），零实�
 
 test('6-4 workspace 锚 + 项目根相对形 ⇒ 当场拒发（ambiguous-path）；反证格：基面存在则不再此拒', { timeout: 60_000 }, async (t) => {
   const ws = mkdtempSync(join(tmpdir(), "tc-int-ws-"))
-  t.after(() => rmSync(ws, { recursive: true, force: true }))
+  t.after(() => removeTempDirBestEffort(ws))
   for (const name of ["p1", "p2"]) {
     mkdirSync(join(ws, name), { recursive: true })
     writeFileSync(join(ws, name, "PROJECT-MANIFEST.json"), MANIFEST)
@@ -222,7 +224,7 @@ test('6-4 workspace 锚 + 项目根相对形 ⇒ 当场拒发（ambiguous-path�
 
 test('6-5 会话锚 = 非项目目录（根无档、下辖 1 个项目）⇒ 当场拒发（ambiguous-path），不把下辖项目当根', { timeout: 60_000 }, async (t) => {
   const box = mkdtempSync(join(tmpdir(), "tc-int-box-"))
-  t.after(() => rmSync(box, { recursive: true, force: true }))
+  t.after(() => removeTempDirBestEffort(box))
   mkdirSync(join(box, "only"), { recursive: true })
   writeFileSync(join(box, "only", "PROJECT-MANIFEST.json"), MANIFEST)
   assert.equal(owningProject(box, parse(box).root), null, "夹具前置：锚根及其祖先无项目档（workspace 态的前提）")

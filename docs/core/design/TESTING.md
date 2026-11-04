@@ -312,19 +312,121 @@ render-core 单层 glob 收顶层 `test/*.test.mjs`（`thincoder-render-core/tes
 
 集成用例自己搭的隔离面——临时 HOME ∕ 临时目录 ∕ 端口 ∕ 子进程——收尾按**尽力面**处理：清理成败**不改业务结果**，因此清理失败**不判红整档**；但它必须**可见**，静默吞掉不算处置。
 
-**射程 = 已按本节处置的档**——现 = `test/integration/browser-start-window.test.mjs`（本节首档）。
-其余集成档的裸收尾尚未处置（本席 2026-11-05 扫 `test/integration/**/*.mjs` 的 `rmSync`：命中 32 档，其中仅 `test/integration/ssh-file-transfer.test.mjs` 已带 try/catch）——登记为后续条目，逐档处置不在本节射程内。
+**射程 = 全部集成用例档**（`test/integration/*.test.mjs`——单层，且与射程判据同一 glob）——用例档只调助手，不自写第二份清理：裸 `rmSync` 与手搓 `try/catch` 同属未处置面。
+
+- **射程判据（机判 · 两半各自可判）**：① `grep -n "rmSync" test/integration/*.test.mjs` 零命中（助手 `test/teardown.mjs` 自身不计——清理实现住在那里）；② 集合等式——`{内容含 mkdtempSync 的档} \ {内容含 removeTempDirBestEffort 的档} = ∅`：凡自建临时目录的档都调了助手，无一档自写清理。
+- **单文件清理同走助手**：`rmSync` 的 `recursive` 只影响目录，对单个夹具文件同样成立 ⇒ 不为「删一个文件」开例外（例外清单会随批生长）。
+- 用例侧另两面隔离面（pty 会话 ∥ 浏览器 profile）不属本节的收尾面，口径 = §4.7。
 
 业务结果 = 该用例的断言过没过（隔离面的来源 = 需求 `docs/core/requirements/TESTING.md` F27「隔离 HOME 与 cwd；重复执行结果一致」）。
 
-- **失败形（三件）**：① 有界重试——`rmSync` 的 `maxRetries` ∥ `retryDelay`，上限 ≈1s；② 外套 `try/catch`；③ 仍失败即向 stderr 写一行、点名绝对路径与错误码（`[teardown] temp home not removed: <abs> (<code>)`），**不抛**。
-- **落点 = 共用助手 `test/teardown.mjs` 的 `removeTempDirBestEffort(dir, opts)`**：注入缝两处——`opts.rm ?? rmSync` ∥ `opts.log ?? ((line) => process.stderr.write(line + "\n"))`。缺省即生产行为；无模块级全局态，故无复原步。
+- **失败形（三件）**：① 有界重试——`rmSync` 的 `maxRetries` ∥ `retryDelay`，上限 ≈1s；② 外套 `try/catch`；③ 仍失败即向 stderr 写一行、点名绝对路径与错误码（`[teardown] temp path not removed: <abs> (<code>)`），**不抛**。
+- **落点 = 共用助手 `test/teardown.mjs` 的 `removeTempDirBestEffort(p, opts)`**：参数名 ∥ JSDoc ∥ 失败行一律**路径中性**（`p` ∥「删一个临时路径」∥ `temp path not removed`）——同一助手既删目录也删单文件，文案得说同一件事。注入缝两处——`opts.rm ?? rmSync` ∥ `opts.log ?? ((line) => process.stderr.write(line + "\n"))`。缺省即生产行为；无模块级全局态，故无复原步。
   单测直调助手，传假 `rm`（抛 `{ code: "EPERM" }`）与捕获 `log`，两条判据一次判完（不抛 ∧ 一行可见）；集成档只调助手，不自写第二份清理。
 - **为什么这是合法兜底，而非「把业务错误改成成功」**：判据 = 删掉这个兜底会不会让业务错误浮出来。这里不会——清理成败与断言结论无关，残留目录不进任何业务账；且它不静默，下次复发自带读数（哪条路径、什么错误码）。
 - **为什么必须尽力面**：并行负载下浏览器 ∥ 子进程仍占着临时目录（Windows 上表现为 `EPERM`），裸调 `rmSync` 把当次**全绿**的用例档判红——判据与被判对象对不上（同旨 = §1.3「判据要能跑绿」：跑红即判据错了，改判据不改活）。
 - **改的是「怎么失败」，不是「判什么」**：用例断言与超时阈值不动（那才是业务结果）；清理失败**不改写成 skip**（skip 不算验过——§11.16 列取值规则同旨）。
-- **先例对齐**：注入面尽力清理同形——`thincoder-core/agent/timers.mjs:135` 依据 `thincoder-core/agent/timers.mjs`「if (h !== null) { try { clear(h) } catch { /* 已触发 / 不可清——尽力面 */ } }」。
-- **判据（机判）**：收尾清理必失败 ⇒ 进程退出码仍为 0 ∧ stderr 含 `[teardown] temp home not removed`；正常面 ⇒ 临时目录收尾后不在盘 ∧ stderr 零 `[teardown]` 行。
+- **先例对齐**：注入面尽力清理同形——依据 `thincoder-core/agent/timers.mjs`「if (h !== null) { try { clear(h) } catch { /* 已触发 / 不可清——尽力面 */ } }」（实现坐标 = 该档的定时器清理支；设计节 = 本档 §4.6；先例批 = 无——批档为一次性载体 ⇒ 长期面不指批次）。
+- **判据（机判）**：收尾清理必失败 ⇒ 进程退出码仍为 0 ∧ stderr 含 `[teardown] temp path not removed`；正常面 ⇒ 临时目录收尾后不在盘 ∧ stderr 零 `[teardown]` 行。
+
+### 4.7 用例之间不共享状态（隔离面）
+
+**目标状态一句话**：每条集成用例自建它用到的隔离面（pty 会话 ∥ 临时目录），用完自己收尾。
+
+- 同档单跑、同档多例顺序跑、同档多份并发跑——三种执行方式给出的结论一致。
+- 断言判的是业务可观察结果；共享的隔离面让「上一条留下的状态」成为下一条的输入，红的那条不是被验的行为坏了。
+- 「收口时靠单跑排除」不算处置：同一个红要人逐个分辨来源，判断成本按次翻倍；并发情形下排除法还无效。
+
+**先例对齐**（判**对齐**；偏离 = 无——未新造缝式）：
+
+- 实现坐标 = `test/integration/anthropic-tool-roundtrip.test.mjs` 的 `home` ∥ `cwd`（档装载期的两个 `mkdtempSync` 临时根）。
+- 实现坐标 = `test/integration/browser-start-window.test.mjs` 的 `HOME` ∥ `USERPROFILE`（假家目录，收尾走 §4.6 助手）。
+- 设计节 = 本节；先例批 = 无（批档为一次性载体 ⇒ 长期面不指批次）。
+
+**公共源勘察**：
+
+- 工作目录树内文档已查 = 本档 §4.3 ∥ §4.6 ∥ §11.15。
+- 代码面已读 = `thincoder-core/browser/launch.mjs` ∥ `thincoder-core/config-io.mjs` ∥ `test/integration/browser-start-window.test.mjs` ∥ `test/integration/ssh-device-readability.test.mjs`。
+- 外部公共源无相关（对象 = 仓内用例的隔离面）；`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（实读）。
+
+**接口契约（两面）**：
+
+| 面 | 隔离物 | 自建形（落点符号） | 收尾 | 判据 |
+|---|---|---|---|---|
+| ① 假设备 pty | ssh 会话 | 每条用例一次 `ssh({ action: "connect" })`，句柄由本条自己持有（`ssh-device-readability.test.mjs` 的 `withSession`） | `finally` 里 `ssh({ action: "close", id })` | 档内每条用例各持一个会话句柄——无跨例共享的会话态 |
+| ② 临时目录 | 临时家目录 ∥ 工作目录 | `mkdtempSync` 建，绝对路径由档掌握——建点三处实测在案：档装载期 ∥ 用例体内 ∥ 工厂内 | `removeTempDirBestEffort(p)`（§4.6，不重述） | §4.6 射程判据（用例档零 `rmSync`） |
+
+**浏览器 profile 面（现状写明，本节不改）**：
+
+- 依据 `thincoder-core/config-io.mjs`「export const configDir = join(homedir(), ".thincoder")」——profile 基址随 `configDir`，而它是**模块装载期常量**。
+- ⇒ 用例档在装载期设 `HOME` ∥ `USERPROFILE` 即拿到本档专属 profile；并发副本各持一份（各自 `mkdtempSync`）。
+- 档内多例共用本档这一份。本节不动这一面，判据不圈它。
+
+**批量套用（形状先验，再铺开）**：
+
+- 先改三档，覆盖三种清理形，一形一档（点名即判据 AC-5 的三档）：单 `cwd` 一处 = `test/integration/context-percent-calibrated.test.mjs` ∥ `cwd` + `logsDir` 两处 = `test/integration/digest-empty-round.test.mjs` ∥ `t.after` 内联一条 = `test/integration/batch-anchor-create.test.mjs`。
+- 跑这三档验形状；形状定后一次性套其余档，不逐档验（每档验一次 = 同一形状读 N 遍）。
+- 整套读数归收口时那一次跑。
+
+**用例表（正常 ∥ 边界 ∥ 错误）**：
+
+| # | 类 | 输入 | 期望 |
+|---|---|---|---|
+| T-1 | 正常 | 任一只改收尾的档直达 `node --test test/integration/<档>` | 全绿——收尾换助手不改断言结论 |
+| T-2 | 边界 | 单文件路径（`tester-role.test.mjs` 的夹具桩）走助手 | 文件不在盘 ∧ stderr 零 `[teardown]` 行 |
+| T-3 | 错误 | 清理必失败（假 `rm` 抛 `EPERM`，按 `opts.rm` 注入） | 档级退出码仍 0 ∧ stderr 一行 `[teardown] temp path not removed: <abs> (<EPERM>)` |
+
+**验收标准（机判 · 回指需求条目 · 编号与批档 §2 同号同义）**：
+
+| # | 判据 | 回指 |
+|---|---|---|
+| AC-1 | 单元测试档 `docs/batches/<批档名>.test.mjs` 全绿（T-2 ∥ T-3）——`node --test <档>`；用毕即删 | 需求 F27 ∥ F34 ① |
+| AC-2 | 两半各自机判：① `grep -n "rmSync" test/integration/*.test.mjs` = 0 命中；② `{含 mkdtempSync 的档} 减 {含 removeTempDirBestEffort 的档}` = ∅ | 需求 F27 |
+| AC-3 | 助手路径中性：`test/teardown.mjs` 内 `temp home` 零命中 ∧ 参数名 `p` ∧ 失败行 = `[teardown] temp path not removed: <abs> (<code>)` | 需求 F27 |
+| AC-4 | 断言零改（三件缺一不可，判法见本节表格下方的「AC-4 的三件」） | 本节边界 |
+| AC-5 | T-1 抽样三档直达绿——三档 = 上「批量套用」点名的三档，一条命令 `node --test <档1> <档2> <档3>` 全绿 | 需求 F27 |
+| AC-6 | 整套 `node test/run.mjs` 退出码 0 ∧ `fail 0`——**归收口（父侧一次跑），批内不跑**，此处登记备查 | 需求 F27 |
+
+**AC-4 的三件**（同树另有在改面落在本面两档上 ⇒ 「某目录 diff 为零」型判据恒假，只判本批碰过的行）：
+
+- ① 正向：`git diff --stat -- <本节受影响文件表所列的档>` 非空——证明真动了该动的；缺这件，一个啥也没做的轮次也能过。
+- ② 收窄：`assert` 零命中只判本批改过的那几行——逐档「改前原文 ∥ 改后原文」随实施留证，判据 = 这些行里 `assert` 零命中。
+- ③ 环境：`git status --porcelain -- test/integration` 原文如实留证，并标明其中含他批未提交改动。
+
+**关键决策**：
+
+| # | 决策 | 被否方案与理由 |
+|---|---|---|
+| K-1 | 隔离面归用例所有：用例自建、自收尾 | 「收口时靠单跑排除」——同一个红要逐个分辨来源；并发情形下照样红 |
+| K-2 | 清理统一走 §4.6 助手，不自写第二份 | 每档手搓 `try/catch` = 同一纪律的 N 份副本，改判据要改 N 处 |
+| K-3 | 判据取「档内零 `rmSync`」，单文件删除同走助手 | 开单文件例外 = 例外清单随批生长；`recursive` 对单文件同样合法 |
+| K-4 | 批量档形状先验再铺开 | 一次改全部档再一起红 = 同一个判断读 N 遍 |
+
+**受影响文件**（尺寸档位结论 = **零档跨档位**）：
+
+- `.md` 无尺寸义务；`.mjs` 受影响档的变动是收尾调用替换——一处 `rmSync` 行换成助手调用行，只减不增，无拆分计划。
+- 受影响档中最长者为 `test/integration/context-overflow-guard.test.mjs`（未越 500 预警档）：本节对它替换两处收尾——模块级 `after` 一处（`cwd` ∥ `logsDir`）∥ 用例体内 `t.after` 一处（`sessCwd`），不拆。
+
+| 文件 | 变动 | 判据 |
+|---|---|---|
+| `test/teardown.mjs` | 参数名 `dir` ⇒ `p` ∥ JSDoc「删一个临时路径」∥ 失败行 `temp path not removed`（行为零变，两处注入缝不变） | AC-3 |
+| `test/integration/*.test.mjs`（`rmSync` 命中档全数；`ssh-file-transfer` 的手搓 `try/catch` 与 `tester-role` 的两处自写清理单列） | 收尾改调 `removeTempDirBestEffort` | AC-2 |
+| `docs/core/design/TESTING.md` | 本节 + §4.6 射程行 ∥ 助手路径中性 | doc_check PASS |
+
+**边界（本节不做）**：
+
+- 不改任何断言行与超时阈值（那才是业务结果）。
+- 不动 `test/run.mjs` 收集面。
+- 不改产品运行行为：本节零产品码改动（`test/teardown.mjs` 是测试面助手，缺省行为不变）。
+- 不为「删一个夹具文件」开例外。
+- 不动浏览器 profile 基址面（现状见上「浏览器 profile 面」），不加模块级注入缝。
+
+**UI ∥ 交互决策**：不适用——本面是用例与助手，无用户可见面。
+
+**集成测试设计（RTM delta · §11.15 三问）**：
+
+- 读 `test/RTM.md`：本批只替换用例自己的收尾调用，不改任何用例断言的业务可观察结果 ⇒ **破行 0 ∥ 冗余 0 ∥ 缺失 0**。
+- 两入口（业务真实需要的场景 ∥ 生产真出过的问题）本轮都不成立 ⇒ 新增集成用例 = 无。
 
 ## 5. 首批集成用例表（场景 + 种子）
 
@@ -426,9 +528,9 @@ render-core 单层 glob 收顶层 `test/*.test.mjs`（`thincoder-render-core/tes
 | A-TS15 | 集成测试集规模窗口在位——一仓 **50–100 用例**（超窗裁减回窗内；§2.1 映射 · 落点 §2 ∕ §4）；守闸读数（现集成数 ∕ 窗口）随收口测试行 ②半带出（§3.3） | §3 N19 |
 | A-TS16 | 防膨胀机制映射在位（§2.1——总量不随规模增长：两闸〔① 不累积 = 单元测试档 · 永不进任何门；② 有上限 = 集成窗口〕＋根判据「验证投入 ∝ 失败代价，与代码量脱钩」）；执行形 = 纪律判据（不配机械闸） | 需求 §1.3 · 需求 §3 N21 |
 | A-TS17 | 现行态认账在位（§2.3——五包读数表 ∥ 单元测试档零留存句 ∥ 集成欠账显式句）；包级收正面 5 处（cli `AGENTS.md` ∥ cli `README.md` ∥ core `README.md` ∥ desktop `AGENTS.md` ∥ vsc `AGENTS.md`）无陈旧声明（`offline unit tests` ∥ `offline unit suite` ∥ `Full suite` 零命中） | F6 ∥ F8 ∥ F9 ∥ F12 |
-| A-TS18 | 起步批量定形在位（§5.1——选例 = 场景①〔F13 点名〕∥ 例数窗 3–9 ∥ 三端落位与清单接线 ∥ 门 = `npm test` 单入口——四要素齐） | N8 ∥ F12 ∥ F13 ∥ F14 ∥ N20 |
+| A-TS18 | 起步批量定形在位（§5.1——选例 = 场景①〔F13 点名〕∥ 例数窗 3–9 ∥ 三端落位与清单接线 ∥ 门 = 仓根 `node test/run.mjs` 单入口——四要素齐） | N8 ∥ F12 ∥ F13 ∥ F14 ∥ N20 |
 | A-TS19 | **单元测试档寿命口径两档统一**（grep 可直跑）：① 两档内旧式处置措辞零命中——判据正则 `可随批档清[理]` ∥ `随[批次]*档留存`，各命中 0（正则写法规避判据行自身）；② 设计档内凡「单元测试档」与「寿命 ∕ 留存 ∕ 归档 ∕ 清理」同行之句一律含「零留存」子串 | F33 |
-| A-TS20 | 执行层分离与空集语义在盘（§10.3 A-SL1–A-SL9 全绿）：`npm test` = 集成层单层收集；核 `npm test` 非零并说明 N20（非门——发布钩 ∥ CI 走语法门）；单档直达零回归 | F1 ∥ F3 ∥ F5 ∥ N20 ∥ AC-M10-4 |
+| A-TS20 | 执行层分离与空集语义在盘（§10.3 A-SL1–A-SL9 全绿）：仓根 `node test/run.mjs` = 集成层单层收集；核 `npm test` 非零并说明 N20（非门——发布钩 ∥ CI 走语法门）；单档直达零回归 | F1 ∥ F3 ∥ F5 ∥ N20 ∥ AC-M10-4 |
 
 **用例表（正常 / 边界 / 错误——摘）**：
 
@@ -551,7 +653,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 - 仓根 `node test/run.mjs`（单入口）= **集成层**：目标集合 = `test/integration/*.test.mjs`（仓根），单层 glob，零第二层；包级 `npm test` 不再是集成门（cli = 空集说明器，同核仓口径；vsc ∥ desktop = 单元清单面——面差②续挂；仓根归位 = §12）。
 - **单元层无入口**：单元测试档住 `docs/batches/`，`node --test <档>` 直达（F5）；不进任何入口的收集面，也不进任何门（§2）。
-- 因此 `npm test` 只证明一件事：集成层的发布门。改动内自查走单档直跑，不再与发布门共用一条命令。
+- 因此仓根 `node test/run.mjs` 只证明一件事：集成层的发布门。改动内自查走单档直跑，不再与发布门共用一条命令。
 
 **收集面权威**：本节 = 收集面 ∥ 空集语义的**唯一权威陈述面**；§10.2 ④-2 的收集面括注与其 CLI ∥ 核样例行按本节改写（同档同步面 = 受影响文件表末行）。
 
@@ -589,7 +691,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 **关键决策**：
 
-- **KD-1 `npm test` 只留集成层**。一条命令两种含义时，一次「全绿」证明不了任何一件具体的事；实施席要报「这处改对了」只能跑集成层全量。
+- **KD-1 入口只留集成层**。一条命令两种含义时，一次「全绿」证明不了任何一件具体的事；实施席要报「这处改对了」只能跑集成层全量。
 - **KD-2 cli 顶层单元收集面删除，不留空壳**。实测 `thincoder-cli/test/` 现盘 = `run.mjs` + `slow.mjs`，零顶层 `*.test.mjs`；留着收集面就是给「单元档住包 test/」留位置，与 F6 相抵。
 - **KD-3 错位档 fail-closed 而非静默忽略**。收集面变窄后，落在 `test/` 其他位置的 `*.test.mjs` 永不执行；让它响亮失败（①），否则就是一个静默漏跑的藏身处。
 - **KD-4 空集非零在 cli ∥ 核两面都落**。同一判据（AC-M10-4「空集不读作绿」）；只改核会留下「cli 集成集清空即绿」的同型洞。

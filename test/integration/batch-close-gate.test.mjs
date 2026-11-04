@@ -1,5 +1,5 @@
 /**
- * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4 / 7-6 / 7-7 / 7-8 / 7-9 / 7-11 / 7-13（RTM CLI 端故事 7「收口只判本批改过的档」；
+ * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4 / 7-5 / 7-6 / 7-7 / 7-8 / 7-9 / 7-11 / 7-13（RTM CLI 端故事 7「收口只判本批改过的档」；
  * 判据原文 = `test/RTM.md` 第 7 节；7-1…7-3 的机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「② 的范围」，
  * 7-4 的机制 = `docs/core/design/TESTING.md` §3.5（零留存的收口门），
  * 7-6 / 7-7 / 7-8 的机制 = 同档 §3.20「结构兜底」（**批档自身恒在判域**：② 面命中即拒、① 面强制集 = 本次写入文本）。
@@ -14,6 +14,7 @@
  * 7-9 判工具描述面（两条判据同判：400 字符段 + 裸档名 ⇒ 双命中；只修锚仍拒；拆段后放行）。
  * 7-13 判段判据的列表项符号集（中文族 `·` ∥ `•` ∥ `①`–`⑳`）：400+ 字的列表档 0 命中、收口放行；
  * 同内容去标记的 400 字一段仍 1 条 ⇒ 照拒——认得列表项只断段、不改阈值。
+ * 7-5 判段判据的围栏语义（`docs/core/design/DOC-DISCIPLINE.md` §3.18「围栏行止」）：嵌套围栏（外层 ```` 包内层 ```）的内层代码不入段；同字数去围栏的对照片照拦。
  *
  * 夹具 = 系统临时域（项目根 + 真 git 仓 + 六段批档；`mkdtempSync`——零落仓、可并发）。收口后的台账重锚
  * 经测试缝 `_setLedgerDirForTest` 导向临时目录（不碰真实用户数据目录）。
@@ -24,9 +25,11 @@
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { batchTool } from "../../thincoder-core/agent-tools/batch.mjs"
 import { runDocCheck } from "../../thincoder-core/doc-check/index.mjs"
@@ -63,10 +66,9 @@ const projects = []
 
 after(() => {
   _resetLedgerDirForTest()
-  // `force` 只忽略 ENOENT、不重试 EPERM/EBUSY；临时仓带 `.git`，句柄未即释时清理会抛
-  // ⇒ 三例全绿却整档判失败（失败面与判据无关）——故给重试窗。
-  for (const p of projects) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(ledgerDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  // 临时仓带 `.git`，句柄未即释时清理会抛 ⇒ 走助手（有界重试、失败只写一行 stderr，不判红整档）。
+  for (const p of projects) removeTempDirBestEffort(p)
+  removeTempDirBestEffort(ledgerDir)
 })
 
 /** 六段批档全文（`sha` ⇒ §1 落 `批起 sha = <sha>` 记入行；`sec1` = §1 正文（7-6 放裸档名）；
@@ -242,12 +244,59 @@ test('7-4 错误 · 批档同目录留本批自己的单测档 ⇒ 收口被拒�
   assert.match(statusLineOf(root), /进行中/, "§1 状态行仍「进行中」")
 
   // 删档（门只拒、不代删）⇒ 同跑收口放行
-  rmSync(join(root, OWN_TEST_REL))
-  rmSync(join(root, OWN_VARIANT_REL))
+  removeTempDirBestEffort(join(root, OWN_TEST_REL))
+  removeTempDirBestEffort(join(root, OWN_VARIANT_REL))
   const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B)]))
   assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `删档后收口放行且落盘：${receipt}`)
   assert.doesNotMatch(receipt, /本批批内单测档/, `放行零回执（本门不出回执段）：${receipt}`)
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
+})
+// 7-5（本批新增）：段判据的围栏语义——**嵌套围栏**（外层四反引号包内层三反引号）的内层代码不入段。
+// 缺口来源 = 2026-10-27 围栏闭合判定缺陷：闭合只比字符不比长度 ⇒ 外层开启行被内层的三反引号提前「闭合」，
+// 内层代码行落回正文、被并成一段 ⇒ 合法档被判「文字太长」而拒。两半都成立才算过：
+// 嵌套档 0 段命中（收口放行）∥ 同字数去围栏对照档恰 1 条（收口照拒）。
+const CODE_LINES = Array.from({ length: 5 }, (_, i) => `const v${i} = "${"c".repeat(66)}"`)
+const CODE_CHARS = CODE_LINES.reduce((n, l) => n + [...l].length, 0)
+/** 嵌套围栏档：外层 ```` 包内层 ```js（内层代码合计 > 300 字——认不出围栏就是一段 395 字）。 */
+const nestedFenceDoc = () => ["# 嵌套围栏档", "", "````", "```js", ...CODE_LINES, "```", "````", ""].join("\n")
+/** 对照档：同一批行去掉围栏标记（同字数、同内容，唯一差别 = 围栏）。 */
+const plainDoc = () => ["# 无围栏对照档", "", ...CODE_LINES, ""].join("\n")
+
+test("7-5 嵌套围栏档内层代码不入段判据：收口放行，对照档照拒", async () => {
+  assert.ok(CODE_CHARS > 300, `夹具前提：内层代码合计 ${CODE_CHARS} 字 > 段判据阈值 300——认不出围栏就是超长段`)
+
+  // 两半 = 两份夹具、两次收口：一次 `batch close` 只能给一个 verdict（跑一次同时断「放行」与「被拒」不可能），
+  // 故按 RTM 句末「两半都成立才算过」逐半各断一次——先例 = 本档 7-11（前半 ∥ 后半）∥ 7-13（另起一份夹具）。
+  // 前半：嵌套围栏档入笔域集 ⇒ 0 段命中、收口放行
+  const root = makeProject("r75")
+  gitRepo(root)
+  writeFileSync(join(root, "docs/notes/nested-fence.md"), nestedFenceDoc())
+  commit(root, "嵌套围栏档")
+  const probe = runDocCheck(root, { mode: "gate", docs: [join(root, "docs/notes/nested-fence.md")], docsSource: "explicit" })
+  assert.equal(probe.paragraphHits.length, 0, `嵌套围栏档应零段命中（内层代码不入段），实读：${probe.report}`)
+
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, []))
+  assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 4 档", `批档 + 本批两档 + 嵌套围栏档 = 4 档且全清：${receipt}`)
+  assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `收口放行且落盘：${receipt}`)
+  assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
+
+  // 后半 = 反证，另起一份夹具（前一本批档已冻结）：同字数、去围栏 ⇒ 一段 395 字，段判据照拦
+  const root2 = makeProject("r75b")
+  gitRepo(root2)
+  writeFileSync(join(root2, "docs/notes/plain.md"), plainDoc())
+  commit(root2, "去围栏对照档")
+  const controlProbe = runDocCheck(root2, { mode: "gate", docs: [join(root2, "docs/notes/plain.md")], docsSource: "explicit" })
+  assert.equal(controlProbe.paragraphHits.length, 1, `对照档应恰 1 条段命中（阈值没动）：${controlProbe.report}`)
+
+  await assert.rejects(
+    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root2, [])),
+    (e) => {
+      assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, `拒串携 verdict 首行：${e.message}`)
+      assert.match(e.message, /✗ 文字太长，难于阅读 docs\/notes\/plain\.md:\d+/, `拒串点名该档与段命中行：${e.message}`)
+      return true
+    },
+  )
+  assert.match(statusLineOf(root2), /进行中/, "§1 状态行仍「进行中」")
 })
 
 test('7-6 错误 · 批档 §1 含裸档名 ⇒ 收口被拒（命中落在批档自身、点名 §1（作者：主 agent））、状态行字节不变', async () => {

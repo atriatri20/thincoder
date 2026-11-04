@@ -17,9 +17,11 @@
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, relative, resolve } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { countRoundBlocks } from "../../thincoder-core/agent-tools/batch-skeleton.mjs"
 import { advisorTool } from "../../thincoder-core/agent-tools/advisor.mjs"
@@ -73,9 +75,9 @@ const roots = []
 after(() => {
   _resetSessionsDirForTest()
   _resetLedgerDirForTest()
-  for (const p of roots) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(sessionsDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(ledgerDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  for (const p of roots) removeTempDirBestEffort(p)
+  removeTempDirBestEffort(sessionsDir)
+  removeTempDirBestEffort(ledgerDir)
 })
 
 function fixture(tag, text) {

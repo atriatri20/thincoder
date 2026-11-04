@@ -23,10 +23,12 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { estimateText } from "../../thincoder-core/provider/rate.mjs"
 import { requestBudget } from "../../thincoder-core/config.mjs"
@@ -152,8 +154,8 @@ async function scene(t, { files = {}, calls = [] } = {}) {
   t.after(async () => {
     for (const cli of children) await cli.stop()
     await endpoint.close()
-    rmSync(home, { recursive: true, force: true })
-    rmSync(cwd, { recursive: true, force: true })
+    removeTempDirBestEffort(home)
+    removeTempDirBestEffort(cwd)
   })
   for (const [rel, content] of Object.entries(files)) {
     mkdirSync(dirname(join(cwd, rel)), { recursive: true })

@@ -13,9 +13,11 @@
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { docCheckTool } from "../../thincoder-core/agent-tools/doc-check.mjs"
 
@@ -45,7 +47,7 @@ function blockLines(report) {
   return lines.slice(start, lines.length - 1)
 }
 
-after(() => { for (const d of TMP) rmSync(d, { recursive: true, force: true }) })
+after(() => { for (const d of TMP) removeTempDirBestEffort(d) })
 
 test("26-1 三形各一处：量法行 + 合计 3 处 + 三行逐处（①②③）+ 末行仍是结论", () => {
   const root = fixture({

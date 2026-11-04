@@ -441,7 +441,7 @@ advisor design review 标准维度补一条：
 
 ## 12. 验证
 
-评审收敛行为（轮次提示词替换、prior 原文注入、确定性轮次判定、**第 6 次及以后照常受理探针**、guard 推回判定、fresh session、host-verified citations、对象声明块注入）的回归测试按测试基建执行（`docs/core/design/TESTING.md` §10：单入口 `npm test`——`slow` 纯别名、原慢测用例随入口全跑）。
+评审收敛行为（轮次提示词替换、prior 原文注入、确定性轮次判定、**第 6 次及以后照常受理探针**、guard 推回判定、fresh session、host-verified citations、对象声明块注入）的回归测试按测试基建执行（`docs/core/design/TESTING.md` §10：集成门 = 仓根 `node test/run.mjs` 单入口；包级 `npm test` 不再是集成门——`slow` 纯别名、原慢测用例随入口全跑）。
 
 提示词锚（“Do NOT look for new issues”、证据规则句等）的防回退核对 = **逐字读核对**；如需机检，形态限**行为面 / 结构机检**（禁读非测试文件断言「某句在场 / 缺席」的散文锚测试——纪律 = `docs/core/requirements/TESTING.md` §2）。
 

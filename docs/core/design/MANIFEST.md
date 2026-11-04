@@ -939,7 +939,7 @@ const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recen
 
 **新增名三问（逐项）**：
 
-- 键 `docRoot.standards` — `none found: thincoder-core/manifest-schema.mjs` 的 `DEFAULT_MANIFEST.docRoot` 五子键 ∥ `thincoder-core/manifest.mjs` ∥ `thincoder-core/advisor/project-context.mjs` ∥ `thincoder-core/declaration.mjs`（旧 `advisor.standardsDoc` 已整键退场，无替代键）。
+- 键 `docRoot.standards` — `none found: thincoder-core/manifest-schema.mjs` 的 `DEFAULT_MANIFEST.docRoot` 五个既有子键（**搜当时的域**：本键即那次搜出来的东西，搜时它还不存在）∥ `thincoder-core/manifest.mjs` ∥ `thincoder-core/advisor/project-context.mjs` ∥ `thincoder-core/declaration.mjs`（旧 `advisor.standardsDoc` 已整键退场，无替代键）。
   名逐字 = `standards`。消费者 = `injectProjectStandards`（注入）· `entryDocPaths`（索引范围，经 `docRootPaths`）· `manifest` 工具键目录（人读面）。
 - 常量 `STANDARDS_UNREADABLE_NOTICE` — `existing: thincoder-core/advisor/project-context.mjs:37` `NO_STANDARDS_NOTICE` · failed on：**句义相反**（那句子说「没有任何东西声明」，第二态恰好是「声明了但读不到」）⇒ 复用即误判，本批禁。
   形态对齐先例（同档、同出口、`(…)` 括注体、末句要求把限制写进发现）；名逐字 = `STANDARDS_UNREADABLE_NOTICE`。消费者 = `injectProjectStandards` 唯一。
@@ -1028,6 +1028,7 @@ read the full file — <absolute path> — for the rest)
 - `DOC_ROOT_ORDER`（`project-context.mjs:131`）= **显式五名串**，不是 `Object.keys(docRoot)` ⇒ 新子键入 `docRoot` **不会**把文档地图带偏：父侧担心的那条判为**不成立**；成立的是它的孪生面（下一条）。
 - `declaration.mjs:158` `entryDocPaths` 遍历的正是 `Object.keys(DEFAULT_MANIFEST.docRoot)` ⇒ **索引范围（§6.14 面⑦）自动多一个前缀**。实读影响：未声明项目 `docRootPaths(null) = []` ⇒ 零变化；声明项目 ⇒ 标准档所在目录进索引范围（本仓 = `docs/core/requirements`，已在范围内 ⇒ 零变化）。判：**接受**——被声明的文档进索引范围是自洽的；由 AC-54② 锁「未声明 ⇒ 逐项等值」。
 - `REVIEW_ROOT_KEYS`（评审根五键，`write-gate.mjs:48` 再出口；键集本体 `agent-tools/review-facts.mjs:35`）⇒ 本族键与评审根键的比较须为**显式名单**（§2.3 该条已收正）；由 AC-54① 锁「加入该键前后 `resolveReviewTargetPaths` 逐项等值」。
+- `manifest` 工具的 `read` 动作（人读面键目录）⇒ 新子键自动进键目录；未声明项目多一行 `missingKeys=docRoot.standards`（自愈，见下「已知代价」条）。零代码改，与写面白名单同一派生源。
 - 写面白名单**从 schema 派生**（`agent-tools/manifest.mjs:62-70`）⇒ 新子键自动可写，工具侧拒因文案零改（`:181` 写的是「sub-keys of docRoot / index」，无计数）。**批次 §1.3「新键得进白名单」这条判断要收正**：不是手加白名单，是进了 schema 就有了。
 
 **已知代价：`missingKeys` 噪音（自愈）**

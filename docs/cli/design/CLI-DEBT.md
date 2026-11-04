@@ -1,7 +1,7 @@
 # CLI 产品树残留债（CLI-DEBT）· CLI 面 · 设计
 
 > 板块 = **CLI 产品树残留债**——`thincoder-cli/**` 的**档位（行数档）登记活账** + 结构 / 一致性尾项登记。
-> 对位册 = `docs/vsc/design/VSC-DEBT.md` §12.1（VSC 越档登记）· `docs/core/design/CORE-UNIFICATION.md` §2.8.1（核内逐档行数与拆分计划）。
+> 对位册 = `docs/vsc/design/VSC-DEBT.md` §12.1（VSC 越档登记）· 核内尺寸档判据与数值单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.10（尺寸档补充登记）。
 > 判据源 = `thincoder-cli/AGENTS.md:34`（单档 >500 行 = advisory · >800 行 = blocking）+ 各批既有裁定（逐条注源）。
 > 论域 = `thincoder-cli/**`（`node_modules/` · `docs/_archive/` 除外；含 `bin/` `src/` `test/`）。
 
@@ -28,10 +28,11 @@
 | # | 档（`thincoder-cli/` 内） | 现读 | 余量 | 触发 / 状态 | 拆分计划 / 裁定（本册活面表述） | 裁定源（记录面） |
 |---|---|---|---|---|---|---|
 
-### 2.2 表 B：<700 · 裁定 / 登记案在册（口径 §1-3——0 档）
+### 2.2 表 B：<700 · 裁定 / 登记案在册（口径 §1-3 ∥ §1-4——1 档）
 
 | # | 档（`thincoder-cli/` 内） | 现读 | 触发 / 状态 | 拆分计划 / 裁定（本册活面表述） | 裁定源（记录面） |
 |---|---|---|---|---|---|
+| B1 | `src/acp/bridge.mjs` | 501（`readFileSync` 按 `\n` 计行 · 2026-11-05） | 口径 4 随触碰补登（面被触碰）；拆分在途 | 拆分在途：IDE 缓冲编辑面 `absOf` / `editSingle` / `editBatch` 外移同目录 `src/acp/buffered-edit.mjs`（工厂形注入 `agent` / `readBuffer` / `writeBuffer` / `pathOf`）；纯搬运，判据 ∥ 回执零变；落盘后复量 | —（裁定 = 本册档头 500 软线约定，无另案） |
 
 **表 B 说明**：本表 = 自冻结/历史记录**转正**的 <700 项（口径 §1-3）——转录自设计档既有登记句（逐条注源）；其余历史登记项如有遗漏，随该档下次触碰并入（非全量普查——先例 = VSC-DEBT §12.1）。
 

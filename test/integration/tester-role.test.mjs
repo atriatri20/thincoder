@@ -36,10 +36,12 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { registerHooks } from "node:module"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { createAgent } from "../../thincoder-core/agent.mjs"
 import { executeToolCalls } from "../../thincoder-core/agent/dispatch.mjs"
@@ -215,8 +217,8 @@ test("30-1 派一个 tester 跑一条必败 ∥ 必过断言：受理 · 工具�
   const runs = []
   t.after(async () => {
     for (const r of runs) await r.endpoint.close()
-    rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-    rmSync(VSCODE_STUB_PATH, { force: true }) // 桩模块是夹具（模块已在进程内载完，删掉不扰后续断言）
+    removeTempDirBestEffort(root)
+    removeTempDirBestEffort(VSCODE_STUB_PATH) // 桩模块是夹具（模块已在进程内载完，删掉不扰后续断言）
   })
 
   // ── 必败断言 ──

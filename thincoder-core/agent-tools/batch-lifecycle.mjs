@@ -38,7 +38,7 @@ import { dirname, relative, resolve } from "node:path"
 import {
   DEPTH0_SEGMENTS, SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, STATUS_WORDS, TEMPLATE_PLACEHOLDERS,
   findPlaceholderResidue, placeholderResidueError, readBatchStatusLine, sectionHasStatusLine,
-  updateSectionStatusLine,
+  updateSectionStatusLine, zoneStatusCount,
 } from "./batch-skeleton.mjs"
 import { assertCloseoutGates, newDebtReasonOf, newDebtReasonReceiptLine, readCloseoutSource, reanchorReceiptLine } from "./batch-closeout.mjs"
 import { assertSingleLineNote, reclaimOnReopen, reopenReasonError, reopenReceiptLine, rewriteAsReopen, todayLocal } from "./batch-reopen.mjs"
@@ -180,6 +180,17 @@ function assertStatusNote(note) {
   }
 }
 
+/** 拒串：目标段段头区内**两条以上**状态行（§4.21.4 写面第二道——让这个歧义状态不再产生）。
+ *  修复句按段分两支：非 §1 = 先 `edit` 删多余那条（区内回到 1 ⇒ 可读行重新出现）再 `status` 改写余下那条
+ *  （记录全程 open，通道可达）；§1 = 主 agent 普通文档写（`edit` / `status` 在不可解析面上全部 fail-closed，
+ *  不许借重开绕）。顺序不能反：歧义时 `status` 拒，而 `edit` 不读该段的词面。 */
+function STATUS_LINE_AMBIGUOUS_ERROR(seg, count) {
+  const repair = Number(seg) === 1
+    ? "The §1 zone cannot be repaired through this tool: edit and status are both fail-closed on an unreadable §1 (reopening is not a way around it) — the main agent repairs it with an ordinary document write, deleting the surplus line so the zone holds exactly one."
+    : `Repair order (the record stays open throughout): first batch({action:"edit", segment:"§${seg}"}) on the non-protected line with newText "" — deleting it leaves the zone with one status line, so a readable line exists again — then batch({action:"status", segment:"§${seg}"}) rewrites that remaining (protected) line.`
+  return `batch: §${seg} carries ${count} \`**状态行**\` lines in its section header zone — a section's status is read only when the zone holds exactly one, so this one reads as unset (§2/§3/§5 word face = null; §1 = unknown ⇒ fail-closed). Nothing was written. ${repair}`
+}
+
 /**
  * status——状态行流转（§4.12，段属主；§4.16 模式感知）。写域 = 调用者自己段内 `**状态行**：`
  * 行（评审 → §3 · eng-designer → §2 · eng-coder / coder → §5 · 主 agent：工程 §1 ∥ 普通
@@ -187,6 +198,8 @@ function assertStatusNote(note) {
  * 字段（落状态行括注）；冻结真值不变（gate 只读 §1）。
  * path 参数 = 仅 depth-0（D-BR21）——子代理/评审传 path ⇒ 拒。F11-C 挂点 = 写盘前（档头结构行含骨架
  * 死占位 ⇒ 拒；段体引用豁免；close 不拦——收口是主 agent 终态动作）。
+ * **段头区歧义拒写**（§4.21.4 写面第二道）：目标段段头区两条以上状态行 ⇒ 拒并给修复句（非 §1 = 先
+ * `edit` 删多余那条再 `status`；§1 = 普通文档写）——位次 = 读档之后、重开合取之前（两路都是拒）。
  * **收口第二通路**：值余核 = §1「已收口」时本 action 同样收口（收口门 + 单测档门 + 机检门 + 冻结与
  * close 同序）⇒ 状态行写盘后同调 `reanchorOnClose`，回执携同一 `[ledger reanchor]` 段。
  * **重开径**（§4.18-B · §2.13）：前态 closed ∧ 值 = 进行中 ∧ note 非空 ⇒ 重开；写盘后同调
@@ -234,6 +247,10 @@ export async function statusBatchRecord({ args, ctx, review, pickTarget, onWritt
   assertStatusValue(seg, value)
   const abs = pickTarget(args?.path)
   const src = readFileSync(abs, "utf8")
+  // 段头区状态行歧义（§4.21.4 写面第二道）——位次 = 读档之后、重开合取与冻结门之前（§1 歧义面拿到的
+  // 是「修法 = 普通文档写」这一句，比冻结门的「不可解析」更贴现场；两路都是拒）。
+  const zoneCount = zoneStatusCount(src, seg)
+  if (zoneCount > 1) throw new Error(STATUS_LINE_AMBIGUOUS_ERROR(seg, zoneCount))
   // 重开合取（§4.18-B）：段 = §1 · depth-0（非评审）· 值关键词 = 进行中 · 门态 = closed——
   // 先于冻结拒写判定（门②的唯一例外）；note = 重开理由（J4 缺则拒）。**台账联动只由本合取触发**。
   const reopen = seg === 1 && depth0 && !review && stripDecorations(value) === STATUS_WORDS[1].open && readBatchStatusLine(src) === "closed"

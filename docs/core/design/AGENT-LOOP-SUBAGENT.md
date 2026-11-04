@@ -773,7 +773,7 @@ This list is not an authorization boundary: touching a file outside it is allowe
 
 | # | 判据 | 回指 |
 |---|---|---|
-| A-1 | `npm test` = **876/876 零红** | 全体 |
+| A-1 | `cd thincoder-vscode && npm test` 全绿 = **单元清单面**（本包显式清单 + 两向自检，exit 0）；**不是集成门**——集成门 = 仓根 `node test/run.mjs`（收口时父侧跑一次） | 全体 |
 | A-2 | `node --test test/agent-tools-registry.test.mjs test/eng-designer-role.test.mjs test/batch-segment.test.mjs test/integration/host-shape-spawn.test.mjs` 全绿 | 红 1–5 |
 | A-3 | 残留清零：VSC `src` + `test` + `webview` 域 snake_case `batch_segment` 字面命中 = **0**；豁免集见下 | 注释面 6 处 + 红 2/3/5b |
 

@@ -51,7 +51,7 @@
 
 **目标**：六段机制要求「一段一作者」，但子代理**没有写批次档的手段**——现实是**父侧代写**，而代写 = 二次加工 = 失真源。`append`（原 `batch_segment` 语义原样迁移）给子代理一条**受控写入通道**：各写各段、写到准确位置、不留后门。
 
-**生命周期扩权（2026-09-21）**：批次档全生命周期（建 → 写 → 转 → 收）收进同一工具——**创建走有门通道**（骨架预齐 + 占位状态行含 gate 合法关键字 + 建档即过 gate），消「校验有工具、创建靠手感」的半截纪律。action 枚举 = `create`（建档，§4.11）/ `append`（段写入，本节全表）/ `status`（状态行流转，§4.12）/ `close`（收口冻结，§4.13）。
+**生命周期扩权（2026-09-21）**：批次档全生命周期（建 → 写 → 转 → 收）收进同一工具——**创建走有门通道**（骨架预齐 + 占位状态行含 gate 合法关键字 + 建档即过 gate），消「校验有工具、创建靠手感」的半截纪律。action 枚举 = `create`（建档，§4.11）/ `append`（段写入，本节全表）/ `edit`（段内就地改，§4.19）/ `status`（状态行流转，§4.12）/ `attach`（现役档补挂台账行，§4.21.3）/ `close`（收口冻结，§4.13）。
 
 ### 4.1 工具契约
 
@@ -62,7 +62,7 @@
 | **段内一个写面（作者改自己那一段）** | **六段各自只有一个作者**；作者对本段可 `append` 在段尾加内容、可 `edit` 就地改写既有行 / 删区间（判据与边界 = §4.19）——§2 与 §1/§3/§5/§6 **同一处置**，差别只在段的内容性质、不在写面。**非作者一概拒**（段白名单仍是机械事实）。**状态行单行改写**（status / close）是唯一被单独划出的行级写面（§4.12 / §4.13）；`append §3` 带打回裁定时由工具同笔把 `§3` 状态行重置为 `进行中（第 N 轮打回）`（判据 / 形态单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5）；**反向同笔** = `append §3` 命中 pass 裁定行且不命中打回行、写前 `§3` 状态行 ≠ `评审通过` ⇒ 工具把该行置成 `评审通过`（三合取各判各的，实现 = `statusPassPlan`，落点 `thincoder-core/agent-tools/batch.mjs` 的「通过即置位」条）——两条靠各自的三合取天然互斥，状态行仍只经 `updateSectionStatusLine` 一个函数改写 |
 | **来源戳（工具生成）** | 写入 §3 时由**工具**加盖 `### 轮次 N（评审子代理）`；N 只数**工具写入过的**轮次行（固定骨架行 `### 轮次与发现（…）` **不计**）；调用方自带同名标题被忽略 |
 | **凭证剥除（工具做）** | 写入前过滤 token / designId 形态行——**模型可能忘，机械不能忘**；工具用**自有正则**（自有冒号态形态），**不复用**凭证巡检正则（后者要求参数名后接空白，匹配不到冒号态）。**形态 = 三形**：① 闭括号形（`[DESIGN-TOKEN:…]`）② 键形（`designId:` + 值）③ 无标两段值形（`⟨uuid⟩:⟨epoch⟩`——Approved 后缀逐字携带）∥ **裸 uuid 不剥**（id 非凭证 ∥ 批侧无 token 上下文不可精确） |
-| **fail-closed** | 目标段标题缺失 / 越段 / 骨架行冲突（写入文本含 `## §N` 标题形态）/ 超量（单次 text 超上限）/ 死占位残留拒（F11-C——判据 = `TOOLS.md` §6.20）/ **已收口档回改 / 状态行不可解析**（§4.9——**唯一例外 = 重开合取**：段 = §1 · depth-0 · 值关键词 = 进行中 · `note` 非空，§4.18-B）/ **`append §3` 无裁定行 ∥ 两者同携**（`R-G3`——判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.6.1；`edit §3` **不在此判据内**——它改的是既有块内的字，裁定行闸只挂 `append`，§4.19） / **收口链未跑完**（§4.18-A——`close` ∥ `status` 写「已收口」）/ **`edit` 锚判据**（零命中 ∥ ≥2 命中 ∥ 锚越段界 ∥ 锚或替换触及状态行——§4.19）⇒ **throw**；失败**明示报告「§× 未写入」**；回退父侧代写**必须打标** |
+| **fail-closed** | 目标段标题缺失 / 越段 / 骨架行冲突（写入文本含 `## §N` 标题形态）/ 超量（单次 text 超上限）/ 死占位残留拒（F11-C——判据 = `TOOLS.md` §6.20）/ **已收口档回改 / 状态行不可解析**（§4.9——**唯一例外 = 重开合取**：段 = §1 · depth-0 · 值关键词 = 进行中 · `note` 非空，§4.18-B）/ **`append §3` 无裁定行 ∥ 两者同携**（`R-G3`——判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.6.1；`edit §3` **不在此判据内**——它改的是既有块内的字，裁定行闸只挂 `append`，§4.19） / **收口链未跑完**（§4.18-A——`close` ∥ `status` 写「已收口」）/ **`edit` 判据**（F11-C 死占位 ∥ `newText` 超 `MAX_TEXT_CHARS` ∥ 零命中 ∥ ≥2 命中 ∥ 锚越段界 ∥ 锚触及**受保护**状态行 ∥ 替换引入状态行 ∥ 改写后区内状态行变多——§4.19 / §4.21.1 / §4.21.2）/ **`append` 状态行闸**（text 携行首 `**状态行**：` 形态行——§4.21.4）/ **`attach` 拒面**（门态非 `进行中` ∥ 档头台账行缺失 ∥ 同面无 `newDebt` ∥ 缺 `title`——§4.21.3）⇒ **throw**；失败**明示报告「§× 未写入」**；回退父侧代写**必须打标** |
 | **文档机检门（2026-10-18）** | `append` ∥ `edit`（全部段，含 depth-0 与评审写 §3）⇒ 写盘前自动跑 `doc_check` 的 gate：`REFUSED` ⇒ throw（串含 verdict + 命中清单），档字节不变；`PASS` ⇒ 照写；`ERROR` ⇒ 写 + 回执明示。`close` ∥ `status` 值余核 =「已收口」⇒ 收口前同跑：`REFUSED` ∥ `ERROR` ⇒ throw（状态行不改）。范围 / 适用面 / 版本前置 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「结构兜底」（本档不重述） |
 | **分段追加** | 超量拒收后拆成多次调用写同轮内容——**每次调用各成节、N 顺延**（档案按节记，分区诚实——无「不新盖戳」承诺） |
 | **action 分发** | 单工具 `batch({action, ...})`——家法 = `subagent` / `memory` / `git` 形态；append / edit 侧判定函数（段白名单 / 来源戳 / 凭证剥除 / 超量 / 冻结 / 机检门）逐一复用，零语义变（§4.11–§4.13 为新增 action 面） |
@@ -87,8 +87,8 @@
 
 | 调用方 | 挂载落点 | 路径来源 |
 |---|---|---|
-| **设计评审** | 评审工具集构造：**仅当 `reviewType === "design"` 且 batchDoc 已绑定（可读）时**追加 `batch`（append / edit / status 可用——create / close 对评审身份拒）；代码评审分支**零变更**（零 git、只读不变）；测试缝保留 | 评审实例键（§4.2） |
-| **eng-designer / eng-coder** | 家族单源 `thincoder-core/agent/family-tools.mjs` 挂载链（eng-coder = `[advisor, verify, batch, subagent]` · eng-designer = `[batch, subagent]`）：两分支各追加 `batch`（append / edit / status 可用——create / close 仅 depth-0） | `child._batchDoc`（spawn 时绑定） |
+| **设计评审** | 评审工具集构造：**仅当 `reviewType === "design"` 且 batchDoc 已绑定（可读）时**追加 `batch`（append / edit / status 可用——create / close / attach 对评审身份拒）；代码评审分支**零变更**（零 git、只读不变）；测试缝保留 | 评审实例键（§4.2） |
+| **eng-designer / eng-coder** | 家族单源 `thincoder-core/agent/family-tools.mjs` 挂载链（eng-coder = `[advisor, verify, batch, subagent]` · eng-designer = `[batch, subagent]`）：两分支各追加 `batch`（append / edit / status 可用——create / close / attach 仅 depth-0） | `child._batchDoc`（spawn 时绑定） |
 | **coder（普通模式 · 2026-10-09——§4.16）** | coder 分支（`[parentChannelTool, ledgerReadTool, verifyTool, advisorTool]`）**携绑定追加 `batchTool(batchDoc)`**——未绑定不挂载（同评审面先例：工具不在表 = 语法面不可达） | `child._batchDoc`（spawn 可选绑定） |
 | **主 agent** | **depth-0 挂载 `batch`（2026-09-21 扩权——D-BR18）**：create / close 仅 depth-0 放行；`append` / `edit` / `status` 的段域 = §1/§4/§6（§4.1 段白名单），**普通文档写照旧零回归**（工具通道是新增、不替代） | create / close `path` 参数（工具无 spawn 绑定态）；depth-0 的 append / status 可选 `path` 参数（§4.1——缺省 = 在飞批唯一时取该批，复数时必传） |
 
@@ -99,7 +99,7 @@
 **动作可用面的判点（装配 ∥ 动作）**：
 
 - **装配**（哪身份挂到哪个工具集）= 家族单源 `thincoder-core/agent/family-tools.mjs` 挂载链 ∥ 评审侧 `advisorToolsFor`。
-- **动作可用面**（哪身份许哪个动作）= `batchTool.execute` 的 action 分派（`thincoder-core/agent-tools/batch.mjs`）：`case "create"` → `createBatchRecord` · `case "append"` → `appendBatchRecord` · `case "edit"` → `editBatchRecord` · `case "status"` → `statusBatchRecord` · `case "close"` → `closeBatchRecord`。
+- **动作可用面**（哪身份许哪个动作）= `batchTool.execute` 的 action 分派（`thincoder-core/agent-tools/batch.mjs`）：`case "create"` → `createBatchRecord` · `case "append"` → `appendBatchRecord` · `case "edit"` → `editBatchRecord` · `case "status"` → `statusBatchRecord` · `case "close"` → `closeBatchRecord` · `case "attach"` → `attachBatchRecord`（§4.21.3）。
 - **`create` 的首判** = `assertMainAgentOnly`（`thincoder-core/agent-tools/batch-ledger-bind.mjs`，注释逐字「main-agent-only 门（BR-19/BR-24）：create 仅 depth-0 放行（eng 子代理 / 评审皆拒）」）；`close` 的同一道门 = BR-24（§4.13）。
 - **段域判** = `allowedSegment`。**上面括注里的「append / edit / status 可用」不是文案，就是这两处判据的读数。**
 
@@ -175,7 +175,7 @@
 | BR-15 | 边界 | M 族批含 **3 个模块**（#67 形态：M3–M6 打包） | 判**越界** ⇒ 拆批（本批先落 ≤2 模块）+ §1 写明拆分理由 |
 | BR-16 | 正常 | M 族批含 ≤2 模块 · 非 M 族批（受影响文件不落 M1–M10） | 通过（L7 不触发——非 M 族计数 = 0） |
 | BR-17 | 边界 | 条目在挂靠批档之外完成（父侧直接执行 / 他批涵盖），该档无对应 §5 记录 ⇒ 主 agent 把结账依据写进该行 `evidence`（§5.2） | `evidence` 记结账依据（落点坐标 / 提交号 / 他批坐标）；**核销仍待挂靠批走完全链收口**（核销门 ② / ③ 判据不变）；批档不被自动改写 |
-| BR-18 | 正常 | 主 agent `create({path, topic, source, prev, ledger?, board?})` | 六段骨架落盘：`## §1–§6` 段头 + §1 段内 `**状态行**：🔄 进行中（…）` + 档头 boilerplate（六段一段一作者句 + 编制行 + 台账/前情指针行——`ledger`/`board` 给参即填、未给留占位）+ 各段模板子标题占位；**建档即过 gate**（占位状态行含「进行中」） |
+| BR-18 | 正常 | 主 agent `create({path, topic, source, prev, ledger?, board?})` | 六段骨架落盘：`## §1–§6` 段头 + §1 段头区 `**状态行**：🔄 进行中（…）` + 档头 boilerplate（六段一段一作者句 + 编制行 + 台账/前情指针行——`ledger`/`board` 给参即填、未给留占位）+ 各段模板子标题占位；**建档即过 gate**（占位状态行含「进行中」） |
 | BR-19 | 错误 | eng-designer / eng-coder / 评审身份调 `create` | throw（「create is main-agent-only」——depth-0 身份判据） |
 | BR-20 | 错误 | create 目标已存在 / 路径不可写 | throw（fail-closed——不覆盖既有批档） |
 | BR-21 | 正常 | eng-designer `status({value:"…设计完成"})` | §2 段内状态行更新；§1 冻结态不变（gate 判定域只读 §1） |
@@ -249,12 +249,26 @@
 | BR-90 | 错误 | 同形块但无裁定行 ∥ 两者同携 | 拒（`R-G3` 串逐字——瘦身不动拒面） |
 | BR-91 | 正常 | designer 写 §2：条目表 + 落点 `design §4.20` + 受影响文件 + 验收行，不重述机制 | 成功；机制叙述不在 §2（判读面 = 评审同轮核） |
 | BR-92 | 边界 | §2 / §3 的依据格写 `batch-skeleton.mjs:306` ∥ 「见上文」 ∥ 「见设计档」 | 机检不拦（无此项门）；判读 = 评审同轮核 + 收口对账（§4.19 D7 两半）——命中即判不合、重写该格 |
+| BR-93 | 错误 | 档头台账行仍带 `#<编号>` 占位时 `edit §2`（锚合法） | throw（`placeholderResidueError` 逐字，逐行点名档头行号 + 原文）；档字节零变 |
+| BR-94 | 边界 | `edit` 的 `newText` 20000 ∥ 20001 字符 | 前者照写（回执点名替换字符数）；后者 throw 点名上限与分段写法，零字节落盘 |
+| BR-95 | 边界 | §1 段头区两条 `**状态行**：`（`已收口 …` ∥ `进行中`） | `readBatchStatusLine` = `unknown`；append / edit / status / close 全拒（冻结同判）；修 = 主 agent 普通文档写 |
+| BR-96 | 正常 | §2 段头区两行（骨架占位行 + 写者追加行）：先 `edit §2` 锚 = 追加行、`newText` 空串，再 `status §2 = 设计完成` | `edit` 成功（`zoneStatusCount` 2 → 1）；随后 `status` 改写受保护行（区内唯一那条）；回读词面 = `设计完成` |
+| BR-97 | 错误 | `edit` 锚 = 段头区内首条状态行 | throw（`EDIT_STATUS_LINE_ERROR` 逐字，指向 `status`）；档字节零变 |
+| BR-98 | 错误 | 段头区 1 行 + `### 子标题` + 段体一行状态行；锚 = 子标题行、`newText` 空串 | throw（`EDIT_STATUS_LINE_PROMOTION_ERROR`：改写后区内 2 > 改写前 1）；档字节零变 |
+| BR-99 | 错误 | `append` 的 text 携行首 `**状态行**：设计完成` | throw（`STATUS_LINE_IN_APPEND_ERROR`，给块引用与 `status` 两条路）；同文改成 `> **状态行**：…` ∥ 表格行 ⇒ 照写 |
+| BR-100 | 边界 | §1 段头区零条 ∥ 恰一条 ∥ 两条以上（§2 / §3 / §5 同构） | `unknown` / 按关键词 `open` ∥ `closed` / `unknown`（§2 面 = `null` / 词 / `null`） |
+| BR-101 | 正常 | 在飞档 `attach({title})`；随后同一调用重放 | 首次：新行 `在途`、`task_book` 指本档、档头台账行 `#a（… · 归批）` → `#a · #b（… · 归批）`；重放：台账零写 + 回执点名「已在列表」 |
+| BR-102 | 错误 | 已收口档 `attach({title})` | throw（点名「先重开（§4.18-B）或另起新批」）；档与台账逐列零变 |
+| BR-103 | 错误 | 本面已有未决行、`attach` 不带 `newDebt`（随后带它重试） | 首次 throw 并列候选（`#<id> <status> <title>`）、台账零写；重试成功 |
+| BR-104 | 错误 | eng 子代理 ∥ 设计评审调 `attach` | throw（`attach is main-agent-only`） |
+| BR-105 | 错误 | §2 段头区两条以上状态行时 `status §2 = 设计完成`（随后按修复句：`edit` 删多余那条 → 再 `status`） | throw（`STATUS_LINE_AMBIGUOUS_ERROR`，给修复句「先 `edit` 删多余那条、再 `status`」）；档字节零变、记录仍 open；`edit` 删完（区内回到 1）后 `status` 成功 |
+| BR-106 | 边界 | 在飞档档头仍是 `> 台账 = #<编号>（core · 归批）` 死占位时 `attach({title})`（随后同档 `edit §2`） | `attach` **成功**（不挂 F11-C——它正是清占位的那条通道）：新行 `在途`、档头变 `#b（core · 归批）`；随后 `edit §2` 可跑（死占位已无残留） |
 
 ### 4.9 状态行冻结拒写 + `docRoot.batches` 双基底（v2——M3 增量）
 
 **写入路径四道机械门（`batch` append/status/close 写入前——符号名 = `batchTool.execute`）**，序列 = ① 状态行解析 → ② 冻结拒写 → ③ 链完整性门（§4.18-A——落位 = 既有拒因之后、文档机检门之前）→ ④ 文档机检门：
 
-1. **状态行解析（fail-closed）**：解析对象 = §1 段内 `**状态行**：` 前缀行（§1 边界 = 该行到下一 `## §` 标题；其他段内「状态行」字样不参与判定）；关键字判定：含 `已收口` → 冻结、含 `进行中` → 放行（emoji / 括号 / 日期后缀容忍）；缺失 / 两关键字皆不命中 → 拒（fail-closed：不可解析视为冻结——宁可误拒进行中档，不得放行回改已收口档）。
+1. **状态行解析（fail-closed）**：解析对象 = §1 **段头区**内 `**状态行**：` 前缀行（段头区 = `## §1` 标题行之后、下一个 `^#{2,}` 行之前——与写面 `updateSectionStatusLine` 同一条定位面；段体与轮次块里引述的状态行不参与判定）；**区内恰一条才取值**——零条 ∥ 两条以上同判不可解析（计数义 = §4.21.4）；关键字判定：含 `已收口` → 冻结、含 `进行中` → 放行（emoji / 括号 / 日期后缀容忍）；缺失 / 两关键字皆不命中 → 拒（fail-closed：不可解析视为冻结——宁可误拒进行中档，不得放行回改已收口档）。
    **行尾形态无关**（LF ∥ CRLF ∥ 混排同判——`\r` 归行分隔、不归行内容；行切分 = `/\r?\n/`）。
 2. **冻结拒写**：`已收口` / 不可解析 → throw（错误消息区分「已收口档不回改」/「状态行不可解析或缺失」）——覆盖 `batch` append / status / edit 通道；**唯一例外 = 重开合取**（§4.18-B：段 = §1 · depth-0 · 值关键词 = 进行中 · `note` 非空 ⇒ 放行并追加 §1 追记行；非合取一律走本拒写，串逐字零变）；主 agent 对 §1/§4/§6 的普通文档写不经本工具，兑底 = 写纪律。
 3. **链完整性门（2026-10-18 · 收口前置——§4.18-A）**：`close` ∥ `status` 写 §1「已收口」两路在写盘前同过 `assertCloseoutChainComplete(src)`——§2 / §3 / §4 / §6 各段须有内容（每一批都要有设计、评审、批准——段内不得声明不适用）；§5 段号豁免；不满足 ⇒ throw 并点名缺段。门位 = 门 ② 之后、门 ④ 之前（链未跑完先报结构缺口，不先跑机检）。判据逐段 / 声明形 / 三拒串 = §4.18-A（本条不重述）。
@@ -274,14 +288,14 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 
 ### 4.10 批次档骨架（create 模板单源落位）
 
-**判据句**：`batch` append 按标题定位追加 ⇒ 骨架由 **create 一次预写**（§4.11）；标题缺失即 fail-closed（§4.1——append 不自动补骨架）。**状态行必居 §1 段内**——解析域 = §1 段内 `**状态行**：` 前缀行至下一 `## §` 标题（§4.9）；只置档头 = 不可解析 ⇒ 拒写。
+**判据句**：`batch` append 按标题定位追加 ⇒ 骨架由 **create 一次预写**（§4.11）；标题缺失即 fail-closed（§4.1——append 不自动补骨架）。**状态行必居 §1 段头区**——解析对象 = 段头区内 `**状态行**：` 前缀行（段头区 = 标题行之后、下一 `^#{2,}` 之前，§4.9）；只置档头 = 不可解析 ⇒ 拒写。
 
 **骨架（create 模板的行为规格——代码单源 = `agent-tools/batch-skeleton.mjs` 的 `batchSkeleton()`（KD-4 拆分后；`batch.mjs` 持 schema ∕ 分发）；红线 = 模板只覆盖骨架与占位，不模板化内容）**：
 
 ```text
 # <日期> · <主题>
 > 六段，一段一作者：§1 讨论（主 agent）· §2 批次任务与设计（eng-designer）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
-> 每段只有一个作者：作者的段可 `append` 加内容、可就地改（`edit`，§4.19）；非作者一概拒。
+> 每段只有一个作者：作者的段可 `append` 加内容、可就地改（`edit`）；非作者一概拒。
 > 编制：主 agent · <日期> · 来源 = <来源实参>。
 > 台账 = <编号实参 | #<编号>>（<板块实参 | <板块>> · 归批）。前情 = <旧档指针 | 无（独立批）>。
 ## §1 讨论（主 agent）
@@ -289,14 +303,14 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 ## §2 批次任务与设计（eng-designer）
 **状态行**：（eng-designer 写入时更新）
-<§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试 / 验收对照 / 关键决策 / 上抛项>
+<§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试覆盖 / 验收对照 / 关键决策 / 上抛项>
 ## §3 设计评审（评审子代理）
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）
 ```
 
-**档头两句（写面与分权的承载位）**：第一句 = 六段 + 一段一作者（A1 族锚句形态）；第二句 = 作者对自己的段有两个动作——`append` 加内容 ∥ `edit` 就地改（§4.19）。新增档逐字取形。
+**档头两句（写面与分权的承载位）**：第一句 = 六段 + 一段一作者（A1 族锚句形态）；第二句 = 作者对自己的段有两个动作——`append` 加内容 ∥ `edit` 就地改（规则住 §4.19；这条括注只在本设计档，生成串内不带节号——骨架块逐字 = 生成串）。新增档逐字取形。
 
 **存量档档头按在不在跑分两判**：档头那句是给**当下的人**读的操作说明，不是决策证据——所以判据不是「存量 / 非存量」，是**这本档还在不在跑**。
 
@@ -351,9 +365,9 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
   **越段拒面**：声明 / 取段越出写域 ⇒ 拒——工程面拒文案逐字零变；普通面模式化新串（逐字 = 该批设计段 §2.2 文案表）；
 `path`（可选——仅 depth-0，取值规则见 §4.1 / D-BR21）。
 
-**写域**：调用者**自己段内**的 `**状态行**：` 行（**段内多命中 ⇒ 改写首条**——as-of 2026-09-30 工具面实读 = `thincoder-core/agent-tools/batch-lifecycle.mjs:169` **逐行扫描**（行切分 `/\r?\n/`——EOL 形态无关）首命中、**命中行原位替换**（行尾随命中行自身、其余字节零变）；
+**写域**：调用者**自己段内**的 `**状态行**：` 行（**段头区内恰一条才写**——区内两条以上 ⇒ 拒并给修复句，§4.21.4；实读 = 段头区逐行扫描（行切分 `/\r?\n/`——EOL 形态无关）第**一**条、**命中行原位替换**（行尾随命中行自身、其余字节零变）；
 
-其余同前缀行 = append 载荷的记录面行，非机读位、零变；缺失则标题行后**偏移插入**状态行 + 空行（**插入块行尾 = 标题行自身行尾**——锚行后首二字节判读：`\r\n` ⇒ CRLF ∥ 其余 ⇒ `\n`；插入块 = 状态行 + 其后空行——**形态单源 = 实装 `thincoder-core/agent-tools/batch-lifecycle.mjs:172-173`**——纯态等值实读校验））——eng-designer → §2 · 评审 → §3 · eng-coder → §5；
+其余同前缀行 = 段体里引述的行，非机读位、零变；缺失则标题行后**偏移插入**状态行 + 空行（**插入块行尾 = 标题行自身行尾**——锚行后首二字节判读：`\r\n` ⇒ CRLF ∥ 其余 ⇒ `\n`；插入块 = 状态行 + 其后空行——**形态单源 = 实装 `thincoder-core/agent-tools/batch-skeleton.mjs` 的 `updateSectionStatusLine`**——纯态等值实读校验））——eng-designer → §2 · 评审 → §3 · eng-coder → §5；
 
 主 agent → §1（**轮 2 裁定 #3**——**工程面**：写域收为 §1 单段，§4/§6 状态面走普通文档写，与 D-BR18 分工一致、零新词表）；**普通面（§4.16——2026-10-09）：主 agent → §1/§2/§5**（设计师席 / 实施席并入——`segment` 取段、缺省 §1；值域照分段词表）。
 
@@ -364,7 +378,7 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 ### 4.13 `close`——收口冻结（仅主 agent）
 
 **参数**：`path`（目标批次档——同 depth-0 append/status 取值规则，见 §4.1 / D-BR21）。
-**动作**：§1 段内状态行 →「已收口 <YYYY-MM-DD>」；此后该档 append / status 全拒（冻结判据唯一真值 = §1 行——与 §4.9 一致，零语义变；**唯一例外 = 重开合取**，§4.18-B）。**文档机检门**：§6 非空门之后、状态行改写之前跑 gate——`REFUSED` ∥ `ERROR` ⇒ throw（不落「已收口」；§4.9 ④）。
+**动作**：§1 段头区状态行 →「已收口 <YYYY-MM-DD>」；此后该档 append / status 全拒（冻结判据唯一真值 = §1 行——与 §4.9 一致，零语义变；**唯一例外 = 重开合取**，§4.18-B）。**文档机检门**：§6 非空门之后、状态行改写之前跑 gate——`REFUSED` ∥ `ERROR` ⇒ throw（不落「已收口」；§4.9 ④）。
 
 **设计凭证消费（工程模式）**：同一收口在状态行改写之前还要消费本批已签发的设计凭证，消费失败 ⇒ 拒 close（档零字节变）；口径单源 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §10，本档不复述。
 
@@ -596,7 +610,7 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 |---|---|
 | 参数 | `segment`（须 ∈ 调用者写域——§4.1 段白名单，与 `append` 同一张表）+ `oldText` + `newText`；`path` 仅 depth-0（D-BR21），子代理无路径参数（目标 = spawn 绑定） |
 | 段域 | **= 同模式 `append` 白名单**（一处单源，两动作读同一张表）：工程面 `eng-designer → §2` · `eng-coder → §5` · 评审 → `§3` · depth-0 → `§1/§4/§6`；普通面 depth-0 → `§1/§2/§4/§5/§6` · coder（携绑定）→ `§5` · 评审 → `§3` |
-| 锚判据（全 fail-closed） | `oldText` 空串 ∥ 纯空白 ⇒ 拒；零命中 ⇒ 拒（不猜）；≥2 命中 ⇒ 拒并列出命中行号；锚越出目标段段体（跨段界）⇒ 拒；锚或替换**触及** `**状态行**：` 行 ⇒ 拒并指向 `status`；`newText` **引入**一条 `**状态行**：` 行 ⇒ 拒（状态行只有一个写者——新插的那条会因 §4.12「段内多命中 ⇒ 改写首条」接管该段状态行的写入） |
+| 锚判据（全 fail-closed） | `oldText` 空串 ∥ 纯空白 ⇒ 拒；零命中 ⇒ 拒（不猜）；≥2 命中 ⇒ 拒并列出命中行号；锚越出目标段段体（跨段界）⇒ 拒；锚**触及受保护行**（段头区内第一个 `**状态行**：` 行——位置义，§4.21.2）⇒ 拒并指向 `status`；锚触及**非受保护**的形态行 ⇒ 放行（`newText` 空串 = 删除惰性副本——§4.21.2）；`newText` **引入**一条 `**状态行**：` 行 ⇒ 拒；改写后该段段头区内状态行条数**多于**改写前 ⇒ 拒（四条合起来 = 状态行只有 `status` 一个写者，`edit` 只能**减少形态行**（行数）） |
 | 来源戳（仅 §3） | `edit §3` 的 `newText` 过 `sanitizeText(text, true)`——`### 轮次 N（评审子代理）` 行被丢弃。`append` 面由工具盖戳；`edit` 面若能写进戳，轮次 N 与「谁是作者」当场可伪造（§4.7 不变量 5） |
 | 骨架保护 | `newText` 含 `## §N` 标题形态 ⇒ 拒（同 `append`——段定位靠标题） |
 | 剥凭证 | `newText` 过同一条 `sanitizeText`（§4.1 凭证剥除）——模型可能忘，机械不能忘 |
@@ -845,6 +859,212 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 
 **UI / 交互决策**：本批无 UI / 交互面（改的是模型可见文案与档内写法）；**无 open 项**。
 
+### 4.21 写入面三面对齐（`edit` 补门 · 状态行唯一位 · 现役档补挂台账行）
+
+**判据句**：一批四件是同一个形状——**对称性缺口**：`append` 有门而 `edit` 没有；`status` 能写而没人能清；`create` 能挂台账行而现役档不能；机器读状态行时靠「区内首个命中」，与作者是谁无关。
+
+处置一律是**把判据补到缺的那一面**：不新增状态词、不动段白名单、不改单写者语义。
+
+**依据**：用户 2026-11-05 05:05 逐字「都开吧。」——按批次档 §1「已定决定」先对齐三面拒因，每加一道门带一格反例夹具。
+
+**四条共同判据**（四件都从这里推，后面不逐件重述理由）：
+
+| # | 判据 | 推出的件 |
+|---|---|---|
+| J1 | **写门只论「写没写档」**：`create` / `append` / `edit` / `status` / `attach` / `close` 写的是同一本档、过同一批骨架判据 ⇒ 死占位 / 冻结 / 剥凭证 / 机检门同挂 | ① |
+| J2 | **「只有一个写者」管的是值，不是行**：机器读的那一行只有 `status` 能给值；机器**不读**的行，删掉不改变任何判据 | ② |
+| J3 | **工具通道只能让形态行变少**：`append` / `edit` 不得新增一条；`status` / `close` / 重开径不得让条数变成两条以上 | ④ |
+| J4 | **账要冻结，现役档要能承接新债**：已核销行没有回退边（这条对），缺的是「给现役档补挂一行」的动作 | ③ |
+
+**落地顺序（依赖，不并行改——§1「顺序」带进设计）**：**① → ②**；**③ ∥ ④ 都在 ① 之后**（① 定的是门挂点，后三件都落在同一处）。
+
+**② ∥ ④ 的调和点 = 上面那两个名**：件② 的删除路径以「受保护行」（位置义）为保护对象，件④ 的读面判据取「可读行」（计数义）。一个名字写两种判据时，「先 `status` 再 `edit` 删」这条正路物理上走不通（评审轮 1 的 🔴 #1）⇒ 两条同批落笔时**先立名、再各自引用**，修复序统一成「先 `edit` 删多余那条、再 `status` 改写余下那条」。
+#### 4.21.1 件①：`edit` 补两道门（F11-C 死占位 ∥ `newText` 单次上限）
+
+**判据句**：
+
+- 目标档档头结构行仍带骨架死占位 ⇒ `edit` 拒。判据与拒串**同一条**（`findPlaceholderResidue` / `placeholderResidueError`），段体引用照旧豁免（判定域没变）。
+- `newText` 原始长度 > `MAX_TEXT_CHARS`（20000）⇒ 拒。比较形与 `append` 一致（先比原始长度，再剥凭证）。
+- **为什么必须补**：同一本档的两条写入通道，一条有上限一条没有 ⇒ 上限等于没有。死占位是「这本档还不是真档」的机器标记，`edit` 是唯一还能在这种档上落字的通道。
+- **位次**：`newText` 形态判据之后、锚解析之前（与 `append` 的「形态 → 门 → 落笔」同序；拒 = 零字节落盘）。
+
+**落点**：`thincoder-core/agent-tools/batch-record-write.mjs` 的 `editBatchRecord`（`edit` 的写面现居此档）——新增拒串常量 `EDIT_TEXT_OVER_LIMIT_ERROR`，一次 `findPlaceholderResidue` 调用（两个符号已在 import 面，零新依赖）；上限常量复用 `MAX_TEXT_CHARS`（零新常量）。
+
+**反例夹具**：① 档头 `> 台账 = #<编号>（core · 归批）` 未填 + `edit §2` 锚合法 ⇒ throw，拒串逐行点名档头行号与原文，档字节零变；② `newText` 20001 字符 ⇒ throw，拒串点名上限与「拆成多次调用」；20000 字符照写（边界两半都断）。
+
+#### 4.21.2 件②：状态行唯一位与惰性副本的删除路径
+
+**两个名，各写一次**（同一个位置，两种问法；评审轮 1 的 🔴 #1 = 一个名字被写成两种判据）：
+
+- **受保护行** = 段头区内的**第一个** `**状态行**：` 形态行——**位置义**：`edit` 不许碰的那一行，也是 `status` / `close` / 重开径改写的那一行（落点 `firstZoneStatusLineRange`）。
+- **可读行** = 段头区内**唯一**的那条——**计数义**：`readBatchStatusLine` / `readSectionStatusWord` 的返回值只从它来（判据 = 件④，§4.21.4）。
+- 区内恰一条时两者是同一行；区内两条以上 ⇒ **可读行不存在**（读面 `unknown` / `null`），而**受保护行仍是第一条**。
+
+**判据句**（「删哪一行、留哪一行」逐条）：
+
+- **留 = 受保护行**：`edit` 碰它 ⇒ 拒（既有 `EDIT_STATUS_LINE_ERROR` 逐字不变）。
+- **删 = 其余每一行**：段头区内的第二行起、段体（区外）的任何形态行——机器都不读，删掉不改变任何判据。
+- `edit` 的 `newText` **引入**一条状态行形态行 ⇒ 仍拒（既有判据，串不变）。
+- **第二道（新增）**：改写后该段段头区内状态行条数 **不得多于** 改写前（`zoneStatusCount` 前后比对，纯函数单源）。
+  它堵的是「删掉隔在中间的子标题、把段体那条顶进段头区」——那条路一个字都不写状态行，却能让一条手写行变成受保护行。
+
+**修复序（两条以上时唯一的正路）**：先用 `edit` 删掉**非受保护**的那条（区内回到 1 ⇒ 可读行重新出现），**再** `status` 改写受保护行。
+
+- 顺序不能反——`status` 在区内两条以上时拒（§4.21.4），而 `edit` 不读该段的词面、通道始终开着。
+- 这条序同时满足 `BR-96`、本件正格与 §4.21.4 反例夹具②：不需要给任何门开例外。
+
+**为什么 `status` 仍是唯一写者**：单写者管的是**值**——可读行的值只能由 `status` / `close` 给。`edit` 删的行机器不读，删了不产生任何值；受保护行被前一条挡着，`edit` 碰不到。四道合起来 = 工具通道对状态行**只减不增、不可改值**（J2 + J3）。
+
+**落点**：
+
+- `thincoder-core/agent-tools/batch-segment-vocab.mjs`——段头区判据仍只此一处（`sectionHeaderZoneLines` 现居此档）。新增三个导出：`zoneStatusLines(src, seg)`（段头区内全部形态行）· `zoneStatusCount(src, seg)`（条数）· `firstZoneStatusLineRange(src, seg)`（受保护行的字符区间——`edit` 保护与 `status` 改写取同一个落点）。`batch-skeleton.mjs` 转出这三个（既有读面出口，零新依赖）。
+- 同一档：`readBatchStatusLine` / `readSectionStatusWord` 改取「区内**恰一条**才读」——判据见件④。
+- `thincoder-core/agent-tools/batch-record-write.mjs` 的 `editBatchRecord`：`statusLineSpans(body)` 的判据由「任何状态行」改为「受保护行区间」；新增改写后条数比对与拒串 `EDIT_STATUS_LINE_PROMOTION_ERROR`。
+
+**反例夹具（四格）**：
+
+- 正格：§2 段头区两行（骨架占位行 + 写者追加的 `**状态行**：设计完成`）；**先** `edit §2` 锚 = 追加行、`newText` 空串 ⇒ 成功（区内 2 → 1）；**再** `status §2 = 设计完成` ⇒ 改写余下那条（受保护行）；回读词面 = `设计完成`。
+- 反格 A：锚 = 受保护行 ⇒ 拒，串指向 `status`。
+- 反格 B（顶升）：区内 1 行 + 其下 `### 子标题` + 段体再一行状态行；锚 = `### 子标题` 行、`newText` 空串 ⇒ 拒（改写后区内 2 > 改写前 1）。
+- 反格 C：`newText` 携一条 `**状态行**：` 行 ⇒ 拒（既有串逐字）。
+
+#### 4.21.3 件③：给现役档补挂台账行（动作 `attach`）
+
+**场景（现场 · 本席 `node` 实扫 `docs/batches/*.md` 全 306 档，2026-11-05）**：带工具追记行（行首 `**重开记录**：<日期> · 原收口 …`）的批档 **10** 本——重开是既有正路（§4.18-B）。
+
+重开后的档若要承接一件新事，今天只有两条路：另起一本新批档（原档的 §1–§6 与追记行从此与债脱钩），或让它跑完一整轮而不记任何债。
+
+**两步复现**：① 取一本带重开记录的档（例 = `docs/batches/2026-11-05-doc-write-gate.md`）；② 看它的档头 `台账` 行与本面未决行——重开后新增的工作没有可落的行位：`create` 只对新档开放（目标已存在 ⇒ 拒），已核销行没有回退边。处置 = 本条。
+
+**判据句**：
+
+- 新动作 `attach`，**仅 depth-0**（与 `create` / `close` 同一道身份判据，拒串形同族：`attach is main-agent-only`）。
+- 作用对象 = **已存在**的批档：开一条新台账行（`在途` · `task_book` = 本档相对指针 · `trigger` = 归批），或接管一条既存未决行；行号补进档头 `台账` 行（多编号单行形，追加在列表尾）。
+- **前置**：目标档门态 = `进行中`。已收口 ⇒ 拒，拒串给两条路——先重开（§4.18-B：`status` 写 §1「进行中」+ `note` 理由）再 `attach`，或另起新批。§1 段头区两条以上（不可解析）⇒ 同拒（fail-closed，与其余写门同判）。
+- **不挂 F11-C 死占位门（本条单列，J1 的例外）**：档头仍带 `#<编号>` 占位的档，`edit` 被死占位门挡着（件①），而这本档在台账侧已经是真档。
+  `attach` 正是把死占位换成真编号的那条通道，⇒ 它必须放行并**填掉**占位；填完即无残留，`edit` 随之打开。
+- **不动已核销行**（J4）：`attach` 只开新行或接管未决行；核销过的行没有回退边。
+- 同面判据沿用 `create` 那一份（单源）：本面无未决行 ⇒ 直接开；有 ⇒ 须 `newDebt` 一句理由，否则拒并列出候选。
+- **幂等**：新行号已在档头列表 ⇒ 零写 + 回执点名「已在列表」。为的是同一个回调在 `ledgerBindBatch` 的「行已 live、零台账写」分支上也安全。
+
+**参数面**：`action:"attach"` + `ledger`（既有行号，可选）+ `newDebt`（可选；本面有未决行时必需）+ `board`（可选）+ `title`（**开新行时必填**）+ `path`（depth-0 既有形；缺省 = 唯一在飞批）。
+
+**为什么新债要自己一个标题**：台账行的 `title` = 这条债叫什么。重开的档承接的是一件**新事**，沿用本批原主题会让台账把它读成原债的第二份。
+
+**新落点的三问（名字 ∥ 位置 ∥ 归谁）**：
+
+- **动作名 `attach`**：`existing but unusable: thincoder-core/agent-tools/batch-ledger-bind.mjs` 的 `createBatchRecord`——失败在契约面：它要求目标**不存在**（BR-20），而本动作的唯一场景恰是目标已存在。
+  consumers: depth-0 主 agent（`family-tools.mjs` 的 depth-0 挂载面）。名字取 `attach`（「挂上去」），与 `create`（「建新的」）成对，不另造词。
+- **参数名 `title`**：`existing: thincoder-core/ledger.mjs` 台账写面已有的 `title`（台账行标题）· name: `"title"` 逐字同名 · consumers: `ledgerBindBatch` → 台账行 `title`。
+  **它与既有台账标题概念是同一件东西，不是第二套**：`create` 的 `topic` 是档名 ∥ 档头主题词（建档时与档名共用同一串）；`attach` 没有档名可给，所以只留台账那一半，并沿用台账写的同名字——模型不必记两套。
+- **函数 `appendLedgerNoToHeader`**：`existing but unusable: thincoder-core/agent-tools/batch-skeleton.mjs` 的 `batchSkeleton()`——它**渲染**档头台账行（`> 台账 = <编号实参>（<板块> · 归批）`），只在建档时跑一次、且是整本档的模板。
+  本函数改的是**已有档头那一行**（读 → 剔括注 → 拆列表 → 尾部追加 → 写回）——语义不同（模板渲染 ∥ 行内追加）⇒ 新函数，同档共址（档头行形态本就住这一档）。
+- **四枚新拒串常量**（各一个 `const`，与既有 `placeholderResidueError` 同族、同址）：`EDIT_TEXT_OVER_LIMIT_ERROR` ∥ `EDIT_STATUS_LINE_PROMOTION_ERROR` ∥ `STATUS_LINE_IN_APPEND_ERROR`（均 `batch-record-write.mjs`）· `STATUS_LINE_AMBIGUOUS_ERROR`（`batch-lifecycle.mjs`）。名字沿用「<面>_<条件>_ERROR」既有形；不造消息拼接层。
+
+**档头拆分的规则（`appendLedgerNoToHeader` 的语义，不只钉在夹具里）**：档头行形 = `> 台账 = #a · #b（core · 归批）。前情 = …`。
+
+- **先剔括注组**：行内第一个 `（` 到其配对 `）` 整组（板块 · 触发 的括注）**不参与拆分**，原样留在尾部。
+  理由 = `·` 既是编号分隔符也是括注组内的分隔符（`core · 归批`），不剔就把它读成两枚编号。
+- **再拆编号列表**：剔掉括注组后的前缀串按 ` · ` 拆，逐枚只取 `#\d+`；不匹配的段（空白、残留符）跳过，不据此拒。
+- **追加位置** = 列表**尾**（新编号接在未枚之后），括注组位置不动。
+- **已是列表成员** ⇒ 零写 + 返回「已在列表」（幂等）。
+- **档头行缺失** ⇒ 拒（不新建档头行——它不是本动作的写域）。
+
+**落点**：
+
+- `thincoder-core/agent-tools/batch-ledger-bind.mjs`——新增 `attachBatchRecord`，与 `createBatchRecord` 同族、同一五步事务形态（`BEGIN IMMEDIATE` → 建 `待讨论` 行 → **回调写档头台账行** → 迁 `在途` + 写 `task_book` → `COMMIT`），差别只在第 3 步写什么。事务与同面判的单源 = `ledgerBindBatch`（`thincoder-core/ledger.mjs`），本档只提供回调。
+- `thincoder-core/agent-tools/batch-skeleton.mjs`——新增 `appendLedgerNoToHeader(src, n)`（纯函数 · 零 fs：按上面四条规则定位与追加，返回新全文 + 是否已在列表）。
+- `thincoder-core/agent-tools/batch.mjs`——`action` 枚举加 `"attach"`；`execute` 分派；参数面新增 `title`。
+
+**拒面（全 fail-closed：档零字节 / 台账零写）**：门态非 `进行中`（含 §1 区内不可解析）· 档头 `台账` 行缺失 · 本面有未决行而无 `newDebt` · 开新行而缺 `title` · 台账库不可达 ∥ 事务失败（沿用 `create` 的回滚语义，回滚失败打成一句回执）。
+
+**反例夹具**：
+
+- ① 已收口档 + `attach{title}` ⇒ 拒，串点名「先重开或另起新批」，档与台账零变。
+- ② 重开后的档 + `attach{title}` ⇒ 新行 `在途`、`task_book` 指本档，档头台账行由 `#a（core · 归批）` 变 `#a · #b（core · 归批）`。
+- ③ 同一调用重放 ⇒ 零写 + 回执「已在列表」。
+- ④ 档头仍是 `#<编号>` 死占位的在飞档 + `attach{title}` ⇒ **成功**：新行开出、档头变 `#b（core · 归批）`（占位被真编号替掉），随后同档 `edit §2` 可跑（F11-C 已无残留）。
+
+#### 4.21.4 件④：状态行的作者由机器判，不由位置猜
+
+**判据句**：
+
+- **可读行（计数义，与 §4.21.2 同一个名）= 段头区内恰一条形态行**。区内零条 ⇒ 不读（`null` / `unknown`，既有面）；区内**两条以上** ⇒ 同样不读——机器不猜哪一条是结论。
+- 读面同判：`readBatchStatusLine`（§1 门）⇒ `unknown`（fail-closed，冻结同判）；`readSectionStatusWord`（§2 / §3 / §5 词面）⇒ `null`；`batch-read` 展示面随 `readSectionStatusWord` 零改。
+- **写面加两道，让这个状态不再产生**：
+  - `append` 的 `text` 含行首 `**状态行**：` 形态行 ⇒ 拒（J3）。这是唯一还开着的入口：`edit` 早就拒「引入状态行」，`append` 没有。
+  - 它真会发生的条件：段尾追加的正文落在段头区内（该段还没有 `^#{2,}` 行时整个段体都是段头区）⇒ 一条手写行就成了第二条。
+  - `status` 的目标段区内两条以上 ⇒ 拒，并给**修复句**。非 §1 段：先 `edit` 删掉非受保护的那条（区内回到 1），再 `status` 改写受保护行；记录全程 open、通道可达。
+  - §1 段：修 = 主 agent 普通文档写（`edit` / `status` 在不可解析面上全部 fail-closed，不许借重开绕）。
+- **引述一条状态行的合法写法**：块引用 `> **状态行**：…` 或改写成非该形态。`STATUS_LINE_RE` 要求行首即 `**状态行**`，`> ` 前缀与表格行的 `|` 天然不命中——拒串直接给这两种写法。
+- **为什么写面加闸而不是只改读面**：只改读面 = 旧档变砖、新档照旧造出同样的砖。读面 fail-closed + 写面加闸 = 存量一次性处置、增量不可能。
+
+**代价（如实写下 · 本席 `node` 逐档实读 2026-11-05）**：
+
+- 量法 = `docs/batches/*.md` 逐档取 §1 段头区（`## §1` 标题行之后、下一 `^#{2,}` 之前），数 `STATUS_LINE_RE` 命中行；全集 **306** 档。
+- **区内两条以上 = 1 档**：`docs/batches/2026-10-25-closeout-marker-gate.md`（区内首条 `已收口 2026-10-25` ∥ 次条 `🔄 进行中（全链——新机制）`）。
+- 该档的**改前 ∥ 改后**：改前 = 首命中 ⇒ `closed`；改后 = 两条 ⇒ `unknown`。两者同属 fail-closed（冻结）⇒ 该档行为零变，变的只是结论的理由；修 = 主 agent 普通文档写（删次条）。
+- **区内零条 = 1 档**：`docs/batches/2026-10-15-doc-ref-direction-cleanup.records.md`——它是原批档 §5 的卷宗件，**没有 `## §1` 段头**。
+- 该档的**改前 ∥ 改后同判 = `unknown`**（读面取段头区，段头缺失即 `unknown`）⇒ 读面不因本条翻面。
+- **其余 304 档区内恰一条** ⇒ 判定零变。
+- **§4.9 门① 的解析面 = §1 段头区**（与写面 `updateSectionStatusLine` 同一条定位面），读面判据 = 区内恰一条才取值（两条以上 ⇒ `unknown`）；本批把 §4.9 列进校正清单，门面描述与实装对齐。
+- 实装那一面 = 依据 `thincoder-core/agent-tools/batch-segment-vocab.mjs`「段级状态行的唯一住所：`## §N` 标题行之后、下一个 `##` / `###` 起行之前」。
+
+**落点**：
+
+- `thincoder-core/agent-tools/batch-segment-vocab.mjs`——`readBatchStatusLine` / `readSectionStatusWord` 的取值由 `.find(Boolean)`（区内首命中）改为「区内恰一条才取」（两条以上 ⇒ `unknown` / `null`）。
+- `thincoder-core/agent-tools/batch-record-write.mjs`——`appendBatchRecord` 新增拒串 `STATUS_LINE_IN_APPEND_ERROR`。
+- `thincoder-core/agent-tools/batch-lifecycle.mjs`——`statusBatchRecord` 在 `assertStatusValue` 之后加区内条数判，拒串 `STATUS_LINE_AMBIGUOUS_ERROR`。
+
+**反例夹具**：
+
+- ① §1 区内两行（`已收口 …` ∥ `进行中`）⇒ `readBatchStatusLine` = `unknown`，`append` / `edit` / `status` / `close` 全拒（既有冻结面），修 = 普通文档写。
+- ② §2 区内两行 ⇒ `readSectionStatusWord` = `null`，`status §2` 拒并给修复句（先 `edit` 删多余那条、再 `status`）；`edit` 删完（区内回到 1）后 `status` 成功——记录全程未收口。
+- ③ `append` 携行首 `**状态行**：设计完成` ⇒ 拒；同一笔改成 `> **状态行**：设计完成` ⇒ 照写。
+
+#### 先例行（逐项——对齐 ∥ 偏离）
+
+- **`append` 的门清单**（§4.1 fail-closed 行）：对齐 = 四道门（冻结 / 死占位 / 剥凭证 / 机检门）一套判定函数同时服务 `append` / `edit` / `status` / `attach`；偏离 = `edit` 不跑 §5 段序门与 §3 裁定行闸（§4.19 既有偏离，理由不变）。
+- **`create` 的台账绑定**（`docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.4）：对齐 = 五步事务形态、同面判据、回滚语义、`task_book` 指针形全部沿用；偏离 = 步 3 写的是档头一行而不是整本档。
+- **`updateSectionStatusLine` 的单行改写**（§4.12）：对齐 = 状态行仍只经一个函数改写；偏离 = 本批不动那个函数，改的是「它改写的那一行由谁决定」。
+- **`edit` 的锚判据**（§4.19）：对齐 = 全 fail-closed、零字节落盘、拒串点名下一步；偏离 = 状态行那一条从「任何状态行」收窄到「受保护行」（段头区内第一个形态行），并加一道条数不变式。
+
+**勘察证据行**：查过 = 本仓 `docs/core/design/DOC-DISCIPLINE.md` §1 D4（引用形态）∥ 本档 §4.1 / §4.12 / §4.19 / §4.20（现状）∥ `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.4（建档 = 建台账行）∥ `test/RTM.md`（第 7 / 13 / 14 / 27 节）——**相关**。声明源 = `PROJECT-MANIFEST.json` `index.publicRepos` = **`[]`** ⇒ **无仓外声明源可查**（照记）。
+
+**受影响面（路径 · 落笔归实施轮）**：
+
+- **实现**：`thincoder-core/agent-tools/batch-record-write.mjs`（`editBatchRecord` 两道门 + `appendBatchRecord` 状态行闸；两者现居此档）· `thincoder-core/agent-tools/batch-segment-vocab.mjs`（段头区判据现居此档；新增三个导出 `zoneStatusLines` ∥ `zoneStatusCount` ∥ `firstZoneStatusLineRange`，两处读面改「恰一条」）· `thincoder-core/agent-tools/batch.mjs`（`action` 枚举 `attach` + 分派 + `title` 参数 + 参数 description）· `thincoder-core/agent-tools/batch-lifecycle.mjs`（`status` 区内条数判）· `thincoder-core/agent-tools/batch-ledger-bind.mjs`（`attachBatchRecord`）· `thincoder-core/agent-tools/batch-skeleton.mjs`（`appendLedgerNoToHeader` + 三个新导出的转出口）。
+- **描述面（模型可见文案）**：`thincoder-core/tool-docs/batch.md`（动作枚举 + 三处拒因 + `attach` 段）· `batch.mjs` 的参数 description（`action` 枚举、`oldText` / `newText` / `text` / 新增 `title`）。
+- **测试面**：本批定向单测 `docs/batches/2026-11-05-batch-tool-gap-family.test.mjs`（新增 · 收口随批删 · 零留存；逐条断言 BR-93–BR-106 的拒面与读面，一格一条）。
+- **零改面**：`STATUS_WORDS` 字面 · 六段作者表 ∥ 段白名单 · 冻结门 / 链门 / §5 段序门 / §3 裁定行闸 · 骨架与占位字面 · `batch-read.mjs` · `updateSectionStatusLine` 本体 · 台账六态与已核销行的冻结。
+
+**贴线判（两档判据）**：量法 = `node` 逐档实读行数（2026-11-05）。
+
+- **文件档（500 软线 / 拆分触发 650 / 硬限 800）**：`batch-lifecycle.mjs` **375** · `batch-record-write.mjs` **369** · `batch-skeleton.mjs` **316** · `batch-segment-vocab.mjs` **231** · `batch.mjs` **199** · `batch-ledger-bind.mjs` **185** ⇒ **无一档越过 500 软线** ⇒ 零拆分义务。§4.20 的「`batch.mjs` 541 行」是 KD-4 拆分前该档的前身读数，拆分后同一功能面分散在上列各档，本条不据它下结论。
+- **函数档（单函数体行数 > 120 ⇒ 动它就得拆它）**：现读数 = `appendBatchRecord` **131**（越线）· `editBatchRecord` **88** · `statusBatchRecord` **88** · `isBatchRecord` **79**。审视结论：本批只给这三件各加一道闸（≈ +8 / +15 / +10 行），不重排内部结构 ⇒ `appendBatchRecord` 保持越线，登记为「下一轮触达该函数时拆」（可拆边 = 形态校验 / 门 / 落笔三段）；其余两件在 120 之下，本批增量不越线。
+
+**验收回指（条目 → 判据 → 机检形）**：
+
+| 条目 | 判据落点 | 机检形 |
+|---|---|---|
+| ① `edit` 补门 | §4.21.1 判据句 ∥ §4.1 fail-closed 行 | BR-93（死占位）· BR-94（上限两半） |
+| ② 惰性副本可删 ∥ 单写者不动 | §4.21.2 判据句 + 「为什么 `status` 仍是唯一写者」 | BR-96（删副本）· BR-97（触首行拒）· BR-98（顶升拒） |
+| ③ 现役档补挂台账行 | §4.21.3 判据句 + 参数面 | BR-101（attach 正向 + 幂等）· BR-102（已收口拒）· BR-103（同面拒）· BR-104（身份拒）· BR-106（档头死占位仍放行） |
+| ④ 作者由机器判 | §4.21.4 判据句 + 代价段 | BR-99（append 闸）· BR-100（三态读面）· BR-105（区内歧义时 `status` 拒并给修复句） |
+| 零回归 | 本条「零改面」+ 四件不动单写者 | BR-95（§1 歧义 ⇒ unknown 冻结）· `STATUS_WORDS` deepEqual · 14-1 / 27-1 既有行 |
+
+**集成测试设计（`test/RTM.md` 读面 → 本批增量 = 0）**：全表逐条对照（CLI 端 33 个业务故事节 + VSC 与 Desktop 各自的节）。**结论 = 零破 / 零冗余 / 零缺行**：不长集成用例，不改任何既有行。
+
+**判据句（为何是 0）**：四件改的是 `batch` 工具内部的拒因面与状态行读法，属内部机制——没有业务用户在这个面上进入产品；本批也不新增业务可观察结果（拒因只多不少、账仍冻结、段仍一段一作者）。
+
+**近邻四行点名（为何都不被打破）**：
+
+- `7-10 就地改 §2`——断言的是一行被换掉、其余行逐字节不变、锚不唯一即拒；本批把「任何状态行」收窄到「受保护行」，该行的夹具是一本干净在飞档，判据两半都仍成立。
+- `13-4 同面有未决行 ⇒ 拒并列候选`——断言的 `create` 面，本批 `attach` 复用同一判据，`create` 一字未改。
+- `14-8 打回即重置`——`updateSectionStatusLine` 与 `statusResetPlan` 零改。
+- `27-1 评审写一笔 §3 就够`——该行明写「不手写状态行」，本批的 `append` 闸只拒手写的那条，正路（块 + 工具置位）零触。
+
+**UI / 交互决策**：本批无 UI / 交互面（改动是拒句、读面判据与一个新动作，逐字在本条定形）；**无 open 项**。
 ## 5. 行为纪律（提示词层，EN 单份）
 
 | 纪律 | 内容 | 落点 |
@@ -1017,6 +1237,10 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 | D-BR37 | **「改 §2 不追认实施」的判据 = 收口对账的两半**（§2 ↔ 设计档 · §2 ↔ §5），不取改时拦截 | 洗账的形是「§2 改成与设计一致、§5 记着另一套实现」——只比 §2 ↔ 设计档时它原样通过（本批评审抓出的设计缺口）。取两半 = 判的对象是两处记录是否对得上，机检与人都可读；不取改时拦截的理由 = 实施开始后改 §2 正当且常见（设计变更传播、口径补清），拦住它等于把正路关掉、写者绕去文件工具直写。**被否** = 只比设计档（洗账从下面过）· 靠写者自觉（同一道口子换成纪律句） |
 | D-BR38 | **批次档记结论与归因，不搬正文**：§3 每轮 = 结论表 + 裁定行 + 计数（回执全文不进档）· §2 = 任务书最薄形 · §6 照旧 | 用户 2026-11-05 03:18 逐字「批档瘦身可以考虑，不过指针你别又写成行号哦。」+ 本批 §1 病面（评审全文进档 ⇒ 档体量随轮数线性长；§2 重述设计正文 ⇒ 同一事实两处、改一处漏一处）。**被否** = 继续逐字（档与回执重复）· 连 §6 一起压（那一段是收口对账的输入） |
 | D-BR39 | **指针形态闭集 = 节号 ∥ 符号名 ∥ 逐字锚；行号不入指针** | 同上原话后半句 + 行号是位置寻址（设计轮写下的指针指向还在动的坐标；本批评审表已实漂）。**被否** = 行号 · 「见上文」相对指针 · 新建机检门（正则会把原文锚里的 `:12` 误判，判据本身在语义面；判读 = 评审同轮核 + 收口对账） |
+| D-BR40 | **`edit` 与 `append` 同挂 F11-C 死占位门与单次上限**（`newText` 超 `MAX_TEXT_CHARS` ⇒ 拒） | 同一本档两条写入通道，一条有上限一条没有 ⇒ 上限等于没有；死占位是「这本档还不是真档」的机器标记，而 `edit` 是唯一还能在这种档上落字的通道。**被否** = 只给 `append` 设上限（`edit` 整块可绕） |
+| D-BR41 | **状态行的单写者管「值」不管「行」**：两个名分开写——**受保护行** = 段头区内第一个形态行（位置义，`edit` 不可碰）· **可读行** = 段头区内唯一的那条（计数义，读面返回值只从它来）。`edit` 可删非受保护行、只减不增 | 删机器不读的行不产生任何值；可读行的值仍只由 `status` / `close` 给 ⇒ 单写者语义不变，而清理路径有了。一个名字写两种判据会让「先 `status` 再 `edit` 删」这条正路物理上走不通（评审轮 1 的 🔴 #1）。**被否** = 新动作 `deleteLine`（第二个写面，段域与参数整套重来）· 只在文件面放开（工具通道无闸，等于没有判据） |
+| D-BR42 | **现役档补挂台账行 = 新动作 `attach`（仅 depth-0）**：复用 `ledgerBindBatch` 的五步事务与同面判据，只换第 3 步写什么 | 「已核销行没有回退边」这条不动（账要冻结）；缺的是给现役档承接新债的口——没有它，重开的批只能另起批，造出不记任何债的行（本仓带追记行的档 10 本即现场——量法 = §4.21.3「场景」）。**被否** = 给已核销行开回退边（冻结失效）· 让 `create` 容忍已存在档（一个动作两种前置，拒文说不清） |
+| D-BR43 | **可读行 = 段头区内恰一条**：两条以上 ⇒ 读面 fail-closed（`unknown` / `null`）+ `append` 不许写入该形态 + `status` 拒并给修复句（先 `edit` 删多余那条、再 `status` 改写受保护行） | 机器只能有一个答案；「区内首个命中」在一条手写引述排在前时把引述读成结论。写面加闸是为了不再产生——只改读面 = 旧档变砖、新档照旧造砖。**被否** = 位置收紧到「段头下第一行」（存量档普遍空一行 ⇒ 大面积误判冻结）· 给状态行加机器标记（骨架与 `STATUS_LINE_RE` 双改，存量全落空） |
 
 ## 8. 边界（本档不做）
 
@@ -1039,4 +1263,7 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 15. 不做「改写追认既有记录」的**改时拦截**（`edit` 只改自己那一段，别人的段零触）——判据落在收口对账的 §2 ↔ §5 半项上（§4.19「改写不追认既有记录」∥ §7 D-BR37）：改过的判据与 §5 记下的实现对得上 = 澄清，对不上 = 差异记 §6、不改 §2 收场。
 16. 不做段级文件写门（拦「用文件工具直写本档别人段」）——现有两道机械门覆盖「写别批」「用工具写别段」，第三方向登记为候选扩展（D-BR36）。
 17. 不做「自动压缩历史批档」这类机制；已收口旧档不回改（用户 2026-11-01 裁定）。不做「行号不入指针」的机检门（判读面 = 评审同轮核 + 收口对账——D-BR39）。
+18. 不做 §1 段头区歧义的自动修复（§4.21.4）：门只拒 + 给修法；修复 = 主 agent 普通文档写（`unknown` 上 `edit` / `status` 全部 fail-closed，见 §4.18-B 的不可解析条）。
+19. 不做已核销台账行的回退边（§4.21.3）：现役档承接新债走 `attach` 开新行，不开已核销行。
+20. 不做状态行的机器标记（§4.21.4）：标记要同时改骨架、`STATUS_LINE_RE` 与全部存量档，存量全落空 ⇒ 判据取「区内恰一条」。
 

@@ -54,18 +54,50 @@ export function isZoneHead(headingText, zones = []) {
   return zones.some((z) => typeof z === "string" && z !== "" && (text === z || text.startsWith(z + "（") || text.startsWith(z + "(")))
 }
 
-/** 行内可执行坐标（命令 / 搜索模式串码段）——锚判据整行跳过用（证据与命令保字面）；段判据不豁免（段 = 读者所见）。 */
-export function isExecutableLine(line) {
+/** 码段切分谓词（判面边界**只此一式**）：行内反引号**按出现序配对**——第 1、3、5… 枚开启、第 2、4… 枚闭合，
+ *  奇数枚落单的末枚不成段 ⇒ `{ start, end, text }[]`：`start` = 开启反引号之后的一位、`end` = 闭合反引号所在位，
+ *  内容 = `line.slice(start, end)`。两枚之间的**空档不参与判定**（它不是码段）。
+ *  依据：旧三支正则都以「裸反引号起止」认码段（`` `[^`\n]*…` ``），于是任意两枚反引号之间的文本都被当码段——
+ *  一行两个已配对码段、空档里出现 `cd` 时整行被判可执行行 ⇒ 该行的悬空指针一条不报（实读：整行 0 条命中；
+ *  去掉码段后同一句 1 条 `档缺`）。漏报方向，故判面改为「码段之内」。 */
+export function codeSpans(line) {
   const l = String(line)
-  if (/`[^`\n]*&&[^`\n]*`/.test(l)) return true // 命令链（cd … && …）
-  if (/`[^`\n]*\b(?:cd|node|npm|npx|grep|rg|git)\s[^`\n]*`/.test(l)) return true // 码段内命令词
-  if (/`[^`\n]*(?:\[\^|\\\.|\(\?<|\(\?:|\{\d)/.test(l)) return true // 码段内搜索模式串片段
-  return false
+  const ticks = []
+  for (let i = 0; i < l.length; i++) if (l[i] === "`") ticks.push(i)
+  const spans = []
+  for (let k = 0; k + 1 < ticks.length; k += 2) {
+    spans.push({ start: ticks[k] + 1, end: ticks[k + 1], text: l.slice(ticks[k] + 1, ticks[k + 1]) })
+  }
+  return spans
 }
 
-/** 行内位置是否在反引号码段内（引述面不判）。 */
+/** 行内可执行坐标（命令 / 搜索模式串码段）——锚判据整行跳过用（证据与命令保字面）；段判据不豁免（段 = 读者所见）。
+ *  判面 = **码段之内**：三支判据各判每个码段的内容（切分单源 = `codeSpans`），空档不判。 */
+export function isExecutableLine(line) {
+  return codeSpans(line).some(({ text: t }) => (
+    t.includes("&&") || // 命令链（cd … && …）
+    /\b(?:cd|node|npm|npx|grep|rg|git)\s/.test(t) || // 码段内命令词
+    /(?:\[\^|\\\.|\(\?<|\(\?:|\{\d)/.test(t) // 码段内搜索模式串片段
+  ))
+}
+
+/** 行内位置是否在反引号码段内（引述面不判）——与 `isExecutableLine` 同取 `codeSpans` 的配对（一处配对规则、两处消费）。
+ *  在段内 = 位于开启反引号之后、闭合反引号（含）之前。
+ *  **与旧「奇偶反引号计数」的差**：只在**反引号数为奇数**的行上——旧式把落单末枚当开启、其后整行算在段内；
+ *  本式按配对规则不认落单枚（判据句 = 设计 §3.18「一处配对规则」）。偶数枚的行上两式逐位同判。 */
 export function inCodeSpan(line, idx) {
-  return (String(line).slice(0, idx).match(/`/g) ?? []).length % 2 === 1
+  return codeSpans(line).some((s) => idx >= s.start && idx <= s.end)
+}
+
+/** 标题谓词（**单源** = 本档 · 判据句 = §3.18「标题谓词只此一式」）：行首 1–6 个 `#` 后接空白 ⇒ `{ level, text }`
+ *  （形对齐 `fenceMark` 的「谓词返回判据物」）；非标题行 ⇒ `null`。段判据的标题栈、写前门的正文行谓词、
+ *  锚判的节号读取（`headingNumber`）同消费本谓词——三处各留一份「什么算标题」的正则就是三处会漂。
+ *  **判据句原文就是「行首 1–6 个 `#` 后接空白」**：所以本式不要求 `#` 后那一行还有正文，也不锚行尾
+ *  （`$` 会让 `\r` 行尾的标题行漏认——CRLF 档里「什么叫标题」两式不同，写前门会把标题行当正文行）。 */
+export function headingMark(l) {
+  const s = String(l)
+  const m = /^(#{1,6})\s+/.exec(s)
+  return m ? { level: m[1].length, text: s.slice(m[0].length) } : null
 }
 
 /** 段判据（阈值 = 调用方内置常量 `paragraphMax` ∥ `lineMax`；口径逐字 = §3.18 条目 Q）：
@@ -74,18 +106,32 @@ export function inCodeSpan(line, idx) {
  *    ∧ 非围栏（标记行与块内整行）∧ 非区带内；其余行类不计入、且把段断开。
  *  · 提示词面（`isPromptFace`）：逐行裸判——`[...line].length` > `lineMax` ⇔ 命中（`clazz: "行太长"`，
  *    无结构豁免）。
- *  单遍扫描携标题栈（`^(#{1,6})\s` 行入栈——同级 ∥ 更高级出栈）：行所属标题链任一为区带头 ⇒ 区带内
+ *  单遍扫描携标题栈（`headingMark` 命中行入栈——同级 ∥ 更高级出栈）：行所属标题链任一为区带头 ⇒ 区带内
  *  （不计入段且断段）。围栏未闭合 ⇒ 至档尾整块免（fail-open 方向——§3.18 残余登记 ①）；
  *  `exemptZones` 缺省 ∥ 空集 ⇒ 零豁免。`files`（必填）= **判定集**（调用方传入的档清单——本档不遍历
- *  任何目录；空集 ⇒ 零命中）。 */
-export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files = [] } = {}) {
+ *  任何目录；空集 ⇒ 零命中）。
+ *
+ *  入参形态（判据句 = §3.20「入参形态」）：**三格必填 + 一格可省**——`paragraphMax` ∥ `lineMax` ∥ `files` 必填，
+ *  `exemptZones` 可省（缺省 `[]`，省略它不抛）。必填格缺一格 ∥ 位置传错（第二实参不是对象 ∥ 形参表外多给位置实参）
+ *  ∥ 类型不对 ⇒ **抛**：静默失效的方向是**假绿**，而假绿没人会去查。 */
+export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files } = {}, ...rest) {
   // 配置缺失 = 硬错，不是静默不命中。
   // `para.len > undefined` 恒 false ⇒ **永不命中 = 假绿**；而误报会被人发现，假绿不会。
-  // 实测来源：围栏批（2026-10-27）调试时把配置当第二参数传，一度以为修复无效——
+  // 实测来源（本档原注记）：围栏批（2026-10-27）调试时把配置当第二参数传，一度以为修复无效——
   // 两个阈值都是 undefined，门一路绿灯。
+  if (rest.length > 0) {
+    throw new Error(`checkParagraphs: 只收一个对象实参（收到 ${rest.length + 1} 个位置实参）。` +
+      "正确形：checkParagraphs({ paragraphMax, lineMax, exemptZones?, files })——配置与判定集必须同在一个对象里；" +
+      "多给的位置实参一律不读，判定集因此静默落空，读起来就是「全部过关」。")
+  }
   if (!Number.isFinite(paragraphMax) || !Number.isFinite(lineMax)) {
     throw new Error(`checkParagraphs: paragraphMax ∥ lineMax 必须是有限数字（收到 ${paragraphMax} / ${lineMax}）。` +
       "配置全在第一个参数：{ paragraphMax, lineMax, exemptZones, files }。阈值缺失时永不命中，读起来就是「全部过关」。")
+  }
+  if (!Array.isArray(files)) {
+    throw new Error(`checkParagraphs: files 必须是数组（判定集——收到 ${files === undefined ? "undefined（缺这一格）" : typeof files}）。` +
+      "正确形：{ paragraphMax, lineMax, exemptZones?, files: [<档绝对路径>] }。判定集缺失 ∥ 传成字串时判 0 档，" +
+      "读起来就是「全部过关」；`files: []` 才是合法的「判 0 档」。")
   }
   const zones = (Array.isArray(exemptZones) ? exemptZones : []).filter((z) => typeof z === "string" && z !== "")
   const hits = []
@@ -116,11 +162,11 @@ export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files
         return // 围栏标记行自身断段
       }
       if (fence !== null) { flush(); return } // 块内整行断段（未闭合 ⇒ 至档尾免）
-      const hm = /^(#{1,6})\s+(.*)$/.exec(l)
+      const hm = headingMark(l) // 标题谓词单源（本档导出面）——段判据不再自持正则
       if (hm) {
-        while (stack.length && stack[stack.length - 1].level >= hm[1].length) stack.pop()
-        const self = isZoneHead(hm[2].trim(), zones)
-        stack.push({ level: hm[1].length, exempt: self || (stack[stack.length - 1]?.exempt ?? false) })
+        while (stack.length && stack[stack.length - 1].level >= hm.level) stack.pop()
+        const self = isZoneHead(hm.text.trim(), zones)
+        stack.push({ level: hm.level, exempt: self || (stack[stack.length - 1]?.exempt ?? false) })
         flush()
         return // 标题断段
       }

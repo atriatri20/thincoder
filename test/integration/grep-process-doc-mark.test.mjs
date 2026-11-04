@@ -23,11 +23,13 @@
  */
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { registerHooks } from "node:module"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { grepTool } from "../../thincoder-core/tools/search.mjs"
 import { bashTool } from "../../thincoder-core/tools/bash.mjs"
@@ -48,7 +50,7 @@ const fixtures = []
 const logDirs = []
 after(() => {
   _setBgTaskLogDirForTest(null)
-  for (const p of [...fixtures, ...logDirs]) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  for (const p of [...fixtures, ...logDirs]) removeTempDirBestEffort(p)
 })
 
 /** 输出里被标出的行数（末行汇总的 N 必须等于它）。 */

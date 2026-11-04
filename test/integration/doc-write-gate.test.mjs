@@ -16,9 +16,11 @@
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { editTool } from "../../thincoder-core/tools/file.mjs"
 
@@ -28,8 +30,8 @@ const BODY = "# 夹具设计档\n\n现有段落。\n"
 
 const projects = []
 after(() => {
-  // `force` 只忽略 ENOENT、不重试 EPERM/EBUSY：句柄未即释时清理会抛 ⇒ 整档判失败（与判据无关）——给重试窗。
-  for (const p of projects) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  // 句柄未即释时清理会抛 ⇒ 走助手（有界重试、失败只写一行 stderr，不判红整档）。
+  for (const p of projects) removeTempDirBestEffort(p)
 })
 
 /** 夹具项目根（项目声明 + 设计档目录；不落盘任何真实仓内容）。 */

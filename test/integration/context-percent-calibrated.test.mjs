@@ -16,9 +16,11 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { _resetSessionsDirForTest, _setSessionsDirForTest, slotPath, writeEndMarker, writeSessionFile } from "../../thincoder-core/session-slots.mjs"
 import { applySession, resumeSlot } from "../../thincoder-core/session-lifecycle.mjs"
@@ -64,7 +66,7 @@ test("16-1 恢复带 estimateSample 的会话 ⇒ 状态行百分比 = 核读数
   _setSessionsDirForTest(join(cwd, "sessions"))
   t.after(() => {
     _resetSessionsDirForTest()
-    rmSync(cwd, { recursive: true, force: true })
+    removeTempDirBestEffort(cwd)
   })
 
   // ① 盘上会话：机读线（contextHistory 为空 ⇒ 回退 history）+ 校准样本

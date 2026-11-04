@@ -39,10 +39,12 @@
 | `posix` | `- Executor: the bash tool runs commands through a POSIX shell ($RAW). Standard POSIX syntax applies ($(...), $VAR, ;, >/dev/null).`（`$RAW` 同上） |
 | `unknown` | `- Executor: the bash tool shell could not be identified (raw: $RAW) — write portable commands and trust the command's own error output.`（`$RAW` 同上） |
 
-**数据流（三端）**：端装配层在本端 `prompt-injections.mjs` 的 `bash-terminal-face` 键填 **import 期求值**的结果（模块加载即求值·注册前）：`executorLine(resolveShellIdentity(configShell()))` ⇒ 按上表组装为静态字符串——
-核缝 `applyPromptInjections` 为纯字符串替换、注册即快照（`prompt-files.mjs:105-113` ∥ `:92-94`；函数值会被 `String.replace` 字符串化 ⇒ 不支持函数值键）⇒ **描述面值随进程启动固定**：进程内改 `shell` 配置不刷新该行（重启生效——残余口径 §8）；
-hint 门等逐执行调用面按配置值 memo 键控重探（同配置值 ⇒ 取缓存身份；配置值变化 ⇒ 未命中重探——裁定①零静态成立）→
-三端注册点不动（`thincoder-cli/bin/thincoder.mjs:32` ∥ `thincoder-vscode/extension.mjs:92` ∥ `thincoder-desktop/src/main/main.mjs:47`）→ `DESC("bash")` 装配链在 `toOpenAISchema` 调用期完成替换（`thincoder-core/tools/shared.mjs:174`）。
+**数据流（三端）**：端装配层在本端 `prompt-injections.mjs` 的 `bash-terminal-face` 键填 **import 期求值**的结果（模块加载即求值·注册前）：`executorLine(resolveShellIdentity(configShell()))` ⇒ 按上表组装为静态字符串。
+
+- **为什么不能交函数值**：核缝 `applyPromptInjections` 为纯字符串替换、注册即快照（`prompt-files.mjs:105-113` ∥ `:92-94`；函数值会被 `String.replace` 字符串化 ⇒ 不支持函数值键）。
+- **由此得到的口径**：**描述面值随进程启动固定**——进程内改 `shell` 配置不刷新该行（重启生效——残余口径 §8）。
+- **逐执行调用面**：hint 门等按配置值 memo 键控重探（同配置值 ⇒ 取缓存身份；配置值变化 ⇒ 未命中重探——裁定①零静态成立）。
+- **注册链**：三端注册点不动（`thincoder-cli/bin/thincoder.mjs:32` ∥ `thincoder-vscode/extension.mjs:92` ∥ `thincoder-desktop/src/main/main.mjs:47`）→ `DESC("bash")` 装配链在 `toOpenAISchema` 调用期完成替换（`thincoder-core/tools/shared.mjs:174`）。
 
 **VSC 端附加面**：VSC `bash-terminal-face` 值 = **执行器声明行 + 既有 terminal 参数行**（两段拼接——terminal 参数语义是 VSC 宿主能力面，
 保留原文 `thincoder-vscode/src/prompt-injections.mjs:18` 整行不动，前拼执行器声明行）。
@@ -62,8 +64,11 @@ win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 s
 
 ### 3.2 三端注入表——端装配层 import 期求值
 
-三端 `prompt-injections.mjs` 的 `bash-terminal-face` 键值 = **import 期求值的静态字符串**（`executorLine(resolveShellIdentity(configShell()))`——模块加载即求值、注册前）：核心缝 `applyPromptInjections` 为纯字符串替换、不支持函数值键（函数值会被 `String.replace` 字符串化——`prompt-files.mjs:105-113`）。
-⇒ **描述面值随进程启动固定**——进程内改 `shell` 配置不刷新该行（重启生效）；同一单源 memo 按配置值键控服务逐执行调用面（hint 门——同配置值取缓存身份，配置值变化 ⇒ 未命中重探，裁定①零静态成立）：
+三端 `prompt-injections.mjs` 的 `bash-terminal-face` 键值 = **import 期求值的静态字符串**（`executorLine(resolveShellIdentity(configShell()))`——模块加载即求值、注册前）。
+
+- **为什么不能交函数值**：核心缝 `applyPromptInjections` 为纯字符串替换、不支持函数值键（函数值会被 `String.replace` 字符串化——`prompt-files.mjs:105-113`）。
+- **由此得到的口径**：**描述面值随进程启动固定**——进程内改 `shell` 配置不刷新该行（重启生效）。
+- **逐执行调用面**：同一单源 memo 按配置值键控服务（hint 门——同配置值取缓存身份，配置值变化 ⇒ 未命中重探，裁定①零静态成立）：
 
 - CLI（`thincoder-cli/src/prompt-injections.mjs:17`）：空串 → 执行器声明行；
 - 桌面（`thincoder-desktop/src/main/prompt-injections.mjs:19`）：空串 → 执行器声明行（桌面 = 核缺省隔离子进程，无 terminal 参数——与 CLI 同形）；
@@ -74,7 +79,11 @@ win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 s
 ### 3.3 `thincoder-core/tool-docs/bash.md` 死写句替形（零断言）+ hint 身份门 + 桌面 execute 随动
 
 - `thincoder-core/tool-docs/bash.md:33` 整行替换为（**零断言替形 · 字面钉死**）：
-  `- Shell identity: the bash tool's shell is NOT fixed — it depends on configuration and environment. The current executor is declared in the Executor line above; write commands for THAT shell, and when a command fails read its error output to identify the actual shell.`
+
+```text
+- Shell identity: the bash tool's shell is NOT fixed — it depends on configuration and environment. The current executor is declared in the Executor line above; write commands for THAT shell, and when a command fails read its error output to identify the actual shell.
+```
+
   （不出现任何具体 shell 名；「以注入面声明为准」语义 = 「Executor line above」。）
 - `posixSyntaxHint`（`bash.mjs:28-38`）加**身份门**：`resolveShellIdentity(ctx.agent?.config?.shell).kind === "cmd"` 才产出 hint；
   kind ≠ cmd ⇒ 返回空串（PS/POSIX 环境不再喊 cmd.exe）；提示语中「Current shell is cmd.exe」改为引用探测名（探测出参 `name`）。
@@ -111,7 +120,7 @@ win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 s
 | AC5 | `grep -r "SHELL_NOTES" thincoder-vscode/src` ⇒ 0 命中（死常量清除） | §3.3 |
 | AC6 | 三端实测取证在档：CLI / VSC / 桌面各跑一次探针命令（`$PSVersionTable.PSVersion.Major` ∥ `echo %COMSPEC%`），读数与本机 config.shell 链一致（三端同链 ⇒ 同值） | 验收标准② |
 | AC7 | 探测不到路径（config.shell = 未知名——U4 夹具 `"myweirdshell"`）⇒ 注入 unknown 中性句（fail-open——不猜）；`_setComSpecForTest("")` + shell=null ⇒ `kind:"cmd"`、注入 cmd 行（链终值 = 兜底字面 `cmd.exe`——spawn 镜像，探测值 = 实际执行器） | 用户裁定③ |
-| AC8 | 核测试 `node --test`（cwd = thincoder-core）全绿；CLI/VSC `npm test` 全绿；桌面装配产物断言（AC2 同式：桌面 `applyPromptInjections(DESC("bash"))` 产物含 `Executor:` 行 ∥ 零 `{{inject:` 字面——桌面集成测试树存在与否实施轮核：在 ⇒ 入集成测试跑，不在 ⇒ 装配探针直断）；`node scripts/doc-check.mjs --root .` exit 0 | 验收标准③ |
+| AC8 | 核语法门 `npm run prepublishOnly`（= `node scripts/check-syntax.mjs`）exit 0；核包级 `npm test` = exit 1 + 说明（空集说明器、非门——`thincoder-core/test/run.mjs` 逐字「无集成测试集 = 什么也没验——exit 1 如实」）；CLI 包级 `npm test` = exit 1 + 说明（非门——集成层在仓根）；VSC `npm test` = 单元清单面（exit 0，非集成门）；集成门 = 仓根 `node test/run.mjs`（收口时父侧跑一次）；桌面装配产物断言（AC2 同式：桌面 `applyPromptInjections(DESC("bash"))` 产物含 `Executor:` 行 ∥ 零 `{{inject:` 字面——桌面集成测试树存在与否实施轮核：在 ⇒ 入集成测试跑，不在 ⇒ 装配探针直断）；`node scripts/doc-check.mjs --root .` exit 0 | 验收标准③ |
 
 ## 7. 用例表（正常 / 边界 / 错误）
 

@@ -9,15 +9,17 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { manifestTool } from "../../thincoder-core/agent-tools/manifest.mjs"
 
 test('9-1 多根工作区锚（下辖 1 个裸仓）+ manifest init ⇒ 报明 + 零建档', { timeout: 60_000 }, async (t) => {
   const box = mkdtempSync(join(tmpdir(), "tc-int-ws-init-"))
-  t.after(() => rmSync(box, { recursive: true, force: true }))
+  t.after(() => removeTempDirBestEffort(box))
   mkdirSync(join(box, "bare", ".git"), { recursive: true }) // 裸仓 = 有 .git、无项目档
   const candidate = resolve(join(box, "bare"))
 

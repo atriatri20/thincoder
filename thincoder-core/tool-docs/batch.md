@@ -4,11 +4,27 @@ actions: create (depth-0 only — write a new six-section skeleton record; pass 
 
 ledger:"#N" takes over an existing row, and omitting ledger opens a new row only when no unsettled row exists on the same board — otherwise create is refused with the candidate list and you pass newDebt:"<why this is a new debt>" or ledger:"#<id>")
 
+· attach (depth-0 only — hang a ledger row on an ALREADY EXISTING in-flight record: a reopened record that takes on a new piece of work, where create cannot go (the file exists) and a settled row has no way back)
+
+attach opens a new row (title required — the row's own subject, never the batch's original one) or takes over an unsettled one with ledger:"#<id>"; the real number lands at the end of the header 台账 list, and the parenthesis group (board · trigger) stays where it is.
+
+Its ledger parameters are create's own, with the same meaning and the same same-face rule: `ledger` (take over a row) / `newDebt` (why this is a new debt) / `board` (the row's face and kind). Only `title` is attach's own.
+
+That `board` does not rewrite the header's parenthesis group: on attach the group keeps its text and only the number list grows — a parenthesis that must change is a plain document write.
+
+Replaying the same attach is zero-write when the number is already in that list. A settled row is never reopened by this action.
+
+attach skips the dead-placeholder gate on purpose: a record whose header still carries `#<编号>` is already real on the ledger side, and attach is exactly the way to replace that placeholder with a real number — after which edit opens.
+
+Refused with nothing written: the record is frozen (§1 已收口 — reopen first, or start a new batch), its §1 status line is unreadable, the header has no 台账 line, opening a new row without title, or a face that already has unsettled rows with no newDebt reason.
+
 · append (add text to the END of YOUR section — the lines already there are left byte-for-byte as they stand)
 
 A §3 append must carry exactly one verdict on its own line — `VERDICT: pass` or `VERDICT: changes-required`; the localized whole-line forms count too (`结论：通过` / `结论：不通过`, and their 需修改 variants), and the Chinese forms take an optional trailing 。.
 
 A §3 write that reads as no verdict line, or as both lines at once, is refused with nothing written — no round number is consumed, so resend the same text with the verdict line added.
+
+A line that starts with the status-line form (`**状态行**：…`) is refused: that line has exactly one writer (`status`), and the tool channel may only make such lines fewer, never more. Quote it with a leading `> ` instead, or write it as prose.
 
 A design review's §3 append carries the round's conclusion table — one row per finding (`#` / severity / status / evidence) — plus the VERDICT line and the counts.
 
@@ -17,9 +33,13 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 
 · edit — replace one anchored range inside YOUR OWN section (any section you may append to; your identity decides which)
 
-oldText must match exactly once, byte for byte (line endings included), inside the section body; newText replaces that range, and an empty newText deletes it.
+oldText must match exactly once, byte for byte (line endings included), inside the section body; newText replaces that range, and an empty newText deletes it. Limit 20000 characters per call, the same cap append enforces.
 
-Refused with nothing written: a blank oldText, zero hits, two or more hits (the matching lines are named), an anchor crossing the section boundary, and any anchor or replacement that touches or introduces a `**状态行**：` line (the status line has one writer: `status`).
+Refused with nothing written: a blank oldText, zero hits, two or more hits (the matching lines are named), and an anchor crossing the section boundary.
+
+A section has one PROTECTED status line — the first `**状态行**：` line of its header zone; an anchor touching it is refused (that line has one writer: `status`). Deleting a status line elsewhere is allowed, e.g. a surplus copy in the same zone.
+
+Refused too: a newText that introduces a `**状态行**：` line, and any edit that would leave MORE status lines in the header zone than before (deleting the sub-heading that fences a body line off would promote it).
 
 On §3 an incoming `### 轮次 N（评审子代理）` line is dropped from newText — the round stamp is tool-generated only.
 
@@ -29,6 +49,10 @@ Two gates hang on `append` alone and do not apply to `edit`: the §5 ordering ga
 · status (update YOUR section's `**状态行**：` line — the value must carry exactly ONE legal keyword of your section's STATUS_WORDS entry, decorated only by surrounding symbols / a trailing ISO date / whitespace).
 
 Prose goes to the separate `note` field, which lands as a parenthetical.
+
+A section's status is read only when its header zone holds exactly one status line; with two or more it reads as unset, and `status` refuses with the repair order.
+
+The repair order: first `edit` the surplus line away (an empty newText), then `status` rewrites the remaining one. On §1 that order is unavailable — the main agent repairs it with an ordinary document write.
 
 A §3 pass round sets that section's status line in the same write — `status` on §3 is an optional rewrite, never a required step.
 
@@ -44,7 +68,7 @@ with the resume sentence 「原批 <record> 已收口，须另起批次接手」
 
 each changed / skipped row is named in a `[ledger reanchor]` receipt block (a ledger write failure — busy store / no derivable project root — is named there too and never blocks the freeze).
 
-Identity fixes what you may write (段白名单): main agent (depth 0) — create/close;
+Identity fixes what you may write (段白名单): main agent (depth 0) — create/attach/close;
 
 append/status domains are mode-dependent: engineering — append §1/§4/§6, status §1; normal — append §1/§2/§4/§5/§6, status §1/§2/§5 (the main agent holds the designer seat and records direct implementation);
 
@@ -54,13 +78,15 @@ eng-designer — §2; eng-coder — §5; a normal-mode coder bound via batchDoc 
 
 A write outside your own section is refused.
 
-Skeleton placeholders (dead literals — `#<编号>` / `<板块>` and the older `<BATCH-ID>` / `<讨论来源>`) in the record header's structural lines block append/status until filled:
+Skeleton placeholders (dead literals — `#<编号>` / `<板块>` and the older `<BATCH-ID>` / `<讨论来源>`) in the record header's structural lines block append/edit/status until filled:
 
-create with ledger / board fills them at creation; if omitted, the main agent fills the header by file edit right after create (citing these literals in a section's prose is fine — only the header is checked);
+create with ledger / board fills them at creation; on an in-flight record that still carries them, attach fills the number (and clears it); otherwise the main agent fills the header by file edit (citing these literals in a section's prose is fine — only the header is checked);
 
 `<§N 模板占位：…>` template lines are legal and never blocked.
 
-Target record: sub-agents and design reviews have NO path parameter in practice — the record arrives via the spawn binding / the review instance key (passing path is refused); depth-0 MAY pass path (若传则须可读), omitting it picks the unique in-flight record (0 or ≥2 in flight ⇒ refuse — pass path).
+Target record: sub-agents and design reviews have NO path parameter in practice — the record arrives via the spawn binding / the review instance key (passing path is refused).
+
+Depth-0 MAY pass path on create / attach / append / edit / status / close (若传则须可读); omitting it picks the unique in-flight record (0 or ≥2 in flight ⇒ refuse — pass path).
 
 A design review's append is stamped by the tool with a `### 轮次 N（评审子代理）` heading — N is tool-counted; do not write your own heading (it would be dropped).
 

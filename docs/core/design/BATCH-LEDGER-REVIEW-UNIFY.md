@@ -37,7 +37,7 @@
 
 ### 2.1 面分类（拒文变体的判据底座）
 
-**判据来源 = 需求档 `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.5**（`:665`–`:668`）：
+**判据来源 = 需求档 `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.5**：
 
 | 面 | 路径枚举 |
 |---|---|
@@ -50,9 +50,9 @@
 - **文档面为什么取 `docRoot`**：需求档写「按写权矩阵（D1）」，D1 判的是**归属**（哪类档谁写），不是路径枚举；机判需要路径前缀，`docRoot` 各值就是 D1 在写面上的投影。两者不冲突：`docRoot` 命中的路径，写权归属仍按 D1 判。
 - **产品文本面** = 四产品包的外向文本（`README.md` · `package.json` · 发布清单 · 产品 `AGENTS.md`）——它**不是**文档面，按产品面走全流程。§13.5 按类别点名，实施按这四例认档。
 - 判据单源住叶档 `thincoder-core/agent/write-face.mjs`（`faceOf(absPath, manifest)` → `"product" | "pass"`；三步面判顺序与每步依据 = `§2.10`）。
-- 路径归一复用 `write-gate.mjs:98-102` 的 `gateKey` 形状（绝对化 + `/` 归一 + win32 大小写归一）；文档面取 manifest 值、不写死 `docs/`（先例 = `write-gate.mjs:58-60`）。
-- **与 `conventions.mjs` 的关系**：面判据**不叠在 `classifyPath` 上**——两值直接判（`§2.10`）。`classifyPath` 本体零改，仍留给引类面用：它有七个生产消费面（`dispatch.mjs:115` · `verify.mjs:193` · `advisor-settle.mjs:74` · `advisor/repos.mjs:122` / `:146` · `declaration.mjs:246`），改它会把 verify / 评审陈旧 / 索引范围一起翻面。
-- **一个消费面换判源**：`agent/dispatch.mjs:115` 的设计门由 `isCodePath(abs, conv)` 换成 `faceOf(abs, manifest)`——设计门的**前置条件不变**（活设计槽），只把它对「什么算产品面」的判断并到唯一一份判据上。理由：两道门各用一套面判据必然漂移，漂移的后果是「设计门放的、写锁拦的」各说各话。其余六个消费面零改。
+- 路径归一复用 `gateKey` 的形状（绝对化 + `/` 归一 + win32 大小写归一）；文档面取 manifest 值、不写死 `docs/`（先例 = `thincoder-core/agent/write-gate.mjs` 再导出的 `REVIEW_ROOT_KEYS` ∥ `resolveReviewRootsFor`）。
+- **与 `conventions.mjs` 的关系**：面判据**不叠在 `classifyPath` 上**——两值直接判（`§2.10`）。`classifyPath` 本体零改，仍留给引类面用：它有七个生产消费面（`agent/dispatch.mjs` · `agent-tools/verify.mjs` · `agent-tools/advisor-settle.mjs` · `advisor/repos.mjs` 两处 · `agent-tools/declaration.mjs`；逐处调用点复扫 = `grep -rn "classifyPath(" thincoder-core`），改它会把 verify / 评审陈旧 / 索引范围一起翻面。
+- **一个消费面换判源**：`agent/dispatch.mjs` 的设计门由 `isCodePath(abs, conv)` 换成 `faceOf(abs, manifest)`——设计门的**前置条件不变**（活设计槽），只把它对「什么算产品面」的判断并到唯一一份判据上。理由：两道门各用一套面判据必然漂移，漂移的后果是「设计门放的、写锁拦的」各说各话。其余六个消费面零改。
 
 ### 2.3 写锁（笔-账绑定 · 写面冲突块第三道门）
 
@@ -122,19 +122,19 @@
 `git` **整把不在入口集**：写型 action 不要号、`path` ∥ `workdir` 不参与取根、`project` 不读（该参数随 `ledger` 一并从 schema 删掉——名字只为被读的地方存在，决策 40）。口径 = 用户 2026-11-05 03:56「git那个按照a处理吧」。
 
 - **理由三条**（按分量）：① **同一件活被收两次费**——提交不落新字节，它记录的是已被本门缴过账的内容；归属由提交信息 ∥ 批档 `§6` ∥ 台账 `evidence` 三处持，提交再报一次不产生新的可查性。② **与安全哲学相反**——本仓的真防线是「工作随时已提交」（快照 ∥ 提交是兜底，不是审批）；给提交加门等于让人少提交，把兜底做成了阻力。③ **实机证据**——台账 `#2049` 一落 `已核销`，`git add` 即被拒（`only a 在途 row carries writes`），只能重开批档 + 新开 `#2056`；`#2056` 不记任何债，只记「这次提交」——一行由门造出来的账。
-- **`isReadonlyAction` 钩子保留**（`thincoder-core/tools/git.mjs:108` 逐字 `isReadonlyAction(args) {`）：它是**审批面**的判据，两个消费面 = planMode 放行（`thincoder-core/agent/dispatch.mjs:63` 逐字 `if (agent.planMode && !tool.readonly && !readonlyActionOf(tool, toolCall.name, args) && !controlActionOf(tool, toolCall.name, args)) {`）∥ 免审批短路（同档 `:185` 逐字 `if (tool.readonly || readonlyActionOf(tool, toolCall.name, args) || controlActionOf(tool, toolCall.name, args) || ...`）。名单本体（六项平铺 + 六条子动作分支）与其 `CHECKPOINT.md` F6/D3 口径注零改——**写门不再读它，不等于把它删掉**。
+- **`isReadonlyAction` 钩子保留**（`thincoder-core/tools/git.mjs` 逐字 `isReadonlyAction(args) {`）：它是**审批面**的判据，两个消费面 = planMode 放行（`thincoder-core/agent/dispatch.mjs` 逐字 `if (agent.planMode && !tool.readonly && !readonlyActionOf(tool, toolCall.name, args) && !controlActionOf(tool, toolCall.name, args)) {`）∥ 免审批短路（同档免审批短路处 逐字 `if (tool.readonly || readonlyActionOf(tool, toolCall.name, args) || controlActionOf(tool, toolCall.name, args) || ...`）。名单本体（六项平铺 + 六条子动作分支）与其 `CHECKPOINT.md` F6/D3 口径注零改——**写门不再读它，不等于把它删掉**。
 - **`bash` 跑 `git status` 仍要号**（决策 36 零改）：`bash` 的命令字面无法静态分类，与 `git` 的枚举可判是两件事——本批不因 `git` 免号而放宽 `bash` ∥ `execute`。
 - **不新造替代门槛**：不加「提交必须带提交信息」之类的写门替代物，也不因 `git` 免号给别的工具加限制——那是交换条件，不是收回一笔重复计费。
 - **提交信息仍要写清这一笔属哪批**：免号免的是门的判定，不是归因——提交信息写「这批是什么」（批名 + 做了什么），归属才追得回来。这条靠纪律与交付记录持，不加机械门：门判得出「有号无号」，判不出「写清了没有」，硬加一道文本匹配只是假门，匹配不上也驳不回那笔提交，只教人绕开它。
 
 **只读名单本体（`isReadonlyAction` 钩子 · 审批面单源）**
 
-- **判法 = 既有谓词 `readonlyActionOf(tool, name, args)`**（`thincoder-core/agent/dispatch-gates.mjs:133` 逐字 `return tool?.isReadonlyAction?.(args) ?? isReadonlyAction(toolName, args)`）——核钩子优先、核名面谓词回落，不新写一套分类。
-- **分类单源落核**（`thincoder-core/tools/git.mjs:108`；端 `thincoder-vscode/src/tools/index.mjs` 的覆写已删，`...coreGitTool` 展开保留）：
+- **判法 = 既有谓词 `readonlyActionOf(tool, name, args)`**（`thincoder-core/agent/dispatch-gates.mjs` 逐字 `return tool?.isReadonlyAction?.(args) ?? isReadonlyAction(toolName, args)`）——核钩子优先、核名面谓词回落，不新写一套分类。
+- **分类单源落核**（`thincoder-core/tools/git.mjs`；端 `thincoder-vscode/src/tools/index.mjs` 的覆写已删，`...coreGitTool` 展开保留）：
   - 六项平铺 ⇒ 只读：`["diff", "status", "log", "show", "ls-remote", "blame"]`；
-  - `checkpoint` ⇒ 只读集 = `["list", "cat"]`（该档 `:53`–`:55`，逐字 `if (args.action === "checkpoint") return ["list", "cat"].includes(args.checkpointAction)`；`:54` 的注逐字「但清的是 commit 后已失去意义的过期快照——保留只读分类免审批（CHECKPOINT.md F6/D3 设计意图）」）；
-  - `tag` / `branch` / `stash` / `remote` / `worktree` ⇒ 各以 `*Action === "list"` 判只读（`:56`–`:60` 五行逐字同形），其余值判写型；
-  - 其余 action ⇒ 写型（该档 `:61` 注逐字 `// add/rm/commit/push/fetch/pull/reset/revert/merge/cherry-pick/checkout/restore + tag/branch/stash 写操作`）。
+  - `checkpoint` ⇒ 只读集 = `["list", "cat"]`（该 `isReadonlyAction` 钩子体内，逐字 `if (args.action === "checkpoint") return ["list", "cat"].includes(args.checkpointAction)`；同段注逐字「但清的是 commit 后已失去意义的过期快照——保留只读分类免审批（CHECKPOINT.md F6/D3 设计意图）」）；
+  - `tag` / `branch` / `stash` / `remote` / `worktree` ⇒ 各以 `*Action === "list"` 判只读（同钩子内五行逐字同形），其余值判写型；
+  - 其余 action ⇒ 写型（该钩子末注逐字 `// add/rm/commit/push/fetch/pull/reset/revert/merge/cherry-pick/checkout/restore + tag/branch/stash 写操作`）。
 - **取「抄齐」，不取「明示偏离」**：偏离会让核钩子与端答案相反，而它们同时是权限短路 ∥ planMode 的判据（`dispatch.mjs` 两处经 `tool.isReadonlyAction` 判），改它 = 改审批行为并推翻 `CHECKPOINT.md` F6/D3 的既有裁定，须用户另裁。
 - **端装饰体随核钩子落地一并删**：`thincoder-vscode/src/tools/index.mjs` 里那个 `isReadonlyAction` 覆写删掉、`...coreGitTool` 展开保留（`CHECKPOINT.md` F6/D3 的口径注随名单搬进核钩子，语义不改）。理由：核有钩子后，端覆写是同一份名单的第二份拷贝，而 `tool?.isReadonlyAction?.(args) ?? …` 的优先级让端覆写吃掉核答案 ⇒ 两份必然漂移；删后 CLI ∥ desktop ∥ vscode 三面同答案，单源 = 核钩子。
 - **缺钩子的面**回落核名面谓词（审批面默认判写型 ⇒ 要审批），fail-closed，不出洞。
@@ -147,9 +147,9 @@
 
 | 工具 | 落盘目标 | 判法 |
 |---|---|---|
-| `manifest` | `<项目>/PROJECT-MANIFEST.json`——`thincoder-core/agent-tools/manifest.mjs:163` 逐字 `initManifest(root, { writer: "main" })` ∥ `:202` 逐字 `writeManifest(root, manifest, { writer: "main" })` | `write` 要号；`init` 条件豁免（豁免支在门体取根步——决策 43）；`read` 不要号。`action` 是枚举（`thincoder-core/agent-tools/manifest.mjs:133`），按值判不是猜内容——与 `git` 同法 |
+| `manifest` | `<项目>/PROJECT-MANIFEST.json`——`thincoder-core/agent-tools/manifest.mjs` 逐字 `initManifest(root, { writer: "main" })` ∥ 逐字 `writeManifest(root, manifest, { writer: "main" })` | `write` 要号；`init` 条件豁免（豁免支在门体取根步——决策 43）；`read` 不要号。`action` 是枚举（`thincoder-core/agent-tools/manifest.mjs` 的 `action` 规格），按值判不是猜内容——与 `git` 同法 |
 | `memory` | `layer:"project"` ⇒ `<项目>/.thincoder/memory/**`——该工具 `layer` 描述逐字「project (shared via this repo's .thincoder/memory/)」；单条 `delete` 的层由 **id 前缀**定（`thincoder-core/memory/memory-tool.mjs` 逐字「layer is OPTIONAL … else the id prefix routes the delete」） | 落 project 层的写型 action 要号，认两个输入：`layer:"project"`，或单条删除且 id 前缀 = `project:`（`layer` 省略时工具按前缀路由到 project 层）。`personal` ∥ `team` 落用户数据目录 ⇒ 不要号；`put` 缺省 `personal`（逐字 `put defaults to personal`）⇒ 缺省径不进本门。`clear` 只对 personal 开放、`maintain` 无 `layer` 参数 ⇒ 两者落不到项目内档，不收进写型枚举 |
-| `settings` | 用户数据目录的 `config.json`——该工具自述逐字「set = 写盘（config.json——磁盘真相最小化：只写被设的键）」；路径旁证 = `thincoder-core/memory/memory-tool.mjs:140` 逐字 `set memory.team in ~/.thincoder/config.json` | 不写项目内档 ⇒ 不进入口集 |
+| `settings` | 用户数据目录的 `config.json`——该工具自述逐字「set = 写盘（config.json——磁盘真相最小化：只写被设的键）」；路径旁证 = `thincoder-core/memory/memory-tool.mjs` 逐字 `set memory.team in ~/.thincoder/config.json` | 不写项目内档 ⇒ 不进入口集 |
 | `browser` | 自有 profile 与截图目录（`~/.thincoder/browser/…`） | 不写项目内档 ⇒ 不进入口集 |
 
 - **这是扫描域，不是全称句**：上表 + 十件既有 = 「凡能把字节落到项目内的工具都在入口集内」的全部依据；新增工具进核时按同一问题判一次（落盘目标在不在项目内）。
@@ -167,17 +167,17 @@
 - **两种「根」不是一回事（判据的钉子）**：声明路径**已带** manifest（或其内部子目录）⇒ 正常判；manifest **在而不可用**（读不动 / 坏 JSON）与「根推得出、台账库却开不了」⇒ **拒**，另起 `(ledger unreadable — <原错>)` 一行。判的是「是不是项目」，不是「项目好不好用」。
 - **一笔写跨两个项目**：同一号要在每个目标所属项目的台账里各查到才放行；任一目标查不到 ⇒ 整笔拒、文件字节零动（原子写）。这是上表的派生结论，不另立观测。
 - **读法**：判据函数 `ledgerRowAt(declared, ledgerNo, cache)` 住本档**模块内**，不导出——唯一消费方就是本门。依次判：解析声明 → 取根（(b) 支 `resolveLedgerRoot(声明, agent.cwd)`：起点在会话锚之内 ⇒ 沿祖先链上溯到最近带 manifest 的目录；(b) 支取不到再走 (a) 支：声明路径自身即带 manifest 且 `agent.cwd` 在它之下 ⇒ 根 = 声明路径；两支都取不到 ⇒ 拒、含 `declared project is not a project`）→ `ledgerQuery({cwd: root, boundary: root})` 取该根行集 → 按 `id` 找行 → 判 `status`。
-  `ledgerQuery` 现有过滤键只有 `status` / `kind` / `board` / `trigger` / `task_book`（`thincoder-core/ledger-cmd.mjs:95` 签名逐字），**没有按 id 的过滤形，本批不为门新增一个列过滤**：行集取全量后按 `id` 找（同一笔写的多目标按 `root` 缓存，一次写只读一遍账）。
+  `ledgerQuery` 现有过滤键只有 `status` / `kind` / `board` / `trigger` / `task_book`（`thincoder-core/ledger-cmd.mjs` 的 `ledgerQuery` 签名逐字），**没有按 id 的过滤形，本批不为门新增一个列过滤**：行集取全量后按 `id` 找（同一笔写的多目标按 `root` 缓存，一次写只读一遍账）。
 - **`boundary` 必传，传的就是本门刚算出的那个根**：`openLedger` 的 `@param` 逐字「上溯上界（会话锚——**必传**；缺则该值缺失即失败，不落 `process.cwd()`）」，体内 `resolveLedgerRoot` 首行即 `resolve(boundary)`——缺省直接抛 ⇒ 每一笔写都被判成「台账读不到」。调用形 = `ledgerQuery({cwd: root, boundary: root})`。
 - **`#` 可省**：`"#2016"` 与 `"2016"` 同判（剥前导 `#` 后须为纯数字；留在 `ledger` 里的非数字原值原样带进拒文）。
-- **三问（判据函数与导出名的既有件答案）**：`existing: thincoder-core/ledger-cmd.mjs:95 ledgerQuery`——返回行集含 `id` / `status` 两列，本门只读；用它，不另写查询。本门上一版的 `ledgerOpenAt`（`thincoder-core/agent/write-gate.mjs:210`）判的是「有没有在途行」，判据换了，函数体与名字一起换（`ledgerRowAt`），旧形不留。
-  两个新名取代旧名 `ledgerOpenWriteConflict` / `ledgerOpenAt`：旧名说的是「台账开着吗」，口径比新判据窄一层——名字留着，下一个读代码的人先学会的是旧规则（同决策 4 ∥ 32）。
-- **最近先例**：本档 `§4` 决策 32（零消费判据退场）。实现坐标 = `thincoder-core/agent/write-gate.mjs` 的 `ledgerRowAt`（模块内、不导出）∥ 设计档节 = 本档 `§4` 决策 32 与 `§2.3` 判据表 ∥ 先例批号 = 台账 `#2016`（`docs/batches/2026-11-03-write-gate-ledger-bind.md` 那一批）。
+- **三问（判据函数与导出名的既有件答案）**：`existing: thincoder-core/ledger-cmd.mjs` 的 `ledgerQuery`——返回行集含 `id` / `status` 两列，本门只读；用它，不另写查询。判据体 = `ledgerRowAt`（模块内、不导出）。
+  名字口径 = 「这一笔绑的行」（`ledgerRowAt`）与「把这一笔写绑到行」（`ledgerBindWriteConflict`）：名字先教规则，读代码的人先学到的是新判据（同决策 4 ∥ 32）。
+- **最近先例**：本档 `§4` 决策 32（零消费判据退场）。实现坐标 = `ledgerRowAt`（模块内、不导出）∥ 设计档节 = 本档 `§4` 决策 32 与 `§2.3` 判据表。
   **对齐**：一个导出名 + 一个模块内判据函数，不新增门、不新增导出。**偏离**：32 删的是判据，本轮换的是判据的**输入**（从「该根有没有行」换成「这一笔报的号」），故连带面多一处——入口集工具的 schema 与工具描述（`§3`）。
 - **面在这里退场**：判据不再随目标面变化（号在途就写，不论目标是文档面还是产品面），原「按面选拒文变体」的三条从句（产品代码 / 产品测试 / 文档）随判据一起删。
   `write-gate.mjs` 对 `faceDetail` 的 import 因此成为零消费，一并删；`thincoder-core/agent/write-face.mjs` 本体不动——设计门与索引面仍用它。
 - **自洽（本批落地那一刻起，父侧自己的写怎么过）**：本批的账 = `#2016`（`在途`，`task_book` = 本档）。落地后父侧每一笔写盘带 `ledger:"#2016"`，实施席写代码同理。
-  **挂行与开档都不经过写面**：`FILE_MUTATORS = new Set(["write", "edit", "insert_after", "apply_patch", "delete", "hashline_edit"])`（`thincoder-core/agent/helpers.mjs:39` 逐字），`ledger` 与 `batch` 皆不在其中 ⇒「没有号就挂不了账」的锁死不存在：先挂行、再开档，然后才许写。
+  **挂行与开档都不经过写面**：`FILE_MUTATORS = new Set(["write", "edit", "insert_after", "apply_patch", "delete", "hashline_edit"])`（`thincoder-core/agent/helpers.mjs` 逐字），`ledger` 与 `batch` 皆不在其中 ⇒「没有号就挂不了账」的锁死不存在：先挂行、再开档，然后才许写。
 - **子代理面（`depth > 0`）零改**：既有 `depth === 0` 守卫不动，token 门照旧。子代理调写工具时 schema 里也有 `ledger`，但本门**不核**它——子代理的号来自它绑定的批档档头 `> 台账 = #N`（那一行它本来就要读），不需要自己查台账；父侧派单时把号写进任务书即可（`§2` 收口行点名这条纪律，不做机械判据）。
 - **入口集的判据 = 凡能把字节落到项目内的工具都在内**：上表逐项扫描的结果就是这句话的依据（十件既有 + `manifest` ∥ `memory` 两处补入 + `settings` ∥ `browser` 两处不写项目内档），不写「其余全部在入口集内」这种没有扫描面的全称句。`ledger` ∥ `batch`（挂行 / 开档 / 写批档段）不在入口集，读类工具也不在。
 - **与既有设计门的关系（并列、不替换）**：设计门问「设计做没做」，本锁问「这笔写替哪条在途行服务」。设计门自己的文档面放行原样保留——本锁不读它、也不改它。
@@ -226,7 +226,7 @@ write refused — ledger row not bound: <case>. Pass project:<the project root t
 | `<case>` | 出处（实读 ∥ 可复现） |
 |---|---|
 | 缺号 | 实机：2026-11-03 02:01 父侧 VSC 端那笔 `write` 不含任何台账号（批档 §1 现象条），正是本门今天拦不住的那一笔 |
-| 非行号形 | 实机形 = 照抄档头：批档档头逐字 `> 台账 = #2016（core · 归批）`，整行照抄即非纯数字。既有同形在 `thincoder-core/ledger-write-ops.mjs:304` 逐字 `id = Number(ledgerNo)` ⇒ 非数字成 `NaN`、行查不到，报错指向不了人；本门把它提前成一句点名的拒文 |
+| 非行号形 | 实机形 = 照抄档头：批档档头逐字 `> 台账 = #2016（core · 归批）`，整行照抄即非纯数字。既有同形在 `thincoder-core/ledger-write-ops.mjs` 逐字 `id = Number(ledgerNo)` ⇒ 非数字成 `NaN`、行查不到，报错指向不了人；本门把它提前成一句点名的拒文 |
 | 号不在盘 | 实机形 = 跨项目引用：台账按项目根隔离（同一夹具档 `test/integration/batch-live-batch-lock.test.mjs` 用 `ledgerKey(root)` 建库位），A 项目的号在 B 项目的账上查不到；同一场景 = 本档判据表「一笔写跨两个项目」那一行（A 项目的号写 B 项目目标 ⇒ 整笔拒） |
 | 号非在途 | 实机：档头 `> 台账 = #N` 那行不随行状态变——收口后该行落 `待核销`、勾销后落 `已核销`（六态见 `docs/core/design/LEDGER.md`），照抄档头的旧号即撞此支；`<status>` 点名是该支的全部价值 |
 | 未声明项目 | 实机：2026-11-03 02:53 重启后 `bash` 不带 `ledger` 照放行——会话锚 = `D:\teamcode`（容器根，祖先链无 manifest）⇒ 旧判据「推不出 ⇒ 门不管」。新形下同一笔落 `no project on this call` |
@@ -254,13 +254,13 @@ write refused — ledger row not bound: <case>. Pass project:<the project root t
 
 `R-C3` 的行在**终态**——重开回收也不回它（`§2.13`），出路只有另立新行；`待核销` 的行还在**结账位**（`§2.7` 第四列），出路有两条：先勾销它，或由持有它的批档重开回收把它带回 `在途`（`§2.13`）。并成一句拒文，父侧读到拒时不知道该走哪条。
 
-实现面同形：`thincoder-core/ledger-write-ops.mjs:192` `bindArchivedError` 与同档 `:194` `bindSettledError` 本就是两个独立字面（各在 `:308` / `:309` 抛出）。
+实现面同形：`thincoder-core/ledger-write-ops.mjs` 的 `bindArchivedError` 与 `bindSettledError` 本就是两个独立字面（两个抛点各自独立）。
 
 **事务（单事务在台账侧，档写在事务窗口内；落档先于指针写入）**：
 
 1. `ledger-cmd.mjs` 新导出 `ledgerBindBatch({cwd, ledgerNo, taskBook, title, kind, board}, writeRecord)` 开 `BEGIN IMMEDIATE`；
-2. **新建路径**：INSERT 一行 `待讨论`（`ledgerAdd` 既有形，`ledger-cmd.mjs:176`；无指针，故 DDL 咬合 CHECK（`docs/core/design/LEDGER.md:54`）不拦），拿到真实行号 `#N`；**接管路径**：`#N` 已知，跳过本步；
-3. 回调 `writeRecord(#N)` 写批档（`wx` 独占创建，不覆写既有档）——**必须先于步 4**：写门两形都判「解析出的档在盘」（在册旧形 `docs/core/design/LEDGER.md:732`；新形臂② `:745`），先写指针、后落档 ⇒ 被自己的门当场拒；
+2. **新建路径**：INSERT 一行 `待讨论`（`ledgerAdd` 既有形，`thincoder-core/ledger-cmd.mjs`；无指针，故 DDL 咬合 CHECK 不拦），拿到真实行号 `#N`；**接管路径**：`#N` 已知，跳过本步；
+3. 回调 `writeRecord(#N)` 写批档（`wx` 独占创建，不覆写既有档）——**必须先于步 4**：写门两形都判「解析出的档在盘」（`docs/core/design/LEDGER.md` 的在册旧形 ∥ 新形臂②），先写指针、后落档 ⇒ 被自己的门当场拒；
 4. 行写入走 `applyRowUpdate` 的**同一函数体**（不重做门：迁移表 → 核销标记门 → executor 语义 → 写门 → `UPDATE`）：`待讨论` / `待设计` → `在途` + `task_book` = 本档（新建行同此一步）；为此给该函数加内部形参 `tx`（外层已有事务时不自开 `BEGIN`），并拆出 `applyRowUpdateTx(db, row, patch)`——**不直写 SQL**，否则迁移表新边（`§2.8` / `§2.13`）反而不会被用；
 5. `COMMIT`。任一步抛 ⇒ `ROLLBACK` + `unlinkSync(批档)`（该档本笔刚建）+
    原样上抛。回滚失败 ⇒ 拒文点名「台账已回滚 / 档残留 <路径>」，**不静默**。
@@ -278,9 +278,9 @@ write refused — ledger row not bound: <case>. Pass project:<the project root t
 
 **主线一句**：**台账行的 `task_book` 就是批档指针**——挂账时为空（行落 `待讨论`、不指任何批档）；**开批时把本档要处理的每一条行都写上本档指针**；收口时这批行一起结（终局只有 `已核销` ∥ `已废弃`）。
 
-**判据单源**：本档的账 = `task_book` 的文件部分解析回本档的**全部行**（`thincoder-core/ledger-write-ops.mjs:185` `resolveBatchRows`；收口重锚 ∥ `ledger update/close --batch` ∥ 重开回收三处同读这一条；读面导出 = `thincoder-core/ledger-cmd.mjs:269` `ledgerBatchRows`，公共面 `thincoder-core/ledger.mjs:157`）。行集是**集合**——既有机制本来就按集合写，本节只规定点火时把它填满。
+**判据单源**：本档的账 = `task_book` 的文件部分解析回本档的**全部行**（`thincoder-core/ledger-write-ops.mjs` 的 `resolveBatchRows`；收口重锚 ∥ `ledger update/close --batch` ∥ 重开回收三处同读这一条；读面导出 = `thincoder-core/ledger-cmd.mjs` 的 `ledgerBatchRows`，公共面 `thincoder-core/ledger.mjs`）。行集是**集合**——既有机制本来就按集合写，本节只规定点火时把它填满。
 
-**读径（判据第 1 步走哪一条）**：走上面那条**同址解析**径。`ledger({action:"query", task_book:"…"})` 是**原值等值**（列串直比，`thincoder-core/ledger-cmd.mjs:108`），该档 `:96`–`:97` 自述与选行「文件部分解析同址」两径口径不同、各自单源 ⇒ **不作判据读径**，只作人读。人工跑一次：
+**读径（判据第 1 步走哪一条）**：走上面那条**同址解析**径。`ledger({action:"query", task_book:"…"})` 是**原值等值**（列串直比，`thincoder-core/ledger-cmd.mjs` 的 `task_book` 过滤支），同档 `task_book` 参数自述 与选行「文件部分解析同址」两径口径不同、各自单源 ⇒ **不作判据读径**，只作人读。人工跑一次：
 
 ```text
 node -e "import('./thincoder-core/ledger.mjs').then(m=>console.log(m.ledgerBatchRows({cwd:'<项目根>',batch:'<本档相对指针>'})))"
@@ -288,7 +288,7 @@ node -e "import('./thincoder-core/ledger.mjs').then(m=>console.log(m.ledgerBatch
 
 **先例**：`resolveBatchRows` 已是行集判据单源，本节**对齐**它的形状（不在批档侧另立第二条判据）；**偏离**一处——它只回答「现在谁指回本档」，本节补上「点火时应当有几条指回本档」。
 
-**事故形态（本条规则要堵的洞）**：`#1912` 建档不带 `ledger` ⇒ 工具自动开一条行；它覆盖的 `#1900` / `#1909` / `#1910` / `#1911` 一条也没写 `task_book` ⇒ 四行不在本档行集内 ⇒ 收口重锚（`thincoder-core/ledger-cmd.mjs:311` 逐行取自 `resolveBatchRows`）对它们零触，四行永远开在 `待讨论`。**同一件事五条账，就是这么来的。**
+**事故形态（本条规则要堵的洞）**：`#1912` 建档不带 `ledger` ⇒ 工具自动开一条行；它覆盖的 `#1900` / `#1909` / `#1910` / `#1911` 一条也没写 `task_book` ⇒ 四行不在本档行集内 ⇒ 收口重锚（收口重锚逐行取自 `resolveBatchRows`）对它们零触，四行永远开在 `待讨论`。**同一件事五条账，就是这么来的。**
 
 **铁律：认领已有的活，不新建台账行。** 本档覆盖 ≥ 1 条旧账时，`batch create` 带 `ledger:"#N"` 接管其中一条，其余每条同轮绑回本档——**本档不新开第二条台账行**。
 
@@ -311,11 +311,11 @@ node -e "import('./thincoder-core/ledger.mjs').then(m=>console.log(m.ledgerBatch
 | `待核销` | 停：已结账待勾销，不构成本批的活（`create` 对 `待核销` 号同拒 = `R-C4`，`§2.4` 建档表）；先核销它，或由持有它的批档重开回收（`§2.13`） |
 | `已核销` / `已废弃` | 不列入 `覆盖账`——**重新开账 = 另立新行**：旧行已在终态（不可绑，`R-C3`），本批做同一件事时 `create` 不带 `ledger` 自开一行，`覆盖账` 只写这个新号，§1 写一行理由说明为何重新开账；旧行原样留着（`evidence` 记着上一次的结账理由，不回收——`§2.13`）。与铁律「本档不新开第二条台账行」不冲突：铁律禁的是**同一件债在同一时刻挂两条未决行**，另立新行的前提正是旧行已离开未决面 |
 
-**认领即承诺（收口分流的后果）**：认领一条行 = 承诺本批把它做到终局。所以点火前先判「这条能在这批做完吗」，判不能 ⇒ **不认领它**（不算覆盖、不绑、§1 不列）。收口时认领行只有两种终局：做完 ⇒ `已核销`；判定「不用做」（前提不成立 / 已有它法）⇒ `已废弃` + `evidence` 写判据。**没有第三种**——退回 `待讨论`、转 `条件` 等下一批都不是认领行的出路（判据单源 = `docs/core/requirements/ENGINEERING-MODE-V2.md:718`「认领即承诺」）。
+**认领即承诺（收口分流的后果）**：认领一条行 = 承诺本批把它做到终局。所以点火前先判「这条能在这批做完吗」，判不能 ⇒ **不认领它**（不算覆盖、不绑、§1 不列）。收口时认领行只有两种终局：做完 ⇒ `已核销`；判定「不用做」（前提不成立 / 已有它法）⇒ `已废弃` + `evidence` 写判据。**没有第三种**——退回 `待讨论`、转 `条件` 等下一批都不是认领行的出路（判据单源 = `docs/core/requirements/ENGINEERING-MODE-V2.md`「认领即承诺」）。
 
 **点火直跳 `在途`，不过 `待设计`**：`待设计` 那条边表达的是「已排设计」，不是点火发生的事——理由与建档事务的必要性单源 = `§2.8`，本节只引用。
 
-**唯一允许撤回的场合 = 重复登记**：两行记的是同一件债 ⇒ 冗余那行 `close {status:"已废弃"}`，`evidence` 点名吸收它的行号。理由：`已废弃` 的语义是**撤回**，把做完的点记成撤回是记错账（`thincoder-core/ledger-write-ops.mjs:155` 只拦 `已核销`，撤回任意态放行）。本形按 `§7` 的边界保留：台账上暂无实读的「两行同债」样本，本节只判这个形本身。
+**唯一允许撤回的场合 = 重复登记**：两行记的是同一件债 ⇒ 冗余那行 `close {status:"已废弃"}`，`evidence` 点名吸收它的行号。理由：`已废弃` 的语义是**撤回**，把做完的点记成撤回是记错账（`thincoder-core/ledger-write-ops.mjs` 的撤回支只拦 `已核销`，任意未归档态放行）。本形按 `§7` 的边界保留：台账上暂无实读的「两行同债」样本，本节只判这个形本身。
 
 **可追溯性由什么补回**：每条原始条目**留在台账上、指针指回本档**——不是靠批档 §1 抄一遍。§1 另写一行 `覆盖账 = …`（见下）：它是判据的输入，也是人读的一面。
 
@@ -323,7 +323,7 @@ node -e "import('./thincoder-core/ledger.mjs').then(m=>console.log(m.ledgerBatch
 
 | 问 | 答 |
 |---|---|
-| 住哪 | 批档 §1 段体，一行。`docs/core/design/BATCH-RECORD.md` 无 §1 必写行清单——它按需登记单条行约定（`已定决定` 行 `:255` · `不适用` 声明 `:442` · `批起 sha` 记入行 `:595`），故本行的判据与字面归本节拥有 |
+| 住哪 | 批档 §1 段体，一行。`docs/core/design/BATCH-RECORD.md` 无 §1 必写行清单——它按需登记单条行约定（`已定决定` 行 · `不适用` 声明 · `批起 sha` 记入行），故本行的判据与字面归本节拥有 |
 | 叫什么 | `覆盖账 = #N [#M …]`——`覆盖账 = ` 后接空格分隔的 `#` 行号，**首项 = 本档自己那一行**（接管的那条 ∥ 自开的 `#N`），其余按行号升序；恒写、单行、无注释。例：`覆盖账 = #1915 #1900 #1909 #1910 #1911`；自开的档写 `覆盖账 = #1915` |
 | 谁消费 | 判据第 2 / 3 步（机判的比对集）+ 人读 |
 | 为何不复用档头 `> 台账 = #N` | 档头那行是**本档自己那一行**（机器按真实行号填，纯人读面——机器判据不读它）；`覆盖账` 是**手写的意图面**（打算覆盖哪几条）。判据要拿「意图」比「事实」——用同一行就是自己比自己，漏登记的那条永远查不出 |
@@ -333,7 +333,7 @@ node -e "import('./thincoder-core/ledger.mjs').then(m=>console.log(m.ledgerBatch
 1. **行集非空**：按上条**读径**取本档行集 ⇒ ≥ 1 行（`create` 保证：不接管就自开一条）。
 2. **覆盖账条条在册**：`覆盖账` 里每个 `#N` ⇒ 该行 `task_book` 的文件部分解析回本档；或该行已在归档态（`已核销` / `已废弃`）且 `evidence` 点名了吸收它的行（只可能是重复登记）。
 3. **反向无孤儿**：第 1 步行集与 `覆盖账` 的 id 集逐条比对 ⇒ 两边相等。差一条就是一条孤儿账。（自开那条也列在 `覆盖账` 里 ⇒ 0 覆盖的档不再被判成孤儿。）
-4. **收口后零未决**：本档收口并结算后同一读径的行集里不得有 `待讨论` / `待设计` / `在途` / `待核销`——终局只有 `已核销` / `已废弃`（`docs/core/requirements/ENGINEERING-MODE-V2.md:718`）。机器兜底对残留的 `待讨论` / `待设计` 只落 `trigger = 条件`、状态留原值（`§2.7`）⇒ 第 4 步照样报出来。
+4. **收口后零未决**：本档收口并结算后同一读径的行集里不得有 `待讨论` / `待设计` / `在途` / `待核销`——终局只有 `已核销` / `已废弃`（`docs/core/requirements/ENGINEERING-MODE-V2.md`）。机器兜底对残留的 `待讨论` / `待设计` 只落 `trigger = 条件`、状态留原值（`§2.7`）⇒ 第 4 步照样报出来。
 
 - **判据管不到的一面（如实写）**：它只保证「登记了的没漏」，不保证「漏了没登记」——`覆盖账` 由人写，少写一条查不出来。那一面归点火前的台账扫描（`thincoder-core/prompts/persona-engineering.md` §Ledger 的 `Batch design` 条）与行龄读数（`aged`），不由本节兜。
 
@@ -354,7 +354,7 @@ node -e "import('./thincoder-core/ledger.mjs').then(m=>console.log(m.ledgerBatch
    - **Register them in §1** on one line — `覆盖账 = #N [#M …]`, this record's own row first and always included (this record opening its own row writes `覆盖账 = #1915`). That line is what the account check compares against.
 ```
 
-- **边界**：只换这一条；台账节前四条与生命周期第 2–5 条零改。工具描述面零改——`thincoder-core/agent-tools/batch.mjs:306` 已准确陈述「带 `ledger` 接管 / 不带就新开」这一分岔。
+- **边界**：只换这一条；台账节前四条与生命周期第 2–5 条零改。工具描述面零改——`thincoder-core/agent-tools/batch.mjs` 已准确陈述「带 `ledger` 接管 / 不带就新开」这一分岔。
 
 拒文（逐字）：
 
@@ -389,14 +389,14 @@ batch: ledger entry #<N> is 待核销 — a row already settled to 待核销 can
 三条全中 ⇒ 同一笔写盘里两处落笔：状态行 → `进行中（第 N 轮打回）`；本轮块首戳一行留痕 `> 状态行重置：第 N 轮打回（changes-required）· 上一轮状态行 = 评审通过 → 进行中 · <YYYY-MM-DD>`。
 
 - **重置不等于清空**：留痕行把「上一轮 pass 被这一轮推翻」写在档里——状态行只余 `进行中`，不写留痕则读档的人会以为从没评过。
-- **只走既有写面**：状态行仍由 `updateSectionStatusLine` 单行改写（同档 `:164`），不新开第二条写路径；留痕行是本轮块内的段体内容，与工具戳的 `### 轮次 N（评审子代理）` 同面，append-only 不变。
+- **只走既有写面**：状态行仍由 `updateSectionStatusLine` 单行改写（同档），不新开第二条写路径；留痕行是本轮块内的段体内容，与工具戳的 `### 轮次 N（评审子代理）` 同面，append-only 不变。
 - **③ 把「上一轮 pass」写死在内**：`§3` 已是 `进行中` ∥ 无状态行 ⇒ 零写、零留痕（本来就写着「评审未完成」，重置无事可做；本轮块本身即证据）。顺序交接不误伤：未打回的批（首轮 pass）不触发。
-- **为什么必须机械**：状态行是下游 `§5` 写入门（`thincoder-core/agent-tools/batch-closeout.mjs:105`）∥ 收口门 ∥ 核销门③的唯一判据面。靠评审「记得把状态行改回去」是一条纪律，而纪律在打回那一轮最容易漏；写成工具条件，漏不掉。**第四处读它的是签发面**：`thincoder-core/agent-tools/design-token.mjs` 的 §3 落地门判据 2——读 `readSectionStatusWord(batchSrc, 3)` 那处，拒因 `status-not-passed`；打回后的 pass 那一轮，字由工具置回 `评审通过`（本节「通过即置位」），判据 2 读到的就是这一轮的字；字不到位即拒签。
+- **为什么必须机械**：状态行是下游 `§5` 写入门（`thincoder-core/agent-tools/batch-closeout.mjs`）∥ 收口门 ∥ 核销门③的唯一判据面。靠评审「记得把状态行改回去」是一条纪律，而纪律在打回那一轮最容易漏；写成工具条件，漏不掉。**第四处读它的是签发面**：`thincoder-core/agent-tools/design-token.mjs` 的 §3 落地门判据 2——读 `readSectionStatusWord(batchSrc, 3)` 那处，拒因 `status-not-passed`；打回后的 pass 那一轮，字由工具置回 `评审通过`（本节「通过即置位」），判据 2 读到的就是这一轮的字；字不到位即拒签。
 - **修前实读（敞口本身）**：`§3` 状态行 = `评审通过` ∧ `§3` 已有轮次块含 `VERDICT: changes-required` ⇒ 直调 `assertSectionFiveGate` 喂此夹具**不抛**（放行——该函数放行时不返回值也不打印，「不抛」就是它唯一的可观察面）；同刻 `readSectionStatusWord(src, 3)` 返回 `评审通过`。重置落地后同夹具读到 `进行中`，门遂拒。
 - **判 `§3` 结论只认状态行那一行**：留痕行逐字写「上一轮状态行 = 评审通过」，轮次块正文也可能出现词表关键字——`**状态行**：` 前缀之外的关键字不构成结论；前缀行本身也只在段头区内才算结论（定位面见本节「段级状态行的定位面」，读面只有那一个取值区）。
-- **留痕行不经文档机检门**：门位在 `insertIntoSection` 之前（`thincoder-core/agent-tools/batch.mjs:243`，判集只含评审正文 `pending.body`），留痕行插在其后 ⇒ 不进门判集；门判的仍是评审正文本身。
+- **留痕行不经文档机检门**：门位在 `insertIntoSection` 之前（`thincoder-core/agent-tools/batch.mjs` 的门位，判集只含评审正文 `pending.body`），留痕行插在其后 ⇒ 不进门判集；门判的仍是评审正文本身。
 - **触发面不扩（理由）**：这一笔连裁定行都没有（设计凭证侧判 `no-pass-line`）⇒ 本重置不触发，`§3` 仍留上一轮的 `评审通过`。触发面**不**扩到「写 `§3` 即重置」——工具手上只有文本，无从区分「打回」与「补记一段散文」，扩面就是按意图猜，猜错还改写了写者刚落的档。
-- **堵这个洞的拒面（判据 / 拒文已定，代码随本批落）**：`§5` 写入门不再只看状态词，还要求 `§3` **最近一轮轮次块自己携 pass 裁定**（判据 / 拒文 = `§2.6`）。所以「写 `§3` 要带裁定行」成为任何一笔的必做，两种情形同一条处置。
+- **堵这个洞的拒面**：`§5` 写入门不再只看状态词，还要求 `§3` **最近一轮轮次块自己携 pass 裁定**（判据 / 拒文 = `§2.6` 的 `R-G2b`）。所以「写 `§3` 要带裁定行」成为任何一笔的必做，两种情形同一条处置。
 - **被拒方案（两终态词 `评审通过` / `评审须修改`）**：代价 = 每个读侧多一态（`readSectionStatusWord` / 链门 / `batch/list` / 词表并集四处）、
   拒文多一支、且 `须修改` 与 `进行中` 对「评审还在跑」不可区分；收益（分清「没跑」与「跑了没过」）`§3` 段体的轮次块已经给了。故不取。
 - **存量档兼容**：旧字面 `评审完成` 读侧等义于 `评审通过`（`readSectionStatusWord` 一张别名表，逐条注退场条件 = 盘上再无该字面）。
@@ -409,10 +409,10 @@ batch: ledger entry #<N> is 待核销 — a row already settled to 待核销 can
 - **③ 的方向与打回那条相反**：打回要「上一轮 = pass」（推翻一条已落的字），通过要「当前 ≠ pass」（补上一条没落的字）；两条的 ③ 因此天然互斥，同一笔不会都触发。
 - **写前无 §3 状态行**（`readSectionStatusWord` 返 `null`——骨架只给 §2 产状态行）⇒ ③ 成立，`updateSectionStatusLine` 按既有插入形在段头后补出该行。这是新批档首次 pass 的常态形状，不是边角。
 - **不写留痕行**：置位的理由是「块自己说了 pass」，同一笔落进 §3 的轮次块就是那条记录，再写一行等于把块的内容抄第二遍。打回方向要留痕，是因为重置**抹掉**了一条已落的 pass，而抹掉这件事没有第二处记录。
-- **只走既有写面**：仍是 `updateSectionStatusLine`（`thincoder-core/agent-tools/batch-skeleton.mjs:164`）单行改写、仍是一次 `writeFileSync`——与打回那条同一条路径，不新开第二条。
+- **只走既有写面**：仍是 `updateSectionStatusLine`（`thincoder-core/agent-tools/batch-skeleton.mjs`）单行改写、仍是一次 `writeFileSync`——与打回那条同一条路径，不新开第二条。
 - **段级状态行的定位面（单源一句）**：段级状态行 = **段头区**内那一行 `**状态行**：`——段头区 = `## §N` 标题行之后、下一个标题行（任意 `##` / `###` / `####` 起的行）之前。
   - **写**：区内有该行 ⇒ 原位单行改写；区内没有 ⇒ 在段头后补出（插入形沿用既有，`thincoder-core/agent-tools/batch-skeleton.mjs` 的 `updateSectionStatusLine`）。**读**（两条计划的 ③ ∥ 六处门面 ∥ `batch/list`）= 同一条定位面。区外——轮次块正文里引述的 `**状态行**：…` 行——既不被改写，也不构成结论。
-  - **区内多行 ⇒ 取区内首命中**：读面 `lines.map((line) => STATUS_LINE_RE.exec(line)).find(Boolean)`（`thincoder-core/agent-tools/batch-skeleton.mjs:202`），写面 `parts.findIndex(...)` 也只认区内第一行（`:176`）⇒ 一条不可解析的首行会把后面的行遮住，该段对所有读面读成 `null`。
+  - **区内多行 ⇒ 取区内首命中**：读面 `lines.map((line) => STATUS_LINE_RE.exec(line)).find(Boolean)`（`readSectionStatusWord`，住 `thincoder-core/agent-tools/batch-skeleton.mjs`），写面 `parts.findIndex(...)` 也只认区内第一行（`updateSectionStatusLine`）⇒ 一条不可解析的首行会把后面的行遮住，该段对所有读面读成 `null`。
     已登记的实例（形状，不点名档）：一个骨架原形批档的 `§2` 段头区里先有占位行 `**状态行**：（…）`、其后才是结论行 ⇒ 该段对所有读面读成 `null`；同形全仓计数未量。
   - **区界判据 = `^#{2,}`**（`thincoder-core/agent-tools/batch-skeleton.mjs` 的 `ZONE_END_RE`，写面与触发读面同读这一条）：认到 `####` 及更深的子标题为止。比「下一个 `##` / `###`」宽一档，方向是**偏安全**——段级状态行由工具插在 `## §N` 标题正下方，任何级别的子标题都在它之后，所以多认一层子标题只会让区更早结束，不会把正文行当成段级状态行。
   - **不设「宽读」模式**：`region` 参数退场——`readSectionStatusWord` 只有一个取值区。留一个可选的段内首命中 = 留一条按需把引述行读成结论的入口，而它的缺省值正好落在错的那一侧。
@@ -466,9 +466,9 @@ batch: ledger entry #<N> is 待核销 — a row already settled to 待核销 can
   - **围栏内算不算** = **算**：读面不认围栏（`sectionBodyLines` 只按行切分，无围栏状态），围栏里的行与正文同权。
   - **取值面（本轮）** = 直接调单源函数 `readSectionStatusWord(src, seg, "section")` 与 `readSectionStatusWord(src, seg, "header")` 比较，不复写解析。
   - **复跑形（`region` 退场后）** = 一刀临时脚本，三步与本节读数的取法逐条对齐：
-    - **切区**：按 `^#{2,}` 把每段切成段头区与段体，在「段头区首命中」与「段内首命中」两处各取值后比较。`STATUS_LINE_RE` 从 `thincoder-core/agent-tools/batch-skeleton.mjs` import（同档 `:75` 已导出）；区界 `ZONE_END_RE` 未导出（同档 `:77`）⇒ 脚本本地复写 `^#{2,}`，判据与该档同一条。
-    - **词条过滤**：只对 `STATUS_WORDS` 有条目的段位取数（`§1` / `§2` / `§3` / `§5`，同档 `:40`）；`§4` / `§6` 无条目，任何区都读成字面「无状态词」⇒ 按裸文本比会照样命中那 52 段，复跑得 **63** 而不是 11。
-    - **归一化**：比较对象 = 归一后的词值，不是裸行文本——先过段位别名表（`§3` 的 `评审完成` → `评审通过`，同档 `:51`），再按 `closed` / `done` / `open` 顺序取 `value.includes(word)`（同档 `:206`–`:211`）；带括注的 `进行中（第 N 轮打回）` 因此读成 `进行中`，裸文本比则不等。
+    - **切区**：按 `^#{2,}` 把每段切成段头区与段体，在「段头区首命中」与「段内首命中」两处各取值后比较。`STATUS_LINE_RE` 从 `thincoder-core/agent-tools/batch-skeleton.mjs` import（同档已导出）；区界 `ZONE_END_RE` 未导出（同档）⇒ 脚本本地复写 `^#{2,}`，判据与该档同一条。
+    - **词条过滤**：只对 `STATUS_WORDS` 有条目的段位取数（`§1` / `§2` / `§3` / `§5`）；`§4` / `§6` 无条目，任何区都读成字面「无状态词」⇒ 按裸文本比会照样命中那 52 段，复跑得 **63** 而不是 11。
+    - **归一化**：比较对象 = 归一后的词值，不是裸行文本——先过段位别名表（`§3` 的 `评审完成` → `评审通过`，同档 `STATUS_WORD_ALIASES`），再按 `closed` / `done` / `open` 顺序取 `value.includes(word)`（同档归一化支）；带括注的 `进行中（第 N 轮打回）` 因此读成 `进行中`，裸文本比则不等。
 
 | 读数 | 值 |
 |---|---|
@@ -494,9 +494,9 @@ batch: ledger entry #<N> is 待核销 — a row already settled to 待核销 can
   那三行的形状就是方向 B：`### 轮次 N（评审子代理）` 块首的 `**状态行**：…` 是评审当时写进块里的，工具不再往那里写。
 
 - **方向 A 的现量 = 0（按下列判别依据读，不是独立的一次量）**：63 段里没有一段是「正文引述行」。三处 §3 的逐条判别依据 = 该行紧跟在 `### 轮次 N（评审子代理）` 块首、括注写的是本轮结论：
-  - `docs/batches/2026-10-28-product-text-sweep.md:322`——`### 轮次 1（评审子代理）`（`:320`）之下，`**状态行**：评审通过（第 3 轮回评：第一轮 8 条 = 7 Fixed + 1 Accepted，🔴 0 · 🔵 2（2026-10-28））`。
-  - `docs/batches/2026-10-28-rule-writing-sweep.md:226`——`### 轮次 2（评审子代理）`（`:224`）之下，`**状态行**：评审通过`。
-  - `docs/batches/2026-10-28-sse-first-chunk-idle.md:160`——`### 轮次 1（评审子代理）`（`:158`）之下，`**状态行**：评审通过（轮次 2 回评：轮次 1 十条全闭（🔴 0），新增 1 🟡 + 3 🔵 不挡通过）`。
+  - `docs/batches/2026-10-28-product-text-sweep.md` 的 `### 轮次 1（评审子代理）` 块首之下，`**状态行**：评审通过（第 3 轮回评：第一轮 8 条 = 7 Fixed + 1 Accepted，🔴 0 · 🔵 2（2026-10-28））`。
+  - `docs/batches/2026-10-28-rule-writing-sweep.md` 的 `### 轮次 2（评审子代理）` 块首之下，`**状态行**：评审通过`。
+  - `docs/batches/2026-10-28-sse-first-chunk-idle.md` 的 `### 轮次 1（评审子代理）` 块首之下，`**状态行**：评审通过（轮次 2 回评：轮次 1 十条全闭（🔴 0），新增 1 🟡 + 3 🔵 不挡通过）`。
   - **为什么是解释而不是量**：工具从不往轮次块里写（`updateSectionStatusLine` 只改段头区）⇒ 块内那行必为手写；手写行是「真状态行」还是「引述」只能由散文判，而「段头区里的行分不出是谁写的」是本节已登记的残余（见下）。
   ⇒ 「引述行冒充段级状态行」至今零实例；真实存在的是方向 B（那三档），而方向 B 就是**触发面与门面读不同的区**这件事本身。
   **读数与决定解耦**：这个数取 0 还是 3 都不改路线 ③——③ 把两个方向一起关掉（`§4` 决策 26），A 的实例数只影响代价大小，不影响收还是不收。
@@ -519,7 +519,7 @@ batch: ledger entry #<N> is 待核销 — a row already settled to 待核销 can
 
 - **为什么打回优先**：一笔同携两行是自相矛盾的回执，而裁定读数的判序**只住一处**——`thincoder-core/agent-tools/batch-skeleton.mjs` 的 `verdictGapOf`（先打回、后 pass）；签发面 `verdictGateFailure`（`thincoder-core/agent-tools/design-token.mjs`）经它取值，两条状态计划各自写的组合序与它同向（`§2.6.1` 登记残余）。状态行必须与门对同一份文本得出的结论一致，否则同一份回执在两个面上结论相反。
 - **与 `§2.6` 判据 1 ∥ 判据 2 的关系**：置位落地后，判据 1（状态词）成为判据 2（末块携 pass）的派生读数；判据 2 **不撤**——它是状态的来源，也是挡住「`status` 单写就开 `§5`」的那一条。
-- **最近先例**：`statusResetPlan`（同档 `:306`）——**对齐**：同签名 `(src, seg, body, date)`、同触发位置（`thincoder-core/agent-tools/batch.mjs:249` 一处判定）、同写面、同「一次 `writeFileSync`」。**偏离一处**：它返回 `{ roundN, statusValue, traceLine }`，本方向只返回 `{ roundN, statusValue }`（无留痕行，理由见上）。不合并成一个函数的理由 = 合并要改它的函数体（`§7` 边界：打回行为零回归），且返回形要加一个没有消费方的判别位。
+- **最近先例**：`thincoder-core/agent-tools/batch-skeleton.mjs` 的 `statusResetPlan`——**对齐**：同签名 `(src, seg, body, date)`、同触发位置（`thincoder-core/agent-tools/batch.mjs` 的 append 轨一处判定）、同写面、同「一次 `writeFileSync`」。**偏离一处**：它返回 `{ roundN, statusValue, traceLine }`，本方向只返回 `{ roundN, statusValue }`（无留痕行，理由见上）。不合并成一个函数的理由 = 合并要改它的函数体（`§7` 边界：打回行为零回归），且返回形要加一个没有消费方的判别位。
 - **调用点（定序一字）**：`const plan = statusResetPlan(...) ?? statusPassPlan(...)`——`??` 的左先右后与上表同向；即使将来某条条件被放宽到两者可同时命中，判出来的仍是打回，与门的结论一致。
 - **锚住骨架档的理由**：置位判据住在骨架档——若把 pass 锚留在签发面，骨架档就要回 import 签发面而成立循环（签发面已 import 骨架档）。
 - **运行时回执串（字面单源）**：`thincoder-core/agent-tools/design-token.mjs` 的 `REVIEW_RECORD_MARK` 第二句 = 「补写该批档 §3（发现 + VERDICT —— 状态行由工具随块落）后重跑设计评审」（与 `docs/core/design/ADVISOR-GUARDS.md` §1.3 的标记块同字）；同档判据 2 的证句 = 「块落盘时由工具置位」。**判据零改**：拒因三值与 `settlementCriterion` 值集不动。
@@ -530,7 +530,7 @@ batch: ledger entry #<N> is 待核销 — a row already settled to 待核销 can
 
 | 门 | 位置 | 判据 | 模式 | 拒绝时报什么 |
 |---|---|---|---|---|
-| 写锁（笔-账绑定） | `write-gate.mjs` `ledgerBindWriteConflict`，挂 `dispatch.mjs` Phase 1（`§2.3`） | 辖内任何写盘 ∥ `bash` · `execute`（不分面、不分类命令）∧ 未携带 `ledger:"#N"` ∥ `#N` 不是本项目台账里的 `在途` 行 ⇒ 拒 | 仅工程 | `§2.3` 串 |
+| 写锁（笔-账绑定） | `write-gate.mjs` `ledgerBindWriteConflict`（判据体与拒文同住一个模块），挂 `dispatch.mjs` Phase 1（`§2.3`） | 辖内任何写盘 ∥ `bash` · `execute`（不分面、不分类命令）∧ 未携带 `ledger:"#N"` ∥ `#N` 不是本项目台账里的 `在途` 行 ⇒ 拒 | 仅工程 | `§2.3` 串 |
 | §3 写入闸（裁定兜底） | `batch` append §3（`thincoder-core/agent-tools/batch.mjs` `appendBatchRecord`，段键 `n === 3`） | 判定输入 = 净化后正文（`sanitizeText(args.text)` 的结果，落档的就是它）；读数 ∈ {`无裁定行`, `两者同携`} ⇒ 当场拒，`VERDICT: changes-required` 照写（`verdictGapOf`，与下一行判据 ② 同一函数） | 两模式（写入方在两种模式下都只有评审实例） | `R-G3` |
 | §5 写入门（段序门） | `batch` append §5（`thincoder-core/agent-tools/batch.mjs` `appendBatchRecord`） | 两条合取：① `§3` 状态行 = `评审通过` ② `§3` **最近一轮轮次块自己携 pass 裁定行**（零豁免：声明已停用） | 两模式 | `R-G2` ∥ `R-G2b` |
 | 收口门 | `close` ∥ `status` 写 `§1 已收口` | 链门（§2 / §3 / §4 / §6 **各有内容**——`不适用` 声明已停用）**∧** `§3` 状态行 = `评审通过` | 两模式 | `R-G1`（§3 未过）∥ 既有 `J1`/`J2` |
@@ -573,7 +573,7 @@ batch: ledger entry #<N> is 待核销 — a row already settled to 待核销 can
 
 **判据单源（接口面）**：块 = 最后一个 `### 轮次 N` 块，取块面 = `thincoder-core/agent-tools/batch-skeleton.mjs` 本轮新增的导出
 **`lastRoundBlock(src, seg = 3) → string ∥ null`**（`seg` 段内无块 ⇒ `null`；返回块文本，含块首行，不含下一块首行）。
-它**只切块**——块内裁定一律由下面两条既有锚判，判定面不在这条导出里（一处不多，也不许再长出一处）。切块正则复用同档既有导出 `ROUND_HEADING_RE`（`:222`）。
+它**只切块**——块内裁定一律由下面两条既有锚判，判定面不在这条导出里（一处不多，也不许再长出一处）。切块正则复用同档既有导出 `ROUND_HEADING_RE`。
 
 裁定行锚 = `_V_PRE` / `_V_SUF` / `VERDICT_CHANGES_LINE` / `VERDICT_PASS_LINE` 四条，全住 `thincoder-core/agent-tools/batch-skeleton.mjs` 的锚块；签发面与 `§5` 写入门 ∥ 通过置位经 import 同读（**零复制**——锚形只此一份）。
 
@@ -602,7 +602,7 @@ pass 形四格同判：`结论：通过` ∥ `结论：通过。` ∥ `VERDICT: 
 - **`§3` 无任何轮次块 ⇒ 判据 2 不成立（照拒）**：真跑过的 pass 必有本轮块（`docs/core/design/ADVISOR-GUARDS.md` §1.2 A-AG22 判据 1），无块即无 pass 可依。
 - **不误伤**：修正轮在 `§3` 已 pass 之后改代码、追加 `§5`，判据当场成立。
 - **`status` 单写不再足以开 `§5`**：本条落地后，只把 `§3` 状态行置 `评审通过` 而不落一块携 pass 裁定的轮次块 ⇒ `§5` 照拒。既有夹具里凡是「`status` 置 pass ⇒ `append §5`」的写法都要补块（`test/RTM.md` 14-8 即此形）。
-- **存量出路（既有在飞批）**：`§3` 的 pass 块若写在「裁定行进 `§3`」成文之前（无裁定行的旧块）⇒ 判据 2 判成无结论、`§5` 不可写；而工程模式的 `§3` 只由绑本档的评审实例写（`batch.mjs:78-87`），父侧不能自行补块 ⇒ 出路 = **追加一轮携 pass 裁定的评审**（块落进 `§3` 即可）；不再跑一轮的，收口面照判据 1 走（收口门 ∥ 核销门③ 只判状态词，见下条）。这是可枚举的小集合（此刻在飞的批），不是持续产生的形。
+- **存量出路（既有在飞批）**：`§3` 的 pass 块若写在「裁定行进 `§3`」成文之前（无裁定行的旧块）⇒ 判据 2 判成无结论、`§5` 不可写；而工程模式的 `§3` 只由绑本档的评审实例写（`thincoder-core/agent-tools/batch.mjs` 的 append 轨 review 绑定支），父侧不能自行补块 ⇒ 出路 = **追加一轮携 pass 裁定的评审**（块落进 `§3` 即可）；不再跑一轮的，收口面照判据 1 走（收口门 ∥ 核销门③ 只判状态词，见下条）。这是可枚举的小集合（此刻在飞的批），不是持续产生的形。
 - **不对称（已登记残余）**：判据 2 只落 `§5` 写入门。收口门与核销门③ 仍只判判据 1（状态词）⇒ 一笔「只写散文、无裁定」的 `§3` 之后，实现被拦而收口 / 核销照走。不同步扩的理由：`§5` 门判的是「能不能开工」，开工面拦得住损失就止住了；收口是本批**已经做完**的事，在那里再插一道评论文本判据，只会让台账行卡在结账位、逼父侧改档才能结账——比它挡住的洞更贵。日后要扩，先重估这条代价。
 
 拒文（逐字）。判据 1 不过（与盘上实现一致）：
@@ -618,7 +618,7 @@ batch: §5 append refused — the implementation section opens only after the de
 batch: §5 append refused — the last §3 round block carries no pass verdict (§3 最近一轮轮次块 = 第 <N> 轮，块内裁定 = <无裁定行 | VERDICT: changes-required | 两者同携>). A pass means that block carries a `VERDICT: pass` line and no changes-required line — a round that does not state a pass is not a pass: append the verdict line to that block (`VERDICT: pass`)，或按裁定行重跑评审。Nothing was written.
 ```
 
-**核销门为什么能去运行态**：`§3` 只能由**绑在该档上的评审实例**写（`batch` 工具的 review 绑定，`batch.mjs:78-87`），
+**核销门为什么能去运行态**：`§3` 只能由**绑在该档上的评审实例**写（`batch` 工具的 review 绑定，`thincoder-core/agent-tools/batch.mjs` 的 append 轨），
 所以「§3 有 pass」本身就证明了「有一次绑本档的评审跑过并给了 pass」，与 token 槽归属同义，且换会话成立。
 代价：评审自报 pass 的信任面不变（今天也是评审自己写 §3）。
 
@@ -629,7 +629,7 @@ batch: §5 append refused — the last §3 round block carries no pass verdict (
 batch: 收口链未跑完（closeout chain gate）— close refuses: the record's closeout chain has not run, and closing would freeze it that way. Missing: <段表>. Each named section must carry its own content — the `不适用` declaration is retired (every batch needs its design, its review and its approval). §6 must carry its verification. Nothing was written.
 ```
 
-**四处拒文逐字面（收正清单）**：除上述两条，`closeoutS3Error`（`thincoder-core/agent-tools/batch-closeout.mjs:53-56`，逐字现为「……§2 / §4 / §6 各段须有内容或由 §1 声明不适用」）与 `§5` 门括注（同档 `:141-142`）同携已停用路——四处一并收正。`§3` 状态词臂拒文收正后只留「评审须真跑过并给 pass」。
+**四处拒文逐字面（收正清单）**：除上述两条，`closeoutS3Error`（`thincoder-core/agent-tools/batch-closeout.mjs`，逐字现为「……§2 / §4 / §6 各段须有内容或由 §1 声明不适用」）与 `§5` 门括注（同档）同携已停用路——四处一并收正。`§3` 状态词臂拒文收正后只留「评审须真跑过并给 pass」。
 
 ### 2.6.1 §3 写入闸（裁定行在写的时刻就要在）
 
@@ -715,7 +715,7 @@ batch_segment: §3 append refused — this round block states no readable verdic
 
 **在册状态读数（实测）**：单源 = `docs/core/design/LEDGER.md` §3.5 四件表——本轮已收正：A / 归批门 / B / C **机制均已在盘**，C 的**规则面**（本节分流）未落。
 
-实读：`thincoder-core/agent-tools/batch-lifecycle.mjs:503` / `:542` / `:601` 调 `reanchorOnClose`；`thincoder-core/ledger-cmd.mjs:395` `REANCHOR_STATUSES = ["待讨论","待设计","在途"]` · `:421` `ledgerReanchorBatch` 在盘。
+实读：`thincoder-core/agent-tools/batch-lifecycle.mjs` 三处调 `reanchorOnClose`；`thincoder-core/ledger-cmd.mjs` 的 `REANCHOR_STATUSES = ["待讨论","待设计","在途"]` · `ledgerReanchorBatch` 在盘。
 
 该表 C 行「规则面未落」= 本节的分流规则；本档落地后由合并轮同步该行读数。
 
@@ -723,7 +723,7 @@ batch_segment: §3 append refused — this round block states no readable verdic
 
 ### 2.8 迁移边（点火与建档用哪两条）
 
-`待讨论 → 在途` 与 `待设计 → 在途` 两条边**在册**——`ALLOWED_MIGRATIONS` 逐字：`"待讨论": ["待设计", "在途", "已废弃"]` · `"待设计": ["在途", "已废弃"]`（`thincoder-core/ledger-db.mjs:163`-`:164`，2026-10-28 实读）。本批工具零改，点火与建档都直接走这两条。
+`待讨论 → 在途` 与 `待设计 → 在途` 两条边**在册**——`ALLOWED_MIGRATIONS` 逐字：`"待讨论": ["待设计", "在途", "已废弃"]` · `"待设计": ["在途", "已废弃"]`（`thincoder-core/ledger-db.mjs` 的 `ALLOWED_MIGRATIONS`，2026-10-28 实读）。本批工具零改，点火与建档都直接走这两条。
 
 **建档的必要性**：建档事务（`§2.4`）的新建路径必须 INSERT 一行 `待讨论`（`在途` 被 DDL 咬合 CHECK 强制非空指针，不能先 INSERT `在途`）、落档后再迁 `在途` 并写指针——`待讨论 → 在途` 是那条路径的必经一步。R8 的验收用例是一条 `待讨论` 行 `update → 在途` 通过，消费方含建档路径本身。
 
@@ -731,7 +731,7 @@ batch_segment: §3 append refused — this round block states no readable verdic
 
 **描述面必须逐边枚举**：工具描述（`thincoder-core/tool-docs/ledger.md` 的 `update` 条）是模型读到这一面的唯一出处——它漏一条边，模型就按漏掉的那一版办事，而 `§2.4` 的建档与点火两条路都走在 `待讨论 → 在途` 上。
 
-故描述面**逐边写全**，与 `ALLOWED_MIGRATIONS` 单源（`thincoder-core/ledger-db.mjs:163`–`:166`）：`待讨论 → 待设计 / 在途 / 已废弃` · `待设计 → 在途 / 已废弃` · `在途 → 待核销 / 已废弃` · `待核销 → 已核销 / 在途 / 已废弃` · `已核销 → 已废弃` · `已废弃` 无出边。两条非常规边各带一句用途：`待讨论 → 在途` = 点火与建档的正路（不是例外，不过 `待设计`）；`待核销 → 在途` = 重开回收（六态唯一的回退边）。
+故描述面**逐边写全**，与 `ALLOWED_MIGRATIONS` 单源（住 `thincoder-core/ledger-db.mjs`）：`待讨论 → 待设计 / 在途 / 已废弃` · `待设计 → 在途 / 已废弃` · `在途 → 待核销 / 已废弃` · `待核销 → 已核销 / 在途 / 已废弃` · `已核销 → 已废弃` · `已废弃` 无出边。两条非常规边各带一句用途：`待讨论 → 在途` = 点火与建档的正路（不是例外，不过 `待设计`）；`待核销 → 在途` = 重开回收（六态唯一的回退边）。
 
 描述面**不引档名**（它由模型直接读，指向别档的引用会在改词后失效）——用途句自己把话说全。
 
@@ -755,7 +755,7 @@ batch_segment: §3 append refused — this round block states no readable verdic
 
 | 序 | 面 | 结果 |
 |---|---|---|
-| 1 | 出辖（祖先链无 manifest） | 放行（`dispatch.mjs:107` 同口径，零改——辖界，不是面） |
+| 1 | 出辖（祖先链无 manifest） | 放行（`thincoder-core/agent/dispatch.mjs` 同口径，零改——辖界，不是面） |
 | 2 | manifest `docRoot` 前缀命中 | 放行（文档面） |
 | 3 | 文件 = `PROJECT-MANIFEST.json`（项目状态档） | 放行（文档面） |
 | 4 | 其余一切（含 `code` / `temp` / `aux` / `state` / 构建产物目录 / 仓根 `scripts` · `test` · `.thincoder` · `.github` · 锁文件） | **拦**（产品面，fail-closed） |
@@ -774,7 +774,7 @@ batch_segment: §3 append refused — this round block states no readable verdic
 
 **不做什么**：`conventions.mjs` / `classifyPath` / `isCodePath` **本体**零改。`codePaths` 键保留，本批不动。
 
-六个消费面逐个点过：`agent/dispatch.mjs:115`（**换判源**：`isCodePath` → `faceOf`，`§2.1`）· `agent-tools/verify.mjs:193` · `agent-tools/advisor-settle.mjs:74` · `advisor/repos.mjs:122` / `:146` · `declaration.mjs:246`（此五处语义零改）。
+六个消费面逐个点过：`agent/dispatch.mjs`（**换判源**：`isCodePath` → `faceOf`，`§2.1`）· `agent-tools/verify.mjs` · `agent-tools/advisor-settle.mjs` · `advisor/repos.mjs`（两处） · `agent-tools/declaration.mjs`（此五处语义零改）。
 ### 2.11 收口前显式处置本批每一行（E11）
 
 **判据**：收口时本批行集里**仍是 `在途`** 的行 = 父侧未显式处置。理由：做完了的处置动作就是把它 `update → 待核销`，做完的行不会留在 `在途`。这是档面 + 台账面的合并事实，零运行态。
@@ -810,12 +810,12 @@ batch_segment: §3 append refused — this round block states no readable verdic
 
 | # | 坐标 | 名称 | 项数 | 消费面 |
 |---|---|---|---|---|
-| 1 | `thincoder-core/index-discover.mjs:28` | `SKIP_DIRS`（导出） | 8 | 索引发现 `:98` / `:155` |
-| 2 | `thincoder-core/tools/shared.mjs:27` | `IGNORED_DIRS`（导出） | 6 | `tools/search.mjs:9` / `:74` / `:172` |
-| 3 | `thincoder-core/tools/tree.mjs:13` | `SKIP_DIRS`（**未导出**） | 13 | `tree.mjs:65` 自身 |
-| 4 | `thincoder-core/memory/schema.mjs:48` | `SKIP_DIRS` + `SKIP_DIRS_FOLD`（`:63`）+ `SKIP_DIR_PREFIXES`（`:69`） | 39 | `memory/file-walk.mjs:13` 的 `isSkippedRelPath` |
+| 1 | `thincoder-core/index-discover.mjs` | `SKIP_DIRS`（导出） | 8 | 索引发现面 |
+| 2 | `thincoder-core/tools/shared.mjs` | `IGNORED_DIRS`（导出） | 6 | `thincoder-core/tools/search.mjs` 三处消费点 |
+| 3 | `thincoder-core/tools/tree.mjs` | `SKIP_DIRS`（**未导出**） | 13 | `tree.mjs` 自身 |
+| 4 | `thincoder-core/memory/schema.mjs` | `SKIP_DIRS` + `SKIP_DIRS_FOLD` + `SKIP_DIR_PREFIXES` | 39 | `memory/file-walk.mjs` 的 `isSkippedRelPath` |
 
-**合并方向 = 以第 4 份为准取并集**：它是四份里最成熟的一份，三件另三份没做的事都已做对——`bin` 故意不列（`:59` 注释原话）、win32 大小写折叠（`Node_Modules` 仍要剪）、前缀族（`bazel-<workspace>` 无法枚举）。
+**合并方向 = 以第 4 份为准取并集**：它是四份里最成熟的一份，三件另三份没做的事都已做对——`bin` 故意不列（该档注释原话）、win32 大小写折叠（`Node_Modules` 仍要剪）、前缀族（`bazel-<workspace>` 无法枚举）。
 
 **单源落点 = 新零依赖叶档 `thincoder-core/skip-dirs.mjs`**，三个导出、只有常量：
 
@@ -834,7 +834,7 @@ export const SKIP_DIR_PREFIXES // ["bazel-"]
 - 其他非代码目录（6）：`Library` · `go` · `Program Files` · `Program Files (x86)` · `Windows` · `$Recycle.Bin`
 - 本批补（3）：`.thincoder` · `.vs` · `.idea`
 
-**`SKIP_DIRS_FOLD`（18 项，`:63`–`:67` 原样）**：`node_modules` · `dist` · `build` · `.turbo` · `coverage` · `__pycache__` · `.venv` · `venv` · `target` · `.next` · `.nuxt` · `.svelte-kit` · `vendor` · `Pods` · `bower_components` · `third_party` · `obj` · `out`。`.git` 不在——它在 `file-walk` 的点段规则里（`:47` 注释）。
+**`SKIP_DIRS_FOLD`（18 项原样）**：`node_modules` · `dist` · `build` · `.turbo` · `coverage` · `__pycache__` · `.venv` · `venv` · `target` · `.next` · `.nuxt` · `.svelte-kit` · `vendor` · `Pods` · `bower_components` · `third_party` · `obj` · `out`。`.git` 不在——它在 `file-walk` 的点段规则里（该档注释）。
 
 **四项处置（附理由，防后人删改）**：
 
@@ -844,7 +844,7 @@ export const SKIP_DIR_PREFIXES // ["bazel-"]
 | `.vs` / `.idea` | 进 `SKIP_DIRS` | IDE 配置目录：进索引是噪音，进锁是无谓摩擦 |
 | 三者不进 `SKIP_DIRS_FOLD` | 折叠集**原样** | 折叠集为「工具在 win32 造出的混合大小写」而设；这三项由工具以小写创建，折叠无收益 |
 | `bin` | **不列**（沿第 4 份） | `thincoder-cli/bin/` 有 2 个 `.mjs` 是 CLI 入口、产品代码（§13.5 的 `{src,bin,webview,test}/**`）；列入会把入口漏出锁外 |
-| `turbo` | **并入 `.turbo`** | `tree.mjs:13` 的 `turbo`（无点）是笔误：另三份都是 `.turbo`，工作区递归查 `*turbo*` 零命中该目录 |
+| `turbo` | **并入 `.turbo`** | `thincoder-core/tools/tree.mjs` 的 `SKIP_DIRS` 里 `turbo`（无点）是笔误：另三份都是 `.turbo`，工作区递归查 `*turbo*` 零命中该目录 |
 
 **一处必须写明的行为变更（用户裁定接受）**：`index-discover` 与 `tools/search` 原只剪 8 / 6 项，接单源后 `vendor` · `third_party` · `Pods` · `target` · `out` · `obj` · `venv` · `.nuxt` 等也落剪枝——索引面因此少收这些目录（多为第三方 / 生成物）。`memory/file-walk` 本就在剪它们，两个面从此同答案。
 
@@ -852,10 +852,10 @@ export const SKIP_DIR_PREFIXES // ["bazel-"]
 
 | 消费面 | 改法 |
 |---|---|
-| `memory/schema.mjs:48-69` | 删三处定义，改 `import` + **同名 re-export**（`memory.mjs:7` 的导出面逐字零变） |
-| `index-discover.mjs:28` | 删本地 `const`，改 `import` + 同名再导出（既有 import 面零改） |
-| `tools/shared.mjs:27` | 删 `IGNORED_DIRS`；`search.mjs` 三处改引 `SKIP_DIRS`（一词一物）。实施时 grep 确认无第四消费面；若有 ⇒ 保留同名再导出 |
-| `tools/tree.mjs:13` | 删本地 `const`（未导出），改 `import` |
+| `memory/schema.mjs` | 删三处定义，改 `import` + **同名 re-export**（`memory.mjs` 的导出面逐字零变） |
+| `index-discover.mjs` | 删本地 `const`，改 `import` + 同名再导出（既有 import 面零改） |
+| `tools/shared.mjs` | 删 `IGNORED_DIRS`；`search.mjs` 三处改引 `SKIP_DIRS`（一词一物）。实施时 grep 确认无第四消费面；若有 ⇒ 保留同名再导出 |
+| `tree.mjs` | 删本地 `const`（未导出），改 `import` |
 | `agent/write-face.mjs` | 面判两值（`§2.10`）；不引排除名单——「什么算产物」不再参与面判定 |
 
 **为什么落叶档不落 `conventions.mjs`**：`memory/schema.mjs` 引 `node:sqlite` / `node:fs` / `node:path` / `../fts-text.mjs`，不是零依赖；`conventions.mjs` 的依赖链已被 `declaration.mjs` → `manifest.mjs` 拖着走。叶档零出边，四处引它不成环、不加重量。
@@ -864,7 +864,7 @@ export const SKIP_DIR_PREFIXES // ["bazel-"]
 
 **收口的反面**：`§2.7` / `§2.11` 管「批档关 ⇒ 行离开工作位」；重开管「批档开 ⇒ 行回工作位」。两者不对称，两个载体就各说各话——台账说「待结账」，批档说「在干」。
 
-**触发判据（写死，一处消费）**：台账联动**只**由重开合取触发，判据 = `thincoder-core/agent-tools/batch-lifecycle.mjs:234` 已有的布尔 `reopen`：
+**触发判据（写死，一处消费）**：台账联动**只**由重开合取触发，判据 = `thincoder-core/agent-tools/batch-lifecycle.mjs` 已有的布尔 `reopen`：
 
 ```
 seg === 1 ∧ depth0 ∧ ¬review ∧ stripDecorations(value) === 进行中 ∧ readBatchStatusLine(src) === "closed"
@@ -879,25 +879,25 @@ seg === 1 ∧ depth0 ∧ ¬review ∧ stripDecorations(value) === 进行中 ∧ 
 | 处境（重开时行的状态） | 重开后 | 理由 |
 |---|---|---|
 | `待核销`（收口后重开） | **→ `在途`** | 行回工作位，活继续在这一行上；台账里又有该档的在途行 ⇒ 写锁放行（`§2.3`） |
-| `已核销`（核销后重开） | **不动** | 终态（`ledger-db.mjs:163` 唯一出边 = `已废弃`）；行上挂着结账证据，拉回来等于抹掉「结过账」 |
+| `已核销`（核销后重开） | **不动** | 终态（`thincoder-core/ledger-db.mjs` 的 `ALLOWED_MIGRATIONS` 唯一出边 = `已废弃`）；行上挂着结账证据，拉回来等于抹掉「结过账」 |
 | 其余（`条件` / `待讨论` / `待设计` / `已废弃` / `在途`） | 不动、不点名 | 都不是本批的活跃工作行：没做的、撤回的、已在工作位的 |
 
 **`待核销` 为什么必须回收**：不回收 ⇒ 重开后行仍 `待核销` ⇒ 台账里没有该档的在途行 ⇒ 写锁按 `§2.3` 判据把每一笔写盘都拒（不分面）。人要干活先被自己的锁挡住，唯一出路是手改行——本该自动的一步。
 
 **`已核销` 为什么不回收 + 必须点名**：核销是一次结账，终态不可逆；「批档重开、行已核销」的处置是**另立新行**（新档 `前情` 指回本档）——`#1827` 那次只能另立 `#1828` 就是这条。静默不回 = 父侧以为行被带回来了，下一步写产品码被写锁拒、回头才查；回执点名 = 当时一眼知道要另立行。
 
-**写法**：台账写点单源 = `ledger-cmd.mjs` 新导出 `ledgerReclaimBatch({cwd, batch, boundary})`，与 `ledgerReanchorBatch`（`:421-454`）**同形对称**——同一行集 `resolveBatchRows`（行集判据单源）、`BEGIN IMMEDIATE` 单事务、失败 `ROLLBACK` 零行改、**不抛**（返回形 `failed`）。
+**写法**：台账写点单源 = `ledger-cmd.mjs` 新导出 `ledgerReclaimBatch({cwd, batch, boundary})`，与 `ledgerReanchorBatch`（同档）**同形对称**——同一行集 `resolveBatchRows`（行集判据单源）、`BEGIN IMMEDIATE` 单事务、失败 `ROLLBACK` 零行改、**不抛**（返回形 `failed`）。
 
 - 返回形：`{batch, reclaimed:[{id,status,title}], unreclaimable:[{id,status,title}], failed:string|null}`。
-- 逐行：`待核销` ⇒ `UPDATE items SET status='在途', executor=? WHERE id=?`——`trigger` / `resume_when` / `evidence` / `updated_at` **零触**（机器回收不是人工推进，行龄读数照旧；同 `ledgerReanchorBatch:418` 口径）；`executor` = **本会话 `sessionId`**（一次事务内取一次），因为行回工作位、而干活的就是重开这个会话——`docs/core/design/LEDGER.md` AC-M2-7（现盘 `:970`）「进入「在途」的迁移带 `executor` = 会话 `sessionId`」因而在机器径上也成立，判活面（同档 §7.3.1，现盘 `:912`）不会读到空属主。`已核销` ⇒ 入 `unreclaimable`；其余 ⇒ 跳过、不点名。
-- **回退边与 AC-M2-7 的随动**：`docs/core/design/LEDGER.md:171` 现写「迁移表仅此两出边；六态**无回退边**」——本批开出第三条出边（`待核销 → 在途`），该句随之改为「回退边唯一一条 = `待核销 → 在途`（重开回收）」，AC-M2-7 的「回退清除」子句由此有了表内路径：回退进入在途 ⇒ `executor` 写本会话，同 §3.1 ① 式。收正归合并轮，本档已定语义。
-- `ledger.mjs:157` 公共面同步再导出。
+- 逐行：`待核销` ⇒ `UPDATE items SET status='在途', executor=? WHERE id=?`——`trigger` / `resume_when` / `evidence` / `updated_at` **零触**（机器回收不是人工推进，行龄读数照旧；同 `ledgerReanchorBatch` 口径）；`executor` = **本会话 `sessionId`**（一次事务内取一次），因为行回工作位、而干活的就是重开这个会话——`docs/core/design/LEDGER.md` 的 AC-M2-7「进入「在途」的迁移带 `executor` = 会话 `sessionId`」因而在机器径上也成立，判活面（同档 §7.3.1）不会读到空属主。`已核销` ⇒ 入 `unreclaimable`；其余 ⇒ 跳过、不点名。
+- **回退边与 AC-M2-7 的随动**：`docs/core/design/LEDGER.md` 现写「迁移表仅此两出边；六态**无回退边**」——本批开出第三条出边（`待核销 → 在途`），该句随之改为「回退边唯一一条 = `待核销 → 在途`（重开回收）」，AC-M2-7 的「回退清除」子句由此有了表内路径：回退进入在途 ⇒ `executor` 写本会话，同 §3.1 ① 式。收正归合并轮，本档已定语义。
+- `ledger.mjs` 公共面同步再导出。
 
-**位次与失败语义**：① `rewriteAsReopen` 写盘（`:476`）→ ② `await reclaimOnReopen(abs, cwd)` → ③ 回执拼 `reopenReceiptLine(reclaim)`。
+**位次与失败语义**：① `rewriteAsReopen` 写盘 → ② `await reclaimOnReopen(abs, cwd)` → ③ 回执拼 `reopenReceiptLine(reclaim)`。
 
 - **失败不否决重开**：重开是从误冻结里出来的唯一通路，台账库忙不该把档锁死。失败 ⇒ 重开照成、回执点名 `failed` 原文 + 后果 + 出路。
 - 后果点名（本节的坑）：行仍 `待核销` ⇒ 台账无在途行，产品码写仍被写锁拒；出路 = 库恢复后 `ledger({action:"update", id, status:"在途"})`。
-- **因此迁移边在册**：`ALLOWED_MIGRATIONS["待核销"]` 含 `在途`（`thincoder-core/ledger-db.mjs:166` 实读：`["已核销", "在途", "已废弃"]`）。没有它上面那句出路是假话（`ledgerUpdate` 会拒）。机器路径走直改、不查迁移表（同重锚）；这条边只为**人面**而设，是 `在途 → 待核销`（收口）的反向边。
+- **因此迁移边在册**：`ALLOWED_MIGRATIONS["待核销"]` 含 `在途`（`thincoder-core/ledger-db.mjs` 实读：`["已核销", "在途", "已废弃"]`）。没有它上面那句出路是假话（`ledgerUpdate` 会拒）。机器路径走直改、不查迁移表（同重锚）；这条边只为**人面**而设，是 `在途 → 待核销`（收口）的反向边。
 
 **回执逐字**（`reopenReceiptLine`，空行不出；`failed` 非空时只出第三行，替代前两行）：
 
@@ -927,7 +927,7 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 
 归档态那支不是新分支：改前同一输入也走这条首判并拒（旧判据 `待讨论 / 待设计 / 待核销` 本就不含归档态），行为零改，只把这句兜底话换准。
 
-**连带退役**：同函数 `:163` 的追认 `evidence` 门随边一并删——边没了，它判的那件事不存在。批量面 `close --batch` 的跳过文案改判据句：`待讨论 / 待设计` 行 ⇒ `ledgerClose：待认领不可核销（须先 update 到 在途）`。
+**连带退役**：同函数内那条追认 `evidence` 门随边一并删——边没了，它判的那件事不存在。批量面 `close --batch` 的跳过文案改判据句：`待讨论 / 待设计` 行 ⇒ `ledgerClose：待认领不可核销（须先 update 到 在途）`。
 
 **最近先例**：同档决策 28（`§2.6`，同批裁定）。**对齐**——同一形状：删掉一条「读起来像捷径」的判据输入，不加门、不写「已注明不可达」；代价与存量处置当场写明。
 
@@ -949,51 +949,33 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 
 ## 3. 受影响文件
 
-**档位结论（本批 · 2026-11-05 实量）**：
+**档位结论（逐档见下表）**——行数读数不落本档：会变的读数进命令、不进状态档（判据 = `docs/core/design/TESTING.md` §1.3「会变 ⇒ 不进文档，进命令」）。下表只留结论与触线判据；要现值就复跑下面的量法。
 
-- `thincoder-core/agent/write-gate.mjs` = **522 行**——在 500 软线之上、650 拆分触发线之下；本批在其上是**净负行**（删 `git` 分支 ∥ 取根支与一个 import `readonlyActionOf`），拆分义务已有承接批在册 ⇒ **不新增**，切法见下表该行。
-- `thincoder-core/agent-tools/batch-skeleton.mjs` = 508 行（2026-11-03 该轮读数）——越软线，拆单见下表第二行。
-- `thincoder-core/tools/shared.mjs` = **497 行**——余 3，触 500 即拆。
-- 其余各档在软线内。
+**量法（唯一一处）**：
 
-**本批 2026-11-05 实量**（量法 = `readFileSync(p,'utf8').split(/\r?\n/).length`，末行空行计入）：
+```text
+node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log(p, fs.readFileSync(p,'utf8').split(/\r?\n/).length)" <档1> <档2> …
+```
 
-- `thincoder-core/agent/write-gate.mjs` = **522**
-- `thincoder-core/tools/git.mjs` = **429**
-- `test/integration/batch-live-batch-lock.test.mjs` = **415**
-- `thincoder-core/tools/shared.mjs` = **497**
+末行空行计入。`Get-Content | Measure-Object -Line` 跳空行、`Get-Content .Count` 与本量法不等——两者都复现不了同一组值，故量法只认上列这一条。
 
-表内行数凡标日期的按该日期取，未标的是 2026-11-03 该轮读数。
-
-- **`write-gate.mjs` = 522 ⇒ 已过 500 软线**：在软线之上、650 拆分触发线之下；本批在其上净负，拆分义务另有承接批在册 ⇒ 本批不新增拆分义务。
-- **`git.mjs` = 429**、`shared.mjs` = 497 ⇒ 两档软线内；本批各为净负（删两格 + 两个 import ∥ 删一条常量导出、改一句描述）。
-- **`test/integration/batch-live-batch-lock.test.mjs` = 415**：测试档不进档位判定（软线判源档），该读数只为「本批改动是净负一格」留证。
-- **本批单测档 `docs/batches/2026-11-05-git-exempt-write-gate.test.mjs` 设计时刻未落盘 ⇒ 不进档位判定**（随批删，见 `docs/core/design/TESTING.md` 的零留存口径）。
-- **不拿估数代替复量**：量法与结果必须同处，读数才可复现；行数按上列量法当场复量一次，不引用记忆里的旧值。
-
-`thincoder-core/agent-tools/batch-lifecycle.mjs` 已拆，现盘 368 行、软线内（拆出的三档在盘：`batch-ledger-bind.mjs` ∥ `batch-closeout.mjs` ∥ `batch-reopen.mjs`）。
-
-**`thincoder-core/agent/write-gate.mjs` 已越 500 行软线**（本批实量 522 行；2026-11-03 该轮读数 510）。本批在其上是**净负**（删 `git` 分支 ∥ 取根支 ∥ 一个 import `readonlyActionOf`），而净负回不到线下（522 > 500）⇒ 拆单义务不因本批产生，且已有承接批在册 ⇒ **本批不拆**，切法与结论见下表该行。
-
-本批涉及的各档行数（各行自标日期；未标 = 2026-11-03 该轮读数。量法 = `readFileSync(p,'utf8').split(/\r?\n/).length`，末行空行计入。`Get-Content | Measure-Object -Line` 跳空行、`Get-Content .Count` 与本量法仍不等——两者都复现不了本表）：
-
-| 档 | 行数 | 档位结论 |
-|---|---|---|
-| `thincoder-core/tools/shared.mjs` | **497**（2026-11-05 实量） | 软线内（余 3）；**2026-11-03 那笔**加 `PROJECT_PARAM_DESC` 一条常量 + 导出，**本批 2026-11-05** 是净负（删 `LEDGER_PARAM_DESC_GIT` 那条导出、`PROJECT_PARAM_DESC` 句内摘掉 `git`）。触线判据 = 实施后 >500 则把参数描述常量（`LEDGER_PARAM_DESC` 及其 `_GIT` ∥ `_MANIFEST` ∥ `_MEMORY` 后缀 + `PROJECT_PARAM_DESC`）整体迁到新档 `thincoder-core/tools/param-desc.mjs`，`shared.mjs` 改再导出（描述仍单源、消费面零改） |
-| `thincoder-core/agent-tools/batch-skeleton.mjs` | 508 | **已越软线**；本批改动是删行（净负），净负回不到线下 ⇒ **拆单**：把裁定行锚与两条计划（`ROUND_HEADING_RE` ∥ `countRoundBlocks` ∥ `lastRoundBlock` ∥ `nextRoundNumber` ∥ `_V_PRE` ∥ `_V_SUF` ∥ `VERDICT_CHANGES_LINE` ∥ `VERDICT_PASS_LINE` ∥ `verdictGapOf` ∥ `statusResetPlan` ∥ `statusPassPlan`）整体迁到新档 `thincoder-core/agent-tools/batch-verdict.mjs`，`batch-skeleton.mjs` 改再导出；判据 = 拆后 ≤500 ∧ 十一件导出名逐条仍在、导出面零变 |
-| `thincoder-core/tools/file.mjs` | 453 | 软线内（余 47）；本批只加 `ledger` 一个参数 ⇒ 不拆 |
-| `thincoder-core/tools/git.mjs` | **429**（2026-11-05 实量，量法见上） | 软线内（余 71）；本批净负——删 `ledger` ∥ `project` 两格 + 清两个 import（`LEDGER_PARAM_DESC_GIT` ∥ `PROJECT_PARAM_DESC`）；`readonlyActionOf` 不在本档（它是 `write-gate.mjs` 的 import，该档随本批删这一个）；`isReadonlyAction` 钩子零改 ⇒ 不拆 |
-| `thincoder-core/agent/write-gate.mjs` | **522**（2026-11-05 实量；2026-11-03 该轮 510） | **已越 500 软线、未到 650 拆分触发线**：本批在其上是净负（删 `git` 分支 ∥ 取根支 ∥ 一个 import `readonlyActionOf`），净负回不到线下 ⇒ 拆分义务不因本批新增（承接批已在册）。**本批不拆**；切法 = 写锁段（`ledgerRowAt` ∥ 拒文组装 ∥ `resolveDeclaredRoot` ∥ `ledgerGateTargets`）整体搬进新档 `thincoder-core/agent/write-gate-ledger.mjs`，`write-gate.mjs` 改 re-export（`ledgerBindWriteConflict` 导出名与调用面零变）；拆单归另一批 |
-| `thincoder-core/tools/ops.mjs` | 347 | 软线内（`ledger` 一行） |
-| `thincoder-vscode/src/tools/shell.mjs` | 334 | 软线内（端 schema 副本补 `ledger` ∥ `project` 两行） |
-| `thincoder-core/tools/patch.mjs` | 307 | 软线内（`ledger` 一行） |
-| `thincoder-core/tools/bash.mjs` | 304 | 软线内（加 `project` 一行） |
-| `thincoder-core/agent/dispatch.mjs` | 282 | 软线内 |
-| `thincoder-core/memory/memory-tool.mjs` | 247 | 软线内（加 `project` 一行） |
-| `thincoder-core/tools/execute.mjs` | 244 | 软线内（加 `project` 一行） |
-| `thincoder-core/agent-tools/manifest.mjs` | 234 | 软线内（加 `project` 一行） |
-| `thincoder-core/agent/dispatch-run.mjs` | 185 | 软线内 |
-| `thincoder-vscode/src/tools/index.mjs` | 178 | 软线内（删端覆写是净负） |
+| 档 | 档位结论 |
+|---|---|
+| `thincoder-core/tools/shared.mjs` | 软线内；**2026-11-03 那笔**加 `PROJECT_PARAM_DESC` 一条常量 + 导出，**本批 2026-11-05** 是净负（删 `LEDGER_PARAM_DESC_GIT` 那条导出、`PROJECT_PARAM_DESC` 句内摘掉 `git`）。触线判据 = 本批落完后复量越 500 则把参数描述常量（`LEDGER_PARAM_DESC` 及其 `_GIT` ∥ `_MANIFEST` ∥ `_MEMORY` 后缀 + `PROJECT_PARAM_DESC`）整体迁到新档 `thincoder-core/tools/param-desc.mjs`，`shared.mjs` 改再导出（描述仍单源、消费面零改） |
+| `thincoder-core/agent-tools/batch-skeleton.mjs` | **已越软线**；本批改动是删行（净负），净负回不到线下 ⇒ **拆单**：把词表 / 段白名单 / 状态行读写叶块（`STATUS_WORDS` ∥ `STATUS_WORD_ALIASES` ∥ `SEGMENT_BY_ROLE` ∥ `SEGMENT_BY_ROLE_NORMAL` ∥ `DEPTH0_SEGMENTS` ∥ `STATUS_LINE_RE` ∥ `SECTION_1_HEADER_RE` ∥ `sectionHeaderRe` ∥ `isBatchRecord` ∥ `TEMPLATE_PLACEHOLDERS` ∥ `HEADER_STRUCTURAL_RE` ∥ `findPlaceholderResidue` ∥ `placeholderResidueError` ∥ `readBatchStatusLine` ∥ `updateSectionStatusLine` ∥ `readSectionStatusWord`）整体迁到新档 `thincoder-core/agent-tools/batch-segment-vocab.mjs`，`batch-skeleton.mjs` 改再导出；判据 = 拆后复量 ≤500 ∧ 十六件导出名逐条仍在、导出面零变；裁定锚与轮次块留原档（与 `sectionBodyLines` / `sectionHeaderZoneLines` 同档，单拆会把段解析复制一份） |
+| `thincoder-core/tools/file.mjs` | 软线内；本批只加 `ledger` 一个参数 ⇒ 不拆 |
+| `thincoder-core/tools/git.mjs` | 软线内；本批净负——删 `ledger` ∥ `project` 两格 + 清两个 import（`LEDGER_PARAM_DESC_GIT` ∥ `PROJECT_PARAM_DESC`）；`readonlyActionOf` 不在本档（它是 `write-gate.mjs` 的 import，该档随本批删这一个）；`isReadonlyAction` 钩子零改 ⇒ 不拆 |
+| `thincoder-core/agent/write-gate.mjs` | **已越 500 软线、未到 650 拆分触发线**：本批在其上是净负（删 `git` 分支 ∥ 取根支 ∥ 一个 import `readonlyActionOf`），净负回不到线下 ⇒ 拆分义务不因本批新增（承接批已在册）。**本批不拆**；切法 = 写锁段（`ledgerRowAt` ∥ 拒文组装 ∥ `resolveDeclaredRoot` ∥ `ledgerGateTargets`）整体搬进新档 `thincoder-core/agent/write-gate-ledger.mjs`，`write-gate.mjs` 改 re-export（`ledgerBindWriteConflict` 导出名与调用面零变） |
+| `thincoder-core/tools/ops.mjs` | 软线内（`ledger` 一行） |
+| `thincoder-vscode/src/tools/shell.mjs` | 软线内（端 schema 副本补 `ledger` ∥ `project` 两行） |
+| `thincoder-core/tools/patch.mjs` | 软线内（`ledger` 一行） |
+| `thincoder-core/tools/bash.mjs` | 软线内（加 `project` 一行） |
+| `thincoder-core/agent/dispatch.mjs` | 软线内 |
+| `thincoder-core/memory/memory-tool.mjs` | 软线内（加 `project` 一行） |
+| `thincoder-core/tools/execute.mjs` | 软线内（加 `project` 一行） |
+| `thincoder-core/agent-tools/manifest.mjs` | 软线内（加 `project` 一行） |
+| `thincoder-core/agent/dispatch-run.mjs` | 软线内 |
+| `thincoder-vscode/src/tools/index.mjs` | 软线内（删端覆写是净负） |
 
 上表逐档给结论，无一档用「改后复量一次」代替结论。
 
@@ -1010,12 +992,12 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 | `thincoder-core/agent/dispatch.mjs` | 改造 | Phase 1 写面冲突块：`bash` ∥ `execute` 也进（写锁那一道的门内），调形传 `tool` + `toolName` + `args`（路径集与 `args.ledger` 由判据函数自己取）；`reason` 改 `ledger binding`（旧串 `no in-flight ledger row` 退场）；既有两道（跨批档写 · D5 冻结窗）位次与判据零改 |
 | `thincoder-core/agent/dispatch-run.mjs` | 改造 | 拒因串消费点：`denied` 分支按 `item.reason` 选回显串，旧串 `no in-flight ledger row` 随判据退场 ⇒ `"ledger binding"` 与既有两道同支，回 `Error: ${item.hint}`。不同笔改这里，拒文会掉进兜底串（模型看不到真拒因） |
 | `thincoder-core/tools/file.mjs` ∥ `patch.mjs` ∥ `ops.mjs` ∥ `bash.mjs` ∥ `execute.mjs` | 改造 | 各工具 `parameters.properties` 加 `ledger`（不进 `required`，决策 35）；`execute.mjs` 另加 `project`（描述 = `PROJECT_PARAM_DESC`，只在定位参数缺位时被读）。`git.mjs` ∥ `manifest.mjs` ∥ `memory-tool.mjs` ∥ `ssh.mjs` 的 `ledger`（及 `manifest` ∥ `memory` 的 `project`）沿用既有——本批只删 `git` 那两格 |
-| `thincoder-vscode/src/tools/index.mjs` | 改造 | 删 `gitTool` 的 `isReadonlyAction` 覆写（`:50`–`:62`），保留 `...coreGitTool` 展开；`CHECKPOINT.md` F6/D3 的口径注搬进核钩子——核有钩子后端覆写就是同一份名单的第二份拷贝，且优先级让端覆写吃掉核答案 |
+| `thincoder-vscode/src/tools/index.mjs` | 改造 | 删 `gitTool` 的 `isReadonlyAction` 覆写，保留 `...coreGitTool` 展开；`CHECKPOINT.md` F6/D3 的口径注搬进核钩子——核有钩子后端覆写就是同一份名单的第二份拷贝，且优先级让端覆写吃掉核答案 |
 | `thincoder-vscode/src/tools/shell.mjs` | 改造 | 端自持的 `bash` 是独立 schema 副本（非核工具展开）⇒ 同一行 `ledger` 参数（描述引 `LEDGER_PARAM_DESC`）+ 同一行 `project`（描述引 `PROJECT_PARAM_DESC`）；不补则该端 schema 面上没有这两个参数，只有拒文能教它 |
 | `thincoder-core/agent-tools/manifest.mjs` | 改造 | `parameters.properties` 加 `ledger`（不进 `required`）与 `project`（`target` 缺位时被读）；`init` ∥ `write` 进本门（`init` 的豁免支在门体取根步——决策 43）、`read` 不进（决策 39） |
 | `thincoder-core/memory/memory-tool.mjs` | 改造 | `parameters.properties` 加 `ledger`（不进 `required`）+ `project`（`PROJECT_PARAM_DESC`，不进 `required`——该工具没有定位参数，判据点只能靠声明，决策 40）；落 project 层的写型 action 进本门——`layer:"project"`，或单条删除且 id 前缀 = `project:`（决策 39） |
 | `thincoder-core/tool-docs/` 入口集工具描述档——**改前十三份 ∥ 改后十二份**（`write` / `edit` / `insert_after` / `apply_patch` / `delete` / `hashline_edit` / `file_ops` / `bash` / `execute` / `manifest` / `memory` / `ssh` / `git` 各一档，同目录：`thincoder-core/tool-docs/git.md` ∥ `thincoder-core/tool-docs/ssh.md` 都在其中。`git` 退出入口集 ⇒ 其档不再教要号 ⇒ 十二份。`ssh` 的 `get` 支机制归 `docs/core/design/TOOLS.md`——那是机制归属，不是描述档落点） | 改造 | 各补一行用法：`ledger:"#N"` = 本笔服务的那条在途台账行；工程模式下缺它 = 拒（描述面是模型真正读到的那一面）。**`git` 档反着做——三处一并删**（`ledger` 行 ∥ `project` 行 ∥ 「Read-only actions do not need it: …」那一句）：本批之后写型与只读不再分判，留着就是教「写动作要号」；`checkpoint` 的 `list` ∥ `cat` 判只读归审批面，由 `thincoder-core/tools/git.mjs` 的钩子持，教学面不复述；`manifest` 档写「`write` 要号；`init` 仅当目标在既有项目内（祖先链上有 `PROJECT-MANIFEST.json`）才要——祖先链无 manifest 的自举不要；`read` 不要」；`memory` 档写「落 project 层就要号——`layer:"project"` 或 `project:` id 前缀」；`bash` ∥ `execute` ∥ `manifest` ∥ `memory` 四档另写一行 `project` 用法与那句「纯声明，不改执行目录」（`execute` ∥ `manifest` 写明「定位参数缺位时才用」） |
-| `thincoder-core/agent/dispatch.mjs` | 改造 | Phase 1 写面冲突块接第三道门（既有两道 = 跨批档写 · D5 冻结窗）+ `:115` 设计门换判源 `isCodePath` → `faceOf`（`§2.1`） |
+| `thincoder-core/agent/dispatch.mjs` | 改造 | Phase 1 写面冲突块接第三道门（既有两道 = 跨批档写 · D5 冻结窗）+ 设计门换判源 `isCodePath` → `faceOf`（`§2.1`） |
 | `thincoder-core/agent-tools/batch-skeleton.mjs` | 改造 | 词表改 `评审通过` + 别名表；`§2.5` 新增导出 `statusPassPlan`，`VERDICT_PASS_LINE` 定义迁入锚块；`§2.6` `INAPPLICABLE_SEGMENTS` 清空（`[]`——声明机制整条退役） |
 | `thincoder-core/agent-tools/batch-lifecycle.mjs` | 改造 | 拆分 + 改链门 + 重开回收调点（`§2.13`；见下）；`readBatchStatusLine` 的消费面五处（`findInFlightBatch` · `assertGateOpen` · 重开合取 · 收口重锚触发 · close 前置存在性网）调形零变，逐处符号 + 调用形见下表（本轮零改，判据 = `§1` 现量 0） |
 | `thincoder-core/agent-tools/batch-ledger-bind.mjs` | 新档 | 从 lifecycle 拆出建档 / 台账接管事务 |
@@ -1034,13 +1016,13 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 | `thincoder-core/memory.mjs` | 零改 | `SKIP_DIRS` 导出面由 re-export 保住 |
 | `thincoder-core/tools/bash.mjs` | 改造 | `parameters.properties` 加 `project`（描述 = `PROJECT_PARAM_DESC`，不进 `required`）；判据读它、执行目录不变（决策 40） |
 
-**上表 34 行**（2026-11-03 逐行实测：新档 5 · 改造 26 · 删档 1 · 零改 2；行数不等于档数—— `thincoder-core/agent/dispatch.mjs` 占两行，同一档两处改动）。
+**上表按档计**：`thincoder-core/agent/dispatch.mjs` 占两行（同档两处改动）——行数不等于档数。
 
-**判据点改动的档位结论**：逐档读数与结论见上表——越线的两档 = `thincoder-core/agent-tools/batch-skeleton.mjs`（508 行，归段头区收窄那一笔，拆单见上表第二行）与 `thincoder-core/agent/write-gate.mjs`（522 行，本批不拆，切法见该行）；其余受触档在软线内，最高 `shared.mjs` = 497（余 3）。
+**判据点改动的档位结论**：逐档结论见上表——越线的两档 = `thincoder-core/agent-tools/batch-skeleton.mjs`（归段头区收窄那一笔，拆单见上表第二行）与 `thincoder-core/agent/write-gate.mjs`（本批不拆，切法见该行）；其余受触档在软线内。
 
-**档位结论（本轮定位面收窄）**：受触档 `thincoder-core/agent-tools/batch-skeleton.mjs` **已越软线（508 行）**——落法是写面与读面共用同一条段头区判定（`§2.5` 的单源表），读面不再有第二个取值区；行数靠拆单回到软线内（拆法与判据 = 上表第二行）。
+**档位结论（本轮定位面收窄）**：受触档 `thincoder-core/agent-tools/batch-skeleton.mjs` **已越软线**——落法是写面与读面共用同一条段头区判定（`§2.5` 的单源表），读面不再有第二个取值区；行数靠拆单回到软线内（拆法与判据 = 上表第二行）。
 
-- **落法做成净负**：删 `region` 形参、删其 JSDoc 段与两条计划的两处 `"header"` 实参 ⇒ 改后行数不高于改前（改前实测 508 行，判据 = `§5` R24 第 ⑧ 格）；不靠「注释行等量压缩」凑预算。`thincoder-core/agent-tools/batch.mjs` 与 `thincoder-core/agent-tools/design-token.mjs` 本笔零改，其余各档零触。
+- **落法做成净负**：删 `region` 形参、删其 JSDoc 段与两条计划的两处 `"header"` 实参 ⇒ 改后不高于改前（判据 = `§5` R24 第 ⑧ 格用上列量法复比）；不靠「注释行等量压缩」凑预算。`thincoder-core/agent-tools/batch.mjs` 与 `thincoder-core/agent-tools/design-token.mjs` 本笔零改，其余各档零触。
 - **`readBatchStatusLine` 的消费面零改、行为不变**——一符号一行（3 档 7 个调用点），收窄只改解析体，调用形与三态返回值零变。**坐标一律用符号名，不记行号**——行号随任何一笔注释增删漂移，而符号名跟着代码走：
 
 | # | 所在符号 | 调用形 |
@@ -1108,7 +1090,7 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 
 23. **一本批档的账 = 指回本档的行集**（`§2.4`）：覆盖几条就绑几条；认领不新开台账行，撤回只许用于重复登记（同一件债记了两次）。
 
-    理由：需求面 `docs/core/requirements/ENGINEERING-MODE-V2.md:718` 本身就是行集模型（一点一账 + 每条覆盖行绑回本档）——同一件事两套账，必然出现「批里已结、账上还开着」。
+    理由：需求面 `docs/core/requirements/ENGINEERING-MODE-V2.md` 本身就是行集模型（一点一账 + 每条覆盖行绑回本档）——同一件事两套账，必然出现「批里已结、账上还开着」。
 
     被拒 = 一本一行、其余 `已废弃` 并入并 `evidence` 记「并入 #N」：① 做完的点被记成撤回（`已废弃` 的语义是撤回，`§2.4`）；② 攒批本就是多点进一批（`thincoder-core/prompts/persona-engineering.md` §Ledger 的 `Merge what can be merged`），点与执行载体的单位不同。代价 = 点火多写 N−1 条 `update`（与并入路径同量）。
 
@@ -1222,7 +1204,7 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 
 `git` **整把退出入口集**（`§2.3`）：写型 action 不要号、`path` ∥ `workdir` 不参与取根、`ledger` ∥ `project` 两格从 schema 删。理由三条（同一件活被收两次费 ∥ 把兜底做成阻力 ∥ 实机 `#2049` → `#2056`）逐字见 `§2.3`「`git` 不进写门」。
 
-**名单本体保留，因为它另有判据消费者**：`isReadonlyAction`（`thincoder-core/tools/git.mjs:108`）判的是**审批面**——planMode 放行（`thincoder-core/agent/dispatch.mjs:63`）∥ 免审批短路（同档 `:185`）。本批只摘掉写门那一个消费者，名单一字不改。
+**名单本体保留，因为它另有判据消费者**：`isReadonlyAction`（`thincoder-core/tools/git.mjs`）判的是**审批面**——planMode 放行（`thincoder-core/agent/dispatch.mjs:63`）∥ 免审批短路（同档 `:185`）。本批只摘掉写门那一个消费者，名单一字不改。
 
 - **六项平铺判只读**：`diff` / `status` / `log` / `show` / `ls-remote` / `blame`。
 - **六条子动作分支**：`checkpoint` 的 `list` ∥ `cat`；`tag` / `branch` / `stash` / `remote` / `worktree` 各自 `list`。
@@ -1278,7 +1260,7 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 | R18 回执建议句按类分流 | 收口含 1 行 `在途` + 1 行 `待讨论` ⇒ 回执第一行携「认领行只有两种终局」、第二行携「不是本批的活（点火违规）」、第三行只点名不给建议；`grep -c "没做完的" thincoder-core/agent-tools/batch-closeout.mjs` = 0 |
 | R19 建档 `待核销` 号拒（`R-C4`） | `create{ledger:"#<待核销号>"}` ⇒ 拒，拒文逐字 = `§2.4` 第四条；档零落盘、行零改（抛出点 `thincoder-core/ledger-write-ops.mjs:309`） |
 | R20 重新开账 = 另立新行 | 覆盖行已 `已核销` ⇒ `create` 不带 `ledger` 自开一行、§1 `覆盖账` 只含新号；旧行状态 / `evidence` 字节零改 |
-| R21 迁移枚举与状态机逐边相等 | `thincoder-core/tool-docs/ledger.md` 的 `update` 枚举边集合 = `thincoder-core/ledger-db.mjs:163-166` 的边集合（含 `待讨论→在途` · `待核销→在途`）；`ALLOWED_MIGRATIONS` 本体零改 |
+| R21 迁移枚举与状态机逐边相等 | `thincoder-core/tool-docs/ledger.md` 的 `update` 枚举边集合 = `thincoder-core/ledger-db.mjs-166` 的边集合（含 `待讨论→在途` · `待核销→在途`）；`ALLOWED_MIGRATIONS` 本体零改 |
 | R22 `§5` 门判据 2 | `§3` 状态行 = 评审通过 ∧ 最近一轮轮次块无 pass 裁定 ⇒ `append §5` 拒（`R-G2b` 串）、§5 字节不变；末块同携 pass 与打回两行 ⇒ 判打回（合取第二项不成立）；块内补 `VERDICT: pass` ⇒ 写入；`§3` 无轮次块 ⇒ 拒；`§1` 写 `> 不适用：§3` ⇒ 照拒（判据 1 不成立，无豁免） |
 | R23 通过即置位（`§2.5`） | 夹具 = 骨架原形批档（§3 无状态行）：一笔 `append §3` 携 `VERDICT: pass` ⇒ 段内出现 `**状态行**：评审通过`、`readSectionStatusWord(src,3)` = `评审通过`、轮次块 +1、留痕行 0；同档再 append 一笔携 pass ⇒ 状态行字节零改、留痕行仍 0；写前 = `进行中（第 3 轮打回）` 的一笔携 pass ⇒ 状态行回 `评审通过`；一笔同携 pass 与打回两行 ⇒ 判打回（`进行中（第 N 轮打回）`；计划函数直调取证，`append §3` 已写不进去）；一笔无裁定行 ⇒ 状态行字节零改；`append §6` 携 pass 行 ⇒ 状态行零改；写前 = pass 的一笔携打回行 ⇒ 既有重置行为逐字不变（零回归）；`thincoder-core/tool-docs/batch.md` 的 `status` 条目含置位句（逐字 = `§2.5`）；**定位面收窄**：写前 §3 段头区无状态行、正文含一行 `**状态行**：进行中（引述）` 的一笔携 `VERDICT: pass` ⇒ 引述行逐字节不变 ∧ 段头区出现 `**状态行**：评审通过` ∧ `readSectionStatusWord(src,3)` = `评审通过` ∧ 轮次块 +1 ∧ 留痕行 0；同形但引述行本身写 `**状态行**：评审通过` ⇒ 置位仍触发（段头区补出 `**状态行**：评审通过`）；写前段头区 = `评审通过` 的一笔携打回行、正文引述 `**状态行**：进行中（上一轮）` ⇒ 段头区 = `进行中（第 N 轮打回）` ∧ 引述行字节不变 ∧ 留痕行 1；`status` 写 §2（段头区有行、`###` 之下另有一行同形）⇒ 段头区那行改写、`###` 之下那行字节不变 |
 | R24 段级状态行只有一个取值区（`§2.5`） | 夹具 = §3 段头区无状态行、块正文含一行 `**状态行**：评审通过`：① `append §5` ⇒ 拒（`R-G2`）② `close` ⇒ 拒、拒文含 `§3 状态行 = （无状态行）` ③ `ledger close` 核销该档行 ⇒ 拒（`R-L3`）④ 派设计评审 ⇒ 拒签（`status-not-passed`）⑤ `batch list` 该档 `§3` = 空 ⑥ 同档落一笔携 `VERDICT: pass` 的 `§3` ⇒ 段头区出现 `**状态行**：评审通过`，①–⑤ 全部翻绿；同形夹具把引述行换成 `**状态行**：进行中` 时 ⑥ 仍成立（置位的第三合取读段头区 = 空 ⇒ 触发），引述行逐字节不变；⑦ 可跑文件 = **实施轮落的** `test/integration/batch-status-auto-set.test.mjs`（`node --test test/integration/batch-status-auto-set.test.mjs`，其 27-1 用例断言「评审写一笔即签字」；27-1 现态 = `test/RTM.md` 在册、「待执行」、用例本体随实施轮落）；⑧ 改后 `thincoder-core/agent-tools/batch-skeleton.mjs` 行数不高于改前（改前实测 508 行，含空行计数） |
@@ -1401,7 +1383,7 @@ ledgerClose：核销仅限 待核销（现态 <X>）：<出路句>
 - **层别纪律（写档做法）**：本档与批档 `§2` 的一切档引用一律带层别全路径（`docs/core/design/` ∥ `docs/core/requirements/` 前缀），不写裸档名。
   理由：`docs/core/design/ENGINEERING-MODE-V2.md` 与 `docs/core/requirements/ENGINEERING-MODE-V2.md` 同名不同层，裸档名解析到哪层不确定；
   本批修正轮就是这么查错了层（按设计层解析、该层无 §13.5），面分类判据因此错了一轮。
-- **不动 `conventions.mjs` / `classifyPath` / `isCodePath` 本体**（`§2.10`）：`agent/dispatch.mjs:115` 换判源（`isCodePath` → `faceOf`，`§2.1`），其余六个消费面语义本批零改。
+- **不动 `conventions.mjs` / `classifyPath` / `isCodePath` 本体**（`§2.10`）：`agent/dispatch.mjs` 换判源（`isCodePath` → `faceOf`，`§2.1`），其余六个消费面语义本批零改。
 - **不删 manifest `codePaths` 键**、不改 `manifest-schema.mjs` 与 manifest 工具可写键。
 - **排除名单只合并名单本身**（`§2.12`）：单源 = 第 4 份全量 ∪ `.thincoder` / `.vs` / `.idea`；判定函数不合并（`isSkippedRelPath` 的折叠 / 前缀留在原地）。
 - **写锁只在工程模式生效**（`§2.3`）；普通模式零改。

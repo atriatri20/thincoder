@@ -930,7 +930,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | **K1** | 仓根机检（cwd = 仓根） | `node scripts/doc-check.mjs --root .` **exit 0**（锚 / 段长 / 行宽同驱——核分居 `scripts/doc-check-anchors.mjs` / `scripts/doc-check-paragraph.mjs` / `scripts/doc-check-targets.mjs` / `scripts/doc-check-linecounts.mjs`）；台账一致性无独立脚本（归核内 SQLite 台账面） | 残留旧 token / 断了的 import ⇒ 转红 |
 | **K2** | 扫替复查 | 三类替换各自的 check 模式**报 0 处**（含花括号简写的改后逐字读校）；保护项计数**扫替前后逐项相等**（保护项计数**以同脚本前后两次读数为准，不硬编码**——写死的值每变一次就失真一次，还会被下一读者当成现行量）；站点排除**逐处逐字未变**（核验 = 改动集 diff 不触及这些站点） | 漏扫 = 报非 0；误伤 = 保护项计数前后不等；排除项被扫动 = 所在行出现在改动集 diff 中 |
 | **K3** | **diff 可逆性**（防夹带——对照面 = **脚本产出子集**） | 以改前提交（HEAD）为输入跑扫替脚本 dry-run ⇒ 输出**逐字节等于**本次改动集中的**脚本产出部分**（类 A + 类 B 的 token 替换）；改动集其余部分 = **恰好一类人工改动**（类 C 手改），**逐处可枚举**；出现枚举外的人工改动即判红 | 夹带人工改动 ⇒ 两者不等 |
-| **K4** | 两产品全链 | CLI：`npm run lint` → `npm test`；VSC：`npm run lint` + `doc:check` → `npm test`——**全 exit 0** | 域参数 / 夹具 / 长路径引用漏改 ⇒ 用例红 |
+| **K4** | 两产品全链 | CLI：`npm run lint` exit 0 ∧ 包级 `npm test` = exit 1 + 说明（非门）；VSC：`npm run lint` + `doc:check` exit 0 ∧ `npm test` = 单元清单面 exit 0；集成门 = 仓根 `node test/run.mjs` | 域参数 / 夹具 / 长路径引用漏改 ⇒ 用例红 |
 | **K5** | 核内测试 | `node --test`（cwd = 核目录）**exit 0**（改前基线同值） | 核内注释指针或 import 面被改坏 |
 | **K6** | 度量复现 | 度量读数与改前**逐位一致**（路径字段除外）——**判据是比较，不是某一组数值**（写死的读数会被下一读者当成现行量） | 默认目录 / 面定义漏改 ⇒ 读数变化或报错 |
 | **K7** | 工作树 | `git status` 仅含预期的重命名 + 文本改动，**无未跟踪残留** | 扫替脚本 / 临时档被误提交 |

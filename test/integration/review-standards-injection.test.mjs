@@ -18,9 +18,11 @@
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, relative, resolve } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { advisorTool } from "../../thincoder-core/agent-tools/advisor.mjs"
 import { injectProjectStandards, NO_STANDARDS_NOTICE } from "../../thincoder-core/advisor/project-context.mjs"
@@ -94,8 +96,8 @@ const ledgerDir = mkdtempSync(join(tmpdir(), "rsi-ledger-"))
 _setLedgerDirForTest(ledgerDir)
 after(() => {
   _resetLedgerDirForTest()
-  for (const p of roots) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(ledgerDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  for (const p of roots) removeTempDirBestEffort(p)
+  removeTempDirBestEffort(ledgerDir)
 })
 
 /** 种一行指着夹具批档的未决台账行（**只走写面，不直写 SQL**——`在途` 必挂 `task_book` 的 CHECK 是被测前提的一半）：

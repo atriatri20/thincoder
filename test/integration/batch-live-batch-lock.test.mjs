@@ -15,10 +15,12 @@
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { executeToolCalls } from "../../thincoder-core/agent/dispatch.mjs"
 import { writeTool } from "../../thincoder-core/tools/file.mjs"
@@ -38,8 +40,8 @@ _setLedgerDirForTest(ledgerDir)
 const fixtures = []
 after(() => {
   _resetLedgerDirForTest()
-  for (const p of fixtures) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(ledgerDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  for (const p of fixtures) removeTempDirBestEffort(p)
+  removeTempDirBestEffort(ledgerDir)
 })
 
 const UUID = "11111111-1111-1111-1111-111111111111"

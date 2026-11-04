@@ -1045,7 +1045,14 @@ checklist 描述档已随工具废除（承接 = `docs/core/design/_archive/modu
 
    - **面谓词**：段判据只剩一个面谓词 `isPromptFace`（提示词面逐行判）。工具描述面不设谓词——不设面例外，也就不留一个会漂的豁免口。
 
-**谓词面**：单源 = `thincoder-core/doc-check/paragraph.mjs`，十名——`isTableRow` / `fenceMark` / `isFenceClose` / `isFenceLine` / `isQuoteLine` / `isZoneHead` / `isExecutableLine` / `inCodeSpan` / `isListItem`（首式 `^\s*(?:[-*+]|\d+[.)、]|[·•])\s` ∥ 次式 `^\s*[①-⑳]`）/ `isPromptFace`。
+**谓词面**：单源 = `thincoder-core/doc-check/paragraph.mjs`，十二名，分四族——
+
+- **行类**：`isTableRow` / `fenceMark` / `isFenceClose` / `isFenceLine` / `isQuoteLine` / `isZoneHead`
+- **段界**：`isListItem`（首式 `^\s*(?:[-*+]|\d+[.)、]|[·•])\s` ∥ 次式 `^\s*[①-⑳]`）
+- **面 ∥ 码段**：`isExecutableLine` / `codeSpans` / `inCodeSpan` / `isPromptFace`（`codeSpans` = 码段切分谓词：按反引号**出现序配对**（第 1、3、5… 枚开启，第 2、4… 枚闭合）返回 `{ start, end, text }` 列表；`inCodeSpan` 与 `isExecutableLine` 同取这一份——一处配对规则、两处消费）
+- **标题**：`headingMark`（标题行 ⇒ `{ level, text }`，非标题行 ⇒ `null`；行首 1–6 个 `#` 后接空白——形同 `fenceMark` 的「谓词返回判据物」）
+
+**标题谓词只此一式**：段判据的标题栈与写前门的正文行谓词同消费 `headingMark`——两处各留一份「什么算标题」的正则就是两处会漂；写前门零本地字面。
 
 **列表项符号集（`isListItem` 的闭集——段界判定）**：闭集成员与两式字面只住 §3.18「谓词面」的 `isListItem` 一处（本处不复制成员表——D2）；本块记的是本批对它的决定与理由：本批新增 = 中文标记一族，ASCII 两族与两式结构未动。
 
@@ -1085,7 +1092,7 @@ checklist 描述档已随工具废除（承接 = `docs/core/design/_archive/modu
 
 区带机制随迁改名 `paragraphExemptZones`（机制保留、内置恒空；删它超出 FR45 射程）。
 
-**既有件三问**：existing: 谓词族 + 扫描骨架（标题栈 ∥ 围栏状态机）= `thincoder-core/doc-check/paragraph.mjs`（实现单源）· name: 上列十名 · consumers: `thincoder-core/doc-check/anchors.mjs:20`（`fenceMark` / `isFenceClose` / `isExecutableLine` / `isPromptFace`）· `scripts/doc-check-paragraph.mjs`（再出口缝）。
+**既有件三问**：existing: 谓词族 + 扫描骨架（标题栈 ∥ 围栏状态机）= `thincoder-core/doc-check/paragraph.mjs`（实现单源）· name: 上列十二名 · consumers: `thincoder-core/doc-check/anchors.mjs:20`（`fenceMark` / `isFenceClose` / `isExecutableLine` / `isPromptFace`）· `scripts/doc-check-paragraph.mjs`（再出口缝）。
 
 **面跳过支（提示词面那条支仍住代码）**：existing: `checkParagraphs` 内的面分派支（`thincoder-core/doc-check/paragraph.mjs:95-101`——`isPromptFace` 命中 ⇒ 走该面判法 ⇒ `continue`）· name: 逐字 `checkParagraphs` · 偏离为零（面判 → 该面判法 → 跳过，同形照抄）。段合并逻辑 = 同档既有 `flush()`（`paragraph.mjs:106`），本批零触。as-of 2026-10-27 实读。
 
@@ -1210,9 +1217,18 @@ checklist 描述档已随工具废除（承接 = `docs/core/design/_archive/modu
 
 **裁定（目标态）**：文档纪律机检**内建为产品能力**，以 agent 工具 **`doc_check`** 提供给 agent；判据参数 = **工具内置常量** `DOC_CHECK_BUILTINS`（`thincoder-core/doc-check/index.mjs` 冻结对象）；**项目自建脚本不在判据链上**。
 
-**范围与参数面（用户 2026-10-22 10:27 裁定）**：判定范围 = **调用方传入的文件清单**（`report` 无清单 ⇒ 报错；`gate` 缺省 = 本会话触达）——不扫全仓、不建全域索引。
+**范围与参数面（用户 2026-10-22 10:27 裁定）**：判定范围 = **调用方传入的文件清单**（`report` 无清单 ⇒ 报错；`gate` 缺省 = 本会话触达）——不扫全仓；**判定用的**全域索引不建（唯一那份同名索引的射程 = 本节「性能」的边界句）。
 
 参数只剩内置常量 `DOC_CHECK_BUILTINS`（`thincoder-core/doc-check/index.mjs`）：`paragraphMax` / `lineMax` = 300 · `paragraphExemptZones` / `exemptions` = `[]`。`scanDirs` / `domain` / `roots` / `exclude` **全部退场**；manifest 不再承载参数，doc_check 也不读 manifest。
+
+**入参形态（缺参 = 硬错，不是零命中）**：段判据的入参是**一个**对象 `{ paragraphMax, lineMax, exemptZones, files }`——**三格必填 + 一格可省**。
+
+- **必填**：`paragraphMax` ∥ `lineMax`（有限数字）∥ `files`（数组——判定集，缺了就是「判 0 档」，读起来是全部过关）。
+- **可省**：`exemptZones`，缺省 `[]`（区带机制保留、内置恒空——机制与规范 = 本档 §3.15 条目 N）。**省略它不抛**——它是「没有区带」的正常写法，不是缺参。
+
+必填格缺一格 ∥ 位置传错（第二实参不是对象 ∥ 形参表外多给位置实参）∥ 类型不对 ⇒ **抛**，报串点名收到的值与正确形。`files: []` 合法——判 0 档不是错。
+
+依据：`files` 缺失 ∥ 传字串 ∥ 与配置互换位置三形实读各 0 条命中且不抛，读起来就是「全部过关」。假绿没人会去查，误报才有人骂。
 
 **交付时点门（gate）**：一轮设计 / 开发动作结束时，对**本轮改过的档**当场全检，命中**当场打回**——需求 = `docs/core/requirements/DOC-CHECK.md`（F1–F7 · F9 · F10 / AC-1–AC-8；机制块 = §3.20「交付时点强制」）。
 
@@ -1232,9 +1248,10 @@ checklist 描述档已随工具废除（承接 = `docs/core/design/_archive/modu
 **① 锚判据——抽取面与解析面（判据句的实现口径）**：
 
 - **抽取面**：逐行扫；fenced 块**整块跳过**（围栏行止 = §3.18 谓词面——`fenceMark` / `isFenceClose`，本节不重述）；可执行行（`isExecutableLine`）**整行跳过**（命令 / 搜索模式串保字面）。
+- **可执行行的判面 = 码段之内**：判的是**码段内容**，不是任意两枚反引号之间的文本。切分谓词 = `codeSpans`（`thincoder-core/doc-check/paragraph.mjs` 导出，枚举 = 本档 §3.18「谓词面」）：反引号按出现序配对，两段之间的空档不参与判定；`inCodeSpan` 与 `isExecutableLine` 同取这一份切分（一处配对规则、不留第二份）。依据：一行有两个已配对码段、空档里出现命令词时，旧式把空档当码段 ⇒ 整行跳过 ⇒ 该行的悬空指针一条不报（实读：同行 0 条命中；去掉码段后 1 条 `档缺`）。
 - **节指示形态**：`档名 §N` ∥ `` `档名 §N` ``（编号 = `N` / `N.M` / `N.M.K`）。**`档名:N` 不作节指示**——行号坐标不参与存在性判（已约定禁止用行号做引用）。
 
-- **档在盘（解析序 · 两级）**：① 仓根相对**全路径** → ② **引用方档所在目录**相对（档相对引用）→ 均未命中 ⇒ `档缺`。**`§N` 节判定只读解析命中的目标档**（点查，不遍历）；裸名不跨目录解析——不建全域文件名索引、不回落 basename（需求 F3）。
+- **档在盘（解析序 · 两级）**：① 仓根相对**全路径** → ② **引用方档所在目录**相对（档相对引用）→ 均未命中 ⇒ `档缺`。**`§N` 节判定只读解析命中的目标档**（点查，不遍历）；裸名不跨目录解析——**解析面不查全域文件名索引**、不回落 basename（需求 F3；同名索引的射程 = 本节「性能」的边界句）。
 
 - **节在盘**：目标档内存在标题行，其标题编号（标题文本去 `^#{1,6}\s` 后的首个 `\d+(?:\.\d+)*`）= 指针节号 ⇒ 在盘；否则 ⇒ `节缺`。
 - **残余登记（fail-open 方向——归评审核验面）**：未闭合围栏 ⇒ 至档尾免（承 §3.18「围栏 ∥ 引文块面」残余登记 ①）；指针行的坐标尾不入判、同行的档 token 照判。
@@ -1250,32 +1267,47 @@ checklist 描述档已随工具废除（承接 = `docs/core/design/_archive/modu
 
   ② **占位**（词干长度 ≤ 1 ∥ 词干落 `PLACEHOLDER_STEMS` 闭集：`x` · `a` · `b` · `file` · `out` · `foo` · `bar` · `example` · `sample` · `name` · `path`）；
 
-  ③ **操作数**（**提示词面**先整串删 `CANON_OPERANDS` 导出的操作数再抽（名数不写死——名集单源 = `thincoder-core/doc-check/anchors.mjs`；本节仅在围栏块内保留交付文本的逐字副本））。
+  ③ **操作数**（**提示词面**先把 `CANON_OPERANDS` 导出的操作数**整 token** 剥除再抽（名数不写死——名集单源 = `thincoder-core/doc-check/anchors.mjs`；本节仅在围栏块内保留交付文本的逐字副本））。
+
+     **剥除面 = 整 token 边界**：只吞「左右界都成立」的操作数名——左界不接 `[A-Za-z0-9_.\-\\/@<>]`、右界不接 `[\w]`，**与锚抽取的档 token 共用同一对边界**（一处定义、两处消费）。名字只是更长 token 的尾段（`test/RTM.md` 里的末段名）⇒ **不剥**，该 token 照常抽出、照常判存在性。
+
+     依据 thincoder-core/doc-check/anchors.mjs「const OPERAND_STRIP_RES = CANON_OPERANDS.map((name) => new RegExp(」——操作数按名逐条剥除 ⇒ 路径前缀与末段名一起被吃掉，剩下的半截不构成 token，该指针不被判。
+
+     提示词面夹具实读（临时域一档 · 三行）：
+
+~~~text
+见 docs/RTM.md      ⇒ 0 条（操作数名被删，剩「见 docs/」）
+见 docs/README.md   ⇒ 0 条（同上）
+见 docs/NOPE.md     ⇒ 1 条 档缺（末段名不在操作数表 ⇒ 整 token 保住）
+~~~
+
+     修后首行 ⇒ 1 条 `档缺`（路径形保住、末段名不再吃前缀）；后续两行判定不变。
 
 - **为什么**：这些名字在文档里指「会读哪些文件」的**操作数**或示例形，不指某个仓内档；同族判据 = `PROMPT-SYSTEM.md` §6.6 判保留面（引，不重述）。
-- **③ 的作用面（只此一面）**：剥除面 = `thincoder-core/prompts/**`（实现 = `anchors.mjs` 的 `OPERAND_FACE`）。`docs/` 面与 `tool-docs/**` 的同名 token 仍按指针判——
+- **③ 的作用面（只此一面）**：剥除面 = `thincoder-core/prompts/**`（面谓词单源 = `paragraph.mjs` 的 `isPromptFace`；锚判侧以 `isOperandFace` 消费同一谓词）。`docs/` 面与 `tool-docs/**` 的同名 token 仍按指针判——
 
-   `AGENTS.md` / `SKILL.md` / `.thincoder/advisor.md` / `project_rules.md` 另有 ① 类名免接住，`README.md` / `MANIFEST.md` / `test/RTM.md` 在非提示词面照报。
+   `AGENTS.md` / `SKILL.md` / `.thincoder/advisor.md` / `project_rules.md` 另有 ① 类名免接住；`README.md` / `MANIFEST.md` 在非提示词面照报；集成索引那名（`test/RTM.md` 的档名）**只在裸名形**被剥——写成路径形则任何面都按指针判。
 
 - **面界差（登记差异 · 不扩面）**：剥除面窄于 `PROMPT-SYSTEM.md` §6.6 的「提示词面」定义（`prompts/**` + `tool-docs/**`）。裁定 = **接受差异**，理由三条：
 
-  ① 剥除面是锚判自己的面判据，§6.6 的 J 族域是提示词引用判据的域——同一棵树不等于同一判据；② 现盘 `tool-docs/**` 六名裸名 2 处（`thincoder-core/tool-docs/advisor.md` 第 3 行 · `thincoder-core/tool-docs/verify.md` 第 1 行），basename 均落 ① 类名免，锚判 0 命中（实读 2026-10-22）；
+  ① 剥除面是锚判自己的面判据，§6.6 的 J 族域是提示词引用判据的域——同一棵树不等于同一判据；② 现盘 `tool-docs/**` 有操作数族的裸名 2 处（`thincoder-core/tool-docs/advisor.md` 第 3 行 · `thincoder-core/tool-docs/verify.md` 第 1 行），basename 均落 ① 类名免，锚判 0 命中（实读 2026-10-22）；
 
-  ③ 扩面 = 产品代码改动 + 判据面变更，须独立批。**解除条件**：`tool-docs/**` 出现任一操作数裸名落入判集（真实假阳）⇒ 扩面（`OPERAND_FACE` 加面），由产品代码批承接。
+  ③ 扩面 = 产品代码改动 + 判据面变更，须独立批。**解除条件**：`tool-docs/**` 出现任一操作数裸名落入判集（真实假阳）⇒ 扩面（`isPromptFace` 的判面加面），由产品代码批承接。
 
 - **不放宽**：三免是**闭集**，错名照报——错名 `commn` + `.md` 不落三类 ⇒ `档缺`（夹具实测）。
 
-- **实现单源**：`thincoder-core/doc-check/anchors.mjs`（as-of 2026-10-22）——`FILENAME_CLASSES` `:28`–`:31` · `PLACEHOLDER_STEMS` `:34`–`:36` · `CANON_OPERANDS` `:45`–`:49` · `stripCanonOperands` `:51`–`:55` · `OPERAND_FACE` `:60`–`:61` · 剥除接线 `:118` · 逐 token 跳过 `:126`；判据句住本节。
+- **实现单源**：`thincoder-core/doc-check/anchors.mjs`——`FILENAME_CLASSES` / `PLACEHOLDER_STEMS` / `CANON_OPERANDS` / `stripCanonOperands` / 档 token 边界（同一对边界兼作剥除面）/ 逐 token 跳过；面谓词 = `paragraph.mjs` 的 `isPromptFace`。坐标只写符号名（D4）；判据句住本节。
 
 - **模型可见契约（`thincoder-core/tool-docs/doc_check.md` · 逐字目标形 · 落笔 = eng-coder）**：落点 = 该档 `Anchors —` 起首 bullet 之末（`…are skipped whole.` 之后续写）。
   **名集以围栏字面列表给出**：未扩面时逐名行内裸写会让该档自己落一条 `MANIFEST.md` `档缺`（见上「面界差」）。
 
 ~~~text
   **Operand names.** Seven names count as operands rather than documents: the model writes them, or reads a file by that name. On
-  the prompt face (`thincoder-core/prompts/**`) they are stripped from a line before extraction. On other faces four of the seven are
-  exempt as file-name classes — `AGENTS.md`, `SKILL.md`, `.thincoder/advisor.md`, `project_rules.md` — while `README.md` and
-  `MANIFEST.md` are still judged as pointers. `RTM.md` is stripped on the prompt face; on other faces it is judged as a pointer — write it
-  path-qualified (e.g. `test/RTM.md`) so it resolves. The seven:
+the prompt face (`thincoder-core/prompts/**`) a **whole token** matching one of them is stripped before extraction; a name that is only
+the tail of a longer token (`RTM.md` inside `test/RTM.md`) is not stripped, and that path is judged like any other pointer. On other
+faces four of the seven are exempt as file-name classes — `AGENTS.md`, `SKILL.md`, `.thincoder/advisor.md`, `project_rules.md` — while
+`README.md` and `MANIFEST.md` are still judged as pointers; `RTM.md` is exempt only in its bare form, so write it path-qualified (e.g.
+`test/RTM.md`). The seven:
 
   ```text
   AGENTS.md  SKILL.md  README.md  MANIFEST.md  .thincoder/advisor.md  project_rules.md  RTM.md
@@ -1433,7 +1465,15 @@ checklist 描述档已随工具废除（承接 = `docs/core/design/_archive/modu
 
   **风险登记**：§3 写入是评审的收尾动作，被拒 = 该轮可能空手返回（用户 token）。缓解 = 拒串明写「同轮改短后重 append」；若实测烧轮，杠杆 = 摘掉评审这一支（一行条件）。
 
-- **性能（本仓实测 · 2026-10-18 新进程）**：空范围 22 ms · 8 档 128 ms · 报告态 212 档 1084 ms。写段一次一跑，**不设缓存**——缓存键（mtime 集）算错即静默放行，正是本机制要关闭的失效模式；128 ms 远低于一次模型回合。
+- **性能（关系式——绝对读数记批档 §5）**：一次 `doc_check` 的耗时随「判定档数 + 指针 token 数」增长，不等比于档长，更不随悬空 token 数增长——同名候选索引一次调用只建一份。全 `docs` 面一次跑完上限 **60 s**，超即索引没做对。
+
+**索引的射程（与「不建全域索引」不互斥）**：那份同名索引**只服务 `档缺` 注解的同名候选提示**（报面 `盘上同名：<档>` 那一行）——**判定与解析都不查它**：档在不在盘由两级解析定，节在不在盘由 `sectionOnDisk` 点查定，两者的判定结果与索引在不在无关。
+
+⇒ 「不建全域索引」∥「解析面不查全域文件名索引」∥ A-DD32 ④⑤ 的「不遍历目录 / 不扫目录」管的是**解析面与读取面**；索引是**注解面**的第二件东西：成本一次性付出、与悬空 token 数脱钩（结构判据 = 本节「结构判据可跑形」，归 A3）。
+
+- **缓存口径**：不设**跨轮**缓存——以 mtime 等键判「这份档还是不是上次读到的那份」，键错即静默放行，正是本机制要关闭的失效模式。
+
+  **同轮记忆不属此列**：一次调用内同一档只读一次、同一档名只查一次（内容与标题号集合按绝对路径记忆）——这个窗口里文件不变，命中集与不记忆逐字相同。
 
 - **实现面（单源）**：`thincoder-core/agent-tools/batch-gate.mjs`——`runBatchGate({ abs, cwd, agent, scope, pending })`：根 = `owningProject(abs) ?? batchProjectRoot(cwd)` / 适用面 / 范围（写者 ∥ 收口，两面皆含批档自身）/ 裁定分类。
 
@@ -1600,7 +1640,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 **产品档位（实现面）**：
 
-- `thincoder-core/doc-check/paragraph.mjs`——谓词 + 段判据（**口径单源 = §3.18 条目 Q**：谓词族十一名 + `[...line].length` 段长度量）；本仓 `scripts/doc-check-paragraph.mjs` = 再出口缝（见本条「实装现状」）。
+- `thincoder-core/doc-check/paragraph.mjs`——谓词 + 段判据（**口径单源 = §3.18 条目 Q**：谓词族十二名 + `[...line].length` 段长度量）；本仓 `scripts/doc-check-paragraph.mjs` = 再出口缝（见本条「实装现状」）。
 
 - `thincoder-core/doc-check/anchors.mjs`——指针抽取 + 解析序 + 节在盘判定（起步判据 ① 的实现面）。
 - `thincoder-core/doc-check/index.mjs`——引擎入口：范围判定（传入清单）+ 判据 + 两种问法的报面行（纯函数——**不阻断、零退出码**；范围收窄面 = `docs` 给定的被判档）。
@@ -1683,7 +1723,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 | DD-102 | 边界 | 夹具：两目录同名档（实档 = `docs/core/design/DOC-SYSTEM.md`）；`A.md` 以其裸名引之（同目录无该名） | `档缺`（无多义概念——不建全域索引、不判多义） |
 | DD-103 | 边界 | 夹具：`A.md` 与 `B.md` 同目录，`A.md` 以裸名引 `B.md` | 可解析、零 `档缺`（两级 ②） |
 | DD-104 | 错误 | 夹具：全路径指向不在盘的档 ∥ 目标档在盘而无该节（`§99`） | 前者 `档缺`（点名 token 与源档:行）；后者 `节缺`（目标 = 解析命中档） |
-| DD-105 | 边界（反证） | 同夹具跑 gate ∥ report；`readFileSync` 命中集断言 | 只读清单档 + 引用目标（不遍历目录、不读第三档）；两面判法同源 |
+| DD-105 | 边界（反证） | 同夹具跑 gate ∥ report；`readFileSync` 命中集断言 | **判据读取面**只读清单档 + 引用目标（解析面不遍历目录、不读第三档；注解面同名索引不计入）；两面判法同源 |
 
 > **载体状态（`DD-92` / `DD-95` / `DD-99` / `DD-120`）**：四行是机制判据的锚，载体 = 各自批次收口时删除的改面单元测试档 ⇒ 当前无可跑档。A-DD31 ⑥ 的「可跑形」行因此只点名当批载体实含的用例；四行留在本表作判据锚，不进可跑集。
 
@@ -1934,24 +1974,11 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 **为什么这个形式让两处判定不会分叉**：今天的分叉成因是**表被导出、判定被各自复制**——`CANON_OPERANDS` 在导出面上，兄弟脚本拿到了它；两张表私有，兄弟脚本根本拿不到，于是它那面上的「哪些名字不算档」这条判定**不是判错，是没判**。谓词把**判定**（而不是表）放上导出面：消费方拿不到表，也就没有第二处可以添加一个名字——新增一类豁免只能改谓词体一处，三个消费面同轮继承。**机械判据**：`anchors.mjs` 的 `export` 行零含 `FILENAME_CLASSES` / `PLACEHOLDER_STEMS`；谓词调用点 = 三处。
 
-**不改语义面**：谓词是既有两张表的**同一判定**的再导出（同输入同输出）——锚判读数零变（回归判据 = §5 A-DD38 ③）。**操作数族不动**：`CANON_OPERANDS` / `stripCanonOperands` 按原样导出与消费——它是**面相关**的剥除（只提示词面剥；`docs/` 面 `README.md` 照判，§3.20「面界差」），与本节两张表的**面无关**判定不是同一件事，混进来会把面相关规则绑到面无关判定上。
+**不改语义面**：谓词是既有两张表的**同一判定**的再导出（同输入同输出）——锚判读数零变（回归判据 = §5 A-DD38 ②）。**操作数族不动**：`CANON_OPERANDS` / `stripCanonOperands` 按原样导出与消费——它是**面相关**的剥除（只提示词面剥；`docs/` 面 `README.md` 照判，§3.20「面界差」），与本节两张表的**面无关**判定不是同一件事，混进来会把面相关规则绑到面无关判定上。
 
-**连带读数（本批的进入条件）**：`node scripts/prompt-refs-check.mjs` 现盘 **10 条命中 / exit 1**（实读 2026-11-01：提示词面 70 档 · 代码面 476 档）。其中 6 条落在豁免名上（占位 `x.md` / `file.md` / `foo.md` / `example.md` / `NAME.md`，类名 `todo.md`）——正是导出面缺的那两张表；余 4 条为真违规（裸档名未写仓根路径）。
+**判据值（一句 · 绝对值不入本档）**：`node scripts/prompt-refs-check.mjs` ⇒ **零命中 / exit 0**。豁免名（占位形 ∥ 类名）不进命中集；模型可见面上的真引用按 `docs/core/design/PROMPT-SYSTEM.md` §6.6 的处置（删引用、非改址）删净，不改成另一种档名写法。逐处命中的坐标与每次的批次读数住批档——本档只写这条判据。
 
-**改后判据值（逐字 · 4 条）**：
-
-```text
-thincoder-core/agent-tools/advisor.mjs:81 ADVISOR-GUARDS.md
-thincoder-core/agent-tools/advisor.mjs:81 METHODOLOGY.md
-thincoder-core/agent-tools/advisor.mjs:142 ADVISOR-GUARDS.md
-thincoder-core/agent-tools/advisor.mjs:142 ADVISOR-GUARDS.md
-```
-
-第三、四行是同一行的两处命中（该行 `ADVISOR-GUARDS.md` 出现两次，输出逐处各一行）——判据值 = 4 条，逐字如上。
-
-**那 4 条本批不修**：它们是存量裸档名，归清账面；本批只让判定对起来，**不改那四处写法**。本批收口后 `prompt-refs-check` 仍 exit 1（4 条真违规在册）——这是如实状态，不是回归。
-
-**边界（本条不做）**：不改判据语义（豁免闭集不扩名——只把已有两类的**判定**放上导出面）；不改 `prompt-refs-check` 的 J1 / J2 / J3 三式形态与域；不修那 4 条存量；不新建判据器；`thincoder-core/**` 对 `scripts/**` 的 import 点仍为 0（方向单一）。
+**边界（本条不做）**：不改判据语义（豁免闭集不扩名——只把已有两类的**判定**放上导出面）；不改 `prompt-refs-check` 的 J1 / J2 / J3 三式形态与域；不处置引用面上的存量（那半幅归 `docs/core/design/PROMPT-SYSTEM.md` §6.6 的判据面）；不新建判据器；`thincoder-core/**` 对 `scripts/**` 的 import 点仍为 0（方向单一）。
 
 **最近先例（对齐 ∥ 偏离）**：先例 = §3.20 条目 S 的“一处定义、两处消费”（`CANON_OPERANDS` 一张表两处消费，`thincoder-core/doc-check/anchors.mjs` 头注在册）∥ 判据面 = `docs/core/design/PROMPT-SYSTEM.md` §6.6「判保留面」。**对齐** = 定义只住一处，消费方只 import 不复制。
 
@@ -2676,7 +2703,7 @@ grep -rEn "R24a|体量|拆分规划|行数标注|行数读数|行数义务" docs
 
 **A-DD8 判据（机器可验）**：
 
-1. **跑整个入口**：`cd thincoder-cli && npm test` ⇒ exit 0；等价单档跑 = `node --test docs/batches/<批次档>.test.mjs`（单元测试档惯例；cwd = 仓根）。
+1. **跑整个入口**：集成门 = 仓根 `node test/run.mjs`（收口时父侧跑一次）⇒ exit 0 ∧ `fail 0`；cli 包级 `cd thincoder-cli && npm test` 恒 exit 1 + 仓根指引（非门——集成层已上移仓根）；单档跑 = `node --test docs/batches/<批次档>.test.mjs`（单元测试档惯例；cwd = 仓根）。
 
    **证据**：探针 / 零落仓 / 并发免疫用例（单元测试档惯例——用毕即删）与夹具纪律均入**单元测试档**。
 2. **零落仓**：运行前后 `git status --porcelain -- docs` 零差异 ∧ 全仓 `_doc-consistency-probe.md` 0 命中 ∧ 仓域扫描目录无新档。
@@ -2823,7 +2850,7 @@ node -e "const s=require('fs').readFileSync('docs/core/design/_archive/DOC-MIGRA
 3. **拆段有效（FR45 验收 ③）**：夹具 900 字符分三段（每段 ≤ 300）⇒ 0 命中。
 4. **提示词面逐行裸判**：夹具提示词面档（`thincoder-core/prompts/**` 形态）一行 301 字符 ⇒ `行太长` 1 条（无结构豁免）；`docs/**` 面同长一行 ⇒ 按段判；工具描述面（`thincoder-core/tool-docs/**`）同长一行 ⇒ 同样按段判（不分面——条 7）。
 
-5. **谓词单源 + 旧档零在盘**：谓词族单源 = 产品档位 `thincoder-core/doc-check/paragraph.mjs`（十名；枚举 = 本档 §3.18 谓词面——本条不复制）；`thincoder-core/doc-check/width.mjs` 与 `scripts/doc-check-width.mjs` **零在盘**；`scripts/doc-check-paragraph.mjs` = 再出口缝（薄档 · 零逻辑 · 逐名再出口）。
+5. **谓词单源 + 旧档零在盘**：谓词族单源 = 产品档位 `thincoder-core/doc-check/paragraph.mjs`（十二名；枚举 = 本档 §3.18 谓词面——本条不复制）；`thincoder-core/doc-check/width.mjs` 与 `scripts/doc-check-width.mjs` **零在盘**；`scripts/doc-check-paragraph.mjs` = 再出口缝（薄档 · 零逻辑 · 逐名再出口）。
 
 6. **单元测试档（判据改动词必配）**：单元测试档（名随批、随批归档；载体 ∕ 复跑口径 = §7 单元测试档）⇒ 跑绿 · 零落仓 · 并发免疫（用例 = §3.18 用例表——本条不复制枚举）。
 
@@ -2920,8 +2947,8 @@ doc_check({ mode: "report", docs: [...] })   # 指定档
 2. **边界（裸名不跨目录）**：清单档以裸名引他目录的档（该档在盘）⇒ `档缺`——不建全域索引、不回落 basename；同名多档与本判据无关（无多义判定）（DD-101 / DD-102 / DD-103）。
 3. **错误（判定不放宽）**：全路径指向不在盘的档 ⇒ `档缺`（点名 token 与源档:行）；目标档在盘而无该节 ⇒ `节缺`（目标 = 解析命中档）（DD-104）。
 
-4. **节判定 = 点查**：`§N` 判定只读解析命中的目标档（`sectionOnDisk`）——不遍历目录、不建索引（DD-105）。
-5. **读取面 = 传入清单 + 引用目标**：`readFileSync` 命中集 ⊆ 传入档 ∪ 其引用目标（AC-50③ 同判）——不读第三档、不扫目录。
+4. **节判定 = 点查（解析面）**：`§N` 判定只读解析命中的目标档（`sectionOnDisk`）——解析面不遍历目录、不建索引（DD-105）；注解面那份同名索引不参与本条判定（射程 = §3.20「性能」的「索引的射程」）。
+5. **读取面 = 传入清单 + 引用目标**：`readFileSync`（**判据读取面**）命中集 ⊆ 传入档 ∪ 其引用目标（AC-50③ 同判）——不读第三档、不扫目录；注解面那份同名索引的目录走查不计入本条读取面（射程 = §3.20「性能」的「索引的射程」）。
 6. **消费面唯一**：解析实现的读取点只出现在 `thincoder-core/doc-check/**`；`scripts/doc-check-anchors.mjs`（V5 手跑面）自有解析序、不参与 verdict（`grep` 源面）。
 
 **A-DD33 判据（机器可验 · 条目 T = 行号引判据式）：**
@@ -3068,10 +3095,9 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 
    **射程**：`J1_WHITELIST` 不属档名豁免（面相关**操作数族**，取自同一导出表、不新增名字）⇒ 不在本判据的红判面。
 2. **零语义回归（锚判）**：DD-146 绿——同一夹具（悬空 ∥ 现存 ∥ 占位 ∥ 类名四类）改前 / 改后命中集逐字相等（基线 = 实施轮首动作前复测）。
-3. **兄弟脚本读数落位**：`node scripts/prompt-refs-check.mjs` ⇒ 汇总行命中数 = **4** ∧ 剩余四条逐字 = §3.24「改后判据值」围栏列表（先红 = 10，见 §3.24）；`exit 1` 仍为 1（4 条真违规未清零——本批不修）。
-4. **那 4 条零改动**：`thincoder-core/agent-tools/advisor.mjs` 的 `git diff` **hunk 0**（本批不修存量）。
-5. **面相关规则不动**：`CANON_OPERANDS` / `stripCanonOperands` 导出面零改 ∧ `prompt-refs-check.mjs` 仍 import 二者；`docs/` 面 `README.md` 在锚判照报（DD-147）。
-6. **判据链方向不变**：`thincoder-core/**` 对 `scripts/**` 的 import 点 = 0（A-DD29 ⑤ 同式）。
+3. **兄弟脚本读数落位**：`node scripts/prompt-refs-check.mjs` ⇒ 汇总行**零命中** ∧ `exit 0`——豁免名不进命中集；模型可见面上的真引用按 §6.6 的处置删净后，闸态即清零。逐处坐标与每次读数住批档。
+4. **面相关规则不动**：`CANON_OPERANDS` / `stripCanonOperands` **导出面**零改（剥除行为口径 = §3.20「剥除面 = 整 token 边界」）∧ `prompt-refs-check.mjs` 仍 import 二者；`docs/` 面 `README.md` 在锚判照报（DD-147）。
+5. **判据链方向不变**：`thincoder-core/**` 对 `scripts/**` 的 import 点 = 0（A-DD29 ⑤ 同式）。
 
 **A-DD39 判据（机器可验 · 条目 Y = 依据行与逐字引文）**：
 
@@ -3145,7 +3171,7 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 | DD-145 | 边界 | 围栏块内一处坐标 + 正文面一处坐标 | 合计行读 `正文面 1 · 围栏内 1 · 合计 2`；围栏内那处带 `围栏内` 标；清单块在末行 `结论：…` 之前 |
 | DD-146 | 正常 | 条目 X：锚判夹具四类（悬空 / 现存 / 占位 / 类名）改前 · 改后 + 一条非 `.md` 夹具（`x.json` 引一处） | 锚判命中集逐字相等；`x.json` 在清单面同样豁免（后缀按闭集剥—见 §3.24 入参契约） |
 | DD-147 | 边界 | `docs/` 面档引 `README.md` | 锚判**照报**——操作数族不并入面无关谓词 |
-| DD-148 | 正常 | `scripts/prompt-refs-check.mjs` 全跑 | 命中 **10 → 4**；剩余四条逐字 = §3.24 围栏列表 |
+| DD-148 | 正常 | `scripts/prompt-refs-check.mjs` 全跑 | 豁免名零命中；命中集只余真引用（占位 ∥ 类名两免生效；绝对读数住批档，不入本档） |
 | DD-149 | 错误（反证） | 夹具：`x.md` · `file.md` · `todo.md` · `NAME.md` 各引一处（提示词面形态） | J1 ∥ J3 零命中——占位 ∥ 类名两免生效 |
 | DD-150 | 错误（反证） | 同一夹具，取 `doc_check({mode:"gate"})` 的返回对象 | `Object.keys` 不含 `lineRefs`（键集面断言——挡「字段挂进 `shared`」这一支） |
 | DD-151 | 正常 | 条目 Y 夹具：一行 `依据 <在盘档>「<该档一行原样>」` | 锚判 **0 条**（引文逐字在场） |
@@ -3202,7 +3228,7 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 - `doc-check.mjs`（入口 / 域驱动 / 报告）：`main` + `formatReport`。
 - `doc-check-anchors.mjs`（单锚引擎）：`checkAnchors` / `extractAnchors` / `scanDocAnchors`——判据同源 = 本档 §4 V5 判据。
 
-- `doc-check-paragraph.mjs`（**再出口薄缝**——见下「再出口缝」条）：逐名再出口产品档位的谓词与判据函数，名单以缝档 `export` 面为准（当前含 `isTableRow` / `fenceMark` / `isFenceLine` / `isQuoteLine` / `isZoneHead` / `isExecutableLine` / `inCodeSpan` / `isListItem` / `isPromptFace` / `checkParagraphs` / `DOC_CLASS`；`checkParagraphs` opts 增 `exemptZones`——区带豁免口径 = §3.15；谓词口径 = §3.18 谓词面）。
+- `doc-check-paragraph.mjs`（**再出口薄缝**——见下「再出口缝」条）：逐名再出口产品档位的谓词与判据函数，名单以缝档 `export` 面为准（当前含 `isTableRow` / `fenceMark` / `isFenceLine` / `isQuoteLine` / `isZoneHead` / `isExecutableLine` / `codeSpans` / `inCodeSpan` / `isListItem` / `isPromptFace` / `headingMark` / `checkParagraphs` / `DOC_CLASS`；`checkParagraphs` opts 增 `exemptZones`——区带豁免口径 = §3.15；谓词口径 = §3.18 谓词面）。
 
 - `doc-check-targets.mjs`（采集面）：`collectSourceDomain` / `collectTestTrees`（域根下**全部 `test` 树**发现——`scripts/doc-check-targets.mjs:61-78`；§4.2.2）/ `collectCaseTitles`（注册调用首参字面量——其树集 = 上项）/ `collectCodeTokens`。
 

@@ -23,9 +23,11 @@
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { basename, join, resolve } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { createReadDataHandlers } from "../../thincoder-cli/src/acp/read-data.mjs"
 
@@ -75,8 +77,8 @@ ledgerClose({ cwd: B, id: closedId, status: "已废弃", boundary: B })
 
 after(() => {
   _resetLedgerDirForTest()
-  // `force` 只忽略 ENOENT、不重试 EPERM/EBUSY；句柄未即释时清理会抛 ⇒ 给重试窗（先例 batch-close-gate.test.mjs）。
-  for (const p of tempRoots) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  // 句柄未即释时清理会抛 ⇒ 走助手（有界重试、失败只写一行 stderr，不判红整档）。
+  for (const p of tempRoots) removeTempDirBestEffort(p)
 })
 
 /** `chdir` 包裹（夹具纪律②③）：只包住被测调用本身，`finally` 恒复原进程锚。

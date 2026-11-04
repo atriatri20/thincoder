@@ -20,9 +20,11 @@
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { batchTool } from "../../thincoder-core/agent-tools/batch.mjs"
 import { countRoundBlocks } from "../../thincoder-core/agent-tools/batch-skeleton.mjs"
@@ -81,9 +83,9 @@ const projects = []
 after(() => {
   _resetSessionsDirForTest()
   _resetLedgerDirForTest()
-  for (const p of projects) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(sessionsDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(ledgerDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  for (const p of projects) removeTempDirBestEffort(p)
+  removeTempDirBestEffort(sessionsDir)
+  removeTempDirBestEffort(ledgerDir)
 })
 
 const statusLineOf = (root) => readFileSync(join(root, BATCH_REL), "utf8").split("\n").find((l) => l.startsWith("**状态行**："))
@@ -176,7 +178,7 @@ test("10-2 错误 · 消费落盘失败 ⇒ close 被拒、§1 字节不变、�
   assert.equal(agent._engDesignTokens.get(DESIGN_ID), TOKEN, "内存槽已整体回滚")
 
   // 可重试：注入解除后同一 close 即收口（「被拒的收口没有收口」）
-  rmSync(tmpBlocker, { recursive: true, force: true })
+  removeTempDirBestEffort(tmpBlocker)
   const receipt = await tool.execute({ action: "close", path: BATCH_REL }, ctx)
   assert.match(receipt, /\[design tokens\] 消费 1 枚/, `重试即收口：${receipt}`)
 })

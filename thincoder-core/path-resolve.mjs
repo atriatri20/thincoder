@@ -4,6 +4,9 @@
  * 机制单源 = `docs/core/design/PATH-RESOLUTION.md` §2（本档只实现，不重述口径）。
  * 各吃路径的面只留自己的**受理判据**（存不存在 / 是不是文档 / 能不能读 / 落不落基底内）；
  * 「一条路径指向哪里」只由本层回答。
+*
+ * **可选的解析会话**（`createResolutionSession` · 注入形 = `opts.session`）：调用方一次调用建一份——同一窗口内的
+ * 同名索引与基根发现只做一次（判定与解析都不查它，只摊薄成本）。缺省（不注入）= 逐 token 现算，与注入前的值逐字相同。
  *
  * 叶档（KD-1）：只 import `node:*` + `manifest.mjs`（`projectRootView`：取根单源）+
  * `declaration.mjs`（`declaredPublicRoots`：声明仓根集单源——`manifest.mjs` 的转口不含它，取它须直引）。
@@ -60,7 +63,7 @@ function siblingDirs(dir) {
   return entries.filter((e) => e.isDirectory()).map((e) => e.name).sort().slice(0, SIBLING_MAX)
 }
 
-/** 同名档扫描（**每根各自起算**：递归深 ≤ `SAME_NAME_MAX_DEPTH`、命中上限 `SAME_NAME_MAX_HITS`、
+/** 同名档扫描（**逐 token 形**：每根各自起算——递归深 ≤ `SAME_NAME_MAX_DEPTH`、命中上限 `SAME_NAME_MAX_HITS`、
  *  跳过隐藏目录与 `_archive`；宽度优先——浅处的同名档先入列）。 */
 function collectSameName(root, name, out) {
   const queue = [{ dir: root, depth: 0 }]
@@ -78,6 +81,83 @@ function collectSameName(root, name, out) {
       }
       if (e.isFile() && e.name === name) out.push(abs)
     }
+  }
+}
+
+/** 同名档扫描（**一次建一份形**：一个根走一遍树、记下**全部**档名的前 `SAME_NAME_MAX_HITS` 个命中）。
+ *  界 ∥ 序 ∥ 跳过面与 `collectSameName` **连字同源**（同深度界、同命中界、同 BFS 宽优先）：
+ *  所以「某名的前 20 个」在两形下逐位相等——扫描一次建成，不再每 token 一遍树。 */
+function collectNamesOnce(root) {
+  const byName = new Map()
+  const queue = [{ dir: root, depth: 0 }]
+  while (queue.length > 0) {
+    const { dir, depth } = queue.shift()
+    let entries
+    try { entries = readdirSync(dir, { withFileTypes: true }) } catch { continue }
+    for (const e of entries) {
+      if (e.name.startsWith(".") || SAME_NAME_SKIP.has(e.name)) continue
+      const abs = join(dir, e.name)
+      if (e.isDirectory()) {
+        if (depth + 1 <= SAME_NAME_MAX_DEPTH) queue.push({ dir: abs, depth: depth + 1 })
+        continue
+      }
+      if (!e.isFile()) continue
+      const list = byName.get(e.name)
+      if (list) { if (list.length < SAME_NAME_MAX_HITS) list.push(abs) }
+      else byName.set(e.name, [abs])
+    }
+  }
+  return byName
+}
+
+/** 同名候选的两个来源（**产出者只此一处**——都在本层）：缺省 = 逐 token 走查（现状）；
+ *  传入 `session`（见 `createResolutionSession`）⇒ 查表。两形的候选集逐字相等。 */
+function collectSameNameAll(roots, name) {
+  const out = []
+  for (const root of roots) collectSameName(root, name, out)
+  return out
+}
+
+/**
+ * 解析会话（**调用方一次建一份** · 注入形）：两件同轮记忆，缺省（不传）⇒ 逐 token 现算（现状，零回归）。
+ *
+ * ① `lookup(roots, name)` = 同名候选索引：按根惰性建、一份覆盖全部档名 ⇒ 同一根只走一遍树
+ *    （候选集与 `collectSameName` 逐 token 形**逐字相等**，同界同序——见 `collectNamesOnce`）。
+ *    射程：只服务 `档缺` 注解的「盘上同名」提示——判定（档在不在盘）与解析序都不查它
+ *    （口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「索引的射程」）。
+ * ② `rootView(anchor)` = 基根发现结果的同轮记忆（`projectRootView` 每次调用要扫两层目录）——
+ *    一次调用里目录不会变，记与不记逐字同值；**跨轮缓存照禁**（口径 = §3.20「缓存口径」）。
+ *    它的必要性 = 同一判据的另一半：不记的话基根发现仍在每个悬空 token 上重跑一遍，走查次数依旧随 token 数走。
+ * @returns {{rootView:(anchor:string)=>object, lookup:(roots:string[], name:string)=>string[]}}
+ *   `lookup` = 按根集序拼合、总量封顶 `SAME_NAME_MAX_HITS`（与走查形同口径；去重仍由调用方的 `uniquePaths` 做）
+ */
+export function createResolutionSession() {
+  const perRoot = new Map() // root → Map(档名 → 绝对路径[])（每名 ≤ SAME_NAME_MAX_HITS，BFS 序）
+  const rootViews = new Map() // anchor → projectRootView 结果
+  const indexOf = (root) => {
+    let byName = perRoot.get(root)
+    if (!byName) { byName = collectNamesOnce(root); perRoot.set(root, byName) }
+    return byName
+  }
+  return {
+    rootView(anchor) {
+      let view = rootViews.get(anchor)
+      if (view === undefined) { view = projectRootView(anchor); rootViews.set(anchor, view) }
+      return view
+    },
+    lookup(roots, name) {
+      const hits = []
+      for (const root of roots) {
+        const list = indexOf(root).get(name)
+        if (!list) continue
+        for (const abs of list) {
+          if (hits.length >= SAME_NAME_MAX_HITS) break
+          hits.push(abs)
+        }
+        if (hits.length >= SAME_NAME_MAX_HITS) break
+      }
+      return hits
+    },
   }
 }
 
@@ -127,7 +207,9 @@ function coreLegs(start, view, referrer, order) {
  * @param {string|undefined|null} given 参数原值（`undefined` = 参数缺省——与空串分野，§2.2 第 1 步）
  * @param {{referrer?:string, bases?:string[], scanBases?:string[],
  *   kind?:"file"|"dir"|"any"|"none", order?:"root-first"|"near-first",
- *   crossRepo?:"dangling"|"visible"}} [opts]
+ *   crossRepo?:"dangling"|"visible", session?:{rootView:Function, lookup:Function}}} [opts]
+ *   `session` **缺省 = 逐 token 现算（现状，零回归）**；给了 ⇒ 基根发现取它的同轮记忆、第 7 步的同名候选查它的表
+ *   （`createResolutionSession` 建的那份；判定与解析不查索引——它的射程只有注解面）
  * @returns {{state:"resolved", abs:string}
  *   | {state:"ambiguous", candidates:string[]}
  *   | {state:"dangling", missing:string, sameName:string[], level:"base"|"path", tried:string[]}
@@ -142,7 +224,7 @@ export function resolvePathTarget(anchor, given, opts = {}) {
   const referrer = typeof o.referrer === "string" && o.referrer.trim() !== "" ? resolve(o.referrer) : null
   const bases = (Array.isArray(o.bases) ? o.bases : []).filter((b) => typeof b === "string" && b.trim() !== "")
   const scanBases = (Array.isArray(o.scanBases) ? o.scanBases : []).filter((b) => typeof b === "string" && b.trim() !== "")
-  const view = projectRootView(start)
+  const view = o.session ? o.session.rootView(start) : projectRootView(start)
 
   // ── 第 1 步：参数缺省（undefined）≠ 空串 —— 没有路径可判，只查锚根
   if (given === undefined || given === null) {
@@ -190,8 +272,9 @@ export function resolvePathTarget(anchor, given, opts = {}) {
 
   // ── 第 7 步：dangling —— 报缺的那一段 + 列同名候选（两层基根 + bases + scanBases 各根，每根各自起算）
   const name = segs[segs.length - 1] ?? pathText
-  const hits = []
-  for (const root of uniquePaths([...roots, ...scanBases])) collectSameName(root, name, hits)
+  const scanRoots = uniquePaths([...roots, ...scanBases])
+  // 两个来源、**产出者只此一处**：缺省 = 逐 token 走查；给了 `session` ⇒ 查表（它一次建一份、覆盖全部档名）。
+  const hits = o.session ? o.session.lookup(scanRoots, name) : collectSameNameAll(scanRoots, name)
   const sameName = uniquePaths(hits)
   return {
     state: "dangling",

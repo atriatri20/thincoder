@@ -5,7 +5,9 @@
  * 业务入口两档（都是用户真会走的那条路）：
  *  - 11-1 / 11-2 / 11-4 / 11-6 / 11-7 / 11-8 = **真会话链路**：`runAgent`（prepareRun → 安全点守卫 → 压缩 → 发送面净判 → 回执）；
  *  - 11-3 / 11-9 = 安全点（`runCompactionCheck`）∥ 发送面（`chat`）按回合环同序（`agent/turn-loop.mjs:143-147`）——
- *    该行设计的交互组件就是「预算面 ↔ 发送面」与「`splitHistory` 无中段支 → `shrinkOversized`」，故不进会话层。
+ *    该行设计的交互组件就是「预算面 ↔ 发送面」与「`splitHistory` 无中段支 → `shrinkOversized`」，故不进会话层；
+ *  - 11-5 = **恢复链路 + 真会话链路**：盘上槽（巨历史 + `estimateSample`）→ `resumeSlot` → `applySession`
+ *    （样本在此接回）→ `runAgent`。判的是「重启后继续大会话不再吃 400」。
  *
  * 模型侧 = `node:http` 本机假 OpenAI SSE 端点 + 请求体留档（先例 `test/integration/review-doc-scope.test.mjs:27-52`）；
  * 零外网、零付费端点、零 `globalThis.fetch` 桩（走真 transport：`chat` → `proxyFetch` 直连分支 → 本机 127.0.0.1）。
@@ -18,15 +20,20 @@
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { createAgent, runAgent } from "../../thincoder-core/agent.mjs"
 import { runCompactionCheck } from "../../thincoder-core/agent/run-stages.mjs"
 import { chat } from "../../thincoder-core/provider/core.mjs"
-import { ASCII_CHARS_PER_TOKEN } from "../../thincoder-core/provider/rate.mjs"
-import { contextUsage } from "../../thincoder-core/token-window.mjs"
+import { ASCII_CHARS_PER_TOKEN, ESTIMATOR_VERSION } from "../../thincoder-core/provider/rate.mjs"
+import { contextUsage, estimateTokens, tokenKey, tokenRatioOf } from "../../thincoder-core/token-window.mjs"
+import { requestBudget } from "../../thincoder-core/config.mjs"
+import { _resetSessionsDirForTest, _setSessionsDirForTest, slotPath, writeEndMarker, writeSessionFile } from "../../thincoder-core/session-slots.mjs"
+import { applySession, resumeSlot } from "../../thincoder-core/session-lifecycle.mjs"
 import { _resetLogsDirForTest, _setLogsDirForTest } from "../../thincoder-core/log.mjs"
 
 // ---------- 夹具 ----------
@@ -134,8 +141,8 @@ const logsDir = mkdtempSync(join(tmpdir(), "ctx-overflow-int-logs-"))
 _setLogsDirForTest(logsDir)
 after(() => {
   _resetLogsDirForTest()
-  rmSync(cwd, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(logsDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  removeTempDirBestEffort(cwd)
+  removeTempDirBestEffort(logsDir)
 })
 
 /** 真会话场景：假 provider + `createAgent`（`deepseek-flash` 无 `maxTokens` ⇒ absent 档）。 */
@@ -319,6 +326,73 @@ test('11-4b 二次越窗：typed 错误浮出、不再压、不截断', { timeou
   assert.equal(turnCalls(s.stub).length, 2, "回合请求恰两次（首 + 重试），无第三次")
   const text = JSON.stringify(error.message)
   assert.ok(!text.includes("\u2026truncated") && !/truncated/i.test(text), "不静默截断")
+})
+
+// ---------- 11-5 恢复带样本的会话：首请求走估算支（CONTEXT-COMPACTION.md §6.17.1 链二）----------
+
+/** 真上游的计法比本机估算高 `TRUE_RATIO` 倍——现场读数 = 723,272 / 491,000（`provider/rate.mjs` 头注同记这一对）：
+ *  「本机估 491,000 < 压缩线」而「服务端眼里 723,272 > limit」正是样本存在的理由，也是本行要断的那一跳。 */
+const TRUE_RATIO = 723_272 / 491_000
+
+test('11-5 恢复带样本的长会话：首请求走估算支先压一次，不吃 400', { timeout: 120_000 }, async (t) => {
+  // RTM 11-5 行的三个数：槽样本 num 723_272 / den 491_000（比 ≈1.473）· provider maxTokens 393_216
+  // ⇒ window 1,000,000 · limit 606,784 · 压缩线 600,000。
+  const MAX_TOKENS = 393_216
+  const SAMPLE = { num: 723_272, den: 491_000 }
+  const provider = { model: "deepseek-flash", apiKey: "sk-test", maxTokens: MAX_TOKENS }
+  const budget = requestBudget(provider)
+  assert.equal(budget.window, 1_000_000, `夹具前提：窗口读数 ${budget.window}`)
+  assert.equal(budget.limit, 606_784, `夹具前提：limit = window − maxTokens = ${budget.limit}`)
+  assert.equal(budget.threshold, 600_000, `夹具前提：压缩线 ${budget.threshold}`)
+
+  // 桩按真上游口径作答：输入估算 × TRUE_RATIO 越 limit 就回越窗 400（报文逐字同 11-4a 那一族）。
+  const stub = await providerStub(({ compress, body }) => {
+    if (compress) return { content: "SUMMARY: earlier work compressed." }
+    const promptTokens = Math.round(estimateTokens(body.messages ?? []) * TRUE_RATIO)
+    const message = `This model's maximum context length is 1000000 tokens. However, you requested ${promptTokens} tokens (${promptTokens} in the messages, ${body.max_tokens} in the completion).`
+    return promptTokens > budget.limit
+      ? { status: 400, text: JSON.stringify({ error: { message, type: "invalid_request_error" } }) }
+      : { content: "handled" }
+  })
+  t.after(() => stub.close())
+  provider.baseURL = `http://127.0.0.1:${stub.port}`
+
+  // ① 盘上会话：可摘中段的巨历史（本机估算 ≈ 491,000）+ 校准样本（键 = `tokenKey(provider)`）
+  const sessCwd = mkdtempSync(join(tmpdir(), "ctx-overflow-resume-"))
+  _setSessionsDirForTest(join(sessCwd, "sessions"))
+  t.after(() => { _resetSessionsDirForTest(); removeTempDirBestEffort(sessCwd) })
+  writeSessionFile(slotPath(sessCwd, 1), {
+    version: 2, cwd: sessCwd, history: historyWithGiant(SAMPLE.den), contextHistory: [],
+    activeProvider: "stub", activeModel: provider.model, updatedAt: Date.now(),
+    estimateSample: { key: tokenKey(provider), num: SAMPLE.num, den: SAMPLE.den, est: ESTIMATOR_VERSION },
+  })
+  writeEndMarker(sessCwd, 1)
+
+  // ② 真恢复链路：resumeSlot → applySession（样本在此被 restoreTokenSample 接回）
+  const { slot, data } = await resumeSlot(sessCwd)
+  assert.equal(slot, 1, "本端记录可用的槽应被复用")
+  const agent = createAgent({ provider, tools: [], config: { agent: {}, traces: { enabled: false } }, cwd: sessCwd, history: [] })
+  applySession(agent, data)
+  const ratio = tokenRatioOf(agent)
+  assert.ok(ratio > 1, `恢复后校准比应 > 1（样本真的接回来了），实读：${ratio}`)
+
+  // 前提读数（不是判据）：不校准 = 在线下（不会压），校准后 = 越过 limit（真上游会 400）——
+  // 两者都在 ⇒ 这一次压缩只可能来自恢复出的样本。
+  const raw = estimateTokens(agent.history)
+  assert.ok(raw < budget.threshold, `夹具前提：未校准估算 ${raw} 应低于压缩线 ${budget.threshold}`)
+  assert.ok(Math.round(raw * ratio) > budget.limit, `夹具前提：校准后 ${Math.round(raw * ratio)} 应越过 limit ${budget.limit}`)
+
+  // ③ 发一条消息：业务可观察 = 用户拿到答复、压缩恰一次、零 400
+  const events = { compress: [] }
+  const answer = await runAgent(agent, "continue", { onCompress: (info) => events.compress.push(info) })
+
+  assert.equal(answer, "handled", "用户拿到答复（不是越窗错误，也不是被上游 400 打回）")
+  assert.equal(events.compress.length, 1, "压缩事件恰一次")
+  assert.equal(events.compress[0].mode, "summary", "那一次是真摘要压缩")
+  assert.ok(stub.requests.every((r) => r.status === 200), `零 400，实读状态序列：${JSON.stringify(stub.requests.map((r) => r.status))}`)
+  assert.equal(stub.requests[0].compress, true, "压缩请求在回合请求之前（首请求前先压一次，不是吃了 400 才补救）")
+  assert.equal(compressCalls(stub).length, 1, "摘要请求恰一次")
+  assert.equal(turnCalls(stub).length, 1, "回合请求恰一次")
 })
 
 // ---------- 11-6 / 11-7 / 11-8 / 11-9 可达性门（CONTEXT-COMPACTION.md §6.17）----------

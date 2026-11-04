@@ -19,9 +19,11 @@
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { _resetSessionsDirForTest, _setSessionsDirForTest } from "../../thincoder-core/session-slots.mjs"
 // 台账模块静态链入 `node:sqlite`（W8 契约②）——消费侧一律动态取。
@@ -73,9 +75,9 @@ const projects = []
 after(() => {
   _resetSessionsDirForTest()
   _resetLedgerDirForTest()
-  for (const p of projects) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(sessionsDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(ledgerDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  for (const p of projects) removeTempDirBestEffort(p)
+  removeTempDirBestEffort(sessionsDir)
+  removeTempDirBestEffort(ledgerDir)
 })
 
 /** 工程模式夹具：项目根（声明 + 三份批档）+ depth-0 主 agent（槽号钉 1）。 */

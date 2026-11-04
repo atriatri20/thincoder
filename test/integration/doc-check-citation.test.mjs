@@ -15,9 +15,11 @@
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { batchTool } from "../../thincoder-core/agent-tools/batch.mjs"
 // `ledger.mjs` 走动态导入：静态链入 `node:sqlite`（W8 契约——台账模块的消费侧一律动态取）。
@@ -37,9 +39,9 @@ _setLedgerDirForTest(ledgerDir)
 const projects = []
 after(() => {
   _resetLedgerDirForTest()
-  // `force` 只忽略 ENOENT、不重试 EPERM/EBUSY：句柄未即释时清理会抛 ⇒ 整档判失败（与判据无关）——给重试窗。
-  for (const p of projects) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(ledgerDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  // 句柄未即释时清理会抛 ⇒ 走助手（有界重试、失败只写一行 stderr，不判红整档）。
+  for (const p of projects) removeTempDirBestEffort(p)
+  removeTempDirBestEffort(ledgerDir)
 })
 
 /** 子代理（`eng-designer` ⇒ 写 §2），目标是 spawn 绑定的批档（无 path 参数）；触达账空。 */

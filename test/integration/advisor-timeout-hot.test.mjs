@@ -15,9 +15,11 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { settingsTool } from "../../thincoder-core/agent-tools/settings.mjs"
 import { advisorTool } from "../../thincoder-core/agent-tools/advisor.mjs"
@@ -81,7 +83,7 @@ async function scene(t, { delayMs, timeoutMs }) {
   const agent = { config, provider: { ...entry, model: "gpt-4o" }, cwd: project }
   t.after(async () => {
     await endpoint.close()
-    rmSync(root, { recursive: true, force: true })
+    removeTempDirBestEffort(root)
   })
   return { agent, settings: settingsTool({ configPath }), endpoint, configPath, project }
 }

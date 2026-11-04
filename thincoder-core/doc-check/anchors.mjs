@@ -9,14 +9,16 @@
  *   引文面要求「目标档全文里的一段连续子串」——不是 ⇒ `引缺`。不构成标记的行不判；不新增判据条数、
  *   不新增 verdict 词（三个命中类同计「锚 N 条」）。
  *
- * 抽取面：逐行扫；fenced 块整块跳过；可执行行（`isExecutableLine`）整行跳过（命令保字面）；
- *   提示词面另剥 CANON 操作数（面判据 = `./paragraph.mjs` 的 `isPromptFace`——七名整串删除后再抽，见 `CANON_OPERANDS`）。
+ * 抽取面：逐行扫；fenced 块整块跳过；可执行行（`isExecutableLine`——判面 = **码段之内**）整行跳过（命令保字面）；
+ *   提示词面另剥 CANON 操作数（面判据 = `./paragraph.mjs` 的 `isPromptFace`——按**整 token 边界**剥除后再抽，见 `CANON_OPERANDS`）。
  * 解析序**两级**（算法单源 = `../path-resolve.mjs` 的统一解析层，本档只声明本面参数）：
  *   ① 仓根相对全路径 → ② 引用方档所在目录相对。零命中 ⇒ `档缺`，并**列同名候选**（「你是不是指这个」——
- *   候选只作提示，**不产命中档**：裸名仍不跨目录解析，全域索引不建）。
+ *   候选只作提示，**不产命中档**：裸名仍不跨目录解析；那份同名索引只服务这条注解，判定与解析都不查它）。
  *   跨仓形（`仓名/相对路径`）⇒ **零命中**，回执记一行（声明源引用 / 须先声明——只判引用写对没有，不查存在性）。
  * 节在盘：**只读解析命中的那一档**（点查，不遍历）——目标档内存在标题行，其标题编号
- *   （标题文本去 `^#{1,6}\s` 后的首个 `\d+(?:\.\d+)*`）= 指针节号。
+ *   （标题谓词单源 = `headingMark`，取标题文本首个 `\d+(?:\.\d+)*`）= 指针节号。
+ * 同轮记忆（一次调用内，跨轮缓存照禁——§3.20「缓存口径」）：解析会话一份（同名索引 + 基根发现）、
+ *   解析结果按（引用方目录 ∥ token）、标题号集合按绝对路径、引文面目标档全文——四处同一窗口口径。
  * 残余登记（fail-open 方向——归评审核验面）：未闭合围栏 ⇒ 至档尾免；指针行的坐标尾不入判、同行的档 token 照判；
  *  **引文含 `」` 时只抽到第一个 `」`**（抽取段是 `[^」]`）——逐字引用一段内含「…」的句子时被验的只是前缀，
  *  错的后半段静默放行（方向是不误拦，不是不误放；这一半的最终裁定归评审核验面，同设计 §3.25「评审面」）。
@@ -24,10 +26,10 @@
  *   两张表保持私有、不上导出面；另两处消费面（兄弟脚本 ∥ 行号坐标清单）只拿判定、拿不到名单。
  */
 import { readFileSync } from "node:fs"
-import { basename, resolve } from "node:path"
+import { basename, dirname, resolve } from "node:path"
 import { docRootPaths, readManifest } from "../manifest.mjs"
-import { resolvePathTarget } from "../path-resolve.mjs"
-import { fenceMark, isFenceClose, isExecutableLine, isPromptFace } from "./paragraph.mjs"
+import { createResolutionSession, resolvePathTarget } from "../path-resolve.mjs"
+import { fenceMark, headingMark, isFenceClose, isExecutableLine, isPromptFace } from "./paragraph.mjs"
 
 /** `docRoot` 各键 → 绝对根集（**只作同名候选的扫描根**，不作受理边界——受理面仍是「档在盘 / 节在盘」）。
  *  读声明面单源 = `docRootPaths`（本档零自持根判定）；无 manifest / 非法 ⇒ 空集。 */
@@ -42,9 +44,18 @@ function docRootBaseKeys(root) {
   return out
 }
 
-/** 文档指针 token：`(目录段/)*名.md` + 可选行号坐标尾 + 可选节指示（`§` + 编号）。
- *  左界守卫排除更长 token 的尾段；右界排除后续字母数字（`.md` 之后紧邻 `[\w]` ⇒ 非完整 token）。 */
-const ANCHOR_RE = /(?<![A-Za-z0-9_.\-\\/@<>])((?:[A-Za-z0-9_.\-]+\/)*[A-Za-z0-9_.\-]+\.md)(?::\d+(?:-\d+)?)?(?:\s*§\s*(\d+(?:\.\d+)*))?(?![\w])/g
+/** 档 token 的**一对边界**（**一处定义、两处消费**）：左界不接 `[A-Za-z0-9_.\-\\/@<>]`（排除更长 token 的尾段）、
+ *  右界不接 `[\w]`（`.md` 之后紧邻字母数字 ⇒ 非完整 token）。锚抽取（`ANCHOR_RE`）与操作数剥除
+ *  （`stripCanonOperands`）同取这一对——两处各写一份边界，剥除面与抽取面就会漂：路径形操作数的末段名被当
+ *  独立操作数删掉、前缀留下来不再构成 token（漏报方向；口径 = §3.20「剥除面 = 整 token 边界」）。 */
+const TOKEN_LEFT_GUARD = "(?<![A-Za-z0-9_.\\-\\\\/@<>])"
+const TOKEN_RIGHT_GUARD = "(?![\\w])"
+
+/** 文档指针 token：`(目录段/)*名.md` + 可选行号坐标尾 + 可选节指示（`§` + 编号）——两界取自上面那一对。 */
+const ANCHOR_RE = new RegExp(
+  `${TOKEN_LEFT_GUARD}((?:[A-Za-z0-9_.\\-]+\\/)*[A-Za-z0-9_.\\-]+\\.md)(?::\\d+(?:-\\d+)?)?(?:\\s*§\\s*(\\d+(?:\\.\\d+)*))?${TOKEN_RIGHT_GUARD}`,
+  "g",
+)
 
 /** 约定文件名（**类名**——文档在描述「会读哪些文件」、黑名单名字、`files` 字段值、测试数据）：不抽。
  *  依据 = 这些名字在仓根 / 兄弟目录不一定存在，它们指的不是「某个仓内档」。 */
@@ -117,10 +128,19 @@ export const CANON_OPERANDS = [
   "RTM.md",
 ]
 
-/** 操作数剥除：逐行先整串删除七名 CANON 操作数再抽（与 `scripts/prompt-refs-check.mjs` 的 J3 豁免同式）。 */
+/** 操作数剥除：提示词面逐行先删 `CANON_OPERANDS` 的**整 token** 再抽（与 `scripts/prompt-refs-check.mjs` 的 J3 豁免同式）。
+ *  **剥除面 = 整 token 边界**（与锚抽取共用同一对边界）：只有左右界都成立的操作数名才被吞——名字只是更长 token
+ *  的尾段（`test/RTM.md` 里的末段名）⇒ **不剥**，该指针照常抽出、照常判存在性。
+ *  改前是子串整串删除（`out.split(s).join("")`）：路径前缀留下、末段名被吃，剩下的半截不构成 token，
+ *  该指针在提示词面**不被判**（漏报方向）。 */
+const OPERAND_STRIP_RES = CANON_OPERANDS.map((name) => new RegExp(
+  `${TOKEN_LEFT_GUARD}${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}${TOKEN_RIGHT_GUARD}`,
+  "g",
+))
+
 export function stripCanonOperands(line) {
-  let out = line
-  for (const s of CANON_OPERANDS) out = out.split(s).join("")
+  let out = String(line)
+  for (const re of OPERAND_STRIP_RES) out = out.replace(re, "")
   return out
 }
 
@@ -130,30 +150,57 @@ export function stripCanonOperands(line) {
 // 提示词面判据单源 = `./paragraph.mjs` 的 `isPromptFace`（§3.18 ②——形态与旧 `OPERAND_FACE` 逐字同）。
 const isOperandFace = isPromptFace
 
-/** 标题编号（标题文本去 `^#{1,6}\s` 后的首个 `\d+(?:\.\d+)*`）；非标题行 ⇒ null。 */
+/** 标题编号（标题文本里的首个 `\d+(?:\.\d+)*`）；非标题行 ⇒ null。
+ *  标题谓词单源 = `./paragraph.mjs` 的 `headingMark`（本档不再自持一份「什么算标题」的正则）。 */
 function headingNumber(line) {
-  const m = /^#{1,6}\s+/.exec(line)
-  if (!m) return null
-  const n = /\d+(?:\.\d+)*/.exec(line.slice(m[0].length))
+  const h = headingMark(line)
+  if (!h) return null
+  const n = /\d+(?:\.\d+)*/.exec(h.text)
   return n ? n[0] : null
 }
 
-/** 节在盘：目标档内任一标题行的编号 = 指针节号（字符串逐字等值——两处同归一形）。 */
-function sectionOnDisk(path, num) {
-  let text = ""
-  try { text = readFileSync(path, "utf8") } catch { return false }
-  for (const l of text.split("\n")) if (headingNumber(l) === num) return true
-  return false
+/** 节在盘：目标档内任一标题行的编号 = 指针节号（字符串逐字等值——两处同归一形）。
+ *  **同档一次读**：标题号集合按绝对路径记在 `cache` 里（一次调用内同一档只读一次——与引文面 `citedTextReader`
+ *  同一窗口口径：文件不变，记与不记逐字同值；跨轮缓存照禁）。读不到 ⇒ 空集（⇒ 节缺）。 */
+function sectionOnDisk(path, num, cache) {
+  let set = cache.get(path)
+  if (!set) {
+    set = new Set()
+    let text = ""
+    try { text = readFileSync(path, "utf8") } catch { text = "" }
+    for (const l of text.split("\n")) {
+      const n = headingNumber(l)
+      if (n !== null) set.add(n)
+    }
+    cache.set(path, set)
+  }
+  return set.has(num)
 }
 
 /** 档解析（判据 ① 的解析序两级——**算法单源 = 统一解析层** `../path-resolve.mjs`：本面只声明
  *  `kind:"file"` / `order:"root-first"`（与既有两级序逐字同序）/ `crossRepo:"visible"`（文档锚面是
- *  唯一开跨仓读数的面），`bases` = 无、`scanBases` = `docRoot` 各键（只喂同名候选提示）。
+ *  唯一开跨仓读数的面），`bases` = 无、`scanBases` = `docRoot` 各键（只喂同名候选提示），
+ *  `session` = 本次调用建的那份解析会话（同名候选查表 ∥ 基根发现同轮记忆——成本不随悬空 token 数增长）。
  *  行号坐标尾（`:N`）不参与档解析——token 只取 `.md` 段（抽取面已剥离坐标尾与节指示）。
  *  `num` = 指针节号（`§` 后编号；无节指示 ⇒ null）——仅用于判定节在盘，不参与档解析。
  *  @returns {{state:string, ...}} 层的四态结果 */
-function resolveDoc(token, refFile, base, scanBases) {
-  return resolvePathTarget(base, token, { kind: "file", order: "root-first", referrer: refFile, crossRepo: "visible", scanBases })
+function resolveDoc(token, refFile, base, scanBases, session) {
+  return resolvePathTarget(base, token, { kind: "file", order: "root-first", referrer: refFile, crossRepo: "visible", scanBases, session })
+}
+
+/** 解析结果的**同轮记忆**（键 = 引用方目录 ∥ token）：解析只依赖「基根 + 引用方目录 + token」——同一目录下
+ *  同一 token 再判一次是同一答案，而这次调用里文件不会变（跨轮缓存照禁，口径 = §3.20「缓存口径」）。 */
+function docResolver(base, scanBases, session) {
+  const cache = new Map()
+  return (token, refFile) => {
+    const key = `${dirname(refFile)}\u0000${token}`
+    let r = cache.get(key)
+    if (r === undefined) {
+      r = resolveDoc(token, refFile, base, scanBases, session)
+      cache.set(key, r)
+    }
+    return r
+  }
 }
 
 /**
@@ -171,6 +218,9 @@ export function checkAnchors(root, { files = [] } = {}) {
   const hits = []
   const crossRepo = []
   const citedTextOf = citedTextReader() // 引文面：目标档全文（同档一次读、同轮缓存）
+  const session = createResolutionSession() // 解析会话：一次调用建一份（同名候选查表 ∥ 基根发现同轮记忆）
+  const resolveToken = docResolver(base, scanBases, session) // 解析面同轮记忆（引用方目录 ∥ token）
+  const sectionCache = new Map() // 节在盘：标题号集合按绝对路径记忆（同档一次读）
   for (const f of files) {
     let text = ""
     try { text = readFileSync(f, "utf8") } catch { continue }
@@ -203,7 +253,7 @@ export function checkAnchors(root, { files = [] } = {}) {
           if (docNameExemption(basename(token)) !== null) continue
           const start = c.index + c[0].indexOf(token)
           cited.push({ start, end: start + token.length })
-          const r = resolveDoc(token, f, base, scanBases)
+          const r = resolveToken(token, f)
           if (r.state === "crossRepo") { crossRepo.push({ file: f, line: i + 1, token, ...r }); continue } // 跨仓：零命中，回执一行（同锚面）
           if (r.state !== "resolved") { // 路径先判存在性——两因不混（路径错 ⇒ `档缺`，引文错 ⇒ `引缺`）
             hits.push({ file: f, line: i + 1, token, clazz: "档缺", missing: r.state === "dangling" ? r.missing : "", sameName: r.state === "dangling" ? r.sameName : [] })
@@ -221,13 +271,13 @@ export function checkAnchors(root, { files = [] } = {}) {
         // 类名 ∥ 占位符两免：抽取面不把它们当指针（判据 = DOC-DISCIPLINE §3.24 条目 X——
         // 判定只此一处，兄弟脚本与行号坐标清单消费同一谓词）
         if (docNameExemption(basename(token)) !== null) continue
-        const r = resolveDoc(token, f, base, scanBases)
+        const r = resolveToken(token, f)
         if (r.state === "crossRepo") { crossRepo.push({ file: f, line: i + 1, token, ...r }); continue } // 跨仓：零命中，回执一行
         if (r.state !== "resolved") {
           hits.push({ file: f, line: i + 1, token, clazz: "档缺", missing: r.state === "dangling" ? r.missing : "", sameName: r.state === "dangling" ? r.sameName : [] })
           continue
         }
-        if (num !== null && !sectionOnDisk(r.abs, num)) hits.push({ file: f, line: i + 1, token, clazz: "节缺", section: num, target: r.abs })
+        if (num !== null && !sectionOnDisk(r.abs, num, sectionCache)) hits.push({ file: f, line: i + 1, token, clazz: "节缺", section: num, target: r.abs })
       }
     })
   }

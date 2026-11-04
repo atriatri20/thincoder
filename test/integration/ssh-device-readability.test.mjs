@@ -23,10 +23,12 @@
  */
 import { after, before, test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { createAgent } from "../../thincoder-core/agent.mjs"
 import { sshTool } from "../../thincoder-core/tools/ssh.mjs"
@@ -97,7 +99,7 @@ after(async () => {
   _setSshBinaryForTest(null)
   _setSshConfigDirForTest(null)
   for (const dir of [cwd, cfgDir]) {
-    if (dir) rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+    if (dir) removeTempDirBestEffort(dir)
   }
 })
 

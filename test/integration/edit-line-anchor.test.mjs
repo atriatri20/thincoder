@@ -13,15 +13,17 @@
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
 import { createHash } from "node:crypto"
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { editTool } from "../../thincoder-core/tools/file.mjs"
 
 const projects = []
 after(() => {
-  for (const p of projects) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  for (const p of projects) removeTempDirBestEffort(p)
 })
 
 const sha = (abs) => createHash("sha256").update(readFileSync(abs)).digest("hex")

@@ -12,9 +12,11 @@
  */
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { executeToolCalls } from "../../thincoder-core/agent/dispatch.mjs"
 import { subagentTool } from "../../thincoder-core/agent-tools/subagent.mjs"
@@ -24,7 +26,7 @@ const SCRATCH = join(ROOT, ".thincoder/tmp")
 mkdirSync(SCRATCH, { recursive: true })
 const fixtures = []
 after(() => {
-  for (const p of fixtures) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  for (const p of fixtures) removeTempDirBestEffort(p)
 })
 
 /** 夹具项目：声明 `docRoot.batches` + 一本真实在盘的批档。 */

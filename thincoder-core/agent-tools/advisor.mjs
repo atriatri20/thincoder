@@ -134,7 +134,7 @@ export const advisorTool = {
       documents: {
         type: "array",
         items: { type: "string" },
-        description: "Doc paths to review (design / requirements / referenced docs). One rule: a relative path resolves against the session project root (e.g. docs/core/design/ADVISOR-GUARDS.md); an absolute path is used as-is. Accepted = an existing .md file anywhere inside a project (a repo-root doc such as METHODOLOGY.md counts); anything else is refused with the resolved path, the reason, and the two expected forms. The advisor reviews ONLY these — no git diff scan. Use for both review types to pass the task's docs list.",
+        description: "Doc paths to review (design / requirements / referenced docs). One rule: a relative path resolves against the session project root (e.g. docs/<area>/<name>.md); an absolute path is used as-is. Accepted = an existing .md file anywhere inside a project (a repo-root doc counts); anything else is refused with the resolved path, the reason, and the two expected forms. The advisor reviews ONLY these — no git diff scan. Use for both review types to pass the task's docs list.",
       },
       batchDoc: {
         type: "string",
@@ -234,7 +234,7 @@ export const advisorTool = {
           const cands = [...new Set(invalid.flatMap((v) => v.candidates ?? []))]
           if (cands.length > 0) lines.push(`Candidates: ${cands.join(" ∥ ")} — pass one explicitly (an absolute path is the surest form).`)
         }
-        lines.push("Expected form 1 — project-root-relative: docs/core/design/ADVISOR-GUARDS.md (resolved against the session project root).", "Expected form 2 — absolute: D:\\repo\\docs\\core\\design\\ADVISOR-GUARDS.md (used as-is).")
+        lines.push("Expected form 1 — project-root-relative: docs/<area>/<name>.md (resolved against the session project root).", "Expected form 2 — absolute: D:\\repo\\docs\\<area>\\<name>.md (used as-is).")
         return withIdentityLine(
           `Advisor: design review documents must be documentation files (per the project's conventions). Invalid:\n${lines.join("\n")}`,
           { type: reviewType, scope: scopeSummary(documents), round: "—", criterion: "scope-not-doc" },

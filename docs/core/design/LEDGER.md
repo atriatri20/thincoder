@@ -315,7 +315,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 实装坐标（逐项）：
 
 - P1 = `thincoder-core/ledger-cmd.mjs:288` / `:300` / `:325`
-- P4 = `thincoder-core/ledger-cmd.mjs:43` / `:101` / `:123`（`EVIDENCE_TOO_LONG_MAX` = `thincoder-core/ledger-db.mjs:150`）
+- P4 = 字段类型拒串（`（应为字符串）` ∥ `（应为数字）` ∥ `（应为布尔）`）的守卫——两档同形：`thincoder-core/ledger-tools.mjs` 的 `assertToolArgs` ∥ `thincoder-core/team-ledger.mjs` 的同形字段校验。扫描式 = `grep -rn "应为字符串" thincoder-core/*.mjs` ⇒ 恰两处
 - P5 = `thincoder-core/ledger-db.mjs:178` / `:254`
 - P6 = `thincoder-core/ledger-cmd.mjs:98` / `:115` + `thincoder-core/ledger-tools.mjs:180` / `:190`
 

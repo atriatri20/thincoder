@@ -76,7 +76,7 @@
 | 7-2 | 同一夹具，工作树里放一档范围外的档且含悬空指针，再收口 | 该档不入判、收口放行、回执零该档行（连档名都不出现） | — | `test/integration/batch-close-gate.test.mjs` |
 | 7-3 | 同一夹具，本批笔域集内一档含悬空指针，再收口 | 收口被拒（throw），§1 状态行字节不变 | — | `test/integration/batch-close-gate.test.mjs` |
 | 7-4 | 同一夹具，收口前在批档同目录放本批自己的单元测试档 `<批档名>.test.mjs`（另备前缀变体 `<批档名>-extra.test.mjs`，盘上无 `<批档名>-extra.md`），再收口 | 收口被拒（throw）：拒串点名该档绝对路径 + 修法（删）；§1 状态行字节不变；删档后同跑收口放行 | — | `test/integration/batch-close-gate.test.mjs` |
-| 7-5 | 夹具项目里放一档**嵌套围栏档**（外层四反引号包内层三反引号、内层代码合计 &gt;300 字）与一档同长度**无围栏正文**档，两者均入本批笔域集，跑一次 `batch` 收口 | 嵌套围栏档 0 命中（其内代码不入段）· 收口放行；对照档命中 1 条（`clazz` = 文字太长）· 收口被拒——两半都成立才算过 | 缺口来源 = 2026-10-27 围栏闭合判定缺陷；回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 · `docs/core/design/DOC-DISCIPLINE.md` §3.18「围栏行止」· §5 A-DD27 | 未落（用例待补） |
+| 7-5 | 夹具项目里放一档**嵌套围栏档**（外层四反引号包内层三反引号、内层代码合计 &gt;300 字），入本批笔域集，跑一次 `batch` 收口；另起一份夹具，把同长度**无围栏正文**对照档放进笔域集，同跑收口 | 嵌套围栏档 0 命中（其内代码不入段）· 收口放行；对照档命中 1 条（`clazz` = 文字太长）· 收口被拒——两半都成立才算过 | 缺口来源 = 2026-10-27 围栏闭合判定缺陷；回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 · `docs/core/design/DOC-DISCIPLINE.md` §3.18「围栏行止」· §5 A-DD27 | `test/integration/batch-close-gate.test.mjs` |
 | 7-6 | 夹具批档 §1 含裸档名（要求档写成了不带目录段的名字），跑一次 `batch close` | 收口被拒（throw）：拒串首行 `DOC-CHECK GATE: REFUSED`、命中行带 `§1（作者：主 agent）`；§1 状态行字节不变 | 回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 ②（收口面含批档自身）；判据 = `docs/core/design/DOC-DISCIPLINE.md` §5 A-DD31 ③；用例号 = DD-129 | `test/integration/batch-close-gate.test.mjs` |
 | 7-7 | 同一夹具，批档干净、笔域集各档干净，跑一次 `batch close` | 收口放行；回执 `[doc-check gate] DOC-CHECK GATE: PASS · 范围 N 档`，N = 实判档数且 ≥ 1（批档自身在内） | 回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 ②；判据 = `docs/core/design/DOC-DISCIPLINE.md` §5 A-DD31 ④（判域恒非空）；用例号 = DD-135 | `test/integration/batch-close-gate.test.mjs` |
 | 7-8 | 子代理 append §2，本次写入文本把要求档写成不带目录段的名字；随后改成全路径再 append 一次 | 第一次被拒：命中行点名 `本次写入文本`，批档字节逐字不变（零字节落盘）；第二次落盘，前文零变 | 回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 ①（写段面强制集 = 本次写入文本）；判据 = `docs/core/design/DOC-DISCIPLINE.md` §5 A-DD31 ⑥；用例号 = DD-130 | `test/integration/batch-close-gate.test.mjs` |
@@ -132,7 +132,7 @@
 | 11-3 | `absent` 档（deepseek-flash 形状）两半段：越线 620,000 ∥ 未越线 100,000，另加退化档 `doubao-seed-2-1-turbo-260628` | 越线：强压 1 · 回合请求 1 · 零 400；未越线：零压缩 · 请求照发；退化档：零压缩 · 请求照发（地板不误伤） | — | `test/integration/context-overflow-guard.test.mjs` |
 | 11-4a | provider 桩首回合回 400 越窗报文，重试回合回 200 | 压缩事件恰 1（自适应压一次）· 压缩请求 1 · 回合请求 2（首 400 + 重试）· 用户拿到答复而非错误 | — | `test/integration/context-overflow-guard.test.mjs` |
 | 11-4b | 同一夹具，压缩后重试仍回 400 越窗（二次越窗） | typed 错误浮出（`kind = "context_overflow"` · `retryable === false`）· 压缩恰 1（不再压）· 回合请求恰 2（无第三次）· 不静默截断 | — | `test/integration/context-overflow-guard.test.mjs` |
-| 11-5 | 恢复带样本的会话（槽带 `estimateSample`：`num 723_272` / `den 491_000` ⇒ 比 ≈ 1.473；provider `maxTokens: 393_216` ⇒ `limit` 606,784），发一条消息 | 首请求估算支 ≈ 723,272 > `limit` ⇒ 触发压缩而非吃 400；业务可观察 = 重启后继续大会话不再 400 | 缺口来源 = 2026-10-27 上下文预算低估批；回指 = `docs/core/requirements/CONTEXT-COMPACTION.md` F-CC7 · `docs/core/design/CONTEXT-COMPACTION.md` §6.17.1 链二 | 未落（用例待补） |
+| 11-5 | 恢复带样本的会话（槽带 `estimateSample`：`num 723_272` / `den 491_000` ⇒ 比 ≈ 1.473；provider `maxTokens: 393_216` ⇒ `limit` 606,784），发一条消息 | 首请求估算支 ≈ 723,272 > `limit` ⇒ 触发压缩而非吃 400；业务可观察 = 重启后继续大会话不再 400 | 缺口来源 = 2026-10-27 上下文预算低估批；回指 = `docs/core/requirements/CONTEXT-COMPACTION.md` F-CC7 · `docs/core/design/CONTEXT-COMPACTION.md` §6.17.1 链二 | `test/integration/context-overflow-guard.test.mjs` |
 | 11-6 | CLI 会话用 128,000 窗档（压缩线 76,800），provider 桩带巨型工具 schema 使 `system + tools` 估算 > 76,800、`history` 仅数条短消息（复刻一次真实超窗事故的现场），发一条消息 | 压缩事件 0（`agent._lastCompressInfo` 未置位）· 摘要请求 0（`logCtx.stage === "compress"` 零发）· 回合请求 1 · 用户拿到答复 · 无 400 | 缺口来源 = 压缩判据把固定开销算进被判定的一侧 | `test/integration/context-overflow-guard.test.mjs` |
 | 11-7 | 同一档，`history` 堆出足量可摘中段，使 `history − middle + 注记 + 占位 + 开销` 的估算 ≤ 76,800，再发一条消息 | 压缩事件恰 1（`agent._lastCompressInfo.mode === "summary"`）· 摘要请求恰 1 · 回合请求恰 1 · 回复引用工具结果 | 同上 | `test/integration/context-overflow-guard.test.mjs` |
 | 11-8 | CLI 会话里让模型主动调 `context{action:'compact'}`——用户说一句「压一下上下文」即进入该回合，且压后仍超压缩线 | 压缩仍执行恰 1——门只拦阈值面，`force` 全文豁免 | — | `test/integration/context-overflow-guard.test.mjs` |
@@ -235,8 +235,8 @@
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
-| 19-1 | CLI 配慢 prefill 的 provider 桩（响应头立刻回、首帧延迟 3s），`agent.bodyIdleTimeoutMs` 设 800，发一条消息 | 用户拿到正文答复；会话流零 `SSE … timeout` 报错（首 chunk 窗生效） | — | 未落（用例待补） |
-| 19-2 | 同一桩吐出首帧后停摆，`agent.bodyIdleTimeoutMs` 设 800 | 报错文案含 `no data for 0.8s`、相位串 `sse-idle`；用时 ≈1s（不是首 chunk 窗的 600s） | — | 未落（用例待补） |
+| 19-1 | CLI 配慢 prefill 的 provider 桩（响应头立刻回、首帧延迟 3s），`agent.bodyIdleTimeoutMs` 设 800，发一条消息 | 用户拿到正文答复；会话流零 `SSE … timeout` 报错（首 chunk 窗生效） | — | `test/integration/sse-first-chunk-window.test.mjs` |
+| 19-2 | 同一桩吐出首帧后停摆，`agent.bodyIdleTimeoutMs` 设 800 | 报错文案含 `no data for 0.8s`、相位串 `sse-idle`（不是 `sse-first-chunk`、不是 600s 首 chunk 窗）；用时只作旁证，不作断言 | — | `test/integration/sse-first-chunk-window.test.mjs` |
 
 ### 20. 一本批档只服务一个并发 spawn
 
