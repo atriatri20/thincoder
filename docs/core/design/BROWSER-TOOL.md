@@ -522,6 +522,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | U71 | 正常 | 末个用者 `close`（另一例已先关） | 浏览器关 ∧ `session.lock` 不在盘；紧接着一个新实例首动作直接走「持有」拉起（不撞等待窗、不报「他进程持有」） | 单元测试 T49 |
 | U72 | 错误 | 持有者半死（端口答不通 ∧ 已过启动窗）**∧ 他实例仍有活登记** | 不回收、不拉起；回执含 `hold live registrations — not reclaiming`；那台浏览器进程未被杀 | 单元测试 T49 |
 | U73 | 边界 | 锁留存且记录 pid 已死 ∧ 端口答不通 ∧ 无他实例活登记 | 走「接管」：`rename` 摘陈旧位 → 回收 → 拉起 → 拿到会话（不报「他进程持有」） | 单元测试 T49 |
+| U74 | 边界 | 生效模式读不到（锁无记录 ∧ 命令行也读不到）时后到实例接入 | 回执尾行 = `[note: the shared browser is already running — …every instance has released it]`：**不含** `headless=`、不含 `(started by pid` | 单元测试 T7 |
 
 **单元测试档用例**：单元测试（T1–T15——假传输 + 打桩，零真实浏览器/文件系统）与冒烟（S1–S7——真 Edge/Chrome 无头 + 进程内 fixture 服务）＝ §7 表逐格引用面（**落点列** = U 条执行档；无编号者 = 单元测试组内，格内归属以 §7 判据列为准）；先红后绿。
 扩展轮件 = 批次本地单元测试档 ∥ 批次本地冒烟档——T16–T26 ∥ S8–S18（剪贴板端到端 = 本机 OS 面——Windows 以 PowerShell `Get-Clipboard` / `Set-Clipboard` 为对照）。
@@ -557,7 +558,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 6. **输入面差异说明**（tool-docs 模型面）：click = DOM 级语义点击（`isTrusted=false`——遮挡面亦可激活）∥ mouse = 真指针（受信 / 命中测试）——选用判据写明；insert 回执仅字符数（值不回显——沿 N-BT4 口径）。
 7. **几何与卷动读数**：回执 `[outside]` 标记 + wheel 的 `window` 读数 = 现场可读信息（人 / 模型同面）。
 8. **超时 / 外部关闭 / 异步三面文案**（人可见——与模型面同句）：超时错误句携卡点步名（诊断面）；重开注记一行（人可读）；ack / 摘要沿用 `bash#` 族文法（`browser#<N>`）；kill 确认句同 `process` 既有形。
-9. **多实例共享面文案**（人可见 ∥ 模型面同句，单源 = §12）：接入注记（生效模式 + 拉起者 pid）· `close` 的三形回执（留下 ∥ 真关 ∥ 末关但浏览器没关成）。没有静默路径——后到者一定看到模式沿用注记。
+9. **多实例共享面文案**（人可见 ∥ 模型面同句，单源 = §12）：接入注记（生效值读得到 ⇒ 生效模式 + 拉起者 pid；读不到 ⇒ 只报关系、不给值、不点 pid——句式见 §12「锁无记录时的模式来源」）· `close` 的三形回执（留下 ∥ 真关 ∥ 末关但浏览器没关成）。没有静默路径——后到者一定看到模式沿用注记。
 
 ## 11. 集成测试设计（F34 · 本批 · 收口口径）
 
@@ -618,11 +619,19 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | 形态 | 判据 | 动作 | 为什么需要这个形态 |
 |---|---|---|---|
 | 接入 | `profile/DevToolsActivePort` 的端口答 `/json/version`（2 s 帽）——**不论锁里记的 pid 死活、不论是否在启动窗内** | 开自己的标签页 → 登记 `users/<pid>.json` → 回执注记（模式与拉起者 pid 取锁记录；锁无记录 ⇒ 按下段「锁无记录时的模式来源」，且不点 pid） | 单实例交接：同一 profile 的第二次启动起不来，接入才是拿到会话的路。持有者被硬杀（exit 钩子不跑）后浏览器在 Windows 上照活——「锁里 pid 死 ∧ 端口答得通」只有接它一条正解：拉起必失败，`DevToolsActivePort` 被在跑的那个占着 |
-| 持有 | 端口答不通 ∧ 无锁可读（无档 ∥ 记录不可解析） | 原子领取 → **先读用者登记** → 同 profile 孤儿回收 → 拉起 → 把生效模式与端口写回锁 → 登记 → 开自己的标签页 | 无人持有且没有可用浏览器——拉起是唯一出路；回收同受「回收的唯一门槛」（有他实例活登记 ⇒ 不回收、不拉起） |
+| 持有 | 端口答不通 ∧ 无锁可读（无档 ∥ 记录不可解析） | 原子领取 → **先读用者登记** → 同 profile 孤儿回收 → 拉起 → 把生效模式与端口写回锁 → 登记 → 开自己的标签页；领取后的两条放弃腿（门槛命中 ∥ 拉起失败）⇒ 各自先摘掉自己刚建的位再报错（见下「原子领取」的放弃腿一条） | 无人持有且没有可用浏览器——拉起是唯一出路；回收同受「回收的唯一门槛」（有他实例活登记 ⇒ 不回收、不拉起） |
 | 等待 | 端口答不通 ∧ 锁可读 ∧ 记录 pid 活 ∧ `now - startedAt ≤ browserStartTimeoutMs()` | 50 ms 轮询；窗口内端口答通 ⇒ 转「接入」；到点仍未答通 ⇒ 转「接管」 | 两实例同时首开 ⇒ 一个持有一个在拉起中；不等待就等于第二个也去拉起（单实例交接 ⇒ 双双失败） |
 | 接管 | 端口答不通 ∧ 锁可读 ∧ （记录 pid 死 ∨ `now - startedAt > browserStartTimeoutMs()`） | **先读 `users/*.json`**：有他实例活条目 ⇒ 不回收不拉起、明确报错（见下「回收的唯一门槛」）；否则 `rename` 摘陈旧位 → 孤儿回收 → 拉起 → 写回 → 登记 | 持有者半死（浏览器被外部关掉 ∥ 拉起后崩在 `enable` 段 ∥ 末关没删成锁）∥ 持有者被硬杀留下锁 ⇒ 端口永不答通；没有这一形态，「端口不通 ∧ 锁在」就是终态，「第一个实例要用时拉起」在这条路上失效 |
 
-**锁无记录时的模式来源**：读在跑那台浏览器的命令行（`--headless=new` 在 ⇒ headless，不在 ⇒ 有头）；进程表读不到 ⇒ 只报「模式由首实例定、全池清空后才切换」，不给值。依据 thincoder-core/browser/launch.mjs「...(headless ? ["--headless=new"] : []),」
+**锁无记录时的模式来源**：读在跑那台浏览器的命令行（`--headless=new` 在 ⇒ headless，不在 ⇒ 有头）——依据 thincoder-core/browser/launch.mjs「...(headless ? ["--headless=new"] : []),」。进程表读不到 ⇒ 只报关系、不给值、不点 pid：
+
+```text
+[note: the shared browser is already running — the mode is set by the first instance; it switches only after every instance has released it]
+```
+
+依据 thincoder-core/browser/pool.mjs「[note: the shared browser is already running — ${tail}]」——这一支没有 `headless=` 段，`the shared browser is running headless=` 只在生效值读得到时成立（AC-M2 那一格）。
+
+**消费者 = 同一注记位**（三问的「谁」在 §12「模式（硬后果）」条：`sealNote` → `runSerial` 回执尾行）——本句与沿用句同槽、同发出时机、发出即清。
 
 **四形如何不重不漏**：「接入」与「接管」由**端口答不答**一刀分开——同一个 2 s 探针对同一端口不可能既答通又答不通，故两者不重；其余组合全落在另外两形（端口不通 ∧ 锁不可读 ⇒ 持有；端口不通 ∧ pid 活 ∧ 窗内 ⇒ 等待）。四位判据（端口 ∥ 锁 ∥ pid ∥ 窗）的 16 种组合逐一落在且只落在一形，无漏项——「锁内 pid 死 ∧ 端口答得通」（评审 N1 那一格）落「接入」。
 
@@ -645,6 +654,8 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 - `EEXIST` ⇒ 读记录：pid 活 ⇒ 等待 ∥ 接管（按启动窗分，见上表）；pid 死 ⇒ `renameSync(lock, lock + ".stale-" + 死pid)` 摘陈旧位（rename 原子——两方同时摘只有一个成功），随后重试创建，上限 5 轮。
 - **不做「先查后建」**：查与建之间正是两实例同时首开那一窗。
  依据 thincoder-core/browser/pool.mjs「const fd = openSync(path, "wx")」——创建成功才算获得（旧形态的「读后写」恰在两实例同时首开那一窗漏掉）。
+- **两条放弃腿都摘掉自己刚建的位**：门槛命中（他实例有活登记）∥ 拉起失败 ⇒ 先删 `session.lock`、再报错。留着它，后来的实例读到「pid 活 ∧ 端口答不通」，排进「等待」耗满一个启动窗才转「接管」——一次失败的领取变成下一个人的等待。
+ 依据 thincoder-core/browser/pool.mjs「d.remove(paths.lock)」——门槛腿与拉起失败腿各一次（领取成功之后、报错之前）。
 
 **用者登记与末关**：
 
@@ -661,7 +672,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 **模式（硬后果）**：
 
 - `headless` ∥ 有头 = **共享浏览器的属性**，由**第一个实例**定；持有者拉起后把生效值写回 `session.lock`。
-- 后到的实例要的是另一个模式 ⇒ **拿不到那个模式**，只能沿用；回执尾行明确告知（置位一次，发出即清）：
+- 后到的实例要的是另一个模式 ⇒ **拿不到那个模式**，只能沿用；回执尾行明确告知（置位一次，发出即清）——下句是生效值读得到的那一支；生效值读不到时的句式住在「锁无记录时的模式来源」条（只报关系、不报值）：
 
   ```text
   [note: the shared browser is running headless=<actual> (started by pid <N>) — the mode is set by the first instance; it switches only after every instance has released it]
@@ -701,7 +712,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | # | 判据 | 量法 |
 |---|---|---|
 | AC-M1 | 两实例同时首开 ⇒ 只拉起一台浏览器 | 进程表按 `--user-data-dir=<profile>` 过滤计数 = 1，且两实例各自拿到会话 |
-| AC-M2 | 后到实例要另一个模式 ⇒ 沿用 + 注记，不报错 | 回执含 `the shared browser is running headless=` ∧ 不含 `session is already running` |
+| AC-M2 | 后到实例要另一个模式 ⇒ 沿用 + 注记，不报错 | 回执含 `the shared browser is running headless=` ∧ 不含 `session is already running`（生效模式读不到 ⇒ 该串不出现，改发「already running」形——句式见「锁无记录时的模式来源」条） |
 | AC-M3 | 末关 | 先关者回执含 `other instance(s) still using it` ∧ 浏览器进程仍在；最后关者回执含 `shared browser closed (last user)` ∧ 进程消失 |
 | AC-M4 | 死条目撑不住计数 | 注入死 pid 条目 ⇒ 末关仍发生 |
 | AC-M5 | 代码里不存在互斥拒文（回归护栏） | `thincoder-core/**` 搜 `browser profile in use by another ThinCoder instance` ⇒ 0 |
