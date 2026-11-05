@@ -7,7 +7,11 @@
  *
  * 错误语义：CDP 回 `{ error: { message } }` ⇒ 拒以 `Error(message)`（BROWSER-TOOL.md §5）。
  * 帽（§2.9 三层帽——层二 / 层三）：`call` 缺省帽 15s（任何未显式配帽的调用也不悬挂）；`connectCdp` open 帽
- * 10s；`/json/new` fetch 帽 5s——动作内调用另随动作控制器（session 侧接线，预算先行）。
+ * 10s；`/json/new` ∥ `/json/close` fetch 帽 5s；`/json/version` 探针帽 2s——动作内调用另随动作控制器（session 侧接线，预算先行）。
+ *
+ * HTTP 面三只（共享池的接入面读数——`docs/core/design/BROWSER-TOOL.md` §12）：`newTab`（回执携标签页
+ * `id`——本实例的标签页标识）∥ `closeTab`（`/json/close/<id>`）∥ `probeVersion`（端口答不答，2 s 帽——
+ * 布尔、零抛：判不了就答不通，由调用方按「端口答不通」那一路走）。
  * 断连面：WS `onclose` / `onerror` ⇒ 拒在飞命令**并通知订阅者**（session 据此复位会话态——§2.10 源②）。
  */
 
@@ -15,8 +19,12 @@
 export const DEFAULT_CALL_TIMEOUT_MS = 15_000
 /** `connectCdp` open 帽（§2.9 层二）。 */
 export const CONNECT_TIMEOUT_MS = 10_000
-/** `/json/new` fetch 帽（§2.9 层二）。 */
+/** `/json/new` ∥ `/json/close` fetch 帽（§2.9 层二）。 */
 export const NEWTAB_TIMEOUT_MS = 5_000
+/** `/json/version` 探针帽（§12「接入」判据——端口答不答的 2 s 帽）。 */
+export const VERSION_TIMEOUT_MS = 2_000
+/** `/json/close/<id>` fetch 帽（§12「摘自己」——失败不阻断）。 */
+export const CLOSETAB_TIMEOUT_MS = 5_000
 
 /** 与浏览器标签页的一条 CDP 连接。 */
 export class CdpClient {
@@ -135,27 +143,47 @@ export async function connectCdp(wsUrl, { WebSocketImpl, openTimeoutMs = CONNECT
   return new CdpClient(ws)
 }
 
-/** 开一张标签页并取其调试地址（`PUT /json/new`，GET 兜底——walkthrough 同式；fetch 帽 5s）。 */
-export async function newTabWebSocketUrl(port, { host = "127.0.0.1", fetchImpl = globalThis.fetch, timeoutMs = NEWTAB_TIMEOUT_MS } = {}) {
-  const url = `http://${host}:${port}/json/new?about:blank`
+/** HTTP 请求 + 硬帽：到点即拒（不悬挂），成功 ⇒ 解析后的 JSON。 */
+async function httpJson(url, init, { fetchImpl, timeoutMs } = {}) {
   let timer = null
   const deadline = new Promise((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error(`browser did not answer /json/new within ${timeoutMs}ms (port ${port})`)),
-      timeoutMs,
-    )
+    timer = setTimeout(() => reject(new Error(`browser did not answer ${new URL(url).pathname} within ${timeoutMs}ms (port ${new URL(url).port})`)), timeoutMs)
     timer.unref?.()
   })
-  const fetchTab = async (init) => (await fetchImpl(url, init)).json()
   try {
-    let tab
-    try { tab = await Promise.race([fetchTab({ method: "PUT" }), deadline]) }
-    catch { tab = await Promise.race([fetchTab(), deadline]) } // GET 兜底（同帽——到点即拒，不悬挂）
-    if (!tab?.webSocketDebuggerUrl) {
-      throw new Error(`browser did not return a debuggable tab from /json/new (port ${port})`)
-    }
-    return tab.webSocketDebuggerUrl
+    return await Promise.race([(await fetchImpl(url, init)).json(), deadline])
   } finally {
     if (timer) clearTimeout(timer)
   }
+}
+
+/** 开一张标签页并取它的调试地址与**标签页 id**（`PUT /json/new`，GET 兜底——walkthrough 同式；fetch 帽 5s）。
+ *  `id` = 本实例的标签页标识（`/json/close/<id>` 摘自己用），共享池按它逐实例开自己的标签页（§12）。 */
+export async function newTab(port, { host = "127.0.0.1", fetchImpl = globalThis.fetch, timeoutMs = NEWTAB_TIMEOUT_MS } = {}) {
+  const url = `http://${host}:${port}/json/new?about:blank`
+  const opts = { fetchImpl, timeoutMs }
+  let tab
+  try { tab = await httpJson(url, { method: "PUT" }, opts) }
+  catch { tab = await httpJson(url, undefined, opts) } // GET 兜底（同帽——到点即拒，不悬挂）
+  if (!tab?.webSocketDebuggerUrl) {
+    throw new Error(`browser did not return a debuggable tab from /json/new (port ${port})`)
+  }
+  return { id: tab.id ?? null, wsUrl: tab.webSocketDebuggerUrl }
+}
+
+/** 关掉指定标签页（`/json/close/<id>`；帽 5s）。摘自己时调用——失败不阻断，故布尔、零抛。 */
+export async function closeTab(port, id, { host = "127.0.0.1", fetchImpl = globalThis.fetch, timeoutMs = CLOSETAB_TIMEOUT_MS } = {}) {
+  if (!id) return false
+  try {
+    await httpJson(`http://${host}:${port}/json/close/${encodeURIComponent(id)}`, undefined, { fetchImpl, timeoutMs })
+    return true
+  } catch { return false }
+}
+
+/** 端口答不答（`/json/version`，帽 2s——§12「接入」判据）：答通 ⇒ true；不应答 ∥ 解析失败 ⇒ false。零抛。 */
+export async function probeVersion(port, { host = "127.0.0.1", fetchImpl = globalThis.fetch, timeoutMs = VERSION_TIMEOUT_MS } = {}) {
+  try {
+    const body = await httpJson(`http://${host}:${port}/json/version`, undefined, { fetchImpl, timeoutMs })
+    return Boolean(body) && typeof body === "object"
+  } catch { return false }
 }

@@ -417,7 +417,7 @@ docs/core/design/PORTABILITY.md:187              tool-gates.mjs:78/:97          
 |---|---|---|---|
 | OBL-1 自指节 | `体量与拆分规划\|档位与拆分说明` | **节内各节**；该模式**节外 0**（仅命中节标题与节内文本；逐档清单为一次性产物，不入本档） | 节内整节删 |
 | OBL-1b 节外指称（含读数合并计） | `R24a\|体量\|拆分规划\|行数标注\|行数读数\|行数义务` | 活档命中 ⇒ **须逐条判入处置面（三分支）或保留面**（判据句 = 本档 §3.7「保留面」；逐行清单为一次性产物） | 按上表三分支逐处处置 |
-| OBL-2 文档行数义务句 | 族正则 = 下方「OBL 模式集」码块 OBL-2 行 | **活档 2 处**（`docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md:292` F12 · `docs/core/design/ADVISOR-CONVERGENCE.md:205` 的 `纯 .md 文档豁免` 变体）；域外余量 = **不处置 + 理由**（一次性材料 / 规则自述 / 只读参照树 / 产品代码），**不公布不可复现的全树总数** | 活档 **2** 处逐处收正（R3 / R6）；提示词 = 零改核验；其余**不处置 + 理由登记** |
+| OBL-2 文档行数义务句 | 族正则 = 下方「OBL 模式集」码块 OBL-2 行 | **活档 2 处**（旧需求档的 F12 句——该档已随归档清理删除 · `docs/core/design/ADVISOR-CONVERGENCE.md:205` 的 `纯 .md 文档豁免` 变体）；域外余量 = **不处置 + 理由**（一次性材料 / 规则自述 / 只读参照树 / 产品代码），**不公布不可复现的全树总数** | 活档 **2** 处逐处收正（R3 / R6）；提示词 = 零改核验；其余**不处置 + 理由登记** |
 | OBL-3 文档档行数读数 | `实测行数\|行数读数\|(实测\|声明)\s*\*{0,2}\d{2,4}\s*\*{0,2}\s*行` | 活档 **25 行**（域 / 排除口径同 OBL-1b；与 OBL-1b ② 分量**口径独立**——不互为分量） | 随条目 1 / 条目 2 处置（同 ② 分支） |
 | OBL-5 文档面标注义务句 | 族正则 = 下方「OBL 模式集」码块 OBL-5 行 | 活档 **26 行** | 收正面 = R 表逐处（R1 / R2 / R4 / R5 / R6 / R7 / R8，各 1 行）；其余命中 = **零改**（判据 = 指称对象为源 / 单元测试档：代码面清单表头与列定义、维度名、已限面句） |
 
@@ -433,15 +433,15 @@ OBL-5  文档面标注义务 = 带当前行数\s*\+?\s*预计增量|行数标注
 | # | 档:行 | 现状（指认） | 收正后 |
 |---|---|---|---|
 | R1 | `docs/core/requirements/METHODOLOGY.md:67`（F-R24a） | 判定句「新建 / 迁移文件标预计规模」未限面；范围边界列「纯文档 .md 豁免标注」 | 判定句限**源 / 单元测试档**；范围边界列改「**文档档零标注义务**（不标行数 / 不写预计增量 / 不写拆分规划）」 |
-| R2 | `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md:65`（批次档模板节） | `### 受影响文件（带当前行数 + 预计增量）` | `### 受影响文件（本批改哪些档 + 动作 + 行数 / 增量读数——**该表只住批档 §2**，设计 / 需求档不设）` |
+| R2 | 旧需求档（批次档模板节——该档已随归档清理删除） | `### 受影响文件（带当前行数 + 预计增量）` | `### 受影响文件（本批改哪些档 + 动作 + 行数 / 增量读数——**该表只住批档 §2**，设计 / 需求档不设）` |
 | R3 | 同上 `:292`（F12） | 「文档不受行数限制——超长**只作提示 / 登记**，不拆」 | 「文档不受行数限制——**无任何行数义务**（不限行数、不登记读数、不写拆分规划）」 |
 | R4 | `docs/core/design/ADVISOR-CONVERGENCE.md:17` | 「行数标注义务 = 纪律层文档规范节」 | 义务限**源 / 单元测试档**；文档规范节**不再承载**行数义务 |
 | R5 | 同上 `:201` | 权威链句同款 | 同 R4 收正 |
 | R6 | 同上 `:205`（评审维度） | 「…纯 `.md` 文档豁免」 | 「文档档**零标注义务**（不标行数 / 不写拆分规划）」——维度射程不变 |
-| R7 | `docs/core/design/_archive/ENGINEERING-MODE.md:107` | 「**拆分规划（提示词面）**：…实测 296 行…当前不拆（只登记）」 | 收正 / 删——提示词档非程序代码 ⇒ 零行数义务 |
+| R7 | 旧设计档（该档已随归档清理删除） | 「**拆分规划（提示词面）**：…实测 296 行…当前不拆（只登记）」 | 收正 / 删——提示词档非程序代码 ⇒ 零行数义务 |
 | R8 | `docs/core/design/STRUCTURE-DEBT.md:39` | 「设计（含受影响文件与行数标注）」 | 「设计（本批改哪些档归批档 §2；状态档不设该表）」 |
 | R9 | `docs/core/design/AGENT-LOOP-SUBAGENT.md`:378 / `:388` / `:554` / `:561` / `:564` / `:565` / `:567` | ① 指针（「见 R24a 节」/「（§R24a）待实现轮复测」）· ② 读数（实测 457 / 442 / 560）· ③ 变更记录枚举 | 删读数片段 + 删 / 改指指针（条目 2 + 死指针两判据同时命中）；异名节 `:540` 整节删 |
-| R10 | `docs/core/requirements/_archive/ENGINEERING-MODE.md:231` | 已限源 / 测试 | **零改**（核验项） |
+| R10 | 旧需求档（该档已随归档清理删除） | 已限源 / 测试 | **零改**（核验项） |
 | R11 | `docs/core/design/DOC-CODE-RECONCILE.md`:230 / `:254` / `:263` / `:265` / `:300` / `:310` / `:480` | ② 体量节读数与判据行（E9 · B3 · C1 · C3 · ACC-5 · 硬限触发句 · §9 体量收正） | ② 删读数片段；**判据行（C3 / ACC-5）整行删**（判据随规则退役——条目 2）；③ 叙述删指称片段 |
 | R12 | `docs/core/design/DOC-SYSTEM.md:332` | **正文残留**：「**拆分规划（R24a）**：本档实测 **423 行**…已超软线」 | **整句删**（② 读数——该句仅读数与拆分规划，无他语义） |
 | R13 | 其余 ① ② ③ 命中行（**全表命中须逐条判入处置面或保留面**；本表已逐处命名其中 15 行） | 变更记录 / 目录枚举 / 沿革句（`TESTING.md:292` · `AGENT-LOOP.md:497` 等） | 按三分支逐处处置（**落笔前逐处回读**——行号只作 as-of） |
@@ -679,7 +679,7 @@ node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).for
 #### J-3（#69）tool-docs 计数收正（D3 计数与列表同改）
 
 **判据**：唯一值 = 判时实读 `git ls-files thincoder-core/tool-docs` 的行数，声明值须等于它（D3——档数与列表同改）。目录档数随工具增减漂移，故读数只作锚：as-of 2026-10-27 实读 = **54**，判时按实读重取。
-checklist 描述档已随工具废除（承接 = `docs/core/design/_archive/modules/ENGINEERING-MODE-V2-MODULE-CHECKLIST-REMOVAL.md`）——该档退场后本族按实读收正。
+checklist 描述档已随工具废除（承接档已随归档清理删除）——该档退场后本族按实读收正。
 
 - **射程补正**：本条目 A 类射程初记 **4 档 7 处**，实为部分完成：`CORE-UNIFICATION.md` 的计数句另有 16 处属同一族（坐标 as-of 该轮：`:65` `:80` `:86` `:96` `:164` `:166` `:408` `:637` `:1003` `:1008` `:1010` `:1031` `:1053` `:1161` `:1515` `:1516`），其中一处是**派生数**（两端提示词面总档数 = 槽位档 + 工具描述档）——派生物不另判，按两项实读重算（D3）。
 
@@ -1267,13 +1267,13 @@ checklist 描述档已随工具废除（承接 = `docs/core/design/_archive/modu
 
   ② **占位**（词干长度 ≤ 1 ∥ 词干落 `PLACEHOLDER_STEMS` 闭集：`x` · `a` · `b` · `file` · `out` · `foo` · `bar` · `example` · `sample` · `name` · `path`）；
 
-  ③ **操作数**（**提示词面**先把 `CANON_OPERANDS` 导出的操作数**整 token** 剥除再抽（名数不写死——名集单源 = `thincoder-core/doc-check/anchors.mjs`；本节仅在围栏块内保留交付文本的逐字副本））。
+  ③ **操作数**（**剥除面**先把 `CANON_OPERANDS` 导出的操作数**整 token** 剥除再抽——剥除面 = 下条「③ 的作用面」定义的那一面（`thincoder-core/prompts/**`），与「面界差」里的「提示词面」（`prompts/**` + `tool-docs/**`）不同物；名数不写死——名集单源 = `thincoder-core/doc-check/anchors.mjs`；本节仅在围栏块内保留交付文本的逐字副本）。
 
      **剥除面 = 整 token 边界**：只吞「左右界都成立」的操作数名——左界不接 `[A-Za-z0-9_.\-\\/@<>]`、右界不接 `[\w]`，**与锚抽取的档 token 共用同一对边界**（一处定义、两处消费）。名字只是更长 token 的尾段（`test/RTM.md` 里的末段名）⇒ **不剥**，该 token 照常抽出、照常判存在性。
 
      依据 thincoder-core/doc-check/anchors.mjs「const OPERAND_STRIP_RES = CANON_OPERANDS.map((name) => new RegExp(」——操作数按名逐条剥除 ⇒ 路径前缀与末段名一起被吃掉，剩下的半截不构成 token，该指针不被判。
 
-     提示词面夹具实读（临时域一档 · 三行）：
+     剥除面夹具实读（临时域一档 · 三行）：
 
 ~~~text
 见 docs/RTM.md      ⇒ 0 条（操作数名被删，剩「见 docs/」）
@@ -1286,7 +1286,9 @@ checklist 描述档已随工具废除（承接 = `docs/core/design/_archive/modu
 - **为什么**：这些名字在文档里指「会读哪些文件」的**操作数**或示例形，不指某个仓内档；同族判据 = `PROMPT-SYSTEM.md` §6.6 判保留面（引，不重述）。
 - **③ 的作用面（只此一面）**：剥除面 = `thincoder-core/prompts/**`（面谓词单源 = `paragraph.mjs` 的 `isPromptFace`；锚判侧以 `isOperandFace` 消费同一谓词）。`docs/` 面与 `tool-docs/**` 的同名 token 仍按指针判——
 
-   `AGENTS.md` / `SKILL.md` / `.thincoder/advisor.md` / `project_rules.md` 另有 ① 类名免接住；`README.md` / `MANIFEST.md` 在非提示词面照报；集成索引那名（`test/RTM.md` 的档名）**只在裸名形**被剥——写成路径形则任何面都按指针判。
+   **名物分开**：本节这一面叫**剥除面**，不叫「提示词面」——`PROMPT-SYSTEM.md` §6.6 的「提示词面」含 `tool-docs/**`（见下「面界差」），两个名指两个面；写成「提示词面」会把 `tool-docs/**` 一起拉进剥除面。
+
+   `AGENTS.md` / `SKILL.md` / `.thincoder/advisor.md` / `project_rules.md` 另有 ① 类名免接住；`README.md` / `MANIFEST.md` 在剥除面之外一律照报（含 `tool-docs/**`——剥除面只到 `prompts/**`）；集成索引那名（`test/RTM.md` 的档名）**只在剥除面、且只剥裸名形**——剥除面之外一律不剥，裸名照按指针判（引用方目录下解析不到即 `档缺`）；写成路径形则任何面都按指针判（可解析即免）。
 
 - **面界差（登记差异 · 不扩面）**：剥除面窄于 `PROMPT-SYSTEM.md` §6.6 的「提示词面」定义（`prompts/**` + `tool-docs/**`）。裁定 = **接受差异**，理由三条：
 
@@ -1305,9 +1307,9 @@ checklist 描述档已随工具废除（承接 = `docs/core/design/_archive/modu
   **Operand names.** Seven names count as operands rather than documents: the model writes them, or reads a file by that name. On
 the prompt face (`thincoder-core/prompts/**`) a **whole token** matching one of them is stripped before extraction; a name that is only
 the tail of a longer token (`RTM.md` inside `test/RTM.md`) is not stripped, and that path is judged like any other pointer. On other
-faces four of the seven are exempt as file-name classes — `AGENTS.md`, `SKILL.md`, `.thincoder/advisor.md`, `project_rules.md` — while
-`README.md` and `MANIFEST.md` are still judged as pointers; `RTM.md` is exempt only in its bare form, so write it path-qualified (e.g.
-`test/RTM.md`). The seven:
+faces the operand family is not stripped at all: four of the seven are exempt as file-name classes — `AGENTS.md`, `SKILL.md`,
+`.thincoder/advisor.md`, `project_rules.md` — and the remaining three are judged as pointers, `RTM.md` included, so write the index
+path-qualified (e.g. `test/RTM.md`). The seven:
 
   ```text
   AGENTS.md  SKILL.md  README.md  MANIFEST.md  .thincoder/advisor.md  project_rules.md  RTM.md
@@ -1974,7 +1976,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 **为什么这个形式让两处判定不会分叉**：今天的分叉成因是**表被导出、判定被各自复制**——`CANON_OPERANDS` 在导出面上，兄弟脚本拿到了它；两张表私有，兄弟脚本根本拿不到，于是它那面上的「哪些名字不算档」这条判定**不是判错，是没判**。谓词把**判定**（而不是表）放上导出面：消费方拿不到表，也就没有第二处可以添加一个名字——新增一类豁免只能改谓词体一处，三个消费面同轮继承。**机械判据**：`anchors.mjs` 的 `export` 行零含 `FILENAME_CLASSES` / `PLACEHOLDER_STEMS`；谓词调用点 = 三处。
 
-**不改语义面**：谓词是既有两张表的**同一判定**的再导出（同输入同输出）——锚判读数零变（回归判据 = §5 A-DD38 ②）。**操作数族不动**：`CANON_OPERANDS` / `stripCanonOperands` 按原样导出与消费——它是**面相关**的剥除（只提示词面剥；`docs/` 面 `README.md` 照判，§3.20「面界差」），与本节两张表的**面无关**判定不是同一件事，混进来会把面相关规则绑到面无关判定上。
+**不改语义面**：谓词是既有两张表的**同一判定**的再导出（同输入同输出）——锚判读数零变（回归判据 = §5 A-DD38 ②）。**操作数族不动**：`CANON_OPERANDS` / `stripCanonOperands` 按原样导出与消费——它是**面相关**的剥除（**只在剥除面剥**，剥除面 = `thincoder-core/prompts/**`；`docs/` 面 `README.md` 照判，§3.20「面界差」），与本节两张表的**面无关**判定不是同一件事，混进来会把面相关规则绑到面无关判定上。
 
 **判据值（一句 · 绝对值不入本档）**：`node scripts/prompt-refs-check.mjs` ⇒ **零命中 / exit 0**。豁免名（占位形 ∥ 类名）不进命中集；模型可见面上的真引用按 `docs/core/design/PROMPT-SYSTEM.md` §6.6 的处置（删引用、非改址）删净，不改成另一种档名写法。逐处命中的坐标与每次的批次读数住批档——本档只写这条判据。
 
@@ -2316,7 +2318,7 @@ V5-B: /(?<![A-Za-z0-9-])((?:T-[A-Z]{1,5}\d{1,3}(?:-\d{1,3})?|T-\d{1,3}|T[A-Z]?\d
 
 1. **实装现态**：扫描域常量 `SCAN_DIRS` = **九元素** + 逐字快照断言（**原用例第 1 条**——载体档已删除）——**二者均随 v2 单引擎收敛删除**：判定范围 = **调用方传入的文件清单**（无目录扫描、无声明面），锚判据承 §2 V5 落点。
 
-2. **文本面差（本条对象）**：参照历史面 `thincoder-cli/docs/_archive/design/ENGINEERING-MODE.md` 的迁移批验收文本仍记**「三元素」**（AC-V5-16 `:2486` · T-V5-16 `:2694`）——与实装现态差 = 射程三次扩展；**处置 = 本追加条（基准层补写）**；参照历史面**不回改**（只读红线——§4.2.8）。
+2. **文本面差（本条对象）**：参照历史面的迁移批验收文本（旧 ENGINEERING-MODE 档——该档已随归档清理删除）仍记**「三元素」**（AC-V5-16 · T-V5-16）——与实装现态差 = 射程三次扩展；**处置 = 本追加条（基准层补写）**；参照历史面**不回改**（只读红线——§4.2.8）。
 
 3. **残留射程 + 源登记**：快照断言为**逐字全等** ⇒ 扫描域再扩仍会再红（测试登记——不阻断本节）；D3 更新落笔 = 设计档本处（#1 行）+ 同处（#1 取 (b) 理由——设计档明文要求逐字快照、只按新值更新）。
 

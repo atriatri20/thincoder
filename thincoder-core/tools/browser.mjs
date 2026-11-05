@@ -105,7 +105,7 @@ export const browserTool = {
       networkIdle: { type: "boolean", description: "wait: true = wait until network activity is quiet for 500ms." },
       timeoutMs: { type: "number", description: "Budget override in ms: wait = the predicate timeout (default 30000, cap 120000); other actions = the whole-call budget (default per action table, hard cap 120000)." },
       fullPage: { type: "boolean", description: "screenshot: true = capture the whole page, false = viewport (default)." },
-      headless: { type: "boolean", description: "Session-open parameter (any action): default true. A different value on a running session is an error — close it first." },
+      headless: { type: "boolean", description: "The shared browser's first-open attribute (any action): default true. When another instance already started it, your value cannot be applied — the session reuses the running mode and the receipt carries a `[note: the shared browser is running headless=<actual> …]` line saying so. Switching modes needs every instance to release the browser first." },
       key: { type: "string", description: "press: key name (Enter, Escape, Tab, Backspace, Delete, Space, Insert, Home, End, PageUp, PageDown, Arrows, F1-F12, modifiers) or a single character." },
       modifiers: { type: "array", items: { type: "string" }, description: "press: modifier keys held (and observed by the page) — Control | Alt | Shift | Meta, any combination." },
       phase: { type: "string", description: "press: press (default) | down | up. mouse: click (default) | down | up." },

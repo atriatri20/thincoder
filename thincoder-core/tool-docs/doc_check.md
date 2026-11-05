@@ -21,9 +21,9 @@ What it checks — exactly two criteria, both built into the engine:
   **Operand names.** Seven names count as operands rather than documents: the model writes them, or reads a file by that name. On
 the prompt face (`thincoder-core/prompts/**`) a **whole token** matching one of them is stripped before extraction; a name that is only
 the tail of a longer token (`RTM.md` inside `test/RTM.md`) is not stripped, and that path is judged like any other pointer. On other
-faces four of the seven are exempt as file-name classes — `AGENTS.md`, `SKILL.md`, `.thincoder/advisor.md`, `project_rules.md` — while
-`README.md` and `MANIFEST.md` are still judged as pointers; `RTM.md` is exempt only in its bare form, so write it path-qualified (e.g.
-`test/RTM.md`). The seven:
+faces the operand family is not stripped at all: four of the seven are exempt as file-name classes — `AGENTS.md`, `SKILL.md`,
+`.thincoder/advisor.md`, `project_rules.md` — and the remaining three are judged as pointers, `RTM.md` included, so write the index
+path-qualified (e.g. `test/RTM.md`). The seven:
 
   ```text
   AGENTS.md  SKILL.md  README.md  MANIFEST.md  .thincoder/advisor.md  project_rules.md  RTM.md

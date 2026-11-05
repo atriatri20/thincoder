@@ -32,6 +32,7 @@
 
 > 目的：默认 25s、可调，失败后会话仍可用。
 > 节注：回指 = docs/core/requirements/BROWSER-TOOL.md 条目 F-BT16b；三态（行序）= 4-1 正常 · 4-2 正常 · 4-3 边界。
+> 池隔离前提：该档把 `HOME` ∥ `USERPROFILE` 指到临时目录——共享浏览器在场时 `navigate` 走接入而不拉起，不隔离即假绿（同前提见故事 34）。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -384,6 +385,20 @@
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
 | 33-1 | CLI 会话里挂一个 timer 等它到期（模块直驱：假 `state` + 真核注入串 + 真镜像分支 + 真 `timer` 工具出缺省消息） | 会话流读到那行 timer 到期行：前缀段至 `timer —` 之前全落在 `/^[\x20-\x7E]+$/`，缺字形字符零命中；缺省消息（`Time's up (…)`）随行可见 | 修前红：注入行带 U+23F0 ⇒ 前缀段判红（Linux 终端渲成豆腐块） | `test/integration/timer-reminder-glyph.test.mjs` |
+
+### 34. 多实例共用一个浏览器（首开末关 · 用者计数）
+
+> 目的：两个（或更多）会话同时要用浏览器时——全机一台共享浏览器、各开自己的标签页；后到者被告知沿用的是哪个模式；关掉一个不带走别人在用的那台。
+> 节注：回指 = docs/core/requirements/BROWSER-TOOL.md 条目 F-BT6b（全机一个共享浏览器）∥ F-BT6（登录态）∥ F-BT2（模式由首实例定、后到沿用）；判据 = docs/core/design/BROWSER-TOOL.md §12 ∥ §12.1；交互组件 = `thincoder-core/browser/pool.mjs`（四形判定 ∥ 用者登记 ∥ 末关）⟷ `thincoder-core/browser/session.mjs`（接线）⟷ 真工具面；进入口 = 同一临时 `HOME` 下两个真 node 进程各发一条 `browser{navigate}`；三态（行序）= 34-1 正常 · 34-2 边界 · 34-3 正常。
+> 池隔离前提：该档把 `HOME` ∥ `USERPROFILE` 指到临时家目录（`browserPaths()` 落在其中）——开发机上真跑着的共享浏览器不得被用例接入。
+
+| 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
+|---|---|---|---|---|
+| 34-1 | 同一临时 `HOME` 下同时起两个实例，各自 `browser{action:navigate}` 一个本地页 | 命令行含 `--user-data-dir=<profile>` 且不是 helper（不含 `--type=`）的进程数 = 1；两实例都拿到 `[navigate]` + 页摘 | — | `test/integration/browser-shared-pool.test.mjs` |
+| 34-2 | 首实例已在无头跑，第二实例以 `headless:false` 跑 `navigate` | 第二实例不报错、拿到 `[navigate]`；回执尾行含 `the shared browser is running headless=true (started by pid <N>)`；不含 `session is already running` | 取「无头为生效值」那一向：另一向（有头为生效值）需显示环境，判的是同一机制（模式不可热切） | `test/integration/browser-shared-pool.test.mjs` |
+| 34-3 | A、B 都用过，先后 `close` | A 回执含 `1 other instance(s) still using it` 且浏览器进程仍在；B 回执含 `shared browser closed (last user)` 且进程消失、`session.lock` 不在盘 | — | `test/integration/browser-shared-pool.test.mjs` |
+
+★ 34-1–34-3：三例都需宿主有 Chromium，无则 skip 并打印（skip 不算绿）；进程计数口径 = 「几台浏览器」而非「几个进程」——helper 进程会带着父进程的 `--user-data-dir`，按裸开关数会把一台数成十几台（实测读数见本批批次档 §5）。
 
 ## VS Code 端（thincoder-vscode）
 

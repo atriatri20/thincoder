@@ -4,33 +4,36 @@
  * 会话健康）∥ §3（安全面）∥ §5（拆分决定）。
  *
  * 单会话/进程（KD-5）：同进程所有 agent 共一份浏览器；动作串行（同一队列——批并行调用天然排队）。
+ * **跨进程共享**：全机一个共享浏览器、第一个实例拉起、最后一个关（用者计数）——判定与生命周期全在
+ * `pool.mjs`（机制单源 = `docs/core/design/BROWSER-TOOL.md` §12），本档只留接线（开启 ∥ 关闭 ∥ 空闲 ∥ 退出钩子）。
  * 硬超时（§2.9）：每动作入队即记预算 deadline（队列等待计入——有意），到点由 `queue.mjs` 动作控制器中止
  * （错误句携卡点步名）；一切 CDP 命令经本档 `cdpCall` 单点接线（步名 = 方法名 ∥ 中止守卫 ∥ abort 后快速失败）。
  * 会话健康（§2.10）：进程事件 ∥ 连接事件 ∥ 入口探针三源；外部关闭 ⇒ `failSession` 单点（拒在飞 ⇒ 态复位
- * ⇒ 释放 profile 锁 ⇒ 置重开注记），下一次动作自愈重开（首回执尾行注记——置位一次，发出即清）。
- * `headless` = 会话开启参数（KD-4：异值报错，不热切）；空闲 15 分钟自动关（KD-8）+ 进程退出杀树兜底。
+ * ⇒ 摘自己的用者登记 ⇒ 置重开注记）；不动 `session.lock`、不杀共享浏览器（§12）。下一次动作自愈重开
+ * （首回执尾行注记——置位一次，发出即清）。
+ * `headless` = **共享浏览器的首开属性**（§12「模式」条）：池内已在跑 ⇒ 沿用生效值并在回执尾行告知，不报错；
+ * 模式注记与重开注记同写一位（`sealNote`），两条同时待发时分两行发出。空闲 15 分钟 = 摘自己（KD-8）
+ * ——仍有活条目则浏览器留着，末个用者才关。
  * 动作实施层 = `actions.mjs`（基线八）+ `input-actions.mjs`（新七）+ `clipboard.mjs`——经会话句柄取能力，
  * 不 import 本档（DAG 单向：`session → {actions, input-actions, clipboard} → {input, snapshot, cdp}`；`session → queue`，§5）。
  *
  * 注入缝（N-BT6）：`_deps.openBrowser` ∥ `_deps.killBrowser` ∥ `_deps.saveShot`——缺省 null ⇒
- * 回落真实现（`??`）；用例注入后 `finally` 还原。
+ * 回落真实现（`??`）；用例注入后 `finally` 还原。共享池的注入缝在 `pool.mjs`。
  */
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { ACTIONS } from "./actions.mjs"
 import { CLIPBOARD_ACTIONS } from "./clipboard.mjs"
 import { INPUT_ACTIONS } from "./input-actions.mjs"
-import { DEFAULT_CALL_TIMEOUT_MS, connectCdp, newTabWebSocketUrl } from "./cdp.mjs"
-import { acquireProfileLock, browserPaths, killBrowser, launchBrowser, releaseProfileLock, resolveBrowser } from "./launch.mjs"
+import { DEFAULT_CALL_TIMEOUT_MS, connectCdp } from "./cdp.mjs"
+import { browserPaths, killBrowser } from "./launch.mjs"
+import { attachOrLaunch, modeNote, releaseUser, releaseUserSync } from "./pool.mjs"
 import { createActionQueue } from "./queue.mjs"
 import {
-  COMPACT_ROWS, DEFAULT_MAX, MAX_ELEMENTS, assignRefs, createRefTable, focusExpression, normalizeSnapshot,
-  pageInfoExpression, renderSnapshot, snapshotExpression,
+  COMPACT_ROWS, createPagePrimitives, pageError,
 } from "./snapshot.mjs"
 
 export const IDLE_MS = 15 * 60 * 1000
-const READY_TIMEOUT_MS = 10_000
-const NAV_SETTLE_MS = 1_000
 const GRACEFUL_CLOSE_MS = 3_000
 const CLOSE_CALL_MS = 3_000 // `Browser.close` 显式帽（§2.9 层二）
 const ENABLE_CALL_MS = 10_000 // `Page/Runtime/Network.enable` 显式帽（§2.9 层二）
@@ -57,56 +60,67 @@ function runFrame(name, work) {
 const state = {
   cdp: null,
   child: null,
-  lockPath: null,
+  tabId: null,
+  starterPid: null,
   headless: null,
-  table: createRefTable(),
   lastUrl: null,
   lastTitle: null,
   lastActivityAt: 0,
   idleTimer: null,
-  reopenNote: false,
+  notes: [],
   net: { inflight: new Set(), lastEventAt: 0 },
+}
+
+/** 待发注记（尾行——重开注记在前、模式注记在后；发出即清）。 */
+function pushNote(text) {
+  if (text) state.notes.push(text)
 }
 
 // ── 生命周期 ────────────────────────────────────────────────────────────────
 
-/** 真实现：发现 → profile 锁 → spawn → `/json/new` → WebSocket → 三域 enable（§2.4 开启序）。
- *  开启段中途中止 ⇒ 连接复位 + 杀树兜底（含「launch 未返回」窗口：结算即补杀）+ 释放 profile 锁；置重开注记在 ensureSession。 */
+/** 真实现：共享池接入 ∥ 首开（`attachOrLaunch`——§12）→ WebSocket → 三域 enable（§2.4 开启序）。
+ *  开启段中途中止 ⇒ 连接复位 + 摘自己的用者登记；**不动 `session.lock`、不杀共享浏览器**（§2.9 ∥ §2.10：
+ *  它是全机共享物，生命周期只由末关 ∥ 下一位持有者的孤儿回收决定）。置重开注记在 ensureSession。 */
 async function openBrowserReal({ headless }) {
-  const exe = resolveBrowser()
   const paths = browserPaths()
-  acquireProfileLock(paths.lock)
-  let child = null, conn = null, launching = null
   try {
-    const launched = await runFrame("launch browser", () => (launching = launchBrowser({ exe, headless, profile: paths.profile })))
-    child = launched.child
-    const wsUrl = await runFrame("connect CDP", () => newTabWebSocketUrl(launched.port))
-    conn = await runFrame("connect CDP", () => connectCdp(wsUrl))
-    for (const domain of ["Page.enable", "Runtime.enable", "Network.enable"]) {
-      await runFrame(domain, () => conn.call(domain, {}, { timeoutMs: ENABLE_CALL_MS }))
+    const joined = await runFrame("launch browser", () => attachOrLaunch({ paths, wantedHeadless: headless }))
+    let conn = null
+    try {
+      conn = await runFrame("connect CDP", () => connectCdp(joined.wsUrl))
+      for (const domain of ["Page.enable", "Runtime.enable", "Network.enable"]) {
+        await runFrame(domain, () => conn.call(domain, {}, { timeoutMs: ENABLE_CALL_MS }))
+      }
+    } catch (e) {
+      try { conn?.close() } catch { /* 已断 */ }
+      throw e
     }
-    return { cdp: conn, child, headless, lock: paths.lock }
+    return {
+      cdp: conn,
+      child: joined.child ?? null,
+      tabId: joined.tabId ?? null,
+      starterPid: joined.starterPid ?? null,
+      headless: joined.headless ?? null,
+      note: joined.note ?? null,
+    }
   } catch (e) {
-    try { conn?.close() } catch { /* 已断 */ }
-    // 中止落在「launch 未返回」窗口 ⇒ child 未赋值：自启仍会结算 ⇒ 结算即补杀（§2.9 开启段中止——防孤儿）
-    if (child) { try { (_deps.killBrowser ?? killBrowser)(child) } catch { /* 已退出 */ } }
-    else if (launching) launching.then((l) => { try { (_deps.killBrowser ?? killBrowser)(l.child) } catch { /* 已退出 */ } }, () => { /* 自启自败（其内已杀树） */ })
-    releaseProfileLock(paths.lock)
+    releaseUserSync({ paths }) // 摘自己的登记（未登记则无事；锁与共享浏览器不动）
     throw e
   }
 }
 
-/** 会话态复位（关闭 ∥ 外部关闭共用单点）。 */
+/** 会话态复位（关闭 ∥ 外部关闭共用单点）。**不碰 `notes`**——待发注记跨复位生（重开注记在复位后置位）。 */
 function resetState() {
   disarmIdle()
   state.cdp = null
   state.child = null
-  state.lockPath = null
+  state.tabId = null
+  state.starterPid = null
   state.headless = null
   state.lastUrl = null
   state.lastTitle = null
   state.lastActivityAt = 0
-  state.table = createRefTable()
+  pages.reset()
   state.net = { inflight: new Set(), lastEventAt: 0 }
 }
 
@@ -127,7 +141,12 @@ let exitHooked = false
 function registerExitHook() {
   if (exitHooked) return
   exitHooked = true
-  process.once("exit", () => { if (state.child) (_deps.killBrowser ?? killBrowser)(state.child) })
+  // 退出钩子里不能等异步面（§12「退出与崩溃的诚实边界」）：同步摘自己的登记；
+  // 无活用者 ∧ 自己持子进程 ⇒ 杀树（pid 来源只有拉起者自己的 `state.child`）；其余留待下一任持有者回收。
+  process.once("exit", () => {
+    const left = releaseUserSync({ paths: browserPaths() }).others
+    if (left === 0 && state.child) (_deps.killBrowser ?? killBrowser)(state.child)
+  })
 }
 
 function headlessOf(args) {
@@ -143,17 +162,16 @@ function externalCloseError(cause) {
   return error
 }
 
-/** 处置单点（§2.10）：拒在飞（同一因由实例）⇒ 态复位 ⇒ 释放 profile 锁（子进程仍活 ⇒ 杀树兜底）⇒ 置重开注记。
- *  不调 `Browser.close`、不等自退（连接 / 进程已死）。 */
+/** 处置单点（§2.10）：拒在飞（同一因由实例）⇒ 态复位 ⇒ 摘自己的用者登记 ⇒ 置重开注记。
+ *  **不动 `session.lock`、不杀共享浏览器**（§12：它是全机共享物）。不调 `Browser.close`、不等自退（连接 / 进程已死）。 */
 function failSession(cause) {
   const error = externalCloseError(cause)
   currentController?.abort("session-lost", error)
-  const { cdp, child, lockPath } = state
+  const { cdp } = state
   resetState()
   if (cdp) { try { cdp.close() } catch { /* 已断 */ } }
-  if (child) { try { (_deps.killBrowser ?? killBrowser)(child) } catch { /* 已退出 */ } }
-  if (lockPath) releaseProfileLock(lockPath)
-  state.reopenNote = true
+  releaseUserSync({ paths: browserPaths() })
+  pushNote(REOPEN_NOTE)
   return error
 }
 
@@ -185,12 +203,13 @@ async function probeSession() {
   }
 }
 
-/** 会话开启（惰性 + headless 一致性判据 + 入口探针）；开启段中止 ⇒ 置重开注记（半开态已由
- *  `openBrowserReal` 复位）——下一次动作干净重开，不中毒（§2.9 开启段中止）。 */
+/** 会话开启（惰性 + 模式沿用注记 + 入口探针）；开启段中止 ⇒ 置重开注记（半开态已由
+ *  `openBrowserReal` 复位）——下一次动作干净重开，不中毒（§2.9 开启段中止）。
+ *  模式不再报错（§12「模式」条）：池内已在跑时请求值异 ⇒ **沿用生效值**并在回执尾行注记（不得静默）。 */
 async function ensureSession(wanted) {
   if (state.cdp) {
-    if (wanted !== undefined && wanted !== state.headless) {
-      throw new Error(`session is already running (headless=${state.headless}) — close it first to switch mode`)
+    if (wanted !== undefined && typeof state.headless === "boolean" && wanted !== state.headless) {
+      pushNote(modeNote({ wanted, actual: state.headless, starterPid: state.starterPid }))
     }
     await probeSession()
     return
@@ -201,16 +220,18 @@ async function ensureSession(wanted) {
   try {
     opened = await runFrame("launch browser", () => (_deps.openBrowser ?? openBrowserReal)({ headless: wanted === undefined ? true : wanted }))
   } catch (e) {
-    if (e?.browserAbort) state.reopenNote = true
+    if (e?.browserAbort) pushNote(REOPEN_NOTE)
     ctl?.resumeBudget() // 失败腿同样恢复（自启失败的裁决归启动窗帽与错误本体）
     throw e
   }
   ctl?.resumeBudget() // 动作时钟自会话就绪后起算（自启用时不计入动作预算；排队期照旧计入）
   state.cdp = opened.cdp
   state.child = opened.child ?? null
-  state.lockPath = opened.lock ?? null
-  state.headless = opened.headless === undefined ? (wanted ?? true) : opened.headless
-  state.table = createRefTable()
+  state.tabId = opened.tabId ?? null
+  state.starterPid = opened.starterPid ?? null
+  state.headless = opened.headless ?? null
+  pushNote(opened.note)
+  pages.reset()
   state.net = { inflight: new Set(), lastEventAt: Date.now() }
   state.lastActivityAt = Date.now()
   const net = state.net
@@ -228,31 +249,48 @@ async function waitForExit(child, maxMs) {
   while (child.exitCode == null && Date.now() < deadline) await sleep(100)
 }
 
-/** 关闭会话（幂等）；返回是否有会话被关。
- *  先 `Browser.close` 优雅关（浏览器自行落盘 profile——Cookie/localStorage 持久化是 F-BT6 的落盘前提；
- *  实测：直杀树不落盘 ⇒ 二段会话拿不到 Cookie），再等自退，未退才走杀树兜底。
- *  中止（预算 / 取消）⇒ 跳过优雅等待、直接杀树兜底，清理完成后以中止因由上报（§2.9 abort 语义）。 */
+/** 关闭会话（幂等）：**摘自己**（删自己的登记）→ 重扫 → 无活条目才关浏览器（末关）→ 关自己的标签页 → 删锁；
+ *  仍有活条目 ⇒ 浏览器留着、只关自己的标签页，回执明说还有几家在用（§12「用者登记与末关」）。
+ *  次序的理由：标签页一关就撕掉本进程的 CDP 连接，而末关的 `Browser.close` 正走那条连接——先关标签页，
+ *  非拉起者的末关就发不出关闭命令（回执说 `closed` 而浏览器还在跑）。
+ *  末关先 `Browser.close` 优雅关（浏览器自行落盘 profile——Cookie/localStorage 持久化是 F-BT6 的落盘前提；
+ *  实测：直杀树不落盘 ⇒ 二段会话拿不到 Cookie）；杀树兜底的 pid 来源**只有拉起者**（`state.child`）。
+ *  中止（预算 / 取消）⇒ 跳过优雅等待、直接杀树兜底，清理完成后以中止因由上报（§2.9 abort 语义）。
+ * @returns {Promise<{hadSession: boolean, others: number, lastUser: boolean, browserClosed: boolean}>} */
 export async function closeSession() {
-  const { cdp, child, lockPath } = state
+  const { cdp, child, tabId } = state
+  const hadSession = Boolean(cdp || tabId)
   resetState()
   let aborted = null
-  if (cdp) {
-    try { await runFrame("Browser.close", () => cdp.call("Browser.close", {}, { timeoutMs: CLOSE_CALL_MS })) }
-    catch (e) { if (e?.browserAbort) aborted = e /* 已断 ∥ 不支持 ∥ 中止 ⇒ 转杀树兜底 */ }
-    try { cdp.close() } catch { /* 已断 */ }
-  }
-  if (child) {
-    if (!aborted) {
-      try { await runFrame("Browser.close", () => waitForExit(child, GRACEFUL_CLOSE_MS)) }
-      catch (e) { if (e?.browserAbort) aborted = e }
+  const closeBrowser = async () => {
+    let closeError = null
+    if (cdp) {
+      try { await runFrame("Browser.close", () => cdp.call("Browser.close", {}, { timeoutMs: CLOSE_CALL_MS })) }
+      catch (e) { closeError = e; if (e?.browserAbort) aborted = e /* 已断 ∥ 不支持 ∥ 中止 ⇒ 转杀树兜底 */ }
     }
-    if (aborted || child.exitCode == null) {
-      try { (_deps.killBrowser ?? killBrowser)(child) } catch { /* 已退出 */ }
+    if (child) {
+      if (!aborted) {
+        try { await runFrame("Browser.close", () => waitForExit(child, GRACEFUL_CLOSE_MS)) }
+        catch (e) { if (e?.browserAbort) aborted = e }
+      }
+      if (aborted || child.exitCode == null) {
+        try { (_deps.killBrowser ?? killBrowser)(child) } catch { /* 已退出 */ }
+      }
+    } else {
+      await sleep(GRACEFUL_CLOSE_MS) // 非拉起者无 pid 可杀：只等 3 s 自退（§12「杀树兜底的 pid 来源只有拉起者」）
     }
+    // 末关的自证面：拉起者有杀树兜底（杀完即消失）；非拉起者只剩「`Browser.close` 被接受」这一读数——
+    // 它失败了就不能声称已关（§2.2 两形回执不可互换 · AC-M3 的量法 = 进程消失）
+    if (closeError && !child) throw closeError
+    if (aborted) throw aborted
   }
-  if (lockPath) releaseProfileLock(lockPath)
+  // 无会话（空闲定时器空跳）⇒ 不碰登记与锁：另一实例可能正在首开中
+  const outcome = hadSession
+    ? await releaseUser({ paths: browserPaths(), tabId, closeBrowser })
+    : { others: 0, lastUser: false, browserClosed: false }
+  if (cdp) { try { cdp.close() } catch { /* 已断 */ } }
   if (aborted) throw aborted
-  return Boolean(cdp)
+  return { hadSession, ...outcome }
 }
 
 /** 审批请示面用的「最近页 URL」（§3.1 文案；无会话 ⇒ null）。 */
@@ -290,72 +328,13 @@ function exceptionText(details) {
   return String(raw).split("\n")[0]
 }
 
-async function pageInfo() {
-  const v = await evalRaw(pageInfoExpression())
-  const info = { url: String(v?.url ?? ""), title: String(v?.title ?? ""), readyState: String(v?.readyState ?? "") }
-  state.lastUrl = info.url
-  state.lastTitle = info.title
-  return info
-}
-
-async function waitForReady(maxMs = READY_TIMEOUT_MS) {
-  return runFrame("waitForReady", async () => {
-    const deadline = Date.now() + maxMs
-    for (;;) {
-      const info = await pageInfo()
-      if (info.readyState === "complete" || Date.now() >= deadline) return info
-      await sleep(100)
-    }
-  })
-}
-
-async function waitForUrlChange(before, maxMs = NAV_SETTLE_MS) {
-  return runFrame("wait poll", async () => {
-    const deadline = Date.now() + maxMs
-    for (;;) {
-      const info = await pageInfo()
-      if (info.url !== before) return info.url
-      if (Date.now() >= deadline) return null
-      await sleep(100)
-    }
-  })
-}
-
-/** 取快照 + 分配引用 + 渲染（会话内单一快照点）。 */
-async function takeSnapshot({ selector = null, max = DEFAULT_MAX } = {}) {
-  const wanted = Number(max)
-  const capped = Math.max(1, Math.min(Number.isFinite(wanted) ? Math.floor(wanted) : DEFAULT_MAX, MAX_ELEMENTS))
-  const snap = normalizeSnapshot(await evalRaw(snapshotExpression({ selector, max: capped })))
-  if (snap.missing) {
-    throw pageError(`snapshot selector "${selector}" matched nothing — pass a CSS selector present on the page`)
-  }
-  const rows = assignRefs(state.table, snap.elements)
-  state.lastUrl = snap.url
-  state.lastTitle = snap.title
-  return {
-    url: snap.url,
-    title: snap.title,
-    total: snap.total,
-    rows,
-    text: renderSnapshot({ url: snap.url, title: snap.title, rows, total: snap.total }),
-  }
-}
-
-/** ref → 引用表条目（未在表 ⇒ 同 stale 句式——§2.3 失效口径）。 */
-function resolveRef(ref) {
-  const entry = state.table.byRef.get(String(ref))
-  if (!entry) throw pageError(`ref ${ref} is stale (was "unknown") — run snapshot again`)
-  return entry
-}
-
-/** ref → 聚焦（§2.7）：表查 + `focusExpression`；不可聚焦 ⇒ 明示拒（不静默错投）。 */
-async function focusRef(ref) {
-  const entry = resolveRef(ref)
-  const f = await evalRaw(focusExpression(entry.selector, entry.tag))
-  if (!f?.found || f.tag) throw pageError(`ref ${ref} is stale (was "${entry.name}") — run snapshot again`)
-  if (f.focused === false) throw pageError(`ref ${ref} "${entry.name}" is not focusable — keys would go to another element`)
-  return { ref, name: entry.name, label: `${ref} "${entry.name}"` }
-}
+/** 页原语（页与引用表——实现单源 = `snapshot.mjs` 的 `createPagePrimitives`；§12 尺寸拆分）。 */
+const pages = createPagePrimitives({
+  evalRaw,
+  step: (name, work) => runFrame(name, work),
+  sleep: (ms) => sleep(ms),
+  onPage: ({ url, title }) => { state.lastUrl = url; state.lastTitle = title },
+})
 
 // ── 安全面 ──────────────────────────────────────────────────────────────────
 
@@ -390,15 +369,9 @@ function assertHostAllowed(url, ctx) {
 async function failureReceipt(message) {
   const parts = [`Error: ${message}`]
   if (state.cdp) {
-    try { parts.push((await takeSnapshot({ max: COMPACT_ROWS })).text) } catch { /* 页不可读 ⇒ 仅错误行 */ }
+    try { parts.push((await pages.takeSnapshot({ max: COMPACT_ROWS })).text) } catch { /* 页不可读 ⇒ 仅错误行 */ }
   }
   return parts.join("\n")
-}
-
-function pageError(message) {
-  const err = new Error(message)
-  err.pageReceipt = true
-  return err
 }
 
 /** 真落盘（screenshot 缝的缺省实现）：`~/.thincoder/browser/shots/shot-<ISO>.png`。 */
@@ -444,12 +417,12 @@ const sessionHandle = {
   call: (method, params) => cdpCall(method, params),
   once: (method, timeoutMs) => runFrame(method, () => once(method, timeoutMs)),
   evalRaw,
-  pageInfo,
-  waitForReady: (maxMs) => waitForReady(maxMs),
-  waitForUrlChange: (before, maxMs) => waitForUrlChange(before, maxMs),
-  takeSnapshot,
-  resolveRef,
-  focusRef,
+  pageInfo: (opts) => pages.pageInfo(opts),
+  waitForReady: (maxMs) => pages.waitForReady(maxMs),
+  waitForUrlChange: (before, maxMs) => pages.waitForUrlChange(before, maxMs),
+  takeSnapshot: (opts) => pages.takeSnapshot(opts),
+  resolveRef: (ref) => pages.resolveRef(ref),
+  focusRef: (ref) => pages.focusRef(ref),
   assertHostAllowed,
   failureReceipt,
   pageError,
@@ -469,11 +442,12 @@ async function dispatchAction(action, args, ctx) {
   return handler(args, ctx, sessionHandle)
 }
 
-/** 自愈重开注记（§2.10）：重开后第一条回执尾行注记——置位一次，发出即清。 */
+/** 尾行注记（§2.10 ∥ §12「模式」）：置位一次，发出即清；多条待发时重开注记在前、模式注记在后。 */
 function sealNote(receipt) {
-  if (!state.reopenNote || !state.cdp) return receipt
-  state.reopenNote = false
-  return `${receipt}\n${REOPEN_NOTE}`
+  if (!state.notes.length || !state.cdp) return receipt
+  const notes = state.notes.join("\n")
+  state.notes = []
+  return `${receipt}\n${notes}`
 }
 
 async function runSerial(action, args, ctx, ctl) {

@@ -8,7 +8,7 @@
 
 ## 1. 方案与理由
 
-**一句话**：核内一个静态 `browser` 工具——首用自启一份系统 Edge/Chrome（独立 profile：`~/.thincoder/browser/profile`），经 CDP（Node ≥24 原生 `WebSocket`）驱动；动作面十六（八基线 + 输入域八扩展：press ∥ hover ∥ wheel ∥ mouse ∥ drag ∥ touch ∥ insert ∥ clipboard）多轮有状态；页面内容按不可信外部数据对待。
+**一句话**：核内一个静态 `browser` 工具——首用自启一份系统 Edge/Chrome（独立 profile：`~/.thincoder/browser/profile`；全机一个共享浏览器：第一个实例拉起、最后一个实例关，§12），经 CDP（Node ≥24 原生 `WebSocket`）驱动；动作面十六（八基线 + 输入域八扩展：press ∥ hover ∥ wheel ∥ mouse ∥ drag ∥ touch ∥ insert ∥ clipboard）多轮有状态；页面内容按不可信外部数据对待。
 
 **为什么走「自启 + CDP 直控」**（对位需求 §4 边界）：
 
@@ -20,7 +20,8 @@
 
 ```
 thincoder-core/browser/cdp.mjs             CDP 传输客户端（connect / call / on / close；WebSocket 注入缝）
-thincoder-core/browser/launch.mjs          浏览器发现（候选表 + BROWSER_PATH）∥ profile 锁 ∥ 启动 ∥ DevToolsActivePort ∥ 杀树
+thincoder-core/browser/launch.mjs          浏览器发现（候选表 + BROWSER_PATH）∥ 启动 ∥ DevToolsActivePort ∥ 孤儿回收 ∥ 杀树
+thincoder-core/browser/pool.mjs            共享池：持有者原子领取 ∥ 用者登记 ∥ 接入 ∥ 拉起分岔 ∥ 末关判定（§12）
 thincoder-core/browser/snapshot.mjs        页侧表达式面：快照脚本 ∥ 几何 ∥ 点 / 聚焦表达式 ∥ 归一 ∥ 引用表 ∥ 渲染 ∥ 页摘
 
 thincoder-core/browser/session.mjs         会话单例：惰性开启 ∥ 串行队列 ∥ 生命周期 ∥ 页原语 ∥ 安全助手 ∥ 分发表
@@ -39,7 +40,7 @@ thincoder-core/tool-docs/browser.md        模型面描述（六要素——TOOL
 依赖方向（单向 DAG）：`tools/browser.mjs`（工具面）→ `session.mjs`（会话单例／句柄）→ {`actions`（基线动作） / `input-actions`（新动作） / `clipboard`} → {`input`（输入引擎） / `snapshot.mjs` / `cdp.mjs`}；`session.mjs` → `queue.mjs`（调度策略：预算 / 控制器 / 步名）；
 
 异步桥 `agent-tools/browser-async.mjs`（动态入径——`tools/browser.mjs` ∥ `tools/ops.mjs`）→ `session.mjs` 入队面。
-动作模块经会话句柄取能力（`call` / `evalRaw` / `takeSnapshot` / `resolveRef` 等），**不 import** `session.mjs`——无环（§5 拆分决定）。
+动作模块经会话句柄取能力（`call` / `evalRaw` / `takeSnapshot` / `resolveRef` 等），**不 import** `session.mjs`——无环（KD-12 拆分决定）。
 
 ## 2. 接口契约
 
@@ -104,7 +105,7 @@ browser {
 | **evaluate** | **expression** · headless? | `[evaluate @ <url>] <值 JSON>`（≤8000 字符 + 截断标记；页面异常 ⇒ `Error: evaluate failed: <message>`） | 首行 `[evaluate @`；超限含 `[truncated` |
 | **wait** | 四选一：**selector** ∥ **text** ∥ **url** ∥ **networkIdle:true**；timeoutMs? | `[wait] <条件> — ok after <ms>ms` | 超时 ⇒ `Error: wait timed out after <ms>ms (<条件>)` + 页摘 + 清单 |
 | **screenshot** | fullPage? · headless? | `[screenshot] <绝对路径> (<bytes> bytes)`（PNG 落 `~/.thincoder/browser/shots/`——模型经 read_image 查看） | 首行 `[screenshot]` + 路径存在于盘且 >0 字节 |
-| **close** | — | `[close] browser session closed`；无会话 ⇒ `[close] no browser session`（成功态——幂等） | 会话与浏览器进程均终止 |
+| **close** | — | `[close] released the shared browser (<N> other instance(s) still using it — the browser is left running)` ∥ `[close] shared browser closed (last user)` ∥ `[close] released the shared browser (last user) — the browser is still running; the next instance reclaims it`（末关但关不成——**不得报「已关」**）；无会话 ⇒ `[close] no browser session`（成功态——幂等） | 本实例标签页与登记消失；末关且关成功 ⇒ 浏览器进程终止 ∧ `session.lock` 删除（§12） |
 | **press** | **key**（§2.8 键面）· modifiers? · phase? · repeat?（0–100）· ref?（发键前聚焦）· headless? | `[press] <combo>`（修饰+主键；`(down)` ∥ `(up)` 后缀；repeat>0 ⇒ ` ×<n>`；携 ref ⇒ ` → <ref> "<name>"`） | 首行 `[press]`；真按键链（页面侧 `isTrusted === true`——冒烟 S8） |
 | **hover** | 二选一：**ref** ∥ **x**+**y** · headless? | `[hover] <ref> "<name>"` ∥ `[hover] <x>,<y>` | 首行 `[hover]`；hover 型菜单可驱出（冒烟 S9） |
 | **wheel** | **deltaX** ∥ **deltaY**（至少一非零）· 落点 ref? ∥ x+**y**（缺省 = 视口中心）· headless? | `[wheel] Δ(<dx>,<dy>) at <x>,<y> — window (<sx>,<sy>)`（卷动稳定后读数 · ≤800ms） | 首行 `[wheel]`；window 读数 = 卷动后值（冒烟 S10） |
@@ -150,21 +151,21 @@ browser {
 
 公开源核查行：查过 本仓 `docs/` 树（本档 §2.9 ∥ `docs/core/requirements/BROWSER-TOOL.md` F-BT16 / N-BT5）+ 代码 `thincoder-core/browser/launch.mjs:34`、`:148`；登记公共源仓 = 无（`PROJECT-MANIFEST.json` `index.publicRepos` 实读 `[]`）；结论 = 无外部权威可对，先例即 walkthrough 脚本与 `BROWSER_PATH` 逃生口（`:47`）。
 
-- **单会话/进程**：模块级单例（`session.mjs`）——同进程所有 agent（主 ∥ 子代）共一份浏览器；动作**串行队列**（promise 链——批并行工具调用天然排队）。
-- **惰性开启**：首动作即开（`navigate` 为常规入口）；开启序 = 发现浏览器 → profile 锁 → spawn（`--headless=new` ∥ 有头；`--remote-debugging-port=0`）→ 轮询 `DevToolsActivePort`（≤ `START_TIMEOUT_MS` = 25s 缺省；env `BROWSER_START_TIMEOUT_MS` 覆盖，钳 `[2_000, 30_000]`——walkthrough `:124-127` 同式）
+- **单会话/实例**：模块级单例（`session.mjs`）——同进程所有 agent（主 ∥ 子代）共接入同一台共享浏览器（跨进程也共享，§12）；动作**串行队列**（promise 链——批并行工具调用天然排队）。
+- **惰性开启**：首动作即开（`navigate` 为常规入口）；开启序 = `attachOrLaunch`（先接既有共享浏览器，§12）——需拉起时：发现浏览器 → 原子领取持有者位 → **先读用者登记**（§12「回收的唯一门槛」）→ 同 profile 孤儿回收 → spawn（`--headless=new` ∥ 有头；`--remote-debugging-port=0`）→ 轮询 `DevToolsActivePort`（≤ `START_TIMEOUT_MS` = 25s 缺省；env `BROWSER_START_TIMEOUT_MS` 覆盖，钳 `[2_000, 30_000]`——walkthrough `:124-127` 同式）
 - **启动窗取值（钳位与非法值，本批定死）**：env 值经 `browserStartTimeoutMs(env)` 解算——`Number.isFinite(v) && v > 0` 才采纳，随后夹进 `[2_000, 30_000]`；非数值 ∥ 空串 ∥ `0` ∥ 负值 ⇒ **回落缺省 25s**（同族口径 = `AGENT-PARAMS.md` §2「非法一律回退默认」）。
   下限 2s 防「瞬间判失败」；上限 30s 把首动作的总墙钟压在「启动窗 + 动作预算」两段各自有帽的范围内（`navigate` 45s **不含**自启——KD-26）；要更长的时间窗走动作级 `timeoutMs`（硬上限 120s——§2.9），它与启动窗各算各的。
 - **冷启预算（本批定死）**：会话自启段受自身帽界定（启动窗 ≤30s ∥ 三域 enable 各 10s），**不占动作预算**——动作时钟自会话就绪后起算（排队期仍计入，U22）。
   实现面 = `thincoder-core/browser/queue.mjs` 的 `pauseBudget` / `resumeBudget` **成对**（`:61` `_pausedAt` · `:65-67` `remaining()` 暂停期读暂停点 · `:71-75` · `:78-83`），`resumeBudget` 经 `extendBy`（`:87-94`）把暂停时长还给 deadline 并重挂定时器；
 
-  接线点 = `thincoder-core/browser/session.mjs:199-208`（`:200` 开段暂停 · `:205` 失败腿恢复 · `:208` 就绪恢复）。
+  接线点 = `thincoder-core/browser/session.mjs` 的 `ensureSession`（开段 `ctl.pauseBudget()` · 失败腿 ∥ 就绪各 `ctl.resumeBudget()`）。
   **事后回补不能替代暂停**：`type` / `snapshot` 的 15s 预算短于启动窗 25s，只在自启结束后 `extendBy` 的形态挡不住「自启窗口内预算钟先裁决」——旧句 `stuck in launch browser` 仍在（U62 要消灭的正是它）。
 
   判据 = 无会话时首动作 `type`（15s 预算）配 12s 假自启 ⇒ 不超时、拿满 15s（§8 U62）；首动作 `navigate` 同判——45s 预算自就绪起算（§8 U63）；自启超启动窗 ⇒ `browser failed to start … within <生效秒数>s`。
   → `PUT /json/new?about:blank`（GET 兜底，walkthrough `:131-132`）→ WebSocket（`:133-141`）→ `Page.enable` + `Runtime.enable` + `Network.enable`。
-- **无头 ∥ 有头**（F-BT2）：`headless` 参数 = **会话开启参数**——默认 true；开启后传同值 = 忽略；传异值 = `Error: session is already running (headless=<现态>) — close it first to switch mode`。切换 = close → 下轮以新参数重开（同 profile ⇒ 登录态保留，F-BT6）。
-- **空闲自动关**：无动作 15 分钟 ⇒ 自动 close（资源卫生——桌面/CLI 长驻进程不为一次用过的浏览器永久占 100–200MB；任何动作重置计时）。**进程退出**：`process.on("exit")` 同步杀树兜底。
-- **多实例边界**（跨进程）：profile 锁文件 `~/.thincoder/browser/session.lock`（pid 活性判：`process.kill(pid,0)`）——他进程持有 ⇒ `Error: browser profile in use by another ThinCoder instance (pid <N>)`；陈旧锁（pid 死）⇒ 接管。**不做多会话/多标签**（边界 §9）。
+- **无头 ∥ 有头**（F-BT2）：`headless` 参数只在**首开**时有效——默认 true；共享浏览器已在跑时，请求值与生效值同 ⇒ 零注记，异 ⇒ **沿用生效值**并在回执尾行注记（不得静默，句面见 §12「模式」条）。换模式 = 全池清空（末关）后由下一个首开实例定（同 profile ⇒ 登录态保留，F-BT6）。
+- **空闲自动关**：无动作 15 分钟 ⇒ 摘自己（关自己的标签页）；池内仍有活条目 ⇒ 浏览器留着，最后一个离开才关（§12）。资源卫生口径不变（桌面/CLI 长驻进程不为一次用过的浏览器永久占 100–200MB）；任何动作重置计时。**进程退出**：`process.on("exit")` 同步摘自己的登记；无活条目 ∧ 自己持子进程 ⇒ 杀树（pid 来源只有拉起者自己的 `state.child`）；其余情形留待下一个持有者回收孤儿（§12「退出与崩溃的诚实边界」）。
+- **多实例**（跨进程）：全机一个共享浏览器，首个实例拉起、最后一个关；`~/.thincoder/browser/session.lock` = **持有者登记**（不是互斥拒文），机制单源 = §12。**本实例不做多标签管理**（一条会话 = 一条标签页；跨实例各开各的标签页——§9）。
 - **会话健康与外部关闭**：自启浏览器**不假定常驻**——进程 / 连接事件 + 入口探针 + 自愈重开（§2.10）；任一动作另受硬预算约束（§2.9）；异步任务的会话关系见 §2.11。
 
 ### 2.5 一次调用的数据流
@@ -233,16 +234,16 @@ Error: <action> timed out after <ms>ms (stuck in <步名>) — retry the action,
 **三层帽**（无一条等待无帽）：
 
 - **动作内 CDP 调用**：随动作控制器——`h.call` / `evalRaw` / `h.once` / 轮询 sleep 全数受控；abort 后一切后续调用**快速失败**（清理路径不得再起命令——防僵尸命令与下一动作交错）。
-- **动作外路径显式帽**：`connectCdp` open 10s ∥ `/json/new` fetch 5s ∥ `Page.enable` / `Runtime.enable` / `Network.enable` 各 10s ∥ `Browser.close` 3s ∥ 健康探针 2s ∥ `launchBrowser` 25s 缺省（`BROWSER_START_TIMEOUT_MS` 覆盖，钳 2–30s）∥ `closeSession` 等待 3s + 杀树兜底。
+- **动作外路径显式帽**：`connectCdp` open 10s ∥ `/json/new` fetch 5s ∥ `Page.enable` / `Runtime.enable` / `Network.enable` 各 10s ∥ `Browser.close` 3s ∥ 健康探针 2s ∥ `launchBrowser` 25s 缺省（`BROWSER_START_TIMEOUT_MS` 覆盖，钳 2–30s）∥ `closeSession` 等待 3s（杀树兜底只对拉起者——§12）。
 - **兜底帽**：`cdp.call` 缺省 15s——任何未显式配帽的调用也不悬挂（机检）。
 
 **步名（`stuck in`）**：`h.call` 自动记为 CDP 方法名（`Page.navigate` / `Runtime.evaluate` …）；非调用阶段显式标注（`queue wait` / `launch browser` / `connect CDP` / `waitForReady` / `wait poll` / `scroll settle`）。**取消**（§2.11）与超时共用同一控制器——错误句分形（`cancelled` ∥ `timed out`），卡点步名同样入句（N-BT10）。
 
-**开启段中止**：动作被取消 ∥ 自启段帽到点落于会话自启序列中途（半开态——连接 / 进程已置而 `enable` 序列未完）⇒ 按 §2.10 同式处置：复位会话态 + 释放 profile 锁（子进程仍活 ⇒ 杀树兜底）+ 置重开注记——下一次动作干净重开（不中毒；判据同 §8 U52）。
+**开启段中止**：动作被取消 ∥ 自启段帽到点落于会话自启序列中途（半开态——连接 / 进程已置而 `enable` 序列未完）⇒ 按 §2.10 同式处置：复位会话态 + 摘自己的用者登记 + 置重开注记——**不动 `session.lock`、不杀共享浏览器**（它是全机共享物，生命周期只由末关 ∥ 下一位持有者的孤儿回收决定，§12）；下一次动作干净重开（不中毒；判据同 §8 U52）。
 
 **取消接线（一条机制两个因由：`process` kill ∥ 回合收尾 discard）**：动作控制器（超时 / 取消单点，KD-19）的取消路径接线 = `thincoder-core/browser/queue.mjs:157` `enqueue(action, args, run, signal = null)` ∥
 
- `thincoder-core/browser/session.mjs:493` `runAction(action, args, ctx, { signal = null } = {})`（透传）；信号入队 ⇒ 控制器 `cancel()`（queued 丢队 ∥ running abort 即时展开）。
+ `thincoder-core/browser/session.mjs` 的 `runAction(action, args, ctx, { signal = null } = {})`（透传）；信号入队 ⇒ 控制器 `cancel()`（queued 丢队 ∥ running abort 即时展开）。
 
 **开启段句面（登记）**：开启段内层帽命中（`Page.enable` / `Runtime.enable` / `Network.enable` 各 10s）⇒ 回执为 CDP 层超时句 `<method> did not respond within <ms>ms`（`browser/cdp.mjs:80`）——方法名属本节步名词表（CDP 方法名）成员，句面合规（非动作面 `(stuck in …)` 形）；开启段内 WS 断连 ⇒ 走 §2.10 会话健康路径（F-BT17 面）。**到期条件 = 动作面失败句面下次触碰统一时一并收编**（不动）。
 
@@ -254,11 +255,13 @@ Error: <action> timed out after <ms>ms (stuck in <步名>) — retry the action,
 2. **连接事件**：CDP WS `onclose`/`onerror` ⇒ 拒在飞命令（既有）**并复位会话态**。
 3. **入口探针**（`ensureSession`）：子进程存活 ∧ 连接未关（零成本恒检）；距上次成功 CDP 活动 >5s 才做心跳 `Browser.getVersion`（帽 2s）——覆盖半死连接。**不做常驻心跳定时器**（检测延迟只在「在飞」有意义——在飞面已由 1/2 + 预算覆盖；常驻定时器只添唤醒成本）。
 
-**处置单点 `failSession(因由)`**：拒在飞命令（同一因由实例）⇒ 态复位（cdp ∥ child ∥ 引用表 ∥ 网络计数）⇒ 释放 profile 锁（子进程仍活 ⇒ 杀树兜底）⇒ 置重开注记。不调 `Browser.close`、不等自退（连接 / 进程已死）。
+**处置单点 `failSession(因由)`**：拒在飞命令（同一因由实例）⇒ 态复位（cdp ∥ child ∥ 引用表 ∥ 网络计数）⇒ 摘自己的用者登记（**不动 `session.lock`、不杀共享浏览器**——§12）⇒ 置重开注记。不调 `Browser.close`、不等自退（连接 / 进程已死）。
 
 **在飞动作** ⇒ 显式失败：`Error: the browser session was closed externally (<因由>) — run the action again to reopen a fresh session`（可重试；**不透明重试**——页面态已丢，静默重放会掩盖事实）。
 
 **自愈**：下一次动作照常 `ensureSession` ⇒ 干净重开（同 profile ⇒ 登录态保留，F-BT6）；重开后**第一条回执**尾行注记 `[note: the previous browser session was closed externally — a fresh session was opened (page state lost; profile/login kept)]`（置位一次，发出即清）。空闲自动关（KD-8，自方行为）不置注记。
+
+**注记位与模式注记同用一个**：同一条尾行位（`sealNote`）兼载 §12 的模式沿用注记；两条同时待发时分两行发出（三问答复见 §12「模式」条）。
 
 ### 2.11 异步通道（F-BT18——后台动作任务）
 
@@ -370,7 +373,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 
 **覆盖序**：`BROWSER_PATH` 环境变量（exe 路径 ∥ 名字）→ 候选表 edge → chrome；全空 ⇒ §2.6 错误句。
 
-**profile**：`~/.thincoder/browser/profile`（`configDir` = `thincoder-core/config-io.mjs:32` 同源）——**持久**（F-BT6：有头登录一次 ⇒ 后续含无头复用登录态；跨会话跨端同机同用户共享）。
+**profile**：`~/.thincoder/browser/profile`（`configDir` = `thincoder-core/config-io.mjs:32` 同源）——**持久且全机唯一一份**（F-BT6：有头登录一次 ⇒ 后续含无头复用登录态；跨会话跨实例同机同用户共享——共享之所以可能 = 各实例接入同一个浏览器进程，见 §12）。
 
 启动参数（沿 walkthrough `:123`）：`--headless=new`（按模式）· `--disable-gpu` · `--no-first-run` · `--hide-scrollbars` · `--user-data-dir=<profile>` · `--remote-debugging-port=0` · `--window-size=1440,900` · `about:blank`；`stdio:"ignore"`；POSIX `detached:true`（组杀前提）。
 
@@ -381,15 +384,15 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | KD-1 | 引用 = 稳定键（`tag|selector`）+ 会话内单调号，跨快照复用 | F-BT4「微变不全失效」的可实现定义；click/type 免猜选择器 |
 | KD-2 | 写闸 = dispatch 分类钩子（click/evaluate 过闸），**不做** in-execute 自问 | 单一闸点（不双问）；planMode/批量/autoApprove 全随既有语义；零新机制 |
 | KD-3 | 域允许清单 = 配置键 + navigate/当前页两点强检；缺省空 | 需求 §4「不建新机制」下最小收束面；护栏非沙箱登记在档 |
-| KD-4 | `headless` = 会话开启参数（异值报错，不热切） | 浏览器进程的无头属性不可热切；报错比静默忽略诚实 |
-| KD-5 | 单会话/进程 + profile 锁；不做多会话/多标签 | 需求动作面单页；多实例并发 = 锁 + 显式报错（诚实） |
+| KD-4 | `headless` = **共享浏览器的首开属性**（后到沿用 + 回执注记，不报错） | 无头属性不可热切；共享下报错等于把别人在用的浏览器夺走（「先关掉自己」关不掉浏览器）⇒ 沿用 + 明说；换模式 = 全池空后重开（§12「模式」条） |
+| KD-5 | 单会话/实例 + **全机一个共享浏览器**（首开末关 · 引用计数，§12）；本实例不做多标签 | Chromium 的 `--user-data-dir` 是单实例目录 ⇒ 共享一份 profile 只有一次启动；登录态又要全机一份（F-BT6）⇒ 共享是同时满足多实例与单一登录态的唯一载体。旧形态（全机互斥锁 + 拒文）把「第二个实例用不了」做成硬拒，与本形方向相反 |
 | KD-6 | screenshot 落盘返路径（非图像块） | 结果契约 = 字符串；视觉模型经 read_image 查看（既有通道）；非视觉模型不毒化会话 |
 | KD-7 | 不设 SSRF 私网拦截 | 本机 dev 服务首要用例；agent 已有 bash 网络能力——拦截零增益 |
-| KD-8 | 空闲 15 分钟自动关 + 进程退出杀树 | 长驻宿主（桌面）资源卫生；进程退出兜底不回退 |
+| KD-8 | 空闲 15 分钟 = **摘自己**（关自己的标签页），不等于关浏览器：池内仍有活条目 ⇒ 浏览器留着，无活条目 ⇒ 末关（§12） | 长驻宿主（桌面）资源卫生不变——一个实例闲着不能关掉别人在用的浏览器；共享后「自动关」的对象从浏览器换成自己那份登记。进程退出的杀树兜底只对**拉起者**成立（pid 来源 = 自己的 `state.child`） |
 | KD-9 | 描述面英文、约 45 行 | 沿既有 tool-docs 惯例（用户面语言 = 模型面英文）；schema 预算（`scripts/tool-schema-size.mjs` 报告态） |
 | KD-10 | 裁决项②：click / type 内部机制**不迁** Input 域 | 零回归（回执 / 寻址 / 旧用例逐条）；分工保留且互补：click = DOM 级语义激活（`el.click()`——`isTrusted=false`，遮挡 / `pointer-events` 面仍可激活）∥ mouse = 真指针输入（真命中测试 + 受信事件）；真输入需求由 press / mouse / insert 全覆盖 |
 | KD-11 | 裁决项①：门面逐动作分类 = §3.1 表（press ∥ mouse ∥ drag ∥ touch 点按 ∥ clipboard 全量过门；hover ∥ wheel ∥ insert ∥ touch 手势免审） | 判据沿 F-BT7（不可逆 / 提交类）逐动作推得；同一 `isReadonlyAction` 钩子按参数分类——机制零新增（需求 §4） |
-| KD-12 | `session.mjs` 拆分（五档——§5） | 拆后五档合计 ≈1,110 行（net ≈+674）——不拆单档破 800 硬限；域界按「动作实施 ∥ 输入引擎 ∥ 会话机制 ∥ 剪贴板」切 |
+| KD-12 | `session.mjs` 拆分（五档——§1 模块结构） | 拆后五档合计 ≈1,110 行（net ≈+674）——不拆单档破 800 硬限；域界按「动作实施 ∥ 输入引擎 ∥ 会话机制 ∥ 剪贴板」切 |
 | KD-13 | 剪贴板路径 = 页面 API（`navigator.clipboard`）+ Browser 域授权（§3.5） | CDP 无剪贴板直控方法（官方议题未决——实读）；`setPermission` 现代形 + `grantPermissions` 回落护版本漂移 |
 | KD-14 | 触屏分工：tap / doubleTap / swipe 走 `dispatchTouchEvent` 显式序列；pinch 走 `synthesizePinchGesture` | 实测（本机 Edge）：`synthesizeTapGesture` 不产 click（事件面仅 pointerdown / touchstart / touchend——无头 ∥ 有头同、加 touchEmulation 亦同）；显式 touchStart + touchEnd ⇒ 全链 mousedown / mouseup / click（`isTrusted`）；doubleTap = 两条序列、间隔 60ms（同一双击窗内）⇒ click:2 + dblclick:2（计数由浏览器管）；pinch 走 `synthesizePinchGesture` 实测有效（scale 1 → 2.0000005——保持）；swipe 需手指路径语义（from → to）——显式序列直配契约且可做单元测试（兜底：若冒烟证 swipe 不驱卷动 ⇒ 改 `synthesizeScrollGesture`——距离语义换算） |
 | KD-15 | 几何渲染口径 = 数据全员携、回执仅 `[outside]` 标记 | 在屏行零几何后缀 ⇒ 旧行文法与旧用例（`$` 锚断言）零回归；`[outside]` = F-BT14「视口外标记」落面 |
@@ -410,11 +413,12 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | 需求 | 设计落点 | 机验判据（用例） |
 |---|---|---|
 | **F-BT1** 自启（无接管） | §1 方案 ∥ §2.4 开启序 | 冒烟 S1：零预置条件下自启成功；回执/进程参数断言 `--user-data-dir` 非默认、端口非 9222 固定；**不 import/不连**任何用户实例（代码面无连接分支） |
-| **F-BT2** 无头∥有头 | §2.4 | 单元测试 T7（异值报错句 + close→异值重开正例——U23）；冒烟 S1（headless）∥ S7（有头——仅本地跑，CI 面可跳：`headless:false` 需显示环境） |
+| **F-BT2** 无头∥有头 | §2.4 ∥ §12「模式」条 | 单元测试 T7（首开取值 + 异值沿用注记句）；**可切 headless 的范围 = 池空（末关之后、无人持有）**——F-BT6b 收窄后的口径，U23 的正例即「池空后重开」；冒烟 S1（headless）∥ S7（有头——仅本地跑，CI 面可跳：`headless:false` 需显示环境） |
+| **F-BT6b** 多实例共用一台浏览器 | §12 ∥ §2.4 多实例 | 单元测试 T49（`attachOrLaunch` 四形态 + 端口即接入 + 回收门槛 + 原子领取 + 死条目 + 末关删锁）；集成 34-1（首开只拉一台）· 34-2（模式沿用注记）· 34-3（末关两形） |
 | **F-BT3** 动作面 | §2.1 ∥ §2.2 | 单元测试 T1（schema 动作枚举 + 参数字典）+ T2（逐动作回执文法）；冒烟 S1：navigate 内联新页清单 ∥ S6：screenshot 真落盘（路径在盘 · PNG 头 · >0 字节） |
 | **F-BT4** 引用步进 | §2.3 | 单元测试 T3（生成/复用/[new]/disabled/stale/上限）；冒烟 S2（snapshot→type→click 按 ref 走通） |
 | **F-BT5** 等待与稳定 | §2.2 wait ∥ 失败回执 | 单元测试 T4（四谓词 + 超时 + 失败回执含页摘清单）；冒烟 S3（wait selector 命中）、S4（wait 超时回执） |
-| **F-BT6** 登录态持久 | §4 profile | 单元测试 T8（profile 路径稳定性）；冒烟 S5：同 profile 两次会话——本地服务 Set-Cookie ⇒ 二段会话免登（读回 cookie 或标记页） |
+| **F-BT6** 登录态持久 | §4 profile ∥ §12 | 单元测试 T8（profile 路径稳定性——全机唯一一份）；冒烟 S5：同 profile 两次会话——本地服务 Set-Cookie ⇒ 二段会话免登（读回 cookie 或标记页）∥ S5b：A 进程有头登录 ⇒ B 进程（另一实例）接入后同一登录态可见（跨实例同享的机验面） |
 | **F-BT7** 写操作闸 | §3.1 | 单元测试 T5（`isReadonlyAction` 分类表逐动作——基线八动作）+ T6（拒绝回执句「permission denied」）；读盘断言 `formatPermission` browser 分支在档；扩展表 = T25（N-BT7 行） |
 | **F-BT8** 四端注册 | §2.6 | 单元测试 T9（`builtinTools` 含 browser；VSC 清单源码含列项）；单元测试 T10（无浏览器错误句——`BROWSER_PATH` 置空 + 发现表打桩） |
 | **N-BT1** 零第三方 | §1 | 单元测试 T11：`browser.mjs` + `browser/*.mjs` import 面扫描 = 仅 `node:*` + 仓内相对路径 |
@@ -422,7 +426,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | **N-BT3** 规模上限 | §2.3 ∥ §2.2 | 单元测试 T13：101 元素 ⇒ 截断标记；8001 字符 evaluate 值 ⇒ 截断标记 |
 | **N-BT4** 隔离与凭据 | §3.4 | 单元测试 T14：password 目标 type 回执含 `(hidden)` 且无明文；清单不含 password `[value=]` |
 | **N-BT5** 平台面 | §4 | 单元测试 T15：三平台候选表 + `BROWSER_PATH` 覆盖 + 找不到错误句（`resolveBrowser` 打桩——零真实文件系统依赖） |
-| **N-BT6** 可测试 | §5 ∥ 本表用例 | 单元测试档两档：单元测试（假传输——`WebSocketImpl`/`_deps` 注入缝）＋ 冒烟（真 Edge/Chrome 无头）；**缝纪律** = 缝默认回落真实现（`??` 缺省）、用例 `finally` 还原、冒烟测试零依赖缝；先红后绿读数入单元测试档 |
+| **N-BT6** 可测试 | §1 模块结构 ∥ 本表用例 | 单元测试档两档：单元测试（假传输——`WebSocketImpl`/`_deps` 注入缝）＋ 冒烟（真 Edge/Chrome 无头）；**缝纪律** = 缝默认回落真实现（`??` 缺省）、用例 `finally` 还原、冒烟测试零依赖缝；先红后绿读数入单元测试档 |
 | **F-BT9** 键盘真输入 | §2.2 press ∥ §2.7 聚焦 ∥ §2.8 键面 | 单元测试 T17（键序列：命名键 / 可打印字符 / 修饰组合 / down-up 分离 / repeat / 聚焦失败）∥ T16（schema 面）；冒烟 S8：真按键驱表单（Enter 提交）成功 + 页面侧 `isTrusted === true` 读回 |
 | **F-BT10** 指针真输入 | §2.2 hover/wheel/mouse ∥ §2.7 坐标解析 | 单元测试 T18（鼠标序列逐形 + wheel 参）∥ T19（坐标 / 几何）；冒烟 S9（hover 驱出菜单）· S10（滚轮位移读数 = window 读数为卷动后值）· S11（坐标点击 / 双击） |
 | **F-BT11** 拖拽 | §2.2 drag ∥ §6 KD-16 | 单元测试 T20（序列 = 按下→移动×N→抬起 + steps + html5 拦截链）；冒烟 S12（拖拽结果断言）· S12b（html5 分支——dragIntercepted 链） |
@@ -431,9 +435,9 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | **F-BT14** 输入基建 | §2.3 几何 ∥ §2.7 | 单元测试 T19（geo / inViewport / `[outside]` / point / focus 表达式）；冒烟 S17（屏外 ref 自动滚动后驱动成立） |
 | **F-BT15** 剪贴板 | §3.5 ∥ §2.2 clipboard | 单元测试 T23（四操作调用形 + 授权序列）∥ T24（隐私：全量过门 / 上限 / 零落盘）；冒烟 S15（工具写 ⇒ 系统读回 ∥ 系统写 ⇒ 工具读回——PowerShell 对照）· S16（copy ⇒ 系统读回 ∥ paste ⇒ 字段值）· S15a（无头：页↔页保真——父侧裁示②增格） |
 | **N-BT7** 写面门覆盖 | §3.1 扩展表 ∥ §2.1 | 单元测试 T25（逐动作分类断言——全表 + 旧八动作分类零变） |
-| **N-BT8** 兼容与不回归 | §5 ∥ §7 本表 | 旧单元测试 21/21 全绿（**唯一随动 = T1 枚举 8⇒16**）∥ 旧冒烟 S1–S7 全绿；新动作逐条配用例（T16+ / S8+）∥ **S18**（有头抽样复跑——`press` + `clipboard` 两动作；仅本地跑、CI 面可跳，沿 S7 先例）= 「无头∥有头双支持」覆盖格（U51） |
+| **N-BT8** 兼容与不回归 | §1 模块结构 ∥ §7 本表 | 旧单元测试 21/21 全绿（**唯一随动 = T1 枚举 8⇒16**）∥ 旧冒烟 S1–S7 全绿；新动作逐条配用例（T16+ / S8+）∥ **S18**（有头抽样复跑——`press` + `clipboard` 两动作；仅本地跑、CI 面可跳，沿 S7 先例）= 「无头∥有头双支持」覆盖格（U51） |
 | **N-BT9** 剪贴板隐私面 | §3.5 ∥ §3.1 | 单元测试 T24（全量过门 + read 上限截断 + 无落盘路径）∥ T23（write 回执不回显） |
-| **F-BT16** 动作硬超时 | §2.9 ∥ §5 `thincoder-core/browser/queue.mjs` | 单元测试 T27–T30 · T27b（新档——挂死型假传输 ⇒ 逐动作拒绝于预算内 ∥ 开启段中止 ⇒ 干净重开 ∥ `ACTION_BUDGETS` 覆盖全动作 ∥ 命令缺省帽 ∥ 卡点步名）；冒烟 S19（永不响应服务） |
+| **F-BT16** 动作硬超时 | §2.9 ∥ §1 模块结构（`thincoder-core/browser/queue.mjs`） | 单元测试 T27–T30 · T27b（新档——挂死型假传输 ⇒ 逐动作拒绝于预算内 ∥ 开启段中止 ⇒ 干净重开 ∥ `ACTION_BUDGETS` 覆盖全动作 ∥ 命令缺省帽 ∥ 卡点步名）；冒烟 S19（永不响应服务） |
 | **F-BT16b**（本批·启动窗旋钮） | §2.4 启动窗取值 ∥ §6 KD-25 | 单元测试 T45（`browserStartTimeoutMs` 逐态：缺省 25000 ∥ `"4000"` = 4000 ∥ `"1500"` 钳 2000 ∥ `"40000"` 钳 30000 ∥ `"abc"` ∥ `"0"` ∥ `"-5"` = 25000）∥ T46（启动失败句含生效秒数：缺省 `within 25s`、env 2000 ⇒ `within 2s`） |
 | **F-BT16**（本批·冷启预算） | §2.4 冷启预算 ∥ §2.9 ∥ §6 KD-26 | 单元测试 T47（假自启 12s + 首动作 `type` 15s ⇒ 动作拿满 15s、不超时；旧形态 ⇒ `timed out after 15000ms (stuck in launch browser)`——红/绿对照）∥ T48（首动作 `navigate`：假自启 12s + 导航 40s ⇒ 不超时、总墙钟 52s；旧形态 ⇒ 45s 含自启 ⇒ 33s 到点、卡点步名 = 导航步——红/绿对照 = 预算表与 §2.4 同口径的机判格） |
 | **F-BT17** 外部关闭可感知与自愈 | §2.10 ∥ §2.4 | 单元测试 T31–T33 · T44（新档——假 WS close ∥ 假 child exit ⇒ 在飞即时拒（下一事件循环内——非墙钟界）+ 态复位 + 重开计数 + 注记；探针三检；外部关闭遇排队条目不呆等）；冒烟 S20；走查 W1（真关窗——用户复核） |
@@ -456,7 +460,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | U9 | 边界 | `wait networkIdle` 于静态页 | 静默 500ms 内 ok | 单元测试 T4 |
 | U10 | 边界 | `max=200` 长页 | 行数 ≤200；超限标记在 | 单元测试 T13 |
 | U11 | 边界 | password 输入 `type` | `(hidden)`、无明文 | 单元测试 T14 |
-| U12 | 边界 | `headless:false` 会话中再传 `headless:true` | 错误句（异值拒） | 单元测试 T7 |
+| U12 | 边界 | 共享浏览器以 `headless:false` 在跑，本实例传 `headless:true` | 会话可用；回执尾行注记沿用实际模式（不报错、不夺走浏览器） | 单元测试 T7 |
 | U13 | 错误 | `click` 老 ref（元素已移除） | `Error: ref … is stale …` + 页摘 + 清单 | 单元测试 T3 |
 | U14 | 错误 | `click`/`evaluate` 用户拒批 | `Error: permission denied by user`（不执行） | 单元测试 T5 · T6 |
 | U15 | 错误 | `navigate` 非 http(s) scheme | `Error: …`（拒） | 单元测试 |
@@ -464,7 +468,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | U17 | 错误 | 无浏览器环境（全候选落空） | §2.6 错误句（可读——N-BT5） | 单元测试 T10 |
 | U18 | 错误 | `wait` 超时 | `Error: wait timed out …` + 页摘 + 清单 | 冒烟 S4 · 单元测试 T4 |
 | U19 | 错误 | `evaluate` 抛异常 | `Error: evaluate failed: <message>` | 单元测试 T2 |
-| U20 | 错误 | 他进程持 profile 锁 | `Error: browser profile in use … (pid <N>)` | 单元测试 |
+| U20 | 正常 | 他进程已拉起共享浏览器 | 本实例接入同一浏览器、开自己的标签页（不报错、不再拉起第二台） | 单元测试 T49 · 集成 34-1 |
 | U21 | 错误 | 缺必填参（如 `click` 无 ref） | `Error: click requires ref`（不执行） | 单元测试 |
 | U22 | 边界 | 同批两次 `navigate`（并行调用） | 串行执行、顺序与调用序一致（队列）；排队期计入预算（端到端界）——排队中到点 ⇒ 同失败形（`stuck in queue wait`） | 单元测试 |
 | U23 | 正常 | `close` ⇒ 以另一 `headless` 值重开 | 新会话达成；进程参数按新值（`--headless=new` 有无）；同 profile | 单元测试 T7 |
@@ -508,6 +512,16 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | U61 | 边界 | 启动窗旋钮：env 未设 ∥ `"4000"` ∥ `"1500"` ∥ `"40000"` ∥ `"abc"` ∥ `"0"` ∥ `"-5"` | 25000 ∥ 4000 ∥ 2000（钳底）∥ 30000（钳顶）∥ 25000 ∥ 25000 ∥ 25000（负值回落缺省）；启动失败句回显生效秒数 | 单元测试 T45 ∥ T46（新档） |
 | U62 | 边界 | 无会话时首动作 = `type`（15s 预算），假自启耗时 12s | 动作不因自启超时、拿满 15s（旧形态 ⇒ 15s 到点 `stuck in launch browser`）；自启超启动窗 ⇒ `browser failed to start … within 25s` | 单元测试 T47（新档） |
 | U63 | 边界 | 无会话时首动作 = `navigate`（45s 预算），假自启 12s + 导航 40s | 不超时（自启段不计入 45s 预算；总墙钟 52s）；`navigate` 超时句的卡点步名是导航步、不是 `launch browser` | 单元测试 T48（新档） |
+| U64 | 正常 | 两实例（同一 `HOME`）同时首开 | 只拉起一台浏览器；两实例都拿到会话；两实例请求同一模式 ⇒ 回执**无模式注记**（AC-M2 的注记只在异值路） | 集成 34-1 · 单元测试 T49 |
+| U65 | 边界 | 首实例 `headless:true`，后到实例要 `headless:false` | 不报错、会话可用；回执尾行含 `the shared browser is running headless=true (started by pid <N>)` | 集成 34-2 · 单元测试 T7 |
+| U66 | 正常 | A、B 都在用；A `close` | 回执含 `1 other instance(s) still using it — the browser is left running`；浏览器进程仍在 | 集成 34-3 |
+| U67 | 正常 | 末个用者 `close` | 回执 `[close] shared browser closed (last user)`；浏览器进程消失 | 集成 34-3 |
+| U68 | 边界 | 池内留有一条死 pid 条目 | 末关仍发生（关前再核活性）；死条目当场剔除 | 单元测试 T49 |
+| U69 | 边界 | 持有者被硬杀（`exit` 钩子未跑）、`session.lock` 留存，**浏览器仍在跑**（`DevToolsActivePort` 的端口答得通） | 下一实例走「接入」：开自己的标签页 + 登记，拿到会话；**不拉起**（进程计数仍 1）、不报 `browser profile in use` ∥ `browser failed to start` | 单元测试 T49 |
+| U70 | 边界 | 持有者半死留锁（pid 活 ∧ 端口答不通 ∧ 已过启动窗 ∧ **无他实例活登记**）——浏览器被外部关掉 ∥ 拉起后崩在 `enable` 段 ∥ 末关没删成锁 | 走「接管」：摘陈旧位 → 孤儿回收 → 拉起 → 拿到会话（不落「not ready」终态；接管后自家拉起失败则走 §2.4 的 `browser failed to start …` 句） | 单元测试 T49 |
+| U71 | 正常 | 末个用者 `close`（另一例已先关） | 浏览器关 ∧ `session.lock` 不在盘；紧接着一个新实例首动作直接走「持有」拉起（不撞等待窗、不报「他进程持有」） | 单元测试 T49 |
+| U72 | 错误 | 持有者半死（端口答不通 ∧ 已过启动窗）**∧ 他实例仍有活登记** | 不回收、不拉起；回执含 `hold live registrations — not reclaiming`；那台浏览器进程未被杀 | 单元测试 T49 |
+| U73 | 边界 | 锁留存且记录 pid 已死 ∧ 端口答不通 ∧ 无他实例活登记 | 走「接管」：`rename` 摘陈旧位 → 回收 → 拉起 → 拿到会话（不报「他进程持有」） | 单元测试 T49 |
 
 **单元测试档用例**：单元测试（T1–T15——假传输 + 打桩，零真实浏览器/文件系统）与冒烟（S1–S7——真 Edge/Chrome 无头 + 进程内 fixture 服务）＝ §7 表逐格引用面（**落点列** = U 条执行档；无编号者 = 单元测试组内，格内归属以 §7 判据列为准）；先红后绿。
 扩展轮件 = 批次本地单元测试档 ∥ 批次本地冒烟档——T16–T26 ∥ S8–S18（剪贴板端到端 = 本机 OS 面——Windows 以 PowerShell `Get-Clipboard` / `Set-Clipboard` 为对照）。
@@ -522,7 +536,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 
 - 不做接管/扩展/WebView2/录制回放/第三方自动化库（需求 §4 全体——设计层面零分支：代码不出现连接既有实例的路径）。
 - 不做多标签管理/弹窗跟随（`target=_blank` 弹出不接管——回执不追；如需 ⇒ 改锚点或 evaluate）。
-- 不做多命名会话（单会话/进程——KD-5）。
+- 不做多命名会话（本实例单会话；跨实例共享同一个浏览器——§12）。
 - 不设 SSRF 私网拦截（KD-7）；不做反爬规避/自动凭据填充（需求 §4）。
 - 不改 `web` / `websearch` 语义（D2 各持权威）；不改审批/权限机制本体（只加 `formatPermission` 一个展示分支）。
 - **输入面不做**（扩展轮）：IME 候选窗 / 输入法 UI 保真（仅协议级组合——KD-17）；不做环境级触屏标志伪造（页面加载期按 `'ontouchstart'` / `maxTouchPoints` 分支的页面触屏面不可达——如实登记）；不做多指自定义手势（面 = tap / doubleTap / swipe / pinch 四形）；不做输入录制 / 回放（需求 §4）。
@@ -530,6 +544,8 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 - 输入动作不做 disabled 前置拒（§2.7——真输入语义）；旧 click / type 的 disabled 拒保持（零回归）。
 - 主框架限定（§2.7——iframe 内不在寻址面）。
 - **新增边界**：不做常驻心跳定时器（KD-20）∥ 不做透明重试（KD-21）∥ 异步不引入并发（KD-22——单页仍串行）∥ 取消不杀浏览器（KD-23）∥ 不做动作级暂停 / 恢复 / 断点续跑；后台动作不做流式面板（只有摘要注入——bash 后台有 log，浏览器无 log 面）；不做自动重连重放。
+- **共享面不做**（§12）：broker 进程 ∥ 跨实例标签互斥 ∥ 实例名 / 端名 / 项目根进键（键 = 全机一个）∥ 排队（首开的等待窗除外）。
+- **共享的硬后果**（如实登记）：模式由首实例定、后到沿用 ⇒ 两个实例要不同模式时，后到者拿不到自己要的那个，换模式须等全池空闲；一台浏览器只有一个可见形态（有头时窗口对所有用者可见）。
 
 ## 10. UI / 交互决策（全落地——无 open 项）
 
@@ -541,6 +557,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 6. **输入面差异说明**（tool-docs 模型面）：click = DOM 级语义点击（`isTrusted=false`——遮挡面亦可激活）∥ mouse = 真指针（受信 / 命中测试）——选用判据写明；insert 回执仅字符数（值不回显——沿 N-BT4 口径）。
 7. **几何与卷动读数**：回执 `[outside]` 标记 + wheel 的 `window` 读数 = 现场可读信息（人 / 模型同面）。
 8. **超时 / 外部关闭 / 异步三面文案**（人可见——与模型面同句）：超时错误句携卡点步名（诊断面）；重开注记一行（人可读）；ack / 摘要沿用 `bash#` 族文法（`browser#<N>`）；kill 确认句同 `process` 既有形。
+9. **多实例共享面文案**（人可见 ∥ 模型面同句，单源 = §12）：接入注记（生效模式 + 拉起者 pid）· `close` 的三形回执（留下 ∥ 真关 ∥ 末关但浏览器没关成）。没有静默路径——后到者一定看到模式沿用注记。
 
 ## 11. 集成测试设计（F34 · 本批 · 收口口径）
 
@@ -556,5 +573,171 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 - **窗到点的时长半不入发布门**：要判「这个值真当期限用」得有常驻不退出、又不写 `DevToolsActivePort` 的替身可执行档；`launchBrowser` 的 spawn 不带 shell（`thincoder-core/browser/launch.mjs:160`）⇒ Windows 上 `.cmd` / `.js` 不能当 exe 起，造这种档等于往仓里加包装器。该半由单测 T45（取值）∥ `launch.mjs:163` 的 `deadline = Date.now() + timeoutMs`（同一值即期限）判。
 - **冷启首动作的墙钟半同理不入门**：真机自启耗时可复现但不可控；判据住单测 T47 / T48（假传输，两格红/绿），真机面 = 冒烟 S1（首动作 `navigate` 成功）。I-BT3 是门内那一格的真机抽样：宿主无 Chromium ⇒ skip 并打印 `no Chromium-based browser — I-BT3 skipped`（沿 §7 S7 先例），跳过不算绿。
 - **慢机（启动 13–17s）不再 12s 早夭不设门内格**：要一台真慢机或人工降速；证据面 = Gitee IKP6ZI 现场 + 用户机走查。设计侧不为此造假慢分支。
-- **落点**：`test/integration/browser-start-window.test.mjs`（仓根——常驻、不随批删；随仓根 `node test/run.mjs` 走）。收集面 = 仓根 `test/run.mjs` 的单层 glob（`test/integration/*.test.mjs`）；`test/integration/` 之外的档被启动前反查拒收集。本批单测档（T45–T48）仍随批删，与集成档是两个对象。
+- **落点**：`test/integration/browser-start-window.test.mjs`（仓根——常驻、不随批删；随仓根 `node test/run.mjs` 走）。收集面 = 仓根 `test/run.mjs` 的单层 glob（`test/integration/*.test.mjs`）；`test/integration/` 之外的档被启动前反查拒收集。批次单测档（T45–T48）仍随批删，与集成档是两个对象。
+
+## 12. 多实例共享浏览器（单池 · 引用计数）
+
+**定位**：全机**一个**共享浏览器——第一个实例要用时拉起，最后一个实例释放时关；每个进程开**自己的标签页**；多实例同时可达（KD-5）。机制单源 = 本节。
+
+**最接近先例**：同档的孤儿回收（`thincoder-core/browser/launch.mjs` 的 `reclaimProfileOrphans` · `listProfileProcs`——按 `--user-data-dir=<profile>` 认同 profile 的进程，判活 ∥ 陈旧位 ∥ 方向不对称三样都在这里现成）。
+
+- **对齐**：判活按 pid、陈旧位摘除后重试、方向不对称（探测失败算活）、回收只认同一份 profile 的进程命令行。
+- **偏离 ①**：领取从「读后写」改成「创建即领取」（`openSync(lock, "wx")`）——读与写之间正是两实例同时首开那一窗，读后写在那一窗必漏。
+- **偏离 ②**：回收门槛不是「锁空闲」，而是「无他实例活登记」——锁空闲不证明没人连着（见下「回收的唯一门槛」）。依据 thincoder-core/browser/pool.mjs「throw blockedError({ port: d.port(paths), others: held.length })」——回收前的门槛判在读用者登记这一处，锁里记的 pid 死活不参与。
+
+**勘察证据行**：查过本仓 `docs/` 树与三处代码；公共源仓 = 无（`PROJECT-MANIFEST.json` 的 `index.publicRepos` 实读 `[]`）。
+
+- **需求侧**：`docs/core/requirements/BROWSER-TOOL.md` 的 F-BT2 ∥ F-BT6 ∥ F-BT6b——多实例共享与模式沿用已有判定行。
+- **设计侧**：`docs/core/design/MULTI-INSTANCE-COLLAB.md` §2 E 类（共享物分类）与 §9 关系行。
+- **代码侧**：实读 `thincoder-core/browser/launch.mjs`（`browserPaths` · `listProfileProcs` · `reclaimProfileOrphans` · `launchBrowser` · `killBrowser`）· `thincoder-core/browser/pool.mjs`（`attachOrLaunch` · `claimSlot` · `takeOver` · `joinShared` · `registerUser` · `liveUsers` · `releaseUser`）· `thincoder-core/browser/session.mjs`（`ensureSession` · `closeSession` · `registerExitHook` · `sealNote`）。
+- **结论**：无外部权威可对，先例即本仓现有锁与孤儿回收。
+
+**为什么只能是「共用一台」而不是「各开一台」**：
+
+- Chromium 的 `--user-data-dir` 是**单实例目录**：第二个进程认到同一 profile 后，把请求交给已在跑的那一个、自己退出，因此**永不写出 `DevToolsActivePort`**。
+- 实测（同一份 profile 连起两次）：先起者成功且存活，后起者 25 s 后报 `browser failed to start: DevToolsActivePort not written within 25s`；先起者未被杀。
+- ⇒ 共享一份 profile 在浏览器层只有一次启动；登录态又要全机一份（F-BT6）⇒ 共享载体只能是「一份 profile、一个浏览器进程、每实例一条标签页」。
+
+**结构（一个池，零实例维度）**：
+
+```text
+~/.thincoder/browser/
+  profile/                     共享 profile（全机唯一一份——登录态全机一份，F-BT6）
+  profile/DevToolsActivePort   浏览器落盘的调试端口（接入面读数）
+  session.lock                 持有者登记：{pid, headless, port, startedAt}（port 只是抄本——判定用 profile/DevToolsActivePort）
+  users/<pid>.json             用者登记：{pid, tabId, joinedAt}
+  shots/                       截图落盘（共享目录；文件名已带 pid）
+```
+
+**判序（端口先行——这一刀就是去重）**：入口单点 `attachOrLaunch`；先读端口答不答，再读锁。四形两两不重，并集覆盖全部状态。
+
+**端口读数单源** = `profile/DevToolsActivePort`（浏览器自己落的盘）；`session.lock` 里的 `port` 是持有者的抄本，只供排障与注记，**不参与判定**——同一件事读两处，必有一处先漂。
+
+**四种进入形态**：
+
+| 形态 | 判据 | 动作 | 为什么需要这个形态 |
+|---|---|---|---|
+| 接入 | `profile/DevToolsActivePort` 的端口答 `/json/version`（2 s 帽）——**不论锁里记的 pid 死活、不论是否在启动窗内** | 开自己的标签页 → 登记 `users/<pid>.json` → 回执注记（模式与拉起者 pid 取锁记录；锁无记录 ⇒ 按下段「锁无记录时的模式来源」，且不点 pid） | 单实例交接：同一 profile 的第二次启动起不来，接入才是拿到会话的路。持有者被硬杀（exit 钩子不跑）后浏览器在 Windows 上照活——「锁里 pid 死 ∧ 端口答得通」只有接它一条正解：拉起必失败，`DevToolsActivePort` 被在跑的那个占着 |
+| 持有 | 端口答不通 ∧ 无锁可读（无档 ∥ 记录不可解析） | 原子领取 → **先读用者登记** → 同 profile 孤儿回收 → 拉起 → 把生效模式与端口写回锁 → 登记 → 开自己的标签页 | 无人持有且没有可用浏览器——拉起是唯一出路；回收同受「回收的唯一门槛」（有他实例活登记 ⇒ 不回收、不拉起） |
+| 等待 | 端口答不通 ∧ 锁可读 ∧ 记录 pid 活 ∧ `now - startedAt ≤ browserStartTimeoutMs()` | 50 ms 轮询；窗口内端口答通 ⇒ 转「接入」；到点仍未答通 ⇒ 转「接管」 | 两实例同时首开 ⇒ 一个持有一个在拉起中；不等待就等于第二个也去拉起（单实例交接 ⇒ 双双失败） |
+| 接管 | 端口答不通 ∧ 锁可读 ∧ （记录 pid 死 ∨ `now - startedAt > browserStartTimeoutMs()`） | **先读 `users/*.json`**：有他实例活条目 ⇒ 不回收不拉起、明确报错（见下「回收的唯一门槛」）；否则 `rename` 摘陈旧位 → 孤儿回收 → 拉起 → 写回 → 登记 | 持有者半死（浏览器被外部关掉 ∥ 拉起后崩在 `enable` 段 ∥ 末关没删成锁）∥ 持有者被硬杀留下锁 ⇒ 端口永不答通；没有这一形态，「端口不通 ∧ 锁在」就是终态，「第一个实例要用时拉起」在这条路上失效 |
+
+**锁无记录时的模式来源**：读在跑那台浏览器的命令行（`--headless=new` 在 ⇒ headless，不在 ⇒ 有头）；进程表读不到 ⇒ 只报「模式由首实例定、全池清空后才切换」，不给值。依据 thincoder-core/browser/launch.mjs「...(headless ? ["--headless=new"] : []),」
+
+**四形如何不重不漏**：「接入」与「接管」由**端口答不答**一刀分开——同一个 2 s 探针对同一端口不可能既答通又答不通，故两者不重；其余组合全落在另外两形（端口不通 ∧ 锁不可读 ⇒ 持有；端口不通 ∧ pid 活 ∧ 窗内 ⇒ 等待）。四位判据（端口 ∥ 锁 ∥ pid ∥ 窗）的 16 种组合逐一落在且只落在一形，无漏项——「锁内 pid 死 ∧ 端口答得通」（评审 N1 那一格）落「接入」。
+
+**「端口答不通」证明什么、不证明什么（回收的唯一门槛）**：
+
+- 它只证明：那台共享浏览器的 CDP HTTP 面在 2 s 内不应答。
+- 它**不**证明「本机没有实例连着它」：浏览器进程挂死 ∥ 忙等 ∥ 被暂停时，各实例的 WebSocket 未断，`failSession`（§2.10）不触发——连接照旧挂着，端口却可能已不应答。
+- ⇒ **回收前先读用者登记**：`users/*.json` 里有**自己以外的活条目** ⇒ **不回收、不拉起**，本实例动作以明确回执失败：
+
+  ```text
+  [error] the shared browser is unreachable on port <P> and <K> other instance(s) hold live registrations — not reclaiming
+  ```
+
+- 无他实例活条目（只有自己 ∥ 全是死条目 ∥ 无条目）⇒ 才回收同 profile 的残留进程并拉起。这一层是保守护栏：条目活而进程实际已用不上 ⇒ 少杀一台（多留一台）；条目死 ⇒ 进程已死、连接随之断，不存在「条目死而连接活」那一半。
+- **被挡住时的出路**：让那些实例 `close` ∥ 退出（各自摘登记）后重试——不是「等一会儿再试」，也不是静默重试。**明确报错**是这一形唯一正确的结局：它守的是「不关掉别人在用的浏览器」这条硬边界。
+
+**原子领取（首开只有一个真的拉起）**：
+
+- **创建即领取**：`openSync(lock, "wx")` 成功 ⇒ 持有者，一次写入 `{pid, headless: null, port: null, startedAt}`。
+- `EEXIST` ⇒ 读记录：pid 活 ⇒ 等待 ∥ 接管（按启动窗分，见上表）；pid 死 ⇒ `renameSync(lock, lock + ".stale-" + 死pid)` 摘陈旧位（rename 原子——两方同时摘只有一个成功），随后重试创建，上限 5 轮。
+- **不做「先查后建」**：查与建之间正是两实例同时首开那一窗。
+ 依据 thincoder-core/browser/pool.mjs「const fd = openSync(path, "wx")」——创建成功才算获得（旧形态的「读后写」恰在两实例同时首开那一窗漏掉）。
+
+**用者登记与末关**：
+
+- 条目 = `{pid, tabId, joinedAt}`；单写者 = 该进程；活性按 pid 判（`process.kill(pid, 0)`，`EPERM` ⇒ 算活——保守）。
+- **摘自己** = 删自己的条目 + 关自己的标签页（`/json/close/<tabId>`，5 s 帽，失败不阻断）——**次序 = 先删条目、后关标签页**：关标签页会撕掉本进程的 CDP 连接，而末关的 `Browser.close` 正走这条连接，先关就等于末个用者发不出关闭命令（回执说「已关」而浏览器还在跑，AC-M3 的量法是进程消失）。
+- **末关**（全序 = 删自己的条目 → 重扫并**逐条再核一次活性**（死条目当场剔除，计数不被死条目撑着）→ 无活条目才关浏览器（`Browser.close` → 3 s 等自退）→ 关成功则**删 `session.lock`** 并关自己的标签页；关不成 ⇒ 锁留着、标签页照关，回执报「仍在跑」）；仍有活条目 ⇒ 浏览器留着 + 关自己的标签页，回执明说还有几家在用。
+- **末关删锁**：关浏览器成功后 `unlink(session.lock)`。锁里记的是**持有者进程**，末关之后它照旧活着——不删锁，下一个实例就读到「pid 活」，接入与等待都拿不到东西，只剩「接管」兜底。主路径 = 删锁；兜底 = 接管（崩溃 ∥ 删锁失败）。
+- **杀树兜底的 pid 来源只有拉起者**：`state.child` 只有拉起这台浏览器的进程有。非拉起者做末关时**无 pid 可杀**——只发 `Browser.close` 并等 3 s，残留进程由下一个持有者的启动序收掉（**回收前先读用者登记**——「回收的唯一门槛」；收时按 `--user-data-dir` 命令行匹配）。`session.lock` 里的 pid 是持有者**进程**的 pid，不是浏览器 pid，拿它去杀会杀掉别的实例。
+- 死条目由任何一次扫描清掉（写者已死，删除不与单写者纪律冲突）。
+- **方向不对称**：探测失败 ⇒ 算活——误留只多留一台浏览器，误删会关掉别人在用的浏览器。
+
+**标签页**：`/json/new` 的回执里 `id` 即本实例的标签页标识（依据 thincoder-core/browser/cdp.mjs「return { id: tab.id ?? null, wsUrl: tab.webSocketDebuggerUrl }」）；关闭走 `/json/close/<id>`（`closeTab`，5 s 帽）。
+
+**模式（硬后果）**：
+
+- `headless` ∥ 有头 = **共享浏览器的属性**，由**第一个实例**定；持有者拉起后把生效值写回 `session.lock`。
+- 后到的实例要的是另一个模式 ⇒ **拿不到那个模式**，只能沿用；回执尾行明确告知（置位一次，发出即清）：
+
+  ```text
+  [note: the shared browser is running headless=<actual> (started by pid <N>) — the mode is set by the first instance; it switches only after every instance has released it]
+  ```
+
+- 换模式的唯一路 = 全池清空（末关）后由下一个首开实例定。
+- **注记位三问（复用既有槽，不新增第二个）**：功能现址 = `thincoder-core/browser/session.mjs` 的 `sealNote(receipt)`（`state.reopenNote` + `REOPEN_NOTE`，重开注记已占这一位）；现名 = `sealNote` / `reopenNote`；消费者 = `runSerial` 的每条回执尾行。**答复 = 复用它**：该位从「一个固定串的布尔」改成「待发注记文本」，模式注记与重开注记同写一位、同一条尾行发出；两条同时待发时按「重开注记在前、模式注记在后」两行拼接。不新增第二槽的理由 = 两者的生命周期、发出时机、消费点完全相同（首条回执尾行、发出即清），第二个槽只会造出两个「谁先发」的口径。
+
+**`session.lock` 的语义**：**持有者登记**——谁拉起的、生效模式、端口多少；它不拒绝任何实例（接入面见上表）。
+
+**生命周期面**：
+
+| 面 | 现形态 |
+|---|---|
+| 空闲 15 分钟 | 摘自己（关自己的标签页）；仍有活用者 ⇒ 浏览器留着；无活用者 ⇒ 末关 |
+| `close` 动作 | 摘自己；仍有用者 ⇒ 回执明说留下；最后一个 ⇒ 关（回执两形见 §2.2 close 行） |
+| 进程退出钩子 | 同步摘自己的登记；无活用者 ∧ 自己持子进程 ⇒ 杀树；其余情形留待下一个持有者的启动序（回收门槛见「回收的唯一门槛」） |
+| 外部关闭 ∥ 崩溃 | `failSession` 复位 + 下一动作重开；重开也走 `attachOrLaunch`——池里已有可用浏览器则接入，不再拉起 |
+
+**退出与崩溃的诚实边界**：
+
+- `process.once("exit")` 里不能等 CDP ⇒ 钩子只**同步摘自己的登记**；无活用者 ∧ 自己持子进程 ⇒ 杀树（pid 来源只有拉起者的 `state.child`）；非持有者若是最后一个离开，浏览器作为孤儿留下（Windows 上子进程不随父退出而消失；下一个持有者的启动序按「回收的唯一门槛」收它——无人有活登记才收）。依据 thincoder-core/browser/session.mjs「const left = releaseUserSync({ paths: browserPaths() }).others」
+- 持有者崩溃：陈旧位由下一个持有者摘掉；残留进程收不收走**「回收的唯一门槛」**（先读用者登记，有他实例活条目 ⇒ 不回收、不拉起并报错），收时只认同 profile 的进程。依据 thincoder-core/browser/launch.mjs「if (!String(row?.cmdline ?? "").replace(/"/g, "").includes(marker)) continue」
+- 浏览器被外部关掉：各实例连接同时断 ⇒ 各自 `failSession` 复位 + 下一动作重开（§2.10）。
+
+**代价（如实）**：
+
+1. 模式不可按实例选——要另一个模式只能等全池空闲。
+2. 一台浏览器只有一个可见形态：有头时窗口对所有用者可见（实例间无隔离）。
+3. 一个实例的 `close` 关不掉别人的浏览器——真关只能等末关。
+4. 标签页随用者进出增删；本实例仍不做多标签管理（一条会话 = 一条标签页）。
+
+**不做**：broker 进程 ∥ 跨实例标签互斥（各开各的标签页）∥ 实例名 / 端名 / 项目根进键（键 = 全机一个）∥ 排队（首开的等待窗除外）。
+
+**机检判据**：
+
+| # | 判据 | 量法 |
+|---|---|---|
+| AC-M1 | 两实例同时首开 ⇒ 只拉起一台浏览器 | 进程表按 `--user-data-dir=<profile>` 过滤计数 = 1，且两实例各自拿到会话 |
+| AC-M2 | 后到实例要另一个模式 ⇒ 沿用 + 注记，不报错 | 回执含 `the shared browser is running headless=` ∧ 不含 `session is already running` |
+| AC-M3 | 末关 | 先关者回执含 `other instance(s) still using it` ∧ 浏览器进程仍在；最后关者回执含 `shared browser closed (last user)` ∧ 进程消失 |
+| AC-M4 | 死条目撑不住计数 | 注入死 pid 条目 ⇒ 末关仍发生 |
+| AC-M5 | 代码里不存在互斥拒文（回归护栏） | `thincoder-core/**` 搜 `browser profile in use by another ThinCoder instance` ⇒ 0 |
+| AC-M6 | 末关之后锁不残留 | 末个用者 `close` 后 `session.lock` 不在盘；紧接着一个新实例首动作拿到会话（回执无「他进程持有」、无等待窗到点） |
+| AC-M7 | 端口答得通即接入，不看锁里 pid 死活 | 夹具：锁记录 pid 为已死 pid ∧ `DevToolsActivePort` 端口答得通 ⇒ 按 `--user-data-dir=<profile>` 过滤的进程数仍 = 1（未新增）∧ 会话可用 ∧ 回执无 `browser failed to start`（U69） |
+| AC-M8 | 端口答不通 ∧ 他实例有活登记 ⇒ 不回收不拉起 | 夹具：一台不应答的端口 + 一份活 pid 的他实例登记 ⇒ 该浏览器进程未被杀 ∧ 回执含 `hold live registrations — not reclaiming`（U72） |
+
+**机制落点**：
+
+| 面 | 落点 |
+|---|---|
+| 池机制 | `thincoder-core/browser/pool.mjs`：入口 `attachOrLaunch`（四形判定）· 内部 `claimSlot` ∥ `joinShared` ∥ `takeOver` ∥ `waitForPort` · 登记 `registerUser` ∥ `liveUsers` ∥ `readHolder` ∥ `writeHolder` ∥ `releaseUser` ∥ `releaseUserSync` · 注记 `modeNote`；注入缝 `_deps`（目录 ∥ 判活 ∥ 时钟）——缺省回落真实现 |
+| 启动 | `thincoder-core/browser/launch.mjs`：`browserPaths()` 增 `users` 目录；互斥领取的两个导出（`acquireProfileLock` ∥ `releaseProfileLock`）由 `pool.mjs` 的领取 / 释放替代（不留双路）；`reclaimProfileOrphans` 函数体零改（调用时机由 `pool.mjs` 按「回收的唯一门槛」把守） |
+| 传输 | `thincoder-core/browser/cdp.mjs`：`/json/new` 回执须带标签页 `id`；新增 `/json/close/<id>` 与 `/json/version` 两个 HTTP 助手（各带帽） |
+| 会话 | `thincoder-core/browser/session.mjs`：开启走 `attachOrLaunch`；`closeSession` 走摘自己 ∥ 末关；空闲定时器与退出钩子同面；模式异值改成注记；`failSession` 不变 |
+
+**尺寸拆分计划（本批向 `session.mjs` 加职责 ⇒ 必答尺寸面）**：
+
+- **为何必答**：本批向该档加五职责（开启接线 ∥ `closeSession` 两形 ∥ 空闲定时器 ∥ 退出钩子 ∥ 模式注记），而该档改前的余量**容不下其中任何一条**（绝对读数与量法登记在批档 §2——设计档只给关系）⇒ 跨 500 软线是**既成事实**，不是「默认结局」；不拆就交付不了。
+- **拆法①（本批必做）**：判定与生命周期全部移入 `pool.mjs`——`attachOrLaunch` · `claimSlot` · `joinShared` · `takeOver` · `registerUser` · `releaseUser`（含「删条目 → 重扫 → 末关 → 删锁 → 关标签页」整序）· `liveUsers` · `modeNote`。
+- **拆法②**：`session.mjs` 只留接线——调用点 ∥ 会话态复位 ∥ `sealNote` 拼尾行；锁 ∥ 登记 ∥ 末关三者任一实现不得留在该档。
+- **两道落线判据**：实施后 `session.mjs` ≤ 500 行 ∧ `pool.mjs` ≤ 300 行；超了按 KD-12 的域界再拆一处，首选把页原语（`pageInfo` / `waitForReady` / `waitForUrlChange` / `takeSnapshot` / `resolveRef` / `focusRef`）并入既有 `snapshot.mjs`。
+- **读数**：改前绝对行数与量法登记在批档 §2（设计档只给关系与拆分计划）。
+
+### 12.1 集成测试设计（对 `test/RTM.md` 的差量）
+
+**业务可观察点** = 用户在两个（或更多）会话里同时用浏览器时看到的东西：能不能用、回执里那句模式说明、关掉之后浏览器还在不在。
+
+| # | 入口（业务可观察点） | 判据（断言什么） | 指回 |
+|---|---|---|---|
+| 34-1 | 同一 `HOME` 下同时起两个实例，各自 `browser{navigate}` 一个本地页 | 命令行含 `--user-data-dir=<profile>` 且不含 `--type=` 的进程数 = 1；两实例都拿到 `[navigate]` + 页摘；两实例请求同一模式 ⇒ **无模式注记**（§2.4：请求值与生效值同 ⇒ 零注记） | F-BT6b（全机一个共享浏览器）· F-BT6（登录态） |
+| 34-2 | 首实例以 `headless:true` 跑起，第二实例以 `headless:false` 跑 `navigate` | 第二实例不报错、拿到 `[navigate]`；回执尾行含 `the shared browser is running headless=true (started by pid <N>)`；不含 `session is already running`。取「无头为生效值」这一向：反向要显示环境，CI 面会红而不是 skip，判的是同一机制（模式不可热切） | F-BT6b（模式由首实例定、后到沿用并告知） |
+| 34-3 | A、B 都用过，先后 `close` | A 回执含 `1 other instance(s) still using it` 且浏览器进程仍在；B 回执含 `shared browser closed (last user)` 且进程消失、`session.lock` 不在盘 | F-BT6b（首开末关 · 用者计数） |
+
+- **差量口径**：破 0 行 · 冗余 0 行 · 缺 3 行（34-1–34-3）。
+- **既有前提须补强**：故事 4 的三行（4-1–4-3）以失败句 / 自启窗为判据——共享浏览器在场时，`navigate` 会走接入而不拉起 ⇒ 那三行需与新增三行同用**临时 `HOME`**（池隔离），否则判据被接入路径替代 = 假绿。
+- **池隔离前提（硬要求）**：集成用例把 `HOME`（Windows 另含 `USERPROFILE`）指到临时目录——开发机上真跑着的共享浏览器不得被用例接入。
+- **落点**：`test/integration/browser-shared-pool.test.mjs`（仓根；编号先落 `test/RTM.md` 再写用例标题 `test('34-1 …')`）。宿主无 Chromium ⇒ skip 并打印，跳过不算绿（沿 §7 S7 先例）。
 

@@ -268,3 +268,92 @@ export function truncateText(text, max, note = "narrow the request") {
   if (text.length <= max) return text
   return `${text.slice(0, max)}\n[... truncated: ${text.length - max} chars omitted — ${note}]`
 }
+/** 页错误（携带失败回执面——§2.2：`Error: <因由>` + 页摘 + 紧凑清单）。 */
+export function pageError(message) {
+  const err = new Error(message)
+  err.pageReceipt = true
+  return err
+}
+
+const READY_TIMEOUT_MS = 10_000
+const NAV_SETTLE_MS = 1_000
+
+/**
+ * 页原语（会话级）：`pageInfo` ∥ `waitForReady` ∥ `waitForUrlChange` ∥ `takeSnapshot` ∥ `resolveRef` ∥ `focusRef`。
+ * 从 `session.mjs` 拆出（BROWSER-TOOL.md §12「尺寸拆分计划」落线判据触发项）：本档只管页与引用表，
+ * 不碰会话生命周期（开启 ∥ 关闭 ∥ 用者登记都不在此）。注入面 = `{ evalRaw, step, sleep, onPage }`：
+ *
+ *  - `evalRaw(expression)` = 会话的 CDP 单点（`Runtime.evaluate` + 页面异常面）；
+ *  - `step(name, work)` = 动作步名帧（`session.mjs` 的 `runFrame`；出队列时虚无帧）；
+ *  - `sleep(ms)` = 受控等待（动作控制器在位时由它裁）；
+ *  - `onPage({url, title})` = 读到页身份后回写会话的「最近页」（§3.1 审批文案用）。
+ *
+ * `reset()` = 换一张新引用表（会话重开 ∥ 关闭时调用——引用号是会话内单调的）。
+ */
+export function createPagePrimitives({ evalRaw, step = (name, work) => work(), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), onPage = () => {} } = {}) {
+  let table = createRefTable()
+  const remember = (url, title) => { onPage({ url, title }) }
+
+  async function pageInfo() {
+    const v = await evalRaw(pageInfoExpression())
+    const info = { url: String(v?.url ?? ""), title: String(v?.title ?? ""), readyState: String(v?.readyState ?? "") }
+    remember(info.url, info.title)
+    return info
+  }
+
+  async function waitForReady(maxMs = READY_TIMEOUT_MS) {
+    return step("waitForReady", async () => {
+      const deadline = Date.now() + maxMs
+      for (;;) {
+        const info = await pageInfo()
+        if (info.readyState === "complete" || Date.now() >= deadline) return info
+        await sleep(100)
+      }
+    })
+  }
+
+  async function waitForUrlChange(before, maxMs = NAV_SETTLE_MS) {
+    return step("wait poll", async () => {
+      const deadline = Date.now() + maxMs
+      for (;;) {
+        const info = await pageInfo()
+        if (info.url !== before) return info.url
+        if (Date.now() >= deadline) return null
+        await sleep(100)
+      }
+    })
+  }
+
+  /** 取快照 + 分配引用 + 渲染（会话内单一快照点）。 */
+  async function takeSnapshot({ selector = null, max = DEFAULT_MAX } = {}) {
+    const wanted = Number(max)
+    const capped = Math.max(1, Math.min(Number.isFinite(wanted) ? Math.floor(wanted) : DEFAULT_MAX, MAX_ELEMENTS))
+    const snap = normalizeSnapshot(await evalRaw(snapshotExpression({ selector, max: capped })))
+    if (snap.missing) {
+      throw pageError(`snapshot selector "${selector}" matched nothing — pass a CSS selector present on the page`)
+    }
+    const rows = assignRefs(table, snap.elements)
+    remember(snap.url, snap.title)
+    return { url: snap.url, title: snap.title, total: snap.total, rows, text: renderSnapshot({ url: snap.url, title: snap.title, rows, total: snap.total }) }
+  }
+
+  /** ref → 引用表条目（未在表 ⇒ 同 stale 句式——§2.3 失效口径）。 */
+  function resolveRef(ref) {
+    const entry = table.byRef.get(String(ref))
+    if (!entry) throw pageError(`ref ${ref} is stale (was "unknown") — run snapshot again`)
+    return entry
+  }
+
+  /** ref → 聚焦（§2.7）：表查 + `focusExpression`；不可聚焦 ⇒ 明示拒（不静默错投）。 */
+  async function focusRef(ref) {
+    const entry = resolveRef(ref)
+    const f = await evalRaw(focusExpression(entry.selector, entry.tag))
+    if (!f?.found || f.tag) throw pageError(`ref ${ref} is stale (was "${entry.name}") — run snapshot again`)
+    if (f.focused === false) throw pageError(`ref ${ref} "${entry.name}" is not focusable — keys would go to another element`)
+    return { ref, name: entry.name, label: `${ref} "${entry.name}"` }
+  }
+
+  function reset() { table = createRefTable() }
+
+  return { pageInfo, waitForReady, waitForUrlChange, takeSnapshot, resolveRef, focusRef, reset }
+}
