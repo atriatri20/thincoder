@@ -5,7 +5,7 @@
  * 产品内建裁定 = 同档 §3.20 条目 S——谓词单源随迁：本仓 `scripts/doc-check-paragraph.mjs` 改述为
  * **再出口缝**（薄档 · 零逻辑 · 逐名再出口），盘上不留第二份谓词实现。
  * 两面切块：文档面量段（相邻非空正文行合并成一段，量段长）· 提示词面（`isPromptFace`）量行
- * （逐行裸判，无结构豁免）。度量 = `[...line].length`（CJK 计 1——不引显示宽度 / 字体）；
+ * （逐行裸判，无结构豁免）——判据不分适用面，工具描述面同样按段判（口径 = §3.18 条 7）。度量 = `[...line].length`（CJK 计 1——不引显示宽度 / 字体）；
  * 阈值 = 调用方的内置常量（`DOC_CHECK_BUILTINS.paragraphMax` / `lineMax`）——不读声明面，也不扫目录：
  * **判定集 = 调用方传入的文件清单**。
  * 不计入段的行类（同时把段断开）= 空行 ∥ 表格行 ∥ 标题 ∥ 列表项 ∥ 引用行 ∥ 围栏（标记行与块内整行）
@@ -21,13 +21,18 @@ export const DOC_CLASS = Object.freeze({ para: "文字太长，难于阅读", li
 /** 表格行谓词（markdown 表格行结构性不可折行——不计入段，与锚检查同源）。 */
 export const isTableRow = (l) => /^\s*\|.*\|\s*$/.test(String(l))
 
-/** 围栏标记（行首可选空白 + 三反引号 ∥ 三波浪号 ⇒ 标记字符；非围栏行 ⇒ null）——**单源**：
+/** 围栏标记（行首可选空白 + 三反引号 ∥ 三波浪号 ⇒ `{ ch, len }`；非围栏行 ⇒ null）——**单源**：
  *  `isFenceLine` 与两处块扫描（本节段判据 ∥ `./anchors.mjs` 锚抽取）同取此式，使「同形围栏行止」只此一解
- *  （同一模块内同符两义 = 单源可漂的结构口子）。 */
+ *  （同一模块内同符两义 = 单源可漂的结构口子）。
+ *  **长度带出**：闭合 = 同字符 ∧ 长度 ≥ 开启长度（CommonMark 围栏语义）——只比字符会让
+ *  `` ```` `` 包 `` ``` `` 的嵌套围栏在外层开启行处提前闭合，内层代码行落入正文并被并成段。 */
 export function fenceMark(l) {
   const m = /^\s*(`{3,}|~{3,})/.exec(String(l))
-  return m ? m[1][0] : null
+  return m ? { ch: m[1][0], len: m[1].length } : null
 }
+
+/** 围栏闭合谓词（单源 = 上面的长度语义）：两个 `{ ch, len }` 判闭合。 */
+export const isFenceClose = (mark, fence) => mark.ch === fence.ch && mark.len >= fence.len
 
 /** 围栏行谓词（单源 = `fenceMark`）——围栏行自身与块内整行均不计入段。 */
 export const isFenceLine = (l) => fenceMark(l) !== null
@@ -35,8 +40,8 @@ export const isFenceLine = (l) => fenceMark(l) !== null
 /** 引文块行谓词（行首可选空白 + `>`）——连续 `>` 行整块不计入段（引证须逐字连续、不可折，同表行理据）。 */
 export const isQuoteLine = (l) => /^\s*>/.test(String(l))
 
-/** 列表项谓词（无序 `-` ∥ `*` ∥ `+` · 有序 `数字 + . ∥ ） ∥ 、` + 空白）——列表项不计入段且断段。 */
-export const isListItem = (l) => /^\s*(?:[-*+]|\d+[.)、])\s/.test(String(l))
+/** 列表项谓词（无序 `-` ∥ `*` ∥ `+` · 有序 `数字 + . ∥ ） ∥ 、` · 中文标记 `·` ∥ `•`——三族要求标记后有空白；圈号 `①`–`⑳` 另起一式、不要求）——列表项不计入段且断段。 */
+export const isListItem = (l) => /^\s*(?:[-*+]|\d+[.)、]|[·•])\s/.test(String(l)) || /^\s*[①-⑳]/.test(String(l))
 
 /** 提示词面谓词（`thincoder-core/prompts/**`——形态对齐 `./anchors.mjs` 的 `OPERAND_FACE`，单源住本档）：
  *  模型读原始文本，一行就是一个块（FR46 同源理由）⇒ 该面逐行裸判，无结构豁免。 */
@@ -74,6 +79,14 @@ export function inCodeSpan(line, idx) {
  *  `exemptZones` 缺省 ∥ 空集 ⇒ 零豁免。`files`（必填）= **判定集**（调用方传入的档清单——本档不遍历
  *  任何目录；空集 ⇒ 零命中）。 */
 export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files = [] } = {}) {
+  // 配置缺失 = 硬错，不是静默不命中。
+  // `para.len > undefined` 恒 false ⇒ **永不命中 = 假绿**；而误报会被人发现，假绿不会。
+  // 实测来源：围栏批（2026-10-27）调试时把配置当第二参数传，一度以为修复无效——
+  // 两个阈值都是 undefined，门一路绿灯。
+  if (!Number.isFinite(paragraphMax) || !Number.isFinite(lineMax)) {
+    throw new Error(`checkParagraphs: paragraphMax ∥ lineMax 必须是有限数字（收到 ${paragraphMax} / ${lineMax}）。` +
+      "配置全在第一个参数：{ paragraphMax, lineMax, exemptZones, files }。阈值缺失时永不命中，读起来就是「全部过关」。")
+  }
   const zones = (Array.isArray(exemptZones) ? exemptZones : []).filter((z) => typeof z === "string" && z !== "")
   const hits = []
   for (const f of files) {
@@ -98,7 +111,7 @@ export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files
       const mark = fenceMark(l)
       if (mark !== null) {
         if (fence === null) fence = mark
-        else if (mark === fence) fence = null
+        else if (isFenceClose(mark, fence)) fence = null
         flush()
         return // 围栏标记行自身断段
       }

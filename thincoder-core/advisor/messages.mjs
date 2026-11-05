@@ -54,6 +54,7 @@ export function buildDesignApprovalBlock(designToken, designId) {
     "## Approval Signal",
     echo,
     "The verdict line is checked mechanically: without a `VERDICT: pass` line, or with a `VERDICT: changes-required` line, no token is issued even when the token is echoed.",
+    "Put that same verdict line on its own line inside the text you append to the batch record's §3 (`batch append`): the §3 write itself is checked the same way, and a §3 append that states no verdict — or states both — is refused before anything lands.",
     "🟡 (Advisory) and 🔵 (Note) findings do NOT block approval — list them if present, but still include the token. If any 🔴 (Critical) issue remains unresolved, do NOT include the token. A reasoned non-fix accepted by the reviewer does not block (🔴 only — 🟡/🔵 never block approval); anything else stays unresolved.",
   ].join("\n")
 }
@@ -155,8 +156,9 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
       }
     }
 
-    // Engineering mode: the project standards section — the declaration face is gone with the
-    // manifest `advisor` key, so this is always an explicit degradation (PO-2).
+    // Engineering mode: the project standards section — read from the project's own
+    // declaration (`docRoot.standards`); three states, each machine-distinguishable:
+    // undeclared / declared-but-unreadable / injected. Never a probed convention name (PO-2).
     if (agent.config?.agent?.engineering) {
       injectProjectStandards(agent, parts, guideRoot)
     }

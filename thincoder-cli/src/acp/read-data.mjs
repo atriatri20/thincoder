@@ -73,8 +73,8 @@ export function createReadDataHandlers(ctx, { intervalMs = WATCH_INTERVAL_MS } =
       const c = resolveCwd(params, ctx)
       if (c.error) return c.error
       const { ledgerCmd } = await core()
-      // `ledgerCount` 出参 = 对象形 `{ count, overdue, evidenceOversize }`（设计档 §7.1）——直传核对象，零包装
-      try { return ledgerCmd.ledgerCount({ cwd: c.cwd }) } catch (e) { return badParams(e?.message ?? String(e)) }
+      // `ledgerCount` 出参 = 对象形 `{ count, overdue, evidenceTooLong }`（设计档 §7.1）——直传核对象，零包装
+      try { return ledgerCmd.ledgerCount({ cwd: c.cwd, boundary: c.cwd }) } catch (e) { return badParams(e?.message ?? String(e)) } // 界 = 调用方指名的 cwd（同 :66；见 docs/core/design/LEDGER.md §3.8「三面三界」）
     },
 
     "batch/list": async (params) => {
@@ -101,8 +101,8 @@ export function createReadDataHandlers(ctx, { intervalMs = WATCH_INTERVAL_MS } =
       const { ledgerDb, batchRead } = await core()
       // 观察域根 = 判据单源 `resolveLedgerRoot`（与写入面同源）：根 ⇒ 其键控库指纹；无根 ⇒ 该域无台账库、
       // 指纹恒 "0"（观察域照常上报——键控库在盘 / 变动即报 `ledger/changed`）。
-      const root = ledgerDb.resolveLedgerRoot(cwd)?.root
-      const ledgerSig = root ? fileSig(ledgerDb.ledgerDbPath(root)) : "0"
+      const root = ledgerDb.resolveLedgerRoot(cwd, cwd)?.root
+      const ledgerSig = root ? fileSig(ledgerDb.ledgerDbPath(root, root)) : "0"
       const batchSig = batchRead.listBatchRecords({ cwd }).batches.map((b) => `${b.path}:${fileSig(b.path)}`).join("|")
       if (!last || last.cwd !== cwd) { last = { cwd, ledgerSig, batchSig }; return [] } // 首查 / 观察域切换 ⇒ 立基线（静默）
       const fired = []

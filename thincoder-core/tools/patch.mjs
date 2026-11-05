@@ -4,9 +4,10 @@ import {
   resolveInCwd,
   normalizeEOL,
   detectFileEol,
-  majorityEol
+  majorityEol,
+  LEDGER_PARAM_DESC
 } from "./shared.mjs";
-import { writeThroughPath, TMP_SUFFIX, markDirty } from "./write-path.mjs";
+import { writeThroughPath, TMP_SUFFIX, markDirty, clearLastWrite } from "./write-path.mjs";
 import { spawnGit } from "./git-run.mjs";
 import { mkdir, readFile, lstat, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -175,6 +176,7 @@ export const applyPatchTool = {
     type: "object",
     properties: {
       patch: { type: "string", description: "Unified diff. May span multiple files (multiple --- / +++ header pairs — including creating MULTIPLE new files via --- /dev/null); --- / +++ headers per file, @@ -old,count +new,count @@ hunks (a bare @@ header is also accepted — coordinate-less hunks are located by their anchor lines: context lines plus the removed (-) lines, matched as a contiguous sequence — a unique match applies; a zero/one-context hunk is accepted only when it removes (-) at least one line and that anchor sequence is unique, while anchor-free pure-+ (insert) hunks need at least 2 context lines). The +++ b/<path> pair may be omitted for existing files — a lone --- a/<path> (or --- b/<path>) header followed directly by hunks applies to that path (new files still need --- /dev/null + +++ b/<path>)." },
+      ledger: { type: "string", description: LEDGER_PARAM_DESC },
     },
     required: ["patch"],
   },
@@ -234,7 +236,13 @@ export const applyPatchTool = {
     const summary = planned.map((p) => `  ${p.isNew ? "created " : "modified"} ${p.path}`).join("\n")
     // Mark every touched file dirty — insert_after must not run on stale line numbers.
     // 整批记账（dirty）= apply_patch 的批级语义（两段式全成功后一次落账——与改前逐字同）。
-    for (const p of planned) markDirty(p.abs)
+    // 2026-11-02：落 dirty 同时清写入快照——apply_patch 不记快照，留着旧 `startLine` 就是
+    // 陈旧的锚：行号锚护栏第 2 行（dirty ∧ 快照在场）会拒，而第 4 行会拿旧值判「目标区在之前
+    // ⇒ 放行」——两种结果都不该由一笔没更新快照的写来决定（EDIT-HELPERS §7.1）。
+    for (const p of planned) {
+      markDirty(p.abs)
+      clearLastWrite(p.abs)
+    }
     const syntaxChecks = await Promise.all(planned.map(async (p) => {
       const r = await autoSyntaxCheck(p.abs)
       return r ? `${p.path}:${r.replace("Syntax: ", "")}` : ""
@@ -256,6 +264,7 @@ export const deleteTool = {
     properties: {
       path: { type: "string", description: "File or empty-directory path (relative to cwd or absolute)" },
       force: { type: "boolean", description: "Allow deleting git-tracked files (default false)" },
+      ledger: { type: "string", description: LEDGER_PARAM_DESC },
     },
     required: ["path"],
   },

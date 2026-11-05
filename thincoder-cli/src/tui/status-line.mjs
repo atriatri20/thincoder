@@ -10,7 +10,6 @@
  */
 import { ansi, C } from "./ansi.mjs"
 import { sliceByWidth, stringWidth } from "./render.mjs"
-import { providerSpec } from "@thincoder/core/config.mjs"
 import { t } from "@thincoder/core/i18n.mjs" // 停滞轻显形（TUI.md §7.7）：句式键 status.quiet——词面单源（CLI 直取）
 import { isRealUserMsg } from "@thincoder/core/history-window.mjs" // B6 回退链：首条真实 user 消息谓词（纯件单源）
 import { isYesNoModal } from "./interaction.mjs" // X8 跟进①：y/n-only 族判据单源
@@ -141,10 +140,10 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
     ? ` ${t("status.quiet", { s: Math.floor((Date.now() - lastOut) / 1000) })}`
     : ""
   const statusText = state.processing ? `${state.status}${toolHint}${elapsed}${quietHint}` : state.status
-  // 2026-09-02 Q1（SESSION.md §6.8）：provider 可为 null —— providerSpec(null) 保守 128K 不抛错
-  // 2026-09-02 §15：context 窗口跟随 providers[].context 覆盖（T-C6——百分比基于覆盖后的窗口）
-  const modelContext = providerSpec(agent.provider).context
-  const ctxPct = Math.round((state.ctxCache.tokens / modelContext) * 100)
+  // 2026-09-02 Q1（SESSION.md §6.8）：provider 可为 null —— 核 `providerSpec(null)` 保守 128K 不抛错。
+  // 2026-09-02 §15 ∥ context-percent-parity：窗口 / 校准比 / 两值全在核 `historyReading` 内解析（`ctxCacheOf` 缓出）——
+  // 本段零自算式，只格式化核读数的两个返回值；零值不显示门 `ctxPct > 0` 留在端侧（空历史口径已登记）。
+  const ctxPct = state.ctxCache.pct
   const ctxTokensHint = state.ctxCache.tokens > 0 ? ` ${fmtK(state.ctxCache.tokens)}` : ""
   const ctxHint = ctxPct > 0
     ? ctxPct >= 80 ? ` │ ${ansi.reset}${C.warn}context ${ctxPct}%${ctxTokensHint}${ansi.reset}${ansi.dim}` : ` │ context ${ctxPct}%${ctxTokensHint}` : ""
@@ -172,7 +171,7 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   // titleHint 前）——取值 = `agent._pendingTimers` 活读（每帧 recompute / 零缓存副本 / 不显倒计时）；
   // 零在途 ⇒ 零注入（负向锁——半态逐字节等价）；到期态（任一在途项已过期未送达）⇒ 同段警示色。
   const timers = agent._pendingTimers ?? []
-  const timerHint = timers.length === 0 ? "" : ` │ ${timers.some((t) => t.expiresAt <= Date.now()) ? `${ansi.reset}${C.warn}⏰${timers.length}${ansi.reset}${ansi.dim}` : `⏰${timers.length}`}`
+  const timerHint = timers.length === 0 ? "" : ` │ ${timers.some((t) => t.expiresAt <= Date.now()) ? `${ansi.reset}${C.warn}timer ${timers.length}${ansi.reset}${ansi.dim}` : `timer ${timers.length}`}`
   // D8（2026-09-21 块标题行对齐批——会话标题常显 · `docs/cli/design/TUI.md` §7.4）：状态段簇尾
   // （ledgerHint 后、键位组前）；取值 = `agent.title` 活读（每帧 recompute）· 40 列截断。
   // B6 消（#677）：空白 ⇒ 回退链值（对位 VSC 顶栏——生成前 ∕ 失败期两端同值；值逐字，行级超宽走 statusMax）。

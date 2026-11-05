@@ -84,13 +84,13 @@ test("用例 1 · 段闭集（fork 裁定保「模型」段 · 2026-10-24 恢复
   assert.ok(anchors.includes("model"), "「模型」段节点应在场（fork 恢复）")
 })
 
-test("用例 2 · `SCOPES` 十一（`SECTIONS` 八名 + 三添加弹窗组常量）", async () => {
+test("用例 2 · `SCOPES` 十二（`SECTIONS` 八名 + 四弹窗组常量）", async () => {
   const { SECTIONS } = await import(url(VIEWS))
   const line = text(MOUNT).split(/\r?\n/).find((row) => row.includes("const SCOPES = "))
   assert.ok(line !== undefined, "未找到 `SCOPES` 声明")
   const constants = [...line.matchAll(/\b([A-Z][A-Z_0-9]*_MODAL_GROUP)\b/g)].map((m) => m[1]).sort()
-  assert.deepEqual(constants, ["ADD_MODAL_GROUP", "CONSULT_ADD_MODAL_GROUP", "MCP_FORM_MODAL_GROUP"])
-  assert.equal(SECTIONS.length + constants.length, 11, "fork 8 段（含 model）+ 3 添加弹窗组")
+  assert.deepEqual(constants, ["ADD_MODAL_GROUP", "CONSULT_ADD_MODAL_GROUP", "MCP_FORM_MODAL_GROUP", "PROVIDER_CONTEXT_MODAL_GROUP"])
+  assert.equal(SECTIONS.length + constants.length, 12, "fork 8 段（含 model）+ 4 弹窗组（上游 0.11.1 增 PROVIDER_CONTEXT）")
 })
 
 test("用例 3 · `MODAL_READS` 行集（fork 面——含 `model` 行）", () => {

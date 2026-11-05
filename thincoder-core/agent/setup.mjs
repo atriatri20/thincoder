@@ -23,20 +23,10 @@ import { normalizeOrigin } from "../memory/origin.mjs"
 import { searchOrigins } from "../memory/code-search.mjs"
 import { INDEX_ORIGIN_ROW_WARN } from "../memory/schema.mjs"
 import { resolveCompactThreshold } from "../config.mjs"
+import { safeSliceUTF16 } from "../text-budget.mjs"
 
 const DOC_SEARCH_LIMIT = 5
 const DOC_CHUNK_PREVIEW_LEN = 300
-/** UTF-16 安全截断（2026-09-02 deepseek 400 根因）：slice(0, N) 按码元切会把 emoji 代理对切成孤立
- *  高代理（如 🔴=U+D83D+DD34 只剩 D83D）——deepseek 解析器严格 UTF-16 报 400
- *  "unexpected end of hex escape"。截断点落在高代理上时向前收一个码元。 */
-function safeSliceUTF16(text, max) {
-  if (text.length <= max) return text
-  const end = max
-  // 截断点恰在高代理（D800-DBFF）上 → 收到高代理之前（不带它）
-  const cp = text.charCodeAt(end - 1)
-  if (cp >= 0xd800 && cp <= 0xdbff) return text.slice(0, end - 1)
-  return text.slice(0, end)
-}
 const MEMORY_SEARCH_LIMIT = 3
 
 /**
@@ -64,6 +54,11 @@ export async function prepareRun(agent, input, callbacks, {
 
   agent._lastPromptTokens = null
   agent._usageAtLen = null
+  // §6.17 估算自校准比（`_tok` / `_tokRatio`）**不在本处清**：本函数是每 run 的 pre-flight，
+  // 而在每轮用户消息上归零会让池化比退化成单样本（R2 失效）。初值在 `agent.mjs` 构造字面量，
+  // 清空点 = `/new`（`session-lifecycle.mjs`）∥ `key` 变自清（`token-window.mjs` `recordTokenSample`）。
+  // §6.17.1 链三自适应额度：run 级一次——本处复位（一次 = 全部额度；同一 run 内第二次独立越窗直接抛）。
+  agent._overflowRetried = false
   // Cumulative provider cache accounting (batch 2026-10-18-context-cache-visibility):
   // the service reports prompt_cache_hit/miss per response; the terminal faces each kept
   // their own tally, so the CORE had none and `context` could not report cache efficiency.

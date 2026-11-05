@@ -31,31 +31,31 @@ export async function beginRun(agent, input, callbacks, {
   // （consult → injectConsultResult；其余 → injectAsyncResult——族分支同 CONSULTATION.md §6.2 D-R17a/b）
   // ——单容器一处清，不再逐族三段。
   // §6.31 消化账务（批 digest-accounting · 2026-10-05 · 台账 #930）：**投递 ≠ 销账**——
-  // 会话态（`_daSession`）投递留容器（覆盖才离容器 / 未见账经消化轮回路重投）；fallback
+  // 会话态（`_daSession`）投递留容器（覆盖才离容器 / 未见账计一个未签收轮、达 `DA_MISS_LIMIT` 升级——
+  // 投递恒一次，无重投回路：批 digest-retry-amplify · 台账 #1850）；fallback
   // （headless / 直连 runAgent）缺省条逐字沿用取尽语义（先离容后注入 ∥ `releaseSettledEntry` 面；
   // 零账目动作——不销账 / 不重投），已投递未销账条同判据跳过且留容器（§6.31 出口缝② · 父侧裁定 2026-10-05）。
   const pendingAsync = agent._pendingAsyncResults
   const { carrierField, releaseChildHold, releaseSettledEntry } = await import("../agent-tools/async-settle.mjs")
   if (carrierField(agent, "_daSession") === true) {
     const { armAccountRound, isDigestRound, shouldDeliverEntry, digestAccountRequirement } = await import("./digest-account.mjs")
-    armAccountRound(agent) // §6.31.5 落痕清位：会话态起跑即清（缺痕 ⇒ 全条未覆盖——安全方向）
+    armAccountRound(agent) // §6.31.5 落痕清位：会话态起跑即清（缺痕 ⇒ 该轮按未签收判一个轮次）
     if (pendingAsync?.length) {
       const { injectAsyncResult } = await import("../agent-tools/subagent.mjs")
       const { injectConsultResult } = await import("../agent-tools/consult.mjs")
       const digestRound = isDigestRound({ autoTurn, upstreamTurn, timerTurn })
-      // 投递门控两态（§6.31.4 · §6.34 收窄）：首投**仅系统轮**（`autoTurn`——用户回合零注入）∥ 重投仅消化轮；
-      // 注入后**留容器**（不 splice）。
+      // 投递门控单门（§6.31.4 · 投递恒一次）：首投**仅系统轮**（`autoTurn`——用户回合零注入），
+      // 已投递条恒跳过；注入后**留容器**（不 splice）。
       // 注入抛错 ⇒ 未投条目（`_daDelivered` 未置）留容器待下轮——收窄既有「splice 先取尽」的丢失窗。
       for (const e of [...pendingAsync]) {
-        if (!shouldDeliverEntry(e, digestRound, autoTurn)) continue
+        if (!shouldDeliverEntry(e, autoTurn)) continue
         if (e.role === "consult") await injectConsultResult(agent, e)
         else await injectAsyncResult(agent, e)
         e._daDelivered = true
-        e._daRetry = false
-        releaseChildHold(e) // 仅释放 `childAgent`——`report` 保留至销账 / 升级（重投需原文）
+        releaseChildHold(e) // 仅释放 `childAgent`——`report` 保留至销账 / 升级（升级终局披露需原文）
       }
       // 账目要求行（§6.31.3）：仅会话态消化轮且未销账清单非空时注入（先投递后拼清单——
-      // 含本回合首投 / 重投）；两档同发（手动 / AUTO）；transient（机器线独有）。
+      // 含本回合首投）；两档同发（手动 / AUTO）；transient（机器线独有）。
       if (digestRound) {
         const ids = pendingAsync.filter((e) => e._daDelivered === true).map((e) => e.id)
         if (ids.length > 0) {
@@ -130,6 +130,14 @@ export async function beginRun(agent, input, callbacks, {
       agent._zeroWriteAlerted = false
       agent._verifyRetries = 0
       agent._advisorRound = 0
+      // ADVISOR-CONVERGENCE.md §6.4 B 复位点 1（穷举两处之一）：新用户回合起点 · 无继承时——回到完整预算。
+      // 「非自动回合」合取：digest / timer / upstream 三类自动回合同样不带 `resume`（同样进本块），
+      // 但它们落在周期中间而非起点——不清零，否则「用户回合 → 自动回合 → 用户回合」每段重新拿满 5 条，
+      // 上限被自动回合吃掉。自动回合留下的值经 `INHERITED_GUARD_KEYS` 回填（`if (g)` 支）。
+      if (!(autoTurn || upstreamTurn || timerTurn)) {
+        agent._advisorReminders = 0
+        agent._advisorHonestySent = false
+      }
       agent._advisorSession = null // advisor session is per-run: discard when the task ends, next task starts fresh
       agent._emptyRetries = 0 // empty-response retry budget is per-run: a fresh user turn restarts from zero
       agent._compressFailures = 0 // compaction summary-failure counter is per-run: a fresh user turn restarts from zero

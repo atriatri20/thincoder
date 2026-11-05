@@ -11,8 +11,8 @@
  *  - `write` ⇒ **点改**：读现档 → 设节点 → 落盘（`writeManifest` 内先 `validateManifest`——
  *              编辑结果非法 ⇒ 拒 + 盘零变）；**缺档 ⇒ 拒** + 引导 `init`（写不建档）。
  *
- * 写面白名单（判据单源 = `MANIFEST_SCHEMA`——钉死谓词）：**12 个可写节点** = `keys` 中**非** `nestedKeys`
- * 父键者（`version` / `phase` / `codePaths` 整键）+ `nestedKeys` 子键（`docRoot.*` 五子键 / `index.*` 四子键）；
+ * 写面白名单（判据单源 = `MANIFEST_SCHEMA`——钉死谓词）：**13 个可写节点** = `keys` 中**非** `nestedKeys`
+ * 父键者（`version` / `phase` / `codePaths` 整键）+ `nestedKeys` 子键（`docRoot.*` 六子键 / `index.*` 四子键）；
  * **两族整键写（传整个对象）⇒ 拒**；白名单外 ⇒ 拒（拼写保护——未知键写盘 = 静默死键，KD-M1-36 问题本体）。
  * `value` 解析 = 同款口径 `settings.mjs` 的 `parseValue`（先 `JSON.parse`，失败取字面串；`"null"` ⇒ `null`
  * ——`docRoot.*` 的「本面无」，KD-M1-37）。
@@ -39,7 +39,7 @@
 import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { MANIFEST_REL, MANIFEST_SCHEMA, initManifest, projectRootView, projectView, readManifest, writeManifest } from "../manifest.mjs"
-import { DESC } from "../tools/shared.mjs"
+import { DESC, LEDGER_PARAM_DESC_MANIFEST, PROJECT_PARAM_DESC } from "../tools/shared.mjs"
 import { clearDeclarationCache } from "../conventions.mjs" // #1367 面⑦：写档成功 ⇒ 缓存失效（fix 轮接线）
 
 /** 拒面统一前缀（设计 §2.10：`manifest <action>: refused — …`）——盘零变类拒绝一律经此抛错。 */
@@ -48,9 +48,9 @@ function refuse(action, reason) {
 }
 
 /** `target` 解析（先例 `eng.mjs` 的 `resolveEngineeringManifest` 缺省会话锚 ∥ `git.mjs` 的 `resolveBaseDir` 相对形归一）：缺省 = 会话锚
- *  （`ctx.agent.cwd ?? ctx.cwd ?? process.cwd()`）；显式相对形按会话锚归一（绝对形原样）。 */
+ *  （`ctx.agent.cwd ?? ctx.cwd`）；显式相对形按会话锚归一（绝对形原样）。 */
 function resolveTarget(args, ctx) {
-  const base = ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
+  const base = ctx?.agent?.cwd ?? ctx?.cwd
   return args?.target ? resolve(base, String(args.target)) : resolve(base)
 }
 
@@ -134,6 +134,9 @@ export const manifestTool = {
       target: { type: "string", description: "Explicit target directory — defaults to the session anchor; relative paths resolve against it. A workspace target (several projects below it) is refused with the full project list — pass the project root you mean." },
       key: { type: "string", description: "(write) Dot path of the node to set — version / phase / codePaths, or a sub-key of docRoot / index (e.g. docRoot.design / index.publicRepos); whole-object writes of those two families are refused", },
       value: { type: "string", description: "(write) New value — parsed as JSON first (null / true / 5 / [\"a\"]), otherwise kept as a literal string; \"null\" is the explicit no-such-face for docRoot.<key>" },
+      ledger: { type: "string", description: LEDGER_PARAM_DESC_MANIFEST },
+      // 项目声明面（决策 40）：`target` 缺位时才被读（定位参数优先）；纯声明，不改查/建的目标目录。
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["action"],
   },

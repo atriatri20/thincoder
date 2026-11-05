@@ -5,12 +5,14 @@
  */
 
 import { proxyFetch } from "../proxy.mjs"
+import { withUserAgent } from "../client-identity.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { effectiveFetchTimeoutMs, effectiveBodyIdleMs } from "./core.mjs"
 import { abortError, timeoutError } from "../abort-provenance.mjs"
 import { terminateBody } from "../stream-destroy.mjs"
 import { requestBudget } from "../config.mjs"
 import { DEFAULT_BODY_IDLE_MS } from "../config-defaults.mjs"
+import { assertPromptFits } from "./errors.mjs"
 
 /** OpenAI 语义 tool_choice → Gemini FunctionCallingConfig（2026-08-31 能力层）。 */
 function mapFunctionCallingConfig(choice) {
@@ -77,7 +79,7 @@ export function convertMessages(messages) {
 
 /** Build and send a Gemini chat request. Returns the same shape as core.mjs chat.
  *  2026-08-31 会诊 #6：接入 rateGate/recordRate（原实现完全绕过 TPM/RPM 闸门）。 */
-export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice }) {
+export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice, logCtx }) {
   const systemMessages = messages.filter((m) => m.role === "system")
   const contents = convertMessages(messages)
 
@@ -118,7 +120,10 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
 
   // 会诊 #6：TPM/RPM 闸门 + 记账
   const { rateGate, recordRate, estimateRequestTokens } = await import("./rate.mjs")
-  const estimated = estimateRequestTokens({ messages })
+  // §6.17 发送面净判：估准面补 `tools`（原只投影 messages）；body 用 `maxOutputTokens`、无 `max_tokens` 键 ⇒ 减项恒 0
+  const estimated = estimateRequestTokens({ messages, tools })
+  const estPrompt = estimated - (body.max_tokens ?? 0)
+  assertPromptFits(provider, estPrompt, logCtx)
   await rateGate(provider, estimated, onWait, signal)
 
   // 2026-08-31：5xx/网络与 OpenAI 格式统一退避重试链（原完全无重试——Gemini 高峰
@@ -126,7 +131,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   const response = await requestWithRetry(
     () => proxyFetch(url, {
       method: "POST",
-      headers: { ...(provider.headers ?? {}), "Content-Type": "application/json" }, // 定制头展开（PROVIDER.md §21）——定制头在前、内置头在后：内置头胜出
+      headers: { ...withUserAgent(provider.headers), "Content-Type": "application/json" }, // 定制头 + 产品标识头（UA 不可被渠道覆盖——PROVIDER.md §6.17）；内置头在后故同名胜出
       body: JSON.stringify(body),
       // 2026-09-01：同 core.mjs——绝对墙钟废除；响应头阶段 fetchTimeoutMs（600s 默认），body 阶段读侧 idle 管
       signal,
@@ -136,7 +141,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     { signal, onWait, buildMessage: (status, text) => `Gemini API error ${status}: ${text}` },
   )
 
-  const result = await parseGeminiStream(response, { onToken, onReasoning, signal, idleMs: effectiveBodyIdleMs(provider) })
+  const result = await parseGeminiStream(response, { onToken, onReasoning, signal, idleMs: effectiveBodyIdleMs(provider), firstChunkMs: effectiveFetchTimeoutMs(provider) })
   recordRate(provider, estimated, result.usage)
 
   const usage = result.usage
@@ -145,6 +150,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
       content: result.content,
       reasoning: result.reasoning,
       finishReason: result.finishReason ?? null, // §6.31.7 F-DA5（原三 transport 恒 null——字段值收正）
+      estimated: estPrompt, // §6.17 自校准采样（den 与净判同口径）
       usage: {
         prompt_tokens: usage.prompt_tokens ?? 0,
         completion_tokens: usage.completion_tokens ?? 0,
@@ -154,7 +160,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     }
   }
 
-  return { content: result.content, reasoning: result.reasoning, finishReason: result.finishReason ?? null, toolCalls: result.toolCalls }
+  return { content: result.content, reasoning: result.reasoning, finishReason: result.finishReason ?? null, estimated: estPrompt, toolCalls: result.toolCalls }
 }
 
 /** Gemini `finishReason` ⇒ 核统一 `finishReason`（§6.31.7 F-DA5——归一只喂既有分类；
@@ -169,7 +175,7 @@ function mapGeminiFinishReason(reason) {
  * Parse Gemini SSE stream.
  * Format: data: {...}\n\n (each line is a complete JSON object)
  */
-async function parseGeminiStream(response, { onToken, onReasoning, signal, idleMs = DEFAULT_BODY_IDLE_MS }) {
+export async function parseGeminiStream(response, { onToken, onReasoning, signal, idleMs = DEFAULT_BODY_IDLE_MS, firstChunkMs }) {
   const result = { content: "", reasoning: "", toolCalls: [], usage: null, finishReason: null }
   const decoder = new TextDecoder()
   let buffer = ""
@@ -216,21 +222,31 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal, idleM
 
   if (!response.body) throw new Error("No stream response body")
   // 2026-09-01 读侧 idle 超时（同 sse.mjs）：body 有数据流动即不超时；连续 `idleMs` 无新 chunk 判死
+  // （首 chunk 之前改用首 chunk 窗，见下）
+  // 首 chunk 两态臂（TIMEOUT-DIGEST.md §2.4）：首个 body 字节前用 `firstChunkMs`，之后每次重挂用 `idleMs`
   let idleTimer = null
   let idleError = null
+  let gotFirstChunk = false
   const armIdle = () => {
     if (idleTimer) clearTimeout(idleTimer)
+    // 同 sse.mjs：首挂窗缺省取 `idleMs`，相位文案按态取（未传者仍报既有 `google-sse-idle`）
+    const firstArm = !gotFirstChunk
+    const ms = firstArm ? (firstChunkMs ?? idleMs) : idleMs
+    const firstChunkPhase = firstArm && firstChunkMs != null
     idleTimer = setTimeout(() => {
       // #878：断流单点分流——直连 fetch（web 流）走 `IDLE_ABORT` 内部 abort 通道；
-      // proxy 形回落 destroyBody（原契约）。相位串 = 本分支专属 google-sse-idle。
-      idleError = timeoutError(`SSE idle timeout: no data for ${idleMs / 1000}s`, "provider", "google-sse-idle")
+      // proxy 形回落 destroyBody（原契约）。
+      idleError = firstChunkPhase
+        ? timeoutError(`SSE first-chunk timeout: no data for ${ms / 1000}s`, "provider", "google-sse-first-chunk")
+        : timeoutError(`SSE idle timeout: no data for ${ms / 1000}s`, "provider", "google-sse-idle")
       try { terminateBody(response, idleError) } catch { /* already gone */ }
-    }, idleMs)
+    }, ms)
     idleTimer.unref?.()
   }
   armIdle()
   try {
     for await (const chunk of response.body) {
+      gotFirstChunk = true
       armIdle()
       if (signal?.aborted) {
         throw abortError(signal, "provider", "transport-google")

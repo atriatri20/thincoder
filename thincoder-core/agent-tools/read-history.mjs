@@ -80,8 +80,8 @@ function messageText(m) {
 
 /** Truncate long content (~500 chars) with an explicit marker. The cut never splits a UTF-16
  *  surrogate pair (emoji etc.) — a lone high surrogate in tool output would be an eyesore at
- *  minimum; the send layer sanitizes it anyway, but clean output costs nothing (setup.mjs
- *  safeSliceUTF16 same rule). */
+ *  minimum; the send layer sanitizes it anyway, but clean output costs nothing
+ *  (thincoder-core/text-budget.mjs `safeSliceUTF16` same rule). */
 function truncateContent(text) {
   const t = String(text ?? "")
   if (t.length <= CONTENT_CAP) return t
@@ -190,7 +190,7 @@ function exceedsScanMax(file) {
 
 /** 跨会话深查（回落面）：单个槽文件，同 filter 面（§6.13 D-R19a——两道护栏逐字保留）。 */
 function querySessionFile(pathArg, { role, kwRe, tool, since, until, direction, limit }, baseCwd) {
-  const file = isAbsolute(pathArg) ? pathArg : resolve(baseCwd ?? process.cwd(), pathArg)
+  const file = isAbsolute(pathArg) ? pathArg : resolve(baseCwd, pathArg)
   if (!existsSync(file)) return `Error: session file not found: ${file}`
   if (exceedsScanMax(file)) return TOO_LARGE_ERROR
   let text
@@ -221,7 +221,7 @@ function querySessionFile(pathArg, { role, kwRe, tool, since, until, direction, 
  *  ——评审 #2：摘要必须含寻址字段——模型第二步深查 = 复制行内文件路径重调 path=）。
  *  计数不可得 = `null` ⇒ `messages: —`（§6.25 判据句 4——禁显示数值 0：真 0 与未知可分）。 */
 function discoverCwd(raw, baseCwd) {
-  const dir = resolve(baseCwd ?? process.cwd(), raw)
+  const dir = resolve(baseCwd, raw)
   let st = null
   try {
     st = statSync(dir)
@@ -358,7 +358,7 @@ export const readHistoryTool = {
     // keyword stays a literal substring).
     const kwRe = keyword ? new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : null
     const tool = typeof a.tool === "string" && a.tool.length > 0 ? a.tool : null
-    const baseCwd = ctx.agent?.cwd ?? process.cwd()
+    const baseCwd = ctx.agent?.cwd
 
     const pathArg = typeof a.path === "string" && a.path.trim().length > 0 ? a.path.trim() : null
     if (pathArg !== null) {

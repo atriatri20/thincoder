@@ -8,6 +8,7 @@ import { providerSpec, requestBudget, resolveEnableThinking } from "../config.mj
 import { DEFAULT_BODY_IDLE_MS } from "../config-defaults.mjs"
 import { resolveProviderSecrets } from "../env-ref.mjs"
 import { proxyFetch } from "../proxy.mjs"
+import { withUserAgent } from "../client-identity.mjs"
 import { escapeMessages, stripLocalMessageFields } from "../escape.mjs"
 import { logEvent, errText, classifyErr, headText } from "../log.mjs"
 import { abortError, annotateAbort, deathLine } from "../abort-provenance.mjs"
@@ -20,7 +21,7 @@ import {
   estimateRequestTokens, rateGate, recordRate,
 } from "./rate.mjs"
 // 2026-09-05 module-split：错误分类/流规则族迁 provider/errors.mjs（core.mjs 557 > 500 硬限）
-import { parseRetryAfter, isNonRetryableError, betaBaseURL, compileStreamRules, assertProviderModel } from "./errors.mjs"
+import { parseRetryAfter, isNonRetryableError, betaBaseURL, compileStreamRules, assertProviderModel, assertPromptFits, markContextOverflow } from "./errors.mjs"
 // 测试 import 面（provider-stream/stream-rules）——core 曾直接 export 这两个
 export { parseRetryAfter, compileStreamRules } from "./errors.mjs"
 
@@ -161,6 +162,8 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
       messages,
       tools: tools?.length ? normalizeTools(tools) : null,
       onToken, onReasoning, onWait, signal, toolChoice,
+      // §6.17 豁免面：内部阶段标签（compress / distill / 续写）需传到发送面净判
+      logCtx,
     })
     return result
   }
@@ -171,6 +174,8 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
       messages,
       tools: tools?.length ? normalizeTools(tools) : null,
       onToken, onReasoning, onWait, signal, toolChoice,
+      // §6.17 豁免面：内部阶段标签（compress / distill / 续写）需传到发送面净判
+      logCtx,
     })
     return result
   }
@@ -184,6 +189,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
       messages,
       tools,
       onToken, onReasoning, onWait, signal, toolChoice,
+      logCtx, // §6.17 豁免面（compress / distill / 续写）
     })
   }
 
@@ -254,10 +260,15 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   if (parallelToolCalls === true) body.parallel_tool_calls = true
 
   const estimated = estimateRequestTokens(body)
+  // §6.17 发送面净判（第二道）：`estPrompt` = 输入侧估算——不减掉 `max_tokens` 会把输出预算白扣一份
+  const estPrompt = estimated - (body.max_tokens ?? 0)
+  assertPromptFits(provider, estPrompt, logCtx)
   await rateGate(provider, estimated, onWait, signal)
 
   const response = await requestWithRetry(provider, body, signal, onWait)
-  const result = await readSSE(response, { onToken, onReasoning, rules, signal, firedPatterns, idleMs: effectiveBodyIdleMs(provider) })
+  const result = await readSSE(response, { onToken, onReasoning, rules, signal, firedPatterns, idleMs: effectiveBodyIdleMs(provider), firstChunkMs: effectiveFetchTimeoutMs(provider) })
+  // §6.17 自校准采样：同一个 estPrompt 随 result 返回（den 与净判同口径）
+  result.estimated = estPrompt
   recordRate(provider, estimated, result.usage)
 
   // Stream rule triggered, user interrupted, or network partial — return immediately.
@@ -275,7 +286,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
       await sleepInterruptible(3000, signal)
     }
     const retryResponse = await requestWithRetry(provider, body, signal, onWait)
-    const retryResult = await readSSE(retryResponse, { onToken, onReasoning, idleMs: effectiveBodyIdleMs(provider) })
+    const retryResult = await readSSE(retryResponse, { onToken, onReasoning, idleMs: effectiveBodyIdleMs(provider), firstChunkMs: effectiveFetchTimeoutMs(provider) })
     recordRate(provider, estimated, retryResult.usage)
     if (retryResult.finishReason !== "insufficient_system_resource") {
       // Merge any partial content from the failed attempt (streaming already showed it)
@@ -290,6 +301,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   }
 
   if (!spec.partialMode && !spec.prefixMode) return result
+  let continuationRuns = 0
   for (let n = 0; result.finishReason === "length" && result.content && n < MAX_CONTINUATIONS; n++) {
     let continued
     try {
@@ -316,6 +328,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
     result.content += continued.content
     result.reasoning += continued.reasoning ?? ""
     mergeRetryToolCalls(result, continued.toolCalls)
+    continuationRuns++
     result.finishReason = continued.finishReason
     if (continued.usage) {
       const sum = (k) => (result.usage?.[k] ?? 0) + (continued.usage[k] ?? 0)
@@ -328,6 +341,9 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
       }
     }
   }
+  // §6.17 自校准口径：续写链把 `usage.prompt_tokens` 累加了 N 份，而 `estimated` 只有一份输入侧估算
+  // ⇒ 这一轮不采样（否则池化比被抬成 ~N 倍，全部估算支虚高、提前压缩）
+  if (continuationRuns > 0) result.estimated = undefined
   return result
 }
 
@@ -402,7 +418,7 @@ async function requestWithRetry(provider, body, signal, onWait) {
       const opts = {
         method: "POST",
         headers: {
-          ...(provider.headers ?? {}), // custom per-provider headers (desktop proposal ④: X-Device-Id etc.)
+          ...withUserAgent(provider.headers), // 定制头 + 产品标识头（UA 不可被渠道覆盖——PROVIDER.md §6.17）
           "Content-Type": "application/json",
           Authorization: `Bearer ${provider.apiKey}`,
         },
@@ -450,7 +466,7 @@ async function requestWithRetry(provider, body, signal, onWait) {
       message += ` [auth diag: baseURL=${host} key=${masked} status=${response.status}]`
     }
     lastStatus = response.status
-    if (isNonRetryableError(response.status, text)) throw new Error(message)
+    if (isNonRetryableError(response.status, text)) throw markContextOverflow(new Error(message), response.status, text)
     if (response.status === 429) {
       const waitMs = parseRetryAfter(response.headers.get("retry-after"), rateLimitHits)
       rateLimitHits++

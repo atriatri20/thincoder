@@ -111,32 +111,19 @@
   launch 与消息构建之间存在窗口（**排队评审的实际启动时点** ∥ 他场结算重写镜像 ∥ run 起点复位）——构建读他场镜像 = 串台（活体复现：排队设计评审构建出他场轮次与 prior）。
   定域单点 = `scopeAdvisorMirror`（叶档 `thincoder-core/agent-tools/review-facts.mjs`）——`resolveAdvisorLaunch`（launch 与构建同栈）∥ `entry.start`（排队经补位启动）双点同调。
 
-  **投递水印**：`run.historyAnchorIdx` = 本评审结果对父可见（async = 投递单点 `injectAsyncResult`；sync = 工具结果提交点）时的 `history` 长度——轮 2+ 响应表取件下界（取件纪律单源 = `docs/core/design/ADVISOR-CONVERGENCE.md` §4.3）。
+  **投递水印**：`run.historyAnchorIdx` = 本评审结果对父可见（async = 投递单点 `injectAsyncResult`；sync = 工具结果提交点）时的 `history` 长度——轮 2+ 响应表取件下界（取件纪律单源 = `docs/core/design/ADVISOR-CONVERGENCE.md` §4.3）。**升级终局披露同经该单点**（§6.31.5）——水印随最后一次投递后移。
 - **实例回收**：`_advisorRuns` 逐实例轻量化与回收——① **关闭点轻量化**：实例关闭（approval 关 ∥ `closeOpenCodeAdvisorRuns`）同拍 `priorOutput = null`（释放大串；closed 实例的 `priorOutput` 零消费面——续跑仅取 open）；
   ② **回收窗**：新实例创建时（`resolveAdvisorLaunch`）去重回收——design 面**同 `docSetKey` 保最新一条 closed**（F2h 的 `prior` 查找只取 newest——语义零变）、code 面 closed 实例清除（`openCodeRun` 仅取 open——零消费）；判据 = 会话内 Map 不随评审代数单调增（有界）。实现 = 实施轮。
 - **消化处置轮**：报告注入 → 模型消化（呈递发现 + 修复建议——不擅自动手）→ 用户逐项拍板 → 修正轮在 agent 回合内发起 round2（async 再启——round / prior 从 `_advisorRuns` 取）。
 - **凭证机制**（designId / token：设计锚 / 同步 / 回显 / 登记 / 消费 / 校验）→ 属工程模式板，见 `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md`（结算面）· `docs/core/design/ENG-TOKEN-BINDING.md`（生命周期 + 写权门禁）。
 
-**受影响文件清单（R24a · 批 8 ED-4）**：
-
-| 文件 | 当前行数 | 预计增量 | 说明 |
-|---|---|---|---|
-| `thincoder-core/agent-tools/advisor-async.mjs` | 357 | +22/−6 | `:15-28` 头注改句 + `:265-267` 池满分支 → 入队（返回 `queued` + `position`）；同 scope 分支**不动**；`cancelAsyncAdvisor:209-224` 排队条目取消分支（无 controller ⇒ 出队 helper + 余位重编号）——≈+4 |
-| `thincoder-core/agent-tools/async-settle.mjs` | 280 | +2/−2 | `:274-278` 补位豁免面收窄（advisor 纳入补位；consult 保持豁免） |
-| `thincoder-core/agent-tools/async-discard.mjs` | 139 | +6 | 排队条目取消 = 出队 + 余项位置重编号 |
-| `thincoder-core/agent-tools/subagent-scheduler.mjs` | 398 | 0 | **复用**既有导出面（入队 / 位置重算 / 补位 / 排队块刷新）——不新造第二套队列 |
-| `thincoder-core/test/advisor-pool-queue.test.mjs` | 新档 | +90 | 判据 1–5 用例宿主  |
-| `thincoder-cli/test/config-pool.test.mjs` | 159 | ±15 | 池满两处断言改排队（`:70-83` / `:85-96`——异 scope 第 5 发 ⇒ 断 `queued` + `position`）  |
-| `thincoder-vscode/test/config-pool.test.mjs` | 201 | ±15 | 同族两处（`:90-97` / `:99-105`）  |
-
-> 行数口径与值 = 本节表**逐字一致**。
 
 ## 6.11 后台评审池可观测 / 可控（接入面补全）
 
 1. **状态通道**：`subagent status` 读**两池并集**——子代理池 + 评审池（`getAsyncPool(agent, "advisor")`）；单查（带 id）先子代理池、未命中落评审池
    （两池共用 `nextSubagentId` 命名空间——id 全局唯一）；概览 `running` 行含 `role` / `model` / `elapsedSec` / `turn` / `maxTurns`（子代理）
 
-   或 `reviewType` / `round` / `elapsedSec`（评审）；`done` 行带「已 settle 未消化」注记（走自动送达通道）；**单查未命中双池 ⇒ 续查 pending / 升级账本**（消化账务批 · 2026-10-05——单查序 = 子代理池 → 评审池 → `_pendingAsyncResults`（已投递未判 / 重投中）→ `_unsettledDigests`（已升级）；**三处皆无 ⇒ 既有错误文案不变**；机制 = §6.31.6）。
+   或 `reviewType` / `round` / `elapsedSec`（评审）；`done` 行带「已 settle 未消化」注记（走自动送达通道）；**单查未命中双池 ⇒ 续查 pending / 升级账本**（消化账务批 · 2026-10-05——单查序 = 子代理池 → 评审池 → `_pendingAsyncResults`（已投递未判 / 未签收轮中）→ `_unsettledDigests`（已升级）；**三处皆无 ⇒ 既有错误文案不变**；机制 = §6.31.6）。
 2. **等待口径**：`wait_for "advisor settled"` 判据 = **评审池无 running / queued 条目**（双载体：`agent._asyncAdvisors` ∪ `history._asyncAdvisors`）——与「未决评审判定」同源（`advisorReviewPending` / `advisorReviewInFlight`）；条件字面 / 超时 / 间隔语义零变。
 3. **取消路由**：`subagent cancel <id>` 在子代理池未命中时**落评审池**——命中 running 评审 → `entry.cancelled = true` + `controller.abort()` + 机读线提醒（「评审已取消——token 未签发」）+ 幂等（重复取消返回同一确认）；
    命中 **queued** 评审 → **出队 + 余位 `position` 重编号** + 终态 cancelled（**无 abort / 无 controller**——从未 start；`wasStatus` 记 `queued`）+ 同款机读线提醒 + 幂等；未命中两池 / 已完成 → 既有错误文案。取消语义同 §6.10（不入 pending、不入 token 槽）。
@@ -282,12 +269,12 @@ Follow this declaration — do not infer the review target from the documents.
 **端差登记（三处：a / b 语义同源、可观察输出等价；c = 覆盖差异——登记 + 收敛方向）**：
 
 - **D-AD8a 注入通道**：核 = `pushReal`（`thincoder-core/context.mjs:184-194`，写机器线 + 人读线）。模型可见输出等价；核侧多写人读线（与 `async-settle.mjs:231` 先例同口径）。
-- **D-AD8b 转义范围**：核 = 仅转义插值（沿 `async-settle.mjs:244/259` 先例；`escapeXml` 源 = `thincoder-core/agent/helpers.mjs:121`）。文本骨架无 XML 特殊字符 ⇒ 输出等价。
+- **D-AD8b 转义范围**：核 = 仅转义插值（沿 `async-settle.mjs:244/259` 先例；`escapeXml` 源 = `thincoder-core/agent/helpers.mjs`）。文本骨架无 XML 特殊字符 ⇒ 输出等价。
 - **D-AD8c status 回显面（评审轮 1 #5）**：对侧丢弃 id 经 `subagent status` 回显 `discarded`（`thincoder-vscode/src/agent/tool-table.mjs:94-96` 墓碑回读）
   CLI 侧除 `depInfo`（`thincoder-core/agent-tools/subagent-scheduler.mjs:123`）外零墓碑读取调用点（grep 实核）⇒ 丢弃 id 在 CLI 状态面报 unknown。
   **取舍**：不触碰 `subagent-actions.mjs`（488 行——§6.20.8-3）——丢弃事实由整批提醒承载（模型可见面不缺）；**收敛方向 = 后续批**（status 墓碑回显）。
 
-**接线点①** `thincoder-core/agent/run-stages.mjs:168-170`（as-of 2026-09-29）：三行（`subPool?.clear(); advPool?.clear(); agent._asyncQueue = []`）
+**接线点①** `thincoder-core/agent/run-stages.mjs:168-170`：三行（`subPool?.clear(); advPool?.clear(); agent._asyncQueue = []`）
 
 → `discardAbortedPool(agent)` + `discardAbortedAdvisors(agent)`（**不传 ctx**——判据 = controller 支，D-AD6；队列剔除由模块接管）。
 `ev:stopped` 日志（`:166`）与 `cleanupConsultSessions` / pending 过滤（`:171-176`）**不变**。
@@ -309,25 +296,6 @@ pending 清容器（`:266`）与既有序（consult 清场 `:267-268`、pendingI
 **数据流**：中止 → 逐条判定（controller 支）→ 墓碑（`_asyncTombstones` 跨 run 终态账本）→ 出池 + 队列剔除（含 `position` 重编号）→ 存活条目留池（其报告沿自动通道到达）→ 整批一次提醒 → `ev:discarded`。
 
 **⟦ev⟧queued 面板块头残差**（评审轮 1 #12）：`refreshQueuedTokens`（`thincoder-core/agent-tools/subagent-scheduler.mjs:346-362`）需 `onToken` 回调，两接线点无回调可传 ⇒ 块头序号随**下一次队列事件**自然重发（其 sig 含活队列序号——变化即重发）；登记为显示面残差（status / 面板读数取活队列索引，不受影响）。
-
-### 6.20.4 受影响文件清单（R24a）
-
-| 文件 | 当前行数 | 预计增量 | 落点 |
-|---|---|---|---|
-| `thincoder-core/agent-tools/async-discard.mjs` | —（新建） | **138（实测）** | 单点实现（双导出 + 私有共享核） |
-| `thincoder-core/agent/run-stages.mjs` | 244 → **246（实测）** | +3 / −3（含 import 行——净 ≈0） | 接线点① |
-| `thincoder-cli/src/tui/suspension-drive.mjs` | 299 → **301（实测）** | +3 / −3（含 import 行——净 ≈0） | 接线点② |
-| `thincoder-core/agent-tools/subagent-scheduler.mjs` | 394 → **398（实测）** | +2 / −1 | F4 |
-| `thincoder-core/test/async-discard.test.mjs` | —（新建） | **234（实测）** | 单点用例（U1–U8）  |
-| `thincoder-core/test/async-family.test.mjs` | 177 → **225（实测）** | +~10 | F4 用例（U9 / U9b）  |
-| `thincoder-cli/test/input-lock.test.mjs` | 204 → **267（实测）** | +~30 | 接线点② 桩驱动用例（U10）  |
-| `thincoder-cli/test/integration/subagent-lifecycle.test.mjs` | 167 → **228（实测）** | +~45 | 业务可观察集成用例（I1）  |
-| `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`（本档） | — | — | §6.20 |
-| `docs/core/requirements/AGENT-LOOP.md` | — | — | §4.10 |
-
-> 行数口径 = **内容行数**（`wc -l` 同口径；读取工具把文件尾换行渲染为空尾行 ⇒ 同文件显示值可 +1——计法差异非漂移）。本表行数为 **as-of 落笔实测**；其余行为预计。
-
-- **未触碰**：`thincoder-core/agent-tools/subagent-actions.mjs`（488）。
 
 ### 6.20.5 关键决策记录
 
@@ -356,13 +324,13 @@ pending 清容器（`:266`）与既有序（consult 清场 `:267-268`、pendingI
 | U8 | 提醒形态 | n = 2 | 注入**一条** user 消息；列表含 `(was queued — never started)` 与 `(was running)` 两词 | F2 N1 |
 | U9 | 依赖终态（C-6） | 依赖目标墓碑 `discarded`（**夹具次序前提**：先经 `writeTombstone` 落一条父形态既有墓碑，复现「载体自有墓碑 Map 已存在」——否则「丢弃先写」次序下写 / 读同落 history 老 Map、用例假绿——评审轮 1 #1） | `depInfo` ≠ `ok`（= `cancelled`）；非 AUTO 依赖者 depc / AUTO 可启动；`failed` / `cancelled` 墓碑行为不变 | F4 |
 | U9b | 边界·生产者绑定（F1↔F4） | 夹具：父形态墓碑已在（`writeTombstone` 写）+ `history` 在场；走生产入口 `discardAbortedPool` | 丢弃墓碑由接线入口产出、与读取面同容器可读（`tombstoneOf` / `depInfo`） | F1 F4 |
-| U10 | 接线点②·挂起中止（桩驱动） | 桩驱动 `suspensionSession`（`thincoder-cli/test/input-lock.test.mjs:17` import），池含在飞 / 排队 / done 条目；父回合中止 | 已死条目出池 + `discarded` 墓碑 + 两族各一条提醒 / `ev:discarded`；存活条目留池 | F3 N2  |
+| U10 | 接线点②·挂起中止（桩驱动） | 桩驱动 `suspensionSession`（端单测档 import），池含在飞 / 排队 / done 条目；父回合中止 | 已死条目出池 + `discarded` 墓碑 + 两族各一条提醒 / `ev:discarded`；存活条目留池 | F3 N2  |
 | I1 | 集成·真管线中止 | 真调度器 + 脚本化 provider：父回合中止（signal abort），池含在飞子代理 | 父历史获一条提醒（关键子串）+ 一条 `ev:discarded`；已死条目出池、存活条目仍能结算注入 | F2 N2 |
 
-**落点**：U1–U8 → `thincoder-core/test/async-discard.test.mjs:84-233`（新建）；U9 / U9b → `thincoder-core/test/async-family.test.mjs:110` / `:135`（扩）；
+**落点**：U1–U8 → 核单测档（新建）；U9 / U9b → 核单测档（扩）；
 
-U10（接线点② 桩驱动）→ `thincoder-cli/test/input-lock.test.mjs:212`（扩）；
-I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）。
+U10（接线点② 桩驱动）→ CLI 单测档（扩）；
+I1 → 集成用例（扩）。
 **I1 若在中止时序上不可稳定驱动 ⇒ 降级为桩面 + 如实登记**，不静默省略。
 
 **测试层寿命分类**：I1 = 集成资产（常驻）；U1–U10 = 单元（开发期工具——批次收口逐条判：默认退役，除业务可观察 + 集成未覆盖 + 可稳定驱动三者全满足）。**断言语义 = 行为面**（池内容 / 墓碑状态 / 注入 / 事件计数 / 依赖终态），不做文档散文锚（寿命分类 → `docs/core/requirements/TESTING.md` §2；行为面禁令本体 → 同档 §5.2 F19）。
@@ -397,7 +365,7 @@ I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）
 ### 6.30.1 现状坐标
 
 - **投递（收正）**：驱动面（CLI ∥ VSC ∥ 桌面）⇒ 到期件不在回合边界注入——交付交**空闲面**（前台空闲闩 ∥ 挂起窗第三兑现态）；回退面（headless ∥ 直连 ∥ 开关关）⇒ 回合边界投递保持。
-  注入单点 = `thincoder-core/agent/post-turn.mjs:21` ∥ 调用点 = `thincoder-core/agent/turn-loop.mjs:263`（as-of 2026-10-12）。机制单源 = §6.34。
+  注入单点 = `thincoder-core/agent/post-turn.mjs:21` ∥ 调用点 = `thincoder-core/agent/turn-loop.mjs:263`。机制单源 = §6.34。
 - **在途跨 run 存活 = 规范语义**（决策 D-TW3）：核内 `_pendingTimers` 读写点三处——初值 `thincoder-core/agent.mjs:73`（三拆后档面收窄） · 写 `timer.mjs:55-59` · 消费 `post-turn.mjs:18-21`——**无 per-run 复位**。
 - **端差（裁定与现态见 §6.30.11 / D-TW3）**：跨 run timer 两端同存活（与核语义一致）。
 - **桌面端**：挂起窗**已落**（2026-09-28 桌面空闲唤醒批——直消费核 `thincoder-core/agent/suspension.mjs` `startSuspension`；原「核挂起驱动在端上零消费者」句随该批收正）· 回合入口单一（`thincoder-desktop/src/main/ipc.mjs:78`）· 主进程仍零轮询 ⇒ **自唤醒面仍不存在**（无空闲 deadline 闩 + 核件 `waitForSettleOrWake` 无 timer 第三兑现态；§6.30.5 表）。
@@ -424,7 +392,7 @@ I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）
 
 **投递形态（D-TW2）**：到期 ⇒ `history.push({ role: "user", content: "[System reminder: ⏰ timer — <message>]" })`——逐字 = 既有注入单源（`injectTimerReminders`）；机器线独有（`[System reminder:` 前缀不入 fullHistory / 页面投影——两端同判）。
 
-**消费入口（D-TW4）**：开一轮 **auto-turn 第三变体 `timerTurn`**——`runAgent` opts 增 `timerTurn`（与 `upstreamTurn` 同族，**仅作域文本选择**；域文本 = `TIMER_TURN_DOMAIN`（已落常量 · `thincoder-core/agent/helpers.mjs:459`））。
+**消费入口（D-TW4）**：开一轮 **auto-turn 第三变体 `timerTurn`**——`runAgent` opts 增 `timerTurn`（与 `upstreamTurn` 同族，**仅作域文本选择**；域文本 = `TIMER_TURN_DOMAIN`（已落常量 · `thincoder-core/agent/helpers.mjs`））。
 
 - **开轮两处**：空闲闩 fire ⇒ `runAgentTurn(ctx, "", { autoTurn: true, timerTurn: true })`（顶层链，`skipSession` 缺省——链尾全语义：队列续发 / 挂起入口 / attention 置位照常，**除外限定**：在途 timer ∧ 唤醒会武装 ⇒ 不计 awaiting——单源 = `docs/cli/design/TUI.md` §7.1 表 awaiting 行 / §7.2 置位谓词）；
   挂起窗内 ⇒ 同 digest 轮形态 `{ autoTurn: true, timerTurn: true, skipSession: true }`。
@@ -476,44 +444,6 @@ I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）
 | 桌面 | ✅（阶段 2） | 空闲 deadline 闩（`thincoder-desktop/src/main/timer-watch.mjs`（已落 · 实读 **76**——2026-09-29 收正）——主进程 · 键面 = 会话键）+ 窗内兑现（核件 opt-in timer 面 = §6.30.10）+ 触发落流（新 `ev:timer`）——落点逐条 = §6.30.11；门 / 帽沿用 §6.30.3 |
 | VSC | ✅（阶段 2） | 端差已消解（`_pendingTimers` 跨 run 存活——复位行删除 · §6.30.11）+ 空闲 deadline 闩（**核件消费**——B3 批改指 = §6.30.16；端面 = `thincoder-vscode/src/extension/timer-watch.mjs`）+ 自有驱动第三兑现态 + 可见面（状态行 `⏰N` + 触发落行） |
 
-### 6.30.6 受影响文件清单（R24a）
-
-**实施后重锚 as-of 2026-09-27（实测）**：代码行读数（清单表）= 实施终态实测（`wc -l` 语义；增量 = 终态 − 设计轮现行）；文档四行 = 实施零触，保持不动。
-
-| 文件 | 现行行数 | 实测增量 | 说明 |
-|---|---|---|---|
-| `thincoder-core/agent/timers.mjs`（已落） | — | **113（实测 · 2026-09-29 B3 收编后；「50」= R4 上提前读数）** | 到期件三件纯函数（deadline / take / inject）；**R4 上提后已扩面**（闩 ∕ 派发 ∕ 火策略住核——`createTimerWatch:79` ∕ `fireTimerWake:105`；重锚 = §6.30.16 重锚清单⑤ · 已落） |
-| `thincoder-core/agent/post-turn.mjs` | 70 | **−4（实测 · 70→66）** | 块改调到期件（行为零变） |
-| `thincoder-core/agent.mjs` | 444 | **+3（实测 · 444→447）** | opts `timerTurn` + 域文本三元 |
-| `thincoder-core/agent/helpers.mjs` | 463 | **+9（实测 · 463→472）** | `TIMER_TURN_DOMAIN` 常量 + 注释 |
-| `thincoder-core/agent-tools/timer.mjs` | 46 | **+17（实测 · 46→63）** | 在途帽显式拒 + 描述面字面收正（725 字符） |
-| `thincoder-core/config.mjs` | 426 | **+3（实测 · 426→429）** | `agent.timerWake: true` |
-| `thincoder-core/test/timer-wake.test.mjs`（已落） | — | **158（实测 · 新档）** | 核侧用例族（T-TW1 / T-TW2 / T-TW7 / T-TW9）  |
-| `thincoder-core/test/turn-domain-mode.test.mjs` | 57 | **+4（实测 · 57→61）** | 三元选择 + 域文本断言  |
-| `thincoder-cli/src/tui/timer-watch.mjs`（已落） | — | **64（实测 · 2026-09-29 B3 收编后；「90」= B3 收编前读数）** | 一次性 deadline 闩（`timer` / `clear` 注入缝 · `unref`） |
-| `thincoder-cli/src/tui/agent-turn.mjs` | 379 | **+7（实测 · 379→386）** | 链尾 `sync` 调用 + `userNeededAtTurnEnd` 在途 timer 除外（§6.30.3 attention 限定） |
-| `thincoder-cli/src/tui/suspension-drive.mjs` | 341 | **+21（实测 · 341→362）** | timer 轮 + 窗内 deadline + 等待第三态 |
-| `thincoder-cli/src/tui/turn-face.mjs` | 64 | **+3（实测 · 64→67）** | `turnCtx.timerWatch` 字段 |
-| `thincoder-cli/src/tui/index.mjs` | 227 | **+13（实测 · 227→240）** | 装配 + 惰性回填开轮入口 |
-| `thincoder-cli/src/tui/render-frame.mjs` | 423 | **+5（实测 · 423→428）** | `timerHint` 段（状态段簇尾） |
-| `thincoder-cli/src/tui/cmd-timers.mjs`（已落） | — | **33（实测 · 新档）** | `/timers` 只读列表 |
-| `thincoder-cli/src/tui/slash-commands.mjs` | 186 | **+3（实测 · 186→189）** | 名单 + 分派 + import |
-| `thincoder-cli/test/timer-wake.test.mjs`（已落） | — | **274（实测 · 新档）** | 端侧用例族（T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13）  |
-| `thincoder-cli/test/cmd-timers.test.mjs`（已落） | — | **42（实测 · 新档）** | T-TW11  |
-| `thincoder-cli/README.md` | 535 | **+1（实测 · 535→536）** | 配置键面示例（`agent.timerWake`） |
-| 文档：`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` | 385 | **+180（实测 · wc -l 565——设计轮 152〔§6.30 ≈148 + 变更记录 3〕+ fix 轮收正 28 · 实读 2026-09-28 = 745〔修正轮重锚——内容行数 ∕ `wc -l` 口径 · 文末换行不计〕）** | 本节（§6.30） |
-| 文档：`docs/cli/design/TUI.md` | 797 | **+42（实测 · wc -l 839——§7.6 + fix 轮 §7.1 / §7.2 / §7.6 除外限定与可达条件）** | §7.6 显示面 |
-| 文档：`docs/core/design/TOOLS.md` | 1131 | **+3（实测 · wc -l 1134——契约行改 + 变更记录 2 行）** | §6.7 timer 契约行补句（支持面指针） |
-| 文档：`docs/core/design/CONFIG.md` | 206 | **+1（实测 · wc -l 207——登记行行内扩面 + 变更记录 1 行）** | §6.2 派生消费面登记行补 `agent.timerWake` |
-
-- `thincoder-cli/src/tui/suspension-drive.mjs`（341 → 362，+21）：改动 = 既有等待原语 `waitForSettleOrWake` 增**第三兑现态** + 既有驱动状态机增一条判据支（窗内 deadline 到 ⇒ 开 timer 轮）——
-  无新模块职责 / 无新导出族（挂起窗单一驱动器职责未破）⇒ **不拆**。
-- `thincoder-core/agent/helpers.mjs`（463 → 472，+9）：域文本常量族内 +1 常量（`TIMER_TURN_DOMAIN`——同族 = `AUTO_TURN_DIGEST_DOMAIN` / `UPSTREAM_TURN_DOMAIN`，`:436` / `:450`）⇒ **不拆**（无新职责 / 无逻辑）。
-- `thincoder-core/agent.mjs`（444 → 447，+3）：`runAgent` opts 旗标族内 +1（`timerTurn`——与 `upstreamTurn` 同族，`:101` / `:175-176`）⇒ **不拆**。
-- `thincoder-core/config.mjs`（426 → 429，+3）：`DEFAULTS` 键 +1（`agent.timerWake`——与 `diagnostics.heapWatch` 同形先例，`:87`）⇒ **不拆**。
-- `thincoder-cli/src/tui/render-frame.mjs`（423 → 428，+5）：既有状态段簇内 +1 段（`timerHint`——同区先例 = `ledgerHint` / `titleHint`，§7.4）⇒ **不拆**。
-- `thincoder-cli/src/tui/agent-turn.mjs`（379 → 386，+7）：既有回合链尾 +1 调用（闩 `sync`）+ `userNeededAtTurnEnd` 除外判据 +1 项 ⇒ **不拆**。
-
 ### 6.30.7 用例表（正常 / 边界 / 错误）
 
 | # | 场景 | 输入 | 预期 |
@@ -527,15 +457,15 @@ I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）
 | T-TW7 | 错误·在途帽 | 在途 8 条 ⇒ 第 9 次设 timer | 工具显式抛错（可读文本）；在途保持 8（不静默丢 / 不静默清） |
 | T-TW8 | 正常·挂起窗第三兑现态 | `suspensionSession` 直驱（池 live + 在途一项 + 假 timer） | 等待含 deadline；兑现 ⇒ timer 轮开启（`runTurn` 桩收 `{autoTurn:true, timerTurn:true}`）+ 注入在场；池空窗退后零重复投递 |
 | T-TW9 | 正常·域文本 | `runAgent`（`autoTurn + timerTurn`，手动档） | 选中 `TIMER_TURN_DOMAIN`（单行 · `[System reminder:` 起 · `]` 收）；AUTO 档零注入（既有口径）；`upstreamTurn` 优先不回归 |
-| T-TW10 | 正常·状态行标记 | `renderStatus` 纯函数直驱——在途 2 / 含过期项 / 空 | 含 `⏰2`；含过期 ⇒ 含警示色序列；空 ⇒ 零 `⏰` + 逐字节等价 |
+| T-TW10 | 正常·状态行标记 | `renderStatus` 纯函数直驱——在途 2 / 含过期项 / 空 | 含 `timer 2`；含过期 ⇒ 含警示色序列；空 ⇒ 零 `timer` 段 + 逐字节等价 |
 | T-TW11 | 正常·`/timers` 列表 | 命令直驱——在途两条 / 零条 | 逐条行（剩余 mm:ss + message 首行）；零条 ⇒ 空态行 |
-| T-TW12 | 边界·子代理隔离 | depth-1 agent 在途两条 · 主 agent 在途零条 ⇒ 主标记 | 零 `⏰`（读对象 = 主 agent 单对象——构造性零泄漏） |
+| T-TW12 | 边界·子代理隔离 | depth-1 agent 在途两条 · 主 agent 在途零条 ⇒ 主标记 | 零 `timer` 段（读对象 = 主 agent 单对象——构造性零泄漏） |
 | T-TW13 | 边界·attention 除外 | 主 agent 在途 timer 一项——`userNeededAtTurnEnd` 直驱（两档：`agent.timerWake` 开 / 关） | 开 ⇒ `false`（不计 awaiting——自动续跑在途）；关 ⇒ `true`（照常置位）；零在途 ⇒ 既有语义不回归 |
 
-**用例宿主**（评审轮 1 #7 收正——先例 = 同档 §6.20.6 落点行）：T-TW1 / T-TW2 / T-TW7 → `thincoder-core/test/timer-wake.test.mjs`（核侧）；
-T-TW9 两档分属——核新档 = 选择面（`timerTurn` ⇒ `TIMER_TURN_DOMAIN` 选中），`thincoder-core/test/turn-domain-mode.test.mjs` = 模式三元回归（`upstreamTurn` 优先 / AUTO 档零注入）；
+**用例宿主**（评审轮 1 #7 收正——先例 = 同档 §6.20.6 落点行）：T-TW1 / T-TW2 / T-TW7 = 该批开发期用例（随批收口删除，无留存宿主）；
+T-TW9 两档分属——核侧 = 选择面（`timerTurn` ⇒ `TIMER_TURN_DOMAIN` 选中）＋ 模式三元回归（`upstreamTurn` 优先 / AUTO 档零注入）；
 
-T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13 → `thincoder-cli/test/timer-wake.test.mjs`（端侧）；T-TW11 → `thincoder-cli/test/cmd-timers.test.mjs`。
+T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13（端侧）与 T-TW11（`/timers` 列表）同属该批开发期用例（随批收口删除，无留存宿主——`thincoder-cli/test/` 实读无这两档，2026-10-28）。
 
 ### 6.30.8 验收标准（逐条回指）
 
@@ -545,7 +475,6 @@ T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13 → `thincoder-cli/test/timer-w
 | A-TW2 | 门三件定义 | §6.30.3：仅系统类可自唤醒（唤醒源写点两处 + 无通用通道）· 成本闸（合并 / 幂等 / 帽 / 无自续）· 开关（键 / 默认 / 理由 / 关语义） |
 | A-TW3 | 跨形态行为表 | §6.30.5 五形态逐格定义（自唤醒 / 不支持 + 理由）（**阶段 2 已接线**——桌面 / VSC 行改 ✅：见 §6.30.5 / §6.30.10–§6.30.11；本行 = 阶段 1 判据原样） |
 | A-TW4 | 端面枚举（含「不接 + 理由」） | `docs/cli/design/TUI.md` §7.6（TUI 落点）+ §6.30.5（桌面 / VSC 不接 + 理由 + 后续登记——**阶段 1 原样 · 阶段 2 已接线**：同表两行改 ✅，见 §6.30.10–§6.30.11） |
-| A-TW5 | 受影响文件全清单（行数标注制） | §6.30.6（现行行数 + 实测增量逐行） |
 | A-TW6 | 验证形态（可复现） | §6.30.7 T-TW1–T-TW13（假 timer / 假到期 / 空转态直驱——零真实等待）；端面按各自既有测法 |
 | A-TW7 | 机检零新增 | 仓根 `node scripts/doc-check.mjs --root .`——对比**开工基线**（悬空 48 / 行宽 22）；逐档零新增（实施后复测：四档零命中——行宽 31 的 +9 全来自他批在途） |
 
@@ -593,7 +522,7 @@ T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13 → `thincoder-cli/test/timer-w
 - **透传**：`turn-face.mjs` 的核 opts 四件 ⇒ 五件（`timerTurn: opts.timerTurn === true`）；`suspension-drive.mjs` `driveTurn` 同键转发。
 - **窗内投递存活（缺陷修复 · 2026-10-01 · #799）**：窗内 timer 轮的会话钉定重装**先于投递**（`suspension-timers.mjs` `faceOf().deliver` 内先重装后注入）；`driveTurn` 对 timer 轮零重装——否则重装整换机读线会吞掉刚落的投递行（明细 = §6.30.17）。
 - **通道与可见面**：新 `ev:timer { key, text }`（触发落流一行；`text` = 交付原文，显示裁 = ≤3 行 + `…`——CLI 同规）⇒ 白名单 **18**（＝盘面现值——含在途批 `ev:ledger` / `ev:queue`；只增自身一位 · 定序同前——只增位）；
-  `ev:usage.timers` 沿用（段 12 `⏰N` 源 = `thincoder-desktop/renderer/views/statusline.mjs:167-174`（as-of 2026-09-29）——零改）；渲染 = 流内触发行（归约切片 `state.timerNotice[key]` + `thincoder-desktop/renderer/views/chat.mjs` 行组——与 `ev:digest` 行同族：**生命期照其现行判据同法**——在场 / 退场随 `ev:digest` 行实现（页读整置即失）；实施轮按该行同法落地并在 §5 记明）。
+  `ev:usage.timers` 沿用（段 12 `⏰N` 源 = `thincoder-desktop/renderer/views/statusline.mjs:167-174`——零改）；渲染 = 流内触发行（归约切片 `state.timerNotice[key]` + `thincoder-desktop/renderer/views/chat.mjs` 行组——与 `ev:digest` 行同族：**生命期照其现行判据同法**——在场 / 退场随 `ev:digest` 行实现（页读整置即失）；实施轮按该行同法落地并在 §5 记明）。
 - **新鲜度**：闩到点即开轮 ⇒ 到期不滞留（该轮回合尾读数同点刷新）；到期/已设两态凭 `⏰N` 段（派生式 · 零缓存）。
 
 **VSC（批条目 B1）**：
@@ -604,7 +533,7 @@ T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13 → `thincoder-cli/test/timer-w
   武装点 = `panel-turn-stages.mjs` `finalizeTurn` 尾（忙态归位后）与挂起会话退出 `finally`（`thincoder-vscode/src/extension/suspension.mjs`）；撤闩 = 面板 `dispose`（`extension/chat-panel.mjs`）与切槽销毁点。
 - **开关生产者**：`agent.config.agent` 白名单增 `timerWake`（与 `autoThink` 同形）——`thincoder-vscode/src/agent/setup.mjs:153` ∕ `:177` ∕ `:196` → 白名单消费位 `thincoder-vscode/src/agent/agent-state.mjs:100`
   → 读面 = 核 `timerWakeEnabled`（B3 批改指——端壳不再自持判据）⇒ `config.json` `agent.timerWake: false` 端侧关闸生效（与 CLI / 桌面同判）。
-- **窗内兑现（收编后现态）**：核 `startSuspension` 等待面（`timerFace` opt-in + 兑现支——§6.30.13 核增补）；VSC 装配 = `thincoder-vscode/src/extension/suspension.mjs` `timerFace`（`{deadline, deliver}`——现档 291 行；原端自有驱动 `waitForSettleOrWake`（镜像面随取核退场））。
+- **窗内兑现（收编后现态）**：核 `startSuspension` 等待面（`timerFace` opt-in + 兑现支）；VSC 装配 = `thincoder-vscode/src/extension/suspension.mjs` `timerFace`（`{deadline, deliver}`——现档 291 行；原端自有驱动 `waitForSettleOrWake`（镜像面随取核退场））。
 - **窗内容纳**：窗内 timer 轮自身的回合级中止（`AbortError` ∧ 会话未停）⇒ 容纳并重入（§6.30.10 轮中止容纳；与同档消化支同判）；其余（非 `AbortError` ∨ 会话停）照旧上抛——**现态**：容纳逻辑住核 `startSuspension` 等待面（端装配 = `thincoder-vscode/src/extension/suspension.mjs`；原端坐标 `:381-393` 已死）。
 - **域文本**：`thincoder-vscode/src/agent/turn-domains.mjs` 选择链增 `timerTurn` 支（端侧零自持字面 = `setup-reminders.mjs` re-export 核 `TIMER_TURN_DOMAIN`）；域文本经核 `opts.turnDomainText` 装配（**现态**：原端注入点 `thincoder-vscode/src/agent.mjs` 随主循环取核退场——组合点 = `turn-domains.mjs`）。
 - **可见面**：状态行 `⏰N` 段（源 = `usage` 载荷增字段 `timers {count, expired}`——`webview/status-bar.js` + `webview/state.js`）+ 触发落流一行（新消息 `timer { status:"fired", text }`——`webview/chat-messages.js` 渲染）+ i18n 键 `status.timer`；协议增量登记 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §3.2（两行）。
@@ -630,59 +559,11 @@ T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13 → `thincoder-cli/test/timer-w
 | T-TW26 | 正常·VSC 域文本 | `timerTurn`（手动档）⇒ 组合点 | 选中核 `TIMER_TURN_DOMAIN`；`upstreamTurn` 优先不回归 |
 | T-TW27 | 边界·VSC 开关关 | `agent.timerWake = false` ⇒ 闩面 `sync` | 零注册 / 已注册者撤闩（与桌面 T-TW17 后半同判） |
 
-**用例宿主**：T-TW14–T-TW16 → `thincoder-core/test/suspension.test.mjs`（原址补例；**修正轮补两桩**（非新号）：`clear` 先到先得用例 ∕ timer 轮中止容纳（±两反例用例））；T-TW17–T-TW21 → 新档 `thincoder-desktop/test/timer-wake.test.mjs`（T-TW21 亦落 `test/agent-host.test.mjs` 驱动面）；
+**用例宿主**：T-TW14–T-TW16 = 该批开发期用例（随批收口删除，无留存宿主）；现盘 `thincoder-core/test/` 实读无该档（2026-10-28）；**修正轮补两桩**（非新号）：`clear` 先到先得用例 ∕ timer 轮中止容纳（±两反例用例）；T-TW17–T-TW21 = 同一批开发期用例（随批收口删除——`thincoder-desktop/test/` 实读无这两档，2026-10-28）；
 
-T-TW22 → `thincoder-vscode/test/agent-lifecycle-singleton.test.mjs`（原址改例）；T-TW23–T-TW26 → 新档 `thincoder-vscode/test/timer-wake.test.mjs`（T-TW25 状态行面亦落 `test/status-line.test.mjs`；T-TW27 → 同档）；
+T-TW22 / T-TW23–T-TW27 = 同一批开发期用例（随批收口删除——`thincoder-vscode/test/` 实读无这些档，2026-10-28）；
 
   **修正轮补三桩**（非新号——随补注登记）：开关真链（`config.json` ⇒ 生产者真链 · 评审 🟡1）· 窗内 timer 轮中止容纳（`AbortError` ∧ 会话未停 ⇒ 容纳并重入 · ±两反例用例 · 评审 🟡2）· 触发落流（`timer { status:"fired", text }`——协议 §3.2 行 19）。
-
-### 6.30.13 受影响文件清单（R24a · 行数 = 现盘实读（`wc -l` 口径））
-
-**实施后重锚（2026-09-28 收尾轮 · 现盘实读）**：代码行读数（表）= `wc -l` 语义现盘实读；增量 = 轨迹标注；与并行批同片者并注「本档面」与「现盘」两值（并行批增量归其自身批档）。
-
-| 文件 | 现行行数 | 实测增量 | 说明 |
-|---|---|---|---|
-| `thincoder-core/agent/suspension.mjs` | **280** | +40（240⇒280——含修正轮 +7） | `timerFace` opt-in + 等待第四态 + 兑现支（修正轮：timer 支 `AbortError` 容纳） |
-| `thincoder-core/test/suspension.test.mjs` | **336** | +72（264⇒336——修正轮补例两桩后） | T-TW14–T-TW16 + 修正轮补例两桩（`clear` 先到先得 ∕ timer 中止容纳）；**已越 300 ⇒ 登记路**——登记注释 = `thincoder-core/test/core-hygiene.test.mjs:108-115`（拆分方案 ∕ 触发条件在册）  |
-| `thincoder-desktop/src/main/timer-watch.mjs`（新档） | **79** | 新档（设计估 ~95） | 空闲 deadline 闩（键面 · 注入缝） |
-| `thincoder-desktop/src/main/agent-host.mjs` | **341** | 该档（285⇒300 恰线）；现盘含并行批增量 | 两枚注入面（`busyOf` / `takeOver`）+ 透传——装配 ∕ 武装点 ∕ 撤闩落 `thincoder-desktop/src/main/suspension-drive.mjs`（实施期前提修正 · 源 = §5.9） |
-| `thincoder-desktop/src/main/suspension-drive.mjs` | **269** | +73（196⇒269） | `timerFace` 装配 + 三武装点 + 撤闩 + 火面包装（轮后链尾接管）+ `driveTurn` 转发 |
-| `thincoder-desktop/src/main/turn-face.mjs` | **70** | 该档（52⇒64）；现盘含并行批增量 | `timerTurn` 透传（核 opts 四件 ⇒ 五件） |
-| `thincoder-desktop/src/preload/preload.cjs` | **59** | 位 16⇒17（该档——`ev:timer` 末位）；现盘 18 位 | `EVENT_CHANNELS` 白名单（名面同集同序） |
-| `thincoder-desktop/renderer/events.mjs` | **497** | 该档（393⇒475）；现盘含并行批增量 | `ev:timer` 归约（`state.timerNotice` 切片） |
-| `thincoder-desktop/renderer/views/chat.mjs` | **354** | 该档（338⇒354——设计轮 439 为拆档前值） | 流内触发行（与 `ev:digest` 行同族） |
-| `thincoder-desktop/renderer/events-subscribe.mjs` | **77** | 该档（74⇒75）；现盘含并行批增量 | 订阅表随动（现盘 18 位——与桥面同集同序） |
-| `thincoder-desktop/renderer/store.mjs` | **328** | 该档（307⇒310）；现盘含并行批增量 | `timerNotice: {}` 初态 |
-| `thincoder-desktop/test/timer-wake.test.mjs`（新档） | **286** | 新档 | T-TW17–T-TW21 宿主 + 驱动面两例 + 渲染面一组  |
-| `thincoder-desktop/test/host-floor.test.mjs` · `thincoder-desktop/test/agent-host.test.mjs`（随动） | **363** · **431** | 计数随动；两档现盘读数含并行批随动 | `host-floor` U76 计数 16⇒17 + `fresh` 入册；`agent-host` = T-TW21 驱动面  |
-| `thincoder-vscode/src/agent/agent-state.mjs` | **158** | −1（159⇒158） | 复位行删除（端差消解） |
-| `thincoder-vscode/src/agent.mjs` | **455** | −2（457⇒455） | 内联块改调核三件 |
-| `thincoder-vscode/src/agent/turn-domains.mjs` | **37** | +2（35⇒37） | `timerTurn` 支 |
-| `thincoder-vscode/src/agent/setup-reminders.mjs` | **141** | +1（140⇒141） | re-export 核 `TIMER_TURN_DOMAIN` |
-| `thincoder-vscode/src/agent/setup.mjs` | **427** | +6（421⇒427） | 开关生产者：`agent.config.agent` 白名单增 `timerWake`（与 `autoThink` 同形——`thincoder-vscode/src/agent/setup.mjs:153` ∕ `:177` ∕ `:196` → 消费位 `thincoder-vscode/src/agent/agent-state.mjs:100`） |
-| `thincoder-vscode/src/extension/timer-watch.mjs` | **74** | 新档后收编（117 ⇒ 74——B3 收编批 · 2026-09-29 实读） | 空闲 deadline 闩 + 交付点（`timer` 消息发射 = `:39`）；闩 ∕ 火面 = 核件消费（§6.30.16） |
-| `thincoder-vscode/src/extension/suspension.mjs` | **483** | +36（447⇒483——含修正轮注释 +2） | 第三兑现态 + 兑现支 + 窗内容纳 |
-| `thincoder-vscode/src/extension/panel-turn-stages.mjs` | **240** | +4（236⇒240） | 武装点 |
-| `thincoder-vscode/src/extension/chat-panel.mjs` | **430** | +4（426⇒430） | `dispose` 撤闩 |
-| `thincoder-vscode/src/extension/panel-callbacks.mjs` | **316** | +3（313⇒316） | `usage` 载荷增 `timers` |
-| `thincoder-vscode/webview/status-bar.js` | **112** | +10（102⇒112） | `⏰N` 段 |
-| `thincoder-vscode/webview/chat-messages.js` | **259** | +21（238⇒259） | `timer` 消息渲染 |
-| `thincoder-vscode/webview/state.js` | **132** | +4（128⇒132） | 两计数槽 |
-| `thincoder-vscode/locales/{zh,en}.json` | **271** | +1 / +1（270⇒271） | `status.timer` |
-| `thincoder-vscode/test/timer-wake.test.mjs`（新档）等 | **396** | 新档（修正轮三例随补）；改例 `agent-lifecycle-singleton.test.mjs` 409⇒414 · `status-line.test.mjs` **239** | T-TW22–T-TW27 + `protocol-coverage` 面  |
-| 文档：本档 §6.30 | **745**（全档实读——2026-09-28 修正轮重锚；口径 = 内容行数 ∕ `wc -l`） | +166（575⇒741——§6.30.10–§6.30.15 + 修正轮 ∕ 收尾轮随动） | §6.30.10–§6.30.15 |
-| 文档：`docs/core/design/TOOLS.md` | **1137** | +3（1134⇒1137） | §6.7 timer 行支持面句 |
-| 文档：`docs/vsc/design/WEBVIEW-PROTOCOL.md` | **657** | +8（649⇒657） | §3.2 两行 + §6.1 / §6.3 + §12 `timer` 行 + 变更记录 |
-
-`thincoder-vscode/src/extension/suspension.mjs`（447 → **483**）：改动 = 既有等待原语增第三兑现态 + 既有状态机 +1 判据支（无新模块职责 / 无新导出族）⇒ **不拆**。
-
-**桌面档面落点（持有面——2026-09-28 收尾轮已落；机制面不动）**：
-
-- `docs/desktop/design/UI.md:116`（段 12 计时行——补触发落流 `ev:timer` 与新鲜度指针）；
-- `docs/desktop/design/IPC.md:29`（事件表增 `ev:timer` 行）+ 载荷键集段 + 会话键面 / 订阅面计数（**18**——盘面现值）；
-- `docs/desktop/design/RENDERER.md`（流内触发行承载句——现档无 timer 条，补一行）；
-- `docs/render-core/design/RENDER-CORE.md` §10 F 行（新鲜度句：空闲期到期 ⇒ 闩到点即开轮，读数于该轮回合尾刷新）；
-- `docs/desktop/design/E2E-TESTING.md`（D16 真机用例行——**已落**（`T-DSK44`）；真机档 `timer-wake-face.test.mjs` 未落（离线不可产组 ⇒ 人工走查 + 真跑闭合））。
 
 ### 6.30.14 验收标准（阶段 2 · 逐条回指）
 
@@ -700,7 +581,7 @@ T-TW22 → `thincoder-vscode/test/agent-lifecycle-singleton.test.mjs`（原址�
 1. 阶段 1 面零改（阶段 2 边界）：CLI 闩 / CLI 挂起窗 / 核三件 / 域文本 / 帽 / 开关语义逐字不动——**CLI 闩面随 B3 批改指核件（§6.30.16；机制语义零变）**＋**核件档头注释一行（`timers.mjs:16` 双写窗口句收正——同批）**；余五面仍逐字不动。
 2. timer 参数 schema 零改——**阶段 2 边界**（timer-completeness 批扩五参——见 §6.30.18）；**不新增机械门**（动作域 = 系统轮既有机械面沿用）。
 3. headless（`chat` / ACP / 直连 `runAgent`）自唤醒面零变化（无空转面 ⇒ 零闩）。
-4. **不碰在途批文件增量**（`desktop-idle-wake` 收口中 / `desktop-vsc-align-2` / `desktop-vsc-align-3`）——实施方案与在途批同片（桌面 main / renderer · vscode）⇒ **排后串行**；桌面档面落点 = 持有面（§6.30.13 末块），**已落**（2026-09-28 收尾轮）。
+4. **不碰在途批文件增量**（`desktop-idle-wake` 收口中 / `desktop-vsc-align-2` / `desktop-vsc-align-3`）——实施方案与在途批同片（桌面 main / renderer · vscode）⇒ **排后串行**；桌面档面落点 = 持有面，**已落**（2026-09-28 收尾轮）。
 5. `/timers` 取消面不做（阶段 1 既有边界沿用）；不接模型门控。
 6. 渲染面零定时器纪律沿用（桌面渲染面零 `setTimeout` / `setInterval`——触发面全在主进程闩）。
 
@@ -708,7 +589,7 @@ T-TW22 → `thincoder-vscode/test/agent-lifecycle-singleton.test.mjs`（原址�
 
 **来源**：parity 收编批（归批表 B3——annex + 重造③ + 上提②）；本节单源承载删留账与实施序。
 
-**现状坐标（as-of 2026-09-29 收编后实测 · 113 内容行）**：核 `thincoder-core/agent/timers.mjs`——`createTimerWatch:79` ∕ `fireTimerWake:105` ∕ `timerWakeEnabled:61` ∕ `deliverExpiredTimers:69`（设计不动；档头 `:16` 双写窗口句随此收正）。
+**现状坐标**：核 `thincoder-core/agent/timers.mjs`——`createTimerWatch:79` ∕ `fireTimerWake:105` ∕ `timerWakeEnabled:61` ∕ `deliverExpiredTimers:69`（设计不动；档头 `:16` 双写窗口句随此收正）。
 
 桌面（对照组 · 已合规）= `thincoder-desktop/src/main/timer-watch.mjs:11-17`（核直取 + 判据 re-export）· `:22`（交付 = 核派发 + `ev:timer` 出词）· `:34-63`（键面表壳包核闩）· `:70-75`（火面 = 核策略 + 端两缝）——代码零触。
 
@@ -744,7 +625,7 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 
 ② `docs/vsc/design/WEBVIEW-PROTOCOL.md` §12 `timer` 行 ② 列（`thincoder-vscode/src/extension/timer-watch.mjs:83`——提取器档已随全清令退场，人工读值重锚）；③ §6.30.5 两行 ∕ §6.30.11 两 bullet 的「行数实施后重锚」标记；④ 设计估行数 ⇒ 实施后实测；
 
-⑤ `thincoder-core/agent/timers.mjs` 行数 ∕ 面描述（旧读「50 行 · 三件纯函数」= R4 上提前读数——已扩面：闩 ∕ 派发 ∕ 火策略住核 `createTimerWatch:79` ∕ `fireTimerWake:105`；与 §6.30.2 ∕ §6.30.6 同址注同拍——**已落（2026-09-29 · 113 内容行）**）。
+⑤ `thincoder-core/agent/timers.mjs` 行数 ∕ 面描述（旧读「50 行 · 三件纯函数」= R4 上提前读数——已扩面：闩 ∕ 派发 ∕ 火策略住核 `createTimerWatch:79` ∕ `fireTimerWake:105`；与 §6.30.2 同址注同拍——**已落（2026-09-29 · 113 内容行）**）。
 
 **边界（不做）**：核件重设计（仅档头 `timers.mjs:16` 双写窗口句收正——该轮即其迁移轮）· 桌面代码 ∕ 文件行零笔 · B1 ∕ B2 ∕ B4–B10 各族与 `#564` 在途面 · 挂起窗「窗内起算面未包判据」在册项（行为变更——另轮）· 协议面（**坐标重锚 ≠ 协议语义变更**——`docs/vsc/design/WEBVIEW-PROTOCOL.md` §12 指针重锚在册 = 本 § 重锚清单②）∕ 门三件 ∕ 在途帽 ∕ 域文本 ∕ 开轮形 ∕ 显示裁语义（§6.30.3 合同逐字沿用）。
 
@@ -799,13 +680,17 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 - **描述面（`thincoder-core/tool-docs/timer.md` · 6 行）**：扩述三式 ＋ 下限 ＋ `cancel`/`list`；**逐字文本 = 机制文档定稿**（D-TW8 同口径；草稿位 = 本节，落 = 实施轮 · eng-coder）。
   **预算读数（评审轮 1 #10）**：扩档 ⇒ **收口轮复跑 `node scripts/tool-schema-size.mjs` 登记读数随动**（先例 = 读数随动入 §5；预算表唯一权威处 = `docs/core/design/PROMPT-SYSTEM.md` §6.11——链 = `docs/core/design/TOOLS.md` §6.9）。
 
-**可见面 ∥ 取消面（功能点 45⑤ 承载）**：模型面 = `list` 动作（四端同得）。`/timers`（CLI）逐条行**插入 kind 段**——`⏰<i> · <kind> · 剩余 <dur> · <message 首行>`（kind = `每 <N>m`（整分）∕ `每 <N>s`（非整分）∥ `每天 <HH:MM>` ∕ `于 <YYYY-MM-DD HH:MM>`；
+**可见面 ∥ 取消面（功能点 45⑤ 承载）**：模型面 = `list` 动作（四端同得）。`/timers`（CLI）逐条行**插入 kind 段**——`timer <i> · <kind> · 剩余 <dur> · <message 首行>`（kind = `每 <N>m`（整分）∕ `每 <N>s`（非整分）∥ `每天 <HH:MM>` ∕ `于 <YYYY-MM-DD HH:MM>`；
 
 判形 = `at` 在场 ⇒ `于` 段；`everyMs` ⇒ `每` 段；`daily` ⇒ `每天` 段；三者皆无 = 一次性 ⇒ 零段；`<dur>` = `<mm:ss>`（< 1h）∥ `<h:mm:ss>`（≥ 1h）；**一次性行零变**——段仅非一次性项插入）；
 
   档 = `thincoder-cli/src/tui/cmd-timers.mjs`（33 行）。
 
-取消面 = **模型工具面**（`cancel` 动作——四端同得）；**不设端专属取消 UI**（CLI `/timers cancel` 子命令等 = 新跨端差异 = 不许）；`/timers` 保持**只读**（其档头 ∥ `docs/cli/design/TUI.md` §7.6「取消面不做」句按此收正为「取消 = 模型 `cancel`」）。状态行 `⏰N` ∥ VSC ∥ 桌面投影 `{ count, expired }` = **零改**（计数式——周期项同计，读 `expiresAt` 单字段不动）。
+**取消面** = 模型工具面（`cancel` 动作——四端同得）；**不设端专属取消 UI**（CLI `/timers cancel` 子命令等 = 新跨端差异 = 不许）。
+
+**`/timers` 保持只读**——其档头 ∥ `docs/cli/design/TUI.md` §7.6「取消面不做」句按此收正为「取消 = 模型 `cancel`」。
+
+**状态行计数段** ∥ VSC ∥ 桌面投影 `{ count, expired }` = 零改（计数式——周期项同计，读 `expiresAt` 单字段不动；字面形（CLI 文字形 ∥ 桌面 ∥ VSC 符号形）= `docs/cli/design/TUI.md` §7.6 单源）。
 
 **attention 面口径（周期项 × awaiting 除外——评审轮 1 #3 收正）**：周期项在途 ⇒ `_pendingTimers` 恒非空 ⇒ `docs/cli/design/TUI.md` §7.1 表 awaiting 行除外（在途 timer ∧ 唤醒会武装）**恒生效**——「不计 awaiting」由一次性瞬态变会话常态。
 
@@ -817,23 +702,6 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 
 **服务面审计面**：`subjectOf("timer", …)`（`thincoder-server/src/agent/chat-env-tools.mjs`）按 `at`/`every`/`daily`/`cancel`/`list` 分支各出主语（原文直出式——`cancel <id>` ∥ `list` ∥ `at <原文>`[ `<message>`] ∥ `every <N>s`[ `<message>`] ∥ `daily <原文>`[ `<message>`]）；一次性式（含缺省 ∥ `message` 缀）逐字零变。
 
-**受影响文件清单（现读 = 实读 2026-10-16）**：
-
-| 文件 | 现读 | 增量 | 说明 |
-|---|---|---|---|
-| `thincoder-core/agent/timers.mjs` | **164** | +≈50 | `TIMER_MIN_EVERY_MS` ∥ `nextFireAt` ∥ take 重排 ∥ 档头「唯一写点」句收正（出列也写） |
-| `thincoder-core/agent-tools/timer.mjs` | **226** | +≈75 | 五参 ∥ 互斥 ∥ 校验 ∥ `cancel`/`list` ∥ 返回文案 ∥ 时钟缝（`ctx.now`） |
-| `thincoder-core/tool-docs/timer.md` | **13** | +≈8 | 描述面四式（逐字 = 机制文档定稿） |
-| `thincoder-cli/src/tui/cmd-timers.mjs` | **70** | +≈8 | kind 段 ＋ `<dur>` 格式 ＋ 档头取消面句收正 |
-| `thincoder-server/src/agent/chat-env-tools.mjs` | **328** | +≈12 | `subjectOf` timer 分支（同片串行——排兄弟批后；坐标按届盘实读） |
-| 单元测试档 | —— | **新 ≈320** | 四用例 ＋ 回归用例（已落 · 实施轮落）——**不入 server 门禁链**（批面非服务） |
-| `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` | **1153** | +≈150 | 本节 ＋ D-TW7 行 ∥ §6.30.3 三处收正 |
-| `docs/core/design/TOOLS.md` | **1243** | +1 | §6.7 `timer` 行扩述 |
-| `docs/cli/design/TUI.md` | **737** | +≈6 | §7.6 行形态 ＋ 取消面句收正 |
-
-**零改面（明示）**：`thincoder-core/agent/post-turn.mjs` ∥ 三端 `timer-watch.mjs` ∥ 三端 `suspension*.mjs` ∥ `thincoder-desktop/src/main/agent-host.mjs` ∥ `thincoder-vscode/src/extension/panel-callbacks.mjs`
-
-∥ `thincoder-cli/src/tui/render-frame.mjs` ∥ `thincoder-cli/src/tui/agent-turn.mjs` ∥ `thincoder-cli/src/tui/tool-events.mjs`。
 
 **关键决策（D-TW9–D-TW17）**：
 
@@ -925,22 +793,9 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 
 **最近先例**：闩转口与零变口径 = 本档 §6.30.16（`createTimerWatch` 端面转口签名冻结）；注入缝 × 假钟用例形 = §6.30.7 T-TW3（直驱、零真实等待）。本批沿同一形；**偏离项** = 构造期新增可选 `busy` 键（additive——§6.30.16 零变不变量 ④ 已登记）。
 
-**调研证据**：查过 `thincoder-core/test/`（现只有 `run.mjs` ∥ `slow.mjs`，**零 `.test.mjs`**——实读 2026-10-19）、`thincoder-core/test/run.mjs:1-49`（`test/*.test.mjs` 单层收集 → `npm test`）、三端 `timer-watch.mjs` 现文——**仓内无既有 timer 测试档可扩**（本档旧清单所列各档均已在各自批收口时按零留存删除）。
+**调研证据**：查过 `thincoder-core/test/`（现只有 `run.mjs` ∥ `slow.mjs`，**零 `.test.mjs`**——实读 2026-10-19）、`thincoder-core/test/run.mjs`（零目标集合、不跑用例——全文 40 行）、三端 `timer-watch.mjs` 现文——**仓内无既有 timer 测试档可扩**。
 
-**受影响文件（现读 = 实读 2026-10-19）**：
-
-| 文件 | 现读 | 增量 | 说明 |
-|---|---|---|---|
-| `thincoder-core/agent/timers.mjs` | **164** | ＋≈10 | `createTimerWatch` 构造期 `busy` 缝（默认 `() => false`）＋ 忙期撤闩返 `null` |
-| `thincoder-cli/src/tui/timer-watch.mjs` | **65** | ＋1–2 | 转口透传 `busy`（构造期） |
-| `thincoder-vscode/src/extension/timer-watch.mjs` | **74** | ＋1–2 | 同上（`turnBusy` 判据） |
-| `thincoder-desktop/src/main/timer-watch.mjs` | **76** | ＋1–2 | 同上（`busyOf` 判据） |
-| `thincoder-core/test/timer-watch-busy.test.mjs` | 新档 | ≈80 | T-TW51–T-TW53；**寿命 = 随批收口删除**（单元测试档零留存） |
-| `thincoder-cli/test/timer-rearm-order.test.mjs` | 新档 | ≈60 | T-TW54（链尾 sync 与 `processing` 归位的先后）；同上寿命 |
-
-- **基线口径**：`timers.mjs` 现读 **164** = §6.30.18 的基线值（该节「164 → ＋≈50」**未落盘**——现读仍 164）；两批同片 ⇒ **串行**：§6.30.18 先落则本批基线改 ≈214 并实施当刻复读。
-- 桌面 **76** vs §6.30.13 的 79：差 −3 归其后收编批次（本档不逐行归因）；本批以现盘 76 为基。
-- 用例宿主 = 各包 `test/`（`test/*.test.mjs` 单层收集——`thincoder-core/test/run.mjs:1-49`）；**测试档不落 `docs/`**。
+- **核包例外**：`thincoder-core/test/run.mjs` 零目标集合、不跑用例，对 `test/` 下任何 `*.test.mjs` 一律报 `uncollected test file`——该报错文案逐字写「unit test files live in docs/batches/」⇒ 核包单元档落 `docs/batches/`，以 `node --test <档>` 直达。
 
 **验收（A-TW20–A-TW22）**：A-TW20 = 本条规范句 ＋ §6.30.16 零变不变量 ④ 同拍在册；A-TW21 = 忙期零武装的反证：删 `sync()` 内 `busy` 判定行 ⇒ T-TW52 红（读数落实施记录）；A-TW22 = 机检零新增：`node scripts/doc-check.mjs --root .` 对比开工基线（悬空 ∥ 行宽逐档零新增）。
 
@@ -957,11 +812,12 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 
 - **投递（delivery）**：pending 条目注入某回合的历史——注入后条目**留在 `_pendingAsyncResults`**（不销）。
 - **见账（accounting）**：消化轮收尾对**投递账**逐条机检账目覆盖（§6.31.3）。
-- **销账（settlement）**：覆盖 ⇒ 离容器 + 释放报告；未覆盖 ⇒ `_daFailures += 1` + `_daRetry = true`（下轮重投）；超限 ⇒ 升级（§6.31.5）。
+- **销账（settlement）**：覆盖 ⇒ 离容器 + 释放报告；未覆盖（空回合与有输出未签收同判）⇒ `_daMissRounds += 1`（未签收轮数）；达 `DA_MISS_LIMIT` ⇒ 升级（§6.31.5）。
+- **投递恒一次**：条目注入一次后不再注入——报告未签收的唯一后续动作 = 升级时的终局披露（§6.31.5 KD-DA4）。理由：反复重投把「父侧这一回合没产出正文」误判成「读了却没签收」，一个空回合就多推一遍；而空回合恰在推理负载最高时最密集 ⇒ 放大集中在最忙的窗口。
 - **不变量**：**归档 ≠ 销账**——块归档恒落起跑窗（投递时点，#738 / #754 口径不动）；销账 = 纯控制面（容器成员 + 账目态），恒落**见账**（账目覆盖）时点。
 - **未销账条目 = 仍在 `_pendingAsyncResults`**——既有「完成待消化」计数（状态行 / `backgroundCounts`）自然含之（不静默）。
-- **会话标记**：`carrier._daSession`（布尔——挂起会话期 true、退出置 false；读以 `=== true` 判）——区分「会话内（可重投）」与「fallback 面（无回路）」的唯一判据。
-- **回合分类单点**：`isDigestRound(opts) = autoTurn && !upstreamTurn && !timerTurn`——账目只属消化轮（timer / 上行轮投递不销账、不重投——其账目在后续消化轮）。
+- **会话标记**：`carrier._daSession`（布尔——挂起会话期 true、退出置 false；读以 `=== true` 判）——区分「会话内（投递恒一次 + 未签收升级）」与「fallback 面（零账目动作）」的唯一判据。
+- **回合分类单点**：`isDigestRound(opts) = autoTurn && !upstreamTurn && !timerTurn`——账目只属消化轮（timer / 上行轮投递不销账；其账目在后续消化轮）。
 
 #### 6.31.3 账目合同（机检形态——零工具轮可满足）
 
@@ -970,13 +826,13 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
   - `[digest-ack #<id>] deferred — <原因>`（未处理）
 - **机检判据**：输出文本内**存在一行**同时含标记 `[digest-ack` 与 `#<id>`（词界）⇒ 该条覆盖；disposition / 要点 / 原因**不参与机检**（处理质量不可判——需求边界「只保不许无声」）。
 - **账目要求行**：核常量 `DIGEST_ACCOUNT_DOMAIN`（`thincoder-core/agent/helpers.mjs`——拟新增；内容依据 = 机制文档，落笔 = eng-coder，本设计给合同与草稿位）+ **未销账 id 清单**（`pending ∩ 已投递`，动态拼）——**两档同发**（手动 / AUTO；manual 域文本注入只覆盖手动档 ⇒ 账目要求独立常量行承载，避免 AUTO 轮无要求）；`transient`（机器线独有）。
-- **注入回合条件**：仅**会话态消化轮**（`_daSession` ∧ `isDigestRound`）且未销账清单非空时注入（先投递后拼清单——含本回合首投 / 重投）；非消化轮（含用户回合）不发——账目判读恒落消化轮输出（每消化轮取件一次——run 级累积痕），用户回合的自行答复不判销账、条目留容器待下一消化轮补账。
+- **注入回合条件**：仅**会话态消化轮**（`_daSession` ∧ `isDigestRound`）且未销账清单非空时注入（先投递后拼清单——含本回合首投；投递恒一次，无重投）；非消化轮（含用户回合）不发——账目判读恒落消化轮输出（每消化轮取件一次——run 级累积痕），用户回合的自行答复不判销账、条目留容器待下一消化轮补账。
 
 #### 6.31.4 投递面（`beginRun` 改造）
 
 - **会话态**（`carrierField(agent, "_daSession") === true`——含会话内用户回合）：
-  - 投递门控（单点谓词 `shouldDeliverEntry`）：`!_daDelivered` ⇒ 投（首次投递——**系统轮**（`autoTurn`；批 async-delivery-formalize 2026-10-12 · §6.34）；回退面沿既有取尽面）∥ `_daRetry` 且**本回合 = 消化轮** ⇒ 投（重投经消化轮回路——F-DA1）；其余跳过（防重复注入）。
-  - 注入后：`_daDelivered = true`、`_daRetry = false`；`releaseChildHold(entry)`（= 仅释放 `childAgent`——`report` 保留至销账 / 升级：重投需原文；驻留增量以报告量级封顶、以重投上限封顶）。
+  - 投递门控（单点谓词 `shouldDeliverEntry(entry, autoTurn)`）：`!_daDelivered` ∧ 本回合 = **系统轮**（`autoTurn`；回退面沿既有取尽面）⇒ 投；`_daDelivered` 已置 ⇒ 恒跳过（**每条只投一次**）。注入抛错 ⇒ `_daDelivered` 未置 ⇒ 下一系统轮重试注入（失败重试，不属投递回路）。
+  - 注入后：`_daDelivered = true`；`releaseChildHold(entry)`（= 仅释放 `childAgent`——`report` 保留至销账 / 升级：升级终局披露需原文；驻留增量以报告量级封顶、以未签收条数封顶）。
   - 条目留容器（不 `splice`）；注入抛错 ⇒ 未投条目留容器待下轮（收窄既有「splice 先取尽」的丢失窗——会话态）。
 - **非会话态**（fallback——headless / 直连 `runAgent`）：缺省条逐字沿用取尽语义（先离容后注入 + `releaseSettledEntry`——无驱动 ⇒ 无回路）；`_daDelivered === true` 条同判据跳过且留容器（防重复 / 条目不离账务面——#45 落码终态）。
 - **报告保留的 OOM 面登记**：`childAgent` 释放点不动（注入后）；`report` 释放点后移至销账（增量 = 报告字符串，历史本已持注入副本——同量级；N 上限封顶）。
@@ -987,11 +843,39 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 - **输出取件（落痕累积）**：`turn-loop` **每模型轮返回即追加**（写父字段 `agent._lastRunOutput += <该轮 content>`——`thincoder-core/agent/turn-loop.mjs:124` 后 ∥ 会话态门：非会话零动作——零取件方 ∥ 防跨 run 无界增殖）——判定输入 = **本 run 内多轮累积文本**（**首轮签收不为收口轮覆盖**——#939 收正）；**run 内落痕**（生命周期 = 单 run：起跑清位 / 收尾取件），不属跨 run 载体字段集（`AGENT-LOOP.md` §2.3 同注）。
   **清位** = `thincoder-core/agent/run-start.mjs`（beginRun——会话态起跑即清；调核助手 `armAccountRound(carrier)`；fallback 零动作）；**读位** = 本 pass（`finalizeAgentTurn`——调 `harvestAccountOutput(carrier)`，**载体吸收**读：父字段优先——写点落父字段（抗 `history` 整体替换） / 回退 `history`（兼容形））。
 
-  缺痕（本 run 零输出落痕——零模型轮 / 起跑即断）⇒ 全条未覆盖（**安全方向**——假阴可重投；假阳是事故本相）；已有轮次输出（哪怕未收口）⇒ 按累积痕判定。
+  缺痕（本 run 零输出落痕——零模型轮 / 起跑即断 / 每轮正文皆空）⇒ **空回合**：该轮按「未签收」判（`_daMissRounds += 1`），不覆盖、不投递。
+
+  判据边界（为何空回合不覆盖撞帽）：落痕只收非空正文（`thincoder-core/agent/turn-loop.mjs:167-168` 的 `&& response.content`）⇒ **说过一个字的 run 都有痕**；截断（`max_tokens`）给的是部分正文 ⇒ 同样有痕；撞帽不是停止径（`thincoder-core/agent/run-stages.mjs:286-287` 只保留池，见账照在 `:304-307` 跑）。已有轮次输出（哪怕未收口）⇒ 按累积痕判定。
 - **判定（逐条——投递账 = `pending ∩ _daDelivered`）**：
-  - 覆盖 ⇒ 离容器（splice）+ `releaseSettledEntry`（含 report 释放）。
-  - 未覆盖 ⇒ `_daFailures += 1`；`≤ DA_RETRY_LIMIT` ⇒ `_daRetry = true`（下轮重投）；`> DA_RETRY_LIMIT` ⇒ **升级**。
-- **上限与升级（F-DA3）**：`DA_RETRY_LIMIT = 2`（**重投 ≤2 次 ⇒ 总投递 ≤3 次**）；升级 = 离容器 + 入 `_unsettledDigests`（载体字段——`{ id, role, failures, report, at }`）+ **恰一条**显式提醒（`pushReal`——机器线+人读线；逐字 = 机制文档定稿）+ **恰一条** `logEvent("ev:unsettled", { n, ids })`（`ids` = join 串落盘——先例 `ev:discarded`）；升级后**停止自动重投**（账目终态「未处理」可见）。
+  - 覆盖（`output != null ∧ coversDigestId`）⇒ 离容器（splice）+ `releaseSettledEntry`（含 report 释放）。
+  - 未覆盖（其余一切——空回合 ∥ 有输出未签收）⇒ `_daMissRounds += 1`；`< DA_MISS_LIMIT` ⇒ 条目**留容器、零投递动作**（投递已经发生过一次，下一消化轮照旧判定）；达 `DA_MISS_LIMIT` ⇒ **升级**（见下「升级支」）。
+  - **单支理由**：「空回合」与「有输出未签收」出口相同（本轮没签收），分记账径已无消费者——既没有重投可豁免，也没有失败计数可按：`_daMissRounds` 是等待轮数，不是对父侧的问责。
+- **未签收上限（`DA_MISS_LIMIT = 4`）**：同一条目积满 4 个未签收消化轮 ⇒ 升级。**N 的依据** = 「连空 3 轮报告仍须在容器、第 4 轮补签仍能销账」（§6.31.10 T-DA21）+ 1 轮余量 ⇒ 4（可复算；不取观测值——修前的观测受「总投递 ≤3」删失）。**场景出处** = 恒空提供端：`thincoder-core/agent/completion.mjs:51-61` 空响应重试两次后抛 `LLM returned empty response` ⇒ 该 run 零非空正文 ⇒ 每消化轮皆判未签收（现实形 = `test/RTM.md:192` 行 15-2；夹具形 = `test/integration/empty-response-retry.test.mjs` 的假 SSE 端点）。
+- **投递净效应**：每条报告投递 **1 次**（首投）。空回合零投递 ⇒ 「父侧空回合 ⇒ 报告又被推一遍」这条放大链不存在，条目总投递不再有「≤3 / ≤6」这类上界问题——恒定 1 次。未签收件在升级那一刻**终局披露一次**，此后不再注入。
+- **升级支（可见性出口——四步先后固定）**：升级时按序四步：**账本与提醒先落，离容器居中，披露最后且逐条包 try/catch**。
+  - ① **入账本**：`_unsettledDigests` 追加 `{ id, role, missRounds, report, at }`（纯内存，不抛）。**账本记录 = 快照**（不含 `error` / `run`）——它只喂 status 面与 `preview`；被注入的对象是原条目（见 ④）。
+  - ② **提醒**：`pushReal` 恰一条 + `logEvent("ev:unsettled", { n, ids })` 恰一条（纯内存；`ids` = join 串落盘——先例 `ev:discarded`）。提醒句轮数恒 = `DA_MISS_LIMIT`（升级只在第 4 个未签收轮发生，同批升级条恒同值）。
+  - ③ **离容器**：`splice`（纯结构，不抛）——至此条目定态为「已升级」，不再参与后续判定（披露结构上至多一次）。
+  - ④ **终局披露**：逐条**按 role 与首投同分流**——`role === "consult"` ⇒ `injectConsultResult`（`thincoder-core/agent-tools/consult.mjs:186`；首行标签拆出再拼、标签不计预算），其余 ⇒ `injectAsyncResult`（`thincoder-core/agent-tools/subagent-async.mjs:374`——内部已分派 `bg` / `browser`）；不新造第二投递形。`accountDigestRound` 因此变 async（唯一调用点 `thincoder-core/agent/run-stages.mjs:306` 加 `await`——该处在 async 收尾函数内，整条 pass 由 `thincoder-core/agent.mjs:104` 的 `finally` 单行调用）。**注入的对象 = 原 pending 条目**（`entry`，不是账本记录）：墓碑值（`error != null ? "failed" : "consumed"`——`thincoder-core/agent-tools/subagent-async.mjs:420`）与评审族投递水印（`entry.run`——`:412`）都按原条目字段才成立；注入账本记录会把失败件写成 `consumed`。
+- **披露失败处置**：披露是本 pass 里唯一的 I/O（`offloadToolResult(..., { force: true })` ∥ `persistOverflowReport` ∥ `pushReal`——`thincoder-core/agent-tools/subagent-async.mjs:388-410`），而 pass 由 `finally` 单行调用：抛错会 ① 中断余下条目的判定 ② 跳过 `thincoder-core/agent/run-stages.mjs:308`（`_inAutoTurn = false`）与 `:312-315`（`_inheritedGuard` 快照）③ 以 finally 抛错覆盖原始错误。故**披露逐条包 try/catch**（形同 `thincoder-core/agent/suspension.mjs:163` 的注入循环收口；差异 = 该处首错即 return，本处逐条 continue——账本与提醒已在 ① ② 落地，单条失败不得拦住余下条目），失败仅留痕（`logEvent`）后继续。
+  **判据 = 披露失败不得使报告离开可见面**：① ② ③ 纯内存且先落 ⇒ 披露抛错时报告已在 `_unsettledDigests`、提醒行已在会话流、status 面可读（`preview` ≤400 字符），少的只是正文的第二次注入。这不是「失败当成功」：可见性降级为「账本 + 提醒 + status 面」，且失败有留痕；与首投面「注入抛错 ⇒ `_daDelivered` 未置 ⇒ 下轮再投」同向——失败必须留痕，不许静默。
+- **披露复用注入器的副作用（登记，非新造）**：
+  - 轮累计预算再记一次（`digestBudgetOver`——`thincoder-core/agent-tools/subagent-async.mjs:385`）：每条未签收件升级时一次，上界 = 未签收条数 × 1。
+  - 二次落盘（`offloadToolResult` / `persistOverflowReport`——`:388-389`）：tag 同首投（`async-subagent-${entry.id}` ∥ `consult-${entry.id}`）；本批不改注入器落盘语义。
+  - 墓碑重写（`writeTombstone`——`:420`）：值同首投（`error != null ? "failed" : "consumed"`）⇒ 重写同值。
+  - 评审族投递水印后移（`noteReviewDelivered`——`:412`）：仅 `role === "advisor"` 条；水印语义见 §6.11（最后一次投递时的 `history` 长度）——升级披露后轮 2+ 取件下界随之后移，与「正文最后一次可见的时点」一致。
+- **F-DA3「正文必须完整可见」的边界**：披露与首投同形 ⇒ 超长 ∥ 轮累计超预算的报告走「落盘 + 路径」或「清单行」（`thincoder-core/agent-tools/subagent-async.mjs:385-389`——`force: true` 跳过长度门，超预算改清单行、正文不进请求体）。**相容理由**：完整可见 = 正文在会话内可及，路径即完整正文入口（`force` 保证 ≤64K 报告也上盘），首投同一形 ⇒ 披露不引入新的不可见面。**已知边界**：超预算改清单行时正文只经路径可见。
+- **升级后零自动投递**（账目终态「未处理」可见）；`unsettledReminder(n, ids)` 保持二参——现行签名 `thincoder-core/agent/digest-account.mjs:151`、唯一调用点 `:124`、三端不消费（端侧只读 `unsettledCount` / 状态面）。
+
+**最近先例**：空输出不当成「已答」、只在一个有界额度内重来 = `thincoder-core/agent/completion.mjs:44-60`（`MAX_EMPTY_RETRIES = 2` + 逐字提醒，run 内）。对应设计节 = §6.31.5。
+
+**对齐点**：空输出不推进终态——那里只推进重试计数，这里空回合只记等待轮数（`_daMissRounds`），不做问责计数。
+
+**偏离项**：见账 pass 仍不驱动模型轮（不自愈），且本机制比先例走得更远——投递恒一次、无重投回路，未签收的出口是升级终局披露而非有界重试。理由 = 用户 2026-10-27 裁定「重投是应对模型不稳定的临时补丁，稳定后留着反而放大投递」；补偿 = 披露一次（正文仍可见）+ 提醒 + status 可读。
+
+**调研证据**：查过 `test/RTM.md` 全表（2026-10-27 实读 = 16 故事 63 行——故事 15 三行 `:191-193` 是恒空提供端现形；故事 2 三行已退役）、`test/integration/`（18 档，零档驱动消化账务 ⇒ 无既有集成用例可扩）。
+
+**调研证据（需求侧）**：`docs/core/requirements/AGENT-LOOP.md` §4.15（F-DA1–F-DA6 / N1–N4）；第三方源档 = 无相关（本批全在核内状态机）。
 - **零噪音**：全覆盖轮 ⇒ 零提醒 / 零事件 / 零残余行。
 - **清账面**：会话中止（`finishSuspension` aborted 分支 + `run-stages` 中止分支）⇒ `_unsettledDigests` 随 pending 一并清（用户全停 = 旧账不续——与 pending 清场同判）；idle 退出 ⇒ 升级账本存续（跨 run 可读——「可接手」面）。
 - **退出清场残余注入按投递账过滤**（消费点③——`finishSuspension` idle 支 · `thincoder-core/agent/suspension.mjs:143-162`）：`entry._daDelivered === true` ⇒ **不注入且不动容器**（防重复——仍驻 pending，可续账）；其余条逐字沿用（注入顺序 ∥ `left` ∥ `reclaim` ∥ `injected`/`error` 不缩水）；fallback（`run-start` 支）同判据——`_daDelivered` 条跳过且留容器 ∥ 缺省条逐字沿用（#45 落码终态）。
@@ -999,9 +883,9 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 #### 6.31.6 可见面（F-DA4——三端同源判据、端差登记）
 
 - **升级提醒（模型 + 用户）**：`pushReal` 单点（核）——三端同源；出现于会话流（人读线 ∥ 机器线）；措辞 = 机制文档定稿。
-- **状态面（父侧可读 · 可接手）**：`subagent action:'status'` 增 `overview.unsettled`（全列——`{ id, role, state, attempts }`；state ∈ `awaiting-digest`（在途未投递 ∥ 已投递未判）/ `retrying`（判过未覆盖）/ `unsettled`（已升级——随携 `preview` ≤400 字符））；**单查 id** 未命中双池 ⇒ 续查 pending / 升级账本同解析（收窄登记——§6.11 同拍）。
+- **状态面（父侧可读 · 可接手）**：`subagent action:'status'` 增 `overview.unsettled`（全列——`{ id, role, state, attempts }`；`attempts` = 未签收轮数（`_daMissRounds`）；state ∈ `awaiting-digest`（在途未投递 ∥ 已投递未判 = `attempts == 0`）/ `unaccounted`（`attempts > 0`——判过未签收）/ `unsettled`（已升级——随携 `preview` ≤400 字符））；**单查 id** 未命中双池 ⇒ 续查 pending / 升级账本同解析（收窄登记——§6.11 同拍）。
     （单查序 = 子代理池 → 评审池 → `_pendingAsyncResults` → `_unsettledDigests`；三处皆无 ⇒ 原错误文案。）
-- **端面残余行（本轮未销账）**：判据 = `unsettledCount(carrier)`（= pending 中 `_daFailures > 0` 条数）——
+- **端面残余行（本轮未销账）**：判据 = `unsettledCount(carrier)`（= pending 中 `attempts > 0` 条数——`_daMissRounds`，与状态面 `unaccounted` 同判据；读取点 = CLI `thincoder-cli/src/tui/suspension-drive.mjs:120` · 桌面 `thincoder-desktop/src/main/turn-face.mjs:181` · VSC `thincoder-vscode/src/extension/suspension.mjs:221`——端侧零改，只换核判据）——
   - CLI：核字典新键 `digest.residue {n}`——终态行之后再落一行（`thincoder-cli/src/tui/lifecycle-records.mjs` `digestTraceLines`；`digestEndRecord` 携 `unsettled`——重建同调）。
   - 桌面：`ev:digest { status:"end" }` 帧增 `unsettled`（`thincoder-desktop/src/main/turn-face.mjs` `emitDigestEnd`——非上行轮才携）⇒ 行组增残余行（`thincoder-desktop/renderer/views/chat-digest-rows.mjs`）。
   - VSC：`digest` end 消息增 `unsettled`（`thincoder-vscode/src/extension/suspension.mjs:212-217`）⇒ 状态行族增残余行（`thincoder-vscode/webview/chat-status.js`）；**记录 / 复列承接**：`end` 记录随载荷携 `unsettled` ⇒ 重建复列随出残余元素（`docs/vsc/design/WEBVIEW.md` §5.7 重建径——与 live 同构形件）。
@@ -1025,65 +909,18 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 - **判据加宽**：`handleCompletion` 空判 `!response.content` ⇒ **空白判**（`String(content ?? "").trim() === ""`）——`stop` 且零内容（含纯空白）走既有空响应重试（`MAX_EMPTY_RETRIES = 2`——`thincoder-core/agent/completion.mjs:15`）⇒ 用尽抛错（fail-loud）——「不得静默」两径达成（`thincoder-core/agent/completion.mjs:30-51`）。
 - **边界**：非空半句 `stop` 检测**不做**（信号层不可分辨——已知边界）；模型层不动；重试预算 / 文案骨架零变；**按因分文不做**（stop 与非 stop 零内容同判——信号层语义收益低）。
 
-#### 6.31.9 受影响文件清单（R24a · 行数 = as-of 2026-10-05 实读；口径 = 内容行数——`wc -l` 同口径，读取工具显示值 +1，§6.20.4）
-
-| 文件 | 现行行数 | 预计增量 | 说明 |
-|---|---|---|---|
-| `thincoder-core/agent/digest-account.mjs`（已落） | — | ≈170–210 | 账务单件（常量 / 解析 / 要求行 / 见账 pass / 读面 / 落痕清位 ∕ 取件助手） |
-| `thincoder-core/agent/suspension.mjs` | 326 → **348** | +22 | `_daSession` 置位 / 复位 + 中止清账本 + 出口缝（idle 清场投递账过滤 ∥ 单遍分区——#44 ∥ #45） |
-| `thincoder-core/agent/run-start.mjs` | 111 → **152** | +41 | 投递门控两态 + 账目要求行 + 会话态起跑清位（`armAccountRound`）+ fallback 支投递账分区（#45） |
-| `thincoder-core/agent/run-stages.mjs` | 270 | +25 / −2 | finalize 见账 pass（读位 `harvestAccountOutput`）+ 缺席支 + 中止清账本 |
-| `thincoder-core/agent/turn-loop.mjs` | 250 | +2 | 收口落痕单点（#939 后 = 本 run 内逐轮累积——见 §6.31.5） |
-| `thincoder-core/agent/completion.mjs` | 154 | +2 / −1 | 空白判（F-DA6） |
-| `thincoder-core/agent/helpers.mjs` | 481 | +6 | `DIGEST_ACCOUNT_DOMAIN` 常量位 |
-| `thincoder-core/agent-tools/async-settle.mjs` | 302 → **326** | +24 | `releaseChildHold` + 账本写助手 + 出口缝注（`releaseSettledEntry` 条件句）+ 归档注收正 |
-| `thincoder-core/agent-tools/escalate-async.mjs` | 307 → **309** | +4 / −2（已落——注释族清扫条件句；净 +2） | `classifyEscalateSettle` 注块（`:109-113`）——注入释放条件句收正（fallback ∥ 会话态两态；注释面 only 零行为） |
-| `thincoder-core/agent-tools/subagent-panel.mjs` | 272 → **273** | +2 / −1（已落——注释族清扫条件句；净 +1） | 读时交叉注块（`:260-262`）——移除条件句收正（fallback 面注入即移除 ∥ 会话面留容器至销账；注释面 only 零行为） |
-| `thincoder-core/agent-tools/subagent-actions-query.mjs` | 270 | +32 | status `unsettled` 段 + 单查落账本 |
-| `thincoder-core/provider/anthropic.mjs` | 225 | +12 / −1 | stop_reason 捕获 + 归一 |
-| `thincoder-core/provider/google.mjs` | 273 | +9 / −1 | finishReason 捕获 + 归一 |
-| `thincoder-core/provider/responses.mjs` | 307 | +1 | completed ⇒ stop |
-| `thincoder-core/agent.mjs` | 105 | +1 / −1 | finalize ctx 携 `upstreamTurn` / `timerTurn` |
-| `thincoder-core/i18n.mjs` | 108 | +1 | 键 `digest.residue` |
-| `thincoder-cli/src/tui/suspension-drive.mjs` | 254 | +4 | digestTurn 携 `unsettled` |
-| `thincoder-cli/src/tui/lifecycle-records.mjs` | 199 | +9 | 记录携 `unsettled` + 残余痕行 |
-| `thincoder-desktop/src/main/turn-face.mjs` | 200 | +5 | end 帧增 `unsettled` |
-| `thincoder-desktop/renderer/events-wake.mjs` | 102 | +4 | end 记录携 `unsettled`（归一） |
-| `thincoder-desktop/renderer/views/chat-digest-rows.mjs` | 274 | +12 | 残余行元素 |
-| `thincoder-vscode/src/extension/suspension.mjs` | 328 | +3 | end 消息增 `unsettled` |
-| `thincoder-vscode/webview/chat-status.js` | 151 | +10 | 残余行元素 |
-| `thincoder-vscode/src/extension/panel-turn-loop.mjs` | 303 | +4 | 载体字段 +2（`_unsettledDigests` ∕ `_daSession`；14 ⇒ 16） |
-| 核侧单元测试档 | —（新档） | **408** | 核侧用例宿主（T-DA1–T-DA10 / T-DA12–T-DA14 + 补充用例——平 node 直驱：假 carrier / 假 runTurn / 直驱 `finalizeAgentTurn` 同窗） |
-| 消化账务出口缝单元测试档 | —（新档） | **165** | 出口缝两用例宿主（T-DA15 / T-DA16——纯搬移自宿主档；核件直驱 `finishSuspension` / `startSuspension` ∥ T-DA16① 另经真 `runAgent` 一轮） |
-| 消化账务 CLI 单元测试档（已落） | — | ≈30–60 | 端用例 T-DA11（CLI——记录携 `unsettled` + 残余痕行） |
-| 消化账务桌面单元测试档（已落） | — | ≈30–60 | 端用例 T-DA11（桌面——end 帧携 `unsettled` + 行元素） |
-| 消化账务 VSC 单元测试档（已落） | — | ≈30–60 | 端用例 T-DA11（VSC——end 消息携 `unsettled` + 行元素） |
-| 文档：本档 §6.31 ∥ §6.8 ∥ §6.11 | 1104 → **1136** | +218（合计） | 本节 + 指针 |
-| 文档：`docs/cli/design/TUI.md` §6.9 | 916 → 917（本 fix 轮后） | +3（已落） | 残余痕行条 + 两行同屏口径注 |
-| 文档：`docs/core/design/AGENT-LOOP.md` §2.3 / §6.15 / §7 / §6.2 / §6.5 | 637 → 642（本 fix 轮后） | +8 / −4（合计——已落） | 载体字段 +2（13 款 ⇒ 15 款——`_unsettledDigests` ∕ `_daSession`）+ 释放点 ∥ D-AL23 ∥ 枚举 ∥ 空白判收正 |
-| 文档：`docs/core/design/LOGGING.md` §6.2 | 161 → **164** | +3（已落：两事件行） | `ev:unsettled` / `ev:finish-missing` 行 |
-| 文档：桌面 / VSC 显示档（§6.31.6 落点） | — | 各 +1–2 | 残余行 / 载荷字段面 / 记录复列（`docs/desktop/design/RENDERER.md` §1.1 · `docs/desktop/design/IPC.md` §1 · `docs/vsc/design/WEBVIEW.md` §5.1 / §5.7 · `docs/vsc/design/WEBVIEW-PROTOCOL.md` §5 / §6.3 / §3.2） |
-
-**单元测试档沿革（内容口径）**：406 ⇒ 456 ⇒ 502（越 500 硬门）⇒ 拆档 = 主档 408 ∥ 出口缝档 165（#47——出口缝两用例纯搬移；拆前 / 拆后两读）。
-
-`subagent-actions-query.mjs`（**277**——**未越软线**（本列口径外）；改动 = status 增段（既有动作面内无新职责 / 无新导出）——不涉拆分窗口）。
-`thincoder-vscode/src/extension/panel-turn-loop.mjs`（303 → ≈307）：改动 = 载体表 +2 字段（数组行内追加——无新职责 / 无新导出）⇒ **不拆**。
-
-`thincoder-core/agent-tools/escalate-async.mjs`（307 → **309**）：改动 = 注入释放条件句收正（注释面 only——无新职责 / 无新导出）⇒ **不拆**。
-`thincoder-core/agent-tools/subagent-async.mjs`（466 → **469**）：改动 = 墓碑注条件句收正（注释面 only——无新职责 / 无新导出）⇒ **不拆**。
-
 #### 6.31.10 用例表（正常 / 边界 / 错误）
 
 | # | 场景 | 输入 | 预期 |
 |---|---|---|---|
-| T-DA1 | 正常·全覆盖销账 | 直驱：pending 3 条已投递 + 输出含三行 ack | 三条全离容器；零提醒 / 零事件 / 零残余行；`_daRetry` 全清 |
-| T-DA2 | 正常·重投补账 | 轮 1 输出缺 #2 ⇒ 轮 2 重投含 #2、输出补 | 轮 1 后：#2 留容器 `_daRetry=true`、`_daFailures=1`；轮 2 后全销 |
+| T-DA1 | 正常·全覆盖销账 | 直驱：pending 3 条已投递 + 输出含三行 ack | 三条全离容器；零提醒 / 零事件 / 零残余行；零注入 |
+| T-DA2 | 正常·无重投下的补账 | 轮 1 输出缺 #2 ⇒ 轮 2 输出补 #2 签收 | 轮 1 后：#2 留容器、`_daMissRounds = 1`、零注入动作（注入计数 = 1）；轮 2 后全销（补账靠要求行 id 清单，不靠重投） |
 | T-DA3 | 正常·用户回合投递不销账 | `_daSession` 下用户回合（非消化轮）投递 | 条目留容器（`_daDelivered=true`）；零销账；下一消化轮补账（无重复注入——T-DA4 同判） |
-| T-DA4 | 边界·防重复注入 | 条目 `_daDelivered ∧ ¬_daRetry` ⇒ 下一消化轮 | 不重复注入（注入计数 = 1）；账目仍判定（skip 后补账可销） |
-| T-DA5 | 错误·超限升级 | 三轮均未覆盖 | 第 3 次后：离容器入 `_unsettledDigests`；恰一条提醒 + 恰一条 `ev:unsettled`；`failures=3` |
+| T-DA4 | 边界·投递恒一次 | 两条形态：① 条目 `_daDelivered` 已置 ⇒ 任一后续消化轮；② 注入抛错（`_daDelivered` 未置）⇒ 下一系统轮 | ① 零注入（注入计数 = 1），账目仍判定（补账可销）；② 照投一次（失败重试，不属投递回路） |
+| T-DA5 | 错误·未签收超限升级 | 四轮均未覆盖（有输出无签收） | 第 4 轮后：离容器入 `_unsettledDigests`（`missRounds = 4`）；终局披露恰一次 + 恰一条提醒 + 恰一条 `ev:unsettled` |
 | T-DA6 | 边界·升级即终结 | 升级后再开消化轮 | 不重投（账目终态）；`poolLive` 不含（会话可退） |
 | T-DA7 | 边界·fallback 零回归（缺省条） | 无 `_daSession`（headless 形）pending 注入——缺省条 | 逐字旧行为：取尽（先离容后注入）+ 注入 + 双释放；零账目动作（`_daDelivered` 条跳过且留容器 = T-DA16 面） |
-| T-DA8 | 边界·输出缺痕 | 消化轮抛错 / 撞帽（未收口）∧ 零输出落痕（#939 缺痕定义——见 §6.31.5；有早轮输出 ⇒ 按累积痕判定——T-DA20 用例 2） | 全条 `_daFailures + 1`（重投窗口保留）；零假销账 |
+| T-DA8 | 边界·空回合 | 消化轮抛错 / 撞帽（未收口）∧ 零输出落痕（#939 缺痕定义——见 §6.31.5；有早轮输出 ⇒ 按累积痕判定——T-DA20 用例 2） | 空回合：`_daMissRounds += 1`、零投递、条留容器（`< DA_MISS_LIMIT`）、`report` 未释放；零假销账 |
 | T-DA9 | 边界·机检反例 | 输出仅提 `#12` 无标记 / 仅标记无 id | 两条皆不计覆盖（皆不销） |
 | T-DA10 | 正常·status 可见 | overview 直驱（在途未销 / 升级各一） | `unsettled` 段两态行在场；单查 id 同解析 |
 | T-DA11 | 正常·端面残余行 | 消化轮收尾 unsettled = 2（CLI 记录 / 桌面帧 / VSC 消息） | CLI 记录携 `unsettled` + 痕行 `digest.residue` 在场；桌面 / VSC 行同键文；= 0 ⇒ 零行 |
@@ -1092,21 +929,31 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 | T-DA14 | 错误·F-DA6 空停 | content 纯空白 ⇒ 重试分支；重试用尽分支 | 空白进空响应支（≤2）后抛；非空半句零触 |
 | T-DA15 | 出口缝①·idle 清场投递账过滤 | 直驱 `finishSuspension`（idle——已投递 ∥ 未投递条交错）∥ 回退形（无投递账条）∥ 全径（会话内消化轮抛非 abort 错） | 已投递条不注入且留容器（不入 `left` / 不入 `reclaim`；`report` 零释放）；未投递条照注入 + 离容；回退形全量注入零变 |
 | T-DA16 | 出口缝②·fallback 支投递账分区 | fallback 直驱（无 `_daSession`——已投递 ∥ 缺省条交错）+ 单遍分区顺序面 | 已投递条零注入且留容器（原序、零释放）∥ 缺省条照注入（恰一次）+ 照释放（双释放）；零账目动作；离容 / 留容器顺序不缩水 |
-| T-DA17 | 缺陷复现（红→绿）·首轮签收跨轮存活 | 多轮 run（首轮输出含 `[digest-ack #3]` + 工具调用 ∥ 收口轮无签收——真 `runAgent` + fetch 桩） | 覆盖 ⇒ 销账（离容器 + 释放）；零失败 / 零重投（注入计数 = 1）；修前红读：`_daFailures=1` + `_daRetry=true` |
-| T-DA18 | 回归·跨 run 清位 | run A 输出含 `#44` 签收（该条不属 A）⇒ run B 投递 #44、输出无签收 | B 判未覆盖（`_daFailures=1`）——上一 run 文本不替本 run 作证（窗未清 ⇒ 假覆盖） |
-| T-DA19 | 回归·未签收照重投 | 单轮无签收 ⇒ 下轮重投补账（两 runAgent） | 轮 1：失败 +1 + `_daRetry`（条留容器 / report 留 / childAgent 释）；轮 2 补账 ⇒ 销（注入计数 = 2） |
-| T-DA20 | 边界·缺痕两用例 | 用例 1：零模型轮（`maxTurns: 0`）⇒ 全条未覆盖 ∥ 用例 2：早轮签收 + 撞帽未收口（`maxTurns: 1`） | 用例 1：失败 +1 + 零假销账；用例 2：按累积痕覆盖（销账——判据窗既定） |
+| T-DA17 | 缺陷复现（红→绿）·首轮签收跨轮存活 | 多轮 run（首轮输出含 `[digest-ack #3]` + 工具调用 ∥ 收口轮无签收——真 `runAgent` + fetch 桩） | 覆盖 ⇒ 销账（离容器 + 释放）；零未签收（`_daMissRounds` 零）/ 零注入（注入计数 = 1） |
+| T-DA18 | 回归·跨 run 清位 | run A 输出含 `#44` 签收（该条不属 A）⇒ run B 投递 #44、输出无签收 | B 判未签收（`_daMissRounds = 1`）——上一 run 文本不替本 run 作证（窗未清 ⇒ 假覆盖） |
+| T-DA19 | 回归·未签收不重投 | 单轮无签收 ⇒ 下轮零注入、按要求行补签收（两 runAgent） | 轮 1：`_daMissRounds = 1`（条留容器 / report 留 / childAgent 释）；轮 2 注入计数仍 = 1，补签收 ⇒ 销 |
+| T-DA20 | 边界·缺痕两用例 | 用例 1：零模型轮（`maxTurns: 0`）⇒ 全条未覆盖 ∥ 用例 2：早轮签收 + 撞帽未收口（`maxTurns: 1`） | 用例 1：空回合（`_daMissRounds += 1`、零投递）；用例 2：按累积痕覆盖（销账——判据窗既定） |
+| T-DA21 | 正常·未签收轮数累计与保留 | 直驱：`output == null` 连空 3 轮（零注入）⇒ 第 4 轮写 ack | 前三轮：`_daMissRounds` 1→3、条留容器、`report` 未释放、注入计数不变；第 4 轮覆盖 ⇒ 销账 |
+| T-DA22 | 错误·未签收上限升级（空轮径） | 直驱：连置 4 次 `output == null` | 第 4 次后离容器入 `_unsettledDigests`（`missRounds = 4`）+ 终局披露恰一次 + 恰一条提醒（轮数 = 4）+ 恰一条 `ev:unsettled`；此后零注入 |
+| T-DA23 | 错误·未签收上限升级（混轮径）与披露形态 | 直驱：空 → 非空未 ack → 空 → 非空未 ack（第 4 个未签收轮） | 第 4 轮后升级（`missRounds = 4`，同一条上限——不另设第二计数）：终局披露**按 role 与首投同分流**（本夹具 role = `subagent` ⇒ `injectAsyncResult`；`consult` ⇒ `injectConsultResult`）恰一次 ⇒ 该报告在 `history` 中出现恰 2 次（首投 + 披露）；提醒 + 事件各一；此后零注入 |
 
-**用例宿主**：核侧（T-DA1–T-DA10 · T-DA12–T-DA14）→ 核侧单元测试档（408 行）；出口缝（T-DA15 / T-DA16）→ 出口缝单元测试档（165 行——纯搬移）；端侧（T-DA11）→ 各端单元测试用例（CLI 记录痕行 ∥ 桌面帧 + 行元素 ∥ VSC 消息 + 行元素——沿各端单元测试惯例）。
-窗收正四例（T-DA17–T-DA20——含 ★ 红绿对）→ 取件窗收正单元测试档（已落——自持）。
+**用例宿主**：
+
+- 核侧（T-DA1–T-DA10 · T-DA12–T-DA14）→ 核侧单元测试档（408 行）。
+- 出口缝（T-DA15 / T-DA16）→ 出口缝单元测试档（165 行——纯搬移）。
+- 端侧（T-DA11）→ 各端单元测试用例（CLI 记录痕行 ∥ 桌面帧 + 行元素 ∥ VSC 消息 + 行元素——沿各端单元测试惯例）。
+- 窗收正四例（T-DA17–T-DA20——含 ★ 红绿对）→ 取件窗收正单元测试档（已落——自持）。
+- 未签收轮数四例（T-DA21–T-DA24，含披露错误径）→ 本批开发期单元测试档（核包 ⇒ 按上条例外落 `docs/batches/`，随批收口删除）；长期验收由集成用例 18-1 承接（`test/RTM.md`——常驻）。
 
 #### 6.31.11 验收标准（逐条回指）
 
 | # | 验收点 | 判据 |
 |---|---|---|
-| A-DA1 | 清算后移（F-DA1） | 投递后条目仍在 `_pendingAsyncResults`（`_daDelivered=true`）；覆盖才离容器；未覆盖留容器 + `_daRetry`；归档时点（起跑窗）行为零变（端面帧序同拍） |
+| A-DA1 | 清算后移（F-DA1） | 投递后条目仍在 `_pendingAsyncResults`（`_daDelivered=true`）；覆盖才离容器；未覆盖留容器（`_daMissRounds += 1`）且零重投；归档时点（起跑窗）行为零变（端面帧序同拍） |
 | A-DA2 | 账目机检（F-DA2） | 解析器判据逐条（标记 + id 词界；无标记 / 无 id 不计；部分覆盖 ⇒ 部分销账）；零工具轮可满足（纯文本判据） |
-| A-DA3 | 重投上限与升级（F-DA3） | 重投 ≤2（总投递 ≤3）；三轮未覆盖 ⇒ 升级（离容器 + `_unsettledDigests` + 恰一条提醒 + 恰一条 `ev:unsettled`）；升级后零自动重投 |
+| A-DA3 | 投递恒一次与未签收升级（F-DA3） | 每条报告投递恰 1 次（`_daDelivered` 置后零注入；注入抛错条于下一系统轮再试一次（注入失败重试，不属投递回路）；未签收轮数达 `DA_MISS_LIMIT = 4` ⇒ 升级 = 离容器 + `_unsettledDigests` + 终局披露恰一次 + 恰一条提醒 + 恰一条 `ev:unsettled`；升级后零注入 |
+| A-DA9 | 空回合与未签收轮数（F-DA3） | 空回合（`output == null`）按未签收判（`_daMissRounds += 1`、零投递）；有输出未签收同判；两径同一上限 4（不另设第二计数）；用例 = T-DA21 ∥ T-DA22 ∥ T-DA23 |
+| A-DA10 | 升级披露的错误径（F-DA3） | 披露抛错（注入器 I/O 失败）⇒ 该条仍在 `_unsettledDigests`、提醒仍恰一条、`unsettledCount = 0`、披露失败留痕恰一条；余下条目照常判定（pass 不中断）；`_inAutoTurn === false` 与 guard 快照照落（无 `finally` 抛错）；用例 = T-DA24 |
 | A-DA4 | 未清算可见化（F-DA4） | status `unsettled` 段三态行在；三端残余行键文同源（`digest.residue`）；升级提醒三端同源；单查 id 落账本同解析 |
 | A-DA5 | 结束信号缺席（F-DA5） | 四 transport 归一逐条；缺席（clean ∧ ¬partial）⇒ 提醒恰一条 + `ev:finish-missing` 恰一条；partial ⇒ 零提醒；既有异常处理零变 |
 | A-DA6 | 空停（F-DA6） | 纯空白 ⇒ 空响应支（≤2）后抛；非空半句零触；重试预算 / 文案零变 |
@@ -1116,7 +963,7 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 #### 6.31.12 边界（不做）
 
 1. 非空半句 `stop` 检测（信号层不可分辨——已知边界）；模型层（无抓手）。
-2. 无挂起会话面（headless / 直连 `runAgent`）不建重投回路——fallback = 缺省条逐字沿用（一发注入，结果不丢）+ `_daDelivered` 条跳过且留容器（防重复；#45 落码终态）；**边界（非缺陷）**：fallback 跳过条在纯 fallback 进程内无离容器路径 ∥ `_daRetry` 在 fallback 不兑现（与 `shouldDeliverEntry` 不对称）。
+2. 无挂起会话面（headless / 直连 `runAgent`）不建重投回路——fallback = 缺省条逐字沿用（一发注入，结果不丢）+ `_daDelivered` 条跳过且留容器（防重复；#45 落码终态）；**边界（非缺陷）**：fallback 跳过条在纯 fallback 进程内无离容器路径。
 3. 不新造独立查询工具面（可见 = 既有 status / 会话行 / 消化行族）；不新造 `⟦ev⟧` 面板事件（块面零改）。
 4. 不改归档时点 / 用户输入优先 / `maxTurns` 预算 / 注入格式与 digest 预算语义；不做处理质量机检。
 5. 多实现面纪律：判据同源（核单件），端差 = 显示载体（登记于 §6.31.6）；载体字段入册（`_unsettledDigests` ∕ `_daSession`——核 §2.3 13 ⇒ 15 款 ∥ VSC 端壳表 14 ⇒ 16 款；AGENT-LOOP.md §2.3 同拍）；`_lastRunOutput` = run 内落痕（不属字段集——§6.31.5）。
@@ -1129,13 +976,14 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 | KD-DA1 | 账目 = 模型文本标记 + 机检覆盖 | — |
 | KD-DA2 | 见账落点 = `finalizeAgentTurn`（消化轮收尾） | — |
 | KD-DA3 | 输出取件 = 本 run 内逐轮累积落痕（父字段 ∥ 载体吸收读；会话态门） | — |
-| KD-DA4 | 重投上限 N = 2（总投递 ≤3） | — |
+| KD-DA4 | 投递恒一次——每条报告只注入一次（无重投回路） | 反复重投把「父侧这一回合没产出正文」误判成「读了却没签收」，一个空回合就多推一遍；而空回合在推理负载最高时最密集 ⇒ 放大集中在最忙的窗口。未签收的后续动作 = 升级终局披露一次（KD-DA11） |
 | KD-DA5 | 升级 = 离容器入 `_unsettledDigests` + 提醒 + 事件 | — |
 | KD-DA6 | 账目要求 = 独立核常量行（两档同发 + id 清单） | — |
 | KD-DA7 | 报告保留至销账（`releaseChildHold`） | **推翻 `docs/core/design/AGENT-LOOP.md` §7 D-AL23**（会话态一截——原位注记同拍） |
-| KD-DA8 | 用户回合投递不销账（重投门控仅消化轮） | — |
+| KD-DA8 | 用户回合投递不销账（投递门 = 系统轮；账目判读只属消化轮） | — |
 | KD-DA9 | F-DA5 = transport 归一 + 缺席同面（提醒 + 留痕） | — |
 | KD-DA10 | F-DA6 = 空白判加宽（既有重试 / 抛错零改） | — |
+| KD-DA11 | 未签收上限 = `DA_MISS_LIMIT = 4` + 升级终局披露 | 上限依据 = 「连空 3 轮报告仍须在容器、第 4 轮补签仍能销账」 + 1 轮余量（不取观测值——受修前上限删失）；空回合与有输出未签收同一计数（无重投可豁免、无问责语义）。披露 = 升级时以首投同一投递形再注入一次；结构上至多一次（升级即离容器），代价 = 每条未签收件多一次注入，换来长报告正文不只靠 400 字符 preview 被看见 |
 
 ## 6.34 主会话异步投递与消化——两种时点（用户裁定）
 
@@ -1166,13 +1014,13 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 
 **续跑段（`resume`）「轮首」口径（登记）**：轮首 = **每段起跑窗 ∥ 段内 `turn === 0`**——`resume` 段（撞帽续跑）重开一次轮首窗；该重开**发生在系统轮内**（续跑链逐段同 `autoTurn` 旗）、**不回用户回合**（用户回合段判据照旧零放行——I1 不破）。
 
-### 6.34.2 逐径改法（现状七行 · as-of 2026-10-12 实读）
+### 6.34.2 逐径改法（现状七行）
 
 | # | 件 | 现投递点（坐标） | 改法 / 保持（落点） |
 |---|---|---|---|
 | 1 | 用户排队消息 | 步边界——`thincoder-core/agent/turn-loop.mjs:112`（`consumeQueuedInput`；用户回合） | **保持**（「非消化轮」门控明文化 = 回调仅 `autoTurn !== true` 传参——消化轮 / 系统轮不传；三端传参面既有分流零改） |
 | 2 | 子上行 | 步边界——`thincoder-core/agent/turn-loop.mjs:108`（`drainChildUpstream`——每轮每步） | **改**：收窄「交付轮轮首」（`turn === 0` ∧ `autoTurn`；驱动面）——用户回合零 drain；ask 唤醒面（`wakeAsyncWaiters` + `upstreamWaiting`）保持（唤醒轮 = 交付轮）；note 不唤醒 + 留队至下一交付轮（开轮源 = settle digest / ask / timer；残面见附注）；回退面（`!suspDriven`）逐字保持 |
-| 3 | 结算报告族 | 下一回合起跑前——`thincoder-core/agent/run-start.mjs:39-64`（`shouldDeliverEntry` 首投任意回合） | **改**：首投收窄**仅系统轮**（`autoTurn`）——用户回合零注入；重投（`_daRetry`）仅消化轮保持；注入后留容器（§6.31 投递账）零改；非会话态支（fallback）零改 |
+| 3 | 结算报告族 | 下一回合起跑前——`thincoder-core/agent/run-start.mjs:39-64`（`shouldDeliverEntry` 首投任意回合） | **改**：首投收窄**仅系统轮**（`autoTurn`）——用户回合零注入；首投后恒不再注入（§6.31 投递恒一次——重投退场）；注入后留容器（§6.31 投递账）零改；非会话态支（fallback）零改 |
 | 4 | 异步工具调用返回 | 入同容器按 role 分发（停靠 `thincoder-core/agent-tools/bash-async.mjs:208` ∥ `browser-async.mjs:149`；注入器 `:231` ∥ `:162`）⇒ 随结算族时点 | **改 = 随结算族**（同容器同门控——零独立时点；注入器内容形态零改） |
 | 5 | timer（在飞） | 工具轮收尾（步边界）——`thincoder-core/agent/post-turn.mjs:21` | **改**：驱动面 ∧ `timerWakeEnabled` ⇒ 不再于工具轮收尾注入（到期件留在途零出列）；交付交空闲面（挂起窗第三兑现态 ∥ 前台空闲闩——均既有）；开关关 ∨ 回退面 ⇒ 逐字保持（§6.30.3③ 承诺对齐） |
 | 6 | 待发提醒 | 起跑窗（`thincoder-core/agent/setup.mjs:187-192`）∥ 工具轮收尾——`post-turn.mjs:24-29` | **保持**（读法登记 = KD-AD5——非异步件族：工具效应第二半（`eng` / `plan` / `skill`）+ 命令 / 生命周期提示（`/auto` · MCP 警告 · 会话恢复）；不属本口径（用户口径无此项）；不涉，保持现状） |
@@ -1184,7 +1032,7 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 
 - **① 未投递结果遇上用户新回合（不塞、等空闲）**：裁定 = I1——用户回合起跑窗不注入（首投门改系统轮）、轮内零 drain；未投条目**留容器**（§6.31 投递账：`_daDelivered` 未置 ⇒ 仍首投候选）；用户回合结束 ⇒ 会话回窗口 / 空闲面 ⇒ 交付轮投递。用户连续排队（多回合链）⇒ 逐条先消费（D-S5 输入优先），异步件等链尾——**不新增丢件通道**（F-AD4 边界逐字）。
 - **② 空闲判定竞态（会话刚空闲 vs 新消息刚到）**：裁定 = I4 先到先得——判据点（窗口步骤 2 决策 ∥ 闩 fire 决策）以当刻为准；判定后到达的用户输入按 busy 语义入队、交付轮跑完后消费（不打断——「非中断」语义同族）；反方向（输入先到）⇒ 输入回合先跑、异步件等之。两向均有既有载体（`pendingInput` / `state.queue`——容量 8），零新机制。
-- **③ 空闲投递后与 §4.15 销账的关系（全保）**：裁定 = 投递 ≠ 销账（§6.31 F-DA1 不变）——空闲投递改变的是**注入时点**；账目判读仍落**消化轮收尾**（§6.31.3「注入回合条件」零改）；重投（仅消化轮）、上限 ≤2、升级账本、中止清场、退出清场过滤（`_daDelivered` 跳过留容器）逐条零改；空闲投递至非消化系统轮（上行轮 / timer 轮）的条目 = 已投未销（下一消化轮补账）——与既有「首投任意回合」的账目语义同构（收窄点 = 用户回合不再首投）。
+- **③ 空闲投递后与 §4.15 销账的关系（全保）**：裁定 = 投递 ≠ 销账（§6.31 F-DA1 不变）——空闲投递改变的是**注入时点**；账目判读仍落**消化轮收尾**（§6.31.3「注入回合条件」零改）；投递恒一次（无重投）、未签收上限 4 与升级终局披露、升级账本、中止清场、退出清场过滤（`_daDelivered` 跳过留容器）逐条零改；空闲投递至非消化系统轮（上行轮 / timer 轮）的条目 = 已投未销（下一消化轮补账）——与既有「首投任意回合」的账目语义同构（收窄点 = 用户回合不再首投）。
 
 ### 6.34.4 无界面径机械处置（headless ∥ ACP ∥ 直连 `runAgent` ∥ 子代理自跑）
 
@@ -1212,7 +1060,7 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 | T-AD1 | **对照①·步边界不投子上行** | 驱动面（`suspDriven:true`）用户回合 ≥2 步；首步后 `pushChildUpstream({kind:"note"})`；该轮开轮源 = 交付轮（settle digest / ask / timer 任一——本用例取在途 timer 到期，假 timer 开 timer 轮，§6.30.7 假钟惯例）；核 `startSuspension` 假 `runTurn` 直驱 | 次步起跑前：队列仍 1 条 ∧ history 零注入；回合后交付轮轮首：恰注入一批、队列清零 |
 | T-AD2 | **对照②·空闲才投结算件** | 会话态（`_daSession`）pending 一条未投；用户回合起跑（`autoTurn:false`） | run-start 零注入 ∧ `_daDelivered` 未置 ∧ 留容器；随后系统轮（`autoTurn:true`）起跑 ⇒ 恰注入一次 + `_daDelivered=true` + 留容器（投递 ≠ 销账） |
 | T-AD3 | 正常·空闲面正径 | 挂起窗（无 `pendingInput`）+ settle ⇒ 交付轮 | 唤醒 ⇒ 交付轮开（谓词 `pendingN > 0`）⇒ 轮首注入恰一次 |
-| T-AD4 | 边界·投递后销账关系 | T-AD2 后消化轮账目覆盖 ∥ 未覆盖 | 覆盖 ⇒ 离容器销账；未覆盖 ⇒ `_daFailures + 1`、重投仅消化轮（§6.31 回路逐条同） |
+| T-AD4 | 边界·投递后销账关系 | T-AD2 后消化轮账目覆盖 ∥ 未覆盖 | 覆盖 ⇒ 离容器销账；未覆盖 ⇒ `_daMissRounds += 1`、零注入（§6.31.5 逐条同） |
 | T-AD5 | 边界·竞态 | 交付轮开启后用户 Enter | 输入入 `pendingInput`（窗口）/ 队列（前台）恰一条；交付轮零中断；轮后消费该输入；零丢 |
 | T-AD6 | 边界·timer 在飞改法 | 驱动面 + `timerWake:true`：到期于工具轮 | 零注入 ∧ 在途不动；链尾空闲 ⇒ 闩 fire ⇒ 交付恰一次 + timer 轮恰一次 |
 | T-AD7 | 边界·timer 回退 | `timerWake:false` ∥ `!suspDriven` 面到期 | 工具轮收尾注入逐字保持（既有语义） |
@@ -1226,23 +1074,9 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 | A-AD2 | 七行逐行有改法或「保持」（§6.34.2 表——每行带坐标） | F-AD5 |
 | A-AD3 | 用户回合零异步（正对照 T-AD1 ∥ T-AD2；负控 = T-AD8） | F-AD2 / F-AD4 |
 | A-AD4 | 空闲投递成立（T-AD3；窗 ∥ 闩两面） | F-AD3 / N1 |
-| A-AD5 | §4.15 全保（T-AD4；账目 / 重投 / 升级 / 清场逐条零改——引 §6.31） | N2 |
+| A-AD5 | §4.15 全保（T-AD4；账目 / 升级 / 清场逐条零改——引 §6.31） | N2 |
 | A-AD6 | 端差异零增（核单点收窄 = run-start 门 ∥ drain 门 ∥ post-turn 门三处；端侧零改） | N3 |
 | A-AD7 | 机检零新增：`node scripts/doc-check.mjs --root .` 对比开工基线（悬空 / 行宽逐档零新增） | 批档自身约束 |
-
-### 6.34.8 受影响文件清单（R24a——实施轮预算；行数口径 = **内容行数**（`wc -l` 同口径——读取工具显示值 +1；§6.20.4）；as-of 2026-10-12 实读 ∥ 2026-10-13 fix 轮复核）
-
-| 文件 | 现行行数 | 预计增量 | 说明 |
-|---|---|---|---|
-| `thincoder-core/agent/run-start.mjs` | 实读 158 | +2/−1 | 会话态投递门控增系统轮判据（`shouldDeliverEntry` 调用点 `:45-49`） |
-| `thincoder-core/agent/digest-account.mjs` | 实读 189 | ±3 | `shouldDeliverEntry` 谓词：首投仅系统轮（调用签名 +1 参）；≤500 ⇒ 无需拆分计划 |
-| `thincoder-core/agent/turn-loop.mjs` | 实读 275 | +2/−1 | drain 门（`turn === 0` ∧ `autoTurn` ∥ `!suspDriven` 保持——`:108`）+ `injectPostTurn` 透传（`:263`） |
-| `thincoder-core/agent/post-turn.mjs` | 实读 70 | +3/−1 | timer 注入门（`suspDriven ∧ timerWakeEnabled` ⇒ 跳过——`:21`；`timerWakeEnabled` 取用 `timers.mjs:112`） |
-| 端侧（CLI / VSC / 桌面） | — | 0 | 零改（核单点收窄；pickup 分流与 timer 空闲 / 窗两面既有） |
-| 单元测试档（已落） | — | 新档 ≈180–240 | T-AD1–T-AD8 宿主 |
-| 文档：`docs/core/design/AGENT-LOOP-ASYNC-POOL.md`（本档——§6.34 ∥ §6.8 ∥ §6.30 ∥ §6.31.4） | **1417**（现读——内容口径） | +≈140（§6.34 新增 + 收正句；终值已复读） | §6.34 新增 + 收正点清单（拆分去向按既有挂债口径不另议） |
-| 文档：`docs/core/design/AGENT-LOOP-UPSTREAM.md`（§6.27） | 1396（现读——内容口径） | +≈2–4（收正句（多为句内替换）；本收正轮 +2——实施轮终值随收口回填） | 收正点清单（§6.34.5） |
-| 文档：`docs/core/design/AGENT-LOOP.md`（§6.2） | 659（现读——内容口径） | +≈1–3（§6.2 收正句） | 收正点清单（§6.34.5） |
 
 ### 6.34.9 关键决策记录（KD-AD）
 
@@ -1250,7 +1084,7 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 |---|---|---|---|
 | KD-AD1 | 「空闲」判据 = 复用既有谓词（闩守卫 ∥ driver 步骤序） | 采纳 | 零新谓词 / 零端迁移 |
 | KD-AD2 | 异步投递 = 交付轮**轮首**（起跑窗 + 首步 drain） | 采纳 | 「空闲时投递」本相 |
-| KD-AD3 | 用户回合零异步（首投门 = 系统轮） | 采纳 | F-AD4 本相；重投仍仅消化轮（账务耦合——§6.31.4 零改） |
+| KD-AD3 | 用户回合零异步（首投门 = 系统轮） | 采纳 | F-AD4 本相；账务耦合面 = §6.31.4 投递门 + §6.31.5 升级支（首投门零改） |
 | KD-AD4 | 回退面（`!suspDriven`）= 逐字保持 | 采纳 | 无空闲面 ⇒ 保留既有投递点（不丢件兜底）；「不向用户扩面」（F-AD1 边界②） |
 | KD-AD5 | 提醒族 = 保持 | 采纳 | 非异步件族——不属本口径（用户口径无此项）；不涉，保持现状（细则 = §6.34.2 行 6） |
 | KD-AD6 | timer 开关关 ⇒ 回退面语义保持 | 采纳 | 与 §6.30.3③「关 ⇒ 回到仅回合边界投递」承诺对齐（门 = `suspDriven ∧ timerWakeEnabled`） |
@@ -1258,9 +1092,9 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 
 ### 6.34.10 边界（不做）
 
-1. **实现**：实施轮落（受影响文件 = §6.34.8；用例 = §6.34.6 T-AD1–T-AD8）。
+1. **实现**：实施轮落（用例 = §6.34.6 T-AD1–T-AD8）。
 2. 提示词面 / 工具描述 / 注入文本逐字（除 §6.34.5 候父侧两项）；端侧零改。
-3. §4.15 账务机制（判据 / 重投 / 升级 / 清场——逐条零改；仅引）。
+3. §4.15 账务机制（判据 / 升级 / 清场——逐条零改；仅引）。
 4. 新唤醒面（零新造——唤醒源族保持：settle / ask / 用户输入 / timer）。
 5. 提醒族迁移——非异步件族，不属本口径（用户口径无此项）；不涉，保持现状。
 6. 父→子 `send` 面；子代理自跑面。

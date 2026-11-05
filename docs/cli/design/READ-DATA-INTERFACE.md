@@ -120,7 +120,7 @@ thincoder ledger list --json [--full] [--family] [--cwd <dir>]
 | 方法 | params | result | 错误 |
 |---|---|---|---|
 | `ledger/list` | `{ cwd?, family?, full? }` | `{ projects: [...] }`（与 CLI 载荷逐字同形） | `-32602` INVALID_PARAMS（`cwd` 非字符串 / `family`·`full` 非布尔 / 解析类错误转述） |
-| `ledger/count` | `{ cwd? }` | `{ count, overdue, evidenceOversize }`（单源 = 核 `ledgerCount` 对象直传——未决四态计数 + 出口面 `overdue` + `evidence` 超限行数；处理器零包装） | 同上 |
+| `ledger/count` | `{ cwd? }` | `{ count, overdue, evidenceTooLong }`（单源 = 核 `ledgerCount` 对象直传——未决四态计数 + 出口面 `overdue` + `evidence` 文字太长行数；处理器零包装） | 同上 |
 | `batch/list` | `{ cwd? }` | `{ batches: [ { file, path, sections } ] }` | 同上 |
 
 - `sections` = `{ "§1" … "§6" }` 映射：`§1`–`§3` / `§5` = 已识别关键词 ∥ null；`§4` / `§6` = 字面 `无状态词`（§2.5）。
@@ -146,32 +146,6 @@ thincoder ledger list --json [--full] [--family] [--cwd <dir>]
 | `thincoder-core/agent-tools/batch-lifecycle.mjs` | `collectMarkdownFiles` 转导出（零行为变） |
 | `thincoder-core/agent-tools/batch-read.mjs` | `listBatchRecords` |
 | `thincoder-cli/src/acp/read-data.mjs` | `createReadDataHandlers` · `WATCH_INTERVAL_MS` |
-
-## 4. 受影响文件与行数预算
-
-Δ = 预期增量；模块 = M 族归属（L7 取数面——非 M 族标 `—`）。
-
-| 文件 | 模块 | 现行 | Δ | 预算 | 改动点 |
-|---|---|---|---|---|---|
-| `thincoder-core/ledger-db.mjs` | M2 | 134 | +31 | ~165 | `openLedger:108` 增 readOnly 态 + items 探针 + 常量 + 落标 |
-| `thincoder-core/ledger-cmd.mjs` | M2 | 140 | +4 | ~144 | `:21` / `:34` 两读点切只读 |
-| `thincoder-core/ledger-read.mjs` | M2 | — | ~150 | ≤300 | 序列化 + 三口径 + `runLedgerList` |
-| `thincoder-core/agent-tools/batch-skeleton.mjs` | M3 | 174 | +22 | ~196 | `:113` 邻位增 `readSectionStatusWord` |
-| `thincoder-core/agent-tools/batch-read.mjs` | M3 | — | ~90 | ≤300 | 记录列举 + sections 组装 |
-| `thincoder-core/agent-tools/batch-lifecycle.mjs` | M3 | 332 | 0 | 332 | `:62` 收集器转导出（零增） |
-| `thincoder-core/ledger.mjs` | M2 | 241 | 0 | 241 | 零编辑——只 import `discoverFamily`（§5 D-11） |
-| `thincoder-cli/src/acp/read-data.mjs` | — | — | ~150 | ≤300 | 三方法 + 观察器 |
-| `thincoder-cli/src/acp.mjs` | — | 143 | +13 | ~156 | `:116-122` 工厂接线 + watcher 出参 + 启动 |
-| `thincoder-cli/src/command-table.mjs` | — | 185 | +8 | ~193 | `:154` 分支 + `:162` usage 行 |
-| `thincoder-cli/src/completions.mjs` | — | 140 | +6 | ~146 | 三套脚本 `list` 词（`:26` / `:73` / `:136`） |
-| `thincoder-cli/bin/thincoder.mjs` | — | 178 | +3 | ~181 | `:137` 邻位 USAGE 两行 |
-
-| `docs/README.md` | — | ≈154 | 0 | ≈154 | §1 计数收正 + 变更记录 |
-| `docs/cli/design/CLI-ENTRY.md` | — | 80 | +3 | ~83 | §2 行 + 变更记录 |
-| `docs/cli/design/ACP-CLIENT.md` | — | 650 | +9 | ~659 | §2.1 / §2.2 行 + §3 枚举（`:76` ∥ `:84` 五 handler 模块，+ `thincoder-cli/src/acp/read-data.mjs`）+ §3.5 模块表（+ 行）+ 变更记录 |
-| `docs/core/design/LEDGER.md` | M2 | 509 | +~6 | 515 | §2 / §7.1 登记 |
-
-**L7 复核（模块数——口径 = `docs/core/design/BATCH-RECORD.md` §5.1）：** 模块列去重 = **2**（M2 台账 SQLite ∥ M3 批次档生命周期）≤ 2——不拆批。
 
 ## 5. 关键决策记录（含被否）
 
@@ -217,7 +191,7 @@ thincoder ledger list --json [--full] [--family] [--cwd <dir>]
 | RDI-4 | 边界 | (a) 旧库（旧 DDL——缺 executor、无 user_version）+ 读前读后哈希；(b) 无库项目读后仍无库；(c) 旧库 `schemaVersion` 读 = 0；(d) 写面开库后 = 2；(e) 文件在盘但非台账库（SQLite 可开、无 `items` 表） | 哈希等 ∥ 无新档 ∥ 0 ∥ 2 ∥ `projects: []` ∧ 文件零改 | 现行读即 DDL / ALTER |
 | RDI-5 | 正常 | 容器 + 双项目（A 2 行 ∥ B 3 行 + 无库兄弟）；读 A ∥ `--cwd B` ∥ `--family` | 单范围各出自身 ∥ family = 发现序逐项（对拍 `discoverFamily`）+ 无库兄弟不出项 | 命令不存在 |
 | RDI-6 | 边界 | 空容器 `--family` ∥ 族内混不可读库 | `{"projects":[]}` ∥ 不可读跳过 | 命令不存在 |
-| RDI-7 | 正常 | 同夹具：CLI 载荷 vs ACP `ledger/list` ∥ `ledger/count` ∥ `batch/list` | 深等 ∥ `count` = 核 `ledgerCount` 对象形（三键 `{ count, overdue, evidenceOversize }`——非 `{ count: <number> }` 单键包装） ∥ batches 形 | 方法不存在 |
+| RDI-7 | 正常 | 同夹具：CLI 载荷 vs ACP `ledger/list` ∥ `ledger/count` ∥ `batch/list` | 深等 ∥ `count` = 核 `ledgerCount` 对象形（三键 `{ count, overdue, evidenceTooLong }`——非 `{ count: <number> }` 单键包装） ∥ batches 形 | 方法不存在 |
 | RDI-8 | 正常 | 批基底夹具：全骨架档（§1 进行中 · §2 设计完成）∥ 无状态行档 ∥ 嵌套档 | sections 逐段对拍：§1–§3 / §5 关键词 ∥ null ∥ §4 / §6 = `无状态词` ∥ 嵌套档在列 | 方法不存在 |
 | RDI-9 | 正常 | `watcher.check()` 基线 → 核写一行 → check；再改批次档 → check；静默轮 → check | 基线静默 ∥ `ledger/changed` ∥ `batch/changed` ∥ 零新增（params `{cwd}`） | 观察器不存在 |
 | RDI-10 | 错误 | `ledger list`（缺 `--json`）∥ `--bogus` | exit 1 + usage（stderr） | 命令不存在 |

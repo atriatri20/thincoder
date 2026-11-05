@@ -37,12 +37,13 @@
 |---|---|---|---|
 | **引-1** | 已迁入基准层的档 | 裸名 + 节号（同部分**同层**）∥ **带层前缀**（同部分跨层，`design/<X>.md §N` / `requirements/<X>.md §N`——承 `DOC-SYSTEM` §7 R2）∥ 仓根相对全路径（跨部分） | V1 解析（按 basename，域内）；V5-A 排除式 5① 让给 V1 |
 | **引-2** | **仍在产品树**的档（未迁） | `名称（VSC 侧）§N`（去 `.md` 去路径——承 `docs/README.md` §2 现状口径）；需给可解析路径时用 `` `thincoder-vscode/docs/...`（VSC 侧） `` | V1 不入判（无 `.md`）；V5-A 路径形态按仓根解析命中 |
-| **引-3** | 代码坐标 | 仓根相对路径 + `:行`（如 `thincoder-vscode/webview/ui.js:445`） | V5-A 按仓根解析（`resolveFile` 候选①）——**产品树相对写法迁出后即失效**，故一律改写 |
+| **引-3** | 代码坐标 | 仓根相对路径 + **符号名**（函数 / 常量 / 导出名——如 `thincoder-vscode/webview/ui.js` 的 `<函数名>`；不写行号） | V5-A 按仓根解析（`resolveFile` 候选①）——**产品树相对写法迁出后即失效**，故一律改写 |
 
 ### 1.4 权威性与维护（B 式的代价处置）
 
 迁移完成后：**基准层活档 = 权威**；产品树旧档 = **参照历史**（保留 ≠ 维护——`docs/README.md` §2）。同一话题在两者同时存在期间，**以基准层为准**；旧档不参与内容同步（「不逐字一致、不加跨面同步依赖」——多实现面纪律）。
-**归档形态（现状）**：`thincoder-vscode/docs/**` 已 `git mv` 入 `thincoder-vscode/docs/_archive/<原相对路径>`（恒等映射 · 正文一字未改）——参照历史可查 · 迁入即出机检源域；方案 = `docs/core/design/DOC-MIGRATION.md` §10。
+
+**归档形态（现状）**：`thincoder-vscode/docs/**` 已 `git mv` 入 `thincoder-vscode/docs/_archive/<原相对路径>`（恒等映射 · 正文一字未改）——参照历史可查 · 迁入即出机检源域；方案 = `docs/core/design/DOC-SYSTEM.md` §5.1（归属判据 P1–P5——归档形态即“参照历史”这一归属的落地）。
 
 ## 2. 分批计划（批序 · 每批 ≤6 档 · 写域）
 
@@ -54,7 +55,7 @@
 | **批 4** | 统一面**纯新建**（落笔时核层无同话题档者） | 6 | `docs/core/{design,requirements}/{DOC-CODE-RECONCILE,AGENT-PARAMS,NORMAL-MODE,MULTI-INSTANCE-COLLAB,SETTINGS-TOOL,STRUCTURE-DEBT}.md` | `docs/core/**` | **已落** |
 | **批 5** | §8A 剩余纯新建（5 档——ADVISOR-CONVERGENCE 翻转跳过 · PROJECT 拆分双落）+ 本档拆分 | 6 | `docs/core/requirements/{DESIGN-TOKEN-SETTLEMENT,ENG-TOKEN-BINDING,PORTABILITY,VERIFY-REDESIGN,PROJECT}.md` · `docs/vsc/requirements/PROJECT.md` | 新建 core 需求档 + `docs/vsc/**` | **已落** |
 | **批 6+** | §8B 并入清单 **26 条**（转并入既有面）+ 待裁 D1–D3 定判后处置 | 26+ | 逐条给定（清单面已收口） | `docs/core/**`（+ 待裁项 `docs/vsc/**`） | **已落** |
-| **收尾批** | 产品树两份地图（`design/README.md` · `requirements/README.md`）随树降格处置 | 2 | —— | 父侧 | 待排（地图处置仍待父侧） |
+| **收尾批** | 产品树两份地图（设计树 · 需求树各一份）随树降格处置 | 2 | —— | 父侧 | 待排（地图处置仍待父侧） |
 
 ## 3. 判据缺口（登记）
 

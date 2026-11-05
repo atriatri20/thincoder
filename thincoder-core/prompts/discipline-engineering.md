@@ -25,27 +25,25 @@ Why: treating an old conclusion as a standing ruling keeps a rule alive on a dea
 **Premise invalidated mid-flight**: when the premise you are executing on turns out false (the code contradicts the design / the task book), send an upstream `ask` (notify_parent).
 Why: finishing the wrong work delivers a whole round on a false premise, and the terminal report arrives too late for anyone to rule on it.
 
-## Change-face routing (doc face ∥ engineering-tools face ∥ product-code face)
+## Change-face routing (doc face ∥ product face)
 
-Judge the **change face** before acting — different faces, different authorization paths:
+Judge the **change face** before acting — two faces, two authorization paths:
 
 | Change face | Domain | Authorization path |
 |---|---|---|
-| **Doc face** | `docs/**` (requirements / design / batch / ledger) | Routing per the D1 matrix |
-| **Engineering-tools face** | `scripts/**` · `test/**`/`tests/**` · `.thincoder/tmp/**` · tool-config · CI · lockfiles | **a mechanical change** ⇒ direct edit (no spawn/designToken) + gate prevails + explicit commit; **a non-mechanical change ⇒ still goes through design** |
-| **Product-code face** | **default face** — every path not in the other two faces (fail-closed; incl. **product-text face**) | Requirements → Design → Review → eng-coder (full flow; token gate) |
+| **Doc face** | the paths declared under the manifest `docRoot` keys (requirements / specs / design / modules / batches) + the project manifest itself (`PROJECT-MANIFEST.json`, the project state file) | Routing per the D1 matrix |
+| **Product face** | **default face** — every path not in the doc face: `scripts/**` · `test/**` · `.thincoder/**` · `.github/**` · `package-lock.json` · the product-text face · everything else (fail-closed) | Requirements → Design → Review → eng-coder (full flow; token gate) |
 
-- **Default classification (fills the enumeration gap)**: any path not listed under the engineering-tools and doc faces is treated as **product-code face** (fail-closed).
+面判定机器单源 = thincoder-core/agent/write-face.mjs；本表与本行同义，冲突时以该档判据为准。
+
+- **Default classification**: any path not inside a declared document root is the **product face** — the path itself decides, with no "cannot tell which face" branch.
   Why: prefer walking the process — a misjudged direct edit skips the write gate and the review, and that round leaves no way back, while the conservative reading costs one extra process.
-- **The product-text face** (outward-facing text inside the product repo: `README.md` / `package.json` / release manifests / product `AGENTS.md`) **is singled out for a reason**.
-  Why: it is the shipped artifact, a user-visible external contract — **not** engineering-tools face.
-- **Two hard constraints on direct engineering-tools edits**: ① a mechanical change ⇒ direct edit + **actually run it and report the reading**; ② any direct edit ⇒ report it as "parent direct execution" + single-commit revertable.
-**Mechanical change** = one that does not alter judgment semantics.
-**One that alters judgment semantics still goes through design** — extracting a predicate / a threshold / what counts as a violation is not on the direct-edit face.
-- **Authorization criterion ≠ gate bypass**: the routing gives you an **authorization criterion**; the gate (token gate / product-code write gate — implementation location per project declaration) **prevails**.
+- **The product-text face** (outward-facing text inside the product repo: `README.md` / `package.json` / release manifests / product `AGENTS.md`) **is part of the product face**.
+  Why: it is the shipped artifact, a user-visible external contract — not a document root.
+- **Authorization criterion ≠ gate bypass**: the routing gives you an **authorization criterion**; the gate (token gate / product write gate — implementation location per project declaration) **prevails**.
   When they disagree ⇒ **stop and report**.
   Why: pressing the routing against the gate only turns the gate off.
-- **Judgment line**: paths not in the enumeration ⇒ full flow as product-code face (fail-closed); mechanical engineering-tools edits ⇒ direct edit + run + report "parent direct execution"; **a non-mechanical change (one that alters judgment semantics) ⇒ still goes through design**.
+- **Judgment line**: paths not in the doc face ⇒ full flow as the product face (fail-closed).
 
 ## Basic flow (four steps, in order)
 1. **Requirements** — discuss what's wanted until clear, land it in the requirements doc, confirm, then move on. The requirements doc (project requirements + function specs) is organized by **five elements**:
@@ -77,6 +75,8 @@ Judge the **change face** before acting — different faces, different authoriza
      - `existing: <coordinate> · name: "<verbatim>" · consumers: <who>` ⇒ **use the existing piece** (name copied verbatim, component reused, endpoint connected).
      - `none found: <which surfaces were checked>` — only a checked absence earns a new build; a missing line = "not checked", not "checked, none found".
      - `existing but unusable: <coordinate> · name: "<verbatim>" · failed on: <the capability ∥ contract failure>`.
+     Before an `existing:` answer is used, check that what it names is still there: a coordinate ∥ a doc section holds only while it exists — a path that no longer exists is an old example, not a precedent, and copying it reproduces the drift.
+     Why: replacing a rule does not remove the old examples — the design docs keep carrying dead coordinates that teach the next reader the old shape, and "align to precedent first" copies them faithfully back.
      **Where the answer lands**: in a design doc, one line per new landing in the new-mechanism section; in a direct pen, one line in batch record §1 beside that pen.
      **Survey how similar / same-kind features currently do it** (implementation coordinates ∥ design sections ∥ precedent batches) — **align first** (the existing shape: component ∥ layout ∥ criteria ∥ wording).
      A deviation needs the existing piece **not reusable**, and its rationale names the **concrete failure on the capability ∥ contract face** — a different shape, a smoother fit or a nicer look is taste, not a rationale.
@@ -84,6 +84,10 @@ Judge the **change face** before acting — different faces, different authoriza
    - **Public-source survey (design precondition)**: before starting design, survey the **public source docs inside the working directory tree** (independent doc repos above all).
      What was checked / whether anything was relevant ⇒ a **survey-evidence line** in the design doc; a "none relevant" outcome is recorded too.
      Why: nothing pushes the design seat toward the docs and no generic discipline fires on its own, so the obligation has to be written down — with the line on disk, design stops being blind.
+   - **Data-fact check (design precondition)**: list the claims the design makes about the data facts — how many rows, whether a field is filled, which values an enum takes today.
+     One of them that cannot be settled true or false from code and docs alone ⇒ read the data first (one query, or a few real rows), and put what you saw on the record.
+     Every claim settled by code and docs ⇒ write "no claim needs data" — the answer is a line, never silence.
+     Why: a judgment made before the data was read is the expensive kind of wrong — read the rows and the whole target judgment changes, with the design already written.
    - Design = a check on requirements — wherever the design resists being written, the requirements were not clear (ask back); inventing an implementation hides the requirement gap inside code.
    - **Requirement-gap stop chain**: exploration finds requirements that fail to hold up / conflict with implementation / have unclear ownership → **stop and bounce back to the main agent** — picking one interpretation yourself and writing on lands semantics nobody ruled on.
    - **Routing**: a requirement-doc change → the main agent; a design-doc change → eng-designer (revisions included); a batch-record change → the main agent, which also verifies the design draft and fires reviews.
@@ -93,30 +97,6 @@ Judge the **change face** before acting — different faces, different authoriza
    **What testing produces**: no test-design document, and no per-user-story case.
    The **UAT report** is a **delivery-face document**.
    - **Repeated mechanical review failure**: same review face, same criterion (the failure conclusion block's `criterion=`) reaching ≥3 ⇒ stop re-running; lay the facts and candidate dispositions before the user — no auto re-run, no auto scope-narrowing, no self-rewritten criteria.
-
-**Light channel (detail-face ∥ convergence-face controlled bypass — hit one of the three ⇒ put it up as a choice, the user picks; bypass ≠ cancellation)**:
-any one of the three named cases — detail / cosmetics · defect fix · problems named on the spot during a walkthrough — is put up as a choice question; it moves only after the pick.
-That means: skip the "Design → Review → Approval" chain — direct edit → live walkthrough → freeze:
-
-1. **Detail / cosmetics** — visual ∥ copy ∥ parameters (thresholds ∥ defaults ∥ lengths) ∥ existing-interaction details (order ∥ position ∥ keybindings ∥ hint texts);
-
-2. **Defect fix** — **a defect ⇒ goes up as item 2** (the implementation contradicts an existing source: requirement ∥ design ∥ record ∥ the user's words on the spot — the work = bringing the implementation back to the source, not adding semantics);
-
-3. **Problems named on the spot during a walkthrough** — routed by the first two (detail class goes up as item 1; behavior class goes up as item 2 — either way it only settles which item it is routed to; whether to walk is still the user's pick).
-
-**One-sentence boundary**: **new mechanism ∥ major change ⇒ full chain**. Everything else falls to the **closeout full chain** as the backstop — a mis-admission gets formalized ∥ caught in review at closeout (the threshold yields to "no leak").
-
-**Annotations**: diagnostics / probes = zero-chain (read-only + temp area, no classification).
-**Performance-observation class** = no structural change ∧ before/after readings provable.
-**A light-channel pen = main-agent direct edit** (the choice question carries "revertable"; big fixes still go to eng-coder).
-
-- **Round form**: a light-channel round = one batch record (per-pen entries: the choice question and the pick · change · walkthrough · freeze) + per-pen ledger rows.
-- **Start-up booking**: at round open, before the first pen, create the round batch record + the round ledger row first — the account precedes the pen; a pen without an account = not established.
-- **One full chain at closeout**: design formalization → independent review (code · record · doc reconciliation) → fixes (if any) → approval → closeout settlement, including the necessary tests.
-  **Convergence-face pens**: the red-then-green reproduction pair ∥ the before/after reading pair.
-- **Closeout not landed ⇒ no settlement** — the batch record and the round ledger row stay open.
-- **Exercise**: routing = the main agent proposes the route per pen as a choice question (both routes side by side, a recommendation allowed but not a default) and the user picks; nothing moves before the pick; subagents neither route nor invoke this channel.
-- **Boundary (each listed here is a defect)**: off-boundary content through the channel (the bypass swallows the full chain) · closeout skipping (the account goes unsettled) · substituting the full chain (the mechanism itself · major changes stay full-chain).
 
 ## Engineering judgment (verdicts ∥ sizing)
 - **Verdict ≠ attribution**: first answer "is it a defect?" — the why comes after, and an unproven cause leaves the verdict standing.
@@ -170,15 +150,16 @@ The report must contain: what changed / why, the paths of files touched, how you
   So **accumulated test volume × the run-everything reflex = verification cost far above coding cost** — delete the runnable artifacts and there is no "everything" left to run.
   **Why the suppression has to be mechanical, not remembered**: the reasoning can be explained and agreed to, and the behavior still comes back.
   So the restraint goes into the form: with the runnable artifacts deleted there is no "everything" left to run, while keeping them and relying on memory bets the project on the model's own restraint.
+  **Unit test files sit beside their batch record, sharing its name** — `<docRoot.batches>/<batch record name, no .md>.test.mjs`, deleted at closeout.
+  Why: the closeout gate reads only the batch record's own directory, so a file kept anywhere else is never named by it and survives.
+  A file under a package's `test/` is wrong on every face: cli ∥ core, already non-zero, swap their message for a collection rejection; vscode ∥ desktop turn a green entry red; render-core's single-level glob runs a top-level file, so a file made to be deleted passes for coverage.
 - **The change's implementer writes them and runs exactly those for the changed face** (nobody else, no per-round re-runs, not another batch's files).
-- **Unit test files are not promoted into integration tests**.
-- **The wish to keep a permanent test around is an integration test talking**: when a few assertions from this change feel worth keeping to watch the spot, that is the moment to design an integration case.
-  **A trimmed copy kept in a permanent file is the same unit test file under a new name**: that is the promotion above, not an integration test.
-  **With no business scenario behind the urge, there is nothing to keep yet**: name it in the report as a ledger row for the parent to book — do not manufacture a permanent file to discharge the urge.
-  Why: the urge is right that the spot matters; a file with no scene pays permanent maintenance and guards nothing.
-- **The same urge returns in a second shape — "this face changed behavior and nothing accepts it, so a case has to be added"**: it arrives with a reason that sounds right (it crosses components ∥ it changes an observable result), and that reason is not the test.
+- **Unit test files are not promoted into integration tests** — a trimmed copy kept in a permanent file is the same unit test file under a new name, not an integration test.
+  **The wish to keep a permanent test around is an integration test talking**: when a few assertions from this change feel worth keeping to watch the spot, that is the moment to design an integration case.
+  The same urge returns in a second shape — "this face changed behavior and nothing accepts it, so a case has to be added": it arrives with a reason that sounds right (it crosses components ∥ it changes an observable result), and that reason is not the test.
   **The only question worth asking is whose job the guarding is**: guarding is the integration suite's job, and an integration case grows from exactly two entries — a business scenario the product really needs, or a problem production really produced.
-  Neither entry ⇒ nothing to guard: "no test watches this face" is not a defect — one ledger row for the parent to book, no permanent file manufactured to discharge the urge.
+  Neither entry ⇒ nothing to guard: "no test watches this face" is not a defect. **With no business scenario behind the urge, there is nothing to keep yet** — one ledger row in the report for the parent to book, and no permanent file manufactured to discharge the urge.
+  Why: the urge is right that the spot matters — a file with no scene pays permanent maintenance and guards nothing.
   Why: the shape is convincing by construction — a mechanism-internal change does cross components and does change what its caller sees, so the wrong criterion passes itself off as the right one.
   Real instance: a tool that returned an empty set now throws a report when it cannot derive a root — it reads like a business-observable change, while no user walks that path.
 - **Closeout test line**: each batch closeout reports two halves.
@@ -310,16 +291,16 @@ Each doc category has one landing route, and the doc system is maintained by dis
    Prompts → content from the main agent, **landing by eng-coder** (product code; content basis = the mechanism doc).
 2. **D2 single authority source** — a mechanism is described in detail in exactly ONE place; everywhere else references it — a restatement leaves two live versions with nothing to tell the reader which is authoritative.
 3. **D3 count/enumeration discipline** — when declaring "N items / N places / N clauses", the count and the list must change together (machine-checkable).
-4. **D4 pointer discipline** — pointer form = `doc:section` (line numbers only as of reference); NO "see above / see that section" relative pointers.
+4. **D4 pointer discipline** — pointer form = `doc:section`; NO "see above / see that section" relative pointers.
    **What this pointer-form rule reaches = pointers** (a citation into another doc's section).
    **Implementation coordinates** (a code / tool-face location) carry **their own form**: the full path from the repo root with `:line` — a bare directory segment without the repo-root part resolves ambiguously and is judged dangling.
-   **Inventory as-of readings** (a measured line recording where things stand now) and **review evidence quotes** (a line quoted from this round's read) each belong to their own face and are outside both forms.
 5. **D5 freeze window** — a doc under review is closed to edits (editing it = the review object changed → stale, no token issued); gather the changes and enter them in one pass.
 6. **D6 read-back check** — after any write, **read back and verify** before reporting done (silent write failures and edit-swallowed-headers have both been proven real).
 7. **D7 settlement sync** — every batch settlement runs a fixed **settlement sync checklist**:
    - the role table / status line / counts / pointers / todo check-offs;
-   - **§2 ↔ design-doc reconciliation** — every criterion or count §2 cites still matches the owning design-doc section.
-     A mismatch is closed by an appended §2 correction, or recorded in §6; judging closeout by a stale §2 is what turns a correct implementation red.
+    - **§2 ↔ design-doc reconciliation** — every criterion or count §2 cites still matches the owning design-doc section — a mismatch is corrected in place with `batch({action:"edit", segment:"§2", oldText, newText})`,
+      or recorded in §6; judging closeout by a stale §2 is what turns a correct implementation red; **§2 ↔ §5 reconciliation** — a criterion §2 has changed still matches what §5 records as implemented;
+      matched = a clarification that stands; mismatched = a difference recorded in §6, never closed by editing §2 again.
    - **prior-batch leftover cross-check** — entry done, its anchor batch unclosed ⇒ the **fallback settlement path**.
    - **fix-round landing precondition** — a correction round after implementation must have landed and been verified before close.
    - **shelved-list re-check** — every registered ∥ shelved item: realized ∥ move it to a new batch.

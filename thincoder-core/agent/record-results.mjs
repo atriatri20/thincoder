@@ -26,8 +26,6 @@
 import { pushReal } from "../context.mjs"
 import { specForModel } from "../config.mjs"
 import { FILE_MUTATORS, toolTouchPaths } from "./helpers.mjs"
-// F-LC6（LIGHT-CHANNEL §2.9 · 台账 #1753）：无账之笔提醒叶（谓词 + 文案 + 闩单源）。
-import { unbookedPenNotice } from "./unbooked-pen.mjs"
 import { capHistoryImages } from "../provider/normalize.mjs"
 import { resolve } from "node:path"
 import { advisorRuns, stripApprovedSuffix } from "../agent-tools/advisor-async.mjs"
@@ -84,10 +82,7 @@ export async function recordToolResults(agent, toolByName, results) {
         }
       } catch { /* Parse failure doesn't affect normal tool messages */ }
     }
-    // F-LC6（LIGHT-CHANNEL §2.9）：主 agent 会话首笔产品源文件笔 ⇒ 回执末尾追加一行通道提醒
-    // （零拦截——只拼回执文本、入史时机不变；命中后本会话不再提示）。
-    const penNotice = unbookedPenNotice(agent, toolCall, ok, tool)
-    pushReal(agent, { role: "tool", tool_call_id: toolCall.id, name: toolCall.name, content: penNotice ? result + penNotice : result })
+    pushReal(agent, { role: "tool", tool_call_id: toolCall.id, name: toolCall.name, content: result })
     if (tool && ok) {
       if (FILE_MUTATORS.has(toolCall.name)) {
         // Direct file edit — code was changed. The prior advisor review and
@@ -139,7 +134,13 @@ export async function recordToolResults(agent, toolByName, results) {
           // （含类型不可判——run 缺失的 legacy 直调）⇒ 不置「已覆盖」（与 settle 面
           // 逐条 parity；设计评审保持计入——无代码面）。
           const incomplete = advisorIncompleteMarker(String(result))
-          if (!(incomplete && run?.reviewType !== "design")) agent._calledAdvisorThisRun = true
+          if (!(incomplete && run?.reviewType !== "design")) {
+            agent._calledAdvisorThisRun = true
+            // ADVISOR-CONVERGENCE.md §6.4 B 复位点 2（同步面）：评审覆盖成立 ⇒ 本未评审周期结束，
+            // 下一周期起于完整预算（未完成尾不计——与覆盖标记同一判据分摊）。
+            agent._advisorReminders = 0
+            agent._advisorHonestySent = false
+          }
           if (reviewId !== undefined) {
             if (run) {
               run.round++

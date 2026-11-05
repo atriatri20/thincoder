@@ -229,7 +229,6 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 | R9 | `:525-527` §11.3 id 命名空间段 | 改述为**统一现态**：id = 持久槽位号（G5 已收正——load/new 同命名空间）；同 id 重载替换；fork 角如实注 |
 | R10 | `:619` / `:620` / `:631` §11.9 | G5 行删、G6 行删（无效化表述即删）；`:631` 登记项 3 改述：resource_link 已接；余多块 text 合流待立批 |
 
-- **API-CONTRACT 再生**（导出面变动：`CONFIG_OPTIONS` 撤、`sessionConfigOptions` / `createSlotReleaser` / `resolveResourceLink` 增）：`node scripts/api-contract.mjs --write`（生成区机械笔）。
 
 ## 6. #862 裁定：拆批（含后续批 scope 草案）
 
@@ -240,23 +239,6 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
   4. **体量档不同**：其余四条 = schema 逐键对位小件；混批会拉长评审/验证。
 - **后续批 scope 草案（供另批设计轮起点——非本次承诺）**：`_meta.subagent = { role, id, state?, progress? }` 候选形（role/id 自 relay 前缀 `parseRelayPath`；state 自事件族状态机；progress 自 `⟦ev⟧turn` 轮号形）；前置件 = 事件文法机读单源 + `_meta` 契约文档。
 - **登记去向**：维持「待设计」；另批由父侧排程（批名建议 `acp-subagent-events`）。
-
-## 7. 受影响文件与行数预算
-
-口径 = 行数实读；Δ = 预期增量。
-
-| 文件 | 现行 | Δ | 预算 | 改动点 |
-|---|---|---|---|---|
-| `thincoder-cli/src/acp/bridge.mjs` | 397 | +~9 | ~406 | `:208` onUsage 收正；`:62` 签名增 `agent`；`:10` 头注；import `providerSpec` |
-| `thincoder-cli/src/acp/session.mjs` | 54 | +1 | 55 | `:22` 调用点传 `agent` |
-| `thincoder-cli/src/acp/handlers-session.mjs` | 292 | +~55（含 −~15） | ~345 | `:32-36` 常量 → `sessionConfigOptions` + `createSlotReleaser` 导出；`:167` new 重排 + 回滚；`:204-206` prompt 接线；`:266`/`:287` 通知收正；`:191`/`:268` 响应 |
-| `thincoder-cli/src/acp/handlers-slots.mjs` | 196 | +~20 | ~216 | `:47-53` list 条；`:79-80` / `:139-140` id；load/resume 替换逻辑；`:114`/`:164` 响应 |
-| `thincoder-cli/src/acp/resource-link.mjs` | 新 | ~130 | ≤300 | §2.5 判定树全量（已落） |
-| `thincoder-cli/src/acp.mjs` | 151 | −2 | ~149 | `:100-108` 计数器与 ctx 键撤除；ctx 增 `releaseClosedSlot` |
-| `docs/cli/design/ACP-CLIENT.md` | 655 | +~15 | ~670 | §5 表十处 + 变更记录（随动——实施轮） |
-| `docs/cli/design/ACP-PROTOCOL-COMPLIANCE.md` | 本档 | — | — | 本次设计（已落） |
-| `docs/core/design/API-CONTRACT.md` | 2961 | 重生成 | — | `node scripts/api-contract.mjs --write` |
-| `docs/cli/requirements/ACP-CLIENT.md` | 151 | 补笔 | — | R-A5.4 补述 + 新判定句——**主 agent 笔**（§1.3） |
 
 ## 8. 关键决策记录
 
@@ -331,7 +313,7 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 ## 12. 落定与实施注意
 
 3. 单元测试档先红后绿；`node scripts/doc-check.mjs --root .` 复跑 exit 0 为验收项。
-4. 同拍收正 `docs/cli/design/ACP-CLIENT.md`（§5 表十处）+ `node scripts/api-contract.mjs --write`（生成区再生）。
+4. 同拍收正 `docs/cli/design/ACP-CLIENT.md`（§5 表十处）。
 5. 需求面补笔 = 主 agent 笔（§1.3 / §7 表末行）——实施轮零触需求档。
 6. 边界登记（§11 各项）随收口入台账（父侧）。
 7. **修正轮实施令（交付登记 号 1 ∥ 号 2 收正——本档定形）**：① `session/new` 同键处置（§2.4——处置点 = `sessions.set` 直前；认领释放随 `sessions.set`/`committed` 之后）；② `session/list` `updatedAt` 值域钳（§2.2）；单元测试档随补 T5 超域用例 + T12 delete→new 用例（先红后绿）。

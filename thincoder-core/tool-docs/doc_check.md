@@ -2,12 +2,20 @@ Run a built-in documentation-discipline check on a project and report its findin
 Read-only. In the default `report` mode it is non-gating: it reports, it never blocks, never sets an exit code, and its output is never a reason to refuse a task or a user instruction.
 
 What it checks — exactly two criteria, both built into the engine:
-- Anchors — every documentation pointer (a `*.md` token, optionally carrying directory segments, optionally followed by a section
+- Anchors — a documentation pointer (a `*.md` token, optionally carrying directory segments, optionally followed by a section
   indicator `§N` / `§N.M` / `§N.M.K`) must resolve: the file must exist on disk (`档缺` when it does not), and when a section
   indicator is given the target file must carry a heading numbered with it (`节缺` when it does not). Line-number coordinates
 
   (`<doc>:12`) are not section references and are not judged as such. Files inside fenced code blocks and executable lines
   (command / pattern code spans) are skipped whole.
+- **The reach is what survives extraction, not every `.md` token.** Three name families are never extracted, so they are never
+  judged: **conventional file names** used to say which files get read (`AGENTS.md`, `SKILL.md`, `project_rules.md`, `todo.md`
+  and the rest of that closed set),
+
+  **placeholder stems** (single letters plus the usual sample words — `x.md`, `file.md`, `foo.md`, `example.md`), and — on the
+  prompt face only — the seven operand names the `Operand names` block below lists.
+
+  A `.md` token outside those families is judged even when misspelled: a wrong name reports `档缺`, never a pass.
 
 ~~~text
   **Operand names.** Seven names count as operands rather than documents: the model writes them, or reads a file by that name. On
@@ -21,14 +29,40 @@ What it checks — exactly two criteria, both built into the engine:
   ```
 ~~~
 
-- Paragraph length — on a document face, adjacent non-blank body lines merge into one paragraph whose total character
+- Citation check — the same criterion, one more hit class `引缺` (a line that claims its own basis).
+
+  A claim line writes `依据 <document path>「<verbatim quotation>」`, and the quoted text must appear as a contiguous substring
+  of the file that path resolves to; when it does not, the hit is `引缺` and the report names the path plus the first 40 characters.
+
+  The path is judged for existence first: a path that does not resolve reports `档缺`, never `引缺` — the fix differs
+  (check the path ∥ check the words). Both classes count into the one `锚` total: no third criterion, no new verdict word.
+
+  Between the path token and `「` only the optional separator (`:` ∥ `：` ∥ `=`) and an optional backtick may sit. Anything else
+  (a space, a prose word, a punctuation mark) means the line is not a basis marker and nothing is judged; an empty `「」` is not a marker either.
+
+  A path whose name falls in the exempt families above is not a marker path either — the same exemption decides both faces.
+
+  Existence only: no whitespace folding, no case or width folding. A verbatim quotation taken from the wrong place still passes —
+  whether it is the *right* basis (a contract rather than a comment) belongs to review, and this tool does not claim to judge it.
+
+
+- Paragraph length — on every non-prompt face, adjacent non-blank body lines merge into one paragraph whose total character
   count (CJK counts as 1) is judged against the built-in threshold; blank lines, table rows, headings, list items,
   quote-block lines and fenced code blocks do not count into a paragraph and break it, and lines inside an exempt zone
 
-  are excluded. Breaking a paragraph into more lines changes nothing — only splitting it into more paragraphs or
-  writing it shorter passes.
+  are excluded. No face is exempt: a tool-description file (`thincoder-core/tool-docs/**`, this file included) is judged on
+  this criterion too — a long paragraph hides its later points from every reader, the model included.
+
+  Breaking a paragraph into more lines changes nothing, and clearing the length check is not the same as fixing it: splitting a
+  paragraph into more paragraphs, or writing it shorter, clears the count while the reader still faces the same packed paragraph.
+
+  What fixes it is fewer and shorter sentences, a list of named items where the paragraph holds parallel assertions, or a table
+  where it holds enumerated readings.
 - Line length — a prompt-face file (`thincoder-core/prompts/**`) is judged line by line: the model reads raw text, so
   one line is one block, and any single line over the threshold counts with no structural exemption.
+
+`report` mode also prints one extra block: an inventory of the line-number coordinates found in the documents you pass
+(`<doc>:12` shape). That block is a reading, not a criterion — `gate` never produces it, and it cannot change a verdict or a hit count.
 
 It cannot — in `report` mode — write anything, gate anything, or turn a finding into a refusal.
 
@@ -46,10 +80,11 @@ is judged; in `gate` mode such paths are listed as skipped instead. A pointer re
 
 against the pointing document's own directory — bare names are not resolved across other directories.
 
-Delivery gate — `mode: "gate"`, for the end of a design or development round. Every listed doc is judged **whole**: a
-pre-existing dangling pointer or overlong paragraph / line anywhere in it counts, not only this round's edited lines. The first line is the
+Delivery gate — `mode: "gate"`, for the end of a design or development round. Every listed doc is judged **whole**:
+a pre-existing dangling pointer or overlong paragraph / line anywhere in it counts, not only this round's edited lines.
 
-machine-readable verdict — `DOC-CHECK GATE: PASS` / `DOC-CHECK GATE: REFUSED（命中 K 条）` / `DOC-CHECK GATE: ERROR（reason）` —
+The first line is the machine-readable verdict — `DOC-CHECK GATE: PASS` / `DOC-CHECK GATE: REFUSED（命中 K 条）` / `DOC-CHECK GATE: ERROR（reason）` —
+
 and consumers judge by that prefix; the hits are fixed in the same round and are never booked to the ledger. The gate refuses
 
 **one delivery**, not a user instruction: an explicit user go-ahead is followed, with the hits written into the delivery.
@@ -64,7 +99,7 @@ a reader: use `doc_search` / `read` to read documents and `grep` to search them;
 Side effects and permissions — none. The tool is read-only: no writes, no approval prompt, safe to run in parallel with other calls.
 
 Parameters and scope — both criteria run on built-in constants (`DOC_CHECK_BUILTINS`: threshold 300 characters, no exempt zones,
-no exemptions), and the judged set is the document list the caller passes — the judged set and the resolution set are the same
+no registration-based exemption list), and the judged set is the document list the caller passes — the judged set and the resolution set are the same
 
 documents, so there is no scan-dir / domain / root / exclude surface and no whole-repository scan. Changing a criterion or a
 threshold is a code change and goes through review; no project declaration changes these readings.

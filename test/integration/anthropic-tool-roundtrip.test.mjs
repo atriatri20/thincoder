@@ -1,4 +1,4 @@
-/**
+﻿/**
  * anthropic-tool-roundtrip.test.mjs — 集成场景 G1–G3（设计：`docs/core/design/PROVIDER.md` §6.28）：
  * 配了 Anthropic 原生通道的会话，用过工具之后还能继续对话。
  * 生产现象（GitHub #20 ∥ Gitee IKKJEE）：带工具的多轮对话，第二轮必被上游
@@ -8,8 +8,9 @@
  * 「会话流」「多轮」「进程重开 + 历史从盘上回放」三项的用户入口（`chat` 一次性且不落会话，
  * TUI 需要真 TTY）；本档扮演 ACP 客户端（NDJSON JSON-RPC）。
  *
- * 模型侧 = 本地脚本化假 Anthropic 端点（零外网、零付费端点）：按 Messages API 回
- * 「tool_use 回合」与「文本回合」两态；文本由本进程实际收到的 tool_result 拼成，
+ * 模型侧 = 本地脚本化假 Anthropic 端点（零外网、零付费端点）：按 Messages API 回**三态**——
+ * 端点本体住 `test/integration/fixtures/anthropic-endpoint.mjs`（可 import——识别规则要能单独核对，链 = `#1833`），本档只做 import：
+ * 「tool_use 回合」·「文本回合」·「摘要回合」（压缩链路，按请求内容认，不按请求序号）；文本由本进程实际收到的 tool_result 拼成，
  * 因此「模型看见过工具结果」「历史是否回放」都落在回复文本里——断言不必窥探内部形态。
  *
  * 可证伪点（G1–G3 同一判据）：`messages[].role` 只收 user / assistant——出现其它 role
@@ -22,11 +23,14 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
-import { createServer } from "node:http"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+
+import { estimateText } from "../../thincoder-core/provider/rate.mjs"
+import { requestBudget } from "../../thincoder-core/config.mjs"
+import { fakeAnthropic } from "./fixtures/anthropic-endpoint.mjs"
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const CLI_ENTRY = join(HERE, "..", "..", "thincoder-cli", "bin", "thincoder.mjs")
@@ -34,104 +38,6 @@ const CLI_ENTRY = join(HERE, "..", "..", "thincoder-cli", "bin", "thincoder.mjs"
 const SCENE_TIMEOUT_MS = 240_000
 /** 一句对话的上限（进程已起好，只等回合走完；本地假端点，不需要长窗）。 */
 const TURN_TIMEOUT_MS = 90_000
-
-// ---------- 假 Anthropic 端点（Messages API · SSE · 零外网）----------
-
-const jsonReply = (res, status, payload) => {
-  res.writeHead(status, { "Content-Type": "application/json" })
-  res.end(JSON.stringify(payload))
-}
-
-const sseReply = (res, events) => {
-  res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" })
-  for (const [name, data] of events) res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`)
-  res.end()
-}
-
-const blocksOf = (message) => (Array.isArray(message?.content) ? message.content : [])
-
-/** 请求体里出现过的全部 tool_result 文本（模型上一回合拿到的工具结果）。 */
-const toolResultTexts = (messages) => messages.flatMap((m) => blocksOf(m)
-  .filter((b) => b?.type === "tool_result")
-  .map((b) => String(b.content)))
-
-/** 客户端最后一句真实发问（跳过 `[System reminder:` 开头的机器注入）。 */
-const lastQuestion = (messages) => messages
-  .filter((m) => m?.role === "user")
-  .flatMap((m) => blocksOf(m).filter((b) => b?.type === "text").map((b) => String(b.text)))
-  .filter((t) => !t.startsWith("[System reminder"))
-  .at(-1) ?? "(no question)"
-
-const replyText = (messages, results) => `Answer to "${lastQuestion(messages)}": ${results.length > 0 ? results.join(" / ") : "no tool results"}`
-
-const messageStart = { type: "message_start", message: { id: "msg_fake", type: "message", role: "assistant", model: "claude-fake-1", content: [], usage: { input_tokens: 20, output_tokens: 1 } } }
-
-/** 工具回合：一条 assistant 消息、每个调用一个 tool_use 块（≥2 个即 §6.28 G2 的一轮多调用）。 */
-const toolUseEvents = (calls) => {
-  const events = [["message_start", messageStart]]
-  calls.forEach((call, index) => {
-    events.push(["content_block_start", { type: "content_block_start", index, content_block: { type: "tool_use", id: call.id, name: call.name, input: {} } }])
-    events.push(["content_block_delta", { type: "content_block_delta", index, delta: { type: "input_json_delta", partial_json: JSON.stringify(call.input ?? {}) } }])
-    events.push(["content_block_stop", { type: "content_block_stop", index }])
-  })
-  events.push(["message_delta", { type: "message_delta", delta: { stop_reason: "tool_use" }, usage: { output_tokens: 10 } }])
-  events.push(["message_stop", { type: "message_stop" }])
-  return events
-}
-
-/** 文本回合（正常收尾）。 */
-const textEvents = (text) => [
-  ["message_start", messageStart],
-  ["content_block_start", { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }],
-  ["content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } }],
-  ["content_block_stop", { type: "content_block_stop", index: 0 }],
-  ["message_delta", { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: text.length } }],
-  ["message_stop", { type: "message_stop" }],
-]
-
-/**
- * 起本地假 Anthropic 端点，返回 `{ port, requests, rejections, close }`。
- * `calls` = **首个模型请求**派发的工具调用；其后一律文本回合（一回合一个请求，不重派）。
- * 回合上限是有意为之：若转换层退化成「角色合法、但 assistant 的 tool_use 没了」，这里直接回文本，
- * 回复里没有工具结果，断言当场给出可读失败，而不是反复派工具直到超时。
- */
-function fakeAnthropic({ calls = [] } = {}) {
-  const requests = []
-  const rejections = []
-  const server = createServer((req, res) => {
-    let raw = ""
-    req.on("data", (chunk) => (raw += chunk))
-    req.on("end", () => {
-      let body
-      try {
-        body = JSON.parse(raw)
-      } catch {
-        return jsonReply(res, 400, { type: "error", error: { type: "invalid_request_error", message: "request body is not valid JSON" } })
-      }
-      requests.push({ url: req.url, body })
-      const messages = Array.isArray(body.messages) ? body.messages : []
-      // 上游语义：messages 只收 user / assistant 两种 role（`role:"tool"` 在此被拒）
-      const offending = messages.find((m) => m?.role !== "user" && m?.role !== "assistant")
-      if (offending) {
-        const message = `messages: Unexpected role "${offending.role}". Each message must have a role of "user" or "assistant".`
-        rejections.push(message)
-        return jsonReply(res, 400, { type: "error", error: { type: "invalid_request_error", message } })
-      }
-      if (calls.length > 0 && requests.length === 1) return sseReply(res, toolUseEvents(calls))
-      return sseReply(res, textEvents(replyText(messages, toolResultTexts(messages))))
-    })
-  })
-  const ready = new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(server.address().port)))
-  return ready.then((port) => ({
-    port,
-    requests,
-    rejections,
-    close: () => new Promise((resolve) => {
-      server.closeAllConnections?.()
-      server.close(() => resolve())
-    }),
-  }))
-}
 
 // ---------- 真 CLI 子进程（ACP 客户端驱动器）----------
 
@@ -287,6 +193,19 @@ async function say(cli, sessionId, text) {
 
 // ---------- G1 正常 / G2 边界 / G3 边界 ----------
 
+/**
+ * 夹具前提（不是被测行为）：本档这一配置的**固定开销估算越过自动压缩线**——§6.17 的可达性门要挡的正是这一格。
+ * 不锁这条，下面那句「零摘要请求」在系统提示 / 工具 schema 缩水到线下后会由 `tokens <= threshold` 早退保持绿，
+ * 等于什么都没测到（假绿）。估算法与 `contextUsage` 同式：`system` ∥ `tools` 各按 `estimateText` 估。
+ */
+function assertFixedOverheadOverLine(endpoint) {
+  const turn = endpoint.requests.find((r) => !r.summary)
+  assert.ok(turn, "至少一发对话请求（本档的会话确实发过话）")
+  const fixed = estimateText(String(turn.body.system ?? "")) + estimateText(JSON.stringify(turn.body.tools ?? []))
+  const threshold = requestBudget({ model: "claude-fake-1" }).threshold
+  assert.ok(fixed > threshold, `夹具前提：固定开销估算 ${fixed} 应越过压缩线 ${threshold}`)
+}
+
 test('1-1 正常：一次工具调用后继续对话 —— 会话流有调用与结果，模型回复引用结果，无 400', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
   const s = await scene(t, {
     files: { "note.txt": "PINEAPPLE-42\n" },
@@ -307,6 +226,8 @@ test('1-1 正常：一次工具调用后继续对话 —— 会话流有调用�
   assert.match(reply, /PINEAPPLE-42/, `模型下段回复应引用工具结果，实际：${reply}`)
   assert.equal(s.endpoint.rejections.length, 0, `上游无 role 类 400（本档证伪点）：${s.endpoint.rejections.join("｜")}`)
   assert.ok(s.endpoint.requests.length >= 2, "工具回合之后还有下一回合（会话确实继续了）")
+  assert.equal(s.endpoint.requests.filter((r) => r.summary).length, 0, "零摘要请求——固定开销吃掉压缩线时不白付一次压缩（§6.17 可达性门）")
+  assertFixedOverheadOverLine(s.endpoint)
 })
 
 test('1-2 边界：一轮两个工具调用后继续对话 —— 两个结果都回到模型，无 400', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
@@ -331,6 +252,8 @@ test('1-2 边界：一轮两个工具调用后继续对话 —— 两个结果�
   assert.match(reply, /BETA-2/, `模型回复应引用第二个结果，实际：${reply}`)
   assert.equal(s.endpoint.rejections.length, 0, `上游无 role 类 400（本档证伪点）：${s.endpoint.rejections.join("｜")}`)
   assert.ok(s.endpoint.requests.length >= 2, "多工具回合之后还有下一回合（会话确实继续了）")
+  assert.equal(s.endpoint.requests.filter((r) => r.summary).length, 0, "零摘要请求——固定开销吃掉压缩线时不白付一次压缩（§6.17 可达性门）")
+  assertFixedOverheadOverLine(s.endpoint)
 })
 
 test('1-3 边界：关进程重开同一会话，历史从盘回放后继续 —— 回复引用上一程的工具结果，无 400', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
@@ -361,4 +284,6 @@ test('1-3 边界：关进程重开同一会话，历史从盘回放后继续 —
   assert.match(reply, /what did the file say\?/, `模型应看见本程的新问题，实际：${reply}`)
   assert.equal(s.endpoint.rejections.length - rejectionsBefore, 0, `第二程无 role 类 400：${s.endpoint.rejections.slice(rejectionsBefore).join("｜")}`)
   assert.ok(s.endpoint.requests.length > requestsBefore, "第二程确实向模型发了请求（回放的历史 + 新问题）")
+  assert.equal(s.endpoint.requests.filter((r) => r.summary).length, 0, "两程零摘要请求——固定开销吃掉压缩线时不白付一次压缩（§6.17 可达性门）")
+  assertFixedOverheadOverLine(s.endpoint)
 })

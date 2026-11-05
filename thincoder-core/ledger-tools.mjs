@@ -24,10 +24,10 @@ const ptrPath = (v) => {
 }
 
 /** 会话锚供值面（**单源**——`cwdOf` 的缺省起点与上溯上界（`boundary`）同一表达式）：
- *  `ctx.agent.cwd` > `ctx.cwd` > 进程 cwd。界 = 会话锚（设计档 §3.8「界（单源）· 两面两界」）——
+ *  `ctx.agent.cwd` > `ctx.cwd`（零进程缺省：工具面拿不到给值时当场失败，不换界）。界 = 会话锚（设计档 §3.8「界（单源）· 两面两界」）——
  *  工具面传给 `resolveLedgerRoot` / `openLedger` 的上界恒取本值，不取 `process.cwd()`（desktop / VSC
  *  宿主下两者不同：会话锚才是「不能跑到工作目录以外去」的那道界）。 */
-const anchorOf = (ctx) => ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
+const anchorOf = (ctx) => ctx?.agent?.cwd ?? ctx?.cwd
 
 /** 工具 cwd 供值面：**起点 = 动作目标路径**（`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md:72`
  *  「参数按用点解析——动作作用于哪个项目的路径，就取那个项目的档」）。
@@ -189,9 +189,9 @@ const ACTION_SPECS = {
       properties: {
         cwd: { type: "string", description: CWD_DESC },
         id: { type: "number", description: "条目 id（与 batch 恰携其一）" },
-        batch: { type: "string", description: "批档指针（与 id 恰携其一）——批级批量结算：只销已到 待核销 的行；待讨论 / 待设计 点名跳过（追认核销不入批量面）" },
-        status: { type: "string", enum: ["已核销", "已废弃"], description: "目标态（勾销 / 追认核销 / 撤回）——携 batch 时可不给（缺省 = 勾销单值），给了只能是 已核销" },
-        evidence: { type: "string", description: "最小证据行（可选；传入 = 追加缺省——旧值非空 ⇒ 拼 `旧｜新`（「｜」零空格）、旧空直写；新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传。追认核销面判结果值须非空：缺 / 全空白 ⇒ 拒）" },
+        batch: { type: "string", description: "批档指针（与 id 恰携其一）——批级批量结算：只销已到 待核销 的行；待讨论 / 待设计 点名跳过（须先 update 到 在途 认领）；在途 点名跳过（不可跳）" },
+        status: { type: "string", enum: ["已核销", "已废弃"], description: "目标态（勾销 / 撤回）——携 batch 时可不给（缺省 = 勾销单值），给了只能是 已核销" },
+        evidence: { type: "string", description: "最小证据行（可选；传入 = 追加缺省——旧值非空 ⇒ 拼 `旧｜新`（「｜」零空格）、旧空直写；新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传）" },
         evidenceReplace: { type: "boolean", description: "覆盖旗（布尔）：与 evidence 同传 = 整段替换（旧文零保留）；缺省 / false = 追加；旗独传（无新文）⇒ 拒" },
       },
       additionalProperties: false,
@@ -237,7 +237,7 @@ const UNION_PARAMETERS = {
     board: { type: "string", description: "归属板块（需求档文档名；add 可空 / update 缺省 = 不变 / query 过滤）" },
     req_doc: { type: "string", description: "需求档指针（add 可空 / update 缺省 = 不变）" },
     task_book: { type: "string", description: "任务书指针（add 可空 / update 缺省 = 不变；在途 / 待核销必填——咬合 CHECK）" },
-    evidence: { type: "string", description: "最小证据行（add 可空；update / close 传入 = 追加缺省——旧空直写、旧非空拼 `旧｜新`（「｜」零空格）、新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传；update 缺省 = 不变 / close 缺省 = 判行值；追认核销须非空）" },
+    evidence: { type: "string", description: "最小证据行（add 可空；update / close 传入 = 追加缺省——旧空直写、旧非空拼 `旧｜新`（「｜」零空格）、新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传；update 缺省 = 不变 / close 缺省 = 判行值）" },
     evidenceReplace: { type: "boolean", description: "覆盖旗（布尔）：与 evidence 同传 = 整段替换；缺省 / false = 追加；旗独传（无新文）⇒ 拒（update / close）" },
     trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "技术待办触发（add / update 可空 / query 过滤）" },
     resume_when: { type: "string", description: "复启条件句（add / update 可空；值非空——空串 / 全空白 ⇒ 拒；`trigger=条件` 行的一句话条件 + 可选锚 `@YYYY-MM-DD` ∥ `@事件件名`）" },
@@ -305,14 +305,14 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
             executorSessionId = getSessionId()
           }
           // 批级批量（§3.3）——`batch` 与 `id` 恰携其一（守卫 P7 已先裁）
-          if (batch != null) return JSON.stringify({ ...ledgerUpdateBatch({ cwd: target, batch, patch, executorSessionId, boundary: anchor }) })
-          return JSON.stringify({ ...ledgerUpdate({ cwd: target, id, patch, executorSessionId, boundary: anchor }) })
+          if (batch != null) return JSON.stringify({ ...ledgerUpdateBatch({ cwd: target, batch, patch, executorSessionId, boundary: anchor, agent: ctx?.agent }) })
+          return JSON.stringify({ ...ledgerUpdate({ cwd: target, id, patch, executorSessionId, boundary: anchor, agent: ctx?.agent }) })
         }
         case "close": {
           const target = startOf(ctx, anchor, rest.cwd, rest.batch, rest.task_book)
           // 批级批量结算（§3.3——勾销径）
-          if (rest.batch != null) return JSON.stringify({ ...ledgerCloseBatch({ cwd: target, batch: rest.batch, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace, boundary: anchor }) })
-          return JSON.stringify({ ...ledgerClose({ cwd: target, id: rest.id, status: rest.status, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace, boundary: anchor }) })
+          if (rest.batch != null) return JSON.stringify({ ...ledgerCloseBatch({ cwd: target, batch: rest.batch, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace, boundary: anchor, agent: ctx?.agent }) })
+          return JSON.stringify({ ...ledgerClose({ cwd: target, id: rest.id, status: rest.status, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace, boundary: anchor, agent: ctx?.agent }) })
         }
         case "query": {
           const target = startOf(ctx, anchor, rest.cwd, rest.task_book)

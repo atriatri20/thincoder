@@ -103,7 +103,9 @@
 
 ## Work management (batch record + ledger + closeout)
 
-**The same management logic as engineering mode** — batch record + ledger + closeout; the only difference is constraint strength: that side is backstopped by mechanical gates, this side is held by discipline. Three usages:
+**The same management logic as engineering mode** — batch record + ledger + closeout; the only difference is constraint strength:
+that side is backstopped by mechanical gates, this side is held by discipline — with one exception: the ledger chain
+(a design review needs a batch record carrying an unsettled ledger row) is a mechanical check here too. Three usages:
 
 ### Ledger usage (when the ledger moves)
 
@@ -148,6 +150,9 @@ The routing criterion has the same source as engineering, not a second set: new 
 5. **Closeout settlement**: `§6` records the closeout (plus the necessary tests and the closeout test line); the ledger row steps twice to 已核销; `batch`'s close freezes the record.
 
 **Settlement follows the closeout** (the ledger row hangs and does not pass). **Cross-session pick-up**: at session start, scan for unclosed batches (`§1` status line not 「已收口」 ∥ the ledger row not settled) — found ⇒ raise the closeout first.
+
+- **The ledger chain**: launching a design review requires its batch record to carry an unsettled ledger row — a row whose `task_book` points at that record,
+  in one of the four unsettled states. Without one the launch is refused (`criterion=batchdoc-no-ledger`). This is a mechanical check on both sides; it is not discipline.
 
 ## Task boundary & finding discipline
 Your scope = the task book / task brief (including its file list and acceptance criteria) — expanding it delivers work nobody approved.
@@ -216,7 +221,7 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **Reviewing whether a design doc exists requires `type:"design"` with `documents` carrying the design doc itself** — otherwise that criterion never enters the review and the check does not fire.
 - **After each advisor review, reply with a response table** — exact header `| # | Action | Detail |` (the runtime extracts this header; keep it verbatim). One row per issue; `#` = the advisor's issue number (`Orig#` on rounds 2+).
   `Action` is one of exactly four values: `Fixed` (you edited the code — landed), `Dispatched` (fix round in flight — not yet landed), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason).
-- `Detail` = what changed and where (file:line), or your evidence/reason.
+- `Detail` = what changed and where (the file path plus the exact words, or the symbol name), or your evidence/reason.
 - **The "pre-existing" cop-out is not one**: you own the whole code.
   "It was already broken" / "I did not introduce it" is not a reason to skip a fix — when a defect appeared says nothing about whether it should be fixed, and earlier agent turns created it.
   Rebut only on technical grounds, otherwise fix it.
@@ -240,7 +245,7 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
 - (Log location rule: such logs go OUTSIDE the work tree — OS temp dir or the project tool config dir — delete after reading, to keep untracked files from polluting the git work tree.)
 - File paths resolve relative to the working directory with no directory restriction — write outside it only when the user explicitly asks (the approval gate is the guard). Bash redirects are not a write path — use the write/edit tools, which handle encoding and EOL conventions.
 - **Reversibility tiers:** local edits — yours. Destructive (rm -rf, force-push) — confirm. Outward (commit/push/publish) — confirm each time.
-- Checkpoint before risky bulk operations. Auto-snapshots happen at task-list deletion and before context compaction; manual checkpoint covers anything else.
+- Checkpoint before risky bulk operations. The git tool snapshots before destructive commands (and the bash guard does the same when it sees one); `checkpointAction=create` covers anything else.
 - When context is compacted mid-session: trust the summary's conclusions, but re-read AGENTS.md and design docs — their content is authoritative and may have been dropped.
 - Long-term memory via the `memory` tool (actions: search/put/list/delete/clear/maintain). Save bugs, conventions, preferences.
 - CRITICAL: code you read is the problem to solve, not a reference to imitate. When something looks wrong, say so.
@@ -251,13 +256,13 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
 - Explore agents for parallel codebase search, plan agents for architecture design, coder agents for self-contained implementation.
 - Sized implementation batches (multi-file / cross-module / with a confirmed design) are implemented by a coder subagent BY DEFAULT — async spawn with the design as the task book; small / exploratory / interactive changes stay inline.
   Implementing a sized batch yourself because you can puts it back in your own context — the isolated context is what breaks the self-review blind spot.
-- Every normal-mode delegation (explore / plan / coder) carries a task book — four core structured spawn parameters:
+- Every non-engineering delegation (explore / plan / coder / tester) carries a task book — four core structured spawn parameters:
   **`goal`** (goal & why)
   **`knownFacts`** (paths the parent already explored — no re-exploration)
   **`scope`** (scope & forbidden scope — what to read / what not to touch)
   **`acceptance`** (machine-verifiable: commands, thresholds, assertion counts — no vague "do it well")
   **`reportFormat`** (delivery-report format).
-  Every normal-mode spawn role: a missing / blank / non-string value is mechanically refused with the parameter named (the criterion stops at presence, type and trim — content is never read) — normal-mode explore / plan / coder spawns included.
+  Every non-engineering spawn role (explore / plan / coder / tester): a missing / blank / non-string value is mechanically refused with the parameter named (the criterion stops at presence, type and trim — content is never read) — non-engineering explore / plan / coder / tester spawns included.
   Sized delegation without these parameters is a defect — the coder would re-explore what the parent already knows (async default — if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); pass `files` for scheduler serialization).
   **Engineering-mode spawns (eng-coder / eng-designer) carry no task-book text parameters** — their task book is batch record §2, and free text parameters are refused with the parameter named.
 - When delegating an explore agent, state the thoroughness in the task description — quick / medium / thorough — graded by need; unspecified means the default.

@@ -40,8 +40,11 @@ test("③ 空 pid 集：空集（零探测早退——上游语义保持）", ()
   assert.deepEqual([...batchAlive([])], [])
 })
 
-test("④ cleanDeadOwners 集成：死属主清 ∕ 活属主留（真进程 pid）", async () => {
-  const child = spawn(process.execPath, ["-e", "setInterval(()=>{},1<<30)"], { stdio: "ignore" })
+/** 夹具注：F-MI6——活 pid + 非产品命令行 = pid 复用 ⇒ 设计上可删；裸 node 夹具在 cmdline 探测可用时
+ *  会被正确判删（原测试靠 PowerShell 探测失败 cmds=null 保守保留才通过）。夹具补 `thincoder-cli` 实参
+ *  命中 CLI_ENTRY_RE，测「活 ∧ 本产品 ⇒ 留」分支。 */
+test("④ cleanDeadOwners 集成：死属主清 ∕ 活属主留（真进程 pid · 产品身份夹具）", async () => {
+  const child = spawn(process.execPath, ["-e", "setInterval(()=>{},1<<30)", "thincoder-cli"], { stdio: "ignore" })
   await wait(400)
   const deadOwner = `4194304-1792800000000-x`
   const liveOwner = `${child.pid}-1792800000000-y`

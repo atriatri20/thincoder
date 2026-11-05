@@ -1,6 +1,8 @@
 Run a git command. Only works inside a git repository.
 
-**Route to git instead of bash** — every sub-command maps to the same-named action: status / log / diff / show / add / rm / commit / push / tag / branch / checkout / restore / stash / fetch / pull / reset / revert / merge / cherry-pick / ls-remote / clone / init / rebase / remote / clean / switch / apply / worktree / archive / blame / mv.
+**Route to git instead of bash** — every sub-command maps to the same-named action:
+
+status / log / diff / show / add / rm / commit / push / tag / branch / checkout / restore / stash / fetch / pull / reset / revert / merge / cherry-pick / ls-remote / clone / init / rebase / remote / clean / switch / apply / worktree / archive / blame / mv.
 
 - diff: unified diff since last commit (`staged` — staged only; `ref` — compare a commit/branch; `path` — scope).
 - status: working tree state — staged / unstaged / untracked / conflicts.
@@ -26,3 +28,9 @@ Run a git command. Only works inside a git repository.
 - Destructive ops (checkout -- path / restore / reset --hard / stash pop / branch|tag delete / clean / rebase) auto-snapshot first; restore a snapshot via `checkpointAction=rewind`.
 - Failures come back as errors — `git <action> failed: <reason>` — nothing is silently swallowed.
 - `filter` narrows any read-only action's output (case-insensitive regex); `config` (git -c overrides, e.g. a proxy) applies to the network actions (push / fetch / pull / ls-remote / clone). Other parameter defaults and applicability live in the schema.
+
+**`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it for a write action; omitted = refused.
+
+**`project`** — the project this call belongs to (absolute path of the project root). Read only when neither `path` nor `workdir` is given — those win when present. Pure declaration: it does not change where git runs (`workdir` does).
+
+Read-only actions do not need it: `diff` / `status` / `log` / `show` / `ls-remote` / `blame`, and each `*Action: "list"` (`checkpoint` `list` / `cat` included).
