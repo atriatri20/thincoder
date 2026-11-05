@@ -12,8 +12,9 @@
  *   清单里不可判档（不在盘 ∥ 非 .md）⇒ 报错点名、整次零判定；
  *   `gate` = 交付时点的裁定——首行给机器可判 verdict；不可判档给跳过行（可见，不静默丢掉）。
  *   强制面住交付协议 + 批次档 §6 前置，工具本体不阻断任何动作。
- * **`report` 面另有一份只读清点：行号坐标清单**（`./line-refs.mjs` · 口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.23 条目 W）——
- *   **只报不拦**：不进 `gate`、不计入 `hits`、不阻断写入。判据面仍是上面两条，一字不改。
+ * 判据三条：前两条如上，第三条 = **行号坐标**（`./line-refs.mjs` 采集 · 口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.23 条目 W）：
+ *   一个档名之后出现的 `:` 加数字即命中。**采集一次、两个问法各读一份**——`report` 面据此出清账清单（不产 verdict），
+ *   `gate` 面把同一份 `total` 计入 `hits.lineRefs` 并进 `hits.total`。两条既有判据的命中集与判决词一字不改。
  */
 import { statSync } from "node:fs"
 import { relative, resolve } from "node:path"
@@ -36,6 +37,14 @@ export const DOC_CHECK_BUILTINS = Object.freeze({
  *  而它按判据链纪律只 import 本档（引擎 import 只指向 `../doc-check/index.mjs`）⇒ 类名由本档再出口，
  *  消费面不抄字面类名——抄一次就是「改报面忘改过滤」那类字面漂移（`paragraph.mjs` 头注记着 2026-10-26 实发过一次）。 */
 export { DOC_CLASS }
+
+/** 第三条判据命中的类名（`hits` 的第三类）：报面标签 ∥ `hits.lineRefs` ∥ 批档门的类属切分同取这一字面。
+ *  按**处**计（与锚的「条」区分），命中行形 = `✗ 行号坐标 <源档>:<行> <形别> <原文片段>`。 */
+export const LINE_REF_CLASS = "行号坐标"
+
+/** 行号坐标命中行（报面单源）：档 + 行定位 + 形别（①②③ 是读数分类，不是判据分级）+ 原文片段 ≤ 40 字
+ *  （读者不打开源档就能判「这是引用还是举例」）。围栏内那处与清单块同样带 `围栏内` 标——判集 = 合计。 */
+const lineRefHitLine = (base, h) => `✗ ${LINE_REF_CLASS} ${rel(base, h.file)}:${h.line} ${h.form}${h.fenced ? " 围栏内" : ""} ${h.snippet}`
 
 /** 段命中的处置块（五行 · 逐字单源）：口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「报面（固定句形 · 交付门 gate）」尾行。
  *  三处消费面（本档 `gateReport` ∥ `agent-tools/batch-gate.mjs` 的报面组装与拒串 ∥ `scripts/doc-check.mjs` 的段报告段）
@@ -115,8 +124,8 @@ const anchorHitLine = (base, h) => {
 }
 
 /** gate 报面（固定句形——§3.20「报面（固定句形 · 交付门 gate）」）：首行 verdict = 唯一机判串。 */
-function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs }) {
-  const total = anchors.hits.length + paragraphs.length
+function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs, lineRefs }) {
+  const total = anchors.hits.length + paragraphs.length + lineRefs.total
   const src = docsSource === "session" ? "本会话写过的文档" : "显式 docs"
   // 首行：锚与段分列（用户 11:16：段的问题叫「文字太长，难于阅读」，不是「命中 N 条」也不是字符数）
   const verdict = () => {
@@ -128,6 +137,7 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs
     const lineCount = paragraphs.filter((h) => h.clazz === DOC_CLASS.line).length
     if (paraCount) parts.push(`${paraCount} 段${DOC_CLASS.para}`)
     if (lineCount) parts.push(`${lineCount} ${DOC_CLASS.line}`)
+    if (lineRefs.total) parts.push(`${LINE_REF_CLASS} ${lineRefs.total} 处`)
     return `DOC-CHECK GATE: REFUSED（${parts.join(" · ")}）`
   }
   const out = [
@@ -159,6 +169,8 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs
   } else {
     for (const h of anchors.hits) out.push(anchorHitLine(base, h))
     for (const w of paragraphs) out.push(paragraphHitLine(base, w))
+    for (const h of lineRefs.body) out.push(lineRefHitLine(base, h))
+    for (const h of lineRefs.fenced) out.push(lineRefHitLine(base, h))
     // 处置块只跟「段」命中走：仅有行太长时不得叫人对段落重写；字面单源 = `PARA_DISPOSE`（三处消费面同一份）
     if (paragraphs.some((h) => h.clazz === DOC_CLASS.para)) out.push(...PARA_DISPOSE)
   }
@@ -174,10 +186,12 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs
  *   `PASS（0 档）` + 空范围说明（「本轮一档没碰」是真实读数）；`report` 面不可判档 ⇒ 报错、整次零判定；
  *   `gate` 面不可判档 ⇒ 跳过行；`docsSource` = 范围来源标签（`session` = 本会话触达记账 ∥ `explicit` = 显式
  *   `docs`）——缺省 = `explicit`；只影响报面措辞。
- * @returns {{report:string, hits:{total:number, anchors:number, paragraph:number}, anchorHits:Array,
- *   paragraphHits:Array, files:string[], checkFiles:string[], paragraphMax:number,
- *   skipped:{missing:string[], notMarkdown:string[]}, lineRefs?:{body:Array, fenced:Array, total:number}}}
- *   `lineRefs`（行号坐标清单的采集结果）**只在 `report` 面返回**——`gate` 面构造上不产该字段。
+ * @returns {{report:string, hits:{total:number, anchors:number, paragraph:number, lineRefs:number}, anchorHits:Array,
+ *   paragraphHits:Array, lineRefHits:Array, files:string[], checkFiles:string[], paragraphMax:number,
+ *   skipped:{missing:string[], notMarkdown:string[]}, lineRefs:{body:Array, fenced:Array, total:number}}}
+ *   `lineRefs` = 行号坐标的采集结果，**两个问法返回同一份**（同一次采集）。
+ *   `hits.lineRefs` = `lineRefs.total`，且只在 `gate` 面计入 `hits.total`——`report` 面的 `hits.total` 仍是两条判据之积
+ *   （清点不产 verdict：报告态的「命中 N 条」与末行结论句只为两条判据而写）。
  *   消费面判「清」须读 `report` 首行（gate）∥ `hits.total`（report），不得只看其中一个。
  */
 export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
@@ -210,25 +224,32 @@ export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
   const anchors = checkAnchors(base, { files: checkFiles })
   const paragraphs = checkParagraphs({ paragraphMax, lineMax, exemptZones: paragraphExemptZones, files: checkFiles })
 
-  const hits = { total: anchors.hits.length + paragraphs.length, anchors: anchors.hits.length, paragraph: paragraphs.length }
+  // 行号坐标的**唯一采集点**：放在两支分支之前——`report` 与 `gate` 读出的是同一份结果，不各采一次
+  // （同源判 = 两个问法的 `lineRefs.total` 逐字相等；一套萃取式，不是一套宽一套窄）。
+  const lineRefs = collectLineRefs({ files: checkFiles })
+  const anchorCount = anchors.hits.length
+  const paraCountAll = paragraphs.filter((h) => h.clazz === DOC_CLASS.para).length
+  const lineCountAll = paragraphs.filter((h) => h.clazz === DOC_CLASS.line).length
   const shared = {
-    hits, anchorHits: anchors.hits, paragraphHits: paragraphs, files: checkFiles, checkFiles, paragraphMax,
+    anchorHits: anchors.hits, paragraphHits: paragraphs, files: checkFiles, checkFiles, paragraphMax,
     skipped: { missing: range.missing, notMarkdown: range.notMarkdown },
+    lineRefHits: [...lineRefs.body, ...lineRefs.fenced].map((h) => ({ ...h, clazz: LINE_REF_CLASS })),
+    lineRefs,
   }
   if (gate) {
-    return { ...shared, report: gateReport({ base, docsSource: source, checkFiles, skipped: shared.skipped, anchors, paragraphs }) }
+    // `gate` 面：第三条判据计入 `hits` 与 `hits.total`（三数之和）。
+    const hits = { total: anchorCount + paragraphs.length + lineRefs.total, anchors: anchorCount, paragraph: paragraphs.length, lineRefs: lineRefs.total }
+    return { ...shared, hits, report: gateReport({ base, docsSource: source, checkFiles, skipped: shared.skipped, anchors, paragraphs, lineRefs }) }
   }
 
-  // 行号坐标清单的**唯一采集点**：放在 `if (gate)` 早返回之后——`gate` 分支上一行已返回，够不着这里。
-  // 「闸看不见清单」靠这个结构成立（不是「算出来再声明它不参与」——一份存在但被声明无用的数，读者迟早拿它当判据）。
-  const lineRefs = collectLineRefs({ files: checkFiles })
+  const hits = { total: anchorCount + paragraphs.length, anchors: anchorCount, paragraph: paragraphs.length }
 
   const out = [
     "文档纪律机检（报告态 · 非门禁）",
     `射程：${base} · 传入清单 ${checkFiles.length} 档 · 区带豁免：${paragraphExemptZones.length ? paragraphExemptZones.join(" ∥ ") : "无"}`,
     "声明：判据参数 = 工具内置常量；范围 = 传入文件（判定范围 = 解析范围）",
     `范围：传入清单 ${checkFiles.length} 档（整档入判 · 判定范围 = 解析范围）`,
-    `命中 ${hits.total} 条（锚 ${anchors.hits.length} · ${DOC_CLASS.para} ${paragraphs.filter((h) => h.clazz === DOC_CLASS.para).length} · ${DOC_CLASS.line} ${paragraphs.filter((h) => h.clazz === DOC_CLASS.line).length}）`,
+    `命中 ${hits.total} 条（锚 ${anchorCount} · ${DOC_CLASS.para} ${paraCountAll} · ${DOC_CLASS.line} ${lineCountAll}）`,
   ]
   for (const h of anchors.hits) out.push(anchorHitLine(base, h))
   for (const w of paragraphs) out.push(paragraphHitLine(base, w))
@@ -238,5 +259,5 @@ export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
   out.push(...lineRefsBlock({ base, files: checkFiles, refs: lineRefs }))
   out.push(hits.total ? `结论：${hits.total} 条命中——报告态，不作拒执行的理由` : `结论：0 条命中（锚 ∥ ${DOC_CLASS.para} ∥ ${DOC_CLASS.line} 均清）`)
 
-  return { ...shared, report: out.join("\n"), lineRefs }
+  return { ...shared, hits, report: out.join("\n") }
 }

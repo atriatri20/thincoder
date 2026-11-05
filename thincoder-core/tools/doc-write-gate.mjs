@@ -24,6 +24,11 @@
  * 判据本体零副本（D2）：锚 ∥ 段两条判据与报面字面全部来自 `../doc-check/index.mjs` 的导出
  * （`runDocCheck` / `DOC_CLASS` / `PARA_DISPOSE`）；本档只装配判面、拒串骨架与片段档。
  *
+ * **本门不计行号坐标那一类**（用户 2026-11-05 16:05「写门可以不挡，但是 doc_check 的时候你还是躲不过」）：
+ * 拒写判定读 `hits.anchors + hits.paragraph`，**不读 `hits.total`**——交付门（`doc_check` 的 `gate` 面）才是三判据全计的地方。
+ * 两个消费面读同一份 `hits`，各自取用的类不同：写门只看引用完整性 ∥ 段长，行号坐标归交付门。
+ * 它也不入拒文：若不计入就不该列，否则写者拿到的是一行自己改不动的命中。
+ *
  * 不判面（边界，§3.26 同款）：不判「该不该有这段」；不判依据对不对；不做写入前美化 ∥ 自动重排；
  * 不缓存 manifest 读数；不改判据本体（阈值与两支判据零改）。
  */
@@ -219,7 +224,9 @@ export async function runDocWriteGate({ abs, content, root } = {}) {
   try {
     zones.forEach((zone, i) => frags.push({ zone, abs: writeFragment(target, newLines, zone, i + 1) }))
     const res = runDocCheck(projectRoot, { mode: "gate", docs: frags.map((f) => f.abs) })
-    if (res.hits.total === 0) return { judged: true, zones: zones.length, hits: 0 }
+    // 拒写判定只取锚 + 段两类的和（**不读 `hits.total`**）：`hits.total` 含行号坐标那一类，
+    // 拿它当拒写输入 = 写门开始拒行号——那是交付门的活，用户明说写门可以不挡。
+    if (res.hits.anchors + res.hits.paragraph === 0) return { judged: true, zones: zones.length, hits: 0 }
     throw new Error(refusalMessage({ res, zones, frags, target, root: projectRoot, regionCount }))
   } finally {
     // 清理失败不覆盖判定结果（残留由下一次门在回执里明示的口径属批档门；本门只保证「不因清理失败改判」）。

@@ -1,7 +1,7 @@
 /**
  * agent-tools/doc-check.mjs — `doc_check` 工具：文档纪律机检（产品内建 · 两种问法）。
  *
- * 设计 = `docs/core/design/DOC-DISCIPLINE.md` §3.20 条目 S（判据 = 锚 ∥ 段判据 · 参数内置常量）。
+ * 设计 = `docs/core/design/DOC-DISCIPLINE.md` §3.20 条目 S（判据 = 锚 ∥ 段判据 | 行号坐标 · 参数内置常量）。
  * 工具形：**无动作枚举**——`mode` = 同一条判据的两种问法（`report` = 报告态 ∥ `gate` = 交付时点的裁定）；
  * **只读**（零副作用 · 免审批 · 可并行）；参数 `target` / `mode` / `docs`
  * （`target` 指向多项目工作区 ⇒ 报明候选并要求指名，同 `manifest` 工具面）。
@@ -26,7 +26,7 @@ export const docCheckTool = {
     type: "object",
     properties: {
       target: { type: "string", description: "Explicit project root to check — defaults to the session anchor; relative paths resolve against it. A workspace target (several projects below it) is reported with the full candidate list — pass the project root you mean." },
-      mode: { type: "string", enum: ["report", "gate"], description: "How to ask the same two-criteria check. \"report\" (default): a non-gating report over the documents you list in docs. \"gate\": the delivery gate — the documents this round touched (docs, or this session's written documents when docs is omitted), whole-file judged, first line a machine-readable verdict (DOC-CHECK GATE: PASS / REFUSED / ERROR)." },
+      mode: { type: "string", enum: ["report", "gate"], description: "How to ask the same three-criteria check. \"report\" (default): a non-gating report over the documents you list in docs. \"gate\": the delivery gate — the documents this round touched (docs, or this session's written documents when docs is omitted), whole-file judged, first line a machine-readable verdict (DOC-CHECK GATE: PASS / REFUSED / ERROR)." },
       docs: { type: "array", items: { type: "string" }, description: "The documents to judge, as paths relative to the project root or absolute — each is judged whole; nothing else is read except the targets those documents point at. Required in \"report\" mode (there is no default range: omitting it is refused, not widened). Omitted in \"gate\" mode ⇒ the Markdown documents this session wrote. A path that is not on disk or is not a Markdown document is an error (no document judged) in report mode and a visible skipped line in gate mode." },
     },
   },

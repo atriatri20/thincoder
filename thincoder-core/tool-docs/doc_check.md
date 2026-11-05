@@ -1,7 +1,7 @@
 Run a built-in documentation-discipline check on a project and report its findings.
 Read-only. In the default `report` mode it is non-gating: it reports, it never blocks, never sets an exit code, and its output is never a reason to refuse a task or a user instruction.
 
-What it checks — exactly two criteria, both built into the engine:
+What it checks — exactly three criteria, all built into the engine:
 - Anchors — a documentation pointer (a `*.md` token, optionally carrying directory segments, optionally followed by a section
   indicator `§N` / `§N.M` / `§N.M.K`) must resolve: the file must exist on disk (`档缺` when it does not), and when a section
   indicator is given the target file must carry a heading numbered with it (`节缺` when it does not). Line-number coordinates
@@ -62,8 +62,19 @@ path-qualified (e.g. `test/RTM.md`). The seven:
 - Line length — a prompt-face file (`thincoder-core/prompts/**`) is judged line by line: the model reads raw text, so
   one line is one block, and any single line over the threshold counts with no structural exemption.
 
-`report` mode also prints one extra block: an inventory of the line-number coordinates found in the documents you pass
-(`<doc>:12` shape). That block is a reading, not a criterion — `gate` never produces it, and it cannot change a verdict or a hit count.
+- Line-number coordinates — a filename token followed by `:` and digits (`<doc>:12`, ranges included) is a hit.
+
+  One collection feeds both faces: `report` prints it as an inventory block, `gate` counts it as the third
+  criterion, so a document carrying one cannot pass the gate.
+
+  Two shapes never become a hit: placeholder or conventional filenames (`x.md:12` is an example, not a
+  reference), and section numbers (`§6.66` carries no colon).
+
+  Fenced blocks count too — a before / after block is a position reference as much as prose is, and it drifts the
+  same way. Write the section, the symbol name, or the quoted line instead; a line number is never a pointer.
+
+`report` mode also prints that collection as an inventory block: a measure line naming the extractor and the scan
+range, then the totals, then one line per hit.
 
 It cannot — in `report` mode — write anything, gate anything, or turn a finding into a refusal.
 
@@ -99,7 +110,7 @@ a reader: use `doc_search` / `read` to read documents and `grep` to search them;
 
 Side effects and permissions — none. The tool is read-only: no writes, no approval prompt, safe to run in parallel with other calls.
 
-Parameters and scope — both criteria run on built-in constants (`DOC_CHECK_BUILTINS`: threshold 300 characters, no exempt zones,
+Parameters and scope — all three criteria run on built-in constants (`DOC_CHECK_BUILTINS`: threshold 300 characters, no exempt zones,
 no registration-based exemption list), and the judged set is the document list the caller passes — the judged set and the resolution set are the same
 
 documents, so there is no scan-dir / domain / root / exclude surface and no whole-repository scan. Changing a criterion or a

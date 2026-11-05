@@ -56,7 +56,7 @@ function docPaths(list, base) {
   return out
 }
 
-/** 锚类命中（引擎大类中的锚面；其余 clazz = 段判据命中）。类名由引擎产出，本档只作切分。
+/** 锚类命中（引擎大类中的锚面；其余 clazz = 段判据命中 —— 另加引擎的第三类 `行号坐标`（按**处**计，不是按「条」）。类名由引擎产出，本档只作切分。
  *  三属同计「锚 N 条」：`档缺` / `节缺` / `引缺`（引文不在所指档内——同属锚判据，不是段类）。 */
 const ANCHOR_CLASSES = new Set(["档缺", "节缺", "引缺"])
 
@@ -181,7 +181,9 @@ function committedDocs(root, sha) {
  *  行数与命中数不等（引擎报面行序变动）⇒ `aligned: false` + 自造行，由调用面回执明示。 */
 function hitEntries(res, root, translate) {
   const lines = res.report.split("\n").filter((l) => l.startsWith("✗ "))
-  const hits = [...res.anchorHits, ...res.paragraphHits]
+  // 三条判据的命中按**报面行序**串起（锚 ∥ 段 ∥ 行号坐标）——引擎的命中数组顺序即报面行序，
+  // 少串一类就会让 `aligned` 永为 false（显示行全走自造形，拒面丢掉引擎原句）。
+  const hits = [...res.anchorHits, ...res.paragraphHits, ...(res.lineRefHits ?? [])]
   const aligned = lines.length === hits.length
   const entries = hits.map((h, i) => ({
     file: h.file,

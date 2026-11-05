@@ -1,12 +1,12 @@
 /**
- * doc-check/line-refs.mjs — `report` 面的行号坐标清单（只报不拦 · 三形归属窗）。
+ * doc-check/line-refs.mjs — 行号坐标的采集与清单块（一条抽取式、两个问法各一件效力 · 三形归属窗）。
  *
  * 判据句单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.23 条目 W（本档只实现，不重述口径）：
  * · 行号坐标 = **一个档名之后出现的 `:` 加数字**；归属窗三形闭集 = 紧贴 ∥ 承名 ∥ 段落承名
  *   （三形是**读数分类**，不是判据分级——同一命中按处计，不按形加权）；
- * · 它是**清点，不是判据**：不产 verdict、不计入 `hits`、不阻断任何写入。
- *   调用点只在 `./index.mjs` 的 `if (gate) { return … }` 早返回之后的报面构造段——`gate` 分支够不着本档，
- *   所以「闸看不见清单」是构造上的事实，不是「算出来但声明不参与」。
+ * · **一个采集、两个读者**：`collectLineRefs` 在 `./index.mjs` 的 **两支分支之前**采一次，
+ *   `report` 面拿它出清账清单（不产 verdict），`gate` 面拿同一份 `total` 计入 `hits.lineRefs`。
+ *   同源靠“采一次”成立，不靠两处各采后声明它们相等。
  * · 档名豁免 = 与锚判同一谓词 `docNameExemption`（单源 = `./anchors.mjs` ∥ §3.24 条目 X）——
  *   本档零自建名集：占位形（`x.md`）∥ 类名（`todo.md`）不算档名，也就不构成任何归属窗。
  *
@@ -50,6 +50,7 @@ function nameSpans(line) {
  * @param {{files?:string[]}} o `files` = 扫描域（调用方传入的档清单——本档不遍历目录、不做全仓扫描）
  * @returns {{body:Array, fenced:Array, total:number}}
  *   `body` = 正文面的处（围栏块外 ∧ 非可执行行）；`fenced` = 围栏内独有的处；每处 = `{file, line, form, fenced, snippet}`
+ *   **两个问法共用这一份**：`report` 面出清单块，`gate` 面逐处成 `✗ 行号坐标 …` 命中行并计 `hits.lineRefs`。
  */
 export function collectLineRefs({ files = [] } = {}) {
   const body = []

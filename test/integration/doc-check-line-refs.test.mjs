@@ -20,6 +20,7 @@ import { dirname, join } from "node:path"
 import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { docCheckTool } from "../../thincoder-core/agent-tools/doc-check.mjs"
+import { runDocCheck } from "../../thincoder-core/doc-check/index.mjs"
 
 const TMP = []
 
@@ -89,4 +90,21 @@ test("26-2 无行号坐标：量法行仍出 + 空态行「行号坐标 0 处」
   assert.equal(block[1], "行号坐标 0 处")
   assert.equal(block.length, 2, `无命中时块内只此两条：${JSON.stringify(block)}`)
   assert.ok(block.every((l) => l.trim() !== ""), "块内不留空行——空行读起来像「没跑」")
+})
+
+test("26-3 闸面拦：同一处真坐标 ⇒ gate 判 REFUSED（行号坐标 1 处），report 清单合计与 hits.lineRefs 逐字相等", () => {
+  const root = fixture({
+    "docs/common.md": "# 共用档\n\n正文。\n",
+    "docs/leak.md": "# 漏\n\n见 docs/common.md:12 那一行。\n",
+  })
+  const gate = docCheckTool.execute({ mode: "gate", docs: ["docs/leak.md"] }, { agent: { cwd: root } })
+  const first = gate.split("\n")[0]
+  assert.equal(first, "DOC-CHECK GATE: REFUSED（行号坐标 1 处）", `首行判决串：${first}`)
+  assert.match(gate, /✗ 行号坐标 docs\/leak\.md:3 ① /, `命中行形：${gate}`)
+  // 清账读数与闸面计数同源：同一份采集，不各采一次
+  const res = runDocCheck(root, { mode: "gate", docs: ["docs/leak.md"] })
+  assert.equal(res.hits.lineRefs, 1, "闸面计数 = 1")
+  assert.equal(res.hits.total, res.hits.anchors + res.hits.paragraph + res.hits.lineRefs, "三数之和 = hits.total")
+  const block = blockLines(runReport(root, ["docs/leak.md"]))
+  assert.equal(block[1], `正文面 ${res.hits.lineRefs} 处 · 围栏内 0 处 · 合计 ${res.hits.lineRefs} 处`, `清单合计与闸面计数逐字相等：${block[1]}`)
 })

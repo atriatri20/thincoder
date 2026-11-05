@@ -159,7 +159,7 @@
 | 12-12 | 会话 cwd = 容器根（祖先链无 manifest）、台账无在途行：`bash` 跑 `git status` 不带 `project`；再带 `project:<本仓>` 但仍不带号；再带 `project` + 本仓在途号 | 第一次拒（含 `no project on this call`）、命令零执行；第二次拒（含 `no ledger number on this call`）；第三次执行并回输出；另：`memory({action:"put", layer:"project"})` 不带 `project` ⇒ 拒、项目内 memory 目录零写 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-13 | `bash` 的 `project` 指到容器根 `D:\teamcode`（自身无 manifest）并带本仓在途号；再声明 A 项目、号取自 B 项目 | 两条都拒：分别含 `declared project is not a project` 与 `does not exist in this project's ledger`；两条拒文都同时点出 `project` 与 `ledger` 两个输入 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-14 | 会话 cwd = `<本仓>/thincoder-cli`（项目子目录）：`bash` 带 `project:"<本仓根>"` + 本仓在途号跑一条命令；同一会话再跑同一条但不带 `project` | 第一次放行、命令执行并回输出（声明根含会话锚 ⇒ 相关）；第二次拒（含 `no project on this call`）、命令零执行 | — | `test/integration/batch-live-batch-lock.test.mjs` |
-| 12-15 | 工程模式父侧、台账无在途行：`manifest({action:"init", target:"<祖先链无 manifest 的新目录>"})` 不带项目不带号；同会话把 `target` 换成既有项目内子目录重跑（仍不带号），再带本仓在途号跑同一笔 | 第一次照跑：`PROJECT-MANIFEST.json` 落盘在 target（不进本门）；第二次拒（含 `no ledger number on this call`）；第三次门过后工具拒（含 `init never overwrites`——落点解析到祖先项目根，`thincoder-core/agent-tools/manifest.mjs:160`），项目 manifest 字节零改 | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-15 | 工程模式父侧、台账无在途行：`manifest({action:"init", target:"<祖先链无 manifest 的新目录>"})` 不带项目不带号；同会话把 `target` 换成既有项目内子目录重跑（仍不带号），再带本仓在途号跑同一笔 | 第一次照跑：`PROJECT-MANIFEST.json` 落盘在 target（不进本门）；第二次拒（含 `no ledger number on this call`）；第三次门过后工具拒（含 `init never overwrites`——落点解析到祖先项目根，见 `thincoder-core/agent-tools/manifest.mjs` 的 init 拒因段），项目 manifest 字节零改 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 
 ### 13. 建批档就有台账
 
@@ -203,7 +203,7 @@
 ### 16. 状态行百分比与压缩判据同尺
 
 > 目的：用户看到的上下文百分比就是压缩实际用的那把尺子——校准比生效，不是低报的裸估算。
-> 节注：需求回指 = `docs/core/requirements/CONTEXT-COMPACTION.md`（F-CC1 感知 `:34`「模型可查当前上下文的用量与构成」∥ 报面 `:57`「同名输出不得两个无名百分比并存」）；设计回指 = `docs/core/design/CONTEXT-COMPACTION.md`（stats 面「与状态行 ctx% 的单源关系」条：单源 = 核 `historyReading`）；交互组件 = 槽 `estimateSample` → 核 `sampleRatio` / `restoreTokenSample` → CLI 渲染缓存 `ctxCacheOf` → 状态行渲染（四组件）；进入口 = CLI 恢复带样本的会话，用户肉眼读状态行；三态（行序）= 16-1 正常。
+> 节注：需求回指 = `docs/core/requirements/CONTEXT-COMPACTION.md`（F-CC1 感知「模型可查当前上下文的用量与构成」∥ 报面「同名输出不得两个无名百分比并存」）；设计回指 = `docs/core/design/CONTEXT-COMPACTION.md`（stats 面「与状态行 ctx% 的单源关系」条：单源 = 核 `historyReading`）；交互组件 = 槽 `estimateSample` → 核 `sampleRatio` / `restoreTokenSample` → CLI 渲染缓存 `ctxCacheOf` → 状态行渲染（四组件）；进入口 = CLI 恢复带样本的会话，用户肉眼读状态行；三态（行序）= 16-1 正常。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -258,7 +258,7 @@
 | 21-1 | 夹具项目 A ∥ B 各在台账建行；`process.chdir(A)`，再跑 `ledger list --json --cwd <B>` | 退出码 0 · 单段 JSON · `projects.length === 1` · `projects[0].root` = B · 行 id 集 = B 的行 · 零 A 行 · `schemaVersion` = 2 | 缺口来源 = 修前 `{"projects":[]}` → 修后 1 项 / 1 行 | `test/integration/ledger-read-cross-project.test.mjs` |
 | 21-2 | 同一 A 锚，`--cwd <带档但无台账库的项目>` | 退出码 0 · `projects` = `[]` · stderr 零行——空账不改成抛 | 回指 = 需求档验收 ②「空库空集 exit 0」；夹具两项 = 目标带 `PROJECT-MANIFEST.json`、键控库不在盘 | `test/integration/ledger-read-cross-project.test.mjs` |
 | 21-3 | 同 21-1 的进程锚与目标，走 ACP `ledger/list`（`params.cwd` = B） | 回包与 CLI 载荷深等：1 项 · 根 = B · 行集 = B 的行 · 零 A 行 | 业务入口 = 扩展拉取选中项目的台账；缺口来源 = 同一缺陷的第二出口（ACP 读账） | `test/integration/ledger-read-cross-project.test.mjs` |
-| 21-4 | 同 21-1 的进程锚与目标，走 ACP `ledger/count`（`params.cwd` = B，会话锚 = A） | `count` = B 的未决四态行数（≠ 0）· `overdue` ∥ `evidenceTooLong` 与 B 的读数一致 | 缺口来源 = 用户 2026-10-28 13:06 裁定 A（`count` 的界跟 `list`）；现行 `thincoder-cli/src/acp/read-data.mjs:77` 走 `ctx.getCwd()` ⇒ 修前回 0 | `test/integration/ledger-read-cross-project.test.mjs` |
+| 21-4 | 同 21-1 的进程锚与目标，走 ACP `ledger/count`（`params.cwd` = B，会话锚 = A） | `count` = B 的未决四态行数（≠ 0）· `overdue` ∥ `evidenceTooLong` 与 B 的读数一致 | 缺口来源 = 用户 2026-10-28 13:06 裁定 A（`count` 的界跟 `list`）；现行 `thincoder-cli/src/acp/read-data.mjs` 走 `ctx.getCwd()` ⇒ 修前回 0 | `test/integration/ledger-read-cross-project.test.mjs` |
 
 ### 22. SSH 接网络设备：读得清、拿得全、判得准
 
@@ -303,15 +303,16 @@
 | 25-1 | CLI 会话把 `agent.maxTurns` 调小，发一个跑得比它长的任务，撞帽后在卡上选 Continue，第二段再撞帽 | 第二张卡的两行都同时含两个数：`Ran 3 turns — 6 turns total. Continue?` 与 `Continue after 3 turns (6 total)?`——本段 3、累计 6，零 `(limit` | — | `test/integration/turn-cap-progress.test.mjs` |
 | 25-2 | 同一会话首段即撞帽（未续跑） | 首张卡 = `Ran 3 turns — 3 turns total. Continue?`（累计等于本段，两个数都在） | — | `test/integration/turn-cap-progress.test.mjs` |
 
-### 26. 清账要先有一把可复述的尺（report 面的行号坐标清单）
+### 26. 清账要先有一把可复述的尺（行号坐标：`report` 清点 ∥ `gate` 拦）
 
 > 目的：清存量行号引用之前，先让「还剩多少」可复述——同一份报面同时给出量法、两面读数与逐处坐标。
-> 节注：回指 = `docs/core/requirements/DOC-CHECK.md` F11 ∥ AC-9（AC-9 ①②④）；判据 = `docs/core/design/DOC-DISCIPLINE.md` §3.23 条目 W；交互组件 = `doc_check({mode:"report"})` → 报面构造 → 行号坐标采集器 → 清单块；进入口 = 真 `doc_check` 工具调用（`mode:"report"` + 显式 `docs`）；两态（行序）= 26-1 正常 · 26-2 边界。
+> 节注：回指 = `docs/core/requirements/DOC-CHECK.md` F11 ∥ AC-9（AC-9 ①②④）；判据 = `docs/core/design/DOC-DISCIPLINE.md` §3.23 条目 W；交互组件 = `doc_check({mode:"report"})` → 报面构造 → 行号坐标采集器 → 清单块（`mode:"gate"` → 引擎 `hits` 组装 → 首行判决串）；进入口 = 真 `doc_check` 工具调用；三态（行序）= 26-1 正常 · 26-2 边界 · 26-3 错误。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
 | 26-1 | 夹具档里三种写法各放一处（紧贴 ∥ 同段承名 ∥ 跨段承名，档名均为在盘档），调 `doc_check`（`mode:"report"` + 显式 `docs`） | 清单块首行是**量法行**（含档名抽取式 ∥ 坐标抽取式 ∥ 扫描域三串）· 合计行读 `合计 3 处` · 逐处行三行且形别 ① / ② / ③ 各一 · 末行仍是 `结论：…` | — | `test/integration/doc-check-line-refs.test.mjs` |
 | 26-2 | 夹具档不含任何行号坐标，同一入口再跑一次 | 清单块仍出量法行 + 空态行「行号坐标 0 处」，块内无空行（空行读起来像「没跑」） | — | `test/integration/doc-check-line-refs.test.mjs` |
+| 26-3 | 夹具档一处真坐标（档名在盘），先调 `doc_check({mode:"gate", docs})`，再对同夹具调 `report` | 首行 `DOC-CHECK GATE: REFUSED（行号坐标 1 处）` ∧ `hits.lineRefs = 1` ∧ 三数之和 = `hits.total`；同夹具的 `report` 清单合计与该值逐字相等 | 命中行形 = `✗ 行号坐标 <源档>:<行> <形别> <原文片段>` | `test/integration/doc-check-line-refs.test.mjs` |
 
 ### 27. 评审写一笔 §3 就够：状态行由工具置位
 
@@ -334,7 +335,7 @@
 ### 29. 路径解析统一层
 
 > 目的：同一条相对路径在哪个面都得到同一个答案——判得出就解析出，判不出就停下要人挑（列出候选），解析无果就说清缺哪一段并列出盘上同名档；跨仓引用只判「引用写对没有」。
-> 节注：回指 = 需求 `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-BATCH-SEGMENT.md`（相对路径解析序与防嵌套 F-BP1）· `docs/core/requirements/PROMPT-SYSTEM.md:125` ⑤（跨仓引用三态）· `docs/core/requirements/ADVISOR-CONVERGENCE.md` §2.3 条目 F18；机制单源 = `docs/core/design/PATH-RESOLUTION.md` §2（四态与判定算法）∥ §2.6（报明文）∥ §2.7（跨仓判据）；交互组件 = 统一解析层 `thincoder-core/path-resolve.mjs` ⟷ 七个吃路径的面（批档读 ∥ create ∥ 评审文档 ∥ 子代理 `files` ∥ 台账 `cwd` ∥ `doc_check target` ∥ 文档锚面）；进入口 = 父侧 `batch append` 一笔 / 一次 `advisor` 发起 / 一跑 `doc_check`；三态（行序）= 29-1 正常 · 29-2 错误 · 29-3 错误 · 29-4 边界 · 29-5 错误。
+> 节注：回指 = 需求 `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-BATCH-SEGMENT.md`（相对路径解析序与防嵌套 F-BP1）· `docs/core/requirements/PROMPT-SYSTEM.md` ⑤（跨仓引用三态）· `docs/core/requirements/ADVISOR-CONVERGENCE.md` §2.3 条目 F18；机制单源 = `docs/core/design/PATH-RESOLUTION.md` §2（四态与判定算法）∥ §2.6（报明文）∥ §2.7（跨仓判据）；交互组件 = 统一解析层 `thincoder-core/path-resolve.mjs` ⟷ 七个吃路径的面（批档读 ∥ create ∥ 评审文档 ∥ 子代理 `files` ∥ 台账 `cwd` ∥ `doc_check target` ∥ 文档锚面）；进入口 = 父侧 `batch append` 一笔 / 一次 `advisor` 发起 / 一跑 `doc_check`；三态（行序）= 29-1 正常 · 29-2 错误 · 29-3 错误 · 29-4 边界 · 29-5 错误。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
