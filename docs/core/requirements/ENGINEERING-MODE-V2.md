@@ -525,8 +525,7 @@ v1 三机检 = 必要内核 + 一大坨 thincoder 私有历史包袱（双引擎
 
 - 不重写 eng-coder / advisor 已验证可靠的核心（只微调）；
 - 不改 thincoder 产品其余部分（只工程模式机制）；
-- 不立即删 v1 老档——v2 确定后 v1 才归档退役；
-- 不把「修 bug」当方向——`docs/core/requirements/_archive/ENGINEERING-MODE-ISSUES.md` 是参考资料，不是 v2 需求。
+- 不把「修 bug」当方向——v1 问题盘点档（ISSUES，已随归档清理删除）是参考资料，不是 v2 需求。
 - 废除 checklist 工具与 checklist 约定（待办跟踪统一到台账，用户 2026-09-17 裁定）。
 
 ### 10.2 落地分期
@@ -534,9 +533,6 @@ v1 三机检 = 必要内核 + 一大坨 thincoder 私有历史包袱（双引擎
 - **阶段 1（先做实）**：研发项目 = 机制本体（三账 / 角色 / 文档体系 / 规则 / 情境）。
 - **阶段 2（延后）**：委托开发 = 本体 + 项目方法论增量（找对人 / 接手流程 / 生命周期 / 对外交付物）——委托开发的「对甲方的交付物」（方案/计划/交付物清单/日报/测试报告）与甲方四类人沟通，延后实现。
 
-### 10.3 退役方案 → 独立成节
-
-> 退役方案已拆为顶级节 **§12 v1 退役迁移方案（另批执行）**——本处只留指针，全文见 §12。
 
 ## 11. 验收标准（怎么算好）
 
@@ -547,76 +543,9 @@ v1 三机检 = 必要内核 + 一大坨 thincoder 私有历史包袱（双引擎
 | **可机判** | 每块验收点可机判，禁散文判据 | 判据句机检 |
 | **可迁移** | 机制不写死本仓，换项目可用 | 声明面（PROJECT-MANIFEST doc-root + 机检配置） |
 
-## 12. v1 退役迁移方案（另批执行）
-
-> 触发：**所有 M（M1–M10）全部落地**后另批执行。本节 = 该批的需求（退役判定表 + 四步闭环 + 代码对账）。
-
-**退役判定表**（v1 工程模式文档面 · 一行一档）：
-
-**需求层（退役）**：
-
-| 档 | 判定 | 去向 |
-|---|---|---|
-| `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` | 退役 ✅ | 12 机制 = 5 替代 + 7 继承搬 v2 §13 |
-| `docs/core/requirements/_archive/ENGINEERING-MODE.md` | 退役 | 角色/工作流 → v2 §7/§8 |
-| `docs/core/requirements/_archive/ENGINEERING-MODE-ISSUES.md` | 退役 | 已并入 v2 |
-
-**设计层（反向退役——旁路档，另起炉灶的）**：
-
-| 档 | 判定 | 合并回（语义对应，逐份核对） |
-|---|---|---|
-| `docs/core/design/_archive/modules/ENGINEERING-MODE-V2-MODULE-LEDGER.md` | 反向退役 | `docs/core/design/LEDGER.md` + `docs/core/design/LEDGER-SELF-CONTAINED.md` |
-| `docs/core/design/_archive/modules/ENGINEERING-MODE-V2-MODULE-BATCH-SEGMENT.md` | 反向退役 | `docs/core/design/BATCH-RECORD.md` |
-| `docs/core/design/_archive/modules/ENGINEERING-MODE-V2-MODULE-WRITE-GATE.md` | 反向退役 | `docs/core/design/WRITE.md` + `ENG-TOKEN-BINDING.md` |
-| `docs/core/design/_archive/modules/ENGINEERING-MODE-V2-MODULE-DELEGATION.md` | 反向退役 | `docs/core/design/AGENT-LOOP-SUBAGENT.md` |
-| `docs/core/design/_archive/modules/ENGINEERING-MODE-V2-MODULE-REVIEW-CREDENTIAL.md` | 反向退役 | `DESIGN-TOKEN-SETTLEMENT.md` + `docs/core/design/ADVISOR-GUARDS.md` |
-| `docs/core/design/_archive/modules/ENGINEERING-MODE-V2-MODULE-MACHINE-CHECK.md` | 反向退役 | `docs/core/design/DOC-DISCIPLINE.md` + `docs/core/design/DOC-CODE-RECONCILE.md` |
-| `docs/core/design/_archive/modules/ENGINEERING-MODE-V2-MODULE-PROMPT-PIPELINE.md` | 反向退役 | `PROMPT-SYSTEM.md` |
-| `docs/core/design/_archive/modules/ENGINEERING-MODE-V2-MODULE-TEST-DISCIPLINE.md` | 反向退役 | `TESTING.md` |
-| `docs/core/requirements/_archive/ENGINEERING-MODE.md` | 退役 | v2 架构设计替代 |
-
-**设计层（不退 · 就地更新为 v2 设计）**：
-
-| 档 | 判定 | 去向 |
-|---|---|---|
-| `docs/core/design/LEDGER.md` | 不退 | 就地更新 = M2 台账设计 |
-| `docs/core/design/LEDGER-SELF-CONTAINED.md` | 不退 | 就地更新 = M2 各仓自持 |
-| `docs/core/design/BATCH-RECORD.md` | 不退 | 就地更新 = M3 批次档六段 |
-| `docs/core/design/WRITE.md` | 不退 | 就地更新 = M4 写门 |
-| `ENG-TOKEN-BINDING.md` | 不退 | 就地更新 = M6 凭证绑定 |
-| `docs/core/design/AGENT-LOOP-SUBAGENT.md` | 不退 | 就地更新 = M5 委派 |
-| `AGENT-LOOP.md` | 不退 | agent 运行时主循环——只更新委派/调度子节 |
-| `docs/core/design/ADVISOR-GUARDS.md` | 不退 | 就地更新 = M6 评审门禁 |
-| `DESIGN-TOKEN-SETTLEMENT.md` | 不退 | 就地更新 = M6 凭证结算 |
-| `docs/core/design/DOC-DISCIPLINE.md` | 不退 | 就地更新 = M8 机检 |
-| `docs/core/design/DOC-CODE-RECONCILE.md` | 不退 | 就地更新 = M8 对账 |
-| `PROMPT-SYSTEM.md` | 不退 | 就地更新 = M9 提示词 |
-| `TESTING.md` | 不退 | 就地更新 = M10 测试纪律 |
-
-> **反向退役**（2026-09-17 用户纠正）：此前把退役方向写反了——M4/M2/M8 等模块落地时 eng-designer 本应「更新既有模块档」，却另起炉灶新写 `MODULE-*.md` 旁路档。纠正 = **退役旁路新档、就地更新旧档**（与 §6.3 就地更新纪律一致）。合并目标上表为语义对应，逐份核对。
-
-**7 个继承机制**（v2 不重写，语义继承入 v2 §13，退役时执行）：
-
-| 机制 | v1 源 |
-|---|---|
-| 文档更新纪律 D1–D12 | MECHANISM §1.15 |
-| VSC 端镜像 | MECHANISM §1.17 |
-| 台账提醒与可见面 | MECHANISM §1.18 |
-| 文档体系各仓自持 | MECHANISM §1.19 |
-| 变更面分流（产品/工具/文档） | MECHANISM §1.21 |
-| 批次档生命周期 | MECHANISM §1.22 |
-| 父侧轮次与提交纪律 | MECHANISM §1.23 |
-
-**批内动作（四步闭环）**：
-
-1. **文档合并**：8 份旁路档内容合并回对应旧档（逐份核对合并目标）+ 归档旁路档；
-2. **继承机制搬入**：7 个继承机制语义继承入 v2 §13（权威转移完成）✅（见 §13）；
-3. **代码↔合并后文档对账**：旁路档漏掉的旧档逻辑，代码也漏了——逐模块核对「合并后旧档设计 vs 已实现代码」，漏逻辑补齐（eng-coder 修正轮：设计→评审→实现）；
-4. **归档 + 指针重定向**：旧档（MECHANISM / ENGINEERING-MODE / ISSUES + 退役设计档）归档入 `_archive/`（不物理删除）+ 全仓指针重定向——**用户拍板后执行**。
-
 ## 13. 继承机制（自 v1 MECHANISM 语义继承——权威转移）
 
-> 退役批第 ② 步：7 个机制自 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` **语义继承**（v2 不重写，但以 v2 表述收录完整语义——MECHANISM 退役后本节 = 唯一权威源）。逐条语义与判据保留，组织归 v2 结构。
+> 本节 7 个机制自 v1 机制需求档（MECHANISM，已随归档清理删除）**语义继承**（v2 不重写，但以 v2 表述收录完整语义——MECHANISM 退役后本节 = 唯一权威源）。逐条语义与判据保留，组织归 v2 结构。
 
 ### 13.1 文档更新纪律 D1–D12（FR21）
 
@@ -1132,6 +1061,64 @@ v1 三机检 = 必要内核 + 一大坨 thincoder 私有历史包袱（双引擎
 **边界**：不改指令优先级梯子（那管冲突，这条管动手前）；不要求每次动手都长篇查证——查的是「这件事的做法有没有已经写过」。
 
 **落点**：`thincoder-core/prompts/common.md`——挂该档的七个场景（engineering / normal / eng-coder / eng-designer / explore / coder / plan）；advisor 与 consult 用自含基底，不在本规则射程内。
+### 13.26 开批前先调研（独立规则 · FR48）
+
+**问题**：调研义务现在只落在设计阶段——设计档里那一节「调研证据」。**开批那一刻没有任何要求**。于是批次的方向在没查现状、也没查外部事实的情况下就定了；设计阶段的调研只能验证**已经定下的**方向，换不了方向。方向错了，后面每一步都合规，也每步都错。
+
+**用户裁定（2026-11-05 15:21）**：「我希望对工程模式下的主会话在开批前给他提个调研要求，我希望它要先用 doc_search 查证一下项目现状，用 websearch 检索一下相关知识。」
+
+**两轮追问定下的三条**（同日晚）：
+
+- 15:23「**我比较担心那个「不适用」会被滥用。**」⇒ **取消「不适用」这一档**（理由见下「为什么不许写不适用」）。
+- 15:25「**分级我觉得是必要的。只是什么时候该上网查确实有点难界定。**」⇒ 分级保留，但判据换成**可复查的两问**，不用「需要不需要知识」这种无边界的判断。
+- 15:27「**先这么做试试。**」⇒ 本版落地。
+
+**规则（平实说法）**：开批之前，主会话先做两件事，并把**读数**写进批档 §1。
+
+**① 库内调研（一律必做）**：用 `doc_search` 查这条批要碰的东西在仓里现在是什么状态——有没有既有决定、既有先例、既有实现。**没有「不需要」这一档。**
+
+**② 库外调研（按两问分级）**：问两个可列、可复查的问题：
+
+| # | 问 | 答「有」的形 |
+|---|---|---|
+| 1 | 本批**改动的文件**里，有没有**外部依赖面**？ | 依赖清单 / 锁文件 · 上游 API 调用点 · 协议实现 · 浏览器 / 设备驱动 |
+| 2 | 本批的**结论**里，有没有**关于外部系统的断言**？ | 否定断言（「某 API 不返回 X」——最不可靠，必查）· 版本 / 发布状态 · 配额 / 限制 · 第三方行为 |
+
+- **任一为「有」 ⇒ A 类**：必须联网查，**检索词原文 + 结论**写进 §1。
+- **两问皆「无」 ⇒ B 类**：**也要把两问的答案写出来**（改动面 = 哪几个文件、外部断言 = 零），不是免检，是答完了。
+
+**③ 唯一豁免是环境事实**：环境没有联网工具 ⇒ 写「未查：环境无联网工具」（可当场核：工具表里有没有联网项），并在收口时标「外部断言未经一手源验证」。
+
+**判据形态（§1 里合法只有这几形）**：
+
+```
+库内 = 已查：<查询词原文> → <结论>
+库外 = 已查：<查询词原文> → <N 条相关 ∥ 无相关>
+库外 = B 类：改动面 = <文件清单>；外部断言 = 零
+库外 = 未查：环境无联网工具
+```
+
+**为什么不许写「不适用」**：那是**判断**，谁都没法复查；「已查：<词> → 无相关」是**读数**，任何人事后拿同一个词重跑一遍就能核对。用户担心的滥用，恰恰长在**不可复查的那一格里**——一个可以随手填的判断词，会成为所有漏做的统一出口。同仓已有前科（主 agent 曾用「不适用」绕过批档 §2 ∥ §3 的评审链），那个机制已被拆除，这条规则不得把它复活。
+
+**为什么（三层，按代价顺序）**：
+
+1. **现状只有那时能查清**：批档一开，交付面与边界就定死了。之后设计席再查，查的是「怎么实现这个方向」，不是「这个方向对不对」。
+2. **最贵的错在否定面**：一条「某 API 不返回 X」写进设计，读起来完全合理，而它可能是半年前某个版本的记忆。等它出错，错在实现层，不在设计层。
+3. **「不需要」与「忘了做」在纸上同形**：这是分级必然带来的口子。判据设计成可复查的两问，而不是「我觉得不用」。
+
+**边界**：
+
+- **不改 §13.25**：那条的触发点是「提问 / 与文档冲突 / 动手」，管的是**怎么做**；这条的触发点是**开批**，管的是**方向从哪来**。两条并存，不合并。
+- **不是要求写调研报告**：是**两行读数**，不是一节文章。
+- **不造机械门**：「查得够不够」不可机判，格式门只能判 §1 有没有那两行，会退化成写两行空话——比没有更坏，因为它让人以为做过了。
+- **B 类不是免检**：把两问答出来，本身就是这条规则的执行。
+
+**落点**：`thincoder-core/prompts/discipline-engineering.md`（工程模式纪律层）；读数落批档 §1。
+
+**依赖**：
+
+- **上游** = §13.25（动手前先查文档）与公共层的联网查证机制。三条**各自触发、互不替代**：本节管「开批前定方向」，§13.25 管「动手前查做法」，公共层管「断言要有一手源」。
+- **下游** = 工程模式纪律层提示词的落地块（逐字终稿在设计面）与批档 §1 的读数行。
 
 ## 附录 · 来源锚（用户口述原话，过程记录）
 
