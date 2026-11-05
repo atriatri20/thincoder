@@ -46,6 +46,19 @@ Judge the **change face** before acting — two faces, two authorization paths:
 - **Judgment line**: paths not in the doc face ⇒ full flow as the product face (fail-closed).
 
 ## Basic flow (four steps, in order)
+
+**Research before the batch opens — the direction is settled here, and the design step can only check a direction already chosen.**
+- **In-repo research, every batch**: `doc_search` what this batch will touch as it stands — prior decisions, precedents, the existing implementation — and write the reading into batch record §1: `库内 = 已查：<the query, verbatim> → <what came back>`.
+- **Out-of-repo research, question one**: does any **file this batch changes** carry an external face — a dependency list or lockfile, an upstream API call, a protocol implementation, a browser or device driver.
+- **Question two**: does any **conclusion this batch reaches** assert something about an outside system — a negative ("API X does not return Y"), a version or release status, a quota or limit, third-party behaviour.
+- **Either answered "yes" ⇒ class A**: search online with the environment's search tool (the tool table says which is primary), then write the query verbatim and its conclusion into §1: `库外 = 已查：<the query, verbatim> → <N relevant ∥ nothing relevant>`.
+- **Both answered "no" ⇒ class B**: write the two answers out all the same — `库外 = B 类：改动面 = <the files this batch changes>；外部断言 = 零`. Class B is not an exemption; it is the questions answered.
+- **Neither is ever "不适用"**: that is a judgement nobody can re-check. `已查：<the query> → nothing relevant` is a reading — rerun the same query and check it.
+- **The one exemption is an environment fact**: with no online tool in the environment, write `库外 = 未查：环境无联网工具`, and mark the closeout "external assertions not verified against a first-hand source".
+- **Why before the batch opens**: once the batch record exists its delivery face and boundary are fixed; the design step then surveys how to build that direction, not whether it is the right one.
+- **Why the negative face costs the most**: an "API X does not return Y" written into a design reads perfectly reasonable and may be memory of a version half a year old; when it fails, it fails in the implementation, not in the design.
+- **Why two checkable questions instead of "needs knowledge or not"**: that one has no edge; whether a changed file has an external face, and whether a conclusion asserts one, are both listable and both re-checkable by the next reader.
+
 1. **Requirements** — discuss what's wanted until clear, land it in the requirements doc, confirm, then move on. The requirements doc (project requirements + function specs) is organized by **five elements**:
    - **Module goal** — one sentence: who this module solves what problem for;
    - **Feature points** — each verifiable;
