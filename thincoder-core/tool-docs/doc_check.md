@@ -150,6 +150,14 @@ and consumers judge by that prefix; the hits are fixed in the same round and are
 A listed document that is on disk but cannot be read makes the verdict `ERROR（读不到 N 档）`: that document was not judged,
 so neither `PASS` nor `REFUSED` is produced — a file the check could not read is not a clean file.
 
+A range that judges **no document at all** makes the verdict `ERROR（0 档受检——空范围不判 PASS）` — an empty `docs` list, a
+round that wrote no `.md`, a list whose paths are all off disk, and a list holding no Markdown file all read the same way.
+
+`PASS` is a statement about the documents: all of them are clean. With no document there is nothing for it to be true of, so
+an empty range is a verdict that could not be reached, not a clean one.
+
+Why the range is empty is not in the first line: the `范围为空：…` line and the skip lines name it, entry by entry.
+
 A rootless call — the engine given no declared root, an empty string, or a non-string — judges nothing.
 The verdict is `ERROR（无法定根 N 档）`, every document is named with its reason, and no hit line is printed.
 
@@ -158,6 +166,7 @@ That is policy, not arithmetic: half a verdict cannot be told apart from "the re
 The gate refuses **one delivery**, not a user instruction: an explicit user go-ahead is followed, with the hits written into it.
 
 `ERROR` is fail-closed (no PASS means not passed): a multi-project workspace is a legal declared root — the list is judged document by document, each against its own project root.
+An empty range is one of its causes too: pass explicit `docs` and re-run.
 
 Do not wire it as a gate or CI step in `report` mode, and do not treat a finding as a reason to refuse an instruction — a
 machine check never outranks a user instruction.

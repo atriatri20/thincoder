@@ -244,6 +244,9 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **A business gate ships with its failure case**: a gate that must reject gets a unit case — deleted with the batch, like every other unit case — that feeds it unsatisfied input and asserts the rejection plus its readable reason (the gate named, the offending input named).
   The happy path alone does not show the gate exists.
   Why: a gate nobody has watched reject is a gate that may be defaulting, auto-creating or catching its way to success; the failure case is the reading that proves the business rule is still deciding.
+- **A criterion earns its place by being able to fail**: run it before the change, on the side where it is meant to read red, and put that command and its output next to what the change is meant to produce — "it was red before" is a sentence, and only the reading can be re-run.
+  A criterion already green on its failing side is rewritten rather than kept: it will print the same number after the change, and the batch then closes on a green nobody earned.
+  A criterion that cannot be run before the change has not pinned its domain yet — an open range or an unnamed ruler answers however that day's wording falls, and a pass over no object reads exactly like a pass over all of them.
 
 ## Doc discipline
 

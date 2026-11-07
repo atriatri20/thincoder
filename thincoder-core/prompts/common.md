@@ -122,6 +122,13 @@ Leads keep their value — they say where to look, which is most of the search.
 Those five are where someone acts on what you wrote: a missing line there costs a redo, while elsewhere a wrong sentence costs one correction.
 This rule reaches no further than those five; a claim carried into one of them answers to the rule where it now sits.
 
+**A reading that can only come out one way has verified nothing**: before a check is trusted, run it where it is expected to fail — the state before the change, the input the gate is meant to reject, the row that is not there yet.
+A check that reads the same there as it does afterwards measures the wording of its own command rather than the fact it was written to watch — and it reads that way for every later reader too, so the green it reports is one the work did not earn.
+**The failing side is recorded, not narrated**: the command and what it printed, beside what the change is expected to produce — "I ran it on the failing side and it was red" is a sentence, and a sentence cannot turn red either.
+Four shapes they take, all met in one day of our own work: a search whose own string carries the answer, so two characters decide green or red; a pattern that matches nothing — a carriage return the pattern does not allow for,
+a dialect where the alternation is read as a literal, a working directory outside the repo; a count with no ruler named, where per line, per occurrence and deduplicated are three answers to one question;
+a run over no object at all, reported as a pass.
+
 ## Business gates — a business failure must fail
 
 A business system is correct when what should not pass does not pass. A **business gate** is a precondition the business states, not the code: the record exists, the state machine allows the move,

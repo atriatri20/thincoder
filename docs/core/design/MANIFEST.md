@@ -852,8 +852,8 @@ const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recen
 **`doc_check` 只判传入文件（用户 2026-10-22 10:27 裁定——判据不漂，范围收窄）**
 
 - 判定范围 = **调用方传入的文件清单**——两种问法各定。**`report` 面**：不给 ∥ `[]` ∥ 非数组 ∥ 含非字符串条目 ⇒ **一律报错**（零遍历、零全域兜底）——`report` 面没有「空清单」读法。
-- **`gate` 面**：范围两来源（并集，由调用方传入）：子代理 = 本会话触达记账（`_touchedFiles`）；父侧 = 触达记账 ∪ 本批提交 diff（`git diff <批起 sha> --name-only -- docs`）——工具内不设默认范围。**空清单 = 合法态**：首行 `DOC-CHECK GATE: PASS（0 档）`，且输出行**必带「0 档受检」**字样（不许只给空范围——防「跳过」被读成「已检」）。
-- 为什么两面对待：零档没有可扫的东西 ⇒ 不存在「偷偷扫全仓」的兜底风险；纯代码轮次触达档 = 0 是常态，gate 报错会把正常态变成故障。`report` 面仍是「不给清单 ≠ 查全域」的防线。
+- **`gate` 面**：范围两来源（并集，由调用方传入）：子代理 = 本会话触达记账（`_touchedFiles`）；父侧 = 触达记账 ∪ 本批提交 diff（`git diff <批起 sha> --name-only -- docs`）——工具内不设默认范围。**空清单 = 判不出**：首行 `DOC-CHECK GATE: ERROR（0 档受检——空范围不判 PASS）`，且输出行**必带「0 档受检」**字样（不许只给空范围——防「跳过」被读成「已检」）。
+- 为什么两面对待：`report` 面**抛错**（没有清单就没有可判的东西，零遍历、零全域兜底）；`gate` 面**不抛错**——照出「0 档受检」实况，由首行判 `ERROR`。纯代码轮次触达档 = 0 是常态：抛错会把常态判成故障，`PASS` 会把「没判」读成「全清」，两态都不可取，故取「照实说 + 判不出」。
 - 参数面 = **纯内置常量** `DOC_CHECK_BUILTINS`（`thincoder-core/doc-check/index.mjs` 冻结对象）：`lineWidth: 300` · `widthExemptZones: []` · `exemptions: []`。**无 `scanDirs` / `domain` / `roots` / `exclude`**——不扫目录、不建全域索引。
 - 两项空列表 = 常量自身的排除类 / 区带类默认值且恒空：豁免谓词（表行 / 围栏 / 可执行行 / 引文）住代码，没有「登记后放过」的写入口 ⇒ 与需求边界「不引入豁免清单」不冲突（空列表 ≠ 可登记豁免）。
 - 锚解析序收为两级：① 仓根相对**全路径** ② 引用档**同目录**；`§N` 节在盘判定只读解析命中的目标档（点查，不遍历）。裸名跨目录解析取消——引用须写全路径或同目录（与 D4 实现坐标口径一致）。
@@ -904,8 +904,8 @@ const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recen
 | AC-46 | 旧档三键残留 ⇒ `validateManifest` `ok:true` + `unknownKeys` 含三名；`write` 一轮后档内三名消失 | FR42 需求 6 | 夹具：旧八键档 → 读 → 写一已知键 → 回读档文 | 同 AC-45 |
 | AC-47 | `doc_check` 在**无** `checkConfig` 的 manifest 上跑 gate：出 `PASS` / `REFUSED`，不出「缺参数」ERROR；doc_check **不读 manifest**（源码面 `readManifest` 零命中） | FR42 需求 5 · 验收 ④ / `docs/core/requirements/DOC-CHECK.md` F3 | 夹具仓 + 源码面 | 核单测档 |
 | AC-48 | 无 `advisor` 键时 Document Map 产出于 `docRoot` 派生梯：① 声明根 README ② 公共祖先 README ③ 降级句；**零静默**（三态各一断言） | FR42 需求 3 · 验收 ⑦ | 纯函数注入夹具三态 + 本仓实跑（落到 `docs/README.md`） | 核单测档 |
-| AC-49 | `advisor.docMap` / `advisor.standardsDoc` 读取分支零残留 | FR42 需求 3 | 源码面：`project-context.mjs` / `declaration.mjs` 两档 `advisor` 零命中（注释除外） | 同 AC-48 |
-| AC-50 | **点查面三条**：① 代码内 `scanDirs` 零消费（源码面 grep，含 `anchors.domain` / `anchors.roots` 零存在）；② **两面分明**——**`report` 面**：不给 `docs` ∥ `[]` ∥ 非数组 ∥ 非字符串条目 ⇒ **一律报错**（零遍历、零全域兜底）；**`gate` 面**：空清单 ⇒ 首行 `DOC-CHECK GATE: PASS（0 档）` 且输出行**必带「0 档受检」**字样（不许只给空范围——防「跳过」被读成「已检」）；③ 传两档 ⇒ 只读这两档 + 其引用目标（`readFileSync` 命中集断言） | FR42 需求 2 · 验收 ③ / `docs/core/requirements/DOC-CHECK.md` F10 · AC-8 | 夹具 + 源码面 + 读盘计数入批档 §2 | 核单测档 |
+| AC-49 | `advisor.docMap` / `advisor.standardsDoc` 读取分支零残留 | FR42 需求 3 | 源码面：`thincoder-core/advisor/project-context.mjs` / `thincoder-core/declaration.mjs` 两档 `advisor` 零命中（注释除外） | 同 AC-48 |
+| AC-50 | **点查面三条**：① 代码内 `scanDirs` 零消费（源码面 grep，含 `anchors.domain` / `anchors.roots` 零存在）；② **两面分明**——**`report` 面**：不给 `docs` ∥ `[]` ∥ 非数组 ∥ 非字符串条目 ⇒ **一律报错**（零遍历、零全域兜底）；**`gate` 面**：空清单 ⇒ 首行 `DOC-CHECK GATE: ERROR（0 档受检——空范围不判 PASS）` + 「0 档受检」照实行（不许只给空范围——防「跳过」被读成「已检」）；③ 传两档 ⇒ 只读这两档 + 其引用目标（`readFileSync` 命中集断言） | FR42 需求 2 · 验收 ③ / `docs/core/requirements/DOC-CHECK.md` F10 · AC-8 | 夹具 + 源码面 + 读盘计数入批档 §2 | 核单测档 |
 
 **未入验收对照表的需求项**：验收 ⑧（本仓 696 条裸名指针，债务 `#1731`）⇒ 边界「本仓债」句（只保证不新增）。
 

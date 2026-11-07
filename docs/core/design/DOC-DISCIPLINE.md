@@ -1521,13 +1521,15 @@ bare names only — `AGENTS.md`, `SKILL.md`, `project_rules.md`. The other four 
     理由：**一个总量数字只对「要不要少做」有用**——而这一条的答案是不许少做；该问的是「这一档现在干不干净」，不是「全仓还剩多少条」。
 
   - **父侧候选清单 = git（指定 base）**：子代理工具面无 git，交付当下用②；父侧 §6 有 git，可另用①给出候选清单。**权威面 = 父侧**：子代理自报的范围是子集，父侧以自查为准（自报不构成范围证据）。清单口径（含 `<批起 sha>` = 本轮开工前的 HEAD）单源 = 本条「结构兜底」的「② 的范围」——本处不复述、不另立清单。
-  - **空范围照实说**：范围 0 档 ⇒ 仍给 `PASS（0 档）` + 一行**必带「0 档受检」**的照实行（如「本会话没有写过清单内的文档；若确认改过 ⇒ 显式传 docs」）——空范围不静默当通过。
+  - **空范围不判 PASS**：范围 0 档 ⇒ 首行 `DOC-CHECK GATE: ERROR（0 档受检——空范围不判 PASS）` + 既有「0 档受检」照实行（如「本会话没有写过 .md 档——若确认改过 ⇒ 显式传 docs」）——判了 0 档不是「全清」，`ERROR` 的消费面 = fail-closed（§6 前置只认 `PASS`）。
+
+    **四个入口同一句回**：显式空清单 ∥ 省略 `docs` 而本会话零 `.md` 触达 ∥ 路径全不在盘 ∥ 全非 `.md`。原因不丢：「为什么空」由既有 `范围为空：…` 四句分流句（两个范围来源 × 有 ∥ 无跳过行）与两个跳过桶头承担（跳过行逐档点名被跳过的路径）；首行只管判决，说明行管原因。
 
 - **裁定面**：首行固定三形 = `DOC-CHECK GATE: PASS` ∥ `DOC-CHECK GATE: REFUSED（按类分列：锚 A 条 · P 段文字太长，难于阅读 · L 行太长）` ∥ `DOC-CHECK GATE: ERROR（原因）`——机器可判串（消费判据 = 首行前缀）；命中逐条给 `档:行` + 类（`档缺` / `节缺` / `文字太长，难于阅读` / `行太长`）。
 
   - **取参失败 ⇒ ERROR（本因退场）**：参数为内置常量、不读 manifest ⇒ 该因已删除；ERROR 余形 = `target` 指向多项目工作区（候选清单行）。`report` 模式无 `docs` ⇒ 报错（可读串），不扫全域。
 
-  - **ERROR 的消费 = fail-closed**：§6 前置只认 `PASS`——`ERROR` 视同未通过（不提交批准 / 不核销 / 不 close / 不改台账）。**一因一处置**：多项目工作区 ⇒ 指名项目根（`target`）后复跑。
+  - **ERROR 的消费 = fail-closed**：§6 前置只认 `PASS`——`ERROR` 视同未通过（不提交批准 / 不核销 / 不 close / 不改台账）。**一因一处置**：多项目工作区 ⇒ 指名项目根（`target`）后复跑；空范围 ⇒ 补显式 `docs` 后复跑。**触发点 2 怎么读它**：纯代码轮本会话零 `.md` 触达 ⇒ 首行 `ERROR（0 档受检…）` 读作「什么都没判」，不是「本批未通过」——处置 = 显式传本轮改过的档复跑到 `PASS`；触发点 3（父侧收口）的范围恒含本批批档自身 ⇒ 恒 ≥1 档，这一形在收口面不可达。
 
 - **三个触发点（哪一步强制 · 失败怎么办）**：
   1. **设计轮交付（eng-designer）**：自检步「评审前预检」末位跑一次；`REFUSED` ⇒ 同轮修到 `PASS` 再交回，报告携 `doc_check: PASS（N 档）` 一行。修法不明（举例 / 类名 / 真指针？）⇒ 上抛主 agent 裁决；**主 agent 拿不准 ⇒ 转呈用户**（需求 F7 收件人 = 用户），不自选豁免；改法会与已批设计冲突 ⇒ 停下上报。
@@ -1635,7 +1637,7 @@ bare names only — `AGENTS.md`, `SKILL.md`, `project_rules.md`. The other four 
 
 - **`ERROR` 消费分野**：② fail-closed（无 PASS 即未见通过）；① **放行 + 回执明示**——F9 只在 ② 点名 ERROR；子代理无法重启会话，卡死写账 = 无账之笔，而 ② 会拒收口 ⇒ 轮次不会被当成已通过。
 
-- **适用面（调用面驱动）**：判据只落传入文件，不看 manifest；空清单两面分明——`report` 面 ⇒ 报错 ∥ `gate` 面 ⇒ `PASS（0 档）` + 「0 档受检」。批档门的「无声明面 ⇒ 未跑」回执行归批档门自身（M3 读 manifest），doc_check 不掺和。
+- **适用面（调用面驱动）**：判据只落传入文件，不看 manifest；空清单两面分明——`report` 面 ⇒ 报错 ∥ `gate` 面 ⇒ 首行 `ERROR（0 档受检——空范围不判 PASS）` + 「0 档受检」。批档门的「无声明面 ⇒ 未跑」回执行归批档门自身（M3 读 manifest），doc_check 不掺和。
 
 - **零回归（门是新增前置，不是替换）**：既有拒因（段白名单 / 段号 / path 门 / 冻结 / 状态行不可解析 / text 校验 / 骨架保护 / 凭证剥除 / 死占位 / §6 非空 / create-close 身份门）逐字、逐序不变——门插在它们**之后**、写盘**之前**；错误串前缀 = `batch:`（新增错误面）。
 
@@ -1729,10 +1731,10 @@ bare names only — `AGENTS.md`, `SKILL.md`, `project_rules.md`. The other four 
 | `report` + 非空清单 | 只判清单内各档（整档入判）；报面 = 本条「报面（固定句形 · 报告态）」（射程行 = 传入清单 N 档、含范围行） |
 | `report` + `[]`（∥ 全为空白串） | **报错**——空清单不是「全域」请求，判据一条都不跑 |
 | `report` + 不在盘 ∥ 非 `.md` 的档 | 报错并逐档点名；**整次零判定**（fail-closed）——不是「判能判的、报不能判的」 |
-| `gate` + 任意 | 空清单 = `PASS（0 档）` + 「0 档受检」；不在盘 ∥ 非 `.md` ⇒ 报错点名 |
+| `gate` + 任意 | 空清单 = 首行 `ERROR（0 档受检——空范围不判 PASS）` + 「0 档受检」；不在盘 ∥ 非 `.md` ⇒ 跳过行逐档点名 |
 | `docs` 非数组 | 报错（裸串不被读作全域请求） |
 
-**两处置同源**：范围判定唯一实现 = `thincoder-core/doc-check/index.mjs` 的 `resolveRange`（传入清单 ∧ 盘上存在 ∧ `.md`），`report` 与 `gate` 共用。两面分界：`report` 无清单 ∥ 空清单 ⇒ 报错；`gate` 空清单 = 合法态（`PASS（0 档）`）——清账面没有「部分检查」这回事，清单写错却报 0 命中是要关闭的假绿。
+**两处置同源**：范围判定唯一实现 = `thincoder-core/doc-check/index.mjs` 的 `resolveRange`（传入清单 ∧ 盘上存在 ∧ `.md`），`report` 与 `gate` 共用。两面分界：`report` 无清单 ∥ 空清单 ⇒ 报错；`gate` 空清单 = 判不出（首行 `ERROR（0 档受检——空范围不判 PASS）`）——判了 0 档不是「部分检查」，但它绝不能读作「全清」：清单写错却报「清」正是要关闭的假绿。
 
 **报错串形**（引擎抛 `doc_check:` 前缀；工具面由调度器包成 `Error: <message>`——`thincoder-core/agent/dispatch-run.mjs` 实读）：四面各一句可读串——① 无 `docs`；② `docs: []`；③ `docs` 非数组；④ 清单内档不可判（不在盘 ∥ 非 `.md`）并逐档点名。文案逐字随实施轮落（英文运行面）；判据 = **各面零判定产出、零遍历**。
 
@@ -1749,7 +1751,7 @@ bare names only — `AGENTS.md`, `SKILL.md`, `project_rules.md`. The other four 
 
 **不产 `DOC-CHECK GATE:` 判词**：判词族是交付门的语义（消费面 = 交付协议 ∥ 批次档 §6 前置）；报告态冒出 `PASS` 会让清账读数冒充本批交付通过。报告态报面 = 本条「报面（固定句形 · 报告态）」一形，不另立第二形。
 
-**实现落点**：范围判定 = `thincoder-core/doc-check/index.mjs` 的 `resolveRange(<传入清单>)`（`report` ∥ `gate` 同源）；`report` 无清单 ∥ 空清单 ∥ 非数组 ∥ 不可判档 ⇒ 报错支（零遍历，不落全域）；`gate` 空清单 ⇒ `PASS（0 档）`。
+**实现落点**：范围判定 = `thincoder-core/doc-check/index.mjs` 的 `resolveRange(<传入清单>)`（`report` ∥ `gate` 同源）；`report` 无清单 ∥ 空清单 ∥ 非数组 ∥ 不可判档 ⇒ 报错支（零遍历，不落全域）；`gate` 空清单 ⇒ 首行 `ERROR（0 档受检——空范围不判 PASS）`，不产 `PASS`。
 
 **既有件三问（`resolveRange`）**：existing: `thincoder-core/doc-check/index.mjs`（`function resolveRange(base, docs)`——传入清单 ∧ 盘上存在 ∧ `.md`）· name: `resolveRange`（逐字）· consumers: `thincoder-core/doc-check/index.mjs`（`runDocCheck` 唯一调点，`report` ∥ `gate` 同源）。
 
@@ -1768,11 +1770,11 @@ none found: 同名第二实现零命中（查过面 = `thincoder-core/**` 全树
 | DD-108 | 错误 | 清单给不在盘的 `.md` ∥ 在盘的非 `.md` 档 | 各报错并点名该档，原因 = `not on disk` ∥ `not a markdown document`；**零命中产出** |
 | DD-109 | 错误 | `docs: []` ∥ 省略 `docs` | 两者**各报错**（空清单 ≠ 全域；无清单 ≠ 全域）；读盘计数 = 0 |
 | DD-110 | 正常（回归） | `gate` + 清单 2 档（皆零命中） | 首行逐字 `DOC-CHECK GATE: PASS`；范围行 = 2 档；`结论：0 条命中（2 档全清）` |
-| DD-111 | 边界 | `gate` 空清单 | 首行 `DOC-CHECK GATE: PASS（0 档）` + 「0 档受检」照实行；仍放行 |
+| DD-111 | 边界 | `gate` 空清单 | 首行 `DOC-CHECK GATE: ERROR（0 档受检——空范围不判 PASS）` + 「0 档受检」照实行；不产 `PASS` |
 | DD-112 | 错误 | `docs` 传裸串（非数组） | 工具面返回非数组报错串（不抛、不落全域）∥ 引擎抛同串；无报面、无 `TypeError` |
 | DD-113 | 错误 | 清单给目录 ∥ 非 `.md` 档 | 各报错点名 `not a markdown document`；**不得**并入 `not on disk`、**不得**按 `.endsWith('.md')` 静默过滤 |
 
-**同类先例（对齐 ∥ 偏离）**：① gate 面的范围收窄（本条「交付时点强制」）——**对齐** = 同一 `resolveRange`、同一「解析面不缩」；**偏离** = 空清单的处置（gate `PASS（0 档）` ∥ report 报错）。② `manifest` 工具的参数错面（报明 + 处置句）——**对齐**「参数错不猜」。先例批之名不入本档（D4 方向唯一）。
+**同类先例（对齐 ∥ 偏离）**：① gate 面的范围收窄（本条「交付时点强制」）——**对齐** = 同一 `resolveRange`、同一「解析面不缩」；**偏离** = 空清单的处置（gate 首行 `ERROR` ∥ report 抛错，两者同为 fail-closed——同一件事的两种失败通道）。② `manifest` 工具的参数错面（报明 + 处置句）——**对齐**「参数错不猜」。先例批之名不入本档（D4 方向唯一）。
 
 **公共源勘察**：同本节证据行（`index.publicRepos` = `[]`，实读）——无相关公共源可引。
 
@@ -1818,7 +1820,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 **拒串面同判**：批档门的拒串（`gateRefusalMessage`）才是被拒者真正读到的那一面——门结果对象里的 `report` 只在 `error` 支被读，处置块若只挂在 `report` 上，字面虽相等而读者面没变。故段命中 ⇒ 拒串 = 原因面 + 空行 + 五行块（`处置：` 1 次 · `同轮修正后复跑` 1 次 · 块为末段）；仅锚 ∥ 仅行命中 ⇒ 拒串零处置块、照旧一句。
 
-空范围 ⇒ 首行 `DOC-CHECK GATE: PASS（0 档）` + 一行 `范围为空：本会话没有写过文档——若确认改过 ⇒ 显式传 docs`。
+空范围 ⇒ 首行 `DOC-CHECK GATE: ERROR（0 档受检——空范围不判 PASS）` + 一行 `范围为空：本会话没有写过 .md 档——若确认改过 ⇒ 显式传 docs`。
 `docs` 含**不可判档**（不在盘 ∥ 非 `.md`）⇒ **报错点名**（fail-closed），不跳过。
 
 `ERROR` 首行 = `DOC-CHECK GATE: ERROR（原因）` + 原因行（`target` 指向多项目工作区候选）——**不产 PASS**，消费面按 fail-closed。
@@ -1886,7 +1888,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 | DD-85 | 正常 | gate + 显式 `docs`（域内 2 档，皆零命中） | 首行 `DOC-CHECK GATE: PASS`；范围行 = 2 档；结论 0 条 |
 | DD-86 | 错误 | gate + `docs`：该档改一行，另有一处**存量**悬空指针（改动行之外） | 首行 `REFUSED`；**两处都在报**（整档入判——AC-1 全文检查） |
 | DD-87 | 边界 | gate + `docs` 不含某档，而该档有悬空指针；同域再跑报告态 | gate **不报**（范围外——AC-2）∥ 报告态 **报出**（对照） |
-| DD-88 | 边界 | gate 未给 `docs`、本会话零文档写入 | `PASS（0 档）` + 空范围行；**不静默当通过** |
+| DD-88 | 边界 | gate 未给 `docs`、本会话零文档写入 | `ERROR（0 档受检——空范围不判 PASS）` + 空范围行；**不静默当通过** |
 | DD-89 | 边界 | gate + `docs` 含本轮已删档 ∥ 清单档以同目录裸名引用未改档 | 已删 ⇒ 报错点名（fail-closed）；同目录裸名引用 ⇒ **零 `档缺`**（解析面不缩） |
 | DD-90 | 错误 | gate + `target` 指向多项目工作区 | 首行 `DOC-CHECK GATE: ERROR（原因）`——**不产 PASS**（消费面 fail-closed）；另给候选清单 |
 | DD-92 | 正常 | 夹具项目（manifest + 写者触达一清档）· eng-designer append §2 ∥ eng-coder append §5 | 首行 `PASS`；段落盘；回执含 `[doc-check gate] DOC-CHECK GATE: PASS` 行 |
@@ -3485,7 +3487,7 @@ doc_check({ mode: "report", docs: [...] })   # 指定档
 3. **② 拒收口（DD-94 ∥ DD-95 ∥ DD-99）**：同夹具 ⇒ `close` throw ∧ §1 状态行仍「进行中」；`status` 值「已收口」同拒；**工作树内范围外的档命中（DD-99）⇒ 不入判 ∧ `close` 放行 ∧ 回执零该档行**（命中即拒，无分域）。
 4. **零命中放行（DD-92）**：清夹具 ⇒ append / close 成功，回执含 `[doc-check gate] DOC-CHECK GATE: PASS` 行。
 
-   **判域恒非空**：批档自身恒在判域（在盘即入）⇒ 「`0 档`」这一形在批档门**不可达**——`grep "PASS（0 档）"` 于 `thincoder-core/agent-tools/batch-gate.mjs` = 0；构造异常（批档不在盘）⇒ 首行 `DOC-CHECK GATE: ERROR（判域为空——批档自身应恒在判域）`，不产 `PASS`。工具面（`doc_check` 工具 gate 空清单）**不变**——另一条调用面。
+   **判域恒非空**：批档自身恒在判域（在盘即入）⇒ 「`0 档`」这一形在批档门**不可达**——`grep "PASS（0 档）"` 于 `thincoder-core/agent-tools/batch-gate.mjs` = 0；构造异常（批档不在盘）⇒ 首行 `DOC-CHECK GATE: ERROR（判域为空——批档自身应恒在判域）`，不产 `PASS`。工具面（`doc_check` 工具 gate 空清单）**同形**——首行 `ERROR（0 档受检——空范围不判 PASS）`，与批档门对齐。
 
 5. **适用面与不静默（DD-96）**：无 manifest 的夹具（`readManifest` 返回 `reason:"missing"`）⇒ append / close 成功 ∧ 回执含 `[doc-check gate] 未跑（本项目无声明面）`；manifest 在盘而 JSON 非法（`reason:"invalid"`）⇒ **不短路**——两条判据参数是内置常量、不读声明面 ⇒ 照常判，干净笔域集即放行。
 
@@ -3573,12 +3575,12 @@ console.log('II tok=%d docs=%d uniq=%d multi=%d zero=%d | doc %d code %d',
 1. **两问法同源（源面直读）**：`thincoder-core/doc-check/index.mjs` 无 `gate-only` 抛点（`grep` 0）；范围判定唯一实现 = `resolveRange`，`report` ∥ `gate` 两处调用它；解析面按需读引用目标（不建全域基线）。相关档 `node --check` 过。
 2. **AC-8 四例 + 本批补例跑绿**：DD-106–DD-113 逐条绿（夹具 = 系统临时域，零落仓 + 并发免疫——§3.4 条目 E）。
 
-3. **两面分明**：`report` 无清单 ∥ `[]` ⇒ 报错（零遍历、不读任何档）；`gate` 空清单 ⇒ `PASS（0 档）` + 「0 档受检」（DD-109 / DD-111）。
+3. **两面分明**：`report` 无清单 ∥ `[]` ⇒ 报错（零遍历、不读任何档）；`gate` 空清单 ⇒ 首行 `ERROR（0 档受检——空范围不判 PASS）` + 「0 档受检」（DD-109 / DD-111）。
 
 4. **判词不串**：报告态输出（含报错面）`grep "DOC-CHECK GATE"` = **0**——判词族只属 gate。
 5. **描述面同口径**：工具 schema 与 `thincoder-core/tool-docs/doc_check.md` 的 `docs` 段**均不含**「Gate only」∥「only valid with mode」类单向句；两模式语义各写一句。
 
-6. **gate 面零变（回归）**：DD-110 绿——gate + 清单 ⇒ 首行逐字 `DOC-CHECK GATE: PASS`、报面行形不变；空清单 ⇒ `PASS（0 档）` + 照实行。
+6. **gate 面零变（回归）**：DD-110 绿——gate + 清单 ⇒ 首行逐字 `DOC-CHECK GATE: PASS`、报面行形不变；空清单 ⇒ 首行 `ERROR（0 档受检——空范围不判 PASS）` + 照实行。
 
 7. **解析面不缩（report 面反证）**：DD-106 绿——清单档以同目录裸名引用未入清单的同目录档 ⇒ 零 `档缺`；「把解析基线一并收窄到清单」这一失效模式必红（假阳来源由此关住）。
 
@@ -3950,7 +3952,7 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 **产物包内机检脚本的域取向**：
 
 - **域语义（实装口径）**：域 = **调用方传入的文件清单**（`--root <仓根>` 只定解析基准，不产生被检集）——无 `--domain`、无目录扫描；**「域根 ∥ 源域」两个概念随 `scanDirs` 退场**。
-- **两面空清单**：`report` 面空清单 ⇒ **报错**（零遍历、零全域兜底）；`gate` 面空清单 ⇒ `PASS（0 档）` + 「0 档受检」照实行——纯代码轮次触达档 = 0 是常态，报错会把正常态当故障。
+- **两面空清单**：`report` 面空清单 ⇒ **报错**（零遍历、零全域兜底）；`gate` 面空清单 ⇒ 首行 `ERROR（0 档受检——空范围不判 PASS）` + 「0 档受检」照实行——纯代码轮次触达档 = 0 是常态，故不抛错；但首行不产 `PASS`（判了 0 档读不成「全清」）。
 
 - **产物包的仓级机检**一律在**仓根**跑；包内 `vscode:prepublish` 只留 `lint` + `test`（不挂文档机检）。
 
@@ -3968,7 +3970,7 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 | # | 判据 |
 |---|---|
 | AC-M8-1 | 单引擎——`scripts/` 仅 `scripts/doc-check.mjs` 一个 main 入口 |
-| AC-M8-2 | 判据参数 = 内置常量；不读 manifest、不扫全仓（源码面：`scanDirs` 零消费）；空清单两面分明——`report` 面 ⇒ 报错 ∥ `gate` 面 ⇒ `PASS（0 档）` + 「0 档受检」 |
+| AC-M8-2 | 判据参数 = 内置常量；不读 manifest、不扫全仓（源码面：`scanDirs` 零消费）；空清单两面分明——`report` 面 ⇒ 报错 ∥ `gate` 面 ⇒ 首行 `ERROR（0 档受检——空范围不判 PASS）` + 「0 档受检」 |
 | AC-M8-3 | 全仓无硬编码本仓 `docs/` 路径于机检判据（grep 零命中） |
 | AC-M8-4 | 台账一致性由 schema 承接（无 `check-ledger`） |
 | AC-M8-5 | 锚检查 / 段判据检查可跑并出红绿 + 退出码 |

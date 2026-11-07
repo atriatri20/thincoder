@@ -206,11 +206,16 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
 - **Debts go on the list**: undispatched / unfinished items of your own ⇒ immediately landed as ledger rows, one per item.
 - **Batch record §6 unresolved keeps only pointers** to those rows.
 - **Disposition routing (one criterion, three destinations, write domain first)**: a verified problem asks one thing up front — must the user rule on it? Yes ⇒ ask now: never start the work, never book it (the pool takes work, not questions); blocks this round ⇒ ask even outside the write domain.
-  It is work ⇒ judge the write domain: inside ∧ small form (wording / coordinates / indexes / cleanup) ⇒ fix it on the spot; inside ∧ large (its own round / a precondition / needs design) ⇒ book it this round as a ledger row naming the batch that takes it, never in prose;
+  It is work ⇒ judge the write domain: inside ∧ small form (wording / coordinates / indexes / cleanup) ⇒ fix it on the spot; inside ∧ large (a precondition / needs design) ⇒ book it this round as a ledger row naming the batch that takes it, never in prose;
   outside ⇒ not fixed, not booked, not reported — the batch that touches it corrects it then, clearing the whole file rather than leaving it to the next batch.
   **Write domain = what this stroke may write**: an implementer takes the files its task book's `files` declares; the main agent takes its own pen-domain documents (batch records / the ledger / requirement docs / design docs / prompts).
   The write-domain boundary outranks both "fix it on the spot" and "debts must be visible" — the boundary is a contract, those two are habits.
   - **Why**: a debt living only in report prose, a code comment, or an inline note is seen by nobody again and is redeemed only when the user chases it.
+- **Setting a fix aside because fixing it would need another review saves nothing**: that review is paid either way — now, or later with the fix attached;
+  what the waiting adds is the interval in which the record says one thing and the disk does another, plus a ledger row to carry and close.
+  **The account, in one line**: fix now = one fix round + one review; set aside = the same fix round + the same review, later, + a stale line on disk + a row to maintain.
+  **What that settles**: the review's price is not a reason to wait, so the question is not "cheaper now or cheaper later" but only "what has to happen first" — an event.
+  **What genuinely waits, and on what**: a precondition (another batch landing first), a user ruling, a design that does not exist yet — the wait is on that event, not on the review's price; with no such event named, "later" has nothing left standing behind it.
 - **A settled decision the requirements doc has not taken yet is a debt of the same shape**: its row lands in the round it settled (visible, not prose) and closes in the round the decision reaches the requirements doc.
 - **When the decision is overturned before it gets there**, the row closes in the round it is overturned: retired under the ledger's existing 已废弃 state, or rewritten to bind the replacement decision.
 - **Triage aged pool entries before disposals**: landed ⇒ retro-close; premise gone / duplicate ⇒ withdraw.
@@ -414,7 +419,7 @@ The single-point pipeline's fixed cost is ~40 minutes — borne alone by one req
      - Examples — sample rows, commands, paths — go in a fenced block, which the anchor and paragraph criteria skip whole; a path left in prose or a table must be a real file — a made-up one is judged `档缺`. An assumed name in a sentence takes `<area>/<name>.md`.
    - **Settlement line** — ensure the settlement line lands (the settlement sync checklist's mechanical step); the settled count goes with the closeout, reported together with it, not as a separate line.
 - **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
-4. **A new debt is work needing its own round, a precondition, or design** (in-scope review findings / stop-and-report output / doc drift) ⇒ book it the same day, naming the batch that takes it.
+4. **A new debt is work needing a precondition or design** (in-scope review findings / stop-and-report output / doc drift) ⇒ book it the same day, naming the batch that takes it.
    That is the disposition routing's second destination — same coordinate, criterion not restated here; a small-form item inside the write domain was already fixed on the spot and never reaches this line.
    **A tech todo must carry `trigger`** (bare enum: `归批` / `条件` / `认账不排期` — the batch name / condition sentence goes into `evidence`; `trigger` holds one bare enum value, and prose there cannot be filtered on).
    - **Why book it**: a debt left in report prose, a code comment, or a "noted on the record"-shaped note is seen by nobody again.

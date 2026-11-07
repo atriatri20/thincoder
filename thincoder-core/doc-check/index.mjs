@@ -461,7 +461,11 @@ function gateReport({ lay, docsSource, checkFiles, skipped, unreadable, anchors,
   const verdict = () => {
     // 读不到优先：判不出就不产 PASS ∥ REFUSED（既有 ERROR 位——fail-closed，没 PASS 就是没过）
     if (unreadable.length) return `DOC-CHECK GATE: ERROR（读不到 ${unreadable.length} 档）`
-    if (total === 0) return checkFiles.length ? "DOC-CHECK GATE: PASS" : "DOC-CHECK GATE: PASS（0 档）"
+    // 判了 0 档 ≠ 全清：`PASS` 是「这些档都干净」的断言，空集上出 `PASS` 等于给「什么都没判」发一张「判过了」的通行证。
+    // 四个入口（显式空清单 ∥ 本会话零 `.md` 触达 ∥ 路径全不在盘 ∥ 全非 `.md`）同一句回；「为什么空」由下方
+    // 「范围为空：…」四句分流与两个跳过桶头照说。词位用既有 `ERROR`（判不出），不造新动词——消费面按首行前缀判
+    // （口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「空范围不判 PASS」条）。
+    if (total === 0) return checkFiles.length ? "DOC-CHECK GATE: PASS" : "DOC-CHECK GATE: ERROR（0 档受检——空范围不判 PASS）"
     const parts = []
     if (anchors.hits.length) parts.push(`锚 ${anchors.hits.length} 条`)
     // 段与行分列——两类命中不得合并（提示词面一行 = 一个块，属「行太长」，不是「一段文字太长」）
@@ -523,7 +527,8 @@ function gateReport({ lay, docsSource, checkFiles, skipped, unreadable, anchors,
  * @param {{docs?:string[], mode?:'report'|'gate', docsSource?:'session'|'explicit', lines?:string[]}} [o]
  *   `mode` 缺省 = `report`；`docs` = 被判档清单（相对 `root` 或绝对）——**必填**（两种问法同）：
  *   缺省 ∥ 非数组 ⇒ 报错要求显式清单（零遍历、零全域兜底）；`report` 面**空数组也报错**，`gate` 面空数组 ⇒
- *   `PASS（0 档）` + 空范围说明（「本轮一档没碰」是真实读数）；`report` 面不可判档 ⇒ 报错、整次零判定；
+ *   不抛错、照出「0 档受检」实况与空范围说明，但首行判 `ERROR（0 档受检——空范围不判 PASS）`（判了 0 档读不成「全清」）；
+ *   `report` 面不可判档 ⇒ 报错、整次零判定；
  *   `gate` 面不可判档 ⇒ 跳过行；`docsSource` = 范围来源标签（`session` = 本会话触达记账 ∥ `explicit` = 显式
  *   `docs`）——缺省 = `explicit`；只影响报面措辞。
  *   `lines` = 读数面清单（相对 `root` 或绝对；收任意在盘档）——**读数，不是判据**：
@@ -562,8 +567,8 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
   if (!Array.isArray(docs)) {
     throw new Error('doc_check: `docs` is required — pass the explicit list of documents to judge. There is no default range: nothing is scanned unless you name it.')
   }
-  // 报告态空清单 = 报错（「没跑」不得装成「跑了且清」）；gate 面空清单照实出 `PASS（0 档）` + 空范围说明
-  // ——交付面「本轮一档没碰」是一种真实读数，不是省略。
+  // 报告态空清单 = 报错（「没跑」不得装成「跑了且清」）；gate 面空清单不抛错——照出「0 档受检」实况 + 空范围说明，
+  // 但首行判 `ERROR`：交付面「本轮一档没碰」是真实读数，照实说不等于判过（口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.20）。
   if (!gate && (docs.length === 0 || docs.every((d) => typeof d !== "string" || d.trim() === ""))) {
     throw new Error('doc_check: docs is empty — an empty list names no document, so nothing can be judged; list the documents you mean.')
   }
