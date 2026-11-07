@@ -1,23 +1,25 @@
 /**
- * doc-check-linecounts.mjs — M8 机检 · 行数面（#546 · 第五判据：调用方传入的行数声明行——manifest 不带该参数面）。
- * 权威设计 = `docs/batches/2026-09-29-doc-check-face.md` §2.4（+ `docs/core/design/DOC-DISCIPLINE.md` §7 行数面随落）。
+ * doc-check-linecounts.mjs — 手跑读数器（行数声明面 ∥ 内容行数）。
+ * 权威设计 = `docs/core/design/DOC-DISCIPLINE.md` §7「手跑读数器」行 + §3.20「行数读数」块。
+ *
+ * **实现已迁核，本档只转出**：`countContentLines` 的**实现单源 = 产品档位 `thincoder-core/doc-check/index.mjs`**
+ *   （`doc_check` 的 `lines` 读数面与手跑面读的是同一个函数——全仓第二份计数实现 = 0）。本档不再持函数体，只再出口。
+ *   缝是**永久薄壳**，不是带到期日的兼容分支（同 `scripts/doc-check-paragraph.mjs` 的形）。
+ * 住本档的 = 声明面逐对比照（`parseSectionRows` / `checkLineCounts`）：口径零改，但不再自动跑、不入引擎
+ *   （`thincoder-core/**` 对 `scripts/**` 的 import 点 = 0）；「实读口径」也不在本档重述——以 `countContentLines` 为准（D2）。
  * 语义：声明（doc + section）⇒ 节域内表格行「文件 ⇒ 表值」逐对与实读内容行数比对；
  * 差异 = 报告态（不入闸——KD-2）；行式异常不静默丢（D3）。
  * 表行语法（KD-3）：表值 = 表值格（第 2 格）首个非 `≈` 加粗数字段内的全部 `\d+`；
  * `**≈N**` = 预估 ⇒ 跳过（计「预估行」）；无数字 ⇒ 跳过（计「非数行」）；配对失败 ∕ 值形态不明 ⇒ 行式异常。
- * 实读口径（KD-4）= 内容行数（文末换行不计——`split("\n")` 末空减一）。
- * 导出：parseSectionRows / checkLineCounts。
+ * 导出：`countContentLines`（再出口）/ `parseSectionRows` / `checkLineCounts`。
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { isTableRow } from "./doc-check-paragraph.mjs";
+import { countContentLines } from "../thincoder-core/doc-check/index.mjs";
 
-/** 内容行数（KD-4）：split("\n") 末元素为空 ⇒ 减一。 */
-export function countContentLines(text) {
-  const parts = text.split("\n");
-  if (parts.length && parts[parts.length - 1] === "") parts.pop();
-  return parts.length;
-}
+// 再出口（本行不携函数体——量法的家 = 产品档位；迁走后本档只剩这一行与一个 import）。
+export { countContentLines };
 
 /** 表格行切格：`| a | b |` ⇒ ["a", "b"]（首尾空元素剔）。 */
 function cellsOf(line) {
