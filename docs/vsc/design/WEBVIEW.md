@@ -613,7 +613,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - **帧驱动**（`thincoder-vscode/webview/streaming.js` 的 `subScroll` ∥ 帧尾；核 `thincoder-render-core/flow/stream.mjs` 的重排条件（含脏集）· 脏集消费置空）：`subagentChunk` 追加后把块记入脏集，rAF 体内逐块 `maybeScrollBlock` 后置空；**节流重排条件含脏集**（跳过的帧不得丢跟随）；`maybeScrollBlock` 取件 = `activity.js` 转口（核件单源）。
 - **高度**：`.advisor-block.sub-block .advisor-content` = **60px**（`thincoder-vscode/webview/chat.css` 的 `sub-block` 规则）；基础 `.advisor-content` = 100px（同档基础规则）。
 - **出生可见性（④——新块必看得见）**：
-  - **区 pin 旗标维护**：`ctx._pinActivity` 由 `scroll` / `wheel` / `touchmove` 三事件同读几何（近底阈 = `max(24px, 视口高 × 0.5)`，单源 = 核 `nearBottomThreshold`——`thincoder-vscode/webview/ui.js` 的 `initScrollFollow` + 核 `thincoder-render-core/scroll.mjs` 的 `watch` 闭包）。`scroll` 为**唯一「滚动已生效」后**触发者（键盘 / 拖条 / 程序写入全覆盖）。
+  - **区 pin 旗标维护**：`ctx._pinActivity` 由 `scroll` / `wheel` / `touchmove` 三事件同读几何（近底阈按视口比例算，取核 `nearBottomThreshold`——**本端不写算式**，单源 = `docs/render-core/design/RENDER-CORE.md` §5「滚动策略族」；消费点 = `thincoder-vscode/webview/ui.js` 的 `initScrollFollow` + 核 `thincoder-render-core/scroll.mjs` 的 `watch` 闭包）。`scroll` 为**唯一「滚动已生效」后**触发者（键盘 / 拖条 / 程序写入全覆盖）。
   - **出生判据（二向）**：`buildBlockEl`（`activity.js`）出生时——钉底（`_pinActivity !== false`）⇒ 照旧 `maybeScrollActivity(ctx)`（跟随）；**未钉底** ⇒ **不改 `scrollTop`**（不夺用户阅读位——D-W2 语义保持），
     改在**区首**生成 / 更新未读计数钮 `.activity-new-btn`（`position: sticky; top: 0`；文案 = locale 键 `sub.newBlocks`（zh `↓ ${n} 新块` / en `↓ ${n} new block(s)`——逐字登记 = `WEBVIEW-PROTOCOL.md` §6.3）；`N` = 未钉底期间出生块数）。
 
@@ -621,6 +621,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
   - **回底清账**：钮点击 ⇒ `scrollTop = MAX` + `_pinActivity = true` + 移除钮 + `N` 归零；任一「近底」判定成立（`scroll` 事件）同清；`resetActivity` 同清。
   - **`:empty` 不回归**：钮按需建 / 删（`N = 0` 时元素不存在）——空区仍 `:empty` 零高（D-W1）。
   - **判据**：T-A21 / T-A22 / T-A23（未钉底出生 ⇒ 钮 `N = 1` 且 `scrollTop` 零改；点击 ⇒ 回底 + 钮消失；`scroll` 事件两向旗标正确）。
+  - **集成面（`test/RTM.md` 行 `VSC 2-1` · 故事「VSC 2 · 流式输出中视口贴底」）**：**评的交互** = 流式帧应用 × pin 观察 × 核 `nearBottom`；**断言** = 活回合中离底不足半视口 ⇒ 下一帧输出后视口仍贴底，离底达到 ∥ 超过半视口 ⇒ 解钉且后续帧不再拉底；**入口** = VSC 聊天面板消息区（回合进行中，用户上滚动作为输入）；**回指** = `docs/vsc/requirements/WEBVIEW.md` F-W2。几何在本层可观测：驱动真 webview 模块 + 自带 `scrollHeight` ∥ `scrollTop` ∥ `clientHeight` 读数的元素即足，不需真排版。用例标题由实施轮按该编号落。
 
 ### 5.6 内容行合并粒度（CLI `pushBlock` 对齐）
 

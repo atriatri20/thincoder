@@ -1373,12 +1373,12 @@ console.log('bad-column-rows', badColumnRows);
 
 | 册 | 故事（分册 H2 里 `. ` 之前的部分） |
 |---|---|
-| `guard` | CLI 7 · CLI 12 · CLI 26 |
+| `guard` | CLI 7 · CLI 12 · CLI 26 · CLI 36 |
 | `batch-ledger` | CLI 5 · 6 · 8 · 10 · 13 · 14 · 17 · 20 · 21 · 24 · 27 |
 | `tooling` | CLI 1 · 3 · 4 · 22 · 28 · 30 · 31 · 34 · 35 |
 | `loop` | CLI 11 · 15 · 16 · 18 · 19 · 23 · 25 · 32 |
 | `paths` | CLI 9 · 29 |
-| `ends` | CLI 33 · VSC 1 |
+| `ends` | CLI 33 · VSC 1 · VSC 2 |
 
 **册路径**（六档，本批新建）：
 

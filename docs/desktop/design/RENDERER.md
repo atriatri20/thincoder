@@ -263,7 +263,7 @@
   读数裁剪不破：仅回填收束帧（帧身份 = 上帧在飞 ∧ 本帧坍落 ∥ 非跟滚）· 写门 = 高度净增 ΔH ≠ 0 才读 ∥ 才写——详式在册）；跟滚 ⇒ 贴底覆盖；
    **零位置机具**（零寻位 ∥ 零搬移 ∥ 零算术）。
 - **回填受理径同步落帧**：取页受理动作 ⇒ 受理帧（`inFlight: true`）**同步落账**（`thincoder-desktop/renderer/app.mjs` `onBackfill` 包装 = 动作 + `frame.flush()`）⇒ 随后回执帧成「上帧在飞 ∧ 本帧坍落 ∧ 非跟滚」**收束帧** ⇒ 读门 ∥ 写门 ∥ 补偿算式**逐字零改**（收束帧判据保位）；不 flush ⇒ 两态并入同帧 ⇒ 收束帧不可判（视口补偿漏）。
-- 跟滚 = 近底复跟（判据 = 核工厂 `nearBottom`——视口比例阈（`max(24, clientHeight × 0.5)`）+ 严格小于：恰等阈不判近底；本端零自持像素常量——`FOLLOW_PX` 再出口已退场；阈单源 = `docs/render-core/design/RENDER-CORE.md` §5「滚动策略族」）。
+- 跟滚 = 近底复跟（判据 = 核工厂 `nearBottom`——阈按视口比例算，**算式只写单源**（`docs/render-core/design/RENDER-CORE.md` §5「滚动策略族」的 `nearBottomThreshold`），本档只写符号与「按视口比例」；+ 严格小于：恰等阈不判近底；本端零自持像素常量——`FOLLOW_PX` 再出口已退场）。
   上滚即停跟；**药丸单判据 = `!following`**（「可滚 ∧ 非近底 ⇒ 显」与此**等价**——上滚即停跟；文本两态 = 未读数 > 0 ⇒ `chat.pill.new`（`${n}`），否则 `chat.pill.bottom`）；点击回底复跟；程序化平滑滚动互斥窗 **420ms**（判据 = `smoothWindowOpen(now, lastAt)`）。
 - **滚动作落面**（DOM 写面点名）：跟滚追加 ⇒ **瞬时贴底**（写 `scrollTop`——先例 `thincoder-vscode/webview/ui.js`）· 药丸回底 ⇒ **程序化平滑**（`scrollTo({ top: scrollHeight, behavior: "smooth" })` + 记 `lastAt`）· `scroll` 订阅先过 `smoothWindowOpen(now, lastAt)` 门——**窗内不派发**（该判据真 ⇒ 窗已过期、可派发；程序化平滑的滚动回波不算用户动作）。
 - **帧尾滚动作（补偿消费点）**：非构造帧末尾 `settleFrame(root, model, scroll, handlers, account)`（落点 = `thincoder-desktop/renderer/views/chat.mjs` · `paintChat` 调用）——六步序 = ① **尾段**（刷 ∥ 尾段造 ∥ 退流摘 ∥ 行族出生——**新到流项按到达序**：行族出生先于同帧补发块；皆**先于读数**）② 读数 `t0` ③ `syncChrome` ④ **头段**（摘 ∥ 造——按数；位次步 ④′ 保留）⑤ 读数 `t1` ⑥ 写（下两条）。

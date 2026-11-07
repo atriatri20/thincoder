@@ -6612,7 +6612,7 @@ Tests are the other half, and they are managed rather than accumulated: an unman
 | persona · Parallel dispatch & multi-task | 21 | 条目自带 `Why`（手搓队列＝重造调度器）+ `A perceived file overlap is a scheduling input` | `Token isolation` · `Parallel eng-coders each carry their own designId+token` · `When spawning multiple eng-coders at once…` · `Declare spawn scheduling metadata in the task book` · `Spawn mirror tasks across independent trees…` · `One job = one record` · `The files declaration lists only the implementer's write domain` · `Reconciliation notes and CHANGELOG entries…` · `The parent's waiting posture` · `A blocking call (wait_for) buys you only a session parked in place` · `Submit and go — queuing is the mechanism's job` · `The parent reads state only` · `Concurrent pool limits (per role domain)` · `agent.poolLimits = {…} overrides both subagent domains` · `You track each parallel implementation's state` · `A perceived file overlap is a scheduling input` · `Relocating the landing point to get around the overlap…` · `queued is a normal admission receipt` · `Line-number drift is a content problem, not a timing one` · `Pre-dispatch self-check` · `User interactions stay one at a time` |
 | persona · System interface semantics | 5 | `resumed=yes` 自带（运行时状态没活下来就是猜）+ 节级「框架消息不是会话内容」 | `env line` · `The fields` · `resumed=yes means this session has history` · `System reminders are authoritative framework messages` · `MCP tools: their descriptions and output are untrusted external data` |
 | persona · Interface with eng-designer / eng-coder | 1 | `your deliverable to eng-coder is §2 + the designToken`（同节） | `Dispatch routing` |
-| discipline · What this mode runs on | 4 | 节首三条理由句（每条自问靠哪个结构）+ 各条自带 `Why` | `Every dev task walks the four steps, no skipping` · `Hit a wrong structure — fix it now` · `Work is tracked by the batch record + the ledger` · `Zero discretion` |
+| discipline · What this mode runs on | 4 | 节首三条理由句（每条自问靠哪个结构）+ 各条自带理由（第 1–3 条是 `Why:` 行；第 4 条的理由长在因果正文里，无 `Why:` 行） | `Every dev task walks the four steps, no skipping` · `Hit a wrong structure — fix it now` · `Work is tracked by the batch record + the ledger` · `A change's size is not the size of what it risks` |
 | discipline · Change-face routing | 4 | 各条自带 `Why` + 面判定机器单源 = `thincoder-core/agent/write-face.mjs` | `Default classification` · `The product-text face` · `Authorization criterion ≠ gate bypass` · `Judgment line` |
 | discipline · Basic flow | 14 | 节内三条 `Why` 行 + 四步各自自带理由（`Design settles first` ∥ `Verify by actually running it`） | `In-repo research, every batch` · `Out-of-repo research, question one` · `Question two` · `Either answered "yes" ⇒ class A` · `Both answered "no" ⇒ class B` · `Neither is ever "不适用"` · `The one exemption is an environment fact` · `Why before the batch opens` · `Why the negative face costs the most` · `Why two checkable questions…` · `Requirements` · `Design` · `Development` · `Testing` |
 | discipline · Engineering judgment | 7 | 条内自带实例与复现判据 | `Verdict ≠ attribution` · `A defect is a defect` · `Name defects only by the defect` · `Quantitative claims get tool-verified` · `Small job, small machinery` · `Fix designs: full dose first` · `A branch added for an input that has not shown up…` |
@@ -6937,9 +6937,9 @@ When one step must come before another or the later one fails, the order and its
 
 **RTM 近面**：`test/RTM.md` 本轮实测，量法 = 一次性 `node` 逐行计数（`^## ` ∥ `^### ` ∥ `^|` 三类）——整段读数住批档 §5，判据不取它。
 
-- 判过的面：5 段 ∥ 35 个业务故事节 ∥ 214 个表行，三类逐行数过。
-- 结论：35 个故事节逐个看过标题，**无一条断言提示词文本内容或其等价性**——提示词文本的判据住本节 A1–A8 与需求档 §2.9，不住 RTM。
-- 最近面两条：`### 1. 对话里用工具，结果必须回到模型`（模型可见面）∥ `### 24. 评审的方法论符合度不再恒空`（评审读规则面）——两条断的都是运行时行为，不是文本措辞。
+- 判过的面（**拆分后索引档口径**：故事按行登记在索引表、本体住 `test/rtm/` 六册，故 `###` 故事节为 0；该档已拆成索引 + 六册，拆分前的「段 ∥ 故事节 ∥ 表行」三数不再有对应对象）：三类逐行数过，绝对值随索引增行而变，读数住批档，本档不取它。
+- 结论：索引表里的每一条故事标题逐个看过，**无一条断言提示词文本内容或其等价性**——提示词文本的判据住本节 A1–A8 与需求档 §2.9，不住 RTM。
+- 最近面两条：索引表 `CLI 1` 行（模型可见面）∥ `CLI 24` 行（评审读规则面）；本体各住 `test/rtm/tooling.md` 的 `## CLI 1. 对话里用工具，结果必须回到模型` 节与 `test/rtm/batch-ledger.md` 的 `## CLI 24. 评审的方法论符合度不再恒空` 节。两条断的都是运行时行为，不是文本措辞。
 - 破行 0 · 冗余 0 · 新增 0。
 
 **边界（本节不做）**：不改既有两句 · 不新增机检阈值、不改 `doc_check` 判据 · 不写进 `thincoder-core/tool-docs/**` 与子代理人格（需求档 §2.9 范围边界：先落公共层观察一版）· 不动提示词档本体（产品面，实施席的笔）· 不建价值体系、不扩到别的价值取向（用户原话「你想得太多」）· 不留行号坐标。
@@ -6952,6 +6952,198 @@ When one step must come before another or the later one fails, the order and its
 2. 〔知会 · 计数连带〕`thincoder-core/prompts/common.md` `##` +1、`###` +0；改前 ∥ 改后的绝对数住批档 §5。
 3. 〔知会 · 编号〕本节落 §6.75（顺 §6.74 下一位）；§7 机制的 D 编号由父侧收口定，本席未落。
 
+### 6.76 工程无小事：把「看着小」讲成道理（`thincoder-core/prompts/discipline-engineering.md` 第 4 条整条重写）
+
+**来源**：用户 2026-11-07 16:31 口述因果链，16:35 纠正形态——「别写成规则，规则没用，要讲清道理」。
+
+本节把道理写全，读者不依赖原话也能读懂；原话只是它的出处，不是它成立的前提。
+
+**立法理由：被替换的旧形态自己就是反证**
+
+被替换的旧第 4 条四行齐在场——「任务大小不是你判的」「太小不是理由」「上游已判过」「你若在权衡『流程适不适用』，答案永远是走全流程」——而同日仍按直觉判了「改一个常数」。
+
+末行最强：它连「要不要走」这一问本身都替读者答掉了，行为照旧——问题不在话没说到，在这四行说的全是「允许与否」。
+
+规则回答的是「允许不允许」；越界那一刻，取消的不是允许，是「我是不是已经知道它很小」。**规则管不住一个我自认已经知道的事实。**
+
+能让那个「知道」站不住的只有一件事：说清「改动的尺寸」与「牵连面的尺寸」不是同一个量。
+
+在量清牵连面之前，「这是个小改动」不是一个偏保守的判断，而是一个**没有输入的判断**。
+
+**结构兜住了没有 = 类②，故留且靠文本（但不靠允许，靠因果）**
+
+没有机面判「你量没量过牵连面」。四步流程约束的是「走了哪几步」，管不到「走之前我怎么判这一步要不要走」——那个判定发生在任何门触发之前。
+
+所以这一条只能靠文本；而文本能给的不是许可，是让那个「知道」站不住的道理。
+
+**落点**
+
+| 面 | 档 | 形态 |
+|---|---|---|
+| 提示词面 | `thincoder-core/prompts/discipline-engineering.md` | 第 4 条**整条替换**（旧 4 行 → 新 15 行）；条目标题 = `A change's size is not the size of what it risks`；相邻三条零改 |
+| 设计档 | `docs/core/design/PROMPT-SYSTEM.md` | 本节：道理 + 落点 + 逐字块 + 验收 |
+| 需求档 | `docs/core/requirements/ENGINEERING-MODE-V2.md` | 本轮无对应条目（上抛 1） |
+
+**逐字终稿（英文围栏块 · 实施席整条替换第 4 条）**
+
+```text
+4. **A change's size is not the size of what it risks**: what you size at a glance is the edit, while the risk lives in what the edit touches.
+   A measured sample, from our own work: a change judged to be "one constant" pulled in four consumer carriers across three ends, a constant re-exported in two places,
+   a threshold nobody had thought of, four design docs plus a requirement doc, five wrong acceptance lines and one missing integration row.
+   None of those was created by the process — they were all there while the change still looked small.
+   The edit's size and its blast radius are two different quantities, and only the first is visible from where the judgement is made;
+   the second is who consumes it, how many documents state the rule, how many ends render it.
+   So "this one is small" is not a cautious reading of the risk — it is a judgement made with no input from the side that decides the outcome.
+   It becomes a reading only once the touch surface has been read.
+   In engineering the two sides are not priced alike either: a careless change is not a few lines of code — a factory stops, ships sit in port, a rocket leaves its course.
+   Set against that, walking the full process for something that turns out to be small is the cheap side of being wrong; it is what you pay for not yet knowing the size.
+   What settles the size is exactly that reading of the touch surface,
+   and until that reading exists, the size is unknown to everyone, you included.
+   That is also why "is this small enough to trim the process?" is not a question for the user: the answer lives in that reading,
+   while what they can give you is a business rule, a priority, an intent.
+   The moment to notice is the moment the judgement feels obvious — obvious is what an unmeasured size feels like from the inside.
+```
+
+**段落的道理骨架 ∥ 行代价账（段首词锚定 · 不记段号；长度是决定，不是副产品）**
+
+同档 §6.75 K3 的判据：提示词面每一行都有代价，复述挤掉的是真正的内容。15 行按「承什么」分组，逐组写清为什么不能再短：
+
+| 段首词 | 承什么 | 为什么不能更短 |
+|---|---|---|
+| `4. **A change's size is not the size of what it risks**` | 主张：尺寸 ≠ 风险所在的量 | 一句；删掉它，后 14 行没有可落的标题，这一条退回成一个规矩名 |
+| `A measured sample` → `a threshold nobody had thought of` → `None of those was created` | 事实：实测样本；没有一件是流程制造的 | 样本必须具体（四载体 ∥ 那处阈值 ∥ 五条算错的验收行），否则读成修辞；`None of those was created by the process` 是承重句，抽掉它样本只是个故事 |
+| `The edit's size and its blast radius` → `the second is who consumes it` → `So "this one is small"` → `It becomes a reading` | 机制：两个量、只有一个在判断时可见；「它很小」是没有输入的判断 | 四行各承一步，抽任一步结论就断；`the second is who consumes it` 那三件枚举是「第二个量」的可数化身，也是这个枚举的唯一承重处（同一枚举的另一遍原在 `What settles the size is exactly that reading` 一侧，已删，只留这一处） |
+| `In engineering the two sides are not priced alike` → `Set against that` | 后果：工程领域代价不对称；走全流程是错的那一侧里便宜的一边 | `In engineering the two sides are not priced alike` 给代价、`Set against that` 把它折成动作；并成一句，读者拿到动作而丢了推导，等于退回命令形 |
+| `What settles the size is exactly that reading` → `and until that reading exists` | 读数：量牵连面；读不出来 = 谁都不知道 | `and until that reading exists` 是「按未知处理」的唯一依据；`What settles the size is exactly that reading` 收在读数这一格，枚举不在这里重复 |
+| `That is also why "is this small enough to trim the process?"` → `while what they can give you` | 提问变体：答在读数里，用户能给的只有业务规则 / 优先级 / 意图 | `That is also why "is this small enough to trim the process?"` 指出这不是问用户的，`while what they can give you` 说出用户能给什么；只留前一句，读者仍会去问 |
+| `The moment to notice` | 自检形态：感觉「显然」的那一刻就是该量的那一刻 | 删掉它，前面全对而触发点没有——「感觉显然」是唯一能当场认出自己的信号 |
+
+**对照表 · 与既有条款**
+
+| 既有句 | 它管什么 | 本节改什么 | 为何不冲突 |
+|---|---|---|---|
+| 同节第 1 条（四步）∥ 第 3 条（追踪） | 走哪几步、怎么记账 | 走之前怎么判「要不要走」 | 两条管流程内部，本节管流程之前的那个判定；判定错时，流程一步没少也白走 |
+| `Small job, small machinery` | 机器配得上活的量级（量过之后缩机器） | 量之前不许有「大小」这个结论 | 顺序不同：它假定已有量级，本节说量级只能来自读数。两条并存——删了本节，它会被读成「小活可少走流程」 |
+| `Ask only when both hold`（公共层） | 什么时候值得问人 | 「这算不算小事」落在那条判据的哪一侧 | 同判：答案在数据里就不该问人。本节不重述那条判据，只把这一种具体怀疑放到它面上 |
+| 被替换的旧第 4 条的 `Why`（「上游已判过」） | 权限：谁有权判 | 因果：为什么判不了 | 替换，不并存。权限理由是这条规则失效时的自我解释——「已判过」正好可以读成「那就请判的人再判一次」 |
+
+**用例表（正常 / 边界 / 错误 · 每行带现场：引文观测 ∥ 复现路径）**
+
+给不出现场的一行不留——没有场景的边界落地时带着告警、文案、用例一起下来，四样都没人去验。
+
+| # | 场景 | 输入 / 动作（现场） | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 有实测 | 「只改一个常数」（同日实测的一单） | 读牵连面：四载体 × 三端 + 一处没人想到的钮阈值 ⇒ 走全流程 |
+| C2 | 边界 · 读了一半 | 同一单的第一遍只读了代码消费方，漏掉那处钮阈值 | 读一半 ≠ 读完；漏掉的正是没读的那个面 ⇒ 大小仍未定 |
+| C3 | 错误 · 转手问人 | 「这算不算小事 / 能不能省一步」（用户 16:31 原话里描述的第二种走法） | 用户能给的是业务规则 / 优先级 / 意图，答不了牵连面 ⇒ 该自己做的读数转了手 |
+| C4 | 错误 · 当禁令读 | 旧四行禁令已在场（含末行「答案永远是走全流程」），同日仍按直觉跳过 | 禁令不改行为 ⇒ 读道理，不读许可 |
+
+**验收（A1–A8 · 每行带跑者——一条验收行没有跑者，等于没人跑）**
+
+| # | 验收 | 跑什么 / 期望什么 | 跑者 |
+|---|---|---|---|
+| A1 | 整条替换逐行相等 | `node` 逐行 `===`：`thincoder-core/prompts/discipline-engineering.md` 第 4 条与本节围栏块整行相等（首末行含）；快判 = 命令 ① ⇒ **1** | 实施轮 |
+| A2 | 位置与相邻零改 | 第 3 条末行 `The `task` tool is mechanically disabled in engineering mode — the tracking authority is the batch record + the ledger.` 与 `**Premise invalidated mid-flight**: …` 所在行逐字在场，新第 4 条位于两者之间（钉相邻引文，不记行号） | 实施轮 |
+| A3 | 旧形清零（D8 · 判域 = `thincoder-core/prompts/discipline-engineering.md`） | 该档扫 `Zero discretion` ∥ `task size was judged the moment` ∥ `The task is too small / just a quick fix` ∥ `does the process apply` ⇒ 各 **0** | 实施轮 |
+| A4 | 删词检验 · **机判半边**（射程 = 本节围栏块那 15 行，**不是全档新规**——同档 §6.75 的条目里情态词照在，扫全档必红） | 命令 ②：围栏块逐行扫 `\b(must\|shall\|should\|never\|always\|forbidden\|required to\|do not\|don't)\b`（不分大小写）⇒ 命中 **0**；顺带给出块行数 | 本席（已跑） |
+| A5 | 行宽 / 语言 / 引用 | 每行 ≤300 字符；扫汉字 ⇒ 0；扫 `.md` ∥ `§[0-9]` ⇒ 0 | 实施轮 |
+| A6 | 本档连带（判域 = 本档 §6.73 清点表 `discipline · What this mode runs on` **那一行**，不是全档全文） | 命令 ③：该行末列含 `A change's size is not the size of what it risks` ⇒ **1** ∧ 该行含 `Zero discretion` ⇒ **0**。全文扫必然 ≥2（「既有件三问」与上抛 2 各引旧名）——旧判据必红而实质是绿，故收窄到它真正要判的那一行 | 本席（已跑） |
+| A7 | 交付门（两档齐判） | `doc_check(mode:"gate", docs:["docs/core/design/PROMPT-SYSTEM.md", "thincoder-core/prompts/discipline-engineering.md"])` 首行 `PASS` | 本席交付前 ∥ 父侧收口复跑 |
+| A8 | 删词检验 · **读者半边**（A4 的另一半） | 判法（一句）：把后果那两行（`In engineering the two sides are not priced alike` → `Set against that`）与读数那两行（`What settles the size is exactly that reading` → `and until that reading exists`）并读，**不看任何「必须 ∥ 不得 ∥ 一律」，能不能读出「先量牵连面，量完再定步子」**——能 ⇒ 绿；只靠条文外的记忆才补得出这一步 ⇒ 红。禁词扫描判不了它（把规则改写成陈述句照样全绿），故这一半只有人判 | 父侧收口，与 A7 同一次 |
+
+**验收命令（可复跑 · 一次性，用完即弃；绝对数只留在输出里，不落本档）**
+
+命令 ① A1 快判（落地档扫新名）：
+
+```text
+node -e "const fs=require('fs');const b=fs.readFileSync('thincoder-core/prompts/discipline-engineering.md','utf8').split(/\r?\n/);console.log(b.filter(l=>/A change.s size is not the size/.test(l)).length)"
+```
+
+命令 ② A4 删词扫描（围栏块 15 行 · 禁词命中 · 最长行）：
+
+```text
+node -e "const fs=require('fs');const b=fs.readFileSync('docs/core/design/PROMPT-SYSTEM.md','utf8').split(/\r?\n/);const i=b.findIndex(l=>l.startsWith('4. **A change'));const blk=b.slice(i,i+15);console.log({lines:blk.length,banned:blk.filter(l=>/\b(must|shall|should|never|always|forbidden|required to|do not|don't)\b/i.test(l)).length,maxLen:Math.max(...blk.map(l=>[...l].length))})"
+```
+
+命令 ③ A6 连带（§6.73 那一行：行数 · 新名 · 旧名）：
+
+```text
+node -e "const fs=require('fs');const b=fs.readFileSync('docs/core/design/PROMPT-SYSTEM.md','utf8').split(/\r?\n/);const r=b.filter(l=>l.startsWith('| discipline \u00b7 What this mode runs on'));console.log(r.length, r.filter(l=>/A change.s size is not the size/.test(l)).length, r.filter(l=>/Zero discretion/.test(l)).length)"
+```
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 整条写成道理，不写禁令 | 规则在场而行为不变，是本条的实测反证；能改行为的是让「我知道它很小」这个前提站不住 |
+| K2 | 权限理由删掉，换因果理由 | 前者答「谁有权判」，后者答「为什么判不了」；只有后者能改变下一次的判断 |
+| K3 | 标题改名（陈述句，不是规矩名） | 规矩名预设读者在权衡许可；陈述句把他放到读数面前。同档一处引用随改 |
+| K4 | 不新开节、不新开维度 | 用户既有规则：加判据 = 加一句话；本条只在原条内换形态 |
+| K5 | 「不许问」写成「为什么问不出答案」 | 否定形一删，剩下的道理仍指路；禁令一删，指路就没有了 |
+| K6 | 样本不写批号、不写日期 | 批号是过程坐标，过期即死；样本值的是它的形状，不是它的编号 |
+| K7 | 保留「走全流程」这句的动作面，但由代价推出 | 原文的动作面是对的，错的是它只挂在权限上；由不对称代价推出，读者自己就能得出同一动作 |
+| K8 | 长度是决定，不是副产品：15 行逐组记账，并把重复的那一处并掉 | 同档 §6.75 K3 的判据（提示词面每行都有代价）。「谁消费 ∥ 几份档 ∥ 几个端」原先在机制段与读数段各列一遍，删读数段那一遍（枚举在机制段承重），另一遍的费用由行代价账逐行写清 |
+| K9 | 用例只留有现场的行 | 边界行给不出引文观测或复现路径就删：没有场景的边界落地时带着告警、文案、用例一起下来，四样都没人验。同日实测那一单同时给出了「读了一半」这个有现场的边界（漏掉的那处钮阈值），用它替掉原来无现场的两行 |
+| K10 | 验收行自己也要能跑：A6 判域收窄到 §6.73 那一行，删词检验拆成 A4 机判半边 + A8 读者半边 | 一条验收行跑出来红、而实质是绿，是判据错了——全文扫旧名必然 ≥2（本节自引也算）。而把规则改写成陈述句照样全绿，所以读者那半边只有人判，且必须写清判法与跑者 |
+
+**先例 ∥ 偏离**：先例 = 本档 §6.75（一段道理 + 逐字围栏块 + 用例表 + A 表）∥ §6.73（结构兜得住的删、兜不住的留且带 why）。
+
+**对齐** = 唯一副本住设计面、实施席逐字照落、验收每条可机判、道理与字面分层不重述。
+
+**偏离**：
+
+- ① 落点是整条替换而非新增 / 增列——改的是同一条的形态（4 行 → 15 行），条数不变、节数不变。
+- ② 删词检验作为主判据，且分两半——A4 机判（射程 = 本节围栏块那 15 行，不是全档新规）+ A8 读者半边（人判：删掉禁令后，代价连到动作的那句还在不在）。既往各节的判据是「在盘 + 位置 + 行宽」，本节的病是形态。
+- ③ 需求档本轮无对应条目（既往各节多为「需求 ∥ 设计 ∥ 提示词」三处同句）；是否补由主 agent 定，本席不越笔域。
+
+**既有件三问（本条不是新名，是改名 + 换形）**
+
+- `existing` = `thincoder-core/prompts/discipline-engineering.md` 第 4 条 · name 逐字 `Zero discretion` · consumers = 工程模式主会话 + 工程子代理（纪律层三段同读）⇒ 在原位换形，不搬位置。
+- `existing`（邻位）= 同节第 1 ∥ 2 ∥ 3 条与 `**Premise invalidated mid-flight**` 段 · 一字不动。
+- `none found` = `blast radius` ∥ `touch surface` ∥ `no input from the side that decides`：`thincoder-core/prompts/` 全档逐串实扫 ⇒ 三串零命中 ⇒ 新文本不重名、不撞旧句。
+
+**勘察证据行（本席本轮实读）**
+
+- 本节的位置锚（本席本轮 read）：依据 `thincoder-core/prompts/discipline-engineering.md`「   The `task` tool is mechanically disabled in engineering mode — the tracking authority is the batch record + the ledger.」——第 4 条紧随其后、`**Premise invalidated mid-flight**` 段之前。
+- 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` 实读 = `[]` ⇒ 工作目录内无独立公共源文档仓——已查，无相关。
+
+**受影响文件与分层结论**
+
+| 档 | 面 | 本笔归谁 |
+|---|---|---|
+| `docs/core/design/PROMPT-SYSTEM.md` | 文档面（设计） | 本席，已落（新节 + 一处改名连带） |
+| `thincoder-core/prompts/discipline-engineering.md` | 产品代码面（提示词 = 运行期面） | 实施轮 eng-coder |
+| `docs/core/requirements/ENGINEERING-MODE-V2.md` | 文档面（需求） | 主 agent（本轮无条目，见上抛 1） |
+| 测试档 | — | **0**（零代码面） |
+
+**分层结论 = 无档跨分层**：档位线只量代码面；`.md` 提示词档免档位判定，运行期代码零改。
+
+**集成测试设计**：`none` —— 改动面 = 一档提示词一条的形态 + 本档一节，零代码面。
+
+两条入口均不成立：① 不改任何既有用例断言的业务可观察结果（`test/RTM.md` 登记的都是运行时行为）；② 未新增业务上真需要的场景——「模型是否真的先量再判」从业务入口复现不出可机判结果，能断言的只有文本等价（A1–A5）。
+
+**RTM 近面**：`test/RTM.md` 已读——本档是索引档：故事按行登记在「故事索引表」里，故事本体住分册（`test/rtm/<族>.md` 形），故索引档里的 `###` 故事节为 0。
+
+段 ∥ 故事行 ∥ 表行三类绝对值随索引增行而变（同一天内 HEAD 与工作树就能差一行），故本档只写怎么读、读到什么结论；绝对值住批档。
+
+- 量法 = 一次性 `node` 逐行计数（`^## ` ∥ `^### ` ∥ `^|` 三类；仓根跑，用完即弃）：
+
+```text
+node -e "const fs=require('fs');const b=fs.readFileSync('test/RTM.md','utf8').split(/\r?\n/);console.log({sections:b.filter(l=>l.startsWith('## ')).length,storySections:b.filter(l=>l.startsWith('### ')).length,tableRows:b.filter(l=>l.startsWith('|')).length})"
+```
+
+- 判过的面：索引表的故事行逐行看过标题。
+- 结论：**无一行断言提示词文本或其等价性**——它们断的都是运行时行为；提示词文本的判据住本节 A1–A8。
+- 破行 0 · 冗余 0 · 新增 0。
+
+**边界（本节不做）**：不改邻位三条 ∥ 前言 ∥ 其余各节 · 不新开节 · 不改工具描述 ∥ 运行时行为 · 不动 `docs/core/design/ENGINEERING-MODE-V2.md` · 不立第二个判据维度（流程成本排序住 §6.75，本节只管「尺寸不可知」）· 不留行号坐标。
+
+**UI / 交互决策**：无界面面——本节只改设计档文字与模型可见提示词文本。
+
+**上抛项**
+
+1. 〔待裁 · 需求面〕`docs/core/requirements/ENGINEERING-MODE-V2.md` 本轮无对应条目（本轮 `grep` 三条探针零命中）。是否补一行判据句、补在哪一族，由主 agent 定；本节已把道理写全，不因缺它停摆。
+2. 〔知会 · 改名连带〕`Zero discretion` → `A change's size is not the size of what it risks`，本档 §6.73 清点表一处已随改（一致性面 · 本节写域内）。
 ## 8. 提示词承载（单源 · M9 落点）
 
 **定位**：提示词 = **产品代码**，唯一副本 = `thincoder-core/prompts/`（17 档，运行期直接加载）。规则的**人读权威** = 中文机制文档（`docs/core/design/` 纪律族）。变更路子 = 改规则 → 先改机制文档 → coder 依它改 EN（走产品代码面：需求 → 设计 → 评审 → coder）。**无机检门**（用户裁定不变）。
