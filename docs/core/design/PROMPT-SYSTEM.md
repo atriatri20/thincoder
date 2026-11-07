@@ -5944,7 +5944,8 @@ D 组现在合规是时点判断，不是豁免：它说明此刻没有要改的
 - **`manifest`'s `init` is exempt only where it bootstraps a new project**: outside any project there is no ledger to ask, so no number; inside an existing project the call is gated and needs the number, and where the landing point has a manifest the tool itself refuses (`init never overwrites`).
 - **A batch's first write is always reachable**: with no row in 在途, `ledger({action:"add"})` then `update` that row to 在途, or `batch({action:"create"})`.
 - **Why that is not a deadlock**: neither of those two is a write, so the gate cannot block the step that satisfies it.
-- **When a call is refused, read the refusal**: it names what is missing and lists the rows in 在途 now — the two shapes you will meet most are `no project on this call` and `row #N is "待讨论" — only a 在途 row carries writes`.
+- **When a call is refused, read the refusal**: it names what is missing and lists the rows in 在途 now — the three shapes you will meet most are `no project on this call`, `row #N is "待讨论" — only a 在途 row carries writes`, and `unknown — no project owns this write's target`.
+  The third one covers the workspace root: with the target inside the anchor's subtree and a manifest-bearing sub-directory under the anchor, `project` is the only source — outside those the first sentence says which condition failed.
 - **Fix the call**: retrying it unchanged, or routing around the gate with another tool, leaves the same write undone and the row unaccounted.
 ```
 
@@ -7914,6 +7915,187 @@ else {
 2. 〔知会 · 新名注册〕本条新名 = `A reading that can only come out one way has verified nothing`（公共层）/ `A criterion earns its place by being able to fail`（工程纪律层）；两面各承自己面的形，机制正文单源住本节。
 3. 〔知会 · 不回改旧节〕早前各节把两档绝对量钉成判据的行（行数 ∥ 字符数 ∥ `##` 块计数）不随本节改；判准 = 本节「验收冲突时的判准」段，收口当轮差异如出现即当轮记录。
 4. 〔上抛 · 形 4 的证物会过期〕`doc_check` 交付门对「0 档受检」仍出首行 `PASS（0 档）`——本席实测一次；本节的形 4 腿把它当现成证物，**那段代码层缺陷修掉之后本腿读数反转**（首行变 `REFUSED` ∥ `ERROR`），届时本腿改判「空范围会红」、形 4 的证物改由本节正文承担。改判条件写在「A7 五腿」表形 4 行；本节零触那段代码。
+
+### 6.80 写门教学面补全：项目怎么给 ∥ 拒文第三种形状（`thincoder-core/prompts/persona-engineering.md` 写门节 · 两条落点 · 同源 = §6.69）
+
+**来源**：用户 2026-11-08 00:43 逐字「提示词和工具面调整过吗? 模型能正确的使用新的写门吗?」，00:45 裁「补」；范围随后扩为用户「既然补了最好补完整」⇒ 一条正面规则、一条拒文形状，同轮同节。
+
+**同源机制**：写门判据面（工作区根窄口）已在机制侧落地，本节零改机制；机制档的判据句住 `thincoder-core/agent/write-gate-ledger.mjs` 的头注与设计族档，本节不复述（D2）。
+
+**判据（一句）**
+
+> **那一节要覆盖一次写盘的两头**——动手前知道项目怎么给，被拒后读得出该改哪一句。只补一头，模型仍然要先撞一次才学会。
+
+**父侧实读：那一节五行教的全是「账」**
+
+| 行 | 教什么 | 缺什么 |
+|---|---|---|
+| `Why the row` | 号是什么（这一笔服务哪条账） | — |
+| `A batch's first write is always reachable` | 一行在途都没有时怎么开账 | — |
+| `Why that is not a deadlock` | 为什么自行挂号不违门 | — |
+| `When a call is refused, read the refusal` | 被拒了怎么读 | 只列两种形状——工作区根那一笔不在其中 |
+| `Fix the call` | 别原文重试、别绕门 | — |
+
+**结论**：五行没有一行教「项目怎么给」⇒ 模型第一次写工作区根文件只能靠撞；撞到的那句（`unknown — no project owns this write's target`）又不在那两种里。
+
+**落点**
+
+| 位置 | 形 | 面 |
+|---|---|---|
+| 写门节 · `Why that is not a deadlock` 之后、`When a call is refused` 之前 | 新增一条 bullet + 续行 3 行（块 ①，共 4 行） | 产品代码面（提示词 = 运行期面），实施轮落 |
+| 写门节 · `When a call is refused, read the refusal` 那一条 | 整条换写 + 续行 1 行（块 ②） | 同上 |
+
+**为什么落这一节、不另立一节**：受众 = 工程模式父侧（写门七件的 `project` 是父侧的调用形）；这一节已是「一次写盘怎么写对」的唯一住处，另立一节 = 同一条规则两个住处。
+
+**为什么两块同轮落**：块 ① 让第一次就写对，块 ② 让被拒时读懂——只落一块，另一头仍旧靠撞。两条合起来才叫覆盖。
+
+**为什么「只在那时」的理由住 bullet 内**：`project` 若在目标路径能解析时也参与，就会顶掉目标路径——两处判据点同时生效，谁说话不确定。模型读的是提示词，句外的说明它读不到。
+
+**逐字终稿（英文 · 围栏即落地形 · 实施席整行照落；唯一权威副本 = 本节）**
+
+块 ① — 写门节新增一条 bullet + 续行 3 行（共 4 行）：
+
+```text
+- **Naming the project when the target has none**: a write tool whose target comes from its own argument judges by that path first — `project` stays out of the judgement while that path resolves to a project, since a declaration would outrank the path and two judging points never both decide.
+  Where that path resolves to no project — a workspace root is the case — `project` is the only source: name a sub-project root whose ledger carries this row's number. The anchor itself will not do: no manifest, so `declared project is not a project`.
+  Four things then decide it, and the refusal's first sentence names the one that failed: the target inside the anchor's subtree, a manifest-bearing direct sub-directory under the anchor, `project` declared, that declaration parsing to a root.
+  `execute` with a `workdir` and `manifest` with a `target` have no such fallback: a target in no project is refused however `project` is set.
+```
+
+块 ② — 同节 `When a call is refused` 那一条整条换写（2 行）：
+
+```text
+- **When a call is refused, read the refusal**: it names what is missing and lists the rows in 在途 now — the three shapes you will meet most are `no project on this call`, `row #N is "待讨论" — only a 在途 row carries writes`, and `unknown — no project owns this write's target`.
+  The third one covers the workspace root: with the target inside the anchor's subtree and a manifest-bearing sub-directory under the anchor, `project` is the only source — outside those the first sentence says which condition failed.
+```
+
+**对照表 · 与既有条款**
+
+| 既有句 | 它管什么 | 本节补什么 | 为何不冲突 |
+|---|---|---|---|
+| `Why the row`（同节） | 这一笔服务哪一行账 | 这一笔落在哪个项目——目标无项目时怎么给 | 同一条门的两半：账 ∥ 项目；那一半本节一字不动 |
+| `A batch's first write is always reachable`（同节） | 一行在途都没有时怎么开账 | 有账而目标无项目时怎么给项目 | 两条各管一种缺法，合读不留缝 |
+| `When a call is refused, read the refusal`（本批换写的那一条） | 被拒后读拒文、照着改 | 第三种形状进那条的枚举 | 同一条的枚举补齐，不是新立一条 |
+| `Fix the call`（同节） | 拒后别原文重试、别绕门 | 无（本批不动） | 它管拒后的动作，本条管拒文的读法 |
+
+**用例表（正常 / 边界 / 错误）**
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 目标在某项目内 | 落项目内文件，不传 `project` | 按目标路径判账；`project` 不参与，第三种形状不出现 |
+| C2 | 正常 · 工作区根 + 声明子项目根 | 目标在工作区根、`project` = 子项目根且其台账有本笔在途号 | 窄口四条件成立即落 |
+| C3 | 边界 · 声明会话锚自身 | 同上，而 `project` = 会话锚 | 拒成 `declared project is not a project`——锚无 manifest；块 ① 那句教的正是这个坑 |
+| C4 | 边界 · 工作区根 + 不声明 | 目标在工作区根、不带 `project` | 拒文含 `unknown — no project owns this write's target`；块 ② 让读者认得出它 |
+| C5 | 错误 · 原文重试 ∥ 换工具绕 | 拒后照原样再发一次，或改用另一件写盘工具 | 同一句拒文再来一次；正路 = 补 `project`（`Fix the call` 那条管） |
+| C6 | 边界 · 目标在会话锚子树外 | 目标落在锚之外的路径、`project` = 锚下一个子项目根 | 拒文首句 = `target is outside the session anchor's subtree`；补 `project` 不解决——块 ① 那句「首句点名哪一条没成立」正是给这一形 |
+| C7 | 边界 · 锚下无带 manifest 的子项目 | 会话锚落在一个不带 manifest、也没有 manifest 子目录的目录下 | 拒文首句 = `the session anchor carries no sub-project`；同龄地补 `project` 不解决 |
+| C8 | 错误 · `execute` ∥ `manifest` 落工作区根 | `execute({workdir: 工作区根})` ∥ `manifest({target: 工作区根, action:"write"})` | 落第三形；窄口对这两形不开（目标在场时声明被丢），补 `project` 无效 ⇒ 目标须落项目内（块 ① 末行教的就是这一条） |
+
+C2 ∥ C3 ∥ C6 ∥ C7 ∥ C8 的依据 = `thincoder-core/agent/write-gate-ledger.mjs` 的 `workspaceRoot` 四分支（声明解析不出 ⇒ `caseNotAProject`；目标在锚子树外 ⇒ `caseOutsideAnchor`；锚下无子项目 ⇒ `caseNoSubProject`）与同档 `ledgerGateTargets` 的两形（`execute` ∥ `manifest` 的 `{ paths }` 不带 `fallbackDeclared`）。
+
+本节不枚举那三句首句的全文——块 ① 与块 ② 只教「首句点出哪一条没成立」，读者拿首句去对块 ① 的四个条件。把三句首句抄成一张表 = 重述机制（D2），加表不是加一句。
+
+**验收（A1–A6 · 每行写「红在什么读数上」）**
+
+| # | 验收 | 跑什么 / 期望什么 | 红在什么读数上 | 跑者 |
+|---|---|---|---|---|
+| A1 | 两块在盘且与本节围栏块**逐行相等** | 命令 ①：两首行在落地档各命中 **1**；`missing` = `none`；逐行 `===` ⇒ `equal: true`。**比的对象 = 本节切片的围栏块**（先切 `### 6.80 ` 到下一个 `^## `，同 §6.79 命令 ⑥ 的节切法）——`§6.69` 的副本在切片外，不比、不计 | 首行 0 命中 ∥ 任一 `missing` 非 `none` ∥ 任一行不等 ⇒ 红。**改前读数 = `missing: disk` ∥ `equal: false`**（命令输出在批档 §2） | 实施轮 |
+| A2 | 旧串清零（D14 退役项） | 命令 ②：`the two shapes` 在落地档（**判域 = 全档**）= **0** | 落地档非 0 ⇒ 红（改前读数 = 非 0，数字在批档 §2）。**本档不作判域**：本档那三次出现分别是本条判据自身、探针串与退役登记——判据串住在档里，判域收在落地档（同 §6.79 形 1 的处置） | 本席 ∥ 实施轮 |
+| A3 | 第三种形状在场 | 命令 ②：`no project owns this write's target` 在落地档 = **1**（口径 = 按出现计） | 0 ⇒ 红（改前读数 = 0）∥ > 1 ⇒ 红；数字在批档 §2 | 实施轮 |
+| A4 | 块 ① 的三句判据在场（**探针串各在块 ① 独占**） | 命令 ②：`stays out of the judgement while that path resolves` = **1** ∥ `The anchor itself will not do` = **1** ∥ `two judging points never both decide` = **1**（落地档） | 任一 = 0（改前读数 = 0）∥ > 1 ⇒ 红；数字在批档 §2。`project` is the only source 不作探针：块 ① 与块 ② 各含一句同串，按落地档计数必为 2——探针串只取在块 ① 独占的那一枚 | 实施轮 |
+| A5 | 行宽 ≤300（提示词面按行判、无结构豁免） | 命令 ①：打印 `maxLen`（两块六行取最大）；块取不到 ⇒ 红 | `maxLen > 300` ⇒ 红——超宽即交付门 `REFUSED`；改前读数（对象 = 围栏块）在批档 §2 | 实施轮 |
+| A6 | 交付门 | `doc_check(mode:"gate", docs:["docs/core/design/PROMPT-SYSTEM.md", "thincoder-core/prompts/persona-engineering.md"])` 首行 `PASS` | 首行非 `PASS` ⇒ 红；漏列落地档 ⇒ 这轮改的档不受判，本条失效 | 本席交付前 ∥ 父侧收口复跑 |
+
+**验收命令（可复跑 · 绝对数只留输出，不落本档）**
+
+命令 ① A1 ∥ A5（围栏块 ∥ 落地档逐行比；块取不到出 `missing`，空 slice 不给绿）：
+
+```text
+node -e "const fs=require('fs');const D=fs.readFileSync('docs/core/design/PROMPT-SYSTEM.md','utf8').split(/\r?\n/);const s=D.findIndex(l=>l.startsWith('### 6.80 '));const e=D.findIndex((l,i)=>i>s&&/^## /.test(l));const sec=D.slice(s,e);const P=fs.readFileSync('thincoder-core/prompts/persona-engineering.md','utf8').split(/\r?\n/);const S=[['- **Naming the project when the target has none**',4],['- **When a call is refused, read the refusal**',2]];for(const [k,n] of S){const i=P.findIndex(l=>l.startsWith(k)),j=sec.findIndex(l=>l.startsWith(k));const miss=(i<0?'disk':'')+(j<0?'fence':'');const a=i<0?[]:P.slice(i,i+n),b=j<0?[]:sec.slice(j,j+n);const eq=a.length===n&&b.length===n&&a.every((l,x)=>l===b[x]);console.log({key:k.slice(3,40),hitsDisk:P.filter(l=>l.startsWith(k)).length,hitsFence:sec.filter(l=>l.startsWith(k)).length,missing:miss||'none',equal:eq,maxLen:Math.max(...a.concat(b).map(l=>[...l].length))})}"
+```
+
+命令 ② A2 ∥ A3 ∥ A4（按出现计；两档分列）：
+
+```text
+node -e "const fs=require('fs');const F={disk:'thincoder-core/prompts/persona-engineering.md',doc:'docs/core/design/PROMPT-SYSTEM.md'};const q=['the two shapes','no project owns this write\'s target','stays out of the judgement while that path resolves','The anchor itself will not do','two judging points never both decide'];for(const [n,f] of Object.entries(F)){const t=fs.readFileSync(f,'utf8');console.log(n, q.map(s=>[s.slice(0,36), t.split(s).length-1]))}"
+```
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 正面规则与拒文形状同轮落 | 一头教怎么写对、一头教被拒怎么读；只补一头，模型仍要先撞一次——「补完整」正是这一条 |
+| K2 | 「只在那时」的理由住 bullet 内 | 模型读提示词、不读本节；理由挪到设计档 = 句外说明，读到的人不是写盘的人 |
+| K3 | 不枚举那三句首句的全文 | 块 ① 与块 ② 只教「首句点出哪一条没成立」，读者拿首句去对块 ① 的四个条件。把三句首句抄成一张表 = 重述机制（D2），加表不是加一句（父侧裁定） |
+| K4 | 中文内容译成英文面落笔 | 提示词面语言纪律：运行面为英文，中文只许出现在四类字面上（台账状态名一类的字面照留，如 `在途`） |
+| K5 | 同档 §6.69 的逐字副本随改一格，其余行不动 | 那一格是盘上仍在行的一句的副本，不同步 = 本档留一句与盘上相反的话（D11）。§6.69 围栏块整体**不是当刻副本**：它的判域 = 它自己那一批的落地时刻，其中 `- **Reach**` 等七条已被 §6.73 从落地档删去 ⇒ 本批只同步那一行的续行，不为那块重判逐行相等、不回改其余行 |
+
+**先例 ∥ 偏离**
+
+先例 = §6.69（同一节的教学面：逐字块 + 逐行相等判据）∥ §6.79（「红在什么读数上」列 + 读数住批档）∥ §6.78（同档连带：旧节的活副本随改）。
+
+**偏离**：① 落点只两条、不新增 `##` 节——本条是那一节的补全，不是另一条规则；② 判据只判「在不在、逐行等不等」，不判模型行为——行为从文本面复现不出可机判结果。
+
+**既有件三问**
+
+- `existing` = `thincoder-core/prompts/persona-engineering.md` 写门节的 `When a call is refused, read the refusal` 条 · name 逐字 `When a call is refused, read the refusal` · consumers = 工程模式父侧 ⇒ 整条换写，同节其余四条一字不动。
+- `existing`（第二件，位置锚）= 同节 `Why that is not a deadlock` 条与 `When a call is refused` 条之间的空行位 ⇒ 块 ① 增列于此，两条既有 bullet 均不位移措辞。
+- `none found` = `Naming the project when the target has none` ∥ `stays out of the judgement while that path resolves` ∥ `The anchor itself will not do` ∥ `two judging points never both decide` ∥ `is the only source`：`thincoder-core/prompts/` 全 17 档逐串实扫（本席本轮）⇒ 五串零命中 ⇒ 新文本不重名、不撞旧句。
+
+**勘察证据行（本席本轮实读 / 实算）**
+
+- 节标题逐字（两条落点所在）：依据 `thincoder-core/prompts/persona-engineering.md`「**The write gate — every write call names the row it serves and the project it lands in.**」
+- 块 ① 的上锚逐字：依据 `thincoder-core/prompts/persona-engineering.md`「- **Why that is not a deadlock**: neither of those two is a write, so the gate cannot block the step that satisfies it.」
+- 块 ② 之后不得动的下锚逐字：依据 `thincoder-core/prompts/persona-engineering.md`「- **Fix the call**: retrying it unchanged, or routing around the gate with another tool, leaves the same write undone and the row unaccounted.」
+- 第三种拒文串逐字：依据 `thincoder-core/agent/write-gate-ledger.mjs`「const LIST_UNKNOWN_TARGET_NOT_A_PROJECT = "unknown — no project owns this write's target"」
+- 锚自身为何不行（块 ① 末句的依据）：依据 `thincoder-core/agent/write-gate-ledger.mjs`「declared project is not a project (no PROJECT-MANIFEST.json at this path or within the session anchor)」
+- 窄口四分支的依据：依据 `thincoder-core/agent/write-gate-ledger.mjs`「async function workspaceRoot(target, anchor, declared)」
+- 四条件逐字（评审第 1 条的处置依据）：依据 `thincoder-core/agent/write-gate-ledger.mjs`「会话锚子树内 ∧ 锚下有带 manifest 的直接子目录 ∧ 本笔显式声明了 `project` ∧ 声明解析得出根」
+- 锚外那一支的拒文首句：依据 `thincoder-core/agent/write-gate-ledger.mjs`「const caseOutsideAnchor = (p) => `target is outside the session anchor's subtree — the workspace-root opening does not apply: ${JSON.stringify(String(p))}`」
+- 锚下无子项目那一支的拒文首句：依据 `thincoder-core/agent/write-gate-ledger.mjs`「const caseNoSubProject = (p) => `the session anchor carries no sub-project — the workspace-root opening does not apply: ${JSON.stringify(String(p))}`」
+- 第三形由三处返回（无声明 ∥ 锚外 ∥ 锚下无子项目）：依据 `thincoder-core/agent/write-gate-ledger.mjs`「return { refusal: { caseText: caseNoSubProject(target), listText: LIST_UNKNOWN_TARGET_NOT_A_PROJECT } }」
+- `execute` ∥ `manifest` 不开窄口：依据 `thincoder-core/agent/write-gate-ledger.mjs`「return wd ? { paths: [wd] } : onlyDeclared()」
+- 无回落声明即拒：依据 `thincoder-core/agent/write-gate-ledger.mjs`「if (!claim.fallbackDeclared) {」
+- `project` 只作定界、锚不作判据点的依据：依据 `thincoder-core/agent/write-gate.mjs`「此前没有任何一句问过「写盘目标在不在这一层工作区」」
+- 结构读数（本节落笔前）：`thincoder-core/prompts/persona-engineering.md` = `##` **18** ∥ `###` **5** ∥ 最长行 **300**（本席本轮实算，命令输出在批档 §2）。
+- 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` 实读 = `[]` ⇒ 工作目录内无独立公共源文档仓——已查，无相关。
+
+**受影响文件与分层结论**
+
+| 档 | 面 | 本笔归谁 |
+|---|---|---|
+| `docs/core/design/PROMPT-SYSTEM.md` | 文档面（设计） | 本席，已落（本节 + §6.69 逐字副本一格随改） |
+| `thincoder-core/prompts/persona-engineering.md` | 产品代码面（提示词 = 运行期面） | 实施轮 eng-coder 落（块 ① 4 行增列 + 块 ② 2 行换写） |
+| 测试档 | — | **0**（零代码面） |
+
+**分层结论 = 无档跨分层**：档位线只量代码面；`.md` 提示词档免档位判定，运行期代码零改。
+
+**集成测试设计**：`none` —— 改动面 = 一档提示词两条 bullet + 本档一节，零代码面。
+
+两条入口均不成立：① 不改任何既有用例断言的业务可观察结果；② 未新增业务上真需要的场景——「模型下次写工作区根文件会不会先给 `project`」从业务入口复现不出可机判结果，能机判的只有文本是否在盘、是否逐行相等（A1–A6）。⇒ 破行 0 · 冗余 0 · 新增 0。
+
+RTM 读数（本席本轮实算，数字住批档 §2）：`test/RTM.md` 的故事索引表逐行读过。近面两行（`CLI 8` ∥ `CLI 12`）：①`CLI 12`「**写盘与跑命令都要报它替哪条台账行服务（不分面、不分类命令）**」——不破：它断的是写门**运行时行为**（工具调用回模型），本批零改判据本体，改的是提示词教法；②`CLI 8`「**批次档建在项目里（工作区锚报明、不落锚目录）**」——不破：建批档路径与工作区锚报明逻辑零改，本批只在教法面讲「目标无项目时 `project` 怎么给」。两行均不断言提示词文本或其等价性。
+
+**边界（本节不做）**
+
+- 不改写门判据本体（`thincoder-core/agent/write-gate-ledger.mjs` ∥ `thincoder-core/agent/write-gate.mjs`），不改窄口四条件。
+- 不动工具面三层：`project` 的 schema ∥ 七份 tool-docs ∥ `PROJECT_PARAM_DESC` 已调过，本批零触。
+- 不枚举那三句首句的全文；不建「五句拒文表」。
+- 不改写门节其余四条 bullet 的措辞；不动 `thincoder-core/prompts/` 其余 16 档。
+- 不回改 §6.69 围栏块其余行（判域 = 它自己那一批的落地时刻）；只同步本轮那块里与本批同文的那一行续行。
+- 不改需求档 ∥ 批档其它段；不新增机检门；本节不留行号坐标。
+
+**UI / 交互决策**：无界面面——本节只改设计档文字与模型可见提示词文本。
+
+**上抛项**
+
+1. 〔知会 · 语言面〕父侧给的内容是中文，落笔为英文面（提示词面语言纪律：运行面英文，中文只许在四类字面）；逐字形见围栏块 ① ②，语义按父侧内容译，未增删判断。
+2. 〔知会 · 措辞面〕块 ① 首句射程收到「目标路径由自身定位参数给出的写盘工具」，不写「七件」再列七个名（枚举七名 = 加一张表）。**`execute` 带 `workdir` ∥ `manifest` 带 `target` 不开窄口**——两形走 `return wd ? { paths: [wd] } : onlyDeclared()`，目标在场时声明被丢，取不到根即落 `caseNotAProject`（补 `project` 不生效）；块 ① 末行为此明写 `have no such fallback`。
+3. 〔知会 · 同档连带〕`docs/core/design/PROMPT-SYSTEM.md` 的 §6.69 逐字副本同步那一行的续行；§6.69 围栏块其余行不回改——判域仍是它自己那一批的落地时刻（已被 §6.73 部分作废）。不在本档留一句与盘上相反的话，是本批只改那一行的唯一理由。
+4. 〔知会 · 计数连带〕落地档结构读数零连带：`##` 18 ∥ `###` 5 不变（读数，不作判据——改前改后同数，红了也不说明事）。
+5. 〔知会 · 新名注册〕新 bullet 题眼 = `Naming the project when the target has none`；同节既有名三条不动；`the two shapes` 退役（扫描域 = 落地档全档，预期残留 0，A2 判）。
+6. 〔知会 · 计数连带〕块 ① 由 2 行改 4 行（评审第 1 条的处置：四个条件与「首句点名哪一条没成立」必须进句内；末行再限定 `execute` ∥ `manifest` 无回落）⇒ 落地档行数与 A1 的 `n` 随改；四行逐行 ≤300 仍由 A5 判。
+
 
 ## 8. 提示词承载（单源 · M9 落点）
 

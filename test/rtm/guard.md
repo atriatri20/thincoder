@@ -30,7 +30,7 @@
 ## CLI 12. 写盘与跑命令都要报它替哪条台账行服务（不分面、不分类命令）
 
 > 目的：工程模式下父侧的每一次落盘、每一次 `bash` / `execute` 都要带 `ledger:"#N"`，且同时给出项目（`bash` ∥ `memory` 用 `project`，其余用各自的定位参数）；该号是**声明项目**台账里一条 `status = 在途` 的行；门不判批档状态，也不判命令内容——`git status` 与 `rm -rf` 同判；`init` 自举一格见 12-15。
-> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.3 ∥ §2.10 ∥ §2.12；交互组件 = 写盘 / 跑命令的工具面 ↔ 笔-账绑定判定 ↔ 台账库；进入口 = 父侧工具调用（工程模式 depth-0）。十四态（行序）= 12-1 错误 · 12-2 正常 · 12-3 错误 · 12-4 错误 · 12-5 错误 · 12-6 借行（服务 R14 排除名单单源；迁出触发条件 = 该名单有独立故事节那一轮） · 12-7 错误 · 12-8 边界 · 12-9 正常 · 12-10 正常 · 12-12 错误 · 12-13 错误 · 12-14 边界 · 12-15 边界。
+> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.3 ∥ §2.10 ∥ §2.12；交互组件 = 写盘 / 跑命令的工具面 ↔ 笔-账绑定判定 ↔ 台账库；进入口 = 父侧工具调用（工程模式 depth-0）。十五态（行序）= 12-1 错误 · 12-2 正常 · 12-3 错误 · 12-4 错误 · 12-5 边界（同一案里拒与放行两支） · 12-6 借行（服务 R14 排除名单单源；迁出触发条件 = 该名单有独立故事节那一轮） · 12-7 错误 · 12-8 边界 · 12-9 正常 · 12-10 正常 · 12-12 错误 · 12-13 错误 · 12-14 边界 · 12-15 边界 · 12-16 错误（工作区根窄口的两条不成之路，回指 §2.3.1）。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -38,7 +38,7 @@
 | 12-2 | 同一会话同一目标，带 `ledger:"#A"` 写一次；再带 `ledger:"A"`（无 `#`）写一次 | 两次都照写，字节 = 写入内容——两形同判 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-3 | 带 `ledger:"#<已核销行>"` 写产品码；带 `ledger:"#999999"` 再写；带 `ledger:"#<待讨论行>"` 再写 | 三次全拒：拒文分别点名 `is "<已核销>"` / `does not exist` / `is "待讨论"`；文件零改 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-4 | 台账库不可读（库位是目录），再写产品码；另造一档项目根 manifest 坏 JSON 后再写 | 两态都拒：拒文含 `ledger row not bound` 与 `ledger unreadable — `（带台账原始错误）；文件零改。第二态与 12-5 成对照：有根但不可用 ≠ 没根 | — | `test/integration/batch-live-batch-lock.test.mjs` |
-| 12-5 | 台账无在途行时写 `<仓外临时目录>/x.mjs`（不传号）；同会话再写 `<仓内路径>`（不传号）；再用 `bash` 把 `project` 指到容器根 `D:\teamcode`、带本仓在途号跑一条命令 | 仓外写拒（拒文含 `declared project is not a project`——判据点是目标路径本身，项目之外没有判据点）；仓内拒（`no ledger number on this call`），文件零改；`project` 指容器根 ⇒ 同拒——「不是项目」与「不是这个项目」是两种拒，不是两种放行 | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-5 | 工程模式父侧，台账无在途行：写 `<仓外临时目录>/x.mjs`（不传号）；会话 cwd = 工作区根、写工作区根那份 `AGENTS.md`（不声明项目）；同一会话把 `project` 指到其下一个子项目并带上该子项目的在途号，再写同一目标；同会话再写 `<仓内路径>`（不传号）；再用 `bash` 把 `project` 指到容器根 `D:\teamcode`、带本仓在途号跑一条命令 | 仓外写拒（拒文含 `declared project is not a project`——项目之外没有判据点）；工作区根那一笔无声明同样拒（清单单位 = `unknown — no project owns this write's target`，不写 `none`）；**带子项目声明 + 在途号写同一目标 ⇒ 放行、字节落盘**（锚子树内 ∧ 锚下有带 manifest 的直接子目录 ∧ 显式声明三条同时成立，判据点换成声明根）；仓内拒（`no ledger number on this call`），文件零改；`project` 指容器根 ⇒ 同拒——「不是项目」与「不是这个项目」是两种拒，不是两种放行 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-6 | 在 `vendor/` · `node_modules/` · `dist/` 各放一份含标记文本的 `.mjs`，用 `grep` 搜该标记；再在普通目录放同文本 | 首次零命中（名单合并后三处都被剪）；普通目录那份命中——证明剪枝生效而非搜索坏了 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-7 | 台账无在途行时（工程模式父侧）跑 `bash` 一条只读命令（`git status`，带 `project:<本仓>`）；挂一条在途行后带同样的 `project` 与号跑同一条 | 第一次拒（拒文含 `no ledger number on this call`），命令零执行、无输出；第二次执行并回输出——只读命令与写命令同判 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-8 | 子代理（`depth > 0`）用 `write` 不传 `ledger`；同一子代理带号再写一次 | 两态都不被本门拒（拒因若现，只来自它自己的 token 门）——子代理的号来自绑定的批档档头，本门不核 | — | `test/integration/batch-live-batch-lock.test.mjs` |
@@ -48,6 +48,7 @@
 | 12-13 | `bash` 的 `project` 指到容器根 `D:\teamcode`（自身无 manifest）并带本仓在途号；再声明 A 项目、号取自 B 项目 | 两条都拒：分别含 `declared project is not a project` 与 `does not exist in this project's ledger`；两条拒文都同时点出 `project` 与 `ledger` 两个输入 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-14 | 会话 cwd = `<本仓>/thincoder-cli`（项目子目录）：`bash` 带 `project:"<本仓根>"` + 本仓在途号跑一条命令；同一会话再跑同一条但不带 `project` | 第一次放行、命令执行并回输出（声明根含会话锚 ⇒ 相关）；第二次拒（含 `no project on this call`）、命令零执行 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-15 | 工程模式父侧、台账无在途行：`manifest({action:"init", target:"<祖先链无 manifest 的新目录>"})` 不带项目不带号；同会话把 `target` 换成既有项目内子目录重跑（仍不带号），再带本仓在途号跑同一笔 | 第一次照跑：`PROJECT-MANIFEST.json` 落盘在 target（不进本门）；第二次拒（含 `no ledger number on this call`）；第三次门过后工具拒（含 `init never overwrites`——落点解析到祖先项目根，见 `thincoder-core/agent-tools/manifest.mjs` 的 init 拒因段），项目 manifest 字节零改 | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-16 | 工程模式父侧，两笔都带合法声明 + 声明项目的在途号：① 会话 cwd = 工作区根（其下有带 manifest 的子项目），目标是**锚外**文件（另建一条系统临时路径）；② 换一个锚（下只有 `bare-git/.git` 子目录、无带 manifest 的直接子目录），声明锚内更深一层的那个项目，写锚根文件 | 两笔都拒、各落自己那句：① 含 `target is outside the session anchor's subtree — the workspace-root opening does not apply`；② 含 `the session anchor carries no sub-project — the workspace-root opening does not apply`；两笔目标文件零改，清单单位都是 `unknown — no project owns this write's target`（不出现 `none`）；① 的拒文**不含** `declared project is not a project`——两支互不顶替 | — | `test/integration/batch-live-batch-lock.test.mjs` |
 
 ## CLI 26. 清账要先有一把可复述的尺（行号坐标：`report` 清点 ∥ `gate` 拦）
 

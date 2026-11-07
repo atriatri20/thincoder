@@ -24,9 +24,9 @@
 
 ## VSC 2. 流式输出中视口贴底
 
-> 目的：流式回合进行中，用户只上滚了一点点（不足半视口）时，输出继续到达不把跟随停掉——视口仍跟着新内容走；真要看历史时才解钉。
-> 节注：回指 = 需求 F-W2（流式跟随与滚动）∥ `docs/vsc/design/WEBVIEW.md` §5.5 集成面行；机制单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-16（近底阈 = 视口比例，半视口为下限）；交互组件 = 流式帧应用（核 `thincoder-render-core/flow/stream.mjs` 的帧尾）× pin 观察（核 `thincoder-render-core/scroll.mjs` 的 `createPinWatch` 更新点）× 近底判据（核 `nearBottom`）；进入口 = VSC 聊天面板消息区，一次流式回合进行中上滚。三态（离底）= 2-1 一个用例覆盖三种离底量（不足 ∥ 恰等于 ∥ 超过半视口）。
+> 目的：流式回合进行中，用户用滑轮上滚**一下**就把跟随停下——不必先滚够半视口；停下后有 600ms 宽限窗（窗内不被帧拽回、再上滚续期），窗过后真看历史（仍离底）就维持停跟，回到底部则恢复跟随。
+> 节注：回指 = 需求 F-W2（流式跟随与滚动）∥ `docs/vsc/design/WEBVIEW.md` §5.5 集成面行；机制单源 = `docs/render-core/design/RENDER-CORE.md` §5「滚动策略族」条 5 ∥ §2 KD-RC-17（上滚即解钉 · `PIN_GRACE_MS` 宽限窗）；交互组件 = 流式帧应用（核 `thincoder-render-core/flow/stream.mjs` 的帧尾）× pin 观察（核 `thincoder-render-core/scroll.mjs` 的 `createPinWatch` 的 `wheel` ∥ `scroll` 两个入口）× 宽限窗（核 `PIN_GRACE_MS` 定时器）；进入口 = VSC 聊天面板消息区，一次流式回合进行中上滚。三态（上滚量）= 2-1 一个用例覆盖三种上滚量（不足 ∥ 恰等于 ∥ 超过半视口）——_三者同判解钉_。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
-| 2-1 | VSC 聊天面板消息区跑一次流式回合（800px 视口；驱动真 webview 装配 `thincoder-vscode/webview/ui.js` 的 `initScrollFollow` + 核帧尾，滚动宿主自带 `scrollHeight` ∥ `scrollTop` ∥ `clientHeight` 读数），回合中依次上滚 300px（不足半视口）· 500px（超过）· 400px（恰等于），每次之后继续出帧；最后滚回底部 | 上滚 300px ⇒ 钉仍真，下一帧输出后视口仍贴底（离底归 0）；上滚 500px ∥ 恰 400px ⇒ 解钉，后续帧零写视口；滚回底部 ⇒ 复钉，下一帧重新贴底 | 无 | `test/integration/vsc-scroll-follow.test.mjs` |
+| 2-1 | VSC 聊天面板消息区跑一次流式回合（800px 视口；驱动真 webview 装配 `thincoder-vscode/webview/ui.js` 的 `initScrollFollow` + 核帧尾，滚动宿主自带 `scrollHeight` ∥ `scrollTop` ∥ `clientHeight` 读数），回合中依次**用滑轮**上滚 300px（不足半视口）· 400px（恰等于）· 500px（超过），每次之后继续出帧；另两回合：① 上滚后滚回底部 ② 上滚 500px 不滚回，两回合均等宽限窗到期（`PIN_GRACE_MS` + 50ms）再出帧 | 上滚任一量（300 ∥ 400 ∥ 500）⇒ 解钉，后续帧零写视口、离底随内容增高（不再按距离分判）；上滚后滚回底部 ⇒ 窗内不即时复钉（近底自愈挂起），窗到期后复钉、下一帧重新贴底；窗到期仍离底超半视口 ⇒ 维持解钉、帧零写视口 | 修前红：上滚 300px（不足半视口）仍贴底——正是用户报的症状 | `test/integration/vsc-scroll-follow.test.mjs` |

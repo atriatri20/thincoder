@@ -12,6 +12,7 @@ import {
   majorityEol,
   FFFD_WARNING,
   LEDGER_PARAM_DESC,
+  PROJECT_PARAM_DESC,
 } from "./shared.mjs";
 import { applyEditBatch } from "./edit-batch.mjs";
 import { runSingleEdit } from "./edit-diff.mjs";
@@ -194,6 +195,8 @@ export const writeTool = {
       path: { type: "string", description: "File path (relative to cwd or absolute)" },
       content: { type: "string", description: "Full content to write" },
       ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      // 工作区根窄口（设计档 §2.3.1）：目标取不到项目根时才被读；目标有根时以路径为准（定位参数优先）。
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["path", "content"],
   },
@@ -248,6 +251,7 @@ export const editTool = {
         },
       },
       ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: [],
   },
@@ -290,6 +294,7 @@ export const insertAfterTool = {
       after_regex: { type: "string", description: "JavaScript regex to find the line to insert after (must match exactly one line)" },
       content: { type: "string", description: "Text to insert (with leading newline if you need a blank line)" },
       ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["path", "content"],
   },
@@ -375,6 +380,7 @@ export const hashlineEditTool = {
       old_hashes: { type: "array", items: { type: "string" }, description: "SHA256 hashes (12 chars) of the lines to replace. Read the file with hashes=true first to obtain these hashes. Single line: pass 1 hash; multiple lines: pass the exact sequence of hashes." },
       new_content: { type: "string", description: "Replacement text (can span multiple lines)" },
       ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["path", "old_hashes", "new_content"],
   },

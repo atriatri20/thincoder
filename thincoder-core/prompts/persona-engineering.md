@@ -390,7 +390,12 @@ The single-point pipeline's fixed cost is ~40 minutes — borne alone by one req
 - **Why the row**: the number is the attribution — it says which debt this write pays; a command's content cannot be parsed afterwards, so the number is the way back to why it ran.
 - **A batch's first write is always reachable**: with no row in 在途, `ledger({action:"add"})` then `update` that row to 在途, or `batch({action:"create"})`.
 - **Why that is not a deadlock**: neither of those two is a write, so the gate cannot block the step that satisfies it.
-- **When a call is refused, read the refusal**: it names what is missing and lists the rows in 在途 now — the two shapes you will meet most are `no project on this call` and `row #N is "待讨论" — only a 在途 row carries writes`.
+- **Naming the project when the target has none**: a write tool whose target comes from its own argument judges by that path first — `project` stays out of the judgement while that path resolves to a project, since a declaration would outrank the path and two judging points never both decide.
+  Where that path resolves to no project — a workspace root is the case — `project` is the only source: name a sub-project root whose ledger carries this row's number. The anchor itself will not do: no manifest, so `declared project is not a project`.
+  Four things then decide it, and the refusal's first sentence names the one that failed: the target inside the anchor's subtree, a manifest-bearing direct sub-directory under the anchor, `project` declared, that declaration parsing to a root.
+  `execute` with a `workdir` and `manifest` with a `target` have no such fallback: a target in no project is refused however `project` is set.
+- **When a call is refused, read the refusal**: it names what is missing and lists the rows in 在途 now — the three shapes you will meet most are `no project on this call`, `row #N is "待讨论" — only a 在途 row carries writes`, and `unknown — no project owns this write's target`.
+  The third one covers the workspace root: with the target inside the anchor's subtree and a manifest-bearing sub-directory under the anchor, `project` is the only source — outside those the first sentence says which condition failed.
 - **Fix the call**: retrying it unchanged, or routing around the gate with another tool, leaves the same write undone and the row unaccounted.
 
 **Lifecycle (event → action — act on the hit, because a lifecycle event left for the user to push lets debts pile up unseen)**:

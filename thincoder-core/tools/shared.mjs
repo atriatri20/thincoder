@@ -36,9 +36,12 @@ export const LEDGER_PARAM_DESC_MEMORY = LEDGER_PARAM_DESC
   + '；仅落 project 层的写型 action 要号：`layer:"project"`，或省略 `layer`、单条删除且 id 以 `project:` 开头（此时层由前缀定；`personal` ∥ `team` 落用户数据目录，不要号）'
 /** 写门 `project` 参数（2026-11-03 项目声明面批 · 设计档 §2.3「工具 schema 面」/ 决策 40）：项目根路径（带
  *  `PROJECT-MANIFEST.json` 的那个目录）—— 台账按项目根算键，所以「传项目」就是把这个根传进来，零映射表。
-  *  三把可能缺定位参数的工具（`bash` ∥ `memory` ∥ `execute`）共用这一条（文面逐字 = 设计档
-  *  §2.3）；`manifest` 不在列——它的 `target` 必填，`project` 替不了它。写盘七件不加——目标路径恒在。定位参数在场时以它为准，`project` 只补位；纯声明，不改执行目录。 */
-export const PROJECT_PARAM_DESC = '本笔调用服务的项目根——带 `PROJECT-MANIFEST.json` 的那个目录（绝对路径，或相对会话 cwd）；工程模式下父侧 `bash` ∥ `memory` 必带，`execute` 在定位参数缺位时必带。纯声明：不改执行目录（`bash` 仍在会话 cwd 执行，`workdir` 才是改执行目录的那个）。'
+ *  定位参数在场时以它为准，`project` 只补位；纯声明，不改执行目录。
+ *  为什么写盘七件也各带一格（2026-11-08 工作区根窄口批 · 设计档 §2.3.1）：它们的定位参数是一支支目标路径，
+ *  而「目标取不到项目根」真会发生（工作区根的文件）——那时 `project` 是唯一可用的判据点，schema 不给
+ *  这一格，门里的口子就永远触发不了（模型不知道有这个参数，第一次撞的还是拒文）。
+ *  描述住本档、零手写副本：同一参数在十二处各写一遍就是十二版规则。 */
+export const PROJECT_PARAM_DESC = '本笔调用服务的项目根——带 `PROJECT-MANIFEST.json` 的那个目录（绝对路径，或相对会话 cwd）；工程模式下父侧 `bash` ∥ `memory` 必带，`execute` ∥ `manifest` 在定位参数缺位时必带，写盘七件在目标取不到项目根时必带。纯声明：不改执行目录（`bash` 仍在会话 cwd 执行，`workdir` 才是改执行目录的那个）。'
 
 const ENCODING_DETECT_MAX_TRIM = 3
 const SYNTAX_CHECK_TIMEOUT = 10000

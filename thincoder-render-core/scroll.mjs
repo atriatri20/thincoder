@@ -4,14 +4,17 @@
  *   ① **判据**：`nearBottomThreshold(clientHeight)`（**唯一算式源**：比例阈 + 24px 下限）· `nearBottom(el)`
  *      （三读数归一 + 视口比例阈 + 严格小于）；
  *   ② **写门**：`applyPin(el, gate)`（旗标门 `!== false` ⇒ 写 `scrollTop = MAX`——超值不读 `scrollHeight`；写口单源）；
- *   ③ **旗标维护**：`createPinWatch(el, opts)`（旗标宿主 = `holder`（缺省 = `el`）——近底无条件翻真（自愈）＋
+ *   ③ **旗标维护**：`createPinWatch(el, opts, deps)`（旗标宿主 = `holder`（缺省 = `el`）——近底无条件翻真（自愈）＋
  *      近底回调；远离底 ⇒ 手势门（`gestureGateMs`）内手势翻假（块 = 600 沿 KD-RC-8 让位三律）∥ `gestureGateMs = 0`
- *      ⇒ 滚动事件按近底直写（活动区 ∕ 池列 ∕ 对话流现行语义——零行为变更）；非手势位移不改旗标）；
+ *      ⇒ 滚动事件按近底直写（活动区 ∕ 池列 ∕ 对话流现行语义——零行为变更）；非手势位移不改旗标；
+ *      **上滚解钉**（选参 `unpinOnUpScroll`，缺省关）= `wheel` 的 `deltaY < 0` 即翻假 ＋ `PIN_GRACE_MS` 宽限窗
+ *      （窗内续期 ∥ 窗内不读几何不翻旗标 ∥ 到期跑一次判定）——设计 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-17）；
  *   ④ **计数簿记**：`createUnreadCounter(el, { countKey })`（`bump` ∕ `clear` ∕ `read`——清账三路：钮点击 ∕
  *      近底（watch 回调）∕ 换代（随元素灭 + 挂载点复位））。
  * 端只留帧调用点 ∕ 计数呈现 ∕ 钮形（逐端置换零行为变更）——载体 = 核 `subblocks/block.mjs`（薄包）·
  * VSC `webview/ui.js`（四函数 · 旗标宿主 `ctx`）· 桌面 `views/activity-new.mjs` ∕ `views/chat-scroll.mjs`。
- * 本档零 `node:` ∕ 零裸包 ∕ 纯 DOM 面（`el` 只取三读数与 `addEventListener` / `removeEventListener` ⇒ 假件可注入）。
+ * 本档零 `node:` ∕ 零裸包 ∕ 纯 DOM 面（`el` 只取三读数与 `addEventListener` / `removeEventListener` ⇒ 假件可注入）；
+ * 时钟 = 全局 `setTimeout` / `clearTimeout` / `Date.now`（`deps` 缝可换假件 ⇒ 宽限窗用例不靠墙钟）。
  */
 
 /** 近底阈的两件参数（单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-16 ∥ §5 条 5）；
@@ -22,6 +25,13 @@
  *    压小；零读数 ∥ 未挂载输入下算式也须给出有限正数。 */
 export const NEAR_BOTTOM_RATIO = 0.5
 export const NEAR_BOTTOM_MIN_PX = 24
+
+/** 上滚解钉后的宽限窗（`unpinOnUpScroll` 用——设计 = `docs/render-core/design/RENDER-CORE.md` §5 条 5 ∥ §2 KD-RC-17）。
+ *  治的是「用户手动位移要多久不被帧夺回」这件事：窗口 = 「给我一点滚动到半页的时间」，窗内再上滚续期。
+ *  **与块内容区手势门同一把数**（`thincoder-render-core/subblocks/block.mjs` 的 `GESTURE_GATE_MS` 从本常量再出口）：
+ *  两个机制治的是同一件事（手动位移让位多久），两处各写一个数只会让同一次操作在两个载体上手感不同。
+ *  字面只在本档出现一次——消费档只引符号。 */
+export const PIN_GRACE_MS = 600
 
 /** 近底阈 = `max(NEAR_BOTTOM_MIN_PX, clientHeight × NEAR_BOTTOM_RATIO)`（**唯一算式源**）。
  *  **入参自带归一**：非有限数（`NaN` ∥ `±Infinity` ∥ 缺 ∥ 非数）归 0；负数不是非有限数、原样通过由
@@ -81,33 +91,52 @@ export function createUnreadCounter(el, { countKey } = {}) {
 }
 
 /** 旗标维护（核四件之三 · **单源**——旗标宿主 `holder[flagKey]`；VSC 面 = `ctx`）。更新点语义：
- *   ① 近底 ⇒ **无条件翻真**（自愈——复位 ∕ 程序写 ∕ 布局回波同收）＋ `onNearBottom()`（近底清账路）；
- *   ② 远离底 ∧ `gestureGateMs > 0` ⇒ **手势门内**（`wheel` ∕ `touchmove` ∕ `pointerdown` 起算）翻假
+ *   ① **上滚解钉**（仅 `unpinOnUpScroll: true`）：`wheel` 的 `deltaY < 0` ⇒ 立即翻假、**零几何读**（流式期间帧每拍
+ *      把 `scrollTop` 写回底 ⇒ 距离判据永远攒不够），并起一个 `PIN_GRACE_MS` 宽限窗；窗内再上滚**重新计时**；
+ *      窗存续期间判定不读几何、不翻旗标（**近底自愈挂起**），到期由定时器跑一次判定（近底复钉 ∥ 远离底维持解钉）；
+ *   ② 近底 ⇒ **无条件翻真**（自愈——复位 ∕ 程序写 ∕ 布局回波同收）＋ `onNearBottom()`（近底清账路）——窗存续期间不做；
+ *   ③ 远离底 ∧ `gestureGateMs > 0` ⇒ **手势门内**（`wheel` ∕ `touchmove` ∕ `pointerdown` 起算）翻假
  *      ＋ `onGesture()`（让位回调——块用 = 出口钮同步）；
- *   ③ 远离底 ∧ `gestureGateMs = 0` ⇒ 滚动事件按近底**直写**（活动区 ∕ 池列 ∕ 对话流现行语义）；
- *   ④ 非手势位移（门外）**不改旗标**（复位回波 ∕ 程序写 ∕ 布局）。
+ *   ④ 远离底 ∧ `gestureGateMs = 0` ⇒ 滚动事件按近底**直写**（活动区 ∕ 池列 ∕ 对话流现行语义）；
+ *   ⑤ 非手势位移（门外）**不改旗标**（复位回波 ∕ 程序写 ∕ 布局）。
+ *  `wheel` 一支合并处理：开启上滚解钉时先判 `deltaY`（缺 ∥ 非数 ⇒ 不判上滚——不带方向的输入不猜），再走原径
+ *  （门控 ⇒ 记手势时刻 ∥ 直写 ⇒ 判一次几何）；翻假即让位 ⇒ 同一个让位回调 `onGesture()`。
  *  事件集：门控模式 = `wheel` ∕ `touchmove` ∕ `pointerdown`（手势标记）+ `scroll`（更新点——VSC 既证「唯一
  *  滚动已生效后触发者」）；直写模式 = `wheel` ∕ `touchmove` ∕ `scroll`（三事件同径——VSC `ui.js` 现行集）。
- *  全 `{ passive: true }`。回 handle：`read()` ∕ `set(value)`（旗标读写——显式动作经此）· `attach()` ∕
- *  `detach()`（幂等；`el` 缺 ∕ 无 `addEventListener` ⇒ `attach` 零动作 `false`——夹具缺区零抛错；`holder` 缺 ⇒
- *  读写零动作不抛）。 */
-export function createPinWatch(el, { holder = el, flagKey, gestureGateMs = 0, onNearBottom, onGesture } = {}) {
+ *  全 `{ passive: true }`。`deps` = 注入缝（与同档调度族 `createFrameMerge(deps)` 同形）：`now` ∥ `setTimeout` ∥
+ *  `clearTimeout` 缺省走全局件 ⇒ 既有载体的时序零变，宽限窗用例换假件即可不靠墙钟。
+ *  回 handle：`read()` ∕ `set(value)`（旗标读写——显式动作经此）· `attach()` ∕ `detach()`（幂等；`detach` 先清
+ *  宽限窗定时器并复位标记——摘完监听再让定时器跑一次判定会写旗标；`el` 缺 ∕ 无 `addEventListener` ⇒ `attach`
+ *  零动作 `false`——夹具缺区零抛错；`holder` 缺 ⇒ 读写零动作不抛）。 */
+export function createPinWatch(
+  el,
+  { holder = el, flagKey, gestureGateMs = 0, unpinOnUpScroll = false, onNearBottom, onGesture } = {},
+  deps = {},
+) {
   const gate = Number.isFinite(gestureGateMs) ? gestureGateMs : 0
+  const unpinOnUp = unpinOnUpScroll === true
+  const now = typeof deps?.now === "function" ? deps.now : Date.now
+  const later = typeof deps?.setTimeout === "function" ? deps.setTimeout : (fn, ms) => setTimeout(fn, ms)
+  const cancelLater = typeof deps?.clearTimeout === "function" ? deps.clearTimeout : (id) => clearTimeout(id)
   let gestureAt = 0
+  let graceOn = false // 宽限窗存续标记（上滚解钉后为真——窗内不读几何、不翻旗标）
+  let graceId = null // 宽限窗到期定时器 id（`null` = 无定时器）
   let wired = false
   const notify = (callback) => { if (typeof callback === "function") callback() }
   const read = () => holder?.[flagKey]
   const set = (value) => { if (holder !== null && holder !== undefined) holder[flagKey] = value; return value }
 
-  /** 一步判定：近底 ⇒ 翻真 + 近底回调；门控离底 ⇒ 门内翻假 + 让位回调；直写离底 ⇒ 翻假（门外非手势 ⇒ 不改）。 */
+  /** 一步判定：窗存续 ⇒ 不读几何不翻旗标；近底 ⇒ 翻真 + 近底回调；门控离底 ⇒ 门内翻假 + 让位回调；直写离底 ⇒ 翻假
+   *  （门外非手势 ⇒ 不改）。 */
   const decide = () => {
+    if (graceOn) return false // 窗内：近底自愈挂起（不读几何、不翻旗标 ⇒ 帧零写视口）
     if (nearBottom(el)) {
       set(true)
       notify(onNearBottom)
       return true
     }
     if (gate > 0) {
-      if (Date.now() - gestureAt < gate) {
+      if (now() - gestureAt < gate) {
         set(false)
         notify(onGesture)
         return true
@@ -118,10 +147,50 @@ export function createPinWatch(el, { holder = el, flagKey, gestureGateMs = 0, on
     return true
   }
 
-  const markGesture = () => { gestureAt = Date.now() }
+  /** 窗到期：跑一次判定（近底复钉 ∥ 远离底维持解钉）。 */
+  const expireGrace = () => {
+    graceId = null
+    graceOn = false
+    decide()
+  }
+
+  /** 起窗（窗内再上滚 ⇒ 取消旧定时器重计 = 滚动续期）。 */
+  const armGrace = () => {
+    if (graceId !== null) cancelLater(graceId)
+    graceOn = true
+    graceId = later(expireGrace, PIN_GRACE_MS)
+  }
+
+  /** 收窗（`detach` 用——清定时器并复位标记，此后没有任何路径去写旗标）。 */
+  const disarmGrace = () => {
+    if (graceId !== null) cancelLater(graceId)
+    graceId = null
+    graceOn = false
+  }
+
+  const markGesture = () => { gestureAt = now() }
+
+  /** 上滚判据 = `wheel` 的 `deltaY < 0`（缺 ∥ 非数 ⇒ 不判上滚）。 */
+  const scrolledUp = (event) => {
+    const delta = event?.deltaY
+    return Number.isFinite(delta) && delta < 0
+  }
+
+  /** `wheel` 合并处理：先判方向（开启上滚解钉时上滚 ⇒ 翻假 + 起窗，零几何读），再走原径。 */
+  const onWheel = (event) => {
+    if (unpinOnUp && scrolledUp(event)) {
+      set(false)
+      notify(onGesture)
+      armGrace()
+      return
+    }
+    if (gate > 0) { markGesture(); return }
+    decide()
+  }
+
   const listeners = gate > 0
-    ? [["wheel", markGesture], ["touchmove", markGesture], ["pointerdown", markGesture], ["scroll", decide]]
-    : [["wheel", decide], ["touchmove", decide], ["scroll", decide]]
+    ? [["wheel", onWheel], ["touchmove", markGesture], ["pointerdown", markGesture], ["scroll", decide]]
+    : [["wheel", onWheel], ["touchmove", decide], ["scroll", decide]]
 
   return {
     read,
@@ -133,6 +202,7 @@ export function createPinWatch(el, { holder = el, flagKey, gestureGateMs = 0, on
       return true
     },
     detach() {
+      disarmGrace()
       if (!wired || typeof el?.removeEventListener !== "function") return false
       for (const [type, fn] of listeners) el.removeEventListener(type, fn, { passive: true })
       wired = false

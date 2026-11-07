@@ -5,7 +5,8 @@ import {
   normalizeEOL,
   detectFileEol,
   majorityEol,
-  LEDGER_PARAM_DESC
+  LEDGER_PARAM_DESC,
+  PROJECT_PARAM_DESC
 } from "./shared.mjs";
 import { writeThroughPath, TMP_SUFFIX, markDirty, clearLastWrite } from "./write-path.mjs";
 import { spawnGit } from "./git-run.mjs";
@@ -177,6 +178,8 @@ export const applyPatchTool = {
     properties: {
       patch: { type: "string", description: "Unified diff. May span multiple files (multiple --- / +++ header pairs — including creating MULTIPLE new files via --- /dev/null); --- / +++ headers per file, @@ -old,count +new,count @@ hunks (a bare @@ header is also accepted — coordinate-less hunks are located by their anchor lines: context lines plus the removed (-) lines, matched as a contiguous sequence — a unique match applies; a zero/one-context hunk is accepted only when it removes (-) at least one line and that anchor sequence is unique, while anchor-free pure-+ (insert) hunks need at least 2 context lines). The +++ b/<path> pair may be omitted for existing files — a lone --- a/<path> (or --- b/<path>) header followed directly by hunks applies to that path (new files still need --- /dev/null + +++ b/<path>)." },
       ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      // 工作区根窄口（设计档 §2.3.1）：目标取不到项目根时才被读；目标有根时以路径为准（定位参数优先）。
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["patch"],
   },
@@ -265,6 +268,7 @@ export const deleteTool = {
       path: { type: "string", description: "File or empty-directory path (relative to cwd or absolute)" },
       force: { type: "boolean", description: "Allow deleting git-tracked files (default false)" },
       ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["path"],
   },

@@ -1,8 +1,9 @@
 /**
- * batch-live-batch-lock.test.mjs — 集成用例 12-1 … 12-15（无 12-11——该格随 2026-11-05 `git` 免号批删除）；RTM CLI 端故事 12「写盘与跑命令都要报它替哪条
+ * batch-live-batch-lock.test.mjs — 集成用例 12-1 … 12-16（无 12-11——该格随 2026-11-05 `git` 免号批删除）；RTM CLI 端故事 12「写盘与跑命令都要报它替哪条
  * 台账行服务（不分面、不分类命令）」。
  *
- * 判据原文 = `test/RTM.md` 第 12 节；机制 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.3。
+ * 判据原文 = `test/rtm/guard.md` 故事 12；机制 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.3；
+ * 工作区根窄口（12-5 放行那一半 ∥ 12-16 两条不成之路）= 同档 §2.3.1。
  * **进入口 = 父侧工具面**（`write` / `bash` / `git` / `batch` / `ledger` 走 `executeToolCalls` 的 Phase 1
  * 真门——不直调 `ledgerBindWriteConflict`）：本档要的是「写这件事」的业务可观察结果
  * （拒 ∥ 写入、文件字节、命令是否执行、仓库有没有提交）。
@@ -190,7 +191,7 @@ test("CLI 12-4 台账库不可读 ∥ 项目根 manifest 坏 JSON ⇒ 两态都�
   assert.equal(existsSync(t2), false, "文件零改")
 })
 
-test("CLI 12-5 判据点是目标路径本身：项目之外没有判据点 ⇒ 拒；仓内缺号 ⇒ 拒；project 指容器根 ⇒ 同拒", async () => {
+test("CLI 12-5 项目之外没有判据点 ⇒ 拒；工作区根无声明 ⇒ 拒；带子项目声明 + 在途号 ⇒ 放行；仓内缺号 ⇒ 拒；project 指容器根 ⇒ 同拒", async () => {
   const root = makeProject("12-5")
   const outside = mkdtempSync(join(tmpdir(), "wg-out-")) // 仓外临时目录：祖先链无 manifest
   fixtures.push(outside)
@@ -211,6 +212,53 @@ test("CLI 12-5 判据点是目标路径本身：项目之外没有判据点 ⇒ 
   assert.equal(viaBash.ok, false)
   assert.match(viaBash.result, /declared project is not a project/)
   assert.doesNotMatch(viaBash.result, /\bhi\b/, "命令零执行")
+
+  // 工作区根窄口（设计档 §2.3.1）：锚 = 自身无 manifest 的工作区根，其下一个带 manifest 的子项目
+  const ws = mkdtempSync(join(tmpdir(), "wg-ws-12-5-"))
+  fixtures.push(ws)
+  const sub = makeProjectAt(join(ws, "sub"))
+  const wsAgent = agentOf(ws)
+  const rootFile = join(ws, "AGENTS.md")
+  const bare = await run(wsAgent, toolMapOf(ws), "write", { path: rootFile, content: "# ws\n" })
+  assert.equal(bare.ok, false, "工作区根目标无声明 ⇒ 拒（声明是口的必要条件）")
+  assert.match(bare.result, /declared project is not a project/)
+  assert.match(bare.result, /unknown — no project owns this write's target/, "清单单位不写 none")
+  assert.equal(existsSync(rootFile), false, "文件零改")
+
+  const wsRow = rowWithStatus(sub, "在途")
+  const opened = await run(wsAgent, toolMapOf(ws), "write", { path: rootFile, content: "# ws\n", project: sub, ledger: `#${wsRow}` })
+  assert.equal(opened.ok, true, opened.result)
+  assert.equal(readFileSync(rootFile, "utf8"), "# ws\n", "字节落盘：锚子树内 ∧ 锚下有子项目 ∧ 显式声明三条同时成立")
+})
+
+test("CLI 12-16 窄口的两条不成之路：目标在锚外 ∥ 锚下无子项目 ⇒ 各落自己那句拒", async () => {
+  // ① 目标在锚外：声明合法（锚下确有带 manifest 的子项目），但目标不在锚子树内
+  const ws = mkdtempSync(join(tmpdir(), "wg-12-16a-"))
+  fixtures.push(ws)
+  const sub = makeProjectAt(join(ws, "sub"))
+  const live = rowWithStatus(sub, "在途")
+  const outside = mkdtempSync(join(tmpdir(), "wg-12-16-out-"))
+  fixtures.push(outside)
+  const outFile = join(outside, "y.md")
+  const resA = await run(agentOf(ws), toolMapOf(ws), "write", { path: outFile, content: "x\n", project: sub, ledger: `#${live}` })
+  assert.equal(resA.ok, false, "锚外目标：窄口不开")
+  assert.match(resA.result, /target is outside the session anchor's subtree — the workspace-root opening does not apply/)
+  assert.match(resA.result, /unknown — no project owns this write's target/, "清单单位指目标，不指号")
+  assert.doesNotMatch(resA.result, /declared project is not a project/, "两支互不顶替：声明本身是合法的")
+  assert.equal(existsSync(outFile), false, "文件零改")
+
+  // ② 锚下无带 manifest 的直接子目录（只有裸 git 子目录 + 其下一个深层项目）
+  const ws2 = mkdtempSync(join(tmpdir(), "wg-12-16b-"))
+  fixtures.push(ws2)
+  mkdirSync(join(ws2, "bare-git", ".git"), { recursive: true })
+  const deep = makeProjectAt(join(ws2, "bare-git", "deep"))
+  const live2 = rowWithStatus(deep, "在途")
+  const wsFile = join(ws2, "AGENTS.md")
+  const resB = await run(agentOf(ws2), toolMapOf(ws2), "write", { path: wsFile, content: "x\n", project: deep, ledger: `#${live2}` })
+  assert.equal(resB.ok, false, "锚下无带 manifest 的直接子目录：窄口不开")
+  assert.match(resB.result, /the session anchor carries no sub-project — the workspace-root opening does not apply/)
+  assert.match(resB.result, /unknown — no project owns this write's target/)
+  assert.equal(existsSync(wsFile), false, "文件零改")
 })
 
 test("CLI 12-6 搜索 / 索引面接名单单源：vendor · node_modules · dist 内的文件不再命中", async () => {
@@ -297,7 +345,7 @@ test("CLI 12-12 会话 cwd = 容器根：不带 project ⇒ 拒、命令零执�
   const tools = toolMapOf(container)
 
   const noProject = await run(agent, tools, "bash", { command: "git status" })
-  assert.equal(noProject.ok, false, "bash 没有定位参数 ⇒ 判据点只能靠声明（会话锚永不充当判据点）")
+  assert.equal(noProject.ok, false, "bash 没有定位参数 ⇒ 判据点只能靠声明（会话锚只定界，不判账）")
   assert.match(noProject.result, /no project on this call/)
   assert.match(noProject.result, /Pass project:/, "拒文点出项目输入")
   assert.match(noProject.result, /ledger:"#N"/, "拒文点出台账号输入")

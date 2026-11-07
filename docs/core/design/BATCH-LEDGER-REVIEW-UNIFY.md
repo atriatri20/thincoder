@@ -103,22 +103,22 @@ package-lock.json        package.json
 
 | 工具 | 项目声明 = | 不带时 |
 |---|---|---|
-| 写盘七件（`write` / `edit` / `insert_after` / `apply_patch` / `delete` / `hashline_edit` / `file_ops`） | 目标路径本身（`toolTouchPaths` 出的绝对路径），沿祖先链取项目根 | 无路径 ⇒ 工具自己拒；路径上溯无 manifest ⇒ 拒（`declared project is not a project`，清单单位 = `unknown — no project owns this write's target`） |
+| 写盘七件（`write` / `edit` / `insert_after` / `apply_patch` / `delete` / `hashline_edit` / `file_ops`） | 目标路径本身（`toolTouchPaths` 出的绝对路径），沿祖先链取项目根 | 无路径 ⇒ 工具自己拒；路径上溯有 manifest ⇒ 按该根判（`project` 不参与）；上溯无 manifest ⇒ **改读 `project`**（`§2.3.1` 窄口）；无声明 ∥ 声明无效 ∥ 目标在锚外 ⇒ 各落自己那句拒（`§2.3.1` 拒文表） |
 | `bash` | 只有 `project`——**纯声明，不改进程工作目录**（命令仍在会话 cwd 执行） | 拒（`no project on this call`） |
 | `memory` | 只有 `project`（只在该笔落 project 层时要） | 落 project 层而不给 ⇒ 拒（`no project on this call`）；`personal` ∥ `team` 不判 |
 | `execute` | 定位参数 `workdir`（既有；真改子进程工作目录）优先；缺位时读 `project` | 两者都无 ⇒ 拒（`no project on this call`），不回落到会话 cwd |
 | `manifest` | 定位参数 `target`（既有）优先；缺位时读 `project` | 两者都无 ⇒ 拒（同上），不回落到会话 cwd；`action:"init"` 的豁免 = 条件形（决策 43） |
 
-- **判据点只有两个来源，都来自调用方**：① 该工具自带的定位参数（它本就说着「这一笔落在哪儿」）；② `project`（项目根绝对路径）。**会话锚不是来源**——它只用于解析相对路径与判相关性；`execute` ∥ `manifest` 缺定位参数时同样不许回落到 cwd（决策 41）。
+- **判据点只有两个来源，都在调用方手里**：① 该工具自带的定位参数（它本就说着「这一笔落在哪儿」）；② `project`（项目根绝对路径）。**会话锚不是来源**——它只用于解析相对路径、判相关性与**定界**（`§2.3.1` 条件 ②）；`execute` ∥ `manifest` 缺定位参数时同样不许回落到 cwd（决策 41）。
 - **定位参数优先于 `project`**：两者同时在时以定位参数为准（它决定字节落在哪），`project` 只补位；`project` 在这四把上一律是纯声明，不改执行目录（`execute` 的 `workdir` 才是改执行目录的那个）。
-- **名字只为被读的地方存在**：写盘七件的目标路径恒在，`project` 在它们身上永不被读 ⇒ 不加（决策 40）。
+- **`project` 加在被读的那些工具上**：写盘七件的目标路径在项目内时恒在，那时 `project` 不被读；但目标取不到项目根时它是唯一可用的判据来源（`§2.3.1` 条件 ④）⇒ 七件也各加一格。定位参数在场时它仍不参与判定（决策 40 的「定位参数优先」不变）。
 
 - **声明的形态**：项目 = **项目根绝对路径**（带 `PROJECT-MANIFEST.json` 的那个目录）——台账按项目根算键（`thincoder-core/ledger-db.mjs` 逐字 `sha1(normalizeCwd(root))` 取前 16 位），所以「传项目」就是把根传进来，不做名字映射、不另立概念。相对路径按会话 cwd 解析。
 - **界 = 相关性判据（不是单向的「不许越界」）**：声明必须满足 (a) 落在带 `PROJECT-MANIFEST.json` 的目录上（或沿祖先链上溯到最近一个这样的目录），且 (b) 与会话锚相关——**声明根含会话锚**（会话 cwd 在项目子目录里，「命名我自己所在的项目」）∥ **声明根在会话锚之内**（沿祖先链上溯到最近带 manifest 的目录，声明项目内部的子目录按此归到该根）。无关键（平级目录、不含锚的更远祖先）⇒ 拒并点名该路径。
 - **两个分支的落法（实施席照此写）**：(b) 支 = 既有单源 `resolveLedgerRoot(声明, agent.cwd)`（起点在锚之内 ⇒ 沿祖先链上溯到最近带 manifest 的目录）；(a) 支 = 声明路径**自身即带 manifest**，且 `agent.cwd` 在它之下 ⇒ 根 = 声明路径（`basis = self`，不上溯）。两条都取不到 ⇒ `declared project is not a project`，无一放行。
   为什么 (a) 支要门自己判一次：`resolveLedgerRoot` 的上溯界就是会话锚，起点落在界之上时它取不到根——而「会话 cwd 在项目子目录」正是项目指南记录的启动形（`cd thincoder/thincoder-cli && node bin/thincoder.cjs`），不认这一支，那种会话里 `bash` ∥ `memory` 声明根也被拒、声明子目录也被拒＝无解。
 - **`bash` 的 `project` 不改执行目录**：该工具没有 cwd 参数，本批也不给它加 shell `cd` 语义。它是**声明即承诺**——命令内容不解析（决策 36），门只问「这笔替哪个项目的那条账服务」。想在别的目录里跑，仍用命令自己的路径（`bash -c "cd … && …"`），那一笔照样要写声明。
-- **`execute` ∥ `manifest` 的 `project` 只在定位参数缺位时被读**：`workdir` ∥ `target` 本就说着「写哪儿」，有它们时 `project` 不参与判定；没有时它是唯一来源（决策 40）。写盘七件不加——目标路径恒在。
+- **`execute` ∥ `manifest` 的 `project` 只在定位参数缺位时被读**：`workdir` ∥ `target` 本就说着「写哪儿」，有它们时 `project` 不参与判定；没有时它是唯一来源（决策 40）。**写盘七件也各带 `project` 一格**，同样只在目标取不到项目根时被读（`§2.3.1` 条件 ④）——目标取得到根时以定位参数为准、它不参与判定。
 
 - **`manifest` 的 `init` 豁免开在取根步（决策 43）**：`manifest({action:"init"})` ∧ 目标沿祖先链取不到项目根 ⇒ 不进本门（无账可问）；目标沿祖先链取得到根（含既有项目内的子目录自举）⇒ 本门照判（要项目、要号），目标自身已有 manifest 时门过后由工具自身拒（`init never overwrites`）；`write` 仍照判（要项目、要号）。
   为什么：`init` 的合法落点恰是「尚无 manifest 的目录」，而判据点要那个项目的账——那个项目还不存在 ⇒ 不豁免则工程模式父侧永远建不出新项目；而走不通的机制迟早被整条废掉。豁免开在取根步而非把 `init` 摘出要号集：既有项目内的子目录自举取得到根，那一笔落在既有项目内、账就在那个项目上，无条件豁免会让它逃门。边界 = 只覆盖 `init` 一个 action，且它只写 `PROJECT-MANIFEST.json` 一个文件。
@@ -175,7 +175,7 @@ package-lock.json        package.json
 
 **正路（不是开子）**：挂行与开档都不经过这两把工具（`ledger` ∥ `batch` 是工具调用）⇒「没号就没法挂号」的锁死不存在。工程模式的第一件事实就是「先挂行、再开档」，之后该根就有在途行，跑什么都过。当下会话的号写在它绑定的批档档头 `> 台账 = #N` 那一行——父侧与子代理都不需要去查台账。
 
-- **判序**：① 解析项目声明（缺 ⇒ `no project on this call`；上溯无 manifest ⇒ `declared project is not a project`；定位参数形式下某个目标不在任何项目里 ⇒ 同一句 `<case>`，清单单位换 `unknown — no project owns this write's target`）→ ② 读该根台账（读不到 ⇒ 拒）→ ③ 按号找行（不在盘 / 非在途 ⇒ 拒）。项目先判：判据点不存在时，号对不对无从谈起。
+- **判序**：① 解析项目声明（缺 ⇒ `no project on this call`；上溯无 manifest ⇒ `declared project is not a project`；定位参数形式下某个目标不在任何项目里且本笔无声明 ⇒ 同一句 `<case>`，清单单位换 `unknown — no project owns this write's target`；有声明 ⇒ 进 `§2.3.1` 窄口）→ ② 读该根台账（读不到 ⇒ 拒）→ ③ 按号找行（不在盘 / 非在途 ⇒ 拒）。项目先判：判据点不存在时，号对不对无从谈起。
 - **判据点由调用方给出**（决策 41）：会话锚只用于解析相对路径与定界，不再充当判据点；声明无效（缺 / 不是项目 / 越界）就是拒。
 - **两种「根」不是一回事（判据的钉子）**：声明路径**已带** manifest（或其内部子目录）⇒ 正常判；manifest **在而不可用**（读不动 / 坏 JSON）与「根推得出、台账库却开不了」⇒ **拒**，另起 `(ledger unreadable — <原错>)` 一行。判的是「是不是项目」，不是「项目好不好用」。
 - **一笔写跨两个项目**：同一号要在每个目标所属项目的台账里各查到才放行；任一目标查不到 ⇒ 整笔拒、文件字节零动（原子写）。这是上表的派生结论，不另立观测。
@@ -205,11 +205,11 @@ package-lock.json        package.json
 
 - **只在工程模式生效**：开关 = `agent.config?.agent?.engineering`（与设计门同一枚）。普通模式按 `docs/core/requirements/NORMAL-MODE.md` 的「纪律自持」不动——挂成两模式通用 = 改普通模式的产品行为，没人裁过（决策 18）。
 
-**工具 schema 面**：`bash` ∥ `memory` ∥ `execute` ∥ `manifest` 的 `parameters.properties` 有 `project`（`type: "string"`，描述 = `PROJECT_PARAM_DESC`）；写盘七件不加（目标路径恒在）；`ledger` 面十二把各一格（入口集十二把逐一，含 `ssh`）——`git` 的 `ledger` ∥ `project` 两格随本批删（不在入口集 ⇒ 两格永不被读）。
+**工具 schema 面**：`bash` ∥ `memory` ∥ `execute` ∥ `manifest` 的 `parameters.properties` 有 `project`（`type: "string"`，描述 = `PROJECT_PARAM_DESC`）；写盘七件同样有这一格（`§2.3.1` 窄口的声明面，只在目标取不到项目根时被读）；`ledger` 面十二把各一格（入口集十二把逐一，含 `ssh`）——`git` 的 `ledger` ∥ `project` 两格随本批删（不在入口集 ⇒ 两格永不被读）。
 
-- `project` 描述单源 = `thincoder-core/tools/shared.mjs` 的 `PROJECT_PARAM_DESC`；本批把 `git` 从该句摘出，目标逐字：「本笔调用服务的项目根——带 `PROJECT-MANIFEST.json` 的那个目录（绝对路径，或相对会话 cwd）；工程模式下父侧 `bash` ∥ `memory` 必带，`execute` ∥ `manifest` 在定位参数缺位时必带。纯声明：不改执行目录（`bash` 仍在会话 cwd 执行，`workdir` 才是改执行目录的那个）。」（单源档一处改，零手写副本）
+- `project` 描述单源 = `thincoder-core/tools/shared.mjs` 的 `PROJECT_PARAM_DESC`；本批把 `git` 从该句摘出，并补上写盘七件的适用条件，目标逐字：「本笔调用服务的项目根——带 `PROJECT-MANIFEST.json` 的那个目录（绝对路径，或相对会话 cwd）；工程模式下父侧 `bash` ∥ `memory` 必带，`execute` ∥ `manifest` 在定位参数缺位时必带，写盘七件在目标取不到项目根时必带。纯声明：不改执行目录（`bash` 仍在会话 cwd 执行，`workdir` 才是改执行目录的那个）。」（单源档一处改，零手写副本）
 - `project` ∥ `ledger` 都**不进 `required`**（决策 35 同款理由：静态 `required` 会让普通模式与子代理读到一条没人核的要求）；机械强制在门。
-- 写盘七件沿用目标路径、不加字段（决策 40）；`execute` ∥ `manifest` 先认各自定位参数（`workdir` ∥ `target`），缺位时读 `project`，两者都无 ⇒ 拒。
+- 写盘七件以目标路径为主、`project` 只在目标取不到项目根时被读（`§2.3.1`）；`execute` ∥ `manifest` 先认各自定位参数（`workdir` ∥ `target`），缺位时读 `project`，两者都无 ⇒ 拒。
 
 - **代价 = 拒文是唯一教学面（决策 38）**：不传号 ⇒ 撞拒 ⇒ 读拒文才知道要传。所以拒文不是「顺手加的好东西」，它与 schema 同属判据面，必须写全三件：缺什么（`<case>`）、要带什么（`Pass ledger:"#N"`）、当下有哪些号可带（`In-flight rows in this project's ledger right now: …`），无在途行时给挂号两步。删掉这一段，工具面就没有任何地方告诉模型「有这个参数、该带什么」。
 
@@ -231,7 +231,9 @@ write refused — ledger row not bound: <case>. Pass project:<the project root t
 | 号在盘 · status ≠ `在途` | `row #<N> is "<status>" — only a 在途 row carries writes` |
 | 未声明项目 | `no project on this call` |
 | 声明路径上溯无 manifest | `declared project is not a project (no PROJECT-MANIFEST.json at this path or within the session anchor): "<path>"` |
-| 定位参数形式下某个目标不在任何项目里（逐目标各自沿祖先链取根：写盘七件的目标路径 ∥ `execute.workdir` ∥ `manifest.target`） | `declared project is not a project (no PROJECT-MANIFEST.json at this path or within the session anchor): "<path>"`（清单单位 = `unknown — no project owns this write's target`） |
+| 定位参数形式下某个目标不在任何项目里、且本笔无 `project` 声明（逐目标各自沿祖先链取根：写盘七件的目标路径 ∥ `execute.workdir` ∥ `manifest.target`） | `declared project is not a project (no PROJECT-MANIFEST.json at this path or within the session anchor): "<path>"`（清单单位 = `unknown — no project owns this write's target`） |
+| 目标取不到根、有声明、而目标在会话锚子树外（`§2.3.1` 支 ④） | `target is outside the session anchor's subtree — the workspace-root opening does not apply: "<目标>"`（清单单位同上） |
+| 目标取不到根、有声明、而锚下无带 manifest 的直接子目录（`§2.3.1` 支 ⑤） | `the session anchor carries no sub-project — the workspace-root opening does not apply: "<目标>"`（清单单位同上） |
 | 台账读不到（不属上述情形：号对不对都判不了） | `no ledger can be read for this project` |
 
 **各支拒文的出处（决策 6b：每支要么有实机出处，要么并支）**
@@ -248,6 +250,101 @@ write refused — ledger row not bound: <case>. Pass project:<the project root t
 
 - **台账读不到时**：基串之后另起一行 `(ledger unreadable — <台账原始错误>)`，且不列在途行清单（读不到就没有清单）。
 - **拒文要列在途行（判据面要求，决策 38）**：`ledger` 不进 `required` ⇒ 模型不知道有这个参数，第一次撞的就是这条拒文，它是这条设计唯一的教学面。做成修法而不是兜底（门照拒）：列出当下在途的号，无在途行时给挂号两步（`ledger add` → `batch create`，两步都不经过写面）。
+
+### 2.3.1 工作区根写法（窄口：目标取不到项目根 · 用户 2026-11-08 00:13 裁 B 形）
+
+**问题**：多仓工作区根的文件（现场 = 工作区根那份 `AGENTS.md`，该根自身无 manifest、其下带 manifest 的子项目 ≥1）在工程模式 depth-0 下写不进去。
+原因三句：写盘七件只按目标路径沿祖先链取根；该根与其祖先链都无 manifest ⇒ 取不到根；调用方给 `project` 也不管用——七件不读它。
+
+**判据：四条件同时成立才开口，任一不成立落自己那一句拒。**
+
+| # | 条件 | 判法（单源） |
+|---|---|---|
+| ① | 目标取不到项目根 | `resolveProjectRoot(target)` = `null`（既有谓词，零改） |
+| ② | 目标在会话锚子树内 | `underKey(anchor, target)`——既有模块内函数；比较键 = `gateKey`（`resolve` + 反斜杠归一 `/` + win32 小写归一） |
+| ③ | 锚下有带 manifest 的直接子目录 | `discoverProjects(anchor)` 的 `kind === "workspace"` ∧ `matched === "manifest"`（项目梯第 ③ 级，既有单源） |
+| ④ | 调用方显式声明 `project` | `args.project` 非空；声明本身另须过 `resolveDeclaredRoot`（既有，零改） |
+
+四条件全成立 ⇒ 判据点 = 声明解析出的项目根，号照原样判（`ledgerRowAt`；在途与否一字不改）。
+
+**问题一 · 锚子树内怎么判**——三段：
+
+- **前缀怎么比**：不新写。`underKey` 已经是本档的路径包含谓词（`(a)` 支靠的就是它），语义 = 相等或 `<root>/` 前缀。
+- **大小写**：由 `gateKey` 归一——win32 上两侧 `.toLowerCase()`，故同一路径的大小写变体同判。
+- **符号链接**：**不解析**，不加 `realpathSync`。整道门只用一个坐标系，另立一套就会出现「路径判据说在界内、声明判据说在界外」。
+  代价照写：目标经链接指向锚外时仍按字面路径判——这是本档既有坐标系的性质，本批不改它。
+
+**问题二 · 声明无效各态落哪一句（拒文表；六支，逐支一句）**：
+
+| 支 | 判据 | 拒文 `<case>` | 在途清单单位 |
+|---|---|---|---|
+| ① 声明路径不存在 | `resolveDeclaredRoot` 首行 `existsSync` 不成立 | `declared project is not a project (…): "<声明>"` | `unknown — the declared project is not a project` |
+| ② 声明路径不是项目 | 两支都取不到带 manifest 的根 | 同上 | 同上 |
+| ③ 与锚无关键（平级目录 ∥ 不含锚的更远祖先） | 同上 | 同上 | 同上 |
+| ④ 目标在锚外（声明本身合法） | ①② 成立而 `underKey` 不成立 | `target is outside the session anchor's subtree — the workspace-root opening does not apply: "<目标>"` | `unknown — no project owns this write's target` |
+| ⑤ 锚下无带 manifest 的直接子目录 | ①② 成立而 ③ 不成立 | `the session anchor carries no sub-project — the workspace-root opening does not apply: "<目标>"` | 同上 |
+| ⑥ 无声明 | ④ 不成立 | 既有那句 `declared project is not a project (…): "<目标>"` | 既有 `unknown — no project owns this write's target` |
+
+- **①②③⑥ 四支逐字沿用既有串**：决策 41 的核心没动，新增只有 ④⑤ 两句。新口子不吃旧拒文。
+- **④⑤ 的清单单位取 `unknown — no project owns this write's target`**：这两支的问题在目标、不在号；列声明项目的在途行会被读成「号不对」，把人引到错的一边。
+
+**判序（插在既有判序第 ① 步里，不新开一步）**
+
+- 逐目标：`resolveProjectRoot(p)` 有根 ⇒ 按该根判号（**零改**）。
+- 无根 ∧ 有声明 ⇒ 先解析声明（①②③）；解析成立再判 ④⑤；全成立 ⇒ 按声明根判号。
+- 无根 ∧ 无声明 ⇒ ⑥（**零改**）。
+- 目标有根时**不看声明**——定位参数优先（决策 40 原口径不动）。
+- `manifest({action:"init"})` 的取根豁免（决策 43）仍更早短路：窄口不为 `init` 开新臂。
+
+**这一格不做什么（四条，各挡一句）**
+
+- 不给工作区挂 manifest——`manifest` 工具的 workspace 判定与 `doc_check` 域表零改。
+- 不放宽到锚外：`C:\Windows` 这类路径照拒，不开第二条出路。
+- 不加「不声明就放过」的默认——声明是口的必要条件。
+- 不动号那半；不动 `bash` ∥ `execute` ∥ `manifest` ∥ `memory` 的声明支（这四把本就没有目标路径这个定位参数，窄口对它们无意义）。
+
+**界线：锚给的是界，不是账**（决策 41 的口径）
+
+- 锚只回答「这个目标在不在我这一层工作区里」，不回答「这一笔判谁的账」。
+- 会破这条界的形只有一种——**回落**：`execute` ∥ `manifest` 缺定位参数时回落到会话 cwd，容器根锚下就每一笔写都不设防（实机：2026-11-03 02:53 `bash` 不带号照放行）。门上没有那条臂。
+- 声明因此恒由调用方显式给出；窄口要的也是显式声明，锚只判界。
+
+**依据（可复跑的探针；读数逐字记在批档 `§2` 的探针读数块，本档不转录数字）**
+
+**宿主单源**：`resolveProjectRoot` ∥ `owningProject` ∥ `discoverProjects` 的定义都在 `thincoder-core/manifest-discovery.mjs`；`thincoder-core/manifest.mjs` 只是它上面的一层转口（同一批名字再导出一次，消费者 import 面零改）。本档与批档 `§2` 落点一律写定义处。
+
+**两个谓词的关系**：条件 ① 的判据名取 `resolveProjectRoot`（门里已在用的那个导出）；它 = `projectRootView(cwd).root`（薄委托），归属段用 `owningProject(target, 界)`、祖先链无档时回落 `discoverProjects`。依据表里出现的 `owningProject` 只说明它的判据体，不是第二个判据名。
+
+```text
+node -e "import('./thincoder-core/manifest-discovery.mjs').then(m=>console.log(m.resolveProjectRoot('D:/teamcode/AGENTS.md')))"
+node -e "import('./thincoder-core/manifest-discovery.mjs').then(m=>{const d=m.discoverProjects('D:/teamcode');console.log(d.kind, d.matched)})"
+node -e "import('./thincoder-core/ledger-db.mjs').then(l=>console.log(JSON.stringify(l.resolveLedgerRoot('D:/teamcode/thincoder','D:/teamcode'))))"
+```
+
+| 支 | 依据（哪一条探针 ∥ 哪个既有判据） |
+|---|---|
+| ① 现场取不到根 | 第一条探针（读数 = 批档 `§2` 探针块 P1）；判据本体 = `resolveProjectRoot`（定义处 `thincoder-core/manifest-discovery.mjs`） |
+| ③ 现场确有子项目 | 第二条探针（读数 = 批档 `§2` 探针块 P2）；判据本体 = `discoverProjects` 的项目梯，取 `kind === "workspace"` ∧ `matched === "manifest"` 两值 |
+| 声明根取得到 | 第三条探针（读数 = 批档 `§2` 探针块 P3）；`(a)` 支既有行为零改即成立（声明路径自身带 manifest ∧ 锚在它之下） |
+| ④ 锚外照拒 | **不是新行为，是既有拒文的换串**：判据 = 决策 41 的代价面（用户 2026-11-03 02:58 裁下「工程模式 `depth = 0` 在会话锚之外的写一律拒」）+ 实机事件 2026-11-03 02:53。本批只把这支的拒文从 `declared project is not a project` 换成拒文表第 ④ 句，边界一字不放宽 |
+| ⑤ 锚下无子项目 | 复现路径：造一个只有裸 git 仓子目录的临时锚（`New-Item -ItemType Directory "<tmp>\bare-git\.git" -Force`），对 `<tmp>` 跑第二条探针 ⇒ 读数 `workspace git`——`matched` ≠ `manifest` ⇒ ③ 不成立、落 ⑤ 那句（读数 = 批档 `§2` 探针块 P5）。缺此条件，任意空目录都成「工作区」 |
+
+**三问（新件的既有件答案）**
+
+- `workspaceRoot`（模块内新函数）：`none found: thincoder-core/agent/write-gate-ledger.mjs`（`underKey` ∥ `resolveDeclaredRoot` ∥ `ledgerGateTargets` 逐处读过）· `thincoder-core/manifest-discovery.mjs`（`resolveProjectRoot` ∥ `owningProject` ∥ `discoverProjects`）· `thincoder-core/agent/write-gate.mjs`（门组装面）——无一件把这四条件组合成一个判定，故新写；组合体内每一件都取既有单源，本函数只做三件事：调用、排序、出拒文。
+- 两条新 `<case>`（拒文表 ④⑤）：`none found: thincoder-core/agent/write-gate-ledger.mjs` 的拒文常量区（`caseNotAProject` 等既有串）——无一句说的是「目标在锚子树外」或「锚下无子项目」，两句都是新语义，故新增；命名与既有 `case…` 同形。
+
+**最近先例**：同档 §2.3 的 `(a)` 支（`resolveDeclaredRoot`：声明路径自身带 manifest ∧ 会话锚在它之下 ⇒ 根 = 声明路径，不上溯）。
+
+- **对齐**：同一个取根函数、同一枚路径比较键（`gateKey`）、同一批拒文常量与清单单位，不新立判据点、不新增导出。
+- **偏离**：`(a)` 支要求「声明路径自身带 manifest」，而**目标**仍在某个项目里；本格允许目标不属任何项目、由声明提供判据点。取根的输入因此多一个——目标路径参与判 ②。
+
+**调研证据**：
+
+- **仓外声明源**：本仓 `PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]` ⇒ 无仓外声明源可查（照记）。
+- **仓内相关档**：`docs/core/design/BATCH-RECORD.md`（六段与冻结）· `docs/core/design/LEDGER.md`（行状态机）· `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.5（面分类）——三档只答「谁写哪一面」，没有一句答「目标不在任何项目里时判谁的账」。
+- **唯一相关面** = 本档 §2.3 与 §4 决策 41；本批改的就是它，无第二处要同步的规范面。
+
 
 ### 2.4 建档 = 建台账行（一件事）
 
@@ -1085,14 +1182,15 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 
 | 档 | 档位结论 |
 |---|---|
-| `thincoder-core/tools/shared.mjs` | 软线内；**2026-11-03 那笔**加 `PROJECT_PARAM_DESC` 一条常量 + 导出，**本批 2026-11-05** 是净负（删 `LEDGER_PARAM_DESC_GIT` 那条导出、`PROJECT_PARAM_DESC` 句内摘掉 `git`）。触线判据 = 本批落完后复量越 500 则把参数描述常量（`LEDGER_PARAM_DESC` 及其 `_GIT` ∥ `_MANIFEST` ∥ `_MEMORY` 后缀 + `PROJECT_PARAM_DESC`）整体迁到新档（`thincoder-core/tools/` 下专用参数描述档），`thincoder-core/tools/shared.mjs` 改再导出（描述仍单源、消费面零改） |
-| `thincoder-core/agent-tools/batch-skeleton.mjs` | **已越软线**；本批改动是删行（净负），净负回不到线下 ⇒ **拆单**：把词表 / 段白名单 / 状态行读写叶块（`STATUS_WORDS` ∥ `STATUS_WORD_ALIASES` ∥ `SEGMENT_BY_ROLE` ∥ `SEGMENT_BY_ROLE_NORMAL` ∥ `DEPTH0_SEGMENTS` ∥ `STATUS_LINE_RE` ∥ `SECTION_1_HEADER_RE` ∥ `sectionHeaderRe` ∥ `isBatchRecord` ∥ `TEMPLATE_PLACEHOLDERS` ∥ `HEADER_STRUCTURAL_RE` ∥ `findPlaceholderResidue` ∥ `placeholderResidueError` ∥ `readBatchStatusLine` ∥ `updateSectionStatusLine` ∥ `readSectionStatusWord`）整体迁到新档 `thincoder-core/agent-tools/batch-segment-vocab.mjs`，`thincoder-core/agent-tools/batch-skeleton.mjs` 改再导出；判据 = 拆后复量 ≤500 ∧ 十六件导出名逐条仍在、导出面零变；裁定锚与轮次块留原档（与 `sectionBodyLines` / `sectionHeaderZoneLines` 同档，单拆会把段解析复制一份） |
-| `thincoder-core/tools/file.mjs` | 软线内；本批只加 `ledger` 一个参数 ⇒ 不拆 |
-| `thincoder-core/tools/git.mjs` | 软线内；本批净负——删 `ledger` ∥ `project` 两格 + 清两个 import（`LEDGER_PARAM_DESC_GIT` ∥ `PROJECT_PARAM_DESC`）；`readonlyActionOf` 不在本档（它是 `thincoder-core/agent/write-gate.mjs` 的 import，该档随本批删这一个）；`isReadonlyAction` 钩子零改 ⇒ 不拆 |
-| `thincoder-core/agent/write-gate.mjs` | **已越 500 软线、未到 650 拆分触发线**：本批在其上是净负（删 `git` 分支 ∥ 取根支 ∥ 一个 import `readonlyActionOf`），净负回不到线下 ⇒ 拆分义务不因本批新增（承接批已在册）。**本批不拆**；切法 = 写锁段（`ledgerRowAt` ∥ 拒文组装 ∥ `resolveDeclaredRoot` ∥ `ledgerGateTargets`）整体搬进新档 `thincoder-core/agent/write-gate-ledger.mjs`，`thincoder-core/agent/write-gate.mjs` 改 re-export（`ledgerBindWriteConflict` 导出名与调用面零变） |
-| `thincoder-core/tools/ops.mjs` | 软线内（`ledger` 一行） |
+| `thincoder-core/tools/shared.mjs` | 软线内；**2026-11-03 那笔**加 `PROJECT_PARAM_DESC` 一条常量 + 导出，**2026-11-05 那一批**是净负（删 `LEDGER_PARAM_DESC_GIT` 那条导出、`PROJECT_PARAM_DESC` 句内摘掉 `git`）。触线判据 = 那一批落完后复量越 500 则把参数描述常量（`LEDGER_PARAM_DESC` 及其 `_GIT` ∥ `_MANIFEST` ∥ `_MEMORY` 后缀 + `PROJECT_PARAM_DESC`）整体迁到新档（`thincoder-core/tools/` 下专用参数描述档），`thincoder-core/tools/shared.mjs` 改再导出（描述仍单源、消费面零改） |
+| `thincoder-core/agent-tools/batch-skeleton.mjs` | **已越软线**；段头区收窄那一笔的改动是删行（净负），净负回不到线下 ⇒ **拆单**：把词表 / 段白名单 / 状态行读写叶块（`STATUS_WORDS` ∥ `STATUS_WORD_ALIASES` ∥ `SEGMENT_BY_ROLE` ∥ `SEGMENT_BY_ROLE_NORMAL` ∥ `DEPTH0_SEGMENTS` ∥ `STATUS_LINE_RE` ∥ `SECTION_1_HEADER_RE` ∥ `sectionHeaderRe` ∥ `isBatchRecord` ∥ `TEMPLATE_PLACEHOLDERS` ∥ `HEADER_STRUCTURAL_RE` ∥ `findPlaceholderResidue` ∥ `placeholderResidueError` ∥ `readBatchStatusLine` ∥ `updateSectionStatusLine` ∥ `readSectionStatusWord`）整体迁到新档 `thincoder-core/agent-tools/batch-segment-vocab.mjs`，`thincoder-core/agent-tools/batch-skeleton.mjs` 改再导出；判据 = 拆后复量 ≤500 ∧ 十六件导出名逐条仍在、导出面零变；裁定锚与轮次块留原档（与 `sectionBodyLines` / `sectionHeaderZoneLines` 同档，单拆会把段解析复制一份） |
+| `thincoder-core/tools/file.mjs` | 软线内；2026-11-03 那一批只加 `ledger` 一个参数、本批 2026-11-08 加 `project` 一格（`§2.3.1`）⇒ 两笔各自增量都小，不拆 |
+| `thincoder-core/tools/git.mjs` | 软线内；2026-11-05 那一批净负——删 `ledger` ∥ `project` 两格 + 清两个 import（`LEDGER_PARAM_DESC_GIT` ∥ `PROJECT_PARAM_DESC`）；`readonlyActionOf` 不在本档（它是 `thincoder-core/agent/write-gate.mjs` 的 import，该档随那一批删这一个）；`isReadonlyAction` 钩子零改 ⇒ 不拆 |
+| `thincoder-core/agent/write-gate.mjs` | **已越 500 软线、未到 650 拆分触发线**：2026-11-05 那一批在其上是净负（删 `git` 分支 ∥ 取根支 ∥ 一个 import `readonlyActionOf`），净负回不到线下 ⇒ 拆分义务不因那一批新增（承接批已在册）。**本批 2026-11-08 只动档头，仍不拆**；切法 = 写锁段（`ledgerRowAt` ∥ 拒文组装 ∥ `resolveDeclaredRoot` ∥ `ledgerGateTargets`）整体搬进 `thincoder-core/agent/write-gate-ledger.mjs`（该档已在盘——这次拆已落，本批是在它上面改），`thincoder-core/agent/write-gate.mjs` 改 re-export（`ledgerBindWriteConflict` 导出名与调用面零变） |
+| `thincoder-core/agent/write-gate-ledger.mjs` | **软线内、本批不跨档位**：本批唯一主落档（`§2.3.1` 窄口判 + 两条拒文 + 一个 import，净增约 40 行）。量法 = 本节上列那一条命令，改前改后各量一次；触线判据 = 复量越 500 则 `workspaceRoot` 与新拒文常量随写锁段整体迁出（本批不新增拆单义务） |
+| `thincoder-core/tools/ops.mjs` | 软线内（2026-11-03 那一批 `ledger` 一行；本批 2026-11-08 `project` 一格） |
 | `thincoder-vscode/src/tools/shell.mjs` | 软线内（端 schema 副本补 `ledger` ∥ `project` 两行） |
-| `thincoder-core/tools/patch.mjs` | 软线内（`ledger` 一行） |
+| `thincoder-core/tools/patch.mjs` | 软线内（2026-11-03 那一批 `ledger` 一行；本批 2026-11-08 `project` 一格） |
 | `thincoder-core/tools/bash.mjs` | 软线内（加 `project` 一行） |
 | `thincoder-core/agent/dispatch.mjs` | 软线内 |
 | `thincoder-core/memory/memory-tool.mjs` | 软线内（加 `project` 一行） |
@@ -1115,12 +1213,12 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 | `thincoder-core/agent/write-gate.mjs` | 改造 | 写锁 = `ledgerBindWriteConflict`（判据 = 本笔报的 `#N` 是目标项目台账里的 `在途` 行）+ 模块内判据函数 `ledgerRowAt`（项目根推导 ∥ `ledgerQuery({cwd, boundary})` 取行集 ∥ 按 `id` 找行判 `status`；`ledger` 动态 import——W8 契约②，不导出）+ 四情形拒文；`faceDetail` import 删除（面在判据里退场）；导出名与模块内判据函数旧名 `ledgerOpenWriteConflict` ∥ `ledgerOpenAt` 一并换掉；入口集补 `bash` ∥ `execute` ∥ `manifest` ∥ `memory`（`bash` 只认 `project` 声明——无定位参数，缺则拒（`no project on this call`）；`execute` 按 `workdir` 推根，缺位时读 `project`，仍无则同拒——不回落会话 cwd（决策 41）；`manifest` 按 `action`、`memory` 按 `layer` ∥ `project:` id 前缀判；拒文清单上限 10 条 + 读不到那支的 `<case>`） |
 | `thincoder-core/agent/dispatch.mjs` | 改造 | Phase 1 写面冲突块：`bash` ∥ `execute` 也进（写锁那一道的门内），调形传 `tool` + `toolName` + `args`（路径集与 `args.ledger` 由判据函数自己取）；`reason` 改 `ledger binding`（旧串 `no in-flight ledger row` 退场）；既有两道（跨批档写 · D5 冻结窗）位次与判据零改 |
 | `thincoder-core/agent/dispatch-run.mjs` | 改造 | 拒因串消费点：`denied` 分支按 `item.reason` 选回显串，旧串 `no in-flight ledger row` 随判据退场 ⇒ `"ledger binding"` 与既有两道同支，回 `Error: ${item.hint}`。不同笔改这里，拒文会掉进兜底串（模型看不到真拒因） |
-| `thincoder-core/tools/file.mjs` ∥ `thincoder-core/tools/patch.mjs` ∥ `thincoder-core/tools/ops.mjs` ∥ `thincoder-core/tools/bash.mjs` ∥ `thincoder-core/tools/execute.mjs` | 改造 | 各工具 `parameters.properties` 加 `ledger`（不进 `required`，决策 35）；`thincoder-core/tools/execute.mjs` 另加 `project`（描述 = `PROJECT_PARAM_DESC`，只在定位参数缺位时被读）。`thincoder-core/tools/git.mjs` ∥ `thincoder-core/agent-tools/manifest.mjs` ∥ `thincoder-core/memory/memory-tool.mjs` ∥ `thincoder-core/tools/ssh.mjs` 的 `ledger`（及 `manifest` ∥ `memory` 的 `project`）沿用既有——本批只删 `git` 那两格 |
+| `thincoder-core/tools/file.mjs` ∥ `thincoder-core/tools/patch.mjs` ∥ `thincoder-core/tools/ops.mjs` ∥ `thincoder-core/tools/bash.mjs` ∥ `thincoder-core/tools/execute.mjs` | 改造 | 各工具 `parameters.properties` 加 `ledger`（不进 `required`，决策 35）；`thincoder-core/tools/execute.mjs` 另加 `project`（描述 = `PROJECT_PARAM_DESC`，只在定位参数缺位时被读）。`thincoder-core/tools/git.mjs` ∥ `thincoder-core/agent-tools/manifest.mjs` ∥ `thincoder-core/memory/memory-tool.mjs` ∥ `thincoder-core/tools/ssh.mjs` 的 `ledger`（及 `manifest` ∥ `memory` 的 `project`）沿用既有——2026-11-05 那一批只删 `git` 那两格 |
 | `thincoder-vscode/src/tools/index.mjs` | 改造 | 删 `gitTool` 的 `isReadonlyAction` 覆写，保留 `...coreGitTool` 展开；`CHECKPOINT.md` F6/D3 的口径注搬进核钩子——核有钩子后端覆写就是同一份名单的第二份拷贝，且优先级让端覆写吃掉核答案 |
 | `thincoder-vscode/src/tools/shell.mjs` | 改造 | 端自持的 `bash` 是独立 schema 副本（非核工具展开）⇒ 同一行 `ledger` 参数（描述引 `LEDGER_PARAM_DESC`）+ 同一行 `project`（描述引 `PROJECT_PARAM_DESC`）；不补则该端 schema 面上没有这两个参数，只有拒文能教它 |
 | `thincoder-core/agent-tools/manifest.mjs` | 改造 | `parameters.properties` 加 `ledger`（不进 `required`）与 `project`（`target` 缺位时被读）；`init` ∥ `write` 进本门（`init` 的豁免支在门体取根步——决策 43）、`read` 不进（决策 39） |
 | `thincoder-core/memory/memory-tool.mjs` | 改造 | `parameters.properties` 加 `ledger`（不进 `required`）+ `project`（`PROJECT_PARAM_DESC`，不进 `required`——该工具没有定位参数，判据点只能靠声明，决策 40）；落 project 层的写型 action 进本门——`layer:"project"`，或单条删除且 id 前缀 = `project:`（决策 39） |
-| `thincoder-core/tool-docs/` 入口集工具描述档——**改前十三份 ∥ 改后十二份**（`write` / `edit` / `insert_after` / `apply_patch` / `delete` / `hashline_edit` / `file_ops` / `bash` / `execute` / `manifest` / `memory` / `ssh` / `git` 各一档，同目录：`thincoder-core/tool-docs/git.md` ∥ `thincoder-core/tool-docs/ssh.md` 都在其中。`git` 退出入口集 ⇒ 其档不再教要号 ⇒ 十二份。`ssh` 的 `get` 支机制归 `docs/core/design/TOOLS.md`——那是机制归属，不是描述档落点） | 改造 | 各补一行用法：`ledger:"#N"` = 本笔服务的那条在途台账行；工程模式下缺它 = 拒（描述面是模型真正读到的那一面）。**`git` 档反着做——三处一并删**（`ledger` 行 ∥ `project` 行 ∥ 「Read-only actions do not need it: …」那一句）：本批之后写型与只读不再分判，留着就是教「写动作要号」；`checkpoint` 的 `list` ∥ `cat` 判只读归审批面，由 `thincoder-core/tools/git.mjs` 的钩子持，教学面不复述；`manifest` 档写「`write` 要号；`init` 仅当目标在既有项目内（祖先链上有 `PROJECT-MANIFEST.json`）才要——祖先链无 manifest 的自举不要；`read` 不要」；`memory` 档写「落 project 层就要号——`layer:"project"` 或 `project:` id 前缀」；`bash` ∥ `execute` ∥ `manifest` ∥ `memory` 四档另写一行 `project` 用法与那句「纯声明，不改执行目录」（`execute` ∥ `manifest` 写明「定位参数缺位时才用」） |
+| `thincoder-core/tool-docs/` 入口集工具描述档——**改前十三份 ∥ 改后十二份**（`write` / `edit` / `insert_after` / `apply_patch` / `delete` / `hashline_edit` / `file_ops` / `bash` / `execute` / `manifest` / `memory` / `ssh` / `git` 各一档，同目录：`thincoder-core/tool-docs/git.md` ∥ `thincoder-core/tool-docs/ssh.md` 都在其中。`git` 退出入口集 ⇒ 其档不再教要号 ⇒ 十二份。`ssh` 的 `get` 支机制归 `docs/core/design/TOOLS.md`——那是机制归属，不是描述档落点） | 改造 | 各补一行用法：`ledger:"#N"` = 本笔服务的那条在途台账行；工程模式下缺它 = 拒（描述面是模型真正读到的那一面）。**`git` 档反着做——三处一并删**（`ledger` 行 ∥ `project` 行 ∥ 「Read-only actions do not need it: …」那一句）：2026-11-05 那一批之后写型与只读不再分判，留着就是教「写动作要号」；`checkpoint` 的 `list` ∥ `cat` 判只读归审批面，由 `thincoder-core/tools/git.mjs` 的钩子持，教学面不复述；`manifest` 档写「`write` 要号；`init` 仅当目标在既有项目内（祖先链上有 `PROJECT-MANIFEST.json`）才要——祖先链无 manifest 的自举不要；`read` 不要」；`memory` 档写「落 project 层就要号——`layer:"project"` 或 `project:` id 前缀」；`bash` ∥ `execute` ∥ `manifest` ∥ `memory` 四档另写一行 `project` 用法与那句「纯声明，不改执行目录」（`execute` ∥ `manifest` 写明「定位参数缺位时才用」） |
 | `thincoder-core/agent/dispatch.mjs` | 改造 | Phase 1 写面冲突块接第三道门（既有两道 = 跨批档写 · D5 冻结窗）+ 设计门换判源 `isCodePath` → `faceOf`（`§2.1`） |
 | `thincoder-core/agent-tools/batch-skeleton.mjs` | 改造 | 词表改 `评审通过` + 别名表；`§2.5` 新增导出 `statusPassPlan`，`VERDICT_PASS_LINE` 定义迁入锚块；`§2.6` `INAPPLICABLE_SEGMENTS` 清空（`[]`——声明机制整条退役） |
 | `thincoder-core/agent-tools/batch-lifecycle.mjs` | 改造 | 拆分 + 改链门 + 重开回收调点（`§2.13`；见下）；`readBatchStatusLine` 的消费面五处（`findInFlightBatch` · `assertGateOpen` · 重开合取 · 收口重锚触发 · close 前置存在性网）调形零变，逐处符号 + 调用形见下表（本轮零改，判据 = `§1` 现量 0） |
@@ -1129,7 +1227,7 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 | `thincoder-core/agent-tools/batch.mjs` | 改造 | `ledger` 参数语义与描述面；`§2.5` 在 `append` 轨的判定处接第二个计划（`statusResetPlan(...) ?? statusPassPlan(...)`）；`readBatchStatusLine` 的消费点 = `append` 轨的 `const status = readBatchStatusLine(src)`，调形零变（本轮零改，判据 = `§1` 现量 0） |
 | `thincoder-core/agent-tools/design-token.mjs` | 改造 | 两处运行时回执串（`REVIEW_RECORD_MARK` 第二句 ∥ `status-not-passed` 证句，字面 = `§2.5`）；`VERDICT_PASS_LINE` 改 import + 原样再导出；拒因三值与判据零改 |
 | `thincoder-core/tool-docs/batch.md` | 改造 | `status` 条目补一句置位语义（逐字 = `§2.5`） |
-| `thincoder-core/ledger-close-proof.mjs` | 零改 | ③ 已要求 `§3` 状态行 = `评审通过`，与收紧后的收口门自动一致 —— 本批不给它加任何放宽；`readBatchStatusLine` 的消费点调形零变 |
+| `thincoder-core/ledger-close-proof.mjs` | 零改 | ③ 已要求 `§3` 状态行 = `评审通过`，与收紧后的收口门自动一致 —— 本笔改动不给它加任何放宽；`readBatchStatusLine` 的消费点调形零变 |
 | `thincoder-core/ledger-db.mjs` | 改造 | 迁移表 +2 边（`待讨论 → 在途` · `待核销 → 在途`） |
 | `thincoder-core/ledger-cmd.mjs` | 改造 | 重锚分流 + 兜底点名（`§2.11`，返回形加 `backstopped` 集）+ `ledgerReclaimBatch`（`§2.13`，与重锚同形） |
 | `thincoder-core/prompts/discipline-engineering.md` | 改造 | `§2.9` 的一句：面分流表后加一行 |
@@ -1139,10 +1237,14 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 | `thincoder-core/memory/schema.mjs` | 改造 | 删三处名单定义、改引单源 + 同名 re-export |
 | `thincoder-core/memory.mjs` | 零改 | `SKIP_DIRS` 导出面由 re-export 保住 |
 | `thincoder-core/tools/bash.mjs` | 改造 | `parameters.properties` 加 `project`（描述 = `PROJECT_PARAM_DESC`，不进 `required`）；判据读它、执行目录不变（决策 40） |
+| `thincoder-core/agent/write-gate-ledger.mjs` | 改造 | `§2.3.1` 窄口：定位参数分支取不到根时进四条件判（模块内 `workspaceRoot`，不导出）+ 两条新 `<case>` + `discoverProjects` 一个 import；`ledgerGateTargets` 在无定位根时读 `args.project`；号的半边、四情形拒文、号前缀可省、清单上限全部零改 |
+| `thincoder-core/agent/write-gate.mjs` | 改造（仅档头） | 判据全文住原档档头 ⇒ 补 `§2.3.1` 那一格；`ledgerBindWriteConflict` 导出与调用面零改 |
+| `thincoder-core/tools/shared.mjs` ∥ `thincoder-core/tools/file.mjs` ∥ `thincoder-core/tools/patch.mjs` ∥ `thincoder-core/tools/ops.mjs` | 改造 | 写盘七件的 `parameters.properties` 各加 `project` 一格（描述 = `PROJECT_PARAM_DESC`，不进 `required`）；`PROJECT_PARAM_DESC` 句内补上七件的适用条件 |
+| `thincoder-core/tool-docs/write.md` ∥ `thincoder-core/tool-docs/edit.md` ∥ `thincoder-core/tool-docs/insert_after.md` ∥ `thincoder-core/tool-docs/apply_patch.md` ∥ `thincoder-core/tool-docs/delete.md` ∥ `thincoder-core/tool-docs/hashline_edit.md` ∥ `thincoder-core/tool-docs/file_ops.md` | 改造 | 各补一行 `project` 用法与「目标取得到项目根时它不参与」那句 |
 
 **上表按档计**：`thincoder-core/agent/dispatch.mjs` 占两行（同档两处改动）——行数不等于档数。
 
-**判据点改动的档位结论**：逐档结论见上表——越线的两档 = `thincoder-core/agent-tools/batch-skeleton.mjs`（归段头区收窄那一笔，拆单见上表第二行）与 `thincoder-core/agent/write-gate.mjs`（本批不拆，切法见该行）；其余受触档在软线内。
+**判据点改动的档位结论**：逐档结论见上表——越线的两档 = `thincoder-core/agent-tools/batch-skeleton.mjs`（归段头区收窄那一笔，拆单见上表第二行）与 `thincoder-core/agent/write-gate.mjs`（2026-11-05 那一批不拆，切法见该行）；其余受触档在软线内。
 
 **档位结论（本轮定位面收窄）**：受触档 `thincoder-core/agent-tools/batch-skeleton.mjs` **已越软线**——落法是写面与读面共用同一条段头区判定（`§2.5` 的单源表），读面不再有第二个取值区；行数靠拆单回到软线内（拆法与判据 = 上表第二行）。
 
@@ -1170,7 +1272,7 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 | 迁出 → `thincoder-core/agent-tools/batch-closeout.mjs`（新） | 链门 + 单测档门 + 机检门调点 + 重锚回执三行（`§2.11`） |
 | 迁出 → `thincoder-core/agent-tools/batch-reopen.mjs`（新） | 重开回收调点 + 回执两 / 三行（`§2.13`） |
 | 留下 | status / close / 消费面 |
-| 本批新增 | close 径接 closeout 调点 ∧ 重开径接 reopen 调点 |
+| 拆分那一批新增 | close 径接 closeout 调点 ∧ 重开径接 reopen 调点 |
 
 ⇒ `thincoder-core/agent-tools/batch-lifecycle.mjs` 回到 500 行软线以内；三新档按上表内容切分。依赖仍单向：`skeleton ← closeout ← bind ← reopen ← lifecycle`。
 
@@ -1301,16 +1403,18 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 **40 · 判据点 = 调用方声明的项目**（用户 2026-11-03 02:58 裁「调用时要同时提供项目和台帐号」，`§2.3`）：`agent.cwd` 是会话锚，而会话锚可以是容器根 / 工作区根——容器根本身不带 manifest，旧判据于是在那种形态下永不设防（实机：2026-11-03 02:53 重启后 `bash` 不带 `ledger` 照放行）。
 
     - **「项目」就是项目根**，不是新概念：台账按项目根算键、项目 = 带 `PROJECT-MANIFEST.json` 的目录，一个判据（`thincoder-core/ledger-db.mjs`）。所以参数值 = 根绝对路径，零映射表。
-     - **声明面优先复用既有定位参数**：`execute` 有 `workdir`、`manifest` 有 `target`、写盘七件有目标路径——它们本就说着「写哪儿」。只有定位参数**可能缺位**的 `bash` ∥ `memory` ∥ `execute` ∥ `manifest` 四把有 `project`，且写明定位参数优先；写盘七件的目标路径恒在，`project` 在那里永不被读 = 第二个名字。`git` 本批不再有任何参数（决策 37）。
+     - **声明面优先复用既有定位参数**：`execute` 有 `workdir`、`manifest` 有 `target`、写盘七件有目标路径——它们本就说着「写哪儿」。定位参数**可能缺位**的四把（`bash` ∥ `memory` ∥ `execute` ∥ `manifest`）与七件（仅当目标取不到项目根）都有 `project`，且一律定位参数优先；`git` 本批不再有任何参数（决策 37）。
     - **`bash` 的 `project` 是纯声明**：不改执行目录（该工具没有 cwd 参数，本批也不给它加 shell `cd` 语义）。声明即承诺——命令内容不解析（决策 36），门只问「这笔替哪个项目的那条账服务」。
     - 被拒 = 继续从会话锚推、只把「推不出」改成拒：判据点仍不是调用方给的，「换个 cwd 就变判据」原样留着。
-    - 被拒 = 十二把工具（含写盘七件）统一加 `project`：目标路径恒在，`project` 在那里永不被读；且两值不一致时「以谁为准」要再立一条判据。五把加 `project` 并写明定位参数优先，正是为了不让它变成第二个判据。
+    - 被拒 = 让 `project` 与定位参数并存时再立一条「以谁为准」的判据：本档一律「定位参数优先」——五把加 `project`、七件只在目标取不到项目根时才读它（`§2.3.1`），都是为了让 `project` 不变成第二个判据。
 
-**41 · 声明无效 ⇒ 拒**（用户 2026-11-03 02:58 裁 ④，`§2.3`）：项目由调用方声明，**会话锚永不充当判据点**（全覆盖：入口集十二把无一回落 cwd，含 `execute` ∥ `manifest`）——声明缺位（既无定位参数又无 `project`）⇒ `no project on this call`；声明与会话锚无关键，或相关但取不到带 manifest 的根 ⇒ `declared project is not a project`。判据的输入缺失时，门只会拒，不会放行。
+**41 · 声明无效 ⇒ 拒**（用户 2026-11-03 02:58 裁 ④；2026-11-08 00:13 补裁 `§2.3.1` 那一格，`§2.3`）：项目由调用方声明，**会话锚不作「判哪个项目的账」的来源**——声明缺位（既无定位参数又无 `project`）⇒ `no project on this call`；声明与会话锚无关键，或相关但取不到带 manifest 的根 ⇒ `declared project is not a project`。判据的输入缺失时，门只会拒，不会放行。
+
+    **会话锚作定界来源**：它回答的是「这个目标在不在我这一层工作区里」，不是「这一笔判谁的账」。判据 = 声明是否由调用方显式给出——显式给出时锚只判界（`§2.3.1` 条件 ②），缺位时任何一支都不回落到它。回落是唯一会破这条线的形：`execute` ∥ `manifest` 缺定位参数时回落会话 cwd，容器根锚下就每一笔写都不设防（实机：2026-11-03 02:53 `bash` 不带号照放行）——门里没有那条臂。
 
     **相关性 = 界的判据**（`§2.3`）：声明根含会话锚（会话 cwd 在项目子目录里）∥ 声明根在会话锚之内（沿祖先链上溯）——两者之外一律拒。会话锚仍用于解析相对路径与判相关性，只是不再是「判哪个项目的账」的答案。被拒的替代 = 允许「推定不出来就不管」：容器根锚下每一笔写都不设防，就是那条臂的产物（实机：2026-11-03 02:53 `bash` 不带号照放行）。
 
-    代价（用户认下）：工程模式 `depth = 0` **在各项目之外**的写（`<仓外临时目录>/x.mjs` 这类）从此一律拒——项目之外没有判据点；要写就先写在项目里。
+    代价（用户认下）：工程模式 `depth = 0` 在**会话锚之外**的写（`<仓外临时目录>/x.mjs` 这类）一律拒——锚外没有判据点；要写就先写进项目，或写进锚下的工作区里（`§2.3.1`）。
 
 **42 · 拒文同时教两个输入**（决策 38 的延伸，`§2.3`）：`project` ∥ `ledger` 都不进 `required` ⇒ 拒文是唯一教学面，故用法句一次点出两个输入（`Pass project:<…> and ledger:"#N" on this call`），挂号两步里的 `ledger add` 带 `cwd`——号挂在哪个项目，声明就写哪个项目。
 
@@ -1358,14 +1462,19 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 
 ## 5. 验收对照
 
-每条回到批档 `§2` 的批次条目（R1–R25）；机检判据如下：
+每条回到批档 `§2` 的批次条目（R1–R37）；机检判据如下：
 
-**可跑面（本批验收的入口）**：本批单测档 = `docs/batches/2026-11-03-write-gate-project-and-ledger.test.mjs`（与批档同名同目录，随本批收口删除），跑法 = `node --test docs/batches/2026-11-03-write-gate-project-and-ledger.test.mjs`。R2 的 ①–⑬ 全落在该档；集成面（12-x / 14-6）由父侧收口跑，不在本档。
+**可跑面（本批验收的入口）——两层**：
+
+- **本批（R34–R37）**：单测档 = `docs/batches/2026-11-08-workspace-root-writable.test.mjs`（与批档同名同目录，随本批收口删除），跑法 = `node --test docs/batches/2026-11-08-workspace-root-writable.test.mjs`。
+- **历史条目（R1–R33）**：读数落在各自批次当时那一本（R2 的 ①–⑬ 落在 2026-11-03 那一本），已随各批收口删除、读数不追改，本批不复跑。
+
+集成面（12-16 / 14-6）由父侧收口跑，不在本档。
 
 | 条目 | 判据（可机检） |
 |---|---|
 | R1 建档=建台账 | 不传 `ledger` 建一档 ⇒ 台账多一行 `在途` 且 `task_book` = 该档；传已存在 `待讨论` 号 ⇒ 该行变 `在途`；传 `已核销` 号 ⇒ 拒且档未落盘、行零改（终态判据；事务内步序 = `§2.4`） |
-| R2 写锁（笔-账绑定） | **判据 = 本笔报的 `#N` 是目标项目台账里的 `在途` 行**（`§2.3` 表）：① 未传 `ledger` ⇒ 拒，拒文含 `no ledger number on this call` 与用法句（`Pass project:` ∧ `ledger:"#N"`，两个输入一次点出），文件字节零改；② `ledger` 非行号形（`"abc"` / `"#"`）⇒ 拒，原值带进拒文；③ 号不在盘（`"#999999"`）⇒ 拒，含 `does not exist`；④ 号在盘而 status ∈ {`已核销`, `已废弃`, `待讨论`, `待设计`, `待核销`} ⇒ 拒，拒文点名该状态词；⑤ 号在途 ⇒ 放行，`"#N"` 与 `"N"` 同判，文档面与产品面同判（面不参与判据）；⑥ **未声明项目 ⇒ 拒**（`bash` ∥ `memory` 缺 `project`；`execute` ∥ `manifest` 既无定位参数又无 `project`——不回落到会话 cwd）拒文含 `no project on this call`；**声明路径不是项目**（与会话锚无关键 ∥ 相关但取不到带 manifest 的根，含容器根 `D:\teamcode`）⇒ 拒、含 `declared project is not a project`；`memory` 的 `personal` ∥ `team` 落用户数据目录 ⇒ 不判（只有落 project 层才要 `project`）；写盘工具目标在任一项目之外 ⇒ 同拒；⑦ 台账读不到 / manifest 在而不可用 ⇒ 拒 + `(ledger unreadable — <原错>)`；⑧ 普通模式与 `depth > 0` 零改；⑨ 子代理带号不被本门核（拒因若现，只来自 token 门）；⑩ **`bash` ∥ `execute` 同判**：台账无在途行时跑一条只读命令（`git status`）⇒ 拒、命令零执行、拒文含 `no ledger number on this call`；带在途号跑同一条 ⇒ 执行并回输出；⑪ **`git` 不在入口集**：台账无在途行时 `git({action:"add", path})` 与 `git({action:"commit", path, message})` 都照常生效（`git log` 出现该 message）、`git({action:"status"})` 照跑回输出；白盒 `grep -c '"git"' thincoder-core/agent/write-gate.mjs` = 0（入口集无他）；⑫ **`manifest` 写型要号、读型不要、`init` 条件豁免**：`manifest({action:"write", key, value})` 不带号 ⇒ 拒、manifest 字节零改；`manifest({action:"read"})` 不带号 ⇒ 照跑；`init` 条件豁免（豁免支在门体取根步——决策 43，断言格 = R33 init 自举面）；⑬ **`memory` 按层判（`layer` ∥ id 前缀）**：`memory({action:"put", layer:"project", title, content})` 不带号 ⇒ 拒、`<项目>/.thincoder/memory/` 零写；`memory({action:"put", layer:"personal", title, content})` 不带号 ⇒ 照跑——同一个 action 两答案，分界在 `layer`；**单条 `delete` 不带 `layer`、id 带 `project:` 前缀 ⇒ 同样拒、文件仍在**（该层由前缀定，只看 `layer` 就漏掉这条删项目内档的路）；带号单删放行 |
+| R2 写锁（笔-账绑定） | **判据 = 本笔报的 `#N` 是目标项目台账里的 `在途` 行**（`§2.3` 表）：① 未传 `ledger` ⇒ 拒，拒文含 `no ledger number on this call` 与用法句（`Pass project:` ∧ `ledger:"#N"`，两个输入一次点出），文件字节零改；② `ledger` 非行号形（`"abc"` / `"#"`）⇒ 拒，原值带进拒文；③ 号不在盘（`"#999999"`）⇒ 拒，含 `does not exist`；④ 号在盘而 status ∈ {`已核销`, `已废弃`, `待讨论`, `待设计`, `待核销`} ⇒ 拒，拒文点名该状态词；⑤ 号在途 ⇒ 放行，`"#N"` 与 `"N"` 同判，文档面与产品面同判（面不参与判据）；⑥ **未声明项目 ⇒ 拒**（`bash` ∥ `memory` 缺 `project`；`execute` ∥ `manifest` 既无定位参数又无 `project`——不回落到会话 cwd）拒文含 `no project on this call`；**声明路径不是项目**（与会话锚无关键 ∥ 相关但取不到带 manifest 的根，含容器根 `D:\teamcode`）⇒ 拒、含 `declared project is not a project`；`memory` 的 `personal` ∥ `team` 落用户数据目录 ⇒ 不判（只有落 project 层才要 `project`）；写盘工具目标在任一项目之外 ∧ 本笔无 `project` 声明 ⇒ 同拒；带子项目声明 + 在途号写同一目标 ⇒ 按 `§2.3.1` 窄口放行（见 R34）；⑦ 台账读不到 / manifest 在而不可用 ⇒ 拒 + `(ledger unreadable — <原错>)`；⑧ 普通模式与 `depth > 0` 零改；⑨ 子代理带号不被本门核（拒因若现，只来自 token 门）；⑩ **`bash` ∥ `execute` 同判**：台账无在途行时跑一条只读命令（`git status`）⇒ 拒、命令零执行、拒文含 `no ledger number on this call`；带在途号跑同一条 ⇒ 执行并回输出；⑪ **`git` 不在入口集**：台账无在途行时 `git({action:"add", path})` 与 `git({action:"commit", path, message})` 都照常生效（`git log` 出现该 message）、`git({action:"status"})` 照跑回输出；白盒 `grep -c '"git"' thincoder-core/agent/write-gate.mjs` = 0（入口集无他）；⑫ **`manifest` 写型要号、读型不要、`init` 条件豁免**：`manifest({action:"write", key, value})` 不带号 ⇒ 拒、manifest 字节零改；`manifest({action:"read"})` 不带号 ⇒ 照跑；`init` 条件豁免（豁免支在门体取根步——决策 43，断言格 = R33 init 自举面）；⑬ **`memory` 按层判（`layer` ∥ id 前缀）**：`memory({action:"put", layer:"project", title, content})` 不带号 ⇒ 拒、`<项目>/.thincoder/memory/` 零写；`memory({action:"put", layer:"personal", title, content})` 不带号 ⇒ 照跑——同一个 action 两答案，分界在 `layer`；**单条 `delete` 不带 `layer`、id 带 `project:` 前缀 ⇒ 同样拒、文件仍在**（该层由前缀定，只看 `layer` 就漏掉这条删项目内档的路）；带号单删放行 |
 | R3 §3 词表 | `status` §3 值 `评审通过` ⇒ 通过；值 `评审完成` ⇒ 拒（词表外）；旧档读侧 `评审完成` ⇒ 等义 pass |
 | R4 §5 段序门 | `§3` 无 `评审通过` 时 `append §5` ⇒ 拒，拒文逐字 = `§2.6` 的 `R-G2` 串；`§3` pass 后追加照写；`§1` 写 `> 不适用：§3` ⇒ 照拒（声明不再是出路） |
 | R5 收口门 | `§3` 无 pass 时 `close` ⇒ 拒，拒文含 `§3 状态行 = <value>`；既有四段内容臂**照判**（`§2`/`§4`/`§6` **各须有内容**——声明已停用）；收口后本批零 `在途` 行（重锚落 `待核销`） |
@@ -1395,10 +1504,14 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 | R28 核销边只留一条（`§2.14`） | `node --test test/integration/ledger-close-proof.test.mjs`：`待讨论` 行跑 `ledger close{status:"已核销"}` ⇒ 拒（拒文逐字含 `核销仅限 待核销（现态 待讨论）` 与**该现态的**出路句 `先 update 到 在途 认领`）、行状态仍 `待讨论`、`closed_at` 仍空；`待设计` 行同形同拒（现态点名 `待设计`、出路句同 `待讨论`）；`在途` 行同形同拒，**出路句 = `先 update 到 待核销（做完才结账），再 close 勾销`**（不是认领句）；归档态行同拒、出路句 = `该行已归档（<X>），不在核销面`；`待核销` 行仍通过（既有 a 档断言零改）；同档 `update` 到 `在途` → `待核销` → `close` 三步全过（「条目在别处完成」的走法）；零改读数 = `grep -c "追认核销" thincoder-core/ledger-write-ops.mjs` / `thincoder-core/ledger-cmd.mjs` / `thincoder-core/ledger-tools.mjs` / `thincoder-core/tool-docs/ledger.md` 四值全 0 |
 | R29 零消费判据退场 | `thincoder-core/agent/live-batch.mjs` 不在盘（`ls thincoder-core/agent` 读数无该档）；`grep -rn "liveBatchOpen" thincoder-core` = 0 命中；`grep -rn "agent/live-batch" thincoder-core` = 0 命中（路径前缀形 = 还有人 import / require 已删模块；裸串 `live-batch` 会命中用例档名 `test/integration/batch-live-batch-lock.test.mjs`——档名不是消费者）；判据函数住模块内且不导出：`grep -n "ledgerRowAt" thincoder-core/agent/write-gate.mjs` ≥ 1 命中 ∧ `grep -n "^export.*ledgerRowAt" thincoder-core/agent/write-gate.mjs` = 0 命中 ∧ 旧名全清 `grep -rn "ledgerOpenAt\|ledgerOpenWriteConflict" thincoder-core test` = 0 命中；本档 `grep -c "活批档"` = 1（唯一命中 = 本行判据句自身）· **扫描面 = `thincoder-core` + `test`（代码与测试面；设计档与本批档要逐字写这条判据，字面必然在，不进来）**：`grep -rn "liveBatchOpen" thincoder-core test` = 0 命中 · `grep -rn "agent/live-batch" thincoder-core test` = 0 命中 · `grep -rn "no live batch record" thincoder-core test` = 0 命中（旧拒文两条英文串随 `§2.10` 单源化同清；实测触发面 = `test/integration/batch-live-batch-lock.test.mjs` 三条断言与头注） |
 
-| R30 项目声明面（`§2.3` · 决策 40） | `bash` ∥ `memory` ∥ `execute` ∥ `manifest` 四把的 `parameters.properties` 有 `project`（描述 = `PROJECT_PARAM_DESC`，`required` 里没有它）；写盘七件的 schema 无 `project` 字段（目标路径即是声明）；**`git` 的 schema 同时无 `project` 与 `ledger` 两格**（不在入口集——决策 37）；`execute` ∥ `manifest` 带定位参数（`workdir` ∥ `target`）时 `project` 不参与判定（白盒：两者同给且指向不同项目 ⇒ 按定位参数判）；`grep -rn "PROJECT_PARAM_DESC" thincoder-core thincoder-vscode/src` 的镜像点 = `tools/bash.mjs` · `tools/execute.mjs` · `agent-tools/manifest.mjs` · `memory/memory-tool.mjs` · `vscode/src/tools/shell.mjs` 五处 + `thincoder-core/tools/shared.mjs` 定义处（描述单源，零手写副本） |
-| R31 判据点 = 声明，无效即拒（`§2.3` · 决策 41） | 见 R2 ⑥；另：项目声明解析的四态——路径不存在 ∥ 与会话锚无关键（平级目录 / 不含锚的更远祖先）∥ 相关但取不到带 manifest 的根 ∥ 根在而 manifest 不可用（后者落 ⑦ 那支）——都落 `declared project is not a project`，无一放行；**相关性两支各一格**：(a) 会话 cwd = `<本仓>/thincoder-cli`、声明 = 本仓根 + 在途号 ⇒ 放行；(b) 会话 cwd = 本仓根、声明 = `<本仓>/thincoder-core` ⇒ 归到本仓根放行；`grep -c 'scope: "out"' thincoder-core/agent/write-gate.mjs` = 0（放行臂不在盘） |
+| R30 项目声明面（`§2.3` · 决策 40） | `bash` ∥ `memory` ∥ `execute` ∥ `manifest` 四把的 `parameters.properties` 有 `project`（描述 = `PROJECT_PARAM_DESC`，`required` 里没有它）；写盘七件的 schema 有 `project` 一格（`§2.3.1` 窄口的声明面；目标取得到项目根时它不参与判定）；**`git` 的 schema 同时无 `project` 与 `ledger` 两格**（不在入口集——决策 37）；`execute` ∥ `manifest` 带定位参数（`workdir` ∥ `target`）时 `project` 不参与判定（白盒：两者同给且指向不同项目 ⇒ 按定位参数判）；`grep -rn "PROJECT_PARAM_DESC" thincoder-core thincoder-vscode/src` 的镜像点 = `tools/bash.mjs` · `tools/execute.mjs` · `agent-tools/manifest.mjs` · `memory/memory-tool.mjs` · `vscode/src/tools/shell.mjs` 五处 + `thincoder-core/tools/shared.mjs` 定义处（描述单源，零手写副本） |
+| R31 判据点 = 声明，无效即拒（`§2.3` · 决策 41） | 见 R2 ⑥；另：项目声明解析的四态——路径不存在 ∥ 与会话锚无关键（平级目录 / 不含锚的更远祖先）∥ 相关但取不到带 manifest 的根 ∥ 根在而 manifest 不可用（后者落 ⑦ 那支）——都落 `declared project is not a project`，无一放行；**相关性两支各一格**：(a) 会话 cwd = `<本仓>/thincoder-cli`、声明 = 本仓根 + 在途号 ⇒ 放行；(b) 会话 cwd = 本仓根、声明 = `<本仓>/thincoder-core` ⇒ 归到本仓根放行；`grep -c 'scope: "out"' thincoder-core/agent/write-gate.mjs` = 0（放行臂不在盘）；**窄口四条件**（`§2.3.1`）：目标取不到根 ∧ 目标在锚子树内 ∧ 锚下有带 manifest 的直接子目录 ∧ 有声明 ⇒ 按声明根判号放行；三条任一不成立照拒，且各落自己那句（④⑤ 两句新串，①②③⑥ 四支沿用旧串） |
 | R32 声明语义（`§2.3`） | `bash` 带 `project:<另一项目>` 跑 `process.cwd()` ⇒ 打印会话 cwd（执行目录未变）；`project:"<本仓>/thincoder-core/agent"`（项目内子目录）⇒ 归到本仓、放行；`project` 相对路径按会话 cwd 解析 |
 | R33 教学面同拍（`§2.3` · 决策 42） | 拒文含 `Pass project:` ∧ `ledger:"#N"` ∧ `In-flight rows in this project's ledger right now:` 三件；`thincoder-core/tool-docs/bash.md` ∥ `thincoder-core/tool-docs/execute.md` ∥ `thincoder-core/tool-docs/manifest.md` ∥ `thincoder-core/tool-docs/memory.md` 各含 `project` 一行与「纯声明」句；**`thincoder-core/tool-docs/git.md` 三处逐字不在**：`ledger` 行 ∥ `project` 行 ∥ 「Read-only actions do not need it: …」那一句（不在入口集 ⇒ 写型与只读不再分判，那一句留着就是教「写动作要号」）；**`thincoder-core/tools/git.mjs` 的 `parameters.properties` 无 `ledger` ∥ `project` 两键 ∧ `PROJECT_PARAM_DESC` 句内无 `git` ∧ `thincoder-core/tools/shared.mjs` 已无 `LEDGER_PARAM_DESC_GIT`**（零消费的判据整条退场，决策 32）；`test/RTM.md` 故事 12 含 12-12 / 12-13 / 12-14 三行；**无项目三形的清单单位**（各一句、与 `none` 互斥）= `unknown — no project on this call` ∥ `unknown — the declared project is not a project` ∥ `unknown — no project owns this write's target`；**`manifest` 的 `init` 自举面**：`manifest({action:"init", target:"<无 manifest 的新目录>"})` 不带项目、不带号 ⇒ 照跑、`PROJECT-MANIFEST.json` 落盘（不进本门）；另带有效 `project` 而祖先链仍取不到根 ⇒ 结果不变（照跑落盘——定位参数在场时 `project` 不参与判定，定位参数优先）；目标已有 manifest ⇒ 拒、拒文 = 工具自身那句 `init never overwrites`（不是本门拒文，清单单位不出现）；`init` 的 target 落在既有项目内（祖先链有 manifest）而 target 自身无 manifest ⇒ 本门照判（要号）——不带号 ⇒ 拒（`no ledger number on this call`）；`manifest({action:"write", …})` 不带号 ⇒ 仍拒（`no ledger number on this call`） |
+| R34 工作区根窄口（`§2.3.1`） | 四条件各一格：放行（声明 + 在途号）∥ 无声明拒 ∥ 号非在途拒 ∥ 目标在锚外拒 ∥ 锚下无子项目拒；拒文串逐字与 `§2.3.1` 拒文表相等 |
+| R35 写盘七件读 `project`（`§2.3.1`） | 七件 schema 各含 `project` 且不在 `required`；路径与 `project` 同给时按路径判（白盒：直调 `ledgerBindWriteConflict`）；`PROJECT_PARAM_DESC` 句内含七件适用条件 |
+| R36 决策 41 措辞改齐（`§2.3` ∥ `§4`） | `§4` 决策 41 正文同时含「不作…判哪个项目的账」与「定界来源」两句；`thincoder-core/agent/write-gate-ledger.mjs` ∥ `thincoder-core/agent/write-gate.mjs` 两档头的旧句 `grep -c` = 0（扫描面 = 代码面 + 测试面 + 本档，三面 `grep -c` 全 0——本档只写判据的语义，不写那句旧串） |
+| R37 新口子不吃旧拒文（`§2.3.1`） | 锚当项目传 ⇒ `declared project is not a project`；目标在锚外带合法声明 ⇒ 只落那句新串，两串各在其位、不互顶替；这三支的清单单位仍是既有 `unknown — …` 三句之一，不出现 `none` |
 
 ## 6. 用例表
 
@@ -1488,13 +1601,22 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 | 边界 | 会话 cwd = `<本仓>/thincoder-cli`，`bash({command:"git status", project:"<本仓根>", ledger:"#<本仓在途号>"})` | 放行——声明根含会话锚（相关性 (a) 支），命令执行并回输出 |
 | 错误 | 同一会话（cwd = `<本仓>/thincoder-cli`）`bash({command:"git status", ledger:"#<本仓在途号>"})` 不带 `project` | 拒，`no project on this call`，命令零执行 |
 | 错误 | `execute({code:"…"})` 既不带 `workdir` 也不带 `project`（工程模式 depth-0） | 拒，`no project on this call`，脚本零执行——不回落到会话 cwd |
+| 边界 | `write` 写工作区根的文件（目标不属任何项目），带 `project:"<该锚下一个子项目根>"` 与在途号 | 放行，字节落盘（`§2.3.1` 窄口） |
+| 错误 | 同上，但不传 `project` | 拒（`declared project is not a project`，清单单位 = `unknown — no project owns this write's target`）；字节零改 |
+| 错误 | 同上带 `project`，但目标在会话锚子树外 | 拒（`target is outside the session anchor's subtree — the workspace-root opening does not apply`） |
+| 错误 | 同上带 `project`，但锚下无带 manifest 的直接子目录（只有裸 git 仓） | 拒（`the session anchor carries no sub-project — the workspace-root opening does not apply`） |
+| 错误 | 工作区根目标 + `project` = 会话锚自身（无 manifest） | 拒（`declared project is not a project`）——新口子不吃旧拒文 |
+| 边界 | 目标在项目内（祖先链有 manifest），同时带另一个项目的 `project` | 按目标自己的项目根判（定位参数优先；`project` 不参与） |
 | 边界 | `execute({code:"…", workdir:"<另一项目仓>", project:"<本仓根>"})` | 按 `workdir` 判（定位参数优先），号要在那个仓的账上 |
 
 ## 7. 边界（本批不做）
 
+- **工作区窄口只开一格**（`§2.3.1`）：目标取不到项目根 ∧ 在会话锚子树内 ∧ 锚下有带 manifest 的直接子目录 ∧ 有声明；四条任一不成立照拒。不给工作区挂 manifest（`manifest` 的 workspace 判定与 `doc_check` 域表零改），也不枚举具体目录名。
+- **不加符号链接解析**（`§2.3.1`）：路径比较仍只走 `gateKey` 一枚坐标，不引 `realpathSync`。
+- **不动号的半边与四把声明支的口径**（`§2.3.1`）：`bash` ∥ `execute` ∥ `manifest` ∥ `memory` 的既有声明判据零改。
 - **设计门的判据点不动**：仍是会话锚（`thincoder-core/agent/dispatch.mjs` 的出辖放行零改）；本批只换写锁的判据点。
 - **不给 `bash` 加 cwd 语义**：`project` 是纯声明，不改执行目录。
-- **不给写盘七件加 `project`**：它们的目标路径即是声明，且恒在。`execute` ∥ `manifest` 的 `project` 只在定位参数缺位时被读（定位参数优先）；`project` 在这四把上一律是纯声明，不改执行目录。
+- **写盘七件的 `project` 只在目标取不到项目根时被读**（`§2.3.1` 条件 ④）：目标取得到项目根时以根为准、`project` 不参与判定——两处判据点不许同时生效。`execute` ∥ `manifest` 的 `project` 同理（定位参数缺位时才被读）；`project` 在这些工具上一律是纯声明，不改执行目录。
 - **不动**：`depth > 0` 守卫、普通模式、设计门位次、跨批档写锁与 D5 冻结窗。
 
 - 不做存量档回填（`§3` 词面 / 档头台账行）：已冻结档字节不动。
@@ -1528,6 +1650,13 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 回执与拒文面：本批改两处运行时串（`§2.5` 末两条，字面已定），无未定项。
 
 ## 9. 集成测试设计（RTM delta）
+
+**本批 delta（`§2.3.1` 工作区根窄口）——改一行 + 增一行**：
+
+- **改的行 = 12-5**：原断言是「目标在任项目之外 ⇒ 放行」（旧作用域论），已随决策 40 退场。本批改写为两半：无声明写工作区根目标 ⇒ 拒；带子项目声明 + 在途号写同一目标 ⇒ 放行。交互 = `write` 工具 ↔ 笔-账绑定判定 ↔ 工作区定界；业务可观察结果 = 声明与界都成立才放行；进入口 = 父侧工具调用（工程模式 depth-0）；服务条目 = R34。
+- **增的行 = 12-16**（12-15 现盘已占 = `manifest` 的 `init` 取根豁免支；故事 12 的下一个空号 = 12-16）：交互 = `write` 工具 ↔ 笔-账绑定判定（锚外与锚下无子项目两条路）；业务可观察结果 = 两种不成立各拒、拒文逐字点出哪一条不成立；**进入口 = 父侧 `write` 工具调用（工程模式 depth-0）**，与 12-5 同一入口；服务条目 = R34 ∥ R37。
+- **冗余的行 = 无**；**其余行零改**：号的四情形、`bash` 同判、子代理面、`manifest` ∥ `memory` 分层判据一字未动。
+- **套件规模**：总行数 +1。编号先落进 `test/rtm/guard.md` 的故事 12 那一节（本档不改 `test/`），再由实施轮写用例标题。
 
 **本批 delta（`§2.6.1` §3 写入闸）**：
 

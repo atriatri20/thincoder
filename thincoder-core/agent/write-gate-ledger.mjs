@@ -12,12 +12,21 @@
  * `gateKey` —— 故 `gateKey` 由本档导出；本档不 import 原档）。
  *
  * 判据全文与逐版沿革住原档档头（§2.3「写锁」条）——本档只承载实现，不重复那套说明。
+ *
+ * 2026-11-08 工作区根窄口批（设计档 §2.3.1）：目标沿祖先链取不到项目根时，判据不止「拒」一条路了——
+ * 四条同时成立（目标在会话锚子树内 ∧ 锚下有带 manifest 的直接子目录 ∧ 调用方显式声明 `project` ∧
+ * 声明本身解析得出根）⇒ 按声明根判号。实现面 = 本档 `workspaceRoot`；判据全文在**原档档头**那一节。
+ * 会破这条界（锚开始判「判谁的账」）的形只有一种——回落；门上没有那条臂。
  */
 import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
 // 项目根推导 + manifest 读面（写锁判据 · 2026-11-03 笔-账绑定批）：判据按**调用方声明的项目**问该根台账（§2.3）。
 // `MANIFEST_REL` = 「自身即带 manifest」那一支的判据（决策 41 的 (a) 支）。
 import { MANIFEST_REL, readManifest, resolveProjectRoot } from "../manifest.mjs"
+// 项目梯单源（定义处 = `thincoder-core/manifest-discovery.mjs`，`thincoder-core/manifest.mjs` 只是转口）：
+// 窄口条件 ③「锚下有带 manifest 的直接子目录」= `discoverProjects(锚)` 的 `kind` ∥ `matched` 两值，
+// 不新写目录扫描——本档是它的第二个消费面，不是第二份判据。
+import { discoverProjects } from "../manifest-discovery.mjs"
 // 工具自报触达面单源谓词（写锁的路径集由判据函数自己算——§2.3；与门禁 / 变更记账同一枚谓词）。
 import { toolTouchPaths } from "./helpers.mjs"
 
@@ -80,6 +89,11 @@ const caseNotInFlight = (no, status) => `row #${no} is ${JSON.stringify(String(s
  *  within the session anchor): "<path>"`）—— 声明与写盘目标两种申报形共用这一句：两者都没在每个被搜过的位置
  *  找到 manifest（写盘目标沿祖先链搜得更远，那句括注仍然为真）。 */
 const caseNotAProject = (p) => `declared project is not a project (no PROJECT-MANIFEST.json at this path or within the session anchor): ${JSON.stringify(String(p))}`
+/** 工作区根窄口的两句新拒文（设计档 §2.3.1 拒文表 ④∥⑤ 逐字）：口子没开成的时候要能读出**是哪一条没成立**——
+ *  两句分开写，合成一句就会把「目标在界外」读成「锚下没子项目」，两条修法完全不同。
+ *  ①②③⑥ 四支不新写：决策 41 的核心（声明缺 ∥ 声明无效 ⇒ 拒）一字没改，新口子不咬旧拒文。 */
+const caseOutsideAnchor = (p) => `target is outside the session anchor's subtree — the workspace-root opening does not apply: ${JSON.stringify(String(p))}`
+const caseNoSubProject = (p) => `the session anchor carries no sub-project — the workspace-root opening does not apply: ${JSON.stringify(String(p))}`
 
 /** 当下在途行清单（决策 38 的第三件）：`#N, #M …`；无 ⇒ `none`；超上限折 `… +K more`。 */
 function ledgerInFlightList(rows) {
@@ -206,13 +220,55 @@ function underKey(root, child) {
   return c === r || c.startsWith(r.endsWith("/") ? r : r + "/")
 }
 
+/**
+ * 工作区根窄口（设计档 §2.3.1 · 用户 2026-11-08 00:13 裁 B 形）：**目标取不到项目根时，换一个判据点。**
+ *
+ * 入参 = 目标绝对路径（已判过 `resolveProjectRoot` = null）+ 会话锚 + 调用方声明；出 = `{root}` 或 `{refusal}`。
+ * 判序按设计档那三步，**声明先于界**：声明本身不是项目时，谈「目标在不在锚子树内」没意义——先修声明。
+ *   ① 声明解析（`resolveDeclaredRoot`，既有零改）：路径不存在 ∥ 不是项目 ∥ 与锚无关键 ⇒ 落 `declared project is not a project`（旧串）
+ *   ② 目标在会话锚子树内（`underKey`，既有零改）⇒ 不成立落「锚外」那句（新串）
+ *   ③ 锚下有带 manifest 的直接子目录（`discoverProjects` 的 `kind` ∥ `matched`）⇒ 不成立落「锚下无子项目」那句（新串）
+ * 四条全中 ⇒ 判据点 = 声明解析出的项目根，号照原样判（号那半一字未改）。
+ *
+ * **锚在这里是界，不是账**：它只回答「目标在不在我这一层工作区」，不回答「判谁的账」——账仍由声明给（决策 41
+ * 的核心），所以没有声明这一支连口子都不进（条件 ④ 不成立）。
+ *
+ * 代价照写：路径比较沿用 `gateKey` 一枚坐标（不解析符号链接）——目标经锚内链接指向锚外时仍按字面路径算在界内。
+ * 另立一套 realpath 坐标系就会出现「路径判据说在界内、声明判据说在界外」。
+ *
+ * @param {string} target — 本笔写的目标绝对路径（已确认取不到项目根）
+ * @param {string} anchor — 会话锚（= `agent.cwd` 的 resolve 形）
+ * @param {string} declared — 调用方给的 `project`（非空；条件 ④ 不成立时本函数不被调用）
+ * @returns {Promise<{root: string}|{refusal: {caseText: string, listText: string}}>}
+ *   `refusal` 的两个字段直接喂 `ledgerNoProjectRefusal`（`<case>` + 清单单位成对出）
+ */
+async function workspaceRoot(target, anchor, declared) {
+  const resolved = await resolveDeclaredRoot(declared, anchor)
+  if (!resolved) {
+    return { refusal: { caseText: caseNotAProject(declared), listText: LIST_UNKNOWN_NOT_A_PROJECT } }
+  }
+  if (!underKey(anchor, target)) {
+    return { refusal: { caseText: caseOutsideAnchor(target), listText: LIST_UNKNOWN_TARGET_NOT_A_PROJECT } }
+  }
+  const found = discoverProjects(anchor)
+  if (!(found.kind === "workspace" && found.matched === "manifest")) {
+    return { refusal: { caseText: caseNoSubProject(target), listText: LIST_UNKNOWN_TARGET_NOT_A_PROJECT } }
+  }
+  return { root: resolved.root }
+}
+
 /** 本笔的判据点（设计档 §2.3「判据点怎么来」· 决策 40）：**只有两个来源，都来自调用方**——
  *  ① 该工具自带的定位参数：写盘七件的目标路径（`toolTouchPaths`）· `execute.workdir` · `manifest.target`；
  *  ② 新参数 `project`（项目根绝对路径，纯声明）。**定位参数优先**，`project` 只在定位参数缺位时被读。
- *  **会话锚永不充当判据点**（决策 41）：`bash` ∥ `memory` 没有定位参数，缺 `project` 即拒；
+ *  **会话锚不作判据点**（决策 41）：`bash` ∥ `memory` 没有定位参数，缺 `project` 即拒；
  *  `execute` ∥ `manifest` 缺定位参数时同样不回落到 cwd。
  *  三种结果：`{ paths }`（按路径所属项目判）· `{ declared }`（按声明取根）· `{ none: true }`（无判据点 ⇒ 拒）；
- *  写盘工具连路径都没有 ⇒ null（工具自己拒，本门不问）。 */
+ *  写盘工具连路径都没有 ⇒ null（工具自己拒，本门不问）。
+ *
+ *  **写盘七件额外带 `fallbackDeclared`（2026-11-08 窄口批 · 设计档 §2.3.1）**：它们的定位参数是一个个目标，
+ *  「取不取得得到根」要逐目标才知道（本函数不算），所以声明只随行不生效——某目标取不到根时它在判序里补位，
+ *  取得到根时它不参与（定位参数优先）。用另一个键名而不是复用 `{ declared }`：两个分支的判据不同（那里是
+ *  「只有声明」，这里是「声明挂在路径后面」），同名会让分支判断分不开。 */
 function ledgerGateTargets(agent, toolName, tool, args) {
   const cwd = resolve(agent?.cwd ?? ".")
   const asAbs = (p) => (typeof p === "string" && p.trim() ? resolve(cwd, p) : null)
@@ -230,7 +286,7 @@ function ledgerGateTargets(agent, toolName, tool, args) {
   const paths = toolTouchPaths(tool, args)
     .filter((p) => typeof p === "string" && p.trim())
     .map((p) => resolve(cwd, p))
-  return paths.length === 0 ? null : { paths }
+  return paths.length === 0 ? null : { paths, fallbackDeclared: declared }
 }
 
 /** 本笔是否需要号（工具自己的枚举判写型——不解析命令字面，决策 36 的禁令不碰）：
@@ -293,8 +349,13 @@ function ledgerRowRefusal(parsed, at) {
  * **判据点 = 调用方声明的项目**（2026-11-03 项目声明面批 · 决策 40）：会话锚可以是容器根 / 工作区根，
  * 拿它当判据点时那种形态下本门永不设防（实机：2026-11-03 02:53 重启后 `bash` 不带号照放行）。
  * 现在只有两个来源、都来自调用方：① 工具自带的定位参数；② `project`（项目根绝对路径）。
- * **会话锚永不充当判据点**（决策 41）：声明缺位 ⇒ `no project on this call`；声明无关键或取不到根 ⇒
+ * **会话锚不作判据点**（决策 41）：声明缺位 ⇒ `no project on this call`；声明无关键或取不到根 ⇒
  * `declared project is not a project`——没有「推不出 ⇒ 门不管」那条臂。
+ *
+ * **窄口（2026-11-08 工作区根批 · 设计档 §2.3.1）**：写盘七件的目标取不到项目根时，四条同时成立（目标在
+ * 会话锚子树内 ∧ 锚下有带 manifest 的直接子目录 ∧ 本笔显式声明了 `project` ∧ 声明解析得出根）⇒ 判据点
+ * 换成声明根。**锚在这里仍是界**：它回答「目标在不在我这一层工作区」，不回答「判谁的账」——所以没有声明
+ * 这一支连口子都不进；也没有任何「不声明就放过」的默认。
  *
  * 与既有「工程模式父侧门」（同 Phase 1 的设计门，非读取路径按面判拒）是**两件事**：前门问「设计做没做」，
  * 本锁问「这笔写替哪条在途行服务」。所以并列、不替换。
@@ -340,11 +401,23 @@ export async function ledgerBindWriteConflict(agent, depth, tool, toolName, args
   // ③ 定位参数形式：每个目标按自己的祖先链取根（一笔写跨两个项目 ⇒ 号要在每个项目的账上各查到）。
   // `init` 的取根豁免（决策 43 · 条件形）：目标沿祖先链取不到项目根 ⇒ 不进本门（无账可问）；
   // 取得到根（含既有项目内的子目录自举）⇒ 照判要号，目标自身已有 manifest 时门过后由工具自身拒。
+  // 取不到根 ∧ 有声明 ⇒ 先试窄口（设计档 §2.3.1）；无声明 ⇒ 既有那句拒（决策 41 的核心未动）。
+  // 豁免位次仍在窄口之前：`init` 的合法落点就是「尚无 manifest 的目录」，窄口不为它开新臂。
   for (const p of claim.paths) {
     const root = resolveProjectRoot(p)
     if (!root) {
       if (String(args?.action ?? "") === "init") return null
-      return { target: p, message: ledgerNoProjectRefusal(caseNotAProject(p), LIST_UNKNOWN_TARGET_NOT_A_PROJECT) }
+      if (!claim.fallbackDeclared) {
+        return { target: p, message: ledgerNoProjectRefusal(caseNotAProject(p), LIST_UNKNOWN_TARGET_NOT_A_PROJECT) }
+      }
+      const opening = await workspaceRoot(p, cwd, claim.fallbackDeclared)
+      if (opening.refusal) {
+        return { target: p, message: ledgerNoProjectRefusal(opening.refusal.caseText, opening.refusal.listText) }
+      }
+      const opened = await ledgerRowAt(opening.root, parsed.no ?? null, cache)
+      const openedMessage = ledgerRowRefusal(parsed, opened)
+      if (openedMessage) return { target: p, message: openedMessage }
+      continue
     }
     const at = await ledgerRowAt(root, parsed.no ?? null, cache)
     const message = ledgerRowRefusal(parsed, at)
