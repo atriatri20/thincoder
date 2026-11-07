@@ -19,9 +19,6 @@ import { t } from "../i18n.mjs"
 import { refreshBlock, noteChunk } from "./activity-view.mjs"
 import { applyPin, createPinWatch } from "../scroll.mjs"
 
-/** 近底阈再出口保名（**唯一数值源** = 核 `../scroll.mjs`——消费面零改；KD-RC-8 ④ 收正）。 */
-export { NEAR_BOTTOM_PX } from "../scroll.mjs"
-
 /** 建子代理块（`details.advisor-block.sub-block.sub-live` + data 面 + toggle 监听 + 首刷）。`model` 须含
  *  `{ key, label, role, id }`（态机 `born` / `takeover` 路径产出）；块元素持 `_subMeta = model`。 */
 export function renderSubBlock(model) {

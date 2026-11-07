@@ -7,6 +7,7 @@
 import { ctx } from "./state.js"
 import { t } from "./i18n.js"
 import { scrollDown, initScrollFollow } from "./ui.js"
+import { nearBottom } from "../node_modules/@thincoder/render-core/scroll.mjs"
 
 initScrollFollow(ctx)
 
@@ -28,7 +29,9 @@ window.addEventListener("resize", positionScrollBottomBtn)
 
 export function updateScrollBottomVisibility() {
   const el = ctx.messagesEl
-  const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+  // 非近底判据 = 核 `nearBottom`（与 pin 同一把尺——阈按视口比例，算式单源 = 核
+  // `nearBottomThreshold`；本端自持的旧像素阈已退场，钮与 pin 不再各持一数）。
+  // `scrollable` 判的是「能不能滚」，与「离底多远」是两个量——并进来可滚判定就会随阈值漂。
   const scrollable = el.scrollHeight > el.clientHeight + 40
-  scrollBottomBtn.classList.toggle("visible", scrollable && !nearBottom)
+  scrollBottomBtn.classList.toggle("visible", scrollable && !nearBottom(el))
 }

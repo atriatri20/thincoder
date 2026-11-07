@@ -1,8 +1,9 @@
 /**
  * chat-scroll.mjs — 对话流滚动面（`docs/desktop/design/RENDERER.md` §1.1 第二形 / §3 · `docs/desktop/design/UI.md` §2）：
  * 常量单源 + 四条纯判据 + `attachScroll` 接线面。滚动容器 = `[data-slot="flow"]` 宿主自身（KD-1：零额外层级）。
- *   ① 常量单源（`FOLLOW_PX`（= 核工厂 `NEAR_BOTTOM_PX` 再出口保名）/ `BACKFILL_PX` / `SMOOTH_MS` /
- *      `MAX_RENDER_BLOCKS`）——别处只引用不复写；近底判据 ∕ 写门 = **核抽核件 `/rc/scroll.mjs` 工厂消费**
+ *   ① 常量单源（`BACKFILL_PX` / `SMOOTH_MS` / `MAX_RENDER_BLOCKS`）——别处只引用不复写；近底判据 ∕
+ *      写门 = **核抽核件 `/rc/scroll.mjs` 工厂消费**（阈 = 视口比例——算式单源 = 核 `nearBottomThreshold`；
+ *      本端零自持像素常量）
  *      （2026-09-29 留端清算 ∕ 批 `docs/batches/2026-09-29-desktop-rebuild-fidelity.md` §2.5——`nearBottom` ∕ `applyPin`）；
  *   ② `scrollAction(metrics, guards)`：序 backfill → follow → unfollow（触顶回填优先于贴底判）；
  *   ③ `compensateTop`（帧尾视口补偿算式）/ `nextWindow`（限增宽窗 = 现限 + 本页**实并入块数**）/ `smoothWindowOpen`（平滑窗判据）；
@@ -15,9 +16,6 @@
  * （`root` 只取三读数 + `addEventListener` / `scrollTo`）⇒ 假 root 可注入。
  */
 import { applyPin, nearBottom } from "/rc/scroll.mjs"
-
-/** 近底阈再出口保名（**唯一数值源** = 核工厂 `NEAR_BOTTOM_PX`——消费面零改；判据漂移 = 缺陷）。 */
-export { NEAR_BOTTOM_PX as FOLLOW_PX } from "/rc/scroll.mjs"
 
 /* 回填触发阈 —— VSC `applyHistoryPage`（`scrollTop > 40` 即不取 ⇒ 触顶 ≤ 40px 取页）逐值。 */
 export const BACKFILL_PX = 40

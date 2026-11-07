@@ -1,7 +1,8 @@
 /**
  * scroll.mjs — 滚动策略族（**核抽核件** · 一处实现四件；单源 = `docs/render-core/design/RENDER-CORE.md`
  * §2 KD-RC-8 ④ ∕ §5「滚动策略族」——2026-09-29 留端清算 ∕ 批 `docs/batches/2026-09-29-desktop-rebuild-fidelity.md`）：
- *   ① **判据**：`NEAR_BOTTOM_PX`（**唯一数值源**）· `nearBottom(el)`（三读数归一 + 严格小于）；
+ *   ① **判据**：`nearBottomThreshold(clientHeight)`（**唯一算式源**：比例阈 + 24px 下限）· `nearBottom(el)`
+ *      （三读数归一 + 视口比例阈 + 严格小于）；
  *   ② **写门**：`applyPin(el, gate)`（旗标门 `!== false` ⇒ 写 `scrollTop = MAX`——超值不读 `scrollHeight`；写口单源）；
  *   ③ **旗标维护**：`createPinWatch(el, opts)`（旗标宿主 = `holder`（缺省 = `el`）——近底无条件翻真（自愈）＋
  *      近底回调；远离底 ⇒ 手势门（`gestureGateMs`）内手势翻假（块 = 600 沿 KD-RC-8 让位三律）∥ `gestureGateMs = 0`
@@ -13,9 +14,23 @@
  * 本档零 `node:` ∕ 零裸包 ∕ 纯 DOM 面（`el` 只取三读数与 `addEventListener` / `removeEventListener` ⇒ 假件可注入）。
  */
 
-/** 近底阈（**唯一数值源**——核 `subblocks/block.mjs` ∕ 桌面 `views/chat-scroll.mjs`（`FOLLOW_PX`）皆再出口保名）。
- *  判据逐字同式 = `scrollHeight − scrollTop − clientHeight < 24`（**严格小于**——恰阈不判近底）。 */
-export const NEAR_BOTTOM_PX = 24
+/** 近底阈的两件参数（单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-16 ∥ §5 条 5）；
+ *  **算式只在本档写一次**（`nearBottomThreshold`），消费端只引用、别处不得另算。
+ *  - `NEAR_BOTTOM_RATIO` = 半个视口：固定像素是绝对量（同一偏移量小视口下是「差一屏」、大视口下只是
+ *    「挪了一点」），「离开底部」的稳定口径只有比例。
+ *  - `NEAR_BOTTOM_MIN_PX` = 下限：用户口径是「**至少**」偏离半视口再锁定，而一个下限自己不能再被视口
+ *    压小；零读数 ∥ 未挂载输入下算式也须给出有限正数。 */
+export const NEAR_BOTTOM_RATIO = 0.5
+export const NEAR_BOTTOM_MIN_PX = 24
+
+/** 近底阈 = `max(NEAR_BOTTOM_MIN_PX, clientHeight × NEAR_BOTTOM_RATIO)`（**唯一算式源**）。
+ *  **入参自带归一**：非有限数（`NaN` ∥ `±Infinity` ∥ 缺 ∥ 非数）归 0；负数不是非有限数、原样通过由
+ *  `max` 兜住 ⇒ 返回值恒为有限值 ≥ 24（导出件对自己的入参成立——否则每个未来消费方都得自兜）。
+ *  视口 ≥ 48px 时恒等于视口的一半，下限不参与。 */
+export function nearBottomThreshold(clientHeight) {
+  const height = Number.isFinite(clientHeight) ? clientHeight : 0
+  return Math.max(NEAR_BOTTOM_MIN_PX, height * NEAR_BOTTOM_RATIO)
+}
 
 /** 三读数归一（缺 ∕ 非数 ⇒ 0——零读数 ⇒ 高度差 0 ⇒ 判近底，不误判停跟）。 */
 function metricsOf(source) {
@@ -24,10 +39,11 @@ function metricsOf(source) {
   return { scrollTop: read(metrics.scrollTop), scrollHeight: read(metrics.scrollHeight), clientHeight: read(metrics.clientHeight) }
 }
 
-/** 近底判据（四载体同式）：三读数归一 + 严格小于。`el` 缺 ∕ 非对象 ⇒ 归一零读数（判近底——不误判停跟）。 */
+/** 近底判据（四载体同式）：三读数归一 + 视口比例阈 + 严格小于（恰阈不判近底）。
+ *  `el` 缺 ∕ 非对象 ⇒ 归一零读数（判近底——不误判停跟；阈落 24px 下限）。 */
 export function nearBottom(el) {
   const { scrollTop, scrollHeight, clientHeight } = metricsOf(el)
-  return scrollHeight - scrollTop - clientHeight < NEAR_BOTTOM_PX
+  return scrollHeight - scrollTop - clientHeight < nearBottomThreshold(clientHeight)
 }
 
 /** 旗标门写口（写口单源）：门 `!== false` ⇒ 写 `scrollTop = MAX`（超值不读 `scrollHeight`——引擎自鉗底）；
