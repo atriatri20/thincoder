@@ -52,12 +52,22 @@ function declaredBases(cwd) {
   return man.ok ? docRootPaths(man.manifest?.docRoot?.batches, base) : []
 }
 
-/** 批次档基底根数组（**声明面单源**——create / 在飞扫描 / 锚定判据共用）：manifest `docRoot.batches`
+/**
+ * 批次档基底根数组（**声明面单源**——create / 在飞扫描 / 锚判的面判共用）：manifest `docRoot.batches`
  *  （串 | 多根数组）→ 声明基底；缺失 / 非法 ⇒ 回退默认基底 `"docs/batches"`（恒返回非空数组）。
  *  **工作区锚**（条 5）⇒ 候选项目基底**并集**（候选按名排序、并集保序）——在飞扫描 / 写门基底集同取此值。
+ *  **注入形**（`{ manifest }` 可选——`thincoder-core/doc-check/index.mjs` 的组根调用吃它）：引擎已按组根
+ *  读过一次 manifest，这里不再重读（每根一次读）；缺省仍自读，既有调用零改。注入只换读取来源，
+ *  形态判据与回退支零改（manifest 是 `readManifest` 的返回值，`ok:false` 照走缺省回退——降级不静默）。
  *  @param {string} cwd
+ *  @param {{manifest?:{ok:boolean, manifest?:object|null}}} [injected] 引擎已读的那份（可选）
  *  @returns {string[]} */
-export function batchDocBases(cwd) {
+export function batchDocBases(cwd, injected = {}) {
+  const man = injected?.manifest
+  if (man) {
+    const roots = man.ok ? docRootPaths(man.manifest?.docRoot?.batches, cwd) : []
+    return roots.length ? roots : [resolve(docRootBase(cwd), "docs/batches")]
+  }
   const ws = workspaceCandidates(cwd)
   if (ws) {
     const union = []

@@ -99,12 +99,14 @@ fenced-block coordinate raises the inventory count without ever entering a verdi
 
 It cannot — in `report` mode — write anything, gate anything, or turn a finding into a refusal.
 
-Arguments — `target` (optional): the **declared root** for this call, not one coordinate system for the whole list.
+Arguments — `target` (required): the **declared root** for this call, not one coordinate system for the whole list.
 Each document is judged against its own project root — the nearest ancestor holding `PROJECT-MANIFEST.json`.
 
 `target` supplies only two things: the base for relative `docs` entries, and the root for a document whose ancestor chain holds no manifest.
 
-It defaults to the session anchor. A plain directory or a multi-project workspace is a legal value and is judged as given; only a relative `target` that matches several existing directories is refused as ambiguous.
+Pass the project root you mean — omitting it is refused (the session anchor is the base for relative `docs` entries, not a default).
+
+A plain directory or a multi-project workspace is a legal value and is judged as given; only a relative `target` that matches several existing directories is refused as ambiguous.
 
 `mode` (optional) — `report` (default: a non-gating report over the documents you list) or `gate` (the delivery gate below).
 `docs` (required) — the documents to judge, as paths relative to the project root or absolute; each is judged whole and nothing

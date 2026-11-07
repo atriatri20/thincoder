@@ -39,8 +39,8 @@ import { checkAnchors } from "./anchors.mjs"
 import { collectLineRefs, lineRefsBlock } from "./line-refs.mjs"
 // 跨仓引用一行读数的文案骨架（单源 = 统一解析层；本档只把它摆进报面）。
 import { crossRepoNote } from "../path-resolve.mjs"
-// 取根判据本体（单源 = `thincoder-core/manifest.mjs` 的转口；判据式见下面 `rootOf`）。
-import { owningProject } from "../manifest.mjs"
+// 域表的一次读（§2.5 KD-7）∥ 取根判据本体（转口单源 = `thincoder-core/manifest.mjs`；判据式见下面 `rootOf`）。
+import { readManifest, owningProject } from "../manifest.mjs"
 
 /** 判据参数（内置常量 · 冻结）：阈值 300 字符（一段 ∥ 一行同值——§3.18 ④）；两项空列表 = 区带类 / 豁免类默认值且恒空
  *  ——豁免谓词（表行 / 围栏 / 列表项 / 引文）住代码，没有「登记后放过」的写入口（空列表 ≠ 可登记豁免）。
@@ -249,6 +249,23 @@ function resolveRange(base, docs) {
 /** 无声明根那一行的头句（§2.4 逐字）——政策，不是公式的推论。 */
 const NO_ROOT_HEAD = "本次没有声明根：声明根是这条判据的调用前置，缺它整清单不判（不出半份判定）"
 
+/** 域表读数块的**句形单源**（§2.5 读数口径——块首行 ∥ 无 manifest 根那一行，逐字）：
+ *  报面（本档 `report` 支）∥ 用例断言（本批单元测试档）同取这两条——两处各写一份字面，改一处必漂一处。
+ *  **出场条件两支**（与设计 §2.5 ∥ KD-8 逐字同源）：「本次读到域表的根集 ≠ {声明根}」**或任一根无 manifest**
+ *  ——单项目锚下根集恰是声明根且该根有 manifest ⇒ 两支皆假 ⇒ 零出（单项目零回归的判据面）。 */
+const DOMAIN_TABLE_HEAD = (n, withMan, without) => `域表读数：${n} 根（读 manifest ${withMan} · 无 manifest ${without}）`
+const DOMAIN_TABLE_EMPTY = "无 PROJECT-MANIFEST.json —— 域表为空（批档面互引照判 · 同名候选零提示）"
+
+/** 域表读数块（§2.5 读数口径 · 仅 `report` 面 · 不进 `hits`、不动 verdict）：
+ *  块首行 = 读了几根哪几态；逐根一行（无 manifest 的根写明空域表——降级可见，不静默）。
+ *  `roots` = 本次参与判定的根（升序）；`read` = 同序的对位布尔（该根读到了 manifest）。 */
+function domainTableBlock(roots, read) {
+  const withMan = read.filter(Boolean).length
+  const out = [DOMAIN_TABLE_HEAD(roots.length, withMan, roots.length - withMan)]
+  roots.forEach((root, i) => out.push(`  ${root}${read[i] ? "        读 manifest" : `        ${DOMAIN_TABLE_EMPTY}`}`))
+  return out
+}
+
 /** 无声明根的**逐档点名**（§2.4 · 三式逐字照抄，不合并成一句）：
  *  ① 绝对路径条目、祖先链有 manifest ⇒ 说「本档本可归 `<该根>`」；
  *  ② 绝对路径条目、祖先链至盘根无 manifest ⇒ 说「祖先链至盘根无 PROJECT-MANIFEST.json」；
@@ -286,6 +303,7 @@ function noRootOutcome(items) {
     lineRefs: { body: [], fenced: [], total: 0, unreadable: [] },
     batchFaceRefs: 0,
     projectRoots: [],
+    domainTables: [],
   }
 }
 
@@ -514,9 +532,12 @@ function gateReport({ lay, docsSource, checkFiles, skipped, unreadable, anchors,
  * @returns {{report:string, hits:{total:number, anchors:number, paragraph:number, lineRefs?:number}, anchorHits:Array,
  *   paragraphHits:Array, lineRefHits:Array, files:string[], checkFiles:string[], paragraphMax:number,
  *   skipped:{missing:string[], notMarkdown:string[]}, unreadable:string[], lineReads:{file:string, lines:number, tier:'hard'|'soft'|null}[],
- *   lineRefs:{body:Array, fenced:Array, total:number, unreadable:string[]}, batchFaceRefs:number, projectRoots:string[]}}
+ *   lineRefs:{body:Array, fenced:Array, total:number, unreadable:string[]}, batchFaceRefs:number, projectRoots:string[],
+ *   domainTables:{root:string, manifest:boolean}[]}}
  *   `lineRefs` = 行号坐标的采集结果，**两个问法返回同一份**（同一次采集）。
  *   `projectRoots` = 参与判定的根（升序；§2.3）。**消费者只有两处**：报面的根清单行（≥2 根才出）与本批用例的断言。
+ *   `domainTables` = 域表读数（§2.5：每组一根、按路径升序；`manifest` = 该根读到了 manifest）。
+ *   **消费者只有两处**：`report` 面的域表读数块与本批用例的断言——不进 `hits`、不改 verdict（`gate` 面零改）。
  *   `batchFaceRefs` = 面判剔除的 token 数（批档面互引不判——读数，**不进 `hits`**、不改 verdict；只有 `report` 面报面出这一行）。
  *   `lineReads` = 读数面结果（给了 `lines` 才有内容；`gate` 面恒空——该面带 `lines` 直接抛错）。
  *   它**不进 `hits`**（不是命中），也不改 verdict、不改跳过行与读面行。
@@ -570,8 +591,15 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
   const { paragraphMax, lineMax, paragraphExemptZones } = DOC_CHECK_BUILTINS
   // 判域（§2.2）：按档定根、逐组判——判法内部（抽取式 ∥ 解析序 ∥ 面判）一字不动，改的只是喂进去的根。
   // 单组不并组：结果与次序就是逐档一次的既有形（零回归 = 报面逐字相等的前提）。
+  // 域表（§2.5 KD-7）：**每组只读一次 manifest**，锚判与批档基底都吃这一份（注入形——缺省自读支留给直调判法的夹具）；
+  // 读不到 manifest（组根无档 ∥ 声明根是普通目录 ∥ 工作区）⇒ 空域表、向严判，不静默（读数面写明）。
   const groups = perRootGroups(checkFiles, base)
-  const perGroup = groups.map((g) => ({ root: g.root, res: checkAnchors(g.root, { files: g.files }) }))
+  const domainTables = groups.map((g) => {
+    let man
+    try { man = readManifest(g.root) } catch { man = { ok: false } }
+    return { root: g.root, ok: !!man?.ok, manifest: man }
+  })
+  const perGroup = groups.map((g, i) => ({ root: g.root, res: checkAnchors(g.root, { files: g.files, manifest: domainTables[i].manifest }) }))
   const anchors = groups.length === 1
     ? perGroup[0].res
     : mergeAnchors(perGroup, new Map(checkFiles.map((f, i) => [f, i])))
@@ -602,6 +630,11 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
     lineRefs,
     // 参与判定的根（升序）：报面根清单与用例断言两处消费（§2.3／§3）
     projectRoots,
+    // 域表读数（§2.5）：每组一根、按路径升序；`manifest` = 该根读到了 manifest。消费者 = 报面读数块与用例断言。
+    domainTables: domainTables
+      .slice()
+      .sort((a, b) => (a.root.toLowerCase() < b.root.toLowerCase() ? -1 : a.root.toLowerCase() > b.root.toLowerCase() ? 1 : 0))
+      .map(({ root, ok }) => ({ root, manifest: ok })),
   }
   if (gate) {
     // `gate` 面：第三条判据的**正文面**计入 `hits` 与 `hits.total`（三数之和）；围栏内只作读数（不进 `hits`）。
@@ -627,6 +660,13 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
   out.push(...bucketLines(lay, unreadable, unreadableHead))
   // 读数块：位置 = 读面行之后、行号坐标清单块之前（末行恒是 `结论：…`；读数不抢它的位）
   if (lineReads.length) out.push(...lineReadBlock(base, lineReads))
+  // 域表读数块（§2.5 · 仅 `report` 面）：出场条件两支——「本次读到域表的根集 ≠ {声明根}」或任一根无 manifest；
+  // 单项目锚下根集恰是声明根且该根有 manifest ⇒ 零出（单项目零回归的判据面，AC-2）。
+  {
+    const read = domainTables.map((d) => d.ok)
+    const rootSetDiffers = projectRoots.length !== 1 || pathKey(projectRoots[0]) !== pathKey(base)
+    if (rootSetDiffers || read.some((r) => !r)) out.push(...domainTableBlock(projectRoots, read))
+  }
   // 批档面留痕（面判的读数）：位置 = 清点块之上、末行结论句之前；0 也出（0 与「没扫」不得同形）
   out.push(batchFaceLine(anchors.batchRefs ?? 0))
   // 清单块位置 = 命中区之后、末行 `结论：…` 之前（报面的末行恒是结论句，清单不抢它的位）。

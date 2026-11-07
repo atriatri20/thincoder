@@ -102,8 +102,8 @@ test('CLI 29-1 父侧 batch append：裸档名定位批档 ⇒ 写入落盘，�
   assert.match(readFileSync(join(root, "docs/batches/2026-11-02-bare.md"), "utf8"), /bare-ref\.md 这一笔已核对/, "文本已落盘")
 })
 
-// ── 29-2 同一句报明：三面（批档 / 台账 / 文档门）在工作区锚下都拒 + 列候选 ──────
-test('CLI 29-2 工作区锚：批档 / 台账 / 文档门三面同一句报明形——拒 + 候选全列', { timeout: 60_000 }, async (t) => {
+// ── 29-2 各一笔报明：三面（批档 / 台账 / 文档门）在工作区锚下都拒（文档门面 = 点名 `target`） ─────
+test('CLI 29-2 工作区锚：批档 / 台账 / 文档门三面各一笔报明形——拒（文档门面 = 点名 `target`）', { timeout: 60_000 }, async (t) => {
   const ws = mkdtempSync(join(tmpdir(), "pr-int-ws-"))
   TMP.push(ws)
   for (const name of ["pa", "pb"]) {
@@ -126,17 +126,17 @@ test('CLI 29-2 工作区锚：批档 / 台账 / 文档门三面同一句报明�
     (e) => /未找到项目根/.test(e.message) && /下辖候选项目：.*pa.*pb/.test(e.message),
     "台账面拒 + 候选全列",
   )
-  // ③ 文档门：target 未指名 + 工作区锚 ⇒ 报明候选（gate 面 ERROR + 候选行）
+  // ③ 文档门：`target` 必填——不传 ⇒ 拒、报文点名 `target`（不再走歧义支：首行不是 gate ERROR 串）
   const gate = String(docCheck.execute({ mode: "gate", docs: [] }, ctx0(ws)))
-  assert.match(gate, /DOC-CHECK GATE: ERROR（多项目工作区：请指名 target）/)
-  assert.match(gate, /候选：.*pa.*pb/, `文档门报候选全列，实际：${gate}`)
+  assert.match(gate, /^doc_check: `target` is required/, `文档门面拒、报文点名 target，实际：${gate}`)
+  assert.doesNotMatch(gate, /DOC-CHECK GATE: ERROR（多项目工作区：请指名 target）/, `target 必填后不再走歧义支，实际：${gate}`)
 })
 
 // ── 29-3 文档门：裸档名不在任何基根 ⇒ 报「缺哪一段」+ 同名候选 ───────────────
 test('CLI 29-3 文档门判档：裸名两层基根零命中 ⇒ 报缺哪一段 + 同名候选（"你是不是指这个"）', { timeout: 60_000 }, async (t) => {
   const root = makeProject({ "docs/core/design/modules/域/guide-topic.md": "# 深处的档\n\n正文。\n" })
   put(root, "docs/core/design/prose.md", "# 正文面\n\n去读 guide-topic.md 那份。\n")
-  const report = String(docCheckTool.execute({ mode: "report", docs: ["docs/core/design/prose.md"] }, ctx0(root)))
+  const report = String(docCheckTool.execute({ mode: "report", docs: ["docs/core/design/prose.md"], target: root }, ctx0(root)))
 
   assert.match(report, /✗ 锚·档缺 docs\/core\/design\/prose\.md:3/, `命中原行，实际：${report}`)
   assert.match(report, /缺「guide-topic\.md」/, `报缺的那一段，实际：${report}`)
@@ -161,7 +161,7 @@ test('CLI 29-4 文档门判跨仓引用：已声明仓名零命中（盘上无�
     "",
   ].join("\n"))
 
-  const report = String(docCheckTool.execute({ mode: "report", docs: ["docs/core/design/refs.md"] }, ctx0(proj)))
+  const report = String(docCheckTool.execute({ mode: "report", docs: ["docs/core/design/refs.md"], target: proj }, ctx0(proj)))
   assert.doesNotMatch(report, /✗ 锚·档缺/, `跨仓形零命中（写作被放行），实际：${report}`)
   assert.match(report, /仓「thin2」的 docs\/guide\.md（声明源引用，未校验存在性）/, `已声明形一行读数，实际：${report}`)
   assert.match(report, /引用外部仓「otherside」——引用外部仓须先在 index\.publicRepos 声明/, `未声明形报须先声明，实际：${report}`)
@@ -171,7 +171,7 @@ test('CLI 29-4 文档门判跨仓引用：已声明仓名零命中（盘上无�
 // ── 29-5 形态错的跨仓引用：文档面仍阻断；改台账面 ⇒ 硬拒（KD-10 的可见差）──
 test('CLI 29-5 形态错的跨仓引用：文档门仍判缺（阻断）；同输入改台账面 ⇒ 硬拒', { timeout: 60_000 }, async (t) => {
   const root = makeProject({ "docs/core/design/bad-form.md": "# 形态错\n\n借道：thin2/../escape.md\n" }, ["thin2"])
-  const report = String(docCheckTool.execute({ mode: "report", docs: ["docs/core/design/bad-form.md"] }, ctx0(root)))
+  const report = String(docCheckTool.execute({ mode: "report", docs: ["docs/core/design/bad-form.md"], target: root }, ctx0(root)))
   assert.match(report, /✗ 锚·档缺 docs\/core\/design\/bad-form\.md:3/, `形态错仍阻断，实际：${report}`)
   assert.doesNotMatch(report, /跨仓引用：/, `形态错不落 crossRepo，实际：${report}`)
 

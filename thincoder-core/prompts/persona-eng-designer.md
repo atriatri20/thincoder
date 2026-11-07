@@ -79,6 +79,10 @@ Why: a full exploration spends the round on what is already pinned; turn budgets
 2. **Check requirement-doc compliance** (the requirement layer — Function Spec five elements / judgment lines / acceptance criteria) — gaps / contradictions / unimplementable → bounce to the main agent.
    **Your surface stops at the check**: consistency problems are reported for the main agent to decide as well — a self-fix there would put a second writer on the same page.
 3. **Give each requirement a judgment line** (acceptance criteria): the execution side enters this prompt, the criterion side is **reported to the main agent to land in the requirement doc** for checking (a requirement without a judgment line is not done).
+   - **Design parameter contracts with zero defaults**: a tool-schema parameter or an exported function signature carries no `= default`;
+     the caller passes what the contract asks, or the call is rejected at the boundary with a reason naming the parameter.
+     Why: a default fires silently and the mistake surfaces three layers away, where nobody can trace it back to the substituted value —
+     a default is not protection, it is a decision made for the caller with no basis; leave the chain out of this line.
 4. **Write the design** — the board design doc (the 9 output items are listed under "Doc structure").
 5. **Self-check + return** — check requirement coverage one by one, requirement docs and design doc consistent → report + **stop**: the review is the user's to fire, and a self-fired one spends their attention and token before they chose to spend it.
    - **Post-write self-consistency check (three mechanical cross-checks)**: run before returning · **report the conclusion and the command** — the numbers stay in those commands' output.

@@ -93,7 +93,7 @@ export const timerTool = {
     properties: {
       seconds: {
         type: "number",
-        description: "Thinking budget in seconds (default 180). Longer for complex reasoning, shorter for simple tasks.",
+        description: "Thinking budget in seconds — required for a one-shot timer (pass at / every / daily to choose another form instead). Longer for complex reasoning, shorter for simple tasks.",
       },
       at: {
         type: "string",
@@ -135,7 +135,7 @@ export const timerTool = {
     const hasDaily = args.daily !== undefined && args.daily !== null
     const hasCancel = args.cancel !== undefined && args.cancel !== null
     const wantsList = args.list === true
-    // `list` 键在场须恰为 `true`——否则显式拒（防 `{list:false}` 静默落缺省 180s：无义键触发真实副作用）。
+    // `list` 键在场须恰为 `true`——否则显式拒（防 `{list:false}` 静默落一次性定时器：无义键触发真实副作用）。
     if (args.list !== undefined && args.list !== null && args.list !== true) {
       throw new Error(
         `timer: list accepts only true (got: ${String(args.list)}) — omit list to set a timer; pass { list: true } to list pending timers`,
@@ -184,8 +184,12 @@ export const timerTool = {
       expiresAt = nextFireAt({ daily: args.daily }, now) // 今日该刻未过 ⇒ 今日；已过 ⇒ 明日（非即时）
       message = `Time's up (daily at ${args.daily})${DEFAULT_TAIL}`
     } else {
-      // D15.3#1：默认 180；非法值（非数字/非正数）显式报错——静默 NaN 定时器永不触发的坑
-      const seconds = Number(args.seconds ?? 180)
+      // D15.3#1：`seconds` 必填——默认 180 那条兜底已撤（缺了就拒，不替调用方选预算）；
+      // 非法值（非数字/非正数）显式报错——静默 NaN 定时器永不触发的坑
+      if (!hasSeconds) {
+        throw new Error("timer: seconds is required for a one-shot timer (or pass at / every / daily) — got none")
+      }
+      const seconds = Number(args.seconds)
       if (!Number.isFinite(seconds) || seconds <= 0) {
         throw new Error(`timer seconds must be a positive number, got: ${args.seconds}`)
       }

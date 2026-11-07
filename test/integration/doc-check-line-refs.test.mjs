@@ -40,7 +40,7 @@ function fixture(files) {
 }
 
 /** 业务入口：真工具调用（`report` + 显式 `docs`）——回执文本即清账读到的那份报面。 */
-const runReport = (root, docs) => docCheckTool.execute({ mode: "report", docs }, { agent: { cwd: root } })
+const runReport = (root, docs) => docCheckTool.execute({ mode: "report", docs, target: root }, { agent: { cwd: root } })
 
 /** 清单块 = 从量法行起、到末行结论之前的那几行。 */
 function blockLines(report) {
@@ -100,7 +100,7 @@ test("CLI 26-3 闸面拦：同一处真坐标 ⇒ gate 判 REFUSED（行号坐�
     "docs/common.md": "# 共用档\n\n正文。\n",
     "docs/leak.md": "# 漏\n\n见 docs/common.md:12 那一行。\n",
   })
-  const gate = docCheckTool.execute({ mode: "gate", docs: ["docs/leak.md"] }, { agent: { cwd: root } })
+  const gate = docCheckTool.execute({ mode: "gate", docs: ["docs/leak.md"], target: root }, { agent: { cwd: root } })
   const first = gate.split("\n")[0]
   assert.equal(first, "DOC-CHECK GATE: REFUSED（行号坐标 1 处）", `首行判决串：${first}`)
   assert.match(gate, /✗ 行号坐标 docs\/leak\.md:3 ① /, `命中行形：${gate}`)
@@ -120,7 +120,7 @@ test("CLI 26-4 锚面射程：悬空代码路径 + 带目录段的类名 ⇒ REF
     // 下半：同一个夹具根，把两处换成裸名 ∥ 在盘路径
     "docs/clean.md": "# 清\n\n实现见 docs/impl.mjs 与 advisor.md 两处。\n",
   })
-  const gate = docCheckTool.execute({ mode: "gate", docs: ["docs/leak.md"] }, { agent: { cwd: root } })
+  const gate = docCheckTool.execute({ mode: "gate", docs: ["docs/leak.md"], target: root }, { agent: { cwd: root } })
   const first = gate.split("\n")[0]
   assert.equal(first, "DOC-CHECK GATE: REFUSED（锚 2 条）", `首行判决串：${first}`)
   const hitLines = gate.split("\n").filter((l) => l.startsWith("✗ "))
@@ -133,6 +133,6 @@ test("CLI 26-4 锚面射程：悬空代码路径 + 带目录段的类名 ⇒ REF
   assert.equal(res.hits.anchors, 2, "锚 = 2 条")
   assert.equal(res.hits.lineRefs, 0, "行号坐标 = 0 处")
   // 下半：裸名（类名免照免）∥ 在盘路径（解析得到）⇒ 放行
-  const clean = docCheckTool.execute({ mode: "gate", docs: ["docs/clean.md"] }, { agent: { cwd: root } })
+  const clean = docCheckTool.execute({ mode: "gate", docs: ["docs/clean.md"], target: root }, { agent: { cwd: root } })
   assert.equal(clean.split("\n")[0], "DOC-CHECK GATE: PASS", `换裸名 ∥ 在盘路径后应放行：${clean.split("\n")[0]}`)
 })

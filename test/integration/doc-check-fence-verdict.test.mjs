@@ -41,8 +41,8 @@ function fixture(files) {
 }
 
 /** 业务入口：真工具调用（`gate` ∥ `report` + 显式 `docs`）——回执文本即用户读到的那一面。 */
-const runGate = (root, docs) => docCheckTool.execute({ mode: "gate", docs }, { agent: { cwd: root } })
-const runReport = (root, docs) => docCheckTool.execute({ mode: "report", docs }, { agent: { cwd: root } })
+const runGate = (root, docs) => docCheckTool.execute({ mode: "gate", docs, target: root }, { agent: { cwd: root } })
+const runReport = (root, docs) => docCheckTool.execute({ mode: "report", docs, target: root }, { agent: { cwd: root } })
 
 /** 首行判决串（唯一机判串）。 */
 const firstLineOf = (receipt) => receipt.split("\n")[0]

@@ -46,10 +46,11 @@ import { createResolutionSession, resolvePathTarget } from "../path-resolve.mjs"
 import { codeSpans, fenceMark, headingMark, isFenceClose, isExecutableLine, isPromptFace } from "./paragraph.mjs"
 
 /** `docRoot` 各键 → 绝对根集（**只作同名候选的扫描根**，不作受理边界——受理面仍是「档在盘 / 节在盘」）。
- *  读声明面单源 = `docRootPaths`（本档零自持根判定）；无 manifest / 非法 ⇒ 空集。 */
-function docRootBaseKeys(root) {
+ *  读声明面单源 = `docRootPaths`（本档零自持根判定）；无 manifest / 非法 ⇒ 空集。
+ *  **注入形**：`manifest` 给了就吃它（引擎按组根已读的那份——每根一次读），缺省仍自读。 */
+function docRootBaseKeys(root, manifest) {
   let man = { ok: false }
-  try { man = readManifest(root) } catch { return [] }
+  try { man = manifest ?? readManifest(root) } catch { return [] }
   if (!man.ok) return []
   const docRoot = man.manifest?.docRoot
   if (!docRoot || typeof docRoot !== "object") return []
@@ -205,10 +206,12 @@ function sectionOnDisk(path, num, cache, unreadable) {
 
 /** 批档面（面判）上下文：基底根单源 = `batchDocBases`（声明面 ∪ 缺省回退 `docs/batches`，恒非空）。
  *  读不到声明面 ∥ 该根不在盘都不抛错——空面只会让引用**照判**（fail-closed 方向，不静默放宽）。
- *  一次调用建一份：基底根不随 token 变，逐 token 读 manifest 是白读。 */
-function batchFaceContext(root) {
+ *  一次调用建一份：基底根不随 token 变，逐 token 读 manifest 是白读。
+ *  **注入形**：`manifest` 给了 ⇒ 传进 `batchDocBases`（引擎按组根已读的那份，每根一次读）——
+ *  它同时判「工作区并合」那支：组根恒是项目根 ∥ 声明根，注入即短路 workspaceCandidates 的重扫。 */
+function batchFaceContext(root, manifest) {
   let bases
-  try { bases = batchDocBases(root) } catch { bases = [] }
+  try { bases = batchDocBases(root, { manifest }) } catch { bases = [] }
   return { root, bases: Array.isArray(bases) ? bases : [] }
 }
 
@@ -273,24 +276,26 @@ function docResolver(base, scanBases, session) {
 /**
  * 锚判据主行程：传入档逐档逐行抽取 + 解析 + 节在盘判定。
  * @param {string} root 项目根（解析序 ① 的基准）
- * @param {{files?:string[]}} o `files` = **判定集兼解析集**（调用方传入的档清单——判定范围 = 解析范围，
- *   无目录遍历、无全域索引：清单外的档既不判也不参与解析）
+ * @param {{files?:string[], manifest?:{ok:boolean, manifest?:object|null}}} o `files` = **判定集兼解析集**（调用方传入的档清单——判定范围 = 解析范围，
+ *   无目录遍历、无全域索引：清单外的档既不判也不参与解析）；
+ *   `manifest` = **可选注入**——引擎按本根已读的那份（每根一次读，§2.5 KD-7），给了就吃它、
+ *   缺省仍自读（直调判法本体的夹具零改）；它同时供 `docRoot` 扫描根与批档基底两处（判定面零改）
  * @returns {{hits:Array, crossRepo:Array, unreadable:string[], batchRefs:number}} hits = 命中（`档缺` / `节缺` / `引缺`——`档缺` 携 `sameName` 同名候选，
  *   `引缺` 携 `quote` 引文原文与 `target` 命中的档）；
  *   `crossRepo` = 跨仓引用读数（零命中、只入回执——§2.6 一行）；
  *   `unreadable` = 在盘但读不到的档（判定集内 ∥ 判据要读的目标）——**不当命中、也不当干净**，由引擎并集上报；
  *   `batchRefs` = 面判剔除的 token 数（批档面互引不判——**不是命中**，不进 `hits`、不改 verdict）
  */
-export function checkAnchors(root, { files = [] } = {}) {
+export function checkAnchors(root, { files = [], manifest } = {}) {
   const base = resolve(root)
-  const scanBases = docRootBaseKeys(base)
+  const scanBases = docRootBaseKeys(base, manifest)
   const hits = []
   const crossRepo = []
   const unreadable = [] // 读面（读不到 ≠ 干净）：档在盘但读不到 ⇒ 入此清单
   const citedTextOf = citedTextReader(unreadable) // 引文面：目标档全文（同档一次读、同轮缓存）
   const session = createResolutionSession() // 解析会话：一次调用建一份（同名候选查表 ∥ 基根发现同轮记忆）
   const resolveToken = docResolver(base, scanBases, session) // 解析面同轮记忆（引用方目录 ∥ token）
-  const face = batchFaceContext(base) // 面判上下文（批档基底根）——一次调用建一份
+  const face = batchFaceContext(base, manifest) // 面判上下文（批档基底根）——一次调用建一份（吃注入的 manifest）
   let batchRefs = 0 // 面判剔除的 token 数（读数：不进 `hits`、不改 verdict；`report` 面据此出一行留痕）
   const sectionCache = new Map() // 节在盘：标题号集合按绝对路径记忆（同档一次读）
   for (const f of files) {

@@ -3,14 +3,14 @@ ONE tool, NINE actions — pick by what you need:
 - action:'spawn' (DEFAULT): run a sub-agent in its own isolated context — its reads, searches and tool calls never reach your history; only the final report comes back. Spawn MULTIPLE subagents in the SAME response for parallel work — they run concurrently.
 - action:'status': NON-BLOCKING progress query — returns immediately, consumes nothing, never fetches. Pass the spawn id for one child (role, state: running|queued|done, model, elapsed, turn, position, plus a touched-files summary — first 5 + a count) or omit it for a pool overview — see what a
   running child has changed BEFORE cancelling it. Background advisor reviews share this surface (pass the review id — role:'advisor', reviewType/round/elapsedSec, same shape).
-- action:'observe': SEE what a running async subagent is DOING right now (progress vs stuck) — pass the id; returns state, turn, the tool(s) executing right now (omitted when none), and the last N one-line turn summaries, newest first (default 5, via recent). Readonly; running/queued/done all answer
+- action:'observe': SEE what a running async subagent is DOING right now (progress vs stuck) — pass the id; returns state, turn, the tool(s) executing right now (omitted when none), and the last N one-line turn summaries, newest first (required for observe, 1..20). Readonly; running/queued/done all answer
   — queued returns a placeholder, done gives the activity summary only, NOT the report (it rides the auto channel). Judge stuck vs progressing BEFORE cancelling or steering.
 - action:'send': STEER a running async subagent mid-flight — id + message (a direction, e.g. "check X, don't fixate on Y"). The child consumes it at its next turn boundary as an ORDINARY user instruction (non-interrupting; its discipline is unchanged — guidance, not a deviation waiver); returns {id,
   status:'delivered', queued}. Only RUNNING async children are targetable — sync/queued/settled/unknown error clearly; if the child settles first, its report carries an 'undelivered' note.
 - action:'escalate' (飞刀): hand an implementation task to a STRONGER model from your consult models; it gets WRITE access and does the work itself, then returns a post-op report (what changed, why, verification). Escalate EARLY, when the task calls for stronger hands (complex refactors, intractable
   bugs, intricate algorithms — or beyond your comfortable ability). Not available in engineering mode (implementation goes through eng-coder).
 
-  Default-async at depth 0: ack {id, role:'escalate', status:'running'} returns immediately; the report arrives automatically with its mutations merged into
+  Async at depth 0: pass `async: true` — ack {id, role:'escalate', status:'running'} returns immediately; the report arrives automatically with its mutations merged into
   your bookkeeping (pooled with the other role-domain spawns).
 - action:'cancel': STOP ONE background subagent — the id from the spawn return is REQUIRED (a blanket cancel is unsupported; Ctrl+C stops everything). Running aborts immediately ({id, status:'cancelled'}); queued is removed ({id, status:'cancelled', was:'queued'}; later positions shift). Other
   children and the session keep running. Cancel is a last resort: verify alarming signals with reliable checks (git/node — not guesses) first, and prefer scoped recovery — a running child's in-flight work dies with it, partial changes stay unmerged and unaudited.
@@ -71,17 +71,18 @@ An eng-coder spawn also carries designToken — the write credential (the exact 
 A record carries one concurrent spawn at a time: a second spawn on a record still in flight is refused, naming the occupant — sequential hand-offs (design → implementation → fix round) pass, because the previous spawn has settled first.
 
 Pass one parameter per field — contents only (the runtime adds the labels):
-subagent(role="eng-coder", round="initial", batchDoc="<batch record>", designToken="…", files=[…])
-subagent(role="explore", goal="…", knownFacts="…", scope="…", acceptance="…", reportFormat="…")
+subagent(role="eng-coder", round="initial", batchDoc="<batch record>", designToken="…", files=[…], async=true)
+subagent(role="explore", goal="…", knownFacts="…", scope="…", acceptance="…", reportFormat="…", async=true)
 
 Mode filtering: normal mode exposes explore/plan/coder/tester (eng-coder and eng-designer are refused); engineering mode exposes explore/eng-designer/eng-coder/tester (plan and coder are refused — plan is a normal-mode role, coder is replaced by eng-coder; tester is dispatchable in both modes).
 
 The role enum is filtered per mode at assembly, and the spawn gate refuses out-of-mode roles mechanically.
 
-Async spawn: top-level spawns are async by default — never pass async:false at depth 0 (the spawn returns {id, status:"running"} immediately; the report arrives automatically; if your next step needs it, end the turn and let the digest deliver it — do not poll;
+Async spawn: pass `async: true` — the spawn returns {id, status:"running"} immediately; the report arrives automatically (the explicit async:false is a mechanism parameter, not for model use). Omitting `async` is refused — pass it explicitly.
 
-  the explicit async:false is a
-mechanism parameter, not for model use). Inside subagents (depth>0) spawns are always synchronous.
+If your next step needs it, end the turn and let the digest deliver it — do not poll.
+
+Inside subagents (depth>0) spawns are always synchronous — pass `async: false` there (an explicit `async: true` is refused).
 
   Async spawns are pooled per role domain — 4 concurrent eng-coders plus 4 concurrent other-role spawns by default (agent.poolLimits overrides both); a full domain queues further spawns with a position
 while the other keeps starting.

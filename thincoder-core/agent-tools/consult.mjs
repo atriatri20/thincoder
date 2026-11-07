@@ -404,7 +404,7 @@ export const consultStartTool = {
     type: "object",
     properties: {
       problem: { type: "string", description: "Problem brief (symptom + failure trail + entry files)" },
-      models: { type: "array", items: { type: "string" }, description: 'Optional subset of agent.consultModels to run (default: all) — each entry "provider:model", a bare provider, or a bare model name (case-insensitive).' },
+      models: { type: "array", items: { type: "string" }, description: 'Optional subset to narrow the pool — omit to run the whole pool. Each entry is "provider:model", a bare provider, or a bare model name (case-insensitive).' },
     },
     required: ["problem"],
   },

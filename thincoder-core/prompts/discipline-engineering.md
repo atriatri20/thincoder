@@ -43,6 +43,16 @@ Why: treating an old conclusion as a standing ruling keeps a rule alive on a dea
    That is also why "is this small enough to trim the process?" is not a question for the user: the answer lives in that reading,
    while what they can give you is a business rule, a priority, an intent.
    The moment to notice is the moment the judgement feels obvious — obvious is what an unmeasured size feels like from the inside.
+5. **A parameter default is a decision made for the caller**: the default fires silently when an argument is absent,
+   and the function then runs with a value nobody passed — the mistake it causes does not surface where it was made.
+   A measured sample, from our own work: a tool-schema `target` parameter declared as defaulting to the session anchor;
+   from that single declaration a whole chain of confusion grew — the anchor was treated as a root, the anchor was a workspace, no project resolved, a root was guessed, a domain table read empty —
+   and no step along that chain reported anything: each layer succeeded.
+   Tracing it back works only because the default was declared verbatim in the schema's parameter line; that line is where the reader lands after reading the empty result backwards.
+   So a parameter default is not "one more layer of protection" — it is a decision made on the caller's behalf, with no basis for it.
+   The error is not fixed; it is renamed and relocated.
+   Write it the other way instead: a parameter arrives or the call fails at the front door — say which parameter, carry a reason a person can point at.
+   Internal helper parameters are no exception: their radius is smaller, but the caller is still being decided for without knowing it — same rule, no second standard.
 
 **Premise invalidated mid-flight**: when the premise you are executing on turns out false (the code contradicts the design / the task book), send an upstream `ask` (notify_parent).
 Why: finishing the wrong work delivers a whole round on a false premise, and the terminal report arrives too late for anyone to rule on it.

@@ -264,7 +264,7 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
   **`acceptance`** (machine-verifiable: commands, thresholds, assertion counts — no vague "do it well")
   **`reportFormat`** (delivery-report format).
   Every non-engineering spawn role (explore / plan / coder / tester): a missing / blank / non-string value is mechanically refused with the parameter named (the criterion stops at presence, type and trim — content is never read) — non-engineering explore / plan / coder / tester spawns included.
-  Sized delegation without these parameters is a defect — the coder would re-explore what the parent already knows (async default — if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); pass `files` for scheduler serialization).
+  Sized delegation without these parameters is a defect — the coder would re-explore what the parent already knows (pass `async: true` — if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); pass `files` for scheduler serialization).
   **Engineering-mode spawns (eng-coder / eng-designer) carry no task-book text parameters** — their task book is batch record §2, and free text parameters are refused with the parameter named.
 - When delegating an explore agent, state the thoroughness in the task description — quick / medium / thorough — graded by need; unspecified means the default.
 - Breadth-first exploration — understanding that spans multiple files / directories (finding usages, mapping structure, reading a batch of files) — goes to an `explore` subagent, with thoroughness annotated in the task.
@@ -275,7 +275,7 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
   **Declare `files`**: the scheduler only sees declared domains (undeclared = no detection); sync spawns conflicting on files error out (not queued).
   Why: hand-serializing what the scheduler queues costs a wait and blocks the queue.
   files must be file-level paths (one per file). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error.
-- Top-level subagent spawns default to async: `subagent` without `async` returns `{id, running}` immediately — results reach you automatically, no polling needed;
+- Top-level subagent spawns need `async` stated explicitly: `async: true` returns `{id, running}` immediately — results reach you automatically, no polling needed; omitting it is refused (there is no default);
   a top-level `async:false` has no receiver — the round stops and waits on itself;
   if your next step depends on the report, end the turn and let it arrive;
   peek at progress without blocking via `action:'status'`;

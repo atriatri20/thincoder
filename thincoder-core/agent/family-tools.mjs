@@ -132,6 +132,9 @@ export async function assembleFamilyTools({
             ? "Spawn a read-only `explore` sub-agent to SURVEY the current state for the design: it reads code / docs / existing designs and reports evidence with file:line. BLOCKING ONLY (no async) and action:'spawn' ONLY — the survey channel is read-only; escalate/status/cancel/panel/consume-design/observe/send are not available. Survey budget: ≤6 explore spawns per batch — the main agent's survey result is reference only; do your own. The spawn carries the five task-book parameters (four core: goal / knownFacts / acceptance / reportFormat + `scope`); a task-only spawn is refused."
             : "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design: it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY (no async — the audit report decides your next protocol step). action:'spawn' ONLY — the audit channel is a read-only spawn; escalate/status/cancel/panel/consume-design/observe/send are not available. The audit context is appended MECHANICALLY — the batch record path (its §2 is the delivery's task book, read it before judging) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch). The spawn carries the five task-book parameters (four core: goal / knownFacts / acceptance / reportFormat + `scope`); a task-only spawn is refused.",
           parameters: { ...subagentTool.parameters, properties: props },
+          // `async` 不在本变体 schema 里（`delete props.async`）= 这条通道**没有异步选项**。`async` 必填化后
+          // 由变体自己声明固定值（同步），而不是给模型留一个缺省——缺省就是替调用方拿主意，同步才是本通道的契约。
+          execute: (args, ctx) => subagentTool.execute({ ...args, async: false }, ctx),
         }
       })()
     : null

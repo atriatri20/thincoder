@@ -52,8 +52,8 @@ const CASE = {
 const LINES = ["src/big.mjs", "src/ok.mjs", "docs/big.md"]
 
 /** 业务入口：真工具调用（`report` + 显式 `docs` + `lines`）。 */
-const runWithLines = (root, lines) => docCheckTool.execute({ mode: "report", docs: ["docs/target.md"], lines }, { agent: { cwd: root } })
-const runPlain = (root) => docCheckTool.execute({ mode: "report", docs: ["docs/target.md"] }, { agent: { cwd: root } })
+const runWithLines = (root, lines) => docCheckTool.execute({ mode: "report", docs: ["docs/target.md"], lines, target: root }, { agent: { cwd: root } })
+const runPlain = (root) => docCheckTool.execute({ mode: "report", docs: ["docs/target.md"], target: root }, { agent: { cwd: root } })
 
 /** 读数块 = 块首行起、到合计行为止（块内无空行）。 */
 function blockLines(report) {
@@ -94,7 +94,7 @@ test("CLI 26-5 行数读数与缝档同源：逐档整数相等，越线标记�
 test("CLI 26-5 异常：gate + lines ⇒ 明确拒绝（抛错点名、不产 verdict 首行），去 lines 再跑照常判决", () => {
   const root = fixture(CASE)
   assert.throws(
-    () => docCheckTool.execute({ mode: "gate", docs: ["docs/target.md"], lines: LINES }, { agent: { cwd: root } }),
+    () => docCheckTool.execute({ mode: "gate", docs: ["docs/target.md"], lines: LINES, target: root }, { agent: { cwd: root } }),
     (err) => {
       assert.match(err.message, /^doc_check: /, `抛错串首：${err.message}`)
       assert.ok(err.message.includes("`lines`"), `点名原因：${err.message}`)
@@ -102,7 +102,7 @@ test("CLI 26-5 异常：gate + lines ⇒ 明确拒绝（抛错点名、不产 ve
       return true
     }
   )
-  const gate = docCheckTool.execute({ mode: "gate", docs: ["docs/target.md"] }, { agent: { cwd: root } })
+  const gate = docCheckTool.execute({ mode: "gate", docs: ["docs/target.md"], target: root }, { agent: { cwd: root } })
   assert.match(gate.split("\n")[0], /^DOC-CHECK GATE: PASS/, `去 lines 后照常判决：${gate.split("\n")[0]}`)
   assert.ok(!gate.includes("行数读数"), "gate 面不出读数块")
 })

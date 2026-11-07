@@ -69,7 +69,7 @@ test("CLI 20-1 工程模式父侧并发派两席共一本批档 ⇒ 第二席被
   const [res] = await executeToolCalls(
     parent,
     new Map([["subagent", subagentTool]]),
-    [{ name: "subagent", id: "call_20-1", arguments: JSON.stringify({ role: "eng-designer", round: "initial", batchDoc: recordRel }) }],
+     [{ name: "subagent", id: "call_20-1", arguments: JSON.stringify({ role: "eng-designer", round: "initial", batchDoc: recordRel, async: false }) }],
     {},
     0,
   )

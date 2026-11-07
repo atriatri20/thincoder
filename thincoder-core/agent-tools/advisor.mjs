@@ -3,9 +3,10 @@
  * The agent calls this explicitly to get an independent review.
  * The top-level `type` is REQUIRED and must be exactly "code" or "design"
  * (F30 fail-closed — no silent default; ADVISOR-GUARDS.md §2.4).
- * AGENT-LOOP-ASYNC-POOL.md §6.10 (R13 — async advisor): at depth 0 the review launches into the
- * background pool by DEFAULT (async:true / omitted; async:false forces the
- * blocking review); depth>0 (eng-coder self-review) stays synchronous always.
+ * AGENT-LOOP-ASYNC-POOL.md §6.10 (R13 — async advisor): `async` is REQUIRED — `true` launches the
+ * review into the background pool at depth 0, `false` forces the blocking review (omitting it is
+ * refused: a default here would decide for the caller); depth>0 (eng-coder self-review) stays
+ * synchronous always.
  */
 import { runAdvisorReview, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { readFileSync } from "node:fs"
@@ -113,7 +114,7 @@ export const advisorTool = {
       type: { type: "string", enum: ["code", "design"], description: "Review type (required): 'design' for design doc review, 'code' for code review. Omitting it is refused — there is no default." },
       async: {
         type: "boolean",
-        description: "Background review: default at depth 0 = true (ack now, report via digest); async:false forces the blocking review. depth>0 → always sync.",
+        description: "Background review: Required — `true` = review in the background (ack now, report via digest); `false` = the blocking review; omitting it is refused. depth>0 → always sync: an explicit `async: true` there is refused.",
       },
       object: {
         type: "object",
@@ -168,6 +169,12 @@ export const advisorTool = {
       })
     }
     const reviewType = args.type
+    // §6.10 (R13)：`async` 必填——**参数级拒判放在类型门之后、账链门之前**（缺参不该先花一次台账查；
+    // 也不该让“先补另一个参数”成为模型的下一步）。depth 不再替调用方选。
+    if (args.async !== true && args.async !== false) {
+      if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
+      return "Advisor: async is required — pass true for the background review or false for the blocking review. Nothing was sent: no review instance, no round consumed, no design token minted, no LLM call."
+    }
     // 准入门：`type="design"` 且 `batchDoc` 缺失 / 空 ⇒ 拒发（判据与拒文 = `docs/core/design/ADVISOR-GUARDS.md`
     // §2 第 6 条）；「携了须可读」那半幅随账链门（下段）一并判——判据与文案仍单源 `resolveBatchDocPath`。
     // 绑定落 `resolved.run`（评审实例键）。
@@ -243,23 +250,17 @@ export const advisorTool = {
       }
     }
 
-    // §6.10 (R13 — ruling ②-3 A): async gate. Depth-0 defaults to the
-    // background pool; depth>0 (eng-coder internal self-review) is ALWAYS sync —
-    // an explicit async:true there is rejected, the default never flips.
-    // depth 显式校验（归一形态——判定单点：`depth` 取一次 + `asyncRequested` 显式布尔，
-    // 判定表与原逐值等价）：
-    //   depth 0 + 未传/true ⇒ 异步（本层默认）/ depth 0 + false ⇒ 同步；
-    //   depth>0（或直调方无 depth） + 显式 true ⇒ 拒；其余 ⇒ 同步。
-    // 「无 depth」= 无 dispatch 上下文的直调方（测试/legacy）——按同步处理。
+    // §6.10 (R13 — ruling ②-3 A)：depth 0 可异步、depth>0 一律同步——显式 `async:true` 在那里被拒
+    // （判据不变）。“无 depth” = 无 dispatch 上下文的直调方（测试/legacy）——按同步处理。
     const depth = ctx?.depth ?? null
     const asyncRequested = args.async === true
     if (asyncRequested && depth !== 0) {
       // 拒发登记（与 cap/池满拒同款）：评审未跑——不置 called/不耗轮次（record-results
       // 的 REFUSED 契约——advisor 评审发现 #1：拒发不得静默满足 guard）。
       if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
-      return "Advisor: async reviews are only available at depth 0 — the top-level session owns the background pool; inside a child (eng-coder self-review) reviews run synchronously. Call advisor again without async:true (or with async:false)."
+      return "Advisor: async reviews are only available at depth 0 — the top-level session owns the background pool; inside a child (eng-coder self-review) reviews run synchronously. Call advisor again with async:false."
     }
-    const isAsync = asyncRequested || (depth === 0 && args.async !== false)
+    const isAsync = asyncRequested
 
     // BATCH-RECORD.md §4.2 评审侧批次档绑定（判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）：
     // 绑定值在**发起时点取一次**，随后随 launch 载荷一路传下去（异步 = 条目 `batchDoc` 字段，同步 = callbacks）。

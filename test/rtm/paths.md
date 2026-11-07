@@ -20,7 +20,7 @@
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
 | 29-1 | 父侧 `batch append` 写一笔 §1：批档以**裸档名**定位（档在 `docRoot.batches` 下），写入文本里再引一个裸档名 | 写入落盘（回执含 `appended`）、回执无 `DOC-CHECK GATE: REFUSED`（门不再判档缺）；追加文本在档内可读回 | — | `test/integration/path-resolution.test.mjs` |
-| 29-2 | 会话锚 = 工作区（下辖两项目），三面各一笔：`batch status` 传项目根相对形 ∥ `ledger count` 不带 `cwd` ∥ `doc_check({mode:"gate"})` 不带 `target` | 三面同一句报明形：拒 + 候选全列（批档面回执含 `Candidates:` 与两个项目名；台账面含「未找到项目根」+ 下辖候选；文档门首行 `DOC-CHECK GATE: ERROR（多项目工作区：请指名 target）` + 候选行） | — | `test/integration/path-resolution.test.mjs` |
+| 29-2 | 会话锚 = 工作区（下辖两项目），三面各一笔：`batch status` 传项目根相对形 ∥ `ledger count` 不带 `cwd` ∥ `doc_check({mode:"gate"})` 不带 `target` | 三面同一句报明形：拒 + 候选全列（批档面回执含 `Candidates:` 与两个项目名；台账面含「未找到项目根」+ 下辖候选；文档门面拒 + 报文点名 `target`（`target` 必填后不再走歧义支——首行不是 `DOC-CHECK GATE: ERROR（多项目工作区：请指名 target）`）） | — | `test/integration/path-resolution.test.mjs` |
 | 29-3 | 文档门判一份引裸档名的档（裸名在项目根与引用方目录都不中、同名档在更深的子目录里） | 回执报「缺「<该名>」」+「盘上同名：<路径>」（「你是不是指这个」）；命中仍是 `档缺` 一条（候选不产受理） | — | `test/integration/path-resolution.test.mjs` |
 | 29-4 | 文档门判一份含两条跨仓引用的档：一条首段 = 已声明仓名（本机没有该仓）、一条首段 = 项目根同级目录名（未声明） | 两条均零命中（写作被放行）；已声明形出行「仓「X」的 Y（声明源引用，未校验存在性）」，未声明形出行含「须先在 index.publicRepos 声明」+ 本机仓名候选 | — | `test/integration/path-resolution.test.mjs` |
 | 29-5 | 文档门判一份形态错的跨仓引用（`仓名/../越界.md`）；同形改走台账面（`ledger update` 的 `task_book` 指同形路径） | 文档面仍判缺（`✗ 锚·档缺`，不落跨仓读数）；台账面硬拒（拒文含 `task_book 指向的档不存在`）——两面放宽面不同 | — | `test/integration/path-resolution.test.mjs` |
