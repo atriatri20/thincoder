@@ -47,7 +47,7 @@ function fixture(tag) {
 
 const readRecord = (root) => readFileSync(join(root, BATCH_REL), "utf8")
 
-test("7-10 正常 · 设计席把 §2 里一行已作废的判据就地换掉 ⇒ 该行被换、其余行逐字节不变", async () => {
+test("CLI 7-10 正常 · 设计席把 §2 里一行已作废的判据就地换掉 ⇒ 该行被换、其余行逐字节不变", async () => {
   const { root, ctx } = fixture("ok")
   const before = readRecord(root)
   assert.ok(before.includes(OBSOLETE), "前置：作废判据那一行在 §2 段体里")
@@ -73,7 +73,7 @@ test("7-10 正常 · 设计席把 §2 里一行已作废的判据就地换掉 �
   assert.equal(a[changed[0]], REPLACEMENT)
 })
 
-test("7-10 错误 · 同一句在 §2 段体出现两处 ⇒ 锚不唯一，拒且档字节一字不动", async () => {
+test("CLI 7-10 错误 · 同一句在 §2 段体出现两处 ⇒ 锚不唯一，拒且档字节一字不动", async () => {
   const { root, ctx } = fixture("dup")
   const withDup = readRecord(root).replace(`验收 A12：收口对账两半跑过。`, `验收 A12：收口对账两半跑过。\n${OBSOLETE}`)
   writeFileSync(join(root, BATCH_REL), withDup)

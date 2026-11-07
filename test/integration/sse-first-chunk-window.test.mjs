@@ -120,7 +120,7 @@ async function session(t, { mode, delayMs = 0 }) {
 
 // ---------- 行 19-1 ----------
 
-test("19-1 慢 prefill 不被当断流：空闲窗 800ms 也拿得到答复", { timeout: 60_000 }, async (t) => {
+test("CLI 19-1 慢 prefill 不被当断流：空闲窗 800ms 也拿得到答复", { timeout: 60_000 }, async (t) => {
   const s = await session(t, { mode: "slow-then-ok", delayMs: FIRST_FRAME_DELAY_MS })
 
   // 取值点读数（前提，不是判据）：用户写的是 agent.bodyIdleTimeoutMs，到读侧那一跳真的落了地；
@@ -139,7 +139,7 @@ test("19-1 慢 prefill 不被当断流：空闲窗 800ms 也拿得到答复", { 
 
 // ---------- 行 19-2 ----------
 
-test("19-2 首帧之后停摆仍按空闲窗报错：0.8s、相位 sse-idle", { timeout: 60_000 }, async (t) => {
+test("CLI 19-2 首帧之后停摆仍按空闲窗报错：0.8s、相位 sse-idle", { timeout: 60_000 }, async (t) => {
   const s = await session(t, { mode: "stall-after-first" })
 
   const started = Date.now()

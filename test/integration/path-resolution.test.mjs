@@ -87,7 +87,7 @@ const agentOf = (root) => ({ cwd: root, config: { agent: { engineering: true } }
 const ctx0 = (root) => ({ depth: 0, agent: agentOf(root) })
 
 // ── 29-1 唯一项目根 + 裸档名 ⇒ 批档写入落盘，门不再判档缺 ────────────────────
-test('29-1 父侧 batch append：裸档名定位批档 ⇒ 写入落盘，文档门不再判档缺', { timeout: 60_000 }, async (t) => {
+test('CLI 29-1 父侧 batch append：裸档名定位批档 ⇒ 写入落盘，文档门不再判档缺', { timeout: 60_000 }, async (t) => {
   const root = makeProject({ "docs/batches/2026-11-02-bare.md": BATCH_SKELETON })
   put(root, "docs/batches/bare-ref.md", "# 被引档\n\n正文。\n")
   await seedRow(root, "docs/batches/2026-11-02-bare.md")
@@ -103,7 +103,7 @@ test('29-1 父侧 batch append：裸档名定位批档 ⇒ 写入落盘，文档
 })
 
 // ── 29-2 同一句报明：三面（批档 / 台账 / 文档门）在工作区锚下都拒 + 列候选 ──────
-test('29-2 工作区锚：批档 / 台账 / 文档门三面同一句报明形——拒 + 候选全列', { timeout: 60_000 }, async (t) => {
+test('CLI 29-2 工作区锚：批档 / 台账 / 文档门三面同一句报明形——拒 + 候选全列', { timeout: 60_000 }, async (t) => {
   const ws = mkdtempSync(join(tmpdir(), "pr-int-ws-"))
   TMP.push(ws)
   for (const name of ["pa", "pb"]) {
@@ -133,7 +133,7 @@ test('29-2 工作区锚：批档 / 台账 / 文档门三面同一句报明形—
 })
 
 // ── 29-3 文档门：裸档名不在任何基根 ⇒ 报「缺哪一段」+ 同名候选 ───────────────
-test('29-3 文档门判档：裸名两层基根零命中 ⇒ 报缺哪一段 + 同名候选（"你是不是指这个"）', { timeout: 60_000 }, async (t) => {
+test('CLI 29-3 文档门判档：裸名两层基根零命中 ⇒ 报缺哪一段 + 同名候选（"你是不是指这个"）', { timeout: 60_000 }, async (t) => {
   const root = makeProject({ "docs/core/design/modules/域/guide-topic.md": "# 深处的档\n\n正文。\n" })
   put(root, "docs/core/design/prose.md", "# 正文面\n\n去读 guide-topic.md 那份。\n")
   const report = String(docCheckTool.execute({ mode: "report", docs: ["docs/core/design/prose.md"] }, ctx0(root)))
@@ -144,7 +144,7 @@ test('29-3 文档门判档：裸名两层基根零命中 ⇒ 报缺哪一段 + �
 })
 
 // ── 29-4 文档门判跨仓引用：只判引用写对没有（已声明不查存在性 / 未声明不阻断）──
-test('29-4 文档门判跨仓引用：已声明仓名零命中（盘上无该仓同判）· 未声明仓名零命中但回执含须先声明 + 仓名候选', { timeout: 60_000 }, async (t) => {
+test('CLI 29-4 文档门判跨仓引用：已声明仓名零命中（盘上无该仓同判）· 未声明仓名零命中但回执含须先声明 + 仓名候选', { timeout: 60_000 }, async (t) => {
   const parent = mkdtempSync(join(tmpdir(), "pr-int-cross-"))
   TMP.push(parent)
   const proj = join(parent, "proj")
@@ -169,7 +169,7 @@ test('29-4 文档门判跨仓引用：已声明仓名零命中（盘上无该仓
 })
 
 // ── 29-5 形态错的跨仓引用：文档面仍阻断；改台账面 ⇒ 硬拒（KD-10 的可见差）──
-test('29-5 形态错的跨仓引用：文档门仍判缺（阻断）；同输入改台账面 ⇒ 硬拒', { timeout: 60_000 }, async (t) => {
+test('CLI 29-5 形态错的跨仓引用：文档门仍判缺（阻断）；同输入改台账面 ⇒ 硬拒', { timeout: 60_000 }, async (t) => {
   const root = makeProject({ "docs/core/design/bad-form.md": "# 形态错\n\n借道：thin2/../escape.md\n" }, ["thin2"])
   const report = String(docCheckTool.execute({ mode: "report", docs: ["docs/core/design/bad-form.md"] }, ctx0(root)))
   assert.match(report, /✗ 锚·档缺 docs\/core\/design\/bad-form\.md:3/, `形态错仍阻断，实际：${report}`)

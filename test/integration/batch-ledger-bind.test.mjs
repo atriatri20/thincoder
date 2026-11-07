@@ -56,7 +56,7 @@ const tool = batchTool(null)
 const rowsOf = (root) => ledgerQuery({ cwd: root, boundary: root })
 const headerOf = (root, rel) => readFileSync(join(root, rel), "utf8").split("\n").find((l) => l.startsWith("> 台账"))
 
-test("13-1 不传 ledger 建一档 ⇒ 台账 +1 行 在途 · task_book = 该档 · 档头写真实 #N", async () => {
+test("CLI 13-1 不传 ledger 建一档 ⇒ 台账 +1 行 在途 · task_book = 该档 · 档头写真实 #N", async () => {
   const root = makeProject("13-1")
   assert.equal(rowsOf(root).length, 0)
   await tool.execute({ action: "create", path: "docs/batches/t.md", topic: "t", source: "集成夹具" }, ctxOf(root))
@@ -69,7 +69,7 @@ test("13-1 不传 ledger 建一档 ⇒ 台账 +1 行 在途 · task_book = 该�
   assert.doesNotMatch(headerOf(root, "docs/batches/t.md"), /#<编号>/, "没有占位残留")
 })
 
-test("13-2 传 待讨论 号 ⇒ 该行 在途 + 指针回填（不新建行）", async () => {
+test("CLI 13-2 传 待讨论 号 ⇒ 该行 在途 + 指针回填（不新建行）", async () => {
   const root = makeProject("13-2")
   const id = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title: "已排的活" }, boundary: root })
   await tool.execute({ action: "create", path: "docs/batches/u.md", topic: "u", source: "集成夹具", ledger: `#${id}` }, ctxOf(root))
@@ -80,7 +80,7 @@ test("13-2 传 待讨论 号 ⇒ 该行 在途 + 指针回填（不新建行）"
   assert.equal(rows[0].task_book, "docs/batches/u.md")
 })
 
-test("13-3 传 已核销 号 ⇒ 拒，档零落盘、行零改", async () => {
+test("CLI 13-3 传 已核销 号 ⇒ 拒，档零落盘、行零改", async () => {
   const root = makeProject("13-3")
   // 造一条已核销行（档面：§1 已收口 + §3 评审通过 ⇒ 机检过）
   writeFileSync(join(root, "docs/batches/old.md"), "# 老批\n\n## §1 讨论（主 agent）\n**状态行**：已收口 2026-10-26\n\n## §3 设计评审（评审子代理）\n**状态行**：评审通过\n")
@@ -99,7 +99,7 @@ test("13-3 传 已核销 号 ⇒ 拒，档零落盘、行零改", async () => {
   assert.deepEqual(rowsOf(root).find((r) => r.id === id), before, "行零改")
 })
 
-test("13-4 同面有未决行：省略 ledger ⇒ 拒并列该行（零写）；携 newDebt ⇒ 档落盘 + 理由入 evidence", async () => {
+test("CLI 13-4 同面有未决行：省略 ledger ⇒ 拒并列该行（零写）；携 newDebt ⇒ 档落盘 + 理由入 evidence", async () => {
   const root = makeProject("13-4")
   const id = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title: "池里的旧欠条", board: "core" }, boundary: root })
   const before = rowsOf(root)

@@ -105,7 +105,7 @@ after(async () => {
 
 // ---------- 行 22-1 ----------
 
-test("22-1 正常：20 000 字符长配置夹不可见序列 ⇒ 零残留 ∥ 头尾俱在 ∥ 中段可取回", { timeout: 120_000 }, async () => withSession(async (id) => {
+test("CLI 22-1 正常：20 000 字符长配置夹不可见序列 ⇒ 零残留 ∥ 头尾俱在 ∥ 中段可取回", { timeout: 120_000 }, async () => withSession(async (id) => {
   const { plain } = buildShowRun()
 
   const receipt = await ssh({ action: "send", id: `ssh#${id}`, data: "show run", timeoutMs: 30_000 })
@@ -148,7 +148,7 @@ test("22-1 正常：20 000 字符长配置夹不可见序列 ⇒ 零残留 ∥ �
 
 // ---------- 行 22-2 ----------
 
-test("22-2 正常：回显后静默 3 s 再出 [OK] ⇒ 结论 = 提示符命中，未在静默窗交出", { timeout: 120_000 }, async () => withSession(async (id) => {
+test("CLI 22-2 正常：回显后静默 3 s 再出 [OK] ⇒ 结论 = 提示符命中，未在静默窗交出", { timeout: 120_000 }, async () => withSession(async (id) => {
   const receipt = await ssh({ action: "send", id: `ssh#${id}`, data: "write memory", timeoutMs: 30_000 })
   assert.equal(receipt.startsWith("Error:"), false, `send 必须成功，实读：${receipt}`)
   const { body, settle } = splitReceipt(receipt)
@@ -162,7 +162,7 @@ test("22-2 正常：回显后静默 3 s 再出 [OK] ⇒ 结论 = 提示符命中
 
 // ---------- 行 22-3 ----------
 
-test("22-3 边界：设备半路停吐 ⇒ 硬超时内返回可读句并点名未过的门，会话仍存活", { timeout: 120_000 }, async () => withSession(async (id) => {
+test("CLI 22-3 边界：设备半路停吐 ⇒ 硬超时内返回可读句并点名未过的门，会话仍存活", { timeout: 120_000 }, async () => withSession(async (id) => {
   const receipt = await ssh({ action: "send", id: `ssh#${id}`, data: "stall", timeoutMs: 1_500 })
   assert.equal(receipt.startsWith("Error:"), false, `硬超时是正常返回（不是错误），实读：${receipt}`)
   const { body, settle } = splitReceipt(receipt)

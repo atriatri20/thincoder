@@ -142,7 +142,7 @@ function reviewRound(agent, run, { writeBlock }) {
   return { settled: settleDesignReview(agent, run, token, receipt(token)), token }
 }
 
-test("17-1 错误 · 评审回 pass 但 §3 未写 ⇒ 无 token、spawn 被机械拒；补写 §3 后重评 ⇒ 签发", () => {
+test("CLI 17-1 错误 · 评审回 pass 但 §3 未写 ⇒ 无 token、spawn 被机械拒；补写 §3 后重评 ⇒ 签发", () => {
   const { root, agent, batchAbs } = fixture("r171", recordText({ blocks: 0, statusRow: null }))
   const run = { reviewId: DESIGN_ID, designId: DESIGN_ID, batchDoc: batchAbs, docSetKey: docSetKey([DESIGN_REL], root), section3BlocksAtStart: null, open: true }
 
@@ -158,7 +158,7 @@ test("17-1 错误 · 评审回 pass 但 §3 未写 ⇒ 无 token、spawn 被机�
   assert.equal(resolveDesignSlot(agent, DESIGN_ID).token, second.token, "spawn 门放行（拿到本 designId 的凭证）")
 })
 
-test("17-2 错误 · 不带 `batchDoc` 的设计评审 ⇒ 拒发、槽数不变、spawn 被机械拒", async () => {
+test("CLI 17-2 错误 · 不带 `batchDoc` 的设计评审 ⇒ 拒发、槽数不变、spawn 被机械拒", async () => {
   const { agent } = fixture("r172", recordText({ blocks: 0, statusRow: null }))
   const slotsBefore = agent._engDesignTokens?.size ?? 0
   // 准入门（`docs/core/design/ADVISOR-GUARDS.md` §2 第 6 条）：未携 `batchDoc` ⇒ 拒发，零实例 / 零槽 / 零 LLM。
@@ -178,7 +178,7 @@ test("17-2 错误 · 不带 `batchDoc` 的设计评审 ⇒ 拒发、槽数不变
   assert.throws(() => resolveDesignSlot(agent, DESIGN_ID), /designId not found/, "随后 eng-coder spawn 因无授权被机械拒")
 })
 
-test("17-3 错误 · 批档的未决行被撤后发设计评审 ⇒ 拒发（账不在）；另一本带未决行的批档 ⇒ 放行", { timeout: 120_000 }, async () => {
+test("CLI 17-3 错误 · 批档的未决行被撤后发设计评审 ⇒ 拒发（账不在）；另一本带未决行的批档 ⇒ 放行", { timeout: 120_000 }, async () => {
   const { root, batchAbs } = ledgerFixture("r173", recordText({ blocks: 0, statusRow: null }))
   // 反证格：同一根下另起一本批档，它那一行保持未决（`在途`）
   const otherAbs = join(root, "docs/batches/other.md")

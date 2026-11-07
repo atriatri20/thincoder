@@ -117,7 +117,7 @@ function singleJson(stdout) {
 /** ACP 面（会话锚 = `getCwd()`；凭据门放行 = `requireConfigured` 回值不带 error 键）。 */
 const acpHandlers = (anchor) => createReadDataHandlers({ getCwd: () => anchor, requireConfigured: () => ({}) }).handlers
 
-test('21-1 正常 · 进程锚 A、--cwd B ⇒ ledger list --json 给 1 项（根 = B）与 B 的行、零 A 行', () => {
+test('CLI 21-1 正常 · 进程锚 A、--cwd B ⇒ ledger list --json 给 1 项（根 = B）与 B 的行、零 A 行', () => {
   const r = runListCli(["--json", "--cwd", B], A)
   assert.equal(r.code, 0, `跨项目读应 exit 0，实际 ${r.code}：${r.stderr}`)
   assert.equal(r.stderr, "", "stderr 零行")
@@ -134,7 +134,7 @@ test('21-1 正常 · 进程锚 A、--cwd B ⇒ ledger list --json 给 1 项（�
   assert.deepEqual(p.rows.filter((x) => A_TITLES.includes(x.title)), [], "零 A 行（旁项目不掺入）")
 })
 
-test('21-2 边界 · 同一 A 锚、--cwd <带档但无台账库的项目> ⇒ exit 0 · projects [] · stderr 零行', () => {
+test('CLI 21-2 边界 · 同一 A 锚、--cwd <带档但无台账库的项目> ⇒ exit 0 · projects [] · stderr 零行', () => {
   // 夹具两项自证（缺任一项本例空转）：目标带档 ∧ 键控库不在盘
   assert.ok(existsSync(join(C, MANIFEST_REL)), "夹具：目标项目 C 带 PROJECT-MANIFEST.json")
   assert.equal(existsSync(ledgerDbPath(C, C)), false, `夹具：C 的键控库不在盘（${ledgerDbPath(C, C)}）`)
@@ -145,7 +145,7 @@ test('21-2 边界 · 同一 A 锚、--cwd <带档但无台账库的项目> ⇒ e
   assert.deepEqual(singleJson(r.stdout), { projects: [] }, "空集，不是报错")
 })
 
-test('21-3 正常 · ACP ledger/list（params.cwd = B、会话锚 = A）⇒ 1 项 · 根 = B · 零 A 行，且与 21-1 载荷深等', async () => {
+test('CLI 21-3 正常 · ACP ledger/list（params.cwd = B、会话锚 = A）⇒ 1 项 · 根 = B · 零 A 行，且与 21-1 载荷深等', async () => {
   const cliPayload = singleJson(runListCli(["--json", "--cwd", B], A).stdout)
   const reply = await withCwdAsync(A, () => acpHandlers(A)["ledger/list"]({ cwd: B }))
 
@@ -157,7 +157,7 @@ test('21-3 正常 · ACP ledger/list（params.cwd = B、会话锚 = A）⇒ 1 �
   assert.deepEqual(reply, cliPayload, "两出口载荷深等（同一序列化单源）")
 })
 
-test('21-4 正常 · ACP ledger/count（params.cwd = B、会话锚 = A）⇒ count = B 的未决四态行数（≠ 0）', async () => {
+test('CLI 21-4 正常 · ACP ledger/count（params.cwd = B、会话锚 = A）⇒ count = B 的未决四态行数（≠ 0）', async () => {
   const reply = await withCwdAsync(A, () => acpHandlers(A)["ledger/count"]({ cwd: B }))
 
   assert.notEqual(reply.count, 0, `跨项目计数须非 0（无根 ⇒ 三零、零报错——正是本行要抓的形态）：${JSON.stringify(reply)}`)

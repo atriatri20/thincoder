@@ -37,7 +37,7 @@ function fixture(tag) {
   return { root, abs, ctx: { cwd: root } }
 }
 
-test("28-1 同一会话内先一笔 edit 改到第 3 行附近，再拿旧行号改第 6-7 行 ⇒ 当场拒、文件字节零改", async () => {
+test("CLI 28-1 同一会话内先一笔 edit 改到第 3 行附近，再拿旧行号改第 6-7 行 ⇒ 当场拒、文件字节零改", async () => {
   const { abs, ctx } = fixture("guard")
   const rel = "doc.md"
 

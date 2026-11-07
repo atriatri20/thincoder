@@ -102,7 +102,7 @@ function inFlightRow() {
 
 // ---------- 行 22-4 ----------
 
-test("22-4 正常：经典 SCP 替身上 `put` 1 MiB 二进制 ⇒ 远端 sha256 相等、回执 = 冠行 + 一行状态句、对话零文件内容", { timeout: 180_000 }, async () => {
+test("CLI 22-4 正常：经典 SCP 替身上 `put` 1 MiB 二进制 ⇒ 远端 sha256 相等、回执 = 冠行 + 一行状态句、对话零文件内容", { timeout: 180_000 }, async () => {
   const local = join(project, "firmware.img")
   const bytes = Buffer.alloc(1024 * 1024)
   for (let i = 0; i < bytes.length; i++) bytes[i] = (i * 31 + 7) % 256
@@ -121,7 +121,7 @@ test("22-4 正常：经典 SCP 替身上 `put` 1 MiB 二进制 ⇒ 远端 sha256
 
 // ---------- 行 22-5 ----------
 
-test("22-5 边界：`get` 回仓 —— 无在途号 ⇒ 写门拒且本地档不存在；带号落盘；目标已存在 ⇒ 拒、原档零改", { timeout: 180_000 }, async () => {
+test("CLI 22-5 边界：`get` 回仓 —— 无在途号 ⇒ 写门拒且本地档不存在；带号落盘；目标已存在 ⇒ 拒、原档零改", { timeout: 180_000 }, async () => {
   const config = Buffer.from("hostname sw-core-1\ninterface Gi0/1\n ip address 10.0.0.1 255.255.255.0\n")
   writeFileSync(join(remoteRoot, "flash/running-config.txt"), config)
   const target = join(project, "backup/running-config.txt")

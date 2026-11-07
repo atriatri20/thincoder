@@ -47,7 +47,7 @@ const create = (box, path) => batchTool().execute(
   { agent: { cwd: box }, depth: 0 },
 )
 
-test('8-1 多根工作区锚（下辖 1 个项目）+ create 无所属 ⇒ 报明 + 路径指引，零建档', { timeout: 60_000 }, async (t) => {
+test('CLI 8-1 多根工作区锚（下辖 1 个项目）+ create 无所属 ⇒ 报明 + 路径指引，零建档', { timeout: 60_000 }, async (t) => {
   const box = workspaceFixture(t)
   const candidate = resolve(join(box, "only"))
 
@@ -66,7 +66,7 @@ test('8-1 多根工作区锚（下辖 1 个项目）+ create 无所属 ⇒ 报�
   assert.equal(existsSync(join(candidate, "docs", "batches")), false, "被报明的项目侧也零建档（本动作未落盘）")
 })
 
-test('8-2 多根工作区锚 + create 目标属某项目 ⇒ 落该项目声明基底，锚目录零新建', { timeout: 60_000 }, async (t) => {
+test('CLI 8-2 多根工作区锚 + create 目标属某项目 ⇒ 落该项目声明基底，锚目录零新建', { timeout: 60_000 }, async (t) => {
   const box = workspaceFixture(t)
   const project = resolve(join(box, "only"))
   const expected = resolve(join(project, "docs", "batches", "x.md"))

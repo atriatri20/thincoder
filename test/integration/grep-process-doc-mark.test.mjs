@@ -133,7 +133,7 @@ registerHooks({
 const VSCODE = await import(STUB_URL)
 const { bashTool: vscBashTool } = await import("../../thincoder-vscode/src/tools/shell.mjs")
 
-test("31-1 过程档行在 grep / bash / execute / VSC bash 四面都带「不可作依据」的前缀", async (t) => {
+test("CLI 31-1 过程档行在 grep / bash / execute / VSC bash 四面都带「不可作依据」的前缀", async (t) => {
   const root = makeProject("31-1")
   const ctx = ctxOf(root)
   const stateAbs = join(root, "docs/design/state.md")
@@ -331,7 +331,7 @@ console.log(rel + ":1: " + readFileSync(rel, "utf8").split("\n")[0])
   })
 })
 
-test("31-2 判不了就不动输出：盘上不存在的假路径零打标，出辖目录不标", async (t) => {
+test("CLI 31-2 判不了就不动输出：盘上不存在的假路径零打标，出辖目录不标", async (t) => {
   const root = makeProject("31-2")
   const ctx = ctxOf(root)
 

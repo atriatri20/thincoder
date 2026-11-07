@@ -110,7 +110,7 @@ async function session(t, { withSessionHeader }) {
 
 // ---------- 行 23-1 ----------
 
-test("23-1 正常：配了 OpenCode Go 的会话能发出话（上游带头才回 200）", { timeout: 60_000 }, async (t) => {
+test("CLI 23-1 正常：配了 OpenCode Go 的会话能发出话（上游带头才回 200）", { timeout: 60_000 }, async (t) => {
   const s = await session(t, { withSessionHeader: true })
 
   const answer = await runAgent(s.agent, "在吗", {})
@@ -123,7 +123,7 @@ test("23-1 正常：配了 OpenCode Go 的会话能发出话（上游带头才�
   assert.deepEqual(assistantTexts, [REPLY], "回复同样落进会话历史（那一格对用户可见）")
 })
 
-test("23-1 对照：修前配置形状（渠道不携该头）复现 400 MissingSessionID", { timeout: 60_000 }, async (t) => {
+test("CLI 23-1 对照：修前配置形状（渠道不携该头）复现 400 MissingSessionID", { timeout: 60_000 }, async (t) => {
   const s = await session(t, { withSessionHeader: false })
 
   const error = await runAgent(s.agent, "在吗", {}).then(() => null, (e) => e)

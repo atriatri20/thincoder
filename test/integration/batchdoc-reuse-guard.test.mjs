@@ -60,7 +60,7 @@ const firstSeat = (abs) => ({
   id: 1, role: "eng-designer", status: "running", done: false, cancelled: false, _batchDoc: abs,
 })
 
-test("20-1 工程模式父侧并发派两席共一本批档 ⇒ 第二席被拒，点名档与占用者；池面不变", async () => {
+test("CLI 20-1 工程模式父侧并发派两席共一本批档 ⇒ 第二席被拒，点名档与占用者；池面不变", async () => {
   const { root, recordRel, recordAbs } = makeProject("20-1")
   const parent = parentOf(root, [firstSeat(recordAbs)])
   const firstSeatBefore = { ...parent._asyncSubagents.get("1") }

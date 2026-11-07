@@ -112,7 +112,7 @@ async function rowAt(ctx, taskBook, title, steps = []) {
   return id
 }
 
-test("10-3 正常 ∥ 错误 · 核销机检三件：a 全过即清账（槽内空无一物也过），b 点名缺 ②，c 点名缺 ③（两行零改）", async () => {
+test("CLI 10-3 正常 ∥ 错误 · 核销机检三件：a 全过即清账（槽内空无一物也过），b 点名缺 ②，c 点名缺 ③（两行零改）", async () => {
   const { root, agent } = fixture()
   const ctx = ctxOf(agent)
   // 前置：夹具未造槽（本档不调 settle / 不造归属表）——“③ 不看槽”的可观察面是下面 a 行当场核销成功
@@ -162,7 +162,7 @@ test("10-3 正常 ∥ 错误 · 核销机检三件：a 全过即清账（槽内�
   assert.match(recordBytes, /\*\*状态行\*\*：✅ 已收口 2026-10-26/, "批档不受台账动作影响（两条存储各管各的）")
 })
 
-test("10-5 错误 ∥ 正常 · 核销只有一条边：待讨论 / 待设计 / 在途 / 归档态一律拒（逐态出路句），认领三步全过", async () => {
+test("CLI 10-5 错误 ∥ 正常 · 核销只有一条边：待讨论 / 待设计 / 在途 / 归档态一律拒（逐态出路句），认领三步全过", async () => {
   const { root, agent } = fixture()
   const ctx = ctxOf(agent)
 

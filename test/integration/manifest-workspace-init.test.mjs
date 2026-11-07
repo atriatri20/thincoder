@@ -17,7 +17,7 @@ import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { manifestTool } from "../../thincoder-core/agent-tools/manifest.mjs"
 
-test('9-1 多根工作区锚（下辖 1 个裸仓）+ manifest init ⇒ 报明 + 零建档', { timeout: 60_000 }, async (t) => {
+test('CLI 9-1 多根工作区锚（下辖 1 个裸仓）+ manifest init ⇒ 报明 + 零建档', { timeout: 60_000 }, async (t) => {
   const box = mkdtempSync(join(tmpdir(), "tc-int-ws-init-"))
   t.after(() => removeTempDirBestEffort(box))
   mkdirSync(join(box, "bare", ".git"), { recursive: true }) // 裸仓 = 有 .git、无项目档

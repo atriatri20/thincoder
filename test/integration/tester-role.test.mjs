@@ -212,7 +212,7 @@ async function assertSameToolFace(endpoint, label) {
   assert.deepEqual(vscNames, coreNames.slice().sort(), `${label}：核 ∥ 端同一角色的工具面必须逐名相等（端差 = 缺陷）`)
 }
 
-test("30-1 派一个 tester 跑一条必败 ∥ 必过断言：受理 · 工具表无写面（核 ∥ 端逐名相等）· 报告带回命令原文与跑者读数", { timeout: 180_000 }, async (t) => {
+test("CLI 30-1 派一个 tester 跑一条必败 ∥ 必过断言：受理 · 工具表无写面（核 ∥ 端逐名相等）· 报告带回命令原文与跑者读数", { timeout: 180_000 }, async (t) => {
   const root = makeProject("30-1")
   const runs = []
   t.after(async () => {

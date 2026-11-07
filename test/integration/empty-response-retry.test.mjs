@@ -118,7 +118,7 @@ const emptyReminders = (agent) => agent.history.filter(
 
 // ---------- 故事 15 三行 ----------
 
-test("15-1 空 → 带正文且带工具调用 → 空 → 带正文：用户拿到两次答复，全程不抛", { timeout: 60_000 }, async (t) => {
+test("CLI 15-1 空 → 带正文且带工具调用 → 空 → 带正文：用户拿到两次答复，全程不抛", { timeout: 60_000 }, async (t) => {
   const s = await session(t, [
     {},                                        // 1 空
     { content: "checking", tool: true },       // 2 实质（正文 + 工具调用）
@@ -146,7 +146,7 @@ test("15-1 空 → 带正文且带工具调用 → 空 → 带正文：用户拿
   assert.equal(s.reads[3].emptyRetries, 1, "其后的空从 1 重新起算——不是累计到 2")
 })
 
-test("15-2 桩恒回空：第 3 次空当场抛 `LLM returned empty response`，前两次各注入一次提醒", { timeout: 60_000 }, async (t) => {
+test("CLI 15-2 桩恒回空：第 3 次空当场抛 `LLM returned empty response`，前两次各注入一次提醒", { timeout: 60_000 }, async (t) => {
   const s = await session(t, [{}]) // 恒回空响应
 
   const error = await runAgent(s.agent, "hi", {}).then(() => null, (e) => e)
@@ -158,7 +158,7 @@ test("15-2 桩恒回空：第 3 次空当场抛 `LLM returned empty response`，
   assert.equal(emptyReminders(s.agent), 2, "前两次空各注入一次提醒（用户在第三次才看到错误）")
 })
 
-test("15-3 空 → 带工具调用 → 空 → 空 → 带正文：不抛（工具轮复位；修前第 3 次空即抛）", { timeout: 60_000 }, async (t) => {
+test("CLI 15-3 空 → 带工具调用 → 空 → 空 → 带正文：不抛（工具轮复位；修前第 3 次空即抛）", { timeout: 60_000 }, async (t) => {
   const s = await session(t, [
     {},                     // 1 空
     { tool: true },         // 2 工具轮（正文空、带工具调用）⇒ 复位

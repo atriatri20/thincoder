@@ -145,7 +145,7 @@ const openInstances = (t, count) => {
   return nets
 }
 
-test('34-1 同时两实例：只拉起一台浏览器，两边都拿到会话', { timeout: 240_000 }, async (t) => {
+test('CLI 34-1 同时两实例：只拉起一台浏览器，两边都拿到会话', { timeout: 240_000 }, async (t) => {
   if (skipIfNoBrowser(t)) return
   const url = await fixtureServer(t)
   const [a, b] = openInstances(t, 2)
@@ -162,7 +162,7 @@ test('34-1 同时两实例：只拉起一台浏览器，两边都拿到会话', 
   await Promise.all([a.run({ action: "close" }), b.run({ action: "close" })])
 })
 
-test('34-2 后到实例要另一个模式：不报错、沿用生效值并在回执里告知', { timeout: 240_000 }, async (t) => {
+test('CLI 34-2 后到实例要另一个模式：不报错、沿用生效值并在回执里告知', { timeout: 240_000 }, async (t) => {
   if (skipIfNoBrowser(t)) return
   const url = await fixtureServer(t)
   const [a, b] = openInstances(t, 2)
@@ -183,7 +183,7 @@ test('34-2 后到实例要另一个模式：不报错、沿用生效值并在回
   await Promise.all([a.run({ action: "close" }), b.run({ action: "close" })])
 })
 
-test('34-3 末关两形：先关者只说留下（浏览器还在），最后关者才关', { timeout: 240_000 }, async (t) => {
+test('CLI 34-3 末关两形：先关者只说留下（浏览器还在），最后关者才关', { timeout: 240_000 }, async (t) => {
   if (skipIfNoBrowser(t)) return
   const url = await fixtureServer(t)
   const [a, b] = openInstances(t, 2)

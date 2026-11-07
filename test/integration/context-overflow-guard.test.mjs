@@ -171,7 +171,7 @@ const turnCalls = (stub) => stub.requests.filter((r) => !r.compress)
 
 // ---------- 用例 ----------
 
-test('11-1 CLI 会话估算越线：压缩出现一次、回合请求照发、无 400', { timeout: 120_000 }, async (t) => {
+test('CLI 11-1 CLI 会话估算越线：压缩出现一次、回合请求照发、无 400', { timeout: 120_000 }, async (t) => {
   const s = await session(t, {
     history: historyWithGiant(620_000),
     // 显式压缩线 750,000 抬到估算之上 ⇒ 阈值面早退，那一次压缩只可能来自**安全点守卫**
@@ -197,7 +197,7 @@ test('11-1 CLI 会话估算越线：压缩出现一次、回合请求照发、�
   assert.ok(s.stub.requests.every((r) => r.body.max_tokens === undefined), "absent 语义不动——本批仍不发 max_tokens")
 })
 
-test('11-2 摘要超长压后仍越线：一条带三实数的错误、回合请求零发、无 400', { timeout: 120_000 }, async (t) => {
+test('CLI 11-2 摘要超长压后仍越线：一条带三实数的错误、回合请求零发、无 400', { timeout: 120_000 }, async (t) => {
   const s = await session(t, {
     history: historyWithGiant(620_000),
     // 同上：阈值面早退，这次压缩由守卫强压一次；摘要桩回 700,000-token 内容
@@ -222,7 +222,7 @@ test('11-2 摘要超长压后仍越线：一条带三实数的错误、回合请
   assert.ok(s.stub.requests.every((r) => r.status === 200), "零 400")
 })
 
-test('11-3 absent 档：越线强压一次后照发；未越线零压缩——deepseek 形状与退化档各验', { timeout: 120_000 }, async (t) => {
+test('CLI 11-3 absent 档：越线强压一次后照发；未越线零压缩——deepseek 形状与退化档各验', { timeout: 120_000 }, async (t) => {
   // 安全点 ∥ 发送面（`agent/turn-loop.mjs:119-131` 同序）：非会话层——本行的交互组件就是这两面。
   const safetyPoint = async (model, tokens, handler) => {
     const stub = await providerStub(handler)
@@ -280,7 +280,7 @@ test('11-3 absent 档：越线强压一次后照发；未越线零压缩——de
   assert.equal(turnCalls(degenerate.stub).length, 1, "请求照发")
 })
 
-test('11-4a provider 回 400 越窗报文：压一次 + 重试一次，成功即返回', { timeout: 120_000 }, async (t) => {
+test('CLI 11-4a provider 回 400 越窗报文：压一次 + 重试一次，成功即返回', { timeout: 120_000 }, async (t) => {
   const overflowText = JSON.stringify({
     error: {
       message: "This model's maximum context length is 1048576 tokens. However, you requested 1068083 tokens (674867 in the messages, 393216 in the completion).",
@@ -306,7 +306,7 @@ test('11-4a provider 回 400 越窗报文：压一次 + 重试一次，成功即
   assert.equal(turnCalls(s.stub)[1].status, 200, "重试回合 200")
 })
 
-test('11-4b 二次越窗：typed 错误浮出、不再压、不截断', { timeout: 120_000 }, async (t) => {
+test('CLI 11-4b 二次越窗：typed 错误浮出、不再压、不截断', { timeout: 120_000 }, async (t) => {
   const overflowText = JSON.stringify({
     error: {
       message: "This model's maximum context length is 1048576 tokens. However, you requested 1068083 tokens (674867 in the messages, 393216 in the completion).",
@@ -334,7 +334,7 @@ test('11-4b 二次越窗：typed 错误浮出、不再压、不截断', { timeou
  *  「本机估 491,000 < 压缩线」而「服务端眼里 723,272 > limit」正是样本存在的理由，也是本行要断的那一跳。 */
 const TRUE_RATIO = 723_272 / 491_000
 
-test('11-5 恢复带样本的长会话：首请求走估算支先压一次，不吃 400', { timeout: 120_000 }, async (t) => {
+test('CLI 11-5 恢复带样本的长会话：首请求走估算支先压一次，不吃 400', { timeout: 120_000 }, async (t) => {
   // RTM 11-5 行的三个数：槽样本 num 723_272 / den 491_000（比 ≈1.473）· provider maxTokens 393_216
   // ⇒ window 1,000,000 · limit 606,784 · 压缩线 600,000。
   const MAX_TOKENS = 393_216
@@ -397,7 +397,7 @@ test('11-5 恢复带样本的长会话：首请求走估算支先压一次，不
 
 // ---------- 11-6 / 11-7 / 11-8 / 11-9 可达性门（CONTEXT-COMPACTION.md §6.17）----------
 
-test('11-6 正常：固定开销吃掉压缩线 ⇒ 零压缩、零摘要请求，用户照常拿到答复', { timeout: 120_000 }, async (t) => {
+test('CLI 11-6 正常：固定开销吃掉压缩线 ⇒ 零压缩、零摘要请求，用户照常拿到答复', { timeout: 120_000 }, async (t) => {
   const s = await session(t, {
     // 复刻 #1833 现场：压缩线 76,800（128K 档的线，此处写显式值 ⇒ 与本档窗口解耦）、
     // 巨型工具 schema 把 system + tools 抬到线上、history 只一百来 token。
@@ -422,7 +422,7 @@ test('11-6 正常：固定开销吃掉压缩线 ⇒ 零压缩、零摘要请求�
   assert.ok(s.stub.requests.every((r) => r.status === 200), "零 400")
 })
 
-test('11-7 边界：固定开销逼近压缩线、中段可摘够 ⇒ 压缩恰一次，回复仍引用尾部工具结果', { timeout: 120_000 }, async (t) => {
+test('CLI 11-7 边界：固定开销逼近压缩线、中段可摘够 ⇒ 压缩恰一次，回复仍引用尾部工具结果', { timeout: 120_000 }, async (t) => {
   const s = await session(t, {
     // 开销逼近线（约 0.8 倍线）但仍在线下：门该放行，且这靠的是「中段够大」而不是「开销小」
     tools: [giantTool(300_000)],
@@ -449,7 +449,7 @@ test('11-7 边界：固定开销逼近压缩线、中段可摘够 ⇒ 压缩恰�
   assert.ok(s.stub.requests.every((r) => r.status === 200), "零 400")
 })
 
-test('11-8 边界：模型主动压缩（context 工具）不受门拦 —— 压后仍越线也执行恰一次', { timeout: 120_000 }, async (t) => {
+test('CLI 11-8 边界：模型主动压缩（context 工具）不受门拦 —— 压后仍越线也执行恰一次', { timeout: 120_000 }, async (t) => {
   let dialogSeq = 0
   const s = await session(t, {
     // 与 11-6 同一格：阈值面本该被门挡住（压后仍越线），force 全文豁免
@@ -479,7 +479,7 @@ test('11-8 边界：模型主动压缩（context 工具）不受门拦 —— �
   assert.ok(s.stub.requests.every((r) => r.status === 200), "零 400")
 })
 
-test('11-9 错误：无中段可摘 ⇒ 走确定性截断，门不拦、零摘要请求', { timeout: 120_000 }, async (t) => {
+test('CLI 11-9 错误：无中段可摘 ⇒ 走确定性截断，门不拦、零摘要请求', { timeout: 120_000 }, async (t) => {
   // 安全点位形（与 11-3 同口径——本行设计的交互组件 = `splitHistory` 无中段支 → `shrinkOversized`）：
   // 「无中段」只在整段历史就是那一条巨消息时出现；真会话里 `runAgent` 至少再推入两条机器提醒，
   // `keepTailSize` / `splitHistory` 因而总能切出中段（len 2 ⇒ keepTail 0 ⇒ 中段 = 整段）。

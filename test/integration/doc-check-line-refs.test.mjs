@@ -1,13 +1,16 @@
 /**
- * doc-check-line-refs.test.mjs — 集成用例 26-1 / 26-2（RTM CLI 端故事 26「清账要先有一把可复述的尺」；
+ * doc-check-line-refs.test.mjs — 集成用例 26-1 / 26-2 / 26-3 / 26-4（RTM CLI 端故事 26「清账要先有一把可复述的尺」；
  * 判据原文 = `test/RTM.md` 第 26 节）。
  *
- * 业务入口 = 真 `doc_check` 工具调用（`thincoder-core/agent-tools/doc-check.mjs` 的 `report` + 显式 `docs`）——
- * 不直调 `runDocCheck`：本档要的是「清账读到的那份清单」这个业务可观察结果。
- * 断言面 = 工具回执文本（报面）：清单块的量法行 / 合计行 / 逐处行 / 空态行，以及末行结论句。
+ * 业务入口 = 真 `doc_check` 工具调用（`thincoder-core/agent-tools/doc-check.mjs` 的 `report` / `gate` + 显式 `docs`）——
+ * 不直调 `runDocCheck`（26-3 ∥ 26-4 另就同一夹具取 `runDocCheck` 的 `hits` 作同源读数）：本档要的是「清账读到的那份清单」
+ * 与「交付门判出什么」两个业务可观察结果。
+ * 断言面 = 工具回执文本（报面）：清单块的量法行 / 合计行 / 逐处行 / 空态行、末行结论句，以及 `gate` 面首行判决串与命中行。
  *
- * 机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.23 条目 W（`report` 面的行号坐标清单 · 只报不拦）。
- * 夹具 = 系统临时域（`mkdtempSync`）⇒ 零落仓 + 并发免疫；两例各自独立起一份（「同一夹具」= 同一夹具形，不依赖执行序）。
+ * 机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.23 条目 W（行号坐标：`report` 面出清账清单 ∥ `gate` 面计入 `hits` 拦）
+ *   + §3.20（锚面射程：扩展名闭集 ∥ 豁免只免裸名——26-4）。
+ * 夹具 = 系统临时域（`mkdtempSync`）⇒ 零落仓 + 并发免疫；各例各自独立起一份（「同一夹具」= 同一夹具形，不依赖执行序；
+ *   26-4 的两半住在同一个夹具根——换的是被引两处的写法，不是夹具）。
  *
  * 复跑（cwd = 仓根）：`node --test test/integration/doc-check-line-refs.test.mjs`
  */
@@ -50,7 +53,7 @@ function blockLines(report) {
 
 after(() => { for (const d of TMP) removeTempDirBestEffort(d) })
 
-test("26-1 三形各一处：量法行 + 合计 3 处 + 三行逐处（①②③）+ 末行仍是结论", () => {
+test("CLI 26-1 三形各一处：量法行 + 合计 3 处 + 三行逐处（①②③）+ 末行仍是结论", () => {
   const root = fixture({
     "docs/common.md": "# 共用档\n\n正文。\n",
     "docs/notes.md": [
@@ -81,7 +84,7 @@ test("26-1 三形各一处：量法行 + 合计 3 处 + 三行逐处（①②③
   assert.match(report.split("\n").at(-1), /^结论：0 条命中/)
 })
 
-test("26-2 无行号坐标：量法行仍出 + 空态行「行号坐标 0 处」+ 块内无空行", () => {
+test("CLI 26-2 无行号坐标：量法行仍出 + 空态行「行号坐标 0 处」+ 块内无空行", () => {
   const root = fixture({ "docs/prose.md": "# 纯正文档\n\n这一行没有行号坐标，也没有档名。\n" })
   const report = runReport(root, ["docs/prose.md"])
   const block = blockLines(report)
@@ -92,7 +95,7 @@ test("26-2 无行号坐标：量法行仍出 + 空态行「行号坐标 0 处」
   assert.ok(block.every((l) => l.trim() !== ""), "块内不留空行——空行读起来像「没跑」")
 })
 
-test("26-3 闸面拦：同一处真坐标 ⇒ gate 判 REFUSED（行号坐标 1 处），report 清单合计与 hits.lineRefs 逐字相等", () => {
+test("CLI 26-3 闸面拦：同一处真坐标 ⇒ gate 判 REFUSED（行号坐标 1 处），report 清单合计与 hits.lineRefs 逐字相等", () => {
   const root = fixture({
     "docs/common.md": "# 共用档\n\n正文。\n",
     "docs/leak.md": "# 漏\n\n见 docs/common.md:12 那一行。\n",
@@ -107,4 +110,29 @@ test("26-3 闸面拦：同一处真坐标 ⇒ gate 判 REFUSED（行号坐标 1 
   assert.equal(res.hits.total, res.hits.anchors + res.hits.paragraph + res.hits.lineRefs, "三数之和 = hits.total")
   const block = blockLines(runReport(root, ["docs/leak.md"]))
   assert.equal(block[1], `正文面 ${res.hits.lineRefs} 处 · 围栏内 0 处 · 合计 ${res.hits.lineRefs} 处`, `清单合计与闸面计数逐字相等：${block[1]}`)
+})
+
+test("CLI 26-4 锚面射程：悬空代码路径 + 带目录段的类名 ⇒ REFUSED（锚 2 条）；换裸名 ∥ 在盘路径 ⇒ PASS", () => {
+  const root = fixture({
+    "docs/impl.mjs": "export const x = 1\n",
+    // 上半：一处解析不到的代码路径（非 .md）∥ 一处带目录段、解析不到的类名 token
+    "docs/leak.md": "# 漏\n\n实现见 thincoder-core/missing/impl.mjs 与 .thincoder/advisor.md 两处。\n",
+    // 下半：同一个夹具根，把两处换成裸名 ∥ 在盘路径
+    "docs/clean.md": "# 清\n\n实现见 docs/impl.mjs 与 advisor.md 两处。\n",
+  })
+  const gate = docCheckTool.execute({ mode: "gate", docs: ["docs/leak.md"] }, { agent: { cwd: root } })
+  const first = gate.split("\n")[0]
+  assert.equal(first, "DOC-CHECK GATE: REFUSED（锚 2 条）", `首行判决串：${first}`)
+  const hitLines = gate.split("\n").filter((l) => l.startsWith("✗ "))
+  assert.equal(hitLines.length, 2, `命中行应为两条：${JSON.stringify(hitLines)}`)
+  assert.ok(hitLines.every((l) => l.startsWith("✗ 锚·档缺 ")), `两条都归锚类（档缺）：${JSON.stringify(hitLines)}`)
+  assert.ok(hitLines.some((l) => l.includes("thincoder-core/missing/impl.mjs")), `代码路径那条点名：${JSON.stringify(hitLines)}`)
+  assert.ok(hitLines.some((l) => l.includes(".thincoder/advisor.md")), `带目录段类名那条点名：${JSON.stringify(hitLines)}`)
+  // 两条都来自锚面：行号坐标那一类不得跟着计数（本夹具零坐标）
+  const res = runDocCheck(root, { mode: "gate", docs: ["docs/leak.md"] })
+  assert.equal(res.hits.anchors, 2, "锚 = 2 条")
+  assert.equal(res.hits.lineRefs, 0, "行号坐标 = 0 处")
+  // 下半：裸名（类名免照免）∥ 在盘路径（解析得到）⇒ 放行
+  const clean = docCheckTool.execute({ mode: "gate", docs: ["docs/clean.md"] }, { agent: { cwd: root } })
+  assert.equal(clean.split("\n")[0], "DOC-CHECK GATE: PASS", `换裸名 ∥ 在盘路径后应放行：${clean.split("\n")[0]}`)
 })

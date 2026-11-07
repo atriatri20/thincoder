@@ -128,7 +128,7 @@ function settleWithBatchDoc(root, agent) {
   return run
 }
 
-test("10-4 正常（生产形）· 以 `batchDoc` 起评审后，清点面「批」列显名（不是 —）", () => {
+test("CLI 10-4 正常（生产形）· 以 `batchDoc` 起评审后，清点面「批」列显名（不是 —）", () => {
   const { root, agent } = fixture("r104")
   settleWithBatchDoc(root, agent)
   const inventory = executeDesignSlotsAction({}, { agent })
@@ -136,7 +136,7 @@ test("10-4 正常（生产形）· 以 `batchDoc` 起评审后，清点面「批
   assert.ok(!/batch=—/.test(inventory), `「批」列不得是 —（今天 24 枚全 —）：${inventory}`)
 })
 
-test("10-1 正常 · 收口即清账：回执点名消费 1 枚、spawn 机械拒、清点面该槽不在", async () => {
+test("CLI 10-1 正常 · 收口即清账：回执点名消费 1 枚、spawn 机械拒、清点面该槽不在", async () => {
   const { root, agent } = fixture("r101")
   settleWithBatchDoc(root, agent)
   const ctx = { depth: 0, agent }
@@ -154,7 +154,7 @@ test("10-1 正常 · 收口即清账：回执点名消费 1 枚、spawn 机械�
   assert.match(inventory, /design-slots: 0 slot\(s\)/, "清点面空账本")
 })
 
-test("10-2 错误 · 消费落盘失败 ⇒ close 被拒、§1 字节不变、槽仍在盘（内存已回滚）", async () => {
+test("CLI 10-2 错误 · 消费落盘失败 ⇒ close 被拒、§1 字节不变、槽仍在盘（内存已回滚）", async () => {
   const { root, agent } = fixture("r102")
   settleWithBatchDoc(root, agent)
   const ctx = { depth: 0, agent }

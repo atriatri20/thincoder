@@ -108,7 +108,7 @@ async function digestRound(agent) {
 
 // ---------- 故事 18 行 18-1 ----------
 
-test("18-1 一条后台报告只投递一次：连空 3 个消化轮不丢不提醒，第 4 轮升级才终局披露，此后零投递", { timeout: 120_000 }, async (t) => {
+test("CLI 18-1 一条后台报告只投递一次：连空 3 个消化轮不丢不提醒，第 4 轮升级才终局披露，此后零投递", { timeout: 120_000 }, async (t) => {
   // 前 4 轮 = 恒空提供端（该轮抛错）；第 5 轮起提供端恢复出正文
   const { agent, entry, state } = await session(t)
 

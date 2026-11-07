@@ -123,7 +123,7 @@ const hasCommit = (root) => {
   try { execFileSync("git", ["rev-parse", "--verify", "HEAD"], { cwd: root, stdio: "pipe" }); return true } catch { return false }
 }
 
-test("12-1 台账有在途行、本笔不传 ledger ⇒ 拒（§2.3 串 + 用法句），文件零改", async () => {
+test("CLI 12-1 台账有在途行、本笔不传 ledger ⇒ 拒（§2.3 串 + 用法句），文件零改", async () => {
   const root = makeProject("12-1")
   const live = await hangLiveRow(root, "12-1-batch")
   const target = join(root, "thincoder-core/agent/x.mjs")
@@ -138,7 +138,7 @@ test("12-1 台账有在途行、本笔不传 ledger ⇒ 拒（§2.3 串 + 用法
   assert.equal(existsSync(target), false, "文件零改")
 })
 
-test("12-2 带 ledger:\"#A\" 与 ledger:\"A\" 两形写同一目标 ⇒ 都照写（# 可省，两形同判）", async () => {
+test("CLI 12-2 带 ledger:\"#A\" 与 ledger:\"A\" 两形写同一目标 ⇒ 都照写（# 可省，两形同判）", async () => {
   const root = makeProject("12-2")
   const live = await hangLiveRow(root, "12-2-batch")
   const agent = agentOf(root)
@@ -151,7 +151,7 @@ test("12-2 带 ledger:\"#A\" 与 ledger:\"A\" 两形写同一目标 ⇒ 都照�
   assert.equal(readFileSync(doc, "utf8"), "# note 2\n", "同一号两形同判")
 })
 
-test("12-3 已核销 ∥ 不存在 ∥ 待讨论 三个号各写一笔 ⇒ 三拒，拒文分别点名，文件零改", async () => {
+test("CLI 12-3 已核销 ∥ 不存在 ∥ 待讨论 三个号各写一笔 ⇒ 三拒，拒文分别点名，文件零改", async () => {
   const root = makeProject("12-3")
   const agent = agentOf(root)
   const target = join(root, "thincoder-core/agent/s.mjs")
@@ -170,7 +170,7 @@ test("12-3 已核销 ∥ 不存在 ∥ 待讨论 三个号各写一笔 ⇒ 三�
   }
 })
 
-test("12-4 台账库不可读 ∥ 项目根 manifest 坏 JSON ⇒ 两态都拒，拒文带原始错误", async () => {
+test("CLI 12-4 台账库不可读 ∥ 项目根 manifest 坏 JSON ⇒ 两态都拒，拒文带原始错误", async () => {
   const broken = makeProject("12-4a")
   mkdirSync(join(ledgerDir, `${ledgerKey(broken)}.db`), { recursive: true }) // 库位是目录 ⇒ 打不开
   const t1 = join(broken, "thincoder-core/agent/z.mjs")
@@ -190,7 +190,7 @@ test("12-4 台账库不可读 ∥ 项目根 manifest 坏 JSON ⇒ 两态都拒�
   assert.equal(existsSync(t2), false, "文件零改")
 })
 
-test("12-5 判据点是目标路径本身：项目之外没有判据点 ⇒ 拒；仓内缺号 ⇒ 拒；project 指容器根 ⇒ 同拒", async () => {
+test("CLI 12-5 判据点是目标路径本身：项目之外没有判据点 ⇒ 拒；仓内缺号 ⇒ 拒；project 指容器根 ⇒ 同拒", async () => {
   const root = makeProject("12-5")
   const outside = mkdtempSync(join(tmpdir(), "wg-out-")) // 仓外临时目录：祖先链无 manifest
   fixtures.push(outside)
@@ -213,7 +213,7 @@ test("12-5 判据点是目标路径本身：项目之外没有判据点 ⇒ 拒�
   assert.doesNotMatch(viaBash.result, /\bhi\b/, "命令零执行")
 })
 
-test("12-6 搜索 / 索引面接名单单源：vendor · node_modules · dist 内的文件不再命中", async () => {
+test("CLI 12-6 搜索 / 索引面接名单单源：vendor · node_modules · dist 内的文件不再命中", async () => {
   const root = makeProject("12-6")
   const marker = "NEEDLE_MARKER_X9"
   writeFileSync(join(root, "vendor/needle.mjs"), `// ${marker}\n`)
@@ -228,7 +228,7 @@ test("12-6 搜索 / 索引面接名单单源：vendor · node_modules · dist �
   assert.doesNotMatch(hit, /needle\.mjs/)
 })
 
-test("12-7 bash：无在途行跑 git status ⇒ 拒、命令零执行；挂行后带号跑同一条 ⇒ 执行并回输出", async () => {
+test("CLI 12-7 bash：无在途行跑 git status ⇒ 拒、命令零执行；挂行后带号跑同一条 ⇒ 执行并回输出", async () => {
   const root = makeProject("12-7")
   makeRepo(root, "keep.txt")
   const agent = agentOf(root)
@@ -243,7 +243,7 @@ test("12-7 bash：无在途行跑 git status ⇒ 拒、命令零执行；挂行�
   assert.match(ok.result, /On branch|No commits yet/, "带号即执行并回输出")
 })
 
-test("12-8 子代理（depth > 0）不带号 ∥ 带号写同一目标 ⇒ 本门不拒（号来自绑定批档档头）", async () => {
+test("CLI 12-8 子代理（depth > 0）不带号 ∥ 带号写同一目标 ⇒ 本门不拒（号来自绑定批档档头）", async () => {
   const root = makeProject("12-8")
   const child = {
     cwd: root, planMode: false, autoApprove: true, config: { agent: { engineering: true } },
@@ -257,7 +257,7 @@ test("12-8 子代理（depth > 0）不带号 ∥ 带号写同一目标 ⇒ 本�
   assert.equal(second.ok, true, "子代理带一个不存在的号：本门也不核")
 })
 
-test("12-9 git 整把不在写门：台账无在途行 add + commit 照常生效；同一会话里写盘工具缺号仍拒", async () => {
+test("CLI 12-9 git 整把不在写门：台账无在途行 add + commit 照常生效；同一会话里写盘工具缺号仍拒", async () => {
   const root = makeProject("12-9")
   makeRepo(root, "a.txt")
   const agent = agentOf(root)
@@ -278,7 +278,7 @@ test("12-9 git 整把不在写门：台账无在途行 add + commit 照常生效
   assert.equal(existsSync(target), false, "文件零改")
 })
 
-test("12-10 名单只判审批，与写门无关：台账无在途行跑 git status ⇒ 照跑回输出", async () => {
+test("CLI 12-10 名单只判审批，与写门无关：台账无在途行跑 git status ⇒ 照跑回输出", async () => {
   const root = makeProject("12-10")
   makeRepo(root, "a.txt")
   const status = await run(agentOf(root), toolMapOf(root), "git", { action: "status" })
@@ -287,7 +287,7 @@ test("12-10 名单只判审批，与写门无关：台账无在途行跑 git sta
   assert.equal(ledgerQuery({ cwd: root, boundary: root }).length, 0, "本夹具台账里确实没有任何行")
 })
 
-test("12-12 会话 cwd = 容器根：不带 project ⇒ 拒、命令零执行；带 project 仍缺号 ⇒ 拒；带 project + 在途号 ⇒ 执行", async () => {
+test("CLI 12-12 会话 cwd = 容器根：不带 project ⇒ 拒、命令零执行；带 project 仍缺号 ⇒ 拒；带 project + 在途号 ⇒ 执行", async () => {
   mkdirSync(SCRATCH, { recursive: true })
   const container = mkdtempSync(join(SCRATCH, "lk-container-12-12-"))
   fixtures.push(container)
@@ -322,7 +322,7 @@ test("12-12 会话 cwd = 容器根：不带 project ⇒ 拒、命令零执行；
   assert.equal(existsSync(join(proj, ".thincoder/memory")), false, "项目内 memory 目录零写")
 })
 
-test("12-13 项目声明与台账对不上：声明容器根 ⇒ 不是项目；声明 A、号取自 B ⇒ 号不在这个项目的账上", async () => {
+test("CLI 12-13 项目声明与台账对不上：声明容器根 ⇒ 不是项目；声明 A、号取自 B ⇒ 号不在这个项目的账上", async () => {
   mkdirSync(SCRATCH, { recursive: true })
   const container = mkdtempSync(join(SCRATCH, "lk-container-12-13-"))
   fixtures.push(container)
@@ -349,7 +349,7 @@ test("12-13 项目声明与台账对不上：声明容器根 ⇒ 不是项目；
   assert.match(wrongLedger.result, /Pass project:/)
 })
 
-test("12-14 会话 cwd = 项目子目录：声明项目根 + 在途号 ⇒ 放行（声明根含会话锚）；不带 project ⇒ 拒", async () => {
+test("CLI 12-14 会话 cwd = 项目子目录：声明项目根 + 在途号 ⇒ 放行（声明根含会话锚）；不带 project ⇒ 拒", async () => {
   mkdirSync(SCRATCH, { recursive: true })
   const proj = makeProjectAt(mkdtempSync(join(SCRATCH, "lk-sub-12-14-")))
   makeRepo(proj, "keep.txt")
@@ -368,7 +368,7 @@ test("12-14 会话 cwd = 项目子目录：声明项目根 + 在途号 ⇒ 放�
   assert.doesNotMatch(noProject.result, /On branch/, "命令零执行")
 })
 
-test("12-15 manifest init 取根豁免（决策 43）：仓外自举不进本门照跑落盘；项目内子目录不带号拒、带号门过后工具拒（init never overwrites）", async () => {
+test("CLI 12-15 manifest init 取根豁免（决策 43）：仓外自举不进本门照跑落盘；项目内子目录不带号拒、带号门过后工具拒（init never overwrites）", async () => {
   mkdirSync(SCRATCH, { recursive: true })
   const proj = makeProjectAt(mkdtempSync(join(SCRATCH, "lk-init-12-15-")))
   const agent = agentOf(proj)

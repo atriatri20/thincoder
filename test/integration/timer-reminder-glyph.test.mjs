@@ -18,7 +18,7 @@ import { buildToolCallbacks } from "../../thincoder-cli/src/tui/tool-events.mjs"
 
 const ASCII_ONLY = /^[\x20-\x7E]+$/
 
-test('33-1 timer 到期行在会话流里的前缀段全为可读 ASCII：挂一个 timer 等它到期，读会话流那一行', () => {
+test('CLI 33-1 timer 到期行在会话流里的前缀段全为可读 ASCII：挂一个 timer 等它到期，读会话流那一行', () => {
   const now = Date.now()
   const agent = { history: [], _pendingTimers: [], config: {}, _advisorRound: 0 }
   // 真工具设一个 1s 一次性 timer（不传 message ⇒ 走缺省消息，字形问题在缺省消息上也出现过）

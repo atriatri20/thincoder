@@ -72,7 +72,7 @@ const runWrite = async (agent, rel, extra = {}) => {
   return res
 }
 
-test("14-1 无裁定行的 §3 写不进去（R-G3）；存量无裁定块仍拒 append §5（R-G2b）；补一块携 VERDICT: pass ⇒ 放行", async () => {
+test("CLI 14-1 无裁定行的 §3 写不进去（R-G3）；存量无裁定块仍拒 append §5（R-G2b）；补一块携 VERDICT: pass ⇒ 放行", async () => {
   const root = await freshRecord("14-1")
   const coder = batchTool(REC)
   const ctx = { depth: 1, agent: { ...agentOf(root, { designSlot: false }), _role: "eng-coder", _batchDoc: REC } }
@@ -106,7 +106,7 @@ test("14-1 无裁定行的 §3 写不进去（R-G3）；存量无裁定块仍拒
   assert.match(await coder.execute({ action: "append", segment: "§5", text: "实现落地" }, ctx), /appended/)
 })
 
-test("14-2 §3 非 pass ⇒ close 拒，回执含 `§3 状态行 =`；§1 状态行字节不变", async () => {
+test("CLI 14-2 §3 非 pass ⇒ close 拒，回执含 `§3 状态行 =`；§1 状态行字节不变", async () => {
   const root = await freshRecord("14-2")
   const before = readFileSync(recOf(root), "utf8").match(/\*\*状态行\*\*：.*/)[0]
   await assert.rejects(
@@ -116,7 +116,7 @@ test("14-2 §3 非 pass ⇒ close 拒，回执含 `§3 状态行 =`；§1 状态
   assert.equal(readFileSync(recOf(root), "utf8").match(/\*\*状态行\*\*：.*/)[0], before, "§1 状态行字节不变")
 })
 
-test("14-3 换会话（槽内无归属）核销合格行 ⇒ 通过（③ 判档面）", async () => {
+test("CLI 14-3 换会话（槽内无归属）核销合格行 ⇒ 通过（③ 判档面）", async () => {
   const root = makeProject("14-3")
   writeFileSync(join(root, "docs/batches/done.md"), "# 已收口批\n\n## §1 讨论（主 agent）\n**状态行**：已收口 2026-10-26\n\n## §3 设计评审（评审子代理）\n**状态行**：评审通过\n")
   const id = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title: "合格行", task_book: "docs/batches/done.md", trigger: "归批" }, boundary: root })
@@ -129,7 +129,7 @@ test("14-3 换会话（槽内无归属）核销合格行 ⇒ 通过（③ 判档
   assert.equal(rowsOf(root).find((r) => r.id === id).status, "已核销")
 })
 
-test("14-4 收口含 1 在途 + 1 待讨论 ⇒ 分别 待核销 / 条件，回执两行", async () => {
+test("CLI 14-4 收口含 1 在途 + 1 待讨论 ⇒ 分别 待核销 / 条件，回执两行", async () => {
   const root = await freshRecord("14-4")
   await review(root).execute({ action: "status", value: "评审通过" }, { agent: agentOf(root) })
   const idle = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title: "没做完" }, boundary: root })
@@ -144,7 +144,7 @@ test("14-4 收口含 1 在途 + 1 待讨论 ⇒ 分别 待核销 / 条件，回�
   assert.match(lines[1], /本批未动行 → 条件 1 行/)
 })
 
-test("14-5 兜底点名：汇总行只点名，建议句各贴其行", async () => {
+test("CLI 14-5 兜底点名：汇总行只点名，建议句各贴其行", async () => {
   const root = await freshRecord("14-5")
   await review(root).execute({ action: "status", value: "评审通过" }, { agent: agentOf(root) })
   const idle = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title: "没做完" }, boundary: root })
@@ -159,7 +159,7 @@ test("14-5 兜底点名：汇总行只点名，建议句各贴其行", async () 
   assert.match(lines[1], /本批未动行 → 条件 1 行：.*—— 这些行不是本批的活（未认领却被绑在本档 = 点火违规）；已落 trigger = 条件 \+ 复启句，由下一批接手，本批不再处置$/, "未认领行的建议贴在第二行")
 })
 
-test("14-6 收口后重开 ⇒ 行回 在途、回执点名 1 行；产品码写分辨在号（带号照写 ∥ 不带号拒）", async () => {
+test("CLI 14-6 收口后重开 ⇒ 行回 在途、回执点名 1 行；产品码写分辨在号（带号照写 ∥ 不带号拒）", async () => {
   const root = await freshRecord("14-6")
   await review(root).execute({ action: "status", value: "评审通过" }, { agent: agentOf(root) })
   await parent.execute({ action: "close", path: recOf(root) }, ctx0(root))
@@ -177,7 +177,7 @@ test("14-6 收口后重开 ⇒ 行回 在途、回执点名 1 行；产品码写
   assert.equal(numbered.ok, true, `带重开那条在途号 ⇒ 产品码写照写 — ${numbered.result}`)
 })
 
-test("14-7 核销后重开 ⇒ 行零改、逐 id 点名；两种重开并存 ⇒ 两行回执各一行", async () => {
+test("CLI 14-7 核销后重开 ⇒ 行零改、逐 id 点名；两种重开并存 ⇒ 两行回执各一行", async () => {
   const root = await freshRecord("14-7")
   // 行 A：待核销（收口后重开回收）；行 B：已核销（终态不回收）
   const a = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title: "待结账", task_book: REC }, boundary: root })
@@ -201,7 +201,7 @@ test("14-7 核销后重开 ⇒ 行零改、逐 id 点名；两种重开并存 �
   assert.equal(rowsOf(root).find((r) => r.id === b).status, "已核销", "已核销行零改")
 })
 
-test("14-8 §3 已 pass 后同批打回 ⇒ 状态行重置、§5 拒；补一块携 pass 裁定的轮次块后放行", async () => {
+test("CLI 14-8 §3 已 pass 后同批打回 ⇒ 状态行重置、§5 拒；补一块携 pass 裁定的轮次块后放行", async () => {
   const root = await freshRecord("14-8")
   const coder = batchTool(REC)
   const ctx = { depth: 1, agent: { ...agentOf(root), _role: "eng-coder", _batchDoc: REC } }

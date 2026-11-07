@@ -208,7 +208,7 @@ function assertFixedOverheadOverLine(endpoint) {
   assert.ok(fixed > threshold, `夹具前提：固定开销估算 ${fixed} 应越过压缩线 ${threshold}`)
 }
 
-test('1-1 正常：一次工具调用后继续对话 —— 会话流有调用与结果，模型回复引用结果，无 400', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
+test('CLI 1-1 正常：一次工具调用后继续对话 —— 会话流有调用与结果，模型回复引用结果，无 400', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
   const s = await scene(t, {
     files: { "note.txt": "PINEAPPLE-42\n" },
     calls: [{ id: "toolu_g1", name: "read", input: { path: "note.txt" } }],
@@ -232,7 +232,7 @@ test('1-1 正常：一次工具调用后继续对话 —— 会话流有调用�
   assertFixedOverheadOverLine(s.endpoint)
 })
 
-test('1-2 边界：一轮两个工具调用后继续对话 —— 两个结果都回到模型，无 400', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
+test('CLI 1-2 边界：一轮两个工具调用后继续对话 —— 两个结果都回到模型，无 400', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
   const s = await scene(t, {
     files: { "note-a.txt": "ALPHA-1\n", "note-b.txt": "BETA-2\n" },
     calls: [
@@ -258,7 +258,7 @@ test('1-2 边界：一轮两个工具调用后继续对话 —— 两个结果�
   assertFixedOverheadOverLine(s.endpoint)
 })
 
-test('1-3 边界：关进程重开同一会话，历史从盘回放后继续 —— 回复引用上一程的工具结果，无 400', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
+test('CLI 1-3 边界：关进程重开同一会话，历史从盘回放后继续 —— 回复引用上一程的工具结果，无 400', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
   const s = await scene(t, {
     files: { "note.txt": "PINEAPPLE-42\n" },
     calls: [{ id: "toolu_g3", name: "read", input: { path: "note.txt" } }],

@@ -61,7 +61,7 @@ const ctxPercentOnStatusLine = (line) => {
   return m ? Number(m[1]) : undefined
 }
 
-test("16-1 恢复带 estimateSample 的会话 ⇒ 状态行百分比 = 核读数（不是未校准值），stats 同值", async (t) => {
+test("CLI 16-1 恢复带 estimateSample 的会话 ⇒ 状态行百分比 = 核读数（不是未校准值），stats 同值", async (t) => {
   const cwd = mkdtempSync(join(tmpdir(), "ctx-percent-calibrated-"))
   _setSessionsDirForTest(join(cwd, "sessions"))
   t.after(() => {

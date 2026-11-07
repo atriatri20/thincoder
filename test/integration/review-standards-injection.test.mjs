@@ -174,7 +174,7 @@ function standardsSection(body) {
   return (end < 0 ? rest : rest.slice(0, end)).replaceAll("\\n", "\n").trim()
 }
 
-test("24-1 声明了标准档 ⇒ 评审上下文拿到该档正文", { timeout: 120_000 }, async (t) => {
+test("CLI 24-1 声明了标准档 ⇒ 评审上下文拿到该档正文", { timeout: 120_000 }, async (t) => {
   const root = fixture("241")
   writeManifest(root, STANDARDS_REL)
   const { body } = await designReview(t, root)
@@ -192,7 +192,7 @@ test("24-1 声明了标准档 ⇒ 评审上下文拿到该档正文", { timeout:
   assert.equal(ret, resolve(root, STANDARDS_REL), "返该档绝对路径")
 })
 
-test("24-2 声明指向不存在的档 ⇒ 态 2 句点名路径与原因，且与 24-3 的句子不等", { timeout: 120_000 }, async (t) => {
+test("CLI 24-2 声明指向不存在的档 ⇒ 态 2 句点名路径与原因，且与 24-3 的句子不等", { timeout: 120_000 }, async (t) => {
   const root = fixture("242")
   writeManifest(root, "docs/nope")
   const { body } = await designReview(t, root)
@@ -206,7 +206,7 @@ test("24-2 声明指向不存在的档 ⇒ 态 2 句点名路径与原因，且�
   assert.notEqual(section, NO_STANDARDS_NOTICE, "且与 24-3 的句子不等")
 })
 
-test("24-3 删掉该键 ⇒ 态 1 句；零正文、零路径字面、零 declared", { timeout: 120_000 }, async (t) => {
+test("CLI 24-3 删掉该键 ⇒ 态 1 句；零正文、零路径字面、零 declared", { timeout: 120_000 }, async (t) => {
   const root = fixture("243")
   writeManifest(root, undefined) // 键缺 = 未声明（在盘的那份标准档不被探测）
   const { body } = await designReview(t, root)

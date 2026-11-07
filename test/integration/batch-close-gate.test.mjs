@@ -1,8 +1,9 @@
 /**
- * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4 / 7-5 / 7-6 / 7-7 / 7-8 / 7-9 / 7-11 / 7-13（RTM CLI 端故事 7「收口只判本批改过的档」；
+ * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4 / 7-5 / 7-6 / 7-7 / 7-8 / 7-9 / 7-11 / 7-13 / 7-15（RTM CLI 端故事 7「收口只判本批改过的档」；
  * 判据原文 = `test/RTM.md` 第 7 节；7-1…7-3 的机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「② 的范围」，
  * 7-4 的机制 = `docs/core/design/TESTING.md` §3.5（零留存的收口门），
- * 7-6 / 7-7 / 7-8 的机制 = 同档 §3.20「结构兜底」（**批档自身恒在判域**：② 面命中即拒、① 面强制集 = 本次写入文本）。
+ * 7-6 / 7-7 / 7-8 的机制 = 同档 §3.20「结构兜底」（**批档自身恒在判域**：② 面命中即拒、① 面强制集 = 本次写入文本）；
+ * 7-15 的机制 = 同档 §3.29 条目 AC（**批档面互引不判**：引用方与目标同在批档基底根下 ⇒ 不判、只留痕）。
  *
  * 业务入口 = 真 `batch` 工具（`agent-tools/batch.mjs`）的 depth-0 `close` 轨——不直调 `runBatchGate`：
  * 本档要的是「收口这件事」的业务可观察结果（放行 ∥ 拒绝、回执行、§1 状态行落没落盘）。
@@ -25,7 +26,7 @@
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, existsSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 // 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
@@ -43,8 +44,11 @@ const OUT_REL = "docs/notes/out-of-range.md" // 工作树内、范围外（不�
 const DIRTY_REL = "docs/notes/dirty.md" // 笔域集内、含悬空指针
 /** 档头「一段一作者」映射（`batch` create 落骨架时写入）——收口面 `§N（作者：<角色>）` 的唯一来源。 */
 const MAPPING = "> 一段一作者：§1 讨论（主 agent）· §2 批次任务与设计（eng-designer）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）"
-/** 裸档名（不带目录段）——仓根与批档同目录都没有它 ⇒ 锚`档缺`（7-6 / 7-8 的探针）。 */
-const BARE = "DOC-CHECK.md"
+/** 探针：带目录段、仓根相对、**不在批档根下**的悬空路径（7-6 / 7-8 共用）。
+ *  为何不写裸名：批档面互引不判（判据单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.29 条目 AC）之后，
+ *  批档面内的裸名走候选 ②（同目录拼法）⇒ 被豁免，这两行就守不住「命中落在批档自身 ∥ 本次写入文本」了。
+ *  带目录段 ⇒ 只走候选 ① ⇒ 面判不成立 ⇒ 照判 `档缺`（该行证的东西不变）。 */
+const OUTSIDE_DANGLING = "thincoder-core/tool-docs/NO-SUCH-DOC.md"
 const OWN_TEST_REL = "docs/batches/fixture.test.mjs" // 7-4：本批自己的单测档（同目录、批档名前缀）
 const OWN_VARIANT_REL = "docs/batches/fixture-extra.test.mjs" // 7-4：同前缀变体（盘上无 fixture-extra.md）
 
@@ -71,9 +75,9 @@ after(() => {
   removeTempDirBestEffort(ledgerDir)
 })
 
-/** 六段批档全文（`sha` ⇒ §1 落 `批起 sha = <sha>` 记入行；`sec1` = §1 正文（7-6 放裸档名）；
+/** 六段批档全文（`sha` ⇒ §1 落 `批起 sha = <sha>` 记入行；`sec1` = §1 正文；`sec5` = §5 正文（7-15 放已删单测档的指针）；
  *  §2/§3/§4/§6 各有内容——close 的链门前置）。 */
-const record = (sha, { sec1 = "夹具讨论。" } = {}) => [
+const record = (sha, { sec1 = "夹具讨论。", sec5 = "夹具实施。" } = {}) => [
   "# 夹具批 · 收口门范围",
   "",
   MAPPING,
@@ -101,7 +105,7 @@ const record = (sha, { sec1 = "夹具讨论。" } = {}) => [
   "夹具批准。",
   "",
   "## §5 实施记录（eng-coder）",
-  "夹具实施。",
+  sec5,
   "",
   "## §6 验证与收口（父代理）",
   "夹具收口。",
@@ -123,11 +127,11 @@ function makeProject(tag) {
  * 于是提交 diff 腿恒 = 批档 ＋ `CLEAN_A` ＋ `CLEAN_B`（批档自身也在判域内，不再被滤掉）；触达账按例各自给
  * （7-1 一档 · 7-2 两档 · 7-3 两干净档＋脏档 · 7-6 零档）。
  */
-function gitRepo(root, { sec1 } = {}) {
+function gitRepo(root, { sec1, sec5 } = {}) {
   git(root, "init", "-q")
   commit(root, "base")
   const sha = rev(root)
-  writeFileSync(join(root, BATCH_REL), record(sha, { sec1 }))
+  writeFileSync(join(root, BATCH_REL), record(sha, { sec1, sec5 }))
   writeFileSync(join(root, CLEAN_A), CLEAN)
   writeFileSync(join(root, CLEAN_B), CLEAN)
   commit(root, "本批两档 + 批档")
@@ -164,7 +168,7 @@ function assertBatchCommitted(root, sha) {
   assert.deepEqual(diffDocs(root, sha), [BATCH_REL, CLEAN_A, CLEAN_B], "提交 diff 腿应恰含批档自身 + 本批两档")
 }
 
-test('7-1 正常 · 笔域集内各档零命中 ⇒ 收口放行、回执 DOC-CHECK GATE: PASS、范围行档数 = 笔域集档数', async () => {
+test('CLI 7-1 正常 · 笔域集内各档零命中 ⇒ 收口放行、回执 DOC-CHECK GATE: PASS、范围行档数 = 笔域集档数', async () => {
   const root = makeProject("r71")
   const sha = gitRepo(root)
   assertBatchCommitted(root, sha)
@@ -179,7 +183,7 @@ test('7-1 正常 · 笔域集内各档零命中 ⇒ 收口放行、回执 DOC-CH
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
 })
 
-test('7-2 边界 · 工作树内范围外脏档 ⇒ 不入判、收口放行、回执零该档行', async () => {
+test('CLI 7-2 边界 · 工作树内范围外脏档 ⇒ 不入判、收口放行、回执零该档行', async () => {
   const root = makeProject("r72")
   const sha = gitRepo(root)
   assertBatchCommitted(root, sha)
@@ -197,7 +201,7 @@ test('7-2 边界 · 工作树内范围外脏档 ⇒ 不入判、收口放行、�
   assert.match(statusLineOf(root), /已收口/, "收口放行且落盘")
 })
 
-test('7-3 错误 · 笔域集内一档含悬空指针 ⇒ 收口被拒（throw）、§1 状态行字节不变', async () => {
+test('CLI 7-3 错误 · 笔域集内一档含悬空指针 ⇒ 收口被拒（throw）、§1 状态行字节不变', async () => {
   const root = makeProject("r73")
   const sha = gitRepo(root)
   assertBatchCommitted(root, sha)
@@ -218,7 +222,7 @@ test('7-3 错误 · 笔域集内一档含悬空指针 ⇒ 收口被拒（throw�
   assert.match(statusLineOf(root), /进行中/, "§1 状态行仍「进行中」")
 })
 
-test('7-4 错误 · 批档同目录留本批自己的单测档 ⇒ 收口被拒（点名绝对路径 + 修法）、删档后同跑放行', async () => {
+test('CLI 7-4 错误 · 批档同目录留本批自己的单测档 ⇒ 收口被拒（点名绝对路径 + 修法）、删档后同跑放行', async () => {
   const root = makeProject("r74")
   const sha = gitRepo(root)
   assertBatchCommitted(root, sha)
@@ -262,7 +266,7 @@ const nestedFenceDoc = () => ["# 嵌套围栏档", "", "````", "```js", ...CODE_
 /** 对照档：同一批行去掉围栏标记（同字数、同内容，唯一差别 = 围栏）。 */
 const plainDoc = () => ["# 无围栏对照档", "", ...CODE_LINES, ""].join("\n")
 
-test("7-5 嵌套围栏档内层代码不入段判据：收口放行，对照档照拒", async () => {
+test("CLI 7-5 嵌套围栏档内层代码不入段判据：收口放行，对照档照拒", async () => {
   assert.ok(CODE_CHARS > 300, `夹具前提：内层代码合计 ${CODE_CHARS} 字 > 段判据阈值 300——认不出围栏就是超长段`)
 
   // 两半 = 两份夹具、两次收口：一次 `batch close` 只能给一个 verdict（跑一次同时断「放行」与「被拒」不可能），
@@ -299,9 +303,9 @@ test("7-5 嵌套围栏档内层代码不入段判据：收口放行，对照档�
   assert.match(statusLineOf(root2), /进行中/, "§1 状态行仍「进行中」")
 })
 
-test('7-6 错误 · 批档 §1 含裸档名 ⇒ 收口被拒（命中落在批档自身、点名 §1（作者：主 agent））、状态行字节不变', async () => {
+test('CLI 7-6 错误 · 批档 §1 含一条带目录段、不在批档根下的悬空路径 ⇒ 收口被拒（命中落在批档自身、点名 §1（作者：主 agent））、状态行字节不变', async () => {
   const root = makeProject("r76")
-  const sha = gitRepo(root, { sec1: `夹具见 ${BARE} 的判据。` }) // 批档自身脏、其余档干净、触达账零档
+  const sha = gitRepo(root, { sec1: `夹具见 ${OUTSIDE_DANGLING} 的判据。` }) // 批档自身脏、其余档干净、触达账零档
   assertBatchCommitted(root, sha)
   const before = readFileSync(join(root, BATCH_REL), "utf8")
 
@@ -310,7 +314,7 @@ test('7-6 错误 · 批档 §1 含裸档名 ⇒ 收口被拒（命中落在批�
     (e) => {
       assert.match(e.message, /文档机检门拒收口/, `拒串点名门位：${e.message}`)
       assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, `拒串携 verdict 首行：${e.message}`)
-      assert.match(e.message, /✗ 锚·档缺 docs\/batches\/fixture\.md:\d+ `DOC-CHECK\.md`/, `命中行点名批档内该行：${e.message}`)
+      assert.match(e.message, /✗ 锚·档缺 docs\/batches\/fixture\.md:\d+ `thincoder-core\/tool-docs\/NO-SUCH-DOC\.md`/, `命中行点名批档内该行：${e.message}`)
       assert.match(e.message, /§1（作者：主 agent）/, `命中行答「谁该改」：${e.message}`)
       return true
     },
@@ -319,7 +323,7 @@ test('7-6 错误 · 批档 §1 含裸档名 ⇒ 收口被拒（命中落在批�
   assert.match(statusLineOf(root), /进行中/, "§1 状态行仍「进行中」")
 })
 
-test('7-7 正常 · 批档干净且笔域集只含批档自身 ⇒ 放行、范围行档数 = 实判档数且 ≥ 1', async () => {
+test('CLI 7-7 正常 · 批档干净且笔域集只含批档自身 ⇒ 放行、范围行档数 = 实判档数且 ≥ 1', async () => {
   const root = makeProject("r77")
   // 无 git 仓 + 触达账零档 ⇒ 笔域集 = 批档自身：范围「1 档」只能是「批档自身进了判域」的结果
   writeFileSync(join(root, BATCH_REL), record("0".repeat(40)))
@@ -333,17 +337,17 @@ test('7-7 正常 · 批档干净且笔域集只含批档自身 ⇒ 放行、范�
   assert.match(statusLineOf(root), /已收口/, "收口放行且落盘")
 })
 
-test('7-8 错误 · 子代理 append §2：本次写入文本含裸档名 ⇒ 拒（零字节）；改全路径后同调用 ⇒ 落盘、前文零变', async () => {
+test('CLI 7-8 错误 · 子代理 append §2：本次写入文本含一条带目录段、不在批档根下的悬空路径 ⇒ 拒（零字节）；改全路径后同调用 ⇒ 落盘、前文零变', async () => {
   const root = makeProject("r78")
   gitRepo(root)
   const before = readFileSync(join(root, BATCH_REL), "utf8")
 
   await assert.rejects(
-    () => asDesigner.execute({ action: "append", segment: "§2", text: `本段引 ${BARE} 的判据。` }, designerCtx(root)),
+    () => asDesigner.execute({ action: "append", segment: "§2", text: `本段引 ${OUTSIDE_DANGLING} 的判据。` }, designerCtx(root)),
     (e) => {
       assert.match(e.message, /文档机检门拒写/, `拒串点名门位：${e.message}`)
       assert.match(e.message, /REFUSED（命中 1 条——本次写入文本/, `强制集指向本次写入文本：${e.message}`)
-      assert.match(e.message, /✗ 锚·档缺 本次写入文本:\d+ `DOC-CHECK\.md`/, `命中行点名本次写入文本：${e.message}`)
+      assert.match(e.message, /✗ 锚·档缺 本次写入文本:\d+ `thincoder-core\/tool-docs\/NO-SUCH-DOC\.md`/, `命中行点名本次写入文本：${e.message}`)
       return true
     },
   )
@@ -360,7 +364,7 @@ test('7-8 错误 · 子代理 append §2：本次写入文本含裸档名 ⇒ �
   assert.ok(after.includes(landed), "本次文本已落盘")
 })
 
-test('7-11 错误 · 批档 §1 写「> 不适用：§3」声明 ⇒ 收口被拒（声明机制已停用，逐字点名该行）；§3 无状态行 ⇒ 收口被拒（`§3 状态行 = （无状态行）`）——两半都成立才算过', async () => {
+test('CLI 7-11 错误 · 批档 §1 写「> 不适用：§3」声明 ⇒ 收口被拒（声明机制已停用，逐字点名该行）；§3 无状态行 ⇒ 收口被拒（`§3 状态行 = （无状态行）`）——两半都成立才算过', async () => {
   // 前半：存量声明档的形态（§1 段体带一行 `> 不适用：§3 —— …`）⇒ 链门前置扫描当场拒，不提「形不合」而是说「这条路没有了」
   const root = makeProject("r711")
   const sha = gitRepo(root, { sec1: "夹具讨论。\n\n> 不适用：§3 —— 本批纯措辞纠正、无设计变更。" })
@@ -397,7 +401,7 @@ test('7-11 错误 · 批档 §1 写「> 不适用：§3」声明 ⇒ 收口被�
 
 // 工具描述面（`thincoder-core/tool-docs/**`）与其余面同判（撤面豁免）——400 字符段在该面照判段判据、
 // 裸档名照判锚判据：两条同时点名；只修锚仍拒（段那条独立成立）；拆段后同一条门放行。
-test('7-9 错误 · 笔域集内一档在工具描述面（400 字符段 + 裸档名）⇒ 收口被拒且锚与段两条同时点名', async () => {
+test('CLI 7-9 错误 · 笔域集内一档在工具描述面（400 字符段 + 裸档名）⇒ 收口被拒且锚与段两条同时点名', async () => {
   const TOOLDOC_REL = "thincoder-core/tool-docs/probe.md"
   const LONG = "长".repeat(400)
   const root = makeProject("r79")
@@ -447,7 +451,7 @@ const CIRCLED5 = "①②③④⑤"
 /** 五项一项一行的中文列表档（每项 80 字 ⇒ 认不出列表项时它就是 400+ 字的长段）。 */
 const cnList = (mark) => "# 中文列表\n\n" + Array.from({ length: 5 }, (_, i) => mark(i)).join("\n") + "\n"
 
-test("7-13 正常 · 中文项目符号三族档入笔域集 ⇒ 收口放行；同内容去标记的 400 字对照档 ⇒ 收口被拒（文字太长，难于阅读）", async () => {
+test("CLI 7-13 正常 · 中文项目符号三族档入笔域集 ⇒ 收口放行；同内容去标记的 400 字对照档 ⇒ 收口被拒（文字太长，难于阅读）", async () => {
   const root = makeProject("r713")
   gitRepo(root)
   const bullets = [
@@ -491,4 +495,34 @@ test("7-13 正常 · 中文项目符号三族档入笔域集 ⇒ 收口放行；
   assert.match(statusLineOf(root2), /进行中/, "§1 状态行仍「进行中」")
 })
 
+// 7-15（本批新增）：批档面互引不判（判据单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.29 条目 AC）。
+// 缺口来源 = 台账 `#2114` ∥ `#2117` 两次收口死锁：本批单元测试档删了判 `档缺`、不删又拒收口（两面互锁）。
+// 三半都成立才算过：① 批档 → 已删的本批单测档 ⇒ 收口放行（死锁消失）；② 同一指针写进设计档 ⇒ 照判 `档缺`（方向纪律）；
+// ③ `report` 面恒出留痕一行（不拦、不进 `hits`）。
+test("CLI 7-15 正常 · 批档引已删的本批单测档 ⇒ 收口放行（死锁消失）；同一指针在设计档 ⇒ 仍判 档缺；report 面留痕一行", async () => {
+  // 前半：指针 = 本批单测档的仓根全路径；档落盘后删掉——那正是死锁发生的时刻（目标已不在盘）
+  const root = makeProject("r715")
+  const sha = gitRepo(root, { sec5: `本批单测档 \`${OWN_TEST_REL}\` 已随收口删除。` })
+  assertBatchCommitted(root, sha)
+  writeFileSync(join(root, OWN_TEST_REL), "// 夹具：本批自己的单元测试档（用毕即删）\n")
+  removeTempDirBestEffort(join(root, OWN_TEST_REL))
+  assert.equal(existsSync(join(root, OWN_TEST_REL)), false, "前置：目标档已删——死锁只在目标不在盘时发生")
+
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, []))
+  assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 3 档", `目标已删仍不判、收口放行：${receipt}`)
+  assert.match(statusLineOf(root), /已收口/, "收口放行且落盘")
+
+  // 中半：同一指针写进设计档 ⇒ 引用方不在批档根下 ⇒ 面判不成立 ⇒ 照判 档缺
+  const designRel = "docs/core/design/probe.md"
+  mkdirSync(join(root, "docs/core/design"), { recursive: true })
+  writeFileSync(join(root, designRel), `# 设计档\n\n见 \`${OWN_TEST_REL}\`。\n`)
+  const gate = runDocCheck(root, { mode: "gate", docs: [designRel], docsSource: "explicit" })
+  assert.match(gate.report.split("\n")[0], /^DOC-CHECK GATE: REFUSED（锚 1 条）/, `规范档引批档照判：${gate.report}`)
+  assert.match(gate.report, /✗ 锚·档缺 docs\/core\/design\/probe\.md:\d+/, `命中行点名该设计档：${gate.report}`)
+
+  // 后半：报面留痕一行（0 也出；这里读到 1 处）——留痕不是命中，不进 `hits`
+  const report = runDocCheck(root, { mode: "report", docs: [BATCH_REL] })
+  assert.match(report.report, /批档面互引未判 1 处（批档 ↔ 批档 · 只留痕，不进 hits、不改 verdict）/, `报面留痕一行：${report.report}`)
+  assert.equal(report.hits.total, 0, "留痕不是命中：不进 hits、不改 verdict")
+})
 

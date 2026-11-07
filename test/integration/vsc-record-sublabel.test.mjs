@@ -68,7 +68,7 @@ function archivedRecord() {
 
 // ─── 1-1 归档块重开 ∥ reload 后，子代理行还是子代理行 ─────────────────
 
-test("1-1 重开后子代行仍以 `explore#1 · ` 起头，父自己的行零子标", () => {
+test("VSC 1-1 重开后子代行仍以 `explore#1 · ` 起头，父自己的行零子标", () => {
   const record = archivedRecord()
   const lines = restoreOnVsc(record)
   assert.deepEqual(lines, [
@@ -78,7 +78,7 @@ test("1-1 重开后子代行仍以 `explore#1 · ` 起头，父自己的行零�
   ])
 })
 
-test("1-1 行正文不重复出现子标（否则回放双份）", () => {
+test("VSC 1-1 行正文不重复出现子标（否则回放双份）", () => {
   const record = archivedRecord()
   for (const row of record.rows) {
     if (row.sub === undefined) continue
@@ -86,7 +86,7 @@ test("1-1 行正文不重复出现子标（否则回放双份）", () => {
   }
 })
 
-test("1-1 重新归档同一块 ⇒ 行形不变（重开不劣化）", () => {
+test("VSC 1-1 重新归档同一块 ⇒ 行形不变（重开不劣化）", () => {
   const record = archivedRecord()
   const replay = liveBlock()
   for (const row of record.rows) renderSubagentChunk(replay, row)
@@ -96,12 +96,12 @@ test("1-1 重新归档同一块 ⇒ 行形不变（重开不劣化）", () => {
 
 // ─── 1-2 同一会话，VSC 与 CLI 两端恢复同一份记录 ──────────────────────
 
-test("1-2 新形记录：两端行文逐字一致（三端同串同位置）", () => {
+test("VSC 1-2 新形记录：两端行文逐字一致（三端同串同位置）", () => {
   const record = archivedRecord()
   assert.deepEqual(restoreOnCli(record), restoreOnVsc(record))
 })
 
-test("1-2 存量记录（子标烙在 text 内）：两端照旧逐字一致、子标恰一份", () => {
+test("VSC 1-2 存量记录（子标烙在 text 内）：两端照旧逐字一致、子标恰一份", () => {
   const legacy = {
     kind: "subagent",
     meta: { key: "sub:explore#1", role: "explore" },
@@ -113,7 +113,7 @@ test("1-2 存量记录（子标烙在 text 内）：两端照旧逐字一致、�
   assert.deepEqual(restoreOnVsc(legacy), cli)
 })
 
-test("1-2 空正文行：两端皆不产行（同一谓词，无端差）", () => {
+test("VSC 1-2 空正文行：两端皆不产行（同一谓词，无端差）", () => {
   const record = {
     kind: "subagent",
     meta: { key: "sub:explore#1", role: "explore" },

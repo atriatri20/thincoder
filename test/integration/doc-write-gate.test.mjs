@@ -48,7 +48,7 @@ function makeProject(tag) {
   return root
 }
 
-test("7-14 错误 · 设计档直写盘带悬空档名 ⇒ 拒写、目标档逐字不变；改成在盘全路径后同一笔落盘", async () => {
+test("CLI 7-14 错误 · 设计档直写盘带悬空档名 ⇒ 拒写、目标档逐字不变；改成在盘全路径后同一笔落盘", async () => {
   const root = makeProject("r714")
   const before = readFileSync(join(root, DOC_REL), "utf8")
   const ctx = { cwd: root }
