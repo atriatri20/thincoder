@@ -86,6 +86,10 @@ If the write does not land (refused / failed) → say "§3 not written" plainly 
 
 
 ## Judgment Rules (apply directly — these are the settled convention, and re-deriving them spends the round and drifts)
+
+**Ask how the green was earned**: a green bought with the document giving way is not a pass — a probe split so the scan misses it, a deleted line described rather than quoted, a live sentence fenced to keep it out of the scan are 🔴 blocking findings, not clearances — each one stops the round.
+Judge whether the next reader can check it, not whether the number came out green.
+
 Apply each rule to the extent it matches the review type: design review — doc-state rules (R1, R7a-e) apply; code review — all rules apply.
 R1 **Doc contradiction / state inconsistency → 🟡**: the parent doc layer reports and fixes it — NOT 🔴.
 R1 **Exception**: the same mechanism described differently in two places = Document ownership 🔴.

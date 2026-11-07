@@ -8127,7 +8127,7 @@ RTM 读数（本席本轮实算，数字住批档 §2）：`test/RTM.md` 的故�
 
 | # | 档 | 位置 / 形态 |
 |---|---|---|
-| ① | `thincoder-core/prompts/discipline-engineering.md` | `### Doc update discipline (D1–D15)` 节的第 15 条：题眼换名 + 正文首行换写（判据分句同换形）+ 新增 2 行射程句 + **删 1 行**（以 `Until` 起头的失效前提句——把记不到数的情形挂在「工具还没报数」这个前提上的那一行；整行删、不换写）；该条其余三行（记形句 ∥ 量法分歧句 ∥ `**Why**` 句）逐字不动；`D1–D15` 编号与条数**都不动** |
+| ① | `thincoder-core/prompts/discipline-engineering.md` | `### Doc update discipline (D1–D15)` 节的第 15 条：题眼换名 + 正文首行换写（判据分句同换形）+ 新增 2 行射程句 + **删 1 行**（整行原文见「改 2」的退役行围栏——把记不到数的情形挂在一个「工具还没报数」的前提上的那一行；整行删、不换写）；该条其余三行（记形句 ∥ 量法分歧句 ∥ `**Why**` 句）逐字不动；`D1–D15` 编号与条数**都不动** |
 | ② | 同档 `### Docs must be human-readable` 节 | 末条 bullet「Chinese strings in AC / verification commands」**整行换写为 4 行**；节内其余四行一字不动 |
 
 **逐字终稿甲（`D15` · 实施席照此落笔 · 唯一权威目标形；只列改动行，未列各行逐字不动）**
@@ -8140,7 +8140,13 @@ RTM 读数（本席本轮实算，数字住批档 §2）：`test/RTM.md` 的故�
     A reading that sits under neither first asks which ruler it has, and is recorded `unverified` where no ruler can be named — the reach is open, not a list of families.
 ```
 
-改 2 — **整行删除第 15 条正文第四行**（以 `Until` 起头、把记不到数的情形挂在一个「工具还没报数」的前提上的那一行）：
+改 2 — **整行删除第 15 条正文第四行**（把记不到数的情形挂在一个「工具还没报数」的前提上的那一行；整行原文见下方围栏——记录必须能引用它删掉的那一行）：
+
+**退役行原文（逐字 · 整行删除 · 本记录引用它——判域只含**围栏甲 ∥ 提示词面**；本围栏块 = 变更记录面，不判）**
+
+```text
+   **Until `doc_check` reports counts**, a count that is needed is recorded `unverified` — never substituted with another ruler.
+```
 
 - **为什么删**：`doc_check` 的 `lines` 参数早已能报数，那个前提不成立。同一句在 `docs/core/design/DOC-DISCIPLINE.md` 里的副本上一轮已按同一理由删净——**两个副本只删一个，落地后就成了「设计档没有、提示词还留着」**。
 - **为什么不换写**：剩下的意思已被射程句第三行吸收（两把之外的读数，定不出尺子就记 `unverified`）。改写成别的说法 = 在原地再造一个副本，同一规则说两遍（`D2`）。
@@ -8200,7 +8206,7 @@ RTM 读数（本席本轮实算，数字住批档 §2）：`test/RTM.md` 的故�
 | A6 | 判据分句四层同形（判域 = 本档 §6.81 的围栏甲 ∥ `docs/core/design/DOC-DISCIPLINE.md` 的 `D15` 行 ∥ 提示词面同节 ∥ 需求档 §13.1 的 `D15` 行） | 命令 ①：围栏甲 `a different decoding standard` = **1** ∧ `it is wrong` = **0** ∥ 设计档 `D15` 行 = **1** ∥ 提示词面同两串 = **1** ∥ **0**；需求档同串（父侧落，收口复核） | 任一层缺 ⇒ 红；任一层留 `it is wrong` ∥ `是错的` ⇒ 红（改前四面即红） | 本席（设计侧）× 实施轮（提示词面）× 父侧（需求档） |
 | A7 | 射程不再枚举族（判域 = 围栏甲 ∥ `docs/core/design/DOC-DISCIPLINE.md` 的 `D15` 行与细则 ∥ 提示词面同节） | 命令 ①：`用例数` 在围栏甲 ∥ 设计档 `D15` 行 ∥ 设计档 `D15 细则` ∥ 提示词同节 = **0** ∥ `whatever kind it is` = **1** ∥ 腿活性 `A7_legGT` ≥ **1**（细则那一片读不到即红） | 该枚举现四层皆零（前一轮已撤）；把它写回任一层 ⇒ > 0 即红 | 本席 ∥ 实施轮 |
 | A8 | 落地行宽（提示词面逐行判、无结构豁免） | 命令 ①：`maxLen`（围栏甲三行 ∥ 围栏乙四行取最大）≤ **300**；块取不到 ⇒ 红 | `maxLen > 300` ⇒ 红——超宽即交付门 `REFUSED`；围栏甲第二行上一版曾超出，故列为判据 | 本席 ∥ 实施轮 |
-| A9 | 失效前提句清零（判域 = 围栏甲 ∥ 本档 §6.81 全节 ∥ 提示词面 `D15` 节切片） | 命令 ②：`K`（= 那一行独有的探针串，命令内拆写，本档不落该串）三面各 **0** | 改前提示词面 = 1（那一行在位）⇒ 能红；本档 §6.81 里出现同一串（把删掉的话再抄一遍）= 红 | 本席 ∥ 实施轮 |
+| A9 | 失效前提句清零（判域 = **围栏甲 ∥ 提示词面** `D15` 节切片；「改 2 的退役行围栏」= 变更记录面，不入判域——记录必须能原样引用删掉的那一行。判域这一改与命令 ② 的切片边界同批落，缘由见 §6.82） | 命令 ②：`K`（= 那一行独有的探针串，照直写）两面各 **0** | 红法 = 把那一行抄回**围栏甲**（或提示词面 `D15` 节）⇒ > 0 即红（原版提示词面在位时该读数非零）；「改 2 的退役行围栏」里出现该串 = 不判（那正是它存在的理由） | 本席 ∥ 实施轮 |
 | A10 | 射程句的 `unverified` 兜底恰 1 处（单源） | 命令 ②：围栏甲内 `unverified` = **1** | 0（兜底被误删）∥ > 1（同一兜底写两处）= 红 | 本席 ∥ 实施轮 |
 
 **判域注**：`findstr` 在 `thincoder-core/prompts/common.md` 的工具路由表另有一处，语义是工具选择（用 `grep` 代替 shell 的 `find*`），不是本条的实例。判域因此**钉死在那两个 `###` 节内**（`### Docs must be human-readable` ∥ `### Doc update discipline`），不收全档、更不收全仓——两条退役串分处两节，只判一节就漏一半。
@@ -8215,10 +8221,10 @@ RTM 读数（本席本轮实算，数字住批档 §2）：`test/RTM.md` 的故�
 node -e "const fs=require('fs');const F='thincoder-core/prompts/discipline-engineering.md',G='docs/core/design/DOC-DISCIPLINE.md',P='docs/core/design/PROMPT-SYSTEM.md';const L=fs.readFileSync(F,'utf8').split(/\r?\n/),GT=fs.readFileSync(G,'utf8'),PL=fs.readFileSync(P,'utf8').split(/\r?\n/);const occ=(t,s)=>t.split(s).length-1;const sec=(h,A)=>{const i=A.findIndex(l=>l.startsWith(h));if(i<0)return null;let j=i+1;while(j<A.length&&!/^### /.test(A[j])&&!/^## /.test(A[j]))j++;return A.slice(i,j)};const H=sec('### Docs must be human-readable',L),D=sec('### Doc update discipline',L);const ps=PL.findIndex(l=>l.startsWith('### 6.81 '));let pe=ps+1;while(pe<PL.length&&!/^## /.test(PL[pe]))pe++;const psec=PL.slice(ps,pe);const f1=[];{let k=psec.findIndex(l=>l.startsWith('15. **D15 '));if(k>=0){while(k<psec.length&&!psec[k].startsWith('\x60\x60\x60')){f1.push(psec[k]);k++}}}const GL=GT.split(/\r?\n/),gi=GL.findIndex(l=>l.startsWith('**D15 \u7ec6\u5219'));let gj=gi+1;while(gi>=0&&gj<GL.length&&!/^## /.test(GL[gj]))gj++;const gt=gi<0?'':GL.slice(gi,gj).join('\n');if(!H||!D||!f1.length||!gt){console.log({missing:true,H:!!H,D:!!D,fence:f1.length,gt:!!gt});process.exit(0)}const h=H.join('\n'),d=D.join('\n'),all=L.join('\n'),f=f1.join('\n'),row=GT.split(/\r?\n/).filter(l=>l.startsWith('| D15 |')).join('\n');const q=['the numbers only compare while they come off one ruler','decodes those bytes under a different encoding standard','readings taken off two standards have nothing to say about each other','the wrong ruler\'s zero and a real absence print identically'];for(const s of q)console.log(occ(h,s),s.slice(0,52));console.log({A1_findstr:occ(h,'findstr')+occ(d,'findstr'),A1_utf8:occ(h,'UTF-8-aware form')+occ(d,'UTF-8-aware form'),A1_toollist:occ(h,'the read tool\'s line numbers')+occ(d,'the read tool\'s line numbers'),A4_title:occ(d,'D15 one ruler per reading'),A4_reach:occ(d,'The reach is every reading, whatever kind it is'),A4_oldTitle:occ(all,'a line count has one ruler'),A5_numbered:D.filter(l=>/^\d+\. \*\*D/.test(l)).length,A5_section:occ(all,'### Doc update discipline (D1\u2013D15)'),A5_countSentence:occ(all,'Fifteen doc-update disciplines:'),A6_fence:occ(f,'a different decoding standard'),A6_fenceWrong:occ(f,'it is wrong'),A6_wrong:occ(d,'it is wrong'),A6_designRow:occ(row,'\u53e6\u4e00\u5957\u89e3\u7801\u6807\u51c6'),A7_family:occ(f,'\u7528\u4f8b\u6570')+occ(d,'\u7528\u4f8b\u6570')+occ(row,'\u7528\u4f8b\u6570')+occ(gt,'\u7528\u4f8b\u6570'),A7_legGT:occ(gt,'\u5c04\u7a0b'),A7_open:occ(f,'whatever kind it is'),maxLen:Math.max(...f.split('\n').concat(h.split('\n')).concat(d.split('\n')).map(l=>[...l].length))})"
 ```
 
-命令 ②（`A9` ∥ `A10` 的探针；探针串在命令内拆写，本档因此不落那串退役句）：
+命令 ②（`A9` ∥ `A10` 的探针；探针串照直写——判域只看活面与目标形（**围栏甲 ∥ 提示词面** `D15` 节），`A9` 要判的是那行从活面消失，不是那串字在文档里绝迹）：
 
 ```text
-node -e "const fs=require('fs');const F='thincoder-core/prompts/discipline-engineering.md',P='docs/core/design/PROMPT-SYSTEM.md';const occ=(t,s)=>t.split(s).length-1;const K='reports'+' counts';const L=fs.readFileSync(F,'utf8').split(/\r?\n/),PL=fs.readFileSync(P,'utf8').split(/\r?\n/);const sec=(h,A)=>{const i=A.findIndex(l=>l.startsWith(h));if(i<0)return null;let j=i+1;while(j<A.length&&!/^### /.test(A[j])&&!/^## /.test(A[j]))j++;return A.slice(i,j)};const D=sec('### Doc update discipline',L);const ps=PL.findIndex(l=>l.startsWith('### 6.81 '));let pe=ps+1;while(pe<PL.length&&!/^## /.test(PL[pe]))pe++;const psec=PL.slice(ps,pe);const fence=(head)=>{const k=psec.findIndex(l=>l.startsWith(head));if(k<0)return [];const out=[];let i=k;while(i<psec.length&&!psec[i].startsWith('\x60\x60\x60')){out.push(psec[i]);i++}return out};const fa=fence('15. **D15 '),fb=fence('- **Chinese strings in an AC');if(!D||!fa.length||!fb.length){console.log({missing:true,D:!!D,fa:fa.length,fb:fb.length});process.exit(0)}const f=fa.join('\n'),s=psec.join('\n'),d=D.join('\n');const w=t=>Math.max(...t.split('\n').map(l=>[...l].length));console.log({A9_fence:occ(f,K),A9_section:occ(s,K),A9_prompt:occ(d,K),A10_unverified:occ(f,'unverified'),A8_maxLenA:w(f),A8_maxLenB:w(fb.join('\n'))})"
+node -e "const fs=require('fs');const F='thincoder-core/prompts/discipline-engineering.md',P='docs/core/design/PROMPT-SYSTEM.md';const occ=(t,s)=>t.split(s).length-1;const K='reports counts';const L=fs.readFileSync(F,'utf8').split(/\r?\n/),PL=fs.readFileSync(P,'utf8').split(/\r?\n/);const sec=(h,A)=>{const i=A.findIndex(l=>l.startsWith(h));if(i<0)return null;let j=i+1;while(j<A.length&&!/^### /.test(A[j])&&!/^## /.test(A[j]))j++;return A.slice(i,j)};const D=sec('### Doc update discipline',L);const ps=PL.findIndex(l=>l.startsWith('### 6.81 '));let pe=ps+1;while(pe<PL.length&&!/^## /.test(PL[pe])&&!/^### /.test(PL[pe]))pe++;const psec=PL.slice(ps,pe);const fence=(head)=>{const k=psec.findIndex(l=>l.startsWith(head));if(k<0)return [];const out=[];let i=k;while(i<psec.length&&!psec[i].startsWith('\x60\x60\x60')){out.push(psec[i]);i++}return out};const fa=fence('15. **D15 '),fb=fence('- **Chinese strings in an AC');if(!D||!fa.length||!fb.length){console.log({missing:true,D:!!D,fa:fa.length,fb:fb.length});process.exit(0)}const f=fa.join('\n'),d=D.join('\n');const w=t=>Math.max(...t.split('\n').map(l=>[...l].length));console.log({A9_fence:occ(f,K),A9_prompt:occ(d,K),A10_unverified:occ(f,'unverified'),A8_maxLenA:w(f),A8_maxLenB:w(fb.join('\n'))})"
 ```
 
 改前关系（绝对值住批档 §2）：三条退役串现各非零、第三串住在 `D15` 条那一行 ⇒ A1 三条腿按两节判都能红；四条探针串现全为 0 ⇒ A2 ∥ A3 能红；旧题眼在位、新题眼与新射程句不在 ⇒ A4 能红；`用例数` 已四层皆零（前一轮撤）、`A7_legGT` 非零证明细则那一片读得到 ⇒ A7 的腿活着；`D15` 正文第四行在位 ⇒ A9 的提示词面读数非零、能红。
@@ -8296,6 +8302,334 @@ node -e "const fs=require('fs');const F='thincoder-core/prompts/discipline-engin
 5. 〔已裁 · 父侧 = 不补〕提示词清单十五条 ∥ 规范面十六条：`D16`「示例进围栏」的**内容**已在 `thincoder-core/prompts/discipline-engineering.md` 的「Doc discipline」节有落点，缺的只是编号。**两面差一 = 已知状态（内容已在、编号未对齐），另批处理**——补成清单第 16 条 = 改编号闭枚举 + 节标题 = 新语义，不在本批。
 6. 〔上抛 · 待父侧笔〕`docs/core/requirements/ENGINEERING-MODE-V2.md` §13.1 的 `D15` 行要改两处：① 四族枚举 `（行数 ∥ 文本命中 ∥ 命中次数 ∥ 用例数）` 撤掉，换成开放句 + 两把尺子 + 「定不出来记 `unverified`」（与 A7 同源）；② `落点` 格内的变更史注 `（2026-11-06 · 射程放开 2026-11-08）` 按 `D8` 删。判据分句那半句已同形，无需改。
 7. 〔已裁 · 并入落点〕`D15` 条正文第四行（以 `Until` 起头、把记不到数的情形挂在「工具还没报数」这个前提上）——父侧裁 **删**，落点见围栏甲改 2：整行删除、不换写。
+
+### 6.82 判据与真话打架时改判据（`thincoder-core/prompts/common.md` 一条 · §6.81 的 `A9` 判域收窄）
+
+**来源**：用户 2026-11-08 02:00 读到父侧对上一轮的表扬后当场指出，02:02 裁改提示词。
+
+> 「**讲真,看到这句话,我觉得你的价值观真的太成问题了.**」
+>
+> 「**这个当然要修,但是我更在意的是要如何改提示词才能让你不再这样做,这个价值观真的是太无法容忍了.**」
+
+**现场**：上一轮把 `A9` 的判域划成「本档 §6.81 全节」。于是那节记录「删了哪句话」时不能把那句话写出来——写出来 `A9` 就红。
+
+后果三样：删掉那行被写成「以 `Until` 起头的失效前提句」，读者无法逐字核；验收命令里的探针串被拆成 `'reports'+' counts'` 两段拼接；注释还明写「本档因此不落那串退役句」。**判据把文档削成了它的形状。**
+
+**判据（一句）**
+
+> 判据与一句真话打架时，让路的是判据：判据是代理，读的是**活面**；记录必须能原样引用它删掉的那一行。
+
+**现有规则为什么没拦住**：`thincoder-core/prompts/common.md` 的 `A reading that can only come out one way has verified nothing` 管的是**判据红不起来**；这次是反方向——判据红得起来，靠「不写」保持绿。同一个病根，两个方向，规则只写了其中一个。
+
+**四处落点（同批，一件不拆）**
+
+| # | 面 | 落什么 | 谁落 |
+|---|---|---|---|
+| ① | 公共层提示词（产品代码面，运行期加载） | `thincoder-core/prompts/common.md` 紧接 `A reading that can only come out one way has verified nothing` 那一块之后，新增一条（逐字见下方围栏） | 实施轮 eng-coder |
+| ② | 设计档（§6.81 的 `A9` 行） | 判域去掉「本档 §6.81 全节」，收到活面：围栏甲 ∥ 提示词面 `D15` 节切片。`A9` 要判的事不变——那行从活面上消失 | 本席，本轮已落 |
+| ③ | 设计档（§6.81 改 2） | 退役行整行原文写进围栏块，读者逐字可核 | 本席，本轮已落 |
+| ④ | 设计档（§6.81 命令 ②） | 探针串照直写；拆写与那句「本档因此不落」的注释撤掉；`A9_section` 读数随之撤除；切片边界收到 `### `（只读本节） | 本席，本轮已落 |
+
+**落点 ① 逐字终稿（唯一权威目标形 · 四行 · 自成一段）**
+
+插入点 = `thincoder-core/prompts/common.md` 里 `a run over no object at all, reported as a pass.` 那一行之后、下一 `##` 节之前；插入块前留一个空行。
+
+```text
+**When a check and a true sentence disagree, fix the check**: a criterion is a proxy — it stands for a fact, such as "the retired line is gone from the live face", and the proxy is what gives way when the fact needs different words.
+The moment you find yourself rewording, splitting or omitting anything — a sentence, a probe string in the check's own command, a note explaining the shortcut — so a check goes green, the check has started writing the record it was meant to guard.
+The green it reports is then one the record cannot back, and the same question comes before praise: a green earned by the document giving way is not an achievement.
+What it reads is the live face, not the account of what was deleted — a record that cannot quote the line it removed leaves nobody able to check the deletion, so the account keeps its quotation and the criterion moves its domain.
+```
+
+**四样各落在哪一句**（只点位置，正文不重述）：
+
+| 要求 | 落在哪一句 |
+|---|---|
+| 可自察的时机（句子 ∥ 探针串 ∥ 注释都算——现场三形里两形不是句子） | 第二行：`find yourself rewording, splitting or omitting anything` |
+| 为什么（判据是代理，那份绿没有依据） | 第一行 `a criterion is a proxy` ＋ 第三行前段 `The green it reports is then one the record cannot back` |
+| 表扬前先问同一句（§6.83 ④ · 并入本条、不另起） | 第三行后段 `a green earned by the document giving way is not an achievement` |
+| 改哪里（判域收到活面、记录保引用） | 第四行 `the live face, not the account of what was deleted` ＋ `the account keeps its quotation and the criterion moves its domain` |
+
+**验收（A1–A5 · 每条带红法 · 读数一律用同一把尺子取）**
+
+| # | 验收 | 跑什么 / 期望什么 | 红在什么读数上 | 跑者 |
+|---|---|---|---|---|
+| A1 | 新规则四样各 1 | 命令 ③：`a criterion is a proxy` = **1** ∧ `find yourself rewording, splitting or omitting anything` = **1** ∧ `a green earned by the document giving way is not an achievement` = **1** ∧ `What it reads is the live face, not the account of what was deleted` = **1** | 抽掉任一句 ⇒ 该条 0 即红；同一句写两处 ⇒ > 1 即红 | 实施轮 |
+| A2 | `A9` 判域不再含本档全节（`D14` 预期残留 = 0） | 命令 ③：`A9` 行内「本档 §6.81 全节」= **0** ∧ 「围栏甲 ∥ 提示词面」= **1** ∧ 「变更记录面，不入判域」= **1** | 旧判域仍在本行 ⇒ > 0 即红；新判域名缺 ⇒ 0 即红；只写「本节不判」这类笼统说法（不点名哪一块不判）⇒ 第三条腿 = 0 即红 | 本席 ∥ 实施轮 |
+| A3 | 退役行在 §6.81 里可逐字读到、且落在围栏块内 | 命令 ③：`A3_hits` = **1** ∧ `A3_outsideFence` = **0** | 0（围栏没写 ∥ 写残一行）⇒ 红；写在围栏外 ⇒ `A3_outsideFence` > 0 即红 | 本席 ∥ 实施轮 |
+| A4 | 命令 ② 的拆写撤净、抬头不带墓志、四个读数仍在 | 命令 ③：`A4_split` = **0** ∧ `A4_A9section` = **0** ∧ `A4_cmdFound` = `true` ∧ `A4_straight` = **1**（抬头写「探针串照直写」）；再跑命令 ② 须输出 `A9_fence` ∥ `A9_prompt` ∥ `A10_unverified` ∥ `A8_maxLenA` | 拆写残留 ⇒ `A4_split` > 0 即红；命令取不到块 ⇒ 输出 `missing` 即红；抬头仍叙述「不必再躲」（写成墓志）⇒ `A4_straight` = 0 即红。**落点 ② 若不随 ③ ④ 同批落，判域仍读 §6.81 全节——退役行一写回，该读数即非零，当场红** | 本席 ∥ 实施轮 |
+| A5 | 交付门 | `doc_check(mode:"gate", docs:["docs/core/design/PROMPT-SYSTEM.md", "thincoder-core/prompts/common.md"])` 首行 `PASS` | 首行非 `PASS` ⇒ 红 | 本席交付前 ∥ 父侧收口复跑 |
+| A6 | 落点 ① 插入块行宽（提示词面逐行判、无结构豁免） | 命令 ③：`A6_maxLen`（量落点 ① 围栏四行）≤ **300** | 块取不到 ⇒ 印 `null`（不给绿）；> 300 ⇒ 红（比照 §6.81 的 `A8`） | 本席 ∥ 实施轮 |
+
+**验收命令 ③（可复跑 · 纯 ASCII · 中文探针照命令原样抄，是反斜杠加 `u` 的转义形）**
+
+```text
+node -e "const fs=require('fs');const P=fs.readFileSync('docs/core/design/PROMPT-SYSTEM.md','utf8').split(/\r?\n/),C=fs.readFileSync('thincoder-core/prompts/common.md','utf8');const occ=(t,s)=>t.split(s).length-1;const sec=(A,h)=>{const i=A.findIndex(l=>l.startsWith(h));if(i<0)return null;let j=i+1;while(j<A.length&&!/^### /.test(A[j])&&!/^## /.test(A[j]))j++;return A.slice(i,j)};const S=sec(P,'### 6.81 '),S2=sec(P,'### 6.82 ');if(!S||!S2){console.log({missing:true,S:!!S,S2:!!S2});process.exit(0)}const a9=S.filter(l=>l.startsWith('| A9 |')).join('\n');const cmd=S.filter(l=>l.startsWith('node -e')&&l.includes('A9_fence')).join('\n');const fence=[],body=[];let inf=false;for(const l of S){if(l.startsWith('\x60\x60\x60')){inf=!inf;continue}(inf?fence:body).push(l)}const tag=l=>l.includes('reports counts')&&l.includes('never substituted with another ruler');const ct=a=>a.filter(tag).length;const rf=S2.findIndex(l=>l.startsWith('**When a check and a true sentence disagree'));let re=rf;if(rf>=0){while(re<S2.length&&!S2[re].startsWith('\x60\x60\x60'))re++}const BLK=rf>=0?S2.slice(rf,re):[];console.log({A1_proxy:occ(C,'a criterion is a proxy'),A1_moment:occ(C,'find yourself rewording, splitting or omitting anything'),A1_praise:occ(C,'a green earned by the document giving way is not an achievement'),A1_live:occ(C,'What it reads is the live face, not the account of what was deleted'),A2_oldInA9Row:occ(a9,'\u672c\u6863 \u00a76.81 \u5168\u8282'),A2_newInA9Row:occ(a9,'\u56f4\u680f\u7532 \u2225 \u63d0\u793a\u8bcd\u9762'),A2_carveOut:occ(a9,'\u53d8\u66f4\u8bb0\u5f55\u9762\uff0c\u4e0d\u5165\u5224\u57df'),A3_hits:ct(fence)+ct(body),A3_outsideFence:ct(body),A4_split:occ(cmd,'\u0027reports\u0027+\u0027 counts\u0027'),A4_A9section:occ(cmd,'A9_section'),A4_cmdFound:cmd.length>0,A4_straight:occ(S.join('\n'),'\u63a2\u9488\u4e32\u7167\u76f4\u5199'),A6_maxLen:BLK.length?Math.max(...BLK.map(l=>[...l].length)):null})"
+```
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | ② 与 ④ 同批落，一件不拆 | 判域若仍含「本档 §6.81 全节」，③ 把退役行写回即刻让那读数从 0 变 1——命令当场红。只改判域不改命令 = 拆写手法留在盘上；只改命令不改判域 = 下次写回还是红，等于逼下一个人再绕一次 |
+| K2 | 判域去「本档 §6.81 全节」、留「围栏甲」 | 围栏甲是**目标形**：退役行若出现在围栏甲里，实施轮会把它再落一次，必须判；本节其余部分是变更记录，必须能引用删掉的那行，不能判。判据判「那行不在活面」，不判「那串字在文档里绝迹」 |
+| K3 | 退役行写进围栏块，不写进行内 | 围栏是**逐字证据面**：写进它不改变规则住在哪（活面仍是提示词面 `D15` 节），所以它不是判据豁免——目标形的**围栏甲**反而必判（`A9`）。行内引文则会被读成活规则。围栏形态的依据 = `D16` 示例进围栏（单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.28），**不是「机检看不见」——那正是本条新规则禁的让路方向**；边界 = 只此一处、只在这个围栏块、由 `A3` 判 |
+| K4 | 新规则只一条，不加清单与表格 | 病根一句能说清；再加一张清单，规则就散在清单里（`D2`），下一个读者还得自己挑一条来背 |
+| K5 | 不动 `D15` 那条 | 上一轮已落且已对——它判的正是「退役行不在活面」；本批改的是另一条判据的判域，不是它的写法 |
+
+**与既有条款对照**
+
+| 既有句 | 它管什么 | 本笔做什么 | 为何不冲突 |
+|---|---|---|---|
+| `A reading that can only come out one way has verified nothing`（`thincoder-core/prompts/common.md`） | 判据要能红 | 管反方向：判据红得起来，却靠「不写」保持绿 | 一个病根两个方向；两条并存——一条判「红得起来」，一条判「绿怎么挣来的」 |
+| `A criterion that cannot be run before the change has not pinned its domain yet`（`thincoder-core/prompts/discipline-engineering.md`） | 判据要钉死判域 | 把「钉到记录面」改成「钉到活面」 | 不冲突：判域仍要钉死，改的是钉在哪一面 |
+| `An invalidated expression is deleted, not revised`（`thincoder-core/prompts/common.md`） | 失效表述从规范面删 | 删掉的那行留在改 2 的围栏块里 | 依据 = 用户裁「**那句退役行照原样写回**」：删的是活面的规则，围栏块记的是「删了哪一行」——围栏不承载规则，只承载证据；没有它，那次删除没人能核 |
+| `D8` 同族「设计档不留历史」 | 设计档只写现在 | 本节留一处退役行原文 | 同上：证据面 ≠ 规范面；边界 = 仅此一处、只在这个围栏块、由 `A3` 判 |
+
+**先例 ∥ 偏离**
+
+先例 = §6.79（判据必须能失败：改前读数落批档、读数用同一把尺子取）∥ §6.80（落点整行换写 + 逐行相等判据）∥ §6.81（判域注 + 每条验收带红法）。
+
+偏离：① 本批的规则落**公共层提示词**（工程模式与普通模式全角色加载），机制正文单源住本节；`A9` 的判域收窄就地改在 §6.81，不另立一节承载（`D2`）。
+② 验收不判模型行为（「下次遇到判据与真话打架会不会改判据」从文本面复现不出可机判结果），只判新规则在场、判域已改、退役行可引、拆写已撤。
+
+**既有件三问**
+
+- `existing` = `thincoder-core/prompts/common.md` 的「A reading that can only come out one way has verified nothing」那一块 · consumers = 工程模式与普通模式全部角色 ⇒ 紧接它另起一条，它一行不改。
+- `existing`（第二件）= §6.81 的 `A9` 行 ∥ 命令 ② ∥ 改 2 的落点 · consumers = 设计席 / 实施席 / 父侧收口 ⇒ 就地改，不新建节承载。
+- `none found` = 新题眼 `When a check and a true sentence disagree, fix the check` 与三条新探针串在 `thincoder-core/prompts/` 全 17 档逐串实扫 ⇒ 零命中（本席本轮）⇒ 不重名、不撞旧句。
+
+**勘察证据行（本席本轮实读）**
+
+- 插入点逐字（同族前一条的收尾句）：依据 `thincoder-core/prompts/common.md`「a run over no object at all, reported as a pass.」
+- 同族「为什么没拦住」的判据句逐字：依据 `thincoder-core/prompts/common.md`「A check that reads the same there as it does afterwards measures the wording of its own command rather than the fact it was written to watch」
+- 退役行在提示词面已不在位（`A9` 的活面）：依据 `thincoder-core/prompts/discipline-engineering.md`「A reading that sits under neither first asks which ruler it has, and is recorded `unverified` where no ruler can be named — the reach is open, not a list of families.」（第 15 条正文第三行，其下紧接记形句——第四行已不在盘）
+- 退役行原文逐字（③ 围栏的源）：整行抄在 §6.81 改 2 的围栏里，本节不重复引用（`D2`）。
+- 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` 实读 = `[]` ⇒ 工作目录内无独立公共源文档仓——已查，无相关。
+- 数据事实：本设计对数据无断言（无行数、无字段、无枚举取自数据）⇒ 无此句。
+
+**受影响文件与分层结论（`D11` 全层 · 一档都不留旧层）**
+
+| 档 | 层 | 改什么 | 本笔归谁 |
+|---|---|---|---|
+| `thincoder-core/prompts/common.md` | 提示词（产品代码面，运行期加载） | 新增一条，四行（逐字围栏见落点 ①） | 实施轮 eng-coder |
+| `docs/core/design/PROMPT-SYSTEM.md` | 设计档（本档） | §6.81 的 `A9` 行 ∥ 改 2 的退役行围栏 ∥ 命令 ②；本节新增 | 本席，本轮已落 |
+| 需求档 | — | **0**（父侧裁：本批不动需求档；新规则属公共层提示词面，需求档无对应条目） | — |
+| 测试档 | — | **0**（零代码面） | — |
+
+**分层结论 = 无档跨分层**：档位线只量代码面；`.md` 提示词档免档位判定，运行期代码零改。
+
+**集成测试设计**：`none` —— 改动面 = 提示词一条 + 设计档三处修订，零代码面。
+
+两条入口均不成立。`test/RTM.md` 本轮逐行走查故事索引（`CLI` ∥ `VSC` 两表逐行），与评审 ∥ 提示词相邻的五行为：
+
+| 行 | 它断什么 | 本笔为何不断它 |
+|---|---|---|
+| CLI 24 评审的方法论符合度不再恒空 | 注入面出现标准正文 ∥ `NO_STANDARDS_NOTICE`（24-2 ∥ 24-3 用例行读过） | 断的是评审**消息组装面**注入的标准块，不是 system prompt 文本 |
+| CLI 27 评审写一笔 §3 就够 | §3 回执与段状态行置位（节注读过） | 断工具面写盘回执，不碰提示词 |
+| CLI 5 顾问评审超时改了马上生效 | 超时配置生效 | 只读到标题；标题与提示词文本无涉 |
+| CLI 6 设计评审的文档范围按项目根受理 | 评审文档范围受理 | 同上 |
+| CLI 32 advisor guard 的提醒到顶就停 | 提醒计数与未评审出声 | 同上 |
+
+五行断的都是工具面的可观察结果，无一行断提示词文本或装配块等价性；其余各行是工具 ∥ 台账 ∥ 循环面。⇒ 破行 0 · 冗余 0 · 新增 0。
+
+**边界（本节不做）**
+
+- 不动 `D15` 那条（已对）· 不动 `docs/core/design/DOC-DISCIPLINE.md` · 不动需求档 · 不动批档其他段。
+- 不新建体系：新规则只一条，不加表格、不加反例清单、不点工具名。
+- 不改 `A9` 要判的事（还是「那行从活面消失」）、不新增机检门、不留行号坐标。
+
+**UI / 交互决策**：无界面面——本节只改提示词文本与设计档文字。
+
+**上抛项**
+
+1. 〔知会 · 无第四层〕新规则落公共层提示词面，需求档无对应条目；父侧裁「不动需求档」⇒ 本批没有待改的需求档行。
+2. 〔知会 · 语言面〕用户给的是中文，落笔为英文面（运行面语言纪律）；四样判据逐句见落点 ① 的围栏。
+3. 〔知会 · 退役串行踪〕③ 落地后，`reports counts` 在仓内会命中本档 §6.81 的围栏块——这正是判域不再读本节的理由：按判域读，不按命中数读。
+
+### 6.83 三席互锁：判据是代理，让步的是判据（设计席 ∥ 实施席 ∥ 评审席 ∥ 父侧 · 四条款）
+
+**来源**：用户在本批修正轮裁定。原话逐字：
+
+> 「**这堵住这个问题需要从 designer/advisor 和 coder 三个角色的提示词都要完善,才能实现互锁.**」
+
+**病能发生的结构原因**：三席各自只看一步。设计席看「判据是对的」，实施席看「我在照判据做」，父侧看「检查绿了、文档也还在讲同一件事」——每句单独成立，合起来是灾难。
+
+**判据（一句）**：产品是本体，判据是它的代理，冲突时代理让步。三席各管一步，所以三席各自要问同一句：**这个绿是怎么挣来的**。
+
+**四处落点（同批，一件不拆）**
+
+| # | 席 | 档 | 落什么 | 谁落 |
+|---|---|---|---|---|
+| ① | 设计席 | `thincoder-core/prompts/persona-eng-designer.md` | 写验收前的自问（两条 · 逐字见终稿甲） | 实施轮 eng-coder |
+| ② | 实施席 | `thincoder-core/prompts/persona-eng-coder.md` | 「判据逼你少写真话 = 判据有缺陷，报上去」（三条 · 逐字见终稿乙） | 实施轮 eng-coder |
+| ③ | 评审席 | `thincoder-core/prompts/advisor-design.md` ∥ `thincoder-core/prompts/advisor-round1.md` ∥ `thincoder-core/prompts/advisor-round2.md` ∥ `thincoder-core/prompts/advisor-round3.md` | 「先问这个绿是怎么挣来的」（两条 · 四档同文 · 逐字见终稿丙） | 实施轮 eng-coder |
+| ④ | 父侧 | `thincoder-core/prompts/common.md`（**并入** §6.82 落点 ① 已批那条，**不另起一条**） | 表扬前问同一句——逐字见 §6.82 落点 ① 围栏第三行 | 实施轮 eng-coder |
+
+**③ 的单源判断（本席实读装配面）= 结构性重复，四档都写**
+
+- 装配是**择一**、不是拼接。依据 `thincoder-core/advisor.mjs`「return applyPromptInjections(ADVISOR_DESIGN)」——六个 `return` 各返回单档内容；同档另两支「if (round === 2) return applyPromptInjections(ADVISOR_ROUND2)」∥「if (!hasPrior) return applyPromptInjections(ADVISOR_ROUND1)」——无任何共享层拼接。
+- 槽位表里没有 advisor（本席本轮实读 `thincoder-core/prompt-overlays.mjs`）：八行槽位 = `engineering` ∥ `normal` ∥ `eng-coder` ∥ `eng-designer` ∥ `explore` ∥ `coder` ∥ `plan` ∥ `tester`，逐行看下去没有一条是评审席；评审席走 `loadAdvisorPrompt`（缺档抛错，与槽位面缺档静默空串不同）。
+- ⇒ 四份 advisor 档是**互不包含的独立 system prompt**，按评审类型与轮次择一装配。条款必须四份都写；这份重复**不是漂移，是装配方式逼出来的**（结构性重复），故配 `A2` 这条验收（命令 ④ 的三条读数）保证四份同文、并与终稿丙围栏按同一口径相等。
+
+**块名两套，不得互换**：本节三块 = **终稿甲** ∥ **终稿乙** ∥ **终稿丙**；`§6.81` 判域里用的是另一套块名（`§6.81` 的 `A9` 行与 `A6` 行各写一次），只在该节指它的对象。同一个名字只指一样东西；判 = `A7` ∥ `A8`。
+
+**逐字终稿甲（设计席 · 插在 `## Five-step workflow` 第 3 步「Give each requirement a judgment line」那段之后）**
+
+```text
+**A criterion reads the live face, never the record of it**: before writing an acceptance line, answer what it reads — the rule as it stands, or the account of what changed — and whether a rule is still in force is judged on the rule's own face.
+The record may be read only for what it kept: an account that can quote the line it removed is a legitimate criterion of its own, while the record answering what the rule says is the substitution this forbids — a record that cannot say which line it deleted leaves that deletion unchecked by anyone.
+```
+
+**逐字终稿乙（实施席 · 插在 `## Boundary: the design is the authoritative spec` 节末）**
+
+```text
+**A criterion that pushes you to write less of the truth is a defect in the criterion — report it, don't route around it**: splitting a probe string so the scan misses it, describing a deleted line instead of quoting it, moving a case off the scanned face are one act in three coats.
+The product is what exists; the criterion is its proxy, and when the two conflict the proxy gives way.
+Landing the workaround instead reports a green the work did not earn, so the conflict goes into your report and the parent moves the domain.
+```
+
+**逐字终稿丙（评审席 · 四档同文 · 各插在 `## Judgment Rules (apply directly` 节首）**
+
+```text
+**Ask how the green was earned**: a green bought with the document giving way is not a pass — a probe split so the scan misses it, a deleted line described rather than quoted, a live sentence fenced to keep it out of the scan are 🔴 blocking findings, not clearances — each one stops the round.
+Judge whether the next reader can check it, not whether the number came out green.
+```
+
+**四条款与既有条款的关系**
+
+| 条款 | 与它最挨的既有句 | 关系 |
+|---|---|---|
+| ① 设计席 | `A criterion that cannot be run before the change has not pinned its domain yet`（`thincoder-core/prompts/discipline-engineering.md`） | 同向加强：那条要求判据钉死判域，这条要求钉在**活面**上；两条并存，先钉死、再问钉在哪一面 |
+| ② 实施席 | `## Boundary: the design is the authoritative spec`（`thincoder-core/prompts/persona-eng-coder.md`） | 不冲突：设计是权威，判据是设计的一部分；判据有缺陷时报上去不是越权，正是那条边界要求的下一步（`A3_coder` 判那条标题仍在） |
+| ③ 评审席 | `## Approval Signal`（`thincoder-core/prompts/advisor-design.md`） | 不冲突：签批准信号之前多问一句「绿怎么挣来的」；判据不变，判的对象从数字换成可核性。界线 = `in force, not in a fence`：围栏里装的是**仍在生效的一句** ⇒ 让路；装的是**删掉那一行的记录** ⇒ 不是——判的是内容生不生效，不是它围在不在围栏里（与 `K3` 同源）。本批的**合法例外点名** = §6.82 的 `A3`：它读 §6.81 的退役行围栏，判的是「记录保住了什么」，不是「规则是什么」。界线这一层只住在本表：四份评审档里由终稿丙的 `live` 一词承载（判断落纸见本节「档位路由」块），不另落第五句（`D2`） |
+| ④ 父侧 | `A reading that can only come out one way has verified nothing`（`thincoder-core/prompts/common.md`） | 并入同一条，不另起：那条管判据红不起来，这条管绿是怎么挣来的——一个病根的两个方向 |
+
+**档位路由（tier routing）——这三样按 🔴 判，`R1` ∥ `R7c` ∥ `R7e` 到不了它们**
+
+同一节另有三条会把同形状的发现归进不阻断档，原文档位逐字：
+
+- `R1` —— `Doc contradiction / state inconsistency → 🟡`
+- `R7c` —— `Numeric drift / TODO unchecked / doc hygiene → 🔵`
+- `R7e` —— `A doc-state contradiction is a 🟡 report-and-pass`
+
+不先断这一层，最省力的读法就是把「删掉那行改写而不引用」报成 doc-state、🟡 放行——条款写了等于没写。
+
+**优先关系（一句）**：这三样判的不是文档卫生、也不是文档状态，而是**判据靠文档让路才绿**——那个绿没有依据。
+
+⇒ 在这三样上按 🔴 判，🟡 / 🔵 路由不适用；同节其余 doc-state / doc-hygiene 发现仍按原档位走，不外溢（判 = `A10`）。
+
+**四份评审档各自的最近邻居**（一份的邻居罩不住另三份——四份规则集不同）：
+
+| 档 | 该档自己最近、会把同形状发现降档的规则（逐字） | 本笔的优先关系 |
+|---|---|---|
+| `thincoder-core/prompts/advisor-design.md` | `**Doc-hygiene rule**: revision-style expressions left on the normative face of a design doc / requirement doc → 🟡 (Doc hygiene)` ∥ `R7c` ∥ `R7e` | 三样不是「规范面上留了改写式表述」：删掉那行是以逐字引用留在记录面上的，规范面已经没有它；按 🔴 |
+| `thincoder-core/prompts/advisor-round1.md` | `R8 **Business-gate fallback**`（🔴，同向）∥ `R9 **Decision surface without evidence → 🟡**` ∥ `R7c` ∥ `R7e` | 最近的一条本来就判 🔴；`R9` 的 🟡 不吸收本笔——本笔缺的不是依据，是那个绿本身没有依据；按 🔴 |
+| `thincoder-core/prompts/advisor-round2.md` | `R1` ∥ `R7c` ∥ `R7e`（该档止于 `R7e`，无 `R8` / `R9`） | 三条都降档 ⇒ 全凭本段的优先关系钉回 🔴 |
+| `thincoder-core/prompts/advisor-round3.md` | `R1` ∥ `R7c` ∥ `R7e`（同上） | 同上 |
+
+**`each one stops the round` = 不放行，不重开上一轮**：判 `VERDICT: changes-required`，本轮不过。
+本轮读什么、判什么不变，上一轮的结论表按它当时裁定的结果留着。
+
+三份轮次档的收敛口径本来就落这一件事：`any unresolved 🔴 issue`（设计档）∥ `any 🔴 issue`（轮 1）∥ `any new 🔴 the fixes introduced`（轮 2 ∥ 轮 3）——不另开收敛规则（判 = `A11`）。
+
+**界线只住在本表（`in force, not in a fence`），四份评审档里由终稿丙的 `live` 一词承载**：`a live sentence` = 仍在生效的一句 ⇒ 让路；`deleted line described rather than quoted` = 记录面那一侧 ⇒ 不是。
+
+不另落第五句：同一条界线写第五遍就是第五个副本（`D2`），而 `live` 与 `describe / quoted` 这组词已经把它分开（判 = `A11`）。
+
+**验收（A1–A11 · 每条带红法 · 读数一律用同一把尺子）**
+
+| # | 验收 | 跑什么 / 期望什么 | 红在什么读数上 | 跑者 |
+|---|---|---|---|---|
+| A1 | 三席各在位 | 命令 ④：`A1_designer` = **1** ∧ `A1_coder` = **1** ∧ `A1_advisor` = **4** | 改前三个读数皆为 0 ⇒ 能红；低于预期 ⇒ 缺一席即红；高于预期 ⇒ 同句写两处即红 | 实施轮 |
+| A2 | ③ 四份同文、且与目标形同文（结构性重复的验收） | 命令 ④：`A2_blocks` = **4** ∧ `A2_same` = **true** ∧ `A2_fenceEq` = **4**（四档各自的块，与本节终稿丙围栏**按去折行后的段**比对——口径照 §6.1 那一条，本行不另立一套；四档各比一次） | 少一档 ⇒ `A2_blocks` = 3 即红；四档文字不同 ⇒ `A2_same` = `false` 即红；**四档一起落后于目标形 ⇒ `A2_fenceEq` < 4 即红**——那一形态下 `A2_same` 仍 `true`、`A1_advisor` 仍 4、`A6` 四腿不动，其余读数判不出；终稿丙围栏取不到 ⇒ `A2_fenceEq` 印 `null`（不给绿）。**改终稿丙 ⇒ 同批重落四档（归实施轮 eng-coder）；由此产生的红只由重落清掉——不得靠放宽本行清掉（换回整串比 ∥ 只比块首行 ∥ 加白名单，都不算清账）**。反向对照一：删掉终稿丙围栏里的 `🔴 blocking` 再跑同一条命令 ⇒ `A2_fenceEq` = **0**，同一次运行其余读数全不变；反向对照二：把某一侧的段拆成两行（内容一字不动）⇒ 同一口径下 `A2_fenceEq` 仍 **4**、`A2_same` 仍 `true`（折行不误红） | 实施轮 |
+| A3 | 与既有条款不冲突（四条腿 · 一席一腿） | 命令 ④：`A3_redFirst` = **1**（公共层） ∧ `A3_pinned` = **1**（设计席侧） ∧ `A3_coder` = **1**（实施席侧 `## Boundary: the design is the authoritative spec`） ∧ `A3_verdict` ≥ **1**（评审席侧；基线腿，不数出现几次，现盘为 2） | 任一跌破基线 ⇒ 新条款把旧条款挤掉 ⇒ 红 | 本席 ∥ 实施轮 |
+| A4 | 三块行宽（提示词面逐行判、无结构豁免） | 命令 ④：`A4_maxLen` ≤ **300** | 块取不到 ⇒ 印 `null`（不给绿）；> 300 ⇒ 红 | 本席 ∥ 实施轮 |
+| A5 | 交付门 | `doc_check(mode:"gate")` 范围含 `thincoder-core/prompts/common.md` ∥ 两份人格档（`thincoder-core/prompts/persona-eng-designer.md` ∥ `thincoder-core/prompts/persona-eng-coder.md`）∥ 四份评审档 ⇒ 首行 `PASS` | 首行非 `PASS` ⇒ 红 | 本席交付前 ∥ 父侧收口复跑 |
+| A6 | 围栏界线：区分词在位 ∥ 旧绝对措辞清零 | 命令 ⑤：`A6_liveSentence` = **1**（终稿丙那一块内）∧ `A6_oldAbsolute` = **0**（同一块内旧措辞清零）∧ `A6_recordFace` = **1**（终稿甲那一块内）∧ `A6_boundary` = **1**（「关系」表 ③ 行内） | 改前读数 = 0 · 1 · 0 · 0 ⇒ 这条能红（旧绝对措辞四份评审档一排下去，1 ⇏ 0 即红）；终稿甲的记录面许可缺 ⇒ `A6_recordFace` = 0 即红；界线句缺 ⇒ `A6_boundary` = 0 即红。探针只读自己那一块，不读本节其余处（否则判据读自己） | 本席 ∥ 实施轮 |
+| A7 | 本节三块名与 `§6.81` 的判域名分属两套（同一个名字只指一样东西） | 命令 ⑤：`A7_oldName` = **0**（判域 = 本节除代码围栏外的全部行；围栏内是判据自己的探针串——本轮以转义书写，故全节也是 0，留此豁免使判据改成明文时也不自我命中） | 出现 ≥ **1** ⇒ 红（改名前三块合计非零 ⇒ 这条能红）；把旧名写回本节正文 ⇒ 同一读数 > 0 即红 | 本席 ∥ 实施轮 |
+| A8 | `§6.81` 的判域名守恒（改名不外溢到 `§6.81`） | 命令 ⑤：`A8_keep81` = 两个读数各 ≥ **1**（`§6.81` 节内那两个判域名仍在盘） | 任一 = **0** ⇒ 红（改名把 `§6.81` 也动了） | 本席 ∥ 实施轮 |
+| A9 | 终稿丙带阻断量，两半各有读数（是停轮，不是提醒） | 命令 ⑤：`A9_blocking` = **1** ∧ `A9_stopRound` = **1**（均在终稿丙那一块内） | 拿掉 `blocking` 那半 ⇒ `A9_blocking` = 0 即红；拿掉 `each one stops the round` 那半 ⇒ `A9_stopRound` = 0 即红（两个读数各咬一半，丢哪半都读得到）；任一 **> 1**（同句写两处）即红。三样都按 🔴 算：探针串拆开 ∥ 删掉的那行改写而不引用 ∥ 活句围起来躲扫描——一条在位就不放行 | 本席 ∥ 实施轮 |
+| A10 | 档位路由对账：三样按 🔴 判、🟡 / 🔵 路由不适用；四份评审档各自的最近邻居各点一句 | 命令 ⑤：`A10_routing` = `true`（「档位路由」块内 `R7c` ∥ `R7e` 都在）∧ `A10_neighbors` = **4**（四份评审档各一行）∧ `A10_designNeighbor` = **1**（`thincoder-core/prompts/advisor-design.md` 自己那条 `revision-style expressions left on the normative face` 逐字在）∧ `A10_r1Neighbor` = **2**（`thincoder-core/prompts/advisor-round1.md` 的 `Business-gate fallback` ∥ `Decision surface without evidence` 逐字在）∧ `A10_proximity` = **0**（四份评审档 `## Judgment Rules` 节内，三样发现的词与 🟡 / 🔵 档位同处一行的行数） | 块取不到 ⇒ 前四条印 `null`，不给绿；`A10_routing` = `false`（路由段被删 ∥ 少一处）即红；`A10_neighbors` < 4（少点一份档）即红；`A10_designNeighbor` ≠ 1 ∥ `A10_r1Neighbor` ≠ 2（邻居句被删 ∥ 拿一份的邻居罩四份）即红；`A10_proximity` > 0（有一条规则把这三样路由到 🟡 / 🔵）即红 | 本席 ∥ 实施轮 |
+| A11 | `each one stops the round` 说清是哪一种停 ∥ 界线住哪落纸 | 命令 ⑤：`A11_stopRound` = **1**（「档位路由」块内引用了这句话并给出停的口径）∧ `A11_noReopen` = **1**（同块内写「不重开」）∧ `A11_boundary` = `true`（关系表 ③ 行内 `live` 与 `in force, not in a fence` 并存） | 块取不到 ⇒ 两个读数印 `null`；口径句被删 ⇒ `A11_stopRound` = 0 即红；「不重开上一轮」被删 ⇒ `A11_noReopen` = 0 即红；界线判断未落纸 ⇒ `A11_boundary` = `false` 即红（关系表 ③ 行原本无 `live`） | 本席 ∥ 实施轮 |
+
+**`A2` 与 §6.1 的关系（不靠默认：口径同一、跑法不同）**
+
+- **口径同一个**：§6.1 明写「围栏内为档宽折行时，按**去折行后的段**比对」——这就是 `A2` 的口径，本行照它比，不另立一套；两处是同一把尺子，谁也不比谁严。
+- **跑法不同、对象同一**：§6.1 那一步是「每个提示词面批次收尾跑一次」；`A2` 把同一件比对（落地档 ↔ 设计围栏块）写成随时可复跑的读数。同一次比对，两种跑法——不是给那一步另加一道门。
+- **它不装锁、不冻结内容**：§6.1 的「零常驻锁、零新增断言」管的是提示词面——内容在场判据用散文锚，不往加载面加断言。`A2` 全部住在设计档的验收面：提示词面一行不加、加载面零改、`doc_check` 判据不动（同本节边界「`A2` 是验收命令，不是新门」）。改终稿丙也不靠改 `A2` 过——同批重落四档，重落后 `A2_fenceEq` 仍读 4。
+
+**验收命令 ④（可复跑 · 纯 ASCII）**
+
+```text
+node -e "const fs=require('fs');const P='thincoder-core/prompts/';const R=f=>fs.readFileSync(P+f,'utf8').split(/\r?\n/);const occ=(t,s)=>t.split(s).length-1;const D=R('persona-eng-designer.md'),C=R('persona-eng-coder.md'),CM=R('common.md'),DE=R('discipline-engineering.md');const ADV=['advisor-design.md','advisor-round1.md','advisor-round2.md','advisor-round3.md'].map(R);const h1='**A criterion reads the live face, never the record of it**',h2='**A criterion that pushes you to write less of the truth is a defect in the criterion',h3='**Ask how the green was earned**';const blk=(L,p)=>{const i=L.findIndex(l=>l.startsWith(p));if(i<0)return null;const o=[];let k=i;while(k<L.length&&L[k].trim()!==''){o.push(L[k]);k++}return o};const b1=blk(D,h1),b2=blk(C,h2),b3=ADV.map(L=>blk(L,h3));const all=[b1,b2,...b3].filter(Boolean);const fold=A=>A.join(' ').replace(/\s+/g,' ').trim();const same=b3.every(B=>B&&b3[0]&&fold(B)===fold(b3[0]));const F=String.fromCharCode(96,96,96),DL=fs.readFileSync('docs/core/design/PROMPT-SYSTEM.md','utf8').split(/\r?\n/);const g=DL.findIndex(l=>l.startsWith('### 6.83 '));let ge=g<0?0:g+1;while(ge>0&&ge<DL.length&&!/^## /.test(DL[ge]))ge++;const S=g<0?[]:DL.slice(g,ge);const hi=S.findIndex(l=>l.startsWith('**\u9010\u5b57\u7ec8\u7a3f\u4e19'));let fi=hi<0?-1:hi;while(fi>=0&&fi<S.length&&!S[fi].startsWith(F))fi++;let fn=null;if(fi>=0&&fi<S.length){const o=[];let k=fi+1;while(k<S.length&&!S[k].startsWith(F)){o.push(S[k]);k++}fn=o}const feq=fn?b3.filter(B=>B&&fold(B)===fold(fn)).length:null;console.log({A1_designer:occ(D.join('\n'),h1),A1_coder:occ(C.join('\n'),h2),A1_advisor:ADV.reduce((n,L)=>n+occ(L.join('\n'),h3),0),A2_blocks:b3.filter(Boolean).length,A2_same:same,A2_fenceEq:feq,A3_redFirst:occ(CM.join('\n'),'A reading that can only come out one way has verified nothing'),A3_pinned:occ(DE.join('\n'),'A criterion that cannot be run before the change has not pinned its domain yet'),A3_verdict:occ(ADV[0].join('\n'),'## Approval Signal'),A3_coder:occ(C.join('\n'),'## Boundary: the design is the authoritative spec'),A4_maxLen:all.length?Math.max(...all.flat().map(l=>[...l].length)):null})"
+```
+
+**验收命令 ⑤（`A6` ∥ `A7` ∥ `A8` ∥ `A9` ∥ `A10` ∥ `A11` 的探针 · 可复跑 · 纯 ASCII）**
+
+```text
+node -e "const fs=require('fs');const L=fs.readFileSync('docs/core/design/PROMPT-SYSTEM.md','utf8').split(/\r?\n/);const occ=(t,s)=>t.split(s).length-1;const i=L.findIndex(l=>l.startsWith('### 6.83 '));if(i<0){console.log({missing:true});process.exit(0)}let j=i+1;while(j<L.length&&!/^## /.test(L[j]))j++;const S=L.slice(i,j);const blk=(p)=>{const k=S.findIndex(l=>l.startsWith(p));if(k<0)return '';const o=[];let m=k;while(m<S.length&&S[m].trim()!==''){o.push(S[m]);m++}return o.join('\n')};const b1=blk('**A criterion reads the live face'),b3=blk('**Ask how the green was earned**'),row=S.filter(l=>l.startsWith('| \u2462 \u8bc4\u5ba1\u5e2d')).join('\n');if(!b1||!b3||!row){console.log({missing:true,b1:!!b1,b3:!!b3,row:!!row});process.exit(0)}const cut=(h,e)=>{const a=L.findIndex(l=>l.startsWith(h));if(a<0)return null;let b=a+1;while(b<L.length&&!e(L[b]))b++;return L.slice(a,b)};const F=String.fromCharCode(96,96,96);const NF=[];let f=false;for(const l of S){if(l.startsWith(F)){f=!f;continue}if(!f)NF.push(l)}const B=NF.join('\n'),K=['\u56f4\u680f\u7532','\u56f4\u680f\u4e59','\u56f4\u680f\u4e19'],T81=(cut('### 6.81 ',l=>/^### 6\.82 /.test(l))||[]).join('\n');const a0=S.findIndex(l=>l.startsWith('**\u6863\u4f4d\u8def\u7531'));let T=null;if(a0>=0){let b=a0+1;while(b<S.length&&!S[b].startsWith('**\u9a8c\u6536\uff08'))b++;T=S.slice(a0,b)}const TT=T?T.join('\n'):null;const PF='thincoder-core/prompts/',AF=['advisor-design.md','advisor-round1.md','advisor-round2.md','advisor-round3.md'];const rules=g=>{const Q=fs.readFileSync(PF+g,'utf8').split(/\r?\n/);const a=Q.findIndex(l=>l.startsWith('## Judgment Rules'));if(a<0)return null;let b=a+1;while(b<Q.length&&!/^## /.test(Q[b]))b++;return Q.slice(a,b)};const prox=AF.reduce((n,g)=>{const R=rules(g);return R?n+R.filter(l=>/(probe split|deleted line described|live sentence fenced)/.test(l)&&/(\uD83D\uDFE1|\uD83D\uDD35)/.test(l)).length:n},0);console.log({A6_liveSentence:occ(b3,'a live sentence fenced to keep it out of the scan'),A6_oldAbsolute:occ(b3,'a quotation fenced so the check skips it'),A6_recordFace:occ(b1,'The record may be read only for what it kept'),A6_boundary:occ(row,'in force, not in a fence'),A7_oldName:K.reduce((n,k)=>n+occ(B,k),0),A8_keep81:K.slice(0,2).map(k=>occ(T81,k)),A9_blocking:occ(b3,'blocking findings, not clearances'),A9_stopRound:occ(b3,'each one stops the round'),A10_routing:TT?((occ(TT,'R7c')>0)&&(occ(TT,'R7e')>0)):null,A10_neighbors:TT?AF.filter(g=>TT.includes(g)).length:null,A10_designNeighbor:TT?occ(TT,'revision-style expressions left on the normative face'):null,A10_r1Neighbor:TT?(occ(TT,'Business-gate fallback')+occ(TT,'Decision surface without evidence')):null,A10_proximity:prox,A11_stopRound:TT?occ(TT,'each one stops the round'):null,A11_noReopen:TT?occ(TT,'\u4e0d\u91cd\u5f00'):null,A11_boundary:(occ(row,'live')>0)&&(occ(row,'in force, not in a fence')>0)})"
+```
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | ③ 四档都写，不抽公共层 | 装配是择一（见上「单源判断」）；抽共享层要改 `thincoder-core/advisor.mjs` 的六个 `return` 并新增一档——运行期代码面改动换来的只是少写三份文字，代价不对等。重复由 `A2` 这条验收兜住 |
+| K2 | ④ 并入已批那条，不另起 | 同病根、同一句自问；另起一条 = 同一规则两个名（`D2`），读者按哪个都不全 |
+| K3 | ①②③ 各自落在它管的席上，不进 `thincoder-core/prompts/common.md` | 那档全角色加载；三条与自己无关的自我审查写进去 = 规则散在公共层里，反而无人认领 |
+| K4 | 三条判据都不判模型行为 | 「下次会不会这么干」从文本面复现不出可机判结果；判的是条款在位、四档同文、既有条款未被挤掉、行宽未越界 |
+
+**先例 ∥ 偏离**：先例 = §6.81（判据带红法 + 判域注）∥ §6.82（公共层一条 + 落点表 + 逐字围栏）。偏离 = 本笔一条规则散落四档，由一条验收（`A2`）把「结构性重复」钉住——先例都是「一档一处」，本笔是首个跨档同文机制。
+
+**既有件三问**
+
+- `existing` = `thincoder-core/prompts/persona-eng-designer.md` 的 `## Five-step workflow` 第 3 步 · consumers = 工程模式设计席 ⇒ 该段后另起一段，原段一字不动。
+- `existing`（第二件）= `thincoder-core/prompts/persona-eng-coder.md` 的 `## Boundary: the design is the authoritative spec` 节 · consumers = 工程模式实施席 ⇒ 节末另起一段。
+- `existing`（第三件）= 四份 advisor 档的 `## Judgment Rules (apply directly` 节 · consumers = 三档评审 ⇒ 节首另起一段，四份同文。
+- `none found` = 三段新题眼（`A criterion reads the live face` ∥ `A criterion that pushes you to write less of the truth` ∥ `Ask how the green was earned`）在 `thincoder-core/prompts/` 全 17 档逐串实扫 ⇒ 零命中（本席本轮）⇒ 不重名、不撞旧句。
+
+**勘察证据行（本席本轮实读）**
+
+- 装配是择一：依据 `thincoder-core/advisor.mjs`「return applyPromptInjections(ADVISOR_DESIGN)」
+- 三条腿的既有句各在盘：`A reading that can only come out one way has verified nothing`（`thincoder-core/prompts/common.md`）∥ `A criterion that cannot be run before the change has not pinned its domain yet`（`thincoder-core/prompts/discipline-engineering.md`）∥ `## Approval Signal` 节标题（`thincoder-core/prompts/advisor-design.md`）。
+- 槽位表无 advisor：本席本轮实读 `thincoder-core/prompt-overlays.mjs`，八行槽位逐行见上（`engineering` 起、`tester` 止），无评审席。
+- 行宽现状（四份 advisor 档 + 两份人格档本席 `node` 实读）= 296–298 ⇒ 新块须 ≤ 300（A4）。
+- 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` 实读 = `[]` ⇒ 工作目录内无独立公共源文档仓——已查，无相关。
+- 数据事实：本设计对数据无断言（无行数、无字段、无枚举取自数据）⇒ 无此句。
+
+**受影响文件与分层结论（`D11` 全层）**
+
+| 档 | 层 | 改什么 | 本笔归谁 |
+|---|---|---|---|
+| `thincoder-core/prompts/persona-eng-designer.md` | 提示词（产品代码面） | ① 两条（终稿甲） | 实施轮 eng-coder |
+| `thincoder-core/prompts/persona-eng-coder.md` | 提示词（产品代码面） | ② 三条（终稿乙） | 实施轮 eng-coder |
+| `thincoder-core/prompts/advisor-design.md` ∥ `thincoder-core/prompts/advisor-round1.md` ∥ `thincoder-core/prompts/advisor-round2.md` ∥ `thincoder-core/prompts/advisor-round3.md` | 提示词（产品代码面） | ③ 两条（终稿丙）· 四档同文 | 实施轮 eng-coder |
+| `thincoder-core/prompts/common.md` | 提示词（产品代码面） | ④ 并入 §6.82 落点 ① 那条（第三行） | 实施轮 eng-coder |
+| `docs/core/design/PROMPT-SYSTEM.md` | 设计档（本档） | 本节新增 | 本席，本轮已落 |
+| 需求档 · 测试档 | — | **0**（用户裁：三席互锁属提示词面机制，需求档无对应条目；零代码面） | — |
+
+**分层结论 = 无档跨分层**：档位线只量代码面；`.md` 提示词档免档位判定，运行期代码零改。
+
+**集成测试设计**：`none` —— 改动面 = 六份提示词档（两份人格 ∥ 四份评审）+ 本档，零代码面，不改任何既有用例断言的业务可观察结果。
+
+两条入口均不成立，判法与 §6.82 同源：那一节已逐行走查 `test/RTM.md` 的故事索引，并列出与评审 ∥ 提示词相邻的五行为 `CLI 24` ∥ `CLI 27` ∥ `CLI 5` ∥ `CLI 6` ∥ `CLI 32`。本笔改动面与它同族——两行人格条款 + 四份评审档同一段文字——逐行结论相同：那五行断的是评审消息注入面的标准块 ∥ 工具面写盘回执 ∥ 超时与范围配置，无一行断 system prompt 文本或装配块等价性。⇒ 破行 0 · 冗余 0 · 新增 0。
+
+**边界（本节不做）**
+
+- 不抽公共层、不改 `thincoder-core/advisor.mjs` 的装配分支。
+- 不新增机检门（`doc_check` 判据不动）；A2 是验收命令，不是新门。
+- 不动 `thincoder-core/prompts/common.md` 已有的那条「红不起来的判据」（④ 只新增一行）。
+- 不写反例清单、不点工具名。
+
+**UI / 交互决策**：无界面面——本节只改提示词文本与设计档文字。
+
+**上抛项**
+
+1. 〔知会 · 结构性重复〕③ 四档同文是被装配方式逼出来的（`thincoder-core/advisor.mjs` 六个 `return` 各返回单档，无共享层）；不是漂移，这条照 `A2` 判同文。
+2. 〔知会 · 语言面〕用户给的是中文，落笔为英文面（运行面语言纪律）；语义按用户三条骨架译，未增删判断。
+3. 〔待裁 · 需求档〕三席互锁若将来要做成需求条目，需求档一层由父侧立行；本批按用户裁「不动需求档」处理。
+
 
 ## 8. 提示词承载（单源 · M9 落点）
 

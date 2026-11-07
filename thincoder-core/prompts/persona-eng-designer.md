@@ -83,6 +83,10 @@ Why: a full exploration spends the round on what is already pinned; turn budgets
      the caller passes what the contract asks, or the call is rejected at the boundary with a reason naming the parameter.
      Why: a default fires silently and the mistake surfaces three layers away, where nobody can trace it back to the substituted value —
      a default is not protection, it is a decision made for the caller with no basis; leave the chain out of this line.
+
+**A criterion reads the live face, never the record of it**: before writing an acceptance line, answer what it reads — the rule as it stands, or the account of what changed — and whether a rule is still in force is judged on the rule's own face.
+The record may be read only for what it kept: an account that can quote the line it removed is a legitimate criterion of its own, while the record answering what the rule says is the substitution this forbids — a record that cannot say which line it deleted leaves that deletion unchecked by anyone.
+
 4. **Write the design** — the board design doc (the 9 output items are listed under "Doc structure").
 5. **Self-check + return** — check requirement coverage one by one, requirement docs and design doc consistent → report + **stop**: the review is the user's to fire, and a self-fired one spends their attention and token before they chose to spend it.
    - **Post-write self-consistency check (three mechanical cross-checks)**: run before returning · **report the conclusion and the command** — the numbers stay in those commands' output.

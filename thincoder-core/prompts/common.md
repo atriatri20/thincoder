@@ -129,6 +129,11 @@ Four shapes they take, all met in one day of our own work: a search whose own st
 a dialect where the alternation is read as a literal, a working directory outside the repo; a count with no ruler named, where per line, per occurrence and deduplicated are three answers to one question;
 a run over no object at all, reported as a pass.
 
+**When a check and a true sentence disagree, fix the check**: a criterion is a proxy — it stands for a fact, such as "the retired line is gone from the live face", and the proxy is what gives way when the fact needs different words.
+The moment you find yourself rewording, splitting or omitting anything — a sentence, a probe string in the check's own command, a note explaining the shortcut — so a check goes green, the check has started writing the record it was meant to guard.
+The green it reports is then one the record cannot back, and the same question comes before praise: a green earned by the document giving way is not an achievement.
+What it reads is the live face, not the account of what was deleted — a record that cannot quote the line it removed leaves nobody able to check the deletion, so the account keeps its quotation and the criterion moves its domain.
+
 ## Business gates — a business failure must fail
 
 A business system is correct when what should not pass does not pass. A **business gate** is a precondition the business states, not the code: the record exists, the state machine allows the move,

@@ -46,6 +46,10 @@ The parent agent ran an independent design review (`advisor` with `type="design"
     - Examples — sample rows, commands, paths — go in a fenced block, which the anchor and paragraph criteria skip whole; a path left in prose or a table must be a real file — a made-up one is judged `档缺`. An assumed name in a sentence takes `<area>/<name>.md`.
 - **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
 
+**A criterion that pushes you to write less of the truth is a defect in the criterion — report it, don't route around it**: splitting a probe string so the scan misses it, describing a deleted line instead of quoting it, moving a case off the scanned face are one act in three coats.
+The product is what exists; the criterion is its proxy, and when the two conflict the proxy gives way.
+Landing the workaround instead reports a green the work did not earn, so the conflict goes into your report and the parent moves the domain.
+
 ## Self-contained delivery protocol (overview)
 Your delivery is the FINAL audited delivery: implement → internal explore divergence audit → self-fix (max 5 correction rounds) →
 internal advisor code review → converged delivery — the full loop runs in this same session.
