@@ -21,3 +21,12 @@
 |---|---|---|---|---|
 | 1-1 | VSC 里跑一个 `advisor` → `explore` 嵌套回合，等块归档落流；重开面板 ∥ `reload` 窗口，展开该归档块 | 每条子代行的行首有 dim 子标 `explore#1 · `（正文里不重复出现）；父自己的行零子标；行正文与重开前逐字一致 | 无 | `test/integration/vsc-record-sublabel.test.mjs` |
 | 1-2 | 同一会话在 VSC 里跑完嵌套子代理回合（新形记录落流），再于 CLI 端恢复同一会话 | 存量记录（子标字面在 `text` 内）两端行文逐字一致；新形记录在 CLI 恢复面同样以 `explore#1 · ` 起头，行全文与 VSC 端逐字一致 | 无 | `test/integration/vsc-record-sublabel.test.mjs` |
+
+## VSC 2. 流式输出中视口贴底
+
+> 目的：流式回合进行中，用户只上滚了一点点（不足半视口）时，输出继续到达不把跟随停掉——视口仍跟着新内容走；真要看历史时才解钉。
+> 节注：回指 = 需求 F-W2（流式跟随与滚动）∥ `docs/vsc/design/WEBVIEW.md` §5.5 集成面行；机制单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-16（近底阈 = 视口比例，半视口为下限）；交互组件 = 流式帧应用（核 `thincoder-render-core/flow/stream.mjs` 的帧尾）× pin 观察（核 `thincoder-render-core/scroll.mjs` 的 `createPinWatch` 更新点）× 近底判据（核 `nearBottom`）；进入口 = VSC 聊天面板消息区，一次流式回合进行中上滚。三态（离底）= 2-1 一个用例覆盖三种离底量（不足 ∥ 恰等于 ∥ 超过半视口）。
+
+| 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
+|---|---|---|---|---|
+| 2-1 | VSC 聊天面板消息区跑一次流式回合（800px 视口；驱动真 webview 装配 `thincoder-vscode/webview/ui.js` 的 `initScrollFollow` + 核帧尾，滚动宿主自带 `scrollHeight` ∥ `scrollTop` ∥ `clientHeight` 读数），回合中依次上滚 300px（不足半视口）· 500px（超过）· 400px（恰等于），每次之后继续出帧；最后滚回底部 | 上滚 300px ⇒ 钉仍真，下一帧输出后视口仍贴底（离底归 0）；上滚 500px ∥ 恰 400px ⇒ 解钉，后续帧零写视口；滚回底部 ⇒ 复钉，下一帧重新贴底 | 无 | `test/integration/vsc-scroll-follow.test.mjs` |
