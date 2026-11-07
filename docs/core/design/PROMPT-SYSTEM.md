@@ -4792,7 +4792,7 @@ consumers: 两模式主会话的派单面 —— 本条与它分工：`:335` 判
 | D-PS11 | **测试层级知识（定义 + 放置）= 落 `thincoder-core/prompts/discipline-engineering.md`「测试纪律」节内两条 bullet 并文**（既有节内增列 ⇒ 零块计数连带）；**定义以机制文档为据、放置两类分述** | 落工程侧纪律节 = 事件面 + 现行节已有部分单元侧表述（最小增改 = 并文）；**「normal 侧另裁」已落——→ D-PS13** |
 | D-PS13 | **测试层级知识扩落普通侧**（`thincoder-core/prompts/discipline-normal.md`「测试与交付」节内两条 bullet 定点并文——定义 ∥ 放置，与工程侧同源同知识） | 口径收正（用户）：**批次档非工程模式专有 · 文档体系对全模式同一 · 两模式之别 = 是否强流程约束** ⇒ D-PS11 之「normal 侧另裁」落地；放置语义照全模式同一的文档体系书写。**流程约束面零搬迁** |
 | D-PS14 | **面向用户表述纪律（说人话）= 落 `thincoder-core/prompts/common.md`「语言纪律」节内增列**（既有节内增列 ⇒ 零 `##` 块计数连带） | 受众 = 全角色（两模式 + 全部子代理——子代理面 = 面向父代理）⇒ 公共层 `thincoder-core/prompts/common.md` 恒第二位 = 唯一全覆盖范围；表述面（怎么说）与语言纪律（用哪种语言 + 术语原文）同节同轴 |
-| D-PS16 | **文档更新纪律清单位同步 = 同步**（`thincoder-core/prompts/discipline-engineering.md` 的 `### Doc update discipline` 节列 **D1–D15**——表头 ∥ 计数句 ∥ 清单行三处同笔；只改数字不改计数句 = 表头改了数、导语仍说旧数） | 清单位 = 运行期可读的 D 族全表（设计族 = D1–D15——跨档同数为簿记面所需）；D8 ∥ D9 语义住公共层，**D10–D15 的语义 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.1、机械面 = `docs/core/design/DOC-DISCIPLINE.md` §1 的 D10–D15 各行及其细则块**（清单行 = 同族行式，非详述）。**每条清单行各写一句，读者读清单即知这条是什么**：D10 **过程面坐标不进交付物** ∥ D11 **规则同轮同拍** ∥ D12 **读数怎么取、住在哪** ∥ D13 **「待裁」不是终态** ∥ D14 **退役对象一次扫完** ∥ D15 **行数只有一把尺子** |
+| D-PS16 | **文档更新纪律清单位同步 = 同步**（`thincoder-core/prompts/discipline-engineering.md` 的 `### Doc update discipline` 节列 **D1–D15**——表头 ∥ 计数句 ∥ 清单行三处同笔；只改数字不改计数句 = 表头改了数、导语仍说旧数） | 清单位 = 运行期可读的 D 族全表（提示词清单 = `D1–D15` 十五条；规范面闭枚举 = `D1–D16`——D16 的提示词落点在 `thincoder-core/prompts/discipline-engineering.md` 的「Doc discipline」节，不在编号清单内，两面差一的处置见 §6.81 上抛项 5）；D8 ∥ D9 语义住公共层，**D10–D15 的语义 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.1、机械面 = `docs/core/design/DOC-DISCIPLINE.md` §1 的 D10–D15 各行及其细则块**（清单行 = 同族行式，非详述）。**每条清单行各写一句，读者读清单即知这条是什么**：D10 **过程面坐标不进交付物** ∥ D11 **规则同轮同拍** ∥ D12 **读数怎么取、住在哪** ∥ D13 **「待裁」不是终态** ∥ D14 **退役对象一次扫完** ∥ D15 **一把尺子**（射程 = 任何读数；读数住哪归 D12；判据分句四层同形，见 §6.81） |
 | D-PS17 | **多仓操作机制落三处**：公共层「批次档常识」§14 末（多仓按仓各自——跨仓建档被拒 = 正确 ∥ 各仓分别建档开批）+ 工程纪律层「文档与台账自持」节（6 项续入）+ 人格层「项目状态档」节（操作他仓前先建档） | 三项各归其位（常识 / 操作规则 / 写权动作）；零 `##` 增为硬口径 ⇒ 不新建节 |
 | D-PS18 | **「文档与台账自持」节既有项微调 = item 5 删并**（与 item 1 同规则重复 + 修订式残句；唯一事实「schema 校验」并入 item 1；序号顺缩） | D8 失效表达必删 + 重复即缺陷；残留即示范（存量不是合法态）；语义零变（逐字对照 = 设计围栏块） |
 | D-PS19 | **旧「跨仓批派单」提示词落笔面收口**：语义以多仓泛化形随册落笔；「反查脚本一条」落笔未做（在册）——`DOC-DISCIPLINE.md` §4.4 随正 | 两仓时代设计句与现况对账（提示词面「跨仓」零命中实证）；「脚本名不写进提示词」口径维持 |
@@ -6625,8 +6625,8 @@ Tests are the other half, and they are managed rather than accumulated: an unman
 | discipline · Docs & ledger repo-self-contained | 14 | 自带（本仓之外的事没人结账；外来档先被删） | `Ledger takes only this repo's entries` · `Batch records same rule` · `The docs system is repo-self-contained` · `Missing layers must be built` · `One batch = one implementation round…` · `Subagents write only this repo` · `Out-of-repo changes = stop and report` · `Several repos coexisting = a normal state` · `A repo = one git repo` · `Another repo gets the six segments` · `Findings in another repo = outside this task book's scope` · `Cross-repo coupling goes through the interface only` · `Splitting repos = an exception` · `Self-containment governs writes; reading is unrestricted` |
 | discipline · Multi-implementation-face discipline | 6 | 自带（拿另一个面的产物改写会把它那边的漂移一起搬进来） | `Each face implements independently, semantics from one source` · `Cross-face alignment goes through the shared design…` · `Differences are reported as found` · `Face-specific sections stay on their own face` · `Verification duty for many-faces-one-mechanism design sets` · `Cross-face difference disposition…` |
 | discipline · Rules & exceptions | 4 | 自带（放过一次，旧偏差即成规则） | `The only grounds for an exception is a judgment line` · `Residue is demonstration` · `Exceptions must carry a resolution window` · `Booking form (engineering mode)` |
-| discipline · Doc update discipline（D1–D15） | 14 | D8 自带（陈旧语句是 RAG 污染源）· D14 自带（每行都以为别人在处理）· D15 自带（四把尺量出四个数） | `D1 dispatch routing` · `D2 single authority source` · `D3 count/enumeration discipline` · `D5 freeze window` · `D6 read-back check` · `D7 settlement sync` · `D8 invalidated expressions must be deleted` · `D9 know the what and the why` · `D10 process-plane coordinates stay out of deliverables` · `D11 a rule changes in every layer the same round` · `D12 a reading: how it is taken, where it lives` · `D13 "pending ruling" is not a final state` · `D14 a retired object is swept once, whole` · `D15 a line count has one ruler`（D4 的指针形半句随第 19 行保留） |
-| discipline · Docs must be human-readable | 1 | 节内「an unreadable doc equals an unwritten one」 | `Chinese strings in AC / verification commands` |
+| discipline · Doc update discipline（D1–D15） | 14 | D8 自带（陈旧语句是 RAG 污染源）· D14 自带（每行都以为别人在处理）· D15 自带（四把尺量出四个数） | `D1 dispatch routing` · `D2 single authority source` · `D3 count/enumeration discipline` · `D5 freeze window` · `D6 read-back check` · `D7 settlement sync` · `D8 invalidated expressions must be deleted` · `D9 know the what and the why` · `D10 process-plane coordinates stay out of deliverables` · `D11 a rule changes in every layer the same round` · `D12 a reading: how it is taken, where it lives` · `D13 "pending ruling" is not a final state` · `D14 a retired object is swept once, whole` · `D15 one ruler per reading`（D4 的指针形半句随第 19 行保留） |
+| discipline · Docs must be human-readable | 1 | 节内「an unreadable doc equals an unwritten one」 | `Chinese strings in an AC or a verification command are one instance of D15` |
 
 **两处量法的差别（一条人核提示，不是第二把尺）**：本清单只按顶格条目数；`.md` 里的散文段（例如 `Project state file` 节全段无顶格条目，计 0 条）不在这个量法里，实施席照清单删，不必扩大射程。
 
@@ -8096,6 +8096,206 @@ RTM 读数（本席本轮实算，数字住批档 §2）：`test/RTM.md` 的故�
 5. 〔知会 · 新名注册〕新 bullet 题眼 = `Naming the project when the target has none`；同节既有名三条不动；`the two shapes` 退役（扫描域 = 落地档全档，预期残留 0，A2 判）。
 6. 〔知会 · 计数连带〕块 ① 由 2 行改 4 行（评审第 1 条的处置：四个条件与「首句点名哪一条没成立」必须进句内；末行再限定 `execute` ∥ `manifest` 无回落）⇒ 落地档行数与 A1 的 `n` 随改；四行逐行 ≤300 仍由 A5 判。
 
+
+### 6.81 一把尺子：`D15` 射程放开到任何读数、判据分句四层同形（`thincoder-core/prompts/discipline-engineering.md` 两处）
+
+**来源**：用户 2026-11-08 01:09–01:14 五连问，末句裁「落」；其后扩为「**其他相似的读数也都盘点一下,一次改了**」。
+
+现场 = 父侧收口上一批时用 PowerShell 数一个中文字串得 0、换 `node` 得 1——同一件事、两把尺子、两个数，差点判成「缺一种拒文形状」。父侧第一反应是补一条反例，被用户否掉。
+
+用户原话（判据源 · 逐字）：
+
+> 「**咱能不写反例吗? 就说其他形式的标准不一致,只有用同一把尺子才能得到同样的结果,标准不一致的读数没有意义.**」
+
+**判据（一句）**
+
+> 一条规则管全部读数：**一把尺子**。`D15` 的形对了，可差两样：射程只到行数，判据分句还是「另一个口径 ∥ 是错的」那个说法；中文串那条则另起炉灶、还带一张反例清单。
+
+**为什么反例不行**：反例是封闭清单，永远漏下一条——今晚漏的是 PowerShell 的 `Get-Content -Raw`，补上它，明天还有第三条。不是列表短，是判据的形态错了：工具的差异不是「不好用」，是**同一串字节按另一套编码标准解码**。
+
+**后果（这条规则的 why，写进句内）**：错的尺子给出的零，和真的没有，印出来一模一样——看的人分不出自己看的是哪一个。上一批那个 0 之所以危险，正是因为它长得和「真缺失」一样。
+
+**三处盘点（父侧实读 ∥ 本席复核取数）= 改两处、不动一处**
+
+| 处 | 现文 | 现判据形态 | 本批处置 |
+|---|---|---|---|
+| `thincoder-core/prompts/discipline-engineering.md` 的 `D15` | 题眼旧名；正文只谈行数，判据分句写「另一个口径 ∥ 是错的」；正文第四行挂着一个「工具还没报数」的失效前提 | ⚠️ 形对了，**射程只到行数、判据分句与另三层不同形**，且带一个失效前提 | **改**：题眼放开 + 判据分句换成「另一套解码标准」形 + 加射程句 + 正文第四行整行删除（改 2）；正文其余三行逐字不动 |
+| 同档 `Chinese strings in AC / verification commands` 那行 | `always use a UTF-8-aware form` + 一条 `findstr` 反例 | ❌ 另起炉灶 + 反例清单 | **改**：整行换写为 4 行，降为 `D15` 的一个实例 |
+| `thincoder-core/prompts/common.md` 的「四种失败形状」之一 | `a count with no ruler named, where per line, per occurrence and deduplicated are three answers to one question` | ✅ 同源的开放句 | **不动**（`D2`：它引用同一原则，不另立判据） |
+
+**落点（两处 · 同档相邻两节）**
+
+| # | 档 | 位置 / 形态 |
+|---|---|---|
+| ① | `thincoder-core/prompts/discipline-engineering.md` | `### Doc update discipline (D1–D15)` 节的第 15 条：题眼换名 + 正文首行换写（判据分句同换形）+ 新增 2 行射程句 + **删 1 行**（以 `Until` 起头的失效前提句——把记不到数的情形挂在「工具还没报数」这个前提上的那一行；整行删、不换写）；该条其余三行（记形句 ∥ 量法分歧句 ∥ `**Why**` 句）逐字不动；`D1–D15` 编号与条数**都不动** |
+| ② | 同档 `### Docs must be human-readable` 节 | 末条 bullet「Chinese strings in AC / verification commands」**整行换写为 4 行**；节内其余四行一字不动 |
+
+**逐字终稿甲（`D15` · 实施席照此落笔 · 唯一权威目标形；只列改动行，未列各行逐字不动）**
+
+改 1 — 第 15 条的标题行与正文首行（原为一行，换为三行：标题行 + 射程句两行）：
+
+```text
+15. **D15 one ruler per reading** — a line count is reported by `doc_check`, and a line count taken any other way is **not "another convention" but a different decoding standard**: the two numbers have no comparison between them, and a wrong ruler's zero prints identically to a real absence.
+    **The reach is every reading, whatever kind it is**: every reading compares only with a reading off that same ruler. Two rulers carry this project — `doc_check` for length-type readings, a `node` line scan ∥ the built-in `grep` for text-type readings.
+    A reading that sits under neither first asks which ruler it has, and is recorded `unverified` where no ruler can be named — the reach is open, not a list of families.
+```
+
+改 2 — **整行删除第 15 条正文第四行**（以 `Until` 起头、把记不到数的情形挂在一个「工具还没报数」的前提上的那一行）：
+
+- **为什么删**：`doc_check` 的 `lines` 参数早已能报数，那个前提不成立。同一句在 `docs/core/design/DOC-DISCIPLINE.md` 里的副本上一轮已按同一理由删净——**两个副本只删一个，落地后就成了「设计档没有、提示词还留着」**。
+- **为什么不换写**：剩下的意思已被射程句第三行吸收（两把之外的读数，定不出尺子就记 `unverified`）。改写成别的说法 = 在原地再造一个副本，同一规则说两遍（`D2`）。
+- **单源核对**：删后 `unverified` 兜底在围栏甲内恰 **1** 处（射程句第三行）——`A10` 判，0 或 > 1 即红。
+- **删后形状**：第 15 条 = 首行三行（标题 + 射程句两行）＋ 记形句 ＋ 量法分歧句 ＋ `**Why**` 句。
+
+**逐字终稿乙（`Chinese strings` 条 · 4 行 · 降为 `D15` 的实例）**
+
+```text
+- **Chinese strings in an AC or a verification command are one instance of D15**: the reading goes through `node` (a line scan) or the built-in `grep`, and every reading of the same string is taken the same way — the numbers only compare while they come off one ruler.
+  A shell tool decodes those bytes under a different encoding standard, so what it reports is not a smaller count but a number from another ruler, and readings taken off two standards have nothing to say about each other.
+  The consequence is why this earns a rule: the wrong ruler's zero and a real absence print identically, and the reader cannot tell which one is on the page.
+  An ASCII string needs no care here — every tool already reads it as one and the same, which is the whole point.
+```
+
+**与既有条款对照**
+
+| 既有句 | 它管什么 | 本笔做什么 | 为何不冲突 |
+|---|---|---|---|
+| 同档 `### Doc update discipline` 的第 15 条 | 行数那一族的尺子 = `doc_check`；判据分句说「另一个口径 ∥ 是错的」 | 题眼放开到任何读数、加一行射程句、判据分句换成「另一套解码标准」形 | 号、条、why 三位不动。改的是题眼、射程与判据分句三处写法：**题眼**（换名）、**射程**（放到任何读数）与**判据分句**（把「是错的」换成「另一套解码标准 + 两数不可比 + 错尺的零与真缺失同印」）——换的是说法，判据仍是同一条：同一件事只用一把尺子量 |
+| `A criterion that cannot be run before the change has not pinned its domain yet`（同档 · 测试纪律） | 一条判据要能读出红 | 一次读数要与另一次读数**可比** | 一条管「这个数会不会变」，一条管「这两个数能不能比」；一把永远读 0 的尺子两样都办不到 |
+| `a count with no ruler named, where per line, per occurrence and deduplicated are three answers to one question`（`thincoder-core/prompts/common.md`） | 四种失败形状之一 = 没点明尺子的计数不算数 | 同一原则在「哪把尺子」上的正面形 | 同一原则的两个落面，`D2` 下不重述、不合并；那一处不动 |
+| `### Doc update discipline (D1–D15)` 与 `Fifteen doc-update disciplines:`（同档） | 编号区间与条数 | 改题眼、射程与判据分句 | **编号与条数都不动**：数是 15，还是 15；三处换的是写法，条目不增不减 |
+
+**判据分句四层 · 改后同一句**（`D11`：四层差一个词，模型面就留着与另三层不同形的一句）：
+
+| 层 | 档与位置 | 判据分句改后逐字 |
+|---|---|---|
+| 提示词面 | 围栏甲（上方） | `not "another convention" but a different decoding standard` |
+| 设计档行 | `docs/core/design/DOC-DISCIPLINE.md` 的 §1 表 `D15` 行 | 不是「另一种口径」，是**另一套解码标准** |
+| 设计档细则 | 同档 `D15 细则` 的判据句 | 同上（同一句） |
+| 需求档行 | `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.1 的 `D15` 行 | 同上（同一句；该层归父侧落，本席只列要求） |
+
+判定 = A6：前三层由本席当轮落（两侧设计档本轮已写）+ 实施轮落提示词面；需求档一层由父侧落，收口复核。
+
+**用例表（正常 / 边界 / 错误）**
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 同一把尺子取两个读数 | 同一中文字串，改前 ∥ 改后各用 `node` 行扫描数一次 | 两个数可比；不等即证明判据能红 |
+| C2 | 正常 · 换成内置 `grep` | 同上，改用内置 `grep` 取数 | 与 C1 同族尺子，读数可比 |
+| C3 | 正常 · 行数 | 问一个文件的行数 | 走 `doc_check`；手数出来的数不是另一个口径，是另一套解码标准（与另三层同一句） |
+| C4 | 边界 · ASCII 串 | 同一 ASCII 串换两种工具数 | 同数——本条不咬它，这正是「同一把尺子」的定义 |
+| C5 | 错误 · 两个尺子的数拿来比 | shell 工具数得 0（另一套编码标准解码），据此判「这条不存在」 | 拦下：那个 0 不可比，须换回同一把尺子重量 |
+| C6 | 错误 · 把反例当规则 | 只补一条「别用某工具」，不写为什么必须同一把尺子 | 拦下：下一把尺子出现时规则仍不覆盖 |
+| C7 | 边界 · 两把尺子之外的读数 | 问一个既不属长度类也不属文本类的读数（如「几个子代理在跑」这类只能从运行面取的数） | 先问「它的尺子是哪把」；定不出来 ⇒ 记 `unverified`，不拿顺手的一件工具凑一个数——射程不靠枚举盖全，靠这一问盖全 |
+
+**验收（A1–A10 · 每条带红法 · 读数一律用同一把尺子，`node` 内联，不用 shell 数中文）**
+
+| # | 验收 | 跑什么 / 期望什么 | 红在什么读数上 | 跑者 |
+|---|---|---|---|---|
+| A1 | 退役串清零（`D14` 预期残留数 = 0；判域 = 两个 `###` 节） | 命令 ①：`### Docs must be human-readable` ∥ `### Doc update discipline` 两节内 `findstr` = **0** ∧ `UTF-8-aware form` = **0** ∧ `the read tool's line numbers` = **0** —— 三条腿各读两节之和 | 三条退役串现各非零（读数住批档 §2）⇒ 实施轮落笔后任一条非 0 即红；`thincoder-core/prompts/common.md` 工具路由表那一处不属判域 | 实施轮 |
+| A2 | 三句骨架各 1 | 命令 ①：`the numbers only compare while they come off one ruler` ∥ `decodes those bytes under a different encoding standard` ∥ `readings taken off two standards have nothing to say about each other` 各 **1** | 改前各为 0 ⇒ 这条能红；0 ∥ > 1 ⇒ 红 | 实施轮 |
+| A3 | 后果句在 | 命令 ①：`the wrong ruler's zero and a real absence print identically` = **1** | 改前 0 ⇒ 能红；> 1 ⇒ 红 | 实施轮 |
+| A4 | 题眼与射程句在位、旧题眼清零 | 命令 ①：`D15 one ruler per reading` = **1** ∥ `The reach is every reading, whatever kind it is` = **1** ∥ 旧题眼 `a line count has one ruler` = **0** | 改前：旧题眼在位、新题眼与射程句不在 ⇒ 能红 | 实施轮 |
+| A5 | 编号与条数守恒 | 命令 ①：`### Doc update discipline` **节切片内**编号条 = **15** ∥ 节标题 `### Doc update discipline (D1–D15)` = **1** ∥ 计数句 `Fifteen doc-update disciplines:` = **1** | 改前同数（守恒）；新增一条 D 即 16 ⇒ 红。计数按节切片取，不取全档 | 实施轮 |
+| A6 | 判据分句四层同形（判域 = 本档 §6.81 的围栏甲 ∥ `docs/core/design/DOC-DISCIPLINE.md` 的 `D15` 行 ∥ 提示词面同节 ∥ 需求档 §13.1 的 `D15` 行） | 命令 ①：围栏甲 `a different decoding standard` = **1** ∧ `it is wrong` = **0** ∥ 设计档 `D15` 行 = **1** ∥ 提示词面同两串 = **1** ∥ **0**；需求档同串（父侧落，收口复核） | 任一层缺 ⇒ 红；任一层留 `it is wrong` ∥ `是错的` ⇒ 红（改前四面即红） | 本席（设计侧）× 实施轮（提示词面）× 父侧（需求档） |
+| A7 | 射程不再枚举族（判域 = 围栏甲 ∥ `docs/core/design/DOC-DISCIPLINE.md` 的 `D15` 行与细则 ∥ 提示词面同节） | 命令 ①：`用例数` 在围栏甲 ∥ 设计档 `D15` 行 ∥ 设计档 `D15 细则` ∥ 提示词同节 = **0** ∥ `whatever kind it is` = **1** ∥ 腿活性 `A7_legGT` ≥ **1**（细则那一片读不到即红） | 该枚举现四层皆零（前一轮已撤）；把它写回任一层 ⇒ > 0 即红 | 本席 ∥ 实施轮 |
+| A8 | 落地行宽（提示词面逐行判、无结构豁免） | 命令 ①：`maxLen`（围栏甲三行 ∥ 围栏乙四行取最大）≤ **300**；块取不到 ⇒ 红 | `maxLen > 300` ⇒ 红——超宽即交付门 `REFUSED`；围栏甲第二行上一版曾超出，故列为判据 | 本席 ∥ 实施轮 |
+| A9 | 失效前提句清零（判域 = 围栏甲 ∥ 本档 §6.81 全节 ∥ 提示词面 `D15` 节切片） | 命令 ②：`K`（= 那一行独有的探针串，命令内拆写，本档不落该串）三面各 **0** | 改前提示词面 = 1（那一行在位）⇒ 能红；本档 §6.81 里出现同一串（把删掉的话再抄一遍）= 红 | 本席 ∥ 实施轮 |
+| A10 | 射程句的 `unverified` 兜底恰 1 处（单源） | 命令 ②：围栏甲内 `unverified` = **1** | 0（兜底被误删）∥ > 1（同一兜底写两处）= 红 | 本席 ∥ 实施轮 |
+
+**判域注**：`findstr` 在 `thincoder-core/prompts/common.md` 的工具路由表另有一处，语义是工具选择（用 `grep` 代替 shell 的 `find*`），不是本条的实例。判域因此**钉死在那两个 `###` 节内**（`### Docs must be human-readable` ∥ `### Doc update discipline`），不收全档、更不收全仓——两条退役串分处两节，只判一节就漏一半。
+
+**验收命令（可复跑 · 绝对数只留输出，不落本档）**
+
+两条命令纯 ASCII：中文探针串写成单个反斜杠加 `u` 的转义形（照命令原样抄，如 `'\u7528\u4f8b\u6570'`），围栏行写成 `\x60\x60\x60`。理由 = 本条自己的判据：命令本身就带中文字节时，shell 会先按它自己的编码标准解一遍——那就是「用一把坏尺子量自己」，而那串退化的字节落到探针上只会报 0。
+
+命令 ①（结构读数 = 按节切片；块取不到即 `missing`，空切片不给绿）：
+
+```text
+node -e "const fs=require('fs');const F='thincoder-core/prompts/discipline-engineering.md',G='docs/core/design/DOC-DISCIPLINE.md',P='docs/core/design/PROMPT-SYSTEM.md';const L=fs.readFileSync(F,'utf8').split(/\r?\n/),GT=fs.readFileSync(G,'utf8'),PL=fs.readFileSync(P,'utf8').split(/\r?\n/);const occ=(t,s)=>t.split(s).length-1;const sec=(h,A)=>{const i=A.findIndex(l=>l.startsWith(h));if(i<0)return null;let j=i+1;while(j<A.length&&!/^### /.test(A[j])&&!/^## /.test(A[j]))j++;return A.slice(i,j)};const H=sec('### Docs must be human-readable',L),D=sec('### Doc update discipline',L);const ps=PL.findIndex(l=>l.startsWith('### 6.81 '));let pe=ps+1;while(pe<PL.length&&!/^## /.test(PL[pe]))pe++;const psec=PL.slice(ps,pe);const f1=[];{let k=psec.findIndex(l=>l.startsWith('15. **D15 '));if(k>=0){while(k<psec.length&&!psec[k].startsWith('\x60\x60\x60')){f1.push(psec[k]);k++}}}const GL=GT.split(/\r?\n/),gi=GL.findIndex(l=>l.startsWith('**D15 \u7ec6\u5219'));let gj=gi+1;while(gi>=0&&gj<GL.length&&!/^## /.test(GL[gj]))gj++;const gt=gi<0?'':GL.slice(gi,gj).join('\n');if(!H||!D||!f1.length||!gt){console.log({missing:true,H:!!H,D:!!D,fence:f1.length,gt:!!gt});process.exit(0)}const h=H.join('\n'),d=D.join('\n'),all=L.join('\n'),f=f1.join('\n'),row=GT.split(/\r?\n/).filter(l=>l.startsWith('| D15 |')).join('\n');const q=['the numbers only compare while they come off one ruler','decodes those bytes under a different encoding standard','readings taken off two standards have nothing to say about each other','the wrong ruler\'s zero and a real absence print identically'];for(const s of q)console.log(occ(h,s),s.slice(0,52));console.log({A1_findstr:occ(h,'findstr')+occ(d,'findstr'),A1_utf8:occ(h,'UTF-8-aware form')+occ(d,'UTF-8-aware form'),A1_toollist:occ(h,'the read tool\'s line numbers')+occ(d,'the read tool\'s line numbers'),A4_title:occ(d,'D15 one ruler per reading'),A4_reach:occ(d,'The reach is every reading, whatever kind it is'),A4_oldTitle:occ(all,'a line count has one ruler'),A5_numbered:D.filter(l=>/^\d+\. \*\*D/.test(l)).length,A5_section:occ(all,'### Doc update discipline (D1\u2013D15)'),A5_countSentence:occ(all,'Fifteen doc-update disciplines:'),A6_fence:occ(f,'a different decoding standard'),A6_fenceWrong:occ(f,'it is wrong'),A6_wrong:occ(d,'it is wrong'),A6_designRow:occ(row,'\u53e6\u4e00\u5957\u89e3\u7801\u6807\u51c6'),A7_family:occ(f,'\u7528\u4f8b\u6570')+occ(d,'\u7528\u4f8b\u6570')+occ(row,'\u7528\u4f8b\u6570')+occ(gt,'\u7528\u4f8b\u6570'),A7_legGT:occ(gt,'\u5c04\u7a0b'),A7_open:occ(f,'whatever kind it is'),maxLen:Math.max(...f.split('\n').concat(h.split('\n')).concat(d.split('\n')).map(l=>[...l].length))})"
+```
+
+命令 ②（`A9` ∥ `A10` 的探针；探针串在命令内拆写，本档因此不落那串退役句）：
+
+```text
+node -e "const fs=require('fs');const F='thincoder-core/prompts/discipline-engineering.md',P='docs/core/design/PROMPT-SYSTEM.md';const occ=(t,s)=>t.split(s).length-1;const K='reports'+' counts';const L=fs.readFileSync(F,'utf8').split(/\r?\n/),PL=fs.readFileSync(P,'utf8').split(/\r?\n/);const sec=(h,A)=>{const i=A.findIndex(l=>l.startsWith(h));if(i<0)return null;let j=i+1;while(j<A.length&&!/^### /.test(A[j])&&!/^## /.test(A[j]))j++;return A.slice(i,j)};const D=sec('### Doc update discipline',L);const ps=PL.findIndex(l=>l.startsWith('### 6.81 '));let pe=ps+1;while(pe<PL.length&&!/^## /.test(PL[pe]))pe++;const psec=PL.slice(ps,pe);const fence=(head)=>{const k=psec.findIndex(l=>l.startsWith(head));if(k<0)return [];const out=[];let i=k;while(i<psec.length&&!psec[i].startsWith('\x60\x60\x60')){out.push(psec[i]);i++}return out};const fa=fence('15. **D15 '),fb=fence('- **Chinese strings in an AC');if(!D||!fa.length||!fb.length){console.log({missing:true,D:!!D,fa:fa.length,fb:fb.length});process.exit(0)}const f=fa.join('\n'),s=psec.join('\n'),d=D.join('\n');const w=t=>Math.max(...t.split('\n').map(l=>[...l].length));console.log({A9_fence:occ(f,K),A9_section:occ(s,K),A9_prompt:occ(d,K),A10_unverified:occ(f,'unverified'),A8_maxLenA:w(f),A8_maxLenB:w(fb.join('\n'))})"
+```
+
+改前关系（绝对值住批档 §2）：三条退役串现各非零、第三串住在 `D15` 条那一行 ⇒ A1 三条腿按两节判都能红；四条探针串现全为 0 ⇒ A2 ∥ A3 能红；旧题眼在位、新题眼与新射程句不在 ⇒ A4 能红；`用例数` 已四层皆零（前一轮撤）、`A7_legGT` 非零证明细则那一片读得到 ⇒ A7 的腿活着；`D15` 正文第四行在位 ⇒ A9 的提示词面读数非零、能红。
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 把 `D15` 放开，不新增一条 D | 用户「一次改了」的裁法；`D15` 的形已经对了，缺的是射程。新增 D16 = 同一条规则两个号，读者按哪个都不全（`D2`） |
+| K2 | 中文串那条降为 `D15` 的实例、整行换写 | 它本来就是一个实例，写成「另起一条规则 + 一张反例清单」才让它看起来像独立规则；实例只保留「本项目的尺子是哪两件」这一具体面 |
+| K3 | 反例（工具名）删净，正面要求留句内 | 反例是封闭清单，下一把尺子出现时规则仍不覆盖（C6）；只说「标准要一致」不给尺子，读者仍要自己挑一把 |
+| K4 | 后果句写进句内 | 提示词是模型唯一读到的面；「错尺的零与真缺失同形」是这条规则的全部说服力，留在设计档 = 写的人读过、照它做的人没读过 |
+| K5 | `thincoder-core/prompts/common.md` 那四种失败形状不动 | 它是同原则的另一个落面且已写成开放句；按 `D2` 引用不重述、不合并 |
+| K6 | 提示词清单的编号与条数一个都不动 | 本批改的是题眼、射程与判据分句三处写法，不是加条——清单仍是 `D1–D15`、十五条（A5 判）。规范面的闭枚举是 `D1–D16`：D16「示例进围栏」的提示词落点在 `thincoder-core/prompts/discipline-engineering.md` 的「Doc discipline」节（单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.28 的落点表），从未进过这份编号清单；**两面差一 = 已知状态（内容已在、编号未对齐），另批处理**，见上抛项 5 |
+| K7 | 那一行**整行删掉，不换写** | 「工具还没报数」的前提没了（`doc_check` 的 `lines` 参数早已能报数）；剩下的意思已被射程句第三行吸收，换写 = 同一规则再说一遍（`D2`），且带着一个失效前提进运行期。同一句的另一个副本上一轮已删——两个副本只删一个，落地后就是设计档与提示词各说一套 |
+
+**先例 ∥ 偏离**
+
+先例 = §6.79（判据必须能失败：改前读数落批档、读数用同一把尺子取）∥ §6.80（整行换写 + 逐行相等判据 + 判域注）∥ 同档 `D15` 自身（本条是它的射程放开，形态一字未改）。
+
+**偏离**：
+
+- ① 本笔只改两处、不动第三处——盘点表三行，`thincoder-core/prompts/common.md` 那一行按 `D2` 明确不动，不是为了省工；
+- ② 验收不判模型行为（「下次取数会不会换尺子」从文本面复现不出可机判结果），只判骨架在场、反例清零、射程句在场、编号守恒。
+
+**既有件三问**
+
+- `existing` = `thincoder-core/prompts/discipline-engineering.md` 的 `### Doc update discipline` 节第 15 条（`D15`） · consumers = 工程模式主会话 + 全部工程子代理 ⇒ 题眼换名 + 正文首行换写（判据分句同换形）+ 增射程句两行，该条其余三行（记形句 ∥ 量法分歧句 ∥ `**Why**` 句）一字不动。
+- `existing`（第二件）= 同档 `### Docs must be human-readable` 节末条 bullet · 题眼逐字 `Chinese strings in AC / verification commands` · consumers 同上 ⇒ 整条换写为 4 行，节内其余四行不动。
+- `none found` = 四条新探针串（`one ruler per reading` ∥ `The reach is every reading, whatever kind it is` ∥ `the numbers only compare while they come off one ruler` ∥ `decodes those bytes under a different encoding standard`）在 `thincoder-core/prompts/` 全 17 档逐串实扫 ⇒ 零命中（本席本轮）⇒ 新文本不重名、不撞旧句。
+
+**勘察证据行（本席本轮实读）**
+
+- `D15` 的 why 逐字（射程句「尺子已在工具里」的依据）：依据 `thincoder-core/prompts/discipline-engineering.md`「**Why**: four rulers measured one document to four numbers, and "report your method" made all four legal — that is not four conventions, it is nobody measuring right. A ruler left in a script has to be remembered; built into the tool it sits in the hand.」
+- `D15` 的记形句逐字（不动的那行）：依据 `thincoder-core/prompts/discipline-engineering.md`「A discussion about **convention ∥ definition ∥ measuring method ∥ counting formula** carries one count taken **this round** with that ruler, written in the D12 form; none ⇒ the paragraph itself is a defect — measure first; another ruler used ⇒ that paragraph is void, **measure again**.」
+- 第二节标题逐字，及节内上一行（不得动）：依据 `thincoder-core/prompts/discipline-engineering.md`「### Docs must be human-readable」∥「**Check**: verify per the project's own doc conventions (generic criteria: no paragraph over 300 characters, normal breaks and separations; project declarations win where they exist).」
+- 判域注的依据（`thincoder-core/prompts/common.md` 那一处的语义）逐字：依据 `thincoder-core/prompts/common.md`「| `ls` / `glob` / `grep` / `tree` | list dirs / find files by pattern / regex search / directory tree | bash `dir`/`find`/`findstr`/`grep -rn` |」
+- 判据能红这一族的同档先例逐字：依据 `thincoder-core/prompts/discipline-engineering.md`「A criterion that cannot be run before the change has not pinned its domain yet — an open range or an unnamed ruler answers however that day's wording falls, and a pass over no object reads exactly like a pass over all of them.」
+- 结构面（关系句，绝对值住批档 §2）：两节 `##` / `###` 计数不变；`D1–D15` 编号与条数不变；被换写的那条由 1 行变 4 行、`D15` 条由 5 行变 6 行（改动形状，不是读数）。
+- 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` 实读 = `[]` ⇒ 工作目录内无独立公共源文档仓——已查，无相关。
+- 数据事实：本设计对数据无断言（无行数、无字段、无枚举取自数据）⇒ 无此句。
+
+**受影响文件与分层结论（`D11` 全层 · 一档都不许留旧层）**
+
+| 档 | 层 | 改什么 | 本笔归谁 |
+|---|---|---|---|
+| `docs/core/design/PROMPT-SYSTEM.md` | 设计档（本档） | 本节 · §7 `D-PS16` 的 `D15` 名句 · §6.73 清点表的 `D15` 名 | 本席，本轮已落 |
+| `thincoder-core/prompts/discipline-engineering.md` | 提示词（产品代码面，运行期加载） | 落点 ① `D15` 题眼 + 射程句 + 正文第四行整行删除（改 2）；落点 ② 中文串条换写 4 行 | 实施轮 eng-coder（逐字块甲 ∥ 乙 + 改 2） |
+| `docs/core/design/DOC-DISCIPLINE.md` | 设计档（机制面 · `D15` 判据单源） | §1 表 `D15` 行与 `D15 细则` 的射程、判据句（族枚举撤除、落点归 `D12`） | 本席，本轮已落（修正轮） |
+| `docs/core/requirements/ENGINEERING-MODE-V2.md` | 需求档 | §13.1 的 `D15` 行：族枚举撤除 + 落点格变更史注删（判据分句已同形） | **父侧（主 agent）**——需求档不在设计席写域 |
+| 测试档 | — | **0**（零代码面） | — |
+
+**分层结论 = 无档跨分层**：档位线只量代码面；`.md` 提示词档免档位判定，运行期代码零改。
+
+**集成测试设计**：`none` —— 改动面 = 提示词两处 + 设计档三处命名，零代码面。
+
+两条入口均不成立：① 不改任何既有用例断言的业务可观察结果（`test/RTM.md` 故事索引逐行标题看过，无一行断言提示词文本或其等价性）；② 未新增业务上真需要的场景——「模型下次取数会不会换尺子」从业务入口复现不出可机判结果，能机判的只有文本在不在、层次同不同形、编号守不守恒（A1–A10）。⇒ 破行 0 · 冗余 0 · 新增 0。
+
+**边界（本节不做）**
+
+- 不新增 D 条、不动 `D1–D15` 编号与条数（A5 判守恒）。
+- 不动 `thincoder-core/prompts/common.md`（含「四种失败形状」那一句与其工具路由表的 `findstr`——语义不同、射程外）。
+- 不动 `thincoder-core/prompts/persona-engineering.md` 写门节（上一批已收口）。
+- 不点任何工具名当反例（连「别用」句式一并不要）。
+- 不改 `D15` 的记形句与 why 句、不改 `D12`、不改 `doc_check` 判据、不新增机检门、不留行号坐标。
+
+**UI / 交互决策**：无界面面——本节只改设计档文字与模型可见提示词文本。
+
+**上抛项**
+
+1. 〔知会 · `D11` 四层已齐〕设计档一层本轮由本席落（`docs/core/design/DOC-DISCIPLINE.md` 的 §1 表 `D15` 行与 `D15 细则`）；需求档一层仍归父侧（`docs/core/requirements/ENGINEERING-MODE-V2.md` §13.1），待改项见上抛项 6。
+2. 〔知会 · 语言面〕用户给的是中文，落笔为英文面（提示词面语言纪律：运行面英文）；逐字形见围栏块甲 ∥ 乙，语义按用户三句骨架译，未增删判断。
+3. 〔知会 · 计数连带〕落点 ② 一条换写为四行；落点 ① 判据分句换形 + 题眼换名 + 增两行射程句 + 删正文一行；两节 `##` / `###` 计数与 `D1–D15` 编号条数不变（关系句；读数住批档 §2，读数不作判据）。
+4. 〔知会 · 新名注册〕`D15` 题眼 = `one ruler per reading`（旧名退役，判域 = `D15` 条所在节，预期残留 0，A4 判）；新实例题眼 = `Chinese strings in an AC or a verification command are one instance of D15`；`UTF-8-aware form` 退役（判域 = 两个 `###` 节，预期残留 0，A1 判）；「另一个口径 ∥ 是错的」旧判据分句退役（判域 = 围栏甲所在节，预期残留 0，A6 判）。
+5. 〔已裁 · 父侧 = 不补〕提示词清单十五条 ∥ 规范面十六条：`D16`「示例进围栏」的**内容**已在 `thincoder-core/prompts/discipline-engineering.md` 的「Doc discipline」节有落点，缺的只是编号。**两面差一 = 已知状态（内容已在、编号未对齐），另批处理**——补成清单第 16 条 = 改编号闭枚举 + 节标题 = 新语义，不在本批。
+6. 〔上抛 · 待父侧笔〕`docs/core/requirements/ENGINEERING-MODE-V2.md` §13.1 的 `D15` 行要改两处：① 四族枚举 `（行数 ∥ 文本命中 ∥ 命中次数 ∥ 用例数）` 撤掉，换成开放句 + 两把尺子 + 「定不出来记 `unverified`」（与 A7 同源）；② `落点` 格内的变更史注 `（2026-11-06 · 射程放开 2026-11-08）` 按 `D8` 删。判据分句那半句已同形，无需改。
+7. 〔已裁 · 并入落点〕`D15` 条正文第四行（以 `Until` 起头、把记不到数的情形挂在「工具还没报数」这个前提上）——父侧裁 **删**，落点见围栏甲改 2：整行删除、不换写。
 
 ## 8. 提示词承载（单源 · M9 落点）
 

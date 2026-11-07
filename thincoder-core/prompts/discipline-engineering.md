@@ -394,10 +394,11 @@ Each doc category has one landing route, and the doc system is maintained by dis
    Every hit takes one of **three dispositions**: **delete** ∥ **re-point** ∥ **book a ledger row whose `evidence` carries the expiry condition**; closeout = **measured hits = the count stated in advance**, off by one ⇒ not closed.
    **A live module's legitimate reference is not a residue** — an `import` point, an interface registration, a judgment spec or a test surface names something still on disk, so it is outside the sweep, not deferred.
    **Why**: one retired object split across several lines, several batches and several "zero-touch" notes — every line believes another one is handling it.
-15. **D15 a line count has one ruler** — a line count is reported by `doc_check`; any **line count** taken by hand with a shell ∥ an editor ∥ the read tool's line numbers is **not "another convention", it is wrong**.
+15. **D15 one ruler per reading** — a line count is reported by `doc_check`, and a line count taken any other way is **not "another convention" but a different decoding standard**: the two numbers have no comparison between them, and a wrong ruler's zero prints identically to a real absence.
+    **The reach is every reading, whatever kind it is**: every reading compares only with a reading off that same ruler. Two rulers carry this project — `doc_check` for length-type readings, a `node` line scan ∥ the built-in `grep` for text-type readings.
+    A reading that sits under neither first asks which ruler it has, and is recorded `unverified` where no ruler can be named — the reach is open, not a list of families.
    A discussion about **convention ∥ definition ∥ measuring method ∥ counting formula** carries one count taken **this round** with that ruler, written in the D12 form; none ⇒ the paragraph itself is a defect — measure first; another ruler used ⇒ that paragraph is void, **measure again**.
    **A measured disagreement is still argued out**: the rule fixes the ruler, not which side wins — measure first with it, then argue.
-   **Until `doc_check` reports counts**, a count that is needed is recorded `unverified` — never substituted with another ruler.
    **Why**: four rulers measured one document to four numbers, and "report your method" made all four legal — that is not four conventions, it is nobody measuring right. A ruler left in a script has to be remembered; built into the tool it sits in the hand.
 
 ### Docs must be human-readable
@@ -405,7 +406,10 @@ When writing/editing docs (requirement layer / design layer — roots are `docRo
 **A whole section/table/rule compressed into one over-long block makes it unreadable** (a paragraph running past 300 characters).
 Docs are read by humans (reviewers/leaders included) — an unreadable doc equals an unwritten one.
 **Check**: verify per the project's own doc conventions (generic criteria: no paragraph over 300 characters, normal breaks and separations; project declarations win where they exist).
-- **Chinese strings in AC / verification commands**: always use a **UTF-8-aware form** (a `node` line scan / the built-in grep tool) — `findstr /c:"<Chinese text>"` matches nothing on this machine ⇒ false red / false green; ASCII strings are unaffected.
+- **Chinese strings in an AC or a verification command are one instance of D15**: the reading goes through `node` (a line scan) or the built-in `grep`, and every reading of the same string is taken the same way — the numbers only compare while they come off one ruler.
+  A shell tool decodes those bytes under a different encoding standard, so what it reports is not a smaller count but a number from another ruler, and readings taken off two standards have nothing to say about each other.
+  The consequence is why this earns a rule: the wrong ruler's zero and a real absence print identically, and the reader cannot tell which one is on the page.
+  An ASCII string needs no care here — every tool already reads it as one and the same, which is the whole point.
 
 ## Parallel calls (general — same source as normal mode)
 Engineering-mode stages (design / review / implementation / audit / delivery review) can run in parallel — **parallelize aggressively**.
