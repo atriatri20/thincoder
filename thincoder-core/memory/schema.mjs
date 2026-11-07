@@ -42,7 +42,7 @@ export const CODE_EXTS = new Set([
 // Same declaration rule as CODE_EXTS (index.docExtensions).
 export const DOC_EXTS = new Set([".md", ".mdc", ".mdx", ".txt", ".rst", ".adoc", ".org", ".wiki", ".tex"])
 // 目录剪枝名单**单源外提**（2026-10-27 四份名单合一 · 零依赖叶档 `../skip-dirs.mjs`）：本档不再持
-// 副本，同名 re-export 保 `memory.mjs:7` 的导出面逐字零变。名单 = 42 项精确集 + win32 折叠族（18）
+// 副本，同名 re-export 保 `memory.mjs` 的导出面逐字零变。名单 = 42 项精确集 + win32 折叠族（18）
 // + 前缀族（`bazel-`）；判定形状（折叠 / 前缀 / 点段）仍在本包 `file-walk.mjs`（只合名单，不合判定）。
 import { SKIP_DIRS, SKIP_DIRS_FOLD, SKIP_DIR_PREFIXES } from "../skip-dirs.mjs"
 export { SKIP_DIRS, SKIP_DIRS_FOLD, SKIP_DIR_PREFIXES } from "../skip-dirs.mjs"
@@ -65,7 +65,7 @@ export function createMemory({ dbPath }) {
   // §6.12 WAL 卫生（TUI 假死批）：① `journal_size_limit` = 回收后 WAL 文件截断上界（防复胀）；
   // ② 开库**一次性** `wal_checkpoint(TRUNCATE)`——失败容忍（另一实例持读事务 ⇒ busy：静默跳过，
   // 不重试不报错）。边界写实：最坏等待上界 = 连接上的 `busy_timeout`（**不是**「不阻塞」；
-  // `wal_checkpoint` 是否走 busy handler = unverified——判据 = 批档 §2.5 T-W2）。
+  // `wal_checkpoint` 是否走 busy handler = unverified）。
   db.exec(`PRAGMA journal_size_limit = ${WAL_SIZE_LIMIT_BYTES}`)
   try { db.exec(`PRAGMA wal_checkpoint(TRUNCATE)`) } catch { /* busy / 非 WAL（内存库）⇒ 保持现状 */ }
 

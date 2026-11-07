@@ -68,19 +68,16 @@ export function resetBatchSegment() { injectedOnWrite = null }
  */
 
 /**
- * 设计评审的实例绑定解析（BATCH-RECORD.md §4.2/§4.3——评审实例的唯一路径来源）：
- *  - 同步路径：调用方（advisor 工具）把实例绑定显式放进 callbacks（**带 batchDoc 键**，
- *    未绑定即 null）——以此为准，不再回看池条目（防同步/异步混跑时串档）；
- *  - 异步路径：本评审所在**池条目**的 `run.batchDoc`（文档集 = 实例键，各评审各取各条）。
+ * 评审侧批次档绑定解析（BATCH-RECORD.md §4.2/§4.3——评审实例的唯一路径来源）：
+ * 单源 = 调用方把**本笔**绑定显式放进 callbacks（**带 batchDoc 键**，未绑定即 null）——
+ * 同步路径来自 advisor 工具，异步路径来自池条目的 `entry.start()`（条目持发起时点的快照）。
+ * 缺键 ⇒ null（fail-closed）。
+ * 池扫兜底已退役：按文档集去池里认条目是同一判据的第二份、且更弱的表述（只认设计轨）；
+ * 代码轨 `documents` 为 null ⇒ `[]` 会匹配到无 documents 的条目，等于另开一个错档入口。
+ * `agent` / `documents` 形参保留为签名兼容（调用方按位置传参），本函数不再消费。
  */
 export function batchDocForReview(agent, documents, callbacks = null) {
   if (callbacks && "batchDoc" in callbacks) return callbacks.batchDoc ?? null
-  const key = JSON.stringify([...(documents ?? [])].sort())
-  for (const e of agent?._asyncAdvisors?.values?.() ?? []) {
-    if (e.status === "running" && e.reviewType === "design" && JSON.stringify([...(e.documents ?? [])].sort()) === key) {
-      return e.run?.batchDoc ?? null
-    }
-  }
   return null
 }
 

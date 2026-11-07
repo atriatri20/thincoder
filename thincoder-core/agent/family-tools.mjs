@@ -2,7 +2,7 @@
  * agent/family-tools.mjs — 家族矩阵单源（`assembleFamilyTools`）。
  *
  * 批次 `docs/batches/2026-09-15-vsc-tool-table-dup.md` §2.3A：家族矩阵（哪个运行面得哪些
- * 家族工具）自 CLI 侧 `agent/setup.mjs` 的 `assembleFamilyTools`（as-of 迁出前坐标）整体迁出——CLI 与 VSC 同调同一份实现
+ * 家族工具）自 CLI 侧 `agent/setup.mjs` 的 `assembleFamilyTools` 整体迁出——CLI 与 VSC 同调同一份实现
  * （消灭「同一角色矩阵两份实现」= 本批缺陷的类根因）；端差（VSC 装饰链 / settings 追加 /
  * consult 池来源）经 `decorate` 注入——**不传 = 核默认形态**（CLI = 迁出前逐字）。
  *
@@ -153,7 +153,7 @@ export async function assembleFamilyTools({
       // 团队台账全量变体（五 action——同律：子代理段只挂读变体；登录态门在工具内）
       teamLedgerTool,
       // manifest 工具（`MANIFEST.md` §2.10 · 2026-10-08 · 台账 #1098）：主 agent 读写出口——
-      // **两模式同挂**（需求未设模式门）；全量变体仅 depth-0——子代理各段挂只读变体（见下 `:187-193`）。
+      // **两模式同挂**（需求未设模式门）；全量变体仅 depth-0——子代理各角色段挂只读变体（见下 depth>0 各段）。
       manifestTool,
       // 文档纪律机检（`DOC-DISCIPLINE.md` §3.20 条目 S）：只读报告态——depth-0 主 agent 段；
       // 写文档 / 设计档的角色段（eng-coder / eng-designer）另挂（见下两分支）。

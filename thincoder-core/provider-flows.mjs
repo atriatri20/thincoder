@@ -2,8 +2,8 @@
  * provider-flows.mjs — provider 加 ∕ 删 ∕ 密钥三流程 + 渠道准入探针判据（核件 —— 「桌面处理流 · VSC 对齐」
  * 批 R8 上提产物；2026-09-28）。
  *
- * 上提源 = VSC `thincoder-vscode/src/extension/provider-flows.mjs`（`addProviderFlow:60` ∕
- * `removeProviderFlow:129` ∕ `setKeyFlow:153` ∕ `probeProviderAdmission:32`）——**纯搬 + 转口，零语义改**
+ * 上提源 = VSC `thincoder-vscode/src/extension/provider-flows.mjs`（`addProviderFlow` ∕
+ * `removeProviderFlow` ∕ `setKeyFlow` ∕ `probeProviderAdmission`）——**纯搬 + 转口，零语义改**
  * （三流程步序 ∕ 字段校验 ∕ 拒因 ∕ 探针语义逐字）；VSC 自持副本已随本批（parity-b4）迁移改指本档（双写窗口关闭——本档 = 桌面 ∕ VSC 消费单源）。
  *
  * 转口（宿主面 ⇒ 注入缝；本档零宿主依赖、零 `vscode` 引用）：

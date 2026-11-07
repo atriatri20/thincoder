@@ -14,8 +14,9 @@
  * `headless` = **共享浏览器的首开属性**（§12「模式」条）：池内已在跑 ⇒ 沿用生效值并在回执尾行告知，不报错；
  * 模式注记与重开注记同写一位（`sealNote`），两条同时待发时分两行发出。空闲 15 分钟 = 摘自己（KD-8）
  * ——仍有活条目则浏览器留着，末个用者才关。
- * 动作实施层 = `actions.mjs`（基线八）+ `input-actions.mjs`（新七）+ `clipboard.mjs`——经会话句柄取能力，
- * 不 import 本档（DAG 单向：`session → {actions, input-actions, clipboard} → {input, snapshot, cdp}`；`session → queue`，§5）。
+ * 动作实施层 = `actions.mjs`（基线八）+ `input-actions.mjs`（新七）+ `clipboard.mjs` + `session-state.mjs`
+ * （会话态六形）——经会话句柄取能力，不 import 本档（DAG 单向：`session → {actions, input-actions, clipboard,
+ * session-state} → {input, snapshot, cdp}`；`session → queue`，§5）。
  *
  * 注入缝（N-BT6）：`_deps.openBrowser` ∥ `_deps.killBrowser` ∥ `_deps.saveShot`——缺省 null ⇒
  * 回落真实现（`??`）；用例注入后 `finally` 还原。共享池的注入缝在 `pool.mjs`。
@@ -25,6 +26,7 @@ import { join } from "node:path"
 import { ACTIONS } from "./actions.mjs"
 import { CLIPBOARD_ACTIONS } from "./clipboard.mjs"
 import { INPUT_ACTIONS } from "./input-actions.mjs"
+import { SESSION_STATE_ACTIONS } from "./session-state.mjs"
 import { DEFAULT_CALL_TIMEOUT_MS, connectCdp } from "./cdp.mjs"
 import { browserPaths, killBrowser } from "./launch.mjs"
 import { attachOrLaunch, modeNote, releaseUser, releaseUserSync } from "./pool.mjs"
@@ -434,7 +436,7 @@ const sessionHandle = {
 
 // ── 分发表 ∥ 入口 ────────────────────────────────────────────────────────────
 
-const ACTION_TABLE = { ...ACTIONS, ...INPUT_ACTIONS, ...CLIPBOARD_ACTIONS }
+const ACTION_TABLE = { ...ACTIONS, ...INPUT_ACTIONS, ...CLIPBOARD_ACTIONS, ...SESSION_STATE_ACTIONS }
 
 async function dispatchAction(action, args, ctx) {
   const handler = ACTION_TABLE[action]

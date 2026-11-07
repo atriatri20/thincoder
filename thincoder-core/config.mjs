@@ -142,7 +142,7 @@ export function isBailianHost(baseURL) {
 }
 
 /**
- * Resolve the Bailian `enable_thinking` switch for qwen hybrid-thinking models (PROVIDER.md §12).
+ * Resolve the Bailian `enable_thinking` switch for qwen hybrid-thinking models (`docs/core/design/PROVIDER.md` §6.12).
  * qwen3.x on Bailian defaults to thinking ON, so an explicit off must send enable_thinking:false
  * or the server silently keeps thinking. Whitelist: model name starts with "qwen" (excluding the
  * non-thinking qwen3-coder line) AND the provider points at a Bailian host.
@@ -160,7 +160,7 @@ export function resolveEnableThinking(provider, spec) {
   if (!isBailianHost(provider?.baseURL)) return undefined
   // 一致性分支（#1659）：effort 档位有值且非 "none" ⇒ effort 赢（thinking on）。
   // 百炼约束：enable_thinking:false 时 reasoning_effort 必须为 "none"，互斥即 400。
-  // 压缩下行（context.mjs:203）显式 thinking:null 但继承 effort（v3 同源裁定）——
+  // 压缩下行（context.mjs 的 compressIfNeeded）显式 thinking:null 但继承 effort（v3 同源裁定）——
   // 无此分支则发出 {enable_thinking:false, reasoning_effort:"medium"} ⇒ 400 ⇒ 压缩三连败。
   if (provider.reasoningEffort && provider.reasoningEffort !== "none") return true
   if (provider.thinking === null) return false

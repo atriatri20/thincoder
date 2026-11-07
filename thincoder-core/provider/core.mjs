@@ -231,7 +231,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   } else if (
     // D-14（MODEL-SPECS §9.6 · 批 2026-09-20-channel-onboarding）：effort 族非百炼渠道的
     // 「off 静默失效」——两端「关思考」发的是 `thinking:null` 标记（CLI cmd-think.mjs / VSC
-    // reasoning-mode.mjs），该标记在 :193 被 falsy 跳过 ⇒ 服务端默认想 on、不发任何思考字段
+    // reasoning-mode.mjs），该标记在 `if (provider.thinking) body.thinking = …` 那支被 falsy 跳过 ⇒ 服务端默认想 on、不发任何思考字段
     // = UI 显 OFF 实际在想（假告知，同 PROVIDER.md §6.12 先例）。`reasoning_effort:"none"` 是
     // 实测唯一有效 off 路径（hy3 / seed：tok=0、rc 消失）。五 guard 面（MODEL-SPECS §9.9 B-5）：
     // 无枚举行（hy4-preview）透传不变 / 显式档优先只携该档（上支）/ 百炼 flash 同义多携 /

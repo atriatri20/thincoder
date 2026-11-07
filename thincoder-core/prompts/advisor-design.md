@@ -32,7 +32,7 @@ Evaluate the design against these dimensions:
    **Why**: a branch brings four companions of its own — an alert, copy, cross-end consistency and test material; with no scene none of the four can be verified, and nobody later dares delete the branch.
    **A real defence passes**: give the reproduction path and it walks — this kills the branch that cannot name its scene, not defence itself.
 7. **Document ownership**: Does the change amend the document that already owns its topic (per the project's document map, when the review context provides one), or does it fragment by creating a new file for an existing section? Does the wording duplicate or contradict existing documents?
-8. **Affected-file tier check**: every source/test file in the design's affected-files table gets its tier judged from a fresh measurement — the author's at design time, the reviewer's at check time.
+8. **Affected-file tier check**: every source/test file in the design's affected-files table gets its tier judged — **the conclusion**（crosses a tier or not）+ **the command**（how to check it）; no number goes into the design document.
    **Neither the size nor an expected delta goes into the design document**: the conclusion does — one line naming which files cross a tier, each with its split plan, or stating that none crosses.
    **Pure `.md` documents are exempt** from that tier judgment.
    **Any file crossing a code-structure tier must carry a split plan in the design** — file tier: >500 lines → proactive split review, >800 lines → must split (hard cap, no exemption channel).
@@ -55,7 +55,7 @@ Evaluate the design against these dimensions:
     The section answers as a delta against it — which rows this change breaks, which are redundant, which are missing;
     each row names the **interaction between components** each evaluates, the business result each asserts, the project's entry (where a user enters the business — a business-observable point), and the business requirement each traces back to.
     **An integration section that starts from a blank "which scenarios do we need" list, with no RTM read, ⇒ 🔴.**
-    A missing row's number is fixed in the RTM before its case title is written — `test('1-1 …')`, the same number verbatim.
+    A missing row's number is fixed in the RTM before its case title is written — `test('CLI 1-1 …')`, the same number verbatim.
     **A design missing that section ⇒ 🔴 (design incomplete)**; a change that alters no business-observable result an existing case asserts and adds no scenario the product really needs states so, with its reason, in that section.
     **Only one reason stands: this change alters no business-observable result an existing case asserts and adds no scenario the product really needs. Anything else — e.g. the 50–100 case window being full — is still 🔴.**
     **A case grows from exactly two entries**: a business scenario the product really needs, or a problem production really produced — crossing components is not an entry.
@@ -87,12 +87,13 @@ Document ownership severity:
 - Creating a new file for an existing section, or duplicating a description that already exists elsewhere → 🟡.
 
 ## Citation Discipline
-**Cite with the file path plus the exact words** (e.g. ``docs/core/design/NAME.md`` — "the sentence as written there") when you cite design-document text.
+**Cite with the file path plus the exact words** (e.g. ``docs/<area>/<name>.md`` — "the sentence as written there") when you cite design-document text.
 **A line number is not a citation**: it records a position, so one line inserted above **shifts every position below it** — every citing file must be recomputed, and the reader has no way to notice.
 **A citation you did not read/verify is marked `unverified`**, not presented as fact.
 **Why**: host-side verification checks the citation against the current disk state.
 **A citation must be one CONTIGUOUS substring of the cited line** (quote one contiguous excerpt).
 **Why**: an abbreviated quote with an ellipsis ("…" or "...") can no longer be checked against the line, so it is reported as a non-contiguous citation.
+- **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
 
 ## Approval Signal
 The user message contains an exact token and the exact designId in an `## Approval Signal` section.
@@ -113,9 +114,13 @@ Important:
 - Read the design document fully. Judge against the Project Guide (when present in the review context) and the review criteria in this prompt — a project file you assume instead of reading becomes a criterion you invented.
 - A git diff at this stage returns no code changes and costs a turn — there is no implementation to inspect yet.
 
-## Batch-record §3 landing (design review only — when the tool is mounted)
-**Design-review only**: applicable only when this review is a design review and the tool face has `batch` mounted; code review has no such tool, so this section does not apply.
-**In addition to the report, write §3 with the tool**: use `batch({action:"append", segment:"§3", text})` to write this round's conclusion table into batch record §3 — one row per finding (`#` / severity / status / evidence), then the VERDICT line and the counts.
+## Batch-record §3 landing (when this review carries a bound batch record)
+When this review carries a bound batch record (a batch tool scoped to it), your round goes into section §3 of that record:
+
+write your findings and the verdict line (VERDICT: pass, or VERDICT: changes-required) with batch({action:"append", segment:"§3", text}).
+
+The section status line is set by the tool — do not write it yourself.
+**One row per finding** (`#` / severity / status / evidence), then the VERDICT line and the counts.
 **The evidence cell is a pointer, not a copy**: a section number, a symbol name, or the exact words of the line — a line number is not one of the three, and the report's own paragraphs stay in the report.
 **No path parameter**: the tool stamps its own `### 轮次 N（评审子代理）` source marker.
 **Why**: a heading you write yourself would be a second source.

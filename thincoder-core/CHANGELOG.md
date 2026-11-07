@@ -113,7 +113,7 @@ Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs
 
 ### Fixed
 
-- **核包 `files` 白名单补 `browser/`**（P0——0.10.5 装机缺该目录 ⇒ CLI 装后启动崩（`ERR_MODULE_NOT_FOUND`）：`tools/browser.mjs:13-15` ∥ `permission.mjs:16` 引 `../browser/*` 而白名单未列；台账 #1362）。发布守则教训：白名单须覆盖运行时引用闭包——发布预检现只对根 `.mjs` ∥ `prompts/` ∥ `tool-docs/` 计数（引闭包断言待另轮补，已登记）。
+- **核包 `files` 白名单补 `browser/`**（P0——0.10.5 装机缺该目录 ⇒ CLI 装后启动崩（`ERR_MODULE_NOT_FOUND`）：`tools/browser.mjs` ∥ `permission.mjs` 引 `../browser/*` 而白名单未列；台账 #1362）。发布守则教训：白名单须覆盖运行时引用闭包——发布预检现只对根 `.mjs` ∥ `prompts/` ∥ `tool-docs/` 计数（引闭包断言待另轮补，已登记）。
 
 ## [0.10.5] — 2026-10-13
 

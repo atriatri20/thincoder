@@ -97,10 +97,14 @@ Document-check gate: every append and every edit runs it before the write — an
 On `edit` the judged set splits by hit class: paragraph / line length is judged on the newText you pass; the anchor classes (档缺 / 节缺 / 引缺) are judged on the whole record as it will stand after your edit.
 
 A dead citation anywhere in the record therefore refuses an unrelated edit — and replacing that very line is the way through, which is why the record is judged as it will stand, not as it sits.
+- Examples — sample rows, commands, paths — go in a fenced block, which the anchor and paragraph criteria skip whole; a path left in prose or a table must be a real file — a made-up one is judged `档缺`. An assumed name in a sentence takes `<area>/<name>.md`.
+- **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
 
-On append it judges three things: the text you are appending now, the markdown files already touched in this run, and the record itself — but only the first two can refuse the write.
+On append it judges three things: the text you are appending now, the change region of the markdown files already touched in this run, and the record itself — only the first two can refuse the write.
 
-A hit in the text you are appending or in a touched file ⇒ REFUSED: nothing lands, the record's bytes stay unchanged (do not close a record after a refused append).
+A hit in the text you are appending or inside the change region of a touched file ⇒ REFUSED: nothing lands, the record's bytes stay unchanged (do not close a record after a refused append).
+
+A hit in a touched file that sits outside its change region is debt an earlier round left there: the receipt prints one count line for it and the write goes through — the close face judges the whole file and lists every one.
 
 A hit in a section that has already landed is named in the receipt with its section number and author and never blocks the write — another author's landed lines cannot be rewritten here; the close face is where it is enforced.
 

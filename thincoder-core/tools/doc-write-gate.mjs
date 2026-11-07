@@ -59,8 +59,10 @@ const isBodyLine = (l) => {
   )
 }
 
-/** 段落区间表（1-based 闭区间；非正文行断段——与引擎的段合并口径同源）。 */
-function paragraphRuns(lines) {
+/** 段落区间表（1-based 闭区间；非正文行断段——与引擎的段合并口径同源）。
+ *  **导出面**（本批）：`thincoder-core/agent-tools/batch-gate.mjs` 的触达账腿要按同一张扩区表判改动区——
+ *  两门判的是同一件事，各写一张表必然漂移（D2 单源）。行为零改。 */
+export function paragraphRuns(lines) {
   const runs = []
   let cur = null
   lines.forEach((l, i) => {
@@ -76,8 +78,8 @@ function paragraphRuns(lines) {
   return runs
 }
 
-/** 围栏块区间表（开启标记行 → 闭合标记行；未闭合 ⇒ 到档尾）。 */
-function fenceBlocks(lines) {
+/** 围栏块区间表（开启标记行 → 闭合标记行；未闭合 ⇒ 到档尾）。导出面同 `paragraphRuns`（行为零改）。 */
+export function fenceBlocks(lines) {
   const blocks = []
   let fence = null
   let start = 0
@@ -111,8 +113,8 @@ function changeRegion(oldLines, newLines) {
   return { start: head + 1, end: newLines.length - tail }
 }
 
-/** 相邻 ∥ 重叠的区并成一个（并后判一次，读者看到的本就是连着一整块）。 */
-function mergeZones(zones) {
+/** 相邻 ∥ 重叠的区并成一个（并后判一次，读者看到的本就是连着一整块）。导出面同 `paragraphRuns`（行为零改）。 */
+export function mergeZones(zones) {
   const out = []
   for (const z of [...zones].sort((a, b) => a.start - b.start || a.end - b.end)) {
     const last = out[out.length - 1]
@@ -130,7 +132,7 @@ function mergeZones(zones) {
  *   · 与围栏块相交 ⇒ 该块从开启标记行到闭合标记行；
  *   · 改动区自身一律入判（表行 ∥ 标题行 ∥ 代码行也在本笔之内——「自己写的那部分」不是只指正文段）。
  */
-function fragmentZones(lines, region) {
+export function fragmentZones(lines, region) {
   const { start, end } = region
   const paras = paragraphRuns(lines)
   const fences = fenceBlocks(lines)

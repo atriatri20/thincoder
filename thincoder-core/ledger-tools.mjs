@@ -29,7 +29,7 @@ const ptrPath = (v) => {
  *  宿主下两者不同：会话锚才是「不能跑到工作目录以外去」的那道界）。 */
 const anchorOf = (ctx) => ctx?.agent?.cwd ?? ctx?.cwd
 
-/** 工具 cwd 供值面：**起点 = 动作目标路径**（`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md:72`
+/** 工具 cwd 供值面：**起点 = 动作目标路径**（`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md` 的「解析模型与作用定位」节
  *  「参数按用点解析——动作作用于哪个项目的路径，就取那个项目的档」）。
  *  指针（`task_book` ∥ `req_doc` ∥ `batch`）在场 ⇒ 取该文件所在目录为起点（文件 = 其所在目录）；
  *  无指针的动作（`query` ∥ `count` ∥ 首次建行）才回退会话锚。项目根由核 `resolveLedgerRoot` 推导。 */

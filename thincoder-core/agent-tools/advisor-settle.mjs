@@ -147,6 +147,11 @@ export function settleAdvisorRun(agent, entry) {
   const launchRefused = result != null && String(result).startsWith(ADVISOR_LAUNCH_REFUSAL_PREFIX)
   if (!stale) {
     if (run.reviewType === "design" && entry.designToken && result) {
+      // 结算面只认本笔快照（判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）：`run` 是
+      // 实例级对象，排队窗口里 `batchDoc` ∥ 点火基线都被同一实例的后一笔发起覆盖过 ⇒ 不写回的话，
+      // §3 落地门按别人的档读块数、token 归属也落到别人的档。
+      run.batchDoc = entry.batchDoc
+      run.section3BlocksAtStart = entry.section3BlocksAtStart
       // settle 前 Map 快照——落盘失败时回滚用（settle 失败 = 结算未发生，不留半结算态：
       // 重评覆盖旧槽的边角（F2h 复用 designId）也原样恢复旧 token——内存与盘一致）。
       const preMap = agent._engDesignTokens instanceof Map

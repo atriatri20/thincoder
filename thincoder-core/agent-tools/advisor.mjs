@@ -138,7 +138,7 @@ export const advisorTool = {
       },
       batchDoc: {
         type: "string",
-        description: "Design review only, REQUIRED: the batch record this review belongs to — the reviewer then also gets the `batch` write channel to record its findings + verdict. A design review without it is refused at launch (a token with no batch has no closer); a path that does not resolve to a readable file is refused. Relative paths resolve against the session cwd first, then candidate project roots (project-root-relative e.g. <repo>/docs/batches/…, or absolute). Code reviews do not pass it.",
+        description: "Optional: the batch record this review belongs to. Carrying it binds: on either track the reviewer also gets the `batch` write channel scoped to that record, and its verdict lands in that record's §3. A design review that omits it is refused at launch (a token with no batch has no closer); a path that does not resolve to a readable file is refused. Relative paths resolve against the session cwd first, then candidate project roots (project-root-relative e.g. <repo>/docs/batches/…, or absolute). A tool-face batch — delivered files are scripts / tests / CI, no design doc — runs on the code track and passes this same parameter together with `paths` = the delivered files.",
       },
     },
     required: ["type"],
@@ -191,7 +191,8 @@ export const advisorTool = {
     // 评审照发、token 照签，收口时重锚不到任何行。
     // 批档绝对路径在本门就要用 ⇒ `resolveBatchDocPath` 从绑定行提前到此处调一次（绑定行复用同值，不二次解析）；
     // 携了不可读 ⇒ 走其既有 throw（顺序表第 3 行：可读是账链的前提，前提坏先报前提）。
-    // 代码评审不走本门（绑定行对 `type="code"` 仍走原解析——行为零变）。
+    // 代码评审不走本门（账链门仍只判设计轨——代码轨不签 token，没有可关之物）。绑定面则与轨无关：
+    // 携 `batchDoc` 即在绑定行落 `resolved.run.batchDoc`（判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）。
     let designBatchDocAbs = null
     if (reviewType === "design") {
       designBatchDocAbs = resolveBatchDocPath(agent.cwd, args.batchDoc)
@@ -260,23 +261,28 @@ export const advisorTool = {
     }
     const isAsync = asyncRequested || (depth === 0 && args.async !== false)
 
+    // BATCH-RECORD.md §4.2 评审侧批次档绑定（判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）：
+    // 绑定值在**发起时点取一次**，随后随 launch 载荷一路传下去（异步 = 条目 `batchDoc` 字段，同步 = callbacks）。
+    // 为什么不能在启动时读活字段：`resolved.run` 是实例级对象（代码轨续用同一实例）——发起①携 A 排队、
+    // 发起②携 B 覆盖同一字段，槽释放后①启动读到 B，评审就把裁定写进一本它没被指派的档。
+    // 不携即清：这一笔不携档（缺 / null / 空串 / 纯空白）⇒ null，不继承上一笔（静默继承比没有绑定更坏）。
+    // 位置 = 实例解析之前：路径不可读 ⇒ 在建实例与记账镜之前就炸（本档不变量「零实例 / 零 token / 零槽」）。
+    const launchBatchDoc = missingBatchDoc(args.batchDoc)
+      ? null
+      // 设计评审的绝对路径由账链门那一段算好（`designBatchDocAbs`——不二次解析）；代码评审仍走原解析。
+      : designBatchDocAbs ?? resolveBatchDocPath(agent.cwd, args.batchDoc)
     // Per-review instance resolution (§6.10 ③ — ruling ②-5 A): fix rounds
     // continue the same reviewId (design = the doc-set instance's designId —
     // slot/spawn continuity; code = the newest OPEN instance). The resolution
     // scopes agent._advisorRound/_lastAdvisorOutput so the message builder and
     // the run.mjs cap read THIS instance's round/prior (multi-review isolation).
     const resolved = resolveAdvisorLaunch(agent, reviewType, { documents })
-    // BATCH-RECORD.md §4.2 评审侧批次档绑定（评审实例的唯一路径来源）：准入面与账链门已保证设计评审的
-    // `batchDoc`（判据 = `docs/core/design/ADVISOR-GUARDS.md` §2 第 6 ∥ 7 条），本段只剩绑定落 `resolved.run`
-    // （评审实例键，与 reviewType/round/designId 同族）——并发设计评审各绑各档，不用单值会话态
-    // （BATCH-RECORD.md §4.7 #6）。
-    if (args.batchDoc !== undefined && args.batchDoc !== null) {
-      // 设计评审的绝对路径由账链门那一段算好（`designBatchDocAbs`——不二次解析）；代码评审仍走原解析。
-      resolved.run.batchDoc = designBatchDocAbs ?? resolveBatchDocPath(agent.cwd, args.batchDoc)
-    }
+    resolved.run.batchDoc = launchBatchDoc
     // §3 点火基线（ADVISOR-GUARDS.md §1.1 判据 1）：结算面判「§3 已被本轮写过」需要「本轮之前有几块」
-    // 这个点——只在点火拍可得（结算时再读只能得到「现在有几块」）。两轨同源（`run` 由池条目透传）。
-    resolved.run.section3BlocksAtStart = section3BlocksBaseline(resolved.run.batchDoc)
+    // 这个点——只在点火拍可得（结算时再读只能得到「现在有几块」）。按**本笔**绑定值算，不按继承值；
+    // 同时也是逐笔快照（随 launch 载荷传下）：实例字段会被同实例的后一笔发起覆盖，排队那笔启动时再写回自己的值。
+    const launchSection3Baseline = section3BlocksBaseline(launchBatchDoc)
+    resolved.run.section3BlocksAtStart = launchSection3Baseline
     // Design token minted for EVERY design round — the reviewer echoes it only on
     // a clean pass; on pass it is slotted under the instance's designId at settle
     // (sync: right here; async: the settle callback — fix #2). A NEW instance
@@ -293,6 +299,9 @@ export const advisorTool = {
       const ack = launchAsyncAdvisor(agent, ctx, {
         reviewType, documents, paths, object: reviewObject,
         designToken, designId, run: resolved.run,
+        // 逐笔绑定快照：条目持此值，`entry.start()` 不再读活的 `run.batchDoc`（排队窗口的值会被后一笔覆盖）。
+        batchDoc: launchBatchDoc,
+        section3BlocksAtStart: launchSection3Baseline,
       })
       if (ack.error) {
         // Pool-full refusal (②-6a — no queueing): the review did NOT launch — the
@@ -336,8 +345,8 @@ export const advisorTool = {
     const result = await runAdvisorReview(agent, reviewType, {
       onOutput: ctx.onOutput,
       signal: ctx.signal,
-      // 同步路径的实例绑定传递（异步路径由池条目 run.batchDoc 取——run.mjs 自行解析）。
-      batchDoc: resolved.run.batchDoc ?? null,
+      // 同步路径的绑定传递 = 同一逐笔值（异步路径走条目 `batchDoc` 字段，同值同形）。
+      batchDoc: launchBatchDoc,
     }, designToken, documents, paths, reviewObject, designId)
 
     // B 启动拒绝（稳定前缀）：拒发登记（同池满 / cap 款——不置 called、不耗轮次），

@@ -25,11 +25,12 @@ const { lspTool } = await import("../tools/lsp.mjs")
 const { codeSearchTool } = await import("../memory/code-sync.mjs")
 
 /**
- * Advisor tool set — ZERO git, read-only ONLY, every round. The change surface comes from the
+ * Advisor tool set — ZERO git, every round：只读六件 + 绑定档时追加 `batch`（该通道写面限 `§3`）。
+ * The change surface comes from the
  * review scope (paths / _touchedFiles injected by the caller), never from git: git output misled
  * reviews (committed fixes never show in `git diff HEAD`, so "no changes" was read as "not
  * fixed") and the user mandate is full decoupling (7d49a52 + d3be613). The reviewer reads files
- * and searches code; it never touches git and never writes. No round parameter — the set is
+ * and searches code; it never touches git. No round parameter — the set is
  * constant across all rounds. 检索面**恒在**（与索引绑定解耦）：`code_search` 永远在集内，
  * 未绑定索引的会话在**执行面**降级为一句端中立说明（不崩、不伪造结果）——工具清单恒定。
  * @param {Object} agent — 索引面载体（`agent.memory`）；缺省时执行面降级。
@@ -40,11 +41,21 @@ function advisorCodeSearchTool(agent) {
     : { ...codeSearchTool(undefined), async execute() { return "(code index not available in this session)" } }
 }
 
+/**
+ * 评审侧工具表（纯函数）。
+ * @param {Object} agent — 索引面载体（`agent.memory`）。
+ * @param {string} [reviewType] — **保留为签名兼容**（调用方与测试缝按位置传参），本函数不再消费：
+ *   绑定判据只有 `batchDoc` 在场，与评审轨无关（判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）。
+ * @param {string|null} [batchDoc] — 本评审逐笔绑定的批次档（绝对路径）；非空 ⇒ 追加 `batch`（写面限 `§3`）。
+ * @returns {{schemas: object[], byName: Map<string, object>}}
+ */
 function advisorToolsFor(agent, reviewType = "code", batchDoc = null) {
   const tools = [readTool, globTool, grepTool, lsTool, lspTool, advisorCodeSearchTool(agent)]
-  // BATCH-RECORD.md §4.3（第 4 批）：**只有绑定了批次档的设计评审**额外拿到写通道——代码评审工具集
-  // 逐字节不变（零 git + 只读不变量，BATCH-RECORD.md §4.7 #1）；未绑定 → 不挂载（fail-closed）。
-  if (reviewType === "design" && batchDoc) tools.push(batchTool(batchDoc, { review: true }))
+  // BATCH-RECORD.md §4.3：**绑了批次档就额外拿到写通道，与评审轨无关**（判据单源 =
+  // `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）。工具面批走代码轨，评审员要写 `§3`
+  // 就靠这一条；不注册 ⇒ 绑定落不到任何一处，`§3` 只能编。未绑定 → 不挂载（fail-closed）。
+  // 绑了以后写面仍只有 `§3` 一段（段白名单按评审身份判），只读六件与零 git 不变。
+  if (batchDoc) tools.push(batchTool(batchDoc, { review: true }))
   return { schemas: tools.map(toOpenAISchema), byName: new Map(tools.map((t) => [t.name, t])) }
 }
 // Test seam: the tool set is pure（恒在六工具 + 批次档绑定條件）。

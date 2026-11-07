@@ -103,7 +103,9 @@ export function freezeWindowConflict(agent, absPaths) {
   for (const entry of pool.values()) {
     if (!entry || entry.reviewType !== "design") continue
     if (entry.status !== "running" || entry.cancelled || entry.done) continue
-    const batchDoc = entry.run?.batchDoc
+    // 逐笔绑定快照（发起时点）：同实例的后一笔发起会覆盖 `run.batchDoc`，冻结窗要护的是
+    // **本条目被指派的那本档**（判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）。
+    const batchDoc = entry.batchDoc ?? entry.run?.batchDoc
     if (typeof batchDoc !== "string" || batchDoc.length === 0) continue
     const batchAbs = normAbs(batchDoc, agent?.cwd)
     if (wantedSet.has(batchAbs)) return { id: String(entry.id), path: batchAbs }

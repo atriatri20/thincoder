@@ -36,7 +36,7 @@ export const MAX_TEXT_CHARS = 20000
 const CRED_RE = /\[DESIGN-TOKEN:[^\]]*\]|designId\s*:\s*\S+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:\d{10,16}/g
 const CRED_TEST_RE = /\[DESIGN-TOKEN:[^\]]*\]|designId\s*:\s*\S+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:\d{10,16}/
 
-// ─── append 迁移面（原 batch-segment.mjs :129-184 私有区——逐字迁移，错误串逐字保序）───
+// ─── append 迁移面（原 batch-segment.mjs 的 append 私有区——逐字迁移，错误串逐字保序）───
 
 /** 段号解析：`§2` / `2` / `§2 批次任务` 均可；无法解析 → null。 */
 function segmentNumber(raw) {
@@ -197,7 +197,8 @@ export function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   }
   // 文档机检门（§3.20「结构兜底」①——门位 = 既有拒因全部之后、insertIntoSection / 写盘之前）：
   // **全部 append 同挂**（§1–§6，含 depth-0 与评审写 §3——规则一条，不按身份分支）；
-  // 强制集 = 本次写入文本 ∪ 写者触达账，批档已落段命中只入回执（不阻本次写）。
+  // 强制集 = 本次写入文本 ∪ 写者触达账**改动区**（判面单源 = 设计档 §3.20「触达账腿的判面 = 本次改动区」），
+  // 批档已落段命中只入回执（不阻本次写）。
   // `pending` = 本次段号与正文：门据此落同目录片段档判「你手里这段」，判法与批档本体逐字同源。
   // REFUSED ⇒ throw（零字节落盘）；PASS ⇒ 照写；ERROR / 门自身异常 ⇒ 写 + 回执明示。
   const gate = runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body } })
@@ -251,7 +252,7 @@ const EDIT_TEXT_OVER_LIMIT_ERROR = `batch: edit newText is over the ${MAX_TEXT_C
 /** 拒串：edit 把一条状态行**顶进**段头区（§4.21.2 第二道——改写后区内条数不得多于改写前）。
  *  它堆的是「删掉隔在中间的子标题、把段体那条顶进区」：这条路一个字都不写状态行，却能让一条手写行
  *  变成**受保护行**（机器不读的副本一夜变成唯一可读行）。 */
-const EDIT_STATUS_LINE_PROMOTION_ERROR = (seg, before, after) => `batch: edit would promote a status line into the §${seg} header zone — the zone would hold ${after} \`**状态行**\` lines against ${before} before this edit, and a section's status is read only when the zone holds exactly one (design §4.21.4). This edit writes no status line: it moves one in by deleting the heading that fenced it off. Nothing was written. Keep the §${seg} header zone at one status line at most: delete the surplus line itself instead of the heading, or move the surplus line out of the zone.`
+const EDIT_STATUS_LINE_PROMOTION_ERROR = (seg, before, after) => `batch: edit would promote a status line into the §${seg} header zone — the zone would hold ${after} \`**状态行**\` lines against ${before} before this edit, and a section's status is read only when the zone holds exactly one. This edit writes no status line: it moves one in by deleting the heading that fenced it off. Nothing was written. Keep the §${seg} header zone at one status line at most: delete the surplus line itself instead of the heading, or move the surplus line out of the zone.`
 /** 拒串：append 的 text 携行首状态行形态行（§4.21.4 写面第一道——J3：工具通道只能让形态行变少）。
  *  两个合法写法**内联在同一句**（不各占独立一行）：拒文自己若以该形态起行，照抄拒文的一笔会被同一道闸再拒一次。 */
 const STATUS_LINE_IN_APPEND_ERROR = "batch_segment: append refused — the text carries a line that starts with the status-line form (行首 `**状态行**：…`), and that line has exactly one writer: status (J3: the tool channel may only make status-line rows fewer, never more). Nothing was written. Two legal ways: quote it instead — start the line with `> ` (块引用) — or rewrite it as prose that does not begin with that form; to change a section's own status line, call batch with action \"status\"."

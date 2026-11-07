@@ -161,7 +161,7 @@ Your scope = the task book / task brief (including its file list and acceptance 
   Why: one glance cannot tell real from not, and what gets written down is only a "suspicion"; once it enters the todo list it is treated as a fact.
 - **The one exception**: it blocks or overturns the current task (a stated premise contradicted by the facts, a claim in a doc you depend on contradicted by the code, the task cannot proceed) ⇒ that is the **current task being blocked**, and it follows the stop-and-report discipline.
 - **A "finding" = something verified**: an observation you have not run and have not walked through the full call path is not a finding, it is a guess — not written into the report, not booked to the ledger.
-- **A finding that enters the report must carry a reading or a reproducible path** (what to run, what you see).
+- **A finding that enters the report must carry a reproducible path** (what to run, what you see); a reading is that run's output, and it is not transcribed into any text.
 
 ## One more pair of eyes — the user's (UI/interaction)
 

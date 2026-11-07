@@ -2,28 +2,36 @@ Run a built-in documentation-discipline check on a project and report its findin
 Read-only. In the default `report` mode it is non-gating: it reports, it never blocks, never sets an exit code, and its output is never a reason to refuse a task or a user instruction.
 
 What it checks — exactly three criteria, all built into the engine:
-- Anchors — a documentation pointer (a `*.md` token, optionally carrying directory segments, optionally followed by a section
-  indicator `§N` / `§N.M` / `§N.M.K`) must resolve: the file must exist on disk (`档缺` when it does not), and when a section
-  indicator is given the target file must carry a heading numbered with it (`节缺` when it does not). Line-number coordinates
+- Anchors — a documentation pointer must resolve: the file must exist on disk (`档缺` when it does not), and when a section
+  indicator follows, the target must carry a heading numbered with it (`节缺` when it does not).
 
-  (`<doc>:12`) are not section references and are not judged as such. Files inside fenced code blocks and executable lines
-  (command / pattern code spans) are skipped whole.
-- **The reach is what survives extraction, not every `.md` token.** Three name families are never extracted, so they are never
+  A pointer is a file token in the closed extension set (`md`, `mjs`, `cjs`, `js`, `json`, `css`, `html`, `svg`, `yml`,
+  `yaml`, `sh`, `ps1`), optionally carrying directory segments and optionally followed by `§N` / `§N.M` / `§N.M.K`.
+
+  Line-number coordinates (`<doc>:12`) are not section references and are not judged as such. Files inside fenced code blocks
+  are skipped whole; on a command line only its code spans are skipped, so a pointer written outside them is judged.
+
+  A pointer whose referring document and whose target both sit under a `docRoot.batches` root is not judged — `report` mode counts them as a reading and they never enter a verdict; a spec document pointing at the batch face is still judged.
+- **The reach is what survives extraction, not every file token.** Three name families are never extracted, so they are never
   judged: **conventional file names** used to say which files get read (`AGENTS.md`, `SKILL.md`, `project_rules.md`, `todo.md`
   and the rest of that closed set),
 
   **placeholder stems** (single letters plus the usual sample words — `x.md`, `file.md`, `foo.md`, `example.md`), and — on the
   prompt face only — the seven operand names the `Operand names` block below lists.
 
-  A `.md` token outside those families is judged even when misspelled: a wrong name reports `档缺`, never a pass.
+  Both families exempt a **bare name only**: a token carrying directory segments is judged as a real path, so a stem like
+  `file` does not save `thincoder-core/tools/file.mjs` from being a pointer — a real file was being read as an example.
+
+  A file token outside those families is judged even when misspelled: a wrong name reports `档缺`, never a pass.
 
 ~~~text
   **Operand names.** Seven names count as operands rather than documents: the model writes them, or reads a file by that name. On
 the prompt face (`thincoder-core/prompts/**`) a **whole token** matching one of them is stripped before extraction; a name that is only
 the tail of a longer token (`RTM.md` inside `test/RTM.md`) is not stripped, and that path is judged like any other pointer. On other
-faces the operand family is not stripped at all: four of the seven are exempt as file-name classes — `AGENTS.md`, `SKILL.md`,
-`.thincoder/advisor.md`, `project_rules.md` — and the remaining three are judged as pointers, `RTM.md` included, so write the index
-path-qualified (e.g. `test/RTM.md`). The seven:
+faces the operand family is not stripped at all: three of the seven are exempt as file-name classes, and the exemption reaches
+bare names only — `AGENTS.md`, `SKILL.md`, `project_rules.md`. The other four are judged as pointers, `.thincoder/advisor.md`
+(its directory segment puts it outside the class exemption) and `RTM.md` included, so write the index path-qualified
+(e.g. `test/RTM.md`). The seven:
 
   ```text
   AGENTS.md  SKILL.md  README.md  MANIFEST.md  .thincoder/advisor.md  project_rules.md  RTM.md
@@ -64,22 +72,39 @@ path-qualified (e.g. `test/RTM.md`). The seven:
 
 - Line-number coordinates — a filename token followed by `:` and digits (`<doc>:12`, ranges included) is a hit.
 
-  One collection feeds both faces: `report` prints it as an inventory block, `gate` counts it as the third
-  criterion, so a document carrying one cannot pass the gate.
+  One collection feeds both faces: `report` prints it as an inventory block, `gate` counts the body-face ones as its
+  third criterion — a coordinate outside a fenced block fails the gate.
 
-  Two shapes never become a hit: placeholder or conventional filenames (`x.md:12` is an example, not a
-  reference), and section numbers (`§6.66` carries no colon).
+  Two shapes never become a hit: placeholder or conventional filenames written bare (`x.md:12` is an example, not a
+  reference — with directory segments it is a real path), and section numbers (a `§` plus digits carries no colon).
 
-  Fenced blocks count too — a before / after block is a position reference as much as prose is, and it drifts the
-  same way. Write the section, the symbol name, or the quoted line instead; a line number is never a pointer.
+  A coordinate with no filename on its own line still counts when the line directly above wrote one: the name is carried
+  down one line. Only a coordinate with no name on either line falls outside the criterion — write the section or the
+  symbol and there is nothing to carry.
+
+  A fenced block is verbatim evidence — a log, a refused message, a diff, a before / after pair. Its coordinates pin a
+  position in the original it quotes, not a place in today's tree, so `gate` does not judge them.
+
+  The reach of that exemption: fenced ones appear as one reading line and never in the hit list; the body face alone
+  decides the verdict. Outside a fenced block the rule stands — a line number is never a pointer; write the section,
+  the symbol name, or the quoted line instead.
+
+  Examples — sample rows, commands, paths — go in a fenced block, which the anchor and paragraph criteria skip whole; a path left in prose or a table must be a real file — a made-up one is judged `档缺`. An assumed name in a sentence takes `<area>/<name>.md`.
 
 `report` mode also prints that collection as an inventory block: a measure line naming the extractor and the scan
 range, then the totals, then one line per hit.
 
+Those three totals (`正文面` / `围栏内` / `合计`) are debt-clearing readings; `gate` scores the body face alone, so a
+fenced-block coordinate raises the inventory count without ever entering a verdict.
+
 It cannot — in `report` mode — write anything, gate anything, or turn a finding into a refusal.
 
-Arguments — `target` (optional): the project root to check; defaults to the session anchor, relative paths resolve against it.
-A workspace target (several projects below it) is reported with the full candidate list — pass the project root you mean.
+Arguments — `target` (optional): the **declared root** for this call, not one coordinate system for the whole list.
+Each document is judged against its own project root — the nearest ancestor holding `PROJECT-MANIFEST.json`.
+
+`target` supplies only two things: the base for relative `docs` entries, and the root for a document whose ancestor chain holds no manifest.
+
+It defaults to the session anchor. A plain directory or a multi-project workspace is a legal value and is judged as given; only a relative `target` that matches several existing directories is refused as ambiguous.
 
 `mode` (optional) — `report` (default: a non-gating report over the documents you list) or `gate` (the delivery gate below).
 `docs` (required) — the documents to judge, as paths relative to the project root or absolute; each is judged whole and nothing
@@ -91,16 +116,46 @@ is scanned unless you name it. A path that is not on disk or is not a Markdown d
 is judged; in `gate` mode such paths are listed as skipped instead. A pointer resolves against the project root (full path) or
 
 against the pointing document's own directory — bare names are not resolved across other directories.
+- **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
+
+`lines` (optional, `report` mode only) — the files to measure, as paths relative to the project root or absolute.
+
+Each gets one line of content count — source files, unit-test files and Markdown files alike.
+
+- Source and unit-test files carry a size-tier mark once they pass a threshold: the soft line asks for a review, the hard
+  line means split.
+- Markdown files report a number only — a document carries no line budget.
+- The tier is a strict greater-than; both thresholds live in the engine's constants.
+
+That count comes from `countContentLines` in the engine — the only way to measure a file's content lines.
+
+A shell count, an editor's status bar and the read tool's line numbers are not another convention: they are wrong.
+A number taken from one of them cannot be compared with this one, nor quoted as this one.
+
+This reading answers one question — whether a file should be split — and nothing else.
+
+- It is not a criterion: it never enters the hit count, never changes the verdict.
+- It never moves the last conclusion line; `report` without `lines` prints exactly what it printed before.
+- `gate` refuses `lines` outright rather than ignoring it, so a caller cannot believe a file was measured when it was not.
 
 Delivery gate — `mode: "gate"`, for the end of a design or development round. Every listed doc is judged **whole**:
 a pre-existing dangling pointer or overlong paragraph / line anywhere in it counts, not only this round's edited lines.
 
 The first line is the machine-readable verdict — `DOC-CHECK GATE: PASS` / `DOC-CHECK GATE: REFUSED（命中 K 条）` / `DOC-CHECK GATE: ERROR（reason）` —
 
-and consumers judge by that prefix; the hits are fixed in the same round and are never booked to the ledger. The gate refuses
+and consumers judge by that prefix; the hits are fixed in the same round and are never booked to the ledger.
 
-**one delivery**, not a user instruction: an explicit user go-ahead is followed, with the hits written into the delivery.
-`ERROR` is fail-closed (no PASS means not passed): a multi-project workspace ⇒ name the project root, per the stated cause.
+A listed document that is on disk but cannot be read makes the verdict `ERROR（读不到 N 档）`: that document was not judged,
+so neither `PASS` nor `REFUSED` is produced — a file the check could not read is not a clean file.
+
+A rootless call — the engine given no declared root, an empty string, or a non-string — judges nothing.
+The verdict is `ERROR（无法定根 N 档）`, every document is named with its reason, and no hit line is printed.
+
+That is policy, not arithmetic: half a verdict cannot be told apart from "the rest is clean".
+
+The gate refuses **one delivery**, not a user instruction: an explicit user go-ahead is followed, with the hits written into it.
+
+`ERROR` is fail-closed (no PASS means not passed): a multi-project workspace is a legal declared root — the list is judged document by document, each against its own project root.
 
 Do not wire it as a gate or CI step in `report` mode, and do not treat a finding as a reason to refuse an instruction — a
 machine check never outranks a user instruction.
@@ -110,11 +165,14 @@ a reader: use `doc_search` / `read` to read documents and `grep` to search them;
 
 Side effects and permissions — none. The tool is read-only: no writes, no approval prompt, safe to run in parallel with other calls.
 
-Parameters and scope — all three criteria run on built-in constants (`DOC_CHECK_BUILTINS`: threshold 300 characters, no exempt zones,
-no registration-based exemption list), and the judged set is the document list the caller passes — the judged set and the resolution set are the same
+Parameters and scope — all three criteria run on built-in constants (`DOC_CHECK_BUILTINS`).
 
-documents, so there is no scan-dir / domain / root / exclude surface and no whole-repository scan. Changing a criterion or a
-threshold is a code change and goes through review; no project declaration changes these readings.
+Those constants are the paragraph and line threshold, the exempt-zone and exemption lists, and the two file size thresholds.
+
+The judged set is the document list the caller passes — the judged set and the resolution set are the same documents.
+There is no scan-dir / domain / root / exclude surface and no whole-repository scan.
+
+Changing a criterion or a threshold is a code change and goes through review; no project declaration changes these readings.
 
 Consistency — the checks and this description are one core implementation: every end that loads the core tool registry gets the
 same semantics.

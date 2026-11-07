@@ -86,14 +86,25 @@ function anchoredPrefix(p, prefixes) {
   return null
 }
 
-/** 越基底判据（create 面）：解析后须落在某一基底根之内；win32 大小写不敏感比较。 */
-function insideBases(abs, bases) {
+/** 落在哪个基底根之内（不落任何一个 ⇒ null）——**判据单源**：create 面的越基底判据（`insideBases`）与
+ *  doc-check 的面判（`thincoder-core/doc-check/anchors.mjs` 的 `isBatchFaceRef`——「同一基底根」要的正是**哪一根**）
+ *  同取本函数。按**路径段**判（`docs/batches-old/` 不算落在 `docs/batches` 内），win32 大小写不敏感。
+ *  @param {string} abs 绝对路径
+ *  @param {string[]} bases 基底根数组（`batchDocBases`——已是绝对路径）
+ *  @returns {string|null} 命中的那个基底根（原值，不归一大小写）∥ null */
+export function baseContaining(abs, bases) {
   const norm = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
   const target = norm(abs)
-  return bases.some((b) => {
+  for (const b of bases) {
     const root = norm(b)
-    return target === root || target.startsWith(root.endsWith(sep) ? root : root + sep)
-  })
+    if (target === root || target.startsWith(root.endsWith(sep) ? root : root + sep)) return b
+  }
+  return null
+}
+
+/** 越基底判据（create 面）：解析后须落在某一基底根之内（判定单源 = 同档 `baseContaining`）。 */
+function insideBases(abs, bases) {
+  return baseContaining(abs, bases) !== null
 }
 
 /** create 越基底（原文案逐字——零变面）。 */

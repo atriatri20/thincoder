@@ -43,6 +43,8 @@ The parent agent ran an independent design review (`advisor` with `type="design"
     - An unclear fix ⇒ escalate to the main agent (the main agent is unsure ⇒ relay to the user).
     - A gate hit is fixed in the round, not booked to the ledger.
       Why: booking moves the work where nobody looks.
+    - Examples — sample rows, commands, paths — go in a fenced block, which the anchor and paragraph criteria skip whole; a path left in prose or a table must be a real file — a made-up one is judged `档缺`. An assumed name in a sentence takes `<area>/<name>.md`.
+- **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
 
 ## Self-contained delivery protocol (overview)
 Your delivery is the FINAL audited delivery: implement → internal explore divergence audit → self-fix (max 5 correction rounds) →

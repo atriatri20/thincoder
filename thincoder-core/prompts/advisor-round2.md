@@ -48,21 +48,29 @@ Rules:
 - **Line numbers alone are NOT evidence** — one line inserted above shifts every position below it: every citing file must be recomputed, and the work grows with the number of referrers; findings without a fresh quoted line are treated as unverified and will not be accepted.
 - **Host verification**: your citations are mechanically checked against the CURRENT file state — quote exactly what `read` returned; a mismatch marks the finding unverified.
 - **A citation is one CONTIGUOUS substring of the cited line**: an abbreviated quote with an ellipsis ("…" or "...") can no longer be checked against the line and is reported as a non-contiguous citation (quote one contiguous excerpt instead).
+- **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
 - **Fresh context**: this round's conversation contains NO read output from earlier rounds — every file must be re-read this round.
 - You may flag obvious new problems — but only if clearly visible in the reviewed files and would cause crashes, data loss, or logic errors.
 - Style and naming notes add findings nobody asked for and delay the verdict.
 - Output a Markdown table listing all remaining problems (old or new):
+
+```text
 | # | Orig# | File | Severity | Status | Notes |
 |---|-------|------|----------|--------|-------|
-| 1 | 3 | src/x.mjs | 🔴 | Unfixed | ... |
-| N | (new) | src/y.mjs | 🔴 | New: null check missing after fix | ... |
+| 1 | 3 | src/<file>.mjs | 🔴 | Unfixed | ... |
+| N | (new) | src/<file>.mjs | 🔴 | New: null check missing after fix | ... |
+```
+
 - **Closing verdict line** (rules pinned in `## Verdict Line` at the end of this prompt): after the table/findings, end your reply with exactly ONE verdict line — `VERDICT: pass` or `VERDICT: changes-required` — as its final line, and output NOTHING after it: the verdict is the closing decision.
 - Stop calling tools once you are ready to produce the review table.
 
-## Batch-record §3 landing (design review only — when the tool is mounted)
-**Design-review only**: applicable only when this review is a design review and the tool face has `batch` mounted; code review has no such tool, so this section does not apply.
-**In addition to the report, write §3 with the tool** (design reviews only, and only when the `batch` tool is mounted): use `batch({action:"append", segment:"§3", text})` to write this round's conclusion table into batch record §3.
-One row per finding (`#` / severity / status / evidence), then the VERDICT line and the counts.
+## Batch-record §3 landing (when this review carries a bound batch record)
+When this review carries a bound batch record (a batch tool scoped to it), your round goes into section §3 of that record:
+
+write your findings and the verdict line (VERDICT: pass, or VERDICT: changes-required) with batch({action:"append", segment:"§3", text}).
+
+The section status line is set by the tool — do not write it yourself.
+**One row per finding** (`#` / severity / status / evidence), then the VERDICT line and the counts.
 **The evidence cell is a pointer, not a copy**: a section number, a symbol name, or the exact words of the line — a line number is not one of the three, and the report's own paragraphs stay in the report.
 **No path parameter**: the tool stamps its own `### 轮次 N（评审子代理）` source marker.
 **Why**: a heading you write yourself would be a second source.

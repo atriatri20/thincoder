@@ -228,7 +228,7 @@ export function launchEscalateAsync(parent, ctx, launch) {
       signal: entry.controller.signal,
       // §2.5 #78 并入：escalate 子代理输出流式（VSC subagent-escalate-async 同款豁免）。
       streamOutput: true,
-      // SUBAGENT-OBSERVE-SEND 缺口补配（TURN-CAP-CONTINUE.md §3.1 :85）：send 注入队列
+      // SUBAGENT-OBSERVE-SEND 缺口补配（`docs/core/design/TURN-CAP-CONTINUE.md` §3.1「兑现后的消费路径」）：send 注入队列
       // 回合边界消费（否则续段文本静默丢弃）。空队列 no-op。
       consumeInjected: (ag) => { drainInjectedQueue(entry, ag ?? child) },
     }

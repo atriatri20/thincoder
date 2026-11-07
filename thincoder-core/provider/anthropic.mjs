@@ -78,7 +78,7 @@ function blockOfPart(part) {
   return { ...part }
 }
 
-/** R8：tool 消息的 `content` → tool_result 内容；空 ∥ 缺失 ⇒ 占位（`record-results.mjs:85` 原样推，无 stdout 的成功调用 = ""）。 */
+/** R8：tool 消息的 `content` → tool_result 内容；空 ∥ 缺失 ⇒ 占位（`record-results.mjs` 的 `pushReal` 原样推，无 stdout 的成功调用 = ""）。 */
 function toolResultText(content) {
   if (typeof content === "string") return content === "" ? EMPTY_TOOL_RESULT : content
   if (content == null) return EMPTY_TOOL_RESULT
@@ -235,7 +235,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   recordRate(provider, estimated, result.usage)
   const finished = finishAnthropic(result)
   finished.estimated = estPrompt // §6.17 自校准采样：den 与净判同口径
-  // §6.27 告警投递：R7 的畸形参数告警并入既有 `_warnings` 机读线（消费面 agent/run-stages.mjs:44-45）
+  // §6.27 告警投递：R7 的畸形参数告警并入既有 `_warnings` 机读线（消费面 agent/run-stages.mjs 的 `injectResponseReminders`）
   finished._warnings = [...(finished._warnings ?? []), ...warnings]
   return finished
 }

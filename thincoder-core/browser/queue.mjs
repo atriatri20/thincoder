@@ -25,8 +25,10 @@ export const ACTION_BUDGETS = {
   touch: 30_000,
   insert: 30_000,
   clipboard: 30_000,
+  cookies: 30_000, // 取全量时随条数线性，仍在本帽内（§2.9）
   type: 15_000, // 单页内快动作
   snapshot: 15_000,
+  storage: 15_000, // 单次页内求值（§2.9）
   wait: 45_000, // = 谓词帽缺省 30s + 15s 余量（timeoutMs 给出时按帽 + 余量重解——§2.9 表）
 }
 export const BUDGET_FALLBACK_MS = 30_000 // 未在册动作的兜底预算（防御——全部在册动作已列）

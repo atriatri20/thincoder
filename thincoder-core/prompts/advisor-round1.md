@@ -57,9 +57,13 @@ Rules:
 - Reply in the same language as the conversation background.
 - Respect the project's stated platform requirements: a feature valid under the project's target environment is not an error, and flagging it sends the parent to fix something that is not broken.
 - Output a Markdown table. This table becomes the sole basis for convergence in later rounds — be thorough.
+
+```text
 | # | File | Severity | Issue | Suggestion |
 |---|------|----------|-------|------------|
 | 1 | src/example.mjs | 🔴 | ... | ... |
+```
+
 - Order by severity: 🔴 Critical · 🟡 Advisory · 🔵 Style.
 - For each issue state: which file, what the problem is, why it is a problem, how to fix it.
 - Cover everything now. Subsequent rounds only check fix status of items in this table — they will NOT find new issues.
@@ -67,6 +71,19 @@ Rules:
 - **Host verification**: every citation in your table is mechanically checked against the CURRENT file state by the host — quote exactly what `read` returned; a mismatch marks the finding unverified.
 - **A citation is one CONTIGUOUS substring of the cited line**: an abbreviated quote with an ellipsis ("…" or "...") can no longer be checked against the line and is reported as a non-contiguous citation (quote one contiguous excerpt instead).
 - **Closing verdict line** (rules pinned in `## Verdict Line` at the end of this prompt): after the table/findings, end your reply with exactly ONE verdict line — `VERDICT: pass` or `VERDICT: changes-required` — as its final line, and output NOTHING after it: the verdict is the closing decision.
+
+## Batch-record §3 landing (when this review carries a bound batch record)
+When this review carries a bound batch record (a batch tool scoped to it), your round goes into section §3 of that record:
+
+write your findings and the verdict line (VERDICT: pass, or VERDICT: changes-required) with batch({action:"append", segment:"§3", text}).
+
+The section status line is set by the tool — do not write it yourself.
+**One row per finding** (`#` / severity / status / evidence), then the VERDICT line and the counts.
+**The evidence cell is a pointer, not a copy**: a section number, a symbol name, or the exact words of the line — a line number is not one of the three, and the report's own paragraphs stay in the report.
+**No path parameter**: the tool stamps its own `### 轮次 N（评审子代理）` source marker.
+**Why**: a heading you write yourself would be a second source.
+If the write does not land (refused / failed) → say "§3 not written" plainly in the report. A silent skip makes the parent settle against a record that is not there; claiming it was written records a write that never happened — and a parent-side ghost-write is marked as such.
+
 
 ## Judgment Rules (apply directly — these are the settled convention, and re-deriving them spends the round and drifts)
 Apply each rule to the extent it matches the review type: design review — doc-state rules (R1, R7a-e) apply; code review — all rules apply.

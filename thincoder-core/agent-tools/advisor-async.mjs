@@ -367,7 +367,7 @@ export function refillAdvisorQueue(parent, onToken) {
  *   or invalid ctx.
  */
 export function launchAsyncAdvisor(parent, ctx, launch) {
-  const { reviewType, documents, paths, object, designToken, designId, run } = launch
+  const { reviewType, documents, paths, object, designToken, designId, run, batchDoc = null, section3BlocksAtStart = null } = launch
   const limit = advisorPoolLimitFor(parent)
   // §6.10 same-scope guard（F-5——用户裁①）：同 type+scope 有 running → 拒——与池容量
   // 守卫独立两关都过才启动——同 scope 不等不排（settled 续跑不变；排队仅异 scope 面）。
@@ -391,6 +391,13 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
   const entry = {
     id, role: "advisor", reviewType, run,
     reviewId: run.reviewId, designId, designToken, documents, paths, object,
+    // 批次档绑定 = 逐笔快照（发起时点的值，与 reviewId / designToken 同族）：排队条目若在启动时读活的
+    // `run.batchDoc`，读到的是后一笔发起覆盖后的值 ⇒ 评审把裁定写进别人的档（判据单源 =
+    // `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）。
+    batchDoc,
+    // 同一逐笔快照（§3 点火基线）：同实例的后一笔发起会覆盖 `run.section3BlocksAtStart`，
+    // 排队那笔启动时自己写回自己的值（结算面读的就是这一格）。
+    section3BlocksAtStart,
     launchSeq: mutationSeqOf(parent),
     // docAbs 产出面同源归一（2026-10-04 · #921 · A 随件）：四分支单源 resolved（裸形/前缀形
     // 命中候选项目根即归一为绝对路径）——冻结窗/陈旧判定对**裸形受理档**照护成立（否则 A
@@ -427,10 +434,16 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
     ctx?.callbacks?.onToken?.(entry.relayPrefix + "[model]" + (entry.model ?? ""))
     // #949 ①：排队 / 延迟窗口封死——构建前按本评审实例复核镜像（消费点定域；幂等）。
     scopeAdvisorMirror(parent, run)
+    // 写回本笔的点火基线（§3 结算面读 `run.section3BlocksAtStart`）：排队窗口里该字段已被后一笔发起覆盖。
+    run.section3BlocksAtStart = entry.section3BlocksAtStart
     runAdvisorReview(parent, reviewType, {
       onOutput: (chunk) => relayAdvisorOutput(ctx?.callbacks, entry.relayPrefix, chunk),
       signal: entry.controller.signal,
       onStall: (rounds) => pushAdvisorAlert(parent, `advisor#${id}`, rounds), // #934：连续无产出越阈 ⇒ 自动上行提醒（只推——§6.32）
+      // 本笔发起时点的绑定快照（入口条目字段），与评审轨无关（判据单源 =
+      // `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）。不读活的 `run.batchDoc`：
+      // 排队条目启动时那个字段已被后一笔发起覆盖。
+      batchDoc: entry.batchDoc,
     }, designToken, documents, paths, object, designId)
       .then((report) => { entry.report = report })
       // §6.12 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀

@@ -40,7 +40,7 @@ export function _resetLedgerDirForTest() { ledgerDir = join(configDir, "ledger")
 export function ledgerDirPath() { return ledgerDir }
 
 /** 项目根 → 库键（**键式单源**——设计档 `LEDGER.md` §2.1：键只在**本函数**一处生成）：
- *  `sha1(normalizeCwd(root))[:16]`——`normalizeCwd`（盘符统一大写）是唯一补丁面：`resolve()`
+ *  `sha1(normalizeCwd(root))` 取前 16 位——`normalizeCwd`（盘符统一大写）是唯一补丁面：`resolve()`
  *  已覆盖分隔符 / 点段 / 尾斜杠；非盘符段大小写**不折叠**（§2.1 不做段）。
  *  @param {string} root 项目根绝对路径
  *  @returns {string} 16 位十六进制键 */
@@ -53,7 +53,7 @@ export function ledgerKey(root) {
 const keyedDbFile = (root) => join(ledgerDir, `${ledgerKey(root)}.db`)
 
 /** 「已注册」判据（**唯一**事实）：该目录带项目声明档 `PROJECT-MANIFEST.json`。
- *  项目 = 带 manifest 的目录（`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md:68`）——
+ *  项目 = 带 manifest 的目录（`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md` 的「解析模型与作用定位」节）——
  *  台账没有自己的「项目」定义：台账根 = 项目根，一个判据。 */
 function isRegistered(dir) {
   return existsSync(join(dir, MANIFEST_REL))

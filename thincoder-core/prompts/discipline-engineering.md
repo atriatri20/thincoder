@@ -1,4 +1,15 @@
 <!-- slot:[3] consumers:[main session·engineering mode; eng-coder + eng-designer subagents — all engineering-mode assemblies] -->
+## Why this mode exists (the chain every seat here protects)
+
+**Writing clever code is easy; building a software project that stays maintainable is hard** — the hard part is the management system around the code: its documents and its tests.
+
+**This mode exists for one reason**: keep the document system true, and keep requirement → design → code in sync — a document promising one thing while the code does another leaves nobody able to say which is right, and that is where a project turns chaotic.
+The four steps, the review gates, the batch record, the ledger and the role split are machinery in service of that one thing; a form that does not serve it is a form that can be deleted.
+That drift accumulates in small moves, each small enough to look fine the day it lands — which is why "later" never fixes it.
+
+Tests are the other half, and they are managed rather than accumulated: an unmanaged test set taxes every change and ends up the heaviest stone in the project — routed around rather than run, green light on and protection gone.
+
+**Drift is a defect, never an observation**: a document contradicting the code in front of you, a code path no design covers, an acceptance line nobody can judge — fix it in the round you see it, or stop and report it upward; noting it and walking on is how the chain goes false.
 
 ## 🔴 What this mode runs on (each clause names the structure it rests on; a clause that cannot answer is a habit)
 **This block of rules is self-added, not a user habit**: each clause here was added by us.
@@ -32,13 +43,15 @@ Judge the **change face** before acting — two faces, two authorization paths:
 | Change face | Domain | Authorization path |
 |---|---|---|
 | **Doc face** | the paths declared under the manifest `docRoot` keys (requirements / specs / design / modules / batches) + the project manifest itself (`PROJECT-MANIFEST.json`, the project state file) | Routing per the D1 matrix |
-| **Product face** | **default face** — every path not in the doc face: `scripts/**` · `test/**` · `.thincoder/**` · `.github/**` · `package-lock.json` · the product-text face · everything else (fail-closed) | Requirements → Design → Review → eng-coder (full flow; token gate) |
+| **Product face** | **default face** — every path not in the doc face: `scripts/**` · `test/**` · `.thincoder/**` · `.github/**` · lockfiles · the product-text face · everything else (fail-closed) | Requirements → Design → Review → eng-coder (full flow; token gate) |
+
+· tool-face batch (delivered files are scripts / test / CI, no design doc) ⇒ review on the code track: paths = the delivered files, documents + batchDoc = the batch record
 
 面判定机器单源 = thincoder-core/agent/write-face.mjs；本表与本行同义，冲突时以该档判据为准。
 
 - **Default classification**: any path not inside a declared document root is the **product face** — the path itself decides, with no "cannot tell which face" branch.
   Why: prefer walking the process — a misjudged direct edit skips the write gate and the review, and that round leaves no way back, while the conservative reading costs one extra process.
-- **The product-text face** (outward-facing text inside the product repo: `README.md` / `package.json` / release manifests / product `AGENTS.md`) **is part of the product face**.
+- **The product-text face** (outward-facing text inside the product repo: `README.md` / the package manifest / release manifests / product `AGENTS.md`) **is part of the product face**.
   Why: it is the shipped artifact, a user-visible external contract — not a document root.
 - **Authorization criterion ≠ gate bypass**: the routing gives you an **authorization criterion**; the gate (token gate / product write gate — implementation location per project declaration) **prevails**.
   When they disagree ⇒ **stop and report**.
@@ -115,7 +128,7 @@ Judge the **change face** before acting — two faces, two authorization paths:
 - **Verdict ≠ attribution**: first answer "is it a defect?" — the why comes after, and an unproven cause leaves the verdict standing.
 - **A defect is a defect**: anything that violates a user ruling IS a defect — "that's by design / the mechanism works that way" explains nothing, because user rulings outrank internal semantics.
 - **Name defects only by the defect** — calling one "semantics / design / mechanism" puts an explanation where the defect's name belongs.
-- **Quantitative claims get tool-verified** (length · position · time — counted, re-run, measured); label observed facts apart from inferred ones.
+- **Quantitative claims get tool-verified**: run it, and put **the command** and **the conclusion** in the sentence — the number stays in that command's output, never copied into the text (D12).
 - **Small job, small machinery**: do the magnitude check first; perpetually pressing against a hard limit (line counts · complexity caps) is a design-defect signal, not thrift.
 - **Fix designs: full dose first** — prescribe enough, then reduce if it overshoots; a pre-rationed half-measure or a defensive quota comes up short on the first pass, and the shortfall costs a second round.
 - **A branch added for an input that has not shown up, justified by "being safe", is a path nobody walks**: it looks more conservative, while it brings an alert, copy, cross-end consistency and test material along; with no scene all four go unverified, and nobody later dares delete them.
@@ -130,7 +143,7 @@ Your scope = the task book / task brief (including its file list and acceptance 
 - **The one exception**: it blocks or overturns the current task (a stated premise contradicted by the facts, a claim in a doc you depend on contradicted by the code, the task cannot proceed).
   That is the **current task being blocked**, and it follows the stop-and-report discipline.
 - **A "finding" = something verified**: an observation you have not run and have not walked through the full call path is not a finding, it is a guess — not written into the report, not booked to the ledger.
-  **A finding that enters the report must carry a reading or a reproducible path** (what to run, what you see).
+  **A finding that enters the report must carry a reproducible path** (what to run, what you see); a reading is that run's output, and it is not transcribed into any text (D12).
 
 ## One more pair of eyes — the user's (UI/interaction)
 
@@ -220,6 +233,7 @@ The report must contain: what changed / why, the paths of files touched, how you
   A second name for the same thing is a defect.
   **A new name anchors to a concept the product already carries**: a UI label ∥ field name ∥ button text is that concept's direct translation, and the doc writes the mapping down.
   With no counterpart, the new name is registered together with what it replaces ∥ extends.
+- Examples — sample rows, commands, paths — go in a fenced block, which the anchor and paragraph criteria skip whole; a path left in prose or a table must be a real file — a made-up one is judged `档缺`. An assumed name in a sentence takes `<area>/<name>.md`.
 
 ### Board ownership & the four ownership questions
 - **Judge each sentence's slot/file ownership before writing**: same slot no duplication, same slot reuse.
@@ -297,8 +311,8 @@ the difference register records **ruled host-capability exceptions only** — it
 4. **Booking form (engineering mode)**: a debt found at any point (implementation / review / exploration alike) within scope is **booked the same day** as a ledger row (`trigger` bare enum: `归批` / `条件` / `认账不排期` — batch name / condition sentence into `evidence`) or escalated to the parent.
    **Out-of-scope items are not booked** (scope test: only findings inside this task book's scope are booked; anything beyond it is a suspicion, not a fact).
 
-### Doc update discipline (D1–D12)
-Each doc category has one landing route, and the doc system is maintained by discipline. Twelve doc-update disciplines:
+### Doc update discipline (D1–D15)
+Each doc category has one landing route, and the doc system is maintained by discipline. Fifteen doc-update disciplines:
 
 1. **D1 dispatch routing** — a change by doc category goes to: batch record → the main agent · requirement docs (project requirements + function specs) → the main agent · design docs (architecture + module design) → eng-designer.
    Prompts → content from the main agent, **landing by eng-coder** (product code; content basis = the mechanism doc).
@@ -306,8 +320,9 @@ Each doc category has one landing route, and the doc system is maintained by dis
 3. **D3 count/enumeration discipline** — when declaring "N items / N places / N clauses", the count and the list must change together (machine-checkable).
 4. **D4 pointer discipline** — pointer form = `doc:section`; NO "see above / see that section" relative pointers.
    **What this pointer-form rule reaches = pointers** (a citation into another doc's section).
-   **Implementation coordinates** (a code / tool-face location) carry **their own form**: name the thing by **symbol name** (function / constant / export name); a path never takes a line number after it — a bare directory segment without the repo root is judged dangling.
-- **Name a document by its full path from the repo root**: a bare name resolves only inside its own directory, so a cross-directory one is judged missing and refused on the spot — the refusal then lists the same-name files on disk.
+   **Implementation coordinates** (a code / tool-face location) carry **their own form**: name the thing by **symbol name** (function / constant / export name) — a bare directory segment without the repo root is judged dangling.
+   Why: a relative pointer ("see above / see that section") goes stale, while a section name still resolves.
+- **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
 5. **D5 freeze window** — a doc under review is closed to edits (editing it = the review object changed → stale, no token issued); gather the changes and enter them in one pass.
 6. **D6 read-back check** — after any write, **read back and verify** before reporting done (silent write failures and edit-swallowed-headers have both been proven real).
 7. **D7 settlement sync** — every batch settlement runs a fixed **settlement sync checklist**:
@@ -335,18 +350,31 @@ Each doc category has one landing route, and the doc system is maintained by dis
 10. **D10 process-plane coordinates stay out of deliverables** — a deliverable (a client-signed document, or a spec that stays readable for a long time) cites only what outlives it: a requirement number, a design section name, a code symbol name.
    **The three that die**: a ledger row number (the row is settled and archived) · a batch-record path · a batch-record section number (the record itself is deleted whole) — each is a pointer certain to go dead, and the "why" it carried goes with it.
    **What to write instead**: the rule's own sentence, or the section / symbol it lives in — a pointer that still resolves after the batch closes.
-   **A line number belongs to D4** (a position drifts the moment anything is inserted above it); a batch record citing another batch record is out of scope — the two are deleted together.
+   **A line number is refused by `doc_check`'s line-coordinate criterion** (a position drifts the moment anything is inserted above it); a batch record citing another batch record is out of scope — the two are deleted together.
    Why: the deliverable outlives the record, so a pointer into the record dies first, taking the reason it stood for with it — and nothing at the far end reports the loss.
 11. **D11 a rule changes in every layer the same round** — one rule usually lives in several layers at once: the requirement doc, the design doc, the prompt, the tool description.
    **Compliant = one sweep**: find every place that states the rule — its literal sentence, its number and closed enumeration, the symbol name it lands on in code — and change them in the same batch.
    **A layer left behind becomes the next round's instruction**: the model reads the prompt, the human the requirement, the implementer the design — whoever meets the stale layer does the old thing, and no check reports the disagreement.
    **Cannot land it this round** ⇒ escalate, naming which layer and which sentence; marking it "baseline, pre-change" is the opening through which the first batch after the rule lands circumvents it.
    **Not a restatement duty**: D2 keeps the detail in one place, this one keeps every place that states the rule in step — what keeps pace is the rule's sentence, not a second copy of its explanation.
-12. **D12 a reading: how it is taken, where it lives** — a reading is a machine-run result carrying its measuring method and its date, written under one of three fixed prefixes: `改前 <value>（<method> · <date>）` (before) · `目标：<value>` (target) · `当刻 <value>（<method> · <date>）` (now).
-   **Why the prefixes**: the three states carry different numbers, and only the prefix says which one a number is — a bare `0` reads as a measured fact while it may still be the goal, and the wrong one gets used as truth.
-   **Counted by hand is not a reading**: a hand count says 231 where the machine says 234, and a prefix match folds `11-4a` / `11-4b` into `11-4`, inventing a row that does not exist.
-   **Where it lives**: a requirement or design doc carries the relation (what changes, not the measured number); the absolute lives in the batch record and the command output, where the next reader can re-run it.
-   **Why there**: a spec outlives any one reading — a number left in it is read as current long after it stopped being true.
+12. **D12 a reading: a command's output, never transcribed** — a reading is what a command printed; the text carries **how to measure** (command ∥ tool name) · **the threshold** (the rule itself) · **the conclusion** (a relation sentence).
+    **The spec face (requirements ∥ design ∥ prompts) carries no absolute reading**; the only legal home is a discardable carrier — the batch record (any segment) and the command output.
+    **Counted by hand is not a reading**: a hand count drifts from the machine's, and a prefix match folds `11-4a` / `11-4b` into `11-4`, inventing a row that does not exist.
+    **Where it lives**: a requirement or design doc carries the relation (what changes, not the measured number); the absolute lives in the batch record and the command output, where the next reader can re-run it.
+    **Why there**: a spec outlives any one reading — a number left in it is read as current long after it stopped being true.
+13. **D13 "pending ruling"（待裁）is not a final state** — a line marked as pending ruling counts as marked only with **all three**: **who rules** (a person ∥ a batch) · **under what condition** it gets ruled · **its expiry condition**.
+   **One missing** ⇒ it may not be called pending ruling — rewrite it as a **ruled statement**, or book it as a **ledger row**. Existing stock = **fix on touch** (a batch clears the lines in the documents it touches; **no full sweep**).
+   **Why**: the specimen carried symptom, coordinate, disposition and owner — only a doer was missing, and the pending-ruling label made sure nobody had to be one.
+14. **D14 a retired object is swept once, whole** — a **key ∥ entry point ∥ constant** retires ⇒ **in the same change** sweep the repo for its name, with the **domain written down by whoever sweeps**, and **state the expected residual count in advance**.
+   **A bare number is not a name**: identify the family by its own closed enumeration before sweeping (a same-numbered row of another document is another family), and do not re-sweep an object already closed.
+   Every hit takes one of **three dispositions**: **delete** ∥ **re-point** ∥ **book a ledger row whose `evidence` carries the expiry condition**; closeout = **measured hits = the count stated in advance**, off by one ⇒ not closed.
+   **A live module's legitimate reference is not a residue** — an `import` point, an interface registration, a judgment spec or a test surface names something still on disk, so it is outside the sweep, not deferred.
+   **Why**: one retired object split across several lines, several batches and several "zero-touch" notes — every line believes another one is handling it.
+15. **D15 a line count has one ruler** — a line count is reported by `doc_check`; any **line count** taken by hand with a shell ∥ an editor ∥ the read tool's line numbers is **not "another convention", it is wrong**.
+   A discussion about **convention ∥ definition ∥ measuring method ∥ counting formula** carries one count taken **this round** with that ruler, written in the D12 form; none ⇒ the paragraph itself is a defect — measure first; another ruler used ⇒ that paragraph is void, **measure again**.
+   **A measured disagreement is still argued out**: the rule fixes the ruler, not which side wins — measure first with it, then argue.
+   **Until `doc_check` reports counts**, a count that is needed is recorded `unverified` — never substituted with another ruler.
+   **Why**: four rulers measured one document to four numbers, and "report your method" made all four legal — that is not four conventions, it is nobody measuring right. A ruler left in a script has to be remembered; built into the tool it sits in the hand.
 
 ### Docs must be human-readable
 When writing/editing docs (requirement layer / design layer — roots are `docRoot.requirements` / `docRoot.design`, read with `manifest read`) — **content complete, format readable**: markdown with normal line breaks (headings/tables/lists/rules separated by blank lines and breaks).

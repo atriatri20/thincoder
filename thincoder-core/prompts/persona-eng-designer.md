@@ -39,9 +39,9 @@ Boundary crossings are backstopped by **prompt discipline + main-agent content v
 - **The one exception**: it blocks or overturns the current task (a stated premise contradicted by the facts, a claim in a doc you depend on contradicted by the code, the task cannot proceed).
   That is not an "out-of-scope finding" — it is the **current task being blocked**, and it follows the stop-and-report discipline.
 - **B · A "finding" = something verified**: an observation you have not run and have not walked through the full call path **is not a finding, it is a guess** — not written into the report, not booked to the ledger.
-- **A finding that enters the report must carry a reading or a reproducible path** (what to run, what you see).
+- **A finding that enters the report must carry a reproducible path** (what to run, what you see); a reading is that run's output, and it is not transcribed into any text.
 - **In-scope anomalies still go into the report one by one**: requirement gaps · implementation conflicts · unclear ownership · count/enumeration mismatches · dangling pointers · doc-code contradictions — including "non-blocking for this batch" observations.
-- **Each one must carry a reading or a reproducible path** per B.
+- **Each one must carry a reproducible path** per B (what to run, what you see).
   Why: a silently fixed finding has no record, and nobody can check what you changed.
 - **The fix-vs-bounce split (tightened)**:
   - **Consistency surface** (duplicate registrations / dead pointers / count/enumeration mismatches / form inconsistencies) → **inside your write domain** (the files this round's task book declares) you **may fix on the spot** (still reported one by one).
@@ -81,10 +81,11 @@ Why: a full exploration spends the round on what is already pinned; turn budgets
 3. **Give each requirement a judgment line** (acceptance criteria): the execution side enters this prompt, the criterion side is **reported to the main agent to land in the requirement doc** for checking (a requirement without a judgment line is not done).
 4. **Write the design** — the board design doc (the 9 output items are listed under "Doc structure").
 5. **Self-check + return** — check requirement coverage one by one, requirement docs and design doc consistent → report + **stop**: the review is the user's to fire, and a self-fired one spends their attention and token before they chose to spend it.
-   - **Post-write self-consistency check (three mechanical cross-checks · run before returning · report the readings)**: re-read what you wrote and align the sets **pairwise** — all three classes here have actually happened (every spot was right when written; the error was **cross-spot**):
+   - **Post-write self-consistency check (three mechanical cross-checks)**: run before returning · **report the conclusion and the command** — the numbers stay in those commands' output.
+     Re-read what you wrote and align the sets **pairwise** — all three classes here have actually happened (every spot was right when written; the error was **cross-spot**):
      1. **Citation set ↔ heading set**: for every `§N` reference in the doc, **check that the number exists** (sub-section numbers especially — a real case cited `4.5.3–4.5.7` while only `4.5.1` / `4.5.2` were on disk).
      2. **Table rows ↔ summary counts**: the row-by-row tally **must equal** the summary/total you state (a real case was off by 43 rows: rows tallied 30/73/50, the summary said 42/53/57).
-     3. **Claims ↔ measurements**: every "all / none / every" in your text is a **freshly measured reading** — a number recalled from memory or derived on paper is a claim, not a reading.
+     3. **Claims ↔ measurements**: every "all / none / every" in your text is something you **just ran** — cite **the command**, and keep its number in the output; a number recalled from memory or derived on paper is a claim, not a reading.
    - **Why this is called out**: the three share **one root cause** — each spot correct, the whole inconsistent; and only the machine check / review catches it (skip the self-check and you forward the cost downstream). "Written" is not "self-consistent".
    - **Pre-review check** (before presenting "design ready for review") — fail any, fix first:
      - ① Requirements five elements concrete enough to design from?
@@ -99,7 +100,9 @@ Why: a full exploration spends the round on what is already pinned; turn budgets
      Why: an exemption you grant yourself keeps a wrong rule alive because you wrote it.
      A fix that would conflict with approved design ⇒ stop and report.
      A gate hit is fixed in the round — booking it moves the work where nobody looks — and it is not left for the next round.
+     - Examples — sample rows, commands, paths — go in a fenced block, which the anchor and paragraph criteria skip whole; a path left in prose or a table must be a real file — a made-up one is judged `档缺`. An assumed name in a sentence takes `<area>/<name>.md`.
    - **Gate discipline**: the machine-check gates (the three self-consistency checks + the doc-check gate) run **once each, only before delivery** — re-running them per round multiplies their cost by the number of rounds.
+- **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
 
 ## Two deliverables (separate homes — mixing them puts one-shot content where the next batch overwrites it)
 1. **The batch task**: this batch's covered requirement entries / entries explicitly NOT in this batch / affected files / acceptance criteria → **batch record §2** (an append, or an in-place edit — §1 belongs to the main agent and stays as written).
@@ -156,7 +159,7 @@ Requirements finalize after confirmation — must be complete before design star
 9. **Integration test design — start from the index**: `test/RTM.md` is the RTM (UAT acceptance matrix: one section per business story, one row per integration case, 5 columns).
    Read it before designing, then answer as a delta: which rows this change breaks (rewrite them), which rows are redundant (delete them), which rows are missing (new rows) —
    with each row naming the **interaction between components** it evaluates, the business-observable result it asserts, the requirement it serves, and this project's entry (where a user enters the business — a business-observable point).
-   A new row's number is fixed in the RTM before its case title is written — `test('1-1 …')`, the same number verbatim.
+   A new row's number is fixed in the RTM before its case title is written — `test('CLI 1-1 …')`, the same number verbatim.
    A change that alters a business-observable result an existing case asserts names the case it revises — "no change" is not an answer there.
    A change that crosses components but starts from no user-visible entry earns no case: an integration case grows from exactly two entries — a business scenario the product really needs, or a problem production really produced.
 

@@ -6,7 +6,8 @@
  *
  * 调用面（`scope` 语义 = 规范「调用面开关，无第三值」）：
  *   ① `batch.mjs` append——**全部 append 同挂**（§1–§6，含 depth-0 与评审写 §3）⇒ `scope: "writer"`；
- *      强制集 = 本次写入文本命中 ∪ 写者触达账命中；`REFUSED` ⇒ 调用面 throw；`ERROR` / 门自身异常 ⇒
+ *      强制集 = 本次写入文本命中 ∪ 写者触达账**改动区**命中（判面单源 = `docs/core/design/DOC-DISCIPLINE.md`
+ *      §3.20「触达账腿的判面 = 本次改动区」）；`REFUSED` ⇒ 调用面 throw；`ERROR` / 门自身异常 ⇒
  *      放行 + 回执明示（子代理无法重启会话，卡死写账 = 无账之笔；② 会拒收口 ⇒ 轮次不会被当成已通过）。
  *   ② `batch-lifecycle.mjs` close ∥ status 值余核「已收口」⇒ `scope: "close"`——范围 = 本批笔域集
  *      （父侧触达账 ∪ 本批提交 diff = `git diff --name-only <批起 sha> HEAD` 内的 `.md` ∪ 批档自身）；
@@ -17,7 +18,7 @@
  * 即本轮的笔面，档内没有「别轮写的存量」可排；存量 = 别批的档，已由单集规则排除。于是：
  *   · ① 面**已落段命中**的处置按动作分两种（判集 = `docs/core/design/BATCH-RECORD.md` §4.9 门 ④ 判集两句）：
  *     `append` ⇒ 只入回执、不阻本次写——追加不碰既有行，拒一个改不动的人只会让这一段永远写不进
- *     （无账之笔）；本次追加文（片段档）与触达账命中当场拒。
+ *     （无账之笔）；本次追加文（片段档）与触达账**改动区**命中当场拒（改动区取法 = 下面那段四态判定）。
  *     `edit`（携 `pending.recordView` = **改写后的整档**）⇒ **判集两类**：段长类（段落过长 · 行过长）只判
  *     `newText`（片段档）——一条早先就在的超长段不拦本段的无关改动；**锚类判整档、当场拒**——引用完整性
  *     是档级属性，且这一段的作者改得动那一行。盘上旧字节不参判（拿改写前的档判，#2021 那条死引文
@@ -27,6 +28,16 @@
  *
  * 判据零变：本档不新增判据——只决定「判谁」与「何时强制」；判据与裁定串由产品引擎
  * `doc-check/index.mjs` 产出（判据源唯一）。
+ *
+ * **触达账腿判改动区（① 面·单源 = 设计档 §3.20「触达账腿的判面 = 本次改动区」）**：写者本 run 写进
+ * 那一档的那些字才进强制集，整档累积的存量债归收口面。改动区取自 git 基线（写工具不提交 ⇒ 本 run 的
+ * 笔迹在工作树里），四态判定 = 先问「在不在 git 仓」、再问「该档在不在跟踪面」（问序反了就把「非 git 仓」
+ * 那一态吃掉——仓里所有档都「不在跟踪面」，会被判成整档，而那正是本批要治的病）：
+ *   · ① 在仓 ∧ 在跟踪面 ∧ 基线可解析 ⇒ `git diff -U0 <基线> -- <该档>` 的区间表，按扩区表扩成片段区；
+ *   · ② 在仓 ∧ **不在**跟踪面 ⇒ 整档（未跟踪的 `.md` 只可能是本轮新建的档，整本即本轮的笔）；
+ *   · ③ 在跟踪面 ∧ 基线不可解析 ∥ ④ 非 git 仓 ⇒ **未定**：本次零强制 + 回执明示（降级方向 = 不阻写）。
+ * 区外命中只出一行计数、不逐条列（137 条逐条列正是本批消掉的现场）；收口面照旧整档判、逐条列——
+ * `close` 范围与判面一字不动。
  *
  * 两条边界（设计与实测同口径）：
  * ① **本次写入文本的判法** = 落批档同目录的隐藏片段档（`.gate-<pid>-<rand>.md`）——锚解析序 ② 是
@@ -42,6 +53,8 @@ import { dirname, join, relative, resolve } from "node:path"
 
 import { owningProject, readManifest } from "../manifest.mjs"
 import { runDocCheck, PARA_DISPOSE, DOC_CLASS } from "../doc-check/index.mjs"
+// 扩区表单源（D2）：两门判的是同一件事（本笔触碰的那几段），各写一张表必然漂移 ⇒ 只调用、不复制。
+import { fragmentZones, mergeZones } from "../tools/doc-write-gate.mjs"
 import { sectionHeaderRe } from "./batch-skeleton.mjs"
 import { batchProjectRoot } from "./batch-paths.mjs"
 
@@ -176,6 +189,79 @@ function committedDocs(root, sha) {
   }
 }
 
+/** git 输出（成功 = trim 后的 stdout；跑不出 ⇒ `null`——非仓 ∥ 无 git 二进制 ∥ 无该对象同一支，由调用面按四态分流）。 */
+function gitOut(cwd, argv) {
+  try {
+    return execFileSync("git", ["-C", cwd, "-c", "core.quotepath=false", ...argv], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 8000 }).trim()
+  } catch { return null }
+}
+
+/**
+ * `git diff -U0` 输出 → 该档的**改后**行号区间表（`@@ -a,b +c,d @@` 的 `+` 侧；一次改动可多段）。
+ * `d === 0`（纯删段）⇒ 宽度为零 `{start:c+1,end:c}`——与写前门「纯删行」同一形，扩区表据此并入紧邻两段。
+ * 只认 `+++ b/<该档>` 之下、`--- /dev/null` 的整档新建不认（那一形由「未跟踪档 ⇒ 整档」承接，不在这里混判）。
+ */
+function diffRangesOf(text, relPath) {
+  const out = []
+  const want = `+++ b/${relPath}`
+  let active = false
+  for (const line of String(text ?? "").split(/\r?\n/)) {
+    if (line.startsWith("+++ ")) { active = line.trim() === want; continue }
+    if (!active) continue
+    const m = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line)
+    if (!m) continue
+    const start = Number(m[1])
+    const count = m[2] === undefined ? 1 : Number(m[2])
+    out.push(count === 0 ? { start: start + 1, end: start } : { start, end: start + count - 1 })
+  }
+  return out
+}
+
+/**
+ * 触达账腿的改动区（四态判定 · 判据单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「改动区取法（基线两级 · 四态判定）」）：
+ * **先问「在不在 git 仓」、再问「该档在不在跟踪面」**——问序反了就把 ④ 吃掉（非 git 仓里所有档都「不在跟踪面」，
+ * 会被 ② 判成整档，而那正是本批要治的病）。返 `Map<pathKey, {kind:'region',zones}|{kind:'whole'}|{kind:'unknown',why}>`。
+ * 扩区只调用写前门的导出（单源）：「什么叫一段」仍只由 `thincoder-core/doc-check/paragraph.mjs` 的谓词族定。
+ * 逐档一次 `git diff -U0 <基线> -- <该档>`；任何一步问不出（无 git ∥ 抛错）⇒ `unknown` + `why`，**不抛给门体**
+ * （降级方向 = 不阻写 + 回执明示，由收口面整档判兜底）。
+ */
+function touchedRegions(docs, baseSpec) {
+  const out = new Map()
+  // 同一次门内按仓缓存：仓根 ∥ 跟踪面清单 ∥ 基线解析——省下的是「每档三次」的机跑，判据一点不改。
+  const tops = new Map() // dirname → 仓根 ∥ null（非仓）
+  const indexes = new Map() // 仓根 → Set(相对路径) ∥ null（清单跑不出）
+  const bases = new Map() // 仓根 → 基线 sha ∥ null（不可解析）
+  for (const abs of docs) {
+    try {
+      const dir = dirname(abs)
+      if (!tops.has(dir)) tops.set(dir, gitOut(dir, ["rev-parse", "--show-toplevel"]))
+      const top = tops.get(dir)
+      if (!top) { out.set(pathKey(abs), { kind: "unknown", why: "不在 git 仓" }); continue }
+      if (!indexes.has(top)) {
+        const list = gitOut(top, ["ls-files", "-z"])
+        indexes.set(top, list === null ? null : new Set(list.split("\0").filter(Boolean)))
+      }
+      const index = indexes.get(top)
+      if (index === null) { out.set(pathKey(abs), { kind: "unknown", why: "git ls-files 跑不出" }); continue }
+      const relPath = relative(top, abs).replace(/\\/g, "/")
+      // ② 在仓而**不在**跟踪面 ⇒ 整档：写工具不提交 ⇒ 未跟踪的 `.md` 只可能是本轮新建的档。
+      if (!index.has(relPath)) { out.set(pathKey(abs), { kind: "whole" }); continue }
+      if (!bases.has(top)) bases.set(top, gitOut(top, ["rev-parse", "--verify", "--quiet", `${baseSpec}^{commit}`]))
+      const base = bases.get(top)
+      if (!base) { out.set(pathKey(abs), { kind: "unknown", why: `基线不可解析（${baseSpec}）` }); continue }
+      const diff = gitOut(top, ["diff", "-U0", base, "--", relPath])
+      if (diff === null) { out.set(pathKey(abs), { kind: "unknown", why: "git diff 跑不出" }); continue }
+      const lines = safeRead(abs).split("\n")
+      const zones = mergeZones(diffRangesOf(diff, relPath).flatMap((r) => fragmentZones(lines, r)))
+      out.set(pathKey(abs), { kind: "region", zones })
+    } catch {
+      out.set(pathKey(abs), { kind: "unknown", why: "判定抛错" })
+    }
+  }
+  return out
+}
+
+
 /** 命中 → `{ aligned, entries }`：`file` / `line` / `clazz` = 判定用（引擎给绝对路径）；
  *  显示行取引擎已产出的 `✗` 行（报面单源不重写），过 `translate` 换掉片段档的临时路径；
  *  行数与命中数不等（引擎报面行序变动）⇒ `aligned: false` + 自造行，由调用面回执明示。 */
@@ -267,6 +353,12 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
   const viewAbs = viewBody === null ? null : fragmentPathOf(selfAbs)
   // 判域内「哪一档是批档本体」：有视图时 = 视图（同目录、同骨架、同引用解析序）；判据与属性标注都读它。
   const selfKey = pathKey(viewAbs ?? selfAbs)
+  // 触达账腿的改动区（① 面·单源 = 设计档 §3.20）。`close` 面判整档 ⇒ 不取改动区（收口面一字不动）；
+  // 批档自身（及其改写后视图）不进这张表——它的判法不动（档生于此轮，档内没有别轮存量可排）。
+  // 基线两级：§1 有 `批起 sha = <sha>` 记入行 ⇒ 该 sha；无该行 ⇒ `HEAD`（写工具不提交 ⇒ 本 run 的笔迹在工作树里）。
+  const regions = close
+    ? new Map()
+    : touchedRegions(touched.filter((p) => pathKey(p) !== pathKey(selfAbs)), baseShaOf(selfAbs) ?? "HEAD")
 
   try {
     // 片段档写在 try 内：写失败也走同一条 finally（不存在就 unlink 失败无害）
@@ -284,6 +376,14 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
     }
 
     const selfRel = relative(root, selfAbs).replace(/\\/g, "/")
+    // 读面（读不到 ≠ 干净）：判域里有在盘但读不到的档 ⇒ 这一轮**判不出**，给 `ERROR` 而不给 `PASS`。
+    // 不并入 `hits`（它不是命中，是一个没做完的判定）；两 scope 按既有 ERROR 语义消费：`close` fail-closed 拒收口，
+    // `writer` 放行 + 回执明示（子代理无法重启会话，卡死写账 = 无账之笔）。口径 = §3.20「读面」块 ∥ K6。
+    if (Array.isArray(res.unreadable) && res.unreadable.length) {
+      const first = `DOC-CHECK GATE: ERROR（读不到 ${res.unreadable.length} 档）`
+      const named = res.unreadable.map((p) => relative(root, p).replace(/\\/g, "/")).join(" ∥ ")
+      return { ...errorState(first, { count: res.checkFiles.length, k: 0, basis }), report: `${first}\n未判（在盘但读不到）：${named}` }
+    }
     const fragRel = fragAbs ? relative(root, fragAbs).replace(/\\/g, "/") : null
     const viewRel = viewAbs ? relative(root, viewAbs).replace(/\\/g, "/") : null
     const translate = (text) => {
@@ -298,17 +398,29 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
       const inSelf = pathKey(e.file) === selfKey
       return { ...e, inSelf, text: inSelf ? `${e.text}${attributionOf(selfSrc, e.line, authors)}` : e.text }
     })
-    // ① 面（**按动作分两种**——判集单源 = `BATCH-RECORD.md` §4.9 门 ④ 判集两句）：
-    //   append（无视图）⇒ 批档已落段命中只明示、不阻写（追加不碰既有行，拒一个改不动的人 = 无账之笔）；其余当场拒。
-    //   edit（有视图）⇒ **判集两类**：档内**锚类**命中当场拒（引用完整性是档级属性）；档内**段长类**命中只明示
-    //     （段长类只判 `newText`——那条在片段档里判，不在这里）。
-    // ② 面：范围内全部命中即 K。
-    const blocks = (e) => !e.inSelf || (viewAbs !== null && ANCHOR_CLASSES.has(e.clazz))
+    // ① 面（**三层腿分开判**——批档自身腿的判集单源 = `BATCH-RECORD.md` §4.9 门 ④ 判集两句）：
+    //   · 本次写入文本（片段档）⇒ 当场拒；
+    //   · 批档自身：append（无视图）⇒ 已落段命中只明示、不阻写（追加不碰既有行，拒一个改不动的人 = 无账之笔）；
+    //     edit（有视图）⇒ **判集两类**：锚类当场拒（引用完整性是档级属性）；段长类只明示（它只判 `newText`）；
+    //   · 触达账 ⇒ **改动区内**的命中当场拒（与本次文本同权）；区外存量只入回执计数；改动区未定 ⇒ 零强制 + 明示。
+    // ② 面：范围内全部命中即 K（收口面整档判，不分区内区外）。
+    const blocks = (e) => {
+      if (e.inSelf) return viewAbs !== null && ANCHOR_CLASSES.has(e.clazz)
+      const region = regions.get(pathKey(e.file))
+      if (!region) return true // 判域内既非批档自身也非触达账 ⇒ 只可能是本次写入文本（片段档）——整段强制
+      if (region.kind === "whole") return true // ② 未跟踪档 ⇒ 整档即本轮的笔
+      if (region.kind === "unknown") return false // ③ ④ 未定 ⇒ 本次零强制（收口面整档判兜底）
+      return region.zones.some((z) => e.line >= z.start && e.line <= z.end)
+    }
     const disclosed = close ? [] : labeled.filter((e) => !blocks(e))
     const forced = close ? labeled : labeled.filter(blocks)
     const k = forced.length
     const forcedLines = forced.map((e) => e.text)
-    const disclosedLines = disclosed.map((e) => e.text)
+    // 明示集一分为二：批档自身的已落段命中**逐条列**（作者改得动、收口人看得懂）；触达账区外存量**只出计数**
+    // （137 条逐条列正是本批消掉的现场——它们本就不该在这一轮被要求修）。
+    const selfDisclosed = disclosed.filter((e) => e.inSelf)
+    const outsideHits = disclosed.filter((e) => !e.inSelf)
+    const disclosedLines = selfDisclosed.map((e) => e.text)
 
     const inFrag = (e) => !!fragAbs && pathKey(e.file) === pathKey(fragAbs)
     const textHits = forced.filter(inFrag)
@@ -322,7 +434,7 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
         const parts = []
         if (textHits.length) parts.push(`本次写入文本（${classifyCounts(textHits)}）`)
         if (recordHits.length) parts.push(`批档整档（${classifyCounts(recordHits)}）`)
-        if (touchHits.length) parts.push(`触达账（${classifyCounts(touchHits)}）`)
+        if (touchHits.length) parts.push(`触达账改动区（${classifyCounts(touchHits)}）`)
         first = `DOC-CHECK GATE: REFUSED（命中 ${k} 条——${parts.join(" · ")}）`
       }
     }
@@ -342,11 +454,24 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
         ? `本次写入文本（${segLabel}）${lineCount} 行已判——段长类只判这一段（档内既有超长段不进你的拒面）；锚类判整档（引用完整性是档级属性）`
         : `本次写入文本（${segLabel}）${lineCount} 行已判——强制集只有这一段（别人的段字面改不动，不进你的拒面）`)
     }
-    if (disclosed.length) {
-      const list = disclosed.map((e) => landedSummary(selfSrc, e, authors)).join(" · ")
+    if (selfDisclosed.length) {
+      const list = selfDisclosed.map((e) => landedSummary(selfSrc, e, authors)).join(" · ")
       notes.push(viewAbs !== null
-        ? `档内段长类命中 ${disclosed.length} 条：${list}—— 段长类判集 = 本次写入文本，档级旧段不入判、不阻本次写；收口面 fail-closed 会拦`
-        : `已落段命中 ${disclosed.length} 条：${list}—— 不属本次笔面，不阻本次写；收口面 fail-closed 会拦`)
+        ? `档内段长类命中 ${selfDisclosed.length} 条：${list}—— 段长类判集 = 本次写入文本，档级旧段不入判、不阻本次写；收口面 fail-closed 会拦`
+        : `已落段命中 ${selfDisclosed.length} 条：${list}—— 不属本次笔面，不阻本次写；收口面 fail-closed 会拦`)
+    }
+    // 区外存量：只出一行计数（N 是唯一变量，行是固定字面）；未定支点名降级原因——静默与「那儿真的干净」读起来一样。
+    if (outsideHits.length) {
+      notes.push(`触达账存量命中 ${outsideHits.length} 条——不属本次改动区，不阻本次写；收口面整档判`)
+    }
+    const undetermined = touched
+      .filter((p) => pathKey(p) !== pathKey(selfAbs))
+      .map((p) => [p, regions.get(pathKey(p))])
+      .filter(([, r]) => r && r.kind === "unknown")
+    if (undetermined.length) {
+      // 点名到档、点名原因（「未定」与「那儿真的干净」否则读起来一样）；句首固定字面单源 = 设计档 §3.20「未定的处置」。
+      const named = undetermined.map(([p, r]) => `${relative(root, p).replace(/\\/g, "/")}（${r.why}）`).join(" · ")
+      notes.push(`触达账改动区未定——只明示、不阻本次写；收口面整档判（${named}）`)
     }
     if (strays.length) {
       notes.push(`\`.gate-*\` 残留 ${strays.length} 档（异常退出的片段档）—— 手工删除后再提交`)
@@ -360,8 +485,9 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
 
     // 处置块只看**段**类命中——设计口径是「只要存在该类命中就出」，没按「谁写的」切；
     // 仅锚 ∥ 仅行命中不得叫人对段落动手（叫错方向比不给方向贵）——类名单源 = 引擎的 `DOC_CLASS`。
-    // edit 面只看**强制集**：档内段长类命中不入本次判集，把它们摆进拒面 = 把写者叫去改一段与本笔无关的文字。
-    const disposePara = (viewAbs !== null ? forced : labeled).some((e) => e.clazz === DOC_CLASS.para)
+    // edit 面只看**强制集**，append 面另看批档自身的明示集（逐条列的才叫得出名字）；触达账区外存量不在此列——
+    // 它们一个都没摆进拒面，叫写者对一段没露出过的文字动手 = 指错方向。
+    const disposePara = [...forced, ...(viewAbs !== null ? [] : selfDisclosed)].some((e) => e.clazz === DOC_CLASS.para)
     return {
       state: k >= 1 ? "refused" : "pass",
       first,

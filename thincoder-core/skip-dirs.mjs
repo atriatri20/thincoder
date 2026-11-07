@@ -1,8 +1,8 @@
 /**
  * skip-dirs.mjs — 目录排除名单**零依赖叶档**（本批 E12：四份名单合一份）。
  *
- * 四份并存曾是漂移源：`index-discover.mjs:28`（8 项）· `tools/shared.mjs:27`（6 项，名 `IGNORED_DIRS`）·
- * `tools/tree.mjs:13`（13 项）· `memory/schema.mjs:48-69`（39 项 + 折叠集 + 前缀族）。同一个问题
+ * 四份并存曾是漂移源：`index-discover.mjs`（8 项）· `tools/shared.mjs`（6 项，名 `IGNORED_DIRS`）·
+ * `tools/tree.mjs`（13 项）· `memory/schema.mjs`（39 项 + 折叠集 + 前缀族）。同一个问题
  * （「哪些目录不是人要读的东西」）四个答案；索引面与检索面各剪各的，同一批文件在两个面上一进一出。
  * 单源 = 本档，四个消费面只 import 名单，不各自持有副本。
  *

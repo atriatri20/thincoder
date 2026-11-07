@@ -71,8 +71,8 @@ export function codeSpans(line) {
   return spans
 }
 
-/** 行内可执行坐标（命令 / 搜索模式串码段）——锚判据整行跳过用（证据与命令保字面）；段判据不豁免（段 = 读者所见）。
- *  判面 = **码段之内**：三支判据各判每个码段的内容（切分单源 = `codeSpans`），空档不判。 */
+/** 行内可执行坐标（命令 / 搜索模式串码段）——锚判据**只跳码段区间**用（证据与命令保字面；码段外的散文照抽照判）；
+ *  段判据不豁免（段 = 读者所见）。判面 = **码段之内**：切分单源 = `codeSpans`，锚判按每段区间判 `inSpan`，空档不判。 */
 export function isExecutableLine(line) {
   return codeSpans(line).some(({ text: t }) => (
     t.includes("&&") || // 命令链（cd … && …）
@@ -113,7 +113,10 @@ export function headingMark(l) {
  *
  *  入参形态（判据句 = §3.20「入参形态」）：**三格必填 + 一格可省**——`paragraphMax` ∥ `lineMax` ∥ `files` 必填，
  *  `exemptZones` 可省（缺省 `[]`，省略它不抛）。必填格缺一格 ∥ 位置传错（第二实参不是对象 ∥ 形参表外多给位置实参）
- *  ∥ 类型不对 ⇒ **抛**：静默失效的方向是**假绿**，而假绿没人会去查。 */
+ *  ∥ 类型不对 ⇒ **抛**：静默失效的方向是**假绿**，而假绿没人会去查。
+ *
+ *  读面（读不到 ≠ 干净）：档在盘但读不到 ⇒ **不静默当零命中**，记入返回值的 `unreadable` 清单（口径 = §3.20「读面」块）。
+ *  返回形仍是命中数组（既有消费面 `for` ∥ `.filter` ∥ `.length` 零改）；清单随属性带出——`hits.unreadable`。 */
 export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files } = {}, ...rest) {
   // 配置缺失 = 硬错，不是静默不命中。
   // `para.len > undefined` 恒 false ⇒ **永不命中 = 假绿**；而误报会被人发现，假绿不会。
@@ -135,9 +138,10 @@ export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files
   }
   const zones = (Array.isArray(exemptZones) ? exemptZones : []).filter((z) => typeof z === "string" && z !== "")
   const hits = []
+  const unreadable = [] // 读面：档在盘但读不到 ⇒ 入此清单（与静默跳过分开：跳过读起来就是「这档干净」）
   for (const f of files) {
     let text = ""
-    try { text = readFileSync(f, "utf8") } catch { continue }
+    try { text = readFileSync(f, "utf8") } catch { unreadable.push(f); continue }
     if (isPromptFace(f)) {
       text.split("\n").forEach((l, i) => {
         const len = [...l].length
@@ -177,5 +181,6 @@ export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files
     })
     flush()
   }
+  hits.unreadable = unreadable // 读不到清单：返回形保持命中数组（消费面零改），清单随属性带出
   return hits
 }
