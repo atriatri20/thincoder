@@ -25,7 +25,7 @@ hashline_edit = **按内容哈希寻址编辑**（非字符串匹配）——**�
 
 ## 3. 语义
 
-- **hash 算法**：`SHA256(line_content).slice(0, 12)`——与 `read(hashes=true)` 同算法（`thincoder-core/tools/file.mjs:376` `hashLine`）。位置无关：hash 标识内容而非行号。
+- **hash 算法**：`SHA256(line_content).slice(0, 12)`——与 `read(hashes=true)` 同算法（`thincoder-core/tools/file.mjs` 的 `hashLine`）。位置无关：hash 标识内容而非行号。
 - **匹配**：滑窗 hash 序列匹配（连续块按序）；歧义（多位置）→ 报错。
 - **not-found**：错误含当前文件 hashes（可据此重试）+ 引导「for fresh hashes, re-read the file with hashes=true」。
 - **U+FFFD 编码警告**：读入含 U+FFFD → 结果文本追加 `FFFD_WARNING`（不阻断——常量见 `docs/core/design/EDIT-HELPERS.md` §5）。
@@ -48,9 +48,9 @@ hashline_edit = **按内容哈希寻址编辑**（非字符串匹配）——**�
 
 | 面 | 落点 | 实核 |
 |---|---|---|
-| 工具对象 / 执行 | `thincoder-core/tools/file.mjs:384`（`hashlineEditTool`） | 导出在位 |
-| hash 计算 | `thincoder-core/tools/file.mjs:380`（`hashLine`） | 导出在位 |
-| U+FFFD 常量 | `thincoder-core/tools/shared.mjs` `:162`（`FFFD_WARNING`） | 导出在位（逐字与 `EDIT-HELPERS.md` §5 同） |
+| 工具对象 / 执行 | `thincoder-core/tools/file.mjs`（`hashlineEditTool`） | 导出在位 |
+| hash 计算 | `thincoder-core/tools/file.mjs`（`hashLine`） | 导出在位 |
+| U+FFFD 常量 | `thincoder-core/tools/shared.mjs`（`FFFD_WARNING`） | 导出在位（逐字与 `EDIT-HELPERS.md` §5 同） |
 | 描述面（模型可见） | `thincoder-core/tool-docs/hashline_edit.md` | 在位（`DESC()` 加载） |
 
 **VSC 端差异**：VSC 端 `hashline-edit.mjs` 另含——① **BOM 处理**（磁盘写回带 BOM、编辑器分支不带——防双 BOM；hash 域 = stripBom + normalizeEOL 与 CLI 同）② **编辑器路径分支**（doc 已打开 → range 编辑，偏移经 `lfOffsetToRaw`——`docs/core/design/EDIT-HELPERS.md` §6）。

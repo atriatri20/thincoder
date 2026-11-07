@@ -42,7 +42,7 @@ thincoder-desktop/                  ← 本端产品包
 │   ├── providers.mjs               ← 渠道族八通道（`provider:list` / `save` / `remove` / `verify` + `setKey` ∕ `delKey` ∕ `models` ∕ `setProxy`——值面住核、端侧零形状构造；写后探单点）
 │   ├── mcp-servers.mjs             ← MCP 族六通道（`mcp:list` / `save` / `remove` / `tools` + `update`（仅落盘） ∕ `reconnect`（先断后连）——探活失败 ⇒ 零写盘）
 │   ├── project-info.mjs            ← 项目级信息族（`ledger:read` / `batch:status`——台账经核动态 import；相位 = `readManifest(cwd)` 回执 `manifest.phase`）
-│   └── attachments.mjs             ← 附件落盘（渲染面 `dataURL` → 主进程落文件 + 核 `appendImagePointer` 锚点——渲染面零 fs；预算 = `docs/desktop/design/PROJECT.md` §4.1））
+│   └── attachments.mjs             ← 附件落盘（渲染面 `dataURL` → 主进程落文件 + 核 `appendImagePointer` 锚点——渲染面零 fs；预算 = `docs/desktop/design/COMPOSER.md` §3.1））
 │   ├── at-complete.mjs             ← `at:complete` 文件枚举过滤（@ 前缀剥离 → 树枚举 → 封顶 20）
 │   ├── exec-run.mjs                ← exec-run 端面缝供值（`configureExecRun` ∕ `configureProcessTreeKill` 核件单源转口）
 │   ├── prompt-injections.mjs       ← 提示锚取值表（两枚核锚供值 · 进程入口一次注册）
@@ -86,24 +86,24 @@ thincoder-desktop/                  ← 本端产品包
 │   ├── settings-modal.mjs        ← 设置组弹窗宿主件（D39——`settingsModalTree` 纯树 + 单例挂载 ∕ 刷新 ∕ 关闭 ∥ Esc ∥ 焦点；沿 `settings-confirm.mjs` 先例；单源 = `docs/desktop/design/SETTINGS.md` §1 **KD-68**）
 │   ├── events-subscribe.mjs        ← 订阅接线（`attachEvents({ on, store, invoke, onTurnTail })`）：**二十五条**通道订阅（含 `ev:secret`）+ 回合尾标题刷新存续（`onTurnTail`）；单向依赖归约档）
 │   ├── mount-pool.mjs              ← 活动池面接线（在册预案落形，`docs/desktop/design/PROJECT.md` §4.1）
-│   ├── mount-settings.mjs          ← 设置面 / 向导接线出档（向导接线族 `mount-onboarding.mjs`；读数 ∕ 出口 ∕ 段出口三族——**151**；预算 = `docs/desktop/design/PROJECT.md` §4.1）；通道接线与表单装配，视图构树住 `views/settings.mjs`）
-│   ├── mount-composer.mjs          ← 输入区挂载出档（**238**——预算 = `docs/desktop/design/PROJECT.md` §4.1）：两态落形 · Enter / Shift+Enter 键位 · 忙态入队（受理交宿主任判）+ 满队提示 · 消费两时刻 = 步边界注入 ∕ 回合尾续发 ·
+│   ├── mount-settings.mjs          ← 设置面 / 向导接线出档（向导接线族 `mount-onboarding.mjs`；读数 ∕ 出口 ∕ 段出口三族）；通道接线与表单装配，视图构树住 `views/settings.mjs`）
+│   ├── mount-composer.mjs          ← 输入区挂载出档（预算 = `docs/desktop/design/COMPOSER.md` §3.1）：两态落形 · Enter / Shift+Enter 键位 · 忙态入队（受理交宿主任判）+ 满队提示 · 消费两时刻 = 步边界注入 ∕ 回合尾续发 ·
   附件条挂载（根锚 `data-attachments`——构树 / 采集住 `attach.mjs`）（形态单源 = `docs/desktop/design/UI.md` §1 输入区行）
-│   ├── attach.mjs                  ← 附件采集与构树纯函数（**57**——预算 = `docs/desktop/design/PROJECT.md` §4.1：输入区 `paste` → `FileReader` → `dataURL` 条目集 + 移除控件；**零 fs** ⇒ 平 node 直测）
-│   ├── mount-sessions.mjs          ← 会话族接线出档（**400**——预算 = `docs/desktop/design/PROJECT.md` §4.1；**≤500 ⇒ 免拆**）：开页三路（`openPage` / `activateSession` / `createSession`）· 关闭尾 `closeTail`（三调用点）· 行控件两件出口（改名 / 删除接线）· 刷新面（通道面 = `docs/desktop/design/IPC.md` §2 会话族注）
-│   ├── mount-cards.mjs             ← 卡族挂载与出站（**156**——预算 = `docs/desktop/design/PROJECT.md` §4.1）：`question:respond` 出站（作答 / 取消两向）
+│   ├── attach.mjs                  ← 附件采集与构树纯函数（预算 = `docs/desktop/design/COMPOSER.md` §3.1：输入区 `paste` → `FileReader` → `dataURL` 条目集 + 移除控件；**零 fs** ⇒ 平 node 直测）
+│   ├── mount-sessions.mjs          ← 会话族接线出档（预算 = `docs/desktop/design/SESSIONS.md` §3.1；**≤500 ⇒ 免拆**）：开页三路（`openPage` / `activateSession` / `createSession`）· 关闭尾 `closeTail`（三调用点）· 行控件两件出口（改名 / 删除接线）· 刷新面（通道面 = `docs/desktop/design/IPC.md` §2 会话族注）
+│   ├── mount-cards.mjs             ← 卡族挂载与出站（预算 = `docs/desktop/design/CHAT.md` §3.1）：`question:respond` 出站（作答 / 取消两向）
                                       + 回执 `ok` 真 ⇒ 清本键 `questions` 切片（`clearQuestion` 增导出 = `thincoder-desktop/renderer/events.mjs`）+ 清位标 + 卡挂载（计划卡零出口——纯呈现）（形态单源 = `docs/desktop/design/UI.md` §1 提问呈现行）
 │   ├── menu-actions.mjs            ← 菜单动作落面（D36）：`ev:menu` **六动作** → 各既有单一实现分派（+`openSettings`——设置页 ∥ 组弹窗；注入缝 ⇒ 平 node 直测；单源 = `docs/desktop/design/MENU.md` §1 **KD-65 ∥ KD-67**）
 │   ├── dom.mjs                     ← 手写 DOM 工具（元素构造 / 事件委托 / 增量渲染）
 │   ├── i18n.mjs                    ← 词表面：核域键取 `config:read` 语言面下发投影 + 宿主 UI 专有键（两语）+ `t()`（供给面 = `docs/desktop/design/IPC.md` §2）；**sink 槽 + `setStringsSink` 注册面导出**（node-safe 档：零 `/rc/` 静态导入）
-│   ├── i18n-views.mjs              ← 词族第二档（按视图面分组；合并点 = `initDict` 装配——自 `thincoder-desktop/renderer/i18n.mjs`；**410**——预算 = `docs/desktop/design/PROJECT.md` §4.1）
-│   ├── i18n-settings.mjs           ← 设置面词族第四档（`SETTINGS_DICT` 两语各 **62** 键；合并点 = `HOST_DICT` 两语展开；**156**——预算 = `docs/desktop/design/PROJECT.md` §4.1）
+│   ├── i18n-views.mjs              ← 词族第二档（按视图面分组；合并点 = `initDict` 装配——自 `thincoder-desktop/renderer/i18n.mjs`；预算 = `docs/desktop/design/UI.md` §4.1）
+│   ├── i18n-settings.mjs           ← 设置面词族第四档（`SETTINGS_DICT` 两语各 **62** 键；合并点 = `HOST_DICT` 两语展开；预算 = `docs/desktop/design/UI.md` §4.1）
 │   ├── store.mjs                   ← 单状态树 + 订阅（会话 / 标签页 / 活动池 / 待审批 / 设置 / 项目级信息 + `questions` / `tasks` 两切片 + 队列面（`pending` 切片 = `ev:queue` 镜面）+ 换形态态 `railForm{ key, mode }` + 两纯动作 `openRailForm` / `closeRailForm`）
 │   └── views/                      ← session-control.mjs · chat.mjs · chat-stream.mjs · chat-scroll.mjs · chat-tool.mjs · chat-cards.mjs · chat-chrome.mjs · chat-text.mjs · chat-pending.mjs · chat-subagent.mjs · chat-guide.mjs · compress-status.mjs · approval.mjs · question.mjs · plan.mjs
  · goal.mjs · chrome.mjs · statusline.mjs · statusline-segments.mjs · statusline-banner.mjs · activity.mjs · pool-subagents.mjs · activity-new.mjs · settings.mjs · settings-sections.mjs · settings-sections-{env,mcp,models,tools}.mjs · settings-agent.mjs · settings-controls.mjs · onboarding.mjs
 ├── scripts/check-dist.mjs          ← 产物校验（照扩展端 check-vsix 先例）
 ├── tools/web-quickcheck/           ← web 快筛（serve.mjs ∥ host-shim.mjs ∥ run.mjs——渲染面脱 Electron 快筛；单源 = `docs/desktop/design/WEB-QUICKCHECK.md`）
-└── test/                           ← run.mjs（单入口 · **49**）+ files.mjs（显式清单——空清单 · **3**）+ rc-resolve.mjs（三档——单源 = `docs/desktop/design/PROJECT.md` §4.1）
+└── test/                           ← run.mjs（单入口）+ files.mjs（显式清单——空清单 · **3**）+ rc-resolve.mjs（三档——单源 = `docs/desktop/design/PROJECT.md` §4.1）
                                       （单元 = 单元测试档（名随批次档 · 住 `docs/batches/` · 不登记 · 随批留存）；集成件 = 落盘时登记 +1）
 ```
 
@@ -112,9 +112,9 @@ thincoder-desktop/                  ← 本端产品包
 **分层铁律**：渲染面代码**不得** import 任何 `node:` 内置或 `@thincoder/core`（照扩展端守卫先例——渲染面静态闭包不得到达 `node:sqlite`：W8 契约②判据——现载体 = 单元测试档，单元测试树重建时回迁端侧单元测试档）；跨面一律走 `window.thincoder`（通道面 = `docs/desktop/design/IPC.md` §1 / §2）。
 
 **node-safe 子集（装载面分层）**：渲染面文件按**装载面**分两档——**① node-safe 档 = 被 node 侧装载的子集**（现 = `thincoder-desktop/renderer/i18n.mjs`——主进程链 `thincoder-desktop/src/main/attachments.mjs` 静态导入）：
-须保持**平 node 可解析**——**禁 `/rc/` 协议别名静态导入**（`/rc/` 仅 `app://` 上下文可解析；平 node 视作盘符绝对路径 ⇒ 装载即 `ERR_MODULE_NOT_FOUND`）。
-**② 浏览器专属档** = 其余渲染档：**核件取词接线只许居此档**——注册单点 = `thincoder-desktop/renderer/app.mjs`（`setStringsSink(setStrings)` 一次注册；`setStringsSink` = `thincoder-desktop/renderer/i18n.mjs` 导出注册面）；`initDict` 合并式原样、经注册端出。
-判据：node-safe 档清单 = `thincoder-desktop/src/main/**` 静态导入闭包触及的渲染档；各档源面零 `/rc/` 静态导入 ∧ 平 node 直载不抛（`/rc/` 前缀白名单不豁免本判据）；违例即主进程装载崩 · 窗口永不出。
+- 须保持**平 node 可解析**——**禁 `/rc/` 协议别名静态导入**（`/rc/` 仅 `app://` 上下文可解析；平 node 视作盘符绝对路径 ⇒ 装载即 `ERR_MODULE_NOT_FOUND`）。
+- **② 浏览器专属档** = 其余渲染档：**核件取词接线只许居此档**——注册单点 = `thincoder-desktop/renderer/app.mjs`（`setStringsSink(setStrings)` 一次注册；`setStringsSink` = `thincoder-desktop/renderer/i18n.mjs` 导出注册面）；`initDict` 合并式原样、经注册端出。
+- 判据：node-safe 档清单 = `thincoder-desktop/src/main/**` 静态导入闭包触及的渲染档；各档源面零 `/rc/` 静态导入 ∧ 平 node 直载不抛（`/rc/` 前缀白名单不豁免本判据）；违例即主进程装载崩 · 窗口永不出。
 
 ## 2. 宿主面职责（形态索引）
 
@@ -128,7 +128,7 @@ thincoder-desktop/                  ← 本端产品包
 | `app://` 供给 | 自定义标准协议（standard + secure + supportFetchAPI）+ 路径逃逸防护；不直载 `file://` | `docs/desktop/design/PROJECT.md` §2 KD-2 |
 | 预载窄桥 | 沙箱 CJS 预载 + `contextBridge` 暴露白名单通道为 `window.thincoder`；渲染面零 Node | `docs/desktop/design/PROJECT.md` §2 KD-3 · `docs/desktop/design/IPC.md` §1 / §2 |
 | 启动自检 | 断言 `process.versions.node` 与 `node:sqlite` 可加载；不满足 ⇒ 显式报错退出（自检本身 = 判据）；**冒烟读数契约**：`--smoke` 单行 JSON——字段闭集 ∕ `ok` 条件 ∕ 出口码 `0 ∕ 3 ∕ 4 ∕ 5` ∕ 20s 超时 ∕ `MIN_NODE` 三 scope 对准（桌面 `"24.0.0"` ∕ CLI `engines >=24` ∕ 核库面 `≥22.13`）——契约单源 = `thincoder-desktop/src/main/main.mjs` 头注 | `docs/desktop/design/PROJECT.md` §2 KD-7 · §7 用例 T-DSK15 |
-| 配置写面 | 一切配置写入经核唯一执行体 `writeConfigAtomic`（`stat → read → mutate → 原子写`四步住核；mtime 冲突 ⇒ 非 ok + `.bak-{ts}` 留现场——`thincoder-core/config-io.mjs:78`）；端侧零自写盘、零 provider 形状构造 | `docs/desktop/design/SETTINGS.md` §1 KD-10 · `docs/desktop/design/IPC.md` §2 设置族与项目级信息族注 |
+| 配置写面 | 一切配置写入经核唯一执行体 `writeConfigAtomic`（`stat → read → mutate → 原子写`四步住核；mtime 冲突 ⇒ 非 ok + `.bak-{ts}` 留现场——`thincoder-core/config-io.mjs`）；端侧零自写盘、零 provider 形状构造 | `docs/desktop/design/SETTINGS.md` §1 KD-10 · `docs/desktop/design/IPC.md` §2 设置族与项目级信息族注 |
 
 ## 3. 与核的接口面逐项点名（七面）
 
@@ -138,11 +138,11 @@ thincoder-desktop/                  ← 本端产品包
 | 会话 | 槽位模型与 manifest 面（核 `@thincoder/core/session-slots.mjs` 族纯转口）+ 端名声明 `END = "desktop"`（`setSessionEnd(END)` 一次）+ **转口八项**（marker 三项〔端参绑定〕：`endMarkerPath` / `readEndMarker` / `writeEndMarker` + 会话族五项：端参绑定 3〔`resumeSlot` / `switchToSlot` / `deleteSlot`〕· 同形转口 1〔`newSession`——无端参〕· 纯 re-export 1〔`renameSlot`〕）——零算法副本（`docs/desktop/design/SESSIONS.md` §1 KD-5） | 不另立会话目录 / 不另写 marker 读写实现（算法归核单源） |
 | 记忆 | 核记忆工具族 + 检索（`memory` / `code_search` / `doc_search` 走 agent 工具面） | 不自持记忆实现、不做降级路径（`docs/desktop/design/PROJECT.md` §2 KD-7） |
 | 工具 | 内置工具静态表 + 家族段（核 `agent-tools/` 与 `agent/family-tools.mjs` 经壳装配注入） | 不复制工具实现、不另写文件 / 进程工具（进程终止**复用** `thincoder-core/tools/process-tree.mjs`） |
-| 审批 | 两条门（批审批 ∥ 逐项——`thincoder-core/agent/dispatch.mjs:179-201`）→ IPC `ev:approval` | 不在渲染面实现权限判定（判定与串行化留核） |
+| 审批 | 两条门（批审批 ∥ 逐项——`thincoder-core/agent/dispatch.mjs`）→ IPC `ev:approval` | 不在渲染面实现权限判定（判定与串行化留核） |
 | 活动事件 | `onToken`（含 `⟦ev⟧` 内联事件族）· `onAgentTurn` · `onToolCall` · `onToolOutput` · `onToolResult` · `onQuestion` · `onSecretInput`（凭据门；⇒ `ev:secret`） | 不另起事件总线、不落第二份轨迹（轨迹落核 `traces/`） |
-| 项目级信息 | 核 `buildScan`（`thincoder-core/ledger.mjs:117`——**经动态 import**）给台账计数 / 超阈 · 核 `readManifest(cwd)` 给批次相位（**回执 `manifest.phase`**——`thincoder-core/manifest.mjs:377`；非 ENOENT 读错上抛直传） | 不携会话 `key`（项目一份）· 不直读核内表 / 不落第二份台账读数（`docs/desktop/design/IPC.md` §2 设置族与项目级信息族注） |
+| 项目级信息 | 核 `buildScan`（`thincoder-core/ledger.mjs`——**经动态 import**）给台账计数 / 超阈 · 核 `readManifest(cwd)` 给批次相位（**回执 `manifest.phase`**——`thincoder-core/manifest.mjs`；非 ENOENT 读错上抛直传） | 不携会话 `key`（项目一份）· 不直读核内表 / 不落第二份台账读数（`docs/desktop/design/IPC.md` §2 设置族与项目级信息族注） |
 
-**不改核**：本端设计面**无一处**要求核新增 / 修改能力——**不改核机制语义**；marker 家族端参数化与创建端字段住核侧（`thincoder-core/session-slots.mjs:99` / `:107` / `:109`），本端只声明端名并转口（`docs/desktop/design/SESSIONS.md` §1 KD-5）。
+**不改核**：本端设计面**无一处**要求核新增 / 修改能力——**不改核机制语义**；marker 家族端参数化与创建端字段住核侧（`thincoder-core/session-slots.mjs` 三处），本端只声明端名并转口（`docs/desktop/design/SESSIONS.md` §1 KD-5）。
 **核面例外（授权在案）** = 核面**纯加法**三处（槽字段 `effort` + `setSlotPrefs` 写出口 + `saveSession` 携带）。
 
 ## 4. 壳装配第三份
@@ -154,11 +154,11 @@ thincoder-desktop/                  ← 本端产品包
 3. 工具族装配（静态表 + 家族段 + 本端注入面）；
 4. 回合驱动与中断（`msg:send` / `msg:interrupt` → 核 run / abort 面）——**主侧本体已落**（单驱动器：在飞再发 ⇒ `busy`；中断 = `signal.abort()`；回执形 = `docs/desktop/design/IPC.md` §2）；**回合尾落盘已落**（三路终局 done / stopped / error 同序 `saveAgentSlot`——**先落盘再出终局事件**，
 `thincoder-desktop/src/main/session-io.mjs`）；**结算序 = 标题 → 落盘 → 读数 → 终局事件**（`settleTurn(key, agent)` 单实现——`thincoder-desktop/src/main/turn-face.mjs`；单源 = `docs/desktop/design/SESSIONS.md` §1 **KD-41**）；
-  UI 输入区与中断键**已落**（挂载 = `thincoder-desktop/renderer/mount-composer.mjs`——形态单源 = `docs/desktop/design/UI.md` §1 输入区行）；
+  - UI 输入区与中断键**已落**（挂载 = `thincoder-desktop/renderer/mount-composer.mjs`——形态单源 = `docs/desktop/design/UI.md` §1 输入区行）；
 5. 待审批项登记（供活动池计数与标签位——**同一事实只存一处**：挂起表在主进程，渲染面只呈现）；**响应通道** = 渲染面出口 `approval:respond`（`docs/desktop/design/IPC.md` §2——白名单 + 处理体，未装配 ⇒ fail-loud）；
-  **挂起表供给已落**——表住 `thincoder-desktop/src/main/suspensions.mjs`（**唯一持有点**：`promptId → { kind, shape?, key, resolve }`——`kind` **三值** = `approval` / `question` / `secret` · `shape` 两值 = `single` / `batch`（verdict 闭集选择 discriminator））·
-  **六操作** `askSingle` / `askBatch` / `askQuestion` / `askSecret` / `denyGates` / `respond`（`askQuestion`——提问门：登记后自 post `ev:question`，渲染面作答经 `question:respond` 回执解除；`askSecret`——凭据门：登记后自 post `ev:secret`，渲染面作答经 `secret:respond` 回执解除）·
-  verdict 闭集两套（逐项 `once` / `always` / `reject` ∥ 批门 `approveAll` / `deny` / `oneByOne`）· `promptId` 主侧生成 · 表清两时点 = 出站 respond ∨ 门 resolve。
+  **挂起表供给已落**——表住 `thincoder-desktop/src/main/suspensions.mjs`（**唯一持有点**：`promptId → { kind, shape?, key, resolve }`——`kind` **三值** = `approval` / `question` / `secret` · `shape` 两值 = `single` / `batch`（verdict 闭集选择 discriminator））：
+  - **六操作** `askSingle` / `askBatch` / `askQuestion` / `askSecret` / `denyGates` / `respond`（`askQuestion`——提问门：登记后自 post `ev:question`，渲染面作答经 `question:respond` 回执解除；`askSecret`——凭据门：登记后自 post `ev:secret`，渲染面作答经 `secret:respond` 回执解除）；
+  - verdict 闭集两套（逐项 `once` / `always` / `reject` ∥ 批门 `approveAll` / `deny` / `oneByOne`）· `promptId` 主侧生成 · 表清两时点 = 出站 respond ∨ 门 resolve。
 
 **两项端差**：MCP 连接（通道与探活 = `thincoder-desktop/src/main/mcp-servers.mjs`）· `attachManifest` 工程模式 M1 钩子；判据 = 真机（配置 MCP ⇒ 会话内工具可达 ∕ 工程模式 manifest 可达）。
 
@@ -187,13 +187,12 @@ thincoder-desktop/                  ← 本端产品包
 | `thincoder-desktop/src/main/turn-chain.mjs` | **99** | 续发链提取 |
 | `thincoder-desktop/src/main/agent-assemble.mjs` | **142** | 装配面 adapter（**消费核单源**：`assembleFor` = 核 `thincoder-core/agent/assemble.mjs` 调用 + `_slot` ∕ 校验调用；四名同名转口 `DEFAULT_DEPS` / `teamConfig` / `gitAuthor` / `validateProvider`；原路径同名 re-export 保名面——本档 §4）：回调桥 / 待决门 / 槽 I-O 三面成出档（下三行）；会话级偏好施加径 `setPrefs`（写盘 → `loadAgentSlot` 重施单点 · 在飞 `flights.has(key)` ⇒ 写盘受理 ∥ 施加顺延——KD-19）；`flagsOf(key)` 活值投影四布尔 + `respond` 成功径回执叠加 `{ key, flags }`（桌内翻转即时刷新面）；装配期两缝注册 `installExecRunSeams()`（`configureExecRun` + `configureProcessTreeKill`——VSC 同形）；MCP 合入缝第二源——项目根 `.mcp.json` 并入（单层读取 · `config.mcp.servers` 同名优先 · 装配期零确认；合并语义单源 = `docs/core/design/MCP.md` §6.4；落点 = `finalizeTools`）；`mcpWarningReminder(warnings)` 词面构造导出（首两段逐字同 CLI；末行 = 桌面可达出口；零警告 ⇒ `null`——装配尾入队住 `agent-host.mjs`） |
 | `thincoder-desktop/src/main/agent-bridge.mjs` | **331** | 回调桥出档：活动名闭集八名 + 协议行解析（`⟦ev⟧`）+ **二十回调** ⇒ `ev:*` 映射（`onSecretInput` ⇒ `ev:secret`）+ 工具参数摘要（与待决门共用口径）——注入 `post` / `askSingle` / `askBatch` / `askQuestion`（自挂起门出 `ev:question`，桥零文案）/ `askSecret`（凭据门），零宿主依赖 ⇒ 平 node 直测（映射单源 = `docs/desktop/design/IPC.md` §1）；`onDistilled` 回调（注入面 `persistDistilled(key)`——缺注入零动作） |
-| `thincoder-desktop/src/main/suspensions.mjs` | **167** | 待决门出档：两门 verdict 闭集（逐项 3 值 / 批门 3 值——核 `dispatch.mjs:281-289`）+ 待决表（挂起表 · **唯一持有点**：`promptId → { kind, shape?, key, resolve }`——`kind` = `approval` / `question` / `secret` · `shape` = `single` / `batch`（verdict 闭集选择 discriminator；码面随动 = `thincoder-desktop/src/main/suspensions.mjs:51` / `:60` / `:63`）+ **六操作**（`askSingle` / `askBatch` / `askQuestion` / `askSecret` / `denyGates` / `respond`）——表清两时点 = 出站 respond ∨ 门 resolve（本档 §4 项 5）；回执**五 reason** 不 resolve（`unknown-prompt` / `bad-kind` / `bad-verdict` / `bad-answer` / `bad-values`；单源 = `thincoder-desktop/src/main/suspensions.mjs:135-149`；`docs/desktop/design/IPC.md` §2） |
+| `thincoder-desktop/src/main/suspensions.mjs` | **167** | 待决门出档：两门 verdict 闭集（逐项 3 值 / 批门 3 值——核 `dispatch.mjs`）+ 待决表（挂起表 · **唯一持有点**：`promptId → { kind, shape?, key, resolve }`——`kind` = `approval` / `question` / `secret` · `shape` = `single` / `batch`（verdict 闭集选择 discriminator；码面随动 = `thincoder-desktop/src/main/suspensions.mjs` 三处）+ **六操作**（`askSingle` / `askBatch` / `askQuestion` / `askSecret` / `denyGates` / `respond`）——表清两时点 = 出站 respond ∨ 门 resolve（本档 §4 项 5）；回执**五 reason** 不 resolve（`unknown-prompt` / `bad-kind` / `bad-verdict` / `bad-answer` / `bad-values`；单源 = `thincoder-desktop/src/main/suspensions.mjs`；`docs/desktop/design/IPC.md` §2） |
 | `thincoder-desktop/src/main/exec-run.mjs` | **22** | exec-run 端面缝供值（`configureExecRun` ∕ `configureProcessTreeKill`——核件单源转口；装配期一次） |
 | `thincoder-desktop/src/main/prompt-injections.mjs` | **37** | 提示锚取值表（两枚核锚供值——进程入口一次、装配之前注册；bash 锚 = 执行器声明行） |
-| `thincoder-desktop/src/main/loop-sampler.mjs` | **77**（port 源 = `thincoder-vscode/src/extension/loop-sampler.mjs:67-76`；VSC **82**） | 宿主忙采样器（`failure` 分档三件之一——供行标分档；零宿主依赖面 ⇒ 平 node 直测） |
-| `thincoder-desktop/src/main/heap-watch.mjs` | **315**（四缝合件——采样 ∕ 快照 ∕ 现场 ∕ 冻结门与恢复动作；port 源 = CLI `thincoder-cli/src/heap-watch.mjs:41-79`（采样 ∕ 双档 ∕ warn 行）+ `thincoder-cli/src/crash-reports.mjs:79-92`（快照武装 ∕ 现场记录）+ Electron 冻结原语〔经注入〕） | 桌面堆遥测与冻结取证（60s 采样 · 双档 70 ∕ 85 · 进程标签 warn 行 · 快照 ∕ 现场动作编排 · **隔离形 = 策略面零 `electron`（顶层 import 面禁令）**——注入键点名 = `sample` ∕ `snapshot` ∕ `log`（+ 冻结 ∕ 恢复动作原语）⇒ 平 node 直测；装配 = `src/main/main.mjs`；单源 = **KD-53**） |
+| `thincoder-desktop/src/main/loop-sampler.mjs` | **77**（port 源 = `thincoder-vscode/src/extension/loop-sampler.mjs`；VSC **82**） | 宿主忙采样器（`failure` 分档三件之一——供行标分档；零宿主依赖面 ⇒ 平 node 直测） |
+| `thincoder-desktop/src/main/heap-watch.mjs` | **315**（四缝合件——采样 ∕ 快照 ∕ 现场 ∕ 冻结门与恢复动作；port 源 = CLI `thincoder-cli/src/heap-watch.mjs`（采样 ∕ 双档 ∕ warn 行）+ `thincoder-cli/src/crash-reports.mjs`（快照武装 ∕ 现场记录）+ Electron 冻结原语〔经注入〕） | 桌面堆遥测与冻结取证（60s 采样 · 双档 70 ∕ 85 · 进程标签 warn 行 · 快照 ∕ 现场动作编排 · **隔离形 = 策略面零 `electron`（顶层 import 面禁令）**——注入键点名 = `sample` ∕ `snapshot` ∕ `log`（+ 冻结 ∕ 恢复动作原语）⇒ 平 node 直测；装配 = `src/main/main.mjs`；单源 = **KD-53**） |
 
-**行数面机检**：`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`，运行根单读）**逐条声明节域——本表为其一**（本域值行单源）；后续本域新档由落盘批在本表补值行，`docs/desktop/design/PROJECT.md` §4.1 同拍补指针行（沿 §4.1 纪律）。
 
 ### 5.2 现有文件改动 · 批块（宿主族）
 
@@ -206,8 +205,8 @@ thincoder-desktop/                  ← 本端产品包
 | 5 | 巨块夹层：`thincoder-desktop/renderer/chat.css`（≈330——**≤500 ⇒ 免拆**）∥ `renderer/core.css`（332——**≤500 ⇒ 免拆**）∥ `renderer/views/chat-text.mjs`（分段窗住新档 + 挂载 ∥ 帧尾两层） | **CSS 支**（三处 `contain: layout style paint`；行级小增 ∕ 零语义；弃档 = `content-visibility`）＋ **JS 支**（新行 5b） | KD-54 ③ |
 | 5b | 巨块 **JS 支（分段挂载）**：`renderer/views/chat-text-segments.mjs`（**497**——**距 500 线余 3 行 ⇒ 贴层在册**）∥ `thincoder-desktop/renderer/views/chat.mjs`（**305**；**≤500 ⇒ 免拆**）∥ `renderer/views/chat-scroll.mjs`（**115**）∥ `thincoder-desktop/renderer/app.mjs`（**292**）∥ `renderer/frame-dispatch.mjs`（**53**）；`renderer/views/chat-text.mjs` **126**；测试 ∕ 探针 = 单元测试档（单元——**520 行 · 12 用例**；探针——**899 行**；单元测试档不计线（KD-4）） | 值口径 = 本档 §5.1 | KD-54 ③ ∕ §2.15 |
 | 6 | 测试 ∕ 探针 | 单元测试档 = 桌面堆取证修复族（采样 ∕ 双档 ∕ 阈值取 ∕ 键两态 ∕ 门序〔含 ping 径〕· once ∕ 5min 守卫 + 段界 ∥ 补偿 ∥ 回滚三用例；**520 行 · 12 用例**）——单元测试档不计线（KD-4）+ `-probe.mjs`（真机——装配 ∕ 快照落盘 ∕ 冻结门；**899 行**）+ 迭代探针 `…-e4js-live.mjs`（**252 行**）+ 读数档两枚 `…-readings.json` ∥ `…-e4js-live-readings.json`（数据件）；集成测试零动 | 全批 |
-| 7 | 文档面 | `docs/desktop/design/PROJECT.md`（§2 **KD-53** ∕ **KD-54**）· 本档 §5.2；随动 = `docs/desktop/design/RENDERER.md`：§2 两条（`MAX_RENDER_BLOCKS` ∕ 窗限增量——常量单源；`:125-131`）+ §1.1 挂起窗行（`:24`）∥ 1s 拍面（`:89`）∥ 块回收面（`:46`）；`docs/render-core/design/RENDER-CORE.md`（核面 owning 档——**KD-RC-11** + §6 随动段） | 全批 |
-| 8 | 核 `thincoder-render-core/flow/block.mjs` | **153**（两处续写支并入末文本节点——`:63-66` 文本 ∕ 推理支 ∥ `:47-49` toolOutput 支；语义等价（RAW 拼接逐字同 ∥ 零视觉差）；文本节点 O(chunks) ⇒ **O(1) ∕ 行**） | 内核面（§2.13 ∕ 核档 §2 KD-RC-11） |
+| 7 | 文档面 | `docs/desktop/design/PROJECT.md`（§2 **KD-53** ∕ **KD-54**）· 本档 §5.2；随动 = `docs/desktop/design/RENDERER.md`：§2 两条（`MAX_RENDER_BLOCKS` ∕ 窗限增量——常量单源）+ §1.1 挂起窗行 ∥ 1s 拍面 ∥ 块回收面；`docs/render-core/design/RENDER-CORE.md`（核面 owning 档——**KD-RC-11** + §6 随动段） | 全批 |
+| 8 | 核 `thincoder-render-core/flow/block.mjs` | **153**（两处续写支并入末文本节点——文本 ∕ 推理支 ∥ toolOutput 支；语义等价（RAW 拼接逐字同 ∥ 零视觉差）；文本节点 O(chunks) ⇒ **O(1) ∕ 行**） | 内核面（§2.13 ∕ 核档 §2 KD-RC-11） |
 
 | # | 档 | 行数 | 面 |
 |---|---|---|---|

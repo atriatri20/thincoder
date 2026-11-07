@@ -59,8 +59,8 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
   识别 = **形态判据**（ASCII 小写事件名 + 终止符 `\x1e`），**不得**用事件名枚举白名单（枚举 = 漏项发生器：
   新增事件名静默泄漏——`queued` / `cancelled` 已在发射面而旧六名白名单未跟，经 `agent_message_chunk` 泄漏）。
 - **R-A3.2**：剥离**不得**误伤正文——载荷含 `⟦ev⟧` 而**无** `\x1e` 终止符 ⇒ 仍转发（判据要求终止符同现）。
-- **R-A3.3**：判据与**既有形态判据对齐**（VSC 宿主消费面 `panel-callbacks.mjs:44,85` 的形态兜底）——核生成侧
-  `thincoder-core/agent/spawn-child.mjs:99-101` 系**枚举**放行判据；不自造第三套文法（relay 前缀文法单源见 R-A2.3）。
+- **R-A3.3**：判据与**既有形态判据对齐**（VSC 宿主消费面 `panel-callbacks.mjs` 的形态兜底）——核生成侧
+  `thincoder-core/agent/spawn-child.mjs` 系**枚举**放行判据；不自造第三套文法（relay 前缀文法单源见 R-A2.3）。
 - **R-A3.4**（可验判据）：带 `queued` / `cancelled` 事件名（含 relay 前缀形态）驱动的通道用例**零可见面文本**（零 `agent_message_chunk`；结构化子代理事件增量见 R-A5.11）；
   载荷含 `⟦ev⟧` 无终止符的用例**照常转发**；既有 T9 信号 token 用例不退红。
 
@@ -81,7 +81,7 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
   `set_config_option` 响应含**全量 `configOptions`**；`session/prompt` 入参取自 `params.prompt`。
 - **R-A5.5**：`fs/*` 反向 RPC 发出前必过客户端能力位（`readTextFile` / `writeTextFile`）；未宣告 ⇒ 回落本地（不得干等超时）。
 - **R-A5.6**：认证语义 = **凭据即时判据**（无跨调用闩锁）：`authenticate` 是**可选确认动作**（成功返回 `{}`；契约**禁止**客户端以 `terminal` 方法调它）；
-  凭据不可解析 ⇒ `-32000` 且文案可行动（门失败**单档** = 无 provider/key ⇒ 指向 config 与 `--login`；持 key 而 `defaultModel` 不可解析 ⇒ **放行**，不作门失败——统一解析口径见 `doc:PROVIDER.md:§6.22`）。
+  凭据不可解析 ⇒ `-32000` 且文案可行动（门失败**单档** = 无 provider/key ⇒ 指向 config 与 `--login`；持 key 而 `defaultModel` 不可解析 ⇒ **放行**，不作门失败——统一解析口径见 `docs/core/design/PROVIDER.md` §6.22）。
 - **R-A5.7**（可验判据）：无 TTY 的脚本化 stdio 客户端**全程不发 `authenticate`** 可完成 `initialize → session/new → session/prompt`（`stopReason:"end_turn"`）；
   非 TTY 下 `thincoder acp --login` **不挂死**（快速退出码非 0）。
 - **R-A5.8**：`usage_update` 含 `used` + `size` 齐备（契约 required——`size` = 模型上下文窗）；`session/list` 条目 `updatedAt` = **ISO 8601 字符串**（非 epoch 数）。

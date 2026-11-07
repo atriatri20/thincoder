@@ -19,7 +19,7 @@
 
 | # | 相对路径 / 对位 | 面 | 相似度 · 逐字节 | 分类 | 目标 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|---|---|---|
-| 116 | `traces/trace-store.mjs` | 同路径 | 0.1869 · 异 | ③ | 进核 | 取并集：目录 / 命名 / 字段取同一形态（现状已一致）+ 容量与清理策略取一侧（建议取 VSC 的完整落盘 + 每写 prune） | 分叉 ＝ 容量策略（CLI 单条 64K 截断 + 在途上限 8 丢记录 `src/traces/trace-store.mjs:96-106,240-247` / VSC 不截断不丢 `:22-23,218`）+ 清理时机（CLI 启动一次 / VSC 每写 prune）；默认开关两端皆 false | **①** | S1（建核补齐） |
+| 116 | `traces/trace-store.mjs` | 同路径 | 0.1869 · 异 | ③ | 进核 | 取并集：目录 / 命名 / 字段取同一形态（现状已一致）+ 容量与清理策略取一侧（建议取 VSC 的完整落盘 + 每写 prune） | 分叉 ＝ 容量策略（CLI 单条 64K 截断 + 在途上限 8 丢记录 / VSC 不截断不丢）+ 清理时机（CLI 启动一次 / VSC 每写 prune）；默认开关两端皆 false | **①** | S1（建核补齐） |
 
 ## 3. 须用户裁条目
 
@@ -27,7 +27,7 @@
 
 | # | 条目（路径 / 对位） | 命中 | 左端行为（CLI） | 右端行为（VSC） | 建议归一形态 | 影响面 | 裁定状态 |
 |---|---|---|---|---|---|---|---|
-| A21 | `traces/trace-store.mjs`（#116） | ① | 单条 >64K 截断（头 16K + 尾 48K）；在途上限 8 条、超了**丢记录**并打 stderr（`:96-106,240-247`）；清理在启动时跑一次 | 不截断、不丢弃，逐条完整落盘（`:22-23,218`）；**每写一次 prune**（每次多一遍目录扫描） | 取并集：目录 / 命名 / 字段取同一形态（现状已一致）+ 容量 / 清理策略取一侧（建议取 VSC 的完整落盘 + 每写 prune） | ① **默认关**（两端皆 `false`）⇒ 多数用户无感；开启后：CLI 的超大轨迹不再缺内容 / VSC 每次落盘多一次扫描；② 两端轨迹可合并分析（现状已可） | **已裁 · 按建议** |
+| A21 | `traces/trace-store.mjs`（#116） | ① | 单条 >64K 截断（头 16K + 尾 48K）；在途上限 8 条、超了**丢记录**并打 stderr（CLI 侧轨迹档的额度段与在途丢记录段）；清理在启动时跑一次 | 不截断、不丢弃，逐条完整落盘（VSC 侧同档容量段）；**每写一次 prune**（每次多一遍目录扫描） | 取并集：目录 / 命名 / 字段取同一形态（现状已一致）+ 容量 / 清理策略取一侧（建议取 VSC 的完整落盘 + 每写 prune） | ① **默认关**（两端皆 `false`）⇒ 多数用户无感；开启后：CLI 的超大轨迹不再缺内容 / VSC 每次落盘多一次扫描；② 两端轨迹可合并分析（现状已可） | **已裁 · 按建议** |
 
 ## 4. 对外契约影响
 
@@ -75,13 +75,14 @@
 - **整删支计数口径（D-TR11）**：整删支的 `removed` 计数 = 该批内 `.jsonl` 条目数（与 ③ 支逐文件计入同口径；非 `.jsonl` 不计数）——既有断言保持（整删支 `removed === 2`：含非 `.jsonl` 的目录落 ③、纯 `.jsonl` 过期目录落 ①，两路合计数不变）。
 - **非日期名 / 非法日目录归类（D-TR11）**：目录名不以 `YYYY-MM-DD` 解析（日期解析 NaN），**或为非法日（解析归一后 ≠ 原日**——如 `2026-02-31`）⇒ ①② 两条件恒假 ⇒ **回落 ③ 逐文件支**（现行语义；非 `.jsonl` 一律不碰）。
 - **D-TR12 每写 prune 节流**：`maybePruneTraces`（`recordChatTrace` 写盘成功后调用）——模块级窗口 `PRUNE_THROTTLE_MS`（10 分钟）+ 在飞合并；`cleanupTraces` 本体保持无状态（启动面 / 手动面直调）。判据 = 同窗 3 连写 ⇒ 扫描 ≤1 次。
-  **测试缝（D-TR12）**：节流为模块级状态（**跨用例残留**）——缝 = 既有先例 `_resetTraceStateForTest`（`thincoder-core/traces/trace-store.mjs:106`）扩展为**一并复位节流窗**（或给节流面注入 now 缝），用例须显式复位。
-- **D-TR13 启动清理触发面收窄（白名单）+ 启动窗外延迟拍**：启动清理仅在**会话型命令白名单**执行——`tui`（**含无参默认路径 `command === undefined`**，`thincoder-cli/src/command-table.mjs:93-94` `case "tui": case undefined:`）/ `chat` / `acp`；
-白名单外命令一律零启动清理（一次性 / 信息命令 `--version` / `-v` / `--help` / `completion`，及 `memory` / `sync` / `reindex` / `distill` / `upgrade` / `session`）；闸位 = 命令解析之后（同档 `:40`）；启动清理白名单判定 = 同档 `:144`；
-判据 = `--version` 总时长 ≤0.5s + **无参启动仍执行启动清理**；策略裁决不变——清理照常执行，只是不在白名单外命令启动时执行。
+  **测试缝（D-TR12）**：节流为模块级状态（**跨用例残留**）——缝 = 既有先例 `_resetTraceStateForTest`（`thincoder-core/traces/trace-store.mjs` 的同名导出）扩展为**一并复位节流窗**（或给节流面注入 now 缝），用例须显式复位。
+- **D-TR13 启动清理触发面收窄（白名单）+ 启动窗外延迟拍**：启动清理仅在**会话型命令白名单**执行——`tui`（**含无参默认路径 `command === undefined`**，`thincoder-cli/src/command-table.mjs` 的 `case "tui": case undefined:` 分支）/ `chat` / `acp`。
+- **白名单外命令零启动清理**：一次性 / 信息命令 `--version` / `-v` / `--help` / `completion`，及 `memory` / `sync` / `reindex` / `distill` / `upgrade` / `session`。
+- **闸位** = 命令解析之后（`thincoder-cli/bin/thincoder.mjs` 的白名单 `if` 行）；启动清理白名单判定 = 同档的 `scheduleTraceCleanup` 调用点。
+- **判据** = `--version` 总时长 ≤0.5s + **无参启动仍执行启动清理**；策略裁决不变——清理照常执行，只是不在白名单外命令启动时执行。
 **启动清理 = 启动窗外延迟拍**：
 
-闸内（同档 `:144-149`）不直呼 `cleanupTraces`，改经**核侧调度器** `scheduleTraceCleanup({ dir, retentionHours })`（`thincoder-core/traces/trace-cleanup.mjs` 导出）——`setTimeout` 延迟点火（`TRACE_CLEANUP_DELAY_MS` = **3s**，自调度点起；与 D-SE39 的 `GC_PASS_DELAY_MS` 同值同形态——启动窗 ≤2s 之外留 ≈1s 裕度；**不 unref**——保后台排空现状，与 D-SE39 同向）。
+闸内（白名单命中的那条命令分支）不直呼 `cleanupTraces`，改经**核侧调度器** `scheduleTraceCleanup({ dir, retentionHours })`（`thincoder-core/traces/trace-cleanup.mjs` 导出）——`setTimeout` 延迟点火（`TRACE_CLEANUP_DELAY_MS` = **3s**，自调度点起；与 D-SE39 的 `GC_PASS_DELAY_MS` 同值同形态——启动窗 ≤2s 之外留 ≈1s 裕度；**不 unref**——保后台排空现状，与 D-SE39 同向）。
 
 `dir` 由调度点捕获（调用面取 `tracesRoot()`）；失败静默保持（`.catch(() => {})` 移入调度器——fire-and-forget 语义不变）；白名单 / 闸位 / 每进程一次语义均保持（启动面恰一处调用——调度器无去重闸）；进程早退（显式 `process.exit`）未及拍 ⇒ 本次不执行（幂等——下次会话型命令照常清理）。
 **注（一次性命令排空 · 与 D-SE39 同向）**：不 unref ⇒ 一次性命令（`chat`）的进程自然排空被延迟拍推后 ≤3s（设计内后果——不损正确性，仅进程退出稍候）。

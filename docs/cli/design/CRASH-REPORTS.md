@@ -48,7 +48,7 @@
 
 - 淘汰阈值 = 30 天；**写时自清理**，搭车点三处：`writeCrashRecord` 写后 · `prepareCrashReporting` 入口 mkdir 后 · `recentCrashHint` 启动扫描前
   （纯 fatal 序列 JS 不运行 → 由下个进程的入口 mkdir 兜底清理）。
-- **purge 模式集 ≠ 提示判定集**（`crash-reports.mjs:46` / `:49`）：
+- **purge 模式集 ≠ 提示判定集**（`crash-reports.mjs` 的两处判定段）：
   - purge 覆盖 `crash-*.json` · `report.*.json` · `tui-stderr-*.log` · `Heap.*.heapsnapshot`；
   - 「上次异常终止」提示**只计前两类**——tui-stderr 每次 TUI 启动都生成（正常退出也留档）、堆快照非「异常终止」证据类，
     计入即正常会话误报。
@@ -72,13 +72,13 @@
 
 - 键：`diagnostics.heapSnapshot`（布尔；判定 / 默认在 `thincoder-core/config.mjs` 装载面）；**判定单点 = bin 入口读键后以显式参数传入**（`prepareCrashReporting({ heapSnapshot })`——包装器不判定，防两处判定漂移）。
 - 判定：键值 `true` → 武装；缺省 / 其余值 / 读失败 → **不武装**（默认关——隐私默认〔traces D-TR6 同族〕；判定形 fail-closed）。**显式开的生效时点分端**：桌面会话热读（运行期即时）∥ CLI 本进程下次启动（判定单点 = 进程启动读键）。
-- 通道纪律（自有配置禁经 env）= `CONFIG.md` §6.2。
+- 通道纪律（自有配置禁经 env）= `docs/core/design/CONFIG.md` §6.2。
 - 包装器的 `--diagnostic-dir` **无条件注入**（开关已关时该参数无副作用面——报告目录由 `process.report.directory` 决定，同值）。
 
 ### 3.3 TUI 定向（`--diagnostic-dir`）
 
 - `wrapped-spawn.mjs` 子 argv **首位**注入 `--diagnostic-dir=<crashReportsDir()>`
-  （Node 选项须在脚本路径前：`[--diagnostic-dir=…, script, ...原始 argv]`——`thincoder-cli/src/tui/wrapped-spawn.mjs:44`）。
+  （Node 选项须在脚本路径前：`[--diagnostic-dir=…, script, ...原始 argv]`——`thincoder-cli/src/tui/wrapped-spawn.mjs`）。
 - 目录由包装前置 mkdir——写时目录必在（目录缺失 = 快照丢失面）。
 - **落点按路径分裂（如实登记的已知边界）**：TUI（主路径 = 实测崩溃路径）→ crash-reports（与既有取证物同址 + 纳入 30 天清理）；
   其余路径保留 Node 默认 CWD（无运行时定向手段，不为单一路径引入双击进程）。

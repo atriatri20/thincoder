@@ -1,33 +1,33 @@
 # Thincoder Server · 计量（metering/METERING）
 
-> 板块 = server ∥ 本档 = metering 域（记账 ∥ 配额 ∥ 查询）；板总览 = `PROJECT.md`（文档地图 = §3）。
-> 需求单源 = `docs/server/requirements/PROJECT.md`（功能点 3 ∥ 4）；本域回指 = `PROJECT.md` §7（AC-3 ∥ AC-4 判据 = 本档 §4）。
+> 板块 = server ∥ 本档 = metering 域（记账 ∥ 配额 ∥ 查询）；板总览 = `docs/server/design/PROJECT.md`（文档地图 = §3）。
+> 需求单源 = `docs/server/requirements/PROJECT.md`（功能点 3 ∥ 4）；本域回指 = `docs/server/design/PROJECT.md` §7（AC-3 ∥ AC-4 判据 = 本档 §4）。
 
 ## 1. 记账（usage）
 
 - 落库 = **请求终结后同一事务三写**（请求结束 ∥ 流终结 ∥ 客户端断开时）：`usage` 行 INSERT + `usage_daily` upsert（计数 +1 ∥ token/时长/错误数累加） + `quota_counters` upsert（token 累加）——单写点 `recordUsage`（KD-SV-8 修订——§6）；
   两 upsert 的 `day`/`month` 键 = 行 `ts` 推导（`strftime(…, ts / 1000, 'unixepoch', 'localtime')`——与 v5 回填/对账 SQL 同表达式；非入账时刻）；
-  任一步失败 ⇒ 整事务回滚（两派生面零漂移）；表结构 = `store/STORE.md` §2 v5 段。
+  任一步失败 ⇒ 整事务回滚（两派生面零漂移）；表结构 = `docs/server/design/store/STORE.md` §2 v5 段。
 - 行形 = 一行/请求：成员 × key × 模型（**`provider` ∥ `model` 两字段** = 内部真名（转发/存储零涉）——对外显示 = **别名回映射**（配别名 ⇒ 别名 ∥ 未配 ⇒ `provider/model`；回映射单源 = `thincoder-server/src/gateway/providers.mjs` 别名索引——KD-SV-59）；`model` 可含斜杠；嵌入行 `provider = ''`——无前缀命名空间，仅统计照记） × 时段（`ts`） × token（三列 + 状态/端点/流式标记/耗时）；
   token 三列 = **上游 usage 原值**（逐值不加工——AC-3 判据单源）；上游未回 ⇒ 三列 NULL（status 照记实况；派生日表该行 token 计 0）。
-- 提取来源 = gateway 侧 tap 扫描（`gateway/API.md` §2.1）。
+- 提取来源 = gateway 侧 tap 扫描（`docs/server/design/gateway/API.md` §2.1）。
 - **管理面 chat 出账**：管理面 chat（**含唤醒回合**）的模型调用 = 本 server 网关链的进程内客户端（loopback）⇒ 与四端客户端**同径出账**：
-  `usage` 行归因 = 本回合发送者（`member`——缺位 ⇒ 会话 owner；2026-10-13 收正——谁用谁）× 该成员的 `admin-agent` key（`keyName` = `admin-agent`）；端点/流式/状态列 = 网关侧实况（与客户端同径）；配额/限流/禁用三件同门生效（阻断面 = 网关错形）。机制全文 = `agent/ADMIN-AGENT.md` §16.2/§16.3。
+  `usage` 行归因 = 本回合发送者（`member`——缺位 ⇒ 会话 owner；2026-10-13 收正——谁用谁）× 该成员的 `admin-agent` key（`keyName` = `admin-agent`）；端点/流式/状态列 = 网关侧实况（与客户端同径）；配额/限流/禁用三件同门生效（阻断面 = 网关错形）。机制全文 = `docs/server/design/agent/ADMIN-AGENT.md` §16.2/§16.3。
 - **派生两表 = 汇表面读源 ∥ 检查面点查源**（`usage_daily` ∥ `quota_counters`——粒度/字段 = §2.3；**可随时自 usage 重算**——对账命令 = §2.5）；仅 `usage` 为真源——明细/导出/审计毫秒精度零改。
-- 保留 = **保留窗（配置化——`usageRetentionDays`，`ops/OPS.md` §1）**：缺省 90 天（论证 = 配额周期 = 月 ⇒ 跨月可见必需；统计回看惯例 = 一季 ⇒ 90 天覆盖；表只增不减 = 无界增长面 ⇒ 缺省窗收口）；`null` = 不限（保留全量——显式开）；非正整数 ⇒ 拒启。
+- 保留 = **保留窗（配置化——`usageRetentionDays`，`docs/server/design/ops/OPS.md` §1）**：缺省 90 天（论证 = 配额周期 = 月 ⇒ 跨月可见必需；统计回看惯例 = 一季 ⇒ 90 天覆盖；表只增不减 = 无界增长面 ⇒ 缺省窗收口）；`null` = 不限（保留全量——显式开）；非正整数 ⇒ 拒启。
 - 清理 = **删除式**（`pruneUsage`——`thincoder-server/src/metering/`）：usage（`ts <` 界 ∥ 走 `idx_usage_ts`） + `usage_daily`（`day <` 界日） + `quota_counters`（`month <` 界月）**三删同事务同窗**；时机 = **启动一次 + 每 24h**（实现常量；入口接线 = `thincoder-server/bin/thincoder-server.mjs`）；无归档面（§8）。
-- **审计事件同窗同清**：`audit_events`（v3）清理复用本保留窗与调度点（启动一次 + 24h——`accounts/ACCOUNTS.md` §2.1；保留治理单旋钮）。
+- **审计事件同窗同清**：`audit_events`（v3）清理复用本保留窗与调度点（启动一次 + 24h——`docs/server/design/accounts/ACCOUNTS.md` §2.1；保留治理单旋钮）。
 - **清理失败口径 = 启动 fail-closed ∥ 周期 fail-open**：启动一次（抛 ⇒ `startup_failed` + 退出码 1） ∥ 周期（`usage_prune_failed` warn 续跑）。
 - **查询面口径**：保留窗不涉查询契约（窗外行自然不在结果——`from` 早于窗界亦同；非错）∥ **明细面（`/api/usage` ∥ `/api/me/usage` ∥ export ∥ 审计）= `usage`（真源——毫秒精度）** ∥ **汇表面（summary/totals/key 窗/成员月累计）= `usage_daily`（本地日粒度——窗沿取整含端日；API 形零变——KD-SV-39）**。
 
 ## 2. 配额（分模型三级·计数准入——KD-SV-38）
 
-### 2.1 三级生效（需求 §2:21——用户 09:28）
+### 2.1 三级生效（需求 §2 功能点 21——用户 09:28）
 
 - ① **成员 × 模型覆盖** = `members.model_quotas_json`（JSON map——键 = 对外标识（别名 ∥ `provider/model`）；值 = ≥0 整数；未设 = 用平台） ⇒ ② **模型平台默认** = `providers.settings_json[上游模型名].quotaTokens`（未设 = 不限） ⇒ ③ **不限**。覆盖 = 整值替换（可高于 ∥ 低于平台——用户 09:28「覆盖平台设置」字面）。
   **键随别名随动**（KD-SV-59）：写面键形 = 当前对外标识（配别名模型 ⇒ 别名形）；别名变更 ⇒ 旧形键落入离表键（恒保留、不生效——无历史/迁移）。
 - 单位 = token（`total_tokens` 口径） ∥ 周期 = 自然月（服务器本地时区；月键 = `'YYYY-MM'`——平台 ∥ 覆盖同窗，用户 09:30）。
-- 配置落点 = 服务模型页配置弹窗（平台——`webui/ADMIN.md` §2.1③） ∥ 成员弹窗（覆盖——`webui/ADMIN.md` §2.1②）；写面 = `POST /api/members/:id/model-quotas`（键级合并——§3） ∥ PATCH `settings`（平台）。
+- 配置落点 = 服务模型页配置弹窗（平台——`docs/server/design/webui/ADMIN.md` §2.1③） ∥ 成员弹窗（覆盖——`docs/server/design/webui/ADMIN.md` §2.1②）；写面 = `POST /api/members/:id/model-quotas`（键级合并——§3） ∥ PATCH `settings`（平台）。
 
 ### 2.2 检查点与超限形
 
@@ -53,13 +53,13 @@
 
 ### 2.5 对账与修复（防漂移兜底）
 
-- `node src/ops/cli.mjs --config <档> usage reconcile [--month YYYY-MM] [--fix]`（本机直开库——`ops/OPS.md` §3）：对账面 = `usage_daily` + `quota_counters` **vs usage 重算**（缺省窗 = 当本月；重算 = 同回填 SQL 逐值）；只报缺省——`--fix` = 以重算值覆写；读数 = 漂移行清单 + 合计；
+- `node src/ops/cli.mjs --config <档> usage reconcile [--month YYYY-MM] [--fix]`（本机直开库——`docs/server/design/ops/OPS.md` §3）：对账面 = `usage_daily` + `quota_counters` **vs usage 重算**（缺省窗 = 当本月；重算 = 同回填 SQL 逐值）；只报缺省——`--fix` = 以重算值覆写；读数 = 漂移行清单 + 合计；
   `--fix` 路径 = **读快照与覆写同事务**（`BEGIN IMMEDIATE` 先行——CLI 对账 × server 记账的跨进程并发窗闭合；报告路径（无 `--fix`）零改）。
 - 口径注：对账只对**完整月**有意义（当本月 ∥ 指定月；保留窗切割月含清理残差——读数自明）；两派生表自 usage 全量可重算（真源单点）。
 
 ## 3. 查询与额度端点（本域）
 
-（错误形 = `gateway/API.md` §3；写端点仅收 `application/json`；同族其余端点 = `accounts/ACCOUNTS.md` §3）
+（错误形 = `docs/server/design/gateway/API.md` §3；写端点仅收 `application/json`；同族其余端点 = `docs/server/design/accounts/ACCOUNTS.md` §3）
 
 | 方法 + 路径 | 鉴权/角色 | 语义 |
 |---|---|---|
@@ -71,10 +71,14 @@
 | `POST /api/members/:id/model-quotas` | admin | 设分模型覆盖（键级合并）：`{quotas: {"<对外标识（别名 ∥ provider/model）>": N|null}}`——值 null = 删键 ∥ ≥0 整数；未出现键不动；**键形校验** = 非空 ∥ 无首尾空白 ∥ 含斜杠时两段非空（裸名 = 别名形合法）∥ 非法键 ⇒ 400（库零变）；返回 `{id, modelQuotas}` |
 
 （过滤参数 `endpoint` ∈ `chat` ∥ `embeddings`（缺省 = 不过滤；非法值 ⇒ 400 `invalid_request_error`）——五读端点同门（两明细 ∥ 两报表 ∥ 导出）；`model` 过滤 = 对外标识形；解析优先级：`endpoint = embeddings` 在场 ⇒ 全串按 `provider = ''`（嵌入命名空间——嵌入名可含斜杠，不切分）∥ 否则**先经别名索引反查**（命中 ⇒ 真名对——KD-SV-59）∥ 未命中且含斜杠 ⇒ `(provider, model)` 逐值对 ∥ 否则 ⇒ `provider = ''`。
+
   **读面回映射**：明细行 `model` ∥ 报表 `byModel`/`trendByModel` 维值 ∥ 成员月表 —— 配别名 ⇒ 显示别名（改别名 ⇒ 当即随动——无历史；映射单源 = `thincoder-server/src/gateway/providers.mjs` 别名索引）。
+
   **数据源分面**：明细 ∥ 导出 = `usage`（真源——毫秒精度零改）∥ 报表两面（`summary`——管理面 ∥ 本人面）/totals/key 窗/成员月累计 = 预聚合日表 `usage_daily`（本地日粒度——窗沿取整含端日；API 形零变）；**key 窗 ∥ 报表缺省窗 = 近 30 个本地日（今日起回溯——同构；`KEY_USAGE_WINDOW_DAYS` ∥ `USAGE_SUMMARY_DAYS`）**。）
 
-**派发 ∥ 过滤两径不对称**（澄清——事实源 = `thincoder-server/src/metering/report.mjs:48-56`（过滤） ∥ `gateway/API.md:32-33`（派发））：派发 = 对外标识精确匹配、未命中 ⇒ **404 `model_not_found`**（配了别名只认别名）；过滤 = **逐值可达**——`model` 过滤值不校可达性（别名反查命中 ⇒ 真名对 ∥ 未命中 ⇒ 逐值对回落）——**过滤值不必是可达的派发名**：已配别名模型的 `provider/model` 名派发 404、过滤照经逐值对命中既有行；两径互不代偿。
+**派发 ∥ 过滤两径不对称**（澄清——事实源 = `thincoder-server/src/metering/report.mjs`（过滤） ∥ `docs/server/design/gateway/API.md` §2.1（派发））：派发 = 对外标识精确匹配、未命中 ⇒ **404 `model_not_found`**（配了别名只认别名）。
+
+过滤 = **逐值可达**——`model` 过滤值不校可达性（别名反查命中 ⇒ 真名对 ∥ 未命中 ⇒ 逐值对回落）——**过滤值不必是可达的派发名**：已配别名模型的 `provider/model` 名派发 404、过滤照经逐值对命中既有行；两径互不代偿。
 
 ## 4. 验收判据（机检）
 
@@ -84,8 +88,8 @@
 | AC-4（功能点 4） | 额度 = N ∥ 已用 ≥ N ⇒ 下一请求 **429 + `quota_exceeded` + 可读提示**；未超额 ⇒ 放行（200） | 单元测试档 |
 | AC-13⑥（功能点 12——用量保留；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 窗内旧行删除（注入时钟：刚出窗的行删、窗内行留）∥ `null` ⇒ 零删 ∥ 启动清理 + 24h 周期接线（单元测试档直调 `pruneUsage` + 断言入口接线）∥ 查询面三端点回归零变 | 单元测试档 |
 | AC-15②（功能点 15——用量看板升级；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 与 `/api/usage` **同源**（同一过滤面；数据源 = 预聚合日表——本地日粒度）：注入行集（日对齐窗）⇒ `summary.totals` 逐值 = 明细归并 ∥ trend 按日归并逐值 + 零填充全长 ∥ byModel（provider×model **两列聚合**——回拼展示）/byMember 降序逐值；CSV/明细 = 真源行集（列形 ∥ RFC 4180 转义 ∥ ISO ts ∥ 空单元格 ∥ BOM）；空集 ⇒ 空数组/totals 0/仅表头（零错）；`endpoint` 过滤（两合法值生效 ∥ 非法 400——五读端点同门）∥ `summary`/`export` 判权三态（user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200）∥ 实测：30 天窗四查合计 p50 ≈11ms @500k（原明细口径 ≈2.7–4.8s——同构探针；KD-SV-39） | 单元测试档 |
-| AC-21（功能点 21——配额分模型；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① 平台「每人每月默认用量」= settings `quotaTokens`（PATCH 保存即热生效 ∥ 非法 ⇒ 400 库与运行时零变）∥ ② 成员覆盖可设（`POST /api/members/:id/model-quotas` 键级合并 ∥ null 删键 ∥ 非法 400 ∥ 404）∥ ③ 三级序逐级生效（覆盖 > 平台 > 不限；短路 = 零 SQL——计数探针注入）∥ ④ 检查 = 仅 chat（派发命中后/转发前）∥ 窗口 = 自然月（服务器本地时区——月键 `'YYYY-MM'`；跨零点/跨月（含月初终结）键随行 `ts`、新月键零起）∥ 超限 ⇒ 429 `quota_exceeded`（message 含模型）且他模型不受累 ∥ ⑤ 嵌入零检查（旧总额检查已移除）∥ 旧总量字段退役（旧列不在 schema ∥ 旧端点 404）（判据全文 = `webui/WEBUI.md` §6 AC-21 行 + `gateway/API.md` §5 AC-21 行） | 单元测试档 |
-| AC-23（功能点 23①——逐行已用数据面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `monthlyCountersByMember`：逐值 = 注入记账归并（自然月键——与配额检查同源同窗）∥ 外标回拼无损（`model` 带斜杠 ∥ 嵌入行单段）∥ `memberId` 给定（唯一键前缀）与全员装配逐值相等 ∥ 控制面字段形 = `webui/WEBUI.md` §6 AC-23 行 | 单元测试档 |
+| AC-21（功能点 21——配额分模型；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① 平台「每人每月默认用量」= settings `quotaTokens`（PATCH 保存即热生效 ∥ 非法 ⇒ 400 库与运行时零变）∥ ② 成员覆盖可设（`POST /api/members/:id/model-quotas` 键级合并 ∥ null 删键 ∥ 非法 400 ∥ 404）∥ ③ 三级序逐级生效（覆盖 > 平台 > 不限；短路 = 零 SQL——计数探针注入）∥ ④ 检查 = 仅 chat（派发命中后/转发前）∥ 窗口 = 自然月（服务器本地时区——月键 `'YYYY-MM'`；跨零点/跨月（含月初终结）键随行 `ts`、新月键零起）∥ 超限 ⇒ 429 `quota_exceeded`（message 含模型）且他模型不受累 ∥ ⑤ 嵌入零检查（旧总额检查已移除）∥ 旧总量字段退役（旧列不在 schema ∥ 旧端点 404）（判据全文 = `docs/server/design/webui/WEBUI.md` §6 AC-21 行 + `docs/server/design/gateway/API.md` §5 AC-21 行） | 单元测试档 |
+| AC-23（功能点 23①——逐行已用数据面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `monthlyCountersByMember`：逐值 = 注入记账归并（自然月键——与配额检查同源同窗）∥ 外标回拼无损（`model` 带斜杠 ∥ 嵌入行单段）∥ `memberId` 给定（唯一键前缀）与全员装配逐值相等 ∥ 控制面字段形 = `docs/server/design/webui/WEBUI.md` §6 AC-23 行 | 单元测试档 |
 | AC-22（功能点 22——模型标识分字段；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① 记账 ∥ 计数行备 `provider`/`model` 两字段（回拼无损——含 `model` 带斜杠 ∥ 嵌入 `provider = ''`）∥ ② 统计聚合 = 列直操作（provider ∥ model ∥ 两者——`summary.byModel` 两列聚合；无字符串切分）∥ ③ 迁移拆分回填抽样比对（与旧复合值首斜杠拆逐值相等）∥ 对外契约不变（API/展示斜杠形——回拼） | 单元测试档 |
 | AC-15⑥（功能点 15——key 明细数据面；已落需求档） | `keyUsageStats`：`lastUsedAt` = `MAX(ts)`（key_id 归因——读 `usage`） ∥ `windowTokens` = 近 30 个本地日（今日起回溯——与报表窗同构；读 `usage_daily`；`KEY_USAGE_WINDOW_DAYS`）——逐值 = 注入 usage 行推导；从未使用 ⇒ `null`/0；`/api/me` 与 `/api/members` key 行同形（单源 = `memberView`） | 单元测试档 |
 | AC-26（功能点 26——我的用量页图表化） | `GET /api/me/usage/summary`：① 判权 = 本人（无会话 ⇒ 401；user ∥ admin 会话 ⇒ 200 且恒本人——双成员注入 ⇒ 响应只含本人值）∥ ② 逐值/零填充（totals 四字段 = 明细归并（日对齐窗）——prompt/completion/total 各自相等 ∥ trend 按日零填充全长 ∥ 两维序逐（维值 × 日）零填充（缺日 = 0） ∥ byModel 降序）∥ ③ 过滤器同门（model ∥ endpoint ∥ from/to 生效；非法 endpoint ⇒ 400——五读端点同门）∥ ④ 空集 ⇒ totals 全 0 + trend 全零全长 + 两维序/排行空数组（零错）∥ ⑤ admin 端点零动（`/api/usage/summary` 响应形与既有件回归零改） | 单元测试档 |
@@ -145,6 +149,6 @@
 ## 8. 本域边界（不做的面）
 
 - 归档面不做（清理 = 删除式保留窗——§1；`null` 可关）∥ 阈值告警（80% 等——需求 §4 不做）∥ 金额/计费（对外计费 = 不做项）∥ token 预估/预扣（无 tokenizer——不做）。
-- **明细导出 = 在**（CSV——§3；「导出」= 当前数据集下载，非归档语义——不涉保留窗）；JSON 导出不另设（`/api/usage` 即 JSON 面）∥ **汇表面 = 预聚合日表**（覆盖索引未采——§2.4）∥ 明细面毫秒精度不变（真源）∥ **我的用量页图表 = 在**（本人过滤复用：`GET /api/me/usage/summary`；管理面专属面收窄 = 跨成员过滤/排行 ∥ CSV 导出 ∥ 管理看板页——`webui/ME.md` §2.2）；本人面导出不另设（否）∥ 小时/周粒度未设（日/月两键为限）。
+- **明细导出 = 在**（CSV——§3；「导出」= 当前数据集下载，非归档语义——不涉保留窗）；JSON 导出不另设（`/api/usage` 即 JSON 面）∥ **汇表面 = 预聚合日表**（覆盖索引未采——§2.4）∥ 明细面毫秒精度不变（真源）∥ **我的用量页图表 = 在**（本人过滤复用：`GET /api/me/usage/summary`；管理面专属面收窄 = 跨成员过滤/排行 ∥ CSV 导出 ∥ 管理看板页——`docs/server/design/webui/ME.md` §2.2）；本人面导出不另设（否）∥ 小时/周粒度未设（日/月两键为限）。
 - 成员面读（逐模型已用）= 与配额同窗（自然月——§2.3）；报表/key 面 = 近 30 个本地日——两窗并存为设计（配额周期 = 自然月——KD-SV-6）；成员总额（`usedTokens`）含嵌入行（现口径保持）。
 - 别名面不做（KD-SV-59）：记账/计数存储 = 真名两字段零改（对外标识 = 读面回映射）；别名历史/迁移不做（改别名 ⇒ 读面当即随动、旧形键 = 离表键保留）；CLI `usage reconcile` 读数 = 内部真名（运维面——非成员对外面）。

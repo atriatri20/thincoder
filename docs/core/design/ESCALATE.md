@@ -92,18 +92,18 @@ subagent(action:"escalate")
 
 | 环节 | 核 / CLI | VSC |
 |---|---|---|
-| 工具面 | `thincoder-core/agent-tools/subagent.mjs:2`（ONE tool, EIGHT actions）· `:94-102`（动作清单含 escalate） | `thincoder-vscode/src/agent-tools/subagent.mjs`（同形动作面） |
-| 动作执行器 | `thincoder-core/agent-tools/subagent-actions.mjs:23`（`launchEscalateAsync`）· `:6`（`executeEscalateAction` §19） | |
-| async runner | `thincoder-core/agent-tools/escalate-async.mjs:2-8`（缺省 async / other 池 / 共享 4 槽）· `:142-149`（入池） | |
-| 池域 | `thincoder-core/agent-tools/subagent-async.mjs:55`（`ASYNC_POOL_LIMITS = { engCoder: 4, other: 4 }`）· `:62-65`（`poolDomainOf`——escalate 以 role coder 落 other 池） | 同源（池域机制见 `AGENT-LOOP.md`） |
+| 工具面 | `thincoder-core/agent-tools/subagent.mjs`（头注 ONE tool, EIGHT actions）· 同档的动作清单（含 escalate） | `thincoder-vscode/src/agent-tools/subagent.mjs`（同形动作面） |
+| 动作执行器 | `thincoder-core/agent-tools/subagent-actions.mjs`（`launchEscalateAsync`）· 同档（`executeEscalateAction`） | |
+| async runner | `thincoder-core/agent-tools/escalate-async.mjs`（头注：缺省 async / other 池 / 共享 4 槽）· 同档的入池段 | |
+| 池域 | `thincoder-core/agent-tools/subagent-async.mjs`（`ASYNC_POOL_LIMITS = { engCoder: 4, other: 4 }`）· 同档的 `poolDomainOf`（escalate 以 role coder 落 other 池） | 同源（池域机制见 `AGENT-LOOP.md`） |
 | 结算 helper | `thincoder-core/agent-tools/async-settle.mjs`（`settleAsyncEntry` / `buildChildSignal`） | |
-| 深度护栏 | `thincoder-core/agent-tools/subagent-actions.mjs:47`（`(ctx.depth ?? 0) > 0` → 明确错误） | |
+| 深度护栏 | `thincoder-core/agent-tools/subagent-actions.mjs` 的深度判据（`(ctx.depth ?? 0) > 0` → 明确错误） | |
 | 工程模式禁用 | fail-closed（实现走 eng-coder spawn） | 同位 |
-| 撞墙继续（同步路径） | `thincoder-core/agent-tools/subagent-actions.mjs:194`（`runWithContinue` + `onPermissionRequest("continue")` y/n 面板——主会话同款） | |
-| 子代理构建 | `createAgent({ provider, tools, config, cwd, memory, role: "coder" })`（async `thincoder-core/agent-tools/escalate-async.mjs:195` · 同步 `subagent-actions.mjs:165`）——人格槽由 `assemblePrompt` 场景表承载 | 同形 |
-| provider 解析 / 改动合并 | `resolveChildProvider`（`thincoder-core/agent-tools/subagent-async.mjs:138`）· `mergeChildMutations`（`:430`） | 同形机制 |
-| 活动流上屏 | relay 前缀 `escalate#<id>/`（`thincoder-core/agent-tools/escalate-async.mjs:158`）→ TUI 子代理活动区块（no-preview legacy 面——`thincoder-cli/src/tui/tool-events.mjs:227-238`） | |
-| 配置入口 / 提示词条款 | `/config` 候选池管理（`thincoder-cli/src/tui/cmd-config-menus.mjs`——上限 5 条 `:110`）· 飞刀条款 = `thincoder-core/prompts/discipline-normal.md` | Settings 面板（VSC 专有面——见 VSC 迁移台账） |
+| 撞墙继续（同步路径） | `thincoder-core/agent-tools/subagent-actions.mjs` 的续跑段（`runWithContinue` + `onPermissionRequest("continue")` y/n 面板——主会话同款） | |
+| 子代理构建 | `createAgent({ provider, tools, config, cwd, memory, role: "coder" })`（async 在 `thincoder-core/agent-tools/escalate-async.mjs` · 同步在 `subagent-actions.mjs`）——人格槽由 `assemblePrompt` 场景表承载 | 同形 |
+| provider 解析 / 改动合并 | `resolveChildProvider`（`thincoder-core/agent-tools/subagent-async.mjs`）· `mergeChildMutations`（同档） | 同形机制 |
+| 活动流上屏 | relay 前缀 `escalate#<id>/`（`thincoder-core/agent-tools/escalate-async.mjs`）→ TUI 子代理活动区块（no-preview legacy 面——`thincoder-cli/src/tui/tool-events.mjs`） | |
+| 配置入口 / 提示词条款 | `/config` 候选池管理（`thincoder-cli/src/tui/cmd-config-menus.mjs`——上限 5 条）· 飞刀条款 = `thincoder-core/prompts/discipline-normal.md` | Settings 面板（VSC 专有面——见 VSC 迁移台账） |
 
 ## 7. 关键决策记录
 
@@ -119,6 +119,6 @@ subagent(action:"escalate")
 | D-E8 | **术语归并** 统一为 escalate | surgeon 曾作角色名与工具名并存导致模型混淆（role 语义 = `coder`，动作名 = escalate） |
 | D-E9 | **depth-0 only** | 飞刀不能再飞刀 |
 | D-E10 | **effort 越界钳制**（池 effort 越出该模型枚举 → 整字段丢弃） | 此前候选每次调用必抛错（「起飞即死」） |
-| D-E11 | **深度护栏**（`(ctx.depth ?? 0) > 0` 拒绝——`thincoder-core/agent-tools/subagent-actions.mjs:341`） | 飞刀不能再飞刀——错误文案明示「an escalate's work cannot be delegated again」 |
+| D-E11 | **深度护栏**（`(ctx.depth ?? 0) > 0` 拒绝——`thincoder-core/agent-tools/subagent-actions.mjs`） | 飞刀不能再飞刀——错误文案明示「an escalate's work cannot be delegated again」 |
 | D-E12 | **无墙钟看门狗的挂死防护** = turn 上限（`subagentTurns` ?? 100）+ 单次 LLM 调用超时 + 用户 Stop 直传 | 与 subagent 写路径对齐——固定墙钟会误杀正常但慢的手术（D-E7 的 CLI 侧出处） |
 

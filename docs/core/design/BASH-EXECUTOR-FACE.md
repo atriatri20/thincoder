@@ -10,11 +10,11 @@
 
 | 项 | 裁定 | 依据（坐标 + 实测） |
 |---|---|---|
-| **修法 A**｜注入锚激活——三端 `bash-terminal-face` 填运行时执行器身份 | **采纳**（主面） | 锚机制位在：核缝 `thincoder-core/prompt-files.mjs:105-113`（`applyPromptInjections`——未配置恒等 ∥ 命中替换 ∥ 缺键抛错）；锚位 = `thincoder-core/tool-docs/bash.md:15`；三端取值现空/无 shell 语义（CLI `thincoder-cli/src/prompt-injections.mjs:17` 空串 ∥ 桌面 `thincoder-desktop/src/main/prompt-injections.mjs:19` 空串 ∥ VSC `thincoder-vscode/src/prompt-injections.mjs:18` 仅 terminal 参数语义） |
-| **修法 B**｜`thincoder-core/tool-docs/bash.md` 死写句收正 | **采纳** | 死写句 = `thincoder-core/tool-docs/bash.md:33`「On Windows the shell is **cmd.exe** (NOT Git Bash, NOT PowerShell)…」 |
+| **修法 A**｜注入锚激活——三端 `bash-terminal-face` 填运行时执行器身份 | **采纳**（主面） | 锚机制位在：核缝 `thincoder-core/prompt-files.mjs` 的 `applyPromptInjections`（未配置恒等 ∥ 命中替换 ∥ 缺键抛错）；锚位 = `thincoder-core/tool-docs/bash.md` 的 Executor 行；三端取值现空/无 shell 语义（CLI `thincoder-cli/src/prompt-injections.mjs` 空串 ∥ 桌面 `thincoder-desktop/src/main/prompt-injections.mjs` 空串 ∥ VSC `thincoder-vscode/src/prompt-injections.mjs` 仅 terminal 参数语义） |
+| **修法 B**｜`thincoder-core/tool-docs/bash.md` 死写句收正 | **采纳** | 死写句 = 该档「On Windows the shell is **cmd.exe** (NOT Git Bash, NOT PowerShell)…」 |
 | **探测机制**｜探测源 | **钉死 = 与 spawn 链同源**：探测读数 = spawn 侧同式计算（`ctx.agent.config.shell`（trim 后非空串即用）→ 空/缺省时 win32 = `%COMSPEC%` → 仍空 = `cmd.exe`；非 win32 = `process.env.SHELL` → 空 = `/bin/sh`） | 探测源与 spawn 参数计算**逐式同源** ⇒ 探测值 = 实际执行器（不是环境快照） |
-| **探测机制**｜时机 | **端装配层 import 期一次（注册前）+ memo 进程生命周期·按配置值键控**（描述面值随进程启动固定——进程内改 `shell` 不刷新，重启生效；hint 门按配置值重探） | `shell-candidates.mjs:8` 同判据先例（「shell 路径不热变化」）；缝纯字符串替换、不支持函数值键 ⇒ 端装配层前置求值（`prompt-files.mjs:105-113`）；`toOpenAISchema` 调用期替换原语（`thincoder-core/tools/shared.mjs:174`）= 值的消费点 |
-| **探测不到 ⇒ 中性句** | **钉死（fail-open，不猜）** | 用户 22:48 裁定③；Identity 未命中知名字（cmd/powershell/pwsh/bash/sh/zsh/fish/wsl）⇒ 注入中性句「当前执行器未能识别——语法以命令实际报错为准」，锚仍被替换（不留锚字面进模型——`prompt-files.mjs:109` 缺键抛错语义由供值面保证不触发） |
+| **探测机制**｜时机 | **端装配层 import 期一次（注册前）+ memo 进程生命周期·按配置值键控**（描述面值随进程启动固定——进程内改 `shell` 不刷新，重启生效；hint 门按配置值重探） | `shell-candidates.mjs` 同判据先例（「shell 路径不热变化」）；缝纯字符串替换、不支持函数值键（`prompt-files.mjs` 的 `applyPromptInjections`）；`toOpenAISchema` 调用期替换原语（`thincoder-core/tools/shared.mjs`）= 值的消费点 |
+| **探测不到 ⇒ 中性句** | **钉死（fail-open，不猜）** | 用户 22:48 裁定③；Identity 未命中知名字（cmd/powershell/pwsh/bash/sh/zsh/fish/wsl）⇒ 注入中性句「当前执行器未能识别——语法以命令实际报错为准」，锚仍被替换（不留锚字面进模型——`prompt-files.mjs` 的缺键抛错语义由供值面保证不触发） |
 | **静态默认/平台推断** | **零容忍** | 用户 22:48 裁定①；平台推断已被本机实证直接证伪（同平台 cmd/PS 由 config.shell 决定，非平台属性） |
 
 链终值补注：COMSPEC 空分支 = win32 进程级继承面实际不可达，兜底字面为 spawn 镜像事实陈述——「unknown 中性句」只用于真探测不到（识别表未命中），不用于链兜底。
@@ -41,17 +41,17 @@
 
 **数据流（三端）**：端装配层在本端 `prompt-injections.mjs` 的 `bash-terminal-face` 键填 **import 期求值**的结果（模块加载即求值·注册前）：`executorLine(resolveShellIdentity(configShell()))` ⇒ 按上表组装为静态字符串。
 
-- **为什么不能交函数值**：核缝 `applyPromptInjections` 为纯字符串替换、注册即快照（`prompt-files.mjs:105-113` ∥ `:92-94`；函数值会被 `String.replace` 字符串化 ⇒ 不支持函数值键）。
+- **为什么不能交函数值**：核缝 `applyPromptInjections` 为纯字符串替换、注册即快照（`prompt-files.mjs` 的注入替换段 ∥ 其函数值守卫段；函数值会被 `String.replace` 字符串化 ⇒ 不支持函数值键）。
 - **由此得到的口径**：**描述面值随进程启动固定**——进程内改 `shell` 配置不刷新该行（重启生效——残余口径 §8）。
 - **逐执行调用面**：hint 门等按配置值 memo 键控重探（同配置值 ⇒ 取缓存身份；配置值变化 ⇒ 未命中重探——裁定①零静态成立）。
-- **注册链**：三端注册点不动（`thincoder-cli/bin/thincoder.mjs:32` ∥ `thincoder-vscode/extension.mjs:92` ∥ `thincoder-desktop/src/main/main.mjs:47`）→ `DESC("bash")` 装配链在 `toOpenAISchema` 调用期完成替换（`thincoder-core/tools/shared.mjs:174`）。
+- **注册链**：三端注册点不动（`thincoder-cli/bin/thincoder.mjs` ∥ `thincoder-vscode/extension.mjs` ∥ `thincoder-desktop/src/main/main.mjs`）→ `DESC("bash")` 装配链在 `toOpenAISchema` 调用期完成替换（`thincoder-core/tools/shared.mjs`）。
 
 **VSC 端附加面**：VSC `bash-terminal-face` 值 = **执行器声明行 + 既有 terminal 参数行**（两段拼接——terminal 参数语义是 VSC 宿主能力面，
-保留原文 `thincoder-vscode/src/prompt-injections.mjs:18` 整行不动，前拼执行器声明行）。
-VSC 自有 `tools/shell.mjs` 的 `SHELL_NOTES`（`:162-166`——**死常量**：全档无引用）**整块删除**。
+保留原文 `thincoder-vscode/src/prompt-injections.mjs` 的 terminal 参数行不动，前拼执行器声明行）。
+VSC 自有 `tools/shell.mjs` 的 `SHELL_NOTES`（**死常量**：全档无引用）**整块删除**。
 
 **VSC terminal 面边界**：`terminal: "visible"/"inject"` 跑在用户自己的可见终端（用户 shell 不可探测）——
-既有文案已声明「may be PowerShell 5.1 … Check the user's shell before assuming」（`shell.mjs:165`）语义保留（以 terminal 参数行原文为准）；
+既有文案已声明「may be PowerShell 5.1 … Check the user's shell before assuming」（`shell.mjs` 的 `SHELL_NOTES` 段）语义保留（以 terminal 参数行原文为准）；
 本机制只声明**隔离子进程**执行器。
 
 ## 3. 机制设计（四处改面）
@@ -60,36 +60,36 @@ VSC 自有 `tools/shell.mjs` 的 `SHELL_NOTES`（`:162-166`——**死常量**�
 
 §2 契约的实现体；纯函数 + 识别表；**禁平台推断**（判定永远从 `raw` 值出发，不从 `process.platform` 出发——
 win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 spawn 侧既有行为的事实镜像）。
-测试缝：`_setComSpecForTest(value)`（注入 %COMSPEC% 读数——仿 `shell-candidates.mjs:34` `_setShellDetectForTest` 先例）。
+测试缝：`_setComSpecForTest(value)`（注入 %COMSPEC% 读数——仿 `shell-candidates.mjs` 的 `_setShellDetectForTest` 先例）。
 
 ### 3.2 三端注入表——端装配层 import 期求值
 
 三端 `prompt-injections.mjs` 的 `bash-terminal-face` 键值 = **import 期求值的静态字符串**（`executorLine(resolveShellIdentity(configShell()))`——模块加载即求值、注册前）。
 
-- **为什么不能交函数值**：核心缝 `applyPromptInjections` 为纯字符串替换、不支持函数值键（函数值会被 `String.replace` 字符串化——`prompt-files.mjs:105-113`）。
+- **为什么不能交函数值**：核心缝 `applyPromptInjections` 为纯字符串替换、不支持函数值键（函数值会被 `String.replace` 字符串化——`prompt-files.mjs` 的注入替换段）。
 - **由此得到的口径**：**描述面值随进程启动固定**——进程内改 `shell` 配置不刷新该行（重启生效）。
 - **逐执行调用面**：同一单源 memo 按配置值键控服务（hint 门——同配置值取缓存身份，配置值变化 ⇒ 未命中重探，裁定①零静态成立）：
 
-- CLI（`thincoder-cli/src/prompt-injections.mjs:17`）：空串 → 执行器声明行；
-- 桌面（`thincoder-desktop/src/main/prompt-injections.mjs:19`）：空串 → 执行器声明行（桌面 = 核缺省隔离子进程，无 terminal 参数——与 CLI 同形）；
-- VSC（`thincoder-vscode/src/prompt-injections.mjs:18`）：执行器声明行 + 既有 terminal 参数行拼接。
-- 三端取 config.shell 的读法：CLI/桌面 = 核 `loadConfig()?.shell`；VSC = 核 `loadConfig()?.shell`（同源 `config-io.mjs`——`thincoder-vscode/src/extension/settings.mjs:12` 既有 import 面）；读带 try/catch fail-open 护栏（读失败 ⇒ null ⇒ 默认链——损坏配置不阻断进程）。
+- CLI（`thincoder-cli/src/prompt-injections.mjs`）：空串 → 执行器声明行；
+- 桌面（`thincoder-desktop/src/main/prompt-injections.mjs`）：空串 → 执行器声明行（桌面 = 核缺省隔离子进程，无 terminal 参数——与 CLI 同形）；
+- VSC（`thincoder-vscode/src/prompt-injections.mjs`）：执行器声明行 + 既有 terminal 参数行拼接。
+- 三端取 config.shell 的读法：CLI/桌面 = 核 `loadConfig()?.shell`；VSC = 核 `loadConfig()?.shell`（同源 `config-io.mjs`——`thincoder-vscode/src/extension/settings.mjs` 既有 import 面）；读带 try/catch fail-open 护栏（读失败 ⇒ null ⇒ 默认链——损坏配置不阻断进程）。
   **端侧零探测逻辑**（纯调核单源——多实现面纪律：语义同源、原文自持）。
 
 ### 3.3 `thincoder-core/tool-docs/bash.md` 死写句替形（零断言）+ hint 身份门 + 桌面 execute 随动
 
-- `thincoder-core/tool-docs/bash.md:33` 整行替换为（**零断言替形 · 字面钉死**）：
+- `thincoder-core/tool-docs/bash.md` 的「On Windows the shell is…」整行替换为（**零断言替形 · 字面钉死**）：
 
 ```text
 - Shell identity: the bash tool's shell is NOT fixed — it depends on configuration and environment. The current executor is declared in the Executor line above; write commands for THAT shell, and when a command fails read its error output to identify the actual shell.
 ```
 
   （不出现任何具体 shell 名；「以注入面声明为准」语义 = 「Executor line above」。）
-- `posixSyntaxHint`（`bash.mjs:28-38`）加**身份门**：`resolveShellIdentity(ctx.agent?.config?.shell).kind === "cmd"` 才产出 hint；
+- `posixSyntaxHint`（`bash.mjs` 的 hint 段）加**身份门**：`resolveShellIdentity(ctx.agent?.config?.shell).kind === "cmd"` 才产出 hint；
   kind ≠ cmd ⇒ 返回空串（PS/POSIX 环境不再喊 cmd.exe）；提示语中「Current shell is cmd.exe」改为引用探测名（探测出参 `name`）。
   VSC `tools/shell.mjs` 无 hint 面（grep 实证零命中）——零随动；
   **桌面端 bash 实现体 = 核 `bash.mjs`（无自有副本——桌面 grep 实证零命中 `posixSyntaxHint`/`SHELL_NOTES`）** ⇒ 核改即桌面随动，零桌面产品码改动。
-- 删除 VSC `shell.mjs:159-166` 死常量块 `SHELL_NOTES`（含 `isWin` 若无他引用——实施时核对该档 `isWin` 其余引用面）。
+- 删除 VSC `shell.mjs` 的 `SHELL_NOTES` 死常量块（含 `isWin` 若无他引用——实施时核对该档 `isWin` 其余引用面）。
 
 ### 3.4 权威档同步（本层三档 · 一行级）
 
@@ -103,10 +103,10 @@ win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 s
 | # | 决策 | 理由 |
 |---|---|---|
 | K1 | 探测源 = spawn 同链（config.shell → %COMSPEC% → 兜底字面） | — |
-| K2 | 探测时机 = 端装配层 import 期一次（注册前）+ memo 进程生命周期·按配置值键控 | 值只随配置值变化——memo 键控后同配置值零重探（hint 门逐执行调用即命中缓存）；memo 先例 = `shell-candidates.mjs:8`（同判据）；描述面值随进程启动固定（进程内改 `shell` 配置不刷新——重启生效，残余口径 §8） |
-| K3 | 注入值 = **端装配层 import 期求值**（注册前——`executorLine(resolveShellIdentity(configShell()))`） | 求值形态 = 端装配层 import 期求值（缝纯字符串替换、不支持函数值键；`prompt-files.mjs:105-113`）；值只随配置值变化——memo 键控后未变配置零重探 |
+| K2 | 探测时机 = 端装配层 import 期一次（注册前）+ memo 进程生命周期·按配置值键控 | 值只随配置值变化——memo 键控后同配置值零重探（hint 门逐执行调用即命中缓存）；memo 先例 = `shell-candidates.mjs`（同判据）；描述面值随进程启动固定（进程内改 `shell` 配置不刷新——重启生效，残余口径 §8） |
+| K3 | 注入值 = **端装配层 import 期求值**（注册前——`executorLine(resolveShellIdentity(configShell()))`） | 求值形态 = 端装配层 import 期求值（缝纯字符串替换、不支持函数值键；`prompt-files.mjs` 的注入替换段）；值只随配置值变化——memo 键控后未变配置零重探 |
 | K5 | hint 身份门 kind==cmd 才出 | POSIX 语法提示对 PS 亦误导；kind 门 = 精确修 |
-| K6 | VSC terminal 参数语义保留于 VSC 表 | visible/inject = VSC 宿主能力面（terminal 参数核 schema 无此键——`bash.mjs:240-249` 实证）＝合法宿主差异（端差纪律唯一例外面）；执行器声明行（三端共用）与 terminal 行（VSC 独有）分属两语义面，拼接不合并 |
+| K6 | VSC terminal 参数语义保留于 VSC 表 | visible/inject = VSC 宿主能力面（terminal 参数核 schema 无此键——`bash.mjs` 的 terminal 参数面实证）＝合法宿主差异（端差纪律唯一例外面）；执行器声明行（三端共用）与 terminal 行（VSC 独有）分属两语义面，拼接不合并 |
 | K7 | `thincoder-core/tool-docs/bash.md` 替形 = 纯零断言句 | 用户裁定②直接钉死 |
 
 ## 6. 验收标准（条目 · 机判）
@@ -131,7 +131,7 @@ win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 s
 | U3 | 正常 | config.shell=`"C:\\Program Files\\Git\\bin\\bash.exe"` | 尾段 `bash.exe` ⇒ kind=posix；注入 = posix 行 |
 | U4 | 边界 | config.shell=`"myweirdshell"`（未知名） | known=false ⇒ unknown 中性句（fail-open；**不**默认任何族） |
 | U5 | 边界 | config.shell=`"  "`（纯空白） | trim 后空 ⇒ 走默认链（与 spawn 侧 `?? null` 后 spawn 行为一致——注：spawn 侧现体对空白串不 trim，直传 spawn 会失败；探测面按 trim 空归默认链，**不改变 spawn 现行为**——如实陈述差异，不改 spawn 面） |
-| U6 | 错误 | `thincoder-core/tool-docs/bash.md` 缺 Executor 行上游（注入表未配置——端侧漏配键） | `prompt-files.mjs:109` 抛错（fail-loud 既有语义——零改；三端装配层保证配置） |
+| U6 | 错误 | `thincoder-core/tool-docs/bash.md` 缺 Executor 行上游（注入表未配置——端侧漏配键） | `prompt-files.mjs` 的缺键抛错（fail-loud 既有语义——零改；三端装配层保证配置） |
 | U7 | 边界 | 非 win32 + SHELL 未设 | raw=/bin/sh（Node 兜底字面镜像），kind=posix |
 
 ## 8. 边界（不做）

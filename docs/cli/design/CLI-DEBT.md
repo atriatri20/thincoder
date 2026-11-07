@@ -2,7 +2,7 @@
 
 > 板块 = **CLI 产品树残留债**——`thincoder-cli/**` 的**档位（行数档）登记活账** + 结构 / 一致性尾项登记。
 > 对位册 = `docs/vsc/design/VSC-DEBT.md` §12.1（VSC 越档登记）· 核内尺寸档判据与数值单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.10（尺寸档补充登记）。
-> 判据源 = `thincoder-cli/AGENTS.md:34`（单档 >500 行 = advisory · >800 行 = blocking）+ 各批既有裁定（逐条注源）。
+> 判据源 = `thincoder-cli/AGENTS.md`「exceeding 500 lines → advisory (🟡)」∥「Exceeding 800 lines → blocking (🔴)」（单档行数门）+ 各批既有裁定（逐条注源）。
 > 论域 = `thincoder-cli/**`（`node_modules/` · `docs/_archive/` 除外；含 `bin/` `src/` `test/`）。
 
 ## 1. 定位与收录口径（判据句）
@@ -13,7 +13,7 @@
 | # | 判据句（收录口径） | 说明 |
 |---|---|---|
 | 1 | **必录**：任一档 ≥ **700** 行 | = 距 800 硬限余量 ≤100 行——**一次实质改动带** |
-| 2 | **必录**：任一档 ≥ **801** 行（越硬限） | 无豁免通道（判据 = `thincoder-cli/AGENTS.md:34` blocking）。现读 = **0 档**（越限面空） |
+| 2 | **必录**：任一档 ≥ **801** 行（越硬限） | 无豁免通道（判据 = `thincoder-cli/AGENTS.md`「Exceeding 800 lines → blocking (🔴)」）。现读 = **0 档**（越限面空） |
 | 3 | **必录**：已有裁定 / 登记案在册（拆分计划 · 「不预拆」· 候选面——**无论读数**） | 裁定原文住记录面（例 = `model-picker.mjs`「不预拆」案） |
 | 4 | **随触碰补登**：>500 且 <700 的档 | 其所在面被触碰的批次在设计轮补登该行（含拆分立场）；**非全量普查**（先例 = VSC-DEBT §12.1 同注） |
 
@@ -40,7 +40,7 @@
 
 | # | 项 | 现状 | 到期 / 触发 |
 |---|---|---|---|
-| T1 | `session gc` / `session index` 旗标补全（bash / zsh / fish **三套皆缺**） | 三套只补子命令名面，无 `--dry-run` / `--confirm` / `--status` / `--rebuild`（实装旗标面 = `thincoder-cli/bin/thincoder.mjs:120-125` USAGE 行） | 该命令面 ∨ 补全下次触碰 |
+| T1 | `session gc` / `session index` 旗标补全（bash / zsh / fish **三套皆缺**） | 三套只补子命令名面，无 `--dry-run` / `--confirm` / `--status` / `--rebuild`（实装旗标面 = `thincoder-cli/bin/thincoder.mjs` 的 USAGE 行） | 该命令面 ∨ 补全下次触碰 |
 | T3 | 补全 / 命令清单**全量**机检锁缺位 | 窄射程锁宿主档（`thincoder-cli/test/memory-sweep-cli.test.mjs`）不在盘 ⇒ **窄锁缺位**；`ledger` 补全锁面 = 单元测试档；其余命令 / 旗标条目无锁 | 立全量锁单批 ∨ 补全下次实质改动 |
 
 ## 5. 边界（本册不做）

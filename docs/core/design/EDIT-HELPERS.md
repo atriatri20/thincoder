@@ -24,7 +24,7 @@ findCandidates(lines, oldString, topN=3, threshold=0.5) → [{ line, preview, sc
   // LCS 行级相似度；score = LCS(old_string, line).length / max(len)；≥ threshold 才进候选
 ```
 
-**坐标**：`thincoder-core/tools/shared.mjs:67`（`detectFileEol`）· `:73`（`joinWithEol`）· `:82`（`majorityEol`）· `:142`（`findCandidates`）· `:162`（`FFFD_WARNING`）。
+**坐标**：`thincoder-core/tools/shared.mjs` 的 `detectFileEol` · `joinWithEol` · `majorityEol` · `findCandidates` · `FFFD_WARNING` 五名（逐名实读在位）。
 
 ## 3. 语义约束（helper 级）
 
@@ -61,7 +61,7 @@ hashline_edit 读入含 U+FFFD 时追加（**不阻断**）：
 ⚠ file contains U+FFFD (replacement char) — encoding may be corrupted; hash-based addressing may be unreliable. Consider fixing the file encoding first.
 ```
 
-实现 = `shared.mjs` 具名常量 `FFFD_WARNING`（`thincoder-core/tools/shared.mjs:162`），由 hashline_edit 在结果文本（成功路径与 not-found 错误）末尾追加。
+实现 = `shared.mjs` 具名常量 `FFFD_WARNING`（`thincoder-core/tools/shared.mjs` 的 `FFFD_WARNING` 导出），由 hashline_edit 在结果文本（成功路径与 not-found 错误）末尾追加。
 
 ## 6. 实现单一权威与端差
 

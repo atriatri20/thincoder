@@ -113,7 +113,7 @@ v1 不需要团队记忆、先把 agent 主干做薄做扎实；存储 / 记忆�
   - **语义检索** = embedding 向量存 sqlite BLOB + JS 余弦
   - **混合排序** = FTS5 + 向量 RRF
   - **远期升级位** = pgvector / 中心化服务端（接口预留）
-  - **架构方向细化** = `thincoder-cli/docs/design/_archive/ARCHITECTURE-v2.md`（v2 未启动，以其为输入）
+  - **架构方向细化** = 架构硬约束与分层见 `docs/core/design/ARCHITECTURE.md`（v2 未启动，以其为输入）
   - **已细化的需求决策**：
     - 共享内容范围：全都要（项目知识 / 架构决策 / 调试经验 / 代码规范）
     - 沉淀双轨制：手动立规矩 + 自动萃取调试经验
@@ -128,7 +128,7 @@ v1 不需要团队记忆、先把 agent 主干做薄做扎实；存储 / 记忆�
 |---|---|---|
 | 语言 | 纯 JavaScript（`.mjs`） | 不用 TypeScript，无构建步骤 |
 | 依赖 | **零 npm 依赖** | 每引入一个依赖就引进一份技术债 |
-| 运行平台 | Node.js >= 24 | `node:sqlite` 等原生能力 |
+| 运行平台 | Node.js **>= 22.13.0**（与核同线） | `node:sqlite` 免 `--experimental-sqlite` 起于 22.13；低于此版必须带 flag，不属支持面 |
 | 界面 | TUI：裸 ANSI 转义 | 零依赖，终端控制自研 |
 | 模型兼容 | **只跟顶流、只跟最新** | 兼容老旧模型是负资产；预设表随换代增删（已支持 Anthropic / Google 原生协议与自定义端点——`format: anthropic/google`） |
 | 上下文策略 | **准比短重要，宁长勿缺** | 1M 窗口是常态；不为省 token 砍模型需要的上下文 |

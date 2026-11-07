@@ -39,7 +39,7 @@
 
 - 径：会话项目根 ⇒ `git rev-parse --show-toplevel` ⇒ `git config --get remote.origin.url` ⇒ **原文**上送 ⇒ **服务端归一**（归一单源 = `project/projects.mjs` `normalizeAddress`）。
 - 无 git 仓 ∥ 无 origin ⇒ 明示失败（「未检出 git 源（origin）——团队账按 git 源记账」）；零请求零写库。
-- 先例（零新依赖）：核既有 git 面——`thincoder-core/git/checkpoint.mjs`（`rev-parse` 形）∥ `thincoder-core/agent/assemble.mjs:38`（`git config` 形）。
+- 先例（零新依赖）：核既有 git 面——`thincoder-core/git/checkpoint.mjs`（`rev-parse` 形）∥ `thincoder-core/agent/assemble.mjs`（`git config user.name` 那一行）。
 
 ### 2.3 登录态门（三态出词）
 
@@ -54,13 +54,13 @@
 ### 2.5 工具变体（深度门）
 
 - depth 0 = 全量五 action（含写面）；子代理（depth > 0）= **只读变体**（`query`/`count`——写三 action schema 级不可达）。
-- 沿本机台账 `ledgerTool`/`ledgerReadTool` 先例（`thincoder-core/agent/family-tools.mjs:145` ∥ `:176-180`）；写面机械不可达 = 权限面第一道。
+- 沿本机台账 `ledgerTool`/`ledgerReadTool` 先例（`thincoder-core/agent/family-tools.mjs` 的 families 段装配行 ∥ 子代理段枚举）；写面机械不可达 = 权限面第一道。
 
 ## 3. 关键决策记录（本档）
 
 | # | 决策 | 理由 |
 |---|---|---|
-| D-TL1 | 端侧承载 = **核工具 `team_ledger`**（三端共享单源）——三端零逐端改动 | 端侧同批纪律（需求 §3）由**核单源**结构性保障：三端同引 `@thincoder/core`（`thincoder-cli/package.json:23` ∥ `thincoder-vscode/package.json:33` ∥ `thincoder-desktop/package.json:20`），家族段由核 `prepareRun` 追加（`thincoder-vscode/src/agent/tool-table.mjs:8-9`）——「先行后补」结构上不可能 |
+| D-TL1 | 端侧承载 = **核工具 `team_ledger`**（三端共享单源）——三端零逐端改动 | 端侧同批纪律（需求 §3）由**核单源**结构性保障：三端 package.json 均引 `@thincoder/core` 依赖（`thincoder-cli/package.json` ∥ `thincoder-vscode/package.json` ∥ `thincoder-desktop/package.json` 的 `dependencies` 段），家族段由核 `prepareRun` 追加（`thincoder-vscode/src/agent/tool-table.mjs` 的 `buildToolTable`）——「先行后补」结构上不可能 |
 | D-TL2 | 工具面**零跨账代码路径**（零 import 本机台账模块） | 上送 = agent 两步显式动作（读本机账 ⇒ 写团队账）——「禁混同」（需求 ⑤）由结构保障而非约定；import 面机检可判 |
 | D-TL3 | 仓标记 = **会话项目根自动派生**（`rev-parse --show-toplevel` + `config --get remote.origin.url`）∥ 原文上送 ∥ 服务端归一 | 需求 ①「写时自动带上，不手挑」；端侧零归一实现 ⇒ 归一单源（两处不可能漂移） |
 | D-TL4 | 登录态门 = `teamStatus().loggedIn`（`team.token` 在场）——未登录零网络 + 明示 | 登录态单源（TEAM.md §2.1）——工具不自建第二判据；「未登录 ⇒ 团队各面不启用」在工具面的落点 |

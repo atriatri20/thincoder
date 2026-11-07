@@ -33,7 +33,7 @@ head（≤16K）  +  \n\n… [middle omitted: N chars] …\n\n  +  tail（预算
 
 ## 3. 落盘（`offloadToolResult`）与失败回退
 
-`offloadToolResult(text, callId, dir?, { force })`（`thincoder-core/agent/offload.mjs`）按 `force` 分两族：**工具结果族**（`force` 缺省，调用点 `thincoder-core/agent/dispatch-run.mjs:148`——非 multimodal 结果统一过落盘守卫）过长度门；**报告族**（`force: true`，调用点 `thincoder-core/agent-tools/subagent-async.mjs:389`）恒落盘。
+`offloadToolResult(text, callId, dir?, { force })`（`thincoder-core/agent/offload.mjs`）按 `force` 分两族：**工具结果族**（`force` 缺省，调用点 `thincoder-core/agent/dispatch-run.mjs`——非 multimodal 结果统一过落盘守卫）过长度门；**报告族**（`force: true`，调用点 `thincoder-core/agent-tools/subagent-async.mjs`）恒落盘。
 
 **落盘条件分族，渲染形态不分族**——两族按同一常量 `TOOL_RESULT_OFFLOAD_LIMIT`（`thincoder-core/agent/offload.mjs` 的常量段）二分：
 
@@ -59,20 +59,20 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 ## 4. advisor 结果截断
 
 - 上限常量 `MAX_RESULT_CHARS = 64 * 1024`（`thincoder-core/advisor/compaction.mjs`，与主链路对齐）。
-- **双端化截断**（DUAL-END-TRUNCATION）：工具结果回填由「保头弃尾」改为**头尾双保**——头行累加至预算约 **60%**（`ADVISOR_HEAD_RATIO = 0.6`，`thincoder-core/advisor/truncate.mjs:14`）→ 中段切 → 尾行累加至剩余预算（**裁决 / 结论行可见**）。
+- **双端化截断**（DUAL-END-TRUNCATION）：工具结果回填由「保头弃尾」改为**头尾双保**——头行累加至预算约 **60%**（`ADVISOR_HEAD_RATIO = 0.6`，`thincoder-core/advisor/truncate.mjs`）→ 中段切 → 尾行累加至剩余预算（**裁决 / 结论行可见**）。
 - 头尾之间省略注 + offset 续读提示保留；**绝不半行切开**；K=0 时不谎报截断。
-- 实现落点：截断纯函数 `truncateAdvisorResult`（`thincoder-core/advisor/truncate.mjs`），唯一调用点 = `thincoder-core/advisor/loop.mjs:282`。
+- 实现落点：截断纯函数 `truncateAdvisorResult`（`thincoder-core/advisor/truncate.mjs`），唯一调用点 = `thincoder-core/advisor/loop.mjs`。
 - advisor 上下文保护另有 `compactMessages` 兜底——放宽上限后不新增风险。
 
 ## 5. read 读回双端返回
 
 `read` 工具对大文件 / offload 产物的读回（纯头向窗口尾不可见的剩余回路）：
 
-- **判别锚**（`thincoder-core/tools/file.mjs:104`）：窗口截断（`windowEnd < total`）**且**文件行数 > `MAX_READ_LINES`（2000，`thincoder-core/tools/shared.mjs:21`）→ 双端分支。
+- **判别锚**（`thincoder-core/tools/file.mjs` 的 `read` 实现）：窗口截断（`windowEnd < total`）**且**文件行数 > `MAX_READ_LINES`（2000，`thincoder-core/tools/shared.mjs`）→ 双端分支。
   - `≤ 2000` 行文件的任何窗口走**旧头向路径**（含旧尾注 `... (N lines total, use offset to continue)`——字节零变化）；窗口覆盖全文件也走旧路径。
   - offload 产物为纯文本（无尾注标记）——按行数判别即天然覆盖（其行数众多）。
-- **返回形态**：头 N 行（请求窗口，offset 起，续读路径不变）+ `…(truncated: K lines in middle, use offset to continue)` + 尾 M 行（文件**真实尾部**，`READ_TAIL_LINES = 500`，`file.mjs:30`）。
-  - K = 尾区起点 − 窗口终点；尾区 = 文件末 500 行；起点落入窗口（重叠）→ 从窗口后开始——**任何行不重复**；剩余全被覆盖（K=0）→ 整印余段、**无假省略注**（`file.mjs:111`–`:116`）。
+- **返回形态**：头 N 行（请求窗口，offset 起，续读路径不变）+ `…(truncated: K lines in middle, use offset to continue)` + 尾 M 行（文件**真实尾部**，`READ_TAIL_LINES = 500`，`thincoder-core/tools/file.mjs`）。
+  - K = 尾区起点 − 窗口终点；尾区 = 文件末 500 行；起点落入窗口（重叠）→ 从窗口后开始——**任何行不重复**；剩余全被覆盖（K=0）→ 整印余段、**无假省略注**（`file.mjs` 的尾区段）。
   - hashes 模式照常（头尾行 hash 与 hashline_edit 同域）。
 - 双端返回结果**不再套纯头 `truncate()`**（会二次切尾）——超 64K 由主链路 offload 双端 preview 兜底（同保尾）。
 
@@ -87,12 +87,12 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 | 双端切片（UTF-16 安全） | 头 = `thincoder-core/text-budget.mjs`（`safeSliceUTF16`，单源）· 尾 = `thincoder-core/agent/offload.mjs`（`safeSliceUTF16End`） | 在位 |
 | preview 构造 | `thincoder-core/agent/offload.mjs`（`buildDualEndPreview`） | 在位 |
 | 落盘主函数 + 写时自清理 | `thincoder-core/agent/offload.mjs`（`offloadToolResult` · 清理函数 `cleanupOldToolResults` 及其调用点） | 在位 |
-| 主链路调用点（工具结果族） | `thincoder-core/agent/dispatch-run.mjs:148` | 非 multimodal 结果过守卫 |
-| 报告族调用点 | `thincoder-core/agent-tools/subagent-async.mjs:389` | 无条件 `{ force: true }` |
+| 主链路调用点（工具结果族） | `thincoder-core/agent/dispatch-run.mjs` | 非 multimodal 结果过守卫 |
+| 报告族调用点 | `thincoder-core/agent-tools/subagent-async.mjs` | 无条件 `{ force: true }` |
 | 共享文本额度纯函数 | `thincoder-core/text-budget.mjs`（`capText` · `appendCappedText` · `safeSliceUTF16` · `safeSliceUTF16Tail`） | 单一来源；`safeSliceUTF16` 消费 = `thincoder-core/memory/*` 三档 ∥ offload 头切片 ∥ setup doc_search 预览 |
 | advisor 上限常量 | `thincoder-core/advisor/compaction.mjs`（`MAX_RESULT_CHARS`） | 由 `thincoder-core/advisor/run.mjs` re-export |
-| advisor 双端截断 | `thincoder-core/advisor/truncate.mjs:14` · 调用 `thincoder-core/advisor/loop.mjs:282` | 头/尾预算行级累加 |
-| read 双端返回 | `thincoder-core/tools/file.mjs:30`（`READ_TAIL_LINES`）· `:104`（判别）· `:111`（尾区起点） | `MAX_READ_LINES` = `thincoder-core/tools/shared.mjs:21` |
+| advisor 双端截断 | `thincoder-core/advisor/truncate.mjs` · 调用 `thincoder-core/advisor/loop.mjs` | 头/尾预算行级累加 |
+| read 双端返回 | `thincoder-core/tools/file.mjs`（`READ_TAIL_LINES` ∥ 判别 ∥ 尾区起点） | `MAX_READ_LINES` = `thincoder-core/tools/shared.mjs` |
 
 ### 6.2 双端与测试
 

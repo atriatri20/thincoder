@@ -2,7 +2,7 @@
 
 > **一句话**：我们自己的**测试箱**（server 测试环境 + 桌面 Linux 构建机 + 沙盒 runner）——怎么上、怎么更新、怎么回滚、哪里有坑。
 > 建档 2026-10-10（用户令：「每次这么盲人摸象摸一遍不是个办法」）；内容来源 = 实跑（2026-10-09 首部署轮 + 2026-10-10 登录面更新轮 + 沙盒 runner 装机轮——本文命令逐条实跑过，读数在案）。
-> 与产品文档的分工：产品侧部署设计 = `server/design/ops/OPS.md` §5 ∥ `thincoder-server/README.md` §3（**客户**怎么部署）；本文 = **我们自己的测试箱**（内部机器 + 机器特定事实）。
+> 与产品文档的分工：产品侧部署设计 = `docs/server/design/ops/OPS.md` §5 ∥ `thincoder-server/README.md` §3（**客户**怎么部署）；本文 = **我们自己的测试箱**（内部机器 + 机器特定事实）。
 > 凭据纪律：本档**不载任何口令 / 密钥值**；访问 = 专用密钥文件（下节）。
 
 ## 1. 访问面
@@ -22,7 +22,7 @@
 |---|---|---|
 | `~/thincoder` | 仓克隆（remote = `origin` = gitee） | thincoder |
 | `~/thincoder-server-deploy/` | 部署目录：`docker-compose.yml` ∥ `.env` ∥ `config/config.json` ∥ `data/gateway.db` | 目录 = thincoder；`config/` ∥ `data/` = ecs-user |
-| 镜像 | `thincoder-server:0.1.0`（**箱上本机构建、无 registry**——compose 只引用，不构建） | — |
+| 镜像 | `thincoder-server` · tag `0.1.0`（**箱上本机构建、无 registry**——compose 只引用，不构建） | — |
 | 容器 | `thincoder-server-deploy-server-1`（`restart: unless-stopped`；`8787:8787`；挂载 config ∥ data） | — |
 | 旁路进程 | 内网嵌入引擎（ollama，`10.0.0.5:11434`，模型 `bge-m3`）——**已停**（2026-10-10 用户令）；server 配置里的 `embedding.baseURL` 仍指向它 | — |
 | 副用 | **桌面 Linux 构建机也在这台**（代号 ha-proxy）——别在大构建并行时做重装 | — |
@@ -142,5 +142,5 @@ curl -s http://127.0.0.1:2375/version
 ## 8. 相关档
 
 - 测试环境首部署的来源 ∥ 授权 ∥ 安全组开放过程 = 见该次部署执行记录（过程面，不入本档）。
-- 产品侧部署设计 = `server/design/ops/OPS.md` §5 ∥ `thincoder-server/README.md` §3。
+- 产品侧部署设计 = `docs/server/design/ops/OPS.md` §5 ∥ `thincoder-server/README.md` §3。
 - 三端发布流程 = `RELEASE.md`。

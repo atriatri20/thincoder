@@ -1,6 +1,6 @@
 # 桌面端（DESKTOP）· 设计
 
-> 板块 = **桌面端设计总览档（索引 ∥ 跨域 ∥ 总表面）**——索引（§1 ∥ §2 ∥ §3 ∥ §5 ∥ §8 ∥ §9 ∥ §11）· 跨域 ∥ 总表面（§4 文件账残面 ∥ §6 验收总表 ∥ §7 用例总表）；分档详情见 §3 / §9 / §11 的指针。
+> 板块 = **桌面端设计总览档（索引 ∥ 跨域 ∥ 总表面）**——索引（§1 ∥ §2 ∥ §3 ∥ §5 ∥ §8 ∥ §9 ∥ §11）· 跨域 ∥ 总表面（§4 源档与设计落点索引 ∥ §6 验收总表 ∥ §7 用例总表）；分档详情见 §3 / §9 / §11 的指针。
 > 本部分 = **十四档**：本档 · `docs/desktop/design/SHELL.md`（宿主适配层——进程与目录形态 · 宿主面职责 · 与核的接口面 · 壳装配第三份）· `docs/desktop/design/IPC.md`（主 ↔ 渲染通道契约）。
 > 另四档 = `docs/desktop/design/UI.md`（界面形态与交互 · 活动池与状态位）· `docs/desktop/design/RENDERER.md`（渲染面实现工艺——有界渲染窗口 / 回填与跟滚）· `docs/desktop/design/E2E-TESTING.md`（端到端测试基建——真 Electron 驱动 · 家目录隔离 · 固定落点截图；并入单入口）· `docs/desktop/design/WEB-QUICKCHECK.md`（渲染面 web 快筛——开发期回路；不作验收判据）。
 > 域拆分七档 =  `docs/desktop/design/MENU.md`（菜单体系——应用菜单五组双语 ∥ 菜单 ↔ 渲染面窄通道）· `docs/desktop/design/PACKAGING.md`（打包与发行——打包链 ∥ Windows 安装包 ∥ 官网托管）。
@@ -47,9 +47,7 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | KD-6 | → `docs/desktop/design/PACKAGING.md` §1 | — |
 | KD-7 | 宿主下限 = **Electron ≥ 44.x**，且以**启动自检**为准 | 核依赖 `node:sqlite`（免 flag 需 Node ≥ 22.13）⇒ 宿主须带够版本的内置 Node（Electron 44 内置 Node **24.21.0**；本端下限取 **Node 24 主版本底线**——需求面 = 需求档 §8 P1）。设计**不把下限压在外部档上**：启动时断言 `process.versions.node` 与 `node:sqlite` 可加载，不满足 ⇒ 显式报错退出（自检本身 = 判据） |
 | KD-8 | → `docs/desktop/design/CHAT.md` §1 | — |
-
 | KD-9 | → `docs/desktop/design/SESSIONS.md` §1 | — |
-
 | KD-10 | → `docs/desktop/design/SETTINGS.md` §1 | — |
 | KD-11 | → `docs/desktop/design/SETTINGS.md` §1 | — |
 | KD-12 | → `docs/desktop/design/SETTINGS.md` §1 | — |
@@ -57,11 +55,10 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | KD-14 | → `docs/desktop/design/CHAT.md` §1 | — |
 | KD-15 | → `docs/desktop/design/SESSIONS.md` §1 | — |
 | KD-16 | → `docs/desktop/design/SESSIONS.md` §1 | — |
-
 | KD-17 | → `docs/desktop/design/COMPOSER.md` §1 | — |
 | KD-18 | → `docs/desktop/design/COMPOSER.md` §1 | — |
 | KD-19 | → `docs/desktop/design/COMPOSER.md` §1 | — |
-| KD-20 | **状态栏占用读数 = 回合尾事件推**（`ev:usage` 载荷 `{ key, ctxPct }`）；**未至 / 非正数 ⇒ 零节点**（禁假造）；归约面按会话 `key` 写切片（**唯一写者**），切标签取活动键值随动 | 需求档 §3.1:52「活动会话的上下文占用（实时读数）」+ §3.2 项 4「回合收尾：状态栏上下文占用更新」——两处皆指回合尾为更新时点；渲染面不复算（第二判据源 = 与真实用量分叉）；载荷与显示门判据单源 = `docs/desktop/design/IPC.md` §1 `ev:usage` 行 |
+| KD-20 | **状态栏占用读数 = 回合尾事件推**（`ev:usage` 载荷 `{ key, ctxPct }`）；**未至 / 非正数 ⇒ 零节点**（禁假造）；归约面按会话 `key` 写切片（**唯一写者**），切标签取活动键值随动 | 需求档 §3.1「活动会话的上下文占用（实时读数）」+ §3.2 项 4「回合收尾：状态栏上下文占用更新」——两处皆指回合尾为更新时点；渲染面不复算（第二判据源 = 与真实用量分叉）；载荷与显示门判据单源 = `docs/desktop/design/IPC.md` §1 `ev:usage` 行 |
 | KD-21 | → `docs/desktop/design/COMPOSER.md` §1 | — |
 | KD-22 | → `docs/desktop/design/CHAT.md` §1 | — |
 | KD-23 | → `docs/desktop/design/CHAT.md` §1 | — |
@@ -71,23 +68,20 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | KD-27 | → `docs/desktop/design/RENDERER.md` §1.6 | — |
 | KD-28 | → `docs/desktop/design/SESSIONS.md` §1 | — |
 | KD-29 | **内容面 / 会话面板视觉对齐 VSC（D21）**：值以 VSC webview 实值为源（三律 = 宿主主题色角色对位 · 语义常量值照搬 · 盒层单层律）；值表分处单源——内容面 **21 面** 住 `docs/render-core/design/RENDER-CORE.md` §5 · 会话面板面 **9 面** 住 `docs/desktop/design/UI.md` §1「批注（D21 · 会话流 / 会话面板视觉对齐 · 两项）」项 2；**结构零动**（外壳 / 主题体系 / 左列 + 标签条结构 / 行族结构不动）；新增变量 **14**（内容面 12 + 会话面板面 2——单源 = 主题表 `thincoder-desktop/renderer/theme.css`）；端差 **3** 项已全部处置 | 用户 2026-09-28 04:42 走查（① 会话流「样式与 VSC 区别很大」② 会话面板「与 vsc 端完全不同，我之前要求过对齐的」）+ 需求卷 **D21**；核产出件两端同形优先（推理内代码块——核档 §9 端差②） |
-| KD-30 | **状态栏对齐 = 「屏面为准」重审**：标尺 = 屏面可见行为——**banner 四态（PLAN / AUTO / ADVISOR / ENG）上状态行行首**（与 CLI 同段位 / 同语义；「PLAN / ADVISOR 本端无该两态」旧裁不实——两态随会话槽恢复可为真）+ 静息状态词（就绪——**入状态词闭枚举**；词形来源 = CLI 静息值 `Ready`，核 i18n 无同源词）与输入提示段（Enter: send）补落 + 键位尾四件逐件坐实；段集 **18** | 用户 2026-09-28 05:34 / 05:38 走查裁定（「对齐」= 屏面为准；「旁置 / 不适用」等账面打折项逐项重审）；两态可为真实证 = `thincoder-core/session-lifecycle.mjs:111-134`（槽恢复）+ 桌面无该两态呈现面；「同一事实一处」在四态上状态行后落成（两态只住状态行一处——CLI 同理） |
+| KD-30 | **状态栏对齐 = 「屏面为准」重审**：标尺 = 屏面可见行为——**banner 四态（PLAN / AUTO / ADVISOR / ENG）上状态行行首**（与 CLI 同段位 / 同语义；「PLAN / ADVISOR 本端无该两态」旧裁不实——两态随会话槽恢复可为真）+ 静息状态词（就绪——**入状态词闭枚举**；词形来源 = CLI 静息值 `Ready`，核 i18n 无同源词）与输入提示段（Enter: send）补落 + 键位尾四件逐件坐实；段集 **18** | 用户 2026-09-28 05:34 / 05:38 走查裁定（「对齐」= 屏面为准；「旁置 / 不适用」等账面打折项逐项重审）；两态可为真实证 = `thincoder-core/session-lifecycle.mjs` 的槽恢复段 + 桌面无该两态呈现面；「同一事实一处」在四态上状态行后落成（两态只住状态行一处——CLI 同理） |
 | KD-31 | → `docs/desktop/design/COMPOSER.md` §1 | — |
 | KD-32 | → `docs/desktop/design/ACTIVITY.md` §1 | — |
 | KD-33 | → `docs/desktop/design/ACTIVITY.md` §1 | — |
 | KD-34 | → `docs/desktop/design/ACTIVITY.md` §1 | — |
 | KD-35 | → `docs/desktop/design/ACTIVITY.md` §1 | — |
 | KD-36 | → `docs/desktop/design/ACTIVITY.md` §1 | — |
-
 | KD-37 | → `docs/desktop/design/CHAT.md` §1 | — |
 | KD-38 | **台账读数出站 = 启动拍 + 周期拍（`ev:ledger`；`REFRESH_MS` = 120s）** | VSC 两拍（端自持周期注册——间隔常数 = 核 `REFRESH_MS`）对位 = 桌面**启动拍 + 周期拍**（120s；直消费核 `startLedgerSurface`——单源 = `docs/desktop/design/IPC.md` §1 `ev:ledger` 行；项目级读数复读同点 = 开项目成功链） |
 | KD-39 | → `docs/desktop/design/CHAT.md` §1 | — |
 | KD-40 | → `docs/desktop/design/COMPOSER.md` §1 | — |
 | KD-41 | → `docs/desktop/design/SESSIONS.md` §1 | — |
-| KD-42 | **对齐审计强制输入 = 核档头「留端」清单 + 核注入缝登记表（两清单逐项对账 · 缺一项即红）**：此后任何以「对齐 ∕ 端差 ∕ 缺口清点」为名的审计（设计轮 ∕ 评审轮 ∕ 走查）**开审前**须以两份权威输入逐项对账——① 核档头 `留端：` 头注（全仓现读：`thincoder-render-core/**` 与核内相关档；**项级一行**）；② 核注入缝登记表（**每审现读原档**；设计面单源 = `docs/core/design/CORE-UNIFICATION.md` §2.13.3（函数面注入位表）＋ §2.13.4（④裁决行对照）；**对账面 = 设计面记录 ＋ 届盘复核**）**并补扫域外缝**（登记表未列者并行对账；**对账保持人工**——机械并扫命名族 `(configure\|reset\|set)[A-Z]` 会撞功能性 setter ⇒ 假阳性；先例 = `thincoder-core/prompt-files.mjs:92` 的 `configurePromptInjections`）。**判定三态**：复用 ∕ 上提 ∕ 真端差（三件齐 = 结构性不对称 + 证据 + 裁定）；**举证不足 ⇒ 消除**。**对账节载体**：每批设计内「对账节」在册。 | — |
-
+| KD-42 | **对齐审计强制输入 = 核档头「留端」清单 + 核注入缝登记表（两清单逐项对账 · 缺一项即红）**：此后任何以「对齐 ∕ 端差 ∕ 缺口清点」为名的审计（设计轮 ∕ 评审轮 ∕ 走查）**开审前**须以两份权威输入逐项对账——① 核档头 `留端：` 头注（全仓现读：`thincoder-render-core/**` 与核内相关档；**项级一行**）；② 核注入缝登记表（**每审现读原档**；设计面单源 = `docs/core/design/CORE-UNIFICATION.md` §2.13.3（函数面注入位表）＋ §2.13.4（④裁决行对照）；**对账面 = 设计面记录 ＋ 届盘复核**）**并补扫域外缝**（登记表未列者并行对账；**对账保持人工**——机械并扫命名族 `(configure\|reset\|set)[A-Z]` 会撞功能性 setter ⇒ 假阳性；先例 = `thincoder-core/prompt-files.mjs` 的 `configurePromptInjections`）。**判定三态**：复用 ∕ 上提 ∕ 真端差（三件齐 = 结构性不对称 + 证据 + 裁定）；**举证不足 ⇒ 消除**。**对账节载体**：每批设计内「对账节」在册。 | — |
 | KD-43 | **右键编辑菜单 = 宿主面职责（Chromium role + 词表显式文案）**：① 机制 = `win.webContents.on("context-menu", …)` ⇒ 按 `params`（`isEditable` / `selectionText` / `editFlags`）构模板 ⇒ `Menu.popup({ window })`；条目集 = 可编辑 ⇒ 剪切 ∕ 复制 ∕ 粘贴 ∕ 全选（`enabled` 取 `editFlags`——缺键不禁用）· 非编辑 ∧ 选中 ⇒ 复制 ∕ 全选 · 非编辑 ∧ 空选 ⇒ **零菜单**；② 行为 = Chromium role 四件（执行径 = 主进程 `webContents` 方法——`contextIsolation` / `sandbox` 下成立）；③ 文案 = **显式 `label` 取词表**（`menu.edit.*` 四键两语；主进程 `loadConfig().locale` **现读**——`thincoder-desktop/src/main/attachments.mjs` 先例）——**不采 role 默认文案**（Electron v44.4.5 `lib/browser/api/menu-item-roles.ts`：默认文案 = 英文硬编码字面 ⇒ 直采即 `#533` 式 en-only 债）；④ 落点 = 新档 `thincoder-desktop/src/main/context-menu.mjs`（两纯函数 · 零 `electron`）+ `window.mjs` 落子 | 用户 02:59 走查（「vsc是可以选中文字然后用鼠标右键复制的……desktop端……不能用右键复制粘贴」）+ 需求 D27；VSC 侧右键 = VS Code 宿主自带（扩展零代码）⇒ 对齐面 = 本端宿主层 |
-
 | KD-44 | → `docs/desktop/design/SETTINGS.md` §1 | — |
 | KD-45 | → `docs/desktop/design/SETTINGS.md` §1 | — |
 | KD-46 | → `docs/desktop/design/SETTINGS.md` §1 | — |
@@ -96,17 +90,14 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | KD-49 | → `docs/desktop/design/SETTINGS.md` §1 | — |
 | KD-50 | → `docs/desktop/design/RENDERER.md` §1.6 | — |
 | KD-51 | → `docs/desktop/design/COMPOSER.md` §1 | — |
-
 | KD-52 | → `docs/desktop/design/COMPOSER.md` §1 | — |
-| KD-53 | **桌面堆遥测与冻结取证**：① 遥测武装 = 新档 `thincoder-desktop/src/main/heap-watch.mjs`（本注新档）——**隔离形 = 策略面零 `electron` 顶层 import（禁令）**：electron 原语全经注入缝（点名 = `sample` ∕ `snapshot` ∕ `log` 三缝 + 冻结 ∕ 恢复动作原语）；装配住 `thincoder-desktop/src/main/main.mjs`（先例 = KD-35 `notify.mjs`）——60s 采样（注入缝 ⇒ 平 node 直测；先例 = CLI `thincoder-cli/src/heap-watch.mjs:41-79`）+ 双档阈值 70% ∕ 85%（与 CLI 同值）+ warn 行**带进程标签**（主进程自读 `process.memoryUsage()` ∕ `v8.getHeapStatistics()`；子进程读数 = `app.getAppMetrics()`——逐进程 type ∕ pid ∕ workingSet ∕ cpu）；② 快照双径 = 主进程 `v8.setHeapSnapshotNearHeapLimit(1)`（近上限自动落盘；CLI 先例 `thincoder-cli/src/crash-reports.mjs:87-89`）+ 渲染进程按需 `webContents.takeHeapSnapshot(path)`（**触发 = 健康期阈值（主进程自读堆比 `heapUsed ∕ heap_size_limit` ≥ 85% ∨ 渲染面 `workingSet` ≥ 800MB〔定值 = 两冻结案实测下沿 933MB × 0.85 ≈ 793 ⇒ 圆整；另一案读 = 2,926MB〕∧ ping 正常）∥ 冻结自复（`responsive` ≤ 宽限）——冻结阻塞期不可得（渲染主线程不可达，实测）**；once + 体积门 + native `Notification` 预告——零新 IPC；收正单源 = §2.11 D8）；③ 冻结门族 = `win.webContents` `unresponsive`（+ `responsive` 恢复记；主侧 ping 兜底——**定值 = 间隔 15s ∕ 超时 8s ∕ 连超 2**——**ping 径同序**：连续 2 次超时 ⇒ 落现场 ⇒ 宽限 ⇒ 恢复动作；grace ∕ once ∕ 5min 三守卫同施）∥ `render-process-gone` ⇒ 落 `~/.thincoder/crash-reports/`（与 CLI 同目录契约：现场 JSON〔双进程读数 + CPU + 动作序〕+ stderr 可见行）；**恢复动作（两径同）= 宽限 15s 持续不响应（`unresponsive` 未复 ∨ ping 续超时）⇒ `forcefullyCrashRenderer()` + `reload()`（换新渲染进程——官方恢复序；once ∕ 5min 节流；先落现场；在飞显示段暂缺至收尾重读——取舍在册 = §2.11 D9）**；**重载后补 = 活跃会话自动接续**（渲染侧 boot 补启：`project.cwd` 非空 ⇒ 自动一次 `session:resume`——既有单路 ∕ 零新通道 ∕ 主进程零改）；④ 配置键 = `diagnostics.heapWatch` ∕ `diagnostics.heapSnapshot` | — |
+| KD-53 | **桌面堆遥测与冻结取证**：① 遥测武装 = 新档 `thincoder-desktop/src/main/heap-watch.mjs`（本注新档）——**隔离形 = 策略面零 `electron` 顶层 import（禁令）**：electron 原语全经注入缝（点名 = `sample` ∕ `snapshot` ∕ `log` 三缝 + 冻结 ∕ 恢复动作原语）；装配住 `thincoder-desktop/src/main/main.mjs`（先例 = KD-35 `notify.mjs`）——60s 采样（注入缝 ⇒ 平 node 直测；先例 = CLI `thincoder-cli/src/heap-watch.mjs`）+ 双档阈值 70% ∕ 85%（与 CLI 同值）+ warn 行**带进程标签**（主进程自读 `process.memoryUsage()` ∕ `v8.getHeapStatistics()`；子进程读数 = `app.getAppMetrics()`——逐进程 type ∕ pid ∕ workingSet ∕ cpu）；② 快照双径 = 主进程 `v8.setHeapSnapshotNearHeapLimit(1)`（近上限自动落盘；CLI 先例 `thincoder-cli/src/crash-reports.mjs`）+ 渲染进程按需 `webContents.takeHeapSnapshot(path)`（**触发 = 健康期阈值（主进程自读堆比 `heapUsed ∕ heap_size_limit` ≥ 85% ∨ 渲染面 `workingSet` ≥ 800MB〔定值 = 两冻结案实测下沿 933MB × 0.85 ≈ 793 ⇒ 圆整；另一案读 = 2,926MB〕∧ ping 正常）∥ 冻结自复（`responsive` ≤ 宽限）——冻结阻塞期不可得（渲染主线程不可达，实测）**；once + 体积门 + native `Notification` 预告——零新 IPC；收正单源 = §2.11 D8）；③ 冻结门族 = `win.webContents` `unresponsive`（+ `responsive` 恢复记；主侧 ping 兜底——**定值 = 间隔 15s ∕ 超时 8s ∕ 连超 2**——**ping 径同序**：连续 2 次超时 ⇒ 落现场 ⇒ 宽限 ⇒ 恢复动作；grace ∕ once ∕ 5min 三守卫同施）∥ `render-process-gone` ⇒ 落 `~/.thincoder/crash-reports/`（与 CLI 同目录契约：现场 JSON〔双进程读数 + CPU + 动作序〕+ stderr 可见行）；**恢复动作（两径同）= 宽限 15s 持续不响应（`unresponsive` 未复 ∨ ping 续超时）⇒ `forcefullyCrashRenderer()` + `reload()`（换新渲染进程——官方恢复序；once ∕ 5min 节流；先落现场；在飞显示段暂缺至收尾重读——取舍在册 = §2.11 D9）**；**重载后补 = 活跃会话自动接续**（渲染侧 boot 补启：`project.cwd` 非空 ⇒ 自动一次 `session:resume`——既有单路 ∕ 零新通道 ∕ 主进程零改）；④ 配置键 = `diagnostics.heapWatch` ∕ `diagnostics.heapSnapshot` | — |
 | KD-54 | → `docs/desktop/design/RENDERER.md` §1.6 | — |
 | KD-55 | → `docs/desktop/design/ACTIVITY.md` §1 | — |
 | KD-56 | → `docs/desktop/design/SESSIONS.md` §1 | — |
 | KD-57 | **桌面排版基线（D29）= 一种字体 ∥ 一个字号 ∥ 行高 1.3 ∥ 字距 `normal` ∥ 自有文字零粗体**：① **统一值**（建议值——用户 ∥ 批准面裁）：字族 = `--mono` 等宽栈（`--font: var(--mono)` 一处切换——全栈同族：外壳 ∥ 内容面 ∥ 工具卡 ∥ 状态行 ∥ 面板 ∥ 核件消费面）；字号 = **14px**（`--fs`——= 现值 body ∥ 内容面同值；除基值外另见 8 ∥ 10 ∥ 11 ∥ 12 ∥ 13 ∥ 15 ∥ 16 ∥ 18px 八级全数归基线）；行高 = **1.3**（`--lh`——撤 1 ∥ 1.4 ∥ 1.45 ∥ 1.55 ∥ 1.6 ∥ 1.7 六值）；字距 = **`normal`**（`--ls`——撤 0.3px ∥ 0.5px ∥ 0.04em 三处 tracking；落位 = `theme.css` body 面 `letter-spacing: var(--ls)` 独立一行〔`font` 简写不载字距〕——全栈唯一声明点 ∥ 与验收判据同字）；变量单源 = `thincoder-desktop/renderer/theme.css`。② **自有文字零粗体**——自有三面 `font-weight` 全归 400（撤 500 ∥ 600 ∥ 700 三档——逐处 = §2 清册）；强调改**颜色通道**（既有色位承担——逐项 = `docs/desktop/design/UI.md` §1「批注（排版统一 · D29）」项 2）；**markdown 标记豁免**（`strong` 700 ∥ `h1–h6` ∥ `th`——用户「除了 markdown 里标了的」）。③ **markdown = 基线 + 修饰层**（不得自成独立体系）：正文族 ∥ 号 ∥ 行高 = 基线；修饰只许**相对（em）或非尺度通道**（粗体 ∥ 斜体 ∥ 色 ∥ 底 ∥ 边框）；**绝对 px 岛清零**（语言条 10px ∥ 复制钮 11px ∥ 推理族 12px ⇒ 基线）；值表单源 = `docs/render-core/design/RENDER-CORE.md` §5「排版统一覆盖」块（内容面）∥ `docs/desktop/design/UI.md` §1 批注表（外壳面）。④ **D21 关系**：排版通道（族 ∥ 号 ∥ 行高 ∥ 字距 ∥ 字重强调通道）以 D29 为准（D21「值以 VSC 实值为源」在排版通道被覆盖）；**结构 ∥ 盒值 ∥ 色面仍随 VSC**（D21 三律余域零改）。⑤ **核件零触**：`thincoder-render-core/**`（含 `composer/composer.css` 逐字锁）∥ VSC 侧零改；核件消费面（输入面板 ∥ 模型菜单 ∥ 搜索条）经**桌面覆盖段**（`thincoder-desktop/renderer/chat-composer.css`——特征度提升选择器）收敛。⑥ **回退配方**（用户否决统一值时）：`--font` 值复原系统 UI 栈 + 内容面族声明改指 `var(--font)`（逐点 = §2）。⑦ **边界**：功能 ∥ 布局零动；块外边距（含件级内边距）非本注射程——现值随轻通道轮四间距归一（单源 = `docs/desktop/design/CHAT.md` §2「批注（流内竖向间距）」）；markdown 语义保留（只动「自成体系」部分）；零通道 ∥ 零词键 ∥ 零 JS。 | 需求卷 **D29**（用户走查两条：「一种字体，一个字号，行间距字间距也都一样」∥「markdown…基于我们系统选定的字体和字号，再在这个基础上做格式修饰，不要弄出一个完全跟系统没关系的独立体系」）；既有在案 = `--mono` 正文等宽族（用户未否）+ 主阅读面现值 14px（「系统选定字号」最简解） |
 | KD-58 | → `docs/desktop/design/ACTIVITY.md` §1 | — |
-
-| KD-59 | **窗口重启最大化 = 启动序「隐建 → maximize → show」（「永远」语义——零窗口态记忆）**：① **落点** = `thincoder-desktop/src/main/window.mjs` `createWindow()`（窗口创建面单点——全仓唯一 `new BrowserWindow`）：`show: true ⇒ false` 隐建 ⇒ `win.maximize()` ⇒ `win.show()`（插点 = 构造函数后 ∥ `setMenu` 前）；② **时机判由（先 maximize 后 show）** = `maximize()` 官方语义「Maximizes the window. This will also show (but not focus) the window if it isn't being displayed already.」（`electron.d.ts:3105-3108` ∥ `:5897-5900`——宿主 = Electron 44.4.5）⇒ 隐藏窗上调用 ⇒ **首次显形即最大化态**（结构性防「默认尺寸闪一帧」）——**推论待真机证**：官方文本未声明「显形即最大化 ∥ 无中间尺寸帧」、本仓无 Electron 原生实现可读面 ⇒ 判径 = §7 **T-DSK53** 首帧用例（`show()` 当刻读 `isMaximized()` ∥ 首帧录屏 ∕ 截图走查）；实测否 ⇒ 序收正（候选 = `show()` 后补 `maximize()`；判据用例随动）；`show()` 官方语义「Shows and gives focus to the window.」（`:3620-3622`）⇒ 补「显形 + 聚焦」（maximize 顺带 show **不聚焦**——不补则启动窗首显不聚焦）；③ **「永远」语义** = 每次启动无条件 maximize——**零窗口态读写**（不读 `isMaximized` ∥ 不落存储 ∥ 不判上次态）：手动缩小 ∥ 最大化 ∥ 最小化后退出皆同归启动最大化（用户字面确认）；**运行期零干预**（用户手动缩放不回夺——射程 = 「重启 ⇒ 打开即最大化」）；④ **平台面**（三平台皆取原生最大化语义）：Windows = 最大化（占满工作区）· macOS = 原生 zoom（`zoomToPageWidth` 默认 false ⇒ 到屏宽——非全屏；如欲全屏 = `setFullScreen`）· Linux = WM 最大化；⑤ **既有窗口逻辑交互（全零改）**：尺寸常量（1200×800 · 下限 800×600）退为**还原尺寸**（un-maximize 回原尺寸；min 约束不变）· 单实例（非主实例零窗口——零 maximize 面）· 记忆面（本端零窗口态存储既有——保持零）· `--smoke`（同经 `createWindow` ⇒ 冒烟窗同最大化——探针 ∥ 引导位读数零影响；冒烟 JSON 字段闭集零改） · **fail-open 档**（平台忽略 maximize ⇒ `show()` 兜底 ⇒ 窗口仍显形、不最大化；不悬窗 ∥ 零告警 ∥ 零重试——可接受降级）；⑥ **边界** = 窗口态记忆（位置 ∥ 尺寸 ∥ 最大化态）不做 · 最小化 ∥ 全屏 ∥ 置顶不做 · 核 ∥ `thincoder-render-core` ∥ 渲染面 ∥ 通道 ∥ preload ∥ `thincoder-desktop/src/main/main.mjs` 零触 | 需求 D31 逐字（「重启 ⇒ 打开即最大化」+「永远」字面确认）；判由 = **首帧序须结构性防闪**——「隐建 → maximize → show」序由官方 API 语义直接支持；「保留 `show: true` + 后补 maximize」（含 show 后 maximize）之别：开窗即可见 ⇒ 尺寸切换的可视帧无契约保证（平台 ∥ 时序相关——概率面非结构面） |
-
+| KD-59 | **窗口重启最大化 = 启动序「隐建 → maximize → show」（「永远」语义——零窗口态记忆）**：① **落点** = `thincoder-desktop/src/main/window.mjs` `createWindow()`（窗口创建面单点——全仓唯一 `new BrowserWindow`）：`show: true ⇒ false` 隐建 ⇒ `win.maximize()` ⇒ `win.show()`（插点 = 构造函数后 ∥ `setMenu` 前）；② **时机判由（先 maximize 后 show）** = `maximize()` 官方语义「Maximizes the window. This will also show (but not focus) the window if it isn't being displayed already.」（`electron.d.ts` 的两处 `maximize()` 声明——宿主 = Electron 44.4.5）⇒ 隐藏窗上调用 ⇒ **首次显形即最大化态**（结构性防「默认尺寸闪一帧」）——**推论待真机证**：官方文本未声明「显形即最大化 ∥ 无中间尺寸帧」、本仓无 Electron 原生实现可读面 ⇒ 判径 = §7 **T-DSK53** 首帧用例（`show()` 当刻读 `isMaximized()` ∥ 首帧录屏 ∕ 截图走查）；实测否 ⇒ 序收正（候选 = `show()` 后补 `maximize()`；判据用例随动）；`show()` 官方语义「Shows and gives focus to the window.」（同档 `show()` 声明）⇒ 补「显形 + 聚焦」（maximize 顺带 show **不聚焦**——不补则启动窗首显不聚焦）；③ **「永远」语义** = 每次启动无条件 maximize——**零窗口态读写**（不读 `isMaximized` ∥ 不落存储 ∥ 不判上次态）：手动缩小 ∥ 最大化 ∥ 最小化后退出皆同归启动最大化（用户字面确认）；**运行期零干预**（用户手动缩放不回夺——射程 = 「重启 ⇒ 打开即最大化」）；④ **平台面**（三平台皆取原生最大化语义）：Windows = 最大化（占满工作区）· macOS = 原生 zoom（`zoomToPageWidth` 默认 false ⇒ 到屏宽——非全屏；如欲全屏 = `setFullScreen`）· Linux = WM 最大化；⑤ **既有窗口逻辑交互（全零改）**：尺寸常量（1200×800 · 下限 800×600）退为**还原尺寸**（un-maximize 回原尺寸；min 约束不变）· 单实例（非主实例零窗口——零 maximize 面）· 记忆面（本端零窗口态存储既有——保持零）· `--smoke`（同经 `createWindow` ⇒ 冒烟窗同最大化——探针 ∥ 引导位读数零影响；冒烟 JSON 字段闭集零改） · **fail-open 档**（平台忽略 maximize ⇒ `show()` 兜底 ⇒ 窗口仍显形、不最大化；不悬窗 ∥ 零告警 ∥ 零重试——可接受降级）；⑥ **边界** = 窗口态记忆（位置 ∥ 尺寸 ∥ 最大化态）不做 · 最小化 ∥ 全屏 ∥ 置顶不做 · 核 ∥ `thincoder-render-core` ∥ 渲染面 ∥ 通道 ∥ preload ∥ `thincoder-desktop/src/main/main.mjs` 零触 | 需求 D31 逐字（「重启 ⇒ 打开即最大化」+「永远」字面确认）；判由 = **首帧序须结构性防闪**——「隐建 → maximize → show」序由官方 API 语义直接支持；「保留 `show: true` + 后补 maximize」（含 show 后 maximize）之别：开窗即可见 ⇒ 尺寸切换的可视帧无契约保证（平台 ∥ 时序相关——概率面非结构面） |
 | KD-60 | → `docs/desktop/design/ACTIVITY.md` §1 | — |
 | KD-61 | **主题三态 = 渲染面 `data-theme` 状态（用户值）覆写系统缺省**：① **状态载体** = `data-theme` 属性——闭集 `system` ∥ `light` ∥ `dark`（缺省 `system`）；**单写者 = `thincoder-desktop/renderer/theme.mjs`**（`initTheme` / `setTheme`——`documentElement.dataset.theme` 唯一写径）；「跟随系统」= 状态值一枚（非零态）：媒体缺省 + `light-dark()` 随系统解析（系统翻转零 JS）；② **值面**（`thincoder-desktop/renderer/theme.css`）= 原「亮缺省块 + `@media` 暗块」收敛为**单块 `light-dark(亮, 暗)` 值对**（色值对 24——暗值逐字保原；`--error-fg` 同值单列）+ `color-scheme` 三态覆写；`@media (prefers-color-scheme: dark)` 退场；**D29 基线四值零动**；③ **切换面** = 设置面板头三态钮族（`data-action="settings:theme"` + `data-theme` 目标值 + `data-active` / `aria-pressed` 当前态；序 = 跟随系统 ∥ 亮色 ∥ 暗色）；④ **持久化** = 渲染面 `localStorage`（键 `thincoder.desktop.theme`——三值闭集串）——端自有 UI 态类（先例 = `poolWidth` ∥ VSC `modelPrefs`@`workspaceState`「非会话文件」；`app://` standard+secure ⇒ Web Storage 持久）；读 = 装配期一次 ∥ 写 = 点按即刻；读 ∥ 写皆捕获 + `console.error`，读失败 ∥ 表外值 ⇒ `system`（降级），写失败 ⇒ 会话内照常（fail-soft）；⑤ **store 镜像** = 顶层切片 `theme`（装配播种 ∥ 出口写；`SETTINGS_KEYS` 增 `theme`——设置面重绘径；`dataset.theme` 应用仍在 `theme.mjs`——同步不经帧）；⑥ **边界** = 窗口画布色 ∥ 原生面（菜单 ∥ 对话框 ∥ 标题栏）仍随系统（主进程不以用户值驱动原生面——`resolveTheme()` 零改；唯菜单勾选态显示缓存一枚——**KD-65** ②）· 主题换肤（色板 ∥ 自定义）不做 · 核 ∥ `thincoder-render-core` ∥ CLI ∥ VSC 零触 · 通道 ∥ preload 零新面 | D33 逐字（亮 ∥ 暗 ∥ 跟随系统 + 记住（重启恢复））+ D30 同族（用户偏好持久化——`localStorage` 先例） |
 | KD-62 | → `docs/desktop/design/ACTIVITY.md` §1 | — |
@@ -116,11 +107,8 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | KD-66 | → `docs/desktop/design/SETTINGS.md` §1 | — |
 | KD-67 | → `docs/desktop/design/MENU.md` §1 | — |
 | KD-68 | → `docs/desktop/design/SETTINGS.md` §1 | — |
-
-| KD-69 | **P1 读数端面消费 = `dbBytes` + 逐 origin 行数上屏（桌面索引段 ∥ VSC 设置面）**：① **数据面已就绪**——核只读出口 `memoryStatus()` 回执携 `dbBytes`（库文件 `statSync`）∥ `origins`（逐 origin code ∥ doc 行数、按名排序；`thincoder-core/memory-status.mjs:48-49`）；② **桌面** = `readIndexCounts` 回执扩两键（`dbBytes` ∥ `origins` 透传——端侧零 SQL 纪律保持；`thincoder-desktop/src/main/index-status.mjs:31-44`）+ 设置面「工具与服务」段增两读（库大小行 + 逐 origin 行数行；词键 ∥ 形 = 实施轮定）；③ **VSC** = `pushIndexStatus` 载荷扩两键（`thincoder-vscode/src/extension/panel-index.mjs:43-56`——取值 = 核出口透传，不另造 SQL）+ `#index-status` 区增两读（`thincoder-vscode/webview/settings-tools.js` `renderIndexStatus` 族）；④ **刷新拍** = 与既有索引读数同拍（设置面加载 ∥ 构建后推送——零新通道、零新计时器）；⑤ **呈现位边界** = 不做常驻状态栏段（状态行 = CLI 对齐段集闭集——零增）；**入档 = 桌面侧详文已回填 `docs/desktop/design/SETTINGS.md` §2.13；VSC 侧已落 `docs/vsc/design/SETTINGS.md` §2.5** | 核出口回执档头实读（`memory-status.mjs:11-20`）；端侧零 SQL 纪律 |
-
-| KD-70 | **桌面 MCP 警告消费 = 装配后入 `_pendingReminders`（会话内提醒 · CLI 同形）**：① **裁定 = 补消费**（备选②收窄句 ∥ ③认账不排期 = 否）；② **落点** = 桌面装配尾（`thincoder-desktop/src/main/agent-host.mjs` `assembleAndLoad`；**写点 = `agent-assemble.mjs:121`——定义档 ∥ 转口档（同名 re-export）关系沿本档 §4 装配面行；实施轮首步现读钉定**）——`agent._mcpWarnings` 非空 ⇒ 构造提醒入 `agent._pendingReminders`（核消费点 = 下一条 user 消息注入——`thincoder-core/agent/setup.mjs:170-174`；装配一次推送一次，同 key 复用不重推——CLI 同形）；③ **词面** = 首两段逐字同 CLI（计数 + 逐条；单源 = `thincoder-cli/src/command-interactive.mjs:151-155`），末行指路 = **桌面可达出口**（设置面 MCP 段重连——CLI 的 `/mcp connect` 桌面不存在，逐字照搬即误导；语义 = 指路可达出口；词面 ∥ 载体（既有键拼装 ∥ 字面串 ∥ 新键）∥ 语言口径 = 实施轮落词前现读钉定——若需新键 ⇒ ④ 随正）；④ **可见面** = 会话内系统提醒（与 CLI 同面——零新 UI ∥ 零新词键）；⑤ **边界** = VSC 第三面未并（端差在册——列报）；`.mcp.json` ∥ 连接 ∥ 管理面语义零触；核档 `docs/core/design/MCP.md` §6.4 消费面句同拍（已落） | 实读：写点 `thincoder-desktop/src/main/agent-assemble.mjs:121`、全仓消费点仅 CLI；核档 `docs/core/design/MCP.md` §6.4 句对桌面原不成立 |
-
+| KD-69 | **P1 读数端面消费 = `dbBytes` + 逐 origin 行数上屏（桌面索引段 ∥ VSC 设置面）**：① **数据面已就绪**——核只读出口 `memoryStatus()` 回执携 `dbBytes`（库文件 `statSync`）∥ `origins`（逐 origin code ∥ doc 行数、按名排序；`thincoder-core/memory-status.mjs` 的出口段）；② **桌面** = `readIndexCounts` 回执扩两键（`dbBytes` ∥ `origins` 透传——端侧零 SQL 纪律保持；`thincoder-desktop/src/main/index-status.mjs`）+ 设置面「工具与服务」段增两读（库大小行 + 逐 origin 行数行；词键 ∥ 形 = 实施轮定）；③ **VSC** = `pushIndexStatus` 载荷扩两键（`thincoder-vscode/src/extension/panel-index.mjs`——取值 = 核出口透传，不另造 SQL）+ `#index-status` 区增两读（`thincoder-vscode/webview/settings-tools.js` `renderIndexStatus` 族）；④ **刷新拍** = 与既有索引读数同拍（设置面加载 ∥ 构建后推送——零新通道、零新计时器）；⑤ **呈现位边界** = 不做常驻状态栏段（状态行 = CLI 对齐段集闭集——零增）；**入档 = 桌面侧详文已回填 `docs/desktop/design/SETTINGS.md` §2.13；VSC 侧已落 `docs/vsc/design/SETTINGS.md` §2.5** | 核出口回执档头实读（同档 `memory-status.mjs` 档头）；端侧零 SQL 纪律 |
+| KD-70 | **桌面 MCP 警告消费 = 装配后入 `_pendingReminders`（会话内提醒 · CLI 同形）**：① **裁定 = 补消费**（备选②收窄句 ∥ ③认账不排期 = 否）；② **落点** = 桌面装配尾（`thincoder-desktop/src/main/agent-host.mjs` `assembleAndLoad`；**写点 = `agent-assemble.mjs` 的装配落点——定义档 ∥ 转口档（同名 re-export）关系沿本档 §4 装配面行；实施轮首步现读钉定**）——`agent._mcpWarnings` 非空 ⇒ 构造提醒入 `agent._pendingReminders`（核消费点 = 下一条 user 消息注入——`thincoder-core/agent/setup.mjs` 的注入段；装配一次推送一次，同 key 复用不重推——CLI 同形）；③ **词面** = 首两段逐字同 CLI（计数 + 逐条；单源 = `thincoder-cli/src/command-interactive.mjs`），末行指路 = **桌面可达出口**（设置面 MCP 段重连——CLI 的 `/mcp connect` 桌面不存在，逐字照搬即误导；语义 = 指路可达出口；词面 ∥ 载体（既有键拼装 ∥ 字面串 ∥ 新键）∥ 语言口径 = 实施轮落词前现读钉定——若需新键 ⇒ ④ 随正）；④ **可见面** = 会话内系统提醒（与 CLI 同面——零新 UI ∥ 零新词键）；⑤ **边界** = VSC 第三面未并（端差在册——列报）；`.mcp.json` ∥ 连接 ∥ 管理面语义零触；核档 `docs/core/design/MCP.md` §6.4 消费面句同拍（已落） | 实读：写点 `thincoder-desktop/src/main/agent-assemble.mjs`、全仓消费点仅 CLI；核档 `docs/core/design/MCP.md` §6.4 句对桌面原不成立 |
 | KD-71 | → `docs/desktop/design/PACKAGING.md` §1 | — |
 | KD-72 | → `docs/desktop/design/PACKAGING.md` §1 | — |
 | KD-73 | → `docs/desktop/design/PACKAGING.md` §1 | — |
@@ -133,7 +121,7 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 
 ### 2.1 宿主下限读数
 
-- 宿主下限的**具体版本号**：Electron 内置 Node = `"24.21.0"`（Electron 44.4.5）；阈值面 = `thincoder-desktop/src/main/host-floor.mjs:9`（`MIN_NODE = "24.0.0"`）⇒ KD-7 下限（Electron ≥ 44.x）成立。
+- 宿主下限的**具体版本号**：Electron 内置 Node = `"24.21.0"`（Electron 44.4.5）；阈值面 = `thincoder-desktop/src/main/host-floor.mjs`（`MIN_NODE = "24.0.0"`）⇒ KD-7 下限（Electron ≥ 44.x）成立。
 
 ### 2.2 挂起窗键面路由注
 
@@ -210,15 +198,15 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 
 ## 二、跨域段
 
-> 本节区 = 各域迁出后的跨域 ∥ 总表面——§4 受影响文件清单（域档分持后的残面：指针表 ∥ 测试三分 ∥ 判不决块留原址）· §6 验收总表 · §7 用例总表；判不决块 ∥ 测试三分 ∥ 留驻行 = 跨域内容（原址保留——域内容已迁者 = 一行指针）。
+> 本节区 = 各域迁出后的跨域 ∥ 总表面——§4 源档与设计落点索引（域档分持后的残面：指路表 ∥ 测试三分 ∥ 判不决块留原址）· §6 验收总表 · §7 用例总表；判不决块 ∥ 测试三分 ∥ 留驻行 = 跨域内容（原址保留——域内容已迁者 = 一行指针）。
 
-## 4. 受影响文件清单
+## 4. 源档与设计落点索引
 
-### 4.1 本端文件清单与行数预算
+### 4.1 源档 → 设计落点指路
 
-本表 = **逐档指针索引**（行数预算**值行单源** = 各域表「文件账」节——本表不复制值；`docs/desktop/design/SHELL.md` §1 树不复制预算列）；**新档落盘随批登记**（此后新档：值行由落盘批在所属域表补行，本表同拍补指针行）——行数口径 = 内容行数（文末换行不计）；**行数面机检 = `checkConfig.lineCounts` 声明（`PROJECT-MANIFEST.json`）——doc-check 行数族**。
+本表 = **源档 → 设计落点指路**：一个源档的设计写在域的哪一节，单源在那一节——本表只写指路行，不复制正文，也不持行数（行数面值单源 = 各域文件账）。**新档落盘随批登记**：值行由落盘批在所属域表补行，本表同拍补指路行（沿本节纪律）。
 
-| 文件 | 预估行数 | 说明 |
+| 文件 | 设计落点（单源在该节） | 备注 |
 |---|---|---|
 | `thincoder-desktop/package.json` | → `docs/desktop/design/PACKAGING.md` §3.1 | — |
 | `thincoder-desktop/electron-builder.yml`（本注落） | → `docs/desktop/design/PACKAGING.md` §3.1 | — |
@@ -386,10 +374,9 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
   - 设置面补**六档**：`settings`（设置族——U98–U102）· `providers`（渠道族——U103–U107（含 U107b））· `mcp-servers`（MCP 族——U108–U110）· `project-info`（项目级信息族——U111–U113）；
     视图两档 `views-settings` / `views-onboarding` **零 U 号**（档名面入 U51 零 CJK 扫描清单——落 `thincoder-desktop/test/views-chrome.test.mjs`）。
     - **U95 分支（`host-floor`）口径**：判据 `≤500` **含线上**（**284**）——依据 = 规则线本身（「无文件 >500 行」），非余量口径；
-      **覆盖范围** = `fresh` 清单十八档（十二 + 六个用例文件）+ 在册例外面（`mount-settings.mjs`）+ `thincoder-desktop/renderer/app.mjs` + 宿主档源面零 `electron`；
-      其余新档（主进程四源档 · `settings.css` · 视图三档 · `views-harness.mjs`）行数面 = §4.1 值列表（分支清单随动 = 码面池）；
-      批 A 新档七档（`thincoder-desktop/renderer/views/{tabbar,question,plan}.mjs` · `thincoder-desktop/renderer/mount-composer.mjs` · `thincoder-desktop/renderer/mount-cards.mjs`（批 A 修正轮） ·
-      `thincoder-desktop/test/{views-question,views-tabbar-close}.test.mjs`）行数面 = 同路（§4.1 值列表 / 分支清单随动 = 码面池）。
+      - **覆盖范围** = `fresh` 清单十八档（十二 + 六个用例文件）+ 在册例外面（`mount-settings.mjs`）+ `thincoder-desktop/renderer/app.mjs` + 宿主档源面零 `electron`。
+      - 其余新档（主进程四源档 · `settings.css` · 视图三档 · `views-harness.mjs`）行数面 = 各域文件账（分支清单随动 = 码面池）。
+      - 批 A 新档七档（`thincoder-desktop/renderer/views/{tabbar,question,plan}.mjs` · `thincoder-desktop/renderer/mount-composer.mjs` · `thincoder-desktop/renderer/mount-cards.mjs`（批 A 修正轮） · `thincoder-desktop/test/{views-question,views-tabbar-close}.test.mjs`）行数面 = 同路（各域文件账 / 分支清单随动 = 码面池）。
     - **`fresh` 清单口径**：`host-floor` 的 `fresh` 清单只收目录文件名读数——**越层档不入清单**（`mount-settings.mjs` **426** 不入）；六档补入 = 码面池（父侧分支清单随动项）。
     - **覆盖缺口两件**：① 设置面 **Esc 键**明示不覆盖（零 Esc 绑定 = 裁定项——`docs/desktop/design/UI.md` §1 设置面行）；② `settings:agent` **保存出口判据**挂 T-DSK7 / T-DSK8——真面缺口（保存出口端侧路径判据未单列）。
   - 批 A 拆档一档 + 增档一档：`thincoder-desktop/test/views-tabbar-close.test.mjs`（确认面族 U55 自 `views-tabbar` 拆出）· `thincoder-desktop/test/views-question.test.mjs`；`views-tabbar` 原址**改例**（⑤ 换机制——既有 `inert` 断言件改「两控件 `tabindex` 两态」+ 点按两向——T-DSK20 / T-DSK25）；
@@ -420,13 +407,13 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | D12 | → `docs/desktop/design/PACKAGING.md` §4 | — |
 | D13 | → `docs/desktop/design/COMPOSER.md` §4 | — |
 | D14 | 真 Electron 启停 + 交互驱动 + 固定落点截图（批 E2E 落 = T-DSK27；单入口 · 每用例隔离临时家 · devDep `playwright-core`——单源 = `docs/desktop/design/E2E-TESTING.md` §3.3 / §6） | T-DSK27 / T-DSK32 |
-| **D15**（§3.1:52 · 需求 §3.5 项 7） | 状态栏上下文占用读数（活动会话 · 回合尾更新）：`ev:usage` 有效读数 ⇒ 读数节点在场；未至 / 非正数 ⇒ 零节点（禁假造）——KD-20 | T-DSK29 |
+| **D15**（§3.1 · 需求 §3.5 项 7） | 状态栏上下文占用读数（活动会话 · 回合尾更新）：`ev:usage` 有效读数 ⇒ 读数节点在场；未至 / 非正数 ⇒ 零节点（禁假造）——KD-20 | T-DSK29 |
 | D16 | → `docs/desktop/design/SETTINGS.md` §4 | — |
 | **D17**（需求卷 D17） | 状态行对齐 CLI：**18 段逐项裁定表**在册（承载 18 / 旁置 1 / 不适用 1 行；零静默省略）；承载段逐段有节点判据与数据源（承载四项〔耗时 / 令牌 / 计时 / 回合 N/M〕**已落（R3a）**——读数槽四住 `thincoder-desktop/renderer/events.mjs`）；未至 / 非正 ⇒ 零节点（禁假造）——KD-25 / KD-30；单源 = `docs/desktop/design/UI.md` §1「批注（对齐重定位）」项 1 + 「批注（状态栏对齐 · 屏面为准）」 | T-DSK33 / T-DSK38 |
 | D18 | → `docs/desktop/design/SESSIONS.md` §4 | — |
 | D19 | → `docs/desktop/design/CHAT.md` §4 | — |
 | D20 | → `docs/desktop/design/ACTIVITY.md` §5 | — |
-| **D21**（需求卷 D21） | 会话流**内容面** + **会话面板**（桌面会话控制面）视觉对齐 VSC：内容面 **21 面** / 会话面板面 **9 面** **逐面映射表在册**（VSC 实值带 `file:line` × 桌面落法——单源 = `docs/render-core/design/RENDER-CORE.md` §5 ∥ `docs/desktop/design/UI.md` §1「批注（D21 · 会话流 / 会话面板视觉对齐 · 两项）」项 2）；**结构零动**（外壳 / 主题体系 / 左列 + 标签条结构不改）；端差 **3** 项已全部处置（核档 §9 同拍）；值面落点 = `thincoder-desktop/renderer/core.css` + 主题表 `thincoder-desktop/renderer/theme.css`（新增变量 **14**）——KD-29 | T-DSK21 / T-DSK37（原址补例） |
+| **D21**（需求卷 D21） | 会话流**内容面** + **会话面板**（桌面会话控制面）视觉对齐 VSC：内容面 **21 面** / 会话面板面 **9 面** **逐面映射表在册**（VSC 实值 × 桌面落法——单源 = `docs/render-core/design/RENDER-CORE.md` §5 ∥ `docs/desktop/design/UI.md` §1「批注（D21 · 会话流 / 会话面板视觉对齐 · 两项）」项 2）；**结构零动**（外壳 / 主题体系 / 左列 + 标签条结构不改）；端差 **3** 项已全部处置（核档 §9 同拍）；值面落点 = `thincoder-desktop/renderer/core.css` + 主题表 `thincoder-desktop/renderer/theme.css`（新增变量 **14**）——KD-29 | T-DSK21 / T-DSK37（原址补例） |
 | **D22**（需求卷 D22） | 状态栏对齐（屏面为准 · 走查裁定）：**18 段**逐项裁定表在册（banner 四态承载 / 静息词 / 输入提示段 / 键位尾逐件——单源 = `docs/desktop/design/UI.md` §1「批注（状态栏对齐 · 屏面为准）」）；四项重审判据句在册；模式位供面 = `history:page` 回执 `flags`（单源 = `docs/desktop/design/IPC.md` §2「模式位投影注」） | T-DSK39 |
 | D23 | → `docs/desktop/design/SESSIONS.md` §4 | — |
 | **D24**（需求卷 D24） | 外壳视觉降噪（对照 mock 选定帧 02-chrome）：**静息描边归零**（容器 3 · 骨架线（现值唯输入区上线——显形保留）· 控件族 3 选择器 · 池条目 1——保位式 `border-color: transparent` ⇒ 零几何位移）+ **交互态显形**（hover / 按下 / 聚焦 + 设置活动行）+ 滚动条皮肤 4 规则 + **设置面映射** 9 面（6 改 + 3 保留）；**保留面负向锁**（两值列——accent 值列 = `.permission-prompt` / `.question-card`；`--line` 值列 = 核件面板输入行 `#input-row` / `.plan-card`；`.block` 消息块壳移出——R12 F1 ① 消除径）+ 零新变量 / 零新依赖 / 零新文件；内容面零动 · 布局与信息层级零动（守 D21 值源）；单源 = `docs/desktop/design/UI.md` §1「批注（外壳视觉降噪 · D24）」 | 验收三件：① 静息描边机检锁（随批单元证据）② 真机 hover · 聚焦读数（真机 = 人工走查 + 父侧真跑闭合）③ 改前 / 改后对照（走查） |
@@ -503,7 +490,6 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | T-DSK40 | → `docs/desktop/design/SESSIONS.md` §5 | — | — | — |
 | T-DSK42 | → `docs/desktop/design/CHAT.md` §5 | — | — | — |
 | T-DSK43 | 正常 · 小修族（外围面 · 对齐第三批） | fixture 家（同上）——**离线可产断言**：设置面类型加工 / Esc 关闭 · **离线不可产**（真回合面）：审批卡两增量 / 提问卡键焦 / 忙态两钮可点 / 中断键两态 | ① 子代理门审批卡首行含 owner 段（`<owner> · <tool>`）∧ diff 节点在场（`apply_patch` 门——`diff-preview` 类名）——**离线不可产**；② 提问卡填入 ⇒ Enter ⇒ 卡退场 ∧ 回焦 `[data-input="text"]`——**离线不可产**；③ 回合在飞 ⇒ 输入区模型 ∕ 推理钮**可点** ∧ 中断键可点（**非在飞 ⇒ 键隐**——核件两态 = 显 ∕ 隐）——**离线不可产**；④ 设置面 agent 段 = 具名控件 ∧ `change` ⇒ 即改即存（回执后回读同值）——离线可产；⑤ 设置面开 ⇒ `Escape` ⇒ 关闭（`[data-slot="settings"]` 清空）——离线可产（**F-Esc 判据**）；⑥ 审批卡出现即 `document.activeElement` = 卡内 `[data-autofocus="1"]`——**离线不可产**（**F-置焦 判据**）；**离线不可产面 = 人工走查 + 父侧真跑闭合**；机检 = 单元测试档惯例 | ✅ 做（对齐第三批 · 拟新增） |
-
 | T-DSK46 | → `docs/desktop/design/SESSIONS.md` §5 | — | — | — |
 | T-DSK47 | 正常 / 边界 · 右键编辑菜单（D27） | 真 Electron：① 流内选中一段文本 ⇒ 右键 ⇒ 点「复制」② 输入框右键（空输入 ∕ 有内容两况）③ 非编辑区空选右键 ④ 输入框粘回验证往返 ⑤ `locale` = zh 重跑 ① | ① 菜单弹出（原生 Menu）且含「复制」项 ⇒ 点按后剪贴板 = 选中文本逐字（**往返** = 粘回输入框可见）② 四件在场（剪切 ∕ 复制 ∕ 粘贴 ∕ 全选；`enabled` 随 `editFlags`——空输入 ⇒ 剪切 ∕ 复制禁用 · 粘贴可用）③ **零菜单**（不弹）④ 往返成立 ⑤ 文案 = zh 四字（`locale` 现读随动）；机检 = 随批单元证据（`context-menu.mjs` 两纯函数三语境 + 两语词值——**单元测试档随批留存**（不入集成测试树——全清令：集成测试不写 ∕ 不改 ∕ 不跑））；真机 = 父侧真跑闭合（D16 义务） |
 | T-DSK48 | → `docs/desktop/design/COMPOSER.md` §5 | — | — | — |

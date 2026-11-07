@@ -3,7 +3,7 @@
 > 板块 = **编辑工具**；本档 = **apply_patch 语义的权威源**（逐工具权威档之一）。
 > 地图与契约要点 = `docs/core/design/TOOLS.md` §6.6 · §8.2——本档不复制其内容（D2）。
 > 共享底层 = `docs/core/design/EDIT-HELPERS.md`（EOL 写回 / 新建随目录多数派——本档只指不述）。
-> 双端：CLI `thincoder-core/tools/patch.mjs`（`applyPatchTool`）· VSC `thincoder-vscode/src/tools/more-file.mjs`——VSC 现体同指 `thincoder-core/tools/patch.mjs`。
+> 双端：CLI `thincoder-core/tools/patch.mjs`（`applyPatchTool`）· VSC `thincoder-vscode/src/tools/index.mjs`（`applyPatchTool` 再出口）——VSC 现体同指 `thincoder-core/tools/patch.mjs`。
 > 模型可见描述 = `thincoder-core/tool-docs/apply_patch.md`（提示词面 / 产品代码）。
 > 需求侧 = `docs/core/requirements/TOOLS.md`（工具系统板块；CLI 树无逐工具需求档）。
 
@@ -47,15 +47,15 @@ hunk 按**上下文 / 删除行定位，非行号**——但上下文必须与�
 
 | 面 | 落点 | 实核 |
 |---|---|---|
-| 工具对象 / 执行 | `thincoder-core/tools/patch.mjs:171`（`applyPatchTool`） | 导出在位 |
-| 删文件拒绝 | `thincoder-core/tools/patch.mjs:49` | 错误文案在位 |
-| `/dev/null` 缺 `+++` 特报 | `thincoder-core/tools/patch.mjs:63` | 错误文案在位 |
-| 返回文案 | `thincoder-core/tools/patch.mjs:243`（`Applied patch to N file(s)`） | 在位 |
-| 注册面 | `thincoder-core/tools/index.mjs:5`（import）· `:21`（注册表） | patch 组（apply_patch / delete） |
+| 工具对象 / 执行 | `thincoder-core/tools/patch.mjs` 的 `applyPatchTool` | 导出在位 |
+| 删文件拒绝 | `thincoder-core/tools/patch.mjs` 的 `Deleting files via patch is not supported` 拒路 | 错误文案在位 |
+| `/dev/null` 缺 `+++` 特报 | `thincoder-core/tools/patch.mjs` 的 `needs a "+++ b/<path>" line` 拒路 | 错误文案在位 |
+| 返回文案 | `thincoder-core/tools/patch.mjs` 的 `Applied patch to N file(s)` | 在位 |
+| 注册面 | `thincoder-core/tools/index.mjs`（import 行 ∥ 工具表注册行） | patch 组（apply_patch / delete） |
 | 描述面（模型可见） | `thincoder-core/tool-docs/apply_patch.md` | 在位（`DESC()` 加载） |
-| VSC 对位实现 | `thincoder-vscode/src/tools/more-file.mjs:239`（`apply_patch`）——现体 = 核 `thincoder-core/tools/patch.mjs` | 同名机制 |
+| VSC 对位实现 | `thincoder-vscode/src/tools/index.mjs`（`applyPatchTool` 再出口）——现体 = 核 `thincoder-core/tools/patch.mjs` | 同名机制 |
 
-**VSC 端差异（编辑器路径面）**：VSC 端 `more-file.mjs:239`（`apply_patch`）——同机制；EOL 写回 / 新建随目录多数派（F1 / F2）同口径（`docs/core/design/EDIT-HELPERS.md` §4）；**无编辑器路径分支**（apply_patch = 整文件域、不进编辑器 range——见 §1）；宽容格式三处（§2）双端同。
+**VSC 端差异（编辑器路径面）**：VSC 端 `thincoder-vscode/src/tools/index.mjs` 的 `applyPatchTool`（核件再出口）——同机制；EOL 写回 / 新建随目录多数派（F1 / F2）同口径（`docs/core/design/EDIT-HELPERS.md` §4）；**无编辑器路径分支**（apply_patch = 整文件域、不进编辑器 range——见 §1）；宽容格式三处（§2）双端同。
 
 ## 7. 关键决策记录
 

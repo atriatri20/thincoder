@@ -1,6 +1,6 @@
-# Thincoder Server · 样式与版式（webui/STYLE.md）
+# Thincoder Server · 样式与版式（docs/server/design/webui/STYLE.md）
 
-> 本档迁自 `webui/WEBUI.md` §2.5 ∥ §2.6 及三表归位行（域内拆分）。域总览与壳面 = `webui/WEBUI.md`。
+> 本档迁自 `docs/server/design/webui/WEBUI.md` §2.5 ∥ §2.6 及三表归位行（域内拆分）。域总览与壳面 = `docs/server/design/webui/WEBUI.md`。
 
 ## 1. 关键决策（本面）
 
@@ -27,27 +27,27 @@
 ④ **态面齐备**（①⑨）：悬停/聚焦/禁用/空·错·加载态逐族在册；**悬停底同值——限定列表行/中性面**（`--hover`：表格数据行 ∥ 导航项；「有的还没有」收口）；钮/链接等交互件悬停取值逐型在表（②——非同值面）。
 ⑤ **收束不重设计**：类名骨架沿用（仅删死类 ∥ 新增态修饰 `.error`）；零动画/过渡；零依赖零构建不变（KD-SV-9）。
 
-**散置/不一致清单（行号 = `thincoder-server/public/style.css`）**：
+**散置/不一致清单（值源 = `thincoder-server/public/style.css`；逐项按值 ∥ 语义定位）**：
 
 | # | 散置/不一致项 | 盘面实读 | 收束 |
 |---|---|---|---|
-| S1 | 悬停底分歧 + 零悬停面（用户原句） | `:27` `#eef1f5`（导航项）∥ `:129` `#f3f6fb`（可点行）∥ 非可点表行零悬停 | `--hover`（`#eef1f5`）列表行/中性面单值 |
-| S2 | 表头/码底两值 | `:39` `#eef1f5` ∥ `:40` `:69` `#f0f2f5` | `--fill`（`#f0f2f5`） |
-| S3 | 状态色重字面 | `:85` `:94` `#2e9e5b` ∥ `:86` `:95` `#d8a013` ∥ `:84` `#9aa3b0` | `--ok` ∥ `--warn` ∥ `--idle` |
-| S4 | 白两写法 | `:43` `:44` `:78` `#fff` ∥ `:5` `--panel`＝`#ffffff` | 统一 `--panel` |
-| S5 | 字号七档 | 12px（10 处）∥ 13px（12 处）∥ 15px（`:34`）∥ 18px（`:121`）∥ 20px（`:93`）∥ body 16（缺省）∥ h2 24（UA） | `--fs`（13px——全档单值） |
-| S6 | 字重七处 600 + UA 粗体 | `:23` `:28` `:39` `:72` `:74` `:79` `:93`（600）∥ h2/h3/h4（UA 700） | 全 400（零粗体——强调走色） |
-| S7 | 圆角四值 | `:104` 2 ∥ `:40` 3 ∥ `:26` 等 6 ∥ `:35` `:54` `:117` 8 | `--r-1..3` = 4/6/8 |
+| S1 | 悬停底分歧 + 零悬停面（用户原句） | `#eef1f5`（导航项）∥ `#f3f6fb`（可点行）∥ 非可点表行零悬停 | `--hover`（`#eef1f5`）列表行/中性面单值 |
+| S2 | 表头/码底两值 | `#eef1f5` ∥ `#f0f2f5`（两处） | `--fill`（`#f0f2f5`） |
+| S3 | 状态色重字面 | `#2e9e5b`（两处）∥ `#d8a013`（两处）∥ `#9aa3b0` | `--ok` ∥ `--warn` ∥ `--idle` |
+| S4 | 白两写法 | `#fff`（三处）∥ `--panel`＝`#ffffff` | 统一 `--panel` |
+| S5 | 字号七档 | 12px（10 处）∥ 13px（12 处）∥ 15px（一处）∥ 18px（一处）∥ 20px（一处）∥ body 16（缺省）∥ h2 24（UA） | `--fs`（13px——全档单值） |
+| S6 | 字重七处 600 + UA 粗体 | 七处 `font-weight: 600` ∥ h2/h3/h4（UA 700） | 全 400（零粗体——强调走色） |
+| S7 | 圆角四值 | 2（一处）∥ 3（一处）∥ 6（一处）∥ 8（三处） | `--r-1..3` = 4/6/8 |
 | S8 | 间距十三值 | 1 ∥ 2 ∥ 3 ∥ 4 ∥ 5 ∥ 6 ∥ 8 ∥ 10 ∥ 12 ∥ 14 ∥ 16 ∥ 18 ∥ 20（padding/margin/gap 全档散置） | `--sp-1..7` = 2/4/6/8/12/16/20 |
-| S9 | 行高三值 | 缺省 `normal` ∥ `:73` 1.7 ∥ `:121` 1 | `--lh`（1.5——全档继承） |
-| S10 | 聚焦环单处 + 控件走 UA 缺省 | `:130` 仅可点行有环；钮/输入/下拉零自定义环 | 统一环 2px `--accent`（控件外偏 2px ∥ 行内缩 −2px） |
-| S11 | 钮族态面缺位 | `:43` 起零 `:hover`/`:focus-visible`/`:disabled` | 五型悬停在册 ∥ 禁用中性化（`--muted` 字 ∥ `--fill` 底） |
-| S12 | 危险钮两形 | 主危（`:45` 仅改字/边——底仍 `:43` 蓝）∥ 次危（`:44`+`:45` 白底红字） | 危险 = 描边单形（面板底 ∥ 红边红字 ∥ 悬停 `--danger-fill`） |
-| S13 | 活动/选中态两形 | `:28` 导航（底 `#e6efff` + 字 accent + 600）∥ `:79` 语言钮（边/字 accent + 600——零底） | `--selected` 底 + accent 边/字（600 撤） |
-| S14 | 死类/死规则 | `stat`（`thincoder-server/public/views-usage.mjs:106` ∥ `views-overview.mjs:50` 传参——零规则）∥ `view`（`thincoder-server/public/app.mjs:248` `:259` 传参——零规则）∥ `.key-line`（`style.css:58` 规则——零消费者） | 删净（双向闭合口径 = 本档 §4 AC-19 续行） |
-| S15 | 宽值重复 | 560（`:117` ∥ `:122`）∥ 200（`:21` ∥ `:31`） | `--modal-w` ∥ `--nav-w` |
+| S9 | 行高三值 | 缺省 `normal` ∥ 1.7（一处）∥ 1（一处） | `--lh`（1.5——全档继承） |
+| S10 | 聚焦环单处 + 控件走 UA 缺省 | 仅可点行有环；钮/输入/下拉零自定义环 | 统一环 2px `--accent`（控件外偏 2px ∥ 行内缩 −2px） |
+| S11 | 钮族态面缺位 | 钮族规则起零 `:hover`/`:focus-visible`/`:disabled` | 五型悬停在册 ∥ 禁用中性化（`--muted` 字 ∥ `--fill` 底） |
+| S12 | 危险钮两形 | 主危（危险钮规则仅改字/边——底仍主钮蓝）∥ 次危（次钮 + 危险钮两规则叠——白底红字） | 危险 = 描边单形（面板底 ∥ 红边红字 ∥ 悬停 `--danger-fill`） |
+| S13 | 活动/选中态两形 | 导航（底 `#e6efff` + 字 accent + 600）∥ 语言钮（边/字 accent + 600——零底） | `--selected` 底 + accent 边/字（600 撤） |
+| S14 | 死类/死规则 | `stat`（`thincoder-server/public/views-usage.mjs` ∥ `views-overview.mjs` 传参——零规则）∥ `view`（`thincoder-server/public/app.mjs` 两处传参——零规则）∥ `.key-line`（`style.css` 规则——零消费者） | 删净（双向闭合口径 = 本档 §4 AC-19 续行） |
+| S15 | 宽值重复 | 560（两处）∥ 200（两处） | `--modal-w` ∥ `--nav-w` |
 | S16 | 三态同形（错不可辨） | 加载 ∥ 空 ∥ 错皆 `.hint`（`--muted`） | 加载/空 = `.hint`；错 = `.hint error`（`--danger` 字） |
-| S17 | 强调线两宽 | `.tip-bar` 3px（`:113`）∥ 聚焦环 2px | `--bw-strong`（2px） |
+| S17 | 强调线两宽 | `.tip-bar` 3px ∥ 聚焦环 2px | `--bw-strong`（2px） |
 
 **底座（⑩ 重定位）：变量族（`style.css` `:root`——单源）**：
 
@@ -108,7 +108,7 @@
 | `input.quota`／`.provider-form input` | 宽/最小宽 = 尺寸字面（非刻度面——原值保留） |
 | `label` | 距 `--sp-3` ∥ `--muted` |
 | 勾选框 `checkbox` | 原生 + `accent-color: var(--accent)`（零自绘） |
-| 表单容器 `.row-form`/`.stack`/`.provider-form`（竖排修饰 `.stacked`——`webui/SYSTEM.md` §2.1；变体实距 = `gap: --sp-2` ∥ `margin-bottom: --sp-3`——与基族 `--sp-4` 异值、均在刻度内） | 距 `--sp-4` |
+| 表单容器 `.row-form`/`.stack`/`.provider-form`（竖排修饰 `.stacked`——`docs/server/design/webui/SYSTEM.md` §2.1；变体实距 = `gap: --sp-2` ∥ `margin-bottom: --sp-3`——与基族 `--sp-4` 异值、均在刻度内） | 距 `--sp-4` |
 | 套用面 | 登录 ∥ 改密 ∥ 配额 ∥ 过滤表单（用量/审计） ∥ 新建成员 ∥ #87 弹窗字段（名/baseURL/密钥/清除勾/候选勾选——随其落地） ∥ #88 配置输入（RPM/TPM/权重/说明——随其落地） |
 
 **④ 间距刻度**：
@@ -170,7 +170,7 @@
 |---|---|
 | 加载 | `.hint`（静态文案——零动画零 spinner） |
 | 空 | `.hint` |
-| 错（页内） | `.hint error`（`--danger` 字——八处「加载失败」面：`views-admin.mjs:51` ∥ `views-me.mjs:233` `:234` ∥ `views-models.mjs:118` ∥ `views-usage.mjs:57` `:58` ∥ `views-audit.mjs:47` ∥ `views-providers.mjs:35`；+ 系统页诊断失败面：`views-system.mjs:92` 状态行 ⇒ `.error` ∥ `:115` 试跑行 ⇒ `.hint error`；+ 弹窗段内 3 处（`views-providers-modals.mjs`：候选发现失败 ∥ 窗内状态行×2〔添加窗 ∥ 详情窗——测试连接/保存/获取模型；2026-10-07 走查收正〕）） |
+| 错（页内） | `.hint error`（`--danger` 字——八处「加载失败」面：`views-admin.mjs` ∥ `views-me.mjs`（两处）∥ `views-models.mjs` ∥ `views-usage.mjs`（两处）∥ `views-audit.mjs` ∥ `views-providers.mjs`；+ 系统页诊断失败面：`views-system.mjs` 状态行 ⇒ `.error` ∥ 试跑行 ⇒ `.hint error`；+ 弹窗段内 3 处（`views-providers-modals.mjs`：候选发现失败 ∥ 窗内状态行×2〔添加窗 ∥ 详情窗——测试连接/保存/获取模型；2026-10-07 走查收正〕）） |
 | 全局提示 | `.flash`（⑥ 单形） |
 | 套用面 | 十页空/加载/错态 + #87/#88 新面（随其落地） |
 
@@ -185,8 +185,8 @@
 | 口径 | 码族 = **唯一族例外**（字面量对齐/可读——桌面排版先例同款：码面独立于 UI 族）；同号同重（一字号口径不破） |
 | 套用面 | 表内标识/密钥提示形 ∥ 系统页/用量页 snippet ∥ 密钥明文区 ∥ #87 模型清单（随其落地） ∥ #88 快照值（随其落地） |
 
-**#87/#88 接续标注**：本节 = 全域样式单源——**后续新增面按本节族表套用**；#87（Provider 重做——工具条 ∥ 添加/详情双弹窗 ∥ 候选勾选列表） ∥ #88（服务模型配置——配置四组 ∥ 停用流 ∥ 元数据行）之新面已列各族套用面并标「随其落地」——实施轮以当刻盘面为准并入；
-两批产品面落地晚于本节 ⇒ 由其落地轮按本节套用（本节不代改其面）；#87 旧内联面撤除 ⇒ 其表单族类（`.provider-form`/`.key-clear`/`.stack-models`）随双弹窗复用——零死类（S14 零登记）；`.model-picks` 随布局收正批（本档 §2.2⑤）退役——规则与字面删净。
+- **单源口径**：本节 = 全域样式单源——**后续新增面按本节族表套用**；#87（Provider 重做——工具条 ∥ 添加/详情双弹窗 ∥ 候选勾选列表） ∥ #88（服务模型配置——配置四组 ∥ 停用流 ∥ 元数据行）之新面已列各族套用面并标「随其落地」——实施轮以当刻盘面为准并入；
+- **两批落地晚于本节**：由其落地轮按本节套用（本节不代改其面）；#87 旧内联面撤除 ⇒ 其表单族类（`.provider-form`/`.key-clear`/`.stack-models`）随双弹窗复用——零死类（S14 零登记）；`.model-picks` 随布局收正批（本档 §2.2⑤）退役——规则与字面删净。
 
 **me 用量图表化新面登记**：`.bar-stacked`/`.bar-seg`/`.bar-swatch`/`.chart-toggle`/`.bar-legend`/`.report-card`——按族套用（段色 = `--accent` 透明度阶梯〔⑥ 色板单源不破〕 ∥ 切换钮活动态 = `.lang-switch .active` 同形〔① 选中态〕 ∥ 内距/间距/圆角 ∈ 各族刻度；零新 `:root` 变量 ∥ 零新悬停规则）；实施轮以当刻盘面并入。
 
@@ -196,9 +196,9 @@
   - 消息面：`.message`（`.user`/`.assistant`——平铺无底） ∥ `.msg-label`（`--accent` 字）∥ `.msg-time`（`--muted` 字）∥ `.bubble`（无底无框——VSC 平铺形）∥ `.message.pending`（待发泡：`--muted` 字）；
   - 输入区：`#toolbar`/`#input-row`/`#controls-row`/`#paste-bar`/`.paste-toast`（核 `composer.css` 命中，本档零覆写）；
   - 自持新增：`#status-line`/`.status-sep`（状态行——`--muted` 字 ∥ 段间距 ∈ ④ 刻度）∥ `.chat-bar`（会话条——sticky 顶 ∥ `--panel` 底 ∥ 下边 `--border`）∥ `.chat-thread`（文档流平铺）∥ 输入区 sticky 底；
-  - **无源钮隐藏**（`#auto-btn`/`#advisor-btn`/`#eng-btn`/`#plan-btn`/`#settings-btn` = `display:none`——无源实证 = `webui/CHAT.md` §2.1③④；`#reasoning-btn` 经 KD-SV-111 出列——档位钮启用〔2026-10-13 收正——评审 #43 发现 1〕）；内距/间距/圆角 ∈ 各族刻度；零新悬停规则（AC-19 canon）；**别名桥 = §2.1① 桥例外**。
+  - **无源钮隐藏**（`#auto-btn`/`#advisor-btn`/`#eng-btn`/`#plan-btn`/`#settings-btn` = `display:none`——无源实证 = `docs/server/design/webui/CHAT.md` §2.1③④；`#reasoning-btn` 经 KD-SV-111 出列——档位钮启用〔2026-10-13 收正——评审 #43 发现 1〕）；内距/间距/圆角 ∈ 各族刻度；零新悬停规则（AC-19 canon）；**别名桥 = §2.1① 桥例外**。
 
-**实施面**：`style.css` 重排（值源化 + 态面 + 死规则删） ∥ `views-admin.mjs` ∥ `views-me.mjs` ∥ `views-models.mjs` ∥ `views-usage.mjs` ∥ `views-audit.mjs` ∥ `views-providers.mjs`（`.hint error` 共 7 处） ∥ `views-providers-modals.mjs`（#87 段内错误面 ⇒ `.hint error`——随其落地并入） ∥ `views-system.mjs`（诊断失败面 2 处——`.error` 修饰） ∥
+- **实施面（样式与视图档）**：`style.css` 重排（值源化 + 态面 + 死规则删） ∥ `views-admin.mjs` ∥ `views-me.mjs` ∥ `views-models.mjs` ∥ `views-usage.mjs` ∥ `views-audit.mjs` ∥ `views-providers.mjs`（`.hint error` 共 7 处） ∥ `views-providers-modals.mjs`（#87 段内错误面 ⇒ `.hint error`——随其落地并入） ∥ `views-system.mjs`（诊断失败面 2 处——`.error` 修饰） ∥
   `views-overview.mjs` ∥ `app.mjs`（死类串删——`stat` 2 处 ∥ `view` 2 处）；`nav.mjs` ∥ `modal.mjs` ∥ i18n 两表 = 零触（零新文案）。
 
 ### 2.2 数据表页视口高壳与布局收正（功能点 20——2026-10-07）
@@ -243,28 +243,28 @@
 **⑤ 弹窗内列表 = 表格形**（风格随全站表格族——`.table-wrap > table` 同构 ∥ 既有表样式零新族；**清单序 = 名称升序**〔候选 ∥ 预设清单〕——2026-10-07 走查收正：长清单可找）：
 
 - **Provider 详情弹窗·勾选段**：**列式表五列**（表头 = `admin.models.colModel` ∥ `admin.providers.colDisplayName` ∥ `colContext` ∥ `metaVision` ∥ `colStatus`）——首格 = `label`（勾选 + 模型名）⇒ 点题名同切换保持（交互零改）；
-  逐格 = `hint` span（缺则空、零占位；退役格 = `hint error`——有则示；功能点 24 = `webui/ADMIN.md` §2.1④）；空态 = `.hint` ∥ 加载 = `.hint`（`candidatesLoading`）∥ 发现失败 = `.hint error`（`webui/ADMIN.md` §2.1④ 不变量）。
+  逐格 = `hint` span（缺则空、零占位；退役格 = `hint error`——有则示；功能点 24 = `docs/server/design/webui/ADMIN.md` §2.1④）；空态 = `.hint` ∥ 加载 = `.hint`（`candidatesLoading`）∥ 发现失败 = `.hint error`（`docs/server/design/webui/ADMIN.md` §2.1④ 不变量）。
 - **添加弹窗·预设信息段**：模型清单 = 单列表（表头 = `admin.models.colModel`——行 = `code` 芯片）；地址行与 apiKey 面零动。
 - **成员详情弹窗·key 表**：四列 = 密钥（`code` hint） ∥ 最后使用（本地化 ∥ `neverUsed`） ∥ 近 30 天（`windowTokensCell`——既有窗口口径） ∥ 操作（表头 `admin.members.colActions`；吊销钮行内）；空态 = `.hint`（`admin.members.noKeys`）。
 - **弹窗内表自滚**（2026-10-07 走查收正 ∥ 同日实测修正——主信息不随表滚 ∥ **单滚动面**：伸缩链 = `.modal-body` flex 列 ⇒ **内容盒（`.modal-body > div`——modal.mjs 整只 append 的调用层盒）** flex 列 `min-height: 0` ⇒ 固定块 `flex: none` ∥ 清单区（`.pick-box`）`flex: 1 1 auto; min-height: 0` 自滚 ∥
-直挂表区（`.modal-body > div > .table-wrap`——成员 key 表 ∥ 配额表）`flex: 1 1 auto; min-height: min-content`——短表（成员 key 表）保自然全高不缩 ∥ 长表（配额表）承缩自滚 + 下限（`.modal-body > div > .quota-table` `min-height: 140px` ≈ 三行——再挤 ⇒ 体滚兜底）；
-外层 `overflow-y: auto` 仅极端兜底；Edge headless 同构实测红→绿在案）+ 表头吸附（`.modal-body .table-wrap thead th` sticky——同壳口径）。
+  - **直挂表区** = `.modal-body > div > .table-wrap`（成员 key 表 ∥ 配额表）`flex: 1 1 auto; min-height: min-content`——短表（成员 key 表）保自然全高不缩 ∥ 长表（配额表）承缩自滚 + 下限（`.modal-body > div > .quota-table` `min-height: 140px` ≈ 三行——再挤 ⇒ 体滚兜底）；
+  - **兜底与表头** = 外层 `overflow-y: auto` 仅极端兜底；Edge headless 同构实测红→绿在案）+ 表头吸附（`.modal-body .table-wrap thead th` sticky——同壳口径）。
 - `.model-picks` 退役——规则与字面删净（S14 零登记口径）。
 
 ### 2.3 隐藏切换语义（`hidden` 兜底规则；功能点 48② ∥ AC-48 ④⑤）
 
-**规则（KD-SV-150）**：`style.css` 底座区增一条 **`[hidden] { display: none !important; }`** ——全站隐藏语义单源；**原两处按例补丁（`.sidebar[hidden]` `:71` ∥ `.tab-panel[hidden]` `:126`）删净**（职能被全局规则吸收——不留冗余）。边界：`!important` 全档**仅此一条**（可点名机检）；组件侧零改（`hidden` 切换写法不动——修的是 CSS 侧）。
+**规则（KD-SV-150）**：`style.css` 底座区增一条 **`[hidden] { display: none !important; }`** ——全站隐藏语义单源；**原两处按例补丁（`.sidebar[hidden]` ∥ `.tab-panel[hidden]`）删净**（职能被全局规则吸收——不留冗余）。边界：`!important` 全档**仅此一条**（可点名机检）；组件侧零改（`hidden` 切换写法不动——修的是 CSS 侧）。
 
 **核对表（全控制台 `hidden` 切换点——逐处核对 `display`）**：
 
 | # | 切换点（实读） | 元素 | 作者 display 源 | 判定 |
 |---|---|---|---|---|
-| 1 | `views-git-sources.mjs:223`（基址门） | `<label>`（`field()` 产物） | `label` `:102` ∥ `.provider-form > label` `:144` ∥ `.provider-form.stacked > label` `:150` | **受压——修**（全局规则接管） |
-| 2 | `views-git-sources.mjs:228`（github 事件块） | `div.stack-box` | `.stack-box` `:235` | **受压——修** |
-| 3 | `thincoder-server/public/app.mjs:154/168`（侧栏） | `aside.sidebar` | `.sidebar` `:70` | 受压——原补丁 `:71` 已覆（删补丁，全局规则接管） |
-| 4 | `tabs.mjs:38/60`（标签面板） | `div.tab-panel` | `.tab-panel` `:125` | 受压——原补丁 `:126` 已覆（同接管） |
-| 5 | `thincoder-server/public/dom.mjs:115/117`（提示条） | `p.flash` | 无（`.flash` 无 `display`） | 结构性安全 |
-| 6 | 余各档（`hidden` 字面全扫——`thincoder-server/public/dom.mjs:57` ∥ `modal.mjs` ∥ `host-credential.mjs` ∥ `views-admin.mjs` ∥ `views-chat.mjs` ∥ `views-ledger.mjs` ∥ `views-me.mjs` ∥ `views-me-sandbox.mjs` ∥ `views-models.mjs` ∥ `views-projects.mjs` ∥ `views-providers-modals.mjs` ∥ `views-sandbox*.mjs`（四档）∥ `views-system*.mjs`（两档）） | `p/span.hint`·`.error`·`.secret`·无类 div | 无（族值规则无 `display`） | 结构性安全（面上全列；「安全」= 命中规则集内无 `display` 声明，非逐点实测） |
+| 1 | `views-git-sources.mjs`（基址门） | `<label>`（`field()` 产物） | `label` 基础规则 ∥ `.provider-form > label` ∥ `.provider-form.stacked > label` | **受压——修**（全局规则接管） |
+| 2 | `views-git-sources.mjs`（github 事件块） | `div.stack-box` | `.stack-box` | **受压——修** |
+| 3 | `thincoder-server/public/app.mjs`（侧栏） | `aside.sidebar` | `.sidebar` | 受压——原补丁已覆（删补丁，全局规则接管） |
+| 4 | `tabs.mjs`（标签面板） | `div.tab-panel` | `.tab-panel` | 受压——原补丁已覆（同接管） |
+| 5 | `thincoder-server/public/dom.mjs`（提示条） | `p.flash` | 无（`.flash` 无 `display`） | 结构性安全 |
+| 6 | 余各档（`hidden` 字面全扫——`thincoder-server/public/dom.mjs` ∥ `modal.mjs` ∥ `host-credential.mjs` ∥ `views-admin.mjs` ∥ `views-chat.mjs` ∥ `views-ledger.mjs` ∥ `views-me.mjs` ∥ `views-me-sandbox.mjs` ∥ `views-models.mjs` ∥ `views-projects.mjs` ∥ `views-providers-modals.mjs` ∥ `views-sandbox*.mjs`（四档）∥ `views-system*.mjs`（两档）） | `p/span.hint`·`.error`·`.secret`·无类 div | 无（族值规则无 `display`） | 结构性安全（面上全列；「安全」= 命中规则集内无 `display` 声明，非逐点实测） |
 
 **机检形（单测档）**：① `[hidden]` 覆盖规则在册（含 `display: none` 与 `!important`）∥ ② `style.css` 全文 `!important` 计数 = 1 ∥ ③ `.sidebar[hidden]`/`.tab-panel[hidden]` 字面零残留（旧补丁零残留）∥ ④ 弹窗源码：非自建平台 ⇒ `hidden` 真值切换（不手写内联 display） ∥
   ⑤ **核对表穷尽性（集合断言）**：`public/**` 全目录扫描含 `hidden` 字面档集 ⊆ 核对表第 6 行在册档集（漏列即红——「面上全列」机械化）。**视觉终判** = 收口轮浏览器实走（建源弹窗两平台两态——非自建 ⇒ 基址不可见）。
@@ -284,18 +284,18 @@
 | 需求 | 设计级判据 | 载体 |
 |---|---|---|
 | AC-19（功能点 19——样式族总体统一；`docs/server/requirements/PROJECT.md` 验收表） | 本档 §2.1 在册：口径五条 ∥ 散置/不一致清单（改前实读——S1–S17） ∥ 变量族底座（`:root` 单源——色/间距/圆角/字排/线宽/布局） ∥ 族值表 + 逐族套用表（①列表 ②按钮 ③表单 ④间距 ⑤字排 ⑥色板 ⑦卡片 ⑧弹窗内构 ⑨空错态 ⑩码面——含 #87/#88 新面「随其落地套用」） ∥ 可点行/不可点行判据 ∥ 空/错/加载态 | 单元测试档 + 收口轮 |
-| AC-19（续·机检口径） | `thincoder-server/public/style.css`：`:root` 块外零颜色字面量（hex/rgba） ∥ 行悬停声明清单（`.nav-item:hover` ∥ `tbody tr:hover`——同取 `var(--hover)`；清单外零行悬停声明；`li.key-item:hover` 随 ul 清单退役删净） ∥ padding/margin/gap 取值 ∈ `--sp-*` ∪ {0, auto} ∪ 布局组变量（`--nav-w`——S15 ∥ 底座布局行；尺寸类白名单除外） ∥ `font-weight` 全 ≤400（**终端面除外**——§2.1 ③ 例外登记：终端面 cell 按 pty 语义；`webui/TERMINAL.md` §2.4） ∥ `font-size` 全 = `var(--fs)`（缺省撤销） ∥ 聚焦环单形（`--bw-strong solid var(--accent)`） ∥ 类名双向闭合（档面字面类 ⊆ `style.css` 类选择器 ∥ `style.css` 类选择器 ⊆ 档面字面类 ∪ 态类）；视觉收口轮浏览器实走（悬停/聚焦/空·错·加载态/弹窗/两语言） | 单元测试档 + 收口轮 |
+| AC-19（续·机检口径） | `thincoder-server/public/style.css`：`:root` 块外零颜色字面量（hex/rgba） ∥ 行悬停声明清单（`.nav-item:hover` ∥ `tbody tr:hover`——同取 `var(--hover)`；清单外零行悬停声明；`li.key-item:hover` 随 ul 清单退役删净） ∥ padding/margin/gap 取值 ∈ `--sp-*` ∪ {0, auto} ∪ 布局组变量（`--nav-w`——S15 ∥ 底座布局行；尺寸类白名单除外） ∥ `font-weight` 全 ≤400（**终端面除外**——§2.1 ③ 例外登记：终端面 cell 按 pty 语义；`docs/server/design/webui/TERMINAL.md` §2.4） ∥ `font-size` 全 = `var(--fs)`（缺省撤销） ∥ 聚焦环单形（`--bw-strong solid var(--accent)`） ∥ 类名双向闭合（档面字面类 ⊆ `style.css` 类选择器 ∥ `style.css` 类选择器 ⊆ 档面字面类 ∪ 态类）；视觉收口轮浏览器实走（悬停/聚焦/空·错·加载态/弹窗/两语言） | 单元测试档 + 收口轮 |
 | AC-20（功能点 20——控制台布局收正；`docs/server/requirements/PROJECT.md` 验收表） | ① 视口高壳在册：壳面五页钉表（成员 `#/admin/members` ∥ Provider `#/admin/providers` ∥ 服务模型 `#/admin/models` ∥ 审计 `#/admin/audit` ∥ 用量明细 `#/me/usage`——本档 §2.2①）；页头固定 ∥ 表头吸附 ∥ 行区滚动 ∥ 表尾行计数（tfoot——吸附表底；声明表 = 本档 §2.2②）∥ 矮视口回退整页滚 ∥ ② 表尾行计数在册（表内 tfoot「共 N 项」= 渲染行数真值——空/错 = 无表无 tfoot；纯前端派生 ∥ 零新端点） ∥ ③ 内容左对齐（`main` 无 auto 居中——`max-width` 沿用） ∥ ④ 弹窗内列表 = 表格形（Provider 勾选 ∥ 预设信息段模型清单 ∥ 成员 key 表——本档 §2.2⑤）；排除面在册（`#/admin/usage` 看板页 ∥ 布局/信息表 ∥ key 表页级（非壳——本档 §2.2① 在案）） | 单元测试档 + 收口轮（浏览器实走） |
-| AC-20（续·机检口径） | 单元测试档用例：`dom.mjs`——`dataShell` 在册（`.page-head`/`.page-area` 两段）+ 表尾计数在册（`table(…, { foot: true })` 与三自建构建器 tfoot 同形 + `common.rowCount` 引用） ∥ `app.mjs`——`SHELL_PAGES` 五路径逐条钉表 ∥ `route()` 切换 `data-shell`（登录/登出径清除） ∥ 五页逐档 `dataShell(` 调用 + 表内 tfoot 计数（成功 = 行数 ∥ 空/错 = 无表） ∥ `style.css`——高度链声明表逐条在册 ∥ `position: sticky` + `top: 0`（表头）∥ `bottom: 0`（tfoot）在册 ∥ 回退媒体查询在册（`height: auto`） ∥ `main` 规则 margin 无 `auto` ∥ 弹窗三处表格形（结构/列头/空错态不变量——含勾选表 `label` 形） ∥ `.model-picks` 零残留（规则与字面两向） ∥ AC-19 canon 不破（零新 `:root` 变量 ∥ 零新悬停规则 ∥ 内距 ∈ 刻度 ∥ 类名双向闭合） ∥ 档目随正——单源 = `webui/WEBUI.md` §1 ∥ 门禁清单添布局收正批单元测试档（十八——以实施盘面为准） ∥ 旧件随正：stub ctx 补 `dataShell` 三件 + 门禁计数两件 | 单元测试档 + 收口轮 |
+| AC-20（续·机检口径） | 单元测试档用例：`dom.mjs`——`dataShell` 在册（`.page-head`/`.page-area` 两段）+ 表尾计数在册（`table(…, { foot: true })` 与三自建构建器 tfoot 同形 + `common.rowCount` 引用） ∥ `app.mjs`——`SHELL_PAGES` 五路径逐条钉表 ∥ `route()` 切换 `data-shell`（登录/登出径清除） ∥ 五页逐档 `dataShell(` 调用 + 表内 tfoot 计数（成功 = 行数 ∥ 空/错 = 无表） ∥ `style.css`——高度链声明表逐条在册 ∥ `position: sticky` + `top: 0`（表头）∥ `bottom: 0`（tfoot）在册 ∥ 回退媒体查询在册（`height: auto`） ∥ `main` 规则 margin 无 `auto` ∥ 弹窗三处表格形（结构/列头/空错态不变量——含勾选表 `label` 形） ∥ `.model-picks` 零残留（规则与字面两向） ∥ AC-19 canon 不破（零新 `:root` 变量 ∥ 零新悬停规则 ∥ 内距 ∈ 刻度 ∥ 类名双向闭合） ∥ 档目随正——单源 = `docs/server/design/webui/WEBUI.md` §1 ∥ 门禁清单添布局收正批单元测试档（十八——以实施盘面为准） ∥ 旧件随正：stub ctx 补 `dataShell` 三件 + 门禁计数两件 | 单元测试档 + 收口轮 |
 | AC-48 ⑤（功能点 48——同族扫描闭合；样式侧） | 本档 §2.3 在册：核对表逐点（全控制台 `hidden` 切换点 ∥ 受压者 = 基址 label + github 事件块 + 原两处补丁位） ∥ 全局规则 `[hidden] { display: none !important; }` 在册 ∥ `!important` 计数 = 1 ∥ 旧两处按例补丁零残留 ∥ 零新 `:root` 变量 ∥ 零新悬停规则（AC-19 canon 不破） | 单元测试档 + 收口轮（浏览器实走：建源弹窗两平台两态） |
-| 容器终端（样式侧；功能点 51） | 终端调色板 **18 枚变量入 `:root`**（登记例外——§2.1 底座表「终端」行；面内零颜色字面量） ∥ 终端面类族五枚（`.terminal-modal`/`.terminal-surface`/`.terminal-row`/`.terminal-cursor`/`.terminal-status`）∥ **粗体例外登记**（§2.1 ③——终端面 cell 按 pty 语义；全局 `font-weight ≤400` 判据在本面留白、余面不破） ∥ 零动画零过渡 ∥ 零新悬停规则（面内无悬停态） ∥ 行悬停声明清单不变 ∥ 内距 ∈ 刻度；判据全文 = `webui/TERMINAL.md` §2.4/§4 ∥ `webui/SANDBOX.md` §2.1① | 单元测试档 + 收口轮（浏览器实走：终端面/光标/滚动） |
+| 容器终端（样式侧；功能点 51） | 终端调色板 **18 枚变量入 `:root`**（登记例外——§2.1 底座表「终端」行；面内零颜色字面量） ∥ 终端面类族五枚（`.terminal-modal`/`.terminal-surface`/`.terminal-row`/`.terminal-cursor`/`.terminal-status`）∥ **粗体例外登记**（§2.1 ③——终端面 cell 按 pty 语义；全局 `font-weight ≤400` 判据在本面留白、余面不破） ∥ 零动画零过渡 ∥ 零新悬停规则（面内无悬停态） ∥ 行悬停声明清单不变 ∥ 内距 ∈ 刻度；判据全文 = `docs/server/design/webui/TERMINAL.md` §2.4/§4 ∥ `docs/server/design/webui/SANDBOX.md` §2.1① | 单元测试档 + 收口轮（浏览器实走：终端面/光标/滚动） |
 
 ## 5. 边界（本面不做面）
 
 - 样式族不做面：版式/结构重设计（骨架沿用——卡片/表格/侧栏/弹窗结构零动）∥ 类名体系改名（沿用——仅删死类 ∥ 新增 `.error` 态修饰）∥ 动画/过渡（零——保持零依赖零动画）∥ 主题化/暗色（不做——未裁）∥ 自绘控件（checkbox 等原生 + `accent-color`）∥ 移动端适配（不做承诺不变——窄屏单条媒体查询保持）。
 - 布局收正不做面：`#/admin/usage` 看板页入壳（报表区无界——另轮如需）∥ 布局/信息表与 key 清单（页级）壳化 ∥ 弹窗内表吸附/分页/筛选 ∥ 分页/虚拟滚动 ∥ 主题化/暗色（不变）。
-- 标签页不做面（console-tabs-component——样式侧）：零新 `:root` 变量 ∥ 行悬停声明清单不变 ∥ 钮族悬停 = ② 型表在册（页签取 `--hover` 底） ∥ 不改版式/结构（页签族 = ② 型扩充 + ① 选中态复用）；其余不做面 ⇒ 见 `webui/TABS.md` §5。
-- 对话页壳不做面（chat-shell-align——样式侧）：核件样式（`composer.css`/`model-menu.css`——核内单源，控制台零覆写；其自带过渡/动画 = 核件行为，非本档新动画）∥ 控制台自有档零动画（KD-SV-36 不破）∥ 别名块不引入新值（逐键 `var(--既有)`——AC-19 ① canon 不破）；其余不做面 ⇒ `webui/CHAT.md` §5。
+- 标签页不做面（console-tabs-component——样式侧）：零新 `:root` 变量 ∥ 行悬停声明清单不变 ∥ 钮族悬停 = ② 型表在册（页签取 `--hover` 底） ∥ 不改版式/结构（页签族 = ② 型扩充 + ① 选中态复用）；其余不做面 ⇒ 见 `docs/server/design/webui/TABS.md` §5。
+- 对话页壳不做面（chat-shell-align——样式侧）：核件样式（`composer.css`/`model-menu.css`——核内单源，控制台零覆写；其自带过渡/动画 = 核件行为，非本档新动画）∥ 控制台自有档零动画（KD-SV-36 不破）∥ 别名块不引入新值（逐键 `var(--既有)`——AC-19 ① canon 不破）；其余不做面 ⇒ `docs/server/design/webui/CHAT.md` §5。
 
 ## 6. 上抛/余项
 

@@ -162,8 +162,8 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 **ASYNC-RESULT-CONTAINER（VSC 仓版）**：语义同源（F1–F6 / N1–N4 已并 §4.8）；VSC 端条目 = ① F-A6 挂起期注入与消化面（settle → 单容器 → digest 轮驱动；中止 → 容器清不注入陈旧结果）·
 
-② 端差 = **已消解**（现体 = 核面同族）·池载体 = 共享 history 数组双查询（`history?._X ?? agent._X`——accessor 吸收，语义同源——**形态（非登记项）**）。坐标（实核）＝ `thincoder-vscode/src/extension/suspension.mjs:32-55`（挂起期单容器）·
-`thincoder-vscode/src/agent.mjs:66-74`。
+② 端差 = **已消解**（现体 = 核面同族）·池载体 = 共享 history 数组双查询（`history?._X ?? agent._X`——accessor 吸收，语义同源——**形态（非登记项）**）。坐标（实核）＝ `thincoder-vscode/src/extension/suspension.mjs`（挂起期单容器）·
+`thincoder-vscode/src/agent.mjs`。
 
 端差差异若有 → 逐条补登记（不静默）；本档不代述对端正文（D2）。
 
@@ -190,7 +190,7 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 **总体需求**：作为**使用 CLI 的开发者**，我想要 **主 agent 回合（depth-0 · 非 resume）注入一条记忆召回块**，而**子代理 spawn 的子代回合不注入**（子代按需自取），以便**召回对主对话可用、且不为每次 spawn 付一次全表扫描**。
 
-来源与依据：VSC 端条目 `docs/core/requirements/MEMORY.md:146` F-M7（depth-0 · 非 resume · 非 auto-turn）。现状代码 `thincoder-core/agent/setup.mjs:101-126` 无 depth 门（同函数其余自动注入面皆有门）⇒ 与本条相抵，修复随该轮。
+来源与依据：VSC 端条目 `docs/core/requirements/MEMORY.md` F-M7（depth-0 · 非 resume · 非 auto-turn）。现状代码 `thincoder-core/agent/setup.mjs` 无 depth 门（同函数其余自动注入面皆有门）⇒ 与本条相抵，修复随该轮。
 
 | # | 需求（能力逐条可交付） | 范围边界（明确不做什么） |
 |---|---|---|
@@ -198,7 +198,7 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 | F2 | 既有「非 resume」条件保持（注入块位于 `if (!resume)` 内——现状即如此） | 不新增门类 |
 | F3 | 子代仍可按需检索（readonly `code_search` / `doc_search` 在子代工具表内；`memory` 工具因工具级 readonly 不在只读子代表内 = 既有登记） | 不改工具表过滤 |
 
-**非功能**：N1 **可机判**（两路径回合装配的注入有无 = 断言）· N2 **零新增失败面**（注入失败静默跳过 = 现状）· N3 **auto-turn 面已满足**（实测 `thincoder-core/agent.mjs:129` `resume: resume || autoTurn` ⇒ auto-turn 回合走 resume 路径、不进召回块；本条不改 auto-turn 语义）。
+**非功能**：N1 **可机判**（两路径回合装配的注入有无 = 断言）· N2 **零新增失败面**（注入失败静默跳过 = 现状）· N3 **auto-turn 面已满足**（实测 `thincoder-core/agent.mjs` `resume: resume || autoTurn` ⇒ auto-turn 回合走 resume 路径、不进召回块；本条不改 auto-turn 语义）。
 
 **设计侧 = `docs/core/design/MEMORY.md` §6.10 修法 B**（三方一致）——本档不复制。
 
@@ -244,7 +244,7 @@ N4 范围 = **核侧 + CLI + VSC 两端对位**（**用户裁定「vsc 肯定要
 
 > **形状面判据**：
 > 情形（尾 `tool` = 活体形状）：缺字段 = **400（逐字 `must be passed back`）** · 空串 = 200（含推理回传） · 真值 = 200；尾 `user` 形状三形态全 200 ⇒ **触发与形状 / `content` 面相关**。**接受面 =
- 活体形状下空串 200** ⇒ 目标 = **活体 400 消除 + 推理连续性 + 同族收口**；残险 = mimo 两行（`model-specs.mjs:75/76`）凭证缺 ⇒ 不可证（保持翻面 + 登记）。
+ 活体形状下空串 200** ⇒ 目标 = **活体 400 消除 + 推理连续性 + 同族收口**；残险 = mimo 两行（`model-specs.mjs`）凭证缺 ⇒ 不可证（保持翻面 + 登记）。
 
 **设计侧 = `docs/core/design/CONTEXT-COMPACTION.md` §6.10 #9 + §7 D-CC22**（判据与决策单源）——本档不复制（D2）；主循环线与端壳接线面指针见 `AGENT-LOOP.md` §6.4 / §6.18。
 
@@ -346,7 +346,7 @@ N4 范围 = **核侧 + CLI + VSC 两端对位**（**用户裁定「vsc 肯定要
 
 **验收**：① 工程模式并发派两席共一本批档（第一席 async 在飞，紧接派第二席）⇒ 第二席被拒 ∧ 返文点名批档路径 ∥ 占用者 ∥ 其 status ∥ 下一步，池面不变（池内仅第一席、队列空）；② 顺序交接（同一 batchDoc 前后两个 spawn 不重叠）⇒ 不判违反。
 
-**依赖**：上游 = 判据单源 `batchDocInFlight`（`thincoder-core/agent-tools/subagent-scheduler.mjs:194`）· 设计面 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.58；下游 = 写面冲突块（跨批档写门）· 集成行 `test/RTM.md` 故事 20 的 `20-1`。
+**依赖**：上游 = 判据单源 `batchDocInFlight`（`thincoder-core/agent-tools/subagent-scheduler.mjs`）· 设计面 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.58；下游 = 写面冲突块（跨批档写门）· 集成行 `test/RTM.md` 故事 20 的 `20-1`。
 
 ### 4.20 tester 子代理（读数来源 · 用户裁定 2026-11-02）
 

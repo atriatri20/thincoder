@@ -8,7 +8,7 @@
 
 - **承载**：端侧团队登录机制——登录 ∥ 退出 ∥ 轮换 ∥ 登录态读面（三端共用逻辑）；派生 provider 条目（登录写入 / 退出停用 / 轮换同步）；端标签生成；登录/退出/轮换对 `~/.thincoder/config.json` 的写面。
 - **核模块**：`thincoder-core/team.mjs`（三端共用单源：CLI ∥ VSC ∥ 桌面同 import）。
-- **不承载**：服务端逻辑（= `client/CLIENT.md`）∥ 团队功能面本身（台账 ∥ 记忆 ∥ 在场 ∥ 会话——后续批）∥ 提供者传输/模型解析（= `PROVIDER.md`）。
+- **不承载**：服务端逻辑（= `docs/server/design/client/CLIENT.md`）∥ 团队功能面本身（台账 ∥ 记忆 ∥ 在场 ∥ 会话——后续批）∥ 提供者传输/模型解析（= `PROVIDER.md`）。
 - **纪律**：明文密码零落盘（请求内存即弃）∥ 本机面不夺能力（未登录 ⇒ 本机功能照常）∥ 无离线缓存（需求 §3）。
 
 ## 2. 机制面
@@ -29,12 +29,12 @@
 - **单写者**：仅登录/退出流程写 `team` 段与派生条目（`writeConfigAtomic` 一次 mutate——核既有写盘执行体；端侧零自写盘，三端同源）。
 - **加载归一**：`loadConfig` 归一 `team` 段（形不符 ⇒ null——软失败不阻启动；沿 `proxy` 段先例）。
 - **登录态判据**：`loggedIn` ⇔ `team.token`（trim 非空）。**= 团队功能开关**（后续各面消费本判据——口径④）。
-- **`team` 段不入 `DEFAULTS`**（沿 `providers` / `proxy` 先例）：不进入 settings 工具的已知键面（**未知键原样通过**——agent 可写、零类型校验；工具不主动写 `team` 段；`thincoder-core/agent-tools/settings.mjs:144`）；`team.token` 若经读面到达 = 敏感段词表天然遮罩（`thincoder-core/agent-tools/settings.mjs:22`）。
+- **`team` 段不入 `DEFAULTS`**（沿 `providers` / `proxy` 先例）：不进入 settings 工具的已知键面（**未知键原样通过**——agent 可写、零类型校验；工具不主动写 `team` 段；`thincoder-core/agent-tools/settings.mjs` 的未知键分支）；`team.token` 若经读面到达 = 敏感段词表天然遮罩（同档的敏感段词表）。
 
 ### 2.2 登录流程（三端同构）
 
 1. 收集：服务器地址 + 用户名 + 密码（+ 本端标签自动生成 = `端名@主机名`——`node:os` `hostname()`；总长 ≤40 裁剪）。
-2. 请求：`POST <server>/api/client/login`（形 = `client/CLIENT.md` §2）。
+2. 请求：`POST <server>/api/client/login`（形 = `docs/server/design/client/CLIENT.md` §2）。
 3. 成 ⇒ 一次写盘：`team` 段（server/member/label/token）+ 派生条目 upsert（按名 `team` + `derived` 定位——有则更新，无则**追加 `providers[]` 表尾**——不劫持既有回退序）。
 4. 败 ⇒ 分类出词（网络不可达 ∥ 凭据错 ∥ 锁定期 ∥ 本机配置写入失败）——零写盘。
 
@@ -51,8 +51,8 @@
 
 - **可用性**：派生条目无 `apiKey` ⇒ 不参与运行时解析（`hasKey` 既有判据——零新代码）；不触发「渠道无效」类提示（回退序跳过）。
 - **列表可见性**：`derived === true` ∧ 无 key ⇒ 从 provider 列表/模型候选面隐藏（**五消费面各一处过滤**：
-  CLI 模型候选（`thincoder-cli/src/tui/model-picker.mjs:115/:271`） ∥ **CLI `/config` provider 列表（`thincoder-cli/src/tui/cmd-config-menus.mjs:204/:214`）** ∥ CLI provider-admin（`thincoder-cli/src/tui/provider-admin.mjs`） ∥ VSC `providerStatus`（`thincoder-vscode/src/extension/settings.mjs`）∥
-  桌面 `providerList`（`thincoder-desktop/src/main/providers.mjs`）；**共单源** = `isDerivedProviderHidden`（`provider-admin.mjs:23`）——与 `docs/core/design/PROVIDER.md` §6.25 同拍）；**登录态下在场**（正常参与，key 掩码显示）。
+  - **CLI 两处** = 模型候选（`thincoder-cli/src/tui/model-picker.mjs`）∥ `/config` provider 列表（`thincoder-cli/src/tui/cmd-config-menus.mjs`）；
+  - **其余三处** = CLI provider-admin（`thincoder-cli/src/tui/provider-admin.mjs`） ∥ VSC `providerStatus`（`thincoder-vscode/src/extension/settings.mjs`）∥ 桌面 `providerList`（`thincoder-desktop/src/main/providers.mjs`）；**共单源** = `isDerivedProviderHidden`（`provider-admin.mjs`）——与 `docs/core/design/PROVIDER.md` §6.25 同拍）；**登录态下在场**（正常参与，key 掩码显示）。
 - **不自动改**：不写 `defaultModel` ∥ 不切换当前会话模型 ∥ 不动既有手工条目（登录唯一副作用 = §2.2 两处写）。
 
 ### 2.5 三端同构面（能力与文案）
@@ -109,26 +109,26 @@
 
 | 端 | 取数面（既有） | 成拍随动落点 |
 |---|---|---|
-| CLI | `agent.providers`（模型 picker 开面活读该数组——`thincoder-cli/src/tui/model-picker.mjs:115`） | `thincoder-cli/src/tui/cmd-team.mjs` `completeTeamLogin`（现盘实读 `:214`——内 `syncProvidersFromDisk` 调用 `:219`）——本批零改 |
-| VSC | `models` 载荷（`fullStatus`——`thincoder-vscode/src/extension/settings.mjs:393`；消费 = `thincoder-vscode/webview/chat-messages.js:150`） | 两处（登录入口两族各一）：① webview 径 ⇒ `thincoder-vscode/src/extension/panel-messages-settings.mjs:268` `handleTeamLogin` 成支 `panel._pushSettings()`；② 扩展侧径（状态栏 item ∥ 命令面板）⇒ `thincoder-vscode/src/extension/team-surface.mjs:135` `loginFlow()` 成支 `_chatPanel?._pushSettings?.()`（登成 ⇒ `models` 随探针拍发） |
-| 桌面 | `model:catalog`（输入区候选面——`thincoder-desktop/renderer/composer-sync.mjs:325`） | `thincoder-desktop/renderer/mount-team.mjs:120` `login()` 成支：既有 `loadProviders()` 旁增 `onProvidersChanged()`（= `composer.refreshCandidates()`；注入面 = `thincoder-desktop/renderer/mount-settings.mjs:155`） |
+| CLI | `agent.providers`（模型 picker 开面活读该数组——`thincoder-cli/src/tui/model-picker.mjs`） | `thincoder-cli/src/tui/cmd-team.mjs` `completeTeamLogin`（内 `syncProvidersFromDisk` 调用）——本批零改 |
+| VSC | `models` 载荷（`fullStatus`——`thincoder-vscode/src/extension/settings.mjs`；消费 = `thincoder-vscode/webview/chat-messages.js`） | 两处（登录入口两族各一）：① webview 径 ⇒ `thincoder-vscode/src/extension/panel-messages-settings.mjs` 的 `handleTeamLogin` 成支 `panel._pushSettings()`；② 扩展侧径（状态栏 item ∥ 命令面板）⇒ `thincoder-vscode/src/extension/team-surface.mjs` 的 `loginFlow()` 成支 `_chatPanel?._pushSettings?.()`（登成 ⇒ `models` 随探针拍发） |
+| 桌面 | `model:catalog`（输入区候选面——`thincoder-desktop/renderer/composer-sync.mjs`） | `thincoder-desktop/renderer/mount-team.mjs` 的 `login()` 成支：既有 `loadProviders()` 旁增 `onProvidersChanged()`（= `composer.refreshCandidates()`；注入面 = `thincoder-desktop/renderer/mount-settings.mjs`） |
 
 **登录入口逐径（本批刷新落点的适用范围）**：本批只动登录成拍一条路径，落在各端**登录入口**上——逐径清点如下。
 
 | 端 | 登录入口 | 本批落点是否覆盖 |
 |---|---|---|
-| CLI | argv `thincoder team login`（`thincoder-cli/src/cli/team-command.mjs`）∥ 首启向导团队路 ∥ 会话内 `/team login` | 覆盖：向导路与会话内**同经 `completeTeamLogin`**（`thincoder-cli/src/tui/wizard.mjs:311` 调同件）；argv 径进程即止、无会话内存 ⇒ 零随动对象（候选面取数 = 下次启动）——三径零改 |
-| VSC | 首启板团队卡 ∥ 状态栏团队 item 点击流 ∥ 命令面板 `thincoder.team` | 覆盖：**三径皆成拍刷新——实现两处（未汇流）**：① 首启板团队卡（webview `teamLogin` 消息）经宿主 `handleTeamLogin`（`thincoder-vscode/src/extension/panel-messages-settings.mjs:264`）；② 状态栏 item ∥ 命令面板经扩展侧 `loginFlow()` 成支（`thincoder-vscode/src/extension/team-surface.mjs:135`——直调核 `teamLogin`，不经 `handleTeamLogin`） |
-| 桌面 | 状态段就地面板（`thincoder-desktop/renderer/mount-team.mjs` `login()` `:120`）∥ 首启向导团队表单（`thincoder-desktop/renderer/mount-onboarding.mjs:182` `team:login`） | 面板径 = 本批落点；向导径**不经 `login()`**——成拍随动 = `loadProviders()`（`thincoder-desktop/renderer/mount-onboarding.mjs:191`）+ 步 2 自带取数链（`loadModels`）⇒ 向导期主界面输入区不在用，本批刷新落点该径不适用（零改；端面单源 = `docs/desktop/design/SETTINGS.md` §2.21） |
+| CLI | argv `thincoder team login`（`thincoder-cli/src/cli/team-command.mjs`）∥ 首启向导团队路 ∥ 会话内 `/team login` | 覆盖：向导路与会话内**同经 `completeTeamLogin`**（`thincoder-cli/src/tui/wizard.mjs` 调同件）；argv 径进程即止、无会话内存 ⇒ 零随动对象（候选面取数 = 下次启动）——三径零改 |
+| VSC | 首启板团队卡 ∥ 状态栏团队 item 点击流 ∥ 命令面板 `thincoder.team` | 覆盖：**三径皆成拍刷新——实现两处（未汇流）**：① 首启板团队卡（webview `teamLogin` 消息）经宿主 `handleTeamLogin`（`thincoder-vscode/src/extension/panel-messages-settings.mjs`）；② 状态栏 item ∥ 命令面板经扩展侧 `loginFlow()` 成支（`thincoder-vscode/src/extension/team-surface.mjs`——直调核 `teamLogin`，不经 `handleTeamLogin`） |
+| 桌面 | 状态段就地面板（`thincoder-desktop/renderer/mount-team.mjs` 的 `login()`）∥ 首启向导团队表单（`thincoder-desktop/renderer/mount-onboarding.mjs` 的 `team:login`） | 面板径 = 本批落点；向导径**不经 `login()`**——成拍随动 = `loadProviders()`（`thincoder-desktop/renderer/mount-onboarding.mjs`）+ 步 2 自带取数链（`loadModels`）⇒ 向导期主界面输入区不在用，本批刷新落点该径不适用（零改；端面单源 = `docs/desktop/design/SETTINGS.md` §2.21） |
 
-**沿既有面（零新增）**：VSC 复用「provider 写成功 ⇒ `panel._pushSettings()`」先例（`thincoder-vscode/src/extension/panel-messages-settings.mjs:94`——登录 = 派生条目入列表，同类动作；`fullStatus` 首行仍发 `providerStatus`，回执序不变）；
-桌面复用「provider 写成功 ⇒ `onProvidersChanged`」先例（`thincoder-desktop/renderer/mount-settings-exits.mjs:123`）；CLI 复用登/退既有两复读之一。
+- **沿既有面（零新增）**：VSC 复用「provider 写成功 ⇒ `panel._pushSettings()`」先例（`thincoder-vscode/src/extension/panel-messages-settings.mjs`——登录 = 派生条目入列表，同类动作；`fullStatus` 首行仍发 `providerStatus`，回执序不变）；
+- **另两端**：桌面复用「provider 写成功 ⇒ `onProvidersChanged`」先例（`thincoder-desktop/renderer/mount-settings-exits.mjs`）；CLI 复用登/退既有两复读之一。
 
-**登出成拍（同律——三端）**：退出成 ⇒ 同拍刷新本端候选面，落点各端一处（VSC 两径未汇流）——
-VSC webview 径 `thincoder-vscode/src/extension/panel-messages-settings.mjs:283` `panel._pushSettings()`；
-VSC 扩展侧径 `thincoder-vscode/src/extension/team-surface.mjs:152` `_chatPanel?._pushSettings?.()`；
-桌面 `thincoder-desktop/renderer/mount-team.mjs:165` `onProvidersChanged?.()`。
-理由 = 退出摘派生条目 `apiKey` ⇒ `team` 渠失效、候选面整表作废；不推则界面挂着过期候选表。VSC 早退径同拍清簿记（`models: []` + prefs 与 `_lastPushedPrefs` 同源同拍——`thincoder-vscode/src/extension/settings.mjs:397` 早退径），否则下一次复推按旧候选簿记复读。
+- **登出成拍（同律——三端）**：退出成 ⇒ 同拍刷新本端候选面，落点各端一处（VSC 两径未汇流）——
+  - **VSC webview 径** = `thincoder-vscode/src/extension/panel-messages-settings.mjs` 的 `panel._pushSettings()`；
+  - **VSC 扩展侧径** = `thincoder-vscode/src/extension/team-surface.mjs` 的 `_chatPanel?._pushSettings?.()`；
+  - **桌面** = `thincoder-desktop/renderer/mount-team.mjs` 的 `onProvidersChanged?.()`。
+理由 = 退出摘派生条目 `apiKey` ⇒ `team` 渠失效、候选面整表作废；不推则界面挂着过期候选表。VSC 早退径同拍清簿记（`models: []` + prefs 与 `_lastPushedPrefs` 同源同拍——`thincoder-vscode/src/extension/settings.mjs` 早退径），否则下一次复推按旧候选簿记复读。
 
 **不动（本批范围外）**：轮换（§2.7）——既有随动零改（轮换只换 token、渠道集合不变；渠道行由 `pushTeamStatus` + `_pushStatus` 当拍重取）。
 
@@ -194,7 +194,7 @@ VSC 扩展侧径 `thincoder-vscode/src/extension/team-surface.mjs:152` `_chatPan
 | ② token 落本地 ∥ 明文密码零落盘：登录成 ⇒ `team.token` 在场 ∥ 派生条目 `apiKey` 同值；实读 config.json 零密码字段 | 单元测试档 |
 | ③ 自动 provider ∥ 模型可用：登录成 ⇒ `providers[]` 现 `team` 条目（`derived:true` ∥ baseURL = `<server>/v1` ∥ apiKey = token——同盘读）；模型面 = 该 token 对 `/v1/models` 可通；收口轮实走一轮 | 单元测试档 + 收口轮 |
 | ④ 未登录 ⇒ 团队面不启用：`loggedIn === false`；三端未登录态渲染（提示句逐字同）；派生条目无 key ⇒ 列表隐藏（§2.4 判据） | 单元测试档 + 收口轮 |
-| ⑤ 退出 ⇒ 服务端吊销 + 团队面关闭：落盘后 `team.token` 摘除 ∥ `apiKey` 摘除且 `derived` 保留 ∥ 服务端该 token 下一请求 ⇒ 401（服务面判据 = `client/CLIENT.md` §4） | 单元测试档 + 收口轮 |
+| ⑤ 退出 ⇒ 服务端吊销 + 团队面关闭：落盘后 `team.token` 摘除 ∥ `apiKey` 摘除且 `derived` 保留 ∥ 服务端该 token 下一请求 ⇒ 401（服务面判据 = `docs/server/design/client/CLIENT.md` §4） | 单元测试档 + 收口轮 |
 
 **增判据（回指桌面 D11 ∥ CLI F19 ∥ F20 ∥ VSC F-W20 ∥ F-W21）**：
 
@@ -228,5 +228,5 @@ VSC 扩展侧径 `thincoder-vscode/src/extension/team-surface.mjs:152` `_chatPan
 ## 7. 边界（不做）
 
 - 不做登录 token 管理面（清单/吊销 = 控制台 key 页 ∥ CLI key 命令——既有面）；轮换 = 端侧可达（§2.7——单把换发）；**不做全换**（他端 token ∥ 沙盒工作区 key 不动——KD-SV-63）**∥ 不做改名**（标签沿用） ∥ 不做多账号/多服务器切换（单登录态） ∥ 不做离线缓存 ∥ 不做授权码/device-flow ∥ 不做周期轮询校验（校验 = 触发点制——§2.6） ∥ 不做团队面板（状态 = 常显段/项；入口 = 登/退面） ∥ 不做新文案（五句失败句 ∥ 未登录句 ∥ 三条一次性提示沿用逐字；新态词仅「已失效——重新登录」）。
-- **token 生命周期**：累积可预期（每次登录一枚 ∥ 无过期 ∥ 不自动清理）——清理 = 用户面（key 列表逐把吊销——既有面）；换 server 重登（单登录态覆盖）⇒ 旧 server 的 token 不在本机——撤销径 = 旧 server 控制台 key 列表（`webui/ME.md` §2.1 ∥ `GET /api/me` ∥ CLI `key revoke`）。
+- **token 生命周期**：累积可预期（每次登录一枚 ∥ 无过期 ∥ 不自动清理）——清理 = 用户面（key 列表逐把吊销——既有面）；换 server 重登（单登录态覆盖）⇒ 旧 server 的 token 不在本机——撤销径 = 旧 server 控制台 key 列表（`docs/server/design/webui/ME.md` §2.1 ∥ `GET /api/me` ∥ CLI `key revoke`）。
 - 不改 `memory.team`（B3 面） ∥ 不动 personal/project 记忆 ∥ 不自动改 `defaultModel` ∥ 不切换会话模型 ∥ 不动手工 provider 条目。

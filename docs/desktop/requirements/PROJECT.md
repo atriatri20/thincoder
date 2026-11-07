@@ -86,9 +86,9 @@
 **「能对话」（硬阻塞 · 先行）**：
 
 1. **输入面** ✓——多行输入框 · **Enter 发送 / Shift+Enter 换行** · **中断键**（对回 §3.1 · D3 ✓；通道已备 = `msg:send` / `msg:interrupt` ✓）；
-2. **`ev:question` / `ev:task` 消费 + 真作答面** ✓ —— **已落**：作答出口 = `thincoder-desktop/src/main/ipc.mjs:217`（`question:respond`）· 注册 = `src/main/ipc-registry.mjs:67` · 预载白名单 = `src/preload/preload.cjs:43` · 流内提问卡 = `thincoder-desktop/renderer/views/question.mjs`（核卡单源 `cards/question.mjs`——含 P2 Enter 提交）；
-3. **消息队列写者** ✓ —— **已由改道消解**：用户排队消息改住输入区上方待发送带，`pool.queue` = 席位保留 · 零写者（`thincoder-desktop/renderer/store.mjs:63`）—— 原「busy 期提交无路径」不再成立；
-4. **会话改名 / 删除 UI** ✓ —— 通道 + 主侧逻辑 + 渲染面控件均已备（`thincoder-desktop/src/main/ipc-registry.mjs:43` ∥ `:44`）（对回 **D2**）。
+2. **`ev:question` / `ev:task` 消费 + 真作答面** ✓ —— **已落**：作答出口 = `thincoder-desktop/src/main/ipc.mjs`（`question:respond`）· 注册 = `src/main/ipc-registry.mjs` · 预载白名单 = `src/preload/preload.cjs` · 流内提问卡 = `thincoder-desktop/renderer/views/question.mjs`（核卡单源 `cards/question.mjs`——含 P2 Enter 提交）；
+3. **消息队列写者** ✓ —— **已由改道消解**：用户排队消息改住输入区上方待发送带，`pool.queue` = 席位保留 · 零写者（`thincoder-desktop/renderer/store.mjs`）—— 原「busy 期提交无路径」不再成立；
+4. **会话改名 / 删除 UI** ✓ —— 通道 + 主侧逻辑 + 渲染面控件均已备（`thincoder-desktop/src/main/ipc-registry.mjs` 的两处）（对回 **D2**）。
 
 **「对齐」（体验面 · 后）**：
 
@@ -130,7 +130,8 @@
 - 落点 = 核件接入（`renderSubBlock` / `activity-view` 族）+ 值对齐。
 
 **勘察已落**——四物对照在册：CLI 状态行 15 段（纯函数段可复用）；VSC live 面板 = **子 agent 实例带**（`thincoder-vscode/src/extension/panel-subagent-relay.mjs`——位置非右栏，桌面为**角色**对位）。
-  桌面 relay 事件**宿主已解析、渲染面丢弃**（`agent-bridge.mjs:15-27` × `renderer/events.mjs:220-221`）；VSC webview 宿主胶水分布（`state.js:10` 单源 + 交互模块散布；CSS 变量经 `base.css:8-20` 映射层）。
+
+  桌面 relay 事件**宿主已解析、渲染面丢弃**（`agent-bridge.mjs` × `renderer/events.mjs` 的丢弃面）；VSC webview 宿主胶水分布（`state.js` 单源 + 交互模块散布；CSS 变量经 `base.css` 映射层）。
 
 **功能面全量对位** ✓：VSC 端**已有的一切用户可见功能**（命令 ∕ 视图 ∕ 面板 ∕ 自动行为 ∕ 会话 ∕ 模型 ∕ 索引 ∕ skills ∕ 多实例等）⇒ 桌面**必须有**——复用 ∕ 上提默认；**缺项 = 缺陷**（真端差须实证，沿本节「对齐口径」）；**全量清点 + 缺项一次补齐**（清点 = 双路侦察：VSC 功能注册表自上而下 ∕ 核件能力三端消费自下而上；回件后归批）。原话：「功能上，你也好好查查，我不想再出现什么 vsc 端有的功能 desktop 没实现的。——一次处理」。
 

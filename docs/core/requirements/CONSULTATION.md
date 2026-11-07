@@ -3,11 +3,12 @@
 > 板块归属 = **核心统一**（phase 2——「一个核 + 两个薄壳」）；本档 = 该板块的**子系统需求档**（三层归属之需求层）。
 > **工作流档**（需求层）= `docs/core/requirements/CORE-UNIFICATION.md` §1–§4 + §5 登记表（统一目标 / 边界原则 / 量级读数基线 / 范围边界）——本档**不复制**（D2 单一权威源）。
 > **设计层** = `docs/core/design/CONSULTATION.md`（本子系统设计与测试）；工作流设计档 = `docs/core/design/CORE-UNIFICATION.md`。
-> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图 `thincoder-cli/docs/README.md` §3.2；三层归属见同图 §3.1。
+> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见仓文档地图 `docs/README.md` §4（板块镜像形态）；三层归属见同档 §1。
 
 ## 1. 总体定位
 
 评审 · 会诊 · 飞刀 = advisor 主面（`advisor.mjs` + `src/advisor/*`）**+** 工具面（`advisor` · `consult` · `advisor-settle` · `review-streak` · `subagent-panel`）**+** 飞刀（升级到更强模型）。
+
 VSC 侧对应面住 `thincoder-core/advisor.mjs` + `src/advisor/*`（拆 `provider.mjs` · `tools.mjs`）与 `agent-tools/subagent-escalate*`。
 本板块对本子系统的要求 = 该面归一为**核内单一实现**（含评审止损护栏）。
 
@@ -18,7 +19,7 @@ VSC 侧对应面住 `thincoder-core/advisor.mjs` + `src/advisor/*`（拆 `provid
 ### 2.1 本子系统条目
 
 - **【派生 · 非用户原话】** 评审 · 会诊 · 飞刀面归一为**核内单一实现**：advisor 提示词选择 / 跟进构建 / 会话装配取一侧；评审 provider 解析与工具集按核内结构归位；**评审止损护栏**（同一批设计文档连续失败达阈值即**拒发**并给失败尝试表）取 CLI 并在**两端生效**。
-  源 = 设计档 `CONSULTATION.md` §2.1–§2.4 · §3.1 A24。
+  源 = 设计档 `docs/core/design/CONSULTATION.md` §2.1–§2.4 · §3.1 A24。
 
 ### 2.2 适用工作流条目（回指 · 不复制）
 
@@ -59,8 +60,9 @@ VSC 侧对应面住 `thincoder-core/advisor.mjs` + `src/advisor/*`（拆 `provid
 语义同源——VSC 档 F-S1–F-S6 / N-S1–N-S4 与 §4.1 / §4.2 逐条同义（不重并）；**VSC 独有条目**：
 
 - **F-S7 面板可见性**：每 consultant 一条活动块（`sub:consult` 事件）+ 回复预览（≤8KB）随 answered 事件带出；冻结入流同 subagent / escalate / advisor——呈现接线 = `docs/vsc/design/WEBVIEW.md` §14。
-- **N-S1 预算**：`consultTurns` 默认 40 + 墙钟看门狗 `consultTimeoutMs` 600000ms（10min）——坐标 ＝ `thincoder-vscode/src/config-io.mjs:321-322`；判定权仍归主 agent（会诊 = 建议非门禁）。
+- **N-S1 预算**：`consultTurns` 默认 40 + 墙钟看门狗 `consultTimeoutMs` 600000ms（10min）——VSC 侧读同名的 `agent.consultTurns` / `agent.consultTimeoutMs` 两键；判定权仍归主 agent（会诊 = 建议非门禁）。
 
 **端差（已裁保留 · 形态类——类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）**：呈现面（面板活动块 + 回复预览 vs TUI）+ 配置入口（Settings 面板 vs `/config`）。坐标 ＝ `thincoder-vscode/src/agent-tools/consult.mjs` · `config-consult.mjs`。
+
 **测试缺口（发现即报）**：VSC `test/` 对 `_consultSessions` / `runConsultChild` 直引零命中——既有间接回归 = `test/config-softfail.test.mjs` · `activity-flow.test.mjs` · `agent-lifecycle-singleton.test.mjs`。
 

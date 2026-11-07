@@ -14,9 +14,9 @@
 
 ## 2. 方案与理由
 
-**最接近先例**：事件通道已有单一实现 `thincoder-core/log.mjs:114` `export function logEvent(kind, fields = {})`（`{"ts","ev","seq",...fields}` 单行 JSON，字段名黑名单 + 字符串脱敏 + 512 字符收尾）。
+**最接近先例**：事件通道已有单一实现 `thincoder-core/log.mjs` 的 `logEvent(kind, fields = {})`（`{"ts","ev","seq",...fields}` 单行 JSON，字段名黑名单 + 字符串脱敏 + 512 字符收尾）。
 
-本批**复用**该函数，事件名沿用既有 `ns:event` 形（`thincoder-core/agent/dispatch-run.mjs:61` `tool:call`、`thincoder-core/provider/core.mjs:88` `llm:start`）；不新造事件总线、不新增日志文件、不加开关。
+本批**复用**该函数，事件名沿用既有 `ns:event` 形（`thincoder-core/agent/dispatch-run.mjs` 的 `tool:call`、`thincoder-core/provider/core.mjs` 的 `llm:start`）；不新造事件总线、不新增日志文件、不加开关。
 
 **偏离**：无。四类事件走同一函数、同一命名形；`session-*.mjs` 侧只加 import 与调用点。
 
@@ -26,8 +26,8 @@
 
 | 新名 | 三问结论 |
 |---|---|
-| `singleLineTitle` | `existing but unusable: thincoder-core/markdown.mjs:80` · 名 `function oneLine(v)` · 失败面 = 档内私有（不导出）+ 语义属 markdown frontmatter 标量 + 正则 `/\s*\r?\n\s*/g` 只覆盖 LF / CRLF 且吞两侧空格 ⇒ 宽度账不守恒。本批需覆盖 `\t` `\v` `\f` U+0085 U+2028 U+2029，且一字符换一空格 |
-| `slot:rotate` · `slot:allocate` · `slot:new` · `slot:refuse` | `existing: thincoder-core/log.mjs:114` · 名形 = 既有 `ns:event`（`thincoder-core/agent/dispatch-run.mjs:61` `tool:call` · `thincoder-core/provider/core.mjs:88` `llm:start`）· consumers = 日志读侧（tail / grep）。本批新开 `slot` 命名空间，分隔符与既有家族一致 |
+| `singleLineTitle` | `existing but unusable: thincoder-core/markdown.mjs` · 名 `function oneLine(v)` · 失败面 = 档内私有（不导出）+ 语义属 markdown frontmatter 标量 + 正则 `/\s*\r?\n\s*/g` 只覆盖 LF / CRLF 且吞两侧空格 ⇒ 宽度账不守恒。本批需覆盖 `\t` `\v` `\f` U+0085 U+2028 U+2029，且一字符换一空格 |
+| `slot:rotate` · `slot:allocate` · `slot:new` · `slot:refuse` | `existing: thincoder-core/log.mjs` · 名形 = 既有 `ns:event`（`thincoder-core/agent/dispatch-run.mjs` 的 `tool:call` · `thincoder-core/provider/core.mjs` 的 `llm:start`）· consumers = 日志读侧（tail / grep）。本批新开 `slot` 命名空间，分隔符与既有家族一致 |
 | `droppedDesignTokens` | `none found:` 检索面 = 本仓 `**/*.mjs` 全量 grep `droppedDesignTokens` 零命中 |
 | `TITLE_BREAK_RE` | `none found:` 检索面 = 本仓 `**/*.mjs` 全量 grep `TITLE_BREAK_RE` 零命中；住址 = `thincoder-cli/src/tui/status-line.mjs`，与 `singleLineTitle` 同档、档内私有、不导出；正则字面单源 = `docs/cli/design/TUI.md` §7.4 |
 | 报明文案（§3.2 两行） | `none found:` 检索面 = 本仓 `**/*.mjs` 全量 grep `已批准设计凭证` / `随槽作废` 零命中。新名锚点 = 产品既有词「设计评审 / 已批准设计凭证」（`advisor` 工具描述同族），本档 §3.2 逐字固定 |
@@ -36,7 +36,7 @@
 
 **R2 理由**：`/new` 与切槽让**已批准的设计凭证**离开当前会话——用户丢掉的是「已花钱走完的评审结果」。只报明不持久化：跨槽留活等于悄悄放大授权范围（一个槽里获批的设计在别的槽继续放行代码写），必须先由用户单独裁定，本批不做（§8）。
 
-**R3 理由**：状态栏按「一行」布局（`render-loop.mjs:111` 按行绝对定位差分重绘），标题里一个 LF 就是一次真实换行 ⇒ 滚屏 + 差分基准 `prevRows` 与物理行错位 ⇒ 旧行残留。清洗放显示入口与写出口两处：前者保语义（回退标题同规则），后者是唯一出口兜底。
+**R3 理由**：状态栏按「一行」布局（`render-loop.mjs` 的按行绝对定位差分重绘），标题里一个 LF 就是一次真实换行 ⇒ 滚屏 + 差分基准 `prevRows` 与物理行错位 ⇒ 旧行残留。清洗放显示入口与写出口两处：前者保语义（回退标题同规则），后者是唯一出口兜底。
 
 ## 3. 接口契约
 
@@ -46,14 +46,14 @@
 
 | `ev` | 触发点（写面坐标） | 必填字段 | 取值 |
 |---|---|---|---|
-| `slot:rotate` | `thincoder-core/session-slot-write.mjs:80-83`（轮转成功）· `:84-93`（异常分支）· `thincoder-core/session-guard.mjs:58-61`（guard 轮转）· `:69-78`（guard 异常分支） | `slot` `reason` `bak` `via` | `reason` ∈ `newer-version` / `foreign-cwd` / `other-session` / `longer-record` / `unreadable` / `rotate-failed`；`bak` = 是否把现场改名成 `.bak-<ts>`（布尔；异常支恒 `false`——`.corrupted` 不计 bak）；`via` ∈ `write` / `guard` |
-| `slot:allocate` | `thincoder-core/session-slot-claims.mjs:178-183`（分到全新号，仅分支 3） | `slot` `prevSlot` `reason` | `reason` = `all-slots-live`；`prevSlot` = 分配前 `m.active`（无则 `null`） |
-| `slot:new` | `thincoder-core/session-lifecycle.mjs:265-290`（`newSession` 落定后） | `slot` `prevSlot` `reason` | `reason` = `new-session`；`prevSlot` = 覆盖前 `m.active`（无则 `null`） |
-| `slot:refuse` | `thincoder-core/session-slots-manifest.mjs:145-149`（拒写）· `:163-164`（写后读回失败） | `reason` | `reason` ∈ `read-failed` / `parse-failed` / `shape-invalid` / `readback-failed` |
+| `slot:rotate` | `thincoder-core/session-slot-write.mjs`（轮转成功 ∥ 异常分支两段）· `thincoder-core/session-guard.mjs`（guard 轮转 ∥ guard 异常分支两段） | `slot` `reason` `bak` `via` | `reason` ∈ `newer-version` / `foreign-cwd` / `other-session` / `longer-record` / `unreadable` / `rotate-failed`；`bak` = 是否把现场改名成 `.bak-<ts>`（布尔；异常支恒 `false`——`.corrupted` 不计 bak）；`via` ∈ `write` / `guard` |
+| `slot:allocate` | `thincoder-core/session-slot-claims.mjs`（分到全新号，仅分支 3） | `slot` `prevSlot` `reason` | `reason` = `all-slots-live`；`prevSlot` = 分配前 `m.active`（无则 `null`） |
+| `slot:new` | `thincoder-core/session-lifecycle.mjs`（`newSession` 落定后） | `slot` `prevSlot` `reason` | `reason` = `new-session`；`prevSlot` = 覆盖前 `m.active`（无则 `null`） |
+| `slot:refuse` | `thincoder-core/session-slots-manifest.mjs`（拒写 ∥ 写后读回失败两段） | `reason` | `reason` ∈ `read-failed` / `parse-failed` / `shape-invalid` / `readback-failed` |
 
-**`unreadable` 与 `rotate-failed` 的判别式**（两者共用同一个 catch，`thincoder-core/session-slot-write.mjs:84-93`）：异常支按现场是否已保全分——`preserved === true` ⇒ `unreadable`（`:88` 已把现场改名 `.corrupted`，盘面坏档 / 半写档）；`preserved === false` ⇒ `rotate-failed`（`:86-91` 现场未保全：文件已不在盘 ∥ 改名失败，属轮转动作本身失败）。
+**`unreadable` 与 `rotate-failed` 的判别式**（两者共用同一个 catch，`thincoder-core/session-slot-write.mjs` 的异常支）：异常支按现场是否已保全分——`preserved === true` ⇒ `unreadable`（同档已把现场改名 `.corrupted`，盘面坏档 / 半写档）；`preserved === false` ⇒ `rotate-failed`（现场未保全：文件已不在盘 ∥ 改名失败，属轮转动作本身失败）。
 
-guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 不记改名成败（`:73-75` 吞异常）⇒ 本批在 `:73-75` 内补 `preserved` 标志（改名成功置 `true`），判别式与 write 侧同形。
+guard 侧同形（`thincoder-core/session-guard.mjs` 的 guard 异常分支），但今日 catch 不记改名成败（同档 catch 吞异常）⇒ 本批在该 catch 内补 `preserved` 标志（改名成功置 `true`），判别式与 write 侧同形。
 
 **硬约束（隐私）**：事件字段**不含用户输入原文、标题、消息内容、文件路径、cwd、token 值**。`slot` / `prevSlot` = 整数；`reason` / `via` = 上面枚举字面。理由：`logEvent` 的黑名单只按字段名挡 token 族，按「自带原文就永远挡不住」的口径，本批事件从字段集上就不带。
 
@@ -67,23 +67,23 @@ guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 
 
 | 函数 | 坐标 | 变更 | 返回 |
 |---|---|---|---|
-| `resetSessionState(agent)` | `thincoder-core/session-lifecycle.mjs:297-325` | `:304` 重建 Map 前数一遍**未过期**条目 | `{ droppedDesignTokens: N }`（N 见下「N 的计数口径」；无 Map ⇒ 0） |
-| `restoreEngTokens(agent, data)` | `thincoder-core/token-ttl.mjs:131-147` | `:132` 重建前快照旧 Map 的未过期 id 集，`:145-146` 落定后与新 Map 的 id 集求差 | `{ droppedDesignTokens: N }`，N = 离开集（见下） |
-| `applySession(agent, data, opts)` | `thincoder-core/session-lifecycle.mjs:89` · 返回点 `:210` / `:214` | **中继契约变更**：返回值由布尔改为对象——`switched` = 今日 `return switched` 的原值（`:210`）∥ 未命中渠道支 `false`（`:214`）；`droppedDesignTokens` = `restoreEngTokens` 的返回值原样透出 | `{ switched, droppedDesignTokens }` |
+| `resetSessionState(agent)` | `thincoder-core/session-lifecycle.mjs` | 重建 Map 前数一遍**未过期**条目 | `{ droppedDesignTokens: N }`（N 见下「N 的计数口径」；无 Map ⇒ 0） |
+| `restoreEngTokens(agent, data)` | `thincoder-core/token-ttl.mjs` | 重建前快照旧 Map 的未过期 id 集，落定后与新 Map 的 id 集求差 | `{ droppedDesignTokens: N }`，N = 离开集（见下） |
+| `applySession(agent, data, opts)` | `thincoder-core/session-lifecycle.mjs` · 两处返回点 | **中继契约变更**：返回值由布尔改为对象——`switched` = 今日 `return switched` 的原值 ∥ 未命中渠道支 `false`；`droppedDesignTokens` = `restoreEngTokens` 的返回值原样透出 | `{ switched, droppedDesignTokens }` |
 
 **N 的计数口径（两分支同判：离开集，不是集合大小差）**：`N` 只数「本会话内生效中且未过期」的凭证 id。
 
-`/new` = 重建前 Map 中 `!(typeof t === "string" && tokenExpired(t))` 的条目数；切槽 = 旧 Map 的未过期 id 里、不在新 Map 的那些（新 Map 已按 TTL 过滤，`thincoder-core/token-ttl.mjs:135`）。
+`/new` = 重建前 Map 中 `!(typeof t === "string" && tokenExpired(t))` 的条目数；切槽 = 旧 Map 的未过期 id 里、不在新 Map 的那些（新 Map 已按 TTL 过滤，`thincoder-core/token-ttl.mjs` 的过滤处）。
 
-`tokenExpired` 走 `thincoder-core/session-lifecycle.mjs:42` 同行 import，不新增依赖方向。
+`tokenExpired` 走 `thincoder-core/session-lifecycle.mjs` 同行 import，不新增依赖方向。
 
 「已批准」与计数同一集合：Map 中的条目即评审签发的凭证，本批只剔除已过期者。
 
-理由：`restoreEngTokens` 是**整体替换**——`:132` `const map = new Map()` 重建、`:145` 覆盖 ⇒ 前后是两个不同 id 的集合，`before - after` 在两个槽都带凭证时恒为 0（A 槽 2 个 → B 槽 2 个），而这两个凭证确实已不在本会话生效，正是要报的那一刻（§7 C9b）。
+理由：`restoreEngTokens` 是**整体替换**——先以 `const map = new Map()` 起新 Map、随后覆盖 ⇒ 前后是两个不同 id 的集合，`before - after` 在两个槽都带凭证时恒为 0（A 槽 2 个 → B 槽 2 个），而这两个凭证确实已不在本会话生效，正是要报的那一刻（§7 C9b）。
 
-**`applySession` 调用面（实读 6 处，均不读返回值 ⇒ 契约变更零回归）**：`thincoder-cli/src/tui/cmd-session.mjs:122` · `thincoder-cli/src/command-interactive.mjs:143` · `thincoder-cli/src/acp/handlers-slots.mjs:112` / `:177`
+**`applySession` 调用面（实读 6 处，均不读返回值 ⇒ 契约变更零回归）**：`thincoder-cli/src/tui/cmd-session.mjs` · `thincoder-cli/src/command-interactive.mjs` · `thincoder-cli/src/acp/handlers-slots.mjs` 两处
 
-· `thincoder-desktop/src/main/session-io.mjs:29` · `thincoder-server/deploy/sandbox/member-shell/core-run.mjs:292`（`core.applySession`）。
+- **另两处** = `thincoder-desktop/src/main/session-io.mjs` · `thincoder-server/deploy/sandbox/member-shell/core-run.mjs`（`core.applySession`）。
 
 端壳取计数的唯一路径 = 读返回值（`/new` 读 `resetSessionState`，切槽读 `applySession`）。
 
@@ -98,11 +98,11 @@ guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 
 
 | 端 | 落点 | 取值 |
 |---|---|---|
-| CLI `/new` | 取值 `thincoder-cli/src/tui/cmd-new.mjs:16`（`resetSessionState(agent)` 返回值）· 打印 `:26` 既有 New session 行之后 | `resetSessionState` 返回值 |
-| CLI 切槽 | 取值 `thincoder-cli/src/tui/cmd-session.mjs:122`（`applySession` 返回值存局部量）· 打印 `:137` 起（`restoreLines(state, desc)` 之后、与 `── Switched to slot` 同址或其后） | `applySession` 返回值 |
+| CLI `/new` | 取值 `thincoder-cli/src/tui/cmd-new.mjs` 的 `resetSessionState(agent)` 调用（返回值）· 打印在该档既有的 New session 行之后 | `resetSessionState` 返回值 |
+| CLI 切槽 | 取值 `thincoder-cli/src/tui/cmd-session.mjs` 的 `applySession` 调用（返回值存局部量）· 打印自 `restoreLines(state, desc)` 之后（与 `── Switched to slot` 同址或其后） | `applySession` 返回值 |
 
-**切槽打印落点不得早于 `:130`**：`thincoder-cli/src/tui/cmd-session.mjs:130` `state.lines = []` 清空行集、`:132` `restoreLines` 重灌——在 `:122` 直接推的警示行会被清掉，C9 必红。
-故取值与打印分两个坐标：`:122` 取值存局部量，行集重建后统一推。`pushLine(..., C.warn)` 在该函数作用域内可用（`:109` / `:120` 已在用）。
+**切槽打印落点不得早于行集清空**：`thincoder-cli/src/tui/cmd-session.mjs` 的 `state.lines = []` 清空行集、随后 `restoreLines` 重灌——在 `applySession` 取值处直接推的警示行会被清掉，C9 必红。
+故取值与打印分两步：取值存局部量，行集重建后统一推。`pushLine(..., C.warn)` 在该函数作用域内可用（同函数另有已在用的两处）。
 
 ### 3.3 状态栏标题单行化（R3）
 
@@ -111,8 +111,8 @@ guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 
 | 位置 | 坐标 | 变更 |
 |---|---|---|
 | `singleLineTitle` 定义 + 具名导出 | `thincoder-cli/src/tui/status-line.mjs` | 新函数（正则见 `docs/cli/design/TUI.md` §7.4） |
-| 状态栏入口 · 标题 / 回退标题 | 同档（`docs/cli/design/TUI.md` §7.4 三处应用点的前两处：入口 `:172` · 回退 `:71-76`） | 各套一层 |
-| status 行写出口兜底 | `thincoder-cli/src/tui/render-frame.mjs:265` | import + 出口套一层 |
+| 状态栏入口 · 标题 / 回退标题 | 同档（`docs/cli/design/TUI.md` §7.4 三处应用点的前两处：入口 ∥ 回退） | 各套一层 |
+| status 行写出口兜底 | `thincoder-cli/src/tui/render-frame.mjs` 的 status 行写出口 | import + 出口套一层 |
 
 三处应用点 = 入口 / 回退 / 写出口，与 `docs/cli/design/TUI.md` §7.4 同口径。
 
@@ -129,13 +129,13 @@ guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 
 | D4 | `slot:refuse` 不设 `via` 字段 | 该事件只有一个写面（manifest），单值字段不携带判别信息 | 留 `via`=常量：闭集里的死字段 |
 | D5 | 只在四类写时点发事件，读路径零事件 | 读放大（`listSlots` 逐槽读）会把日志冲爆，事件价值被淹 | 全链路埋点：日志成噪声 |
 | D6 | 凭证只报明、不跨槽持久化 | 凭证跨槽留活 = 授权范围悄悄放大，须用户单独裁定 | 随槽文件复制：授权边界变更，超出本批 |
-| D7 | 单行化 = 固定控制字符集 + 一字符换一空格 | 宽度账逐个守恒；固定集可机判 | 复用 `thincoder-core/markdown.mjs:80` `oneLine`：私有 + 吞空格 + 不覆盖 `\t`/`\v`/`\f`/U+0085/U+2028/U+2029；用 `split(/\s+/).join(" ")`：会并空格、改可见字符宽度 |
+| D7 | 单行化 = 固定控制字符集 + 一字符换一空格 | 宽度账逐个守恒；固定集可机判 | 复用 `thincoder-core/markdown.mjs` 的 `oneLine`：私有 + 吞空格 + 不覆盖 `\t`/`\v`/`\f`/U+0085/U+2028/U+2029；用 `split(/\s+/).join(" ")`：会并空格、改可见字符宽度 |
 | D8 | 两分支两句文案，语义分开 | `/new` 让凭证离开会话、切槽只是本槽不再生效（切回可恢复）；一句文案盖两种事实即误报 | 合成一句「随槽作废」：切槽分支实况不符 |
 | D9 | `applySession` 返回对象承载 `droppedDesignTokens` | 端壳取计数的唯一既有中继点；6 个调用点均不读返回值 ⇒ 零回归 | 另加读接口 / agent 上挂临时字段：多一条状态通道 |
 | D10 | 状态行兜底放 `render-frame.mjs` 的 `put()` 处 | 唯一写出口；上游任意新增标题来源都被兜住 | 只改 status-line：回退链 / 未来新段再犯 |
-| D11 | 上游 `generate-title.mjs:119` 不动 | 该处是标题生成面，改它会改 VSC / 桌面顶栏与清单显示值——跨端行为变更，不在本批 | 生成时就清洗：外溢到未评审的端 |
+| D11 | 上游 `generate-title.mjs` 不动 | 该处是标题生成面，改它会改 VSC / 桌面顶栏与清单显示值——跨端行为变更，不在本批 | 生成时就清洗：外溢到未评审的端 |
 | D12 | `droppedDesignTokens` 数**离开集**，不数集合大小差 | 整体替换语义下前后是两个不同 id 的集合；`before - after` 在 A(2)→B(2) 时恒 0 ⇒ 静默漏报（§7 C9b） | `max(0, before - after)`：换槽带凭证时恒 0 |
-| D13 | guard 异常支补 `preserved` 跟踪 | 闭集 `reason` 的 `unreadable` / `rotate-failed` 在 guard 侧要可判别；今日 catch 吞掉改名成败（`session-guard.mjs:73-75`） | guard 侧恒报一个值：另一个闭集值成死值 |
+| D13 | guard 异常支补 `preserved` 跟踪 | 闭集 `reason` 的 `unreadable` / `rotate-failed` 在 guard 侧要可判别；今日 catch 吞掉改名成败（`session-guard.mjs` 的异常支） | guard 侧恒报一个值：另一个闭集值成死值 |
 
 ## 6. 验收判据（回指条目）
 
@@ -156,8 +156,8 @@ guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 
 |---|---|---|---|
 | C1 | 轮转（正常） | 槽文件 cwd 为别的项目 | `slot:rotate reason=foreign-cwd bak=true via=write`；stderr 行照旧 |
 | C2 | 轮转（不可读） | 槽文件为半写坏档，改名 `.corrupted` 成功 | `slot:rotate reason=unreadable bak=false via=write` |
-| C3 | 轮转（现场未保全） | 槽文件为非法 JSON（`JSON.parse` 抛），并把 `<槽文件>.corrupted` 预先建成目录 ⇒ `:88` 改名失败 | `slot:rotate reason=rotate-failed bak=false via=write` |
-| C3b | guard 异常支（现场未保全） | VSC 侧槽文件为非法 JSON，`<槽文件>.corrupted` 预先建成目录 ⇒ `session-guard.mjs:73-75` 改名失败 | `slot:rotate reason=rotate-failed bak=false via=guard` |
+| C3 | 轮转（现场未保全） | 槽文件为非法 JSON（`JSON.parse` 抛），并把 `<槽文件>.corrupted` 预先建成目录 ⇒ 同档改名失败 | `slot:rotate reason=rotate-failed bak=false via=write` |
+| C3b | guard 异常支（现场未保全） | VSC 侧槽文件为非法 JSON，`<槽文件>.corrupted` 预先建成目录 ⇒ `session-guard.mjs` 的异常支改名失败 | `slot:rotate reason=rotate-failed bak=false via=guard` |
 | C4 | guard 轮转 | VSC 侧槽文件 `version=3` | `slot:rotate reason=newer-version bak=true via=guard` |
 | C5 | 落号 | 全部槽被活进程占（制造路径见 §9） | `slot:allocate slot=<max+1> prevSlot=<active> reason=all-slots-live` |
 | C6 | 新建 | `/new` | `slot:new slot=<n> prevSlot=<旧 active> reason=new-session` |
@@ -179,8 +179,8 @@ guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 
 ## 8. 边界（不做）
 
 - **不做**设计凭证跨槽持久化 / 跨槽继承 / 授权范围变更（§5 D6）。
-- **不做** VSC 端报明：该端 `reconcileEngDesignTokens` 的 Map「永不复位清空」（`thincoder-vscode/src/agent/agent-state.mjs:51`），本批 before/after 度量形在该路径没有丢弃时点；从槽合入凭证时只增不减（`:118`）。
-- **不做**桌面端报明：`thincoder-desktop/src/main/session-io.mjs:29` 的 `applySession` 前置态已勘察——装配面每次出全新 agent（`thincoder-desktop/src/main/agent-assemble.mjs:116` `coreAssemble`），该处 `_engDesignTokens` 为空 ⇒ `thincoder-core/token-ttl.mjs:155` 的离开集恒 0，无丢弃时点；另一调用面重载同一槽（`agent-host.mjs:264`），前后 id 集相同。
+- **不做** VSC 端报明：该端 `reconcileEngDesignTokens` 的 Map「永不复位清空」（`thincoder-vscode/src/agent/agent-state.mjs` 的 Map 构造处），本批 before/after 度量形在该路径没有丢弃时点；从槽合入凭证时只增不减（同档）。
+- **不做**桌面端报明：`thincoder-desktop/src/main/session-io.mjs` 的 `applySession` 前置态已勘察——装配面每次出全新 agent（`thincoder-desktop/src/main/agent-assemble.mjs` 的 `coreAssemble`），该处 `_engDesignTokens` 为空 ⇒ `thincoder-core/token-ttl.mjs` 的离开集恒 0，无丢弃时点；另一调用面重载同一槽（`agent-host.mjs`），前后 id 集相同。
 - **不做**事件的可视化面板、聚合统计、告警阈值；只落文件行。
 - **不改** `logEvent` 的字段黑名单、脱敏、512 字符收尾语义（通道单源不动）。
 - **不改**标题生成面与上游截断（§5 D11）；**不改** VSC / 桌面顶栏、会话清单的标题显示值。
@@ -200,4 +200,4 @@ guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 
 
 **C5（`slot:allocate`）的制造路径**：临时 `sessions` 目录 + 与槽数等量的活进程——启 K 个 `node -e "setTimeout(()=>{},600000)"`，把各 pid 写进该目录 `manifest.json` 的 `slotSessions`（槽 1..K），再在该目录下起第 K+1 个进程触发落号 ⇒ `liveClaimed` 全真 ⇒ 走分支 3，日志得 `all-slots-live`。
 
-**单元面**：`thincoder-cli/test/` 有可用收集器 `run.mjs`（收 `test/*.test.mjs` 与 `test/integration/*.test.mjs`，`thincoder-cli/test/run.mjs:3`；当前零用例即绿）与 `test/slow.mjs`（纯别名）。本批的单元测试档（`singleLineTitle` 控制字符集与宽度守恒、两个返回值、事件字段组装）已按 `docs/core/requirements/TESTING.md` §1.1 用毕即删——跑过即删、零留存。
+**单元面**：`thincoder-cli/test/` 有可用收集器 `run.mjs`（收 `test/*.test.mjs` 与 `test/integration/*.test.mjs`，见 `thincoder-cli/test/run.mjs`；当前零用例即绿）与 `test/slow.mjs`（纯别名）。本批的单元测试档（`singleLineTitle` 控制字符集与宽度守恒、两个返回值、事件字段组装）已按 `docs/core/requirements/TESTING.md` §1.1 用毕即删——跑过即删、零留存。

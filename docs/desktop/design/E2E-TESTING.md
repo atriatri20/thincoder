@@ -9,7 +9,7 @@
 
 E2E 基建 = 在既有单入口测试骨架里**真启 Electron 应用**、驱动渲染面交互、把固定路径 PNG 落盘。四件东西定形：
 
-**① 驱动 = `playwright-core`（devDependency）**。Electron 驱动住在该包内（`types/types.d.ts:19251` 导出 `_electron`），
+**① 驱动 = `playwright-core`（devDependency）**。Electron 驱动住在该包内（该包类型声明的 `_electron` 导出），
 且该包 registry 元数据 `scripts` / `dependencies` 两字段缺省（无 postinstall、不下载浏览器 · 自身零依赖）—— 安装不触代理面、不引浏览器二进制。
 
 依据（发行包 tarball `1.63.0` 与 registry 直读四项：`_electron` 导出 · `scripts` 缺省 · `dependencies` 缺省 · 现版 `1.63.0`）；**运行期可达性 = 实施首步实证**（失败退路见 KD-1）。
@@ -24,14 +24,14 @@ E2E 基建 = 在既有单入口测试骨架里**真启 Electron 应用**、驱�
 **④ 隔离 = 每用例独立临时家目录**。`launch` 的 `env` 显式把 HOME / USERPROFILE 与 APPDATA / XDG_CONFIG_HOME 重定向到用例自建 `mkdtemp` 目录，
 
 并预置其中 `.thincoder/config.json` = `{"locale":"en"}`。三重作用：零网络（不读真家 provider）· 消单实例锁撞车
-（`thincoder-desktop/src/main/main.mjs:92` 起 `app.requestSingleInstanceLock()`，锁落 userData ⇒ 两个并发 Electron 实例必须各有独立 userData）·
+（`thincoder-desktop/src/main/main.mjs` 起 `app.requestSingleInstanceLock()`，锁落 userData ⇒ 两个并发 Electron 实例必须各有独立 userData）·
 
 **模型段 `none` 兼作重定向生效的证据**（真家有 provider 时该段不为 `none`）。
 
-**就绪判据**（不用固定 sleep）：引导位 = `documentElement.dataset.boot`（置位面 `thincoder-desktop/renderer/dom.mjs:44-46`；
-`thincoder-desktop/renderer/app.mjs:237` 置 `ok`，`:224` `:231` `:240` 置 `error`）。断言序 = **先等 `boot ∈ {ok, error}` 落位，再断言其 `=== "ok"`**
+**就绪判据**（不用固定 sleep）：引导位 = `documentElement.dataset.boot`（置位面 `thincoder-desktop/renderer/dom.mjs`；
+`thincoder-desktop/renderer/app.mjs` 置 `ok` 一处、置 `error` 三处）。断言序 = **先等 `boot ∈ {ok, error}` 落位，再断言其 `=== "ok"`**
 
-—— 直接等 `"ok"` 会在真错误面空等超时，把「引导失败」报成「超时」。这一读法沿用宿主既有读回口径（`thincoder-desktop/src/main/window.mjs:116-118` 轮询至置位或上限）。
+—— 直接等 `"ok"` 会在真错误面空等超时，把「引导失败」报成「超时」。这一读法沿用宿主既有读回口径（`thincoder-desktop/src/main/window.mjs` 轮询至置位或上限）。
 
 **截图判据**：`page.screenshot({ path })`（Playwright 按扩展名出 PNG），落 `thincoder-desktop/test/artifacts/settings-panel.png`（新增 · 运行期产物目录）。**判定 = 文件存在 + PNG magic（前 4 字节 `89 50 4E 47`）**，不做像素断言（跨平台字体 / 渲染差异 ⇒ 假红源）。
 
@@ -44,16 +44,16 @@ E2E 基建 = 在既有单入口测试骨架里**真启 Electron 应用**、驱�
 | KD-3 | 用例落 `thincoder-desktop/test/integration/`（域界 = 目录界） | 判据 = `docs/core/design/TESTING.md` §4.1 承载选型（域界 = 目录界）+ §4.3 目录 / 命名契约 |
 | KD-4 | 隔离手段 = **家目录重定向**（env 面，主选）；退路 = 测试侧 `--user-data-dir` 启动参数 | 退路 = **测试侧** `launch.args` 项（不动产品码），落位实证与停手口径见 §3.2 |
 | KD-5 | **不传 `executablePath`**，走缺省解析 | 缺省 = 包内 `node_modules/.bin/electron`（包类型声明 `Electron.launch` 的 `executablePath` 项注释）。逃生口（实施期若缺省落空）= `createRequire(import.meta.url)("electron")` —— electron 包入口尾行 `module.exports = getElectronPath()`（本机实读）⇒ 该 require 的**值**即二进制路径串，不写任何硬路径 |
-| KD-6 | 走**常态启动面**（窗口常驻），不用 `--smoke` | `--smoke` 语义 = 单行 JSON 读数后退出（`thincoder-desktop/src/main/main.mjs:4` 启动序）；与本条「开面板 ⇒ 交互 ⇒ 截图」不同面。冒烟读数归既有复核形 |
-| KD-7 | 断言 = **DOM 契约**（`data-*` 锚与态值），非文案 | 文案随 locale 变；契约锚 = 产品自身登记的机读面 ⇒ 属 `docs/core/design/TESTING.md` §4.5「业务可观察结果」侧（不 import 应用内部 / 不锁私有形状；「子节点数 0」= 产品登记的退场契约——容器清空，`thincoder-desktop/renderer/views/settings.mjs:261`）；契约锚清单 = 本表下 **KD-7 注** |
+| KD-6 | 走**常态启动面**（窗口常驻），不用 `--smoke` | `--smoke` 语义 = 单行 JSON 读数后退出（`thincoder-desktop/src/main/main.mjs` 启动序）；与本条「开面板 ⇒ 交互 ⇒ 截图」不同面。冒烟读数归既有复核形 |
+| KD-7 | 断言 = **DOM 契约**（`data-*` 锚与态值），非文案 | 文案随 locale 变；契约锚 = 产品自身登记的机读面 ⇒ 属 `docs/core/design/TESTING.md` §4.5「业务可观察结果」侧（不 import 应用内部 / 不锁私有形状；「子节点数 0」= 产品登记的退场契约——容器清空，`thincoder-desktop/renderer/views/settings.mjs`）；契约锚清单 = 本表下 **KD-7 注** |
 | KD-8 | 截图**不做像素断言** | 判据只要求「落点固定 + 可见」，未要求视觉回归；像素差异 = 假红源 |
 | KD-9 | 每用例独立 fixture 家 + 独立 Electron 实例 | `node --test` 逐档并发 ⇒ 档间不得共享状态；用例尾递归清临时家（失败取证靠 PNG 与 stdout，不靠临时家） |
 | KD-10 | 新增 `thincoder-desktop/.gitignore`（忽略 `thincoder-desktop/test/artifacts/`）（新增） | 运行期产物不进 git（兄弟包各有 `.gitignore` 先例）；`.gitignore` = 仓库管线文件、**非产品码**，与本档「不改产品码」不抵（该判断登记 §7） |
 
-**KD-7 注（契约锚清单）**：`[data-settings][data-state]`（`thincoder-desktop/renderer/views/settings.mjs:269`）·
-`[data-settings] [data-section]`（**作用域限定**——`data-section` 名在 rail 面同现：`thincoder-desktop/renderer/views/sessions.mjs:135`）·
+**KD-7 注（契约锚清单）**：`[data-settings][data-state]`（`thincoder-desktop/renderer/views/settings.mjs`）·
+`[data-settings] [data-section]`（**作用域限定**——`data-section` 名在 rail 面同现：`thincoder-desktop/renderer/views/sessions.mjs`）·
 
-`#settings-btn`（核件面板控制行第 7 钮——`thincoder-render-core/composer/controls.mjs:51`；出口 = `openSettings`）/ `"settings:close"`（`thincoder-desktop/renderer/views/settings.mjs:253`）。
+`#settings-btn`（核件面板控制行第 7 钮——`thincoder-render-core/composer/controls.mjs`；出口 = `openSettings`）/ `"settings:close"`（`thincoder-desktop/renderer/views/settings.mjs`）。
 
 ## 3. 架构与接口契约
 
@@ -77,9 +77,9 @@ _electron.launch({
 | 项 | 形态 | 依据 |
 |---|---|---|
 | 临时家 | `mkdtemp(join(tmpdir(), "tc-desktop-e2e-"))`，**每用例一枚** | KD-9「一用例一隔离」 |
-| fixture | `<临时家>/.thincoder/config.json` = `{"locale":"en"}`（**唯一预置内容**——用例 1 面；用例 2 见 §3.5） | 核 `thincoder-core/config-io.mjs:32` `configDir = join(homedir(), ".thincoder")` ⇒ 家目录改向即配置面改向；无 provider ⇒ 零网络 |
+| fixture | `<临时家>/.thincoder/config.json` = `{"locale":"en"}`（**唯一预置内容**——用例 1 面；用例 2 见 §3.5） | 核 `thincoder-core/config-io.mjs` `configDir = join(homedir(), ".thincoder")` ⇒ 家目录改向即配置面改向；无 provider ⇒ 零网络 |
 | userData | 生效路径 = 测试侧 `launch.args` 传 `--user-data-dir=<临时家>/userData`（§3.2 生效路径段 · 不动产品码）；依据 = 实测 env 改向不达该面（Chromium 不采信 `APPDATA`——只给四 env 时 `app.getPath("userData")` 仍指系统真值）；**不用**产品 `setPath` | 实测 = 落 `<临时家>/userData`；侧证 = 本用例 `provider:list` ∥ `model:catalog` 回执零渠（夹具家无渠） |
-| userData 落位（实施首步实证） | 经 Electron 侧读 `app.getPath("userData")` ⇒ 断言 ∈ 临时家；两况须过 = 本机已有实例 · 并发实例 | 单实例锁落 userData（`thincoder-desktop/src/main/main.mjs:92-106`：非主实例弹模态框待点击（非 `--smoke` 径）⇒ 子进程阻塞待人工点击） |
+| userData 落位（实施首步实证） | 经 Electron 侧读 `app.getPath("userData")` ⇒ 断言 ∈ 临时家；两况须过 = 本机已有实例 · 并发实例 | 单实例锁落 userData（`thincoder-desktop/src/main/main.mjs` 的单实例锁段：非主实例弹模态框待点击（非 `--smoke` 径）⇒ 子进程阻塞待人工点击） |
 | 清理 | 用例尾递归删临时家 | KD-9 |
 
 **生效路径（userData 面）**：`launch.args` 传 `--user-data-dir=<临时家>`（测试侧传参 ⇒ 不改产品码；采信已实证）；该路亦不成立 ⇒ **停手上抛**（§8-6），不得就地改产品码。
@@ -88,12 +88,12 @@ _electron.launch({
 
 1. `launch` ⇒ `await app.firstWindow()`
 2. 等 `dataset.boot ∈ {ok, error}` 落位 ⇒ 断言 `=== "ok"`
-3. 断言设置入口在：`button#settings-btn`（核件面板控制行——`thincoder-render-core/composer/controls.mjs:51`；入口与项目无关，装配期即挂）
-4. 点按入口 ⇒ 等根 `div[data-settings][data-state="open"]`（`thincoder-desktop/renderer/views/settings.mjs:269`）
+3. 断言设置入口在：`button#settings-btn`（核件面板控制行——`thincoder-render-core/composer/controls.mjs`；入口与项目无关，装配期即挂）
+4. 点按入口 ⇒ 等根 `div[data-settings][data-state="open"]`（`thincoder-desktop/renderer/views/settings.mjs`）
 5. 读设置面段集合与序：`[data-settings] [data-section]` 的 `data-section` 列表 `=== ["providers","agent","mcp","env","tools","models","team"]`（`SECTIONS` 冻结序**七段**——「模型」段随 `docs/desktop/design/SETTINGS.md` §1 **KD-80** 撤场；单源 = `thincoder-desktop/renderer/views/settings.mjs`）
 6. 等设置面各段 `[data-settings] [data-section]` 的 `data-state` 脱离加载态 ⇒ 断言 `providers / agent / mcp = "ready"`（夹具定形；隔离生效证据 = `provider:list` ∥ `model:catalog` 回执零渠——夹具家无渠；`env ∕ tools ∕ models ∕ team` 四段态断言随下次 E2E 跑补记）
 7. `mkdirSync(dirname(PNG), { recursive: true })` **预建落点目录**（`node:fs`；不押截图调用的自建行为）⇒ `page.screenshot({ path: PNG })` 落固定落点 `thincoder-desktop/test/artifacts/settings-panel.png`（`PNG` = 用例文件内单一绝对常量 · §5③）⇒ 断言存在 + PNG magic（前 4 字节 `89 50 4E 47`）
-8. 点 `button.settings-close[data-action="settings:close"]`（`thincoder-desktop/renderer/views/settings.mjs:250-252`）⇒ 等根 `[data-state="closed"]` 且**子节点数 0**（退场 = 容器清空，非 `hidden`）
+8. 点 `button.settings-close[data-action="settings:close"]`（`thincoder-desktop/renderer/views/settings.mjs`）⇒ 等根 `[data-state="closed"]` 且**子节点数 0**（退场 = 容器清空，非 `hidden`）
 9. `await app.close()` ⇒ 清临时家
 
 ### 3.4 接口面小结
@@ -106,14 +106,14 @@ _electron.launch({
   夹具**预置**会话槽族档一枚：`<临时家>/.thincoder/sessions/<40hex>.json`（`cwd` = `PROJ`；形单源 = 核写面 `thincoder-core/session-slots.mjs` 物化形 · 族判据 = `thincoder-core/session-stale.mjs` 的 `GROUP_RE`）。
   读面口径 = `docs/desktop/design/IPC.md` §2 项目面注项 4（40 位哈希族 ⇒ 位次 = 最近写入）；夹具先例 = 手写族档。
 2. `launch`（§3.1 契约 · `--user-data-dir=<临时家>/userData` 照 §3.2）⇒ `await app.firstWindow()` ⇒ 等 `dataset.boot ∈ {ok, error}` **落位**（就绪判据 = §1）⇒ 断言 `=== "ok"`，且骨架三锚在场：
-   `[data-slot="session-control"]`（会话控制条——骨架 `thincoder-desktop/renderer/index.html:40`；常量 = `thincoder-desktop/renderer/mount-sessions.mjs:37` `SESSION_SLOT`）· `[data-slot="flow"]` · `[data-slot="composer"]`。
-3. 向导退场（**真点** · 零配置 ⇒ 向导树占 `[data-slot="settings"]` 槽——槽位口径 = `thincoder-desktop/renderer/mount-settings.mjs`）：点 `button[data-action="settings:close"]`（退场控件 = `thincoder-desktop/renderer/views/onboarding.mjs:121-124`）
+   `[data-slot="session-control"]`（会话控制条——骨架 `thincoder-desktop/renderer/index.html`；常量 = `thincoder-desktop/renderer/mount-sessions.mjs` `SESSION_SLOT`）· `[data-slot="flow"]` · `[data-slot="composer"]`。
+3. 向导退场（**真点** · 零配置 ⇒ 向导树占 `[data-slot="settings"]` 槽——槽位口径 = `thincoder-desktop/renderer/mount-settings.mjs`）：点 `button[data-action="settings:close"]`（退场控件 = `thincoder-desktop/renderer/views/onboarding.mjs`）
    ⇒ 等 `[data-slot="settings"]` 清空（`thincoder-desktop/renderer/settings.css`：`:empty` / `[data-state="closed"]` ⇒ 零覆盖层面——该层 `position: fixed` 全覆盖，**不退场则后续真点全落空**）。
 4. 断言 `no-project` 档：对话流根 `[data-slot="flow"]` 的 `data-state === "none"` ∧ `data-blocks === 0` ∧ 其内 `[data-guide="no-project"]` 在场、内含 `button[data-action="project:open"]`（构树 = `thincoder-desktop/renderer/views/chat-guide.mjs`）；
    输入框禁用：`[data-slot="composer"]` 根 `data-state === "none"` ∧ 其内输入框 `disabled` 真（两态口径 = `thincoder-desktop/renderer/mount-composer.mjs`）——判据 = **无活动会话**，引导在场**不**解除。
-5. 等会话控制面项目钮在场：`button.session-project[data-action="project:open"]`（**恒在场**——R13 后渲染面开项目入口；构树 = `thincoder-desktop/renderer/views/session-control.mjs:112-120`）。
+5. 等会话控制面项目钮在场：`button.session-project[data-action="project:open"]`（**恒在场**——R13 后渲染面开项目入口；构树 = `thincoder-desktop/renderer/views/session-control.mjs`）。
 6. **真点**该钮（渲染面产品路出口——**非**引导面自证；**对话框夹具** = 测试侧替换主进程 `dialog.showOpenDialog` ⇒ 返回 `PROJ`——仅换 OS 对话框层，
-产品码 ∕ 渲染面零改）：`openDir(PROJ)`（`thincoder-desktop/renderer/app.mjs:106-116`）⇒ `refreshRail()` + `resumeOpened()`（`thincoder-desktop/renderer/mount-sessions.mjs`）⇒ 等 `[data-guide="no-message"]` 在场 ∧ 输入框 `disabled` 撤（夹具槽可续 ⇒ 续会话；不可续 ⇒ 新分配——两况同落 `no-message` ∧ enabled）。
+产品码 ∕ 渲染面零改）：`openDir(PROJ)`（`thincoder-desktop/renderer/app.mjs`）⇒ `refreshRail()` + `resumeOpened()`（`thincoder-desktop/renderer/mount-sessions.mjs`）⇒ 等 `[data-guide="no-message"]` 在场 ∧ 输入框 `disabled` 撤（夹具槽可续 ⇒ 续会话；不可续 ⇒ 新分配——两况同落 `no-message` ∧ enabled）。
 
   **选择器限定**：同页多枚 `project:open` 在场（会话控制面项目钮 + 引导面动作控件——同出口）⇒ 按类取值（`button.session-project`）；两者皆走主进程原生对话框，无 `data-path` 形。
 7. 断言空态分态：`[data-guide="no-project"]` 已退场 ∧ 对话流 `data-state === "empty"` ∧ `data-blocks === 0` ∧ `[data-guide="no-message"]` 在场（= 既有空态节点，词面 `chat.empty.hint` 不变 · 该码零动作控件）∧ 输入框非 `disabled`。
@@ -124,7 +124,7 @@ _electron.launch({
 
 **边界**：本序不出网、不押真实模型（零 provider = 发送必败面即判据；成功面**不做** —— §8）· 不截图（固定落点 PNG 判据 = §3.3 第 7 步）· 断言只走 `data-*` 锚与 console 字面（**零文案匹配** —— 临时家无 `locale` 配置，词面非本序判据）· `project:open` 无 `data-path` 形（主进程原生对话框）⇒ 真点面 = 会话控制面项目钮 + **主进程对话框测试侧替换**（返回 `PROJ`——第 6 步）；
 
-引导面 `project:open` 控件维持**在场断言**（第 4 步）· **`no-session` 面 ∕ 其引导动作步不作本序覆盖**——无可达 UI 驱动路（`tab:close` 控件随 R13 裁撤全树零命中 ∧ `session:delete` 末项门〔会话数 ≤ 1 拒〕∧ 开项目恒一次 resume 分配——实读 `thincoder-desktop/src/main/session-actions.mjs:58-73`）。
+引导面 `project:open` 控件维持**在场断言**（第 4 步）· **`no-session` 面 ∕ 其引导动作步不作本序覆盖**——无可达 UI 驱动路（`tab:close` 控件随 R13 裁撤全树零命中 ∧ `session:delete` 末项门〔会话数 ≤ 1 拒〕∧ 开项目恒一次 resume 分配——实读 `thincoder-desktop/src/main/session-actions.mjs`）。
 
 ### 3.6 账本警示面序（即用例 5 的执行序 · 六序）
 
@@ -159,7 +159,7 @@ _electron.launch({
 | `T-DSK27 settings-panel` | 正常 | 空 fixture 家（唯一预置 `<临时家>/.thincoder/config.json` = `{"locale":"en"}`）· 无项目 | boot `ok`；入口在；点按后面板 `open`；段序 `providers,agent,mcp,env,tools,models,team`；态 `ready,ready,ready`；PNG 落固定落点（§3.3 第 7 步）；关闭后 `closed` 且子节点 0 | ✅ 做 |
 | `T-DSK32 first-run-smoke` | 正常 | 空 fixture 家（零 config ⇒ 无项目 / 无会话；预置族档一枚） | 四断言（向导退场 → `no-project` → 真点开项目 `no-message` → 键入必败面）· 全形 = §3.5 十序 | ✅ 做 |
 | `T-DSK37 chat-render` | 正常 | fixture 家（`{"locale":"en"}` + 会话槽族四档——槽 1 回放历史：围栏块 / 注入样本 / 路径候选 / 推理块） | 引导位 `ok`；真点最近目录 ⇒ `data-state="flow"` ∧ 块序 = `user/reasoning/assistant/user`（恢复帧次序 = 推理 → 正文）；`pre.code-block` 恰一枚 + 复制钮点按 ⇒ 剪贴板收代码文本；注入样本字面在场 ∧ 零 `script` 节点；推理块（`details.reasoning-block`）恰一枚；路径候选零 `.file-link`；行元数据段序 = `provider / msgs / updated` ∧ 含 `p1:m1` | ✅ 做（R3c） |
-| `T-DSK39 statusline-align` | 正常 | fixture 家（`{"locale":"en"}` + **另建第二枚临时目录作项目根**（记 `PROJ`）+ 会话槽族档〔`cwd` = `PROJ`；沿 T-DSK32 夹具先例〕——**两分支**（夹具按可达态）：主分支槽档 = `autoApprove: true` / `advisor: { guard: true }` / `engineering: true` / `planMode: false`（四真不可达——`engineering: true` ⇒ 核恢复点 `clearPlanMode` 令 `planMode` 恒 false，实读 `thincoder-core/session-lifecycle.mjs:126-133`）；第二分支槽档 = `planMode: true` / `engineering: false` + `autoApprove: true` / `advisor: { guard: true }` 同值（另盖 `plan` 点亮）；两分支皆 `tasks` 2 条 + `title` 一条 + 读数可算；清理 = 两枚临时目录） | ① 真点**会话控制面项目钮**（`button.session-project[data-action="project:open"]`——对话框夹具 `PROJ`，照 §3.5 第 6 步；与 T-DSK32 同一产品路）⇒ `openDir` 成功链 ⇒ 自动一次 `session:resume` 开页（点开即续；主路未开页 ⇒ 备路 = 点会话控制面选择器开下拉 ⇒ 点条目〔`.session-item[data-slot]`——`session:switch` 同一开页尾〕） ② 状态行在场段 ⊆ 18 码闭集 ∧ 相对序 = 闭集序 ∧ 假 / 缺 ⇒ 零节点（**主分支**亮点三段 = `auto` / `advisor` / `eng` 在场 + **`plan` 零节点**（负断言）；**第二分支** = `plan` 在场 + `eng` 零节点；两分支保留在场 = `state` / `tasks` / `context` / `title` / `enter`）③ `state` 段词 = `Ready`（locale = en）④ `enter` 段词 = `Enter: send` ⑤ `tasks` 段词 = `✓0/2` ⑥ PNG 落 `thincoder-desktop/test/artifacts/statusline-align.png`（CLI 同刻对照面）；断言序单源 = `docs/desktop/design/PROJECT.md` §7 **T-DSK39** 行 | ✅ 做（机检 = 单元测试档惯例） |
+| `T-DSK39 statusline-align` | 正常 | fixture 家（`{"locale":"en"}` + **另建第二枚临时目录作项目根**（记 `PROJ`）+ 会话槽族档〔`cwd` = `PROJ`；沿 T-DSK32 夹具先例〕——**两分支**（夹具按可达态）：主分支槽档 = `autoApprove: true` / `advisor: { guard: true }` / `engineering: true` / `planMode: false`（四真不可达——`engineering: true` ⇒ 核恢复点 `clearPlanMode` 令 `planMode` 恒 false，实读 `thincoder-core/session-lifecycle.mjs` 的恢复点）；第二分支槽档 = `planMode: true` / `engineering: false` + `autoApprove: true` / `advisor: { guard: true }` 同值（另盖 `plan` 点亮）；两分支皆 `tasks` 2 条 + `title` 一条 + 读数可算；清理 = 两枚临时目录） | ① 真点**会话控制面项目钮**（`button.session-project[data-action="project:open"]`——对话框夹具 `PROJ`，照 §3.5 第 6 步；与 T-DSK32 同一产品路）⇒ `openDir` 成功链 ⇒ 自动一次 `session:resume` 开页（点开即续；主路未开页 ⇒ 备路 = 点会话控制面选择器开下拉 ⇒ 点条目〔`.session-item[data-slot]`——`session:switch` 同一开页尾〕） ② 状态行在场段 ⊆ 18 码闭集 ∧ 相对序 = 闭集序 ∧ 假 / 缺 ⇒ 零节点（**主分支**亮点三段 = `auto` / `advisor` / `eng` 在场 + **`plan` 零节点**（负断言）；**第二分支** = `plan` 在场 + `eng` 零节点；两分支保留在场 = `state` / `tasks` / `context` / `title` / `enter`）③ `state` 段词 = `Ready`（locale = en）④ `enter` 段词 = `Enter: send` ⑤ `tasks` 段词 = `✓0/2` ⑥ PNG 落 `thincoder-desktop/test/artifacts/statusline-align.png`（CLI 同刻对照面）；断言序单源 = `docs/desktop/design/PROJECT.md` §7 **T-DSK39** 行 | ✅ 做（机检 = 单元测试档惯例） |
 | `T-DSK40 ledger-notice` | 正常 | fixture 家（`{"locale":"en"}` + 第二枚临时目录作项目根〔记 `PROJ`〕+ 会话槽族档〔`cwd` = `PROJ`〕+ **损坏现场档** `{manifest}.corrupted` 一枚——命名 / 落位单源 = §3.6 第 1 步；清理 = 两枚临时目录） | ① 真点**会话控制面项目钮**（`button.session-project`——对话框夹具 `PROJ`，照 §3.5 第 6 步）⇒ 等 `[data-guide="no-message"]` ② 点开下拉 ⇒ 下拉首行 = `div.session-ledger-notice[data-ledger-notice]`（**非 `button`** ∧ 零 `data-action`）∧ `.session-item` 条目数 = 夹具族数 ③ PNG 落 `thincoder-desktop/test/artifacts/ledger-notice.png` ④ 零 `pageerror`；断言序单源 = §3.6；用例号自铸披露 | ✅ 做（机检 = 单元测试档惯例） |
 | `T-DSK42 小修族·对话流面` | 正常 | fixture 家（`{"locale":"en"}` + 会话槽族档〔`cwd` = `PROJ`〕——沿 `T-DSK32` 夹具先例） | ① 工具卡头 = 名称 / 参数 / 状态词 / 耗时 / **摘要段**（`read` ⇒ `N lines` 形）在场 ∧ 状态色 = `data-status` 两值（`error` ⇒ `#f14c4c`）② 停止痕 `[data-stopped]` 在场（`msg:interrupt` ⇒ `stopped` 终局后）且词 = `[stopped]`（en）——**离线不可产** ③ 错误横幅 = 文 + 重试钮在场（末 `user` 块在场 ⇒ 钮在）；`details`（`techInfo`）面 = **离线不可产** ④ `no-message` 帧欢迎条 = 抬头 / 文案 / 快捷键行三行 ⑤ 工具结果含盘上真路径 ⇒ `.file-link[data-path]` 在场 ∧ 点按 ⇒ 零 `pageerror`——**离线不可产**；**离线不可产面 = 人工走查 + 父侧真跑闭合**（D16 义务——零 provider 夹具 ⇒ 真回合不可离线复现）；机检 = `thincoder-desktop/test/integration/align3-face.test.mjs`（**209** · 集成域——离线可产断言） | ✅ 做 |
 | `T-DSK43 小修族·外围面` | 正常 | fixture 家（同上） | ① 子代理门审批卡首行含 owner 段（`<owner> · <tool>`）∧ diff 节点在场（`apply_patch` 门——`diff-preview` 类名）——**离线不可产** ② 提问卡填入 ⇒ Enter ⇒ 卡退场 ∧ 回焦 `[data-input="text"]`——**离线不可产** ③ 回合在飞 ⇒ 输入区模型 ∕ 推理钮**可点** ∧ 中断键可点（**非在飞 ⇒ 键隐**——核件两态 = 显 ∕ 隐）——**离线不可产** ④ 设置面 agent 段 = 具名控件 ∧ `change` ⇒ 即改即存（回读同值）——离线可产 ⑤ 设置面开 ⇒ `Escape` ⇒ 关闭（`[data-slot="settings"]` 清空）——离线可产（**F-Esc 判据**）⑥ 审批卡出现即 `document.activeElement` = 卡内 `[data-autofocus="1"]`——**离线不可产**（**F-置焦 判据**）；**离线不可产面 = 人工走查 + 父侧真跑闭合**；机检 = `thincoder-desktop/test/integration/align3-face.test.mjs`（**209** · 集成域——离线可产断言） | ✅ 做 |

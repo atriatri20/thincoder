@@ -10,14 +10,14 @@
 
 1. **删代码**：`thincoder-core/tools/checklist.mjs`（300 行）+ `checklist-sync.mjs`（182 行）。
 2. **卸挂载（核 + VSC 两处工具表）**：
-   - 核 `thincoder-core/tools/index.mjs`（import `:11` · builtinTools `:25` · re-export `:35`）；
-   - VSC `thincoder-vscode/src/tools/index.mjs`（import `:20` · re-export `:165` · builtinTools `:175`）。
+   - 核 `thincoder-core/tools/index.mjs`（import · builtinTools · re-export 三处）；
+   - VSC `thincoder-vscode/src/tools/index.mjs`（import · re-export · builtinTools 三处）。
 3. **移除上下文注入（核 + VSC）**：
-   - 核 `thincoder-core/agent/setup.mjs:128-139`（动态 import + `pendingItems` + system reminder 注入）；
-   - VSC `thincoder-vscode/src/agent/context-injections.mjs`（`pushChecklist` `:178` · 调用 `:205` · `_deps.pendingItems` `:217`）。
+   - 核 `thincoder-core/agent/setup.mjs`（动态 import + `pendingItems` + system reminder 注入）；
+   - VSC `thincoder-vscode/src/agent/context-injections.mjs`（`pushChecklist` · 调用点 · `_deps.pendingItems` 三处）。
 4. **删约定**：checklist 约定废除（项目内 md 清单档形态不再存在）。
-5. **删门禁**：`thincoder-core/agent-tools/subagent-scheduler.mjs:38,56` 的 `checklist*` 前缀禁用路径族。
-6. **死指针改指台账**：`thincoder-core/agent-tools/task.mjs:36`「use checklist」· `thincoder-vscode/src/memory-tool.mjs:37`「use checklist」→ 改指台账（`/ledger` 查询）。
+5. **删门禁**：`thincoder-core/agent-tools/subagent-scheduler.mjs` 的两处 `checklist*` 前缀禁用路径族。
+6. **死指针改指台账**：`thincoder-core/agent-tools/task.mjs`「use checklist」· `thincoder-vscode/src/memory-tool.mjs`「use checklist」→ 改指台账（`/ledger` 查询）。
 7. **语义承接**：checklist 三态（pending / in_progress / done）由台账六态承接（待讨论 / 待设计 / 在途 / 待核销 / 已核销 / 已废弃）。
 
 ## ③ 边界（不做什么）

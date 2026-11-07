@@ -99,7 +99,7 @@
 
 ### 2.9 Slash 命令（**28** 个 · 实核）
 
-登记面 = `thincoder-cli/src/tui/slash-commands.mjs:40`。
+登记面 = `thincoder-cli/src/tui/slash-commands.mjs`。
 
 | 分组 | 命令 |
 |---|---|
@@ -108,7 +108,7 @@
 | Project | `/init` · `/skills` · `/mcp` · `/reindex` · `/extract` |
 | System | `/shell` · `/upgrade` · `/config` · `/team` · `/restore` · `/exit` · `/help` |
 
-**别名**（`thincoder-cli/src/tui/slash-commands.mjs:71`）：`/h` → `/help` · `/x` → `/exit` · `/m` → `/model` · `/p` → `/plan` · `/t` → `/think` · `/c` → `/clear` · `/n` → `/new`。
+**别名**（`thincoder-cli/src/tui/slash-commands.mjs`）：`/h` → `/help` · `/x` → `/exit` · `/m` → `/model` · `/p` → `/plan` · `/t` → `/think` · `/c` → `/clear` · `/n` → `/new`。
 
 ### 2.10 模型适配
 
@@ -174,6 +174,6 @@
 | N6 | 供应商限速 | 本地滑动窗口限速 + 尊重重试头退避（防 429） |
 | N7 | 输出上限 | 工具输出超限落盘 + 预览（保头保尾） |
 | N8 | 崩溃可取证 | 异常终止落崩溃记录 + 近堆快照 + 堆预警（CLI 侧面见 `docs/cli/design/CRASH-REPORTS.md`） |
-| N9 | 对外文档契约面 | README / `USAGE` / 用户可见提示串对 slash 命令 · 子命令 · 配置键 · 机制事件的列举须与实装可达面一致（判据句见 §2.13）。**度量方式**：无机检门——对外文本面不在 V5 源域（`docs/**`）内、`scripts/doc-check-anchors.mjs` 不覆盖 ⇒ 守护 = 同批改动 + 人巡；漂移处置 = 能力在位 ⇒ 改文档（反向删实装 = 违规） |
+| N9 | 对外文档契约面 | README / `USAGE` / 用户可见提示串对 slash 命令 · 子命令 · 配置键 · 机制事件的列举须与实装可达面一致（判据句见 §2.13）。**度量方式**：无机检门——对外文本面不在 `doc_check` 的传入清单内（范围 = 调用方传入的文件清单、不扫目录）⇒ 守护 = 同批改动 + 人巡；漂移处置 = 能力在位 ⇒ 改文档（反向删实装 = 违规） |
 | N10 | 盘根启动门 | cwd = 磁盘根（`X:\` ∥ `/`；win32 大小写归一）⇒ 会话面硬拦（默认 TUI ∥ `tui` ∥ `chat` ∥ `acp`）：一行提示（先进工作目录再启动）+ 非零退出；信息维护面（`-v` ∥ `--help` ∥ `memory` ∥ `upgrade` ∥ `completion` ∥ `session *`）放行。动机 = 盘根启动 ⇒ 全盘索引。**无强开旗**；家目录维持软防护（不升硬拦） |
 

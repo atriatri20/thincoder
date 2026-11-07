@@ -62,22 +62,22 @@
 | # | 模块 | 现有模块（file/dir → 变更） | 职责（一句话） | v2 依据 |
 |---|---|---|---|---|
 | M1 | 项目状态档 manifest | `thincoder-core/manifest.mjs`（**新增**）——机制代码在核，操作对象 = 被开发项目**项目根（= 带 manifest 的目录——**git 非前提**；归属 = 最近祖先优先 / 发现梯 = 纯向下一层；用户裁定——明细 = `docs/core/design/MANIFEST.md` §2.2 / §2.9）**的 `PROJECT-MANIFEST.json`（数据档，N3 迁移点）；`thincoder-core/agent/setup-reminders.mjs` + `thincoder-core/agent/run-stages.mjs`（**修改**——情境行注入，E5.1） | JSON schema + 读/写/校验（五键 version/phase/docRoot/codePaths/index——后两键 = 声明两族）+ 情境值 → 模型注入行 | §5.1 · §6 · §9 |
-| M2 | 台账（SQLite） | `thincoder-core/ledger.mjs`（228 行·**修改**）+ `ledger-surface.mjs`（77 行·**修改**）+ CLI/VSC 端 `ledger-surface.mjs`（70/119 行·**修改**，完整清单见接线表） | md 读面 → `node:sqlite` 读面 + 写命令 + 六态 CHECK schema | §5.2 |
-| M3 | 批次档生命周期工具 | `batch-segment.mjs` → **改名 `batch.mjs`**（265 行·**修改**——action 分发扩 create/status/close，超硬顶则拆 `batch-skeleton.mjs` 模板档） | 批次档生命周期（create/append/status/close）+ 段白名单 + 状态行冻结拒写 | §5.3 · `docs/core/design/BATCH-RECORD.md` §4.11–§4.13 |
-| M4 | 写权门禁（token 门 + 冻结窗口） | `thincoder-core/agent/dispatch.mjs`（490 行·**修改**）+ 新档 `write-gate.mjs`（`resolveReviewTargetPaths` + 冻结窗口判据组装）+ VSC `tool-gates.mjs`（165 行·**修改**，完整清单见接线表） | token 门 + D5 冻结窗口——评审对象/被审文件读 manifest `docRoot`（去硬编码 docs/） | §7 · §8.5 |
-| M5 | 委派与 spawn 门 | `thincoder-core/agent-tools/subagent-spawn.mjs`（435 行·**修改**·as-of 2026-10-24，**拆分候选**）+ `subagent-scheduler.mjs`（428 行·**修改**，**拆分候选**） | 工程角色任务书 = 批次档 §2（零任务书文本参数，命中即点名拒收）+ `round` + designToken；非工程角色 = 四项核心 + `scope`；files 声明面拦截 | §8.1–8.2 · §9.3 |
-| M6 | 评审凭证（advisor + token） | `thincoder-core/advisor.mjs`（274 行·**修改**）+ `token-ttl.mjs`（286 行·**零改（继承）**）+ `agent-tools/design-token.mjs`（118 行·**零改（继承）**） | 评审对象来源读 `docRoot`（唯一微调，继承 v1 不重写） | §8.5 |
+| M2 | 台账（SQLite） | `thincoder-core/ledger.mjs`（228 行·**修改**）+ `thincoder-core/ledger-surface.mjs`（77 行·**修改**）+ CLI/VSC 端 `thincoder-cli/src/tui/ledger-surface.mjs` ∥ `thincoder-vscode/src/extension/ledger-surface.mjs`（70/119 行·**修改**，完整清单见接线表） | md 读面 → `node:sqlite` 读面 + 写命令 + 六态 CHECK schema | §5.2 |
+| M3 | 批次档生命周期工具 | `thincoder-core/agent-tools/batch.mjs`（原批段工具档改名；265 行·**修改**——action 分发扩 create/status/close，超硬顶则拆 `thincoder-core/agent-tools/batch-skeleton.mjs` 模板档） | 批次档生命周期（create/append/status/close）+ 段白名单 + 状态行冻结拒写 | §5.3 · `docs/core/design/BATCH-RECORD.md` §4.11–§4.13 |
+| M4 | 写权门禁（token 门 + 冻结窗口） | `thincoder-core/agent/dispatch.mjs`（490 行·**修改**）+ 新档 `thincoder-core/agent/write-gate.mjs`（`resolveReviewTargetPaths` + 冻结窗口判据组装） | token 门 + D5 冻结窗口——评审对象/被审文件读 manifest `docRoot`（去硬编码 docs/） | §7 · §8.5 |
+| M5 | 委派与 spawn 门 | `thincoder-core/agent-tools/subagent-spawn.mjs`（435 行·**修改**·as-of 2026-10-24，**拆分候选**）+ `thincoder-core/agent-tools/subagent-scheduler.mjs`（428 行·**修改**，**拆分候选**） | 工程角色任务书 = 批次档 §2（零任务书文本参数，命中即点名拒收）+ `round` + designToken；非工程角色 = 四项核心 + `scope`；files 声明面拦截 | §8.1–8.2 · §9.3 |
+| M6 | 评审凭证（advisor + token） | `thincoder-core/advisor.mjs`（274 行·**修改**）+ `thincoder-core/token-ttl.mjs`（286 行·**零改（继承）**）+ `thincoder-core/agent-tools/design-token.mjs`（118 行·**零改（继承）**） | 评审对象来源读 `docRoot`（唯一微调，继承 v1 不重写） | §8.5 |
 | M7 | checklist 废除 | 删 checklist 族 3 档 + 摘挂载/移除注入（核 2 + VSC 2）+ 死指针 2 + 门禁 1 + 测试 5——完整清单见接线表 | 待办跟踪统一到台账六态 | §5.2 · §10.1 |
-| M8 | 机检引擎 | `scripts/doc-check.mjs` + `scripts/doc-check-anchors.mjs` + `scripts/doc-check-targets.mjs` + `scripts/doc-check-width.mjs`（**现状档**） | 单引擎（锚 + 行宽）+ 参数内置常量（判据参数不落声明面）；台账一致性由 SQLite schema 承接（`check-ledger` 作废） | §8.7 |
+| M8 | 机检引擎 | `scripts/doc-check.mjs`（现状档 = 手跑面、零判据角色；判据面 = `thincoder-core/doc-check/index.mjs`） | 单引擎（锚 + 段判据）+ 参数内置常量（判据参数不落声明面）；台账一致性由 SQLite schema 承接（`check-ledger` 作废） | §8.7 |
 | M9 | 提示词单源承载 | `thincoder-core/prompts/`（16 档，唯一副本，运行期加载——落点 = 产品源码内固定路径，不读 manifest） | 提示词 = 产品代码单源（只承载「怎么执行」）；规则本体 = 机制文档 | §8.4 |
-| M10 | 测试纪律 | 产品 `package.json`（**修改**）+ `test/run-fast|full|integration|slow-gate|slow`（**修改/删除**） | 三层门禁 → 一条 `test` 全绿 | §8.6 |
-| M11 | plan 面排除（FR31） | 核 `agent/family-tools.mjs`（174 行·**修改**）+ `thincoder-core/agent-tools/plan.mjs`（86 行·**修改**）+ `agent-tools/eng.mjs`（102 行·**修改**）+ `session-lifecycle.mjs`（305 行·**修改**）；两端侧文件见接线表 + §2.3 E7 | 工程模式 plan 工具不入表 + 命令面拒绝（含 ACP 出口形态 / VSC 提示载体）+ `planMode` 清零（内存 + 槽） | §13.9 |
+| M10 | 测试纪律 | 产品各包清单档（**修改**）+ `test/run-fast|full|integration|slow-gate|slow`（**修改/删除**） | 三层门禁 → 一条 `test` 全绿 | §8.6 |
+| M11 | plan 面排除（FR31） | 核 `thincoder-core/agent/family-tools.mjs`（174 行·**修改**）+ `thincoder-core/agent-tools/plan.mjs`（86 行·**修改**）+ `thincoder-core/agent-tools/eng.mjs`（102 行·**修改**）+ `thincoder-core/session-lifecycle.mjs`（305 行·**修改**）；两端侧文件见接线表 + §2.3 E7 | 工程模式 plan 工具不入表 + 命令面拒绝（含 ACP 出口形态 / VSC 提示载体）+ `planMode` 清零（内存 + 槽） | §13.9 |
 
 **现状勘察摘要（用于两端接线锚定）**：
 
 - 三包结构：`thincoder-core/`（核，单一权威源）· `thincoder-cli/`（CLI 端）· `thincoder-vscode/`（VSC 端）。两端均经 `@thincoder/core` 引入核，端侧只保留薄装配面 / 面特有段。
-- `thincoder-core/tools/checklist.mjs` + `checklist-sync.mjs` **非死文件纯清理**——仍挂载核侧工具表（`thincoder-core/tools/index.mjs:11,25,35`）+ VSC 工具表（`thincoder-vscode/src/tools/index.mjs:20,165,175`），上下文注入仍在（核 `thincoder-core/agent/setup.mjs:126-139` · VSC `context-injections.mjs:177-205`）。
-  并有死指针（`task.mjs:36` · `memory-tool.mjs`）与 `subagent-scheduler.mjs:38,56` 门禁族；受影响文件清单以 M7 spec 为准。
+- `thincoder-core/tools/index.mjs` 的挂载面与 VSC 工具表三处一并收正（清单式坐标移出本节，随各自收口）。
+  并有死指针（`thincoder-core/agent-tools/task.mjs` · `thincoder-core/memory/memory-tool.mjs`）与 `thincoder-core/agent-tools/subagent-scheduler.mjs` 门禁族；受影响文件清单以 M7 spec 为准。
 - 机检脚本落仓根 `scripts/`（非三包产品代码）：`check-doc-width*.mjs` 双引擎 + `doc-anchors*.mjs` 四套 + `check-ledger*.mjs` 双引擎 = M8 合并/砍的对象。
 
 **两端接线（core + CLI + VSC）**：
@@ -86,17 +86,17 @@
 
 | 模块 | 核（thincoder-core/） | CLI（thincoder-cli/） | VSC（thincoder-vscode/） |
 |---|---|---|---|
-| M1 manifest | 新增 `manifest.mjs` + 修改 `thincoder-core/agent/setup-reminders.mjs` / `thincoder-core/agent/run-stages.mjs`（情境行注入——E5.1） | 修改 `src/cli/make-agent.mjs`（装配层读/初始化 manifest） | 修改 `thincoder-vscode/src/agent/setup.mjs`（装配层读/初始化 manifest）+ `thincoder-vscode/src/agent.mjs` / `thincoder-vscode/src/agent/setup-reminders.mjs`（情境行端镜） |
-| M2 台账 | 修改 `ledger.mjs` + `ledger-surface.mjs` + 命令注册 `thincoder-core/tools/index.mjs` + `family-tools.mjs` | 修改 `thincoder-cli/src/tui/ledger-surface.mjs`（70 行） | 修改 `thincoder-vscode/src/extension/ledger-surface.mjs`（119 行） |
-| M3 批次档 | 修改 `batch-segment.mjs`（改名 `batch.mjs`——符号名随批改 `batchTool`） | 零改（核内工具，端经 import 装配） | 零改（核内工具，端经 import 装配） |
-| M4 写权门禁 | 修改 `agent/dispatch.mjs` | 零改（核内门禁） | 修改 `src/agent/tool-gates.mjs`（165 行——VSC 独立同语义镜像） |
-| M5 委派 spawn | 修改 `subagent-spawn.mjs` + `subagent-scheduler.mjs` | 零改（端经核单源 import） | 零改（端经核单源 import） |
-| M6 评审凭证 | 修改 `advisor.mjs` + `token-ttl.mjs` + `agent-tools/design-token.mjs` | 零改 | 零改（`tool-gates.mjs` 已 import `validateDesignToken` 自核） |
+| M1 manifest | 新增 `thincoder-core/manifest.mjs` + 修改 `thincoder-core/agent/setup-reminders.mjs` / `thincoder-core/agent/run-stages.mjs`（情境行注入——E5.1） | 修改 `thincoder-cli/src/cli/make-agent.mjs`（装配层读/初始化 manifest） | 修改 `thincoder-vscode/src/agent/setup.mjs`（装配层读/初始化 manifest）+ `thincoder-vscode/src/agent.mjs` / `thincoder-vscode/src/agent/setup-reminders.mjs`（情境行端镜） |
+| M2 台账 | 修改 `thincoder-core/ledger.mjs` + `thincoder-core/ledger-surface.mjs` + 命令注册 `thincoder-core/tools/index.mjs` + `thincoder-core/agent/family-tools.mjs` | 修改 `thincoder-cli/src/tui/ledger-surface.mjs`（70 行） | 修改 `thincoder-vscode/src/extension/ledger-surface.mjs`（119 行） |
+| M3 批次档 | 修改 `thincoder-core/agent-tools/batch.mjs`（原批段工具档改名——符号名随批改 `batchTool`） | 零改（核内工具，端经 import 装配） | 零改（核内工具，端经 import 装配） |
+| M4 写权门禁 | 修改 `thincoder-core/agent/dispatch.mjs` | 零改（核内门禁） | — |
+| M5 委派 spawn | 修改 `thincoder-core/agent-tools/subagent-spawn.mjs` + `thincoder-core/agent-tools/subagent-scheduler.mjs` | 零改（端经核单源 import） | 零改（端经核单源 import） |
+| M6 评审凭证 | 修改 `thincoder-core/advisor.mjs` + `thincoder-core/token-ttl.mjs` + `thincoder-core/agent-tools/design-token.mjs` | 零改 | 零改（已 import `validateDesignToken` 自核） |
 | M7 checklist 废除 | 删 checklist 族 + 摘挂载 `thincoder-core/tools/index.mjs` + 移除注入 `thincoder-core/agent/setup.mjs` + 死指针 + 门禁 + 注释 + 测试 3 档（清单见 M7 模块设计档） | 零改 | VSC 摘挂载/移除注入/死指针 + 编排注记（±0）+ 测试 2 档（清单见 M7 模块设计档） |
 | M8 机检 | 零改（引擎在仓根 `scripts/`） | 零改 | 零改 |
 | M9 提示词 | 零改（提示词 = 产品代码，由 coder 按机制文档落笔） | 零改 | 零改 |
-| M10 测试 | 修改 `package.json` + `test/` | 修改 `package.json` + `test/` | 修改 `package.json` + `test/` |
-| M11 plan 面排除 | 修改 `family-tools.mjs` · `plan.mjs` · `eng.mjs` · `session-lifecycle.mjs` | 修改 `cmd-plan.mjs` · `cmd-eng.mjs` · `handlers-session.mjs` | 修改 `thincoder-vscode/src/agent/setup.mjs` · `src/agent/agent-state.mjs` · `src/extension/chat-panel.mjs` · `panel-messages-settings.mjs` · `panel-messages.mjs` · `panel-session.mjs` · `image-handler.mjs` · `webview/mode-buttons.js` · `locales/en.json` · `locales/zh.json`（逐档改动面 = §2.3 E7 表） |
+| M10 测试 | 修改 各包清单档 + `test/` | 修改 各包清单档 + `test/` | 修改 各包清单档 + `test/` |
+| M11 plan 面排除 | 修改 `thincoder-core/agent/family-tools.mjs` · `thincoder-core/agent-tools/plan.mjs` · `thincoder-core/agent-tools/eng.mjs` · `thincoder-core/session-lifecycle.mjs` | 修改 `thincoder-cli/src/tui/cmd-plan.mjs` · `thincoder-cli/src/tui/cmd-eng.mjs` · `thincoder-cli/src/acp/handlers-session.mjs` | 修改 `thincoder-vscode/src/agent/setup.mjs` · `thincoder-vscode/src/agent/agent-state.mjs` · `thincoder-vscode/src/extension/chat-panel.mjs` · `thincoder-vscode/src/extension/panel-messages-settings.mjs` · `thincoder-vscode/src/extension/panel-messages.mjs` · `thincoder-vscode/src/extension/panel-session.mjs` · `thincoder-vscode/src/extension/image-handler.mjs` · `thincoder-vscode/webview/mode-buttons.js` · `thincoder-vscode/locales/en.json` · `thincoder-vscode/locales/zh.json`（逐档改动面 = §2.3 E7 表） |
 
 **依赖方向**（实现顺序 = Function Spec 拆分参考）：
 
@@ -222,7 +222,7 @@ M10 测试（独立简化，无依赖）
 | 主 agent | 目标确认 · 派单 · 台账落笔 · 核验裁决 | manifest · 台账 · 批次档 §1/§4/§6 · 项目需求/功能规格 |
 | eng-designer | 架构/模块设计 · 核对主 agent 写的 Function Spec 合规（五要素，不合规打回） | 设计档（架构 + 模块）· 批次档 §2 |
 | eng-coder | 按任务书实现 + 自测 | 产品代码 · 批次档 §5 · 提示词落地档（主 agent 内容权 + coder 落笔） |
-| advisor | 独立评审（设计 / 代码） | 批次档 §3（仅设计评审，纯只读评审） |
+| advisor | 独立评审（设计 / 代码） | 批次档 §3（写通道按 `batchDoc` 在场判定、与轨无关；评审读面仍只读六件，写权仅此一段） |
 
 （辅助角色 explore = 只读勘察，无写权；plan = 待定。）
 
@@ -230,7 +230,7 @@ M10 测试（独立简化，无依赖）
 
 | 层面 | 门禁 | 落点 | 继承 |
 |---|---|---|---|
-| 机械面 | token 门（eng-coder 写产品代码需活 designToken） | M4 `dispatch.mjs` | v1 |
+| 机械面 | token 门（eng-coder 写产品代码需活 designToken） | M4 `thincoder-core/agent/dispatch.mjs` | v1 |
 | 机械面 | `batch` append 段白名单（越段即拒） | M3 `batch` 工具 | v1 |
 | 机械面 | `batchDoc` 参数门（缺参/不可读即拒） | M5 spawn 门 | v1 |
 | 机械面 | 台账/清单写命令仅主 agent 装配（SQLite 写门） | M2 ledger 命令装配 | **新增** |
@@ -341,8 +341,8 @@ M10 测试（独立简化，无依赖）
 
 | # | 面 | 结构 | 判据（可机判） |
 |---|---|---|---|
-| ① | 装配面 | `assembleFamilyTools` 固定段按模式裁剪（`thincoder-core/agent/family-tools.mjs:184-186`）：工程模式固定段 = `[timer]`——task / plan 皆不入表（KD8 / F10 同处置）——**模型不可见** | 工程模式装配名集不含 `plan` ∧ 不含 `task`；普通模式两者皆含（回归） |
-| ② | 命令面 | `/plan`（`thincoder-cli/src/tui/cmd-plan.mjs`）· ACP 两入口（`handlers-session.mjs` `applyConfigOption` `mode` 分支 · `session/set_mode`）· VSC 面板开关（`chat-panel.mjs` `_setPlanMode`）工程模式一律拒绝 + 提示可见 | 拒绝后 `planMode` 不变 + 提示可见（非静默失败） |
+| ① | 装配面 | `assembleFamilyTools` 固定段按模式裁剪（`thincoder-core/agent/family-tools.mjs` 的固定段）：工程模式固定段 = `[timer]`——task / plan 皆不入表（KD8 / F10 同处置）——**模型不可见** | 工程模式装配名集不含 `plan` ∧ 不含 `task`；普通模式两者皆含（回归） |
+| ② | 命令面 | `/plan`（`thincoder-cli/src/tui/cmd-plan.mjs`）· ACP 两入口（`thincoder-cli/src/acp/handlers-session.mjs` `applyConfigOption` `mode` 分支 · `session/set_mode`）· VSC 面板开关（`thincoder-vscode/src/extension/chat-panel.mjs` `_setPlanMode`）工程模式一律拒绝 + 提示可见 | 拒绝后 `planMode` 不变 + 提示可见（非静默失败） |
 | ③ | 残留清零 | 单点 `clearPlanMode(agent)`（`thincoder-core/agent-tools/plan.mjs`）：清 `planMode` + 两 reminder 计数 + **未注入的 plan 提示语**；三个翻转点 + 两个恢复点复用；恢复面**槽值一并收正** | 工程模式真值 ⇒ `planMode` 恒 false（内存 + 槽位） |
 
 **命令面逐面钉定（工程真值来源 / 拒绝出口形态 / 提示可见载体）**：
@@ -350,8 +350,8 @@ M10 测试（独立简化，无依赖）
 | 面 | 工程真值来源 | 拒绝出口形态 | 提示可见载体 |
 |---|---|---|---|
 | CLI `/plan`（`thincoder-cli/src/tui/cmd-plan.mjs`） | `agent.config.agent.engineering`（核单源同键） | 前置判 → 零翻转（不写 `planMode`） | TUI 提示行（共用文案常量逐字） |
-| ACP 两入口（`thincoder-cli/src/acp/handlers-session.mjs`） | `agent.config?.agent?.engineering === true` | **handler 前置判**（`session/set_config_option`：`configId==="mode" && value==="plan"` · `session/set_mode`：`params.mode==="plan"`）⇒ `{ ...ACP_ERRORS.INVALID_PARAMS, message: 共用文案常量 }`；`applyConfigOption` 布尔契约零改（`false` 仍 = `unknown configId`——工程拒绝不经该路径，`:212-215` 的误导文案不再可达） | ACP 错误响应 `message`（共用文案常量逐字） |
-| VSC 面板开关（`thincoder-vscode/src/extension/chat-panel.mjs` `_setPlanMode`） | `agentSettings(_agentSettingsSession()).engineering`（槽权威面——先例 `thincoder-vscode/src/extension/chat-panel.mjs:359-364` · `thincoder-vscode/src/extension/settings.mjs:196`） | 不写槽 + 回推 `{type:"planMode", active:false}`（回弹） | webview plan 按钮 **disabled + title**（`applyModeButtons`——`thincoder-render-core/composer/controls.mjs:76-89` 置 `planBtn.disabled = _engOn === true`；title = 新增键 `toolbar.planDisabled`，`thincoder-vscode/locales/en.json` + `thincoder-vscode/locales/zh.json` 同步）+ 点击守卫（`:103-109`） |
+| ACP 两入口（`thincoder-cli/src/acp/handlers-session.mjs`） | `agent.config?.agent?.engineering === true` | **handler 前置判**（`session/set_config_option`：`configId==="mode" && value==="plan"` · `session/set_mode`：`params.mode==="plan"`）⇒ `{ ...ACP_ERRORS.INVALID_PARAMS, message: 共用文案常量 }`；`applyConfigOption` 布尔契约零改（`false` 仍 = `unknown configId`——工程拒绝不经该路径，同档既有的误导文案不再可达） | ACP 错误响应 `message`（共用文案常量逐字） |
+| VSC 面板开关（`thincoder-vscode/src/extension/chat-panel.mjs` `_setPlanMode`） | `agentSettings(_agentSettingsSession()).engineering`（槽权威面——先例 `thincoder-vscode/src/extension/chat-panel.mjs` ∥ `thincoder-vscode/src/extension/settings.mjs`） | 不写槽 + 回推 `{type:"planMode", active:false}`（回弹） | webview plan 按钮 **disabled + title**（`applyModeButtons`——`thincoder-render-core/composer/controls.mjs` 置 `planBtn.disabled = _engOn === true`；title = 新增键 `toolbar.planDisabled`，`thincoder-vscode/locales/en.json` + `thincoder-vscode/locales/zh.json` 同步）+ 点击守卫（同档） |
 
 **排除面矩阵（FR31 边界项——本档裁定，逐格给理由）**：
 
@@ -359,25 +359,31 @@ M10 测试（独立简化，无依赖）
 |---|---|---|
 | depth-0 主 agent · CLI | 是 | 需求本体（用户实测场景）；`/eng` 与核 `eng` 工具两处翻转点须清零 |
 | depth-0 主 agent · VSC | 是 | 同一产物两端同源（§13.2「两端同一套、各自实现」）；端差仅在「模式位由谁传」（见下） |
-| depth>0 子代理（eng-coder / eng-designer / explore · 工程模式） | **是** | ① 子代理的「计划」= 任务书（父侧已做）——入 plan 只会自我只读化，与其职责（写设计 / 实现审计 / 勘察）冲突；② 话术冲突同在主代理；③ 角色面已排除而工具面留口 = 半排除：工程模式 role enum 已无 `plan`（`family-tools.mjs:44-48`）+ spawn 门机械拒 `role='plan'`（`agent-tools/subagent.mjs:253-255`）；④ 判据句最短「工程模式则无 plan 工具」，不带深度分支 |
-| 普通模式（全深度、两端） | 否 | FR31 边界：普通模式零改（`thincoder-core/prompts/persona-normal.md:25-27` 的 plan 引导照常有效） |
+| depth>0 子代理（eng-coder / eng-designer / explore · 工程模式） | **是** | ① 子代理的「计划」= 任务书（父侧已做）——入 plan 只会自我只读化，与其职责（写设计 / 实现审计 / 勘察）冲突；② 话术冲突同在主代理；③ 角色面已排除而工具面留口 = 半排除：工程模式 role enum 已无 `plan`（`thincoder-core/agent/family-tools.mjs` 的 role enum）+ spawn 门机械拒 `role='plan'`（`thincoder-core/agent-tools/subagent.mjs` 的门段）；④ 判据句最短「工程模式则无 plan 工具」，不带深度分支 |
+| 普通模式（全深度、两端） | 否 | FR31 边界：普通模式零改（`thincoder-core/prompts/persona-normal.md` 的 plan 引导照常有效） |
 
 **端差面（两产品各自实现，语义同源）**：
 
-- CLI 路径 = 核 `thincoder-core/agent/setup.mjs:163-168`，**已传** `engineering`（`:165` 取 `agent.config?.agent?.engineering === true`）⇒ 核改一处即生效；
-- VSC 路径 = `thincoder-vscode/src/agent/setup.mjs:132-142` **未传** `engineering`（端差原因：该参数的既有唯一消费点 `filteredSubagent` 被端侧 `decorate.subagent` 整体替换 ⇒ 端侧无消费点）。**新增的固定段裁剪不被 `decorate` 覆盖** ⇒ VSC 须补传，且装配块（`:125-191`）须下移至模式判定（`applySlotSessionState`，`:267`）之后方能取值——两个产品从此同口径：装配入参 = 工程模式真值。
+- CLI 路径 = 核 `thincoder-core/agent/setup.mjs` 的装配段，**已传** `engineering`（同段取 `agent.config?.agent?.engineering === true`）⇒ 核改一处即生效；
+- VSC 路径 = `thincoder-vscode/src/agent/setup.mjs` 的装配段 **未传** `engineering`（端差原因：该参数的既有唯一消费点 `filteredSubagent` 被端侧 `decorate.subagent` 整体替换 ⇒ 端侧无消费点）。**新增的固定段裁剪不被 `decorate` 覆盖** ⇒ VSC 须补传，且装配块须下移至模式判定（`applySlotSessionState`，同档）之后方能取值——两个产品从此同口径：装配入参 = 工程模式真值。
 - **VSC 侧 depth>0 装配面（两条活体面，逐条钉定真值来源）**：
-  ① **spawn 子代**（eng-coder / eng-designer / coder / explore 经 `subagent` 装配）：真值 = 核强制位（`thincoder-core/agent-tools/subagent-spawn.mjs:328-331` 工程角色置 `engineering: true`）；
+  ① **spawn 子代**（eng-coder / eng-designer / coder / explore 经 `subagent` 装配）：真值 = 核强制位（`thincoder-core/agent-tools/subagent-spawn.mjs` 的工程角色置 `engineering: true` 处）；
 
-  子代执行走核 `runChildPipeline → runAgent`（`thincoder-core/agent-tools/subagent-async.mjs:17-19` · `:308`）⇒ 子代面闭环（以强制位为准）。
+  子代执行走核 `runChildPipeline → runAgent`（`thincoder-core/agent-tools/subagent-async.mjs` 两处）⇒ 子代面闭环（以强制位为准）。
 
-  ② **VSC 旁路面**（视觉渠道子代理：`thincoder-core/vision-reader.mjs:68-70` 的 `runAgent(..., { depth: 1, role: "explore", maxTurns: 10 })`——不传 `engState` / `engPersist`）：
+  ② **VSC 旁路面**（视觉渠道子代理：`thincoder-core/vision-reader.mjs` 的 `runAgent(..., { depth: 1, role: "explore", maxTurns: 10 })`——不传 `engState` / `engPersist`）：
 
-  该面工程真值回落 config.json 镜像（`thincoder-vscode/src/agent/setup.mjs:250-252` · `thincoder-vscode/src/agent/agent-state.mjs:88-91`），经核 `eng` 工具 / CLI 侧开的工程会话可派生 false ⇒ 该子代理装配仍含 `plan`。
+  该面工程真值回落**用户配置文件**的镜像（`thincoder-vscode/src/agent/setup.mjs` · `thincoder-vscode/src/agent/agent-state.mjs`），经核 `eng` 工具 / CLI 侧开的工程会话可派生 false ⇒ 该子代理装配仍含 `plan`。
+
+本条里「用户配置文件」的原件名（用户态配置，不是仓内清单——围栏块内不构成指针）：
+
+```text
+config.json
+```
 
 
-  **补传**（真值 = 槽权威同源）：`thincoder-vscode/src/extension/panel-messages.mjs:133` 取 `agentSettings(panel._agentSettingsSession()).engineering` 传入 `runVisionReader`，`thincoder-core/vision-reader.mjs:68-70` 携 `engState: { enabled }` ⇒ 该面与 depth-0 同源。
-- **在飞回合翻转窗（边界）**：VSC 翻转点（`thincoder-vscode/src/extension/panel-messages-settings.mjs:171-186` `handleSetEngineeringEnabled` / `chat-panel.mjs:349-364` `_setPlanMode`）
+  **补传**（真值 = 槽权威同源）：`thincoder-vscode/src/extension/panel-messages.mjs` 取 `agentSettings(panel._agentSettingsSession()).engineering` 传入 `runVisionReader`，`thincoder-core/vision-reader.mjs` 携 `engState: { enabled }` ⇒ 该面与 depth-0 同源。
+- **在飞回合翻转窗（边界）**：VSC 翻转点（`thincoder-vscode/src/extension/panel-messages-settings.mjs` 的 `handleSetEngineeringEnabled` / `thincoder-vscode/src/extension/chat-panel.mjs` 的 `_setPlanMode`）
   在**在飞回合内**只收正槽位——活体 `agent.config.agent.engineering` / `planMode` 由下一次 hydrate 收正 ⇒ 该回合剩余轮次内 `planMode` 可仍为 true、当轮表内仍有 `plan`。
   **不新增机械门**（真值 = 槽权威）；**零残留**（下一轮 hydrate 收正）。窗口限定与 AC12 / AC14 / T12 的判据行同口径（非条件断言，均为「仅 VSC · 在飞回合内 · 下一轮 hydrate 收正」）。
 
@@ -387,50 +393,49 @@ M10 测试（独立简化，无依赖）
 engineering 真值 ──► 固定段裁剪（plan / task 不入表）──────► 模型不可见（①）
                 ├──► 命令面拒绝（/plan · ACP · VSC 面板）─► 半状态不产生（②）
                 └──► clearPlanMode（三翻转 + 两恢复）────► planMode 恒 false（③）
-                         └─► 消费面零改（core 侧五处为示例：dispatch.mjs:167 · run-stages.mjs:98 · context.mjs:344
-                             · render-frame.mjs:234 ∕ :237（PLAN 常量行 ∕ `bannerPrefix`）· session.mjs:128（槽保存）；VSC 载体面 / 槽写面同类面见 §2.4 依赖表行）
+                         └─► 消费面零改（core 侧五处为示例：dispatch.mjs · run-stages.mjs · context.mjs
+                             · render-frame.mjs（PLAN 常量行 ∕ `bannerPrefix`）· session.mjs（槽保存）；VSC 载体面 / 槽写面同类面见 §2.4 依赖表行）
 ```
 
 **受影响文件表**（行数 = 实测——口径 = 内容行数、不含文末空行；测试落点 = T10–T14 的建议就近档）：
 
 | file | 行数 | 改动面 |
 |---|---|---|
-| 核 `agent/family-tools.mjs` | 174 | 固定段按 `engineering` 裁剪（`:173` 返回式 + 注释）；`:27` 解构形态零改（`test/tool-registry.test.mjs:102` 源扫描依赖） |
+| 核 `thincoder-core/agent/family-tools.mjs` | 174 | 固定段按 `engineering` 裁剪（返回式 + 注释）；解构形态零改 |
 | 核 `thincoder-core/agent-tools/plan.mjs` | 86 | 新增 `clearPlanMode(agent)` + 拒绝文案常量（TUI / ACP 两面共用一条；VSC 面提示 = webview i18n 键 `toolbar.planDisabled`） |
-| 核 `agent-tools/eng.mjs` | 102 | `enter` 分支（`:85` 翻态后）调 `clearPlanMode` |
-| 核 `session-lifecycle.mjs` | 305 | 槽恢复面清零（`:101` planMode 与 `:111-114` engineering 判定之后——清 `planMode` + 未注入提示语；CLI 槽在下次保存随内存值收正） |
+| 核 `thincoder-core/agent-tools/eng.mjs` | 102 | `enter` 分支（翻态后）调 `clearPlanMode` |
+| 核 `thincoder-core/session-lifecycle.mjs` | 305 | 槽恢复面清零（planMode 与 engineering 判定之后——清 `planMode` + 未注入提示语；CLI 槽在下次保存随内存值收正） |
 | CLI `thincoder-cli/src/tui/cmd-plan.mjs` | 10 | 工程模式拒绝分支（提示行 + 零翻转） |
 | CLI `thincoder-cli/src/tui/cmd-eng.mjs` | 94 | ON 翻转后 `clearPlanMode` + 槽 `data.planMode = false` + 清零提示行 |
-| CLI `thincoder-cli/src/acp/handlers-session.mjs` | 240 | **两 handler 前置判**（`session/set_config_option` / `session/set_mode`）⇒ 携共用文案的 `INVALID_PARAMS`；`applyConfigOption` 布尔契约零改（`:80-84`）；`normal` 照常（唯一合法态，幂等） |
-| VSC `thincoder-vscode/src/agent/setup.mjs` | 495 | 装配块（`:125-191`）下移至模式判定后 + 传 `engineering`；水合发现槽 `planMode:true` ∧ engineering ⇒ 槽回写 false（先例 `:277-279`）；拆分方案见下 |
-| VSC `thincoder-vscode/src/agent/agent-state.mjs` | 149 | `:110` 生效值收正（engineering ⇒ `_planMode=false`，优先于槽 `planMode`；纯函数面零 IO） |
-| VSC `thincoder-vscode/src/extension/chat-panel.mjs` | 441 | `_setPlanMode`（`:314-319`）工程模式拒绝（真值 = `agentSettings(_agentSettingsSession()).engineering`；不写槽 + 回弹） |
-| VSC `thincoder-vscode/src/extension/panel-messages-settings.mjs` | 202 | `handleSetEngineeringEnabled`（`:171-176`）ON ⇒ 调 `panel._setPlanMode(false)` |
-| VSC `thincoder-vscode/webview/mode-buttons.js` | 119 | 工程模式 plan 按钮 disabled + title（`toolbar.planDisabled`）+ 点击守卫（`applyModeButtons` `:16-23` · 点击 `:35-39`） |
-| VSC `thincoder-vscode/src/extension/panel-session.mjs` | 295 | `:129` 装载推送改读生效值（工程真值 ⇒ `planMode` 推送 `active:false`） |
-| VSC `thincoder-vscode/src/extension/panel-messages.mjs` | 294 | `:133` 取槽同源 engineering 传入 `runVisionReader` |
-| VSC `thincoder-vscode/src/extension/image-handler.mjs` | 87 | `:84` 旁路 runAgent 携 `engState: { enabled }`（工程真值同源） |
-| VSC `thincoder-vscode/locales/en.json` · `zh.json` | 263 · 263 | 新增 `toolbar.planDisabled` 一键（两 locale 同步） |
-| 核 `test/family-tools.test.mjs` | 131 | 工程模式固定段断言（depth-0 + 子代理面）；普通面既有断言零改 |
-| CLI `test/cmd-plan.test.mjs` | 新建 | `/plan` 工程拒绝 + 普通模式回归 |
-| CLI `test/cmd-eng.test.mjs` | 124 | 清零断言（内存位 + 槽位） |
-| CLI `test/acp-contract.test.mjs` | 363 | `set_mode` / `set_config_option` 拒绝断言 |
-| CLI `test/session-store.test.mjs` | 389 | 恢复清零断言（槽 `engineering` + `planMode` 双真；恢复后槽 `planMode` 收正） |
-| VSC `test/agent-lifecycle-singleton.test.mjs` | 491 | 槽恢复清零断言（`_planMode` 内存位 + 槽位） |
-| VSC `test/chat-panel-messages.test.mjs` | 462 | `_setPlanMode` 拒绝断言（不写槽 + 回弹） |
-| VSC `test/integration/host-shape-spawn.test.mjs` | 208 | T5 fixture 两条工程行（`:121-127` FAMILY_FIXTURE 的 eng-designer / eng-coder）删 `plan` + 增 explore 工程行（旁路面形状——`:193-199` 以 engineering=true 驱动；= T10 旁路面判据落点）；其余既有用例零改 |
-| VSC `test/status-line.test.mjs` | 157 | plan 按钮 disabled + title 断言（happy-dom 真 chat.js 驱动全量 id fixture；`agentSettings` engineering=true 注入面） |
+| CLI `thincoder-cli/src/acp/handlers-session.mjs` | 240 | **两 handler 前置判**（`session/set_config_option` / `session/set_mode`）⇒ 携共用文案的 `INVALID_PARAMS`；`applyConfigOption` 布尔契约零改（同档）；`normal` 照常（唯一合法态，幂等） |
+| VSC `thincoder-vscode/src/agent/setup.mjs` | 495 | 装配块下移至模式判定后 + 传 `engineering`；水合发现槽 `planMode:true` ∧ engineering ⇒ 槽回写 false（先例同档）；拆分方案见下 |
+| VSC `thincoder-vscode/src/agent/agent-state.mjs` | 149 | 生效值收正（engineering ⇒ `_planMode=false`，优先于槽 `planMode`；纯函数面零 IO） |
+| VSC `thincoder-vscode/src/extension/chat-panel.mjs` | 441 | `_setPlanMode` 工程模式拒绝（真值 = `agentSettings(_agentSettingsSession()).engineering`；不写槽 + 回弹） |
+| VSC `thincoder-vscode/src/extension/panel-messages-settings.mjs` | 202 | `handleSetEngineeringEnabled` ON ⇒ 调 `panel._setPlanMode(false)` |
+| VSC `thincoder-vscode/webview/mode-buttons.js` | 119 | 工程模式 plan 按钮 disabled + title（`toolbar.planDisabled`）+ 点击守卫（`applyModeButtons` ∥ 点击两处） |
+| VSC `thincoder-vscode/src/extension/panel-session.mjs` | 295 | 装载推送改读生效值（工程真值 ⇒ `planMode` 推送 `active:false`） |
+| VSC `thincoder-vscode/src/extension/panel-messages.mjs` | 294 | 取槽同源 engineering 传入 `runVisionReader` |
+| VSC `thincoder-vscode/src/extension/image-handler.mjs` | 87 | 旁路 runAgent 携 `engState: { enabled }`（工程真值同源） |
+| VSC `thincoder-vscode/locales/en.json` · `thincoder-vscode/locales/zh.json` | 263 · 263 | 新增 `toolbar.planDisabled` 一键（两 locale 同步） |
+| 核 | — | 工程模式固定段断言（depth-0 + 子代理面）；普通面既有断言零改 |
+| CLI | — | `/plan` 工程拒绝 + 普通模式回归 |
+| CLI | — | 清零断言（内存位 + 槽位） |
+| CLI | — | `set_mode` / `set_config_option` 拒绝断言 |
+| CLI | — | 恢复清零断言（槽 `engineering` + `planMode` 双真；恢复后槽 `planMode` 收正） |
+| VSC | — | 槽恢复清零断言（`_planMode` 内存位 + 槽位） |
+| VSC | — | `_setPlanMode` 拒绝断言（不写槽 + 回弹） |
+| VSC | — | plan 按钮 disabled + title 断言（happy-dom 真 `thincoder-vscode/webview/chat.js` 驱动全量 id fixture；`agentSettings` engineering=true 注入面） |
 
-**VSC `thincoder-vscode/src/agent/setup.mjs` 拆分**：装配段（家族段装配 / MCP 连接 / 基础集 · 全表 · `toolByName` · `toolSchemas` 构建；`thincoder-vscode/src/agent/setup.mjs:222-304`）⇒ 迁入既有邻档 `thincoder-vscode/src/agent/setup-tooltable.mjs`
+**VSC `thincoder-vscode/src/agent/setup.mjs` 拆分**：装配段（家族段装配 / MCP 连接 / 基础集 · 全表 · `toolByName` · `toolSchemas` 构建；同档的装配段）⇒ 迁入既有邻档 `thincoder-vscode/src/agent/setup-tooltable.mjs`
 
-（纯结构搬移零语义；缝 = 导出函数 `buildToolTable`；落位与行数见 `docs/core/design/MANIFEST.md` §2.3 行 16 · 行 29）。
-触发条件（拆分后沿用）= 越 800 硬限，或下一次触碰该档的批。拆后估算：`setup.mjs` ≈432 · `setup-tooltable.mjs` ≈325。
+（纯结构搬移零语义；缝 = 导出函数 `buildToolTable`；落位与行数见 `docs/core/design/MANIFEST.md` §2.3 的档级行数表）。
+触发条件（拆分后沿用）= 越 800 硬限，或下一次触碰该档的批。拆后估算：`thincoder-vscode/src/agent/setup.mjs` ≈432 · `thincoder-vscode/src/agent/setup-tooltable.mjs` ≈325。
 
 **提示词面（评估结论 = 零改，理由三条）**：① 工程两档（`thincoder-core/prompts/persona-engineering.md` / `thincoder-core/prompts/discipline-engineering.md`）与中文模板零处指示 plan 模式（实读 grep 命中仅「并发池上限：其他角色（explore/plan/coder）池」= 角色域枚举，非 plan 模式指令）。
 
-  ② 工具不注册已由结构兜底——再加「不要用 plan 模式」句 = 为不可见选项写限制（承反模式之裁）；③ `ENG_ON_REMINDER`（`agent/helpers.mjs`）无 plan 字样，无悬挂指令。
+  ② 工具不注册已由结构兜底——再加「不要用 plan 模式」句 = 为不可见选项写限制（承反模式之裁）；③ `ENG_ON_REMINDER`（`thincoder-core/agent/helpers.mjs`）无 plan 字样，无悬挂指令。
 
-**边界（不做什么）**：普通模式零改（工具 / 命令 / ACP / 恢复四路径全带宽）· **三条 reminder 文本本体不改**——`PLAN_EXIT_REMINDER` 现行 = `thincoder-core/agent-tools/plan.mjs:21`（引用位 `:11` · `:17` · `:21`，普通模式仍用）；
+**边界（不做什么）**：普通模式零改（工具 / 命令 / ACP / 恢复四路径全带宽）· **三条 reminder 文本本体不改**——`PLAN_EXIT_REMINDER` 现行 = `thincoder-core/agent-tools/plan.mjs`（同档三处引用位，普通模式仍用）；
 
 不新增机械门（拒绝点 = 既有命令面与既有翻转点）· 不改 `_setPlanMode` 的既有槽写契约（合法态仍 = 槽写 + 回推面板；工程态拒绝 = 不写槽 + 回弹）· VSC 新增 i18n 键仅 `toolbar.planDisabled` 一条（plan 按钮禁用态 title，两 locale 同步）。
 
@@ -444,13 +449,13 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 | M2 ⇄ M3 | 互指 | 两账咬合（条目 `task_book` 指针 → 批次档 §2） |
 | M4 → M1 | 读写 | manifest 写门 + 台账写命令装配（仅主 agent） |
 | M4 → M6 | 读 | 槽文件（token 门读 M6 签发的凭证，无活槽即拒） |
-| M6 → M4 | 读 | `resolveReviewTargetPaths`（M4 拆出的 `write-gate.mjs` 单一权威源——M6 复用，避免 advisor → dispatch 循环依赖） |
+| M6 → M4 | 读 | `resolveReviewTargetPaths`（M4 拆出的 `thincoder-core/agent/write-gate.mjs` 单一权威源——M6 复用，避免 advisor → dispatch 循环依赖） |
 | M5 → M1 | **零读面** | spawn 门判据不依赖 manifest |
 | M5 → M4 | 读 | eng-coder spawn 需活 token（活槽判据） |
 | M8 → M1 | 读 | `docRoot`（目录落点）；判据参数 = 内置常量，不读 manifest |
 | M6 → M1 | 读 | 评审对象来源 = manifest `docRoot`（声明面，E6 微调点） |
 | M11 ← VSC 装配 | 读 | `engineering` 模式位（端差面：VSC 装配块下移后取派生值——E7） |
-| M11 → planMode 消费面 | 不变量 | 「工程模式 ⇒ `planMode` 恒 false」——core 侧五处（示例）：`thincoder-core/agent/dispatch.mjs:167` · `thincoder-core/agent/run-stages.mjs:98` · `thincoder-core/context.mjs:344` · `thincoder-cli/src/tui/render-frame.mjs:234 ∕ :237` · `thincoder-core/session.mjs:128`（槽保存）；同不变量下另有 VSC 载体面（`thincoder-vscode/src/agent/tool-gates.mjs:73` · `thincoder-vscode/src/agent.mjs:419`）与槽写面（`thincoder-core/token-ttl.mjs:256` · `thincoder-core/session-slot-write.mjs:131` · `thincoder-core/session-lifecycle.mjs:250`）——**全部零改** |
+| M11 → planMode 消费面 | 不变量 | 「工程模式 ⇒ `planMode` 恒 false」——core 侧五处（示例）：`thincoder-core/agent/dispatch.mjs` · `thincoder-core/agent/run-stages.mjs` · `thincoder-core/context.mjs` · `thincoder-cli/src/tui/render-frame.mjs`（两处）· `thincoder-core/session.mjs`（槽保存）；同不变量下另有 VSC 载体面（`thincoder-vscode/src/agent.mjs`）与槽写面（`thincoder-core/token-ttl.mjs` · `thincoder-core/session-slot-write.mjs` · `thincoder-core/session-lifecycle.mjs`）——**全部零改** |
 
 ### 2.5 整体数据流
 
@@ -481,7 +486,7 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 | KD6 | token 门 = 继承 v1 零改，仅评审对象来源改读 `docRoot` | 重写 token 门无必要（v2 §8.5 明示「继承 v1 只微调」） |
 | KD7 | 台账直用 `node:sqlite`（零依赖） | 引入第三方 SQLite 包违零依赖硬约束（ARCHITECTURE §1.1 约束 4） |
 | KD8 | plan 排除形态 = 卸载（不注册）而非「注册 + 报错」 | 用户裁决①：看不见的选项不会被选；注册但报错 = 白烧干扰回合 |
-| KD9 | 裁剪落点 = 核单源 `family-tools.mjs`（端壳不二次过滤） | 同一条规则两端各实现一次 = 两份矩阵 ⇒ 端侧只补传模式位 |
+| KD9 | 裁剪落点 = 核单源 `thincoder-core/agent/family-tools.mjs`（端壳不二次过滤） | 同一条规则两端各实现一次 = 两份矩阵 ⇒ 端侧只补传模式位 |
 | KD10 | 清零 = 单点 `clearPlanMode`（三翻转 + 两恢复复用） | 清零点含「未注入 plan 提示语」过滤（否则 `PLAN_EXIT_REMINDER` 可跨模式落地）；内联 = 五份副本 |
 | KD11 | 排除面 = 全深度（含子代理）+ 两端 | 见 §2.3 E7 矩阵：角色面已排除（role enum + spawn 门），工具面留口即半排除；判据句最短 |
 
@@ -524,4 +529,4 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 | T11 | 边界：命令面拒绝 | 工程模式下 `/plan` · ACP `set_mode{mode:"plan"}` · `set_config_option{configId:"mode", value:"plan"}` · VSC `setPlanMode{value:true}` | 四处均拒 + 提示可见；`planMode` 保持 false；ACP 拒绝携共用文案（非 `unknown configId`）；VSC 按钮 disabled + title + 回弹；ACP `mode:"normal"` 照常接受 |
 | T12 | 边界：翻转清零 | `planMode=true` 后开工程模式（核 `eng` 工具 / `/eng` / VSC 面板开关） | `planMode=false` + 槽 `planMode=false`（CLI `/eng` · VSC）+ 未注入的 plan 提示语被摘除；**VSC 在飞回合内窗口**（AC14 限定）：当拍只收正槽位 ⇒ 该回合余轮内存值可仍 true，下一轮 hydrate 收正 |
 | T13 | 边界：恢复清零 | 槽 `{engineering:true, planMode:true}` → CLI `applySession` / VSC `applySlotSessionState` | 恢复后 `planMode`（VSC `_planMode`）= false，**槽 `planMode` 一并收正**（装载推送不再重推 plan-active） |
-| T14 | 错误：普通模式零回归 | 普通模式装配 / `/plan` 切换 / ACP `mode:"plan"` / 槽 `planMode:true` 恢复 | 四条路径全带宽不变（**除所列矩阵镜像收正**——`host-shape-spawn.test.mjs` T5：两条工程行删 `plan` + 增 explore 工程行——外，既有测试零改全绿） |
+| T14 | 错误：普通模式零回归 | 普通模式装配 / `/plan` 切换 / ACP `mode:"plan"` / 槽 `planMode:true` 恢复 | 四条路径全带宽不变（**除所列矩阵镜像收正**外，既有测试零改全绿） |

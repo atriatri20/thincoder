@@ -7,7 +7,7 @@
 ## 1. 定位与边界
 
 - **行间区块 = 普通工具输出的唯一形态**：工具执行时在对话区产出「标题行 + 执行中滚动内容 + 完成行」，随会话流滚动。
-- 不存在「面板 / 行间」双轨。权威注在实现侧：`thincoder-core/agent/dispatch.mjs:258` · `:315`
+- 不存在「面板 / 行间」双轨。权威注在实现侧：`thincoder-core/agent/dispatch.mjs` 的两处同句注释
   （`Panel area abolished — all tools now stream inline via onToolOutput`）。
 - **区块是 UI 层预览**：完整结果始终落 history（需求 FR4）；模型从 history 读完整结果，不读区块。
 - **本档只覆盖普通工具输出路径**；子 agent / advisor / subagent 活动由专用分支承载（见 §7）。
@@ -41,21 +41,21 @@
 
 ## 4. 参数可见性（`thincoder-cli/src/tui/tool-args.mjs`）
 
-- **单源摘要**：`describeToolArgs(name, args)`（单源 = 核 `thincoder-core/tool-args.mjs:16`；本端 `:14` 同名转口）——按工具挑关键参数的可读单行
+- **单源摘要**：`describeToolArgs(name, args)`（单源 = 核 `thincoder-core/tool-args.mjs` 的 `describeToolArgs`；本端 `thincoder-cli/src/tui/tool-args.mjs` 同名转口）——按工具挑关键参数的可读单行
   （bash = 命令 + workdir；文件工具 = 路径 + offset/limit/edit 摘要；搜索 = pattern + path；未知 / MCP 工具 = 紧凑 JSON 80 截断）。
-- **live 标题行**：`❯ name <可读摘要>`（`tool-events.mjs:158` 调用）。
-- **恢复路径**：`[tool] name — <摘要>` 标题行 + **全量 pretty JSON 落 dim 行**（`toolArgsLines`，`:20-23`）——
+- **live 标题行**：`❯ name <可读摘要>`（`tool-events.mjs` 的 `argSummary` 行调用）。
+- **恢复路径**：`[tool] name — <摘要>` 标题行 + **全量 pretty JSON 落 dim 行**（`toolArgsLines`，`thincoder-cli/src/tui/tool-args.mjs`）——
   TUI 无悬停面，全量必须落行；超长由连续 dim 折叠收纳。畸形 args JSON 降级为原始串 dim 行，不崩。
 - **两端对齐**：VSC 卡片头 name+args 截断 ≈ 标题行摘要；点击展开 body ≈ 全量 JSON dim 行。
 
 ## 5. 载体收尾与共享守卫
 
-- **载体收尾语义分层**：普通工具结果落载体本体（`settleToolBlock(state, name, toolId, summary)`——`tool-display.mjs:105`）；
+- **载体收尾语义分层**：普通工具结果落载体本体（`settleToolBlock(state, name, toolId, summary)`——`tool-display.mjs`）；
   **subagent / escalate / advisor** 的结果由专用分支承载（子 agent 冻结框 / 评审冻结框），但 dispatch 级载体仍需标 done
   ——统一收尾（否则回合清扫会把成功调用误标 `(interrupted)`）。
-- **中断清扫**：`sweepToolBlocks(state)`（`tool-display.mjs:60`；agent-turn finally 调用，与 `freezeAllSubTasks` 并列）
+- **中断清扫**：`sweepToolBlocks(state)`（`tool-display.mjs` 的 `sweepToolBlocks`；agent-turn finally 调用，与 `freezeAllSubTasks` 并列）
   ——未 done 载体标 `done + interrupted` 并清计时。
-- **`slimToolResultForDisplay(result, maxRows = 400)`**（`tool-display.mjs:82`，LIVE 与 RESTORE 共用）：
+- **`slimToolResultForDisplay(result, maxRows = 400)`**（`tool-display.mjs` 的同名函数，LIVE 与 RESTORE 共用）：
   ① `read_image` 等多模态结果剥离 base64 images 只留 text（模型侧图像走 multimodal 通道）；
   ② 超过 `maxRows` 截断（全文在 history）。恢复路径同函数。
 - **工具块宽度的组件 `cols` 纪律**：工具块展开 / 折叠态的组件调用**必须传 `cols`**（漏传 = 组件按默认 80 wrap，生成中「左边一小块」）。
@@ -68,9 +68,9 @@
 
 | 常量 | 值 | 面 |
 |---|---|---|
-| `TOOL_OUTPUT_LINE_CAP` | 200 | 输出环条目数（`:24`） |
-| `REMINDER_CAP` | 3 | 回合末提示行数上限（`:25`） |
-| `REMINDER_PERSIST_TURNS` | 5 | 提示落盘节流（每 N 回合，`:26`） |
+| `TOOL_OUTPUT_LINE_CAP` | 200 | 输出环条目数 |
+| `REMINDER_CAP` | 3 | 回合末提示行数上限 |
+| `REMINDER_PERSIST_TURNS` | 5 | 提示落盘节流（每 N 回合） |
 | 预览行数上限 | 8 | 子 agent 预览尾部行数（`SUBAGENT_PREVIEW_LINES` 族——归显示层额度族管辖） |
 | 预览行宽 | 120 | 预览行字符上限（`PREVIEW_LINE_CHARS` 族） |
 

@@ -3,8 +3,8 @@
 > 板块 = **工具系统（verify 元工具）**——通用验证门禁的交互契约、判定门与双端一致。
 > 本档 = verify 机制设计的**唯一权威**（契约 / 判定 / 坐标）。
 > 工具契约要点 = `docs/core/design/TOOLS.md`（§6.7 verify 行 · 元工具族）；`verify` 与 coding 语境的边界 = `docs/core/design/AGENT-LOOP.md`；本档不复制其内容（D2）。
-> 双端：CLI `thincoder-core/agent-tools/verify.mjs` · VSC `thincoder-vscode/src/agent-tools/verify.mjs`（同机制、各自实现）。
-> 需求侧 = `docs/core/requirements/`（根层**无**对应档）；CLI 树需求档 `thincoder-cli/docs/requirements/VERIFY-REDESIGN.md`（部分面已由 `TOOLS.md` D-V5 快路径接管）。
+> 双端：CLI `thincoder-core/agent-tools/verify.mjs` · VSC `thincoder-vscode/src/agent-tools/index.mjs`（核工具表再出口——同机制、单实现）。
+> 需求侧 = `docs/core/requirements/VERIFY-REDESIGN.md`（部分面已由 `docs/core/design/TOOLS.md` 的 D-V5 快路径接管）。
 
 ## 1. 定位
 
@@ -12,14 +12,14 @@
 
 ## 2. 交互契约（声明式）
 
-模型调用 verify 时**声明验证状态**（`verification` 参数，`thincoder-core/agent-tools/verify.mjs:82`–`:92`）：
+模型调用 verify 时**声明验证状态**（`verification` 参数，schema 见 `thincoder-core/agent-tools/verify.mjs` 的 `verifyTool`）：
 
 ```text
 verification: { status: "passed" | "failed" | "skipped", command?, summary?, basis? }   // status 必填；basis 可选（「根据」维）
 ```
 
 - `command` / `summary` 可选；**`summary` 在 `skipped` 时为必填**（须给具体理由）。
-- **`basis`（可选）**：判据源 ∥ 实读坐标（`file:line`）∥ 显式 `unverified`——「根据」维**声明式**（格式零校验 · 零机检）。`passed` / `skipped` 缺 `basis` ⇒ 报告附**提示行**（advisory——不阻断 · 不改判定）；`failed` 面零提示（已阻断）；`skipped` 无 `summary` 的打回支同零提示（阻断面不叠加——提示仅随放行面出现）。
+- **`basis`（可选）**：判据源 ∥ 实读的档名 + 逐字引文 ∥ 显式 `unverified`——「根据」维**声明式**（格式零校验 · 零机检）。`passed` / `skipped` 缺 `basis` ⇒ 报告附**提示行**（advisory——不阻断 · 不改判定）；`failed` 面零提示（已阻断）；`skipped` 无 `summary` 的打回支同零提示（阻断面不叠加——提示仅随放行面出现）。
 - verify **不执行** `command`——它是模型的自述证据。
 - 参数面保留 `workdir`（定位项目根 / doc-only 判定）。
 - 参数面无 `full` / `testNamePattern` / `filter` 及其拒绝分支（无「自动跑测试」后语义消亡）。
@@ -34,7 +34,7 @@ verification: { status: "passed" | "failed" | "skipped", command?, summary?, bas
 | `skipped` 无 `summary` | 打回（空跳过不允许——防假装跑过） |
 | 未声明 | 打回并要求声明 |
 
-- **打回引导**（`thincoder-core/agent-tools/verify.mjs:62` · `:166`）：打回消息列出改动的源文件，并引导「参考项目 `AGENTS.md` 声明的验证方式决定补什么验证」——不空泛说「没验证」。
+- **打回引导**（`thincoder-core/agent-tools/verify.mjs` 的 `appendBlockGuidance`）：打回消息列出改动的源文件，并引导「参考项目 `AGENTS.md` 声明的验证方式决定补什么验证」——不空泛说「没验证」。
 - **doc-only 快路径**：全部改动为文档 → 早退（无需验证）；**但不得吞显式 `failed`**——模型显式声明 `verification.status = "failed"` 时**恒打回**（双端同）。
 - **可选语法提示**：仅改动为 `.js` / `.mjs` 且 node 存在时给 `node --check` **软提示**（**不进门禁**）。
 - 另报：改动文件清单（git diff）、task 清单、自审 checklist。
@@ -44,12 +44,12 @@ verification: { status: "passed" | "failed" | "skipped", command?, summary?, bas
 
 verify 的强制面住在完成路径，不住 verify 本体：
 
-- **completion guard**（`thincoder-core/agent/completion.mjs:73`–`:74`）：**opt-in**（`agent.verifyGuard === true`）且**排除工程模式**（工程模式走流程驱动评审，不做逐回合机械推回）。
-  - G1 未验证 → 推回提醒（`:76` · `:81`）；
-  - G2 已声明但未通过 → 重试推回（`:89` · `:94`），上限 `MAX_VERIFY_RETRIES`；
-  - G3 重试耗尽 → 一次性诚实声明提醒（`:100` · `:109`）。
-  - 三条文案均**不称**「test failures」——`_verifyPassed === false` 可能是 failed / 无理由 skipped / 未声明（`:87`–`:88` 注释即此判据）。
-- **goal 门禁**（`thincoder-core/agent-tools/goal.mjs:52`–`:54`）：本 run 改过文件却未 verify → 拒绝 complete。
+- **completion guard**（`thincoder-core/agent/completion.mjs` 的 `handleCompletion` 内 verify guard 段）：**opt-in**（`agent.verifyGuard === true`）且**排除工程模式**（工程模式走流程驱动评审，不做逐回合机械推回）。
+  - G1 未验证 → 推回提醒（`MAX_VERIFY_PUSHBACKS` 支）；
+  - G2 已声明但未通过 → 重试推回（重试支，上限 `MAX_VERIFY_RETRIES`）；
+  - G3 重试耗尽 → 一次性诚实声明提醒（耗尽支）。
+  - 三条文案均**不称**「test failures」——`_verifyPassed === false` 可能是 failed / 无理由 skipped / 未声明（该支注释即此判据）。
+- **goal 门禁**（`thincoder-core/agent-tools/goal.mjs` 的 `goalTool` 完成支）：本 run 改过文件却未 verify → 拒绝 complete。
 
 ## 5. 双端一致与提示词面
 
@@ -57,14 +57,14 @@ verify 的强制面住在完成路径，不住 verify 本体：
 
 | 面 | CLI | VSC |
 |---|---|---|
-| guard 首闸 | `thincoder-core/agent/completion.mjs:81` | `thincoder-vscode/src/agent/run-stages.mjs:86` |
-| guard 重试 | `thincoder-core/agent/completion.mjs:94` | `thincoder-vscode/src/agent/run-stages.mjs:99` |
-| guard 耗尽 | `thincoder-core/agent/completion.mjs:109` | `thincoder-vscode/src/agent/run-stages.mjs:113` |
-| code-mutations 层 | `thincoder-core/agent/completion.mjs:80`（`hasCodeMutations`） | `thincoder-vscode/src/agent/run-helpers.mjs:71` |
-| 打回报告 | `thincoder-core/agent-tools/verify.mjs` | `thincoder-vscode/src/agent-tools/verify.mjs:142`（`rejectionReport`） |
-| goal 门禁 | `thincoder-core/agent-tools/goal.mjs:52` | `thincoder-vscode/src/agent-tools/goal.mjs:38` |
+| guard 首闸 | `thincoder-core/agent/completion.mjs`（`MAX_VERIFY_PUSHBACKS` 支） | `thincoder-vscode/src/agent/run-stages.mjs` |
+| guard 重试 | `thincoder-core/agent/completion.mjs`（`MAX_VERIFY_RETRIES` 支） | `thincoder-vscode/src/agent/run-stages.mjs` |
+| guard 耗尽 | `thincoder-core/agent/completion.mjs`（耗尽支） | `thincoder-vscode/src/agent/run-stages.mjs` |
+| code-mutations 层 | `thincoder-core/agent/completion.mjs`（`hasCodeMutations`） | `thincoder-vscode/src/agent/run-helpers.mjs` |
+| 打回报告 | `thincoder-core/agent-tools/verify.mjs`（`appendBlockGuidance`） | `thincoder-vscode/src/agent-tools/index.mjs`（核工具表再出口） |
+| goal 门禁 | `thincoder-core/agent-tools/goal.mjs`（`goalTool`） | `thincoder-vscode/src/agent-tools/index.mjs`（核工具表再出口） |
 
-- **提示词面**：测试执行职责**在模型**——模型从项目 `AGENTS.md` 读验证方式，自决跑哪一层（迭代期只跑本任务面单元测试；全量 ∕ 集成 = 收口恰一次、父侧——见 `requirements/TESTING.md` §2 F1–F4），verify 只**收声明**。提示词 = `thincoder-core/prompts/**`（唯一副本；本档只留机制边界，D2）。
+- **提示词面**：测试执行职责**在模型**——模型从项目 `AGENTS.md` 读验证方式，自决跑哪一层（迭代期只跑本任务面单元测试；全量 ∕ 集成 = 收口恰一次、父侧——见 `docs/core/requirements/TESTING.md` §2 F1–F4），verify 只**收声明**。提示词 = `thincoder-core/prompts/**`（唯一副本；本档只留机制边界，D2）。
 - **测试纪律不进 verify 代码**：纪律靠 `AGENTS.md` / 提示词自然语言指导，不硬编码进工具。
 
 ## 6. 机制面（现状路径）
@@ -73,13 +73,13 @@ verify 的强制面住在完成路径，不住 verify 本体：
 
 | 面 | 落点 | 状态 |
 |---|---|---|
-| 工具对象 / 描述派生 | `thincoder-core/agent-tools/verify.mjs:75`（`verifyTool`）· `:78`（description） | 在位 |
-| `verification` schema | `thincoder-core/agent-tools/verify.mjs:82`–`:92` | 在位 |
-| doc-only + 显式 failed 铁判 | `thincoder-core/agent-tools/verify.mjs:152`–`:167` | 注释 + 分支在位 |
-| 判定门写入点 | `thincoder-core/agent-tools/verify.mjs:183` · `:226` · `:235` · `:241` · `:247` · `:253` · `:260` | 在位 |
-| 未知 status 拒 | `thincoder-core/agent-tools/verify.mjs:258` | 在位 |
-| guard 强制端 | `thincoder-core/agent/completion.mjs:73`–`:74`（opt-in）· `:81` · `:94` · `:109` | 在位 |
-| goal 完成门 | `thincoder-core/agent-tools/goal.mjs:52` | 在位 |
+| 工具对象 / 描述派生 | `thincoder-core/agent-tools/verify.mjs` 的 `verifyTool` · 描述由 `DESC("verify")` 派生 | 在位 |
+| `verification` schema | 同档 `verifyTool` 入参的 `verification` 键（`status` 必填，其余可选） | 在位 |
+| doc-only + 显式 failed 铁判 | 同档 `execute` 的 doc-only 早退支（含显式 failed 铁判） | 注释 + 分支在位 |
+| 判定门写入点 | 同档 `execute` 内七处判定门写入点（实读） | 在位 |
+| 未知 status 拒 | 同档 `execute` 的未知 status 拒支 | 在位 |
+| guard 强制端 | `thincoder-core/agent/completion.mjs` 的 `handleCompletion` verify guard 段（opt-in ∥ 首闸 ∥ 重试 ∥ 耗尽） | 在位 |
+| goal 完成门 | `thincoder-core/agent-tools/goal.mjs` 的 `goalTool` 完成支 | 在位 |
 
 ### 6.2 用例（现行）
 

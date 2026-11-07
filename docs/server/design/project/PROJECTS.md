@@ -1,13 +1,13 @@
 # Thincoder Server · 团队项目与权限（project/PROJECTS）
 
-> 板块 = server ∥ 本档 = project 域（团队项目与权限——git 源接入 ∥ 仓表/项目 ∥ 权限三档 ∥ 成员同步；2026-10-12 B2 批新立）；板总览 = `PROJECT.md`（文档地图 = §3）。
-> 需求单源 = `docs/server/requirements/PROJECT.md`（功能点 44 ∥ AC-44）；本域回指 = `PROJECT.md` §7（AC-44 判据 = 本档 §9）。
-> 界面承载 = `webui/PROJECTS.md`（面档——页族/导航/入口单源）；端点表 = `gateway/API.md` §2.9（单源）；存储段 = `store/STORE.md` §2 v17（单源）；审计 = `accounts/ACCOUNTS.md` §2.1（`project_event` 行）。
+> 板块 = server ∥ 本档 = project 域（团队项目与权限——git 源接入 ∥ 仓表/项目 ∥ 权限三档 ∥ 成员同步；2026-10-12 B2 批新立）；板总览 = `docs/server/design/PROJECT.md`（文档地图 = §3）。
+> 需求单源 = `docs/server/requirements/PROJECT.md`（功能点 44 ∥ AC-44）；本域回指 = `docs/server/design/PROJECT.md` §7（AC-44 判据 = 本档 §9）。
+> 界面承载 = `docs/server/design/webui/PROJECTS.md`（面档——页族/导航/入口单源）；端点表 = `docs/server/design/gateway/API.md` §2.9（单源）；存储段 = `docs/server/design/store/STORE.md` §2 v17（单源）；审计 = `docs/server/design/accounts/ACCOUNTS.md` §2.1（`project_event` 行）。
 
 ## 1. 定位与形态
 
 - **一句话**：把「团队项目」与 git 平台接起来——项目/仓从 git 源来、成员跟着平台单向同步、本地只管「谁能看/谁能写」（三档：只读 ∥ 读写 ∥ 管理；未授权即不可见）。
-- **落点**：代码 = `thincoder-server/src/project/`（新域——本档 §8）；文档 = 本档 + `webui/PROJECTS.md`（面档）。
+- **落点**：代码 = `thincoder-server/src/project/`（新域——本档 §8）；文档 = 本档 + `docs/server/design/webui/PROJECTS.md`（面档）。
 - **场景边界（需求 44 边界）**：企业项目才有本机制；个人单仓不挂同步；不做反向写回平台（平台 = 身份源，单向跟随）。
 - 域词表（全文一体一名）：**项目** = 一行 = 一个 git 仓（项目 ↔ 仓一对一，需求裁）；**源** = git 平台接入（一行一源）；**成员行** = 项目成员表一行（用户名 × 档位 × 来源）；**来源** = manual（本地维护）∥ sync（平台同步）；**档位** = 只读（read）∥ 读写（readwrite）∥ 管理（manage）。
 
@@ -15,7 +15,7 @@
 
 | # | 决策 | 理由 |
 |---|---|---|
-| KD-SV-115 | **新立 `project` 域**（代码 `src/project/` ∥ 档 = 本档；否并 `accounts` 域） | 职责独立（git 平台接入 + 项目实体 + 项目级权限层 + 同步引擎——与「账号/会话/凭据自身」不同层）；文档热面隔离（`accounts/ACCOUNTS.md` 多域共触——新域 = 新并发隔离单元）；体量（≈6 档 ≈1150 行——超 accounts 单域相称体量） |
+| KD-SV-115 | **新立 `project` 域**（代码 `src/project/` ∥ 档 = 本档；否并 `accounts` 域） | 职责独立（git 平台接入 + 项目实体 + 项目级权限层 + 同步引擎——与「账号/会话/凭据自身」不同层）；文档热面隔离（`docs/server/design/accounts/ACCOUNTS.md` 多域共触——新域 = 新并发隔离单元）；体量（≈6 档 ≈1150 行——超 accounts 单域相称体量） |
 | KD-SV-116 | **成员身份 = 统一用户名键**：成员行以用户名为键（本地成员 = `members.username`；平台侧 = 平台账号名）；**同名即对接**（大小写不敏感——`COLLATE NOCASE` 唯一）；平台行（origin=`sync`）遇同名手工行（origin=`manual`）⇒ **手工行优先，同步不触**；成员行**不要求本地账号存在** | 一个命名空间免第二张「身份绑定」表与绑定界面（体量最小）；同名对接 = 企业内账号惯例；手工优先 = 本地决定不被同步覆盖；不要求账号存在 = 平台名册可如实落库（「那边添加了用户这边也添加」字面可达） |
 | KD-SV-117 | **同步作用域 = 源级成员表**（组织/企业/组——三平台端点据调研在册）：拉源的名册 ⇒ 应用到**该源下全部项目**（底线档按映射表；手工行升档）；**仓级协作者角色不拉**（映射表附注对照——证据边界见 §4） | 端点证据仅覆盖组织/企业/组级成员表（调研实读）；逐仓拉取 = N×M 调用且 gitee 仓协作者端点未逐条实核；用户模型 = 「源（组织）加人 ⇒ 这边跟」；底线 + 手工升档 = 档位可控且不被同步回退（手工行优先——KD-SV-116） |
 | KD-SV-118 | **事件进路 = github 成员事件接收端**（承 R63 乙裁——用户 2026-10-12 授权）：源行持 `sync_mode`（`poll` ∥ `event`；缺省 `poll`）+ 平台能力矩阵注明可事件平台（github）；接收端 = §13（`POST /api/hooks/git-sources/:id`——公开面，门 = 每源独立密钥 `hook_secret_cipher` 的 HMAC-SHA256 验签；github 侧 webhook = **手动登记**——保零反向出站（AC-44⑥））；**`event` 语义 = 事件触发（近实时）+ 定时对账兜底 + 手动恒在**（消「置 event ⇒ 零自动同步」死区——调度判据不设模式门）；触发 = 跑该源一次成员同步（载荷不解析——名册全量对账幂等） | 事件近实时性（需求 44③⑦「能同步的同步」）+ 乙裁授权；手动登记 = 零反向写回纪律下的唯一登记形；定时对账把「投递不达/公网未达」兜在可用线以上（功能可用性不依赖事件）；全量对账 = 重复/乱序投递天然幂等 |
@@ -28,9 +28,9 @@
 | KD-SV-123 | **页面承载 = 三页**：`#/me/projects`（我的·项目——全体；可见项目列表 + 详情弹窗）∥ `#/admin/projects`（管理·项目——admin；全量 + 添加仓 + 地址/负责人变更）∥ `#/admin/git-sources`（管理·Git 源——admin；源表全操作）；管理组两项分列（否 tab 合页） | 「一页一职责」（KD-SV-20 精神）；源表 = 需求 44⑤ 点名的独立承载（凭据/同步面），与项目实体面不同管理对象；源面未来会长（事件/钩子接入）——分列免再拆 |
 | KD-SV-151 | **gitee 范围三态显式（个人 ∥ 组织 ∥ 企业——用户 2026-10-13 18:54 裁「用户知道自己是个人/组织/企业，你选择器分一下」）+ 迁移与超时口径**：源行增 `scope_kind`（`personal` ∥ `org` ∥ `enterprise`——非 gitee 恒 NULL）；**gitee 建源必携类型 ∥ 改源键级**（gitee 行值/解析结果为空 ⇒ 400——迁移后不可达的防御句）（形门）；路由 = 个人 ⇒ 仅 `/user/repos` ∥ 组织 ⇒ + `/orgs/{scope}/repos` ∥ 企业 ⇒ + `/enterprises/{scope}/repos`（成员表两径同源；实测企业：仓 70 ∥ 成员 13）；声明与实况不符 ⇒ `http_error` + 人话（「改选范围类型」句），**不自动改走他径**（出站零另一径——机检）；gitee 读类超时 20s（余平台 10s——实测 `/user/repos` 4.8–5.4s，10s 预算不足）；**旧行迁移 = 零猜测**（gitee 存量：scope 在场 ⇒ `org`（沿现行路由——组织零回归）∥ scope 空 ⇒ `personal`；非 gitee 零动）——企业旧源（如 id=2）在编辑窗改选「企业」一次即工作 | 用户 18:54 裁定（三态由用户声明——明拒自动探测）；企业端点实测可用而现盘只走组织径；超时 = 实测预算 |
 
-**最近先例（KD-SV-151）**：实现坐标 = `thincoder-server/src/project/platform-client.mjs`（`listRepos` 组织径并集去重 `:170-210` ∥ `rosterRowOf` 管理三谓词 `:237` ∥ `READ_TIMEOUT_MS` 单点 `:17`）∥ 对应设计节 = 本档 §4 客户端口径（gitee/scope/超时三条）；先例 = team-projects-permissions（gitee 组织径并集去重）；
-  另引 = 掩码三态（provider apiKey 口径）∥ 列级 ALTER 段（`store/STORE.md` §2——v6/v16）∥ 读类超时 10s（镜像源口径）；对齐 = 范围径「主径 + 范围径去重、300 行上限」 ∥ 掩码「未编辑不携 ∥ 明填 = 替换」 ∥ 超时「平台单点常量」形；
-  偏离 = ① 范围类型 = 用户显式声明（先例无类型概念——理由 = 用户 18:54 裁定：禁自动探测；不符 ⇒ 人话报错，不静默改走他径）∥ ② gitee 读类超时 20s（先例全平台 10s——理由 = 实测 `/user/repos` 4.8–5.4s）。
+- **最近先例（KD-SV-151）**：实现坐标 = `thincoder-server/src/project/platform-client.mjs`（`listRepos` 组织径并集去重 ∥ `rosterRowOf` 管理三谓词 ∥ `READ_TIMEOUT_MS` 单点）∥ 对应设计节 = 本档 §4 客户端口径（gitee/scope/超时三条）；先例 = team-projects-permissions（gitee 组织径并集去重）；
+- 另引 = 掩码三态（provider apiKey 口径）∥ 列级 ALTER 段（`docs/server/design/store/STORE.md` §2——v6/v16）∥ 读类超时 10s（镜像源口径）；对齐 = 范围径「主径 + 范围径去重、300 行上限」 ∥ 掩码「未编辑不携 ∥ 明填 = 替换」 ∥ 超时「平台单点常量」形；
+- 偏离 = ① 范围类型 = 用户显式声明（先例无类型概念——理由 = 用户 18:54 裁定：禁自动探测；不符 ⇒ 人话报错，不静默改走他径）∥ ② gitee 读类超时 20s（先例全平台 10s——理由 = 实测 `/user/repos` 4.8–5.4s）。
 
 ## 3. 权限模型（判据句——能力矩阵）
 
@@ -54,7 +54,7 @@
 5. **负责人边界**：负责人 ⇒ `manageMembers` + `rename`；负责人**不可被非 admin 移除/降档**（对该两径 ⇒ 403）；负责人指派/更换 = admin（`PATCH /api/projects/:id { owner }`）。
 6. **改仓地址仅 admin**：非 admin（含负责人/管理档）改 `address` ⇒ 403（消息「改仓地址仅管理员」）——仓地址 = 记账键（需求 44② 原话理由）。
 7. **档位来源**：成员行 `level`；平台行档位 = 映射表（§4）；手工行档位 = 添加/改档时选定；同名手工行优先于平台行（KD-SV-116）。
-8. **admin 恒见全部**：管理面两页（管理·项目 ∥ 管理·Git 源）恒 admin 门（`requireAdmin`——会话判权沿 `accounts/ACCOUNTS.md` §3）。
+8. **admin 恒见全部**：管理面两页（管理·项目 ∥ 管理·Git 源）恒 admin 门（`requireAdmin`——会话判权沿 `docs/server/design/accounts/ACCOUNTS.md` §3）。
 9. **项目删除仅 admin**：`can.delete` 仅 admin 为真（负责人/管理档/其余 ✗）——`DELETE /api/admin/projects/:id` 恒 `requireAdmin`；二次确认 + 级联 + 审计全文 = §14。
 
 ## 4. 平台接入（能力矩阵 ∥ 角色映射表 ∥ 客户端口径）
@@ -110,18 +110,18 @@
 - **并发锁**：单源在飞 ⇒ 手动重触发 400「该源正在同步中，稍后再试」；调度撞锁跳过；**事件撞锁 ⇒ 待跑旗合并**（在飞 + 多次投递 ⇒ 结束后续跑一次——§13）。
 - **PAT 体检**（独立动作）：`POST /api/admin/git-sources/:id/check` ⇒ 体检调用（§4 `GET /user`）⇒ 成 ⇒ `token_state='ok'` + 200 `{ ok:true, ms }`；败 ⇒ `auth` ⇒ `token_state='invalid'`（界面标红 + 人话）+ 自含失败形；审计 `project_event`/`source_check`。
 - **源生命周期**：停用（`enabled=0`）⇒ 定时停、已挂项目保留（需求 44⑤ 逐字）；删源防护（还挂项目 ⇒ 400——KD-SV-122）；改源（含 PAT 重填——掩码三态：未编辑不携 ∥ 编辑 ⇒ 明传替换）。
-- **加仓两径**（需求 44①）：① 从源拉列表勾选批量添加（`GET …/:id/repos` + 提交 `{ sourceId, repos: [...] }`）；② 手输保底（载荷逐字 = `gateway/API.md` §2.9 单源——`{ address, displayName?, owner? }`；裸 git 仓/自建无接口）。批量提交全成或全拒（一条撞重复 ⇒ 400 列重复项、零落库）；
+- **加仓两径**（需求 44①）：① 从源拉列表勾选批量添加（`GET …/:id/repos` + 提交 `{ sourceId, repos: [...] }`）；② 手输保底（载荷逐字 = `docs/server/design/gateway/API.md` §2.9 单源——`{ address, displayName?, owner? }`；裸 git 仓/自建无接口）。批量提交全成或全拒（一条撞重复 ⇒ 400 列重复项、零落库）；
   **仓地址归一 = 跨形单键**：trim ∥ 去 scheme（`scheme://`）与用户段 ∥ scp 形 `:` ⇒ `/`（`git@host:path`）∥ 去尾斜杠 + `.git` 尾 ⇒ 规范形 `host[:port]/path`（http/https/ssh/scp 各形同代码 ⇒ 同键 ⇒ 跨形重复同拒）；`projects.address` 唯一（重复挂仓拒——AC-44①）。
 
 ## 6. 端点与判权（摘要 + 指针）
 
-- 端点逐行（路径 ∥ 语义 ∥ 形/码）= `gateway/API.md` §2.9（单源——十七端点：成员面六 ∥ 管理面十 ∥ 接收面一（公开——验签门；§13））。
-- 判权摘要：成员面 = 会话 + 能力矩阵（§3——`user` 可达「我的·项目」面）；管理面十端点 = `requireAdmin`（含项目删除——§14；`accounts/ACCOUNTS.md` §3 口径；错误形零新码——400/403/404 族 + 自含状态形）；接收面 = 无会话（验签门——§13）。
+- 端点逐行（路径 ∥ 语义 ∥ 形/码）= `docs/server/design/gateway/API.md` §2.9（单源——十七端点：成员面六 ∥ 管理面十 ∥ 接收面一（公开——验签门；§13））。
+- 判权摘要：成员面 = 会话 + 能力矩阵（§3——`user` 可达「我的·项目」面）；管理面十端点 = `requireAdmin`（含项目删除——§14；`docs/server/design/accounts/ACCOUNTS.md` §3 口径；错误形零新码——400/403/404 族 + 自含状态形）；接收面 = 无会话（验签门——§13）。
 - 错误码：零新码（400 ∥ 403 ∥ 404 ∥ 401 沿用；自含失败形不走统一信封——沿代理测试/镜像源先例）。
 
 ## 7. 界面承载
 
-⇒ 见 `webui/PROJECTS.md`（页族/导航位/入口/键族/判据——单源；KD-SV-123 的页面落点）。
+⇒ 见 `docs/server/design/webui/PROJECTS.md`（页族/导航位/入口/键族/判据——单源；KD-SV-123 的页面落点）。
 
 ## 8. 本域文件与行数预算
 
@@ -135,20 +135,20 @@
 | `thincoder-server/src/project/admin-routes.mjs`（已落） | ≈**224**（拉列表携 `scopeKind` ∥ 超时口径） | 管理面十端点（源 CRUD/同步/体检/拉列表/加仓 + webhook 密钥 + 项目删除） |
 | `thincoder-server/src/project/webhooks.mjs`（已落） | ≈90 | 事件接收端（路由/验签/触发/忽略面——载荷不解析；§13） |
 | `thincoder-server/src/store/credential-crypto.mjs`（已落——KD-SV-119） | ≈65 | 凭据三件 + 键路径派生 `credentialKeyPath`（自 onboarding 逐字抽出——双消费方共享单源） |
-| `thincoder-server/src/store/db.mjs`（已落盘 · 实读 675） | ≈+14（v21 段——`scope_kind` 列 + 存量回填）；**>500 软线复核 = `store/STORE.md` §4——维持 + 上限 700（触发外拆）** ⇒ 实读 ≈690 未触线 | 迁移段（细段 = `store/STORE.md` §2 单源） |
+| `thincoder-server/src/store/db.mjs`（已落盘 · 实读 675） | ≈+14（v21 段——`scope_kind` 列 + 存量回填）；**>500 软线复核 = `docs/server/design/store/STORE.md` §4——维持 + 上限 700（触发外拆）** ⇒ 实读 ≈690 未触线 | 迁移段（细段 = `docs/server/design/store/STORE.md` §2 单源） |
 | `thincoder-server/src/sandbox/onboarding.mjs`（已落盘 · 实读 373） | −≈50（三件外迁）+ ≈2（再导出）；`keyPath` 取件改指 `credentialKeyPath(config)`（同行同值） | 零语义（KD-SV-119） |
 | `thincoder-server/src/accounts/audit.mjs`（已落盘 · 实读 116） | +1 型（`project_event` 入 `AUDIT_TYPES`——≈+2 行含注释） | 型面 十三 ⇒ 十四 |
 | `thincoder-server/bin/thincoder-server.mjs`（已落盘 · 实读 192） | +≈8（三注册行（含接收面）+ 调度器接线） | 装配 |
 | `thincoder-server/package.json`（已落盘 · 实读 30） | 机械（2026-10-12 已落：`prepublishOnly` = 3×`node --check`——链撤；单元测试档不入任何门，零剩余改动） | 发布钩 |
 
-|（webui 面文件与 i18n 键族 = `webui/PROJECTS.md` §3 单源；域小计 = 服务端七档行和 **≈1545**（四档 ≈+70——`platform-client` ≈+40 ∥ `git-sources` ≈+25 ∥ `sync` ≈+3 ∥ `admin-routes` ≈+2）+ 共享件改动 **≈+109** 净（≈+95 ＋ `db.mjs` v21 ≈+14；实施实读为准）。）
+|（webui 面文件与 i18n 键族 = `docs/server/design/webui/PROJECTS.md` §3 单源；域小计 = 服务端七档行和 **≈1545**（四档 ≈+70——`platform-client` ≈+40 ∥ `git-sources` ≈+25 ∥ `sync` ≈+3 ∥ `admin-routes` ≈+2）+ 共享件改动 **≈+109** 净（≈+95 ＋ `db.mjs` v21 ≈+14；实施实读为准）。）
 
 ## 9. 验收判据（AC-44 ①–⑨ 对位）
 
 | 需求判据 | 设计级判据（机检） | 载体 |
 |---|---|---|
 | AC-44① 仓表（一对一——重复挂仓拒；只 admin 能加） | `projects.address` 唯一 + 跨形归一（§5）；加仓端点 admin 门（`requireAdmin`——`user` ⇒ 403）∥ 用例 N4/N5/B1（跨形四形） | 单元测试档 |
-| AC-44② 拉列表勾选批量 + 手输保底 + 可搜索 | `GET …/:id/repos` 自含形 + 批量提交全成或全拒（§5）；UI 对话框勾选 + 过滤（`webui/PROJECTS.md` §2）；项目列表 `?q=` 搜索（显示名/地址子串——命中集恒 ⊆ 可见集）∥ 用例 N19 | 单元测试档 + 收口轮（浏览器实走） |
+| AC-44② 拉列表勾选批量 + 手输保底 + 可搜索 | `GET …/:id/repos` 自含形 + 批量提交全成或全拒（§5）；UI 对话框勾选 + 过滤（`docs/server/design/webui/PROJECTS.md` §2）；项目列表 `?q=` 搜索（显示名/地址子串——命中集恒 ⊆ 可见集）∥ 用例 N19 | 单元测试档 + 收口轮（浏览器实走） |
 | AC-44③ 多源并存（四类平台各 PAT 各源） | `git_sources.platform` 四值枚举 + 逐源 PAT 独立（掩码面逐值）∥ 用例 N3（四平台假件） | 单元测试档 |
 | AC-44④ 三档权限生效 | 能力矩阵（§3）+ 判定读数（`can.write` 读数 ∥ 动作面 403/404）——**判定级**（R67）∥ 用例 N6/N7/N8 | 单元测试档 + 收口轮（浏览器实走） |
 | AC-44⑤ 负责人边界（加/减成员 + 改显示名；改仓地址 ⇒ 拒） | §3 判据句 5/6 ∥ 用例 N9（owner 改地址 403 ∥ admin 200） | 单元测试档 |
@@ -227,7 +227,7 @@
 | R67 | **「读写能写」机检口径**：无独立写对象 ⇒ 以能力读数（`can.write`）+ 动作面负例机检（§3 判据 2/3）。**代价**：AC-44④ 的「能写」暂为判定级。 | —— | 维持本裁 |
 | R68 | **admin-agent 工具面缺项**：项目/源管理工具未入管理面 agent 工具面（需求未写）。**代价**：管理面 agent 暂不能代管项目/源。 | —— | 维持不做 |
 | R69 | **gitee 企业成员端点**（2026-10-12 登记）——**已办（gitee-namespace-kinds）**：范围三态显式（`scope_kind`）+ 企业两径接线（仓列表 70 ∥ 成员 13——.5 实测）；用户裁定「选择器显式分」（明拒自动探测）。机制 = KD-SV-151 ∥ §4。**自建平台协议 v1 = GitLab 兼容**（非兼容自建 ⇒ 拉取报确切人话 + 手输保底——同族口径，零改）。 | 已办 | —— |
-| R70 | **需求档计数回笔（主 agent 笔）**：§2:13/:14「我的 3 ⇒ **4（我的·项目）** ⇒ 5（沙盒余面批）」链；「管理 九页」⇒ **十一页**（+项目 +Git 源）；「侧栏合计 **十二页（现盘面）** ⇒ **十五页** ⇒ 十六（沙盒余面批）」；AC-12 链同拍（判据单源 = `webui/WEBUI.md` §6）。 | 需求档回笔 | **已办**——回笔在盘（`requirements/PROJECT.md`:64-65 现行「管理 十一页 ∥ 侧栏 十五 ⇒ 十六」 ∥ :314 AC-12 两链） |
+| R70 | **需求档计数回笔（主 agent 笔）**：§2 的 13 ∥ 14 两行「我的 3 ⇒ **4（我的·项目）** ⇒ 5（沙盒余面批）」链；「管理 九页」⇒ **十一页**（+项目 +Git 源）；「侧栏合计 **十二页（现盘面）** ⇒ **十五页** ⇒ 十六（沙盒余面批）」；AC-12 链同拍（判据单源 = `docs/server/design/webui/WEBUI.md` §6）。 | 需求档回笔 | **已办**——回笔在盘（`docs/server/requirements/PROJECT.md` 的现行「管理 十一页 ∥ 侧栏 十五 ⇒ 十六」两行 ∥ AC-12 两链） |
 
 ## 13. 事件接收端（github 成员事件——R63 ∥ KD-SV-127）
 
@@ -240,7 +240,7 @@
 - **密钥面**：`POST /api/admin/git-sources/:id/hook-secret`（admin）⇒ 生成/轮换（32 字节随机 ⇒ hex）；响应 `{ hookSecret: { plain } }` **一次性明文**（此后读面恒掩码——源行 `hookSecret: { set, hint }` 沿 PAT 口径）；审计 `source_update`（keys 含 `hookSecret`——值零入）；**轮换 ⇒ 旧密钥即刻失效**（登记处须同步换）。
 - **登记步（github 侧——手动；零出站写）**：Settings ⇒ Webhooks ⇒ Add webhook——Payload URL = `<公网前缀>` + `/api/hooks/git-sources/<id>`；Content type = `application/json`；Secret = 一次性明文；Events = Organization member 族；SSL 按部署面。
 - **响应形**：受理 ⇒ `{ ok: true, triggered: true }` ∥ 忽略 ⇒ `{ ok: true, ignored: true }`（三忽略面：非 `member` 事件 ∥ 源停用 ∥ `sync_mode='poll'`）；零新码。
-- **界面承载** = `webui/PROJECTS.md` §2.3（添/编窗事件块）；机检 = §10 用例 N20/N21/B3/E3。
+- **界面承载** = `docs/server/design/webui/PROJECTS.md` §2.3（添/编窗事件块）；机检 = §10 用例 N20/N21/B3/E3。
 
 ## 14. 项目删除（R64 ∥ KD-SV-128）
 
@@ -248,5 +248,5 @@
 - **级联（同事务）**：`project_members`（`project_id` 命中行——**唯一引用面**）随删 + `projects` 行删；库零外键（应用层事务——零部分写）；删除后同地址（规范形）可再挂（新行——不设墓碑）。
 - **审计**：`project_event`/`project_delete` 一行（detail = projectId/displayName/address/memberCount；actor = 操作 admin 名快照）。
 - **挂载防护（接口位）**：零挂载面（实核——工作区/台账/记忆面均无 project 引用）；记于 §11。
-- **界面**：项目详情弹窗「删除项目」钮（`can.delete` 渲——admin 两页同面）+ 二次确认窗（后果句：成员表随删 ∥ 不可恢复；服务端 `confirm` 门同判——页面不是判据）。承载 = `webui/PROJECTS.md` §2.1/§2.2。
+- **界面**：项目详情弹窗「删除项目」钮（`can.delete` 渲——admin 两页同面）+ 二次确认窗（后果句：成员表随删 ∥ 不可恢复；服务端 `confirm` 门同判——页面不是判据）。承载 = `docs/server/design/webui/PROJECTS.md` §2.1/§2.2。
 - **幂等**：二次删 ⇒ 404（已删——零副作用）。

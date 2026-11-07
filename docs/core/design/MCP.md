@@ -30,7 +30,7 @@
 |---|---|---|---|---|---|---|
 | 144 | `src/mcp/helpers.mjs` ↔ `src/mcp/utils.mjs` | ② | 融合：取一侧（常量 + RPC id 生成） | 分叉 ＝ 档名（helpers / utils）；常量逐条同值（`INIT_TIMEOUT_MS` / `CALL_TIMEOUT_MS` / `ENDPOINT_WAIT_MS`）⇒ 前提成立 | — | S1（建核补齐） |
 | 145 | `src/mcp/transport-stdio.mjs` ↔ `src/mcp/stdio.mjs` | ② | 融合：取一侧 + 核内 `mcp/` 切分归位 | 分叉 ＝ 档名与目录；同源自述 ⇒ 前提成立 | — | S1（建核补齐） |
-| 146 | `src/mcp/transport-http.mjs` ↔ `src/mcp/http.mjs` | ② | 融合：同 #145 | 同 #145（VSC `http.mjs:252` 自述「与 CLI 语义同构」）⇒ 前提成立 | — | S1（建核补齐） |
+| 146 | `src/mcp/transport-http.mjs` ↔ `src/mcp/http.mjs` | ② | 融合：同 #145 | 同 #145（VSC 侧 `http.mjs` 自述「与 CLI 语义同构」）⇒ 前提成立 | — | S1（建核补齐） |
 | 147 | `src/mcp/transport-ws.mjs` ↔ `src/mcp/ws.mjs` | ② | 融合：同 #145 | 同 #145 ⇒ 前提成立 | — | S1（建核补齐） |
 | 148 | `src/mcp.mjs` ↔ `src/mcp/index.mjs` | ② | 融合：核内单一切分 + 端侧配置面板 / 监视面按端注入 | 分叉 ＝ 组织（VSC 2 行转口 + `mcp/index.mjs`）；可配项（三种传输）与 `mcp.servers[]` 同源；**承 §2.5 #81** | —（承 #81） | S1（建核补齐） |
 
@@ -77,9 +77,9 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 
 - **启动装配**：顶层 agent 装配时批量连接 `config.mcp.servers`——读取项目级 `.mcp.json`（`mcpServers` 为**对象**形态时并入——`config.json` 同名 server 优先；数组形态非规范 → 跳过并记录）；并发连接（`Promise.allSettled`）；
    **失败不阻塞**（死 server 只记 warning，`agent._mcpWarnings` 携带；**消费面 = CLI ∥ 桌面 ∥ VSC**（三端同形）——装配后入 `agent._pendingReminders`
-   （CLI `thincoder-cli/src/command-interactive.mjs:161-168` ∥ 桌面 `thincoder-desktop/src/main/agent-host.mjs:185-189` 装配尾；
+   （CLI `thincoder-cli/src/command-interactive.mjs` ∥ 桌面 `thincoder-desktop/src/main/agent-host.mjs` 装配尾；
 
-   VSC `thincoder-vscode/src/agent/setup.mjs` 装配尾），下一条 user 消息注入提醒（消费 = `thincoder-core/agent/setup.mjs:172-176`）；
+   VSC `thincoder-vscode/src/agent/setup.mjs` 装配尾），下一条 user 消息注入提醒（消费 = `thincoder-core/agent/setup.mjs` 的提醒注入段）；
    末行指路 = 端可达出口（CLI `/mcp connect <name>`；桌面 ∥ VSC = 设置面 MCP 段 Reconnect）；成功展开的工具并入 `agent.tools`。
 - **项目文件源裁定（CLI ∕ 桌面同判）**：**发现面** = 项目根单层（`join(cwd, ".mcp.json")`，无向上多级搜索；文件缺 ⇒ 零读零效果）；**信任面** = 装配期零交互确认（项目文件与 `config.mcp.servers` 同信任域，不设首次信任 ∕ 端别门）；读 ∕ 解析失败非致命——记录不阻断装配。（VSC 端第三面已并；三端同判。）
 - **幂等连接（registry 键控）**：registry（`_sessions`，serverName → session，模块级存活）已存在**同 name 活连接且 fingerprint 一致** → 直接复用已展开工具、不重建；fingerprint = config 关键字段（command / args / url / wsUrl / env / headers / token）的 JSON 归一；**config 变更**（fingerprint 不一致）→ 主动关旧连接（不触发 onDead 重连）+ 丢弃 session + 重建。
@@ -150,18 +150,18 @@ server 行 action 用 `@name:` 命名空间（与 `add` / `refresh` 保留动作
 > 接入 / 展开 / 幂等 / 探活 / 自愈均走核 `thincoder-core/mcp.mjs`（name 键 session 面）；端壳增量（client-id 注册表 + 面板状态接口）住 `thincoder-vscode/src/extension/panel-mcp.mjs`。
 
 - **VSC 无 `/mcp` 命令面（结构性端差）**：CLI 有 `/mcp` TUI（§6.8）；VS Code 配置 / 连接全在 **Settings 面板
-MCP 页**——`pushMcpStatus`（`thincoder-vscode/src/extension/panel-mcp.mjs:96`）推 `mcpStatus { servers: [{ name,
+MCP 页**——`pushMcpStatus`（`thincoder-vscode/src/extension/panel-mcp.mjs`）推 `mcpStatus { servers: [{ name,
 desc, connected, toolCount, config }] }`（●/○ 连接态 + N tools + 原始 config 供表单预填）。动作消息 →
 
-`reconnectMcp`（`:116`——断开 + 重连）、`testMcp`（核 `probeMcpServer`）、`editMcp`（`saveMcpServer` =
+`reconnectMcp`（断开 + 重连）、`testMcp`（核 `probeMcpServer`）、`editMcp`（`saveMcpServer` =
 add-or-update 原位 → 推状态）。面板 [Edit] 与 [Add] 复用同一表单（已存在 ⇒ 原位 update；add 侧失败（含并发冲突）原串上抛）。工具展开器
 
 （行内 [tools]）载荷 = 面板契约投影 `{ name, description, inputSchema }`（端壳 `panelToolList` 自核原生
 工具投影——schema 取 `parameters`；工具名 = 原生 `{server}_{tool}` 名）。
 - **config-mcp.mjs（config.json `mcp.servers[]` 读写——纯 Node，extension host 外可做单元测试）**：`loadMcpServers`
-（`:12`——过滤无 name / 非对象项）· `addMcpServer`（`:19`——name 重复拒）· `updateMcpServer`（`:37`——原位替换、
+（滤无 name / 非对象项）· `addMcpServer`（name 重复拒）· `updateMcpServer`（原位替换、
 数组序保持、name 不可改、transport 字段被清空时回落到既有条目的类型与值——编辑表单只改 token/headers
-不产出退化 `{name}`）· `removeMcpServer`（`:63`）；三者经 `persistRaw` + `conflictError`（并发写冲突 → 同型提示串）。
+不产出退化 `{name}`）· `removeMcpServer`；三者经 `persistRaw` + `conflictError`（并发写冲突 → 同型提示串）。
 - **启动装配（depth-0 only）**：面板回合把 `mcpServers: getMcpServers()` 注入 runAgent opts（panel-chat.mjs）；
 `setupAgentRun` 在 **depth-0** 且 `mcpServers` 非空时动态 import 端壳 MCP 面 `thincoder-vscode/src/extension/panel-mcp.mjs` → `connectMcpServersExpanded`
 （`Promise.allSettled` 并发、失败隔离：每死 server 记 warning、其余照常；展开整体失败非致命——模型本轮缺
@@ -192,6 +192,6 @@ MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展�
 | D-MC13 | 列表即菜单 + `@name:` 命名空间 | 消灭「四个操作各自弹一次 server picker」的重复；server 可叫 add / refresh 不撞名 |
 | D-MC14 | agent 代配 = **磁盘重读 + fingerprint 对账**（漂移诚实报告） | disk 变更 / 删除已连 server 时不误断正在用的；`⚠ disk changed` 持续标记到显式解决 |
 | D-MC15 | **单写者假设**（不做双写合并） | 既有 config 写入模型；仅记录不引入新机制 |
-| D-MC16 | VSC 配置 / 连接入口 = **Settings 面板 MCP 页**（无 `/mcp` 命令面） | VSC 无 TUI 命令通道——结构性端差；面板表单 add-or-update 复用、探活确认环（§6.5 语义）对齐 CLI 保存前探活 |
+| D-MC16 | VSC 配置 / 连接入口 = **Settings 面板 MCP 页**（无 `/mcp` 命令面） | VSC 无 TUI 命令通道——结构性端差；面板表单 add-or-update 复用、探活确认环（§6.8 语义）对齐 CLI 保存前探活 |
 | D-MC17 | 退出路径树杀**同步合法**：win32 `killTree` 用 `spawnSync("taskkill", …)`（`/T /F` 语义不变） | `process.on("exit")` 阶段仅同步合法——异步 `spawn` 不落地 ⇒ 退出泄漏；代价 = 关闭路径同步阻塞 20–50ms（close 非热路径，可接受）。 |
 | D-MC18 | HTTP 会话过期（404）= **transport 内自愈**（清会话 + 重新 initialize + 重试一次；单飞重建；失败 ⇒ fireDead 退避链兜底） | 「404 直接映射错误、不重置会话」= 会话过期后每次调用重复失败（无自愈——用户只能手动 `/mcp reconnect`）；直接走 `scheduleReconnect` 过重（1s+ 退避起步 + 全量重建含 SSE 重开——「会话刚过期」是高频临时态）。 |

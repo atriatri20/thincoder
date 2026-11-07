@@ -16,15 +16,15 @@
 |---|---|---|
 | 1 | **纯 ESM `.mjs`**——无 TypeScript、无转译；仓根引导为 `.cjs`（`bin/thincoder.cjs`） | `package.json` 双端 `"type": "module"` |
 | 2 | **无构建步骤**——无 bundler、无打包产物；直接跑源码 | 双端 `scripts` 无 build 项 |
-| 3 | **Node 版本**：CLI 产品 `>=24` · 核包 `>=22.13.0`——**核包底线由最低宿主驱动**：VSC 扩展宿主（`engines.vscode` 面 · Node 22.13）为最低宿主 ⇒ **核内禁用 Node 24 专属 API**（核 = 三壳共用实现，须在最老宿主可跑） | `thincoder-cli/package.json:19` · `thincoder-core/package.json:29` · `thincoder-vscode/package.json:29` |
-| 4 | **零第三方运行期依赖**——唯一运行期依赖 = 仓内核包 `@thincoder/core`（本地链接，非 registry 第三方） | `thincoder-cli/package.json:22` · `thincoder-cli/node_modules/@thincoder` |
+| 3 | **Node 版本下限**：CLI 产品 `>=22.13.0` · 核包 `>=22.13.0`——**两者同线，由最低宿主驱动**：VSC 扩展宿主（`engines.vscode` 面 · Node 22.13）为最低宿主；`node:sqlite` 免 `--experimental-sqlite` 起于 Node 22.13 ⇒ **核 ∥ CLI 均禁用高于 22.13 的专属 API**（如 `Error.isError` ∥ `URLPattern`）；桌面端宿主下限另计（Electron 内置 Node——`docs/desktop/design/PROJECT.md` §2 KD-7） | `thincoder-cli/package.json`（`engines.node`）· `thincoder-core/package.json`（`engines.node`）· `thincoder-cli/bin/node-version-gate.cjs`（`nodeVersionError`） |
+| 4 | **零第三方运行期依赖**——唯一运行期依赖 = 仓内核包 `@thincoder/core`（本地链接，非 registry 第三方） | `thincoder-cli/package.json` 的 `dependencies` 段 · `thincoder-cli/node_modules/@thincoder` |
 | 5 | **仓内三目录分工**：核包 `thincoder-core/`（共享实现）· CLI 壳 `thincoder-cli/` · VSC 壳 `thincoder-vscode/` | 仓根目录树（§3） |
-| 6 | **第四端（桌面端）适用面**：主进程纯 ESM（`.mjs`）· 预载 = 沙箱 CJS（`.cjs`——官方约束：沙箱预载不支持 ESM import）· 渲染面零 Node（原生 ESM + 手写 DOM，**无构建步骤**）· 零第三方**运行期**依赖（唯一 = 核包；Electron 与打包器 = **构建期 devDep**） | 设计 = `docs/desktop/design/PROJECT.md` §1–§2（KD-1 / KD-3 / KD-4 / KD-6）；宿主下限判据 = 启动自检（该档 §2 KD-7） |
+| 6 | **第四端（桌面端）适用面**：主进程纯 ESM（`.mjs`）· 预载 = 沙箱 CJS（`.cjs`——官方约束：沙箱预载不支持 ESM import）· 渲染面零 Node（原生 ESM + 手写 DOM，**无构建步骤**）· 零第三方**运行期**依赖（唯一 = 核包；Electron 与打包器 = **构建期 devDep**） | 设计 = `docs/desktop/design/PROJECT.md` §1–§2（KD-1 / KD-3 / KD-4 / KD-6）；宿主下限判据 = 启动自检（`docs/desktop/design/PROJECT.md` §2 KD-7） |
 
 ## 2. 设计原则
 
 1. **零依赖**：第三方 npm 依赖 = 技术债（质量 / 安全 / 版本）；Node 标准库能做的先用标准库。
-2. **接口先行**：存储 / 记忆接口为团队记忆预留扩展位（v2 目标——草案档 = `thincoder-cli/docs/design/_archive/ARCHITECTURE-v2.md`）。
+2. **接口先行**：存储 / 记忆接口为团队记忆预留扩展位（v2 目标——统一方向见 `docs/core/requirements/MEMORY.md` §2.1）。
 3. **可运行验证**：每个里程碑跑通——不交付「写了没跑过」的代码。
 4. **准比短重要**：长上下文常态化，信息完整优先于字数。
 5. **代码是问题不是答案**：诊断修复，非朝圣模仿。
@@ -40,7 +40,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 │   ├── cli/ · vsc/                 ← 产品面板块档
 │   ├── TODO.md · TODO-archive.md   ← 项目级台账（单仓单账）
 │   └── batches/                    ← 批次档
-├── scripts/                        ← 仓根统一机检族（单引擎四档：doc-check.mjs 入口 + doc-check-anchors.mjs 锚 / doc-check-targets.mjs 采集 / doc-check-width.mjs 行宽；判据全读 manifest 声明面）
+├── scripts/                        ← 仓根机检脚本（手跑面、零判据角色——不参与任何 verdict；判据面 = thincoder-core/doc-check/）
 │                                   ← **报告态一档（不入闸）**：tool-schema-size.mjs（schema 体量读数——拟新增）
 │
 ├── thincoder-core/                 ← 核包（@thincoder/core——共享机制实现 + 共享提示词与工具描述）
@@ -96,14 +96,14 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | 域 | VSC 模块 | 职责 | 详细设计 → |
 |----|---------|------|-----------|
 | 入口 | `thincoder-vscode/extension.mjs` | activate / 命令注册 / 状态栏 / WebviewViewProvider | —（装配入口——命令 id 视作冻结，见 `docs/core/design/CORE-UNIFICATION.md` §2.8 命令面） |
-| 装配 | `thincoder-vscode/src/extension/chat-panel.mjs` | ChatPanel 类——面板生命周期 · 消息路由 · 会话管理 | `docs/vsc/design/WEBVIEW.md`（消息流 / 协议）+ `thincoder-vscode/docs/_archive/design/SESSION.md`（panel-session 会话面·归档址） |
-| 装配 | `thincoder-vscode/src/extension/panel-*.mjs` | 消息路由 / 回合驱动 / 会话 / 项目 / 索引 / MCP / toolPanel 载荷分模块 | `docs/vsc/design/WEBVIEW.md` · `thincoder-vscode/docs/_archive/design/{SESSION,MCP}.md`（归档址） |
-| 装配 | `thincoder-vscode/src/extension/suspension.mjs` · `permission-gate.mjs` | 挂起回合驱动（digest / 排队合并 / 唤醒）· 权限弹窗门 + 批审批门 | `thincoder-vscode/docs/_archive/design/AGENT-LOOP.md`（挂起 digest）· `thincoder-vscode/docs/_archive/design/TOOLS.md`（权限审批·均归档址） |
-| 装配 | `thincoder-vscode/src/extension/{settings,presets,provider-flows}.mjs` | config.json 面板读写 · preset · provider 增删流 | `thincoder-vscode/docs/_archive/design/PROVIDER.md`（归档址） · `docs/vsc/design/SETTINGS.md` |
-| 核心 | `thincoder-vscode/src/agent.mjs` · `src/agent/**` · `src/agent-tools/**` | runAgent 主循环 + 工具分发 + 注入 + 收尾 · 元工具族（subagent / advisor / eng 等） | `thincoder-vscode/docs/_archive/design/AGENT-LOOP.md` · `thincoder-vscode/docs/_archive/design/ADVISOR-CONVERGENCE.md` · `thincoder-vscode/docs/_archive/design/ENGINEERING-MODE.md`（VSC 树归档档——均归档址） |
-| 工具 | `thincoder-vscode/src/tools/**` | 内置工具实现（file / search / git / web / lsp / execute / …） | `thincoder-vscode/docs/_archive/design/TOOLS.md` · `CHECKPOINT.md`（快照子系统——均归档址） |
-| LLM | `thincoder-core/provider/**`（VSC 侧经 `@thincoder/core` 引用） | 三 transport · 重试 · 限频门 | `thincoder-vscode/docs/_archive/design/PROVIDER.md` |
-| 支撑 | `thincoder-vscode/src/repomap.mjs`（余为核单源——现体经 `@thincoder/core` 引用） | 记忆 / 向量索引 · MCP 客户端 · 仓库大纲 | `thincoder-vscode/docs/_archive/design/MEMORY.md` · `MCP.md` · `CONTEXT-COMPACTION.md`（均归档址） |
+| 装配 | `thincoder-vscode/src/extension/chat-panel.mjs` | ChatPanel 类——面板生命周期 · 消息路由 · 会话管理 | `docs/vsc/design/WEBVIEW.md`（消息流 / 协议） |
+| 装配 | `thincoder-vscode/src/extension/panel-*.mjs` | 消息路由 / 回合驱动 / 会话 / 项目 / 索引 / MCP / toolPanel 载荷分模块 | `docs/vsc/design/WEBVIEW.md` · `docs/vsc/design/WEBVIEW-PROTOCOL.md` |
+| 装配 | `thincoder-vscode/src/extension/suspension.mjs` · `permission-gate.mjs` | 挂起回合驱动（digest / 排队合并 / 唤醒）· 权限弹窗门 + 批审批门 | ——（VSC 面无独立档；现体读 `thincoder-vscode/src/extension/suspension.mjs` ∥ `permission-gate.mjs`） |
+| 装配 | `thincoder-vscode/src/extension/{settings,presets,provider-flows}.mjs` | config.json 面板读写 · preset · provider 增删流 | `docs/vsc/design/SETTINGS.md` |
+| 核心 | `thincoder-vscode/src/agent.mjs` · `src/agent/**` · `src/agent-tools/**` | runAgent 主循环 + 工具分发 + 注入 + 收尾 · 元工具族（subagent / advisor / eng 等） | ——（VSC 面无独立档；现体读 `thincoder-vscode/src/agent/` ∥ `src/agent-tools/`） |
+| 工具 | `thincoder-vscode/src/tools/**` | 内置工具实现（file / search / git / web / lsp / execute / …） | `docs/core/design/CHECKPOINT.md`（快照子系统） |
+| LLM | `thincoder-core/provider/**`（VSC 侧经 `@thincoder/core` 引用） | 三 transport · 重试 · 限频门 | `docs/core/design/PROVIDER.md` |
+| 支撑 | `thincoder-vscode/src/repomap.mjs`（余为核单源——现体经 `@thincoder/core` 引用） | 记忆 / 向量索引 · MCP 客户端 · 仓库大纲 | `docs/core/design/MEMORY.md` · `docs/core/design/MCP.md` · `docs/core/design/CONTEXT-COMPACTION.md` |
 | Webview | `thincoder-vscode/webview/**`（chat/streaming/ui/activity/panels/send/md/…） | 前端渲染 / 交互（隔离 iframe——只经 postMessage、无共享状态） | `docs/vsc/design/WEBVIEW*.md`（三档——结构 ∥ 协议 ∥ 输入） |
 
 测试树：`thincoder-vscode/test/`（`package.json` `"test"` = `node thincoder-vscode/test/run.mjs`——**单入口（收口时跑一次）**；显式清单 `thincoder-vscode/test/files.mjs` = 单一来源，清单↔盘上两向自检；权威 = `docs/core/design/TESTING.md` §10）。
@@ -131,7 +131,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | tui | `startTUI` | 裸 ANSI 终端界面 | `docs/cli/design/TUI.md` |
 | acp | ACP 协议桥 | IDE 缓冲 / 工具调用桥接 | `docs/cli/design/ACP-CLIENT.md` |
 | crash-reports | 崩溃捕获与取证 | fatal 报告 / 记录 / stderr 捕获 / 近堆快照 | `docs/cli/design/CRASH-REPORTS.md` |
-| bin/thincoder.mjs | CLI 命令表 | 命令分发入口 | ——（`thincoder-cli/bin/thincoder.mjs:1`） |
+| bin/thincoder.mjs | CLI 命令表 | 命令分发入口 | ——（`thincoder-cli/bin/thincoder.mjs`） |
 | desktop 壳 | 宿主适配 + IPC 通道族 | 桌面端第四壳（Electron 宿主——主进程持核 · 渲染面零 Node；宿主面与通道面分档） | `docs/desktop/design/SHELL.md` · `docs/desktop/design/IPC.md` |
 | render-core | DOM 构件族 + 纯函数族 | 扩展端 / 桌面端**共用宿主无关渲染核**（会话流呈现）；**不入发布序列**——`private: true` 永不发布、两端内嵌带发、零 registry 端消费者 | `docs/render-core/design/RENDER-CORE.md` |
 
@@ -161,7 +161,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | 活动渲染 | TUI 面板 / 折叠动画 | 活动面板 + 冻结入流（机制语义趋同，不逐像素镜像） |
 | 验证层 | 自有测试组织 | 单入口 `npm test`（`node thincoder-vscode/test/run.mjs`）+ 显式清单 `thincoder-vscode/test/files.mjs` |
 
-**字段往返**：共享槽位文件全量覆盖写 + `...existing` 透传——CLI 写入的 `activeModel` / `engineering` / `engDesignToken` 等字段 VSC 侧往返不丢（会话面契约——`thincoder-vscode/docs/_archive/design/SESSION.md` §6）。
+**字段往返**：共享槽位文件全量覆盖写 + `...existing` 透传——CLI 写入的 `activeModel` / `engineering` / `engDesignToken` 等字段 VSC 侧往返不丢（会话面契约——`docs/core/design/SESSION.md`）。
 
 **VSC 专属设计取向**（与 core §2 重叠者不重述）：① **薄封装**——扩展是 agent 核心的 VS Code 适配层（负责任，不是办公设备）；② **职责分离**——extension host 负责 agent 循环与工具执行，Webview 只负责 UI 渲染与用户交互（`postMessage` 单向通信）；③ **VS Code 原生能力优先**——工具执行经 VS Code API 增强（如 `workspace.openTextDocument` 写入后自动在编辑器中打开文件）。
 

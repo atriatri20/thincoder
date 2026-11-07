@@ -3,7 +3,7 @@
 > 板块归属 = **核心统一**（phase 2——「一个核 + 两个薄壳」）；本档 = 该板块的**子系统需求档**（三层归属之需求层）。
 > **工作流档**（需求层）= `docs/core/requirements/CORE-UNIFICATION.md` §1–§4 + §5 登记表（统一目标 / 边界原则 / 量级读数基线 / 范围边界）——本档**不复制**（D2 单一权威源）。
 > **设计层** = `docs/core/design/MCP.md`（本子系统设计与测试）；工作流设计档 = `docs/core/design/CORE-UNIFICATION.md`。
-> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图 `thincoder-cli/docs/README.md` §3.2；三层归属见同图 §3.1。
+> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图（该档现不在盘）；三层归属见同图。
 
 ## 1. 总体定位
 
@@ -18,7 +18,7 @@ MCP 客户端 = 客户端入口（CLI `mcp.mjs` 真实现 ↔ VSC `mcp.mjs` 转�
 ### 2.1 本子系统条目
 
 - **【派生 · 非用户原话】** MCP 客户端归一为**核内单一实现**（三种传输 + `mcp.servers[]` 同源）；配置面板与配置监视面（依赖宿主能力）按**端差注入**。
-  源 = 设计档 `MCP.md` §2.1 #81 · §2.2 #144–#148。
+  源 = 设计档 `docs/core/design/MCP.md` §2.1 #81 · §2.2 #144–#148。
 
 ### 2.2 适用工作流条目（回指 · 不复制）
 
@@ -71,10 +71,10 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的工具**动态�
 
 | 面 | VSC 端 | 端差 |
 |---|---|---|
-| 配置 / 连接管理入口 | Settings 面板 MCP 页（[Add] / [Edit] / [Test] / [Reconnect]——`thincoder-vscode/src/config-mcp.mjs:12-63` · `src/extension/panel-mcp.mjs:8-68`） | 对端 = `/mcp` 表单命令——本端**无命令面**（F-M3 范围边界） |
+| 配置 / 连接管理入口 | Settings 面板 MCP 页（[Add] / [Edit] / [Test] / [Reconnect]——`thincoder-vscode/src/config-mcp.mjs` · `src/extension/panel-mcp.mjs`） | 对端 = `/mcp` 表单命令——本端**无命令面**（F-M3 范围边界） |
 | 配置重读 | 每轮 `loadRaw` 即磁盘（下轮装配生效） | 对端有磁盘重读菜单面 |
 | 展开机制 / schema / 三 transport / 直调 | 同款（`docs/core/design/MCP.md` §6.10） | 无实质差（语义同源、各端独立实现） |
 
 **二态化裁定行**：① 无命令面 = **形态（非登记项）**（范围边界在册 = §4.4 / F-M3）；② 配置重读 = **形态（非登记项）**（每轮 `loadRaw` 即磁盘——语义同源）；③ 展开机制 / schema / transport / 直调 = **无实质差**（零动作）。
 
-探活零副作用 = `src/mcp/index.mjs:129`（一次性探活、不进注册表、探完必关）。
+探活零副作用 = `src/mcp/index.mjs` 的探活段（一次性探活、不进注册表、探完必关）。

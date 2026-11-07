@@ -12,19 +12,20 @@
 
 | 维度 | 先例坐标 | 本档取法 |
 |---|---|---|
-| 配置段 + 严格校验 + fail-closed | `thincoder-server/src/ops/config.mjs:86`（`validateConfig`）· `:146`（`validateProxyConfig` 段级校验） | 照抄形：tls / rateLimits 各一个段级校验函数，非法 ⇒ 抛（拒启） |
-| 配置写面（白名单 + 子键级 + 原子写 + 审计） | `thincoder-server/src/gateway/config-admin.mjs:30`（`CONFIG_WRITABLE_KEYS`）· `:102`（embedding 子键级） | 照抄形：`tls` / `rateLimits` 进白名单，子键级合并 |
-| 进程内限流（定窗、可注时钟、429 + `Retry-After`） | `thincoder-server/src/gateway/ratelimit.mjs`（KD-SV-35）· `src/accounts/login-guard.mjs:33` | 算法同形（固定窗），模块另立 |
-| 审计「一域一型」 | `src/accounts/audit.mjs:22`（十七型枚举）· KD-SV-91（`agent_event` 三 kind 不扩） | 新型 `security_event`，不动既有型 |
+| 配置段 + 严格校验 + fail-closed | `thincoder-server/src/ops/config.mjs`（`validateConfig`）· 同档（`validateProxyConfig` 段级校验） | 照抄形：tls / rateLimits 各一个段级校验函数，非法 ⇒ 抛（拒启） |
+| 配置写面（白名单 + 子键级 + 原子写 + 审计） | `thincoder-server/src/gateway/config-admin.mjs`（`CONFIG_WRITABLE_KEYS`）· 同档（embedding 子键级） | 照抄形：`tls` / `rateLimits` 进白名单，子键级合并 |
+| 进程内限流（定窗、可注时钟、429 + `Retry-After`） | `thincoder-server/src/gateway/ratelimit.mjs`（KD-SV-35）· `src/accounts/login-guard.mjs` | 算法同形（固定窗），模块另立 |
+| 审计「一域一型」 | `src/accounts/audit.mjs`（十七型枚举）· KD-SV-91（`agent_event` 三 kind 不扩） | 新型 `security_event`，不动既有型 |
 | 服务端技术选型 = 内置模块、零依赖 | `thincoder-server/README.md`（运行期依赖一条 = `electron-updater`，仅桌面） | `node:https` / `node:tls` / `node:http` / `node:fs` |
 
-**公开源调研**：工作区内公开源文档 = `docs/README.md` 档地图 + `docs/server/design/` 二十九档；查 `TLS` / `反代` / `限流` 相关主题，命中的只有 `ops/OPS.md` §5.6（现口径「前置反代 + nginx 样例」）与 `accounts/ACCOUNTS.md` §2（登录防爆破）。**与本设计相关的只有一处：OPS §5.6 的口径被用户第 3 条令推翻，本批同时改口**（见 §8）。其余无相关先例。
+**公开源调研**：工作区内公开源文档 = `docs/README.md` 档地图 + `docs/server/design/` 二十九档；查 `TLS` / `反代` / `限流` 相关主题，命中的只有 `docs/server/design/ops/OPS.md` §5.6（现口径「前置反代 + nginx 样例」）与 `docs/server/design/accounts/ACCOUNTS.md` §2（登录防爆破）。
+- **与本设计相关的只有一处**：OPS §5.6 的口径被用户第 3 条令推翻，本批同时改口（见 §8）。其余无相关先例。
 
 **分层选择**：TLS 终止放在 **gateway 服务层**（`createGatewayServer`），不做独立入口。理由三条：
 
-① 全服只有一处装配调用（`bin/thincoder-server.mjs:204`）；独立入口要把路由表、静态面、升级钩子整套复制一遍。
+① 全服只有一处装配调用（`bin/thincoder-server.mjs`）；独立入口要把路由表、静态面、升级钩子整套复制一遍。
 
-② 升级路（终端 WebSocket）挂在 `server.mjs:101`，必须继续生效——`node:https` 的 `upgrade` 事件与 `node:http` 同形；换成独立进程或 `node:http2` 都得改写这条链。
+② 升级路（终端 WebSocket）挂在 `server.mjs`，必须继续生效——`node:https` 的 `upgrade` 事件与 `node:http` 同形；换成独立进程或 `node:http2` 都得改写这条链。
 
 ③ 二十三档 import `gateway/server.mjs`，只改函数签名内部不影响它们。
 
@@ -54,7 +55,7 @@
 写面预检（`PATCH` 时、落盘前）：`tls` 在场且 `enabled: true` ⇒ 校验 `certPath` / `keyPath` 可读且能建出上下文；不过 ⇒ 400 原报文 + 文件字节零变（机制与理由 = §9「写面防自锁」）。
 
 
-阈值取法：登录维阈值 = 20 次/分/IP，与 `login-guard` 的 IP 维（20 次失败/15 分钟，`login-guard.mjs:11`）同量级但不叠加锁——限流挡脚本级连打，锁挡猜密码；团队 NAT 共用出口 IP，阈值贴地即误伤。
+阈值取法：登录维阈值 = 20 次/分/IP，与 `login-guard` 的 IP 维（20 次失败/15 分钟，`login-guard.mjs` 的常量表）同量级但不叠加锁——限流挡脚本级连打，锁挡猜密码；团队 NAT 共用出口 IP，阈值贴地即误伤。
 
 **入口签名（`src/gateway/server.mjs`）**
 
@@ -74,11 +75,11 @@ limiter.noteBurst(payload)                     // 由判点在超限分支调用
 ```
 
 - **判点顺序（限流器之外、路由之前）**：`clientIp(req, { trustProxy })` 取 IP → `check` → `limited` ⇒ `noteBurst({ ip, ruleClass, retryAfterS })`（触发 `onBurst`——同窗一次）→ 回 429 `rate_limited` + `Retry-After`；未超限 ⇒ 放行。
-- **IP 取法 = 与 `trustProxy` 同源的既有助手** `clientIp(req, { trustProxy })`（`src/accounts/login-guard.mjs:17`，调用形同 `src/accounts/routes.mjs:79`）——限流不另立 IP 解析。
+- **IP 取法 = 与 `trustProxy` 同源的既有助手** `clientIp(req, { trustProxy })`（`src/accounts/login-guard.mjs`，调用形同 `src/accounts/routes.mjs`）——限流不另立 IP 解析。
 - `onBurst` 由入口装配注入（`bin/thincoder-server.mjs`），回调体 = 记 `security_event`/`rate_limit_burst` 一行；缺省空函数 ⇒ 限流器本体可单独测。
 - 算法 = **固定窗（60 s）计数**，Map<`class|ip`> → `{ count, windowStart }`，读写路径惰性清扫；与 `gateway/ratelimit.mjs` ∥ `login-guard.mjs` 同形（不引入令牌桶——第二套机制没有净收益，边界 2× 突发在案接受）。
 - 类别：`auth` = `POST /api/accounts/login` ∥ `POST /api/client/login`；`public` = 公开接收面（验签前可达的写端点，清单以 `src/project/webhooks.mjs` 注册行为准，落 `limits.mjs` 常量表）。`/healthz` 与静态面不限（探活/资源面）。
-- 超限 ⇒ 复用既有错误形 `rate_limited`（429 + `type: rate_limit_error`，`src/gateway/errors.mjs:20`）+ `Retry-After` 整数秒——**零新错误码**。
+- 超限 ⇒ 复用既有错误形 `rate_limited`（429 + `type: rate_limit_error`，`src/gateway/errors.mjs`）+ `Retry-After` 整数秒——**零新错误码**。
 - `/v1/*` 不进本限流器：既有 per-model RPM/TPM + 配额（KD-SV-35 / KD-SV-38）已覆盖，且需 Bearer 鉴权。
 
 **重定向监听（入口装配，`bin/thincoder-server.mjs`）**
@@ -109,9 +110,9 @@ limiter.noteBurst(payload)                     // 由判点在超限分支调用
 | `cert_reload` | `audit.securityCert` |
 | `cert_reload_failed` | `audit.securityCert` |
 | `rate_limit_burst` | `audit.securityBurst` |
-- actor = `"server"`（非人类行为人名快照——与 `scheduler` ∥ `webhook` 先例同法，`audit.mjs:6`），`actorId = null`。
+- actor = `"server"`（非人类行为人名快照——与 `scheduler` ∥ `webhook` 先例同法，`audit.mjs` 的 actor 注释），`actorId = null`。
 - 扩型论证（KD-SV-91 要求）：现有十七型全是「域动作 + 已认证 actor」；TLS 生命周期与限流告警没有 actor，塞进任一既有型会污染该域计数（审计页按型过滤）。逐域自持型已有先例（`project_event` / `ledger_event` / `mcp_event`），故新立一型而非扩既有型的 kind。
-- 逐请求的匿名访问**不落审计行**：既有逐请求日志行（`gateway/server.mjs:65` `request`）承载访问审计，审计表只记「生命周期 + 异常」。理由：匿名请求无 actor 快照可记，量级又远超审计保留窗（90 天）的设计意图。
+- 逐请求的匿名访问**不落审计行**：既有逐请求日志行（`gateway/server.mjs` 的 `request` 日志行）承载访问审计，审计表只记「生命周期 + 异常」。理由：匿名请求无 actor 快照可记，量级又远超审计保留窗（90 天）的设计意图。
 - 迁移：`src/store/migrations.mjs` 新增 **v26**，重建 `audit_events` CHECK（十八型：+ `security_event`），步序与 v20 / v23 / v24 同构（建新表 → 搬行 → 删旧 → 改名 → 建两索引）。零回填。
 
 **会话 cookie 加固（`src/accounts/session.mjs`）**
@@ -152,7 +153,7 @@ limiter.noteBurst(payload)                     // 由判点在超限分支调用
 - 拆点 = 按版本区间抽 DDL 常量、注册表留原档：`ddl-v1-v11.mjs`（11 段）∥ `ddl-v12-v20.mjs`（9 段）∥ `ddl-v21-v26.mjs`（6 段，含新增 v26）。逐字搬迁、零语义改动，每段仍是 `export const DDL_Vn`。
 - 拆后 `migrations.mjs` = 三档 import + `MIGRATIONS` 数组 + `SCHEMA_VERSION` ∥ `migrate` ∥ `readVersion` ≈70 行；对外导出面逐字不变（`db.mjs` 与调用方零改）。
 - 拆后行数：`ddl-v1-v11` ≈300 ∥ `ddl-v12-v20` ≈305 ∥ `ddl-v21-v26` ≈190 ∥ `migrations.mjs` ≈70——四档均 < 500，余量留给后续版本段。
-- 迁移链「只进不退」不受影响：拆的是常量的存放位置，`MIGRATIONS` 的顺序与内容不变；结构单源仍是 `store/STORE.md` §2，本次不动任何 DDL 语义。
+- 迁移链「只进不退」不受影响：拆的是常量的存放位置，`MIGRATIONS` 的顺序与内容不变；结构单源仍是 `docs/server/design/store/STORE.md` §2，本次不动任何 DDL 语义。
 
 测试面：新增单元测试档 `thincoder-server/test/publicnet.test.mjs`（本批自持、收口删除），估算 ≈260 行（实际值收口轮记 §5），覆盖 §6 用例 N1–N7 ∥ B1–B7 ∥ E1–E11；另有常驻装配断言 A7（运维设计档 §4.1）：`redirectPort` 在场 ⇒ 装配后第二个 server 在册且停机被关、`SIGHUP` 监听断基线增量 = 1（用例 `finally` 复原）——实施轮按反证义务逐条「删装配行 ⇒ 该档必红 ⇒ 恢复」记读数。集成面（浏览器实走 HTTPS 登录 + 限流 429）归收口轮。
 
@@ -214,7 +215,7 @@ limiter.noteBurst(payload)                     // 由判点在超限分支调用
 | E4 | 错误 | `tls.redirectPort` = `port` | 配置校验拒启 |
 | E5 | 错误 | `PATCH /api/admin/config { "tls": { "certPath": "" } }` | 400 原报文；文件零变；无 `config_update` 审计 |
 | E6 | 错误 | 触限后继续连打 | 全部 429，`Retry-After` 递减；审计仍只一行（同窗聚合） |
-| E7 | 错误 | 未知审计型写入 | 抛（枚举校验 `audit.mjs:52`）+ 库 CHECK 拒绝 |
+| E7 | 错误 | 未知审计型写入 | 抛（枚举校验 `audit.mjs` 的型枚举）+ 库 CHECK 拒绝 |
 | N6 | 正常 | `tls.enabled` 部署，容器 `HEALTHCHECK` 按 §5.9 命令探活；探针命令另本地直跑（假 200 ∥ 假 503 服务） | 200；`docker compose ps` = `(healthy)`；探针 200 ⇒ 退 0 ∥ 503 ⇒ 退 1 |
 | N7 | 正常 | 无 `rateLimits` 段的配置档，登录端点同 IP 第 1–20 次 | 全部放行（缺省阈 20） |
 | B6 | 边界 | `public` 类公开端点同 IP 第 `publicPerMin` 次 ∥ 第 `publicPerMin+1` 次 | 前者放行；后者 429；下一窗首请求放行 |
@@ -239,14 +240,14 @@ limiter.noteBurst(payload)                     // 由判点在超限分支调用
 
 ## 8. 既有口径改口（D8：删除，不留「曾用 nginx」）
 
-> 行号读数日 = 2026-10-19（`OPS.md` 本轮改后实读）。
+> 行号读数日 = 2026-10-19（`docs/server/design/ops/OPS.md` 本轮改后实读）。
 
 | 落点 | 改后状态 | 责任面 |
 |---|---|---|
 | `docs/server/design/ops/OPS.md` §5.6（现 `272` 行起） | 已改写为「TLS 内置与证书轮换」：配置六键 ∥ `SIGHUP` 轮换 ∥ 308 重定向 ∥ `trustProxy` 只在可信代理前置时开 | 设计轮（本轮已落） |
 | `docs/server/design/ops/OPS.md` §1 配置表（`33` 行 `trustProxy` ∥ 新增 `36` / `37` 行 `tls` / `rateLimits`） | 已改 / 已增 | 设计轮（本轮已落） |
 | `docs/server/design/ops/OPS.md` 边界（`412` / `415` 行） | 已删「TLS 终结（前置反代）」，改为「证书签发/ACME 自动续期不做」 | 设计轮（本轮已落） |
-| `docs/server/design/ops/OPS.md` KD-SV-25（`:374`）∥ AC-13（`:356`） | 判据已改为「README §11 = TLS 内置完整段（配置 + 轮换 + 重定向）」 | 设计轮（本轮已落） |
+| `docs/server/design/ops/OPS.md` KD-SV-25 ∥ AC-13 | 判据已改为「README §11 = TLS 内置完整段（配置 + 轮换 + 重定向）」 | 设计轮（本轮已落） |
 | `docs/README.md` 档地图（`17` 行） | 已改：server 设计 30 档、gateway 2 档、部分档 194 | 设计轮（本轮已落） |
 | `thincoder-server/README.md` §11（现 `215`–`243` 面） | 待改：整段重写为「TLS 内置（`tls` 段 + 证书轮换 + 重定向）」，nginx 配置块整段删除 | 实施轮（产品文档面 = eng-coder） |
 | `thincoder-server/README.md` `255` 行 ∥ `46` 行 | 待改：`255` 行删「TLS 终结（前置反代）」；`46` 行改「前置于可信反代时才开；直连/内置 TLS 部署保持 false」 | 实施轮（同上） |

@@ -130,7 +130,7 @@ ACP 官方 SDK 是 npm 依赖——违反零依赖哲学，故自写精简层。
 
 **判据**：**函数档是第一判据**——文件 ≤800 行而内含 ≥300 行单体函数**仍不合规**
 （`docs/core/requirements/METHODOLOGY.md` F3-1「函数 ≥300 必拆」+ `thincoder-core/prompts/advisor-design.md` 第 8 条）。
-现状 `buildAcpHandlers`（`acp.mjs:99`–`:466` = **368 行**，含 jsdoc 375 行）越线；既改其大半正文（12 个 handler 中 10 个改形），**当轮拆**——不留给「下次触碰」。
+现状 `buildAcpHandlers`（`acp.mjs` 的 handler 装配段 = **368 行**，含 jsdoc 375 行）越线；既改其大半正文（12 个 handler 中 10 个改形），**当轮拆**——不留给「下次触碰」。
 
 | 模块（无扩展名形态，见下注） | 装什么 | 关键缝 |
 |---|---|---|
@@ -284,13 +284,13 @@ last-write-wins 于内部状态（**不落 config.json**）；set 成功后 noti
 ### 7.1 question 工具装配期剔除
 
 - **动机**：ACP 会话是**无交互 UI 的 headless 通道**——工具面不得提供本通道不存在的交互能力（模型可见即会调用，调用即必错）。
-- **机制**：`thincoder-cli/src/acp.mjs:77` 导出 `ACP_EXCLUDED_TOOLS = ["question"]`；
-  `defaultCreateSession`（`:83`）传 `assembleAgent({ excludeTools: ACP_EXCLUDED_TOOLS })`。
-- **过滤实现**：`thincoder-cli/src/cli/make-agent.mjs:21` 导出纯函数 `applyToolExclusions(tools, excludeTools = [])`（按 `name` 过滤），
-  施用点 = 核 `toolsFinalize` 缝（挂点 `:39` ∕ 施用 `:101`——位次：工具装配后、`createAgent` 前）——schema 逐请求派生自 `agent.tools`，故工具不可见。
+- **机制**：`thincoder-cli/src/acp.mjs` 导出 `ACP_EXCLUDED_TOOLS = ["question"]`；
+  `defaultCreateSession`（同档）传 `assembleAgent({ excludeTools: ACP_EXCLUDED_TOOLS })`。
+- **过滤实现**：`thincoder-cli/src/cli/make-agent.mjs` 导出纯函数 `applyToolExclusions(tools, excludeTools = [])`（按 `name` 过滤），
+  施用点 = 核 `toolsFinalize` 缝（挂点 = 装配回调 ∕ 施用 = `applyToolExclusions` 调用行——位次：工具装配后、`createAgent` 前）——schema 逐请求派生自 `agent.tools`，故工具不可见。
 - **剔除点选型理由**：装配期参数（schema 直接少一条；通道知识住 `acp.mjs`）——事后变异绕装配契约、bridge 层无装配权。
 - **工具描述面**：`thincoder-core/tool-docs/question.md` 经 `{{inject:question-ui-face}}` 锚注入可用性行
-  （取值表 = `thincoder-cli/src/prompt-injections.mjs:35`）——明写「无交互面（headless / 子代理）返回错误，问题放正文回复」。
+  （取值表 = `thincoder-cli/src/prompt-injections.mjs`）——明写「无交互面（headless / 子代理）返回错误，问题放正文回复」。
 - **同缺陷登记（不在本板块范围）**：`thincoder chat` 与子代理 children 的工具集亦无 `onQuestion`——
   机制相同（可用性行列已覆盖描述面），是否同款剔除待定（见 §9 登记项）。
 
@@ -326,15 +326,15 @@ export function relayPrefixOf(label, id) // → `${label}#${id}/`
 **⟦ev⟧ 事件 token 剥离 = 形态判据（需求档 F7 / R-A3）**
 
 - **修法（形态取代枚举）**：命中式 = `^⟦ev⟧[a-z]+\x1e`——事件名域 = ASCII 小写 + 终止符 `\x1e`；**枚举退役**（新增事件名零维护）。判别式**单源** = 核模块 `subagent-event.mjs`（`parseSubagentEvent` 非空 ⇒ 剥；§12.4）。
-- **形态依据（既有先例，非新造）**：VSC 宿主面消费单点 `thincoder-vscode/src/extension/panel-callbacks.mjs:44`（`includes("⟦ev⟧")` 识别）+
-  `:85`（`startsWith("⟦ev⟧")` **兜底消费**——注释原文「其余核事件：消费不泄漏」）即形态判据；核生成侧（`thincoder-core/agent/spawn-child.mjs:114-115` `EVENT_PHASE` / `EVENT_TYPE`）系**枚举**放行判据——**不引为形态先例**（枚举面 = D13 所否同形；**不在修法范围**）。
+- **形态依据（既有先例，非新造）**：VSC 宿主面消费单点 `thincoder-vscode/src/extension/panel-callbacks.mjs`（`includes("⟦ev⟧")` 识别）+
+  （`startsWith("⟦ev⟧")` **兜底消费**——注释原文「其余核事件：消费不泄漏」）即形态判据；核生成侧（`thincoder-core/agent/spawn-child.mjs` 的 `EVENT_PHASE` / `EVENT_TYPE`）系**枚举**放行判据——**不引为形态先例**（枚举面 = D13 所否同形；**不在修法范围**）。
   ⇒ 本修法 = ACP 面与 VSC 面既有**形态判据**对齐，不是新语义。
-- **面覆盖注**：事件 token 生成侧发射**全走 `callbacks.onToken`**（逐点实核：`thincoder-core/agent.mjs:208` · `dispatch.mjs:296` · `subagent-scheduler.mjs:337` · `subagent-async.mjs:262` · `async-settle.mjs:228/:262/:264` · `subagent.mjs:359` · `subagent-run.mjs:143`
-  `thincoder-core/agent-tools/subagent-panel.mjs:98` · `consult.mjs:249` · `spawn-child.mjs:162`）。
+- **面覆盖注**：事件 token 生成侧发射**全走 `callbacks.onToken`**（逐点实核：`thincoder-core/agent.mjs` · `dispatch.mjs` · `subagent-scheduler.mjs` · `subagent-async.mjs` · `async-settle.mjs`（三处）· `subagent.mjs` · `subagent-run.mjs`
+  `thincoder-core/agent-tools/subagent-panel.mjs` · `consult.mjs` · `spawn-child.mjs`）。
 
-`onReasoning`（`bridge.mjs:201-207`——只剥 relay 前缀；事件 token 不经此面）与 `agent_thought_chunk` / 工具卡 `title` / `request_permission` 文本面**不产** `⟦ev⟧` ⇒ 其余面残余向量 = **模型伪造**（非事件泄漏）——**接受**该边界（伪造面按核生成侧 strip 判据另行处置，不在本档）。
-- **CLI 侧已有形态判据先例（非缺陷——同一判据家族已在位）**：`thincoder-cli/src/tui/render.mjs:245-256` 已是形态剥（结构化 `/⟦ev⟧[^\x1e…]*\x1e…/` + 末行 `/⟦ev⟧[A-Za-z]*/` 兜底）⇒ 修法**保留终止符约束**（`\x1e` 同现才剥），**不得**放宽为无终止符形态。
-- **另一消费点已自洽（非缺陷——登记为观察项）**：`thincoder-cli/src/tui/subagent-blocks.mjs:46` 的 `SUB_EVENT_RE` 枚举（含 `queued`、**不含** `cancelled`）之外另有 `:172` 显式 `cancelled` 分支 + `:187` `startsWith("⟦ev⟧")` 兜底 ⇒ 无泄漏面，**不改**。
+`onReasoning`（`bridge.mjs`——只剥 relay 前缀；事件 token 不经此面）与 `agent_thought_chunk` / 工具卡 `title` / `request_permission` 文本面**不产** `⟦ev⟧` ⇒ 其余面残余向量 = **模型伪造**（非事件泄漏）——**接受**该边界（伪造面按核生成侧 strip 判据另行处置，不在本档）。
+- **CLI 侧已有形态判据先例（非缺陷——同一判据家族已在位）**：`thincoder-cli/src/tui/render.mjs` 已是形态剥（结构化 `/⟦ev⟧[^\x1e…]*\x1e…/` + 末行 `/⟦ev⟧[A-Za-z]*/` 兜底）⇒ 修法**保留终止符约束**（`\x1e` 同现才剥），**不得**放宽为无终止符形态。
+- **另一消费点已自洽（非缺陷——登记为观察项）**：`thincoder-cli/src/tui/subagent-blocks.mjs` 的 `SUB_EVENT_RE` 枚举（含 `queued`、**不含** `cancelled`）之外另有同档显式 `cancelled` 分支 + `startsWith("⟦ev⟧")` 兜底 ⇒ 无泄漏面，**不改**。
 - **嵌套形态顺序不变**：relay 前缀由桥先剥（本节表①「信号检查改在 payload 上」）；前缀后 token 落 payload 首 ⇒ 同一判据命中。
 - **负向边界（防过剥）**：正文含 `⟦ev⟧` 而无 `\x1e` 终止符 ⇒ **仍转发**（判据要求终止符同现）；`[a-z]+` 不吃其它 `⟦…⟧` token 形态。
 - **测试覆盖**：宿主 `thincoder-cli/test/acp-channel.test.mjs`（T9 信号 token 带前缀 → **零可见面文本**（零 `agent_message_chunk`）；结构化增量见 §12）——增 `queued` / `cancelled` 两相 + 无终止符负例（正文含哨兵仍须转发）。
@@ -373,9 +373,9 @@ ACP 不转发工具输出流式增量——**父工具与子代理工具同口�
 | D14 | onWait 三消费点（TUI / headless / ACP 日志）= **调用核单源映射** | 相位值域（五相：`gate` / `retry` / `overloaded` 带秒 · `warn` / `quota` 带 message）无单源 ⇒ 三处各自 `else` 兜底，`warn` / `quota` 渲染 `undefined`。映射表与判据见 `docs/core/design/PROVIDER.md` §6.20 |
 | D15 | **认证门 = 凭据即时判据**（撤 `authenticated` 闩锁） | 契约上 `authenticate` 是**可选**流程（`NewSessionRequest` 逐字：「**May** return an `auth_required` error … **if** the agent requires authentication」）⇒ 闩锁使「不调 `authenticate` 的客户端」会话一律起不来（编排器常见姿势——核心缺陷）。 |
 | D16 | `authMethods` = **对象数组 + `clientCapabilities.auth.terminal` 门控** | schema `AuthMethodTerminal` 逐字：「Agents **MUST** advertise this method **only when the client enabled its terminal authentication capability**」+ 必填 `id`/`name`；裸字符串 `"terminal"` 既不匹配 `anyOf` 任一分支也无 `id`。 |
-| D17 | 凭据面**收回文档声称**：**不实现** env fallback | 项目现行裁定 = 「env vars are not a key source」（`DOC-CODE-RECONCILE` A6——「实装为准改文档」），四处逐字在位（`thincoder-cli/src/tui/model-picker.mjs:43` · `thincoder-vscode/src/extension/presets.mjs:31/66/96` · `embed-config.mjs:5` · `thincoder-core/agent-tools/subagent-async.mjs:143`）；仅在 ACP 面实现 = 同一产品两套凭据语义（把一处漂移换成更深的语义分裂）。且无 TTY 的真实阻塞是 D15（认证闩锁），不是 key 来源少一条。env 通道属 CONFIG / PROVIDER 板块（§11.9 登记） |
+| D17 | 凭据面**收回文档声称**：**不实现** env fallback | 项目现行裁定 = 「env vars are not a key source」（`DOC-CODE-RECONCILE` A6——「实装为准改文档」），四处逐字在位（`thincoder-cli/src/tui/model-picker.mjs` · `thincoder-vscode/src/extension/presets.mjs`（三处）· `embed-config.mjs` · `thincoder-core/agent-tools/subagent-async.mjs`）；仅在 ACP 面实现 = 同一产品两套凭据语义（把一处漂移换成更深的语义分裂）。且无 TTY 的真实阻塞是 D15（认证闩锁），不是 key 来源少一条。env 通道属 CONFIG / PROVIDER 板块（§11.9 登记） |
 | D18 | **契约形状以 schema 逐字段为准**，不以「某客户端能跑就行」为准 | 实核出四处响应形状不合契约（§11.3 G2 族）：`agentCapabilities` 键名 · `session/new` 必填 `sessionId` · `session/prompt` 必填 `params.prompt` · `session/list` 条目 `sessionId`（另 `configOptions[]` 的 `id`/`name`）。 |
-| D19 | fs 反向 RPC **按客户端能力位门控**，未宣告 ⇒ 回落本地 | schema `FileSystemCapabilities` 默认 `false` + 文档「MUST treat all capabilities omitted … as UNSUPPORTED」；现状无条件发 `fs/*` ⇒ 不支持者干等 30s（`bridge.mjs:106/114/291`）。判据同构 = kimi `server.ts:626-636`（皆否 ⇒ 回落 `LocalKaos`）；能力位来源 = §3.4 快照（“initialize 单次交换”语义） |
+| D19 | fs 反向 RPC **按客户端能力位门控**，未宣告 ⇒ 回落本地 | schema `FileSystemCapabilities` 默认 `false` + 文档「MUST treat all capabilities omitted … as UNSUPPORTED」；现状无条件发 `fs/*` ⇒ 不支持者干等 30s（`bridge.mjs` 的 write / edit 分支）。判据同构 = kimi `server.ts` 的能力位判据（皆否 ⇒ 回落 `LocalKaos`）；能力位来源 = §3.4 快照（“initialize 单次交换”语义） |
 | D20 | 结构化子代理事件 = `session/update` → `session_info_update`（全字段可省载体）+ `update._meta["thincoder.dev/subagent"]` | 零契约字段虚构（唯一零必填变体）；`_meta` = schema 预留扩展位（MUST NOT assume——通用客户端忽略即合规）。详见 §12 |
 | D21 | 键名 = `thincoder.dev/subagent`（命名空间形） | 承上游 Extensibility 示例 `zed.dev/debugMode`；对外契约防保留键碰撞。§12.1 |
 | D22 | `state` = 事件名原文（形态域开集；现发射集 8 名） | 单一来源（token 自身命名）——零第二语义层；枚举化 = 漏项发生器（D13 同源否）。§12.3 |
@@ -400,8 +400,8 @@ ACP 不转发工具输出流式增量——**父工具与子代理工具同口�
 
 > **受影响文件表 / AC 与用例表** = 一次性材料，不入本档
 > （机制 / 判据 / 不变量单源留本档，纪律见 `docs/core/design/DOC-DISCIPLINE.md` §1 D2「单一权威源」；同 §7.2 末行先例）。本节只留**机制、判据与不变量**。
-> **现状坐标（拆分前单体）**：本节各表的「现状」列 = 拆分前单体 `thincoder-cli/src/acp.mjs` 的行号；
-> 落 **§3.5 的模块划分**后，同一 handler 迁入新模块 ⇒ **按方法名定位，行号不再适用**。
+> **现状定位形（拆分前单体）**：本节各表的「现状」列 = 拆分前单体 `thincoder-cli/src/acp.mjs` 的**方法名 ∥ 段名**（行号不作引用形态）；
+> 落 **§3.5 的模块划分**后，同一 handler 迁入新模块 ⇒ **按方法名定位**，与新址同形。
 
 ### 11.1 规范依据（锁定 · 一手 → 二手 → 交叉印证）
 
@@ -460,20 +460,20 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 
 **契约**：`FileSystemCapabilities.{readTextFile,writeTextFile}` 默认 **`false`**；schema 逐字：「Only available if the client advertises the `fs.writeTextFile` capability.」；文档「MUST treat all capabilities omitted … as UNSUPPORTED」。
 
-**现状**：`bridge.mjs:104-118`（`readBuffer` / `writeBuffer`）与 `:285-307`（`toolRouter` 的 write / edit 分支）**无条件**发 `fs/*`；
-不回应该面的客户端 ⇒ 每次 `write` / `edit` **干等 30s**（`bridge.mjs:106` · `:114` · `:291` 的 `timeoutMs: 30000`），再走错误分支。
+**现状**：`bridge.mjs`（`readBuffer` / `writeBuffer`）与（`toolRouter` 的 write / edit 分支）**无条件**发 `fs/*`；
+不回应该面的客户端 ⇒ 每次 `write` / `edit` **干等 30s**（`bridge.mjs` 三处 `timeoutMs: 30000`），再走错误分支。
 
 **改法**：能力位（§3.4 快照，`session/new` 时刻取值，会话生命周期内不变）**AND** 工具形态：
 
 - `clientCaps.fs?.writeTextFile !== true` ⇒ write **不路由**（返回 `{handled:false}`）→ 本地写盘（与只读工具同路径）。
 - `clientCaps.fs?.readTextFile !== true` ⇒ edit **不路由**（读回是 edit 桥的必要前提）→ 本地 edit（`computeEditEntry` 单一权威不变）。
 - 二者皆 `true` ⇒ 现有路径**零改**（支持者行为不变——零回归）。
-- **判据同构**：kimi `server.ts:626-636`（`fs?.readTextFile` 与 `fs?.writeTextFile` 皆否 ⇒ 返回 `undefined`，核回落 `LocalKaos`）。
+- **判据同构**：kimi `server.ts` 的 `fs?.readTextFile` 与 `fs?.writeTextFile` 皆否判据（返回 `undefined`，核回落 `LocalKaos`）。
 
 ### 11.5 G8 · 凭据面（裁定）
 
-**现状**：`acp.mjs:39-45` `defaultIsConfigured()` = `loadConfig().provider?.apiKey`；
-而 `config.provider`（`thincoder-core/config.mjs:332-339`）= 统一解析 `resolveProviderPlan` 产物（核单源——回退序 + 三态，机制见 `docs/core/design/PROVIDER.md` §6.22）：
+**现状**：`acp.mjs` 的 `defaultIsConfigured()` = `loadConfig().provider?.apiKey`；
+而 `config.provider`（`thincoder-core/config.mjs`）= 统一解析 `resolveProviderPlan` 产物（核单源——回退序 + 三态，机制见 `docs/core/design/PROVIDER.md` §6.22）：
 
 任一渠道持 key ⇒ 核必选中 ⇒ `provider` 非空 ⇒ 门**放行**（「持 key ∧ 无有效 `defaultModel`」= `fallback` 类——协议面零提示行）；
 仅「无 provider/key」（`invalid` 类）⇒ `provider = {}` ⇒ `-32000`。
@@ -483,7 +483,7 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 - **判据拆分与门失败文案**：`isConfigured()`（布尔注入口，决定放行 / `-32000`）**不动**；**同注入位姐妹探针** `providerStatus()`（默认 `defaultProviderStatus`，可注入）→ `{ ok, keyPresent, reason }`：
   - `ok` = `loadConfig().provider?.apiKey?.trim()`（与 `isConfigured()` 同源同式）；
   - `keyPresent` = `loadConfig().providers` 中任一 `apiKey` 在位；
-  - `reason` = `loadConfig().providerInvalidReason`（**name 面**——`thincoder-core/config.mjs:337` 产出：入选渠道具名 ⇒ null ∕ 无入选渠道 ⇒ 非空；`docs/core/design/PROVIDER.md` §6.22）。
+  - `reason` = `loadConfig().providerInvalidReason`（**name 面**——`thincoder-core/config.mjs` 产出：入选渠道具名 ⇒ null ∕ 无入选渠道 ⇒ 非空；`docs/core/design/PROVIDER.md` §6.22）。
   **落点 = 各受门 handler 共用的门助手**（`requireConfigured()`，住 `handlers-session.mjs` 的 `ctx`；**`session/new` 是门链首个触点**）：
   - `ok === true` ⇒ 放行；
   - `keyPresent === false`（=「无 provider/key」类）⇒ `-32000`，文案指向 `~/.thincoder/config.json` 的 `providers[].apiKey` **与** `thincoder acp --login`——**不拼 reason**。
@@ -494,13 +494,13 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 
   改法：装配后**显式检查** `agent._providerInvalid`，真 ⇒ 返回错误（文案 = `agent._providerInvalidReason`——核 `thincoder-core/agent/assemble.mjs` `validateProvider(agent, config)` 取 `config?.providerInvalidReason`（兜底三档文案「provider 不存在 / model 缺失 / 缺少 baseURL」））而**不建半死会话**。
 - **代码注释面（逐字目标）**：
-  - `thincoder-core/config.mjs:11` → ` * API key comes from providers[].apiKey only — environment variables are not a key source.`
-  - `thincoder-cli/src/acp.mjs:69` → `/** Config is "configured" when the active provider has a resolvable API key (providers[].apiKey only). */`
+  - `thincoder-core/config.mjs` 档头注释 → ` * API key comes from providers[].apiKey only — environment variables are not a key source.`
+  - `thincoder-cli/src/acp.mjs` 的 `defaultIsConfigured` 注释 → `/** Config is "configured" when the active provider has a resolvable API key (providers[].apiKey only). */`
   （代码笔 = eng-coder；探针默认实现 `defaultIsConfigured` / `defaultProviderStatus` **仍住入口模块 `acp.mjs`**——§3.5）
 
 ### 11.6 G10 · 文档面
 
-- **链接现状**：`thincoder-cli/README.md:60` = 站内指南 `https://thincoder.com/acp.html`（Setup 行）；登录入口句在同段（`:61` = `thincoder acp --login`）。
+- **链接现状**：`thincoder-cli/README.md` = 站内指南 `https://thincoder.com/acp.html`（Setup 行）；登录入口句在同段（`thincoder acp --login`）。
 
   **裁定：链接指向用户面活档**——用户面链接 = 站内指南 `https://thincoder.com/acp.html`（悬空 ∥ 指向退役层 ∥ 指向设计档均不合格——用户面链接以用户面活档为准）；登录入口句在同段（`thincoder acp --login`）。
   理由：CLI 树归档层是「**保留 ≠ 维护**」的退役层（`docs/README.md` §2）；产品 README（**对外发布面**）不得把用户引进退役层——悬空与指向退役层都不合格，**用户面活档才是唯一正确目标**。
@@ -522,8 +522,8 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 
 | 不做 | 理由 |
 |---|---|
-| **G4** 单 cwd 模型（`acp.mjs:163-167`） | 多 cwd 需改 agent 的 confine / 核侧工作目录语义——超 ACP 面；以「不声明 `additionalDirectories`」**如实**处理 |
-| **G7** `mcpServers` 静默忽略（`acp.mjs:168-170`） | 转发面（含能力声明与传输协商）是独立设计面；以「不声明 `mcpCapabilities`」如实处理 |
+| **G4** 单 cwd 模型（`acp.mjs` 的 cwd 处理段） | 多 cwd 需改 agent 的 confine / 核侧工作目录语义——超 ACP 面；以「不声明 `additionalDirectories`」**如实**处理 |
+| **G7** `mcpServers` 静默忽略（`acp.mjs` 的 `mcpServers` 分支） | 转发面（含能力声明与传输协商）是独立设计面；以「不声明 `mcpCapabilities`」如实处理 |
 | **G9** ACP 端到端测试网 | 另批建网；AC 用 handler 直调 + 单条 stdio 冒烟覆盖 |
 | **env 凭据通道** | CONFIG / PROVIDER 板块（D17 理由 3） |
 | **`_meta['terminal-auth']` legacy 兜底** | 旧 SDK 客户端过渡面，非 v1 契约（D16） |

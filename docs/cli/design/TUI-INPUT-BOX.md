@@ -13,7 +13,8 @@
 3. `submit()`：清空 input/cursor → `history.push(text)` → `historyIndex = -1` → `scroll = 0`。
 4. **模式栈互斥**，优先级从高到低：`permission → question → search → interruptPrompt → picker 栈 / wizard → 凭据窗（`secretPrompt`）→ 正常输入`。
    每个模式处理自己的键后必须 `return`。picker 打开期间 Ctrl+I 不受阻——processing 时照常打开注入框
-   （Ctrl+I 创建与 interruptPrompt 模态分支先于 picker 分支——Esc 关框后 picker 原样保留），非 processing 时零动作；
+   （Ctrl+I 创建与 interruptPrompt 模态分支先于 picker 分支——Esc 关框后 picker 原样保留），非 processing 时零动作。
+
    picker 其余按键由 picker 独占消费。
    **搜索面让位（显示面）**：掩码三面在场 ⇒ 输入框显示面归掩码面（框题 ∥ 内容）；其余搜索态照旧——规则本体（判据 ∥ 消费点 ∥ 先例坐标） = `docs/cli/design/TUI.md` §4「掩码守卫」（本档不重述——D2）。
 5. `layoutInput(chars, cursor, width)` 是纯函数：`(chars, cursor, width) → { lines, cursorLine, cursorCol, lineStarts }`，
@@ -94,8 +95,8 @@
 > 需求锚 = `docs/cli/requirements/TUI.md` **F16**（多槽 / 合并消费）；语义对位 = 子代理 `send`（回合边界注入，非打断）。
 > **形态 = 多槽（容量 8 条）+ 合并消费**（用户裁定——机制 / 常量单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8）。
 > Ctrl+I 中断注入**保留并存**（打断 vs 排队两语义——用户裁定，零触碰 Ctrl+I）。
-> **扩面覆盖面**：池 live 会话期 `state.suspended` 恒 true（`thincoder-cli/src/tui/suspension-drive.mjs:226/:290`），池 live 的用户回合（`:246-250`，只翻 `agent._suspended`）与 digest 均属「挂起会话内」⇒ 工程模式（子代理常年在飞）的日常面同入 busy 门禁——吞面 = `state.suspended || state._suspPending`，两面同判据、同队列、同反馈。
-> 送达链路 = **步边界 pickup（主）** + 既有回合尾 drain（`thincoder-cli/src/tui/agent-turn.mjs:333-350` 队列续发 + `thincoder-cli/src/tui/suspension-drive.mjs:246-257`
+> **扩面覆盖面**：池 live 会话期 `state.suspended` 恒 true（`thincoder-cli/src/tui/suspension-drive.mjs` 两处），池 live 的用户回合（同档的回合翻面处，只翻 `agent._suspended`）与 digest 均属「挂起会话内」⇒ 工程模式（子代理常年在飞）的日常面同入 busy 门禁——吞面 = `state.suspended || state._suspPending`，两面同判据、同队列、同反馈。
+> 送达链路 = **步边界 pickup（主）** + 既有回合尾 drain（`thincoder-cli/src/tui/agent-turn.mjs` 队列续发 + `thincoder-cli/src/tui/suspension-drive.mjs`
 > driver 消费）——**取数同按合并计划**（见「送达链路」段）；消费回执 = 每批一行 dim 行；反馈面与三时机 = `docs/cli/design/TUI.md` §7.5（机制侧步边界定义 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8）。
 
 **放行判据（busy Enter → 入队，全部满足）**：
@@ -113,47 +114,57 @@
 
 **执行序（`key-handler-busy.mjs` busy 门禁）**：
 斜杠 → 吞 + busy 提示（文本保留，既有）；空 → 静默（既有）；条件 2 不满足 → 吞 + busy 提示（文本保留，既有）；
-**队满（条件 5）→ 拒 + 提示 + 文本保留**（先例 = 挂起态队满分支 `key-handler-edit.mjs:60-64` 同构——拒 + 提示 + 文本保留；**满队提示形态 = 端内字面** `[主会话处理中 —— 已排队 8 条消息，请等其处理完成后再发送]`（`C.warn`）；
+
+**队满（条件 5）→ 拒 + 提示 + 文本保留**（先例 = 挂起态队满分支 `key-handler-edit.mjs` 同构——拒 + 提示 + 文本保留；**满队提示形态 = 端内字面** `[主会话处理中 —— 已排队 8 条消息，请等其处理完成后再发送]`（`C.warn`）；
 **其余（1∧2∧3∧4∧5）→ 入队**：清框 + `history.push` + `historyIndex = -1` + `_draft = null` + `pendingInput.push(text)`
-+ `state.scroll = 0` + `state._followTail = true`（F4「新提交消息 → 恢复跟随」——排队提交同列；与 `thincoder-cli/src/tui/turn-face.mjs:32-33` submit 同款两行，两条入槽路径同款：本档 busy 门禁 / `key-handler-edit.mjs:65-70` 挂起态）
++ `state.scroll = 0` + `state._followTail = true`（F4「新提交消息 → 恢复跟随」——排队提交同列；与 `thincoder-cli/src/tui/turn-face.mjs` submit 同款两行，两条入槽路径同款：本档 busy 门禁 / `key-handler-edit.mjs` 挂起态）
 （与挂起态入队分支同款清理——`state.input` 永不被后台事件读写的不变量（§4）保持：入队是**前台**按键路径写自己的队列）。
 **挂起面入队后同款唤醒**：`state.suspended || state._suspPending` ⇒ `state._suspWake?.()`（§4 既有挂起分支同款）；
-busy 期该槽恒 null ⇒ 零动作——证据 = `thincoder-cli/src/tui/suspension-drive.mjs:122`（等待结束清理即置 null）· `:137`（仅在 `waitForSettleOrWake` 等待窗口注入；唯一调用点 `:279`）
+
+busy 期该槽恒 null ⇒ 零动作——证据 = `thincoder-cli/src/tui/suspension-drive.mjs`（等待结束清理即置 null）· 同档的注入处（仅在 `waitForSettleOrWake` 等待窗口注入；唯一调用点）
 ⇒ 轮末 driver 步骤 1 恒接走；普通 busy 面零唤醒（现状零改）。用例「挂起内入槽」格断言 `wakes` 计数（= 呼叫点执行——桩注入 spy；生产 busy 期零副作用）。
 
 **再提交与满队（容量 8）= 拒 + 提示 + 文本保留**：容量内再提交 ⇒ 连续入队（多槽——每条各占一项）；满队再提交 ⇒ 拒 + 提示 + 文本保留
-（不覆盖、不丢——违「不静默丢」纪律的反面；先例 `thincoder-cli/src/tui/suspension-drive.mjs:308-311` 中止残余转正注释）；拒 + 提示与既有队列满语义同构零新机制。
+（不覆盖、不丢——违「不静默丢」纪律的反面；先例 `thincoder-cli/src/tui/suspension-drive.mjs` 中止残余转正注释）；拒 + 提示与既有队列满语义同构零新机制。
 
-**submit 双保险同步**（`turn-face.mjs` submit busy 拒分支——`:21-25`）：防御语义 = 「busy 期拒绝 + 不清框」；
+**submit 双保险同步**（`turn-face.mjs` submit busy 拒分支）：防御语义 = 「busy 期拒绝 + 不清框」；
 正常流量的 Enter 在 key-handler 族（`key-handler-busy.mjs` 门禁 · `key-handler-edit.mjs` 入槽）分流，submit busy 分支只服务直呼防御。
 
 **消费回执（送达链路侧——每批一行 dim 行）**：`[sending queued message]` 在**消费时**按批推送（批 = 合并计划取数单位）——
 ① **步边界 pickup**（`queued-pickup.mjs`——核循环头回调取批后）；② 回合尾兜底转正点（`agent-turn.mjs` 队列 while 取批后）；③ 挂起 driver 消费点（`suspension-drive.mjs` pendingInput 取批后）。
-形态对位既有 `[continuing…]`（`agent-turn.mjs:255`，`C.tool`）——消费事实的可见锚，回执在则顺序自然
+形态对位既有 `[continuing…]`（`agent-turn.mjs` 的推送点，`C.tool`）——消费事实的可见锚，回执在则顺序自然
 （queued dim 行 → 回合尾 → `❯ You:` 标签 + 消息行）。
 
 **排队期呈现与消费转正（呈现面）**：入队后队列以会话流尾**待发送块**呈现（派生行——
-逐条原文 + 条数标签；形态 / 上限 / 缓存键 / 边界 = `docs/cli/design/TUI.md` §7.5；本档不重述——D2）；消费按合并计划取批（步边界 pickup（主——`queued-pickup.mjs`）/ `agent-turn.mjs` 回合尾兜底 + 队列续发 /
-`suspension-drive.mjs` driver 输入优先）⇒ 回执 + `❯ You:` + **合并文本**落 `state.lines`（`agent-turn.mjs:84-87`）在同一同步段
+逐条原文 + 条数标签；形态 / 上限 / 缓存键 / 边界 = `docs/cli/design/TUI.md` §7.5；本档不重述——D2）。
+
+消费按合并计划取批（步边界 pickup（主——`queued-pickup.mjs`）/ `agent-turn.mjs` 回合尾兜底 + 队列续发 / `suspension-drive.mjs` driver 输入优先）⇒ 回执 + `❯ You:` + **合并文本**落 `state.lines`（`agent-turn.mjs`）在同一同步段
 ⇒ 渲染帧合并调度下**单帧切换**（N 条待发送块 → 回执行 + 一条合并用户消息：零空窗 / 零重复——并解同处 §7.5 消费转正条）。
+
 中止残余（按合并计划转 `state.queue` + 既有提示行）不渲染待发送块（同 §7.5 边界）。
 
 **送达链路（合并消费）**：四支入口共用**同一合并计划** `planQueuedInput`（纯函数——
 核单源 `thincoder-core/queued.mjs`（CLI 经转口档 `thincoder-cli/src/tui/queued-merge.mjs`）；常量 `MAX_MERGE_ITEMS`（8）/ `MAX_MERGE_CHARS`（2000）与形态文案同源）：
+
 ⓪ **用户回合在飞（`autoTurn === false`）⇒ 步边界 pickup（主）**：核 loop 循环头投递回调（`consumeQueuedInput`）按计划取批（首动作 = merged 批；`/cmd` 首动作 = 入队门禁不可达的防御面——留给既有消费点）
 ⇒ `pushReal` 一条 user 消息入历史（下一步生效——不中断）+ 呈现（回执行 + `❯ You:` + 合并文本）。系统轮（digest / 上行唤醒轮）不传回调（域 / 门禁降格理由 = `docs/cli/design/TUI.md` §7.5「分流」）；
-① 普通回合 busy 入队 → 回合自然结束：顶层兜底（`agent-turn.mjs:334-336`：`!poolLive` 时按计划取批 → `state.queue` → 队列 while 续发新回合）；
-② 挂起会话内 busy 入队 → 池 live ⇒ driver 步骤 1 输入优先，按计划取批（`thincoder-cli/src/tui/suspension-drive.mjs:246-257`——以合并消息开新回合，先于 digest 合并）；
+① 普通回合 busy 入队 → 回合自然结束：顶层兜底（`agent-turn.mjs` 的顶层兜底：`!poolLive` 时按计划取批 → `state.queue` → 队列 while 续发新回合）；
+② 挂起会话内 busy 入队 → 池 live ⇒ driver 步骤 1 输入优先，按计划取批（`thincoder-cli/src/tui/suspension-drive.mjs`——以合并消息开新回合，先于 digest 合并）；
 ③ 池空 + 会话退出 ⇒ 退出前残余按计划兜底（`suspension-drive.mjs` 退出段——零丢失）。超过一批者（>8 条 / 合并 > 2000 字符）截批先行——余下循环接取（多回合，不丢）。
 
 **VSC 对位**：`webview/send.js` 出口守卫 **busy 即排队面 = `S._turnState === "running"`**
-（`_suspended` 不再参与分流）；队列载体两态（无会话 = `panel._busyQueued`；会话在飞 = 会话队列 `susp.pendingInput`，
+（`_suspended` 不再参与分流）。
+
+队列载体两态（无会话 = `panel._busyQueued`；会话在飞 = 会话队列 `susp.pendingInput`，
 既有 `_chat` 分流——driver 步骤 1 优先按合并计划取批）。契约单源 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 **C-B2-6**（分流 / 容量 8 /
-镜像判据源 / 送达 / 贴图降级 / **待发送标记**细则 = 同处 ①–⑦——D2 不重述）；webview 排队期标记（逐条气泡 `pending` 标记 + 标签行；多条批消费时就地合并为一条气泡）
+镜像判据源 / 送达 / 贴图降级 / **待发送标记**细则 = 同处 ①–⑦——D2 不重述）。
+
+webview 排队期标记（逐条气泡 `pending` 标记 + 标签行；多条批消费时就地合并为一条气泡）
 与 CLI 待发送块**语义同源（形态各端自落）**。
 
-**边界**：**攒批 = 合并消费**：单批 ≤ 8 条 ∧ 合并 ≤ 2000 字符；超限截批 / 单条超长直发；队容量 8（第 9 条拒）；`/cmd` 逐条保序（不进合并）；不触碰 Ctrl+I 代码与文档条目（`key-handler.mjs:81-88` /
+**边界**：**攒批 = 合并消费**：单批 ≤ 8 条 ∧ 合并 ≤ 2000 字符；超限截批 / 单条超长直发；队容量 8（第 9 条拒）；`/cmd` 逐条保序（不进合并）；不触碰 Ctrl+I 代码与文档条目（`key-handler.mjs` 的 Ctrl+I 分支 /
 `key-modes.mjs handleInterruptMode` / 本档 §2 表 Ctrl+I 行 / §8——两语义并存）；`_pasting` 锁零触；
+
 非 busy 期（空闲 / 挂起空闲 / 释放窗口）Enter 语义零改（§4 分流原样）；斜杠 busy 禁发零改；
 F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/design/TUI.md` §7.5）。
 
@@ -205,8 +216,8 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 | `thincoder-cli/src/tui/render-frame.mjs` · `render-loop.mjs` | question 自由文本态光标例外（`hasOverlay` 细化 / `cursorSuffix` 正常发）；Inject 框标题提示与空态占位符（§8.3） |
 | `thincoder-cli/src/tui/ansi.mjs` | `keyboardPush` / `keyboardPop` 序列常量 |
 | `thincoder-cli/src/tui/tui-state.mjs` | state 初始化单源（`createTuiState`——含 `_draft` / `interruptPrompt` 空态） |
-| `thincoder-cli/src/tui/input-face.mjs` | stdin 层 `translateShiftEnter` 接线（`:151`）+ 键盘 / 鼠标后置挂载入口（`mountKeys` / `mountMouse`） |
-| `thincoder-cli/src/tui/index.mjs` | `startTUI` 装配序列（命令层 / 启动屏 / resize / render loop）；启动 `keyboardPush` / 退出 `keyboardPop`（序列体 = `tui-lifecycle.mjs`——启动调用点 = `input-face.mjs:39`） |
+| `thincoder-cli/src/tui/input-face.mjs` | stdin 层 `translateShiftEnter` 接线 + 键盘 / 鼠标后置挂载入口（`mountKeys` / `mountMouse`） |
+| `thincoder-cli/src/tui/index.mjs` | `startTUI` 装配序列（命令层 / 启动屏 / resize / render loop）；启动 `keyboardPush` / 退出 `keyboardPop`（序列体 = `tui-lifecycle.mjs`——启动调用点 = `input-face.mjs`） |
 | `thincoder-cli/test/busy-injection.test.mjs`（留守）· `busy-injection-render.test.mjs` · `busy-injection-consume.test.mjs` | F16 用例宿主——按族三档：留守 T-F16-1 / 3 / 4 / 8 / 13 · 渲染族 6 / 10 / 11 / 12 / 14 / 17 · 消费族 2 / 5 / 9 / 15 / 16 / 18 / 19 |
 
 ## 7. question 自由文本输入态：光标与编辑键

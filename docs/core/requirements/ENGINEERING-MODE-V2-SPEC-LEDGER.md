@@ -19,7 +19,7 @@
    | `board` | 归属板块 |
    | `req_doc` | 需求档指针（需求类：`<档> §X`） |
    | `task_book` | 任务书指针（在途 / 待核销必填） |
-   | `evidence` | `file:line` + 症状（技术类最小证据行） |
+   | `evidence` | 档名 + 符号名 ∥ 逐字引文 + 症状（技术类最小证据行——不写行号） |
    | `trigger` | CHECK(trigger IN ('归批','条件','认账不排期') OR NULL) |
    | `executor` | 执行者归属：`sessionId` 文本；**在途写入 / 离开在途清除**——状态翻「在途」时记当前会话；离开「在途」（→ 待核销 / → 已废弃）与撤回（任意态 → 已废弃）时清空；核销路径（勾销 / 追认）零触碰；可空（老数据 / 历史行 NULL） |
    | 时间戳 | `created_at` · `updated_at` · `closed_at` |

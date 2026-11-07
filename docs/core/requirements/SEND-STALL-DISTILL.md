@@ -16,10 +16,10 @@
 
 | # | 需求 | 判定句（可机器验证） |
 |---|---|---|
-| **FR1** | 输入按钮立即恢复 | `onComplete` 在蒸馏**之前**发出、蒸馏不阻塞回合结束——发射点 VSC `thincoder-vscode/src/agent/run-stages.mjs:232`（`fireEndOfRunDistill`）由轮末调用且**不 await**（核侧同语义：`thincoder-core/agent.mjs:342-347`） |
-| **FR2** | 蒸馏语义不变 | 蒸馏 promise 在**下一轮 push 用户输入之前**被 await——摘要必在下一轮 LLM 调用前就位（核 `thincoder-core/agent.mjs:99-101`；VSC `thincoder-vscode/src/extension/panel-chat.mjs:170-172`） |
-| **FR3** | 磁盘仍为压缩版 | 蒸馏**实际替换历史后**触发保存回调（哨兵 = `onDistilled`）——VSC `thincoder-vscode/src/extension/panel-callbacks.mjs:187-189`（含槽位守卫）；核侧 = 会话退出 flush（`thincoder-core/agent.mjs:84` 注释） |
-| **FR4** | 失败路径不变 | 蒸馏失败静默、原始探索结果保留、不影响回合结果与历史——失败 = 返回 null ⇒ 不替换、不触发保存；发射侧 `.catch(() => null)` 防 unhandled rejection（核 `.catch(() => {})`——`thincoder-core/agent.mjs:346`） |
+| **FR1** | 输入按钮立即恢复 | `onComplete` 在蒸馏**之前**发出、蒸馏不阻塞回合结束——发射点 VSC `thincoder-vscode/src/agent/run-stages.mjs`（`fireEndOfRunDistill`）由轮末调用且**不 await**（核侧同语义：`thincoder-core/agent.mjs`） |
+| **FR2** | 蒸馏语义不变 | 蒸馏 promise 在**下一轮 push 用户输入之前**被 await——摘要必在下一轮 LLM 调用前就位（核 `thincoder-core/agent.mjs`；VSC `thincoder-vscode/src/extension/panel-chat.mjs`） |
+| **FR3** | 磁盘仍为压缩版 | 蒸馏**实际替换历史后**触发保存回调（哨兵 = `onDistilled`）——VSC `thincoder-vscode/src/extension/panel-callbacks.mjs`（含槽位守卫）；核侧 = 会话退出 flush（`thincoder-core/agent.mjs` 注释） |
+| **FR4** | 失败路径不变 | 蒸馏失败静默、原始探索结果保留、不影响回合结果与历史——失败 = 返回 null ⇒ 不替换、不触发保存；发射侧 `.catch(() => null)` 防 unhandled rejection（核 `.catch(() => {})`——`thincoder-core/agent.mjs`） |
 
 ## 3. 非功能性需求
 
@@ -27,7 +27,7 @@
 |---|---|---|
 | **N1** | 竞态安全 | 蒸馏替换历史与下一轮 push 输入**互斥**——await 必须在 push 输入之前，否则新输入被压缩替换清掉 |
 | **N2** | 数据一致性 | 会话文件最终为压缩版；快速连发下一条消息不丢输入、不丢摘要；切换会话不串写（槽位守卫） |
-| **N3** | 可中止（与运行 signal 分离） | 蒸馏使用**面板生命周期专用**中止信号——**仅面板 dispose / 会话切换时 abort**；用户 Stop（中止运行 signal）不影响蒸馏。中止器每生命周期一个、**不随轮次重置**（VSC `panel-chat.mjs:161-162`）。**CLI 侧形态**：由下一轮开头 await 与**退出 flush（≤5s）兑底**；Stop 只中断回合本身 |
+| **N3** | 可中止（与运行 signal 分离） | 蒸馏使用**面板生命周期专用**中止信号——**仅面板 dispose / 会话切换时 abort**；用户 Stop（中止运行 signal）不影响蒸馏。中止器每生命周期一个、**不随轮次重置**（VSC `panel-chat.mjs`）。**CLI 侧形态**：由下一轮开头 await 与**退出 flush（≤5s）兑底**；Stop 只中断回合本身 |
 | **N4** | 双端一致 | 同一时序（结束信号 → 异步蒸馏 → 保存回调）与同一挂载点语义（会话 / 面板侧 `pending`）。语义同源、**实现形态各端自持** |
 | **N5** | 可测试 | 竞态时序（连发消息）/ 保存回调触发 / 槽位守卫 / 失败静默均有测试 |
 

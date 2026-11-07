@@ -2,18 +2,18 @@
 
 > **域**：输入区（composer）——文本输入 ∥ 控件行 ∥ 附件 ∥ 发送 ∥ 忙态队列 ∥ 挂起窗输入 ∥ @ 文件引用 ∥ 斜径命令面——本域设计单源档。
 > **导航**：`docs/desktop/design/PROJECT.md`（总览 · 共享决策）∥ `IPC.md`（通道与载荷）∥ `SHELL.md`（壳与树）∥ `UI.md`（壳面形态）∥ `RENDERER.md`（渲染工艺）∥ `CHAT.md`（对话流）∥ `COMPOSER.md`（本档）∥ `ACTIVITY.md`（活动池与消化面）∥ `SESSIONS.md` ∥ `SETTINGS.md` ∥ `MENU.md` ∥ `PACKAGING.md` ∥ `E2E-TESTING.md`（端到端测试基建）∥ `WEB-QUICKCHECK.md`
-> **需求侧**：需求分卷（`docs/desktop/requirements/`）行号以现文为准；本档 D 号引用 = 需求卷条目号（查卷口 = `docs/desktop/requirements/PROJECT.md` §4 **D 表索引**；本域卷 = `docs/desktop/requirements/COMPOSER.md`）。
+> **需求侧**：需求分卷（`docs/desktop/requirements/`）；本档 D 号引用 = 需求卷条目号（查卷口 = `docs/desktop/requirements/PROJECT.md` §4 **D 表索引**；本域卷 = `docs/desktop/requirements/COMPOSER.md`）。
 
 ## 1. 关键决策
 
 | 号 | 决策 | 依据 |
 |---|---|---|
 | KD-17 | **`effort` 的会话级载体 = 槽数据文件顶层字段**（`null` = 未设 ⇒ 回落渠道级 `reasoningEffort`（config 链））；`provider` / `model` 两键入参**不新增字段**——映射既有 `activeProvider` / `activeModel`；`newSlotData` 产 `effort: null`；`saveSession` 字段表**须携 `effort`**（缺之 ⇒ 下一次回合保存把槽写面结果整对象抹除）；老槽无键 ⇒ 按 `null` 容忍（**禁回填**——沿 `createdBy` 先例） | 需求档 §3.1:47（会话级三值 = **会话级**状态 · D6）——须随槽持久化、且与 CLI / 扩展端**同一份**槽；核现无该键的槽写出口（既有四钥 = `autoApprove` / `planMode` / `engineering` / `advisor.guard`）⇒ 端侧只剩两条错路：落 config（全局态——切一处波及全部会话）∥ 自建副本（跨端互写失守）；判据单源 = `docs/core/design/SESSION.md` §6.21 判据句 1 / 5 |
-| KD-18 | **档位枚举化（会话级）**：居所 = 输入区控件行（写槽）；枚举**单源** = 核 `specForModel(model).reasoningEffortEnum`（**逐模型取**——不落全局一份表）；端侧候选面 = `model:list` 回执**逐模型元素投影 `{ id, effortEnum, thinkOff }`**（`thinkOff` = off 可达判据——单源 = 核 `thinkOffPath`）；表外档位字面串 ⇒ **归一 `null`**（未设——写面不预校验）；`null` 仅允许 `effort` 一键；`provider` 变更须**同送 `model`**（槽双字段恒非空） | 需求档 §3.5 项 6 逐字「自由文本 ⇒ 枚举选项」；枚举值域逐模型不同 ⇒ 端侧自持一份表必错（第二值域 = 漂移面）；候选面须离线可用（先例 = `thincoder-vscode/src/extension/settings.mjs:207-213`）；**缺口闭合** = 端 `model:list` 现仅回 `{ ok, models }` ⇒ 补逐模型 `effortEnum` / `thinkOff` 投影（主进程引核函数 = 零副本，沿 `listModels` 转口先例） |
+| KD-18 | **档位枚举化（会话级）**：居所 = 输入区控件行（写槽）；枚举**单源** = 核 `specForModel(model).reasoningEffortEnum`（**逐模型取**——不落全局一份表）；端侧候选面 = `model:list` 回执**逐模型元素投影 `{ id, effortEnum, thinkOff }`**（`thinkOff` = off 可达判据——单源 = 核 `thinkOffPath`）；表外档位字面串 ⇒ **归一 `null`**（未设——写面不预校验）；`null` 仅允许 `effort` 一键；`provider` 变更须**同送 `model`**（槽双字段恒非空） | 需求档 §3.5 项 6 逐字「自由文本 ⇒ 枚举选项」；枚举值域逐模型不同 ⇒ 端侧自持一份表必错（第二值域 = 漂移面）；候选面须离线可用（先例 = `thincoder-vscode/src/extension/settings.mjs`）；**缺口闭合** = 端 `model:list` 现仅回 `{ ok, models }` ⇒ 补逐模型 `effortEnum` / `thinkOff` 投影（主进程引核函数 = 零副本，沿 `listModels` 转口先例） |
 | KD-19 | **施加径 = 写盘 → 重施**（`loadAgentSlot`）单点；**在飞**（`flights.has(key)`）⇒ **写盘受理 ∥ 施加顺延**（回合尾 `settleTurn` 落盘后重施；在飞不重施 ⇒ 回合一致性保持；落盘面 = **偏好键单写者**——回合关联落盘不携 `activeProvider`/`activeModel`/`effort`，播种除外） | 施加面唯一 = 核 `applySession`（判据单源 = `docs/core/design/SESSION.md` §6.21 判据句 4——三端共用）；端侧内存态不手改（第二施加面 = 漂移）；回合在飞时改 provider / 模型 ⇒ 同会话前后分属两模型（回合一致性失守）；写盘后不重施 ⇒ 活动会话读数与内存态分叉 |
 | KD-21 | **附件 = 渲染面零 fs**：`paste` 取剪贴板图像 → `FileReader` 转 `dataURL` ⇒ 随 `msg:send` 载荷 `images`（**dataURL 串数组**——严格串形）→ 主进程落盘 + 核 `appendImagePointer` 深 import（**核零改**）；**非视觉模型前置门**（核 spec `multimodal` 判据 · 对齐 VSC 面）⇒ 先落盘 + 降级跑者（成功 = 描述注文 ∕ 失败 = 说明行，回执携 `degraded`）；单图上限 **15MB** | 沙箱渲染面零 Node ⇒ 无 fs（KD-3）；落盘与指针段住核（先例 = CLI / VSC 同径）⇒ 端侧零第二份实现；上限与弃项判据单源 = `docs/desktop/design/IPC.md` §2「附件注」（本档不重述） |
 | KD-31 | **排队可见面 = 输入区上方待发送带（非流内）+ 队列按会话分键**（「对齐第二批」项 2）：忙态提交 ⇒ 待发送件住**输入区上方待发送带**（**非流内块**——派生：`pending` 镜面非空判据；消费时刻恰一枚真块入流）；队列 = **宿主单源**（`pending` 切片 = `ev:queue` 快照镜面；单源 = 本档 **KD-40**）；右列「队列」族**零写者 · 席位保留** | 用户「queued跑到右边Activity区去了」+「排队中的时候要先是在输入区的上面，不是在右边」；待发送件随会话归属（带面随活动会话）⇒ 队列须带键（兼修「切会话错发」缺陷面）；核 `queued-mark` 直消费（`markPending` / `paintLabel` 两导出） = 标记形与标签两形态单源；`planBusyQueued` / `clearPending` 不消费（登记） |
-| KD-40 | **忙态入队 = 宿主单源 + 步边界取批注入 + 回合尾续发（渲染面镜面）**：① 队列 = 宿主按会话键内存表（`thincoder-desktop/src/main/queued-input.mjs`——容量 8 按键判 ∕ 计划取批（合并 ≤8 条 ∧ ≤2000 字符 + 合并形态 = CLI ∕ VSC 同值）∥ 条目 `{ text, ts, images? }`）；② 受理 = `send` 忙态入队（回执 `{ ok: true, queued: true }`；满 ⇒ `queue-full`）+ `turn-face.mjs` 传 `consumeQueuedInput`（**缝只接不改**——核 `thincoder-core/agent/turn-loop.mjs:90-93`；用户回合传 ∕ 消化轮不传；**timer 轮（`timerTurn` 真）同按 `autoTurn` 分流**——`autoTurn` 真 ⇒ 与消化轮同、缝不传，队列留待该轮回合尾续发）= `pushReal` 普通 user 消息（不中断 · 下一步生效）；③ 消费两时刻 = 步边界（同上报）∥ 回合尾（结算后队非空 ⇒ 宿主续发；队空 ⇒ 既有 `takeOver` 接管——**队列先于接管**；**续发起跑前查在飞表**——已有在飞 ⇒ 零续发，队列留待该回合结算点——单驱动器不变量）；④ 渲染面 `pending` 切片 = 宿主快照镜像（写者 = `ev:queue` 归约；`history:page` 回执 `queue` 键 = 冷启重建）+ **回合尾 flush 携行退役（`onTurnTail` 窄口存续——标题刷新消费面不动）**（防双写者重复投递）；⑤ 附件 = **留队**（条目携图；**步边界整批让位；送达径携图退化逐条**（逐条保图文同投）；送达面 `prepareTurnAttachments` 判决，`degraded` 随消费回执浮出）；**⑥ 挂起窗输入队共镜**：窗内受理 ∕ 窗内消费 ∕ 残输入续发 ∕ 窗中止清队 ⇒ 同 `ev:queue` 帧（快照整置；消费回执 `delivered`）——**步边界消费并入窗面（窗优先：`suspension.stepBoundaryPickup ∥ chain.stepBoundaryPickup`——**消费点六帧**（受理 ∕ 步边界消费 ∕ 窗内消费 ∕ 残续发 ∕ 窗中止清队 ∥ **残值弃件链尾**——弃件径两站点））∥ 窗消费按核计划取批（合并批 ∕ 携图退化逐条——载体数组单一 `inputQueue: entry.pending`：受理 ∕ 消费 ∕ 残值 ∕ 清队零第二写者）**——**两源（忙态队 ∪ 窗输入队）按键互斥**（窗开 ⇒ 忙态队已尽；窗内提交走窗径）⇒ 单镜无歧义；并源单点 = `turn-driver.mjs` `queueView`（链 `postQueue` 全帧 ∥ `history:page` `queue` 键）；**步边界消费帧出站 = 窗队件 `emitDelivery` 单点**（守卫恒在：缺省 ⇒ 零出站 ∥ `ts` 非有限 ⇒ 键缺席——直呼 `postQueue` 径退役）；**内存载体不合并**（两态两缝）；会话中止（`dispose` ∕ 切项目）⇒ **在飞回合中止 + 在飞表清**（`flights`）+ 队清 + 零续发；**边界（slash 尾径）**：步边界 ∥ 回合尾同判即消费（**计划首动作即消费**——slash ⇒ 单条直发 · 保序 · 不合并 · 零静默丢；**斜杠提交面拦截、不进队**（单源 = 本档 §2「斜径命令面批注」；队列侧 = **防御语义保留**） | 用户走查「会话中插入用户指令的功能在桌面端也丢了」+ 设计三要素（不中断 ∕ 下一步生效 ∕ 内容不拆）；① 步边界回调只在宿主进程内可触（`runAgent` 宿主直跑）——队列若仍住渲染面则机制不可达（现状 = 只到回合尾）；② 两端同源：CLI `thincoder-cli/src/tui/queued-pickup.mjs:22-34` ∕ VSC `thincoder-vscode/src/agent.mjs:210` + `thincoder-vscode/src/extension/panel-turn-loop.mjs:106`（`autoTurn ? null : …`）；③ 队列快照 = VSC `pushBusyQueued` 同法（宿主权威 + 端侧镜像）；④ 留队 = 端差默认消灭（VSC 条目携图）且闭「文本引用附件被分离投递」错配 |
+| KD-40 | **忙态入队 = 宿主单源 + 步边界取批注入 + 回合尾续发（渲染面镜面）**：① 队列 = 宿主按会话键内存表（`thincoder-desktop/src/main/queued-input.mjs`——容量 8 按键判 ∕ 计划取批（合并 ≤8 条 ∧ ≤2000 字符 + 合并形态 = CLI ∕ VSC 同值）∥ 条目 `{ text, ts, images? }`）；② 受理 = `send` 忙态入队（回执 `{ ok: true, queued: true }`；满 ⇒ `queue-full`）+ `turn-face.mjs` 传 `consumeQueuedInput`（**缝只接不改**——核 `thincoder-core/agent/turn-loop.mjs`；用户回合传 ∕ 消化轮不传；**timer 轮（`timerTurn` 真）同按 `autoTurn` 分流**——`autoTurn` 真 ⇒ 与消化轮同、缝不传，队列留待该轮回合尾续发）= `pushReal` 普通 user 消息（不中断 · 下一步生效）；③ 消费两时刻 = 步边界（同上报）∥ 回合尾（结算后队非空 ⇒ 宿主续发；队空 ⇒ 既有 `takeOver` 接管——**队列先于接管**；**续发起跑前查在飞表**——已有在飞 ⇒ 零续发，队列留待该回合结算点——单驱动器不变量）；④ 渲染面 `pending` 切片 = 宿主快照镜像（写者 = `ev:queue` 归约；`history:page` 回执 `queue` 键 = 冷启重建）+ **回合尾 flush 携行退役（`onTurnTail` 窄口存续——标题刷新消费面不动）**（防双写者重复投递）；⑤ 附件 = **留队**（条目携图；**步边界整批让位；送达径携图退化逐条**（逐条保图文同投）；送达面 `prepareTurnAttachments` 判决，`degraded` 随消费回执浮出）；**⑥ 挂起窗输入队共镜**：窗内受理 ∕ 窗内消费 ∕ 残输入续发 ∕ 窗中止清队 ⇒ 同 `ev:queue` 帧（快照整置；消费回执 `delivered`）——**步边界消费并入窗面（窗优先：`suspension.stepBoundaryPickup ∥ chain.stepBoundaryPickup`——**消费点六帧**（受理 ∕ 步边界消费 ∕ 窗内消费 ∕ 残续发 ∕ 窗中止清队 ∥ **残值弃件链尾**——弃件径两站点））∥ 窗消费按核计划取批（合并批 ∕ 携图退化逐条——载体数组单一 `inputQueue: entry.pending`：受理 ∕ 消费 ∕ 残值 ∕ 清队零第二写者）**——**两源（忙态队 ∪ 窗输入队）按键互斥**（窗开 ⇒ 忙态队已尽；窗内提交走窗径）⇒ 单镜无歧义；并源单点 = `turn-driver.mjs` `queueView`（链 `postQueue` 全帧 ∥ `history:page` `queue` 键）；**步边界消费帧出站 = 窗队件 `emitDelivery` 单点**（守卫恒在：缺省 ⇒ 零出站 ∥ `ts` 非有限 ⇒ 键缺席——直呼 `postQueue` 径退役）；**内存载体不合并**（两态两缝）；会话中止（`dispose` ∕ 切项目）⇒ **在飞回合中止 + 在飞表清**（`flights`）+ 队清 + 零续发；**边界（slash 尾径）**：步边界 ∥ 回合尾同判即消费（**计划首动作即消费**——slash ⇒ 单条直发 · 保序 · 不合并 · 零静默丢；**斜杠提交面拦截、不进队**（单源 = 本档 §2「斜径命令面批注」；队列侧 = **防御语义保留**） | 用户走查「会话中插入用户指令的功能在桌面端也丢了」+ 设计三要素（不中断 ∕ 下一步生效 ∕ 内容不拆）；① 步边界回调只在宿主进程内可触（`runAgent` 宿主直跑）——队列若仍住渲染面则机制不可达（现状 = 只到回合尾）；② 两端同源：CLI `thincoder-cli/src/tui/queued-pickup.mjs` ∕ VSC `thincoder-vscode/src/agent.mjs` + `thincoder-vscode/src/extension/panel-turn-loop.mjs`（`autoTurn ? null : …`）；③ 队列快照 = VSC `pushBusyQueued` 同法（宿主权威 + 端侧镜像）；④ 留队 = 端差默认消灭（VSC 条目携图）且闭「文本引用附件被分离投递」错配 |
 | KD-51 | **@ 文件引用 = 核单源（`thincoder-core/file-refs.mjs`——`injectAtRefs` ∕ `stripAtRefs` 同档）+ 两端薄壳（探针注入）**：① 注入位 = 用户回合起跑前单点（`thincoder-desktop/src/main/turn-face.mjs` `executeTurn`——`autoTurn` 不扫；resume 复用同一 body ⇒ 恰一次）；② 剥离位 = 恢复面（`thincoder-desktop/src/main/session-slots.mjs` `pageHistory`）∥ 标题源（核 `thincoder-core/generate-title.mjs` 读源——`stripAtRefs` 同件）；③ 文本形逐字冻结（regex ∕ 4000 截断 ∕ `[File: …]` 围栏 ∕ 摘要块——上提零语义改） | 语义同源 = `thincoder-core/file-refs.mjs`——上提后核单源；两端薄壳 = 探针注入——**只述实现形态**（形式沿 KD-39 先例）；成对契约不可劈（`stripAtRefs` fail-closed 判据逐字依赖注入输出格式——语法与其逆变换同住一处）；先例 = `file-links`；**有意分歧给据（免登记）**：解析基 VSC = `_cwd() ∥ process.cwd()` ∥ 桌面 = `projects.currentCwd()`（无根 ⇒ 原样返回）——零用户可见差（两基同义 = 会话项目根 ∥ 工作区根）+ 无根态两分支皆不可达 ⇒ 登记豁免 |
 | KD-52 | **携文容量档 = 忙态队同档；队满拒收可见形 = 入口预检回执 + toast + 文本不吞**：① 容量档 = `QUEUED_MAX_ITEMS`（核件单源——携文入队与忙态队同表同判，不另立档）；② 拒收判点 = `interrupt` 入口（cap 询问待答 ∧ `message` 非空）**先执入队判**（`queued.add` 权威面）——满 ⇒ 整调用回 `{ ok:false, reason:"queue-full" }`，**零中止**（询问在场 ∕ 回合照旧 ∕ 零丢失）；③ 端侧可见形 = 核件 toast `input.slotFull`（词键复用——i18n 零增；先例 = 忙态径 `thincoder-render-core/composer/panel.mjs` `send()` 满队门）+ 文本回注输入框（先例 = VSC 无工作区拒发面「保留文本 + 瞬时 toast」——`docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-5 ∕ §7 U-I7）；④ 入队单点 = interrupt 入口（cap 态判定）；`onCapCancelled` 退为核结算通知（零二次入队） | 「用户输入零丢失」口径：静默丢 = 缺陷面（原形 = 零入队 ∕ 零帧——用户不可知）；对位 = 忙态径满队面（核 `thincoder-render-core/composer/panel.mjs` `send()` 满队门 toast `input.slotFull` ∥ CLI `thincoder-cli/src/tui/key-handler-busy.mjs`）；真机可达 = 撞帽询问待答期 ∥ 队满（8 条） |
 | KD-78 | **模型菜单三修 + 写失败可见**：① **行 = 分组/展开控件**（零选中语义——`role="button"` + `aria-expanded` 随本行组体开合；行点击 = 展开⇄收起；**组体开合与菜单层开合解耦**——行点击不关菜单；行径**恒零 `post` 零槽写**——核件单源 = `docs/render-core/design/RENDER-CORE.md` §2 **KD-RC-14**）；② **拾取单点 = `click`**（`mousedown` 仅 `preventDefault` + `stopPropagation`）+ **`onPick` 携 `row` 直传**（菜单在场期候选换行集零丢点；缺 ⇒ 回查，查无 ⇒ 记错一行）；③ **写失败可见 + 零乐观写**：`session:prefs` 失败 ⇒ 失败行 `data-notice="prefs-failed"`（新键 `composer.prefs.failed` 携 `${reason}`——**与发送失败词分家**）+ 钮 ∥ 本地选中态**由槽现值重派生**（回滚钩；槽复合缺 ⇒ `rollback` 位 ⇒ 钮回「未选」空态）+ 槽零写；**成功径清点**（`receipt.ok ∧ meta` 有效 ⇒ 本通道失败行清点 + 重绘——source 门 `session:prefs` 仅清本通道；行 = 当前态陈述——滞留即失实）；**`defaultModel` 写回失败** ⇒ 主侧回执叠 `carryover:{ ok:false, reason }`（槽写照旧 `ok:true`——**不反扑**保留）⇒ 渲染面同一条失败行 | 用户口径（行 = 分组/展开、无选中语义）+ 缺陷「整行点击静默无操作」+ 用户可见「切模型零写入」；失败面全链治（槽写 ∥ 写回两径同一条行——复用既有 `recordFailure` 单点）；核件单源 ⇒ 两端同收 |
@@ -24,16 +24,16 @@
 **批注（回合中插入 · 步边界 pickup）**：本注定形桌面端「回合进行中插入用户指令」（用户走查「会话中插入用户指令的功能在桌面端也丢了」）——B1 宿主接缝 ∕ B2 渲染面时序 ∕ B3 附件边界三面；决策单源 = `docs/desktop/design/PROJECT.md` §2 **KD-40**。
 
 1. **队列单源 = 宿主（主进程）**——忙态提交 ⇒ `msg:send` **一律交宿主任判**（受理判据 = 宿主在飞表；渲染面**不再本地判忙入队**）：受理 ⇒ 回执 `{ ok: true, queued: true }` ⇒ **消费前流内零块**（待发送件住输入区上方带——项 4 形态；消费时刻入流恰一枚）；满队（第 9 条，按键判）⇒ 回执 `{ ok: false, reason: "queue-full" }` + 失败行（词键 `composer.send.failed`）+ **本地块退流** + 稿留输入历史（`↑` 召回）。
-   镜面：`pending: { [会话键]: string[] }` 切片 = **宿主快照镜像**（条目 = 文本串）（写者 = `ev:queue` 归约；权威 = 宿主队列）；冷启 ∕ 重载重建 = `history:page` 回执 `queue` 键（首屏读）。
-   落点：`thincoder-desktop/src/main/queued-input.mjs`（队列 + 计划取批：合并常量 8 ∕ 2000 与合并形态同 CLI ∕ VSC 值）· `thincoder-desktop/src/main/agent-host.mjs`（受理路由 + 续发链）· `thincoder-desktop/src/main/turn-face.mjs`（`consumeQueuedInput` 传参）；
-   `thincoder-desktop/renderer/queue.mjs`（快照应用）· `thincoder-desktop/renderer/events.mjs` + `thincoder-desktop/renderer/events-subscribe.mjs`（`ev:queue` 订阅与归约）。
-   判据：**机检** = 宿主用例（在飞提交 ⇒ 入队 + 回执形；第 9 条 ⇒ `queue-full` 零入队）+ 归约用例（快照整置 ∕ 消费回执）+ 计划面值对拍锁（与 CLI 副本同值）；
-   **真机** = 忙态提交 ⇒ 气泡在场 ∧ 段 14 读数 = 1（**零 `busy` 拒面**）。
+   - 镜面：`pending: { [会话键]: string[] }` 切片 = **宿主快照镜像**（条目 = 文本串）（写者 = `ev:queue` 归约；权威 = 宿主队列）；冷启 ∕ 重载重建 = `history:page` 回执 `queue` 键（首屏读）。
+   - 落点：`thincoder-desktop/src/main/queued-input.mjs`（队列 + 计划取批：合并常量 8 ∕ 2000 与合并形态同 CLI ∕ VSC 值）· `thincoder-desktop/src/main/agent-host.mjs`（受理路由 + 续发链）· `thincoder-desktop/src/main/turn-face.mjs`（`consumeQueuedInput` 传参）。
+   - 渲染面件：`thincoder-desktop/renderer/queue.mjs`（快照应用）· `thincoder-desktop/renderer/events.mjs` + `thincoder-desktop/renderer/events-subscribe.mjs`（`ev:queue` 订阅与归约）。
+   - 判据：**机检** = 宿主用例（在飞提交 ⇒ 入队 + 回执形；第 9 条 ⇒ `queue-full` 零入队）+ 归约用例（快照整置 ∕ 消费回执）+ 计划面值对拍锁（与 CLI 副本同值）。
+   - **真机** = 忙态提交 ⇒ 气泡在场 ∧ 段 14 读数 = 1（**零 `busy` 拒面**）。
 2. **消费两时刻（步边界注入 ∥ 回合尾送达）**——步边界 = 核循环头缝（`consumeQueuedInput`——**缝只接不改**）：用户回合传回调（系统轮 ∕ 消化轮不传；**timer 轮（`timerTurn` 真）同按 `autoTurn` 分流**——`autoTurn` 真 ⇒ 与消化轮同、缝不传，队列留待该轮回合尾续发）、取批按计划（**统一语义 = 计划首动作即消费**——`slash` ⇒ 单条即消费〔见项 5〕）、注入 = `pushReal` 普通 user 消息（**不中断**：在飞工具 ∕ signal 零触碰 · 下一步生效）；
-   回合尾 = 结算（三径同判据）后队非空 ⇒ 宿主**续发**（起跑前查在飞表——已有在飞 ⇒ 零续发；取批 ⇒ 普通回合送达，递归至队空）⇒ 队空才进既有挂起窗接管（**队列先于接管**）；会话中止（`dispose` ∕ 切项目）⇒ 队清 + 零续发。
-   呈现（两时刻同形）：`ev:queue` 消费回执 ⇒ 待发送带该项退场 ∧ 同帧用户块入流（**消费恰一枚**——本径零本地块）；段 14 读数随镜面。
-   **渲染面回合尾 flush 携行退场（`onTurnTail` 窄口存续——标题刷新消费面不动）**（双写者会造同条重复投递）。
-   判据：**机检** = 宿主用例（步边界注入 ⇒ 历史尾 = `user` ∧ 批 ≥2 合并一次消费；结算后续发 ∕ 队空接管 ∕ 中止零续发）+ 归约用例（回执 ⇒ 气泡摘 + 尾块 = `user`）；**真机** = 忙态发两条 ⇒ 首条于下一步边界后可见（用户块 + 气泡交接）∧ 末条随回合尾送达。
+   - 回合尾 = 结算（三径同判据）后队非空 ⇒ 宿主**续发**（起跑前查在飞表——已有在飞 ⇒ 零续发；取批 ⇒ 普通回合送达，递归至队空）⇒ 队空才进既有挂起窗接管（**队列先于接管**）；会话中止（`dispose` ∕ 切项目）⇒ 队清 + 零续发。
+   - 呈现（两时刻同形）：`ev:queue` 消费回执 ⇒ 待发送带该项退场 ∧ 同帧用户块入流（**消费恰一枚**——本径零本地块）；段 14 读数随镜面。
+   - **渲染面回合尾 flush 携行退场（`onTurnTail` 窄口存续——标题刷新消费面不动）**（双写者会造同条重复投递）。
+   - 判据：**机检** = 宿主用例（步边界注入 ⇒ 历史尾 = `user` ∧ 批 ≥2 合并一次消费；结算后续发 ∕ 队空接管 ∕ 中止零续发）+ 归约用例（回执 ⇒ 气泡摘 + 尾块 = `user`）；**真机** = 忙态发两条 ⇒ 首条于下一步边界后可见（用户块 + 气泡交接）∧ 末条随回合尾送达。
 3. **附件边界 = 留队（条目携图 · 步边界让位 · 送达面判决）**——条目可携 `images`（**dataURL 串数组**原样）；**批内含图 ⇒ 步边界不消费**（同步缝不可落盘 ∕ 降级）⇒ 留队待回合尾送达面：`prepareTurnAttachments`（既有面——落盘 ∕ 非视觉降级 ∕ 弃项）判决，降级码随消费回执 `delivered.degraded` 浮出（零静默）；气泡显示文本（图随条目走——两端同形；`dataURL` 不回传渲染面）。
    理由 = 端差默认消灭（VSC 条目携图 = 同语义面）；拆行 ⟹「文本引用附件被分离投递」内容错配；拒 ⟹ 阻塞用户意图 + 与 VSC 分叉。**边界（不做）**：入队即落盘（VSC `savePastedImages` 形）——桌面落盘面现只在送达点；入队即落盘 = 新落盘面 + 队清 ∕ 中止清理面（**登记消解径**）。
    判据：**机检** = 宿主用例（携图条目 ⇒ 步边界不消费 ∧ 结算续发送达 ⇒ 附件面被调 + `degraded` 随回执）；**真机** = 忙态携图提交 ⇒ 气泡在场（文本）⇒ 回合尾送达后模型侧得图指引。
@@ -47,9 +47,9 @@
 22. **附件·非栅格拒绝时机**——对齐形：**粘贴即拒**——栅格四型（png / jpeg / gif / webp）之外（含 `image/svg+xml` / `image/heic` / `image/bmp`）⇒ 不入条 + 提示行（词键 `paste.unsupportedFormat` 值逐字同 VSC——含 `${type}`）；
    提示行 = `composer-notice` 单形（`data-notice="attach-unsupported"`），下次成功采集 / 发送替换清。落点 = `thincoder-desktop/renderer/attach.mjs` + `mount-composer.mjs`。边界：主侧判据（`parseDataUrl`）零动（双闸——渲染面拒先达）。
 26. **错误·发送失败可见性**——对齐形：直发失败（`ok` 假 / 抛）⇒ 输入区提示行（`data-notice="send-failed"`；词键 `composer.send.failed` 带 `${reason}`）+ 文本保留；下次成功发送清。落点 = `mount-composer.mjs` + `i18n.mjs`。判据 = 机检（失败 ⇒ 提示行 ∧ 文本留）+ 真机（`provider-invalid` 可见）。
-28. **输入区·中断键两态**——两态 = **显 ∕ 隐**——在飞（本会话位标含 `running`）⇒ 显；否则 ⇒ 隐（核件 `thincoder-render-core/composer/panel.mjs:404`——`running` ⇒ `display:flex` ∕ 否则 `none`；输入面板 = 核件工厂，两端同件同形）。
-   **挂起窗在飞档**：消化 ∕ 唤醒轮在飞 ⇒ 该轮即普通回合面（`ev:activity` `turn` 帧 ⇒ 位标含 `running`）⇒ 显（中断 = 回合级——单源 = `docs/desktop/design/IPC.md` §2 `msg:interrupt` 窗内支）；
-   窗空闲等待期（无在飞回合）⇒ 隐（通道级防线 = `{ok:false, reason:"idle"}`——键面零死控）——**判据单源 = 位标切片含 `running`**（`thincoder-desktop/renderer/views/chrome.mjs` `busyOf`——与输入区忙态同式；`suspActiveOf` = 出泡抑制面判据，非本键判据）。落点 = `thincoder-desktop/renderer/mount-composer.mjs`（输入面板 = 核件工厂 `createComposerPanel`——两态住核件）。
+28. **输入区·中断键两态**——两态 = **显 ∕ 隐**——在飞（本会话位标含 `running`）⇒ 显；否则 ⇒ 隐（核件 `thincoder-render-core/composer/panel.mjs`——`running` ⇒ `display:flex` ∕ 否则 `none`；输入面板 = 核件工厂，两端同件同形）。
+   - **挂起窗在飞档**：消化 ∕ 唤醒轮在飞 ⇒ 该轮即普通回合面（`ev:activity` `turn` 帧 ⇒ 位标含 `running`）⇒ 显（中断 = 回合级——单源 = `docs/desktop/design/IPC.md` §2 `msg:interrupt` 窗内支）。
+   - 窗空闲等待期（无在飞回合）⇒ 隐（通道级防线 = `{ok:false, reason:"idle"}`——键面零死控）——**判据单源 = 位标切片含 `running`**（`thincoder-desktop/renderer/views/chrome.mjs` `busyOf`——与输入区忙态同式；`suspActiveOf` = 出泡抑制面判据，非本键判据）。落点 = `thincoder-desktop/renderer/mount-composer.mjs`（输入面板 = 核件工厂 `createComposerPanel`——两态住核件）。
 
 **批注（挂起窗径「消费前流内零块」）**：本注定形挂起窗（子代理在跑 ∕ 主回合已收）内插入的处置——「消费前流内零块」纪律**全输入径**落定；
    用户走查（「为什么现在还是我一回车直接就进流了」）；决策 = `docs/desktop/design/PROJECT.md` §2 **KD-40 ⑥**（+ KD-23 ∕ KD-34）。
@@ -60,7 +60,7 @@
 4. **判据（真机 · 父侧闭合）**：窗内插话 ⇒ 流内零用户块 ∧ 待发送带在场 ∧ 窗落定消费 ⇒ 恰一枚入流；`queue-full` 径 ⇒ 零流内块 + 失败可见；**VSC 零回归** = 核件 `thincoder-render-core/**` 与 `thincoder-vscode/**` 零改（结构性判据）。
 5. **边界**：窗内队容量不增 ∕ 载体不合并（两态两缝）∥ 满队 toast ∕ 词键零改 ∕ 通道零新 ∕ 测试覆盖（全清令）——**集成测试不写 ∕ 不改 ∕ 不跑；批档本地用例随批留存**（不入集成测试树）；段 14 = **形态零改 · 源并两源**（`docs/desktop/design/UI.md` §1「批注（桌面重建保真 + 留端清算族）」）。
 
-**批注（窗队列 VSC 逐点对齐）**：本注 = 挂起窗输入队列的宿主面**逐点对齐 VSC 实盘**（规格本体 = `thincoder-vscode/src/extension/panel-messages.mjs:96-121` `pushBusyQueued`：两载体合计快照 ∕ 受理 + 五消费点 + 握手重推推送点）；
+**批注（窗队列 VSC 逐点对齐）**：本注 = 挂起窗输入队列的宿主面**逐点对齐 VSC 实盘**（规格本体 = `thincoder-vscode/src/extension/panel-messages.mjs` 的 `pushBusyQueued`：两载体合计快照 ∕ 受理 + 五消费点 + 握手重推推送点）；
 
 1. **窗内携图对齐（载具层携图）**——窗条目形 `{ text, ts, images? }`（与忙态队条目同形）；窗内提交携附件 ⇒ **同受理**（回执 `{ ok: true, queued: true }`）；送达面（窗内消费 ∕ 残输入续发）逐条过 `prepareTurnAttachments` 判决 ⇒ 降级码随 `delivered.degraded` 浮出（与忙态径同判据）；`busy` 档收窄为窗径竞态防御（窗已摘——实际不可达）。图不入快照（既有）。
 2. **标记 ∕ 清标 ∕ 合泡语义（对齐 VSC）**——逐条标记 = 带面逐条（`[data-pending-item][data-raw]`）；清标 = 快照整置（消费 ∕ 中止清队即清）；合泡 = 消费回执 `delivered.text` 单写者入流恰一枚（= VSC `merged` 同义位）；窗径单条消费（批合并差登记驱动收口）。
@@ -75,7 +75,7 @@
    取值 = `projects.currentCwd()`（无根 ∥ 非串 ⇒ 原样返回——防御分支）；注入器 = 端薄壳 `thincoder-desktop/src/main/file-refs.mjs`（核单源 = `thincoder-core/file-refs.mjs`——探针注入）。
    活面气泡 ∕ 待发送带 ∕ 队镜面恒原文（注入只在 `run` 入参——三显示面零污染）。
 2. **剥离（显示面）**——恢复面 = `thincoder-desktop/src/main/session-slots.mjs` `pageHistory`（user 消息文本过核件 `stripAtRefs`；首屏 ∕ 回填同门；assistant ∕ tool 零动）∥ 标题源 = 核 `thincoder-core/generate-title.mjs` 读源处剥离（标题不得由 `[File: …]` 正文生成）。
-   盘面 ∕ 机读线零触碰（注入形 = 落盘形——只剥离显示面）；落点同位 = `thincoder-vscode/src/extension/panel-session.mjs:185`。
+   盘面 ∕ 机读线零触碰（注入形 = 落盘形——只剥离显示面）；落点同位 = `thincoder-vscode/src/extension/panel-session.mjs`。
 3. **欢迎条词值**——`welcome.shortcuts` 两语补 `@` 段：zh = 「输入 @ 引用文件 · Enter 发送 · Shift+Enter 换行」∥ en = 「Type @ for file references · Enter to send · Shift+Enter for newline」（plain-text 形；词条落点 = `thincoder-desktop/renderer/i18n-views.mjs`）。
 4. **判据**——机检 = 单元测试档 **9/9 绿**；真机 = 五用例（注入哨兵复述 · 切回剥离形 · 负向零围栏 · VSC 回归复读 · 欢迎条首屏）= 父侧探针。
 5. **计数（D3）**——词键 **0** 增退（`welcome.shortcuts` 值面）· 通道 **0** · 白名单 **0** · 段集零改；新档 **1**（`thincoder-desktop/src/main/file-refs.mjs` **19**）+ 核件 **1**（`thincoder-core/file-refs.mjs` **103**——上提单源，两端共享）。
@@ -87,17 +87,24 @@
 3. **执行与消费面**：命中 ⇒ **本地面执行、不进消息径**（**零消息径上行** = 零 `msg:send` ∥ `queuedUserMessage` 上行、零用户块、零 loading、零 `onTurnStart` ∥ `onUserEcho`；**模式三钮动作照走 `session:flags`——同钮径不变**）；
    **已受理**（已执行 ∨ 二段交互在场——`/auto` 确认 popover 径同判）⇒ 清框 + 入输入历史（`↑` 可召回）；**未受理**（门拒 ∥ 携参不支持）⇒ 文本保留。**未知命令** ⇒ **不发送**（CLI 同判）+ toast `slash.unknown: <名>` + 文本保留。
 4. **忙态 ∥ 挂起期（同钮门）**：`/model` **恒受理**（模型钮忙态门已放开——随处可切；`slash.busy` 键退役）；`/auto` ∥ `/plan` ∥ `/eng` 三钮无忙态门 ⇒ 命令可执行（同钮径）；`/plan` 在 ENG 态拒 ⇒ 复用词键 `toolbar.planDisabled`。**机制差异在册**：CLI 忙态对斜杠全吞——桌面取「命令面与钮面同门」（一致性优先；差异登记在册）。
-5. **词键（两键 + 增量六键 × 2 语——落 `thincoder-desktop/renderer/i18n-views.mjs` 第二档，经注册面进核字典）**：`slash.unknown`（en `Unknown command: ${name} (/help for available commands)`（CLI `thincoder-cli/src/tui/slash-commands.mjs:130` 前段逐字）；zh `未知命令：${name}（/help 查看可用命令）`）·
-  `slash.args`（en `This command does not take arguments here`；zh `此命令在此不接受参数`）；
-   **增量六键（`/help` 面——消费面 = 端装配面 `printHelp` 口经核 `formatHelp` 取词）**：`slash.help.label`（en `❯ Help`——CLI 逐字；zh `❯ 帮助`）∥ `slash.desc.model`（en `select model & manage providers`；zh `选择模型并管理渠道`）∥ `slash.desc.auto`（en `toggle auto-approve`；zh `切换自动批准`）∥
-   `slash.desc.plan`（en `toggle plan mode (design first, then implement)`；zh `切换计划模式（先设计，再实现）`）∥ `slash.desc.eng`（en `toggle engineering mode — strict methodology enforcement`；zh `切换工程模式——严格方法论约束`）∥ `slash.desc.help`（en `this list`；zh `本清单`）——**en 值皆 CLI desc 逐字**（读 CLI 源档机检）。
-6. **判据**：机检 = 单元测试档（解析 ∥ 别名 ∥ 回落 ∥ 表纪律 ∥ `/help` 行集 ∥ 行族画件——斜径命令面族）；
-   真机 = 走查 ≥ 七用例（`/model` ⇒ 菜单在场 ∧ 输入框清空 ∥ `/nope` ⇒ toast **携 `/help` 指引** ∧ 文本留 ∥ 忙态 `/model` ⇒ 菜单开出 ∧ 零 toast ∧ 文本清空 ∥ `/plan` ⇒ 钮态翻转 ∥ `/auto` ⇒ 确认 popover 在场 ∧ 输入框清空（受理径）∥ 忙态 `/plan` ⇒ 钮态翻转 ∥
-   **`/help` ⇒ `[data-help]` 行族在场（标签 ∥ 组 ∥ 命令行三段）∧ 回底 ∧ `data-blocks` 不变**）——**全表（含携参拒 ∥ 无会话守卫 ∥ ENG 态 `/plan` 拒 ∥ `/help` 面）在册**。
+5. **词键（两键 + 增量六键 × 2 语——落 `thincoder-desktop/renderer/i18n-views.mjs` 第二档，经注册面进核字典）**：
+   - `slash.unknown`（en `Unknown command: ${name} (/help for available commands)`（CLI `thincoder-cli/src/tui/slash-commands.mjs` 的前段逐字）；zh `未知命令：${name}（/help 查看可用命令）`）
+   - `slash.args`（en `This command does not take arguments here`；zh `此命令在此不接受参数`）
+   - **增量六键（`/help` 面——消费面 = 端装配面 `printHelp` 口经核 `formatHelp` 取词）**：
+     - `slash.help.label`（en `❯ Help`——CLI 逐字；zh `❯ 帮助`）
+     - `slash.desc.model`（en `select model & manage providers`；zh `选择模型并管理渠道`）
+     - `slash.desc.auto`（en `toggle auto-approve`；zh `切换自动批准`）
+     - `slash.desc.plan`（en `toggle plan mode (design first, then implement)`；zh `切换计划模式（先设计，再实现）`）
+     - `slash.desc.eng`（en `toggle engineering mode — strict methodology enforcement`；zh `切换工程模式——严格方法论约束`）
+     - `slash.desc.help`（en `this list`；zh `本清单`）
+   - **en 值皆 CLI desc 逐字**（读 CLI 源档机检）。
+6. **判据**：机检 = 单元测试档（解析 ∥ 别名 ∥ 回落 ∥ 表纪律 ∥ `/help` 行集 ∥ 行族画件——斜径命令面族）。
+   - **真机** = 走查 ≥ 七用例（`/model` ⇒ 菜单在场 ∧ 输入框清空 ∥ `/nope` ⇒ toast **携 `/help` 指引** ∧ 文本留 ∥ 忙态 `/model` ⇒ 菜单开出 ∧ 零 toast ∧ 文本清空 ∥ `/plan` ⇒ 钮态翻转 ∥ `/auto` ⇒ 确认 popover 在场 ∧ 输入框清空（受理径）∥ 忙态 `/plan` ⇒ 钮态翻转 ∥ **`/help` ⇒ `[data-help]` 行族在场（标签 ∥ 组 ∥ 命令行三段）∧ 回底 ∧ `data-blocks` 不变**）。
+   - **全表（含携参拒 ∥ 无会话守卫 ∥ ENG 态 `/plan` 拒 ∥ `/help` 面）在册**。
 7. **边界（不做）**：键位补全（Tab——Web 焦点键，接管需用户裁定）· 其余 22 条命令（另批 ∥ 不做——逐条处置在册）· 携参直切（`/model p:m`——另批候选）· **VSC 命令面零接缝**（不传 `deps.slash` ⇒ 行为零变）。
 8. **`/help` 面（用户直斥「你他妈的help都没有」+「去看 cli 的斜杠命令代码，别自己生造」；依据 = CLI `cmd-help.mjs` 实盘形）**：**流内打印形**——标签 `❯ Help` ∥ 组序（Agent → System，CLI 同序）∥ 命令行 `名字 (别名)  描述` 逐行；**标签强调 = 色位通道**（accent · `font-weight: 400`——组行 dim ∥ 命令行基线；D29 零粗体）；**禁浮层 ∥ 禁 toast 主体 ∥ 禁交互式列表**（CLI 实盘零交互）。
-   内容单源 = **表本体**（核 `formatHelp` 表→行集 ∥ 端 `printHelp` 口承载）；行族 `[data-help]` = 流内非块节点（尾组槽位：卡序列前——`data-blocks` 不变式零破 ∥ 重挂径槽位固定零位次记忆）；生命周期 = 运行期痕 · **两门**（首屏页读整置即失 ∥ 回合起跑门 = `msg:send` 出站即清——单源 = `docs/desktop/design/RENDERER.md` §1.6 **KD-74**）；
-   受理径 = 清框 + 入历史 + **回底**；无忙态门（打印零状态写）；未知反馈携 `/help` 指引；别名 `/h` 在册。逐面在册（CLI 实盘对位表 ∥ E10–E13）。
+   - 内容单源 = **表本体**（核 `formatHelp` 表→行集 ∥ 端 `printHelp` 口承载）；行族 `[data-help]` = 流内非块节点（尾组槽位：卡序列前——`data-blocks` 不变式零破 ∥ 重挂径槽位固定零位次记忆）；生命周期 = 运行期痕 · **两门**（首屏页读整置即失 ∥ 回合起跑门 = `msg:send` 出站即清——单源 = `docs/desktop/design/RENDERER.md` §1.6 **KD-74**）。
+   - 受理径 = 清框 + 入历史 + **回底**；无忙态门（打印零状态写）；未知反馈携 `/help` 指引；别名 `/h` 在册。逐面在册（CLI 实盘对位表 ∥ E10–E13）。
 
 **批注（`provider-invalid` 词面真因化）**：本注定形输入区发送失败行的 `provider-invalid` 词面——真因分类 → 词。契约面 = `docs/desktop/design/IPC.md` §2 `msg:send` 行；设置 ∕ 向导面 = `docs/desktop/design/SETTINGS.md` §2.14。
 
@@ -113,13 +120,13 @@
 **批注（fallback 明示行）**：本注定形 composer 提示带上**态明示行**——「可运行 ∧ 无有效 `defaultModel`」（`fallback`）态的端侧呈现
 （判据单源 = `docs/core/design/PROVIDER.md` §6.22；词面 = **新键 `composer.send.noDefaultModelFallback`**——澄清半句（**失败词 ∥ 态词分家**，见项 2））；契约面 = `docs/desktop/design/IPC.md` §2「provider 态投影注」。
 
-1. **数据面**：`history:page` 回执（会话打开）∥ `msg:send` 回执（发送刷新）∥ **设置写回执**（`settings:agent` ∥ `provider:save` 成功回执——**第三刷新点**；实落写点三处 = `thincoder-desktop/src/main/settings.mjs:230` ∥ `:330` ∥ `thincoder-desktop/src/main/providers.mjs:181`）
+1. **数据面**：`history:page` 回执（会话打开）∥ `msg:send` 回执（发送刷新）∥ **设置写回执**（`settings:agent` ∥ `provider:save` 成功回执——**第三刷新点**；实落写点三处 = `thincoder-desktop/src/main/settings.mjs` 两处 ∥ `thincoder-desktop/src/main/providers.mjs` 一处）
    新增 `providerState` 键（形 = `{ state, channel, model, reason, invalidReason }`）；渲染面落 store 切片（写点与 `meta` 同族）⇒ 提示带重派生（`paintNotices`）。
-2. **行面**：`state === "fallback"` ∧ **非 invalid 类**（合成式 = `state === "invalid"` ∨ `providerInvalidReason` 非空——单源 = `doc:PROVIDER.md:§6.22`）⇒ 本行在场——词 = `composer.send.noDefaultModelFallback`（**澄清半句两字面按载荷 `model` 在场分**：在场「— 正在使用可用渠道」∥ 缺「— 渠道可用、模型未定」
+2. **行面**：`state === "fallback"` ∧ **非 invalid 类**（合成式 = `state === "invalid"` ∨ `providerInvalidReason` 非空——单源 = `docs/core/design/PROVIDER.md` §6.22）⇒ 本行在场——词 = `composer.send.noDefaultModelFallback`（**澄清半句两字面按载荷 `model` 在场分**：在场「— 正在使用可用渠道」∥ 缺「— 渠道可用、模型未定」
    ——与 VSC `banner.defaultModelFallback` 同构；composer-notice 系无 ⚠ 先例），词为**态陈述行**，非发送失败行；
    行锚 = `data-notice="provider-fallback"`（机检——与失败行锚 `send-failed` 分判）；`state === "ok"` ⇒ 零行（负向锁——invalid 类除外）；invalid 类 ⇒ 本行零行（归发送失败行）。
 3. **行序**：提示带尾（现序 [待发送? ∥ 降级? ∥ 失败?] 零动，本行追加于带尾）。
-4. **清位**：`state` 转 `ok` 的一次 `msg:send` 回执到达 ⇒ 行退场；**第三刷新点**：设置写回执（`settings:agent` ∥ `provider:save` 成功回执；实落写点三处 = `thincoder-desktop/src/main/settings.mjs:230` ∥ `:330` ∥ `thincoder-desktop/src/main/providers.mjs:181`）携 `providerState` ⇒ 同点落切片（渲染面三出口）⇒ 行随重派生
+4. **清位**：`state` 转 `ok` 的一次 `msg:send` 回执到达 ⇒ 行退场；**第三刷新点**：设置写回执（`settings:agent` ∥ `provider:save` 成功回执；实落写点三处 = `thincoder-desktop/src/main/settings.mjs` 两处 ∥ `thincoder-desktop/src/main/providers.mjs` 一处）携 `providerState` ⇒ 同点落切片（渲染面三出口）⇒ 行随重派生
    （设置面修好 `defaultModel` 后**即时**退场——不再等下次发送 / 开页；零新通道——回执内字段）。
 5. **边界**：失败词路由零改；`providerKind` 判据 = 「有持 key 渠道」（全无 key 态出真·无 key 词）记于本档 §2 受影响表，不另立面。核件 ∥ VSC 零触。
 
@@ -144,10 +151,11 @@
 3. **生效链（读数面）**：条目拾取 ⇒ `selectModel`（核件）⇒ `session:prefs`（`thincoder-desktop/renderer/composer-wire.mjs` `writePrefs`）
    ⇒ 槽实写（`thincoder-desktop/src/main/agent-host.mjs` `setPrefs`；已装配 ⇒ 重施 `loadAgentSlot`——在飞 ⇒ 回合尾顺延，单源 = 本档 §1 **KD-19**）
    + 槽面实变 ∧ `provider` + `model` 同在 ⇒ `defaultModel` 写回（单源 = `docs/desktop/design/IPC.md` §2「会话级偏好注」项 8）。
-4. **写失败可见 + 零乐观写回滚**：失败径 ⇒ 失败行（`thincoder-desktop/renderer/composer-sync.mjs` `failedNotice` 按 `source === "session:prefs"` 路由——
-   `data-notice="prefs-failed"` + 新键携 `${reason}`）+ 钮 ∥ 本地选中态**由槽现值重派生**（回滚钩 `rollbackPrefs`——核 `applyModels` 单点重推候选行；槽复合缺 ⇒ `rollback` 位 ⇒ 钮回「未选」空态）+ 槽零写；
-   `defaultModel` 写回失败 ⇒ 回执叠 `carryover:{ ok:false, reason }`（槽写不反扑）⇒ **同一条失败行**。
-   **成功径清点**：成功受理（`receipt.ok ∧ meta` 有效）⇒ 本通道失败行清点 + 重绘（source 门——`failed?.source === "session:prefs"`；发送径失败行不误清；行语义 = 当前态陈述——滞留至下次发送 = 失实）。
+4. **写失败可见 + 零乐观写回滚**：
+   - 失败径 ⇒ 失败行（`thincoder-desktop/renderer/composer-sync.mjs` `failedNotice` 按 `source === "session:prefs"` 路由——`data-notice="prefs-failed"` + 新键携 `${reason}`）。
+   - 同径余件 = 钮 ∥ 本地选中态**由槽现值重派生**（回滚钩 `rollbackPrefs`——核 `applyModels` 单点重推候选行；槽复合缺 ⇒ `rollback` 位 ⇒ 钮回「未选」空态）+ 槽零写。
+   - `defaultModel` 写回失败 ⇒ 回执叠 `carryover:{ ok:false, reason }`（槽写不反扑）⇒ **同一条失败行**。
+   - **成功径清点**：成功受理（`receipt.ok ∧ meta` 有效）⇒ 本通道失败行清点 + 重绘（source 门——`failed?.source === "session:prefs"`；发送径失败行不误清；行语义 = 当前态陈述——滞留至下次发送 = 失实）。
 5. **判据**：机检 = 单元测试档（用例 a 行 toggle 三判 ∥ 用例 b 拾取单点 + `row` ∥ 用例 c 写失败行 + 回滚 + 槽零写 + **成功径清点**（滞留 ⇒ 成功径清行 ∥ 负控 = 发送径失败行不误清） ∥ 用例 d 回执携写回码——模型菜单三修族单元测试档）；真机 = 桌面模型菜单走查 + 复扫槽档（父侧/用户——修前「全槽扫描 0 处写入」⇒ 条目选中后落值）。
 6. **边界**：`defaultModel` 写回语义零改（= **新会话起点**，非渠道默认模型）；核件 `panel.mjs`（回写门 `writebackBlocked`）零改；VSC 三消费面随核件同拍生效 = 有意（非回归）。
 
@@ -163,13 +171,11 @@
 | `thincoder-desktop/src/main/file-refs.mjs` | **19** | 端薄壳（核单源 = `thincoder-core/file-refs.mjs`）：`node:fs` 三件探针 + 核件注入转口 + `stripAtRefs` re-export；消费面 = 注入缝（`turn-driver.mjs`）∥ 恢复面剥离（`session-slots.mjs`） |
 | `thincoder-desktop/src/main/at-complete.mjs` | **74** | `at:complete` 文件枚举过滤（@ 前缀剥离 → 项目树枚举 → 过滤 → 封顶 20；零改 `file-links.mjs`） |
 | `thincoder-desktop/renderer/queue.mjs` | **40** | 队列面（三纯动作 + `QUEUE_MAX`） |
-| `thincoder-desktop/renderer/mount-composer.mjs` | **300** | 输入区挂载：两态落形 · Enter / Shift+Enter 键位 · 忙态入队（受理交宿主任判）· 满队提示（按键判）；附件条挂载（根锚 `data-attachments`——构树 / 采集住 `thincoder-desktop/renderer/attach.mjs`）+ 附件随 `msg:send` 载荷 `images` 出口 + `degraded` 提示行；`refreshCandidates` 透传导出（`sync.refreshCandidates`——`:243`）+ 句柄注；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
+| `thincoder-desktop/renderer/mount-composer.mjs` | **301** | 输入区挂载：两态落形 · Enter / Shift+Enter 键位 · 忙态入队（受理交宿主任判）· 满队提示（按键判）；附件条挂载（根锚 `data-attachments`——构树 / 采集住 `thincoder-desktop/renderer/attach.mjs`）+ 附件随 `msg:send` 载荷 `images` 出口 + `degraded` 提示行；`refreshCandidates` 透传导出（`sync.refreshCandidates`）+ 句柄注；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
 | `thincoder-desktop/renderer/composer-wire.mjs` | **301**（+3——**成功径清点**（本通道失败行随成功径清点 + 重绘）） | 输入区写面（通道往返归一 + 逐类型出站 handler：`msg:send` ∕ `msg:interrupt` ∕ `at:complete` ∕ `session:prefs` ∕ `session:flags` ∕ footer 三出口；本地先行块登记与退流 ∕ 失败态行源） |
 | `thincoder-desktop/renderer/composer-sync.mjs` | **343** | 输入面板随动派生面（`state` 读面 + 忙态 ∕ 守卫派生 + 模式位推送 + 候选面 + 两挂件锚窄刷（提示带 ∕ 末条复制控件）+ `syncPanel`）；候选面重写（`land` ∕ `fetchCatalog` ∕ `startRetryChain` ∕ `syncCandidates` ∕ `pushModels` ∕ `refreshCandidates`）；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
 | `thincoder-desktop/renderer/attach.mjs` | **54** | 附件采集与构树纯函数（输入区 `paste` → `FileReader` → `dataURL` 条目集 + 移除控件；**零 fs** ⇒ 平 node 直测）；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
 | `thincoder-desktop/renderer/chat-composer.css` | **136** | 输入区段样式：变量别名块（C2 唯一桥）+ 提示行锚 + 扁平化覆盖段；面板族本体单源 = 核件 `composer/composer.css`——两控件族 + `⧉` 字形 + 尾锚规则随摘 |
-
-**行数面机检**：`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`，运行根单读）**逐条声明节域——本表为其一**（本域值行单源）；后续本域新档由落盘批在本表补值行，`docs/desktop/design/PROJECT.md` §4.1 同拍补指针行（沿 §4.1 纪律）。
 
 ### 3.2 现有文件改动（本域）
 
@@ -223,7 +229,7 @@
 | # | 档 | 落值 | 面 |
 |---|---|---|---|
 | 1 | `thincoder-render-core/composer/slash.mjs` | **69**（+`formatHelp` 表→行集 ∥ 组序常量） | 核面 |
-| 2 | `thincoder-render-core/composer/panel.mjs` | **489（零触**——打印口 = 端侧表构造期闭包注入；`deps.slash`/`ctx` 零改 ∥ 距 800 硬限余 **311**） | 核面 |
+| 2 | `thincoder-render-core/composer/panel.mjs` | **489**（零触——打印口 = 端侧表构造期闭包注入；`deps.slash`/`ctx` 零改 ∥ 距 800 硬限余 **311**） | 核面 |
 | 3 | `thincoder-desktop/renderer/slash-commands.mjs` | **65**（4 条补 `group`/`descKey` + `/help` 条（别名 `/h`）） | 端表层 |
 | 4 | `thincoder-desktop/renderer/mount-composer.mjs` | **296**（+`formatHelp` import ∥ `printHelp` 口 ∥ deps 装配补键） | 装配面 |
 | 5 | `thincoder-desktop/renderer/store.mjs` | **322**（+`helpLines` 槽 ∥ `setHelpLines` 纯动作；**越层在册——结构性触碰 ⇒ 拆档评估窗口触发；处置 = 续期**） | 状态树 |
@@ -268,13 +274,13 @@
 **回合中插入批（验收）**：需求回指 = **D25**「回合中插入（步边界 pickup）」（已落）；设计单源 = 本档 §1 **KD-40** ∕ 本档 §2（回合中插入批注）；
 真机 = **T-DSK45**（集成域新档——真 Electron：忙态发两条 ⇒ 首条步边界注入可见 + 气泡交接 + 段 14 读数；D16 义务）；测试文件随修随加——不占设计条目（裁定）。
 
-**窗队列 VSC 逐点对齐批（验收）**：需求回指 = **D25**（本注 = 挂起窗径携图 ∕ 受理同形 ∕ 消费恰一枚三面同判——需求卷 `docs/desktop/requirements/COMPOSER.md`）；设计单源 = `docs/desktop/design/ACTIVITY.md` §1 **KD-34**（载具层携图）∥ 本档 §2（窗队列 VSC 逐点对齐批注）（含判据项 5）；
-机检 = 随批单元证据（**批档本地用例随批留存**——载体 = 窗队列 VSC 逐点对齐批单元测试档（T1–T9） · 不入集成测试树；全清令：集成测试不写 ∕ 不改 ∕ 不跑）；
-真机 = **T-DSK48**（窗内携图提交 ⇒ 受理回执 ∧ 待发送带在场；消费 ⇒ 恰一枚入流 + 图随回合送达 + `degraded` 浮出）+ **核件 ∕ VSC ∕ `thincoder-render-core` 零改**（结构性判据）；**离线不可产面**（真 provider 回合 ⇒ 附件送达判决）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计条目（裁定）。
+- **窗队列 VSC 逐点对齐批（验收）**：需求回指 = **D25**（本注 = 挂起窗径携图 ∕ 受理同形 ∕ 消费恰一枚三面同判——需求卷 `docs/desktop/requirements/COMPOSER.md`）；设计单源 = `docs/desktop/design/ACTIVITY.md` §1 **KD-34**（载具层携图）∥ 本档 §2（窗队列 VSC 逐点对齐批注）（含判据项 5）。
+- **机检** = 随批单元证据（**批档本地用例随批留存**——载体 = 窗队列 VSC 逐点对齐批单元测试档（T1–T9） · 不入集成测试树；全清令：集成测试不写 ∕ 不改 ∕ 不跑）。
+- **真机** = **T-DSK48**（窗内携图提交 ⇒ 受理回执 ∧ 待发送带在场；消费 ⇒ 恰一枚入流 + 图随回合送达 + `degraded` 浮出）+ **核件 ∕ VSC ∕ `thincoder-render-core` 零改**（结构性判据）；**离线不可产面**（真 provider 回合 ⇒ 附件送达判决）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计条目（裁定）。
 
-**斜径命令面批（验收）**：需求回指 = **D34**（斜杠命令族——行为标杆 = CLI 实形；5 条 + 别名 3）；设计单源 = `docs/render-core/design/RENDER-CORE.md` §2 **KD-RC-12** ∥ §5 条 6 ∥ 本档 §2（slash 命令面批注）；
-机检 = 单元测试档（**已建成 · 425 行 · 18 例全绿**——用例 1–9（含用例 6A–6J 面板拦截假 DOM 实跑）；随批留存 · 不进集成测试树）；
-真机 = **T-DSK56**（真 Electron：`/model` 开菜单 ∥ `/help` 流内打印 ∥ 回落 toast + 文本保留）；**离线不可产面**（真交互 ∥ 真菜单 ∥ 真 provider 回合）= 人工走查 + 父侧真跑闭合（**D16 义务**）；测试文件随修随加——不占设计条目（裁定）。
+- **斜径命令面批（验收）**：需求回指 = **D34**（斜杠命令族——行为标杆 = CLI 实形；5 条 + 别名 3）；设计单源 = `docs/render-core/design/RENDER-CORE.md` §2 **KD-RC-12** ∥ §5 条 6 ∥ 本档 §2（slash 命令面批注）。
+- **机检** = 单元测试档（**已建成 · 425 行 · 18 例全绿**——用例 1–9（含用例 6A–6J 面板拦截假 DOM 实跑）；随批留存 · 不进集成测试树）。
+- **真机** = **T-DSK56**（真 Electron：`/model` 开菜单 ∥ `/help` 流内打印 ∥ 回落 toast + 文本保留）；**离线不可产面**（真交互 ∥ 真菜单 ∥ 真 provider 回合）= 人工走查 + 父侧真跑闭合（**D16 义务**）；测试文件随修随加——不占设计条目（裁定）。
 
 ## 5. 用例
 

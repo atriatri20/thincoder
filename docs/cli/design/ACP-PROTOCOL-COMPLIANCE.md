@@ -24,7 +24,7 @@
 
 ### 2.1 #871a · `usage_update` 形状收正
 
-- **现盘坐标**：`thincoder-cli/src/acp/bridge.mjs:208` `onUsage: (usage) => update("usage_update", { usage })`——`usage` 是自定义包装键；官方 `UsageUpdate.required = ["used","size"]`（§4.2），现状双缺。
+- **现盘坐标**：`thincoder-cli/src/acp/bridge.mjs` `onUsage: (usage) => update("usage_update", { usage })`——`usage` 是自定义包装键；官方 `UsageUpdate.required = ["used","size"]`（§4.2），现状双缺。
 - **目标形**：
   ```js
   onUsage: (usage) => update("usage_update", {
@@ -34,12 +34,12 @@
   ```
   - `used` = 该轮请求 prompt + 生成 completion（近似「当前在上下文中的 token」——量级近似，客户端进度条允许偏差，如实登记）。
   - `size` = **模型上下文窗口**（schema 逐字「Total context window size in tokens」）。取值单源 = `providerSpec(agent.provider).context`（`@thincoder/core/config.mjs` 再导出；含 `providers[].context` 覆写，K→×1024 换算单源）——未知模型 ⇒ `DEFAULT_SPEC.context = 128_000` 兜底（函数全量，零 undefined）。
-  - **agent 传递**：`buildAcpCallbacks` 增入参 `agent`（`bridge.mjs:62` 签名 + `thincoder-cli/src/acp/session.mjs:22` 调用点）；**活引用**（`session/set_config_option` 切模型后 size 随动——不得在构造期固化数值）。
+  - **agent 传递**：`buildAcpCallbacks` 增入参 `agent`（`bridge.mjs` 的 `buildAcpCallbacks` 签名 + `thincoder-cli/src/acp/session.mjs` 调用点）；**活引用**（`session/set_config_option` 切模型后 size 随动——不得在构造期固化数值）。
 - **验收判据**：任一次 `usage_update` 通知含整数 `used ≥ 0` 与 `size ≥ 0`；`used` = prompt+completion 之和；模型可知时 `size` = 其规格 context（如 `kimi-k3` → 1_000_000），未知 ⇒ 128_000。用例 T1–T3。
 
 ### 2.2 #871b · `session/list` 条目 `updatedAt` 收正 + `messageCount` 剔除
 
-- **现盘坐标**：`thincoder-cli/src/acp/handlers-slots.mjs:47-53`——`:50` `updatedAt: s.updatedAt ?? 0`（epoch 数——schema 要 ISO 8601 字符串，见 §4.2）；`:52` `messageCount`（非 SessionInfo 字段——多余键收敛）。
+- **现盘坐标**：`thincoder-cli/src/acp/handlers-slots.mjs` 的 `session/list` 条目映射——`updatedAt: s.updatedAt ?? 0`（epoch 数——schema 要 ISO 8601 字符串，见 §4.2）；`messageCount`（非 SessionInfo 字段——多余键收敛）。
 - **目标形**：
   ```js
   sessions: slots.map((s) => ({
@@ -51,14 +51,14 @@
     title: s.title ?? "",
   })),
   ```
-  - `s.updatedAt` 源 = 核 `listSlots` 条目 `updatedAt: meta.updatedAt ?? meta.ts`（epoch ms 数——`thincoder-core/session-slots.mjs:208`）。
+  - `s.updatedAt` 源 = 核 `listSlots` 条目 `updatedAt: meta.updatedAt ?? meta.ts`（epoch ms 数——`thincoder-core/session-slots.mjs` 的 `listSlots` 投影）。
   - **值域钳**（防 `toISOString` RangeError ⇒ list 整方法 `-32603`）：`Number.isFinite(v) && Math.abs(v) <= 8.64e15`（ECMA-262 TimeClip 上限——域内 `toISOString()` 恒不抛）⇒ ISO 串；**非法 ∥ 超域**（非有限 ∥ `|v| > 8.64e15`）⇒ `undefined`（JSON 序列化 ⇒ 键缺席——= null 语义；schema 该键可空且非必填；既定形，不用 epoch 0 占位——0 会谎报 1970 活动）。
   - `title` 保留（`string` 合法；`""` 合法）。`messageCount` **删**（无 schema 位；客户端不可依赖）。
 - **验收判据**：有限且 `|v| <= 8.64e15` 的 `updatedAt`（输入 = epoch 数）⇒ 发射值为 ISO 8601 串，且**对发射值**往返恒等——`new Date(emit(v)).toISOString() === emit(v)`（`emit(v)` = `session/list` 条目中该键的发射值）；非法 ∥ 超域 ⇒ 键缺席、方法零抛（`-32603` 不可达）；`messageCount` 键不在。用例 T4–T5。
 
 ### 2.3 #873 · `set_config_option` 响应补 `configOptions` + 全形判别键
 
-- **现盘坐标**：`thincoder-cli/src/acp/handlers-session.mjs`——`:268` `set_config_option` 返 `{}`（`SetSessionConfigOptionResponse.required = ["configOptions"]` ⇒ 客户端 parse error）；`:32-36` `CONFIG_OPTIONS` 元素 `{id,name}`（缺 oneOf 判别键 `type` 与现值——`SessionConfigOption` 见 §4.2）。
+- **现盘坐标**：`thincoder-cli/src/acp/handlers-session.mjs`——`set_config_option` 处理器返 `{}`（`SetSessionConfigOptionResponse.required = ["configOptions"]` ⇒ 客户端 parse error）；`CONFIG_OPTIONS` 常量元素 `{id,name}`（缺 oneOf 判别键 `type` 与现值——`SessionConfigOption` 见 §4.2）。
 - **目标形**：
   - `CONFIG_OPTIONS` 常量**替换**为投影函数 `sessionConfigOptions(agent)`（导出——`handlers-slots.mjs` 同源消费）：
     ```js
@@ -79,26 +79,26 @@
     ```
   - `thinking` 现值判据 = 「非 off 形」：off 两形 = `null`（effort 族）∥ `{type:"disabled"}`（type 族）——`th != null && th.type !== "disabled"`（与 `thinkOffShape` 两形对应；含 `thinkEnabledValue` 自定义开值族，如 `"adaptive"`）。
   - `model` 不可解析 ⇒ 该项**缺席**（select 的 `currentValue` 必填——无值不可虚构；余两项照常）。
-  - 响应点四处同源：`session/set_config_option` `:268` → `{ configOptions: sessionConfigOptions(found.session.agent) }`；`session/new` `:191`、`session/load` `handlers-slots.mjs:114`、`session/resume` `:164` → 同函数（替换 `[...CONFIG_OPTIONS]`）。
+  - 响应点四处同源：`session/set_config_option` → `{ configOptions: sessionConfigOptions(found.session.agent) }`；`session/new`、`session/load`（`handlers-slots.mjs`）、`session/resume` → 同函数（替换 `[...CONFIG_OPTIONS]`）。
   - 通知面（`config_option_update` 全量数组）归 §2.4。
 - **验收判据**：`set_config_option` 响应 = `{configOptions: [...]}`；每项含 `id`/`name`/`type`；select 项含 `currentValue` + `options[]`（元素 `{value,name}`）；boolean 项含 `currentValue`（布尔）；四处响应同形。用例 T6–T8。
 
 ### 2.4 #872 · 会话身份与状态同步（G5 收正）
 
-- **现盘坐标**：`thincoder-cli/src/acp.mjs:100-108`（`nextId` 计数器 + `ctx.allocSessionId`）；`handlers-session.mjs:167`（new）/ `handlers-slots.mjs:79-80`（load）/ `:139-140`（resume）三处消费；`handlers-session.mjs:287` 通知 `mode:` ∥ `:266` 通知 `{configId,value}`（均与 schema 相抵）。
+- **现盘坐标**：`thincoder-cli/src/acp.mjs` 的 `nextId` 计数器与 `ctx.allocSessionId`；`handlers-session.mjs`（new）∥ `handlers-slots.mjs`（load ∥ resume）三处消费；`handlers-session.mjs` 的 `session/set_mode` 通知 `mode:` ∥ `session/set_config_option` 通知 `{configId,value}`（均与 schema 相抵）。
 - **目标形（id 语义统一）**：
   - **`session id = 持久槽位号字符串**（全族单一命名空间）：
-    - `session/new`：**先** `const slot = await newSession(getCwd())`（认领 + 槽文件 + digest——`thincoder-core/session-lifecycle.mjs:226`），`const id = String(slot)`（createSession 的 id 在构造期烧入 callbacks——必须先行）；`session.agent._slot = slot` 由既有点位保留（零改）。
+    - `session/new`：**先** `const slot = await newSession(getCwd())`（认领 + 槽文件 + digest——`thincoder-core/session-lifecycle.mjs` 的 `newSession`），`const id = String(slot)`（createSession 的 id 在构造期烧入 callbacks——必须先行）；`session.agent._slot = slot` 由既有点位保留（零改）。
     - `session/load` / `resume`：`const id = String(params.sessionId)`（**客户端原文形态**——同值读回保续）；`sessions.set(id, session)`。
   - **失败回滚（new 的新序引入的孤儿面——必处置）**：`createSession` 抛错 ∥ `_providerInvalid` 分支 ⇒ `deleteSlot(getCwd(), slot)`（既有函数——文件 + manifest 条目 + 认领由 `session-slots.mjs` 单点清理；回滚以 `committed` 旗标守卫：仅在未 `sessions.set` 前生效）。
   - **同 id 在存 ⇒ 处置（new/load/resume 三途同法）**：按 `session/close` 同法处置旧实例（动作 = `cancel()` ∥ `sessions.delete(id)` ∥ 认领释放），再装载——共性理由：防旧实例成为不可达孤儿（同 id 在 Map 上唯一）；load/resume 另：旧实例的钉槽不再计入 `sameProcessPinned`（重载同槽 ⇒ 可正常钉回原槽，不误 fork）。位次按途钉定（下两条）。
-    - **load/resume 途替换点钉定（拒载安全）**：替换在既有前置判据（`loadSlotFile` 缺失 `handlers-slots.mjs:64-67` ∥ 工程模式拒载 `:72-77`）**之后**、`createSession` **之前**——拒载路径零副作用（旧实例保留：不 `cancel`、不释放认领——不误杀在飞回合）。
-    - **new 途处置点钉定（delete→new 槽号回收面）**：`session/delete` 删档后槽号回流（`thincoder-core/session-slots.mjs:226-229`），`session/new` 复得同号时 `sessions.set(id, session)` 撞**同键在存实例**——旧回合不 cancel、通知串流（同 id 在存不处置类经 delete→new 入口）。
-      触发条件：键 = 槽号串而 `_slot` 已与键分离（fork/换钉）的旧实例不受 delete 重钉环处置（`handlers-slots.mjs:211-213` 按 `_slot` 匹配）。
+    - **load/resume 途替换点钉定（拒载安全）**：替换在既有前置判据（`loadSlotFile` 缺失 ∥ 工程模式拒载两处判据——同在 `handlers-slots.mjs`）**之后**、`createSession` **之前**——拒载路径零副作用（旧实例保留：不 `cancel`、不释放认领——不误杀在飞回合）。
+    - **new 途处置点钉定（delete→new 槽号回收面）**：`session/delete` 删档后槽号回流（`thincoder-core/session-slots.mjs` 的 `deleteSlot`），`session/new` 复得同号时 `sessions.set(id, session)` 撞**同键在存实例**——旧回合不 cancel、通知串流（同 id 在存不处置类经 delete→new 入口）。
+      触发条件：键 = 槽号串而 `_slot` 已与键分离（fork/换钉）的旧实例不受 delete 重钉环处置（`handlers-slots.mjs` 按 `_slot` 匹配的重钉环）。
       处置点 = `sessions.set(id, session)` **直前**（`createSession` 成功与 `_providerInvalid` 排除之后）：`const stale = sessions.get(id); if (stale) { stale.cancel(); sessions.delete(id) }`——此前任何一步失败均不改动旧实例。
-    - **new 途认领释放位次**：`if (stale) releaseClosedSlot()` 置于 `sessions.set` 与 `committed` 置位**之后**——保留集须含新会话槽（`createSlotReleaser` 保留集 = 在存 Map 槽——`handlers-session.mjs:64-72`）：
-      先释后装会把 `newSession` 刚写的新认领当残留释放（`staleClaims` 谓词——`session-slot-claims.mjs:29-35`；认领写入 `session-lifecycle.mjs:273-274`）⇒ 复开 F2 双写窗口；置 `committed` 后 ⇒ 释放失败不误删已建会话。
-  - **认领释放单点抽取**：现 `releaseClosedSessionSlot`（`handlers-session.mjs:135-141`）提为 `createSlotReleaser({ getCwd, sessions })` 工厂（导出）——`acp.mjs` 建一次入 `ctx.releaseClosedSlot`（同 `requireConfigured` 先例），new 失败回滚外三处（close ∥ load 替换 ∥ resume 替换）同源消费。
+    - **new 途认领释放位次**：`if (stale) releaseClosedSlot()` 置于 `sessions.set` 与 `committed` 置位**之后**——保留集须含新会话槽（`createSlotReleaser` 保留集 = 在存 Map 槽——`handlers-session.mjs` 的工厂装配段）：
+      先释后装会把 `newSession` 刚写的新认领当残留释放（`staleClaims` 谓词——`session-slot-claims.mjs`；认领写入 `session-lifecycle.mjs` 的 `newSession`）⇒ 复开 F2 双写窗口；置 `committed` 后 ⇒ 释放失败不误删已建会话。
+  - **认领释放单点抽取**：现 `releaseClosedSessionSlot`（`handlers-session.mjs`）提为 `createSlotReleaser({ getCwd, sessions })` 工厂（导出）——`acp.mjs` 建一次入 `ctx.releaseClosedSlot`（同 `requireConfigured` 先例），new 失败回滚外三处（close ∥ load 替换 ∥ resume 替换）同源消费。
   - **`allocSessionId` / `nextId` 撤除**（零消费者——`acp.mjs` ctx 键删除；两 handler 模块解构同步删）。
   - **通知字段收正**：
     - `session/set_mode` → `update: { sessionUpdate: "current_mode_update", currentModeId: params.mode }`（`CurrentModeUpdate.required = ["currentModeId"]`）。
@@ -109,7 +109,7 @@
 
 ### 2.5 #870 · `session/prompt` 支持 `resource_link`（基线内容块）
 
-- **现盘坐标**：`thincoder-cli/src/acp/handlers-session.mjs:204-206`——仅取首个 text 块；`resource_link` 块丢弃（全仓零命中）；schema 基线句「All agents **MUST** support resource links in prompts」（§4.2）。
+- **现盘坐标**：`thincoder-cli/src/acp/handlers-session.mjs` 的 prompt 块取用段——仅取首个 text 块；`resource_link` 块丢弃（全仓零命中）；schema 基线句「All agents **MUST** support resource links in prompts」（§4.2）。
 - **落点**：新档 `thincoder-cli/src/acp/resource-link.mjs`（已落——块解析与内联纯函数面；`node:fs` ∥ `node:url` ∥ `node:path` 叶子级）。
   - 导出：`resolveResourceLink(block, { cwd })`（异步——单块 → 内联段或降级标记）· `buildPromptText(blocks, { cwd })`（异步——聚合）· 常量 `MAX_INLINE_BYTES` / `MAX_INLINE_LINES` / `MAX_INLINE_CHARS`。
 - **目标形（`buildPromptText`）**：
@@ -134,9 +134,9 @@
      `binary (NUL byte)` / `too many lines (>2000)` / `too long (>100000 chars)` / `invalid selection` / `lines out of range`；
      块间独立——单块失败不影响他块。
 - **语义裁定（三条）**：
-  - **无 cwd confine**：用户显式 @ 引用可读任意绝对路径——与 `read` 工具同界（`thincoder-core/tools/shared.mjs:291-302`；trust model + 审批门为界——读操作只读，不触发审批）。
+  - **无 cwd confine**：用户显式 @ 引用可读任意绝对路径——与 `read` 工具同界（`thincoder-core/tools/shared.mjs` 的 `read` 工具实现；trust model + 审批门为界——读操作只读，不触发审批）。
   - **无需能力位**：`resource_link` 属基线 MUST（非 `PromptCapabilities` 项）——零门控、零声明变更；`embeddedContext` 维持 `false`（`resource` / image / audio 块丢弃照旧）。
-  - **上限量级与 `read` 同源**：行上限直引 `MAX_READ_LINES`（`@thincoder/core/tools/shared.mjs:21` = 2000）；字节 10MB / 字符 100k = 本面常量（同量级，常量住 §2.5 落点新档）。
+  - **上限量级与 `read` 同源**：行上限直引 `MAX_READ_LINES`（`@thincoder/core/tools/shared.mjs` 导出 = 2000）；字节 10MB / 字符 100k = 本面常量（同量级，常量住 §2.5 落点新档）。
 - **接线（handlers-session.mjs）**：
   ```js
   const blocks = Array.isArray(params?.prompt) ? params.prompt : []
@@ -218,16 +218,16 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 
 | # | 现落点 | 目标文本（要点逐字） |
 |---|---|---|
-| R1 | `:37` §2.1 session/new 行 | 返回 `{ sessionId, configOptions }`；`sessionId` = 本进程内该会话的持久槽位号（G5 收正）；`configOptions` = 全形（§11.3） |
-| R2 | `:114` §3.3 list 行 | `{ sessionId, cwd, updatedAt(ISO 8601), title }`（`messageCount` 已剔——非 SessionInfo 字段）；`sessionId` 取值 = 持久化槽位号——即**全族统一身份**（§11.3） |
-| R3 | `:115-116` §3.3 load/resume 行 | 增一句：**会话 id 沿用客户端传入值**（响应无 `sessionId`——id 不变语义）；同 id 在存 ⇒ 旧实例按 close 同法替换 |
-| R4 | `:152` §3.5 ctx 键行 | `{ getCwd, sessions, notifyRef, requestRef, createSession, requireConfigured, releaseClosedSlot, log }`（`allocSessionId` 撤） |
-| R5 | `:153` §3.5 句 | 会话 id = 持久槽号（load/new 同命名空间；`releaseClosedSlot` = 认领释放单点） |
-| R6 | `:180` §5 映射行 | `usage_update` `{ used, size }`（used = prompt ∥ completion 之和；size = 上下文窗口——`providerSpec(agent.provider).context`） |
-| R7 | `:490-491` §11.3 契约 bullet | `SessionConfigOption` 全形（required [id,name] + oneOf select/boolean 判别键 `type`：select 另需 `currentValue`+`options`；boolean 需 `currentValue`）；`SessionInfo.updatedAt` = ISO 8601 字符串 |
-| R8 | `:523` §11.3 响应统一形状句 | `configOptions` 条目 → 全形（`{id,name,type,currentValue,options?}`） |
-| R9 | `:525-527` §11.3 id 命名空间段 | 改述为**统一现态**：id = 持久槽位号（G5 已收正——load/new 同命名空间）；同 id 重载替换；fork 角如实注 |
-| R10 | `:619` / `:620` / `:631` §11.9 | G5 行删、G6 行删（无效化表述即删）；`:631` 登记项 3 改述：resource_link 已接；余多块 text 合流待立批 |
+| R1 | §2.1 session/new 行 | 返回 `{ sessionId, configOptions }`；`sessionId` = 本进程内该会话的持久槽位号（G5 收正）；`configOptions` = 全形（§11.3） |
+| R2 | §3.3 list 行 | `{ sessionId, cwd, updatedAt(ISO 8601), title }`（`messageCount` 已剔——非 SessionInfo 字段）；`sessionId` 取值 = 持久化槽位号——即**全族统一身份**（§11.3） |
+| R3 | §3.3 load/resume 行 | 增一句：**会话 id 沿用客户端传入值**（响应无 `sessionId`——id 不变语义）；同 id 在存 ⇒ 旧实例按 close 同法替换 |
+| R4 | §3.5 ctx 键行 | `{ getCwd, sessions, notifyRef, requestRef, createSession, requireConfigured, releaseClosedSlot, log }`（`allocSessionId` 撤） |
+| R5 | §3.5 句 | 会话 id = 持久槽号（load/new 同命名空间；`releaseClosedSlot` = 认领释放单点） |
+| R6 | §5 映射行 | `usage_update` `{ used, size }`（used = prompt ∥ completion 之和；size = 上下文窗口——`providerSpec(agent.provider).context`） |
+| R7 | §11.3 契约 bullet | `SessionConfigOption` 全形（required [id,name] + oneOf select/boolean 判别键 `type`：select 另需 `currentValue`+`options`；boolean 需 `currentValue`）；`SessionInfo.updatedAt` = ISO 8601 字符串 |
+| R8 | §11.3 响应统一形状句 | `configOptions` 条目 → 全形（`{id,name,type,currentValue,options?}`） |
+| R9 | §11.3 id 命名空间段 | 改述为**统一现态**：id = 持久槽位号（G5 已收正——load/new 同命名空间）；同 id 重载替换；fork 角如实注 |
+| R10 | §11.9 三行（G5 ∥ G6 ∥ 登记项 3） | G5 行删、G6 行删（无效化表述即删）；登记项 3 改述：resource_link 已接；余多块 text 合流待立批 |
 
 
 ## 6. #862 裁定：拆批（含后续批 scope 草案）
@@ -308,7 +308,7 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 - 多引用块**总量无闸**（各块独立上限——登记候选）。
 - `resource_link` 两形登记（行为按实装钉——均**降级不中断**）：① 裸盘符形（`C:\…` / `C:/…`）⇒ `unsupported scheme` 标记；② 非 URL 形带片段 ⇒ 片段并入路径、不选区 ⇒ 通常 `unreadable`。
 - #862 全项（拆批——§6）。
-- `thinking` 的 `currentValue` = **本地显式档**语义——`undefined`（未显式设置）⇒ `false`（§2.3 判据式 `th != null && …` 如此）；`thinkAlwaysOn` 族（`thincoder-core/model-specs.mjs:69`）为本地档、非服务端生效态——不探测服务端侧生效状态（登记）。
+- `thinking` 的 `currentValue` = **本地显式档**语义——`undefined`（未显式设置）⇒ `false`（§2.3 判据式 `th != null && …` 如此）；`thinkAlwaysOn` 族（`thincoder-core/model-specs.mjs`）为本地档、非服务端生效态——不探测服务端侧生效状态（登记）。
 
 ## 12. 落定与实施注意
 

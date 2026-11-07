@@ -52,7 +52,7 @@
 - **【已定决定】** 压缩触发面增**可达性门**（台账 `#1833`）：`压 ⟺ total > threshold ∧ post(plan) ≤ threshold`——压完仍到不了线下就不压。理由 = 压缩只能压 `history`，`system + tools` 是压不掉的固定开销；把固定开销算进触发判据，等于对着一面敲不动的墙反复付费，而每付一次都可能吃掉一个真实响应。设计单源 = `docs/core/design/CONTEXT-COMPACTION.md` §6.17。
 
 - **【用户需求】压缩线目标 = 窗口 60%**（2026-10-27 定）。口径 = **「不越窗」优先于「线高」**——线压低，压缩来得早，但不会走到「预算算出来了却发不出去」那一步：
-  - **阈值链**：显式 `config.agent.compactThreshold` 优先；auto = 可用窗口与 `⌊窗口 × 0.6⌋` 取小（`thincoder-core/config.mjs:53` `COMPACT_RATIO = 0.6`）。**可用窗口 = `usableWindow(窗口, 预留)`——窗口减预留；预留 ≥ 窗口时退到 `⌊窗口 / 2⌋`**（预留占满整窗时裸减会得 0，阈值与真限一起归零，那一档就永远发不出任何请求）。**预留 = 实发 `maxTokens`；未发时按规格 `maxOutput` 保守计，不封顶**（封顶会让预算面与发送面脱钩，产生「算预算用 25%、实发 39%」的死区）——`resolveCompactThreshold` 单源，**派生值不回写活配置**（auto 值落显式键 = 换模型后不跟随的陈旧值）。
+  - **阈值链**：显式 `config.agent.compactThreshold` 优先；auto = 可用窗口与 `⌊窗口 × 0.6⌋` 取小（`thincoder-core/config.mjs` 的 `COMPACT_RATIO = 0.6`）。**可用窗口 = `usableWindow(窗口, 预留)`——窗口减预留；预留 ≥ 窗口时退到 `⌊窗口 / 2⌋`**（预留占满整窗时裸减会得 0，阈值与真限一起归零，那一档就永远发不出任何请求）。**预留 = 实发 `maxTokens`；未发时按规格 `maxOutput` 保守计，不封顶**（封顶会让预算面与发送面脱钩，产生「算预算用 25%、实发 39%」的死区）——`resolveCompactThreshold` 单源，**派生值不回写活配置**（auto 值落显式键 = 换模型后不跟随的陈旧值）。
   - **压缩线取值与预留量互斥（预留 &lt; 窗口 时）**：两者取小，故线高不会超过「窗口 − 预留」。今日实例 = `maxTokens 393,216`（占 39%）⇒ 可用窗口 606,784，`⌊窗口 × 0.6⌋ = 60.0%` 更小 ⇒ 压缩线落 **60.0%**（取小取了比例项）；同一档若预留降到 0，压缩线仍停在 60%，**不会回升**。**取舍判据 = 「不越窗」优先于「线高」**——线高由比例项封顶，**预留 ≥ 40% 窗口时**才进一步压低它；**预留 ≥ 窗口时半窗退化接管，线 = `⌊窗口 / 2⌋`（不再降）**。
   - **报面**：主口径 = **窗口占用**（`total / window`）；压缩线以**具名数值**露出（不再作百分比分母）；同名输出不得两个无名百分比并存；**请求预算行 = 五实数**（窗口 + 来源 ∥ 实发 max_tokens + 来源 ∥ **全量 prompt 占用**——含 system + tools，字面名取设计已定的 `prompt` ∥ 距压缩线 ∥ 距真限）。预留占比不单列：它由「窗口」与「max_tokens」两个在场数直接相除得出，再列一遍等于同一事实两处出现。
   - **判定句**：① 逐档推算全表（`model-specs.mjs` 全量）——预留 ≤ 40% 窗口的档 = **60.0%**（比例项更小）；预留 &gt; 40% 且 &lt; 窗口的档 = `窗口 − 预留`（可用窗口项更小；恰 40% 时两式同得 60%）；**预留 ≥ 窗口的档 = `⌊窗口 / 2⌋`（半窗退化）**；且该两类须在报面明示该档的预留占比；三式与 `min(usableWindow(窗口, 预留), ⌊窗口 × 0.6⌋)` 逐档互推一致；② stats 首行恰含一个具名百分比（分母 = 窗口）∧ 压缩线以具名数值在场 ∧ 请求预算行五实数在场；③ 溢出风险论证三件在场（真溢出后果 ∥ 兜底接法 ∥ 高风险档清单）。
@@ -97,8 +97,8 @@
 语义同源——VSC 档 F-K1–F-K6 / N-K1–N-K4 与 §4.1 逐条同义（不重并）；**VSC 独有条目** = **F-K7 压缩可见性（本端）**：
 回调链 onCompressStart → onCompress / onCompressFail → webview `compress` 消息四态（start / done / fallback / failed）渲染至 `#compress-status` 状态行（仅生命周期可见——摘要正文不进前端）。
 
-（阈值 / 切割 / 降级常量**单源 = 核**——本端不另持）+ `src/extension/panel-callbacks.mjs:144-152`（compress 回调接线）。**端差（已裁保留 · 形态类——类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）**：呈现面（webview 状态行四态 vs TUI 压缩面板）；
+（阈值 / 切割 / 降级常量**单源 = 核**——本端不另持）+ `src/extension/panel-callbacks.mjs`（compress 回调接线）。**端差（已裁保留 · 形态类——类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）**：呈现面（webview 状态行四态 vs TUI 压缩面板）；
 
-提示词（`SUMMARIZE_PROMPT`）**单源 = 核 export**（`thincoder-core/context.mjs:61`）。**测试缺口（发现即报）**：VSC `test/` 对压缩面零专属用例——补测触发 = 该面下次被触碰。
+提示词（`SUMMARIZE_PROMPT`）**单源 = 核 export**（`thincoder-core/context.mjs`）。**测试缺口（发现即报）**：VSC `test/` 对压缩面零专属用例——补测触发 = 该面下次被触碰。
 
 **二态化裁定行**：端差（呈现面四态）= **已裁保留**（形态类——类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）；提示词面 = **单源 = 核 export**（非端差）。

@@ -40,9 +40,9 @@ write = **整文件替换 / 新建**——覆盖已有文件（read 后确认整
 
 | 面 | 落点 | 实核 |
 |---|---|---|
-| 工具对象 / 执行 | `thincoder-core/tools/file.mjs:192`（`writeTool`） | 导出在位 |
-| 写路径记账（dirty / lastWrite） | `thincoder-core/tools/write-path.mjs:41`（`recordWrite`）· `:74`（`dirtyRefusalMessage`） | 由 `file.mjs:43` re-export |
-| 行尾 helper | `thincoder-core/tools/shared.mjs:67`（`detectFileEol`）· `:73`（`joinWithEol`）· `:82`（`majorityEol`） | 导出在位 |
+| 工具对象 / 执行 | `thincoder-core/tools/file.mjs` 的 `writeTool` | 导出在位 |
+| 写路径记账（dirty / lastWrite） | `thincoder-core/tools/write-path.mjs` 的 `recordWrite` · `dirtyRefusalMessage` | 由 `thincoder-core/tools/file.mjs` 的再导出行转出 |
+| 行尾 helper | `thincoder-core/tools/shared.mjs` 的 `detectFileEol` · `joinWithEol` · `majorityEol` | 导出在位 |
 | 描述面（模型可见） | `thincoder-core/tool-docs/write.md` | 在位（`DESC()` 加载） |
 | 注册面 | `thincoder-core/tools/index.mjs`（`builtinTools` · file 组） | 组陈述见 `docs/core/design/TOOLS.md` §6.2 |
 | VSC 对位实现 | `thincoder-vscode/src/tools/file.mjs` | 同名机制 · 独立实现 |

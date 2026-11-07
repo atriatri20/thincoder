@@ -51,16 +51,16 @@
 | 93 | `agent-tools/consult.mjs` | 同路径 | 0.2207 · 异 | ② | 进核 | 融合：取 CLI 装配（子运行器 = `runAgent(agent, …)`）+ VSC 的 `specForModel` / `extraTools` 面归位 | 分叉 ＝ 载体（agent vs history）与子运行器装配；机制骨架（pending 单容器 + 全 settle 一次注入 + 零评判 + `consult_stop` 不注入）两端相同 | — | S1（建核补齐） |
 | 95 | `thincoder-core/agent-tools/advisor.mjs` | 同路径 | 0.1499 · 异 | ② | 进核 | 融合：取 CLI（异步判定 + 拆分面）+ VSC 的 `depth` 显式校验并入 | 分叉 ＝ `depth` 缺省读法（CLI 缺省走同步 / VSC 当 0 走异步——仅影响非 dispatch 直调路径）+ 文件职责切分 | — | S1（建核补齐） |
 | 104 | `advisor/citations.mjs` | 同路径 | 0.8175 · 异 | ② | 进核 | 融合：取一侧（仅注释契约编号不同） | 分叉 ＝ 头注释出处；判据与输出同形 | — | S1（建核补齐） |
-| 105 | `advisor/project-context.mjs` | 同路径 | 0.6494 · 异 | ② | 进核 | 融合：取一侧 + 取模型窗口的字段名归一（`agent.provider` / `agent._provider`） | 分叉 ＝ 取模型上下文窗口的字段名（CLI `src/advisor/project-context.mjs:113` / VSC `:117`）+ 注释；预算与降级文案逐字同 | — | S1（建核补齐） |
+| 105 | `advisor/project-context.mjs` | 同路径 | 0.6494 · 异 | ② | 进核 | 融合：取一侧 + 取模型窗口的字段名归一（`agent.provider` / `agent._provider`） | 分叉 ＝ 取模型上下文窗口的字段名（CLI `src/advisor/project-context.mjs` / VSC 同件）+ 注释；预算与降级文案逐字同 | — | S1（建核补齐） |
 | 106 | `advisor/repos.mjs` | 同路径 | 0.6435 · 异 | ② | 进核 | 融合：取一侧 + `isDocOnlyChange` 语义归一（临时文件算不算「只文档」） | 分叉 ＝ 判定语义不同（CLI 非代码即「只文档」/ VSC 要求「非代码且是文档」）；**两端当前均无消费方** ⇒ 潜伏差异，归一时取一侧并登记 | — | S1（建核补齐） |
 | 107 | `advisor/compaction.mjs` | 同路径 | 0.5665 · 异 | ② | 进核 | 融合：取一侧（空响应标记字面归一） | 分叉 ＝ 空响应标记字面（CLI `Advisor: empty response` / VSC `Advisor: (empty response`）+ VSC 多 `incompleteNotice`；数值与提醒文案族同 | — | S1（建核补齐） |
 | 108 | `advisor/messages.mjs` | 同路径 | 0.4965 · 异 | ② | 进核 | 融合：正文取一侧（逐字相同）+ 装配管道（声明注入点 / 轮次来源 / 相对路径前缀守卫）按核内结构归一 | 分叉 ＝ 装配管道（CLI 正文内插对象声明 + 全局 `_advisorRound` / VSC 由 `run.mjs` 注入 + 评审实例 `rv`）；前提（评审正文同源）仍成立 | — | S1（建核补齐） |
-| 109 | `advisor/loop.mjs` | 同路径 | 0.3889 · 异 | ② | 进核 | 融合：取 CLI 限额族 + 工具集取并集（`code_search` 恒在）+ 进度行按端注入（④ 段） | 分叉 ＝ 评审工具集（CLI 需 `agent.memory` 才挂 `code_search` `src/advisor/loop.mjs:37-46` / VSC 恒在 `code_search`（现体 = 核 `thincoder-core/advisor/loop.mjs:31`——检索面恒在句））+ 进度行实现；墙 / 轮帽 / 预算同 | — | S1（建核补齐） |
-| 110 | `thincoder-core/advisor/run.mjs` | 同路径 | 0.3589 · 异 | ③ | 进核 | 取并集：以 CLI 为准（含设计评审连续失败止损护栏 `src/advisor/run.mjs:15-17,59-75,199-204`）+ VSC 的评审实例上下文并入 | 分叉 ＝ CLI 多一道止损闸（VSC 全仓零 `review-streak` 命中）+ 轮次载体（全局字段 vs 实例 `rv`）；前提（同职责）仍成立 | **①** | S1（建核补齐） |
+| 109 | `advisor/loop.mjs` | 同路径 | 0.3889 · 异 | ② | 进核 | 融合：取 CLI 限额族 + 工具集取并集（`code_search` 恒在）+ 进度行按端注入（④ 段） | 分叉 ＝ 评审工具集（CLI 需 `agent.memory` 才挂 `code_search`（`src/advisor/loop.mjs`）/ VSC 恒在 `code_search`（现体 = 核 `thincoder-core/advisor/loop.mjs` 的检索面恒在句））+ 进度行实现；墙 / 轮帽 / 预算同 | — | S1（建核补齐） |
+| 110 | `thincoder-core/advisor/run.mjs` | 同路径 | 0.3589 · 异 | ③ | 进核 | 取并集：以 CLI 为准（含设计评审连续失败止损护栏 `src/advisor/run.mjs` 的护栏段）+ VSC 的评审实例上下文并入 | 分叉 ＝ CLI 多一道止损闸（VSC 全仓零 `review-streak` 命中）+ 轮次载体（全局字段 vs 实例 `rv`）；前提（同职责）仍成立 | **①** | S1（建核补齐） |
 
 > **#106 S2 接线前口径确认项（只记——S2 动作）**：
-> 归一形态 = **取一侧 = CLI**（核内已承载：`thincoder-core/advisor/repos.mjs:128` `isDocOnlyChange` = **非代码即「只文档」**——`docs/` / `*.md` 与临时件（`tmp-*` / `.tmp` / `.temp`）**同落「只文档」流**；逐行实核）；
-> 对端严格形态 = **非代码 ∧ 是文档**（`thincoder-vscode/src/advisor/repos.mjs:111`——临时件既非代码也非文档 ⇒ **中断「只文档」流**）。
+> 归一形态 = **取一侧 = CLI**（核内已承载：`thincoder-core/advisor/repos.mjs` 的 `isDocOnlyChange` = **非代码即「只文档」**——`docs/` / `*.md` 与临时件（`tmp-*` / `.tmp` / `.temp`）**同落「只文档」流**；逐行实核）；
+> 对端严格形态 = **非代码 ∧ 是文档**（`thincoder-vscode/src/advisor/repos.mjs`——临时件既非代码也非文档 ⇒ **中断「只文档」流**）。
 > 两端当前**均无生产消费方**（对端仅测试引用）⇒ 属**潜伏差异**；
 > **S2 接线前须确认**：接线后差异面 = **仅「临时件场景」**（`isDocOnlyChange` 对「临时件（+ 文档）」变更集的判定由 false 变为 true）——接受统一，或以端差注入承载严格形态（二选一——属 S2 接线轮动作，本项只记）。
 
@@ -69,7 +69,7 @@
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
 | 159 | `src/agent-tools/review-facts.mjs`（改名自 review-streak） + `thincoder-core/agent-tools/subagent-panel.mjs` ↔ 核内（VSC 零 `review-facts` / `panel` 动作） | ③ | 以 CLI 为准（评审连续失败止损 / `panel` 动作）——VSC 接线后生效 | 分叉 ＝ VSC 未实现（零命中）；**承 §2.5 #110（止损）/ #99（panel 端特有段）** | —（承 #110 / #99） | S1（建核补齐） |
-| 160 | `thincoder-core/advisor.mjs` ↔ `thincoder-core/advisor.mjs` | ② | 融合：取一侧（advisor 提示词选择 / 跟进构建 / 会话装配） | 分叉 ＝ 档名与目录（VSC 头注自述「VS Code port of thincoder CLI `thincoder-core/advisor.mjs`」`:3`）⇒ 前提成立 | — | S1（建核补齐） |
+| 160 | `thincoder-core/advisor.mjs` ↔ `thincoder-core/advisor.mjs` | ② | 融合：取一侧（advisor 提示词选择 / 跟进构建 / 会话装配） | 分叉 ＝ 档名与目录（VSC 头注自述「VS Code port of thincoder CLI `thincoder-core/advisor.mjs`」——同档头注）⇒ 前提成立 | — | S1（建核补齐） |
 | 161 | （CLI 侧内联于 `thincoder-core/advisor/run.mjs`）↔ `src/advisor/provider.mjs` + `advisor/tools.mjs` | ② | 融合：评审 provider 解析 / 工具集按核内结构归位 | 分叉 ＝ 拆档（VSC 拆 2 档）；工具集差异（`code_search` 挂载条件）**已由 §2.5 #109 裁决** ⇒ 前提成立（现体 = 核 `thincoder-core/advisor/**`） | S1（建核补齐） |
 
 ## 3. 须用户裁条目
@@ -78,7 +78,7 @@
 
 | # | 条目（路径 / 对位） | 命中 | 左端行为（CLI） | 右端行为（VSC） | 建议归一形态 | 影响面 | 裁定状态 |
 |---|---|---|---|---|---|---|---|
-| A24 | `thincoder-core/advisor/run.mjs` | ① | 有**止损护栏**：同一批设计文档连续失败达阈值即拒发并给失败尝试表（`:15-17,59-75,199-204`） | **无该护栏**（VSC 全仓零 `review-streak`）⇒ 一次次重复发起、烧配额 | 取并集：以 CLI 为准（含止损护栏）+ VSC 的评审实例上下文并入 | ① VSC 侧评审连续失败时从此会止损并给出失败清单（现状是重复失败） | **已裁 · 按建议** |
+| A24 | `thincoder-core/advisor/run.mjs` | ① | 有**止损护栏**：同一批设计文档连续失败达阈值即拒发并给失败尝试表（同档 `run.mjs` 的护栏段） | **无该护栏**（VSC 全仓零 `review-streak`）⇒ 一次次重复发起、烧配额 | 取并集：以 CLI 为准（含止损护栏）+ VSC 的评审实例上下文并入 | ① VSC 侧评审连续失败时从此会止损并给出失败清单（现状是重复失败） | **已裁 · 按建议** |
 
 ## 4. 对外契约影响
 
@@ -87,8 +87,8 @@
 ## 6. 机制面
 
 > **本节 = 该档中「根层所缺」内容的并入面**：(a) 机制 / 契约的实质描述 · (b) 实现细节与坐标 · (c) 关键决策依据（§7）。
-> **坐标口径**：本节一律按**现状路径**落笔（CLI 侧实现已住 `thincoder-core/**`；`thincoder-cli/src/tui/**` = CLI 壳体面；VSC 侧 = `thincoder-vscode/src/**`）。符号名与档路径为契约面，行号未逐条复核。
-> **泛化机制不复制**：digest / settle / pending 单容器的机制本体 → 本层 `AGENT-LOOP-SUBAGENT.md` §6.7.3 / `AGENT-LOOP-ASYNC-POOL.md` §6.8（不复制）；async 结果容器契约 → `thincoder-cli/docs/_archive/design/ASYNC-RESULT-CONTAINER.md`（CLI 档 · 未迁）。
+> **坐标口径**：本节一律按**现状路径**落笔（CLI 侧实现已住 `thincoder-core/**`；`thincoder-cli/src/tui/**` = CLI 壳体面；VSC 侧 = `thincoder-vscode/src/**`）。符号名与档路径为契约面（行号不作引用形态）。
+> **泛化机制不复制**：digest / settle / pending 单容器的机制本体 → 本层 `AGENT-LOOP-SUBAGENT.md` §6.7.3 / `AGENT-LOOP-ASYNC-POOL.md` §6.8（不复制）；async 结果容器契约 → CLI 侧归档设计档 ASYNC-RESULT-CONTAINER（原档路径已不在盘 · 未迁）。
 
 ### 6.1 架构与数据流
 
@@ -182,9 +182,9 @@ consult_stop
 
 | 环节 | VS Code（现状坐标） |
 |---|---|
-| 子 agent 构建 | `runConsultChild`（`thincoder-core/agent-tools/consult.mjs:215`）——`buildProvider` + effort 钳制（越 `reasoningEffortEnum` 整字段丢弃——防 candidate 开跑即死）；`models` 子集选择器同 CLI（大小写不敏感） |
+| 子 agent 构建 | `runConsultChild`（`thincoder-core/agent-tools/consult.mjs`）——`buildProvider` + effort 钳制（越 `reasoningEffortEnum` 整字段丢弃——防 candidate 开跑即死）；`models` 子集选择器同 CLI（大小写不敏感） |
 | 子任务 runner | `runAgent(child, problem, childCallbacks, { depth: 1, maxTurns: consultTurns, signal })` |
-| 只读工具集 | setup.mjs role 过滤（depth>0 且 role `consult` → 只读）+ `main_history` 经 `opts.extraTools` 注入（`makeMainHistoryTool` = `thincoder-core/agent-tools/consult.mjs:82`——limit 默认 20 最大 100；多模态 base64 图片替换 `[image omitted]`、tool_calls 显形 args 截 200、60KB 字节预算） |
+| 只读工具集 | setup.mjs role 过滤（depth>0 且 role `consult` → 只读）+ `main_history` 经 `opts.extraTools` 注入（`makeMainHistoryTool` = `thincoder-core/agent-tools/consult.mjs`——limit 默认 20 最大 100；多模态 base64 图片替换 `[image omitted]`、tool_calls 显形 args 截 200、60KB 字节预算） |
 | 系统 prompt | role `"consult"` → consult-base 底座（瘦——不背主 agent persona / 工具引用） |
 | 工具注册 | setup.mjs：`consultModels` 非空即注册 `consult_start` / `consult_stop`——空池不注册 |
 | 会话跨 run 容器 | `history._consultSessions`（`_asyncSubagents` 同款载体——agent per-run 重建） |

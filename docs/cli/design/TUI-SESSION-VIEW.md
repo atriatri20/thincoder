@@ -160,18 +160,18 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
   胖行场景下限 = `LINES_TRIM_FLOOR`（200 行——≥8 屏@24 行制）。
 - **恢复 / 翻页记账**：恢复 / 切槽 / 清空路径全部经既有对账（直算重对账或逐行入账 + 重跑对账 / 同步归零）——**例外 = 翻页路径的占位行移除**（见下条限定）；每次恢复 / 翻页 materialize 后立即对账裁剪。
 - **记账口径**：`state.lines` 的一切增删都必须过账——
-  增 = 逐行 `accountLine`（`thincoder-cli/src/tui/display-budget.mjs:137`）/ 批算 `accountAll`（同档 `:146`）；
-  **删 = 同额负向出账**（新增导出 `releaseLine(state, l)` = `state._linesChars -= lineChars(l)`，钳 0）——`:170` `loadOlder` 移除占位行即归此列。
-  不变式 = `state._linesChars === Σ lineChars(l)`（`:147` 恢复路径的直算对账即该式）。
+  增 = 逐行 `accountLine` / 批算 `accountAll`（两者都住 `thincoder-cli/src/tui/display-budget.mjs`）；
+  **删 = 同额负向出账**（新增导出 `releaseLine(state, l)` = `state._linesChars -= lineChars(l)`，钳 0）——`loadOlder` 移除占位行即归此列。
+  不变式 = `state._linesChars === Σ lineChars(l)`（恢复路径的直算对账即该式，单源 = `accountAll`）。
 
-  **复用不可**：既有 `accountLine` 以行对象 `_budgetChars` 为基、幂等（`display-budget.mjs:137-143`）——行已从 `state.lines` 脱落后再调用，增量值恒 0 ⇒ 不产生负向出账，故需新增导出。
-- **限定**：`loadOlder` 占位行移除（`thincoder-cli/src/tui/startup.mjs:170`）不出账 ⇒ 直算账对 Σ 有高估（数十码元 / 页）；`thincoder-cli/src/tui/display-budget.mjs:175` 的 `!Number.isFinite(_linesChars)` 守卫对该路径不触发（账仍有限）⇒ 不重算、漂移逐页累积。**处置 = `shift()` 处补同额出账**（对比表紧随本节）。
+  **复用不可**：既有 `accountLine` 以行对象 `_budgetChars` 为基、幂等（`display-budget.mjs` 的 `accountLine` 函数体）——行已从 `state.lines` 脱落后再调用，增量值恒 0 ⇒ 不产生负向出账，故需新增导出。
+- **限定**：`loadOlder` 占位行移除（`thincoder-cli/src/tui/startup.mjs` 的 `createLoadOlder`）不出账 ⇒ 直算账对 Σ 有高估（数十码元 / 页）；`thincoder-cli/src/tui/display-budget.mjs` 的 `syncLineBudget` 里那道 `!Number.isFinite(state._linesChars)` 守卫对该路径不触发（账仍有限）⇒ 不重算、漂移逐页累积。**处置 = `shift()` 处补同额出账**（对比表紧随本节）。
 
 **选型对比**：占位行移除的记账处置两候选——
 
 | # | 候选方案 | 判据逐项评估 | 取舍（选定代价 / 权衡） | 结论 |
 |---|---|---|---|---|
-| 1 | `shift()` 处补同额出账 | 不变式 `_linesChars = Σ lineChars` 恒成立；与 `:147` 直算对账同口径；一行改动 | 需核对该行字符数（既有 `lineChars` 可复用） | **选定** |
+| 1 | `shift()` 处补同额出账 | 不变式 `_linesChars = Σ lineChars` 恒成立；与 `accountAll` 直算对账同口径；一行改动 | 需核对该行字符数（既有 `lineChars` 可复用） | **选定** |
 | 2 | 占位行不单独入账 | 无需新增调用 | 占位行确在 `state.lines` 渲染面 ⇒ 该行**不计入**账即反向失真（账 < 实际），不变式破坏 | **否决** |
 - **两层 scrollback**：TUI 全程 alt screen（`\x1b[?1049h`——`thincoder-cli/src/tui/tui-lifecycle.mjs` 启动序列）——终端自身
   scrollback 不承载会话（退出即弃）；滚轮 / 键面滚动全走内层 `state.lines` ⇒ **单层可见历史**。视口 = 内层自底偏移

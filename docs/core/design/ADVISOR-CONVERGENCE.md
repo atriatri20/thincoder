@@ -161,7 +161,7 @@ CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式�
 **裁定原话（逐字）**：「不不不，过度工程，防无限重评审也不是这么防的，到处加机械限制是一种非常拙劣低级的做法，完全不体现程序员的能力和水平。」
 
 - **无会话级计数载体**：不设任何计数载体、不按计数拒发（无按计数拒发的常量 / 工具层预检 / 内防线 / guard 轮次项）。
-- **纪律面（提示词面 = 逐字建议，落笔权在主 agent）**：两处提示词末句（EN 运行面）`thincoder-core/prompts/discipline-normal.md:126` · `thincoder-core/prompts/persona-engineering.md` §Review convergence 的 `Rounds are uncapped — repeated mechanical failure (same criterion) ⇒ stop and report.`——
+- **纪律面（提示词面 = 逐字建议，落笔权在主 agent）**：两处提示词末句（EN 运行面）= `thincoder-core/prompts/discipline-normal.md` · `thincoder-core/prompts/persona-engineering.md` §Review convergence 的 `Rounds are uncapped — repeated mechanical failure (same criterion) ⇒ stop and report.`——
   **落点（N5）**：末句 = en `No round cap — repeated mechanical failure (same criterion) ⇒ stop and report.`（句首两段逐字保留）。
 - **轮次字段保留（区分对待——勿一刀切）**：每实例的轮次（`run.round`）**保留**——它是**提示词衰减**（§2.1 轮次表）与 TUI / VSC 轮次显示的数据源；**轮次不是终止判据**，不参与任何拒发判定。
 - **保留的既有自限**（逐条登记——都不是「评审发起封禁」）：工具轮硬帽 100（§2.3 宿主打断死循环）· 评审墙钟预算（F15）· completion guard 推回预算——两层口径：进展窗口 `MAX_ADVISOR_PUSHBACKS` ≤ 3 条 ∥ 未评审周期 `MAX_ADVISOR_REMINDERS` ≤ 5 条（权威面 §6.4；两者都只节流 guard 自身的提醒，不封禁评审发起）· 异步池并发上限（资源保护归调度域）。
@@ -177,8 +177,8 @@ CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式�
 
 逐字建议（**落位清单写全**；**已落笔**——运行期 `thincoder-core/prompts/discipline-engineering.md` §基本流程 · 步骤 4（测试）之子条目「评审反复机械失败」）：
 
-- **工程模式（本句落位）**：运行期 `thincoder-core/prompts/discipline-engineering.md` §基本流程 步骤 4（测试）之子条目（`:41` 之后——与步骤 2 的写权子条目同层）。
-- **普通模式（同族句落位）**：运行期 `thincoder-core/prompts/discipline-normal.md` §Review discipline（`:119` 起）——即 §3.1 逐字句所在的同一节位。
+- **工程模式（本句落位）**：运行期 `thincoder-core/prompts/discipline-engineering.md` §基本流程 步骤 4（测试）之子条目（与步骤 2 的写权子条目同层）。
+- **普通模式（同族句落位）**：运行期 `thincoder-core/prompts/discipline-normal.md` §Review discipline——即 §3.1 逐字句所在的同一节位。
 
 ```text
 - **评审反复机械失败**：同一评审面同类机械失败累计 ≥3 次（失败结论块 criterion= 相同）⇒ 停止重跑，把事实与候选处置摆给用户——不自动重跑、不自动缩范围、不自行改判据。
@@ -215,22 +215,22 @@ CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式�
 
 **① 提示词面（活行 2 = 2 句——§3.1 逐字句；同族 2 组 = 裁项在 §3.5）**
 
-| # | file:line | 现形态（末句） | 处置 |
+| # | 档名（+ 节） | 现形态（末句） | 处置 |
 |---|---|---|---|
 | P1 | `thincoder-core/prompts/discipline-normal.md` | 现行句 `No round cap — repeated mechanical failure (same criterion) ⇒ stop and report.` | **已落**——§3.1 逐字句 |
 | P2 | `thincoder-core/prompts/persona-engineering.md` §Review convergence（轮次衰减条） | 现行句：`Rounds are uncapped — repeated mechanical failure (same criterion) ⇒ stop and report.` | 同上（已落） |
 | P5 | `thincoder-core/prompts/persona-engineering.md` §Batch-record lifecycle 的 `§5 fix-round cap = 5 rounds` | §5 修正轮上限 5 轮 / §3「cap 豁免」/ >3 轮停止判据 | **同族 · 未落**——§3.5 行 1 / 行 2（待用户裁）；已登记 |
-| P6 | `thincoder-core/prompts/persona-eng-coder.md:22` | `self-fix (max 5 correction rounds)` | **同族 · 未落**——§3.5 行 3（非本面射程） |
+| P6 | `thincoder-core/prompts/persona-eng-coder.md` | `self-fix (max 5 correction rounds)` | **同族 · 未落**——§3.5 行 3（非本面射程） |
 
 **② 需求面（只登记、不改文——需求档笔在父侧；三行未落）**
 
-| # | file:line | 现形态 | 处置 |
+| # | 档名（+ 节） | 现形态 | 处置 |
 |---|---|---|---|
-| R1 | `docs/core/requirements/NORMAL-MODE.md:68` | F7「…🔴 不得埋；**≤5 轮收敛**；全清后跑 `verify`」 | 登记：与撤 cap 口径冲突 |
-| R2 | `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-REVIEW-CREDENTIAL.md:13` | 继承枚举「轮次衰减 / **机械 cap** / 会话隔离 / 失败护栏」 | 登记：枚举陈旧 |
-| R3 | `docs/core/requirements/ENGINEERING-MODE-V2.md:391`（同族见 `:187` ∥ `:668`） | 「自修（≤5 轮）」/「§5 修正轮上限 5 轮…」 | 登记：§3.5 行 1 / 行 3 的需求面 |
+| R1 | `docs/core/requirements/NORMAL-MODE.md` | F7「…🔴 不得埋；**≤5 轮收敛**；全清后跑 `verify`」 | 登记：与撤 cap 口径冲突 |
+| R2 | `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-REVIEW-CREDENTIAL.md` | 继承枚举「轮次衰减 / **机械 cap** / 会话隔离 / 失败护栏」 | 登记：枚举陈旧 |
+| R3 | `docs/core/requirements/ENGINEERING-MODE-V2.md`（三处同族） | 「自修（≤5 轮）」/「§5 修正轮上限 5 轮…」 | 登记：§3.5 行 1 / 行 3 的需求面 |
 
-**③ 假阳登记（非同族——宽扫命中，勿误收）**：`thincoder-core/prompts/advisor-design.md:10`（`≤500` 行 = 代码结构档位判据）· `docs/core/requirements/CONSULTATION.md:56`（`consultModels` 候选池 ≤5）。
+**③ 假阳登记（非同族——宽扫命中，勿误收）**：`thincoder-core/prompts/advisor-design.md`（`≤500` 行 = 代码结构档位判据）· `docs/core/requirements/CONSULTATION.md`（`consultModels` 候选池 ≤5）。
 
 ## 4. 收敛会话与证据纪律
 
@@ -240,7 +240,7 @@ CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式�
 
 - ROUND2/3 的 system prompt 与 follow-up 用户消息均声明 **STALE-CONTEXT WARNING**：更早消息中的任何内容都是历史快照——**视为过期——只有本轮 `read` 的结果描述当前状态**。
 - **round2+ follow-up 刻意零 git**：不注入 diff / 状态快照（已提交的修复不会出现在 diff 里 ⇒ 会误导复评，把“无变化”读成“无修复”）——验证只靠 `read`。
-- **证据强制**：任何 “Unfixed” / “New” 判定必须附 `read` 验证的 `file:line` 证据（引本轮 read 的确切行内容——行号本身不是证据）；无证据的判定视为未验证、不予接受。机械校验见 §5。
+- **证据强制**：任何 “Unfixed” / “New” 判定必须附 `read` 验证的证据（档名 + 本轮 read 读到的那一行逐字原文——行号本身不是证据）；无证据的判定视为未验证、不予接受。机械校验见 §5。
 
 ### 4.2 fresh session——每轮全新会话
 
@@ -263,7 +263,7 @@ CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式�
 - **取件下界（per-review 窗口）**：agent 响应表取件按**本评审实例**收敛——下界 = 本评审**投递水印**（`run.historyAnchorIdx`：本评审结果进入父 history 的落点；async = 投递单点 `injectAsyncResult` ∥ sync = 工具结果提交点落——机制见 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.10）。
   取件 = 自水印**前向**扫描取**首张**响应表；无水印（legacy 直调 / 无实例）回落既有全文倒扫。依据 = 并发评审下全文倒扫取「最新」表 ⇒ 取到他场。
 
-  **残余声明**：① **索引稳定性前提**：水印 = 投递刻 history 下标；跨存档重装（整换径 `thincoder-core/session-lifecycle.mjs:115` `agent.history = [...machineMerged]`）∥ 头裁切后可失配；失配两向（同因）——前向窗**越过**本表 ⇒ 回落「no response table」兜底文本 ∥ 前向窗起点**左移** ⇒ 覆盖更早区段（可含投递前）⇒ 可取他场**更早**表；两向均 = 聚焦参考降级、不驱动控制流。
+  **残余声明**：① **索引稳定性前提**：水印 = 投递刻 history 下标；跨存档重装（整换径 `thincoder-core/session-lifecycle.mjs` `agent.history = [...machineMerged]`）∥ 头裁切后可失配；失配两向（同因）——前向窗**越过**本表 ⇒ 回落「no response table」兜底文本 ∥ 前向窗起点**左移** ⇒ 覆盖更早区段（可含投递前）⇒ 可取他场**更早**表；两向均 = 聚焦参考降级、不驱动控制流。
 
   ② 水印下界只保证「≥ 本评审投递点」——他场响应表若在本评审投递之后、本次构建之前交错写入，取件仍可先命中他场；「聚焦参考」语义不变（不驱动控制流——与 F9 / F-A12 不相触）。
 - **已知边界（legacy 路径）**：legacy 收敛路径不应用转义——**直接外部调用方须自行转义**（parent 对话引用字面转义序列时有服务端 400 风险）；正常流已转义，无风险。
@@ -272,7 +272,7 @@ CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式�
 
 提示词的证据规则无法由 LLM 自我强制——模型可以声称读过而实际复述 prior 表。**宿主侧机械校验是最后防线**：
 
-- 评审结果拿到后解析其中的 `file:line: content` 引用（后缀白名单（源码/配置/文档扩展名，防 URL 假阳性）+ 内容长度下限 + 排除反引号引文）。
+- 评审结果拿到后解析其中的引文——形 = 档路径 + 该行行号 + 该行引文（解析器 = `thincoder-core/advisor/citations.mjs` 的 `extractCitations`；后缀白名单（源码/配置/文档扩展名，防 URL 假阳性）+ 内容长度下限 + 排除反引号引文）。行号只作解析器的定位键，**证据 = 引文本身**（与 §4.1 同口径）。
 - 逐条磁盘比对：该文件该行的实际内容是否**包含**引用内容；引用路径有**路径围栏**（realpath 解析后必须仍在 cwd 内——LLM 生成的路径不可信，防越界读泄漏配置）。
 - 验证报告追加到评审结果：`[host-verified] N/M citations match current file state.` + 不匹配清单（至多 10 条，含失败原因）。
 - 父 agent（决策方）与用户看到验证报告后，对不匹配的 “Unfixed” 判定自动降权——**未通过校验的引用不能支撑打回**。效果：模型编造 / 复述旧证据的成本从“零”变为“必然被标记”。
@@ -392,7 +392,7 @@ if (!pending                          // 异步评审在飞/排队 → 未决不
 纪律层的响应表纪律（**纯提示词纪律——不加机械解析**——响应表仍是“聚焦参考”，不驱动控制流）：
 
 1. **表头精确**：`| # | Action | Detail |`——运行时按此精确提取，保持逐字。每 issue 一行；`#` = advisor 的 issue 编号（**round2+ 用原编号**——不重编号）。
-2. **`Action` 四值封闭词表**：`Fixed`（**已落地**——已改代码/设计）、`Dispatched`（**修正轮在途——尚未落地**）、`Not an issue`（技术反驳，附证据）、`Deferred`（承认但不修，附理由——适用于 🟡/🔵 改进、需用户先拍板的 🔴，或**携理由的认账不修 🔴**（争议窗自第 3 轮起收口，§2.5）；零理由即不接受，**不得用于静默丢弃真缺陷**）。`Detail` = 改了哪、在哪（file:line），或证据 / 理由。**不修即须携理由**——零理由的沉默 ∥ 回避不在接受之列（争议窗语义见 §2.5）。
+2. **`Action` 四值封闭词表**：`Fixed`（**已落地**——已改代码/设计）、`Dispatched`（**修正轮在途——尚未落地**）、`Not an issue`（技术反驳，附证据）、`Deferred`（承认但不修，附理由——适用于 🟡/🔵 改进、需用户先拍板的 🔴，或**携理由的认账不修 🔴**（争议窗自第 3 轮起收口，§2.5）；零理由即不接受，**不得用于静默丢弃真缺陷**）。`Detail` = 改了哪、在哪（档名 + 逐字引文 ∥ 符号名），或证据 / 理由。**不修即须携理由**——零理由的沉默 ∥ 回避不在接受之列（争议窗语义见 §2.5）。
 3. **禁止「pre-existing」借口**：评审双方拥有整个代码 / 设计——“之前就有”“不是我引入的”永远不是跳过修复的理由；问题何时出现不决定它该不该修。只能技术反驳或修，否则不算收敛。
 4. **工程模式收窄**：超出已批准设计范围的 finding → **surface 或提设计更新**（父代理不直接写实现代码）；一个 🔴 既不修也不 surface = **阻断收敛**。
 5. **收口时序**：见 §7.1。
@@ -402,7 +402,7 @@ if (!pending                          // 异步评审在飞/排队 → 未决不
 - **链行节点**（两档同文插入）：`… 提醒用户发起设计评审（发起权在用户）→ **评审 pass 后逐条裁决** →（如需修正）**修正轮落地并经核验** → 用户批准 → spawn eng-coder 实现。`
 - **时序规则**：评审 pass 后逐条裁决（裁决表）——裁决要求修正的（设计档修订 / 实现修复），**修正轮落地并经核验后，才可请求用户批准**；**修正轮在途时不得请求批准**——在途状态只作汇报，汇报不携带批准请求。
   **修正轮边界**：只落评审发现与裁决直接导出的修正——**不得夹带新语义 / 新范围**；夹带即新内容，须显式摆给用户单独定。
-  批准请求中，裁决表的 `Dispatched` 行须已逐条收敛为 `Fixed`（随请求给出落地证据：file:line 或设计档节）。
+  批准请求中，裁决表的 `Dispatched` 行须已逐条收敛为 `Fixed`（随请求给出落地证据：档名 + 逐字引文 ∥ 符号名，或设计档节）。
 - **落点**：两档运行期提示词——`thincoder-core/prompts/discipline-normal.md` §Review discipline ∥ `thincoder-core/prompts/persona-engineering.md` §Review convergence；
   就地把「三选一」句替换为四值文本；时序 bullet 紧随裁决表条块末行之后。
 
@@ -468,7 +468,7 @@ advisor design review 标准维度补一条：
 | A-AC17 | 分支出处核查维度在位（每条新增分支带「依据」：真实观测 ∥ 复现命令；两者都给不出 ⇒ 🔴；真防御给得出复现路径即过）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 `6b` 条（第 6 条与第 7 条之间） | 分支出处 |
 | A-AC18 | 集成测试设计段核查维度在位（设计档缺该段 ⇒ 🔴（设计不完整）；改动未触及业务行为 ⇒ 段内写明「无变化 + 理由」，理由须是「未触及业务行为」本身，以窗口上限为由不成立 ⇒ 仍 🔴；段内场景逐条回指业务需求）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 12 条（**逐字读核对**；机检限行为面 / 结构机检）；**已落笔**（EN 在盘——2026-10-24） | 集成测试设计段 |
 
-**工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs:207-217` 推入 `messages` 的 assistant 消息由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"`
+**工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs` 的推入段（`messages` 的 assistant 消息）由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"`
 
  族（继承主 provider 或显式 `advisor.provider`，均按 `providerSpec` 判定）**恒带** `reasoning_content`（本轮无推理 ⇒ 空串）；`optional` / 未声明族恒不带。
 
@@ -502,13 +502,13 @@ advisor design review 标准维度补一条：
 
 ## 17. 集成测试设计段核查（设计评审维度）
 
-> 权威链（指环单向化）：集成测试设计段**义务**（业务设计一并设计集成测试——场景 + 业务可观察判据 + 逐条回指业务需求）= 纪律层设计步（需求 = `docs/core/requirements/TESTING.md` F34 `:199`，该条明书「不是评估项、不是可选项」）；**核查维度行为语义 = 本节**；执行实现 = 设计评审提示词的对应维度——落点 = `thincoder-core/prompts/advisor-design.md` §Review Criteria 第 12 条。
+> 权威链（指环单向化）：集成测试设计段**义务**（业务设计一并设计集成测试——场景 + 业务可观察判据 + 逐条回指业务需求）= 纪律层设计步（需求 = `docs/core/requirements/TESTING.md` F34 条，该条明书「不是评估项、不是可选项」）；**核查维度行为语义 = 本节**；执行实现 = 设计评审提示词的对应维度——落点 = `thincoder-core/prompts/advisor-design.md` §Review Criteria 第 12 条。
 
-- **核查**：设计档是否含集成测试设计段——本次改动新增 ∥ 修改的集成场景表、每场景断言的业务可观察结果，且**逐条回指业务需求**（F34 `:199`「场景表 + 判据，逐条回指业务需求」）。
+- **核查**：设计档是否含集成测试设计段——本次改动新增 ∥ 修改的集成场景表、每场景断言的业务可观察结果，且**逐条回指业务需求**（F34「场景表 + 判据，逐条回指业务需求」）。
 - **缺段 ⇒ 🔴**（设计不完整）；改动未触及业务行为 ⇒ 该段写明「无变化 + 理由」，这是唯一替代形态。
-- **理由不成立 ⇒ 仍判 🔴**：理由须是「改动未触及业务行为」本身；以集成窗口已满（50–100 用例）为由不成立——F34 `:199` 明书该窗口是**上限约束**（超窗裁减旧场景），不是「不新增」的理由。
-- **同类先例**：先例坐标 = 本档 §14（`:407`）∥ §15（`:416`）∥ §16（`:425`）的同一形（权威链引块 + 核查条目 + A-AC 行 + 提示词逐字建议）；实现坐标 = `thincoder-core/prompts/advisor-design.md:40`（第 9 条）∥ `:44`（第 10 条）。**对齐**：本节整形复用，不另立专名。**偏离**：无。
-- **勘察证据**：`index.publicRepos` = `[]`（`PROJECT-MANIFEST.json:35`）⇒ **零仓外声明源**（无相关也照记）。本节成形所据的树内公共源 = `docs/core/requirements/TESTING.md`（F34 `:199` = 唯一需求依据 ∥ N20 `:115` = 集成集只住三前端）· 本档 §14 ∥ §15 ∥ §16（同形先例）。
+- **理由不成立 ⇒ 仍判 🔴**：理由须是「改动未触及业务行为」本身；以集成窗口已满（50–100 用例）为由不成立——F34 明书该窗口是**上限约束**（超窗裁减旧场景），不是「不新增」的理由。
+- **同类先例**：先例 = 本档 §14 ∥ §15 ∥ §16 的同一形（权威链引块 + 核查条目 + A-AC 行 + 提示词逐字建议）；实现 = `thincoder-core/prompts/advisor-design.md` 评审标准第 9 条 ∥ 第 10 条。**对齐**：本节整形复用，不另立专名。**偏离**：无。
+- **勘察证据**：`index.publicRepos` = `[]`（`PROJECT-MANIFEST.json` 清单项）⇒ **零仓外声明源**（无相关也照记）。本节成形所据的树内公共源 = `docs/core/requirements/TESTING.md`（F34 = 唯一需求依据 ∥ N20 = 集成集只住三前端）· 本档 §14 ∥ §15 ∥ §16（同形先例）。
 - **为什么必须查**：集成测试是唯一从用户可见入口走的验收回路；批内单测档收口即删——设计时没定下集成场景，这个改动收口后就没有验收了。
 
 **【提示词逐字建议】`thincoder-core/prompts/advisor-design.md` §Review Criteria 第 12 条**：
@@ -521,4 +521,4 @@ advisor design review 标准维度补一条：
     **Why**: integration tests are the only acceptance run that starts from a user-visible entry, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves the change with no acceptance at all.
 ```
 
-**本批集成测试设计**：无新增集成场景——理由三条：① 本改动 = 评审判据文本（提示词 ∥ 过程面）；② 裁决面依赖模型输出，无可确定性断言的前端入口；③ 集成集只住三前端（`docs/core/requirements/TESTING.md` N20 `:115`）。验证面 = 逐字读核对 + doc-check gate。
+**本批集成测试设计**：无新增集成场景——理由三条：① 本改动 = 评审判据文本（提示词 ∥ 过程面）；② 裁决面依赖模型输出，无可确定性断言的前端入口；③ 集成集只住三前端（`docs/core/requirements/TESTING.md` N20）。验证面 = 逐字读核对 + doc-check gate。

@@ -3,13 +3,15 @@
 > 板块归属 = **核心统一**（phase 2——「一个核 + 两个薄壳」）；本档 = 该板块的**子系统需求档**（三层归属之需求层）。
 > **工作流档**（需求层）= `docs/core/requirements/CORE-UNIFICATION.md` §1–§4 + §5 登记表（统一目标 / 边界原则 / 量级读数基线 / 范围边界）——本档**不复制**（D2 单一权威源）。
 > **设计层** = `docs/core/design/SESSION.md`（本子系统设计与测试）；工作流设计档 = `docs/core/design/CORE-UNIFICATION.md`。
-> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图 `thincoder-cli/docs/README.md` §3.2；三层归属见同图 §3.1。
+> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见仓文档地图 `docs/README.md` §4；三层归属见同档 §1。
 > **需求条目面**（§4）：既有需求条目正文（编号承旧档）。
 
 ## 1. 总体定位
 
 会话与历史面 = 会话数据层（`session.mjs` · `session-store.mjs` · `session-segments.mjs` · `session-guard.mjs` · `session-migrate.mjs` · `session-rename.mjs`）**+** 槽位 **+** 清理（`session gc`）**+** 历史读取工具（`agent-tools/read-history.mjs`）。
+
 VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-slot-write.mjs` · `session-slots.mjs` · `session-gc.mjs`。
+
 本板块对本子系统的要求 = 该面归一为**核内单一实现**，且两端**存储契约不变**（历史无缝续读）。
 
 > 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/SESSION.md` §1–§2（不复制）。
@@ -19,7 +21,7 @@ VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-
 ### 2.1 本子系统条目
 
 - 会话与历史面归一为**核内单一实现**：数据层 / 槽位 / 记录存储 / 段 / 归属守卫 / 改名 / 旧短哈希迁移各面按核内结构归位；`read-history` 取 **CLI 语义**（相对路径按 cwd 解析 + 宽松 `version` 校验 + 本会话**磁盘全量可查**）。
-  源 = 设计档 `SESSION.md` §2.1 · §2.2 · §3.1 A14。
+  源 = 设计档 `docs/core/design/SESSION.md` §2.1 · §2.2 · §3.1 A14。
 
 ### 2.2 适用工作流条目（回指 · 不复制）
 
@@ -36,7 +38,7 @@ VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-
 **模块目标**：多端并存下，槽认领与共享指针的纪律——**认领随绑定走**（离开即释放），**被拒操作零副作用**（四不动：不翻共享指针 / 不写端标记 / 不改认领集 / 不写解析缓存）。
 
 - **F-CR1（认领随绑定）**：任一进程成功切换 / 新建、绑定迁至槽 B 后，**释放**其对旧槽 A 的认领（判据 = A ≠ B ∧ `slotSessions[A]` = 本进程 ∧ 本进程绑定已不再指 A）；`/new` · 启动恢复 · VSC 端壳同名落点同判。边界情形（目标被占 ⇒ 不认领 + fork 面）由设计钉。
-  **释放覆盖范围扩展**：① **ACP `session/close` 关闭面**同样释放该会话槽认领；② **跨 cwd 释放**（项目切换时释放旧 cwd manifest 的认领）；③ VSC 端壳释放面（`newSlot` / `switchToSlot` 的 `release` 传参）加端壳级机判——三条实现口径 = 设计档 `SESSION.md` §6.16。
+  **释放覆盖范围扩展**：① **ACP `session/close` 关闭面**同样释放该会话槽认领；② **跨 cwd 释放**（项目切换时释放旧 cwd manifest 的认领）；③ VSC 端壳释放面（`newSlot` / `switchToSlot` 的 `release` 传参）加端壳级机判——三条实现口径 = 设计档 `docs/core/design/SESSION.md` §6.16。
 - **F-CR2（拒绝零副作用）**：目标槽被另一活进程占用而**拒绝切换**的路径（**作用域 = 面板路径**：受占 ⇒ 判据前置、不进入 `switchToSlot`），**共享 `active` 指针、端标记、认领集、解析缓存四不动**（VSC `handleSwitchSession` = 判据前置或回滚）；**核 / CLI 受占路径不属本面**——切换成立（警告 + 继续）：指针 / 记录按 D-6 / D-4 落点 + 保留集 = 空释放旧认领（fork 依赖该指针——设计 D-SE33）。
 - **F-CR3（零回归）**：恢复目标选择（§4.1 F1–F4）· 死主清理 · fork 防互覆 · 端分离（NF1）零回归；**ACP 语义**（`sameProcessPinned` 例外核）**除 F-CR1 的 `session/close` 释放面外**零回归。
 
@@ -137,12 +139,14 @@ VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-
 
 **非功能**：N-S1 有界性可测 · N-S2 零回归 · N-S3 **VSC 兼容红线**（槽 JSON version 2 字段与形态不变、`history` 仍为全量数组、sidecar 对 VSC 不可见）· N-S4 恢复速度 · N-S5 可移植 · N-S6 尽力面（追加失败不阻断回合）。
 
-**判定句（验收语义）**：F-S1 连续 pushReal 10,000 条 → 存储条数 = 10,000；进程被杀后下次启动可见全部已追加条目。
-F-S2 同上模拟（绑定态）→ `agent._fullHistory.length ≤ 200` 且恰为最新 200 条（未绑定路径负断言 = 维持全量）。
-F-S3 恢复后翻页至最早 → 页内容与磁盘对应条逐条相等；翻页过程 `state.lines` 字符总量 ≤ 设计额度。
-F-S4 内存窗口外的旧消息用 keyword 可命中（匹配基准 = 存储文本——slim 截断面 delta 已登记）。
-F-S5 两向对账（存储 ≥ JSON / JSON 更长）。F-S6 `deleteSlot` 后 sidecar 目录不存在；`session gc --confirm` 清冷前缀后 sidecar 不存在。
-N-S3 CLI 写出的槽文件 `history` 数组（version 2 + history 数组）未进入 VSC 可枚举面。
+**判定句（验收语义）**：
+
+- F-S1 连续 pushReal 10,000 条 → 存储条数 = 10,000；进程被杀后下次启动可见全部已追加条目。
+- F-S2 同上模拟（绑定态）→ `agent._fullHistory.length ≤ 200` 且恰为最新 200 条（未绑定路径负断言 = 维持全量）。
+- F-S3 恢复后翻页至最早 → 页内容与磁盘对应条逐条相等；翻页过程 `state.lines` 字符总量 ≤ 设计额度。
+- F-S4 内存窗口外的旧消息用 keyword 可命中（匹配基准 = 存储文本——slim 截断面 delta 已登记）。
+- F-S5 两向对账（存储 ≥ JSON / JSON 更长）。F-S6 `deleteSlot` 后 sidecar 目录不存在；`session gc --confirm` 清冷前缀后 sidecar 不存在。
+- N-S3 CLI 写出的槽文件 `history` 数组（version 2 + history 数组）未进入 VSC 可枚举面。
 
 **范围边界（不做）**：不改槽 JSON 的 version / 字段形态 / 路径约定（VSC 兼容红线）；不改机器线（`contextHistory`）的压缩语义与保存策略；
 不做记录存储的跨端读取协议（VSC 读 sidecar——另案）；不做历史文件格式迁移；`read_history` 跨会话 `path=` 的 JSON 读取路径与护栏**保留为回落面**（索引优先 + 主存回落；护栏逐字保留）。
@@ -150,10 +154,10 @@ N-S3 CLI 写出的槽文件 `history` 数组（version 2 + history 数组）未�
 ### 4.5 VSC 端条目
 
 语义同源——VSC 档 F-N1–F-N8 / N-N1–N-N5 与 §4.1–§4.4 逐条同义（不重并）；**VSC 端差（登记）**：① marker `END = "vscode"`——只写 `.manifest.vscode`、永不碰 `.cli`（认领面隔离）·
-② 历史分页步长 **200**（`HISTORY_PAGE_SIZE`——`thincoder-vscode/src/extension/history-window.mjs:18-22`，对端 20）· ③ 恢复呈现 = assistant 帧容器 + 嵌套工具卡（配对语义同源）·
+② 历史分页步长 **200**（`HISTORY_PAGE_SIZE`——`thincoder-vscode/src/extension/history-window.mjs`，对端 20）· ③ 恢复呈现 = assistant 帧容器 + 嵌套工具卡（配对语义同源）·
 ④ 冷 cwd 手动 GC 无 shell 通道（只接线自动残留 GC）——**注销**：VSC 已补命令入口 `thincoder.sessionGc`（数据面 API——双端同面；见 `docs/core/design/SESSION.md` §6.17 D-SE38）
 · ⑤ 记录存储形态 = **端面事实**（本端零该机制——非端差，如实登记；**写缝 = `pushRecord` 注入面**（`thincoder-core/context.mjs`——`pushReal` 双胞）；承载 = 端面 ∥ 单源 = §4.4 F-S7）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。
-坐标＝ `thincoder-vscode/src/extension/session-slots.mjs`（76 行）· `session-io.mjs`（246 行）· `panel-session.mjs`（312 行）· `session-gc.mjs`（21 行）。
+落点＝ `thincoder-vscode/src/extension/session-slots.mjs` · `session-io.mjs` · `panel-session.mjs` · `session-gc.mjs`。
 
 **二态化裁定行**：① = **保留**（结构性不对称——端 marker 单侧存在：只写 `.manifest.vscode`、永不碰 `.cli`）；②③⑥ = **保留**（形态类——显示 / 互斥面；类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）；④ = **注销**（VSC 有命令入口，双端同面）；⑤ = **端面事实**（非端差）。
 

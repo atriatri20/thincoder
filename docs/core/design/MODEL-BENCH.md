@@ -40,7 +40,7 @@ run.mjs（CLI 解析 + 编排 + 中断/退出码 + dry-run）
 | 4 | **报告** | 报告对 `<日期>-<标签>.{md,json}` 同 basename；md 骨架 = §2.3 固定结构（方法 / 结果 / 局限三段必备 + 段序）；同骨架跨模型/跨时点可比；**段位与表列集 = 呈现面**（渲染面单源 = §2.3 骨架块） | `bench/lib/report.mjs`（已实现）· `bench/lib/report-tables.mjs`（已实现）· `bench/lib/report-time.mjs`（已实现）· `bench/lib/report-review.mjs`（已实现） | **呈现面变化（段位增删 / 表列集 / 排序 / 图例与脚注文案）不 bump**——结果数值 / 判定 / 分账 / 计时口径零改，在档报告可由 `--recompute` 以现行形态重出（§2.7）；`SUITE_VERSION` 轴 = 题集（口径 1）/ 判分（口径 2）/ 计时（口径 3）/ **结果数值构成规则**（分账 · 归一化 · 聚合口径——改则数值面跨版本不可比）；后两类见对应行（KD-27）；**版本轴枚举单源 = 本行**——KD-2 与渲染面「方法」行版本句 · `bench/suites/index.mjs` 注释 · `bench/README.md` 版本口径行的枚举以其为准（字面欠列第四项处按本行判读）；**版本轴判入 = 规则层**（测什么 / 怎么算 / 什么进数字）——**采集完整度补全**（如失败调用耗时补录——KD-30）与在档案数据**不入轴**（规则零改 ⇒ 不 bump；对照：把「`error` run 照计」改成「不计」= 规则变化 ⇒ bump） |
 | 5 | **价格** | 单价只住 `prices.json`（手动维护 · `asOf` + `source` 必备）；成本 = §2.5 计算式；**价格变动不 bump suiteVersion**（另记 `prices.asOf`） | `bench/prices.json`（已实现）· `bench/lib/prices.mjs`（已实现） | 改价 = 改数据（无须版本号）；离线重算见 §2.7 |
 
-**计时口径的实现依据（实测锚）**：核的流读面只在**非空** delta 时回调（`thincoder-core/provider/sse.mjs:142-149`）⇒ 空 role 起始块不产回调；TTFT 以「首个非空 delta」为观测点，是核路径上最接近「首字节」的可观测单位。
+**计时口径的实现依据（实测锚）**：核的流读面只在**非空** delta 时回调（`thincoder-core/provider/sse.mjs`）⇒ 空 role 起始块不产回调；TTFT 以「首个非空 delta」为观测点，是核路径上最接近「首字节」的可观测单位。
 
 **模型级温度例外（KD-31 · 2026-09-24 名单扩容批）**：温度 = **运行参数面**（同 `--max-tokens`：参数入档 + 报告披露），**不入版本轴**（§1.3-4 四轴零改）——缺省恒 0；仅当该模型 API **拒收 0** 时按档显式开例外（`models.json` 的 `temperature`，探针依据在册）。例外档的测量条件差异由 `models[].temperature` 入档 + 报告概览派生披露句承载（§2.3 · §2.2-12）——不设 CLI 全局温度参数。
 
@@ -99,7 +99,7 @@ node bench/preflight.mjs [--live]     # 跑前参数预检（枚举面缺省跑 
 1. `--dims` 词表统一——`--dims capability,speed,cost`（AC-1 例）= 全量跑 + 三轴全出；`--dims reasoning`（§1.8 子集复跑）= 只跑推理维（轴缺省 = 全轴，派生指标免费）；`--dims speed,cost` = 全量跑 + 只出速度/成本表。
 2. 有效维度面（每模型）= `CLI --dims 能力项` ∩ `roster.dims`（若给）− `roster.skipDims`（若给）；被排除的维在矩阵中显示 `—`（不在该模型面），不是失败。
 3. `capability` 关键字 = 8 个自动维，**不含** `manual`（人工 lane 需显式点名或使用缺省全跑）。
-4. 温度 = `0`（缺省 · 冻结；经核 `tempRange` 归一裁剪，`thincoder-core/provider/core.mjs:186-192`）；**模型级例外**（仅当该模型 API 拒收 0——探针依据在册）：取 `models.json` 档位 `temperature`（0–2），实际取值逐档入档（`models[].temperature`）+ 报告披露（§2.3 · KD-31）。
+4. 温度 = `0`（缺省 · 冻结；经核 `tempRange` 归一裁剪，`thincoder-core/provider/core.mjs`）；**模型级例外**（仅当该模型 API 拒收 0——探针依据在册）：取 `models.json` 档位 `temperature`（0–2），实际取值逐档入档（`models[].temperature`）+ 报告披露（§2.3 · KD-31）。
    **思考强度 = 中档口径（KD-32）**：取 `models.json` 档位字段 `reasoningEffort`（缺省 ⇒ 沿用户 config 的 provider 条目原值；两者皆无 ⇒ 不发该字段）；实际发送值与来源逐档入档（`models[].reasoningEffort` / `reasoningEffortFrom`——§2.2-13）+ 报告披露（§2.3 逐档参数表）。
    `thinking` 等其余参数取用户 `~/.thincoder/config.json` 的 provider 条目原值（测「该配置下的实际表现」）。
 5. 退出码：`0` = 跑完（**模型用例失败不影响退出码**——失败是数据不是错误）；`1` = 基建错误（参数错 / 未知模型 / provider 缺配置 / `prices.json` / `models.json` / `judge.json` 不可读或不合 schema
@@ -206,7 +206,7 @@ node bench/preflight.mjs [--live]     # 跑前参数预检（枚举面缺省跑 
 
 **字段纪律**：
 
-1. `tokens` 只来自 `usage`（核已归一：`prompt_tokens` / `completion_tokens` / `prompt_cache_hit_tokens`，见 `thincoder-core/provider/sse.mjs:13-22`）；缺失 → 该字段 `null` + `warnings` 登录，**不近似**。
+1. `tokens` 只来自 `usage`（核已归一：`prompt_tokens` / `completion_tokens` / `prompt_cache_hit_tokens`，见 `thincoder-core/provider/sse.mjs`）；缺失 → 该字段 `null` + `warnings` 登录，**不近似**。
 2. 每 `call`（工具环每轮一 call）独立记录指标——**失败调用亦落 `totalMs` = 发起 → 失败墙钟**（`ttftMs` / `tokens` / `finishReason` 照实缺记 `null`——§1.3-3 / KD-30）；用例级聚合规则 = 见 §2.3-1~3。
    失败路径的记录式与成功路径**同源单点**（`client.mjs` `toCallRecord` 单形状函数——失败路径传合成 call：`totalMs` / `throttled` 两个实测量，无 `response` ⇒ `ttftMs` / `tokens` / `toolNames` / `finishReason` 照实缺记 `null`）；「新增 per-call 字段须两处同步」的漂移面就此消除（KD-47②）。
    `calls[].throttled` 照实记——**失败路径同真**（观测通道 = §2.9-4 第 4 条 · KD-48）。
@@ -228,7 +228,7 @@ node bench/preflight.mjs [--live]     # 跑前参数预检（枚举面缺省跑 
     **采集面 = 运行期写入**（不依赖重跑用例源）⇒ `--recompute` 自足。**在档集 = §3 `bench/results/` 行单源** ⇒ 本字段**无历史兼容分支**。
 12. `models[].temperature` = 该档实际温度（缺省 0；例外档逐档——KD-31）；渲染面据 `(models[].temperature ?? run.temperature) ≠ run.temperature` 派生概览**温度例外披露句**（§2.3）——旧档缺该字段 ⇒ 等价缺省（无例外；**缺省语义，非历史兼容分支**），`--recompute` 自足。
 13. `models[].reasoningEffort` = 该档**实际发送**的思考强度值（中档口径——KD-32；来源 = 档位覆写或用户配置原值）；`reasoningEffortFrom ∈ {models.json, config}` 同写同缺；**未发送该字段 ⇒ 两键皆不写**（缺省语义，非历史兼容分支——旧档缺键 ≡ 未采集，渲染 `—`）；`--recompute` 自足（渲染只读档内值）。
-14. `models[].note` = 该档备注（逐档来自 `models.json` 条目 `note`——`bench/lib/pipeline.mjs:226` 实读；渲染 = 概览模型表「备注」列（空值渲染 `—`）——`bench/lib/report.mjs:52-54` 实读同源派生）；**生效性事实**（如「服务端忽略 effort」）随本键披露（§2.3-9——不另设列）；`--recompute` 自足（渲染只读档内值）。
+14. `models[].note` = 该档备注（逐档来自 `models.json` 条目 `note`——`bench/lib/pipeline.mjs` 实读；渲染 = 概览模型表「备注」列（空值渲染 `—`）——`bench/lib/report.mjs` 实读同源派生）；**生效性事实**（如「服务端忽略 effort」）随本键披露（§2.3-9——不另设列）；`--recompute` 自足（渲染只读档内值）。
 15. **替代判级联记档（§2.10.1 · KD-20 缺省不写口径）**：`runs[].judge.judges[].substitutes[]` = 该位实际启用的替代级链（逐项 `{level, provider, model, cause}`——`level` 自 2 起；`cause` = 上一级失败摘要 ≤160 字符）；`calls[].level` = 该尝试所属级（**1 = 原位 ⇒ 不写**——缺省语义）；原位全程成功 ⇒ **两键皆不写**（缺键 ≡ 未发生）。
     成本面按 `calls[].level` 的实际身份键计价（§2.10.5）；`--recompute` 自足（级链 + 逐调用级号 = 档内原子账目）。
 16. 顶层 `judge` 块扩：`fallbacks[]` = **替代池快照**（逐项 `provider` / `model` / `host` / `temperature` / `maxTokens` / `timeoutSec` / `sameVendorAsTested` / `calls` / `costCny`——池内调用计入 `judgeCalls` 合计；代际自述面 §2.10.6；**样例节选 2 项——现行池 6 项与级联序逐字 = §9**）。
@@ -300,7 +300,7 @@ node bench/preflight.mjs [--live]     # 跑前参数预检（枚举面缺省跑 
 
 8. **成本表脚注字符串（逐字冻结 · 单一字符串）** = 「评估开销（判官 / 复核）不进被测成本、不参与相对成本归一化——报告不列评估开销金额；账目见结果 JSON」（骨架成本表行同字面）。与 §5.13 `render.3` ②③ 逐字对齐：② 的成本表块反例字面（`判官成本` / `复核成本` / 「两列」）均不在本串内；③ 的字面片段「不参与相对成本归一化」在本串内、脚注零金额 ⇒ ②③ 对同一渲染件同真（互斥消除）。
 9. **逐档参数表（冻结）**：行 = 每一在册被测档（序同概览模型表）；列 = {模型 · 路由（provider:model@host）· temperature · 思考强度（`reasoningEffort` + 来源）· maxTokens（取自 `run.maxTokens`）}——单源 = 结果 JSON；温度例外档在该格注「档位例外」（与披露句同源派生，非第二真相源）；缺键（旧档未采集）⇒ 该格 `—`（不追改）。
-   **生效性事实**（如「服务端忽略 effort」）**不设独立列**——随 `models[].note` 披露（概览模型表「备注」列——`bench/lib/report.mjs:63` 同源派生）。
+   **生效性事实**（如「服务端忽略 effort」）**不设独立列**——随 `models[].note` 披露（概览模型表「备注」列——`bench/lib/report.mjs` 同源派生）。
 
 10. **报告形态增补（#271 速度表双排序 / #272 能力矩阵两列 / #276 报告交叉列 · 冻结 · 用户 2026-09-24 22:37 / 22:48 / 22:51 / 22:5x + 2026-09-25 00:22 裁定链）**：三项均属**呈现面**（KD-27 ⇒ **不 bump**——`SUITE_VERSION` 5 → 6 的归因 = 判官 B 换代 + 判据修订（#273 / #274，两项均判分口径面、共用一次），§6 末段；聚合参与口径零改——§7-12 射程不变）。
 **① 速度表双表（#271）**：标题逐字 = `### 速度表 A（按 TTFT 中位升序）` / `### 速度表 B（按 tok/s 中位降序）`；两表**列集逐字相同**（`| 模型 | TTFT 中位 | tok/s 中位 | 总耗时（中位） | 采样 run 数 |`）。
@@ -467,18 +467,18 @@ import { chat } from "../../thincoder-core/provider/index.mjs";
 1. 调模型 = `chat(providerEntry, { messages, tools, onToken, onReasoning, signal, parallelToolCalls, … })`。
 **provider 条目构造面（冻结）= 克隆用户 config 条目 + 覆写 `maxTokens` / `temperature` / `reasoningEffort` / `.model`**：核从**条目**读这些字段
 
-（`thincoder-core/provider/core.mjs:180` 的 `maxTokens`、`thincoder-core/provider/core.mjs:181-188` 的 `temperature` + `tempRange` 裁剪、`thincoder-core/provider/core.mjs:193-200` 的 `reasoningEffort` 启送 + 枚举守卫），
+（`thincoder-core/provider/core.mjs` 的 `maxTokens`、同档的 `temperature` + `tempRange` 裁剪、同档的 `reasoningEffort` 启送 + 枚举守卫），
 
-且请求体模型名取条目（`thincoder-core/provider/core.mjs:174`）；`chat` 的 opts（`thincoder-core/provider/core.mjs:117` 解构）无这两位
+且请求体模型名取条目（`thincoder-core/provider/core.mjs`）；`chat` 的 opts（同档解构）无这两位
 ⇒ 覆写不落条目会**静默失效**（仍按用户配置跑，破可比性面）；`.model` 覆写 = `models.json` 条目的 `model` 值；
 除上述覆写字段外，条目其余字段保持用户原值（渠道差异如实测）。
 2. 计时钩子 = `onToken` / `onReasoning` 首次回调（§1.3 口径 3）。
-3. 多轮工具链 = bench 侧小工具环：执行本地桩 → `assistantToolCallMessage(result, specForModel(model))` 构造工具回合 assistant 消息（**reasoning 回显策略随核规格**，`thincoder-core/model-specs.mjs:279-289`）→ 追加 tool 结果消息 → 续调。
+3. 多轮工具链 = bench 侧小工具环：执行本地桩 → `assistantToolCallMessage(result, specForModel(model))` 构造工具回合 assistant 消息（**reasoning 回显策略随核规格**，`thincoder-core/model-specs.mjs`）→ 追加 tool 结果消息 → 续调。
 4. 继承的核行为（如实记录、不改造）：重试 / 续写（`finishReason:"length"`）/ 限流门（`rateGate`）/ 日志与轨迹钩子（`traces` 默认关，落盘受用户配置门控）。暂停（限流等待）发生时该 call 记 `throttled: true`（**失败路径同真**——KD-48）。
 失败路径观测通道（KD-48）：传输面把观测到的暂停状态**挂在上抛的错误对象上**（挂载单点 = `client.mjs` `markFailureObservation`——对象 ∧ 可扩展才挂；错误本体的名 / 消息 / 栈零动）；消费单点 = `runCase` 失败记录（`e?.throttled === true`——缺字段 ≡ `false`）；**未挂 ≡ 未观测到暂停**。
 
 契约文句（**传输面冻结面的扩展 · 单列裁定项**）：成功路径返回式契约零改（`{response, ttftMs, totalMs, throttled}`），新增 = 「抛错时错误对象可携带 `throttled: true`（本轮确实发生过实际暂停——`onWait` 非 `warn` 相位）」；调用签名零改（不引入汇点参数——签名单源不变）。
-5. 已知缺口（上抛项 ①）：核按模型 spec 的 `noUsageStream` 抑制 `stream_options.include_usage`（`thincoder-core/model-specs.mjs` 的 glm 族 `:59-74` / minimax `:134-164` / gemini `:181-183` 带此标），与当日四家探针「include_usage 全部支持」相抵 ⇒ 这些模型可能无 usage ⇒ 成本记 `null`。**处置 = 如实记录 + 报告脚注**（改核越边界——零三端改动）。
+5. 已知缺口（上抛项 ①）：核按模型 spec 的 `noUsageStream` 抑制 `stream_options.include_usage`（`thincoder-core/model-specs.mjs` 的 glm 族 / minimax / gemini 三条 spec 带此标），与当日四家探针「include_usage 全部支持」相抵 ⇒ 这些模型可能无 usage ⇒ 成本记 `null`。**处置 = 如实记录 + 报告脚注**（改核越边界——零三端改动）。
 
 ### 2.10 判官机制（语义·语用面 · AC-1/2/3/5/6 + 双判）
 
@@ -520,7 +520,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 **从宽理由**：① cap 非实耗、计费按实际 tokens ⇒ 放宽只影响最坏时延，不动成本口径；② 级内单发 ⇒ 无第二发补救，预算须一次到位（截断类 `finishReason=length` 由预算面根治——实证 = v6 A 位 `multiturn.1` 在 4096 仍截断）；③ 取上限 ⇒ 零头部余量、无二次调参。判官预算与被测调用的 `--max-tokens` **解耦**（同一 suiteVersion 的判分口径不随运行参数漂移）。
 
-**调用路径**：核 `chat`（`thincoder-core/provider/core.mjs:75`）经 `bench/lib/client.mjs`（已实现）的 `liveTransport`（请求构造面 = `judgeProviderEntry`：克隆用户 provider 条目 + 覆写 `.model` / `maxTokens` / `temperature`——**判官面三字段，effort 沿条目原值、不覆写**；与受测面四字段（含 `reasoningEffort`——§2.9-1）之差量见 §2.10.3）。
+**调用路径**：核 `chat`（`thincoder-core/provider/core.mjs`）经 `bench/lib/client.mjs`（已实现）的 `liveTransport`（请求构造面 = `judgeProviderEntry`：克隆用户 provider 条目 + 覆写 `.model` / `maxTokens` / `temperature`——**判官面三字段，effort 沿条目原值、不覆写**；与受测面四字段（含 `reasoningEffort`——§2.9-1）之差量见 §2.10.3）。
 
 #### 2.10.2 判据分层表（逐用例 · 冻结）
 
@@ -689,7 +689,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 ⑤ 路由与 format 豁免面（`model` 含 `/` / `format ∈ {anthropic, google}` ⇒ effort 不启送）：命中 ⇒ **豁免**（③ 判定跳过；记录面按「未发送」语义——§2.2-13 两键不写；现行 29 档 + 判官三槽 `model` 名零含 `/` ⇒ 休眠面，format 面随用户 config 派生）；
 
-⑥ thinking 面组合（`thinkApi` / `thinkEnabledValue`）：**豁免——不设判定**（运行面组合语义归核守卫单源 `thincoder-core/provider/core.mjs:193-220`，预检不复制；逐档行打印 `thinkApi` 值供目检）。
+⑥ thinking 面组合（`thinkApi` / `thinkEnabledValue`）：**豁免——不设判定**（运行面组合语义归核守卫单源 `thincoder-core/provider/core.mjs`，预检不复制；逐档行打印 `thinkApi` 值供目检）。
 **阻断项枚举 = ① ② ③**；有阻断项 ⇒ **拒跑 exit 1 + 逐条点名**（启动门与 `bench/preflight.mjs`（已实现）共用同一判定实现）。
 2. **实弹面**（`--live` · 需密钥 · 1 发/档 · 单轮无工具 · 与运行面同构参数）：全档参数受理探针（透传档为**必测面**——无枚举行时核守卫不把关）；读数 = 受理 / 400 / 抛错 + 时延，逐档打印。
 
@@ -785,7 +785,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | KD-4 | `models.json` 维度面 = **两个显式字段**（`dims` 白名单 / `skipDims` 黑名单） | §1.9 原文并列「跳过/限定」两种语义；拆两字段后每条义单一可机检（`—` 与 `fail` 不混） |
 | KD-5 | 清单与价格**对齐键 = `provider:model`**；`label` 仅展示名 | 价格随渠道（provider 条目）变——`provider:model` 与调用面一一对应；`label` 可改而无副作用 |
 | KD-6 | 成本缺失（无价 / 无 usage）记 `null` + 脚注，**不估算**；`prices.json` schema fail-closed | 与「delta 近似禁用」同源：可比性建立在精确账目上；估算会把口径漂移藏进数字 |
-| KD-7 | TTFT = 首个**非空** delta（content 或 reasoning 先到者）− 调用发起 | 核路径上唯一可观测的「模型开始输出」时刻（`thincoder-core/provider/sse.mjs:142-149` 只在非空 delta 回调）；空 role 块不携模型产出，不具比较意义 |
+| KD-7 | TTFT = 首个**非空** delta（content 或 reasoning 先到者）− 调用发起 | 核路径上唯一可观测的「模型开始输出」时刻（`thincoder-core/provider/sse.mjs` 只在非空 delta 回调）；空 role 块不携模型产出，不具比较意义 |
 | KD-8 | 报告**成对留档 + 写档前脱敏断言**（构造性白名单 + fail-closed 断言双保险） | AC-9「可发布」= 结构完整 + 无路径/凭据泄漏；断言把「忘了脱敏」变成硬失败 |
 | KD-9 | 人工 lane 独立：不判分、不入矩阵/成本归一化、不阻塞退出码 | AC-6；中文歧义本身无客观判据，只做证据保留 |
 | KD-10 | 覆盖保护 = 同名拒写（无 `--force`） | 留档不可被静默覆盖；删旧档 = 人工显式动作 |
@@ -806,14 +806,14 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | KD-25 | v3 对处置 = **重跑落档后清理**（`git rm` md + json） | 承 01:31「历史报告没意义」口径；bump 后 v3 跨版本不严格可比（留档误导）；缺陷证据已在记录面（本档 §5.13 / §2.12） |
 | KD-26 | 复核**改判后仍保持单判**（沿 A 位；不升双判、不改触发 / 输入 / 判定） | 对照轴 = 机械 vs LLM（KD-18）——问题面 = 「机械判据是否自洽」，非模型视角分歧；复核素材有据且窄（机械条文 + 失败断言 + 逐回合观测）；双判成本 +100% 且引入「无多数」面而无降级可走（失败处置 = fail 维持）；误翻案面由承接机制显影（判据修复必修——§2.12） |
 
-| KD-27 | **呈现面变化不 bump `SUITE_VERSION`**：段位增删 / 表列集 / 排序 / 图例与脚注文案 = 渲染面；版本轴 = 题集（口径 1）/ 判分（口径 2）/ 计时（口径 3）/ **结果数值构成规则**（分账 · 归一化 · 聚合口径） | ① `SUITE_VERSION` 与 `judge.json.frozenAtSuiteVersion` 机检绑定（`bench/lib/judge.mjs:86`：不等即拒跑）——呈现面 bump 会强制改判官配置档（判官身份零变化），把「判分口径换代」的错误信号写进版本号；② 版本号语义 = 测量与判定口径（KD-2）——删列 / 增表**数值面零改**，在档报告与新版报告数字同源可比 ⇒ bump 反使在档对无端失真 · 版本信号稀释；③ 渲染面可从结果 JSON 以现行形态重出（§2.7 `--recompute`）⇒ 形态差异无需版本号承载 |
-| KD-28 | 用时表：表名 = **用时表** · 落位 = 速度表后 · 轴门控 = `speed` · 参与面 = 该模型面内**实际执行**的 run（`skipped` 不入 · **error run 已记录耗时照计**）· 列 = {模型 · 累计耗时 · 相对倍率 · 排名 · 采样 run 数} · 排名 = 升序 + 同值并列顺延 · 倍率 = ÷ 最低者（1.0×） | ① 累计 = Σ `runs[].metrics.totalMs`（`bench/lib/metrics.mjs:61-74` 单源 = 该 run 的 per-call 耗时和）——判官 / 复核调用住 `runs[].judge…` / `runs[].review…`，**不参与该式**；② 「执行全部用例的累计耗时」字面口径 = 实际发生的执行耗时 ⇒ error run 已记录调用照计（超时也占墙钟），`skipped` 未执行不入——**失败路径的记录面 = KD-30**（补全：失败分支原硬编码 `totalMs: null` ⇒ 该类 run 未入累计）；③ 名 / 位与「速度表 / 成本表」并体例（三字表名 · 时间面紧随速度表）；④ 轴 = `speed`（时间面——CLI 词表零改，不增第三轴词） |
+| KD-27 | **呈现面变化不 bump `SUITE_VERSION`**：段位增删 / 表列集 / 排序 / 图例与脚注文案 = 渲染面；版本轴 = 题集（口径 1）/ 判分（口径 2）/ 计时（口径 3）/ **结果数值构成规则**（分账 · 归一化 · 聚合口径） | ① `SUITE_VERSION` 与 `judge.json.frozenAtSuiteVersion` 机检绑定（`bench/lib/judge.mjs`：不等即拒跑）——呈现面 bump 会强制改判官配置档（判官身份零变化），把「判分口径换代」的错误信号写进版本号；② 版本号语义 = 测量与判定口径（KD-2）——删列 / 增表**数值面零改**，在档报告与新版报告数字同源可比 ⇒ bump 反使在档对无端失真 · 版本信号稀释；③ 渲染面可从结果 JSON 以现行形态重出（§2.7 `--recompute`）⇒ 形态差异无需版本号承载 |
+| KD-28 | 用时表：表名 = **用时表** · 落位 = 速度表后 · 轴门控 = `speed` · 参与面 = 该模型面内**实际执行**的 run（`skipped` 不入 · **error run 已记录耗时照计**）· 列 = {模型 · 累计耗时 · 相对倍率 · 排名 · 采样 run 数} · 排名 = 升序 + 同值并列顺延 · 倍率 = ÷ 最低者（1.0×） | ① 累计 = Σ `runs[].metrics.totalMs`（`bench/lib/metrics.mjs` 单源 = 该 run 的 per-call 耗时和）——判官 / 复核调用住 `runs[].judge…` / `runs[].review…`，**不参与该式**；② 「执行全部用例的累计耗时」字面口径 = 实际发生的执行耗时 ⇒ error run 已记录调用照计（超时也占墙钟），`skipped` 未执行不入——**失败路径的记录面 = KD-30**（补全：失败分支原硬编码 `totalMs: null` ⇒ 该类 run 未入累计）；③ 名 / 位与「速度表 / 成本表」并体例（三字表名 · 时间面紧随速度表）；④ 轴 = `speed`（时间面——CLI 词表零改，不增第三轴词） |
 | KD-29 | **评估开销金额报告零展示**（用户裁定）：成本表 / 概览账目句 / 判官行逐位成本三处均不列金额；分账**原则**句保留（不列数字）；评估**统计**（调用次数 / 分歧率 / 仲裁 / 复核次数 / 翻案 / 复核失败）住非成本面（判官行 / 告警行 / 《复核翻案》）；账目面 = 结果 JSON（字段零改） | ① 成本表 / 概览成本句的行身份 = 被测模型的性价比，评估开销（判官 + 复核）非模型自身开销（KD-21 同源）；② 判官行逐位金额亦属评估开销金额 ⇒ 一并收（「报告不展示」的整面读法）——账目零丢失（JSON 照记 + 账目指针句在位）；③ 统计 ≠ 开销（次数类不进成本面即可，无需随之消失——审计面已在册） |
-| KD-30 | **失败调用耗时照记并入累计**（用户指令「报错你就不算？时间呢？算进去了吗？」）：`calls[].totalMs` = 发起 → 失败墙钟（落点 = `client.mjs` `runCase` 调用侧）· `ttftMs` / `tokens` 照实缺 `null` · 用时表口径零改（`null` = 未记录 ⇒ 不计）· **版本口径：不 bump**（记录面补全 ≠ 口径变化） | ① 观测点 = **调用侧**（`runCase` 于传输面调用前后取墙钟）：传输面抛错时「发起 → 失败」的唯一可靠观测位；错误对象挂载耗时 = 隐式契约（每个传输面各自实现、漏实现即静默 `null`——实测缺口正是如此：`bench/lib/client.mjs:148` 失败分支硬编码 `totalMs: null`）；② 语义 = 「该次调用实际占用墙钟」——超时也占墙钟（v4 实核：qwen `instructions.3` 超时未记录 ⇒ 累计 170115 ms 缺 ≈120 s，补录后排名 2 → 3）；③ **版本轴管规则、不管采集完整度**：口径（测什么 / 怎么算 / 什么进数字）零改 ⇒ 不 bump——bump 的机械代价 = `SUITE_VERSION` 单轴整数连带改 `judge.json.frozenAtSuiteVersion` 并经 `bench/lib/judge.mjs:86` 机检，等于向「判分口径换代」发假信号；④ 可比性由在档自述承载（v4 用时表脚注明示 1 个 run 未参与累计） |
+| KD-30 | **失败调用耗时照记并入累计**（用户指令「报错你就不算？时间呢？算进去了吗？」）：`calls[].totalMs` = 发起 → 失败墙钟（落点 = `client.mjs` `runCase` 调用侧）· `ttftMs` / `tokens` 照实缺 `null` · 用时表口径零改（`null` = 未记录 ⇒ 不计）· **版本口径：不 bump**（记录面补全 ≠ 口径变化） | ① 观测点 = **调用侧**（`runCase` 于传输面调用前后取墙钟）：传输面抛错时「发起 → 失败」的唯一可靠观测位；错误对象挂载耗时 = 隐式契约（每个传输面各自实现、漏实现即静默 `null`——实测缺口正是如此：`bench/lib/client.mjs` 失败分支硬编码 `totalMs: null`）；② 语义 = 「该次调用实际占用墙钟」——超时也占墙钟（v4 实核：qwen `instructions.3` 超时未记录 ⇒ 累计 170115 ms 缺 ≈120 s，补录后排名 2 → 3）；③ **版本轴管规则、不管采集完整度**：口径（测什么 / 怎么算 / 什么进数字）零改 ⇒ 不 bump——bump 的机械代价 = `SUITE_VERSION` 单轴整数连带改 `judge.json.frozenAtSuiteVersion` 并经 `bench/lib/judge.mjs` 机检，等于向「判分口径换代」发假信号；④ 可比性由在档自述承载（v4 用时表脚注明示 1 个 run 未参与累计） |
 
 | KD-31 | **模型级温度例外**：`models.json` 增可选字段 `temperature`（0–2 · 缺省 0 = 冻结）——**仅当该模型 API 拒收 `temperature: 0`** 时逐档显式开（准入依据 = 探针实测在册）；透传 = `pipeline.mjs` 读 `entry.temperature ?? 0`（两分支）；入档 = `models[].temperature`（实际值）；呈现 = 概览派生披露句（`(m.temperature ?? run.temperature) ≠ run.temperature` ⇒ 逐档列出）；**版本口径：不 bump**（温度 = 运行参数面，同 `--max-tokens`——§1.3 四轴零改） | ① 判官面实测（`2026-09-24-judge-hybrid` §5：`kimi:kimi-k3` 400「invalid temperature: only 1 is allowed for this model」）+ （kimi 四档同拒 0 / 1 通过）——「照实 error 不列」= 用户点名的 kimi 四档全废（非受控选择）；② per-model 例外 = **数据面**（名单档字段）而非命令面（CLI 参数）⇒ 例外随名单持久、可复现（命令串不含例外决策）；③ 披露链 = 入档 + 报告披露句（跨档比较的测量条件差异不得静默）；④ 不 bump 理由同 KD-30 ③：版本轴管规则不管参数——例外档仅涉新增模型，既有档与在档报告的可比性零损 |
 | KD-32 | **思考强度中档口径**（用户裁定「确认一下测试都是用模型的中档思考强度测」）：受测档统一取**该档自身标尺的中档**——① 枚举行含 `medium` ⇒ `medium`；② 枚举行无 `medium` ⇒ 按强度序取**中位档**（偶数项取较弱者；现行实测落 `high`）；③ 无枚举行（透传档）⇒ `medium` 直发（受理面实弹覆盖）——**枚举行分类以实施后 spec 表为准**（`MODEL-SPECS.md` §13 建行后 `doubao-seed-2-1` 三档归 ① 类；§13.3 在册）。载体 = `models.json` 档位级 `reasoningEffort`（与 KD-31 `temperature` 同构；用户 config 零改）；透传 = `pipeline.mjs`（`entry.reasoningEffort ?? user.reasoningEffort`）；入档 = `models[].reasoningEffort` / `reasoningEffortFrom`；**版本口径：不 bump**（运行参数面——§1.3-4 四轴零改，KD-31 同源）；口径代际 = v5 原值口径（不追改）· 中档口径自下一代起效 | ① 用户明令「统一中档」——原值口径实测非中档（max×9 / high×11 / 无值×9）；② **逐档显式值**（非运行时算法）——映射规则在**设计 / 数据面**一次裁定，运行面只读字面（可复现 · 可审）；③ 无 `medium` 档的取法 = **该档自身标尺的中位**（qwen3.7-max {xhigh, high} ⇒ `high`；deepseek / glm / kimi 三值族 ⇒ `high`）——不硬编码 `medium`（服务端只认自身枚举）；④ 无枚举行仍发 `medium`（受理面已实弹 · 29/29）——「被忽略档」（mimo×3 / minimax×2）照发：口径统一优先，生效性由披露面如实标注（`models[].note` ⇒ 概览模型表「备注」列——§2.3-9）；⑤ 覆写优先于 config 原值 ⇒ #264 类「配置伪影」结构性消失（档位面自足） |
-| KD-33 | **判官 B 位换代**（用户裁定）：B `tokenhub:hy3` → **`glm:glm-5.3-flashx`**（用户点名终选）；换代 ⇒ `SUITE_VERSION` 5 → 6 + `frozenAtSuiteVersion` 同步（§2.10.3 冻结绑定）；**存量重判不可行**——判官素材 = 该回合**响应原文** + 工具调用事实（`name(arguments)`），而结果 JSON 只落 `runs[].summary.textHead`（≤300 字符）+ `toolNames`（仅名字）+ 长度计数（§2.2 / §7-5）⇒ 素材不可重建 ⇒ v5 判官面按当时槽位留档、不追改、不重判 | ① 用户点名「更常见的主流模型」+ B 位须 ≠ A / C（身份机检）；② 候选判据 = 可得性（provider ∈ config + 渠道实测在册）/ 价格在录 / **服从性证据**（严格 JSON 单发读数——`judge-slot-probe` 族：判官 + 复核两模板各 1 发 + 重材料用例）；④ 换代动因 = 实录 B 位 `multiturn.1` 系统性超时（≥6 例 · 跨 6 档）⇒ 可靠性不足；⑤ **flashx 选定依据** = 用户点名 + 探针读数（judge ✓ 1.6s · review ✓ 8.8s · 重材料 ⚠ 38.6s · attempts=2——探针读数如实登记；当时口径的重发，现行 = 单发 + 预算 8192，§2.10.1）+ v5 实测在册（23/25 · TTFT 1038ms / tok/s 136.2）；身份 = ≠ A / C ✓ ∧ ∈ 被测集（同位自判——裁定允许，重合标记照常）；⑥ 参数相容 = `glm` 条目 effort `max` ∈ flashx 枚举 {low, high, max} ✓ ∧ temperature 0 ∈ `tempRange` [0, 1] ✓（判官调用沿 provider 条目 effort 原值）；⑦ **B 位成本可读性认账**：`glm` 族带 `noUsageStream`（`thincoder-core/model-specs.mjs:69-87`——flashx = `:81`）⇒ 该位判官成本账目可能整段 `null`（缺 usage 记 null，不估算——§2.10.5）；判定面不受影响（判定不吃 usage） |
+| KD-33 | **判官 B 位换代**（用户裁定）：B `tokenhub:hy3` → **`glm:glm-5.3-flashx`**（用户点名终选）；换代 ⇒ `SUITE_VERSION` 5 → 6 + `frozenAtSuiteVersion` 同步（§2.10.3 冻结绑定）；**存量重判不可行**——判官素材 = 该回合**响应原文** + 工具调用事实（`name(arguments)`），而结果 JSON 只落 `runs[].summary.textHead`（≤300 字符）+ `toolNames`（仅名字）+ 长度计数（§2.2 / §7-5）⇒ 素材不可重建 ⇒ v5 判官面按当时槽位留档、不追改、不重判 | ① 用户点名「更常见的主流模型」+ B 位须 ≠ A / C（身份机检）；② 候选判据 = 可得性（provider ∈ config + 渠道实测在册）/ 价格在录 / **服从性证据**（严格 JSON 单发读数——`judge-slot-probe` 族：判官 + 复核两模板各 1 发 + 重材料用例）；④ 换代动因 = 实录 B 位 `multiturn.1` 系统性超时（≥6 例 · 跨 6 档）⇒ 可靠性不足；⑤ **flashx 选定依据** = 用户点名 + 探针读数（judge ✓ 1.6s · review ✓ 8.8s · 重材料 ⚠ 38.6s · attempts=2——探针读数如实登记；当时口径的重发，现行 = 单发 + 预算 8192，§2.10.1）+ v5 实测在册（23/25 · TTFT 1038ms / tok/s 136.2）；身份 = ≠ A / C ✓ ∧ ∈ 被测集（同位自判——裁定允许，重合标记照常）；⑥ 参数相容 = `glm` 条目 effort `max` ∈ flashx 枚举 {low, high, max} ✓ ∧ temperature 0 ∈ `tempRange` [0, 1] ✓（判官调用沿 provider 条目 effort 原值）；⑦ **B 位成本可读性认账**：`glm` 族带 `noUsageStream`（`thincoder-core/model-specs.mjs` 的 glm 族段——flashx 条目就在该段内）⇒ 该位判官成本账目可能整段 `null`（缺 usage 记 null，不估算——§2.10.5）；判定面不受影响（判定不吃 usage） |
 | KD-34 | **跑批前参数预检**（用户裁定「测试模型的用的参数都核对一下，不要再用错参数了」）：① **枚举面**（零网络 · fail-closed）入 `run.mjs` 启动门——逐档 + 判官三槽做「config × spec」兼容判定（provider 在 config / spec 命中 / effort ∈ 枚举（若声明）/ 温度档位值与 `tempRange` 裁剪对账 / 路由与 format 豁免面 / thinking 面组合），有阻断项 ⇒ **拒跑 exit 1 + 点名**；② **实弹面** = `bench/preflight.mjs`（已实现）`--live`（1 发/档 · 需密钥 · 单轮无工具）——透传档与全档参数受理探针；③ **零落库**（不写 `bench/results/`、不写台账、不改配置）；④ 单源 = `bench/lib/params.mjs`（已实现）（参数构造 + 枚举面判定，`pipeline.mjs` 与 `preflight.mjs` 共用——防两套漂移） | ① #264 类参数错的**结构性防复发**（核守卫只在「spec 有枚举」面把关——透传档无守卫，只能靠预检）；② 枚举面零网络 ⇒ 可每次跑批自动跑（零成本）；③ 实弹面须密钥 / 花钱 ⇒ **不入 run 自动路径**（点名执行），与「跑批 = 用户点名」口径一致；④ 判官三槽同受检——换槽自身参数错（如 B 换档后 provider effort 越枚举）在跑前显影；⑤ 单源构造档 = 防「预检说没问题、跑批构造另一套」 |
 | KD-35 | **逐档参数披露**（用户裁定「测试报告里应该有测试用的模型的参数」）：结果 JSON 增 `models[].reasoningEffort` / `reasoningEffortFrom`（`models.json` 格式档 = 档位覆写 / `config` = 用户配置原值；两键同写同缺）；md 概览增**逐档参数表**（模型 · 路由 · temperature · 思考强度（值 + 来源）· maxTokens）；温度 / maxTokens / 路由复用既有单源（`models[].temperature` / `run.maxTokens` / `models[].host` 等——**不立副本**）；**呈现面变化不 bump**（KD-27）；旧档缺键 ⇒ `—`（缺省语义——未采集，非历史兼容分支） | ① 「跨档 / 跨代可比性的前提」= 参数面必须可读（否则「同 suiteVersion」被读成「同条件」）；② 参数错（#264 类）在报告里即可见——报告自身成为预检的第二道显影面；③ 不立副本 = D2（温度例外披露句 / 参数表同源派生自 `models[].temperature`）；④ 与 KD-29（评估开销金额零展示）正交——参数表零金额 |
 | KD-36 | **spec 行补齐的证据等级与「未探不声明」**（用户裁定「9 档参数补齐的应该去查表补齐」）：`thincoder-core/model-specs.mjs` 建行 = **机器读源补齐**（逐名显式行，取代泛行继承 / 兜底）；字段取值三态——① 有读数（实测 / 校验级 / 受理级）照写；② 官方口径 / 同族沿用（**点名来源行**）照写 + 行注标级；③ 零口径 ⇒ **不声明该能力位**（尺寸位沿用现盘生效值 + 行注标「未取证」）；**视觉位语义单一**（`multimodal` 仅 `true` 或**不声明**——无视觉 = 不声明，测试锚承载；T-7 零改）；新建行 `tempRange` **取值以 `MODEL-SPECS.md` §13.3 逐行为准**（族沿用有据者照写）；**KD-31 例外准入档不得带 `tempRange`**（保 KD-31 例外档不变量：入档值 = 实发值） | ① 用户点名「查表补齐」= 证据先行；③ 「未探不声明」= 与 §2.4「零静默退化」同源（宁缺勿猜——不冒充）；④ 视觉位语义单一（T-7 已冻结）⇒ 无视觉档的正确机读形态就是**不声明**（补齐 = 行注 + 测试锚，非改值）；⑤ `tempRange` 不入 KD-31 例外准入档 = KD-31 例外的准入不变量（有 `tempRange` 则核裁剪 ⇒ 入档值 ≠ 实发值） |
@@ -822,22 +822,22 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | KD-39 | **跑后补判通道（§2.14）**（用户 01:28「可以重判吗」+ 01:31 裁定）：`--rejudge --from <结果.json>`——判官面 error run **定点收正**；**素材面 = 定点重取**（响应原文不落档——§7-5 / KD-33 ⇒ 判官素材不可由档内重建）；落**新对**（缺省标签 `<原标签>-rejudged` · 原档不动 · 收编 = 人工点名）；溯源块 `rejudged` 逐 run `was → now`；与 `--recompute` 分工 = 触网 / 零网络两分档 | ① 用户要「收正 v6 1 例、免整跑重来」；② 素材不可重建是既有事实（KD-33 已裁）⇒ 补判必须重取素材（该 run 被测调用定点重跑 + 级联判分）——不许诺「同素材重判」；③ 原档不动 = 留档不可变（KD-10 精神）+ 收编先例（v5 重出）；④ `--recompute` 零网络结构保证不破（补判独立分档） |
 | KD-40 | **判官级联批版本口径 = 6 → 7**（+ `judge.json.frozenAtSuiteVersion` 同步）：级联替代 / 单判定判 / 替代池（判官身份面）三项均为判分口径面（§1.3-2 变更规则明列）⇒ 共用一次 bump；**补判档版本归属**：补判对 = 补判时代际（7）；原档仍标原代际（6——不改写）；两档不严格可比（方法行版本句已载）；同代际补判 ⇒ 可比性零损 | ① 判分合成规则变化 = 版本轴判入（§1.3-2 / §1.3-4 规则层）；② 替代池 = 判官身份面（同「任一位判官身份变化」）；③ 补判按现行口径执行 ⇒ 新对标现行代际才诚实；原档不动 ⇒ 不存在「6 档被改写成 7」的假象；④ 机械代价 = `SUITE_VERSION` 整数 + `judge.json.frozenAtSuiteVersion` 同步（机检绑定） |
 
-| KD-41 | **探针驱动路径 = 进程内核心 spawn API**（`buildSpawnChild` + `runChildPipeline`；父面零 LLM；`wantAsync = true` 取异步形返回注） | ① 判据须机械可判——探针自持夹具（父面回调 / `_childUpstream` 队列 / 沙箱 diff）都要求同进程持有 parent 与 child 对象；② child 面高保真——人格装配 / 工具集 / 管道 / spawn 门与真实 spawn 同源（`subagent.mjs:342` 同一 `runChildPipeline`）；③ 父面不经 LLM ⇒ 驱动确定性（无「父模型是否派单」这一随机面）；④ 零新机制——全部为核既有导出的进程内直调（bench 已有 `../thincoder-core/*` 直引先例，`bench/lib/client.mjs:17-18`） |
-| KD-42 | **停止条件 = 首次 ask 入队即终止该 run**（`terminal = "asked"`；判据时点 = `onToolResult` 收口） | ① 主问题（是否上抛 / 回合序）在 ask 时点已答完；② 成本封顶且跨模型一致（asked run ≈ 上抛回合数）；③ 父面无 LLM ⇒ ask 后世界（无答复）与真实 spawn（父会答复）不可比——post-ask 轨迹不构成可比读数，观测它只引噪声；④ ask 判据只用「已入队」事实（`parent-channel.mjs:98` 同步入队），不用模型自述 |
-| KD-43 | **落盘判据 = 沙箱树前后快照 diff（实测）+ 写工具调用序列（尝试）双列** | ① `child._touchedFiles` 是 per-run 记账（`thincoder-core/agent/run-start.mjs:82` 每 run 重置——三拆前 `thincoder-core/agent.mjs:157`）——管道追问扩写轮会把它清零，读数会丢；② 工具调用 ≠ 落盘（权限 / 参数错 / 沙箱外路径都可能使调用无果）；③ 沙箱 diff = 磁盘事实，且顺带覆盖「写了但未成」的全部形态 |
+| KD-41 | **探针驱动路径 = 进程内核心 spawn API**（`buildSpawnChild` + `runChildPipeline`；父面零 LLM；`wantAsync = true` 取异步形返回注） | ① 判据须机械可判——探针自持夹具（父面回调 / `_childUpstream` 队列 / 沙箱 diff）都要求同进程持有 parent 与 child 对象；② child 面高保真——人格装配 / 工具集 / 管道 / spawn 门与真实 spawn 同源（`subagent.mjs` 同一 `runChildPipeline`）；③ 父面不经 LLM ⇒ 驱动确定性（无「父模型是否派单」这一随机面）；④ 零新机制——全部为核既有导出的进程内直调（bench 已有 `../thincoder-core/*` 直引先例，`bench/lib/client.mjs`） |
+| KD-42 | **停止条件 = 首次 ask 入队即终止该 run**（`terminal = "asked"`；判据时点 = `onToolResult` 收口） | ① 主问题（是否上抛 / 回合序）在 ask 时点已答完；② 成本封顶且跨模型一致（asked run ≈ 上抛回合数）；③ 父面无 LLM ⇒ ask 后世界（无答复）与真实 spawn（父会答复）不可比——post-ask 轨迹不构成可比读数，观测它只引噪声；④ ask 判据只用「已入队」事实（`parent-channel.mjs` 同步入队），不用模型自述 |
+| KD-43 | **落盘判据 = 沙箱树前后快照 diff（实测）+ 写工具调用序列（尝试）双列** | ① `child._touchedFiles` 是 per-run 记账（`thincoder-core/agent/run-start.mjs` 每 run 重置——三拆前 `thincoder-core/agent.mjs`）——管道追问扩写轮会把它清零，读数会丢；② 工具调用 ≠ 落盘（权限 / 参数错 / 沙箱外路径都可能使调用无果）；③ 沙箱 diff = 磁盘事实，且顺带覆盖「写了但未成」的全部形态 |
 | KD-44 | **judge 兜底 = `judge.json` A 位单发**（`allowed = surfaced\|buried\|unclear`）；失败 ⇒ `reportFace = null` + warning（不阻断、不级联） | ① 问题面 = 1 bit 分类（报告面是否呈报冲突）——A / B 双判 + 仲裁的成本与延迟 ×2~3，收益近零；② 本面 = 测量面（非 bench 的判分面）——不承担「结论必得」义务（该义务 = 判分面 KD-38 的范围）；③ 复用 `callSlot` 单点 = 零新判官机制（装载 / schema / 记账同源）；④ 失败如实（null + warning）——不猜、不估（与缺价纪律同源） |
-| KD-45 | **参数面沿 bench 口径 + `promptsDigest` 入档** | ① 跨模型可比性 = 条件可读（temperature / effort / maxTokens 与 QA 套件同源——KD-31 / KD-32 / KD-35 体例；复用 `buildProviderEntry` 单点）；② 提示词版本是「新旧提示词各测」的锚——`promptsDigest` = 三槽文件（`thincoder-core/prompts/persona-eng-designer.md` / `thincoder-core/prompts/common.md` / `thincoder-core/prompts/discipline-engineering.md`）内容摘要哈希，逐 run 入档；核 prompts 根 = `import.meta.url`（`thincoder-core/prompt-files.mjs:27-32`）无环境覆盖缝 ⇒ A / B 对照 = 时点法（两轮 + digest 记录），不引入覆盖参数 |
+| KD-45 | **参数面沿 bench 口径 + `promptsDigest` 入档** | ① 跨模型可比性 = 条件可读（temperature / effort / maxTokens 与 QA 套件同源——KD-31 / KD-32 / KD-35 体例；复用 `buildProviderEntry` 单点）；② 提示词版本是「新旧提示词各测」的锚——`promptsDigest` = 三槽文件（`thincoder-core/prompts/persona-eng-designer.md` / `thincoder-core/prompts/common.md` / `thincoder-core/prompts/discipline-engineering.md`）内容摘要哈希，逐 run 入档；核 prompts 根 = `import.meta.url`（`thincoder-core/prompt-files.mjs`）无环境覆盖缝 ⇒ A / B 对照 = 时点法（两轮 + digest 记录），不引入覆盖参数 |
 | KD-46 | **落档 = 同一 `bench/results/` 家 + `probe-` 标签前缀强制 + `kind` / `probeVersion` 字段** | ① 单一 results 家（防两份留档史分裂——D1 / D2 纪律）；② 文件名自描述（`<日期>-probe-<x>.{md,json}` 一眼分探针与 QA 对）；③ JSON 自证实（`kind` + `probeVersion`） |
 
-| KD-47 | **失败路径补全族（记录面）**：① 判官 / 复核逐尝试 `calls[].totalMs` **失败照记**（发起 → 失败墙钟——观测点 = `callSlot` 调用侧；对齐 §2.2-8 既冻结语义与 §2.2 样例 B 位 attempt 1 = 30120）；② 失败记录**形状单源**（成功 / 失败两路径同过 `client.mjs` `toCallRecord`——失败路径传合成 call）；③ 用时表「部分未记录」谓词**排除 `skipped`**（口径钉死——生产形态天然不触发）；④ `report-tables.mjs:75` 注释补「未记录」定性（与 §2.3-7 同源）。**版本口径：不 bump**（采集完整度 / 记录形状 / 注释 / 谓词口径——规则层零改，KD-30③ 同源） | ① 与 KD-30 同族（失败执行也是执行）——判官逐尝试账目 = 同口径姊妹面，且 §2.2 样例本就载此语义（实现未随）；② 「新增 per-call 字段须两处同步」= error-duration 评审 #4 既报缺陷面——单形状函数把漂移面结构性消除；③ 谓词未排除 `skipped` 时，构造形态下脚注会为**未入累计的 run** 声言「按已记录之和入累计」（设计轮实测：`- fx-skip：1 个 run 部分 call 未记录` 与累计格 `—` 并存）——自相矛盾的脚注；④ 注释与口径行同源 = `render.4` ⑦ 字面断言的对读前提 |
+| KD-47 | **失败路径补全族（记录面）**：① 判官 / 复核逐尝试 `calls[].totalMs` **失败照记**（发起 → 失败墙钟——观测点 = `callSlot` 调用侧；对齐 §2.2-8 既冻结语义与 §2.2 样例 B 位 attempt 1 = 30120）；② 失败记录**形状单源**（成功 / 失败两路径同过 `client.mjs` `toCallRecord`——失败路径传合成 call）；③ 用时表「部分未记录」谓词**排除 `skipped`**（口径钉死——生产形态天然不触发）；④ `report-tables.mjs` 的注释补「未记录」定性（与 §2.3-7 同源）。**版本口径：不 bump**（采集完整度 / 记录形状 / 注释 / 谓词口径——规则层零改，KD-30③ 同源） | ① 与 KD-30 同族（失败执行也是执行）——判官逐尝试账目 = 同口径姊妹面，且 §2.2 样例本就载此语义（实现未随）；② 「新增 per-call 字段须两处同步」= error-duration 评审 #4 既报缺陷面——单形状函数把漂移面结构性消除；③ 谓词未排除 `skipped` 时，构造形态下脚注会为**未入累计的 run** 声言「按已记录之和入累计」（设计轮实测：`- fx-skip：1 个 run 部分 call 未记录` 与累计格 `—` 并存）——自相矛盾的脚注；④ 注释与口径行同源 = `render.4` ⑦ 字面断言的对读前提 |
 | KD-48 | **传输面失败路径观测通道（`throttled` · 单列裁定项）**：`liveTransport` 抛错前把观测到的暂停状态挂上错误对象（挂载原语 = `client.mjs` `markFailureObservation`——对象 ∧ 可扩展才挂，错误本体零改）；`runCase` 失败记录读 `e?.throttled === true`。契约扩展 = 「传输面抛错时错误对象**可携带** `throttled: true`（本轮确实发生过实际暂停）」——成功路径返回式契约与调用签名零改。**须单列裁定**（§3 评审 + §4 用户）：否决 ⇒ 该项保持现态并留缺口登记，其余四项照做 | ① 暂停状态**只有传输面能观测**（`onWait` 相位住核内回调）——调用侧无法事后测量（与 KD-30 的关键差异：耗时调用侧可自测、暂停状态不可）⇒ 「只挂调用侧不可观测的量」；② 消费侧后果真实：失败记录恒 `false` 会把「等待后失败」的调用从报告告警行的限流计数（`throttled` 面）漏掉——该计数系统性低估；③ 最小面：只扩失败路径的一个可选字段——夹具 / 判官面 / 成功路径全零改 |
 
-| KD-49 | **本面形态 = API 级直测 · 单发单轮**：`bench/lib/client.mjs:137` `runCase({…, maxRounds: 1})` + 一行固定中性 system（`SYSTEM_BASE`）+ 核 provider 路径 | ① 三轴（选择 / schema 合法 / 参数语义）都是**单点可判**的量——首调用即答；② 归因：多轮 agentic 会把「选择」与「读过工具结果后改主意」混在一起；③ 复用既有单点（传输 / 记账 / 超时 / 参数构造）⇒ 零新机制、样本量可放大（单发 ≈ ¥0.015–0.03 / 次）；④ 可行性已实证（设计轮探针：`runCase` + 夹具传输 + 真载荷 ⇒ 一次调用返回 `toolCalls` 可读） |
-| KD-50 | **变体构造 = 声明式变换**：V0 = 实面逐字 · V1 = 枚举块（5 档）+ V0 文本逐字 + 参数描述唯一缺口补齐（`edit.edits[].*` 7 项）· V2 = 路由句（取句规则）+ 实面参数面逐字 | ① 实读所得：参数面（`type` / `required` / `enum` / `items`）在现形已近饱和（103 带类型参数 / 7 缺描述，全在 `edit.edits[].*`——`thincoder-core/tools/file.mjs:240-251`）⇒ 可动自变量主要是**描述文本（= 选择面）**；② V1 样本 = 近邻枢纽档（`read` / `grep` / `bash` / `git` / `edit`——逐档证据 = `thincoder-core/tool-docs/*.md` 的路由散文）；③ V2 取句 = 确定性规则（不涉判断）；④ 差异面可机检（V1 − V0 = 5 档描述 + 7 项嵌套参数描述；V2 参数面逐字节等值） |
+| KD-49 | **本面形态 = API 级直测 · 单发单轮**：`bench/lib/client.mjs` 的 `runCase({…, maxRounds: 1})` + 一行固定中性 system（`SYSTEM_BASE`）+ 核 provider 路径 | ① 三轴（选择 / schema 合法 / 参数语义）都是**单点可判**的量——首调用即答；② 归因：多轮 agentic 会把「选择」与「读过工具结果后改主意」混在一起；③ 复用既有单点（传输 / 记账 / 超时 / 参数构造）⇒ 零新机制、样本量可放大（单发 ≈ ¥0.015–0.03 / 次）；④ 可行性已实证（设计轮探针：`runCase` + 夹具传输 + 真载荷 ⇒ 一次调用返回 `toolCalls` 可读） |
+| KD-50 | **变体构造 = 声明式变换**：V0 = 实面逐字 · V1 = 枚举块（5 档）+ V0 文本逐字 + 参数描述唯一缺口补齐（`edit.edits[].*` 7 项）· V2 = 路由句（取句规则）+ 实面参数面逐字 | ① 实读所得：参数面（`type` / `required` / `enum` / `items`）在现形已近饱和（103 带类型参数 / 7 缺描述，全在 `edit.edits[].*`——`thincoder-core/tools/file.mjs`）⇒ 可动自变量主要是**描述文本（= 选择面）**；② V1 样本 = 近邻枢纽档（`read` / `grep` / `bash` / `git` / `edit`——逐档证据 = `thincoder-core/tool-docs/*.md` 的路由散文）；③ V2 取句 = 确定性规则（不涉判断）；④ 差异面可机检（V1 − V0 = 5 档描述 + 7 项嵌套参数描述；V2 参数面逐字节等值） |
 | KD-51 | **三轴判据与分母口径（冻结）**：轴① = 首调用名（`expect.name === null` ⇒ 判「无调用」）· 轴② = 全调用 schema 合法 · 轴③ = 轴① ∧ 逐例参数谓词；分母 = 轴① 全有效 run（`terminal ∉ {error, skipped}`）· 轴② / ③ 期望有调用的 run；无调用 run 逐轴按轴表判（轴① 期望无调用者 `true` / 期望有调用者 `false`；轴② / ③ 期望有调用者 `false`、期望无调用者 `null`）+ 单列 `noCall` | ① 需求面三轴逐例机读；② 「首调用」= 单点判定面（多调用 run 单列 `multiCall`，不改主判定面）；③ 分母显式成文（承 §10 评审 🔴#1 教训——截断 / 失败面不入分母，读数不漂移）；④ `perfect = legal ∧ semOk`（完全正确率 = 四率之一，可拆解） |
 | KD-52 | **上下文成本读数 = 静态 + 实测两路**：静态 = 逐变体载荷 `chars` / `bytes` / `descriptionChars`（确定性）；实测 = 逐 run `usage.prompt_tokens` → 逐变体中位 + Δ vs V0（同案同模型差分） | ① 「散文 vs 结构」的核心代价 / 收益就是上下文成本；② 静态读数零网络可复跑、实测读数同源核 usage（不估）；③ 差分法消掉提示 / 模型面常数 |
 | KD-53 | **独立 runner + 自持版本轴与落档前缀**：`bench/toolcall.mjs`（**已落**）· `TOOL_PROBE_VERSION` · 标签必 `toolcall-` 起 · JSON `kind` / `toolProbeVersion` | ① `bench/probe.mjs` 并入即越 500 线（§10 面）；② 两探针形态不同（多轮行为面 vs 单发工具选择面）⇒ CLI 合同与版本轴分立（§10.2 同源理由）；③ 单一 `bench/results/` 家 + 文件名自描述（KD-46 体例） |
-| KD-54 | **产品面零改：V0 载荷经产品单点构造**（`builtinTools`（`thincoder-core/tools/index.mjs:19-27`）+ `toOpenAISchema`（`thincoder-core/tools/shared.mjs:169`）+ 能力位判据 `:64`）——探针只做载荷级变换，不写 `tool-docs/**` / schema 本体 / 注册面 | ① 边界红线（产品面零改）；② V0 必须 = 用户真实所见（否则测的不是现形）；③ 变体只在夹具内构造 ⇒「没改产品面而改的描述面」可审计（`git diff` 零命中） |
+| KD-54 | **产品面零改：V0 载荷经产品单点构造**（`builtinTools`（`thincoder-core/tools/index.mjs`）+ `toOpenAISchema`（`thincoder-core/tools/shared.mjs`）+ 能力位判据（`thincoder-core/tools/index.mjs`））——探针只做载荷级变换，不写 `tool-docs/**` / schema 本体 / 注册面 | ① 边界红线（产品面零改）；② V0 必须 = 用户真实所见（否则测的不是现形）；③ 变体只在夹具内构造 ⇒「没改产品面而改的描述面」可审计（`git diff` 零命中） |
 | KD-55 | **版本轴独立**：`TOOL_PROBE_VERSION` 单源（夹具 / 用例 / 判据 / system / 参数口径变化 ⇒ +1；呈现面不 bump）；`SUITE_VERSION`（恒 7）/ `PROBE_VERSION` / `judge.json.frozenAtSuiteVersion` / `bench/suites/` 零触 | ① 三轴与夹具 = 测量口径 ⇒ 版本轴承载（同 §10.2 / KD-27 体例）；② 本面不参与既有两条版本轴——三条轴各管自己的面（QA 判分面 / 行为面 / 本面） |
 | KD-56 | **建议面归报告外收口**：报告只出读数；「要不要结构补强 / 怎么补」= 人工判读（父侧 / 用户笔），并接池内 #15 并案 | ① 报告面纪律 = 模板化读数、禁主观评价词（§2.3《关键发现》同源）；② 建议是**判断**——须在读数之上由人（或父侧）作；③ 报告是对外可留档物，掺评价会失真 |
 
@@ -1060,7 +1060,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `render.6` | 正常 / 边界（逐档参数表） | 夹具结果五态：① 档位覆写档（`models[].reasoningEffort = "medium"` + `reasoningEffortFrom = "models.json"`）② 配置原值档（`from = "config"`）③ 旧档缺两键（自 ① 删键）④ 含温度例外档 ⑤ 被忽略档（`models[].note` = 「服务端忽略 effort（实弹 2026-09-24）」） | ① ② 参数表在位（列集 = 模型 · 路由 · temperature · 思考强度（值 + 来源）· maxTokens）+ 逐行对读；③ 该档格 `—`（缺省语义——旧代际未采集）；④ temperature 格注「档位例外」（与披露句同源）；⑤ note 披露用例：概览模型表该行「备注」格含「服务端忽略 effort」字面 ∧ 参数表列集零改（生效性不另设列——§2.3-9）；**反控** = 全 md 零评估开销金额（KD-29 不回归） | `report-present.check.mjs` |
 | `render.7` | 正常（速度表双排序） | 夹具结果渲染（含缺数据档：TTFT / tok/s `null`——构造） | ① 两表在位 + 落位 = A 在 B 前 · B 在用时表前（标题逐字 `### 速度表 A（按 TTFT 中位升序）` / `### 速度表 B（按 tok/s 中位降序）`）；② 表 A 行序 = TTFT 中位升序（缺数据居末）；③ 表 B 行序 = tok/s 中位降序（快者在前 · 缺数据居末）；④ **列集逐字相同正控**（两表表头 = `| 模型 | TTFT 中位 | tok/s 中位 | 总耗时（中位） | 采样 run 数 |`）；⑤ 注文区分（A 含「按 TTFT 中位升序」/ B 含「按 tok/s 中位降序」）；⑥ 脚注一份 · 列表 B 后；⑦ 轴门控：无 `speed` 轴 ⇒ 两表同隐 | `report-present.check.mjs` |
 | `render.8` | 正常（能力矩阵两列） | 夹具结果渲染（含缺数据档：无 pass/fail 样本 / 无价） | ① 矩阵表头 = 既有列 + 合计 + 总耗时 + 相对成本（两列接合计后）；② 总耗时 = 速度表同源格值（与 `### 速度表 A` 同档对读一致）；③ 相对成本 = 成本表同源倍率（最低者 = 1.0×）；④ **反例控制**：≠ 用时表「累计耗时」（累计大值档的两格不等）；⑤ 缺数据 `—`；⑥ 行序不变（合计通过数降序）；⑦ 注文区分（矩阵注文含「与用时表「累计耗时」不同源」区分句） | `report-present.check.mjs` |
-| `render.9` | 正常 / 边界（替代面渲染） | 夹具结果两态：① 含替代记录（`substitutes[]` + `calls[].level`）+ 池快照 `judge.fallbacks[]` + 两计数（`substitutions` / `singleJudged`——§2.2-15/16）；② 旧代际档（自 ① 删池快照与两计数） | ① 概览替代池行在位（级序 × `provider:model` + 启用次数——逐项对读池快照与 `substitutions`）· 逐维明细判官理由行替代位标注 `（替代：<provider:model>）` · **单判定判 run 注「单判定判」在位**（`resolution = "single"` run 的逐维明细判官理由行标注——§2.3 `:254`）· 告警行分列计数（替代 S 次 / 单判 T 次 / 不可用 M 次——与顶层计数同源对读）· **方法段级联句在位**（`## 方法` 段含「位级失败经替代判级联换模型补判」字面——§2.3 `:241`）；② 缺键用例 ⇒ 概览替代池行渲染「未采集」· 告警分列计数按「0 次启用」（缺省语义——§2.2-16 · 反例控制）；版本字面 7（概览题集版本行 `suiteVersion = 7`） | `report-present.check.mjs` |
+| `render.9` | 正常 / 边界（替代面渲染） | 夹具结果两态：① 含替代记录（`substitutes[]` + `calls[].level`）+ 池快照 `judge.fallbacks[]` + 两计数（`substitutions` / `singleJudged`——§2.2-15/16）；② 旧代际档（自 ① 删池快照与两计数） | ① 概览替代池行在位（级序 × `provider:model` + 启用次数——逐项对读池快照与 `substitutions`）· 逐维明细判官理由行替代位标注 `（替代：<provider:model>）` · **单判定判 run 注「单判定判」在位**（`resolution = "single"` run 的逐维明细判官理由行标注——口径见 §2.3）· 告警行分列计数（替代 S 次 / 单判 T 次 / 不可用 M 次——与顶层计数同源对读）· **方法段级联句在位**（`## 方法` 段含「位级失败经替代判级联换模型补判」字面——§2.3 的方法段）；② 缺键用例 ⇒ 概览替代池行渲染「未采集」· 告警分列计数按「0 次启用」（缺省语义——§2.2-16 · 反例控制）；版本字面 7（概览题集版本行 `suiteVersion = 7`） | `report-present.check.mjs` |
 | `roster.4` | 正常（中档取值表） | `bench/models.json` 全 29 档 × 映射规则（① 枚举含 `medium` ⇒ `medium`；② 无 `medium` ⇒ 该档枚举行中位档；③ 无枚举行 ⇒ `medium`） | 逐档 `reasoningEffort` = 映射值（全 29 档逐档表）；覆写值 ∉ 该档 spec 枚举 ⇒ 由预检枚举面拦（`preflight.1` ③——双层防护） | `roster.check.mjs` |
 | `preflight.1` | 正常 / 错误（枚举面 · fail-closed） | `bench/lib/params.mjs`（已实现）枚举面判定**六项对齐用例**（stub config + 真 spec 表）：① 全合法 ⇒ 零阻断（对照用例）；② provider 缺（项①）⇒ 阻断；③ spec 未命中（项②）⇒ 阻断（新用例）；④ effort ∉ 枚举（项③）⇒ 阻断 + 同用例变体 = 豁免档（`model` 含 `/`）⇒ 判定跳过 · 零阻断（项⑤——新用例）；⑤ 温度裁剪对账（项④）⇒ 报警（不入阻断集）；⑥ thinking 面（项⑥）= 不设判定（明示无用例） | ① 过；② ③ ④ 逐条点名阻断（`run.mjs` 启动面 ⇒ 拒跑 exit 1；`bench/preflight.mjs`（已实现）同源打印）；⑤ 报警行在位且 exit 0（对阻断集反例控制）；**零网络**；判官三槽 + 替代池逐项同受检（含槽位 entry effort 面）——**池内项用例**：池项 provider 缺 / spec 未命中 / effort 越枚举 ⇒ 阻断；豁免档（`model` 含 `/` / `format` 面）⇒ 判定跳过 · 零阻断（同 ④ 用例变体） | `bench/check/preflight.check.mjs`（**已落**） |
 | `mech.1` | 正常 / 错误（`multiturn.1` 判据修复 · 定点复现） | 合成 `result.turns`（不调模型）：① 修复形态 = 回合 1 [`get_time` 检索步 + 追问文本]、回合 2 [`send_email`（`to = team@example.com`）]；② 实录形态 = 回合 2 多条 `send_email` 且 `arguments` = 同一 JSON 对象**重复拼接**（minimax 实录形态）；③ 反例 = `to` 为他值 / 回合 1 出 `send_email` / 回合 2 无 `send_email`；④ 原语直接用例 = `firstJsonObject` / `argValue` 三态（严格过 / 拼接取首件 / 不闭合 ⇒ null） | ① 机械面全过 ∧ 桩判官被调（**修复后 pass** 用例）；② 机械面全过（存在语义 + 首平衡对象取值——修复判别形态：修复前严格解析失败 ⇒ `to` 读空 ⇒ fail）；③ 三条各 fail 且**不调判官**（短路——不放松真违规支）；④ 原语三态逐条；⑤ dry-run 全链路（`.1` 夹具 = 检索步形态）run pass ∧ 判官记录在场 ∧ 无复核记录；修复前 fail 凭证 = v5 报告《复核翻案》承接表实录（`bench/results/2026-09-24-roster-29-v5.md`；机械失败断言原文 `回合 1 信息不全却调用了工具：get_time` / `send_email.to=（需 team@example.com）`）+ 旧判据串负断言（循 `text.1` 先例） | `graders.check.mjs` |
@@ -1075,7 +1075,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 ⑤ **名单 / 价格数据面（29 档解析 · 温度 schema 与透传 · 价格键对齐）= 必测项**（§5.13 `roster.1–3` / `temperature.1` / `render.5`）。
 ⑥ **失败路径补全族（`timing.2` / `timing.3` · KD-47）= 必测项**（判官 / 复核逐尝试失败耗时 · 失败路径 `throttled` 观测 · 记录形状单源 · `render.4` ⑫ `skipped` 排除用例）。
 
-**失败耗时采集用例的设计轮预演实测（2026-09-24 · 只读实验 · 无落档）**：`runCase` + 挂起传输（响应 `signal` 中止）+ `timeoutMs = 80` ⇒ 前记录（预演当刻）= `calls[0] = { round: 1, ttftMs: null, totalMs: null, tokens: null, toolNames: [], finishReason: null, throttled: false }`（缺口实态——`bench/lib/client.mjs:148`；**落地后该缺口已补**）；
+**失败耗时采集用例的设计轮预演实测（2026-09-24 · 只读实验 · 无落档）**：`runCase` + 挂起传输（响应 `signal` 中止）+ `timeoutMs = 80` ⇒ 前记录（预演当刻）= `calls[0] = { round: 1, ttftMs: null, totalMs: null, tokens: null, toolNames: [], finishReason: null, throttled: false }`（缺口实态——`bench/lib/client.mjs` 的失败分支；**落地后该缺口已补**）；
 
 `error` = `TimeoutError: The operation was aborted due to timeout`（与 v4 实录同形）· 墙钟 ≈ 96 ms（超时预算 + 中止传播）⇒ `timing.1` ① 阈值建议 ≥ 50 ms（预算取值 80 ms）；该用例在自写 harness 体内可直接完成（已验）。
 
@@ -1174,12 +1174,12 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 | 源 AC 号 | 坐标 | 态 | 落点 / 处置 |
 |---|---|---|---|
-| `AC-5` | `bench/lib/grade.mjs:59` · `bench/suites/code.mjs:4` | 落点 | §2.6 |
-| `AC-10` | `bench/lib/pipeline.mjs:6` · `bench/lib/recompute.mjs:2` / `:33` | 落点 | §2.7 |
-| `AC-4` | `bench/lib/prices-judge.mjs:2` | 落点 | §2.5 |
-| `AC-6` | `bench/lib/report-tables.mjs:286` · `bench/suites/index.mjs:6` · `bench/suites/manual.mjs:2` / `:4` | 落点 | §2.3-④ |
-| `AC-12` | `bench/lib/report-review.mjs:21` | 已取代 | 批内编号（表 1 无此号）⇒ 删号保事实 |
-| `AC-11` | `bench/check/probe.check.mjs:139` | 不适用 | 射程外（射程 = `bench/lib` + `bench/suites`） |
+| `AC-5` | `bench/lib/grade.mjs` · `bench/suites/code.mjs` | 落点 | §2.6 |
+| `AC-10` | `bench/lib/pipeline.mjs` · `bench/lib/recompute.mjs` | 落点 | §2.7 |
+| `AC-4` | `bench/lib/prices-judge.mjs` | 落点 | §2.5 |
+| `AC-6` | `bench/lib/report-tables.mjs` · `bench/suites/index.mjs` · `bench/suites/manual.mjs` | 落点 | §2.3-④ |
+| `AC-12` | `bench/lib/report-review.mjs` | 已取代 | 批内编号（表 1 无此号）⇒ 删号保事实 |
+| `AC-11` | `bench/check/probe.check.mjs` | 不适用 | 射程外（射程 = `bench/lib` + `bench/suites`） |
 
 **需求面 AC 条目与编号的补录 = 主 agent 动作**——设计侧只回指，不改需求档。
 
@@ -1190,8 +1190,8 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | 失败耗时 · AC-1 | 失败调用（超时 / 接口错）在 `calls[]` 落盘 `totalMs`（发起 → 失败墙钟；`ttftMs` / `tokens` 照旧 `null`） | §1.3-3（计时口径 · 失败照记）· §2.2-2 / §2.2-3 · KD-30 · §3 表 `client.mjs` 行 | `timing.1`（① 超时用例 ≥ 阈值 + ② 接口错用例 + ③ 成功对照用例 + ④ 部分未记录用例 + `runMetrics` 聚合用例） |
 | 失败耗时 · AC-2 | 用时表：`error` run 的**已记录**耗时照计（「`null` 不计入」仅对**未记录**）；脚注 / 口径句同步 | §2.3 骨架（用时表行）· §2.3-7 · KD-28 ② · KD-30 · §3 表 `report-time.mjs` 行 | `render.4`（扩 ⑦ + ⑧：口径行两短语 + **全部 call 已记录**的 `error` run 照计且不入脚注——对 null 用例反例控制；⑧ = 部分未记录用例按已记录之和入累计 + 入脚注；既有 Σ 定域 / 倍率 / 排名 / 采样用例不回归） |
 | 失败耗时 · AC-3 | 全绿 + 既有成功路径读数零改（成功路径回归零差异） | §3 表（`client.mjs` 仅失败分支 · `metrics.mjs` 公式零改 · 记录式与成功路径同源） | `node bench/check/run.mjs` 全绿（`timing.1` 成功对照用例 + dry-run 全链路读数零差——dry-run 夹具无模型调用失败 ⇒ 产物读数逐字同前） |
-| 裁定 5（版本口径） | 记录面补全 vs 口径变更 = 设计轮给结论（倾向不 bump） | §1.3-4（版本轴判入 = 规则层）· KD-30 | **结论 = 不 bump**（现行版本值单源 = §1.3-4；`suite.check.mjs:32` / `judge.4` 断言零改）；§3 表 `bench/suites/index.mjs` · `bench/judge.json` **±0** 行 |
-（`bench/README.md` 用时表条口径句（`:117`）收正 = 实施面（字面要求 = 两短语「error run 已记录耗时照计」·「`null` = 未记录」——同 AC-2 口径行）；**验收含该行人工对读**（两短语在位——读数入 §6）。）
+| 裁定 5（版本口径） | 记录面补全 vs 口径变更 = 设计轮给结论（倾向不 bump） | §1.3-4（版本轴判入 = 规则层）· KD-30 | **结论 = 不 bump**（现行版本值单源 = §1.3-4；`suite.check.mjs` / `judge.4` 断言零改）；§3 表 `bench/suites/index.mjs` · `bench/judge.json` **±0** 行 |
+（`bench/README.md` 用时表条口径句收正 = 实施面（字面要求 = 两短语「error run 已记录耗时照计」·「`null` = 未记录」——同 AC-2 口径行）；**验收含该行人工对读**（两短语在位——读数入 §6）。）
 
 **回指 · 批 ID = 名单扩容批（2026-09-24）· 需求档 §1.3 / §1.9 · 现行**
 
@@ -1212,7 +1212,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | 价格v5 · AC-2 | 缺价用例校准后测试全绿（预期入 §2 · 实测入 §5） | §5.13 `render.1`（缺价用例 = 合成键）· §3 表 `bench/check/report-render.check.mjs` 行 | `render.1` 三条断言（位级成本 `null` · 位级缺价警告在位 · md 零评估开销金额）+ `node bench/check/run.mjs` 全绿 |
 | 价格v5 · AC-3 | 跑批命令与产物名在档 · **可跑准备就绪**（点火 = 用户点名） | §2.1-6（结果对落 `bench/results/`）· §2.7 全量复跑 · §3 表 `bench/results/` 行 | 命令 = `node bench/run.mjs --label roster-29-v5`（缺省 = 清单全量 29 档 · 28 项/档 ≈ 812 run）；就绪三检 = 全价 ∧ 测试全绿 ∧ provider 覆盖（29 档 provider ∈ 用户 config——`bench/lib/pipeline.mjs` 缺即拒跑）+ 判官三槽冻结 5；产物 = `bench/results/<运行日>-roster-29-v5.{md,json}`（同名拒写——KD-10）（本行数值 = 该批当时读数；现行版本值 = 7——单源 = §1.3-4） |
 | 价格v5 · AC-4 | §2 条目表逐条对到落点与判定方式 | §2（与本表同源） | 本表三列逐条对读（AC ↔ 设计落点 ↔ 判定方式） |
-| 价格v5 · AC-5 | v4 对出档 + `bench/README.md` 零 `flash-compare-v4` 死指针 + **同一提交**（时点 = v5 落档验收后） | §2.2-7 / §2.2-11（在档注）· §3 表 `bench/results/` / `bench/README.md` 行 · §7-12 · §9 | v4 对（`flash-compare-v4`）删除 + `bench/README.md` `:29-32` 收正（同一提交）；验收 = `git status` 零残留 · `flash-compare-v4` 零命中（读数入档 / §6；在档集单源 = §3 `bench/results/` 行） |
+| 价格v5 · AC-5 | v4 对出档 + `bench/README.md` 零 `flash-compare-v4` 死指针 + **同一提交**（时点 = v5 落档验收后） | §2.2-7 / §2.2-11（在档注）· §3 表 `bench/results/` / `bench/README.md` 行 · §7-12 · §9 | v4 对（`flash-compare-v4`）删除 + `bench/README.md` 的 v4 对照段收正（同一提交）；验收 = `git status` 零残留 · `flash-compare-v4` 零命中（读数入档 / §6；在档集单源 = §3 `bench/results/` 行） |
 
 **条目回指**：
 
@@ -1225,8 +1225,8 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | 267 | spec 行补齐：10 档无专行 + 4 档视觉声明 + 尺寸失实面 | `docs/core/design/MODEL-SPECS.md` §13 · §3 表（`model-specs.mjs` 行）· KD-36 | 新增锚（建行逐名命中 / 未探词在场 / `multimodal` 分态）承载 = 新载体单测档（已实现）+ 主测试档 T-4/A-14 就地改指 |
 | 269 | 报告 + 结果 JSON 逐档披露实发参数 | §2.2-13（入档字段）· §2.3（概览逐档参数表 + 规则 9）· KD-35 | `render.6`（在位 / 例外注 / 缺键 / 零金额反控）+ dry-run 产物对读 |
 | 263 | 缺价用例两条可选加固（恒真断言弱守卫 · 覆写未随改） | §5.13 `render.1`（四断言形态） | `render.1` 四断言（含表头正控——增补③ 后 = 八列串）+ 全档 `node --test` 全绿 |
-| 271 | 速度表双排序（表 A = TTFT 中位升序 / 表 B = tok/s 中位降序（快者在前）· 缺数据居末 · 列集相同 · 标题与注文区分） | §2.3 骨架（速度表 A / B 双行 + 规则 10①）· §5.13 `render.7` | `render.7`（两表 / 行序 / 缺数据居末 / 列集正控 / 注文区分 / 脚注 / 轴门控）+ `report.1` 段清单断言同步（`report-render.check.mjs:106` 增 A / B 双断言） |
-| 272 | 能力矩阵加两列（总耗时 = 速度表「总耗时（中位）」同源 · 相对成本 = 成本表同源 · 行序不变 · 缺数据 `—`） | §2.3 骨架（能力矩阵行 + 规则 10②）· §5.13 `render.8` | `render.8`（两列 / 同源对读 / 反例控制 = 与用时表累计不同源 / 缺数据 / 行序不变）+ 既有矩阵断言同步（`report-render.check.mjs:153` / `:288`——新增列后计数同步） |
+| 271 | 速度表双排序（表 A = TTFT 中位升序 / 表 B = tok/s 中位降序（快者在前）· 缺数据居末 · 列集相同 · 标题与注文区分） | §2.3 骨架（速度表 A / B 双行 + 规则 10①）· §5.13 `render.7` | `render.7`（两表 / 行序 / 缺数据居末 / 列集正控 / 注文区分 / 脚注 / 轴门控）+ `report.1` 段清单断言同步（`report-render.check.mjs` 增 A / B 双断言） |
+| 272 | 能力矩阵加两列（总耗时 = 速度表「总耗时（中位）」同源 · 相对成本 = 成本表同源 · 行序不变 · 缺数据 `—`） | §2.3 骨架（能力矩阵行 + 规则 10②）· §5.13 `render.8` | `render.8`（两列 / 同源对读 / 反例控制 = 与用时表累计不同源 / 缺数据 / 行序不变）+ 既有矩阵断言同步（`report-render.check.mjs` 的两处矩阵断言——新增列后计数同步） |
 | 276 | 报告交叉列（用时表 +2：合计通过数 / 相对成本；成本表 +3：合计通过数 / 累计耗时 / 相对倍率——同源照搬 · 行序不变 · 缺数据 `—`） | §2.3 骨架（用时表 / 成本表两行 + 规则 10④）· §5.13 `render.3` / `render.4`（扩） | `render.3` ⑦⑧⑨⑩ + `render.4` ⑨⑩⑪（表头逐字正控 = 八列 / 七列 · 交叉列同源对读 / 缺数据 `—` / 行序不变 / 轴子集照出值）+ `render.1` 头串同步 |
 
 | 273 | `multiturn.1` 判据修复（v5 承接 ×4 翻案 · 检索步合法 + `send_email` / `to` 存在语义——多次调用 / 重复参数不计缺失或错误） | §5.6 / §5.11（`.1` 正本）· §2.10.2 · §2.6（原语）· KD-37 | 定点复现 `mech.1`（修复前 fail / 修复后 pass + 反例控制 + dry-run 全链路）+ 版本 6（`suite.check.mjs` / `judge.json` 对读） |
@@ -1256,7 +1256,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | 探针10 · AC-3 | 机械读数齐（§10.5 字段 + 行为类表）；上抛判据 = `kind="ask"` 队列条目 | §10.5 | 脚本化假 child 三形态（`asked@3` / `cap` / `completed`）+ 字段在场断言 |
 | 探针10 · AC-4 | 停止条件三态区分（asked / cap / timeout）+ ask 入队时点收口 | §10.3-6 | 单元测试（三态 + 「未入队不记 ask」反例用例） |
 | 探针10 · AC-5 | 沙箱隔离（真实仓零残留）+ 落盘判据 = 沙箱 diff | §10.3-5 · §10.9-② | **分段**：实施轮 = 单元测试（根检查 / 物化 / diff 三态 / 清运）；实跑用例 = 实弹轮核对（实跑后 `git status` 零残留——真实仓） |
-| 探针10 · AC-6 | judge 兜底（无 ask run 单判；三态 + 失败 null + warning 不阻断） | §10.6 | 桩传输三态 + 失败用例（`bench/lib/client.mjs:90` 复用） |
+| 探针10 · AC-6 | judge 兜底（无 ask run 单判；三态 + 失败 null + warning 不阻断） | §10.6 | 桩传输三态 + 失败用例（`bench/lib/client.mjs` 的夹具传输复用） |
 | 探针10 · AC-7 | 落档形态（`probe-` 前缀 / 同名拒写 / 脱敏 / `kind` + `probeVersion`） | §10.7 · §10.8 | 单元测试（四用例）+ dry-run 产物断言 |
 | 探针10 · AC-8 | 成本上界与闸（单 run 上界式 + `--max-cost` ⇒ 余面 `skipped`） | §10.8 · §10.5 / §10.7（`skipped` 态与聚合口径） | 单元测试（假成本到顶用例：余面 `skipped` 入 `runs[]` + 聚合分母排除 + warning + 退出码 0） |
 | 探针10 · AC-9 | 既有面零动（`SUITE_VERSION` / `frozenAtSuiteVersion` / `cases/` / `run.mjs` 判分合同；三端零改动） | §10.2 · §10 头注 | 既有断言零改 + `git diff` 范围核对 |
@@ -1266,10 +1266,10 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 | 批 · 源 AC | 判据（条目面） | 设计落点 | 判定方式 |
 |---|---|---|---|
-| 失败路径 · AC-1 | #259① 判官 / 复核逐尝试耗时：传输面失败不再记 `null` | §1.3-3（计时行）· §2.2-8（`totalMs` 语义）· KD-47① | `timing.2` ①（直测 `callSlot` 延迟抛错 ⇒ 数字 ∧ ≥ 25）+ `timing.2` ②（`judge.14` 级联用例：失败级非 `null`）+ §2.2 样例对读（B 位 attempt 1 = 30120）；**复核面经同一 `callSlot` 单点覆盖**（`bench/lib/judge.mjs:276`——不另设专属用例） |
+| 失败路径 · AC-1 | #259① 判官 / 复核逐尝试耗时：传输面失败不再记 `null` | §1.3-3（计时行）· §2.2-8（`totalMs` 语义）· KD-47① | `timing.2` ①（直测 `callSlot` 延迟抛错 ⇒ 数字 ∧ ≥ 25）+ `timing.2` ②（`judge.14` 级联用例：失败级非 `null`）+ §2.2 样例对读（B 位 attempt 1 = 30120）；**复核面经同一 `callSlot` 单点覆盖**（`bench/lib/judge.mjs` 的复核面——不另设专属用例） |
 | 失败路径 · AC-2 | #259② 失败路径 `throttled`：观测出洞（**单列裁定项**） | §2.9-4（观测通道契约）· §2.2-2（消费指针）· KD-48 | `timing.3` ①–⑤（生产者四态 + 消费两态 + 成功对照 + 形状同集）；**先决 = §4 单列裁定通过**（否决 ⇒ 本 AC 撤销并留缺口登记；随撤 = `markFailureObservation` + `timing.3` ①–④，`timing.3` ⑤ **保留**（AC-4 判定方式依赖），`timing.check.mjs` 增量相应回退） |
 | 失败路径 · AC-3 | #260① 部分未记录谓词排除 `skipped` | §2.3-7（部分未记录分支）· KD-47③ | `render.4` ⑫（构造用例：`skipped` 形态不入脚注；守卫前反例 = 入脚注——设计轮实测在册） |
-| 失败路径 · AC-4 | #260②③ 失败记录形状单源 + `report-tables.mjs:75` 注释「未记录」定性 | §2.2-2（单形状函数句）· KD-47②④ · §2.3-7（口径同源） | `timing.3` ⑤（键集同形）+ 注释逐字对读（含「未记录」定性——与 §2.3 骨架口径行同源） |
+| 失败路径 · AC-4 | #260②③ 失败记录形状单源 + `report-tables.mjs` 的注释「未记录」定性 | §2.2-2（单形状函数句）· KD-47②④ · §2.3-7（口径同源） | `timing.3` ⑤（键集同形）+ 注释逐字对读（含「未记录」定性——与 §2.3 骨架口径行同源） |
 | 失败路径 · AC-5 | 批次边界：既有报告对拍（零回归锚）+ 版本面零改 + 在档零改写 | §3 表（`bench/results/` ±0）· §1.3-4（采集完整度不入轴）· KD-47（不 bump） | ① `node bench/check/run.mjs` 全绿；② **在档对拍**：`bench/results/2026-09-25-roster-29-v6-rejudged.{json,md}`——`renderReport(JSON)` 与在档 `.md` **逐字节相同**（现盘实测 = `IDENTICAL` · 237025 字符；内存渲染、不落档）；③ `git status --porcelain bench/results/` 空；④ `SUITE_VERSION` 恒 7 ∧ `judge.json.frozenAtSuiteVersion` 恒 7（两档 ±0 行） |
 
 **回指 · 批 ID = 工具面探针批（§11 · KD-49 – KD-56）· 需求档无对应节（源 = 批内验收）· 现行**
@@ -1402,7 +1402,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 参数相容 = `glm` 条目 effort `max` ∈ flashx 枚举 {low, high, max} ✓ ∧ temperature 0 在 `tempRange` [0, 1] 内 ✓ ∧ 实调零 400 ✓。
 
-**成本可读性认账（评审轮 1 #10 · 措辞沿家族）**：B = `glm:glm-5.3-flashx` ∈ `glm` 族——族行带 `noUsageStream`（`thincoder-core/model-specs.mjs:69-87`，flashx = `:81`；§2.9-5）⇒ 该位判官成本账目可能整段 `null`（usage 缺失记 null，不估算——§2.10.5）；判定面不受影响（判定不吃 usage）。
+**成本可读性认账（评审轮 1 #10 · 措辞沿家族）**：B = `glm:glm-5.3-flashx` ∈ `glm` 族——族行带 `noUsageStream`（`thincoder-core/model-specs.mjs` 的 glm 族段；§2.9-5）⇒ 该位判官成本账目可能整段 `null`（usage 缺失记 null，不估算——§2.10.5）；判定面不受影响（判定不吃 usage）。
 
 **选型口径（冻结 · 与运行面校验同源）**：① **A ≠ B**、**仲裁员 ≠ A / B**（模型字面——§2.10.3 身份校验）；② 三槽**跨厂商**、与被测**无重合**为**优先姿态**（理想态 = 三家 ⇒ 无 `sameVendorAsTested` 旗标——第二 / 第三视角更干净；**实测槽位** A / C 同渠道（上「槽位实测」段）⇒ 旗标按被测集派生、逐位明示（§2.10.3 三级）；**非约束**：重合（含同位自判）允许——§2.10.3）；③ A 位保留 POC 唯一已验键 `deepseek:deepseek-flash`（判准证据 + 价格已录）；
 
@@ -1438,31 +1438,31 @@ v3 重跑（AC-7）实测记档（**v3 对已按 KD-25 出档** · **v4 对出�
 
 驱动 = `bench/probe.mjs`（已实现）进程内直调核单点（复用核路径体例同 KD-1）；**父面零 LLM**（确定性），只有 child 用真实模型。
 
-1. **探针父面**（合成 parent · depth 0）：`createAgent({provider, tools, config, cwd: 沙箱, memory: null, role: null})`（`thincoder-core/agent.mjs:60`）——`tools` = `builtinTools` 静态表（`thincoder-core/tools/index.mjs:19-27`，按模型多模态位补 `read_image`——判据同 `thincoder-core/tools/index.mjs:64`）；
+1. **探针父面**（合成 parent · depth 0）：`createAgent({provider, tools, config, cwd: 沙箱, memory: null, role: null})`（`thincoder-core/agent.mjs` 的 `createAgent`）——`tools` = `builtinTools` 静态表（`thincoder-core/tools/index.mjs`，按模型多模态位补 `read_image`——能力位判据同档）；
 `provider` = **抛错桩**（`Proxy`：`name` / `model` 两键返回桩值，**其余任何键访问即抛错**——`chat` 必经的 `baseURL` / `apiKey` 在列 ⇒ 任何 LLM 路径调用即硬失败：「父面零 LLM」可机检）；`cwd` = 沙箱根（仓外临时目录——§10.9-②）。
 
 `config` = 用户 config 克隆（`thincoder-core/config.mjs` 的 `loadConfig`）+ `providersList` 逐档覆写（见 ④）+ `agent.subagentTurns = --max-turns`；`autoApprove = true`（child 写权限放行）；`_subAgentCounter = 0`。
-2. **child 装配**：`buildSpawnChild(parent, ctx, args, "eng-designer", true, [], [], null)`（`thincoder-core/agent-tools/subagent-spawn.mjs:201`）——
+2. **child 装配**：`buildSpawnChild(parent, ctx, args, "eng-designer", true, [], [], null)`（`thincoder-core/agent-tools/subagent-spawn.mjs`）——
 `args = {goal, knownFacts, designPoints, acceptance, reportFormat, round: "initial", batchDoc: "docs/batches/probe-fixture-<族>.md"（沙箱内相对形态）, model: "<provider>:<model>"}`；
 
 spawn 门照走（`batchDoc` 必带 + 任务书五项参数齐全——工程角色名集 = `taskBookParamsFor("eng-designer")`（四项核心 + `designPoints`），`thincoder-core/agent-tools/spawn-gates.mjs`）。
-`model` 带 `provider:` 前缀 ⇒ 经 `providersList` 解析、不读父面 `provider`（`thincoder-core/agent-tools/subagent-async.mjs:151-155`）；`batchDoc` 按父面 cwd 解析。
+`model` 带 `provider:` 前缀 ⇒ 经 `providersList` 解析、不读父面 `provider`（`thincoder-core/agent-tools/subagent-async.mjs`）；`batchDoc` 按父面 cwd 解析。
 
-`wantAsync = true` ⇒ `child._upstream.sync = false`（`subagent-spawn.mjs:431`）——`notify_parent` 返回注取**异步形**（与 depth-0 真实 spawn 一致）；**池不入**（探针自持驱动）。
+`wantAsync = true` ⇒ `child._upstream.sync = false`（`subagent-spawn.mjs` 的异步支）——`notify_parent` 返回注取**异步形**（与 depth-0 真实 spawn 一致）；**池不入**（探针自持驱动）。
 3. **child 运行**：`runChildPipeline(child, input, childOpts, childRunOpts, {parent, role: "eng-designer", args, askContinue: () => Promise.resolve(false)})`
-（`thincoder-core/agent-tools/subagent-async.mjs:305`）——与真实 `subagent` 工具 spawn 同一管道（`thincoder-core/agent-tools/subagent.mjs:342`）；
+（`thincoder-core/agent-tools/subagent-async.mjs`）——与真实 `subagent` 工具 spawn 同一管道（`thincoder-core/agent-tools/subagent.mjs`）；
 
-`depth = 1` ⇒ 人格装配 = eng-designer 场景（`thincoder-core/agent/setup.mjs:186-193` · `thincoder-core/prompt-overlays.mjs:45`）、家族段含 `notify_parent`（`thincoder-core/agent/family-tools.mjs:172`）。
-`askContinue` 恒 false ⇒ 撞帽即拒绝降级 partial（该态 = 读数「绕圈」，非基建错误——`thincoder-core/agent/spawn-child.mjs:233`）。
-4. **参数面**（沿 bench 口径 · KD-45）：逐档 provider 条目 = `buildProviderEntry(user条目, {model, maxTokens: 4096, temperature: entry.temperature ?? 0, reasoningEffort: entry.reasoningEffort ?? null})`（`bench/lib/params.mjs:30`）；
-   写入探针父面 `providersList` 供 `resolveChildProvider` 取用（`thincoder-core/agent-tools/subagent-async.mjs:139`）；实际值逐档入档。
-   `?? null` 语义 = **档位覆写优先；缺省 ⇒ 键不落条目** ⇒ 沿 base（用户 config）原值（与 KD-32 同式——`bench/lib/params.mjs:30-34` · 同 `bench/lib/pipeline.mjs:183`）。
+`depth = 1` ⇒ 人格装配 = eng-designer 场景（`thincoder-core/agent/setup.mjs` · `thincoder-core/prompt-overlays.mjs`）、家族段含 `notify_parent`（`thincoder-core/agent/family-tools.mjs`）。
+`askContinue` 恒 false ⇒ 撞帽即拒绝降级 partial（该态 = 读数「绕圈」，非基建错误——`thincoder-core/agent/spawn-child.mjs` 的 `runWithContinue`）。
+4. **参数面**（沿 bench 口径 · KD-45）：逐档 provider 条目 = `buildProviderEntry(user条目, {model, maxTokens: 4096, temperature: entry.temperature ?? 0, reasoningEffort: entry.reasoningEffort ?? null})`（`bench/lib/params.mjs` 的 `buildProviderEntry`）；
+   写入探针父面 `providersList` 供 `resolveChildProvider` 取用（`thincoder-core/agent-tools/subagent-async.mjs`）；实际值逐档入档。
+   `?? null` 语义 = **档位覆写优先；缺省 ⇒ 键不落条目** ⇒ 沿 base（用户 config）原值（与 KD-32 同式——`bench/lib/params.mjs` · 同 `bench/lib/pipeline.mjs`）。
 5. **观测面（探针自持夹具）**：
-   - 回合帧 = child 侧 `⟦ev⟧turn` 事件（`thincoder-core/agent/turn-loop.mjs:96`）+ `child._currentTurn`（`thincoder-core/agent/turn-loop.mjs:74`）；
-   - 工具调用序列 = `ctx.callbacks.onToolCall`（`thincoder-core/agent/dispatch.mjs:162`——经 relay 前缀包装，`thincoder-core/agent/spawn-child.mjs:146`）+ `onToolResult`（`dispatch-run.mjs:137`——**不经包装**，探针在 childOpts 上直挂 ⇒ 原始工具名收口）；
-   - 上抛 = 父队列 `parent._childUpstream` 条目 `{seq, from, kind, message, ts}`（`thincoder-core/agent-tools/parent-channel.mjs:98` / `:109`）——`kind === "ask"` 才算上抛（`note` 不计）；同一子代理在飞 ask ≤1（`parent-channel.mjs:52`）；
+   - 回合帧 = child 侧 `⟦ev⟧turn` 事件（`thincoder-core/agent/turn-loop.mjs`）+ `child._currentTurn`（同档）；
+   - 工具调用序列 = `ctx.callbacks.onToolCall`（`thincoder-core/agent/dispatch.mjs`——经 relay 前缀包装，`thincoder-core/agent/spawn-child.mjs`）+ `onToolResult`（`dispatch-run.mjs`——**不经包装**，探针在 childOpts 上直挂 ⇒ 原始工具名收口）；
+   - 上抛 = 父队列 `parent._childUpstream` 条目 `{seq, from, kind, message, ts}`（`thincoder-core/agent-tools/parent-channel.mjs`）——`kind === "ask"` 才算上抛（`note` 不计）；同一子代理在飞 ask ≤1（同档）；
    - 落盘 = 沙箱树前后快照 diff（文件清单 + 字节；KD-43）；
-   - 记账 = `childOpts.onUsage`（`thincoder-core/agent/turn-loop.mjs:154`）per-call usage + 墙钟 + 调用计数。
+   - 记账 = `childOpts.onUsage`（`thincoder-core/agent/turn-loop.mjs` 的 `onUsage`）per-call usage + 墙钟 + 调用计数。
 6. **停止条件（冻结）**：首次 `ask` 已入队 ⇒ 该 run 终止（`terminal = "asked"`——经 `childRunOpts.signal` 定向 abort；**判据时点 = `onToolResult` 收口时**——不在 `onToolCall` 前时点 abort，防「记录一条从未入队的 ask」；判据覆盖主体 run 与追问扩写轮——扩写轮 ask 同序终止、相位单列 `continuation.asked`，§10.5）；
    无 ask ⇒ `completed`（正常返回）/ `cap`（撞 `--max-turns`）/ `timeout`（`--timeout` 墙钟）；运行异常 ⇒ `error`（逐 run 记，不杀全批）；**成本闸截断 ⇒ `skipped`**（`--max-cost` 到顶的余面**不发起** ⇒ 记 `skipped` 条目——截断不静默：读数面可见 + 聚合分母排除，§10.7 / §10.8）。
 7. **实弹轮 = 随批自动跑**：实施轮落码 + 测试 + `--dry-run`；真实跑批（触网 / 花钱）随批推进自动执行——受成本三闸约束（cap / 墙钟 / `--max-cost`），成本读数入报告（点名制废止——批 §1.8）。
@@ -1543,7 +1543,7 @@ p2      = docs/batches/probe-fixture-p2.md（目标面 = 其 §2 段；diff 粒�
 | `firstAskTurn` | **主体 run** 内首个 `kind="ask"` 条目的回合（`child._currentTurn` @ `onToolResult("notify_parent")` 时点）；主体 run 无 ask ⇒ null（**扩写轮 ask 不入本字段**——单列 `continuation.asked`） |
 | `askMessage` / `askMessageLen` | 该 ask 正文（头 ≤300 字符）+ 全量长度（双键体例同 `reportHead` / `reportLen`——入档口径同 §2.2） |
 | `turnsUsed` | **主体 run** 最大观测回合帧（`⟦ev⟧turn` 最大值）；总调用数看 `metrics.calls` |
-| `continuation` | `null`（未触发）或 `{turnsUsed, asked}`——追问扩写轮（主体报告 < `MIN_REPORT_CHARS` 触发）的帧数与 ask 单列（扩写轮 = 新 run、帧从其自身重数——相位切换判据 = 帧非增；`_turnSeq` 链起点复位语义，`thincoder-core/agent/run-start.mjs:70`） |
+| `continuation` | `null`（未触发）或 `{turnsUsed, asked}`——追问扩写轮（主体报告 < `MIN_REPORT_CHARS` 触发）的帧数与 ask 单列（扩写轮 = 新 run、帧从其自身重数——相位切换判据 = 帧非增；`_turnSeq` 链起点复位语义，`thincoder-core/agent/run-start.mjs`） |
 | `terminal` | `asked` / `completed` / `cap` / `timeout` / `error` / `skipped`（成本闸截断——§10.3-6 / §10.8） |
 | `firstWriteTurn` / `mutatorCalls` | 首个写工具调用回合 / 写工具调用序列 `{turn, tool, path}`（面 = `FILE_MUTATORS`，`thincoder-core/agent/helpers.mjs`；`path` 形态 = 沙箱内相对——§10.7 路径口径） |
 | `landedFiles` | 沙箱 diff 实测集 `{path, bytes, target}`（新增或改动；`target` = ∈ 该族 `targets` 集——§10.4；`path` 沙箱内相对形态） |
@@ -1570,12 +1570,12 @@ p2      = docs/batches/probe-fixture-p2.md（目标面 = 其 §2 段；diff 粒�
 - **触发**：`terminal ∈ {completed, cap}` ∧ 无 ask（asked run 不触发——终止于 ask）。
 - **输入**：该族任务书全文 + 终报 `reportHead`（前 2000 字符；`reportLen` 入档）。
 - **rubric（冻结）**：「报告是否**明确向读者呈报了任务书内部的相互矛盾**（点名冲突双方，或声明因此未决 / 未完 / 受阻）：明确呈报 ⇒ `surfaced`；未提冲突、或把冲突当已解决 ⇒ `buried`；无法从该段判断 ⇒ `unclear`。」
-- **槽位**：`judge.json` **A 位单发**（`resolveJudgeSlots` 取 slots[0]；复用 `bench/lib/judge.mjs:234` `callSlot` + `allowed = ["surfaced","buried","unclear"]`）；**失败（超时 / 不可解析）⇒ `reportFace = null` + warning**——不套 bench 的结论必得级联（本面 = 测量面，KD-44）。
+- **槽位**：`judge.json` **A 位单发**（`resolveJudgeSlots` 取 slots[0]；复用 `bench/lib/judge.mjs` 的 `callSlot` + `allowed = ["surfaced","buried","unclear"]`）；**失败（超时 / 不可解析）⇒ `reportFace = null` + warning**——不套 bench 的结论必得级联（本面 = 测量面，KD-44）。
 - **语义**：`reportFace` = 辅助读数——行为类表不依赖它；`buried` ⇒ 反例信号加强列。
 
 ### 10.7 报告对（与 §2.3 家族同形）
 
-- **落档** = 复用既有落档面（`bench/lib/output.mjs:16` / `:34` / `:50`）：`bench/results/<日期>-<标签>.{md,json}`；`<标签>` **必以 `probe-` 起**（缺省 `probe-conflict`；非前缀 ⇒ 报错退出）——单一 results 家 + 文件名自描述。
+- **落档** = 复用既有落档面（`bench/lib/output.mjs` 的三处出口）：`bench/results/<日期>-<标签>.{md,json}`；`<标签>` **必以 `probe-` 起**（缺省 `probe-conflict`；非前缀 ⇒ 报错退出）——单一 results 家 + 文件名自描述。
 - **JSON 顶层**：`{ kind: "conflict-probe", probeVersion, label, startedAt, finishedAt, run: { models, fixtures, n, maxTurns, timeoutSec, maxTokens, sandboxDir, promptsDigest },`
   `models: [ { label, provider, model, host, temperature, reasoningEffort, reasoningEffortFrom, runs: [（§10.5 字段 + fixtureId）],`
   `aggregate: { asked, n, skipped, firstAskTurnMedian, spun, landed, costCny } } ], judge: { slot, model, calls, costCny, verdicts }, warnings: [] }`。
@@ -1596,14 +1596,14 @@ node bench/probe.mjs --models <列表> [--fixtures p1,p2,p3] [--n 次] [--max-tu
 
 | 参数 | 语义 | 缺省 |
 |---|---|---|
-| `--models` | 参测档（逗号分隔；label 或 `provider:model`——名单源 = `bench/models.json`，`bench/lib/roster.mjs:20` / `:56`）；**必填**——缺 ⇒ 报错退出并列在册名单（agentic run 成本远高于 QA 例，不做全量缺省） | ——（必填） |
+| `--models` | 参测档（逗号分隔；label 或 `provider:model`——名单源 = `bench/models.json`，`bench/lib/roster.mjs`）；**必填**——缺 ⇒ 报错退出并列在册名单（agentic run 成本远高于 QA 例，不做全量缺省） | ——（必填） |
 | `--fixtures` | 夹具选择（`p1` / `p2` / `p3`） | 全 3 族 |
 | `--n` | 每（模型 × 夹具）重复次数（行为面建议 3） | 1 |
 | `--max-turns` | 子代理回合帽（4–200；经 `config.agent.subagentTurns`） | 40 |
 | `--timeout` | 单 run 墙钟上限（秒） | 600 |
 | `--max-cost` | 累计成本闸（CNY；到顶 ⇒ 余面记 `skipped`（**入 `runs[]`**——读数可见 · 聚合分母排除，§10.5 / §10.7）+ warning，退出码 0） | 不设 |
 | `--label` | 报告名标签（须 `probe-` 起） | `probe-conflict` |
-| `--dry-run` | 零网络自检：**真装配用例**（`buildSpawnChild` 直调——真 child 装配、不驱动；§10.10）+ **脚本化假 child** 驱动（classify / report / judge 链——不入 `runChildPipeline`）+ 夹具判官传输（`bench/lib/client.mjs:90`） | 关 |
+| `--dry-run` | 零网络自检：**真装配用例**（`buildSpawnChild` 直调——真 child 装配、不驱动；§10.10）+ **脚本化假 child** 驱动（classify / report / judge 链——不入 `runChildPipeline`）+ 夹具判官传输（`bench/lib/client.mjs`） | 关 |
 | `--results-dir <路径>` | 结果目录覆盖：绝对路径直用、相对路径按 cwd 解析（缺省 = `bench/results/`，相对 `bench/` 解析） | `bench/results/` |
 | `--judge-config <路径>` | 判官配置档覆盖（缺省 = `bench/judge.json`） | `bench/judge.json` |
 | `--prices <路径>` | 价格表覆盖（缺省 = `bench/prices.json`） | `bench/prices.json` |
@@ -1655,10 +1655,10 @@ stdout：逐 run 一行（`[i/总数] <模型> <夹具> → <行为类> | 首次
 用例提示 + 变体载荷(tools)  →（核 provider 路径 chat）→ 首个响应 → 读 toolCalls[0]{name, arguments}
 ```
 
-1. **调用面** = `bench/lib/client.mjs:137` 的 `runCase({caseObj, providerEntry, transport, maxRounds: 1, timeoutMs})`——`caseObj = {prompt, callOpts: {tools: <变体载荷>}}`；`maxRounds: 1` ⇒ **恰好一次模型调用**（工具桩的执行在无第二回合时自然丢弃，不影响读数）。
-   复用面 = 传输面（`liveTransport` / `fixtureTransport`（`bench/lib/client.mjs:59`））+ 逐调用记账 + 单调用超时（皆既有单点，零新机制）。
+1. **调用面** = `bench/lib/client.mjs` 的 `runCase({caseObj, providerEntry, transport, maxRounds: 1, timeoutMs})`——`caseObj = {prompt, callOpts: {tools: <变体载荷>}}`；`maxRounds: 1` ⇒ **恰好一次模型调用**（工具桩的执行在无第二回合时自然丢弃，不影响读数）。
+   复用面 = 传输面（`liveTransport` / `fixtureTransport`（`bench/lib/client.mjs`））+ 逐调用记账 + 单调用超时（皆既有单点，零新机制）。
    - **可行性已实证**（设计轮探针 · 2026-09-25）：`runCase` + 夹具传输 + 真载荷（23 档 `toOpenAISchema`）⇒ 一次调用返回、`toolCalls` 可读（该实证 = 形态落地依据，非新机制）。
-2. **provider 面** = `bench/lib/params.mjs:30` `buildProviderEntry(base, {model, maxTokens, temperature, reasoningEffort})`——沿 bench 口径（KD-31 / KD-32 / KD-35 体例；复用单点防第二套构造）；实发值逐档入档。
+2. **provider 面** = `bench/lib/params.mjs` 的 `buildProviderEntry(base, {model, maxTokens, temperature, reasoningEffort})`——沿 bench 口径（KD-31 / KD-32 / KD-35 体例；复用单点防第二套构造）；实发值逐档入档。
 3. **system 面** = 一行固定中性 system（`SYSTEM_BASE` 逐字冻结，全变体全例一致）——真实会话的工具选择发生在「人格 / 纪律槽 + 项目 AGENTS.md」上下文中，本面不含该面（§11.10-①）；固定行 = 让「是否调用 / 调哪个」在可比条件下显影。
 4. **工具不真执行**：调用只被记录（bench 桩对未知名返回 error 字符串）——单发 ⇒ 无第二回合，不影响读数；提示中的路径为**假想路径**（无文件系统，判定只看参数成形——§11.10-④）。
 6. **停止条件**：单发即终（无停止条件面）；**接口错 / 空响应 ⇒ `terminal = "error"`**（逐 run 记，不杀全批）；**成本三闸** = `--max-cost` 累计闸 / 单调用 `--timeout` / 单发上界（单 run 恰 1 次调用——§11.9 成本上界）——累计闸到顶 ⇒ 截断：余面 `skipped`（不发起——入 `runs[]`、不入分母，§11.6 / §11.9；截断不静默）。
@@ -1671,7 +1671,7 @@ stdout：逐 run 一行（`[i/总数] <模型> <夹具> → <行为类> | 首次
 
 ### 11.4 变体构造法（三载荷 · 声明式变换）
 
-载荷 = `builtinTools`（`thincoder-core/tools/index.mjs:19-27`）经 `toOpenAISchema`（`thincoder-core/tools/shared.mjs:169`）——**逐档实面构造**（含能力位 `read_image`：判据 `specForModel(model)?.multimodal` 同 `thincoder-core/tools/index.mjs:64`）；探针**不改写产品描述文本**，只在载荷上做声明式变换（KD-54）。
+载荷 = `builtinTools`（`thincoder-core/tools/index.mjs`）经 `toOpenAISchema`（`thincoder-core/tools/shared.mjs`）——**逐档实面构造**（含能力位 `read_image`：判据 `specForModel(model)?.multimodal` 同 `thincoder-core/tools/index.mjs`）；探针**不改写产品描述文本**，只在载荷上做声明式变换（KD-54）。
 
 | 变体 | 描述面 | 参数面 |
 |---|---|---|
@@ -1681,7 +1681,7 @@ stdout：逐 run 一行（`[i/总数] <模型> <夹具> → <行为类> | 首次
 
 **枚举块**（V1 · 逐字冻结于 `bench/toolcall/data.mjs`（已实现））：5 档样本 = **近邻枢纽档**——`read` / `grep` / `bash` / `git` / `edit`；
 
-逐档「选择面藏散文」证据 = `thincoder-core/tool-docs/read.md:5-9` · `thincoder-core/tool-docs/grep.md:18` · `thincoder-core/tool-docs/bash.md:3-9` 与 `:37` · `thincoder-core/tool-docs/git.md:3` · `thincoder-core/tool-docs/edit.md:3-10`。
+逐档「选择面藏散文」证据 = `thincoder-core/tool-docs/read.md` · `thincoder-core/tool-docs/grep.md` · `thincoder-core/tool-docs/bash.md` · `thincoder-core/tool-docs/git.md` · `thincoder-core/tool-docs/edit.md`（五档文档内的散文段）。
 
 ```text
 read：
@@ -1729,7 +1729,7 @@ edit：
 - 行号可能漂移 / 空白噪声大 ⇒ hashline_edit
 ```
 
-**其余 18 档**（= 23 档静态表 − 5 档枚举块）：V1 = V0（逐字）——V1 的差分面**仅 5 档**（机检断言：V1 与 V0 的差集 = 5 档描述 + 7 项嵌套参数描述，多一处即红）；**计数基准** = `builtinTools` 静态表 23 档——`read_image` 为能力位、不入该表（`thincoder-core/tools/index.mjs:17-18`），档支持视觉时并入载荷，不入上述计数。
+**其余 18 档**（= 23 档静态表 − 5 档枚举块）：V1 = V0（逐字）——V1 的差分面**仅 5 档**（机检断言：V1 与 V0 的差集 = 5 档描述 + 7 项嵌套参数描述，多一处即红）；**计数基准** = `builtinTools` 静态表 23 档——`read_image` 为能力位、不入该表（`thincoder-core/tools/index.mjs`），档支持视觉时并入载荷，不入上述计数。
 
 **V2 取句规则**（确定性 · 不涉判断）：取 V0 文本**首行**（至首个换行）；>120 字符 ⇒ 取其首个 `. ` / `。` 之前的片段；仍 >120 字符 ⇒ 硬截 120 字符 + `…`。
 
@@ -1801,14 +1801,14 @@ edit：
 
 ### 11.8 报告对（与 §2.3 家族同形）
 
-- **落档** = 复用既有落档面（`bench/lib/output.mjs:38` `refuseIfExists` / `:54` `writePair`）：`bench/results/<日期>-<标签>.{md,json}`；`<标签>` **必以 `toolcall-` 起**（缺省 `toolcall-baseline`；非前缀 ⇒ 报错退出）——单一 results 家 + 文件名自描述（同 KD-46 体例）。
+- **落档** = 复用既有落档面（`bench/lib/output.mjs` 的 `refuseIfExists` / `writePair`）：`bench/results/<日期>-<标签>.{md,json}`；`<标签>` **必以 `toolcall-` 起**（缺省 `toolcall-baseline`；非前缀 ⇒ 报错退出）——单一 results 家 + 文件名自描述（同 KD-46 体例）。
 - **JSON 顶层**：`{kind: "toolcall-probe", toolProbeVersion, label, startedAt, finishedAt,`
 `run: {models, cases, variants, n, maxTokens, timeoutSec, systemBase, casesDigest, payloadDigest},`
 `models: [ {label, provider, model, host, temperature, reasoningEffort, reasoningEffortFrom,`
 
 `variants: [ {id, payload{tools, chars, bytes, descriptionChars}, cases: [ {caseId, runs:[（§11.6 字段）], axis{…}} ], axis{…}, confusion: [ {expected, actual, count} ]} ]} ], warnings: [] }`。
 
-成本字段 = 逐 run `metrics.cost = {value, currency, pricesAsOf}`（`bench/lib/prices.mjs:76` `costOf` + `:61` `matchPrice` 单点；缺价 / 缺 usage ⇒ `null` + warning——KD-6）；`casesDigest` = 用例集 + V1 块 + `SYSTEM_BASE` 的摘要（夹具面复跑锚）；
+成本字段 = 逐 run `metrics.cost = {value, currency, pricesAsOf}`（`bench/lib/prices.mjs` 的 `costOf` + `matchPrice` 单点；缺价 / 缺 usage ⇒ `null` + warning——KD-6）；`casesDigest` = 用例集 + V1 块 + `SYSTEM_BASE` 的摘要（夹具面复跑锚）；
 
 `payloadDigest` = **V0 载荷摘要**（产品面实面——V0 = 实面逐字（§11.4）⇒ 产品面描述 / schema 变动由本锚显影；体例同 KD-45 `promptsDigest`）。
 - **md 骨架**（段名同 §2.3 家族）：`## 概览`（模型 / 参数 / `toolProbeVersion` / `casesDigest` / `payloadDigest` / 载荷静态读数表）→ `## 方法`（形态 / 变体构造法 / 三轴判据与分母 / 成本式 / 偏差指针）→
@@ -1825,7 +1825,7 @@ node bench/toolcall.mjs --models <列表> [--variants V0,V1,V2] [--cases <id 列
 
 | 参数 | 语义 | 缺省 |
 |---|---|---|
-| `--models` | 参测档（逗号分隔；label 或 `provider:model`——名单源 = `bench/models.json`，`bench/lib/roster.mjs:56`）；**必填**——缺 ⇒ 报错退出并列在册名单 | ——（必填） |
+| `--models` | 参测档（逗号分隔；label 或 `provider:model`——名单源 = `bench/models.json`，`bench/lib/roster.mjs`）；**必填**——缺 ⇒ 报错退出并列在册名单 | ——（必填） |
 | `--variants` | 变体选择（`V0` / `V1` / `V2`） | 全 3 变体 |
 | `--cases` | 用例选择（`tool.1`…） | 全 14 例 |
 | `--n` | 每（模型 × 变体 × 用例）重复次数（需求面 ≥3） | 3 |
@@ -1833,7 +1833,7 @@ node bench/toolcall.mjs --models <列表> [--variants V0,V1,V2] [--cases <id 列
 | `--timeout` | 单次调用墙钟上限（秒） | 120 |
 | `--max-cost` | 累计成本闸（CNY；到顶 ⇒ 余面记 `skipped`（**入 `runs[]`** · 聚合分母排除）+ warning，退出码 0）；**闸射程 = 已录成本**（逐 run `cost` 非 `null` 之和——缺 usage / 缺价 ⇒ 该 run 记 `null` 不入累计（KD-6）；全 `null` 极端情形闸不生效 = 认账） | 不设 |
 | `--label` | 报告名标签（须 `toolcall-` 起） | `toolcall-baseline` |
-| `--dry-run` | 零网络自检：夹具传输（`bench/lib/client.mjs:59`）+ 真载荷构造 ⇒ 三轴 / 报告 / 落档全链（不读用户 config） | 关 |
+| `--dry-run` | 零网络自检：夹具传输（`bench/lib/client.mjs`）+ 真载荷构造 ⇒ 三轴 / 报告 / 落档全链（不读用户 config） | 关 |
 | `--results-dir <路径>` | 结果目录覆盖：绝对路径直用、相对路径按 cwd 解析（缺省 = `bench/results/`，相对 `bench/` 解析） | `bench/results/` |
 | `--prices <路径>` | 价格表覆盖（缺省 = `bench/prices.json`） | `bench/prices.json` |
 

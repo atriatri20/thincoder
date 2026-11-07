@@ -1,7 +1,7 @@
 # 批次档与段写入（BATCH-RECORD）· 设计
 
 > 板块：工程模式 / 批次档载体——**全链路唯一贯穿的档**的载体机制、spawn 门禁、交界面锚、受控写入通道、行为纪律、VSC 镜像。
-> **v2 就地更新**（2026-09-17）：M3 模块设计增量融入（已收口档回改拒 + `docRoot.batches` 双基底——见 §4.9；原旁路档 `_archive/modules/ENGINEERING-MODE-V2-MODULE-BATCH-SEGMENT.md` 已归档 `_archive/modules/`）。
+> **v2 就地更新**（2026-09-17）：M3 模块设计增量融入（已收口档回改拒 + `docRoot.batches` 双基底——见 §4.9；原旁路档 ENGINEERING-MODE-V2-MODULE-BATCH-SEGMENT 已归档，该归档树现不在盘）。
 > 需求层指针 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §8（运作规则：交界面契约 B1–B14 + 五条铁律 · 依据缺失处置）· §5（三账：批次记录档产品机制——v1 需求档已归档）· §13.2（VSC 端镜像 FR23）。
 > 兄弟档：`docs/core/design/ENGINEERING-MODE-V2.md`（工作流本体 / 角色 / 凭证）· `docs/core/design/DOC-DISCIPLINE.md`（文档更新纪律 / 机检）。
 > 判据指针：归属与命名 = `docs/core/design/DOC-SYSTEM.md` §5.1 / §6；「一段一作者」「三方条目一致」的行为条款住纪律层提示词（本档给契约与机械面）。
@@ -26,7 +26,7 @@
 | 参数 schema | spawn 参数面新增 `batchDoc` 属性（否则参数无处传入）；模型面描述文案 = **模式无关措辞**（两模式分支同列、不随会话模式变动——§4.16「描述面处置」） |
 | 角色域 | 门**只对 `NEEDS_BATCH_DOC = { eng-coder, eng-designer }` 生效**——其余角色（`explore` / `plan`）**零变更**（不带 batchDoc 照常 spawn）；`coder`（普通模式）：门不生效、**可选**携 `batchDoc`（传则须可读——§4.16） |
 | 校验落点 | **单一共用装配点 + 与 token 门同出口**（阻塞/异步两路命中同一校验函数；错误生命周期一致） |
-| 路径解析 | 相对路径解析序（候选序 + 锚定防嵌套 + 基底自有项目根形）**单源 = §4.15**（`batch-paths.mjs`）——门判据仍「参数在 + 路径可读」，解析面与 append / create 同源（2026-09-25 批；2026-10-05 收正） |
+| 路径解析 | 相对路径解析序（候选序 + 锚定防嵌套 + 基底自有项目根形）**单源 = §4.15**（`thincoder-core/agent-tools/batch-paths.mjs`）——门判据仍「参数在 + 路径可读」，解析面与 append / create 同源（2026-09-25 批；2026-10-05 收正） |
 | 注入 | 通过校验后 child 携带批次档绝对路径；**child 任务文本含一行 `Batch record (batchDoc): <abs>`**（同形镜像，无变体退路） |
 | 受限变体 | 审计 / 勘察子代理的 `delete props` 清单**同步加 `batchDoc`**（不得透传给子代） |
 | 越界文案 | 越界错误文案**带实际角色名**参数化（designer 越界时不误导为 eng-coder 专属措辞） |
@@ -92,7 +92,7 @@
 | **coder（普通模式 · 2026-10-09——§4.16）** | coder 分支（`[parentChannelTool, ledgerReadTool, verifyTool, advisorTool]`）**携绑定追加 `batchTool(batchDoc)`**——未绑定不挂载（同评审面先例：工具不在表 = 语法面不可达） | `child._batchDoc`（spawn 可选绑定） |
 | **主 agent** | **depth-0 挂载 `batch`（2026-09-21 扩权——D-BR18）**：create / close 仅 depth-0 放行；`append` / `edit` / `status` 的段域 = §1/§4/§6（§4.1 段白名单），**普通文档写照旧零回归**（工具通道是新增、不替代） | create / close `path` 参数（工具无 spawn 绑定态）；depth-0 的 append / status 可选 `path` 参数（§4.1——缺省 = 在飞批唯一时取该批，复数时必传） |
 
-**评审面的写旁路 = 无（装配面实测）**：评审工具集 = 只读六件（`read` ∥ `glob` ∥ `grep` ∥ `ls` ∥ `lsp` ∥ 代码检索），设计评审绑本档时再追加 `batch`（append / edit / status）。
+**评审面的写旁路 = 无（装配面实测）**：评审工具集 = 只读六件（`read` ∥ `glob` ∥ `grep` ∥ `ls` ∥ `lsp` ∥ 代码检索），**绑了本档的评审（设计轨 / 代码轨同判）再追加** `batch`（append / edit / status）——携 `batchDoc` 即绑定，判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15。
 
 不含 `write` / `edit` / `bash` / `apply_patch` ⇒ 写批档的通道 = `batch` 的 `append` 与 `edit`（`create` / `close` 对评审身份拒）；`§3` 的裁定行闸挂在 `append` 通道上（`edit` 改的是既有块内的字，不要求裁定行——§4.19）：判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.6.1。实现坐标 = `thincoder-core/advisor/loop.mjs` `advisorToolsFor`。
 
@@ -131,7 +131,7 @@
   现行目标形 = §4.20 围栏块（唯一副本，实施席照落、不自行改英文）。
 
   **原位保留其形**：「写进 §3」这件事一字不减——§3 轮次块存在与否是机械判据（§4.3 / `docs/core/design/ADVISOR-GUARDS.md` §2 判据 1），换写只换块内写什么。
-  **适用范围限定**：round2/3 为**设计 + 代码评审共用**——该句必须限定「**仅设计评审、且工具已挂载时**」（否则每轮代码评审会被引导报假“§3 未写入”）。
+  **适用范围限定**：round2/3 为**设计 + 代码评审共用**——该句必须限定「**绑了本档的评审、且工具已挂载时**」（否则工具未挂载的每一轮都会被引导报假“§3 未写入”）。
 - **designer 侧一句**（`thincoder-core/prompts/persona-eng-designer.md`）：§2 = 任务书最薄形（条目 / 落点节号 / 受影响文件 / 验收行），与既有的只引不抄句同一处；指针闭集 = §4.20。
 - **失败明示句**：「写不进去 → 报告里明说‘§× 未写入’；父侧代写**必须打标**」。
 
@@ -164,7 +164,7 @@
 | BR-4 | 边界 | text 内嵌凭证形态行 + `designId:` 行 + 无标两段值形（`⟨uuid⟩:⟨epoch⟩`） | 落档后三形零命中；**裸 uuid 逐字保留**（id 非凭证）；其余内容逐字保留 |
 | BR-5 | 正常 | 正常写入 / text 自带轮次标题 / 连写两轮 | 工具标题为首行；自带标题被忽略；两轮 N = 1、2 |
 | BR-6 | 边界 | V3 四例：在飞批次（仅骨架/占位行）· §4 有实质内容且 §3 无工具轮次行 · §4 有实质内容且含工具轮次行 · §3 只有骨架行 | 不报 / 报 / 不报 / **报**（骨架行不算） |
-| BR-7 | 错误 | 设计评审**不带** `batchDoc` → 拒发（零实例 / 零槽 / 零 LLM）；评审带**不可读的** `batchDoc` → throw；代码评审工具集 | 前者拒发串点名 `batchDoc` 必填 + 两种期望形；中者 `resolveBatchDocPath` 文案逐字；后者工具集**不含** `batch` |
+| BR-7 | 错误 | 设计评审**不带** `batchDoc` → 拒发（零实例 / 零槽 / 零 LLM）；评审带**不可读的** `batchDoc` → throw；代码评审工具集（未携 `batchDoc`）| 前者拒发串点名 `batchDoc` 必填 + 两种期望形；中者 `resolveBatchDocPath` 文案逐字；后者工具集**不含** `batch`——携可读 `batchDoc` 的代码轨评审**含** `batch`（绑定与轨无关，单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15） |
 | BR-8 | 边界 | text 含 `## §4 用户批准` 行 / text 超量 | 前者 throw（引导改写）；后者 throw（引导分段追加），拆两次调用各成节 N = 1、2 |
 | BR-9 | 边界 | 两个设计评审（不同批次档）并发各写 §3 | **各自落自档**（实例键绑定） |
 | BR-10 | 正常 | 新交付目标（主题词变）起新批 | 新批新档；§1 顶部前情指针指向旧档（已收口 `<日期>`）；旧档不回改 |
@@ -248,7 +248,7 @@
 | BR-89 | 正常 | 设计评审 `append §3`，块 = 结论表（`#` ∥ 严重度 ∥ 状态 ∥ 依据）+ `VERDICT: pass` + 计数；依据格 = 节号 / 符号名 / 逐字锚 | 成功；裁定行闸照判、`§3` 状态行照置位（机械面零变——§4.4 / §4.20） |
 | BR-90 | 错误 | 同形块但无裁定行 ∥ 两者同携 | 拒（`R-G3` 串逐字——瘦身不动拒面） |
 | BR-91 | 正常 | designer 写 §2：条目表 + 落点 `design §4.20` + 受影响文件 + 验收行，不重述机制 | 成功；机制叙述不在 §2（判读面 = 评审同轮核） |
-| BR-92 | 边界 | §2 / §3 的依据格写 `batch-skeleton.mjs:306` ∥ 「见上文」 ∥ 「见设计档」 | 机检不拦（无此项门）；判读 = 评审同轮核 + 收口对账（§4.19 D7 两半）——命中即判不合、重写该格 |
+| BR-92 | 边界 | §2 / §3 的依据格写 `thincoder-core/agent-tools/batch-skeleton.mjs` 后接冒号行号 ∥ 「见上文」 ∥ 「见设计档」 | 机检不拦（无此项门）；判读 = 评审同轮核 + 收口对账（§4.19 D7 两半）——命中即判不合、重写该格 |
 | BR-93 | 错误 | 档头台账行仍带 `#<编号>` 占位时 `edit §2`（锚合法） | throw（`placeholderResidueError` 逐字，逐行点名档头行号 + 原文）；档字节零变 |
 | BR-94 | 边界 | `edit` 的 `newText` 20000 ∥ 20001 字符 | 前者照写（回执点名替换字符数）；后者 throw 点名上限与分段写法，零字节落盘 |
 | BR-95 | 边界 | §1 段头区两条 `**状态行**：`（`已收口 …` ∥ `进行中`） | `readBatchStatusLine` = `unknown`；append / edit / status / close 全拒（冻结同判）；修 = 主 agent 普通文档写 |
@@ -274,11 +274,11 @@
 3. **链完整性门（2026-10-18 · 收口前置——§4.18-A）**：`close` ∥ `status` 写 §1「已收口」两路在写盘前同过 `assertCloseoutChainComplete(src)`——§2 / §3 / §4 / §6 各段须有内容（每一批都要有设计、评审、批准——段内不得声明不适用）；§5 段号豁免；不满足 ⇒ throw 并点名缺段。门位 = 门 ② 之后、门 ④ 之前（链未跑完先报结构缺口，不先跑机检）。判据逐段 / 声明形 / 三拒串 = §4.18-A（本条不重述）。
 4. **文档机检门（2026-10-18 · 结构兜底）**：`append` ∥ `edit`（全部段）、`status` 值「已收口」、`close` 各路在写盘前跑 `doc_check` 的 gate——`REFUSED` ⇒ 拒（append / edit 面档字节不变；close / status 面状态行不改）；`ERROR` ⇒ append / edit 放行 + 回执明示 ∥ close / status 拒（fail-closed）。契约 = §4.1 行 + `docs/core/design/DOC-DISCIPLINE.md` §3.20「结构兜底」；门位在既有拒因**之后**、写盘**之前**（零回归）。**判集分两类**：**段长类**（段落过长 / 行过长）判本次写入的文本——`append` 判追加文、`edit` 判 `newText`；**锚类**（`档缺` / `节缺` / `引缺`）+ 骨架 / 占位 / 状态行判**整档**——引用完整性是档级属性，改一处不能只看新文。`close` 面整档照判（既有 fail-closed 不变）。
 
-收口两路（`close` ∥ `status` 值「已收口」）另过 **§4.13 单测档零留存门**——判序已定：本门位在 ③ 链完整性门**之后**、④ 文档机检门**之前**（判序单源 = `thincoder-core/agent-tools/batch-closeout.mjs:80` 的 `assertCloseoutGates`：① 链门 → ② `§3` 状态词臂 → ③ 本门 → ④ 机检门）；本清单只登记全路径门，本门的判据与拒面 = `docs/core/design/TESTING.md` §3.5。
+收口两路（`close` ∥ `status` 值「已收口」）另过 **§4.13 单测档零留存门**——判序已定：本门位在 ③ 链完整性门**之后**、④ 文档机检门**之前**（判序单源 = `thincoder-core/agent-tools/batch-closeout.mjs` 的 `assertCloseoutGates`：① 链门 → ② `§3` 状态词臂 → ③ 本门 → ④ 机检门）；本清单只登记全路径门，本门的判据与拒面 = `docs/core/design/TESTING.md` §3.5。
 
 **在途性真值 = 批次档状态行自身**（本档 ① 冻结门读它）。
 
-**落点接线（N3 可迁移）**：解析序与防嵌套**单源 = §4.15**（2026-09-25 批收正——`batch-paths.mjs`）。
+**落点接线（N3 可迁移）**：解析序与防嵌套**单源 = §4.15**（2026-09-25 批收正——`thincoder-core/agent-tools/batch-paths.mjs`）。
 `resolveBatchDocPath(cwd, given)` = 该解析序的**读面形态**（首个可读文件胜；不可读 → throw，fail-closed 不变）。
 
 manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入缝 = `configureBatchSegment`）= 解析序内**基底分支**。
@@ -290,7 +290,7 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 
 **判据句**：`batch` append 按标题定位追加 ⇒ 骨架由 **create 一次预写**（§4.11）；标题缺失即 fail-closed（§4.1——append 不自动补骨架）。**状态行必居 §1 段头区**——解析对象 = 段头区内 `**状态行**：` 前缀行（段头区 = 标题行之后、下一 `^#{2,}` 之前，§4.9）；只置档头 = 不可解析 ⇒ 拒写。
 
-**骨架（create 模板的行为规格——代码单源 = `agent-tools/batch-skeleton.mjs` 的 `batchSkeleton()`（KD-4 拆分后；`batch.mjs` 持 schema ∕ 分发）；红线 = 模板只覆盖骨架与占位，不模板化内容）**：
+**骨架（create 模板的行为规格——代码单源 = `thincoder-core/agent-tools/batch-skeleton.mjs` 的 `batchSkeleton()`（KD-4 拆分后；`thincoder-core/agent-tools/batch.mjs` 持 schema ∕ 分发）；红线 = 模板只覆盖骨架与占位，不模板化内容）**：
 
 ```text
 # <日期> · <主题>
@@ -398,7 +398,7 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 
 ### 4.15 相对路径解析序与防嵌套（2026-09-25 批）
 
-**契约（本面参数与落位判据单源 = `agent-tools/batch-paths.mjs`；四处调用点全部经它——create / append·status·close / 评审门 / spawn 门）**；候选序算法单源 = `docs/core/design/PATH-RESOLUTION.md` §2.2。**矩阵 cwd 四形** = 项目根 / 项目内子目录 / 项目根的上级目录 / 非项目目录（无 manifest）——用例 BR-27–BR-35 以此四形为准。
+**契约（本面参数与落位判据单源 = `thincoder-core/agent-tools/batch-paths.mjs`；四处调用点全部经它——create / append·status·close / 评审门 / spawn 门）**；候选序算法单源 = `docs/core/design/PATH-RESOLUTION.md` §2.2。**矩阵 cwd 四形** = 项目根 / 项目内子目录 / 项目根的上级目录 / 非项目目录（无 manifest）——用例 BR-27–BR-35 以此四形为准。
 
 **末形再分两判**：多根工作区锚（`projectRootView` 报 `workspace`——直接子目录带档 ≥1 ∥ 零带档时下辖裸仓 ≥1）⇒ 条 5 报明；`none`（空目录 ∥ 锚自身为裸仓——`.git` 无档且下辖无已注册项目）⇒ 兜底 `resolve(cwd)`：
 
@@ -408,7 +408,7 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 
    **取面分野（基底分支）**：**create / 在飞扫描 / 锚定面**取「声明面 + 缺省回退」合体（`batchDocBases(cwd)`——恒非空）；**读面 ③ 分支只取声明面**（无 manifest ⇒ **无基底分支**——读面零回归）。
 
-   **「项目根」取根单源** = `resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`（归属形单源——`thincoder-core/manifest-discovery.mjs` 的 `owningProject`（经 `manifest.mjs` 转口）取根臂 = 仅归属命中；发现读数只供 `workspace` 报明、不进 `root`；调用方 `?? resolve(cwd ?? ".")` 兜底；同式 = 库键式的同一子表达式，`docs/core/design/LEDGER.md` §6.1 口径 2）；
+   **「项目根」取根单源** = `resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`（归属形单源——`thincoder-core/manifest-discovery.mjs` 的 `owningProject`（经 `thincoder-core/manifest.mjs` 转口）取根臂 = 仅归属命中；发现读数只供 `workspace` 报明、不进 `root`；调用方 `?? resolve(cwd ?? ".")` 兜底；同式 = 库键式的同一子表达式，`docs/core/design/LEDGER.md` §6.1 口径 2）；
 
 **多根工作区锚**（`projectRootView` 报 `workspace`——下辖有已注册项目，1 ∥ ≥2 同判）⇒ 专用条 5（不静默回退）。
    **单值**——基底可多根，项目根不受基底数影响（多基底不产生多项目根）。
@@ -472,7 +472,7 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 **骨架模式化（create ∥ §4.10）**：`batchSkeleton({…, mode})`——普通面作者标签**四处替换**（§4.10 普通变体块）；工程面骨架产出逐字不变。
 **已知边界（骨架取形时点）**：骨架按 create 时模式位取形（建档即固）；模式翻转不回写既有骨架——§2/§5 标签留存原形、新批按新位取形；append / edit / status 白名单 = 执行期实读（翻转即时生效——BR-52），两者解耦。
 
-**描述面处置（模型可见文案——与白名单同步）**：工具描述文案 ∥ 参数描述面（`thincoder-core/tool-docs/batch.md` ∥ `batch.mjs` / `subagent.mjs` 描述属性）**换写为模式无关措辞**——两模式分支同列、文本不随会话模式变动（翻转安全）。
+**描述面处置（模型可见文案——与白名单同步）**：工具描述文案 ∥ 参数描述面（`thincoder-core/tool-docs/batch.md` ∥ `thincoder-core/agent-tools/batch.mjs` / `thincoder-core/agent-tools/subagent.mjs` 描述属性）**换写为模式无关措辞**——两模式分支同列、文本不随会话模式变动（翻转安全）。
 **锚检查**：A8（工具描述文案）换写后仍为逐字锚；A2（工程 persona 写入手段句）零触、锚文本零变。
 
 **VSC 锚检查随动判定（§6.2——A8 族 ∥ 六段作者行族）**：触动文本 = ①`thincoder-core/tool-docs/batch.md` + 参数描述面（段白名单模式分支化）②`thincoder-core/prompts/common.md` 六段全图行（模式分辨换写）③普通侧教学新增文本（`thincoder-core/prompts/discipline-normal.md` / `thincoder-core/prompts/persona-normal.md`）；工程侧 persona 六段块（A1 / A2 宿主面）零触。
@@ -492,16 +492,16 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 - **P7 档头台账行多编号形（§4.10 / §4.11）**：先例 = 单编号形（`ledger` 单值 ⇒ `> 台账 = #<编号>`——本档 §4.10 既有骨架占位）；多编号 = 同形承载（单物理行、` · ` 连接）——偏离 = 输入分隔符集合扩为 数组 ∥ ` · ` ∥ `,` ∥ 空白（理由 = 一批多行实测 14 行；承载面单行契约不变）。
 - **P2 收口重锚（§4.13——收径自动写）**：先例 = 批级批量体例（`docs/core/design/LEDGER.md` §3.3——取行 + 逐行落笔 + 单事务）∥ `close` 回执段（列名单、不阻断冻结）。**对齐** = 取行单源 ∥ 事务体例 ∥ 不阻断冻结。**偏离** = 回执段由只读改为**自动写台账行**（放开面 = 收径一处——§8 边界 12）。
 
-**勘察证据行**：查过 = 本仓公共源档——`docs/core/design/DOC-DISCIPLINE.md` §4.2.2（声明源 / 引用解析序）∥ `MANIFEST.md` §2.2（`docRoot.batches`）∥ `docs/core/design/LEDGER.md` §6.2（归批指针门——本批 P2 收口重锚的反查源）——**相关**。声明源 = `PROJECT-MANIFEST.json` `index.publicRepos` = **`[]`**（实读 `:61`）⇒ **无仓外声明源可查**（照记）。**结论 = 无仓外声明源相关**。
+**勘察证据行**：查过 = 本仓公共源档——`docs/core/design/DOC-DISCIPLINE.md` §4.2.2（声明源 / 引用解析序）∥ `MANIFEST.md` §2.2（`docRoot.batches`）∥ `docs/core/design/LEDGER.md` §6.2（归批指针门——本批 P2 收口重锚的反查源）——**相关**。声明源 = `PROJECT-MANIFEST.json` `index.publicRepos` = **`[]`**（实读该段）⇒ **无仓外声明源可查**（照记）。**结论 = 无仓外声明源相关**。
 
 **受影响面（行数 = 现行 · 落笔当刻实读）**：
 
 - **实现**：`thincoder-core/agent-tools/batch-skeleton.mjs`（219 行——多枚归一 + 渲染）· `thincoder-core/agent-tools/batch-lifecycle.mjs`（现行 = `docs/core/design/LEDGER.md` §3.5——收口两路（`close` ∥ `status` 写 §1「已收口」）共用单源 `reanchorOnClose`：取行集 + 调核内重锚单源 + 回执点名）；
-  其余：`thincoder-core/agent-tools/batch.mjs`（337 行——`ledger` schema 描述）；`batch-lifecycle.mjs` 动态 import `ledger.mjs`（零静态引 `node:sqlite`）。
+  其余：`thincoder-core/agent-tools/batch.mjs`（337 行——`ledger` schema 描述）；`thincoder-core/agent-tools/batch-lifecycle.mjs` 动态 import `thincoder-core/ledger.mjs`（零静态引 `node:sqlite`）。
 - **文档 / 描述面（模型可见文案——换写）**：本档 §4.8（BR-54 / BR-56）/ §4.10 / §4.11 / §4.13 · 本档 §7（D-BR29）/ §8 边界 12 · `thincoder-core/tool-docs/batch.md`（`ledger` 参数描述面）。
 - **零改面**：骨架与占位字面（`TEMPLATE_PLACEHOLDERS` ∥ `TOOLS.md` §6.20 判定域）逐字不动。
 
-**贴线判（500 软线 / 800 硬限）**：有增量档全列**最高 `batch-lifecycle.mjs` 506 行（本批增量 ≈ +25 ⇒ ≈531）** ⇒ **零拆分义务**（拆分触发 = 过 650 行——判据单源 = 本档 §4.18 贴线判）。
+**贴线判（500 软线 / 800 硬限）**：有增量档全列**最高 `thincoder-core/agent-tools/batch-lifecycle.mjs` 506 行（本批增量 ≈ +25 ⇒ ≈531）** ⇒ **零拆分义务**（拆分触发 = 过 650 行——判据单源 = 本档 §4.18 贴线判）。
 
 ### 4.18 收口前置（链完整性门）与重开路径（带审计）
 
@@ -515,7 +515,7 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
   ① **有内容**——段体内至少一行不属于：空行 ∥ 标题行（`^#{1,6}\s`）∥ `**状态行**：` 行 ∥ `<§N 模板占位：…>` 行 ∥ 「不适用」声明行；
   ② **声明一律拒**——§1 段体内出现 `> 不适用：§N —— <理由>` 即拒（判据 = `malformedInapplicableLine`，拒串 = `inapplicableDeclarationError`）：§2 / §3 / §4 / §6 每段必须带自己的内容（设计 / 评审 / 批准 / 验证）。
   **§5 不判**（段号豁免）。
-- **判据口径单源**：`sectionContentState(src, seg)` → `content` ∥ `empty`（`not-applicable` 随声明机制退役已删；住 `batch-skeleton.mjs`——判据字面与骨架共址）。§6 旧判据 `sectionSixHasContent` 改为 `sectionContentState(src, 6) === "content"`——**同一 predicate、无第二套**；口径收紧一处（「有标题无正文」由「非空」改判「空」）。
+- **判据口径单源**：`sectionContentState(src, seg)` → `content` ∥ `empty`（`not-applicable` 随声明机制退役已删；住 `thincoder-core/agent-tools/batch-skeleton.mjs`——判据字面与骨架共址）。§6 旧判据 `sectionSixHasContent` 改为 `sectionContentState(src, 6) === "content"`——**同一 predicate、无第二套**；口径收紧一处（「有标题无正文」由「非空」改判「空」）。
 - **「空」的三实测形（本会话五本）**：① 段体零行（`## §4` 段头紧接下一段头）；② 只有 `**状态行**：…` + `<§2 模板占位：…>` 两行；③ 只有子标题（`### …`）而正文零行。三者皆判 `empty`。
 - **为什么一句声明也不行**：一声「本批无设计 / 无批准」就能把批结了账，而它由主 agent 在自己段里写；对照之下 `§3` 状态行只有绑本档的评审实例写得进。**写得进去的人不同，门的重量就不同**——用户 2026-11-02 16:17 / 16:24 两裁。`malformedInapplicableLine` 留作这条已退役路的痕迹检测：`§1` 里还写它的人当场被拒，而不是静默当作没写。
 - **拒串**：`inapplicableDeclarationError` 逐字回违规行（「声明已停用——§2 / §3 / §4 / §6 各段必须带内容」）。
@@ -552,15 +552,15 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 **先例行（逐项——对齐 ∥ 偏离）**：
 
 - **L8 暂缓 / 复启**（§5.1 L8）：对齐 = 同工具、同状态行、`note` 承载机读标记；偏离 = 复启是 open→open（不动冻结），重开是 closed→open——**冻结档的逆向流转必须留痕**，暂缓没有这一步。
-  **实现坐标** = `thincoder-core/agent-tools/batch-lifecycle.mjs:376-386`（`assertStatusNote`——note 的单行 + 词表零命判据；重开径不取它，见 §4.18-B 理由校验）。
+  **实现坐标** = `thincoder-core/agent-tools/batch-lifecycle.mjs`（`assertStatusNote`——note 的单行 + 词表零命判据；重开径不取它，见 §4.18-B 理由校验）。
 - **`close` 的 §6 非空门**（§4.13 · #422①）：对齐 = 同一 predicate、同一拒句风格（点名 + 下一步 + `Nothing was written`）；偏离 = 从单段扩到链（§2/§3/§4/§6）——单段门只挡 §6 空，而本会话五本正是 **§6 满、§2/§3/§4 空**；链门因此不看单段的空，只看四段里有没有一段没跑过。
-  **实现坐标** = `thincoder-core/agent-tools/batch-lifecycle.mjs:220-222`（`emptySectionSixError`；段空判据由 `batch-skeleton.mjs` 的 `sectionContentState` 单一承担——`sectionSixHasContent` 已随判据单源删除；§6 为唯一缺段时仍取该拒串函数）。
+  **实现坐标** = `thincoder-core/agent-tools/batch-closeout.mjs`（`emptySectionSixError`；段空判据由 `thincoder-core/agent-tools/batch-skeleton.mjs` 的 `sectionContentState` 单一承担——`sectionSixHasContent` 已随判据单源删除；§6 为唯一缺段时仍取该拒串函数）。
 - **F11-C 判据可辨性**（`TOOLS.md` §6.20）：对齐 = 判据靠字面形态（声明形 ∥ 模板占位形）而不靠语义猜；偏离 = 无。
 
 **勘察证据行**：查过 = 链判段集 `CHAIN_SEGMENTS = [2, 3, 4, 6]`（`thincoder-core/agent-tools/batch-closeout.mjs`）——§5 不在段集内，即 §5 豁免的依据
 ∥ `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.6（FR28 闭合/退役）∥ 本档 §4.9 / §4.12 / §4.13（现状）∥ `docs/core/design/TOOLS.md` §6.20（逐字文本面先例）——**相关**。
 
-声明源 = `PROJECT-MANIFEST.json:61` `"publicRepos": []` ⇒ **无仓外声明源可查**。结论 = 无仓外声明源相关。
+声明源 = `PROJECT-MANIFEST.json` 的 `index.publicRepos` 段 `"publicRepos": []` ⇒ **无仓外声明源可查**。结论 = 无仓外声明源相关。
 
 **受影响面（行数 = 现行 · 落笔当刻实读）**：
 
@@ -570,10 +570,10 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 - **描述面（模型可见文案——换写）**：`thincoder-core/tool-docs/batch.md`（2288 字符 · 单物理行——同三处换写，行数不变）· `docs/core/design/TOOLS.md` §6.24（1522 → 1553 行 · +31 · 实测）· 本档（522 → 636 行 · +114 · 实测）。
   触达节 = §4.8（BR-57–BR-69 · BR-38 射程限定）∥ §4.9（门清单四道 + 冻结拒写行）∥ §4.1（fail-closed 行）∥ §4.12 ∥ §4.13 ∥ §7（D-BR30 / D-BR31 / D-BR32）∥ §8（边界 13）。
 - **读数随动**：`docs/core/design/PROMPT-SYSTEM.md` §6.11 = 描述面预算读数的唯一权威处（`batch` **6,553** 字符 · top5 · 当前 **142,991** = **1.381 × 基线**——已按 2026-10-18 实施轮实测回填）——三处 description 换写会改该读数 ⇒ 实施轮跑 `node scripts/tool-schema-size.mjs` 后回填（先例口径 = `TOOLS.md` §6.20 报告发现条「叶子计数须与本批键面同步」）。
-- **测试面**：当批定向单测 `docs/batches/2026-10-18-batch-freeze-gate-fix.test.mjs`（新增 · 收口随批删 · 零留存；读数一行落 §5）。
-- **零改面**：`STATUS_WORDS` 字面 · 六段作者表 · append 段白名单 · 冻结门对已收口档 append/status 的拒（逐字）· `close` 的 §6 单段拒串（唯一缺段时逐字）· `batch-read.mjs` 读面 · 台账。
+- **测试面**：当批定向单测 `docs/batches/<批档名>.test.mjs`（新增 · 收口随批删 · 零留存；读数一行落 §5）。
+- **零改面**：`STATUS_WORDS` 字面 · 六段作者表 · append 段白名单 · 冻结门对已收口档 append/status 的拒（逐字）· `close` 的 §6 单段拒串（唯一缺段时逐字）· `thincoder-core/agent-tools/batch-read.mjs` 读面 · 台账。
 
-**贴线判（500 软线 / 800 硬限）**：最高实现档 = `batch-lifecycle.mjs` **506 行**（node 实读；500 软线之上、800 硬限未触）⇒ **本批不拆**（拆分 = 新结构，设计未授权）；**触发 = 该档过 650 行**（与 `config.mjs` 同口径）。
+**贴线判（500 软线 / 800 硬限）**：最高实现档 = `thincoder-core/agent-tools/batch-lifecycle.mjs` **506 行**（node 实读；500 软线之上、800 硬限未触）⇒ **本批不拆**（拆分 = 新结构，设计未授权）；**触发 = 该档过 650 行**（与 `thincoder-core/config.mjs` 同口径）。
 
 **验收回指（条目 → 判据 → 机检形）**：
 
@@ -602,7 +602,7 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 
 **不做整段替换**：段体可能超 `MAX_TEXT_CHARS`（20000——`thincoder-core/agent-tools/batch.mjs` 实读）。整段替换要模型把全文重发一遍，缺一段就是静默丢内容。
 
-**实测**（`docs/batches/*.md` 全 **283** 本带 §2 的档，逐本读段体字符数——本轮复测）：**56 本（约两成）的 §2 超过 20000 字符**；最大一本 = `docs/batches/2026-10-15-doc-ref-direction-cleanup.md`，其 §2 **128,888 字符 ≈ 上限的 6.4 倍**。
+**实测**（`docs/batches/**` 全 **283** 本带 §2 的档，逐本读段体字符数——本轮复测）：**56 本（约两成）的 §2 超过 20000 字符**；最大一本 = 2026-10-15-doc-ref-direction-cleanup（批档已清），其 §2 **128,888 字符 ≈ 上限的 6.4 倍**。
 
 **不做模糊匹配**：一次近似改写 = 一次没人看见的错改。**匹配 = 逐字节，含行尾**：`\r\n` 档上的 LF 锚零命中 ⇒ 拒（安全方向，不会误改）。
 
@@ -672,7 +672,7 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 | 段域（非作者） | **有场景**：实施席想让自己那一段与「§2 说的一致」——`eng-coder` 以 `edit` 改 §2，就没有第二个人能判那是澄清还是洗账。段白名单是这事的唯一机械面 | 一段一作者；两侧记录由各自的作者写，改别人的段 = 替人作证 |
 | `oldText` 零命中 | **有场景（本批的现场）**：`#2021` 里实施席按早前抄来的句作锚去改 §5 那行死引文——锚在盘上已无一字命中。零命中若放行（当作无事发生），「删掉那行」会**报成功而一字未删** | 删不动而报成功比不做更坏；`close` 会一直拒在该引文上 |
 | 锚 ≥2 命中 | **有场景 · 构造型复现（最小两步）**：① 取一句在本档机制表与验收表各出现一次的短判据；② 以它为 `oldText` 调 `edit` ⇒ 命中两处（放行则删一处会连另一处一起删） | 拒并列出命中行号 = 让写者把锚加长到唯一 |
-| 锚越段界 | **有场景 · 构造型复现（最小两步）**：① 取目标段末行 + 紧接的下一段段头；② 以这两行作 `oldText` 调 `edit` ⇒ 跨段界（放行则下一段段头被删 / 改，段定位当场失效） | `^## §N` 是全家族的段定位判据（`sectionHeaderRe`——`thincoder-core/agent-tools/batch-skeleton.mjs` 导出，`batch.mjs` 直接导入，同族三处共用） |
+| 锚越段界 | **有场景 · 构造型复现（最小两步）**：① 取目标段末行 + 紧接的下一段段头；② 以这两行作 `oldText` 调 `edit` ⇒ 跨段界（放行则下一段段头被删 / 改，段定位当场失效） | `^## §N` 是全家族的段定位判据（`sectionHeaderRe`——`thincoder-core/agent-tools/batch-skeleton.mjs` 导出，`thincoder-core/agent-tools/batch.mjs` 直接导入，同族三处共用） |
 | 锚或替换触及状态行 | **有场景 · 构造型复现（最小两步）**：① 取目标段段体内那条 `**状态行**：` 行本身作锚（取「段头 + 状态行」两行会先越段界，验的不是这一面）；② 调 `edit`，或让 `newText` 引入一条状态行 ⇒ 抛状态行拒串 | 状态行有两个写者 ⇒ `status` 的生命周期流转可被一次 `edit` 伪造（§4.12）；下游 §5 门 / 收口门 / 核销门都读它 |
 | `oldText` 空串 ∥ 纯空白 | **有场景 · 构造型复现（最小两步）**：① 以 `oldText` = 空串（或纯空白）调一次 `edit`；② 若放行，空锚按「恰一次」成立、替换落在段首——就是那一次调用 | 按不变式拒：没有任何一次真实改写需要空锚；拒文不解释「你可能想干什么」 |
 | `newText` 引入状态行 | **有场景 · 构造型复现（最小两步）**：① 取目标段段体内任一行作锚；② `newText` 携一条 `**状态行**：` 行传进去 ⇒ 抛状态行拒串 | 状态行只有一个写者（`status`）；新引入的那条会接管该段状态行的写入（§4.12） |
@@ -682,11 +682,11 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 
 **新落点的三问（名字 ∥ 位置 ∥ 归谁）**：
 
-- **动作名 `edit`**：`existing: thincoder-core/agent-tools/batch.mjs` 的 action 分发表 · name: `"batch"`（五动作 `create` / `append` / `edit` / `status` / `close`）· consumers: eng-designer / eng-coder / 设计评审（`family-tools.mjs` 挂载）∥ 主 agent（depth-0）。内置 `edit` 工具（文件区间替换）已占这个名字，取同名 = 用读者已有的直觉（改既有内容），不另造词。本批不新增动作、不新增参数——改的是段域常量与拒串。
+- **动作名 `edit`**：`existing: thincoder-core/agent-tools/batch.mjs` 的 action 分发表 · name: `"batch"`（五动作 `create` / `append` / `edit` / `status` / `close`）· consumers: eng-designer / eng-coder / 设计评审（`thincoder-core/agent/family-tools.mjs` 挂载）∥ 主 agent（depth-0）。内置 `edit` 工具（文件区间替换）已占这个名字，取同名 = 用读者已有的直觉（改既有内容），不另造词。本批不新增动作、不新增参数——改的是段域常量与拒串。
 - **锚参数 `oldText` / `newText`**：`existing: 同档` 的 `append` 载荷参 `text` · name: `"text"`——两名是它的旧 / 新两半，同族命名。**偏离** = 内置 `edit` 工具的 `old_string` / `new_string`，理由 = 本工具自己那一半已叫 `text`，同一个工具里两套名字会逼模型记两套。
 - **回执串** `batch: edited §<N> of the batch record — replaced <M> characters with <K>.`：`existing: 同档` 的 `batch: created <abs>` ∥ `batch_segment: appended …` 家族形，逐字对齐。
 
-**骨架保护的既有缺口（本批不改，登记理由）**：`batch.mjs` 的判据是 `/^## §\d/m`，`##  §4`（两个空格）不被它命中。**机器面无影响**——同族定位判据同形（`sectionHeaderRe`，三处共用），两空格那行对它们都不是段头，落在段体里当普通文本。
+**骨架保护的既有缺口（本批不改，登记理由）**：`thincoder-core/agent-tools/batch.mjs` 的判据是 `/^## §\d/m`，`##  §4`（两个空格）不被它命中。**机器面无影响**——同族定位判据同形（`sectionHeaderRe`，三处共用），两空格那行对它们都不是段头，落在段体里当普通文本。
 
 **唯一后果 = 人读那一行会以为是段界**。不收紧的理由：收紧要同时改三处定位判据（否则写进去的行就成了真段头）——那是段定位机制，不在本批边界内。
 
@@ -737,7 +737,7 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 
 **禁入形**：`<path>:<line>` / `<path>:<line>-<line>`（行号——`docs/batches/<x>.md:120` 同判）· 「见上文」「见前述」（相对指针）· 无落点的「见设计档」（读者不知道翻哪节）。
 
-**射程**：闭集只判**批次档** §2 / §3 的依据格。设计档里的实现坐标照旧携 `:line`（那是落笔当刻实读的读数，形态 = `docs/core/design/DOC-SYSTEM.md` §1 的 implementation coordinate）——两个面判据不同，别互推：批档是**派单前**写的，设计档是**实读时**写的。
+**射程**：闭集只判**批次档** §2 / §3 的依据格。设计档的落点另按 `docs/core/design/DOC-DISCIPLINE.md` 的「行号一律不作引用形态（强制 · 无例外）」判——三形同（节名 ∥ 符号名 ∥ 逐字引文），射程不同，别互推：批档是**派单前**写的指针，设计档是**实读时**的指认。
 
 **§2 任务书最薄形**：条目表 + 落点节号 + 受影响文件 + 验收行。机制与设计正文住设计档（既有只引不抄句，承载 = `docs/core/design/PROMPT-SYSTEM.md` §6.37）；§2 只写派单需要的东西——照 §2 能开工，机制为什么这样不在 §2 里找。
 
@@ -917,9 +917,9 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 
 **落点**：
 
-- `thincoder-core/agent-tools/batch-segment-vocab.mjs`——段头区判据仍只此一处（`sectionHeaderZoneLines` 现居此档）。新增三个导出：`zoneStatusLines(src, seg)`（段头区内全部形态行）· `zoneStatusCount(src, seg)`（条数）· `firstZoneStatusLineRange(src, seg)`（受保护行的字符区间——`edit` 保护与 `status` 改写取同一个落点）。`batch-skeleton.mjs` 转出这三个（既有读面出口，零新依赖）。
+- `thincoder-core/agent-tools/batch-segment-vocab.mjs`——段头区判据仍只此一处（`sectionHeaderZoneEntries` 现居此档，档内私有）。新增三个导出：`zoneStatusLines(src, seg)`（段头区内全部形态行）· `zoneStatusCount(src, seg)`（条数）· `firstZoneStatusLineRange(src, seg)`（受保护行的字符区间——`edit` 保护与 `status` 改写取同一个落点）。`thincoder-core/agent-tools/batch-skeleton.mjs` 转出这三个（既有读面出口，零新依赖）。
 - 同一档：`readBatchStatusLine` / `readSectionStatusWord` 改取「区内**恰一条**才读」——判据见件④。
-- `thincoder-core/agent-tools/batch-record-write.mjs` 的 `editBatchRecord`：`statusLineSpans(body)` 的判据由「任何状态行」改为「受保护行区间」；新增改写后条数比对与拒串 `EDIT_STATUS_LINE_PROMOTION_ERROR`。
+- `thincoder-core/agent-tools/batch-record-write.mjs` 的 `editBatchRecord`：受保护行判据改取 `firstZoneStatusLineRange(src, n)`（锚触及该区间 ⇒ 拒），替代原先「任何状态行」的扫法；新增改写后条数比对（`zoneStatusCount` 前后各取一次）与拒串 `EDIT_STATUS_LINE_PROMOTION_ERROR`。
 
 **反例夹具（四格）**：
 
@@ -934,7 +934,7 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 
 重开后的档若要承接一件新事，今天只有两条路：另起一本新批档（原档的 §1–§6 与追记行从此与债脱钩），或让它跑完一整轮而不记任何债。
 
-**两步复现**：① 取一本带重开记录的档（例 = `docs/batches/2026-11-05-doc-write-gate.md`）；② 看它的档头 `台账` 行与本面未决行——重开后新增的工作没有可落的行位：`create` 只对新档开放（目标已存在 ⇒ 拒），已核销行没有回退边。处置 = 本条。
+**两步复现**：① 取一本带重开记录的档（例 = 2026-11-05-doc-write-gate，批档已清）；② 看它的档头 `台账` 行与本面未决行——重开后新增的工作没有可落的行位：`create` 只对新档开放（目标已存在 ⇒ 拒），已核销行没有回退边。处置 = 本条。
 
 **判据句**：
 
@@ -954,12 +954,12 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 **新落点的三问（名字 ∥ 位置 ∥ 归谁）**：
 
 - **动作名 `attach`**：`existing but unusable: thincoder-core/agent-tools/batch-ledger-bind.mjs` 的 `createBatchRecord`——失败在契约面：它要求目标**不存在**（BR-20），而本动作的唯一场景恰是目标已存在。
-  consumers: depth-0 主 agent（`family-tools.mjs` 的 depth-0 挂载面）。名字取 `attach`（「挂上去」），与 `create`（「建新的」）成对，不另造词。
+  consumers: depth-0 主 agent（`thincoder-core/agent/family-tools.mjs` 的 depth-0 挂载面）。名字取 `attach`（「挂上去」），与 `create`（「建新的」）成对，不另造词。
 - **参数名 `title`**：`existing: thincoder-core/ledger.mjs` 台账写面已有的 `title`（台账行标题）· name: `"title"` 逐字同名 · consumers: `ledgerBindBatch` → 台账行 `title`。
   **它与既有台账标题概念是同一件东西，不是第二套**：`create` 的 `topic` 是档名 ∥ 档头主题词（建档时与档名共用同一串）；`attach` 没有档名可给，所以只留台账那一半，并沿用台账写的同名字——模型不必记两套。
 - **函数 `appendLedgerNoToHeader`**：`existing but unusable: thincoder-core/agent-tools/batch-skeleton.mjs` 的 `batchSkeleton()`——它**渲染**档头台账行（`> 台账 = <编号实参>（<板块> · 归批）`），只在建档时跑一次、且是整本档的模板。
   本函数改的是**已有档头那一行**（读 → 剔括注 → 拆列表 → 尾部追加 → 写回）——语义不同（模板渲染 ∥ 行内追加）⇒ 新函数，同档共址（档头行形态本就住这一档）。
-- **四枚新拒串常量**（各一个 `const`，与既有 `placeholderResidueError` 同族、同址）：`EDIT_TEXT_OVER_LIMIT_ERROR` ∥ `EDIT_STATUS_LINE_PROMOTION_ERROR` ∥ `STATUS_LINE_IN_APPEND_ERROR`（均 `batch-record-write.mjs`）· `STATUS_LINE_AMBIGUOUS_ERROR`（`batch-lifecycle.mjs`）。名字沿用「<面>_<条件>_ERROR」既有形；不造消息拼接层。
+- **四枚新拒串常量**（各一个 `const`，与既有 `placeholderResidueError` 同族、同址）：`EDIT_TEXT_OVER_LIMIT_ERROR` ∥ `EDIT_STATUS_LINE_PROMOTION_ERROR` ∥ `STATUS_LINE_IN_APPEND_ERROR`（均 `thincoder-core/agent-tools/batch-record-write.mjs`）· `STATUS_LINE_AMBIGUOUS_ERROR`（`thincoder-core/agent-tools/batch-lifecycle.mjs`）。名字沿用「<面>_<条件>_ERROR」既有形；不造消息拼接层。
 
 **档头拆分的规则（`appendLedgerNoToHeader` 的语义，不只钉在夹具里）**：档头行形 = `> 台账 = #a · #b（core · 归批）。前情 = …`。
 
@@ -1002,13 +1002,13 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 **代价（如实写下 · 本席 `node` 逐档实读 2026-11-05）**：
 
 - 量法 = `docs/batches/*.md` 逐档取 §1 段头区（`## §1` 标题行之后、下一 `^#{2,}` 之前），数 `STATUS_LINE_RE` 命中行；全集 **306** 档。
-- **区内两条以上 = 1 档**：`docs/batches/2026-10-25-closeout-marker-gate.md`（区内首条 `已收口 2026-10-25` ∥ 次条 `🔄 进行中（全链——新机制）`）。
+- **区内两条以上 = 1 档**：2026-10-25-closeout-marker-gate（批档已清；区内首条 `已收口 2026-10-25` ∥ 次条 `🔄 进行中（全链——新机制）`）。
 - 该档的**改前 ∥ 改后**：改前 = 首命中 ⇒ `closed`；改后 = 两条 ⇒ `unknown`。两者同属 fail-closed（冻结）⇒ 该档行为零变，变的只是结论的理由；修 = 主 agent 普通文档写（删次条）。
-- **区内零条 = 1 档**：`docs/batches/2026-10-15-doc-ref-direction-cleanup.records.md`——它是原批档 §5 的卷宗件，**没有 `## §1` 段头**。
+- **区内零条 = 1 档**：2026-10-15-doc-ref-direction-cleanup 的 records 卷宗件（批档已清）——它是原批档 §5 的卷宗件，**没有 `## §1` 段头**。
 - 该档的**改前 ∥ 改后同判 = `unknown`**（读面取段头区，段头缺失即 `unknown`）⇒ 读面不因本条翻面。
 - **其余 304 档区内恰一条** ⇒ 判定零变。
 - **§4.9 门① 的解析面 = §1 段头区**（与写面 `updateSectionStatusLine` 同一条定位面），读面判据 = 区内恰一条才取值（两条以上 ⇒ `unknown`）；本批把 §4.9 列进校正清单，门面描述与实装对齐。
-- 实装那一面 = 依据 `thincoder-core/agent-tools/batch-segment-vocab.mjs`「段级状态行的唯一住所：`## §N` 标题行之后、下一个 `##` / `###` 起行之前」。
+- 实装那一面 = 依据 `thincoder-core/agent-tools/batch-segment-vocab.mjs`「段级状态行的唯一住所：`## §N` 标题行之后、下一个」
 
 **落点**：
 
@@ -1034,13 +1034,13 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 **受影响面（路径 · 落笔归实施轮）**：
 
 - **实现**：`thincoder-core/agent-tools/batch-record-write.mjs`（`editBatchRecord` 两道门 + `appendBatchRecord` 状态行闸；两者现居此档）· `thincoder-core/agent-tools/batch-segment-vocab.mjs`（段头区判据现居此档；新增三个导出 `zoneStatusLines` ∥ `zoneStatusCount` ∥ `firstZoneStatusLineRange`，两处读面改「恰一条」）· `thincoder-core/agent-tools/batch.mjs`（`action` 枚举 `attach` + 分派 + `title` 参数 + 参数 description）· `thincoder-core/agent-tools/batch-lifecycle.mjs`（`status` 区内条数判）· `thincoder-core/agent-tools/batch-ledger-bind.mjs`（`attachBatchRecord`）· `thincoder-core/agent-tools/batch-skeleton.mjs`（`appendLedgerNoToHeader` + 三个新导出的转出口）。
-- **描述面（模型可见文案）**：`thincoder-core/tool-docs/batch.md`（动作枚举 + 三处拒因 + `attach` 段）· `batch.mjs` 的参数 description（`action` 枚举、`oldText` / `newText` / `text` / 新增 `title`）。
-- **测试面**：本批定向单测 `docs/batches/2026-11-05-batch-tool-gap-family.test.mjs`（新增 · 收口随批删 · 零留存；逐条断言 BR-93–BR-106 的拒面与读面，一格一条）。
-- **零改面**：`STATUS_WORDS` 字面 · 六段作者表 ∥ 段白名单 · 冻结门 / 链门 / §5 段序门 / §3 裁定行闸 · 骨架与占位字面 · `batch-read.mjs` · `updateSectionStatusLine` 本体 · 台账六态与已核销行的冻结。
+- **描述面（模型可见文案）**：`thincoder-core/tool-docs/batch.md`（动作枚举 + 三处拒因 + `attach` 段）· `thincoder-core/agent-tools/batch.mjs` 的参数 description（`action` 枚举、`oldText` / `newText` / `text` / 新增 `title`）。
+- **测试面**：本批定向单测 `docs/batches/<批档名>.test.mjs`（新增 · 收口随批删 · 零留存；逐条断言 BR-93–BR-106 的拒面与读面，一格一条）。
+- **零改面**：`STATUS_WORDS` 字面 · 六段作者表 ∥ 段白名单 · 冻结门 / 链门 / §5 段序门 / §3 裁定行闸 · 骨架与占位字面 · `thincoder-core/agent-tools/batch-read.mjs` · `updateSectionStatusLine` 本体 · 台账六态与已核销行的冻结。
 
 **贴线判（两档判据）**：量法 = `node` 逐档实读行数（2026-11-05）。
 
-- **文件档（500 软线 / 拆分触发 650 / 硬限 800）**：`batch-lifecycle.mjs` **375** · `batch-record-write.mjs` **369** · `batch-skeleton.mjs` **316** · `batch-segment-vocab.mjs` **231** · `batch.mjs` **199** · `batch-ledger-bind.mjs` **185** ⇒ **无一档越过 500 软线** ⇒ 零拆分义务。§4.20 的「`batch.mjs` 541 行」是 KD-4 拆分前该档的前身读数，拆分后同一功能面分散在上列各档，本条不据它下结论。
+- **文件档（500 软线 / 拆分触发 650 / 硬限 800）**：`thincoder-core/agent-tools/batch-lifecycle.mjs` **375** · `thincoder-core/agent-tools/batch-record-write.mjs` **369** · `thincoder-core/agent-tools/batch-skeleton.mjs` **316** · `thincoder-core/agent-tools/batch-segment-vocab.mjs` **231** · `thincoder-core/agent-tools/batch.mjs` **199** · `thincoder-core/agent-tools/batch-ledger-bind.mjs` **185** ⇒ **无一档越过 500 软线** ⇒ 零拆分义务。§4.20 的「`thincoder-core/agent-tools/batch.mjs` 541 行」是 KD-4 拆分前该档的前身读数，拆分后同一功能面分散在上列各档，本条不据它下结论。
 - **函数档（单函数体行数 > 120 ⇒ 动它就得拆它）**：现读数 = `appendBatchRecord` **131**（越线）· `editBatchRecord` **88** · `statusBatchRecord` **88** · `isBatchRecord` **79**。审视结论：本批只给这三件各加一道闸（≈ +8 / +15 / +10 行），不重排内部结构 ⇒ `appendBatchRecord` 保持越线，登记为「下一轮触达该函数时拆」（可拆边 = 形态校验 / 门 / 落笔三段）；其余两件在 120 之下，本批增量不越线。
 
 **验收回指（条目 → 判据 → 机检形）**：
@@ -1172,10 +1172,10 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 | A2 | **写入手段句**（`batch({action:"append", segment, text})` ∥ `batch({action:"edit", segment, oldText, newText})`——子代理 append/edit/status 无路径参数 + 段白名单枚举；create / status / close 各附身份判据，depth-0 `path` 破例见 §4.1 / D-BR21） | 纪律层同块 | 同上 |
 | A3 | **执行者拒收**·**澄清必经主 agent**·**三方条目一致** | coder / designer persona | 同名两档 |
 | A4 | **D1–D7 文档更新纪律表** | 纪律层文档更新纪律节 | 同 A1 宿主 |
-| A5 | **§3 写入指令句 + 适用面限定子串**（仅设计评审 / 工具已挂载） | 评审三档 | 同名三档 |
-| A6 | **失败明示句** | 纪律层 + 评审三档 | 同 A1 宿主 + 三档 |
+| A5 | **§3 写入指令句 + 适用面限定子串**（绑了本档 / 工具已挂载） | 评审四档 | 同名四档 |
+| A6 | **失败明示句** | 纪律层 + 评审四档 | 同 A1 宿主 + 四档 |
 | A7 | **调用侧句**（设计评审**一律必传** `batchDoc`——未携即拒发；没有批档在飞 ⇒ 先 `batch create`） | 本档 §4.5 调用侧句 ∥ `thincoder-core/prompts/persona-engineering.md` 的 Review convergence 节发起评审纪律句 | 同 A1 宿主 |
-| A8 | **`batch` 工具描述文案**（action 枚举五动作 / 段白名单枚举 / 子代理 append·status·edit 无路径参数 + depth-0 可选 `path` 破例（D-BR21）/ 写面一句（作者可 `edit` 自己段）/ 来源戳 / 剥凭证 / 失败明示） | 工具定义字符串 | 新增同名档（**断言口径 = 跨仓同文件 grep**） |
+| A8 | **`batch` 工具描述文案**（action 枚举六动作 / 段白名单枚举 / 子代理 append·status·edit 无路径参数 + depth-0 可选 `path` 破例（D-BR21）/ 写面一句（作者可 `edit` 自己段）/ 来源戳 / 剥凭证 / 失败明示） | 工具定义字符串 | 新增同名档（**断言口径 = 跨仓同文件 grep**） |
 | A9 | **来源戳形态**（`### 轮次 N（评审子代理）`、N = §3 内该形态行计数 + 1、排骨架行） | 本档 §4.1 | 工具实现（**行为锚**——不进 grep 集合） |
 | A10 | **V3 触发判据**（§4 或 §6 有实质内容；骨架/占位行不算） | 本档 §4.6 | 一致性检查实现（**行为锚**） |
 | A11 | **spawn 样例行带 `batchDoc=`** | 纪律层 spawn 样例节 | 同 A1 宿主 |
@@ -1219,7 +1219,7 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 | D-BR19 | **合法关键字集单源**（STATUS_WORDS **分段**词表常量——§1 项 = gate 词表 `{进行中, 已收口}`，gate 只消费 §1 项；§2/§3/§5 各带段内生命周期词表——fix 轮 #1） | 第二份词表 = 漂移源（痛点 ② 根因面——模板文案与 gate 检查同源的 §1 红线要求；骨架占位行由 §1 项引用生成，非独立字面——轮 2 #8） |
 | D-BR21 | **depth-0 的 append / status 增可选 `path` 参数**（子代理语法不变——目标仍由 spawn 注入） | 主 agent 无 spawn 绑定且多批同时在飞——无 path 则「主 agent → §1/§4/§6」通道无从定位目标档（能力被声明而参数面缺失）；沿 D-BR17 破例逻辑（depth-0 身份判据兜住授权面）；缺省规则 = 在飞批唯一时取该批、复数时必传。 |
 
-| D-BR22 | 批次档相对路径 = **统一解析序**（cwd → 项目根 → 基底，单源 `batch-paths.mjs`，四处调用点共用）+ **锚定防嵌套**（含基底相对前缀者只解析项目根形；不落基底内 ⇒ fail-closed） | 同一串在不同动作 / 不同 cwd 下必须同解（三规则各解各的 = #287 病灶）；读面判据仍「可读」、create 判据仍「落基底内」 |
+| D-BR22 | 批次档相对路径 = **统一解析序**（cwd → 项目根 → 基底，单源 `thincoder-core/agent-tools/batch-paths.mjs`，四处调用点共用）+ **锚定防嵌套**（含基底相对前缀者只解析项目根形；不落基底内 ⇒ fail-closed） | 同一串在不同动作 / 不同 cwd 下必须同解（三规则各解各的 = #287 病灶）；读面判据仍「可读」、create 判据仍「落基底内」 |
 | D-BR23 | 批次档写门**豁免自身批次伴随件**（非 `.md` · 同目录 · 词干族三合取——判据本体 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.29.1） | 批次件的合法作者 = 本批实施者（#545 实证误伤）；门保护对象 = 批次档本体（跨批写他批 §2 = #309 损害通道），非 `.md` 伴随件不构成该通道。 |
 | D-BR24 | 暂缓**机读位 = §1 状态行 note 位**（形态 `进行中（暂缓 · 复核条件 = <条件句>）`）；例检 = 收口轮槽位 + 会话启动 ∕ 条件事件纪律句——**零产品码** | 状态行已有 gate 读侧与扫描先例；note 字段既有（零工具改）；暂缓非冻结（gate 词汇零扩——升 gate 词会锁死复启通道、双端面成本）。 |
 | D-BR25 | #942 残留 = **基底自有项目根形收正 + 基底相对形收窄单段**（余形通用 fail-closed 拒） | 条 3 既有措辞（「已含基底相对前缀者只解析项目根形」）在「基底不落 cwd 项目根下」时前缀不可判 ⇒ 漏锚 ⇒ 基底分支静默嵌套；收正 = 前缀面补全「基底自有项目根」+「基底 + 全形」二次拼接退场；#828 族判据同旨（可判 ⇒ 落 / 不可判 ⇒ 显式拒、列候选）。 |
@@ -1231,7 +1231,7 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 | D-BR31 | **重开 = `status` 逆向流转 + §1 尾部追记行**（§4.18-B）：理由复用 `note`（零新参）、必带；追记行 `**重开记录**：<日期> · 原收口 <旧日期> · 理由 = … · 操作者 = 主 agent`（原收口 = 改写前状态行的日期字面——重开后首收口时点唯有此处保留）；无锁 | 冻结防的是**悄悄改写历史**，不是永远不能承认标错——带审计的追加既留痕又给合法修复口。被否 = 第三状态词（gate 词面扩 = 双端成本）· 新 `reason` 参（第二个散文载体）· 手改冻结档（无审计）· 本批造锁（新机制，另议） |
 | D-BR32 | **无锁的处置条款 = 重开后回读 §1**（§4.18-B 并发条）：自己的「重开记录」行不在 ⇒ 重跑重开（状态行同值——幂等） | 写面无锁（`batch` 四 action 同形 read-modify-write，后写覆盖前写）；并发丢行是唯一可观察后果，回读一次即可判 ⇒ 不为它造锁（锁文件 + 陈旧锁清理 + 跨端 = 新机制，另议） |
 | D-BR33 | **批档段内一个写面**：作者对自己的段可 `append` 加内容、可 `edit` 就地改（锚定区间，恰一次命中）；非作者一概拒；状态行仍只有一个写者（`status`） | 用户 2026-11-03 05:41 逐字「我个人觉得没必要限制 append-only，应该都允许修改，append-only 这个有过度设计的嫌疑。」+ 现场（#2021：被引需求档一句改了 ⇒ §5 那行成死引文 ⇒ 作者改不动、append 补说明改不动机检、close fail-closed ⇒ 本档永久收不了口）。**被否** = 上一版的「两种处置」（§2 规范面可改 ∥ 其余只追加）——被引文档会变是常态，它把常态变成永久卡死 |
-| D-BR34 | **段内就地改走 `batch` 的 `edit` 动作**（锚定区间替换，恰一次命中；`newText` 空串 = 删区间），不走「文件工具直写」 | 段作者白名单在 append 通道上是机械事实；只在文件面上放开就地改 = 「加内容有闸、改内容靠自觉」——而携绑定子代理直写自身批档本就放行（`thincoder-core/agent/write-gate.mjs:165` `if (targetKey === boundKey) continue // 写自己绑定的档 = 正常面`），闸就只剩提示词。**被否** = 不加动作（规则退半步）· 整段替换（§2 数百行、超 `MAX_TEXT_CHARS`，重发全文 = 静默丢内容）· 模糊匹配（规范面近似改写 = 无声错改） |
+| D-BR34 | **段内就地改走 `batch` 的 `edit` 动作**（锚定区间替换，恰一次命中；`newText` 空串 = 删区间），不走「文件工具直写」 | 段作者白名单在 append 通道上是机械事实；只在文件面上放开就地改 = 「加内容有闸、改内容靠自觉」——而携绑定子代理直写自身批档本就放行（`thincoder-core/agent/write-gate.mjs` 的 `if (targetKey === boundKey) continue // 写自己绑定的档 = 正常面` 行），闸就只剩提示词。**被否** = 不加动作（规则退半步）· 整段替换（§2 数百行、超 `MAX_TEXT_CHARS`，重发全文 = 静默丢内容）· 模糊匹配（规范面近似改写 = 无声错改） |
 | D-BR35 | **已收口档六段一律不可就地改**；修 = 重开径（§4.18-B，带追记行）或另起新批 | 收口 = 这一轮的账已经结过；照那一轮之外的新规则改它，账里就出现一件从没跑过的事。与 D-BR11（整档冻结、外部记忆不删）同源 |
 | D-BR36 | **段级文件写门（拦「用文件工具直写本档别人段」）不在本批**，登记为候选扩展 | 现有机械面两道：跨批档写门（写别批）+ 工具通道段白名单（用工具写别段），覆盖两个方向；第三方向无实测案，且需 diff 段归属判定（改一字也要判它落在哪段）——先登记，不立空护栏。**处置 = 登记即终局**（不补门、不另裁）：文件工具仍在被正当使用（档头改写、工具未建模的一次性修字面），段级门要放行它们就得先判「这处改动落在谁的段」，而那条判据只在工具通道里有；档级写门只给批档加门、对设计档 / 需求档同样零拦 = 假安全 |
 | D-BR37 | **「改 §2 不追认实施」的判据 = 收口对账的两半**（§2 ↔ 设计档 · §2 ↔ §5），不取改时拦截 | 洗账的形是「§2 改成与设计一致、§5 记着另一套实现」——只比 §2 ↔ 设计档时它原样通过（本批评审抓出的设计缺口）。取两半 = 判的对象是两处记录是否对得上，机检与人都可读；不取改时拦截的理由 = 实施开始后改 §2 正当且常见（设计变更传播、口径补清），拦住它等于把正路关掉、写者绕去文件工具直写。**被否** = 只比设计档（洗账从下面过）· 靠写者自觉（同一道口子换成纪律句） |
@@ -1253,7 +1253,7 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 7. 需求档面（`requirements/`）零改动（需求笔归主 agent——若需同步收口由主代理裁量）。
 8. 不做批次档路径的启发式查找（basename 搜索 / 全仓 glob）——解析只认候选序、锚定规则与基底自有项目根形（§4.15 条 1 / 条 3 / 条 6 边界）。
 9. 不做暂缓批的机械写锁 ∕ 新提示面产品码（暂缓 = 调度陈述——gate 词汇零扩；扫描器 ∕ 提醒器不做；例检 = §5.1 L8 + 既有清单槽位）。
-10. 不新增工程机械门到普通面（设计令牌 ∥ spawn 强制 `batchDoc` ∥ 写文件门禁——三者在普通面**不新增**；第三门名统一「写文件门禁」——权威措辞 = `docs/core/design/ADVISOR-CONVERGENCE.md:378`）
+10. 不新增工程机械门到普通面（设计令牌 ∥ spawn 强制 `batchDoc` ∥ 写文件门禁——三者在普通面**不新增**；第三门名统一「写文件门禁」——权威措辞 = `docs/core/design/ADVISOR-CONVERGENCE.md` 的 Design gate 条（「spawn eng-coder 时 token 校验 + 写文件门禁」）
 ——普通面作者缝 = 纪律 + 可选绑定（§4.16）；**携批次档绑定的实施子代理随绑定受既有批次档写门**（containment——非新增门；§4.16 ∥ `AGENT-LOOP-SUBAGENT.md` §6.29.1）。
     **同句的另一半**：设计评审的 `batchDoc` 参数契约收严（未携即拒发）**不在此列**——评审工具只有一套，模式不改变它的参数契约；spawn 强制 `batchDoc` 仍为工程专属（需求面同句 = `docs/core/requirements/NORMAL-MODE.md` §5.6）。
 11. 不做档头台账行的多**物理行**形态（多编号仍居单行——§4.10）：多物理行会破「档头结构行」单行契约与占位残留判定域（`TOOLS.md` §6.20）——不做。

@@ -14,12 +14,12 @@
 - 块字段 = **判别六键 + `role`/`id` 随行**：`{ key, status, frozen, awaitingDigest, region, dom }`（判别面——签名去重与 trio 归判只读此六键）+ `role`/`id`（随行——发射寻址与标注）：
   - `key` = 渲染面块键（`sub:role#id` 形；consult 子块 `consult#N` 同表）；
   - `status` = 核态机活态（running/queued/done/cancelled/error——`state.mjs` 模型字段逐字）；
-  - `frozen` ∥ `awaitingDigest` = 归档闸两判据（`subagent-reduce.mjs:141`）逐字上报——**trio 判别主键**；
+  - `frozen` ∥ `awaitingDigest` = 归档闸两判据（`subagent-reduce.mjs` 的两判据处）逐字上报——**trio 判别主键**；
   - `region` = `"activity"`（驻右列）∥ `"flow"`（已入流——归档墓碑）——**入流位**；
-  - `dom` = 渲染面元素在场：查 `[data-subname="<key>"]`（核件 `thincoder-render-core/subblocks/block.mjs:30` 单点盖章；活动区块与流内回显块**同属性** ⇒ 单查询覆盖两区）。
-- **推送点** = 渲染面**帧出口**（`thincoder-desktop/renderer/app.mjs:307-315` `applyFrame` 五面分派之后——DOM 已落），按**签名**（上列字段串 + 会话键）去重：同签名零报；状态迁转 ∥ 出生 ∥ 归档 ∥ DOM 增减 ∥ 会话切换 ⇒ 一报。流式 `rows` 变化不入签名（内容面不属判别面——不产生逐 token 上报）。
+  - `dom` = 渲染面元素在场：查 `[data-subname="<key>"]`（核件 `thincoder-render-core/subblocks/block.mjs` 单点盖章；活动区块与流内回显块**同属性** ⇒ 单查询覆盖两区）。
+- **推送点** = 渲染面**帧出口**（`thincoder-desktop/renderer/app.mjs` 的 `applyFrame` 五面分派之后——DOM 已落），按**签名**（上列字段串 + 会话键）去重：同签名零报；状态迁转 ∥ 出生 ∥ 归档 ∥ DOM 增减 ∥ 会话切换 ⇒ 一报。流式 `rows` 变化不入签名（内容面不属判别面——不产生逐 token 上报）。
 - **主侧缓存** = 新档 `thincoder-desktop/src/main/panel-live.mjs`（`Map key → readout`；`report(key, blocks)` ∥ `get(key)`；后报覆前报）。代理装配处挂 `agent._panelReadout = () => panelLive.get(key)`。
-- **工具读源链**（`executePanelAction` 视图面）：`ctx.readout()` 快照非空 ⇒ 返回 `{ source:"renderer", asOf, ageMs, panel[] }`——awaitingDigest 条目**读时交叉**核池/pending 标 `digested`（沿 CLI 面判据 `thincoder-core/agent-tools/subagent-panel.mjs:176-185`；consult 子块走同款消费判据）∥ 快照空（窗未载 ∥ 未报）⇒ 回落现链路（`ctx.state` → 降级池视图；两降级注保留）。
+- **工具读源链**（`executePanelAction` 视图面）：`ctx.readout()` 快照非空 ⇒ 返回 `{ source:"renderer", asOf, ageMs, panel[] }`——awaitingDigest 条目**读时交叉**核池/pending 标 `digested`（沿 CLI 面判据 `thincoder-core/agent-tools/subagent-panel.mjs` 的消费判据；consult 子块走同款消费判据）∥ 快照空（窗未载 ∥ 未报）⇒ 回落现链路（`ctx.state` → 降级池视图；两降级注保留）。
 - **陈旧呈现**：`ageMs` 恒携（防「读了旧镜不自知」）；**不设截断阈值**——卡留块状态恒定，旧镜亦真；截断反会隐藏判别面。
 
 ### 2.2 归还补口：回收恒达窗（结构性收口）
@@ -28,24 +28,24 @@
 
 落法（核 `thincoder-core/agent/suspension.mjs` 三支 + 一处返回面；全部为「发射口恒达」形，零新语义）：
 
-1. **循环内三支 runTurn 调用**（用户支 `:220-228` ∥ 消化支 `:236-249` ∥ timer 支 `:261-274`）：`hooks.reclaim?.(afterRun())` 移入**恒达窗**（`finally` 形）——正常 ∥ Abort-continue ∥ 异常抛**三径同达**。消化支 Abort-continue 的既有语义序保持（`onDigest("end")` 先行；reclaim ∥ onCounts 于重入前到达——两探针幂等，序不影响归档判定）。
-2. **`finishSuspension` 残差注入**（`:129-132`）：`splice(0)` = **离容全量** `left`；注入循环 **try/catch 收口**（前缀 = `injected`；首错 = `error`）；返回 `{ injected, left, error }`；调用点（`:285`）在 `hooks.freezeAll?.()` 前增 `hooks.reclaim?.(left)`——**补发面 = 离容全量（抛错径同覆）**；`error` 非空 ⇒ 重抛（**fail-loud 保持**）。与 freezeAll 双探针幂等。
+1. **循环内三支 runTurn 调用**（用户支 ∥ 消化支 ∥ timer 支）：`hooks.reclaim?.(afterRun())` 移入**恒达窗**（`finally` 形）——正常 ∥ Abort-continue ∥ 异常抛**三径同达**。消化支 Abort-continue 的既有语义序保持（`onDigest("end")` 先行；reclaim ∥ onCounts 于重入前到达——两探针幂等，序不影响归档判定）。
+2. **`finishSuspension` 残差注入**：`splice(0)` = **离容全量** `left`；注入循环 **try/catch 收口**（前缀 = `injected`；首错 = `error`）；返回 `{ injected, left, error }`；调用点在 `hooks.freezeAll?.()` 前增 `hooks.reclaim?.(left)`——**补发面 = 离容全量（抛错径同覆）**；`error` 非空 ⇒ 重抛（**fail-loud 保持**）。与 freezeAll 双探针幂等。
 3. **既有中止快照径保持零改**（回归锚——不得以「收口」名义动中止语义）。
 
-宿主侧（桌面）零改：`reemitDone`（`thincoder-desktop/src/main/suspension-drive.mjs:76-86`）本为 `hooks.reclaim`/`freezeAll` 唯一消费体——逐条 `done` 直发 `ev:subagent`；consult 族 `childIds` 展开既有。
+宿主侧（桌面）零改：`reemitDone`（`thincoder-desktop/src/main/suspension-drive.mjs`）本为 `hooks.reclaim`/`freezeAll` 唯一消费体——逐条 `done` 直发 `ev:subagent`；consult 族 `childIds` 展开既有。
 
 ### 2.3 ③ 桌面回收阀（freeze 桌面对位）
 
 - **门控数据源扩为「回读源链」**：`panelFreezeGate` 首判从「`computePanelBlocks(ctx.state)` 单源」改 **`readPanelSource(ctx)`**——`ctx.readout`（桌面渲染面快照）优先 ∥ `ctx.state`（CLI 现算）∥ 二者皆空 ⇒ 维持现拒因文案。CLI 面**判据与文案零变**（同一门控函数、同序检查）——**唯一有意放宽 = 键规范化（下条——两端同宽，接受面纯增）**。
 - **判据映射**（门控序）：`key` 规范化命中块（**键规范化——有意放宽且两端同宽**：`sub:` 前缀剥除后比对，桌面 ∥ CLI 皆接受 `sub:advisor#27` 与 `advisor#27` 两写法；命中后②③④与发射全用规范化键）⇒ ① `awaitingDigest === true`（否 ⇒ 逐态拒因，文案沿运行时块 ∥ `region === "flow"` 追加拒因——已入流 = 已归档，无卡可收）② 池归属查 ③ pending 单容器查 ④ consult 子块消费判据——②③④**复用既有函数逐字**。
 - **发射**（消费端 = 渲染面归档机——零新消费者）：门控通过 ⇒ `ctx.callbacks.onToken("${规范化键}/⟦ev⟧done\x1e0\x1e0\x1edone\x1e")`（sub 块 = `role#id` ∥ consult 子块 = `consult#N`）——**与 CLI 面同字面**。
-  链路：桌面主会话 callbacks = 桥面（`thincoder-desktop/src/main/turn-face.mjs:114` `run(agent, body, bridge(key), …)`）⇒ `bridge.onToken` relay 分流（`thincoder-desktop/src/main/agent-bridge.mjs:153-158`）⇒ `relayEventToSubPatch` 表（`thincoder-render-core/subblocks/relay.mjs:135`）
+  链路：桌面主会话 callbacks = 桥面（`thincoder-desktop/src/main/turn-face.mjs` 的 `run(agent, body, bridge(key), …)`）⇒ `bridge.onToken` relay 分流（`thincoder-desktop/src/main/agent-bridge.mjs`）⇒ `relayEventToSubPatch` 表（`thincoder-render-core/subblocks/relay.mjs`）
 
-  ⇒ `ev:subagent {status:"done"}` ⇒ 态机排收 done ⇒ 归档（awaitingDigest 收 done ⇒ `archive atBoundary`）⇒ 归档入流 + **`record:append` 落档**（`thincoder-desktop/renderer/subagent-reduce.mjs:125-138`——trio 缺的正是这份记录）。
+  ⇒ `ev:subagent {status:"done"}` ⇒ 态机排收 done ⇒ 归档（awaitingDigest 收 done ⇒ `archive atBoundary`）⇒ 归档入流 + **`record:append` 落档**（`thincoder-desktop/renderer/subagent-reduce.mjs`——trio 缺的正是这份记录）。
 
-  `sub:` 前缀**必须**在发射前剥除（relay 前缀文法 `^([\w-]+)#(\d+)\//` 不吃 `:`——`thincoder-render-core/subblocks/relay.mjs:22`；带前缀发出会漏入内容面）。
-- 幂等：重复 freeze ⇒ 二次 done 命中已归档块 ⇒ 态机 `drop-frozen` 丢弃（`thincoder-render-core/subblocks/state.mjs:236-240`）——零重复归档、零重复记录。
-- 工具描述收正（语义）：`agent-tools/subagent.mjs:135` freeze 参数说明的「requires the CLI TUI panel mirror」随改述（桌面回读源在列）；`thincoder-core/tool-docs/subagent.md:10` 的「exactly as the user sees them」句**逐字保留**（把它变成真）。
+  `sub:` 前缀**必须**在发射前剥除（relay 前缀文法 `^([\w-]+)#(\d+)\//` 不吃 `:`——`thincoder-render-core/subblocks/relay.mjs`；带前缀发出会漏入内容面）。
+- 幂等：重复 freeze ⇒ 二次 done 命中已归档块 ⇒ 态机 `drop-frozen` 丢弃（`thincoder-render-core/subblocks/state.mjs`）——零重复归档、零重复记录。
+- 工具描述收正（语义）：`agent-tools/subagent.mjs` 的 freeze 参数说明的「requires the CLI TUI panel mirror」随改述（桌面回读源在列）；`thincoder-core/tool-docs/subagent.md` 的「exactly as the user sees them」句**逐字保留**（把它变成真）。
 
 ### 2.4 ④ 对账自愈（宿主自愈扫 + done 帧双痕）
 
@@ -53,9 +53,9 @@
 
 **digested-stuck 定义**：渲染面块呈 `frozen ∧ awaitingDigest` 半态（终态已折叠 · 等待消化），而核侧两池 + pending 皆无该条目 = 报告已入模型上下文、块滞留等待归档——done 帧曾丢。
 
-**自愈扫**（`sweepDigestedStuck`——`thincoder-desktop/src/main/suspension-drive.mjs:77-95`）：手动 freeze 谓词（`thincoder-core/agent-tools/subagent-panel.mjs:117-155`）的 beat 级自动化——渲染面上报块 `awaitingDigest ∧ frozen ∧ 非 consult` ∧ 核侧不在驻留（在途 ⇒ 零动作）⇒ 逐条补发 done（复用 `reemitDone`）。
+**自愈扫**（`sweepDigestedStuck`——`thincoder-desktop/src/main/suspension-drive.mjs`）：手动 freeze 谓词（`thincoder-core/agent-tools/subagent-panel.mjs` 的门控）的 beat 级自动化——渲染面上报块 `awaitingDigest ∧ frozen ∧ 非 consult` ∧ 核侧不在驻留（在途 ⇒ 零动作）⇒ 逐条补发 done（复用 `reemitDone`）。
 
-**三拍** = 起跑（`:184`）∥ `onCounts`（`:255`）∥ `reclaim`（`:256`）；谓词逐 beat 现算 = 零新存储；重复发射由渲染面归档闸幂等消化。
+**三拍** = 起跑 ∥ `onCounts` ∥ `reclaim` 三处发帧点；谓词逐 beat 现算 = 零新存储；重复发射由渲染面归档闸幂等消化。
 
 **v1 限度**：扫拍依赖渲染面上报快照（`panel:state` 签名去重上报）——全静默时段无新上报 ⇒ 极端下仍等到下一活动拍。∥ **consult 族不在扫射程**（谓词显式排除——其滞留走手动回收径，门控 `consultChildUndigested`；D20 句「不得须用户介入」为方向性承诺，后续批按需扩扫）。
 
@@ -63,15 +63,15 @@
 
 | # | 发射点 | 坐标 | 痕 |
 |---|---|---|---|
-| ① | 起跑补发（`ev:digest start` 发帧点） | `thincoder-desktop/src/main/suspension-drive.mjs:183` | `[suspension-drive] reemit-done` |
-| ② | `hooks.reclaim`（兜底幂等） | `thincoder-desktop/src/main/suspension-drive.mjs:256` | 同左（四径共用点 = `:104`） |
-| ③ | `hooks.freezeAll`（退出 ∥ 中止兜底） | `thincoder-desktop/src/main/suspension-drive.mjs:257-261` | 同左 |
-| ④ | 手动 = 核 `panel freeze` 工具 | `thincoder-core/agent-tools/subagent-panel.mjs:117-155` 门控 ∥ `:194` 发射 ⇒ 桥 relay（§2.3） | 工具回执 + relay 面（未加宿主痕） |
-| ⑤ | 自愈扫补发（beat 级——谓词同 §2.4 自愈扫条） | `thincoder-desktop/src/main/suspension-drive.mjs:77-95`（发射 = `:93`） | `[suspension-drive] sweep-digested-stuck` |
+| ① | 起跑补发（`ev:digest start` 发帧点） | `thincoder-desktop/src/main/suspension-drive.mjs` 的起跑拍 | `[suspension-drive] reemit-done` |
+| ② | `hooks.reclaim`（兜底幂等） | `thincoder-desktop/src/main/suspension-drive.mjs` 的 reclaim 拍 | 同左（四径共用点） |
+| ③ | `hooks.freezeAll`（退出 ∥ 中止兜底） | `thincoder-desktop/src/main/suspension-drive.mjs` 的 `freezeAll` 拍 | 同左 |
+| ④ | 手动 = 核 `panel freeze` 工具 | `thincoder-core/agent-tools/subagent-panel.mjs` 门控 ∥ 发射面 ⇒ 桥 relay（§2.3） | 工具回执 + relay 面（未加宿主痕） |
+| ⑤ | 自愈扫补发（beat 级——谓词同 §2.4 自愈扫条） | `thincoder-desktop/src/main/suspension-drive.mjs` 的 `sweepDigestedStuck`（发射面） | `[suspension-drive] sweep-digested-stuck` |
 
 **双痕落点与读法**：宿主侧 `[suspension-drive] reemit-done` ∥ `[suspension-drive] sweep-digested-stuck`（`console.error`——主进程 stderr；四径共用点 + 逐拍命中表）。
 
-渲染侧 `[subagent-trace] <name> <key>`（devtools 控制台——`thincoder-desktop/renderer/subagent-reduce.mjs:189-194`；丢弃径零静默——`thincoder-render-core/subblocks/state.mjs:36-39` 桌面诊断面「到期」兑现；丢弃径名 = `drop-frozen` ∥ `drop-tombstone` ∥ `late-terminal-stub` 等）。
+渲染侧 `[subagent-trace] <name> <key>`（devtools 控制台——`thincoder-desktop/renderer/subagent-reduce.mjs` 的 trace 钩；丢弃径零静默——`thincoder-render-core/subblocks/state.mjs` 桌面诊断面「到期」兑现；丢弃径名 = `drop-frozen` ∥ `drop-tombstone` ∥ `late-terminal-stub` 等）。
 
 **生效面 = 新进程**。机制句单源 = 本节；家族决策行 = `docs/desktop/design/ACTIVITY.md` §1 KD-34。
 
@@ -94,7 +94,7 @@
         └─ 宿主 reemitDone ──▶ ev:subagent done ×N ──▶ 渲染面归档 + record:append
 ```
 
-**新通道**：`panel:state`（渲染 → 主 · 白名单末位 **48**）——载荷 `{ key, blocks }`；回执 `{ ok:true }` ∥ `{ ok:false, reason }`（形沿 `theme:state`——`thincoder-desktop/src/main/ipc.mjs:271` 邻位；主侧缓存与处理体同 `panel-live.mjs`）。登记面（§2 该行 ∥ 白名单面）住 `docs/desktop/design/IPC.md`。
+**新通道**：`panel:state`（渲染 → 主 · 白名单末位 **48**）——载荷 `{ key, blocks }`；回执 `{ ok:true }` ∥ `{ ok:false, reason }`（形沿 `theme:state`——`thincoder-desktop/src/main/ipc.mjs` 邻位；主侧缓存与处理体同 `panel-live.mjs`）。登记面（§2 该行 ∥ 白名单面）住 `docs/desktop/design/IPC.md`。
 
 
 ## 5. 四交付面落点表（对 §2 验收）

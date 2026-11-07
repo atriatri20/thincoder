@@ -3,7 +3,7 @@
 > 板块归属 = **核心统一**（phase 2——「一个核 + 两个薄壳」）；本档 = 该板块的**子系统需求档**（三层归属之需求层）。
 > **工作流档**（需求层）= `docs/core/requirements/CORE-UNIFICATION.md` §1–§4 + §5 登记表（统一目标 / 边界原则 / 量级读数基线 / 范围边界）——本档**不复制**（D2 单一权威源）。
 > **设计层** = `docs/core/design/LOGGING.md`（本子系统设计与测试）；工作流设计档 = `docs/core/design/CORE-UNIFICATION.md`。
-> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图 `thincoder-cli/docs/README.md` §3.2；三层归属见同图 §3.1。
+> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见仓文档地图 `docs/README.md` §4（板块镜像形态）；三层归属见同档 §1。
 
 ## 1. 总体定位
 
@@ -17,7 +17,7 @@
 ### 2.1 本子系统条目
 
 - **【派生 · 非用户原话】** 诊断日志归一为**核内单一实现**（事件骨架 + `redactSecret` 同构）；注释指针按**仓根约定**订正、镜像注记删除（**非语义**）。
-  源 = 设计档 `LOGGING.md` §2.1 #42。
+  源 = 设计档 `docs/core/design/LOGGING.md` §2.1 #42。
 
 ### 2.2 适用工作流条目（回指 · 不复制）
 
@@ -60,4 +60,4 @@
 ### 4.4 VSC 端条目
 
 语义同源——VSC 档 F1–F7 / N1–N5 与 §4.1–§4.3 逐条同义（不重并；共享 `~/.thincoder/logs/` 同格式同事件面已载 §4.2 F-L6）；VSC 端坐标 ＝ `@thincoder/core/log.mjs`——
-`_dead` 静默降级（`:46` / `:63` / `:137`）· **日志落点缝（进程内 · 设计档 `docs/core/design/CONFIG.md` §6.2 ③ 类）作测试隔离** · `NODE_TEST_CONTEXT` 门（`:64`）· 每进程每日首写机会式清理（extension host 长驻兜底）。
+`_dead` 静默降级 · **日志落点缝（进程内 · 设计档 `docs/core/design/CONFIG.md` §6.2 ③ 类）作测试隔离** · `NODE_TEST_CONTEXT` 门 · 每进程每日首写机会式清理（extension host 长驻兜底）。

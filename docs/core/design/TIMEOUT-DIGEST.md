@@ -5,26 +5,26 @@
 
 ## 1. 方案与理由
 
-**closest-precedent（最近的先例）**：头部超时已是可配项——`effectiveFetchTimeoutMs`（`thincoder-core/provider/core.mjs:73-75`）读 `provider.fetchTimeoutMs`，由 `thincoder-core/config.mjs:350-352` 从 `agent.fetchTimeoutMs` 提升而来。
+**closest-precedent（最近的先例）**：头部超时已是可配项——`effectiveFetchTimeoutMs`（`thincoder-core/provider/core.mjs` 的导出）读 `provider.fetchTimeoutMs`，由 `thincoder-core/config.mjs` 的提升段从 `agent.fetchTimeoutMs` 提升而来。
 
 - **对齐**：body 空闲超时照同一形——配置键在 `DEFAULTS.agent`，装载期提升为 `provider.*`，再经同名式 helper 解析。同一条链上的两个超时从此同构。
-- **偏离**：默认值的家 = `config-defaults.mjs` 的 DEFAULTS 表，不是只住常量。理由：`settings list` 展平的是活配置对象（`thincoder-core/agent-tools/settings.mjs:269-272`），未登记进 DEFAULTS 的键在 `list` 里看不见，判据「`settings list` 能看到该键」就无法满足；`fetchTimeoutMs` 正因此至今不可见（本轮不改它，见 §7）。
-- **反向先例（对照着偏离）**：`docs/core/design/AGENT-PARAMS.md:21` 记 `advisor.timeoutMs` 的默认值只住 `REVIEW_TIMEOUT_MS` 常量、不写进 `DEFAULTS.agent.advisor`——本键因「`settings list` 可见」判据必须登记 DEFAULTS，故不沿用该处置；`/config` 不新增编辑项一节仍与该档同档（§8）。
+- **偏离**：默认值的家 = `config-defaults.mjs` 的 DEFAULTS 表，不是只住常量。理由：`settings list` 展平的是活配置对象（`thincoder-core/agent-tools/settings.mjs` 的展平段），未登记进 DEFAULTS 的键在 `list` 里看不见，判据「`settings list` 能看到该键」就无法满足；`fetchTimeoutMs` 正因此至今不可见（本轮不改它，见 §7）。
+- **反向先例（对照着偏离）**：`docs/core/design/AGENT-PARAMS.md` 记 `advisor.timeoutMs` 的默认值只住 `REVIEW_TIMEOUT_MS` 常量、不写进 `DEFAULTS.agent.advisor`——本键因「`settings list` 可见」判据必须登记 DEFAULTS，故不沿用该处置；`/config` 不新增编辑项一节仍与该档同档（§8）。
 
 **survey-evidence（查了哪些公开源 / 有无相关内容）**：`index.publicRepos = []`（`PROJECT-MANIFEST.json`），本仓无公开源仓可查。
 
-查了本仓四处状态档：`docs/core/design/PROVIDER.md` §6.3 记「body 阶段用读侧空闲超时」；`docs/core/design/AGENT-LOOP.md:321` 记「pending tasks 提醒最多推回一次，task 更新即重置」；`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` 记 digest 注入单点 = `injectAsyncResult`；`docs/core/design/AGENT-PARAMS.md:21` 记 `advisor.timeoutMs` 默认只住常量的反向先例。
+查了本仓四处状态档：`docs/core/design/PROVIDER.md` §6.3 记「body 阶段用读侧空闲超时」；`docs/core/design/AGENT-LOOP.md` 记「pending tasks 提醒最多推回一次，task 更新即重置」；`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` 记 digest 注入单点 = `injectAsyncResult`；`docs/core/design/AGENT-PARAMS.md` 记 `advisor.timeoutMs` 默认只住常量的反向先例。
 
 四处都只记现状，与本批目标不冲突；其中两处事实被本批改写，已就地更新并指回本档。
 
-**closest-precedent（首 chunk 分窗的最近先例）**：响应头阶段超时已按「等上游」语义取 `effectiveFetchTimeoutMs`（`thincoder-core/provider/core.mjs:73-75`），`thincoder-core/provider/core.mjs:428` 把它作为 `_headerTimeoutMs` 传入；`thincoder-core/proxy-transport.mjs:234` 已有「头阶段 ∥ body 阶段」两段计时。
+**closest-precedent（首 chunk 分窗的最近先例）**：响应头阶段超时已按「等上游」语义取 `effectiveFetchTimeoutMs`（`thincoder-core/provider/core.mjs` 的导出），同一档把它作为 `_headerTimeoutMs` 传入；`thincoder-core/proxy-transport.mjs` 已有「头阶段 ∥ body 阶段」两段计时。
 
 - **对齐**：首 chunk 窗复用同一个 `effectiveFetchTimeoutMs` 值——两处都在等上游开口，一个值一个语义，零新配置键。
 - **偏离**：不把 body 的 `idleMs` 调大（那正是要修的病：它把两种失败模式绑在一个旋钮上）；也不立 `agent.firstChunkTimeoutMs` 新键——现无「首 chunk 窗要与头阶段窗不同」的现场，多一个键多一个用户要学的旋钮。
 
 **survey-evidence（查了哪些公开源 / 有无相关内容）**：`index.publicRepos = []`（`PROJECT-MANIFEST.json`），本仓无公开源仓可查。
 
-查了本仓状态档三处：`docs/core/design/PROVIDER.md:112`（body 阶段用读侧空闲 `agent.bodyIdleTimeoutMs`）、`docs/core/design/PROXY.md:36`（传输层 `_bodyIdleMs` 看门狗）、本档 §2.1（消费点表）。
+查了本仓状态档三处：`docs/core/design/PROVIDER.md`（body 阶段用读侧空闲 `agent.bodyIdleTimeoutMs`）、`docs/core/design/PROXY.md`（传输层 `_bodyIdleMs` 看门狗）、本档 §2.1（消费点表）。
 
 三处都只记现状，与目标不冲突；其中 PROVIDER 与本档 §2.1 就地更新为分窗形，PROXY 面本批不改（传输面不在本批，见 §4 D8）。
 
@@ -32,13 +32,13 @@
 
 | 分支 | 依据 |
 |---|---|
-| 超时值 `≤0` / 非有限数 ⇒ 回退默认 | 同 `effectiveFetchTimeoutMs` 的既有判式（`provider/core.mjs:73`）；手写 config.json 的非法值不得静默禁用保护（`docs/core/design/AGENT-PARAMS.md` §2 同款裁定） |
+| 超时值 `≤0` / 非有限数 ⇒ 回退默认 | 同 `effectiveFetchTimeoutMs` 的既有判式（`provider/core.mjs`）；手写 config.json 的非法值不得静默禁用保护（`docs/core/design/AGENT-PARAMS.md` §2 同款裁定） |
 | 落盘改用 `offloadToolResult` 的 `force` 支，而不是新写一个落盘函数 | `offloadToolResult` 已是「预览 + 路径」文案单源（`thincoder-core/agent/offload.mjs`）；同文案两处实现 = 漂移 |
 | `force` 支按正文长度二分渲染：≤64K 原样一份 + 路径；>64K 双端预览 + 路径 | `buildDualEndPreview` 对 `text.length ≤ 16K` 的正文头尾各返整串（`thincoder-core/agent/offload.mjs`）——原样复用会注入「正文两份 + `middle omitted: 0 chars`」，A4 的 200 字符用例正是此形（评审 #1） |
-| 判超记账保留、布尔改作渲染档位（超轮预算 ⇒ 只给清单行 + 路径），落盘不再看它 | `digestBudgetOver` 的 `used` 是四族共享的轮累计（`thincoder-core/agent-tools/digest-budget.mjs:51-56`）；删调用会让 consult 族的累计口径跟着变；渲染保留它，单轮 inline 正文仍受 64K 预算约束（评审 #7） |
-| 完成门加 `!poolLive(agent)` | 挂起尾巴已用同判据（`thincoder-core/agent/suspension.mjs:296`）；二次立口径 = 池空判定两处漂移 |
-| 首 chunk 窗 = `effectiveFetchTimeoutMs`（默认 600s），不新立配置键 | 用户现场（2026-10-28 00:25 逐字）：「我们的本地 spark 集群在长上下文时首 token 一定会超过这个时间」（指 `SSE idle timeout: no data for 120s`）；头阶段超时早已用同一值等上游（`thincoder-core/provider/core.mjs:428`），语义同为「等上游开口」 |
-| 首 chunk 相位的文案与相位串单列（`sse-first-chunk` ∥ `google-sse-first-chunk`），既有 `sse-idle` / `google-sse-idle` 零改 | 用户报障时拿到的 `SSE idle timeout: no data for 120s` 分不清「流断了」与「还没开始」——这正是本次报障的表述缺口；相位串进 `abortInfo.detail`（词汇表归属面 = `docs/core/design/PROVIDER.md:117` 指向的 AGENT-LOOP 板），既有串不动 ⇒ 下游分类零改 |
+| 判超记账保留、布尔改作渲染档位（超轮预算 ⇒ 只给清单行 + 路径），落盘不再看它 | `digestBudgetOver` 的 `used` 是四族共享的轮累计（`thincoder-core/agent-tools/digest-budget.mjs` 的轮累计段）；删调用会让 consult 族的累计口径跟着变；渲染保留它，单轮 inline 正文仍受 64K 预算约束（评审 #7） |
+| 完成门加 `!poolLive(agent)` | 挂起尾巴已用同判据（`thincoder-core/agent/suspension.mjs` 的挂起尾巴扫）；二次立口径 = 池空判定两处漂移 |
+| 首 chunk 窗 = `effectiveFetchTimeoutMs`（默认 600s），不新立配置键 | 用户现场（2026-10-28 00:25 逐字）：「我们的本地 spark 集群在长上下文时首 token 一定会超过这个时间」（指 `SSE idle timeout: no data for 120s`）；头阶段超时早已用同一值等上游（`thincoder-core/provider/core.mjs` 的 `_headerTimeoutMs` 传参点），语义同为「等上游开口」 |
+| 首 chunk 相位的文案与相位串单列（`sse-first-chunk` ∥ `google-sse-first-chunk`），既有 `sse-idle` / `google-sse-idle` 零改 | 用户报障时拿到的 `SSE idle timeout: no data for 120s` 分不清「流断了」与「还没开始」——这正是本次报障的表述缺口；相位串进 `abortInfo.detail`（词汇表归属面 = `docs/core/design/PROVIDER.md` 指向的 AGENT-LOOP 板），既有串不动 ⇒ 下游分类零改 |
 
 ## 2. 接口契约
 
@@ -50,11 +50,11 @@
 | 单位 / 类型 | 毫秒，正整数（`Number.isFinite(v) && v > 0`） |
 | 默认值 | `120000`（单源常量 `DEFAULT_BODY_IDLE_MS`，`thincoder-core/config-defaults.mjs`） |
 | 非法值 | `≤0` / 非数字 / 缺省 ⇒ 回退 `DEFAULT_BODY_IDLE_MS`（不抛错、不静默禁用） |
-| 读取链 | `DEFAULTS.agent.bodyIdleTimeoutMs` → `loadConfig` 提升 `merged.provider.bodyIdleTimeoutMs`（同 `fetchTimeoutMs` 形：后者 `config.mjs:361-363`，本键 `config.mjs:366-367`）→ `effectiveBodyIdleMs(provider)` 消费 |
+| 读取链 | `DEFAULTS.agent.bodyIdleTimeoutMs` → `loadConfig` 提升 `merged.provider.bodyIdleTimeoutMs`（同 `fetchTimeoutMs` 形：两键的提升段在 `config.mjs` 相邻）→ `effectiveBodyIdleMs(provider)` 消费 |
 | 写面 | `settings set agent.bodyIdleTimeoutMs <ms>`（数值叶子自动派生类型，无需形状表行）；手写 `config.json` 同效；`null` = 删键回退默认 |
 | 生效时机 | 下一回合（回合边界键） |
 
-`effectiveBodyIdleMs(provider)` 住 `thincoder-core/provider/core.mjs:80-83`，与 `effectiveFetchTimeoutMs`（`:73-75`）相邻：
+`effectiveBodyIdleMs(provider)` 住 `thincoder-core/provider/core.mjs`，与 `effectiveFetchTimeoutMs` 相邻：
 
 ```js
 export function effectiveBodyIdleMs(provider) {
@@ -67,14 +67,14 @@ export function effectiveBodyIdleMs(provider) {
 
 | 消费点 | 当前形 |
 |---|---|
-| `provider/core.mjs:265` / `:285` `readSSE` 调用 | `idleMs: effectiveBodyIdleMs(provider)`（主路径 / 重试路径各一处） |
-| `provider/core.mjs:429` 代理传输分支 | `_bodyIdleMs: effectiveBodyIdleMs(provider)` |
-| `provider/sse.mjs:93` 读侧定时器入参 | `idleMs = DEFAULT_BODY_IDLE_MS`（缺省即单源常量；超时文案用实际值） |
-| `provider/google.mjs:139` 代理传输分支 | `_bodyIdleMs: effectiveBodyIdleMs(provider)` |
-| `provider/google.mjs:144` / `:178` Gemini 流解析器 | `:144` 传 `idleMs: effectiveBodyIdleMs(provider)`；`:178` 形参缺省 `idleMs = DEFAULT_BODY_IDLE_MS` |
-| `provider/anthropic.mjs:229` 代理传输分支 | `_bodyIdleMs: effectiveBodyIdleMs(provider)` |
-| `provider/responses.mjs:252` / `:271` / `:289` 代理传输分支 | `_bodyIdleMs: effectiveBodyIdleMs(provider)`（三条分支同值） |
-| `proxy.mjs:52` · `proxy-transport.mjs:234` 缺省值 | `opts?._bodyIdleMs ?? DEFAULT_BODY_IDLE_MS`（未传 `_bodyIdleMs` 时的传输层缺省，与 provider 缺省同值同源）；`proxy-transport.mjs:43` 形参缺省同源 |
+| `provider/core.mjs` 的 `readSSE` 两处调用 | `idleMs: effectiveBodyIdleMs(provider)`（主路径 / 重试路径各一处） |
+| `provider/core.mjs` 的代理传输分支 | `_bodyIdleMs: effectiveBodyIdleMs(provider)` |
+| `provider/sse.mjs` 的读侧定时器入参 | `idleMs = DEFAULT_BODY_IDLE_MS`（缺省即单源常量；超时文案用实际值） |
+| `provider/google.mjs` 的代理传输分支 | `_bodyIdleMs: effectiveBodyIdleMs(provider)` |
+| `provider/google.mjs` 的 Gemini 流解析器两处 | 调用处传 `idleMs: effectiveBodyIdleMs(provider)`；形参缺省 `idleMs = DEFAULT_BODY_IDLE_MS` |
+| `provider/anthropic.mjs` 的代理传输分支 | `_bodyIdleMs: effectiveBodyIdleMs(provider)` |
+| `provider/responses.mjs` 的三条代理传输分支 | `_bodyIdleMs: effectiveBodyIdleMs(provider)`（三条分支同值） |
+| `proxy.mjs` · `proxy-transport.mjs` 的缺省值 | `opts?._bodyIdleMs ?? DEFAULT_BODY_IDLE_MS`（未传 `_bodyIdleMs` 时的传输层缺省，与 provider 缺省同值同源）；同档形参缺省同源 |
 
 数据流：配置盘 → `loadConfig` 合并 + 提升 → `agent.config.provider.bodyIdleTimeoutMs` → `chat(provider)` 各 transport → 两条读侧路径（直连 fetch 的读者定时器 ∥ 代理的 `_bodyIdleMs`）读同一个值。
 
@@ -86,10 +86,10 @@ export function effectiveBodyIdleMs(provider) {
 |---|---|---|
 | 正文 ≤ `TOOL_RESULT_OFFLOAD_LIMIT`（64K） | 恒写 | **正文原样一份** + `full content saved to: <path>` + 读取提示（无 `middle omitted`、无 `too large` 字样） |
 | 正文 > 64K | 恒写 | 双端预览（头 16K + `middle omitted: N chars`（N>0）+ 尾）+ `output too large (N chars total), full content saved to: <path>` |
-| 轮累计超预算（`over` 为真，见下） | 恒写（经 `persistOverflowReport`，现形即如此） | 只给既有清单行——`thincoder-core/agent-tools/digest-budget.mjs:73` 的单源整串 `Report saved to disk (digest inject budget exceeded — full text not inlined): <path>` + `Read it with the read tool (offset/limit).`（正文不进请求体，全量在盘；同一事件只此一处文案） |
+| 轮累计超预算（`over` 为真，见下） | 恒写（经 `persistOverflowReport`，现形即如此） | 只给既有清单行——`thincoder-core/agent-tools/digest-budget.mjs` 的单源整串 `Report saved to disk (digest inject budget exceeded — full text not inlined): <path>` + `Read it with the read tool (offset/limit).`（正文不进请求体，全量在盘；同一事件只此一处文案） |
 | 写盘失败 | — | 回落同一正文形态（≤64K 原样 / >64K 双端预览）+ `offload to disk failed`；报告不吞、不抛 |
 
-- 注入点 `thincoder-core/agent-tools/subagent-async.mjs:388` 改为两条路都落盘（不再有「不落盘」的路径）：
+- 注入点 `thincoder-core/agent-tools/subagent-async.mjs` 改为两条路都落盘（不再有「不落盘」的路径）：
 
 ```js
 const over = digestBudgetOver(agent, raw.length)   // 记账保留（consult 族共享轮累计）；超预算 ⇒ 清单行档
@@ -97,20 +97,20 @@ const preview = (over && await persistOverflowReport(raw, { tag: `async-subagent
   || await offloadToolResult(raw, `async-subagent-${entry.id}`, _digestOffloadDirForTest(), { force: true })
 ```
 
-- **轮预算仍约束本族**：`over` 为真（`thincoder-core/agent-tools/digest-budget.mjs:53` 的 `round.used > 0 && round.used + size > 64K`）⇒ 只给清单行 + 路径，正文不进请求体；首条豁免照旧（`used === 0` 不判超）。单轮 inline 正文总量 ≈ ≤64K——越预算那条及其后恒走清单行，首条 >64K 也只渲染 ≤64K 预览，与现状同量级（评审 #7 / #14）。
+- **轮预算仍约束本族**：`over` 为真（`thincoder-core/agent-tools/digest-budget.mjs` 的 `round.used > 0 && round.used + size > 64K` 判式）⇒ 只给清单行 + 路径，正文不进请求体；首条豁免照旧（`used === 0` 不判超）。单轮 inline 正文总量 ≈ ≤64K——越预算那条及其后恒走清单行，首条 >64K 也只渲染 ≤64K 预览，与现状同量级（评审 #7 / #14）。
 - **测试缝**：`dir` 由注入点从既有缝取值——`digest-budget.mjs` 增 `_digestOffloadDirForTest()`（无参返回 `_digestOffloadDirOverride ?? undefined`），生产恒 `undefined` ⇒ 默认 `configDir/tool-results`。一条缝覆盖 `persistOverflowReport` 与 `offloadToolResult` 两族，不立第二条。
-- `persistOverflowReport`（`digest-budget.mjs:66`）既是本注入点超预算档的落盘 + 清单行单源，也保留给其它族，语义不变。
+- `persistOverflowReport`（`digest-budget.mjs`）既是本注入点超预算档的落盘 + 清单行单源，也保留给其它族，语义不变。
 - 覆盖族：`subagent` / `advisor` / `escalate`（同经 `injectAsyncResult`）。`bg` / `browser` 族自有注入器，不入本契约（见 §7）。
 
-### 2.3 完成门（`thincoder-core/agent/completion.mjs:62`）
+### 2.3 完成门（`thincoder-core/agent/completion.mjs`）
 
 ```js
 if (depth === 0 && !agent.config?.agent?.engineering && !poolLive(agent)
     && agent.tasks.some((t) => t.status === "pending") && (agent._taskPushbacks ?? 0) < 1) {
 ```
 
-- `poolLive` 取自 `thincoder-core/agent/suspension.mjs:64`（已导出）——与挂起尾巴 `:296` 同一判据，不立第二口径。
-- `task.mjs:83` 的 `_taskPushbacks = 0` 语义**不动**：池空（`!poolLive`）时列表一更新仍获一次新提醒；池里有在飞条目时门不触发，归零不再变成「拖回合」。
+- `poolLive` 取自 `thincoder-core/agent/suspension.mjs`（已导出）——与挂起尾巴同一判据，不立第二口径。
+- `task.mjs` 的 `_taskPushbacks = 0` 语义**不动**：池空（`!poolLive`）时列表一更新仍获一次新提醒；池里有在飞条目时门不触发，归零不再变成「拖回合」。
 - 若 `completion.mjs → suspension.mjs` 在实施时成环（`node --check` / 启动自检报 TDZ 或循环初始化），把 `poolLive` 判据体迁到叶子 `thincoder-core/agent/pool-live.mjs`，`suspension.mjs` 保留同名 re-export——消费面零改。这是模块图的机械约束，不是新语义。
 
 ### 2.4 首 chunk 窗与流中途空闲窗分计
@@ -126,27 +126,27 @@ if (depth === 0 && !agent.config?.agent?.engineering && !poolLive(agent)
 
 | 面 | 接口形 |
 |---|---|
-| 读侧 OpenAI 形 | `readSSE(response, { … idleMs = DEFAULT_BODY_IDLE_MS, firstChunkMs })`（`thincoder-core/provider/sse.mjs:93`）：未传 `firstChunkMs` ⇒ 首挂窗取 `idleMs`（体内 `firstChunkMs ?? idleMs` 兜住）；循环体收到 chunk 即置 `gotFirstChunk`（`:228-229`），`armIdle()`（`:207-224`）按态取窗与文案 |
-| 读侧 Gemini 形 | `parseGeminiStream(response, { … idleMs = DEFAULT_BODY_IDLE_MS, firstChunkMs })`（`thincoder-core/provider/google.mjs:178`）：同形（未传 `firstChunkMs` ⇒ 首挂窗取 `idleMs`，体内 `firstChunkMs ?? idleMs` 兜住；`:230-245` 两态臂、`:249-250` 收到 chunk 即翻转） |
+| 读侧 OpenAI 形 | `readSSE(response, { … idleMs = DEFAULT_BODY_IDLE_MS, firstChunkMs })`（`thincoder-core/provider/sse.mjs`）：未传 `firstChunkMs` ⇒ 首挂窗取 `idleMs`（体内 `firstChunkMs ?? idleMs` 兜住）；循环体收到 chunk 即置 `gotFirstChunk`，`armIdle()` 按态取窗与文案（同档两处） |
+| 读侧 Gemini 形 | `parseGeminiStream(response, { … idleMs = DEFAULT_BODY_IDLE_MS, firstChunkMs })`（`thincoder-core/provider/google.mjs`）：同形（未传 `firstChunkMs` ⇒ 首挂窗取 `idleMs`，体内 `firstChunkMs ?? idleMs` 兜住；同档两态臂 ∥ 收到 chunk 即翻转） |
 
-- **入参缺省 = 老行为**：`firstChunkMs` 缺省取 `idleMs`，未传者零变化（`thincoder-core/provider/list-models.mjs:33` 只传 `_bodyIdleMs: LIST_TIMEOUT_MS`，不吃读侧定时器）。
-- **读取链**：`agent.fetchTimeoutMs` → `loadConfig` 提升 `provider.fetchTimeoutMs`（`thincoder-core/config.mjs:370-372`）→ `effectiveFetchTimeoutMs(provider)`（`thincoder-core/provider/core.mjs:73-75`）→ 两条读侧路径传 `firstChunkMs`。零新配置键。
+- **入参缺省 = 老行为**：`firstChunkMs` 缺省取 `idleMs`，未传者零变化（`thincoder-core/provider/list-models.mjs` 只传 `_bodyIdleMs: LIST_TIMEOUT_MS`，不吃读侧定时器）。
+- **读取链**：`agent.fetchTimeoutMs` → `loadConfig` 提升 `provider.fetchTimeoutMs`（`thincoder-core/config.mjs` 的提升段）→ `effectiveFetchTimeoutMs(provider)`（`thincoder-core/provider/core.mjs` 的导出）→ 两条读侧路径传 `firstChunkMs`。零新配置键。
 
 **本机制新增的传参面（调用点与 §2.1 表同一批）**：
 
 | 消费点 | 形 |
 |---|---|
-| `thincoder-core/provider/core.mjs:265` / `:285` `readSSE` | `firstChunkMs: effectiveFetchTimeoutMs(provider)`（主路径 / 重试路径） |
-| `thincoder-core/provider/google.mjs:144` `parseGeminiStream` | `firstChunkMs: effectiveFetchTimeoutMs(provider)` |
+| `thincoder-core/provider/core.mjs` 的 `readSSE` 两处 | `firstChunkMs: effectiveFetchTimeoutMs(provider)`（主路径 / 重试路径） |
+| `thincoder-core/provider/google.mjs` 的 `parseGeminiStream` | `firstChunkMs: effectiveFetchTimeoutMs(provider)` |
 
-**读侧面无 `≤0` 门，也不需要**：`armIdle()` 现形恒挂定时器（`thincoder-core/provider/sse.mjs:207-224` 没有 `idleMs > 0` 判式），两条读侧路径传入的值都来自 `effectiveFetchTimeoutMs` / `effectiveBodyIdleMs`——两者恒为正（非法值回退默认），没有「窗被静默关掉」的路径。代理传输面的 `bodyIdleMs > 0` 门（`thincoder-core/proxy-transport.mjs:104`）不在本批（§4 D8）。
+**读侧面无 `≤0` 门，也不需要**：`armIdle()` 现形恒挂定时器（`thincoder-core/provider/sse.mjs` 的 `armIdle` 没有 `idleMs > 0` 判式），两条读侧路径传入的值都来自 `effectiveFetchTimeoutMs` / `effectiveBodyIdleMs`——两者恒为正（非法值回退默认），没有「窗被静默关掉」的路径。代理传输面的 `bodyIdleMs > 0` 门（`thincoder-core/proxy-transport.mjs` 的同名门）不在本批（§4 D8）。
 
 **超时文案与相位串按相位分**（三面并列：文案 ∥ 相位串）：
 
 | 面 | 首 chunk 相位（新） | 流中途相位（不变） |
 |---|---|---|
-| 读侧 OpenAI 形（`thincoder-core/provider/sse.mjs:218-220`） | `SSE first-chunk timeout: no data for Ns` ∥ `sse-first-chunk` | `SSE idle timeout: no data for Ns` ∥ `sse-idle` |
-| 读侧 Gemini 形（`thincoder-core/provider/google.mjs:239-241`） | `SSE first-chunk timeout: no data for Ns` ∥ `google-sse-first-chunk` | `SSE idle timeout: no data for Ns` ∥ `google-sse-idle` |
+| 读侧 OpenAI 形（`thincoder-core/provider/sse.mjs`） | `SSE first-chunk timeout: no data for Ns` ∥ `sse-first-chunk` | `SSE idle timeout: no data for Ns` ∥ `sse-idle` |
+| 读侧 Gemini 形（`thincoder-core/provider/google.mjs`） | `SSE first-chunk timeout: no data for Ns` ∥ `google-sse-first-chunk` | `SSE idle timeout: no data for Ns` ∥ `google-sse-idle` |
 
 `N` = 该相位实际生效的窗值（`firstChunkMs / 1000` ∥ `idleMs / 1000`）——与现形同口径（超时文案用实际值）。
 
@@ -154,11 +154,11 @@ if (depth === 0 && !agent.config?.agent?.engineering && !poolLive(agent)
 
 | 新名 | 三问答复 |
 |---|---|
-| 相位串 `sse-first-chunk` ∥ `google-sse-first-chunk` | `existing but unusable:` `sse-idle` / `google-sse-idle`（`thincoder-core/provider/sse.mjs:218-220` ∥ `google.mjs:239-241`）· failed on: 分不出「流断了」与「还没开始」——正是本次报障的表述缺口 |
+| 相位串 `sse-first-chunk` ∥ `google-sse-first-chunk` | `existing but unusable:` `sse-idle` / `google-sse-idle`（`thincoder-core/provider/sse.mjs` ∥ `google.mjs` 两处超时文案）· failed on: 分不出「流断了」与「还没开始」——正是本次报障的表述缺口 |
 | 文案 `SSE first-chunk timeout: no data for Ns` | `existing but unusable:` `SSE idle timeout: no data for Ns`（同上两处）· failed on: 同上——用户拿到的文案看不出卡在哪一相位 |
 | 入参 `firstChunkMs`（`readSSE` ∥ `parseGeminiStream`） | `none found:` 查了 `thincoder-core/**/*.mjs`（grep `firstChunkMs|first-chunk` 零命中）——无同名 ∥ 同义入参可复用 |
 
-单词表归属：`abortInfo.detail` 的词汇表归 AGENT-LOOP 板（`docs/core/design/PROVIDER.md:117`）；该板无闭集枚举清单（grep `AGENT-LOOP.md` 的 `abortInfo` 只命中 D-AL13「一模块一词汇表」与载荷双改纪律行），故新增 `detail` 字面值不需另立登记行；既有三串零改。
+单词表归属：`abortInfo.detail` 的词汇表归 AGENT-LOOP 板（`docs/core/design/PROVIDER.md`）；该板无闭集枚举清单（grep `AGENT-LOOP.md` 的 `abortInfo` 只命中 D-AL13「一模块一词汇表」与载荷双改纪律行），故新增 `detail` 字面值不需另立登记行；既有三串零改。
 
 **代价认账**：首 chunk 窗默认取 600s ⇒「响应头已回、此后永不出字节」的发现时间由 120s 变为 600s。与「调大 `agent.bodyIdleTimeoutMs`」那条被拒选项的代价同源（§4 D7），本设计认这笔账：换来的是长上下文 prefill 不再被腰斩。缩短的旋钮只有一个且已在：`agent.fetchTimeoutMs`。
 
@@ -166,14 +166,14 @@ offload / 预览族住 `thincoder-core/agent/offload.mjs`：导出面三件 = `o
 
 `thincoder-core/agent/helpers.mjs` 以具名 re-export 转口同名三件——所有既有 `import … from "…/helpers.mjs"` 逐字零改。
 
-批内用例落 `docs/batches/` 而非 `thincoder-core/test/`：后者是常驻机检档目录（`advisor-project-context` / `doc-check-*` / `manifest-five-keys` / `subagent-design-token-gate` 等），混入一次性档会让「零留存」不可读（`docs/core/design/TESTING.md:92-94` 的口径 = `docs/batches/*.test.mjs`，随批删）。
+批内用例落 `docs/batches/` 而非 `thincoder-core/test/`：后者是常驻机检档目录（`advisor-project-context` / `doc-check-*` / `manifest-five-keys` / `subagent-design-token-gate` 等），混入一次性档会让「零留存」不可读（`docs/core/design/TESTING.md` 的口径 = `docs/batches/*.test.mjs`，随批删）。
 
 ## 4. 关键决策（含被拒选项）
 
 | # | 决策 | 被拒选项与理由 |
 |---|---|---|
 | D1 | 配置键名 `agent.bodyIdleTimeoutMs`，默认 `120000` | `agent.fetchTimeoutMs` 扩容为总超时——与既有「头 / 体两段语义」冲突；`provider.bodyIdleMs` 放 provider 级——11 个 provider 逐一写值，用户改不动全局 |
-| D2 | 默认值住 DEFAULTS 表 + 单源常量 `DEFAULT_BODY_IDLE_MS` | 只住 `provider/core.mjs` 常量（照抄 `fetchTimeoutMs`）——`settings list` 看不见该键，判据不成立；对照 `AGENT-PARAMS.md:21` 的 advisor 先例（默认只住常量）——本键因可见性判据不沿用 |
+| D2 | 默认值住 DEFAULTS 表 + 单源常量 `DEFAULT_BODY_IDLE_MS` | 只住 `provider/core.mjs` 常量（照抄 `fetchTimeoutMs`）——`settings list` 看不见该键，判据不成立；对照 `AGENT-PARAMS.md` 的 advisor 先例（默认只住常量）——本键因可见性判据不沿用 |
 | D3 | 非法值回退默认，不抛错、不解释成「禁用」 | 「`0` = 永不超时」——无场景判据（没有出现过的现场），且静默关保护；本轮不做开关 |
 | D4 | 报告落盘复用 `offloadToolResult` 的 `force` 支 | 新写 `persistReport`——与既有预览文案形成第二实现；在 settle 回调另起落盘点——四族 settle 各一处，注入点才是唯一共享面 |
 | D5 | 注入体 = 正文一份（≤64K）/ 双端预览（>64K）/ 清单行（超轮预算）+ 路径；短文绝不双端预览 | 短文双端预览——`buildDualEndPreview` 对 ≤16K 正文头尾各返整串（`thincoder-core/agent/offload.mjs` 的 `safeSliceUTF16End` ∥ `buildDualEndPreview`）⇒ 正文两份 + `middle omitted: 0 chars`；保留「超预算才落盘」——正是报告丢失的成因；全文 `inline`——64K+ 请求体的原事故面 |
@@ -232,20 +232,20 @@ T5–T8 均经 `_setDigestOffloadDirForTest(沙箱)` 执行、`finally` 复位�
 - 不引入第三方依赖；不动 `requestWithRetry` 的重试语义（只替换 idle 超时的取值来源）。
 - 不提供「禁用空闲超时」开关（`0` 语义未获判据）。
 - 不改 `agent.fetchTimeoutMs` 的可见性：它仍不在 `settings list` 里；首 chunk 分窗只是让它多一个消费面，不扩其配置面。
-- `bg` / `browser` 两族注入器不改（`subagent-async.mjs:377-379` 已分流；其摘要形态见各自板）。
+- `bg` / `browser` 两族注入器不改（`subagent-async.mjs` 已分流；其摘要形态见各自板）。
 - 不改 `docs/README.md` 权威地图（本批不写该档）：该档裸名锚在 doc-check 门内不跨目录解析（只认仓根 ∥ 指向档自身目录），写它会把本批的门拖红。**地图登记 = 父侧收口动作**：登记 `TIMEOUT-DIGEST.md` + 计数收正为「`core/design/` 实档 63 = 登记 62 + 待补登 1（`SESSION-OBSERVABILITY.md`）」（实读 2026-10-24），由主 agent 在收口清单里落行。
-- **不改 `agent.bodyIdleTimeoutMs` 的默认值与 `≤0` 语义**：「能否禁用空闲超时」是另一个问题、无现场判据，本批不夹带（`thincoder-core/config-defaults.mjs:16` 的注释口径不动）。
+- **不改 `agent.bodyIdleTimeoutMs` 的默认值与 `≤0` 语义**：「能否禁用空闲超时」是另一个问题、无现场判据，本批不夹带（`thincoder-core/config-defaults.mjs` 的注释口径不动）。
 - **传输层看门狗未处置**：`thincoder-core/proxy-transport.mjs` 的首 chunk 窗不在本批（无现场、无复现路径——§4 D8 ∥ §8 上抛①）；代理径在首个 body 字节之前仍只有 `bodyIdleMs` 一个窗在计时。相应不新建 `_firstChunkMs` 传参面（`thincoder-core/proxy.mjs` / `proxy-transport.mjs` / `anthropic.mjs` / `responses.mjs` 均不动）。
-- **不给 anthropic 直连读侧新增空闲定时器，也不向它传首 chunk 窗**：该径现状无读侧 timer（`thincoder-core/provider/anthropic.mjs:229` 只有代理传输分支的 `_bodyIdleMs`），代理径首 chunk 窗随传输面另批——既有边界不变。
+- **不给 anthropic 直连读侧新增空闲定时器，也不向它传首 chunk 窗**：该径现状无读侧 timer（`thincoder-core/provider/anthropic.mjs` 只有代理传输分支的 `_bodyIdleMs`），代理径首 chunk 窗随传输面另批——既有边界不变。
 - **不做首 chunk 阶段的用户提示**（「正在等待模型输出」类文案）：那是 UI 面，本批只改计时口径。
-- 不改 `task.mjs:83` 的归零语义、不改 `digestBudgetOver` 的记账口径与 `persistOverflowReport` 的既有语义。
+- 不改 `task.mjs` 的归零语义、不改 `digestBudgetOver` 的记账口径与 `persistOverflowReport` 的既有语义。
 
 ## 8. UI / 交互决策
 
 - `/config` 菜单不新增编辑项：该键手写 `config.json` 或 `settings set` 即可，与 `advisor.timeoutMs` 同档处置（`docs/core/design/AGENT-PARAMS.md` §2）。
 - 首 chunk 分窗不新增任何交互面：无新配置键、无新菜单项、无新提示文案（§7）。
 - 无 `open` 项。
-- **上抛（待主 agent 裁）①：代理径（传输层看门狗）的首 chunk 窗**——事实面：`thincoder-core/proxy-transport.mjs:104` 现形是 `if (bodyIdleMs > 0)` 单窗、`:126` 头到齐即首次挂；按对称推理，代理用户同样会在首字节前被 120s 误杀，但唯一的逐字现场（spark 报障）未提代理，无日志、无复现命令、无代理配置下的读数（§4 D8 ∥ §7 传输层看门狗未处置）。另批需要：现场或可复现路径（代理配置 + 首字节延迟夹具的读数）。
+- **上抛（待主 agent 裁）①：代理径（传输层看门狗）的首 chunk 窗**——事实面：`thincoder-core/proxy-transport.mjs` 现形是 `if (bodyIdleMs > 0)` 单窗、头到齐即首次挂；按对称推理，代理用户同样会在首字节前被 120s 误杀，但唯一的逐字现场（spark 报障）未提代理，无日志、无复现命令、无代理配置下的读数（§4 D8 ∥ §7 传输层看门狗未处置）。另批需要：现场或可复现路径（代理配置 + 首字节延迟夹具的读数）。
 - **上抛（待主 agent 裁）②**：复用 `agent.fetchTimeoutMs` 作首 chunk 窗后，用户把它调到 < 120s 会让「等首 chunk」比「流中途」更早判死。本设计判为「用户明确要求更短的等上游窗口」，不加钳制；若要求首 chunk 窗恒 ≥ `bodyIdleTimeoutMs`，那是另一条判据，请裁。
 - **上抛（待主 agent 裁）③**：anthropic 直连读侧是否补空闲定时器（现状 = 无定时器，本键不覆盖该格）。
 

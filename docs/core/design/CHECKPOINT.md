@@ -29,13 +29,13 @@
 **四要素明细**
 
 - **#48 `tools/git-checkpoint.mjs`**（同路径 · j 0.9091 · sha `7b56f04cc565` / `5d9a226a1321` · 143 / 150 行）
-  - 左端读数（CLI）：`escapeXml` 经 `thincoder-cli/src/tools/git-checkpoint.mjs:7` 由 `thincoder-core/agent/helpers.mjs` 导入（共享实现）；checkpoint 子系统依赖 `../git/checkpoint.mjs`（`:8-16`）。
-  - 右端读数（VSC）：`escapeXml` 本地定义（`thincoder-vscode/src/tools/git-checkpoint.mjs:21-23`；注释自述「镜像 CLI 版本」）；依赖 `./checkpoint.mjs`（`:8-16`）；头注含「CLI 镜像：」行（`:5`）。
+  - 左端读数（CLI）：`escapeXml` 经 `thincoder-cli/src/tools/git-checkpoint.mjs` 由 `thincoder-core/agent/helpers.mjs` 导入（共享实现）；checkpoint 子系统依赖 `../git/checkpoint.mjs`（同档 import 段）。
+  - 右端读数（VSC）：`escapeXml` 本地定义（`thincoder-vscode/src/tools/git-checkpoint.mjs`；注释自述「镜像 CLI 版本」）；依赖 `./checkpoint.mjs`（同档 import 段）；头注含「CLI 镜像：」行。
   - 建议归一形态：融合——`escapeXml` 下沉核内单一实现（消除本地副本）；依赖 / 路径按核内闭包归一。
   - 影响面：无行为差——两 `escapeXml` 实现逐字相同（同款 5 链替换、同序）；差异属组织面（共享函数本地副本化 + 子系统模块位置）⇒ 不命中三口径（须用户裁 = —）。
 - **#49 `tools/git-ext.mjs`**（同路径 · j 0.9071 · sha `682c67b71974` / `0cfaddecef28` · 173 / 174 行）
-  - 左端读数（CLI）：注释 + 依赖 `../git/checkpoint.mjs`（动态导入 `thincoder-cli/src/tools/git-ext.mjs:56`）；函数体与右端逐字相同。
-  - 右端读数（VSC）：注释（含「CLI 镜像：」注记 `thincoder-vscode/src/tools/git-ext.mjs:5`）+ 依赖 `./checkpoint.mjs`（`:57`）；函数体逐字相同（filterLines / runGitStrict / validateRef / gitConfigArgs / snapshotBefore / executeExtAction）。
+  - 左端读数（CLI）：注释 + 依赖 `../git/checkpoint.mjs`（动态导入 `thincoder-cli/src/tools/git-ext.mjs`）；函数体与右端逐字相同。
+  - 右端读数（VSC）：注释（含「CLI 镜像：」注记，同档头注）+ 依赖 `./checkpoint.mjs`（同档 import 段）；函数体逐字相同（filterLines / runGitStrict / validateRef / gitConfigArgs / snapshotBefore / executeExtAction）。
   - 建议归一形态：融合——注释归一（删镜像注记）+ 依赖路径按核内闭包。
   - 影响面：无行为 / 契约差（差异 = 注释与依赖组织）⇒ 不命中三口径（须用户裁 = —）。
 
@@ -128,30 +128,17 @@
 
 > 与 CLI 同源的机制本体（v2 全量副本 / 触发三路 / 存储与 id / commit 清理 / git 纪律 / 恢复语义）已入 §6.1–§6.8，不重复（D2）。
 
-- **VSC 触发点（本端接线）**：git 破坏性 op 自动快照 = 核 `tools/git-ext.mjs` `snapshotBefore`（`:54`——reset --hard /
-checkout 文件 / restore / stash pop / branch|tag delete / clean / rebase，操作前 best-effort 快照 → 返回
-
-`[snapshot <id> created before <label>]\n` 注记，失败不阻塞 op，审批层才是真门）；bash git 破坏性命令 =
-`shell.mjs gitGuardSnapshot`（`:139` `GIT_DESTRUCTIVE_RE` 宽 matcher / `:148` 实现——快照经核 `git/checkpoint.mjs`；匹配 `git checkout -- .` /
-
-`restore` / `reset --hard` / `clean -f` 等，命令**从不拒绝**（模型会绕），snapshot-then-proceed 全量副本 →
-返回 notice 注记含恢复入口 `checkpointAction=rewind checkpointId=<id>`，best-effort 永不 throw）；commit 后清理
-
-（核 `git.mjs` commit case——清理经核 `thincoder-core/git/checkpoint.mjs`）+ F6 懒清理（核 `tools/git-checkpoint.mjs` `lazyClearIfCommitted` = `:24`——list / create 入口比对
-`git log -1 --format=%ct` ×1000 与最新快照 meta.time）。与 §6.2 / §6.5 / §6.6 统一语义同轨。
-- **恢复输出契约（VSC 侧面）**：checkpoint 子动作 = list / create / rewind / cat / versions
-（核 `tools/git-checkpoint.mjs` `executeCheckpointAction` = `:39`）。`list`：`(no checkpoints yet)` 或每快照
-
-`id  ISOtime  N tracked: …  N untracked: …`；文件名单经 XML 转义（untrusted 回流模型上下文）。`create`：
-`Checkpoint <id> created (N file(s): X tracked, Y untracked)`。`versions path=<file>`：每行
-
-`snapshotId ISOtime sizeB sha:<sha> (tracked|untracked)` + 恢复指引行；无副本 → `No snapshot copies of … found`。
-
-`rewind checkpointId path=…`：**单文件 `path` 必填**（全量回滚禁用——与 `git checkout -- .` 同危险）；成功 →
-
-`Restored "<path>" (tracked|untracked) from checkpoint <id>.\n(The pre-restore state was snapshotted first —
-you can restore again to go back.)`；oversized / 未含文件 → 具体 Error。`cat checkpointId path=…`：只读查看
-快照内文件内容（legacy 走临时恢复 + 还原工作树）。`restoreFile(cwd,path,id)` = rewind path 模式薄封装。
+- **VSC 触发点（本端接线）**：git 破坏性 op 自动快照 = 核 `tools/git-ext.mjs` `snapshotBefore`（reset --hard / checkout 文件 / restore / stash pop / branch|tag delete / clean / rebase）。
+  - 时序 = 操作前 best-effort 快照 → 返回 `[snapshot <id> created before <label>]\n` 注记；失败不阻塞 op，审批层才是真门。
+  - bash git 破坏性命令 = `shell.mjs gitGuardSnapshot`（`GIT_DESTRUCTIVE_RE` 宽 matcher / 实现——快照经核 `git/checkpoint.mjs`；匹配 `git checkout -- .` / `restore` / `reset --hard` / `clean -f` 等）。
+  - 命令**从不拒绝**（模型会绕）：snapshot-then-proceed 全量副本 → 返回 notice 注记含恢复入口 `checkpointAction=rewind checkpointId=<id>`，best-effort 永不 throw。
+  - commit 后清理 = 核 `git.mjs` commit case（清理经核 `thincoder-core/git/checkpoint.mjs`）+ F6 懒清理（核 `tools/git-checkpoint.mjs` `lazyClearIfCommitted` 的入口比对（list / create）——比 `git log -1 --format=%ct` ×1000 与最新快照 meta.time）。与 §6.2 / §6.5 / §6.6 统一语义同轨。
+- **恢复输出契约（VSC 侧面）**：checkpoint 子动作 = list / create / rewind / cat / versions（核 `tools/git-checkpoint.mjs` `executeCheckpointAction`）。
+  - `list`：`(no checkpoints yet)` 或每快照 `id  ISOtime  N tracked: …  N untracked: …`；文件名单经 XML 转义（untrusted 回流模型上下文）。
+  - `create`：`Checkpoint <id> created (N file(s): X tracked, Y untracked)`。
+  - `versions path=<file>`：每行 `snapshotId ISOtime sizeB sha:<sha> (tracked|untracked)` + 恢复指引行；无副本 → `No snapshot copies of … found`。
+  - `rewind checkpointId path=…`：**单文件 `path` 必填**（全量回滚禁用——与 `git checkout -- .` 同危险）；成功 → `Restored "<path>" (tracked|untracked) from checkpoint <id>.\n(The pre-restore state was snapshotted first — you can restore again to go back.)`；oversized / 未含文件 → 具体 Error。
+  - `cat checkpointId path=…`：只读查看快照内文件内容（legacy 走临时恢复 + 还原工作树）。`restoreFile(cwd,path,id)` = rewind path 模式薄封装。
 - **只读分类（审批过滤）**：git 只读 action 免审批（diff/status/log/show/ls-remote/blame）+ checkpoint 的 **list/cat**（list 的 F6 懒清理副作用已判可接受——清的是 commit 后失去意义的过期快照）；rewind/create/versions 走副作用门。F2 提示文本（`checkpointAction=list` 非空输出尾部固定一行）— 与 §6.7 D-CP7 同文本。
   分类面现住端装配面装饰（`isReadonlyAction`——端 `thincoder-vscode/src/tools/index.mjs`）。
 

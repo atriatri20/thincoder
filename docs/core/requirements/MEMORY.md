@@ -4,7 +4,7 @@
 > **工作流档**（需求层）= `docs/core/requirements/CORE-UNIFICATION.md` §1–§4 + §5 登记表（统一目标 / 边界原则 / 量级读数基线 / 范围边界）——本档**不复制**（D2 单一权威源）。
 > **设计层** = `docs/core/design/MEMORY.md`（本子系统设计与测试）；工作流设计档 = `docs/core/design/CORE-UNIFICATION.md`。
 > **不新增需求**：条文分**搬移 / 回填 / 派生**三类并逐条标来源；无现成表述者由设计裁决派生，标「**派生 · 非用户原话**」。
-> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图 `thincoder-cli/docs/README.md` §3.2；三层归属见同图 §3.1。
+> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文住 CLI 产品地图（该档已随两仓合并退役）§3.2；三层归属见同图 §3.1。
 
 ## 1. 总体定位
 
@@ -21,7 +21,7 @@ CLI 侧住 `thincoder-cli/src/memory/**`（8 档）与 `memory.mjs` 转口；VSC
 - **【回填】** 记忆面**归一方向 = CLI 语义**（`node:sqlite` 的 `DatabaseSync` + FTS5；库为唯一载体），VSC 侧改接线、**不保留降级路径**；分叉前提（「VS Code 内置 Node 不支持 sqlite」）**已失效** ⇒ 直接归一，不作选边拉锯。
   来源 = 工作流档 §1.2 第 6 条（承用户裁定 **A12**「记忆系统要向 cli 端统一」· **A13**「旧版用户升一下级不会死的」）。
 - **【回填】** 既有记忆数据以**一次性导入器**承接（VSC `personal` 层 `.md` + 遗留 `.json` → CLI `entries`）；`modelPrefs`（住 VS Code 状态、无文件系统载体）**不迁**。
-  来源 = 设计档 `MEMORY.md` §3.1 A2（用户「全部按建议」批量批准）。
+  来源 = 设计档 `docs/core/design/MEMORY.md` §3.1 A2（用户「全部按建议」批量批准）。
 - **【回填】** VSC **引擎下限随之抬升**（`node:sqlite` 需 Node ≥ 22.13）；下限值属对外契约变更 ⇒ **已裁（用户）：`^1.104.0` · 不另做真机实测**（资料推导链 + `activate()` 护栏兜底）；配套运行时护栏 = `activate()` 自检 + 明确提示（**不崩**）。
   来源 = 工作流档 §3 N7（承 A8 残余 / A13）。
 
@@ -42,7 +42,7 @@ CLI 侧住 `thincoder-cli/src/memory/**`（8 档）与 `memory.mjs` 转口；VSC
 
 ## 4. 需求条目（自 CLI 产品需求档并入）
 
-> **来源** = `thincoder-cli/docs/requirements/MEMORY.md`（154 行 · CLI 产品需求档）——根层裁定后该档 = **迁移期参照历史**（只读 · 不维护）。
+> **来源** = CLI 产品需求档（154 行；该档已随两仓合并退役，为**迁移期参照历史**，只读 · 不维护）。
 > **并入** = 需求条目正文（编号与文本承旧档）；**不并** = 「来源 / 状态」注 · 批次来源注 · 变更记录。
 
 ### 4.1 总体需求（旧 §1）
@@ -88,8 +88,12 @@ CLI 侧住 `thincoder-cli/src/memory/**`（8 档）与 `memory.mjs` 转口；VSC
 
 **非功能**：N5 降级可用 + 零回归（校验判「不匹配」时按「增强不可用」降级——关键词路径照常出结果）· N6 可机器验证（fixture / 桩面板驱动真模块；真 git 子进程用例归册（`slow()`））。
 
-**判定句**：F6 换模型后 —— `searchIndex` 返回空（不返回 score=0 行）；索引状态面显示「模型不匹配 + 重建入口」。F7 gitignored 文件增 / 删 / 改 —— `needsRebuild` 报 `needed:true`。
-F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F9 全路径 —— reason ∈ 七词表（`no-index` · `new-commits` · `file-added` · `file-removed` · `file-missing` · `file-changed` · `up-to-date`）。
+**判定句**：
+
+- F6 换模型后 —— `searchIndex` 返回空（不返回 score=0 行）；索引状态面显示「模型不匹配 + 重建入口」。
+- F7 gitignored 文件增 / 删 / 改 —— `needsRebuild` 报 `needed:true`。
+- F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。
+- F9 全路径 —— reason ∈ 七词表（`no-index` · `new-commits` · `file-added` · `file-removed` · `file-missing` · `file-changed` · `up-to-date`）。
 **归一退场注**：F6–F9 及上列判定句随索引面归一退场——文件制索引机制不迁移；核面承接 = `docs/core/design/MEMORY.md` §6.9 / D-MEM14（失效向量置空 + 检索懒回填——不产出无效结果；`mismatch` 可见面自然化）。
 
 ### 4.5 配置路径字段家目录展开（旧 §5——F10–F14 / N7–N9）
@@ -131,7 +135,7 @@ N-M3 零依赖 / 可移植（无迭代器则**键序分页**——游标键随�
 
 ### 4.7 VSC 端需求条目（并入 · 批 6）
 
-> 来源 = `thincoder-vscode/docs/requirements/MEMORY.md`（50 行 · VSC 产品需求档——旧档留参照历史）。**VSC 端当前实现面** = 文件式两层记忆（无 team 层 / 无 sqlite）；CORE-UNIFICATION 归一方向（§2.1 回填条目——以 CLI 语义为准、VSC 改接线）为 **governing 上覆**——本节登记 VSC 端现状条目与端差，不改变归一方向。
+> 来源 = VSC 产品需求档（50 行；旧档已随两仓合并退役，留参照历史）。**VSC 端当前实现面** = 文件式两层记忆（无 team 层 / 无 sqlite）；CORE-UNIFICATION 归一方向（§2.1 回填条目——以 CLI 语义为准、VSC 改接线）为 **governing 上覆**——本节登记 VSC 端现状条目与端差，不改变归一方向。
 > **索引存储面裁定收口（用户）**：索引面归一 = 并核 sqlite；**数据面零迁移 / 零兼容**（不写导入器——重新索引 = 正当路径）——本节 F-M5 / F-M6 与端差「索引形态」行所述文件制索引面（`.thincoder/index/` · `indexer` 族）随 W8 接线删旧退场。
 
 **总体**：记忆系统让 agent 跨会话保存 / 检索 / 治理知识——VSC 端承载 personal / project 两层（**无 team 层**——团队记忆由 CLI 管）并提供代码 / 文档索引（code / doc chunk）。存储形态 = **markdown 文件即真相**（`cwd/.thincoder/memory/`，无独立 DB——可人工编辑、可 git 管理）。
@@ -164,12 +168,12 @@ N-M3 零依赖 / 可移植（无迭代器则**键序分页**——游标键随�
 
 **二态化裁定行**：存储 / 索引形态两行 = **已消解**（W8 归一核面——零动作，承上归一注）；层数行 = **已裁保留**（结构性不对称——team 管理面单侧存在：端面 `layer:"team"` 明确拒绝并指路）；配置面行 = **形态（非登记项）**；命名面行 = **同源**（内部词保留——非端差）。
 
-> VSC 端证据坐标：`thincoder-vscode/src/memory.mjs:30`（`memoryDir`）· `:36`（`scopeDir`）· `:170`–`:177`（legacy 根 + `_scope` 标注）· `thincoder-vscode/src/memory-tool.mjs:117`（action 级只读）· `:151`（向量通道）
-> · `thincoder-vscode/src/indexer.mjs:162`（`model-changed`；核面现体 `thincoder-core/memory/code-sync.mjs`）· `:170`–`:258`（`needsRebuild` 七词表）· `thincoder-vscode/src/extension/panel-index.mjs:171`（未列入提示行）。
+> VSC 端证据坐标：`thincoder-vscode/src/memory.mjs` 的三处（`memoryDir` · `scopeDir` · legacy 根 + `_scope` 标注）· `thincoder-vscode/src/memory-tool.mjs` 的两处（action 级只读 · 向量通道）
+> · `thincoder-vscode/src/indexer.mjs` 的两处（`model-changed`——核面现体 `thincoder-core/memory/code-sync.mjs` · `needsRebuild` 七词表）· `thincoder-vscode/src/extension/panel-index.mjs`（未列入提示行）。
 
 ### 4.8 嵌入输入编码安全
 
-> 来源 = 网友实测（硅基流动 embedding `400 / 20015`）+ 父侧实核根因（三处 UTF-16 码元截断）；设计面 = 设计档 MEMORY.md 的 §6.3「嵌入输入文本（三路）」+ D-MEM16。
+> 来源 = 网友实测（硅基流动 embedding `400 / 20015`）+ 父侧实核根因（三处 UTF-16 码元截断）；设计面 = 设计档 `docs/core/design/MEMORY.md` 的 §6.3「嵌入输入文本（三路）」+ D-MEM16。
 
 **总体**：送嵌入服务的批量文本必须**码点安全**——截断不得把代理对切成孤立代理；请求体零孤立代理（严格 UTF-16 解析端此前因此 400）。
 
@@ -198,7 +202,7 @@ ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `
 
 **非功能**：N-S1 **可响应性可判**（让出事件可确定性断言，不依赖真实时钟）· N-S2 **二次方零容忍**（游标形须走索引直扫，计划面可机判——等值前缀列不得带进元组游标）· N-S3 **边界写实**（开库回收最坏等待上界 = `busy_timeout`，非「不阻塞」）。
 
-**设计侧 = `docs/core/design/MEMORY.md` §6.10–§6.12 + `MULTI-INSTANCE-COLLAB.md` §3.1 / §3.2**（**三方一致**）——本档不复制。
+**设计侧 = `docs/core/design/MEMORY.md` §6.10–§6.12 + `docs/core/design/MULTI-INSTANCE-COLLAB.md` §3.1 / §3.2**（**三方一致**）——本档不复制。
 
 ### 4.10 索引规模治理与大库操作面（F-S6–F-S8 ∕ N-S4–N-S6 编号族续 §4.9）
 
@@ -212,12 +216,18 @@ ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `
 | F-S7 大库操作面处置 | 每回合的 embedding 回填**探针**走部分索引（schema v10——只增索引）；`COUNT` ∕ 大纲面 **origin 限定 + 有界形**；全量同步**收尾 stale 删除循环**同款让出；**读面零写**（模型失效判定留读面 = 降级 FTS-only + 一行可见，失效执行移维护口） | 不引 worker_thread（升级触发 = 修复后单回合召回墙钟仍 ≥ 0.5 s）；不改召回语义 ∕ limit ∕ RRF；不建 ANN |
 | F-S8 体积护栏与增量维护 | `memoryStatus` 出 `dbBytes` + 逐 origin 行数；每 origin 行预算（**WARN 100k ∕ CAP 300k**〔见 §4.13〕——只停新增，行序确定性）；commit 锚改 **per-origin** 键（旧键兼容 = 全扫一次）；`gitSync` diff 表带 `--relative`（路径形态与索引同形） | 自动删除 ∥ 自动 VACUUM 归 **§4.12 维护面**（维护 ≠ 收录裁决）；不做写侧 checkpoint；`D:/dgx-spark` 系存量 = 用户裁定项 |
 
-**非功能**：N-S4 **剪枝安全可机判**（零命中 ⇒ 无备份；`--confirm` 后命中行 0 ∧ 非命中行逐键等前值 ∧ `integrity_check` ok）· N-S5 **成本可证**（探针计划含 `USING INDEX`；显示面计数语义见 §4.13 F-S14）· N-S6 **零行为变化（排除面 ∕ v10 面）**（`excludePaths` 缺省 `[]`、v10 只增索引）；
-  **默认面行为变化（在册）** = ① M1 锚 per-origin 化（旧单键 ⇒ 该 origin 首扫一次）② M2 子目录 origin 落行 path 形态收正 ③ B3 ∕ B4 越界返回「+」形 ∥ 提示行。
+**非功能**：
 
-**判定句**：F-S6 —— manifest 夹具投影 `["./openclaw/","refs",""] → ["openclaw","refs"]`；`openclaw-fork/**` 不被 `openclaw` 吞；`sweep --path` 干跑 = 仅命中行动作 `delete`；`--confirm`（沙箱库）⇒ 命中行 0 ∧ 非命中行逐键不变 ∧ 备份 `integrity_check` ok；零命中 ⇒ 无备份零写。
-  F-S7 —— `user_version=10` ∧ `sqlite_master` 两枚部分索引在 ∧ 两探针计划无 `SCAN`；`search ∕ docSearch ∕ codeSearch` 经 spy 句柄零 `UPDATE∕INSERT∕DELETE`。
-  F-S8 —— `dbBytes` = `statSync`；CAP 越界 `budgetSkipped > 0` 且两跑跳过集逐字相等；两 origin 锚键互不覆盖；子目录 origin touch 后 `gitSync` 重索引（非删除支）。
+- N-S4 **剪枝安全可机判**（零命中 ⇒ 无备份；`--confirm` 后命中行 0 ∧ 非命中行逐键等前值 ∧ `integrity_check` ok）。
+- N-S5 **成本可证**（探针计划含 `USING INDEX`；显示面计数语义见 §4.13 F-S14）。
+- N-S6 **零行为变化（排除面 ∕ v10 面）**（`excludePaths` 缺省 `[]`、v10 只增索引）。
+- **默认面行为变化（在册）** = ① M1 锚 per-origin 化（旧单键 ⇒ 该 origin 首扫一次）② M2 子目录 origin 落行 path 形态收正 ③ B3 ∕ B4 越界返回「+」形 ∥ 提示行。
+
+**判定句**：
+
+- F-S6 —— manifest 夹具投影 `["./openclaw/","refs",""] → ["openclaw","refs"]`；`openclaw-fork/**` 不被 `openclaw` 吞；`sweep --path` 干跑 = 仅命中行动作 `delete`；`--confirm`（沙箱库）⇒ 命中行 0 ∧ 非命中行逐键不变 ∧ 备份 `integrity_check` ok；零命中 ⇒ 无备份零写。
+- F-S7 —— `user_version=10` ∧ `sqlite_master` 两枚部分索引在 ∧ 两探针计划无 `SCAN`；`search ∕ docSearch ∕ codeSearch` 经 spy 句柄零 `UPDATE∕INSERT∕DELETE`。
+- F-S8 —— `dbBytes` = `statSync`；CAP 越界 `budgetSkipped > 0` 且两跑跳过集逐字相等；两 origin 锚键互不覆盖；子目录 origin touch 后 `gitSync` 重索引（非删除支）。
 
 **设计侧 = `docs/core/design/MEMORY.md` §6.14 + §7 D-MEM23–D-MEM28**——本档不复制。
 
@@ -276,8 +286,9 @@ ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `
 
 **总体需求**：作为**长期使用同一工作区（含多仓嵌套 / 参考系树）的开发者**，我想要**批次档目录（`docs/batches`）无条件不进文档索引**——不管声明档里配没配 `index.excludePaths`，以便**每回合注入的「相关文档」与 `doc_search` 只端真知识，不把流程记录当知识端上来**。
 
-来源 = 用户「我希望提示词体系在注入 doc_search 结果的时候能把批次档排除掉，不知道能做到吗？好做吗？」+ 裁定「我希望不管 manifest 里配置没配置排除路径，都把批次档目录排除掉。」；父侧实核：索引排除谓词与三起效点已在（`declaration.mjs` `isExcludedRelPath` → `memory/file-list.mjs` 双径 ∥ 收尾保护 `sync-tail.mjs`）——缺口 = 该面**未被默认引用**；
-`docRoot.batches` 默认 `docs/batches` 为一等声明键（`manifest-schema.mjs`）；机检面先例 = `checkConfig.anchors.exclude` 默认已含 `batches`。
+- **来源** = 用户「我希望提示词体系在注入 doc_search 结果的时候能把批次档排除掉，不知道能做到吗？好做吗？」+ 裁定「我希望不管 manifest 里配置没配置排除路径，都把批次档目录排除掉。」
+- **父侧实核**：索引排除谓词与三起效点已在（`declaration.mjs` `isExcludedRelPath` → `memory/file-list.mjs` 双径 ∥ 收尾保护 `sync-tail.mjs`）——缺口 = 该面**未被默认引用**；
+- **默认键与先例**：`docRoot.batches` 默认 `docs/batches` 为一等声明键（`manifest-schema.mjs`）；机检面先例 = `checkConfig.anchors.exclude` 默认已含 `batches`。
 
 | # | 需求（能力逐条可交付） | 范围边界（明确不做什么） |
 |---|---|---|
@@ -293,9 +304,9 @@ ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `
 
 **总体需求**：作为**工作区里挂多生态参考树 / 多仓嵌套的开发者**，我想要**索引只吃「声明过的目录」**——锚自身 manifest 声明的目录 ∪ **一级子目录**（带 manifest 者）声明的目录，以便**索引不再是「全树减排除」的开放式名单——未声明的大目录从结构上进不来**（体积与噪音双向可控）。
 
-来源 = 用户「你觉得是不是只索引manifest指定的目录更合理？因为否则很容易碰到大目录炸索引。」+ 裁定「我还是希望改成只索引manifest指定的目录，当然不是只考虑cwd下的manifest，还要考虑一级子目录下的manifest。」；
-父侧实核：现模型 = 全树（`git ls-files`）+ 扩展名表 + SKIP 表 + `index.excludePaths`，**`docRoot` 与索引面零关系**（`memory/file-list.mjs` ∥ 全域 grep 实读）；实库读数（`~/.thincoder/memory.db`，1.65GB）：本工作区 origin 24,973 条文档 chunk = 批次档 13,271（53%）∥ `_archive` 6,022（24%）∥ 真知识面 23%；
-垃圾类目录（node_modules 等）实测 **0**（SKIP 表在干活）；一级子目录 manifest 实况 = `thincoder` ∥ `thincoder.com` 仅两；发现/归属纪律 = **纯向下、一级子目录一层**（多项在案裁定）——本规照此。
+- **来源** = 用户「你觉得是不是只索引manifest指定的目录更合理？因为否则很容易碰到大目录炸索引。」+ 裁定「我还是希望改成只索引manifest指定的目录，当然不是只考虑cwd下的manifest，还要考虑一级子目录下的manifest。」
+- **父侧实核**：现模型 = 全树（`git ls-files`）+ 扩展名表 + SKIP 表 + `index.excludePaths`，**`docRoot` 与索引面零关系**（`memory/file-list.mjs` ∥ 全域 grep 实读）；实库读数（`~/.thincoder/memory.db`，1.65GB）：本工作区 origin 24,973 条文档 chunk = 批次档 13,271（53%）∥ `_archive` 6,022（24%）∥ 真知识面 23%；
+- **旁证与发现纪律**：垃圾类目录（node_modules 等）实测 **0**（SKIP 表在干活）；一级子目录 manifest 实况 = `thincoder` ∥ `thincoder.com` 仅两；发现/归属纪律 = **纯向下、一级子目录一层**（多项在案裁定）——本规照此。
 
 | # | 需求（能力逐条可交付） | 范围边界（明确不做什么） |
 |---|---|---|

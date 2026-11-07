@@ -39,23 +39,23 @@
 
 ### 1.4 公开源核查
 
-`PROJECT-MANIFEST.json` 的 `index.publicRepos` 为空数组（`PROJECT-MANIFEST.json:35`）——无外部公开源可查；本次核查结论按「无外部源」记录。
+`PROJECT-MANIFEST.json` 的 `index.publicRepos` 为空数组（`PROJECT-MANIFEST.json` 的 `index` 段）——无外部公开源可查；本次核查结论按「无外部源」记录。
 
-仓内已读面（逐档 `file:line`）：
+仓内已读面（逐档 + 符号名）：
 
-- `thincoder-core/prompt-files.mjs:30` `PROMPTS_DIR` · `:38` `loadSlot` · `:59` `loadToolDoc` · `:105` `applyPromptInjections`；
-- `thincoder-core/prompt-overlays.mjs:41` `SCENARIO_SLOT_FILES` · `:68` `assemblePrompt`；
-- `thincoder-core/provider/index.mjs:5` 导出 `chat` / `createProvider`；`thincoder-core/provider/core.mjs:84` `chat(provider, opts)`；
-- `thincoder-core/model-ref.mjs:62` `resolveRuntimeProvider`；
-- `thincoder-core/config.mjs:219` `loadConfig` · `:188` `findProvider`；
-- `thincoder-core/tools/index.mjs:21` `builtinTools`（**无** `subagent`；`subagent` 是 depth 绑定工具） · `thincoder-core/tools/shared.mjs:169` `toOpenAISchema` · `thincoder-core/tool-docs/subagent.md`（真实派工工具描述）；
+- `thincoder-core/prompt-files.mjs` 的 `PROMPTS_DIR` · `loadSlot` · `loadToolDoc` · `applyPromptInjections`；
+- `thincoder-core/prompt-overlays.mjs` 的 `SCENARIO_SLOT_FILES` · `assemblePrompt`；
+- `thincoder-core/provider/index.mjs` 导出 `chat` / `createProvider`；`thincoder-core/provider/core.mjs` 的 `chat(provider, opts)`；
+- `thincoder-core/model-ref.mjs` 的 `resolveRuntimeProvider`；
+- `thincoder-core/config.mjs` 的 `loadConfig` · `findProvider`；
+- `thincoder-core/tools/index.mjs` 的 `builtinTools`（**无** `subagent`；`subagent` 是 depth 绑定工具） · `thincoder-core/tools/shared.mjs` 的 `toOpenAISchema` · `thincoder-core/tool-docs/subagent.md`（真实派工工具描述）；
 - `thincoder-core/agent.mjs` 与 `thincoder-core/prompts/` 三档正本（被测对象）：
   - `thincoder-core/prompts/persona-engineering.md` 471 行 / 67,515 字符
   - `thincoder-core/prompts/common.md` 440 行 / 53,771 字符
   - `thincoder-core/prompts/discipline-engineering.md` 358 行 / 45,726 字符
   - 合计 167,012 字符
 
-档地图核对（评审 #9）：`docs/README.md:51` 把「提示词系统（槽位 / 工具描述）」主题归 `docs/core/design/PROMPT-SYSTEM.md`。本档不描述提示词系统本身，描述**测提示词的工具**；两者主题不同、无覆盖关系。按 `docs/README.md:74` 的 core/design 其余档清单登记本档（受影响文件表有该行）。
+档地图核对（评审 #9）：`docs/README.md` 把「提示词系统（槽位 / 工具描述）」主题归 `docs/core/design/PROMPT-SYSTEM.md`。本档不描述提示词系统本身，描述**测提示词的工具**；两者主题不同、无覆盖关系。按 `docs/README.md` 的 core/design 其余档清单登记本档（受影响文件表有该行）。
 
 结论：仓内没有提示词 A/B 夹具；本档是新增实现面，不重写任何既有工具。
 
@@ -131,8 +131,8 @@ prompt-fixture/
 
 ### 2.3 装配
 
-- 槽位表 = `thincoder-core/prompt-overlays.mjs:41` 的 `SCENARIO_SLOT_FILES["engineering"]`（单一权威，夹具不另抄一份）。
-- 拼接规则与产品装配同：按槽位序、以 `"\n\n"` 连接，再过 `applyPromptInjections`（`thincoder-core/prompt-files.mjs:105`）。
+- 槽位表 = `thincoder-core/prompt-overlays.mjs` 的 `SCENARIO_SLOT_FILES["engineering"]`（单一权威，夹具不另抄一份）。
+- 拼接规则与产品装配同：按槽位序、以 `"\n\n"` 连接，再过 `applyPromptInjections`（`thincoder-core/prompt-files.mjs`）。
 - **机检（防装配漂移）**：baseline 副本的装配结果必须与 `assemblePrompt("engineering").prompt` **逐字相等**；不等 ⇒ 抛错并给首个差异位置。这使「夹具拼的就是产品装的那段文本」成为构造性事实。
 - 注入锚：夹具不配置注入表（恒等态），运行记录记 `injections: "unconfigured"`。
 
@@ -184,14 +184,14 @@ prompt-fixture/
 
 ### 2.5 工具面（声明面 = 4 件，偏离写在这里）
 
-声明工具面（`prompt-fixture/tools.mjs`）：`read` · `write` · `edit` · `subagent`。前三件的 schema 直接 import `thincoder-core/tools/index.mjs:33` 的导出对象、经 `toOpenAISchema`（`thincoder-core/tools/shared.mjs:169`）转换——描述就是产品里模型看到的那段，不另写。
+声明工具面（`prompt-fixture/tools.mjs`）：`read` · `write` · `edit` · `subagent`。前三件的 schema 直接 import `thincoder-core/tools/index.mjs` 的导出对象、经 `toOpenAISchema`（`thincoder-core/tools/shared.mjs`）转换——描述就是产品里模型看到的那段，不另写。
 
 与真实会话工具面的偏差（逐项说明）：
 
 | 面 | 真实会话 | 夹具 | 为什么 |
 |---|---|---|---|
 | `read` / `write` / `edit` | 在 | 在（真实 schema） | 场景判的就是这三个动作 |
-| `subagent` | 在，但 depth 绑定、不在 `builtinTools`（`thincoder-core/tools/index.mjs:21` 起的静态表无该名） | 在，夹具自己声明 | 判据是「提示词是否选择派工」，不是「真子代理机制能否跑通」；只保留 `spawn` 一个动作的参数面 |
+| `subagent` | 在，但 depth 绑定、不在 `builtinTools`（`thincoder-core/tools/index.mjs` 的静态表无该名） | 在，夹具自己声明 | 判据是「提示词是否选择派工」，不是「真子代理机制能否跑通」；只保留 `spawn` 一个动作的参数面 |
 | `subagent` 描述文本 | 真实九动作长文（`thincoder-core/tool-docs/subagent.md`） | 夹具自写的短描述（派工语义 + `prompt` 参数） | 参数面只剩 spawn，搬九动作长文会描述模型实际调不到的动作，属于自造噪声。偏离记在这里，是设计选择不是抄漏 |
 | 其余全部内置工具（`bash` / `glob` / `grep` / `git` / `lsp` / `web*` / `browser` / `execute` …） | 在 | **不在** | 场景按动作类判结局；多一个工具就多一条判据不覆盖的路径（例如 `bash` 写文件），读数被稀释。工具面随场景收窄，是数据（`tools` 字段），不是代码 |
 
@@ -204,9 +204,9 @@ prompt-fixture/
 
 ### 2.6 调用 provider 与跑批
 
-- **provider 调用面**：`import { chat } from "../thincoder-core/provider/index.mjs"`（`thincoder-core/provider/index.mjs:5` 再导出，实现 `thincoder-core/provider/core.mjs:84`）。夹具自己的传输包装只有一层：读响应、抽 `content / reasoning / toolCalls / usage / finishReason`、记耗时。不 import 任何其它跑批工具的传输 / 工具环 / 落档 / 参数模块。
-- **provider 条目**：`loadConfig()`（`thincoder-core/config.mjs:219`）→ 严格单发解析 `parseModelRef(ref, config.providers)`（`thincoder-core/model-ref.mjs:33`）→ `hasKey(entry)`（`:80`）。解析不过 / 渠道无 key ⇒ **拒绝启动**，点名 ref 与可用渠道名。采样参数**沿用户 config 原值**（夹具不改 temperature / maxTokens：测的是真实运行设置下的提示词行为）。
-- **为什么不用核的运行时主径**：`resolveProviderPlan`（`thincoder-core/model-ref.mjs:116`）带渠道面回退序——被测渠道无 key 时它**换一个渠道跑**，读数就不再属于被指定的那个模型。夹具要的正是严格单发（解析不过即拒、不回退）。同理不调 `resolveRuntimeProvider`（`model-ref.mjs:62`，核注释 `:60`–`:61` 标「新码勿调」）：夹具要的是它的语义，但取原语自组装，不引被标退役的包装。
+- **provider 调用面**：`import { chat } from "../thincoder-core/provider/index.mjs"`（`thincoder-core/provider/index.mjs` 再导出，实现 `thincoder-core/provider/core.mjs`）。夹具自己的传输包装只有一层：读响应、抽 `content / reasoning / toolCalls / usage / finishReason`、记耗时。不 import 任何其它跑批工具的传输 / 工具环 / 落档 / 参数模块。
+- **provider 条目**：`loadConfig()`（`thincoder-core/config.mjs`）→ 严格单发解析 `parseModelRef(ref, config.providers)`（`thincoder-core/model-ref.mjs`）→ `hasKey(entry)`（同档的 `hasKey` 谓词）。解析不过 / 渠道无 key ⇒ **拒绝启动**，点名 ref 与可用渠道名。采样参数**沿用户 config 原值**（夹具不改 temperature / maxTokens：测的是真实运行设置下的提示词行为）。
+- **为什么不用核的运行时主径**：`resolveProviderPlan`（`thincoder-core/model-ref.mjs`）带渠道面回退序——被测渠道无 key 时它**换一个渠道跑**，读数就不再属于被指定的那个模型。夹具要的正是严格单发（解析不过即拒、不回退）。同理不调 `resolveRuntimeProvider`（同档；核注释标「新码勿调」）：夹具要的是它的语义，但取原语自组装，不引被标退役的包装。
 - **CLI**：
 
 ```
@@ -243,7 +243,7 @@ node prompt-fixture/run.mjs [--copies baseline,demo] [--scenarios write-constrai
 | `turnsUsed` | 实际消耗的用户轮数（1 + 已发出的 `followUps` 数） | 跑批循环 |
 | `calls` | 该 run 的模型调用次数 | 跑批循环计数 |
 | `roundsExhausted` | `maxRounds` 用完仍有工具调用 ⇒ true | 工具环 |
-| `tokens` | `{prompt, completion}` 整数；`usage` 缺失或两键皆 `undefined` ⇒ `null`，不估不补 0 | `usage.prompt_tokens → prompt` / `usage.completion_tokens → completion`（`thincoder-core/provider/core.mjs:331`–`:332`） |
+| `tokens` | `{prompt, completion}` 整数；`usage` 缺失或两键皆 `undefined` ⇒ `null`，不估不补 0 | `usage.prompt_tokens → prompt` / `usage.completion_tokens → completion`（`thincoder-core/provider/core.mjs` 的 usage 映射段） |
 | `unknownToolCalls` | 未声明工具名的调用次数 | 桩执行器 |
 | `error` | 失败摘要字符串或 `null` | 调用异常 |
 
@@ -349,7 +349,7 @@ node prompt-fixture/run.mjs --dry-run --copies baseline,demo
 - 不改产品面：`thincoder-core/prompts/` 零改；`prompt-overlays.mjs` / `prompt-files.mjs` / `tools/*` 只 import 不改。
 - 不 import、不修改、不引用任何其它跑批工具（用户 18:30 令）。
 - system 只到三档装配：不装 AGENTS.md / skills 尾部块（随项目变），不另做工具描述文本变体。
-- 首版只装配 `SCENARIO_SLOT_FILES["engineering"]` 一个槽集（`thincoder-core/prompt-overlays.mjs:41`）；normal 模式的槽集不在首版范围——加槽集属夹具语义变化，须 bump `PROMPT_FIXTURE_VERSION`（2.8）。
+- 首版只装配 `SCENARIO_SLOT_FILES["engineering"]` 一个槽集（`thincoder-core/prompt-overlays.mjs`）；normal 模式的槽集不在首版范围——加槽集属夹具语义变化，须 bump `PROMPT_FIXTURE_VERSION`（2.8）。
 - 不并发、不重试失败调用、不补跑。
 - 不进集成套件，不改 RTM；不进产品包 / 不发布。
 - 首版不出图、不出 PDF、不记成本（无价格源，记 usage token 即止）。
