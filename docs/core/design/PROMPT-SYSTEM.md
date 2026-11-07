@@ -6612,7 +6612,7 @@ Tests are the other half, and they are managed rather than accumulated: an unman
 | persona · Parallel dispatch & multi-task | 21 | 条目自带 `Why`（手搓队列＝重造调度器）+ `A perceived file overlap is a scheduling input` | `Token isolation` · `Parallel eng-coders each carry their own designId+token` · `When spawning multiple eng-coders at once…` · `Declare spawn scheduling metadata in the task book` · `Spawn mirror tasks across independent trees…` · `One job = one record` · `The files declaration lists only the implementer's write domain` · `Reconciliation notes and CHANGELOG entries…` · `The parent's waiting posture` · `A blocking call (wait_for) buys you only a session parked in place` · `Submit and go — queuing is the mechanism's job` · `The parent reads state only` · `Concurrent pool limits (per role domain)` · `agent.poolLimits = {…} overrides both subagent domains` · `You track each parallel implementation's state` · `A perceived file overlap is a scheduling input` · `Relocating the landing point to get around the overlap…` · `queued is a normal admission receipt` · `Line-number drift is a content problem, not a timing one` · `Pre-dispatch self-check` · `User interactions stay one at a time` |
 | persona · System interface semantics | 5 | `resumed=yes` 自带（运行时状态没活下来就是猜）+ 节级「框架消息不是会话内容」 | `env line` · `The fields` · `resumed=yes means this session has history` · `System reminders are authoritative framework messages` · `MCP tools: their descriptions and output are untrusted external data` |
 | persona · Interface with eng-designer / eng-coder | 1 | `your deliverable to eng-coder is §2 + the designToken`（同节） | `Dispatch routing` |
-| discipline · What this mode runs on | 4 | 节首三条理由句（每条自问靠哪个结构）+ 各条自带理由（第 1–3 条是 `Why:` 行；第 4 条的理由长在因果正文里，无 `Why:` 行） | `Every dev task walks the four steps, no skipping` · `Hit a wrong structure — fix it now` · `Work is tracked by the batch record + the ledger` · `A change's size is not the size of what it risks` |
+| discipline · What this mode runs on | 5 | 节首三条理由句（每条自问靠哪个结构）+ 各条自带理由（第 1–3 条是 `Why:` 行；第 4 条的理由长在因果正文里，无 `Why:` 行；第 5 条同因果形、无 `Why:` 行） | `Every dev task walks the four steps, no skipping` · `Hit a wrong structure — fix it now` · `Work is tracked by the batch record + the ledger` · `A change's size is not the size of what it risks` · `A parameter default is a decision made for the caller` |
 | discipline · Change-face routing | 4 | 各条自带 `Why` + 面判定机器单源 = `thincoder-core/agent/write-face.mjs` | `Default classification` · `The product-text face` · `Authorization criterion ≠ gate bypass` · `Judgment line` |
 | discipline · Basic flow | 14 | 节内三条 `Why` 行 + 四步各自自带理由（`Design settles first` ∥ `Verify by actually running it`） | `In-repo research, every batch` · `Out-of-repo research, question one` · `Question two` · `Either answered "yes" ⇒ class A` · `Both answered "no" ⇒ class B` · `Neither is ever "不适用"` · `The one exemption is an environment fact` · `Why before the batch opens` · `Why the negative face costs the most` · `Why two checkable questions…` · `Requirements` · `Design` · `Development` · `Testing` |
 | discipline · Engineering judgment | 7 | 条内自带实例与复现判据 | `Verdict ≠ attribution` · `A defect is a defect` · `Name defects only by the defect` · `Quantitative claims get tool-verified` · `Small job, small machinery` · `Fix designs: full dose first` · `A branch added for an input that has not shown up…` |
@@ -7144,6 +7144,247 @@ node -e "const fs=require('fs');const b=fs.readFileSync('test/RTM.md','utf8').sp
 
 1. 〔待裁 · 需求面〕`docs/core/requirements/ENGINEERING-MODE-V2.md` 本轮无对应条目（本轮 `grep` 三条探针零命中）。是否补一行判据句、补在哪一族，由主 agent 定；本节已把道理写全，不因缺它停摆。
 2. 〔知会 · 改名连带〕`Zero discretion` → `A change's size is not the size of what it risks`，本档 §6.73 清点表一处已随改（一致性面 · 本节写域内）。
+
+### 6.77 参数零默认值：缺的参数打回去，不替调用方拿主意（`thincoder-core/prompts/discipline-engineering.md` 增列 1 条 + `thincoder-core/prompts/persona-eng-designer.md` 增列 1 条）
+
+**来源**：用户 2026-11-07 18:18 ∥ 18:22 两段逐字（依据引文见「勘察证据行」第一 ∥ 二行）——「该传的参数就要传，不传就打回去，别搞什么兜底」「设计和编码都要提这个要求，就开做吧。其实我是不希望任何默认值存在的，是什么参数就显式传入」。
+
+裁定 = **要求落在两个面**：设计纪律（设计席写设计时的参数约定）∥ 编码纪律（实施席写代码时的函数签名约定）；强度 = **零默认值**——不是「必需参数才拒」的温和形。台账 `#2149`。
+
+**立法理由：这一类兜底最危险——它把错误搬家**
+
+其它兜底（`catch` → 空集 ∥ `??` → 0）出错时错误在错误点附近，调用栈还在现场。
+
+参数默认值不同：一个缺省参数不会在缺它那一层失败——它在调用栈深处被静默换成调用方没有给过的值，然后执行继续。
+
+错误不在发生的那一层冒出来，在三层之外的某个读数里才被看见——到那时没人能从报面倒回「是哪个参数被替了默认值」。**链上每一层都"成功"了。**
+
+本日实测样本（活样本，形状照此理解；批号与日期不进提示词——K6 同判）：`doc_check` 工具 schema 里 `target` 参数写着「Defaults to the session anchor」；之后一整条混乱从它长出来——锚被当根用、锚实为工作区、无项目可判、猜根、域表读不到、空集，每一步都没有报错。
+
+今天的人倒查的手法是：从报面（空集读数）出发 → 看它消费了哪个参数 → 打开工具 schema 逐字读参数行 → 读出「Defaults to…」 ⇒ 锁定是哪个参数被替了值。
+
+这个手法能走通，全靠参数默认值声明在**工具 schema 的参数行里逐字可见**——把它当成倒查的入口来写，样本就具体了；不写批号日期，样本值的是形状不是编号。
+
+⇒ **默认值兜底不是「多一层保护」，是替调用方做了一次没有依据的决定。**错误不是被修了，是被**改名**并**搬家**了。
+
+**强度边界（已裁：单一标准，内部函数不豁免——父侧 2026-11-07 18:44 裁，住批档 docs/batches/2026-11-07-parameter-zero-defaults.md §1「已定决定（三条上抛的裁定，2026-11-07 18:44 父侧裁）」）**
+
+「零默认值」落地的边界问题：内部私有辅助函数的参数算不算？**已裁——单一标准，内部函数不豁免**。本节给单一标准的理由：
+
+- **已裁口径 = 单一标准，零默认值适用于全部参数**（对外契约面：工具 schema 参数 ∥ 导出函数——零默认、缺就拒；纯内部辅助函数的参数——同样零默认，缺就抛）。
+
+  理由：同一条道理覆盖两层，没有理由两套标准。内部函数的默认值半径小，但半径小 ≠ 无害——错误照样搬家（内部函数的调用方也是调用方，也在被替了主意而不自知），且**对外契约面与内部面的分界线本身就漂**（一个私有函数明天可能被导出；一个参数默认值留在内部函数里，就是留给下一次导出的活样本）。
+
+- **存量核算（如实报）**：`thincoder-core/**/*.mjs` 里 `= {})` 形默认参 **100+ 处**（批档已划界：**清存量 = 另一批，本批只立判据**）。
+
+  按已裁口径（全部参数零默认），存量改动面 = 本批零触——清存量是另一个批次的活，本批只立判据，判据强度不影响本批的改动面。
+
+  另批清存量的代价 = 逐处显式传参或抛错，量级 = 100+ 处（内部默认参正是批档点名的病源形 `= {})`）。**结论：已裁口径不扩大本批改动面；另批改动量级如实报。**
+
+- 〔已裁〕强度边界 = 单一标准，内部函数不豁免——父侧 2026-11-07 18:44 裁，住批档 §1「已定决定（三条上抛的裁定，2026-11-07 18:44 父侧裁）」；两条提示词文本按单一标准落。
+
+**结构兜住了没有 = 类②，故留且带 why**
+
+没有机面判「这个函数签名带了默认参数」。`doc_check` 判文档、`verify` 判声明、写门判凭据——没有一个门扫函数签名的 `=` 缺省形。
+
+静态检查不抓参数缺省（它合法），评审席不逐函数核签名。所以这一条只能靠文本；而文本能给的不是许可，是让「带个默认值更安全」这个直觉站不住的道理。
+
+**落点（两处，同一道理两面引用——不开两个机制节）**
+
+| 面 | 档 | 位置 / 形态 |
+|---|---|---|
+| 编码纪律 | `thincoder-core/prompts/discipline-engineering.md` | 「🔴 What this mode runs on」节末（第 4 条之后、`**Premise invalidated mid-flight**` 段之前）**增列第 5 条**——同形先例 = 第 4 条（同节条目式，编号顺延）。该节现为 4 条，本批 4 → 5 |
+| 设计纪律 | `thincoder-core/prompts/persona-eng-designer.md` | 「Five-step workflow」节的第 3 步「**Give each requirement a judgment line**」之后增列一条 bullet——设计席写判据行时同一条参数约定就在手边（设计席给每条需求落验收判据，参数约定正是它写判据时用的那个约定） |
+
+为什么两面各落一处、不开两个机制节：同一道理，单源住本节，两条提示词文本各承自己那一面的形（编码面 = 函数签名形；设计面 = 接口/参数约定形），**不重述算式 ∥ 不重述搬家链全文**——两条文本各自把该面该讲的讲完，谁都不回指本节（提示词面不带文档引用），D2 不破。
+
+**逐字终稿（英文围栏块 · 实施席照此落笔 · 唯一权威目标形）**
+
+块 ① — `thincoder-core/prompts/discipline-engineering.md`「🔴 What this mode runs on」节末增列（第 4 条之后）：
+
+```text
+5. **A parameter default is a decision made for the caller**: the default fires silently when an argument is absent,
+   and the function then runs with a value nobody passed — the mistake it causes does not surface where it was made.
+   A measured sample, from our own work: a tool-schema `target` parameter declared as defaulting to the session anchor;
+   from that single declaration a whole chain of confusion grew — the anchor was treated as a root, the anchor was a workspace, no project resolved, a root was guessed, a domain table read empty —
+   and no step along that chain reported anything: each layer succeeded.
+   Tracing it back works only because the default was declared verbatim in the schema's parameter line; that line is where the reader lands after reading the empty result backwards.
+   So a parameter default is not "one more layer of protection" — it is a decision made on the caller's behalf, with no basis for it.
+   The error is not fixed; it is renamed and relocated.
+   Write it the other way instead: a parameter arrives or the call fails at the front door — say which parameter, carry a reason a person can point at.
+   Internal helper parameters are no exception: their radius is smaller, but the caller is still being decided for without knowing it — same rule, no second standard.
+```
+
+块 ② — `thincoder-core/prompts/persona-eng-designer.md`「Five-step workflow」第 3 步之后增列：
+
+```text
+   - **Design parameter contracts with zero defaults**: a tool-schema parameter or an exported function signature carries no `= default`;
+     the caller passes what the contract asks, or the call is rejected at the boundary with a reason naming the parameter.
+     Why: a default fires silently and the mistake surfaces three layers away, where nobody can trace it back to the substituted value —
+     a default is not protection, it is a decision made for the caller with no basis; leave the chain out of this line.
+```
+
+**为什么落这两处、不落别处**
+
+- 编码面落「🔴 What this mode runs on」节末、不落「Basic flow」或「Engineering judgment」：该节是本档判据密度最高的节（每条一个结构依据），且第 4 条（工程无小事）刚以同形（因果形、带实测样本、编号顺延）重写——同形落点读起来是同族，不象补丁。
+
+- 设计面落第 3 步之后、不落「Doc structure」或「The return」：第 3 步是设计席**写判据行**的那一步——参数约定正是写判据时用的那个约定；落「Doc structure」是给文档结构加规则（不达意），落「The return」是给交付报告加规则（时机太晚）。
+
+- 不落 `thincoder-core/prompts/common.md`（公共层）：受众不同——公共层是两模式 + 全部子代理；本条的受众是「写函数签名的人」（编码面）与「写参数约定的人」（设计面），普通模式与 explore / plan 子代理不写函数签名。
+
+  判据强度（零默认值）是用户裁定，落公共层会把普通模式也捆上；受众已裁 = 只捆工程侧两面（父侧 2026-11-07 18:44 裁，批档 §1），本批落点 = 两工程档，普通模式档零触。
+
+**对照表 · 与既有条款**
+
+| 既有句 | 它管什么 | 本节补什么 | 为何不冲突 |
+|---|---|---|---|
+| `## Business gates — a business failure must fail`（`thincoder-core/prompts/common.md`） | 业务门必须显式失败；兜底唯一合法判据 = 业务结果不变 | 参数缺省这一类兜底的**为什么最危险**（错误搬家 + 每层都成功）与**函数签名层面的动作**（不写默认参） | 同向不同面：那条管业务结果层（哪个失败不能被做通），本条管函数签名层（哪个参数不能被替）——一个管结果、一个管输入；本条不重述它的正反例清单（D2） |
+| `workable default`（`thincoder-core/prompts/persona-engineering.md` §In-flight ask ∥ `thincoder-core/prompts/persona-normal.md`） | 执行面默认值：长任务不阻塞，带默认继续推进 | 函数签名的参数缺省 | 两轴：那条管**工作推进**（拿不准的问题怎么走），本条管**代码契约**（函数签名怎么写）；本条的样本句「default fires silently…」与它无涉 |
+| 第 4 条（`A change's size is not the size of what it risks`） | 走流程之前的那个判定（量牵连面） | 函数签名层的参数缺省 | 两条管不同的判定点：那条管流程之前，本条管写代码那一刻；同形落点（同节、编号顺延、因果形 + 实测样本）是刻意对齐，不是同一条 |
+
+**用例表（正常 / 边界 / 错误）**
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 导出函数带缺省参（实施席写新函数） | `function f(target = anchor)` 形签名 | 判违规：改成 `function f(target)` + 调用处显式传参；缺参 ⇒ 函数体内第一行抛（带参数名） |
+| C2 | 正常 · 工具 schema 参数带「Defaults to…」句（设计席写新工具描述） | `target: { type: "string", description: "…Defaults to the session anchor…" }` | 判违规：删「Defaults to…」句，schema 加 `required: true`；缺参 ⇒ 工具实现第一行拒（带参数名） |
+| C3 | 边界 · 内部私有辅助函数 | `parseLedgerNo(args?.ledger)` 形——私有、无导出面 | 同判：零默认值；缺参 ⇒ 抛（内部函数的调用方也是调用方，也在被替了主意而不自知） |
+| C4 | 错误 · 「半径小」当豁免理由 | 「这只是内部函数，默认值无妨」 | 判违规：半径小 ≠ 无害——错误照样搬家；同一条道理，没有理由两套标准 |
+| C5 | 错误 · 当禁令清单念 | 「哪条规则说了不许默认参？」 | 违规：本条给的是道理（错误搬家 + 每层都成功），按道理自推，不按字面穷举 |
+
+**验收（A1–A7 · 每行带跑者）**
+
+| # | 验收 | 跑什么 / 期望什么 | 跑者 |
+|---|---|---|---|
+| A1 | 两块落盘且逐行相等 | `node` 逐行 `===`：`thincoder-core/prompts/discipline-engineering.md` 块① 与本节「块 ①」围栏块整行相等；`thincoder-core/prompts/persona-eng-designer.md` 块② 与「块 ②」围栏块整行相等；快判 = 命令 ① ⇒ 两档各 **1** | 实施轮 |
+| A2 | 位置（钉相邻引文，不记行号） | 块① 首行 = 第 4 条末行（`The moment to notice is the moment the judgement feels obvious` 那行）之后的第一行，且在 `**Premise invalidated mid-flight**` 行之前；块② 首行 = 第 3 步整行（`a requirement without a judgment line is not done` 所在行）之后的第一行，且在 `4. **Write the design**` 条首行之前 | 实施轮 |
+| A3 | 删词检验 · 机判半边（D8 · 判窗 = 两块围栏本身，按块取 10 ∥ 4 行） | 命令 ②：块①（10 行）∥ 块②（4 行）各自逐行扫禁词 ⇒ 各 **0**（禁词表 = `\b(must|shall|should|never|always|forbidden|required to|do not|don't)\b`）；顺带给出块行数——判窗到块末行收口，不越过块末行（多判的行是别的批次的写域；判据红而实质绿 = 判据错，§6.76 K10 同判） | 本席（已跑，命中 0）· 实施轮复跑 |
+| A4 | 同一机制单源（D2）· 两面各承自己的形、不重述搬家链 | discipline 档块① 含 `decision made for the caller` ⇒ ≥1；designer 档块② 含 `leave the chain out of this line` ⇒ **1**——两条文本各写自己那一面的形，搬家链全文只住本节 | 实施轮 |
+| A5 | 行宽 / 语言 / 引用 | 两块逐行 ≤300 字符；扫汉字 ⇒ 0；扫 `.md` ∥ `§[0-9]` ⇒ 0（§6.6 禁带文档引用） | 实施轮 |
+| A6 | 本档连带 ∥ 外溢判（D11） | `thincoder-core/prompts/` 其余 15 档扫 `zero defaults` ∥ `parameter default is a decision` ⇒ **0**（两面只落两处，零外溢）——命令 ③ | 本席（已跑）· 实施轮复跑 |
+| A7 | 交付门（三档齐判） | `doc_check(mode:"gate", docs:["docs/core/design/PROMPT-SYSTEM.md", "thincoder-core/prompts/discipline-engineering.md", "thincoder-core/prompts/persona-eng-designer.md"])` 首行 `PASS` | 本席交付前 ∥ 父侧收口复跑 |
+
+**验收命令（可复跑 · 一次性，用完即弃；绝对数只留在输出里，不落本档）**
+
+命令 ① A1 快判（两档各扫新名，行数）：
+
+```text
+node -e "const fs=require('fs');for(const [f,p,pat] of [['disc','thincoder-core/prompts/discipline-engineering.md','A parameter default is a decision'],['des','thincoder-core/prompts/persona-eng-designer.md','Design parameter contracts with zero defaults']]){const b=fs.readFileSync(p,'utf8').split(/\r?\n/);console.log(f,b.filter(l=>l.includes(pat)).length)}"
+```
+
+命令 ② A3 删词扫描（两块禁词命中 · 块行数；判窗按块 = 10 ∥ 4，到块末行收口）：
+
+```text
+node -e "const fs=require('fs');for(const [f,p,pat,n] of [['disc','thincoder-core/prompts/discipline-engineering.md','A parameter default is a decision',10],['des','thincoder-core/prompts/persona-eng-designer.md','Design parameter contracts with zero defaults',4]]){const b=fs.readFileSync(p,'utf8').split(/\r?\n/);const i=b.findIndex(l=>l.includes(pat));const blk=b.slice(i,i+n);console.log(f,{lines:blk.length,banned:blk.filter(l=>/\b(must|shall|should|never|always|forbidden|required to|do not|don't)\b/i.test(l)).length,maxLen:Math.max(...blk.map(l=>[...l].length))})}"
+```
+
+命令 ③ A6 外溢判（其余 15 档零命中）：
+
+```text
+node -e "const fs=require('fs');const dir='thincoder-core/prompts';const files=fs.readdirSync(dir).filter(f=>f.endsWith('.md')&&!['discipline-engineering.md','persona-eng-designer.md'].includes(f));let t=0;for(const f of files){t+=fs.readFileSync(dir+'/'+f,'utf8').split(/\r?\n/).filter(l=>/zero defaults|parameter default is a decision/.test(l)).length}console.log(t)"
+```
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 因果形，不写禁令 | 同档 §6.76 实测：规则在场而行为不变——被替换的旧第 4 条四行禁令齐在场而同日仍按直觉判「改一个常数」。规则回答「允许不允许」，因果让「带个默认值更安全」这个直觉站不住 |
+| K2 | 强度 = 零默认值（用户 18:22 原话「其实我是不希望任何默认值存在的，是什么参数就显式传入」），不写「必需参数才拒」温和形 | 用户裁定强度；温和形是设计在替用户降档 |
+| K3 | 两面各落一处，同一机制节为单源，不开两个机制节 | 同一道理，两面引用——重述搬家链全文 = 两处各自漂移；两条文本各承自己面的形（签名形 ∥ 接口形），不重述全文 |
+| K4 | 设计面落第 3 步之后（判据行写作点），不落「Doc structure」 | 第 3 步是设计席写判据行的那一步；参数约定正是写判据时用的那个约定。落「Doc structure」是给文档结构加规则，不达意 |
+| K5 | 不落公共层（`thincoder-core/prompts/common.md`），普通模式零触 | 受众面已裁 = 只捆工程侧两面（父侧 2026-11-07 18:44 裁，批档 §1）；写函数签名的是工程侧实施席与设计席，普通模式档不在受众内 |
+| K6 | 样本不写批号日期，样本值的是形状 | 批号是过程坐标，过期即死；形状句「一个参数声明默认值 → 一整条混乱从它长出来」才是可迁移的 |
+| K7 | 强度边界按「单一标准」落（内部函数不豁免），已裁 | 父侧 2026-11-07 18:44 裁（批档 §1）；单一标准有据：半径小 ≠ 无害、分界线本身漂、内部函数的调用方也是调用方 |
+| K8 | 存量 100+ 处零触（批档已划界），判据强度不影响本批改动面 | 清存量是另批的活；本批只立判据，另批的量级与温和口径相当（如实报，见「强度边界」段） |
+
+**先例 ∥ 偏离**：先例 = 本档 §6.76（因果形 + 实测样本 + 同节条目式增列 + 删词检验）∥ §6.75（新增落点 + 对照表 + 用例表 + A 表）∥ §6.42（业务门：同主题相邻机制——业务结果层的兜底禁令）。
+
+**对齐** = 唯一副本住设计面、实施席逐字照落、验收每条可机判、道理与字面分层不重述。
+
+**偏离**：
+
+- ① 落点是**增列**（discipline 档该节 4 → 5 条）∥ **节内增列 bullet**（designer 档第 3 步之后）——零新 `##` 节、零 `###` 节（与 §6.76 整条替换同节、零块计数连带；§6.75 的 `##` +1 那种连带本批零）。
+
+- ② 删词检验 = A3（两块禁词零命中）——本席已跑，命中 0；实施轮复跑。
+
+- ③ 强度边界已裁 = 单一标准（K7）——父侧 2026-11-07 18:44 裁（批档 §1），正文按单一标准落。
+
+**既有件三问（本条是新增判据名 + 既有节内增列）**
+
+- `existing` = `thincoder-core/prompts/discipline-engineering.md`「🔴 What this mode runs on」节 · name 逐字 `What this mode runs on` · consumers = 工程模式主会话 + 工程子代理（纪律层三段同读）⇒ 节末增列第 5 条，既有 4 条一字不动。
+
+- `existing`（第二件）= `thincoder-core/prompts/persona-eng-designer.md` 的 `## Five-step workflow` 节第 3 步 · name 逐字 `Give each requirement a judgment line` · consumers = 设计席 ⇒ 第 3 步之后增列一条 bullet，第 3 步本体一字不动。
+
+- `none found` = `A parameter default is a decision made for the caller` ∥ `Design parameter contracts with zero defaults` ∥ `error is not fixed; it is renamed and relocated`：`thincoder-core/prompts/` 全 17 档逐串实扫（本席本轮）⇒ 三串零命中 ⇒ 新文本不重名、不撞旧句。
+
+**勘察证据行（本席本轮实读 / 实算）**
+
+- 用户口径逐字一（本席本轮 read）：依据 `docs/batches/2026-11-07-parameter-zero-defaults.md`「18:18「其实真正出问题的不是提示词里说到的这些，**最危险的情况是一个必须的参数不传，代码按默认值兜底**，这个是最可怕最不可控的，我希望的是**该传的参数就要传，不传就打回去，别搞什么兜底**。」」
+
+- 用户口径逐字二（本席本轮 read）：依据 `docs/batches/2026-11-07-parameter-zero-defaults.md`「18:22「**设计和编码都要提这个要求，就开做吧。其实我是不希望任何默认值存在的，是什么参数就显式传入。**」」
+
+- 活样本 schema 行逐字（本席本轮 grep）：依据 `thincoder-core/agent-tools/doc-check.mjs`「`target` supplies only the base for relative `docs` entries and the root for a document whose ancestors hold no manifest. Defaults to the session anchor.」
+
+- 同主题相邻条款逐字（本席本轮 read，跨两行整段）：依据 `thincoder-core/prompts/common.md`「Making it pass instead — a default value, an auto-created parent, a caught exception that lets the loop continue, an empty list standing in for rows that could not be read, a neutral message in」
+
+- 同主题相邻条款逐字（续行）：依据 `thincoder-core/prompts/common.md`「place of the refusal — turns a business error into silence, and a silent error is never found, never fixed, never learned from.」
+
+- 执行面默认值分界逐字（本席本轮 grep）：依据 `thincoder-core/prompts/common.md`「**A workable default is a different thing**: it decides how the work moves, not what the business decides, and it never invents a business outcome. The line is the outcome, not the mechanism.」
+
+- 编码面落点位置锚（本席本轮 read）：依据 `thincoder-core/prompts/discipline-engineering.md`「   The moment to notice is the moment the judgement feels obvious — obvious is what an unmeasured size feels like from the inside.」（第 4 条末行，紧邻 `**Premise invalidated mid-flight**` 行之前）——块① 首行紧随其后。
+
+- 设计面落点位置锚（本席本轮 read）：`thincoder-core/prompts/persona-eng-designer.md` 的 `## Five-step workflow` 节第 3 步整行 = 「**Give each requirement a judgment line**」条（末句逐字 `a requirement without a judgment line is not done`）。
+
+（引文逐字住该档第 3 步整行，落笔时以盘上整行为准；本行只记判定与落点关系——块② 首行紧随其后。）
+
+- 旧句复用扫描：三条探针串在 `thincoder-core/prompts/` 全 17 档零命中（本席本轮 grep）——新文本不重名、不撞旧句。
+
+- 公共源勘察：项目 manifest 的 `index.publicRepos` 实读 = `[]` ⇒ 工作目录内无独立公共源文档仓——已查，无相关。
+
+**受影响文件与分层结论**
+
+| 档 | 面 | 本笔归谁 |
+|---|---|---|
+| `docs/core/design/PROMPT-SYSTEM.md` | 文档面（设计） | 本席，已落（新节 §6.77） |
+| `thincoder-core/prompts/discipline-engineering.md` | 产品代码面（提示词 = 运行期面） | 实施轮 eng-coder 落（块① 增列第 5 条） |
+| `thincoder-core/prompts/persona-eng-designer.md` | 产品代码面（提示词 = 运行期面） | 实施轮 eng-coder 落（块② 增列 bullet） |
+| `docs/core/requirements/ENGINEERING-MODE-V2.md` | 文档面（需求） | 主 agent（本轮无对应条目，见上抛 1） |
+| 测试档 | — | **0**（零代码面） |
+
+**分层结论 = 无档跨分层**：档位线只量代码面；`.md` 提示词档免档位判定，运行期代码零改。
+
+**集成测试设计**：`none` —— 改动面 = 两档提示词各增列一段 + 本档一节，零代码面。
+
+两条入口均不成立：① 不改任何既有用例断言的业务可观察结果（`test/RTM.md` 本轮逐行读——故事标题逐个看过，无一行断言提示词文本或其等价性）；② 未新增业务上真需要的场景——「模型是否真的不写默认参」从业务入口复现不出可机判结果，能断言的只有文本等价（A1–A6）。⇒ 破行 0 · 冗余 0 · 新增 0。
+
+**RTM 近面**：`test/RTM.md` 已读——本档是索引档：故事按行登记在「故事索引表」里，故事本体住分册（`test/rtm/<族>.md` 形）。
+
+判过的面 = 索引表全 36 行故事标题逐个看过；最近面两条 = `CLI 1`（对话里用工具，结果必须回到模型）∥ `CLI 12`（写盘与跑命令都要报它替哪条台账行服务）——两条断的都是运行时行为，不是文本措辞。⇒ 破行 0 · 冗余 0 · 新增 0。
+
+**边界（本节不做）**——逐条：
+
+- 不改既有 4 条（编码面）∥ 第 3 步本体（设计面）。
+- 不清存量 100+ 处默认参（批档已划界，另批）。
+- 不动 `thincoder-core/prompts/common.md` ∥ `thincoder-core/prompts/persona-engineering.md` ∥ `thincoder-core/prompts/persona-normal.md` ∥ 普通模式三档（受众面已裁 = 只捆工程侧两面，批档 §1）。
+- 不新增机检门 ∥ 不改 `doc_check` 判据。
+- 不写进 `thincoder-core/tool-docs/**`（工具描述面另有判据域——本节只落提示词面）。
+- 不留行号坐标。
+
+**UI / 交互决策**：无界面面——本节只改设计档文字与模型可见提示词文本。
+
+**上抛项**
+
+1. 〔已裁 · 需求面〕需求档不补条目——判据住本节单源（同「工程无小事」批的判法），父侧 2026-11-07 18:44 裁，住批档 §1。
+
+2. 〔已裁 · 强度边界〕内部辅助函数的参数不豁免，单一标准（K7）——父侧 2026-11-07 18:44 裁，住批档 §1「已定决定（三条上抛的裁定，2026-11-07 18:44 父侧裁）」。
+
+3. 〔已裁 · 受众面〕只捆工程侧两面，普通模式不同捆——父侧 2026-11-07 18:44 裁，住批档 §1；本批落点 = 两工程档，普通模式档零触。
+
+4. 〔知会 · 零连带〕discipline 档该节 4 → 5 条、零 `##` ∥ `###` 计数连带；designer 档零节级连带（`##` ∥ `###` 计数零改）。
+
+5. 〔知会 · 新名注册〕本条新名 = `A parameter default is a decision made for the caller`（编码面）/ `Design parameter contracts with zero defaults`（设计面）——两面各承自己面的形，同一机制节为单源，A4 判两面不重述搬家链（探针串 = `decision made for the caller` ∥ `leave the chain out of this line`）。
+
+6. 〔知会 · 清点表行连带〕本档 §6.73 清点表「discipline · What this mode runs on」行三格已随改：条数格 = 5；吸收 why 落点格带「第 5 条同因果形、无 `Why:` 行」；类② 题眼末列带第五条条名 `A parameter default is a decision made for the caller`（一致性面 · 本节写域内——§6.76 上抛 2 同形先例）。
 ## 8. 提示词承载（单源 · M9 落点）
 
 **定位**：提示词 = **产品代码**，唯一副本 = `thincoder-core/prompts/`（17 档，运行期直接加载）。规则的**人读权威** = 中文机制文档（`docs/core/design/` 纪律族）。变更路子 = 改规则 → 先改机制文档 → coder 依它改 EN（走产品代码面：需求 → 设计 → 评审 → coder）。**无机检门**（用户裁定不变）。

@@ -717,9 +717,9 @@ export const manifestReadTool = {
     properties: {
       action: { type: "string", enum: ["read"], description: "read — current manifest + validation state (five-state anchor, never throws)" },
 
-      target: { type: "string", description: "Explicit target directory — defaults to the session anchor; relative paths resolve against it. A workspace target (several projects below it) is reported with the full project list — pass the project root you mean." },
+      target: { type: "string", description: "Required — pass the project root or directory you mean (relative paths resolve against the session anchor; a workspace target is reported with its project list)" },
     },
-    required: ["action"],
+    required: ["action", "target"],
   },
 
   readonly: true,
@@ -746,7 +746,7 @@ read [target] — report the manifest state with a stable anchor `state=ok|missi
 
 Use it to locate documentation instead of assuming a path: read `docRoot.<key>` and resolve your target under that root. A missing face (`null`) means that document layer does not exist in this project — report it instead of inventing a path.
 
-target — explicit target directory; defaults to the session anchor, relative paths resolve against it. A workspace target (several projects below it) is reported with the full candidate list — name the project root you mean and pass it as target.
+target — the project root or directory you mean; **required** — omitting it is refused. Relative paths resolve against the session anchor. A workspace target (several projects below it) is reported with the full candidate list — name the project root you mean and pass it as target.
 ```
 
 **挂载面（判据：全部 depth>0 段）**

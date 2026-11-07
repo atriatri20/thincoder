@@ -207,7 +207,7 @@ apply_patch——无坐标 hunk 宽容 + 文件头容缺；多文件原子。wri
 - **glob**：`{a,b}` brace 展开；`!` 排除前缀；不支持语法（`?(x)` / `@(a|b)` / `+(x)` / 空 / 未闭合 brace）**显式报错**（不静默漏匹配）。
 - **wait_for**：条件等待（非 sleep）——条件语义化（advisor settled / subagent id:N done / consult done / `bash id:N done` / `browser id:N done` / file exists / port open）；未知条件显式报错；timeout 默认 30s（config 可覆盖，cap 600s）；
 interval 默认 1s 下限 100ms。**`advisor settled` 判据** = 后台评审池真实态（无 running / queued 评审）——该判据读子代理池的 advisor 条目（该池永无此类条目）⇒ **恒真 0ms 秒过**（用户实证）。机制面细则归 AGENT-LOOP 板。
-- **timer**：四式 = 一次性倒计时（默认 180s · `seconds` 有限正数）∥ 绝对时刻（`at` = `YYYY-MM-DDTHH:MM[:SS]` 本地 · 过时点即时）∥ 固定间隔（`every` 秒 · 下限 60s · 首投 = 设时 + N）∥ 日历式（`daily` = `HH:MM` 本地 · 每日该刻）；
+- **timer**：四式 = 一次性倒计时（`seconds` 必填 · 有限正数）∥ 绝对时刻（`at` = `YYYY-MM-DDTHH:MM[:SS]` 本地 · 过时点即时）∥ 固定间隔（`every` 秒 · 下限 60s · 首投 = 设时 + N）∥ 日历式（`daily` = `HH:MM` 本地 · 每日该刻）；
   另二动作 = `cancel`（按 id）∥ `list`（只读）；`seconds` ∥ `at` ∥ `every` ∥ `daily` 至多一（互斥违例显式拒）。在途 ≤ 8（超限显式拒——周期项占坑：1 条 1 坑、到点重排净零）；
 
   到期语义 = 在途跨 run 存活 + 到点自唤醒（空闲 / 挂起窗）——**支持面 = CLI / VSC / 桌面三端前台（headless 结构性不支持）**，逐格定义 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.5；四式机制 = 同档 §6.30.18（开关 `agent.timerWake` 默认开；端面接线 = §6.30.11）。
