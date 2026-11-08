@@ -1,11 +1,14 @@
-Find files by glob pattern. Returns matching paths (relative to the search path), sorted, capped at 1000. Use this to discover file structure; use grep to search file contents.
+Find files by glob pattern. Returns matching paths (relative to the search path), sorted, capped at 1000. Use it to discover file structure; use `grep` to search file contents.
 
 Parameters:
-- pattern (required): Glob pattern — supports `**` (recursive), `**/`, `*` (within a segment), `?` (single char), `[..]` character classes, and `{a,b}` brace expansion (e.g. `**/*.{js,txt}` matches .js and .txt files at any depth). Space-separated multiple patterns with a leading `!` are EXCLUSIONS — `**/*.js !test/**` matches .js files except those under test/. Pattern matching is relative to `path`. A pattern containing a literal space is fine on its own (spaces only separate patterns when a `!` exclusion is present). An expression splits ONLY before `!`-exclusion tokens — to match several extensions in one include, use a `{a,b}` group (e.g. `**/*.{js,md}`); adjacent space-separated includes are not a supported form.
-- path: Directory to search in (default cwd)
+- `pattern` (required): glob pattern, relative to `path`. Supported:
+  - `**` (recursive), `**/`, `*` (within a segment), `?` (single char), `[..]` character classes, and `{a,b}` brace expansion - e.g. `**/*.{js,txt}` matches .js and .txt files at any depth.
+  - Exclusions: a space-separated `!` token - `**/*.js !test/**` matches .js files except those under test/.
+  - Several extension alternatives go in one `{a,b}` group (e.g. `**/*.{js,md}`); adjacent space-separated includes are not a supported form. A pattern containing a literal space is fine on its own - spaces separate patterns only when a `!` exclusion is present.
+- `path`: directory to search in (default cwd).
 
 Notes:
-- Invalid glob syntax is an EXPLICIT error — never a silent no-match. Unsupported extglob dialects (`?(x)`/`@(a|b)`/`+(x)`) and malformed braces (empty `{}`, unclosed `{`, nested `{a,{b,c}}`) return `glob error: ...` — use `{a,b}` or a space-separated `!exclude` pattern instead.
-- Skips node_modules, .git, dist, build, .turbo, coverage
-- Results capped at 1000 matches
-- Prefer patterns with a literal anchor (extension or subdirectory) over bare wildcards
+- Invalid glob syntax is an EXPLICIT error, never a silent no-match: unsupported extglob dialects (`?(x)` / `@(a|b)` / `+(x)`) and malformed braces (empty `{}`, unclosed `{`, nested `{a,{b,c}}`) return `glob error: ...` - use `{a,b}`, or a space-separated `!exclude`, instead.
+- Skips node_modules, .git, dist, build, .turbo, coverage.
+- Results are capped at 1000 matches.
+- Prefer a pattern with a literal anchor (an extension or a subdirectory) over a bare wildcard.

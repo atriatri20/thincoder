@@ -6,9 +6,7 @@ Two targeting forms (mutually exclusive — use one):
 
 ② content-based: old_string is the current content of the region to change (must match exactly once); new_string is the desired result of that region.
 
-old_string matching is tolerant: exact match first, then a unique whitespace-only variant, then fuzzy match (unique window with ≥90% of lines identical after trimming,
-
-tab→space indent and quote normalization — ASCII single, curly single/double and backtick quotes all unify to straight double quotes).
+old_string matching is tolerant: exact match first, then a unique whitespace-only variant, then a fuzzy match on a unique window — indentation width and quote style are normalized on both sides, so a straight-quoted copy still matches a curly-quoted original.
 
 Lines shared by old/new are kept; lines only in new_string take their position relative to the shared lines (LCS order); lines only in old_string are deleted — a replacement never leaves old lines behind (zero overlap → old lines are replaced by new_string, not kept).
 
@@ -27,14 +25,14 @@ replace_all applies to content-based edits only: literal replacement of every oc
 
 **Batch multiple changes into ONE call via the `edits` array** (preferred over N single edit calls) — same file or across files; atomic: any failure writes nothing. One permission ask, one undo unit, and one turn instead of N. Per-entry shape and targeting are in the schema.
 
-Line-number entries in one `edits` array apply first, in descending `startLine` order, so each is anchored on the numbers you read; their ranges must not overlap (overlap ⇒ the whole batch is refused, nothing written). Content entries then apply in array order. The receipt stays in call order.
+Line-number entries in one `edits` array must not overlap (overlap ⇒ the whole batch is refused, nothing written); each is anchored on the numbers you read, and the receipt stays in call order.
 
 Notes:
 - Prefer this over write for targeted edits — it's safer and keeps changes targeted
 - If old_string matches zero times (even fuzzy): error. If it matches multiple times without replace_all: error — add more surrounding context to make it unique
 - Returns `Edited <path>: replaced N occurrence(s)` (delete-mode: `Deleted line N of <path>` / `Deleted lines N-M of <path>`) + git diff + syntax-check note + context block (L..-L..).
 - Never fabricate the old_string — copy it verbatim from the actual file using read first
-- **Line-number anchoring**: `line` / `startLine`+`endLine` are judged against the last write to that file: inside or below that write's affected range, or when the file was written after it without updating that anchor, the call is refused — naming the path, the drift (`L<startLine>`, `±shift`) and two ways on (re-read, or address the region without line numbers).
+- **Line-number anchoring**: a `line` / `startLine`+`endLine` target is judged against the last write to that file, so a target that drifted is refused — the refusal names the path, the drift (`L<startLine>`, `±shift`) and two ways on (re-read, or address the region without line numbers).
 - use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed
 
 **`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it — a call that does not say which row it serves is refused.

@@ -14,8 +14,8 @@ Notes:
 - Paths resolve relative to cwd — no directory restriction (same boundary as bash; the approval gate is the guard).
 - `dest` is overwritten if it already exists. `copy` is recursive for directories.
 - To create a directory, use `write` (creates parent dirs) or `bash mkdir`.
-- Returns `Moved|Copied|Renamed <source> -> <dest>` or `Error: ...` (same-path and missing-path errors).
+- Returns one line: `Moved` / `Copied` / `Renamed`, then the two paths exactly as you passed them separated by an arrow; or `Error: ...` (same path, missing path, unknown action).
 
 **`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it — a call that does not say which row it serves is refused.
 
-**`project`** — the project this call serves: absolute path of a project root (the directory carrying `PROJECT-MANIFEST.json`). Read only when the target sits outside every project and the session anchor is that workspace root; else the target's root decides and `project` is not read.
+**`project`** — the project this call serves: a project root (the directory carrying `PROJECT-MANIFEST.json`). Read only when the target sits outside every project and the session anchor is that workspace root; else the target's root decides and `project` is not read.

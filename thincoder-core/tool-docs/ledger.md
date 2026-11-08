@@ -1,8 +1,31 @@
-台账统一入口——action = add / update / close / query / count。query / count 只读全角色；add / update / close 写仅主 agent。
-- add：新增条目入待讨论。kind = requirement（需求池）/ tech_todo（技术待办）；trigger = 归批 / 条件 / 认账不排期（可空）；resume_when = 复启条件句（可空；值非空——空串 / 全空白拒；句内可带锚 `@YYYY-MM-DD`（机判到期）或 `@事件件名`（机器不判））。task_book 写门（add ∥ update 同判，判本笔写入面）：结果行 在途 / 待核销 ∥ trigger = 归批 ⇒ task_book 必填（缺 / 空串 / 全空白拒）；本笔新写 task_book（非空值）∥ 本笔新写 trigger = 归批 ⇒ 该指针的文件部分（首个 `§` 前子串）须可解析且指出的档在盘，否则拒。本笔不动指针 ⇒ 零判零阻——旧指针所指档已被清理不阻 status / evidence / 其它字段更新（「档在不在盘」是读数 taskBookOnDisk，不是门）。
-- update：按六态允许表迁移（逐边枚举，表外拒）：待讨论→待设计 / 待讨论→在途 / 待设计→在途 / 在途→待核销 / 待核销→已核销 / 待核销→在途 / 任意非 已废弃 态→已废弃（已废弃 无出边）。`待讨论→在途` 是点火与建档的正路——批档一开就把覆盖行直接落到 在途，不过 待设计（待设计 = 已排设计，不是点火发生的事）；`待核销→在途` 是重开回收——批档重开 ⇒ 行回工作位，六态唯一的回退边。id ∥ batch 恰携其一。status 缺省 = 仅更新字段；executor 缺省 = 进入待设计 / 在途自动写本会话，出在途 / 撤回清空；resume_when 同 update 可空字段（缺省 = 不变）。evidence 传入 = 追加（旧值非空 ⇒ 拼接 `旧｜新`——「｜」零空格；旧空直写）；`evidenceReplace: true` 与 evidence 同传 = 整段替换；旗独传（无新文）∥ 新值全空白 ⇒ 拒。
-- update --batch：批级批量迁移（batch = 批档指针，与该档 task_book 同址的行一次处理）——携 status ⇒ 逐行按迁移表重判；不携 status ⇒ 纯字段补丁（status 零写）。回执 { batch, status, applied, skipped }；被跳过的行逐行点名 { id, from, why }（why = 逐行拒因原文），其余行照落；事务级失败整批回滚。batch 值须可解析且批档在盘，否则拒。
-- close：勾销（待核销 → 已核销）——**只有这一条核销边**：待讨论 / 待设计 / 在途 一律拒（拒文点名现态 + 该现态的出路句）；撤回（任意态 → 已废弃）不拦。软删除（写 closed_at，行保留）。id ∥ batch 恰携其一。evidence 传入 = 追加（旧值非空 ⇒ 拼接 `旧｜新`；旧空直写）；`evidenceReplace: true` 同传 = 整段替换；旗独传 / 新值全空白 ⇒ 拒；缺省 = 判行值。
-- close --batch：批级批量结算——只销已到 待核销 的行（勾销）；待讨论 / 待设计 逐行点名跳过（须先 update 到 在途 认领）；在途 逐行点名跳过（不可跳）；已核销 / 已废弃 行静默不计。status 可不给（缺省 = 已核销），给了只能是 已核销。
-- query：SQLite 行集，等值过滤（status / kind / board / trigger / task_book）缺省 = 全部行；行集逐行携 aged（未决四态 ∧ 行龄 > 30 天）/ evidenceTooLong（evidence 文字太长，难于阅读——读数非拒写；超 300 字即算命中）/ taskBookOnDisk（task_book 文件部分解析成立 ∧ 该档在盘 ⇒ true；缺指针 / 不可解析 / 不在盘 ⇒ false——读数非门，不拦任何写入）/ overdue（出口态字串 ∥ null：resume_due / dangling / unlabeled / aged，首中优先）。六态 = 待讨论 / 待设计 / 在途 / 待核销 / 已核销 / 已废弃。
-- count：回报 { count, overdue, evidenceTooLong }——count = 未决四态（待讨论 / 待设计 / 在途 / 待核销）行数；overdue = 其中命中出口态的行数；evidenceTooLong = 其中文字太长、难于阅读的行数。task_book 等值过滤。
+The project's todo book — one entry per requirement point or per piece of engineering debt. `action` = add / update / close / query / count. `query` / `count` are read-only and open to every role; `add` / `update` / `close` write and are main-agent only.
+
+- `add`: a new entry lands in `待讨论`.
+  - `kind` = `requirement` (requirement pool) / `tech_todo` (engineering debt).
+  - `trigger` = `归批` / `条件` / `认账不排期` (optional).
+  - `resume_when` = the sentence saying when the entry resumes (optional; when given it may not be blank, and it may carry an anchor `@YYYY-MM-DD` (judged) or `@<event>` (not judged by machine)).
+  - **The `task_book` gate** — same on `add` and `update`, judged on what this call writes. An entry that ends up in `在途` / `待核销`, or a call that sets `trigger` = `归批`, must carry `task_book`: absent / empty / blank is refused.
+  - A call that writes `task_book` (non-empty), or that sets `trigger` = `归批`, is also held to the pointer: its file part, the text before the first `§`, must resolve, with that file on disk, else refused.
+  - A call that does not touch the pointer is not judged: a stale pointer left by an earlier call never blocks a `status` / `evidence` / other-field update — "is the file on disk" is the `taskBookOnDisk` reading, not a gate.
+- `update`: moves an entry along the six-state table, edge by edge — `待讨论→待设计` / `待讨论→在途` / `待设计→在途` / `在途→待核销` / `待核销→已核销` / `待核销→在途` / any non-`已废弃` state → `已废弃` (`已废弃` has no way out); every edge not on that list is refused.
+  - `待讨论→在途` is the ignition path: opening a batch moves its coverage rows straight to `在途`, never through `待设计` (`待设计` means design is scheduled, not that ignition happened).
+  - `待核销→在途` is the reopen reclaim — a reopened batch puts its rows back to work, and it is the only backward edge.
+  - Give exactly one of `id` / `batch`.
+  - `status` omitted = update only the fields you passed; `resume_when` omitted = unchanged; `executor` omitted = entering `待设计` / `在途` writes this session, and leaving `在途` or withdrawing clears it.
+  - `evidence` appends (old value non-empty ⇒ `old｜new`, nothing around `｜`; old empty ⇒ written as given). `evidenceReplace: true` together with `evidence` replaces the whole text; the flag alone, or a blank new value, is refused.
+- `update --batch`: one migration across a batch (`batch` = the batch-record pointer; the rows whose `task_book` sits on that record are handled together).
+  - With `status` ⇒ every row is re-judged against the migration table; without `status` ⇒ a pure field patch, `status` untouched.
+  - Receipt `{ batch, status, applied, skipped }`; each skipped row is named `{ id, from, why }` (`why` = that row's own refusal text) and the rest still land; a transaction-level failure rolls the whole batch back.
+  - A `batch` that does not resolve to a record on disk is refused.
+- `close`: settle (`待核销 → 已核销`) — the one settling edge. `待讨论` / `待设计` / `在途` are refused, naming the current state and that state's way out; withdrawing (any state → `已废弃`) is never blocked.
+  - Soft delete: the row keeps its content and gains a `closed_at`.
+  - `status` is required on a single-row close: `已核销` to settle, `已废弃` to withdraw. Give exactly one of `id` / `batch`. `evidence` / `evidenceReplace` behave as in `update`, and an omitted `evidence` leaves the row's own text as it stands.
+- `close --batch`: settles only the rows already at `待核销`. `待讨论` / `待设计` rows are skipped and named (move them to `在途` first to claim them), `在途` rows are skipped and named (they cannot be jumped), settled and withdrawn rows are not counted.
+  - `status` may be omitted (default `已核销`) and can only be `已核销`.
+- `query`: equality filters (`status` / `kind` / `board` / `trigger` / `task_book`), default every row. Each row carries:
+  - `aged` — an unsettled state and older than 30 days.
+  - `evidenceTooLong` — the evidence text is too long to read; a reading, never a write refusal.
+  - `taskBookOnDisk` — the `task_book` file part resolves and that file is on disk.
+  - `overdue` — the exit state as a word: `resume_due` / `dangling` / `unlabeled` / `aged`, first match wins.
+  - The six states: `待讨论` / `待设计` / `在途` / `待核销` / `已核销` / `已废弃`.
+- `count`: `{ count, overdue, evidenceTooLong }`. `count` = rows in the four unsettled states; `overdue` = how many of those are in an overdue exit state; `evidenceTooLong` = how many carry over-long evidence. Same equality filters as `query`.

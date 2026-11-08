@@ -1,4 +1,4 @@
-List running processes, optionally filtered by name — or kill a process tree / a background task. List returns process name / PID / memory; kill returns a one-line confirmation.
+List running processes, optionally filtered by name — or kill a process tree / a background task. List returns one line per process (name / PID, plus memory on Windows); kill returns a one-line confirmation.
 
 **Route to process instead of bash:**
 - `tasklist` (Windows) / `ps aux` (POSIX) → process

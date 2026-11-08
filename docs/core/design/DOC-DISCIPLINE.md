@@ -1497,7 +1497,7 @@ bare names only — `AGENTS.md`, `SKILL.md`, `project_rules.md`. The other four 
 
 **工具形（与 `manifest` / `ledger` / `batch` 同级）**：
 
-- **名 / 参数**：`doc_check`（参数 = `target` 可选——显式项目根，缺省 = 会话锚；`target` 指向多项目工作区 ⇒ 报明候选并要求指名，同 `manifest` 工具面）；
+- **名 / 参数**：`doc_check`（参数 = `target` **必填**——显式项目根，没有「缺省 = 会话锚」这一支：不传即拒；`target` 指向多项目工作区 ⇒ 报明候选并要求指名，同 `manifest` 工具面）；
   `mode` 可选——`report`（缺省）∥ `gate`（交付门——§3.20「交付时点强制」）；`docs` —— 显式档清单：`gate` 面可选（缺省 = 本轮改过的档；首行 verdict）；`report` 面**必给**（缺省 ⇒ 报错；见本条「报告态档集」）——给了 ⇒ 只判这些档；不在盘 ∥ 非 `.md` ⇒ 报错点名（闭集 = 本条「不可判档的二因」）。
 
 - **标记**：`readonly`（零副作用 · 免审批 · 可并行）；**无 action 参数**——`mode` 不是动作枚举：它是**同一个判据的两种问法**（报告态 ∥ 范围化裁定），判据本身只有一条。

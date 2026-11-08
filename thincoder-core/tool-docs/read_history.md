@@ -1,19 +1,30 @@
-Query message history — THIS session by default, any session on disk with `path`. Recall what was said or done earlier: design decisions, tool-call timing, past rulings.
+Query message history - THIS session by default, any session on disk with `path`. Recall what was said or done earlier: design decisions, tool-call timing, past rulings.
 
-Default (no path): this session's full record (never compacted, audit-complete).
+Default (no `path`): this session's full record - never compacted, audit-complete.
 
-Filters combine with AND (role / keyword / tool / since-until / limit / direction — semantics per parameter; keyword with path="all" matches FTS words / phrases).
+Filters combine with AND (`role` / `keyword` / `tool` / `since`-`until` / `limit` / `direction` - semantics per parameter; `keyword` with `path="all"` matches words and phrases, not only an exact substring).
 
-Returns a JSON array in chronological order: [{ts, role, name?, tool_call_id?, content (≈500 chars, truncated marker), tool_calls ([{name, arguments}] — arguments capped at 300 chars)}]. Messages without ts return ts:null; content is truncated — the full text is in the session file.
+Returns a JSON array in chronological order:
 
-Cross-session (`path`, optional): a session file path deep-queries THAT session with the same filters (relative paths resolve against the project cwd) — from the derived session index when it covers that session,
+```text
+[{ts, role, name?, tool_call_id?, content (≈500 chars, truncated marker), tool_calls ([{name, arguments}] - arguments capped at 300 chars)}]
+```
 
-otherwise from the session file itself (a file over 50,000 messages or 200,000 lines is refused as "session too large").
+Messages without `ts` return `ts: null`. `content` is truncated - the full text is in the session file.
 
-"cwd:<dir>" lists that directory's session slots (slot + file path + title + count + updatedAt; copy one into path= to deep-query it).
+Cross-session (`path`, optional): a session file path deep-queries THAT session with the same filters (a relative path resolves against the project cwd). A session too large to deep-query is refused as `session too large`.
 
-"all" searches every INDEXED session (cross-project; rows carry session.file) — sessions never indexed yet are invisible (query them with path=<file>, or index first with the CLI `thincoder session index --rebuild`).
+`cwd:<dir>` lists that directory's session slots (slot + file path + title + count + updatedAt; copy one into `path` to deep-query it).
 
-检索/记忆族选哪个：查**本会话**说过/裁定过 → read_history（默认）；查**别的会话/项目**旧对话 → read_history 带 path/cwd 参数；查**本 run 改过哪些文件** → recent_changes；
+`all` searches every INDEXED session (cross-project; the rows carry `session.file`). A session never indexed yet is invisible - query it with `path=<file>`, or index first with the CLI `thincoder session index --rebuild`.
 
-查**跨会话已存知识/约定**（memory）→ memory search；查**项目设计文档** → doc_search；查**代码实现** → code_search；查 git 历史快照 → checkpoint cat/versions。read_history 只查会话消息——文件级改动用 recent_changes——知识与约定用 memory——互相不替代。
+Which tool for which question:
+- what was said or ruled in THIS session → `read_history` (default).
+- an older conversation in another session or project → `read_history` with `path` / `cwd`.
+- which files changed in this run → `recent_changes`.
+- stored knowledge and conventions (cross-session) → `memory search`.
+- project design documents → `doc_search`.
+- the code as implemented → `code_search`.
+- a git snapshot → `checkpoint cat` / `versions`.
+
+`read_history` only reads session messages; file-level changes belong to `recent_changes`, knowledge and conventions to `memory` - none substitutes for another.

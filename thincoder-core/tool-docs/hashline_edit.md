@@ -1,18 +1,17 @@
-Edit a file using content-hash addressing instead of string matching. More reliable than edit when whitespace or encoding varies — hashes are computed from exact line bytes on disk.
+Edit a file using content-hash addressing instead of string matching. More reliable than `edit` when whitespace or encoding varies, because the addresses are line bytes as they sit on disk.
 
 Parameters:
-- path (required): File path
-- old_hashes (required): Array of SHA256 hashes (12-char hex) identifying lines to replace. Read the file with hashes=true first to obtain these hashes. For a single line, pass [hash]; for a contiguous block, pass [hash1, hash2, ...] in order.
-- new_content (required): Replacement text (multi-line ok, \n separated)
+- `path` (required): file path.
+- `old_hashes` (required): array of the line hashes to replace (12-char hex). Read the file with `hashes=true` first to get them; a single line takes `[hash]`, a contiguous block takes `[hash1, hash2, ...]` in order.
+- `new_content` (required): the replacement text (multi-line ok, `\n` separated).
 
 Notes:
-- The hash of each line is computed as SHA256(line_content).slice(0, 12) — the same algorithm used by read(hashes=true)
-- Hashes are position-independent: they identify lines by content, not by line number (which changes after edits)
-- If the hash sequence isn't found, the error will include the current file's hashes so you can retry with corrected values
-- Prefer this over edit when: 1) the file may have mixed whitespace/encoding, 2) you want to edit a block of lines with a single call
-- Replacement text replaces the lines identified by the hashes — content not present in new_content is deleted. For a new line after a known line, use insert_after. For a single simple string swap, use edit.
-- use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed
+- Hashes are position-independent: they identify lines by content, not by line number, so a line-number drift after an edit does not touch them.
+- When the hash sequence is not found, the error carries the file's current hashes so you can retry with corrected values.
+- Prefer this over `edit` when (1) the file may have mixed whitespace or encoding, or (2) you want to edit a block of lines in one call.
+- The replacement replaces exactly the lines the hashes identify - whatever is not in `new_content` is deleted. For a new line after a known line use `insert_after`; for a single simple string swap use `edit`.
+- Re-read the file after it changed: hashes taken before a write are stale.
 
-**`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it — a call that does not say which row it serves is refused.
+**`ledger`** - the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it - a call that does not say which row it serves is refused.
 
-**`project`** — the project this call serves: absolute path of a project root (the directory carrying `PROJECT-MANIFEST.json`). Read only when the target sits outside every project and the session anchor is that workspace root; else the target's root decides and `project` is not read.
+**`project`** - the project this call serves: absolute path of a project root (the directory carrying `PROJECT-MANIFEST.json`). Read only when the target sits outside every project and the session anchor is that workspace root; else the target's root decides and `project` is not read.

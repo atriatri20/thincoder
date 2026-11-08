@@ -1,10 +1,10 @@
-Read an image file and return it as multimodal content visible to the model. Use this to view screenshots, UI mockups, diagrams, or any visual content. The model only sees images through this tool — it cannot "see" files directly.
-
-Supports png, jpg, gif, webp. The image is base64-encoded and included in the response. Large images (>15MB) are rejected.
+Read an image file and return it as content you can see. Use this for screenshots, UI mockups, diagrams, or any visual content: the model only sees images through this tool, never by reading a file.
 
 Parameters:
-- path (required): Path to image file (relative to cwd or absolute). Supports png, jpg, gif, webp; svg is returned as text source.
+- path (required): Path to image file (relative to cwd or absolute).
 
 Notes:
-- Raster formats only (png/jpg/gif/webp): no mainstream vision API (Kimi, Anthropic, OpenAI, Gemini) accepts svg or bmp, and an unsupported image part in history makes every subsequent request fail with 400. svg files are returned as text source instead (readable by any model); bmp is rejected — convert to PNG first.
-- This tool only works with models that support vision/image input (capability is spec-driven — the model spec decides, not a hardcoded list). Models without vision support will receive an error — except svg, which needs no vision support since it is read as text.
+- Raster formats only: png, jpg, gif, webp. A file over 15MB is rejected.
+- svg is returned as text source instead, which works even with a text-only model.
+- bmp is rejected: convert it to PNG first.
+- Requires a model that accepts image input. Any other model gets an error; svg is the only exception.

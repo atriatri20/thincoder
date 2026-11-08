@@ -17,7 +17,7 @@
 | agent-tools 工具面 | `src/agent-tools/*.mjs` | 同名 / 拆分档 |
 | 单端独有实现 | `tools/{bash,edit-batch,glob-dialect,patch,repomap}.mjs` | `thincoder-vscode/src/tools/{code,ide,focus,index,shared,shell}.mjs`（`checkpoint` 现体 = 核 `thincoder-core/git/checkpoint.mjs`；`context` → **`ide`** 改名——让出 `context` 名与核新工具） |
 
-> 工具**描述文本**（运行期面 = 核包 `thincoder-core/tool-docs/*.md`）的行本体住 `docs/core/design/PROMPT-SYSTEM.md`（提示词面）；本档只收**实现面**与工具行为契约。
+> 工具**描述文本**（运行期面 = 核包 `thincoder-core/tool-docs/*.md`）分三面：**行本体**（逐字文本）住 `docs/core/design/PROMPT-SYSTEM.md`（提示词面）；**哪些行该进描述**（内容去留界线）= 本档 §6.9；**体量读数与预算** = `docs/core/design/PROMPT-SYSTEM.md` §6.11。本档另收**实现面**与工具行为契约。
 
 ## 2. 核模块裁决行
 
@@ -215,14 +215,14 @@ interval 默认 1s 下限 100ms。**`advisor settled` 判据** = 后台评审池
 - **verify**：通用验证门禁——语言 / 框架 / 项目无关，不自动跑任何测试命令；模型经 `verification:{status:"passed"|"failed"|"skipped", command?, summary?}` 声明验证状态（passed 放行 / failed 打回 / skipped 放行但须 summary 理由）；参数面 = `workdir`。
 - **read_image**：视觉模型读图；非视觉模型拒绝 / 占位（防 image_url 毒化会话）；svg 返回文本源码、bmp 拒绝并提示转 PNG。
 - **websearch / fetch**：网络边界见 §6.4；后端优先级（DeepSeek → Tavily → Bing ∥ 本地直取）见 §6.23；fetch 失败错误含 proxy 提示。
-- **browser**：自启系统 Edge/Chrome（独立 profile——`~/.thincoder/browser/profile`）+ CDP 直控（Node 原生 WebSocket——零第三方依赖）；十六动作 navigate/snapshot/click/type/evaluate/wait/screenshot/close + press/hover/wheel/mouse/drag/touch/insert/clipboard（CDP Input 真输入域 + 剪贴板保真读写）。
+- **browser**：自启系统 Edge/Chrome（独立 profile——`~/.thincoder/browser/profile`）+ CDP 直控（Node 原生 WebSocket——零第三方依赖）；十八动作 navigate/snapshot/click/type/evaluate/wait/screenshot/close + press/hover/wheel/mouse/drag/touch/insert/clipboard + cookies/storage（会话态两动作各三形 `get` ∥ `set` ∥ `clear`；存储面 = 浏览器级 cookie ∥ 页 origin 的 localStorage / sessionStorage——`thincoder-core/browser/session-state.mjs` 的 `SESSION_STATE_ACTIONS`，动作表 = `BROWSER_ACTIONS`）。
   snapshot 回执 = 可交互元素清单 + 稳定引用（`e<N>`）+ 几何（视口外 `[outside]` 标记；ref 寻址动作前自动滚动到视）；click/type 按引用寻址；过审批门 = click/evaluate + press/mouse/drag/touch 点按 + clipboard 全量（`isReadonlyAction` 动作级分类——其余免审；分类不随 `async` 变）。
 
   **硬预算**（每动作超时必返——错误句携卡点步名）；**会话不假定常驻**（外部关闭 ⇒ 在飞即时显式失败 + 下一次自愈重开）；**异步通道** `async:true`（ack `browser#<id>` + 结算摘要；`wait_for "browser id:N done"` ∥ `process` kill）。设计权威 = `BROWSER-TOOL.md`（本层）。
 - **process / file_ops / get_current_time / tree / lsp / lint / delete / bash**：按各自描述契约。
  - **batch**：批次档生命周期（action = create ∕ append ∕ edit ∕ status ∕ close；**无路径参数**——目标档 = spawn 绑定；身份定可写段）；**段内一个写面**——作者可 `append` 加内容、可就地 `edit` 自己那一段（`edit` 段域 = 同模式 `append` 白名单——一张表两动作；行级独占只留 `**状态行**：`，`status` 是它唯一的写者）；写前剔凭证；工具盖轮次戳（仅 §3）；fail-closed 逐条 throw。权威 = 工程模式板。
 - **manifest**：project-manifest 全键读写出口（三动作 `read` / `init` / `write`——点改 ∥ 全键族白名单 ∥ depth-0 两模式同挂）；机制 = `docs/core/design/MANIFEST.md` §2.10。
-- **doc_check**：文档纪律机检（只读 · 报告态 · 非门禁——不阻断、不置退出码）——判据两条（锚 = 文档指针可解析 ∥ 行宽 = 单行 > 阈值）；判据参数依据 `PROJECT-MANIFEST.json` `checkConfig`；参数 = `target`（可选）。机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.20。
+- **doc_check**：文档纪律机检（只读）——`mode:"report"` 缺省 = 报告态非门禁，`mode:"gate"` = 交付门（首行 `DOC-CHECK GATE: PASS / REFUSED / ERROR`）。判据三条 = ① 锚（命中类四：`档缺` ∥ `节缺` ∥ `引缺` ∥ `环引`，四属同计一个「锚 N 条」）∥ ② 段判据（一段文字太长 ∥ 行太长——行太长只对提示词面逐行判）∥ ③ 行号坐标（`gate` 只判正文面，围栏内出一行读数）；参数 = `target`（必填）∥ `docs` ∥ `lines`（gate 拒收——读数不是判据）。机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.20。
 - **notify_parent**：子代理上行通道（`kind` = ask / note；非阻塞；父侧队列 ≤20 条 ∥ 单条 ≤1,500 字符）；depth>0 段装配（consult 段除外）。
 - **ledger**：台账统一入口（`action` = add / update / close 写仅主 agent ∥ query / count 只读全角色）；随核家族段装配（`thincoder-core/ledger.mjs`——全量变体 depth-0 ∥ 读二变体 depth>0）。
 
@@ -233,6 +233,67 @@ MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完
 ### 6.9 工具描述写作六要素
 
 工具描述（md / 内嵌）必含六要素，缺一补一：① 一句话语义（能做什么 / 不能做什么）；② 参数关系；③ 路由 / 反模式（何时用别的工具、何时不该用本工具）；④ 副作用与权限（破坏性 / 外发 / 需确认标注）；⑤ 错误形态（失败时返回什么、如何引导）；⑥ 多端一致（CLI / VS Code 描述同语义）。
+
+**调用者面 ∥ 实现者面（内容去留的界线）**
+
+一个问题定去留：**这一句会不会改变一个称职调用者发出的调用，或他读完回执后能得出的结论？** 会 ⇒ 调用者面，留。只会解释工具内部怎么走到那个答案 ⇒ 实现者面，删——内容住 `docs/core/design/` 的对应机制档，描述档不复述（同一件事写两遍，正是 D2 在治的）。
+
+**调用者面四样**（六要素落到可逐行判）：
+
+| # | 样 | 判什么 |
+|---|---|---|
+| K1 | 是什么（含动了什么） | 一句：拿它做什么、不拿它做什么、动了什么——破坏性 ∥ 外发 ∥ 需先过确认门（= 六要素 ①③④） |
+| K2 | 参数 | 名字 · 必填与否 · 类型 · 缺省时真的发生什么 · 取值边界（含互斥与依赖） · 值不合形时是拒还是当给了 |
+| K3 | 回执 | 返回什么 · 成功与失败怎么分 · 失败那句话里能读到什么（= 六要素 ⑤） |
+| K4 | 误用一句 | 最常撞的那一下：把甲当乙 ∥ 必须写全路径 ∥ 不能与丙同用（= 六要素 ③ 的压缩形） |
+
+六要素 ①–⑤ 一一有槽：①④ → K1 · ② → K2 · ⑤ → K3 · ③ → K1 ∥ K4。六要素 ⑥ 是落地约束（四端取同一份档），不是内容项——它不进描述正文。
+
+**④ 不另立一行，但也不是可省句**：破坏性 ∥ 外发 ∥ 需先过确认门挂在 K1 那一句里。它决定调用者发不发这一笔——删了它，调用者只能按猜踩下去。存活由验收 A6 逐档读数（`docs/batches/2026-11-08-tool-desc-trim.md` §2）。
+
+**语言 = 英文**：描述面统一英文（2026-11-08 用户「工具描述统一都是英文」）——同一批发给模型的描述读它的是同一个模型，一半英文一半中文不是风格问题，是同一面上的两种写法。
+
+**翻译不碰的四类**（描述面里的非 ASCII 只允许落在这四类）：
+
+1. **机判与回执的字面值**——`档缺` ∥ `节缺` ∥ `引缺` ∥ `环引`，以及回执里逐字出现的读数行片段。翻了它，回执就对不上。
+2. **协议字面值**——批档的结构名与状态词、台账六态与三条触发器 `归批` ∥ `条件` ∥ `认账不排期`、上抛标记 `[上抛·待裁]` ∥ `[上抛·知会]`。
+3. **回执里的符号与排版字符**——`→` ∥ `｜` ∥ `••••（masked）` ∥ 树形 `├──` ∥ `│`，以及 `—` ∥ `⇒` ∥ `…` ∥ `≤` ∥ `±` 这类。
+4. **产品既有中文名与路径**。
+
+散文（说明、判据、建议）一律英文——留着中文散文，同一份描述就是两种写法。
+
+**实现者面四类**（删）：
+
+| # | 类 | 例 |
+|---|---|---|
+| I1 | 判据谓词 | 白名单 ∥ 黑名单 ∥ 词干表 ∥ 正则 ∥ 阈值常量 ∥ 计数口径 |
+| I2 | 实现坐标 | 内部函数名 ∥ 常量名 ∥ 模块内结构 ∥ 探针导出名 |
+| I3 | 机制理由与来历 | 为什么这样设计 ∥ 被否的方案 ∥ 设计取舍 |
+| I4 | 判例与教训 | 真实事故叙述 ∥ 改过几次 ∥ 谁踩过 |
+
+**三处最常混的，各给一刀**：
+
+- **缺省值 ∥ 判据谓词**：「参数不给时用会话锚」是 K2——它决定你给不给；「判定按词干、占位词干表含 `file` ∥ `x.md`」是 I1——你给什么名字都不因它而变。
+- **结论 ∥ 过程**：「命中三条」是 K3，留一句；「这三条是三族名剥除后按指针解析序算出来的」是 I1，删。
+- **取值面 ∥ 取值算法**：「一个档 token 先按仓根、再按本档目录、再按声明仓解，`index.publicRepos` 没声明的仓一律拒，裸名只在全仓恰一份同名档时才过」是 K2——它决定你写全路径还是写裸名、写完会不会被判 `档缺`；「这四步在引擎里按什么次序试、那一步叫什么」是 I1，删。同一条线也管批档面：「批档引批档不判、规范档引批档照判」同时是 K2（批档里能不能互引）与 K3（`批档面互引未判 N 处` 这行读数是什么意思），两件都留。
+
+**删之前先有落点**：I 类内容在 `docs/core/design/` 有对应机制档 ⇒ 删；没有 ⇒ 先补机制档再删——删掉而没有落点，等于把知识扔了。
+
+**这一节为什么在**：工具描述是模型每轮都读到的唯一用法面（`thincoder-core/tool-docs/` 整档原样进 `description`）。2026-11-08 用户问「发给模型的工具描述能写这么长?!」——病根不是长，是**写给谁**：写的是实现者要读的判据谓词，调用者要读的用法淹在里面。
+
+**最近先例（三问式）**
+
+- `existing:` 坐标 `docs/core/design/PROMPT-SYSTEM.md` §6.11（名逐字 `### 6.11 工具描述面：外置统一与预算`）· consumers = 写描述档的人与体量机检。
+- 对齐 = 描述面的规矩住设计面、别处只指不述（该节自己就写「写作契约（六要素）→ `TOOLS.md` §6.9」）。
+- 偏离 = §6.11 判**体量**（基线 ∥ 当前读数 ∥ 单档帽 ∥ 机检），本节判**哪一行该在**。用户已否长度作判据（2026-11-08 17:09 / 17:17），故内容线单独立在这里，不并入预算表。
+
+**调研证据行**：仓外声明源 = `PROJECT-MANIFEST.json` 的 `index.publicRepos` 实读 = `[]` ⇒ 无仓外档可查（已查，无相关）。仓内实读五处：
+
+- `thincoder-core/prompt-files.mjs` 的 `loadToolDoc` —— `return readFileSync(join(TOOL_DOCS_DIR, `${name}.md`), "utf8")`：整档原样进 `description`，无渲染、无摘要。
+- `thincoder-core/tool-docs/` —— `node` 实读 `readdirSync` = 54 档（逐档字符合计 130,749）。
+- `docs/core/design/PROMPT-SYSTEM.md` §6.11 —— 预算表与「54 档——枚举工具 53 ∥ 目录档 54」的口径（本批不并入，见先例行）。
+- `docs/core/design/TOOLS.md` §6.7 —— 每工具一句「要旨」的既有汇总面。
+- `test/RTM.md` —— 全文零命中 `描述` ∥ `description` ∥ `tool-docs` ⇒ 无一行断言描述文本（本批集成增量为 0 的根据）。
 
 描述面机制与预算（外置单源 ∥ 基线 / 当前读数 / 目标状态 ∥ 单档帽 ∥ 机检 `scripts/tool-schema-size.mjs`）→ `PROMPT-SYSTEM.md` §6.11——**预算表唯一权威处**（本档不复制 · D2）。
 
@@ -258,7 +319,7 @@ VS Code 端在 extension host 内运行的**端独有增强**（CLI 无对应面
 - **权限审批面**：webview 逐工具弹窗 + 批合并询问（`thincoder-vscode/src/extension/permission-gate.mjs` / `batchPermissionGate`）+ 逐项 diff 预览；子代理（depth>0）审批卡（归属 `<child key> · <tool>`——`makeChildPermission`）+ Stop 释放挂起门
   （abort → resolve(false)/deny，循环不悬挂——接线 = `docs/core/design/AGENT-LOOP.md` §6.18）。**端增量**：git 工具动作级只读分类（`isReadonlyAction`）住 VSC 装配面 `thincoder-vscode/src/tools/index.mjs`（核 git 工具无此概念）；
   审批层还消费 `configureGitApproval` / `configureEditReceipt` 缝（按缺省不覆盖——端审批在工具执行前）。
-- **描述装载面**：两端同源 = 核包 `tool-docs/*.md`（`DESC()` = 核 `loadToolDoc` 单一解析面；锚替换调用期应用）；50 档随包发布（`.vscodeignore` 不排除 `node_modules/@thincoder/core/**`——打包面 N6 需求侧承载）。
+- **描述装载面**：两端同源 = 核包 `tool-docs/*.md`（`DESC()` = 核 `loadToolDoc` 单一解析面；锚替换调用期应用）；54 档随包发布（`.vscodeignore` 不排除 `node_modules/@thincoder/core/**`——打包面 N6 需求侧承载）。
 - **工具面接线**：① **派发面 hooks 三调用点**（核 `thincoder-core/agent/dispatch.mjs` PreToolUse〔可阻断——阻断结果逐字同核〕· `thincoder-core/agent/dispatch-run.mjs` PostToolUse ∕ PostToolUseFailure；机制 = `AGENT-LOOP.md` §6.13 / §6.18）；
   ② **台账工具面随核家族段装配**（统一入口 `ledger`——读二 `action=query` / `action=count` 随核 `assembleFamilyTools` 到达 ⇒ 模型面 + 子代装配面同核口径；写三 `action=add` / `action=update` / `action=close` 随核家族段在端可达）。
 
@@ -941,25 +1002,7 @@ FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verif
 
 登记 = `docs/core/design/CORE-UNIFICATION.md` §2.13.5 补正④；机制实现面 = `thincoder-core/tools/patch.mjs`（delete 分支）∥ `thincoder-core/tools/write-path.mjs`（rmdir 分支）。
 
-**描述档（`thincoder-core/tool-docs/delete.md`——全文改后逐字）**：
-
-```text
-Delete a file, or an empty directory. Use when the agent created a temporary or junk file or empty directory that should be cleaned up, or when the user explicitly asks to delete something.
-Refuses to delete git-tracked files as a safety measure — tracked files should be edited or removed via bash with explicit user confirmation.
-
-**Route to delete instead of bash:** `del file` / `rm file` → delete (single files); an empty directory → delete (empty directories only). Non-empty directories have no delete path — stop and report to the user instead of hand-rolling a recursive shell delete.
-
-Parameters:
-- path (required): File or empty-directory path, relative to cwd or absolute
-- force: Allow deleting git-tracked files (default false)
-
-Notes:
-- Untracked or non-git files are deleted immediately
-- Tracked files require force=true (user must confirm separately)
-- Directories: empty ones only — a non-empty directory is refused (a natural fuse; nothing recursive is ever removed); delete nested empty trees bottom-up
-- Symbolic links are removed as links — the link itself is deleted, never followed (its target is untouched)
-- Returns `Deleted <path>` (or `Error: ...` on failure / tracked / non-empty refusal).
-```
+**描述面单源 = `thincoder-core/tool-docs/delete.md`**（整档原样进 `description`，运行期唯一副本）。本节不持描述正文的逐字副本：描述面按 §6.9 随批重写，副本必然与盘上不一致，而它读起来仍像规范（D2——同一件事写两遍，第二遍必漂）。
 
 **边界（本节不做）**：**非空目录零通路**（有意——保险丝；不实装极窄白名单；如需 ⇒ 另批）· 不递归 ∕ 无 `recursive` 选项 · `file_ops` 枚举零改（目录操作面维持 move / copy / rename）· 审批门零改（delete 既有 `onPermissionRequest` 门继承）· `touchedPaths` ∥ 重叠谓词零改（`thincoder-core/peer-claims.mjs` 已按目录级语义在册）。
 
@@ -967,7 +1010,7 @@ Notes:
 
 **范围注（不经跟踪检查——放宽面）**：前提「空目录不可能被 git 跟踪」按**常规面**声明（git 索引不记空目录）；例外面候选 = **索引条目（gitlink——如未初始化 ∕ 未检出子模块路径）对应的空目录路径**（**unverified**——未实核）：该类路径索引留条目而工作树形可为空目录 ⇒ 本分支对该面同不经跟踪检查（放宽面据此声明）；如日后实核出反例 ⇒ 另议（父侧裁）。
 
-**口径注（逐字文本面归属）**：本节内联 = `thincoder-core/tool-docs/delete.md` **逐字文本面**（承 §6.20 先例——工具面批描述文本变更以本档 §6.x 持逐字文本面）；**`PROMPT-SYSTEM.md` 现持面** = 描述面**机制与预算**（§6.11——外置单源 ∥ 预算表唯一权威处 ∥ 写作契约 → §6.9），该描述档文本**不在该档**（零命中）；描述文本**运行期单源** = `thincoder-core/tool-docs/delete.md`（核内唯一副本）——非二次归属。
+**口径注（文本面归属）**：描述文本的**运行期单源** = `thincoder-core/tool-docs/delete.md`（核内唯一副本，整档进 `description`）；`docs/core/design/PROMPT-SYSTEM.md` §6.11 持**机制与预算**（外置单源 ∥ 预算表唯一权威处 ∥ 写作契约 → 本档 §6.9），描述正文不在该档。设计档**不复制**描述正文——复制的第二份在描述面重写后与盘上相反，而读者分不出哪份是活的。
 
 用例表 ∕ 受影响文件 ∕ 验收回指 = 本节内（本档不重述）。
 
@@ -1671,26 +1714,9 @@ package.json    ssh-credentials.json
 
 #### ⑥ 工具描述建议文本（提示词面——内容依据 = 机制文档，落笔 = eng-coder）
 
-> 增量差异句；其余文字零动。文本面先例 = §6.20 / §6.21。
+**描述面单源 = `thincoder-core/tool-docs/websearch.md` ∥ `thincoder-core/tool-docs/fetch.md`**（整档原样进 `description`）。本节曾持两档的增量差异句逐字；描述面按 §6.9 重写后那段副本与盘上相反，故删除、改指单源（D2）。
 
-`thincoder-core/tool-docs/websearch.md`：
-
-```text
-Search the web (DeepSeek Search when a DeepSeek provider is configured; otherwise Tavily with a key, else Bing). Returns result titles, URLs, and snippets — DeepSeek results also carry a date · authority (0–4) · rerank (0–3) line and a long summary.
-...
-- Backend priority: DeepSeek (auto — a providers[] entry with baseURL host api.deepseek.com and a key) → Tavily → Bing. websearch.backend: "local" disables the DeepSeek backend.
-- DeepSeek query operators: site:, lang:, after:/before:, and quoted phrases pass through as-is; limit maps to count (1–20).
-```
-
-`thincoder-core/tool-docs/fetch.md`：
-
-```text
-Fetch a URL and return its content. With a DeepSeek provider configured the URL is fetched through DeepSeek's servers and returned as Markdown ([deepseek] title + content); otherwise it is fetched locally and HTML is stripped to readable text. Private/metadata URLs are never sent.
-...
-- fetch.backend: "local" disables the DeepSeek backend.
-```
-
-**描述预算（F15）**：本批两档新增 ≈ +630 字符（实算：`websearch.md` +≈423 ∥ `fetch.md` +≈208）——现值 1,535 ∥ 731 字符 ⇒ 落笔后 ≈1,958 ∥ ≈939，均不越单档 8,000 字符帽（`PROMPT-SYSTEM.md`）；报告态机检 = `node scripts/tool-schema-size.mjs`。
+**描述预算（F15）**：体量口径与单档帽住 `docs/core/design/PROMPT-SYSTEM.md` §6.11（唯一权威处，本档不复制）；本节不持读数。
 
 #### ⑦ 测试计划（单测 · 假 transport 替身 · 收口随批删）
 
@@ -1842,12 +1868,23 @@ test/integration/*.test.mjs
 | 重开后的状态行 | `**状态行**：进行中（重开 <YYYY-MM-DD>）` |
 | §1 尾部追记行 | `**重开记录**：<YYYY-MM-DD> · 原收口 <旧日期> · 理由 = <note> · 操作者 = 主 agent`（**原收口 = 改写前状态行的收口日期字面**；无日期字面 ⇒ 落「未标日期」——重开后首收口时点只在此行保留） |
 
-**④ `edit` 动作的描述面（`thincoder-core/tool-docs/batch.md` + `thincoder-core/agent-tools/batch.mjs` 的 action 枚举行）——逐字**：
+**④ `edit` 动作的描述面（`thincoder-core/tool-docs/batch.md` + `thincoder-core/agent-tools/batch.mjs` 的 action 枚举行）**
 
-| 键 | 换写后逐字（只列追加 / 改动分句；其余分句不动） |
-|---|---|
-| action 枚举行 | `edit — replace one anchored range inside YOUR OWN section (§1–§6 alike; your identity decides which section) …` |
-| `edit` 参数说明 | `oldText must match exactly once, byte for byte (line endings included), inside the section body; newText replaces that range, and an empty newText deletes it. Refused with nothing written: a blank oldText, zero hits, two or more hits (the matching lines are named), an anchor crossing the section boundary, and any anchor or replacement that touches or introduces a `**状态行**：` line (the status line has one writer: `status`).` |
+**「逐字」绑 schema，不绑描述档**：`thincoder-core/agent-tools/batch.mjs` 是机读契约，一个字节都要对得上；描述档读的人是模型、写法随 §6.9 变，要求的是同一份内容——三种拒与「删多余副本允许」不得少一项。
+
+action 枚举行（schema 逐字）：
+
+```text
+edit — replace one anchored range inside YOUR OWN section (§1–§6 alike; your identity decides which section)
+```
+
+`oldText` 参数说明（schema 逐字；描述档同句，只除首 `edit only — ` 前缀）：
+
+```text
+edit only — oldText must match exactly once, byte for byte (line endings included), inside the section body; newText replaces that range, and an empty newText deletes it. Refused with nothing written: a blank oldText, zero hits, two or more hits (the matching lines are named), an anchor crossing the section boundary, an anchor touching the section's PROTECTED status line (the first `**状态行**：` line of its header zone — one writer: `status`; deleting a status line elsewhere, e.g. a surplus copy, is allowed), any replacement that introduces a `**状态行**：` line, and any edit that would leave MORE status lines in the header zone than before.
+```
+
+**状态行面只拒三种**：锚触该段 header 区**第一条**状态行 ∥ 替换**引入**状态行 ∥ 使该区状态行**变多**。**删多余副本允许**——一个段若带两份及以上状态行，机器读成「该段未设状态」，而 `status` 只认恰一行（它会拒）；这个态的修复路径正是用 `edit` 删掉多余那一行。
 
 **⑤ `edit` 的拒句（逐字 · 模型可见）**：
 
@@ -1857,7 +1894,7 @@ test/integration/*.test.mjs
 | E2 | 零命中 | `batch: edit anchor not found — oldText must match the §<N> body exactly once, byte for byte (line endings included). Nothing was written. Re-read the section and pass its current text verbatim.` |
 | E3 | ≥2 命中 | `batch: edit anchor is not unique — it matches <N> places inside §<N> (lines <n1>, <n2>, …). Extend the anchor until it matches once. Nothing was written.` |
 | E4 | 锚越段界 | `batch: edit anchor crosses the §<N> section boundary — it starts outside the section body or reaches the next §N header, and rewriting across it would break section location. Nothing was written.` |
-| E5 | 触及 / 引入状态行 | `batch: edit would rewrite or introduce a **状态行** line — that line has exactly one writer: status, with a value from the section's word list. Nothing was written.` |
+| E5 | 状态行面三种（判据见本节 ④） | `batch: edit would rewrite or introduce a **状态行** line — that line has exactly one writer: status, with a value from the section's word list. Nothing was written.`（逐字实读 `thincoder-core/agent-tools/batch-record-write.mjs` 的 `EDIT_STATUS_LINE_ERROR`）。**这句的措辞比它实际管的三种条件宽**：读它的人会以为碰一下就拒，而删多余副本是允许的。措辞收窄属代码面，不在本档；本档保证 ④ 写的是真判据，不被这句读窄 |
 | E6 | 已收口 / 段域 / 骨架保护 / 凭证 | 冻结串 · 骨架保护串 · 剥凭证**逐字同 append 面**；**骨架保护串的一句改写** = `…would break section location and the append-only guarantee.` → `…would break section location.`（段内一个写面下它仍成立；早先那句「and the append-only guarantee」只对证据面成立）。**段域拒文按场景分两族**。**族一·无写权身份 = `append` 与 `edit` 共用一条**（同一件事不各写一份串——`noSegmentError`）：工程面 `batch_segment: no segment is writable by this caller — the channel exists for eng-designer (§2), eng-coder (§5) and design reviews bound to a batch record (§3); the parent agent writes §1/§4/§6 through ordinary document writes.` ∥ 普通面同句，尾句作 `… ; in normal mode the parent agent writes §1/§2/§4/§5/§6 through ordinary document writes.`。**族二·段域不合 = `edit` 自成一形三式**（不复用 `append` 串：那串说的是「追加只到这几段」，而 `edit` 的调用者正是能改自己那一段的人 ⇒ 逐字复用即谎报）：depth-0 工程面 = `batch: §<N> is not yours to write — in engineering mode depth-0 edit rewrites §1/§4/§6 (一段一作者: §2 = eng-designer, §3 = design review, §5 = eng-coder). Nothing was written.` ∥ depth-0 普通面 = `batch: §<N> is not yours to write — in normal mode depth-0 edit rewrites §1/§2/§4/§5/§6 (一段一作者: §3 = design review only). Nothing was written.` ∥ 子代理 = `batch_segment: §<N> is not yours to write — this caller writes §<own> only (一段一作者: eng-designer → §2, design review → §3, eng-coder → §5). Nothing was written.` |
 
 **边界（本节不做）**：本批只**新增一个 action**（`edit`）与两个 schema 属性（`oldText` / `newText`）；其余 action 与参数零改（理由走既有 `note`）· 不改 `STATUS_WORDS` 词表 · 不改冻结门对已收口档 append / status / edit 的拒（串逐字）· 不改 `close` 的 §6 单段拒串（J2 逐字）· 端面零改（VSC / desktop 消费同一 tool-docs）。用例表 ∕ 验收回指 = `BATCH-RECORD.md` §4.19（本档不重述）。

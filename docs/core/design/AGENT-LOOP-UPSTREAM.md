@@ -259,22 +259,9 @@ it at its next turn boundary and keeps the rest of its discipline unchanged.
 - 英文：`**Premise invalidated mid-flight**: when the premise you are executing on turns out false (the code contradicts the design / the task book), send an upstream `ask` (notify_parent) — do not finish the wrong work and stop at the terminal report.`
 - 中文：`**途中前提失效**：正在执行的前提被实况证伪（代码与设计 / 任务书相抵）⇒ 走上行 `ask`（notify_parent）——不要做完错的工作再终态停报。`
 
-**④ 工具描述（`parent-channel.mjs` 的 `description`——实现轮落笔，建议逐字）**：
+**④ 工具描述单源 = `thincoder-core/tool-docs/notify_parent.md`**
 
-```
-A one-way channel to your PARENT (the agent that spawned you) — you are a subagent, so there is no user to ask.
-Queue a message on the parent's side; your turn is not interrupted and nothing is consumed from it.
-- kind:'ask' — a question whose answer changes your next step and that you cannot answer from the materials you can read
-  (task book / design doc / repo). The parent replies with subagent action:'send'; you receive it as an ordinary
-  instruction at your next turn boundary. One ask at a time while the previous one is still waiting in the parent's queue.
-- kind:'note' — an FYI that needs no answer (a premise you found broken, a conflict you resolved and want visible early).
-- NON-BLOCKING: the call returns immediately. Keep working on the unaffected parts; keep the affected part pending.
-  There is no fetch and no waiting — if you finish first, report the unanswered part as not done (never idle, never poll).
-- SYNCHRONOUS SPAWN: if the parent is blocked on your run (sync spawn), nothing can be sent back to you — the reply path (`send`) reaches only a RUNNING ASYNC child. The message is read when the parent's call returns (it may re-spawn you with an answer); report the unanswered part as not done.
-- Out of scope: naming / implementation / wording details, anything a read or a command would answer, trade-offs the
-  task book already states. When in doubt use the stop-and-report discipline — this is not an escape from your own judgment.
-- Availability: subagents only (depth > 0). At depth 0 you talk to the user through your normal reply or the question tool.
-```
+描述正文由该档持有（整档原样进 `description`——`thincoder-core/prompt-files.mjs` 的 `loadToolDoc`）。本节不持逐字副本：描述面按写作契约重写后，副本必然与盘上不一致，而它读起来仍像规范（D2）。机制 / 语义 / 三闸 / 拒句仍住本节与 §6.27.x，描述面只述用法。
 
 ### 6.27.9 用例表（正常 / 边界 / 错误）
 

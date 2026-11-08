@@ -1,9 +1,10 @@
-团队台账（服务端一本——登录后可用；与**本机台账两账独立**：本机账照旧，团队账零离线缓存）。action = query / count / add / update / close。
-- query / count：只读全角色；add / update / close：写仅主 agent 装配面（子代理只读）。
-- 仓标记自动派生（当前项目根的 git 源——不手挑）：无 git 仓 ∥ 无 remote.origin.url ⇒ 明示失败、零请求。
-- query：scope = "repo"（缺省——当前仓）∥ "team"（全队跨仓）；过滤 status（六态：待讨论 / 待设计 / 在途 / 待核销 / 已核销 / 已废弃）∥ owner（用户名精确匹配）；行集携 aged（未决四态 ∧ 行龄 > 30 天）。
-- count：同 query 参数，出 total。
-- add：title 必填（≤200）∥ detail（≤4000）∥ owner（缺省 = 自己）——status 恒 待讨论。
-- update：id 必填；title / detail / owner / status 至少一件；status = 迁移表合法后继（待讨论→待设计 ∥ 待设计→在途 ∥ 在途→待核销 ∥ 待核销→已核销 ∥ 未归档→已废弃）；已归档（已核销 / 已废弃）⇒ 拒；仓不可改。
-- close：id + status（已核销 ∥ 已废弃）——已核销：勾销（只自 待核销；其余现态 400，出路 = 先 PATCH 推进到 待核销）；已废弃 = 撤回（任意未归档态）。
-- 登录态门：未登录 ⇒ 明示「未登录」且零请求；401（token 失效）⇒ 「登录已失效——请重新登录」；不可达 ⇒ 「服务器不可达」（零离线缓存，重试不落旧值）。
+The team ledger: one book on the server, shared by the whole team, usable once you are logged in. It is a separate book from the local `ledger` - two independent accounts, no sync between them, and this one keeps no offline copy. `action` = query / count / add / update / close.
+
+- `query` / `count` are read-only and open to every role; `add` / `update` / `close` write and reach the main agent only (a subagent gets the read-only two).
+- The repo tag is derived for you from the current project root's git origin; with no git repo, or no `remote.origin.url`, the call fails explicitly and sends no request. You cannot pick or change the repo.
+- `query`: `scope` = `"repo"` (default - the current repo) / `"team"` (every repo in the team); filters `status` (one of the six states `待讨论` / `待设计` / `在途` / `待核销` / `已核销` / `已废弃`) and `owner` (exact username). Each row carries `aged` when it sits in an unsettled state and is older than 30 days.
+- `count`: the same filters as `query`, and returns the total.
+- `add`: `title` required (non-blank, ≤200), `detail` (≤4000), `owner` (default = yourself). A new entry always lands in `待讨论`.
+- `update`: `id` required; at least one of `title` / `detail` / `owner` / `status`. `status` moves along the same six-state table as the local ledger - `待讨论→待设计` / `待讨论→在途` / `待设计→在途` / `在途→待核销` / `待核销→已核销` / `待核销→在途` / any state but `已废弃` → `已废弃` (`已废弃` has no way out); any edge off that list is refused.
+- `close`: `id` + `status` (`已核销` / `已废弃`). `已核销` settles, and only from `待核销` - from any other state it is refused, and the way out is to `update` that entry to `待核销` first. `已废弃` withdraws an entry from any non-archived state.
+- Login gate: not logged in ⇒ the call fails with a message saying so, and sends no request; 401 (token expired) ⇒ login expired, log in again; server unreachable ⇒ reported as such, with no offline fallback: a retry never serves an old value.

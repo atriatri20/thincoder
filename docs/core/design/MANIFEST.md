@@ -123,7 +123,7 @@
   - 态名 `workspace` — `existing: 本档 §2.2 `projectRootView` 契约行`（`state` ∈ `ok` / `workspace` / `none`）· 逐字名 `workspace`；消费 = 报明行构造 + `projectView` 五态。
 - `MANIFEST_SCHEMA`（对象：`phase` 枚举、`docRoot` 六个子键存在、`index` 子键存在、`version` 数值、**声明族键形态**——KD-M1-32）。
 - `DEFAULT_MANIFEST`（对象：默认五键——`version:1`、`phase:"initial-dev"`、`docRoot` 六个子键（五个默认路径 + `standards: null`）、`codePaths:["src"]`、`index:{codeExtensions:[],docExtensions:[],excludePaths:[],publicRepos:[],docCheckExcludePaths:[]}`）。
-- `readManifest(cwd)` → `{ ok, manifest, missingKeys, unknownKeys, errors, reason }`：读 + `validateManifest(obj)`；缺键 → 产 `missingKeys`（非拒）→ 补默认值 → 再校验通过；整档缺失 → `{ok:false, reason:'missing'}`。**未知键（#802）**：产 `unknownKeys` + 读面一行可见告警（含键名；同档同键集去重）——非拒定性零变、搬运语义零改（KD-M1-11 / M1-36）。
+- `readManifest(cwd)` → `{ ok, manifest, missingKeys, unknownKeys, errors, reason }`：读 + `validateManifest(obj)`；缺键 → 产 `missingKeys`（非拒）→ 补默认值 → 再校验通过；整档缺失 → `{ok:false, reason:'missing'}`。**未知键（#802）**：产 `unknownKeys`（返回值里；顶层 + `docRoot` / `index` 两嵌套层，嵌套键点形）+ 写一条诊断日志（`logEvent('manifest:unknown-keys')`——含键名；同档同键集恰一次，读到零未知键即清该条）；**不上界面、不进 `manifest read` 回执**——非拒定性零变、搬运语义零改（KD-M1-11 / M1-36）。
 - `validateManifest(obj)` → `{ ok, errors, missingKeys, unknownKeys }`：形状校验（枚举 / `version` 数值 / 键存在 / **`docRoot` 子键值形态**——F7 / **两族声明键形态**——KD-M1-32）+ **未知键产线**（KD-M1-36——非拒）；**纯函数、不读 fs、不落盘**。
 - `requireManifest(cwd)` → 装配钩子入口 = `readManifest(cwd)`：`ok:true` 返回补默认值后的 manifest；`reason:'missing'` 由调用方走**建档流**（**工程模式会话**口径——梯②⑤ 就地建档，**不拒会话**；KD-M1-29）；模式门 + 建档分支见下方两端装配钩子）。
 - `resolveEngineeringManifest(cwd, { writer = 'subagent', init = true })` → **非抛错**的入口决策树（§2.8 F1）：
@@ -235,7 +235,7 @@
 | KD-M1-33 | 读向**单向**：`thincoder-core/declaration.mjs`（经其转口可达）经 `readManifest` / `manifestFilePath` 投影两族键（`loadProjectDeclaration`）；本模块零出边 | 同一档禁两份读取器 / 第二份根解析（KD-M1-18 同族）；两模块同属**模式无关面**（全模式消费）⇒ 耦合非模式耦合。 |
 | KD-M1-34 | 退役旧档的在场处置 = **一行可见告警**（`console.warn` + `logEvent('declaration:retired-file')`）+ 存在性检查（**内容零解析**、零回退） | 用户裁定「不要同时保留二者」= 零并存；告警 ≠ 机制（零读零回退），但静默停用 = 哨兵失效不可见（`PORTABILITY.md` 问题本体）——可迁移纪律要求可见。 |
 | KD-M1-35 | **`index.publicRepos` 并入 index 族**（缺省 `[]`；元素层宽容 ∕ 数组层 fail-closed）——值形 = **从本仓根可解析的路径**；**值形 ∥ 解析两层定义**（值形 = 归一后相对串（声明投影）∥ 解析 = 绝对根集（`normalizeOrigin` 消费）——细则单源 = `MEMORY.md` §6.15）= `declaredPublicRoots(cwd)`（`declaration.mjs` 新导出——检索同步 ∥ 读面 origin 集 ∥ 引用解析三消费面共用，不得二写） | 嵌 index 族 = 检索范围声明（同款先例 = `index.excludePaths`）⇒ 顶层键族与默认档计数零扰动；`fillDefaults` 已知键搬运自动覆盖本键（未知键静默丢弃 = #802 在册面——不因本键消解）。**`declared` 连带：本键非空 ⇒ `declared=true`（值比较——判据正本 = `PORTABILITY.md` §3.1）。** |
-| KD-M1-36 | **未知键可见化（#802——fail-open 保留 ∥ fail-silent 消除）**：未知键（顶层 + `docRoot`/`index` 两嵌套层——恰 = `fillDefaults` 丢弃面）⇒ `validateManifest` 产 `unknownKeys`（非拒）+ `readManifest` 读面单点一行告警（`console.warn` + `logEvent('manifest:unknown-keys')`——含键名；同档同键集去重）；**memo = 档路径 → 上次观测键集；读到零未知键即清该条**；`ok:true` 与搬运语义零改（KD-M1-11「不迁移、不报错」定性不变——告警 ≠ 报错） | 声明失效须可见（零报错 = 无人知——拼写错 / 版本错位类声明键静默死）。 |
+| KD-M1-36 | **未知键可见化（#802——fail-open 保留 ∥ fail-silent 消除）**：未知键（顶层 + `docRoot`/`index` 两嵌套层——恰 = `fillDefaults` 丢弃面）⇒ `validateManifest` 产 `unknownKeys`（非拒）+ `readManifest` 返回值携 `unknownKeys` 并写一条诊断日志（`logEvent('manifest:unknown-keys')`——含键名；不上界面；同档同键集恰一次）；**memo = 档路径 → 上次观测键集；读到零未知键即清该条**；`ok:true` 与搬运语义零改（KD-M1-11「不迁移、不报错」定性不变——告警 ≠ 报错） | 声明失效须可见（零报错 = 无人知——拼写错 / 版本错位类声明键静默死）。 |
 | KD-M1-37 | `docRoot` 值域**增「本面无」= 显式 `null`**（合法哨兵——不被补回；`docRootPaths(null) = []`） | **缺键 = 缺省便利**（仍补默认——KD-M1-6 零改）与**本面无 = 显式事实**两分不混。 |
 | KD-M1-38 | agent 工具面**写形 = 点改**（`write`：`key` 点分路径 + `value`）；写面白名单 = **全键族**（`version` / `phase` / `codePaths` 整键 ∥ `docRoot.*` / `index.*` 子键——判据单源 = `MANIFEST_SCHEMA`）；白名单外 ⇒ 拒 | 需求 ②.7「各节点」口径（用户逐字「各节点都能被 agent 读写」）。 |
 | KD-M1-39 | 目标面**判据复用零新解析器**：`read` = `projectView`（五态报明）；`init` / `write` = `projectRootView`（`workspace` ⇒ 拒 + 下辖项目全列 + 显式 `target` 指引）；**init 不覆盖**（已带档 ⇒ 拒——`initManifest` 无覆盖保护，工具面补闸）；**write 不建档**（缺档 ⇒ 拒 + 引导 `init`） | 「不唯一解析不猜」硬口径（需求 ②.7）：`resolveProjectRoot` 对 `workspace` / `none` 塌缩 `null`（**它不回落**——回落住调用方 `docRootBase` / `writeRoot` 的 `?? resolve(cwd)`，两处均在 `thincoder-core/manifest.mjs`）⇒ 直用 = 静默挑锚——故写 / 建面一律取 `projectRootView` 直读形。init 不覆盖 = 默认档会碾掉现档（数据丢失面）；write 不建档 = 建档是独立动作（KD-M1-29 建档站点收窄零改） |
@@ -552,7 +552,7 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 
 | 动作 | 参数 | 语义 |
 |---|---|---|
-| `read` | `target?` | 现档 + 校验态（`ok` / `missingKeys` / `unknownKeys` / `errors` / 缺档报明）——`readManifest` 语义 |
+| `read` | `target?` | 现档 + 校验态（`ok` / `missingKeys` / `errors` / 缺档报明）——`readManifest` 语义；`unknownKeys` 只产在 `readManifest` / `validateManifest` 的返回值里，**回执不印它** |
 | `init` | `target?` | 缺档 ⇒ 建默认档（`initManifest`；内容 = `DEFAULT_MANIFEST`）；**已带档 ⇒ 拒**（不覆盖——`initManifest` 本体无覆盖保护，工具面补此闸） |
 | `write` | `target?` `key` `value` | **点改**：读现档 → 设节点 → 落盘前 `validateManifest`（`writeManifest` 内——非法 ⇒ 拒 + 盘零变）；**缺档 ⇒ 拒** + 引导 `init`（写不建档） |
 
@@ -560,7 +560,7 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
   `key` = 点分路径（形如 `docRoot.design` / `index.publicRepos`）；`value` = 字符串——先 `JSON.parse`，失败取字面串（同款口径 = `thincoder-core/agent-tools/settings.mjs`），`"null"` ⇒ `null`（`docRoot.*` 的「本面无」——KD-M1-37）。
 - **写面白名单 = 全键族**（需求 ②.7 写项逐字）；**谓词钉死**：`keys` 中非 `nestedKeys` 父键者（= `version` / `phase` / `codePaths` 整键）+ `nestedKeys` 子键（`docRoot.*` / `index.*`（含 `publicRepos`））；**两族整键写（`docRoot` / `index` 传整个对象）⇒ 拒**。
   判据单源 = `MANIFEST_SCHEMA`（`manifest-schema.mjs`）；白名单外 ⇒ 拒（拼写保护——未知键写盘 = 静默死键，KD-M1-36 问题本体，挡在写入口）。
-- **返回面**：`read` 五态带稳定锚 `state=ok|missing|invalid|workspace|no-project`（ok 态附 manifest JSON + `missingKeys` / `unknownKeys` / `errors` 行——非空才出）；`init` / `write` 成功 = 结果行含落点 `path`；拒面 = **抛错**（统一前缀 `manifest <action>: refused — …`；工作区 ⇒ 报明事实 + 下辖项目全列 + 点名 `target` 的下一步）。
+- **返回面**：`read` 五态带稳定锚 `state=ok|missing|invalid|workspace|no-project`（ok 态附 manifest JSON + `missingKeys` / `errors` 行——非空才出；回执行集逐字 = `state=` / `path=` / `manifest=` / `missingKeys=` / `errors=`，`unknownKeys` 不在其中——`thincoder-core/agent-tools/manifest.mjs` 的 `readAction`）；`init` / `write` 成功 = 结果行含落点 `path`；拒面 = **抛错**（统一前缀 `manifest <action>: refused — …`；工作区 ⇒ 报明事实 + 下辖项目全列 + 点名 `target` 的下一步）。
 - **写路径复用（零新写路径）**：落盘恒经 `writeManifest`（`thincoder-core/manifest.mjs`——writer 闸 + 校验前闸）∥ `initManifest`（同档）；`writer` 恒显式 `'main'`（缺省 `'subagent'` 误用即拒——KD-M1-3 / AC-M1-5 零改）。
 
 **目标面（KD-M1-39——判据复用，零新解析器）**：
@@ -743,17 +743,7 @@ export const manifestReadTool = {
 - `missing` 的 hint 行：`canInit ? "hint: run manifest action=init to create the default manifest here" : "hint: no manifest here — report it; creating one is a main-agent action"`；
 - `no-project` 同式：`canInit ? 原行 : "hint: no project on the ancestor chain and none below — report it; creating one is a main-agent action"`。
 
-**描述档全文（逐字——新描述档内容）**
-
-```text
-Read the project manifest (PROJECT-MANIFEST.json) — the project-level state file: version / phase / docRoot (the root of each document layer: requirements / specs / design / modules / batches) / codePaths / index. Read-only: the only action is `read`. Creating or editing a manifest belongs to the main agent — this subagent variant has no init / write action.
-
-read [target] — report the manifest state with a stable anchor `state=ok|missing|invalid|workspace|no-project`. The ok state prints the manifest JSON plus missingKeys / unknownKeys / errors rows (only when non-empty). Never throws — a missing manifest is reported, not refused.
-
-Use it to locate documentation instead of assuming a path: read `docRoot.<key>` and resolve your target under that root. A missing face (`null`) means that document layer does not exist in this project — report it instead of inventing a path.
-
-target — the project root or directory you mean; **required** — omitting it is refused. Relative paths resolve against the session anchor. A workspace target (several projects below it) is reported with the full candidate list — name the project root you mean and pass it as target.
-```
+**描述档单源 = `thincoder-core/tool-docs/manifest-read.md`**（整档原样进 `description`，运行期唯一副本）。本档不持描述正文的逐字副本：描述面按 `docs/core/design/TOOLS.md` §6.9 随批重写，副本必然与盘上不一致（D2）。
 
 **挂载面（判据：全部 depth>0 段）**
 
@@ -1160,9 +1150,9 @@ read the full file — <absolute path> — for the rest)
 | AC-30 | **归属形（上溯 / 嵌套）**：`owningProject(target)` 自目标（目录 ⇒ 含自身；文件 ⇒ 取其所在目录）**上溯取最近带档目录**；带 ⇒ 该目录；祖链不带 ⇒ `null`（⇒ 发现兜底）；**不跨兄弟**（无档分叉不取旁支）；`projectView` 两段合成逐格归位 | 规格 §⑥（归属形） | ✅ tmp 多层夹具（非项目目录 / 根项目 / 带档子项目 / 根内不带档子目录 / 兄弟）逐格断言（T48） |
 | AC-35 | **`projectRootView` 基座**：三态结构化——`ok`（**归属命中**）⇒ `root` 非空 ∥ `candidates` = `[]`；`workspace`（多根工作区：下辖带档者 ≥1 ∥ 零带档时裸仓 ≥1）⇒ `root` = `null` ∥ 下辖项目全列**按名排序**（**恒非空**）；`none`（其余——空目录 ∥ 裸仓锚）⇒ 双空；覆盖位在场 ⇒ 头部短路（`ok` + 覆盖值）；**薄委托等价**：`resolveProjectRoot(cwd)` ≡ `projectRootView(cwd).root` 逐格全等（含覆盖位） | §2.2（判定单点） | ✅ 夹具三态逐态断 `{state, root, candidates}`（含下辖 1 项目格 ⇒ `workspace`、空目录格 ⇒ `none`）+ 覆盖位断言 + 等价逐格对（回归守卫 = 单元测试档基座用例） |
 | AC-36 | **工作区锚收口（报明 + 下一步 · 零猜）**：① 台账缺省（锚 = 工作区）⇒ 报明事实（下辖 N 项目）+ 点名项目根——零写（`docs/core/design/LEDGER.md` §8 AC-M2-17）；② 批档 create 无所属 ⇒ 报明 + 显式路径指引 ∥ 目标所属 ⇒ 落其基底（`docs/core/design/BATCH-RECORD.md` §4.8 BR-39–BR-42）；③ 文件工具 = **零改**（结语——无新行为面）；`ok` / `none` 两态逐一回归零变 | §2.2 ∥ §2.5（单项目解析律）· `docs/core/design/LEDGER.md` §8 · `docs/core/design/BATCH-RECORD.md` §4.15 | ✅ 同夹具（工作区锚双带档 tmp + 实景 `d:\teamcode` 双跑）；断言 = 报明含下辖项目全列 + **零「ambiguous / 歧义」字样** + 零写；文件工具零改 ⇒ 无断言（结语口径） |
-| AC-38 | **未知键可见化（#802）**：`validateManifest` 产 `unknownKeys`（顶层 + 四嵌套层；非拒——`ok:true` 定性零变）；`readManifest` 返回面携 `unknownKeys` + 一行告警（含键名；同档同键集去重）；零未知键 ⇒ 零告警（负向锁） | KD-M1-36 | ✅ 单元测试档（四项：枚举 ∥ 告警逐字含键名 ∥ 去重恰一次 ∥ 负向锁） |
+| AC-38 | **未知键可见化（#802）**：`validateManifest` 产 `unknownKeys`（顶层 + `docRoot` / `index` 两嵌套层；非拒——`ok:true` 定性零变）；`readManifest` 返回值携 `unknownKeys` + 写一条诊断日志（含键名；同档同键集恰一次）；**`manifest read` 回执不印 `unknownKeys`**——回执行集逐字 = `state=` / `path=` / `manifest=` / `missingKeys=` / `errors=`；零未知键 ⇒ 零日志 + 清该档 memo（负向锁） | KD-M1-36 | ✅ 单元测试档（四项：枚举 ∥ 诊断日志逐字含键名 ∥ 去重恰一次 ∥ 负向锁） |
 | AC-39 | **「本面无」合法表达（#944）**：`docRoot.<键> = null` ⇒ `validateManifest` `ok:true` + `readManifest` `ok:true`（值**保持 `null`**——不被默认补回）+ `docRootPaths(null) = []`；**删键仍补默认**（对照格——KD-M1-6 零改）；`""` / `[]` / 数组含空串等仍拒 | KD-M1-37 | ✅ `isValidDocRootValue(null) === true`；夹具：某键 `null` + 其余合法 ⇒ `ok:true` + 该键读回 `null`；对照格删键 ⇒ 补默认；负向格 `""` / `[]` ⇒ `errors` 含键名 |
-| AC-40 | **agent 工具面·读写往返（全键）**：对样例项目 `read`（`ok` + manifest + `missingKeys` / `unknownKeys` / `errors` 细节面）→ 全键族逐键 `write`（`version` / `phase` / `docRoot.<键>` / `codePaths` / `index.<键>`（含 `publicRepos`）——各 ≥1 例）→ `read` 回读**已知键**值逐键相等 + 非目标**已知**键逐字零变（未知键丢 / 缺键补默认 = 回写收敛语义——KD-M1-11；T66 登记）；缺档 ⇒ `init` → 回读 `ok` + 档内容 = `DEFAULT_MANIFEST` | AC-M1-10 | ✅ 单元测试档：工具调用往返——回读值对照 `readManifest` 直读；逐键 diff + `init` 档逐键断言 |
+| AC-40 | **agent 工具面·读写往返（全键）**：对样例项目 `read`（`ok` + manifest + `missingKeys` / `errors` 细节面——`unknownKeys` 断在 `readManifest` 返回值面，回执不印它）→ 全键族逐键 `write`（`version` / `phase` / `docRoot.<键>` / `codePaths` / `index.<键>`（含 `publicRepos`）——各 ≥1 例）→ `read` 回读**已知键**值逐键相等 + 非目标**已知**键逐字零变（未知键丢 / 缺键补默认 = 回写收敛语义——KD-M1-11；T66 登记）；缺档 ⇒ `init` → 回读 `ok` + 档内容 = `DEFAULT_MANIFEST` | AC-M1-10 | ✅ 单元测试档：工具调用往返——回读值对照 `readManifest` 直读；逐键 diff + `init` 档逐键断言 |
 | AC-41 | **agent 工具面·fail-closed 与报明**：① 非法值写（`phase:"bogus"` / `docRoot.specs:""`）⇒ 拒（`refused` 锚）+ 档**逐字节未变**（sha256）② 白名单外 key（`phas` / `docRoot.xxx` / 两族整键写——`docRoot` / `index` 传整个对象）⇒ 拒 + 零变 ③ `write` 缺档 ⇒ 拒 + 引导 `init`（零建档）④ `init` 已带档 ⇒ 拒 + 零覆盖（sha256）⑤ 缺档 `read` ⇒ `state=missing` 报明（不抛）；`workspace` ⇒ 报明 + 下辖项目全列（零写——去「ambiguous」措辞） | AC-M1-11 | ✅ 逐格夹具断言（sha256 前后对比 + 拒文案锚 + read 五态返回面） |
 | AC-42 | **agent 工具面·权限面**：① 子代理装配**只挂只读变体**——`assembleFamilyTools({depth:1, role})` 五格（eng-coder / eng-designer / coder / consult / 兜底）各含恰一 `manifest`，其 `action` 枚举 = `["read"]` 且无 `key` / `value`（写动作 schema 级不可达——§2.10.1）；`depth:0` 两模式（`engineering` 两值）皆含恰一全量变体（三动作）② 写门——工具落盘恒经 `writeManifest` / `initManifest`（源码面：`writer: "main"` 字面量；缺省 `'subagent'` 拒 = AC-5 同一闸）③ 主 agent `init` / `write` 实调 ⇒ 放行 | AC-M1-12（读面按用户令 2026-10-22 收正——§2.10.1） | ✅ 装配夹具五格 + `depth:0` 两格 + 源码面断言 + 实调放行格 + 只读变体 execute 拒绝格 |
 | AC-43 | **工具形 / 分类面 / 描述面（登记）**：① 参数面 = `action ∈ {read,init,write}`（必）+ `target?` / `key?` / `value?`；**两族整键写（`docRoot` / `index` 父键传整个对象）⇒ 拒**（谓词钉死 = §2.10）；② 分类——`readonlyActionOf(tool,"manifest",{action:"read"}) === true`；`write` ⇒ false（侧效门）③ 描述单源——`manifestTool.description === thincoder-core/tool-docs/manifest.md`逐字节（DESC）④ value 解析——`"null"` ⇒ `null`（`docRoot.*` 本面无）· `'["../shared"]'` ⇒ 数组 · 裸串 ⇒ 字面串 | ②.7（目标面 ∥ 权限面）· F15（描述面——`docs/core/requirements/TOOLS.md` §4.2） | ✅ 参数面断言 + 分类谓词断言 + 描述逐字节 + 三值解析格（T70–T73） |
@@ -1242,7 +1232,7 @@ read the full file — <absolute path> — for the rest)
 | T61 | 正常：某面「本面无」 | `docRoot.batches = null` ∥ `docRoot.design = null`（其余合法） | `readManifest` `ok:true`；`manifest.docRoot.<键> = null`（未补回）；`docRootPaths(null, cwd) = []`；`missingKeys` 不含该键（AC-39） |
 | T62 | 边界：对照与负向 | 删 `docRoot.<键>`（对照）∥ `""` / `[]` / `["a",""]`（负向） | 对照：补默认单串（零改）；负向：`ok:false` + `errors` 含键名（AC-39 / AC-11） |
 | T62b | 正常：`docRoot.batches = null` ⇒ 基底回退默认 | `docRoot.batches = null`（其余合法）；目标批档经基底解析命中（落默认基底 `docs/batches` 内） | 声明面零根（`docRootPaths(null) = []`）⇒ 基底集 = **默认基底**（回退恒发生——与缺键同款）；`resolveBatchDocPath` 正常命中返回；**对照**：显式基底全不可读 ⇒ `throw`（T21 零改——AC-12） |
-| T63 | 正常：`read` 五态之 ok | target 带合法档（含未知键与缺键各一） | `state=ok` + manifest JSON + `missingKeys`（缺键路径）+ `unknownKeys`（含键名）行；`errors` 空（AC-40） |
+| T63 | 正常：`read` 五态之 ok | target 带合法档（含未知键与缺键各一） | `state=ok` + manifest JSON + `missingKeys`（缺键路径，非空才出）行；回执行集 = `state=` / `path=` / `manifest=` / `missingKeys=` / `errors=`——`unknownKeys` **不在其中**（只在 `readManifest` 返回值与诊断日志里）；`errors` 空（AC-40） |
 | T64 | 边界 / 非 ok 四态：`read` | ① 缺档（裸仓）② 无项目（空目录）③ 工作区（双带档子目录）④ 档非法（坏 JSON / 非法枚举） | ① `state=missing` + init 引导 ② `state=no-project` ③ `state=workspace` + 下辖项目全列 ④ `state=invalid` + `errors` 行；四态均不抛（AC-41⑤） |
 | T78 | 端到端：**多项目工作区实景（回归面五场景）** | 夹具 = `d:\teamcode`（下辖 `thincoder` ∥ `thincoder.com`；锚自身无档无 `.git`）：① 批档 create（`thincoder/docs/batches/<x>.md`）② `manifest` read / write（`target=thincoder`）③ 评审 documents（`docs/core/design/MANIFEST.md` 相对形）④ `ledger` 读写（`cwd=thincoder`）⑤ `git` 仓发现 | ①②④⑤ **不停手**：各自解析到 `thincoder`（按用点路径 / 显式 `cwd`）；③ **当场拒发**——workspace 锚下相对形无基面 ⇒ `criterion=scope-not-doc` + `reason=no-project-root` + 期望形两句，零评审实例（判据单源 = `docs/core/design/ADVISOR-GUARDS.md` §12 分支 2）；无路径形 ⇒ 报明 + 下一步（不抛「歧义」）；**零 `ambiguous` 字样**（AC-44 / AC-36） |
 | T65 | 正常 / 边界：`init` 三格 + 不覆盖 | ① 梯②（裸仓无档）② **项目梯④（裸仓级）**（多根工作区 + 下辖 1 裸仓）③ 梯⑤（空目录——落点 = target 自身）④ 已带档 | ①③ 生成 `DEFAULT_MANIFEST`（落点 = 裸仓 / target）；② ⇒ 报明（`workspace`——不就地建档，候选全列）；④ 拒（`refused`）+ sha256 零变（AC-40 / AC-41④） |

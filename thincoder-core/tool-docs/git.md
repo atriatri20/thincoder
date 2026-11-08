@@ -26,5 +26,5 @@ status / log / diff / show / add / rm / commit / push / tag / branch / checkout 
 - switch: switch branch (`name` required; `create` = -c); apply: apply a patch (`path` required); archive: tar of a `ref` (`path` required, output file); blame: file blame (`path` required); mv: rename/move (`path` + `dest` required); worktree: `worktreeAction` list / add / remove.
 - checkpoint: local snapshots — `checkpointAction` list / create / rewind / cat / versions (`checkpointId` for rewind / cat).
 - Destructive ops (checkout -- path / restore / reset --hard / stash pop / branch|tag delete / clean / rebase) auto-snapshot first; restore a snapshot via `checkpointAction=rewind`.
-- Failures come back as errors — `git <action> failed: <reason>` — nothing is silently swallowed.
+- Failures come back as errors — `git <action> failed: <reason>`.
 - `filter` narrows any read-only action's output (case-insensitive regex); `config` (git -c overrides, e.g. a proxy) applies to the network actions (push / fetch / pull / ls-remote / clone). Other parameter defaults and applicability live in the schema.
