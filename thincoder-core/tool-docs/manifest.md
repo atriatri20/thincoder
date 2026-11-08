@@ -23,7 +23,7 @@ The written file is picked up by the session's project-state line on the next tu
 
 read is read-only (planMode passes, no approval); init / write are side effects (approval gate). Writes go through writeManifest / initManifest with writer "main" — the fail-closed subagent default is never used.
 
-Key catalog — the 13 writable nodes (3 whole keys + docRoot's 6 sub-keys + index's 4 sub-keys): what each is; when to change it; wrong ⇒ consequence.
+Key catalog — the 14 writable nodes (3 whole keys + docRoot's 6 sub-keys + index's 5 sub-keys): what each is; when to change it; wrong ⇒ consequence.
 - `version` — schema version (a number); change on file migration; wrong ⇒ validation refuses (disk unchanged).
 - `phase` — project stage, `initial-dev` / `production`; change when the stage is crossed; wrong ⇒ validation refuses.
 - `codePaths` — path segment names (replaces the default `["src"]`); change when the layout moves; wrong ⇒ no segment is classified (the fallback still runs).
@@ -31,6 +31,7 @@ Key catalog — the 13 writable nodes (3 whole keys + docRoot's 6 sub-keys + ind
 - `docRoot.standards` — the project's standards document, by FILE path (a string | a multi-file array | `null` = undeclared); the reviewer judges methodology compliance against it; change when that document moves; wrong ⇒ the review says the declaration is unreadable and names the path (never a guessed default — there is none).
 - `index.codeExtensions` · `index.docExtensions` — extra code / doc extensions (unioned, add-only); change when a file type is missing from the index; wrong ⇒ that type stays out of the index (extras harmless; a missing entry = a miss).
 - `index.excludePaths` — project-root-relative path prefixes (for the index); change to keep a directory out of the index; wrong ⇒ that directory is still indexed, or another is wrongly excluded.
+- `index.docCheckExcludePaths` — project-root-relative path prefixes (for `doc_check`); change to keep a directory out of the document check; wrong ⇒ those documents are still judged, or others are wrongly skipped. Not interchangeable with `index.excludePaths`: that list only feeds the index, and `doc_check` never reads it.
 - `index.publicRepos` — public-repo paths (resolvable from this repo root) = this repo's out-edge table: a repo listed here may be **searched and cited**; change it when wiring a public repo in or dropping one.
   - Not listing a repo: not merely un-indexed — a pointer into it is reported as a missing document, and a delivery gate fails.
   - Listing a path that does not exist on this machine: you lose that retrieval origin, and a pointer into it is reported `unverified`.

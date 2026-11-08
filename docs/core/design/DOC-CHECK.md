@@ -90,7 +90,7 @@ DOC-CHECK GATE: ERROR（无法定根 N 档）
 - **行内路径**：无声明根 ⇒ 没有可相对的根，`<档>` 按**条目原文**显示，不套 `rel(base, …)`。
 - `report` 面同样抛错（现状 report 面对不可判档就是抛错、整次零判定，同口径）。
 - **不跳过、不出半份判定**：该面**零 `✗` 命中行**。判不了就是一次都没判，不得出成「有的判过了」。
-- **为什么这是政策，不是公式的推论**：`rootOf` 的 `?? declaredBase` 只在「祖先链无 manifest」的档上落空——**一个有 manifest 祖先的档，没有声明根也本来就有根**（`owningProject` 沿祖先链取最近带 manifest 的目录，见 §2.1）。所以「整清单不判」不是公式算出来的结论，而是**刻意的一条政策**：声明根是调用的前置条件，缺它整清单不判，**即使部分档本可定根也不出半份判定**。理由两条：缺声明根时盘上的形是**整次不判**（`thincoder-core/doc-check/index.mjs` 的 `declaredRoot` 取 `null` ⇒ 整清单走本节），政策与它同向——把不可读的崩溃换成一个能读的拒绝；而半份判定在报面上分不出「这档干净」与「这档没判」。
+- **为什么这是政策，不是公式的推论**：`rootOf` 的 `?? declaredBase` 只在「祖先链无 manifest」的档上落空——**一个有 manifest 祖先的档，没有声明根也本来就有根**（`owningProject` 沿祖先链取最近带 manifest 的目录，见 §2.1）。所以「整清单不判」不是公式算出来的结论，而是**刻意的一条政策**：声明根是调用的前置条件，缺它整清单不判，**即使部分档本可定根也不出半份判定**。理由两条：缺声明根时盘上的形是**整次不判**（`thincoder-core/doc-check/per-root.mjs` 的 `declaredRoot` 取 `null` ⇒ 整清单走本节），政策与它同向——把不可读的崩溃换成一个能读的拒绝；而半份判定在报面上分不出「这档干净」与「这档没判」。
 
 ### 2.5 域表：按各档所属项目根读
 
@@ -132,6 +132,115 @@ thincoder-core/declaration.mjs · declaredPublicRoots 的参数注
 - 无 manifest 的根，该行写 `无 PROJECT-MANIFEST.json —— 域表为空（批档面互引照判 · 同名候选零提示）`：降级可见，不静默。
 - `gate` 面不出域表读数：verdict 面只放判据。既有先例同向——`lines` 读数与批档面留痕行都只在报告态出。`gate` 面本批增的是 `未核 N 条` 列报（不进 `hits`、不动 verdict）与环引命中行；阈值与其余命中行形未动。
 
+### 2.6 排除目录：manifest 的 `index.docCheckExcludePaths`（F3 同轮改）
+
+**要建的一件事**：判之前，把落在 manifest 排除面里的档从**判集**里去掉。改的是判集，判据本体（阈值 ∥ 命中类 ∥ verdict 词）一律不动。
+
+**键位与名**：`PROJECT-MANIFEST.json` 的 `index.docCheckExcludePaths`（数组，缺省 `[]`）。写法例：
+
+```json
+{ "index": { "docCheckExcludePaths": ["docs/core/design/_archive"] } }
+```
+
+- 与 `index.excludePaths` **同族不同消费面**：那是索引面（`docs/core/design/MANIFEST.md` §2.2），`doc_check` **不吃**它；本键只服务 `doc_check`。
+- 键名自带消费面（`docCheck…`），读者不必靠位置去猜这条排除是给谁用的。
+
+**匹配语义（写死一种，不设分支）**：
+
+- 归一：与 `index.excludePaths` 同一份归一——`trim` · `\`→`/` · 首部 `./` 剥离 · 去尾斜杠 · 空 ∕ 非串元素剔除 · 去重保序。判据单源 = `thincoder-core/declaration.mjs` 的 `normalizePathList`（本批只把它从私有改为导出，**不写第二份**）：依据 `thincoder-core/declaration.mjs`「function normalizePathList(v) {」。
+- 命中：前缀语义，**恰等 ∨ 后随 `/`**，相对**该档自己的项目根**（一档一根，§2.1）。
+- **大小写**：比较走平台语义，与引擎既有 `pathKey` 同一处规则——`win32` 折小写、其余逐字（依据 `thincoder-core/doc-check/per-root.mjs`「const pathKey = (p) => (process.platform === "win32" ? p.toLowerCase() : p)」）。不另立一条更严的比较：Windows 上大小写写错的排除项会静默不生效，正是本节要消的那种静默漏，也与 §2.4 的「Windows 大小写不敏感」同一条。
+- 目录与单个档 **同写一式**：写目录 = 该子树全排除；写某个档路径 = 恰等命中那一档。不设「尾斜杠必须写」的第二写法——归一已把尾斜杠吃掉。
+- **全关就是全关**：排除面覆盖全库 ⇒ 全库不判，这是**定义**，不是缺陷。不设「不得覆盖 `docRoot`」一类守卫、不设提示、不设守卫返回。
+
+**生效坐标**：`thincoder-core/doc-check/index.mjs` 的 `runDocCheck(root, opts)`，**装配那一处**。
+
+- **`checkFiles` = 排除后的清单**（写死一条路，不留第二读法）：过滤发生在**分组之前**——逐档用 `rootOf(该档, 声明根)` 求该档自己的根，按根记忆 `readManifest`（与喂 `domainTables` 的**同一次读**），该档落在本根 `index.docCheckExcludePaths` 内 ⇒ 不进 `checkFiles`，改记入 `excluded`。
+- `perRootGroups(checkFiles, …)` 分的就是这个清单；三条判据（`checkAnchors` ∥ `checkParagraphs` ∥ `collectLineRefs`）与报面**全部吃 `checkFiles`** —— 只改装配一处即全覆盖，**不另设 `judgedFiles` 这第二个名字**。
+- 弃案（保留 `checkFiles` 为过滤前、另喂判据一份并集）：两个名字共存后，`范围` 行的档数 ∥ `0 档受检` 那一支 ∥ `hits` 口径各要重新指定吃谁，实现席只能猜；且全排除时 `checkFiles.length !== 0` ⇒ 首行落 `PASS`，直接撞本节的用例表。
+- **判据本体零改**：`thincoder-core/doc-check/anchors.mjs` ∥ `paragraph.mjs` ∥ `line-refs.mjs` 三档不碰。
+
+**报面（两问法同出；不进 `hits`、不改 verdict）**：
+
+- 新桶一行：`排除 N 档（manifest 排除面命中，未判）：` + 逐档行，行形取既有 `bucketLines`（与「跳过」桶同形）。
+- **N = 0 时不出**（`bucketLines` 对空清单返回空数组，与两个跳过桶同一条规则）⇒ 未声明该键的 manifest 上，`report` ∥ `gate` 报面与改动前逐字相等（AC-Ex5）。
+- 排除档**不进** `hits`／`unreadable`／`skipped`——它既不是命中，也不是「不在盘」或「读不到」。
+- **出在两问法**，位置 = 两个跳过桶之后、读不到桶之前：它与「跳过」同属「未判」族（可见、不静默丢掉），不是量。§2.5「`gate` 面只放判据」那条管的是**读数**（域表块 ∥ `lines` ∥ 批档面留痕）——`gate` 面早就同时出跳过行与读不到行，本桶与它们同一族。不出的代价是「被排除」与「干净」在报面上同形。
+- **全清单被排除（唯一一处「错读会当成干净范围」的地方）**，两面各一句，两句都点名排除面：
+  - `gate` 面：首行 `DOC-CHECK GATE: ERROR（0 档受检——空范围不判 PASS）`（`checkFiles` 已空，走既有那一支），随后 `范围：… **0 档受检**`，排除桶点名全部档，空范围句取 `范围为空：清单 N 档全落在 manifest 排除面内——没有可判档`。**不落**「本会话没有写过 .md 档」那两句——那两句会把「被声明排除」说成「本轮没碰」。
+  - `report` 面：`范围` 行照出 0 档，排除桶点名全部档，末行取 `结论：0 档入判——清单 N 档全落在 manifest 排除面内，不得读作已检`（**不取**既有「锚 ∥ 段 ∥ 行 均清」那一句——一档没判时说「均清」就是假绿）。
+
+**值形态非法（非数组）⇒ 与 `index.excludePaths` 同款**：`validateManifest` 记 `errors`（数组层 fail-closed）。此时 `readManifest` 不可用 ⇒ 域表 `manifest:false` ⇒ 排除面按空集、照判（向严）。
+
+**复现场景**（先例对称：`index.excludePaths` 同款同形）：手写 `"docCheckExcludePaths": "docs/x"`（单串而非数组）⇒ `validateManifest` 报该键、域表 `manifest:false`、清单照判。既不静默把单串当一项读，也不因此少判任何档。**不为「排除面读坏了」单设分支**：既有域表降级就是那条路。
+
+**最接近先例**：`index.excludePaths`（`docs/core/design/MANIFEST.md` §2.2）。对齐三项——键位（同在 `index` 族）∥ 归一（同一份 `normalizePathList`）∥ 命中（恰等 ∨ 后随 `/`）；**形上零偏离**。与本键的差别只在**消费面**（谁吃这张清单：索引 vs `doc_check`），不是形——所以本节没有「偏离理由」要写；键为何不新立顶层第六键，理由见 KD-Ex1。
+
+**公共源勘查**：本面是仓内工具面，无外部公共源参与；已查 manifest 声明的公共仓（`index.publicRepos`：`../.thincoder` ∥ `../thincoder.com`），与本面无关——**已查，无相关**。
+
+**数据事实核对**：本批的数据断言 = 本仓 `PROJECT-MANIFEST.json` 现有 `index.excludePaths` 两项（`docs/core/design/_archive` ∥ `docs/core/requirements/_archive`），`doc_check` 今日照判其中档。取证 = 读该档顶层 `index` 对象（本席本轮回读）。除此之外本批无数据断言——其余由读码得。
+
+#### 关键决策
+
+| # | 决策 | 理由 |
+|---|---|---|
+| KD-Ex1 | 键挂 `index` 族（`index.docCheckExcludePaths`），**不新立顶层第六键** | 顶层第六键会把三处机判不变量一起改写：`DEFAULT_MANIFEST`「恰五键」· `nestedKeys`「恰两族」· `docs/core/design/MANIFEST.md` §2.11 的五键叙述（架构 §2.2 / §2.3 同句）。本键不新增族、不动这组不变量，代价是共享 `index` 命名空间——由键名自带消费面抵掉。**弃案**：顶层 `docCheckExcludePaths`（语义更干净，代价 = 三档计数句 + 一条机判 AC 同轮改写，见 `docs/core/design/MANIFEST.md` AC-45） |
+| KD-Ex2 | 归一复用 `normalizePathList`，命中复用「恰等 ∨ 后随 `/`」 | 两个键各写一份归一，语义必然漂；差别只该在「谁吃这个清单」，不应在「怎么认路径」 |
+| KD-Ex3 | 生效点 = `runDocCheck` 的判集过滤，不放 `checkAnchors`、不放工具面 | `checkAnchors` 只覆盖锚一条判据，段长 ∥ 行号坐标两条也吃 `checkFiles`；工具面拿不到「每档所属根」，而排除面是**按各档根**声明的 |
+| KD-Ex4 | 排除面可以覆盖全库，不设守卫 | 用户原话「排除如果被定义成了全关,就要全关.」——全关是定义，不是缺陷；守卫会让「用户声明的排除面」与「机检实际判的集」变成两件事 |
+
+#### 受影响文件与档层结论
+
+| 文件 | 改动 | 档层结论 |
+|---|---|---|
+| `thincoder-core/manifest-schema.mjs` | `DEFAULT_MANIFEST.index` 增 `docCheckExcludePaths: []`；`validateManifest` 增一行数组层判据（同 `index.excludePaths` 款） | 未越线（无档位标记） |
+| `thincoder-core/declaration.mjs` | `normalizePathList` 私有 → 导出（零语义改动） | 未越线（无档位标记） |
+| `thincoder-core/doc-check/index.mjs` | 判集过滤（装配一处）+ `excluded` 桶 + 报面两行 + 返回值增 `excluded` 读数；越硬限后整族已按 §4 接缝拆出 | 标 `soft`，越软线、未越硬限 |
+| `thincoder-core/doc-check/per-root.mjs` | 新增档：定根 ∥ 分组 ∥ 报面路径形这一族与 `pathKey` ∥ `rel` 随拆分落此（§4 接缝）；判集过滤不在本档 | 未越线（无档位标记） |
+| `thincoder-core/tool-docs/manifest.md` | 键面描述增一行（与 `index.excludePaths` 并列） | 只出数不标（`.md` 零尺寸档位义务） |
+| `docs/core/requirements/DOC-CHECK.md` | F3 改写（主 agent 笔，字面见批次档 §2） | 文档档，零档位义务 |
+| `docs/core/design/MANIFEST.md` | 键面增一条（§2.2 `index.docCheckExcludePaths`）· 元素层句点名该键 · 写面白名单计数 13→14（`index.*` 四→五子键）· AC-47 改口径（读声明面两处，不是「不读 manifest」） | 文档档，零档位义务 |
+| `docs/batches/<本批批档同名>.test.mjs` | 本批单元测试档（用毕即删） | 实施轮创建后随同一次读数取档位 |
+
+**档层读数怎么取**（命令 · 本轮已跑）：`doc_check({mode:"report", target:"<仓根>", docs:["test/RTM.md"], lines:[上面每一份源档]})`，读它的档位标记。数值住命令输出与批档，本档只落结论（D12）。
+
+**`thincoder-core/doc-check/index.mjs` 那一行接回 §4**：本批往它里加判集过滤与报面两行后它越 800 硬限，按 §4 那条预留接缝整族拆出 `thincoder-core/doc-check/per-root.mjs`；原档回软线，新档在线内。判集过滤留在 §4 的装配件里，不随族迁走。
+
+拆档接缝与拆法，住 §4，本档不重述（D2）。本批新增源档一份 = `thincoder-core/doc-check/per-root.mjs`，落引擎同目录。
+
+#### 验收（回指本批条目）
+
+本批用例全部住 `docs/batches/<本批批档同名>.test.mjs`，逐条核法 = `node --test docs/batches/<本批批档同名>.test.mjs`（用毕即删）。
+
+- **AC-Ex1（过滤生效，两读同一条）**：同一份带死指针的档，落在排除面 ⇒ 该档不出命中；把它移出排除面（或把那段从 `docCheckExcludePaths` 删掉）⇒ 同一份档出 1 条 `档缺`。两读用同一夹具、同一命令，只换排除面。
+- **AC-Ex2（归一与命中形）**：`[".\\docs\\excluded\\", "./docs/excluded"]` 与 `["docs/excluded"]` 行为逐字相同；前缀同名兄弟目录（`excluded` 与 `excluded-fork`）不被吞——后者照判。
+- **AC-Ex3（单档形）**：排除面写一个具体档路径 ⇒ 只排除那一档，同目录其他档照判。
+- **AC-Ex4（值形态）**：`docCheckExcludePaths` 非数组 ⇒ `validateManifest(...).ok === false` 且 `errors` 点名该键。
+- **AC-Ex5（缺省零变化）**：manifest 无该键 ⇒ `runDocCheck` 的 `hits` ∥ `checkFiles` ∥ 报面与改动前逐字相等（`checkFiles` 按本节 = 排除后的清单，缺键时它与改动前的清单同一个集）。
+- **AC-Ex6（全排除不得读成干净）**：排除面覆盖清单全部档 ⇒ `gate` 首行 `ERROR（0 档受检——空范围不判 PASS）` 且空范围句取「全落在 manifest 排除面内」那一句（「本会话没有写过 .md 档」零出）；同一清单的 `report` 面末行取「0 档入判…不得读作已检」（「均清」那一句零出）；两面都点名全部排除档。
+
+**红侧读数**：AC-Ex1 的第一读在改造前恒为「排除仍判」；AC-Ex6 在改造前两面的句子都不存在——本批单元测试档把两读同跑，红侧读数随交付报出。
+
+#### 用例表
+
+| 类 | 输入 | 期望 |
+|---|---|---|
+| 正常 | 夹具项目：排除面收一段目录，排除段内的档与非排除段的档各带一条死指针，`gate` 判两档 | `hits.total === 1`，命中落在非排除段那档，`excluded` 读数 = 1 |
+| 正常 | 同上，排除面删空 | `hits.total === 2`，`excluded` 读数 = 0——**同一夹具只换排除面**，两读不相等才证明过滤在起作用（AC-Ex1） |
+| 正常 | 排除键缺省 ∥ `[]` | 排除桶零出（N=0 不出行），`checkFiles` ∥ `hits` ∥ 报面与改动前逐字相等（AC-Ex5） |
+| 边界 | 排除面覆盖清单全部档，`gate` 面 | `checkFiles` 为空；首行 `ERROR（0 档受检…）`；空范围句取「全落在 manifest 排除面内」那一句；排除桶点名全部档（AC-Ex6） |
+| 边界 | 同上清单，`report` 面 | 末行取「0 档入判…不得读作已检」；「均清」零出；排除桶点名全部档（AC-Ex6） |
+| 边界 | 排除面收一段目录，夹具另有同前缀兄弟目录 | 兄弟目录里的档照判（前缀不吞同名兄弟） |
+| 边界 | 排除面写单档路径 | 只该档不入判，同目录其他档照判 |
+| 错误 | `docCheckExcludePaths` 给非数组值 | `validateManifest` `ok:false`，`errors` 点名该键；域表 `manifest:false`，照判 |
+
+#### 边界（本批不做）
+
+- 不加「排除前缀不得覆盖 `docRoot`」一类守卫、不加提示、不加读数以外的机制。
+- 不动判据：阈值 ∥ 命中类 ∥ verdict 词 ∥ 抽取式 ∥ 解析序一律不碰。
+- 不让 `doc_check` 吃 `index.excludePaths`，也不把两键合并。
+- 不改 `manifest` 工具的白名单写面（顶层键集不变——KD-Ex1）。
+
 ## 3. 接口契约
 
 | 面 | 形状 | 变 ∥ 不变 |
@@ -147,7 +256,7 @@ thincoder-core/declaration.mjs · declaredPublicRoots 的参数注
 
 数据流：`docs` 条目 →（**无声明根 ⇒ 停在这里，走 §2.4 的 `ERROR`**）→ `resolve(declaredBase, d)` 得绝对路径（路径解析基准**不变**，相对条目仍按声明根解析）→ 可判性判定（在盘 ∥ `.md`，**不变**）→ 按 `rootOf` 分组 → 逐组 `checkAnchors` → 合并命中 → 报面（单根无标 ∥ 多根打标）。
 
-**判据句合规**：分组与定根住在 `thincoder-core/doc-check/index.mjs`；锚判据的跨仓三笔只沿 `index.publicRepos` 给出的边读（`thincoder-core/declared-repos.mjs` 的 `declaredCycles` 不遍走目录）⇒ `anchors.domain` ∥ `anchors.roots` 仍零存在，「不做全仓扫描」那条判据句照旧成立（回指 `docs/core/requirements/DOC-CHECK.md` 的边界段判据句）。
+**判据句合规**：分组与定根住在 `thincoder-core/doc-check/per-root.mjs`；锚判据的跨仓三笔只沿 `index.publicRepos` 给出的边读（`thincoder-core/declared-repos.mjs` 的 `declaredCycles` 不遍走目录）⇒ `anchors.domain` ∥ `anchors.roots` 仍零存在，「不做全仓扫描」那条判据句照旧成立（回指 `docs/core/requirements/DOC-CHECK.md` 的边界段判据句）。
 
 ## 4. 受影响文件与档层结论
 
@@ -163,24 +272,25 @@ thincoder-core/declaration.mjs · declaredPublicRoots 的参数注
 
 ```text
 docs/batches/2026-11-07-doccheck-workspace-anchor.test.mjs   本批单元测试档（用毕即删）
-thincoder-core/doc-check/per-root.mjs                     仅当 index.mjs 越硬限时的拆出档（落引擎同目录，判据面不搬）
+thincoder-core/doc-check/per-root.mjs                     越 800 硬限后拆出的定根 ∥ 分组 ∥ 报面路径形族（落引擎同目录，判据面不搬）
 test/RTM.md                                               故事索引表加一行
 test/rtm/guard.md                                         册内用例行
 test/integration/**                                       集成用例文件（编号按 §9 落地）
 ```
 
-**档层结论：四份改动档一份越软线、三份未越线，无一越硬限**。判据 = `doc_check({mode:"report", lines:[…]})` 的档位标记（读数存批档，本档不预载数值），逐档一句：
+**档层结论：五份源档一份标 `soft`、四份未越线，无一越硬限**。判据 = `doc_check({mode:"report", lines:[…]})` 的档位标记（读数存批档，本档不预载数值），逐档一句：
 - `thincoder-core/agent-tools/doc-check.mjs`——未越线（无标记）。
 - `thincoder-core/doc-check/index.mjs`——标 `soft`，越软线、未越硬限。
+- `thincoder-core/doc-check/per-root.mjs`——未越线（无标记）。
 - `thincoder-core/doc-check/anchors.mjs`——未越线（无标记）。
 - `thincoder-core/agent-tools/batch-paths.mjs`——未越线（无标记）。
 - 本批单元测试档——实施轮创建后随同一次读数取档位；越硬限即拆，不越硬限不拆。
 
-**软线的审视结论**：软线的语义是「主动审视」，不是「拆」。可拆的接缝已在盘上——定根 ∥ 分组 ∥ 报面布局这一族（`rootOf` ∥ `perRootGroups` ∥ `reportLayout` ∥ `bucketLines` ∥ `rootsSuffix` ∥ `noRootItems`）与判据本体之间只靠 `runDocCheck` 串联，整族可搬进落地件清单里那个拆出档，`thincoder-core/doc-check/index.mjs` 只留 import。
+**接缝与现状**：软线的语义是「主动审视」，不是「拆」。定根 ∥ 分组 ∥ 报面布局这一族（`rootOf` ∥ `perRootGroups` ∥ `reportLayout` ∥ `bucketLines` ∥ `rootsSuffix` ∥ `noRootItems`）与判据本体之间只靠 `runDocCheck` 串联，所以它已整族住在 `thincoder-core/doc-check/per-root.mjs`，`thincoder-core/doc-check/index.mjs` 只留 import 与装配件。
 
-**本批不拆**：未越硬限；而拆档会把本批改动面从「定根一处」扩成「两个文件的边界重构」，与 §8 的边界相冲。越硬限时按上面这条接缝拆。
+**拆分已落在这条接缝上**：`thincoder-core/doc-check/index.mjs` 越过 800 硬限后，上面那一族整族搬到 `thincoder-core/doc-check/per-root.mjs`；原档只留装配件与判据面，两档都在线内。
 
-**本批不新增源档**：只有实施后越硬限才拆，拆出档落**引擎同目录**（见上方落地件清单），判据面留原档。
+**本批新增源档一份**：拆出档落**引擎同目录**（见上方落地件清单），判据面留原档。
 
 ## 5. 关键决策记录
 
@@ -190,16 +300,21 @@ test/integration/**                                       集成用例文件（�
 - **叫什么**：取根判据 = `owningProject`（`thincoder-core/manifest.mjs` 导出）；兜底那臂 = `batchProjectRoot`（`thincoder-core/agent-tools/batch-paths.mjs`）。
 - **谁在用**（仓根全路径）：`thincoder-core/agent-tools/batch-gate.mjs` · `thincoder-core/agent-tools/batch-paths.mjs` · `thincoder-core/agent-tools/review-facts.mjs` · `thincoder-core/ledger-db.mjs` · `thincoder-core/declaration.mjs` · `thincoder-core/path-resolve.mjs`。
 
-**本批新引入的六个名字，逐个三问**（`none found` 的读法 = `grep` 于 `thincoder-core/**` 零命中；取根家族既有名 = `owningProject` ∥ `projectRootView` ∥ `resolveProjectRoot`，逐个比对过不撞名）：
+**本批新引入的十一个名字，逐个三问**（`none found` 的读法 = `grep` 于 `thincoder-core/**` 零命中；取根家族既有名 = `owningProject` ∥ `projectRootView` ∥ `resolveProjectRoot`，逐个比对过不撞名）：
 
 | 新名字 | 在哪 | 叫什么 | 谁在用 |
 |---|---|---|---|
-| `rootOf` | `none found`——仓内零命中，本批首建，住 `thincoder-core/doc-check/index.mjs` | 本档命名（取根式，非导出函数） | §2.1 ∥ §2.2 ∥ §3 的数据流 |
-| `perRootGroups` | `none found`——零命中，本批新建于 `thincoder-core/doc-check/index.mjs` | 本档命名 | 引擎入口一处调用（§2.2） |
+| `rootOf` | `none found`——仓内零命中，本批首建，住 `thincoder-core/doc-check/per-root.mjs` | 本档命名（取根式；拆档后由该档导出供装配件调用） | §2.1 ∥ §2.2 ∥ §3 的数据流 |
+| `perRootGroups` | `none found`——零命中，本批新建于 `thincoder-core/doc-check/per-root.mjs` | 本档命名 | 引擎入口一处调用（§2.2） |
 | `projectRoots` | 返回键零命中；既有返回面（`hits` ∥ `lineRefs` ∥ `lineReads` ∥ `batchFaceRefs` …）不撞名 | 本档命名 | 报面根清单行 ∥ §7 用例断言（仅此两处） |
 | 多根标签 `[<项目名>]` | `none found`——报面没有逐行项目标签的先例；相邻先例 = 工具面的 `候选：A ∥ B` 行 | 取它的分隔符，不取它的位置 | §2.3 报面 §6 AC-6 |
 | `ERROR（无法定根 N 档）` | 先例在盘：`thincoder-core/doc-check/index.mjs` 的 `verdict()` 「读不到 N 档」一支 | **对齐**——同句形同位置（首行） | §2.4 ∥ §6 AC-3 |
 | `domainTables` | 返回键零命中——`grep` 于 `thincoder-core/**` 零命中；既有返回面（`projectRoots` ∥ `hits` ∥ `lineRefs` ∥ `lineReads` ∥ `batchFaceRefs` …）不撞名 | 本档命名（§2.5 的读数口径：每组一根、按路径升序） | 报面域表读数块 ∥ §6 AC-10 ∥ §7 用例 7-11 |
+| `index.docCheckExcludePaths` | 先例在盘：`index.excludePaths`（同类键，同族） | **对齐**——键名自带消费面（`docCheck…`），读者不必靠位置猜这条排除给谁用 | 装配处的判集过滤（§2.6）∥ `manifest` 工具写面（白名单由 schema 派生，无需手加） |
+| `excluded`（返回读数 ∥ 桶） | 同层既有名 = `skipped` ∥ `unreadable`（都属「未判」清单） | 本档命名（语义 = 被声明排除、未判；与「不在盘」「读不到」各是一件事） | 报面排除桶 ∥ 本批用例断言 |
+| 桶标签 `排除 N 档（manifest 排除面命中，未判）：` | 行形先例在盘：`bucketLines` 的「跳过 N 档（…，未检）：」 | **对齐**——同一合成函数、同一句形 | `report` ∥ `gate` 两面（§2.6） |
+| 空范围句 `范围为空：清单 N 档全落在 manifest 排除面内——没有可判档` | 先例在盘：`gate` 面既有四句 `范围为空：…` | **对齐**——第五句，与前四句同句形 | AC-Ex6 ∥ 本批用例 |
+| Report 面结论句 `结论：0 档入判——清单 N 档全落在 manifest 排除面内，不得读作已检` | 先例在盘：既有 `结论：0 条命中…` 两式 | **对齐**——同句位（末行），只换「一档没判」那一态 | AC-Ex6 ∥ 本批用例 |
 
 - **判据本体复用**：`owningProject` 就是取根判据本体，直接复用。
 - **兜底臂不复用**：`?? batchProjectRoot(base)` 把「找不到归属」直接落成会话根，本批不照抄。
@@ -276,7 +391,8 @@ test/integration/**                                       集成用例文件（�
 - **不合并各组扫描根**：每组只吃自己那根的域表（§2.5 KD-9）；域表为空集时向严判，不向宽判。
 - **四态的判据不归本档**：`thincoder-core/path-resolve.mjs` 的四态（`ambiguous` 与第四态 `unverified`）归 `docs/core/design/PATH-RESOLUTION.md`；本档只规定工具面**何时拒**（`target` 缺 ∥ `null` ∥ 空串 ⇒ 拒；非空 `target` 解析为多项目工作区 ⇒ 另拒）。
 - **`gate` 面只增列报与环引行**：域表读数不进 verdict、不改首行；`gate` 面增的是 `未核 N 条` 列报（不入 `hits`）与环引命中行。
-- **需求档本批不再改**：`docs/core/requirements/DOC-CHECK.md` 已含 F17 ∥ AC-15。
+- **需求档本批不再改（判域面）**：`docs/core/requirements/DOC-CHECK.md` 已含 F17 ∥ AC-15。
+- **排除面按用户定义执行，不设守卫**：排除面可以覆盖全库，全关即全关（§2.6 KD-Ex4）——本批不加任何「不得覆盖」检查。
 
 ### 登记项（同病但本批只登记、不越界改）
 
@@ -289,6 +405,13 @@ test/integration/**                                       集成用例文件（�
 
 - **改写的断言 = 1**：`test/rtm/paths.md` 的 29-2 行原断言「工作区锚下 `doc_check({mode:"gate"})` 不带 `target` ⇒ 首行 `ERROR（多项目工作区：请指名 target）`」——盘上真值是照判，该断言本就为假。`target` 必填后，该行的文档门那一笔改成「拒 + 报文点名 `target`」（与工具面同句）；「工作区作声明根照判」那一面移入 `test/rtm/guard.md` 的 `36-1`。
 - **冗余行 = 0**。
+- **本批（排除面）增量 = 1 行，号已定死 `36-5`**（族 = `guard`，住 `test/rtm/guard.md`；36-1–36-4 已占）。四件：
+  - **交互** = manifest 声明 `index.docCheckExcludePaths` → `runDocCheck` 装配处按各档自身根过滤判集 → 命中数随之变。
+  - **业务可观察结果** = 同一份带死指针的档，在排除面内零命中，移出排除面后 1 条 `档缺`。
+  - **业务入口** = 交付时点真 `doc_check({mode:"gate", docs, target})` 调用（与 `36-1` 同一个入口）。
+  - **回指业务需求** = `docs/core/requirements/DOC-CHECK.md` F3（唯一项目级声明面 = 该键）∥ 本档 AC-Ex1。
+- 用例档落 `test/integration/` 目录下（`test/**` 不属本席笔域，文件名与落地归实施轮）。
+- **新桶会不会撞既有行**：不撞。`36-4` 断的是四条空范围入口照出 `范围为空：…` 说明行——四条都不涉排除面，新句只在排除分支出；`36-1` ∥ `36-2` ∥ `36-3` 断首行 ∥ 标签 ∥ 命中归属，而排除桶 N=0 时不出行。
 - **缺的行 = 1 → 已落为 `36-3`**：故事 36（跨项目文档清单的交付门按各档自身项目根判）下的「域表按档根」行 = `test/rtm/guard.md` 的 `36-3`（B 档同基底互引豁免 ∥ A 档同 token 照判 `档缺`）；业务入口与 `36-1` 同一个入口（会话锚 = 工作区，下辖两个项目、自身无 manifest）；回指本档 **§2.5** ∥ **AC-9**。
 - **AC-8 的干净轮由既有 `36-1` 覆盖**——本批不重复加行。
 - **AC-11 不另立集成行**：它与 AC-8 是同一条交互（工具面 ⟷ 引擎 ⟷ 定根）、同一夹具，差别只在入参形；缺参面由 `test/rtm/paths.md` 的 `29-2` 那一笔断（拒 + 报文点名 `target`）。

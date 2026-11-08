@@ -202,6 +202,7 @@ function refusalMessage({ res, zones, frags, target, root, regionCount }) {
  *   拿会话 cwd 当界会把「写项目外的档」静默变成零判——同一个目标面判成 `doc-root`、根却取不到 = 门自己
  *   把自己关掉，而这跳过的样子和「不该判」一模一样。
  * @returns {{judged:boolean, zones:number, hits:number}} 判面空 ⇒ `judged:false`（零判、零片段档）；
+ *   判集被 manifest 排除面吃空 ⇒ 也 `judged:false`（**零档入判，不得读作判过**）；
  *   放行 ⇒ `hits:0`。命中 ⇒ **throw**（拒串见 `refusalMessage`），目标档字节不变。
  */
 export async function runDocWriteGate({ abs, content, root } = {}) {
@@ -230,6 +231,10 @@ export async function runDocWriteGate({ abs, content, root } = {}) {
   try {
     zones.forEach((zone, i) => frags.push({ zone, abs: writeFragment(target, newLines, zone, i + 1) }))
     const res = runDocCheck(projectRoot, { mode: "gate", docs: frags.map((f) => f.abs) })
+    // 判集被**排除面**吃空（`index.docCheckExcludePaths` 命中本笔的片段档——片段住目标档同目录）⇒
+    // 本次**一个档都没判**。「没判」不得报成「判干净了」：`judged: true, hits: 0` 的意思是「我判过了，
+    // 它是干净的」，而事实是零档入判——与设计 §2.6「被排除与干净不得同形」是同一条，只是换了个面。
+    if (res.checkFiles.length === 0) return { judged: false, zones: 0, hits: 0 }
     // 拒写判定只取锚 + 段两类的和（**不读 `hits.total`**）：`hits.total` 含行号坐标那一类，
     // 拿它当拒写输入 = 写门开始拒行号——那是交付门的活，用户明说写门可以不挡。
     if (res.hits.anchors + res.hits.paragraph === 0) return { judged: true, zones: zones.length, hits: 0 }

@@ -43,7 +43,9 @@ export const DEFAULT_MANIFEST = Object.freeze({
   }),
   // 项目声明三族（2026-09-27 声明载体唯一化批并入——键名 / 形态逐字承前；来源档已退役）。
   codePaths: Object.freeze(["src"]),
-  index: Object.freeze({ codeExtensions: Object.freeze([]), docExtensions: Object.freeze([]), excludePaths: Object.freeze([]), publicRepos: Object.freeze([]) }),
+  // `docCheckExcludePaths` = `doc_check` 的排除目录（机制 = `docs/core/design/DOC-CHECK.md` §2.6）：与 `excludePaths`
+  // **同族不同消费面**——那是索引面，`doc_check` 不吃它；键名自带消费面，读者不必靠位置猜这条排除给谁用。
+  index: Object.freeze({ codeExtensions: Object.freeze([]), docExtensions: Object.freeze([]), excludePaths: Object.freeze([]), docCheckExcludePaths: Object.freeze([]), publicRepos: Object.freeze([]) }),
 })
 
 /** 校验判据（模块设计 §2.2）——枚举 / 键存在（fallback 用）；判据单源（KD-M1-4）。 */
@@ -118,6 +120,11 @@ export function validateManifest(obj) {
     for (const k of ["codeExtensions", "docExtensions"]) if (obj.index[k] !== undefined) strArrErr(`index.${k}`, obj.index[k])
     if (obj.index.excludePaths !== undefined && !Array.isArray(obj.index.excludePaths)) {
       errors.push(`index.excludePaths 值形态非法：${JSON.stringify(obj.index.excludePaths)}（须为数组——非数组 fail-closed；空 ∕ 非串元素由归一剔除）`)
+    }
+    // `index.docCheckExcludePaths`（§2.6）：与上一行同款**数组层** fail-closed——非数组 ⇒ 拒（元素层宽容，由归一剔除）。
+    // 后果同款：域表 `manifest:false` ⇒ 排除面按空集、照判（向严）——既不把单串当一项读，也不因此少判任何档。
+    if (obj.index.docCheckExcludePaths !== undefined && !Array.isArray(obj.index.docCheckExcludePaths)) {
+      errors.push(`index.docCheckExcludePaths 值形态非法：${JSON.stringify(obj.index.docCheckExcludePaths)}（须为数组——非数组 fail-closed；空 ∕ 非串元素由归一剔除）`)
     }
     if (obj.index.publicRepos !== undefined && !Array.isArray(obj.index.publicRepos)) {
       errors.push(`index.publicRepos 值形态非法：${JSON.stringify(obj.index.publicRepos)}（须为数组——非数组 fail-closed；空 ∕ 非串元素由归一剔除）`)

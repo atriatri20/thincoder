@@ -29,7 +29,7 @@
 7. **agent 工具面**：主 agent 对 manifest 的**全键读写**出口。现状 = 机制代码在场但无出口——装配侧内部调用之外，agent 侧唯一写点 = 工程模式翻转对缺档锚建默认档。五项：
    - **读**：现档 + 校验态（`ok` / `missingKeys` / `unknownKeys` / `errors` / 缺档报明）——`readManifest` 语义；
    - **建**：缺档 ⇒ 建默认档（`initManifest`；默认档 = `DEFAULT_MANIFEST`）；
-   - **写**：**五键逐节点**可改——`version` / `phase` / `docRoot.*`（五子键）/ `codePaths` / `index.*`（四子键）/ 另含台账指针面；落盘前经 `validateManifest`（非法 ⇒ 拒 + 盘零变，fail-closed 照旧）；已退役三键（`promptsLanding` / `checkConfig` / `advisor`）写入时静默剥离，读面不报、不上界面；
+   - **写**：**五键逐节点**可改——`version` / `phase` / `docRoot.*`（六子键）/ `codePaths` / `index.*`（五子键）/ 另含台账指针面；落盘前经 `validateManifest`（非法 ⇒ 拒 + 盘零变，fail-closed 照旧）；已退役三键（`promptsLanding` / `checkConfig` / `advisor`）写入时静默剥离，读面不报、不上界面；
    - **目标面**：显式目标目录参数（缺省 = 会话锚 / 按用点解析语义——歧义不猜、多候选列报）；
    - **权限面**：写面（`init` / `write`）只挂**主 agent**（沿写门不变）；读面（`read`）子代理另有**只读变体**（同名工具、`action` 枚举只剩 `read`，写动作 schema 级不可达 + execute 入口再拒一次）。子代理写面两道防线不动（写动作不在其装配 + `files` 域拒）。
 
