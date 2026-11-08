@@ -12,6 +12,11 @@
  * 抽取面：逐行扫；fenced 块整块跳过；可执行行**只跳码段区间**（`codeSpans` 切出的那几段不抽——命令 / 搜索模式串保字面），
  *   **码段外照抽照判**。旧式整行跳过：一行里只要有一处命令形码段，同行的真指针一条不报（实读：整行 0 条；去掉码段 1 条 `档缺`）——
  *   这道豁免给自己的理由本来就限在码段之内，把码段外的散文一并放过是没有理由的那一半（口径 = 同档 §3.20「抽取面」块）。
+ * 花括号组形（`<前缀>{<名1>,<名2>[,…]}<后缀>.<扩展名>`）：抽取面的一支，展开成 N 个具体档名后**逐名**走同一解析序判存在性。
+ *   它治的是「门看不见」这一类：`{` `,` `}` 都不在档 token 的字符类内，一个 token 指两件的形式既不红也不绿——**它不在判面里**。
+ *   判决仍走现成的 `档缺`，判决词 ∥ 解析序 ∥ 豁免谓词 ∥ 阈值四样零改（**这是抽取面的 carve-out，不是判据本体的改动**）。
+ *   命中行同时点名原花括号 token 与缺的那个展开名（`expanded`）——只报展开名，读者拿到的是一个他档里从没写过的名字；
+ *   只报原 token，他看不出该改哪一处。三条不展开的形（取值枚举 ∥ 模板占位 ∥ 嵌套）见 `expandBraceToken` 的头注。
  *   提示词面另剥 CANON 操作数（面判据 = `./paragraph.mjs` 的 `isPromptFace`——按**整 token 边界**剥除后再抽，见 `CANON_OPERANDS`）。
  * 档 token 的扩展名闭集 = `DOC_EXTS`（与 `./line-refs.mjs` 的行号面同一组）：代码路径同样入判——只认 `.md` 时
  *   悬空的代码路径一条不报，读者按指针找不到实现（§3.20「扩展名闭集」条）。
@@ -89,6 +94,33 @@ const ANCHOR_RE = new RegExp(
   `${TOKEN_LEFT_GUARD}((?:[A-Za-z0-9_.\\-]+\\/)*[A-Za-z0-9_.\\-]+\\.(?:${DOC_EXTS.join("|")}))(?::\\d+(?:-\\d+)?)?(?:\\s*§\\s*(\\d+(?:\\.\\d+)*))?${TOKEN_RIGHT_GUARD}`,
   "g",
 )
+
+/** 花括号组形的抽取式（判据见头注「花括号组形」条）：目录段照常、末段 = 前缀 `{` 成员 `,` 成员 `}` 后缀 `.` 扩展名。
+ *  三支走不到的守卫**不写成判据**（写成判据就是给没人走的路修栅栏）：
+ *  · 组内含 `/` ∥ `*`（取值枚举 `{ running / queued / done }`）——成员字符类 `[A-Za-z0-9_.\-]` 本就不含这两个字符，匹配不上；
+ *  · 成员 < 2（`${count}` ∥ `📁 {name}` 这类模板占位）——成员后的 `(?:,…)+` 必带一个逗号；
+ *  · 嵌套形（`i18n-{zh,en}-{shell,me}.mjs`：后缀里再出现 `{`）——后缀字符类不含 `{`，外层匹配不成；
+ *    内层组则由消费点那条「紧跟在 `}` 之后的那一组不展开」挡住（左界守卫放它过：`}` 不在排除类内）。
+ *  嵌套那一形因此今天不入判、明天仍不入判——本支不假装治了它。 */
+const BRACE_GROUP_RE = new RegExp(
+  `${TOKEN_LEFT_GUARD}((?:[A-Za-z0-9_.\\-]+\\/)*[A-Za-z0-9_.\\-]*\\{[A-Za-z0-9_.\\-]+(?:,[A-Za-z0-9_.\\-]+)+\\}[A-Za-z0-9_.\\-]*\\.(?:${DOC_EXTS.join("|")}))${TOKEN_RIGHT_GUARD}`,
+  "g",
+)
+
+/** 展开：`<目录段…/>前缀{名1,名2[,…]}后缀` ⇒ N 个具体档名（目录段原样保留，只展开末段的组）。
+ *  成员 < 2 ⇒ 原样返回一个 token（不是展开成 1 个——那会在报面上凭空多出一条与原文同名的命中）。 */
+function expandBraceToken(token) {
+  const segs = String(token).split("/")
+  const base = segs.pop()
+  const bi = base.indexOf("{")
+  const ei = base.indexOf("}")
+  if (bi < 0 || ei <= bi) return [String(token)] // 不可达（抽取式保证两符在盘）：保住纯函数前提，不在误用时造出假名
+  const members = base.slice(bi + 1, ei).split(",")
+  if (members.length < 2) return [String(token)] // 同上——单成员形在抽取式那层就匹配不上（`+` 后必带一个逗号）
+  const prefix = base.slice(0, bi)
+  const suffix = base.slice(ei + 1)
+  return members.map((name) => [...segs, prefix + name + suffix].join("/"))
+}
 
 /** 约定文件名（**类名**——文档在描述「会读哪些文件」、黑名单名字、`files` 字段值、测试数据）：不抽。
  *  依据 = 这些名字在仓根 / 兄弟目录不一定存在，它们指的不是「某个仓内档」。 */
@@ -333,6 +365,7 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
     const text = readText(f, unreadable) // 读不到 ⇒ 入 unreadable，不再静默当零命中
     const re = new RegExp(ANCHOR_RE.source, "g") // 每档一份实例（零共享 lastIndex 状态）
     const citeRe = new RegExp(CITE_RE_SRC, "g") // 同上（引文标记面）
+    const braceRe = new RegExp(BRACE_GROUP_RE.source, "g") // 同上（花括号组形）
     const stripOperands = isOperandFace(f) // 只有提示词面剥（面判据 = `isPromptFace`）
     let fence = null // 围栏标记（` ∥ ~）；null = 不在块内
     text.split("\n").forEach((l, i) => {
@@ -379,9 +412,22 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
           if (!citedTextOf(r.abs).includes(quote)) hits.push({ file: f, line: i + 1, token, clazz: "引缺", quote, target: r.abs })
         }
       }
+      // ── 花括号组形：先占区间、再逐名解析（抽取面的一支）。
+      //    **为什么先占区间**：组的尾段会自成一条 token——`i18n-{zh,en}-core.mjs` 的 `-core.mjs` 左界是 `}`，
+      //    而 `}` 不在左界守卫的排除类内 ⇒ 锚面会把那个尾段当成一个独立指针，一处写成两件报出两条，
+      //    其中一条的名字读者从没写过（且即使展开名全在盘，那一处仍会因尾段而判红）。组占的区间因此交给本支，锚面不再重报。
+      const braceGroups = []
+      let braceMatch
+      while ((braceMatch = braceRe.exec(scan)) !== null) {
+        if (inSpan(braceMatch.index)) continue // 码段内的组形不抽（与锚面同面）
+        if (scan[braceMatch.index - 1] === "}") continue // 嵌套形的内层组：外面还有一层，展开也定位不到（见抽取式头注）
+        braceGroups.push({ token: braceMatch[1], start: braceMatch.index, end: braceMatch.index + braceMatch[0].length })
+      }
+      const inBrace = (at) => braceGroups.some((g) => at >= g.start && at < g.end)
       let m
       while ((m = re.exec(scan)) !== null) {
         if (inSpan(m.index)) continue // 码段内的 token 不抽（命令 / 搜索模式串保字面）
+        if (inBrace(m.index)) continue // 花括号组的尾段不归锚面（上面已占区间——一处写成两件只算一处）
         const token = m[1]
         if (cited.some((c) => m.index >= c.start && m.index < c.end)) continue // 该 token 归引文判（上面已判，不重报）
         const num = m[2] ?? null
@@ -398,6 +444,21 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
         }
         if (r.how === "suffix") suffixHits.push({ file: f, line: i + 1, token, abs: r.abs })
         if (num !== null && !sectionOnDisk(r.abs, num, sectionCache, unreadable)) hits.push({ file: f, line: i + 1, token, clazz: "节缺", section: num, target: r.abs })
+      }
+      // 花括号组形逐名判（区间已在上方占下）：展开成具体名后走**同一**解析序（复用 `resolveToken`，不新增第二套解析）；
+      // 每个解不到的展开名出一条 `档缺`，携 `expanded`——报面据此同时点名原 token 与缺的那个名字。
+      // 判决词 ∥ 解析序 ∥ 豁免谓词 ∥ 阈值四样零改：本支只让抽取面看见一个此前看不见的形。
+      for (const group of braceGroups) {
+        for (const name of expandBraceToken(group.token)) {
+          if (docNameExemption(name) !== null) continue // 类名 ∥ 占位两免与锚面同判（同一 token 不得两套口径）
+          if (isBatchFaceRef(f, name, face)) { batchRefs++; continue } // 面判同判（与锚 ∥ 依据两条分支同一谓词）
+          const r = resolveToken(name, f)
+          if (r.state === "unverified") { unverified.push({ file: f, line: i + 1, token: group.token, trigger: "pointer", ...r }); continue }
+          // 第 6′ 步解出来的也记读数：与锚分支同一口径（**不标就混进绿里**）——`i18n-{zh,en}-core.mjs` 这类真实形
+          // 展开后往往只剩后缀腿可解，不记的话同一 token 写成裸名有清账行、写成组形却是无读数的一格绿。
+          if (r.how === "suffix") suffixHits.push({ file: f, line: i + 1, token: group.token, abs: r.abs })
+          if (r.state !== "resolved") hits.push({ ...danglingHit(f, i + 1, group.token, r), expanded: name })
+        }
       }
     })
   }

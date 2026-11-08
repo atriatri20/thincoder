@@ -11,11 +11,11 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 工具实现（同路径对） | `thincoder-cli/src/tools/{question,bash,tree,execute,linter,ops,shared,search,lsp,web,file,edit-diff,index}.mjs` | 取名核（`@thincoder/core/tools/*`）；自持仅 `shell` 等拆档，住 `thincoder-vscode/src/tools/`。`wait_for` 为工具名、非档名——实现在核 `thincoder-core/tools/ops.mjs` |
+| 工具实现（核侧单源 · 端侧无同名实现，仅存拆档） | `thincoder-core/tools/{question,bash,tree,execute,linter,ops,shared,search,lsp,web,file,edit-diff,index}.mjs` | 取名核（`@thincoder/core/tools/*`）；自持仅 `shell` 等拆档，住 `thincoder-vscode/src/tools/`。`wait_for` 为工具名、非档名——实现在核 `thincoder-core/tools/ops.mjs` |
 | 工具描述（提示词面） | — | **运行期面 = 核包 `thincoder-core/tool-docs/*.md`** |
 | 注册表 | `thincoder-core/agent-tools.mjs` + `thincoder-cli/src/cli/make-agent.mjs` | `thincoder-vscode/src/agent-tools/index.mjs` |
 | agent-tools 工具面 | `src/agent-tools/*.mjs` | 同名 / 拆分档 |
-| 单端独有实现 | `tools/{bash,edit-batch,glob-dialect,patch,repomap}.mjs` | `tools/{code,ide,focus,index,shared,shell}.mjs`（`checkpoint` 现体 = 核 `thincoder-core/git/checkpoint.mjs`；`context` → **`ide`** 改名——让出 `context` 名与核新工具） |
+| 单端独有实现 | `tools/{bash,edit-batch,glob-dialect,patch,repomap}.mjs` | `thincoder-vscode/src/tools/{code,ide,focus,index,shared,shell}.mjs`（`checkpoint` 现体 = 核 `thincoder-core/git/checkpoint.mjs`；`context` → **`ide`** 改名——让出 `context` 名与核新工具） |
 
 > 工具**描述文本**（运行期面 = 核包 `thincoder-core/tool-docs/*.md`）的行本体住 `docs/core/design/PROMPT-SYSTEM.md`（提示词面）；本档只收**实现面**与工具行为契约。
 

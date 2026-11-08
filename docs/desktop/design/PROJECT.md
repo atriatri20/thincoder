@@ -376,7 +376,7 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
     - **U95 分支（`host-floor`）口径**：判据 `≤500` **含线上**（**284**）——依据 = 规则线本身（「无文件 >500 行」），非余量口径；
       - **覆盖范围** = `fresh` 清单十八档（十二 + 六个用例文件）+ 在册例外面（`mount-settings.mjs`）+ `thincoder-desktop/renderer/app.mjs` + 宿主档源面零 `electron`。
       - 其余新档（主进程四源档 · `thincoder-desktop/renderer/settings.css` · 视图三档 · 该批的视图夹具）行数面 = 各域文件账（分支清单随动 = 码面池）。
-      - 批 A 新档七档（`thincoder-desktop/renderer/views/{tabbar,question,plan}.mjs` · `thincoder-desktop/renderer/mount-composer.mjs` · `thincoder-desktop/renderer/mount-cards.mjs`（批 A 修正轮） · 该批的两档单元测试）行数面 = 同路（各域文件账 / 分支清单随动 = 码面池）。
+      - 批 A 新档七档（`thincoder-desktop/renderer/views/{question,plan}.mjs` · 标签栏视图 · `thincoder-desktop/renderer/mount-composer.mjs` · `thincoder-desktop/renderer/mount-cards.mjs`（批 A 修正轮） · 该批的两档单元测试）行数面 = 同路（各域文件账 / 分支清单随动 = 码面池）。
     - **`fresh` 清单口径**：`host-floor` 的 `fresh` 清单只收目录文件名读数——**越层档不入清单**（`mount-settings.mjs` **426** 不入）；六档补入 = 码面池（父侧分支清单随动项）。
     - **覆盖缺口两件**：① 设置面 **Esc 键**明示不覆盖（零 Esc 绑定 = 裁定项——`docs/desktop/design/UI.md` §1 设置面行）；② `settings:agent` **保存出口判据**挂 T-DSK7 / T-DSK8——真面缺口（保存出口端侧路径判据未单列）。
   - 批 A 拆档一档 + 增档一档：该批拆出的确认面单元测试档（确认面族 U55 自 `views-tabbar` 拆出）· 该批新增的提问面单元测试档；`views-tabbar` 原址**改例**（⑤ 换机制——既有 `inert` 断言件改「两控件 `tabindex` 两态」+ 点按两向——T-DSK20 / T-DSK25）；

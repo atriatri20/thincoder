@@ -81,7 +81,11 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
 
   两处均带**零探测早退**（粘性早退 / 无属主或本进程属主）——详面 = `SESSION.md` §6.2；测试锚 = 本档「判据（测试层 · F-MI7）」条 ③。
 - **活判定身份校验（F-MI6 / N-MI6）**：身份过滤**不进 `batchAlive`**（保持**纯存在性**——`thincoder-core/peer-domains.mjs` 死文件清理语义零变、**零改**）；过滤落点 = **读面 `peerInstances()`**（存在性结果 × 命令行复核）+ **清理面 `filterDeadOwners`**（详面见下条判据单源）。命令行命中**本产品标记族**才计为活同伴。
-  标记族 = ① CLI 入口族（命令行含 `thincoder.cjs` / `thincoder.mjs` / `thincoder-cli` 路径段）· ② VSC 宿主族（既有 `VSC_END_RE`——extensionHost）· ③ 桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段 ∥ `node_modules/electron/dist/` 段）；
+  标记族 = 三支：
+
+  - ① CLI 入口族（命令行含 `bin/thincoder.cjs` ∥ `thincoder-cli/bin/thincoder.cjs` ∥ `thincoder.mjs` ∥ `thincoder-cli` 路径段）
+  - ② VSC 宿主族（既有 `VSC_END_RE`——extensionHost）
+  - ③ 桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段 ∥ `node_modules/electron/dist/` 段）；
   命令**明确可得且不命中** ⇒ 不列为同伴（消除 pid 复用假阳性）；命令探测失败 / 该 pid 缺行 ⇒ **保守保留**（探测失败 ≠ 死；既有降级语义不变）。
 - **判据单源**：身份判据实现住 **`thincoder-core/process-probe.mjs`**——`batchAlive` / `probeCmdlines` / `isProductProc(cmdline)` / `classifyEnd` / `filterDeadOwners`；
 
@@ -100,7 +104,7 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
   cmdline 一发**仅在存在非自身存活属主时**必需（无活外人 ⇒ 省发）——束内自决，调用面零探测零判据。
   **失败 ⇒ `aliveSet = null`（未知）**：判据层按「保留 / 不可认领」降级（三态判据），**任何调用面不得把 `null` 当「全死」**。
 - **已知局限（登记）**：manifest 记录不含 cwd、进程 cwd 无跨平台可移植获取面 ⇒ 被他 cwd 的**真实** thincoder 实例（或他窗口 VS Code 宿主）复用 pid 时仍可能误报——处置方向 = **保守保留**（D-MI10 不对称）；**消解路径未定**（登记为已知局限，非本档可解）。
-- **已知局限（误删方向 · 登记）**：标记族**假阴性**——真实本产品实例命令行不含 `thincoder.cjs` / `thincoder.mjs` / `thincoder-cli` 路径段且非 extensionHost（如包装器 / 新入口形态）⇒ 清理面会删**活**属主槽条目——正是 `D-SE3` 要防的「双进程同槽」方向（`D-MI10` 不对称只护「探测失败 / 缺行」）。
+- **已知局限（误删方向 · 登记）**：标记族**假阴性**——真实本产品实例命令行不含 `bin/thincoder.cjs` / `thincoder.mjs` / `thincoder-cli` 路径段且非 extensionHost（如包装器 / 新入口形态）⇒ 清理面会删**活**属主槽条目——正是 `D-SE3` 要防的「双进程同槽」方向（`D-MI10` 不对称只护「探测失败 / 缺行」）。
   接受边界 = 入口族命中面（CLI 入口段 / extensionHost）内无此方向；族外残差接受（放宽标记族 = 复引入 pid 复用误报——`D-MI11` 判据零改）；消解路径 = 实测出现该形态时按形态补进标记族（单源改点 = `isProductProc`）。
 - **判据（测试层 · 需求档 F-MI6 / N-MI6）**：读面 = 核 `peer-instances` 单测（注入缝首用——身份不符 ⇒ **不列为同伴**；身份符 / 探测失败 / 缺行 ⇒ **保留**）；清理面 = 核 `session-slot-write` 单测（同判据：不符 ⇒ 删，不确定 ⇒ 不删）；
 - **判据（测试层 · 需求档 F-MI7）**：单元测试档 = 核 `process-probe` 半（束 API / 三态 / 注入缝计数 / 零同步 exec 扫描）+ 核 `session-slot-write` 半（扩——有界同步例外锚）+ 端 `zero-sync-exec` 半（零同步 exec 扫描）；四路锚：
@@ -131,7 +135,7 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
 
 ### 3.2 L1 回合注入（`pushPeerReminder`）
 
-装配 = `thincoder-core/agent/setup-reminders.mjs`；时序（`setup.mjs`，depth-0）= env-state 之后、time reminder 之前（time 保持 LAST——prefix-cache 契约）。
+装配 = `thincoder-core/agent/setup-reminders.mjs`；时序（`thincoder-core/agent/setup.mjs`，depth-0）= env-state 之后、time reminder 之前（time 保持 LAST——prefix-cache 契约）。
 形态 = **depth-0、transient:true**（同 env-state 纪律）；无同伴零开销（惰性缓存）；任何感知失败静默跳过（注入绝不打断回合）。
 
 **异步形态（TUI 假死 · 2026-09-18）**：`pushPeerReminder` = async（内部 await 读面）——装配点 `prepareRun` 为
@@ -210,7 +214,7 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 > 术语注意：本面「认领 / claims」= **意图认领**（文件域级 · 租约）——与 `docs/core/design/SESSION.md` §6.2 的**槽位认领**（slot claim——会话存储隔离）**无关**，两概念不联动。
 > 需求档同词两用：N-MI3「不认领**槽位**」/ F-MI7「认领路径」= **槽位面**；F-MI8 / F-MI9 / N-MI7 的「认领 / 认领面」= **本面**（意图认领）。
 > 触发面证据：长回合足迹空窗真实存在——足迹 flush 只在 run 收尾落一次（`thincoder-core/agent/run-stages.mjs` 的 `finalizeAgentTurn`；端侧更窄 = 仅 depth-0 收尾，
-> `thincoder-vscode/src/agent/run-stages.mjs` 的收尾挂点），而一次实施 run 可达数十分钟 ⇒ 期间对端零信号。
+> 端已取核同一档，无自有挂点），而一次实施 run 可达数十分钟 ⇒ 期间对端零信号。
 > 「子代理收尾 flush 足迹」变体 = **已在机制内**（子代理走同一 run 收尾、同点零缺）⇒ 认领面补的是**回合内即时性**，与变体不重叠。
 
 #### 4.4.1 存储与字段（D-MI17）
@@ -327,7 +331,7 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 | D-MI8 | 感知面**纯只读** + 惰性缓存 + 批量判活 | N-MI3——不新建平行存储，复用 `SESSION.md` §6.2 基建 |
 | D-MI9 | 活判定身份判据 = **命令行命中本产品标记族** | 「能拿到的证据里唯一区分本产品与他进程」的信号 |
 | D-MI10 | 探测失败 / 缺行 ⇒ **保守保留**（不剔除、不删） | 方向性不对称：误保留 = 噪音（可忍）；误删 = 活实例失槽（破坏存储隔离，高危） |
-| D-MI11 | 清理面 **同判据单源**（实现住 `process-probe.mjs`，`session-slots.mjs` 只调一行） | pid 死 ⇒ 删（既有）；pid 活 + 命令明确可得 + 身份不符 ⇒ 删（pid 复用案）；其余保守不删 |
+| D-MI11 | 清理面 **同判据单源**（实现住 `thincoder-core/process-probe.mjs`，`thincoder-core/session-slots.mjs` 只调一行） | pid 死 ⇒ 删（既有）；pid 活 + 命令明确可得 + 身份不符 ⇒ 删（pid 复用案）；其余保守不删 |
 | D-MI13 | 读面缓存判据 = **mtime 未变 ∨ 快照年龄 < TTL(5 s)**；探测函数 **异步化**（同一注入缝）；写面（manifest）频率零改 | 纯 mtime 判据被 `saveSession` 每回合重写自击穿；同步 `execFileSync` 在回合路径上独占事件循环（假死源）。**边界**：TTL 只关新鲜度不关正确性；探测失败 / 缺行仍保守保留（D-MI10 零变） |
 | D-MI14 | 清理 / 认领面 = **入口一次探测束 + 判据查表**；`resumeSlot` 整链 **async** | 原逐 pid `isProcessAlive` 形态 = 1 发批量 cmdline + N 发逐 pid 判活 ⇒ 初始化窗口叠 2–3 轮 = 8–12 s 同步独占（实测）。现形态：`probeOwnersAsync`（会话起点 / 认领）/ `probeOwnersSync`（**两处同步消费面**——① `activeSlot` 冷路径；② 占用判定 `slotOccupancy`）各 ≤1+≤1 exec；`SYNC_PROBE_MS` = 2 s 紧界 + 零探测早退；例外锚 = 本档 §3.1「判据（测试层 · F-MI7）」条 ③，到期条件随需求档 `MULTI-INSTANCE-COLLAB.md` F-MI7 例外句（已登记 · 不重述） |
 | D-MI12 | **常态各面独立实现 → 双面同改（同源缺陷冻结级特例）** | 同源缺陷为冻结级（初始化窗口 8–12 s 同步独占）且两面对**同一 manifest**——单面修则另一端仍旧形态。**另注**：VSC 宿主族命中面天然包含他窗口 VS Code 宿主 ⇒ 该局限与 D-MI10 同向（宁可多留）。核面判据 = D-MI13 |

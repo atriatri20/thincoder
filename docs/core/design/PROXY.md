@@ -2,7 +2,7 @@
 
 > 板块 = **网络出口（代理）**——配置形态 · 传输实现 · TLS 校验 · 消费面。实现 = `thincoder-core/proxy.mjs`。
 > 地图与相邻权威 = `docs/core/design/CONFIG.md`；provider 面 = `docs/core/design/PROVIDER.md`（本档不复制，D2）。
-> 双端：CLI 用核内 `thincoder-core/proxy.mjs`（取 CLI 的 abort 来源标注 + VSC 的坏代理串友好报错——见 `CONFIG.md` 融合表 `proxy.mjs` 行）；VSC 侧经 `@thincoder/core/proxy.mjs` 引用。
+> 双端：CLI 用核内 `thincoder-core/proxy.mjs`（取 CLI 的 abort 来源标注 + VSC 的坏代理串友好报错——见 `CONFIG.md` 融合表 `thincoder-core/proxy.mjs` 行）；VSC 侧经 `@thincoder/core/proxy.mjs` 引用。
 > 需求侧 = `docs/core/requirements/CONFIG.md`（代理字段面承载）。
 
 ## 1. 定位与配置形态
@@ -30,8 +30,10 @@
 - **loopback 旁路**：目标为 loopback（`localhost` ∥ `*.localhost` ∥ `127.0.0.0/8` ∥ `::1`——判定 `isLoopbackTarget()` `thincoder-core/proxy-target.mjs`；含尾点 ∥ IPv6 括号归一）时，即便在案代理串也**一律直连**
   （`proxyFetch` 入口旁路 `thincoder-core/proxy.mjs`；NO_PROXY 语义）。本地网关 / 开发服务（如 `127.0.0.1:8787` 渠道）被塞进企业代理 ⇒ 连接失败 / 403 假红。
 - **三档形态**：`thincoder-core/proxy-target.mjs`（`resolveProxyConfig` ∥ `resolveWebProxy` ∥ `isLoopbackTarget`：目标 ∥ 配置解析面）·
-  `thincoder-core/proxy-transport.mjs`（`streamHttpResponse` ∥ `tunnelHttps` ∥ `tcpConnectProxy` + `FETCH_TIMEOUT`：传输面）· `proxy.mjs`（留 `injectProxy` + `proxyFetch` 编排 + 兼容再出口 facade——**消费面 import 零改**）。
-  三档 = `proxy-target.mjs` ∥ `proxy-transport.mjs` ∥ `proxy.mjs`（≤500 软线）。
+  `thincoder-core/proxy-transport.mjs`（`streamHttpResponse` ∥ `tunnelHttps` ∥ `tcpConnectProxy` + `FETCH_TIMEOUT`：传输面）。
+
+  `thincoder-core/proxy.mjs`（留 `injectProxy` + `proxyFetch` 编排 + 兼容再出口 facade——**消费面 import 零改**）。
+  三档 = `thincoder-core/proxy-target.mjs` ∥ `thincoder-core/proxy-transport.mjs` ∥ `thincoder-core/proxy.mjs`（≤500 软线）。
 - 错误形态：坏代理串**友好报错**（`Invalid proxy URI: "…" — expected http://host:port`，`thincoder-core/proxy-transport.mjs` 的两处抛点）。
 - 超时语义：CONNECT/TLS 阶段用 `FETCH_TIMEOUT`（15s）；**响应头**用 `opts._headerTimeoutMs`（默认 60s——消费面 = **代理分支**；直连面（无 `proxyUri`）无本仓头阶段超时〔纳入 = 设计轮面——在册；同族收窄 = `PROVIDER.md` §6.3〕）；**body 阶段一个窗**：`opts._bodyIdleMs`（默认 120s，首字节之前与之后同一个窗；该面分首 chunk 窗不在本期——另批，边界与事实面见 `docs/core/design/TIMEOUT-DIGEST.md` §7 ∥ §8）。
 - **响应体分块解码**：响应携 `Transfer-Encoding: chunked` 时，传输层按块长帧**剥帧解码**后入 body
@@ -153,7 +155,7 @@ Clear proxy
 | 内容编码解压 | `thincoder-core/proxy-transport.mjs`（`streamHttpResponse` 内——TE 剥帧后接；chunked ∥ 非 chunked 两径同点） | 已落 |
 | 背压传播 + 停止门 | `thincoder-core/proxy-transport.mjs`（`pushDownstream` ∥ 推送分支 ∥ 看门狗复位 ∥ 停止门） | 已落 |
 | 统一出口 | `thincoder-core/proxy.mjs`（`proxyFetch` 编排——直连分支 = 断流通道建设点） | 在位 |
-| loopback 旁路 | `thincoder-core/proxy-target.mjs`（`isLoopbackTarget`）· 旁路点 = `proxy.mjs` `proxyFetch` 入口 | 在位 |
+| loopback 旁路 | `thincoder-core/proxy-target.mjs`（`isLoopbackTarget`）· 旁路点 = `thincoder-core/proxy.mjs` `proxyFetch` 入口 | 在位 |
 | web 工具代理参数 | `thincoder-core/tools/web.mjs`（两处调用面） | 逐次调用参数 |
 | TUI 子菜单 | `thincoder-cli/src/tui/cmd-config-menus.mjs`（`createProxyMenu`） | 在位 |
 | VSC 对位实现 | 经 `@thincoder/core/proxy.mjs` 引用 · 配置面 = 核 `config-io.mjs` 引用 · **运行期注入点 = `thincoder-vscode/src/extension/presets.mjs`（`providerFromConfig`——逐渠判定）** | 同实现 |
@@ -162,7 +164,7 @@ Clear proxy
 
 ### 6.2 测试
 
-- 代理族单元测试（CONNECT 隧道 / 配置解析 / `normalizeProxy` / 坏代理串报错 / provider 头注入）：现盘 CLI 测试树（`thincoder-cli/test/`）= `run.mjs` ∕ `slow.mjs` + smoke 三枚，零 `.test.mjs`。
+- 代理族单元测试（CONNECT 隧道 / 配置解析 / `normalizeProxy` / 坏代理串报错 / provider 头注入）：现盘 CLI 测试树（`thincoder-cli/test/`）= `thincoder-cli/test/run.mjs` ∕ `thincoder-cli/test/slow.mjs` + smoke 三枚，零测试后缀用例档。
 - 现形 = 单元测试档（沿单元测试档惯例——名随批 · 随批留存 · 不随集成测试树收集）。
 - 守卫用例（body 终止族）落单元测试档（已落——沿单元测试档惯例）。
 - （逐渠独立）单元测试档（**已落**——拆档 ∥ 逐渠判定 ∥ 探针字段面 ∥ 文案面 ∥ 全局面 ∥ 两向导补步；T1–T8 + W1 ∥ W2 = 10/10 绿）。
@@ -183,7 +185,7 @@ Clear proxy
 | D-PX7 | `destroy(err)` 前挂**永久兜底 `'error'` 监听者**——单点 `destroyBody`（proxy ∥ provider 三文件复用） | 无监听者瞬间 `destroy(err)` ⇒ 未处理 `'error'` ⇒ 进程被杀 |
 | D-PX8 | web `ReadableStream` 断流 = **内部 abort 通道**（`IDLE_ABORT` 挂 response；`terminateBody` 分流） | 守卫对 web 流 no-op ⇒ 直连 fetch 看门狗静默失效（crash-guards U-CG-1）；**建设点 = `proxyFetch` 直连分支单点**（覆盖两条流式直连链 `readSSE` ∥ `parseGeminiStream`；proxy 两分支不挂——自有 `_bodyIdleMs`；直连面调用点收口恒走 `proxyFetch`） |
 | D-PX9 | loopback 目标**永不经代理**（`localhost` ∥ `*.localhost` ∥ `127.0.0.0/8` ∥ `::1`——`isLoopbackTarget()`；`proxyFetch` 入口单点旁路） | 本地网关 / 开发服务（如 `127.0.0.1:8787` 渠道）被企业代理劫持 ⇒ 连接失败 / 403 假红；NO_PROXY 语义——本地可达性不取决于代理运营方。 |
-| D-PX10 | `proxy.mjs` **分档**：`proxy-target.mjs`（配置解析 + loopback）∥ `proxy-transport.mjs`（tunnel/传输）析出；本档留 `injectProxy` + `proxyFetch` 编排 + 兼容再出口 facade | 三档分单责；facade 再出口 ⇒ 消费面 import 零改 |
+| D-PX10 | `thincoder-core/proxy.mjs` **分档**：`proxy-target.mjs`（配置解析 + loopback）∥ `proxy-transport.mjs`（tunnel/传输）析出；本档留 `injectProxy` + `proxyFetch` 编排 + 兼容再出口 facade | 三档分单责；facade 再出口 ⇒ 消费面 import 零改 |
 | D-PX11 | 响应体 **chunked 剥帧在传输层单点**（`streamHttpResponse`；解码器 = `proxy-chunked.mjs`）；畸形帧**回退透传**；`content-encoding` 列册转**已处置**（⇒ D-PX12） | 帧字节 `7378\r\n{…` 直入 `text()` ⇒ 探针 `non-JSON response` ∥ SSE 事件被 CRLF+hex 打断（须剥帧）；判定按头 |
 | D-PX12 | 响应体 **`content-encoding` 解压单点**（`streamHttpResponse`——TE 剥帧后接，chunked ∥ 非 chunked 两径同点）：单 token 已知编码 ⇒ 解压（gzip ∥ x-gzip ⇒ gunzip ∥ deflate ⇒ inflate ∥ br ⇒ brotli）；`identity` ∥ 头缺席 ∥ 未知 ∥ 多 token 列表 ⇒ 透传；**零输入（空体）不解压**（sawInput 门）；解压失败 ⇒ body 明错误终止；**不发 `Accept-Encoding`** | 上游自发压缩（未请仍压缩）⇒ 消费面得明文（探针 JSON.parse 成功 ∥ SSE 事件可解） |
 | D-PX13 | **chunked 径背压传播**：暂停级 = body 前最后一级可写流（带 CE = 解压器 ∥ 无 CE = body），`write()` 返 false ⇒ 暂停上游源，排空 ⇒ 恢复（旗守卫幂等）；**看门狗复位源扩 `drain`**（readable ∪ drain）；**停止门**：body 终止时上游仍在暂停态 ⇒ 恢复 + 销毁源 | 与非 chunked 径 `pipe` 同语义对齐；冻结顾虑 =「背压暂停期无数据到达 ⇒ 看门狗误杀慢而健康的消费者」——排空信号 = 消费进度；消费方永停摆 ⇒ 照旧 `bodyIdleMs` 断流（不新增悬挂口——停止门闭合） |

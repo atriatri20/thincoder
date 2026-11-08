@@ -98,7 +98,7 @@ On `edit` the judged set splits by hit class: paragraph / line length is judged 
 
 A dead citation anywhere in the record therefore refuses an unrelated edit — and replacing that very line is the way through, which is why the record is judged as it will stand, not as it sits.
 - Examples — sample rows, commands, paths — go in a fenced block, which the anchor and paragraph criteria skip whole; a path left in prose or a table must be a real file — a made-up one is judged `档缺`. An assumed name in a sentence takes `<area>/<name>.md`.
-- **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
+- **Doc names: any form that resolves — a bare name is fine while the name is unique.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass. A bare name goes red the day a `same name` file appears — then write the distinguishing form.
 
 On append it judges three things: the text you are appending now, the change region of the markdown files already touched in this run, and the record itself — only the first two can refuse the write.
 

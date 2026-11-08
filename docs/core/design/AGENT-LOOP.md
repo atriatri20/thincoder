@@ -15,7 +15,7 @@
 |---|---|---|
 | 主循环 | `thincoder-core/agent.mjs`（编排——`beginRun → runTurnLoop → finalizeAgentTurn`）+ `thincoder-core/agent/run-start.mjs` · `agent/turn-loop.mjs` · `agent/chat-call.mjs` | 同名（同路径对） |
 | 装配 / 提醒 / 收尾 | `thincoder-core/agent/assemble.mjs` · `thincoder-core/agent/setup.mjs` · `thincoder-core/agent/setup-reminders.mjs` · `run-stages.mjs` · `post-turn.mjs` · `dispatch.mjs` · `completion.mjs` · `record-results.mjs` · `relay-prefix.mjs` · `thincoder-core/agent/helpers.mjs` · `spawn-child.mjs` · `child-marks.mjs` | `src/agent/*`（拆档：`execute-tools` · `tool-gates` · `run-helpers` · `context-injections` · `agent-state`） |
-| 子代理 / 异步 | `src/agent-tools/{subagent-scheduler,subagent,subagent-actions,subagent-async,subagent-run,async-settle,subagent-spawn,escalate-async}.mjs` | 同名 / 拆分档 |
+| 子代理 / 异步 | `thincoder-core/agent-tools/{subagent-scheduler,subagent,subagent-actions,subagent-async,subagent-run,async-settle,subagent-spawn,escalate-async}.mjs` | 同名 / 拆分档 |
 | 挂起与唤醒 | `thincoder-cli/src/tui/suspension-drive.mjs` | `thincoder-vscode/src/extension/suspension.mjs` |
 | 权限 | `thincoder-cli/src/cli/permission.mjs` | `src/extension/permission-gate.mjs` · `agent-tools/child-permission.mjs` |
 | hooks | `thincoder-core/hooks.mjs` | 核 `hooks.mjs`（静态引——Stop + 派发四事件已接线；见 §6.13 / §6.18） |

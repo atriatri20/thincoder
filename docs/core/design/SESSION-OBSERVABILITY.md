@@ -57,7 +57,12 @@ guard 侧同形（`thincoder-core/session-guard.mjs` 的 guard 异常分支）�
 
 **硬约束（隐私）**：事件字段**不含用户输入原文、标题、消息内容、文件路径、cwd、token 值**。`slot` / `prevSlot` = 整数；`reason` / `via` = 上面枚举字面。理由：`logEvent` 的黑名单只按字段名挡 token 族，按「自带原文就永远挡不住」的口径，本批事件从字段集上就不带。
 
-**通道**：`import { logEvent } from "./log.mjs"`（`session-slot-claims.mjs` / `session-guard.mjs` / `session-slots-manifest.mjs` / `session-slot-write.mjs` / `session-lifecycle.mjs` 各加一行）。`logEvent` 是 fire-and-forget（写失败只置 `_dead`，主流程零影响），调用点不得 `await`、不得包 try 外抛。
+**通道**：五档各加一行同目录相对导入取 `logEvent`（`thincoder-core/log.mjs`）：
+
+- `thincoder-core/session-slot-claims.mjs` ∥ `thincoder-core/session-guard.mjs` ∥ `thincoder-core/session-slots-manifest.mjs`
+- `thincoder-core/session-slot-write.mjs` ∥ `thincoder-core/session-lifecycle.mjs`
+
+`logEvent` 是 fire-and-forget（写失败只置 `_dead`，主流程零影响），调用点不得 `await`、不得包 try 外抛。
 
 **负向锁**：读路径（`listSlots` / `loadSlotFile` / 状态查询）零事件——只在上面四个写时点发。
 
@@ -133,7 +138,7 @@ guard 侧同形（`thincoder-core/session-guard.mjs` 的 guard 异常分支）�
 | D8 | 两分支两句文案，语义分开 | `/new` 让凭证离开会话、切槽只是本槽不再生效（切回可恢复）；一句文案盖两种事实即误报 | 合成一句「随槽作废」：切槽分支实况不符 |
 | D9 | `applySession` 返回对象承载 `droppedDesignTokens` | 端壳取计数的唯一既有中继点；6 个调用点均不读返回值 ⇒ 零回归 | 另加读接口 / agent 上挂临时字段：多一条状态通道 |
 | D10 | 状态行兜底放 `render-frame.mjs` 的 `put()` 处 | 唯一写出口；上游任意新增标题来源都被兜住 | 只改 status-line：回退链 / 未来新段再犯 |
-| D11 | 上游 `generate-title.mjs` 不动 | 该处是标题生成面，改它会改 VSC / 桌面顶栏与清单显示值——跨端行为变更，不在本批 | 生成时就清洗：外溢到未评审的端 |
+| D11 | 上游 `thincoder-core/generate-title.mjs` 不动 | 该处是标题生成面，改它会改 VSC / 桌面顶栏与清单显示值——跨端行为变更，不在本批 | 生成时就清洗：外溢到未评审的端 |
 | D12 | `droppedDesignTokens` 数**离开集**，不数集合大小差 | 整体替换语义下前后是两个不同 id 的集合；`before - after` 在 A(2)→B(2) 时恒 0 ⇒ 静默漏报（§7 C9b） | `max(0, before - after)`：换槽带凭证时恒 0 |
 | D13 | guard 异常支补 `preserved` 跟踪 | 闭集 `reason` 的 `unreadable` / `rotate-failed` 在 guard 侧要可判别；今日 catch 吞掉改名成败（`session-guard.mjs` 的异常支） | guard 侧恒报一个值：另一个闭集值成死值 |
 
@@ -200,4 +205,4 @@ guard 侧同形（`thincoder-core/session-guard.mjs` 的 guard 异常分支）�
 
 **C5（`slot:allocate`）的制造路径**：临时 `sessions` 目录 + 与槽数等量的活进程——启 K 个 `node -e "setTimeout(()=>{},600000)"`，把各 pid 写进该目录 `manifest.json` 的 `slotSessions`（槽 1..K），再在该目录下起第 K+1 个进程触发落号 ⇒ `liveClaimed` 全真 ⇒ 走分支 3，日志得 `all-slots-live`。
 
-**单元面**：`thincoder-cli/test/` 有可用收集器 `run.mjs`（收 `test/*.test.mjs` 与 `test/integration/*.test.mjs`，见 `thincoder-cli/test/run.mjs`；当前零用例即绿）与 `test/slow.mjs`（纯别名）。本批的单元测试档（`singleLineTitle` 控制字符集与宽度守恒、两个返回值、事件字段组装）已按 `docs/core/requirements/TESTING.md` §1.1 用毕即删——跑过即删、零留存。
+**单元面**：`thincoder-cli/test/` 有可用收集器（`thincoder-cli/test/run.mjs`；收本目录与集成子目录两侧的单测档，当前零用例即绿）与 `thincoder-cli/test/slow.mjs`（纯别名）。本批的单元测试档（`singleLineTitle` 控制字符集与宽度守恒、两个返回值、事件字段组装）已按 `docs/core/requirements/TESTING.md` §1.1 用毕即删——跑过即删、零留存。

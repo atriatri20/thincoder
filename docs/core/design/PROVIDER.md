@@ -11,8 +11,8 @@
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
 | 调用核心 | `thincoder-core/provider/core.mjs` + `thincoder-core/provider/index.mjs` | 经 `@thincoder/core/provider/core.mjs` 引用 |
-| 传输 | `src/provider/{anthropic,google,responses}.mjs` | 经核 `provider/{anthropic,google,sse,responses}.mjs` 引用 |
-| 基础件 | `src/provider/{sse,retry,normalize,errors,abort-provenance}.mjs` | 经核同列引用 |
+| 传输 | `thincoder-core/provider/{anthropic,google,responses}.mjs` | 经核 `provider/{anthropic,google,sse,responses}.mjs` 引用 |
+| 基础件 | `thincoder-core/provider/{sse,retry,normalize,errors}.mjs` · `thincoder-core/abort-provenance.mjs` | 经核同列引用（`abort-provenance.mjs` 实住核根，不在核 `provider/` 子目录） |
 | 限流 | `thincoder-core/provider/rate.mjs` | 经 `@thincoder/core/provider/rate.mjs` 引用 |
 | 模型清单 | `thincoder-core/provider/list-models.mjs` | 经 `@thincoder/core/provider/list-models.mjs` 引用 |
 | 模型规格 | `thincoder-core/model-specs.mjs` | `thincoder-core/config.mjs`（模型规格段）+ `specs.mjs` |

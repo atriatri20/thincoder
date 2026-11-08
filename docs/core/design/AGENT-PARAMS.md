@@ -15,7 +15,7 @@ const timeoutMs = (Number.isFinite(cfg) && cfg > 0) ? cfg : REVIEW_TIMEOUT_MS
 ```
 
 - **运行期校验**：手写 `config.json` 的非法值（0 / 负数 / 字符串）不得静默禁用或立即触发超时——**非法一律回退默认**。
-- 读取链：`thincoder-core/config.mjs` 把 `merged.agent.advisor` promote 为 `merged.advisor`（decoupled copy；`promoteAgentViews`——非对象段不展开）——**运行读面 = promoted 视图 `agent.config.advisor.timeoutMs`**（`thincoder-core/advisor/loop.mjs`；VSC `thincoder-vscode/src/advisor/loop.mjs` 同形）；
+- 读取链：`thincoder-core/config.mjs` 把 `merged.agent.advisor` promote 为 `merged.advisor`（decoupled copy；`promoteAgentViews`——非对象段不展开）——**运行读面 = promoted 视图 `agent.config.advisor.timeoutMs`**（`thincoder-core/advisor/loop.mjs`——端侧 advisor 镜像已退役，两端读同一核档）；
   `runAdvisorToolLoop` 已接收 `agent` 参数，**无需改签名**。
 - **写面不变式（指针）**：promoted 视图是装载期派生的副本，**内存里改 `agent.advisor.*` 不会自动流过读面** ⇒ 每个写点都得同步。
   写面三条腿（子键 set ∥ `null` 删除腿 ∥ 整段赋值）的唯一机制、会话级键保留规则与判据住 `SETTINGS-TOOL.md` §2.3——本档不复制（D2）；导出面 = `thincoder-core/config.mjs` 的 `promoteAgentViews(config)`（`loadConfig` 与 `settings set` 共用同一条规则）。
@@ -74,7 +74,7 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 
 - 评审超时：配置覆盖 / 回退 / 非法值回退三态（`thincoder-cli/test/` 的 advisor 族用例）。
 - 评审超时热应用（本批新增——机判三格）：`settings set agent.advisor.timeoutMs 900000` ⇒ 下一次循环检查点读到 900000（无需重启）∥ `settings set agent.advisor.timeoutMs null` ⇒ 读面回退 `REVIEW_TIMEOUT_MS`（600 000）∥ `advisor.guard = true` 而 `agent.advisor` 无 `guard` ⇒ 一次 `promoteAgentViews` 后 `guard` 仍在。
-  宿主 = 批次单测档 `docs/batches/2026-10-24-tool-timeouts.test.mjs`（收口随批删；`test/` 树不新增常驻档——单测随批删、不进常驻套）。
+  宿主 = 该批的单元测试档（收口随批删；`test/` 树不新增常驻档——单测随批删、不进常驻套）。
 
 **集成测试设计（F34 · 本批 · 收口口径）**：业务可观察点 = 用户在会话里改评审超时后，下一次评审按新值跑、不用重启。
 
@@ -97,15 +97,15 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 | 面 | VSC 落点（实核） |
 |---|---|
 | 评审超时默认 | `thincoder-core/advisor/compaction.mjs`（`REVIEW_TIMEOUT_MS` = 600 000） |
-| 评审检查点（配置覆盖 + 非法回退） | `thincoder-vscode/src/advisor/loop.mjs`（`Number.isFinite(cfg) && cfg > 0` → 缺省回退常量） |
+| 评审检查点（配置覆盖 + 非法回退） | `thincoder-core/advisor/loop.mjs`（`Number.isFinite(cfg) && cfg > 0` → 缺省回退常量；端侧镜像已退役、两端读同一核档） |
 | advisor 配置读取链 | `thincoder-vscode/src/agent/setup.mjs`（初始 `{ guard: false }`）· 同档读取兜底（`raw.agent?.advisor ?? { guard: false }`） |
-| 面板保存透传 timeoutMs（P4——不静默丢） | `thincoder-vscode/src/extension/settings-panel-write.mjs`（`saveAgentSettingsFromPanel` · 合法 payload 胜，否则保留 current——不合并会丢字段；`thincoder-vscode/src/config-io.mjs` re-export） |
-| explore 30 硬帽已移除 | `thincoder-vscode/src/agent-tools/subagent.mjs`（`parent.config?.agent?.subagentTurns ?? 100`——无 `Math.min(30, …)`；与 async/escalate 路径一致） |
-| maxTurns 默认 200 | `thincoder-vscode/src/agent/run-helpers.mjs` · `thincoder-vscode/src/config-io.mjs`（`AGENT_DEFAULTS`）· `thincoder-vscode/src/agent/setup.mjs`（初始 ∥ 读取兜底 `?? 200`） |
+| 面板保存透传 timeoutMs（P4——不静默丢） | `thincoder-vscode/src/extension/settings-panel-write.mjs`（`saveAgentSettingsFromPanel` · 合法 payload 胜，否则保留 current——不合并会丢字段；配置面 `thincoder-core/config-io.mjs`——端侧镜像已删、直接引核） |
+| explore 30 硬帽已移除 | `thincoder-core/agent-tools/subagent.mjs`（`parent.config?.agent?.subagentTurns ?? 100`——无 `Math.min(30, …)`；与 async/escalate 路径一致） |
+| maxTurns 默认 200 | `thincoder-vscode/src/agent/run-helpers.mjs` · `thincoder-vscode/src/agent/setup.mjs`（初始 ∥ 读取兜底 `?? 200`） |
 | 面板显示兜底 | `thincoder-vscode/webview/settings-agent.js`（`as.maxTurns ?? 200`） |
 | 面板 UI 无 timeoutMs 输入框 | 保持现状（config.json 手写即可——保存路径已透传，见上行） |
 
-**VSC 侧不动项**：`goalTurns` / `consultTurns` / `subagentTurns` 默认值语义独立、不并——与本档 §5 总表同构。**默认值单一来源**纪律两端同构：VSC 评审超时默认只住 `compaction.mjs` 常量、不进 `AGENT_DEFAULTS.advisor`（`thincoder-vscode/src/config-io.mjs` 注释即此登记）。
+**VSC 侧不动项**：`goalTurns` / `consultTurns` / `subagentTurns` 默认值语义独立、不并——与本档 §5 总表同构。**默认值单一来源**纪律两端同构：VSC 评审超时默认只住 `compaction.mjs` 常量、不进端侧默认值表（端侧镜像已删，默认值取核单一来源）。
 
 ## 7. 关键决策记录
 

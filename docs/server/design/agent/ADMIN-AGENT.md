@@ -42,7 +42,7 @@
 | `thincoder-server/src/agent/chat-wake.mjs`（已落盘） | 实读 **141** | 唤醒器（§15.1）：会话键面闩表（核 `createTimerWatch` 复用——零第二套闩）∥ 空闲判定（会话行 `status` 单源）∥ 火策略（核 `fireTimerWake`）∥ 结算钩子（`_asyncWaiters`——先自再武装再评估）∥ 再武装三链尾 ∥ 零轮询 |
 
 - `thincoder-server/package.json`（`@thincoder/core` 版本声明依赖——实读 `^0.10.7`）与**带核发布形**（版本对位口径）= 服务端设计档 `docs/server/design/PROJECT.md` §2.3（单源；核先于/同拍发行）。**地板 = 含 A3 阈值算式的核版本**：导出在场 ≠ 算式同位（0.10.7/0.10.8 的 `resolveCompactThreshold` = `floor(usable × 0.6)`；仓内现行 = `min(usable, ⌊window × 0.8⌋)`——读数差额 = §13 R92）。
-- sandbox 域件（`thincoder-server/src/sandbox/ssh.mjs` ∥ 主机凭据件）= `docs/server/design/sandbox/SANDBOX.md` §13（本档不重复）；`bin/thincoder-server.mjs` **±0**（节点/凭据端点经 `thincoder-server/src/sandbox/routes.mjs` 转注册——装配行计入 sandbox 域预算）。
+- sandbox 域件（`thincoder-server/src/sandbox/ssh.mjs` ∥ 主机凭据件）= `docs/server/design/sandbox/SANDBOX.md` §13（本档不重复）；`thincoder-server/bin/thincoder-server.mjs` **±0**（节点/凭据端点经 `thincoder-server/src/sandbox/routes.mjs` 转注册——装配行计入 sandbox 域预算）。
 
 ## 7. 验收判据（机检）
 
@@ -414,7 +414,7 @@
 
 | R87 | **需求档回笔 ＋ 随正件 ＋ 披露 ＋ 部署收尾**：① 需求档回笔（主 agent 笔）——**已入册**：功能点 55 = `docs/server/requirements/PROJECT.md` §2 ∥ AC-55 = 该档验收表 ∥ §5 行；AC-12/AC-28 链零动（无控制台页 ∥ 零新审计型）∥ ② 随正件（父侧落——实施轮同拍）：**零**（无门禁链；档目/计数件零涉——零新档 ∥ 零新端点 ∥ i18n 零涉）；单元测试档 1 档（批内定向单测——收口随批删、不入任何门）∥ ③ 披露（不阻塞）：测试耗真 token（计入发送者用量 × `admin-agent`——用户 00:50「记账」口径）∥ 读数含网关链全链耗时（loopback 一跳 ＋ 网关处理——如实，不复算分拆）∥ 网关自产错误与上游透传错误不可区分（如实一类 `http_error`——转发面「原样透传」设计事实）∥ `models.test` 无控制台对位面（回指口径例外——会话面专属）∥ SSE 流形假设（OpenAI 兼容——上游非 SSE 2xx ⇒ `bad_response`）∥ ④ 部署收尾（父侧执行）：镜像重建 ＋ 重收敛 ＋ 会话实走（点名一个已配模型 ⇒ `test` ⇒ 四读数在场 ⇒ 用量面见一行） | 披露 | 评审/用户复核 |
 
-| R88 | **需求档回笔建议 ＋ 随正件 ＋ 披露 ＋ 部署收尾**：① 需求档回笔（主 agent 笔）——**已办**：§2 条目块在册（`docs/server/requirements/PROJECT.md`——五要素成块；三链同源：本档 §12.2 ∥ §7 行 ∥ §8（N85 ∥ B81 ∥ E63））＋ AC-56 行 ＋ §5 立案行（回笔 = 该档变更记录段）；**余项** = §5 行计数**已随正**（工具面九件）∥ ② 随正件（父侧落——实施轮同拍）：**零门禁链**（`thincoder-server` 无 test 脚本；`prepublishOnly` = 三档 `node --check`——零涉）；旧批批内件名集断言 = 旧快照（八件口径——非门禁面，不追改）∥ ③ 披露（不阻塞）：token 明文经聊天文本来往（用户消息行原文——沿 providers `apiKey` 既态；工具面三面掩蔽在册）∥ `headers`/`env` 袋内非列名键值 = 掩蔽面残余（键名表 `SENSITIVE_KEYS` 单源——§12.2③） ∥ 探活 = 库内行（草稿试连 = 控制台面）∥ 探活不落 `mcp_event`（诊断零审计——routes 同口径）∥ `chat.mjs` 733 越 720 拆档线——微触 ≈+10（评估 = §9 KD-SV-208）∥ ④ 部署收尾（父侧执行）：镜像重建 ＋ 重收敛 ＋ 会话实走（列/探/增一条真实服务器——AC-56 收口腿） | 披露 | 评审/用户复核 |
+| R88 | **需求档回笔建议 ＋ 随正件 ＋ 披露 ＋ 部署收尾**：① 需求档回笔（主 agent 笔）——**已办**：§2 条目块在册（`docs/server/requirements/PROJECT.md`——五要素成块；三链同源：本档 §12.2 ∥ §7 行 ∥ §8（N85 ∥ B81 ∥ E63））＋ AC-56 行 ＋ §5 立案行（回笔 = 该档变更记录段）；**余项** = §5 行计数**已随正**（工具面九件）∥ ② 随正件（父侧落——实施轮同拍）：**零门禁链**（`thincoder-server` 无 test 脚本；`prepublishOnly` = 三档 `node --check`——零涉）；旧批批内件名集断言 = 旧快照（八件口径——非门禁面，不追改）∥ ③ 披露（不阻塞）：token 明文经聊天文本来往（用户消息行原文——沿 providers `apiKey` 既态；工具面三面掩蔽在册）∥ `headers`/`env` 袋内非列名键值 = 掩蔽面残余（键名表 `SENSITIVE_KEYS` 单源——§12.2③） ∥ 探活 = 库内行（草稿试连 = 控制台面）∥ 探活不落 `mcp_event`（诊断零审计——routes 同口径）∥ `thincoder-server/src/agent/chat.mjs` 733 越 720 拆档线——微触 ≈+10（评估 = §9 KD-SV-208）∥ ④ 部署收尾（父侧执行）：镜像重建 ＋ 重收敛 ＋ 会话实走（列/探/增一条真实服务器——AC-56 收口腿） | 披露 | 评审/用户复核 |
 
 | R91 | **审批卡面批（2026-10-17）——需求回笔 ＋ 随正件 ＋ 披露 ＋ 部署收尾**：① 需求回笔 = 主 agent 笔（用户裁「必须上审批卡」在册）∥ ② 随正件（实施轮实读为准）：结构版本断言 = **25** ∥ `agent_chats` 列面 = **8 列**（含 `auto_approve`） ∥ 门禁件数 ∥ 静态档目链 + `views-chat-cards.mjs` ∥ ③ 披露：`#auto-btn` 留隐（钮位面出列）∥ 断线/未决卡 ⇒ 拒值（中止可解）∥ 拒行落审计（−1）∥ ④ 部署收尾 = 父侧（镜像 + 实走：写类弹卡 ⇒ 批 ⇒ 执行 ∥ always ∥ 拒） | 披露 | 评审/用户复核 |
 
@@ -638,7 +638,7 @@
 
 | 核件 | 取用面（导出） | 服务面消费坐标 |
 |---|---|---|
-| `@thincoder/core/mcp.mjs` | `connectMcpServer` ∥ `probeMcpServer` ∥ `closeAllMcp` ∥ `removeMcpTools` | 新档 `thincoder-server/src/mcp/face.mjs`（已落盘——工具面装配）∥ `thincoder-server/src/mcp/routes.mjs`（已落盘——探活 ∥ 删行关闭）∥ `bin/thincoder-server.mjs`（停机收尾） |
+| `@thincoder/core/mcp.mjs` | `connectMcpServer` ∥ `probeMcpServer` ∥ `closeAllMcp` ∥ `removeMcpTools` | 新档 `thincoder-server/src/mcp/face.mjs`（已落盘——工具面装配）∥ `thincoder-server/src/mcp/routes.mjs`（已落盘——探活 ∥ 删行关闭）∥ `thincoder-server/bin/thincoder-server.mjs`（停机收尾） |
 
 **新增（3 面——零核改可采纳件）**：
 

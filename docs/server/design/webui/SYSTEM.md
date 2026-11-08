@@ -59,7 +59,7 @@
 
 **键族登记**：
 
-- **键族登记（`i18n-{zh,en}-system` 部件）**：`system.*` 配置族 ≈23（`configTitle` ∥ `configHint` ∥ `cfgHost`/`cfgPort`/`cfgDb` ∥ `cfgTopologyNote` ∥ `cfgAutoUpdate` + 三档选项（`cfgAutoUpdateOff`/`Notify`/`Auto`） ∥
+- **键族登记（`thincoder-server/public/i18n-zh-system.mjs` ∥ `thincoder-server/public/i18n-en-system.mjs` 部件）**：`system.*` 配置族 ≈23（`configTitle` ∥ `configHint` ∥ `cfgHost`/`cfgPort`/`cfgDb` ∥ `cfgTopologyNote` ∥ `cfgAutoUpdate` + 三档选项（`cfgAutoUpdateOff`/`Notify`/`Auto`） ∥
   `cfgTrustProxy` ∥ `cfgRetention`/`cfgRetentionUnlimited`/`cfgRetentionInvalid` ∥ `cfgProxyUri`/`cfgProxyUriPh` ∥ `cfgProvidersRow`/`cfgProvidersValue` ∥ `cfgBootstrapRow`/`cfgBootstrapValue` ∥ `cfgSaved`/`cfgLoadFailed`）∥
   `vector.*` 六键（`apiKey`/`apiKeyPh`/`clearApiKey`/`draftNote` ∥ `unconfigured`（「未配置」/「Not configured」） ∥ `unconfiguredHint`（「嵌入引擎未配置——填写并保存后启用（重启生效）」/ 英文同义））∥ `audit.*` 两键（`type.config_update`/`keys`）；
   `admin.providers.useProxy`（提示改向「系统 → 服务配置」——界面文案不得指向界面外入口）；表体量：`i18n-zh-system` ≈151 ∥ `i18n-en-system` ≈151 ∥ `i18n-{zh,en}-admin` 138 ∥ 142（实施实读为准）。

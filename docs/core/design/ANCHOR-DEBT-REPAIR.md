@@ -152,7 +152,7 @@
 | N2 `档已迁核` | 目标档已迁核（现体在核） | W / S 系列迁核记录行（「自持镜像已删，现体 = 核 …」） |
 | N3 `工具已退役` | 死脚本名族 | #54 / #42 在册 + #40 收口（`mirror-divergence` · `doc-anchors-*` · `check-ledger` · `check-doc-width*` · `reconcile-lookup`） |
 | N4 `入口已并入` | 测试入口并入现入口 | `thincoder-cli/test/run.mjs` / `thincoder-cli/test/slow.mjs`（两侧清单档 scripts 实核） |
-| N5 `机制已废` | checklist 族（M7 废除） | `thincoder-core/tools/{checklist,checklist-sync}.mjs` 全仓零命中 |
+| N5 `机制已废` | checklist 族（M7 废除） | checklist 与 checklist-sync 两个清单工具——全仓零实现档 |
 | N6 `旧址` | 改前坐标记录行 | 行内已给改后形态者（B9 坐标收正类） |
 
 **到期条件（逐条在册 · 闭枚举四码）**——豁免项**无一永久**（承 §3-Q5「无到期条件 = 永久先例 ⇒ 不许」）：

@@ -76,7 +76,7 @@ hashline_edit 读入含 U+FFFD 时追加（**不阻断**）：
 
 hash 域统一（stripBom + normalizeEOL——CRLF 尾 `\r` / BOM 首行不哈希失配）；hashline_edit BOM 还原（磁盘写回带 BOM、编辑器分支不带——防双 BOM）。
 
-getOpenDoc win32 盘符大小写归一（消除 split-brain）；insert_after 编辑器分支换行符按 fileEol（消除 `$` 锚失配与混合 EOL 注入）。消费点 = `{file-edit,hashline-edit,more-file}.mjs`。
+getOpenDoc win32 盘符大小写归一（消除 split-brain）；insert_after 编辑器分支换行符按 fileEol（消除 `$` 锚失配与混合 EOL 注入）。消费点 = 编辑器写路径三缝 `configureWritePath({ openDoc, applyEdit, isDirty })`——核侧实现住 `thincoder-core/tools/write-path.mjs`，VSC 侧供值住 `thincoder-vscode/src/tools/shared.mjs`。
 
 本仓检出 EOL 约定（`.gitattributes` = `* text=auto eol=lf`）与 CLI 仓逐字节同源（各端自持）。
 

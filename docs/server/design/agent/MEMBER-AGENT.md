@@ -376,7 +376,7 @@
 | `public/views-me-chat-messages.mjs` | **124** | ≈130 | 消息面（帧面纯函数 ∥ 回读装配——沿管理面同形） |
 | `public/views-me-chat-composer.mjs` | **456** | ≈390 | 输入区与状态行（核件全件消费适配层——沿管理面同构；四旗读面/出站 + 状态行段扩 + `images` 放行 + `atComplete` 桥 + **钮可见性适配层开关**（`#toolbar` 挂 `data-flags="live"`）） |
 | `thincoder-server/public/i18n-zh-me.mjs` ∥ `thincoder-server/public/i18n-en-me.mjs` | **184 ∥ 185** | 各 ⇒ ≈200 ∥ ≈200 | 文案表·me 部件扩键 |
-| 随正件 | —— | 小 | `public/app.mjs`（**209**） ∥ `nav.mjs`（**107**） ∥ `views-me.mjs`（**398**——账户页「Git 凭据」卡；行账 = `docs/server/design/webui/ME.md` §3） ∥ `style.css`（**445**——卡族/下拉/搜索/子代理块类名 + 钮可见性作用域覆写；行账 = `docs/server/design/webui/STYLE.md` §3） ∥ shell 两表（+1/表——键 `nav.page.me.chat`） ∥ `src/sandbox/routes.mjs` ∥ `registry.mjs`（写面判据点 + 上限） ∥ `bin/thincoder-server.mjs`（**241**） |
+| 随正件 | —— | 小 | `public/app.mjs`（**209**） ∥ `nav.mjs`（**107**） ∥ `views-me.mjs`（**398**——账户页「Git 凭据」卡；行账 = `docs/server/design/webui/ME.md` §3） ∥ `style.css`（**445**——卡族/下拉/搜索/子代理块类名 + 钮可见性作用域覆写；行账 = `docs/server/design/webui/STYLE.md` §3） ∥ shell 两表（+1/表——键 `nav.page.me.chat`） ∥ `src/sandbox/routes.mjs` ∥ `registry.mjs`（写面判据点 + 上限） ∥ `thincoder-server/bin/thincoder-server.mjs`（**241**） |
 | 测试（单元测试档——**不入任何门**；随批收口用后即删——零留存） | —— | —— | 用例 = §7（成员面 N71–N87 ∥ B69–B76 ∥ E54–E61） |
 
 ## 6. 验收（AC-50 对位——机检）

@@ -115,7 +115,7 @@ A criterion whose red-side reading and expected reading come out the same has no
      A gate hit is fixed in the round — booking it moves the work where nobody looks — and it is not left for the next round.
      - Examples — sample rows, commands, paths — go in a fenced block, which the anchor and paragraph criteria skip whole; a path left in prose or a table must be a real file — a made-up one is judged `档缺`. An assumed name in a sentence takes `<area>/<name>.md`.
    - **Gate discipline**: the machine-check gates (the three self-consistency checks + the doc-check gate) run **once each, only before delivery** — re-running them per round multiplies their cost by the number of rounds.
-- **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
+- **Doc names: any form that resolves — a bare name is fine while the name is unique.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass. A bare name goes red the day a `same name` file appears — then write the distinguishing form.
 
 ## Two deliverables (separate homes — mixing them puts one-shot content where the next batch overwrites it)
 1. **The batch task**: this batch's covered requirement entries / entries explicitly NOT in this batch / affected files / acceptance criteria → **batch record §2** (an append, or an in-place edit — §1 belongs to the main agent and stays as written).

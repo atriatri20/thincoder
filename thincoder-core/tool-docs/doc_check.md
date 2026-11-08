@@ -117,11 +117,17 @@ There is no default range in `report` mode: omitting `docs`, or passing an empty
 is scanned unless you name it. A path that is not on disk or is not a Markdown document is an error in `report` mode and nothing
 is judged; in `gate` mode such paths are listed as skipped instead.
 
-A pointer resolves against the project root (full path), against the pointing document's own directory, or inside a repo this one declares under `index.publicRepos` (first segment = that repo's directory name).
-Bare names are not resolved across other directories.
+A pointer resolves through these legs, in this order:
+
+- the project root (full path);
+- the pointing document's own directory;
+- a repo this project declares under `index.publicRepos` (first segment = that repo's directory name);
+- the unique-suffix fallback, reached only when the legs above find nothing — exactly one file in the repo whose path ends with the whole token.
+
+A bare name resolves through the last-resort unique-suffix leg: while exactly one file in the repo carries that name it resolves and passes; with two or more, or none, it is judged 档缺.
 
 A pointer into a repo this project has not declared is refused, not merely noted: it is reported as a missing document and a `gate` run fails the delivery.
-- **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
+- **Doc names: any form that resolves — a bare name is fine while the name is unique.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass. A bare name goes red the day a `same name` file appears — then write the distinguishing form.
 
 `lines` (optional, `report` mode only) — the files to measure, as paths relative to the project root or absolute.
 

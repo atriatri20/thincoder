@@ -22,7 +22,7 @@ agent 工具面**无任何配置调整工具**——`/config` 是用户 TUI 命�
 
 ### 2.2 键寻址与展平
 
-- `resolvePath(obj, "a.b.0.c")`（`settings.mjs` 的导出）逐段下钻（数组数字段支持）；get 缺失段返回 `{ ok:false, reached, missing, depth }`，报错含就近提示；
+- `resolvePath(obj, "a.b.0.c")`（`thincoder-core/agent-tools/settings.mjs` 的导出）逐段下钻（数组数字段支持）；get 缺失段返回 `{ ok:false, reached, missing, depth }`，报错含就近提示；
 - `setKeyPath` 自动建中间对象；返回旧值；
 - list 递归展平当前 `agent.config` 实值（含数组下标段——`providers.0.model` 形态），按 path 排序。
 
@@ -32,7 +32,7 @@ agent 工具面**无任何配置调整工具**——`/config` 是用户 TUI 命�
 （**D-F5b 语义**：磁盘新鲜读 + 只改被设键——**默认值不固化**——+ mtime 门控；冲突 / 畸形抛错 → 内存不热应用，零虚假成功——语义权威 = `MULTI-INSTANCE-COLLAB.md` §6.3）。
 **不整 reload**（直接改内存对象等价且无副作用）。
 
-**promoted 视图同步（本机制设计单源）**：`agent.config` 的部分段是**装载期派生副本**——`thincoder-core/config.mjs` 的 `loadConfig` 把 `agent.advisor` promote 成顶层 `advisor`，而运行读面读的是**副本**（`thincoder-core/advisor/loop.mjs`；VSC `thincoder-vscode/src/advisor/loop.mjs` 同形）。
+**promoted 视图同步（本机制设计单源）**：`agent.config` 的部分段是**装载期派生副本**——`thincoder-core/config.mjs` 的 `loadConfig` 把 `agent.advisor` promote 成顶层 `advisor`，而运行读面读的是**副本**（`thincoder-core/advisor/loop.mjs`——端侧 advisor 镜像已退役，两端读同一核档）。
 写点不同步 ⇒ 盘与嵌套键都变了、读面仍是旧值——回显的「运行中已生效」就成了假承诺。
 
 - **前置行（本批）**：先例行 = `loadConfig` 装载期 promote（`thincoder-core/config.mjs`）——本批把同一条规则提成导出函数 `promoteAgentViews(config)` 供 `settings set` 共用，**对齐**（装载行为逐字不变），零偏离。
@@ -43,10 +43,10 @@ agent 工具面**无任何配置调整工具**——`/config` 是用户 TUI 命�
 - **子键 set**（`agent.advisor.<k>`）：写嵌套后**只把被写的那个键同步进 promoted 副本**（键级：`thincoder-core/agent-tools/settings.mjs` 的 `setKeyPath(config, "advisor.<k>", v)`），**不整段 re-derive**。
   - 理由：`DEFAULTS.agent.advisor.guard = false`（`thincoder-core/config-defaults.mjs`）经 `loadConfig` 并进 `agent.advisor`；整段 re-derive 会拿嵌套面的同名默认值盖回运行面 ⇒ 一次 `settings set agent.advisor.timeoutMs` 就会静默关掉 `/advisor` 打开的会话级 `guard`，违反本节末「会话级键在合并中保留」。
   - 判据：`config.advisor.guard = true`、`agent.advisor` 无 `guard` 键 ⇒ set `agent.advisor.timeoutMs` 后 `guard` 仍为 `true`。
-- **`null` 删除腿**：删嵌套同一子键 → **再删 promoted 副本上的同一子键** → **不再 re-derive**（`settings.mjs` 的删除腿）。
+- **`null` 删除腿**：删嵌套同一子键 → **再删 promoted 副本上的同一子键** → **不再 re-derive**（`thincoder-core/agent-tools/settings.mjs` 的删除腿）。
   - 理由：promote 本体 = `{ ...config.advisor, ...config.agent.advisor }`（`thincoder-core/config.mjs` 的 promote 本体；**非对象段不展开**——手写 config.json 的畸形段是字符串时 spread 会产出 `0/1/2` 垃圾键，而读面本就「非法一律回退默认」，本函数同口径）——只删嵌套再 re-derive，会把 `config.advisor` 里的旧值原样带回副本，删除即失效。
   - 判据（对不在 DEFAULTS 的 advisor 键，如 `timeoutMs`）：删除后两个视图都不再有该键（`settings get` 两条路径均报无此键）；DEFAULTS 内的键（如 `guard`）按既有 #645 口径回填默认值。
-- **整段赋值**（`agent.advisor` 为对象）：调 `promoteAgentViews(config)`（`settings.mjs` 的整段赋值腿）——同一条合并语义。合并只覆盖、不删除——显式写入的段里去掉的键仍留在副本上，要清某键走 `null` 删除腿（键级语义）。
+- **整段赋值**（`agent.advisor` 为对象）：调 `promoteAgentViews(config)`（`thincoder-core/agent-tools/settings.mjs` 的整段赋值腿）——同一条合并语义。合并只覆盖、不删除——显式写入的段里去掉的键仍留在副本上，要清某键走 `null` 删除腿（键级语义）。
 
 运行面独有的会话级键（如 `advisor.guard`——`thincoder-cli/src/tui/cmd-advisor.mjs` 只写 promoted、会话恢复 `thincoder-core/session-lifecycle.mjs` 只恢复 promoted）在合并中保留。
 
@@ -54,9 +54,9 @@ agent 工具面**无任何配置调整工具**——`/config` 是用户 TUI 命�
 
 `isSensitiveKey(path)` 对完整点分键路径做**段级**测试（**完整段名**命中才算——段界 = 串首 / 串尾 / `.` / `_` / `-`），两句取或（同文件相邻两常量——落点 `thincoder-core/agent-tools/settings.mjs`）：
 
-- **词表句**（`settings.mjs` 的敏感词表常量）：`/(^|[._-]|[a-z0-9])(api[_-]?key|key|token|secret|password|authorization|auth|cookie|credential)($|[._-])/i`
+- **词表句**（`thincoder-core/agent-tools/settings.mjs` 的敏感词表常量）：`/(^|[._-]|[a-z0-9])(api[_-]?key|key|token|secret|password|authorization|auth|cookie|credential)($|[._-])/i`
   ——段名命中即敏感（`-` 为段界，`X-Auth-Token` 类经 `token` 词命中）；
-- **开口键族句**（`settings.mjs` 的开口键族常量）：`/(^|[._-])(headers|env)($|[._-])/i`
+- **开口键族句**（`thincoder-core/agent-tools/settings.mjs` 的开口键族常量）：`/(^|[._-])(headers|env)($|[._-])/i`
   ——段名 `headers` 或 `env` 命中 ⇒ **其下全部子键整族遮罩**——HTTP 头名与环境变量名由对端 / 用户任意取，词表**永远漏**。
 - **段内复合段名 = 已裁采纳**（D-ST17）：段内复合敏感名（`refreshToken` / `clientSecret` / `privateKey` 类 camelCase / 前缀复合）⇒ 谓词扩**段内边界**（**先红夹具格**）；假阳取舍 = 方向安全（只丢值、键名仍可见）；理由与裁定 = D-ST13 ∕ D-ST17。
 
@@ -86,9 +86,9 @@ parse 失败 → 字符串字面（`return s`——裸 `abc`）。两端语义�
   - 理由：该值是读面运行期校验（`AGENT-PARAMS.md` §2「非法一律回退默认」）的对象——写面收下却按默认跑，回显的「运行中已生效」即假承诺。
   - 整段赋值腿：`agent.advisor` ∥ `advisor` 两个段名的对象值，对对象内该键同规则校验（`thincoder-core/agent-tools/settings.mjs` 的段名对象值腿）——两个入口两种结果 = 写面假承诺。
   - 手写 `config.json` 不经本校验——仍按读面回退默认（D-P3 不撤）。
-- **加键流程**：核 `config.mjs` DEFAULTS 一处 → 护栏自动跟随（消除手写漂移——W16：双源面收单）。
+- **加键流程**：核 `thincoder-core/config.mjs` DEFAULTS 一处 → 护栏自动跟随（消除手写漂移——W16：双源面收单）。
 - **测试缝导出**（`_` 前缀）：`_buildShapeTable` / `_nullLeafPaths` / `_NULL_LEAF_SHAPES` / `_SIBLING_SHAPES` / `_checkKnownKeyValue` / `_checkShapeCompleteness`。
-- **测试缝双缝纪律**：写侧假体（`settingsTool({ configPath })`）+ 读侧 `_setConfigPathForTest` **必须同指临时文件**——防用例读写真实用户配置（`config.mjs` 默认 `configPath`）；两端单元测试档（CLI / VSC）同守此规。
+- **测试缝双缝纪律**：写侧假体（`settingsTool({ configPath })`）+ 读侧 `_setConfigPathForTest` **必须同指临时文件**——防用例读写真实用户配置（`thincoder-core/config.mjs` 默认 `configPath`）；两端单元测试档（CLI / VSC）同守此规。
 
 ### 2.7 输出契约
 

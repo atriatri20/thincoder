@@ -284,7 +284,7 @@ HostConfig:
 | B84 | 边界 | 执行面（配额步） | 陈旧挂载 + 盘上镜像**不在**（假件——判据③旧 inode 挂载） | `umount` → `losetup -d /dev/loop32` → `truncate` → `mkfs.ext4 -q -O project,quota -F` → `mount -o loop,prjquota` → `chown` → `chattr`（目录/文件分治——§4）——后续复用 ext4 径尾；`recovery = "rebuild"` ∥ `quota_recovered` 行在场（旧 inode 内容不可再达 ⇒ 有抹 ⇒ 行必落） |
 | E59 | 错误 | 执行面（配额步） | 陈旧挂载 ⇒ 重建（`mkfs`）后项目标记步 `exit≠0`（假件） | 审计 `quota_recovered`（`recovery = "rebuild"`）**在场**（重建即留痕）+ `quota_apply_failed` 在场；错误上抛（建盒停） |
 | E60 | 错误 | 执行面（配额步） | 降级腿（`ext4-project` 项目标记失败 ⇒ loopback 径）后 loopback 径项目标记**再失败**（假件） | **停**（零第二次降级）；`quota_recovered`（`recovery = "demote"`）在场 + `quota_apply_failed` 在场 |
-| N89 | 正常 | 执行面（壳更新面） | 假件（假 fetch/假 spawn/假 fs 根）：内建树 v=H1；manifest v=H2；工件 = 真 tar（树哈希 H2） | 序 = manifest ⇒ 工件 ⇒ 解包 ⇒ 树哈希 == H2 ⇒ 就位（槽：落件 + 材料化 + `state.json`）⇒ 换执行（spawn 参数 = `node <HOME>/.tc-shell/<H2>/index.mjs`——恰一次）；版本行恰一行 `源=取件`（承接进程落——子回 ③ 腿就地跑、零自旋）；镜像面/控制面零调用 |
+| N89 | 正常 | 执行面（壳更新面） | 假件（假 fetch/假 spawn/假 fs 根）：内建树 v=H1；manifest v=H2；工件 = 真 tar（树哈希 H2） | 序 = manifest ⇒ 工件 ⇒ 解包 ⇒ 树哈希 == H2 ⇒ 就位（槽：落件 + 材料化 + 槽内状态件——运行期生成，随槽）⇒ 换执行（spawn 参数 = `node <HOME>/.tc-shell/<H2>/index.mjs`——恰一次）；版本行恰一行 `源=取件`（承接进程落——子回 ③ 腿就地跑、零自旋）；镜像面/控制面零调用 |
 | B85 | 边界 | 执行面（壳更新面） | 三腿：manifest 不可达 ∥ 工件 404 ∥ 无缓存副本 | 逐腿回退：缓存副本 ∥ 内建顶上；零重试；引导不抛（进程续走）；版本行恰一行逐腿如实（`源=缓存` ∥ `源=内建`）；盒照起 |
 | B86 | 边界 | 执行面（壳更新面） | 工件字节被改（解包后树哈希 ≠ manifest.version） | 丢弃暂存（缓存零变——槽内状态件与既有副本照旧）；回退 = 缓存 ∥ 内建；零换入 |
 | B87 | 边界 | 执行面（壳更新面） | 零行为变化腿：内建树 == manifest（新鲜镜像） | 零工件取件调用（调用计数）；单行版本行 `源=内建`；本进程就地跑（零 spawn） |

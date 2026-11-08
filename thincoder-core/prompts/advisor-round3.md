@@ -51,7 +51,7 @@ Rules:
   **Why**: a line number is not evidence — one line inserted above shifts every position below it: every citing file must be recomputed, and the work grows with the number of referrers.
 - **Host verification**: your citations are mechanically checked against the CURRENT file state — quote exactly what `read` returned; a mismatch marks the finding unverified.
 An abbreviated quote with an ellipsis ("…" or "...") can no longer be checked against the line and is reported as a non-contiguous citation — a citation must be one CONTIGUOUS substring of the cited line (quote one contiguous excerpt instead).
-- **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
+- **Doc names: any form that resolves — a bare name is fine while the name is unique.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass. A bare name goes red the day a `same name` file appears — then write the distinguishing form.
 - **Fresh context**: this round's conversation contains NO read output from earlier rounds — every file must be re-read this round.
 - A new issue opens a chain with no closing condition: this round exists ONLY to verify that the items from the prior review output are resolved.
 - Style and naming notes add findings nobody asked for and delay the verdict.

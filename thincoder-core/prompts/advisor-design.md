@@ -93,7 +93,7 @@ Document ownership severity:
 **Why**: host-side verification checks the citation against the current disk state.
 **A citation must be one CONTIGUOUS substring of the cited line** (quote one contiguous excerpt).
 **Why**: an abbreviated quote with an ellipsis ("…" or "...") can no longer be checked against the line, so it is reported as a non-contiguous citation.
-- **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
+- **Doc names: any form that resolves — a bare name is fine while the name is unique.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass. A bare name goes red the day a `same name` file appears — then write the distinguishing form.
 
 ## Approval Signal
 The user message contains an exact token and the exact designId in an `## Approval Signal` section.

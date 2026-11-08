@@ -1626,7 +1626,7 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 - 不动写面既有两道（跨批档写 · D5 冻结窗）；锁与它们并列挂同一块（`thincoder-core/agent/dispatch.mjs` 的写锁段）。
 - 提示词面本批两笔（落点与字面 = `§2.9` ∥ 批档 `§2.3.4`）：`## Change-face routing (doc face ∥ product face)` 两行表 ∥ persona 节标题改 `### Change-face routing and dispatch fields`；由实施轮 eng-coder 落笔。
 - 本档不写 `test/**`；RTM 改行与用例由实施轮按 `§9` 的 delta 落。**两处 `test/` 同属产品面**（`§2.10`）。
-- **层别纪律（写档做法）**：本档与批档 `§2` 的一切档引用一律带层别全路径（`docs/core/design/` ∥ `docs/core/requirements/` 前缀），不写裸档名。
+- **层别纪律（写档做法）**：本档与批档 `§2` 的一切档引用一律带层别**能解到的形**（`docs/core/design/` ∥ `docs/core/requirements/` 前缀），不写裸档名。
   理由：`docs/core/design/ENGINEERING-MODE-V2.md` 与 `docs/core/requirements/ENGINEERING-MODE-V2.md` 同名不同层，裸档名解析到哪层不确定；
   本批修正轮就是这么查错了层（按设计层解析、该层无 §13.5），面分类判据因此错了一轮。
 - **不动 `thincoder-core/conventions.mjs` / `classifyPath` / `isCodePath` 本体**（`§2.10`）：`thincoder-core/agent/dispatch.mjs` 换判源（`isCodePath` → `faceOf`，`§2.1`），其余六个消费面语义本批零改。

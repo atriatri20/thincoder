@@ -67,7 +67,7 @@
 ## CLI 36. 跨项目文档清单的交付门按各档自身项目根判
 
 > 目的：一次交付轮里判的档可以横跨两个项目——每个档按**自己落点的项目根**解析其指针，不因为清单里混了别的仓就判 `档缺`；报面仍是一条 verdict，并在 ≥2 根时把根清单摆进范围行；域表（`docRoot` 各键 ∥ `docRoot.batches`）同按各档自己的项目根读——批档面互引的豁免不跨项目。
-> 节注：回指 = `docs/core/requirements/DOC-CHECK.md` F17 ∥ AC-15；判据 = `docs/core/design/DOC-CHECK.md` §2.1（`rootOf` 按档定根）∥ §2.3（多根报面：标签 = 最短唯一定位后缀）∥ §2.5（域表按各档所属项目根读）∥ §6 AC-1 ∥ AC-6 ∥ AC-7 ∥ AC-9；交互组件 = `doc_check` 工具面（`target` = 声明根）⟷ 引擎按根分组 ⟷ 域表按组根读 ⟷ 锚解析；进入口 = 真 `doc_check({mode:"gate", docs, target})` 调用（`target` = 该工作区绝对路径；会话锚 = 工作区，下辖两个项目、自身无 manifest）；四态（行序）= 36-1 正常 · 36-2 边界（两个项目根同名 ⇒ 两条标签互不相同）· 36-3 边界（域表按档根：B 档同基底互引豁免 ∥ A 档同 token 照判 `档缺`）· 36-4 边界（一个档都没判 ⇒ 首行判 `ERROR（0 档受检——空范围不判 PASS）`，不产 `PASS`——「没判」不得读成「全清」）。
+> 节注：回指 = `docs/core/requirements/DOC-CHECK.md` F17 ∥ AC-15（36-1–36-4）· F3（36-5）；判据 = `docs/core/design/DOC-CHECK.md` §2.1（`rootOf` 按档定根）∥ §2.3（多根报面：标签 = 最短唯一定位后缀）∥ §2.5（域表按各档所属项目根读）∥ §2.6（排除目录：判集过滤）∥ §6 AC-1 ∥ AC-6 ∥ AC-7 ∥ AC-9 ∥ AC-Ex1；交互组件 = `doc_check` 工具面（`target` = 声明根）⟷ 引擎按根分组 ⟷ 域表按组根读 ⟷ 锚解析；进入口 = 真 `doc_check({mode:"gate", docs, target})` 调用（`target` = 该工作区绝对路径；会话锚 = 工作区，下辖两个项目、自身无 manifest）；五态（行序）= 36-1 正常 · 36-2 边界（两个项目根同名 ⇒ 两条标签互不相同）· 36-3 边界（域表按档根：B 档同基底互引豁免 ∥ A 档同 token 照判 `档缺`）· 36-4 边界（一个档都没判 ⇒ 首行判 `ERROR（0 档受检——空范围不判 PASS）`，不产 `PASS`——「没判」不得读成「全清」）· 36-5 边界（排除面内零命中 ∥ 移出后同一档出 1 条 `档缺`）。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -75,4 +75,20 @@
 | 36-2 | 夹具工作区下造两个**根目录同名**的项目（`site-a/web` ∥ `site-b/web`，各带 `PROJECT-MANIFEST.json`）、各放一档且各带一处悬空指针，会话锚 = 该工作区，一次交付调用 `doc_check({mode:"gate", docs:[两档], target:"<该工作区绝对路径>"})` | 首行 `DOC-CHECK GATE: REFUSED（锚 2 条）` ∧ 两条命中行的行首标签**互不相同**，且各是本次根集里的最短唯一定位后缀（`[site-a/web]` ∥ `[site-b/web]`）∧ 取根目录名那一形 `[web]` 零出 ∧ 全文 `DOC-CHECK GATE:` 只出现 1 次 | 反例读数：把标签改回 `basename(root)` 后本用例当场红（两行都写 `[web]`），改回即绿——本行断的是「读者分得清是谁的账」，不是格式好看；回指 = `docs/core/design/DOC-CHECK.md` §2.3 ∥ §6 AC-6 ∥ §7 用例 7-10 | `test/integration/doc-check-per-file-root.test.mjs` |
 | 36-3 | 夹具工作区下造两个各带 `PROJECT-MANIFEST.json` 的项目（只有 B 的 manifest 声明 `docRoot.batches` = `docs/batches`）：B 的基底根下放一份批档、档内引同基底下一份**已不在盘**的伴档；A 放一份普通档引**同一 token**（A 无此路径、也未声明基底）；会话锚 = 该工作区，一次交付调用 `doc_check({mode:"gate", docs:[A 档, B 档], target:"<该工作区绝对路径>"})` | 首行 `DOC-CHECK GATE: REFUSED（锚 1 条）` ∧ 唯一命中行属 A（行首标签 `[projA]`、命中类 `档缺`）∧ B 那处零命中（全文零 `[projB]` 开头的命中行——同基底互引被面判豁免）∧ 全文 `DOC-CHECK GATE:` 只出现 1 次 | 反例读数（已验）：域表改回按声明根单根读（单组 · 根 = 声明根）⇒ B 那处转 `档缺`、首行变 `REFUSED（锚 2 条）` ⇒ 红；回指 = `docs/core/design/DOC-CHECK.md` §2.5 ∥ §6 AC-9 ∥ §7 用例 7-12 | `test/integration/doc-check-per-file-root.test.mjs` |
 | 36-4 | `doc_check({mode:"gate"})` 四条空范围入口各跑一次：`docs: []` 显式 ∥ 省略 `docs` 而本会话零 `.md` 触达 ∥ 路径全不在盘 ∥ 全非 `.md`；对照 = 同一次调用换成一档干净档 | 四条首行逐字 `DOC-CHECK GATE: ERROR（0 档受检——空范围不判 PASS）` ∧ 报面照出「0 档受检」与 `范围为空：…` 说明行 ∧ 对照那档首行逐字 `DOC-CHECK GATE: PASS`——「没判」与「全清」不再同形 | 缺口来源 = 本批现场（用户实读首行 `PASS（0 档）`）；交互组件 = 工具面 → 引擎裁决 → 判据三面；业务可观察结果 = 交付门首行怎么读；进入口 = 用户收口时读首行 | 本批集成用例档（住 `test/integration/`，文件名住批档 §2 第五节围栏） |
+| 36-5 | 夹具项目里一份带死指针的档落在 `index.docCheckExcludePaths` 声明的目录内、另一份干净档在排除面外；一次交付调用 `doc_check({mode:"gate", docs:[两档], target:"<该项目根>"})`；随后把 manifest 里该键删掉、同一调用再跑一次 | 前半：首行逐字 `DOC-CHECK GATE: PASS` ∧ 回执出一行 `排除 1 档（manifest 排除面命中，未判）：<夹具内那一档的相对路径>` ∧ 全文零 `✗ ` 命中行；后半：首行 `DOC-CHECK GATE: REFUSED（锚 1 条）` ∧ 唯一命中行点名那份档（`档缺`）——两半都成立才算过 | 缺口来源 = 台账 #2195（用户 2026-11-08 15:48「我希望能在project-manifest里定义doc_check的排除目录.」）；判据 = `docs/core/design/DOC-CHECK.md` §2.6 ∥ AC-Ex1；回指 = `docs/core/requirements/DOC-CHECK.md` F3；反例读数 = 把判集过滤拿掉（`checkFiles` 退回过滤前）⇒ 前半首行变 `REFUSED（锚 1 条）`、与后半相等 ⇒ 红 | `test/integration/doc-check-exclude-paths.test.mjs` |
 
+## CLI 38. 交付门看得见花括号组形：解不到就判红，命中点名原 token 与缺的展开名
+
+> 目的：一个花括号组形（本行夹具那一形见本节末围栏）在门里既不红也不绿——`{` `,` `}` 都不在档 token 的字符类内，它整个不在判面里。「不要强行要求写法」那句也否掉了「要求大家展开写」这条出路，所以正路是让门看见它：展开成具体名后按同一条判据（解不到就是错的）处理，不新增第二条规则。
+> 节注：回指 = `docs/core/design/DOC-DISCIPLINE.md` §3.27 条目 AA 的边界句 ∥ §5 `A-DD42` ⑤（判据本体零改，花括号组展开是抽取面新加的一支）；交互组件 = `doc_check` 工具面 ⟷ 锚抽取面（花括号组展开）⟷ 解析序（逐名判存在性）⟷ 命中报面；进入口 = 用户收口时读首行（与 26-3 ∥ 36-4 同一读面）；一态一行 = 38-1 错误（红半 ∥ 绿半 ∥ 反证三半同行）。
+
+| 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
+|---|---|---|---|---|
+| 38-1 | 夹具项目里一份设计档正文一行写本节末围栏里那一形（两个展开名都不在盘），调 `doc_check({mode:"gate", docs:[该档], target:"<夹具项目根>"})`；另一夹具把 `i18n-zh-core.mjs` ∥ `i18n-en-core.mjs` 两个展开名落到盘、同一行照写，同跑；反证 = 第三份夹具写组内含 `/` 的 `{ running / queued / done }` 与 `x-{a/b,c}.md`，同跑 | 红半：首行逐字 `DOC-CHECK GATE: REFUSED（锚 2 条）` ∧ 两条命中行各点名原花括号 token（逐字见本节末围栏）与一个缺失的展开名（`i18n-zh-core.mjs` ∥ `i18n-en-core.mjs` 各一处）；绿半：首行逐字 `DOC-CHECK GATE: PASS` ∧ 全文零 `✗ ` 命中行（结论行 = `0 段有问题`）；反证：首行 `PASS` ∧ 零 `✗ ` 命中行（取值枚举 ∥ 组内带 `/` 的形都不是文件名列举，展开会凭空造出名字）——三半都成立才算过 | 缺口来源 = 台账 #2191（该形 16 处从未入判）；判据本体（解析序 ∥ 判决词 ∥ 豁免谓词 ∥ 阈值）零改——判决仍走现成的 `档缺`；回指 = `docs/core/design/DOC-DISCIPLINE.md` §3.27 条目 AA 的边界句 ∥ §5 `A-DD42` ⑤ | `test/integration/doc-check-brace-group.test.mjs` |
+
+本节末围栏（38-1 的夹具形；名与真档位置。围栏内的名字不是指针）：
+
+```text
+夹具设计档正文那一行：i18n-{zh,en}-core.mjs
+两个展开名：i18n-zh-core.mjs ∥ i18n-en-core.mjs   （真档在 thincoder-server/public/）
+```

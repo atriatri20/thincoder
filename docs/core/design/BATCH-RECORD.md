@@ -274,7 +274,7 @@
 3. **链完整性门（2026-10-18 · 收口前置——§4.18-A）**：`close` ∥ `status` 写 §1「已收口」两路在写盘前同过 `assertCloseoutChainComplete(src)`——§2 / §3 / §4 / §6 各段须有内容（每一批都要有设计、评审、批准——段内不得声明不适用）；§5 段号豁免；不满足 ⇒ throw 并点名缺段。门位 = 门 ② 之后、门 ④ 之前（链未跑完先报结构缺口，不先跑机检）。判据逐段 / 声明形 / 三拒串 = §4.18-A（本条不重述）。
 4. **文档机检门（2026-10-18 · 结构兜底）**：`append` ∥ `edit`（全部段）、`status` 值「已收口」、`close` 各路在写盘前跑 `doc_check` 的 gate——`REFUSED` ⇒ 拒（append / edit 面档字节不变；close / status 面状态行不改）；`ERROR` ⇒ append / edit 放行 + 回执明示 ∥ close / status 拒（fail-closed）。契约 = §4.1 行 + `docs/core/design/DOC-DISCIPLINE.md` §3.20「结构兜底」；门位在既有拒因**之后**、写盘**之前**（零回归）。**判集分两类**：**段长类**（段落过长 / 行过长）判本次写入的文本——`append` 判追加文、`edit` 判 `newText`；**锚类**（`档缺` / `节缺` / `引缺`）+ 骨架 / 占位 / 状态行判**整档**——引用完整性是档级属性，改一处不能只看新文。`close` 面整档照判（既有 fail-closed 不变）。
 
-收口两路（`close` ∥ `status` 值「已收口」）另过 **§4.13 单测档零留存门**——判序已定：本门位在 ③ 链完整性门**之后**、④ 文档机检门**之前**（判序单源 = `thincoder-core/agent-tools/batch-closeout.mjs` 的 `assertCloseoutGates`：① 链门 → ② `§3` 状态词臂 → ③ 本门 → ④ 机检门）；本清单只登记全路径门，本门的判据与拒面 = `docs/core/design/TESTING.md` §3.5。
+收口两路（`close` ∥ `status` 值「已收口」）另过 **§4.13 单测档零留存门**——判序已定：本门位在 ③ 链完整性门**之后**、④ 文档机检门**之前**（判序单源 = `thincoder-core/agent-tools/batch-closeout.mjs` 的 `assertCloseoutGates`：① 链门 → ② `§3` 状态词臂 → ③ 本门 → ④ 机检门）；本清单只登记文档机检门，本门的判据与拒面 = `docs/core/design/TESTING.md` §3.5。
 
 **在途性真值 = 批次档状态行自身**（本档 ① 冻结门读它）。
 

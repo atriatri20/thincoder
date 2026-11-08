@@ -130,7 +130,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
 - **最近先例**：包内测试面 = `thincoder-server/test/rc-resolve.mjs`（模块解析守卫，`node --test` 直跑）；跑法先例 = `thincoder-core/test/run.mjs`（`test/*.test.mjs` 单层收集 → `npm test`）。本档沿用「包内 `test/` ＋ `node --test`」，不改惯例；装配面探针缝无先例（缝形自定，理由见下）。
 - **调研证据**：查过 `thincoder-server/test/`（现只有 `thincoder-server/test/rc-resolve.mjs`——零装配面断言）、`thincoder-server/package.json`（无 `scripts.test`）、`thincoder-core/test/run.mjs`（跑法）；无同形先例。
 - **现状缺口**：装配面（`thincoder-server/bin/thincoder-server.mjs`，实读 **241** 行）的验证只有进程内驱 `run()` 的整链冒烟——跑完即弃，不留常驻断言。删掉一处装配行（周期 ticker ∥ 路由族注册 ∥ 终端 hub 接线 ∥ 保留清理周期 ∥ 更新自检周期 ∥ 项目同步调度），全套测试仍绿 ⇒ **静默失效**。
-- **落地形态**：常驻测试位 = `thincoder-server/test/assembly.test.mjs`（`node --test`）；断言 = **行为断言**（进程内驱 `run()` 跑一遍看结果），不读设计档查句子。
+- **落地形态**：常驻测试位 = 装配断言测试位（计划位，未在盘；`node --test`）；断言 = **行为断言**（进程内驱 `run()` 跑一遍看结果），不读设计档查句子。
 - **运行点**：命令 = `cd thincoder-server && npm test`——本批新增 `thincoder-server/package.json` 的 `"test": "node --test test/*.test.mjs"`（包内现无 `test` 脚本，实读）。**入发布门**：`prepublishOnly` 链尾追加 `&& npm test`（现链 = 3×`node --check`）。
 - **寿命档位**：本档 = **常驻回归档**——§5.1「单元测试档不入任何门 ∥ 随批收口零留存」纪律的**显式例外**。理由：它是装配面唯一的持久断言，删掉即「删一行仍全绿」复发；一般单元测试档随批删除的纪律不变（`#1346` 的用例档仍属后者）。
 - **产品面改动 = 族表驱动重构 ＋ 探针缝 ＋ 停机句柄**（三件同批）：族表驱动 = 路由族注册收进 `ROUTE_FAMILIES` 表循环（A1） ∥ 停机句柄 = `stop` 暴露清周期入口（A3） ∥ 探针缝 = `run(argv, log, { update = {}, onAssembled })`——装配完成、`listen` 前调用
@@ -181,7 +181,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
 - **版本身份 = npm 包**（两路同源）：升级 = 装 npm 新版 + 重启（§5.4）；**镜像 tag 不承担版本语义**（tag 只标壳——除 Node 基座换代外无需重建镜像）。
 - **npm 路（包体就绪——发布动作 = 发布面轮）**：`thincoder-server/package.json` 转可发布形——撤 `private` ∥ 包名 = `@thincoder/server`（拟——发布轮验 registry 占用/scope 权限；更优命名可上抛） ∥ `bin` = `thincoder-server`
   ∥ `engines` node>=24 ∥ `prepublishOnly` 门禁 = 3×`node --check`（`bin` ∥ `src/ops/update.mjs` ∥ `deploy/converge.mjs`）→ `npm test`（**唯一例外** = §4.1 的常驻装配回归档——它要阻一件事，红即不发布）；其余**单元测试档不入任何门**（随批收口用后即删、零留存）。
-  - `files` 白名单 = bin ∥ src ∥ public ∥ config.example.json ∥ README.md（`deploy/` 档组 = 仓内部署面——不入包）。
+  - `files` 白名单 = bin ∥ src ∥ public ∥ config.example.json ∥ `thincoder-server/README.md`（`deploy/` 档组 = 仓内部署面——不入包）。
 - **npm 路装机 = 前缀式**（自升前提）：`NPM_CONFIG_PREFIX` 指**服务账号可写目录**（建议 `/opt/thincoder-server/.npm-global`——与配置/数据同根）⇒ 装机（`npm i -g @thincoder/server`）与自升（服务进程内——§5.4）同前缀、免 sudo 重写；安放后该根目录整归服务账号（`chown -R`）。
 - **Docker 路 = 壳镜像**（`thincoder-server/Dockerfile`——重设计）：基座 `node:24-slim` + 引导层（`thincoder-server/deploy/docker-entrypoint.sh`（已落盘 7 行） ∥ `thincoder-server/deploy/converge.mjs`（已落盘 197 行））；**App 代码由 npm 取装**——镜像本体只含壳（不带版本身份）。
 - **构建期预装 = 上下文包体**（离线可运行性）：构建上下文（= **仓根**——`docker build -f thincoder-server/Dockerfile … .`）内 `npm pack` 双包（`thincoder-server` + `thincoder-render-core`——同各 `files` 白名单形）
@@ -335,7 +335,7 @@ services:
 
 - **运行面**：MCP 服务器由 **server 进程**建连——`stdio` 类 = server 同机子进程（容器路 = 镜像内环境：Node/npx 随镜像可得；python/uv 类服务器须宿主/镜像自备）∥ `http`/`ws` 类 = server 出向（**新出网目的地 = 用户配置**——零白名单，内网工具面口径）。
 - **凭据**：`token`/`headers`/`env` 值 AES-256-GCM 落库 + 密列零回显（机制 = `docs/server/design/mcp/MCP.md` §3.1）。
-- **生命周期**：停机收尾关闭全部 MCP 会话（stdio 子进程杀树——`bin/thincoder-server.mjs`）；`kill -9` ⇒ 子进程残留（如实披露——`docs/server/design/mcp/MCP.md` §12 R86③）。
+- **生命周期**：停机收尾关闭全部 MCP 会话（stdio 子进程杀树——`thincoder-server/bin/thincoder-server.mjs`）；`kill -9` ⇒ 子进程残留（如实披露——`docs/server/design/mcp/MCP.md` §12 R86③）。
 - **运维读数**：探活 = 控制台行内动作（`POST /api/admin/mcp/probe`——零副作用）；失败原因就地人话。
 
 ## 6. 本域文件与行数预算（本域族行）

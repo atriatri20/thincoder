@@ -43,7 +43,7 @@
   **何故扩面**：核件去重集逐 `buildTools` 调用新建——只护单 server 内 ∥ `sanitizeToolName` 归一非字母数字（`thincoder-core/mcp/helpers.mjs` 的 sanitize 支），`web.search` ∥ `web search` ∥ 64 字符截断可同形 ⇒ 服务器 × 服务器重名在此收口（先者留存）。
 - **工具数**：无上限、无逐个开关（对齐三端；配置面自担——披露项，上抛余项 R86③（本档末节））。
 - **生命周期**：删行/停用 ⇒ 关闭该服务器会话（核导出面 `removeMcpTools` ∥ `closeAllMcp`——零自造关闭链；`face.mjs` 持最近工具表为关闭靶）；
-  **停机收尾** ⇒ `closeAllMcp`（`bin/thincoder-server.mjs` 停机路径一行——stdio 子进程（POSIX `detached`）不随父进程自然退出，须显式杀树；`kill -9` 残留 = 披露项）。
+  **停机收尾** ⇒ `closeAllMcp`（`thincoder-server/bin/thincoder-server.mjs` 停机路径一行——stdio 子进程（POSIX `detached`）不随父进程自然退出，须显式杀树；`kill -9` 残留 = 披露项）。
 - **测试注入缝**：`deps.mcpConnectImpl ?? null`（建连替身——沿 `deps.execImpl` 先例）∥ `deps.mcpProbeImpl ?? null`（探活替身——N3 两径）∥ `deps.mcpCloseImpl ?? null`（关闭替身——N5 停机收尾）；三缝缺省 `null` = 生产零变；核件真件亦可（仓内直引）。
 
 ## 3. 配置面（问题②）
