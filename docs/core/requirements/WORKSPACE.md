@@ -4,12 +4,18 @@
 > **工作流档**（需求层）= `docs/core/requirements/CORE-UNIFICATION.md` §1–§4 + §5 登记表（统一目标 / 边界原则 / 量级读数基线 / 范围边界）——本档**不复制**（D2 单一权威源）。
 > **设计层** = `docs/core/design/WORKSPACE.md`（本子系统设计与测试）；工作流设计档 = `docs/core/design/CORE-UNIFICATION.md`。
 > 建档：2026-09-13（**需求侧拆分轮**——用户 2026-09-13 明令「需求侧文档先拆」）。**不新增需求**：条文分**搬移 / 回填 / 派生**三类并逐条标来源；无现成表述者由设计裁决派生，标「**派生 · 非用户原话**」。
-> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图 `thincoder-cli/docs/README.md` §3.2；三层归属见同图 §3.1。
+> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 端产品地图的「板块镜像」一节；三层归属见同图上一层。
 > **需求条目面**（§4 · 2026-09-14「B 轮并入」）：本板块**同名旧档缺 ⇒ 无新内容并入**（不虚构）——详见 §4。
 
 ## 1. 总体定位
 
-工作区约定 = 技能发现（`skills.mjs`）**+** 规则发现（`rules.mjs`）**+** 同伴实例 / 域（`peer-instances.mjs` · `peer-domains.mjs`）**+** 台账规则与路径约定（`ledger.mjs` · `conventions.mjs` · `escape.mjs`）**+** 台账展示面（`thincoder-cli/src/tui/ledger-surface.mjs` ↔ VSC `thincoder-vscode/src/extension/ledger-surface.mjs`）。
+工作区约定 = **核内单一实现**，按发现面分五组：
+
+- 技能发现 —— `thincoder-core/skills.mjs`
+- 规则发现 —— `rules.mjs`
+- 同伴实例 / 域 —— `thincoder-core/peer-instances.mjs` · `thincoder-core/peer-domains.mjs`
+- 台账规则与路径约定 —— `ledger.mjs` · `conventions.mjs` · `escape.mjs`
+- 台账展示面 —— `thincoder-cli/src/tui/ledger-surface.mjs` ↔ VSC `thincoder-vscode/src/extension/ledger-surface.mjs`
 VSC 侧同名面住 `src/extension/**`。
 本板块对本子系统的要求 = 该面归一为**核内单一实现**，fs 面与渲染面作**端差注入**。
 
@@ -42,8 +48,8 @@ VSC 侧同名面住 `src/extension/**`。
 
 | 旧档 | 状态 |
 |---|---|
-| `thincoder-cli/docs/requirements/WORKSPACE.md` | **不存在**（CLI / VSC 两树设计 / 需求两侧均无同名档） |
-| `thincoder-cli/docs/design/WORKSPACE.md` | **不存在**（设计侧同样缺——见 `docs/core/design/WORKSPACE.md` §6） |
+| CLI 树需求侧的 WORKSPACE 同名档 | **不存在**（CLI / VSC 两树设计 / 需求两侧均无同名档） |
+| CLI 树设计侧的 WORKSPACE 同名档 | **不存在**（设计侧同样缺——见 `docs/core/design/WORKSPACE.md` §6） |
 
 ⇒ 对 WORKSPACE 板块**需求侧无并入面**——不据其他档代拟需求条目（不虚构）。
 

@@ -7,7 +7,7 @@
 
 ## 1. 总体定位
 
-供应商与模型 = 调用核心（`thincoder-core/provider/core.mjs` + `index.mjs` ↔ VSC `provider.mjs`）**+** 传输（`anthropic` / `google` / `responses`）**+** 基础件（`sse` / `retry` / `normalize` / `errors` / `abort-provenance`）**+** 限流（`rate.mjs`）**+** 模型清单（`list-models.mjs`）**+** 模型规格（`model-specs.mjs`）。
+供应商与模型 = 调用核心（`thincoder-core/provider/core.mjs` + `thincoder-core/provider/index.mjs`）**+** 传输（`anthropic` / `google` / `responses`）**+** 基础件（`sse` / `retry` / `normalize` / `errors` / `abort-provenance`）**+** 限流（`rate.mjs`）**+** 模型清单（`list-models.mjs`）**+** 模型规格（`model-specs.mjs`）。
 
 本板块对本子系统的要求 = 该面归一为**核内单一调用核心**，可见面变更**保留兼容并登记**。
 
@@ -27,7 +27,7 @@
   同时新增 `huawei` 预设（22 家——`PROJECT.md` C3 计数随动）。
 - **【responses 适配面健壮性三判据】**
   ① **判据-D9**：构造 `type:"error"` 帧流 ⇒ parseStream **抛错或 partial 抢救**（分界 = 是否已有流出；禁止静默跳过）——T1–T4；
-  ② **判据-D8**：`errors.mjs` 导出码级映射（最小集五码逐码断言 ∥ 未列码 null 透传）——T5–T6；
+  ② **判据-D8**：`thincoder-core/provider/errors.mjs` 导出码级映射（最小集五码逐码断言 ∥ 未列码 null 透传）——T5–T6；
   ③ **判据-D5**：`buildBody` 仅显式 `maxTokens` 时发 `max_output_tokens`——T7–T8。
   设计 = `docs/core/design/PROVIDER.md` §6.13 错误出口块 + D-PR34/35/36。
 
@@ -207,7 +207,7 @@ N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自
 | R26 | **非法值不发散**：0 / 负数 / 非数 / 非整 ⇒ 视为未报，落下一层 | 四类非法值各造一例 ⇒ 解析结果与「该字段缺席」逐字相同；不抛、不落 0 |
 | R27 | **异常值可见不静默**：列表值 > 静态表 ×4（表无行时 > 4×128K）⇒ **照用 + 告警一次**（去重），不截断 | 造一个 8× 值 ⇒ 采用该值且告警恰一次；数值未被改写 |
 | R32 | **量级守卫覆盖人工声明**：L1 `modelContext` ∥ L2 旧键的 K 值 ×1024 后 > 静态表 ×4（表无行时 > 4×128K）⇒ **照用 + 告警一次**（不截断、不拒写） | ① 声明 `262144`（K）⇒ 采用 2.68 亿 token 且告警恰一次（去重键含渠道 + 模型 + 值）；② 声明 `128` ⇒ 零告警；③ 手改 JSON 与三端界面两条来源同判（守卫在核，不在各端） |
-| R33 | **三端展示串同源**：卡片行 ∥ 写面 current 段 ∥ 清除确认正文 ∥ 保存回执，凡渲染窗口串处一律经核 `formatDeclaredContextK(k)`；**端侧不得自拼** `String(k) + "K"`，也不得端侧先 `k * 1024` 再喂 `formatContextK` | ① 声明 `1024` ⇒ 三端均显示 `1M`（不是 `1024K`）；② 声明 `128` ⇒ 三端 `128K`——**该值不出舍入、自拼与核出词同串，判别力为零，不得当验收样本**；③ **射程 = 窗口展示面五档**（CLI `provider-admin.mjs` ∥ VSC `settings-providers.js` ∥ `settings-provider-dialog.js` ∥ `src/extension/provider-context.mjs` ∥ 桌面 `src/main/providers.mjs`），该五档 `* 1024` 零命中（全文其他位置的字节算术不在射程）；④ 三端同渠道同模型同一串 |
+| R33 | **三端展示串同源**：卡片行 ∥ 写面 current 段 ∥ 清除确认正文 ∥ 保存回执，凡渲染窗口串处一律经核 `formatDeclaredContextK(k)`；**端侧不得自拼** `String(k) + "K"`，也不得端侧先 `k * 1024` 再喂 `formatContextK` | ① 声明 `1024` ⇒ 三端均显示 `1M`（不是 `1024K`）；② 声明 `128` ⇒ 三端 `128K`——**该值不出舍入、自拼与核出词同串，判别力为零，不得当验收样本**；③ **射程 = 窗口展示面五档**（CLI `thincoder-cli/src/tui/provider-admin.mjs` ∥ VSC `settings-providers.js` ∥ `settings-provider-dialog.js` ∥ `src/extension/provider-context.mjs` ∥ 桌面 `src/main/providers.mjs`），该五档 `* 1024` 零命中（全文其他位置的字节算术不在射程）；④ 三端同渠道同模型同一串 |
 | R28 | **列表未报时行为零变**：qwen / glm / mimo 类渠道解析结果与改前逐字相同 | 五档既有模型在「列表不报」路径下 context 逐值不变 |
 | R29 | **人工声明按模型粒度**：`modelContext` 按模型 ID 查表，同渠道不同模型可各自不同；键的匹配与规格表**同一把尺子**（末段归一后相等——§4.6 R22） | ① 同渠道两模型各给不同值 ⇒ 各自生效；② 键 `nvidia/NVIDIA-Nemotron-…` 与列表返回的同名字段末段相等 ⇒ 命中；③ 未点名的模型不发散（落链下一层）；④ **前缀不同但末段相同**（`a/gpt-4o` ∥ `b/gpt-4o` 同渠道）⇒ 末段相等 ⇒ **命中同一条**（取该条即用；**不设拒绝径、不告警**——两条键归一后相同就是同一个模型的两种写法，用户写哪条都是他写的值）；⑤ 同一模型的多种写法在**写面一并改写为新值**、在**清除面一并删除**——只改一条会留下仍归一相等的旧值（读面可能取到它，「已保存」成假收执），只删一条会让卡面继续显示已声明 |
 | R30 | **单位是 K，三处一致**：输入、存储、展示都用 K（128 = 128K）；解析时乘 1024，与旧键同口径 | ① 写 `128` ⇒ 解析结果恰为 131072；② 旧键 `context`（K）在同配置内仍被读，同一乘点，告警一次；③ 界面回显 `128K` 而非 `131072` |
@@ -225,7 +225,7 @@ N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自
 
 | # | 需求 | 判定句（验收口径——摘要） |
 |---|---|---|
-| R33 | 会话用了工具，结果必须回到模型：同一客户端会话里调用一次工具、工具结果进入会话历史、模型继续对话——**重开同一会话后历史回放不丢工具调用与结果**（含多工具并行与重开两形态） | ① 集成用例三态：一次工具调用后继续 ∥ 一轮多工具后继续 ∥ 重开会话回放历史后继续（`thincoder-cli/test/integration/anthropic-tool-roundtrip.test.mjs` G1–G3）；② 业务可观察点 = 用户在配了 Anthropic 原生通道的会话里用过工具后还能继续对话；③ 判据 = 不出现 `400 Unexpected role "tool"` |
+| R33 | 会话用了工具，结果必须回到模型：同一客户端会话里调用一次工具、工具结果进入会话历史、模型继续对话——**重开同一会话后历史回放不丢工具调用与结果**（含多工具并行与重开两形态） | ① 集成用例三态：一次工具调用后继续 ∥ 一轮多工具后继续 ∥ 重开会话回放历史后继续（`test/integration/anthropic-tool-roundtrip.test.mjs` G1–G3）；② 业务可观察点 = 用户在配了 Anthropic 原生通道的会话里用过工具后还能继续对话；③ 判据 = 不出现 `400 Unexpected role "tool"` |
 
 **非功能**：不改 OpenAI 面（适配层只在 Anthropic 径）· 不改历史写入面（回放读既有 `session/` 存储）。
 
@@ -239,7 +239,7 @@ N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自
 
 | # | 需求 | 判定句（验收口径——摘要） |
 |---|---|---|
-| R34 | 三件齐全、机器可解析 | 出站 `User-Agent` 三段 = 产品名 ∥ 端类型 ∥ 版本号；端类型 ∈ {`cli`, `vscode`, `desktop`, `server`}（另有内部缺省 `core`）；版本号 = 该端 `package.json` 的 `version` 原样 |
+| R34 | 三件齐全、机器可解析 | 出站 `User-Agent` 三段 = 产品名 ∥ 端类型 ∥ 版本号；端类型 ∈ {`cli`, `vscode`, `desktop`, `server`}（另有内部缺省 `core`）；版本号 = 该端包清单的 `version` 字段原样 |
 | R35 | **不可被渠道配置覆盖** | `providers[].headers` 写 `User-Agent` 或 `user-agent`（含大小写变体）⇒ 出站仍是本产品标识，**单值**，无渠道值残留 |
 | R36 | 无配置键 | 标识由代码设定，不读配置、不读环境变量、不读 `argv`；核件不自行探测自己在哪个端 |
 | R37 | 端侧接线可验 | 每端启动入口注入一次后，该端进程内 `clientIdentity()` = 该端 `surface` + 该端版本；未注入 ⇒ 可判哨兵（`core` / `0.0.0`），四端进程内出现即为注入漏接 |

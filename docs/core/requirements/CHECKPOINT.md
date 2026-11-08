@@ -10,8 +10,11 @@
 ## 1. 总体定位
 
 检查点与 git 面 = 检查点核心（现经 `@thincoder/core/git/checkpoint.mjs` 引用）**+** 检查点工具面（`tools/git-checkpoint.mjs` · `tools/git-ext.mjs`——核内单源 `@thincoder/core/tools/*`）。
+
 共同契约 = 同一目录同一格式、**快照跨端互通**。
+
 另住他档的相关面：hooks 四事件 → 子系统档 `AGENT-LOOP.md`；team 层记忆 git 同步 → 子系统档 `MEMORY.md`。
+
 本板块对本子系统的要求 = 该面归一为**核内单一实现**（共享函数下沉、消除端内副本）。
 
 > 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/CHECKPOINT.md` §1–§2（不复制）。
