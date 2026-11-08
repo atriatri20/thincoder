@@ -23,9 +23,13 @@
   - **判据 = 主次版本比较**（不是主版本整数比较）：下限 `22.13`。
   - 过 = `22.13.0` ∥ `22.13.1` ∥ `22.14.0` ∥ `23.x` ∥ `24.x` ∥ `30.x`；带 `v` 前缀（`v22.13.0`）同规则过。
   - 拒 = `22.12.x` ∥ `22.9.x` ∥ `21.x` ∥ `20.x`；不可解析的串（只有主版本的 `22` ∥ 空串 ∥ 非数字）同样拒（fail-closed）。
-  - **文案逐字**：`thincoder requires Node.js >= 22.13.0 (current: <version>)`——输出流 = stderr、退出码 = 1。
+  - **文案逐字**——输出流 = stderr、退出码 = 1：
+
+    ```text
+    thincoder requires Node.js >= 22.13.0 (current: <version>)
+    ```
   - 上述值与 `thincoder-cli/package.json` 的 `engines.node` 同拼写（`>=22.13.0`）——两处一改同改。
-  - 接线 = `thincoder-cli/bin/thincoder.cjs` shim 首行（`enforceNodeMajor()` 先于 `import("./thincoder.mjs")`）。
+  - 接线 = `thincoder-cli/bin/thincoder.cjs` shim 首行（`enforceNodeMajor()` 先于对同目录分发主体 `thincoder-cli/bin/thincoder.mjs` 的 import）。
 - **盘根启动门**：**会话面**（无参默认 ∥ `tui` ∥ `chat` ∥ `acp`）于 `cwd = 磁盘根`时 ⇒ **一行提示 + 非零退出**（`process.exit(1)`——同版本门先例）；
   - 放行面 = 非会话集成员，含 N10 点名的信息维护面 `-v` ∥ `--help` ∥ `memory` ∥ `upgrade` ∥ `completion` ∥ `session *`；**无强开旗**。
   - 家目录维持软防护，不升硬拦——机制见 `docs/core/design/MEMORY.md` §6.14 L-④。
@@ -34,7 +38,7 @@
   - **包装子进程面** = `src/tui/wrapped-spawn.mjs` 的 `spawnImpl` 起子进程行以 `bin/thincoder.mjs` 直起（绕 shim）——父进程先判（阻断 ⇒ 包装不发生）、子进程复判幂等（cwd 同源）。
   - 判定体 = 纯函数 `diskRootGateError({ command, cwd, platform })`（新档 `thincoder-cli/bin/disk-root-gate.mjs`——`null` ∥ 一行文案；`platform` 入参供直测双道——先例 `nodeVersionError(version)`）。
   - 文案 = **英文一行（逐字钉 · 含 N10「先进工作目录再启动」语义）**：`thincoder cannot start from a disk root — cd into a working directory and start again`——输出流 = **stderr**、退出码 = `process.exit(1)`（承版本门 ∥ 家目录护栏先例）。
-  - 直测用例（单元测试档 `2026-10-08-diskroot-gate-index-excludes.test.mjs`）：`diskRootGateError` 直调（win32 ∥ POSIX 双道——根矩阵 11 例）∥ 子进程 e2e（卷根 cwd ⇒ stderr 逐字本句 + exit 1；同 cwd `-v` ⇒ exit 0；沙箱 HOME 纪律照 §3）。
+  - 直测用例（该批单元测试档）：`diskRootGateError` 直调（win32 ∥ POSIX 双道——根矩阵 11 例）∥ 子进程 e2e（卷根 cwd ⇒ stderr 逐字本句 + exit 1；同 cwd `-v` ⇒ exit 0；沙箱 HOME 纪律照 §3）。
 - **盘根门已知限制（登记——不取）**：显式索引命令 `reindex` ∥ `sync` 属放行面（判定式 = 会话集成员）——盘根下运行经同链仍触发索引（N10 动机面「盘根 ⇒ 全盘索引」可达）；需求（N10）只圈会话面 ⇒ 循需求不拦——**残留面登记**，后续批或需求侧可取。
 - 与 `docs/cli/design/TUI-COMMANDS.md` 的分界：后者 = TUI 内 **slash 命令层**；本档 = **argv 命令层**（进程级）。
 
@@ -71,7 +75,7 @@
 
 - **发射面** = `printCompletion(shell)`（`thincoder-cli/src/completions.mjs`）；`completion` 分支在 `bin/thincoder.mjs` 分发（非法 shell ⇒ usage + 退出 1）。
 - **横深对齐**：三套脚本须覆盖 §2 表内旗标词面——**ledger 族已对齐**；余缺口在册 = `session gc ∕ index` 旗标（`docs/cli/design/CLI-DEBT.md` §3-T1）。
-  ledger 词表现读含 `list`（三套发射 `migrate audit list`——源档 `thincoder-cli/src/completions.mjs` 的 bash ledger 分派行 ∥ fish 的 `ledger` 子命令行）；MS-2 发射锁面字面断言随词表收正（单元测试档 `2026-09-30-defect-fixes-cli.test.mjs`）。
+  ledger 词表现读含 `list`（三套发射 `migrate audit list`——源档 `thincoder-cli/src/completions.mjs` 的 bash ledger 分派行 ∥ fish 的 `ledger` 子命令行）；MS-2 发射锁面字面断言随词表收正（该批单元测试档）。
 - **bash 源文本形 ≡ 发射字节形**（防改形漂移；同族各分支行逐字节同形）：
   - 形（源档 `completions.mjs` 模板字面量内直写 = 发射字节，**零反斜杠**）：`$(compgen -W "<词表>" -- "$cur")`；分派行 = `case "$prev" in`。
   - **JS 插值险位例外**：发射面须含字面 `${…}` 的段（`"\${COMP_WORDS[1]}"` 一类）在源档保留 `\${` 转义（模板字面量内 `\$` ⇒ 发射 `$`）。
@@ -81,7 +85,7 @@
 
 ## 4. 机检形（#350 契约）
 
-**宿主**：单元测试档 `2026-09-30-defect-fixes-cli.test.mjs`（MS-2 锁定形含 §3 发射字节形 + zsh 分派行）；**回迁 = 测试体系重建轮**。三例：
+**宿主**：该批单元测试档（MS-2 锁定形含 §3 发射字节形 + zsh 分派行）；**回迁 = 测试体系重建轮**。三例：
 
 - **MS-1 · 源码 token 机检**：读 `bin/thincoder.mjs` + `src/command-table.mjs` + `src/cli/memory-command.mjs` 源文本，断言 `case "memory"` 分发面 · `case "sweep"` 分支 · `SWEEP_USAGE` 行 · 三旗标 token。
   **耦合义务**：命令分发表外提（触发在册 = `docs/cli/design/CLI-DEBT.md` §2.1 A4）：读取面锁点 = `src/command-table.mjs`。

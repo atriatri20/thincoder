@@ -15,14 +15,14 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 | # | 需求 | 判定句（可机器验证） |
 |---|---|---|
 | **F1** | 统一语义 | 撞墙 = `runAgent` 耗尽 `maxTurns` 抛 `ContinueError`（类 `thincoder-core/agent/helpers.mjs`（唯一实现；VSC `thincoder-vscode/src/agent.mjs` 只剩转口）/ 抛点 `thincoder-core/agent/turn-loop.mjs`）；继续 = `resume:true` 重跑同一执行体 |
-| **F2** | 续跑不重来 | 继续**不重新注入任务文本**、保留 history 与改动——`resume` 把子执行体的活 history 交回（VSC `thincoder-vscode/src/agent-tools/subagent-run.mjs`） |
+| **F2** | 续跑不重来 | 继续**不重新注入任务文本**、保留 history 与改动——`resume` 把子执行体的活 history 交回（现体 = 核 `thincoder-core/agent-tools/subagent-run.mjs`） |
 | **F3** | 全执行体覆盖 | 四类执行体均有续跑分支：主 agent（`thincoder-vscode/src/extension/panel-chat.mjs` 回合循环）· 子 agent（`agent-tools/subagent-run.mjs` 两处）· 飞刀（现体 = 核 `thincoder-core/agent-tools/subagent-actions.mjs`）· 会诊（`agent-tools/consult.mjs`） |
 | **F4** | 拒绝返回部分成果 | 拒绝 / headless / 无法续跑 → 部分成果 + turn-cap 标记（VSC `agent-tools/subagent-run.mjs` 两处，文本含 "work may be partial"）——报告据此判定「撞墙中断、工作可能不完整」 |
 | **F5** | 用户 Stop 优先 | 中止路径（`AbortError` / `signal.aborted`）始终优先于继续提示——不弹继续卡、不自动续跑 |
-| **F6** | 继续提示串行 | 按会话级队列串行（`continueQueue`——`thincoder-vscode/src/agent-tools/consult.mjs`）——并行执行体同时撞墙不弹多个卡；后台 async 子代理**永不弹用户卡**——撞帽改走**父代理检查点**（F8）；无父代理 ⇒ 降级 partial |
+| **F6** | 继续提示串行 | 按会话级队列串行（`continueQueue`——核 `thincoder-core/agent-tools/consult.mjs`）——并行执行体同时撞墙不弹多个卡；后台 async 子代理**永不弹用户卡**——撞帽改走**父代理检查点**（F8）；无父代理 ⇒ 降级 partial |
 | **F7** | 编号跨段累计 | 触发回合帽续跑后，面向上层的逐轮编号**跨段累计为唯一单调序列**（不重置、不倒退）——展示口径 `turn n/max`：n = 链内累计已跑轮数，max = 累计已授予预算（段数 × 段预算）；双端同源（各端独立实现） |
 | **F8** | 撞帽即续期检查点（裁定 A） | 撞帽（`ContinueError`——核 `thincoder-core/agent.mjs`）**不再静默自动续期**：**异步族**（后台子代理 / 异步飞刀 / 会诊）⇒ **向父代理报请**（ask；答「续期」⇒ `resume:true` 重入 · 答「停」⇒ 部分成果 + turn-cap 标记）；**同步族**（阻塞子代理 / 同步飞刀）⇒ **用户卡路径保留**（父代理被本次调用阻塞 · 应答不可达）；depth-0 ⇒ 回用户；**AUTO 一律不再自动批准续期**（无人应答 ⇒ partial）；续期**留痕** = 累计轮次 / 段数可查；**撞帽检查 = 无条件**（**有无产出皆检查**——**不设零产出阈值**，裁定 D） |
-| **F9** | 载入面自证（裁定 E） | **运行面**必须可自证：① **启动期一行诊断** = 记录当前 core 的**实体路径 + 版本**；② **打包面机检** = 扩展打包内 core 须含撞帽检查点接线（`checkpoint.mjs` + `subagent-run.mjs` 接线）——防「仓内已修、运行面仍旧」✗（实盘教训 = 安装面冻结旧构建 ⇒ 静默续段半天） |
+| **F9** | 载入面自证（裁定 E） | **运行面**必须可自证：① **启动期一行诊断** = 记录当前 core 的**实体路径 + 版本**；② **打包面机检** = 扩展打包内 core 须含撞帽检查点接线（`thincoder-core/agent-tools/checkpoint.mjs` + `subagent-run.mjs` 接线）——防「仓内已修、运行面仍旧」✗（实盘教训 = 安装面冻结旧构建 ⇒ 静默续段半天） |
 | **F10** | 撞帽提示带累计 | 撞帽提示必须同时给出**本段轮数**与**链内累计轮数**，并删掉 `(limit …)` 括注（各可交互面同一信息集）。只报本段，用户判不出「已经转了 40 轮」还是「刚转 12 轮」，而继续 / 停的决断正好取决于这个量级；`(limit N)` 在撞帽面上恒等于本段轮数（`ContinueError(maxTurns)` 于循环跑满后抛出 ⇒ 同一个数说两遍；VSC / 桌面更印成无数字的断头句） |
 
 ## 3. 非功能性需求

@@ -69,9 +69,14 @@
 
 ### 4.4 VSC 端条目
 
-语义同源——VSC 档 F-C1–F-C7 / N-C1–N-C4 与上列条目逐条同义（机制体 = 设计档 §6 承载），**不重并**（D2）。**端共享面（非端差）**：① **共享存储**
-（`~/.thincoder/checkpoints/{cwdHash12}/`——与 CLI 同目录同格式、快照跨端互通；盘符归一后同 cwdHash12——core §1.1 已载）· ② **非 git cwd 变体**
-（`createNonGitCheckpoint` 全目录拷贝 + SKIP 集——core §4.2 已载）。坐标（实核）＝ `@thincoder/core/git/checkpoint.mjs` · `@thincoder/core/tools/git-checkpoint.mjs` · `thincoder-vscode/src/tools/git.mjs`（379 行 · 本端装配面保留）· `thincoder-vscode/src/tools/shell.mjs`（318 行 · 本端装配面保留）。
+语义同源——VSC 档 F-C1–F-C7 / N-C1–N-C4 与上列条目逐条同义（机制体 = 设计档 §6 承载），**不重并**（D2）。
+
+**端共享面（非端差）**：
+
+- ① **共享存储**（`~/.thincoder/checkpoints/{cwdHash12}/`——与 CLI 同目录同格式、快照跨端互通；盘符归一后同 cwdHash12——core §1.1 已载）
+- ② **非 git cwd 变体**（`createNonGitCheckpoint` 全目录拷贝 + SKIP 集——core §4.2 已载）
+
+坐标（实核）＝ `@thincoder/core/git/checkpoint.mjs` · `@thincoder/core/tools/git-checkpoint.mjs` · `thincoder-core/tools/git.mjs`（端装配面 `gitTool` 直取本份）· `thincoder-vscode/src/tools/shell.mjs`（318 行 · 本端装配面保留）。
 **测试缺口（发现即报）**：VSC `test/` 对 checkpoint 面零专属用例——补测触发 = 该面下次被触碰。
 
 **二态化裁定行**：①② 两条 = **共享 / 同源事实（非端差）**——（「与 CLI 同目录同格式、快照跨端互通」/「core §4.2 已载」）；本档 §4.4 无端差登记项。

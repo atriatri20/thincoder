@@ -83,7 +83,7 @@
 6. **交接消息按批合并续发**：busy 提交入队列（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1——吞面收敛四）+ **合并消费**（`planQueuedInput` 攒批——连续非 `/` 且 ≤8 条 ∧ 合并 ≤2000 字符 ⇒ 合并为一条、一次回合；超批截批先行；单条 > 2000 字符直发；`/cmd` 逐条保序）——
    `state.queue` 为**残项单容器**（释放窗口兜底池空转正 / 挂起中止残余——零丢失）；回合尾按批直发（**残项路径**——队列主消费 = **步边界 pickup**：机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8「步边界 pickup」）；
    释放窗口期入 `pendingInput` 的条目在池已空时按计划转回队列。
-7. **挂起会话**（`suspension-drive.mjs`——状态机行表以 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8 为权威，本档不复制）：
+7. **挂起会话**（`thincoder-cli/src/tui/suspension-drive.mjs`——状态机行表以 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8 为权威，本档不复制）：
    队列清空后池仍 live 且非 skipSession 且未中止 → 进入挂起态——**挂起内 busy 与普通 busy 同判据入队**（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1）。
 
    挂起态另开三面：空闲输入 Enter 走 `pendingInput` 队列（键面契约见 `docs/cli/design/TUI-INPUT-BOX.md` §4）；settle 事件驱动 auto-turn 消化轮；状态行显示「后台 N 子代理运行中 · M 待消化」，池空且无待处理输入时补发 done 冻结、自然退出。
@@ -208,7 +208,7 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
   - **合成点 = 读面** `synthSubTask`（`thincoder-cli/src/tui/lifecycle-records.mjs`）：条目带 `sub` ⇒ 行文 = 子标 + 分隔符 + 正文（即 `<sub> · <text>`）；不带 ⇒ 原样。渲染面零改——折叠尾 3 行（`thincoder-cli/src/tui/render-segments.mjs` `foldTailLines`）与展开体（同档 `renderBlockTimeline`）同点出形。
   - **空正文行 = 两端同判丢弃**：条目 `text` 为空 ⇒ 不产行，与 `sub` 在场与否无关（与 VSC 派生面 `rowsOf` 同一谓词）——该态在活流不可达（核 `thincoder-render-core/flow/block.mjs` `appendAdvisorChunk` 空串早返），同一份记录两端行数同判。
   - **写面不设该跳过**：CLI 写面 `rowsOf`（`thincoder-cli/src/tui/lifecycle-records.mjs`——`typeof b.text !== "string"` 之外不再过滤）不跳过空正文行——该态活流不可达，读面两端同判已足；加写面分支 = 给不可达输入修桥。写面写出一条两端都不显示的行不产生端差（两端都不显示），只留一条没人走的路径。
-  - **三端同一件事**：同一 `sub` 字面（记录字段，不派生）· 同一位置（行首）· 同一分隔符（` · `，U+00B7 前后各一空格——即 VSC ∥ 桌面 `span.advisor-sub` 的同一串）⇒ 同一份记录在 VSC ∥ 桌面（DOM span）与 CLI（文本前缀）读出同一行全文 `explore#1 · read — src/x.mjs`；差别只在承载，不在内容。
+  - **三端同一件事**：同一 `sub` 字面（记录字段，不派生）· 同一位置（行首）· 同一分隔符（` · `，U+00B7 前后各一空格——即 VSC ∥ 桌面 `span.advisor-sub` 的同一串）⇒ 同一份记录在 VSC ∥ 桌面（DOM span）与 CLI（文本前缀）读出同一行全文 `explore#1 · read — thincoder-cli/src/tui/lifecycle-records.mjs`；差别只在承载，不在内容。
   - **写面不变**：CLI 活流 `sub.blocks` 行不带 `sub`（逐行身份由块载体承载——顶层的在冻结头 `<key>`，嵌套子代各占自己载体）⇒ CLI 自产快照恒为无 `sub` 形。
   - **存量容读**：条目无 `sub` ⇒ 零前缀、`text` 原样（存量 VSC 快照字面烙在 `text` 内）⇒ 恢复后逐字不变；零迁移 ∥ 零版本标记。
 
@@ -216,9 +216,9 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 
   | # | 场景 | 输入 | 期望 |
   |---|---|---|---|
-  | T-S1 | 正常：新形记录 ⇒ 前缀在场 | `rows:[{kind:"tool", text:"read — src/x.mjs", sub:"explore#1"}]` | 合成件 `blocks[0].text` = `explore#1 · read — src/x.mjs`（**修前红**：前缀缺席） |
+  | T-S1 | 正常：新形记录 ⇒ 前缀在场 | `rows:[{kind:"tool", text:"read — thincoder-cli/src/tui/lifecycle-records.mjs", sub:"explore#1"}]` | 合成件 `blocks[0].text` = `explore#1 · read — thincoder-cli/src/tui/lifecycle-records.mjs`（**修前红**：前缀缺席） |
   | T-S2 | 边界：父自己的行（负控） | 同条去 `sub` | `blocks[0].text` 与记录 `text` 逐字等、零前缀 |
-  | T-S3 | 边界：存量记录容读 | `rows:[{kind:"tool", text:"explore#1 · read — src/x.mjs"}]` | `blocks[0].text` 逐字不变（子标恰一份，不双份） |
+  | T-S3 | 边界：存量记录容读 | `rows:[{kind:"tool", text:"explore#1 · read — thincoder-cli/src/tui/lifecycle-records.mjs"}]` | `blocks[0].text` 逐字不变（子标恰一份，不双份） |
   
 - **翻页**：数据源零改（`store.page`——记录已在存储、随页自然可见）；「N more earlier messages」与「N messages」口径含记录（与桌面 KD-55 ⑤ 同口径容忍）。
 - **容差（CLI 侧状态）**：① 跨页分裂 = **消**（上「`n` 解析」）；② 归档快照晚一拍 = **消**（产生面 = 进程内冻结点，先于回合落盘 ∥ 读径 = 存储直读——追加即达）；③ 复活径双记录（墓碑复活 ⇒ 同键两代冻结 ⇒ 重建面双块 ∥ 活流单块）——**在册**（低频异常修复径 ∥ 数据零损；重开条件 = 实测走查命中 ⇒ 另批）。

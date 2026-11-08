@@ -199,7 +199,7 @@
   - **无源钮隐藏**（`#auto-btn`/`#advisor-btn`/`#eng-btn`/`#plan-btn`/`#settings-btn` = `display:none`——无源实证 = `docs/server/design/webui/CHAT.md` §2.1③④；`#reasoning-btn` 经 KD-SV-111 出列——档位钮启用〔2026-10-13 收正——评审 #43 发现 1〕）；内距/间距/圆角 ∈ 各族刻度；零新悬停规则（AC-19 canon）；**别名桥 = §2.1① 桥例外**。
 
 - **实施面（样式与视图档）**：`style.css` 重排（值源化 + 态面 + 死规则删） ∥ `views-admin.mjs` ∥ `views-me.mjs` ∥ `views-models.mjs` ∥ `views-usage.mjs` ∥ `views-audit.mjs` ∥ `views-providers.mjs`（`.hint error` 共 7 处） ∥ `views-providers-modals.mjs`（#87 段内错误面 ⇒ `.hint error`——随其落地并入） ∥ `views-system.mjs`（诊断失败面 2 处——`.error` 修饰） ∥
-  `views-overview.mjs` ∥ `app.mjs`（死类串删——`stat` 2 处 ∥ `view` 2 处）；`nav.mjs` ∥ `modal.mjs` ∥ i18n 两表 = 零触（零新文案）。
+  `views-overview.mjs` ∥ `thincoder-server/public/app.mjs`（死类串删——`stat` 2 处 ∥ `view` 2 处）；`nav.mjs` ∥ `modal.mjs` ∥ i18n 两表 = 零触（零新文案）。
 
 ### 2.2 数据表页视口高壳与布局收正（功能点 20——2026-10-07）
 
@@ -213,7 +213,7 @@
 **② 机制——两段壳与高度链（表尾计数 = 表内 tfoot）**：
 
 - 壳结构 = `.page-head`（页题/工具条/过滤——固定）∥ `.page-area`（表卡——吃剩余高）；由 `ctx.dataShell(mount, { head, area })` 构建（两段挂载）。表卡内 = `.table-slot`（表 ∥ 空/错态）——直持 `.table-wrap`（滚区）；**行计数 = 表内 `<tfoot>`**（`table(…, { foot: true })` 或自建构建器同形——「共 N 项」，吸附表底）。
-- `body.data-shell` = 壳页标记（`app.mjs` 路由按 `SHELL_PAGES` 五路径切换——登录/登出径清除）。
+- `body.data-shell` = 壳页标记（`thincoder-server/public/app.mjs` 路由按 `SHELL_PAGES` 五路径切换——登录/登出径清除）。
 - 高度链（`style.css` 声明单源——本表）：
 
 | 选择器 | 声明 |
@@ -232,7 +232,7 @@
 
 - 吸附口径：表头吸附在滚区上沿、**表尾 `tfoot` 吸附滚区下沿**（底色 = `--fill`——① 族单源）；**弹窗内表 = 自滚 + 表头吸附**（壳吸附选择器限 `main` 不命中弹窗；弹窗侧规则 = 2026-10-07 走查收正——本档 §2.2⑤）。
 - 挂载前提①（弹窗挂载点——壳吸附不命中弹窗可核）：`<dialog>` 直属 `document.body`（`modal.mjs` 实读——`document.body.append(root)`；不在 `main` 内）⇒ 吸附选择器 `body.data-shell main thead th` 不命中弹窗内表。
-- 挂载前提②（壳挂载点——高度链落点）：视图根 `<section>` 直属 `main#app`（`app.mjs` 路由实读——`h("section")` ⇒ `appEl.replaceChildren(mount)`；`index.html` `<main id="app">`）——`ctx.dataShell` 的 `mount` = 该 section ⇒ 高度链 `main > section` 命中视图根。
+- 挂载前提②（壳挂载点——高度链落点）：视图根 `<section>` 直属 `main#app`（`thincoder-server/public/app.mjs` 路由实读——`h("section")` ⇒ `appEl.replaceChildren(mount)`；`thincoder-server/public/index.html` `<main id="app">`）——`ctx.dataShell` 的 `mount` = 该 section ⇒ 高度链 `main > section` 命中视图根。
 - 回退：`@media (max-width: 760px), (max-height: 600px)` ⇒ `body.data-shell .content { height: auto }`——撤高度链（整页滚；吸附随壳失效）；阈值 = 设计取值。
 - 零新 `:root` 变量 ∥ 零新悬停规则——本档 §2.1 canon 不破（新声明全数纳入其判据）。
 
@@ -286,7 +286,7 @@
 | AC-19（功能点 19——样式族总体统一；`docs/server/requirements/PROJECT.md` 验收表） | 本档 §2.1 在册：口径五条 ∥ 散置/不一致清单（改前实读——S1–S17） ∥ 变量族底座（`:root` 单源——色/间距/圆角/字排/线宽/布局） ∥ 族值表 + 逐族套用表（①列表 ②按钮 ③表单 ④间距 ⑤字排 ⑥色板 ⑦卡片 ⑧弹窗内构 ⑨空错态 ⑩码面——含 #87/#88 新面「随其落地套用」） ∥ 可点行/不可点行判据 ∥ 空/错/加载态 | 单元测试档 + 收口轮 |
 | AC-19（续·机检口径） | `thincoder-server/public/style.css`：`:root` 块外零颜色字面量（hex/rgba） ∥ 行悬停声明清单（`.nav-item:hover` ∥ `tbody tr:hover`——同取 `var(--hover)`；清单外零行悬停声明；`li.key-item:hover` 随 ul 清单退役删净） ∥ padding/margin/gap 取值 ∈ `--sp-*` ∪ {0, auto} ∪ 布局组变量（`--nav-w`——S15 ∥ 底座布局行；尺寸类白名单除外） ∥ `font-weight` 全 ≤400（**终端面除外**——§2.1 ③ 例外登记：终端面 cell 按 pty 语义；`docs/server/design/webui/TERMINAL.md` §2.4） ∥ `font-size` 全 = `var(--fs)`（缺省撤销） ∥ 聚焦环单形（`--bw-strong solid var(--accent)`） ∥ 类名双向闭合（档面字面类 ⊆ `style.css` 类选择器 ∥ `style.css` 类选择器 ⊆ 档面字面类 ∪ 态类）；视觉收口轮浏览器实走（悬停/聚焦/空·错·加载态/弹窗/两语言） | 单元测试档 + 收口轮 |
 | AC-20（功能点 20——控制台布局收正；`docs/server/requirements/PROJECT.md` 验收表） | ① 视口高壳在册：壳面五页钉表（成员 `#/admin/members` ∥ Provider `#/admin/providers` ∥ 服务模型 `#/admin/models` ∥ 审计 `#/admin/audit` ∥ 用量明细 `#/me/usage`——本档 §2.2①）；页头固定 ∥ 表头吸附 ∥ 行区滚动 ∥ 表尾行计数（tfoot——吸附表底；声明表 = 本档 §2.2②）∥ 矮视口回退整页滚 ∥ ② 表尾行计数在册（表内 tfoot「共 N 项」= 渲染行数真值——空/错 = 无表无 tfoot；纯前端派生 ∥ 零新端点） ∥ ③ 内容左对齐（`main` 无 auto 居中——`max-width` 沿用） ∥ ④ 弹窗内列表 = 表格形（Provider 勾选 ∥ 预设信息段模型清单 ∥ 成员 key 表——本档 §2.2⑤）；排除面在册（`#/admin/usage` 看板页 ∥ 布局/信息表 ∥ key 表页级（非壳——本档 §2.2① 在案）） | 单元测试档 + 收口轮（浏览器实走） |
-| AC-20（续·机检口径） | 单元测试档用例：`dom.mjs`——`dataShell` 在册（`.page-head`/`.page-area` 两段）+ 表尾计数在册（`table(…, { foot: true })` 与三自建构建器 tfoot 同形 + `common.rowCount` 引用） ∥ `app.mjs`——`SHELL_PAGES` 五路径逐条钉表 ∥ `route()` 切换 `data-shell`（登录/登出径清除） ∥ 五页逐档 `dataShell(` 调用 + 表内 tfoot 计数（成功 = 行数 ∥ 空/错 = 无表） ∥ `style.css`——高度链声明表逐条在册 ∥ `position: sticky` + `top: 0`（表头）∥ `bottom: 0`（tfoot）在册 ∥ 回退媒体查询在册（`height: auto`） ∥ `main` 规则 margin 无 `auto` ∥ 弹窗三处表格形（结构/列头/空错态不变量——含勾选表 `label` 形） ∥ `.model-picks` 零残留（规则与字面两向） ∥ AC-19 canon 不破（零新 `:root` 变量 ∥ 零新悬停规则 ∥ 内距 ∈ 刻度 ∥ 类名双向闭合） ∥ 档目随正——单源 = `docs/server/design/webui/WEBUI.md` §1 ∥ 门禁清单添布局收正批单元测试档（十八——以实施盘面为准） ∥ 旧件随正：stub ctx 补 `dataShell` 三件 + 门禁计数两件 | 单元测试档 + 收口轮 |
+| AC-20（续·机检口径） | 单元测试档用例：`thincoder-server/public/dom.mjs`——`dataShell` 在册（`.page-head`/`.page-area` 两段）+ 表尾计数在册（`table(…, { foot: true })` 与三自建构建器 tfoot 同形 + `common.rowCount` 引用） ∥ `thincoder-server/public/app.mjs`——`SHELL_PAGES` 五路径逐条钉表 ∥ `route()` 切换 `data-shell`（登录/登出径清除） ∥ 五页逐档 `dataShell(` 调用 + 表内 tfoot 计数（成功 = 行数 ∥ 空/错 = 无表） ∥ `style.css`——高度链声明表逐条在册 ∥ `position: sticky` + `top: 0`（表头）∥ `bottom: 0`（tfoot）在册 ∥ 回退媒体查询在册（`height: auto`） ∥ `main` 规则 margin 无 `auto` ∥ 弹窗三处表格形（结构/列头/空错态不变量——含勾选表 `label` 形） ∥ `.model-picks` 零残留（规则与字面两向） ∥ AC-19 canon 不破（零新 `:root` 变量 ∥ 零新悬停规则 ∥ 内距 ∈ 刻度 ∥ 类名双向闭合） ∥ 档目随正——单源 = `docs/server/design/webui/WEBUI.md` §1 ∥ 门禁清单添布局收正批单元测试档（十八——以实施盘面为准） ∥ 旧件随正：stub ctx 补 `dataShell` 三件 + 门禁计数两件 | 单元测试档 + 收口轮 |
 | AC-48 ⑤（功能点 48——同族扫描闭合；样式侧） | 本档 §2.3 在册：核对表逐点（全控制台 `hidden` 切换点 ∥ 受压者 = 基址 label + github 事件块 + 原两处补丁位） ∥ 全局规则 `[hidden] { display: none !important; }` 在册 ∥ `!important` 计数 = 1 ∥ 旧两处按例补丁零残留 ∥ 零新 `:root` 变量 ∥ 零新悬停规则（AC-19 canon 不破） | 单元测试档 + 收口轮（浏览器实走：建源弹窗两平台两态） |
 | 容器终端（样式侧；功能点 51） | 终端调色板 **18 枚变量入 `:root`**（登记例外——§2.1 底座表「终端」行；面内零颜色字面量） ∥ 终端面类族五枚（`.terminal-modal`/`.terminal-surface`/`.terminal-row`/`.terminal-cursor`/`.terminal-status`）∥ **粗体例外登记**（§2.1 ③——终端面 cell 按 pty 语义；全局 `font-weight ≤400` 判据在本面留白、余面不破） ∥ 零动画零过渡 ∥ 零新悬停规则（面内无悬停态） ∥ 行悬停声明清单不变 ∥ 内距 ∈ 刻度；判据全文 = `docs/server/design/webui/TERMINAL.md` §2.4/§4 ∥ `docs/server/design/webui/SANDBOX.md` §2.1① | 单元测试档 + 收口轮（浏览器实走：终端面/光标/滚动） |
 

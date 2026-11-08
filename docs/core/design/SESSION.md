@@ -11,10 +11,10 @@
 
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
-| 会话数据层 | `thincoder-core/session.mjs` · `session-store.mjs` · `session-segments.mjs` · `session-guard.mjs` · `session-migrate.mjs` · `session-rename.mjs` | `thincoder-vscode/src/extension/session-io.mjs` · `session-slot-write.mjs`（记录存储内联） |
+| 会话数据层 | `thincoder-core/session.mjs` · `session-store.mjs` · `session-segments.mjs` · `session-guard.mjs` · `session-migrate.mjs` · `session-rename.mjs` | `thincoder-vscode/src/extension/session-io.mjs` · `thincoder-vscode/src/extension/session-slot-write.mjs`（记录存储内联） |
 | 槽位 | `thincoder-core/session-slots.mjs` | `thincoder-vscode/src/extension/session-slots.mjs` |
 | 清理 | `thincoder-core/session-gc.mjs`（+ `session gc` 子命令） | `thincoder-vscode/src/extension/session-gc.mjs` |
-| 历史读取工具 | `src/agent-tools/read-history.mjs` | 同名（同路径对） |
+| 历史读取工具 | `thincoder-core/agent-tools/read-history.mjs` | 同名（同路径对） |
 
 > **现行模块清单**（含拆档后新增 / 拆分产物）看 §6 各节坐标：`thincoder-core/session-lifecycle.mjs`（§6.22 / §6.24）· `session-slots-manifest.mjs`（§6.23）· `session-stale.mjs`（§6.17）· `session-index*.mjs` / `fts-text.mjs`（§6.19）· `session-slot-scan.mjs`（§6.22）· `session-slot-verify.mjs`（§6.25）。
 > `read-history` 现行路径 = `thincoder-core/agent-tools/read-history.mjs`。
@@ -27,17 +27,17 @@
 
 | # | 相对路径 / 对位 | 面 | 相似度 · 逐字节 | 分类 | 目标 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|---|---|---|
-| 89 | `agent-tools/read-history.mjs` | 同路径 | 0.3881 · 异 | ③ | 进核 | 以 CLI 为准（相对路径按 cwd 解析 + 宽松版本校验 + 磁盘全量可查） | 分叉 ＝ ① 相对路径解析 ② 版本校验口径（`version` 1/2）③ 本会话可查范围——CLI 流式迭代磁盘 `src/agent-tools/read-history.mjs` / VSC 只读内存（同档）；前提（同职责）仍成立 | **①** | S1（建核补齐） |
+| 89 | `agent-tools/read-history.mjs` | 同路径 | 0.3881 · 异 | ③ | 进核 | 以 CLI 为准（相对路径按 cwd 解析 + 宽松版本校验 + 磁盘全量可查） | 分叉 ＝ ① 相对路径解析 ② 版本校验口径（`version` 1/2）③ 本会话可查范围——CLI 流式迭代磁盘 `thincoder-core/agent-tools/read-history.mjs` / VSC 只读内存（同档）；前提（同职责）仍成立 | **①** | S1（建核补齐） |
 
 ### 2.2 语义对位遍行（同职责但相对路径不同）
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
 | 123 | `thincoder-core/session.mjs` ↔ `thincoder-vscode/src/extension/session-io.mjs` | ② | 融合：数据层取一侧 + VSC 的 `history-window` 拆面按核内结构归位 | 分叉 ＝ 目录归属（VSC 住 `extension/`）；存储契约两端自述同格式（同一 `~/.thincoder/sessions/<hash>.json.{N,manifest}`——VSC 头注自述）⇒ 前提成立 | — | S1（建核补齐） |
-| 124 | `src/session-slots.mjs` ↔ `thincoder-vscode/src/extension/session-slots.mjs` | ② | 融合：取一侧（slot / manifest / 认领 / 属主判定） | 分叉 ＝ 目录归属；头注互指「同构镜像」（CLI `src/session-slots.mjs` / VSC 同档对位）⇒ 前提成立 | — | S1（建核补齐） |
+| 124 | `thincoder-core/session-slots.mjs` ↔ `thincoder-vscode/src/extension/session-slots.mjs` | ② | 融合：取一侧（slot / manifest / 认领 / 属主判定） | 分叉 ＝ 目录归属；头注互指「同构镜像」（CLI `thincoder-core/session-slots.mjs` / VSC 同档对位）⇒ 前提成立 | — | S1（建核补齐） |
 | 125 | `thincoder-core/session-gc.mjs` ↔ `thincoder-vscode/src/extension/session-gc.mjs` | ② | 融合：取一侧；冷 cwd 手动面 = **双端同面**（端差注销——VSC 补命令入口走数据面 API；判据 / 执行面单源见 §6.17） | 分叉 ＝ 目录归属（端壳档纯转口重导出核五名）；保留期 / 阈值两端同值 ⇒ 前提成立 | — | S1（建核补齐） |
-| 126 | `src/session-store.mjs` ↔ `thincoder-vscode/src/extension/session-slot-write.mjs` | ② | 融合：核内单一记录存储 + 槽写入面归位 | 分叉 ＝ 切分与目录归属（VSC 记录存储内联于槽写面）；槽写语义两端同 ⇒ 前提成立 | — | S1（建核补齐） |
-| 127 | `src/session-segments.mjs` · `session-guard.mjs` · `session-rename.mjs` · `session-migrate.mjs` ↔ 核内（VSC 侧内联于 `session-io` / `session-slots`） | ② | 融合：按核内结构归位（段 / 归属守卫 / 改名 / 旧短哈希迁移四面各保留） | 分叉 ＝ 拆档粒度（VSC 未拆）；能力面逐条对位（VSC `thincoder-vscode/src/extension/session-io.mjs` 的迁移遍 / 改名枚举同构）⇒ 前提成立 | — | S1（建核补齐） |
+| 126 | `thincoder-core/session-store.mjs` ↔ `thincoder-vscode/src/extension/session-slot-write.mjs` | ② | 融合：核内单一记录存储 + 槽写入面归位 | 分叉 ＝ 切分与目录归属（VSC 记录存储内联于槽写面）；槽写语义两端同 ⇒ 前提成立 | — | S1（建核补齐） |
+| 127 | `thincoder-core/session-segments.mjs` · `session-guard.mjs` · `session-rename.mjs` · `session-migrate.mjs` ↔ 核内（VSC 侧内联于 `session-io` / `session-slots`） | ② | 融合：按核内结构归位（段 / 归属守卫 / 改名 / 旧短哈希迁移四面各保留） | 分叉 ＝ 拆档粒度（VSC 未拆）；能力面逐条对位（VSC `thincoder-vscode/src/extension/session-io.mjs` 的迁移遍 / 改名枚举同构）⇒ 前提成立 | — | S1（建核补齐） |
 
 ## 3. 须用户裁条目（指针 → `CORE-UNIFICATION.md` §2.5.1）
 
@@ -90,8 +90,8 @@
 - **`isProcessAlive(pid)`**：Windows `tasklist /FO CSV`（PID 列精确比对） / Unix `kill(pid, 0)`；**实现住 `process-probe.mjs`**（本模块 re-export 保 import 面零变）；同步有界 2 s，**返回 `true | false | undefined` 三态**（`undefined` = 未知——超时 / 探测失败；未知不作「死」判据，与 D-MI10 同向）。
   **认领 / 占用 / 清理 / 新会话死主四路不经它**：改经批量束 + `ownerState` 三态判据；**「假 ⇒ 判死」形态的调用点一律改经 `ownerState`**（未知 ⇒ 保守保留）——不得布尔化消费三态结果。
 
-  **消费面全枚举（改经束）**：核内 `session.mjs` 三处（含 `slotOccupancy`）· `session-slots.mjs` 五处
-  · `session-gc.mjs`（`liveSlots` / `deleteColdCwd`）+ `session-stale.mjs`（`listStaleCwds`——存量面同判）（**符号锚**；未知 ⇒ 不判冷 / 保留）⇒ 全部改经束 + `ownerState`（零判定消费残留）；
+  **消费面全枚举（改经束）**：核内 `thincoder-core/session.mjs` 三处（含 `slotOccupancy`）· `thincoder-core/session-slots.mjs` 五处
+  · `thincoder-core/session-gc.mjs`（`liveSlots` / `deleteColdCwd`）+ `session-stale.mjs`（`listStaleCwds`——存量面同判）（**符号锚**；未知 ⇒ 不判冷 / 保留）⇒ 全部改经束 + `ownerState`（零判定消费残留）；
 
   端侧 `thincoder-vscode/src/extension/session-io.mjs` 两处（+ 镜像档）= 判定收归核束（端侧薄壳只留 END / 命名空间面）。
 - **slot 粘性**：`saveSession` 首次认领后缓存 `agent._slot`，**永不重跑** ensureActive（触发场景：并发方在保存间翻动 manifest active ⇒ 重推 ensureActive 会让会话静默迁移 → 双副本 / 覆盖他人）；`applySession` 清空缓存；ACP 加载路径显式钉回目标槽。
@@ -154,7 +154,7 @@
 ### 6.6 与 VS Code 的契约对齐点
 
 - **基础契约**：cwd hash（40 位 sha1 + 盘符大写）· 槽位认领（slotSessions + 判活束 / `ownerState` 三态）· 双线落盘（`history` + `contextHistory`）· 旧格式回退（无 contextHistory → 从 history 播种）· transient 过滤（人读线过滤、机读线保留）· 本端记录 marker（形态 / 写者 / 置空语义双端一致）。
-- **跨端共享契约增补**：`sessionStart` 打点（CLI `setup.mjs` 赋一次 / VSC `saveLines` 赋一次——**VSC 恒 null 则覆盖防护永不触发**）· legacy transient 过滤（读 loadSlotFile + 写 saveSession 双点）· 机读线判定（`contextHistory.length > 0`，否则 VSC 恢复空机器线）· v1 回退剥离截断 args · 同会话并发追加检测（VSC 磁盘 history 比待写快照长 → 轮转 `.bak`）· 
+- **跨端共享契约增补**：`sessionStart` 打点（CLI `thincoder-core/agent/setup.mjs` 赋一次 / VSC `saveLines` 赋一次——**VSC 恒 null 则覆盖防护永不触发**）· legacy transient 过滤（读 loadSlotFile + 写 saveSession 双点）· 机读线判定（`contextHistory.length > 0`，否则 VSC 恢复空机器线）· v1 回退剥离截断 args · 同会话并发追加检测（VSC 磁盘 history 比待写快照长 → 轮转 `.bak`）· 
 `activeModel` 双向 · manifest 死主清理（`deletions`）· `loadManifest` 容错（`!m.slots` → `{}`）· 读校验顺序（**cwd 先行**——「别人的文件不动」优先于结构校验）。
 - **新字段双端同步条款**：CLI `saveSession` 全量覆盖写、VSC `saveLines` `...existing` 保留未知字段 ⇒ 两端字段集必须同步演进；任一端新增槽内字段须在同一变更中双端实现，否则 CLI 保存会**静默删除 VSC 侧新字段**。
 
@@ -176,7 +176,7 @@
   **常显 = 三端 chrome 常驻**（VSC 面板顶栏 / CLI 状态行段——CLI 段取值 = `agent.title` 活读 · 空值回退链（`sessionTitleFallback`——`firstMessage` ≤40 截断 ∥ `"(empty)"`）；
 
 桌面 = 状态行 `title` 段与左列行 ∕ 标签条——三层同读 `sessions:list` 行源，
-  落点 = `thincoder-desktop/renderer/views/statusline.mjs` ∕ `thincoder-desktop/renderer/views/sessions.mjs` ∕ `tabbar.mjs`；落点设计 = `docs/cli/design/TUI.md` §7.4）。
+  落点 = `thincoder-desktop/renderer/views/statusline.mjs` ∕ 会话列表视图 ∥ 标签栏视图；落点设计 = `docs/cli/design/TUI.md` §7.4）。
 
   空窗差（生成前 / 失败期）= **消**——CLI 段同款回退链（`sessionTitleFallback`；对位 VSC `panel-session.mjs`）；三端同显回退值（VSC 顶栏 ∥ 桌面 `thincoder-desktop/renderer/views/statusline.mjs` ∥ CLI 段）；`/session` 列表按需面不变。
 - **边界**：标题规范 / 超时 / 失败语义 / 手动重命名链（`renameSlot`）零改；机器注入消息（`[System reminder:` 前缀）永不入标题源。
@@ -254,7 +254,7 @@
 `session gc --confirm <hash>`（或 `--all`）
 显式清理该 cwd hash 前缀**全部文件**（manifest + end marker + 死主槽数据文件 + 裸 v1 `{hash}.json` + 残留）——含数据文件是为避免制造**孤儿数据**；删除前警告 + **重校验**（TOCTOU 防护，期间变活跃则拒绝）；**经回收目录（可回退）**——§6.17。
 - **标题写契约**：`renameSlot` / `setSlotTitle` 返回 `{ ok: true }` | `{ ok: false, reason: "file-missing" | "parse-failure" | "mtime-conflict" | "invalid-slot" }`——reason 与内部判定一一对应、**不含用户文本**（渲染由调用方决定）；双端同契约，调用方同步适配。
-- **模块与实现约束**：GC 逻辑入**独立模块** `thincoder-core/session-gc.mjs`（不塞 `session-slots.mjs`——500 行硬限）；`renameSlot` 自 session-slots 拆入 `thincoder-core/session-rename.mjs`；残留 GC 与冷 cwd 共用文件集合判断；**存量清立面** = 分组 / 判据 / 回收入 `thincoder-core/session-stale.mjs`（§6.17）。
+- **模块与实现约束**：GC 逻辑入**独立模块** `thincoder-core/session-gc.mjs`（不塞 `thincoder-core/session-slots.mjs`——500 行硬限）；`renameSlot` 自 session-slots 拆入 `thincoder-core/session-rename.mjs`；残留 GC 与冷 cwd 共用文件集合判断；**存量清立面** = 分组 / 判据 / 回收入 `thincoder-core/session-stale.mjs`（§6.17）。
 - **引文映射（子标相容）**：代码注释引文「§6.12①」（旧子标——本节 bullet 无编号）实指 §6.14「生命周期联动」条——`.bak` 轮转对非本会话活动绑定面联动改名 sidecar（判据 = `agent._recordStore?.dir`）。
 
 ### 6.13 跨会话历史检索与检索族消歧
@@ -270,7 +270,7 @@
 
 > 问题（事故形态）：人读线 `_fullHistory` 永不压缩、全量常驻内存——TUI 会话 ~19.4 分钟 ≈ 8GB 堆（爬升型 OOM）。用户裁定修复方向 = **磁盘为准 + 内存窗口**。
 
-- **记录存储 = 定长分段 JSONL sidecar**：目录 `{槽文件路径}.d/`（与槽文件同目录同前缀；**VSC 侧不可见**——其 GC 后缀表 / 发现正则 / 迁移重命名均不匹配 `.d`）；`meta.json` = `{ "v", "segSize", "identity", "degraded"? }`——段粒度保险 + **会话身份锚**（防跨会话采纳）+ 降级标记；段文件 `seg-NNNNNN.jsonl`（六位零填充，**只追加、不回改**）；行 = `JSON.stringify(slimForDisplay(m))`——
+- **记录存储 = 定长分段 JSONL sidecar**：目录 `{槽文件路径}.d/`（与槽文件同目录同前缀；**VSC 侧不可见**——其 GC 后缀表 / 发现正则 / 迁移重命名均不匹配 `.d`）；侧车元数据档 = `{ "v", "segSize", "identity", "degraded"? }`——段粒度保险 + **会话身份锚**（防跨会话采纳）+ 降级标记；段文件 `seg-NNNNNN.jsonl`（六位零填充，**只追加、不回改**）；行 = `JSON.stringify(slimForDisplay(m))`——
 与槽 JSON `history` 元素**逐字节同形**（投影零转换）；追加过滤与 saveSession 同源（跳过 transient 与 legacy-transient）。
 - **索引与常量**（单源 = `thincoder-core/session-store.mjs`）：`RECORD_SEG_MESSAGES = 100`（绝对序号 i → 段 `floor(i/100)+1`、行 `i%100`）· `RECORD_WINDOW_MESSAGES = 200`（内存窗口——与首屏 `INITIAL_HISTORY_MESSAGES` 同值）· `RECORD_DIR_SUFFIX = ".d"`。
 - **总条数与不变式**：`total` = `(段文件数−1)×segSize + 末段行数`（**末段空文件按 0 行计**）；**半行容忍**（末段尾行 JSON 解析失败视为未写完、忽略，不自动修复）；**段不可变不变式** = 仅末段可追加，轮转 = 末段满 segSize 后下一次追加新建下一段。
@@ -310,7 +310,7 @@ configDir 版（端侧无直调点）。
 
 **端壳保留 = 端差一款（已裁保留 · A9）**：
 ① **end marker 层 = 零副本转口**（**端差注销 · 不计入保留款数**；判据单源 = §6.20 判据句 3）：
-端壳 `session-slots.mjs` 副本（marker 三式 + `usableSlot` / `resumeSlot` 本体）改为逐行绑定转口（`(cwd) => coreX(cwd, END)` 形态）；
+端壳各自的会话槽档副本（marker 三式 + `usableSlot` / `resumeSlot` 本体）改为逐行绑定转口（`(cwd) => coreX(cwd, END)` 形态）；
 
 四个维护落点（`resumeSlot` / `newSlot` / `switchToSlot` / `deleteSlotAndUpdate`——`thincoder-vscode/src/extension/session-io.mjs` 内四个槽动作）
 经端壳绑定核同名件（**调用点零改**）；端壳副本原无的裸 v1 单文件兜底差异随副本注销（端壳消费核 `resumeSlot` 后获得核兜底——§6.20 端差注销）；
@@ -558,7 +558,7 @@ git 富注入（GIT-ASYNC L21——双端异步化）：`collectGitContext` / `p
 - cwd = 面板域 `_cwd()`（`thincoder-vscode/src/extension/panel-messages.mjs` 的 `_cwd()`——workspaceFolders[0]，与认领落点同域）；`workspaceFolders` 空 ⇒ **跳过释放**（`_cwd()` 回退宿主任意 process.cwd()——不给宿主 cwd 造盘面 / 误放他项目认领）。
 - 薄包装 `releaseClaimsOnExit(dir, hasWorkspace)` 住 `thincoder-vscode/src/extension/session-io.mjs`（node 可测缝——`extension.mjs` 依赖 vscode 模块不可直测）：无 workspace ⇒ false；否则转核 `releaseClaimsAll`（容忍逻辑全在核——端侧零重复）。
 
-**端壳裁定（F-XR4 双端同源）**：释放机制核内单点；端壳对位 = **纯转口两行**（`session-slots.mjs` / `session-io.mjs` 各一——W11 转口纪律形态）。端壳镜像按端差必要性判定：marker 层 / `resumeSlot` 算法端差已注销（§6.20 判据句 3）；本面谓词 = `getSessionId` 字符串比较（零探测零束）⇒ 无镜像必要。NF1 红线：零新增跨端共享可变字段。
+**端壳裁定（F-XR4 双端同源）**：释放机制核内单点；端壳对位 = **纯转口两行**（`thincoder-vscode/src/extension/session-slots.mjs` / `thincoder-vscode/src/extension/session-io.mjs` 各一——W11 转口纪律形态）。端壳镜像按端差必要性判定：marker 层 / `resumeSlot` 算法端差已注销（§6.20 判据句 3）；本面谓词 = `getSessionId` 字符串比较（零探测零束）⇒ 无镜像必要。NF1 红线：零新增跨端共享可变字段。
 
 **边界情形**
 
@@ -597,7 +597,7 @@ git 富注入（GIT-ASYNC L21——双端异步化）：`collectGitContext` / `p
 
 - 派生索引库 = 单库 `~/.thincoder/session-index.db`（`node:sqlite`；与 `memory.db` 同区——`configDir` 单源 `thincoder-core/config-io.mjs`）；测试缝 `_setSessionIndexDirForTest()` / `_resetSessionIndexDirForTest()`（`_setLedgerDirForTest` 同款）。
 - **零权威**：主存（槽 JSON + sidecar + manifest）= 真源；索引只读主存（整读 / 偏移 `readSync`），**绝不写回** sessions 树；索引丢 / 坏 = 重生成；查询恒可回落主存路径（回落判据 = D-SE47 路由表）。
-- **零第三方依赖**：新档仅 `node:` + 仓内相对 import——三端 `package.json` 依赖面零新增（机检：diff 不含 dependencies 行）。
+- **零第三方依赖**：新档仅 `node:` + 仓内相对 import——三端包清单的依赖面零新增（机检：diff 不含 dependencies 行）。
 - **双端单源**：实现住核（`thincoder-core/session-index.mjs` / `session-index-build.mjs` / `session-index-query.mjs` / `session-index-pass.mjs` / `session-index-cmd.mjs`）——CLI 与 VSC 同取（VSC `thincoder-vscode/src/agent-tools/index.mjs` 转口面零改）。
 - **拆分产物①**：`thincoder-core/session-index-query.mjs`（面 = 查询与 FTS 检索）。
 - **拆分产物②**：`thincoder-core/session-index-pass.mjs`（面 = 有界趟 / 全量重建 / 清行 / 延迟拍）。
@@ -643,7 +643,7 @@ git 富注入（GIT-ASYNC L21——双端异步化）：`collectGitContext` / `p
 
 - **丢失 / 损坏检测 = 打开即验**：库文件缺失 ⇒ 建；打开 / DDL 失败（`SQLITE_NOTADB` 族 / `index_meta.v` 不符）⇒ 现场改名 `session-index.db.corrupt-<epochms>` 保留 + 新建空库（**开箱自愈**——下一次 ensure / 拍 / 命令自动重建；与 `memory.db`「丢 / 坏 = 重生成」同族）。
 - **命令面**（CLI `case "session"` 分发 `gc` / `index`）：`thincoder session index --rebuild`（清四表 → 全量建 → 摘要行）/ `--status`（会话 / 消息 / 工具调用行数 + 库字节 + 水位覆盖 + 上次变更时刻（`pass_at`——无源变零写、不推进））/ 无参 = 同 `--status`。
-- **VSC 对位**：命令 `thincoder.sessionIndexRebuild`（`package.json` contributes.commands + `extension.mjs` 处理体）+ 端壳档 `thincoder-vscode/src/extension/session-index-command.mjs`（`session-gc-command.mjs` 同族，消费核数据面）。
+- **VSC 对位**：命令 `thincoder.sessionIndexRebuild`（`thincoder-vscode/package.json` contributes.commands + `extension.mjs` 处理体）+ 端壳档 `thincoder-vscode/src/extension/session-index-command.mjs`（`session-gc-command.mjs` 同族，消费核数据面）。
 - **不做迁移**：索引可丢弃 ⇒ schema 变更 = `index_meta.v` 不符 ⇒ 重建（无版本迁移路径）。
 - **库体量**：与语料同阶（FTS 面另加）——`--status` 露字节；不做自动清理 / 淘汰（见「不做」）。
 
@@ -667,7 +667,7 @@ git 富注入（GIT-ASYNC L21——双端异步化）：`collectGitContext` / `p
 
 | 情形 | 判据 |
 |---|---|
-| 会话只有 `meta.json`（段数 0） | 按 `src=json` 走槽 JSON（空目录 ≠ 有内容——段数 0 不立 sidecar 支） |
+| 会话侧车只有元数据档（段数 0） | 按 `src=json` 走槽 JSON（空目录 ≠ 有内容——段数 0 不立 sidecar 支） |
 | 槽 JSON 结构非法 / 无 `history` 数组 | 该会话跳过并计入 `--status` 的未索引数；查询回落 JSON 路径（既有错误文案逐字） |
 | 活会话正被写入 | 懒保证读增量（append-only ⇒ 已落盘行为准；半行不建）；查询恒新鲜到「最后一条完整行」 |
 | 源文件已删（库内仍有行） | `ensure` 先清该会话行 ⇒ 走回落路径（`Error: session file not found`——既有文案） |
@@ -685,7 +685,7 @@ git 富注入（GIT-ASYNC L21——双端异步化）：`collectGitContext` / `p
 **验收回指（需求 §4.3 F-R19a / **F-R19c** / **F-R19d** · §4.4 F-S4）**：
 ① 超大会话（> 50,000 消息夹具）经索引可答（返回 JSON 数组，非 `TOO_LARGE`）∧ 未索引同档仍逐字护栏文案（回落面零回归）——F-R19c；② `path:"all"` 跨 cwd 两会话命中 + 行内回查锚——F-R19a / F-R19d；③ 增量 = 追加 1 条 ⇒ 新增恰 1 行（其余行 `rowid` 不变）；④ 幂等 = 二次 pass 零读零写；
 
-⑤ 重建 = 删库 / 坏库自愈（行数复原）+ `--rebuild` / `--status` 读数（F-R19d——零权威 · 可重建）；⑥ 零新依赖 + 主存零改（F-R19d / F-S4；`session-store.mjs` / `session.mjs` 零 diff + sessions 树文件「路径 / 字节 / mtime」三元组快照对拍不变）；
+⑤ 重建 = 删库 / 坏库自愈（行数复原）+ `--rebuild` / `--status` 读数（F-R19d——零权威 · 可重建）；⑥ 零新依赖 + 主存零改（F-R19d / F-S4；`session-store.mjs` / `thincoder-core/session.mjs` 零 diff + sessions 树文件「路径 / 字节 / mtime」三元组快照对拍不变）；
 
 ⑦ 三端门禁读数（各取本面可达值 · 口径单源 = `docs/core/design/TESTING.md` §10.3）：核 = `cd thincoder-core && npm run prepublishOnly` exit 0 ∧ `check-syntax: N file(s) OK`；
 
@@ -907,7 +907,7 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 **判据句 2（与 applySession 后读数同源同式 · 三事同判）**：读数 = `historyReading(mergeAdjacentAssistantEchoes(machineLine), mergedProvider, sampleRatio(data.estimateSample, mergedProvider))`——与 `applySession` 后的 `tokenRatioOf(agent)` 同一取比判定：两处同输入同公式同尺（第三参无缺省）：
 
 - **线选**：`contextHistory` 非空 ⇒ 取之；否则 `history` 经 `stripTruncatedToolArgs` 回退（v1 老档同径——与 `applySession` 机读线选择同判）。
-- **回声归并**：`mergeAdjacentAssistantEchoes`（`thincoder-core/context-echo.mjs`——经 `context.mjs` 转口可达；`applySession` 装线前同一步；干净输入同引用返回）。
+- **回声归并**：`mergeAdjacentAssistantEchoes`（`thincoder-core/context-echo.mjs`——经 `thincoder-core/context.mjs` 转口可达；`applySession` 装线前同一步；干净输入同引用返回）。
 - **渠道合并**：槽 `activeProvider` 在册**且持 key** ⇒ `{ ...entry, model }`——`model` 按统一模型面序取（槽 `data.activeModel` ∥ `defaultModel` 属本渠道 ⇒ 其模型段；单源 = `doc:PROVIDER.md:§6.22`）；未命中（不在册 ∥ 无 key）⇒ `fallback`（支 ②「静默保持现状」的装配口径 = `loadConfig().provider`）。
   **实现坐标**：`thincoder-core/session-lifecycle.mjs` 的 find 谓词 = `pr.name === data.activeProvider && hasKey(pr)`（key 门单源 `thincoder-core/model-ref.mjs` `hasKey`——与 `doc:PROVIDER.md:§6.22` 同判；本文「同源同式」句实读成立）。
 - **公式**：核 `historyPercent` / `historyReading`（`thincoder-core/token-window.mjs`——与 CLI 状态行 / VSC `ctxPercentForHistory` **同源**：三处全是这一实现点的投影，端侧零自算式）；第三参 = 估算校准比，**取自槽 `estimateSample`**（`sampleRatio(sample, provider)`——与 `restoreTokenSample` 同一套校验）
@@ -1054,7 +1054,7 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
     - **读面归一义务（字段级——沿上 `key` 读义务先例）**：他端记录读入 ⇒ 归一到本端归档块同形（产物 = 读面新对象——记录 ∥ 存储零写）：`key` 非空且无 `sub:` 前缀 ⇒ 补前缀；`label` ∥ `role` ∥ `id` 由 `key` 派生（头文载体 ∥ `dataset.subid` 门）∥ `frozen` 恒 `true`（记录 = 归档快照）∥ `status` 按上三条词面归一 ∥
       两时间戳互填（缺 `doneAt` ⇒ `startedAt` ∥ 缺 `startedAt` ⇒ `doneAt ?? 0`——冻结耗时算式）；其余字段原样携带。
     - **两形值域（互查面）**：digest `ask` 的 `from`（显示形域 = `role#id`）∥ `subagent.meta.key`（规范形域异形同轴）；读面义务 = **按键互查须前缀归一**（按 `from` 查块 ∥ 按 `key` 匹配提问者——现盘未见此类消费面，预防性在册）。
-- **写缝**（单点 = 核 `thincoder-core/context-push.mjs` **`pushRecord(agent, record)`**——经 `context.mjs` 转口可达；`pushReal` 双胞）：
+- **写缝**（单点 = 核 `thincoder-core/context-push.mjs` **`pushRecord(agent, record)`**——经 `thincoder-core/context.mjs` 转口可达；`pushReal` 双胞）：
   `ts` 打点 ∥ 记录存储追加（`_recordStore?.append`——§6.14）∥ 尾窗驱逐三面同 `pushReal`；**机器线零触** = `history` 以一次性弃数组承接 ⇒ 记录不入 `agent.history` / `contextHistory`（不喂模型）；追加失败不阻断（尽力面 N-S6 承接）。
   未绑定（`_recordStore` 缺）⇒ 人读线追加照常 ∥ 存储侧空转（零抛——模式 F 零回归）。
 - **产生面 = 各端进程内同点追加**（与用户可见帧/行**同点双动作**——`ts` 与帧/行同时序）：桌面 = 宿主发帧点三型（`cap` 帧点 = `thincoder-desktop/src/main/turn-face.mjs`）∥ 渲染面归档派生点经 `record:append` 通道（subagent 快照——含非活动键）；
@@ -1070,7 +1070,7 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
   桌面 = **写面薄壳在册**（`session-io.appendRecord` 现行 = 复用 `pushReal` 半提取载体形 `{ _fullHistory, _recordStore, _historyWindow, history: [] }`——消解路径 = 端壳下次触碰改调核 `pushRecord`，行为等价）。
 
   **失败面**：追加失败不阻断（尽力面——N-S6）；载体缺位（CLI = `state._agent` ∥ `ctx.agent` 双缺；VSC = `_liveLines` ∥ `_susp?.lines` 皆缺——无活跃会话）⇒ 零动作 + 日志一行（零抛）。
-- **读缝**（单点 = 核 `history-window.mjs` `historyWindow(history, before, pageSize, opts)`——`opts.records === true` **opt-in**）：`digest` ∥ `subagent` 两型记录**原样入窗**（`{ ...record, idx }`——字段零改名；占条目位、游标按条目推进；不入回合 ∥ 可见性谓词）；**默认关**（缺 `opts` ∥ 非 `true`）⇒ 输出与改前逐字等价（负控——存量读面零破）。
+- **读缝**（单点 = 核 `thincoder-core/history-window.mjs` `historyWindow(history, before, pageSize, opts)`——`opts.records === true` **opt-in**）：`digest` ∥ `subagent` 两型记录**原样入窗**（`{ ...record, idx }`——字段零改名；占条目位、游标按条目推进；不入回合 ∥ 可见性谓词）；**默认关**（缺 `opts` ∥ 非 `true`）⇒ 输出与改前逐字等价（负控——存量读面零破）。
 - **读面 delta 登记（记录 = 人读线条目——检索消费面按字段面天然分化）**：记录与消息同住人读线、同用 `idx` 空间；四消费面处置如下（构造面零改；§6.13 护栏 ∥ §6.14 读面契约 ∥ §6.19 索引建模三处既有句之射程以本条界定）：
   - `read_history` 输出行形（本会话 ∥ 回落 ∥ 索引三读径同判）：输出构造 / 字段 / limit 默认值与上限**零改**——匹配集按字段面分化：`role` ∥ `keyword` ∥ `tool` 三面**零命中**（记录无 `role` / `name` / `content`）；**无滤 ∥ 仅 since-until** ⇒ 记录随集，行形 = `{ts, role:null, content:""}`（空壳如实；limit 窗口按条目取端）。
   - 会话索引面行：记录**占行**（`idx` 只数可解析行 ⇒ 连续面保持；「一行 = 一条消息」句之射程 = 消息行）：`role` / `content` 空 ∥ 无声明 ∥ FTS 零词元（零命中）；`path=<文件>` ∥ `path:"all"` 索引面与 JSON 面**逐条等价保持**（记录混入后两路同判）。
@@ -1119,7 +1119,7 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 | D-SE25 | 本会话检索走存储；跨会话面 = **索引优先 + 主存回落**（由 D-SE47 / §6.19 接管该面） | 边界对齐（§6.19）：索引对 sidecar **只读**——零写回、不寄生记录存储语义（追加单点 / 绑定对账 / 降级面仍单点于 §6.14）⇒「外部 slot 的 sidecar 解释权」零扩张 |
 | D-SE26 | **模式 F（未绑定）零回归** | `thincoder chat` / 测试 / 未覆盖路径保留全量物化行为；窗口仅在绑定态或 depth>0 子代理启用 |
 | D-SE27 | VSC 运行中禁止切换 + **turnSlot 纵深防御**（保存 / 标题落回合捕获槽） | 运行中切槽 = 旧 turn 流串台 + 内容落错槽；turnSlot 使并发切换零窗口 |
-| D-SE28 | VSC `setSlot*` 写面 = **Parnas 拆分** + `loadSlotForWrite` 对新槽补默认记录 | 一次性写面档（session-slot-write.mjs）避免槽写逻辑混入既有档；新槽无记录 → 静默丢标志（AUTO-bug） |
+| D-SE28 | VSC `setSlot*` 写面 = **Parnas 拆分** + `loadSlotForWrite` 对新槽补默认记录 | 一次性写面档（`thincoder-vscode/src/extension/session-slot-write.mjs`）避免槽写逻辑混入既有档；新槽无记录 → 静默丢标志（AUTO-bug） |
 | D-SE29 | VSC 懒历史分页 = **帧容器 + 嵌套 tools[] + 全局 idx**（HISTORY_PAGE_SIZE 200） | 跨页消息永不重编号；工具卡随帧渲染防跨页双显；匹配 CLI 首屏 200 |
 | D-SE30 | VSC 标题触发 = **回合尾、忙态归位之前**；写形 = 标题值随整档 `saveLines` 落盘（单写；链单源 = §6.7） | 标题期 = busy 窗口（webview Stop 显 + 路由守卫入队列（容量 8）——`docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）；标题抛错不卡永久 busy；单写免「整档 save + 独立 `renameSlot`」两次落盘 |
 | D-SE31 | 跨端 `m.active` 翻动 = **他端合法事件、本进程零效果**（绑定 / 缓存 / 记录不因外部翻指针迁移；释放时**不收养幸存 active**——§6.15 裁定条 P1–P5） | 收养绕开 `usableSlot` / `slotOccupancy` 守卫（可能接手另一活进程的槽 ⇒ 双端双写互覆盖）；且与 D-SE2 粘性同病灶——本端绑定只在四个本端落点维护 |

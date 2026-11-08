@@ -77,16 +77,16 @@
   **处置面**：新清点 / 批量消费面（F-SL1 / F-SL2）按「**槽为准**」（核现径）落地——裁决主项与核侧一致；**两面对齐余项**（VSC 内存优先面收正）**缓办**（零触端 reconcile 面）——待决项维持未裁，到期条件照旧（该面下次触碰）。
 
   ② **过期清理回写时序**（VSC = 当场权威台账回写；本形态 = 惰性〔随下次 `persistEngTokens` / `saveSession` 携带〕）——**形态（写回时序）· 语义零差**（清理对象 = 过期项——任何门禁均不授权，早清晚清不改变授权结果）⇒ 非登记项。源码注释逐字登记（`thincoder-core/token-ttl.mjs` 的过期判定段注释）。
-- **依赖环（有意、安全）**：`token-ttl.mjs` 只 import 底层槽 I/O（`session-slots.mjs` + `session-guard.mjs`）；`session.mjs` 同时 import `token-ttl.mjs` → 静态环，与既有 session ↔ session-slots 环同构（函数声明实例化期已初始化，环安全）。
+- **依赖环（有意、安全）**：`token-ttl.mjs` 只 import 底层槽 I/O（`thincoder-core/session-slots.mjs` + `session-guard.mjs`）；`thincoder-core/session.mjs` 同时 import `token-ttl.mjs` → 静态环，与既有 session ↔ session-slots 环同构（函数声明实例化期已初始化，环安全）。
 
 ### 6.3 VSC 端结算接线
 
 > 来源 = VSC 产品档（旧档一字未改、留参照历史）。VSC 结构性基线不同：agent 对象**每 run 重建**（`thincoder-vscode/src/agent/setup.mjs`——非 CLI 常驻单对象）⇒ 结算面多出
-> 「死对象 / 快照 / 清零」三类 VSC 独有断点——D1–D6 全部落地后与 CLI **同机制语义**（settle 即落盘权威台账 / 门禁读权威 / 镜像退役）。生命周期语义 / TTL / 格式 = 核面单一权威（`docs/core/design/ENG-TOKEN-BINDING.md` §6.3——本档不重述）；原 VSC 镜像 `advisor.mjs` 等随 W12/W13 已删）。
+> 「死对象 / 快照 / 清零」三类 VSC 独有断点——D1–D6 全部落地后与 CLI **同机制语义**（settle 即落盘权威台账 / 门禁读权威 / 镜像退役）。生命周期语义 / TTL / 格式 = 核面单一权威（`docs/core/design/ENG-TOKEN-BINDING.md` §6.3——本档不重述）；原 VSC 镜像副本连同其兄弟档随 W12/W13 删除）。
 
 | 面 | VSC 落点（实核 · W16 接线面收正） |
 |---|---|
-| settle 当场同步落盘（D1——去 fire-and-forget） | **W12 已迁核**——现体 = 核 `thincoder-core/agent-tools/advisor-settle.mjs`（`settleAdvisorRun`：当场落盘 + 失败回滚）+ 核 `thincoder-core/token-ttl.mjs` 的 `persistEngTokens`；原端侧 `src/agent-tools/advisor-async.mjs` 的 settle 段已删 |
+| settle 当场同步落盘（D1——去 fire-and-forget） | **W12 已迁核**——现体 = 核 `thincoder-core/agent-tools/advisor-settle.mjs`（`settleAdvisorRun`：当场落盘 + 失败回滚）+ 核 `thincoder-core/token-ttl.mjs` 的 `persistEngTokens`；端侧 advisor-async 档的 settle 段已删 |
 | token 入槽 + Approved 后缀（echo 即裁决） | **W12 已迁核**——现体 = 核 `thincoder-core/agent-tools/design-token.mjs` 的 `buildApprovedSuffix` · `settleDesignReview`；原 `advisor-async.mjs` 的同两处已删 |
 | 门禁读权威（miss 回读槽——D4） | 现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs` 的 `resolveDesignSlot`（内存 miss 回读槽 reconcile + TTL 过滤保留；仅过期拒才删槽） |
 | 写侧保留槽 + union 合并（D2 + D6——忙时不清 settle 落盘项） | **W11 转口核**——端壳 `thincoder-vscode/src/extension/session-slot-write.mjs`（`engTokensMergeForSave` = 核 `mergeEngTokensForSave` re-export）→ 核 `thincoder-core/session-slot-write.mjs`（并集 + 同 key 新铸者胜） |
@@ -232,7 +232,7 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 | U-SL10 | 正常 | 无参 ∥ `designId` 过滤 ∥ `designId:''` | 三态逐槽行均含 `designToken=<全串>`（live ∥ expired 同显）；过滤态尾行注 `(filtered by designId)` |
 | U-SL11 | 边界 | 槽值不可解析（非 `uuid:epoch` 形） | 该行 `designToken=—`（`ageDays` / `expiresAt` 同 `—`）；其余槽照常出值 |
 | U-SL12 | 错误 | `designId` 不在并集视图 | 拒；错误串列在场 designId 全集（空账本 ⇒ `(none)`） |
-| U-SL13 | 边界 | `logEvent` + 测试缝：`head` 含 token 值形串 | 落盘内容在值形前截断——日志零 token 值（`log.mjs` `SECRET_FORM` 在案，零改） |
+| U-SL13 | 边界 | `logEvent` + 测试缝：`head` 含 token 值形串 | 落盘内容在值形前截断——日志零 token 值（`thincoder-core/log.mjs` `SECRET_FORM` 在案，零改） |
 | U-SL14 | 机检（删除面） | 实现落定后的两档全文 | 两档 `grep -c reveal` = **0**（`grep -c reveal thincoder-core/agent-tools/design-slots.mjs` ⇒ `0`；`grep -c reveal thincoder-core/agent-tools/subagent.mjs` ⇒ `0`）∧ 参数 schema 无 `reveal` 键（同上 = 0 即证）；仓库根跑 |
 
 **关键决策**：
@@ -289,9 +289,9 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 
 **写面如实登记**：
 
-- `mergeEngTokenBatchesForSave`（`session-slot-write.mjs`）与既有 `mergeEngTokensForSave`（同档）**同形**——纯函数；核侧 `thincoder-core/session.mjs` 为整档覆盖写，两函数在核内均无调用点。
+- `mergeEngTokenBatchesForSave`（`thincoder-core/session-slot-write.mjs`）与既有 `mergeEngTokensForSave`（同档）**同形**——纯函数；核侧 `thincoder-core/session.mjs` 为整档覆盖写，两函数在核内均无调用点。
 - 既有的 tokens 版只有端面一个消费者（`thincoder-vscode/src/extension/panel-session-write.mjs`）；旁列版端面尚未接线。
-- ⇒ A6（U-BG10）只验纯函数面：「核内保存会不会写丢归属」在本形态下不发生（`session.mjs` 那个展开点就是内存快照，旁列随 `engTokenSlotFields` 一并入档）。两个并集函数是端面 / 防御面预留，与本批要消的窗口无因果关系。
+- ⇒ A6（U-BG10）只验纯函数面：「核内保存会不会写丢归属」在本形态下不发生（`thincoder-core/session.mjs` 那个展开点就是内存快照，旁列随 `engTokenSlotFields` 一并入档）。两个并集函数是端面 / 防御面预留，与本批要消的窗口无因果关系。
 
 **射程划分（旁列 ≠「不为恢复便利扩展机制」）**：需求档 §5 末条已明写「批归属的旁列（F-D7）不属本条射程」（`docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md` §5 末条）——旁列承载**归属**（让写门判「本笔改动属于哪一批」），不承载**恢复**（不为把过期 ∥ 已消费凭证捞回来）。该裁定的正文单源在需求档，本节不复述（D2）。
 
@@ -339,7 +339,7 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 
 | 名字 | 三问答案 |
 |---|---|
-| `engDesignTokenBatches` | `existing: thincoder-core/token-ttl.mjs engTokenSlotFields · name: "engDesignTokens" · consumers: session.mjs saveSession ∥ token-ttl.mjs persistEngTokens` ⇒ 对齐（同族槽字段、同序列化点）；偏差 = 新增一个键（无既有键承载批次） |
+| `engDesignTokenBatches` | `existing: thincoder-core/token-ttl.mjs engTokenSlotFields · name: "engDesignTokens" · consumers: thincoder-core/session.mjs saveSession ∥ token-ttl.mjs persistEngTokens` ⇒ 对齐（同族槽字段、同序列化点）；偏差 = 新增一个键（无既有键承载批次） |
 | `_engDesignTokenBatches` | `existing: token-ttl.mjs agent._engDesignTokens（Map，同拍读写）· consumers: token-ttl.mjs ∥ design-slots.mjs unionSlots` ⇒ 对齐（同 Map 形态、同生命周期）；偏差 = 新增一张表 |
 | `readEngTokenBatchesFromSlot` | `existing but unusable: token-ttl.mjs readEngTokensFromSlot · failed on: 字段名硬编码（只返回 data.engDesignTokens，不读旁列）` ⇒ 偏差 = 同形兄弟函数，同一轻读形（无 TTL 过滤、不改盘） |
 | `consumeBatchDesignTokens` | `existing: thincoder-core/agent-tools/design-slots.mjs executeConsumeDesignAction · designIds 选择器已存在` ⇒ 复用（KD-BG6）；本名只剩「按批反查 designId 集」的薄壳 |
@@ -359,14 +359,14 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 | 编号 | 怎么做 | 怎么算通过（业务可观测） | 交互组件 | 进入口 | 回指 |
 |---|---|---|---|---|---|
 | 10-1 | 工程模式夹具里，让一次设计评审以 `batchDoc` 带上批档（签发一个槽），再调 `batch close` 收该批。**夹具须让该评审把 §3 写进批档**（轮次块 + 状态行 = `评审通过`）——否则 §3 落地门（单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.1）挡住签发，本行断言不可达 | close 回执含 `[design tokens]` 且点名消费 1 枚；随后同 designId 的 eng-coder spawn 被机械拒；`design-slots` 里该槽不在 | `batch-lifecycle.mjs` 收口通路 ↔ `design-slots.mjs` 消费核 ↔ 槽文件 I/O | 父侧经 `batch` 工具收口（工程模式） | F-D7 ∥ F-D8 |
-| 10-4 | 工程模式夹具里以 `batchDoc` 带批档跑一次设计评审（签发一个槽），再调 `subagent` `action:'design-slots'`（夹具同上：该评审须把 §3 写进批档） | 该槽行 `batch=<批档 basename>`（不是 `—`）；其余列零变 | `advisor.mjs` 实例绑定 ↔ `design-token.mjs` settle 旁列 ↔ `design-slots.mjs` 清点行 | 父侧调 `design-slots`（工程模式） | F-SL1 ∥ F-D7 |
+| 10-4 | 工程模式夹具里以 `batchDoc` 带批档跑一次设计评审（签发一个槽），再调 `subagent` `action:'design-slots'`（夹具同上：该评审须把 §3 写进批档） | 该槽行 `batch=<批档 basename>`（不是 `—`）；其余列零变 | `thincoder-core/agent-tools/advisor.mjs` 实例绑定 ↔ `design-token.mjs` settle 旁列 ↔ `design-slots.mjs` 清点行 | 父侧调 `design-slots`（工程模式） | F-SL1 ∥ F-D7 |
 | 10-2 | 同一夹具，把 `persistEngTokens` 注入为抛错后再 close | close 被拒且回执点名消费失败；§1 状态行字节不变；槽仍在盘（内存已回滚） | 同上 | 同上 | F-D8 |
 
 落点：两行编号与文字落 `test/RTM.md`、用例落 `test/integration/batch-close-token-consume.test.mjs`（实现轮由 eng-coder 落，见下表）。
 
 行数与坐标 = 本轮实读（行号口径 = 末行行号）；实施轮的行号随动——判据以内容机检为准（U-BG9 ∥ U-SL14 同口径），行号只用于定位。
 
-**跨 500 软线登记与拆分计划**：六档产品码里只有 `batch-lifecycle.mjs` 越线（556 → 612）；`token-ttl.mjs` 306 → 370、`design-slots.mjs` 245 → 305、`session-slot-write.mjs` 240 → 260、`design-token.mjs` 184 → 200、`session-slots-manifest.mjs` 247 → 264 均未触线；六档均未触 800 硬限。
+**跨 500 软线登记与拆分计划**：六档产品码里只有 `batch-lifecycle.mjs` 越线（556 → 612）；`token-ttl.mjs` 306 → 370、`design-slots.mjs` 245 → 305、`thincoder-core/session-slot-write.mjs` 240 → 260、`design-token.mjs` 184 → 200、`session-slots-manifest.mjs` 247 → 264 均未触线；六档均未触 800 硬限。
 
 `batch-lifecycle.mjs` 已越 500 软线：**拆分触发条件** = 本批之后任一改动触及该档时先拆，或任一时刻行数 ≥ 700（硬限 800 前留 100 行余量）。
 

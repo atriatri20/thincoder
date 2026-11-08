@@ -16,7 +16,7 @@
 
 | # | 需求 | 判定句（可机器验证） |
 |---|---|---|
-| **FR1** | 输入按钮立即恢复 | `onComplete` 在蒸馏**之前**发出、蒸馏不阻塞回合结束——发射点 VSC `thincoder-vscode/src/agent/run-stages.mjs`（`fireEndOfRunDistill`）由轮末调用且**不 await**（核侧同语义：`thincoder-core/agent.mjs`） |
+| **FR1** | 输入按钮立即恢复 | `onComplete` 在蒸馏**之前**发出、蒸馏不阻塞回合结束——发射点由轮末调用且**不 await**（端侧现体 = 蒸馏适配面 `thincoder-vscode/src/explore-distill.mjs`；核侧同语义：`thincoder-core/agent.mjs`） |
 | **FR2** | 蒸馏语义不变 | 蒸馏 promise 在**下一轮 push 用户输入之前**被 await——摘要必在下一轮 LLM 调用前就位（核 `thincoder-core/agent.mjs`；VSC `thincoder-vscode/src/extension/panel-chat.mjs`） |
 | **FR3** | 磁盘仍为压缩版 | 蒸馏**实际替换历史后**触发保存回调（哨兵 = `onDistilled`）——VSC `thincoder-vscode/src/extension/panel-callbacks.mjs`（含槽位守卫）；核侧 = 会话退出 flush（`thincoder-core/agent.mjs` 注释） |
 | **FR4** | 失败路径不变 | 蒸馏失败静默、原始探索结果保留、不影响回合结果与历史——失败 = 返回 null ⇒ 不替换、不触发保存；发射侧 `.catch(() => null)` 防 unhandled rejection（核 `.catch(() => {})`——`thincoder-core/agent.mjs`） |

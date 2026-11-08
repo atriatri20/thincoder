@@ -17,7 +17,7 @@
 
 **与 E2E 基建（`docs/desktop/design/E2E-TESTING.md`）的复用与边界**：
 
-- **复用**：同一枚驱动依赖 `playwright-core`（`thincoder-desktop/package.json` devDep——零 postinstall、不下载浏览器；依据 = `E2E-TESTING.md` KD-1）；运行期产物同根 `thincoder-desktop/test/artifacts/`（已由 `thincoder-desktop/.gitignore` 忽略）；单入口集成测试树零改（`thincoder-desktop/test/run.mjs` ∥ `files.mjs` 零触）。
+- **复用**：同一枚驱动依赖 `playwright-core`（`thincoder-desktop/package.json` devDep——零 postinstall、不下载浏览器；依据 = `E2E-TESTING.md` KD-1）；运行期产物同根 `thincoder-desktop/test/artifacts/`（已由 `thincoder-desktop/.gitignore` 忽略）；单入口集成测试树零改（`thincoder-desktop/test/run.mjs` ∥ `thincoder-desktop/test/files.mjs` 零触）。
 - **边界**：E2E = 真 Electron 全栈（真进程 ∥ 真 preload 白名单 ∥ 真 IPC ∥ `app://` scheme ∥ 真窗口截图）——**验收判据**；快筛 = 真浏览器 + 假宿主——**开发期回路**。快筛红 ⇒ 渲染面大概率真红（同一份文件被两端取用）；快筛绿 ⇒ 只证渲染面在 shim 契约内自洽，**IPC ∥ 主进程 ∥ 宿主面仍未验**。
 - **E2E-TESTING.md 面零触**：本体不改；其 §7 项 1「不做 web 快筛」边界句与 §8-1 上抛项的**状态随动 = §8 上抛 U1**（裁权归主 agent——「不扩已收口面」）。
 
@@ -31,9 +31,9 @@
 | KD | 决策 | 理由 |
 |---|---|---|
 | KD-W1 | 权威面 = 真 Electron（走查 + E2E）；快筛 = 开发期回路，不作验收判据 | 实读：宿主面（白名单 ∥ 真 IPC ∥ `app://`）不可脱 ⇒ 快筛替代 = 假绿面 |
-| KD-W2 | 实现落点 = `thincoder-desktop/tools/web-quickcheck/`（`serve.mjs` ∥ `host-shim.mjs` ∥ `run.mjs`） | 工具 ≠ 集成测试树：`test/` 树 = 单入口集成测试树域（`thincoder-desktop/test/run.mjs` 对未登记 `*.test.mjs` 反查即红）；本工具 = 零登记运行路径 |
+| KD-W2 | 实现落点 = `thincoder-desktop/tools/web-quickcheck/`（`serve.mjs` ∥ `host-shim.mjs` ∥ `thincoder-desktop/tools/web-quickcheck/run.mjs`） | 工具 ≠ 集成测试树：`test/` 树 = 单入口集成测试树域（`thincoder-desktop/test/run.mjs` 对未登记的集成测试档反查即红）；本工具 = 零登记运行路径 |
 | KD-W3 | 静态服务 = 自持 `node:http`（三根 + MIME 白名单 + 逃逸 ∥ 点段门 + `127.0.0.1` 绑定） | 语义对齐 `thincoder-desktop/src/main/protocol.mjs`（双根 ∥ MIME 白名单 ∥ 逃逸与点段门三条同判）但**不同源**——本机开发工具、loopback 唯一入口（安全门语义本职在 Electron 侧）。漂移控制 = §3.4 对齐表 + §6 WQ-2 行为用例 |
-| KD-W4 | host shim = **服务端静态注入**（`/` 的 HTML 把 shim 脚本行插在 `app.mjs` 前）+ 有限 stub 表（5 通道） | 同源注入 ⇒ Playwright 与手动浏览同一形；CSP `script-src 'self'` 放行同源脚本（`thincoder-desktop/renderer/index.html` 的 meta 行） |
+| KD-W4 | host shim = **服务端静态注入**（`/` 的 HTML 把 shim 脚本行插在 `thincoder-desktop/renderer/app.mjs` 前）+ 有限 stub 表（5 通道） | 同源注入 ⇒ Playwright 与手动浏览同一形；CSP `script-src 'self'` 放行同源脚本（`thincoder-desktop/renderer/index.html` 的 meta 行） |
 | KD-W5 | 浏览器 = **系统浏览器 channel**（缺省 `msedge`；`--browser=` 覆盖）；不引浏览器下载 | `playwright-core` 零 postinstall、不下载浏览器（`E2E-TESTING.md` KD-1 依据守恒）；本机 Edge ∥ Chrome 两在；通道选项在册（`playwright-core` 类型声明里的 `channel?: string`） |
 | KD-W6 | 冒烟测试 = 引导链（boot ∥ 骨架 ∥ 引导面 ∥ 会话条 ∥ 输入面板）+ **一真事件径**（会话下拉开合）+ CSS ∥ 布局读数 + 截图 + 干净面 | 断言锚全为已登记契约面（§3.3 逐锚实读）；深浅平衡 = 一条覆盖 boot 全链，不叠形状敏感 stub |
 | KD-W7 | 不入集成测试树、零登记、单入口工具调用（`npm run quickcheck`——scripts +1） | 快筛 ≠ 验收门（KD-W1）；集成测试单入口规则零破（`docs/core/design/TESTING.md` §10 F1/F2） |
@@ -42,7 +42,7 @@
 
 ### 3.1 静态服务（`serve.mjs`）
 
-- 绑定 = `127.0.0.1:<port>`（缺省端口 0 = 系统分配，打印实 URL）；可独立运行（打印 URL 待命）∥ 可被 `run.mjs` 导入（导出服务句柄 `{ url, close }`）。
+- 绑定 = `127.0.0.1:<port>`（缺省端口 0 = 系统分配，打印实 URL）；可独立运行（打印 URL 待命）∥ 可被 `thincoder-desktop/tools/web-quickcheck/run.mjs` 导入（导出服务句柄 `{ url, close }`）。
 - 路由（三根显式登记 · 前缀序——前两根语义对齐 `thincoder-desktop/src/main/protocol.mjs` 的双根供给）：
 
 | 前缀 | 供给根 | 档案 |
@@ -53,7 +53,7 @@
 
 - MIME 白名单 = `.html` ∥ `.mjs` ∥ `.css` ∥ `.svg` ∥ `.png` ∥ `.woff2`（表逐项同 `thincoder-desktop/src/main/protocol.mjs` 的白名单；表外 ⇒ 404）。
 - 门（fail-closed）：点段（`.` ∥ `..` 段）⇒ 404；逃逸（resolve 越根）⇒ 404（判据形对齐 `thincoder-desktop/src/main/protocol.mjs` 的逃逸门段）。
-- **注入**：`/` 与 `/index.html` 响应把 `thincoder-desktop/renderer/index.html` 的 `app.mjs` 脚本行替换为 **shim 脚本行 + 原行**（模块脚本按文档序执行 ⇒ shim 先于 `app.mjs` 求值）；**锚缺失 ⇒ 500 + stderr 明示**（fail-loud——不静默出未注入页）。
+- **注入**：`/` 与 `/index.html` 响应把 `thincoder-desktop/renderer/index.html` 的 `thincoder-desktop/renderer/app.mjs` 脚本行替换为 **shim 脚本行 + 原行**（模块脚本按文档序执行 ⇒ shim 先于 `thincoder-desktop/renderer/app.mjs` 求值）；**锚缺失 ⇒ 500 + stderr 明示**（fail-loud——不静默出未注入页）。
 
 ### 3.2 host shim 契约（`host-shim.mjs`）
 
@@ -88,7 +88,7 @@ stub 表（回执逐形 = 实读锚）：
 
 表外行为 = 拒 + 记录——**不猜、不造回执**。
 
-### 3.3 冒烟路径（`run.mjs` · 九段）
+### 3.3 冒烟路径（`thincoder-desktop/tools/web-quickcheck/run.mjs` · 九段）
 
 1. 起服务（端口 0 ⇒ 读实 URL）；浏览器 = `chromium.launch({ channel, headless: true })`——`channel` 缺省 `msedge`，`--browser=` 覆盖（`chrome` ∥ `msedge` 本机两在）；启动失败 ⇒ 明示退出（不静默回退）。
 2. 上下文 = `{ viewport: { width: 1440, height: 900 }, colorScheme: "light" }`（固定视口 ⇒ 布局读数 ∥ 截图稳定）；挂 `pageerror` ∥ `console.error` 收集器。
@@ -108,7 +108,7 @@ stub 表（回执逐形 = 实读锚）：
 
 1. **证据链**：验收 ∥ 走查 ∥ 交付依据一律出真 Electron（E2E ∥ 真机走查）；快筛读数只进开发回路——不作收口依据 ∥ 不作核销锚 ∥ 不作完成依据。
 2. **红绿含义**：快筛红 ⇒ 先当真因查（渲染面同源）；快筛绿 ⇒ 零验收效力（宿主面未验）。
-3. **漂移处置方向**：快筛与 Electron 行为不一致 ⇒ **修快筛**（shim ∥ 服务语义以产品与 `protocol.mjs` 为准）。
+3. **漂移处置方向**：快筛与 Electron 行为不一致 ⇒ **修快筛**（shim ∥ 服务语义以产品与 `thincoder-desktop/src/main/protocol.mjs` 为准）。
 4. **单源保持**：渲染面文件零分叉（两端取用同一份文件）；shim ∪ stub 表 = 唯一假面；扩面走本档修订（不在工具里就地长语义）。
 
 服务语义对齐表（权威 → 镜像）：
@@ -131,7 +131,7 @@ stub 表（回执逐形 = 实读锚）：
 | `thincoder-desktop/package.json` | **24**（内容行数口径——含 `quickcheck` script） | `devDependencies` 零改（`playwright-core` 在册复用；`dependencies` 零改） |
 | `docs/desktop/design/WEB-QUICKCHECK.md` | 本档 | 设计单源 |
 | `docs/desktop/design/PROJECT.md` | 1891 | §4.1 三行 + 值列 · §4.2 对应块 · §5 script 行（已落） |
-| `docs/desktop/design/SHELL.md` | 238 | §1 树一行 + `package.json` 行（已落） |
+| `docs/desktop/design/SHELL.md` | 238 | §1 树一行 + `thincoder-desktop/package.json` 行（已落） |
 | `docs/README.md` | 141 | 地图（desktop 设计 7 ∕ 部分 8 ∕ 总 34）（已落） |
 
 **零改动面**（逐面）：
@@ -159,8 +159,8 @@ stub 表（回执逐形 = 实读锚）：
 |---|---|---|---|---|
 | `WQ-1` boot 冒烟 | 正常 | 起服务 ⇒ 系统浏览器 ⇒ §3.3 九段全序 | 九段全绿 + PNG 落点 + `unstubbed = 0` + exit 0 | ✅ 做 |
 | `WQ-2` 边界 | 边界 | 表外通道调用 ∥ 逃逸路径 `..%2Fsrc%2Fmain%2Fprotocol.mjs` ∥ 表外扩展名 | 拒（reject + `unstubbed` 记名）∥ 404 ∥ 404 | ✅ 做（单元测试档用例） |
-| `WQ-3` 错误 | 错误 | 注入锚缺失（夹具改 `index.html` 脚本行） | 服务 500 + stderr 明示（fail-loud） | ✅ 做（单元测试档用例） |
-| `WQ-4` 错误 | 错误 | `--browser=<不存在通道名>` 直跑 `run.mjs` | 启动即败：非零退出 + stderr 含该通道名 | ✅ 做（单元测试档用例：非零退出 + stderr 含通道名） |
+| `WQ-3` 错误 | 错误 | 注入锚缺失（夹具改 `thincoder-desktop/renderer/index.html` 脚本行） | 服务 500 + stderr 明示（fail-loud） | ✅ 做（单元测试档用例） |
+| `WQ-4` 错误 | 错误 | `--browser=<不存在通道名>` 直跑 `thincoder-desktop/tools/web-quickcheck/run.mjs` | 启动即败：非零退出 + stderr 含该通道名 | ✅ 做（单元测试档用例：非零退出 + stderr 含通道名） |
 | 设置面开合 ∥ provider 真链 ∥ 事件面 ∥ 像素回归 | — | — | 不作（§7 边界——不静默缩水：登记于此） | ❌ 不做 |
 
 ## 7. 边界（不做）

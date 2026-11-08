@@ -59,7 +59,7 @@ git blame thincoder-vscode/package.json                # blame 跨 graft 无需�
 
 ### 2.5 项目台账单仓化
 
-仓根 `docs/TODO.md`（项目级唯一活档）+ `docs/TODO-archive.md`（两产品归档并入 + 单仓化归档节）；机检承接 = 台账机检默认清单改指仓根两档（`scripts/check-ledger.mjs`）。仓根 `README.md` 有「Project ledger」节登记。
+仓根 `docs/TODO.md`（项目级唯一活档）+ 归档节（两产品归档并入 + 单仓化归档）；机检承接 = 台账机检默认清单改指仓根两档（当时的机检脚本，现由内建台账工具与内建 `doc_check` 引擎接管）。仓根 `README.md` 有「Project ledger」节登记。
 
 ### 2.6 CI 承载
 
@@ -95,7 +95,7 @@ git blame thincoder-vscode/package.json                # blame 跨 graft 无需�
 - **执行根**：一律自合并仓根执行；
 - **调用**：两产品门禁链各自调用仓根统一脚本并**传入本产品域**（避免发布门禁相互牵连）；
 - **扫描域两态**：无域参 = **全域**（CI 全域调用与现行文档命令形态）；产品域态（门禁——显式传本产品域）；
-- **判据核**（各档 ≤300 行）：`doc-anchors.mjs` · `doc-anchors-v5.mjs` · `doc-anchors-core.mjs` · `doc-anchors-targets.mjs` · `check-doc-width.mjs` · `check-doc-width-core.mjs` · `check-ledger.mjs` · `check-ledger-core.mjs`；
+- **判据核**（各档 ≤300 行）：锚检与宽度检两族脚本（doc-anchors 一族四档 · check-doc-width 两档 · check-ledger 两档——共八档，均已退场，现由内建 `doc_check` 引擎与台账工具承接）；
 - **产品域外引用豁免**：带「对方产品侧」注记的引用不判 unknown-doc（单仓语义 = 产品域外引用豁免）。
 
 ## 6. 关键决策记录

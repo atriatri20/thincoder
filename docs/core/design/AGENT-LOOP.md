@@ -14,15 +14,15 @@
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
 | 主循环 | `thincoder-core/agent.mjs`（编排——`beginRun → runTurnLoop → finalizeAgentTurn`）+ `thincoder-core/agent/run-start.mjs` · `agent/turn-loop.mjs` · `agent/chat-call.mjs` | 同名（同路径对） |
-| 装配 / 提醒 / 收尾 | `thincoder-core/agent/assemble.mjs` · `thincoder-core/agent/setup.mjs` · `setup-reminders.mjs` · `run-stages.mjs` · `post-turn.mjs` · `dispatch.mjs` · `completion.mjs` · `record-results.mjs` · `relay-prefix.mjs` · `thincoder-core/agent/helpers.mjs` · `spawn-child.mjs` · `child-marks.mjs` | `src/agent/*`（拆档：`execute-tools` · `tool-gates` · `run-helpers` · `context-injections` · `agent-state`） |
+| 装配 / 提醒 / 收尾 | `thincoder-core/agent/assemble.mjs` · `thincoder-core/agent/setup.mjs` · `thincoder-core/agent/setup-reminders.mjs` · `run-stages.mjs` · `post-turn.mjs` · `dispatch.mjs` · `completion.mjs` · `record-results.mjs` · `relay-prefix.mjs` · `thincoder-core/agent/helpers.mjs` · `spawn-child.mjs` · `child-marks.mjs` | `src/agent/*`（拆档：`execute-tools` · `tool-gates` · `run-helpers` · `context-injections` · `agent-state`） |
 | 子代理 / 异步 | `src/agent-tools/{subagent-scheduler,subagent,subagent-actions,subagent-async,subagent-run,async-settle,subagent-spawn,escalate-async}.mjs` | 同名 / 拆分档 |
 | 挂起与唤醒 | `thincoder-cli/src/tui/suspension-drive.mjs` | `thincoder-vscode/src/extension/suspension.mjs` |
 | 权限 | `thincoder-cli/src/cli/permission.mjs` | `src/extension/permission-gate.mjs` · `agent-tools/child-permission.mjs` |
-| hooks | `src/hooks.mjs` | 核 `hooks.mjs`（静态引——Stop + 派发四事件已接线；见 §6.13 / §6.18） |
+| hooks | `thincoder-core/hooks.mjs` | 核 `hooks.mjs`（静态引——Stop + 派发四事件已接线；见 §6.13 / §6.18） |
 | 工作区约定（技能 / 规则 / 同伴 / 台账） | —（另档） | → `docs/core/design/WORKSPACE.md` |
-| 推理档位 / 模型引用 | `src/auto-think.mjs` · `model-ref.mjs` | `src/extension/reasoning-mode.mjs` · `src/config.mjs`（模型引用解析段） |
+| 推理档位 / 模型引用 | `thincoder-core/auto-think.mjs` · `model-ref.mjs` | `src/extension/reasoning-mode.mjs` · `thincoder-core/config.mjs`（模型引用解析段） |
 | 探索蒸馏 | `thincoder-core/explore-distill.mjs` | 同名（同路径对） |
-| token 台账 | `src/agent-tools/design-token.mjs` · `src/token-ttl.mjs` | `src/agent/agent-state.mjs` · `agent/tool-gates.mjs` |
+| token 台账 | `thincoder-core/agent-tools/design-token.mjs` · `thincoder-core/token-ttl.mjs` | `src/agent/agent-state.mjs` · VSC 侧门禁档（已并入核） |
 
 ## 2. 核模块裁决行
 
@@ -30,38 +30,38 @@
 
 | # | 相对路径 / 对位 | 面 | 相似度 · 逐字节 | 分类 | 目标 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|---|---|---|
-| 76 | `explore-distill.mjs` | 同路径 | 0.5247 · 异 | ② | 进核 | 融合：取一侧 + 截断取 VSC 的 UTF-16 安全切片〔现体 = 会话续写（单源构造 `buildCompressMessages`——核 `thincoder-core/explore-distill.mjs`）〕 | 分叉 ＝ 截断实现（CLI 裸 slice `thincoder-core/explore-distill.mjs` / VSC `safeSliceUTF16`）+ 就地改写 vs 返回新值；前提 ＝ 无 | — | S1（建核补齐） |
-| 78 | `agent.mjs` | 同路径 | 0.0883 · 异 | ③ | 进核 | 以 CLI 为准（主循环本体）+ VSC 的 onToken 三态门 / 帧回调 / 空响应内联重试并入 | 分叉 ＝ 分层方式 + **一处配置面缺口**（`agent.streamRules` 在 VSC 全仓零消费方——VSC `src/**` 0 命中；CLI `thincoder-core/agent/chat-call.mjs` 的 `streamRules` 传递段）+ 中断时入历史的工具结果不同（CLI 丢弃 + 占位 / VSC 保留真实结果 VSC `thincoder-vscode/src/agent.mjs`） | **①②** | S1（建核补齐） |
+| 76 | `thincoder-core/explore-distill.mjs` | 同路径 | 0.5247 · 异 | ② | 进核 | 融合：取一侧 + 截断取 VSC 的 UTF-16 安全切片〔现体 = 会话续写（单源构造 `buildCompressMessages`——核 `thincoder-core/explore-distill.mjs`）〕 | 分叉 ＝ 截断实现（CLI 裸 slice `thincoder-core/explore-distill.mjs` / VSC `safeSliceUTF16`）+ 就地改写 vs 返回新值；前提 ＝ 无 | — | S1（建核补齐） |
+| 78 | `thincoder-core/agent.mjs` | 同路径 | 0.0883 · 异 | ③ | 进核 | 以 CLI 为准（主循环本体）+ VSC 的 onToken 三态门 / 帧回调 / 空响应内联重试并入 | 分叉 ＝ 分层方式 + **一处配置面缺口**（`agent.streamRules` 在 VSC 全仓零消费方——VSC `src/**` 0 命中；CLI `thincoder-core/agent/chat-call.mjs` 的 `streamRules` 传递段）+ 中断时入历史的工具结果不同（CLI 丢弃 + 占位 / VSC 保留真实结果 VSC `thincoder-vscode/src/agent.mjs`） | **①②** | S1（建核补齐） |
 | 94 | `agent-tools/subagent-scheduler.mjs` | 同路径 | 0.1914 · 异 | ② | 进核 | 融合：取 CLI 队列实现 + VSC 的跨 `runAgent` 存活载体面按核内结构归一 | 分叉 ＝ 队列载体（CLI 独立数组 / VSC 池 Map 插入序）与 AUTO 判定取词；域上限、依赖语义、位置计算同规格 | — | S1（建核补齐） |
-| 98 | `agent-tools/async-settle.mjs` | 同路径 | 0.0819 · 异 | ② | 进核 | 融合：取 CLI（中止守卫 + 取消提醒落点 + `TURN_CAP_MARK` 常量）+ VSC 的 interrupt 豁免面按端注入 | 分叉 ＝ 载体 / 守卫口径 / 提醒落点 / 事件名（`advisor:done` vs `child:done`）+ VSC 把 turn cap 文案写成字面量（`src/agent-tools/async-settle.mjs` 的 turn cap 文案处）；前提（同职责）仍成立 | — | S1（建核补齐） |
-| 99 | `agent-tools/subagent.mjs` | 同路径 | 0.0447 · 异 | ③ | 进核 | 以 CLI 为准（含 `panel` 动作）+ VSC 无 panel 属**有意端差**（其载荷面在 VSC 不存在 ⇒ ④ 段以注入剔除） | 分叉 ＝ 动作枚举（CLI 八动作 / VSC 七动作、有意无 `panel` `src/agent-tools/subagent-spec.mjs`〔现体 = `thincoder-core/agent-tools/subagent.mjs`〕）；前提（`panel` 依赖 CLI TUI 展示面）仍成立 ⇒ ④ 段 | **①** | S1（建核补齐） |
+| 98 | `agent-tools/async-settle.mjs` | 同路径 | 0.0819 · 异 | ② | 进核 | 融合：取 CLI（中止守卫 + 取消提醒落点 + `TURN_CAP_MARK` 常量）+ VSC 的 interrupt 豁免面按端注入 | 分叉 ＝ 载体 / 守卫口径 / 提醒落点 / 事件名（`advisor:done` vs `child:done`）+ VSC 把 turn cap 文案写成字面量（`thincoder-core/agent-tools/async-settle.mjs` 的 turn cap 文案处）；前提（同职责）仍成立 | — | S1（建核补齐） |
+| 99 | `agent-tools/subagent.mjs` | 同路径 | 0.0447 · 异 | ③ | 进核 | 以 CLI 为准（含 `panel` 动作）+ VSC 无 panel 属**有意端差**（其载荷面在 VSC 不存在 ⇒ ④ 段以注入剔除） | 分叉 ＝ 动作枚举（CLI 八动作 / VSC 七动作、有意无 `panel`——VSC 侧该 spec 分档已并入核 `thincoder-core/agent-tools/subagent.mjs`）；前提（`panel` 依赖 CLI TUI 展示面）仍成立 ⇒ ④ 段 | **①** | S1（建核补齐） |
 | 100 | `agent-tools/subagent-actions.mjs` | 同路径 | 0.0407 · 异 | ② | 进核 | 融合：动作执行器按核内单一切分归位（含 `cancel` 归属） | 分叉 ＝ 纯文件分工（CLI 的 `cancel` 在 `subagent-async.mjs` / VSC 在 `subagent-actions.mjs`）+ VSC 的 advisor 评审取消路由；`status`/`observe`/`send` 语义同规格 | — | S1（建核补齐） |
 | 101 | `agent-tools/advisor-async.mjs` | 同路径 | 0.0378 · 异 | ② | 进核 | 融合：取 CLI 拆分（settle 记账 / token 组外提）+ VSC 的会话槽台账写入面归位 | 分叉 ＝ 拆分粒度与落盘路径（CLI 走 token 清理 + slot 权威台账模块 / VSC 直写 slot）；容量拒超 / 取消 / 陈旧判定同规格 | — | S1（建核补齐） |
 | 102 | `agent-tools/subagent-async.mjs` | 同路径 | 0.0204 · 异 | ② | 进核 | 融合：异步机械按核内单一切分归位（含 §18 审计门 / `collectSettledAsync` 落点） | 分叉 ＝ 切法不同（CLI 的 `cancel` 执行器在此 / VSC 在 `subagent-actions`；VSC 审计门与 collect 留此档）；前提（同职责）仍成立 | — | S1（建核补齐） |
-| 103 | `agent-tools/subagent-run.mjs` | 同路径 | 0.0135 · 异 | ② | 进核 | 融合：**同名不同物**——两端两份能力**分别**归位（CLI = 异步 spawn 执行器；VSC = 子代理 `runAgent` 闭环） | 分叉 ＝ 文件名复用而实体不同（CLI `executeAsyncSpawn` `thincoder-core/agent-tools/subagent-run.mjs` / VSC `runChild` `thincoder-vscode/src/agent-tools/subagent-run.mjs`）；核内分别落位（CLI 侧对应 VSC `subagent-async.mjs` 的 `spawnAsyncSubagent`） | — | S1（建核补齐） |
+| 103 | `agent-tools/subagent-run.mjs` | 同路径 | 0.0135 · 异 | ② | 进核 | 融合：**同名不同物**——两端两份能力**分别**归位（CLI = 异步 spawn 执行器；VSC = 子代理 `runAgent` 闭环） | 分叉 ＝ 文件名复用而实体不同（CLI `executeAsyncSpawn` `thincoder-core/agent-tools/subagent-run.mjs` / VSC `runChild`——同功能另一实现，VSC 侧副本已并入核）；核内分别落位（CLI 侧对应 VSC `subagent-async.mjs` 的 `spawnAsyncSubagent`） | — | S1（建核补齐） |
 | 111 | `thincoder-core/agent/run-stages.mjs` | 同路径 | 0.0709 · 异 | ③ | 进核 | 以 CLI 为准（Stop 钩子 + 收尾编排）+ VSC 的 guard 推回 / 蒸馏发射面按核内结构归位 | 分叉 ＝ 文件职责划分 + 两处行为（CLI 跑 Stop 钩子 `thincoder-core/agent/run-stages.mjs`、VSC 全仓零 `runHooks`（现由核 `runAgent` 自动获得，见本档 §6.13 / §6.18）；中止时 CLI 清空子代理池（同档 abort 分支）/ VSC 只清已死（**中止清池 → 只清已死 + 墓碑 + 一条整批提醒，见 `AGENT-LOOP-ASYNC-POOL.md` §6.20**） | **①** | S1（建核补齐） |
-| 112 | `thincoder-core/agent/setup.mjs` | 同路径 | 0.0532 · 异 | ③ | 进核 | 以 CLI 为准（装配顺序与注入块）+ 端差注入：VSC 编辑器上下文 / 按模型能力的 `read_image` / 每轮惰性 MCP 扩工具 | 分叉 ＝ VSC 拆 `context-injections.mjs` + 三处挂载条件不同（`read_image` 按多模态 `thincoder-core/tools/index.mjs`；`settings` 只挂 depth0（同档挂载条件）；召回限 depth0 且 `!autoTurn`）；前提（两端同装配面）成立 | **①** | S1（建核补齐） |
+| 112 | `thincoder-core/agent/setup.mjs` | 同路径 | 0.0532 · 异 | ③ | 进核 | 以 CLI 为准（装配顺序与注入块）+ 端差注入：VSC 编辑器上下文 / 按模型能力的 `read_image` / 每轮惰性 MCP 扩工具 | 分叉 ＝ VSC 侧曾拆出注入分档（已并入核）+ 三处挂载条件不同（`read_image` 按多模态 `thincoder-core/tools/index.mjs`；`settings` 只挂 depth0（同档挂载条件）；召回限 depth0 且 `!autoTurn`）；前提（两端同装配面）成立 | **①** | S1（建核补齐） |
 | 113 | `thincoder-core/agent/setup-reminders.mjs` | 同路径 | 0.0453 · 异 | ② | 进核 | 融合：取并集 + VSC 编辑器上下文 / 贴图指引按端注入（④ 段） | 分叉 ＝ VSC 独有两条注入（编辑器上下文 · 贴图指引 `thincoder-vscode/src/agent/setup-reminders.mjs`）+ 提示语同套；前提（贴图依赖宿主）仍成立 | — | S1（建核补齐） |
 
 ### 2.2 语义对位遍行（同职责但相对路径不同）
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
-| 149 | `src/agent/dispatch.mjs` ↔ `src/agent/execute-tools.mjs` + `src/agent/tool-gates.mjs` | ② | 融合：两阶段执行 + 前置门禁按核内结构归位 | 分叉 ＝ 拆分（VSC 拆 tools / gates —— `tool-gates.mjs` 头注自述「自 execute-tools.mjs verbatim 迁出——零语义」）⇒ 前提成立 | — | S1（建核补齐） |
-| 150 | `thincoder-core/agent/helpers.mjs` ↔ `src/agent/run-helpers.mjs` | ② | 融合：核内单一工具函数面 | 分叉 ＝ 档名（helpers / run-helpers）；VSC `context-injections.mjs` 头注自述「CLI 对位 `thincoder-core/agent/helpers.mjs`」（该段现已分居 `agent/helpers.mjs` 与 `agent/offload.mjs`，据符号名定位）⇒ 前提成立 | — | S1（建核补齐） |
-| 151 | `src/agent/post-turn.mjs` ↔ `thincoder-vscode/src/agent/setup-reminders.mjs` + `agent.mjs`（内联） | ② | 融合：回合后记账（计时器 / 提醒 / 停滞检测 / goal 追踪）按核内结构归位 | 分叉 ＝ 落点（VSC 住 setup-reminders / 主循环内联——`thincoder-vscode/src/agent.mjs` 自述「ported from CLI post-turn」）⇒ 前提成立 | — | S1（建核补齐） |
-| 152 | `src/agent/spawn-child.mjs` ↔ `src/agent-tools/subagent-run.mjs` | ② | 融合：子运行器按核内结构归位（含 `_capturedOutput` 额度面） | 分叉 ＝ 文件名复用而实体不同（VSC 该档 = `runChild` 闭环）；**承 §2.5 #103** | —（承 #103） | S1（建核补齐） |
-| 153 | `src/agent/completion.mjs` · `record-results.mjs` · `relay-prefix.mjs` ↔ 核内（VSC 内联） | ② | 融合：按核内结构归位（完成守卫 / 结果提交与记账 / 前缀续写切片） | 分叉 ＝ 拆档（VSC 内联于主循环）；守卫语义两端同（`completion.mjs` 三守卫 / 配对关闭 / UTF-16 安全切片）⇒ 前提成立 | — | S1（建核补齐） |
-| 154 | `src/agent-tools/design-token.mjs` + `src/token-ttl.mjs` ↔ `src/agent/agent-state.mjs` + `src/agent/tool-gates.mjs` | ② | 融合：token TTL / 会话槽台账按核内结构归位 | 分叉 ＝ 落点（CLI 独立档 / VSC 住 agent-state · tool-gates）；两端同 token 格式（`uuid:expiresAt`）与 fail-closed 口径 ⇒ 前提成立 | — | S1（建核补齐） |
-| 155 | `src/agent-tools/escalate-async.mjs` ↔ `src/agent-tools/subagent-escalate-async.mjs` + `subagent-escalate.mjs` | ② | 融合：异步飞刀引擎按核内结构归位 | 分叉 ＝ 档名与拆分（VSC 拆 sync / async 两档）；同池（「other」域）/ 同 ack 形态 ⇒ 前提成立（VSC 两档现体 = `thincoder-core/agent-tools/escalate-async.mjs` + `subagent-actions.mjs`） | — | S1（建核补齐） |
-| 156 | `src/agent-tools/recent-changes.mjs` ↔ `src/agent-tools/recent_changes.mjs`（核内单源） | ② | 融合：取一侧（工具名 `recent_changes` 两端同） | 分叉 ＝ 档名连字符 / 下划线 + `readonly` 标记；工具语义同（本轮已读）⇒ 前提成立 | — | S1（建核补齐） |
-| 157 | `src/agent-tools/subagent-spawn.mjs` ↔ `src/agent-tools/subagent-spawn-gate.mjs` | ② | 融合：spawn 门禁按核内结构归位 | 分叉 ＝ 档名与拆分；VSC `subagent-spawn-gate.mjs` 头注自述「CLI 同构面；CLI 执行器在 agent-tools/subagent-spawn.mjs」⇒ 前提成立 | — | S1（建核补齐） |
-| 158 | `src/agent-tools/advisor-settle.mjs` ↔ 核内（VSC 侧住 `advisor-async.mjs`） | ② | 融合：advisor settle 记账 / 变更日志 / 陈旧判定按核内结构归位 | 分叉 ＝ 拆档（VSC 未拆；**同路径对 #101 的另一半**）⇒ 随 #101 处置 | —（承 #101） | S1（建核补齐） |
+| 149 | `thincoder-core/agent/dispatch.mjs` ↔ VSC 侧拆出的执行 / 门禁两档（均已并入核） | ② | 融合：两阶段执行 + 前置门禁按核内结构归位 | 分叉 ＝ 拆分（VSC 曾把执行与门禁拆成两档，其门禁档头注自述自执行档逐字迁出、零语义）⇒ 前提成立 | — | S1（建核补齐） |
+| 150 | `thincoder-core/agent/helpers.mjs` ↔ `src/agent/run-helpers.mjs` | ② | 融合：核内单一工具函数面 | 分叉 ＝ 档名（helpers / run-helpers）；VSC 侧注入分档（已并入核）头注曾自述 CLI 对位 `thincoder-core/agent/helpers.mjs`（该段现已分居 `agent/helpers.mjs` 与 `agent/offload.mjs`，据符号名定位）⇒ 前提成立 | — | S1（建核补齐） |
+| 151 | `thincoder-core/agent/post-turn.mjs` ↔ `thincoder-vscode/src/agent/setup-reminders.mjs` + VSC 主循环档（内联） | ② | 融合：回合后记账（计时器 / 提醒 / 停滞检测 / goal 追踪）按核内结构归位 | 分叉 ＝ 落点（VSC 住 setup-reminders / 主循环内联——`thincoder-vscode/src/agent.mjs` 自述「ported from CLI post-turn」）⇒ 前提成立 | — | S1（建核补齐） |
+| 152 | `thincoder-core/agent/spawn-child.mjs` ↔ `thincoder-core/agent-tools/subagent-run.mjs` | ② | 融合：子运行器按核内结构归位（含 `_capturedOutput` 额度面） | 分叉 ＝ 文件名复用而实体不同（VSC 该档 = `runChild` 闭环）；**承 §2.5 #103** | —（承 #103） | S1（建核补齐） |
+| 153 | `thincoder-core/agent/completion.mjs` · `record-results.mjs` · `relay-prefix.mjs` ↔ 核内（VSC 内联） | ② | 融合：按核内结构归位（完成守卫 / 结果提交与记账 / 前缀续写切片） | 分叉 ＝ 拆档（VSC 内联于主循环）；守卫语义两端同（`completion.mjs` 三守卫 / 配对关闭 / UTF-16 安全切片）⇒ 前提成立 | — | S1（建核补齐） |
+| 154 | `thincoder-core/agent-tools/design-token.mjs` + `thincoder-core/token-ttl.mjs` ↔ `src/agent/agent-state.mjs` + VSC 侧门禁档（已并入核） | ② | 融合：token TTL / 会话槽台账按核内结构归位 | 分叉 ＝ 落点（CLI 独立档 / VSC 住 agent-state · tool-gates）；两端同 token 格式（`uuid:expiresAt`）与 fail-closed 口径 ⇒ 前提成立 | — | S1（建核补齐） |
+| 155 | `thincoder-core/agent-tools/escalate-async.mjs` ↔ VSC 侧曾拆的 sync / async 两档（已并入核） | ② | 融合：异步飞刀引擎按核内结构归位 | 分叉 ＝ 档名与拆分（VSC 拆 sync / async 两档）；同池（「other」域）/ 同 ack 形态 ⇒ 前提成立（VSC 两档现体 = `thincoder-core/agent-tools/escalate-async.mjs` + `subagent-actions.mjs`） | — | S1（建核补齐） |
+| 156 | `thincoder-core/agent-tools/recent-changes.mjs` ↔ 同职责另一档名形（核内单源） | ② | 融合：取一侧（工具名 `recent_changes` 两端同） | 分叉 ＝ 档名连字符 / 下划线 + `readonly` 标记；工具语义同（本轮已读）⇒ 前提成立 | — | S1（建核补齐） |
+| 157 | `thincoder-core/agent-tools/subagent-spawn.mjs` ↔ VSC 侧 spawn 门禁分档（已并入核） | ② | 融合：spawn 门禁按核内结构归位 | 分叉 ＝ 档名与拆分；VSC 侧该门禁档头注曾自述与 CLI 同构、执行器在 `thincoder-core/agent-tools/subagent-spawn.mjs` ⇒ 前提成立 | — | S1（建核补齐） |
+| 158 | `thincoder-core/agent-tools/advisor-settle.mjs` ↔ 核内（VSC 侧住 `advisor-async.mjs`） | ② | 融合：advisor settle 记账 / 变更日志 / 陈旧判定按核内结构归位 | 分叉 ＝ 拆档（VSC 未拆；**同路径对 #101 的另一半**）⇒ 随 #101 处置 | —（承 #101） | S1（建核补齐） |
 | 165 | `thincoder-cli/src/cli/permission.mjs` ↔ `src/extension/permission-gate.mjs` | ② | 融合：权限闸按核内结构归位 + 展示面按端注入 | 分叉 ＝ 目录与展示形态（TUI 卡 / webview 卡）；闸语义（每回合 `autoApprove` 快照 + 中途 live 标志）同 ⇒ 前提成立 | — | S1（建核补齐） |
-| 166 | （CLI 无独立档）↔ `src/agent-tools/child-permission.mjs` | ② | 融合：子代理权限通道按核内结构归位（父卡归属 + 定向 signal） | 分叉 ＝ 拆档（VSC 独有拆面）；**承 §2.5 #112（装配）/ §2.12.1 事件语义面** | —（承 #112） | S1（建核补齐） |
-| 169 | `src/hooks.mjs` ↔ 核内（VSC 侧接线） | ③ | 以 CLI 为准（Stop 等四事件）——VSC 接线后开始触发（外部副作用登记） | 分叉 ＝ **已消**（端侧接线：Stop + 派发面三调用点 + `hooks` 配置段 plumb；见本档 §6.13 / §6.18）；**承 §2.5 #111** | —（承 #111） | S1（建核补齐） |
-| 175 | `src/auto-think.mjs` ↔ `src/extension/reasoning-mode.mjs` | ② | 融合：核内自动难度分级 + 端侧推理档位面——**端侧自有 · 经 provider 字段数据面**（UI 下拉 / 档位 patch；核内无需位——裁定） | 分叉 ＝ 落点（CLI 自动难度分级 / VSC UI→provider 字段映射）；VSC DEFAULTS 已载 `autoThink`（`thincoder-vscode/src/config-io.mjs`）但**全仓无消费方** ⇒ 归一后接线（默认 `false` ⇒ 默认无行为变化） | **②**（丁组 D2） | S1（建核补齐） |
-| 176 | `src/model-ref.mjs` ↔ `src/config.mjs`（模型引用解析段）+ `specs.mjs` | ② | 融合：核内单一 `provider:model` 解析 | 分叉 ＝ 落点；解析口径（首冒号切分 / 双段非空 / 显式 `p:m` 一律放行）两端同源 ⇒ 前提成立 | — | S1（建核补齐） |
+| 166 | （CLI 无独立档）↔ `thincoder-core/agent-tools/child-permission.mjs` | ② | 融合：子代理权限通道按核内结构归位（父卡归属 + 定向 signal） | 分叉 ＝ 拆档（VSC 独有拆面）；**承 §2.5 #112（装配）/ §2.12.1 事件语义面** | —（承 #112） | S1（建核补齐） |
+| 169 | `thincoder-core/hooks.mjs` ↔ 核内（VSC 侧接线） | ③ | 以 CLI 为准（Stop 等四事件）——VSC 接线后开始触发（外部副作用登记） | 分叉 ＝ **已消**（端侧接线：Stop + 派发面三调用点 + `hooks` 配置段 plumb；见本档 §6.13 / §6.18）；**承 §2.5 #111** | —（承 #111） | S1（建核补齐） |
+| 175 | `thincoder-core/auto-think.mjs` ↔ `src/extension/reasoning-mode.mjs` | ② | 融合：核内自动难度分级 + 端侧推理档位面——**端侧自有 · 经 provider 字段数据面**（UI 下拉 / 档位 patch；核内无需位——裁定） | 分叉 ＝ 落点（CLI 自动难度分级 / VSC UI→provider 字段映射）；VSC DEFAULTS 已载 `autoThink`（`thincoder-core/config-io.mjs`）但**全仓无消费方** ⇒ 归一后接线（默认 `false` ⇒ 默认无行为变化） | **②**（丁组 D2） | S1（建核补齐） |
+| 176 | `thincoder-core/model-ref.mjs` ↔ `thincoder-core/config.mjs`（模型引用解析段）+ `specs.mjs` | ② | 融合：核内单一 `provider:model` 解析 | 分叉 ＝ 落点；解析口径（首冒号切分 / 双段非空 / 显式 `p:m` 一律放行）两端同源 ⇒ 前提成立 | — | S1（建核补齐） |
 | 184 | `thincoder-vscode/src/extension/suspension.mjs` ↔ `thincoder-cli/src/tui/suspension-drive.mjs` | ② | 融合：挂起 / 唤醒机制按核内结构归位（池载体按端注入） | 分叉 ＝ 目录（CLI 住 `tui/`）；VSC 头注自述「与 CLI 的结构差异（同语义移植）」⇒ 前提成立 ⇒ **已收编：核 `startSuspension` 单源、三端消费，端差只在装配面（见本档 §2.3）** | — | S1（建核补齐） |
 
 ### 2.3 #184 挂起 / 唤醒——核内形态（设计定案）
@@ -146,7 +146,7 @@
 
 1. 落核 + 核测试状态机用例（假 carrier / 假 runTurn / 假 hooks 纯 Node 驱动——不加载端模块，T-C4 / N3）：池空直退 · pending 触发消化轮 · 用户输入优先 · abort 清池不注入 · idle 残余注入 · 唤醒栓双路（settle / wake）。
 2. **载体双夹具**：CLI 形（`agent` 字段对象）与 VSC 形（`history` 字段对象）各跑同组断言——证明「池载体按端注入」成立（机制对载体零预设，除上表字段集）；**并各补一组「不预置载体字段」夹具**（池 / 队列 / pending / 墓碑 / 唤醒栓注册表 / 评审实例注册表 / 变更日志 / 上行队列全空缺——字段集 15 款全无预置）：机制须**自建容器**且同组断言与预置形同值（防「两端各自预置才碰巧能跑」——见上「载体字段集与回写义务」）。
-3. 核内零端名分支 / 零文案：`suspension.mjs` 无产品名、无状态行文案字面量（grep 零命中——契约 5 / 10）；零 TUI / 宿主依赖（N3——既有 `core-hygiene` 机检覆盖）。
+3. 核内零端名分支 / 零文案：`thincoder-core/agent/suspension.mjs` 无产品名、无状态行文案字面量（grep 零命中——契约 5 / 10）；零 TUI / 宿主依赖（N3——既有 `core-hygiene` 机检覆盖）。
 4. **依赖顺序（硬）**：本行与异步机械族的 VSC 侧融合（#98 / #101 / #154 等——清扫 / 计数读法 = 核内异步面单一实现的下游）同批或先后紧邻；先定异步面载体口径，再落本行（池队列表示随 #94 融合收敛——本行不重复裁决）。
 5. 行为面：核内零消费方阶段只测内核；S2 接线后按面内裁决口径验收（A10）；**S1 段两产品一行不改**（T-C12）。**驱动面单源**（收编后现态）——挂起面单源 = 核驱动（三端消费）：CLI ∕ VSC ∕ desktop 皆以 `startSuspension` 为唯一驱动，端差只在装配面（carrier ∕ hooks ∕ 输入缝）。
 
@@ -156,9 +156,9 @@
 
 | # | 条目（路径 / 对位） | 命中 | 左端行为（CLI） | 右端行为（VSC） | 建议归一形态 | 影响面 | 裁定状态 |
 |---|---|---|---|---|---|---|---|
-| A7 | `agent.mjs`（#78） | ①② | 读 `config.agent.streamRules` 传给模型（`thincoder-core/agent/chat-call.mjs`）；中断时丢弃工具结果并写占位（同档中断分支） | `streamRules` **全仓零消费方**（VSC `src/**` 0 命中，本端 PARITY 批亦登记为缺口）；中断时保留真实工具结果（`thincoder-vscode/src/agent.mjs`） | 以 CLI 为准（主循环本体）+ VSC 的 onToken 三态门 / 帧回调 / 空响应重试并入 | ① CLI 能配的流规则在 VSC 不生效（现状）⇒ 归一后生效；② 中断时模型所见的历史内容不同 | **已裁 · 按建议** |
-| A15 | `agent-tools/subagent.mjs`（#99） | ① | 八动作（含 `panel`） | 七动作——**有意无 `panel`**（`subagent-spec.mjs`，其载荷面在 VSC 不存在） | 以 CLI 为准（保留 `panel`）+ VSC 端按端差**不注入**该动作 | ① VSC 的 `subagent` 动作集不变（`panel` 仍无）；CLI 不变——本行只登记端差合法性与注入位 | **已裁 · 按建议** |
-| A22 | `thincoder-core/agent/setup.mjs`（#112） | ① | 每轮装配全内联；`read_image` **恒在**注册表；子代理继承含 `settings` 的工具集；文档 / 记忆召回只受 `!resume` 约束（未按 depth 门控） | 拆 `context-injections.mjs`；`read_image` 仅当模型多模态（该档 `read_image` 挂载条件）；`settings` 只挂 depth0（该档挂载条件）；召回限 depth0 且 `!autoTurn`；每轮惰性把 MCP 扩成原生工具 | 以 CLI 为准（装配顺序与注入块）+ 端差注入（编辑器上下文 · 按模型能力的 `read_image` · MCP 扩工具时机） | ① VSC 非多模态模型仍没有 `read_image`（端能力，保留）；② 子代理的 `settings` 工具与记忆召回门控归属（CLI 子代理上下文更肥 vs VSC 更瘦） | **已裁 · 按建议** |
+| A7 | `thincoder-core/agent.mjs`（#78） | ①② | 读 `config.agent.streamRules` 传给模型（`thincoder-core/agent/chat-call.mjs`）；中断时丢弃工具结果并写占位（同档中断分支） | `streamRules` **全仓零消费方**（VSC `src/**` 0 命中，本端 PARITY 批亦登记为缺口）；中断时保留真实工具结果（`thincoder-vscode/src/agent.mjs`） | 以 CLI 为准（主循环本体）+ VSC 的 onToken 三态门 / 帧回调 / 空响应重试并入 | ① CLI 能配的流规则在 VSC 不生效（现状）⇒ 归一后生效；② 中断时模型所见的历史内容不同 | **已裁 · 按建议** |
+| A15 | `agent-tools/subagent.mjs`（#99） | ① | 八动作（含 `panel`） | 七动作——**有意无 `panel`**（VSC 侧该 spec 分档已并入核，其载荷面在 VSC 不存在） | 以 CLI 为准（保留 `panel`）+ VSC 端按端差**不注入**该动作 | ① VSC 的 `subagent` 动作集不变（`panel` 仍无）；CLI 不变——本行只登记端差合法性与注入位 | **已裁 · 按建议** |
+| A22 | `thincoder-core/agent/setup.mjs`（#112） | ① | 每轮装配全内联；`read_image` **恒在**注册表；子代理继承含 `settings` 的工具集；文档 / 记忆召回只受 `!resume` 约束（未按 depth 门控） | 拆出注入分档（已并入核）；`read_image` 仅当模型多模态（该档 `read_image` 挂载条件）；`settings` 只挂 depth0（该档挂载条件）；召回限 depth0 且 `!autoTurn`；每轮惰性把 MCP 扩成原生工具 | 以 CLI 为准（装配顺序与注入块）+ 端差注入（编辑器上下文 · 按模型能力的 `read_image` · MCP 扩工具时机） | ① VSC 非多模态模型仍没有 `read_image`（端能力，保留）；② 子代理的 `settings` 工具与记忆召回门控归属（CLI 子代理上下文更肥 vs VSC 更瘦） | **已裁 · 按建议** |
 | A23 | `thincoder-core/agent/run-stages.mjs`（#111） | ① | 收尾跑 **Stop 钩子**（核 `run-stages.mjs` 收尾段）；中止时**直接清空**异步子代理池与评审池（同档 abort 分支——**中止清池 → 只清已死 + 墓碑 + 一条整批提醒，见 `AGENT-LOOP-ASYNC-POOL.md` §6.20**） | **全仓零 `runHooks`**（无 Stop 钩子）——**已接线**（端侧 Stop 钩子 + 派发面三调用点；见本档 §6.13 / §6.18）；中止时只清**已死**条目（端侧中止分支） | 以 CLI 为准（Stop 钩子 + 收尾编排）+ VSC 的 guard 推回 / 蒸馏发射面按核内结构归位 | ① 归一后 VSC 侧是否开始触发 Stop 钩子（外部副作用）；② 按中断时后台子代理是「被清」还是「被留」⇒ 结果可见差异 | **已裁 · 按建议** |
 
 **未并入项登记（A7 / #78）**：VSC 的「仅 reasoning ⇒ 视为 content」分支（无 tool calls ∧ `content` 空 ∧ `reasoning` 非空 ⇒ 以 reasoning 填 content——`thincoder-vscode/src/agent.mjs` 内联段）**未并入核内**（核内对应面 = `thincoder-core/agent/completion.mjs` 的空响应重试径——无该分支）。
@@ -169,7 +169,7 @@
 
 | # | 条目（路径 / 对位） | 命中 | 左端行为（CLI） | 右端行为（VSC） | 建议归一形态 | 影响面 | 裁定状态 |
 |---|---|---|---|---|---|---|---|
-| D2 | `src/auto-think.mjs` ↔ `src/extension/reasoning-mode.mjs`（§2.5 #175） | ② | 自动难度分级 → 推理档位（`config.agent.autoThink` 为开关，CLI 有消费方） | VSC DEFAULTS **已载** `autoThink`（`thincoder-vscode/src/config-io.mjs`）但**全仓零消费方** ⇒ 该键在 VSC 是**死键** | **建议（方向唯一）**：核内实现 + VSC 接线（死键恢复语义）；默认 `false` ⇒ **默认无行为变化**；面板推理档位面**端侧自有 · 经 provider 字段数据面**（核内无需位——裁定） | ① 在 VSC 显式设过 `autoThink: true` 的用户：该键从「无效」变「生效」（行为变化，但 = 恢复 CLI parity 的既定语义）；② 默认配置下无变化 | **已裁 · 按建议** |
+| D2 | `thincoder-core/auto-think.mjs` ↔ `src/extension/reasoning-mode.mjs`（§2.5 #175） | ② | 自动难度分级 → 推理档位（`config.agent.autoThink` 为开关，CLI 有消费方） | VSC DEFAULTS **已载** `autoThink`（`thincoder-core/config-io.mjs`）但**全仓零消费方** ⇒ 该键在 VSC 是**死键** | **建议（方向唯一）**：核内实现 + VSC 接线（死键恢复语义）；默认 `false` ⇒ **默认无行为变化**；面板推理档位面**端侧自有 · 经 provider 字段数据面**（核内无需位——裁定） | ① 在 VSC 显式设过 `autoThink: true` 的用户：该键从「无效」变「生效」（行为变化，但 = 恢复 CLI parity 的既定语义）；② 默认配置下无变化 | **已裁 · 按建议** |
 
 ## 4. 对外契约影响
 
@@ -179,7 +179,7 @@
 
 > **本节内容**：(a) 机制 / 契约的实质描述 · (b) 实现细节与坐标 · (c) 关键决策依据（§7）。
 > **坐标口径**：机制实现面住 `thincoder-core/**`，CLI 树留壳体面 `thincoder-cli/src/**`；符号名与档路径为契约面。
-> 核主循环面分档（`agent/run-start.mjs` ∕ `agent/turn-loop.mjs` ∕ `agent/chat-call.mjs`；`agent.mjs` = 105 行编排面）。
+> 核主循环面分档（`agent/run-start.mjs` ∕ `agent/turn-loop.mjs` ∕ `agent/chat-call.mjs`；`thincoder-core/agent.mjs` = 105 行编排面）。
 > **§6.7–§6.12 已拆出** → `docs/core/design/AGENT-LOOP-SUBAGENT.md` · `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` · `docs/core/design/AGENT-LOOP-UPSTREAM.md`（节号沿用）；本档续 §6.1–§6.6 + §6.13–§6.17。
 
 ### 6.1 模块地图（职责面）
@@ -187,7 +187,7 @@
 | 模块 | 职责 |
 |---|---|
 | `thincoder-core/agent.mjs` | `runAgent` 编排面：`beginRun` → 回合环 → `finalizeAgentTurn`；状态工厂（`createAgent`）+ re-export 面（105 行） |
-| `thincoder-core/agent/run-start.mjs` | 起跑前段（`beginRun`）：蒸馏等待 ∕ pendingAsync 注入 ∕ `_inAutoTurn` ∕ prepareRun 调用 ∕ per-run 复位块 ∕ auto-turn 域文本（自 `agent.mjs` 拆出） |
+| `thincoder-core/agent/run-start.mjs` | 起跑前段（`beginRun`）：蒸馏等待 ∕ pendingAsync 注入 ∕ `_inAutoTurn` ∕ prepareRun 调用 ∕ per-run 复位块 ∕ auto-turn 域文本（自 `thincoder-core/agent.mjs` 拆出） |
 | `thincoder-core/agent/turn-loop.mjs` | 回合环（`runTurnLoop`）：循环头注入族 ∕ 压缩检查点 ∕ `_turnSeq` 帧 ∕ 工具批调度 ∕ 零落盘结账 + `ContinueError` |
 | `thincoder-core/agent/chat-call.mjs` | 单回合模型调用（`callModelTurn`）+ `streamOutputAllowed` 流式门 |
 | `thincoder-core/agent/assemble.mjs` | 会话装配序核单源：`assembleAgent`（配置 → 代理注入 → 记忆 / embedder → 文件规则 → 记忆层（项目 / 团队）→ 工具 → `toolsFinalize` 缝 → 代理 + 三字段）；`DEFAULT_DEPS`（八缺省缝）+ `teamConfig` / `gitAuthor` / `validateProvider`（端壳 adapter 消费：cwd / `_slot` / MCP / 校验调用） |
@@ -203,7 +203,7 @@
 | `thincoder-core/agent/run-stages.mjs` | 回合阶段骨架 / abort 分支 / pending 单容器过滤 / `finalizeAgentTurn`（收尾单点） |
 | `thincoder-core/agent/suspension.mjs` | 挂起 / 唤醒状态机（核内形态与载体契约见 §2.3） |
 | `thincoder-core/auto-think.mjs` | 任务难度分类 → 自动设置 reasoning effort（opt-in）；分类调用先过**「可关思考」守卫**（不可关 ⇒ 跳过 + 一次可见警示）；失败一次可见——D-AL26 |
-| `thincoder-core/agent-tools/subagent*.mjs` | subagent 工具：spawn / status / observe / send / escalate / cancel / panel 动作面、async 池、调度器、审计任务书；`subagent-panel.mjs` = 面板执行器 |
+| `thincoder-core/agent-tools/subagent*.mjs` | subagent 工具：spawn / status / observe / send / escalate / cancel / panel 动作面、async 池、调度器、审计任务书；`thincoder-core/agent-tools/subagent-panel.mjs` = 面板执行器 |
 | `thincoder-core/agent-tools/async-settle.mjs` | async 结果容器统一共享 helper：`settleAsyncEntry` / `getAsyncPool` / `parkAsyncPending` / `parentAborted` 守卫 / `buildChildSignal` |
 | `thincoder-core/agent-tools/subagent-scheduler.mjs` | 任务调度器：`normalizeFileList` / `filesOverlap` / `depInfo` / `queueRunnable` / `assertNoDepCycle` / 停滞检测 |
 | `thincoder-core/agent-tools/advisor*.mjs` | advisor 工具（async 面见 `AGENT-LOOP-ASYNC-POOL.md` §6.10） |
@@ -305,7 +305,7 @@ VSC 端壳自有 depth-0 循环同址（`thincoder-vscode/src/agent.mjs` 邻位�
 （真机实证 · **活体形状（请求尾 = tool）**：三形态全 **200**）；「缺字段 **200** · 服务端不再回推理」= **设计轮形状（尾 =
  user）**读数）。
 
-`optional`（glm 族）/ 未声明族恒不带（行为不变）。显示面零改（`history-window.mjs` `reasoningOf` 对空串返回 null——不出幽灵帧）。
+`optional`（glm 族）/ 未声明族恒不带（行为不变）。显示面零改（`thincoder-core/history-window.mjs` `reasoningOf` 对空串返回 null——不出幽灵帧）。
 
 **第三站点**：VSC 端壳自有 depth-0
  循环同经本单点（`thincoder-vscode/src/agent.mjs`——端 `thincoder-vscode/src/specs.mjs` 取值 × 单点构造；静态引合法（W8 契约②）= 结论）；端侧接线事实见 §6.18 表。
@@ -324,11 +324,11 @@ PreToolUse hooks → 阻断
 
 **Phase 2 执行（顺序保序）**：只读工具 + `parallel` 标记工具可并行（Promise.all 一批）；非只读工具**打断批量串行**（先 flush 再单独执行）——保证顺序语义且允许只读并行。执行前对副作用工具做 `snapshotForUndo`（`/undo` 回滚基线）。
 
-结果超限落盘 `~/.thincoder/tool-results/`（阈值权威源 = 工具输出上限系 + `helpers.mjs` 的 `TOOL_RESULT_OFFLOAD_LIMIT`——双端预览）；错误写入 `~/.thincoder/tool-errors/`（模型只见 message + 关键参数，不见 stack trace）；PostToolUse 钩子 fire-and-forget。
+结果超限落盘 `~/.thincoder/tool-results/`（阈值权威源 = 工具输出上限系 + `thincoder-core/agent/helpers.mjs` 的 `TOOL_RESULT_OFFLOAD_LIMIT`——双端预览）；错误写入 `~/.thincoder/tool-errors/`（模型只见 message + 关键参数，不见 stack trace）；PostToolUse 钩子 fire-and-forget。
 
 **console 回显**：dispatch 拦截工具 `execute` 期间的 `console.log/error`，收集后附结果回显模型（`[console during <tool>]` 段）；异常路径同样回显；嵌套 dispatch（子代理）各自拦截 / 恢复，捕获分离；`bash` 走子进程 `onOutput` 不受影响。
 
-**console 回显预算**：capturedConsole 采集与拼接**双上界**——① **采集端 cap** = `CONSOLE_CAPTURE_LIMIT = 64 * 1024`（65536 字符——与 `helpers.mjs` `TOOL_RESULT_OFFLOAD_LIMIT` 同值；落点 = `dispatch-run.mjs` 采集点同档）：拦截为有界收集——累计达限 ⇒ 停止收集（超出丢弃——防「console 洪水」）；
+**console 回显预算**：capturedConsole 采集与拼接**双上界**——① **采集端 cap** = `CONSOLE_CAPTURE_LIMIT = 64 * 1024`（65536 字符——与 `thincoder-core/agent/helpers.mjs` `TOOL_RESULT_OFFLOAD_LIMIT` 同值；落点 = `dispatch-run.mjs` 采集点同档）：拦截为有界收集——累计达限 ⇒ 停止收集（超出丢弃——防「console 洪水」）；
 
 发生丢弃 ⇒ 回显段尾**恰一行**标记（逐字 = `[console truncated at 65536 chars]`）；
 
@@ -551,7 +551,7 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 | 挂起回合 digest | 核驱动装配（状态机本体 = 核 `startSuspension`——端壳 = carrier ∕ hooks ∕ 输入缝装配面）+ 面板交互层：`panel._suspWake` 绑定核句柄 `handle.wake` · `_turnState==="running"` busy 队列受理（容量 8——吞面收敛四；满队（第 9 条）拒 + 提示 + 文本保留——`docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）· settle 驱动 digest 轮 · 中止残余消息按普通回合兜底执行（零丢失） | 机制核内形态 = §2.3（#184 注入面表）；消化面 = `AGENT-LOOP-ASYNC-POOL.md` §6.8；呈现 = `docs/vsc/design/WEBVIEW.md` §5 · `docs/vsc/design/WEBVIEW-PROTOCOL.md` §5（digest 轮可见面） |
 | eng-coder 交付协议 | 本端闭环：async 缺省 · explore 受限审计（BLOCKING spawn-only + 审计预算 ≤6 · 任务书三要素机械追加）· token 门（`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `resolveDesignSlot`——designId 槽解析 + TTL fail-closed 槽回读）· 变更记账 `mergeChildMutations`（取消路径不合并——`thincoder-core/agent-tools/subagent-async.mjs`） | token 门机制权威 = `docs/core/design/ENGINEERING-MODE-V2.md`（E6 评审凭证）；受限通道描述面 = `AGENT-LOOP-SUBAGENT.md` §6.7.6 |
 | 子代理活动显示 | webview 活动区：活动区 → `awaitingDigest`（等待消化） → 消化归档落流（`#subagent-activity`）· 终态即时归档 | 呈现权威 = `docs/vsc/design/WEBVIEW.md` §5.1 / §5.2（生命周期 / 块头形态）——本档不复制 |
-| child permission gate | 子代理（depth>0）写操作走审批门：`makeChildPermission`（`thincoder-core/agent-tools/child-permission.mjs`——announce → ask → 清态）+ `childOwnerLabel`（同档——`escalate <model> #<id>` / `<role>#<id>`）· autoApprove 值源 = 父对象字段 `parent.autoApprove`（核引擎 child 权限面三读点：`thincoder-core/agent-tools/subagent-spawn.mjs` · `escalate-async.mjs` · `subagent-actions.mjs`；VSC 侧字段接线 = 本表「自持工具登记面」行）· 卡释放三路（child abort〔signal = 条目级 controller——端侧供给接回，见下行〕/ Stop / approve-all 连带 `permissionWithdrawn`）· 块头 `⏸` + 态词 `等待审批`（`webview/activity-view.js`） · **端侧供给**：手动档子代询问 = `callbacks.onPermissionRequest`（`thincoder-vscode/src/extension/panel-callbacks.mjs` 供给——面板权限卡 + owner 归属 + `⏸` 态）经 `execute-tools.mjs` toolCtx 透传（核同范式 = `thincoder-core/agent/dispatch.mjs`）；缺失 ⇒ 静默拒绝不出卡（`thincoder-core/agent-tools/subagent-spawn.mjs`）· ① signal 接回——供给按归属键 id 读池条目（`_asyncSubagents.get(String(id))`）⇒ `signal: entry.controller.signal`——路径①（child abort）VSC 转实态（⏹ / `action:'cancel'` / 会话链中止一律 deny 释放 + `permissionWithdrawn`；迟到弹卡 sig 已 abort ⇒ 即释放）；② 询问名携键 + model 供给——飞刀 async 名 = `escalate#<id>/<tool>`、sync 同构包装、`continue` = args.agent 机器键（三生产者同规）⇒ owner 归属 + `escalate <model> #<id>`（model = 池条目值）· tool-ctx `getAuto` / `sessionSignal` 透传 = 历史残留、零消费面（F2 注释收正——核门读父对象 `autoApprove` 字段；会话 signal 经 `agent._sessionSignal` 达核） | §2.1 #166 裁决行 · 权限调度面 §6.4 · 呈现 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.2 |
+| child permission gate | 子代理（depth>0）写操作走审批门：`makeChildPermission`（`thincoder-core/agent-tools/child-permission.mjs`——announce → ask → 清态）+ `childOwnerLabel`（同档——`escalate <model> #<id>` / `<role>#<id>`）· autoApprove 值源 = 父对象字段 `parent.autoApprove`（核引擎 child 权限面三读点：`thincoder-core/agent-tools/subagent-spawn.mjs` · `escalate-async.mjs` · `subagent-actions.mjs`；VSC 侧字段接线 = 本表「自持工具登记面」行）· 卡释放三路（child abort〔signal = 条目级 controller——端侧供给接回，见下行〕/ Stop / approve-all 连带 `permissionWithdrawn`）· 块头 `⏸` + 态词 `等待审批`（`webview/activity-view.js`） · **端侧供给**：手动档子代询问 = `callbacks.onPermissionRequest`（`thincoder-vscode/src/extension/panel-callbacks.mjs` 供给——面板权限卡 + owner 归属 + `⏸` 态）经端侧执行档（已并入核）的 toolCtx 透传（核同范式 = `thincoder-core/agent/dispatch.mjs`）；缺失 ⇒ 静默拒绝不出卡（`thincoder-core/agent-tools/subagent-spawn.mjs`）· ① signal 接回——供给按归属键 id 读池条目（`_asyncSubagents.get(String(id))`）⇒ `signal: entry.controller.signal`——路径①（child abort）VSC 转实态（⏹ / `action:'cancel'` / 会话链中止一律 deny 释放 + `permissionWithdrawn`；迟到弹卡 sig 已 abort ⇒ 即释放）；② 询问名携键 + model 供给——飞刀 async 名 = `escalate#<id>/<tool>`、sync 同构包装、`continue` = args.agent 机器键（三生产者同规）⇒ owner 归属 + `escalate <model> #<id>`（model = 池条目值）· tool-ctx `getAuto` / `sessionSignal` 透传 = 历史残留、零消费面（F2 注释收正——核门读父对象 `autoApprove` 字段；会话 signal 经 `agent._sessionSignal` 达核） | §2.1 #166 裁决行 · 权限调度面 §6.4 · 呈现 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.2 |
 | 上行通道消费 / 唤醒面 | 核循环头调核单源 `drainChildUpstream`（核 `thincoder-core/agent.mjs` 循环头——主循环取核后随主体归核）+ 载体两字段入 `CARRIER_FIELDS`（`thincoder-vscode/src/extension/panel-turn-loop.mjs`——装配期 16 款访问器别名）；挂起驱动第 2 步判据 = 核 `startSuspension` 内 `upstreamWaiting`（端差零自持）+ `upstreamTurn` 旗标三跳（`panel-turn-stages.mjs` → `panel-chat.mjs` → `panel-turn-loop.mjs` 核 opts）+ `digest:start` / `digest:end` 载荷 `upstream: true`（两端同规） | 机制权威 = `AGENT-LOOP-UPSTREAM.md` §6.27.12（§6.27.12.12 = VSC 对位面）；验收机判 = VSC 上游对位用例（T-VS-U1–U7） |
 | 自持工具登记面（#83） | VSC 经**核登记册**取 14 工具（单一来源）：装配面 `thincoder-vscode/src/agent/setup.mjs` `hydrateRun` 内**动态** `await import("@thincoder/core/agent-tools.mjs")`（静态引入会经 consult/subagent 族触达 `node:sqlite`——W8 契约②；核侧同款动态先例 = 核 `agent-tools.mjs` 头注）；端侧转口面 `thincoder-vscode/src/agent-tools/index.mjs` = `export * from` 核登记册（不再自持 14 名清单）；`batch` 记账缝（#84）端侧注册 = 同档 `configureBatchSegment({ onWrite })`（`_touchedFiles` 记账——与删除前内联面同语义）；同装配面每轮把**基础集**（除端侧 meta 工具族 `agentTools` 外的装配项）绑定到 agent 对象（`agent.tools`——spawn 读点 `parent.tools` / 子代装配展开；`thincoder-core/agent/family-tools.mjs`（家族单源——`assembleFamilyTools`；核调用点 `thincoder-core/agent/setup.mjs`）追加 task/plan/timer 等 depth 家族由核负责——**不相交式 = 追加家族 ∥ 绑定值（基础集）**（端侧 meta 族与追加家族实测重叠 11 名，故其不得入绑定值；防子代装配重名）；家族矩阵同批单源化：端侧角色分支链删除、装配改调核侧单源实现——CLI 与 VSC 同调，端差装饰留端）。**`agent.autoApprove` 字段接线**：同装配面 B 类 run 绑定（`hydrateRun` 每轮重指）以**访问器**把 `agent.autoApprove` 接 `getAuto` live 闭包——核侧字段读点（spawn/escalate 门 · 子代权限继承 · 调度 · 结算）获值（宿主曾缺该字段致 AUTO 档核读点恒判非 AUTO）；无 setter（面板 flag 为唯一来源） | 机制行 = §2.2 / §2.5 #83；缝位清单 = `CORE-UNIFICATION.md` §2.13.3；验收机判 = 工具登记册面用例 · autoApprove 字段接线回归用例（用例表） |
 | 端壳事件中继面 / 调用期适配（W15） | ① **事件中继**：核 relay `⟦ev⟧` 事件 token（`queued` / `cancelled` / `stopped` / `settled` / `done` / `turn` + `⟦ev⟧async`+`[model]`）经 `thincoder-vscode/src/extension/panel-callbacks.mjs` `relaySubagentEventToken` → webview `{type:"subagent"}` 状态消息单点（⏹ queued 等待头回收 + 位置前移；`panel-messages.mjs` ⏹ 路由携 config/autoApprove 真值）。**策略**：未映射的 `⟦ev⟧` 事件**静默消费**（不泄漏进聊天文本；VSC 另有结构化通道者如 `⟦ev⟧approval` = `onSubagentApproval` 不受影响）；嵌套 relay 前缀（孙代事件）按 head 折叠到外层块（扁平活动区语义）；② **循环契约位移 = 调用期适配**（主循环面 = `thincoder-vscode/src/extension/panel-turn-loop.mjs`（核 `runAgent` 改接 ∕ 三段续跑）+ 装配面 = `thincoder-vscode/src/agent/setup.mjs`；`thincoder-vscode/src/agent.mjs` = 转口残面（`ContinueError`）：live `autoApprove` getter · `opts.distillState`↔核 `agent._pendingDistill` · 载体字段访问器别名住共享 `history`（16 款））；③ **核原语改指**：`thincoder-vscode/src/explore-distill.mjs` = 核 `summarizeRunExplorations` 适配器（agent 载体 ↔ 共享数组原位回收）· `thincoder-vscode/src/agent/setup-reminders.mjs` = 端特有面（env 行端身份 R4 / peer / 重启闸）+ 核转口（git/注入/AUTO/ENG）· `thincoder-vscode/src/i18n.mjs` = 核 `projectDictionary` 投影 + 端特有键（webview 面）叠加（本地键恒胜）；④ **`autoThink` 键随 config 归一**（#175 a 半——消费点 = `thincoder-vscode/src/agent.mjs` 首轮核 `auto-think.mjs`，默认 false 零行为变化；档位 patch 全程端侧 = `src/extension/panel-chat.mjs` → provider 字段数据面）；⑤ **内容中继**：子代内容 chunk（text / think / 工具调用行 / 工具输出行——`wrapChildCallbacks` 四路前缀包装）经 `relaySubagentContentChunk` 分流 → webview `toolPanel` `sub:<role>#<id>` 块（嵌套子标随行；事件面先吃、内容面后判——前缀 chunk 不再落主会话流） | 回指：§2.3（载体字段集）· §6.1（循环）；验收机判 = VSC 面板消息面用例 ⑫/⑬ · 内容中继用例（T1–T7） · #175a 归一用例 |

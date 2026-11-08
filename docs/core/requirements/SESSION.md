@@ -8,9 +8,9 @@
 
 ## 1. 总体定位
 
-会话与历史面 = 会话数据层（`session.mjs` · `session-store.mjs` · `session-segments.mjs` · `session-guard.mjs` · `session-migrate.mjs` · `session-rename.mjs`）**+** 槽位 **+** 清理（`session gc`）**+** 历史读取工具（`agent-tools/read-history.mjs`）。
+会话与历史面 = 会话数据层（`thincoder-core/session.mjs` · `session-store.mjs` · `session-segments.mjs` · `session-guard.mjs` · `session-migrate.mjs` · `session-rename.mjs`）**+** 槽位 **+** 清理（`session gc`）**+** 历史读取工具（`agent-tools/read-history.mjs`）。
 
-VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-slot-write.mjs` · `session-slots.mjs` · `session-gc.mjs`。
+VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `thincoder-vscode/src/extension/session-slot-write.mjs` · `thincoder-vscode/src/extension/session-slots.mjs` · `thincoder-vscode/src/extension/session-gc.mjs`。
 
 本板块对本子系统的要求 = 该面归一为**核内单一实现**，且两端**存储契约不变**（历史无缝续读）。
 
@@ -48,7 +48,7 @@ VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-
 ② **面板拒绝路径**前记 `m.active` / 端标记 / 认领集 / 解析缓存 → 受占切换被拒 → 四者与前态逐字段相等；**核 / CLI 受占** ⇒ 切换成立（指针翻至目标槽 + 记录按 D-4 + 保留集 = 空释放旧认领）∧ 下次保存 fork（与 ③ 同源）；
 ③ 甲进程离开 X 后乙进程认领 X：甲经 `/session X` 再切入 ⇒ 甲不认领 X（占用判）∧ 下次保存 fork（既有语义）；④ 双端对称（CLI 与 VSC 端壳**同名落点**同判据——F-CR1 释放面；F-CR2 零副作用面 = 面板拒绝路径：端壳函数内受占分支零写 ∧ 调用面前置判据）。
 
-**依赖**：核槽面（`session-lifecycle.mjs` `switchToSlot`/`newSession`/`slotOccupancy`）· VSC 端壳（`session-io.mjs` `switchToSlot`/`newSlot` · `panel-messages-session.mjs`）· 设计档 `docs/core/design/SESSION.md` · ACP 例外核。
+**依赖**：核槽面（`session-lifecycle.mjs` `switchToSlot`/`newSession`/`slotOccupancy`）· VSC 端壳（`thincoder-vscode/src/extension/session-io.mjs` `switchToSlot`/`newSlot` · `panel-messages-session.mjs`）· 设计档 `docs/core/design/SESSION.md` · ACP 例外核。
 
 ### 2.4 启动等待：会话 GC 热路径 + sessions 存量
 
@@ -60,7 +60,7 @@ VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-
   判定句：清理面存在且逐项判据可核；清理后目录量级回落（存量 9,358 前缀组可处理）。
 - **边界**：不动活数据（活主 / 近期写 / 绑定面）· 不引入常驻进程 · 不改槽文件与端标记形态 · VSC 端壳 resume 路径（同源调用）同判零端差。
 - **验收**：① 启动路径同步阻塞 ≤50ms（对照 ≈10s）；② CLI 启动到 TTY 门 ≤ **2s**（对照 9.6–16s；空 HOME 0.495s + 真装配 ~1.0s 为参考下界）；③ 三端测试全绿；④ 存量清理面执行后 sessions 项数回落且零活数据误删。
-- **依赖**：`session-lifecycle.mjs`（resumeSlot）· `session-gc.mjs`（gcResidue / listColdCwds）· CLI `bin/thincoder.mjs` 启动序 · VSC 端壳（`session-io.mjs` resumeSlot 包装）· 设计档 `docs/core/design/SESSION.md` §6.12。
+- **依赖**：`session-lifecycle.mjs`（resumeSlot）· `thincoder-core/session-gc.mjs`（gcResidue / listColdCwds）· CLI `bin/thincoder.mjs` 启动序 · VSC 端壳（`thincoder-vscode/src/extension/session-io.mjs` resumeSlot 包装）· 设计档 `docs/core/design/SESSION.md` §6.12。
 
 ### 2.5 优雅退出认领释放
 
@@ -81,7 +81,7 @@ VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-
 ⑤ T5 VSC `deactivate` 后 manifest 无本进程条目（端壳机判）；
 ⑥ 既有 session 系 / key-handler 系测试全绿。
 
-**依赖**：核槽面（`thincoder-core/session-slots-manifest.mjs` `saveManifest`/`staleClaims`）· CLI `thincoder-cli/src/tui/key-handler.mjs` 退出分支 · VSC `thincoder-vscode/src/extension.mjs` deactivate · 设计档 `docs/core/design/SESSION.md`（§6.10 D-2/D-4）。
+**依赖**：核槽面（`thincoder-core/session-slots-manifest.mjs` `saveManifest`/`staleClaims`）· CLI `thincoder-cli/src/tui/key-handler.mjs` 退出分支 · VSC `thincoder-vscode/extension.mjs` deactivate · 设计档 `docs/core/design/SESSION.md`（§6.10 D-2/D-4）。
 
 ## 3. 非功能性需求
 
@@ -128,7 +128,7 @@ VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-
 
 **总体需求**：会话的人读记录以**磁盘为准**（append-only 冷存——进程崩溃不丢）；运行期内存只保**最近一数窗口**（有界——不随会话长度增长）；恢复展示 / 向上翻页 / 本会话检索（`read_history`）从磁盘按需回读；槽文件的跨端 JSON 投影保持不变——VS Code 端零感知。
 
-- **F-S1（磁盘为准——append-only 记录存储）**：每条真实消息在 `pushReal` 时点追加进本槽的**记录存储**；条目形态与槽 JSON `history` 逐字节同形；追加单点 = `context.mjs` `pushReal`。
+- **F-S1（磁盘为准——append-only 记录存储）**：每条真实消息在 `pushReal` 时点追加进本槽的**记录存储**；条目形态与槽 JSON `history` 逐字节同形；追加单点 = `thincoder-core/context.mjs` `pushReal`。
 - **F-S2（内存窗口）**：运行期人读线只保最近 **200 条**（`RECORD_WINDOW_MESSAGES`）；**范围 = 绑定态**（未绑定路径维持既有全量行为）。
 - **F-S3（分页源 = 磁盘）**：TUI 懒加载的数据源改为记录存储按**绝对序号**取页；翻页不再往内存累积、活消息增长不使翻页错位。
 - **F-S4（read_history 走盘）**：本会话检索（无 `path`）读记录存储；跨会话 `path=` **索引优先 + 主存回落**（索引命中 ⇒ 索引检索；索引不可用 / 库内无行 ⇒ 既有槽文件 JSON 读径与护栏——逐字保留、零回归）。
@@ -157,7 +157,7 @@ VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-
 ② 历史分页步长 **200**（`HISTORY_PAGE_SIZE`——`thincoder-vscode/src/extension/history-window.mjs`，对端 20）· ③ 恢复呈现 = assistant 帧容器 + 嵌套工具卡（配对语义同源）·
 ④ 冷 cwd 手动 GC 无 shell 通道（只接线自动残留 GC）——**注销**：VSC 已补命令入口 `thincoder.sessionGc`（数据面 API——双端同面；见 `docs/core/design/SESSION.md` §6.17 D-SE38）
 · ⑤ 记录存储形态 = **端面事实**（本端零该机制——非端差，如实登记；**写缝 = `pushRecord` 注入面**（`thincoder-core/context.mjs`——`pushReal` 双胞）；承载 = 端面 ∥ 单源 = §4.4 F-S7）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。
-落点＝ `thincoder-vscode/src/extension/session-slots.mjs` · `session-io.mjs` · `panel-session.mjs` · `session-gc.mjs`。
+落点＝ `thincoder-vscode/src/extension/session-slots.mjs` · `thincoder-vscode/src/extension/session-io.mjs` · `panel-session.mjs` · `thincoder-vscode/src/extension/session-gc.mjs`。
 
 **二态化裁定行**：① = **保留**（结构性不对称——端 marker 单侧存在：只写 `.manifest.vscode`、永不碰 `.cli`）；②③⑥ = **保留**（形态类——显示 / 互斥面；类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）；④ = **注销**（VSC 有命令入口，双端同面）；⑤ = **端面事实**（非端差）。
 

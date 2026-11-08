@@ -147,9 +147,11 @@ thincoder-desktop/                  ← 本端产品包
 
 ## 4. 壳装配第三份
 
-形态对齐另两端先例（CLI 侧 `assembleAgent` ∥ 扩展端 `buildTopLevelAgent`）：**装配序 = 核单源（`thincoder-core/agent/assemble.mjs`）+ 端壳 adapter（cwd ∕ `_slot` ∕ 校验调用；端差在册）**——本端 `thincoder-desktop/src/main/agent-host.mjs` 主责，回调桥 / 待决门 / 槽 I-O 三面已成出档（`agent-bridge.mjs` / `suspensions.mjs` / `session-io.mjs`——§1 树同源）：
+形态对齐另两端先例（CLI 侧 `assembleAgent` ∥ 扩展端 `buildTopLevelAgent`）：**装配序 = 核单源（`thincoder-core/agent/assemble.mjs`）+ 端壳 adapter（cwd ∕ `_slot` ∕ 校验调用；端差在册）**。
 
-1. 载核与实例化 agent（cwd = 当前项目目录——**主进程内存态**、项目面 = `docs/desktop/design/IPC.md` §2 项目面注；provider / 模型 / 档位 / 工程模式**槽值优先**——`effort` 未设（`null`）⇒ 回落**渠道级 `reasoningEffort`**（槽字段已落——KD-17）；槽装载 = `session-io.mjs` 的 `loadAgentSlot`——槽缺 ⇒ 新建形）；
+本端 `thincoder-desktop/src/main/agent-host.mjs` 主责，回调桥 / 待决门 / 槽 I-O 三面已成出档（`agent-bridge.mjs` / `suspensions.mjs` / `thincoder-desktop/src/main/session-io.mjs`——§1 树同源）：
+
+1. 载核与实例化 agent（cwd = 当前项目目录——**主进程内存态**、项目面 = `docs/desktop/design/IPC.md` §2 项目面注；provider / 模型 / 档位 / 工程模式**槽值优先**——`effort` 未设（`null`）⇒ 回落**渠道级 `reasoningEffort`**（槽字段已落——KD-17）；槽装载 = `thincoder-desktop/src/main/session-io.mjs` 的 `loadAgentSlot`——槽缺 ⇒ 新建形）；
 2. 注入核回调集 → 转成 IPC 事件（`docs/desktop/design/IPC.md` §1）——回调**逐条映射**，不改核签名；
 3. 工具族装配（静态表 + 家族段 + 本端注入面）；
 4. 回合驱动与中断（`msg:send` / `msg:interrupt` → 核 run / abort 面）——**主侧本体已落**（单驱动器：在飞再发 ⇒ `busy`；中断 = `signal.abort()`；回执形 = `docs/desktop/design/IPC.md` §2）；**回合尾落盘已落**（三路终局 done / stopped / error 同序 `saveAgentSlot`——**先落盘再出终局事件**，
@@ -164,7 +166,7 @@ thincoder-desktop/                  ← 本端产品包
 
 **序 + 团队层取值** = 核件 `thincoder-core/agent/assemble.mjs`。
 
-**装配 MCP 缝体 = 双源**：`config.mcp.servers` + 项目根 `.mcp.json`（单层 · config 同名优先 · 装配期零确认——合并语义单源 = `docs/core/design/MCP.md` §6.4；落点 = `thincoder-desktop/src/main/agent-assemble.mjs` `finalizeTools` 缝）。
+**装配 MCP 缝体 = 双源**：`config.mcp.servers` + 项目根的 MCP 配置文件（单层 · config 同名优先 · 装配期零确认——合并语义单源 = `docs/core/design/MCP.md` §6.4；落点 = `thincoder-desktop/src/main/agent-assemble.mjs` `finalizeTools` 缝）。
 
 **装配表维护两件**：① **无效装配不入表**（`ensure`：装配完成时 `_providerInvalid === true` ⇒ 不入装配表——修正后再发按盘上新态重装配）；
 ② **槽装载后复验**（`assembleAndLoad`：`loadAgentSlot` 后 `if (agent._providerInvalid) validateProvider(agent, agent.config)`——槽有效 ⇒ 清标 ⇒ 本次发送放行）。机制单源 = KD-8。
@@ -185,7 +187,7 @@ thincoder-desktop/                  ← 本端产品包
 | `thincoder-desktop/src/main/turn-input.mjs` | **146** | 输入受理族出档（`send` ∥ `interrupt`（转口保名）） |
 | `thincoder-desktop/src/main/turn-face.mjs` | **206** | 单回合执行面提取（`send` ∕ 驱动同源——在飞表占位 + `suspDriven: true`〔撤回合尾直注入兜底〕+ 三径结算（落盘 → 读数 → 终局事件）+ 释放在飞）；出档理由 = `agent-host.mjs` 触 300 顾问线（在册预案「回合执行面再出档」落形）；撞帽三径（`askContinue` 薄形询问 ∕ 换代 controller + `resume:true` 重入 ∕ `autoTurn` cap 即收口）；回合尾结算 `settleTurn` 单实现（标题先于落盘）；cap 记录（`autoTurn ∧ ¬timerTurn` 门——timer 轮不冒充消化边界）；`end` 记录写点前移（边界轮终帧 ∥ 记录同点——先于槽落盘） |
 | `thincoder-desktop/src/main/turn-chain.mjs` | **99** | 续发链提取 |
-| `thincoder-desktop/src/main/agent-assemble.mjs` | **142** | 装配面 adapter（**消费核单源**：`assembleFor` = 核 `thincoder-core/agent/assemble.mjs` 调用 + `_slot` ∕ 校验调用；四名同名转口 `DEFAULT_DEPS` / `teamConfig` / `gitAuthor` / `validateProvider`；原路径同名 re-export 保名面——本档 §4）：回调桥 / 待决门 / 槽 I-O 三面成出档（下三行）；会话级偏好施加径 `setPrefs`（写盘 → `loadAgentSlot` 重施单点 · 在飞 `flights.has(key)` ⇒ 写盘受理 ∥ 施加顺延——KD-19）；`flagsOf(key)` 活值投影四布尔 + `respond` 成功径回执叠加 `{ key, flags }`（桌内翻转即时刷新面）；装配期两缝注册 `installExecRunSeams()`（`configureExecRun` + `configureProcessTreeKill`——VSC 同形）；MCP 合入缝第二源——项目根 `.mcp.json` 并入（单层读取 · `config.mcp.servers` 同名优先 · 装配期零确认；合并语义单源 = `docs/core/design/MCP.md` §6.4；落点 = `finalizeTools`）；`mcpWarningReminder(warnings)` 词面构造导出（首两段逐字同 CLI；末行 = 桌面可达出口；零警告 ⇒ `null`——装配尾入队住 `agent-host.mjs`） |
+| `thincoder-desktop/src/main/agent-assemble.mjs` | **142** | 装配面 adapter（**消费核单源**：`assembleFor` = 核 `thincoder-core/agent/assemble.mjs` 调用 + `_slot` ∕ 校验调用；四名同名转口 `DEFAULT_DEPS` / `teamConfig` / `gitAuthor` / `validateProvider`；原路径同名 re-export 保名面——本档 §4）：回调桥 / 待决门 / 槽 I-O 三面成出档（下三行）；会话级偏好施加径 `setPrefs`（写盘 → `loadAgentSlot` 重施单点 · 在飞 `flights.has(key)` ⇒ 写盘受理 ∥ 施加顺延——KD-19）；`flagsOf(key)` 活值投影四布尔 + `respond` 成功径回执叠加 `{ key, flags }`（桌内翻转即时刷新面）；装配期两缝注册 `installExecRunSeams()`（`configureExecRun` + `configureProcessTreeKill`——VSC 同形）；MCP 合入缝第二源——项目根的 MCP 配置文件并入（单层读取 · `config.mcp.servers` 同名优先 · 装配期零确认；合并语义单源 = `docs/core/design/MCP.md` §6.4；落点 = `finalizeTools`）；`mcpWarningReminder(warnings)` 词面构造导出（首两段逐字同 CLI；末行 = 桌面可达出口；零警告 ⇒ `null`——装配尾入队住 `agent-host.mjs`） |
 | `thincoder-desktop/src/main/agent-bridge.mjs` | **331** | 回调桥出档：活动名闭集八名 + 协议行解析（`⟦ev⟧`）+ **二十回调** ⇒ `ev:*` 映射（`onSecretInput` ⇒ `ev:secret`）+ 工具参数摘要（与待决门共用口径）——注入 `post` / `askSingle` / `askBatch` / `askQuestion`（自挂起门出 `ev:question`，桥零文案）/ `askSecret`（凭据门），零宿主依赖 ⇒ 平 node 直测（映射单源 = `docs/desktop/design/IPC.md` §1）；`onDistilled` 回调（注入面 `persistDistilled(key)`——缺注入零动作） |
 | `thincoder-desktop/src/main/suspensions.mjs` | **167** | 待决门出档：两门 verdict 闭集（逐项 3 值 / 批门 3 值——核 `dispatch.mjs`）+ 待决表（挂起表 · **唯一持有点**：`promptId → { kind, shape?, key, resolve }`——`kind` = `approval` / `question` / `secret` · `shape` = `single` / `batch`（verdict 闭集选择 discriminator；码面随动 = `thincoder-desktop/src/main/suspensions.mjs` 三处）+ **六操作**（`askSingle` / `askBatch` / `askQuestion` / `askSecret` / `denyGates` / `respond`）——表清两时点 = 出站 respond ∨ 门 resolve（本档 §4 项 5）；回执**五 reason** 不 resolve（`unknown-prompt` / `bad-kind` / `bad-verdict` / `bad-answer` / `bad-values`；单源 = `thincoder-desktop/src/main/suspensions.mjs`；`docs/desktop/design/IPC.md` §2） |
 | `thincoder-desktop/src/main/exec-run.mjs` | **22** | exec-run 端面缝供值（`configureExecRun` ∕ `configureProcessTreeKill`——核件单源转口；装配期一次） |
@@ -204,17 +206,17 @@ thincoder-desktop/                  ← 本端产品包
 | 4 | 渲染 ∕ 主进程面：`thincoder-desktop/renderer/store.mjs`（302——**≤500 ⇒ 免拆**）· `renderer/views/chat-scroll.mjs`（**115**——见行 5b）· `renderer/subagent-reduce.mjs`（191）· `renderer/events-wake.mjs`（≈100）· `renderer/events-blocks.mjs`（135）· `renderer/views/activity.mjs`（194）∥ `src/main/agent-host.mjs`（262）· `src/main/turn-driver.mjs`（252） | 值口径 = 本档 §5.1 单源 | KD-54 ② |
 | 5 | 巨块夹层：`thincoder-desktop/renderer/chat.css`（≈330——**≤500 ⇒ 免拆**）∥ `renderer/core.css`（332——**≤500 ⇒ 免拆**）∥ `renderer/views/chat-text.mjs`（分段窗住新档 + 挂载 ∥ 帧尾两层） | **CSS 支**（三处 `contain: layout style paint`；行级小增 ∕ 零语义；弃档 = `content-visibility`）＋ **JS 支**（新行 5b） | KD-54 ③ |
 | 5b | 巨块 **JS 支（分段挂载）**：`renderer/views/chat-text-segments.mjs`（**497**——**距 500 线余 3 行 ⇒ 贴层在册**）∥ `thincoder-desktop/renderer/views/chat.mjs`（**305**；**≤500 ⇒ 免拆**）∥ `renderer/views/chat-scroll.mjs`（**115**）∥ `thincoder-desktop/renderer/app.mjs`（**292**）∥ `renderer/frame-dispatch.mjs`（**53**）；`renderer/views/chat-text.mjs` **126**；测试 ∕ 探针 = 单元测试档（单元——**520 行 · 12 用例**；探针——**899 行**；单元测试档不计线（KD-4）） | 值口径 = 本档 §5.1 | KD-54 ③ ∕ §2.15 |
-| 6 | 测试 ∕ 探针 | 单元测试档 = 桌面堆取证修复族（采样 ∕ 双档 ∕ 阈值取 ∕ 键两态 ∕ 门序〔含 ping 径〕· once ∕ 5min 守卫 + 段界 ∥ 补偿 ∥ 回滚三用例；**520 行 · 12 用例**）——单元测试档不计线（KD-4）+ `-probe.mjs`（真机——装配 ∕ 快照落盘 ∕ 冻结门；**899 行**）+ 迭代探针 `…-e4js-live.mjs`（**252 行**）+ 读数档两枚 `…-readings.json` ∥ `…-e4js-live-readings.json`（数据件）；集成测试零动 | 全批 |
+| 6 | 测试 ∕ 探针 | 单元测试档 = 桌面堆取证修复族（采样 ∕ 双档 ∕ 阈值取 ∕ 键两态 ∕ 门序〔含 ping 径〕· once ∕ 5min 守卫 + 段界 ∥ 补偿 ∥ 回滚三用例；**520 行 · 12 用例**）——单元测试档不计线（KD-4）+ 真机探针（装配 ∕ 快照落盘 ∕ 冻结门；**899 行**）+ 迭代探针（**252 行**）+ 读数档两枚（数据件）；集成测试零动 | 全批 |
 | 7 | 文档面 | `docs/desktop/design/PROJECT.md`（§2 **KD-53** ∕ **KD-54**）· 本档 §5.2；随动 = `docs/desktop/design/RENDERER.md`：§2 两条（`MAX_RENDER_BLOCKS` ∕ 窗限增量——常量单源）+ §1.1 挂起窗行 ∥ 1s 拍面 ∥ 块回收面；`docs/render-core/design/RENDER-CORE.md`（核面 owning 档——**KD-RC-11** + §6 随动段） | 全批 |
 | 8 | 核 `thincoder-render-core/flow/block.mjs` | **153**（两处续写支并入末文本节点——文本 ∕ 推理支 ∥ toolOutput 支；语义等价（RAW 拼接逐字同 ∥ 零视觉差）；文本节点 O(chunks) ⇒ **O(1) ∕ 行**） | 内核面（§2.13 ∕ 核档 §2 KD-RC-11） |
 
 | # | 档 | 行数 | 面 |
 |---|---|---|---|
-| 1 | `thincoder-desktop/src/main/agent-assemble.mjs` | **≈130**（`finalizeTools` 双源：`config.mcp.servers` + 项目根 `.mcp.json` 并入——单层读取 · config 同名优先 · 读 ∕ 解析失败非致命；核缝 ctx 携 `cwd`——零核改） | #691 三问裁定 |
+| 1 | `thincoder-desktop/src/main/agent-assemble.mjs` | **≈130**（`finalizeTools` 双源：`config.mcp.servers` + 项目根的 MCP 配置文件并入——单层读取 · config 同名优先 · 读 ∕ 解析失败非致命；核缝 ctx 携 `cwd`——零核改） | #691 三问裁定 |
 | 2 | 核 `docs/core/design/MCP.md` §6.4 | 启动装配句补两裁定（发现面 = 项目根单层 ∕ 信任面 = 零交互确认——CLI ∕ 桌面同判） | 同单源 |
 | 3 | `docs/desktop/design/SHELL.md` §4 | 补「装配 MCP 缝体 = 双源」一句（指针——语义单源 = `docs/core/design/MCP.md` §6.4） | 文档面 |
 | 4 | 本档（SHELL §5.1 行 ∕ §5.2）+ `docs/desktop/design/PROJECT.md` | `agent-assemble.mjs` 行值 = **102** | 文档面 |
-| 5 | 测试覆盖 | 单元测试档 = `.mcp.json` 项目文件源族（单元测试档 · 不登记 · 预期 ≈140 行 · 9 用例——装配含 ∕ 不含 ∕ 优先级 ∕ 边界）；集成测试零动 | 全批 |
+| 5 | 测试覆盖 | 单元测试档 = 项目根 MCP 配置文件源族（单元测试档 · 不登记 · 预期 ≈140 行 · 9 用例——装配含 ∕ 不含 ∕ 优先级 ∕ 边界）；集成测试零动 | 全批 |
 
 **机制 ∕ 判据单源 = KD-59**（`docs/desktop/design/PROJECT.md` §2）
 

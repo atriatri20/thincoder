@@ -65,7 +65,7 @@
 
 **面形**：表单 = **弹窗形态**（`#mcp-dialog`——五路关 ∥ 开框重置 ∥ 拒因可见；机制 = §2.17 ①）。本节只承存储 ∥ 字段集 ∥ 提交判据（三面零改）；形面 ∥ 关路 ∥ 入出口归 §2.17。
 
-**装配面第二源**：MCP **装配面**（`thincoder-vscode/src/extension/panel-turn-loop.mjs` ro 载荷——实施落点）另并项目根 `.mcp.json`——单层发现（`join(cwd, ".mcp.json")`）· 零交互信任 · config 同名优先 ∕ 异名追加（机制单源 = `doc:docs/core/design/MCP.md:§6.4`）；**管理面**（本节列表 ∕ 增删改 ∕ 重连 ∕ 探活）仍 config 单源（`.mcp.json` 源不进管理列表——沿 CLI `/mcp` 口径）。
+**装配面第二源**：MCP **装配面**（`thincoder-vscode/src/extension/panel-turn-loop.mjs` ro 载荷——实施落点）另并项目根的 MCP 配置文件——单层发现（项目根一份）· 零交互信任 · config 同名优先 ∕ 异名追加（机制单源 = `doc:docs/core/design/MCP.md:§6.4`）；**管理面**（本节列表 ∕ 增删改 ∕ 重连 ∕ 探活）仍 config 单源（该文件源不进管理列表——沿 CLI `/mcp` 口径）。
 
 **MCP 警告消费**：装配失败（死 server）不再静默——装配面出参 `warnings` 入 `agent._mcpWarnings`，装配尾转提醒入 `agent._pendingReminders`。
 
@@ -209,7 +209,7 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 
 - **门调用点** = `webview/settings-tools.js`（入口 1 ∥ 入口 2）· `webview/settings-providers.js`（入口 4）· `webview/settings-mcp.js`（入口 5）· `webview/input.js`（入口 6——**经 hook 链路**：核 footer `onClick` ⇒ `hooks.confirmRemoveProvider` ⇒ 本桥调门）。
 - **直通门**：`window._confirmDelete`（`thincoder-vscode/webview/settings.js`——**保留门**）**零调用点**（结构对账 W17-17 钉住）⇒ 全数删除入口**唯一通道 = 确认门**。
-- **定义仍在**：`_confirmDelete`（同档——保留门）；`test/smoke-settings.mjs` 的 handler 在位断言照绿。
+- **定义仍在**：`_confirmDelete`（同档——保留门）；该批单元测试档的 handler 在位断言照绿。
 - **新增入口**：一律按上二分类判——后域内不存在直通调用点，误入直通即结构对账点名（fail-closed）。
 
 - **不并入「撤销机制」**——撤销属加机器，不取（用户裁定）。
@@ -238,7 +238,7 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 - **行 6**：`removeProvider` 的**第二载体**（行 4 = settings 面板 provider 行 −）；判据 = 同一「不可复得」判据句——删整条时其 `apiKey` 原文随条目一并消失（写入 = `thincoder-core/config-io.mjs` · 整条 filter = 同档，与行 4 同源）。
 - **门位** = **webview 侧调用点**（同档动作闭包过 `_confirmSecretDelete`）——选型理由见下「模型菜单入口」段；判据 = W17-31…W17-34。
 - **宿主侧链**：路由 = `src/extension/panel-messages.mjs`（`case "removeProvider"`）；处理器 = `src/extension/panel-messages-settings.mjs`（`msg.name` 有 ⇒ 直落 `persistRemoveProvider`；**无 ⇒ `removeProviderFlow`**）。
-- **QuickPick 面** = 核 `thincoder-core/provider-flows.mjs` `removeProviderFlow`（VSC `provider-flows.mjs` 薄壳转口；候选 = 非 active 过滤 · 空集早退 · `showQuickPick`〔`ui.pick`〕· 取消早退 `if (!sel) return` · 删 `removeProviderEntry(sel.label)`）。
+- **QuickPick 面** = 核 `thincoder-core/provider-flows.mjs` `removeProviderFlow`（VSC `thincoder-vscode/src/extension/provider-flows.mjs` 薄壳转口；候选 = 非 active 过滤 · 空集早退 · `showQuickPick`〔`ui.pick`〕· 取消早退 `if (!sel) return` · 删 `removeProviderEntry(sel.label)`）。
 - **渲染位与门位的先后（本门前提）**：footer 行的 click 处理器（`thincoder-render-core/composer/model-menu.mjs`）=「先 `closeModelMenu()`、后调 `f.onClick()`」⇒ 弹框开在菜单 overlay 移除**之后**（弹框 `.auto-confirm` z-index 1000 / 遮罩 999——与 `mm-overlay` 1000 同层，无菜单在场即无遮挡）。
 - **MCP token / headers 无独立删除钮**：其唯一删除路径 = 编辑表单清空 token / headers 后保存（**表单语义，非删除按钮**——`thincoder-vscode/src/config-mcp.mjs` 的 `if (cfg.token)` / `if (cfg.headers)`：条目重建时字段随之消失）；
   webview 侧 = `webview/settings-mcp.js` 读表单（stdio / http / ws 三分支）→ 发 `editMcp` / `saveMcpServer`。
@@ -348,7 +348,7 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 
 **F-W18 静默判据的取值方式（三路——「无可观测 ≥ 2 s 静默」如何机判）**：
 
-- **① 静态扫描**：shell 候选探测路径零 `spawnSync` / `execSync`（域 = `settings.mjs` `shellCandidates` 及其调用链）；
+- **① 静态扫描**：shell 候选探测路径零 `spawnSync` / `execSync`（域 = `thincoder-vscode/src/extension/settings.mjs` `shellCandidates` 及其调用链）；
 - **② 注入式时序断言**（机检形态）：注入带人为延迟的伪探测（同步阻塞面模拟）⇒ 断言打开拍推送链按序到齐且**相邻两拍间隔 < 2 s**；
 - **③ 实机读数**（非单元测试）：扩展宿主日志相邻行时间差扫描——打开拍区间零 ≥ 2 s 静默。
 
@@ -472,7 +472,7 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
   ④ 关面板态调用 ⇒ 零节点 ∧ 开面板（buildSettings 后）⇒ 复现（关面板不丢）；⑤ 单实例（二次调用替换）；⑥ `closeSettings()` 后复开 ⇒ 不复现（关 = 销账）。
   ⑦ 源锁：`showSettingsError` 体内**零 `setTimeout`**（不自散；同档打开等待定时器——250ms 回退，**不在锁域**）；⑧ 闭集外 scope（如 `"bogus"`）⇒ 零段标；⑨ 空 reason（缺 ∕ `undefined` 同判）⇒ 零节点。
 真机用例（父侧）：制造写冲突 ⇒ 段标 + 词句驻留（无 6s 自散）∧ 关面板重开仍见。
-**机检**：单元测试档（九用例 + 扩展侧文本锁）∥ 站点接入（单元测试档）；冒烟 = `thincoder-vscode/test/smoke-settings.mjs`（调用形 `showSettingsError("panel", "test error")`）。
+**机检**：单元测试档（九用例 + 扩展侧文本锁）∥ 站点接入（单元测试档）；冒烟 = 该批单元测试档（调用形 `showSettingsError("panel", "test error")`）。
 
 ### 2.16 provider 添加弹窗 · 字段序 · 走 proxy 开关 · 扩面三件
 
@@ -481,9 +481,9 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 **① 添加表单 → 弹窗（面形与开合）**
 
 - **载体**：新档 `thincoder-vscode/webview/settings-provider-dialog.js`（表单族；表单 HTML 在卡外）。
-- **DOM 锚**：遮罩 = `.settings-dialog-backdrop`（新独立类——z 999；规格入 `settings.css` 新段：fixed inset 0 ∥ `--overlay` 底 ∥ 动效复用 `backdrop-in`；不与确认族共用类 `.auto-backdrop` 合流——隔离判由 = ① 关路句）；
-卡 = `#prov-add-dialog` + 新类 `.settings-dialog`（`settings.css` 新增小段：fixed 居中 ∥ z 1000 ∥ `--bg` 底 ∥ 1px 边框 ∥ 圆角 8px ∥ 宽 ≤ 420px；`role="dialog"` + `aria-modal="true"` + `aria-label` = `settings.addProviderTitle`）；
-卡体 = `.settings-card-body`（字段样式复用）+ 首件 `.settings-subtitle`（`settings.addProviderTitle`）。
+- **DOM 锚**：遮罩 = `.settings-dialog-backdrop`（新独立类——z 999；规格入 `thincoder-vscode/webview/settings.css` 新段：fixed inset 0 ∥ `--overlay` 底 ∥ 动效复用 `backdrop-in`；不与确认族共用类 `.auto-backdrop` 合流——隔离判由 = ① 关路句）；
+  - **卡** = `#prov-add-dialog` + 新类 `.settings-dialog`（`thincoder-vscode/webview/settings.css` 新增小段：fixed 居中 ∥ z 1000 ∥ `--bg` 底 ∥ 1px 边框 ∥ 圆角 8px ∥ 宽 ≤ 420px；`role="dialog"` + `aria-modal="true"` + `aria-label` = `settings.addProviderTitle`）；
+  - **卡体** = `.settings-card-body`（字段样式复用）+ 首件 `.settings-subtitle`（`settings.addProviderTitle`）。
 - **入口（两处）**：① `#prov-add-btn`（词 = `settings.addProvider`，既有——`settings-providers.js`）onclick ⇒ `window._openAddProviderDialog()`；
 ② 首启板交棒——`webview/onboarding.js` 的 custom 径 ⇒ `window._openAddProviderDialog?.({ key })`（`?.` 守卫保留；**分支前移**——custom 分支先于 key 校验 ⇒ 空键亦交棒（板面不再强制键——与弹窗键面「键可选」一致）；
    - **携 key 预填**：板面键入值随交棒入框（`#pa-key`；开框重置序之后落 —— 零重输）；时序 = `_openSettings?.()` 后随调，面板 ∥ 框两处 +50ms 焦点定时器同拍序——框后调度 ⇒ 末位焦点 `#pa-type`）。
@@ -491,7 +491,7 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 初始焦点 = `#pa-type`（+50ms）。**探针结果归属（请求 id）**：`_paFetchModels` 发起时自增 `_fetchSeq` 记在飞 `_pendingFetchId`（载荷携 `id`）；`updateTestProviderResult` 落框前比对——缺 ∥ 不符 ⇒ 弃；命中即清（防重放）；开 ∥ 关框双清在飞（在飞探果跨框零污染）。
 - **关（五路同效）**：保存（**守卫通过才发 + 关**——本地守卫拒 ⇒ 零发 ∥ 不关框 ∥ 在编值保留；落点 = `settings-provider-dialog.js` 的 `paSave` 守卫 ∥ 关框段；残余 = 添加弹窗径宿主后置拒仍走「发后关」旧径——回执形见 §2.18；弹窗径 = 条件行）
 ∥ 取消钮 ∥ 背板点击 ∥ 框内 Esc（`stopPropagation` —— 不连带触 `webview/chat.js` 的关面板分支——沿确认弹框同判）∥ `closeSettings()` 同清——**落法**：`settings.js` 的 `closeSettings()` 增调新档导出 `closeAddProviderDialog()`（与 `closeConfirmPopover()` 同拍）；
-- **遮罩 = 独立类 `.settings-dialog-backdrop`**（z 999；样式入 `settings.css` 新段——**不入确认族共用类 `.auto-backdrop`**：确认族帚扫站点（`settings-widgets.js` ∥ `session-bar.js` ∥ `chat.js` 三处）零误扫；框在场 ⇒ 确认族开 ∥ 关两向均不触框组；卡 ∥ 幕归 `closeAddProviderDialog` 独清）。
+- **遮罩 = 独立类 `.settings-dialog-backdrop`**（z 999；样式入 `thincoder-vscode/webview/settings.css` 新段——**不入确认族共用类 `.auto-backdrop`**：确认族帚扫站点（`settings-widgets.js` ∥ `session-bar.js` ∥ `chat.js` 三处）零误扫；框在场 ⇒ 确认族开 ∥ 关两向均不触框组；卡 ∥ 幕归 `closeAddProviderDialog` 独清）。
 - **保存徽标（受理径才闪）**：闪点按 `paSave()` 返回值门控——本地守卫拒 ⇒ 零闪；受理径（已发消息）才亮（门控落点 = `settings-provider-dialog.js`；词 ∥ 样式 = 既有 `flashSaved`（`settings-widgets.js`——词 `settings.autoSaved`）复用，零新件）。
 - **与卡重绘关系**：框在卡外（挂 body）⇒ `renderProvidersCard()` 的 P2-6 保表单段**删**（卡重建不再触碰框；在编输入由「框不重绘」天然保真）；`bindAddProviderForm()` 域收窄为盘根行 `✕`（`pa-*` 绑定随档迁）。
 
@@ -503,7 +503,7 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 
 **③ 走 proxy 开关（写面）**
 
-- **控件**：`#pa-proxy`（`.switch` 形复用（`settings.css` 既有）；词 = `settings.proxyRow` + `title` = `settings.proxyRowTitle`——与行开关同词键）。
+- **控件**：`#pa-proxy`（`.switch` 形复用（`thincoder-vscode/webview/settings.css` 既有）；词 = `settings.proxyRow` + `title` = `settings.proxyRowTitle`——与行开关同词键）。
 - **写面**：`addProvider` 载荷 + `proxy`（可选布尔，勾选 ⇒ `true`）⇒ 宿主 `handleAddProvider`（`src/extension/panel-messages-settings.mjs`）透传 `addProviderEntry` ⇒ 核 `addProviderEntry`（`thincoder-core/config-io.mjs`）受 `proxy`：`proxy === true` ⇒ 条目携 `proxy:true` 同批落盘；
 缺 ∥ 非真 ⇒ 零键。条目形状单源 = `docs/core/design/CONFIG.md`。
 - **与行开关一致性（点名）**：字段 = `providers[].proxy`（同一键）；行读 = `thincoder-vscode/src/extension/settings.mjs`（`proxy: entry.proxy === true`，行渲染 = `settings-providers.js`）；行写 = 同档 `handleSetProviderProxy`（`true` 写 ∥ `false` 删键）。
@@ -569,7 +569,7 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 
 - **落法**：`webview/input.js`（OUT 表 `addProvider` 条）由「出站消息」改**本地面动作**（`window._openAddProviderDialog()`——**裸调用 ∥ 不取防御式回退**：门由 `initSettings`（`webview/settings.js`）安装、同文档 ⇒ 点击前必已安装；缺门响亮失败——沿 §2.10 纪律）——与桌面「post 映射 = 本地面」对称（桌面 `composer-wire` 同拍改）；
 `removeProvider` ∥ `setKey` 两条仍走既有出站（确认门 ∥ 消息）。
-- **宿主面**：`handleAddProvider`（`src/extension/panel-messages-settings.mjs`）**无载荷 else 支**（QuickPick 增流程）不在盘——残留分支 = 畸形载荷 ⇒ `console.error` 零动作（fail-loud）；`provider-flows.mjs` 的 `addProviderFlow` 包装不在盘（唯一调用点即该支；核流程 ∥ CLI 交互面零动——CLI 仍走核 `addProviderFlow`，判据「宿主原生专面各守其面」）。
+- **宿主面**：`handleAddProvider`（`src/extension/panel-messages-settings.mjs`）**无载荷 else 支**（QuickPick 增流程）不在盘——残留分支 = 畸形载荷 ⇒ `console.error` 零动作（fail-loud）；`thincoder-vscode/src/extension/provider-flows.mjs` 的 `addProviderFlow` 包装不在盘（唯一调用点即该支；核流程 ∥ CLI 交互面零动——CLI 仍走核 `addProviderFlow`，判据「宿主原生专面各守其面」）。
 - **协议面**：`WEBVIEW-PROTOCOL.md` §13 `addProvider` 行发送列 = onboarding ∥ 表单两处；host 消费位分支 = 无载荷支。
 
 **判据 / 机检**：单元测试档（8/8——用例集：五路关 ∥ 开框重置 ∥ 单例 ∥ 拒因可见（name 空 ⇒ 零发 ∥ 不关框 ∥ 在编值保留）∥ 跨框互清（各弹窗只清自身两件）∥ 页脚零出站（`addProvider` = 本地面动作——零 `postMessage`）∥ 词面五新键两语）；
@@ -592,7 +592,7 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 | 11 | `thincoder-vscode/locales/en.json ∥ zh.json` | **298**（+5 键 × 两语） | 词面 |
 | 12 | `thincoder-vscode/webview/settings.css` | **412** | 样式（零新 CSS——类全复用） |
 
-**跨 300 面**：`settings.css` **412**（>300 在册 ⇒ 拆分窗口顺延；单源 = §3 样式档行）；其余各档皆 <300（`settings-provider-dialog.js` **284** ∥ `settings-mcp.js` **126** ∥ 两新档 **219** ∥ **151**）。零触面 = 核 ∥ CLI ∥ 桌面。
+**跨 300 面**：`thincoder-vscode/webview/settings.css` **412**（>300 在册 ⇒ 拆分窗口顺延；单源 = §3 样式档行）；其余各档皆 <300（`settings-provider-dialog.js` **284** ∥ `settings-mcp.js` **126** ∥ 两新档 **219** ∥ **151**）。零触面 = 核 ∥ CLI ∥ 桌面。
 
 **④ 边界**：MCP 字段集 ∥ 型组 ∥ kv 行式机制 ∥ 探测/重连语义零改；会诊行渲染 ∥ effort 档 ∥ advisor 面零改；键行就地编辑保持行内；首启板 ∥ 向导 ∥ CLI 交互面零动；桌面另面（`docs/desktop/design/SETTINGS.md` §2.18 ∥ §1 KD-77）。
 
@@ -610,7 +610,7 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 - **拒径**：零回执 ⇒ **零闪**；宿主失败照旧发 `providerError`（`scope:"providers"`——失败面单槽 banner，§2.15；机制零改）⇒ **拒因可见**；**行不关** = providers 卡重绘守卫——在编密钥编辑（`#prov-list` 内 password 输入在位）⇒ `updateProviderStatus` 本拍只更新 SS、不重绘（用户输入优先于推送——沿 U-S10 工具键行 `skipWhileEditing` 同判；在编值保留、可即改即重存）。
 - **行关不依赖状态推送**（同值重存 ⇒ 状态无差、无重绘）：由回执径就地恢复——受理径恒达。
 - **无写径**：空 ∥ 全空白钥 ⇒ 写面守卫早退（零写盘 ∥ 零错误）⇒ 宿主**零回执**（回执 ⟺ 真写）+ `console.warn` 一条（零静默；亦不判失败——发送面守卫使该径 UI 不可达）。
-  写面三态 = `{ status: "ok" | "no-write" | "conflict", hint? }`（单源 = `thincoder-vscode/src/extension/presets.mjs` `storeProviderKey`——透传链 = `settings.mjs` `saveProviderKey`）。
+  写面三态 = `{ status: "ok" | "no-write" | "conflict", hint? }`（单源 = `thincoder-vscode/src/extension/presets.mjs` `storeProviderKey`——透传链 = `thincoder-vscode/src/extension/settings.mjs` `saveProviderKey`）。
 
 **边界**：添加弹窗径（`addProvider` 宿主后置拒）不在本节——残余 = §2.16 ①（条件行）；本回执形为其复用模板。桌面对位（`provider:setKey` 回执 + 失败草稿——`renderer/mount-settings-segments-providers.mjs`；主面回读核验「零假成功」——`thincoder-desktop/src/main/providers.mjs`）。
 
@@ -675,7 +675,7 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 - **快照未达拍的代理控件渲染值**（观感面 · §2.8 登记）：`#px-web` 在快照缺席时按渲染默认显示为勾选——打开拍必达落地后该拍仅在推送丢失时出现，且发值门（§2.8 基线判据）已消除其危害；消解路径 = 若日后引入推送回执 / 超时可见化，则在同一处显式化该拍；到期 = 设置面下次被触碰时。
 - **确认弹框形态三处同族重复**（结构面 · §2.10 登记）：同一弹框件现有三处实现——
   `thincoder-vscode/webview/session-bar.js`（会话删除确认）· `webview/mode-buttons.js`（AUTO 启用确认）· §2.10 的 settings 面一处；
-  只在 settings 面立单源（`showConfirmPopover`）。消解路径 = 抽公共件 `thincoder-vscode/webview/confirm-popover.js` 并三点迁移（纯搬移、零语义改）；
+  只在 settings 面立单源（`showConfirmPopover`）。消解路径 = 抽公共件（`webview/` 下新档）并三点迁移（纯搬移、零语义改）；
   到期 = 该两面下次被触碰时 / 父侧裁定扩写域。
 - **provider 行 − 的凭证归类**（归类面 · §2.10 入口册 #4）：该行条目内含 `apiKey`（写入 = `thincoder-core/config-io.mjs` · 删条目的整条 filter = 同档）⇒ 删行同时移除 key 原文 ⇒ 判入**不可复得类**（用户裁定 A——载体 = `webview/settings-providers.js` 卡 HTML + 编辑行取消重建位）。
 - **本门弹框文案**（文案面 · §2.10 弹框契约登记）：正文键 `settings.secretDeleteConfirm` = 类通用式（值级改写 · 键数不变 · 键名不动；改写值 = §2.10 文案条）——密钥类与 MCP server 行（入口册 #5，不显掩码、删除目标 = 整条 server 条目）两族均成立。
@@ -685,13 +685,13 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 ——① 拆出 = `thincoder-vscode/webview/settings-mcp.js`；缝 = `mcpFormHtml()` ∥ `bindMcpControls()` 两口回插；对外导出名零改——`settings.js` ∥ `chat.js` 消费面零改。
   到期条件 = 阈值 750 行到达时。
 - **直通门 `_confirmDelete` 零调用点（保留门）**（结构面 · §2.10「后态」）：入口册全数过确认门 ⇒ `window._confirmDelete`（`thincoder-vscode/webview/settings.js`）**零调用点**（门体零动——**保留门**）；
-  `test/smoke-settings.mjs` 的 handler 在位断言照绿。
+  该批单元测试档的 handler 在位断言照绿。
 
 - **入口 6 的确认不绑定目标**（交互面 · §2.10「模型菜单入口」段登记）：确认弹框发生在宿主 QuickPick 选定**之前**（文案 = 类通用式 `settings.secretDeleteConfirm`、不携 `name`）⇒ 与入口 1–5（目标 = 载体所在行）的确认力度不同；按「取消 ⇒ 零删除 ∧ 零消息副作用」的**严格读法**选门位（webview 侧调用点），代价入册。
   补偿 = 目标选定步（QuickPick）自身是显式选择（见 §2.10 补偿两条）；消解路径 = ① 若父侧裁定确认须绑定目标，则须先裁定该半句读法（严格 = 零发值 / 宽松 = 无持久副作用）+ 登记第二确认形态（VS Code 原生件）例外；② 或宿主把选定 `name` 回传 webview 走同件（须协议 +1 条消息）；到期条件 = 本门下次被触碰 / 父侧裁定。
 
 - **`thincoder-vscode/src/extension/settings.mjs` 越 300 行建议线（拆分复核）**（结构面 · §2.13 载体档）：该档现 **426**（内容行数口径）——**仍越 300 建议线**（< 750 触发阈值）⇒ 拆分计划维持（快照面透传语义不变）。
-  - **拆分组边界** = ① 快照族（`agentSettings` / `proxySettings` / `websearchSettings` / `fullStatus`）② 渠道路由族（provider 增删 / 代理旗标 / 连接测试）③ 密钥与 MCP 族（`saveProviderKey` / `deleteProviderKey` / MCP 三件）——① 拆出 = `thincoder-vscode/src/extension/settings-snapshots.mjs`。
+  - **拆分组边界** = ① 快照族（`agentSettings` / `proxySettings` / `websearchSettings` / `fullStatus`）② 渠道路由族（provider 增删 / 代理旗标 / 连接测试）③ 密钥与 MCP 族（`saveProviderKey` / `deleteProviderKey` / MCP 三件）——① 拆出 = `src/extension/` 下一新档（快照族）。
   - **拆分计划** = 触发阈值 **750 行** 或该档下次结构改动（先到即拆）；到期条件 = 触发阈值到达时。
 
 - **`advisor.guard: null` 磁盘形态 vs 判据用例域**（边界面 · §2.14 载体）：种子循环（`settings-panel-write.mjs`）对 `v === null` 除 `thinking` 外 continue。

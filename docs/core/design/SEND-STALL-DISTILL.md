@@ -14,11 +14,11 @@
 
 仅顶层（`depth === 0`）触发：先发 `onComplete` 释放前端，再把蒸馏 promise 化挂起、**不 await**，立即返回回合内容。
 
-- 发射函数 = `fireEndOfRunDistill`（VSC `thincoder-vscode/src/agent/run-stages.mjs`；核侧同语义调用点 = `thincoder-core/agent/turn-loop.mjs`）。
+- 发射函数 = `fireEndOfRunDistill`（现体 = `thincoder-vscode/src/explore-distill.mjs`；核侧同语义调用点 = `thincoder-core/agent/turn-loop.mjs`）。
 - **depth 守卫**：子轮（`depth > 0`）不得创建蒸馏——否则先创建者晚 resolve 会 clobber 历史（竞态）。
 - 落位时 **原地改保持 history 引用**（同一数组），并失效 token 基线（机器行形状变了）；随后调 `onDistilled`。
 - 蒸馏本体 = `summarizeRunExplorations`（VSC `thincoder-vscode/src/explore-distill.mjs`；核 `thincoder-core/explore-distill.mjs`）——
-  两档为**同名同源模块**（各端自持、语义同源）；现体消费 = `thincoder-vscode/src/agent/run-stages.mjs` 直引 VSC 蒸馏本体；核侧 re-export 见 `thincoder-core/context.mjs`。
+  两档为**同名同源模块**（各端自持、语义同源）；现体消费 = `thincoder-vscode/src/explore-distill.mjs` 直引 VSC 蒸馏本体（面板级调用点 = `thincoder-vscode/src/extension/panel-turn-loop.mjs`）；核侧 re-export 见 `thincoder-core/context.mjs`。
 
 ### 2.2 下一轮开头 await（FR2 / N1）
 
@@ -68,11 +68,11 @@ flush 点 = 每轮 `runAgentTurn` 的 finally（render 已先行、退出场景�
 
 | 面 | 核 / CLI | VSC |
 |---|---|---|
-| 轮末发射 | `thincoder-core/agent/turn-loop.mjs`（depth 守卫 + `summarizeRunExplorations(...).catch(() => {})` + `_pendingDistill = distill`） | `thincoder-vscode/src/agent/run-stages.mjs`（`fireEndOfRunDistill`）· 同档的 `onDistilled` 调用点 |
+| 轮末发射 | `thincoder-core/agent/turn-loop.mjs`（depth 守卫 + `summarizeRunExplorations(...).catch(() => {})` + `_pendingDistill = distill`） | 现体 = `thincoder-vscode/src/explore-distill.mjs`（`fireEndOfRunDistill`）· 面板级调用点 = `thincoder-vscode/src/extension/panel-turn-loop.mjs` |
 | 跨轮挂载点 | `thincoder-core/agent.mjs`（`_pendingDistill`——字段声明随档面收窄） | `thincoder-vscode/src/extension/panel-chat.mjs`（`_distillState`） |
 | 下一轮 await | `thincoder-core/agent/run-start.mjs` | `thincoder-vscode/src/agent.mjs`（runAgent 内）· `panel-chat.mjs`（面板级同因 await） |
 | 蒸馏本体 | `thincoder-core/explore-distill.mjs` | `thincoder-vscode/src/explore-distill.mjs` |
-| re-export | `thincoder-core/context.mjs` | 现体消费 = `thincoder-vscode/src/agent/run-stages.mjs` |
+| re-export | `thincoder-core/context.mjs` | 现体消费 = `thincoder-vscode/src/explore-distill.mjs` |
 | 保存回调 | `thincoder-cli/src/tui/tool-events.mjs`（`onDistilled` → `saveSessionImpl` 静默保存；callbacks 由 `src/tui/agent-turn.mjs` 传入） | `thincoder-vscode/src/extension/panel-callbacks.mjs` |
 | 退出 flush | `thincoder-cli/src/tui/agent-turn.mjs`（`DISTILL_FLUSH_TIMEOUT_MS = 5000`）· 同档 finally（内有界等待）· 同档「不摘除 `_pendingDistill`」注释 | —（面板生命周期中止面替代——见 §2.4） |
 | 中止器 | —（会话退出 flush） | `panel-chat.mjs`（`_distillController` 建立支）· `chat-panel.mjs`（dispose）· `panel-session.mjs`（会话切换） |

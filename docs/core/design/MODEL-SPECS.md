@@ -197,7 +197,7 @@
    本就排除 `data:audio/`，`thincoder-core/provider/normalize.mjs` 的 `RASTER_IMAGE_URL`）⇒ `modalities` 写进来后
 
    **零个消费点**，只剩「登记了但没人读」的第二真源风险（违 D2 单权威源）。
-   （注：`thincoder-core/tools/file.mjs:138` 的 `multimodal` 是**工具属性**（返回值带图），与模型 spec 无关，不入此计数；端同名实现已取核。）
+   （注：`thincoder-core/tools/file.mjs` 的 `multimodal` 是**工具属性**（返回值带图），与模型 spec 无关，不入此计数；端同名实现已取核。）
 3. **本环境不接音频输入**：ACP 侧 `promptCapabilities` 全 `false`
    （`thincoder-cli/src/acp/client-caps.mjs` 的 `createCapsHandlers`）⇒ 用户无法向本工具投喂音频，
    声明服务端音频能力对产品行为无意义。
@@ -1121,7 +1121,7 @@ VSC 产品码全零改（`EFFORT_DEFAULT_PREFIXES`（`thincoder-vscode/src/specs
 
 **行数处置**：判据 = 软线 **500** / 硬限 **800**（数值单源 = 工作区根 `AGENTS.md`；函数体 ≥300 的那条量的是单体函数，不量文件）——`model-specs.mjs` ~337 ⇒ **在 500 软线内，无拆分义务**（上行同批落）；
 
-**拆分计划** = 拆点 `MODEL_SPECS` 表块（行 + 行注）外提；落点 `thincoder-core/model-specs-table.mjs`（拟新增——主档 re-export 保 import 面零改）；连带面 = 单元测试档文本扫描 helpers（`SPEC_SOURCE` 族）随拆分批改读两档；**消解窗口 = 越 800 硬限前或该档下次实质改动时**（触发 = 该档越 500 软线时）。
+**拆分计划** = 拆点 `MODEL_SPECS` 表块（行 + 行注）外提；落点 = 核包内拟新增的表档 `model-specs-table`（去扩展名命名——主档 re-export 保 import 面零改）；连带面 = 单元测试档文本扫描 helpers（`SPEC_SOURCE` 族）随拆分批改读两档；**消解窗口 = 越 800 硬限前或该档下次实质改动时**（触发 = 该档越 500 软线时）。
 
 ### 13.7 验收标准回指（条目 #267 · 需求裁定）
 
@@ -1418,7 +1418,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 | `thincoder-vscode/src/extension/settings.mjs` | **409** | **±0** | 快照面（spread 透传）已载新旧两键与 `thinking`——读面归 webview（§15.4-4），本档零改 |
 | 设计档 | — | 设计轮 + 修正轮笔 | 本档 §15 · `PROVIDER.md` §6.9/§6.11/§6.12 · `docs/vsc/design/SETTINGS.md` §2.13 + §3 + U-S12 · `docs/vsc/design/WEBVIEW.md` §6 D-W41 / §8 U-W20（WEBVIEW 两行为设计轮已落、修正轮零改） |
 
-**`settings.mjs` 拆分复核注**：组边界 = ① 快照族（`agentSettings` / `proxySettings` / `websearchSettings` / `fullStatus`）② 渠道路由族（provider 增删 / 代理旗标 / 连接测试）③ 密钥与 MCP 族（`saveProviderKey` / `deleteProviderKey` / MCP 三件）——① 拆出 = `src/extension/settings-snapshots.mjs`（拟新增）；
+**`thincoder-vscode/src/extension/settings.mjs` 拆分复核注**：组边界 = ① 快照族（`agentSettings` / `proxySettings` / `websearchSettings` / `fullStatus`）② 渠道路由族（provider 增删 / 代理旗标 / 连接测试）③ 密钥与 MCP 族（`saveProviderKey` / `deleteProviderKey` / MCP 三件）——① 拆出 = VSC 扩展目录下拟新增的快照档 `settings-snapshots`（去扩展名命名）；
 
 拆分计划 = 触发阈值 **750 行** 或该档下次结构改动（先到即拆）；**登记 = `doc:docs/vsc/design/SETTINGS.md:§3`**。
 

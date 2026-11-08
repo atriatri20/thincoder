@@ -9,7 +9,7 @@
 - **传输**：NDJSON over stdio（每行一个 JSON，JSON-RPC 2.0）。
 - **方向**：IDE = client（发起请求）、agent = server（响应 + 反向 RPC 通知）。
 - **版本**：`initialize` 内 `protocolVersion` 协商（当前稳定版本 `1`）。
-- **协议权威**：`agentclientprotocol/agent-client-protocol` 仓库 `schema/v1` 的 `schema.json`（方法名 / 事件类型以 schema 为准）。
+- **协议权威**：`agentclientprotocol/agent-client-protocol` 仓库 `schema/v1` 的协议 schema（方法名 / 事件类型以 schema 为准）。
   注意区分：`@agentclientprotocol/sdk` 的版本号是 **SDK 包版本**、不是协议版本。
 - **不做**：unstable 扩展（auth-configuration / buffer sync / inline-edit 预测等）——正常客户端流程不依赖。
 - **规范基线（as-of 2026-09-18 · 锁定）**：一手 = 上游仓 `agentclientprotocol/agent-client-protocol`（`main` 分支）`schema/v1` 目录的 v1 schema；二手 = `agentclientprotocol.com/protocol/**`（v1）；交叉印证 = 本地四份参考实现。
@@ -337,7 +337,7 @@ export function relayPrefixOf(label, id) // → `${label}#${id}/`
 - **另一消费点已自洽（非缺陷——登记为观察项）**：`thincoder-cli/src/tui/subagent-blocks.mjs` 的 `SUB_EVENT_RE` 枚举（含 `queued`、**不含** `cancelled`）之外另有同档显式 `cancelled` 分支 + `startsWith("⟦ev⟧")` 兜底 ⇒ 无泄漏面，**不改**。
 - **嵌套形态顺序不变**：relay 前缀由桥先剥（本节表①「信号检查改在 payload 上」）；前缀后 token 落 payload 首 ⇒ 同一判据命中。
 - **负向边界（防过剥）**：正文含 `⟦ev⟧` 而无 `\x1e` 终止符 ⇒ **仍转发**（判据要求终止符同现）；`[a-z]+` 不吃其它 `⟦…⟧` token 形态。
-- **测试覆盖**：宿主 `thincoder-cli/test/acp-channel.test.mjs`（T9 信号 token 带前缀 → **零可见面文本**（零 `agent_message_chunk`）；结构化增量见 §12）——增 `queued` / `cancelled` 两相 + 无终止符负例（正文含哨兵仍须转发）。
+- **测试覆盖**：宿主 = 该批单元测试档（T9 信号 token 带前缀 → **零可见面文本**（零 `agent_message_chunk`）；结构化增量见 §12）——增 `queued` / `cancelled` 两相 + 无终止符负例（正文含哨兵仍须转发）。
 - **受影响文件与验收（回指）**：受影响文件（当前行数 / 增量）= 本档 §3.5；验收 = 可机器验证（V4）。
 
 ### 7.3 能力缺口：`onToolOutput` 明示缺
@@ -622,21 +622,21 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 ## 14. 用户文档面（对外文档 · 清单与同拍义务）
 
 > **定位**：本板块能力面变更 → **用户文档**联动的单源——面清单与同拍义务句住本节；收口执行位 = `docs/core/design/BATCH-RECORD.md` §5.3（槽位「用户文档面同拍」；槽位枚举权威 = `docs/core/design/DOC-DISCIPLINE.md` D7 行）。
-> **正文单源判定**：用户指南**正文** = 站仓页 `acp.html`（站内自持——不依赖仓内档路径）；仓内**事实源** = 本档（指南陈述逐句可回指）；
+> **正文单源判定**：用户指南**正文** = 站仓页 `thincoder.com/www/acp.html`（站内自持——不依赖仓内档路径）；仓内**事实源** = 本档（指南陈述逐句可回指）；
 > resource_link 细节（判定树 ∥ 上限 ∥ 降级词表）= `docs/cli/design/ACP-PROTOCOL-COMPLIANCE.md` §2.5（冻结基准）；其余用户面 = 摘要 ∥ 指针 ∥ 提及——只引用不重述（D2）。
 
 **面清单（站仓 = `thincoder.com`）**
 
 | # | 面 | 角色 | 用户可感能力变更时 |
 |---|---|---|---|
-| 1 | `acp.html`（接入指南——前置 ∥ 能力 ∥ 三宿主 ∥ 会话 ∥ 配置 ∥ 引用 ∥ 排障 ∥ 限制） | **正文单源** | **必更** |
-| 2 | `docs.html` §在 IDE 中使用（ACP） | 摘要 + 指针 | 随核对 |
-| 3 | `features.html` §Agent Client Protocol（ACP） | 能力摘要 + M1/M2 展望行 | 随核对 |
-| 4 | `install.html`（命令行列 ∥ 故障排查指针） | 命令 + 指针 | 随核对 |
-| 5 | `about.html`（路线图：ACP M1 ✅ ∥ M2 展望） | 路线图 | 随核对 |
-| 6 | `cli.html`（命令表行）· `index.html`（产品位提及） | 命令表 / 提及 | 仅顶层陈述变化时 |
+| 1 | `thincoder.com/www/acp.html`（接入指南——前置 ∥ 能力 ∥ 三宿主 ∥ 会话 ∥ 配置 ∥ 引用 ∥ 排障 ∥ 限制） | **正文单源** | **必更** |
+| 2 | `thincoder.com/www/docs.html` §在 IDE 中使用（ACP） | 摘要 + 指针 | 随核对 |
+| 3 | `thincoder.com/www/features.html` §Agent Client Protocol（ACP） | 能力摘要 + M1/M2 展望行 | 随核对 |
+| 4 | `thincoder.com/www/install.html`（命令行列 ∥ 故障排查指针） | 命令 + 指针 | 随核对 |
+| 5 | `thincoder.com/www/about.html`（路线图：ACP M1 ✅ ∥ M2 展望） | 路线图 | 随核对 |
+| 6 | `thincoder.com/www/cli.html`（命令表行）· `thincoder.com/www/index.html`（产品位提及） | 命令表 / 提及 | 仅顶层陈述变化时 |
 | 7 | `thincoder-cli/README.md` ACP 段（**产品文本面**） | 摘要 + 指南链接 | 随核对 |
-| — | `changelog.html` | 发布条目 | **不在本机制**（单源 = `docs/RELEASE.md` §6） |
+| — | `thincoder.com/www/changelog.html` | 发布条目 | **不在本机制**（单源 = `docs/RELEASE.md` §6） |
 
 **同拍义务句**：本板块出现**用户可感**能力变更（新增 ∥ 改变用户可见行为）⇒ 该变更批**收口前**逐面对照上表：
 面 1 **必更**、其余面**随核对**；落入 = ① 同批更新（跨仓**站仓轮**——页更新 + 部署；执行与判据 = `docs/RELEASE.md` §5.8）∥ ② **挂账有据**（台账行 + 触发批坐标）；**不得静默跳过**。

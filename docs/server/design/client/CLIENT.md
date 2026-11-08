@@ -42,7 +42,7 @@
 | **小计** | **≈276**（92 + 184） | —— |
 
 - `thincoder-server/package.json`（30 行）：`prepublishOnly` = 3×`node --check` 单行（`bin/thincoder-server.mjs` ∥ `src/ops/update.mjs` ∥ `deploy/converge.mjs`——现读）；**批内单测不入链**（现行纪律——见下行）；**store 域零改**（本域零迁移——结构版本现读 v24）。
-- 单元测试档：客户端接入单元测试档（服务端面——估 ≈260 行）；**本批（轮换）单元测试档**：`docs/batches/2026-10-15-team-token-rotation.test.mjs`（≈**320**——服务端面 + 核面 + 三端结构机检）。
+- 单元测试档：客户端接入单元测试档（服务端面——估 ≈260 行）；**本批（轮换）单元测试档** = 随批自持、收口即删的单元测试档（≈**320**——服务端面 + 核面 + 三端结构机检）。
   **入链判定 = 不入链**——本件跨面（服务端 + 核 + 三端结构），沿「跨面件无宿主产品链」先例（`docs/core/design/TEAM.md` §4）；现行纪律 = 批内单测随批档归档、不进产品链（`docs/core/design/TESTING.md`）⇒ **零随正**（`package.json` `prepublishOnly` 保持 3×`node --check`；门禁件数断言件现无在盘件）。
 
 ## 4. 验收判据（机检——回指 AC-31）

@@ -38,7 +38,7 @@
    - **存储零新建**：字段挂在既有 items 单表（台账库本就按项目根共享）——不建平行存储（MULTI-INSTANCE-COLLAB N-MI1 吻合）。
 
 9. **库键归一与跨端一致**：库键 = `sha1(normalizeCwd(项目根绝对路径))[:16]`——
-   - **归一步** = `session-slots.mjs` `normalizeCwd`（Windows 盘符统一大写；跨端契约同 session / checkpoint / traces / peers）；`resolve()` 既有规范化覆盖分隔符 / 点段 / 去尾斜杠；**非盘符段不折叠**（POSIX 大小写敏感——同 `MEMORY.md` §6.11「不做」）；`realpath` / 别名路径不做。
+   - **归一步** = `thincoder-core/session-slots.mjs` `normalizeCwd`（Windows 盘符统一大写；跨端契约同 session / checkpoint / traces / peers）；`resolve()` 既有规范化覆盖分隔符 / 点段 / 去尾斜杠；**非盘符段不折叠**（POSIX 大小写敏感——同 `MEMORY.md` §6.11「不做」）；`realpath` / 别名路径不做。
    - **不变性**：CLI 侧（盘符本大写）键零变；VSC 侧（`uri.fsPath` 小写盘符）并入同键 ⇒ **两端同库**。
    - **存量面**：变体键合并迁移（`thincoder ledger migrate --dry-run|--confirm`：备份 → 单事务迁入（id 重发）→ 事务内读回 → 源回收 `ledger-trash` 不删）· 残档审计（`thincoder ledger audit`：只读逐库定性 + 处置建议；只报告零动作）。
 
@@ -60,7 +60,7 @@
 ## ③ 边界（不做什么）
 
 - 不做 manifest（M1，只互指咬合）；不做批次档（M3）；不做 checklist（M7 废除，语义由本模块六态承接）。
-- 不做项目归档档搬迁（`docs/TODO-archive.md` 是项目文档约定，不在本模块）。
+- 不做项目归档档搬迁（项目归档档是项目文档约定，不在本模块）。
 - **首跑检测（F-LX3）不做**：不做变体库自动迁移 / 自动删除（只提示；收正 = 用户显式跑 `thincoder ledger migrate`）∥ 不做桌面 / VSC 启动面提示（CLI 主入口为限）。
 - 不承载细节展开（台账条目一行一条——细节进需求档 / 批次档）。
 

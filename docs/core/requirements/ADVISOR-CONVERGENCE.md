@@ -172,7 +172,7 @@
 | N-A3 | 超时 | 单工具 30s；整场评审 600s（可覆盖，非法回退默认）；墙判定绑信号状态 |
 | N-A4 | 评审对象稳定 | 评审对象由调用时显式传入——不遍历 git diff |
 | N-A5 | 触发克制 | 评审在既有流程节点触发；工具面空范围早退 |
-| N-A6 | 可机判 | 评审链行为由用例断言（契约：`test/advisor-chain-guards.test.mjs` 等） |
+| N-A6 | 可机判 | 评审链行为由用例断言（契约：评审链护栏用例组） |
 
 ### 8.3 对位与端差登记
 
@@ -180,7 +180,7 @@
 - 端差登记：
   1. **硬墙中止形态**：墙判定以信号状态为主判据。**= 已消解**（中止形态 = 核单源——`thincoder-core/advisor/loop.mjs` 的两处（其中一处返回「Advisor: interrupted.」尾）∥ `thincoder-core/advisor/run.mjs`（`AbortError` + `signal.reason.interrupt` 重抛））。
   2. **结算拒发不记账载体** = per-call `ctx._advisorRefused`（CLI 用 `agent._advisorRefusals` Set）——载体差异，语义零差——**形态（非登记项）**。
-  3. **冻结窗口实现点** = `src/agent/execute-tools.mjs`（单一预闸点——VSC 无独立 dispatch 模块）；事件面 = 核 `_mutLog`（`noteMutations`）——**形态（非登记项）**（实现点各端自持，语义同源）。
+  3. **冻结窗口实现点** = 各端自持的单一预闸点（VSC 无独立 dispatch 模块）；事件面 = 核 `_mutLog`（`noteMutations`）——**形态（非登记项）**（实现点各端自持，语义同源）。
    4. **项目方法论指针** = 仅声明（`docRoot.standards`）；文档地图 = 声明优先 → 兜底链——**形态（非登记项）**（指针形态；两端同机制）。
 
 **二态化裁定行**：① = **已消解**（端侧实现面不存在；中止形态 = 核单源）；② = **形态（非登记项）**（载体差异，语义零差）；③ = **形态（非登记项）**（实现点差异，语义同源）；④ = **形态（非登记项）**（指针形态，两端同机制）。

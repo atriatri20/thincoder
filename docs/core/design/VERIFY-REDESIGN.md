@@ -57,9 +57,9 @@ verify 的强制面住在完成路径，不住 verify 本体：
 
 | 面 | CLI | VSC |
 |---|---|---|
-| guard 首闸 | `thincoder-core/agent/completion.mjs`（`MAX_VERIFY_PUSHBACKS` 支） | `thincoder-vscode/src/agent/run-stages.mjs` |
-| guard 重试 | `thincoder-core/agent/completion.mjs`（`MAX_VERIFY_RETRIES` 支） | `thincoder-vscode/src/agent/run-stages.mjs` |
-| guard 耗尽 | `thincoder-core/agent/completion.mjs`（耗尽支） | `thincoder-vscode/src/agent/run-stages.mjs` |
+| guard 首闸 | `thincoder-core/agent/completion.mjs`（`MAX_VERIFY_PUSHBACKS` 支） | `核单源 thincoder-core/agent/completion.mjs 常量` |
+| guard 重试 | `thincoder-core/agent/completion.mjs`（`MAX_VERIFY_RETRIES` 支） | `核单源 thincoder-core/agent/completion.mjs 常量` |
+| guard 耗尽 | `thincoder-core/agent/completion.mjs`（耗尽支） | `核单源 thincoder-core/agent/completion.mjs 常量` |
 | code-mutations 层 | `thincoder-core/agent/completion.mjs`（`hasCodeMutations`） | `thincoder-vscode/src/agent/run-helpers.mjs` |
 | 打回报告 | `thincoder-core/agent-tools/verify.mjs`（`appendBlockGuidance`） | `thincoder-vscode/src/agent-tools/index.mjs`（核工具表再出口） |
 | goal 门禁 | `thincoder-core/agent-tools/goal.mjs`（`goalTool`） | `thincoder-vscode/src/agent-tools/index.mjs`（核工具表再出口） |

@@ -15,7 +15,7 @@
 
 **共同契约**：同一目录同一格式、快照跨端互通。
 
-> 相关但另住他档：**hooks 四事件**（`src/hooks.mjs` ↔ 核内）→ `docs/core/design/AGENT-LOOP.md` #169；**team 层记忆 git 同步**（`src/git/gitmem.mjs`）→ `docs/core/design/MEMORY.md` #168。
+> 相关但另住他档：**hooks 四事件**（`thincoder-core/hooks.mjs` ↔ 核内）→ `docs/core/design/AGENT-LOOP.md` #169；**team 层记忆 git 同步**（`thincoder-core/git/gitmem.mjs`）→ `docs/core/design/MEMORY.md` #168。
 
 ## 2. 核模块裁决行
 
@@ -29,13 +29,13 @@
 **四要素明细**
 
 - **#48 `tools/git-checkpoint.mjs`**（同路径 · j 0.9091 · sha `7b56f04cc565` / `5d9a226a1321` · 143 / 150 行）
-  - 左端读数（CLI）：`escapeXml` 经 `thincoder-cli/src/tools/git-checkpoint.mjs` 由 `thincoder-core/agent/helpers.mjs` 导入（共享实现）；checkpoint 子系统依赖 `../git/checkpoint.mjs`（同档 import 段）。
-  - 右端读数（VSC）：`escapeXml` 本地定义（`thincoder-vscode/src/tools/git-checkpoint.mjs`；注释自述「镜像 CLI 版本」）；依赖 `./checkpoint.mjs`（同档 import 段）；头注含「CLI 镜像：」行。
+  - 左端读数（CLI）：`escapeXml` 经 `thincoder-core/tools/git-checkpoint.mjs` 由 `thincoder-core/agent/helpers.mjs` 导入（共享实现）；checkpoint 子系统依赖 `thincoder-core/git/checkpoint.mjs`（同档 import 段）。
+  - 右端读数（VSC）：`escapeXml` 本地定义（VSC 侧同名档，其注释曾自述镜像 CLI 版本；该副本已并入核）；依赖同目录 checkpoint 档（已并入核 `thincoder-core/git/checkpoint.mjs`）；头注含「CLI 镜像：」行。
   - 建议归一形态：融合——`escapeXml` 下沉核内单一实现（消除本地副本）；依赖 / 路径按核内闭包归一。
   - 影响面：无行为差——两 `escapeXml` 实现逐字相同（同款 5 链替换、同序）；差异属组织面（共享函数本地副本化 + 子系统模块位置）⇒ 不命中三口径（须用户裁 = —）。
 - **#49 `tools/git-ext.mjs`**（同路径 · j 0.9071 · sha `682c67b71974` / `0cfaddecef28` · 173 / 174 行）
-  - 左端读数（CLI）：注释 + 依赖 `../git/checkpoint.mjs`（动态导入 `thincoder-cli/src/tools/git-ext.mjs`）；函数体与右端逐字相同。
-  - 右端读数（VSC）：注释（含「CLI 镜像：」注记，同档头注）+ 依赖 `./checkpoint.mjs`（同档 import 段）；函数体逐字相同（filterLines / runGitStrict / validateRef / gitConfigArgs / snapshotBefore / executeExtAction）。
+  - 左端读数（CLI）：注释 + 依赖 `thincoder-core/git/checkpoint.mjs`（动态导入 `thincoder-core/tools/git-ext.mjs`）；函数体与右端逐字相同。
+  - 右端读数（VSC）：注释（含「CLI 镜像：」注记，同档头注）+ 依赖同目录 checkpoint 档（已并入核 `thincoder-core/git/checkpoint.mjs`）；函数体逐字相同（filterLines / runGitStrict / validateRef / gitConfigArgs / snapshotBefore / executeExtAction）。
   - 建议归一形态：融合——注释归一（删镜像注记）+ 依赖路径按核内闭包。
   - 影响面：无行为 / 契约差（差异 = 注释与依赖组织）⇒ 不命中三口径（须用户裁 = —）。
 
@@ -43,13 +43,13 @@
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
-| 167 | `src/git/checkpoint.mjs` ↔ `src/tools/checkpoint.mjs` | ② | 融合：取一侧（v2 全文件快照 / rewind / 每文件恢复 / 只读 git 仓） | 分叉 ＝ 目录归属；VSC 头注自述「MIRROR of thincoder CLI src/git/checkpoint.mjs——同一目录同一格式、快照跨端互通」⇒ 前提成立 | — | S1（建核补齐） |
+| 167 | `thincoder-core/git/checkpoint.mjs` ↔ VSC 侧 tools 目录的同族档（已并入核） | ② | 融合：取一侧（v2 全文件快照 / rewind / 每文件恢复 / 只读 git 仓） | 分叉 ＝ 目录归属；VSC 头注曾自述为 CLI checkpoint 档的镜像——同一目录同一格式、快照跨端互通 ⇒ 前提成立 | — | S1（建核补齐） |
 
 **工具实现面单端档映射**
 
 | 单端档 | 对位 / 处置 |
 |---|---|
-| VSC `tools/checkpoint.mjs` | ↔ CLI `git/checkpoint.mjs`（行 #167） |
+| VSC 侧 tools 目录的同族档（已并入核） | ↔ CLI `thincoder-core/git/checkpoint.mjs`（行 #167） |
 
 ## 3. 须用户裁条目
 
@@ -77,7 +77,7 @@
 
 - **存储目录**：`~/.thincoder/checkpoints/{cwdHash12}/` 全量文件副本。
 - **cwd hash 契约（钉定）**：`cwdHash12 = sha1(normalizeCwd(cwd)).slice(0, 12)`，`normalizeCwd` = Windows 盘符大写——VS Code 的 `uri.fsPath` 小写盘符，归一化后同 cwd 两端产生**同一 hash**，快照跨端互通；归一化同 session 存储（`thincoder-core/session-slots.mjs` `normalizeCwd`）。
-- **id 语义**：时间戳（36 进制）+ 随机后缀；能力：rewind（单文件 / 目录恢复 + **恢复前自动快照**——可逆）、cat（快照内文件读取）、versions（per-file 历史，逐快照文件级元数据存 meta.json 支撑）。
+- **id 语义**：时间戳（36 进制）+ 随机后缀；能力：rewind（单文件 / 目录恢复 + **恢复前自动快照**——可逆）、cat（快照内文件读取）、versions（per-file 历史，逐快照文件级元数据存侧车元数据档支撑）。
 - **上限（NF6）**：每 cwd **100 个**（`MAX_CHECKPOINTS = 100`；`createCheckpoint` 末尾 `pruneCheckpoints`——快照数 >100 → 删最旧）。
 - **存量兼容**：VS Code 旧 stash 快照不迁移——不再支持 checkpoint 工具 rewind（用户可手动 `git stash drop`）；cwdHash 归一化前的 CLI 存量旧路径快照孤儿化（失效但文件保留，可手动清理）——新快照从归一化路径重新积累。
 

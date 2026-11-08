@@ -23,7 +23,7 @@
 - **不进既有目录的理由**：`scripts/` 是一次性仓维护脚本（无数据、无产物家、跑完即弃）；`.thincoder/tmp/` 被 gitignore（场景无法版本化）；`test/` 是集成套件家（夹具不替代集成测试，§7）；产品包会发布，夹具不发布。
 - **零依赖、不建 `package.json`**：仓根与各工具目录都不设 `package.json`，夹具沿用同一形态——仓根下 `node prompt-fixture/run.mjs …` 直接跑。
 
-**最接近的先例（结构面）**：仓根 2026-10-26 读数 = `.github` · `bench` · `bin` · `docs` · `scripts` · `test` · `thincoder-cli` · `thincoder-core` · `thincoder-desktop` · `thincoder-render-core` · `thincoder-server` · `thincoder-vscode`，根下无 `package.json`。
+**最接近的先例（结构面）**：仓根 2026-10-26 读数 = `.github` · `bench` · `bin` · `docs` · `scripts` · `test` · `thincoder-cli` · `thincoder-core` · `thincoder-desktop` · `thincoder-render-core` · `thincoder-server` · `thincoder-vscode`，根下不承载包清单。
 
 - **对齐**：`bin/` 是单个薄入口（`thincoder.cjs`，683 字节），`node bin/…` 直跑、不设包；`test/` 是自足套件目录（`RTM.md` + `run.mjs` + `integration/`），`node --test` 直跑。本目录沿同形：自足、零 `package.json`、`node prompt-fixture/run.mjs` 直跑。
 - **偏离一（产物家）**：`bin/` 只做转口、`test/` 的产物是 CI 读数，两者都不承担「一次运行 = 一份可回看的证据」——夹具的产物是读数，必须有自己的 `results/`。
@@ -204,7 +204,7 @@ prompt-fixture/
 
 ### 2.6 调用 provider 与跑批
 
-- **provider 调用面**：`import { chat } from "../thincoder-core/provider/index.mjs"`（`thincoder-core/provider/index.mjs` 再导出，实现 `thincoder-core/provider/core.mjs`）。夹具自己的传输包装只有一层：读响应、抽 `content / reasoning / toolCalls / usage / finishReason`、记耗时。不 import 任何其它跑批工具的传输 / 工具环 / 落档 / 参数模块。
+- **provider 调用面**：以相对 import 取 `chat`（`thincoder-core/provider/index.mjs` 再导出，实现 `thincoder-core/provider/core.mjs`）。夹具自己的传输包装只有一层：读响应、抽 `content / reasoning / toolCalls / usage / finishReason`、记耗时。不 import 任何其它跑批工具的传输 / 工具环 / 落档 / 参数模块。
 - **provider 条目**：`loadConfig()`（`thincoder-core/config.mjs`）→ 严格单发解析 `parseModelRef(ref, config.providers)`（`thincoder-core/model-ref.mjs`）→ `hasKey(entry)`（同档的 `hasKey` 谓词）。解析不过 / 渠道无 key ⇒ **拒绝启动**，点名 ref 与可用渠道名。采样参数**沿用户 config 原值**（夹具不改 temperature / maxTokens：测的是真实运行设置下的提示词行为）。
 - **为什么不用核的运行时主径**：`resolveProviderPlan`（`thincoder-core/model-ref.mjs`）带渠道面回退序——被测渠道无 key 时它**换一个渠道跑**，读数就不再属于被指定的那个模型。夹具要的正是严格单发（解析不过即拒、不回退）。同理不调 `resolveRuntimeProvider`（同档；核注释标「新码勿调」）：夹具要的是它的语义，但取原语自组装，不引被标退役的包装。
 - **CLI**：
@@ -356,7 +356,7 @@ node prompt-fixture/run.mjs --dry-run --copies baseline,demo
 
 ## 8 UI / 交互
 
-无 UI：入口是 CLI（`run.mjs` / `compare.mjs`），产物是 `prompt-fixture/results/` 下的报告对。报告列集与统计口径固定在 2.7。无 `open` 项。
+无 UI：入口是 CLI（`prompt-fixture/run.mjs` / `compare.mjs`），产物是 `prompt-fixture/results/` 下的报告对。报告列集与统计口径固定在 2.7。无 `open` 项。
 
 ## 9 集成测试设计（RTM 增量）
 

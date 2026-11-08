@@ -57,7 +57,7 @@ phase 1 的实测（口径与复现命令 = `thincoder-cli/docs/requirements/TWO
 
 | 面 | 事实 |
 |---|---|
-| CLI 记忆面 | 用 **`node:sqlite` 的 `DatabaseSync` + FTS5**（`thincoder-cli/src/memory/schema.mjs`——零第三方依赖） |
+| CLI 记忆面 | 用 **`node:sqlite` 的 `DatabaseSync` + FTS5**（CLI 侧当年的记忆 schema 实现档——零第三方依赖） |
 | VSC 记忆面 | **零 sqlite 用法**（两套逻辑） |
 
 **处置 —— 不做「取一侧」的合并，先做前提校验**：分叉源于**已失效的前提**（「VS Code 内置 Node 不支持 sqlite」）⇒ **用户裁定 A12：记忆面向 CLI 语义归一**（CLI 为准）。

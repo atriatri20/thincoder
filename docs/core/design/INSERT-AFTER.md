@@ -3,7 +3,7 @@
 > 板块 = **编辑工具**；本档 = **insert_after 语义的权威源**（逐工具权威档之一）。
 > 地图与契约要点 = `docs/core/design/TOOLS.md` §6.6 · §8.2——本档不复制其内容（D2）。
 > 共享底层 = `docs/core/design/EDIT-HELPERS.md`（EOL 与候选 helper——本档只指不述）。
-> 双端：CLI `thincoder-core/tools/file.mjs`（`insertAfterTool` + read-before-insert 护栏）· VSC `thincoder-vscode/src/tools/more-file.mjs`（同机制，各自实现；**无 dirty 机制**——见 §4 差异；现体同指核 `thincoder-core/tools/file.mjs`；dirty 护栏随核单源生效）。
+> 双端：CLI `thincoder-core/tools/file.mjs`（`insertAfterTool` + read-before-insert 护栏）· VSC 端无自有实现档（现体同指核 `thincoder-core/tools/file.mjs`；同机制、**无自有 dirty 面**——见 §4 差异；dirty 护栏随核单源生效）。
 > 模型可见描述 = `thincoder-core/tool-docs/insert_after.md`（提示词面 / 产品代码）。
 > 需求侧 = `docs/core/requirements/TOOLS.md`（工具系统板块；CLI 树无逐工具需求档）。
 
@@ -57,7 +57,7 @@ insert_after 定位基于行号 / 正则；文件若在 `read` 之后被别的�
 | 拒文（dirty 面） | `thincoder-core/tools/write-path.mjs` 的 `dirtyRefusalMessage` | 导出在位 |
 | 拒文（行号漂移面） | `thincoder-core/tools/write-path.mjs` 的 `lineAnchorRefusal`（与 `dirtyRefusalMessage` 同处） | edit / insert_after 同句 |
 | 描述面（模型可见） | `thincoder-core/tool-docs/insert_after.md` | 在位（`DESC()` 加载） |
-| VSC 对位实现 | `thincoder-vscode/src/tools/more-file.mjs` 的 `insert_after`（现体 = 核 `thincoder-core/tools/file.mjs`） | 同名机制 · 无自有 dirty 面（随核护栏） |
+| VSC 对位实现 | 现体 = 核 `thincoder-core/tools/file.mjs` 的 `insert_after`（VSC 端无自有实现档） | 同名机制 · 无自有 dirty 面（随核护栏） |
 
 ### 6.2 记账面归位
 
@@ -65,7 +65,7 @@ insert_after 定位基于行号 / 正则；文件若在 `read` 之后被别的�
 
 ### 6.3 VSC 端差异
 
-VSC 端 `thincoder-vscode/src/tools/more-file.mjs` 的 `insert_after`；现体 = 核 `thincoder-core/tools/file.mjs`，行号锚护栏随核单源生效（无独立记账面）。
+VSC 端 `insert_after` 现体 = 核 `thincoder-core/tools/file.mjs`（VSC 无自有实现档），行号锚护栏随核单源生效（无独立记账面）。
 
 编辑器分支：doc 已打开 → 换行符按 fileEol（normalizeEOL + 消除 `$` 锚失配与混合 EOL 注入——`docs/core/design/EDIT-HELPERS.md` §6），经写路径缝承接。
 

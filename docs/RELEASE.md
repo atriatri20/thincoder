@@ -11,7 +11,7 @@
 对外版本号规则 = **CalVer**（§4——各单元同制）。
 **发布顺序恒为：核 → CLI → VSC → 桌面**（产品发布恒以核已发布为前提——`docs/core/design/CORE-UNIFICATION.md` §2.6 发布顺序硬约束；**桌面 = 三端之一**（发布轮含桌面——2026-10-13 用户裁定）——其核内嵌源自源树、发布窗按 §5.6 走）。
 
-**顺序 = 版本面 + 内容面双关**：下游引用核的**新面**（判例 = CLI `src/cli/team-command.mjs` 消费核 `team.mjs`——唯一写者）⇒ 核须随**含该面**的版本**先发 ∥ 同拍发**；核源树内容变而未换号 ⇒ registry 面滞留旧内容 ⇒ 装后即缺档失效
+**顺序 = 版本面 + 内容面双关**：下游引用核的**新面**（判例 = CLI `src/cli/team-command.mjs` 消费核 `thincoder-core/team.mjs`——唯一写者）⇒ 核须随**含该面**的版本**先发 ∥ 同拍发**；核源树内容变而未换号 ⇒ registry 面滞留旧内容 ⇒ 装后即缺档失效
 
 （同类实证 = 0.10.5 核包缺 `browser/`——台账 #1362）。机检 = §5.0 P2 核行闭包断言 + §5.0 P4 ④ registry 复验（工具 = `scripts/check-pack.mjs`——台账 #1363 ∥ #1222）。
 **发布序硬门（核内容变更 ⇒ 依赖面同批抬版）**：核内算式 / 机制变更 ⇒ 核先发；下游（服务端 ∥ 三端）对核依赖写 **caret 形**（`^<本次核发行版>`——与 §4.4 同口径），并在同一发布轮抬到本次核发行版；发前人工校一次核 tag 内算式常量与源树一致（一次性动作，非运行时判据）。
@@ -57,7 +57,7 @@
 ### 4.2 定号纪律
 
 1. **号在发布时定，开发期不预占**：开发批 CHANGELOG 记录挂 `[Unreleased]` 段（不编号）；发布 = 唯一定号动作（bump → Unreleased 段头改新号；条目 = 发布轮回填——§5.2 步 2）。
-2. **待发号 = 当月已发最高号 + 1**；发布前查当月双源最高 + 当前月（期望号 = `0.<当月>.<月内序号>`；package.json ≠ 期望号 → 先纠正）。
+2. **待发号 = 当月已发最高号 + 1**；发布前查当月双源最高 + 当前月（期望号 = `0.<当月>.<月内序号>`；各端包清单的版本号 ≠ 期望号 → 先纠正）。
 3. **月切换硬规则**：新月份第一次发布 = `0.<当月>.1`（月内计数每月重置，CalVer 语义）。
 4. **缺口 / 越月号不补**：历史缺口（0.12.54→0.12.58，55/56/57 永缺）**不补发**；0.8.11 类越月预占号**作废**（9 月内容归 0.9.1）；规则从下一发起保证零新缺口。
 5. **各端独立号段**：核（`@thincoder/core`）· CLI（`thincoder`）· VSC（`thincoder-vscode`）· **桌面（`thincoder-desktop`——2026-10-01 起入号：首版 `0.10.1`）** 各自独立计数，互不挤占（包名不同，版本各算）。
@@ -141,7 +141,7 @@
 **P5 · 回退**
 
 - 干跑面：零副作用——无回退对象；复跑幂等。
-- bump 未发布 ⇒ 改回 `package.json` 即退（未占号）；已发布 ⇒ §5.7 失败总原则（从失败端重跑；已发端不重发——不另立）。
+- bump 未发布 ⇒ 改回包清单版本即退（未占号）；已发布 ⇒ §5.7 失败总原则（从失败端重跑；已发端不重发——不另立）。
 - dev 链破（物化后未恢复）⇒ P3 恢复 + 复判 = 0；`--force` 不入本段判据（破坏性、显式——§2.6.1）。
 
 **P6 · 检查清单（就位轮逐项打勾——逐条时点见括注）**
@@ -181,13 +181,13 @@
 
 ### 5.2 阶段 0 · 发布前置（各端通用）
 
-1. **定号**（§4.2）：查当月最高已发号 + 当前月 → 期望号；`package.json` ≠ 期望号 → 先纠正再走流程。
+1. **定号**（§4.2）：查当月最高已发号 + 当前月 → 期望号；各端包清单的版本号 ≠ 期望号 → 先纠正再走流程。
 2. **CHANGELOG**：**各端各自**（核 `thincoder-core/CHANGELOG.md` ✗ CLI ✗ VSC ✗ **桌面 `thincoder-desktop/CHANGELOG.md`**（首版已建——§5.6 步 1）——**核不豁免**：首发漏建 ✗ 2026-09-21 补建 ✗ 0.9.1 段已补 ✗ 后续发布随阶段 0 一起更新）
    ——开发批记录挂 `[Unreleased]` 段，发布时段头改新号（Keep a Changelog 格式，中文，Added / Changed / Fixed / Removed 分节；VSC 侧 = 市场页 Changelog 标签内容来源）；**无档先建**（首发端 = 建 + 写首发段）。
    **CHANGELOG 条目 = 发布轮回填（取材 = 批档 §5 提交集 + 提交标题），开发批不逐条追写**（2026-10-15 定案——维持回填 + 明示书面化；0.10.5 ∥ 0.10.6 ∥ 0.10.7 三次发布实测均回填形）。
 
    **附带**：CLI README 的 Changelog 摘要节（面向 npm 用户的英文精要 ✗ 非 CHANGELOG 全量镜像）同步补新版本段——首发漏更过一次（0.12.12→0.12.63 空窗 ✗ 2026-09-21 补 0.12.63/0.12.62 两段 ✗ 此后每发布必更 ✓）。
-3. **version bump**：`package.json` 改到期望号（**JSON.parse → 改字段 → JSON.stringify**——禁 PowerShell `Set-Content -Encoding UTF8`：会写 BOM `EF BB BF`，JSON 解析失败、发布门崩）。
+3. **version bump**：各端包清单的版本改到期望号（**JSON.parse → 改字段 → JSON.stringify**——禁 PowerShell `Set-Content -Encoding UTF8`：会写 BOM `EF BB BF`，JSON 解析失败、发布门崩）。
 4. **依赖核对**：三产品（CLI ∕ VSC ∕ 桌面）`@thincoder/core` 声明与本次核版本对齐（§4.4——形 = caret，值 = 本次核发行版；核发新号后同步收正）。
 5. **发布轮批档**（`docs/batches/<日期>-release.md`——每轮发布建一档）：**§2 = 薄节**——一句话方案（**方案单源 = 本档 §5**：候选号 ∥ 逐端条目集 ∥ 命令 ∥ 判据 ∥ 回退全引；**零新设计**）+（可选）就位实读小表；**不做**逐端方案展开（展开 = §5 的活，重复 = 缺陷）——设计师分钟级即结（用户裁定 A · 2026-10-05）。
 
@@ -225,7 +225,7 @@ node test/smoke-qwen-thinking.mjs --smoke <provider>:<model>   # 显式选路（
 npm publish                    # prepublishOnly 自动跑 release:check（lint → 测试 → 集成测试集）
 ```
 
-**门禁链细节**（`scripts/release-check.mjs`）：两步 = lint（`check-syntax.mjs`）→ 集成测试（仓根 `test/run.mjs`——仓内一处收集；单元测试档不进任何门）；输出只打摘要行，失败时自动提取失败详情（每块 ≤24 行、最多 12 块；无汇总段回退输出尾 40 行）。
+**门禁链细节**（`scripts/release-check.mjs`）：两步 = lint（`thincoder-cli/scripts/check-syntax.mjs`）→ 集成测试（仓根 `test/run.mjs`——仓内一处收集；单元测试档不进任何门）；输出只打摘要行，失败时自动提取失败详情（每块 ≤24 行、最多 12 块；无汇总段回退输出尾 40 行）。
 
 **顺序守卫**：release-check 首查核版本存在性（registry 查无 = 中止——防止发出发坏包）；核**内容**面守卫 = §5.0 P2 核行闭包断言 + §5.0 P4 ④ registry 复验（台账 #1222——顺序 = 版本面 + 内容面双关）。
 
@@ -247,7 +247,7 @@ npm install --install-links             # link → registry 真实拷贝
 **render-core（`@thincoder/render-core`）不入发布序列**：永不发布（`private: true`）；**两打包窗内嵌形随打包器**：
 - **VSC vsix** = **link 形 + `--follow-symlinks`**——`npm install --install-links` 物化对其不可执行（vsce 依赖检测 `ELSPROBLEMS/invalid` ⇒ 打包硬失败；R1 打包窗实测 475 件）；**回链自愈**：`publish-all.mjs` 段 0.5 于打包前自动把物化态拉回 link 形（零手工——`--install-links` 后无需再手敲 `npm link`）；
 - **桌面产物** = **物化（源树实拷）**——electron-builder 无 follow 面（junction 入 asar 仅为 link 节点 ⇒ 装后断链），物化由打包窗脚本执行、一律源自源树（单源 = `docs/desktop/design/PACKAGING.md` §2.2 ∕ §1 KD-64）。
-内嵌面收窄 = 仅运行必需（`.mjs` + `package.json`；core 另携 `prompts/` ∥ `tool-docs/` 两面全额）。
+内嵌面收窄 = 仅运行必需（`.mjs` 与包清单；core 另携 `prompts/` ∥ `tool-docs/` 两面全额）。
 本步 `@thincoder/core` 物化纪律不动（桌面窗同理：物化源树）。单源 = `docs/render-core/design/RENDER-CORE.md` §1.3 ∕ §10 B。
 
 **第 2 步 · 凭据预验**（防无 TTY 静默假成功——npm 的 exit-0 判定**不可**推广到 vsce/ovsx）：
@@ -305,7 +305,7 @@ cd ..   # 回 `thincoder` 仓根——dev-link.mjs 住仓根 scripts/（步骤 2
 node scripts/dev-link.mjs --force && node scripts/dev-link.mjs --check   # 自愈已入链（postpackage 第三腿）——本步 = 幂等复判 ∥ 兜底（构建中止径）；终态 = 0
 ```
 
-**步骤 4 · 上传（OSS 托管 · feed 三件）**：键形 = `downloads/` 前缀——**Windows**：`ThinCoder-Setup-<号>.exe` ∥ 同名 `.blockmap` ∥ `latest.yml`（feed 三件——单源 = `docs/desktop/design/PACKAGING.md` §2.8.3）。
+**步骤 4 · 上传（OSS 托管 · feed 三件）**：键形 = `downloads/` 前缀——**Windows**：`ThinCoder-Setup-<号>.exe` ∥ 同名 `.blockmap` ∥ `thincoder-desktop/dist/latest.yml`（feed 三件——单源 = `docs/desktop/design/PACKAGING.md` §2.8.3）。
   上传 = 站点仓独立小件 `thincoder.com/scripts/upload-download.mjs`（站点小件——规格 = 同档 §2.9.7）：
 
   **凭证口径（2026-10-26 定）**：`ALIYUN_KEY` ∥ `ALIYUN_SECRET` 就在环境变量里（本机已设）——直接跑，不往命令行写值（写进去就进了 shell 历史与会话记录），也不问用户要。先查再跑（`[Environment]::GetEnvironmentVariable('ALIYUN_KEY')`） ⇒ 有就直跑；真的未设才停下上报。**曾因没先查而向用户要过一次凭证**——用户原话：「凭证不一直就在环境变量里吗！」
@@ -315,11 +315,11 @@ cd thincoder.com
 node scripts/upload-download.mjs <exe> <blockmap> <latest.yml>   # 键形 = downloads/<文件名>；顺序 = exe → blockmap → latest.yml（latest.yml 末传）
 ```
 
-**判据**：三件取回（HTTP 200 ∥ 字节数 = 本地一致）+ **`latest.yml` 对盘**（`version` = 本次号 ∥ `files[0].sha512` = 本地 exe 实算）；同号重传 ⇒ URL 核验加查询串绕缓存（`?v=…`）。
+**判据**：三件取回（HTTP 200 ∥ 字节数 = 本地一致）+ **`thincoder-desktop/dist/latest.yml` 对盘**（`version` = 本次号 ∥ `files[0].sha512` = 本地 exe 实算）；同号重传 ⇒ URL 核验加查询串绕缓存（`?v=…`）。
 
 **步骤 5 · 官网挂载** = §5.8 阶段 5 一并执行（下载卡 + 版本面三处——条目形见本档 §6.2 分节）。
 
-**完成判定**：check-dist 绿 + 签名态 = 已签（发布版）+ URL 可达（exe ∥ blockmap ∥ latest.yml 三件）+ 站点三处版本面 = 本次号；**Linux 面 = 暂缓**（复核条件 = 用户要求发布 Linux 面时恢复）。
+**完成判定**：check-dist 绿 + 签名态 = 已签（发布版）+ URL 可达（exe ∥ blockmap ∥ 版本清单三件）+ 站点三处版本面 = 本次号；**Linux 面 = 暂缓**（复核条件 = 用户要求发布 Linux 面时恢复）。
 
 **失败处置**：§5.7 失败总原则（从失败端重跑；已发端不重发）+ `docs/desktop/design/PACKAGING.md` §2.6 失败面表 ∥ §2.8.1 更新失败面（fail-soft）。
 

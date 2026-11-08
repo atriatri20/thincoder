@@ -52,7 +52,7 @@
 - **可用性**：派生条目无 `apiKey` ⇒ 不参与运行时解析（`hasKey` 既有判据——零新代码）；不触发「渠道无效」类提示（回退序跳过）。
 - **列表可见性**：`derived === true` ∧ 无 key ⇒ 从 provider 列表/模型候选面隐藏（**五消费面各一处过滤**：
   - **CLI 两处** = 模型候选（`thincoder-cli/src/tui/model-picker.mjs`）∥ `/config` provider 列表（`thincoder-cli/src/tui/cmd-config-menus.mjs`）；
-  - **其余三处** = CLI provider-admin（`thincoder-cli/src/tui/provider-admin.mjs`） ∥ VSC `providerStatus`（`thincoder-vscode/src/extension/settings.mjs`）∥ 桌面 `providerList`（`thincoder-desktop/src/main/providers.mjs`）；**共单源** = `isDerivedProviderHidden`（`provider-admin.mjs`）——与 `docs/core/design/PROVIDER.md` §6.25 同拍）；**登录态下在场**（正常参与，key 掩码显示）。
+  - **其余三处** = CLI provider-admin（`thincoder-cli/src/tui/provider-admin.mjs`） ∥ VSC `providerStatus`（`thincoder-vscode/src/extension/settings.mjs`）∥ 桌面 `providerList`（`thincoder-desktop/src/main/providers.mjs`）；**共单源** = `isDerivedProviderHidden`（`thincoder-cli/src/tui/provider-admin.mjs`）——与 `docs/core/design/PROVIDER.md` §6.25 同拍）；**登录态下在场**（正常参与，key 掩码显示）。
 - **不自动改**：不写 `defaultModel` ∥ 不切换当前会话模型 ∥ 不动既有手工条目（登录唯一副作用 = §2.2 两处写）。
 
 ### 2.5 三端同构面（能力与文案）
@@ -184,7 +184,7 @@
 - 单元测试档三件（跨档集——批内件随批档归档，零入链）：服务端单件（**305**）∥ 本册件（核 + 三端结构面——**410**——跨面件无宿主产品链）∥
   桌面面单件（**364**——桌面包无 `prepublishOnly` 链）。
 - `thincoder-core/agent-tools/settings.mjs`（`team` 不入 `DEFAULTS`——工具面不受影响）。
-- 本批（轮换）单元测试档（拟新增）：`docs/batches/2026-10-15-team-token-rotation.test.mjs`（≈**320**——服务端面 + 核面 + 三端结构机检；**不入链**——跨面件随批档归档）。
+- 本批（轮换）单元测试档：与批档同名的单测档（≈**320**——服务端面 + 核面 + 三端结构机检；**不入链**——随批删，零留存）。
 
 ## 5. 验收判据（端侧面——回指 AC-31 ①–⑤）
 

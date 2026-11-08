@@ -51,7 +51,7 @@
 | AC-M1-6 | 情境行注入：`phase` 逐回合注入模型上下文（幂等 / 单活体 / 压缩自愈 / 门控；值变检测 = mtime 门控重读（③b）——AC-N7 / N7b / N7c / N7d 在册） | 判据逐条 = 设计 `docs/core/design/MANIFEST.md` §3.1 AC-N1–AC-N6、AC-N3b、**AC-N7–AC-N7d** |
 | AC-M1-7 | `docRoot` 值形态：单串、数组、`null` 都要通过；`null` 解析为空且不被默认顶回；空串、空数组、混合数组拒绝。 | 设计 `docs/core/design/MANIFEST.md` §3.1 AC-7–AC-13、AC-39 |
 | AC-M1-8 | 二道防线（M5 spawn 门）：工程模式子代理 `files` 声明含 `PROJECT-MANIFEST.json`（任意层 / 任意大小写）→ 拒（专用文案） | 声明该路径 → 期望拒 |
-| AC-M1-9 | 项目声明两族键（`codePaths` / `index.*`）：形态非法 ⇒ 档非法（fail-closed）+ 消费面逐族回默认 + 可见；退役档（`.thincoder/conventions.json`）在场 ⇒ 零生效 + 一行告警（零并存） | 判据逐条 = 设计 `docs/core/design/MANIFEST.md` §3.1 AC-31–AC-34 ∕ §3.2 T56–T58 |
+| AC-M1-9 | 项目声明两族键（`codePaths` / `index.*`）：形态非法 ⇒ 档非法（fail-closed）+ 消费面逐族回默认 + 可见；退役的用户目录约定配置名（用户目录 `.thincoder/` 下的约定档）在场 ⇒ 零生效 + 一行告警（零并存） | 判据逐条 = 设计 `docs/core/design/MANIFEST.md` §3.1 AC-31–AC-34 ∕ §3.2 T56–T58 |
 | AC-M1-10 | agent 工具面·读写往返（全键）：对样例项目读（含校验态）→ 各键族逐键写 → 回读逐键相等；缺档 ⇒ 建档 → 回读 `ok` | 工具调用往返 → 逐键 diff |
 | AC-M1-11 | agent 工具面·fail-closed：非法值写 ⇒ 拒（报明）+ 盘零变；缺档读 ⇒ 报明（不砖死） | 构造非法/缺档 → 期望拒/报明 ∧ 文件逐字节未变 |
 | AC-M1-12 | agent 工具面·权限面：子代理**写面**不可达（写动作未装配 + 写门拒）；子代理**读面** = 只读变体（`action` 枚举 `[\"read\"]`）；主 agent 写 ⇒ 放行 | 子代理实调 → 拒；主 agent 实调 → 过 |
@@ -60,7 +60,7 @@
 
 - **上游**：无（基础模块）。
 - **下游**：M2 / M3 / M4 / M6 / M8 / M9 读 manifest 字段（`docRoot` / `phase` / `index`）。
-- **agent 工具面**：上游 = 本条读写校验器（`manifest.mjs` ∥ `manifest-schema.mjs`）+ 工具装配面（`agent/family-tools.mjs`）；下游 = 主 agent 运行面（工具调用）。
+- **agent 工具面**：上游 = 本条读写校验器（`thincoder-core/manifest.mjs` ∥ `manifest-schema.mjs`）+ 工具装配面（`agent/family-tools.mjs`）；下游 = 主 agent 运行面（工具调用）。
 
 ## ⑥ 解析模型与作用定位（按用点解析）
 

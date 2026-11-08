@@ -46,5 +46,5 @@ ThinCoder 曾以**两个独立 git 仓**分头维护：CLI 仓与 VSC 扩展仓�
 - 与 **「各仓自持」**（需求层条款：文档体系各仓自持 / 需求层必须在本仓有档）的关系 = **同一病根的两种解法**：隔离（各记各的）→ 消灭（根本无仓可分）。
   本板块落地后，「各仓自持」条款失去对象，随之退役；二者**非叠加关系**。
 - 与 **「跨仓内容纪律」** 无冲突：内容纪律（正文可指他仓、条目与归属不带跨仓指针）在本板块落地后**自然收窄**为仓内规范，条款本体留存。
-- **条款住址**：两族条款住 CLI 产品树需求档 `thincoder-cli/docs/_archive/requirements/ENGINEERING-MODE.md`（CLI 侧**未迁**）与 VSC 侧同名档（未迁）——**先例不构成例外依据**为其中一条。
+- **条款住址**：两族条款当年住 CLI 产品树需求档与 VSC 侧同名档（两侧均**未迁**入本板）——其中**先例不构成例外依据**一条现于 `docs/core/requirements/ENGINEERING-MODE-V2.md`（F14）。
 - **不属本板块**：phase 2（核心统一）——演进通道 = `docs/core/design/CORE-UNIFICATION.md`（设计）/ `docs/core/requirements/CORE-UNIFICATION.md`（需求）。

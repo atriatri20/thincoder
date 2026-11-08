@@ -119,7 +119,7 @@ VSC 形挂 depth-0 `history`）：
 
 **装配接线（改后）**：
 
-- `thincoder-core/agent-tools.mjs`（登记册，20 → **23** 行）：+ 一行 re-export——`export { parentChannelTool }`（源 = `./agent-tools/parent-channel.mjs`）；
+- `thincoder-core/agent-tools.mjs`（登记册，20 → **23** 行）：+ 一行 re-export——`export { parentChannelTool }`（源 = `thincoder-core/agent-tools/parent-channel.mjs`）；
 - `thincoder-core/agent/family-tools.mjs` 的 depth>0 段**前置** `parentChannelTool`——**4 处携带**：`eng-coder` · `eng-designer` · `coder` · 兜底段（explore / plan / 未列名 role）；`consult` 分支不入。
 
 **上游接线（改后——3 站点全枚举，各 1 行 + 注）**：
@@ -135,7 +135,7 @@ VSC 形挂 depth-0 `history`）：
 
 **父侧消费点（改后）**：`thincoder-core/agent/turn-loop.mjs` 的回合头单点邻位新增一行 `drainChildUpstream(agent)`（空队列 no-op——零开销）。
 
-▸ **import 形态 = 动态**：`const { drainChildUpstream } = await import("./agent-tools/parent-channel.mjs")` —— 实到档 = `thincoder-core/agent-tools/parent-channel.mjs`；先例 = `injectAsyncResult`（`thincoder-core/agent.mjs`）：
+▸ **import 形态 = 动态**：登记册内以 `await import(...)` 动态引入该工具档 —— 实到档 = `thincoder-core/agent-tools/parent-channel.mjs`；先例 = `injectAsyncResult`（`thincoder-core/agent.mjs`）：
 **不新增静态边**（登记册静态图契约 = `family-tools.mjs` 头注 / 端壳 W8 契约②）；
 
 取用一次 / 循环头就地取皆可（实现轮择一，判据 = 零新增静态 import + A2 的循环头调用点）。
@@ -594,7 +594,7 @@ spawning subagents, asking questions — those need a real user message. End the
 
 **指位约束**：域文本先注入（`thincoder-core/agent.mjs` 循环前）、在飞消息由循环头 drain 追加（同档循环头）⇒ 消息落于域文本**之后（下方）**——逐字面**不得**以「above / 上方」指在飞消息（原「named in the reminder above」与注入次序相抵）；末段「finished subagent reports … above」指 run 首注入的已结算报告（同档注入段）——用法正确、保留。
 
-**落笔纪律**（承 §6.27.8 先例）：英文代码（核 `helpers.mjs`）文本归父侧同轮落笔；本档只登记落点与逐字建议。
+**落笔纪律**（承 §6.27.8 先例）：英文代码（核 `thincoder-core/agent/helpers.mjs`）文本归父侧同轮落笔；本档只登记落点与逐字建议。
 
 #### 6.27.12.9 用例表（正常 / 边界 / 错误）
 
@@ -604,7 +604,7 @@ spawning subagents, asking questions — those need a real user message. End the
 | T19 | 边界·note 不唤醒 | 同 T18 但 `{kind:"note"}` | 唤醒回调 **0 次**；队列长度 1 | 条目 1 / 边界 7 |
 | T20 | 边界·无等待栓（父侧忙 / 已退出） | `_asyncWaiters` 缺省 / 空数组 | ask 入队成功、唤醒 no-op（零抛错、队列长度 1） | 条目 1 / F11 / F12 |
 | T21 | 谓词真值 | `[]{ }` / `[{kind:"note"}]` / `[{kind:"ask"}]` / `[{kind:"note"},{kind:"ask"}]` 四形 | `upstreamWaiting` = false / false / true / true | 条目 2 |
-| T22 | 结构单点（机检） | 源文本 | `async-settle.mjs` 内 `wakeAsyncWaiters` 定义 1 处 + `splice(0)` 全档仅在该函数内；三驱动第 2 步含 `upstreamWaiting(`；`agent.mjs` 的 `drainChildUpstream(agent)` 仍恰 1 处 | 条目 1 / 2 / 零回归 |
+| T22 | 结构单点（机检） | 源文本 | `async-settle.mjs` 内 `wakeAsyncWaiters` 定义 1 处 + `splice(0)` 全档仅在该函数内；三驱动第 2 步含 `upstreamWaiting(`；`thincoder-core/agent.mjs` 的 `drainChildUpstream(agent)` 仍恰 1 处 | 条目 1 / 2 / 零回归 |
 | T23 | 正常·核驱动开轮（假 carrier） | `startSuspension`：池内 1 running + `_childUpstream` 含 ask；假 `runTurn` 记录 `(text, opts)` 并清池 | `runTurn("", { autoTurn: true, upstreamTurn: true })` 恰 1 次；`res.upstreamTurn === true` | 条目 2 |
 | T24 | 边界·核驱动 note 不开轮 | 同上但 `[{kind:"note"}]` | 零 `runTurn` 调用；池空即退出（`reason: "idle"`） | 条目 2 / 边界 7 |
 | T-CL-U1 | 正常·CLI 驱动开轮 + **旗标贯通**（`driveRig`） | `agent._childUpstream = [{kind:"ask",…}]` + 池内 1 running；桩 `ctx.runAgent`（记录第 4 参 opts） | 桩被调 1 次（`text === ""`——auto 轮）；**桩第 4 参 `opts.upstreamTurn === true`**（旗标未被 CLI 跳丢弃——可机检）；提示行为 ask 档携参形态（字面随 F-UC8 批收正——§6.27.12.13 ⑦） | 条目 4 |

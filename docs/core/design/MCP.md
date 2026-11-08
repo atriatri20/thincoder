@@ -28,11 +28,11 @@
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
-| 144 | `src/mcp/helpers.mjs` ↔ `src/mcp/utils.mjs` | ② | 融合：取一侧（常量 + RPC id 生成） | 分叉 ＝ 档名（helpers / utils）；常量逐条同值（`INIT_TIMEOUT_MS` / `CALL_TIMEOUT_MS` / `ENDPOINT_WAIT_MS`）⇒ 前提成立 | — | S1（建核补齐） |
-| 145 | `src/mcp/transport-stdio.mjs` ↔ `src/mcp/stdio.mjs` | ② | 融合：取一侧 + 核内 `mcp/` 切分归位 | 分叉 ＝ 档名与目录；同源自述 ⇒ 前提成立 | — | S1（建核补齐） |
-| 146 | `src/mcp/transport-http.mjs` ↔ `src/mcp/http.mjs` | ② | 融合：同 #145 | 同 #145（VSC 侧 `http.mjs` 自述「与 CLI 语义同构」）⇒ 前提成立 | — | S1（建核补齐） |
-| 147 | `src/mcp/transport-ws.mjs` ↔ `src/mcp/ws.mjs` | ② | 融合：同 #145 | 同 #145 ⇒ 前提成立 | — | S1（建核补齐） |
-| 148 | `src/mcp.mjs` ↔ `src/mcp/index.mjs` | ② | 融合：核内单一切分 + 端侧配置面板 / 监视面按端注入 | 分叉 ＝ 组织（VSC 2 行转口 + `mcp/index.mjs`）；可配项（三种传输）与 `mcp.servers[]` 同源；**承 §2.5 #81** | —（承 #81） | S1（建核补齐） |
+| 144 | `thincoder-core/mcp/helpers.mjs` ↔ VSC 侧 utils 分档（已并入核） | ② | 融合：取一侧（常量 + RPC id 生成） | 分叉 ＝ 档名（helpers / utils）；常量逐条同值（`INIT_TIMEOUT_MS` / `CALL_TIMEOUT_MS` / `ENDPOINT_WAIT_MS`）⇒ 前提成立 | — | S1（建核补齐） |
+| 145 | `thincoder-core/mcp/transport-stdio.mjs` ↔ VSC 侧 stdio 分档（已并入核） | ② | 融合：取一侧 + 核内 `mcp/` 切分归位 | 分叉 ＝ 档名与目录；同源自述 ⇒ 前提成立 | — | S1（建核补齐） |
+| 146 | `thincoder-core/mcp/transport-http.mjs` ↔ VSC 侧 http 分档（已并入核） | ② | 融合：同 #145 | 同 #145（VSC 侧该分档头注曾自述与 CLI 语义同构）⇒ 前提成立 | — | S1（建核补齐） |
+| 147 | `thincoder-core/mcp/transport-ws.mjs` ↔ VSC 侧 ws 分档（已并入核） | ② | 融合：同 #145 | 同 #145 ⇒ 前提成立 | — | S1（建核补齐） |
+| 148 | `thincoder-core/mcp.mjs` ↔ VSC 侧 mcp 目录转口档（已并入核） | ② | 融合：核内单一切分 + 端侧配置面板 / 监视面按端注入 | 分叉 ＝ 组织（VSC 侧曾以目录加 2 行转口实现）；可配项（三种传输）与 `mcp.servers[]` 同源；**承 §2.5 #81** | —（承 #81） | S1（建核补齐） |
 
 ## 3. 须用户裁条目
 
@@ -75,20 +75,20 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 
 ### 6.4 连接装配与热插拔
 
-- **启动装配**：顶层 agent 装配时批量连接 `config.mcp.servers`——读取项目级 `.mcp.json`（`mcpServers` 为**对象**形态时并入——`config.json` 同名 server 优先；数组形态非规范 → 跳过并记录）；并发连接（`Promise.allSettled`）；
+- **启动装配**：顶层 agent 装配时批量连接 `config.mcp.servers`——读取项目根的项目级 MCP 配置文件（`mcpServers` 为**对象**形态时并入——`config.json` 同名 server 优先；数组形态非规范 → 跳过并记录）；并发连接（`Promise.allSettled`）；
    **失败不阻塞**（死 server 只记 warning，`agent._mcpWarnings` 携带；**消费面 = CLI ∥ 桌面 ∥ VSC**（三端同形）——装配后入 `agent._pendingReminders`
    （CLI `thincoder-cli/src/command-interactive.mjs` ∥ 桌面 `thincoder-desktop/src/main/agent-host.mjs` 装配尾；
 
    VSC `thincoder-vscode/src/agent/setup.mjs` 装配尾），下一条 user 消息注入提醒（消费 = `thincoder-core/agent/setup.mjs` 的提醒注入段）；
    末行指路 = 端可达出口（CLI `/mcp connect <name>`；桌面 ∥ VSC = 设置面 MCP 段 Reconnect）；成功展开的工具并入 `agent.tools`。
-- **项目文件源裁定（CLI ∕ 桌面同判）**：**发现面** = 项目根单层（`join(cwd, ".mcp.json")`，无向上多级搜索；文件缺 ⇒ 零读零效果）；**信任面** = 装配期零交互确认（项目文件与 `config.mcp.servers` 同信任域，不设首次信任 ∕ 端别门）；读 ∕ 解析失败非致命——记录不阻断装配。（VSC 端第三面已并；三端同判。）
+- **项目文件源裁定（CLI ∕ 桌面同判）**：**发现面** = 项目根单层（项目根下的那份配置文件，无向上多级搜索；文件缺 ⇒ 零读零效果）；**信任面** = 装配期零交互确认（项目文件与 `config.mcp.servers` 同信任域，不设首次信任 ∕ 端别门）；读 ∕ 解析失败非致命——记录不阻断装配。（VSC 端第三面已并；三端同判。）
 - **幂等连接（registry 键控）**：registry（`_sessions`，serverName → session，模块级存活）已存在**同 name 活连接且 fingerprint 一致** → 直接复用已展开工具、不重建；fingerprint = config 关键字段（command / args / url / wsUrl / env / headers / token）的 JSON 归一；**config 变更**（fingerprint 不一致）→ 主动关旧连接（不触发 onDead 重连）+ 丢弃 session + 重建。
 - **每轮重建与热插拔**：每轮 runAgent 重新装配 tools 数组——registry 状态变化天然在下一轮生效；已连 server 的展开工具**不因重建而丢失**（幂等复用）。
 - **生命周期收口**：`closeAllMcp(agent)` 退出时关闭全部 session；`removeMcpTools(agent, serverName)` 把工具移出并关该 session。
 
 ### 6.5 配置机制
 
-- **按传输的 config 形态**：`stdio: { name, command, args?, env? }` · `HTTP: { name, url, token?, headers? }` · `WS: { name, wsUrl, token?, headers? }`；name 是唯一键控名（不可改）；`headers` / `env` 为键值对象；`token` 为**一等可选字段**（HTTP/WS）；项目级 `.mcp.json` 亦可提供 server，但 `/mcp` 管理入口操作的仍是 `config.json` 的 `mcp.servers`。
+- **按传输的 config 形态**：`stdio: { name, command, args?, env? }` · `HTTP: { name, url, token?, headers? }` · `WS: { name, wsUrl, token?, headers? }`；name 是唯一键控名（不可改）；`headers` / `env` 为键值对象；`token` 为**一等可选字段**（HTTP/WS）；项目根的项目级 MCP 配置文件亦可提供 server，但 `/mcp` 管理入口操作的仍是 `config.json` 的 `mcp.servers`。
 - **token 合成规则**：client 自动合成 `headers.Authorization = "Bearer " + token`——**仅当 headers 未显式含 Authorization 时**（显式 headers 优先）；合成发生在传给 transport 前，**不写回 config**；WS 经 **subprotocol**（`bearer.<token>`）传递（Node 内置 WebSocket 无法自定义请求头；不注入 URL query——防日志泄露凭证）；
 **fingerprint 计入 `token` 字段**（改 token → 指纹变更 → 重连）；token 明文存 `config.json`（不引入 keychain）——`token` ∕ `headers` ∕ `env` 值亦可存 `${env:VAR}` 引用（落盘不落明文；解析 = MCP 传输建连侧，单源 = `doc:CONFIG.md:§6.3`；指纹 ∕ 漂移比对仍按存储原文——env 变更不伪装为配置漂移；重连按当时环境重解析）。
 - **headers / env 键值对输入**：**三端行集语义同源**——键值对按「行 = 一对」逐对编辑；提交四判据同源（trim ∥ 空键/空值行不提交 ∥ 重复键后行胜 ∥ 全空 ⇒ 字段删除）；值 = **字面**（逗号 ∥ 等号 ∥ 引号 ∥ 空格原样——零切分零剥离）。字段输入语义（非行集字段——name / url / wsUrl / command / token / args）：空输入 = 不变；`-` = 删除可选字段；required 字段（name / url / wsUrl / command）拒绝 `-`。

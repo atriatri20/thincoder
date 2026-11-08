@@ -61,7 +61,7 @@ hashline_edit 读入含 U+FFFD 时追加（**不阻断**）：
 ⚠ file contains U+FFFD (replacement char) — encoding may be corrupted; hash-based addressing may be unreliable. Consider fixing the file encoding first.
 ```
 
-实现 = `shared.mjs` 具名常量 `FFFD_WARNING`（`thincoder-core/tools/shared.mjs` 的 `FFFD_WARNING` 导出），由 hashline_edit 在结果文本（成功路径与 not-found 错误）末尾追加。
+实现 = 具名常量 `FFFD_WARNING`（`thincoder-core/tools/shared.mjs` 的 `FFFD_WARNING` 导出），由 hashline_edit 在结果文本（成功路径与 not-found 错误）末尾追加。
 
 ## 6. 实现单一权威与端差
 
@@ -188,7 +188,7 @@ write point to check them against.
 
 回显顺序仍是调用序——**按条目在 `edits` 数组里的原始下标排**（R2 只改应用顺序）。跨文件交错的批同样如此：按文件分组去排会排成 A、A、B，而模型是按位置对号的，顺序一变它会把结果贴到错的那一笔上。
 
-**回执里的档名取组内首现拼写**（批末汇总行同此）：同一档在一批里出现两种拼写（`./a.md` 与 `a.md`）时，组内每条回执都报第一条的写法。理由：模型按条目位置对号，不按拼写对号；逐条比对拼写要为一次回执多读一次原名，收益远小于成本。
+**回执里的档名取组内首现拼写**（批末汇总行同此）：同一档在一批里出现两种拼写（带 `./` 前缀与不带前缀的两种写法）时，组内每条回执都报第一条的写法。理由：模型按条目位置对号，不按拼写对号；逐条比对拼写要为一次回执多读一次原名，收益远小于成本。
 
 **判定点（写死，不留选择）**：批量在组循环**之前**用批前快照判一次。`thincoder-core/tools/edit-batch.mjs` 的 `applyEditBatch` 在 `for (const g of groups.values())` 之前，对组内每个 `abs` 跑一遍 §7.1 的判据，命中即抛、零写。组内不再逐条判——组内漂移由 R2 自己算得出来，逐条再判会用同一份快照判出与 R2 相反的结果。
 

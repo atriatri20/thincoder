@@ -248,7 +248,7 @@
 | `answer`（增补） | `{ promptId, kind, verdict? ∥ answer? ∥ values? }` | ask 应答回程（浏览器 ⇒ `POST …/asks/:promptId` ⇒ relay 下行） |
 | `abort`（扩） | `{ cmdId, sessionId, key? }` | `key`（`<role>#<id>`）在场 = 停单个子代理（停单件）；缺 = 中止整回合（沿既有） |
 
-掩蔽口径：`ask.args` 与 `call.args` 同源（`member-relay.mjs` `cappedFrame` 单点——`argsTextOf` ⇒ ≤500）；`ask` 秘密载荷（`fields`）零值（描述面）+ 应答 `values` 值零入上下文零落盘（页 → 盒直通）。**拒改口径**：帧面单源 = 盒壳 `protocol.mjs` 构造器 ∥ server `member-relay.mjs` 单点转发。
+掩蔽口径：`ask.args` 与 `call.args` 同源（`member-relay.mjs` `cappedFrame` 单点——`argsTextOf` ⇒ ≤500）；`ask` 秘密载荷（`fields`）零值（描述面）+ 应答 `values` 值零入上下文零落盘（页 → 盒直通）。**拒改口径**：帧面单源 = 盒壳 `thincoder-server/deploy/sandbox/member-shell/protocol.mjs` 构造器 ∥ server `member-relay.mjs` 单点转发。
 
 #### (2) ask 回路与卡族（KD-SV-217）
 
@@ -261,7 +261,7 @@
 | `permission` | `{ promptId, tool, args, diff?, owner? }` | 核 `renderApprovalCard`（diff 预览内建——**两形**：`{patch}` 统一 diff 文本 ∥ `{old,new,path}` 旧/新全文；`view-diff` ⇒ 页内弹窗全量 patch——判类/差分走核件 `patchLineType`/`lineDiff`） | `{ verdict: "once" ∥ "always" ∥ "reject" }` |
 | `batch` | `{ promptId, count, tools: [名…] }` | 核 `renderBatchApprovalCard` | `{ verdict: "approveAll" ∥ "oneByOne" ∥ "deny" }` |
 | `question` | `{ promptId, question, options }` | 核 `renderQuestionCard` | `{ answer: <串> ∥ null }` |
-| `secret` | `{ promptId, kind?, sessionId?, host?, user?, port?, fields, keys }`（七键白名单——桌面 `askSecret` 同形） | 页内件（核无此卡——VSC `secret-input.js` ∥ 桌面 `secret-prompt.mjs` 同族）：`fields` 逐项（masked ⇒ 口令框 ∥ prefill ∥ required）+ 提交/取消 | `{ values: {<name>:<值>} ∥ null }` |
+| `secret` | `{ promptId, kind?, sessionId?, host?, user?, port?, fields, keys }`（七键白名单——桌面 `askSecret` 同形） | 页内件（核无此卡——VSC `secret-input.js` ∥ 桌面 `thincoder-desktop/renderer/secret-prompt.mjs` 同族）：`fields` 逐项（masked ⇒ 口令框 ∥ prefill ∥ required）+ 提交/取消 | `{ values: {<name>:<值>} ∥ null }` |
 
 **盒壳映射单点**（`answer` ⇒ 核回调返回值）：`once`/`always` ⇒ `true`（`always` 另经 `setSlotAutoApprove` 置槽 + 回推行 `flags`——同桌面「always」）；`reject` ⇒ `false`；批门三值直传；问询 = 串 ∥ `null`（取消）；秘密 = 值对象 ∥ `null`。**零值入上下文**：秘密值只经应答体直达核回调（同 `onSecretInput` 契约——核工具自身保证值不入消息）。
 
@@ -375,7 +375,7 @@
 | `public/views-me-chat-pull.mjs` | **218** | ≈180 | 拉取弹窗（项目选择/目录 ∥ 四态轮询 ∥ **凭据就地绑**（预检/表单/自动续拉/无效更新——KD-SV-215）∥ 纯件两枚（`pullStateLabel` ∥ `pullDetailText`）∥ 自加守卫三枚（§3.6）） |
 | `public/views-me-chat-messages.mjs` | **124** | ≈130 | 消息面（帧面纯函数 ∥ 回读装配——沿管理面同形） |
 | `public/views-me-chat-composer.mjs` | **456** | ≈390 | 输入区与状态行（核件全件消费适配层——沿管理面同构；四旗读面/出站 + 状态行段扩 + `images` 放行 + `atComplete` 桥 + **钮可见性适配层开关**（`#toolbar` 挂 `data-flags="live"`）） |
-| `public/i18n-{zh,en}-me.mjs` | **184 ∥ 185** | 各 ⇒ ≈200 ∥ ≈200 | 文案表·me 部件扩键 |
+| `thincoder-server/public/i18n-zh-me.mjs` ∥ `thincoder-server/public/i18n-en-me.mjs` | **184 ∥ 185** | 各 ⇒ ≈200 ∥ ≈200 | 文案表·me 部件扩键 |
 | 随正件 | —— | 小 | `public/app.mjs`（**209**） ∥ `nav.mjs`（**107**） ∥ `views-me.mjs`（**398**——账户页「Git 凭据」卡；行账 = `docs/server/design/webui/ME.md` §3） ∥ `style.css`（**445**——卡族/下拉/搜索/子代理块类名 + 钮可见性作用域覆写；行账 = `docs/server/design/webui/STYLE.md` §3） ∥ shell 两表（+1/表——键 `nav.page.me.chat`） ∥ `src/sandbox/routes.mjs` ∥ `registry.mjs`（写面判据点 + 上限） ∥ `bin/thincoder-server.mjs`（**241**） |
 | 测试（单元测试档——**不入任何门**；随批收口用后即删——零留存） | —— | —— | 用例 = §7（成员面 N71–N87 ∥ B69–B76 ∥ E54–E61） |
 
@@ -396,7 +396,7 @@
 | 机制行（鉴权/判权） | 双鉴权（cookie ∥ Bearer 同判权）；越权（他人会话/工作区 ⇒ 404 零泄露）；上限（超限 ⇒ 400 `workspace_limit_reached`） |
 | 机制行（审计） | `member_event` **六 kind** 落行（`chat_start` ∥ `chat_call` ∥ `chat_stop` ∥ `pull` ∥ `credential_set` ∥ `credential_revoke`）；盒动作 = `sandbox_event` 行（detail 携 `by:"member"`） |
 | 机制行（记忆面） | 本机制零新增记忆面件/零新增盒内本地索引接线（断言）：服务端零记忆表/零端点；盒内 = 核默认面随核同件（非本机制件——§2 KD-SV-158 注） |
-| 成员面三端对齐（用户「跟 vsc/desktop 差不多」；功能点 50①） | ① **帧面**：七型 + `usage` 两扩字段 + 下行 `answer`/`abort.key`（假盒桩逐帧形；盒壳 `protocol.mjs` 构造器单点）；② **卡族**：ask 回路端到端（ask 帧 ⇒ 卡 → `POST …/asks/:promptId` ⇒ `answer` ⇒ 结算；单件/批/问询/秘密四形；核件直用断言）；③ **模式旗**：四旗写读（PATCH ⇒ `session.update` ⇒ 槽四字段 ⇒ 行 `flags`）∥ 回合装配生效（核 `applySession`）∥ **钮可见性**两侧同测（成员面四模式钮可见 ∥ 管理面五枚仍隐）；④ **状态行**：段表全段（19 段——源 ⊆ 表）；⑤ **子代理**：`sub` 帧 ⇒ 核栈（归约/效果表）∥ 停单件（`abort { key }`）；⑥ **会话条**：自绘下拉（位标/meta/✎/✕/📁）+ 重命名/删除端形；⑦ 页面小件（搜索/复制降级/@ 菜单/图片/toolOutput/全文/⚙） | 单元测试档 + 收口轮（用户实走对照 VSC/桌面） |
+| 成员面三端对齐（用户「跟 vsc/desktop 差不多」；功能点 50①） | ① **帧面**：七型 + `usage` 两扩字段 + 下行 `answer`/`abort.key`（假盒桩逐帧形；盒壳 `thincoder-server/deploy/sandbox/member-shell/protocol.mjs` 构造器单点）；② **卡族**：ask 回路端到端（ask 帧 ⇒ 卡 → `POST …/asks/:promptId` ⇒ `answer` ⇒ 结算；单件/批/问询/秘密四形；核件直用断言）；③ **模式旗**：四旗写读（PATCH ⇒ `session.update` ⇒ 槽四字段 ⇒ 行 `flags`）∥ 回合装配生效（核 `applySession`）∥ **钮可见性**两侧同测（成员面四模式钮可见 ∥ 管理面五枚仍隐）；④ **状态行**：段表全段（19 段——源 ⊆ 表）；⑤ **子代理**：`sub` 帧 ⇒ 核栈（归约/效果表）∥ 停单件（`abort { key }`）；⑥ **会话条**：自绘下拉（位标/meta/✎/✕/📁）+ 重命名/删除端形；⑦ 页面小件（搜索/复制降级/@ 菜单/图片/toolOutput/全文/⚙） | 单元测试档 + 收口轮（用户实走对照 VSC/桌面） |
 | ask 回路与收尾兜底（KD-SV-217） | 假盒桩：ask 帧逐形（四 kind）→ 页应答恰一 `POST` → relay `answer` 下行恰一 → 盒侧结算；兜底：`end`/中止/掉线 ⇒ 未决 ask 全量收口（单件拒 ∥ 批 deny ∥ 问询/秘密取消）∥ 后到应答 ⇒ 400 零副作用 ∥ 秘密值零入上下文（消息面扫描）∥ 非本人会话 ⇒ 404 不辨 | 单元测试档 |
 | 成员面 MCP 工具挂载（AC-54⑤；机制全文 = `docs/server/design/mcp/MCP.md` §6） | 分面判据：装配面 = §3.7/§3.11(7)（逐回合取表 ⇒ `extraTools` 并面 ∥ 失败降级回合不阻断）∥ 清单面 = 两端点响应零秘密 ∥ 审批面 = `readonly:false` ⇒ 核门挡 ⇒ 审批卡∥ 审计面 = `chat_call` 帧源落行 ∥ 命名面 = 核单源 + 盒侧防撞拒挂 + 日志；载体 = `docs/server/design/mcp/MCP.md` §11 AC-54⑤ 行 ∥ 用例 N6/B4/E3 | 单元测试档 + 收口轮（成员会话实调一轮） |
 | 边界行 | 不做面零出现（移动壳/公网化/穿透/三端面——路由与页面核读） |
@@ -441,5 +441,5 @@
 | R86 | **团队登录态段**（呈报——无参照物）：桌面段源 = 宿主登录面（未登录/失效/已登录三态）；成员面 = 恒登录（页面即成员会话）⇒ 三态无参照。如要对表显示成员名 ⇒ 一行取数（控制台会话面既有）；未裁前不造 | 上抛·呈报 | 父侧/用户 |
 | R87 | **页件拆档合并序**：拆 `views-me-chat.mjs`（500 越线）为四件；拉取件外拆 `views-me-chat-pull.mjs` 同拍——合并序 = 父侧路由 | 路由 | 父侧 |
 | R88 | **盒镜像随动**（改件 `deploy/sandbox/member-shell/{protocol,core-run}.mjs` + `member-tools.mjs` 住镜像内）：部署 = 盒镜像重建；旧盒在途期旧帧面（新页兼容旧盒：未知帧零处理、`ask` 缺 ⇒ 工具拒照旧）；收口轮实走以新盒复读为判 | 部署 | 收口轮 |
-| R89 | **测试链随正**（清单单源）：① `2026-10-13-member-face-chat-ui.test.mjs` ⇒ 拆档重指新档三件；② `2026-10-13-member-face-chat.test.mjs` ⇒ 帧词表/端点面用例随正；③ `2026-10-08-server-public-structure.test.mjs` ⇒ 键数就地收正 + 指纹 sha256 重算；④ `2026-10-11-console-tabs-component.test.mjs` ⇒ `PUBLIC_SNAPSHOT` +新档三件（档目/键数就地收正）；⑤ `2026-10-10-runner-admin-console-ui.test.mjs` ⇒ 键数/档目就地收正；⑥ `2026-10-12-team-projects-permissions-ui.test.mjs` ⇒ 键数就地收正（越 500 软线——仅数字收正、拆分不做）；⑦ 单元测试档（用例 = §7 N80–N87 ∥ B74–B76 ∥ E59–E61） | 随正 | 实施轮 |
+| R89 | **测试链随正**（清单单源）：① 旧批成员面对话界面单测档（批次面，收口即删） ⇒ 拆档重指新档三件；② 旧批成员面对话机制单测档（批次面，收口即删） ⇒ 帧词表/端点面用例随正；③ 旧批静态面结构单测档（批次面，收口即删） ⇒ 键数就地收正 + 指纹 sha256 重算；④ 旧批页签组件单测档（批次面，收口即删） ⇒ `PUBLIC_SNAPSHOT` +新档三件（档目/键数就地收正）；⑤ 旧批运行面管理控制台界面单测档（批次面，收口即删） ⇒ 键数/档目就地收正；⑥ 旧批团队项目权限界面单测档（批次面，收口即删） ⇒ 键数就地收正（越 500 软线——仅数字收正、拆分不做）；⑦ 单元测试档（用例 = §7 N80–N87 ∥ B74–B76 ∥ E59–E61） | 随正 | 实施轮 |
 | R90 | **盒内并发回合资源面**（呈报·知会——无真约束、无门）：跨会话并行放开后盒内并发数**不设上限**（容器配额 = 事实上限——KD-SV-223）；如要限流/排队 ⇒ 新机制（另裁）；同会话二发已封（会话级门） | 上抛·知会 | 父侧/用户 |

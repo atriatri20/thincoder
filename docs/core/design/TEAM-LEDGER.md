@@ -60,7 +60,7 @@
 
 | # | 决策 | 理由 |
 |---|---|---|
-| D-TL1 | 端侧承载 = **核工具 `team_ledger`**（三端共享单源）——三端零逐端改动 | 端侧同批纪律（需求 §3）由**核单源**结构性保障：三端 package.json 均引 `@thincoder/core` 依赖（`thincoder-cli/package.json` ∥ `thincoder-vscode/package.json` ∥ `thincoder-desktop/package.json` 的 `dependencies` 段），家族段由核 `prepareRun` 追加（`thincoder-vscode/src/agent/tool-table.mjs` 的 `buildToolTable`）——「先行后补」结构上不可能 |
+| D-TL1 | 端侧承载 = **核工具 `team_ledger`**（三端共享单源）——三端零逐端改动 | 端侧同批纪律（需求 §3）由**核单源**结构性保障：三端包清单均引 `@thincoder/core` 依赖（`thincoder-cli/package.json` ∥ `thincoder-vscode/package.json` ∥ `thincoder-desktop/package.json` 的 `dependencies` 段），家族段由核 `prepareRun` 追加（`thincoder-vscode/src/agent/tool-table.mjs` 的 `buildToolTable`）——「先行后补」结构上不可能 |
 | D-TL2 | 工具面**零跨账代码路径**（零 import 本机台账模块） | 上送 = agent 两步显式动作（读本机账 ⇒ 写团队账）——「禁混同」（需求 ⑤）由结构保障而非约定；import 面机检可判 |
 | D-TL3 | 仓标记 = **会话项目根自动派生**（`rev-parse --show-toplevel` + `config --get remote.origin.url`）∥ 原文上送 ∥ 服务端归一 | 需求 ①「写时自动带上，不手挑」；端侧零归一实现 ⇒ 归一单源（两处不可能漂移） |
 | D-TL4 | 登录态门 = `teamStatus().loggedIn`（`team.token` 在场）——未登录零网络 + 明示 | 登录态单源（TEAM.md §2.1）——工具不自建第二判据；「未登录 ⇒ 团队各面不启用」在工具面的落点 |
@@ -116,5 +116,5 @@
 ## 8. 边界（本档不做）
 
 - 不做逐端独立面板/状态行/命令行族（D-TL6）；不做端侧缓存/离线队列/自动重发；不做自动上送/映射/同步（需求 ⑤ 明禁）。
-- 不承载控制台面（server 侧）∥ 不触本机台账模块 ∥ 不改 `team.mjs` 登录/凭据面。
+- 不承载控制台面（server 侧）∥ 不触本机台账模块 ∥ 不改 `thincoder-core/team.mjs` 登录/凭据面。
 - 不做服务端 admin agent 的团队账工具（服务端零团队登录——其裁剪面随动 = `docs/server/design/ledger/LEDGER.md` §9）。

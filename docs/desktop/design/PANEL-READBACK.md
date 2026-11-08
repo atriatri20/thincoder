@@ -101,9 +101,9 @@
 
 | 面 | 落点（核 ∥ 宿主 ∥ 渲染） | 验收指向 |
 |---|---|---|
-| ㈠ 实况回读 | `preload.cjs` ∥ `ipc.mjs` ∥ `panel-live.mjs` ∥ `agent-host.mjs` ∥ `app.mjs` ∥ `panel-readout.mjs` ∥ `subagent-panel.mjs`（视图面）∥ `subagent.mjs`（ctx） | AC-1 ∥ AC-4 ∥ AC-5 |
-| 归还补口 | `suspension.mjs`（核——三支恒达窗 + finish 返回面） | AC-2 |
-| ③ 回收阀 | `subagent-panel.mjs`（门控源链 + 发射）∥ `subagent.mjs`（描述） | AC-3 ∥ AC-4 |
+| ㈠ 实况回读 | `preload.cjs` ∥ `ipc.mjs` ∥ `panel-live.mjs` ∥ `agent-host.mjs` ∥ `thincoder-desktop/renderer/app.mjs` ∥ `panel-readout.mjs` ∥ `thincoder-core/agent-tools/subagent-panel.mjs`（视图面）∥ `subagent.mjs`（ctx） | AC-1 ∥ AC-4 ∥ AC-5 |
+| 归还补口 | `thincoder-core/agent/suspension.mjs`（核——三支恒达窗 + finish 返回面） | AC-2 |
+| ③ 回收阀 | `thincoder-core/agent-tools/subagent-panel.mjs`（门控源链 + 发射）∥ `subagent.mjs`（描述） | AC-3 ∥ AC-4 |
 | ④ 对账自愈 | `thincoder-desktop/src/main/suspension-drive.mjs`（宿主自愈扫 + done 帧痕） | §2.4 |
 
 ## 6. 用例清单（单元测试档 ← 设计轮拟定；normal ∥ boundary ∥ error 逐条）

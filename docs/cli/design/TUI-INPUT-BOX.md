@@ -127,18 +127,18 @@ busy 期该槽恒 null ⇒ 零动作——证据 = `thincoder-cli/src/tui/suspen
 **再提交与满队（容量 8）= 拒 + 提示 + 文本保留**：容量内再提交 ⇒ 连续入队（多槽——每条各占一项）；满队再提交 ⇒ 拒 + 提示 + 文本保留
 （不覆盖、不丢——违「不静默丢」纪律的反面；先例 `thincoder-cli/src/tui/suspension-drive.mjs` 中止残余转正注释）；拒 + 提示与既有队列满语义同构零新机制。
 
-**submit 双保险同步**（`turn-face.mjs` submit busy 拒分支）：防御语义 = 「busy 期拒绝 + 不清框」；
+**submit 双保险同步**（`thincoder-cli/src/tui/turn-face.mjs` submit busy 拒分支）：防御语义 = 「busy 期拒绝 + 不清框」；
 正常流量的 Enter 在 key-handler 族（`key-handler-busy.mjs` 门禁 · `key-handler-edit.mjs` 入槽）分流，submit busy 分支只服务直呼防御。
 
 **消费回执（送达链路侧——每批一行 dim 行）**：`[sending queued message]` 在**消费时**按批推送（批 = 合并计划取数单位）——
-① **步边界 pickup**（`queued-pickup.mjs`——核循环头回调取批后）；② 回合尾兜底转正点（`agent-turn.mjs` 队列 while 取批后）；③ 挂起 driver 消费点（`suspension-drive.mjs` pendingInput 取批后）。
+① **步边界 pickup**（`thincoder-cli/src/tui/queued-pickup.mjs`——核循环头回调取批后）；② 回合尾兜底转正点（`agent-turn.mjs` 队列 while 取批后）；③ 挂起 driver 消费点（`thincoder-cli/src/tui/suspension-drive.mjs` pendingInput 取批后）。
 形态对位既有 `[continuing…]`（`agent-turn.mjs` 的推送点，`C.tool`）——消费事实的可见锚，回执在则顺序自然
 （queued dim 行 → 回合尾 → `❯ You:` 标签 + 消息行）。
 
 **排队期呈现与消费转正（呈现面）**：入队后队列以会话流尾**待发送块**呈现（派生行——
 逐条原文 + 条数标签；形态 / 上限 / 缓存键 / 边界 = `docs/cli/design/TUI.md` §7.5；本档不重述——D2）。
 
-消费按合并计划取批（步边界 pickup（主——`queued-pickup.mjs`）/ `agent-turn.mjs` 回合尾兜底 + 队列续发 / `suspension-drive.mjs` driver 输入优先）⇒ 回执 + `❯ You:` + **合并文本**落 `state.lines`（`agent-turn.mjs`）在同一同步段
+消费按合并计划取批（步边界 pickup（主——`thincoder-cli/src/tui/queued-pickup.mjs`）/ `agent-turn.mjs` 回合尾兜底 + 队列续发 / `thincoder-cli/src/tui/suspension-drive.mjs` driver 输入优先）⇒ 回执 + `❯ You:` + **合并文本**落 `state.lines`（`agent-turn.mjs`）在同一同步段
 ⇒ 渲染帧合并调度下**单帧切换**（N 条待发送块 → 回执行 + 一条合并用户消息：零空窗 / 零重复——并解同处 §7.5 消费转正条）。
 
 中止残余（按合并计划转 `state.queue` + 既有提示行）不渲染待发送块（同 §7.5 边界）。
@@ -150,7 +150,7 @@ busy 期该槽恒 null ⇒ 零动作——证据 = `thincoder-cli/src/tui/suspen
 ⇒ `pushReal` 一条 user 消息入历史（下一步生效——不中断）+ 呈现（回执行 + `❯ You:` + 合并文本）。系统轮（digest / 上行唤醒轮）不传回调（域 / 门禁降格理由 = `docs/cli/design/TUI.md` §7.5「分流」）；
 ① 普通回合 busy 入队 → 回合自然结束：顶层兜底（`agent-turn.mjs` 的顶层兜底：`!poolLive` 时按计划取批 → `state.queue` → 队列 while 续发新回合）；
 ② 挂起会话内 busy 入队 → 池 live ⇒ driver 步骤 1 输入优先，按计划取批（`thincoder-cli/src/tui/suspension-drive.mjs`——以合并消息开新回合，先于 digest 合并）；
-③ 池空 + 会话退出 ⇒ 退出前残余按计划兜底（`suspension-drive.mjs` 退出段——零丢失）。超过一批者（>8 条 / 合并 > 2000 字符）截批先行——余下循环接取（多回合，不丢）。
+③ 池空 + 会话退出 ⇒ 退出前残余按计划兜底（`thincoder-cli/src/tui/suspension-drive.mjs` 退出段——零丢失）。超过一批者（>8 条 / 合并 > 2000 字符）截批先行——余下循环接取（多回合，不丢）。
 
 **VSC 对位**：`webview/send.js` 出口守卫 **busy 即排队面 = `S._turnState === "running"`**
 （`_suspended` 不再参与分流）。
@@ -218,7 +218,7 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 | `thincoder-cli/src/tui/tui-state.mjs` | state 初始化单源（`createTuiState`——含 `_draft` / `interruptPrompt` 空态） |
 | `thincoder-cli/src/tui/input-face.mjs` | stdin 层 `translateShiftEnter` 接线 + 键盘 / 鼠标后置挂载入口（`mountKeys` / `mountMouse`） |
 | `thincoder-cli/src/tui/index.mjs` | `startTUI` 装配序列（命令层 / 启动屏 / resize / render loop）；启动 `keyboardPush` / 退出 `keyboardPop`（序列体 = `tui-lifecycle.mjs`——启动调用点 = `input-face.mjs`） |
-| `thincoder-cli/test/busy-injection.test.mjs`（留守）· `busy-injection-render.test.mjs` · `busy-injection-consume.test.mjs` | F16 用例宿主——按族三档：留守 T-F16-1 / 3 / 4 / 8 / 13 · 渲染族 6 / 10 / 11 / 12 / 14 / 17 · 消费族 2 / 5 / 9 / 15 / 16 / 18 / 19 |
+| 该批单元测试档（三档） | F16 用例宿主——按族三档：留守 T-F16-1 / 3 / 4 / 8 / 13 · 渲染族 6 / 10 / 11 / 12 / 14 / 17 · 消费族 2 / 5 / 9 / 15 / 16 / 18 / 19 |
 
 ## 7. question 自由文本输入态：光标与编辑键
 
@@ -257,7 +257,7 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 - Enter 提交；Ctrl+V 粘贴落 cursor 位置——**粘贴含 `\n` → 替换为空格**（保文本——单行不变式硬守卫）。
 - **Ctrl+J = no-op 吞**（不插换行）；未列键一律消费 `return`，无 fall-through。
 - **options 态**：↑↓ / Enter / Esc 不变；选中后自由文本态（`Custom answer…`）自动进入上述光标态；↑↓ 语义 = **环绕**（末项 down → 第 0 项；首项 up → 末项——三选择面契约见 `docs/cli/design/TUI-COMMANDS.md` §3）。
-- Ctrl+V 与 bracketed paste 共用同一实现（`clipboard.mjs insertPastedText` question 分支）：落 cursor + `\n`/`\r` 折叠为空格 + `\t` → 2 空格。
+- Ctrl+V 与 bracketed paste 共用同一实现（`thincoder-cli/src/tui/clipboard.mjs insertPastedText` question 分支）：落 cursor + `\n`/`\r` 折叠为空格 + `\t` → 2 空格。
 
 ## 8. Inject 框（Ctrl+I）：光标与编辑键
 

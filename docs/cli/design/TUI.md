@@ -317,10 +317,10 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 ### 6.8 子 agent 活动区块
 
-区块数据层在 `subagent-blocks.mjs` / `subagent-children.mjs` / `subagent-freeze.mjs` / `subagent-panel.mjs`；
+区块数据层在 `subagent-blocks.mjs` / `subagent-children.mjs` / `subagent-freeze.mjs` / `thincoder-cli/src/tui/subagent-panel.mjs`；
 编排语义（settle 时序、async 生命周期、排队规则）以 `docs/core/design/AGENT-LOOP.md` 为权威。**显示层契约**：
 
-- **运行中 = 固定底部面板**（`subagent-panel.mjs`，会话与 todo 之间）；**冻结 = 流内折叠块**（`render-segments.mjs` `frozenSubSeg`）。
+- **运行中 = 固定底部面板**（`thincoder-cli/src/tui/subagent-panel.mjs`，会话与 todo 之间）；**冻结 = 流内折叠块**（`render-segments.mjs` `frozenSubSeg`）。
   折叠键 `sub-${key}` 跨运行 / 冻结边界共用（折叠态无缝衔接）。
 - **折叠头形态**（显式头标）：`[▶ eng-coder#2 · async · glm-5.3 · 45s · turn 12/100] bash — npm test`
   ——`[▶/⏸/✓ key · <mode/status 词> · model · elapsed · turn] state`；⏸ = 等待审批；✓ = 已完成。
@@ -367,7 +367,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 - **墓碑存活闸**：「回合尾 `freezeAllSubTasks` 兜底清场」的兜底面**收窄为仅非存活块**——
   池内仍存活的条目不得被冻结 / 写墓碑；墓碑生效点与复活语义见 **§6.8.3**（本节不重述）。
 - **面板读时现算**：`computePanelBlocks(state)`（subTasks 活值纯推导）；
-  `index.mjs` 反向挂载 `agent._tuiState = state`——**门控语义零动**（单账本）。
+  `thincoder-cli/src/tui/index.mjs` 反向挂载 `agent._tuiState = state`——**门控语义零动**（单账本）。
 - **降级路径**：无 TUI 装配（headless / VSC / 子代理）→ 现算返 null → view 降级池视图 + freeze 报不可用。
 - **已结算待消化态零动**：settled 三态机 / `_freezeAt` settle 锚 splice / `shiftFreezeAnchors` 头裁补偿 /
   降序 splice / `freezeReclaimDigestedBlocks` 逐条**兜底幂等**回收（主面 = 起跑窗——§6.9；consult 子块按会话消费判据） / `panelFreezeGate` 门控（同判据）全部保留。
@@ -467,7 +467,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | 池读取 | `state._agent?._asyncSubagents` / `_asyncAdvisors`（Map） | 存活单一事实源；键 `String(id)`；**存活判据（逐字）**：**条目在池 ∧ `entry.done !== true` ∧ `entry.cancelled !== true`（running/queued）**（done-in-pool 留池 = `async-settle.mjs` / `thincoder-core/agent-tools/async-discard.mjs`） |
 | helper 归址 | `livePoolHas(state, key)` / `removeFrozenSubTaskLine(state, key)` 定义于 `subagent-freeze.mjs`，导出供 `subagent-blocks.mjs` import | import 方向 blocks → freeze 既存（`subagent-blocks.mjs`）——**无环** |
 | key 匹配 | **写死映射**：最后 `#` 切分 → `role` + `id`；命中 = `pool.has(String(id))` ∧ `entry.role === role`；非池键（`compress#N` 等）= false | 池键 = `String(id)`（`subagent-run.mjs` / `advisor-async.mjs`）⇒ `pool.has(key)` 恒 miss；与 `_frozenSubKeys` / `subTasks` 同命名空间；存活判据（逐字）同 §6.8.3.2 P0-a |
-| 挂载 | `index.mjs` 已挂 `state._agent`（§6.8.1 降级路径条） | 既有先例：`thincoder-cli/src/tui/subagent-panel.mjs` 读 `_syncChildAborts` |
+| 挂载 | `thincoder-cli/src/tui/index.mjs` 已挂 `state._agent`（§6.8.1 降级路径条） | 既有先例：`thincoder-cli/src/tui/subagent-panel.mjs` 读 `_syncChildAborts` |
 | 降级 | `state._agent` 缺省 ⇒ 无存活信息 | 维持丢弃（零回归） |
 
 **6.8.3.4 受影响文件**
@@ -477,7 +477,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | 1 | CLI·源 | `thincoder-cli/src/tui/subagent-blocks.mjs` | 437 | import 面加 `livePoolHas` / `removeFrozenSubTaskLine` · `ensureSubTaskKey` 墓碑分支加存活复活 + 旧载体行摘除 + 留痕 | ~460 |
 | 2 | CLI·源 | `thincoder-cli/src/tui/subagent-freeze.mjs` | 176 | `freezeAllSubTasks` 加存活跳过 + 新增导出 `livePoolHas(state, key)` / `removeFrozenSubTaskLine(state, key)`（与墓碑写点同址） | ~205 |
 | 3 | 核·源 | `thincoder-core/agent-tools/subagent-scheduler.mjs` | 429 | catch 补 `logEvent`（+ 顶注 import 面补 `logEvent`——现未 import） | ~437 |
-| 4 | CLI·测（**拟新增**） | `thincoder-cli/test/subagent-zero-block.test.mjs` | 新 | T-ZB1–T-ZB6（§6.8.3.6）；直驱 `routeSubToken` / `freezeAllSubTasks` / `refreshQueuedTokens`——零网络、零定时器 | ~120 |
+| 4 | CLI·测（**拟新增**） | `thincoder-cli/test/` 下本批单元测试档 | 新 | T-ZB1–T-ZB6（§6.8.3.6）；直驱 `routeSubToken` / `freezeAllSubTasks` / `refreshQueuedTokens`——零网络、零定时器 | ~120 |
 | 5 | 设计档 | `docs/cli/design/TUI.md` | 737 | 本节（§6.8.3）+ §6.8.1 指针行 | 本档已落 |
 
 **跨文件限**：三份源档预计后均 < 800 硬限（460 / 205 / 437）——**无拆分需要**。
@@ -510,7 +510,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | AC-ZB1 | 墓碑命中且条目**存活** ⇒ 复活建块 | T-ZB1 / T-ZB2 | §6.8.3.5 D-ZB2 |
 | AC-ZB2 | 墓碑命中且条目**不存活**（池外 / `entry.done === true`〔含 done-in-pool〕/ `entry.cancelled === true`）⇒ 维持丢弃（迟到 chunk 丢弃语义不回归） | T-ZB3 | by-design 面 |
 | AC-ZB3 | `freezeAllSubTasks` 不冻存活条目；已终态（含 done-in-pool）照旧冻结 | T-ZB4 | 清扫面 |
-| AC-ZB4 | 发射面零改：域释放补位仍发 `⟦ev⟧async` + `[model]`；queued 仍不发 `[model]` | 既有断言（`advisor-pool-queue.test.mjs` 两例——**仅 async 面**）+ T-ZB1（**`[model]` 面**落位断言） | §6.8.1 发射面 |
+| AC-ZB4 | 发射面零改：域释放补位仍发 `⟦ev⟧async` + `[model]`；queued 仍不发 `[model]` | 既有断言（该批单元测试档的两例——**仅 async 面**）+ T-ZB1（**`[model]` 面**落位断言） | §6.8.1 发射面 |
 | AC-ZB5 | 降级面（无 `state._agent`）行为与批前逐字一致 | T-ZB5 | §6.8.1 降级路径条 |
 | AC-ZB6 | 留痕：复活分支与 relay 异常各留一条可观测痕（禁静默） | T-ZB6 | P1 禁静默留痕 |
 | AC-ZB7 | 两端集成测试绿（`npm test`） | `npm test`（cli + core） | 常规门 |
@@ -521,7 +521,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **不新增按族分支**：墓碑是共享单点，修复天然覆盖 subagent / escalate / advisor / consult / compress 五族，但**不新增任何按族代码**（非「扩族」）；**复活可达面** = 键可映射到 §6.8.3.3 两池条目者（subagent / escalate / advisor）；非池键（`compress#N` 等）判 false ⇒ 维持既有丢弃语义（零回归——非本面修面）。
 - **不改**：`isAsyncSpawnResult` 判定面（`tool-display.mjs`）· `⟦ev⟧cancelled` 出队语义（`subagent-blocks.mjs`）· `awaitingDigest`（等待消化）与 `_freezeAt` 锚点（§6.8.1 已结算待消化驻留零动——用户裁定）· `computePanelBlocks` 现算面。
 - **不引入**块落盘恢复；不改提示词 / 需求档 / `_archive/**`。
-- **VSC 对位不在本次**（VSC `panel-callbacks.mjs` / `suspension.mjs` 为独立实现）——登记为观察项。
+- **VSC 对位不在本次**（VSC `panel-callbacks.mjs` / `thincoder-vscode/src/extension/suspension.mjs` 为独立实现）——登记为观察项。
 
 ### 6.9 消化轮（digest auto-turn）可见面（X9）
 
@@ -642,7 +642,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
   **标签行不声明时机**（面无关——用户回合 / 系统轮两面的精确时机 = 状态栏 `enterHint` 逐字：见下「消费时机」段）；正文 = 逐条直排（`C.dim`——`sanitizeDisplay` + `wrapText(text, cols - 1)`，与正文同口径）：多条带 `i. ` 编号首行 + 续行 2 空格缩进（**编号 = 模型将看到的合并形态预览**——§“合并消费”）；单条不加编号。块前空行（同主输出呼吸行约定）。
 - **体行折叠豁免（`_skipDimFold`）**：原文行 / 尾标记行携 `_skipDimFold`（`thincoder-cli/src/tui/render-conversation.mjs` 两处）——连 dim 折叠 pass（`FOLD_LINES` = 8）命中任一带标记行 ⇒ 整块不折（同档；零新机制——复用既有豁免，先例 = 思考流 / advisor 收缩尾）；N ≥ 3 时 dim 连跑可过 8 ⇒「永不被折走」由显式豁免保证（N ≤ 2 连跑 ≤ 8，本在阈下）。
 - **宽度口径**：折行宽 = `cols - 1`（`wrapText` 作用于逐条原文）；多条态编号首行**预扣除**——`wrapTextHead(text, width, firstDeduct)`（首行折宽 = `width − firstDeduct`，`firstDeduct` = 编号前缀显示宽；单条态 / 续行照 `wrapText`）；编号首行总显示宽 ≤ `cols − 1`。实位 = `thincoder-cli/src/tui/render-conversation.mjs`。
-- **上限**：每条原文行至多 `QUEUED_ITEM_MAX_LINES`（3）；超限 ⇒ 该条尾标记行 `… [该条共 N 行——发送后完整显示]`（`C.dim`）。**队容量** = `QUEUED_MAX_ITEMS`（8——**常量单源** = `thincoder-core/queued.mjs`（核件；CLI 经转口档 `queued-merge.mjs` 导出，显示面 / 输入门禁同源 import；与合并批上限 `MAX_MERGE_ITEMS`（8）**同值不同名**——同住核件）；块超视口时条数可见性由状态栏段兜底。
+- **上限**：每条原文行至多 `QUEUED_ITEM_MAX_LINES`（3）；超限 ⇒ 该条尾标记行 `… [该条共 N 行——发送后完整显示]`（`C.dim`）。**队容量** = `QUEUED_MAX_ITEMS`（8——**常量单源** = `thincoder-core/queued.mjs`（核件；CLI 经转口档 `thincoder-cli/src/tui/queued-merge.mjs` 导出，显示面 / 输入门禁同源 import；与合并批上限 `MAX_MERGE_ITEMS`（8）**同值不同名**——同住核件）；块超视口时条数可见性由状态栏段兜底。
 - **缓存键参与**：`convCacheKey`（`thincoder-cli/src/tui/render-conversation.mjs`）增排队签名（条数 + 各条长度 + 首 8 字——同 `blocksSig` 口径）；漏挂 ⇒ 缓存命中出陈旧帧（块不现 / 不消）。
 - **跟随（F4「新提交消息 → 恢复跟随」）**：入槽即 `state.scroll = 0` + `state._followTail = true`（`thincoder-cli/src/tui/turn-face.mjs` submit 同款两行；两条入槽路径同款——busy 门禁 / 挂起态 Enter）。
 - **合并消费（R15 攒批恢复）**：消费点按同一计划 `planQueuedInput`（纯函数——核单源 `thincoder-core/queued.mjs`；CLI 经转口档 `thincoder-cli/src/tui/queued-merge.mjs`）取数：连续非 `/` 条目攒批**合并为一条消息、一次回合**

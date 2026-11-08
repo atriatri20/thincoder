@@ -50,7 +50,7 @@
 | 单位 / 类型 | 毫秒，正整数（`Number.isFinite(v) && v > 0`） |
 | 默认值 | `120000`（单源常量 `DEFAULT_BODY_IDLE_MS`，`thincoder-core/config-defaults.mjs`） |
 | 非法值 | `≤0` / 非数字 / 缺省 ⇒ 回退 `DEFAULT_BODY_IDLE_MS`（不抛错、不静默禁用） |
-| 读取链 | `DEFAULTS.agent.bodyIdleTimeoutMs` → `loadConfig` 提升 `merged.provider.bodyIdleTimeoutMs`（同 `fetchTimeoutMs` 形：两键的提升段在 `config.mjs` 相邻）→ `effectiveBodyIdleMs(provider)` 消费 |
+| 读取链 | `DEFAULTS.agent.bodyIdleTimeoutMs` → `loadConfig` 提升 `merged.provider.bodyIdleTimeoutMs`（同 `fetchTimeoutMs` 形：两键的提升段在 `thincoder-core/config.mjs` 相邻）→ `effectiveBodyIdleMs(provider)` 消费 |
 | 写面 | `settings set agent.bodyIdleTimeoutMs <ms>`（数值叶子自动派生类型，无需形状表行）；手写 `config.json` 同效；`null` = 删键回退默认 |
 | 生效时机 | 下一回合（回合边界键） |
 
@@ -74,7 +74,7 @@ export function effectiveBodyIdleMs(provider) {
 | `provider/google.mjs` 的 Gemini 流解析器两处 | 调用处传 `idleMs: effectiveBodyIdleMs(provider)`；形参缺省 `idleMs = DEFAULT_BODY_IDLE_MS` |
 | `provider/anthropic.mjs` 的代理传输分支 | `_bodyIdleMs: effectiveBodyIdleMs(provider)` |
 | `provider/responses.mjs` 的三条代理传输分支 | `_bodyIdleMs: effectiveBodyIdleMs(provider)`（三条分支同值） |
-| `proxy.mjs` · `proxy-transport.mjs` 的缺省值 | `opts?._bodyIdleMs ?? DEFAULT_BODY_IDLE_MS`（未传 `_bodyIdleMs` 时的传输层缺省，与 provider 缺省同值同源）；同档形参缺省同源 |
+| `thincoder-core/proxy.mjs` · `proxy-transport.mjs` 的缺省值 | `opts?._bodyIdleMs ?? DEFAULT_BODY_IDLE_MS`（未传 `_bodyIdleMs` 时的传输层缺省，与 provider 缺省同值同源）；同档形参缺省同源 |
 
 数据流：配置盘 → `loadConfig` 合并 + 提升 → `agent.config.provider.bodyIdleTimeoutMs` → `chat(provider)` 各 transport → 两条读侧路径（直连 fetch 的读者定时器 ∥ 代理的 `_bodyIdleMs`）读同一个值。
 
@@ -166,7 +166,7 @@ offload / 预览族住 `thincoder-core/agent/offload.mjs`：导出面三件 = `o
 
 `thincoder-core/agent/helpers.mjs` 以具名 re-export 转口同名三件——所有既有 `import … from "…/helpers.mjs"` 逐字零改。
 
-批内用例落 `docs/batches/` 而非 `thincoder-core/test/`：后者是常驻机检档目录（`advisor-project-context` / `doc-check-*` / `manifest-five-keys` / `subagent-design-token-gate` 等），混入一次性档会让「零留存」不可读（`docs/core/design/TESTING.md` 的口径 = `docs/batches/*.test.mjs`，随批删）。
+批内用例落 `docs/batches/` 而非 `thincoder-core/test/`：后者是常驻机检档目录（`advisor-project-context` / `doc-check-*` / `manifest-five-keys` / `subagent-design-token-gate` 等），混入一次性档会让「零留存」不可读（`docs/core/design/TESTING.md` 的口径 = 批档目录下与批档同名的单测档，随批删）。
 
 ## 4. 关键决策（含被拒选项）
 
@@ -177,7 +177,7 @@ offload / 预览族住 `thincoder-core/agent/offload.mjs`：导出面三件 = `o
 | D3 | 非法值回退默认，不抛错、不解释成「禁用」 | 「`0` = 永不超时」——无场景判据（没有出现过的现场），且静默关保护；本轮不做开关 |
 | D4 | 报告落盘复用 `offloadToolResult` 的 `force` 支 | 新写 `persistReport`——与既有预览文案形成第二实现；在 settle 回调另起落盘点——四族 settle 各一处，注入点才是唯一共享面 |
 | D5 | 注入体 = 正文一份（≤64K）/ 双端预览（>64K）/ 清单行（超轮预算）+ 路径；短文绝不双端预览 | 短文双端预览——`buildDualEndPreview` 对 ≤16K 正文头尾各返整串（`thincoder-core/agent/offload.mjs` 的 `safeSliceUTF16End` ∥ `buildDualEndPreview`）⇒ 正文两份 + `middle omitted: 0 chars`；保留「超预算才落盘」——正是报告丢失的成因；全文 `inline`——64K+ 请求体的原事故面 |
-| D6 | 完成门加 `!poolLive(agent)`，判据取自 `suspension.mjs` | 在 `task.mjs` 侧改归零条件——`task` 更新与池状态无关，判据错位；新建池空判定——第二口径 |
+| D6 | 完成门加 `!poolLive(agent)`，判据取自 `thincoder-core/agent/suspension.mjs` | 在 `task.mjs` 侧改归零条件——`task` 更新与池状态无关，判据错位；新建池空判定——第二口径 |
 | D7 | 首 chunk 窗复用 `effectiveFetchTimeoutMs`，不新立配置键 | 新立 `agent.firstChunkTimeoutMs`——现无「首 chunk 窗要 ≠ 头阶段窗」的现场，多一个键多一个用户要学的旋钮；调大 `bodyIdleTimeoutMs`——把两种失败模式绑在一个旋钮上，流中途停摆的发现时间同比变长 |
 | D8 | 只修读侧面（`readSSE` ∥ `parseGeminiStream`），传输层看门狗另批 | 同批修传输面（`thincoder-core/proxy-transport.mjs`）——唯一的逐字现场（spark 报障）未提代理，无日志、无复现命令、无代理配置下的读数；分支要有现场才走，无现场的防御是没人走的路径 |
 | D9 | 相位串按相位分，既有串零改 | 沿用 `sse-idle`——报障时无法区分「流断了」与「还没开始」（正是本次报障的表述缺口）；新串进 `abortInfo.detail`，不改既有分类判据 |

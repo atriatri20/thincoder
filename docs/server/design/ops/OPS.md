@@ -128,7 +128,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
 ### 4.1 装配面的持久断言（回归护栏）
 
 - **最近先例**：包内测试面 = `thincoder-server/test/rc-resolve.mjs`（模块解析守卫，`node --test` 直跑）；跑法先例 = `thincoder-core/test/run.mjs`（`test/*.test.mjs` 单层收集 → `npm test`）。本档沿用「包内 `test/` ＋ `node --test`」，不改惯例；装配面探针缝无先例（缝形自定，理由见下）。
-- **调研证据**：查过 `thincoder-server/test/`（现只有 `rc-resolve.mjs`——零装配面断言）、`thincoder-server/package.json`（无 `scripts.test`）、`thincoder-core/test/run.mjs`（跑法）；无同形先例。
+- **调研证据**：查过 `thincoder-server/test/`（现只有 `thincoder-server/test/rc-resolve.mjs`——零装配面断言）、`thincoder-server/package.json`（无 `scripts.test`）、`thincoder-core/test/run.mjs`（跑法）；无同形先例。
 - **现状缺口**：装配面（`thincoder-server/bin/thincoder-server.mjs`，实读 **241** 行）的验证只有进程内驱 `run()` 的整链冒烟——跑完即弃，不留常驻断言。删掉一处装配行（周期 ticker ∥ 路由族注册 ∥ 终端 hub 接线 ∥ 保留清理周期 ∥ 更新自检周期 ∥ 项目同步调度），全套测试仍绿 ⇒ **静默失效**。
 - **落地形态**：常驻测试位 = `thincoder-server/test/assembly.test.mjs`（`node --test`）；断言 = **行为断言**（进程内驱 `run()` 跑一遍看结果），不读设计档查句子。
 - **运行点**：命令 = `cd thincoder-server && npm test`——本批新增 `thincoder-server/package.json` 的 `"test": "node --test test/*.test.mjs"`（包内现无 `test` 脚本，实读）。**入发布门**：`prepublishOnly` 链尾追加 `&& npm test`（现链 = 3×`node --check`）。
@@ -269,7 +269,7 @@ services:
   - RPO（进程崩溃）= **0**——WAL 提交即持久，重起自恢复；**掉电** = 丢最后若干提交（`synchronous=NORMAL`——计量档位在册，`store/db.mjs`）；
   - RPO（整机/介质丢失）= **最新快照龄**——定时器样例每日 ⇒ **≤24h**（调频 = 改 `OnCalendar`；频次越高 RPO 越小、盘占用越高）；
   - RTO = 恢复四步「停服 → 快照替换库 + 清 `-wal`/`-shm` 伴档 → 起服 → `/healthz` 200」——脚本段实测（演练读数 `copy_ms`+`verify_ms`）+ 人工段读数（收口轮真机回填）。
-- **恢复演练**（可跑流程：`deploy/restore-drill.mjs`（≈170 行））：
+- **恢复演练**（可跑流程：恢复演练脚本（角色件——未在盘，≈170 行））：
   - 运行：`node deploy/restore-drill.mjs --config <配置档> [--backup <快照>] [--dir <演练目录>]`（缺省快照 = 配置档旁 `backups/` 最新 `gateway-*.db` ∥ 演练目录 = 配置档旁 `restore-drill/`）；
   - 步 = ① 定位快照（缺 ⇒ 退出 1「无快照可演练」）② 复制到演练目录（同名覆盖——演练目录专用）③ 只读开 + 三判据（`integrity_check`=`ok` ∥ `user_version` 数值可读 ∥ 关键表行数可读）④ 对源比对（源库可读 ⇒ `members`/`providers` 行数与 `user_version` 逐一相等；源不可读 ⇒ 跳 + 注行）⑤ 读数与退出码；
   - **判据**：全过 ⇒ 退出 0，stdout `PASS` + `copy_ms ∥ verify_ms` + 各表行数（= RTO 脚本段实测源）∥ **失败判据**：任一不过 ⇒ 退出 1 + `FAIL: <原因>`（演练副本留盘——排障）；
@@ -343,7 +343,7 @@ services:
 | 档 | 行数 | 职责 |
 |---|---|---|
 | `thincoder-server/bin/thincoder-server.mjs` | **241**（实读 2026-10-19；本批 ＋≈40——族表驱动 ＋ 探针缝 ＋ 停机句柄） | argv ∥ 配置加载 ∥ 首启引导 ∥ 启动 ∥ 停机 |
-| `thincoder-server/test/assembly.test.mjs` | 新档 ≈220 | 装配面常驻断言（A1–A7 ＋ 反证注释——§4.1） |
+| 装配面常駻断言档（计划档——对象角色，未在盘） | 新档 ≈220 | 装配面常驻断言（A1–A7 ＋ 反证注释——§4.1） |
 | `thincoder-server/src/ops/config.mjs` | **360** | 读档 ∥ 校验（fail-closed） ∥ `env:` 解析 ∥ 缺省值 ∥ 预设展开接线 |
 | `thincoder-server/src/ops/update.mjs` | **239** | 更新机制 |
 | `thincoder-server/src/ops/presets.mjs` | **52** | 预设表（`SERVER_PRESETS`——起步 **21** 家 `{ baseURL }`；**2026-10-09 清除批：零 `model` 键**） ∥ 展开（`expandProviderEntry`：`name` 缺省 ∥ 覆盖 ∥ 未知预设拒启） |
@@ -385,7 +385,7 @@ services:
 | KD-SV-15 | **首启 admin 引导 = config `bootstrap` + 幂等**：仅零 admin 时依配置创建（`username` ∥ `password`——支持 `env:`）；建后配置可撤；零 admin 且未配置 ⇒ 启动告警；非零 ⇒ 跳过 | 「首启引导（env 或本机 CLI）」的需求形；幂等 = 只建不改（不覆盖已改口令）∥ 配置口令 ⇒ 操作者已知首密、零额外步骤 |
 | KD-SV-17 | **provider 预设 = server 自持表（快照——起步 21 家 OpenAI 兼容子集）**：`thincoder-server/src/ops/presets.mjs`（已落盘 52 行）静态表 `{ baseURL }` × 展开（`name` 缺省 = 预设名 ∥ 条目覆盖 `baseURL`/`models` ∥ 未知预设名拒启）；漂移 = 手工同步 + 单元测试档断言 | 需求 = 免手写 `baseURL`（功能点 9——模型面走「发现」勾选）；自持 ⇒ 引核口径 KD-SV-78（运行时不 import core）∥ 表极小（≈45 行）∥ 快照口径 + 漂移件兜同步 |
 | KD-SV-18 | **自动更新 = 两路统一 npm 版本身份（自检 + 档位 + 自升执行器；容器 = 壳）**：版本真相 = npm 包（镜像 tag 不承担版本语义）；自检 = registry `latest`（`NPM_CONFIG_REGISTRY` 可指内网镜像；失败/404 静默）；`autoUpdate` = `false ∥ "notify" ∥ "auto"`（缺省 `"notify"`——可见不越权；`"auto"` = opt-in）；自升 = `npm i -g @thincoder/server@<版号>` 子进程（超时 120s；成功 ∧ 复读校验 ⇒ 优雅停机 ⇒ 守护重起；失败 ⇒ 恒保留旧版）；容器 = 壳镜像（构建期上下文包体预装——离线可运行；`TC_SERVER_VERSION` 三态收敛：空/钉/`latest`；钉版抑制自装）；全文 = §5.4 | 用户令（两路统一 npm 路径 + 容器壳化）；「退出 ⇒ 重起」两路守护既有（unit `Restart=always` ∥ compose `restart: unless-stopped`）；零第三方依赖（fetch = node 内建 ∥ 自升走 npm CLI）；自持实现（先例语义参考 `thincoder-cli/src/upgrade.mjs`——零代码共享：跨包不可 import） |
-| KD-SV-19 | **provider 配置面 = 库单源 + 保存即热生效**：控制台管理（`providers` 表——迁移 v2）；密钥落库（明文 ∥ `env:` 引用并存——引用保形）；`config.json` 的 `providers[]` 降为**一次性种子**（空库导入；非空库忽略 + 警告）；热生效 = 注册表重建 + 原子换表（在途请求 = 派发时快照） | 用户 2026-10-06 16:01 令（「不再只靠 `config.json` + 重启」）；库 = 运行期单源（迁移链 G2 断点）；热生效免重启（零守护依赖 ∥ 亚秒级）；`env:` 保形（密钥卫生——种子不物化秘密）；预设衔接 = 界面「从预设快速添加」复用 `presets.mjs`（KD-SV-17） |
+| KD-SV-19 | **provider 配置面 = 库单源 + 保存即热生效**：控制台管理（`providers` 表——迁移 v2）；密钥落库（明文 ∥ `env:` 引用并存——引用保形）；`config.json` 的 `providers[]` 降为**一次性种子**（空库导入；非空库忽略 + 警告）；热生效 = 注册表重建 + 原子换表（在途请求 = 派发时快照） | 用户 2026-10-06 16:01 令（「不再只靠 `config.json` + 重启」）；库 = 运行期单源（迁移链 G2 断点）；热生效免重启（零守护依赖 ∥ 亚秒级）；`env:` 保形（密钥卫生——种子不物化秘密）；预设衔接 = 界面「从预设快速添加」复用 `thincoder-server/src/ops/presets.mjs`（KD-SV-17） |
 | KD-SV-23 | **健康检查 = `GET /healthz`（无鉴权只读探活）**：`{ status, version, uptime, db }`（`SELECT 1` 一探）；db 故障 ⇒ 503 `degraded`；no-store；接线 = Dockerfile `HEALTHCHECK` 单源（compose 继承——§5.9；探针契约 = `docs/server/design/gateway/API.md` §2.3） | 探针入口须零凭据（Docker/监控直调）；只读单探 = 零副作用；`version` 与 `ready` 行同源；接线单源 = 改一处 |
 | KD-SV-24 | **版本/更新可见面 = `GET /api/system`（会话——两角色）+ 控制台（meta 槽 ∥ 系统页）**：`{ version, update: { mode, lastCheckAt, latest } }`——数据 = 更新器进程内状态（`getStatus()` 导出）；`latest` = 已见新版（无/未检/失败 ⇒ `null`——静默同面） | 浏览器不可读日志 ⇒ 控制台可见须 HTTP 数据面（#961「ready 行足」限定 = 部署面——两消费方不同，不相抵）；系统页 = admin（动作方）；meta 槽 = 全角色（版本非敏感） |
 | KD-SV-25 | **部署文档完备 = README 定稿（TLS 内置完整段 ∥ 备份 = `deploy/backup.mjs`（已落盘 86 行）+ systemd 定时器样例）**：TLS 段 = `tls` 配置六键 ∥ 证书轮换（`SIGHUP`） ∥ 重定向（308）∥ 公网部署注意（安全组只开 443）；备份 = node:sqlite `backup()`（WAL 在线一致——免停写窗；零外部工具） | 用户 2026-10-19 令（「没有nginx，thincoder-server要自己实现tls」）；证书用户自备、服务只读路径；node 自带备份 = sqlite3 CLI 不保证在；在线备份 = 免停写、与运行实例并存 |

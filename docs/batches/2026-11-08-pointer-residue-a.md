@@ -7,7 +7,7 @@
 **状态行**：🔄 进行中（…）
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（289 处按五类分流；D1∥D2 共 145 处可开工，非仓内名与站点仓件两类待裁（已上抛））
+**状态行**：设计完成（残余轮 4 条裁定已落形；15 档锚面复跑读 = 2 条，均为不改档的登记项（③ 判不了 ∥ ④ 抽取器假阳））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试覆盖 / 验收对照 / 关键决策 / 上抛项>
 
 ### 本批条目（覆盖）
@@ -197,6 +197,208 @@ src/main/context-menu.mjs ×2 ∥ settings-modal.mjs ×2 ∥ preload.cjs ×2 ∥
 3. 在裁定前，逐档写入按 R6「整段一起清」推进：该段在写门口径下的裸名一并不留。
 
 依据：本刻对 `docs/desktop/design/MENU.md` 的整段写入被写门拒（零字节落盘），拒文逐条如上；同刻引擎跑同档 8 条。
+
+### 第 2 轮 · 尺子归一 + 已落与余量（本刻）
+
+**尺子（唯一判据，取代上文所有读数口径）**
+
+依据 `docs/core/design/DOC-DISCIPLINE.md`「验收取内置工具 `doc_check`（同一引擎 `runDocCheck`），或**静态面**（源面 `grep` ∥ 直读文件 ∥ `git diff` 改动面）。直接 `import` 引擎函数只作临时诊断，**其读数不得作为判据**。」
+
+⇒ 本批验收读数一律取内置 `doc_check`（`mode:"gate"`），docs = 下列 15 档，逐档路径写全以便照抄复跑：
+
+```text
+docs/desktop/design/ACTIVITY.md      docs/desktop/design/SESSIONS.md
+docs/desktop/design/CHAT.md          docs/desktop/design/SETTINGS.md
+docs/desktop/design/COMPOSER.md      docs/desktop/design/SHELL.md
+docs/desktop/design/E2E-TESTING.md   docs/desktop/design/UI.md
+docs/desktop/design/IPC.md           docs/desktop/design/WEB-QUICKCHECK.md
+docs/desktop/design/MENU.md          docs/desktop/design/RENDERER.md
+docs/desktop/design/PACKAGING.md     docs/desktop/design/PANEL-READBACK.md
+docs/desktop/design/PROJECT.md
+```
+
+**上一轮那条「写门判面 ≠ 引擎判面」的待裁 = 已闭（同尺）**：重启前会话进程加载的是改动前的引擎镜像；重启后写门与内置工具同一版。实测：`docs/desktop/design/PACKAGING.md` 两处读数同为 116（改前），不再有第二把尺。**该待裁三件（谁裁 · 何种条件 · 到期）无需再补——它不是待裁，是旧镜像的读数事故。**
+
+**本轮读数（内置 `doc_check` gate，同一命令）**
+
+| 时点 | 首行 | 余红档 |
+|---|---|---|
+| 开工（未改） | `DOC-CHECK GATE: REFUSED（锚 286 条）` | 15 档 |
+| 三档落地后 | `DOC-CHECK GATE: REFUSED（锚 126 条）` | 12 档 |
+
+**已清到 0（写门与内置工具同判）**：`docs/desktop/design/ACTIVITY.md` · `docs/desktop/design/PACKAGING.md` · `docs/desktop/design/SETTINGS.md` · `docs/desktop/design/UI.md`（末档落地后未复量，下轮首件事 = 复量取首行）。
+
+**余量分布（按上表 126 条读数；按名字族归并，不逐条抄）**
+
+| 名字族 | 落形（R 号） | 涉及档 |
+|---|---|---|
+| 仓内多候选码件（`app.mjs` ∥ `store.mjs` ∥ `chat.css` ∥ `settings.css` ∥ `index.html` ∥ `projects.mjs` ∥ `session-io.mjs` ∥ `run.mjs` ∥ `files.mjs` …） | R1 仓根全路径 | 其余 11 档 |
+| 收口即删的单元 / 集成测试档与探针件 | R3 角色叙述 | `docs/desktop/design/PROJECT.md` · `docs/desktop/design/E2E-TESTING.md` · `docs/desktop/design/SHELL.md` · `docs/desktop/design/WEB-QUICKCHECK.md` |
+| 用户配置档 ∥ 运行期配置名 | R2 叙述形 | `docs/desktop/design/E2E-TESTING.md` · `docs/desktop/design/PROJECT.md` |
+
+**判不了清单（逐条：档 + 名字 + 卡在哪一问）——本刻三条**
+
+| 档 | 名字 | 卡在哪一问 |
+|---|---|---|
+| `docs/desktop/design/SHELL.md` | `chat-digest.mjs` | 第 1 问（在仓否）：盘上同名零命中，而消化行族现有档名为 `docs/desktop/design/ACTIVITY.md` 与 `docs/desktop/design/RENDERER.md` 所记的另一名，无法在盘上指认「就是它」 |
+| `docs/desktop/design/PROJECT.md` | `views-harness.mjs` | 第 2 问（曾在此、现退否）：整仓零同名，且无一句能证明它被谁接走 |
+| `docs/desktop/design/WEB-QUICKCHECK.md` | `2Fprotocol.mjs` | 第 1 问：残缺 token（疑为 URL 转义残留），无从判定它原指哪一件 |
+
+**最近先例**：同形处置 = `docs/desktop/design/SETTINGS.md` §1 **KD-68**（同一句里「文件名 shorthand」一律展开为仓根全路径，`-sections-mcp.mjs` 一族照此落形）；对齐本批五类判法，偏离面 = 零。
+
+**调研证据**：查过 `docs/core/design/PATH-RESOLUTION.md`（解析链与唯一后缀兜底）· `docs/core/design/DOC-DISCIPLINE.md`（求值口径）· `docs/desktop/design/` 15 档自身的档树表；相关 = 前两档，取用面已在上面两段引文点名。另查 `docs/core/design/TESTING.md`（单元测试档收口即删）——与本批 R3 同源。
+
+**本批边界（不变）**：只改上述 15 档的坐标与由此失效的句子；不碰产品码 ∥ 需求档 ∥ 台账 ∥ 清单外的档 ∥ 本档 §1 §3 §4 §6。
+
+### 第 3 轮 · 第二程（余 11 档）落盘与残余（本刻）
+
+**尺子不变**：内置 `doc_check`（`mode:"gate"`），docs = 第 2 轮那 11 档，路径写全照抄复跑。
+
+**读数（同一命令 · 本程两跑）**
+
+| 时点 | 首行 | 余红 |
+|---|---|---|
+| 本程开工（复量——上一程末档落地后未复量的那一跑） | `DOC-CHECK GATE: REFUSED（锚 84 条）` | 9 档 |
+| 本程落盘后 | `DOC-CHECK GATE: REFUSED（锚 4 条）` | 3 档 |
+
+**已到 0（8 档）**：
+
+- `docs/desktop/design/E2E-TESTING.md` · `docs/desktop/design/IPC.md`
+- `docs/desktop/design/MENU.md` · `docs/desktop/design/PANEL-READBACK.md`
+- `docs/desktop/design/RENDERER.md` · `docs/desktop/design/SESSIONS.md`
+- `docs/desktop/design/CHAT.md` · `docs/desktop/design/COMPOSER.md`（此二档本程开工即 0，复量证实）
+
+**残余（4 条 · 逐条：档 + 名字 + 卡在哪 + 还缺哪条信息）**
+
+| 档 | 名字 | 卡点 | 缺什么才判得了 |
+|---|---|---|---|
+| `docs/desktop/design/SHELL.md` | `chat-digest.mjs` | 第 1 问（在仓否）：整仓零同名 | 需有人确认该批是否另有一份 `chat-digest.mjs`；盘上现役是 `thincoder-desktop/renderer/views/chat-digest-rows.mjs`，与句中「全族三段迁入」不是同一件 |
+| `docs/desktop/design/PROJECT.md` | `views-harness.mjs` | 第 2 问（曾在此、现退否）：整仓零同名 | 需一句「它被谁接走 ∥ 被删」。盘上无同名档，也无一句指认 |
+| `docs/desktop/design/WEB-QUICKCHECK.md` | `2Fprotocol.mjs` | 不是残缺指针，是**抽取器切出的尾段** | 原字面 = `..%2Fsrc%2Fmain%2Fprotocol.mjs`（WQ-2 的逃逸探针输入，非档指针）。要判得先裁：探针字面是否原样保留，或改抽取器对百分号编码字面的处理——**引擎面，不在本批写域** |
+| `docs/desktop/design/PROJECT.md` | `settings.css` | **判得出**（= `thincoder-desktop/renderer/settings.css`）但**落不了盘** | 与上一行同址（同一句的枚举里）。写门按整区判，任何触该处的写入都被 `views-harness.mjs` 拒 |
+
+**上面第四条卡点的读数（实测 · 单点写入该处）**
+
+```text
+对该处一笔单点写入（只把 settings.css 展开为仓根全路径）：
+DOC-CHECK GATE: REFUSED（锚 1 条）
+✗ 锚·档缺 docs/desktop/design/PROJECT.md:378 `views-harness.mjs`（缺「views-harness.mjs」）
+判面：改动区 1 区 · 片段区 1 区 · 目标档段首行 378
+本次写入未落盘——目标档字节逐字不变（零字节）。
+```
+
+⇒ 该句两条 token 互锁：`views-harness.mjs` 不裁，`settings.css` 就清不动。成因 = R6（推进单位 = 段）与「判不了的留着」两条落在同一句时的相互作用。
+
+**本程的非坐标改动（AC-3′ 在册 · 一段）**
+
+`docs/desktop/design/SHELL.md` §4 首段原为单段长句（`node` 逐字符计数 = 293）。把 `thincoder-desktop/src/main/session-io.mjs` 展开成仓根全路径后越 300 字段落线，写门按段落判拒（`1 段文字太长`，零字节落盘）。处置 = 原地拆两段、一段一断言、逐字未改；前段收在「端差在册）」句号处，后段自「本端 …主责」起。语义零改，只动断点。
+
+**判据可失败（AC-5 · 本程读数）**
+
+同一条命令两跑：改前 `REFUSED（锚 84 条）`，改后 `REFUSED（锚 4 条）`。读数不同 ⇒ 该命令判的是这批债，不是它自己的写法。
+
+**调研证据（本程新增 · 盘上实读）**
+
+- `thincoder-desktop/renderer/views/session-control.mjs` 的 `sessionModel` 内写 `msgs: Number.isFinite(row?.messageCount) ? row.messageCount : null`，档头写「元数据三值各自缺席（非串 ∥ 空串 ∥ 非数）⇒ 该值零节点」——`D23` 行与 `docs/desktop/design/E2E-TESTING.md` 的 KD-7 注那两处，原指一份已不在盘的渲染面档名，继任者确指本档（读出来的，非猜名）。
+- `thincoder-desktop/test/` 现盘 = `files.mjs` ∥ `rc-resolve.mjs` ∥ `run.mjs`，无 `integration/` 目录 ⇒ 集成 ∥ 单元测试档名的 R3 处置有据：那一族档确实不在盘上。
+
+**最近先例**（不变）= `docs/desktop/design/SETTINGS.md` §1 **KD-68**；偏离面 = 零（拆段一处按写门要求处置，已在上方单列）。
+
+### 残余轮处置（用户 2026-11-08 裁定 · 本批最后一程）
+
+**取数（一把尺）**：内置 `doc_check`，`mode:"report"`，清单 = 本批 15 档。
+
+- 开工读 = `命中 286 条（锚 286 · 段落 0 · 行号坐标 0）`。
+- 改后读 = `命中 2 条（锚 2）`——即下面 ③ ∥ ④ 两条「不改文档」的登记项。
+- 同一刻仓内九批并发清账：其余 13 档由别批落盘，故改后读数只剩本三档；两次读数是同一条命令、同一清单。
+
+#### 四条裁定落形
+
+| # | 档 | 对象 | 处置 | 落形 |
+|---|---|---|---|---|
+| ① | `docs/desktop/design/PROJECT.md` | 视图夹具件（见下块） | **R3 角色叙述** | 「该批的视图夹具」 |
+| ② | `docs/desktop/design/PROJECT.md` | 设置面样式件（见下块） | **R1 仓根全路径** | 见下块 |
+| ③ | `docs/desktop/design/SHELL.md` | 摘要族件（见下块） | **判不了**（三件见后） | 原句不动 |
+| ④ | `docs/desktop/design/WEB-QUICKCHECK.md` | 逃逸探针伪 token（见下块） | **抽取器假阳**：登记，档改 0 字 | 原句不动 |
+
+① ∥ ② 同处一句，按写门「整区判」一次写；逐字（原句 ⇒ 改后句）：
+
+```text
+原：其余新档（主进程四源档 · `settings.css` · 视图三档 · `views-harness.mjs`）行数面 = 各域文件账（分支清单随动 = 码面池）。
+改：其余新档（主进程四源档 · `thincoder-desktop/renderer/settings.css` · 视图三档 · 该批的视图夹具）行数面 = 各域文件账（分支清单随动 = 码面池）。
+```
+
+- ① 判据 = 整仓零同名（该件盘上零处）+ 无继任句 ⇒ 对象已无 ⇒ R3；R3 不要求指认继承者。
+- ② 判据 = 盘上两处同名，桌面设置面语境 ⇒ 取桌面渲染面那一份（R1 多候选按上下文选）。
+
+#### ③ 判不了 · 三件齐
+
+- **谁裁**：父侧 ∥ 用户（本轮已裁「保持判不了，别猜」）。
+- **条件**：确认「全族三段迁入」那一批是否另有一份副本——盘上现役的摘要行族件与「全族三段迁入」不是同一件。
+- **到期**：本批收口前。
+
+原句一字不动；该 token 仍在读数里，是登记项不是新命中。
+
+#### ④ 抽取器假阳 · 三件齐
+
+- **谁裁**：父侧（抽取器修正立账；用户本轮「这类不改文档，改抽取器，我会立账」）。
+- **条件**：抽取器对 URL 编码段（`%2F`）不再切出档名；同族假阳 = D 簇里产品名被当档名那一类。
+- **到期**：抽取器修正批落地前，本档只登记不改字。
+
+登记形（档 + token + 原字面）：
+
+```text
+档       = docs/desktop/design/WEB-QUICKCHECK.md
+token    = 2Fprotocol.mjs
+原字面   = ..%2Fsrc%2Fmain%2Fprotocol.mjs   （WQ-2 逃逸探针输入；改了这条用例就失效）
+```
+
+#### 同轮一并清掉的 12 条（读数里未裁的族，按同族判词处置）
+
+开工那 14 条本三档命中的其余 12 条，判词与用户本轮 ① 同族，故一并清在本轮：
+
+- **R1 仓根全路径 5 处**：KD-53 先例件、边界行工程件、会话族三联（`session-io` ∥ `session-slots` ∥ `projects`——均取桌面主进程目录）。
+- **R2 不带路径的叙述形 1 处**：项目根的 MCP 配置文件（运行期配置名，不写档名）。
+- **R3 角色叙述 6 处**：已删单元测试四件（视图面 ∥ 确认面 ∥ 提问面 ∥ 锁面）+ 花括号写法切出的残片一件 + 一处整档名指向已删用例。
+
+处置理由：四件用例档盘上零处（`glob` 查桌面测试目录无匹配），且不在继任名单；残片由抽取器切分产生；整档名那一处所指的用例档同样已删。
+
+#### 复跑读数（改后 · 15 档）
+
+```text
+命中 2 条（锚 2 · 段落 0 · 行号坐标 0）
+✗ SHELL.md:233          chat-digest.mjs      （③ 登记）
+✗ WEB-QUICKCHECK.md:161 2Fprotocol.mjs       （④ 登记）
+```
+
+本三档中 PROJECT.md = 0 条；SHELL.md = 1 条（③）；WEB-QUICKCHECK.md = 1 条（④）。其余 13 档 = 0 条（同一次运行）。
+
+#### 未裁 12 条的逐对在册（原句 ⇒ 改后句）
+
+与本轮四条同理：改的是坐标与点名形，句子结构 ∥ 断言内容零动。
+
+```text
+R1  KD-53  （先例 = KD-35 `notify.mjs`）
+        ⇒   （先例 = KD-35 `thincoder-desktop/src/main/notify.mjs`）
+R2  KD-70  ；`.mcp.json` ∥ 连接 ∥ 管理面语义零触；
+        ⇒   ；项目根的 MCP 配置文件 ∥ 连接 ∥ 管理面语义零触；
+R1  边界行  ∥ `projects.mjs` ∥ 核 ∥ `thincoder-render-core`
+        ⇒   ∥ `thincoder-desktop/src/main/projects.mjs` ∥ 核 ∥ `thincoder-render-core`
+R1  会话族  （`session-io.mjs` ∥ `session-slots.mjs` ∥ `session-maintenance.mjs` ∥ `session-actions.mjs` ∥ `sessions.mjs` ∥ `projects.mjs`）
+        ⇒   首件 · 次件 · 末件改仓根全路径，中间三件原样（后缀唯一，读数不报）
+R3  用例面 落 `thincoder-desktop/test/views-chrome.test.mjs`
+        ⇒   落该批的单元测试档
+R3  用例面 `thincoder-desktop/test/{views-question,views-tabbar-close}.test.mjs`
+        ⇒   该批的两档单元测试
+R3  用例面 `thincoder-desktop/test/views-tabbar-close.test.mjs`（确认面族 U55 自 `views-tabbar` 拆出）· `thincoder-desktop/test/views-question.test.mjs`
+        ⇒   该批拆出的确认面单元测试档（确认面族 U55 自 `views-tabbar` 拆出）· 该批新增的提问面单元测试档
+R3  用例面 = `thincoder-desktop/test/views-tabbar-close.test.mjs`（页随动**五例**
+        ⇒   = 该批拆出的确认面单元测试档（页随动**五例**
+R3  用例面 + `thincoder-desktop/test/views-locks.test.mjs` 原址补例
+        ⇒   + 该批的锁面单元测试档 原址补例
+```
+
+依据：四档用例档在桌面测试目录零匹配（`glob` 查 `views-chrome` ∥ `views-tabbar-close` ∥ `views-question` ∥ `views-locks` 的 `.test.mjs` 全无返回），且与用户本轮 ① 同族——整仓零同名 + 无继任句 ⇒ 对象已无 ⇒ R3。
 
 ## §3 设计评审（评审子代理）
 ## §4 用户批准（主 agent）

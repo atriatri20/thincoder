@@ -45,9 +45,9 @@
 
     ② **池 live 进会话（回合尾）**：`enterSuspensionTurn` 将 `panel._busyQueued` 残项预填 `susp.pendingInput`（同一 driver 消费点）；③ **池空 idle 归位分支**：`_busyQueued` 非空 ⇒ 直接以该消息续发回合（后清槽）。
 
-    会话退出兜底 = 核 `done.residualInput` ⇒ 普通回合续发（`suspension.mjs` 外壳面——零丢失）。送达侧气泡生命周期 = **与纯挂起既有 queued 路径同款**——送达时本地气泡即视为该消息 user 回声面，回合流式渲染不重复出气泡。
+    会话退出兜底 = 核 `done.residualInput` ⇒ 普通回合续发（`thincoder-vscode/src/extension/suspension.mjs` 外壳面——零丢失）。送达侧气泡生命周期 = **与纯挂起既有 queued 路径同款**——送达时本地气泡即视为该消息 user 回声面，回合流式渲染不重复出气泡。
 
-    **载体面取批贴图批退化**：driver 步骤 1 / 装载② / 退出残余三处共用取批——批内任一条目携 `images` ⇒ `count = 1`（逐条取；图片随条目元数据走 F-1 降级面），无贴图 ⇒ 按计划合并（取项单源 = 核 `thincoder-core/queued.mjs` `takeQueuedBatchItem`——三调用点 = `panel-turn-stages.mjs` ∕ `suspension.mjs`）。
+    **载体面取批贴图批退化**：driver 步骤 1 / 装载② / 退出残余三处共用取批——批内任一条目携 `images` ⇒ `count = 1`（逐条取；图片随条目元数据走 F-1 降级面），无贴图 ⇒ 按计划合并（取项单源 = 核 `thincoder-core/queued.mjs` `takeQueuedBatchItem`——三调用点 = `panel-turn-stages.mjs` ∕ `thincoder-vscode/src/extension/suspension.mjs`）。
   - ③ 外部入口（Ask ThinCoder 命令 / retry）经 `routeUserTurn` busy 分支同面分流（同判据同队列）——会话在飞同入会话队列（容量 8）；`chat-panel.mjs` `sendMessage` 的挂起会内 busy 拒收守卫随本次撤销（外部入口同面受理；**回显只走真回合**——忙态零 post；回显面 = `WEBVIEW-PROTOCOL.md` §4.1；细则⑦）。
   - ④ **busy 面统一**：挂起会话内 digest 与普通回合 busy 同判据（`S._suspended` 只作会话在场指示，不参与受理分流）。
   - ⑤ 落点 = 核 `thincoder-render-core/composer/panel.mjs` `send()`（出口分流——`running` 一律排队；槽满守卫在队列分支内）· `webview/state.js`（`_busyQueuedPending` 镜像字段）· `webview/chat.js`（`case "busyQueued"`）
@@ -55,7 +55,7 @@
 
     · `chat-panel.mjs`（`_busyQueued` 初始化 + `_chat` susp 分支入槽 / 来源标记参 + `sendMessage` 守卫）· `image-handler.mjs`（F-1 降级判决函数）；协议登记 = `WEBVIEW-PROTOCOL.md` §3.2 行 16 / 行 17 + §12 行 + §6.3 键 `input.slotFull`；需求锚 = CLI 需求档 F16 对称句。
   - ⑥ **送达路由贴图降级对位**（与 idle 面同一判定——非直呼 `runChat` 旁路）：入槽项**两面同款携来源标记**（普通回合 busy 与会话在飞 busy）⇒ 送达时同过 F-1 判定——`images` 路径非空 ∧ `modelOverride` 在场 ∧ `specForModel(modelOverride).multimodal` 假 ⇒ 视觉渠道一次性子代理读图（成功 = 描述注入 text + images 清空；无渠道 / spawn 失败 / 超时 / 空返 ⇒ 原样兜底，不静默丢）。
-    判决函数 = 核 `attachments.mjs` `downgradeNonVisionImages`（VSC `image-handler.mjs` 薄壳转口；`visionReader` per-call 注入缝——缺省回落生产跑者 = 核 `vision-reader.mjs`，形态同 idle 先例）。
+    判决函数 = 核 `thincoder-core/attachments.mjs` `downgradeNonVisionImages`（VSC `image-handler.mjs` 薄壳转口；`visionReader` per-call 注入缝——缺省回落生产跑者 = 核 `vision-reader.mjs`，形态同 idle 先例）。
 
     三调用点 = idle 面（含 `_turnState !== "susp"` 门）/ 装载②（`deliverBusyQueued`——**先置 running 再 await**，同 F-1 idle 面忙锁不变量）
 
@@ -97,11 +97,11 @@
 
       | # | 消费点 | 载体坐标 | 携 `merged` | 流内出块 | 带面 |
       |---|---|---|---|---|---|
-      | ① | 步边界 pickup（主——用户回合在飞） | `queued-pickup.mjs` 的步边界 | 是（`action.text`） | 恰一枚 | 按 `items` 重绘（本批项退场） |
-      | ② | driver 步骤 1（会话在飞输入优先消费） | `suspension.mjs` 的步骤 1 | 是 | 恰一枚 | 同上 |
+      | ① | 步边界 pickup（主——用户回合在飞） | `thincoder-vscode/src/extension/queued-pickup.mjs` 的步边界 | 是（`action.text`） | 恰一枚 | 按 `items` 重绘（本批项退场） |
+      | ② | driver 步骤 1（会话在飞输入优先消费） | `thincoder-vscode/src/extension/suspension.mjs` 的步骤 1 | 是 | 恰一枚 | 同上 |
       | ③ | 装载① 载体迁移（`_busyQueued` → `susp.pendingInput`） | `panel-turn-stages.mjs` 的 `enterSuspensionTurn` | **否** | **零出块** | 原样（`items` 实况——项仍在队，只换载体）；**实现条件 = 迁移快照推送先于 `splice`**（推送读 `_busyQueued` 实况；`splice` 后 `panel._susp` 尚未建 ⇒ 两载体读空） |
       | ④ | 装载② 归位（池空 idle 续发） | `panel-turn-stages.mjs` 的 idle 归位分支 | 是 | 恰一枚 | 同上 |
-      | ⑤ | 会话退出残余直发循环 | `suspension.mjs` 的退出残余段 | 是 | 恰一枚 | 同上 |
+      | ⑤ | 会话退出残余直发循环 | `thincoder-vscode/src/extension/suspension.mjs` 的退出残余段 | 是 | 恰一枚 | 同上 |
 
       **术语对齐**：「窗内消费」= 上表 ②（挂起会话在飞时 driver 步骤 1 从 `susp.pendingInput` 取批）；需求档 F-W22 的「回合尾」= ③ + ④（装载两分支），「卸载直发」= ⑤。
 
@@ -112,10 +112,10 @@
     · **刷新**：`clearMessages` ⇒ 带面镜像复位（空带），随握手 / 下一次快照重建。
     · **边界**：外部入口队满拒收 = 既有回执面零变；引用失效守卫随气泡认领整体退役（派生面结构性无悬空）；纯挂起窗输入同面（两载体合计同快照）。CLI 对位 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1 + `docs/cli/design/TUI.md` §7.5（待发送块——语义同源、形态各端自落）。
   - ⑧ **统一消费语义（计划首动作即消费）**：取项 ∕ 步边界 ∕ 步边界缝三面同判——`slash` ⇒ 单条（原文 · 保序 · 不合并）；取项单源 = 核 `thincoder-core/queued.mjs` `takeQueuedBatchItem` ⇒ slash 首条不滞留队首；
-    落点 = `thincoder-vscode/src/extension/queued-pickup.mjs` 步边界（消费点）· 取项三处 = `panel-turn-stages.mjs` ∕ `suspension.mjs`；slash 可达且就地消费。
+    落点 = `thincoder-vscode/src/extension/queued-pickup.mjs` 步边界（消费点）· 取项三处 = `panel-turn-stages.mjs` ∕ `thincoder-vscode/src/extension/suspension.mjs`；slash 可达且就地消费。
 
 - **Shift+Enter** 既有形态（核件键位面不处理——换行）。
-- **不动面**：`_turnState` 生命周期 / 单广播 / 派生、录入面（录入不禁；提交面受理分流 = C-B2-6）、中断模态、下拉过滤 / 防抖 / seq、CSS、`index.html`。（`applyBusyLock` 占位符含**第三态**——守卫 > busy > 常态，见 C-B2-5。）
+- **不动面**：`_turnState` 生命周期 / 单广播 / 派生、录入面（录入不禁；提交面受理分流 = C-B2-6）、中断模态、下拉过滤 / 防抖 / seq、CSS、`thincoder-vscode/webview/index.html`。（`applyBusyLock` 占位符含**第三态**——守卫 > busy > 常态，见 C-B2-5。）
 - **登记（未做）**：真机 IME 矩阵（mac / Safari 组合确认 Enter 的 `isComposing` 时序差异）未覆盖——`keyCode === 229` 兜底**不引入**（登记项）。
 
 ### 1.1 其他键位（同族既有语义）

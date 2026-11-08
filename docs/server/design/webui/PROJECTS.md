@@ -1,6 +1,6 @@
 # Thincoder Server · 团队项目与权限·界面（webui/PROJECTS）
 
-> 板块 = server ∥ 本档 = webui 域·面档（团队项目与权限——页面族/导航位/入口）；板总览 = `PROJECT.md`（文档地图 = §3）。
+> 板块 = server ∥ 本档 = webui 域·面档（团队项目与权限——页面族/导航位/入口）；板总览 = `docs/server/design/PROJECT.md`（文档地图 = §3）。
 > 机制单源 = `project/PROJECTS.md`（对象/权限/同步——本档不复述，只落界面承载）；页集单源 = `webui/WEBUI.md` §2（本档回指）。
 
 ## 1. 关键决策（本面）
@@ -35,7 +35,7 @@
 - **地址栏**：子段形 `#/admin/projects/<tab>`；切换 = `history.replaceState`（不触发 hashchange——零重渲；沿 `webui/TABS.md` §2.2 四岔口——= 组件第二消费面）。
 - **懒读**：面板首激活建 ⇒ 数据随建读（面板① = 项目列表；面板② = 源清单）；未激活面板零读。
 - **旧址**：`#/admin/git-sources` = 静态别名（`nav.mjs` `ROUTE_ALIASES` ⇒ `/admin/projects/git-sources`）；**解析序现成**（`resolveRoute` 实读——别名先行、别名目标再走子段裁分 ⇒ `sub` 回传 ⇒ `{ path: "/admin/projects", sub: "git-sources", redirect: true }`；nav 侧仅 +1 别名行，零额外改）；
-  重定向 = `app.mjs` 带 `sub` 跳转（`resolved.path ∥ sub` 拼回）⇒ 落点/刷新/直打均达标签②；user 角色 ⇒ 重定向先行 ⇒ 落 `/admin/projects` 后 `denied` 块（页面级——服务端仍判据）。
+  重定向 = `thincoder-server/public/app.mjs` 带 `sub` 跳转（`resolved.path ∥ sub` 拼回）⇒ 落点/刷新/直打均达标签②；user 角色 ⇒ 重定向先行 ⇒ 落 `/admin/projects` 后 `denied` 块（页面级——服务端仍判据）。
 - **零回归**：两面板件 = 原样（面板① 项目表件 ∥ 面板② `renderGitSources`——导出名不变）；弹窗全族 ∥ `closeActiveModal` 路由收口（切换不重渲 ⇒ 不误关窗）∥ 其余页面零改。
 - **添加仓对话框**（共用构建器；两区）：
   - **从源拉列表**：源选单（含「手输（无源）」项）+ 「读取」按需（读时读——`GET /api/admin/git-sources/:id/repos`；自含形：成 ⇒ 勾选列表（复选 + 过滤输入（客户端）——行 = 全名 + 私有标 + 已在册标（**服务端 `known` 读数**——跨形归一命中在册项目 ⇒ 标「已添加」且勾选禁提交；消客户端匹配漂移）+ `truncated` 提示）；败 ⇒ 窗内分类人话（`auth`/`scope_missing`/`unreachable`/`timeout`/`http_error`/`bad_response` 六分）+ 重试）。
@@ -75,11 +75,11 @@
 | `thincoder-server/public/views-audit.mjs`（已落盘） | **271**（型表 + `project_event` + 详情支（kind 族）） | 审计面 |
 | `thincoder-server/public/i18n.mjs`（已落盘） | **137**（门面两档 `i18n-{zh,en}.mjs` 各 2 行） | 部件装配 |
 | `thincoder-server/public/style.css`（已落盘） | **358**（+1 全局 `[hidden]` 兜底 ∥ −2 按例补丁删——`webui/STYLE.md` §2.3） | 样式 |
-| 跨批单元测试档 `2026-10-08-server-public-structure.test.mjs`（已落盘 · 实读 **168**） | **在册**（守卫现盘含 `project` 域：`ledger` 域 ∥ 指纹 zh `3a3cdf31…` ∥ en `1d8e1612…` ∥ 键数 **970 ∥ 975**；复跑 6/6 绿）；**零新档**（PARTS/DOMAINS 零动）；行数核清单在册者 = `app.mjs`（≤300——204，绿） ∥ `views-admin-projects.mjs` ∥ `views-git-sources.mjs`（三视图 ≤500——69 ∥ 278，绿）；`nav.mjs` ∥ `style.css` 零在册 | 结构守卫（零改） |
+| 跨批单元测试档（旧批静态面结构单测档——批次面，收口即删；已落盘 · 实读 **168**） | **在册**（守卫现盘含 `project` 域：`ledger` 域 ∥ 指纹 zh `3a3cdf31…` ∥ en `1d8e1612…` ∥ 键数 **970 ∥ 975**；复跑 6/6 绿）；**零新档**（PARTS/DOMAINS 零动）；行数核清单在册者 = `thincoder-server/public/app.mjs`（≤300——204，绿） ∥ `views-admin-projects.mjs` ∥ `views-git-sources.mjs`（三视图 ≤500——69 ∥ 278，绿）；`nav.mjs` ∥ `style.css` 零在册 | 结构守卫（零改） |
 
 **面小计**：≈1172（本面档行和）。
 
-**键族登记**（两表逐键同步——`i18n-{zh,en}-project.mjs` 部件）：
+**键族登记**（两表逐键同步——`thincoder-server/public/i18n-zh-project.mjs` ∥ `thincoder-server/public/i18n-en-project.mjs` 部件）：
 
 - 部件键（≈120/表）：`me.projects.*`（≈22——页题/列头/空态/详情字段/成员表列头/档位三值/动作/提示）∥ `admin.projects.*`（≈40——页题/列头/添加入口/对话框（源选单/读取/勾选/过滤/提交/重复项）/手输区 + 删除钮/确认窗/后果句）∥ `admin.gitSources.*`（≈55——页题/列头/状态词/同步方式两值/结果分类人话六分/五钮/添编窗字段/删除确认/防护句 + 事件块（地址/密钥/生成/一次性/登记说明））。
 - 随动键：shell 两部件 3 键（`nav.page.me.projects` ∥ `nav.page.admin.projects` ∥ `nav.page.admin.gitSources`）∥ system 两部件 +1 键（`audit.type.project_event`）。
@@ -95,7 +95,7 @@
 | AC-44 ④⑤（三档权限 + 负责人边界）· 控制台面 | 详情弹窗权限感知（`my` 读数显隐：成员操作列 ∥ 加成员控件 ∥ 改显示名 ∥ 改地址（admin）∥ 更换负责人（admin）∥ **删除钮（admin——`can.delete`）+ 确认窗**）∥ 负责人行保护（无移除/降档控件）∥ 直打端点仍服务端判（页面不是判据） | 单元测试档 + 收口轮（浏览器实走） |
 | AC-44 ⑦⑨（能同步的同步 + 手动钮永在 ∥ 源表）· 控制台面 | 源表七列在册（名字/平台/PAT 掩码/状态/同步方式/上次结果/操作）∥ 「立即同步」恒显 + 进行中禁 + 终态刷新 ∥ 「拉列表」预选源 ∥ 「体检」+ 失效标红 + 人话 ∥ 「删源防护」400 就地呈 ∥ 添/编窗字段逐件（含自建基址条件显）+ 同步方式两值 + 平台门（`event` 仅 github 可选）∥ 事件块（地址/密钥/登记说明；密钥一次性明文） | 单元测试档 + 收口轮（浏览器实走） |
 | AC-12（IA） | `nav.mjs` 直测：我的 6（零改）∥ 管理 **10**（功能点 48①）∥ 别名集 +1（`/admin/git-sources` ⇒ `/admin/projects/git-sources`）∥ admin 组仅 admin ∥ 其余重定向/角色默认/子段容许零改 ∥ 静态档目随正（单源 = `webui/WEBUI.md` §1） | 单元测试档 |
-| AC-14（多语言） | 新部件 `i18n-{zh,en}-project.mjs` 两表键集相等 ∥ en 零 CJK ∥ 键引用闭合 ∥ 域界归属（`project` 部件：`admin.projects` ∥ `admin.gitSources` ∥ `me.projects`）∥ 指纹/键数随正 | 单元测试档 |
+| AC-14（多语言） | 新部件 `thincoder-server/public/i18n-zh-project.mjs` ∥ `thincoder-server/public/i18n-en-project.mjs` 两表键集相等 ∥ en 零 CJK ∥ 键引用闭合 ∥ 域界归属（`project` 部件：`admin.projects` ∥ `admin.gitSources` ∥ `me.projects`）∥ 指纹/键数随正 | 单元测试档 |
 | AC-19/AC-20（样式与壳）· 零回归 | 零新颜色变量 ∥ 零新悬停规则 ∥ **非壳页定论**（本面两页三表不入视口高壳；`SHELL_PAGES` 五路径零改；沿 key 表非壳先例） | 单元测试档 + 收口轮 |
 | R63/R64 补面（用户授权——`project/PROJECTS.md` §13/§14）· 控制台面 | 事件块（选单平台门 ∥ 地址/密钥/登记说明 ∥ 密钥一次性明文）∥ 删除钮 + 确认窗（`can.delete` 渲 ∥ 服务端 `confirm` 同判） | 单元测试档 + 收口轮（浏览器实走） |
 | AC-44 ⑬（gitee 范围三态） | 弹窗三态选择器（仅 gitee 显 ∥ 创建无默认 + 必选门 ∥ 个人 ⇒ 范围隐 ∥ 组织/企业 ⇒ 显且必填 ∥ 跨态切换：切「个人」⇒ 范围置空并提交 ∥ 切非 gitee ⇒ `scopeKind` 不携/置空）∥ 编辑态逐值回填 ∥ 不符报错显示面（拉列表窗内原文 + 同步结果列 message）∥ 键族 +8/表（zh/en 对位——en 零 CJK）∥ 用例 U1（选择器/范围门/跨态切换）∥ U2（编辑态回填/不符报错显示面） | 单元测试档 + 收口轮（浏览器实走——建企业源 ⇒ 拉列表） |

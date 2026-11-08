@@ -39,7 +39,7 @@
 | `posix` | `- Executor: the bash tool runs commands through a POSIX shell ($RAW). Standard POSIX syntax applies ($(...), $VAR, ;, >/dev/null).`（`$RAW` 同上） |
 | `unknown` | `- Executor: the bash tool shell could not be identified (raw: $RAW) — write portable commands and trust the command's own error output.`（`$RAW` 同上） |
 
-**数据流（三端）**：端装配层在本端 `prompt-injections.mjs` 的 `bash-terminal-face` 键填 **import 期求值**的结果（模块加载即求值·注册前）：`executorLine(resolveShellIdentity(configShell()))` ⇒ 按上表组装为静态字符串。
+**数据流（三端）**：端装配层在本端注入档（`thincoder-cli/src/prompt-injections.mjs` ∥ `thincoder-vscode/src/prompt-injections.mjs` ∥ `thincoder-desktop/src/main/prompt-injections.mjs`）的 `bash-terminal-face` 键填 **import 期求值**的结果（模块加载即求值·注册前）：`executorLine(resolveShellIdentity(configShell()))` ⇒ 按上表组装为静态字符串。
 
 - **为什么不能交函数值**：核缝 `applyPromptInjections` 为纯字符串替换、注册即快照（`prompt-files.mjs` 的注入替换段 ∥ 其函数值守卫段；函数值会被 `String.replace` 字符串化 ⇒ 不支持函数值键）。
 - **由此得到的口径**：**描述面值随进程启动固定**——进程内改 `shell` 配置不刷新该行（重启生效——残余口径 §8）。
@@ -64,7 +64,7 @@ win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 s
 
 ### 3.2 三端注入表——端装配层 import 期求值
 
-三端 `prompt-injections.mjs` 的 `bash-terminal-face` 键值 = **import 期求值的静态字符串**（`executorLine(resolveShellIdentity(configShell()))`——模块加载即求值、注册前）。
+三端注入档（`thincoder-cli/src/prompt-injections.mjs` ∥ `thincoder-vscode/src/prompt-injections.mjs` ∥ `thincoder-desktop/src/main/prompt-injections.mjs`）的 `bash-terminal-face` 键值 = **import 期求值的静态字符串**（`executorLine(resolveShellIdentity(configShell()))`——模块加载即求值、注册前）。
 
 - **为什么不能交函数值**：核心缝 `applyPromptInjections` 为纯字符串替换、不支持函数值键（函数值会被 `String.replace` 字符串化——`prompt-files.mjs` 的注入替换段）。
 - **由此得到的口径**：**描述面值随进程启动固定**——进程内改 `shell` 配置不刷新该行（重启生效）。
@@ -139,7 +139,7 @@ win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 s
 - **零触**：advisor/subagent 工具面 ∥ manifest 面 ∥
   需求档面（`docs/core/requirements/**`；提示词 = `thincoder-core/prompts/**`，注入值本身除外）∥ VSC terminal 参数语义（`shell.mjs` visible/inject 行原文保留）∥
   spawn 面行为本身（`shell` 参数计算式零改——只加声明面与 hint 门）。
-- 边界口径：授权边界 = **设计前枚举**（三面——`thincoder-core/tool-docs/bash.md` ∥ 三端 `prompt-injections.mjs` ∥ 探测辅助档）；条目 4（hint 身份门）∥ 5（VSC 死常量删除）∥ 6（权威档三档指针/收正）依用户全链授权纳入（同缺陷族修复面，非新语义）。
+- 边界口径：授权边界 = **设计前枚举**（三面——`thincoder-core/tool-docs/bash.md` ∥ 三端注入档（`thincoder-cli/src/prompt-injections.mjs` ∥ `thincoder-vscode/src/prompt-injections.mjs` ∥ `thincoder-desktop/src/main/prompt-injections.mjs`）∥ 探测辅助档）；条目 4（hint 身份门）∥ 5（VSC 死常量删除）∥ 6（权威档三档指针/收正）依用户全链授权纳入（同缺陷族修复面，非新语义）。
 - 残余口径（偏差登记）：核心缝注册即快照、不支持函数值键 ⇒ **描述面 Executor 行随进程启动固定**——进程存活期内改 `shell` 配置不刷新该行（重启生效）；hint 门等逐执行调用面按配置值 memo 键控重探。
 - 不改 `shell-candidates.mjs`（设置面板候选面——与本机制不同语义面：候选探测 vs 身份声明）；不做可见终端（用户 shell）探测（不可探测——K6）。
 - 不动 `question-ui-face` 锚（仍待工具面 review——只处置 bash 锚）。

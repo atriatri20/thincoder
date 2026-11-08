@@ -101,7 +101,7 @@
 | `thincoder-server/src/accounts/audit.mjs` | 121（`AUDIT_TYPES` += `ledger_event`——十五型；头注计数同拍） | 审计型目录（型面单源——`docs/server/design/accounts/ACCOUNTS.md` §2.1 随正） |
 
 - **行数口径**：上表 = 档总行数（**LF 计数** = `split(/\r?\n/)`，与字节侧 `\n` 计数同值——2026-11-02 实读）。不用 `Get-Content … .Count`：它在纯 LF 档上偏低（同一档实测 `.Count` = 289、LF = 310，差 21 行；核侧同错差 140 行）⇒ 换把尺子，别再吃这个亏。**余行仍为旧尺读数**，量法统一轮重读一遍（本域最大 = `items.mjs` 310，已按 LF 校正）；`±0` = 本域零改动档。
-- **测试档 = 无**：`thincoder-server` 下 `*.test.mjs` 零档 ⇒ 本域 §11 用例表是判据设计，没有可跑的机检载体。
+- **测试档 = 无**：本域零测试档 ⇒ 本域 §11 用例表是判据设计，没有可跑的机检载体。
 - **软线读数**：本域各档均低于 500 软线（本域最大 = `src/ledger/items.mjs` 310，LF 口径）；表内另两行 = 跨域读数（装配面 `bin/thincoder-server.mjs` 314 ∥ 域外 `src/project/projects.mjs` 352），本域只记不判。`docs/server/design/store/STORE.md` §4 的 >700 触发线不涉本域。
 
 ## 10. 验收判据（AC-32 ①–⑥ 对位）

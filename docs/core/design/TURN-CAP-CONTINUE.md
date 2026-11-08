@@ -17,7 +17,7 @@
 | 5 | **继续提示串行** | 会话级队列消费者 = **会诊（唯一）**（`continueQueue`——`agent-tools/consult.mjs`；检查点报请仍串行其上）；**同步子代理**走 `_permQueue`（核 `subagent.mjs`）；**同步飞刀 = 直问用户**（无队列）；异步飞刀权限同经 `_permQueue`（核 `escalate-async.mjs`）；**depth-0 直弹卡、无会话队列**（CLI `agent-turn.mjs` / VSC `panel-turn-loop.mjs`）；**异步族**经上行通道报请（无队列——#7；**会诊除外**——见本行首句）。并行执行体同时撞墙不弹多个卡 |
 | 6 | **次数不限** | 无次数帽；防卡死靠用户 Stop（**不设零产出阈值**；该裁定对象 = **续跑决策的自动动作面**——只读角色零产出告警机制另见 `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.32） |
 | 7 | **撞帽检查点（F8）** | 撞帽 ⇒ **不再静默自动续期**：**异步族**（后台子代理 / 异步飞刀 / 会诊）⇒ **报请父代理**（上行 ask：载荷 = 段数 / 跨段累计轮次 + 去向一句话）；父答**续期** ⇒ 同执行体 `resume:true` 重入（#2 不变量）+ 新段预算（会诊同挂 watchdog 重置）；父答**停** ⇒ #3 partial。**同步族**（阻塞子代理 / 同步飞刀）⇒ **用户卡路径保留**（父代理被本次调用阻塞 · 应答不可达；挂起亦不可续——累计 history 随调用返回丢弃）。depth-0 ⇒ 用户卡（digest 无人值守档 ⇒ 收口）。**AUTO 一律不再自动批准续期**——**AUTO × 同步族**：AUTO 档对 `continue` 名不再短路（CLI `interaction.mjs` / VSC `panel-callbacks.mjs`）⇒ 卡**在场待答**；无人应答（headless / 无人值守）⇒ 落 #3 partial（非静默放行）。**可答判据（机械）** = `child._upstream?.parent` 在场且 `sync !== true` ⇒ **段边界挂起**（不 settle / 不重派——§5 D-TC12）；不可达 ⇒ #3 partial。留痕 = 跨段累计轮次 + 段数（§4）+ 摘要文本面（§3.1） |
-| 8 | **载入面自证** | 运行面与仓内面的一致性**可核**——「以为在跑新码」必须可自证：① **启动期诊断**——VSC 激活时记一行 `[thincoder] core face = <core 实体路径> (v<版本>)`（路径经 `import.meta.resolve("@thincoder/core/agent.mjs")` 取实体目录；版本读同目录 `package.json`）——**不比对、不拒载**（只留证据；读取失败 ⇒ 记 `core face = unresolved`，不抛 / 不阻断激活——§3.2 注）；② **打包面机检**——`thincoder-vscode/scripts/check-vsix.mjs` 增断言：vsix 内 `@thincoder/core/agent-tools/checkpoint.mjs` 存在 ∧ `agent-tools/subagent-run.mjs` 含 `registerTurnCapCheckpoint`（接线未进包 ⇒ 机检即红，不靠人眼）。**不动机制语义**；实况触发 = 运行面为安装包冻结旧构建 |
+| 8 | **载入面自证** | 运行面与仓内面的一致性**可核**——「以为在跑新码」必须可自证：① **启动期诊断**——VSC 激活时记一行 `[thincoder] core face = <core 实体路径> (v<版本>)`（路径经 `import.meta.resolve("@thincoder/core/agent.mjs")` 取实体目录；版本读同目录包清单）——**不比对、不拒载**（只留证据；读取失败 ⇒ 记 `core face = unresolved`，不抛 / 不阻断激活——§3.2 注）；② **打包面机检**——`thincoder-vscode/scripts/check-vsix.mjs` 增断言：vsix 内 `@thincoder/core/agent-tools/checkpoint.mjs` 存在 ∧ `agent-tools/subagent-run.mjs` 含 `registerTurnCapCheckpoint`（接线未进包 ⇒ 机检即红，不靠人眼）。**不动机制语义**；实况触发 = 运行面为安装包冻结旧构建 |
 
 ## 2. 四执行体（预算 / 通道 / 上限）
 
@@ -97,7 +97,7 @@
 
 **§3.2 注（载入面自证 · 实现面）**：
 
-- **实现 = 2 行**：读取行（`import.meta.resolve("@thincoder/core/agent.mjs")` 取实体目录 + 读同目录 `package.json` 的 `version`；
+- **实现 = 2 行**：读取行（`import.meta.resolve("@thincoder/core/agent.mjs")` 取实体目录 + 读同目录包清单的 `version`；
   **单行 `try` 兜底**——先例（单元测试树重建时恢复；形态 = `try { src = readFileSync(file, "utf8") } catch { continue }`））+ 输出行 `console.warn("[thincoder] core face = <路径> (v<版本>)")`。
 - **失败面**：读取失败 ⇒ 记 `[thincoder] core face = unresolved`——**不抛、不阻断激活**（只留证据；诊断面非门禁面）。
 - **观察通道** = VSC **Extension Host 日志**（`console.warn` 宿主直捕——零新增通道；同档既有先例（engine floor 诊断行 ∥ activate starting 诊断行））⇒ T7 / 实盘复核按此通道读日志。
@@ -199,7 +199,7 @@ CLI 非 TUI 命令面（`[paused]` 行）：`[paused] Agent stopped after ${seg}
 | CLI | `thincoder-cli/src/tui/agent-turn.mjs`（`pushLine` 文案 · `state.status`） | 分支头取一次 `const total = agent._turnSeq`，两行同用 |
 | CLI 非 TUI 命令面 | `thincoder-cli/src/command-interactive.mjs`（`[paused]` 行） | `agent` 在本函数域（`agent.autoApprove` 同域）⇒ 同处拼串，取 `agent._turnSeq` |
 | VSC | `thincoder-vscode/src/extension/panel-turn-loop.mjs` | `agent` 在本函数域声明（同函数内），catch 内直达 |
-| 桌面 | `thincoder-desktop/src/main/turn-face.mjs`（`consentOf` 转口 · `agent` 在域的调用点）· `thincoder-desktop/src/main/turn-driver.mjs`（注入面 `askContinue`） | 注入面签名扩一参 `askContinue(key, turn, total)`，调用点传 `agent._turnSeq`；两处注释（`turn-face.mjs` / `turn-driver.mjs`）同改 |
+| 桌面 | `thincoder-desktop/src/main/turn-face.mjs`（`consentOf` 转口 · `agent` 在域的调用点）· `thincoder-desktop/src/main/turn-driver.mjs`（注入面 `askContinue`） | 注入面签名扩一参 `askContinue(key, turn, total)`，调用点传 `agent._turnSeq`；两处注释（`thincoder-desktop/src/main/turn-face.mjs` / `thincoder-desktop/src/main/turn-driver.mjs`）同改 |
 
 `state.permission.args`（CLI 权限卡参数，`{ turns: error.turn }`）**零改**——权限载荷不是提示面。
 

@@ -6,7 +6,7 @@
 
 ## 1. 静态面
 
-- 落点 = `thincoder-server/public/`（已落盘）：`index.html`（壳——侧栏容器 + 挂载点 + 模块入口）∥ `app.mjs`（入口：路由分派 ∥ fetch 封装 ∥ 会话态 ∥ 启动装配）∥ `dom.mjs`（渲染助手 + 提示条）∥ `health.mjs`（健康轮询）∥ `nav.mjs`（IA 单源——组/项数据 + 路由解析纯函数）∥ `style.css`。
+- 落点 = `thincoder-server/public/`（已落盘）：`thincoder-server/public/index.html`（壳——侧栏容器 + 挂载点 + 模块入口）∥ `thincoder-server/public/app.mjs`（入口：路由分派 ∥ fetch 封装 ∥ 会话态 ∥ 启动装配）∥ `thincoder-server/public/dom.mjs`（渲染助手 + 提示条）∥ `health.mjs`（健康轮询）∥ `nav.mjs`（IA 单源——组/项数据 + 路由解析纯函数）∥ `style.css`。
 - **视图档（按页分档——§2）**：按页族逐条起名，一项一族。
   - **登录与我的三页**：`views-auth.mjs`（登录）∥ `views-me.mjs`（我的·key/用量/账户三页）。
   - **成员管理**：`views-admin.mjs`（成员管理）。
@@ -30,10 +30,10 @@
   - **公共组件**：`modal.mjs`（已落盘——弹窗 + 窗体助手四件——`docs/server/design/webui/ADMIN.md` §2.1①）∥ `tabs.mjs`（已落——公共标签页组件——`docs/server/design/webui/TABS.md` §2.1）。
 - 视图拆分 = 按页归档（每档 ≤300）。
 - 直发 = `thincoder-server/src/webui/static.mjs`（已落盘）：`node:http` 读发 `public/`——mime 表（`.mjs` ⇒ text/javascript） ∥ 防路径穿越 ∥ `Cache-Control: no-cache`（内部工具——改版即见）。
-- 路由：`GET /` ⇒ `index.html`；其余静态档按名直发（同源）；`/v1/*` 与 `/api/*` 优先于静态面（分派 = `docs/server/design/gateway/API.md` §1）。
+- 路由：`GET /` ⇒ `thincoder-server/public/index.html`；其余静态档按名直发（同源）；`/v1/*` 与 `/api/*` 优先于静态面（分派 = `docs/server/design/gateway/API.md` §1）。
 - 形态钉死（用户令）：**零框架 ∥ 零构建 ∥ 零外部资源**（无 CDN ∥ 无外链字体——内网自洽）；先例 = 本仓 webview（`thincoder-vscode/webview/`）的 vanilla 口径。
-- JS = **六十九档**：`modal.mjs` ∥ `i18n.mjs` ∥ `i18n-zh.mjs` ∥ `i18n-en.mjs` ∥ i18n 部件**十八档**（`i18n-{zh,en}-{shell,me,admin,sandbox,system,core,project,ledger,mcp}.mjs`——`docs/server/design/webui/I18N.md` §2.1 拆表） ∥ `model-specs-snapshot.mjs`）+ `style.css`；行标 = ≤500 软线。
-- **档目（UI 代码档 ∥ 含 favicon 全目录——AC 行口径）单源 = 本节**：UI 代码档 **71** ∥ 含 favicon 全目录 **72**（实读 2026-10-16；口径 = 全目录档数 −1（favicon.png）；UI 代码 = 69 `*.mjs` + 1 `style.css` + 1 `index.html`；全目录 = + favicon.png）。
+- JS = **六十九档**：`modal.mjs` ∥ `thincoder-server/public/i18n.mjs` ∥ `i18n-zh.mjs` ∥ `i18n-en.mjs` ∥ i18n 部件**十八档**（`i18n-{zh,en}-{shell,me,admin,sandbox,system,core,project,ledger,mcp}.mjs`——`docs/server/design/webui/I18N.md` §2.1 拆表） ∥ `model-specs-snapshot.mjs`）+ `style.css`；行标 = ≤500 软线。
+- **档目（UI 代码档 ∥ 含 favicon 全目录——AC 行口径）单源 = 本节**：UI 代码档 **71** ∥ 含 favicon 全目录 **72**（实读 2026-10-16；口径 = 全目录档数 −1（favicon.png）；UI 代码 = 69 `*.mjs` + 1 `style.css` + 1 `thincoder-server/public/index.html`；全目录 = + favicon.png）。
 - **静态面双根**：`public/`（本根）+ **`/rc/*` → `@thincoder/render-core` 包目录**（渲染核供给根——`static.mjs` 前缀表；两先例同形 = 桌面 `app://` 双根 ∥ VSC 相对径）。
 
 ## 2. 控制台 IA 与视图（哈希路由——KD-SV-20）
@@ -64,7 +64,7 @@
 
 - 登录 = `#/login`（无侧栏——登录卡）；`#/` ∥ 未知 ⇒ 角色默认页（admin ⇒ `#/admin/overview` ∥ user ⇒ `#/me/keys`）。
 - **计数口径**（IA 单源）：各式页面/组项计数 = `nav.mjs` `NAV_GROUPS` 数据实读（组项数）；**登录页不属侧栏、不计入**（登录页单列——「十八页 + 登录」式）；各式计数语句与此一致。
-- **旧链迁移**：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/overview` ∥ `#/admin/proxy` ⇒ `#/admin/system` ∥ **`#/admin/git-sources` ⇒ `#/admin/projects/git-sources`**（Git 源并入项目页标签②；重定向带子段——`app.mjs` 拼回 ⇒ 落点/刷新/直打均达；旧书签可达；`#/admin/members` 等页路径仍直达）。
+- **旧链迁移**：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/overview` ∥ `#/admin/proxy` ⇒ `#/admin/system` ∥ **`#/admin/git-sources` ⇒ `#/admin/projects/git-sources`**（Git 源并入项目页标签②；重定向带子段——`thincoder-server/public/app.mjs` 拼回 ⇒ 落点/刷新/直打均达；旧书签可达；`#/admin/members` 等页路径仍直达）。
 - **路由解析 = `nav.mjs` 纯函数**（`resolveRoute(path, role)`——无 DOM、单元测试档直测）：**解析序 = 别名先行、子段裁分在其后**（别名目标再走裁分 ⇒ `sub` 回传——`#/admin/git-sources` ⇒ `/admin/projects` + `sub: "git-sources"`）；别名重定向 ∥ 角色默认 ∥ admin 面 `denied`（页面级「无权限」块——判据仍在服务端，§3）。
   **子段容许（裁定「进」）**：`#/<组>/<页>/<子段>`——裁末段试前缀（在册 ⇒ 记 `sub` 供页面消费 ∥ 未在册 ⇒ 照旧默认页回落）；既有 hash 形行为逐字不变（`docs/server/design/webui/TABS.md` §2.2）。
 - **导航渲染**：侧栏 = 品牌 ∥ 组标题 + 项（活动态高亮）∥ 底部（meta 槽（健康状态灯（`docs/server/design/webui/READINGS.md` §2.1⑤） ∥ 版本——`/api/system`，全角色） + 语言切换器 + 退出登录）；admin 组仅 admin 渲染。
@@ -267,7 +267,7 @@
 | KD-SV-31 ∥ KD-SV-32 ∥ KD-SV-33 ∥ KD-SV-34 ∥ KD-SV-41 ∥ KD-SV-43 ∥ KD-SV-45 ∥ KD-SV-46 | ⇒ `docs/server/design/webui/ADMIN.md` §1 | —— |
 | KD-SV-36 ∥ KD-SV-37 | ⇒ `docs/server/design/webui/STYLE.md` §1 | —— |
 | KD-SV-47 ∥ KD-SV-49 | ⇒ `docs/server/design/webui/ME.md` §1 | —— |
-| KD-SV-52 | **`app.mjs` 拆三档**：渲染助手 + `flash` ⇒ `dom.mjs` ∥ 健康轮询 ⇒ `health.mjs`（+ 订阅清零口）∥ `app.mjs` 收窄为入口 | 350 越 300 软线；注册预案（健康块单独拆）按当刻实估不回线内（`350−50+1 ≈ 301`——`50` = 删除行数；新档 `≈62` = 删除 50 + 档头/导入 ≈12——§5 同源）；随正面已含全部目录断言（边际改点 ≈ 零）；逐字搬移 + 门禁/走查双验 |
+| KD-SV-52 | **`thincoder-server/public/app.mjs` 拆三档**：渲染助手 + `flash` ⇒ `thincoder-server/public/dom.mjs` ∥ 健康轮询 ⇒ `health.mjs`（+ 订阅清零口）∥ `thincoder-server/public/app.mjs` 收窄为入口 | 350 越 300 软线；注册预案（健康块单独拆）按当刻实估不回线内（`350−50+1 ≈ 301`——`50` = 删除行数；新档 `≈62` = 删除 50 + 档头/导入 ≈12——§5 同源）；随正面已含全部目录断言（边际改点 ≈ 零）；逐字搬移 + 门禁/走查双验 |
 | KD-SV-54 | ⇒ `docs/server/design/webui/ADMIN.md` §1 | —— |
 | KD-SV-60 | ⇒ `docs/server/design/webui/SYSTEM.md` §1 | —— |
 | KD-SV-101 | ⇒ `docs/server/design/webui/CHAT.md` §1 | —— |
@@ -292,8 +292,8 @@
 - Provider 模型元数据不做面 ⇒ 见 `docs/server/design/webui/ADMIN.md` §5。
 - me-keys 不做面 ⇒ 见 `docs/server/design/webui/ME.md` §5。
 - me 用量图表化不做面 ⇒ 见 `docs/server/design/webui/ME.md` §5。
-- 结构轮不做面：`style.css` ∥ `index.html` 零触 ∥ `thincoder-server/src/**` 零触（服务端语义零改）∥ 批外档零触（域外发现只报）∥ i18n 语义面（键值 ∥ 回退链 ∥ 复数取形）零改 ∥ 门面外消费面（`i18n.mjs` ∥ 视图件 `t()` 面）零改。
-- 视图取件面核实：`views-*` 十档零 `app.mjs` import——渲染助手/`t`/`flash` 等全经 `ctx` 注入（`viewCtx()` 单点装配）；i18n 表族 = `i18n.mjs` 单点取件 ⇒ `dom.mjs`/`health.mjs` 拆分与门面保留下视图面零触（零触承载面 = `ctx` 注入）。
+- 结构轮不做面：`style.css` ∥ `thincoder-server/public/index.html` 零触 ∥ `thincoder-server/src/**` 零触（服务端语义零改）∥ 批外档零触（域外发现只报）∥ i18n 语义面（键值 ∥ 回退链 ∥ 复数取形）零改 ∥ 门面外消费面（`thincoder-server/public/i18n.mjs` ∥ 视图件 `t()` 面）零改。
+- 视图取件面核实：`views-*` 十档零 `thincoder-server/public/app.mjs` import——渲染助手/`t`/`flash` 等全经 `ctx` 注入（`viewCtx()` 单点装配）；i18n 表族 = `thincoder-server/public/i18n.mjs` 单点取件 ⇒ `thincoder-server/public/dom.mjs`/`health.mjs` 拆分与门面保留下视图面零触（零触承载面 = `ctx` 注入）。
 - 控制台测试 key 修复不做面 ⇒ 见 `docs/server/design/webui/ADMIN.md` §5。
 - server 代理不做面 ⇒ 见 `docs/server/design/webui/ADMIN.md` §5。
 - 配置控制台不做面 ⇒ 见 `docs/server/design/webui/SYSTEM.md` §5。
