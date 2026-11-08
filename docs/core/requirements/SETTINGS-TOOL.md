@@ -7,7 +7,7 @@
 ## 1. 总体定位
 
 agent 需要在不打断会话的前提下查看 / 修改运行配置（模型、轮次、压缩阈值、顾问、轨迹等）。
-`settings` 工具把该面收成**受形状护栏的读写通道**：写盘 = 两端共享的 `config.json`，热应用 = 当前会话的 live 配置；
+`settings` 工具把该面收成**受形状护栏的读写通道**：写盘 = 两端共享的用户数据目录配置文件，热应用 = 当前会话的 live 配置；
 写入前做已知键校验与敏感键遮蔽，避免 agent 写出结构不符 / 泄漏凭据的内容。
 
 ## 2. 功能性需求
@@ -15,7 +15,7 @@ agent 需要在不打断会话的前提下查看 / 修改运行配置（模型�
 | # | 需求 | 判定句（可机器验证） |
 |---|---|---|
 | **F-ST1** | 只读动作面 | 列表 / 取值类动作为只读——主 agent 面可调（与记忆工具同分类），不需写权限（注册面 `thincoder-vscode/src/agent/setup.mjs`） |
-| **F-ST2** | 写动作 = 写共享配置 | 设值类动作写共享配置（`thincoder-vscode/src/config-io.mjs`）+ 热应用到 live 配置（`thincoder-core/agent-tools/settings.mjs`）；**热应用语义**：回合边界读取的键（maxTurns / autoThink 等）下回合生效、会话内持续读取的键即时、重启不丢（写盘） |
+| **F-ST2** | 写动作 = 写共享配置 | 设值类动作写共享配置（`thincoder-core/config-io.mjs`）+ 热应用到 live 配置（`thincoder-core/agent-tools/settings.mjs`）；**热应用语义**：回合边界读取的键（maxTurns / autoThink 等）下回合生效、会话内持续读取的键即时、重启不丢（写盘） |
 | **F-ST7** | 值解析两端统一（**去引号**） | `JSON.parse` 成功且为顶层标量 / 对象 / 数组 → 解析结果；**解析成功但结果为字符串 → 解析值（去引号）**；parse 失败 → 字符串字面——两端同一语义；不可消费形态两端同拒、磁盘零变化 |
 | **F-ST3** | 已知键校验 | 非空叶子由默认值表（agent / traces 默认集）**派生**——按规范全路径寻址，不手写镜像键表 |
 | **F-ST4** | 形状护栏 | 不可消费形态明确拒绝（不落盘、不热应用）；空叶子与跨面 / 同族键走显式形状表；**无静默判据**（F-S1.8）：对每个受约束键断言「接受集 == 应用侧可消费集 ∧ 拒绝集 == 应用侧不可消费集」（表驱动集合相等，判据取自应用侧读取器本体——`thincoder-core/config.mjs` · `thincoder-core/agent/assemble.mjs` · `thincoder-core/agent-tools/subagent-spawn.mjs` · `thincoder-core/tools/bash.mjs` · `thincoder-core/model-ref.mjs` 形态面），被拒值的写入尝试不改变磁盘与内存 |
@@ -30,7 +30,7 @@ agent 需要在不打断会话的前提下查看 / 修改运行配置（模型�
 | **N-ST2** | 成功即生效 | 写盘成功 ⇒ 该配置对当前会话后续运行立即生效（无重启要求） |
 | **N-ST3** | 零凭据落输出 | 工具输出永不含明文凭据（敏感键段一律遮蔽） |
 | **N-ST4** | 可测试 | 工具形状、空叶子、跨面键、描述句由用例逐条断言；登记入测试清单 |
-| **N-ST5** | 零 npm 依赖 | `settings` 实现只 import `node:*` 与仓内模块（`thincoder-core/config.mjs`——DEFAULTS / writeConfigAtomic / configPath）——与 config.mjs 同界 |
+| **N-ST5** | 零 npm 依赖 | `settings` 实现只 import `node:*` 与仓内模块（`thincoder-core/config.mjs`——DEFAULTS / writeConfigAtomic / configPath）——与 `thincoder-core/config.mjs` 同界 |
 | **N-ST6** | 描述纪律 | 工具描述写清：set = 持久配置变更；敏感值永不明文回显；热应用语义（回合边界）；`/config` 是用户等效手动面；类型校验口径（含 null 默认值键按真实消费形态） |
 
 ## 4. 范围边界（不做）
@@ -41,7 +41,7 @@ agent 需要在不打断会话的前提下查看 / 修改运行配置（模型�
   与双端工具描述「Unknown keys under a known section are stored as given」）。
 - **持久性边界**（文档级）：可写键限 **loadConfig 保留域**（顶层已知节内）——节外任意键写盘后下次启动被合并逻辑丢弃。
 - 不引入第二份配置存储（写面 = 共享配置文件单一权威）。
-- 不改 `DEFAULTS` / `AGENT_DEFAULTS` 键集与语义；不改读取侧（`config.mjs` / `make-agent.mjs` / `bash.mjs` / `subagent-async.mjs`）。
+- 不改 `DEFAULTS` / `AGENT_DEFAULTS` 键集与语义；不改读取侧（`thincoder-core/config.mjs` / `thincoder-cli/src/cli/make-agent.mjs` / `thincoder-core/tools/bash.mjs` / `thincoder-core/agent-tools/subagent-async.mjs`）。
 - 不改其它写面：`/config` · `/shell` · `/submodel` TUI、VSC 面板写面、`persistRaw` / `writeConfigAtomic` 写链。
 - 不校验渠道 / 模型 / 可执行文件存在性、角色名合法性（形状层止步——设计侧 D-ST9）；数组默认值键（`consultModels` / `streamRules` / `mcp.servers` / `providers`）维持既有豁免。
 - 不改任何用户配置文件内容（改用户值是运维动作）。

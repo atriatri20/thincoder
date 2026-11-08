@@ -34,7 +34,8 @@
       "docs/core/requirements/_archive"
     ],
     "publicRepos": [
-      "../.thincoder"
+      "../.thincoder",
+      "../thincoder.com"
     ]
   }
 }

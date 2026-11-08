@@ -58,7 +58,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 - **入参容器守卫**：`edits` 真值非数组（字符串 / 对象 / 数字等）或空数组 ⇒ 成形错误「edits must be a non-empty array of {path, old_string | line/startLine+endLine, new_string}」——空数组与真值非数组 = 同一错误面；假值 `edits`（`""` / `0` / `false` / `null`）视同缺席 ⇒ 单形态面（不触本守卫）。
 - **条目守卫**：条目非对象（`null` / 字符串 / 数字 / 数组）⇒ 条目级成形错误「edits[i] must be an object of {path, old_string | line/startLine+endLine, new_string}」（i = 数组下标）。
 - **守卫与文案单源**：两守卫（`assertEditsContainer` / `assertEditEntries`）+ 五文案（`EDITS_CONTAINER_ERROR` / `editsEntryError(i)` / `EDIT_ENTRY_NO_PATH` / `EDIT_ABORT_PREFIX` / `editEntryLabel(p)`）单源 = `thincoder-core/tools/edit-diff.mjs`。
-- **调用点**：核 `edit-batch.mjs` 与 ACP 桥 `bridge.mjs` 一律引用调用——桥零字面副本（§6 入参守卫行 / §8 D-7）。
+- **调用点**：核 `thincoder-core/tools/edit-batch.mjs` 与 ACP 桥 `thincoder-cli/src/acp/bridge.mjs` 一律引用调用——桥零字面副本（§6 入参守卫行 / §8 D-7）。
 - **零裸抛**：`touchedPaths` 钩子（`execute` 前被多处消费）不抛——真值非数组容器 ⇒ 零触达（返 `[]`；假值视同缺席 ⇒ 顶层 `path` 分支）、非对象条目 ⇒ 按「缺 path」尽力提取（§8 D-6）；**`args` 自身为 null 或非对象 ⇒ 一律按 `{}` 处理**（消费边界规范化——单源谓词 `toolTouchPaths`，见 `docs/core/design/TOOLS.md` §6.17）。
 - **桥面同口径**：ACP 桥 `editBatch` 与核同调用两守卫（同单源、同句）——`[null]` / 非对象条目 ⇒ 同文案含下标成形错误（经 `toolRouter` catch 渲染 `Error: <msg>` 工具结果——零裸 TypeError、零反向 RPC）。
 - **非数组容器归宿**：`edits` **真值**非数组 ⇒ 两通道同判——桥 `edit` 路由与核 `execute` 同为真值判 ⇒ 走容器守卫同一错误面（携合法单形态参数的窄形态同样落此面——**不存在「桥径单形态应用」分支**）；`edits` 假值（缺席）⇒ 单形态面（见 §8 D-8）。
@@ -78,7 +78,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 | 入参守卫 | 单源 `thincoder-core/tools/edit-diff.mjs`（`assertEditsContainer` / `assertEditEntries` + 五文案——两通道共用）· 调用点 `thincoder-core/tools/edit-batch.mjs` / `thincoder-cli/src/acp/bridge.mjs` · `thincoder-core/tools/file.mjs` 的 `editTool.touchedPaths`（零抛、尽力提取） | 已落 |
 | D1/D2 纯函数 | `thincoder-core/tools/edit-batch.mjs` 的 `normalizeEditLine` · `findFuzzyWindow` · `applyLineEdit` · `FUZZY_MATCH_NOTE` | 导出在位（edit-diff 调用期导入——ESM 循环安全） |
 | 三通道共用 | 本地单形态 / `edits` 批量 / ACP 桥 | 同内核 |
-| 批量回执汇总行 | `thincoder-core/tools/edit-batch.mjs` 的 `applyEditBatch` 收尾（`summary` 组装 ∥ `return [...results, summary].join("\n")`） | 已落；**ACP 桥批量回执不适用**（桥面自持逐条行——`bridge.mjs` editBatch 逐条 join 收尾） |
+| 批量回执汇总行 | `thincoder-core/tools/edit-batch.mjs` 的 `applyEditBatch` 收尾（`summary` 组装 ∥ `return [...results, summary].join("\n")`） | 已落；**ACP 桥批量回执不适用**（桥面自持逐条行——`thincoder-cli/src/acp/bridge.mjs` 的 editBatch 逐条 join 收尾） |
 | 注册面 | `thincoder-core/tools/index.mjs` 的静态注册表（`file.mjs` 组） | file 组 |
 | 描述面（模型可见） | `thincoder-core/tool-docs/edit.md` | 在位（`DESC()` 加载） |
 | VSC 对位实现 | `thincoder-vscode/src/tools/index.mjs` 的 import 行直接取核 `editTool`（`@thincoder/core/tools/file.mjs`）——端侧零实现副本 | 同机制（同一份判据与记账表） |
@@ -102,8 +102,8 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 | D-3 | **零重叠 ⇒ 替换即删**（breaking） | 「插入保留旧行」使简单替换产生双份内容（实害） |
 | D-4 | 显式空串 = **错误**、省略 = 删行 | 空串是手滑最可能形态（防误删）；省略是有界显式意图 |
 | D-5 | `edits` 数组**全判后原子写** | 半应用批量 = 不自洽工作树 |
-| D-6 | 入参守卫落 **`touchedPaths` 零抛 + 执行阶段单源成形错误** | 钩子内抛错（即便成形文案）会从首个未守卫点逸出（实测 = VSC L3 前置查询 `thincoder-vscode/src/agent/execute-tools.mjs`→`Promise.all` 批级拒绝、裸 TypeError 直达用户）；零抛 ⇒ 拒绝统一落 `applyEditBatch`（与空数组同点同文）。**消费侧兜底**：十处消费点归单源谓词 `toolTouchPaths`（`docs/core/design/TOOLS.md` §6.17）——零抛契约两侧同护。 |
-| D-7 | 跨档单源 = **`thincoder-core/tools/edit-diff.mjs`**（桥面同批收）：两守卫 + 五文案，核 `edit-batch.mjs` 与 ACP 桥 `bridge.mjs` 同调用、桥零副本 | 两侧已共同导入 `edit-diff` 校验词汇（`assertEditArgsExclusive` / `validateEditEntry` 等先例）——单源住共用导入面，条件与文案同时锁死 |
+| D-6 | 入参守卫落 **`touchedPaths` 零抛 + 执行阶段单源成形错误** | 钩子内抛错（即便成形文案）会从首个未守卫点逸出（实测 = VSC L3 前置查询段→`Promise.all` 批级拒绝、裸 TypeError 直达用户）；零抛 ⇒ 拒绝统一落 `applyEditBatch`（与空数组同点同文）。**消费侧兜底**：十处消费点归单源谓词 `toolTouchPaths`（`docs/core/design/TOOLS.md` §6.17）——零抛契约两侧同护。 |
+| D-7 | 跨档单源 = **`thincoder-core/tools/edit-diff.mjs`**（桥面同批收）：两守卫 + 五文案，核 `thincoder-core/tools/edit-batch.mjs` 与 ACP 桥 `thincoder-cli/src/acp/bridge.mjs` 同调用、桥零副本 | 两侧已共同导入 `edit-diff` 校验词汇（`assertEditArgsExclusive` / `validateEditEntry` 等先例）——单源住共用导入面，条件与文案同时锁死 |
 | D-8 | 非数组容器的通道归宿 = **归一**：桥 `edit` 路由判据改与核同（`Boolean(args?.edits)` 真值判）——`edits` 真值 ⇒ 两通道同入批量分支、同容器错误面；假值 ⇒ 单形态面。窄形态（真值非数组 + 合法单形态参数）不再有「桥径单形态应用」分支 | 分歧的代价 = 窄形态下写落地而门禁 / 变更记账 / L3 看到零路径（fail-open 面——`touchedPaths` 真值非数组返 `[]` 的前提「该调用必败」被打破）；归一恢复该前提 ⇒ `[]` 语义重新为真，该判据零改 |
 | D-9 | 汇总行 = **恒定末行**（不设「仅大回执」分支） | tail 恒保留 ⇒ 末行恒可见；恒定 = 判据单点（无阈值分支、无临界尺寸二义）；小回执多一行 = 零害 |
 

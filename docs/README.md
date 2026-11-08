@@ -78,8 +78,8 @@
   `core/design/MANIFEST.md` · `core/design/TESTING.md` · `core/design/TURN-CAP-CONTINUE.md`；
 - 基准测试 **2 档**：`core/design/MODEL-BENCH.md`（模型基准测试套件——独立评估面的设计档：对外部 provider 做性能评估，产物 = `bench/results/` 评估报告 = 产品输出，不打包进三端；2026-09-23 建档）· `core/design/MODEL-SPECS.md`（模型规格表设计档——bench 名单面规格行承载；2026-09-24 建行）；
 - 团队客户端面 **2 档**：`core/design/TEAM.md`（团队客户端——登录与接入：`team` 段 ∥ 派生 provider 条目 ∥ 三端同构 ∥ 决策 D-TM1–6；2026-10-10 B1 建档）· `core/design/TEAM-LEDGER.md`（团队台账客户端面——核工具 `team_ledger` 端侧面单源；2026-10-13 建档）；
-- 会话可观测 · 超时投递面 **2 档**：`core/design/SESSION-OBSERVABILITY.md`（槽事件 · 设计凭证丢弃报明 · 状态栏标题单行化——批档 `docs/batches/2026-10-24-session-events-and-title.md`）· `core/design/TIMEOUT-DIGEST.md`（超时旋钮与投递兜底——body 空闲可配 ∥ 子代理报告无条件落盘 ∥ 完成门认池；2026-10-24 建档，批档 `docs/batches/2026-10-24-timeout-and-digest.md`）；
-- 提示词效果夹具 **1 档**：`core/design/PROMPT-FIXTURE.md`（副本 A/B 夹具——改前/改后副本跑同一批场景出读数与差异；不内置「有效」门槛；2026-10-26 建档，批档 `docs/batches/2026-10-26-prompt-fixture.md`）；
+- 会话可观测 · 超时投递面 **2 档**：`core/design/SESSION-OBSERVABILITY.md`（槽事件 · 设计凭证丢弃报明 · 状态栏标题单行化）· `core/design/TIMEOUT-DIGEST.md`（超时旋钮与投递兜底——body 空闲可配 ∥ 子代理报告无条件落盘 ∥ 完成门认池；2026-10-24 建档）；
+- 提示词效果夹具 **1 档**：`core/design/PROMPT-FIXTURE.md`（副本 A/B 夹具——改前/改后副本跑同一批场景出读数与差异；不内置「有效」门槛；2026-10-26 建档）；
 - **计数核对（按名对账）**：`core/design/` 实档 **63** = 本图登记 **63** + **待补登 0**（逐名相等）。
 
 **工作流档** = `core/design/CORE-UNIFICATION.md`（注册表 · 事实基线 · 核形态 · 选型 · 分段执行 · 决策 · 验收 · 契约策略 · 测试——**计入上条实档计数**）——子系统档由它索引、**不复制**其内容（D2 单一权威源）；裁决行的**列定义**亦住该档 §2.5。

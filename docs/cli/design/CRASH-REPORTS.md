@@ -12,7 +12,7 @@
 | **Node 诊断报告** | V8 fatal | Node | `~/.thincoder/crash-reports/` | `report.<YYYYMMDD>.<HHMMSS>.<pid>.<seq>.json` | 30 天写时自清理 |
 | **JS 异常记录** | `uncaughtException` / `unhandledRejection` | `writeCrashRecord` | 同上 | `crash-<epochms>-<pid>.json` | 30 天写时自清理 |
 | **TUI stderr 日志** | TUI 启动 | 包装父进程 tee | 同上 | `tui-stderr-<ts>-<pid>.log` | 30 天写时自清理 |
-| **堆预警行**（观测面，非文件） | 堆用量跨阈值档 | `heap-watch.mjs` | stderr + TUI 行 + 事件日志 | 逐字见 §4.3 | 不落文件 |
+| **堆预警行**（观测面，非文件） | 堆用量跨阈值档 | `thincoder-cli/src/heap-watch.mjs` | stderr + TUI 行 + 事件日志 | 逐字见 §4.3 | 不落文件 |
 
 **纪律（全族共守）**：取证能力本身**不得影响正常运行**（尽力面——各处独立 `try/catch`，失败静默）；
 全部同步 API（崩溃路径无异步）。
@@ -21,14 +21,14 @@
 
 ### 2.1 入口预建与 `process.report` 启用
 
-- **调用点**：`bin/thincoder.mjs` 入口最前调 `prepareCrashReporting()`（**全部命令同源**——TUI 子进程亦经此入口）。
+- **调用点**：`thincoder-cli/bin/thincoder.mjs` 入口最前调 `prepareCrashReporting()`（**全部命令同源**——TUI 子进程亦经此入口）。
 - **动作**：mkdir 预建 `~/.thincoder/crash-reports/` + `process.report.directory` / `reportOnFatalError` 代码内启用
   （shebang 入口无法携带启动参数 ⇒ 代码内启用是唯一路径）。
 - **预建是必要动作**（非「零成本保险」）：目录缺失时 Node 对 fatal **静默不写**报告。
 - **落点**：`report.*.json` 落 `~/.thincoder/crash-reports/`——`process.report.directory` 已由进程内设定，
   **非 CWD**。
 - 接口（注入缝）：`prepareCrashReporting({ dir, heapSnapshot = true, armHeapSnapshot })`（`thincoder-cli/src/crash-reports.mjs` 导出）
-  ——默认参数保**其余调用点**（如 `thincoder-cli/test/fixtures/r25-oom.mjs` 无参调用）零改（生产判定单点 = bin 入口读配置键 `diagnostics.heapSnapshot` 后显式传入——§3.2）；`dir` 选项同时服务 mkdir / `report.directory` / purge / 返回。返回值 = 目录路径。
+  ——默认参数保**其余调用点**（如 OOM 复现夹具的无参调用）零改（生产判定单点 = bin 入口读配置键 `diagnostics.heapSnapshot` 后显式传入——§3.2）；`dir` 选项同时服务 mkdir / `report.directory` / purge / 返回。返回值 = 目录路径。
 
 ### 2.2 JS 异常记录与启动提示
 

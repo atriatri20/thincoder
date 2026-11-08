@@ -90,16 +90,18 @@
   - **`session id = 持久槽位号字符串**（全族单一命名空间）：
     - `session/new`：**先** `const slot = await newSession(getCwd())`（认领 + 槽文件 + digest——`thincoder-core/session-lifecycle.mjs` 的 `newSession`），`const id = String(slot)`（createSession 的 id 在构造期烧入 callbacks——必须先行）；`session.agent._slot = slot` 由既有点位保留（零改）。
     - `session/load` / `resume`：`const id = String(params.sessionId)`（**客户端原文形态**——同值读回保续）；`sessions.set(id, session)`。
-  - **失败回滚（new 的新序引入的孤儿面——必处置）**：`createSession` 抛错 ∥ `_providerInvalid` 分支 ⇒ `deleteSlot(getCwd(), slot)`（既有函数——文件 + manifest 条目 + 认领由 `session-slots.mjs` 单点清理；回滚以 `committed` 旗标守卫：仅在未 `sessions.set` 前生效）。
+  - **失败回滚（new 的新序引入的孤儿面——必处置）**：`createSession` 抛错 ∥ `_providerInvalid` 分支 ⇒ `deleteSlot(getCwd(), slot)`（既有函数——文件 + manifest 条目 + 认领由 `thincoder-core/session-slots.mjs` 单点清理；回滚以 `committed` 旗标守卫：仅在未 `sessions.set` 前生效）。
   - **同 id 在存 ⇒ 处置（new/load/resume 三途同法）**：按 `session/close` 同法处置旧实例（动作 = `cancel()` ∥ `sessions.delete(id)` ∥ 认领释放），再装载——共性理由：防旧实例成为不可达孤儿（同 id 在 Map 上唯一）；load/resume 另：旧实例的钉槽不再计入 `sameProcessPinned`（重载同槽 ⇒ 可正常钉回原槽，不误 fork）。位次按途钉定（下两条）。
-    - **load/resume 途替换点钉定（拒载安全）**：替换在既有前置判据（`loadSlotFile` 缺失 ∥ 工程模式拒载两处判据——同在 `handlers-slots.mjs`）**之后**、`createSession` **之前**——拒载路径零副作用（旧实例保留：不 `cancel`、不释放认领——不误杀在飞回合）。
+    - **load/resume 途替换点钉定（拒载安全）**：替换在既有前置判据（`loadSlotFile` 缺失 ∥ 工程模式拒载两处判据——同在 `thincoder-cli/src/acp/handlers-slots.mjs`）**之后**、`createSession` **之前**——拒载路径零副作用（旧实例保留：不 `cancel`、不释放认领——不误杀在飞回合）。
     - **new 途处置点钉定（delete→new 槽号回收面）**：`session/delete` 删档后槽号回流（`thincoder-core/session-slots.mjs` 的 `deleteSlot`），`session/new` 复得同号时 `sessions.set(id, session)` 撞**同键在存实例**——旧回合不 cancel、通知串流（同 id 在存不处置类经 delete→new 入口）。
-      触发条件：键 = 槽号串而 `_slot` 已与键分离（fork/换钉）的旧实例不受 delete 重钉环处置（`handlers-slots.mjs` 按 `_slot` 匹配的重钉环）。
+      触发条件：键 = 槽号串而 `_slot` 已与键分离（fork/换钉）的旧实例不受 delete 重钉环处置。
+
+      （`thincoder-cli/src/acp/handlers-slots.mjs` 按 `_slot` 匹配的重钉环）。
       处置点 = `sessions.set(id, session)` **直前**（`createSession` 成功与 `_providerInvalid` 排除之后）：`const stale = sessions.get(id); if (stale) { stale.cancel(); sessions.delete(id) }`——此前任何一步失败均不改动旧实例。
-    - **new 途认领释放位次**：`if (stale) releaseClosedSlot()` 置于 `sessions.set` 与 `committed` 置位**之后**——保留集须含新会话槽（`createSlotReleaser` 保留集 = 在存 Map 槽——`handlers-session.mjs` 的工厂装配段）：
-      先释后装会把 `newSession` 刚写的新认领当残留释放（`staleClaims` 谓词——`session-slot-claims.mjs`；认领写入 `session-lifecycle.mjs` 的 `newSession`）⇒ 复开 F2 双写窗口；置 `committed` 后 ⇒ 释放失败不误删已建会话。
-  - **认领释放单点抽取**：现 `releaseClosedSessionSlot`（`handlers-session.mjs`）提为 `createSlotReleaser({ getCwd, sessions })` 工厂（导出）——`acp.mjs` 建一次入 `ctx.releaseClosedSlot`（同 `requireConfigured` 先例），new 失败回滚外三处（close ∥ load 替换 ∥ resume 替换）同源消费。
-  - **`allocSessionId` / `nextId` 撤除**（零消费者——`acp.mjs` ctx 键删除；两 handler 模块解构同步删）。
+    - **new 途认领释放位次**：`if (stale) releaseClosedSlot()` 置于 `sessions.set` 与 `committed` 置位**之后**——保留集须含新会话槽（`createSlotReleaser` 保留集 = 在存 Map 槽——`thincoder-cli/src/acp/handlers-session.mjs` 的工厂装配段）：
+      先释后装会把 `newSession` 刚写的新认领当残留释放（`staleClaims` 谓词——`thincoder-core/session-slot-claims.mjs`；认领写入 `thincoder-core/session-lifecycle.mjs` 的 `newSession`）⇒ 复开 F2 双写窗口；置 `committed` 后 ⇒ 释放失败不误删已建会话。
+  - **认领释放单点抽取**：现 `releaseClosedSessionSlot`（`thincoder-cli/src/acp/handlers-session.mjs`）提为 `createSlotReleaser({ getCwd, sessions })` 工厂（导出）——`thincoder-cli/src/acp.mjs` 建一次入 `ctx.releaseClosedSlot`（同 `requireConfigured` 先例），new 失败回滚外三处（close ∥ load 替换 ∥ resume 替换）同源消费。
+  - **`allocSessionId` / `nextId` 撤除**（零消费者——`thincoder-cli/src/acp.mjs` ctx 键删除；两 handler 模块解构同步删）。
   - **通知字段收正**：
     - `session/set_mode` → `update: { sessionUpdate: "current_mode_update", currentModeId: params.mode }`（`CurrentModeUpdate.required = ["currentModeId"]`）。
     - `session/set_config_option` → `update: { sessionUpdate: "config_option_update", configOptions: sessionConfigOptions(found.session.agent) }`（`ConfigOptionUpdate.required = ["configOptions"]`——**全量数组**，非增量 `{configId,value}`）。
@@ -121,7 +123,7 @@
   2. `new URL(uri)`：
      - 成功 ∧ `protocol === "file:"` ⇒ 路径 = `decodeURIComponent(url.pathname)`；UNC 主机（`hostname` 非空且非 `localhost`）⇒ `//<host><path>`；否则 `/C:/…` 形式剥前导 `/`（Windows 盘符）；解码失败 ⇒ 标记 `invalid percent-encoding`。
      - 成功 ∧ 非 file 协议 ⇒ 标记 `unsupported scheme`（路径位 = 原 uri）——含**裸盘符形**（`C:\…` / `C:/…`：`new URL` 成功、protocol = 单字母 `c:` ⇒ 本支；盘符剥前导 `/` 收正仅对 `file:` 形生效）。
-     - 失败 ⇒ 按纯路径处理（整串百分号解码；失败 ⇒ `invalid percent-encoding`）——**相对路径按 cwd 解析**（`path.resolve(cwd, p)`）——含**非 URL 形带片段**（如 `docs/a.md#L10-L20`：片段并入路径、**不解析选区**——选区只从 `url.hash` 取出；通常 `unreadable`）。
+     - 失败 ⇒ 按纯路径处理（整串百分号解码；失败 ⇒ `invalid percent-encoding`）——**相对路径按 cwd 解析**（`path.resolve(cwd, p)`）——含**非 URL 形带片段**（如「文档路径 + `#L10-L20` 片段」形：片段并入路径、**不解析选区**——选区只从 `url.hash` 取出；通常 `unreadable`）。
   3. 选区（仅 `url.hash`，格式 `#L<a>` ∥ `#L<a>-<b>` ∥ `#L<a>:<b>`（`b` 可带 `L` 前缀）——含 `#L5:15` / `#L10-L20` 两观察形）：`a`/`b` 均 1 基闭区间；`b < a` ⇒ 标记 `invalid selection`；`a > 总行数` ⇒ 标记 `lines out of range`；`b` 超尾 ⇒ 截到总行数。
   4. 读面：`stat` 失败 ⇒ 标记 `unreadable`；非普通文件 ⇒ `not a regular file`；`size > MAX_INLINE_BYTES`（10MB，**文件级**——先于读取）⇒ `too large (>10MB)`；读取抛错 ⇒ `unreadable`；缓冲含 NUL 字节 ⇒ `binary (NUL byte)`。
   5. 载荷级上限（**选区时作用于选区切片**，整文时作用于全篇）：行数 > 2000 ⇒ `too many lines (>2000)`；字符数 > 100k ⇒ `too long (>100000 chars)`。

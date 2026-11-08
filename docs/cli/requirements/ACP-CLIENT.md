@@ -17,7 +17,7 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
 - **工具审批弹在 IDE 内**（`request_permission`）；
 - **登录态 / 会话复用**（一次终端登录、多表面可用）。
 
-**协议权威**：`agentclientprotocol/agent-client-protocol` 仓库的 `schema/v1` 下 `schema.json`
+**协议权威**：`agentclientprotocol/agent-client-protocol` 仓库的 `schema/v1` 目录下的协议定义
 （稳定协议版本 **1**；方法名 / 事件类型以 schema 为准）。**注意**：`@agentclientprotocol/sdk` 的版本号是 **SDK 包版本**、不是协议版本。
 
 ## 2. 功能性需求

@@ -7,7 +7,7 @@
 
 ## 1. 总体定位
 
-MCP 客户端 = 客户端入口（CLI `mcp.mjs` 真实现 ↔ VSC `mcp.mjs` 转口 + `src/mcp/index.mjs`）**+** 基础件（`helpers.mjs` ↔ `utils.mjs`）**+** 三种传输（stdio / http / ws）。
+MCP 客户端 = 客户端入口（CLI 真实现 = `thincoder-core/mcp.mjs`；VSC 端转口 + 核内 MCP 客户端件）**+** 基础件（`thincoder-core/mcp/helpers.mjs` ↔ VSC 侧工具件）**+** 三种传输（stdio / http / ws）。
 共同契约 = 可配项（三种传输）与 `mcp.servers[]` 同源。
 本板块对本子系统的要求 = 该面归一为**核内单一实现**，面板 / 监视面作**端差注入**。
 
@@ -71,10 +71,10 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的工具**动态�
 
 | 面 | VSC 端 | 端差 |
 |---|---|---|
-| 配置 / 连接管理入口 | Settings 面板 MCP 页（[Add] / [Edit] / [Test] / [Reconnect]——`thincoder-vscode/src/config-mcp.mjs` · `src/extension/panel-mcp.mjs`） | 对端 = `/mcp` 表单命令——本端**无命令面**（F-M3 范围边界） |
+| 配置 / 连接管理入口 | Settings 面板 MCP 页（[Add] / [Edit] / [Test] / [Reconnect]——`thincoder-vscode/src/config-mcp.mjs` · `thincoder-vscode/src/extension/panel-mcp.mjs`） | 对端 = `/mcp` 表单命令——本端**无命令面**（F-M3 范围边界） |
 | 配置重读 | 每轮 `loadRaw` 即磁盘（下轮装配生效） | 对端有磁盘重读菜单面 |
 | 展开机制 / schema / 三 transport / 直调 | 同款（`docs/core/design/MCP.md` §6.10） | 无实质差（语义同源、各端独立实现） |
 
 **二态化裁定行**：① 无命令面 = **形态（非登记项）**（范围边界在册 = §4.4 / F-M3）；② 配置重读 = **形态（非登记项）**（每轮 `loadRaw` 即磁盘——语义同源）；③ 展开机制 / schema / transport / 直调 = **无实质差**（零动作）。
 
-探活零副作用 = `src/mcp/index.mjs` 的探活段（一次性探活、不进注册表、探完必关）。
+探活零副作用 = 核内 MCP 客户端件的探活段（一次性探活、不进注册表、探完必关）。

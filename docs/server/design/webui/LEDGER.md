@@ -1,8 +1,8 @@
 # Thincoder Server · 团队台账·界面（webui/LEDGER）
 
-> 板块 = server ∥ 本档 = webui 域·面档（团队台账——页形/控件/键族）；板总览 = `PROJECT.md`（文档地图 = §3）。
-> 机制单源 = `ledger/LEDGER.md`（数据形/判权/端点——本档不复述，只落界面承载）；页集单源 = `webui/WEBUI.md` §2（本档回指）；键族单源 = `webui/I18N.md` §2.1。
-> 最近先例 = `webui/PROJECTS.md` §2.1（`#/me/projects`——「我的」组承载 + 权限感知渲染）；对齐 = 承载位与渲法（`canWrite` 显隐 + 列表/弹窗形）；偏离 = 本页为成员全量维护面（数据面权限过滤覆盖 admin 全量视角——无第二页）。
+> 板块 = server ∥ 本档 = webui 域·面档（团队台账——页形/控件/键族）；板总览 = `docs/server/design/PROJECT.md`（文档地图 = §3）。
+> 机制单源 = `docs/server/design/ledger/LEDGER.md`（数据形/判权/端点——本档不复述，只落界面承载）；页集单源 = `docs/server/design/webui/WEBUI.md` §2（本档回指）；键族单源 = `docs/server/design/webui/I18N.md` §2.1。
+> 最近先例 = `docs/server/design/webui/PROJECTS.md` §2.1（`#/me/projects`——「我的」组承载 + 权限感知渲染）；对齐 = 承载位与渲法（`canWrite` 显隐 + 列表/弹窗形）；偏离 = 本页为成员全量维护面（数据面权限过滤覆盖 admin 全量视角——无第二页）。
 
 ## 1. 关键决策（本面）
 
@@ -16,16 +16,16 @@
 
 - **页形**：页头（页题 + 「新建」钮）+ 筛选行 + 表槽（加载/空/错三态）。
   - **筛选行**（需求 ⑥ 三筛）：**仓**（选单——选项 = 列表响应 `repos[]`（可见项目））∥ **状态**（选单——六态）∥ **负责人**（文本输入——用户名精确匹配）∥ 「清除」（复位三筛）。即选即查（`GET /api/ledger?repo=&status=&owner=`）。
-  - **表列**（七列）：编号（`id`）∥ 仓（`repos[]` 显示名回填；缺（项目已删——`ledger/LEDGER.md` §2 KD-SV-147）⇒ 显归地址）∥ 标题 ∥ 状态（状态词 + **老化标**——`aged` ⇒ 「老化」小徽标）∥ 负责人 ∥ 更新（`updatedAt`）∥ 操作。
+  - **表列**（七列）：编号（`id`）∥ 仓（`repos[]` 显示名回填；缺（项目已删——`docs/server/design/ledger/LEDGER.md` §2 KD-SV-147）⇒ 显归地址）∥ 标题 ∥ 状态（状态词 + **老化标**——`aged` ⇒ 「老化」小徽标）∥ 负责人 ∥ 更新（`updatedAt`）∥ 操作。
   - **空态**：无可见条目 ⇒ 提示行（「暂无台账条目」+ 一句说明）；筛选零命中 ⇒ 同形（另句）；加载中 ⇒ 既有 `common.loading` 形；读败 ⇒ `ctx.fail` + 就地人话。
-- **行点击 ⇒ 详情/编辑弹窗**（公共弹窗组件——`modal.mjs` 家族）：
+- **行点击 ⇒ 详情/编辑弹窗**（公共弹窗组件——`thincoder-server/public/modal.mjs` 家族）：
   - 详情段（恒显）：编号 ∥ 仓 ∥ 状态 ∥ 负责人 ∥ 创建者 ∥ 创建/更新时间 ∥ 正文。
   - 编辑段（仅 `canWrite` 渲染；服务端同判——页面不是判据）：标题输入 ∥ 正文文本域 ∥ 负责人输入 ∥ 状态选单（**选项 = 迁移表合法后继** ∪ 当前值——非法迁移在服务端 400 同判）。
   - 保存 ⇒ `PATCH /api/ledger/:id`；败 ⇒ 窗内人话可重试（`submitThen` 先例）。
 - **行内动作**（仅 `canWrite` 渲染）：「收口」（⇒ `POST …/close {status:"已核销"}`——追认须正文：服务端 400 人话就地呈）∥ 「撤回」（⇒ `POST …/close {status:"已废弃"}`——**非原生 `confirm`** 二次确认，后果句「撤回后条目不再列出（行保留）」）。
 - **新建弹窗**：仓（选单 = `repos[]` 中 `canWrite` 者；无可写项目 ⇒ 钮禁用 + 括注「需先加入项目」）∥ 标题 ∥ 正文 ∥ 负责人（缺省 = 自己——服务端缺省同口径）。
-  - 提交 ⇒ `POST /api/ledger`；**仓不可改**（编辑态选单置只读——记账键，`ledger/LEDGER.md` §4）。
-- **判权全在后端**：控件显隐 = `canWrite` 读数（行级 ∥ `repos[]` 级）；直打端点仍服务端 403/404（页面不是判据——`webui/WEBUI.md` §3 口径）。
+  - 提交 ⇒ `POST /api/ledger`；**仓不可改**（编辑态选单置只读——记账键，`docs/server/design/ledger/LEDGER.md` §4）。
+- **判权全在后端**：控件显隐 = `canWrite` 读数（行级 ∥ `repos[]` 级）；直打端点仍服务端 403/404（页面不是判据——`docs/server/design/webui/WEBUI.md` §3 口径）。
 
 ## 3. 文件账（本面文件行 ∥ 键族登记）
 
@@ -34,10 +34,10 @@
 | `thincoder-server/public/views-ledger.mjs` | **300** | 页（筛选行 ∥ 表 ∥ 详情/编辑弹窗 ∥ 新建弹窗 ∥ 撤回确认） |
 | `thincoder-server/public/nav.mjs` | **104**（我的组含 `#/me/ledger`——末位；头注计数同拍） | IA 单源 |
 | `thincoder-server/public/app.mjs` | **206** | 页面挂载 |
-| `thincoder-server/public/i18n-zh-ledger.mjs` / `i18n-en-ledger.mjs` | **84 ∥ 84**（键 **65/表**——en 零 CJK） | 文案表·ledger 面（部件对——域界 = `me.ledger.*` 前缀） |
-| `thincoder-server/public/i18n-zh.mjs` / `i18n-en.mjs` | **16 ∥ 16**（import + 展开项） | 部件装配 |
-| `thincoder-server/public/i18n-zh-shell.mjs` / `i18n-en-shell.mjs` | **80 ∥ 78**（键 **61 ∥ 61**，含 `nav.page.me.ledger`） | 导航文案 |
-| `thincoder-server/public/i18n-zh-system.mjs` / `i18n-en-system.mjs` | **208 ∥ 208**（键 **185 ∥ 185**，含 `audit.type.ledger_event`） | 审计型名 |
+| `thincoder-server/public/i18n-zh-ledger.mjs` / `thincoder-server/public/i18n-en-ledger.mjs` | **84 ∥ 84**（键 **65/表**——en 零 CJK） | 文案表·ledger 面（部件对——域界 = `me.ledger.*` 前缀） |
+| `thincoder-server/public/i18n-zh.mjs` / `thincoder-server/public/i18n-en.mjs` | **16 ∥ 16**（import + 展开项） | 部件装配 |
+| `thincoder-server/public/i18n-zh-shell.mjs` / `thincoder-server/public/i18n-en-shell.mjs` | **80 ∥ 78**（键 **61 ∥ 61**，含 `nav.page.me.ledger`） | 导航文案 |
+| `thincoder-server/public/i18n-zh-system.mjs` / `thincoder-server/public/i18n-en-system.mjs` | **208 ∥ 208**（键 **185 ∥ 185**，含 `audit.type.ledger_event`） | 审计型名 |
 | `thincoder-server/public/views-audit.mjs` | **238**（型表 ∥ 详情支含 `ledger_event`） | 审计面随正 |
 | 跨批单元测试档 | **168** | 结构守卫（PARTS/DOMAINS + `ledger` 域 + `me.ledger`） |
 
@@ -52,8 +52,8 @@
 | 需求 ⑥（界面维护管理）· 控制台面 | 列表在册（七列 ∥ `aged` 标 ∥ `owner` 列）∥ 三筛在册（仓/状态/负责人 + 清除；`?repo=&status=&owner=` 逐参）∥ 新建弹窗（仓选单 = 可写项目 ∥ 标题 ∥ 正文 ∥ 负责人缺省 = 自己）∥ 编辑弹窗（权限感知——`canWrite` 渲）∥ 收口（已核销——追认 400 就近呈）∥ 撤回（非原生 confirm + 后果句）∥ 空/错/加载态 ∥ 直打端点仍服务端判 | 单元测试档 + 收口轮（浏览器实走） |
 | AC-32②（控制台可见：未决/在途/老化/归属 + 仓标记）· 控制台面 | 状态词六态 ∥ `aged` 徽标 ∥ 负责人列 ∥ 仓列（显示名回填）∥ 数据面 = `repos[]`/`items[]` 单源（服务端派生） | 单元测试档 + 收口轮（浏览器实走） |
 | AC-32①（两账独立）· 控制台面 | 页面零本机台账面（无本机账读数/无跳转）∥ 未登录 ⇒ 登录面（自然不可达——沿 KD-SV-20） | 单元测试档 |
-| AC-12（IA）· 随正 | `nav.mjs` 直测：我的 **6**（`#/me/ledger`——末位）∥ 管理 **10** ∥ 既有重定向/角色默认零改 ∥ 静态档目随正（单源 = `webui/WEBUI.md` §1） | 单元测试档 |
-| AC-14（多语言）· 随正 | 新部件 `i18n-{zh,en}-ledger.mjs` 两表键集相等 ∥ en 零 CJK ∥ 键引用闭合 ∥ 域界归属（`me.ledger` 前缀）∥ 指纹/键数随正 | 单元测试档 |
+| AC-12（IA）· 随正 | `thincoder-server/public/nav.mjs` 直测：我的 **6**（`#/me/ledger`——末位）∥ 管理 **10** ∥ 既有重定向/角色默认零改 ∥ 静态档目随正（单源 = `docs/server/design/webui/WEBUI.md` §1） | 单元测试档 |
+| AC-14（多语言）· 随正 | 新部件 `thincoder-server/public/i18n-zh-ledger.mjs` ∥ `thincoder-server/public/i18n-en-ledger.mjs` 两表键集相等 ∥ en 零 CJK ∥ 键引用闭合 ∥ 域界归属（`me.ledger` 前缀）∥ 指纹/键数随正 | 单元测试档 |
 | AC-19/AC-20（样式与壳）· 零回归 | 零新颜色变量 ∥ 零新悬停规则 ∥ 本页**不入数据表壳**（沿 team-projects 三页之例——非钉表五页；无 tfoot 行计数） | 单元测试档 + 收口轮 |
 
 ## 5. 边界（本面不做面）

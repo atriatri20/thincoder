@@ -32,7 +32,7 @@ thincoder/                          ← 单一 git 仓（默认分支 main）
 | CLI | npm 包 `thincoder` | `prepack` 之外无构建；发布门 = `prepublishOnly` → lint → 单入口集成门 = 仓根 `node test/run.mjs`（包级 `npm test` = 空集说明器，非门）（CLI 设计档 `docs/cli/design/RELEASE.md`） |
 | VSC | vsix `thincoder-vscode` | `vscode:prepublish` = lint + 文档机检 + 单元清单面 `cd thincoder-vscode && npm test`（本包显式清单，非集成门）；集成门 = 仓根 `node test/run.mjs`；发布 = Marketplace + Open VSX |
 
-两产品**互不触发**：`package.json` / `package-lock.json` 各自留在子目录内（**不合并 lockfile**）；发布动作本身仍是各自的既有流程，合并只改变**执行目录**。
+两产品**互不触发**：`thincoder-cli/package.json` ∥ `thincoder-vscode/package.json`（lockfile 同形：`thincoder-cli/package-lock.json` ∥ `thincoder-vscode/package-lock.json`）各自留在子目录内（**不合并 lockfile**）；发布动作本身仍是各自的既有流程，合并只改变**执行目录**。
 
 ### 2.3 历史承载
 

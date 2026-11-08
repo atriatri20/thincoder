@@ -41,7 +41,7 @@
 | # | 项 | 现状 | 到期 / 触发 |
 |---|---|---|---|
 | T1 | `session gc` / `session index` 旗标补全（bash / zsh / fish **三套皆缺**） | 三套只补子命令名面，无 `--dry-run` / `--confirm` / `--status` / `--rebuild`（实装旗标面 = `thincoder-cli/bin/thincoder.mjs` 的 USAGE 行） | 该命令面 ∨ 补全下次触碰 |
-| T3 | 补全 / 命令清单**全量**机检锁缺位 | 窄射程锁宿主档（`thincoder-cli/test/memory-sweep-cli.test.mjs`）不在盘 ⇒ **窄锁缺位**；`ledger` 补全锁面 = 单元测试档；其余命令 / 旗标条目无锁 | 立全量锁单批 ∨ 补全下次实质改动 |
+| T3 | 补全 / 命令清单**全量**机检锁缺位 | 窄射程锁宿主档（`memory-sweep` CLI 的单元测试档——收口即删）不在盘 ⇒ **窄锁缺位**；`ledger` 补全锁面 = 单元测试档；其余命令 / 旗标条目无锁 | 立全量锁单批 ∨ 补全下次实质改动 |
 
 ## 5. 边界（本册不做）
 

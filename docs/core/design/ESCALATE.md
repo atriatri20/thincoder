@@ -92,7 +92,7 @@ subagent(action:"escalate")
 
 | 环节 | 核 / CLI | VSC |
 |---|---|---|
-| 工具面 | `thincoder-core/agent-tools/subagent.mjs`（头注 ONE tool, EIGHT actions）· 同档的动作清单（含 escalate） | `thincoder-vscode/src/agent-tools/subagent.mjs`（同形动作面） |
+| 工具面 | `thincoder-core/agent-tools/subagent.mjs`（头注 ONE tool, EIGHT actions）· 同档的动作清单（含 escalate） | 同形动作面（VSC 侧无独立实现档） |
 | 动作执行器 | `thincoder-core/agent-tools/subagent-actions.mjs`（`launchEscalateAsync`）· 同档（`executeEscalateAction`） | |
 | async runner | `thincoder-core/agent-tools/escalate-async.mjs`（头注：缺省 async / other 池 / 共享 4 槽）· 同档的入池段 | |
 | 池域 | `thincoder-core/agent-tools/subagent-async.mjs`（`ASYNC_POOL_LIMITS = { engCoder: 4, other: 4 }`）· 同档的 `poolDomainOf`（escalate 以 role coder 落 other 池） | 同源（池域机制见 `AGENT-LOOP.md`） |
@@ -100,7 +100,7 @@ subagent(action:"escalate")
 | 深度护栏 | `thincoder-core/agent-tools/subagent-actions.mjs` 的深度判据（`(ctx.depth ?? 0) > 0` → 明确错误） | |
 | 工程模式禁用 | fail-closed（实现走 eng-coder spawn） | 同位 |
 | 撞墙继续（同步路径） | `thincoder-core/agent-tools/subagent-actions.mjs` 的续跑段（`runWithContinue` + `onPermissionRequest("continue")` y/n 面板——主会话同款） | |
-| 子代理构建 | `createAgent({ provider, tools, config, cwd, memory, role: "coder" })`（async 在 `thincoder-core/agent-tools/escalate-async.mjs` · 同步在 `subagent-actions.mjs`）——人格槽由 `assemblePrompt` 场景表承载 | 同形 |
+| 子代理构建 | `createAgent({ provider, tools, config, cwd, memory, role: "coder" })`（async 在 `thincoder-core/agent-tools/escalate-async.mjs` · 同步在 `thincoder-core/agent-tools/subagent-actions.mjs`）——人格槽由 `assemblePrompt` 场景表承载 | 同形 |
 | provider 解析 / 改动合并 | `resolveChildProvider`（`thincoder-core/agent-tools/subagent-async.mjs`）· `mergeChildMutations`（同档） | 同形机制 |
 | 活动流上屏 | relay 前缀 `escalate#<id>/`（`thincoder-core/agent-tools/escalate-async.mjs`）→ TUI 子代理活动区块（no-preview legacy 面——`thincoder-cli/src/tui/tool-events.mjs`） | |
 | 配置入口 / 提示词条款 | `/config` 候选池管理（`thincoder-cli/src/tui/cmd-config-menus.mjs`——上限 5 条）· 飞刀条款 = `thincoder-core/prompts/discipline-normal.md` | Settings 面板（VSC 专有面——见 VSC 迁移台账） |

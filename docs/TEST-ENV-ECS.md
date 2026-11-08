@@ -21,7 +21,7 @@
 | 路径 | 内容 | 属主 |
 |---|---|---|
 | `~/thincoder` | 仓克隆（remote = `origin` = gitee） | thincoder |
-| `~/thincoder-server-deploy/` | 部署目录：`docker-compose.yml` ∥ `.env` ∥ `config/config.json` ∥ `data/gateway.db` | 目录 = thincoder；`config/` ∥ `data/` = ecs-user |
+| `~/thincoder-server-deploy/` | 部署目录：compose 编排档 ∥ 环境变量档 ∥ `config` 子目录（server 配置文件） ∥ `data` 子目录（sqlite 库） | 目录 = thincoder；`config/` ∥ `data/` = ecs-user |
 | 镜像 | `thincoder-server` · tag `0.1.0`（**箱上本机构建、无 registry**——compose 只引用，不构建） | — |
 | 容器 | `thincoder-server-deploy-server-1`（`restart: unless-stopped`；`8787:8787`；挂载 config ∥ data） | — |
 | 旁路进程 | 内网嵌入引擎（ollama，`10.0.0.5:11434`，模型 `bge-m3`）——**已停**（2026-10-10 用户令）；server 配置里的 `embedding.baseURL` 仍指向它 | — |
@@ -86,7 +86,7 @@ ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.5 "cd ~/thincoder-se
 
 1. **`-i` 必须显式**：漏了 ⇒ `publickey,password` 被拒（本机默认钥匙里没有专用钥匙）。
 2. **PowerShell 里别用 `\$(...)` 嵌套命令替换**：会被 PS 抢先解析 ⇒ 远端命令碎裂（2026-10-10 实测：两处 `docker exec $(...)` 失败）。远端命令一律平铺、单层；需要内侧引号时 = **PS 用单引号包整条 ssh 命令**（内侧引号原样透传——2026-10-10 实测可行姿势）。
-3. **`deploy/backup.mjs` 以 `thincoder` 跑会失败**（`EACCES: mkdir '.../config/backups'`——`config/` 属 `ecs-user`、本箱无免密 sudo）⇒ 更新前的兜底 = **旧镜像打标**；真备份 = 待补（用 `ecs-user` 侧能力或容器内路径）。
+3. **`thincoder-server/deploy/backup.mjs` 以 `thincoder` 跑会失败**（`EACCES: mkdir '.../config/backups'`——`config/` 属 `ecs-user`、本箱无免密 sudo）⇒ 更新前的兜底 = **旧镜像打标**；真备份 = 待补（用 `ecs-user` 侧能力或容器内路径）。
    - 同族：箱上直接跑仓内运维 CLI 会挂（配置里 `db` = 容器内绝对路径 `/app/data`——宿主机跑必 `EACCES`）⇒ 运维命令一律**在容器内跑**（§2 表的镜内路径）。
 4. **容器名固定** = `thincoder-server-deploy-server-1`（compose 项目名 + 服务名派生）。
 5. **`config/` 与 `data/` 属 `ecs-user`**（部署目录本身属 `thincoder`）——直接 `cp` 这两处的文件可能被拒。

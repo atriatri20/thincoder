@@ -7,9 +7,9 @@
 
 ## 1. 总体定位
 
-评审 · 会诊 · 飞刀 = advisor 主面（`advisor.mjs` + `src/advisor/*`）**+** 工具面（`advisor` · `consult` · `advisor-settle` · `review-streak` · `subagent-panel`）**+** 飞刀（升级到更强模型）。
+评审 · 会诊 · 飞刀 = advisor 主面（`thincoder-core/advisor.mjs` + `thincoder-core/advisor/*`）**+** 工具面（`advisor` · `consult` · `advisor-settle` · `review-streak` · `subagent-panel`）**+** 飞刀（升级到更强模型）。
 
-VSC 侧对应面住 `thincoder-core/advisor.mjs` + `src/advisor/*`（拆 `provider.mjs` · `tools.mjs`）与 `agent-tools/subagent-escalate*`。
+VSC 侧对应面住 `thincoder-core/advisor.mjs` + `thincoder-core/advisor/*` 各分件与 `thincoder-core/agent-tools/subagent-escalate*`。
 本板块对本子系统的要求 = 该面归一为**核内单一实现**（含评审止损护栏）。
 
 > 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/CONSULTATION.md` §1–§2（不复制）。
@@ -62,7 +62,7 @@ VSC 侧对应面住 `thincoder-core/advisor.mjs` + `src/advisor/*`（拆 `provid
 - **F-S7 面板可见性**：每 consultant 一条活动块（`sub:consult` 事件）+ 回复预览（≤8KB）随 answered 事件带出；冻结入流同 subagent / escalate / advisor——呈现接线 = `docs/vsc/design/WEBVIEW.md` §14。
 - **N-S1 预算**：`consultTurns` 默认 40 + 墙钟看门狗 `consultTimeoutMs` 600000ms（10min）——VSC 侧读同名的 `agent.consultTurns` / `agent.consultTimeoutMs` 两键；判定权仍归主 agent（会诊 = 建议非门禁）。
 
-**端差（已裁保留 · 形态类——类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）**：呈现面（面板活动块 + 回复预览 vs TUI）+ 配置入口（Settings 面板 vs `/config`）。坐标 ＝ `thincoder-vscode/src/agent-tools/consult.mjs` · `config-consult.mjs`。
+**端差（已裁保留 · 形态类——类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）**：呈现面（面板活动块 + 回复预览 vs TUI）+ 配置入口（Settings 面板 vs `/config`）。坐标 ＝ `thincoder-core/agent-tools/consult.mjs` · CLI `/config` 命令面。
 
-**测试缺口（发现即报）**：VSC `test/` 对 `_consultSessions` / `runConsultChild` 直引零命中——既有间接回归 = `test/config-softfail.test.mjs` · `activity-flow.test.mjs` · `agent-lifecycle-singleton.test.mjs`。
+**测试缺口（发现即报）**：VSC `test/` 对 `_consultSessions` / `runConsultChild` 直引零命中——既有间接回归 = VSC 侧三族回归档（配置软失败 ∥ 活动流 ∥ 生命周期单例）。
 

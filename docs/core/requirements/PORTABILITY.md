@@ -17,19 +17,19 @@
 
 | # | 需求 | 判定句（可机器验证——证据均为本仓实测） |
 |---|---|---|
-| **F1** | 分类判据单一权威 | `thincoder-vscode/src/conventions.mjs`为唯一裁判实现（`classifyPath` / `isCodePath` / `isDocPath` 三判定）；全仓**零分散副本**（机判 = 组件式 / 锚定式正则副本、`docs/` 前缀判据副本 grep 零命中——判据式见 `PORTABILITY（VSC 侧）`） |
+| **F1** | 分类判据单一权威 | `thincoder-core/conventions.mjs` 为唯一裁判实现（`classifyPath` / `isCodePath` / `isDocPath` 三判定）；全仓**零分散副本**（机判 = 组件式 / 锚定式正则副本、`docs/` 前缀判据副本 grep 零命中——判据式见 `PORTABILITY（VSC 侧）`） |
 | **F2** | 项目约定可声明 | 声明面 = `PROJECT-MANIFEST.json` 三族键（`codePaths` / `index.*Extensions` / `advisor.*`，载体现行 = `thincoder-core/manifest.mjs`；读取单源 = `thincoder-core/conventions.mjs` `loadProjectDeclaration`）；`codePaths` 声明替换默认、`index.*Extensions` 追加入并集；档不可用 → 逐族回默认 + 警告 + 不崩（形态错 = 档非法——fail-closed） |
 | **F3** | 嵌套布局不漏判 | 段匹配非锚定、大小写不敏感、`/` 与 `\` 通吃——`packages/<foo>/src/<x>.md` 判 code（分类优先级 = 代码段 > temp > 文档扩展名 > 辅助面（aux）> 兜底 code） |
-| **F4** | 评审注入降级可见 | 降级句常量四句在位（`thincoder-vscode/src/advisor/project-context.mjs`）；缺 AGENTS.md / 地图 / 标准文档 / git 时各注入对应句、从不静默——`injectProjectGuide` · `injectDocumentMap` · `injectProjectStandards` · `thincoder-vscode/src/advisor/messages.mjs` |
-| **F5** | 索引面可声明、未列入可见 | 扩展名表 + 声明并集（`thincoder-vscode/src/index-discover.mjs`；核面现体 `thincoder-core/memory/file-walk.mjs`）；构建返回 `unlistedExts`（`thincoder-vscode/src/indexer.mjs`；核面现体 `thincoder-core/memory/code-sync.mjs`）+ 面板提示行（`thincoder-vscode/src/extension/panel-index.mjs`） |
-| **F6** | 非 git 项目行为有定义 | 索引：无 git → 全量 walk + per-file mtime 回退（`thincoder-vscode/src/indexer.mjs`；核面现体 `thincoder-core/memory/code-sync.mjs`）；评审：`NO_GIT_NOTICE` 降级句、评审照常 |
-| **F7** | 门禁面同源 | 工程写门禁按声明分类判定（`thincoder-vscode/src/agent/tool-gates.mjs`）——不以 `src/` 硬编码 / `docs/` 前缀放行 |
+| **F4** | 评审注入降级可见 | 降级句常量四句在位（`thincoder-core/advisor/project-context.mjs`）；缺 AGENTS.md / 地图 / 标准文档 / git 时各注入对应句、从不静默——`injectProjectGuide` · `injectDocumentMap` · `injectProjectStandards` · `thincoder-core/advisor/messages.mjs` |
+| **F5** | 索引面可声明、未列入可见 | 扩展名表 + 声明并集（`thincoder-core/index-discover.mjs`；核面现体 `thincoder-core/memory/file-walk.mjs`）；构建返回 `unlistedExts`（核面现体 `thincoder-core/memory/code-sync.mjs`）+ 面板提示行（`thincoder-vscode/src/extension/panel-index.mjs`） |
+| **F6** | 非 git 项目行为有定义 | 索引：无 git → 全量 walk + per-file mtime 回退（核面现体 `thincoder-core/memory/code-sync.mjs`）；评审：`NO_GIT_NOTICE` 降级句、评审照常 |
+| **F7** | 门禁面同源 | 工程写门禁按声明分类判定（`thincoder-core/agent/dispatch.mjs`——VSC 随核单源）——不以 `src/` 硬编码 / `docs/` 前缀放行 |
 | **F8** | 提示词面不假定本仓形态 | 提示词内指令性引用零本仓指涉（「本产品自研仓 =」标注形态除外——判据式见 `PORTABILITY（VSC 侧）`） |
-| **F9** | 父侧写域缺省 | 工程模式**父侧门**分类缺省：路径段 `test` / `tests` / `scripts`（**项目根相对面** · 根内任意深度——根外 / 根未知 ⇒ 面不可判 ⇒ 缺省不命中）与 `.thincoder/tmp/**` **判非代码面** ⇒ 父侧无令牌可写；**代码段优先级在前**（`src/test/**` 仍判 code）；范围 = **父侧门**（`thincoder-core/agent/dispatch.mjs` ∥ VSC `thincoder-vscode/src/agent/tool-gates.mjs`——VSC 随核单源）；**eng-coder 门不动**；项目可用 `codePaths` 声明（F2）收回该缺省。判据 = `classifyPath` 四例（`test/<x>.mjs` ≠ code · `scripts/<x>.mjs` ≠ code · `.thincoder/tmp/<a>.mjs` ≠ code · `src/test/<x>.mjs` = code） |
+| **F9** | 父侧写域缺省 | 工程模式**父侧门**分类缺省：路径段 `test` / `tests` / `scripts`（**项目根相对面** · 根内任意深度——根外 / 根未知 ⇒ 面不可判 ⇒ 缺省不命中）与 `.thincoder/tmp/**` **判非代码面** ⇒ 父侧无令牌可写；**代码段优先级在前**（`src/test/**` 仍判 code）；范围 = **父侧门**（`thincoder-core/agent/dispatch.mjs`——VSC 随核单源）；**eng-coder 门不动**；项目可用 `codePaths` 声明（F2）收回该缺省。判据 = `classifyPath` 四例（`test/<x>.mjs` ≠ code · `scripts/<x>.mjs` ≠ code · `.thincoder/tmp/<a>.mjs` ≠ code · `src/test/<x>.mjs` = code） |
 
-| **F10** | 项目状态档父侧可写 | 分类器新增第五值 `state`。判定：文件名是 `project-manifest.json`（不分大小写），或路径含 `.thincoder/conventions.json` 这一段，就算状态档，不算代码。效果：主 agent 在工程模式下可以直接写这两个文件，父侧门放行，不需要令牌；唯一作者不变。优先级在 aux 之后、兜底之前，所以 `src/state/<x>.json` 这类仍然算代码。只动父侧门：eng-coder 门不动，VSC 跟着核走。判定函数 `isStatePath`，在 `thincoder-core/conventions.mjs`。 |
+| **F10** | 项目状态档父侧可写 | 分类器新增第五值 `state`。判定：文件名是 `project-manifest.json`（不分大小写），或路径含 `~/.thincoder/conventions.json` 这一段，就算状态档，不算代码。效果：主 agent 在工程模式下可以直接写这两个文件，父侧门放行，不需要令牌；唯一作者不变。优先级在 aux 之后、兜底之前，所以 `src/state/<x>.json` 这类仍然算代码。只动父侧门：eng-coder 门不动，VSC 跟着核走。判定函数 `isStatePath`，在 `thincoder-core/conventions.mjs`。 |
 
-| **F11** | 门禁辖域 = manifest 树以内 | 父侧门（CLI `dispatch.mjs`）辖域判定改按**目标祖先链**：任一级祖先带 `PROJECT-MANIFEST.json` ⇒ 在辖——判据声明面 = **目标所属项目**（最近祖先，nearest wins），不再取会话 cwd；**找不到 manifest ⇒ 一律放行**。项目内判定零改（code 段 / fail-closed / aux·temp·doc·state 豁免）；**不可解析目标保守拦截不变**；未声明 hint 改指名所属项目。 |
+| **F11** | 门禁辖域 = manifest 树以内 | 父侧门（`thincoder-core/agent/dispatch.mjs`）辖域判定改按**目标祖先链**：任一级祖先带 `PROJECT-MANIFEST.json` ⇒ 在辖——判据声明面 = **目标所属项目**（最近祖先，nearest wins），不再取会话 cwd；**找不到 manifest ⇒ 一律放行**。项目内判定零改（code 段 / fail-closed / aux·temp·doc·state 豁免）；**不可解析目标保守拦截不变**；未声明 hint 改指名所属项目。 |
 
 ## 3. 非功能性需求
 

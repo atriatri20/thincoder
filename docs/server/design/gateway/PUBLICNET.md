@@ -155,7 +155,7 @@ limiter.noteBurst(payload)                     // 由判点在超限分支调用
 - 拆后行数：`ddl-v1-v11` ≈300 ∥ `ddl-v12-v20` ≈305 ∥ `ddl-v21-v26` ≈190 ∥ `migrations.mjs` ≈70——四档均 < 500，余量留给后续版本段。
 - 迁移链「只进不退」不受影响：拆的是常量的存放位置，`MIGRATIONS` 的顺序与内容不变；结构单源仍是 `docs/server/design/store/STORE.md` §2，本次不动任何 DDL 语义。
 
-测试面：新增单元测试档 `thincoder-server/test/publicnet.test.mjs`（本批自持、收口删除），估算 ≈260 行（实际值收口轮记 §5），覆盖 §6 用例 N1–N7 ∥ B1–B7 ∥ E1–E11；另有常驻装配断言 A7（运维设计档 §4.1）：`redirectPort` 在场 ⇒ 装配后第二个 server 在册且停机被关、`SIGHUP` 监听断基线增量 = 1（用例 `finally` 复原）——实施轮按反证义务逐条「删装配行 ⇒ 该档必红 ⇒ 恢复」记读数。集成面（浏览器实走 HTTPS 登录 + 限流 429）归收口轮。
+测试面：新增本批自持的单元测试档（收口删除，不写档名），估算 ≈260 行（实际值收口轮记 §5），覆盖 §6 用例 N1–N7 ∥ B1–B7 ∥ E1–E11；另有常驻装配断言 A7（运维设计档 §4.1）：`redirectPort` 在场 ⇒ 装配后第二个 server 在册且停机被关、`SIGHUP` 监听断基线增量 = 1（用例 `finally` 复原）——实施轮按反证义务逐条「删装配行 ⇒ 该档必红 ⇒ 恢复」记读数。集成面（浏览器实走 HTTPS 登录 + 限流 429）归收口轮。
 
 ## 4. 关键决策记录
 
@@ -215,7 +215,7 @@ limiter.noteBurst(payload)                     // 由判点在超限分支调用
 | E4 | 错误 | `tls.redirectPort` = `port` | 配置校验拒启 |
 | E5 | 错误 | `PATCH /api/admin/config { "tls": { "certPath": "" } }` | 400 原报文；文件零变；无 `config_update` 审计 |
 | E6 | 错误 | 触限后继续连打 | 全部 429，`Retry-After` 递减；审计仍只一行（同窗聚合） |
-| E7 | 错误 | 未知审计型写入 | 抛（枚举校验 `audit.mjs` 的型枚举）+ 库 CHECK 拒绝 |
+| E7 | 错误 | 未知审计型写入 | 抛（枚举校验 `thincoder-server/src/accounts/audit.mjs` 的型枚举）+ 库 CHECK 拒绝 |
 | N6 | 正常 | `tls.enabled` 部署，容器 `HEALTHCHECK` 按 §5.9 命令探活；探针命令另本地直跑（假 200 ∥ 假 503 服务） | 200；`docker compose ps` = `(healthy)`；探针 200 ⇒ 退 0 ∥ 503 ⇒ 退 1 |
 | N7 | 正常 | 无 `rateLimits` 段的配置档，登录端点同 IP 第 1–20 次 | 全部放行（缺省阈 20） |
 | B6 | 边界 | `public` 类公开端点同 IP 第 `publicPerMin` 次 ∥ 第 `publicPerMin+1` 次 | 前者放行；后者 429；下一窗首请求放行 |
@@ -255,7 +255,7 @@ limiter.noteBurst(payload)                     // 由判点在超限分支调用
 | `docs/server/design/ops/OPS.md` §5.7（Docker 路） | 已增 TLS 追加段：证书目录挂卷 `./certs:/app/certs:ro` ∥ `tls` 六键 ∥ 端口映射 `"8787:8787"` + `"8443:8443"` ∥ `ps` 见 healthy | 设计轮（本轮已落） |
 | `docs/server/design/ops/OPS.md` §5.1 compose 样例 | 已改：`ports` 加 `"8443:8443"`，`volumes` 加 `./certs:/app/certs:ro` | 设计轮（本轮已落） |
 | `docs/server/design/ops/OPS.md` §1 配置写面可写项 ∥ 启动校验清单 ∥ `host` 行 ∥ §7 非功能行 | 已改：两段进白名单与校验清单；口径改「默认内网部署；公网部署须开 `tls`」 | 设计轮（本轮已落） |
-| `docs/server/design/ops/OPS.md` §6 行数预算 | 已改：`bin` 241 ∥ `config.mjs` 360 ∥ `README.md` 259（实读 `wc -l` 口径，与本档 §3 同源） | 设计轮（本轮已落） |
+| `docs/server/design/ops/OPS.md` §6 行数预算 | 已改：`bin` 241 ∥ `thincoder-server/src/ops/config.mjs` 360 ∥ `README.md` 259（实读 `wc -l` 口径，与本档 §3 同源） | 设计轮（本轮已落） |
 | `docs/server/design/ops/OPS.md` §4.1 | 已增：A7 不变量 + `onAssembled` 增 `redirectServer` | 设计轮（本轮已落） |
 | `docs/server/design/accounts/ACCOUNTS.md` §2.1 审计型表 | 待改：十七型 → 十八型（+ `security_event`），列形随动；本档未读该档（`unverified`），改时以本档 §2 审计面为准 | 实施轮 |
 | `thincoder-server/Dockerfile`（`HEALTHCHECK`） | 待改：探针命令换 §5.9 新形（TLS 分支） | 实施轮（产品代码面） |

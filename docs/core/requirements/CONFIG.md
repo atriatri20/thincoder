@@ -4,7 +4,7 @@
 > **工作流档**（需求层）= `docs/core/requirements/CORE-UNIFICATION.md` §1–§4 + §5 登记表（统一目标 / 边界原则 / 量级读数基线 / 范围边界）——本档**不复制**（D2 单一权威源）。
 > **设计层** = `docs/core/design/CONFIG.md`（本子系统设计与测试）；工作流设计档 = `docs/core/design/CORE-UNIFICATION.md`。
 > **不新增需求**：条文分**搬移 / 回填 / 派生**三类并逐条标来源；无现成表述者由设计裁决派生，标「**派生 · 非用户原话**」。
-> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图 `thincoder-cli/docs/README.md` §3.2；三层归属见同图 §3.1。
+> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图 `docs/README.md`；三层归属见同图。
 > **需求条目面**（§4）：本板块**同名旧档缺 ⇒ 无新内容并入**（不虚构）——详见 §4。
 
 ## 1. 总体定位
@@ -19,10 +19,10 @@
 
 ### 2.1 本子系统条目
 
-- **【派生 · 非用户原话】** 配置系统归一为**核内单一装载器与全量默认值表**（同一 `config.json`、同一 v2 架构）：`settings` 工具的类型校验取**全量口径**（错类型**拒写**）；VSC 的 `$schema` 注入与配置监视面（宿主能力）按**端差注入**；键面与默认值归一后**旧键保留为读入别名**、写回带 `.bak-{ts}` 备份记号、变更**登记 + CHANGELOG**。
+- **【派生 · 非用户原话】** 配置系统归一为**核内单一装载器与全量默认值表**（同一份用户数据目录下的配置文件、同一 v2 架构）：`settings` 工具的类型校验取**全量口径**（错类型**拒写**）；VSC 的 `$schema` 注入与配置监视面（宿主能力）按**端差注入**；键面与默认值归一后**旧键保留为读入别名**、写回带 `.bak-{ts}` 备份记号、变更**登记 + CHANGELOG**。
   源 = 设计档 `CONFIG.md` §2.1 #74 / #77 / #79 / #80 / #87 · §2.2 #128–#132 / #177 · §3.1 A4 / A5 · §4.1 第 1–4 行。
 - **【`${env:VAR}` 值引用】** 敏感配置值位支持 **`${env:VAR}` 环境变量引用**——消费侧解析（整值与内嵌同解）；变量未设 ∕ 空串 ∥ 畸形 ⇒ 消费点**抛错**（点名变量；零静默字面透传）；
-  生效面 = 五敏感值族（`providers[].apiKey` ∕ `providers[].headers.*` ∕ `mcp.servers[].token` 与 `.headers.*` ∕ `.env.*` ∕ `websearch.apiKey` ∕ `embedding.apiKey`）；解析产物**永不回显 ∥ 永不回写**（写盘链按磁盘原文）；非新配置通道（`config.json` 仍唯一真源）。
+  生效面 = 五敏感值族（`providers[].apiKey` ∕ `providers[].headers.*` ∕ `mcp.servers[].token` 与 `.headers.*` ∕ `.env.*` ∕ `websearch.apiKey` ∕ `embedding.apiKey`）；解析产物**永不回显 ∥ 永不回写**（写盘链按磁盘原文）；非新配置通道（用户数据目录下的配置文件仍唯一真源）。
   设计档机制单源 = `CONFIG.md` §6.3。
 
 ### 2.2 适用工作流条目（回指 · 不复制）
@@ -45,9 +45,9 @@
 
 | 旧档 | 状态 |
 |---|---|
-| `thincoder-cli/docs/requirements/CONFIG.md` | **不存在**（CLI / VSC 两树设计 / 需求两侧均无同名档） |
-| `thincoder-cli/docs/design/CONFIG.md` | **不存在**（设计侧同样缺——见 `docs/core/design/CONFIG.md` §6） |
+| CLI 侧同名需求档 | **不存在**（CLI / VSC 两树设计 / 需求两侧均无同名档） |
+| CLI 侧同名设计档 | **不存在**（设计侧同样缺——见 `docs/core/design/CONFIG.md` §6） |
 
 ⇒ 对 CONFIG 板块**需求侧无并入面**——不据其他档代拟需求条目（不虚构）。
 
-**越段发现（只记 · 未处置）**：配置面需求级约束的旧档载体**散布**（`SETTINGS-TOOL.md` / `PROXY.md` 等同板面档）——参照面（同板块同名档）不含。⇒ **触发 = 父侧另派**。
+**越段发现（只记 · 未处置）**：配置面需求级约束的旧档载体**散布**（`docs/core/requirements/SETTINGS-TOOL.md` / `docs/core/design/PROXY.md` 等同板面档）——参照面（同板块同名档）不含。⇒ **触发 = 父侧另派**。

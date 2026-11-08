@@ -16,7 +16,7 @@
 |---|---|
 | `thincoder-cli/src/tui/slash-commands.mjs` | `SLASH_COMMANDS` 表 + `SLASH_ALIASES` + `HANDLERS` 分派（handler 异常统一拦截成 `[error]` 行——不击穿 TUI 主循环）+ `completions` / Tab 循环 |
 | `thincoder-cli/src/tui/cmd-*.mjs`（单命令档族） | 每个命令实现独立成档：`cmd-auto` / `cmd-clear` / `cmd-config` / `cmd-copy` / `cmd-eng` / `cmd-exit` / `cmd-extract`+`distill-cmd` / `cmd-fold` / `cmd-goal` / `cmd-help` / `cmd-init` / `cmd-mcp` / `cmd-mcp-form` / `cmd-model` / `cmd-new` / `cmd-plan` / `cmd-reindex` / `cmd-restore` / `cmd-session` / `cmd-shell` / `cmd-skills` / `cmd-submodel` / `cmd-team` / `cmd-think` / `cmd-undo` / `cmd-upgrade` / `cmd-advisor` |
-| `thincoder-cli/src/tui/model-picker.mjs` | 模型两级选择器（provider → model，可 fetch `/models`；拉取失败 ⇒ 该渠道不可用——无预设回退）+ `pickModelForSlot`（子模型槽位）；渠道管理流族 = 调用点（流体住 `provider-admin.mjs`） |
+| `thincoder-cli/src/tui/model-picker.mjs` | 模型两级选择器（provider → model，可 fetch `/models`；拉取失败 ⇒ 该渠道不可用——无预设回退）+ `pickModelForSlot`（子模型槽位）；渠道管理流族 = 调用点（流体住 `thincoder-cli/src/tui/provider-admin.mjs`） |
 | `thincoder-cli/src/tui/provider-admin.mjs` | 渠道管理流族（`/model` Add / Remove / key 流程）+ `cascadeRemoveProvider` |
 | `thincoder-cli/src/tui/model-catalog.mjs` | 模型清单目录面（供选择器构造条目） |
 | `thincoder-cli/src/tui/ledger-surface.mjs` | 台账状态位胶水（动态 import 核 `@thincoder/core/ledger-surface.mjs` 转口——`state.ledger` = 状态行 L1 标记源；W8 契约②） |

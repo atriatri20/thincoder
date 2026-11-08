@@ -3,7 +3,7 @@
 > 板块 = **编辑工具**（edit / insert_after / hashline_edit / apply_patch / write + 共享 helper）；本档 = **write 语义的权威源**（逐工具权威档之一）。
 > 地图与契约要点 = `docs/core/design/TOOLS.md` §6.6（编辑工具地图）——本档不复制其内容（D2 单一权威源）。
 > 共享底层 = `docs/core/design/EDIT-HELPERS.md`（行尾 / 失败候选 / U+FFFD 编码探测——本档只指不述）。
-> 双端：CLI `thincoder-core/tools/file.mjs`（`writeTool`）· VSC `thincoder-vscode/src/tools/file.mjs`（同机制，各自实现）。
+> 双端：`thincoder-core/tools/file.mjs`（`writeTool`）——VSC 端经核包导入同一实现（`thincoder-vscode/src/tools/index.mjs` 转出），不另持档。
 > 模型可见描述 = `thincoder-core/tool-docs/write.md`（提示词面 / 产品代码——本档不复述）。
 > 需求侧 = `docs/core/requirements/TOOLS.md`（工具系统板块；CLI 树无逐工具需求档）。
 
@@ -45,7 +45,7 @@ write = **整文件替换 / 新建**——覆盖已有文件（read 后确认整
 | 行尾 helper | `thincoder-core/tools/shared.mjs` 的 `detectFileEol` · `joinWithEol` · `majorityEol` | 导出在位 |
 | 描述面（模型可见） | `thincoder-core/tool-docs/write.md` | 在位（`DESC()` 加载） |
 | 注册面 | `thincoder-core/tools/index.mjs`（`builtinTools` · file 组） | 组陈述见 `docs/core/design/TOOLS.md` §6.2 |
-| VSC 对位实现 | `thincoder-vscode/src/tools/file.mjs` | 同名机制 · 独立实现 |
+| VSC 对位实现 | `thincoder-vscode/src/tools/index.mjs`（转出核包 `writeTool`） | 同一实现 · 不另持档 |
 
 **VSC 端差异**：VSC 端 `file.mjs`（`writeTool`）——① **编辑器路径**：doc 已打开 → 编辑器写（undo 单元）；否则本地写盘；② autoSyntaxCheck 与 EOL 两规则（F1 覆盖按原行尾 / F2 新建随目录多数派）双端同口径（`docs/core/design/EDIT-HELPERS.md` §4）。
 

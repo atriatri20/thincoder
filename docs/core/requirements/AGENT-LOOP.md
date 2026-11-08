@@ -9,9 +9,9 @@
 
 ## 1. 总体定位
 
-agent 主循环与子代理 = 主循环（`agent.mjs`）**+** 装配 / 提醒 / 收尾（`agent/*`）**+** 子代理与异步（`agent-tools/subagent*` · `async-settle`）**+** 挂起与唤醒 **+** 权限 **+** hooks **+** 推理档位与模型引用 **+** 探索蒸馏 **+** token 台账。
+agent 主循环与子代理 = 主循环（`thincoder-core/agent.mjs`）**+** 装配 / 提醒 / 收尾（`agent/*`）**+** 子代理与异步（`agent-tools/subagent*` · `async-settle`）**+** 挂起与唤醒 **+** 权限 **+** hooks **+** 推理档位与模型引用 **+** 探索蒸馏 **+** token 台账。
 
-VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` · `context-injections` · `agent-state` · `suspension.mjs`）。
+VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` · `context-injections` · `agent-state` · `thincoder-vscode/src/extension/suspension.mjs`）。
 本板块对本子系统的要求 = 该面归一为**核内单一实现**，端差以**注入**承载。
 
 > 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/AGENT-LOOP.md` §1–§2（不复制）。
@@ -47,7 +47,7 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 
 | # | 条目 | 内容 |
 |---|---|---|
-| 1 | 工具描述三锚 | `thincoder-core/tool-docs/question.md` / VS Code question.mjs 对齐：每调用一问；单问简短（背景 / 分析放正文回复不放 question）；routine confirmations 走普通回复（仅真决策用工具） |
+| 1 | 工具描述三锚 | `thincoder-core/tool-docs/question.md` / VS Code 侧 question 卡片渲染对齐：每调用一问；单问简短（背景 / 分析放正文回复不放 question）；routine confirmations 走普通回复（仅真决策用工具） |
 | 2 | 提示词 | discipline-engineering 的 Questioning Style 语义 + common 确认门段 + discipline-normal 工具表反模式列 |
 | 3 | 机械限制 | question 长度 ≤100 字符、options ≤4 条——超限返回错误串，不弹卡、不调 onQuestion |
 | 4 | VS Code 渲染 | `.question-text` 加 `white-space: pre-wrap` + max-height 兜底滚动 |
@@ -244,7 +244,7 @@ N4 范围 = **核侧 + CLI + VSC 两端对位**（**用户裁定「vsc 肯定要
 
 > **形状面判据**：
 > 情形（尾 `tool` = 活体形状）：缺字段 = **400（逐字 `must be passed back`）** · 空串 = 200（含推理回传） · 真值 = 200；尾 `user` 形状三形态全 200 ⇒ **触发与形状 / `content` 面相关**。**接受面 =
- 活体形状下空串 200** ⇒ 目标 = **活体 400 消除 + 推理连续性 + 同族收口**；残险 = mimo 两行（`model-specs.mjs`）凭证缺 ⇒ 不可证（保持翻面 + 登记）。
+ 活体形状下空串 200** ⇒ 目标 = **活体 400 消除 + 推理连续性 + 同族收口**；残险 = mimo 两行（`thincoder-core/model-specs.mjs`）凭证缺 ⇒ 不可证（保持翻面 + 登记）。
 
 **设计侧 = `docs/core/design/CONTEXT-COMPACTION.md` §6.10 #9 + §7 D-CC22**（判据与决策单源）——本档不复制（D2）；主循环线与端壳接线面指针见 `AGENT-LOOP.md` §6.4 / §6.18。
 
@@ -255,7 +255,7 @@ N4 范围 = **核侧 + CLI + VSC 两端对位**（**用户裁定「vsc 肯定要
 
 | # | 需求（能力逐条可交付） | 范围边界（明确不做什么） |
 |---|---|---|
-| F-TW1 | **到期件**：核 `thincoder-core/agent/timers.mjs`（已落）三件纯函数（deadline / takeExpired / injectReminders）——`post-turn.mjs` 改调（行为零变 · 投递形态逐字沿用） | 不新增并行调度器；不改注入文本形态 |
+| F-TW1 | **到期件**：核 `thincoder-core/agent/timers.mjs`（已落）三件纯函数（deadline / takeExpired / injectReminders）——`thincoder-core/agent/post-turn.mjs` 改调（行为零变 · 投递形态逐字沿用） | 不新增并行调度器；不改注入文本形态 |
 | F-TW2 | **空闲唤醒**：CLI 空闲面一次性 deadline 闩（到点自撤 / `unref` / 单槽）+ 挂起窗第三兑现态 `timer` ⇒ 开轮经既有驱动器（auto-turn 第三变体 `timerTurn` · 普通权限面） | 不借 busy 队列（用户消息语义）；不入 `poolLive`（挂起态三面）；headless = 结构性不支持（空转面不存在）；**桌面 / VSC = 阶段 2**（分阶段交付） |
 | F-TW3 | **门三件**：仅系统类可自唤醒（唤醒源 = `_pendingTimers` 写点**两处**——timer 工具设/取消 ∥ 核出列重排面）· 成本闸（合并一轮 / 到期即消费幂等 / `maxTurns` 帽 / 撞帽不续跑 / 在途帽 8 超限显式拒）· 开关 `agent.timerWake` 默认 true | 不新增机械门（动作域 = 系统轮既有机械面沿用）；timer 参数 schema 零改 |
 | F-TW4 | **可见面**：单源 = `docs/cli/requirements/TUI.md` F17 | 本档不复制（D2） |
@@ -371,7 +371,7 @@ N4 范围 = **核侧 + CLI + VSC 两端对位**（**用户裁定「vsc 肯定要
 - 角色注册面 = `thincoder-core/agent/family-tools.mjs` 的角色 enum ∥ `thincoder-core/agent-tools/subagent.mjs` 的 ROLES 白名单。
 - 提示词：运行期英文档住 `thincoder-core/prompts/`，命名规则 = `persona-` + 角色名；中文权威正文 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.59.10。
 - 装配 = `thincoder-core/prompt-overlays.mjs` 的 `SLOT_CONTENTS` ∥ `SCENARIO_SLOT_FILES`。
-- 工具表 = `family-tools.mjs` 的角色分支。
+- 工具表 = `thincoder-core/agent/family-tools.mjs` 的角色分支。
 - 池位 = `agent.poolLimits` 的 other 域。
 
 **设计侧**：落点由设计席实读后定，本档不预写（D2 单源）。

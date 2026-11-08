@@ -25,7 +25,7 @@
 | 成员面对话面（成员 · 移动端） | `/api/me/chat/*`（会话十行——列表/建/详情/模型清单/发消息 NDJSON 流/中止/换模型设档/ask 应答/删除/`@` 候选）+ 成员面工作区写面（建/启停/销毁/拉仓——`/api/me/sandbox/*` 扩）+ 成员 git 凭据（三行——`/api/me/git-credentials*`） | 会话 cookie ∥ 登录 token（Bearer——**双门同判权**；恒本人） | 本档 §2.11 |
 | 盒接入面（盒出向） | `GET /api/box/events`（SSE 下行——含 `cmd` 指令） ∥ `POST /api/box/sessions/:id/turns`（流式体） ∥ `POST /api/box/commands/:cmdId/result` ∥ `POST /api/box/ping`（保活应答） ∥ `POST /api/box/credential`（git 凭据取件） ∥ `GET /api/box/mcp`（MCP 工具表——零秘密） ∥ `POST /api/box/mcp/call`（MCP 调用） | 每工作区 key（`Authorization: Bearer`——与 /v1 同校验单源；第二门） | 本档 §2.12 |
 | MCP 管理面 | `GET/POST/PATCH/DELETE /api/admin/mcp*` ∥ `POST /api/admin/mcp/probe`（清单 CRUD + 探活——机制全文 = `docs/server/design/mcp/MCP.md`） | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.13 |
-| 前端静态面 | `GET /` ∥ `public/**`（`app.mjs` ∥ `nav.mjs` ∥ `views-*`（档单 = `docs/server/design/webui/WEBUI.md` §1） ∥ `style.css`） | 公开（页面壳零数据） | `docs/server/design/webui/WEBUI.md` §1 |
+| 前端静态面 | `GET /` ∥ `public/**`（`thincoder-server/public/app.mjs` ∥ `thincoder-server/public/nav.mjs` ∥ `views-*`（档单 = `docs/server/design/webui/WEBUI.md` §1） ∥ `thincoder-server/public/style.css`） | 公开（页面壳零数据） | `docs/server/design/webui/WEBUI.md` §1 |
 | 其余 | —— | —— | 404（JSON 错误形 = §3） |
 
 - 分派 = `thincoder-server/src/gateway/server.mjs`（已落盘）注册行制——新端点 = 注册一行（断点列 = `docs/server/design/EVOLUTION.md` §1-G1）。
@@ -70,7 +70,7 @@
 | `POST /api/admin/providers/discover` | 模型发现（草稿可用）`{ baseURL, apiKey?, providerId?, proxy? }` ⇒ `{ models: [...], modelMeta: { "<id>": {…} } }`（留存集——见下「模型元数据」）；失败 ⇒ 502 `upstream_error`；`proxy` = 代理判定明传（**明传优先 ∥ `providerId` 条目旗兜底 ∥ 皆无 ⇒ 直连**——与 chat 转发同判定，见 §2.1） |
 | `GET /api/admin/providers/presets` | 预设清单（只读——「从预设快速添加」数据源）`{ presets: [{ preset, name, baseURL, models: [] }] }`——全表（起步 21 家；**零 `model` 键；`models` = 空清单保留**——模型清单表 = 空表，勾选走「模型发现」）；缺省展开 = `expandProviderEntry`（`thincoder-server/src/ops/presets.mjs`——KD-SV-17）；**表零密钥**——响应无 `apiKey` 字段 |
 
-- **存储 = 库单源**：`providers` 表（`docs/server/design/store/STORE.md` §2 v2 段）；`config.json` 的 `providers[]` 降为一次性种子（矩阵 = `docs/server/design/ops/OPS.md` §1）。
+- **存储 = 库单源**：`providers` 表（`docs/server/design/store/STORE.md` §2 v2 段）；`thincoder-server/config.json` 的 `providers[]` 降为一次性种子（矩阵 = `docs/server/design/ops/OPS.md` §1）。
 - **保存即热生效**（用户令）：装配期建 provider 运行时（箱内持注册表）；保存路径 = ① 校验（单源 = `thincoder-server/src/ops/config.mjs` 导出——与配置种子同规）→ ② 建候选注册表（`env:` 解析——缺位 ⇒ 400 不落库）→ ③ 落库 → ④ `runtime.set(候选)`（原子换表）；HTTP 面（`/v1/models` ∥ 派发）读 `runtime.get()`——**零重启**。
 - **在途请求口径**：派发时快照（转发闭包持当时 provider 对象）——换表只影响**后续**请求；删除/改名不断在途流。
 - **密钥回显形**（永不回明文）：空 ⇒ `""`；`env:` 引用 ⇒ 原文（引用非秘密）；明文 ⇒ `…` + 末 4 字符。密钥值**永不入日志**（日志只带 provider 名/id 与动作）。
@@ -101,7 +101,7 @@
 
   控制台弹窗 = 单键提交——部分字段保存恒以全对象提交（同键其余字段不丢）；读面 = GET 行内 `settings` 全图；**存储 = `providers.settings_json`（v4——`docs/server/design/store/STORE.md` §2/§3）**。
 
-  校验单源 = `thincoder-server/src/ops/config.mjs`（`validateProviderEntry`/`validateProviderEntries` 扩 settings——未知子字段 ∥ 非法值 ⇒ 400，库与运行时零变）；**保存即热生效** = 既有四步链（候选注册表携带 settings ⇒ 换表 ⇒ 限流行取新值——KD-SV-35）；**配置种子零 settings 字段**（控制台单一面——`config.json` `providers[]` 段载入缺省 `{}`）。
+  校验单源 = `thincoder-server/src/ops/config.mjs`（`validateProviderEntry`/`validateProviderEntries` 扩 settings——未知子字段 ∥ 非法值 ⇒ 400，库与运行时零变）；**保存即热生效** = 既有四步链（候选注册表携带 settings ⇒ 换表 ⇒ 限流行取新值——KD-SV-35）；**配置种子零 settings 字段**（控制台单一面——`thincoder-server/config.json` `providers[]` 段载入缺省 `{}`）。
 - **预设快速添加（通道 = 预设列表端点）**：`GET /api/admin/providers/presets` ⇒ 表单预填（`name`/`baseURL`——用户补 `apiKey` 并经「模型发现」勾选）⇒ 保存走 **POST 全字段路径**；列表端点只读（写路径零新语义）——**预填不豁免校验**（单源 = `thincoder-server/src/ops/config.mjs` 导出；重名 ∥ 非法 ∥ `env:` 缺位照 400）；预设名不进写路径（写入体无 `preset` 字段——无未知预设错误面）；错误 = 401 ∥ 403（同族判权——零新码）。
 - 装配接线：gateway 注册行装配期引导运行时（种子导入 → 构建）并返回；provider 管理面注册行接收**同一实例**（换表两族同见）。
 
@@ -129,7 +129,7 @@
 | `PATCH /api/admin/config` | 配置写（白名单五键——`autoUpdate` ∥ `trustProxy` ∥ `usageRetentionDays`（正整数 ∥ null） ∥ `proxyUri`（`http:` URL ∥ `""` = 清除该段） ∥ `embedding: { baseURL, model, apiKey }`（**子键级 = 缺省 = 不动 ∥ 明填 = 替换——`apiKey: ""` = 显式空**；**掩码/引用回显形（`…`+末 4 ∥ `env:X`）不作明传值**——`apiKey` 三态 = 未编辑 ⇒ 不携（= 不变） ∥ 编辑 ⇒ 明传 ∥ 清除勾 ⇒ `""`））：出现的键 = 应用（未出现 = 不动；未知键 ∥ 空提交 ⇒ 400）；合并原档**保未知键** ⇒ 门 = `resolveEnvRefs` + `validateConfig`（**载入面等价两跳**——写入的文件必可载入；不过 ⇒ 400 原报文 + 文件零变）⇒ **原子写**（同目录 tmp ⇒ `rename` 覆盖；失败 ⇒ 文件零变 + 500）⇒ 审计 `config_update`（detail = 变更键名清单——值永不入）；⇒ `{ ok: true }`；**缺 `embedding` 段 ⇒ 子键合并自动建段**（控制台从无到有创建——缺段档 PATCH 他键照常过门；部分子键 ⇒ 400）∥ **`embedding: null` ⇒ 400**（清空段 = 不做——禁用 = 编辑配置文件）；生效 = 重启（统一标注——`docs/server/design/ops/OPS.md` §1） |
 | `POST /api/admin/proxy/test` | 上游代理连通测试（控制台系统页「服务配置」卡·连通测试块——**真打**；`docs/server/design/webui/SYSTEM.md` §2.2）：body `{ uri, target }`（**双必传**——trim 非空；`uri` 须 `http:` URL（口径沿 `validateProxyConfig`——`docs/server/design/ops/OPS.md` §1 单源复用）；`target` 须 http(s) URL；缺 ∥ 非法 ⇒ 400 `invalid_request_error`）；服务端经 `proxyFetch(target, { method: "GET", signal }, uri)` 发真实 GET（同传输 ∥ 同 loopback 旁路判定）；成功（收到任一 HTTP 响应——**含非 2xx**）⇒ 200 `{ ok: true, status, ms }`；传输层失败 ⇒ 200 `{ ok: false, error: { kind, message }, ms }`——`kind` ∈ `timeout` ∥ `unreachable`（message 携底层诊断）；**不走统一错误信封**（诊断自含状态——沿 `/healthz`/向量探活先例）；超时 10s（`PROXY_TEST_TIMEOUT_MS`——注册参数可覆盖）；**不落库不计量**（不经 usage/配额/审计路径——失败仅 `log.warn`）；判权 = `requireAdmin`（user ⇒ 403 ∥ 无/过期会话 ⇒ 401） |
 
-- **装配接线**：gateway 注册行一条（同 provider 管理面——`bin/thincoder-server.mjs` 一行注册）。
+- **装配接线**：gateway 注册行一条（同 provider 管理面——`thincoder-server/bin/thincoder-server.mjs` 一行注册）。
 
 ### 2.5 沙盒控制台面（admin；机制全文 = `docs/server/design/sandbox/SANDBOX.md` §3/§8）
 
@@ -300,7 +300,7 @@
 | `GET /api/me/chat/files?workspaceId=&q=` | 本人 | `@` 候选（工作区 cwd 遍历（忽略 `node_modules`/`.git`），≤50 行）⇒ `{ files: [{ name, path }] }`；盒离线 ⇒ 409；工作区 ∉ 本人 ⇒ 404 不辨 |
 | `PATCH /api/me/chat/sessions/:id` | 本人 | 会话设置面（一次一件）⇒ `session.update` 指令（**盒离线 ⇒ 409**）：`{ model }`（∈ 开放清单——否则 400；换模型 ⇒ 档位清 `null`）∥ `{ reasoning }`（值 ∈ 该模型核枚举——表外 400；`null` = 清）∥ `{ autoApprove } ∥ { planMode } ∥ { engineering } ∥ { advisorGuard }`（布尔——四模式旗；槽四字段，回合装配生效；ENG⇒PLAN 互斥随核）∥ `{ title }`（串——重命名；核 `renameSlot`——`{ok:false}` ⇒ 400 人话）；双携 ⇒ 400；下回合生效；⇒ 200 `{ session }`（行形 = 列表行同源） |
 | `GET /api/me/git-credentials` | 本人 | 清单：`{ credentials: [{ host, username, updatedAt }] }`（**零秘密**——密文永不回显） |
-| `PUT /api/me/git-credentials` | 本人 | 绑定/更新 `{ host, username, secret }`（host 归一（小写）；加密存储——`credential-crypto.mjs`；成事 ⇒ 审计 `member_event`/`credential_set`）⇒ 200 `{ credential }`（零秘密）；形非法 ⇒ 400 |
+| `PUT /api/me/git-credentials` | 本人 | 绑定/更新 `{ host, username, secret }`（host 归一（小写）；加密存储——`thincoder-server/src/store/credential-crypto.mjs`；成事 ⇒ 审计 `member_event`/`credential_set`）⇒ 200 `{ credential }`（零秘密）；形非法 ⇒ 400 |
 | `DELETE /api/me/git-credentials/:host` | 本人 | 撤销（无该行 ⇒ 404）⇒ 200 `{ ok: true }`；成事 ⇒ 审计 `member_event`/`credential_revoke` |
 | `POST /api/me/sandbox/workspaces` | 本人 | 建工作区 `{ name? }`（缺省名「工作区 N」）——**上限校验**（归属成员现存行数 ≥ `memberWorkspaceLimit` ⇒ 400 `workspace_limit_reached`，message 含上限数）⇒ 200 `{ workspace }`（绑定节点 ∥ 签发每工作区 key ∥ 建盒——沿 §2.5 建面） |
 | `POST /api/me/sandbox/workspaces/:id/:action` | 本人 | `start` ∥ `stop` ∥ `destroy`（`confirm` 缺 ⇒ 400——沿 §2.5）；404 |
@@ -318,7 +318,7 @@
 
 （端点族 = `/api/box/*`；鉴权 = **每工作区 key**（`Authorization: Bearer`——与 `/v1` 同校验单源 `verifyKey`；键 → `sandbox_workspaces.key_id` 行 → 工作区 + 负责人；吊销 ⇒ 401 即断）；**连接发起方恒为盒**（server 零拨盒路径——AC-50③ 判据）。
 
-流形 = 下行 SSE（`text/event-stream`——chunked）+ 上行 NDJSON（流式请求体）；**`turns` 体读 = 流式（逐行 NDJSON 边收边消费——路由级例外；`server.mjs` 随正 ⇒ §4）**；错误形 = §3 全码沿用——**零新码**。）
+流形 = 下行 SSE（`text/event-stream`——chunked）+ 上行 NDJSON（流式请求体）；**`turns` 体读 = 流式（逐行 NDJSON 边收边消费——路由级例外；`thincoder-server/src/gateway/server.mjs` 随正 ⇒ §4）**；错误形 = §3 全码沿用——**零新码**。）
 
 | 方法 + 路径 | 语义 |
 |---|---|
@@ -373,7 +373,7 @@
 | `thincoder-server/src/gateway/sse-tap.mjs`（已落盘） | **90** | `data:` 行增量扫描 ∥ usage 提取 ∥ 有界缓冲 |
 | `thincoder-server/src/gateway/providers.mjs`（已落盘） | **253** | provider 注册 ∥ 模型派发 ∥ 派发失败形 ∥ 运行时（§2.2） |
 | `thincoder-server/src/gateway/provider-admin.mjs`（已落盘） | **365** | provider 管理面（控制台——仅 admin） |
-| `thincoder-server/src/gateway/reasoning-levels.mjs`（已落） | **87** | 档位值域单源桥（核 `model-specs.mjs`——服务端零第二清单；消费 = `provider-admin` GET ∥ `chat-routes` PATCH 校验 ∥ `chat.mjs` 装配过滤） |
+| `thincoder-server/src/gateway/reasoning-levels.mjs`（已落） | **87** | 档位值域单源桥（核 `thincoder-core/model-specs.mjs`——服务端零第二清单；消费 = `provider-admin` GET ∥ `chat-routes` PATCH 校验 ∥ `thincoder-server/src/agent/chat.mjs` 装配过滤） |
 | `thincoder-server/src/gateway/ratelimit.mjs`（已落盘） | **64**（进程内 60s 定窗计数（`check` ∥ `record`） ∥ `Retry-After` 计算 ∥ 纯函数可直测；§6 KD-SV-35） | 模型限流（per-model RPM/TPM） |
 | `thincoder-server/src/gateway/system.mjs`（已落盘） | **61** | 系统面（healthz ∥ system） |
 | `thincoder-server/src/gateway/embedding-admin.mjs`（已落盘） | **112** | 向量服务面（控制台——仅 admin） |
@@ -497,7 +497,7 @@
 - 模型元数据面不做：元数据同步/校验/仲裁机制（用户裁）∥ 上游状态自动停用/自动勾选 ∥ 保留集外字段（推理档位/视频/输出上限等——无用途不堆砌）∥ 对外 `/v1/models` 元数据带出（须论证 + 点名方可议） ∥ 元数据参与转发/计费（纯展示）。
 - 健康/系统面不做：metrics/Prometheus ∥ 深度依赖探活（仅 db 一探） ∥ `unhealthy` 自动处置（外部工具面） ∥ `/api/system` 写面（只读）。
 - 控制台数据面不做：引擎试跑历史/存档（一次性读数） ∥ 总览图表（总览 = 数值卡——趋势归用量页） ∥ 引擎地址下发非 admin 面（用户面 = 模型名 + snippet——`docs/server/design/webui/READINGS.md` §2.1①）。
-- 代理测试不做（KD-SV-60——`docs/server/design/webui/WEBUI.md` §7）：测试历史/存档 ∥ 测试经记账/配额/审计路径（零落库零计费） ∥ 代理池/多代理 ∥ 代理认证（沿本档 §8 上游代理面） ∥ 目标协议白名单/探针准入（http(s) 即收）；传输语义（KD-SV-55）零变——`proxy.mjs` 零触。
+- 代理测试不做（KD-SV-60——`docs/server/design/webui/WEBUI.md` §7）：测试历史/存档 ∥ 测试经记账/配额/审计路径（零落库零计费） ∥ 代理池/多代理 ∥ 代理认证（沿本档 §8 上游代理面） ∥ 目标协议白名单/探针准入（http(s) 即收）；传输语义（KD-SV-55）零变——`thincoder-server/src/gateway/proxy.mjs` 零触。
 - 成员模型禁用面不做：新错误码（404 复用——消息明示） ∥ 定时/条件禁用 ∥ 嵌入面禁用（零涉） ∥ 禁用变更审计（零增——`docs/server/design/accounts/ACCOUNTS.md` §2.2）；禁用状态的成员可见面（只出清单与拒形）。
 - 上游代理面不做：全局代理闸 ∥ 环境变量回落（`HTTPS_PROXY` 一族——显式配置面）∥ `insecureTls` opt-in 通道 ∥ 代理认证（`Proxy-Authorization`）∥ 代理连接复用/连接池（每请求独立连接）∥ 按目标分层代理（单一 uri）∥ 嵌入面代理（零涉）。
 - 别名面不做（KD-SV-59）：别名历史/迁移（改别名 = 当即生效）∥ 别名级独立限流/配额配置（键随对外标识自然随动）∥ 一名多模型/一组多名 ∥ 嵌入面别名（用户裁「嵌入面不相干」）∥ 成员键的存在性/别名交叉校验（键形校验 = 形状面单源——`docs/server/design/accounts/ACCOUNTS.md` §2.2）。

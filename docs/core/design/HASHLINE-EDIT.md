@@ -53,7 +53,7 @@ hashline_edit = **按内容哈希寻址编辑**（非字符串匹配）——**�
 | U+FFFD 常量 | `thincoder-core/tools/shared.mjs`（`FFFD_WARNING`） | 导出在位（逐字与 `EDIT-HELPERS.md` §5 同） |
 | 描述面（模型可见） | `thincoder-core/tool-docs/hashline_edit.md` | 在位（`DESC()` 加载） |
 
-**VSC 端差异**：VSC 端 `hashline-edit.mjs` 另含——① **BOM 处理**（磁盘写回带 BOM、编辑器分支不带——防双 BOM；hash 域 = stripBom + normalizeEOL 与 CLI 同）② **编辑器路径分支**（doc 已打开 → range 编辑，偏移经 `lfOffsetToRaw`——`docs/core/design/EDIT-HELPERS.md` §6）。
+**VSC 端差异**：VSC 端经核包导入同一 `hashlineEditTool`，不另持档——① **BOM 处理**（磁盘写回带 BOM、编辑器分支不带——防双 BOM；hash 域 = stripBom + normalizeEOL 与 CLI 同）② **编辑器路径分支**（doc 已打开 → range 编辑，偏移经 `lfOffsetToRaw`——`docs/core/design/EDIT-HELPERS.md` §6）。
 
 ### 6.2 与 edit 的差异化定位（现行口径）
 

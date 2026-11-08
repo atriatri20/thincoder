@@ -14,7 +14,7 @@
 
 | # | 约束 | 核验落点 |
 |---|---|---|
-| 1 | **纯 ESM `.mjs`**——无 TypeScript、无转译；仓根引导为 `.cjs`（`bin/thincoder.cjs`） | `package.json` 双端 `"type": "module"` |
+| 1 | **纯 ESM `.mjs`**——无 TypeScript、无转译；仓根引导为 `.cjs`（`bin/thincoder.cjs`） | `thincoder-cli/package.json` ∥ `thincoder-core/package.json` 的 `"type": "module"` |
 | 2 | **无构建步骤**——无 bundler、无打包产物；直接跑源码 | 双端 `scripts` 无 build 项 |
 | 3 | **Node 版本下限**：CLI 产品 `>=22.13.0` · 核包 `>=22.13.0`——**两者同线，由最低宿主驱动**：VSC 扩展宿主（`engines.vscode` 面 · Node 22.13）为最低宿主；`node:sqlite` 免 `--experimental-sqlite` 起于 Node 22.13 ⇒ **核 ∥ CLI 均禁用高于 22.13 的专属 API**（如 `Error.isError` ∥ `URLPattern`）；桌面端宿主下限另计（Electron 内置 Node——`docs/desktop/design/PROJECT.md` §2 KD-7） | `thincoder-cli/package.json`（`engines.node`）· `thincoder-core/package.json`（`engines.node`）· `thincoder-cli/bin/node-version-gate.cjs`（`nodeVersionError`） |
 | 4 | **零第三方运行期依赖**——唯一运行期依赖 = 仓内核包 `@thincoder/core`（本地链接，非 registry 第三方） | `thincoder-cli/package.json` 的 `dependencies` 段 · `thincoder-cli/node_modules/@thincoder` |
@@ -98,8 +98,8 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | 入口 | `thincoder-vscode/extension.mjs` | activate / 命令注册 / 状态栏 / WebviewViewProvider | —（装配入口——命令 id 视作冻结，见 `docs/core/design/CORE-UNIFICATION.md` §2.8 命令面） |
 | 装配 | `thincoder-vscode/src/extension/chat-panel.mjs` | ChatPanel 类——面板生命周期 · 消息路由 · 会话管理 | `docs/vsc/design/WEBVIEW.md`（消息流 / 协议） |
 | 装配 | `thincoder-vscode/src/extension/panel-*.mjs` | 消息路由 / 回合驱动 / 会话 / 项目 / 索引 / MCP / toolPanel 载荷分模块 | `docs/vsc/design/WEBVIEW.md` · `docs/vsc/design/WEBVIEW-PROTOCOL.md` |
-| 装配 | `thincoder-vscode/src/extension/suspension.mjs` · `permission-gate.mjs` | 挂起回合驱动（digest / 排队合并 / 唤醒）· 权限弹窗门 + 批审批门 | ——（VSC 面无独立档；现体读 `thincoder-vscode/src/extension/suspension.mjs` ∥ `permission-gate.mjs`） |
-| 装配 | `thincoder-vscode/src/extension/{settings,presets,provider-flows}.mjs` | config.json 面板读写 · preset · provider 增删流 | `docs/vsc/design/SETTINGS.md` |
+| 装配 | `thincoder-vscode/src/extension/suspension.mjs` · `thincoder-vscode/src/extension/permission-gate.mjs` | 挂起回合驱动（digest / 排队合并 / 唤醒）· 权限弹窗门 + 批审批门 | ——（VSC 面无独立档；现体读 `thincoder-vscode/src/extension/suspension.mjs` ∥ `thincoder-vscode/src/extension/permission-gate.mjs`） |
+| 装配 | `thincoder-vscode/src/extension/{settings,presets,provider-flows}.mjs` | 用户数据目录配置文件的面板读写 · preset · provider 增删流 | `docs/vsc/design/SETTINGS.md` |
 | 核心 | `thincoder-vscode/src/agent.mjs` · `src/agent/**` · `src/agent-tools/**` | runAgent 主循环 + 工具分发 + 注入 + 收尾 · 元工具族（subagent / advisor / eng 等） | ——（VSC 面无独立档；现体读 `thincoder-vscode/src/agent/` ∥ `src/agent-tools/`） |
 | 工具 | `thincoder-vscode/src/tools/**` | 内置工具实现（file / search / git / web / lsp / execute / …） | `docs/core/design/CHECKPOINT.md`（快照子系统） |
 | LLM | `thincoder-core/provider/**`（VSC 侧经 `@thincoder/core` 引用） | 三 transport · 重试 · 限频门 | `docs/core/design/PROVIDER.md` |
@@ -131,7 +131,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | tui | `startTUI` | 裸 ANSI 终端界面 | `docs/cli/design/TUI.md` |
 | acp | ACP 协议桥 | IDE 缓冲 / 工具调用桥接 | `docs/cli/design/ACP-CLIENT.md` |
 | crash-reports | 崩溃捕获与取证 | fatal 报告 / 记录 / stderr 捕获 / 近堆快照 | `docs/cli/design/CRASH-REPORTS.md` |
-| bin/thincoder.mjs | CLI 命令表 | 命令分发入口 | ——（`thincoder-cli/bin/thincoder.mjs`） |
+| `thincoder-cli/bin/thincoder.mjs` | CLI 命令表 | 命令分发入口 | ——（`thincoder-cli/bin/thincoder.mjs`） |
 | desktop 壳 | 宿主适配 + IPC 通道族 | 桌面端第四壳（Electron 宿主——主进程持核 · 渲染面零 Node；宿主面与通道面分档） | `docs/desktop/design/SHELL.md` · `docs/desktop/design/IPC.md` |
 | render-core | DOM 构件族 + 纯函数族 | 扩展端 / 桌面端**共用宿主无关渲染核**（会话流呈现）；**不入发布序列**——`private: true` 永不发布、两端内嵌带发、零 registry 端消费者 | `docs/render-core/design/RENDER-CORE.md` |
 
@@ -154,7 +154,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | 文件打开 | TUI 内显示 | VS Code 编辑器标签页（WorkspaceEdit undo + 立即保存） |
 | 权限审批 | TUI 内交互式（y/n/a） | webview 弹窗 + 批确认；autoApprove 会话级槽位字段两端语义一致 |
 | 记忆系统 | 3-layer FTS5 + vector | 核单源（现体 = 核 `thincoder-core/memory/**`）；统一方向见 `docs/core/requirements/MEMORY.md` §2.1（A12/A13） |
-| MCP | 支持 | 支持（stdio + HTTP——同一 config.json） |
+| MCP | 支持 | 支持（stdio + HTTP——同一份用户数据目录配置文件） |
 | lsp 工具 | 自起 LSP server（config lsp.servers） | VS Code 原生语言服务（零配置零进程） |
 | 子代理 / 后台 | 池挂 agent 对象（跨 run） | 池挂共享 depth-0 history 数组（agent per-run） |
 | 命令队列 | TUI `/cmd` 命令队列 | 无——webview 命令走 msg.type 按钮通道 |
@@ -176,7 +176,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | 前端形态 | TUI 自绘 | Webview 前端（iframe 内） | 渲染面原生 ESM + 手写 DOM（零框架零构建） |
 | 渲染面 Node 能力 | 不适用（同进程） | 无（postMessage 桥） | 无（沙箱预载 + contextBridge 桥） |
 | 会话存储 | 共享目录 + 端 marker `.cli` | 共享目录 + 端 marker `.vscode` | 共享目录 + 端 marker `.desktop` |
-| 配置存储 | 共享 `config.json` | 同一文件 | 同一文件 |
+| 配置存储 | 共享的用户数据目录配置文件 | 同一文件 | 同一文件 |
 | 权限审批 | TUI 交互（y/n/a） | 弹窗 + 批确认 | 流内卡片 + 活动池计数 + 标签位（同一待决项三种视图） |
 | 活动渲染 | TUI 面板 | 活动面板 + 冻结入流 | 会话内右栏活动池（随会话入标签页，可折叠） |
 | 壳装配 | `assembleAgent` | `buildTopLevelAgent` | 装配序核单源（`thincoder-core/agent/assemble.mjs`）+ 端壳 adapter（余端差在册） |

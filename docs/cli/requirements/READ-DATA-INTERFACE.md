@@ -15,8 +15,8 @@
 | # | 需求（说明 + 判定句） | 范围边界（不做） |
 |---|---|---|
 | **FR1** | **CLI 命令面**：`thincoder ledger list --json`——台账行原样输出（id ∥ kind ∥ status ∥ title ∥ board ∥ req_doc ∥ task_book ∥ trigger ∥ executor ∥ created_at ∥ updated_at ∥ closed_at）+ **`schemaVersion` 结构版本号**；**`evidence` 默认不输出、`--full` 才给**（实测单条 500–2000 字符）。判定句：① `--json` 输出可被 `JSON.parse` 且含 `schemaVersion`；② 默认输出零 `evidence` 键 ∥ `--full` 含；③ 行集与核 `ledgerQuery` 同源同数 | 不做写面命令 ∥ 不改 `ledger migrate` / `audit` 现有语义 ∥ 不做无版本库的结构推断 |
-| **FR2** | **三口径**：① **多项目范围** = 当前项目（默认）∥ `--cwd <路径>` ∥ **同族**（`--family`——口径与 `docs/core/design/LEDGER.md` §7 族定义**成套**）；② **无台账 ⇒ 返回空集**（exit 0，非报错）；③ **全程只读**——读路径不得建库 / 不得迁移 / 不得任何写副作用。判定句：① 三范围各可核（当前 ∥ 指定 cwd ∥ 同族合计）；② 空库 exit 0 + 空集；③ 读路径零 DDL（对旧库读一次后库文件结构零变） | 不做跨机器 ∥ 不做远程 ∥ 族定义不另立（单源 = LEDGER.md §7） |
-| **FR3** | **ACP 协议面**：只读方法 `ledger/list` ∥ `ledger/count` ∥ `batch/list` + **「数据已变更」通知**（挂现有 notify 通道）。`batch/list` 同时给批次级（§1 进行中 / 已收口）与各段状态（§2 设计完成 ∥ §3 评审完成 ∥ §5 实施完成——词面 = `batch-skeleton.mjs` 词表单源；§4 / §6 无状态词，如实给「无状态词」）。判定句：① 三方法可调、回包只读数据；② 通知在数据变更后可达；③ `batch/list` 状态与文件面一致（解析器单源复用） | 不做写方法 ∥ 不改协议版本（沿先例——加方法不动版本；是否进 initialize 能力面 = 设计轮定） ∥ 不造 §4 / §6 状态词 |
+| **FR2** | **三口径**：① **多项目范围** = 当前项目（默认）∥ `--cwd <路径>` ∥ **同族**（`--family`——口径与 `docs/core/design/LEDGER.md` §7 族定义**成套**）；② **无台账 ⇒ 返回空集**（exit 0，非报错）；③ **全程只读**——读路径不得建库 / 不得迁移 / 不得任何写副作用。判定句：① 三范围各可核（当前 ∥ 指定 cwd ∥ 同族合计）；② 空库 exit 0 + 空集；③ 读路径零 DDL（对旧库读一次后库文件结构零变） | 不做跨机器 ∥ 不做远程 ∥ 族定义不另立（单源 = `docs/core/design/LEDGER.md` §7） |
+| **FR3** | **ACP 协议面**：只读方法 `ledger/list` ∥ `ledger/count` ∥ `batch/list` + **「数据已变更」通知**（挂现有 notify 通道）。`batch/list` 同时给批次级（§1 进行中 / 已收口）与各段状态（§2 设计完成 ∥ §3 评审完成 ∥ §5 实施完成——词面 = `thincoder-core/agent-tools/batch-skeleton.mjs` 词表单源；§4 / §6 无状态词，如实给「无状态词」）。判定句：① 三方法可调、回包只读数据；② 通知在数据变更后可达；③ `batch/list` 状态与文件面一致（解析器单源复用） | 不做写方法 ∥ 不改协议版本（沿先例——加方法不动版本；是否进 initialize 能力面 = 设计轮定） ∥ 不造 §4 / §6 状态词 |
 
 ## 3. 非功能性需求
 

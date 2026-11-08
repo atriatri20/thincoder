@@ -9,7 +9,7 @@
 ## 1. 总体定位
 
 记忆系统 = 三层记忆（`personal` / `project` / `team`）的存取 **+** 代码 / 文档索引 **+** 嵌入面。
-CLI 侧住 `thincoder-cli/src/memory/**`（8 档）与 `memory.mjs` 转口；VSC 侧住 `thincoder-core/memory.mjs` + `memory-tool.mjs`。
+CLI 侧住 `thincoder-cli/src/memory/**`（8 档）与 `thincoder-core/memory.mjs` 转口；VSC 侧住 `thincoder-core/memory.mjs` + `thincoder-vscode/src/memory-tool.mjs`。
 本板块对本子系统的要求 = 该面归一为**核内单一实现**，方向 = **CLI 语义**（承用户裁定 A12 / A13）。
 
 > 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/MEMORY.md` §1–§2（不复制）。
@@ -110,7 +110,7 @@ CLI 侧住 `thincoder-cli/src/memory/**`（8 档）与 `memory.mjs` 转口；VSC
 | F13 | 无字面量 `~` 目录 | 配置含 `~` 路径时，任何启动 / 命令路径都不得创建名为 `~` 的目录或文件（机验） | 不迁移历史受害数据 |
 | F14 | README 与示例对齐 | README 配置块反映 `~` 展开语义（示例本身合法可用，注释说明展开规则） | 不改 README 其它章节 |
 
-**非功能**：N7 零回归（不含 `~` 的既有形态行为逐字不变）· N8 零依赖 · 可测（展开器纯函数、home 可注入）· N9 磁盘原文（config.json 字节不被重写）。
+**非功能**：N7 零回归（不含 `~` 的既有形态行为逐字不变）· N8 零依赖 · 可测（展开器纯函数、home 可注入）· N9 磁盘原文（配置文件字节不被重写）。
 
 **判定句**：F10 四字段夹具 → 返回值全部为展开后绝对路径（`startsWith("~")` 零命中）；展开逻辑恰一处。F11 各形态按表映射；`~user` / 串中 `~` / 非字符串原样。F12 绝对 projectDir 各消费点均为该绝对路径；相对与 `join(cwd, p)` 逐字等值。F13 伪 HOME 端到端 —— DB 落伪 HOME 下 ∧ `<cwd>/~` 不存在。F14 README 含展开说明句 ∧ 三字段注释更新。
 
@@ -168,8 +168,8 @@ N-M3 零依赖 / 可移植（无迭代器则**键序分页**——游标键随�
 
 **二态化裁定行**：存储 / 索引形态两行 = **已消解**（W8 归一核面——零动作，承上归一注）；层数行 = **已裁保留**（结构性不对称——team 管理面单侧存在：端面 `layer:"team"` 明确拒绝并指路）；配置面行 = **形态（非登记项）**；命名面行 = **同源**（内部词保留——非端差）。
 
-> VSC 端证据坐标：`thincoder-vscode/src/memory.mjs` 的三处（`memoryDir` · `scopeDir` · legacy 根 + `_scope` 标注）· `thincoder-vscode/src/memory-tool.mjs` 的两处（action 级只读 · 向量通道）
-> · `thincoder-vscode/src/indexer.mjs` 的两处（`model-changed`——核面现体 `thincoder-core/memory/code-sync.mjs` · `needsRebuild` 七词表）· `thincoder-vscode/src/extension/panel-index.mjs`（未列入提示行）。
+> VSC 端证据坐标（归一前）：VSC 侧记忆实现档的三处（`memoryDir` · `scopeDir` · legacy 根 + `_scope` 标注）· `thincoder-vscode/src/memory-tool.mjs` 的两处（action 级只读 · 向量通道）
+> · VSC 侧索引件的两处（`model-changed`——核面现体 `thincoder-core/memory/code-sync.mjs` · `needsRebuild` 七词表）· `thincoder-vscode/src/extension/panel-index.mjs`（未列入提示行）。
 
 ### 4.8 嵌入输入编码安全
 
@@ -287,8 +287,8 @@ ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `
 **总体需求**：作为**长期使用同一工作区（含多仓嵌套 / 参考系树）的开发者**，我想要**批次档目录（`docs/batches`）无条件不进文档索引**——不管声明档里配没配 `index.excludePaths`，以便**每回合注入的「相关文档」与 `doc_search` 只端真知识，不把流程记录当知识端上来**。
 
 - **来源** = 用户「我希望提示词体系在注入 doc_search 结果的时候能把批次档排除掉，不知道能做到吗？好做吗？」+ 裁定「我希望不管 manifest 里配置没配置排除路径，都把批次档目录排除掉。」
-- **父侧实核**：索引排除谓词与三起效点已在（`declaration.mjs` `isExcludedRelPath` → `memory/file-list.mjs` 双径 ∥ 收尾保护 `sync-tail.mjs`）——缺口 = 该面**未被默认引用**；
-- **默认键与先例**：`docRoot.batches` 默认 `docs/batches` 为一等声明键（`manifest-schema.mjs`）；机检面先例 = `checkConfig.anchors.exclude` 默认已含 `batches`。
+- **父侧实核**：索引排除谓词与三起效点已在（`thincoder-core/declaration.mjs` `isExcludedRelPath` → `thincoder-core/memory/file-list.mjs` 双径 ∥ 收尾保护 `thincoder-core/memory/sync-tail.mjs`）——缺口 = 该面**未被默认引用**；
+- **默认键与先例**：`docRoot.batches` 默认 `docs/batches` 为一等声明键（`thincoder-core/manifest-schema.mjs`）；机检面先例 = `checkConfig.anchors.exclude` 默认已含 `batches`。
 
 | # | 需求（能力逐条可交付） | 范围边界（明确不做什么） |
 |---|---|---|
@@ -296,7 +296,7 @@ ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `
 
 **非功能**：N-S11 **零回归可机判**（批次档外**且未命中 `index.excludePaths`** 的路径：同步索引 ∥ 检索结果 ∥ 行数逐字不变；**命中 `index.excludePaths` 的存量行 = 读面同判不可见**（读面 = 同一排除谓词全族——面①∪面⑥；sync 保护位与 `sweep` 删除面无改）；批次档历史行不删不损——只自可见面退场；两消费口同源生效——注入块 ∥ `doc_search` 同判）。
 
-**判定句**：F-S15 —— 夹具（任意 manifest 含 `excludePaths: []`）× 批次档树 ⇒ 同步后 `doc_search` 与回合注入块对 `docs/batches/**`（含嵌套形 `repo/docs/batches/x.md`）**零命中** ∧ 非批次档且未命中 `index.excludePaths` 的路径结果逐字不变；**含 `index.excludePaths` 命中存量行的夹具 ⇒ 该行读面零命中**（同一谓词全族）；对先行索引过的历史行 ⇒ 改后**查询面即零命中**（行在不在库 = 设计定，不在判据面）。
+**判定句**：F-S15 —— 夹具（任意 manifest 含 `excludePaths: []`）× 批次档树 ⇒ 同步后 `doc_search` 与回合注入块对 `docs/batches/**`（含嵌套形——多仓布局下 `docs/batches` 段序列出现在更深层）**零命中** ∧ 非批次档且未命中 `index.excludePaths` 的路径结果逐字不变；**含 `index.excludePaths` 命中存量行的夹具 ⇒ 该行读面零命中**（同一谓词全族）；对先行索引过的历史行 ⇒ 改后**查询面即零命中**（行在不在库 = 设计定，不在判据面）。
 
 **设计侧 = `docs/core/design/MEMORY.md` §6.14 段族**——本档不复制。
 
