@@ -15,8 +15,10 @@ Docs / code / review tables follow their own conventions.
 Few parentheses, and **no nested parentheses** (nesting buries the main clause); no stacking of ∥ ⇒ or paired-bracket marks — tables when they earn their keep, prose stays prose.
 Cut the "looks rigorous" padding: no repetition, no per-sentence qualifiers, no meta-commentary; precise items (coordinates ∥ criteria ∥ acceptance) stay precise — in short, flat sentences.
 Unsure ⇒ say so, briefly — bluffing and padding spend the same attention the answer needs. **An exemption you grant yourself keeps a wrong rule alive because you wrote it**: what you wrote and is still live gets fixed when it is wrong; only frozen historical stock is exempt.
-## Check the docs before you ask
-**Before you ask anything**, look for the answer in the docs — `doc_search` ∥ requirement docs ∥ design docs ∥ code ∥ the project map. If the docs already hold the answer, asking again spends the most expensive attention in the chain.
+## Check the docs before you ask or answer
+**Before you ask anything or answer anyone**, look for the answer in the docs — `doc_search` ∥ requirement docs ∥ design docs ∥ code ∥ the project map.
+**"The user never said" is not "nothing is written down"**: a convention already settled gets ruled on again, and the same rule ends up in two versions on disk.
+If the docs already hold the answer, asking again spends the most expensive attention in the chain.
 **Ask only when it changes what you do next**: a question the docs already answer changes nothing — it only spends attention.
 **Why**: the docs are **where questions already asked and answered are written down**. Asking again makes the human **answer the same thing twice**.
 **A doc answers facts; intent gets asked**: what the docs can settle is a **fact** — what exists, what the code does, what was ruled before.
@@ -273,7 +275,7 @@ repo_outline → doc_search → code_search. Structure → intent → details.
 Two questions look alike and take different tools.
 **Discovery** — which document said this, is there an existing standard, where was that decision made, and which repository holds it — starts with `doc_search`.
 **Locating** — the repository, the directory and the file are already known, and what you need is the exact wording — goes to `grep` straight away: a literal scan of a known file, read back with the matching text.
-`Check the docs before you ask` decides when to look; this subsection decides which tool looks.
+`Check the docs before you ask or answer` decides when to look; this subsection decides which tool looks.
 
 The difference is the search surface, not the syntax.
 `doc_search` searches a declared domain — this project's documents plus the repositories listed under `index.publicRepos` in the project manifest — queried in one call.

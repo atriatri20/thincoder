@@ -169,6 +169,9 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
 ## Dispatch & close discipline (parent-side rounds)
 ### Dispatch, agent reports, and the zero-write watchdog
 - **Dispatch truthfully**: stating "dispatched / running / submitted" ⇒ **must fire the call in the same round**; queue status **only copied from tool receipts** — a status stated from memory or inference cannot be checked, and the parent will act on it.
+- **An upstream ask is answered from the docs, not from the surface of the question**: a child escalates a rule conflict, a contradicted premise, or a place it could not find.
+- **Nine times out of ten the answer is already written** in a requirement or design doc, and the ask carries the coordinates to read it.
+- **Why**: "the user never said" is not "nothing written down" — a settled convention re-ruled from memory leaves the same rule in two versions on disk.
 - **Subagent ids carry their accounts in reports**: report subagent statuses as a table with a dedicated ledger column — form: `eng-coder #12 | #1104 · gate-jurisdiction | gate implementation | running`; a bare serial number ⇒ violation (the user traces the number straight to its account and batch).
 - **Digest acks come first, verbatim**: when a report delivery arrives (the reminder names `[digest-ack #N]`), the reply's first line is that exact ack line — `[digest-ack #N] digested — …` or `… deferred — …`.
   - **Why**: the line is a fixed format between you and the parent, and a paraphrase no longer proves which digest was received.
@@ -377,14 +380,13 @@ When one step must come before another or the later one fails, the order and its
 
 ## Ledger (requirement pool / tech todos) — batching & lifecycle
 The single-point pipeline's fixed cost is ~40 minutes — borne alone by one requirement point; batching spreads the fixed cost over many. Batching changes only the "firing timing", not "how each point is done".
-1. **Pool routing** — ordinary requirement points register into the owning board's requirement doc + the project ledger (requirement-pool group — read/write via the `/ledger` query surface); design does not start until the user says start this batch (or marks it urgent — fast lane).
+1. **Pool routing** — ordinary requirement points register into the owning board's requirement doc + the project ledger (requirement-pool group — read/write via the `/ledger` query surface); design does not start until the user says start this batch.
 2. **Threshold reminder** — same board ≥2 points or pool-wide ≥3: remind once that batch design can start — the user still fires the review and approval.
-3. **Fast lane** — the user saying urgent / do it now skips pooling: single point walks the full flow (design → review → implementation — a cut step skips a check nobody re-runs). (Urgent points still register, marked urgent.)
-4. **Batch design**: before batch ignition (before design starts), scan the ledger for related entries (same board / pool surface).
+3. **Batch design**: before batch ignition (before design starts), scan the ledger for related entries (same board / pool surface).
    **Merge what can be merged**: same migration window ∥ same review face ∥ same implementation face.
    **For those not merged, write the reason** (condition not met ∥ different face ∥ high risk) into batch record §1.
    **Landing multiple requirement points at once** → one review → user approval → batch implementation.
-5. **Boundary**: the pool takes only **user requirement points** — tech todos still go to the project tech-todo area — the two pools answer different questions and mixing them leaves neither readable; urgent bugs go through the fast lane.
+4. **Boundary**: the pool takes only **user requirement points** — tech todos still go to the project tech-todo area — the two pools answer different questions and mixing them leaves neither readable.
 
 **The write gate — every write call names the row it serves and the project it lands in.**
 - **Why the row**: the number is the attribution — it says which debt this write pays; a command's content cannot be parsed afterwards, so the number is the way back to why it ran.
