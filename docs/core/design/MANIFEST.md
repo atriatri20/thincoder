@@ -148,7 +148,11 @@
 - `index`（嵌套对象）：`codeExtensions` / `docExtensions`（各自缺省 `[]`）；对内置扩展名表**追加**（并集，只增不减）；`excludePaths`（缺省 `[]`）= 项目根相对路径**前缀**数组（首部 `./` 剥离 · `/` 归一 · 去尾斜杠 · 去重保序；前缀命中 = 恰等 ∨ 后随 `/`——索引用途 = `MEMORY.md` §6.14 面①）；
   `publicRepos`（缺省 `[]`）= **公共仓路径数组**（**从本仓根可解析**——相对 ∥ 绝对同收，同级 `../` 合法；归一 = 首部 `./` 剥离 · `/` 归一 · 去尾斜杠 · 去重保序；元素层宽容 ∕ 数组层 fail-closed）。
 
-  **用途 = 公共仓索引接入 ∥ 跨仓引用解析**（值形 ∥ 解析单一定义 = `declaredPublicRoots`；机制 = `MEMORY.md` §6.15 · 引用解析序 = `docs/core/design/DOC-DISCIPLINE.md` §4.2.2 · 记录面例外 = `docs/core/design/LEDGER-SELF-CONTAINED.md` §4.1）。
+  **用途 = 公共仓索引接入 ∥ 声明仓引用 ∥ 出边图**（值形 ∥ 解析单一定义 = `declaredPublicRoots`；机制 = `docs/core/design/MEMORY.md` §6.15 · 引用解析序 = `docs/core/design/DOC-DISCIPLINE.md` §4.2.2 · 记录面例外 = `docs/core/design/LEDGER-SELF-CONTAINED.md` §4.1）。这张表就是本仓的**出边**：列了谁就能读、检索、引用谁。
+
+  **未列即拒**：指向未声明仓的文档指针判 `档缺`、交付门判 `REFUSED`——不只是检索不到。已声明而声明根不在本机 ⇒ 列报 `未核`、不入闸（存在性跨机器不成立）。
+
+  **不加角色位**：本键不带 base ∥ app 一类的角色语义——应用与基础的边界并不清晰，一个应用可以是另一个应用的基础；方向只由「列了谁」给出。
 - 形态判据（`validateManifest`，**非法即 `errors`——与 `docRoot` 子键同款**）两层分列：
   · **元素层**：`codePaths` / `index.{codeExtensions,docExtensions}` 各元素须为非空字符串（`trim` 后非空）；`index.excludePaths` / `index.publicRepos` 元素层宽容（空 ∕ 非串元素由归一剔除——数组层仍 fail-closed）。
   · **数组层**：`codePaths` / `index.*` 数组**自身可空**（`[]` 合法）——空数组语义逐键：`codePaths:[]` = 无段名代码面（合法）；`index.*:[]` = 追加零项 ∕ 排除零项（合法，即默认）。
@@ -641,7 +645,7 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 | `docRoot.*` | `requirements` · `specs` · `design` · `modules` · `batches` | 文档层各根的路径（串 ∥ 多根数组 ∥ `null`＝本面无）；文档层跨根 / 换根时动；写错 ⇒ 校验拒，或机检 / 批次档落点 / 写门评审根静默错 |
 | `index.*` | `codeExtensions` · `docExtensions` | 追加的代码 / 文档扩展名（并集，只增不减）；索引漏某类型时动；写错 ⇒ 该类型文件不入索引（只增不减 ⇒ 多写不炸 · 漏写即漏索引） |
 | | `excludePaths` | 项目根相对路径**前缀**数组（索引用途）；**要排除某目录不入索引时改它**；写错 ⇒ 该目录仍入索引 / 误排除他目录 |
-| | `publicRepos` | 公共仓路径数组（从本仓根可解析）；接入公共仓索引 / 跨仓引用时动；写错 ⇒ 该公共仓检索不可达（origin 集收空 / 指错路径——见上「变更记账面」③） |
+| | `publicRepos` | 公共仓路径数组（从本仓根可解析）= 本仓**出边表**；接入公共仓索引 / 声明仓引用时动；写错 ⇒ 该公共仓检索不可达，且指向它的指针落 `档缺`、交付门被拒（见上「变更记账面」③） |
 
 > 目录只给「用点必需」的最小事实；值形归一细则 / 消费面清单 / 判据仍读本档对应节（§2.2）。两族整键写（`docRoot` / `index`）⇒ 拒（须点改子键）——此句属**动作面**，住描述既有段。
 

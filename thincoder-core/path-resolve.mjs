@@ -9,22 +9,24 @@
  * 同名索引与基根发现只做一次（判定与解析都不查它，只摊薄成本）。缺省（不注入）= 逐 token 现算，与注入前的值逐字相同。
  *
  * 叶档（KD-1）：只 import `node:*` + `manifest.mjs`（`projectRootView`：取根单源）+
- * `declaration.mjs`（`declaredPublicRoots`：声明仓根集单源——`manifest.mjs` 的转口不含它，取它须直引）。
+ * `declared-repos.mjs`（声明出边：目录名 ∥ 声明项原文 ∥ 本机在盘的三合投影——它自己只读 `declaration.mjs`，
+ * 同一份声明表不建第二份投影）。
  *
  * 四态（§2.1）：`resolved{abs}` · `ambiguous{candidates}` · `dangling{missing, sameName, level, tried}` ·
- * `crossRepo{repo, declared, relPath, candidates}`。`tried` = 基根序下试过的绝对候选（面报「解析 = …」用；
- * 只作读数，不作判据）。
+ * `unverified{declaredRepo, declaredRoot, relPath, declarationEntry}`（已声明、声明根不在本机 ⇒ 存在性判不了：
+ * 列报、不入闸）。声明仓两形另给 `dangling` 带四格载荷（`declaredRepo` ∥ `declaredRoot` ∥ `rootOnDisk` ∥ `siblingRepos`）。
+ * `tried` = 基根序下试过的绝对候选（面报「解析 = …」用；只作读数，不作判据）。
  */
 import { existsSync, readdirSync, statSync } from "node:fs"
-import { basename, dirname, isAbsolute, join, resolve } from "node:path"
+import { dirname, isAbsolute, join, resolve } from "node:path"
 
-import { declaredPublicRoots } from "./declaration.mjs"
+import { declaredOutEdges } from "./declared-repos.mjs"
 import { projectRootView } from "./manifest.mjs"
 
 /** 同名候选扫描界（KD-7）：每根各自起算深 ≤3、命中上限 20（只在 `dangling` 路径上跑）。 */
 const SAME_NAME_MAX_DEPTH = 3
 const SAME_NAME_MAX_HITS = 20
-/** 跨仓未声明形的同级目录枚举上限（§2.7：一次 `readdir`、不递归、按名排序）。 */
+/** 声明仓未声明形的同级目录枚举上限（§2.7：一次 `readdir`、不递归、按名排序）。 */
 const SIBLING_MAX = 20
 /** 同名候选扫描跳过的目录名（归档区不是「你是不是指这个」的候选面）。 */
 const SAME_NAME_SKIP = new Set(["_archive"])
@@ -171,22 +173,33 @@ function firstMissing(base, segs) {
   return segs[segs.length - 1] ?? ""
 }
 
-/** 跨仓识别（§2.7，只在 `crossRepo === "visible"` ∧ 输入多段 ∧ 第 4–5 步零命中时调）：
- *  已声明形 = 首段 ∈ 声明仓名集（声明根**不 stat**——位置因人而异）；未声明形 = 首段是项目根的同级目录名；
- *  形态不合法（含 `..` / `.` 段 / 余段空）⇒ 不是跨仓形 ⇒ `null`（落 `dangling`，KD-11）。 */
-function crossRepoOf(start, pathText, view) {
+/** 声明仓腿（§2.7，只在 `declaredRepos` 为真 ∧ 输入多段 ∧ 第 4–5 步零命中时调）——三种结局：
+ *  · 首段命中声明仓目录名（声明序首者）∧ **声明根在本机** ⇒ 于该声明根判余段存在性：在盘 `resolved`，不在盘 `dangling`（红）；
+ *  · 命中 ∧ **声明根不在本机** ⇒ `unverified`（仓名与形态都合规，只是存在性跨机器不成立——列报、不入闸）；
+ *  · 未命中 ⇒ 不成腿（落 `dangling`；首段是本机同级目录名时把同级目录带上作提示，与 `sameName` 同性质）。
+ *  形态不合法（含 `..` / `.` 段 / 余段空）⇒ 不成腿（形态是作者能写对的事，写错仍阻断，KD-11）。 */
+function declaredRepoLeg(start, pathText, kind, view) {
   const segs = pathText.split("/").filter(Boolean)
   if (segs.length < 2) return null
   if (segs.some((s) => s === ".." || s === ".")) return null
   const repo = segs[0]
   const relPath = segs.slice(1).join("/")
   if (!relPath) return null
-  const declaredNames = new Set(declaredPublicRoots(start).map((r) => basename(r)))
-  if (declaredNames.has(repo)) return { state: "crossRepo", repo, declared: true, relPath, candidates: [] }
-  const parent = view.state === "ok" ? dirname(view.root) : dirname(start)
-  const siblings = siblingDirs(parent)
-  if (siblings.includes(repo)) return { state: "crossRepo", repo, declared: false, relPath, candidates: siblings }
-  return null
+  const declared = declaredOutEdges(start).find((e) => e.name === repo)
+  if (!declared) { // 未声明形：首段确实是本机同级目录名时才算「跨仓形」，同级目录只作提示、不产受理
+    const parent = view.state === "ok" ? dirname(view.root) : dirname(start)
+    const siblings = siblingDirs(parent)
+    return { extras: { siblingRepos: siblings.includes(repo) ? siblings : [] } }
+  }
+  if (!declared.onDisk) { // 已声明 ∧ 声明根不在本机 ⇒ 存在性判不了
+    return { state: "unverified", declaredRepo: repo, declaredRoot: declared.root, relPath, declarationEntry: declared.entry }
+  }
+  const abs = resolve(declared.root, relPath)
+  if (existsAs(abs, kind)) return { state: "resolved", abs }
+  return {
+    extras: { declaredRepo: repo, declaredRoot: declared.root, rootOnDisk: true },
+    missing: firstMissing(declared.root, relPath.split("/").filter(Boolean)),
+  }
 }
 
 /** 前两级基根（§2.2 第 4 步——缺哪级就跳过）：`root-first` = 项目根 → 所指目录；
@@ -207,20 +220,23 @@ function coreLegs(start, view, referrer, order) {
  * @param {string|undefined|null} given 参数原值（`undefined` = 参数缺省——与空串分野，§2.2 第 1 步）
  * @param {{referrer?:string, bases?:string[], scanBases?:string[],
  *   kind?:"file"|"dir"|"any"|"none", order?:"root-first"|"near-first",
- *   crossRepo?:"dangling"|"visible", session?:{rootView:Function, lookup:Function}}} [opts]
+ *   declaredRepos?:boolean, session?:{rootView:Function, lookup:Function}}} [opts]
+ *   `declaredRepos`（缺省 `false`）= 开声明仓腿：首段命中声明仓目录名时于该声明根解析余段。
+ *   **只有文档锚面传它**（`docs/core/design/PATH-RESOLUTION.md` §2.5 表末行）——其余面不传，仓外路径照旧判缺。
  *   `session` **缺省 = 逐 token 现算（现状，零回归）**；给了 ⇒ 基根发现取它的同轮记忆、第 7 步的同名候选查它的表
  *   （`createResolutionSession` 建的那份；判定与解析不查索引——它的射程只有注解面）
  * @returns {{state:"resolved", abs:string}
  *   | {state:"ambiguous", candidates:string[]}
- *   | {state:"dangling", missing:string, sameName:string[], level:"base"|"path", tried:string[]}
- *   | {state:"crossRepo", repo:string, declared:boolean, relPath:string, candidates:string[]}}
+ *   | {state:"dangling", missing:string, sameName:string[], level:"base"|"path", tried:string[],
+ *       declaredRepo?:string, declaredRoot?:string, rootOnDisk?:boolean, siblingRepos?:string[]}
+ *   | {state:"unverified", declaredRepo:string, declaredRoot:string, relPath:string, declarationEntry:string}}
  */
 export function resolvePathTarget(anchor, given, opts = {}) {
   const o = opts ?? {}
   const start = resolve(anchor ?? ".")
   const kind = o.kind === "dir" || o.kind === "any" || o.kind === "none" ? o.kind : "file"
   const order = o.order === "near-first" ? "near-first" : "root-first"
-  const wantCrossRepo = o.crossRepo === "visible"
+  const wantDeclaredRepos = o.declaredRepos === true
   const referrer = typeof o.referrer === "string" && o.referrer.trim() !== "" ? resolve(o.referrer) : null
   const bases = (Array.isArray(o.bases) ? o.bases : []).filter((b) => typeof b === "string" && b.trim() !== "")
   const scanBases = (Array.isArray(o.scanBases) ? o.scanBases : []).filter((b) => typeof b === "string" && b.trim() !== "")
@@ -264,10 +280,12 @@ export function resolvePathTarget(anchor, given, opts = {}) {
   if (baseHits.length === 1) return { state: "resolved", abs: baseHits[0] }
   if (baseHits.length > 1) return { state: "ambiguous", candidates: baseHits }
 
-  // ── 第 6 步：跨仓识别（仅文档锚面开；仓内缺档仍阻断）
-  if (wantCrossRepo) {
-    const cross = crossRepoOf(start, pathText, view)
-    if (cross) return cross
+  // ── 第 6 步：声明仓腿（仅文档锚面开；仓内缺档仍阻断）
+  let repoLeg = null
+  if (wantDeclaredRepos) {
+    repoLeg = declaredRepoLeg(start, pathText, kind, view)
+    if (repoLeg?.state === "resolved") return { state: "resolved", abs: repoLeg.abs }
+    if (repoLeg?.state === "unverified") return repoLeg
   }
 
   // ── 第 7 步：dangling —— 报缺的那一段 + 列同名候选（两层基根 + bases + scanBases 各根，每根各自起算）
@@ -278,10 +296,11 @@ export function resolvePathTarget(anchor, given, opts = {}) {
   const sameName = uniquePaths(hits)
   return {
     state: "dangling",
-    missing: firstMissing(roots[0] ?? start, segs),
+    missing: repoLeg?.missing ?? firstMissing(roots[0] ?? start, segs),
     sameName,
     level: "path",
     tried,
+    ...(repoLeg?.extras ?? {}),
   }
 }
 
@@ -289,12 +308,4 @@ export function resolvePathTarget(anchor, given, opts = {}) {
 export function danglingSameNameHint(result) {
   const list = result?.state === "dangling" && Array.isArray(result.sameName) ? result.sameName : []
   return list.length > 0 ? `盘上同名：${list.join(" ∥ ")}` : ""
-}
-
-/** 跨仓一行的读数文案（§2.6 两条形——已声明 ∥ 未声明；未声明形不阻断，只作读数）。 */
-export function crossRepoNote(ident, result) {
-  if (result?.state !== "crossRepo") return ""
-  if (result.declared) return `${ident} → 仓「${result.repo}」的 ${result.relPath}（声明源引用，未校验存在性）`
-  const cands = Array.isArray(result.candidates) && result.candidates.length > 0 ? result.candidates.join(" ∥ ") : "（无）"
-  return `${ident} 引用外部仓「${result.repo}」——引用外部仓须先在 index.publicRepos 声明；本机仓名候选：${cands}`
 }

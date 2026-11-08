@@ -171,6 +171,10 @@ function refusalMessage({ res, zones, frags, target, root, regionCount }) {
   const hits = [...res.anchorHits, ...res.paragraphHits]
   const zoneOf = (fragAbs) => frags.find((f) => f.abs === fragAbs)?.zone ?? null
   const shown = hits.map((h) => {
+    // 仓级命中（`环引`）没有行号——拿引擎那一行的原文（按链对位，链每条唯一）；换坐标会把 `null` 写进写者眼前。
+    if (h.clazz === "环引") {
+      return engineLines.find((l) => l.includes("锚·环引") && l.includes(h.chain)) ?? `✗ 锚·环引 ${h.chain}`
+    }
     const zone = zoneOf(h.file)
     const at = zone ? zone.start + h.line - 1 : h.line
     const fragRel = relDisplay(root, h.file)

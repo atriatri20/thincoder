@@ -800,7 +800,7 @@ export function outputReserve(provider, spec) {
 
 偏差 = 分支③候选试探 ∥ 分支④歧义归一 ∥ `scope-doc-ambiguous` 判据整条删除——用户 2026-10-25 11:41「为啥要试探？不能要求写对吗？」：路径要求写对，试探面无存在理由。
 
-**解析面归口**：相对形的解析序改调统一解析层（`docs/core/design/PATH-RESOLUTION.md` §2.2，`order:"root-first"`——项目根先、引用方目录后，与旧序同序）；本表分支 1 / 2 的判据由该层的 `resolved` / `ambiguous` / `dangling` 结果态给出，本面不另判。跨仓形（`crossRepo`）**不进入本面**——本面受理面仍是「项目内现存 `.md`」，跨仓引用只开在文档锚面。
+**解析面归口**：相对形的解析序改调统一解析层（`docs/core/design/PATH-RESOLUTION.md` §2.2，`order:"root-first"`——项目根先、引用方目录后，与旧序同序）；本表分支 1 / 2 的判据由该层的 `resolved` / `ambiguous` / `dangling` 结果态给出，本面不另判。本面**不传 `declaredRepos`**——受理面仍是「项目内现存 `.md`」，项目外指针照旧判 `档缺`；声明仓腿只开在文档锚面。
 
 **公开源核查**：项目声明 `PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]` ⇒ 无公开源档可查；已查无。
 

@@ -7,7 +7,7 @@
  *
  * 五行对应关系（行号 = RTM 定死的号）：
  * 29-1 裸档名 ⇒ 批档写入落盘、门不再判档缺 · 29-2 三面同一句报明（拒 + 候选全列）·
- * 29-3 文档门：缺哪一段 + 同名候选 · 29-4 跨仓引用只判引用写对没有 · 29-5 形态错仍阻断（文档面 / 台账面两面差）。
+ * 29-3 文档门：缺哪一段 + 同名候选 · 29-4 声明出边：已声明在盘照判 / 未声明即拒 · 29-5 形态错仍阻断（文档面 / 台账面两面差）。
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
@@ -143,29 +143,40 @@ test('CLI 29-3 文档门判档：裸名两层基根零命中 ⇒ 报缺哪一段
   assert.match(report, /盘上同名：docs\/core\/design\/modules\/域\/guide-topic\.md/, `列同名候选（不产命中档），实际：${report}`)
 })
 
-// ── 29-4 文档门判跨仓引用：只判引用写对没有（已声明不查存在性 / 未声明不阻断）──
-test('CLI 29-4 文档门判跨仓引用：已声明仓名零命中（盘上无该仓同判）· 未声明仓名零命中但回执含须先声明 + 仓名候选', { timeout: 60_000 }, async (t) => {
+// ── 29-4 声明出边：已声明且根在盘 ⇒ 照判（含节号）；未声明的仓名 ⇒ 拒（不再是读数行）──
+test('CLI 29-4 文档门判跨仓引用：已声明且根在盘 ⇒ 零命中 PASS · 错节号 ⇒ 锚·节缺 · 未声明仓名 ⇒ 锚·档缺 + 同级候选与未声明注解', { timeout: 60_000 }, async (t) => {
   const parent = mkdtempSync(join(tmpdir(), "pr-int-cross-"))
   TMP.push(parent)
   const proj = join(parent, "proj")
   mkdirSync(proj, { recursive: true })
-  writeFileSync(join(proj, "PROJECT-MANIFEST.json"), manifestOf(["thin2"]))
+  writeFileSync(join(proj, "PROJECT-MANIFEST.json"), manifestOf(["../thin2"]))
+  // 已声明仓（本机在盘、有 manifest、档在盘、首节号 = 1）
+  mkdirSync(join(parent, "thin2", "docs"), { recursive: true })
+  writeFileSync(join(parent, "thin2", "PROJECT-MANIFEST.json"), manifestOf())
+  writeFileSync(join(parent, "thin2", "docs", "guide.md"), "# 对面仓\n\n## 1. 一节\n")
+  // 未声明仓：与 proj 同级、无 manifest
   mkdirSync(join(parent, "otherside", "docs"), { recursive: true })
   writeFileSync(join(parent, "otherside", "docs", "guide.md"), "# 对面仓\n")
-  put(proj, "docs/core/design/refs.md", [
-    "# 跨仓引用面",
-    "",
-    "① 已声明源：thin2/docs/guide.md",
-    "",
-    "② 未声明仓：otherside/docs/guide.md",
-    "",
-  ].join("\n"))
+  put(proj, "docs/core/design/declared-ok.md", "# 已声明在盘\n\n① thin2/docs/guide.md\n")
+  put(proj, "docs/core/design/bad-section.md", "# 错节号\n\n① thin2/docs/guide.md §9.9\n")
+  put(proj, "docs/core/design/undeclared.md", "# 未声明\n\n① otherside/docs/guide.md\n")
+  const run = (doc, mode) => String(docCheckTool.execute({ mode, docs: [doc], target: proj }, ctx0(proj)))
 
-  const report = String(docCheckTool.execute({ mode: "report", docs: ["docs/core/design/refs.md"], target: proj }, ctx0(proj)))
-  assert.doesNotMatch(report, /✗ 锚·档缺/, `跨仓形零命中（写作被放行），实际：${report}`)
-  assert.match(report, /仓「thin2」的 docs\/guide\.md（声明源引用，未校验存在性）/, `已声明形一行读数，实际：${report}`)
-  assert.match(report, /引用外部仓「otherside」——引用外部仓须先在 index\.publicRepos 声明/, `未声明形报须先声明，实际：${report}`)
-  assert.match(report, /本机仓名候选：.*otherside/, `未声明形给仓名候选，实际：${report}`)
+  // ① 已声明 ∧ 根在盘 ∧ 档在盘 ⇒ 静默（与仓内指针同形）
+  const ok = run("docs/core/design/declared-ok.md", "gate")
+  assert.match(ok, /^DOC-CHECK GATE: PASS/, `已声明在盘档零命中，实际：${ok}`)
+  assert.doesNotMatch(ok, /锚·档缺|跨仓引用：/, `已声明形不再出读数行，实际：${ok}`)
+  // ② 已声明 ∧ 根在盘 ∧ 节号不在 ⇒ 锚·节缺（跨仓指针从此也管节号）
+  const sec = run("docs/core/design/bad-section.md", "report")
+  assert.match(sec, /✗ 锚·节缺 docs\/core\/design\/bad-section\.md:3/, `跨仓指针管节号，实际：${sec}`)
+  assert.match(sec, /无 §9\.9/, `点名缺的节号，实际：${sec}`)
+  assert.match(run("docs/core/design/bad-section.md", "gate").split("\n")[0], /REFUSED（锚 1 条）/, "节缺进闸")
+  // ③ 未声明仓名 ⇒ 锚·档缺 + 同级目录候选 + 一句未声明（从读数行变成拒绝）
+  const undeclared = run("docs/core/design/undeclared.md", "report")
+  assert.match(undeclared, /✗ 锚·档缺 docs\/core\/design\/undeclared\.md:3/, `未声明即拒，实际：${undeclared}`)
+  assert.match(undeclared, /本机同级目录：.*otherside/, `列同级候选，实际：${undeclared}`)
+  assert.match(undeclared, /该名未在 index\.publicRepos 声明/, `点名未声明，实际：${undeclared}`)
+  assert.match(run("docs/core/design/undeclared.md", "gate").split("\n")[0], /REFUSED（锚 1 条）/, "未声明进闸")
 })
 
 // ── 29-5 形态错的跨仓引用：文档面仍阻断；改台账面 ⇒ 硬拒（KD-10 的可见差）──
@@ -173,7 +184,6 @@ test('CLI 29-5 形态错的跨仓引用：文档门仍判缺（阻断）；同�
   const root = makeProject({ "docs/core/design/bad-form.md": "# 形态错\n\n借道：thin2/../escape.md\n" }, ["thin2"])
   const report = String(docCheckTool.execute({ mode: "report", docs: ["docs/core/design/bad-form.md"], target: root }, ctx0(root)))
   assert.match(report, /✗ 锚·档缺 docs\/core\/design\/bad-form\.md:3/, `形态错仍阻断，实际：${report}`)
-  assert.doesNotMatch(report, /跨仓引用：/, `形态错不落 crossRepo，实际：${report}`)
 
   // 台账面：同形跨仓指针（task_book 指向外部仓）⇒ 写门硬拒（L4 判据零改）
   await seedRow(root, "docs/batches/2026-11-02-bad.md", { writeRecord: true })

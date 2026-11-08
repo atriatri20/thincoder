@@ -128,7 +128,7 @@ const ambiguousLandingError = (raw, landings) => new Error(`batch: create path r
 
 /**
  * **读面**解析的四态本体（候选序 + 判态全部经统一解析层——本面只声明自己的参数：
- * `order:"near-first"`（近基根 = cwd / 会话锚 先）+ `kind:"file"` + `crossRepo:"dangling"`，
+ * `order:"near-first"`（近基根 = cwd / 会话锚 先）+ `kind:"file"`，本面**不传 `declaredRepos`**（不放宽跨仓形：
  * `bases` = `docRoot.batches` 声明面（读面无 manifest ⇒ 无这一级））。锚定串只解析项目根形
  * （不二次拼接——§4.15 判据，见 `resolveBatchReadPath`）。
  * 导出面供 spawn 门拼「追加同名候选」（§2.6：既有文案逐字在前，新信息追加在后）。

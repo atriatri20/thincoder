@@ -303,7 +303,10 @@ The report must contain: what changed / why, the paths of files touched, how you
     **This clause governs coupling, not reading** — declared sources are read as usual.
 13. **Splitting repos = an exception**: split only for independent deployment / release / lifecycle reasons; **coordination machinery built because several repos coexist turns a normal state into a mechanism**.
 14. **Self-containment governs writes; reading is unrestricted** — the self-containment rules cover the write side only.
-    **Content under the working directory is searchable, readable and citable by default**; **sources beyond the working directory are read per the declaration** (project manifest `index.publicRepos`).
+    **Reading has no boundary**: anything you can reach may be read, in this repo or outside it.
+    **What may be cited has a boundary, and that boundary is the declaration**: a reference is legal only to a file in the repo that holds it, or in a repo this one lists under `index.publicRepos`.
+    **A repo sitting beside this one is not thereby declared** — proximity is not the boundary, and it is not something a reader on another machine can check.
+    A reference to a repo you have not declared is refused: the pointer is reported as a missing document, and a delivery gate fails.
     **Check the declared sources before implementing / designing**; **missing sources that block this design / implementation ⇒ top up the list as you go** (a light action — in-scope work).
     Missing sources ∥ noise seen in passing that do not block the current task = out of scope — not recorded, not acted on.
     **The three are separate**: reading ≠ writing ≠ coupling.

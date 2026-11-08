@@ -42,6 +42,7 @@
 | CLI 34 | 多实例共用一个浏览器（首开末关 · 用者计数） | tooling | 有 | 缺 | 缺 |
 | CLI 35 | 会话态的读写在浏览器工具里（cookie 含 httpOnly · storage 两域自分 · 六形免审） | tooling | 有 | 缺 | 缺 |
 | CLI 36 | 跨项目文档清单的交付门按各档自身项目根判 | guard | 有 | 缺 | 缺 |
+| CLI 37 | 声明出边：可引用谁由 `index.publicRepos` 定 | paths | 有 | 缺 | 缺 |
 | VSC 1 | 归档块重开 ∥ reload 后，子代理行还是子代理行 | ends | 缺 | 有 | 缺 |
 | VSC 2 | 流式输出中视口贴底 | ends | 缺 | 有 | 缺 |
 

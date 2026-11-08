@@ -1,7 +1,8 @@
 # 文档检查（DOC-CHECK）· 设计
 
 > 需求层 = `docs/core/requirements/DOC-CHECK.md`（F1–F17 / AC-1–AC-15；本批的判据条目 = **F17** ∥ **AC-15**）。本档只答「怎么建」，判据口径不重述（单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20）。
-> 改动面 = **判域的定根与域表**：三条判据（锚 ∥ 段长 ∥ 行号坐标）与引文判法**一字不动**。
+> 改动面两笔：**判域的定根与域表**，以及**锚判据的跨仓三笔**（命中类增 `环引` · 增 `未核` 收集且不入 `hits` · 报面增 `未核 N 条` 与环引行）。
+> 判据仍三条（锚 ∥ 段长 ∥ 行号坐标）：段长 ∥ 行号坐标两条与引文判法未动，三条判据的阈值未动；判据口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20。
 
 ## 1. 模块目标与现状
 
@@ -46,20 +47,20 @@ rootOf(abs) = owningProject(abs, parse(abs).root) ?? declaredBase
 
 **数据事实核对**：本档唯一的数据断言 = 工作区锚下不止一个项目。取证 = 新进程直调 `projectRootView` 的读数（本档不预载候选数，读数随交付报出）。其余断言全部由读码得。
 
-### 2.2 分组判（判定内容不动的做法）
+### 2.2 分组判（只换喂进去的根）
 
 引擎在**分组之前**先定声明根：缺声明根 ⇒ 整清单走 §2.4 的 `ERROR`（不出现「部分组无根」）。声明根在 ⇒ 可判集 `checkFiles` 按 `rootOf` 分组，每组调一次既有 `checkAnchors(root_i, { files: group_i })`，命中按文件稳定序合并。
 
 **另两条判据与根无关**：`checkParagraphs({ paragraphMax, lineMax, exemptZones, files: checkFiles })` 与 `collectLineRefs({ files: checkFiles })` 都不收根（读码取证）⇒ 全清单一次跑完，零改。
 
-**为什么这样切**：抽取式 ∥ 解析序 ∥ 面判这些判法内部一字不动，改的只是喂进去的根；跨项目清单在锚面等价于「两组各按自己的根判一遍」。
+**为什么这样切**：分组只换喂进去的根，抽取式 ∥ 解析序 ∥ 面判这些判法内部不因分组而改（锚判据的跨仓三笔是另一笔改动）；跨项目清单在锚面等价于「两组各按自己的根判一遍」。
 
-**弃案：把根做成 `checkAnchors` 的逐 token 参数**——那要改解析序内部（同轮记忆按根建、同名候选扫描根按根取），判法跟着动，与本批边界「判定内容不碰」相冲。
+**弃案：把根做成 `checkAnchors` 的逐 token 参数**——那要改解析序内部（同轮记忆按根建、同名候选扫描根按根取），判法跟着动，与本档 §8 的边界相冲。
 
 ### 2.3 命中报面（跨项目清单怎么读）
 
 - **verdict 只有一条**：一次调用一个答案。不按项目分 verdict——分节判 PASS 会让读者读到其中一节的 PASS，而另一节是 REFUSED。
-- **单根清单**：报面逐字不变，**不附根行**（这是零回归的判据面，见 §6 的 AC-2）。
+- **单根清单**：**不附根行**；除本档头注列的两形（`未核 N 条` 与环引行）外，报面照旧（零回归的判据面见 §6 的 AC-2）。
 - **≥2 根**：范围行追加根清单；每条命中 ∥ 跳过 ∥ 读不到行前置 `[<项目名>]`，行内路径**相对该档自身的根**显示。读回执的人据此分清是谁的账。
 - **项目名 = 本次调用里能唯一定位该根的最短路径后缀**（段间以 `/` 分隔）：末尾一段在本次的根之间不重复 ⇒ 就是根目录名；重名（两个项目各有一个 `web`）⇒ 往前多取一段，直到各根互不相同，如 `[a/web]` ∥ `[b/web]`。**唯一定位的判据面 = 本次调用的根集**，不是全机路径——标签的职责是让读者分清是谁的账，两个同名根同时出现时必须分得开。
 
@@ -95,21 +96,22 @@ DOC-CHECK GATE: ERROR（无法定根 N 档）
 
 **判据**：一份档的指针按谁的项目声明判，它的域表就按谁的项目根读——域表与判定同一条规则、同一个根。
 
-- **域表三项**：`docRoot` 各键（同名候选的扫描根）· `docRoot.batches`（批档基底根——决定「批档面互引」豁不豁免）· `index.publicRepos`（跨仓引用读数的声明源）。三项一律取自**该档所属项目根**的 `PROJECT-MANIFEST.json`。
-- **`index.publicRepos` 的读取点**：`thincoder-core/declaration.mjs` 的 `declaredPublicRoots`（声明值单源），判法面经 `thincoder-core/path-resolve.mjs` 的统一解析层消费——依据 `thincoder-core/path-resolve.mjs`「`declaredPublicRoots`：声明仓根集单源」。判定面 `thincoder-core/doc-check/anchors.mjs` 只 import 该解析层、不直读该键，故该键不在四份改动档的读取面上，§4 的「零改」行不动。
-- **第三项的按档根性（读码佐证）**：判法面的 `resolveDoc` 把**该档的判定根**当解析锚传进统一解析层；解析层以锚定 `start`，跨仓声明名集按 `start` 取；声明层的 `declaredPublicRoots` 再按入点取声明——三行盘上逐字见下方围栏。
+- **域表三项**：`docRoot` 各键（同名候选的扫描根）· `docRoot.batches`（批档基底根——决定「批档面互引」豁不豁免）· `index.publicRepos`（声明仓引用的**判据源**：那张表就是本仓出边，未声明即 `档缺`）。三项一律取自**该档所属项目根**的 `PROJECT-MANIFEST.json`。
+- **`index.publicRepos` 的读取点**：值单源 = `thincoder-core/declaration.mjs` 的 `declaredPublicRoots`；解析层经 `thincoder-core/declared-repos.mjs` 的 `declaredOutEdges` 取三件（目录名 · 声明项原文 · 本机在盘）。判定面 `thincoder-core/doc-check/anchors.mjs` 不直读该键，只 import 解析层与出边投影。
+- **第三项的按档根性（读码佐证）**：判法面的 `resolveDoc` 把**该档的判定根**当解析锚传进统一解析层；解析层以锚定 `start`，声明仓名集按 `start` 取；声明层的 `declaredPublicRoots` 再按入点取声明——三行盘上逐字见下方围栏。
+- **声明源同时是环检的边集**：锚判据按被判档的组根走一遍出边图，每个节点读它**自己**的 manifest（兄弟仓各读各的，不借本根的声明）；无 manifest 的节点是叶仓，没有出边，走查在该节点止步。
 
 ```text
 thincoder-core/doc-check/anchors.mjs · resolveDoc（base = checkAnchors 收到的判定根）
-  return resolvePathTarget(base, token, { kind: "file", order: "root-first", referrer: refFile, crossRepo: "visible", scanBases, session })
+  return resolvePathTarget(base, token, { kind: "file", order: "root-first", referrer: refFile, declaredRepos: true, scanBases, session })
 thincoder-core/path-resolve.mjs
   const start = resolve(anchor ?? ".")
-  const declaredNames = new Set(declaredPublicRoots(start).map((r) => basename(r)))
+  const declared = declaredOutEdges(start).find((e) => e.name === repo)
 thincoder-core/declaration.mjs · declaredPublicRoots 的参数注
   @param {string} [cwd] 会话锚（项目根经 manifest.mjs 解析）
 ```
 
-链上无声明根一环：分组后判定根 = 组根（§2.2）＝该档所属项目根，各档的 `publicRepos` 各读各的根，头句第三项由此成立；本批四档零改，这条链原样保留。
+链上无声明根一环：分组后判定根 = 组根（§2.2）＝该档所属项目根，各档的 `publicRepos` 各读各的根，头句第三项由此成立；这条链原样保留。
 - **落地形 = 组根**：`perRootGroups` 每组的 `root` 已经是该组各档的项目根，组内**只读一次** manifest（§3 的 `manifest` 注入），锚判与批档基底都吃这一份。
 - **不并成并集**：各组各读各的，A 组的扫描根绝不进 B 组的候选集。并集只在「拿一个根盖整批」的旧形下才需要，而那个形本档已否（§2.1）。
 - **无 manifest 的组**：该档祖先链无 manifest ⇒ 组根 = 声明根；声明根也没有 manifest（普通目录 ∥ 工作区）⇒ **域表为空集**。空集两向都是 fail-closed：批档面互引**不豁免**（token 照判，目标缺了就是 `档缺`）· 同名候选零提示（只影响提示，读数面）。**空集不会让门误判 `PASS`**——它只会让门更严。
@@ -128,7 +130,7 @@ thincoder-core/declaration.mjs · declaredPublicRoots 的参数注
 
 - **出场条件**：只在「本次读到域表的根集 ≠ {声明根}」**或任一根无 manifest** 时出（7-13 的「无 manifest」行只有靠这半句才出得来）。单项目锚下根集恰是声明根且该根有 manifest ⇒ 两支皆假 ⇒ 零出，单项目零回归的判据面（AC-2）不破。
 - 无 manifest 的根，该行写 `无 PROJECT-MANIFEST.json —— 域表为空（批档面互引照判 · 同名候选零提示）`：降级可见，不静默。
-- `gate` 面零改：verdict 面只放判据。既有先例同向——`lines` 读数与批档面留痕行都只在报告态出。
+- `gate` 面不出域表读数：verdict 面只放判据。既有先例同向——`lines` 读数与批档面留痕行都只在报告态出。`gate` 面本批增的是 `未核 N 条` 列报（不进 `hits`、不动 verdict）与环引命中行；阈值与其余命中行形未动。
 
 ## 3. 接口契约
 
@@ -138,24 +140,24 @@ thincoder-core/declaration.mjs · declaredPublicRoots 的参数注
 | 引擎内部 | `perRootGroups(files, declaredBase)` → `{ root, files }[]`；每组一次 `readManifest(root)` | 取根 = `owningProject(abs, parse(abs).root) ?? declaredBase`；**每根一次读**（§2.5、§5 KD-7） |
 | 判法入口 | `checkAnchors(root, { files, manifest? })` | 新增可选 `manifest`：给了就吃它（引擎已读的那份），缺省仍自读——直调判法本体的夹具（AC-5 的对照面）零改 |
 | 基底根 | `batchDocBases(cwd, { manifest? })`（`thincoder-core/agent-tools/batch-paths.mjs`） | 同上注入形；批档工具面既有调用零改 |
-| 引擎返回 | `projectRoots: string[]`（参与判定的根，升序）＋ `domainTables: { root, manifest }[]` | `projectRoots` 的消费者 = 报面根清单行（§2.3）与用例断言；`domainTables` 的消费者 = §2.5 的域表读数块与用例断言。`hits` 三数口径、`anchorHits` ∥ `paragraphHits` ∥ `lineRefHits` 形状不变 |
+| 引擎返回 | `projectRoots: string[]`（参与判定的根，升序）＋ `domainTables: { root, manifest }[]` ＋ 锚面的 `unverified` 桶 | `projectRoots` 的消费者 = 报面根清单行（§2.3）与用例断言；`domainTables` 的消费者 = §2.5 的域表读数块与用例断言；`unverified` 的消费者 = `未核 N 条` 列报（不进 `hits`、不动 verdict）。`hits` 三数口径、`anchorHits` ∥ `paragraphHits` ∥ `lineRefHits` 形状不变 |
 | 工具面 | `thincoder-core/agent-tools/doc-check.mjs` | **改两处**：① `target` 必填——缺 ∥ `null` ∥ 空串 ⇒ 拒、报文点名 `target`、零判定（schema 加 `required: ["target"]`）；② `ambiguous` 那处守卫的「给了」判据 = **一个非空字符串**（§5 KD-10），该守卫必须与解析层同一条线——依据 `thincoder-core/path-resolve.mjs`「if (given === undefined || given === null) {」。`view.state === "workspace"` 提前返回**已不在盘上**（盘上照判），不重建。锚只作相对形 `target` 的基根 |
-| 判定面 | `thincoder-core/doc-check/anchors.mjs` | 只改域表的**读取来源**（吃注入的 `manifest`）：判据内容、命中类与命中行形一字不动 |
+| 判定面 | `thincoder-core/doc-check/anchors.mjs` | 域表吃注入的 `manifest`（读取来源一处）；锚判据另有跨仓三笔——`resolveDoc` 传 `declaredRepos` · 走查声明出边图出 `锚·环引`（仓级命中、无行号）· 两处收集点收 `未核` 且不入 `hits`；判据口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20 |
 | 判定面 | `thincoder-core/doc-check/paragraph.mjs` ∥ `line-refs.mjs` | **零改**（期望 `git diff` 空；真要改就停手报回来） |
 
 数据流：`docs` 条目 →（**无声明根 ⇒ 停在这里，走 §2.4 的 `ERROR`**）→ `resolve(declaredBase, d)` 得绝对路径（路径解析基准**不变**，相对条目仍按声明根解析）→ 可判性判定（在盘 ∥ `.md`，**不变**）→ 按 `rootOf` 分组 → 逐组 `checkAnchors` → 合并命中 → 报面（单根无标 ∥ 多根打标）。
 
-**判据句合规**：分组与定根住在 `thincoder-core/doc-check/index.mjs`，判据面零改 ⇒ `anchors.domain` ∥ `anchors.roots` 仍零存在，「不做全仓扫描」那条判据句照旧成立（回指 `docs/core/requirements/DOC-CHECK.md` 的边界段判据句）。
+**判据句合规**：分组与定根住在 `thincoder-core/doc-check/index.mjs`；锚判据的跨仓三笔只沿 `index.publicRepos` 给出的边读（`thincoder-core/declared-repos.mjs` 的 `declaredCycles` 不遍走目录）⇒ `anchors.domain` ∥ `anchors.roots` 仍零存在，「不做全仓扫描」那条判据句照旧成立（回指 `docs/core/requirements/DOC-CHECK.md` 的边界段判据句）。
 
 ## 4. 受影响文件与档层结论
 
 | 文件 | 改动 |
 |---|---|
 | `thincoder-core/doc-check/index.mjs` | 每组一次 `readManifest` 并注入判法；返回 `domainTables`；`report` 面域表读数块（§2.5） |
-| `thincoder-core/doc-check/anchors.mjs` | 域表改吃注入的 `manifest`（`docRootBaseKeys` ∥ `batchFaceContext` 两处）——判据内容零改 |
+| `thincoder-core/doc-check/anchors.mjs` | 域表吃注入的 `manifest`（`docRootBaseKeys` ∥ `batchFaceContext` 两处）；判据面另有跨仓规则三笔（`resolveDoc` 传 `declaredRepos` · 环检出 `锚·环引` · 两处收集点收 `未核` 且不入 `hits`）——判据口径单源见 `docs/core/design/DOC-DISCIPLINE.md` §3.20 |
 | `thincoder-core/agent-tools/batch-paths.mjs` | `batchDocBases` 增可选 `manifest` 注入（缺省自读，既有调用零改） |
 | `thincoder-core/agent-tools/doc-check.mjs` | 改两处：① `target` 必填——缺 ∥ `null` ∥ 空串 ⇒ 拒、点名 `target`（缺省支删除）；schema 加 `required: ["target"]`；② `ambiguous` 守卫的「给了 `target`」判据 = 非空字符串（§3 ∥ §5 KD-10 ∥ AC-11）。工作区锚的提前返回已不在盘上，不重建 |
-| `thincoder-core/tool-docs/doc_check.md` | 零改：`target` 段已写「每档按自己的项目根判」 |
+| `thincoder-core/tool-docs/doc_check.md` | 解析序句已换三行终稿（本批）；`target` 段仍零改——已写「每档按自己的项目根判」 |
 
 以下落地件由实施轮创建（`test/**` 不在本席笔域）：
 
@@ -176,7 +178,7 @@ test/integration/**                                       集成用例文件（�
 
 **软线的审视结论**：软线的语义是「主动审视」，不是「拆」。可拆的接缝已在盘上——定根 ∥ 分组 ∥ 报面布局这一族（`rootOf` ∥ `perRootGroups` ∥ `reportLayout` ∥ `bucketLines` ∥ `rootsSuffix` ∥ `noRootItems`）与判据本体之间只靠 `runDocCheck` 串联，整族可搬进落地件清单里那个拆出档，`thincoder-core/doc-check/index.mjs` 只留 import。
 
-**本批不拆**：未越硬限；而拆档会把本批改动面从「定根一处」扩成「两个文件的边界重构」，与 §8「不改判定内容」的窄边相冲。越硬限时按上面这条接缝拆。
+**本批不拆**：未越硬限；而拆档会把本批改动面从「定根一处」扩成「两个文件的边界重构」，与 §8 的边界相冲。越硬限时按上面这条接缝拆。
 
 **本批不新增源档**：只有实施后越硬限才拆，拆出档落**引擎同目录**（见上方落地件清单），判据面留原档。
 
@@ -207,7 +209,7 @@ test/integration/**                                       集成用例文件（�
 
 **勘察记录（公共源档）**：
 
-- **外仓参考系声明**：`PROJECT-MANIFEST.json` 的 `index.publicRepos` = 空（本项目未声明外仓参考系）。
+- **外仓参考系声明**：`PROJECT-MANIFEST.json` 的 `index.publicRepos` 是本仓出边表（域表第三项 ∥ 环检边集），取值以该档为准、本档不复述。
 - **仓内已查三处**：`docs/core/design/PATH-RESOLUTION.md` §2.1（统一解析层四态 ∥ `referrer` 参数）· `docs/core/design/DOC-DISCIPLINE.md` §3.20（判据口径单源）· `test/RTM.md` 故事索引表。
 - **仓内结果**：相关 2 处——前者给出「解析判不出唯一即停」，后者给出报面句形；无一处给出「按档定根」的做法 ⇒ 本批新建，取根复用 `owningProject`。
 - **`referrer` 不改用**：它取**所指目录**当基根，本批要的是**项目根**（token 按项目根相对写），不是同一个量。
@@ -217,7 +219,7 @@ test/integration/**                                       集成用例文件（�
 | # | 决策 | 弃案 | 理由 |
 |---|---|---|---|
 | KD-1 | 根按档求，`owningProject` 加盘根界 | 必传 `target` 让人挑根 | 跨项目清单是常态（工作区锚），每批都要人挑就是把机制债摊给调用方 |
-| KD-2 | 分组调既有 `checkAnchors` | 把根做成判法内部逐 token 参数 | 判法内部一字不动是本批边界；分组后等价性可直接用单组夹具对照 |
+| KD-2 | 分组调既有 `checkAnchors` | 把根做成判法内部逐 token 参数 | 根留在判法之外，分组只换喂进去的那一个参数；等价性可直接用单组夹具对照 |
 | KD-3 | verdict 一条 | 按项目分节各出 verdict | 分节会让读者读到一节 PASS 而另一节 REFUSED |
 | KD-4 | 无主档落 `declaredBase` | 要求声明根自身必须是项目 | 夹具档住系统临时域、那里没有 manifest：要求「声明根是项目」会把既有单元测试面全打死，救它的唯一办法是再开一档豁免——那是在判据上挖洞。「谁声明的、用谁的」不挖洞 |
 | KD-5 | 无声明根 ⇒ `ERROR` 点名，零命中；即使部分档本可由 manifest 定根，也不出半份判定 | 跳过该档继续判 | 跳过 = 把「判不了」洗成「判过了」；出半份判定同样读不出来。它是**政策**、不是公式推论——理由与报文口径见 §2.4 |
@@ -235,7 +237,7 @@ test/integration/**                                       集成用例文件（�
 | AC-2 | 单项目零回归：`target` = 本仓根（∥ 锚即本仓）时，本仓固定三档的 `report` 面与基线（改码前同一命令的报面整段，存批档实施记录）**逐字相等**（差 0），且域表读数行零出 | AC-15 ② |
 | AC-3 | 无声明根 ⇒ `ERROR`：直接调引擎、`root` 缺省 ∥ 空串 ⇒ 首行 `DOC-CHECK GATE: ERROR（无法定根 N 档）`，逐档点名该档与原因，原因句按 §2.4 的表逐档取式；**假话零出**——清单里若有档带 manifest 祖先，该档行零含「无 `PROJECT-MANIFEST.json`」 | F17（解析不到根 ⇒ 显式报错）∥ AC-15 ③ |
 | AC-4 | 不出一半：无声明根时报面**零 `✗` 命中行**，且每档都被点名（N = 清单独特条目数——见 §2.4）——「判不了」不出成「有的判过了」 | F17（不许静默跳过该档） |
-| AC-5 | 判定内容零改：同一批夹具（含跨项目清单）上，引擎整次调用的 `hits` 三桶（锚 ∥ 段长 ∥ 行号坐标）与**逐档直调判法本体**的合并值逐项相等——逐档值 = `checkAnchors(rootOf(该档), { files: [该档] })` 的锚数 + `checkParagraphs` 的段数 + `collectLineRefs` 的正文面数。它判的是判定结果，不是文件动没动：分组只换喂进去的根 | AC-15 ⑥ |
+| AC-5 | 分组不改变判定结果：同一批夹具（含跨项目清单）上，引擎整次调用的 `hits` 三桶（锚 ∥ 段长 ∥ 行号坐标）与**逐档直调判法本体**的合并值逐项相等——逐档值 = `checkAnchors(rootOf(该档), { files: [该档] })` 的锚数 + `checkParagraphs` 的段数 + `collectLineRefs` 的正文面数。它判的是判定结果，不是文件动没动：分组只换喂进去的根 | AC-15 ⑥ |
 | AC-6 | 报面分段：跨项目清单的每条命中行带 `[<项目名>]`（项目名按 §2.3 取最短唯一定位后缀，同名根必须分得开）且行内路径相对其自身根；单根清单零标签、无根行 | AC-15 ⑤ |
 | AC-7 | 一条 verdict：跨项目清单里一档命中 ⇒ 首行只有一条 `REFUSED`，全文 `DOC-CHECK GATE:` 出现一次 | AC-15 ④ |
 | AC-8 | 工作区锚照判 = **等价性**：同一清单、同一内容，**每根一问**——夹具工作区下两个项目根（A ∥ B）各跑一次：`target` = **A 的项目根**一问 ∥ `target` = **B 的项目根**一问，两问**首行判决词相同、`hits` 三桶（锚 ∥ 段长 ∥ 行号坐标）逐项相等**。X 由档自己定（干净 ⇒ `PASS`；有真命中 ⇒ `REFUSED（…）`），本条不指定 X。判法：夹具 = 工作区 + 两项目各一档，条目用**绝对路径**（本条判的是定根，不是相对条目的解析基准）→ 两轮（两档皆干净 ∥ 一档带真悬空指针），每轮两问（A 根 ∥ B 根）；坏法 = 恢复 `view.state === "workspace"` 提前返回 ⇒ 「`target` = A 的项目根」那一问变 `ERROR`、与 B 根那一问不等 ⇒ 红 | F17 ∥ §2.4 |
@@ -267,13 +269,13 @@ test/integration/**                                       集成用例文件（�
 
 ## 8. 边界（本批不做）
 
-- **不改判定内容**：锚 ∥ 段长 ∥ 行号坐标 ∥ 引文判法一字不动；三条判据的阈值与报面句形不变。
+- **不改既有判据正文与阈值**：段长 ∥ 行号坐标两条判据、引文判法、三条判据的阈值都未动；锚判据的改动只有本档头注那三笔（命中类 `环引` · `未核` 收集不入 `hits` · 报面 `未核 N 条` 与环引行）。
 - **不放松错判**：没有声明根就是 `ERROR`，不跳过该档、不出半份判定。
 - **不做全仓扫描**：清单仍是唯一范围来源；按档定根不等于按目录找档。
 - **不按项目分 verdict**：一次调用一个答案。
 - **不合并各组扫描根**：每组只吃自己那根的域表（§2.5 KD-9）；域表为空集时向严判，不向宽判。
-- **不改解析层四态语义**：`thincoder-core/path-resolve.mjs` 的 `ambiguous` 判据归 `docs/core/design/PATH-RESOLUTION.md`；本档只规定工具面**何时拒**（`target` 缺 ∥ `null` ∥ 空串 ⇒ 拒；非空 `target` 解析为多项目工作区 ⇒ 另拒）。
-- **`gate` 面零改**：域表读数不进 verdict、不改首行与命中行形。
+- **四态的判据不归本档**：`thincoder-core/path-resolve.mjs` 的四态（`ambiguous` 与第四态 `unverified`）归 `docs/core/design/PATH-RESOLUTION.md`；本档只规定工具面**何时拒**（`target` 缺 ∥ `null` ∥ 空串 ⇒ 拒；非空 `target` 解析为多项目工作区 ⇒ 另拒）。
+- **`gate` 面只增列报与环引行**：域表读数不进 verdict、不改首行；`gate` 面增的是 `未核 N 条` 列报（不入 `hits`）与环引命中行。
 - **需求档本批不再改**：`docs/core/requirements/DOC-CHECK.md` 已含 F17 ∥ AC-15。
 
 ### 登记项（同病但本批只登记、不越界改）

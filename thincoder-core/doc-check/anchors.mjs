@@ -20,7 +20,12 @@
  * 解析序**两级**（算法单源 = `../path-resolve.mjs` 的统一解析层，本档只声明本面参数）：
  *   ① 仓根相对全路径 → ② 引用方档所在目录相对。零命中 ⇒ `档缺`，并**列同名候选**（「你是不是指这个」——
  *   候选只作提示，**不产命中档**：裸名仍不跨目录解析；那份同名索引只服务这条注解，判定与解析都不查它）。
- *   跨仓形（`仓名/相对路径`）⇒ **零命中**，回执记一行（声明源引用 / 须先声明——只判引用写对没有，不查存在性）。
+ *   声明仓腿（`仓名/相对路径`）：**只有本面开**（`declaredRepos`）：已声明且声明根在本机 ⇒ 于该声明根判余段
+ *   （在盘 `resolved` / 缺档 `档缺`）；已声明而声明根不在本机 ⇒ `unverified`（**零命中、列报不入闸**）；
+ *   未声明 ⇒ `档缺` + 同级目录候选 + 一句「该名未在 `index.publicRepos` 声明」。口径单源 = `docs/core/design/PATH-RESOLUTION.md` §2.7。
+ * 环检（`锚·环引`）：判之前先按组根走一遍声明出边图（`../declared-repos.mjs`），走回组根成环 ⇒ 一条 `环引`；
+ *   走查在「声明根不在本机」的节点止步，那些节点进 `unverified`（触发 = 环走查止步）——「没找到环」与
+ *   「没看过去」因此在报面上分得开。环与 `档缺` 同计「锚 N 条」，不新增判据条数、不新增 verdict 词。
  * 节在盘：**只读解析命中的那一档**（点查，不遍历）——目标档内存在标题行，其标题编号
  *   （标题谓词单源 = `headingMark`，取标题文本首个 `\d+(?:\.\d+)*`）= 指针节号。
  * 同轮记忆（一次调用内，跨轮缓存照禁——§3.20「缓存口径」）：解析会话一份（同名索引 + 基根发现）、
@@ -39,9 +44,10 @@
  *   方向纪律：规范档引批档**照判**——引用方不在批档根下 ⇒ 面判不成立（D4 细则二的最后一道机检）。
  */
 import { readFileSync } from "node:fs"
-import { dirname, resolve } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { batchDocBases, baseContaining } from "../agent-tools/batch-paths.mjs"
-import { docRootPaths, readManifest } from "../manifest.mjs"
+import { declaredCycles } from "../declared-repos.mjs"
+import { MANIFEST_REL, docRootPaths, readManifest } from "../manifest.mjs"
 import { createResolutionSession, resolvePathTarget } from "../path-resolve.mjs"
 import { codeSpans, fenceMark, headingMark, isFenceClose, isExecutableLine, isPromptFace } from "./paragraph.mjs"
 
@@ -248,14 +254,14 @@ export function isBatchFaceRef(refAbs, token, face) {
 }
 
 /** 档解析（判据 ① 的解析序两级——**算法单源 = 统一解析层** `../path-resolve.mjs`：本面只声明
- *  `kind:"file"` / `order:"root-first"`（与既有两级序逐字同序）/ `crossRepo:"visible"`（文档锚面是
- *  唯一开跨仓读数的面），`bases` = 无、`scanBases` = `docRoot` 各键（只喂同名候选提示），
+ *  `kind:"file"` / `order:"root-first"`（与既有两级序逐字同序）/ `declaredRepos`（文档锚面是
+ *  唯一开声明仓腿的面），`bases` = 无、`scanBases` = `docRoot` 各键（只喂同名候选提示），
  *  `session` = 本次调用建的那份解析会话（同名候选查表 ∥ 基根发现同轮记忆——成本不随悬空 token 数增长）。
  *  行号坐标尾（`:N`）不参与档解析——抽取面已剥离坐标尾与节指示，token = 档路径（后缀在闭集内）。
  *  `num` = 指针节号（`§` 后编号；无节指示 ⇒ null）——仅用于判定节在盘，不参与档解析。
  *  @returns {{state:string, ...}} 层的四态结果 */
 function resolveDoc(token, refFile, base, scanBases, session) {
-  return resolvePathTarget(base, token, { kind: "file", order: "root-first", referrer: refFile, crossRepo: "visible", scanBases, session })
+  return resolvePathTarget(base, token, { kind: "file", order: "root-first", referrer: refFile, declaredRepos: true, scanBases, session })
 }
 
 /** 解析结果的**同轮记忆**（键 = 引用方目录 ∥ token）：解析只依赖「基根 + 引用方目录 + token」——同一目录下
@@ -280,9 +286,10 @@ function docResolver(base, scanBases, session) {
  *   无目录遍历、无全域索引：清单外的档既不判也不参与解析）；
  *   `manifest` = **可选注入**——引擎按本根已读的那份（每根一次读，§2.5 KD-7），给了就吃它、
  *   缺省仍自读（直调判法本体的夹具零改）；它同时供 `docRoot` 扫描根与批档基底两处（判定面零改）
- * @returns {{hits:Array, crossRepo:Array, unreadable:string[], batchRefs:number}} hits = 命中（`档缺` / `节缺` / `引缺`——`档缺` 携 `sameName` 同名候选，
- *   `引缺` 携 `quote` 引文原文与 `target` 命中的档）；
- *   `crossRepo` = 跨仓引用读数（零命中、只入回执——§2.6 一行）；
+ * @returns {{hits:Array, unverified:Array, unreadable:string[], batchRefs:number}} hits = 命中（`档缺` / `节缺` / `引缺` / `环引`——`档缺` 携 `sameName` 同名候选与声明仓四格，
+ *   `引缺` 携 `quote` 引文原文与 `target` 命中的档，`环引` 携 `root` 与 `chain`）；
+ *   `unverified` = "判得了仓名、判不了存在性"的列报（声明根不在本机——**零命中、不入闸**；两个产出方：
+ *   `trigger:"pointer"` 的逐指针行 ∥ `trigger:"walk"` 的环走查止步节点——按声明根汇总在引擎面做）；
  *   `unreadable` = 在盘但读不到的档（判定集内 ∥ 判据要读的目标）——**不当命中、也不当干净**，由引擎并集上报；
  *   `batchRefs` = 面判剔除的 token 数（批档面互引不判——**不是命中**，不进 `hits`、不改 verdict）
  */
@@ -290,7 +297,7 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
   const base = resolve(root)
   const scanBases = docRootBaseKeys(base, manifest)
   const hits = []
-  const crossRepo = []
+  const unverified = []
   const unreadable = [] // 读面（读不到 ≠ 干净）：档在盘但读不到 ⇒ 入此清单
   const citedTextOf = citedTextReader(unreadable) // 引文面：目标档全文（同档一次读、同轮缓存）
   const session = createResolutionSession() // 解析会话：一次调用建一份（同名候选查表 ∥ 基根发现同轮记忆）
@@ -298,6 +305,20 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
   const face = batchFaceContext(base, manifest) // 面判上下文（批档基底根）——一次调用建一份（吃注入的 manifest）
   let batchRefs = 0 // 面判剔除的 token 数（读数：不进 `hits`、不改 verdict；`report` 面据此出一行留痕）
   const sectionCache = new Map() // 节在盘：标题号集合按绝对路径记忆（同档一次读）
+  // 环检（§2.7「环检」）：按组根走一遍声明出边图——走回本根成环 ⇒ 一条 `环引`（与 `档缺` 同计「锚 N 条」）；
+  // 走查在「声明根不在本机」的节点止步 ⇒ 那些节点进 `unverified`（触发 = 环走查止步，零命中、不入闸）。
+  const cycles = declaredCycles(base)
+  for (const c of cycles.cycles) hits.push({ file: join(base, MANIFEST_REL), line: null, clazz: "环引", root: base, chain: c.names.join(" → ") })
+  for (const s of cycles.stopped) unverified.push({ declaredRepo: s.name, declaredRoot: s.root, declarationEntry: s.entry, trigger: "walk" })
+  /** `档缺` 两处产出点共用一形（路径线 ∥ 依据行——同一 token 不得两套载荷）。 */
+  const danglingHit = (file, line, token, r) => ({
+    file, line, token, clazz: "档缺",
+    missing: r.state === "dangling" ? r.missing : "",
+    sameName: r.state === "dangling" ? r.sameName : [],
+    ...(r.state === "dangling"
+      ? { declaredRepo: r.declaredRepo, declaredRoot: r.declaredRoot, rootOnDisk: r.rootOnDisk, siblingRepos: r.siblingRepos }
+      : {}),
+  })
   for (const f of files) {
     const text = readText(f, unreadable) // 读不到 ⇒ 入 unreadable，不再静默当零命中
     const re = new RegExp(ANCHOR_RE.source, "g") // 每档一份实例（零共享 lastIndex 状态）
@@ -338,9 +359,9 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
           // 面判（批档面互引不判）：与锚分支同判——同一 token 不得一面判一面不判。区间已占 ⇒ 锚面不再重报。
           if (isBatchFaceRef(f, token, face)) { batchRefs++; continue }
           const r = resolveToken(token, f)
-          if (r.state === "crossRepo") { crossRepo.push({ file: f, line: i + 1, token, ...r }); continue } // 跨仓：零命中，回执一行（同锚面）
+          if (r.state === "unverified") { unverified.push({ file: f, line: i + 1, token, trigger: "pointer", ...r }); continue } // 判不了存在性：列报，不入闸（同锚面）
           if (r.state !== "resolved") { // 路径先判存在性——两因不混（路径错 ⇒ `档缺`，引文错 ⇒ `引缺`）
-            hits.push({ file: f, line: i + 1, token, clazz: "档缺", missing: r.state === "dangling" ? r.missing : "", sameName: r.state === "dangling" ? r.sameName : [] })
+            hits.push(danglingHit(f, i + 1, token, r))
             continue
           }
           // 引文面：只判「是不是该档里的一段连续子串」——不折叠空白、不换全半角、不换算大小写（§3.25 边界）
@@ -359,14 +380,14 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
         // 面判（批档面互引不判 · §3.29 条目 AC）：引用方与目标同在批档基底根下 ⇒ 不解析、不判，只计数。
         if (isBatchFaceRef(f, token, face)) { batchRefs++; continue }
         const r = resolveToken(token, f)
-        if (r.state === "crossRepo") { crossRepo.push({ file: f, line: i + 1, token, ...r }); continue } // 跨仓：零命中，回执一行
+        if (r.state === "unverified") { unverified.push({ file: f, line: i + 1, token, trigger: "pointer", ...r }); continue } // 判不了存在性：列报，不入闸
         if (r.state !== "resolved") {
-          hits.push({ file: f, line: i + 1, token, clazz: "档缺", missing: r.state === "dangling" ? r.missing : "", sameName: r.state === "dangling" ? r.sameName : [] })
+          hits.push(danglingHit(f, i + 1, token, r))
           continue
         }
         if (num !== null && !sectionOnDisk(r.abs, num, sectionCache, unreadable)) hits.push({ file: f, line: i + 1, token, clazz: "节缺", section: num, target: r.abs })
       }
     })
   }
-  return { hits, crossRepo, unreadable, batchRefs }
+  return { hits, unverified, unreadable, batchRefs }
 }

@@ -33,6 +33,8 @@
       "docs/core/design/_archive",
       "docs/core/requirements/_archive"
     ],
-    "publicRepos": []
+    "publicRepos": [
+      "../.thincoder"
+    ]
   }
 }

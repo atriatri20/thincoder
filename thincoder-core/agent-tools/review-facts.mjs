@@ -93,7 +93,7 @@ export function resolveReviewDocPaths(documents, cwd) {
   for (const doc of (documents ?? [])) {
     if (typeof doc !== "string" || !doc.trim()) continue
     const abs = /^[a-zA-Z]:[\\/]/.test(doc) || doc.startsWith("/") || doc.startsWith("\\\\")
-    const r = resolvePathTarget(cwd, doc, { kind: "file", order: "root-first", crossRepo: "dangling", scanBases })
+    const r = resolvePathTarget(cwd, doc, { kind: "file", order: "root-first", scanBases })
     if (r.state === "ambiguous") { invalid.push({ doc, resolved: null, reason: "ambiguous-path", candidates: r.candidates }); continue }
     // 相对形 ∧ 锚无项目根 ⇒ 无基可挂（受理判据「必须在项目内」）——**与盘上有没有那档无关**：
     // 同一锚态同一个词（KD-8），否则拒因词成了磁盘状态的函数。

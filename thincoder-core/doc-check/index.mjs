@@ -37,8 +37,6 @@ import { basename, isAbsolute, parse, relative, resolve } from "node:path"
 import { checkParagraphs, DOC_CLASS } from "./paragraph.mjs"
 import { checkAnchors } from "./anchors.mjs"
 import { collectLineRefs, lineRefsBlock } from "./line-refs.mjs"
-// 跨仓引用一行读数的文案骨架（单源 = 统一解析层；本档只把它摆进报面）。
-import { crossRepoNote } from "../path-resolve.mjs"
 // 域表的一次读（§2.5 KD-7）∥ 取根判据本体（转口单源 = `thincoder-core/manifest.mjs`；判据式见下面 `rootOf`）。
 import { readManifest, owningProject } from "../manifest.mjs"
 
@@ -125,24 +123,24 @@ function perRootGroups(files, declaredBase) {
 }
 
 /** 并组的锚结果（§2.2）：命中按**文件稳定序**（清单位次）再按行号合并。
- *  单组时不重排（次序就是逐档一次的既有次序）；多组时这一步让跨项目的命中按清单序读，而不是按组的首现序读。 */
+ *  单组时不重排（次序就是逐档一次的既有次序）；多组时这一步让跨项目的命中按清单序读，而不是按组的首现序读。
+ *  `unverified` 并组不排序：它按声明根汇总，次序按组首现序（报面一行一根，不按档排）。 */
 function mergeAnchors(perGroup, fileOrder) {
   const hits = []
-  const crossRepo = []
+  const unverified = []
   const unreadable = []
   let batchRefs = 0
   for (const { res } of perGroup) {
     hits.push(...res.hits)
-    crossRepo.push(...(res.crossRepo ?? []))
+    unverified.push(...(res.unverified ?? []))
     for (const u of res.unreadable ?? []) if (!unreadable.includes(u)) unreadable.push(u)
     batchRefs += res.batchRefs ?? 0
   }
   if (perGroup.length > 1) {
     const at = (h) => (fileOrder.has(h.file) ? fileOrder.get(h.file) : Number.MAX_SAFE_INTEGER)
-    hits.sort((a, b) => at(a) - at(b) || a.line - b.line)
-    crossRepo.sort((a, b) => at(a) - at(b) || a.line - b.line)
+    hits.sort((a, b) => at(a.file) - at(b.file) || (a.line ?? 0) - (b.line ?? 0))
   }
-  return { hits, crossRepo, unreadable, batchRefs }
+  return { hits, unverified, unreadable, batchRefs }
 }
 
 /** 多根的项目名（§2.3）：**本次调用里能唯一定位该根的最短路径后缀**（段间 `/`）。
@@ -415,29 +413,63 @@ function lineReadBlock(base, reads) {
  *  `lay` = 报面路径形（§2.3：单根零标签、相对声明根；≥2 根行首项目标签、相对该档自身的根）。 */
 const paragraphHitLine = (lay, h) => `${lay.tag(h.file)}✗ ${h.clazz} ${lay.shown(h.file)}:${h.line}`
 
-/** 跨仓引用读数行（零命中、只入回执——文案骨架单源 = `path-resolve.mjs` 的 `crossRepoNote`）。 */
-const crossRepoLine = (h) => `跨仓引用：${crossRepoNote(h.token, h)}`
-
-/** `档缺` 命中行的追加提示（§2.6：缺的那一段 + 盘上同名——候选只提示，不改判态）。 */
+/** `档缺` 命中行的追加提示（§2.6：缺的那一段 + 盘上同名 + 声明仓两格——候选只提示，不改判态）。 */
 const missingHint = (lay, h) => {
   const seg = typeof h.missing === "string" && h.missing !== "" ? `缺「${h.missing}」` : ""
   const same = Array.isArray(h.sameName) && h.sameName.length > 0 ? `盘上同名：${h.sameName.map((p) => lay.shown(p)).join(" ∥ ")}` : ""
   const parts = [seg, same].filter(Boolean)
+  // 已声明而根在机却缺档 ⇒ 点名声明仓与「根在盘」这个事实（两件事：声明无罪、目标真的不在）
+  if (typeof h.declaredRepo === "string" && h.declaredRepo !== "") {
+    parts.push(`声明仓 ${h.declaredRepo}（声明根 ${lay.shown(h.declaredRoot)}，本机在盘：${h.rootOnDisk === true ? "在" : "不在"}）`)
+  }
+  // 未声明形的同级目录候选（仅当首段确实是本机同级目录名——空集不写这句，否则仓内普通拼错会被读成跨仓）
+  if (Array.isArray(h.siblingRepos) && h.siblingRepos.length > 0) {
+    parts.push(`本机同级目录：${h.siblingRepos.join(" ∥ ")}；该名未在 index.publicRepos 声明`)
+  }
   return parts.length > 0 ? `（${parts.join("；")}）` : ""
 }
 
-/** 锚命中的类名词（报面标签——类名由引擎定，本档只配显示形；三属同一条判据、同计「锚 N 条」）。 */
-const ANCHOR_LABELS = { 档缺: "锚·档缺", 节缺: "锚·节缺", 引缺: "锚·引缺" }
+/** 锚命中的类名词（报面标签——类名由引擎定，本档只配显示形；四属同一条判据、同计「锚 N 条」）。 */
+const ANCHOR_LABELS = { 档缺: "锚·档缺", 节缺: "锚·节缺", 引缺: "锚·引缺", 环引: "锚·环引" }
 
-/** 锚命中行（报面单源——三命中类同形，按 `clazz` 分词）：`档缺` 追加缺哪一段与盘上同名，
- *  `节缺` 点名目标档，`引缺` 点名引文前 40 字（读者不必回目标档自己找哪一段不对）。
- *  两处消费（`gate` 报面 ∥ 报告态报面）只调本函数——各写一份三元式改一处必漏一处。
+/** 锚命中行（报面单源——四命中类同形，按 `clazz` 分词）：`档缺` 追加缺哪一段与盘上同名，
+ *  `节缺` 点名目标档，`引缺` 点名引文前 40 字（读者不必回目标档自己找哪一段不对），
+ *  `环引` 点名成环的仓链——环是**仓级**事实（没有行号），坐标拿声明档本身与组根（判据单源 = `docs/core/design/PATH-RESOLUTION.md` §2.7「环检」）。
+ *  两处消费（`gate` 报面 ∥ 报告态报面）只调本函数。
  *  `lay` = 报面路径形（§2.3）：行首项目标签（≥2 根才打）+ 行内路径相对该档自身的根。 */
 const anchorHitLine = (lay, h) => {
-  const head = `${lay.tag(h.file)}✗ ${ANCHOR_LABELS[h.clazz] ?? `锚·${h.clazz}`} ${lay.shown(h.file)}:${h.line} \`${h.token}\``
+  const label = ANCHOR_LABELS[h.clazz] ?? `锚·${h.clazz}`
+  if (h.clazz === "环引") return `${lay.tag(h.file)}✗ ${label} ${lay.shown(h.file)}（${h.root}）publicRepos 成环：${h.chain}`
+  const head = `${lay.tag(h.file)}✗ ${label} ${lay.shown(h.file)}:${h.line} \`${h.token}\``
   if (h.clazz === "引缺") return `${head}（引文不在该档内：「${String(h.quote ?? "").slice(0, 40)}…」）`
   if (h.clazz === "节缺") return `${head}（目标 ${lay.shown(h.target)} 无 §${h.section}）`
   return head + missingHint(lay, h)
+}
+
+/** `未核` 列报块（**判不了** = 声明根不在本机）——句形单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「报面」两条行：
+ *  `未核 N 条（声明源缺位——列报不入闸）` + 逐声明根一行。**一个声明根一行、条数按声明根计**（不是按指针计）。
+ *  两个产出方共用这一形：`trigger:"pointer"` 的逐指针（列档:行与 token）∥ `trigger:"walk"` 的环走查止步。
+ *  **不进 `hits`、不动 verdict**——它是「看过了、判不了」在报面上的唯一形（口径单源 = `docs/core/design/PATH-RESOLUTION.md` §2.7）。 */
+const UNVERIFIED_HEAD = (n) => `未核 ${n} 条（声明源缺位——列报不入闸）`
+
+function unverifiedBlock(lay, list) {
+  if (!Array.isArray(list) || list.length === 0) return []
+  const byRoot = new Map()
+  for (const u of list) {
+    const key = pathKey(u.declaredRoot)
+    let g = byRoot.get(key)
+    if (!g) { g = { repo: u.declaredRepo, root: u.declaredRoot, entry: u.declarationEntry, pointers: [], walk: false }; byRoot.set(key, g) }
+    if (u.trigger === "walk") g.walk = true
+    else g.pointers.push(`${lay.shown(u.file)}:${u.line} \`${u.token}\``)
+  }
+  const out = [UNVERIFIED_HEAD(byRoot.size)]
+  for (const g of byRoot.values()) {
+    const triggers = []
+    if (g.pointers.length > 0) triggers.push(g.pointers.join(" ∥ "))
+    if (g.walk) triggers.push("环走查止步（该根无出边可读）")
+    out.push(`未核（声明源缺位）  仓 ${g.repo}：声明根 ${g.root} 本机不存在（声明项 = ${g.entry}）  触发 = ${triggers.join(" ∥ ")}`)
+  }
+  return out
 }
 
 /** 批档面留痕行（固定句形 · 单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.29 条目 AC「回执可见面」）：
@@ -487,9 +519,9 @@ function gateReport({ lay, docsSource, checkFiles, skipped, unreadable, anchors,
   out.push(...bucketLines(lay, skipped.missing, (n) => `跳过 ${n} 档（已不在盘，未检）：`))
   out.push(...bucketLines(lay, skipped.notMarkdown, (n) => `跳过 ${n} 档（非 markdown 档，未检）：`))
   out.push(...bucketLines(lay, unreadable, unreadableHead)) // 读面：与跳过行分开——「没读成」不是「不在盘」
-  // 跨仓引用读数（零命中类——不进 `total`、不改 verdict，只让作者看到「这一处没保证」）；
-  // 位置 = 命中区之前，末行仍留给结论 / 处置块。
-  for (const h of anchors.crossRepo ?? []) out.push(crossRepoLine(h))
+  // `未核` 列报（判不了类——不进 `total`、不改 verdict）：位置 = 命中区之前（口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「报面」），
+  // 末行仍留给结论 / 处置块。
+  out.push(...unverifiedBlock(lay, anchors.unverified))
   if (checkFiles.length === 0) {
     // 空范围不静默当通过（K6）——照实说明 + 给出补充通道（两侧都不得读成「已检」）。
     // 措辞按「有没有跳过行」分流：无跳过行时不得写「见上方跳过行」。
@@ -659,10 +691,10 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
   ]
   for (const h of anchors.hits) out.push(anchorHitLine(lay, h))
   for (const w of paragraphs) out.push(paragraphHitLine(lay, w))
-  // 跨仓引用读数（零命中类——只报不拦，位置 = 命中区之后、清单块之前）
-  for (const h of anchors.crossRepo ?? []) out.push(crossRepoLine(h))
   // 读面：清单块之前单列一行点名（口径 = §3.20「读面」块——「没读成」不得与「干净」同形）
   out.push(...bucketLines(lay, unreadable, unreadableHead))
+  // `未核` 列报：与读面同处（不当命中、也不当干净），行形单源 = `unverifiedBlock`
+  out.push(...unverifiedBlock(lay, anchors.unverified))
   // 读数块：位置 = 读面行之后、行号坐标清单块之前（末行恒是 `结论：…`；读数不抢它的位）
   if (lineReads.length) out.push(...lineReadBlock(base, lineReads))
   // 域表读数块（§2.5 · 仅 `report` 面）：出场条件两支——「本次读到域表的根集 ≠ {声明根}」或任一根无 manifest；

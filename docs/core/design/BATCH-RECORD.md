@@ -402,7 +402,7 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 
 **末形再分两判**：多根工作区锚（`projectRootView` 报 `workspace`——直接子目录带档 ≥1 ∥ 零带档时下辖裸仓 ≥1）⇒ 条 5 报明；`none`（空目录 ∥ 锚自身为裸仓——`.git` 无档且下辖无已注册项目）⇒ 兜底 `resolve(cwd)`：
 
-1. **候选序（相对路径）**：算法单源 = `docs/core/design/PATH-RESOLUTION.md` §2.2。本面只声明自己的参数：`order:"near-first"`（近基根 = cwd / 会话锚 先、项目根次之——本面自声明的例外）· 读面 `kind:"file"` ∥ create `kind:"none"` · `crossRepo:"dangling"`（本面不放宽跨仓形）。
+1. **候选序（相对路径）**：算法单源 = `docs/core/design/PATH-RESOLUTION.md` §2.2。本面只声明自己的参数：`order:"near-first"`（近基根 = cwd / 会话锚 先、项目根次之——本面自声明的例外）· 读面 `kind:"file"` ∥ create `kind:"none"` · 不传 `declaredRepos`（本面不放宽跨仓形）。
 
    本面追加的第三级基底**取值两段**：**声明面** = manifest `docRoot.batches`；**缺省回退默认值** = 声明面为空时 `resolve(docRootBase(cwd), "docs/batches")`（docRootBase = 项目根 ?? cwd）。**create 面候选序与收窄**见条 2 / 条 6。
 

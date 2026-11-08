@@ -115,9 +115,12 @@ else is read except the targets those documents point at. Omitted in `gate` mode
 There is no default range in `report` mode: omitting `docs`, or passing an empty list, is refused rather than widened — nothing
 
 is scanned unless you name it. A path that is not on disk or is not a Markdown document is an error in `report` mode and nothing
-is judged; in `gate` mode such paths are listed as skipped instead. A pointer resolves against the project root (full path) or
+is judged; in `gate` mode such paths are listed as skipped instead.
 
-against the pointing document's own directory — bare names are not resolved across other directories.
+A pointer resolves against the project root (full path), against the pointing document's own directory, or inside a repo this one declares under `index.publicRepos` (first segment = that repo's directory name).
+Bare names are not resolved across other directories.
+
+A pointer into a repo this project has not declared is refused, not merely noted: it is reported as a missing document and a `gate` run fails the delivery.
 - **Doc names: repo-root full path, every mention — same-directory and second mentions too.** Cross-directory bare names are judged `档缺` and refused; the named path is a hint, not a pass. Same-directory ones pass the machine but dangle once either moves — so ask: is the token `uniquely` placeable?
 
 `lines` (optional, `report` mode only) — the files to measure, as paths relative to the project root or absolute.

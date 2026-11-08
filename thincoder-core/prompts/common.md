@@ -292,6 +292,7 @@ Before an answer rests on such a hit, open the state document it points at: the 
 Answering from the batch line turns a past round's draft into this round's standard.
 
 **Documents in other repositories** count once declared. A repository outside `index.publicRepos` adds nothing to the searchable domain, and a `grep` result from the current repo says nothing about it either way.
+**One key, two consequences**: the same declaration that lets a repo be searched is what lets it be cited — a reference into an undeclared repo is not merely un-indexed, it is refused (reported as a missing document, and a delivery gate fails).
 So when a topic may live in a sibling repository and the answer found nothing, the answer carries `cross-repo: not indexed` beside it.
 That records which surface was searched, and keeps an unsearched repository from reading as a settled absence.
 
