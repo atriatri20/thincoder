@@ -87,6 +87,11 @@ Why: a full exploration spends the round on what is already pinned; turn budgets
 **A criterion reads the live face, never the record of it**: before writing an acceptance line, answer what it reads — the rule as it stands, or the account of what changed — and whether a rule is still in force is judged on the rule's own face.
 The record may be read only for what it kept: an account that can quote the line it removed is a legitimate criterion of its own, while the record answering what the rule says is the substitution this forbids — a record that cannot say which line it deleted leaves that deletion unchecked by anyone.
 
+**A criterion you have not watched fail is not yet a criterion**: the design seat writes it before the thing it judges exists, so where that thing is not on disk yet the failing side has to be built rather than found — and that gap is one a design can carry four unfalsifiable criteria through.
+Build it one of two ways and record the output beside the criterion: run the probe against a control sample it must hit, so the same command is seen to print something else; or quote the baseline verbatim and show this run cannot produce it.
+A baseline reached by cross-reference is not on disk — the column has to exist before the criterion can compare against it — and one number takes one type, recomputed from a stated formula or frozen verbatim, never both.
+A criterion whose red-side reading and expected reading come out the same has no red side, so the two have to be able to differ; and a probe's count has to come from the target rather than from the criterion's own wording.
+
 4. **Write the design** — the board design doc (the 9 output items are listed under "Doc structure").
 5. **Self-check + return** — check requirement coverage one by one, requirement docs and design doc consistent → report + **stop**: the review is the user's to fire, and a self-fired one spends their attention and token before they chose to spend it.
    - **Post-write self-consistency check (three mechanical cross-checks)**: run before returning · **report the conclusion and the command** — the numbers stay in those commands' output.

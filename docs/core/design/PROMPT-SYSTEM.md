@@ -8631,6 +8631,167 @@ node -e "const fs=require('fs');const L=fs.readFileSync('docs/core/design/PROMPT
 3. 〔待裁 · 需求档〕三席互锁若将来要做成需求条目，需求档一层由父侧立行；本批按用户裁「不动需求档」处理。
 
 
+### 6.84 判据自喂：设计轮里红侧要造出来，不是找出来（`thincoder-core/prompts/persona-eng-designer.md` 新增一段 · 四行）
+
+**来源**：用户 2026-11-08 08:19 裁「B」——「我写要判什么，不写读数怎么取」。
+
+**起因（前一批四轮评审连出的四种自喂形态，同一病换四次形）**
+
+- 改前读数写成改后值：两侧同一个数，判据没有红侧。
+- 基线写「见某表」而该表没有那一列：基线不在盘，收口只能拿现值比现值。
+- 检索不锚定：判据自己的措辞命中了自己。
+- 一个数被写成两条互斥指令：既要求重算，又要求逐字冻结。
+
+**题眼（一句）**：设计轮里被判物还不存在——红侧要造出来，不是找出来。
+
+**病根（一句）**：既有原则要求到会失败的地方跑一次，而设计席写判据时被判的东西还不存在；于是「跑过了」在设计轮里从不兑现，写下来的每一条看上去都像判据。
+
+依据 `thincoder-core/prompts/common.md`「A reading that can only come out one way has verified nothing」——原则在位，缺的是设计席这一侧怎么兑现它。
+
+**两种红侧取法（不用凭空造缺陷）**
+
+| # | 取法 | 怎么算跑过 |
+|---|---|---|
+| 1 | 反向控制 | 同一命令对一个**必须被命中**的样本跑一次，证明它有本事打印别的数 |
+| 2 | 基线在盘 | 基线逐字抄在判据旁，并说明「本次运行不可能产回它」 |
+
+**自察三问（写的时候就能答；答不上即判据未成立）**
+
+| # | 问 | 答「是」意味什么 |
+|---|---|---|
+| 1 | 红侧读数与期望读数是不是同一个数 | 这条判据没有红侧：它只会印一个数 |
+| 2 | 基线是不是只靠交叉引用指过去 | 基线不在盘，收口只能拿现值比现值 |
+| 3 | 一个数是不是同时被要求「重算」与「逐字冻结」 | 两条互斥指令，执行侧无法同时满足 |
+
+**与 §6.79 的分工（`D2` 划界，两节不互为副本）**
+
+- §6.79 治**通用面**：任何一条判据，改前要在不通过那侧跑一次。它的 `Q1` 已点到设计轮这一侧——那侧可以是「还不存在的那一行」。
+- §6.79 的 `Q3` ∥ `Q4` 正对着设计轮的状态，而它们给出的出路**不是造红侧**：`Q3`（改前跑不了：域 ∥ 口径没定死）的处置是先定域与口径、定不下来的报「未判」；`Q4` 的处置是报「判了 0 个」。
+- 照这两条，设计席可以完全合规地把每条判据写成「未判」或「判了 0 个」：诚实、可核、一条都不会红，批次带着零个红侧读数收口。它们让缺口**被记录**，本节让它**被造出来**——报「未判」是承认没跑，造出红侧是把它跑了。这一句是本节真正新增的那一半。
+- 本节治**设计轮里被判物尚不存在**这一特定空隙：`Q1` 的第三支没有现成对象可跑，红侧要造出来，不是找出来。
+- 故本节是 `Q1` 第三支的兑现办法，不是 §6.79 的第二次申明。
+
+**逐字终稿（插在 `thincoder-core/prompts/persona-eng-designer.md` 的 `## Five-step workflow` 第 3 步那段之后 · 四行 · 自成一段）**
+
+```text
+**A criterion you have not watched fail is not yet a criterion**: the design seat writes it before the thing it judges exists, so where that thing is not on disk yet the failing side has to be built rather than found — and that gap is one a design can carry four unfalsifiable criteria through.
+Build it one of two ways and record the output beside the criterion: run the probe against a control sample it must hit, so the same command is seen to print something else; or quote the baseline verbatim and show this run cannot produce it.
+A baseline reached by cross-reference is not on disk — the column has to exist before the criterion can compare against it — and one number takes one type, recomputed from a stated formula or frozen verbatim, never both.
+A criterion whose red-side reading and expected reading come out the same has no red side, so the two have to be able to differ; and a probe's count has to come from the target rather than from the criterion's own wording.
+
+```
+
+围栏内四行之后留一空行：本节围栏与人格档落地块按空行分块比对（`A2`），两侧同形，比对才归同一把尺子。
+
+**四样各落在哪一句**（只点位置，正文不重述）
+
+| 要求 | 落在哪一句 |
+|---|---|
+| 义务本身（写判据时失败侧还不存在，故那侧要造） | 第一行：`the design seat writes it before the thing it judges exists` ＋ `where that thing is not on disk yet the failing side has to be built rather than found` |
+| 两种取法 ＋ 红侧读数落在判据旁 | 第二行：`run the probe against a control sample it must hit` ∥ `quote the baseline verbatim and show this run cannot produce it` ＋ `record the output beside the criterion` |
+| 基线在盘 ∥ 一个数一种型 | 第三行：`A baseline reached by cross-reference is not on disk` ＋ `one number takes one type … never both` |
+| 红侧与期望同数即无红侧（两半各带自己的补救句） | 第四行前半：`come out the same has no red side` ＋ `the two have to be able to differ` |
+| 探针的计数只能来自目标档 | 第四行后半：`a probe's count has to come from the target rather than from the criterion's own wording` |
+
+**落点（钉引文，不记行号）**
+
+| # | 锚 | 逐字 | 判什么 |
+|---|---|---|---|
+| 1 | 前锚甲（§6.83 终稿甲末行） | `leaves that deletion unchecked by anyone` | 块落在它之后 |
+| 2 | 前锚乙（同档第 3 步末行） | `leave the chain out of this line` | 块落在它之后 |
+| 3 | 后锚（第 4 步标题） | `4. **Write the design**` | 块落在它之前 |
+
+`A3` 钉的是一、二两枚的**较后者**之后、后锚之前：终稿甲哪天被删，第二枚仍立；两枚一起取不到 ⇒ 命令印 `null`，不给绿也不误绿。
+
+**为什么先落本节（`F2`）**
+
+依据 `docs/core/design/PROMPT-SYSTEM.md`「改规则 → 先改机制文档 → coder 依它改 EN（产品代码面）」
+
+先落提示词再补记录会留一个窗口：规矩在提示词面已生效、在机制面查不到出处。下一个人读到它，要么以为凭空加的、要么以为已废弃——两种误读都不产生红灯。**顺序本身是这条规则的一部分。**
+
+**验收（A1–A5 · 每条带红法 · 读数用同一把尺子；绝对数只留命令输出，不落本档）**
+
+| # | 验收 | 跑什么 / 期望什么 | 红在什么读数上 | 跑者 |
+|---|---|---|---|---|
+| A1 | 终稿四行在人格档正好落一处 ∥ 块形四行 ∥ 自成一段 ∥ 每行 ≤ 300 | 命令 ⑥：`A1_block` = **1** ∧ `A1_lines` = **4** ∧ `A1_prevBlank` = `true` ∧ `A1_maxLen` ≤ **300** | 块取不到 ⇒ 前三条印 `null`（不给绿，不写成 0）；`A1_block` = 0（未落）∥ ≥ 2（写两处）⇒ 红；`A1_lines` ≠ 4 ⇒ 红；`A1_prevBlank` = `false`（块没自成一段）⇒ 红；`A1_maxLen` > 300 ⇒ 红 | 实施轮（落地后）∥ 本档每轮改本节时复跑 |
+| A2 | 两处逐字相等（口径 = 去折行后逐字相等，同 §6.83 的 `A2`） | 命令 ⑥：`A2_fenceEq` = `true`（人格档那一块 ↔ 本节围栏四行） | 任一侧取不到 ⇒ `null`（不给绿）；`false`（两处文字不等）⇒ 红。改本节围栏 ⇒ 同批重落人格档；由此产生的红只由重落清掉，不得靠放宽本行清掉 | 实施轮（落地后） |
+| A3 | 落点：块在两枚前锚的较后者之后、后锚之前 | 命令 ⑥：`A3_order` = `true` ∧ 反向对照 `A3_control` = `false` | `false`（块落在锚外）⇒ 红；`null`（前锚取不到）⇒ 不给绿；`A3_control` ≠ `false` ⇒ 比对失活 ⇒ 也判红 | 本席（本轮）∥ 实施轮（落地后） |
+| A4 | 终稿四行不**逐字**重述 `thincoder-core/prompts/common.md` 块 ① 的四条形状串（判字面；语义分工住本节） | 命令 ⑥：`A4_restated` = **0** ∧ `A4_control` = **4**（四条串在 `thincoder-core/prompts/common.md` 上逐串各 1）∧ `A4_sample` ≥ **1**（一段确实重述了第一形的样本） | 块取不到 ⇒ `A4_restated` 印 `null`（不给绿）；> 0 ⇒ 红；`A4_control` < 4 ⇒ 探针失活 ⇒ 红；`A4_sample` = 0 ⇒ 探针没有命中能力 ⇒ 红 | 本席（本轮）∥ 实施轮（落地后） |
+| A5 | 交付门 | `doc_check(mode:"gate", docs:["docs/core/design/PROMPT-SYSTEM.md", "thincoder-core/prompts/persona-eng-designer.md"])` 首行 `PASS` | 首行非 `PASS` ⇒ 红 | 本席交付前 ∥ 父侧收口复跑 |
+
+**判域注**：`A4` 的四条形状串是**探针**，判的是人格档那一块含不含它们；它们照 `thincoder-core/prompts/common.md` 块 ① 的原句写进命令，只作判据，不作规则的重述（`D2` 的重述禁令管规则本体，不管判据串）。本节其余文字不入 `A4` 判域，故本节的题眼不自喂。
+
+**验收命令 ⑥（可复跑 · 纯 ASCII · 判域 = 人格档 ∥ `thincoder-core/prompts/common.md` ∥ 本档）**
+
+```text
+node -e "const fs=require('fs');const D=fs.readFileSync('thincoder-core/prompts/persona-eng-designer.md','utf8'),C=fs.readFileSync('thincoder-core/prompts/common.md','utf8'),P=fs.readFileSync('docs/core/design/PROMPT-SYSTEM.md','utf8');const occ=(t,s)=>t.split(s).length-1;const H='**A criterion you have not watched fail is not yet a criterion**';const blk=(A,i)=>{if(i<0)return null;const o=[A[i]];let k=i+1;while(k<A.length&&A[k].trim()!==''){o.push(A[k]);k++}return o};const DL=D.split(/\r?\n/),PL=P.split(/\r?\n/);const iH=DL.findIndex(l=>l.startsWith(H));const B=blk(DL,iH);const s6=PL.findIndex(l=>l.startsWith('### 6.84 '));let s6e=s6;if(s6>=0){s6e=s6+1;while(s6e<PL.length&&!/^### /.test(PL[s6e])&&!/^## /.test(PL[s6e]))s6e++}const S6=s6<0?null:PL.slice(s6,s6e);const B6=S6?blk(S6,S6.findIndex(l=>l.startsWith(H))):null;const shape=['a search whose own string carries the answer','a pattern that matches nothing','a count with no ruler named','a run over no object at all'];const SAMPLE='C2 sample: a criterion worded so a search whose own string carries the answer decides its own result';const j=B?B.join('\n'):'';const fold=a=>a.join(' ').replace(/\s+/g,' ').trim();const A_BEFORE='leaves that deletion unchecked by anyone',A_STEP3='leave the chain out of this line',A_STEP4='4. **Write the design**';const ord=T=>{const i=T.indexOf(H),lo=Math.max(T.indexOf(A_BEFORE),T.indexOf(A_STEP3)),hi=T.indexOf(A_STEP4);return(i>=0&&lo>=0&&hi>=0)?(i>lo&&i<hi):null};const S7=A_BEFORE+'\n'+A_STEP3+'\n'+A_STEP4+'\n'+H;console.log({A1_block:occ(D,H),A1_lines:B?B.length:null,A1_prevBlank:iH>0?DL[iH-1].trim()==='':null,A1_maxLen:B?Math.max(...B.map(l=>[...l].length)):null,A2_fenceEq:(B&&B6)?fold(B)===fold(B6):null,A3_order:ord(D),A3_control:ord(S7),A4_restated:B?shape.reduce((n,s)=>n+occ(j,s),0):null,A4_control:shape.reduce((n,s)=>n+occ(C,s),0),A4_sample:shape.reduce((n,s)=>n+occ(SAMPLE,s),0)})"
+```
+
+**关键决策**
+
+| # | 决策 | 取它 | 拒掉的替代 | 理由 |
+|---|---|---|---|---|
+| K1 | 义务落在五步流程第 3 步之后，不落第 5 步收尾清单 | ✔ | 在收尾清单里加一条 | 收尾清单是要打勾的；红侧是**写的时候**决定的，写完补不出来。位置由 `A3` 钉住——`A1` 的计数兜不住位置 |
+| K2 | 红侧取法给两条，不给一条 | ✔ | 只写「跑一次会失败的那一次」 | 设计席的失败侧常不存在；只写原则 = 把 `thincoder-core/prompts/common.md` 那条原样再发一遍（父侧裁：这批补的不是原则） |
+| K3 | 第四形以更窄的形进终稿第四行，不删 | ✔ | 删掉后半句 ∥ 四形全写进终稿 | 全写 = 块 ① 的第二份副本（`D2`）；删了设计席就拿不到那个当场可做的形。取中间：同族（同一个病根）、判域不同（块 ① 判检索本身，第四行判红侧读数的来处），字面由 `A4` 判 |
+
+**先例 ∥ 偏离**
+
+- 先例 = §6.79（一条规则 + 落点表 + 每条验收带红法）∥ §6.83 落点 ①（设计席终稿甲就住在同一插入点：一条规则自成一段 + 逐字围栏 + 每条验收带跑者）。
+- 偏离 = 先例的红侧多是落地后才读到的数；本节把落地前的那枚读数与它的红法写进验收面，并把「证不出红侧的候选判据换掉、不留在表里占位」写成本节的边界。
+
+**既有件三问**
+
+- `existing` = `thincoder-core/prompts/common.md`「A reading that can only come out one way has verified nothing」那一块 · consumers = 两模式全部角色 ⇒ 该块一字不动，只在设计席人格档另起一条。
+- `existing`（第二件）= 同档「The failing side is recorded, not narrated」——它要求命令与输出并排记下；本节补的是那一次运行在设计轮里根本跑不起来时的取法。
+- `none found` = 新题眼 `A criterion you have not watched fail is not yet a criterion` 与三条新探针串（`failing side has to be built rather than found` ∥ `one number takes one type` ∥ `not watched fail`）在 `thincoder-core/prompts/` 全 17 档逐串实扫 ⇒ 零命中 ⇒ 不重名、不撞旧句。
+
+**勘察证据行（本席本轮实读）**
+
+- 原则在位：依据 `thincoder-core/prompts/common.md`「A reading that can only come out one way has verified nothing」
+- 插入点前一行（§6.83 终稿甲末行，已在盘）：依据 `thincoder-core/prompts/persona-eng-designer.md`「leaves that deletion unchecked by anyone」
+- 备用前锚：依据 `thincoder-core/prompts/persona-eng-designer.md`「leave the chain out of this line」
+- 插入点后一行：依据 `thincoder-core/prompts/persona-eng-designer.md`「4. **Write the design**」
+- §6.79 的 `Q1` 逐字（本节兑现它第三支）：依据 `docs/core/design/PROMPT-SYSTEM.md`「改前在**不通过那侧**跑过吗——先说出那侧是哪一侧（改前的状态 ∥ 本该被拒的输入 ∥ 还不存在的那一行）」
+- §6.79 的 `Q3` 处置逐字：依据 `docs/core/design/PROMPT-SYSTEM.md`「改前跑不了（域 ∥ 口径没定死）」
+- §6.79 的 `Q4` 处置逐字：依据 `docs/core/design/PROMPT-SYSTEM.md`「空范围不算通过」
+- 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` 实读 = `[]` ⇒ 工作目录内无独立公共源文档仓——已查，无相关。
+- 数据事实：本节对数据无断言（无行数、无字段、无枚举取自数据）⇒ 无此句。
+
+**受影响文件与分层结论（`D11` 全层）**
+
+| 档 | 层 | 改什么 | 本笔归谁 |
+|---|---|---|---|
+| `docs/core/design/PROMPT-SYSTEM.md` | 设计档（本档） | 本节新增 | 本席，本轮已落 |
+| `thincoder-core/prompts/persona-eng-designer.md` | 提示词（产品代码面，运行期加载） | 新增四行（逐字见本节围栏） | 实施轮 eng-coder，本节落盘之后 |
+| 需求档 · 测试档 | — | **0**（用户裁「不动需求档」；零代码面） | — |
+
+**分层结论 = 无档跨分层**：档位线只量代码面；`.md` 提示词档免档位判定，运行期代码零改。
+
+**集成测试设计**：`none` —— 改动面 = 一份提示词档四行 + 本档一节，零代码面。
+
+两条入口均不成立：
+
+- 不改任何既有用例断言的业务可观察结果——`test/RTM.md` 的故事索引里与评审 ∥ 提示词相邻的行断的是评审消息注入面 ∥ 工具面写盘回执 ∥ 超时与范围配置（逐行走查结果见 §6.83 的五行表；本节改动面是它的子集，不重复走查）。
+- 未新增业务上真需要的场景——「设计席下次写判据会不会造红侧」从业务入口复现不出可机判结果；能机判的只有文本在不在、两处同不同文、位置在不在锚内（`A1`–`A4`）。
+
+⇒ 破行 0 · 冗余 0 · 新增 0。
+
+**边界（本节不做）**
+
+- 不逐字重述 `thincoder-core/prompts/common.md` 块 ① 的四条形状串：终稿四行一条不含（`A4` 判）；第四形只以更窄的形落在终稿第四行后半。
+- 不点工具名、不给判据模板、不写反例清单——一条规则，不做成体系。
+- 不新建机检门：`A1`–`A5` 是验收命令，不是新门；`doc_check` 判据一字不动。
+- 不动 `thincoder-core/prompts/common.md` ∥ `thincoder-core/prompts/discipline-engineering.md`，不动需求档、不动台账。
+
+**UI / 交互决策**：无界面面——本节只改提示词文本与设计档文字。
+
+**上抛项**
+
+1. 〔知会 · 顺序〕本节先落盘，提示词那一笔随后一次落；同一轮分两次派单，顺序由 `A2` 兜住（块未落时 `A2_fenceEq` 只能是 `null`，不给绿）。
+2. 〔知会 · 语言面〕用户给的是中文，落笔为英文面（运行面语言纪律）；四样逐句见上「四样各落在哪一句」。
+
+
 ## 8. 提示词承载（单源 · M9 落点）
 
 **定位**：提示词 = **产品代码**，唯一副本 = `thincoder-core/prompts/`（17 档，运行期直接加载）。规则的**人读权威** = 中文机制文档（`docs/core/design/` 纪律族）。变更路子 = 改规则 → 先改机制文档 → coder 依它改 EN（走产品代码面：需求 → 设计 → 评审 → coder）。**无机检门**（用户裁定不变）。
