@@ -25,6 +25,9 @@
  *   量法的家 = 本档 `countContentLines`（全仓唯一实现）；`scripts/doc-check-linecounts.mjs` 只是再出口缝。
  * 批档面留痕行（`批档面互引未判 N 处`——读数，不是判据）：口径单源 = 同档 §3.29 条目 AC；只在 `report` 面出，
  *   不进 `hits`、不改 verdict，`gate` 面零改（详情住 `./anchors.mjs` 的面判谓词，本档只把数摆上报面）。
+ * 后缀兜底读数块（`how="suffix" N 处` + 按 token 去重的清账清单——读数，不是判据）：口径单源 = `docs/core/design/PATH-RESOLUTION.md`
+ *   §2.6 ∥ §2.8；只在 `report` 面出。**为什么必须显式**：唯一后缀证明「能定位」，不证明「是你想指的那个」——
+ *   不标，它就混进绿里；清单的封顶与总数行（`共 N 条 token · M 处`）同住 `suffixBlock`。
  * 判域（**按档定根** · 判据句单源 = `docs/core/design/DOC-CHECK.md` §2.1–§2.4；需求条 = `docs/core/requirements/DOC-CHECK.md` 的 F17 ∥ AC-15）：
  *   每个档用**自己的落点**定根——`rootOf(abs) = owningProject(abs, parse(abs).root) ?? 声明根`；界 = 该档所在盘的盘根
  *   （界填声明根会把跨项目的档先判出界、再落回声明根，那正是本批要修的 `档缺`）。
@@ -129,18 +132,22 @@ function mergeAnchors(perGroup, fileOrder) {
   const hits = []
   const unverified = []
   const unreadable = []
+  const suffixHits = []
   let batchRefs = 0
+  let suffixBuilds = 0
   for (const { res } of perGroup) {
     hits.push(...res.hits)
     unverified.push(...(res.unverified ?? []))
+    suffixHits.push(...(res.suffixHits ?? []))
     for (const u of res.unreadable ?? []) if (!unreadable.includes(u)) unreadable.push(u)
     batchRefs += res.batchRefs ?? 0
+    suffixBuilds += res.suffixBuilds ?? 0
   }
   if (perGroup.length > 1) {
     const at = (h) => (fileOrder.has(h.file) ? fileOrder.get(h.file) : Number.MAX_SAFE_INTEGER)
     hits.sort((a, b) => at(a.file) - at(b.file) || (a.line ?? 0) - (b.line ?? 0))
   }
-  return { hits, unverified, unreadable, batchRefs }
+  return { hits, unverified, unreadable, batchRefs, suffixHits, suffixBuilds }
 }
 
 /** 多根的项目名（§2.3）：**本次调用里能唯一定位该根的最短路径后缀**（段间 `/`）。
@@ -300,6 +307,8 @@ function noRootOutcome(items) {
     unreadable: [], lineReads: [],
     lineRefs: { body: [], fenced: [], total: 0, unreadable: [] },
     batchFaceRefs: 0,
+    suffixHits: [],
+    suffixBuilds: 0,
     projectRoots: [],
     domainTables: [],
   }
@@ -417,7 +426,11 @@ const paragraphHitLine = (lay, h) => `${lay.tag(h.file)}✗ ${h.clazz} ${lay.sho
 const missingHint = (lay, h) => {
   const seg = typeof h.missing === "string" && h.missing !== "" ? `缺「${h.missing}」` : ""
   const same = Array.isArray(h.sameName) && h.sameName.length > 0 ? `盘上同名：${h.sameName.map((p) => lay.shown(p)).join(" ∥ ")}` : ""
-  const parts = [seg, same].filter(Boolean)
+  // 第 6′ 步 ≥2 命中的候选（§2.6）：与「盘上同名」分列——两张表各答一件事，并进一列读者分不清是哪种候选
+  const suffix = Array.isArray(h.suffixCandidates) && h.suffixCandidates.length > 0
+    ? `后缀命中 ${h.suffixCandidates.length} 处：${h.suffixCandidates.map((p) => lay.shown(p)).join(" ∥ ")}`
+    : ""
+  const parts = [seg, same, suffix].filter(Boolean)
   // 已声明而根在机却缺档 ⇒ 点名声明仓与「根在盘」这个事实（两件事：声明无罪、目标真的不在）
   if (typeof h.declaredRepo === "string" && h.declaredRepo !== "") {
     parts.push(`声明仓 ${h.declaredRepo}（声明根 ${lay.shown(h.declaredRoot)}，本机在盘：${h.rootOnDisk === true ? "在" : "不在"}）`)
@@ -469,6 +482,34 @@ function unverifiedBlock(lay, list) {
     if (g.walk) triggers.push("环走查止步（该根无出边可读）")
     out.push(`未核（声明源缺位）  仓 ${g.repo}：声明根 ${g.root} 本机不存在（声明项 = ${g.entry}）  触发 = ${triggers.join(" ∥ ")}`)
   }
+  return out
+}
+
+/** 后缀兜底清单的封顶（§2.6 / §2.8 护栏一：按处数降序取前 50 行）。 */
+const SUFFIX_LIST_MAX = 50
+
+/** 后缀兜底读数行（固定句形）：写明这一支解析了几处、索引建了几次。
+ *  **为什么必须显式**：唯一后缀证明「能定位」，不证明「是你想指的那个」——不标，它就混进绿里（§2.8 护栏一）。
+ *  `后缀索引建 N 次` 是读数不是判据：它衡量「建一次」这件事，墙钟不衡量任何事（§2.8）。 */
+const SUFFIX_HEAD = (n, builds) => `后缀兜底读数：how="suffix" ${n} 处（唯一后缀命中的指针——能定位，不等于你想指的那一处；后缀索引建 ${builds} 次）`
+
+/** 后缀兜底读数块（仅 `report` 面 · 不进 `hits`、不改 verdict）：
+ *  一行读数 + 按 token 去重的清账清单（`token ⇒ 绝对路径（N 处）`）。
+ *  界：按处数降序、token 字典序为次键、取前 `SUFFIX_LIST_MAX` 行，末行 `共 N 条 token · M 处`
+ *  （N = 去重后的 token 数、M = 处数——两个数都由当次载荷算出，不估）。
+ *  位置 = `未核` 列报之后、行号坐标清单块之前（末行仍留给 `结论：…`）。 */
+function suffixBlock(hits, builds) {
+  if (!Array.isArray(hits) || hits.length === 0) return []
+  const byToken = new Map()
+  for (const h of hits) {
+    const g = byToken.get(h.token)
+    if (g) g.count++
+    else byToken.set(h.token, { abs: h.abs, count: 1 })
+  }
+  const rows = [...byToken.entries()].sort((a, b) => b[1].count - a[1].count || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+  const out = [SUFFIX_HEAD(hits.length, builds)]
+  for (const [token, g] of rows.slice(0, SUFFIX_LIST_MAX)) out.push(`  ${token} ⇒ ${g.abs.replace(/\\/g, "/")}（${g.count} 处）`)
+  out.push(`  共 ${byToken.size} 条 token · ${hits.length} 处`)
   return out
 }
 
@@ -570,12 +611,16 @@ function gateReport({ lay, docsSource, checkFiles, skipped, unreadable, anchors,
  *   paragraphHits:Array, lineRefHits:Array, files:string[], checkFiles:string[], paragraphMax:number,
  *   skipped:{missing:string[], notMarkdown:string[]}, unreadable:string[], lineReads:{file:string, lines:number, tier:'hard'|'soft'|null}[],
  *   lineRefs:{body:Array, fenced:Array, total:number, unreadable:string[]}, batchFaceRefs:number, projectRoots:string[],
+ *   suffixHits:{file:string, line:number, token:string, abs:string}[], suffixBuilds:number,
  *   domainTables:{root:string, manifest:boolean}[]}}
  *   `lineRefs` = 行号坐标的采集结果，**两个问法返回同一份**（同一次采集）。
  *   `projectRoots` = 参与判定的根（升序；§2.3）。**消费者只有两处**：报面的根清单行（≥2 根才出）与本批用例的断言。
  *   `domainTables` = 域表读数（§2.5：每组一根、按路径升序；`manifest` = 该根读到了 manifest）。
  *   **消费者只有两处**：`report` 面的域表读数块与本批用例的断言——不进 `hits`、不改 verdict（`gate` 面零改）。
  *   `batchFaceRefs` = 面判剔除的 token 数（批档面互引不判——读数，**不进 `hits`**、不改 verdict；只有 `report` 面报面出这一行）。
+ *   `suffixHits` = 第 6′ 步（唯一后缀兜底）解析出来的指针（逐处 `{file, line, token, abs}`——读数，**不进 `hits`**、不改 verdict；
+ *   只有 `report` 面出读数块）；`suffixBuilds` = 后缀索引建表次数（同一行读数里的 `后缀索引建 N 次`）。
+ *   **消费者只有两处**：`report` 面的后缀读数块与本批用例的断言——它是「这些指针为什么从 `档缺` 变绿」的唯一可查面。
  *   `lineReads` = 读数面结果（给了 `lines` 才有内容；`gate` 面恒空——该面带 `lines` 直接抛错）。
  *   它**不进 `hits`**（不是命中），也不改 verdict、不改跳过行与读面行。
  *   `unreadable` = 三条判据的并集（在盘但读不到的档）——**不进 `hits`**（不是命中），但它让 `gate` 首行判 `ERROR`；
@@ -665,6 +710,9 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
     batchFaceRefs: anchors.batchRefs ?? 0,
     lineRefHits: lineRefs.body.map((h) => ({ ...h, clazz: LINE_REF_CLASS })),
     lineRefs,
+    // 后缀兜底（第 6′ 步）的两件读数：逐处的 `suffixHits`（不是命中）与建表次数。消费者 = `report` 面读数块与用例断言。
+    suffixHits: anchors.suffixHits ?? [],
+    suffixBuilds: anchors.suffixBuilds ?? 0,
     // 参与判定的根（升序）：报面根清单与用例断言两处消费（§2.3／§3）
     projectRoots,
     // 域表读数（§2.5）：每组一根、按路径升序；`manifest` = 该根读到了 manifest。消费者 = 报面读数块与用例断言。
@@ -695,6 +743,8 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
   out.push(...bucketLines(lay, unreadable, unreadableHead))
   // `未核` 列报：与读面同处（不当命中、也不当干净），行形单源 = `unverifiedBlock`
   out.push(...unverifiedBlock(lay, anchors.unverified))
+  // 后缀兜底读数块（第 6′ 步 · 仅 `report` 面）：位置 = `未核` 之后、行数读数之前；0 处不出（没有这一支就没有可标的）
+  out.push(...suffixBlock(shared.suffixHits, shared.suffixBuilds))
   // 读数块：位置 = 读面行之后、行号坐标清单块之前（末行恒是 `结论：…`；读数不抢它的位）
   if (lineReads.length) out.push(...lineReadBlock(base, lineReads))
   // 域表读数块（§2.5 · 仅 `report` 面）：出场条件两支——「本次读到域表的根集 ≠ {声明根}」或任一根无 manifest；

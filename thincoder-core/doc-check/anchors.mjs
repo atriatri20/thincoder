@@ -17,12 +17,17 @@
  *   悬空的代码路径一条不报，读者按指针找不到实现（§3.20「扩展名闭集」条）。
  * 读面（读不到 ≠ 干净）：判据读取面遇到「档在盘但读不到」（权限 / 文件锁 / I/O 错）⇒ 记入返回值的 `unreadable` 清单，
  *   **不静默当零命中**；引擎并集上报、`gate` 面据此判 `ERROR`（口径 = 同档 §3.20「读面」块）。
- * 解析序**两级**（算法单源 = `../path-resolve.mjs` 的统一解析层，本档只声明本面参数）：
+ * 解析序（算法单源 = `../path-resolve.mjs` 的统一解析层，本档只声明本面参数）：**前两级基根**＝
  *   ① 仓根相对全路径 → ② 引用方档所在目录相对。零命中 ⇒ `档缺`，并**列同名候选**（「你是不是指这个」——
  *   候选只作提示，**不产命中档**：裸名仍不跨目录解析；那份同名索引只服务这条注解，判定与解析都不查它）。
+ *   **这两级之后还有两条腿**（见下两段）：声明仓腿 ∥ 唯一后缀兜底——所以「零命中」在实践中还要过那两条腿才判 `档缺`。
  *   声明仓腿（`仓名/相对路径`）：**只有本面开**（`declaredRepos`）：已声明且声明根在本机 ⇒ 于该声明根判余段
  *   （在盘 `resolved` / 缺档 `档缺`）；已声明而声明根不在本机 ⇒ `unverified`（**零命中、列报不入闸**）；
  *   未声明 ⇒ `档缺` + 同级目录候选 + 一句「该名未在 `index.publicRepos` 声明」。口径单源 = `docs/core/design/PATH-RESOLUTION.md` §2.7。
+ * 唯一后缀兜底（第 6′ 步）：**也只有本面开**（`suffixFallback`）——第 4–6 步全零命中时，token 在仓内文件树里按后缀恰一处
+ *   命中就判解析到那一处，并在载荷标 `how:"suffix"`（逐处进 `suffixHits`，报面据此出读数与清账清单：唯一后缀证明「能定位」，
+ *   不证明「是你想指的那个」，不标它就混进绿里）；多处 ∥ 零处仍判 `档缺`（零命中仍红是这条腿的反向控制）。
+ *   口径单源 = 同档 §2.8。
  * 环检（`锚·环引`）：判之前先按组根走一遍声明出边图（`../declared-repos.mjs`），走回组根成环 ⇒ 一条 `环引`；
  *   走查在「声明根不在本机」的节点止步，那些节点进 `unverified`（触发 = 环走查止步）——「没找到环」与
  *   「没看过去」因此在报面上分得开。环与 `档缺` 同计「锚 N 条」，不新增判据条数、不新增 verdict 词。
@@ -255,13 +260,14 @@ export function isBatchFaceRef(refAbs, token, face) {
 
 /** 档解析（判据 ① 的解析序两级——**算法单源 = 统一解析层** `../path-resolve.mjs`：本面只声明
  *  `kind:"file"` / `order:"root-first"`（与既有两级序逐字同序）/ `declaredRepos`（文档锚面是
- *  唯一开声明仓腿的面），`bases` = 无、`scanBases` = `docRoot` 各键（只喂同名候选提示），
- *  `session` = 本次调用建的那份解析会话（同名候选查表 ∥ 基根发现同轮记忆——成本不随悬空 token 数增长）。
+ *  唯一开声明仓腿的面）/ `suffixFallback`（文档锚面同时是唯一开第 6′ 步的面，§2.8），
+ *  `bases` = 无、`scanBases` = `docRoot` 各键（只喂同名候选提示），
+ *  `session` = 本次调用建的那份解析会话（同名候选查表 ∥ 基根发现同轮记忆 ∥ 后缀索引——成本不随悬空 token 数增长）。
  *  行号坐标尾（`:N`）不参与档解析——抽取面已剥离坐标尾与节指示，token = 档路径（后缀在闭集内）。
  *  `num` = 指针节号（`§` 后编号；无节指示 ⇒ null）——仅用于判定节在盘，不参与档解析。
  *  @returns {{state:string, ...}} 层的四态结果 */
 function resolveDoc(token, refFile, base, scanBases, session) {
-  return resolvePathTarget(base, token, { kind: "file", order: "root-first", referrer: refFile, declaredRepos: true, scanBases, session })
+  return resolvePathTarget(base, token, { kind: "file", order: "root-first", referrer: refFile, declaredRepos: true, suffixFallback: true, scanBases, session })
 }
 
 /** 解析结果的**同轮记忆**（键 = 引用方目录 ∥ token）：解析只依赖「基根 + 引用方目录 + token」——同一目录下
@@ -286,12 +292,15 @@ function docResolver(base, scanBases, session) {
  *   无目录遍历、无全域索引：清单外的档既不判也不参与解析）；
  *   `manifest` = **可选注入**——引擎按本根已读的那份（每根一次读，§2.5 KD-7），给了就吃它、
  *   缺省仍自读（直调判法本体的夹具零改）；它同时供 `docRoot` 扫描根与批档基底两处（判定面零改）
- * @returns {{hits:Array, unverified:Array, unreadable:string[], batchRefs:number}} hits = 命中（`档缺` / `节缺` / `引缺` / `环引`——`档缺` 携 `sameName` 同名候选与声明仓四格，
+ * @returns {{hits:Array, unverified:Array, unreadable:string[], batchRefs:number, suffixHits:Array, suffixBuilds:number}} hits = 命中（`档缺` / `节缺` / `引缺` / `环引`——`档缺` 携 `sameName` 同名候选与声明仓四格，
  *   `引缺` 携 `quote` 引文原文与 `target` 命中的档，`环引` 携 `root` 与 `chain`）；
  *   `unverified` = "判得了仓名、判不了存在性"的列报（声明根不在本机——**零命中、不入闸**；两个产出方：
  *   `trigger:"pointer"` 的逐指针行 ∥ `trigger:"walk"` 的环走查止步节点——按声明根汇总在引擎面做）；
  *   `unreadable` = 在盘但读不到的档（判定集内 ∥ 判据要读的目标）——**不当命中、也不当干净**，由引擎并集上报；
- *   `batchRefs` = 面判剔除的 token 数（批档面互引不判——**不是命中**，不进 `hits`、不改 verdict）
+ *   `batchRefs` = 面判剔除的 token 数（批档面互引不判——**不是命中**，不进 `hits`、不改 verdict）；
+ *   `suffixHits` = 第 6′ 步解析出来的指针（逐处 `{file, line, token, abs}`）——**读数，不是命中**：同一条指针
+ *   本来判 `档缺`，现在解析出了；它不是新增 ∥ 删掉的命中，而是「本来就该解析、只是写法与解析面不匹配」那一批的账；
+ *   `suffixBuilds` = 后缀索引建表次数（读数 `后缀索引建 N 次`；同一次调用里恒 1）
  */
 export function checkAnchors(root, { files = [], manifest } = {}) {
   const base = resolve(root)
@@ -299,6 +308,7 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
   const hits = []
   const unverified = []
   const unreadable = [] // 读面（读不到 ≠ 干净）：档在盘但读不到 ⇒ 入此清单
+  const suffixHits = [] // 第 6′ 步解析出来的指针（逐处；`report` 面据此出读数行与按 token 去重的清账清单）
   const citedTextOf = citedTextReader(unreadable) // 引文面：目标档全文（同档一次读、同轮缓存）
   const session = createResolutionSession() // 解析会话：一次调用建一份（同名候选查表 ∥ 基根发现同轮记忆）
   const resolveToken = docResolver(base, scanBases, session) // 解析面同轮记忆（引用方目录 ∥ token）
@@ -316,7 +326,7 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
     missing: r.state === "dangling" ? r.missing : "",
     sameName: r.state === "dangling" ? r.sameName : [],
     ...(r.state === "dangling"
-      ? { declaredRepo: r.declaredRepo, declaredRoot: r.declaredRoot, rootOnDisk: r.rootOnDisk, siblingRepos: r.siblingRepos }
+      ? { suffixCandidates: r.suffixCandidates, declaredRepo: r.declaredRepo, declaredRoot: r.declaredRoot, rootOnDisk: r.rootOnDisk, siblingRepos: r.siblingRepos }
       : {}),
   })
   for (const f of files) {
@@ -364,6 +374,7 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
             hits.push(danglingHit(f, i + 1, token, r))
             continue
           }
+          if (r.how === "suffix") suffixHits.push({ file: f, line: i + 1, token, abs: r.abs })
           // 引文面：只判「是不是该档里的一段连续子串」——不折叠空白、不换全半角、不换算大小写（§3.25 边界）
           if (!citedTextOf(r.abs).includes(quote)) hits.push({ file: f, line: i + 1, token, clazz: "引缺", quote, target: r.abs })
         }
@@ -385,9 +396,10 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
           hits.push(danglingHit(f, i + 1, token, r))
           continue
         }
+        if (r.how === "suffix") suffixHits.push({ file: f, line: i + 1, token, abs: r.abs })
         if (num !== null && !sectionOnDisk(r.abs, num, sectionCache, unreadable)) hits.push({ file: f, line: i + 1, token, clazz: "节缺", section: num, target: r.abs })
       }
     })
   }
-  return { hits, unverified, unreadable, batchRefs }
+  return { hits, unverified, unreadable, batchRefs, suffixHits, suffixBuilds: session.suffixBuilds() }
 }

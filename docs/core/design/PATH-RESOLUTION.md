@@ -51,12 +51,13 @@ resolvePathTarget(anchor, given, opts) → Result
 | `kind` | `"file"` \| `"dir"` \| `"any"` \| `"none"` | 存在判口径，缺省 `"file"` |
 | `order` | `"root-first"`（缺省）\| `"near-first"` | 前两级基根的次序：项目根先 ∥ 所指目录先（逐面声明，KD-2 / KD-3） |
 | `declaredRepos` | `boolean`（缺省 `false`） | 声明仓腿：开 ⇒ 首段命中声明仓目录名时于该声明根解析余段（只有文档锚面传它，KD-10） |
+| `suffixFallback` | `boolean`（缺省 `false`） | 唯一后缀兜底（第 6′ 步）：取 token 末段为键、全树恰一命中即解析（只有文档锚面传它，§2.8 / KD-15） |
 
 | state | 载荷 | 含义 |
 |---|---|---|
-| `resolved` | `abs: string` | 判出唯一落点 |
+| `resolved` | `abs: string` · 可选 `how: "suffix"` | 判出唯一落点；`how` 只在后缀兜底那一支出现——其余来源静默（§2.6） |
 | `ambiguous` | `candidates: string[]` | 判不出唯一 ⇒ **停下要人挑**（不猜） |
-| `dangling` | `missing` · `sameName` · `level`（`base` \| `path`）· `tried`；跨仓两形另带 `declaredRepo` · `declaredRoot` · `rootOnDisk` · `siblingRepos` | 解析无果 ⇒ 报**缺的那一段** + 列同名候选；`level` 说明缺在基根还是缺在路径段；`tried` = 基根序下试过的绝对候选（**只作读数、不入判据**——既有拒文里带解析后绝对路径的面从这里取，例如评审面 `resolved` 字段） |
+| `dangling` | `missing` · `sameName` · `level`（`base` \| `path`）· `tried` · `suffixCandidates`（仅第 6′ 步 ≥2 那一支：后缀命中集，按路径排序、封顶 20）；跨仓两形另带 `declaredRepo` · `declaredRoot` · `rootOnDisk` · `siblingRepos` | 解析无果 ⇒ 报**缺的那一段** + 列同名候选；`level` 说明缺在基根还是缺在路径段；`tried` = 基根序下试过的绝对候选（**只作读数、不入判据**——既有拒文里带解析后绝对路径的面从这里取，例如评审面 `resolved` 字段） |
 | `unverified` | `declaredRepo` · `declaredRoot` · `relPath` · `declarationEntry` | 已声明、仓名与形态都合规，但**声明根不在本机** ⇒ 存在性判不了：列报、不入闸（§2.7、KD-9） |
 
 **四态各自的分支依据**（每一支都必须能填出这一格；填不出就删掉这一支）：
@@ -83,6 +84,8 @@ resolvePathTarget(anchor, given, opts) → Result
 5. **判态**（前两级择一 · 第三级判多）：前两级基根（第 4 步 ①②，按 `order`）**首命中即 `resolved`**——按序逐级 `existsAs`，第一份现存者胜出，后一级不再看；第三级 `bases` 逐个取现存候选——恰一 ⇒ `resolved`，≥二 ⇒ `ambiguous`（全部列出，按基根序列候选）。
    - 依据 = KD-2 的那句理由「顺序只在两个基根各有一份同名且都存在的档时才有可观察差异」：次序要可观察，只能靠首命中择一；前两级判多则 `order` 无从生效，AC-11 的两条断言也不成立。
 6. **声明仓腿**（仅 `opts.declaredRepos` 为真、输入**多段**、且第 4–5 步零命中）：首段命中声明仓目录名 ⇒ 于该声明根解析余段，根不在本机 ⇒ `unverified`。见 §2.7。
+6′. **唯一后缀兜底**（仅 `opts.suffixFallback` 为真，且第 4–6 步全零命中）：前置不成立（绝对形 ∥ 段内带 `..` ∥ `.` ∥ 以 `/` 结尾 ∥ **声明仓形**）⇒ 不成腿。取 token 末段为索引键，命中集按「路径 == token ∥ 路径以 `/` + token 结尾」过滤；**恰一** ⇒ `resolved{abs, how:"suffix"}`，**≥2** ⇒ `dangling`（候选进 `suffixCandidates`，见 §2.8），**0** ⇒ 不成腿、落第 7 步。
+   - **声明仓形** = 首段命中声明仓名（根在盘 ∥ 不在盘）∥ 首段是本机同级目录名而未声明。两形都不进本步（单源 = §2.8）。
 7. **零命中且未命中声明仓名** ⇒ `dangling`（`level` = 缺在基根还是缺在路径段）。
 
 ### 2.3 多仓根：判不出唯一 ⇒ 停下（不猜）
@@ -105,6 +108,8 @@ resolvePathTarget(anchor, given, opts) → Result
 
 只在 `dangling` 路径上跑——成功路径零扫描，所以这份成本买不到延迟。依据 = 裸档名判档缺时，人拿到的是「档缺」，得自己翻目录找；本条把「翻目录」这一步替人做掉（用例表末几行）。
 
+**与后缀索引（§2.8）是两张表，不合并**：本条是**提示**——深 ≤3、封顶 20、跳 `_archive`，射程写死为「你是不是指这个」，不产 `resolved`；后缀索引是**判定**——全树、无深度帽、产 `resolved`。合表只能靠放宽本条的界（命中上限 `SAME_NAME_MAX_HITS` = 20、每根深 ≤3）：第 21 个同名档会被藏起来，两名就能判成假唯一。第 6′ 步 ≥2 那一支的候选走 `suffixCandidates`，同样不并进本条。
+
 ### 2.5 接线表：七面各调本层，各留受理判据
 
 | 面 | 代码落点 | `kind` / `order` / `declaredRepos` | 基底（逐面写死）：`bases` = 第三级解析基底 · `scanBases` = 只喂同名候选 | 三态处置 | 该面不变的业务语义 |
@@ -123,9 +128,9 @@ resolvePathTarget(anchor, given, opts) → Result
 
 四类结果的文案形状统一成同一句话骨架，语种随各面既有面（本层只给骨架与字段，不锁语种）：
 
-- `resolved`：不报（静默用）。
+- `resolved`：不报（静默用）；唯一后缀那一支例外——`how:"suffix"` 进返回载荷，`report` 面出读数行与按 token 去重的清账清单（§2.8）：清单按处数降序、token 字典序为次键、取前 50 行，末行 `共 N 条 token · M 处`，N 与 M 由当次载荷算出。
 - `ambiguous`：`<参数面>：<输入> 解析到 N 个候选，判不出唯一（fail-closed）——<候选全列>；请显式给路径`。
-- `dangling`：`<参数面>：<输入> 找不到——缺「<第一不存在段>」`；`sameName` 非空时追加 `；盘上同名：<列表>`；`level:"base"` 时改报「无项目根」+ 期望形；既有拒文带解析后绝对路径的面（如评审面的 `resolved` 字段）取 `tried[0]` 渲染那个读数，`tried` 空则不渲染。
+- `dangling`：`<参数面>：<输入> 找不到——缺「<第一不存在段>」`；`sameName` 非空时追加 `；盘上同名：<列表>`；`suffixCandidates` 非空时追加 `；后缀命中 N 处：<列表>`（按路径序、封顶 20）；`level:"base"` 时改报「无项目根」+ 期望形；既有拒文带解析后绝对路径的面（如评审面的 `resolved` 字段）取 `tried[0]` 渲染那个读数，`tried` 空则不渲染。
 - `dangling` 未声明形：`<参数面>：<输入> 引用外部仓「<repo>」——该名未在 index.publicRepos 声明；本机同级目录：<列表>`（阻断；列表只作提示，不产受理）。
 - `unverified`：`<参数面>：<输入> 的声明根 <declaredRoot> 本机不存在（仓 <declaredRepo>，声明项 = <declarationEntry>）——未核，不入闸`。报面按**声明根**聚合：一个声明根一行、条数按声明根计（不是按指针计）。
 
@@ -157,7 +162,11 @@ resolvePathTarget(anchor, given, opts) → Result
   - **不在本机** ⇒ `unverified`：仓名合规、形态合规，只是本机没有那个仓根 ⇒ 列报、不阻断；余段与节号都不判（判不了）。
     载荷四格 `declaredRepo` ∥ `declaredRoot` ∥ `relPath` ∥ `declarationEntry` 全进报面——读者据此分得清「没声明」「声明了但本机没 clone」「声明了、clone 了、档不在」三件事。
   - **在本机** ⇒ 于该声明根解析余段，按 `kind` 判存在性：在盘 ⇒ `resolved`；不在盘 ⇒ `dangling`（红）。下游「节在盘」照旧判——跨仓指针从此也管节号。
-- **未声明形**：首段 = 项目根的**同级目录**名（一次 `readdir`，不递归；命中上限 20、按名排序）⇒ `dangling` + `siblingRepos` = 同级目录名。那是「你是不是指这个」的提示，与 `sameName` 同性质，只提示、不产受理（KD-6）。
+- **未声明形**：首段 = 项目根的**同级目录**名（一次 `readdir`，不递归）⇒ `dangling` + `siblingRepos` = 同级目录名。那是「你是不是指这个」的提示，与 `sameName` 同性质，只提示、不产受理（KD-6）。
+- **同级名集两处消费，射程各写死**：**提示面**（`siblingRepos` 候选列表）= 封顶 `SIBLING_MAX` = 20、按名排序截断，列得够用即可；**判定面**（第 6′ 步前置 `isDeclaredRepoForm` 认仓形）= **不封顶**（传 `Infinity`）。
+  理由与 `SAME_NAME_MAX_HITS` = 20 同一条：**封顶只在提示面成立**——判定面一封就变成「同级目录数超过 20 就失效」，而失效方式是**静默转绿**：第 21 名及其后的未声明仓名不被认成仓形 ⇒ 退化成普通悬空 ⇒ 落进第 6′ 步被后缀兜底救成绿。
+  帽值因此是**调用方的参**（`siblingDirs` ∥ `siblingRepoNames` 的 `max`）：两处各说各的射程，函数里不二选一。
+- **这条判在第 6′ 步之前**：首段落进声明仓形 ⇒ 第 6′ 步不再兜底（§2.8）——声明面优先于猜测面。
 
 **环检**（`锚·环引`）：落点在锚判据内、按被判档的组根各走一遍。
 
@@ -171,6 +180,67 @@ resolvePathTarget(anchor, given, opts) → Result
 
 `docs/core/design/LEDGER-SELF-CONTAINED.md` 对台账指针的跨仓硬判**不动**：那是事故换来的 fail-closed（别条产品线的债登进本仓台账、随主线推到公开远端）。文档面判「这一处引用合不合声明」，台账面判「这笔债归谁」——两面判的不是一件事。
 
+### 2.8 唯一后缀兜底：能定位，但不冒充「你要的那一处」
+
+**判据一句话**：前五步（含声明仓腿）全零命中时，若这个 token 在仓内文件树里**按后缀恰有一处**命中，就判它解析到那一处——并在报面标出「这是后缀兜底」。
+
+**最近先例**：本档 §2.7 声明仓腿。**对齐 = 四件**：同为「在既有解析序上插一条腿」、同插进 §2.1 / §2.2 两张契约表（次序才看得见）、同只对文档锚面开（缺省 `false`）、同缺省静默。
+
+**偏离一处，理由是能力面不成立。** 声明仓腿的匹配键来自**声明表**：`declaredPublicRoots` 给出的封闭名单，首段匹配、命中即定仓根。
+
+仓内相对写法**没有声明表可匹配**——vsc 设计档里写成包内形 `thincoder-vscode/src/extension/workspace-guard.mjs` 的那种 token，不在任何名单里。能匹配的只有文件树本身，故本步另立全树后缀索引，代价 = 每会话一次遍历（惰性建，见下文）。
+**调研证据**：库内已查 `docs/**` 全量读数（下文分支表即其分布）；外部源无相关——本机制只解仓内相对路径，不涉外部系统。
+
+**为什么需要这一条腿**：文档按「包内相对」写、解析按「仓根」收，两套口径的差就是这批债。全量读数里绝大多数锚命中都是「后缀在仓内唯一」这一形——**它们不是笔误，是写法与解析面不匹配**。按旧规则清要逐处改写成仓根全路径，多数比原写法更长：文档变难读，判据才变绿。具体条数随树变，本档不抄——读数由引擎当次跑给出。
+
+本节样板（下文一律用代号，不写成散文里的 token）：
+
+```text
+P1  vsc 设计档里写包内相对路径 src/extension/workspace-guard.mjs
+    ⇒ 全仓唯一后缀命中 thincoder-vscode/src/extension/workspace-guard.mjs
+P2  裸名 manifest.mjs ⇒ 仓内两份：thincoder-core/manifest.mjs ∥ thincoder-core/agent-tools/manifest.mjs
+P3  全仓不存在的名（如 no-such-file-xyz.mjs）⇒ 零后缀命中，必须仍判档缺
+P4  vsc 面写一个核内独有的裸名（如 config.mjs）⇒ 能定位，但可能写错
+P5  裸名只在跳过面目录（node_modules）下恰一份、仓内别处零份 ⇒ 零后缀命中，必须仍判档缺
+P6  token 首段是仓名（未声明的同级目录名 ∥ 已声明且根在盘），而项目根下恰有一处同后缀路径 ⇒ 本步不成立，必须仍判档缺
+```
+
+| 分支 | 判态 | 依据（可复现） |
+|---|---|---|
+| 恰一命中 | `resolved{abs, how:"suffix"}` | P1：包内相对写法在全仓恰一处后缀相符 |
+| ≥2 命中 | `dangling` + `suffixCandidates`（封顶 20、按路径序） | P2：定位得到，但不是唯一那处 |
+| 零命中 | 不成腿，落第 7 步 `dangling` | P3：必须继续红 |
+| 前置不成立 | 不成腿 | 绝对形在第 2 步已 `resolved`；`..` 段与目录形由形态判据挡（KD-11） |
+
+**声明仓形不进兜底（本步的第二条前置）**
+
+首段构成**声明仓形**时本步不成立，落第 7 步。两形都算：**未声明**（首段 = 本机同级目录名、不在 `index.publicRepos`）与**已声明**（首段命中声明仓名，根在盘 ∥ 不在盘）。
+
+判定面上的同级名集**不封顶**——提示面那份 20 帽不沿用到这一步（射程两条 = §2.7「同级名集两处消费，射程各写死」）。
+
+- **理由 = 声明面优先于猜测面。** §2.7 那两条规则靠「不成腿」实现：未声明形只给同级提示，已声明而余段缺档只报缺段。
+- **链上只要还有一步会猜，两条就被救成绿。** 而本步判的是「后缀在仓内恰一处」，与「这个仓名声明过没有」毫不相干。
+- **依据（可复现）**：AC-20 两支各打一处——删「未声明形不进本步」⇒ 未声明同级仓名那个 token 转 `resolved{how:"suffix"}`、29-4 转红；删「已声明形不进本步」⇒ 已声明缺档那个 token 也转绿。
+- **「今天没撞上」不作理由**：交界上没有断言守着时，「拦得住」与「恰好没走到」在报面上同形。
+
+**索引（建在哪、算什么）**：
+
+- **域** = 项目根。不含声明仓根——声明表是跨仓的唯一入口，索引若覆盖声明仓根，这条腿就成了第二个入口（KD-15）。
+- **源** = 文件系统遍历；**跳过面 = 本步自持的一处常量 `SUFFIX_SKIP_DIR_NAMES`**（`thincoder-core/path-resolve.mjs`）：dot 名 ∥ `_archive` ∥ `node_modules` ∥ `dist` ∥ `build` ∥ `coverage` ∥ `obj`。**不含 `bin`**：`bin/thincoder.cjs` 与 `thincoder-cli/bin/thincoder.cjs` 都在盘且是指针的合法目标，把 `bin` 放进表里的后果是这两个 token 恒零后缀命中、被判成真死。**否决 `git ls-files`**：那答的是「跟踪了吗」，判据问的是「在盘吗」（KD-15）。
+- **跳过面不与同名候选共用**：§2.4 那一张一字不动（dot 名 + `_archive`）。三条理由：
+  - 后缀索引必须跳 `node_modules` 一类，否则索引面就是整块盘（含全部依赖树），每会话一遍的遍历撑不住。
+  - 同名候选**故意不跳**：`dist` 下那份档也是「盘上有这个名」，提示面要如实说出来。
+  - **判据不同 ⇒ 跳过面不同**。这不是同一件事写了两遍，是两件事各写一遍——「单源」管的是同一件事不要两处描述；而 KD-B 已定「界不同、不能放宽」，本条是同一句理由在跳过面上的落地。
+- **按域根各一份、惰性、每会话**：挂在 `createResolutionSession` 上（`suffixLookup(domainRoot, token)`——两参，域根在前），与同名索引、基根发现同窗口；建表次数进报面读数行（`后缀索引建 N 次`：**单根清单跑 N = 1**，多根清单跑 N = 走到第 6′ 步的根数）；跨轮缓存照禁（§3.20「缓存口径」全部适用）。
+- **与同名索引不共用一次遍历，是有意的**：同名索引按三层基根**各自**起算（含 `bases` / `scanBases`，其中可能有项目根之外的根），后缀索引按项目根**全树一遍**；共用先要裁两套不同的根集与深度帽，且同名索引只在 `dangling` 路径上跑、后缀索引惰性建——常见路径上省不到开销。
+
+**两个护栏，缺一不可**：
+
+1. **解析方式必须显式**：`how:"suffix"` 逐处进返回载荷（`suffixHits`），`report` 面出读数行 + 按 token 去重的清单（`token ⇒ 绝对路径（N 处）`；按处数降序、取前 50 行，末行 `共 N 条 token · M 处`）。理由：唯一后缀证明「**能定位**」，不证明「**是你想指的那个**」——P4 就是这一形。不标，它就混进绿里。
+2. **反向控制**：P3（全仓零后缀命中）仍判 `档缺`。这条不加，兜底就是「什么都放行」。
+
+**不做**：不立 `docRoot` 板块 ↔ 包 的映射（「`docs/vsc` 只在 `thincoder-vscode/` 里找」）——那是新概念，用户 2026-11-08 否，不再当改进提案重提。
+
 ## 3. 受影响文件清单
 
 新增：
@@ -178,9 +248,9 @@ resolvePathTarget(anchor, given, opts) → Result
 - `thincoder-core/path-resolve.mjs`（本层本体）
 
 ```text
-thincoder-core/declared-repos.mjs                     声明出边图 + 环走查（叶档：只 import node:* 与 manifest.mjs / declaration.mjs）
-docs/batches/2026-11-08-cross-repo-refs.test.mjs       本批单元测试档（收口删）
-test/integration/cross-repo-refs.test.mjs              集成用例（故事 CLI 37，实施轮建档）
+thincoder-core/declared-repos.mjs                     声明出边图 + 环走查（叶档：只 import node:* 与 thincoder-core/manifest.mjs / thincoder-core/declaration.mjs）
+docs/batches/<批档同名>.test.mjs                      本批单元测试档（档名 = 批档同名，随批档收口删）
+test/integration/cross-repo-refs.test.mjs              集成用例（故事 CLI 37 的 37-1 … 37-4）
 ```
 
 改（源码）：
@@ -189,8 +259,9 @@ test/integration/cross-repo-refs.test.mjs              集成用例（故事 CLI
 - `thincoder-core/agent-tools/review-facts.mjs` — `resolveReviewDocPaths` 改调本层；reason 词汇增 `ambiguous-path` / `dangling-path`；删掉传进本层的退役选项（行为零变）
 - `thincoder-core/agent-tools/advisor.mjs` — reason 透传文案（实施时核词汇表是否硬编码，硬编码则同步）
 - `thincoder-core/agent-tools/doc-check.mjs` — `target` 三态；工作区分支改调本层
-- `thincoder-core/doc-check/anchors.mjs` — `resolveDoc` 改调本层，传 `declaredRepos`；`unverified` 收集（**不入 `hits`** ⇒ 不改 verdict）；按组根接环检、产 `锚·环引`；`档缺` 载荷透传
-- `thincoder-core/doc-check/index.mjs` — `unverified` 的并集 ∥ 条数行 ∥ 逐声明根行（与 `unreadable` 块同处）＋ `锚·档缺` 行的 `missing` / `sameName` / `declaredRepo` / `siblingRepos` 括注 ＋ `锚·环引` 类名
+- `thincoder-core/path-resolve.mjs` — 第 6′ 步（唯一后缀兜底）+ 会话内一份后缀索引（§2.8）+ 新增后缀索引自持的跳过面常量 `SUFFIX_SKIP_DIR_NAMES` 与候选封顶 `SUFFIX_CANDIDATE_MAX`（既有 `SAME_NAME_SKIP` 一字不动 ⇒ 同名候选行为零变）；第 6′ 步的**前置** `isDeclaredRepoForm`（声明仓形不进兜底，两支：声明出边 ∥ 同级目录名）与它复用的 `siblingRepoNames`、`declaredEdgeFor`（与声明仓腿同一处匹配）；`siblingDirs` ∥ `siblingRepoNames` 的帽值上移成调用方的参（提示尾传 `SIBLING_MAX`、判定面传 `Infinity`）
+- `thincoder-core/doc-check/anchors.mjs` — `resolveDoc` 改调本层，传 `declaredRepos`；`unverified` 收集（**不入 `hits`** ⇒ 不改 verdict）；按组根接环检、产 `锚·环引`；`档缺` 载荷透传；**第 6′ 步参数 `suffixFallback: true` 与 `suffixHits` 收集**
+- `thincoder-core/doc-check/index.mjs` — `unverified` 的并集 ∥ 条数行 ∥ 逐声明根行（与 `unreadable` 块同处）＋ `锚·档缺` 行的 `missing` / `sameName` / `declaredRepo` / `siblingRepos` 括注 ＋ `锚·环引` 类名；**`report` 面后缀兜底读数行 ∥ 清账清单 ∥ 返回值并集 `suffixHits`**
 - `thincoder-core/agent-tools/batch-gate.mjs` — `ANCHOR_CLASSES` 增 `环引`：`锚·环引` 与其余三属同计 `锚 N 条`，批档门的拒串不把它切成段类
 - `thincoder-core/tools/doc-write-gate.mjs` — 拒串映射增仓级命中一分支：`环引` 没有行号，取引擎那一行原文，不把 `null` 当行号写进写者眼前
 - `thincoder-core/ledger-db.mjs` — `noRootMessage` 改由本层候选驱动
@@ -199,25 +270,36 @@ test/integration/cross-repo-refs.test.mjs              集成用例（故事 CLI
 
 测试：
 
-- 集成：`test/integration/path-resolution.test.mjs` 的 29-4 ∥ 29-5 改写；故事 CLI 37 的新用例档见上方围栏（实施轮建档）
+- 集成：`test/integration/path-resolution.test.mjs` 的 29-4 ∥ 29-5 改写 ＋ 29-6 新增；故事 CLI 37 的四行落在 `test/integration/cross-repo-refs.test.mjs`
 
 文档：
 
 - `docs/core/design/PATH-RESOLUTION.md`（本档）
 - `docs/core/design/BATCH-RECORD.md` §4.15 — 候选序引本层 §2.2，本面只留自己的参数与落位判据（无算法复写）
 - `docs/core/design/ADVISOR-GUARDS.md` §12 — 解析面归口（本面不传 `declaredRepos`）＋ reason 词汇表同步
-- `docs/core/design/DOC-DISCIPLINE.md` §3.20 ∥ §4.2.2 — 锚判据的报面与解析序单源，实现改了报文就同步它
+- `docs/core/design/DOC-DISCIPLINE.md` §3.20 ∥ §4.2.2 — 锚判据的报面与解析序单源；本批改的正是这两面，同步内容 = 解析序增第 6′ 步、报面增后缀读数行与清账清单、`dangling` 增 `suffixCandidates` 渲染
 - `docs/core/design/DOC-CHECK.md` §2.5 — 域表三项里声明源那一项的用途（判据源，不是读数源）
 - `docs/core/design/MANIFEST.md` §2.2 — `publicRepos` 的出边表语义
 - `docs/core/design/LEDGER.md` — 无根报明面改由本层候选驱动
 
 **层级结论**：无档跨层。全部改动落在 `thincoder-core/**` 与仓库根 `test/**`，没有一端（cli / vsc / desktop / server）与核心之间的分层迁移，也没有跨层共享的接口形状变化。
 
-**贴线判（500 软线）：零拆分义务**——本批改动面无档越线；两个既有档越线、**不在本批改动面**（`thincoder-core/agent-tools/batch-skeleton.mjs` ∥ `thincoder-core/agent-tools/batch.mjs`），已登记台账待下一批接笔。
+**贴线判（500 软线）：本批有一档越线。** 读数命令 = 引擎自带的 `lines` 面（`runDocCheck` 的 `lines` 参数；越线档行尾带「越 500 软线」标记）。
+**行数口径（一次声明）**：行数 = 该面读数 = 末行内容行，不含档尾换行带来的空行；下表三档一律由该面给出。
 
-拆边界 = 「骨架常量与判定字面」对「工具 action 分发与 schema」——拆开后前者只留常量与纯判定、后者只留 action 分派。
+| 档 | 读数 | 档位 |
+|---|---|---|
+| `thincoder-core/doc-check/index.mjs` | 768 行 | **越 500 软线**（硬限 800 未越），且本批在它里面加报面读数行 ∥ 清账清单 ∥ 返回值并集 |
+| `thincoder-core/doc-check/anchors.mjs` | 405 行 | 未越线 |
+| `thincoder-core/path-resolve.mjs` | 469 行 | 未越线 |
 
-本批不拆（改它们不是本批的任务），**登记下一批接笔**（台账另开一行，挂 `条件`）。
+**拆分计划（`thincoder-core/doc-check/index.mjs`）**：界线 = 「把判据结果渲染成文本」对「把清单判成结果」。
+
+- **报面渲染族**：`reportLayout` ∥ `bucketLines` ∥ `domainTableBlock` ∥ `unverifiedBlock` ∥ `lineReadBlock` ∥ `missingHint` ∥ `anchorHitLine` ∥ `paragraphHitLine` ∥ `gateReport` 与各固定句形常量。
+- **编排与判绘族**：`runDocCheck` ∥ `resolveRange` ∥ `perRootGroups` ∥ `mergeAnchors` ∥ `countContentLines` ∥ `resolveLineReads` ∥ `undecidableReason`。
+- **拆前要先定的一件**：`hits` 汇总与 verdict 组装归哪一族。
+
+**本批不拆**：拆是纯搬运，与本批机制无关（本批只在这档里加三条接线）；越线结论在册，下一轮触碰该档的批接笔。
 
 ## 4. 关键决策记录
 
@@ -301,6 +383,22 @@ test/integration/cross-repo-refs.test.mjs              集成用例（故事 CLI
 
 只报穿过起点的环的理由：仓自足——A 的门不该为 B 与 C 之间的环背红。
 
+**KD-15 唯一后缀兜底（第 6′ 步）只在文档锚面开；索引域 = 项目根、源 = 文件系统遍历。**
+
+依据：用户 2026-11-08 裁定甲′——「解析面认包内相对写法，不改那批文档」。三条被否：
+
+1. **守现规则、逐处改全路径**：文档变长变难读，且与「按板块组织」的既有写法相悖——判据绿了，交付物坏了。
+2. **收窄判据（只判散文、跳表格行）**：死指针照样藏，只是看不见了。
+3. **索引源用 `git ls-files`**：它答「跟踪了吗」，判据问「在盘吗」。两条实读否掉它——240 个在盘未跟踪的档它一个不列（假红）；工作树删掉而尚未暂存的档它照列（假绿）。且判据跑在提交之前：与源码同轮新增、尚未 `git add` 的档，被引用时恒判红，门会逼人先提交再改文档。
+
+`opts.suffixFallback` 缺省 `false` ⇒ 其余六面行为零变（与 KD-10 同形：逐面声明，不全区放宽）。索引域不含声明仓根，理由同 KD-10——声明表是跨仓唯一入口。
+
+**被否：复用同名索引当判定面。** 那索引每根封顶 `SAME_NAME_MAX_HITS` = 20 个命中、每根深 ≤3：第 21 个同名档会被藏起来，两名就能判成假唯一；而本步的判据恰是「全树恰一」，界一放宽判据就假。两张表各归各：同名索引只作 `dangling` 的提示，后缀索引是判定面。
+
+**同一条道理，第二个落点**：`SIBLING_MAX` = 20 只属提示面（同级候选列表），第 6′ 步前置认仓形时**不封顶**。封顶的判定面把「同级目录超过 20 个」变成「规则失效」，且失效方式是静默转绿——与「`SAME_NAME_MAX_HITS` 不能当判定面」是同一句理由的两个落点，不是两个特例（§2.7）。
+
+**两张表各走一遍树是有意的**：同名索引按三层基根各自起算（含 `bases` / `scanBases`，可能有项目根之外的根），后缀索引按项目根全树一遍；共用要先裁两套不同的根集与深度帽，而同名索引只在 `dangling` 路径上跑、后缀索引惰性建——常见路径上省不到开销。
+
 ## 5. 验收判据（对回需求）
 
 **对回口径**：本表「对回」列一律指 `docs/core/requirements/PROMPT-SYSTEM.md` §2.3 的跨仓引用块——`⑤` 三态 ∥ `⑤-补` 的四条（形态 / 仓名 / 方向 / 叶仓）。
@@ -320,6 +418,15 @@ test/integration/cross-repo-refs.test.mjs              集成用例（故事 CLI
 | AC-11 | 基根序：两个基根各有一份同名现存档 ⇒ 文档锚面取**项目根**那份（`root-first`）、批档面取**近基根**那份（`near-first`）——两条断言各一 | 机制面 |
 | AC-12 | 形态错仍阻断：`仓名/../越界` · `仓名/`（余段空）· 未声明且首段非同级目录 ⇒ 均 `dangling`，无一落 `unverified` | ⑤-补 形态不合法 ⇒ 阻断 |
 | AC-13 | **方向与叶仓**：A ↔ B 互为声明 ⇒ 判 A 的档时 `锚·环引` 一条（链 `A → B → A`）、首行 `REFUSED`；A → B → C 无环 ⇒ 零 `环引`；A 声明无 manifest 的 C、指针指 C 内的在盘档 ⇒ `resolved`、零命中、首行 `PASS` | ⑤-补 方向 ∥ 叶仓 |
+| AC-14 | **后缀三分各有断言**：恰一 ⇒ `resolved` 且 `how:"suffix"`；两名 ⇒ `dangling`、`suffixCandidates` = 两名（按路径排序、封顶 20）而 `sameName` 与本步无关；零名 ⇒ `dangling`、`suffixCandidates` 为空 | 判据 ① |
+| AC-15 | **全量落差 = 两跑等式（禁估）**：同一份清单（由测试档枚举 `docs/**` 的 `.md`、排序写出，取法写进命令）在改前树与改后树各跑一次：**改后锚数 = 改前锚数 − `suffixHits` 条数 + 兜底后新判出的 `节缺` 条数 + 兜底后新判出的 `引缺` 条数**（**四项不是三项**：依据行分支收 `suffixHits` 之后才判引文——落点从「悬空」变「在盘」时引文面才第一次有得判；写三项时靠「本轮恰为 0」对上，作为机检式会漏），三类差逐条列出，两跑的分型读数同列。**判据不落在档数上**（档数是取清单那一刻的读数） | 判据 ①② |
+| AC-16 | **报面可读且有界**：`report` 面出后缀兜底读数行与按 token 去重的清单（`token ⇒ 绝对路径（N 处）`）；清单按处数降序、取前 50 行，末行 `共 N 条 token · M 处`，且 N = 载荷里去重后的 token 数（等式断言）；`gate` 面判决词与命中分类零改 | 判据 ② |
+| AC-17 | **反向控制能失败（两条变异各打各的行）**：① **零命中侧**——把 ⑥′d 的「0 ⇒ 不成腿」改成「0 ⇒ `resolved{abs, how:"suffix"}`」，则「零后缀命中仍 `档缺`」那一行必须转红；② **多命中侧**——把 ⑥′d 的 `=== 1` 放宽成 `>= 1`，则「两名 ⇒ `dangling` + `suffixCandidates`」那一行必须转红。`>= 1` 打不到零命中侧（`0 >= 1` 不成立，仍落第 7 步），故两条不能互替；两跑读数同列 | 判据 ② |
+| AC-18 | **索引建一次、可数（两种口径各一条断言）**：**单根清单跑**（本仓 `docs/**` 那一形）——一次全量跑里 `后缀索引建 N 次` 的 N = 1；同一 token 连查两次后仍为 1；50 次不同 token 查找后仍为 1。**多根清单跑**——N = 走到第 6′ 步的根数（索引按域根各一份，§2.8），不是恒 1。时长只作读数、不入判据 | 判据 ② |
+| AC-19 | **跳过面生效**：夹具里某 token 的同名档**只在跳过面目录（`node_modules`）下恰一份、仓内别处零份** ⇒ 后缀索引零命中 ⇒ 仍 `dangling`、`suffixCandidates` 为空，不落 `resolved`。**红侧 = 把 `node_modules` 从 `SUFFIX_SKIP_DIR_NAMES` 移出** ⇒ 同一 token 必须转 `resolved{how:"suffix"}`、§6 的 P5 行必须转红；不许写成「再跑一次仍红」的恒绿形。变异面 = 跳过面常量本身，不是 ⑥′d 的分支条件：移出 `node_modules` ⇒ P5 转红、P2 ∥ P3 零变；反过来 ⑥′d 的 M1（0 ⇒ `resolved`）也让 P5 转红，却打不到跳过面，本条也打不到 P3 ⇒ 三处各证一件事，谁也替不了谁；两跑读数同列 | 判据 ① |
+| AC-20 | **声明仓形不进兜底（两支各一条断言）**：夹具 = 项目根下存在 `pkg/<仓名>/x.md` 使该后缀在仓内恰一处，token 写作 `<仓名>/x.md` 而仓侧无 `x.md`。① **未声明形**：`<仓名>` = 本机同级目录名且未声明 ⇒ `dangling`（`锚·档缺`）；② **已声明形**：`<仓名>` 在 `index.publicRepos` 且根在盘 ⇒ 同样 `dangling`（带 `declaredRepo` ∥ `rootOnDisk`）。**红侧两条各打一支**：① 删「未声明形不进本步」⇒ 转 `resolved`、集成行 29-4 转红；② 删「已声明形不进本步」⇒ ② 那一半转红。两条不能互替（两支各一个入口） | ⑤-补 仓名未声明 ∥ ⑤ 核 |
+
+**AC-19 为什么承重**：跳过面一旦失效是两笔实账——① 不跳 `node_modules`，索引面就是整块盘，每会话一遍的遍历撑不住；② 依赖树里的同名档会把「唯一」变成「多候选」，一片假红。今天没有一条断言守着它：下一轮谁按「统一跳过面」把 `node_modules` 删掉，档内测试照旧全绿，判据已经错了。红侧定成「移出即翻」，因为改坏这一处时翻的正是那个开关——「再跑一次仍红」读到的是恒绿，与一条坏掉的判据长得一模一样。
 
 **跑法**：改面单测档见 §3 围栏里那份批档同名档——本批断言全在此档（集成半在收口行报，不写全量套跑）。
 
@@ -363,6 +470,14 @@ C 仓：与 A 同级，无 manifest，未声明
 | 错误 | 首段等于仓内真目录名（如 `docs`）而仓内无该档 | `dangling`，不按仓名解 |
 | 错误 | 空串 / 非字符串 | `dangling`，`missing` = 该参数本身 |
 | 错误 | 路径含 `..` 越出项目根 | 本层照解析；越界由各面受理判据判（`outside-project` 不变） |
+| 正常 | 裸名在仓内唯一（样板 P1 那形） | `resolved`，`how:"suffix"` |
+| 边界 | 裸名两名（样板 P2 那形） | `dangling`，`suffixCandidates` 两名（封顶 20、按路径序） |
+| 边界 | 多段 token 只与一处后缀相符 | `resolved`，`how:"suffix"` |
+| 错误 | 零后缀命中（样板 P3） | `dangling`，`suffixCandidates` 为空 |
+| 边界 | 某 token 的同名档只在跳过面目录下恰一份（样板 P5） | `dangling`、`suffixCandidates` 为空；**反向** = 该目录名移出 `SUFFIX_SKIP_DIR_NAMES` ⇒ 同一输入变 `resolved{how:"suffix"}`，本行必须转红 |
+| 错误 | 首段 = 未声明同级目录名，且项目根下有 `pkg/<该名>/x.md` 使后缀恰一处（样板 P6 前半） | `dangling`、`suffixCandidates` 为空（AC-20 ①） |
+| 错误 | 首段 = 已声明仓名且根在盘，该仓侧无 `x.md`，项目根下有 `pkg/<该名>/x.md`（样板 P6 后半） | `dangling` 带 `declaredRepo` ∥ `rootOnDisk`——兜底救不回（AC-20 ②） |
+| 边界 | `suffixFallback` 缺省（其余六面） | 同一 token 行为零变：仍 `dangling` |
 
 ## 7. 边界（不做什么）
 
@@ -374,7 +489,9 @@ C 仓：与 A 同级，无 manifest，未声明
 - **不给叶仓造 manifest**：`thinworker` ∥ `thincoder-issues` 保持无 manifest，规则写在 §2.7，不替它们建档。
 - **不做双向同步 / 镜像**：引用方向是单向出边，不要求对方回指。
 - **不跨仓写**：跨仓任务各仓自己的会话、自己的批次档；本层不提供跨仓落点。
-- **不建目录索引、不缓存**：同名候选扫描有界（KD-7）；未声明形的同级目录列举 = 一次 `readdir`，不递归、不落缓存。
+- **不建同名候选的全域目录索引、不缓存解析结果**：同名候选扫描有界（KD-7）；未声明形的同级目录列举 = 一次 `readdir`，不递归、不落缓存。后缀索引是另一件事——判定面用、每会话一份、不跨轮（§2.8）。
+- **不立 `docRoot` 板块 ↔ 包 的映射**：`docs/vsc` 只在 `thincoder-vscode/` 里找是另一种放宽（用户 2026-11-08 否），后缀兜底不靠板块身份。
+- **不新增命中类、不改 verdict 词**：后缀兜底只是第 6′ 步，命中仍是四类、判决仍两词。
 
 ## 8. 界面 / 交互决策
 
@@ -387,19 +504,22 @@ C 仓：与 A 同级，无 manifest，未声明
 
 ## 9. 集成测试设计（`test/RTM.md` 增量）
 
-读 `test/RTM.md` 与 `test/rtm/paths.md` 后按增量答：**改 2 行（29-4 ∥ 29-5）· 增 1 故事 4 行（CLI 37）· 冗余 0**。
+读 `test/RTM.md` 与 `test/rtm/paths.md` 后按增量答：**改 2 行（29-4 ∥ 29-5）· 增 1 故事 4 行（CLI 37）· 增 1 行（29-6，同一故事 CLI 29）· 冗余 0**。
 
 | 处置 | 行 | 入口 | 交互的组件 | 断言的可观察结果 | 对回 |
 |---|---|---|---|---|---|
-| 改 | 29-4 | 一次文档门 `gate` 跑 | 文档交付门 × 声明出边 × 统一解析层 | 已声明在盘档 ⇒ 零命中、首行 `PASS`；带错节号 ⇒ `锚·节缺`；未声明仓名 ⇒ `锚·档缺` + 同级候选注解 | ⑤ 三态 |
+| 改 | 29-4 | 一次文档门 `gate` 跑 | 文档交付门 × 声明出边 × 统一解析层 × 唯一后缀兜底 | 已声明在盘档 ⇒ 零命中、首行 `PASS`；带错节号 ⇒ `锚·节缺`；未声明仓名 ⇒ `锚·档缺` + 同级候选注解。**夹具里那条未声明仓名指针另配一处同后缀路径**（项目根下 `pkg/<该名>/x.md`）⇒ 仍 `锚·档缺`：本行由「今天没撞上」升成兜底在声明仓形上不成立的守卫（AC-20 ①） | ⑤ 三态 ∥ ⑤-补 |
 | 改 | 29-5 | 同上 | 文档门 × 台账面 | 文档面形态错 ⇒ `锚·档缺`（零改）；台账面同形 `task_book` ⇒ 硬拒（零改） | ⑤-补 形态 ∥ 台账硬判 |
 | 新增 | 37-1 | 一次文档门 `gate` 跑 | 文档交付门 × 声明出边 | A 声明 B 且 B 在本机：指在盘档 ⇒ `PASS`；指缺档 ⇒ `锚·档缺`、首行 `REFUSED`——声明不免除存在性，**但只在根在盘这一格** | ⑤ 核 ∥ 红 |
 | 新增 | 37-2 | 同上 | 文档交付门 × 声明出边 × 同级目录 | 未声明仓名 ⇒ `锚·档缺` +「未在 `index.publicRepos` 声明」+ 同级候选；同输入改台账面仍硬拒（可见差） | ⑤-补 仓名未声明 |
 | 新增 | 37-3 | 同上 | 文档交付门 × 出边图 | A ↔ B 互声明 ⇒ `锚·环引`、首行 `REFUSED`；B 无 manifest 当被声明 ⇒ 零 `环引`，且 B 内的在盘档可解析为 `resolved` | ⑤-补 方向 ∥ 叶仓 |
 | 新增 | 37-4 | 同上 | 文档交付门 × 声明出边 × 本机缺仓 | A 声明 B 而 B 不在本机：报面出 `未核 1 条` + 该根一行（`触发 = 指针 ∥ 环走查止步`）、首行 `PASS`；同一指针删掉声明再跑 ⇒ `锚·档缺` + `REFUSED` | ⑤ 未核 |
+| 新增 | 29-6 | 一跑 `gate` 取判决 + 一跑 `report` 取读数（读数块只在 `report` 面出） | 文档交付门 × 唯一后缀兜底 × 仓内文件树 | 三条同跑、红绿并置：指向唯一后缀的指针 ⇒ `gate` 首行 `PASS`、`report` 出后缀读数行计 1；同名两份 ⇒ `锚·档缺` + 候选；零命中 ⇒ `锚·档缺`。两跑分开是机制定的，不是三次抽取 | 判据 ① ② |
 
 - 故事号 = `CLI 37`（索引表现有行到 `CLI 36`）；属册 = `paths`（同族：路径与引用解析），不新开分册。
+- 29-6 并入既有故事 `CLI 29`（索引表已有该行，不新开 CLI 号）：29 系现有 29-1 … 29-6。
 - 用例号在此定死：行内号 `37-1` … `37-4`，测试标题逐字 = `test('CLI 37-1 …')`——`CLI` 前缀是编号的一部分，与既有 `test('CLI 29-4 …')` 同形，丢了它故事就对不上索引表。
-- 29-1 ∥ 29-2 ∥ 29-3 零改；6-1 / 6-2 / 6-3 不受影响（在项目根内解析，本层不改这一格；6-3 的 `outside-project` 判据零变）。
+- 29-1 ∥ 29-2 零改；6-1 / 6-2 / 6-3 不受影响（在项目根内解析，本层不改这一格；6-3 的 `outside-project` 判据零变）。
+- **29-3 改写**：夹具原为「裸名只有深处一份」，恰是本步要放行的那一形 ⇒ 断言必红。改成「两处同名」，断言由「零命中仍档缺」收紧为「后缀命中 2 处仍档缺」（候选不产受理的原意更硬）。
 - 冗余：无。本次不删任何既有行。
-- 行号落在 `test/RTM.md` 的动作归实施轮（RTM 与集成用例同处维护）；本档只定号与断言口径。
+- **落地顺序 = 行先号后**：号在本档定（`37-1` … `37-4` ∥ `29-6`）；`test/RTM.md` 与 `test/rtm/paths.md` 的行与 `test('CLI 37-1 …')` 标题同号。落行时撞号（该号已被占用）⇒ 停下上抛，不静默改号。

@@ -14,16 +14,17 @@
 
 ## CLI 29. 路径解析统一层
 
-> 目的：同一条相对路径在哪个面都得到同一个答案——判得出就解析出，判不出就停下要人挑（列出候选），解析无果就说清缺哪一段并列出盘上同名档；跨仓引用认声明表：已声明且声明根在本机就照判（含节号），声明根不在本机就列报（未核、不入闸），没声明就拒。
-> 节注：回指 = 需求 `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-BATCH-SEGMENT.md`（相对路径解析序与防嵌套 F-BP1）· `docs/core/requirements/PROMPT-SYSTEM.md` ⑤（跨仓引用三态）· `docs/core/requirements/ADVISOR-CONVERGENCE.md` §2.3 条目 F18；机制单源 = `docs/core/design/PATH-RESOLUTION.md` §2（四态与判定算法）∥ §2.6（报明文）∥ §2.7（声明仓引用、环检、叶仓）；交互组件 = 统一解析层 `thincoder-core/path-resolve.mjs` ⟷ 七个吃路径的面（批档读 ∥ create ∥ 评审文档 ∥ 子代理 `files` ∥ 台账 `cwd` ∥ `doc_check target` ∥ 文档锚面）；进入口 = 父侧 `batch append` 一笔 / 一次 `advisor` 发起 / 一跑 `doc_check`；三态（行序）= 29-1 正常 · 29-2 错误 · 29-3 错误 · 29-4 边界 · 29-5 错误。
+> 目的：同一条相对路径在哪个面都得到同一个答案——判得出就解析出，判不出就停下要人挑（列出候选），解析无果就说清缺哪一段并列出盘上同名档；跨仓引用认声明表：已声明且声明根在本机就照判（含节号），声明根不在本机就列报（未核、不入闸），没声明就拒。文档指针按「包内相对」写（如只写包内那一段路径）时，由唯一后缀兜底定位：全仓恰一处后缀相符就解析出并在报面标出这是后缀兜底，多处 ∥ 零处仍判档缺。
+> 节注：回指 = 需求 `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-BATCH-SEGMENT.md`（相对路径解析序与防嵌套 F-BP1）· `docs/core/requirements/PROMPT-SYSTEM.md` ⑤（跨仓引用三态）· `docs/core/requirements/ADVISOR-CONVERGENCE.md` §2.3 条目 F18；机制单源 = `docs/core/design/PATH-RESOLUTION.md` §2（四态与判定算法）∥ §2.6（报明文）∥ §2.7（声明仓引用、环检、叶仓）∥ §2.8（唯一后缀兜底）；交互组件 = 统一解析层 `thincoder-core/path-resolve.mjs` ⟷ 七个吃路径的面（批档读 ∥ create ∥ 评审文档 ∥ 子代理 `files` ∥ 台账 `cwd` ∥ `doc_check target` ∥ 文档锚面）；进入口 = 父侧 `batch append` 一笔 / 一次 `advisor` 发起 / 一跑 `doc_check`；三态（行序）= 29-1 正常 · 29-2 错误 · 29-3 错误 · 29-4 边界 · 29-5 错误 · 29-6 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
 | 29-1 | 父侧 `batch append` 写一笔 §1：批档以**裸档名**定位（档在 `docRoot.batches` 下），写入文本里再引一个裸档名 | 写入落盘（回执含 `appended`）、回执无 `DOC-CHECK GATE: REFUSED`（门不再判档缺）；追加文本在档内可读回 | — | `test/integration/path-resolution.test.mjs` |
 | 29-2 | 会话锚 = 工作区（下辖两项目），三面各一笔：`batch status` 传项目根相对形 ∥ `ledger count` 不带 `cwd` ∥ `doc_check({mode:"gate"})` 不带 `target` | 三面同一句报明形：拒 + 候选全列（批档面回执含 `Candidates:` 与两个项目名；台账面含「未找到项目根」+ 下辖候选；文档门面拒 + 报文点名 `target`（`target` 必填后不再走歧义支——首行不是 `DOC-CHECK GATE: ERROR（多项目工作区：请指名 target）`）） | — | `test/integration/path-resolution.test.mjs` |
-| 29-3 | 文档门判一份引裸档名的档（裸名在项目根与引用方目录都不中、同名档在更深的子目录里） | 回执报「缺「<该名>」」+「盘上同名：<路径>」（「你是不是指这个」）；命中仍是 `档缺` 一条（候选不产受理） | — | `test/integration/path-resolution.test.mjs` |
-| 29-4 | 文档门判一份含三条跨仓引用的夹具：一条首段 = 已声明仓名且该声明根在本机、档在盘；一条同仓但带一个该仓不存在的节号；一条首段 = 项目根同级目录名（未声明） | 已声明形静默（零命中、首行 `PASS`，不再出读数行）；错节号 ⇒ `✗ 锚·节缺`（跨仓指针也管节号）；未声明形 ⇒ `✗ 锚·档缺` + 括注含同级目录候选与「该名未在 index.publicRepos 声明」，gate 首行 `REFUSED` | — | `test/integration/path-resolution.test.mjs` |
+| 29-3 | 文档门判一份引裸档名的档（裸名在项目根与引用方目录都不中，同名档在两处更深的子目录里——**两处**，因为恰一处的那一形自本轮起由 29-6 的兜底解析） | 回执报「缺「<该名>」」+「盘上同名：<路径>」（「你是不是指这个」）+「后缀命中 2 处」（两张候选各说一件事）；命中仍是 `档缺` 一条（候选不产受理） | — | `test/integration/path-resolution.test.mjs` |
+| 29-4 | 文档门判一份含三条跨仓引用的夹具：一条首段 = 已声明仓名且该声明根在本机、档在盘；一条同仓但带一个该仓不存在的节号；一条首段 = 项目根同级目录名（未声明）。**另在项目根下配一处同后缀路径**（`pkg/<该名>/…`，使该 token 在全仓恰一处后缀相符） | 已声明形静默（零命中、首行 `PASS`，不再出读数行）；错节号 ⇒ `✗ 锚·节缺`（跨仓指针也管节号）；未声明形 ⇒ `✗ 锚·档缺` + 括注含同级目录候选与「该名未在 index.publicRepos 声明」，gate 首行 `REFUSED`；**配上那处同后缀路径后仍判 `锚·档缺`、报面无后缀读数块**（声明仓形不进唯一后缀兜底——声明面优先于猜测面） | — | `test/integration/path-resolution.test.mjs` |
 | 29-5 | 文档门判一份形态错的跨仓引用（`仓名/../越界.md`）；同形改走台账面（`ledger update` 的 `task_book` 指同形路径） | 文档面仍判缺（`✗ 锚·档缺`，形态写错不成腿）；台账面硬拒（拒文含 `task_book 指向的档不存在`）——两面放宽面不同 | — | `test/integration/path-resolution.test.mjs` |
+| 29-6 | 文档门判两册夹具（同一仓内文件树）：一册只写一条「包内相对」形指针且全仓恰一处后缀相符；一册写两条（同名档两处 ∥ 全仓零后缀命中） | 唯一后缀 ⇒ `gate` 首行 `PASS`、`report` 出后缀读数行（`how="suffix"` 1 处）与清账清单一行、末行 `共 1 条 token · 1 处`；同名两处 ⇒ `✗ 锚·档缺` + 括注「后缀命中 2 处」（候选只提示）；零命中 ⇒ `✗ 锚·档缺`，两红同计 ⇒ `gate` 首行 `REFUSED（锚 2 条）`。读数块只在 `report` 面出（`gate` 面判决词与命中分类零改） | — | `test/integration/path-resolution.test.mjs` |
 
 ## CLI 37. 声明出边：可引用谁由 `index.publicRepos` 定
 
