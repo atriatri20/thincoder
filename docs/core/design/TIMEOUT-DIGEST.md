@@ -110,8 +110,8 @@ if (depth === 0 && !agent.config?.agent?.engineering && !poolLive(agent)
 ```
 
 - `poolLive` 取自 `thincoder-core/agent/suspension.mjs`（已导出）——与挂起尾巴同一判据，不立第二口径。
-- `task.mjs` 的 `_taskPushbacks = 0` 语义**不动**：池空（`!poolLive`）时列表一更新仍获一次新提醒；池里有在飞条目时门不触发，归零不再变成「拖回合」。
-- 若 `completion.mjs → suspension.mjs` 在实施时成环（`node --check` / 启动自检报 TDZ 或循环初始化），把 `poolLive` 判据体迁到叶子 `thincoder-core/agent/pool-live.mjs`，`suspension.mjs` 保留同名 re-export——消费面零改。这是模块图的机械约束，不是新语义。
+- `thincoder-core/agent-tools/task.mjs` 的 `_taskPushbacks = 0` 语义**不动**：池空（`!poolLive`）时列表一更新仍获一次新提醒；池里有在飞条目时门不触发，归零不再变成「拖回合」。
+- 若 `thincoder-core/agent/completion.mjs` → `thincoder-core/agent/suspension.mjs` 在实施时成环（`node --check` / 启动自检报 TDZ 或循环初始化），把 `poolLive` 判据体迁到叶子 `thincoder-core/agent/pool-live.mjs`，`suspension.mjs` 保留同名 re-export——消费面零改。这是模块图的机械约束，不是新语义。
 
 ### 2.4 首 chunk 窗与流中途空闲窗分计
 
