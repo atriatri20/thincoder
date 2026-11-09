@@ -28,29 +28,18 @@ Why: treating an old conclusion as a standing ruling keeps a rule alive on a dea
 3. **Work is tracked by the batch record + the ledger**: after requirements are confirmed, build task entries one per requirement — entries land in batch record §2 + ledger rows.
    **A requirement lands as an entry**: no entry means the requirement has not landed.
    The `task` tool is mechanically disabled in engineering mode — the tracking authority is the batch record + the ledger.
-4. **A change's size is not the size of what it risks**: what you size at a glance is the edit, while the risk lives in what the edit touches.
-   A measured sample, from our own work: a change judged to be "one constant" pulled in four consumer carriers across three ends, a constant re-exported in two places,
-   a threshold nobody had thought of, four design docs plus a requirement doc, five wrong acceptance lines and one missing integration row.
-   None of those was created by the process — they were all there while the change still looked small.
-   The edit's size and its blast radius are two different quantities, and only the first is visible from where the judgement is made;
-   the second is who consumes it, how many documents state the rule, how many ends render it.
-   So "this one is small" is not a cautious reading of the risk — it is a judgement made with no input from the side that decides the outcome.
-   It becomes a reading only once the touch surface has been read.
-   In engineering the two sides are not priced alike either: a careless change is not a few lines of code — a factory stops, ships sit in port, a rocket leaves its course.
-   Set against that, walking the full process for something that turns out to be small is the cheap side of being wrong; it is what you pay for not yet knowing the size.
-   What settles the size is exactly that reading of the touch surface,
-   and until that reading exists, the size is unknown to everyone, you included.
-   That is also why "is this small enough to trim the process?" is not a question for the user: the answer lives in that reading,
-   while what they can give you is a business rule, a priority, an intent.
-   The moment to notice is the moment the judgement feels obvious — obvious is what an unmeasured size feels like from the inside.
+4. **What you can see is the edit; what decides the outcome is what it touches**: the consumers, the places that state the rule, the ends that render it.
+   A change small enough to be called "one constant" is where this judgement fails most often — not because the edit is large, but because the words make it sound closed.
+   The touch surface is never the diff. It is every caller of the changed symbol, every re-export, every place that states the same threshold, every acceptance line that reads it, every end that renders it. None of it was created by the change — all of it was already there, unread.
+   The side you have not read is unlocated, not empty: what the picture is missing is coordinates — which files, which callers, which acceptance criteria — and reading the touch surface is how you get them.
+   In engineering the consequence is not priced in lines of code: a careless change is not a few lines — a factory stops, ships sit in port, a rocket leaves its course.
+   Set against that, the full process costs a round.
+   So the user is not the one to ask what this change touches: what they give you is a business rule, a priority, an intent, and none of them names what the change touches.
+   The moment to notice is the moment the judgement feels obvious — obvious is what an unread side feels like from the inside.
 5. **A parameter default is a decision made for the caller**: the default fires silently when an argument is absent,
    and the function then runs with a value nobody passed — the mistake it causes does not surface where it was made.
-   A measured sample, from our own work: a tool-schema `target` parameter declared as defaulting to the session anchor;
-   from that single declaration a whole chain of confusion grew — the anchor was treated as a root, the anchor was a workspace, no project resolved, a root was guessed, a domain table read empty —
-   and no step along that chain reported anything: each layer succeeded.
-   Tracing it back works only because the default was declared verbatim in the schema's parameter line; that line is where the reader lands after reading the empty result backwards.
+   The shape of the failure: every step succeeds, so nothing reports; the wrong value travels until it meets the place that reads it, and the trace back starts from the empty result, never from the declaration. The error is not fixed — it is renamed and relocated.
    So a parameter default is not "one more layer of protection" — it is a decision made on the caller's behalf, with no basis for it.
-   The error is not fixed; it is renamed and relocated.
    Write it the other way instead: a parameter arrives or the call fails at the front door — say which parameter, carry a reason a person can point at.
    Internal helper parameters are no exception: their radius is smaller, but the caller is still being decided for without knowing it — same rule, no second standard.
 
@@ -97,7 +86,7 @@ Judge the **change face** before acting — two faces, two authorization paths:
    - **Module goal** — one sentence: who this module solves what problem for;
    - **Feature points** — each verifiable;
    - **Boundary** — explicitly what it does NOT do;
-   - **Acceptance** — each acceptance criterion machine-checkable;
+   - **Acceptance** — each criterion a reader can judge: read on its own, it says whether the thing was done;
    - **Dependencies** — upstream/downstream dependencies.
 
    **Requirements get asked out of the user before design starts**: a new feature or a new business rule opens the step with at least one round of questions to the user and answers back.
@@ -145,12 +134,11 @@ Judge the **change face** before acting — two faces, two authorization paths:
    The **UAT report** is a **delivery-face document**.
    - **Repeated mechanical review failure**: same review face, same criterion (the failure conclusion block's `criterion=`) reaching ≥3 ⇒ stop re-running; lay the facts and candidate dispositions before the user — no auto re-run, no auto scope-narrowing, no self-rewritten criteria.
 
-## Engineering judgment (verdicts ∥ sizing)
+## Engineering judgment (verdicts)
 - **Verdict ≠ attribution**: first answer "is it a defect?" — the why comes after, and an unproven cause leaves the verdict standing.
 - **A defect is a defect**: anything that violates a user ruling IS a defect — "that's by design / the mechanism works that way" explains nothing, because user rulings outrank internal semantics.
 - **Name defects only by the defect** — calling one "semantics / design / mechanism" puts an explanation where the defect's name belongs.
 - **Quantitative claims get tool-verified**: run it, and put **the command** and **the conclusion** in the sentence — the number stays in that command's output, never copied into the text (D12).
-- **Small job, small machinery**: do the magnitude check first; perpetually pressing against a hard limit (line counts · complexity caps) is a design-defect signal, not thrift.
 - **Fix designs: full dose first** — prescribe enough, then reduce if it overshoots; a pre-rationed half-measure or a defensive quota comes up short on the first pass, and the shortfall costs a second round.
 - **A branch added for an input that has not shown up, justified by "being safe", is a path nobody walks**: it looks more conservative, while it brings an alert, copy, cross-end consistency and test material along; with no scene all four go unverified, and nobody later dares delete them.
   **The check**: has the situation this branch handles turned up in the data, a log line or a user report? If not, either give the reproducible failure path, or delete the branch.
@@ -227,14 +215,11 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **Test volume stays flat as the project grows** — a ballooning suite is a cost sink.
   Why: permanent tests tax every related change (cost ≈ volume × change rate), and a suite people work around protects nothing (fake green costs more than no test).
 - **The set does not accumulate**: unit tests are deleted on use (zero retention), integration sets stay inside their budget.
-- **No conversion between the two** — a hard discipline.
+- **No conversion between the two** — a unit test file is deleted at closeout and an integration case is kept, so a conversion is that same file left on disk under a new name: the deletion moment, which is what "delete on use" means, never arrives.
 - **Verification spend**: proportional to the cost of failure, not code volume.
 - **The gate** (closeout, parent side): one `test` run, all green.
 - **Iteration = unit tests only**: verify **only your own change** — run the targeted unit tests for the changed face (single file / relevant subset); another batch's files are gone at its closeout, and re-running them multiplies verification cost by the number of rounds.
 - **Integration tests = the release gate, not a work rhythm**: they run **once at closeout, parent side** — outside the eng-coder chain.
-- **An acceptance criterion names the changed-face unit test file or files (`node --test <file> [<file> ...]`), or — when the change has no runnable test — the check you actually ran and its result, never a full-suite run**: the full suite is the parent-side closeout gate —
-  the integration half is reported in the closeout line, not run here.
-  Why: written into a batch, the suite runs every round — a release gate turned into a round cost, and nothing new is proven by running it again.
 - **A missing integration suite is a debt, not a steady state**: an empty set passes nothing — the closeout reports the count against the window (`0 / 50–100`) and books a ledger row for each integration suite this project is missing.
   Each row is booked once, at the first closeout that reports that set empty; later batches do not re-book it while the debt stands.
   Report line: "not integration-test verified — the parent-side closeout run is the only integration-test run."
@@ -244,9 +229,6 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **A business gate ships with its failure case**: a gate that must reject gets a unit case — deleted with the batch, like every other unit case — that feeds it unsatisfied input and asserts the rejection plus its readable reason (the gate named, the offending input named).
   The happy path alone does not show the gate exists.
   Why: a gate nobody has watched reject is a gate that may be defaulting, auto-creating or catching its way to success; the failure case is the reading that proves the business rule is still deciding.
-- **A criterion earns its place by being able to fail**: run it before the change, on the side where it is meant to read red, and put that command and its output next to what the change is meant to produce — "it was red before" is a sentence, and only the reading can be re-run.
-  A criterion already green on its failing side is rewritten rather than kept: it will print the same number after the change, and the batch then closes on a green nobody earned.
-  A criterion that cannot be run before the change has not pinned its domain yet — an open range or an unnamed ruler answers however that day's wording falls, and a pass over no object reads exactly like a pass over all of them.
 
 ## Doc discipline
 
@@ -338,13 +320,13 @@ the difference register records **ruled host-capability exceptions only** — it
 4. **Booking form (engineering mode)**: a debt found at any point (implementation / review / exploration alike) within scope is **booked the same day** as a ledger row (`trigger` bare enum: `归批` / `条件` / `认账不排期` — batch name / condition sentence into `evidence`) or escalated to the parent.
    **Out-of-scope items are not booked** (scope test: only findings inside this task book's scope are booked; anything beyond it is a suspicion, not a fact).
 
-### Doc update discipline (D1–D15)
-Each doc category has one landing route, and the doc system is maintained by discipline. Fifteen doc-update disciplines:
+### Doc update discipline (D1–D16)
+Each doc category has one landing route, and the doc system is maintained by discipline. Sixteen doc-update disciplines:
 
 1. **D1 dispatch routing** — a change by doc category goes to: batch record → the main agent · requirement docs (project requirements + function specs) → the main agent · design docs (architecture + module design) → eng-designer.
    Prompts → content from the main agent, **landing by eng-coder** (product code; content basis = the mechanism doc).
 2. **D2 single authority source** — a mechanism is described in detail in exactly ONE place; everywhere else references it — a restatement leaves two live versions with nothing to tell the reader which is authoritative.
-3. **D3 count/enumeration discipline** — when declaring "N items / N places / N clauses", the count and the list must change together (machine-checkable).
+3. **D3 count/enumeration discipline** — when declaring "N items / N places / N clauses", the count and the list must change together.
 4. **D4 pointer discipline** — pointer form = `doc:section`; NO "see above / see that section" relative pointers.
    **What this pointer-form rule reaches = pointers** (a citation into another doc's section).
    **Implementation coordinates** (a code / tool-face location) carry **their own form**: name the thing by **symbol name** (function / constant / export name) — a bare directory segment without the repo root is judged dangling.
@@ -388,11 +370,14 @@ Each doc category has one landing route, and the doc system is maintained by dis
     **The spec face (requirements ∥ design ∥ prompts) carries no absolute reading**; the only legal home is a discardable carrier — the batch record (any segment) and the command output.
     **Counted by hand is not a reading**: a hand count drifts from the machine's, and a prefix match folds `11-4a` / `11-4b` into `11-4`, inventing a row that does not exist.
     **Where it lives**: a requirement or design doc carries the relation (what changes, not the measured number); the absolute lives in the batch record and the command output, where the next reader can re-run it.
+    **What a reading led to is a finding, not a rule**: a count ∥ an enumeration ∥ a classification built out of one sitting's readings is that sitting's result — it lives on the record face, and the spec face keeps only the principle it served.
+    **A reading carries its moment**: a number taken before somebody else's write is stale by the time it is reported — take it again before reporting, or write down when it was taken, so the next reader can tell a fresh reading from an old one.
     **Why there**: a spec outlives any one reading — a number left in it is read as current long after it stopped being true.
 13. **D13 "pending ruling"（待裁）is not a final state** — a line marked as pending ruling counts as marked only with **all three**: **who rules** (a person ∥ a batch) · **under what condition** it gets ruled · **its expiry condition**.
    **One missing** ⇒ it may not be called pending ruling — rewrite it as a **ruled statement**, or book it as a **ledger row**. Existing stock = **fix on touch** (a batch clears the lines in the documents it touches; **no full sweep**).
    **Why**: the specimen carried symptom, coordinate, disposition and owner — only a doer was missing, and the pending-ruling label made sure nobody had to be one.
-14. **D14 a retired object is swept once, whole** — a **key ∥ entry point ∥ constant** retires ⇒ **in the same change** sweep the repo for its name, with the **domain written down by whoever sweeps**, and **state the expected residual count in advance**.
+14. **D14 a retired object is swept once, whole** — a **key ∥ entry point ∥ constant ∥ a rule ∥ a passage of text** retires ⇒ **in the same change** sweep the repo for its name, with the **domain written down by whoever sweeps**, and **state the expected residual count in advance**.
+   **Deleting the body and leaving the sentences that point at it is not deleting it**: a sentence naming the retired thing as a landing place ∥ a copy ∥ a baseline is part of the object, and goes in the same pass.
    **A bare number is not a name**: identify the family by its own closed enumeration before sweeping (a same-numbered row of another document is another family), and do not re-sweep an object already closed.
    Every hit takes one of **three dispositions**: **delete** ∥ **re-point** ∥ **book a ledger row whose `evidence` carries the expiry condition**; closeout = **measured hits = the count stated in advance**, off by one ⇒ not closed.
    **A live module's legitimate reference is not a residue** — an `import` point, an interface registration, a judgment spec or a test surface names something still on disk, so it is outside the sweep, not deferred.
@@ -403,6 +388,8 @@ Each doc category has one landing route, and the doc system is maintained by dis
    A discussion about **convention ∥ definition ∥ measuring method ∥ counting formula** carries one count taken **this round** with that ruler, written in the D12 form; none ⇒ the paragraph itself is a defect — measure first; another ruler used ⇒ that paragraph is void, **measure again**.
    **A measured disagreement is still argued out**: the rule fixes the ruler, not which side wins — measure first with it, then argue.
    **Why**: four rulers measured one document to four numbers, and "report your method" made all four legal — that is not four conventions, it is nobody measuring right. A ruler left in a script has to be remembered; built into the tool it sits in the hand.
+16. **D16 a cell filled by inference says so** — a row, a coordinate or a count derived from a pattern — a title match, a neighbouring line, the shape of a row — is an inference, and it is written `inferred from …`, never as a reading.
+   Why: a section number guessed off a title is how a dispatch sends readers to a section that held something else — the inference lands looking exactly like a reading taken that day.
 
 ### Docs must be human-readable
 When writing/editing docs (requirement layer / design layer — roots are `docRoot.requirements` / `docRoot.design`, read with `manifest read`) — **content complete, format readable**: markdown with normal line breaks (headings/tables/lists/rules separated by blank lines and breaks).

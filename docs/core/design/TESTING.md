@@ -227,6 +227,15 @@ render-core 单层 glob 只收顶层单元档（`thincoder-render-core/test/run.
 单元测试档后缀 = .test.mjs
 ```
 
+**I/O 失败 ⇒ fail-closed（判不了就是不许过）**
+
+- **什么算**：列目录 `D` 抛错——`EACCES`（无权限）∥ `ENOENT`（目录不在）∥ 非目录，任一者即是；读这一步不成立，后面的归属判据也就无从谈起。
+- **判成什么**：**拒绝收口**——throw，点名目录与原因，`§1` 状态行字节不变；两路（`close` ∥ `status` 写「已收口」）同判。拒串用本支自己的机检锚 `unit-test gate cannot determine`，与「档真在盘」那支的锚 `unit test file(s) still on disk` 不互混。
+- **为什么不取「读不到当空集」**：空集得出的结论是「本批无单测档」⇒ 放行；而它实际说的是「不知道有没有」。一个绿色就此冒充了「没有档」——本门存在的理由正是挡住这种冒充，所以判不了就是不许过。
+- **可复现**：对不存在的目录调 `batchUnitTestFiles` ⇒ 上面那条拒串（`ENOENT`）。
+
+**口径归属**：本支沿本仓既有 fail-closed 惯例（`docs/core/design/BATCH-RECORD.md` §4.1「fail-closed」行）；那条例行管「`batch` 写门何时 fail-closed」的通用面，本节只写本门这一支，不复述它。
+
 **为什么用最长前缀而不是同名**：实读 13 档里有档名 = 批档名 + 序号后缀的形态——其归属批档是同名前缀档，同名判据会把它判成无主，最长前缀才接得住（真实遗漏 1 ∕ 13）。
 
 反过来，同目录并存两份批档、且其中一份的 stem 是另一份的前缀时，短前缀会把那份别人的档算到本批头上——最长前缀两条都挡住。
@@ -241,7 +250,12 @@ render-core 单层 glob 只收顶层单元档（`thincoder-render-core/test/run.
 
 `thincoder-core/agent-tools/batch-gate.mjs` **零改**：其契约是「判据零变——只决定判谁与何时强制，判据由 `doc-check` 引擎产出」，文件存在性判据住进去会破坏该单一判据源（D2）。
 
-**新名三问（三问三形，逐项答）**：模块 `thincoder-core/agent-tools/batch-unit-test-gate.mjs` ∥ 两函数 `batchUnitTestFiles` ∥ `assertUnitTestFilesCleared` ∥ 机检锚 —— **`none found`**（检索域 = `thincoder-core/agent-tools/*.mjs` 全族 + 既有拒串词表；无同职责件、无同义既有名）。
+**新名三问（三问三形，逐项答）**：模块 `thincoder-core/agent-tools/batch-unit-test-gate.mjs` ∥ 两函数 `batchUnitTestFiles` ∥ `assertUnitTestFilesCleared` —— **`none found`**（检索域 = `thincoder-core/agent-tools/*.mjs` 全族 + 既有拒串词表；无同职责件、无同义既有名）。
+
+**机检锚（两枚，逐枚三形答）**——两枚都是本门新起的串，各管一种拒因，**不互混**：
+
+- `unit-test gate cannot determine` —— **`none found:`**（已查 = 全仓 `*.md` ∥ `*.mjs` ∥ `*.js` ∥ `*.json` 的字面检索：同串只出现于本门实现档与本档，无更早的同职责锚）。住 = `thincoder-core/agent-tools/batch-unit-test-gate.mjs` 的 `batchUnitTestFiles` 拒串首行；消费 = 收口拒面判「目录读不了」这一支。
+- `unit test file(s) still on disk` —— **`none found:`**（同上检索域：同串只出现于本门实现档与本档，无更早的同职责锚）。住 = 同档 `unitTestFilesStillOnDiskError` 拒串首行；消费 = 收口拒面判「本批档还在盘」这一支。
 
 既有件不可用的那一支 = **`existing but unusable: thincoder-core/agent-tools/batch-gate.mjs · name: "runBatchGate" · failed on: 无 manifest 时 `evaluate()` 早退「不适用」⇒ 该判据在无声明面项目里静默失效（K-1）`**。
 
@@ -256,7 +270,7 @@ render-core 单层 glob 只收顶层单元档（`thincoder-render-core/test/run.
 
 **公共源勘察**：工作目录树内公共源文档已查（`docs/core/{design,requirements}` 两树 ∥ `test/**` ∥ `thincoder-core/prompts/discipline-engineering.md`）。
 
-相关 = 本档 §2 ∥ §3.1 ∥ §3.3 ∥ `docs/core/design/BATCH-RECORD.md` §4.13 ∥ `docs/core/design/DOC-DISCIPLINE.md` §3.20（结构兜底的判据句）。`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（实读）⇒ 外部公共源无相关。
+相关 = 本档 §2 ∥ §3.1 ∥ §3.3 ∥ `docs/core/design/BATCH-RECORD.md` §4.13 ∥ `docs/core/design/DOC-DISCIPLINE.md` §3.20（结构兜底的判据句）。`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `["../.thincoder","../thincoder.com"]`（实读）——两仓内本判据的判据源零命中（两枚锚串各 0）⇒ 外部公共源无相关。
 
 **受影响文件**（表级尺寸档位结论：`.md` 零行数义务；两处代码档 = 一处新建、一处就地改，未触发拆分计划）：`thincoder-core/agent-tools/batch-unit-test-gate.mjs`（新档）· `thincoder-core/agent-tools/batch-lifecycle.mjs`。
 
@@ -389,7 +403,7 @@ U-4 的夹具单元档 = x-extra.test.mjs                  U-6 的无主夹具�
 
 - 工作目录树内文档已查 = 本档 §4.3 ∥ §4.6 ∥ §11.15。
 - 代码面已读 = `thincoder-core/browser/launch.mjs` ∥ `thincoder-core/config-io.mjs` ∥ `test/integration/browser-start-window.test.mjs` ∥ `test/integration/ssh-device-readability.test.mjs`。
-- 外部公共源无相关（对象 = 仓内用例的隔离面）；`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（实读）。
+- 外部公共源无相关（对象 = 仓内用例的隔离面）；`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `["../.thincoder","../thincoder.com"]`（实读——两仓为工作区工具面 ∥ 站点面，无测试隔离面判据）。
 
 **接口契约（两面）**：
 

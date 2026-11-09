@@ -133,6 +133,9 @@
 **包装门作用域**：包装门（`--tui-wrapped`）改 argv 后**仅直系子进程生效**——TUI 会话内嵌套起多一层包装 + 一份 `tui-stderr-*.log`（无功能破坏）。
 
 **`loadConfig()` 全命令路径**：配置装载现于**全命令路径**运行（含 `--version` / `completion`）——老字段迁移写回 / 告警可能出现（stdout 未污染）。
+**渠道条目准入判据归 PROVIDER.md**：`providers[]` 条目的准入（无名条目不进使用面）单源住 `docs/core/design/PROVIDER.md` §6.29；本节只声明 `providers` 属第 ① 类配置键与其归一语义，不复述该判据。
+
+**运行中重读沿用本装载面**：`/model` 打开时的重读走同一个 `loadConfig`（机制见 `docs/core/design/PROVIDER.md` §6.30）——迁移写回与装载期告警是既有行为，重读不新增写盘；那边的「零写盘」只指不重写被丢弃的 `providers[]` 条目。
 
 **关键决策（本面）**：
 

@@ -1320,6 +1320,236 @@ R7 畸形参数的处置只在单元层断言（T-7）——它不是生产报�
 
 **窗口读数**：`thincoder-cli/test/` 实读现量 = `thincoder-cli/test/run.mjs` ∥ `thincoder-cli/test/slow.mjs`，无 `integration/` 目录 ⇒ 集成集 0 例，本表 3 例为其首批；50–100 为上限约束（超窗裁减旧场景）。
 
+### 6.29 渠道条目装载过滤（无名条目不进使用面）
+
+**保留判据**：`providers[]` 条目进使用面 ⟺ 非 null 的纯对象 ∧ `typeof p.name === "string"` ∧ `p.name !== ""`。
+
+其余形态（`null` ∥ 非对象 ∥ 数组 ∥ 无 `name` ∥ `name` 空串）在装载点丢弃，不进使用面。
+
+**判据的理由**：`name` 是渠道唯一句柄。`findProvider` ∥ `parseModelRef` ∥ 会话槽 ∥ 选择器全按 name 匹配；无名条目既不可寻址也不可被发送，留着只能让读它的地方失真。
+
+失败形态具体到表达式：`{ ...null }` 得 `{}`，其 `name` 为 `undefined`，渲染面 `${p.name.padEnd(12)}` 直接抛 `Cannot read properties of undefined (reading 'padEnd')`。一个空条目足以让整条渠道列表不可用。
+
+**先例（closest-precedent）**：对位 = 同档 §6.15（模型上下文解析 · 判定函数住核单源）。
+
+- **对齐**：判定函数住核单源；消费面只读一个出口；异常态以字符串向用户明示，不静默。
+- **偏离**：§6.15 的链只决定「取哪一层的值」，输入条目全部保留；本节直接**丢弃**输入条目——无 name 的条目不可寻址，留着等于让每个读点各自失真。
+- **偏离**：明示面从 §6.15 的 `windowSource` 来源串换成列表头一行计数。
+
+**survey-evidence**：
+
+- **外部源**：`PROJECT-MANIFEST.json` 的 `index.publicRepos` 实读 = `["../.thincoder","../thincoder.com"]`；两仓在盘目录清单（`../.thincoder/advisor.md` ∥ `../thincoder.com/AGENTS.md` 等）文件名无渠道准入机制档特征，未逐档打开。
+- **本仓**：需求层 `docs/core/requirements/`、设计层 `docs/core/design/CONFIG.md`、本档既有条目过滤先例。
+- **结论**：**none relevant**——外部源无渠道条目准入规则可对位；取形 = 用户 2026-11-08 裁定「甲（丢弃 + 告警）」+ F-4 软失败先例；盘面 = 不重写被丢弃那条 = **父侧裁定**（用户未就此表态）。
+
+**过滤点（单点，位于整表别名之前）**：`thincoder-core/config.mjs` 的 `merged` 组装处——`providers:` 分支由「直接 map」改为「先按判据过滤，再 `sanitizeProviderHeaders({ ...p })`」。
+
+下游零改：`merged.providersList = merged.providers`（该档那条整表别名）、`resolveProviderPlan`（`thincoder-core/model-ref.mjs`）、`sanitizeConsultModels` 的渠道名集，三处读的都是这同一个数组。
+
+过滤放在别名之前是必须的：别名之后没有第二个汇聚点，漏一处就留一条不可寻址的条目在运行面。
+
+**归属**：`loadConfig` 合并面归 `docs/core/design/CONFIG.md`（该档 §6.2 名录第 ① 类 + `loadConfig()` 全命令路径那条）。本节只给该分支加一条准入判据，键面 ∥ 归一语义 ∥ 磁盘原文零改。
+
+**同轮单向指针**：`docs/core/design/CONFIG.md` 加一行指向本节；判据单源住本节，那边不复述。
+
+**第二处 `padEnd`**：全仓另有 `thincoder-cli/src/tui/model-picker.mjs` 的 `Select provider` 行也读 `p.name.padEnd(12)`。
+
+装载过滤是全仓唯一入口 ⇒ 两处都受保护。渲染层不加 `?? ""` 之类的防御——防御留在渲染处会把坏条目重新藏起来。
+
+**丢弃要看得见（数据面载体）**：装载结果增键 `providersDropped` = `string[]`，一条一句 = **盘上下标 + 丢弃原因**。
+
+原因闭集住 `providerDropReason(p)`（`thincoder-core/config-normalize.mjs`）——唯一判定；准入谓词 `isUsableProviderEntry(p)` 就是它的 `null` 面（`return providerDropReason(p) === null`），自己不带分支。
+
+四值：`null`（条目为 `null`）· `not an object`（非对象 ∥ 数组）· `no name`（`name` 缺失 ∥ 非字符串）· `empty name`（`name === ""`）。
+
+记录里**只有下标与原因，绝不带条目内容**——不 `JSON.stringify` 条目、不带任何键名或键值。
+
+**整键类型错误不属本闭集**：`providers` 不是数组（写成对象 ∥ 字符串 ∥ 数字）时按缺省空表处理——渠表为空、`providersDropped` 不存在、`/model` 无表头，`providerStateReason` 落「未配置任何 provider」（同 `thincoder-core/team.mjs` 非数组按空表的既有形）。
+
+条目闭集管的是「这一条为什么不能用」；整键类型错误属**配置校验面**的事，而**该面尚无任何可见提示**——用户把 `providers` 写成对象时看不到「类型写错了」。把它塞进条目闭集，等于让一个记录形同时承担两种错误分类，将来加配置校验就得拆。
+
+理由 = **载体是数据层，不是渲染层**：它会进日志、进报错、进别人的调试输出。一条「有 `apiKey` 却缺 `name`」的条目，会把 `sk-…` 原样写进载体。
+
+判据只需要知道「第几条坏了、坏在哪」；条目内容对它零价值，而零价值的东西出现在载体里，就是把密钥写进不需要它的地方。渲染层今天不读内容，不代表明天没人读。
+
+载体先例同 `agent.consultModelsFiltered`（同档 F-4 范式：丢弃记录挂数据层，端面按需出词）。本批唯一消费方 = `/model` L1 列表首行。
+
+```text
+merged.providersDropped = ["providers[18]: null"]
+```
+
+**可见面 = 列表构建的纯函数（不在闭包里）**：新增一个条目构建模块，出口签名见下框。
+
+```js
+// thincoder-cli/src/tui/provider-entries.mjs   ← 新建档：零 TUI 运行时依赖
+export function buildProviderEntries({ providers, activeProvider, activeModel, dropped, isHidden, ctxText })
+```
+
+- **参数契约**：六个键调用方必须写全，不得省略任一键；其中三项的真值域含「无」：`dropped` = `string[] | undefined`（载体只在有丢弃时才存在，缺即无丢弃，与 `[]` 同义）、`activeProvider` = `string | null`、`activeModel` = `string | null`（会话槽无值即 `null`，同 §6.22 ③）。三者在函数内按 `?? []` ∥ `?? null` 归一。
+- **边界真必填的只有三项**：`providers`（数组）· `isHidden`（函数 `(provider) => boolean`）· `ctxText`（函数 `(provider) => string`——按该渠道算已声明的上下文回显，每行文本不同，一个字符串产不出多行）——缺一项或类型不符 ⇒ 抛 `TypeError` 点名该参数；另三项的「无」是合法值域，不抛。
+- **返回**：L1 的 `entries[]`。`dropped` 非空 ⇒ **首行**一条 `type: "header"` 告警，其后渠道行与 `Management` 管理项；`dropped` 为空 ⇒ 首行即渠道行。
+- **L1 调用点**：`thincoder-cli/src/tui/model-picker.mjs` 的 `openModelPicker()`，传 `agent.providers` ∥ `agent.activeProvider` ∥ `agent.activeModel` ∥ `agent.config?.providersDropped` ∥ `isDerivedProviderHidden` ∥ `declaredContextText`。
+- **单元测试调用点**：本批单元测试档 import 该函数并喂这几项，数组形状（首行 `type` ∥ 条数 ∥ 逐键值）**只在这一层**断言；测试里不复制实现——崩溃点 `p.name.padEnd(12)` 只住这一个函数体。
+- **集成两行不进这一层**：从 `createModelPicker(ctx).openModelPicker()` 进（注入面见 §6.30「集成入口」），断言只落用户看见的那一屏；同一断言不在两层各留一份（§6.28 同款分工）。
+- **可驱动性**：该模块不 import `render.mjs` ∥ picker 绑定（一律由参数进来），用例无需终端。
+
+**新名与文案（三问答复）**：
+
+- `providersDropped` — `none found:` 查过 `thincoder-core/config.mjs` 的 `merged.*` 载体与 `merged.providers*` 键，无渠道丢弃载体；最近同形 = 该档 `if (cmClean.dropped.length) merged.agent.consultModelsFiltered = cmClean.dropped`。⇒ 新键，形态对齐该载体（`string[]`、一条一句、消费面按需出词）。
+- `providerDropReason` — `none found:` 查过该档导出面（本批两枚新增之外共八枚：`sanitizeConsultModels` ∥ `warnConsultModelsFiltered` ∥ `sanitizeSubagentModel` ∥ `sanitizeSubagentModels` ∥ `warnSubagentModelsFiltered` ∥ `normalizeProxy` ∥ `normalizeTeamSection` ∥ `sanitizeProviderHeaders`），无「这一条为什么不能用」的原因函数。**对齐** = 拾取式返回值（可进使用面 ⇒ `null`，同 `sanitizeConsultModels` 交回 `dropped` 的软失败形）；**偏离** = 本函数判单条目、返原因串，不返 `{ keep, dropped }`——丢弃记录由装载分支拼成 `providers[<i>]: <原因>`。⇒ 新名，住同档；本函数是唯一判定，准入谓词取它的 `null` 面。
+- `isUsableProviderEntry` — `none found:` 查过 `thincoder-core/config-normalize.mjs` 全部导出（`sanitizeConsultModels` ∥ `warnConsultModelsFiltered` ∥ `sanitizeSubagentModel` ∥ `sanitizeSubagentModels` ∥ `warnSubagentModelsFiltered` ∥ `normalizeProxy` ∥ `normalizeTeamSection` ∥ `sanitizeProviderHeaders`），无条目准入谓词。`sanitizeProviderHeaders` = `existing but unusable:`——它收一个条目返回头对象，判的是头字段，不是准入。⇒ 新谓词住同档（load-time 清洗纯函数的家），装载 ∥ 重读共用。
+- `reloadProviders` — `none found:`：全仓 `.mjs` 扫 `reloadProviders` 零命中（盘上只有 `thincoder-core/config.mjs` 的 `reloadMcpFromDisk`）⇒ 新名。先例 `existing: thincoder-core/config.mjs · name: "reloadMcpFromDisk" · consumers: thincoder-cli/src/tui/cmd-mcp.mjs 菜单打开边界`。**对齐** = 读盘 → 与内存态合并 → 写回 `agent.config.<段>` → 返 `{ ok, … }`、绝不 throw；**偏离** = 本节重算 `injectProxy` 派生值并按 name 留住 `_unavailable`，MCP 面留的是 `keptConnected`（盘上已删而已连接的服务）。
+- `buildProviderEntries` — `existing: thincoder-cli/src/tui/model-picker.mjs · name: "buildProviderEntries" · consumers: 同档 openModelPicker 的 L1 列表`。**对齐** = 名字不改、返回形不变（`type` / `text` / `action` / `provider` / `marker` / `note`）；**偏离** = 搬出闭包成独立纯模块，闭包变量改由参数进来——唯一目的是让崩溃点可被 import 直接测。
+- `[model] cannot re-read config: …` — `existing:` `thincoder-cli/src/tui/model-picker.mjs` 的 `[model] fetch models failed: ` · `consumers:` L2 拉取失败路径。**对齐** = `[model] <动作> failed: <message>` 这一前缀形；**偏离** = 本行不是「取模型失败」而是「读不到配置」，且必须带文件坐标——用户要能凭这一行找到要改的那份档。
+- 两行文案 — `none found:` 查过 `thincoder-cli/src/tui/model-picker.mjs` ∥ `thincoder-cli/src/tui/provider-admin.mjs` ∥ `thincoder-core/config-normalize.mjs` 的既有告警串；`warnConsultModelsFiltered` 是 console 级、对象是 `agent.consultModels`、形为 `entry "p:m" references unknown provider …`——与渠道条目丢弃不是一件事 ⇒ 不复用原文案，新写两形。
+
+文案逐字（与 L1 现有英文行同一语言面）：
+
+```text
+⚠ 1 provider entry skipped — no "name" (fix providers[] in config.json)
+⚠ N provider entries skipped — no "name" (fix providers[] in config.json)
+```
+
+走列表头而不走 `console.warn`：盘上未见把 `console.warn` 接到 TUI 行的接线（`thincoder-cli/src` 内无 `console.warn =` ∥ patchConsole 覆写），而端侧用户可见通道是 `pushLine` 与 picker 行（`thincoder-cli/src/tui/provider-admin.mjs` 的 `probeChannelFlow` 就用 `pushLine` 出「不可用」）。
+
+一条警告只住一处：两个家会各说各话。
+
+**`defaultModel` 指着无效条目时**：命中不了——引用按 name 匹配，无名条目没有 name 可比（`thincoder-core/model-ref.mjs` 的 `parseModelRef` 取 `provider:model` 首冒号前段再与 `list` 的 name 比对）。
+
+全表皆无效 ⇒ 过滤后 `providers = []` ⇒ `resolveProviderPlan` 落 `state="invalid"`，`providerStateReason` =「未配置任何 provider」（`thincoder-core/config.mjs` 的 `merged.providerStateReason = plan.reason` 那条既有路径）。**不建第二套**。
+
+附带修正：过滤前 `[null]` 落成 `[{}]`，渠表长度 1 ⇒ reason 走「未配置 API 密钥」——指向错因；过滤后文案才与实情一致。
+
+**盘面处置 = 不重写被丢弃的那一条**：本批不改、不删、不修正盘上那个条目。此条为**父侧裁定**——用户只裁了丢弃 + 告警，未就盘面表态。三条理由：
+
+- 该条目可能携用户已填的 `apiKey` ∥ `baseURL`；装载期删盘 = 无撤销的数据销毁，而用户没发起任何写。
+- 装载期归一的既有契约就是只读——依据 `thincoder-core/config.mjs`「装载归一不产新键，只清内存镜像（磁盘原文零变）」。
+- 每次装载都过滤并报数，盘面留着一条空条目不会复发崩溃。
+
+**「零写盘」的边界（不涵盖既有迁移写回）**：`loadConfig` 除归以外还有一条**老字段迁移写回**，检测到老字段即 `writeConfigAtomic` 原子写盘。
+
+- 写回失败只告警、不阻断，下次装载重试。这是既有契约（`docs/core/design/CONFIG.md` §6.2「老字段迁移写回」），本批不新增、不改动、不关闭。
+- `migrateLegacyModelFields` 幂等，启动那次已迁完 ⇒ 运行中重读通常零写。
+- 所以本批的「零写盘」准确读法是：**不重写被丢弃的那条 `providers[]` 条目**，不是「整份文件字节永不变」。
+
+**装载期告警与正在跑的 TUI**：唯一的装载期告警面是迁移写回失败时那句 `console.warn`（既有），本批不再加第二条。丢弃提示走 `/model` 列表头，不进 console，不污染 TUI 屏。
+
+代价与边界：盘面那条空条目一直留着，每次打开列表都提示一次（这正是「丢弃要看得见」要求的效果）。清它走用户正常入口（手改 ∥ `/config` 写面）；本批不开任何装载期回写。
+
+**边界**：
+
+- 有 name 的条目一个字节不动：不 trim、不改拼写、不改键序、不改任何既有键语义。
+- 不给无名条目编名字——编名等于把坏配置伪装成好配置。
+- 不建配置校验体系：只此一处过滤 + 一条载体 + 一行列表头。
+- 不改 `/model` 的选择 ∥ 增删渠道 ∥ 设键各流的交互语义；打开时的行为按 §6.30 明改两处——多一行表头（仅当有丢弃）∥ 读失败时不打开列表并出一行错误。
+- 其它端（VSC ∥ 桌面 ∥ 沙箱）：**unverified** 是否都经同一 `loadConfig` 取渠表。实读仅 `thincoder-vscode/src/prompt-injections.mjs` 有 `import { loadConfig } from "@thincoder/core/config.mjs"`，该处读的是 `shell`，未证渠表面。
+
+**验收（红侧可真跑）**：单元测试档与批档同址同名（批档文件名换扩展名），用 `_setConfigPathForTest`（`thincoder-core/config.mjs` 再出口的测试缝）指向临时 config。
+
+```text
+红侧（改前）：providers = [{"name":"a","apiKey":"k"}, null]
+  loadConfig().providersList.length === 2
+  第 2 项 .name === undefined
+  对该项执行 `${p.name.padEnd(12)}` ⇒ TypeError: Cannot read properties of undefined (reading 'padEnd')
+绿侧（改后）：同输入
+  providersList.length === 1，每项 name 为非空串
+  providersDropped.length === 1，且首条以 "providers[1]" 开头
+全无效：providers = [null] ⇒ providersList 为空数组、providerState === "invalid"、
+  providerStateReason === "未配置任何 provider"
+```
+
+红侧那条表达式与本批抽出的 `buildProviderEntries` 体内那条 `padEnd` 表达式同一形态——`undefined.padEnd` 是它唯一可能的失败，所以该断言在改前必须是红的。
+
+测试缝 = `thincoder-core/config-io.mjs` 那一对 `_setConfigPathForTest(p)` / `_resetConfigPathForTest()`（`thincoder-core/config.mjs` 再出口）；③ 缝的成对规则见 `docs/core/design/CONFIG.md` §6.2，用例收尾必须复位。
+
+### 6.30 `/model` 打开即重读盘上渠道（新鲜度 · 会话态按 name 合并）
+
+**要解决的问题（当前事实）**：`agent.providers` 只在启动时赋一次——`thincoder-cli/src/tui/cmd-config.mjs` 与 `thincoder-cli/src/tui/cmd-team.mjs` 各一处 `agent.providers = cfg.providersList`。
+
+此后对 config.json 的任何改动——手改 ∥ 别的进程写 ∥ 别的工具写——都要重启才在会话里生效。盘上已经改对，进程手里的还是旧表。
+
+**前置：本批只换「列表」这一半。**
+
+- **重读面**：`agent.providers` ∥ `agent.config.providersList` ∥ `agent.config.providers` ∥ 告警载体。
+- **不动面**：`defaultModel` ∥ `agent.provider` ∥ `providerState` 仍是启动时 `resolveProviderPlan` 解析的那份。
+- **用户看到的差异**：列表是新的、运行态是旧的。新加的渠道出现在列表里、可选可设键；当前会话的 `●` 仍落旧渠道（旧渠道已从盘上删掉则无处落），发请求仍走启动时那条。
+- **何时自行对齐**：重启，或显式切一次模型（`selectModel` 写会话槽会落新的 `provider`）。
+- **为何不本批补**：替换 `agent.provider` 会动到进行中的请求面，属运行态变更，不宜与「列表新鲜度」同批暗改。这条缺口按已知项登记。
+
+**先例（closest-precedent）**：对位 = `thincoder-cli/src/tui/cmd-mcp.mjs` 的菜单打开边界重读盘上配置（`reloadMcpFromDisk`，`thincoder-core/config.mjs`）——同一个「打开面读一次盘、不重启」的形。
+
+- **对齐**：打开边界重读；返结构体、绝不 throw；读盘与内存态合并后再写回。
+- **偏离**：MCP 面畸形盘面回退内存态并出提示行，本节**拒开列表并报错**——理由见「读失败」下方。
+- **偏离**：MCP 面留 `keptConnected`（盘上已删而已连接的活服务），本节按 name 留 `_unavailable`。
+
+**survey-evidence**：外部源无「渠道列表新鲜度」机制可对位（实读面同 §6.29，本节不重述）；本仓对位 = 上条那个调用点与 §6.29 的准入判据。结论 = 外部 **none relevant**，本仓先例如上。
+
+**形：读盘 → 同判据过滤 → 按 name 合并会话态 → 写回 `agent.providers`。** 两个候选都被淘汰：
+
+- **弃：只在 `/model` 入口读一份用完即弃的局部表。** 淘汰理由 = 选择面与动作面分叉——列表里看得见的渠道，`selectModel` ∥ 设键 ∥ 探测都按 `agent.providers` 找；点一条表上没有的渠道，动作落进空气。
+- **弃：整表替换 `agent.providers`。** 淘汰理由 = 冲掉会话态——`_unavailable`（探针标记，`thincoder-cli/src/tui/provider-admin.mjs` 写入）不是盘上的东西，一替换就丢，用户会看到刚标过不可用的渠道又变回可用。
+
+**采用形的四步**：
+
+1. 读盘（`loadConfig`）——它自带的老字段迁移写回是既有行为（幂等、启动那次已迁完），本批不新增写盘；边界见 §6.29「零写盘」那两段。
+2. 准入过滤在装载那一步已经发生——本步不重复应用谓词，直接把 `loadConfig` 交回的 `providersList` 与 `providersDropped` 收下。
+
+   判据单源 = `isUsableProviderEntry`，只由装载调用一次；重读经装载共用同一次判定，不存在第二份判据实现，也不存在第二份丢弃记录。
+3. `injectProxy`（`thincoder-core/proxy.mjs`）按当前 `config.proxy` 重算 `proxyUri`——它是派生值，不是会话态，重算即正确。
+4. 按 name 把 `_unavailable` 从旧表带到新表；同一数组赋给 `agent.providers` 与 `agent.config.providersList` ∥ `agent.config.providers`；丢弃记录写回 `agent.config.providersDropped`（同一键、同形）。
+
+**写回必须同赋值**：启动时两者本就是同一数组；只换一边就分叉。`thincoder-core/advisor/run.mjs` ∥ `thincoder-core/agent-tools/subagent-async.mjs` 读的是 `config.providersList` 那一侧。
+
+**告警载体同步（单载体）**：可见面只读 `agent.config.providersDropped` 一个键。重读按盘上现况重算并写回，所以改好文件重开 `/model` 表头即消失；不新增第二个载体。
+
+**`derived`（团队渠道）不需特别保留**：它落在盘上——`thincoder-core/team.mjs` 往 `raw.providers` 追加 `{ …, derived: true }` 后原子写盘——重读自然带回来。
+
+**编辑中态：不存在未落盘的渠道编辑。** 写面一律先盘后存（`thincoder-cli/src/tui/provider-admin.mjs` 各 `persistRaw` 处的 D-F5a 先盘后存），内存态是盘的镜像，不是草稿。所以重读不会冲掉用户正在编辑的内容，它只会把别处刚写的拉进会话。
+
+**读失败 = 报错，绝不退化成旧表**：
+
+- 解析失败 ⇒ `thincoder-core/config.mjs` 的 `loadConfig()` 抛错 ⇒ 重读返回 `{ ok: false, error }`，`/model` 出一行 `[model] cannot re-read config: <message> (file: <path>)` 并**不打开列表**。
+- **依据**：依据 thincoder-core/config.mjs「Config file is not valid JSON, check or delete it:」——抛点在 `JSON.parse` 失败支上，可复跑：往临时 config 档写一段非法 JSON，调 `loadConfig()` 即抛这一句。
+- **为什么拒开，而不是「开空表 + 错误行」**：空表在用户眼里读作「我没配渠道」——那是另一句假话，拿它替换旧表只是换了个错。真值是「这份档读不出来」，报错是唯一如实的出词；列表一开，屏幕上就有一份盘上不存在的渠道表。
+- **场景来源**：本批服务的正是「运行中手改 config.json」（用户 2026-11-08 22:00 原话「这个能不能改成切的时候读啊?」），而手改没有原子性保证。本仓写面走 `writeConfigAtomic`，本席**未见到**撕裂现场——本支的判据是上面那条抛错路径可复跑，不是一次真事故。
+- 档不存在 ⇒ `loadConfig` 按缺省返回空渠表（不抛）⇒ 列表为空。那是盘上的现况，不是旧表。
+
+策略句：**拿旧表当现况正是这个缺陷的形状**——盘上改了不生效，就是因为读的不是盘。所以任何读失败都不许退回 `agent.providers`。
+
+**会话槽指向已消失的渠道**：列表无 `●` 标记（既有渲染对不存在的 name 无标记），此处不改会话槽——那是 `resolveProviderPlan` 的面。
+
+**复用而非重写（单源）**：过滤判据 = `thincoder-core/config-normalize.mjs` 的 `isUsableProviderEntry(p)`（原因闭集住同档 `providerDropReason(p)`，谓词是它的 `null` 面），只由装载分支调用；重读经装载共用同一次判定。
+
+重读本体 = `thincoder-core/config-reload.mjs` 的 `reloadProviders(agent)`，返回 `{ ok, dropped, error? }`（`dropped` 恒为 `string[]`，无丢弃即 `[]`），不 throw——出词归调用方。
+
+该档从 `thincoder-core/config.mjs` 整段抽出（越 `docs/core/design/DOC-DISCIPLINE.md` §3.10 的 500 行软线后按本节候选线移出）；`thincoder-core/config.mjs` 以 re-export（`export { reloadProviders }`）保持导入面，调用点零改。
+
+**重读点**：`thincoder-cli/src/tui/model-picker.mjs` 的 `openModelPicker()`——构造条目之前先重读，再把 `agent.providers` 与 `agent.config.providersDropped` 喂给抽出的 `buildProviderEntries`（import 自新模块）。
+
+**集成入口（两行都从这里进）**：`createModelPicker(ctx).openModelPicker()`。
+
+依据 thincoder-cli/src/tui/model-picker.mjs「closePicker, renderPickerLines, confirmDelete }（后四者为 pickers.mjs 通用 picker 绑定——闭包入参，环安全）。」——picker 绑定本就是 ctx 的闭包入参，不需新缝。
+
+- **注入面 = 既有 ctx**：用例自造 `ctx`，注入 `showPicker`（捕获拿到的那一屏后返回 `null` 结束）与 `pushLine`（捕获推出的行）。生产路径同一个入口、同一批绑定 ⇒ **不新增缝**，生产行为零改。
+- **断言落用户看见的东西**：那一屏的标题与行文（刚改过的渠道在不在表里、表头在不在）；非法 JSON 时断言 `showPicker` 一次未被调用、`pushLine` 收到 `[model] cannot re-read config:` 那一行。
+- **形态层（配色 ∥ 宽度 ∥ 滚动）不进用例**：那是人工读数，落实施记录一行。
+
+**边界**：只改 `/model` 这条读取路径。全 CLI 的配置加载不改成每次重读——那是另一个立项。
+
+**验收（红侧可真跑）**：
+
+```text
+红侧 1（新鲜度）：启动读盘 [{name:"a"}]，盘上改为 [{name:"a"},{name:"b"}]，不重启开列表
+  改前：列表只有 a（旧表）
+  改后：a ∥ b 都在
+红侧 2（读失败）：盘上改为一段非法 JSON 后开列表
+  改前：列表照开（看不出盘面已坏）
+  改后：出 [model] cannot re-read config: … 且列表不开
+绿侧（会话态不丢）：旧表某渠道 _unavailable = true，重读后同名渠道仍带该标记
+绿侧（单源）：agent.providers 与 agent.config.providersList 重读后仍是同一数组
+绿侧（载体跟新）：盘上那条坏条目改好 → 重开 /model ⇒ providersDropped 为空 ⇒ 表头不出现
+```
+
 ## 7. 关键决策记录
 
 | # | 决策 | 理由 |

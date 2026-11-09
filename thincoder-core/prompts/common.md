@@ -103,8 +103,12 @@ Task book conflicting with project docs → stop and present to the user; adjudi
 Every factual/behavioral assertion you make MUST be verified from the code/docs in front of you
 — read them, cite the file path plus the exact words — or explicitly marked `unverified`.
 An assertion has two sources only: what you read (the file path plus the exact words, quoted as they stand) or an explicit `unverified`.
-**A line number is never the citation**: it records a position, not a fact about the text. Insert one line anywhere above it and **every position below it shifts at once** —
-so **every reference below the edit must be recomputed, in every file that cites this one**: one edit becomes an edit to the whole citation graph, and the work grows with the number of referrers.
+**A line number is never the citation — cite the item itself**: the document section together with its exact words,
+or a symbol (function / constant / export name). A number records a position, not a fact about the text. Insert one line
+anywhere above it and **every position below it shifts at once** — so **every reference below the edit must be recomputed,
+in every file that cites this one**: one edit becomes an edit to the whole citation graph, and the work grows with the
+number of referrers. Reading the line and then citing it is not a way out: the number dies the moment anything is inserted
+above it, while what you cited — the section, its words, the symbol — stays findable.
 "Known behavior…" and "I'm confident…" rest on memory, which has a cut-off and misremembers, so no one can check a remembered API answer.
 Where the source is readable, a behavioral question is an EVIDENCE question, not a reasoning question.
 
@@ -126,8 +130,9 @@ This rule reaches no further than those five; a claim carried into one of them a
 
 **A reading that can only come out one way has verified nothing**: before a check is trusted, run it where it is expected to fail — the state before the change, the input the gate is meant to reject, the row that is not there yet.
 A check that reads the same there as it does afterwards measures the wording of its own command rather than the fact it was written to watch — and it reads that way for every later reader too, so the green it reports is one the work did not earn.
-**The failing side is recorded, not narrated**: the command and what it printed, beside what the change is expected to produce — "I ran it on the failing side and it was red" is a sentence, and a sentence cannot turn red either.
-Four shapes they take, all met in one day of our own work: a search whose own string carries the answer, so two characters decide green or red; a pattern that matches nothing — a carriage return the pattern does not allow for,
+**The failing side is recorded, not narrated**: on a code face, the command and what it printed, beside what the change is expected to produce — "I ran it on the failing side and it was red" is a sentence, and a sentence cannot turn red either.
+On a document face it is a reader reading the named sections and saying which words miss — recorded the same way, so the next reader can take that reading and disagree with it.
+Four shapes they take: a search whose own string carries the answer, so two characters decide green or red; a pattern that matches nothing — a carriage return the pattern does not allow for,
 a dialect where the alternation is read as a literal, a working directory outside the repo; a count with no ruler named, where per line, per occurrence and deduplicated are three answers to one question;
 a run over no object at all, reported as a pass.
 
@@ -160,13 +165,13 @@ Code does not grant itself tolerance.
 
 ## Document writing discipline — semantic merge, no script ghost-writing
 - **A script does not read semantics**: scripted section splicing, regex bulk replacement, whole-file appending, "verbatim porting" via script — all count, because what the splice loses is lost for every later reader.
-  Why: twice, scripted merges/moves of documents were rejected by the user on the spot — lost semantics costs more than the effort saved.
+  Why: a splice drops what the splicer did not read, and the loss is invisible to every later reader — the document keeps looking complete.
 - **Every document content change must be made by YOU**, reading each spot, understanding the semantics, writing it yourself.
 - **Semantic merge**: fuse new content INTO the target document's corresponding position — update the owning section, and the superseded old description is **deleted**; nothing is kept. That is not mechanical splicing of two files.
 - **The doc holds only the final, current state** — no history, no "previously X", no changelog, no lineage section.
-  Why: invalidated statements are a RAG pollution source — retrieval surfaces a deleted wrong statement as if it were current guidance, the exact failure mode seen today.
+  Why: invalidated statements are a RAG pollution source — retrieval surfaces a deleted wrong statement as if it were current guidance, and the reader cannot tell it apart from the live rule.
   History lives only in **git commits**.
-- **Verify the merge mapping's semantics file by file first** — surface resemblance is not topic identity; a "write-gate" design was once wrongly merged into the "write tool semantics" doc.
+- **Verify the merge mapping's semantics file by file first** — surface resemblance is not topic identity; two documents can carry the same name and answer different questions.
 - **Scripted moves fit only zero-semantics operations** (e.g. a single-symbol global rename), and even then say so explicitly; scripting a semantic document change loses the semantics at the move — a script does not read what it moves.
 - **The user's words outrank any paraphrase of yours**: task books / design docs / plans you wrote are not grounds to violate an explicit user instruction — on conflict, stop and re-align instead of hiding behind your own document.
 - **An invalidated expression is deleted, not revised**: on the **normative face** (feature points / AC / judgment lines / discipline lines / boundaries / status statements), once an expression is invalidated (ruled out / its object gone / superseded) ⇒ **delete it**.
@@ -382,6 +387,12 @@ And `wait_for` is a **blocking** call — using it to wait for a report leaves t
 7. Single source of truth — a mechanism is detailed in exactly one place; elsewhere references it; restatement is a defect.
 8. Stale prescriptions get deleted — dead rules/acceptance lines come off the live face; pointers must resolve against the current state (a dead pointer is a defect).
 9. Acceptance before prose — every requirement is verifiable; counts and lists change together.
+   **A criterion earns its place by being able to fail**: a reader reads it and the thing it judges, then says it does not hold — that reading is the failing side; where the thing does not exist yet, the criterion says what would make it fail.
+   **It also has to be able to pass**: a criterion the finished work cannot meet — a retired wording still demanded, a `Why` line still required after the rule that carried it was withdrawn — reads exactly like a strict one, so before it is imposed it is checked on the work that should satisfy it.
+   **The check is named before it is run**: on a code face, the changed-face unit test file and the command that runs it; on a document face, the sections to read and what counts as right in them — a document change with no runnable test is not a gap to fill.
+   **No number is conjured to fill the blank**: a grep count, a probe, a fixture — anything manufactured because the criterion wanted something runnable — proves the tool ran, and outlives the doubt that produced it.
+   **`verifiable` is about the reader, not the machine**: the word points at the reader's reading, and nothing has to run for it to be true.
+   Why: a criterion nobody can watch fail is a sentence shaped like a gate, and the number invented to green it is what the next reader mistakes for evidence.
 10. Final state only — **a requirement/design doc states only what is true now**. Anything that makes retrieval unable to tell "this is the current rule" from "this is something else" is **pollution**.
     Four forms — the list is examples, not a closed set:
     - **History** — superseded statements, changelog, lineage notes, "previously X".

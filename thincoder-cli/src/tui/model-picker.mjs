@@ -20,11 +20,13 @@
  *      closePicker, renderPickerLines, confirmDelete }（后四者为 pickers.mjs 通用 picker 绑定——闭包入参，环安全）。
  */
 import { sliceByWidth } from "./render.mjs"
-import { providerSpec, specMatch, resolveCompactThreshold, formatContextK } from "@thincoder/core/config.mjs"
+import { providerSpec, specMatch, resolveCompactThreshold, formatContextK, reloadProviders, configPath } from "@thincoder/core/config.mjs"
 import { saveSession, loadSlotFile } from "@thincoder/core/session.mjs"
 import { carryoverDefaultModel } from "./config-helpers.mjs"
 import { getProviderModels, modelListFailureText, dedupeModels } from "./model-catalog.mjs"
 import { createProviderAdmin, isDerivedProviderHidden, declaredContextText } from "./provider-admin.mjs"
+// L1 列表行构建（崩溃点所在——从本档闭包搬出成可 import 的纯函数；`docs/core/design/PROVIDER.md` §6.29）
+import { buildProviderEntries } from "./provider-entries.mjs"
 
 /** createModelPicker(ctx) → { openModelPicker, selectModel, setProviderKey, setModelContextFlow, pickModelForSlot } */
 export function createModelPicker(ctx) {
@@ -53,10 +55,25 @@ export function createModelPicker(ctx) {
     pk.index = restored >= 0 ? restored : Math.min(pk.index, Math.max(0, itemRows.length - 1))
   }
 
-  /** Level 1: provider list（/model 入口——session 复合两级面）。 */
+  /** Level 1: provider list（/model 入口——session 复合两级面）。
+   *  打开即重读盘上渠道（`docs/core/design/PROVIDER.md` §6.30）：列表是盘上现况，不是启动时那份——
+   *  盘上改完的渠道不必重启就能看见。读失败 ⇒ 出一行错误且**不打开列表**：拿旧表当现况正是
+   *  「盘上改了不生效」的形状，开一张盘上不存在的表只是换了个错。 */
   async function openModelPicker() {
+    const reload = reloadProviders(agent)
+    if (reload.ok !== true) {
+      pushLine(`[model] cannot re-read config: ${reload.error} (file: ${configPath})`, C.error)
+      return
+    }
     for (;;) {
-      const entries = buildProviderEntries()
+      const entries = buildProviderEntries({
+        providers: agent.providers,
+        activeProvider: agent.activeProvider,
+        activeModel: agent.activeModel,
+        dropped: agent.config?.providersDropped,
+        isHidden: isDerivedProviderHidden,
+        ctxText: declaredContextText,
+      })
       const items = entries.filter((e) => e.type === "item")
       const current = items.findIndex(
         (e) => e.action === "open-models" && e.provider === agent.activeProvider)
@@ -105,39 +122,11 @@ export function createModelPicker(ctx) {
     return false
   }
 
-  /** Build entries for Level 1: provider list（L1 = 渠道面——session 复合态随行显示）。
-   *  2026-10-09 清除批：渠道条目不携模型——模型段只显**会话槽**值（仅当前会话渠道），
-   *  其余显示回退 = 行 note 的 `baseURL`。 */
-  function buildProviderEntries() {
-    const entries = []
-    const providers = agent.providers.filter((p) => !isDerivedProviderHidden(p)) // 派生无 key ⇒ 隐藏（TEAM.md §2.4——模型候选面）
-    for (const p of providers) {
-      const active = p.name === agent.activeProvider
-      const shown = active && agent.activeModel ? ` ${agent.activeModel}` : ""
-      const marker = active ? "●" : ""
-      // A1（第 20 批 §12.5）：渠道警示（(no key) / (不可用)）上移 text——与既有状态标
-      // （(ctx …) / ← session）同簇（先例 = provider-admin.mjs setKeyFlow / wizard 的 (added, no key)）：
-      // 警示不再位于最先牺牲段。note 收窄为 baseURL（补充信息——超宽随行右截断可接受）。
-      const sessionNote = active ? " ← session" : ""
-      const keyStatus = p.apiKey ? "" : " (no key)"
-      const unavailable = p._unavailable ? " (不可用)" : ""
-      const ctxTag = ` (ctx ${declaredContextText(p)})`
-      entries.push({
-        type: "item",
-        text: `${p.name.padEnd(12)}${shown}${ctxTag}${keyStatus}${unavailable}${sessionNote}`,
-        action: "open-models",
-        provider: p.name,
-        marker,
-        note: p.baseURL,
-      })
-    }
-    entries.push({ type: "header", text: "Management" })
-    entries.push({ type: "item", text: "Add provider…", action: "add" })
-    if (providers.length > 1) entries.push({ type: "item", text: "Remove provider…", action: "remove" })
-    entries.push({ type: "item", text: "Set / change API key…", action: "key" })
-    entries.push({ type: "item", text: "Set context window (K)…", action: "model-context" })
-    return entries
-  }
+  // L1 列表行构建已迁 `thincoder-cli/src/tui/provider-entries.mjs` 的 `buildProviderEntries`
+  // （`docs/core/design/PROVIDER.md` §6.29「可见面」）——搬出闭包的唯一目的是让崩溃点
+  // `${p.name.padEnd(12)}` 可被用例 import 直测；L1 与用例共用同一个函数。
+  // 2026-10-09 清除批：渠道条目不携模型——模型段只显**会话槽**值（仅当前会话渠道），
+  // 其余显示回退 = 行 note 的 `baseURL`。
 
   /** Level 2 entries（/model 会话面——候选运行期拉取）：当前会话行 + 候选区（拉取填充）。
    *  占位行必须存在：showPicker 对 0 item **立即 resolve(null)**（picker 不打开、entries 不可达）——

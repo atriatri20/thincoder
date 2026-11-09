@@ -190,7 +190,7 @@
 | **apply_patch** | 统一 diff 应用到一或多文件（整块 / 新建 / 跨文件） |
 | **write** | 整文件替换 / 新建（含父目录） |
 
-**契约要点**：edit——`line: N` / `startLine–endLine` 行号形态（互斥 `old_string`）或 `old_string` 内容形态；三级匹配（逐字→空白窗口→模糊 ≥ 90%）；零重叠替换即删；空 `new_string` 显式错（防静默删除）；edits 数组批（原子）。
+**契约要点**：edit——`line: N` / `startLine–endLine` 行号形态（互斥 `old_string`）或 `old_string` 内容形态；三级匹配（逐字→空白窗口→模糊 ≥ 90%）；零重叠替换即删；空 `new_string` 显式错（防静默删除）；edits 数组批（逐条成败、逐档一次就地写）。
 
 insert_after——`after_line` / `after_regex`（须唯一）+ read-before-insert 护栏（受影区拒绝）。hashline_edit——`old_hashes`（read hashes=true 取）+ `new_content`（空 = 删块——命名删行路径）；U+FFFD 警告。
 apply_patch——无坐标 hunk 宽容 + 文件头容缺；多文件原子。write——整文件替换（read 先）；EOL 覆盖按原行尾 / 新建随目录多数派。
@@ -2070,7 +2070,7 @@ import { gateDesignToken, designTokenRefusal } from "../../thincoder-core/agent-
 
 **契约要点**：目标区整体在写点之前 ⇒ 放行，边界按记账类型分——`insert` 记的 `endLine <= startLine`、`edit` 记的 `endLine < startLine`。其余 ⇒ 拒，拒文带路径、漂移量 `±shift` 与两条下一步（重 `read` ∥ 位置无关寻址 `old_string` / `hashline_edit`）。`write` 全文重写后 ⇒ 任何行号拒。`isDirty` ∧ 快照在场 ⇒ 拒（快照陈旧）。
 
-批量同档：行号条目按快照降序先应用，重叠整批拒（原子零写），内容条目随后按调用序；判定点在组循环之前、用批前快照判一次。
+批量同档：行号条目按快照降序先应用，重叠则那两条都废（互指对方行范围，同档其余条照应用），内容条目随后按调用序；行号锚在逐档读盘之后、帧排之前按批前快照逐条判，命中只废那一条。
 
 **机面落点**：
 

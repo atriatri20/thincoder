@@ -169,11 +169,12 @@ export function resolveEnableThinking(provider, spec) {
 }
 
 // 加载期归一 / 清洗纯函数族已迁 `config-normalize.mjs`（§6.16.9 —— C1）——四个公共函数经本档
-// re-export 保持既有导入面；其余四个（sanitizeProviderHeaders ∥ sanitizeConsultModels ∥ 两枚
-// 一次性警告旗）只由 loadConfig 消费。
+// re-export 保持既有导入面；其余六个（sanitizeProviderHeaders ∥ sanitizeConsultModels ∥
+// isUsableProviderEntry ∥ providerDropReason ∥ 两枚一次性警告旗）只由 loadConfig 消费
+// （`reloadProviders` 经 loadConfig 共用同一次判定，本档只转交，不另调）。
 import {
   sanitizeConsultModels, warnConsultModelsFiltered, sanitizeSubagentModel, sanitizeSubagentModels,
-  warnSubagentModelsFiltered, sanitizeProviderHeaders, normalizeProxy, normalizeTeamSection,
+  warnSubagentModelsFiltered, sanitizeProviderHeaders, normalizeProxy, normalizeTeamSection, isUsableProviderEntry, providerDropReason,
 } from "./config-normalize.mjs"
 export { sanitizeSubagentModel, sanitizeSubagentModels, normalizeProxy, normalizeTeamSection }
 
@@ -210,6 +211,17 @@ export function promoteAgentViews(config) {
 }
 
 /**
+ * 丢弃记录一句一条（`docs/core/design/PROVIDER.md` §6.29「丢弃要看得见」）：`providers[18]: null`。
+ * 只有盘上下标 + 原因闭集四值之一——**绝不带条目内容**：载体是数据层，会进日志 ∥ 报错 ∥ 调试输出，
+ * 一条「有 apiKey 却缺 name」的条目若取 JSON，`sk-…` 就原样写进不需要它的地方。原因由
+ * `providerDropReason`（`thincoder-core/config-normalize.mjs`）给出——与准入判据同源，同一条目不会
+ * 在这里和装载分支各判出一种说法；下标让用户能找到要改的那一条。
+ */
+function providerDropLine(index, reason) {
+  return `providers[${index}]: ${reason}`
+}
+
+/**
  * Load configuration.
  * No env-var overrides — config.json is the single source of truth
  * (API keys, baseURL, defaultModel all come from the file).
@@ -237,13 +249,28 @@ export function loadConfig() {
     }
   }
 
+  // 渠道条目准入过滤（`docs/core/design/PROVIDER.md` §6.29）：无名条目不进使用面——`name` 是渠道
+  // 唯一句柄（findProvider ∥ parseModelRef ∥ 会话槽 ∥ 选择器全按 name 匹配），无名条目既不可寻址
+  // 也不可被发送，留着只会让读它的地方失真：`/model` 的 `${p.name.padEnd(12)}` 直接抛
+  // `Cannot read properties of undefined (reading 'padEnd')`，19 个正常渠道被 1 条空条目连累。
+  // 过滤在整表别名 `merged.providersList = merged.providers` **之前**：别名之后没有第二个汇聚点，
+  // 漏一处就留一条不可寻址的条目在运行面。判据单源 = `isUsableProviderEntry`（装载 ∥ 重读共用）。
+  // 盘面处置 = 不重写被丢弃的那条（同节「零写盘」：它可能携用户已填的 apiKey ∥ baseURL）。
+  // 丢弃记录只写盘上下标 + 原因闭集（条目内容不进载体——载体是数据层，会进日志与调试输出）。
+  const droppedProviders = []
+  const providers = Array.isArray(config.providers)
+    ? config.providers.flatMap((p, index) => {
+      if (isUsableProviderEntry(p)) return [sanitizeProviderHeaders({ ...p })]
+      droppedProviders.push(providerDropLine(index, providerDropReason(p)))
+      return []
+    })
+    : []
+
   const merged = {
     ...DEFAULTS,
     ...config,
     defaultModel: typeof config.defaultModel === "string" && config.defaultModel.trim() ? config.defaultModel : null,
-    providers: Array.isArray(config.providers)
-      ? config.providers.map((p) => sanitizeProviderHeaders({ ...p }))
-      : [],
+    providers,
     agent: { ...DEFAULTS.agent, ...config.agent },
     memory: { ...DEFAULTS.memory, ...config.memory },
     embedding: { ...DEFAULTS.embedding, ...config.embedding },
@@ -251,6 +278,12 @@ export function loadConfig() {
     traces: { ...DEFAULTS.traces, ...config.traces },
     diagnostics: { ...DEFAULTS.diagnostics },
   }
+
+  // 丢弃要看得见（同节「丢弃要看得见 · 数据面载体」）：载体只在有丢弃时有值（无丢弃 ⇒ undefined，
+  // 与 `[]` 同义）。一条一句挂数据层；出词归消费面——本批唯一消费方 = `/model` L1 列表首行
+  // （`thincoder-cli/src/tui/provider-entries.mjs`），故不走 console。无条件写一次：载体是派生值，
+  // 而 `merged` 先摊平了盘上原文（`...config`），条件赋值会把盘上手写的同名键原样放进数据层。
+  merged.providersDropped = droppedProviders.length ? droppedProviders : undefined
 
   // 家目录展开（第 29 批）：config 路径字段单一规范化点——只读归一（磁盘原文保留）
   merged.memory.dbPath = expandHome(merged.memory.dbPath)
@@ -379,6 +412,10 @@ export function loadConfig() {
 
   return merged
 }
+
+// 运行中重读盘上渠道表本体居 `config-reload.mjs`（`docs/core/design/PROVIDER.md` §6.30）——本档越
+// 500 行主动审视线后按设计指的候选线抽出，以下 re-export 保持既有导入面（同 config-io.mjs 拆分形态）。
+export { reloadProviders } from "./config-reload.mjs"
 
 /**
  * MCP.md §5 D-3 (2026-09-01): re-read config.json and replace ONLY the agent's mcp section

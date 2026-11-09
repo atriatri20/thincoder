@@ -12,6 +12,24 @@
 |---|---|---|---|---|
 | 33-1 | CLI 会话里挂一个 timer 等它到期（模块直驱：假 `state` + 真核注入串 + 真镜像分支 + 真 `timer` 工具出缺省消息） | 会话流读到那行 timer 到期行：前缀段至 `timer —` 之前全落在 `/^[\x20-\x7E]+$/`，缺字形字符零命中；缺省消息（`Time's up (…)`）随行可见 | 修前红：注入行带 U+23F0 ⇒ 前缀段判红（Linux 终端渲成豆腐块） | `test/integration/timer-reminder-glyph.test.mjs` |
 
+## CLI 39. 无名渠道条目不进使用面（/model 列表照常列出其余渠道）
+
+> 目的：盘上漏进一条无 `name` 的渠道条目时，`/model` 照常打开——那条不进列表，其余渠道照常可选，且列表首行说出「有条目被跳过、要改 `providers[]`」。
+> 节注：回指 = `docs/core/design/PROVIDER.md` §6.29（准入判据 ∥ 丢弃可见面）；机制单源 = 核装载点的准入过滤（`thincoder-core/config-normalize.mjs` 的 `isUsableProviderEntry`，装载 ∥ 重读共用一个谓词），端侧只读过滤后的渠表；交互组件 = 核装载过滤 ⟷ CLI L1 列表构建（`thincoder-cli/src/tui/provider-entries.mjs` 的 `buildProviderEntries`）；进入口 = CLI 里打开 `/model`；一态 = 39-1 正常。
+
+| 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
+|---|---|---|---|---|
+| 39-1 | 临时 config 写一条 `null` 渠道 + 一条具名渠道，打开 `/model`（模块直驱 `createModelPicker(ctx).openModelPicker()`，ctx 注入 `showPicker` ∥ `pushLine` 捕获那一屏） | 那一屏首行是告警行且指向 `providers[]`；具名渠道行照常出现；全程无 `padEnd` 崩溃、会话流无崩错行 | 修前红：那一条空条目让列表构建在 `${p.name.padEnd(12)}` 抛 `Cannot read properties of undefined (reading 'padEnd')`——用户 2026-11-08 21:55 报的正是这一句 | `test/integration/model-picker-provider-freshness.test.mjs` |
+
+## CLI 40. 盘上改完不用重启，切渠道那一刻就是现况
+
+> 目的：手改 config.json 之后不必重启——重开 `/model` 看到的就是盘上现况：新渠道在表里，坏条目改好后首行表头消失；盘面读不出来时出一行错误、不打开列表。
+> 节注：回指 = `docs/core/design/PROVIDER.md` §6.30（重读四步 ∥ 读失败拒开）；机制单源 = 核的 `reloadProviders`（本体住 `thincoder-core/config-reload.mjs`，经 `thincoder-core/config.mjs` 再出口）；交互组件 = 核重读 ⟷ CLI `/model` 打开边界（`thincoder-cli/src/tui/model-picker.mjs` 的 `openModelPicker`）；进入口 = CLI 里开一次 `/model`、盘上改完再开一次；三态 = 40-1 一个用例覆盖三态（新渠道出现 ∥ 表头消失 ∥ 读失败拒开）。
+
+| 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
+|---|---|---|---|---|
+| 40-1 | 启动时盘上一条具名渠道 + 一条坏条目，开 `/model`；不重启把坏条目改成一条真渠道再开；再把盘上写成一段非法 JSON 第三次开 | 第二次那一屏出现刚改的渠道、首行表头消失；第三次一屏都不开（`showPicker` 零调用）且会话流收到一行以 `[model] cannot re-read config:` 起头的错误 | 修前红：列表只认启动时那份渠表（盘上改完仍要重启），盘面读不出时列表照开——看不出盘面已坏 | `test/integration/model-picker-provider-freshness.test.mjs` |
+
 ## VSC 1. 归档块重开 ∥ reload 后，子代理行还是子代理行
 
 > 目的：会话重开 / 面板重载后，归档块里嵌套子代理那几行的行首子标仍在，不退化成正文；父自己的行照旧无子标。
