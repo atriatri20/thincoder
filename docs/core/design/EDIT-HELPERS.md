@@ -171,9 +171,9 @@ write point to check them against.
 | 档 | 位置 | 逐字 |
 |---|---|---|
 | `thincoder-core/tool-docs/edit.md` | Notes 段末条（`use the most recent read …`）之前插入一条 | `- **Line-number anchoring**: \`line\` / \`startLine\`+\`endLine\` are judged against the last write to that file: inside or below that write's affected range, or when the file was written after it without updating that anchor, the call is refused — naming the path, the drift (\`L<startLine>\`, \`±shift\`) and two ways on (re-read, or address the region without line numbers).` |
-| `thincoder-core/tool-docs/edit.md` | `**Batch multiple changes into ONE call via the edits array**` 段末追加一句 | `Line-number entries in one \`edits\` array apply first, in descending \`startLine\` order, so each is anchored on the numbers you read; their ranges must not overlap (overlap ⇒ the whole batch is refused, nothing written). Content entries then apply in array order. The receipt stays in call order.` |
+| `thincoder-core/tool-docs/edit.md` | `**Batch multiple changes into ONE call via the edits array**` 段末追加一句 | `Line-number entries in one \`edits\` array apply first, in descending \`startLine\` order, so each is anchored on the numbers you read; their ranges must not overlap (overlap ⇒ **those two entries fail**, each naming the other's range; the rest of the batch still applies). Content entries then apply in array order. The receipt stays in call order.` |
 | `thincoder-core/tool-docs/insert_after.md` | `- **Read-before-insert guard**` 条整条替换 | `- **Read-before-insert guard**: \`after_line\` is judged against the last write to that file — a line at or above that write's write point is allowed; inside or below it, or when the file was written after it without updating that anchor, the call is refused with the path, the drift and two ways on (re-read, or address the region without line numbers).` |
-| `thincoder-core/tools/file.mjs` | `editTool.parameters.edits.description` 里那段应用序（现文说 same-file entries apply serially，与 R1–R4 相抵） | `Batch form — multiple edits in ONE call, atomic (any failure writes nothing; line-number entries apply first, in descending startLine order, and their ranges must not overlap — overlap refuses the whole batch; content entries then apply in array order).` |
+| `thincoder-core/tools/file.mjs` | `editTool.parameters.edits.description` 里那段应用序（与 R1–R4 同口径） | `Batch form — multiple edits in ONE call, each entry reported as its own block: an entry that fails is named and the rest still apply (a file whose final content is rejected writes nothing and all its entries fail; a file already written is never rolled back). Line-number entries apply first, in descending startLine order, and their ranges must not overlap — an overlapping pair fails on both sides; content entries then apply in array order.` |
 
 ### 7.3 批量帧（`edit` 的 `edits` 数组同档多条）
 
@@ -183,31 +183,33 @@ write point to check them against.
 |---|---|---|---|
 | R1 | 行号先应用 | 同档组内行号条目先全部应用，内容条目随后 | 内容匹配与位置无关，先后都不影响它；行号必须锚在快照上 |
 | R2 | 降序应用 | 行号条目按 `startLine` 降序应用 | 从下往上改，上方行号不被同批自己顶偏——组内漂移本工具算得出来，按快照解释才是模型的意图 |
-| R3 | 重叠拒 | 两条行号条目的范围在快照坐标上重叠 ⇒ 整批拒（原子，零写） | 重叠时「先改哪条」决定结果，模型意图在此矛盾，猜一个即替它做决定 |
+| R3 | 重叠拒 | 两条行号条目的范围在快照坐标上重叠 ⇒ **那两条都废**（每条各得一行失败原因、互指对方行范围），同档其余条照应用 | 重叠时「先改哪条」决定结果，模型意图在此矛盾，猜一个即替它做决定 |
 | R4 | 内容条目按调用序 | 内容条目仍按数组序串行累积（现行语义不变） | 位置无关寻址没有帧问题 |
 
 回显顺序仍是调用序——**按条目在 `edits` 数组里的原始下标排**（R2 只改应用顺序）。跨文件交错的批同样如此：按文件分组去排会排成 A、A、B，而模型是按位置对号的，顺序一变它会把结果贴到错的那一笔上。
 
 **回执里的档名取组内首现拼写**（批末汇总行同此）：同一档在一批里出现两种拼写（带 `./` 前缀与不带前缀的两种写法）时，组内每条回执都报第一条的写法。理由：模型按条目位置对号，不按拼写对号；逐条比对拼写要为一次回执多读一次原名，收益远小于成本。
 
-**判定点（写死，不留选择）**：批量在组循环**之前**用批前快照判一次。`thincoder-core/tools/edit-batch.mjs` 的 `applyEditBatch` 在 `for (const g of groups.values())` 之前，对组内每个 `abs` 跑一遍 §7.1 的判据，命中即抛、零写。组内不再逐条判——组内漂移由 R2 自己算得出来，逐条再判会用同一份快照判出与 R2 相反的结果。
+**判定点（写死，不留选择）**：逐档读盘之后、帧排之前，用**批前快照**对组内每个行号条目判一遍。`thincoder-core/tools/edit-batch.mjs` 的 `applyEditBatch` 在 `for (const g of groups.values())` 的第三段对每条跑一遍 §7.1 的判据，命中 ⇒ **那一条失败**（回执一行），该档其余条照应用、其他档照落盘。组内不重判——组内漂移由 R2 自己算得出来，重判会用同一份快照判出与 R2 相反的结果。
 
 单形态的判定点在 `thincoder-core/tools/edit-diff.mjs` 的 `runSingleEdit`：读盘之后、`computeEditEntry` 之前。
 
 **帧的落点是纯函数，不是每个通道一份循环**：
 
-- `planEditEntries(entries) → { order, rejection }`——零 IO，只看条目自身的行号：判重叠、给降序应用序；
-- `applyPlannedEntries(content, entries, order) → { content, results }`——零 IO，逐条 `computeEditEntry` 按计划序累积，`results` 按调用序回到原位。
+- `planEditEntries(entries, path?) → { order, rejections }`——零 IO，只看条目自身的行号：判重叠（互指的每一条各得一行 `{index, reason}`，拒因 = 纯原因句——不带前缀、不带写盘结论）、给降序应用序；
+- `applyPlannedEntries(content, entries, order, opts) → { content, results, failures }`——零 IO，逐条 `computeEditEntry` 按计划序累积，`results` 按调用序回到原位；`opts.onEntryError:"collect"` 时一条抛错只记一行 `failures`、累积内容不动、继续下一条——**两个批面（核 `applyEditBatch` ∥ 桥 `editBatch`）都传它**；缺省 `"throw"` = 遇错即抛（整批拒的语义，现无批面使用）。
 
 两函数单源住 `thincoder-core/tools/edit-diff.mjs`（D-7 的跨档单源面）。每条通道只提供自己的 IO：读、写、记账。
 
-**为什么这样落**：`applyEditBatch` 原先把「读文件 → 排顺序 → 写回」焊在一个函数里，只有写那层留了注入缝。ACP 桥因此把那份组循环抄了一遍——它现在正是「数组序应用、无重叠拒」的那个副本。抄一份帧，第三个通道就会再抄一份；共用的是排法，不是 IO。
+**为什么这样落**：`applyEditBatch` 原先把「读文件 → 排顺序 → 写回」焊在一个函数里，只有写那层留了注入缝。ACP 桥因此把那份组循环抄了一遍——它当时正是「数组序应用、无重叠拒」的那个副本；桥面归一后（`docs/core/design/EDIT.md` §8 D-15）它改调这两个纯函数，副本已删。抄一份帧，第三个通道就会再抄一份；共用的是排法，不是 IO。
 
-**R3 的来源**：无生产实例，来源 = 可复现径（本批 AC5）——两条行号条目在同一段上重叠时，先改哪条决定结果，任何顺序都只是猜。
+**R3 的来源**：无生产实例，来源 = 可复现径——两条行号条目在同一段上重叠时，先改哪条决定结果，任何顺序都只是猜（`docs/core/design/EDIT.md` §5「行号条目范围重叠」）。
 
-**登记行为变更（R1 的代价）**：数组序里内容条目在前、行号条目改到同一段时，旧序能过（内容条目先匹配成），新序是硬拒——行号条目先应用后，内容条目的 `old_string` 已指向被改掉的文本 ⇒ 显式 not-found、整批零写。
+**登记行为变更（R1 的代价）**：数组序里内容条目在前、行号条目改到同一段时，旧序能过（内容条目先匹配成），新序是硬拒——行号条目先应用后，内容条目的 `old_string` 已指向被改掉的文本 ⇒ 该内容条目显式 not-found（同档其余条照应用、其余档照落盘）。
 
-这是有意的：同一批里两条目对同一段的两份意图本就不自洽，先到先得会把矛盾写进盘面。用例 = 本批 AC10。
+这是有意的：同一批里两条目对同一段的两份意图本就不自洽，先到先得会把矛盾写进盘面。
+
+这条的验证面：本批单测（收口删），集成面不为它增行——两条条目在同一段上重叠，是同一批内两份意图自相矛盾，不存在从业务流程进它的入口。
 
 ### 7.4 作用域与通道覆盖
 
@@ -253,15 +255,30 @@ write point to check them against.
 | `thincoder-core/agent-tools/batch.mjs`（批档直写） | 不接 | 该档直写批档正文（`writeFileSync`，既无 `recordWrite` 也无 `markDirty`）⇒ 本进程内 `batch` 改过某档之后，再拿行号 `edit` 它落第 1 行放行。不接的理由：批工具的写入面按段锚文本改（`action:"edit"` 的 `oldText`），它不靠行号定位，模型从它那里拿不到坐标系；接上需把直写换成 `writeThroughPath` 并重排脏态门禁与段级校验的次序，本批不扩面 |
 | `bash`（外部进程直写） | 不接 | 写盘发生在本进程之外，记账面看不见；要覆盖需文件系统层挂钩子（watch ∥ 尾记），成本与收益不成比例——**已知盲区**：`bash` 写过之后再用行号 `edit`，护栏无从判 |
 
+**记账归属（谁在哪一层写记账表）**——这张表是 `write-path.mjs` 档头那句「唯一例外」的判据来源。没有它，同一句话落到每一处都要重判一次：
+
+| 层 | 谁写 | 写什么 | 本仓实例 |
+|---|---|---|---|
+| 写点内（`writeThroughPath` 一跳） | 写点自己 | `recordWrite`，或 `markDirty` + `clearLastWrite`；调用方只把**记录的值**交给它 | `edit` 单形态 · `edit` 批面（合并快照作为 `record`）· `write` · `insert_after` · `hashline_edit` |
+| 调用方自持（不经写点） | 调用方 | 自己调 `markDirty` / `clearLastWrite` / `recordWrite` | `thincoder-core/tools/patch.mjs` 的批级循环（对已落盘档跑，成功 ∥ 失败两路） · ACP 桥三入口（IDE 缓冲不经写点，`docs/core/design/EDIT.md` §6） |
+
+按此判，`thincoder-core/tools/` 内的**唯一例外** = `apply_patch` 的批级记账（两段式结束后由调用方一次 `markDirty` + `clearLastWrite`，对已落盘档跑——成功 ∥ 失败两路同，含注入径已提交那批）。
+
+- **`edit` 批面不算**：`thincoder-core/tools/edit-batch.mjs` 把合并快照作为 `record` 交给 `writeThroughPath`，记账动作仍发生在写点，只是记录的取值由调用方算。
+- **量法**（结论可复跑）：仓根跑 `grep -rn "markDirty(\|clearLastWrite(\|recordWrite(" thincoder-core/tools`——命中只落三档：`write-path.mjs`（定义 ∥ 写点内自用）· `patch.mjs`（批级循环）· `file.mjs`（`read` 清快照）。出现第四档就是又一个调用方自持的记账面，这张表要重判。
+
+所以 `write-path.mjs` 档头保留「唯一例外 = `apply_patch`」的单点措辞，并把上面那张表与量法写进那句的括注——否则下一个读者会把 `edit` 批面数成第二处。
+
 **ACP 桥为什么必须自己落记账**：桥读 IDE 缓冲、写回也是 IDE 缓冲（`fs/write_text_file`），不经 `writeThroughPath` ⇒ 核的写点一次都不经过，记账与判据都得在桥面接。
 
 - **三入口**：桥自己路由 `write` / `editSingle` / `editBatch`，三个入口各自在写缓冲成功后 `recordWrite`——`write` 记 `{ type: "write", startLine: 1, shift: 0 }`（与核 `writeTool` 同型）；`editSingle` 记该条的 `{ type: "edit", … }`；`editBatch` 记合并快照。少接一个入口，同一份漂移就会「本地 write 之后拒、IDE 缓冲 write 之后放」。
 - **回执面（与核的差异逐条给据，不用「面板不同」一句带过）**：逐条回执分两形——**替换条目写确认形** `OK: edited <path> via IDE (<n> occurrence(s))`；**删行条目写 `Deleted <line N|lines N-M> of <path> via IDE`**，其中 `line N` / `lines N-M` 取自 `deleteTarget`，与核同一函数、同一取值。删行与替换是模型区分「删了行」与「换了内容」的两条线索，压成一句就分不出同一批里哪条删、哪条换。
+- **失败条与末行与核同形**：失败条写 `<定位> — failed: <原因原文>`，定位 = `edits[<i>]`（与核同一构造器 `editEntryFailureLine(label, reason)`——第一参 = 定位串，不是下标）；末行写 `editBatchSummary` 的输出（与核同一构造器）。桥与核在回执上只差成功行措辞（上一条）与三样读盘产物（下一条）。
 - **单形态删行不经桥**：桥的单形态路由门要求 `new_string` 是字符串，而删行只在**省略** `new_string` 时成立 ⇒ 单形态删行落本地通道（回执 = 核面 `Deleted line N of <path>`），桥面的删行回执只来自 `edits` 数组形态。单形态经桥的回执恒为确认形。
-- **桥面不写的四样（同一理由：它们都读盘面内容或起外部进程，而桥写的是 IDE 缓冲，缓冲与盘面可能不同步）**：`diff`（`gitDiffOne` 读盘）· `autoSyntaxCheck`（读盘并起进程）· `context (L…-L…)` 写入点上下文（`appendWriteContext` 里 `readFile` 读盘）· 批末汇总行（只为 >64K 大回执落盘后 preview 保尾，桥回执不含 diff、够不到那个阈值）。
+- **桥面不写的三样（同一理由：它们都读盘面内容或起外部进程，而桥写的是 IDE 缓冲，缓冲与盘面可能不同步）**：`diff`（`gitDiffOne` 读盘）· `autoSyntaxCheck`（读盘并起进程）· `context (L…-L…)` 写入点上下文（`appendWriteContext` 里 `readFile` 读盘）。桥面**写**批末汇总行——它的数字（条目总数 / 成功条数 / 已写档数与路径）全在内存里，与那三样不同源（依据 = `docs/core/design/EDIT.md` §8 D-16）。
 - 判据：`editSingle` 读缓冲后、`computeEditEntry` 之前调同一函数；`editBatch` 在组循环之前判一次（同 §7.3 判定点）。
-- 帧：**不另写循环**——调 §7.3 的 `planEditEntries` / `applyPlannedEntries`；桥只做「读缓冲 → 应用计划 → 写缓冲」。
-- 记账：缓冲写回**成功之后** `recordWrite(abs, { type: "edit", startLine, shift })`，`startLine` 取组内最小、`shift` 取组内净漂移（同核批量的合并快照语义）。
+- 帧：**不另写循环**——调 §7.3 的 `planEditEntries` / `applyPlannedEntries`（`onEntryError:"collect"` + `scope:"batch"`，与核批面同组实参）；桥只做「读缓冲 → 应用计划 → 写缓冲」。
+- 记账：缓冲写回**成功之后** `recordWrite(abs, { type: "edit", startLine, shift })`，`startLine` 取**成功条目** `editStartLine` 的最小值、`shift` 取**成功条目** `lineShift` 之和（失败条目没有可记的漂移）；零条成功的档不写缓冲、不记账（同核批量的合并快照语义）。
 - **记账键 = `resolveInCwd` 之后的绝对路径**，与核同一键；键不一致则核与桥各记一条、互相看不见，护栏对另一条通道等于零。
 - 顺带对齐：`editSingle` 向 `computeEditEntry` 传 `absPath`，not-found 提示的记账分支因此在桥面同样生效。
 - 坐标系：读与写都经 IDE 缓冲，快照对同一坐标系有效（缓冲内容与盘面可能不同步，行号语义跟的是缓冲）。
@@ -285,6 +302,36 @@ write point to check them against.
 | 判据函数（`thincoder-core/tools/write-path.mjs` 新增具名导出 `lineAnchorVerdict`） | `existing but unusable: thincoder-core/tools/file.mjs` 的 `insertAfterTool.execute` 内联分支 · 失败面：内联在 insert_after 的 `execute` 体内，edit 的单形态 / 批量 / 桥三处都调不到 ⇒ 提为具名函数，判据语义照抄（唯一变更 = §7.1 第 2 行新格） |
 | 拒文构造器（同档新增具名导出） | `existing: thincoder-core/tools/write-path.mjs` 的 `dirtyRefusalMessage`——复用其形：具名导出、端中立、与记账面同档；文案不复用（那是编辑器缓冲脏态，不是行号漂移） |
 | `insert_after` 现有拒句（`thincoder-core/tools/file.mjs` 的 `insertAfterTool.execute` 里两句中文拒句） | `existing but unusable` · 失败面：两句中文写死在工具体内，与英文描述面不一致 ⇒ 收正为共享构造器（唯一判定变更 = §7.1 第 2 行新格，见 §7.2） |
+
+### 7.6 跨工具失败回执骨架（单源）
+
+编辑工具族里凡「一次调用写多档、失败可能只落在其中一部分档上」的工具，失败回执都按这张表填。下表两个填充实例 = `edit` 批面（`docs/core/design/EDIT.md` §5）与 `apply_patch`（`docs/core/design/APPLY-PATCH.md` §4），第三个写入工具接入时填这张表、不新造形。
+
+| 骨架（逐字 · 各工具同形） | `edit` 批面填什么 | `apply_patch` 填什么 |
+|---|---|---|
+| `<定位> — failed: <原因原文>` | 定位 = `edits[<i>]`（i = 该条在 `edits` 里的下标） | 定位 = `<path>`；hunk 面失败再加 ` hunk <n>` |
+| `<工具名>: <k>/<M> <单位> applied, <M−k> failed`，**`<单位>` ≠ 档时再接 ` — <K> file(s) written`** | `<工具名>` = `edit batch` · `<单位>` = `entries`（≠ 档）⇒ 接末段 · `M`/`k` 记条目 · `K` = 已写档数 | `<工具名>` = `apply_patch` · `<单位>` = `file(s)`（= 档）⇒ **末段省略** · `M`/`k` 记档（`k` 即已写档数） |
+| 末行后接 `: ` + 已写档清单（仅 `K ≥ 1`） | 已写档路径，去重保首现序、分隔 `, ` | 已落盘档路径，补丁序、分隔 `, ` |
+
+**第一参是定位串、不是下标**：`editEntryFailureLine(label, reason)` 收的是各工具的天然定位——`edit` 批面传 `edits[<i>]`，`apply_patch` 传 `<path>` / `<path> hunk <n>`。按下标收就只剩 `edit` 一个工具填得进，`apply_patch` 只好再写一份 `— failed: ` 字面量，那正是这张表要防的第二处形状。
+
+四条判据管这张表：
+
+- **位置**：逐条细节在前、汇总恒为末行——两工具同一位次（理由见 `docs/core/design/EDIT.md` §8 D-9）。
+- **原因原文**：工具抛出的错误文本逐字，不提炼、不改写。
+- **没有原因就不出 `— failed:` 行**：`apply_patch` 的连坐档写 `not committed <path>`，不替它编原因。
+- **末段存废由「报单位是不是档」定**：末段存在的唯一理由是「报单位与实际落盘档数可能不同」——`edit` 报条目、写档，`K ≤ M` 才带信息；单位本身就是档时两个数恒相等，印两遍只让读者每次多想一秒。
+
+第三个写入工具接入时，它要自己回答一句「我的单位是不是档」，而不是照抄一段多余的话（`apply_patch` 的 `file(s)` 就是省了末段的那一个）。
+
+**骨架为何住在本档**：这张表被两个工具共用，而本档是编辑工具族共享语义的唯一权威；`docs/core/design/EDIT.md` §5 只留 `edit` 批面自己的填充位，`apply_patch` 侧同理。
+
+**先例与调研**：
+
+- 先例 = 核批面 `thincoder-core/tools/edit-batch.mjs` 的 `applyEditBatch` 收尾的 `k/M entries applied` 与 `edits[<i>] — failed:` 两形；两形已提成具名构造器，住 `thincoder-core/tools/edit-receipt.mjs`。
+- 调研 = `doc_search` 查「写入工具 失败回执 已提交清单 部分落盘」⇒ 命中全在 `thincoder/docs/**`；`index.publicRepos` 声明的 `../.thincoder` · `../thincoder.com` 零相关命中 ⇒ 骨架只源自本仓 `edit` 批面，外部无先例。
+
+**集成面（RTM 增量）**：本档不单立行——两个工具的行是 `CLI 41-2`（桥面批量回执）与 `CLI 42-1`（`apply_patch` 写盘段回执），全表与判法见 `docs/core/design/EDIT.md` §7。
 
 ## 8. 关键决策记录
 

@@ -16,8 +16,12 @@
  * 记账面（dirty-file tracking）**同源住本档**：核内写盘只此一处 ⇒ 记账面只此一处（Map/Set +
  * 函数）。默认径的记账由本档代落——`meta.record` ⇒ `recordWrite`、`op="delete"` ⇒ `markDirty`；
  * 调用方不再自行 `recordWrite` / `markDirty`（**不重复记账**）。**唯一例外 = apply_patch 的批级
- * 记账**（两段式全部成功后由调用方一次 `markDirty`——批级语义，与改前逐字同）。`file.mjs` 只做
- * 再导出，保既有 import 面稳定（模块拆分写优先纪律）。
+ * 记账**——判据（谁在哪一层写记账表）：写点内由写点自己记、调用方只交记录的值，只有「调用方
+ * 自持」才不经写点；`edit` 批面把合并快照当 `record` 交给本档 ⇒ 仍属写点内，不是例外。
+ * 量法（结论可复跑）：仓根 `grep -rn "markDirty(\|clearLastWrite(\|recordWrite(" thincoder-core/tools`
+ * ⇒ 只有 `write-path.mjs`（定义 ∥ 写点内自用）· `patch.mjs`（批级循环，对已落盘档跑，成功 ∥ 失败
+ * 两路同、含注入径已提交那批）· `file.mjs`（`read` 清快照）三档命中；出现第四档就是又一个调用方
+ * 自持的记账面，这一句要重判。`file.mjs` 只做再导出，保既有 import 面稳定（模块拆分写优先纪律）。
  */
 import { writeFile, unlink, rename, cp, rm, rmdir } from "node:fs/promises"
 

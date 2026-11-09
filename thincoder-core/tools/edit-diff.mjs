@@ -54,8 +54,6 @@ export const EDITS_CONTAINER_ERROR = "edits must be a non-empty array of {path, 
 export const editsEntryError = (i) => `edits[${i}] must be an object of {path, old_string | line/startLine+endLine, new_string}`
 /** 条目缺 path 且无顶层默认路径。 */
 export const EDIT_ENTRY_NO_PATH = "each edit must have a path — give each entry its own path or pass a top-level path"
-/** 批量原子失败前缀（条目判定失败时拼在消息前的 abortPrefix）。 */
-export const EDIT_ABORT_PREFIX = "edit aborted (atomic — no files written): "
 /** 批量条目校验前缀（validateEditEntry 的 opts.label）。 */
 export const editEntryLabel = (path) => `edit for ${path}: `
 
@@ -152,25 +150,18 @@ export function assertEditsContainer(edits) {
   if (!Array.isArray(edits) || edits.length === 0) throw new Error(EDITS_CONTAINER_ERROR)
 }
 
-/** 入参条目守卫（#325——EDIT.md §5）：条目非对象（null / 字符串 / 数字 / 数组）⇒ 含下标成形
- *  错误——预扫于条目循环之前（不读盘、不触盘、零部分应用）。 */
-export function assertEditEntries(edits) {
-  for (let i = 0; i < edits.length; i++) {
-    const e = edits[i]
-    if (e === null || typeof e !== "object" || Array.isArray(e)) throw new Error(editsEntryError(i))
-  }
-}
-
 /**
  * 前置校验——内容形态：空 old / 非字符串 new；按行号改形态（D1，2026-09-08；阶段 2
  * 删行——EDIT.md §5）：与 old_string 互斥 / line 与 startLine|endLine 互斥 /
  * startLine+endLine 须成对 / 正整数 / endLine ≥ startLine / replace_all 不适用 /
  * new_string：省略（undefined）= 删行 / 显式空串 = 显式错（防误删）/ 其他类型报错。
  * error 文本按调用形态（单形态 rich / 批量 label）。
- * opts: { label = ""（批量前缀 = editEntryLabel(path)）, rich = true（单形态完整文本） }
+ * opts: { label = ""（批量前缀 = editEntryLabel(path)）, rich = true（单形态完整文本）,
+ *         scope = "batch" 时一律按 rich=false（批面不带写盘结论——EDIT.md §5 / §8 D-14） }
  */
 export function validateEditEntry(entry, opts = {}) {
   const label = opts.label ?? ""
+  const rich = opts.scope === "batch" ? false : opts.rich !== false
   if (hasLineParams(entry)) {
     if (entry.old_string !== undefined) {
       throw new Error(label + "line/startLine/endLine are mutually exclusive with old_string — target by line number OR by content, not both")
@@ -193,30 +184,30 @@ export function validateEditEntry(entry, opts = {}) {
       throw new Error(label + "replace_all does not apply to line-based edits (a line range is already a single explicit target)")
     }
     if (entry.new_string === "") {
-      throw new Error(label + EMPTY_NEW_STRING_LINE + (opts.rich === false ? "" : " — nothing written"))
+      throw new Error(label + EMPTY_NEW_STRING_LINE + (rich ? " — nothing written" : ""))
     }
     if (entry.new_string !== undefined && typeof entry.new_string !== "string") {
       throw new Error(
         label + `new_string must be a string (got ${typeof entry.new_string})` +
-        (opts.rich === false ? "" : " — nothing written")
+        (rich ? " — nothing written" : "")
       )
     }
     return
   }
   if (!entry.old_string) {
     throw new Error(
-      label + "old_string must not be empty" + (opts.rich === false ? "" : " (empty string matches everywhere and would corrupt the file)")
+      label + "old_string must not be empty" + (rich ? " (empty string matches everywhere and would corrupt the file)" : "")
     )
   }
   if (entry.new_string === "") {
     // 空串 vs 省略矩阵（EDIT.md §5/§8.1）：内容形态空串 = 显式错（无界意图防静默）——
     // 先于 replace_all 分支（否则 replace_all + 空串会静默删除全部 occurrences——绕过保护）
-    throw new Error(label + EMPTY_NEW_STRING + (opts.rich === false ? "" : " — nothing written"))
+    throw new Error(label + EMPTY_NEW_STRING + (rich ? " — nothing written" : ""))
   }
   if (typeof entry.new_string !== "string") {
     throw new Error(
       label + `new_string must be a string${entry.new_string === undefined ? " (missing)" : ` (got ${typeof entry.new_string})`}` +
-      (opts.rich === false ? "" : " — nothing written")
+      (rich ? " — nothing written" : "")
     )
   }
 }
@@ -242,7 +233,10 @@ function isSingleLineReplace(entry) {
  * LCS 替换 / replace_all 字面）→
  * 元数据（受影响区首行/行数差/次数——recordWrite 与结果回显用）。
  * 返回 { updated, editStartLine, lineShift, occurrences, note?, deleted? }；失败抛错（含路径/引导）。
- * opts: { path, abortPrefix（批量 = EDIT_ABORT_PREFIX） }
+ * opts: { path, absPath, scope }
+ *   `scope:"batch"` = 两个批面（EDIT.md §5「守卫与文案单源」/ §8 D-14）：错误文本**不带任何写盘结论**
+ *   ——不带 ` — nothing written` 后缀（批面逐条报，那句在批面为假）；
+ *   其余取值（含缺省）= 单档面，照 `rich` 的既有取法（带后缀）。
  */
 /**
  * P15.11（2026-09-05 用户裁定——edit 连续失败分析）：old_string 逐字 not-found 时——
@@ -280,7 +274,10 @@ function findWhitespaceVariant(content, old) {
 export const WHITESPACE_VARIANT_NOTE = "applied to the unique whitespace-only match (content identical, leading/trailing whitespace differs from your old_string)"
 
 export function computeEditEntry(content, entry, opts = {}) {
-  validateEditEntry(entry, { ...opts, rich: !opts.abortPrefix })
+  // 写盘结论面（EDIT.md §5「守卫与文案单源」/ §8 D-14）：`scope:"batch"` 这一个开关压掉
+  // ` — nothing written` 后缀（批面逐条报，那句在批面为假）。前缀形随 D-17 退役，不再有要拼的。
+  const batchScope = opts.scope === "batch"
+  validateEditEntry(entry, { ...opts, rich: !batchScope })
   // D1 按行号改（EDIT.md §2/§5）：行号定位条目直接按行替换（applyLineEdit——落点
   // edit-batch.mjs），不走 old_string 匹配/判定序；省略 new_string = 删行（EDIT.md §5）；
   // 互斥/越界/显式空串均在 validateEditEntry/applyLineEdit 显式报错。
@@ -312,7 +309,7 @@ export function computeEditEntry(content, entry, opts = {}) {
       candText = "\n" + header + "\n" + cands.map((c) => `    L${c.line}: ${c.preview} (${Math.round(c.score * 100)}%)`).join("\n")
     }
     throw new Error(
-      `${opts.abortPrefix ?? ""}old_string not found in ${opts.path ?? "file"}\n` +
+      `old_string not found in ${opts.path ?? "file"}\n` +
       `  searched: "${preview}${entry.old_string.length > 100 ? "…" : ""}" — use grep to locate the actual content\n` +
       (opts.absPath && lastWriteOf(opts.absPath)?.type === "write"
         ? `  hints: this file was modified since your last read (write 全文重写后内容全变) — re-read it to refresh your copy of the content, then retry\n`
@@ -324,7 +321,7 @@ export function computeEditEntry(content, entry, opts = {}) {
   }
   if (occurrences > 1 && !entry.replace_all) {
     throw new Error(
-      `${opts.abortPrefix ?? ""}old_string matches ${occurrences} times in ${opts.path ?? "file"}; provide more context or set replace_all`
+      `old_string matches ${occurrences} times in ${opts.path ?? "file"}; provide more context or set replace_all`
     )
   }
   const matchIdx = content.indexOf(old)
@@ -366,8 +363,11 @@ export function computeEditEntry(content, entry, opts = {}) {
  * **零 IO**（只看条目自身的行号）：两个通道（本地 `edit-batch` ∥ ACP 桥）调同一份排法，
  * 各自只提供自己的 IO——抄一份组循环就是本机制要根治的形状。
  *
- * @returns {{ order: number[]|null, rejection: string|null }} `order` = 数组下标的应用序
- *   （回显仍按调用序取原位）；`rejection` 非空 = R3 重叠：整批拒、零写。
+ * @returns {{ order: number[], rejections: {index: number, reason: string}[] }}
+ *   `order` = **未被拒**条目的应用序（下标指向传入的 `entries`，回显仍按调用序取原位）；
+ *   `rejections` = R3 重叠：**互指的每一条各得一行**（原因互指对方行范围——EDIT.md §5
+ *   「行号条目范围重叠」，同档其余条照应用）。拒因是**纯原因句**——不带前缀、不带写盘结论
+ *   （「no files written」在逐条模式为假）；回执行由调用方按骨架组装。
  *   `path`（可选）= 拒文里点名的目标档（条目自带 path 优先——顶层 path 不在条目上）。
  */
 export function planEditEntries(entries, path = null) {
@@ -376,34 +376,52 @@ export function planEditEntries(entries, path = null) {
   const contentIdx = []
   entries.forEach((e, i) => { (hasLineParams(e) ? lineIdx : contentIdx).push(i) })
   // R3：两条行号条目的范围在快照坐标上重叠 ⇒ 先改哪一条决定结果，模型意图在此矛盾
+  // ——两条都废（先改哪条都改意），互指对方行范围。
+  const rejected = new Map() // 条目下标 → 拒因
   const byStart = [...lineIdx].sort((a, b) => rangeOf(entries[a])[0] - rangeOf(entries[b])[0])
   for (let i = 1; i < byStart.length; i++) {
-    const prev = rangeOf(entries[byStart[i - 1]])
-    const cur = rangeOf(entries[byStart[i]])
-    if (cur[0] <= prev[1]) {
-      const label = entries[byStart[i]].path ?? entries[byStart[i - 1]].path ?? path ?? "file"
-      return {
-        order: null,
-        rejection:
-          `${EDIT_ABORT_PREFIX}line-number entries L${prev[0]}-L${prev[1]} and L${cur[0]}-L${cur[1]} (${label}) overlap — ` +
-          `two changes to the same region cannot both be anchored on the numbers you read; split them into separate calls`,
-      }
-    }
+    const a = byStart[i - 1]
+    const b = byStart[i]
+    const ra = rangeOf(entries[a])
+    const rb = rangeOf(entries[b])
+    if (rb[0] > ra[1]) continue
+    const label = entries[b].path ?? entries[a].path ?? path ?? "file"
+    const reason =
+      `line-number entries L${ra[0]}-L${ra[1]} and L${rb[0]}-L${rb[1]} (${label}) overlap — ` +
+      `two changes to the same region cannot both be anchored on the numbers you read; split them into separate calls`
+    if (!rejected.has(a)) rejected.set(a, reason)
+    if (!rejected.has(b)) rejected.set(b, reason)
   }
+  const rejections = [...rejected.entries()]
+    .sort((x, y) => x[0] - y[0])
+    .map(([index, reason]) => ({ index, reason }))
   // R2：降序（同档起始行不会相等——相等即重叠，已在 R3 拒掉）
-  const desc = [...lineIdx].sort((a, b) => rangeOf(entries[b])[0] - rangeOf(entries[a])[0])
-  return { order: [...desc, ...contentIdx], rejection: null }
+  const alive = lineIdx.filter((i) => !rejected.has(i))
+  const desc = [...alive].sort((a, b) => rangeOf(entries[b])[0] - rangeOf(entries[a])[0])
+  return { order: [...desc, ...contentIdx], rejections }
 }
 
 /**
  * 按 `planEditEntries` 排出的应用序逐条 `computeEditEntry` 累积——**零 IO**。
  * `results` 按调用序回到原位（回显顺序不变），元数据形同 `computeEditEntry` 返回。
+ *
+ * opts.onEntryError：`"throw"`（缺省——整批拒的调用面）∥ `"collect"`（逐条成败：一条抛错
+ * 就记它自己一行、累积内容不动、继续下一条——EDIT.md §5「一条失败只废它自己」）。
  */
 export function applyPlannedEntries(content, entries, order, opts = {}) {
   let cur = content
   const results = new Array(entries.length)
+  const failures = []
+  const collect = opts.onEntryError === "collect"
   for (const i of order) {
-    const out = computeEditEntry(cur, entries[i], { ...opts, abortPrefix: opts.abortPrefix ?? EDIT_ABORT_PREFIX })
+    let out
+    try {
+      out = computeEditEntry(cur, entries[i], opts)
+    } catch (err) {
+      if (!collect) throw err
+      failures.push({ index: i, reason: err?.message ?? String(err) })
+      continue
+    }
     results[i] = {
       editStartLine: out.editStartLine,
       lineShift: out.lineShift,
@@ -413,7 +431,7 @@ export function applyPlannedEntries(content, entries, order, opts = {}) {
     }
     cur = out.updated
   }
-  return { content: cur, results }
+  return { content: cur, results, failures }
 }
 
 /**
