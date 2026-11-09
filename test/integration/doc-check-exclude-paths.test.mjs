@@ -3,11 +3,12 @@
  * 用例行原文 = `test/rtm/guard.md` 第 36 节）。
  *
  * 业务入口 = 真 `doc_check` 工具调用（`mode:"gate"` + 显式 `docs` + `target`），与 36-1 同一个入口。
- * 业务可观察结果 = 同一份带死指针的档落在 manifest 排除面内 ⇒ 交付门零命中；把它移出排除面 ⇒ 同一份档出 1 条 `档缺`。
- * 判据 = `docs/core/design/DOC-CHECK.md` §2.6（`index.docCheckExcludePaths`：排除改的是**判集**，不是判据）∥ AC-Ex1；
- * 回指 = `docs/core/requirements/DOC-CHECK.md` F3（唯一项目级声明面 = 该键）。
+ * 业务可观察结果 = 三读：同一份带死指针的档落在 manifest 排除面内 ⇒ 交付门零命中；清单只剩被排除那一档 ⇒
+ * 免检放行（首行 `PASS`、零免责句）；把它移出排除面 ⇒ 同一份档出 1 条 `档缺`。
+ * 判据 = `docs/core/design/DOC-CHECK.md` §2.6（`index.docCheckExcludePaths`：排除改的是**判集**，不是判据；
+ * 全排除 = 免检放行）∥ AC-Ex1 ∥ AC-Ex6；回指 = `docs/core/requirements/DOC-CHECK.md` F3（唯一项目级声明面 = 该键）。
  *
- * 两读同一夹具、同一命令，**只换排除面**——两读首行不相等才证明过滤在起作用（改写前两读都是 `REFUSED`）。
+ * 三读同一夹具、同一命令，**只换清单或排除面**——首行不相等才证明过滤在起作用（改写前第一读也判 `REFUSED`）。
  * 夹具 = 系统临时域（`mkdtempSync`）⇒ 零落仓 + 并发免疫。
  *
  * 复跑（cwd = 仓根）：`node --test test/integration/doc-check-exclude-paths.test.mjs`
@@ -45,15 +46,16 @@ const manifestText = (exclude) => JSON.stringify({
   ...(exclude === undefined ? {} : { index: { docCheckExcludePaths: exclude } }),
 }, null, 2) + "\n"
 
-test("CLI 36-5 manifest 声明排除目录：排除面内零命中，移出后同一档出 1 条档缺", () => {
+test("CLI 36-5 manifest 声明排除目录：排除面内零命中，全排除免检放行，移出后同一档出 1 条档缺", () => {
   const root = fixture({
     "PROJECT-MANIFEST.json": manifestText(["docs/excluded"]),
     "docs/kept.md": "# kept\n\n正文干净，没有指针。\n",
     "docs/excluded/x.md": "# x\n\n指针：docs/nope.md\n",
   })
   const docs = ["docs/kept.md", "docs/excluded/x.md"]
+  const run = (list) => docCheckTool.execute({ mode: "gate", docs: list, target: root }, { agent: { cwd: root } })
   // 第一读：x.md 落在排除面内 ⇒ 交付门零命中，回执点名「未判」的那一档
-  const inside = docCheckTool.execute({ mode: "gate", docs, target: root }, { agent: { cwd: root } })
+  const inside = run(docs)
   const insideLines = inside.split("\n")
   assert.equal(insideLines[0], "DOC-CHECK GATE: PASS", inside)
   assert.equal(insideLines.some((l) => l.includes("✗ ")), false, `排除档不得出命中：\n${inside}`)
@@ -61,9 +63,19 @@ test("CLI 36-5 manifest 声明排除目录：排除面内零命中，移出后�
     insideLines.includes("排除 1 档（manifest 排除面命中，未判）：docs/excluded/x.md"),
     `排除桶缺失或行形不符：\n${inside}`,
   )
-  // 第二读：同一夹具、同一命令，只把 manifest 里该键删掉 ⇒ 同一份档照判 `档缺`
+  // 第二读（AC-Ex6）：同一夹具、同一 manifest，清单收成只含被排除那一档 ⇒ 全排除 = 免检放行
+  const onlyExcluded = run(["docs/excluded/x.md"])
+  const onlyLines = onlyExcluded.split("\n")
+  assert.equal(onlyLines[0], "DOC-CHECK GATE: PASS", onlyExcluded)
+  assert.equal(onlyExcluded.includes("不得读作已检"), false, `全排除不得出免责句：\n${onlyExcluded}`)
+  assert.equal(onlyLines.some((l) => l.includes("✗ ")), false, `排除档不得出命中：\n${onlyExcluded}`)
+  assert.ok(
+    onlyLines.includes("排除 1 档（manifest 排除面命中，未判）：docs/excluded/x.md"),
+    `排除桶缺失或行形不符：\n${onlyExcluded}`,
+  )
+  // 第三读：同一夹具、同一命令，只把 manifest 里该键删掉 ⇒ 同一份档照判 `档缺`
   writeFileSync(join(root, "PROJECT-MANIFEST.json"), manifestText(undefined))
-  const outside = docCheckTool.execute({ mode: "gate", docs, target: root }, { agent: { cwd: root } })
+  const outside = run(docs)
   const outsideLines = outside.split("\n")
   assert.equal(outsideLines[0], "DOC-CHECK GATE: REFUSED（锚 1 条）", outside)
   const hitLines = outsideLines.filter((l) => l.includes("✗ "))

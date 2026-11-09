@@ -1359,7 +1359,9 @@ checklist 描述档已随工具废除（承接档已随归档清理删除）—�
 
 **范围与参数面（用户 2026-10-22 10:27 裁定）**：判定范围 = **调用方传入的文件清单**（`report` 无清单 ⇒ 报错；`gate` 缺省 = 本会话触达）——不扫全仓；**判定用的**全域索引不建（唯一那份同名索引的射程 = 本节「性能」的边界句）。
 
-参数只剩内置常量 `DOC_CHECK_BUILTINS`（`thincoder-core/doc-check/index.mjs`）：`paragraphMax` / `lineMax` = 300 · `paragraphExemptZones` / `exemptions` = `[]`。`scanDirs` / `domain` / `roots` / `exclude` **全部退场**；manifest 不再承载参数，doc_check 也不读 manifest。
+参数只剩内置常量 `DOC_CHECK_BUILTINS`（`thincoder-core/doc-check/index.mjs`）：`paragraphMax` / `lineMax` = 300 · `paragraphExemptZones` / `exemptions` = `[]`。`scanDirs` / `domain` / `roots` / `exclude` **全部退场**；manifest 不再承载参数，`doc_check` 也不读 manifest 的**参数面**。
+
+- **读面清单**：它读哪几处**声明面**（五处）、各改什么事，单源 = `docs/core/design/DOC-CHECK.md` §2.8（本节不复制）。
 
 **入参形态（缺参 = 硬错，不是零命中）**：段判据的入参是**一个**对象 `{ paragraphMax, lineMax, exemptZones, files }`——**三格必填 + 一格可省**。
 
@@ -1380,7 +1382,7 @@ checklist 描述档已随工具废除（承接档已随归档清理删除）—�
 
 | # | 判据 | 判据句（可机验 · 命中即入报告集） |
 |---|---|---|
-| ① | **锚** | 文档指针 = 档 token（扩展名落闭集 `DOC_EXTS`；`.md` 与代码路径同判，见下「扩展名闭集」；可带目录段）± 节指示（紧随 `§` + 编号）；**档不在盘** ⇒ `档缺`；带节指示 ∧ **节不在盘** ⇒ `节缺`。行号坐标（`:N`）**不作节指示**——行号不作引用 |
+| ① | **锚** | 文档指针 = 档 token（扩展名落清单：`DEFAULT_DOC_EXTS` ∪ 该档所属项目的 `index.docCheckExts`，**裸名与带目录段的形同一把尺**，见下「扩展名清单」；`.md` 与代码路径同判；可带目录段）± 节指示（紧随 `§` + 编号）；**档不在盘** ⇒ `档缺`；带节指示 ∧ **节不在盘** ⇒ `节缺`。行号坐标（`:N`）**不作节指示**——行号不作引用 |
 | ② | **段长** | 一段字符数 > 阈值 ⇒ 命中（段 = §3.18 口径条 1——相邻非空正文行合并；表格 / 标题 / 列表 / 引用 / 围栏 / 区带断段不计）；提示词面档逐行裸判（口径逐字 = §3.18 条目 Q）。**面射程**：工具描述面（`thincoder-core/tool-docs/**`）同判本条——不分面（§3.18 条 7，本节不重述） |
 | ③ | **行号坐标** | 位置引用落成「档名 + 冒号 + 数字」⇒ 命中（判据句 ∥ 抽取式 ∥ 判集 ∥ 豁免 = 本档 §3.23 条目 W）；与 ① ② 同计 `hits`、同可判 `REFUSED` |
 
@@ -1395,7 +1397,7 @@ checklist 描述档已随工具废除（承接档已随归档清理删除）—�
 
   **场景（实读，不是设想）**：这条缺损是在一个清债批**交付完成之后**回头扫才发现的——「0 处」与「没读成」在回执上长得一样。**复现行** = 一档不可读 + 同档一处真坐标 ⇒ 修前 `gate` 判 `PASS`；修后首行 `ERROR（读不到 1 档）`。Windows 造不出这一形（`chmod` 不阻断读取），该面由 POSIX 侧用例 DD-177 承载。
 
-- **抽取面的扩展名闭集 = 与行号坐标同一组**（单源 = `thincoder-core/doc-check/anchors.mjs` 的 `DOC_EXTS`；行号面 `thincoder-core/doc-check/line-refs.mjs` 反向 import 这一组、不另持字面）：抽取面**不再只认 `.md`**，代码路径同样入判。理由：D4 细则要求代码面指针写得能解到实现，而抽取面只看 `.md` ⇒ 悬空的代码路径一条不报，读者按指针找不到实现（本档 §3.25 的 `依据` 行早已按闭集判非 `.md` 路径，普通指针面却漏着，同一份判据两副射程）。
+- **抽取面的扩展名定义 = 与行号坐标同一组**（单源 = `thincoder-core/doc-check/anchors.mjs` 的 `DEFAULT_DOC_EXTS` 与 `isExtension`；行号面 `thincoder-core/doc-check/line-refs.mjs` 反向 import 这一组、不另持字面）：**两条形同一把尺**——裸名与带目录段的 token 都看后缀在不在清单（`DEFAULT_DOC_EXTS` ∪ 该项目 `index.docCheckExts`），`20.x/22.x` ∥ `tar.gz` 因此不成候选；清单内后缀的真悬空路径照报 `档缺`（那是真阳，不是误报）。抽取面**不再只认 `.md`**，代码路径同样入判。理由：D4 细则要求代码面指针写得能解到实现，而抽取面只看 `.md` ⇒ 悬空的代码路径一条不报，读者按指针找不到实现（本档 §3.25 的 `依据` 行早已按闭集判非 `.md` 路径，普通指针面却漏着，同一份判据两副射程）。
 - **节指示形态**：`档名 §N` ∥ `` `档名 §N` ``（编号 = `N` / `N.M` / `N.M.K`）。**`档名:N` 不作节指示**——行号坐标不参与存在性判（已约定禁止用行号做引用）。
 
 - **档在盘**：判定按 §4.2.2 的解析序（单源，四级）；四步均未命中 ⇒ `档缺`。**`§N` 节判定只读解析命中的目标档**（点查，不遍历）。
@@ -1541,7 +1543,7 @@ bare names only — `AGENTS.md`, `SKILL.md`, `project_rules.md`. The other four 
     理由：**一个总量数字只对「要不要少做」有用**——而这一条的答案是不许少做；该问的是「这一档现在干不干净」，不是「全仓还剩多少条」。
 
   - **父侧候选清单 = git（指定 base）**：子代理工具面无 git，交付当下用②；父侧 §6 有 git，可另用①给出候选清单。**权威面 = 父侧**：子代理自报的范围是子集，父侧以自查为准（自报不构成范围证据）。清单口径（含 `<批起 sha>` = 本轮开工前的 HEAD）单源 = 本条「结构兜底」的「② 的范围」——本处不复述、不另立清单。
-  - **空范围不判 PASS**：范围 0 档 ⇒ 首行 `DOC-CHECK GATE: ERROR（0 档受检——空范围不判 PASS）` + 既有「0 档受检」照实行（如「本会话没有写过 .md 档——若确认改过 ⇒ 显式传 docs」）——判了 0 档不是「全清」，`ERROR` 的消费面 = fail-closed（§6 前置只认 `PASS`）。
+    - **空范围不判 PASS**：范围 0 档 ⇒ 首行 `DOC-CHECK GATE: ERROR（0 档受检——空范围不判 PASS）` + 既有「0 档受检」照实行（如「本会话没有写过 .md 档——若确认改过 ⇒ 显式传 docs」）——判了 0 档不是「全清」，`ERROR` 的消费面 = fail-closed（§6 前置只认 `PASS`）。**排除面造成的空判集除外**：全清单都落在 `index.docCheckExcludePaths` 声明面内 ⇒ **免检放行、照常通过**（首行 `PASS`）——排除就是不去检测，不是「检了但要声明没检」。
 
     **四个入口同一句回**：显式空清单 ∥ 省略 `docs` 而本会话零 `.md` 触达 ∥ 路径全不在盘 ∥ 全非 `.md`。原因不丢：「为什么空」由既有 `范围为空：…` 四句分流句（两个范围来源 × 有 ∥ 无跳过行）与两个跳过桶头承担（跳过行逐档点名被跳过的路径）；首行只管判决，说明行管原因。
 
@@ -1657,7 +1659,7 @@ bare names only — `AGENTS.md`, `SKILL.md`, `project_rules.md`. The other four 
 
 - **`ERROR` 消费分野**：② fail-closed（无 PASS 即未见通过）；① **放行 + 回执明示**——F9 只在 ② 点名 ERROR；子代理无法重启会话，卡死写账 = 无账之笔，而 ② 会拒收口 ⇒ 轮次不会被当成已通过。
 
-- **适用面（调用面驱动）**：判据只落传入文件，不看 manifest；空清单两面分明——`report` 面 ⇒ 报错 ∥ `gate` 面 ⇒ 首行 `ERROR（0 档受检——空范围不判 PASS）` + 「0 档受检」。批档门的「无声明面 ⇒ 未跑」回执行归批档门自身（M3 读 manifest），doc_check 不掺和。
+- **适用面（调用面驱动）**：三件事分开看，一句话不得兼两义。① **判定范围** = 调用方传入的文件清单（只判传入档，无目录扫描、无全域兜底）。② **扫描域**：manifest **不**给「扫哪里」——无 `scanDirs` 一类声明口。③ **声明面**读 manifest，各改一件事（判什么 ∥ 入不入判 ∥ 拦不拦）；逐行清单与读点单源 = `docs/core/design/DOC-CHECK.md` §2.8（本节只留指针，不列条目）；**判据参数**（段长阈值 ∥ 命中类 ∥ verdict 词）恒为内置常量，无项目声明口。空清单两面分明——`report` 面 ⇒ 报错 ∥ `gate` 面 ⇒ 首行 `ERROR（0 档受检——空范围不判 PASS）` + 「0 档受检」。批档门的「无声明面 ⇒ 未跑」回执行归批档门自身（M3 读 manifest），doc_check 不掺和。
 
 - **零回归（门是新增前置，不是替换）**：既有拒因（段白名单 / 段号 / path 门 / 冻结 / 状态行不可解析 / text 校验 / 骨架保护 / 凭证剥除 / 死占位 / §6 非空 / create-close 身份门）逐字、逐序不变——门插在它们**之后**、写盘**之前**；错误串前缀 = `batch:`（新增错误面）。
 
@@ -2003,7 +2005,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 | 形 | 抽取式 | 主（owner） | 判定 |
 |---|---|---|---|
-| **Ⅲ 文件坐标** | **§4.2.1 的 V5-A 围栏抽取式逐字**（扩展名闭集与并列组随该式——本条不重述枚举） | 前导文件 token | 档在盘（既有锚判据）+ **N ≤ 该档行数** |
+| **Ⅲ 文件坐标** | **§4.2.1 的 V5-A 围栏抽取式逐字**（扩展名定义与并列组随该式——本条不重述枚举） | 前导文件 token | 档在盘（既有锚判据）+ **N ≤ 该档行数** |
 | **Ⅱ 符号坐标** | `/(?<![\w.$/\\-])([A-Za-z_$][\w$]{2,}):(\d+(?:-\d+)?)(?![\w])/` | 前置标识符，且须为**仓内声明符号** | **无（一律报告面）**——值形 ∥ 行号双义判不动（实例 `maxTokens:131072` · `HOT_WINDOW_MS:37`），强判即假阳 |
 | **Ⅰ 裸坐标** | `/(?<![\w.\-\\/@<>]):(\d+)(?:-(\d+))?(?![\w])/` | **同行主**：同一行内有文件 token，或有回指词（`同档` / `本档` / `源档` / `该档` / `同文件` / `核内` / `端侧` / `邻位` / `同上` / `同句` / `上一行`） | 有主 ⇒ 报告面；**无主 ⇒ 判缺陷（无主引）** |
 
@@ -2019,7 +2021,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 **覆盖关系（三形 △ §3.5 条目 F / §4.2.1）**：
 
-- **抽取单源 = §4.2.1**：Ⅲ 形逐字消费 V5-A 围栏抽取式（含扩展名闭集 `mjs|cjs|js|json|md|css|html|svg|yml|yaml|sh|ps1` 与并列组）；本条不另立抽取、不重述枚举。
+- **抽取单源 = §4.2.1**：Ⅲ 形逐字消费 V5-A 围栏抽取式（含扩展名定义——单源 = `thincoder-core/doc-check/anchors.mjs` 的 `DEFAULT_DOC_EXTS` ∪ 该项目 `index.docCheckExts`，与锚抽取面同一份——与并列组）；本条不另立抽取、不重述枚举。
 - **坐标尾边界 = §3.5 条目 F**：`:N` / `:N-M` / 并列组的闭枚举、整段消费、两入口同义——单源在条目 F，本条不重述。
 
 - **裸坐标归哪个判集**：条目 F 判据 3「无路径前缀的裸坐标串不入集」的射程 = **锚集（存在性判集）**——裸坐标没有路径 token，判不了存在性；本条 Ⅰ 形判的是**另一类**：无主裸坐标 = **无主引**（读者与机器都无法辨它指向哪个档哪一行），判面 = 文档面文本纪律。两句**正交**：同一坐标可以既不入锚集，又构成无主引。
@@ -2114,7 +2116,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 **条目号跳过 `V`**：`V1`–`V6` 已是 §2 的校验族编号，重号会让两处面混读。
 
-**判据句（本条 = 详述处）**：行号坐标 = **一个档名之后出现的 `:` 加数字**（`:` 与数字之间无空白；数字可带 `-` 区间）。**档名** = 带扩展名的文件名 token（扩展名闭集同 §3.21 条目 T Ⅲ 所引的 §4.2.1 V5-A 抽取式，本条不另立枚举）。
+**判据句（本条 = 详述处）**：行号坐标 = **一个档名之后出现的 `:` 加数字**（`:` 与数字之间无空白；数字可带 `-` 区间）。**档名** = 带扩展名的文件名 token（扩展名定义与锚抽取面同一份：`DEFAULT_DOC_EXTS` ∪ 该项目 `index.docCheckExts`，两条形同一把尺；剥法单源 = `isExtension`，本条不另立枚举）。
 
 **归属窗（三形 · 闭集）**：
 
@@ -2142,7 +2144,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
  - `unreadable`——**现有形状扩用** · 三条判据各自的返回值上新增一张同名清单 · 消费面 = `thincoder-core/doc-check/index.mjs`（并集上报）、`thincoder-core/agent-tools/batch-gate.mjs`（未判档 ⇒ `error` 态）；不新建第二张表。
  - `ERROR` 首行——**现有词位** · `thincoder-core/doc-check/index.mjs` 的 gate 首行三串早已含它（「判不出」位）· 消费面 = 同一首行优先级（`ERROR` 先于 `PASS` / `REFUSED`）；不新增第四种判决词。
- - `DOC_EXTS`——**现有闭集** · `thincoder-core/doc-check/anchors.mjs` 导出、行号面反向 import · 消费面三处：锚面 `ANCHOR_RE` ∥ 行号面 `NAME_RE` ∥ （零改的）`scripts/prompt-refs-check.mjs`；不另立第二份字面。
+ - `DEFAULT_DOC_EXTS`——**缺省扩展名清单** · `thincoder-core/doc-check/anchors.mjs` 导出、行号面反向 import · 消费面三处：锚面 `ANCHOR_RE` ∥ 行号面 `NAME_RE` ∥ （零改的）`scripts/prompt-refs-check.mjs`；项目追加项 = `index.docCheckExts`（并集、只增不减）；剥后缀的谓词单源 = `isExtension`；不另立第二份字面。
 
 **为什么挂 `gate` 面、不挂写前门**：两道门的分工是成文的——只有写前门则旧账没人清，只有轮末检查则问题攒到交付才炸（`docs/core/requirements/DOC-CHECK.md` F14）。本条要的是**清旧账**那一半。
 
@@ -2177,14 +2179,14 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 | # | 符号 / 位置 | 改什么 |
 |---|---|---|
 | 1 | `collectLineRefs`（`thincoder-core/doc-check/line-refs.mjs`） | **采集口径零改**——`body` ∥ `fenced` ∥ `total` 已分列，围栏判定借 `fenceMark` ∥ `isFenceClose` |
-| 2 | `gate` 分支的 `hits`（`thincoder-core/doc-check/index.mjs`） | `lineRefs` 取 `lineRefs.body.length`；`hits.total` 只加正文面 |
+| 2 | `gate` 分支的 `hits`（`thincoder-core/doc-check/index.mjs`） | `lineRefs` 取正文面（`lineRefs.body` 里经豁免分类后留下的那批）；`hits.total` 只加正文面 |
 | 3 | `gateReport`（同档） | 首行 `行号坐标 N 处` 的 N 取正文面；`✗` 行只出 `lineRefs.body`；`lineRefs.fenced` 改出一行读数行（句形见上「只作读数」段），不入命中集 |
 | 4 | `lineRefHits`（同档） | 只装 `body`。**必改项，不是附带改动**：`thincoder-core/agent-tools/batch-gate.mjs` 的 `hitEntries` 按「`✗` 行数 == 命中数」判 `aligned`；围栏内那批留在 `lineRefHits` 里却不再出 `✗` 行 ⇒ `aligned` 永假、整个门的显示面静默退化 |
 | 5 | `lineRefsBlock`（`thincoder-core/doc-check/line-refs.mjs`） | **零改**——`report` 面那两个读数是清账用的，`合计` 是读数不是判据 |
 
 两处现形（依据行，逐字取自源档）：
 
-依据 `thincoder-core/doc-check/index.mjs`「const hits = { total: anchorCount + paragraphs.length + lineRefs.body.length, anchors: anchorCount, paragraph: paragraphs.length, lineRefs: lineRefs.body.length }」
+依据 `thincoder-core/doc-check/index.mjs`「const hits = { total: anchorCount + paragraphHitsKept.length + lineRefHitsKept.length, anchors: anchorCount, paragraph: paragraphHitsKept.length, lineRefs: lineRefHitsKept.length }」
 
 依据 `thincoder-core/doc-check/index.mjs`「lineRefHits: lineRefs.body.map((h) => ({ ...h, clazz: LINE_REF_CLASS })),」
 
@@ -2250,7 +2252,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 - T 按**起点 token** 分形（Ⅲ 文件坐标 / Ⅱ 符号坐标 / Ⅰ 裸坐标），判「越界 / 无主引」；本条按**归属窗**定位（紧贴 / 承名 / 段落承名），只清点。
 - 两轴不可互换：一个坐标可以承名却起首于符号（T Ⅱ），也可以紧贴却归属到上一行的档名（③）。把 T 的抽取式搬来，② ③ 与跨行归属整块丢——F11 的三形有两种报不出。
-- **不互抄**：T 的抽取式住 §3.21（判据式），本条住本节（清点式）；两处的扩展名闭集同指 §4.2.1 一处，不各立一套。
+- **不互抄**：T 的抽取式住 §3.21（判据式），本条住本节（清点式）；两处的扩展名定义同指 §4.2.1 一处，不各立一套。
 - **两处坐标式的守卫不同，是刻意的**：本条 `(?<![0-9:])` 只排数字 / 冒号前导（挡时刻 `12:30`）；T 的 Ⅰ 形 `(?<![\w.\-\\/@<>])` 还排标识符与路径字符（挡 `foo:12` 落进裸坐标形）。合成一条，要么让 ② ③ 的跨行归属失效，要么把符号坐标拉进清单——两处判的不是同一件事（一处判「档名之后的坐标」，一处判「没有主的坐标」）。
 
 **最近先例（对齐 ∥ 偏离 · 两半各一）**：`report` 半幅的先例 = §3.22 条目 U 的 U-3 形态表（「只出候选清单（`档:行` + 行首 40 字），判官是人」）∥ §5 A-DD19 ④「机判（辅助 · 候选行清单 · 判官是人）」——**对齐** = 不判、只给坐标与片段、读者自判；**偏离** = 那两处的对象是计数串与目录档数，本条的对象是行号坐标，抽取面不同（一处判串形，一处要跨行归属），复用会把归属规则塞进计数判据里。
@@ -2291,16 +2293,16 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 - ① token **带目录段** ⇒ `null`——按真路径判，不走豁免。两张表管的是**裸名**：`file.mjs` 作示例写成裸名，`thincoder-core/tools/file.mjs` 是实档，外形同、身份不同。
 - ② **整名** ∈ `FILENAME_CLASSES` ⇒ `"filename-class"`（该表条目全为 `.md` 形态，按整名判，不剥后缀）。
-- ③ **词干** = 剥掉**扩展名闭集内任一个**后缀后剩下的部分（闭集同 §3.23 抽取式）；词干长度 ≤ 1 ∥ 词干 ∈ `PLACEHOLDER_STEMS` ⇒ `"placeholder"`。
+- ③ **词干** = 剥掉**扩展名清单内任一个**后缀后剩下的部分（清单同 §3.23：`DEFAULT_DOC_EXTS` ∪ 该项目 `index.docCheckExts`，剥法单源 = `isExtension`）；词干长度 ≤ 1 ∥ 词干 ∈ `PLACEHOLDER_STEMS` ⇒ `"placeholder"`。
 - ④ 其余 ⇒ `null`。
 
 **为什么把作用面收到裸名**：实读 `thincoder-core/tools/file.mjs` 是真实档，而词干 `file` 在占位表内 ⇒ 旧的末段名判定把它整类放过（读数：`gate` 出 `PASS`、清单 0 处，而坐标仍在盘）。带目录段的类名同理——`thincoder-cli/AGENTS.md` 被当示例放过。一条修正治两族。
 
 **判据面随本契约走（A-DD38 ①）**：三处消费面一律传**写出来的 token**，不预剥目录段；谓词调用点仍为三处，表仍私有。
 
-**为什么后缀按闭集剥、不按 `.md` 剥**：清单的档名闭集含 `mjs|cjs|js|json|css|html|svg|yml|yaml|sh|ps1`，只剥 `.md` 会让 `x.json:12` 落进清单而 `x.md:12` 不落——同一个示例名在两种后缀下判出两种结果，三面“同输入同输出”就没有判据面。
+**为什么按清单剥、不按 `.md` 剥**：档名后缀的定义含 `mjs|cjs|js|json|css|html|svg|yml|yaml|sh|ps1` 一族，只剥 `.md` 会让 `x.json:12` 落进清单而 `x.md:12` 不落——同一个示例名在两种后缀下判出两种结果，三面“同输入同输出”就没有判据面。
 
-**这不改变锚判读数**：锚判与行号面共用同一组扩展名闭集（`DOC_EXTS`），后缀也按同一组剥 ⇒ 同一个 token 在两面上判出同一个身份，同输入同输出（回归 = A-DD38 ② / DD-146）。
+**这不改变锚判读数**：锚判与行号面共用同一组扩展名定义（`DEFAULT_DOC_EXTS` ∪ 项目清单 `index.docCheckExts`，剥法单源 = `isExtension`）⇒ 同一个 token 在两面上判出同一个身份，同输入同输出（回归 = A-DD38 ② / DD-146）。
 
 **三处消费（同一谓词，不复制）**：
 
@@ -3807,7 +3809,7 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 | DD-143 | 边界 | 空档 ∥ 无坐标档 | 清单块首行 = 量法行（含量法两串）∧ 空态行「行号坐标 0 处」∧ 块内无空行 |
 | DD-144 | 错误（反证） | 夹具档含一处真坐标（正文面），分别跑 `report` 与 `gate` | 两问法 `lineRefs.body` 相等；`gate` 判 `REFUSED`——采集同源、计分面只取正文面 |
 | DD-145 | 边界 | 围栏块内一处坐标 + 正文面一处坐标 | 合计行读 `正文面 1 · 围栏内 1 · 合计 2`；围栏内那处带 `围栏内` 标；清单块在末行 `结论：…` 之前 |
-| DD-146 | 正常 | 条目 X：锚判夹具四类（悬空 / 现存 / 占位 / 类名）改前 · 改后 + 一条非 `.md` 夹具（`x.json` 引一处） | 锚判命中集逐字相等；`x.json` 在清单面同样豁免（后缀按闭集剥—见 §3.24 入参契约） |
+| DD-146 | 正常 | 条目 X：锚判夹具四类（悬空 / 现存 / 占位 / 类名）改前 · 改后 + 一条非 `.md` 夹具（`x.json` 引一处） | 锚判命中集逐字相等；`x.json` 在清单面同样豁免（后缀按清单剥——见 §3.24 入参契约） |
 | DD-147 | 边界 | `docs/` 面档引 `README.md` | 锚判**照报**——操作数族不并入面无关谓词 |
 | DD-148 | 正常 | `scripts/prompt-refs-check.mjs` 全跑 | 豁免名零命中；命中集只余真引用（占位 ∥ 类名两免生效；绝对读数住批档，不入本档） |
 | DD-149 | 错误（反证） | 夹具：`x.md` · `file.md` · `todo.md` · `NAME.md` 各引一处（提示词面形态） | J1 ∥ J3 零命中——占位 ∥ 类名两免生效 |
@@ -3835,7 +3837,7 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 | DD-178 | 正常 ∥ 边界 | 夹具：`thincoder-core/tools/file.mjs` 带坐标（占位词干撞真实档）∥ 裸 `file.mjs` 带坐标 | 前者计入清单 / `gate` `REFUSED`；后者 **0 处**（裸名两免照旧） |
 | DD-179 | 正常 ∥ 边界 | 夹具：一条带目录段、解析不到的类名 token（角括号形写明，不写真实路径）∥ 裸 `AGENTS.md` | 前者 **1 条 `档缺`**；后者 **0 条**（类名免只对裸名） |
 | DD-180 | 正常 ∥ 边界 | 夹具：一行含命令形码段，码段外一处悬空 `.md`；反证 = 同一 token 写进码段内 | 前者 **1 条 `档缺`**；后者 **0 条**（锚面只跳码段内） |
-| DD-181 | 正常 ∥ 边界 | 夹具：一条解析不到的非 `.md` 代码路径（角括号形写明）∥ 在盘的同类 token | 前者 **1 条 `档缺`**；后者 0 条——抽取面扩展名闭集与行号面同一组 |
+| DD-181 | 正常 ∥ 边界 | 夹具：一条解析不到的非 `.md` 代码路径（角括号形写明）∥ 在盘的同类 token | 前者 **1 条 `档缺`**；后者 0 条——抽取面扩展名清单与行号面同一组 |
 | DD-182 | 边界（反证） | 夹具：`第 48 行` 一族中文行序指认 | **0 处**——抽取式不扩（用户边界，不是缺损） |
 | DD-183 | 正常 | `lines` 两档：`.mjs` 301 行 ∥ `.md` 900 行 | 两行读数、两档零标记、`tier` 皆 null；合计行读 `合计 2 档（越硬限 0 · 越软线 0 · 未越线 2）` |
 | DD-184 | 正常 | `lines` 一档 `.mjs` 812 行 | 该行带硬限标记；合计行 `越硬限 1` |

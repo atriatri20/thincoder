@@ -18,8 +18,9 @@
  *   命中行同时点名原花括号 token 与缺的那个展开名（`expanded`）——只报展开名，读者拿到的是一个他档里从没写过的名字；
  *   只报原 token，他看不出该改哪一处。三条不展开的形（取值枚举 ∥ 模板占位 ∥ 嵌套）见 `expandBraceToken` 的头注。
  *   提示词面另剥 CANON 操作数（面判据 = `./paragraph.mjs` 的 `isPromptFace`——按**整 token 边界**剥除后再抽，见 `CANON_OPERANDS`）。
- * 档 token 的扩展名闭集 = `DOC_EXTS`（与 `./line-refs.mjs` 的行号面同一组）：代码路径同样入判——只认 `.md` 时
- *   悬空的代码路径一条不报，读者按指针找不到实现（§3.20「扩展名闭集」条）。
+ * 档 token 的后缀族 = **生效扩展名清单**（缺省 `DEFAULT_DOC_EXTS` ∪ 该档所属项目的 `index.docCheckExts`；判定 = `isDocToken`，
+ *   与 `./line-refs.mjs` 的行号面同一组）：代码路径同样入判——只认 `.md` 时悬空的代码路径一条不报，读者按指针找不到实现
+ *   （§3.20「扩展名清单」条；机制 = `docs/core/design/DOC-CHECK.md` §2.6）。名字字符类走 Unicode 字母与数字（中文档名同样入判）。
  * 读面（读不到 ≠ 干净）：判据读取面遇到「档在盘但读不到」（权限 / 文件锁 / I/O 错）⇒ 记入返回值的 `unreadable` 清单，
  *   **不静默当零命中**；引擎并集上报、`gate` 面据此判 `ERROR`（口径 = 同档 §3.20「读面」块）。
  * 解析序（算法单源 = `../path-resolve.mjs` 的统一解析层，本档只声明本面参数）：**前两级基根**＝
@@ -75,36 +76,80 @@ function docRootBaseKeys(root, manifest) {
   return out
 }
 
-/** 档 token 的**一对边界**（**一处定义、两处消费**）：左界不接 `[A-Za-z0-9_.\-\\/@<>]`（排除更长 token 的尾段）、
- *  右界不接 `[\w]`（`.md` 之后紧邻字母数字 ⇒ 非完整 token）。锚抽取（`ANCHOR_RE`）与操作数剥除
- *  （`stripCanonOperands`）同取这一对——两处各写一份边界，剥除面与抽取面就会漂：路径形操作数的末段名被当
- *  独立操作数删掉、前缀留下来不再构成 token（漏报方向；口径 = §3.20「剥除面 = 整 token 边界」）。 */
-const TOKEN_LEFT_GUARD = "(?<![A-Za-z0-9_.\\-\\\\/@<>])"
-const TOKEN_RIGHT_GUARD = "(?![\\w])"
+/** 档 token 的**一对边界**（**一处定义、四处抽取式加剥除式同吃**——本批转导出面）：
+ *  左界不接名字字符类 ∣ 路径分隔符 ∣ `@` ∣ `<>`（排除更长 token 的尾段）、右界不接字母数字
+ *  （扩展名之后紧邻字母数字 ⇒ 非完整 token）。锚（`ANCHOR_RE`）∥ 花括号组 ∥ 依据行（`CITE_RE_SRC`）∥
+ *  行号面（`./line-refs.mjs` 的 `NAME_RE`）与操作数剥除（`stripCanonOperands`）同取这一对。
+ *  **四条抽取式与剥除式一律 `gu` 标志**：`\p{…}` 不带 `u` 是字面量 `p{…}`，整条式会静默变成另一种式；
+ *  `u` 下过度的转义在模块求值时抛错（fail-loud 在载入面，比抽出错字好）。
+ *  **收敛带来的一处行为差（如实）**：行号面的左界改用本对（含 `<>`）⇒ 名字前紧贴 `<` ∥ `>` 的 token 不再被抽，
+ *  方向是漏报（§2.6「收敛带来的一处行为差」）。 */
+export const TOKEN_LEFT_GUARD = "(?<![\\p{L}\\p{N}_.\\-\\\\/@<>])"
+export const TOKEN_RIGHT_GUARD = "(?![\\p{L}\\p{N}_])"
 
-/** 扩展名闭集（档名后缀族——**物理单源**）：谓词按这一组剥后缀取词干，锚抽取的档 token 也按这一组认
- *  （代码路径同判——§3.20「扩展名闭集」条），行号面（`./line-refs.mjs`）的 `NAME_RE` 从本处 import 拼出。
+/** 名字字符类（**一处定义，四条抽取式同吃**）：Unicode 字母与数字（含中日韩）+ 原 ASCII 符号集。
+ *  空白与全角标点都不在内 ⇒ 中文句读 `。，、；：？！「」『』（）《》【】` 一律截断名字，既做不成名字的一段，
+ *  也做不成扩展名的首字符（§2.6「为什么中文句读吞不进来」）。 */
+export const NAME_CH = "[\\p{L}\\p{N}_.\\-]"
+
+/** 扩展名的**形护**（判「这个后缀长得像不像后缀」；清单判「算不算本项目的档」——两道都过才是候选）：
+ *  ASCII 点 + 首字符字母 + 长度 1–10 ⇒ `1.5` ∥ `v2.0` ∥ `192.168.1.1` 的候选扩展名首字符是数字，抽都抽不出来。
+ *  形护进正则而不进谓词：抽出再丢会动归属窗——`1.5` 先被抽出再被丢掉，那一行里其余 token 的行号坐标归属跟着变（KD-R1）。 */
+export const EXT_PART = "\\.[A-Za-z][A-Za-z0-9]{0,9}"
+
+/** 缺省扩展名清单（**物理单源**；退役件 `DOC_EXTS` 的**改名 + 改值**——位置与消费面不变）：
+ *  取形六条（§2.6）：改前认得的 12 项全留（扔掉即零回归面破）· F19 点名的五项（AC-17 钉在这几个后缀上）·
+ *  真实文件类型补入 · 代码表达式 ∥ 字段访问的末段一律不进 · 单字符后缀不入（`.x` 是 `20.x/22.x` 的来源）·
+ *  归档内层不入（`build/app.tar.gz` 的末段是 `gz`，不在清单 ⇒ 整串不当档名）。
+ *  项目追加项 = `index.docCheckExts`（并集、只增不减）；装配处并集后过一次取形过滤，谓词只查那张已过滤的表。
  *  **为何定义住本档**：依赖方向是 `line-refs.mjs` → 本档（它已有 `docNameExemption` 要拿）；
- *  反方向（本档 import 行号面）会成环，且本档的 `ANCHOR_RE` 在模块求值时就要这组枚举（环上的 TDZ）。
- *  ⇒ 位置与设计写的「单源 = 行号面的抽取式」不同：**枚举值同源，物理住所只有一个**，两者不得各持一份字面。 */
-export const DOC_EXTS = ["md", "mjs", "cjs", "js", "json", "css", "html", "svg", "yml", "yaml", "sh", "ps1"]
+ *  反方向（本档 import 行号面）会成环，且本档的 `ANCHOR_RE` 在模块求值时就要这份清单（环上的 TDZ）。 */
+export const DEFAULT_DOC_EXTS = [
+  // 改前认得的 12 项
+  "md", "mjs", "cjs", "js", "json", "css", "html", "svg", "yml", "yaml", "sh", "ps1",
+  // F19 点名的五项
+  "py", "csv", "txt", "sql", "xml",
+  // 真实文件类型补入（认对了而盘上没有 = 真悬空，照报；不与「认错了东西」混为一谈）
+  "ts", "tsx", "jsx", "vue", "rb", "go", "rs", "java", "kt", "toml", "ini", "conf", "proto",
+  "ico", "git", "db", "pem", "pub",
+]
 
-/** 文档指针 token：`(目录段/)*名.<闭集内一个后缀>` + 可选行号坐标尾 + 可选节指示（`§` + 编号）——两界取自上面那一对。 */
+/** 扩展名是否落在清单内（**扩展名定义只此一处**——豁免谓词的词干判定与候选谓词同取它，§3.24 条目 X / F12 单源）：
+ *  比较不折叠点、不分大小写（`JSON` 与 `json` 同项、`.md` 与 `md` 同项——书写面允许带前导点）。
+ *  `exts` 缺省 = `DEFAULT_DOC_EXTS`（引擎装配好的生效清单由调用方传入）。 */
+export function isExtension(ext, exts = DEFAULT_DOC_EXTS) {
+  const e = String(ext ?? "").replace(/^\./, "").toLowerCase()
+  if (e === "") return false
+  return (exts ?? DEFAULT_DOC_EXTS).some((x) => String(x ?? "").trim().replace(/^\./, "").toLowerCase() === e)
+}
+
+/** 候选谓词（**清单的判定落点** · §2.6「清单落在哪一层」）：只看 token 末段最后一个点之后那一段——
+ *  有没有目录段在这里没有分支（裸名与路径形**同一把尺**）。清单由引擎按该档所属项目根装配好再传进来，
+ *  本谓词只按字面查已过滤的表，不另设第二支、不逐条列被挡下的 token（数量大，列出来正是真命中被淹没的成因）。 */
+export function isDocToken(token, exts = DEFAULT_DOC_EXTS) {
+  const base = String(token ?? "").split("/").pop()
+  const dot = base.lastIndexOf(".")
+  if (dot <= 0 || dot === base.length - 1) return false
+  return isExtension(base.slice(dot + 1), exts)
+}
+
+/** 文档指针 token：`(目录段/)*名<扩展名的形护>` + 可选行号坐标尾 + 可选节指示（`§` + 编号）——两界取自上面那一对；
+ *  后缀算不算数由 `isDocToken` 在消费点判（形护在这里，清单在那里——两条各坐一处）。 */
 const ANCHOR_RE = new RegExp(
-  `${TOKEN_LEFT_GUARD}((?:[A-Za-z0-9_.\\-]+\\/)*[A-Za-z0-9_.\\-]+\\.(?:${DOC_EXTS.join("|")}))(?::\\d+(?:-\\d+)?)?(?:\\s*§\\s*(\\d+(?:\\.\\d+)*))?${TOKEN_RIGHT_GUARD}`,
-  "g",
+  `${TOKEN_LEFT_GUARD}((?:${NAME_CH}+\\/)*${NAME_CH}+${EXT_PART})(?::\\d+(?:-\\d+)?)?(?:\\s*§\\s*(\\d+(?:\\.\\d+)*))?${TOKEN_RIGHT_GUARD}`,
+  "gu",
 )
 
 /** 花括号组形的抽取式（判据见头注「花括号组形」条）：目录段照常、末段 = 前缀 `{` 成员 `,` 成员 `}` 后缀 `.` 扩展名。
  *  三支走不到的守卫**不写成判据**（写成判据就是给没人走的路修栅栏）：
- *  · 组内含 `/` ∥ `*`（取值枚举 `{ running / queued / done }`）——成员字符类 `[A-Za-z0-9_.\-]` 本就不含这两个字符，匹配不上；
+ *  · 组内含 `/` ∥ `*`（取值枚举 `{ running / queued / done }`）——成员字符类（`NAME_CH`）本就不含这两个字符，匹配不上；
  *  · 成员 < 2（`${count}` ∥ `📁 {name}` 这类模板占位）——成员后的 `(?:,…)+` 必带一个逗号；
- *  · 嵌套形（`i18n-{zh,en}-{shell,me}.mjs`：后缀里再出现 `{`）——后缀字符类不含 `{`，外层匹配不成；
+ *  · 嵌套形（`i18n-{zh,en}-{shell,me}.mjs`：后缀里再出现 `{`）——后缀位（`NAME_CH`）不含 `{`，外层匹配不成；
  *    内层组则由消费点那条「紧跟在 `}` 之后的那一组不展开」挡住（左界守卫放它过：`}` 不在排除类内）。
  *  嵌套那一形因此今天不入判、明天仍不入判——本支不假装治了它。 */
 const BRACE_GROUP_RE = new RegExp(
-  `${TOKEN_LEFT_GUARD}((?:[A-Za-z0-9_.\\-]+\\/)*[A-Za-z0-9_.\\-]*\\{[A-Za-z0-9_.\\-]+(?:,[A-Za-z0-9_.\\-]+)+\\}[A-Za-z0-9_.\\-]*\\.(?:${DOC_EXTS.join("|")}))${TOKEN_RIGHT_GUARD}`,
-  "g",
+  `${TOKEN_LEFT_GUARD}((?:${NAME_CH}+\\/)*${NAME_CH}*\\{${NAME_CH}+(?:,${NAME_CH}+)+\\}${NAME_CH}*${EXT_PART})${TOKEN_RIGHT_GUARD}`,
+  "gu",
 )
 
 /** 展开：`<目录段…/>前缀{名1,名2[,…]}后缀` ⇒ N 个具体档名（目录段原样保留，只展开末段的组）。
@@ -140,10 +185,10 @@ const PLACEHOLDER_STEMS = new Set([
  *  就**不构成标记**，不判：讲写法的档里本就有「`依据` = 判据契约（…）＋用户裁定「…」」这类散文句，
  *  松判会把它们读成标记形，而批档恒在收口判域，一次假命中就拦一次合法收口。
  *  （`依据` 与路径之间、以及那个分隔符是否带空白不限——那一段不是判据要防的那一处。）
- *  扩展名族 = `DOC_EXTS`（与行号坐标族同组，单源）。
+ *  扩展名族 = 生效扩展名清单（与行号坐标族同组，单源；后缀算不算数由 `isDocToken` 在消费点判）。
  *  **导出面说明**：源串导出只作**量法扫串的单一源**（改面单测档的「存量读数」用它，不再自建第二份字面）——
  *  生产行为不变，别处不去拼它。 */
-export const CITE_RE_SRC = `依据\\s*[:：=]?\\s*\`?((?:[A-Za-z0-9_.\\-]+/)*[A-Za-z0-9_.\\-]+\\.(?:${DOC_EXTS.join("|")}))\`?[:：=]?「([^」]*)」`
+export const CITE_RE_SRC = `依据\\s*[:：=]?\\s*\`?((?:${NAME_CH}+/)*${NAME_CH}+${EXT_PART})\`?[:：=]?「([^」]*)」`
 
 /** 读档（**读面单源**：读不成 ⇒ 记入 `unreadable` 清单、返回空串——「没读成」不得与「干净」同形，
  *  口径 = 同档 §3.20「读面」块）；`unreadable` 缺省 ⇒ 不记（调用方还没接这一面）。 */
@@ -171,7 +216,7 @@ function citedTextReader(unreadable) {
  * 旧式按末段名判（消费面各自 `basename`）就是「真档被当示例」那条漏报的口子。
  * @param {string} token 写出来的档 token（裸名 ∥ `目录段/名`）
  * @returns {null|"filename-class"|"placeholder"} `"filename-class"` = 约定的类名（整名判，不剥后缀）；
- *   `"placeholder"` = 占位词干（按闭集剥后缀后取词干，词干 ≤ 1 字符或命中占位表）；`null` = 不是豁免名
+ *   `"placeholder"` = 占位词干（按清单剥后缀后取词干——剥法单源 = `isExtension`；词干 ≤ 1 字符或命中占位表）；`null` = 不是豁免名
  */
 export function docNameExemption(token) {
   const bn = String(token ?? "").replace(/\\/g, "/").toLowerCase()
@@ -179,7 +224,7 @@ export function docNameExemption(token) {
   if (FILENAME_CLASSES.has(bn)) return "filename-class"
   const dot = bn.lastIndexOf(".")
   const ext = dot > 0 ? bn.slice(dot + 1) : ""
-  const stem = DOC_EXTS.includes(ext) ? bn.slice(0, dot) : bn
+  const stem = isExtension(ext) ? bn.slice(0, dot) : bn
   if (stem.length <= 1 || PLACEHOLDER_STEMS.has(stem)) return "placeholder"
   return null
 }
@@ -205,7 +250,7 @@ export const CANON_OPERANDS = [
  *  该指针在提示词面**不被判**（漏报方向）。 */
 const OPERAND_STRIP_RES = CANON_OPERANDS.map((name) => new RegExp(
   `${TOKEN_LEFT_GUARD}${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}${TOKEN_RIGHT_GUARD}`,
-  "g",
+  "gu",
 ))
 
 export function stripCanonOperands(line) {
@@ -295,7 +340,7 @@ export function isBatchFaceRef(refAbs, token, face) {
  *  唯一开声明仓腿的面）/ `suffixFallback`（文档锚面同时是唯一开第 6′ 步的面，§2.8），
  *  `bases` = 无、`scanBases` = `docRoot` 各键（只喂同名候选提示），
  *  `session` = 本次调用建的那份解析会话（同名候选查表 ∥ 基根发现同轮记忆 ∥ 后缀索引——成本不随悬空 token 数增长）。
- *  行号坐标尾（`:N`）不参与档解析——抽取面已剥离坐标尾与节指示，token = 档路径（后缀在闭集内）。
+ *  行号坐标尾（`:N`）不参与档解析——抽取面已剥离坐标尾与节指示，token = 档路径（后缀在清单内）。
  *  `num` = 指针节号（`§` 后编号；无节指示 ⇒ null）——仅用于判定节在盘，不参与档解析。
  *  @returns {{state:string, ...}} 层的四态结果 */
 function resolveDoc(token, refFile, base, scanBases, session) {
@@ -320,10 +365,12 @@ function docResolver(base, scanBases, session) {
 /**
  * 锚判据主行程：传入档逐档逐行抽取 + 解析 + 节在盘判定。
  * @param {string} root 项目根（解析序 ① 的基准）
- * @param {{files?:string[], manifest?:{ok:boolean, manifest?:object|null}}} o `files` = **判定集兼解析集**（调用方传入的档清单——判定范围 = 解析范围，
+ * @param {{files?:string[], manifest?:{ok:boolean, manifest?:object|null}, exts?:string[]}} o `files` = **判定集兼解析集**（调用方传入的档清单——判定范围 = 解析范围，
  *   无目录遍历、无全域索引：清单外的档既不判也不参与解析）；
  *   `manifest` = **可选注入**——引擎按本根已读的那份（每根一次读，§2.5 KD-7），给了就吃它、
- *   缺省仍自读（直调判法本体的夹具零改）；它同时供 `docRoot` 扫描根与批档基底两处（判定面零改）
+ *   缺省仍自读（直调判法本体的夹具零改）；它同时供 `docRoot` 扫描根与批档基底两处（判定面零改）；
+ *   `exts` = **生效扩展名清单**（引擎按该根装配好的那张：缺省 ∪ 项目追加项，已过一次取形过滤，§2.6）——
+ *   缺省 ∥ 空数组 ⇒ `DEFAULT_DOC_EXTS`（空清单会让全部 token 静默不成候选，那是假绿的方向，不接）
  * @returns {{hits:Array, unverified:Array, unreadable:string[], batchRefs:number, suffixHits:Array, suffixBuilds:number}} hits = 命中（`档缺` / `节缺` / `引缺` / `环引`——`档缺` 携 `sameName` 同名候选与声明仓四格，
  *   `引缺` 携 `quote` 引文原文与 `target` 命中的档，`环引` 携 `root` 与 `chain`）；
  *   `unverified` = "判得了仓名、判不了存在性"的列报（声明根不在本机——**零命中、不入闸**；两个产出方：
@@ -334,8 +381,11 @@ function docResolver(base, scanBases, session) {
  *   本来判 `档缺`，现在解析出了；它不是新增 ∥ 删掉的命中，而是「本来就该解析、只是写法与解析面不匹配」那一批的账；
  *   `suffixBuilds` = 后缀索引建表次数（读数 `后缀索引建 N 次`；同一次调用里恒 1）
  */
-export function checkAnchors(root, { files = [], manifest } = {}) {
+export function checkAnchors(root, { files = [], manifest, exts } = {}) {
   const base = resolve(root)
+  // 生效扩展名清单（§2.6）：引擎按本根装配好传进来（并集 + 取形过滤已做过）；直调判法本体的夹具不传 ⇒ 缺省清单。
+  // **空数组不是「什么都判不了」**：它是上游装配失败的一种形态，那样会让全部 token 静默不成候选（假绿）——向严回缺省。
+  const extList = Array.isArray(exts) && exts.length > 0 ? exts : DEFAULT_DOC_EXTS
   const scanBases = docRootBaseKeys(base, manifest)
   const hits = []
   const unverified = []
@@ -363,9 +413,9 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
   })
   for (const f of files) {
     const text = readText(f, unreadable) // 读不到 ⇒ 入 unreadable，不再静默当零命中
-    const re = new RegExp(ANCHOR_RE.source, "g") // 每档一份实例（零共享 lastIndex 状态）
-    const citeRe = new RegExp(CITE_RE_SRC, "g") // 同上（引文标记面）
-    const braceRe = new RegExp(BRACE_GROUP_RE.source, "g") // 同上（花括号组形）
+    const re = new RegExp(ANCHOR_RE.source, "gu") // 每档一份实例（零共享 lastIndex 状态）
+    const citeRe = new RegExp(CITE_RE_SRC, "gu") // 同上（引文标记面）
+    const braceRe = new RegExp(BRACE_GROUP_RE.source, "gu") // 同上（花括号组形）
     const stripOperands = isOperandFace(f) // 只有提示词面剥（面判据 = `isPromptFace`）
     let fence = null // 围栏标记（` ∥ ~）；null = 不在块内
     text.split("\n").forEach((l, i) => {
@@ -397,6 +447,8 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
           if (quote === "") continue // `「」` 空引文不构成标记（§3.25 边界：没有第二分支）
           // 豁免名（类名 ∥ 占位）在锚面不抽 ⇒ 引文面同判：同一 token 不得两套口径（§3.24 条目 X / F12 单源）
           if (docNameExemption(token) !== null) continue
+          // 清单谓词（§2.6）：后缀不在生效清单内 ⇒ 不是候选（与锚 ∥ 花括号 ∥ 行号面四处同形判断）
+          if (!isDocToken(token, extList)) continue
           const start = c.index + c[0].indexOf(token)
           cited.push({ start, end: start + token.length })
           // 面判（批档面互引不判）：与锚分支同判——同一 token 不得一面判一面不判。区间已占 ⇒ 锚面不再重报。
@@ -434,6 +486,8 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
         // 类名 ∥ 占位符两免：抽取面不把它们当指针（判据 = DOC-DISCIPLINE §3.24 条目 X——
         // 判定只此一处，兄弟脚本与行号坐标清单消费同一谓词；**入参是 token 本身**，带目录段者不豁免）
         if (docNameExemption(token) !== null) continue
+        // 清单谓词（§2.6）：形护过了还要过这一道——`JSON.parse` ∥ `20.x` 这类裸名在清单外 ⇒ 不是候选
+        if (!isDocToken(token, extList)) continue
         // 面判（批档面互引不判 · §3.29 条目 AC）：引用方与目标同在批档基底根下 ⇒ 不解析、不判，只计数。
         if (isBatchFaceRef(f, token, face)) { batchRefs++; continue }
         const r = resolveToken(token, f)
@@ -449,6 +503,8 @@ export function checkAnchors(root, { files = [], manifest } = {}) {
       // 每个解不到的展开名出一条 `档缺`，携 `expanded`——报面据此同时点名原 token 与缺的那个名字。
       // 判决词 ∥ 解析序 ∥ 豁免谓词 ∥ 阈值四样零改：本支只让抽取面看见一个此前看不见的形。
       for (const group of braceGroups) {
+        // 组形的后缀与展开名同一段（末段之后那一段）⇒ 组 token 过一次谓词就够；不过就不展开（与锚面同尺）。
+        if (!isDocToken(group.token, extList)) continue
         for (const name of expandBraceToken(group.token)) {
           if (docNameExemption(name) !== null) continue // 类名 ∥ 占位两免与锚面同判（同一 token 不得两套口径）
           if (isBatchFaceRef(f, name, face)) { batchRefs++; continue } // 面判同判（与锚 ∥ 依据两条分支同一谓词）

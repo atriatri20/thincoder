@@ -15,6 +15,10 @@ Parameters:
 What it checks: three criteria, with built-in thresholds that no project declaration changes:
 - **Anchors** — a documentation pointer must resolve. Four hit classes, all counted into one `锚` total (no separate verdict word): `档缺` (the file is not on disk), `节缺` (the section indicator matches no heading in the target), `引缺` (the line claims its own basis as `依据 <path>「<quotation>」` and the quotation is not a contiguous substring of that file), and `环引` (the repos this project declares cycle back to the group root - a repo-level finding, reported against the declaration file itself, with no line number).
 
+  A pointer is a token whose suffix is on the extension list; a bare name and a path-shaped name sit under **one ruler** - a path separator alone never makes a token a document name.
+
+  The list = the built-in `DEFAULT_DOC_EXTS` united with `index.docCheckExts` (add-only, never a replacement; a single-character suffix or an archive inner layer never takes effect). A project writing that key gets one reading line in `report` mode.
+
   A pointer resolves through these legs, in this order:
 
   - the project root (full path);
@@ -29,13 +33,24 @@ What it checks: three criteria, with built-in thresholds that no project declara
 - **Line-number coordinates** — a filename token followed by `:` and digits is a hit. Both modes collect them: `report` prints the inventory (a measure line, the totals, one line per hit) and `gate` counts the body-face ones into its total and names them in the REFUSED line as `行号坐标 N 处`. A coordinate inside a fenced block is a reading, never a hit.
 
 Gate receipt — the first line is the machine-readable verdict, and consumers judge by that prefix:
-- `DOC-CHECK GATE: PASS` — every listed document is clean.
-- `DOC-CHECK GATE: REFUSED（命中 K 条）` — K hits; fix them in the same round.
+- `DOC-CHECK GATE: PASS` — every listed document is clean, or every listed document sits inside the manifest's `index.docCheckExcludePaths` face: those are exempt, not judged, and the receipt names them in the exclusion bucket.
+- `DOC-CHECK GATE: REFUSED（命中 K 条）` — K hits; fix them in the same round. K counts only hits **not** registered as adjudicated false positives.
 - `DOC-CHECK GATE: ERROR（reason）` — nothing was judged, so neither `PASS` nor `REFUSED` was produced. Fail-closed: no `PASS` means not passed.
+
+**Adjudicated false positives (the third bucket)** - a hit you have ruled a false positive, and whose document should stand, is registered in the manifest's `index.docCheckExemptions` (an array, read per project root).
+
+One entry = five fields, all required: `file` (project-root-relative) · `kind` (hit class) · `text` (hit text) · `why` (the ruling and its basis) · `review` (when to re-examine).
+
+A registered hit still appears in every receipt under `豁免 N 条（已裁定假阳，不阻断交付）：`, listing all four items, and it no longer blocks the gate.
+
+- Matched on `file` + `kind` + `text` verbatim, never on a line number: inserting a line above the hit does not void the entry; editing the hit text does, and the hit blocks again. Deleting the entry puts the hit back in the blocking count - nothing is memoised.
+- An entry missing a field, or carrying a `kind` outside the closed set, does not apply: the hit still blocks and the receipt names it (`豁免登记无效 N 条`). An entry matching no hit is reported as `登记未命中 N 条（原文已变或已不在判集，复核后删）`.
+- Never a class rule: a directory, a prefix or a wildcard does not count. Keeping a whole region unjudged is the exclusion face's job - "not looked at", against "looked at, ruled, not blocking". The two are not interchangeable.
 
 `ERROR` is what you get for three things:
 - a document that is on disk but cannot be read — a file the check could not read is not a clean file.
 - a range that judges no document at all: an empty `docs` list, a round that wrote no `.md`, a list whose paths are all off disk.
+  A list whose documents all sit inside the manifest's `index.docCheckExcludePaths` face is not this case: those documents are exempt from judging, and the first line is still `DOC-CHECK GATE: PASS`.
 - a rootless call (`无法定根`), where every document is named with its reason and no hit line is printed.
 
 In each case, pass explicit `docs` and re-run.

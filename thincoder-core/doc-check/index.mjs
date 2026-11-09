@@ -35,15 +35,25 @@
  *   `root` 入参 = **声明根**（调用方给出的坐标系），不再是整批共用的坐标系；**缺声明根 ⇒ 整清单不判、显式 `ERROR`**
  *   （政策：半份判定在报面上分不出「这档干净」与「这档没判」），「声明根自身是不是项目」不参与判断。
  *   判定内容（锚 ∥ 段长 ∥ 行号坐标 ∥ 引文）一字不动——改的只是「拿哪个根去解析」：按根分组、逐组调既有 `checkAnchors(root_i, …)`。
- * 判集排除（manifest 的 `index.docCheckExcludePaths`——机制单源 = `docs/core/design/DOC-CHECK.md` §2.6）：
+ * 判集排除（manifest 的 `index.docCheckExcludePaths`——机制单源 = `docs/core/design/DOC-CHECK.md` §2.7）：
  *   判之前把落在排除面里的档从**判集**里去掉——改的是判集，判据本体（阈值 ∥ 命中类 ∥ verdict 词）零改。
- *   排除面相对**该档自己的项目根**声明（一档一根）；排除档进 `excluded` 桶、两面都出行——它既不是命中，
- *   也不是「不在盘」或「读不到」。全清单被排除时两面各有一句点名排除面：判了 0 档不得读成干净范。
+ *   排除面相对**该档自己的项目根**声明（一档一根）；排除档进 `excluded` 桶、两面都出行（记录「这批档按声明免检」，
+ *   不是免责句）——它既不是命中，也不是「不在盘」或「读不到」。**免检即放行**：全清单被排除是合法状态，
+ *   两面照常通过（首行 `PASS`、末行均清句）、零免责句。排除是调用方的声明，不是「检不了的声明」。
+ * 逐条豁免（manifest 的 `index.docCheckExemptions`——机制单源 = 同档 §2.7）：
+ *   三条判据都跑完之后、verdict 之前分类：登记的命中进 `exempted` 桶（照列、不阻断），未登记的留 `hits`（拦）。
+ *   识别键 = `file` + `kind` + `text` 三合一全等（**不用行号**——插一行整片失效，豁免就成了一次性的）。
+ *   登记表按**该条命中自己的 `file`** 求 `rootOf` 取（一个仓的登记不替另一个仓放行）；条目形态在**消费点**判，
+ *   不进 `validateManifest` 的 `errors`（一个写坏的条目不该把整份 manifest 打掉）。**两面同出**、不进 `hits`、不改 verdict。
+ * 扩展名清单（manifest 的 `index.docCheckExts`——机制单源 = 同档 §2.6）：
+ *   装配处的**一处拼装**：`DEFAULT_DOC_EXTS ∪ 该根 index.docCheckExts`，再过一次取形过滤（单字符后缀 ∥ 归档内层剔除）；
+ *   清单透传给判法面的 `isDocToken`（锚 ∥ 花括号 ∥ 依据行 ∥ 行号面四处同吃）。`report` 面出读数一行（该仓写了这项才出）。
  */
 import { readFileSync, statSync } from "node:fs"
 import { resolve } from "node:path"
 import { checkParagraphs, DOC_CLASS } from "./paragraph.mjs"
-import { checkAnchors } from "./anchors.mjs"
+// 判法面（锚 ∥ 行号坐标）：生效扩展名清单的缺省值也住 `./anchors.mjs`（扩展名定义只此一处，D2）。
+import { DEFAULT_DOC_EXTS, checkAnchors } from "./anchors.mjs"
 import { collectLineRefs, lineRefsBlock } from "./line-refs.mjs"
 // 域表的一次读（§2.5 KD-7）。
 import { readManifest } from "../manifest.mjs"
@@ -130,7 +140,7 @@ function excludeFaceOf(entry) {
  *  命中语义 = 恰等 ∨ 后随 `/`（归一已吃掉尾斜杠，目录与单个档同写一式）；比较走 `pathKey`——
  *  Windows 上大小写写错的排除项会静默不生效，那正是本节要消的静默漏。
  *  口径写死一条路：过滤后的清单就是 `checkFiles`，**不另设 `judgedFiles` 这第二个名字**——否则
- *  「范围」行的档数 ∥ 「0 档受检」那一支 ∥ `hits` 口径各要重新指定吃谁，且全排除时 `checkFiles` 非空 ⇒ 首行落 `PASS`。 */
+ *  「范围」行的档数 ∥ 「0 档受检」那一支 ∥ `hits` 口径各要重新指定吃谁，实现席只能猜。 */
 function splitExcluded(files, declaredBase, readOf) {
   const faces = new Map()
   const faceOf = (root) => {
@@ -148,6 +158,123 @@ function splitExcluded(files, declaredBase, readOf) {
     else checkFiles.push(abs)
   }
   return { checkFiles, excluded }
+}
+
+/** 归档内层扩展名（§2.6 取形第六条）：装了外层的名字，内层后缀不单列 ⇒ `build/app.tar.gz` 的末段是 `gz`、不在清单
+ *  ⇒ 整串不当档名。**两条取形规则对项目自己写的项同样生效**（写了与不写，读数逐字相同）。 */
+const ARCHIVE_INNER_EXTS = Object.freeze(["tar", "gz", "zip", "bz2", "xz", "7z", "tgz", "rar"])
+
+/** 生效扩展名清单（**装配处单源** · §2.6「生效清单怎么拼」）：`DEFAULT_DOC_EXTS ∪ 该根 index.docCheckExts`，
+ *  并集**不替换**（与 `codeExtensions` ∥ `docExtensions` 同族语义：只增不减——窄判集是豁免面的事），
+ *  再过一次取形过滤：单字符后缀 ∥ 归档内层一律剔除；比较不折叠点、不分大小写（书写面允许带前导点）。
+ *  **过滤坐在装配处而不是谓词里**：谓词 `isDocToken` 只按字面查这张表，项目写进去的项先被剔掉，它看不到。 */
+function effectiveExtsOf(entry) {
+  const declared = entry.ok ? entry.res.manifest?.index?.docCheckExts : []
+  const out = []
+  for (const raw of [...DEFAULT_DOC_EXTS, ...(Array.isArray(declared) ? declared : [])]) {
+    const e = String(raw ?? "").trim().replace(/^\./, "").toLowerCase()
+    if (e.length < 2 || ARCHIVE_INNER_EXTS.includes(e)) continue
+    if (!out.includes(e)) out.push(e)
+  }
+  return out
+}
+
+/** 一根一份生效清单（与排除面 ∥ 域表吃**同一次** `readManifest`——`readOf` 的记忆体）：清单随根变，不成全局常量。 */
+function extsReader(readOf) {
+  const memo = new Map()
+  return (root) => {
+    const key = pathKey(root)
+    let list = memo.get(key)
+    if (list === undefined) { list = effectiveExtsOf(readOf(root)); memo.set(key, list) }
+    return list
+  }
+}
+
+/** 登记条目的判据类闭集（§2.7 的 `kind` 表）：按类 ∥ 通配 ∥ 路径前缀都不作数——`kind` 是判据类、`text` 是逐处文本。 */
+const EXEMPTION_KINDS = Object.freeze(["锚·档缺", "锚·节缺", "锚·引缺", `段·${DOC_CLASS.para}`, `行·${DOC_CLASS.line}`, LINE_REF_CLASS])
+
+/** 一条登记的形态判据（**在消费点判**，不进 `validateManifest` 的 `errors`——一个写坏的条目不该把整份 manifest 打掉：
+ *  manifest 不可用 ⇒ 域表空集 ⇒ 批档面互引不豁免 ⇒ 邻仓批档引用一律 `档缺`）。
+ *  @returns {null|string} `null` = 可用；否则 = 报面点名用的那句（五字段缺一 ∥ 非字符串 ∥ 空白，或 `kind` 在闭集外） */
+function exemptionProblem(e) {
+  if (e === null || typeof e !== "object" || Array.isArray(e)) return "条目不是对象"
+  for (const k of ["file", "kind", "text", "why", "review"]) {
+    if (typeof e[k] !== "string" || e[k].trim() === "") return `缺 ${k}`
+  }
+  if (!EXEMPTION_KINDS.includes(e.kind)) return `kind 不在闭集：${e.kind}`
+  return null
+}
+
+/** 命中 → 识别键（§2.7「命中怎么被稳定识别」）：`file` + `kind` + `text` 三合一全等，**不用行号**。
+ *  `null` = 该类不可登记：`环引` 是仓级命中（无行号、无档内文本）——假环意味着声明的 `index.publicRepos` 本身错了，
+ *  那是改声明，不是登记一个假阳。 */
+function exemptionKeyOf(hit) {
+  if (hit.clazz === "档缺") return { kind: "锚·档缺", text: hit.token }
+  if (hit.clazz === "节缺") return { kind: "锚·节缺", text: `${hit.token}§${hit.section}` }
+  if (hit.clazz === "引缺") return { kind: "锚·引缺", text: `${hit.token}「${hit.quote ?? ""}」` }
+  if (hit.clazz === DOC_CLASS.para) return { kind: `段·${hit.clazz}`, text: String(hit.text ?? "") }
+  if (hit.clazz === DOC_CLASS.line) return { kind: `行·${hit.clazz}`, text: String(hit.text ?? "") }
+  if (hit.clazz === LINE_REF_CLASS) return { kind: LINE_REF_CLASS, text: String(hit.text ?? "") }
+  return null
+}
+
+/** 装配处的豁免分类（§2.7 · **三条判据跑完之后、verdict 之前**）：一档一根地取登记表（与域表同一次读），
+ *  已登记的命中进 `exempted`（照列、不阻断），未登记的留 `hits`（拦）。
+ *  - **`hits` 只数未登记的那批**：消费面（批档门 ∥ 收口 ∥ 写前门）全读 `hits.total`，留在里面就要每处各学一遍「已裁定的不算」。
+ *  - **登记未命中** = 这一轮一条都没对上的有效条目（原文已变 ∥ 该档已不在判集）——登记跟着一条消失的命中活下来，
+ *    就是下一轮没人敢删的残骸。
+ *  - **无效条目单独点名**：它不生效（命中照拦），但不把整份 manifest 打掉。
+ *  @returns {{anchorHits:Array, paragraphHits:Array, lineRefHits:Array, exempted:Array, invalid:Array, stale:number}}
+ *   `exempted` 每格 = 原命中 + `kind` + `exemption`（`why` ∥ `review` 从登记条目带出，报面四项一个不少） */
+function classifyExemptions({ anchorHits, paragraphHits, lineRefHits, base, roots, readOf }) {
+  const tables = new Map()
+  const tableOf = (root) => {
+    const key = pathKey(root)
+    const hit = tables.get(key)
+    if (hit !== undefined) return hit
+    const entry = readOf(root)
+    const raw = entry.ok ? entry.res.manifest?.index?.docCheckExemptions : []
+    const items = (Array.isArray(raw) ? raw : []).map((e, i) => {
+      const problem = exemptionProblem(e)
+      if (problem !== null) return { problem, index: i }
+      return { fileKey: pathKey(String(e.file).trim()), kind: e.kind, text: e.text, why: e.why, review: e.review, used: false }
+    })
+    const t = { root, items }
+    tables.set(key, t)
+    return t
+  }
+  // 参与判定的每个根都读一次（与域表同一次读）：登记未命中要能数出「这一轮一条都没对上」的那批。
+  for (const r of roots) tableOf(r)
+  const split = (hits) => {
+    const kept = []
+    const exempted = []
+    for (const h of hits) {
+      const k = exemptionKeyOf(h)
+      if (k === null) { kept.push(h); continue }
+      const t = tableOf(rootOf(h.file, base))
+      const own = pathKey(rel(t.root, h.file))
+      const matched = t.items.find((it) => it.problem === undefined && it.fileKey === own && it.kind === k.kind && it.text === k.text)
+      // 同一识别键可能对上多处（同一行两处行号坐标 ∥ 两段同文）：**一处登记免掉这一组**——识别键本身分不开它们，
+      // 只认第一处会让第二处「登记了却照拦」，而作者看回执只会以为登记坏了。
+      if (matched) { matched.used = true; exempted.push({ ...h, kind: k.kind, exemption: matched }); continue }
+      kept.push(h)
+    }
+    return { kept, exempted }
+  }
+  const a = split(anchorHits)
+  const p = split(paragraphHits)
+  const l = split(lineRefHits)
+  const invalid = []
+  let stale = 0
+  for (const t of tables.values()) for (const it of t.items) {
+    if (it.problem !== undefined) invalid.push({ root: t.root, index: it.index, problem: it.problem })
+    else if (!it.used) stale++
+  }
+  return {
+    anchorHits: a.kept, paragraphHits: p.kept, lineRefHits: l.kept,
+    exempted: [...a.exempted, ...p.exempted, ...l.exempted],
+    invalid, stale,
+  }
 }
 
 /** 并组的锚结果（§2.2）：命中按**文件稳定序**（清单位次）再按行号合并。
@@ -246,6 +373,10 @@ function noRootOutcome(items) {
     suffixBuilds: 0,
     projectRoots: [],
     domainTables: [],
+    // 豁免桶（§2.7）的返回形同键：无声明根时一条都没有，但消费面读 `.exempted` 不该拿到 undefined。
+    exempted: [],
+    exemptInvalid: [],
+    exemptStale: 0,
   }
 }
 
@@ -457,27 +588,65 @@ function suffixBlock(hits, builds) {
  *  它不是命中：不进 `hits`、不改 verdict、不动首行与命中行形（不拦、留痕）。 */
 const batchFaceLine = (n) => `批档面互引未判 ${n} 处（批档 ↔ 批档 · 只留痕，不进 hits、不改 verdict）`
 
+/** 豁免块的句形（§2.7 报面 · **两问法同出**，不进 `hits`、不改 verdict）：N = 0 时零出 ⇒ 未登记任何豁免的仓，
+ *  两面报面与改动前逐字相等（零回归）。F21 的四项一个不少：哪一条（`kind` + `text`）∥ 哪一份档（`file`）∥
+ *  理由（`why`）∥ 复审（`review`）。 */
+const EXEMPT_HEAD = (n) => `豁免 ${n} 条（已裁定假阳，不阻断交付）：`
+const EXEMPT_INVALID_HEAD = (n) => `豁免登记无效 ${n} 条（字段缺一或形态不对，不生效；命中照拦）：`
+const EXEMPT_STALE = (n) => `登记未命中 ${n} 条（原文已变或已不在判集，复核后删）`
+
+/** 已裁定条目一行：行首项目标签（≥2 根才打）+ 判据类 + 档与行 + 命中文本 + 理由 + 复审。 */
+function exemptBlock(lay, list) {
+  if (!Array.isArray(list) || list.length === 0) return []
+  const out = [EXEMPT_HEAD(list.length)]
+  for (const e of list) {
+    const at = typeof e.line === "number" ? `:${e.line}` : ""
+    out.push(`  ${lay.tag(e.file)}✗ ${e.kind} ${lay.shown(e.file)}${at} ${e.exemption.text} —— ${e.exemption.why}（复审 ${e.exemption.review}）`)
+  }
+  return out
+}
+
+/** 无效登记一行：点名是哪一份 manifest 的第几项、差在哪一条——「登记了却不生效」必须看得见，否则作者以为已经放过。 */
+function invalidExemptionBlock(lay, list) {
+  if (!Array.isArray(list) || list.length === 0) return []
+  const out = [EXEMPT_INVALID_HEAD(list.length)]
+  for (const v of list) {
+    const at = lay.shown(resolve(v.root, "PROJECT-MANIFEST.json"))
+    out.push(`  ${lay.tag(resolve(v.root, "PROJECT-MANIFEST.json"))}${at} · index.docCheckExemptions[${v.index}] —— ${v.problem}`)
+  }
+  return out
+}
+
+/** 扩展名清单读数（§2.6：「报面读数一行，只在该仓写了这一项时出」· 仅 `report` 面）：不进 `hits`、不改 verdict；
+ *  没写这一项的仓零出 ⇒ 单项目零回归面不破。N = 该仓写了几项（按字面数；被取形剔掉的不逐条点名）。 */
+const extListLine = (n) => `扩展名清单：缺省 + 本仓 ${n} 项`
+
 /** 「读不到」清单行的句头（报面单源 · 两问法同形）：点名哪几档未判——一个不点名的「没读成」与「干净」在报面上无法区分。 */
 const unreadableHead = (n) => `读不到 ${n} 档（未判，不得读作已检）：`
 
 /** gate 报面（固定句形——§3.20「报面（固定句形 · 交付门 gate）」）：首行 verdict = 唯一机判串。
  *  §2.3：verdict 只有一条；单根清单报面逐字不变（零回归的判据面）；≥2 根时范围行追加根清单、
  *  命中 ∥ 跳过 ∥ 读不到行带项目标签。 */
-function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable, anchors, paragraphs, lineRefs }) {
+function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable, anchors, paragraphs, lineRefs, exempted = [], exemptInvalid = [], exemptStale = 0 }) {
   // 第三条判据的**判集 = 正文面**（围栏块外）；围栏内那部分只进下面那行读数（口径 = §3.23「判面 = 正文面」块）。
   const bodyRefs = lineRefs.body.length
   const fencedRefs = lineRefs.fenced.length
   const total = anchors.hits.length + paragraphs.length + bodyRefs
   const src = docsSource === "session" ? "本会话写过的文档" : "显式 docs"
+  const hasSkips = skipped.missing.length > 0 || skipped.notMarkdown.length > 0
+  // 免检全关（§2.6 KD-Ex4 / AC-Ex6）：判集被排除面清空、且没有别的未判档 ⇒ 这是「免检放行」，不是「判了 0 档」。
+  // 算一次、三处读它（首行 ∥ `范围` 行 0 档括注 ∥ 空范围说明行守卫）；`report` 面末行删支后不吃它。
+  const exemptedAll = checkFiles.length === 0 && excluded.length > 0 && !hasSkips
   // 首行：锚与段分列（用户 11:16：段的问题叫「文字太长，难于阅读」，不是「命中 N 条」也不是字符数）
   const verdict = () => {
     // 读不到优先：判不出就不产 PASS ∥ REFUSED（既有 ERROR 位——fail-closed，没 PASS 就是没过）
     if (unreadable.length) return `DOC-CHECK GATE: ERROR（读不到 ${unreadable.length} 档）`
     // 判了 0 档 ≠ 全清：`PASS` 是「这些档都干净」的断言，空集上出 `PASS` 等于给「什么都没判」发一张「判过了」的通行证。
+    // **免检全关不属此列**（`exemptedAll`）：那几档按 manifest 声明不进判集、等于通过，判集空是声明出来的 ⇒ 照出 `PASS`。
     // 四个入口（显式空清单 ∥ 本会话零 `.md` 触达 ∥ 路径全不在盘 ∥ 全非 `.md`）同一句回；「为什么空」由下方
     // 「范围为空：…」四句分流与两个跳过桶头照说。词位用既有 `ERROR`（判不出），不造新动词——消费面按首行前缀判
-    // （口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「空范围不判 PASS」条）。
-    if (total === 0) return checkFiles.length ? "DOC-CHECK GATE: PASS" : "DOC-CHECK GATE: ERROR（0 档受检——空范围不判 PASS）"
+    // （口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「空范围不判 PASS」条；排除面例外 = `docs/core/design/DOC-CHECK.md` §2.6）。
+    if (total === 0) return checkFiles.length || exemptedAll ? "DOC-CHECK GATE: PASS" : "DOC-CHECK GATE: ERROR（0 档受检——空范围不判 PASS）"
     const parts = []
     if (anchors.hits.length) parts.push(`锚 ${anchors.hits.length} 条`)
     // 段与行分列——两类命中不得合并（提示词面一行 = 一个块，属「行太长」，不是「一段文字太长」）
@@ -493,7 +662,9 @@ function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable
     "文档纪律机检（交付门 · gate）",
     checkFiles.length
       ? `范围：${src} ${checkFiles.length} 档${rootsSuffix(lay)}`
-      : `范围：${src} —— **0 档受检**（空清单：本次没有判任何档，不得读作「已检」）`,
+      : exemptedAll
+        ? `范围：${src} —— **0 档受检**（清单 ${excluded.length} 档全落在 manifest 排除面内）`
+        : `范围：${src} —— **0 档受检**（空清单：本次没有判任何档，不得读作「已检」）`,
     "判据：逐段检查——" + DOC_CLASS.para,
   ]
   out.push(...bucketLines(lay, skipped.missing, (n) => `跳过 ${n} 档（已不在盘，未检）：`))
@@ -505,25 +676,18 @@ function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable
   // `未核` 列报（判不了类——不进 `total`、不改 verdict）：位置 = 命中区之前（口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「报面」），
   // 末行仍留给结论 / 处置块。
   out.push(...unverifiedBlock(lay, anchors.unverified))
-  if (checkFiles.length === 0) {
+  if (checkFiles.length === 0 && !exemptedAll) {
     // 空范围不静默当通过（K6）——照实说明 + 给出补充通道（两侧都不得读成「已检」）。
     // 措辞按「有没有跳过行」分流：无跳过行时不得写「见上方跳过行」。
-    const hasSkips = skipped.missing.length > 0 || skipped.notMarkdown.length > 0
-    // 全清单被排除（§2.6）：这是**唯一一处错读会当成干净范围**的地方——句子里点名排除面。
-    // **不落**「本会话没有写过 .md 档」那两句：它们会把「被声明排除」说成「本轮没碰」。
-    // 清单里另带跳过档时本句不成立（那些档不是被排除的）⇒ 落既有跳过句；那句的归因只看跳过、
-    // 不提排除面——**设计未给混态句**，本席不自行造句（排除桶仍在报面上点名全部被排除档）。
-    if (excluded.length > 0 && !hasSkips) {
-      out.push(`范围为空：清单 ${excluded.length} 档全落在 manifest 排除面内——没有可判档`)
-    } else {
-      out.push(docsSource === "session"
-        ? (hasSkips
-          ? "范围为空：本会话触达的档均不可判（见上方跳过行）——若确认改过 ⇒ 显式传 docs"
-          : "范围为空：本会话没有写过 .md 档——若确认改过 ⇒ 显式传 docs")
-        : (hasSkips
-          ? "范围为空：显式 docs 里没有可判档——见上方跳过行"
-          : "范围为空：显式 docs 是空清单——列出要判的档后复跑"))
-    }
+    // 免检全关（`exemptedAll`）不进这一块：那几档是声明出来的免检、不是「空范围」⇒ 零说明行（§2.6 AC-Ex6）；
+    // 混态（另有不在盘 ∥ 非 `.md` 的档）照进这一块，由 `hasSkips` 那两句点名——免检不放宽「清单与盘不符」。
+    out.push(docsSource === "session"
+      ? (hasSkips
+        ? "范围为空：本会话触达的档均不可判（见上方跳过行）——若确认改过 ⇒ 显式传 docs"
+        : "范围为空：本会话没有写过 .md 档——若确认改过 ⇒ 显式传 docs")
+      : (hasSkips
+        ? "范围为空：显式 docs 里没有可判档——见上方跳过行"
+        : "范围为空：显式 docs 是空清单——列出要判的档后复跑"))
   } else if (total === 0) {
     // 正文面零命中但围栏内有存量 ⇒ 判 `PASS` 的同时把那一行读数照出（读数不是判据，但不能让读者以为「围栏那片没有」）。
     if (fencedRefs) out.push(fencedRefNote(fencedRefs))
@@ -539,6 +703,11 @@ function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable
     // 处置块只跟「段」命中走：仅有行太长时不得叫人对段落重写；字面单源 = `PARA_DISPOSE`（三处消费面同一份）
     if (paragraphs.some((h) => h.clazz === DOC_CLASS.para)) out.push(...PARA_DISPOSE)
   }
+  // 豁免块（§2.7 · **两问法同出**）：位置 = 命中区之后（处置块之后）；不进 `hits`、不改 verdict。
+  // N = 0 时零出 ⇒ 未登记任何豁免的仓，gate 报面与改动前逐字相等（零回归）。
+  out.push(...exemptBlock(lay, exempted))
+  out.push(...invalidExemptionBlock(lay, exemptInvalid))
+  if (exemptStale > 0) out.push(EXEMPT_STALE(exemptStale))
   return out.join("\n")
 }
 
@@ -562,17 +731,20 @@ function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable
  *   skipped:{missing:string[], notMarkdown:string[]}, unreadable:string[], lineReads:{file:string, lines:number, tier:'hard'|'soft'|null}[],
  *   lineRefs:{body:Array, fenced:Array, total:number, unreadable:string[]}, batchFaceRefs:number, projectRoots:string[],
  *   suffixHits:{file:string, line:number, token:string, abs:string}[], suffixBuilds:number,
- *   domainTables:{root:string, manifest:boolean}[]}}
+ *   domainTables:{root:string, manifest:boolean}[], exempted:Array, exemptInvalid:Array, exemptStale:number}}
  *   `lineRefs` = 行号坐标的采集结果，**两个问法返回同一份**（同一次采集）。
  *   `projectRoots` = 参与判定的根（升序；§2.3）。**消费者只有两处**：报面的根清单行（≥2 根才出）与本批用例的断言。
  *   `domainTables` = 域表读数（§2.5：每组一根、按路径升序；`manifest` = 该根读到了 manifest）。
  *   **消费者只有两处**：`report` 面的域表读数块与本批用例的断言——不进 `hits`、不改 verdict（`gate` 面零改）。
  *   `batchFaceRefs` = 面判剔除的 token 数（批档面互引不判——读数，**不进 `hits`**、不改 verdict；只有 `report` 面报面出这一行）。
- *   `excluded` = 落在 manifest 排除面内、**未判**的档（§2.6；`checkFiles` 因此是**排除后**的清单，两者不重叠）。
+ *   `excluded` = 落在 manifest 排除面内、**未判**的档（§2.7；`checkFiles` 因此是**排除后**的清单，两者不重叠）。
  *   它既不是命中，也不是「不在盘」或「读不到」。**消费者只有两处**：报面的排除桶与用例断言。
  *   `suffixHits` = 第 6′ 步（唯一后缀兜底）解析出来的指针（逐处 `{file, line, token, abs}`——读数，**不进 `hits`**、不改 verdict；
  *   只有 `report` 面出读数块）；`suffixBuilds` = 后缀索引建表次数（同一行读数里的 `后缀索引建 N 次`）。
  *   **消费者只有两处**：`report` 面的后缀读数块与本批用例的断言——它是「这些指针为什么从 `档缺` 变绿」的唯一可查面。
+ *   `exempted` = 已裁定假阳（§2.7：与 `skipped` ∥ `unreadable` ∥ `hits` 各自一桶——**不进 `hits`**、不改 verdict；
+ *   两面报面各出一块）。`exemptInvalid` = 形态不对而不生效的登记条目（点名，不打断 manifest）；
+ *   `exemptStale` = 这一轮一条都没对上的有效条目数（`登记未命中 N 条`）。**消费者 = 两面豁免块与用例断言。**
  *   `lineReads` = 读数面结果（给了 `lines` 才有内容；`gate` 面恒空——该面带 `lines` 直接抛错）。
  *   它**不进 `hits`**（不是命中），也不改 verdict、不改跳过行与读面行。
  *   `unreadable` = 三条判据的并集（在盘但读不到的档）——**不进 `hits`**（不是命中），但它让 `gate` 首行判 `ERROR`；
@@ -631,12 +803,15 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
   // 域表（§2.5 KD-7）：**每组只读一次 manifest**，锚判与批档基底都吃这一份（注入形——缺省自读支留给直调判法的夹具）；
   // 读不到 manifest（组根无档 ∥ 声明根是普通目录 ∥ 工作区）⇒ 空域表、向严判，不静默（读数面写明）。
   const groups = perRootGroups(checkFiles, base)
+  // 生效扩展名清单（§2.6）：一根一份（与排除面 ∥ 域表同一次 `readManifest`）；逐档按自己的根取（一档一根）。
+  const extsOfRoot = extsReader(readOf)
+  const extsOfFile = (abs) => extsOfRoot(rootOf(abs, base))
   // 域表：每组吃 `readOf` 记忆的那一份（与排除面同一次读——一根一次，§2.5 KD-7 ∥ §2.6）。
   const domainTables = groups.map((g) => {
     const entry = readOf(g.root)
     return { root: g.root, ok: entry.ok, manifest: entry.res }
   })
-  const perGroup = groups.map((g, i) => ({ root: g.root, res: checkAnchors(g.root, { files: g.files, manifest: domainTables[i].manifest }) }))
+  const perGroup = groups.map((g, i) => ({ root: g.root, res: checkAnchors(g.root, { files: g.files, manifest: domainTables[i].manifest, exts: extsOfRoot(g.root) }) }))
   const anchors = groups.length === 1
     ? perGroup[0].res
     : mergeAnchors(perGroup, new Map(checkFiles.map((f, i) => [f, i])))
@@ -646,18 +821,31 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
 
   // 行号坐标的**唯一采集点**：放在两支分支之前——`report` 与 `gate` 读出的是同一份结果，不各采一次
   // （同源判 = 两个问法的 `lineRefs.body` 逐字相等；一套萃取式，不是一套宽一套窄）。
-  const lineRefs = collectLineRefs({ files: checkFiles })
+  const lineRefs = collectLineRefs({ files: checkFiles, extsOf: extsOfFile })
   // 读面并集（三条判据各带清单）：同一个未读档可能出现多次（一档三面都读不到）⇒ 去重保序
   const unreadable = [...new Set([
     ...(anchors.unreadable ?? []),
     ...(paragraphs.unreadable ?? []),
     ...(lineRefs.unreadable ?? []),
   ])]
-  const anchorCount = anchors.hits.length
-  const paraCountAll = paragraphs.filter((h) => h.clazz === DOC_CLASS.para).length
-  const lineCountAll = paragraphs.filter((h) => h.clazz === DOC_CLASS.line).length
+  // 逐条豁免（§2.7 · 三条判据都跑完之后、verdict 之前）：已登记的进 `exempted`（照列、不阻断），未登记留 `hits`（拦）。
+  // 行号面的命中带 `clazz`（与既有 `lineRefHits` 同形），另外要交出整行原文（识别键的 `text`）。
+  const split = classifyExemptions({
+    anchorHits: anchors.hits,
+    paragraphHits: [...paragraphs],
+    lineRefHits: lineRefs.body.map((h) => ({ ...h, clazz: LINE_REF_CLASS })),
+    base, roots: projectRoots, readOf,
+  })
+  const anchorHitsKept = split.anchorHits
+  const paragraphHitsKept = split.paragraphHits
+  const lineRefHitsKept = split.lineRefHits
+  // `gate` 的命中行与 `hits` 只吃未登记那批；`report` 的清账清单块仍列全量（清单 = 读数，不是判据）。
+  const lineRefsKept = { ...lineRefs, body: lineRefHitsKept }
+  const anchorCount = anchorHitsKept.length
+  const paraCountAll = paragraphHitsKept.filter((h) => h.clazz === DOC_CLASS.para).length
+  const lineCountAll = paragraphHitsKept.filter((h) => h.clazz === DOC_CLASS.line).length
   const shared = {
-    anchorHits: anchors.hits, paragraphHits: paragraphs, files: checkFiles, checkFiles, paragraphMax,
+    anchorHits: anchorHitsKept, paragraphHits: paragraphHitsKept, files: checkFiles, checkFiles, paragraphMax,
     skipped: { missing: range.missing, notMarkdown: range.notMarkdown },
     // 排除面命中的档（**未判**族——不是命中、也不是「不在盘」/「读不到」；§2.6）。消费者 = 报面排除桶与用例断言。
     excluded,
@@ -665,8 +853,13 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
     lineReads,
     // 面判读数（批档面互引不判——**不是命中**：不进 `hits`、不改 verdict；与 `lineRefs` 同层靠读数消费面取）
     batchFaceRefs: anchors.batchRefs ?? 0,
-    lineRefHits: lineRefs.body.map((h) => ({ ...h, clazz: LINE_REF_CLASS })),
+    lineRefHits: lineRefHitsKept,
     lineRefs,
+    // 已裁定假阳（§2.7）：与 `skipped` ∥ `unreadable` ∥ `hits` 各自一桶——消费面 = 两面豁免块与用例断言。
+    // 不进 `hits`、不改 verdict；`invalid` ∥ `stale` 两个读数同层（登记失效与「一条都没对上」不是命中）。
+    exempted: split.exempted,
+    exemptInvalid: split.invalid,
+    exemptStale: split.stale,
     // 后缀兜底（第 6′ 步）的两件读数：逐处的 `suffixHits`（不是命中）与建表次数。消费者 = `report` 面读数块与用例断言。
     suffixHits: anchors.suffixHits ?? [],
     suffixBuilds: anchors.suffixBuilds ?? 0,
@@ -680,12 +873,12 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
   }
   if (gate) {
     // `gate` 面：第三条判据的**正文面**计入 `hits` 与 `hits.total`（三数之和）；围栏内只作读数（不进 `hits`）。
-    // 读不到列不计数但定判决词（`ERROR`）。
-    const hits = { total: anchorCount + paragraphs.length + lineRefs.body.length, anchors: anchorCount, paragraph: paragraphs.length, lineRefs: lineRefs.body.length }
-    return { ...shared, hits, report: gateReport({ lay, docsSource: source, checkFiles, skipped: shared.skipped, excluded, unreadable, anchors, paragraphs, lineRefs }) }
+    // 读不到列不计数但定判决词（`ERROR`）。**只数未登记的**（已裁定的进 `exempted`，§2.7 KD-X4）。
+    const hits = { total: anchorCount + paragraphHitsKept.length + lineRefHitsKept.length, anchors: anchorCount, paragraph: paragraphHitsKept.length, lineRefs: lineRefHitsKept.length }
+    return { ...shared, hits, report: gateReport({ lay, docsSource: source, checkFiles, skipped: shared.skipped, excluded, unreadable, anchors: { ...anchors, hits: anchorHitsKept }, paragraphs: paragraphHitsKept, lineRefs: lineRefsKept, exempted: split.exempted, exemptInvalid: split.invalid, exemptStale: split.stale }) }
   }
 
-  const hits = { total: anchorCount + paragraphs.length, anchors: anchorCount, paragraph: paragraphs.length }
+  const hits = { total: anchorCount + paragraphHitsKept.length, anchors: anchorCount, paragraph: paragraphHitsKept.length }
 
   const out = [
     "文档纪律机检（报告态 · 非门禁）",
@@ -694,8 +887,8 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
     `范围：传入清单 ${checkFiles.length} 档（整档入判 · 判定范围 = 解析范围）${rootsSuffix(lay)}`,
     `命中 ${hits.total} 条（锚 ${anchorCount} · ${DOC_CLASS.para} ${paraCountAll} · ${DOC_CLASS.line} ${lineCountAll}）`,
   ]
-  for (const h of anchors.hits) out.push(anchorHitLine(lay, h))
-  for (const w of paragraphs) out.push(paragraphHitLine(lay, w))
+  for (const h of anchorHitsKept) out.push(anchorHitLine(lay, h))
+  for (const w of paragraphHitsKept) out.push(paragraphHitLine(lay, w))
   // 排除桶（§2.6 · 与读面同处——两者都是「未判」）：位于命中区之后、读面行之前；不进 `hits`。
   // N = 0 时不出行 ⇒ 未声明该键的 manifest 上报面与改动前逐字相等。
   out.push(...bucketLines(lay, excluded, (n) => `排除 ${n} 档（manifest 排除面命中，未判）：`))
@@ -707,6 +900,15 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
   out.push(...suffixBlock(shared.suffixHits, shared.suffixBuilds))
   // 读数块：位置 = 读面行之后、行号坐标清单块之前（末行恒是 `结论：…`；读数不抢它的位）
   if (lineReads.length) out.push(...lineReadBlock(base, lineReads))
+  // 扩展名清单读数（§2.6 · 仅 `report` 面）：**只在该仓写了这一项时出**；不进 `hits`、不改 verdict；
+  // 没写这一项的仓零出 ⇒ 单项目零回归面不破。N = 该仓写了几项（按字面数，不逐条点名）。
+  for (const r of projectRoots) {
+    const entry = readOf(r)
+    const declared = entry.ok ? entry.res.manifest?.index?.docCheckExts : []
+    const n = Array.isArray(declared) ? declared.length : 0
+    if (n === 0) continue
+    out.push(`${extListLine(n)}${projectRoots.length >= 2 ? `（${lay.name(r)}）` : ""}`)
+  }
   // 域表读数块（§2.5 · 仅 `report` 面）：出场条件两支——「本次读到域表的根集 ≠ {声明根}」或任一根无 manifest；
   // 单项目锚下根集恰是声明根且该根有 manifest ⇒ 零出（单项目零回归的判据面，AC-2）。
   {
@@ -717,15 +919,20 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
   // 批档面留痕（面判的读数）：位置 = 清点块之上、末行结论句之前；0 也出（0 与「没扫」不得同形）
   out.push(batchFaceLine(anchors.batchRefs ?? 0))
   // 清单块位置 = 命中区之后、末行 `结论：…` 之前（报面的末行恒是结论句，清单不抢它的位）。
+  // **清账清单吃全量**（含已裁定那几处）：它是读数不是判据——把已裁定的坐标从清单里抹掉，下一轮就没人知道那里还躺着一处。
   out.push(...lineRefsBlock({ base, files: checkFiles, refs: lineRefs }))
+  // 豁免块（§2.7 · 两问法同出）：位置 = 清账清单之后、末行 `结论：…` 之前；N = 0 时零出（零回归）。
+  out.push(...exemptBlock(lay, split.exempted))
+  out.push(...invalidExemptionBlock(lay, split.invalid))
+  if (split.stale > 0) out.push(EXEMPT_STALE(split.stale))
   out.push(hits.total
     ? `结论：${hits.total} 条命中——报告态，不作拒执行的理由`
     : unreadable.length
       ? `结论：0 条命中（但有 ${unreadable.length} 档未判——见上方「读不到」行，不得读作已检）`
-      // 一档没判时不得说「均清」——那是假绿；全清单被排除时末行点名排除面（§2.6 AC-Ex6）。
-      : checkFiles.length === 0 && excluded.length > 0
-        ? `结论：0 档入判——清单 ${excluded.length} 档全落在 manifest 排除面内，不得读作已检`
-        : `结论：0 条命中（锚 ∥ ${DOC_CLASS.para} ∥ ${DOC_CLASS.line} 均清）`)
+      // 「一档没判」只有读不到这一形：它不得说「均清」（那是假绿）。全清单被排除不属此列——免检放行、
+      // 那几档等于通过 ⇒ 取既有均清句（§2.7 AC-X3 ①）。报告态另有不可判档时先抛错，故此处只剩「全排除」与「真干净」两读。
+      // 已裁定非 0 时清句旁边要摆上它：一列已裁定条目旁边写着「均清」，读者会读成「这里什么都没有」（§2.7）。
+      : `结论：0 条命中（锚 ∥ ${DOC_CLASS.para} ∥ ${DOC_CLASS.line} 均清）${split.exempted.length ? `；已裁定假阳 ${split.exempted.length} 条（见上，不阻断）` : ""}`)
 
   return { ...shared, hits, report: out.join("\n") }
 }

@@ -102,10 +102,10 @@ export function headingMark(l) {
 
 /** 段判据（阈值 = 调用方内置常量 `paragraphMax` ∥ `lineMax`；口径逐字 = §3.18 条目 Q）：
  *  · 文档面：相邻非空正文行合并成一段，段长 = 组成行 `[...line].length` 之和 > `paragraphMax` ⇔ 命中
- *    （`clazz: "文字太长，难于阅读"`，定位 = 段首行号）。正文行 = 非空 ∧ 非表格行 ∧ 非标题 ∧ 非列表项 ∧ 非引用行
+ *    （`clazz: "文字太长，难于阅读"`，定位 = 段首行号；`text` = 该段整段原文、首尾去空白）；正文行 = 非空 ∧ 非表格行 ∧ 非标题 ∧ 非列表项 ∧ 非引用行
  *    ∧ 非围栏（标记行与块内整行）∧ 非区带内；其余行类不计入、且把段断开。
  *  · 提示词面（`isPromptFace`）：逐行裸判——`[...line].length` > `lineMax` ⇔ 命中（`clazz: "行太长"`，
- *    无结构豁免）。
+ *    无结构豁免；`text` = 该行整行原文、首尾去空白）。
  *  单遍扫描携标题栈（`headingMark` 命中行入栈——同级 ∥ 更高级出栈）：行所属标题链任一为区带头 ⇒ 区带内
  *  （不计入段且断段）。围栏未闭合 ⇒ 至档尾整块免（fail-open 方向——§3.18 残余登记 ①）；
  *  `exemptZones` 缺省 ∥ 空集 ⇒ 零豁免。`files`（必填）= **判定集**（调用方传入的档清单——本档不遍历
@@ -145,16 +145,20 @@ export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files
     if (isPromptFace(f)) {
       text.split("\n").forEach((l, i) => {
         const len = [...l].length
-        if (len > lineMax) hits.push({ file: f, line: i + 1, len, clazz: DOC_CLASS.line })
+        // `text` = 该行整行原文（首尾去空白）——豁免登记的识别键取它（§2.7「`text` 取什么」）：
+        // 只给行号不给文本，登记就只能靠行号匹配，插一行整片失效。
+        if (len > lineMax) hits.push({ file: f, line: i + 1, len, clazz: DOC_CLASS.line, text: l.trim() })
       })
       continue
     }
     const stack = [] // 标题栈 —— { level, exempt }；exempt = 自身 ∥ 祖先命中区带
     let fence = null // 围栏标记（` ∥ ~）；null = 不在块内
-    let para = null // 在写的段 —— { start, len }；非正文行 ⇒ 断开
+    let para = null // 在写的段 —— { start, len, text: [] }；非正文行 ⇒ 断开
     const lines = text.split("\n")
     const flush = () => {
-      if (para !== null && para.len > paragraphMax) hits.push({ file: f, line: para.start, len: para.len, clazz: DOC_CLASS.para })
+      // `text` = 该段整段原文（首尾去空白、内部逐字）——豁免登记的识别键取它（§2.7「`text` 取什么」）。
+      // 段文本就是本循环已经在数的那些行，不另读一次档、不另拆一次段。
+      if (para !== null && para.len > paragraphMax) hits.push({ file: f, line: para.start, len: para.len, clazz: DOC_CLASS.para, text: para.text.join("\n").trim() })
       para = null
     }
     lines.forEach((l, i) => {
@@ -176,8 +180,9 @@ export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files
       }
       const inZone = stack[stack.length - 1]?.exempt === true
       if (inZone || l.trim() === "" || isTableRow(l) || isListItem(l) || isQuoteLine(l)) { flush(); return }
-      if (para === null) para = { start: i + 1, len: 0 }
+      if (para === null) para = { start: i + 1, len: 0, text: [] }
       para.len += [...l].length
+      para.text.push(l)
     })
     flush()
   }

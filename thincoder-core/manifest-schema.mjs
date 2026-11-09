@@ -43,9 +43,11 @@ export const DEFAULT_MANIFEST = Object.freeze({
   }),
   // 项目声明三族（2026-09-27 声明载体唯一化批并入——键名 / 形态逐字承前；来源档已退役）。
   codePaths: Object.freeze(["src"]),
-  // `docCheckExcludePaths` = `doc_check` 的排除目录（机制 = `docs/core/design/DOC-CHECK.md` §2.6）：与 `excludePaths`
+  // `docCheckExcludePaths` = `doc_check` 的排除目录（机制 = `docs/core/design/DOC-CHECK.md` §2.7）：与 `excludePaths`
   // **同族不同消费面**——那是索引面，`doc_check` 不吃它；键名自带消费面，读者不必靠位置猜这条排除给谁用。
-  index: Object.freeze({ codeExtensions: Object.freeze([]), docExtensions: Object.freeze([]), excludePaths: Object.freeze([]), docCheckExcludePaths: Object.freeze([]), publicRepos: Object.freeze([]) }),
+  // `docCheckExts` = 裸名的扩展名追加项（并集、只增不减；机制 = 同档 §2.6）：它不替换引擎的 `DEFAULT_DOC_EXTS`——
+  // 收窄判集是排除面的事。 `docCheckExemptions` = 逐条豁免登记（五字段条目；机制 = 同档 §2.7）：改的是「拦不拦」，不改判据。
+  index: Object.freeze({ codeExtensions: Object.freeze([]), docExtensions: Object.freeze([]), excludePaths: Object.freeze([]), docCheckExcludePaths: Object.freeze([]), publicRepos: Object.freeze([]), docCheckExemptions: Object.freeze([]), docCheckExts: Object.freeze([]) }),
 })
 
 /** 校验判据（模块设计 §2.2）——枚举 / 键存在（fallback 用）；判据单源（KD-M1-4）。 */
@@ -121,11 +123,17 @@ export function validateManifest(obj) {
     if (obj.index.excludePaths !== undefined && !Array.isArray(obj.index.excludePaths)) {
       errors.push(`index.excludePaths 值形态非法：${JSON.stringify(obj.index.excludePaths)}（须为数组——非数组 fail-closed；空 ∕ 非串元素由归一剔除）`)
     }
-    // `index.docCheckExcludePaths`（§2.6）：与上一行同款**数组层** fail-closed——非数组 ⇒ 拒（元素层宽容，由归一剔除）。
+    // `index.docCheckExcludePaths`（§2.7）：与上一行同款**数组层** fail-closed——非数组 ⇒ 拒（元素层宽容，由归一剔除）。
     // 后果同款：域表 `manifest:false` ⇒ 排除面按空集、照判（向严）——既不把单串当一项读，也不因此少判任何档。
     if (obj.index.docCheckExcludePaths !== undefined && !Array.isArray(obj.index.docCheckExcludePaths)) {
       errors.push(`index.docCheckExcludePaths 值形态非法：${JSON.stringify(obj.index.docCheckExcludePaths)}（须为数组——非数组 fail-closed；空 ∕ 非串元素由归一剔除）`)
     }
+    // `index.docCheckExts`（§2.6）：**进元素层**——与 `codeExtensions` ∥ `docExtensions` 同款（各元素须为非空字符串，
+    // 非串 ∥ 空串 ⇒ `errors`）；数组层 `[]` 合法（= 不追加）。取形过滤（单字符后缀 ∥ 归档内层）**不在这里判**：
+    // 那是装配处的降级，不把整份 manifest 打掉。
+    if (obj.index.docCheckExts !== undefined) strArrErr("index.docCheckExts", obj.index.docCheckExts)
+    // `index.docCheckExemptions`（§2.7）：**两层都不入选校验**——条目形态在消费点判（KD-X3：一个写坏的条目
+    // 不该把整份 manifest 打掉——manifest 不可用 ⇒ 域表空集 ⇒ 批档面互引不豁免 ⇒ 邻仓批档引用一律 `档缺`）。
     if (obj.index.publicRepos !== undefined && !Array.isArray(obj.index.publicRepos)) {
       errors.push(`index.publicRepos 值形态非法：${JSON.stringify(obj.index.publicRepos)}（须为数组——非数组 fail-closed；空 ∕ 非串元素由归一剔除）`)
     }

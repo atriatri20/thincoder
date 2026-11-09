@@ -22,11 +22,13 @@
  */
 import { readFileSync } from "node:fs"
 import { relative } from "node:path"
-import { DOC_EXTS, docNameExemption } from "./anchors.mjs"
+import { DEFAULT_DOC_EXTS, EXT_PART, NAME_CH, TOKEN_LEFT_GUARD, TOKEN_RIGHT_GUARD, docNameExemption, isDocToken } from "./anchors.mjs"
 import { fenceMark, isFenceClose } from "./paragraph.mjs"
 
-/** 档名 token（抽取式 · 逐字 = 判据句）：目录段可选，扩展名闭集——枚举的定义**单源 = `./anchors.mjs` 的 `DOC_EXTS`**（本档只消费、不持第二份字面，与锚面同一组即从这来）；左界排除更长 token 的尾段、右界排除后续字母数字。 */
-export const NAME_RE = new RegExp(`(?<![A-Za-z0-9_.\\-\\\\/@])((?:[A-Za-z0-9_.\\-]+\\/)*[A-Za-z0-9_.\\-]+\\.(?:${DOC_EXTS.join("|")}))(?![\\w])`)
+/** 档名 token（抽取式 · 逐字 = 判据句）：目录段可选，名字字符类与扩展名形护**单源 = `./anchors.mjs` 的
+ *  `NAME_CH` ∥ `EXT_PART` ∥ 边界对**（本档只消费、不持第二份字面）；后缀算不算数由 `isDocToken` 在消费点判。
+ *  左界含 `<>`（与锚面同一份）——名字前紧贴 `<` ∥ `>` 的 token 不再被抽，方向是漏报（§2.6「收敛带来的一处行为差」）。 */
+export const NAME_RE = new RegExp(`${TOKEN_LEFT_GUARD}((?:${NAME_CH}+\\/)*${NAME_CH}+${EXT_PART})${TOKEN_RIGHT_GUARD}`, "gu")
 
 /** 行号坐标（抽取式 · 逐字 = 判据句）：`:` 后接数字（可带 `-` 区间）；左界只排数字 / 冒号前导（挡时刻 `12:30`）。 */
 export const COORD_RE = /(?<![0-9:]):(\d+)(?:-(\d+))?(?![\w])/
@@ -37,14 +39,16 @@ const rel = (base, p) => relative(base, p).replace(/\\/g, "/")
 /** 原文片段 ≤ 40 字（CJK 按字计——`[...]` 逐码点切，不按 UTF-16 单元）。 */
 const snippet = (line) => [...line.trim()].slice(0, 40).join("")
 
-/** 一行内的档名位置（已过豁免谓词——豁免名不算档名，也就不构成任何归属窗）。
- *  **入参是 token 本身**（可含目录段）：带目录段者按真路径判——只有裸名才走类名 ∥ 占位两免（§3.24「入参契约」）。 */
-function nameSpans(line) {
+/** 一行内的档名位置（已过豁免谓词与清单谓词——豁免名不算档名，也就不构成任何归属窗）。
+ *  **入参是 token 本身**（可含目录段）：带目录段者按真路径判——只有裸名才走类名 ∥ 占位两免（§3.24「入参契约」）。
+ *  `exts` = 生效扩展名清单（引擎按该档所属项目根装配好传入；缺省 = `DEFAULT_DOC_EXTS`）。 */
+function nameSpans(line, exts) {
   const out = []
-  const re = new RegExp(NAME_RE.source, "g")
+  const re = new RegExp(NAME_RE.source, "gu")
   let m
   while ((m = re.exec(line)) !== null) {
     if (docNameExemption(m[1]) !== null) continue
+    if (!isDocToken(m[1], exts)) continue
     out.push({ start: m.index, end: m.index + m[0].length })
   }
   return out
@@ -52,14 +56,17 @@ function nameSpans(line) {
 
 /**
  * 采集：逐档逐行找行号坐标，定归属窗，分两面。
- * @param {{files?:string[]}} o `files` = 扫描域（调用方传入的档清单——本档不遍历目录、不做全仓扫描）
+ * @param {{files?:string[], extsOf?:(abs:string)=>string[]}} o `files` = 扫描域（调用方传入的档清单——本档不遍历目录、不做全仓扫描）；
+ *   `extsOf` = 按档取生效扩展名清单的回调（引擎给的——每档按自己的项目根读，§2.6）；缺省 ⇒ `DEFAULT_DOC_EXTS`
  * @returns {{body:Array, fenced:Array, total:number, unreadable:string[]}}
- *   `body` = 正文面的处（围栏块外，**含可执行行**）；`fenced` = 围栏内独有的处；每处 = `{file, line, form, fenced, snippet}`
+ *   `body` = 正文面的处（围栏块外，**含可执行行**）；`fenced` = 围栏内独有的处；每处 = `{file, line, form, fenced, snippet, text}`
+ *   （`text` = 该行整行原文、首尾去空白——豁免登记的识别键取它，§2.7「`text` 取什么」）
  *   `unreadable` = 在盘但读不到的档（**不当 0 处**——「没读成」不得与「干净」同形）
  *   **两个问法共用这一份**：`report` 面出清单块，`gate` 面逐处成 `✗ 行号坐标 …` 命中行（**只取 `body`**）并计
  *   `hits.lineRefs`；`fenced` 那批只进一行读数。
  */
-export function collectLineRefs({ files = [] } = {}) {
+export function collectLineRefs({ files = [], extsOf } = {}) {
+  const extsFor = typeof extsOf === "function" ? extsOf : () => DEFAULT_DOC_EXTS
   const body = []
   const fenced = []
   const unreadable = []
@@ -77,7 +84,7 @@ export function collectLineRefs({ files = [] } = {}) {
         prevNames = [] // 围栏标记行不承载档名（③ 因此不跨过围栏边界）
         return
       }
-      const names = nameSpans(l)
+      const names = nameSpans(l, extsFor(f))
       const re = new RegExp(COORD_RE.source, "g")
       let m
       while ((m = re.exec(l)) !== null) {
@@ -88,7 +95,7 @@ export function collectLineRefs({ files = [] } = {}) {
         else if (before.length) form = "②" // 承名：本行前文有档名（反引号收尾的坐标归此形）
         else if (prevNames.length) form = "③" // 段落承名：本行无前文档名，取上一行最后一个档名
         else continue // 无主——判据句自然排除，不列例外表
-        const hit = { file: f, line: i + 1, form, fenced: inFence, snippet: snippet(l) }
+        const hit = { file: f, line: i + 1, form, fenced: inFence, snippet: snippet(l), text: l.trim() }
         ;(inFence ? fenced : body).push(hit)
       }
       prevNames = names

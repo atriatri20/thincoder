@@ -107,3 +107,22 @@
 | 35-3 | 同一夹具页逐个调 `browser{cookies get ∥ set ∥ clear}` 与 `browser{storage get ∥ set ∥ clear}`；门面读数取 dispatch 的公共输入 `readonlyActionOf(browserTool, "browser", args)` | 六形逐条为真（门闭态走免审短路 ⇒ 零审批请求），且六形真跑成功（`cookies set` ∥ `storage set` 回读得到）⇒ 用户逐字裁掉的「不要搞鸡毛审核」有一条常驻判据 | — | `test/integration/browser-session-state.test.mjs` |
 
 ★ 35-1–35-3：三例都需宿主有 Chromium，无则 skip 并打印（skip 不算绿）；「切到该源」在 35-1 里由 `domain` 过滤面承担——`localhost` 与 `127.0.0.1` 同端口即两个源，不另起第二次启动。35-3 的免审判的是「门面按动作分类」这一交互（`browserTool.execute` 直调面绕得过门禁，所以「零审批」只能在门面读数上验）。
+
+## CLI 41. 批量改多档：一条失败只废那一条，成了的不返工，回执逐条说清
+
+> 目的：一次批量改多档时，某一条改不成只反馈那一条——已经改成的档留在盘上、不需要重做整批；某档最终内容被写前门拒只连坐该档；回执按调用序逐条说清哪条成、哪条败，末行给计数。改前那里是「任一条失败 ⇒ 整批抛错、盘上零字节」，用户为此改成一档一调 + 逐次回读。
+> 节注：回指 = `docs/core/requirements/TOOLS.md` F16 ∥ F17；机制单源 = `docs/core/design/EDIT.md` §5「`edits` 数组（逐条成败）」∥「批量回执（逐条 + 末行计数）」∥「桥面同口径」· §8 D-5 ∥ D-9 ∥ D-10 ∥ D-14 ∥ D-15 ∥ D-16；交互组件 = `edit` 工具的 `edits` 形 ⟷ 逐档就地写 ⟷ 写前文档门（41-1）∥ ACP 桥的批量编辑 ⟷ IDE 缓冲读写（`fs/read_text_file` ∥ `fs/write_text_file`）⟷ 帧排 ∥ `onEntryError:"collect"`（41-2）；进入口 = 真 `edit` 工具调用 ∥ ACP 客户端（IDE）发起一次批量编辑；态数（行序）= 41-1 错误 · 41-2 错误。
+
+| 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
+|---|---|---|---|---|
+| 41-1 | 临时项目里调 `edit` 的 `edits` 形，两段各一批：① 两档各一条 + 同档再补一条，其中一条给匹配不到的 `old_string`；② 带 `PROJECT-MANIFEST.json` 的项目里一份 `docRoot` 内的 `.md`，两条编辑让该档最终内容触发写前门（段落超长），同批另给一份 `.txt` 一条合法编辑 | ① 成了的条目都在盘上（同档两条合成一次写）、败的那档字节逐字不变（改前改后哈希相同）；回执按调用序逐条一行（`edits[1] — failed: old_string not found in beta.txt`），末行逐字 `edit batch: 2/3 entries applied, 1 failed — 1 file(s) written: alpha.txt`，全文零 `nothing written` ∥ `no files written`；② `.txt` 档照落、`.md` 档字节逐字不变，该档两条都是失败行且原因含门拒文那句，末行逐字 `edit batch: 1/3 entries applied, 2 failed — 1 file(s) written: docs/design/notes.txt` | 修前红 = 任一条失败整批抛错、前面各档零字节（用户为此改成一档一调 + 逐次回读）——本行断言的就是那条已退场的旧行为 | `test/integration/edit-batch-entry-outcome.test.mjs` |
+| 41-2 | 以 ACP 会话入口（`buildAcpCallbacks`）的 `toolRouter("edit", { edits })` 发起一次批量编辑，读写两侧都打到桩 IDE 对端（反向 `fs/read_text_file` ∥ `fs/write_text_file`）：IDE 里开着三档，其中第 2 条给匹配不到的 `old_string`；再跑一批全成的（同档两条 + 另一档一条） | ① 第 2 条以 `edits[1] — failed: ` 起头、另两条是桥面成功形（`OK: edited … via IDE`）；IDE 缓冲只含成功条（败的那档逐字未动）；末行逐字 `edit batch: 2/3 entries applied, 1 failed — 2 file(s) written: alpha.txt, gamma.txt`，全文零 `nothing written` ∥ `no files written`；② 全成批末行 `edit batch: 3/3 entries applied, 0 failed — 2 file(s) written: a.txt, b.txt`，同档两条只写回一次；另：盘面无新增档（桥写的是 IDE 缓冲） | 修前红 = 桥面「全过才写」：任一条失败整批抛错（前缀 `edit aborted (atomic — no files written): `）、缓冲一条都不写 | `test/integration/acp-bridge-batch-outcome.test.mjs` |
+
+## CLI 42. 补丁改多档：写盘段中途失败，回执说清哪几档已落盘
+
+> 目的：一次补丁改多档、写到一半失败时，回执要说清「哪几档已经在盘上、哪一档败了、哪几档没动」——已经落盘的不回滚、不假装没发生。改前那里抛的是一句裸 `rename` 错误：没有清单、不说哪一档失败，用户只能自己一档一档去猜。
+> 节注：回指 = `docs/core/requirements/TOOLS.md` F17；机制单源 = `docs/core/design/APPLY-PATCH.md` §4「返回值（未全成）」∥「两个失败段」· §7 D-P2 ∥ D-P4 · 回执骨架单源 = `docs/core/design/EDIT-HELPERS.md` §7.6；交互组件 = `apply_patch` 提交段 ⟷ 注入径即时提交（编辑器已打开的档在暂存段就落盘）⟷ 批级记账；进入口 = 真 `apply_patch` 调用（三档补丁，其中一档的提交段必失败）；态数（行序）= 42-1 错误。
+
+| 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
+|---|---|---|---|---|
+| 42-1 | 临时项目里调真 `apply_patch`：三档补丁（`alpha.txt` / `beta.txt` / `gamma.txt` 各一行替换），第 1 档的目标档在 IDE 里打开着（注入径 ⇒ 暂存段即提交）；桩宿主在它落盘之后把第 2 档的目标档换成一个目录 ⇒ 第 2 档的提交段 `rename` 必失败 | 抛错正文按补丁序逐档一行（`  modified alpha.txt` ∥ `beta.txt — failed: <原因原文>` ∥ `  not committed gamma.txt`）+ 末行逐字 `apply_patch: 1/3 file(s) applied, 2 failed: alpha.txt`（报单位 = 写单位 = 档 ⇒ 末段省）；盘上 `alpha.txt` 已是新内容、`gamma.txt` 逐字未动 ⇒ 已落盘的不回滚 | 修前红 = 抛一句裸 `rename` 错误：无清单、不说哪一档失败（用户不知道哪些档已经在盘上） | `test/integration/apply-patch-write-phase.test.mjs` |
