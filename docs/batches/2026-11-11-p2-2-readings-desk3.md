@@ -8,7 +8,7 @@
 批起 sha = 4fafb49c002e12d935989fd9a7eeb72d0d0d2c6b
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（续轮六已落：WEBVIEW.md §3 撤五处绝对行数与「52 档模块」库存计数（改结构关系句 + 补体量口径句），同档同族另四处扫平，doc_check gate = PASS）
+**状态行**：设计完成（续轮七已落：server 两档三处路径锚（真路径补全 ∥ 示例去路径形），doc_check gate = PASS）
 **批次任务（覆盖）**：desk3 = 五档设计档的存量绝对读数清账，判类 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 三行（读 §3.22 U-5 / U-6）：
 
 - `docs/desktop/design/SHELL.md`
@@ -339,6 +339,56 @@
 **台账**：`#2312` = 活干完、档未冻的 open-but-settled；冻结与收口由父侧走，本席未动。
 
 **量法自检**：候选取法 = 逐节人读 + `grep` 复核（不由正则出候选集）；机检 = 本轮末跑，见上表。
+
+### 续轮七：server 两档三处路径锚（父侧本轮指令）
+
+**授权与口径（父侧本轮给出，本席照做，不另立）**：三处带路径段的锚逐处按一句判——**读者照这句话去找，能不能找对**；真路径补全，示例不写成路径形，**不为了过门编一个假路径**。门绿是判完的结果，不是目的。
+
+**本轮已落（2 档 3 处）**
+
+| 处 | 处置 | 判 |
+|---|---|---|
+| `docs/server/design/gateway/API.md` AC-32「仓归一」行 | 示例仓地址去路径形——改述为「同一仓的 SSH 形 ∥ HTTPS 形 ⇒ 同键」，两形各以协议前缀与 `.git` 后缀辨识 | 示例地址不是本仓档 ⇒ 不写成路径形；「跨形同键」判据照旧可判 |
+| `docs/server/design/ops/OPS.md` §1 配置表 `db` 行 | 缺省值的相对形后补盘上全路径 | 真路径 ⇒ 补全；相对口径（值本身是相对形）一字不失 |
+| `docs/server/design/ops/OPS.md` §9 恢复步 | 同口径：换成「配置档同级 `data` 目录内的库档 + 仓内全路径」 | 同上 |
+
+**三处原形与落形（逐字摘录，供复核）**
+
+```text
+（原）API.md AC-32 行 — 仓归一（跨形同键：`git@host:org/repo.git` ∥ `https://host/org/repo` ⇒ 同键）
+（今）API.md AC-32 行 — 仓归一（跨形同键：同一仓的 SSH 形（`git@host:` 起头、仓路径带 `.git` 后缀）∥ HTTPS 形（`https://host/org/repo`）⇒ 同键）
+
+（原）OPS.md §1 `db` 行 — SQLite 库路径（相对 = 本配置档所在目录）；缺省 `data/gateway.db`
+（今）OPS.md §1 `db` 行 — SQLite 库路径（相对 = 本配置档所在目录）；缺省 = 配置档同级 `data` 目录内的 `gateway.db`（仓内 checkout 落点 = `thincoder-server/data/gateway.db`）
+
+（原）OPS.md §9 恢复步 — 以快照替换库（`gateway-<时间戳>.db` ⇒ `data/gateway.db`）
+（今）OPS.md §9 恢复步 — 以快照替换库（`gateway-<时间戳>.db` ⇒ 配置档同级 `data` 目录内的 `gateway.db`——仓内 checkout 即 `thincoder-server/data/gateway.db`）
+```
+
+**补全的盘上依据（本轮亲读）**：配置模块里缺省库路径是一个裸相对形常量，载入期按配置档所在目录解析为绝对路径——原文一行（常量声明）：
+
+```text
+export const DEFAULT_DB = "data/gateway.db"
+```
+
+外加同档 `const baseDir = dirname(configPathAbs)` 与 `return resolve(baseDir, db)` 两处约束（表达式无路径段）。旁证：配置档在盘 = `thincoder-server/config.json`，库在盘 = `thincoder-server/data/gateway.db`。故缺省相对形自配置档目录解析，正落该全路径——补的是盘上真坐标，不是凑一个能过门的形。
+
+**判类留（逐处记）**：`OPS.md` §1 JSON 示例块内的 `db` 字面值 = 配置档里真写的东西，留（围栏块内，且它答的是「值写什么」）；§5 容器路三处 = 容器内真路径，留。
+
+**验收读数（本轮实跑）**
+
+| 判据 | 判法 | 读数 |
+|---|---|---|
+| 机检（改前） | `doc_check({mode:"gate", docs:[两档]})` | 首行 `DOC-CHECK GATE: REFUSED（锚 3 条）`——恰为父侧点名的三处（API.md AC-32 行 ∥ OPS.md §1 `db` 行 ∥ OPS.md §9 恢复步） |
+| 机检（改后） | 同上 | 首行 `DOC-CHECK GATE: PASS`；0 段有问题（2 档全清） |
+| 三处落点 | 读改后正文 + `grep` 旧两形 | 三处新述句逐字在盘；示例仓地址旧形命中 = 0；裸相对库路径命中 = 1（围栏块内配置字面值），散文与表格内 = 0 |
+| 零越界 | `git status --porcelain`（仓根） | 恰 2 M，即本轮两档 |
+
+**本段落盘受阻两处（记下）**：本段 append 被批次文档机检门拒写两次（首次 7 条、二次 1 条），均未落盘、档字节不变。处置 = 原形 / 落形与源码摘录移入围栏块（引用面），散文只留别名描述。这正是「批档也不把死 token 当活指针写」的同一条判据，落笔先过门。
+
+**做错的一处（给下一个班）**：`bash` 里传 `workdir` 查仓状态，报 `fatal: not a git repository`——仓状态查询走 `git` 工具。
+
+**未落项**：无（三处全落，门已绿）。
 
 ## §3 设计评审（评审子代理）
 ## §4 用户批准（主 agent）

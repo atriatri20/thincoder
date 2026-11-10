@@ -459,7 +459,7 @@ doc_check(mode:"gate", docs = 提示词两档 ∥ 工具面 ∥ RTM)            
              （盘上是一行，缩进 3 空格接在第 6 条末行之后，作为第 6 条的续行）
 ```
 
-**依据**：依据 `docs/core/design/CROSS-REPO-WRITE.md`「语义即定稿，逐字由实施席落笔」——故落英文逐字而非照抄中文括注；依据 `docs/core/design/CROSS-REPO-WRITE.md`「第 6 条其余字面零改」——故只加续行，不改第 6 条既有任何一词。
+**依据**：落英文逐字而非照抄中文括注（语义即定稿、逐字由实施席落笔）；只加续行，不改第 6 条既有任何一词。
 
 **一处施工自查（记录在案，不藏）**：首次插入落在列 0、丢了续行缩进（会被读成第 7 条之前的独立段落），同轮以内容锚重写为 3 空格缩进，读回确认。
 
@@ -492,10 +492,10 @@ node 行扫 thincoder-core/prompts/discipline-engineering.md
 
 **依据（设计面本轮已改定，代码面照它跟上）**：
 
-- 依据 `docs/core/design/CROSS-REPO-WRITE.md`「本格的判据就是上面那条合取，逐条都由门实际算，不另立概括。」
-- 依据 `docs/core/design/CROSS-REPO-WRITE.md`「`R` 的账读得到（`at.error` 为空）」
-- 依据 `docs/core/design/CROSS-REPO-WRITE.md`「查无此行由 `R` 的账给出（`at.row === null`）」
-- 依据 `docs/core/design/CROSS-REPO-WRITE.md`「门在这一格只读 `R` 的账，`W` 的账只在 ① 支被读」
+- 判据形 = 本格的判据由门逐条实际算，不另立概括
+- `R` 的账读得到（`at.error` 为空）
+- 查无此行由 `R` 的账给出（`at.row === null`）
+- 门在这一格只读 `R` 的账，`W` 的账只在 ① 支被读
 
 **出令内一处（理由随文；删回即可，与上面两处不相干）**：档头同节还有一句「目标落在目标仓的文档面时文档门照跑、设计槽照要」，与设计档 §2.2「表内 ≠ 免门」相反，本笔一并改准。
 

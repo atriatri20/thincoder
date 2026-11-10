@@ -287,7 +287,7 @@ cd thincoder-core && node scripts/check-syntax.mjs                   ⇒ check-s
 
 **红侧读数（先红后绿，同一支命令）**
 
-- 跑法：把四个落盘档（`agent-tools/manifest.mjs` ∥ `agent/write-gate-ledger.mjs` ∥ `tools/shared.mjs` ∥ `tool-docs/manifest.md`）逐档 `git checkout --` 回 HEAD，再跑同一条单测命令。
+- 跑法：把四个落盘档（`agent-tools/manifest.mjs` ∥ `agent/write-gate-ledger.mjs` ∥ `thincoder-core/tools/shared.mjs` ∥ `tool-docs/manifest.md`）逐档 `git checkout --` 回 HEAD，再跑同一条单测命令。
 - 结果：`tests 2 / pass 0 / fail 2`。首条失败文本逐字 = 改前本门那口 —— `write refused — ledger row not bound: no ledger number on this call. …`（即 `manifest({action:"write"})` 无号被拒）；第二条 = schema 仍带 `ledger` 一格。
 - 复原：从备份拷回、复跑 ⇒ `pass 2 / fail 0`。备份目录建在仓外且在同一轮内删除（仓工作树零残留）；设计档「无新增文件」说的是仓内工作面，这条如实记在此处。
 
