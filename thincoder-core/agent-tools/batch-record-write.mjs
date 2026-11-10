@@ -260,7 +260,7 @@ const STATUS_LINE_IN_APPEND_ERROR = "batch_segment: append refused — the text 
 
 /** 段体**字符区间**（`## §N` 标题行的行尾之后 → 下一 `## §N` 段头之前；段头缺失 ⇒ null）。
  *  段定位判据与 `batch-skeleton.mjs` 同源（`sectionHeaderRe` + `/^## §\d/gm`）——本档只取**偏移**。
- *  区间函数住这里而不进骨架档：骨架档贴 500 软线，本批不带出助手函数（分批记录 2.4 贴线判）。 */
+ *  区间函数住这里而不进骨架档：骨架档当年已过 500 行，本批不带出助手函数（分批记录 2.4 贴线判）。 */
 function sectionBodySpan(src, seg) {
   const hdr = sectionHeaderRe(seg).exec(src)
   if (!hdr) return null

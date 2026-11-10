@@ -216,32 +216,36 @@ const DOCS_COORDINATE_PREFIX = "Docs (project-root relative, declared by this pr
  *  `docs/design` 这类默认路径与一条真声明同形，打出去就是把项目从未声明的坐标当声明发给子代理
  *  （KD-DC2——比不发更坏，它看起来像声明）。
  *
- *  **读不出（缺档 ∥ 坏档 ∥ 校验不过 ∥ 读抛）⇒ 返回 null，调用点不推块**：不加本行的结果 = 本批之前的
- *  行为，业务结果零变（KD-DC4；这不是兜底式静默——坐标取不到不该赔掉一次 spawn）。
+ *  **读不出（缺档 ∥ 坏档 ∥ 校验不过 ∥ 读抛 ∥ 项目根解析链 I/O 异常）⇒ 返回 null，调用点不推块**：不加本行
+ *  的结果 = 本批之前的行为，业务结果零变（KD-DC4；这不是兜底式静默——坐标取不到不该赔掉一次 spawn）。
+ *
+ *  **护栏宽度 = 整段坐标计算**（读档 + 基数解析 + 路径映射 + 串拼装），不是只包读档那一句（§6.61.2 ④ ·
+ *  AC-DC-8）：基数取法 `docRootBase(cwd)` 走项目发现链，而树根那一环 `owningProject` 的 `statSync` 无护栏
+ *  ⇒ 该链的 I/O 异常照原样上抛；只包读档那一句，「读不出不赔掉一次 spawn」就只兑现一半。
  *
  *  本档局部纯函数（D23-9：不外提模块——块文本一行、无逐字跨档消费者）。返回块文本 ∥ null。 */
 function docsCoordinatesBlockOf(cwd) {
-  let read
   try {
-    read = readManifest(cwd)
+    const read = readManifest(cwd)
+    if (!read.ok || !read.manifest) return null // 缺档 ∥ 坏 JSON ∥ 校验不过（契约 ③ 读档格）
+    const missing = new Set(read.missingKeys ?? [])
+    // 整键缺 ∥ 非对象 ⇒ 三层皆按未声明。**不另设「三层全未声明」分支**：它就是下面这条逐层判据连用三次。
+    const wholeUndeclared = missing.has("docRoot")
+    const base = docRootBase(cwd)
+    const layers = DOCS_COORDINATE_KEYS.map((key) => {
+      if (wholeUndeclared || missing.has(`docRoot.${key}`)) return `${key} = (undeclared)`
+      const value = read.manifest.docRoot?.[key]
+      // 显式「本面无」（`null`）与缺键同呈现：`docRootPaths(null) = []` 已定那一读（MANIFEST.md §2.7）。
+      if (value === null || value === undefined) return `${key} = (undeclared)`
+      // 路径一律项目根相对、`/` 分隔；解析为空（声明 = 项目根自身）呈现为 `.`。
+      const roots = docRootPaths(value, cwd).map((abs) => relative(base, abs).replaceAll("\\", "/") || ".")
+      return `${key} = ${roots.join(", ")}`
+    })
+    return `${DOCS_COORDINATE_PREFIX} ${layers.join(" · ")}`
   } catch {
-    return null // 非 ENOENT 读错（权限 ∥ 目录等）：readManifest fail-closed 上抛，本处收住（契约 ④）
+    // 读档非 ENOENT 读错（权限 ∥ 目录等）· 项目根解析链的 I/O 异常：一律收成「读不出」（契约 ④）
+    return null
   }
-  if (!read.ok || !read.manifest) return null // 缺档 ∥ 坏 JSON ∥ 校验不过（契约 ③ 读档格）
-  const missing = new Set(read.missingKeys ?? [])
-  // 整键缺 ∥ 非对象 ⇒ 三层皆按未声明。**不另设「三层全未声明」分支**：它就是下面这条逐层判据连用三次。
-  const wholeUndeclared = missing.has("docRoot")
-  const base = docRootBase(cwd)
-  const layers = DOCS_COORDINATE_KEYS.map((key) => {
-    if (wholeUndeclared || missing.has(`docRoot.${key}`)) return `${key} = (undeclared)`
-    const value = read.manifest.docRoot?.[key]
-    // 显式「本面无」（`null`）与缺键同呈现：`docRootPaths(null) = []` 已定那一读（MANIFEST.md §2.7）。
-    if (value === null || value === undefined) return `${key} = (undeclared)`
-    // 路径一律项目根相对、`/` 分隔；解析为空（声明 = 项目根自身）呈现为 `.`。
-    const roots = docRootPaths(value, cwd).map((abs) => relative(base, abs).replaceAll("\\", "/") || ".")
-    return `${key} = ${roots.join(", ")}`
-  })
-  return `${DOCS_COORDINATE_PREFIX} ${layers.join(" · ")}`
 }
 
 /**

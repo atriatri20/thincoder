@@ -413,8 +413,8 @@ export function loadConfig() {
   return merged
 }
 
-// 运行中重读盘上渠道表本体居 `config-reload.mjs`（`docs/core/design/PROVIDER.md` §6.30）——本档越
-// 500 行主动审视线后按设计指的候选线抽出，以下 re-export 保持既有导入面（同 config-io.mjs 拆分形态）。
+// 运行中重读盘上渠道表本体居 `config-reload.mjs`（`docs/core/design/PROVIDER.md` §6.30）——本档已过
+// 500 行后按设计指的候选线抽出，以下 re-export 保持既有导入面（同 config-io.mjs 拆分形态）。
 export { reloadProviders } from "./config-reload.mjs"
 
 /**

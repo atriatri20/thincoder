@@ -22,14 +22,14 @@ export const pathKey = (p) => (process.platform === "win32" ? p.toLowerCase() : 
 
 /** 声明根（§2.4）：`root` 入参 = **调用方给出的坐标系**。缺省 ∥ 空串 ∥ 非字符串 ⇒ `null`。
  *  **「声明根自身是不是项目」不参与判断**——普通目录、多项目工作区都能当声明根，照它判。
- *  空串判缺省是对今日的收紧：今日 `resolve("")` 悄悄落进程 cwd，那正是本批要禁的「猜一个根」。 */
+ *  空串判缺省，不是「当前目录」：落进程 cwd 等于替调用方猜一个根——那正是 §2.4 禁的形（缺声明根 ⇒ 整清单不判）。 */
 export function declaredRoot(root) {
   if (typeof root !== "string" || root.trim() === "") return null
   return resolve(root)
 }
 
 /** 取根式（§2.1 · 判据本体 = `owningProject`，全仓单源）：该档落点的项目根；祖先链至盘根无 manifest ⇒ 声明根。
- *  **界必须是盘根**：界填声明根时，跨项目的档在第一步就判出界、再落回声明根——那正是本批要修的 `档缺`。 */
+ *  **界必须是盘根**：界填声明根时，跨项目的档在第一步就判出界、再落回声明根——那正是 F17 要修的 `档缺`。 */
 export function rootOf(abs, declaredBase) {
   return owningProject(abs, parse(abs).root) ?? declaredBase
 }

@@ -31,7 +31,7 @@
  * 判域（**按档定根** · 判据句单源 = `docs/core/design/DOC-CHECK.md` §2.1–§2.4；需求条 = `docs/core/requirements/DOC-CHECK.md` 的 F17 ∥ AC-15；
  *   实现落 `./per-root.mjs`——定根 ∥ 分组 ∥ 报面路径形同出一档）：
  *   每个档用**自己的落点**定根——`rootOf(abs, 声明根) = owningProject(abs, parse(abs).root) ?? 声明根`；界 = 该档所在盘的盘根
- *   （界填声明根会把跨项目的档先判出界、再落回声明根，那正是本批要修的 `档缺`）。
+ *   （界填声明根会把跨项目的档先判出界、再落回声明根，那正是 F17 要修的 `档缺`）。
  *   `root` 入参 = **声明根**（调用方给出的坐标系），不再是整批共用的坐标系；**缺声明根 ⇒ 整清单不判、显式 `ERROR`**
  *   （政策：半份判定在报面上分不出「这档干净」与「这档没判」），「声明根自身是不是项目」不参与判断。
  *   判定内容（锚 ∥ 段长 ∥ 行号坐标 ∥ 引文）一字不动——改的只是「拿哪个根去解析」：按根分组、逐组调既有 `checkAnchors(root_i, …)`。
@@ -71,7 +71,7 @@ import { normalizePathList } from "../declaration.mjs"
 /** 判据参数（内置常量 · 冻结）：阈值 300 字符（一段 ∥ 一行同值——§3.18 ④）；两项空列表 = 区带类 / 豁免类默认值且恒空
  *  ——豁免谓词（表行 / 围栏 / 列表项 / 引文）住代码，没有「登记后放过」的写入口（空列表 ≠ 可登记豁免）。
  *  后两键 = 文件档尺寸档位的**数值单源**（§3.10 的读数口径行指向这里；判据是**严格大于**）：
- *  `fileSoftMax` 越线 = 主动审视（报面标「软线」）∥ `fileHardMax` 越线 = 必须拆（标「硬限」）。
+ *  500 = 设计器硬线（设计时判改代码前的长度，>500 必给分拆方案）∥ 800 = 其他检查硬线（只有收口检查判这一条，>800 必须拆）——两条都是硬线（口径单源 = docs/core/design/DOC-GRAPH.md §3）。
  *  它们只服务 `lines` 读数面的档位标记——`.md` 零尺寸档位义务（§3.7 条目 H），出数不标。 */
 export const DOC_CHECK_BUILTINS = Object.freeze({
   paragraphMax: 300,
@@ -416,7 +416,7 @@ function zoneTableOf(base, zones) {
 }
 
 /** 域表读数块的**句形单源**（§2.5 读数口径——块首行 ∥ 无 manifest 根那一行，逐字）：
- *  报面（本档 `report` 支）∥ 用例断言（本批单元测试档）同取这两条——两处各写一份字面，改一处必漂一处。
+ *  报面（本档 `report` 支）∥ 用例断言同取这两条——两处各写一份字面，改一处必漂一处。
  *  **出场条件两支**（与设计 §2.5 ∥ KD-8 逐字同源）：「本次读到域表的根集 ≠ {声明根}」**或任一根无 manifest**
  *  ——单项目锚下根集恰是声明根且该根有 manifest ⇒ 两支皆假 ⇒ 零出（单项目零回归的判据面）。 */
 const DOMAIN_TABLE_HEAD = (n, withMan, without) => `域表读数：${n} 根（读 manifest ${withMan} · 无 manifest ${without}）`
@@ -475,7 +475,7 @@ export function countContentLines(text) {
  *  `.md` 零标记是用户裁定下的行为，不是遗漏——文档档零行数义务、零拆分触发（§3.7 条目 H ∥ §3.10）。 */
 const SIZE_TIER_EXTS = Object.freeze([".mjs", ".cjs", ".js"])
 
-/** 档位分级（严格大于 · 阈值单源 = `DOC_CHECK_BUILTINS`）：越硬限 ⇒ `hard` ∥ 越软线 ⇒ `soft` ∥ 未越线 ∥ 非源档 ⇒ `null`。 */
+/** 档位分级（严格大于 · 阈值单源 = `DOC_CHECK_BUILTINS`）：越其他检查硬线 ⇒ `hard` ∥ 越设计器硬线 ⇒ `soft` ∥ 未越线 ∥ 非源档 ⇒ `null`。 */
 function sizeTier(n, abs) {
   const lower = abs.toLowerCase()
   if (!SIZE_TIER_EXTS.some((e) => lower.endsWith(e))) return null
@@ -486,8 +486,8 @@ function sizeTier(n, abs) {
 
 /** 档位标记字面（单源 · 字面随常量取值）：读面行尾追加，未越线不追加。 */
 function sizeTierMark(tier) {
-  if (tier === "hard") return `越 ${DOC_CHECK_BUILTINS.fileHardMax} 硬限（必须拆）`
-  if (tier === "soft") return `越 ${DOC_CHECK_BUILTINS.fileSoftMax} 软线（主动审视）`
+  if (tier === "hard") return `越 ${DOC_CHECK_BUILTINS.fileHardMax}（其他检查硬线：必须拆）`
+  if (tier === "soft") return `越 ${DOC_CHECK_BUILTINS.fileSoftMax}（设计器硬线：设计轮必给分拆方案）`
   return ""
 }
 
@@ -558,7 +558,7 @@ function lineReadBlock(base, reads) {
   const soft = reads.filter((r) => r.tier === "soft").length
   const out = ["行数读数（量法 = countContentLines · 档位标记只给源 / 单元测试档；.md 档只出数不标）"]
   for (const r of reads) out.push(`  ${r.lines}  ${rel(base, r.file)}${r.tier ? `  · ${sizeTierMark(r.tier)}` : ""}`)
-  out.push(`合计 ${reads.length} 档（越硬限 ${hard} · 越软线 ${soft} · 未越线 ${reads.length - hard - soft}）`)
+  out.push(`合计 ${reads.length} 档（其他检查硬线 ${hard} · 设计器硬线 ${soft} · 未越线 ${reads.length - hard - soft}）`)
   return out
 }
 
@@ -828,16 +828,16 @@ function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable
  *   `lineRefs` = 行号坐标的采集结果，**两个问法返回同一份**（同一次采集）。
  *   **每条命中携两格载荷**（`token` = 被拒的内容 ∥ `root` = 该命中的判定根）——拒文四件的「内容」与
  *   「解析根」两格读它（设计单源 = `docs/core/design/BATCH-RECORD.md` §4.22）；载荷不进 `hits`、不改 verdict。
- *   `projectRoots` = 参与判定的根（升序；§2.3）。**消费者只有两处**：报面的根清单行（≥2 根才出）与本批用例的断言。
+ *   `projectRoots` = 参与判定的根（升序；§2.3）。**消费者只有两处**：报面的根清单行（≥2 根才出）与用例断言。
  *   `cycleReads` = 判集未指向的成环事实（两问法同出读数行，不进 hits）；
  *   `domainTables` = 域表读数（§2.5：每组一根、按路径升序；`manifest` = 该根读到了 manifest）。
- *   **消费者只有两处**：`report` 面的域表读数块与本批用例的断言——不进 `hits`、不改 verdict（`gate` 面零改）。
+ *   **消费者只有两处**：`report` 面的域表读数块与用例断言——不进 `hits`、不改 verdict（`gate` 面零改）。
  *   `batchFaceRefs` = 面判剔除的 token 数（批档面互引不判——读数，**不进 `hits`**、不改 verdict；只有 `report` 面报面出这一行）。
  *   `excluded` = 落在 manifest 排除面内、**未判**的档（§2.7；`checkFiles` 因此是**排除后**的清单，两者不重叠）。
  *   它既不是命中，也不是「不在盘」或「读不到」。**消费者只有两处**：报面的排除桶与用例断言。
  *   `suffixHits` = 第 6′ 步（唯一后缀兜底）解析出来的指针（逐处 `{file, line, token, abs}`——读数，**不进 `hits`**、不改 verdict；
  *   只有 `report` 面出读数块）；`suffixBuilds` = 后缀索引建表次数（同一行读数里的 `后缀索引建 N 次`）。
- *   **消费者只有两处**：`report` 面的后缀读数块与本批用例的断言——它是「这些指针为什么从 `档缺` 变绿」的唯一可查面。
+ *   **消费者只有两处**：`report` 面的后缀读数块与用例断言——它是「这些指针为什么从 `档缺` 变绿」的唯一可查面。
  *   `exempted` = 已裁定假阳（§2.7：与 `skipped` ∥ `unreadable` ∥ `hits` 各自一桶——**不进 `hits`**、不改 verdict；
  *   两面报面各出一块）。`exemptInvalid` = 形态不对而不生效的登记条目（点名，不打断 manifest）；
  *   `exemptStale` = 这一轮一条都没对上的有效条目数（`登记未命中 N 条`）。**消费者 = 两面豁免块与用例断言。**

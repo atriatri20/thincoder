@@ -1,6 +1,6 @@
 /**
  * views-me-chat-sessions.mjs — 成员·对话页·会话条（`webui/CHAT.md` §2.2 差异⑨；机制 = `agent/MEMBER-AGENT.md` §3.11(6)）；
- * 自 `views-me-chat.mjs` 外拆（拆档缘由 = 该件越 500 软线——增行前先外拆；member-face-parity 批 KD-SV-221）——面内三族：
+ * 自 `views-me-chat.mjs` 外拆（拆档缘由 = 该件当年已过 500 行；member-face-parity 批 KD-SV-221）——面内三族：
  * ① 工作区读数段（名 ∥ 盒态 ∥ 回收原因 ∥ 在线态——沿 §2.2 差异②）；② **自绘会话下拉**（原生 `<select>` 换自绘——行 = 位标
  *    （● 运行中 ∥ ⏸ 待审批）∥ 标题（槽 `title` 非空顶行 ∥ 空 ⇒ `excerpt`）∥ meta（工作区 · provider · N msgs · 日期）∥
  *    ✎ 行内重命名 ∥ ✕ 删除（>1 时在场；确认门））；③ 成员条自有钮（新会话 ∥ 启动工作区 ∥ 拉取项目 ∥ 重读 ∥ 📁 工作区选择）。

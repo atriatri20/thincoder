@@ -39,7 +39,9 @@ Evaluate the design against these dimensions:
 8. **Affected-file tier check**: every source/test file in the design's affected-files table gets its tier judged — **the conclusion**（crosses a tier or not）+ **the command**（how to check it）; no number goes into the design document.
    **Neither the size nor an expected delta goes into the design document**: the conclusion does — one line naming which files cross a tier, each with its split plan, or stating that none crosses.
    **Pure `.md` documents are exempt** from that tier judgment.
-   **Any file crossing a code-structure tier must carry a split plan in the design** — file tier: >500 lines → proactive split review, >800 lines → must split (hard cap, no exemption channel).
+   **Any file crossing a file tier must carry a split plan in the design** — the tier is judged on the length **before** the code change.
+   >500 lines → the design must give a split plan (no discretion); >800 lines → must split, and the split lands before the change (hard cap, no exemption channel).
+   **The 500 line belongs to the design round alone** — the implementation, closeout and review faces judge only the 800 line.
    **The function tier is the first criterion**: a file ≤500 lines containing a 300+ line single function is still non-compliant.
    **Tier authority**: the code-structure criteria stated in this bullet.
    **Spot-check**: sample the table's source/test files, size each one yourself, and verify the conclusion line against them.

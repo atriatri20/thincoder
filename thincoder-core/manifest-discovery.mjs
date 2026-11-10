@@ -136,7 +136,9 @@ function isInsideOrEqual(dir, bound) {
  *  **按名排序**——多根工作区常态，非错误态；1 ∥ ≥2 同判）/ `none`（其余，含裸仓锚——
  *  **不向下取根** ⇒ 双空）；覆盖位在场 ⇒ 头部短路（`ok` + 覆盖值）。
  *  **发现读数只供 `workspace` 报明**：`discoverProjects` 的 `self` **不进 `root`**
- *  （判据单源 = `owningProject`）。**非抛错 / 零写**；`resolveProjectRoot` 薄委托本函数。
+ *  （判据单源 = `owningProject`）。**零写 · 状态面不抛**（`state` 三值恒有答案）；**I/O 异常照原样上抛**——
+ *  `owningProject` 取根那一环无护栏（`statSync(..., { throwIfNoEntry: false })` 只把「不存在」变成 `undefined`，
+ *  权限 ∥ 链接环等照抛），故调用点要自己包护栏；`resolveProjectRoot` 薄委托本函数。
  *  @returns {{state:'ok'|'workspace'|'none', root:string|null, candidates:string[]}} */
 export function projectRootView(cwd) {
   const target = resolve(cwd ?? ".")

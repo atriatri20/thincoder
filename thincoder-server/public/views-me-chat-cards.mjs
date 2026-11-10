@@ -1,6 +1,6 @@
 /**
  * views-me-chat-cards.mjs — 成员·对话页·ask 卡族（`webui/CHAT.md` §2.2 差异⑨；机制 = `agent/MEMBER-AGENT.md` §3.11(2) KD-SV-217）；
- * 自 `views-me-chat.mjs` 外拆（拆档缘由 = 该件越 500 软线——增行前先外拆；member-face-parity 批）——面内四族：
+ * 自 `views-me-chat.mjs` 外拆（拆档缘由 = 该件当年已过 500 行；member-face-parity 批）——面内四族：
  * ① **卡族四件**：`permission`（核 `renderApprovalCard`——diff 预览内建）∥ `batch`（核 `renderBatchApprovalCard`）∥
  *    `question`（核 `renderQuestionCard`）∥ `secret`（**页内件**——核无此卡；沿 VSC `secret-input.js` 同族：`fields` 逐项
  *    masked/prefill/required + 提交/取消——值只经应答体，零入上下文零落盘）；

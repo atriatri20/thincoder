@@ -2,7 +2,7 @@
  * session-index-build.mjs — 会话枚举 / 取源 / 水位增量 / 会话重建（SESSION.md §6.19 D-SE44/D-SE45；写面）。
  *
  * 机制契约全文 = `docs/core/design/SESSION.md` §6.19（D2 单一权威源）。本档只**读**主存（槽 JSON 整读 / 段偏移
- * `readSync`），绝不写回 sessions 树（零权威）；`session-index.mjs` 的 >300 软线二分产物（设计「跨档线
+ * `readSync`），绝不写回 sessions 树（零权威）；`session-index.mjs` 的 >300 行线二分产物（设计「跨档线
  * 拆分预案」：枚举与水位增量 ∥ 重建 / 拍 / 清行——拍 / 清行 / 有界趟住 `session-index-pass.mjs`）。
  *
  * 取源**双路**：`<槽文件>.d/` 含 `seg-*.jsonl` ⇒ `src=sidecar`（增量面）；否则 `src=json`（槽 JSON

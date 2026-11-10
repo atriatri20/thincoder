@@ -1,7 +1,7 @@
 /**
  * session-index-query.mjs — 索引查询与 FTS 检索（SESSION.md §6.19 D-SE47；查询面）。
  *
- * `session-index.mjs` 的 >300 软线二分产物（设计「跨档线拆分预案」：DDL / 打开与自愈 ∥
+ * `session-index.mjs` 的 >300 行线二分产物（设计「跨档线拆分预案」：DDL / 打开与自愈 ∥
  * 查询与 FTS 检索）。路由判据 / 语义分面 = §6.19 查询面路由表：
  *   · 单会话（`path=<文件>` ∈ sessions 根 ∧ 库内有行）——`keyword` = 子串（`LIKE`，既有契约不变）
  *   · 跨会话（`path:"all"`）——`keyword` = FTS 词 / 短语（`buildFtsQuery` 单源）；无词元 ⇒ 退化 `LIKE`

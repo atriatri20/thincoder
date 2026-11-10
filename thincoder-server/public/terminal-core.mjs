@@ -3,7 +3,7 @@
  * ① 字符网格模型（单元格 = 码点 + SGR 属性 ∥ 宽字符两列占位 ∥ DECSTBM 滚动区 ∥ 备用屏 ∥ 卷回 1000 行环 ∥ 模式位
  * `?1`/`?6`/`?7`/`?12`/`?25`/`?47`/`?1047`/`?1049`/`?2004` + IRM）——语义（解析产物 ⇒ 网格操作）随本档；
  * ② 增量 UTF-8 解码（`Utf8Decoder`）∥ ③ 键盘编码（`encodeKey`/`encodePaste`——§2.3 表）——②③ 住编解码面，本档转出。
- * **拆分面 = 职责三分**（实施实读越 500 软线后按职责界线拆——`webui/TERMINAL.md` §3 越线拆案触发点）：
+ * **拆分面 = 职责三分**（实施实读越 500 行后按职责界线拆——`webui/TERMINAL.md` §3 越线拆案触发点）：
  * 解析面 = `terminal-vt.mjs`（字符级状态机）∥ 编解码面 = `terminal-codec.mjs`（增量 UTF-8 ∥ 键盘编码——经本档转出）。
  * **零 DOM ∥ 零网络 ∥ 零控制台依赖**（不 import `i18n.mjs`/`modal.mjs`/`dom.mjs`——壳与文案归宿主；§2.6 宿主契约）。
  * 读面 = 只读快照（`screenRow`/`scrollbackRow`/`cursor`/`modes`/`takeDirty`/`version`）——`terminal-render.mjs` 按脏行重渲（§2.4）。

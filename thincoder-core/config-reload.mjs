@@ -1,8 +1,8 @@
 /**
  * config-reload.mjs — 运行中重读盘上渠道表（`docs/core/design/PROVIDER.md` §6.30）。
  *
- * 从 `thincoder-core/config.mjs` 抽出：该档落盘后越过 `docs/core/design/DOC-DISCIPLINE.md` §3.10 的
- * 500 行主动审视线，抽法沿 §6.30 指的候选线——`reloadProviders` 整段移出，`config.mjs` 以
+ * 从 `thincoder-core/config.mjs` 抽出：该档落盘后越过 `docs/core/design/DOC-DISCIPLINE.md` §3.10 所定的 500 行，
+ * 抽法沿 §6.30 指的候选线——`reloadProviders` 整段移出，`config.mjs` 以
  * re-export 保持导入面（形态同 `config-migrate.mjs` ∥ `config-io.mjs` 两次既有拆分）。
  *
  * 环：本档 import `config.mjs` 的 `loadConfig` ∥ `proxy.mjs` 的 `injectProxy`，而两者都反向指向

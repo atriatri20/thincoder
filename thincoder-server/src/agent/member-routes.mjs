@@ -3,7 +3,7 @@
  * member-face-chat 批 · KD-SV-152–157/203/204；member-face-parity 批扩——在途门会话级 ∥ 四旗/标题写面 ∥
  * 工作区 key 第三门 ∥ 图片通道 ∥ 行扩四键）：会话读/建/改 = **盒指令转发**（`cmd`——会话真源在盒内，服务器零会话落库；
  * 盒离线 ⇒ 409 `workspace_offline`）∥ 工作区写面四端点（建/启停销毁/拉仓——本人资源自管 + `memberWorkspaceLimit` 上限）∥
- * git 凭据三端点（`member-cred.mjs`）；ask 应答/会话删除/`@` 候选三端点住 `member-asks.mjs`（拆档——越 500 软线）。
+ * git 凭据三端点（`member-cred.mjs`）；ask 应答/会话删除/`@` 候选三端点住 `member-asks.mjs`（拆档——越 500 行）。
  *
  * 判权 = **双鉴权同判权**（控制台 cookie ∥ 登录 token `Authorization: Bearer`——KD-SV-157）+ **恒本人**
  * （他人资源 ⇒ 列表零出现 ∥ 直取 404 不辨）+ **工作区 key 第三门**（`/api/me/sandbox/*` 写面——盒内工具面：

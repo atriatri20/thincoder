@@ -429,9 +429,13 @@ const HALF_STATE_EXITS = {
   "header-row-missing": "主路径 = 把该号从档头 台账 行删掉（普通文档写，零台账写、无前置条件）；改完 check 转一致。次路 = 重跑 attach：省略 ledger 开新行受同面判约束；同面还有未决行时须带显式 ledger:\"#N\" 或改用主路径。",
 }
 
-/** 半状态项（`id` = 首个命中行的编号，`rows` = 命中行编号集；`exit` = 出路句）。 */
-const halfStateOf = (name, rows) => ({
-  name, id: rows.length ? Number(rows[0].id) : null, rows: rows.map((r) => Number(r.id)), exit: HALF_STATE_EXITS[name],
+/** `record = unknown`（§1 状态行缺行 ∥ 不可解析）时 `open-but-settled` 的出路句：不印「直接收口」——补关入口
+ *  恒为 `record = open`（`docs/core/design/BATCH-RECORD.md` §4.18-C），读不出就先修 §1。类名不动（类集合单源 = 设计档 §2.17 表）。 */
+const UNKNOWN_RECORD_EXIT = "状态行读不出（§1 无状态行 ∥ 不可解析）——先修 §1 状态行，修好前不按「直接收口」办"
+
+/** 半状态项（`id` = 首个命中行的编号，`rows` = 命中行编号集；`exit` = 出路句——缺省取上表，`unknown` 那格另给）。 */
+const halfStateOf = (name, rows, exit) => ({
+  name, id: rows.length ? Number(rows[0].id) : null, rows: rows.map((r) => Number(r.id)), exit: exit ?? HALF_STATE_EXITS[name],
 })
 
 /**
@@ -443,7 +447,8 @@ const halfStateOf = (name, rows) => ({
  * 读数；加上第三条，它判的仍是同一件真事：该批此刻没有一条在途行，所以一个字也写不进去。
  * **`open-but-settled` 是预期读形**（重开一份非空全归档批的必然结果——`已核销` 不回收），不是缺陷；空行集不命中。
  * 判据 = `record !== "closed"` ∧ 行集非空 ∧ 全归档（`docs/core/design/LEDGER.md` §11.2）：`unknown` 照报
- * （不可判必须可见，不许静默当作已收口）；补关入口恒为 `record = open` 且 `halfStates` 恰为唯一本项目。
+ * （不可判必须可见，不许静默当作已收口），但出路句换成「先修 §1」、不印「直接收口」——补关入口恒为
+ * `record = open` 且 `halfStates` 恰为唯一本项目。
  * `closed-but-open-rows` 同读 `status` 与 `trigger`：在途恒算；等待态只在 trigger 非条件且非认账不排期时算。
  * `header-row-missing` 只判档头号在 items 无同号行；行存在但已解绑不计入。
  * @param {{cwd?:string, batch?:string, boundary?:string}} o — `cwd` = 批档所属项目根；`boundary` = 会话锚
@@ -484,7 +489,11 @@ export function batchLedgerConsistency({ cwd, batch, boundary } = {}) {
   if (record === "closed" && openRows.length) halfStates.push(halfStateOf("closed-but-open-rows", openRows))
   if (record === "closed" && settling.length) halfStates.push(halfStateOf("closed-but-settling", settling))
   if (record === "open" && inFlight.length === 0 && settling.length) halfStates.push(halfStateOf("open-but-unwritable", settling))
-  if (record !== "closed" && rows.length > 0 && archived.length === rows.length) halfStates.push(halfStateOf("open-but-settled", rows))
+  if (record !== "closed" && rows.length > 0 && archived.length === rows.length) {
+    halfStates.push(record === "open"
+      ? halfStateOf("open-but-settled", rows)
+      : halfStateOf("open-but-settled", rows, UNKNOWN_RECORD_EXIT))
+  }
   if (stale.length) halfStates.push(halfStateOf("pointer-stale", stale))
   if (missingHeaderRows.length) halfStates.push(halfStateOf("header-row-missing", missingHeaderRows))
   return {

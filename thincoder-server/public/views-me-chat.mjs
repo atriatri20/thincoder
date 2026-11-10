@@ -5,7 +5,7 @@
  * 取数：列表/详情 = `GET …/sessions[/:id]`（读时读）∥ 发送 = `POST …/:id/messages`（体 = `{ content, images? }`——图列 dataURL 直通，服务端视觉门拒 ⇒ 400 人话 + 草稿保留）∥ 中止 = `POST …/abort`（携 `{ key? }`——停单件）。
  * 换模型/设档/四旗/标题 = `PATCH …/:id`（一次一件）∥ 删除 = `POST …/:id/delete { confirm: true }` ∥ ask 应答 = `POST …/asks/:promptId`；模型候选 = `GET …/models`；`@` 候选 = `GET …/chat/files`；工作区 = `GET …/sandbox/workspaces` + 建/启/拉。
  * 断连/离页 = 读流中止（回合仍在盒内执行）。直测面 = `renderMeChat`。
- * 外拆（member-pull-inline-cred 批 ∥ member-face-parity 批 KD-SV-221——本件外拆至 500 软线内）：拉取弹窗与凭据就地绑 = `views-me-chat-pull.mjs`（KD-SV-215）∥ 会话条与会话起点弹窗 = `views-me-chat-sessions.mjs` ∥ ask 卡族四件 = `views-me-chat-cards.mjs` ∥ 子代理面 = `views-me-chat-subs.mjs`——本档 `export … from` 兼容重导出拉取两纯件（旧测试面零改）。
+ * 外拆（member-pull-inline-cred 批 ∥ member-face-parity 批 KD-SV-221——本件外拆至 500 行内）：拉取弹窗与凭据就地绑 = `views-me-chat-pull.mjs`（KD-SV-215）∥ 会话条与会话起点弹窗 = `views-me-chat-sessions.mjs` ∥ ask 卡族四件 = `views-me-chat-cards.mjs` ∥ 子代理面 = `views-me-chat-subs.mjs`——本档 `export … from` 兼容重导出拉取两纯件（旧测试面零改）。
  */
 import { t, langTag } from "./i18n.mjs"
 import { buildUserMessage, renderBlock } from "/rc/flow/block.mjs"

@@ -42,14 +42,15 @@ function fixture(files) {
 /** n 行内容（末行带换行）——内容行数 = n。 */
 const body = (n, tag = "L") => Array.from({ length: n }, (_, i) => `${tag}${i + 1}`).join("\n") + "\n"
 
-/** 26-5 的三档夹具：`.mjs` 812（越硬限）∥ `.mjs` 500（恰在软线上，不标）∥ `.md` 900（只出数）。 */
+/** 26-5 的四档夹具：`.mjs` 812（越其他检查硬线）∥ `.mjs` 700（越设计器硬线）∥ `.mjs` 500（恰在设计器硬线上，不标）∥ `.md` 900（只出数）。 */
 const CASE = {
   "docs/target.md": "# 靶档\n\n正文一行。\n",
   "src/big.mjs": body(812),
+  "src/mid.mjs": body(700),
   "src/ok.mjs": body(500),
   "docs/big.md": body(900, "D"),
 }
-const LINES = ["src/big.mjs", "src/ok.mjs", "docs/big.md"]
+const LINES = ["src/big.mjs", "src/mid.mjs", "src/ok.mjs", "docs/big.md"]
 
 /** 业务入口：真工具调用（`report` + 显式 `docs` + `lines`）。 */
 const runWithLines = (root, lines) => docCheckTool.execute({ mode: "report", docs: ["docs/target.md"], lines, target: root }, { agent: { cwd: root } })
@@ -71,12 +72,13 @@ test("CLI 26-5 行数读数与缝档同源：逐档整数相等，越线标记�
   const root = fixture(CASE)
   const report = runWithLines(root, LINES)
   const block = blockLines(report)
-  assert.equal(block.length, 5, `块首行 + 三档 + 合计行：${JSON.stringify(block)}`)
-  // 三档标记：812 越硬限 ∥ 500 恰在软线（严格大于 ⇒ 不标）∥ .md 900 只出数；行序 = 路径升序
+  assert.equal(block.length, 6, `块首行 + 四档 + 合计行：${JSON.stringify(block)}`)
+  // 四档标记：812 越其他检查硬线 ∥ 700 越设计器硬线 ∥ 500 恰在设计器硬线上（严格大于 ⇒ 不标）∥ .md 900 只出数；行序 = 路径升序
   assert.equal(block[1], "  900  docs/big.md", `.md 只出数：${block[1]}`)
-  assert.equal(block[2], `  812  src/big.mjs  · 越 ${DOC_CHECK_BUILTINS.fileHardMax} 硬限（必须拆）`, `硬限标记：${block[2]}`)
-  assert.equal(block[3], "  500  src/ok.mjs", `500 不标：${block[3]}`)
-  assert.equal(block[4], "合计 3 档（越硬限 1 · 越软线 0 · 未越线 2）", `合计三数：${block[4]}`)
+  assert.equal(block[2], `  812  src/big.mjs  · 越 ${DOC_CHECK_BUILTINS.fileHardMax}（其他检查硬线：必须拆）`, `其他检查硬线标记：${block[2]}`)
+  assert.equal(block[3], `  700  src/mid.mjs  · 越 ${DOC_CHECK_BUILTINS.fileSoftMax}（设计器硬线：设计轮必给分拆方案）`, `设计器硬线标记：${block[3]}`)
+  assert.equal(block[4], "  500  src/ok.mjs", `500 不标：${block[4]}`)
+  assert.equal(block[5], "合计 4 档（其他检查硬线 1 · 设计器硬线 1 · 未越线 2）", `合计三数：${block[5]}`)
   // 缝档再出口与 `lines` 读数逐档相等（一条实现，缝档只转出）
   const res = runDocCheck(root, { docs: ["docs/target.md"], lines: LINES })
   for (const r of res.lineReads) {

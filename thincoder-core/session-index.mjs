@@ -4,7 +4,7 @@
  * 机制契约全文 = `docs/core/design/SESSION.md` §6.19（D-SE43–D-SE47；D2 单一权威源）。
  * 本档 = 「DB 打开 / DDL / schema / 测试缝」面；查询与 FTS 检索 = `session-index-query.mjs`；
  * 写面（枚举 / 水位增量 / 会话重建 / 延迟拍 / 清行）= `session-index-build.mjs` +
- * `session-index-pass.mjs`（>300 软线按设计「跨档线拆分预案」二分）；命令面 = `session-index-cmd.mjs`。
+ * `session-index-pass.mjs`（>300 行线按设计「跨档线拆分预案」二分）；命令面 = `session-index-cmd.mjs`。
  *
  * **零权威**：主存（槽 JSON + `{槽}.d/` sidecar + manifest）= 真源；本库只读主存（整读 / 偏移
  * `readSync`），**绝不写回** sessions 树；库丢 / 坏 = 重生成（D-SE46 打开即验 + 改名保留自愈）。

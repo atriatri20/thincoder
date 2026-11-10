@@ -91,7 +91,7 @@ function docRootBaseKeys(root, manifest) {
   return out
 }
 
-/** 档 token 的**一对边界**（**一处定义、四处抽取式加剥除式同吃**——本批转导出面）：
+/** 档 token 的**一对边界**（**一处定义、四处抽取式加剥除式同吃**——转导出面）：
  *  左界不接名字字符类 ∣ 路径分隔符 ∣ `@` ∣ `<>`（排除更长 token 的尾段）、右界不接字母数字
  *  （扩展名之后紧邻字母数字 ⇒ 非完整 token）。锚（`ANCHOR_RE`）∥ 花括号组 ∥ 依据行（`CITE_RE_SRC`）∥
  *  行号面（`./line-refs.mjs` 的 `NAME_RE`）与操作数剥除（`stripCanonOperands`）同取这一对。
