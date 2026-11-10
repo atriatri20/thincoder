@@ -119,7 +119,7 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 | F-O4 | 轨迹存档单次拷贝收敛 | 单条轨迹写入不再产生整对象图深拷贝（序列化一遍完成脱敏 + 编码）；超长消息内容按额度截断（头尾保真）；单记录总量超上限 → 正文降级为摘要 stub（元数据保留，标记可见） | 不改轨迹字段集 / 落盘目录 / 保留期；不改开关默认（默认 OFF）；不做轨迹压缩 / 加密 |
 | F-O5 | 轨迹在途份数有界 | 并发在途写盘份数 ≤ 设计上界定值——超限丢弃并计数（不阻塞模型调用路径）；序号分配不再逐次同步扫目录 | 不做轨迹重放 / 重试补偿；不改 fire-and-forget 不阻塞语义 |
 
-**非功能**：N-O1 有界可测（四条上界均可注入缝直测——零网络、零真实写盘）· N-O2 零回归（既有族测试全绿；digest 注入内容与预算零变化）· N-O3 诊断可见（丢弃 / 截断均有可观测标记——不静默）· N-O4 行数纪律（触碰源档守 800 硬限；越 500 软线如实登记）。
+**非功能**：N-O1 有界可测（四条上界均可注入缝直测——零网络、零真实写盘）· N-O2 零回归（既有族测试全绿；digest 注入内容与预算零变化）· N-O3 诊断可见（丢弃 / 截断均有可观测标记——不静默）· N-O4 行数纪律（触碰源档守 800 硬限；设计轮判「改代码前」的 500 硬线，>500 必须带拆分计划——两条硬线、无软线一档，口径 = `docs/core/design/DOC-GRAPH.md` §3）。
 
 **明确不做**：不做子代理内存的全局池级上限；不做 entry / report 的落盘化；不做轨迹内容质量改写（仅截断 / 降级 + 标记）；不改 VSC 端。
 
@@ -131,6 +131,7 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 |---|---|---|
 | F1 | observe 查进度 | As a 父 agent, I want to query a running async subagent by id for its recent-activity snapshot（最近 N 条回合 / 动作摘要 + 当前工具 + turn / touched），so that I can judge whether it is progressing vs stuck without guessing |
 | F2 | send 注入引导 | As a 父 agent, I want to send a message to a running async subagent, which it consumes as an ordinary input at its next turn boundary, so that I can give it direction when it is stuck / off-course |
+| F3 | 子代理携文档坐标 | As a 子代理，我需要知道本项目声明的文档层住在哪里（`requirements` ∥ `design` ∥ `batches`），so that 我找现成件时直接去对应目录，而不是靠 `glob` 摸；**未声明与读不出两种状态必须可区分**（前者明写未声明，后者不注入）——否则模型会把默认值当成项目声明 |
 
 **边界**：只对**异步池中未 settle** 的子代理（父自身 spawn 的 async 子代理）；sync / 阻塞（父在等、无法中转）与已 settle / 已 cancel 不可 send。observe 可查 running / queued / done 任意。注入不等同偏离豁免——子代理按普通用户回合接收，其内部收敛 / 审计纪律不变。
 
@@ -182,7 +183,7 @@ VSC 侧同名面多为拆档（`execute-tools` · `tool-gates` · `run-helpers` 
 | F3 | 中止清池在**两个生产接线点**（回合尾中止 · 挂起会话中止）都生效——任一 Stop 路径均不静默 | 收尾站（`finishSuspension`）**不接线**（无父 agent 注入目标——判据登记设计档 §6.20.1）；**不改 VSC 侧** |
 | F4 | 依赖目标被判丢弃时**不再判「报告已到达」**（`depInfo` 归 `cancelled` 口径——非 AUTO 依赖者锁住等父处置，AUTO 可启动） | 不新增枚举值；不改 `describeBlockers` / `detectStall` 与依赖者文案 |
 
-**非功能**：N1 **对称语义**（提醒文案 / 动作序 / 事件名与对侧同源；必须不同处须显式登记端差，不静默偏离）· N2 **可机检**（断言 = 墓碑状态 / 池内容 / 提醒注入 / `ev:discarded` 计数 / 依赖终态）· N3 **尺度与可回退**（源档守 800 硬限，越 500 软线如实登记 + 拆分计划；纯增量接线 ⇒ 整批可回退）。
+**非功能**：N1 **对称语义**（提醒文案 / 动作序 / 事件名与对侧同源；必须不同处须显式登记端差，不静默偏离）· N2 **可机检**（断言 = 墓碑状态 / 池内容 / 提醒注入 / `ev:discarded` 计数 / 依赖终态）· N3 **尺度与可回退**（源档守 800 硬限；设计轮判「改代码前」的 500 硬线，>500 必须带拆分计划——两条硬线、无软线一档；纯增量接线 ⇒ 整批可回退）。
 
 **设计侧 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.20**——本档不复制。
 

@@ -516,7 +516,7 @@ test/integration/manifest-init-default.test.mjs
 值 → 展开（串 / 数组统一成列表）→ 逐元素 trim + `\`→`/` 归一 → resolve(docRootBase(cwd), p) → 去重（保序）
 ```
 
-**全消费面清单（7 处，逐处给策略）**：
+**全消费面清单（8 处，逐处给策略）**：
 
 | # | 消费点 | 现语义 | 策略 |
 |---|---|---|---|
@@ -527,9 +527,16 @@ test/integration/manifest-init-default.test.mjs
 | 5 | `thincoder-cli/src/cli/make-agent.mjs` · `thincoder-vscode/src/agent/setup.mjs`（壳面装配钩子） | `requireManifest` / `initManifest` | **零改**（不取值形态） |
 | 6 | `PROJECT-MANIFEST.json`（本仓数据档） | 五键单串 | **改**：`requirements` / `design` 各三根（core + cli + vsc）；`specs` / `modules` / `batches` 保持单串（部分层无此目录——不预造惰性根） |
 | 7 | `thincoder-core/conventions.mjs` `isDocPath`（`agent-tools/verify.mjs` 等消费） | 文档分类 = conventions 面 | **零涉**（判据源不同——非 `docRoot`；不碰） |
+| 8 | `thincoder-core/agent-tools/subagent-spawn.mjs`（子代理固块 S5——`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.61） | 不读 `docRoot` | **新增**：`readManifest` + `docRootPaths` 取三层（`requirements` ∥ `design` ∥ `batches`）作项目根相对坐标行；**未声明判别取 `missingKeys`、不回退 `DEFAULT_MANIFEST`**（补默认后的值不是声明面）；读不出 ⇒ **整块不推**（三层一行都不出现） |
 
-**「本面无」消费面读数**：`docRootPaths` 统一展开 ⇒ 该键零贡献（`[]`）：write-gate 评审根集逐键展开（该键 `[]`——其余键照常）
-∥ `batch-paths` 基底（`docRoot.batches = null` ⇒ 声明面零根 ⇒ 回退默认基底——与缺键同款回退，登记；**两情形分清**：键 `null` ⇒ 回退默认基底，**显式**基底（串 / 数组）全不可读 ⇒ `throw`——AC-12 / T21 语义零改）∥ doc-check（不读 `docRoot`）∥ 壳面（不取值形态）。
+**「本面无」消费面读数**：`docRootPaths` 统一展开 ⇒ 该键零贡献（`[]`）。逐消费面：
+
+- **write-gate 评审根集**：逐键展开，该键 `[]`，其余键照常。
+- **`batch-paths` 基底**：`docRoot.batches = null` ⇒ 声明面零根 ⇒ 回退默认基底（与缺键同款回退，登记）。
+- **两情形分清**：键 `null` ⇒ 回退默认基底；**显式**基底（串 / 数组）全不可读 ⇒ `throw`（AC-12 / T21 语义零改）。
+- **doc-check**：不读 `docRoot`。
+- **壳面**：不取值形态。
+- **子代理固块 S5**：该层呈现 `(undeclared)`（`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.61）。
 
 **验收** = §3.1 AC-39 / §3.2 T61–T62 ∥ T62b（`readManifest` ∥ `docRootPaths` ∥ 批档基底读数 ∥ 门禁读数复跑全 OK）。
 

@@ -234,7 +234,7 @@
 | A1 | 漏调路径**必红**：T5-5 / T5-6 / T5-7 三例断言抛错（`assert.throws`——非静默通过） | — |
 | A2 | 断言在位可机检：`thincoder-core/agent-tools/subagent-run.mjs` / `thincoder-core/agent-tools/escalate-async.mjs` / `thincoder-core/agent-tools/advisor-async.mjs` 消费点各含令牌断言、三入池点各含键守卫（grep 断言句 + 抛错分支） | — |
 | A4 | 范围守恒（机检）：diff 不触取号公式行（`thincoder-core/agent-tools/subagent-scheduler.mjs`）与池键形态（`String(id)`）；`thincoder-vscode/**` 零写入 | — |
-| A5 | 触碰源档 ≤800 硬限；越软线档在档内登记（含拆分计划） | — |
+| A5 | 触碰源档按其他检查硬线 800 判（>800 ⇒ 先拆再落；≤800 ⇒ 不管）；档位口径 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」 | — |
 
 ### 6.21.8 边界（本条目不做）
 
@@ -566,7 +566,7 @@ export function writeTombstone(parent, id, status, role) {
 
 **边界（本节不做）**：不动 `spawn` 的 depth 语义；不动工具描述 / 提示词面（`subagent` 工具描述 = `thincoder-core/tool-docs/subagent.md`——描述外置面（`DESC("subagent")` 单点加载）；内容依据 = 机制文档，落笔 = eng-coder）；不做 observe/send/cancel/panel 既有门文案的旧编号收正（旧编号在现行两档均不可解析——域外登记）；
 
-**不执行** `thincoder-core/agent-tools/subagent-actions.mjs` 拆分，只登记不执行（§6.20.8-3 = §6.20 的边界声明，非拆分计划本体——措辞收正）。
+**不执行** `thincoder-core/agent-tools/subagent-actions.mjs` 拆分，只登记不执行（§6.20.8-3 = §6.20 的边界声明，非拆分计划本体）。
 
 ## 6.26 机制性指令注入位置：spawn 固块改走 system 面
 
@@ -592,6 +592,7 @@ export function writeTombstone(parent, id, status, role) {
 | 13 | `REPORT_CONTINUATION`（报告过短追问） | `thincoder-core/agent-tools/subagent-async.mjs` | user 追问 | 按需重发（机制不同：重发即在场） | 保持 |
 | 14 | async 结果注入 / digest 提醒 | `thincoder-core/agent-tools/subagent.mjs`（`injectAsyncResult`） | user 提醒 | 事件驱动 | 保持 |
 | 15 | 写域声明行（S4） | `thincoder-core/agent-tools/subagent-spawn.mjs`（固块收集点） | **未注入**（只有调度器知道） | spawn 级固定（`files` 是 spawn 参数，同一 child 终身不变） | **改**：入 system 固块——判据 ① 两条全中；判据 ② 后半不命中（写域声明是「在哪改」的常驻契约，不是任务内容） |
+| 16 | 文档坐标行（S5） | `thincoder-core/agent-tools/subagent-spawn.mjs`（固块收集点） | **未自动注入**——五个 depth>0 段各挂 `manifestReadTool`（§6.60.2 ①），子代理读得到 `docRoot`；但那是按需主动读，得先想到去读、再知道键名。增量与理由见 §6.61.1 | spawn 级固定（`docRoot` 在 spawn 时读一次，同一 child 终身不变） | **加**：入 system 固块——判据 ① 两条全中；细节 = §6.61（逐字文本、取数出口、读不出不推块三格住那里，本表不复述） |
 
 **接口契约（改后 = 盘上真身节选）**：
 
@@ -630,7 +631,7 @@ if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
 **写域行（S4）—— `files` 首次进入 child 视野**：
 
 - **触发**：`files.length > 0`。`files` 到这里已是归一化写域（`thincoder-core/agent-tools/subagent-spawn.mjs` 调 `normalizeFileList`：相对 cwd 转绝对——`resolve(cwd, f)`，平台原生分隔符，win32 为反斜杠）。空数组 / 未传 ⇒ **不推块**（`_spawnSystemBlock` 不因 S4 改变）。
-- **收集序**：批次档行 → 审计块 → **写域行**（追加在既有两块之后，既有两个推块语句零改、零换序）。**序非断言对象**：A23-8 判 `_spawnSystemBlock` 逐字节相等、A23-9 判块内两句语义在位，都与位次无关 ⇒ 写域行只占最后一格。
+- **收集序**：批次档行 → 审计块 → **写域行** — 其后还可能有文档坐标行（S5），全序正本 = §6.61.2 ①。**序非断言对象**：A23-8 判块内写域行的有无、A23-9 判块内两句语义在位，都与位次无关 ⇒ 写域行紧跟审计块，位次不承诺「末」。
 - **落点**：`thincoder-core/agent-tools/subagent-spawn.mjs` 本档局部纯函数 `filesBlockOf(files)`（表头 + 逐条 + 两句，不外提模块——D23-9）。
 - **角色无关**：只读角色（`explore` / `plan`）同样收本行——它们的写权限已由 `thincoder-core/agent-tools/subagent-spawn.mjs` 机械置 false，文案不必按角色分叉（第二种文案无观察到的场景支撑）。
 - **文本（逐字；英文——与兄弟块同语体）**：
@@ -666,7 +667,7 @@ This list is not an authorization boundary: touching a file outside it is allowe
   「system = 槽位装配 + 项目指令 + skills」下的**充分形态**，非必要条件。
 - 固块值 = spawn 参数派生（批次档绝对路径 / 审计快照），**在 child 生命周期内恒定** ⇒ 同一 child 的任意两次请求 system 逐字节相同 ⇒ **命中不破**。
 - 跨 spawn 不同值（不同批次档）不构成损失：新 child 的首个请求本来即缓存写（首现无前缀可复用）。
-- 零回归：`_spawnSystemBlock` 为 null ⇒ 拼接分支不进入 ⇒ depth-0 / explore / plan / coder / consult 的 system 逐字节同改前
+- 零回归：`_spawnSystemBlock` 为 null ⇒ 拼接分支不进入 ⇒ system 逐字节同改前。null 两形 = **depth-0**（不走 `buildSpawnChild`）∥ **depth>0 但一块都没推**（manifest 读不出 ∧ 无 `files` ∧ 非工程角色）。`depth>0` 本身不是 null 的充分条件——S5 文档坐标行对任何 `depth>0` 角色都推（§6.61.2 ①）。
 
 **压缩面不变量（AC 机判对象）**：
 
@@ -679,7 +680,7 @@ This list is not an authorization boundary: touching a file outside it is allowe
 
 拼接分支 = `thincoder-core/agent/setup.mjs`；缓存契约精化句 = `docs/core/design/AGENT-LOOP.md` §6.3；装配事实行 = `docs/core/design/PROMPT-SYSTEM.md` §6.2。
 
-> 行数纪律：**文档档不适用源码行数线**（线口径 = `AGENTS.md` 源文件）；档位归属（三分）——§6.8 / §6.10 / §6.11 / §6.18 / §6.19 / §6.20 ⇒ `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`；
+> 行数纪律：**文档档不受行数限制**（代码档档位口径 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」，与工作区根 `AGENTS` 档同口径）；档位归属（三分）——§6.8 / §6.10 / §6.11 / §6.18 / §6.19 / §6.20 ⇒ `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`；
 > §6.27 全族 ⇒ `docs/core/design/AGENT-LOOP-UPSTREAM.md`；本档留子代理工具契约与装配面。
 
 **关键决策记录**：
@@ -704,11 +705,11 @@ This list is not an authorization boundary: touching a file outside it is allowe
 | U2 | 正常 | 审计 spawn（eng-coder 父 + role `explore` + attempt 非 null） | `systemPrompt` 含五锚：`[Audit instructions — mechanical template` · A2 块头 · `Zero-git scope authority` · `[Audit budget — mechanical]` · `[Audit report format — mechanical template` | **红**：五锚只在 `input` |
 | U3 | 边界 | 长史（> 切割面）→ 压缩（`compressFallback` 零网络；另跑 `compressIfNeeded` + stub provider 一条） | system 五锚仍在 ∧ `agent.history` 无五锚 | **红**：两处皆无（压缩吞首条 = 病根复现） |
 | U4 | 边界 | 同一 child 连跑两次 `prepareRun` | 两次 `systemPrompt` 逐字节相等（缓存契约） | 现态绿（基线——改后须保持绿） |
-| U5 | 边界 | `_spawnSystemBlock` 为 null（depth-0 / explore / plan / consult） | `systemPrompt` 与改前逐字节相同（零回归） | 现态绿（基线） |
+| U5 | 边界 | `_spawnSystemBlock` 为 null（depth-0；或 depth>0 但 manifest 读不出 ∧ 无 `files` ∧ 非工程角色） | `systemPrompt` 与改前逐字节相同（零回归） | 现态绿（基线） |
 | U6 | 边界 | designer 勘察 spawn（attempt = null） | system 不含审计五锚 ∧ 不含批次档行 | 现态绿（基线；改后须保持） |
 | U7 | 边界 | 整请求体（system + history）文本计数 | 固块文本恰出现 **1** 次（独占性） | **红**：现态在 history 中出现（而压缩后为 0） |
 | U8 | 正常 | eng-coder spawn，`files` = 两条真路径（真 `buildSpawnChild` + 真 `prepareRun`） | `systemPrompt` 含两条绝对路径（逐条一行）∧ 含两句语义逐字 ∧ `input`（`_engTaskInput`）不含所声明的写域路径 | **红**：现态 system 零路径——写域只有调度器知道 |
-| U9 | 边界 | 同一 spawn 去掉 `files`（`batchDoc` 仍在） | `_spawnSystemBlock` 逐字节 = `Batch record (batchDoc): <abs>`（S4 未推块） | 现态绿（基线——改后须保持） |
+| U9 | 边界 | 同一 spawn 去掉 `files`（`batchDoc` 仍在） | 块内无写域行（不含 `Files declared for this spawn`）；批档行与文档坐标行照旧在位（S4 未推块） | 现态绿（基线——改后须保持） |
 | U10 | 边界 | explore spawn 带 `files`（无 `batchDoc`、无审计）；同 child 连跑两次 `prepareRun` | system 含写域行 ∧ 不含批次档行 ∧ 两次 `systemPrompt` 逐字节相等 | **红**：现态零路径 |
 
 **验收标准（逐条可机判）**：
@@ -718,11 +719,11 @@ This list is not an authorization boundary: touching a file outside it is allowe
 | A23-1 | `prepareRun(engChild).systemPrompt` 含批次档行 ∧ `input` 不含（U1） |
 | A23-2 | 审计 spawn 的 system 含五锚 ∧ `input` 不含（U2） |
 | A23-3 | 压缩后五锚仍在 system ∧ 不在 history（U3）——**先红**：现态两处皆无 |
-| A23-4 | 同 child 两次装配 system 逐字节相等（U4）；null 固块路径逐字节同改前（U5 / U6） |
+| A23-4 | 同 child 两次装配 system 逐字节相等（U4）；`_spawnSystemBlock` 为 null ⇒ 逐字节同改前（U5） |
 | A23-5 | 分类裁定表 15 行逐处有裁定（本档表——含「同类已解」第 11 行） |
 | A23-6 | `doc_check(mode:"gate")` 对触碰档 PASS（判据为绝对量：零悬空锚 / 零超长段——机检无 delta 语义） |
 | A23-7 | `files` 非空 ⇒ `prepareRun(child).systemPrompt` 含每条声明路径（逐条一行）∧ `_engTaskInput` 不含所声明的写域路径（U8） |
-| A23-8 | `files` 空 / 未传 ⇒ `_spawnSystemBlock` 逐字节同改前（U9——零回归） |
+| A23-8 | `files` 空 / 未传 ⇒ 块内无写域行，其余块不受 S4 影响（U9） |
 | A23-9 | 块内含两句语义逐字（`not an authorization boundary` ∧ `your share only`）（U8 / U10） |
 | A23-10 | 同一 child 两次装配 system 逐字节相等（`files` 属 spawn 参数，run 内恒定——U10 后半） |
 
@@ -1016,7 +1017,7 @@ batchDoc is already in flight — spawn refused. Batch record: <abs path>. Occup
 **① 角色白名单**——`thincoder-core/agent-tools/subagent.mjs`：
 - 该行 schema `role.enum` 从 `["explore", "plan", "coder", "eng-coder", "eng-designer"]` 增 `"tester"`。
 - `const ROLES = new Set(["explore", "plan", "coder", "eng-coder", "eng-designer"])` 增 `"tester"`；同档拒文的角色枚举同增（不改则报错信息说谎：合法角色被报成非法）。
-- 模式门**不加新门**（F-TT1 两模式都可派）。四条模式拒文里**只有一句枚举了模式内角色集**：该句「the engineering-mode enum is explore / eng-designer / eng-coder / tester」——已把 `tester` 写进去（本轮已落）。另三句各点名一个具体替代角色、没有角色集可增：工程模式禁 `coder` ⇒ 指向 `eng-coder`；普通模式禁 `eng-coder` ⇒ 指向 `coder`；普通模式禁 `eng-designer` ⇒ 指向 `explore` / `plan`——往这三句塞 `tester` 会把它写成「可替代角色」，语义反而错，故不改。
+- 模式门**不加新门**（F-TT1 两模式都可派）。四条模式拒文里**只有一句枚举了模式内角色集**：该句「the engineering-mode enum is explore / eng-designer / eng-coder / tester」——已把 `tester` 写进去。另三句各点名一个具体替代角色、没有角色集可增：工程模式禁 `coder` ⇒ 指向 `eng-coder`；普通模式禁 `eng-coder` ⇒ 指向 `coder`；普通模式禁 `eng-designer` ⇒ 指向 `explore` / `plan`——往这三句塞 `tester` 会把它写成「可替代角色」，语义反而错，故不改。
 
 **② depth-0 角色 enum（按模式）**——`thincoder-core/agent/family-tools.mjs`：
 - 两个模式各一份 `enum`：工程面 `["explore", "eng-designer", "eng-coder"]` 与普通面 `["explore", "plan", "coder"]` **都增** `"tester"`。
@@ -1071,15 +1072,15 @@ batchDoc is already in flight — spawn refused. Batch record: <abs path>. Occup
 
 | 文件（节 ∥ 落点） | 层级 | 本轮 |
 |---|---|---|
-| `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.59 | 设计档 | 写（机制全貌，本轮已落） |
-| 同档 §6.7.1 角色表 + 「模式过滤」句 | 设计档 | 加 `tester` 行；模式过滤改写为六角色事实形（普通 explore / plan / coder / tester · 工程 explore / eng-designer / eng-coder / tester）（本轮已落） |
-| 同档 §6.22 非工程角色句 + §6.22.1 必填集合表 | 设计档 | 角色集增 `tester`、必填表加 `tester` 行（同 explore 五项）（本轮已落） |
-| 同档 §6.22.8-A 逐字块 | 设计档 | 首句角色集改 `non-engineering roles: explore / plan / coder / tester`；实施轮 `thincoder-core/tool-docs/subagent.md` 按该块整段替换（AC-SC-5 的逐字对比目标 = 改后的块）（本轮已落） |
-| 同档 §6.22.8 P3 ∥ P4 ∥ P5 ∥ P10 | 设计档 | 角色枚举增 `tester`、`normal-mode` → `non-engineering`（判据 = 描述与门同源：`taskBookParamsFor` 只看 `isEngineeringRole`，tester 取五项；P4 的 `context` 已实读为 tester 可用）（本轮已落） |
-| 同档 §6.22.8 P14 | — | **不改**：该行删的是 normal-mode 清单里的 `round` 行，行内只枚举工程角色，无「非工程角色集」可增；它所在的清单头 = P10，已在 P10 改（本轮核定） |
-| 同档 §6.22.8 P16 ∥ P17（P16 / P17 为一对新增行） | 设计档 | 两处代码文案的角色集订正（`thincoder-core/agent-tools/subagent.mjs` 的任务书错误文案 ∥ `thincoder-core/agent-tools/spawn-gates.mjs` 的 designPoints 指路句）（本轮已落） |
-| 同档 §6.23.3 的 `thincoder-core/agent-tools/subagent.mjs` 模式过滤行 ∥ `thincoder-core/agent/family-tools.mjs` 工程 enum 行 | 设计档 | 两格「改后」文本再增 `tester`（逐字住 §6.23.3，本节不复制）（本轮已落） |
-| `docs/core/design/TOOLS.md` §6.27 | 设计档 | 写（工具面一侧 + 回指 §6.59）（本轮已落） |
+| `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.59 | 设计档 | 写（机制全貌） |
+| 同档 §6.7.1 角色表 + 「模式过滤」句 | 设计档 | 加 `tester` 行；模式过滤改写为六角色事实形（普通 explore / plan / coder / tester · 工程 explore / eng-designer / eng-coder / tester） |
+| 同档 §6.22 非工程角色句 + §6.22.1 必填集合表 | 设计档 | 角色集增 `tester`、必填表加 `tester` 行（同 explore 五项） |
+| 同档 §6.22.8-A 逐字块 | 设计档 | 首句角色集改 `non-engineering roles: explore / plan / coder / tester`；实施轮 `thincoder-core/tool-docs/subagent.md` 按该块整段替换（AC-SC-5 的逐字对比目标 = 改后的块） |
+| 同档 §6.22.8 P3 ∥ P4 ∥ P5 ∥ P10 | 设计档 | 角色枚举增 `tester`、`normal-mode` → `non-engineering`（判据 = 描述与门同源：`taskBookParamsFor` 只看 `isEngineeringRole`，tester 取五项；P4 的 `context` 已实读为 tester 可用） |
+| 同档 §6.22.8 P14 | — | **不改**：该行删的是 normal-mode 清单里的 `round` 行，行内只枚举工程角色，无「非工程角色集」可增；它所在的清单头 = P10，已在 P10 改 |
+| 同档 §6.22.8 P16 ∥ P17（P16 / P17 为一对新增行） | 设计档 | 两处代码文案的角色集订正（`thincoder-core/agent-tools/subagent.mjs` 的任务书错误文案 ∥ `thincoder-core/agent-tools/spawn-gates.mjs` 的 designPoints 指路句） |
+| 同档 §6.23.3 的 `thincoder-core/agent-tools/subagent.mjs` 模式过滤行 ∥ `thincoder-core/agent/family-tools.mjs` 工程 enum 行 | 设计档 | 两格「改后」文本再增 `tester`（逐字住 §6.23.3，本节不复制） |
+| `docs/core/design/TOOLS.md` §6.27 | 设计档 | 写（工具面一侧 + 回指 §6.59） |
 | `docs/core/requirements/AGENT-LOOP.md` §4.20 | 需求档 | 父侧落笔（`F-TT4-补` 行），设计席未改 |
 | `thincoder-core/prompts/persona-engineering.md` 池位句 | 产品代码（提示词面） | 实施轮写：`other-role (explore / plan / coder) pool` → 增 `tester`（tester 落 `other` 池域，§6.59.2 池位） |
 | 注释面四处（`thincoder-core/agent-tools/spawn-gates.mjs` 两处 · `thincoder-core/agent-tools/subagent-spawn.mjs` · `thincoder-core/agent-tools/subagent-async.mjs`） | 产品代码（注释） | 实施轮写：注释里的三角色枚举补 `tester`，零行为变更 |
@@ -1102,7 +1103,7 @@ test/integration/*.test.mjs
 
 - 本轮零跨层——只写设计面二档（`AGENT-LOOP-SUBAGENT.md` ∥ `TOOLS.md`）。
 - 实施轮跨入产品代码面（走实施席 + 设计令牌）；`test/RTM.md` 与 `test/integration/` 属产品面（走全链）。
-- **无拆分计划**：实施轮五个代码档（`thincoder-core/agent-tools/subagent.mjs` ∥ `thincoder-core/agent/family-tools.mjs` ∥ `thincoder-core/agent-tools/subagent-spawn.mjs` ∥ `thincoder-core/prompt-overlays.mjs` ∥ 端侧 `thincoder-vscode/src/agent/tool-table.mjs`），连同表内两处注释面档（`thincoder-core/agent-tools/spawn-gates.mjs` ∥ `thincoder-core/agent-tools/subagent-async.mjs`），无档越 500 行软线。
+- **实施面只判 800 硬线**：实施轮五个代码档（`thincoder-core/agent-tools/subagent.mjs` ∥ `thincoder-core/agent/family-tools.mjs` ∥ `thincoder-core/agent-tools/subagent-spawn.mjs` ∥ `thincoder-core/prompt-overlays.mjs` ∥ 端侧 `thincoder-vscode/src/agent/tool-table.mjs`），连同表内两处注释面档（`thincoder-core/agent-tools/spawn-gates.mjs` ∥ `thincoder-core/agent-tools/subagent-async.mjs`），均未过 800（档位口径 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」；500 不是实施面的判据）。
 
 ### 6.59.4 关键决策记录
 
@@ -1321,12 +1322,10 @@ This variant carries the three query actions only — `scan` belongs to the main
 
 **不改**：`thincoder-core/agent-tools/doc-check.mjs`（只读、无变体）；`thincoder-vscode/src/agent/tool-table.mjs`（家族段由核 `assembleFamilyTools` 追加，端侧基础集不含家族段——`test/integration/tester-role.test.mjs` 的「家族段逐名排除」比较即此事实的机检）；`thincoder-core/agent-tools/subagent-spawn.mjs`（按角色过滤的是**父侧工具表**，与家族段无关）。
 
-**分层结论**：**无档跨层，无拆分计划**。
+**分层结论**：**无档跨层**。四个代码档（`family-tools.mjs` ∥ `agent-tools/doc-graph.mjs` ∥ `agent-tools.mjs` ∥ `advisor/loop.mjs`）各留 `thincoder-core` 本层；两个测试面留 `test/` 本层。
 
-- 四个代码档（`family-tools.mjs` ∥ `agent-tools/doc-graph.mjs` ∥ `agent-tools.mjs` ∥ `advisor/loop.mjs`）各留 `thincoder-core` 本层，职责不变。
-- 两个测试面留 `test/` 本层。
-- **量法** = `doc_check(mode:"report", lines:[…])`，逐档取内容行数；软线 500 行 = 主动审视线（量法与软线同源 = `docs/core/design/DOC-GRAPH.md` §3 标题行）。
-- 四档本批的载荷都不改职责、不搬逻辑；逐档读数按上一条量法取，绝对值住批档实施记录，本表只写结论。
+- **量法** = `doc_check(mode:"report", lines:[…])`，逐档取内容行数；档位口径（设计器硬线 500 ∥ 其他检查硬线 800）= `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」，本节不复述。
+- 本节各档按 ① 判改代码前长度，无一档过 500 ⇒ 本节不给分拆方案（逐档读数按上一条量法取，绝对值住批档实施记录）。
 
 ### 6.60.4 关键决策记录
 
@@ -1395,5 +1394,226 @@ This variant carries the three query actions only — `scan` belongs to the main
 **为什么用 tester 作载体**：它是 AC-10 点名的八角色之一，且已有可用的真入口夹具（`test/integration/tester-role.test.mjs` 的假端点 + 真 `subagent` 门）；其余六角色的表内成员由 `AC-DT1` 在单测面覆盖——集成面不该为同一件事起六次真派单。
 
 **规模**：本批净加 1 行；故事 30 由 1 行变 2 行，仍在 50–100 的窗内。
+
+## 6.61 子代理文档坐标行（spawn 固块 S5）
+
+**需求** = 父侧本批派单（用户 2026-11-11 02:20「project-manifest 跟 advisor 和子 agent 是否应该建立关联？这样它们能知道哪类内容应该从哪里找」→ 02:22「我觉得要」）。
+
+本节只说机制：子代理的提示里为什么多一行、这一行从哪取、取不到时怎么办。
+
+### 6.61.1 做法与理由
+
+**做法**：`buildSpawnChild` 的固块收集点在既有三块之后追加一格（站点号 S5）——一行文档坐标，取自本项目 manifest 的 `docRoot` 三层（`requirements` ∥ `design` ∥ `batches`），项目根相对形；
+三层各按「已声明（列路径）∥ 未声明（字面 `(undeclared)`）」呈现；manifest 读不出（缺档 ∥ 坏档 ∥ 读抛）⇒ **不推这一块**。
+
+**`S5` 是站点号，不是块计数**：`S1`–`S5` 是本档的注入位编号（§6.26 的分类表），站点与块不一一对应。本批后一次 spawn 的块上限 = **四块**（批档行 ∥ 审计块 ∥ 写域行 ∥ 文档坐标行），可达态最多三块（§6.61.2 ① 的两条复合态）。
+
+**为什么是这三层而不是整张图**：坐标行每发都付一次 token，长提示会把判据稀释。子代理要的是「去哪个目录找」，不是目录下有什么——目录里有什么它自己读得到。
+
+三层 = 设计席最常找的三处：需求条目、设计机制、批次记录。
+
+**为什么进 system 固块而不是 user 首条**：§6.26 判据 ①——内容 spawn 级固定（同一 child 终身不变）且属「这件事怎么找」的常驻契约。判据 ② 不命中（不是任务内容）。
+
+反向证据在同档注释里：user 首条会被压缩吞掉，固块吞不掉。
+
+**为什么必须区分「未声明」与默认值**：`readManifest` 的返回值**已补默认值**，而 `DEFAULT_MANIFEST.docRoot` 带五条真实默认路径。
+直接打印 `read.manifest.docRoot[键]`，会把项目从未声明的默认路径当成项目声明发给子代理——那是「猜路径」换了个位置。
+
+判别单源 = `readManifest` 返回的 `missingKeys`（在**原始档**上算得，与补默认后的值分属两个事实）。
+
+**最近先例**：`existing: thincoder-core/agent-tools/subagent-spawn.mjs` · name: `filesBlockOf`（§6.26 的 S4 写域行）· consumers: 同一 `spawnBlocks` 收集点。
+
+- **对齐**：同一收集点、spawn 级固定、角色无关、英文语体、局部纯函数不外提（D23-9 同判）。
+- **偏离**：S4 的输入缺席就等价于「没有该参数」，故它无失败格；本块要读盘，因而多一格「读不到就不推块」（契约 ④）。
+
+**相对既有 `manifest` 读工具的增量**：五个 depth>0 段本就各挂 `manifestReadTool`（§6.60.2 ①），子代理今天就读得到 `docRoot`——但那是**按需主动读**：它得先想到「坐标可能记在 manifest 里」，再知道键名与值形态，才读得到。本行把答案在 spawn 时就放进 system 面：一次不查也知道三层在哪。增量 = 省掉「先想到、再探明」那一趟，不是新开数据通路（出口零新解析，契约 ③）。
+
+**advisor 侧各有其主**：目录坐标注入不是本批新开的面——`thincoder-core/advisor/project-context.mjs` 早已读 `docRoot` 拼项目上下文，那一半由它承；本批只管子代理这一半，不合并、不抽公共层（父侧明令，边界 2）。
+
+**既有件三问（本批新增名）**：
+
+| 新落点 | 现有（坐标 · 名 · 消费者） | 结论 |
+|---|---|---|
+| `docsCoordinatesBlockOf(cwd)` | `thincoder-core/agent-tools/subagent-spawn.mjs` · `filesBlockOf(files)` · 同一 `spawnBlocks` 收集点 | **existing（同形先例）**：本档局部纯函数、回块文本、调用点判空后推块——照此形建 |
+| Docs 行文本 | `none found`（子代理面）：`docRoot` 从不进 child 的提示面，`manifestReadTool` 只回 JSON、不排成坐标行 | **新造，唯一副本 = 本节**；对齐点仅语体——与兄弟块同英文、同 spawn 级固定 |
+| 「未声明」判别 | `thincoder-core/manifest.mjs` · `readManifest().missingKeys` · `docs/core/design/MANIFEST.md` §2.7 全消费面第 8 行 | **existing（直接复用）**：不另造判别式、不读默认档 |
+
+**勘察证据（本批实读，逐字）**：
+
+- 依据 thincoder-core/manifest.mjs「const manifest = fillDefaults(obj)」——补默认发生在 `readManifest` 内部，返回值不能用来判「项目声明了什么」。
+- 依据 thincoder-core/manifest.mjs「return { ok: final.ok, manifest, missingKeys: first.missingKeys, unknownKeys: first.unknownKeys, errors: final.errors」——`missingKeys` 取 `first`（原始档校验），是「未声明」唯一可判面。
+- 依据 thincoder-core/manifest-schema.mjs「requirements: "docs/requirements",」——默认档带真实路径；猜路径的风险不是假想。
+- 依据 thincoder-core/manifest.mjs「if (e.code === "ENOENT") {」∥「throw e // 权限/目录等其他读错——fail-closed 上抛」——缺档与读抛两形都必须在消费点收住，否则一次读错赔掉一次 spawn。
+- 依据 thincoder-core/agent-tools/subagent-spawn.mjs「const spawnBlocks = []」∥「if (files.length > 0) spawnBlocks.push(filesBlockOf(files))」∥「if (spawnBlocks.length > 0) child._spawnSystemBlock = spawnBlocks.join("\n\n")」——收集点、收集序与绑定点。
+- 依据 thincoder-core/advisor/project-context.mjs「const docRoot = (read.ok && read.manifest ? read.manifest : DEFAULT_MANIFEST).docRoot ?? {}」——**反例先例**：advisor 面在整档不可用时按默认档说，与「不猜路径」相左；本面不照抄这一句（KD-DC2）。
+- **已查库外：无**——本机制不引外部 API ∥ 协议 ∥ 第三方版本，也不对本仓外系统下断言（是「查的对象为零」，不是「未查」）。
+
+**数据事实检查**：无需要读数据才能定的断言——判据全落在源码事实（默认档内容 ∥ `missingKeys` 算法 ∥ 固块收集点）上，已逐字取到；不查库。
+
+### 6.61.2 接口契约
+
+**① 收集点**（`thincoder-core/agent-tools/subagent-spawn.mjs`，`buildSpawnChild` 内）：
+
+```js
+const docsBlock = docsCoordinatesBlockOf(parent.cwd) // 读不出 ⇒ null
+if (docsBlock) spawnBlocks.push(docsBlock)
+```
+
+- **收集序**：批次档行 → 审计块 → 写域行 → **文档坐标行**（追加在既有三块之后，三处推块语句零改、零换序）。
+- **可达的复合态（块集不是自由组合）**：审计块只在「工程父下的 `explore` 子代理」出现（`thincoder-core/agent/spawn-child.mjs` 的 `gateEngCoderSpawn` 只放行 `role='explore'`，designer 勘察路径返回 `null` ⇒ 不注审计块），而批次档行只在工程角色 ∥ 绑定 `coder` 出现（`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `batchBound = engineeringRole || (role === "coder" && !!batchDocAbs)`）⇒ **两块互斥、永不共存**。可达的完整集只有两条：工程角色 + `files` ⇒ [批档行, 写域行, Docs 行]；审计子代理 + `files` ⇒ [审计块, 写域行, Docs 行]。验收只断言这两条。
+- **角色无关**：任何 `depth>0` 角色都收本行；它的价值对 `explore` ∥ `eng-designer` 最高，但按角色分叉会多一份文案而无第二个场景（同 S4 判法）。
+- §6.26 的「改后 = 盘上真身节选」代码块是**节选**，本行不在其列——节选不承诺穷举，收集序的正本 = 本节。
+
+**② 文本（形 + 逐字前缀；英文——与兄弟块同语体）**：
+
+**形** = 前缀 + 三个 `层 = 值`；层间分隔 ` · `；同一层的多根之间 `, `。层次序固定 `requirements` → `design` → `batches`。前缀逐字：
+
+```text
+Docs (project-root relative, declared by this project's PROJECT-MANIFEST.json docRoot):
+```
+
+**示例**（示例值不是本仓实值——项目换一次声明、行长就变，故本档不抄 `PROJECT-MANIFEST.json` 的现值；示例值 = AC-DC-1 的夹具 F1）：
+
+```text
+Docs (project-root relative, declared by this project's PROJECT-MANIFEST.json docRoot): requirements = docs/requirements · design = docs/core/design, docs/vsc/design · batches = docs/batches
+```
+
+- 未声明的层 ⇒ 该项的 `值` 呈现 `(undeclared)`。
+- 三层全未声明**不另设分支**：它是「逐层各判一次」连用三次的结果（契约 ③ 的判别式一层用一次）。
+- 路径一律项目根相对、`/` 分隔：`relative(docRootBase(cwd), abs).replaceAll("\\", "/")`；结果为空（声明路径 = 项目根自身）呈现为 `.`。
+
+**③ 取数（既有出口，零新解析）——每格附它管什么输入**：
+
+| 面 | 出口 | 用法 | 这一格管的输入 |
+|---|---|---|---|
+| 读档 | `thincoder-core/manifest.mjs` `readManifest(cwd)` | `ok === false`（缺档 ∥ 坏档 ∥ 校验不过）⇒ 不推块 | 三形：无档 ⇒ `reason` = `missing`；坏 JSON ∥ 顶层非对象 ⇒ `reason` = `invalid`（两形都在该档 return 上逐字在案）；非 ENOENT 读错 ⇒ 抛，契约 ④ 收 |
+| 未声明判别（子键） | 同次返回的 `missingKeys`，点形 | 含 `docRoot.<键>` ⇒ 该层 `(undeclared)` | 项目写了 `docRoot` 却没写这一键（手写档 ∥ 较早的档）。复现 ① 同时给出两件事：`missingKeys` 含该点形键，而补默认把该层填成默认路径——**默认值 ≠ 声明**，正是要挡的那一格 |
+| 未声明判别（整键） | 同上 | 含 `docRoot` ⇒ 三层皆按未声明呈现 | `docRoot` 整键缺 ∥ 非对象（该函数这两形都只推整键名）。复现 ② |
+| 「本面无」判别 | `manifest.docRoot[键] === null` | 项目显式声明本面无 ⇒ 该层 `(undeclared)`（与缺键同呈现——`docRootPaths(null) = []` 已定那一读） | 项目显式「本面无」（`docs/core/design/MANIFEST.md` §2.7 语义 5）。复现 ③：`missingKeys` 不含该项、`errors` 为空、补默认后原值仍为 `null` |
+| 路径解析 | `docRootPaths(value, cwd)` | 展开 ∥ `trim` ∥ `\` 归一 ∥ 基数 = 项目根 ∥ 去重保序 | 多根声明（本仓 `design` 即多根）——串与数组同管线、同基数 |
+
+复现 ①–③（走 `thincoder-core/manifest-schema.mjs` 的两个导出；纯函数、零 fs、不落盘）：
+
+```js
+import { validateManifest, fillDefaults } from "./thincoder-core/manifest-schema.mjs"
+const d = { version: 1, phase: "initial-dev" }
+// ① 缺子键：docRoot 在、design 不在
+const f1 = { ...d, docRoot: { requirements: "docs/req", batches: "docs/batches" } }
+validateManifest(f1).missingKeys        // ⇒ 含 "docRoot.design"
+fillDefaults(f1).docRoot.design         // ⇒ "docs/design"（默认值——不可当作声明）
+// ② 整键缺
+validateManifest(d).missingKeys         // ⇒ 含 "docRoot"
+// ③ 本面无
+const f3 = { ...d, docRoot: { requirements: "docs/req", design: "docs/d", batches: null } }
+validateManifest(f3).missingKeys        // ⇒ 不含 docRoot.batches
+fillDefaults(f3).docRoot.batches        // ⇒ null（原值保持）
+```
+
+- **层键固定 = `["requirements", "design", "batches"]`**：不读 `specs` ∥ `modules` ∥ `standards`——多的层每发再付一次 token（KD-DC3）。
+- **基数 = `parent.cwd`**（child 的 `cwd` 即父的，`createAgent` 那一行在案）；`docRootPaths` 与 `readManifest` 内部都归到项目根，两处基数同源、不另写解析。
+
+**④ 读错收口**：`readManifest` 对非 ENOENT 的读错上抛 ⇒ 调用点包 `try/catch`，抛出即按「读不出」处理 ⇒ 不推块。
+
+**护栏宽度 = 整段坐标计算**（读档 + 基数解析 + 路径映射 + 串拼装），不是只包 `readManifest` 那一句：基数取法 `docRootBase(cwd)` 走项目发现链（`resolveProjectRoot` → `projectRootView` 的 `owningProject` ∥ `discoverProjects`），它同样读盘、同样可能抛。只把读档那一句包进护栏，「读不出不赔掉一次 spawn」这条承诺就只兑现了一半。
+
+取不到一行坐标，不得让一次 spawn 失败——**这条不是兜底式静默**：不加本行的结果 = 本批之前的行为，业务结果不变（子代理仍从任务书 ∥ `files` ∥ 自行读取取坐标）。
+
+**⑤ 落点**：`thincoder-core/agent-tools/subagent-spawn.mjs` 本档局部纯函数（与 `filesBlockOf` 同形同址），不外提模块——块文本一行、无逐字跨档消费者（D23-9 同判）。
+
+**⑥ 与 depth-0 的关系**：本块只走 `buildSpawnChild`（sync ∥ async 同点）⇒ 主 agent 的 system 零改；主 agent 读 manifest 的通道 = `manifest` 工具 ∥ 情境行（既有，零改）。
+
+**⑦ 代价（如实登记）**：
+
+- **档读**：每次 spawn 多一次 `readManifest`（一次档读，几 KB JSON）。相同 `cwd` 的重复读不做缓存——缓存会引入一个「盘上改了、读数还是旧的」的失效面，而一次 spawn 的档读不构成热路径。
+- **注入 token**：本行随 system 面下发，长度随三层声明的**根总数**增长（每根一个路径串 + 一个分隔符），与层数无关。多根项目实付长度是示例的数倍——这是「根数由项目声明决定」的直接结果，不是上限失守；KD-DC3 只砍层数，砍不掉根数。
+- **不设根数上限**：截断会把已声明的根藏起来，与 §6.26 写域行「清单不截断」同一条判据——声明面不藏。真要降本，改法在声明侧（少声明根）或层数（KD-DC3），不在渲染端砍字符串。
+
+### 6.61.3 受影响文件清单与分层结论
+
+| 文件 | 改动 |
+|---|---|
+| `thincoder-core/agent-tools/subagent-spawn.mjs` | 新增局部纯函数 `docsCoordinatesBlockOf(cwd)` ∥ 收集点一行推块 ∥ `const spawnBlocks = []` 上方那段收集序注释补 S5 一句 |
+| `thincoder-core/agent/setup.mjs` | 拼接分支 `if (agent._spawnSystemBlock)` 上方那段注释的块枚举补「文档坐标行」，块计数与收集点同数（四块）；注释面，零行为变更 |
+| `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.61 ∥ §6.26 表 | 写（本节）；S5 一行入表（回指本节） |
+| `docs/batches/<batch record name>.test.mjs` | 改面单测档（实施轮创建）：本批自写自跑，收口随批删除（零留存）；测试面，不进产品档的分层判断 |
+
+**不改**：`thincoder-core/manifest.mjs` ∥ `thincoder-core/manifest-schema.mjs`（零新解析、零新导出）· `thincoder-core/advisor/project-context.mjs`（父侧明令不动）· 提示词面 `thincoder-core/prompts/`（本块是运行期派生文本，非槽位档——§6.26 既有口径）· `thincoder-core/tool-docs/`（工具描述与本次机制无关）。
+
+**层级结论**：无档跨层。`thincoder-core/agent-tools/subagent-spawn.mjs` **改代码前已过 500** ⇒ 按 ① 必须给分拆方案（下列），不给裁量。
+
+- **量法** = `doc_check(mode:"report", lines:[…])`，逐档取内容行数；档位口径（设计器硬线 500 ∥ 其他检查硬线 800）= `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」，本节不复述。
+- **读数结论**：该档改代码前已过 500（绝对值按上一条量法取，不进本节）。
+- **分拆方案（本批不执行）**：按「谁与谁常一起变」切三族，该档每段归一族；某段归不进任一族 ⇒ 族界划错，执行那一批先修族界再切。
+  - **调度族**：搬出 `buildSpawnChild` 及其调用面 ∥ 派发 ∥ 队列与依赖编排。
+  - **固块族**：搬出 `filesBlockOf` ∥ `docsCoordinatesBlockOf` ∥ system 固块拼装与收集序。
+  - **门禁族**：搬出 spawn 侧的判门调用与拒收路径；拒文正文不搬、不复制——它的单源是既有兄弟档 `thincoder-core/agent-tools/spawn-gates.mjs`（§6.22.1）。
+  - **本档留下**：派单入口与三族的接线，导出名不变。新档名与边界由执行那一批定。
+- **切点与理由**：三族各随一种变更原因改动（队列语义 ∥ 注入面 ∥ 权限判据）；切在族边界上，一次改动只碰一族，跨族只经显式入参、不共享模块级状态。
+- **本批只给方案**：本批在该档只加一个局部纯函数 + 一行推块 + 一句收集序注释；同批搬位则 `buildSpawnChild` 的调用面随之挪，与本批「兄弟块零改、零换序」的验收正相反。执行排期归父侧。
+
+### 6.61.4 关键决策记录
+
+| # | 决策 | 否决的替代 | 理由 |
+|---|---|---|---|
+| KD-DC1 | 进 system 固块（S5） | 拼进 `input`（user 首条） | §6.26 判据 ①：spawn 级固定 + 常驻契约；user 首条被压缩吞掉（同档注释逐字在案） |
+| KD-DC2 | 未声明判别取 `missingKeys`，**不回退** `DEFAULT_MANIFEST` | 照 advisor 面的 `read.ok && read.manifest ? read.manifest : DEFAULT_MANIFEST` | 那句把「读不到」变成「按默认档说」；默认档带 `docs/design` 等真实路径 ⇒ 子代理拿到项目从未声明的坐标，比不发更坏（它看起来像声明） |
+| KD-DC3 | 只给三层 | 六层全列 ∥ 整张 document map（advisor 面注入 README 正文） | 每发都付 token；且 map 回答「目录下有什么」，本问题是「去哪找」 |
+| KD-DC4 | 缺档 ∥ 坏档 ∥ 读抛 ⇒ 不推块 | 推一行空值 ∥ 推一行「manifest 不可读」 | 空值是坏数据，读成「声明了但为空」；「不可读」对子代理无行动价值（它改不了该项目档）。业务结果零变：不加本行 = 本批之前的行为 |
+| KD-DC5 | 不探测路径是否存在 | 只列盘上存在的层 | 声明是项目的话；探测会把「声明了但目录还没建」变成静默隐瞒，并给每次 spawn 加三次 fs 探测 |
+
+### 6.61.5 验收（回指 §2 条目；机检命令逐条）
+
+改面单测档 = 与批档同名、同目录的单测档（`docs/batches/<batch record name>.test.mjs`，实施轮创建）：`node --test` 只跑这一个目标，收口随批删除、零留存。
+
+| # | 判据 | 机检 |
+|---|---|---|
+| AC-DC-1 | 夹具 F1（临时项目目录：`docRoot.requirements` = `docs/requirements` 单串 · `docRoot.design` = `["docs/core/design", "docs/vsc/design"]` 两根 · `docRoot.batches` = `docs/batches` 单串）⇒ Docs 行**逐字等于**契约 ② 的示例串（同层 `, ` 并列、层间 ` · `）；路径项目根相对、`/` 分隔 | 夹具 F1 ⇒ 取 `_spawnSystemBlock` 逐字断言 |
+| AC-DC-2 | **红侧一格**：档内缺 `docRoot.design` ⇒ 该项为 `(undeclared)`，且全文**不含** `docs/design`（默认值） | 同夹具删该键 ⇒ 两断言并取 |
+| AC-DC-3 | **红侧二格**：`docRoot.batches = null` ⇒ 该项为 `(undeclared)` | 夹具 `null` ⇒ 断言同上 |
+| AC-DC-4 | **红侧三格**：无档 ∥ 坏 JSON ∥ 读抛 ⇒ spawn 正常返回，`_spawnSystemBlock` 不含 `Docs (` | 三格各一次；断言不抛。夹具 = 临时目录，且其祖链上无 `PROJECT-MANIFEST.json`——否则「无档」格取到的是别处的档，用例读的不是它自己造的状态 |
+| AC-DC-5 | 零回归 + 两条**可达**复合态各自块内相对序（不主张四块共存——审计块与批次档行互斥，见契约 ①）。甲：工程角色（`eng-designer`）+ `files` ⇒ 批档行（首）→ 写域行 → Docs 行（末），块内无审计块；乙：`eng-coder` 父下的 `explore` + `files` ⇒ 审计块（首）→ 写域行 → Docs 行（末），块内**没有独立的批档行块**（首块不以 `Batch record (batchDoc):` 开头；该串在块内唯一出现处是审计块模板自身带的那句批档路径，见 `thincoder-core/agent-tools/audit-block.mjs`）——判法是块级，「全文无该串」在审计块零改的前提下不可达 | 两条各一次 `buildSpawnChild`，断言块内相对序 + 首块块头 |
+| AC-DC-6 | 文档门：本批触碰档 `doc_check(mode:"gate")` 首行 `DOC-CHECK GATE: PASS` | `doc_check` |
+
+### 6.61.6 用例表
+
+| # | 类 | 输入 | 期望 |
+|---|---|---|---|
+| 1 | 正常 | 夹具 F1（`requirements` 单串 ∥ `design` 两根 ∥ `batches` 单串） | Docs 行逐字 = 契约 ② 示例串（AC-DC-1） |
+| 2 | 正常 | 夹具 F1 的 `design` 改回单串 | 该层单路径，仍以 ` · ` 与邻层分隔——形 = `层 = 值`，与根数无关 |
+| 3 | 边界 | 缺 `docRoot.design` | `design = (undeclared)`；无默认值（AC-DC-2） |
+| 4 | 边界 | `docRoot.batches = null` | `batches = (undeclared)`（AC-DC-3） |
+| 5 | 错误 | 无 manifest 档 | 不推块；spawn 照常（AC-DC-4） |
+| 6 | 错误 | manifest 坏 JSON | 同上（AC-DC-4） |
+| 7 | 正常 | 工程角色（`eng-designer`）+ `files` 两条 | 批档行（首）→ 写域行 → Docs 行（末）；无审计块（AC-DC-5 甲） |
+| 8 | 正常 | 审计子代理（`eng-coder` 父 + `role` = `explore`）+ `files` | 审计块（首，块头 = `[Audit scope — mechanical context`）→ 写域行 → Docs 行（末）；无独立批档行块（AC-DC-5 乙） |
+| 9 | 边界 | `docRoot` 整键缺 ∥ 值非对象 | 三层皆 `(undeclared)`——`missingKeys` 含整键名 `docRoot`（契约 ③ 整键格；「三层全未声明」不是另设分支，同一逐层判据连用三次的结果） |
+| 10 | 错误 | manifest 读抛（非 ENOENT 的读错） | 不推块；spawn 照常返回（AC-DC-4 第三格） |
+
+### 6.61.7 边界（本节不做）
+
+1. 不给整张 document map、不读 `README.md`（KD-DC3）。
+2. 不动 advisor 面（父侧明令）；也不为「两份一致」造公共层——两处各读同一组既有出口。
+3. 不探测路径存在性（KD-DC5）。
+4. 不加工具参数、不加 manifest 键、不改 `docRoot` 值形态与校验。
+5. 不写进提示词面（`thincoder-core/prompts/`）：本块是运行期派生文本。
+6. 不规定子代理该读哪一层——那是任务书（`goal` ∥ `scope` ∥ 批档 §2）的事，本行只报坐标。
+
+### 6.61.8 UI / 交互决策
+
+无 UI 面：坐标行在子代理的 system 面，对用户不可见。`open` 项为零。
+
+### 6.61.9 集成测试设计（RTM delta）
+
+**读索引的结论**（`test/RTM.md` 故事 30「读数子代理」∥ `test/rtm/tooling.md`）：本批**不新开故事、不新增行**。
+
+| 项 | 答案 |
+|---|---|
+| 被破坏的现有行 | **0 条**——本批**已核**：`test/` 下对 `_spawnSystemBlock` 检索零命中，无一行断言子代理 system 固块内容。此项不再是实施轮复核项 |
+| 冗余可删的行 | 0 条 |
+| 缺的行 | **0 条**——本改动不改变任何业务可观察结果 |
+
+**为什么不立行**：集成用例只从两个入口长出——产品真需要的业务场景，或生产真发生过的问题。本行是提示面的一行坐标，子代理读它之后**用户能看见的结果**不变（同一任务、同一报告）；两侧入口皆不成立，故不造用例。
+
+**这不是缺陷**：没有用例盯这一面，不等于这一面有洞——它的正确性由 AC-DC-1–AC-DC-5 的单测读数负责，收口随批删除。
 
 

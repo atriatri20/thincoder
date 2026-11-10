@@ -206,14 +206,14 @@ list : unknown — no project owns this write's target
 
 **tier 结论**：**无 tier 跨界**——无目录迁移、无模块边界挪动；本批新增的唯一档是本批单测档（与批档同名同目录，随收口删除，不是常驻件）。`declaration.mjs` 的新导出经 `conventions.mjs` 转口一行，与既有 `declaredPublicRoots` 同形，不是第二套解析。
 
-**尺寸越线两处（点名 + 处置）**：两个档各越软线 500，硬线 800 均未至——处置同款 = **接受并记一笔，不拆档**。
+**尺寸越线两处（点名 + 分拆方向）**：两个档过 500（设计器硬线；读数住批档 §2）——各须给分拆方案，方向如下；最终切点与档名由执行那一批定（判据单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）。
 
-- `test/integration/batch-live-batch-lock.test.mjs`：本批的 `12-17` 把它推过去的；为几个用例拆一个用例档，代价高于收益（用户 2026-11-09 裁）。
-- `thincoder-core/agent/write-gate-ledger.mjs`：本批新增的判序注释 + 第三句的两件（`CASE_WRITABLE_UNREADABLE` ∥ `ledgerTableUnreadableRefusal`）推过去的；拆档要搬的是这套判序本身，不是几十行注释，代价高于收益（它与 `write-gate.mjs` 的拆档理由不同——那一刀是三百行混住）。
+- `test/integration/batch-live-batch-lock.test.mjs`：按故事号分档——`12-` 一族用例搬新档，本档留其余故事。
+- `thincoder-core/agent/write-gate-ledger.mjs`：判序独立成档（`ledgerGateTargets` 的判序 ①–⑥ 各支），表可读性与两条拒文留本档。
 
-其余在表 source ∥ test 档未越软线；在表 `.md` 档（工具描述 ∥ 提示词 ∥ RTM）只出读数、不带档位标记——档位判定只对源 ∥ 单元测试档成立（逐档读数住批档 §2 的读数块）。
+其余在表 source ∥ test 档现行读数未过 500——不提分拆；在表 `.md` 档（工具描述 ∥ 提示词 ∥ RTM）不受行数限制（口径单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」的「对象」行；逐档读数住批档 §2 的读数块）。
 
-**核法**：上表每个 source ∥ test 档各按行数量一次（`doc_check` 的 `lines` 读数）；档位 = 软线 500 ∥ 硬线 800，越软线 ⇒ 接受并记一笔，越硬线 ⇒ 先拆再落。读数住批档 §2，不入本档。
+**核法**：上表每个 source ∥ test 档各按行数量一次（`doc_check` 的 `lines` 读数）；档位判据与失败侧单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」，本档不另写阈值。读数住批档 §2，不入本档。
 
 **取面入口的实读坐标（两条，均本批零改）**：
 

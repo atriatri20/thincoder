@@ -516,11 +516,11 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
 - 测试（用例号 = §9.9）：用例面覆盖 A-1..A-12（五名逐字段 · 证据等级行注 · 转售命中面 · 既有族零回归）、
   B-1..B-6（chat 载荷面 `reasoning_effort` · D-14 off 补发与五 guard 零变面、后台路径副作用认账）、
   P-1..P-4（预置逐字段等值 · 漂移白名单护栏 · `maxTokens` 随改指模型同变）。
-- 行数上限：`model-specs.mjs` · `config-presets.mjs` 两档均低于 500 行软线；**两单元测试档亦在 500 软线内** ⇒ 处置 = 预裁「**不拆档——单档内聚**」，
+- 行数上限：`model-specs.mjs` · `config-presets.mjs` 两档均未过 500（设计器硬线）；**两单元测试档亦未过 500** ⇒ 处置 = 预裁「**不拆档——单档内聚**」，
   消解窗口 = 越 800 硬限前或该档下次实质改动时。
-  `thincoder-core/provider/core.mjs`（D-14 已落）同判（`wc -l` 口径 = 核内机检口径），在 500 软线内。
-- **核规格单测档行数（已裁已落）**：在 500 软线内。判据 = 软线 500 / 硬限 800：
-  `walk(ROOT)`（`ROOT` = `thincoder-core/`）递归全树、**无 test 目录排除**，注册键 = 核内相对路径 ⇒ 测试文件同受文件档判据（>500 主动审视 · >800 必须拆）约束。
+  `thincoder-core/provider/core.mjs`（D-14 已落）同判（口径 = `doc_check` 的 `lines` 面），未过 500。
+- **核规格单测档行数（已裁已落）**：未过 500。判据 = `docs/core/design/DOC-GRAPH.md` §3（500 设计器硬线 ∥ 800 其他检查硬线）：
+  `walk(ROOT)`（`ROOT` = `thincoder-core/`）递归全树、**无 test 目录排除**，注册键 = 核内相对路径 ⇒ 测试文件同受文件档判据约束（过 500 ⇒ 设计带拆分方案；过 800 ⇒ 先拆再落）。
   处置 = 「**不拆档——单档内聚**」；消解窗口 = 越 800 硬限前或该档下次实质改动时。
 - **计数同变面（D3 · 「预设 20」改名）**：测试面（CLI / VSC 的 config-merge 单测档
   + `thincoder-vscode/test/files.mjs`）· 设计面（`docs/core/design/PROVIDER.md` §6.11 +
@@ -1118,9 +1118,9 @@ VSC 产品码全零改（`EFFORT_DEFAULT_PREFIXES`（`thincoder-vscode/src/specs
 |---|---|---|
 | `thincoder-core/model-specs.mjs` | —（10 行 + 行注块 + 4 处行注升级；500 软线内） | 见 §13.2 / §13.3；行序取「同族相邻」（查表按前缀长度排序，行序不影响命中——防遮蔽由 G-1 / T-11 覆盖） |
 
-**行数处置**：判据 = 软线 **500** / 硬限 **800**（数值单源 = 工作区根 `AGENTS.md`；函数体 ≥300 的那条量的是单体函数，不量文件）——`model-specs.mjs` **在 500 软线内，无拆分义务**（上行同批落）；
+**行数处置**：判据 = `docs/core/design/DOC-GRAPH.md` §3（500 设计器硬线 ∥ 800 其他检查硬线；函数体 ≥300 的那条量的是单体函数，不量文件）——`model-specs.mjs` **未过 500，不提分拆**（上行同批落）；
 
-**拆分计划** = 拆点 `MODEL_SPECS` 表块（行 + 行注）外提；落点 = 核包内拟新增的表档 `model-specs-table`（去扩展名命名——主档 re-export 保 import 面零改）；连带面 = 单元测试档文本扫描 helpers（`SPEC_SOURCE` 族）随拆分批改读两档；**消解窗口 = 越 800 硬限前或该档下次实质改动时**（触发 = 该档越 500 软线时）。
+**拆分计划** = 拆点 `MODEL_SPECS` 表块（行 + 行注）外提；落点 = 核包内拟新增的表档 `model-specs-table`（去扩展名命名——主档 re-export 保 import 面零改）；连带面 = 单元测试档文本扫描 helpers（`SPEC_SOURCE` 族）随拆分批改读两档；**消解窗口 = 越 800 硬限前或该档下次实质改动时**（触发 = 该档过 500 时）。
 
 ### 13.7 验收标准回指（条目 #267 · 需求裁定）
 
@@ -1224,7 +1224,7 @@ CLI `/think` 面板与 VSC 思考下拉的可见面：新建行未声明枚举�
 | `thincoder-vscode/webview/settings-widgets.js` | — | `buildEffortSelect`（= **换模型重建径**）同源化；空枚举返 null 语义不变（`view === null`） |
 | `thincoder-vscode/webview/settings-models.js` | — | `collectConsultRows` 落盘前 `effortPayloadValue` 归一（「—」/`none`/空 → null ⇒ 删键）+import；读取面保持原始值 |
 | `thincoder-vscode/webview/settings-state.js` | — | 新 `effortSelectView`（levels = 「—」+ 枚举；selected = 已存值 > 注册默认∈枚举 > 「—」；枚举空 ⇒ null）与 `effortPayloadValue`（「—」/`none`/空 → null ⇒ 删键）；`defaultEffortFor` 并入删除（零调用者） |
-| `thincoder-cli/src/tui/cmd-config.mjs` | — | 抽 `effortMenuLevels` 导出；**行数面 = 500 软线**（判据同全仓） |
+| `thincoder-cli/src/tui/cmd-config.mjs` | — | 抽 `effortMenuLevels` 导出；**行数面 = 两条硬线**（判据同全仓 = `docs/core/design/DOC-GRAPH.md` §3） |
 | `thincoder-cli/src/tui/cmd-advisor.mjs` | — | 归一 + 删档 + 回执 |
 | `thincoder-cli/src/tui/cmd-think.mjs` | — | 码面零改 |
 | DOC 侧（就地改写） | — | — |

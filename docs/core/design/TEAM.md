@@ -150,7 +150,7 @@
 
 | 档 | 事由 |
 |---|---|
-| `thincoder-core/config.mjs` | `team` 段加载归一；越 500 软线 ⇒ 主动拆分评估层——拆分预案指针 = `docs/core/design/CONFIG.md` §5（核内落点行数）→ `docs/core/design/CORE-UNIFICATION.md` §2.8.1「核内逐档行数与拆分计划」 |
+| `thincoder-core/config.mjs` | `team` 段加载归一；过 500 ⇒ 设计须带拆分方案（语义单源 = `docs/core/design/DOC-GRAPH.md` §3）——拆分预案指针 = `docs/core/design/CONFIG.md` §5（核内落点行数）→ `docs/core/design/CORE-UNIFICATION.md` §2.8.1「核内逐档行数与拆分计划」 |
 | `thincoder-core/config-io.mjs` | 写面复用 `writeConfigAtomic` |
 | `thincoder-cli/src/cli/team-command.mjs` | `team rotate` 子命令 ∥ 确认问句 ∥ 结果行；三子命令 ∥ 旗标 ∥ 三态输入面照旧 |
 | `thincoder-cli/src/command-table.mjs` | 零改——`case "team"` 透传 args |

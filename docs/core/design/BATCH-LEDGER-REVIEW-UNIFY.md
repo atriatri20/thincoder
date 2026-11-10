@@ -9,7 +9,7 @@
 一件工作的三个载体现在各自独立：批档是一份 `.md`，台账是一行 SQLite，评审是 `§3` 的一段文本加一枚运行态 token 槽。
 用户裁定把它们串成一条链：**建批档即建台账行**、**评审结论进状态机**、**没有在途台账行就不许写盘（不分面）**、**收口必须显式处置本批每一行**。
 
-核销不在这条链上：核销的门是行上的工作证据本身，不读批档的在盘 / 收口 / 评审状态（状态机语义单源 = `docs/core/design/LEDGER.md` §10）。
+核销判工作证据与锚批 §1：在盘且未收口即拒；档不在盘等例外 = `docs/core/design/LEDGER.md` §11.2。§3 评审状态与 token 槽归属仍不是核销条件。
 
 做法一句话：**把三条链的每一处连接都改成「档面上的事实」**，不留运行态判据（内存 Map / 会话槽号），
 这样换会话、重启进程、隔天补账，判据都还成立。
@@ -674,8 +674,8 @@ batch: ledger entry #<N> is 待核销 — a row already settled to 待核销 can
 | 写锁（笔-账绑定） | `thincoder-core/agent/write-gate.mjs` `ledgerBindWriteConflict`（判据体与拒文同住一个模块），挂 `thincoder-core/agent/dispatch.mjs` Phase 1（`§2.3`） | 辖内任何写盘 ∥ `bash` · `execute`（不分面、不分类命令）∧ 未携带 `ledger:"#N"` ∥ `#N` 不是本项目台账里的 `在途` 行 ⇒ 拒 | 仅工程 | `§2.3` 串 |
 | §3 写入闸（裁定兜底） | `batch` append §3（`thincoder-core/agent-tools/batch.mjs` `appendBatchRecord`，段键 `n === 3`） | 判定输入 = 净化后正文（`sanitizeText(args.text)` 的结果，落档的就是它）；读数 ∈ {`无裁定行`, `两者同携`} ⇒ 当场拒，`VERDICT: changes-required` 照写（`verdictGapOf`，与下一行判据 ② 同一函数） | 两模式（写入方在两种模式下都只有评审实例） | `R-G3` |
 | §5 写入门（段序门） | `batch` append §5（`thincoder-core/agent-tools/batch.mjs` `appendBatchRecord`） | 两条合取：① `§3` 状态行 = `评审通过` ② `§3` **最近一轮轮次块自己携 pass 裁定行**（零豁免：声明已停用） | 两模式 | `R-G2` ∥ `R-G2b` |
-| 收口门 | `close` ∥ `status` 写 `§1 已收口` | 链门（§2 / §3 / §4 / §6 **各有内容**——`不适用` 声明已停用）**∧** `§3` 状态行 = `评审通过` | 两模式 | `R-G1`（§3 未过）∥ 既有 `J1`/`J2` |
-| 核销门③ | `thincoder-core/ledger-close-proof.mjs` `assertCloseOutProof` | 应用本笔补丁后的 `evidence` 非空白（不读 token 槽归属、不读批档在盘 / 收口 / `§3`；语义单源 = `docs/core/design/LEDGER.md` §10.2） | 两模式 | `R-L3` |
+| 收口门 | `close` ∥ `status` 写 `§1 已收口` | 正常批 = 链门 ∧ `§3` 状态行 = `评审通过`；全归档批补关 = `docs/core/design/BATCH-RECORD.md` §4.18-C | 两模式 | `R-G1`（§3 未过）∥ 既有 `J1`/`J2` ∥ 补关拒面 |
+| 核销门③ | `assertCloseOutProof` + `applyRowClose` 锚批门 | 证据非空白 ∧ 在盘锚批 §1 = closed；不读 token 槽或 §3。例外与留痕 = `docs/core/design/LEDGER.md` §11.2 | 两模式 | `R-L3` ∥ 锚批拒文 |
 
 **收口门的 §3 内容臂留着**（不换成只判状态词）：既有链门 = `§2`/`§3`/`§4`/`§6` 各段有内容（声明一律拒，`docs/core/design/BATCH-RECORD.md` §4.18-A），本批在它之上**加**一条状态词臂，两条全需满足。理由：内容臂守的是「段里真跑过」，状态词臂守的是「跑的结论是 pass」——换掉内容臂 = 门被放宽（一段空着但状态词对就过），那正是本批要堵的洞。
 
@@ -759,9 +759,8 @@ batch: §5 append refused — the implementation section opens only after the de
 batch: §5 append refused — the last §3 round block carries no pass verdict (§3 最近一轮轮次块 = 第 <N> 轮，块内裁定 = <无裁定行 | VERDICT: changes-required | 两者同携>). A pass means that block carries a `VERDICT: pass` line and no changes-required line — a round that does not state a pass is not a pass: append the verdict line to that block (`VERDICT: pass`)，或按裁定行重跑评审。Nothing was written.
 ```
 
-**核销门判什么**：本笔应用后的 `evidence` 非空白——就这一条（语义单源 = `docs/core/design/LEDGER.md` §10.2）。
-它不读 token 槽归属，也不读批档在盘 / 收口 / `§3`：工作完成的证据挂在行上，与另一张档走到哪一步无关。
-故换会话、批档已收口或暂缓、`§3` 结论如何，都不改变同一行的同一个判据。
+**核销门判什么**：证据门判本笔应用后的 `evidence` 非空白；锚批门判在盘批档 §1 = closed。两门判据与例外 = `docs/core/design/LEDGER.md` §11.2。
+它不读 token 槽归属或 §3。换会话不改变判据；批档暂缓且未收口时不得单独归档，须先走 batch close。
 
 拒文（逐字）：
 
@@ -1421,7 +1420,7 @@ Why：机判只认日期锚（`docs/core/design/LEDGER.md` §3.7 的 `resume_due
 | `closed-but-open-rows` | `record = closed` ∧ 本批存在以下任一行：① `status = 在途`；② `status ∈ {待讨论, 待设计}` ∧ `trigger` 既非 `条件` 也非 `认账不排期`（含 `trigger` 为空） | 重开（`status` §1 `进行中` + note）后重试收口 |
 | `closed-but-settling` | `record = closed` ∧ 本批存在 `待核销` 行 | 同上，或 `ledger` 批量结算单笔补齐 |
 | `open-but-unwritable` | `record = open` ∧ 本批**无** `在途` 行 ∧ 存在 `待核销` 行 | 收口一次把它结清；或把它退到 `在途` 继续做。**这一形两种来头同一读法**：真做完提前推进的行，与重开补偿失败（档回滚失败）的残态——两种都使该批写盘全被拒（写锁只认 `在途` 行） |
-| `open-but-settled` | `record = open` ∧ 本批行集**非空** ∧ 全部为归档态 | 直接收口（活已做完、档未冻结）；**重开一份全归档批的必然读形**（`§2.13` 已核销不回收）⇒ 属预期，不是缺陷；要继续做须先另立新行认领 |
+| `open-but-settled` | `record ≠ closed` ∧ 本批行集**非空** ∧ 全部为归档态 | 直接补关；唯一命中此类时可不补写历史过程段，完整条件 = `docs/core/design/BATCH-RECORD.md` §4.18-C。要继续做须另立新行认领 |
 | `pointer-stale` | 行 `task_book` 解析失败 ∥ 所指档不在盘 | 改指针，或把该行退回 `待讨论` 交还。**预定行（值尾带 `（预定）` 标记）不计入**：档未建是它的合法态（单源 = `docs/core/design/LEDGER.md` §6.4）。本面**结构不可达**（读数与理由 = `docs/core/design/LEDGER.md` §8.1 AC-M2-40）⇒ 不为它接一条喂不到输入的分支 |
 | `header-row-missing` | 档头 `台账` 行登记的某个 `#N`，台账 `items` 里**没有**同号行（`SELECT 1 FROM items WHERE id = N` 空） | **主路径 = 把该号从档头 `台账` 行删掉**（普通文档写，零台账写、无前置条件）；改完 `check` 转一致。**次路 = 重跑 `attach`**，只在它真能补上那一行时可用：`attach` 省略 `ledger` 而开新行时受同面判约束（`docs/core/design/LEDGER.md` §6.3「模型可见描述面」逐字「but only when no unsettled row exists on the same face (board); otherwise it is refused and lists the candidates」）⇒ 同面还有未决行时那一笔被拒，此时须带显式 `ledger:"#N"`（接手一行，同面判零判）或改用主路径。本批还有活要记时另立新行 |
 
@@ -1496,7 +1495,7 @@ doc_check({
 **关键决策（含被拒）**：
 
 - **收口一次结算**（采用）：`close` 结束即本批零 `待核销` 残留。代价（认下）：结算过的行是归档终态，重开不回收 ⇒ 同一个工作对象要继续做只能另立新行；这是 A5「归档即终态」的直接后果。
-- **收口证据由本笔给，不由机器造**（采用 `closeEvidence` 必填）：核销门只判证据非空白；若由机器代写一句，这道门就成了摆设。证据来自本笔调用，来源在行上用 `收口 <日期>：` 前缀可辨。**一句证据覆盖本批 N 行**（同一笔写的同一件事）——逐行写不同句子不是本单的要求，行上的分辨靠前缀而非句子长短；要逐行留痕时，仍可在本笔证据里逐行写。
+- **收口证据由本笔给，不由机器造**（采用 `closeEvidence` 必填）：证据门只判证据非空白；若由机器代写一句，这道门就成了摆设。证据来自本笔调用，来源在行上用 `收口 <日期>：` 前缀可辨。**一句证据覆盖本批 N 行**（同一笔写的同一件事）——逐行写不同句子不是本单的要求，行上的分辨靠前缀而非句子长短；要逐行留痕时，仍可在本笔证据里逐行写。
 - **被拒 = 真事务**：两处存储无两阶段提交面，做出来的是自建日志 + 恢复扫描；恢复扫描要挂进每一次读，成本远大于它省的两次重试。
 - **被拒 = 台账先行、档后写**：台账核销不可逆，失败后无法回滚；档可逆，故可逆的一方先写、留着做补偿。
 - **被拒 = 失败后自动重试**：同一失败（库忙 / 盘满）再试一次也不成，只把失败推后并掩盖回执。
@@ -1897,9 +1896,9 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 
     代价：`待讨论 / 待设计` 行从此只有认领一条出路（`update` 到 `在途` → 全链收口 → `待核销` → 勾销），没设计的东西不再能一步结账。
 
-31. **核销判据 = 结账依据写在行上**（`docs/core/design/BATCH-RECORD.md` §5.2）：`assertCloseOutProof` 只判应用本笔补丁后的 `evidence` 非空白，不读批档在盘、`§1` 收口状态或 `§3` 评审状态。
+31. **核销判据 = 行上证据 + 锚批已收口**（`docs/core/design/BATCH-RECORD.md` §5.2）：证据非空白是必要条件；在盘锚批非 closed 时拒绝单独归档。档不在盘、无指针与 retro-close 的例外 = `docs/core/design/LEDGER.md` §11.2。
 
-    被拒 = 让核销去读批档的收口状态：批暂缓或撤销时，已完成的行结不了账——「做完了」这件事实被另一张档的进度挡住（语义单源 = `docs/core/design/LEDGER.md` §10.2）。
+    被拒 = 恢复 §3 或 token 槽门：它们管评审与授权，不再替核销判断工作事实。全归档旧档由补关出口冻结，不靠先结行的旁路。
 
 32. **零消费的判据整条退场**（用户 2026-11-03 裁定 ①）：写锁改读台账在途行后，原合取判据零消费面 ⇒ 代码档删、设计节删、引用面清，三件一起。
 
@@ -1993,8 +1992,8 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 | R2 写锁（笔-账绑定） | **判据 = 本笔报的 `#N` 是目标项目台账里的 `在途` 行**（`§2.3` 表）：① 未传 `ledger` ⇒ 拒，拒文含 `no ledger number on this call` 与用法句（`Pass project:` ∧ `ledger:"#N"`，两个输入一次点出），文件字节零改；② `ledger` 非行号形（`"abc"` / `"#"`）⇒ 拒，原值带进拒文；③ 号不在盘（`"#999999"`）⇒ 拒，含 `does not exist`；④ 号在盘而 status ∈ {`已核销`, `已废弃`, `待讨论`, `待设计`, `待核销`} ⇒ 拒，拒文点名该状态词；⑤ 号在途 ⇒ 放行，`"#N"` 与 `"N"` 同判，文档面与产品面同判（面不参与判据）；⑥ **未声明项目 ⇒ 拒**（`bash` ∥ `memory` 缺 `project`；`execute` 既无 `workdir` 又无 `project`——不回落到会话 cwd）拒文含 `no project on this call`；**声明路径不是项目**（与会话锚无关键 ∥ 相关但取不到带 manifest 的根，含容器根 `D:\teamcode`）⇒ 拒、含 `declared project is not a project`；`memory` 的 `personal` ∥ `team` 落用户数据目录 ⇒ 不判（只有落 project 层才要 `project`）；写盘工具目标在任一项目之外 ∧ 本笔无 `project` 声明 ⇒ 同拒；带子项目声明 + 在途号写同一目标 ⇒ 按 `§2.3.1` 窄口放行（见 R34）；⑦ 台账库开不了 ⇒ 拒 + `(ledger unreadable — <原错>)`（写方 manifest 在而不可用另落 `§2.3.1` 拒文表 ⑧，见 R35 那格）；⑧ 普通模式与 `depth > 0` 零改；⑨ 子代理带号不被本门核（拒因若现，只来自 token 门）；⑩ **`bash` ∥ `execute` 同判**：台账无在途行时跑一条只读命令（`git status`）⇒ 拒、命令零执行、拒文含 `no ledger number on this call`；带在途号跑同一条 ⇒ 执行并回输出；⑪ **`git` 不在入口集**：台账无在途行时 `git({action:"add", path})` 与 `git({action:"commit", path, message})` 都照常生效（`git log` 出现该 message）、`git({action:"status"})` 照跑回输出；白盒 `grep -c '"git"' thincoder-core/agent/write-gate.mjs` = 0（入口集无他）；⑫ **`manifest` 三动作一律不要号**：台账无在途行时 `manifest({action:"write", key, value})` 不带项目不带号 ⇒ 落盘成功、`PROJECT-MANIFEST.json` 可读回新值；**同一时刻写一份设计档（`write` ∥ `edit`）不带号仍拒**（含 `no ledger number on this call`）——证明只开了这一口；`manifest({action:"read"})` 照跑；带一个已从 schema 删的 `ledger` 与不带同判（未声明的键没有一处读它——本节「整把退场」条末句）；⑬ **`memory` 按层判（`layer` ∥ id 前缀）**：`memory({action:"put", layer:"project", title, content})` 不带号 ⇒ 拒、`<项目>/.thincoder/memory/` 零写；`memory({action:"put", layer:"personal", title, content})` 不带号 ⇒ 照跑——同一个 action 两答案，分界在 `layer`；**单条 `delete` 不带 `layer`、id 带 `project:` 前缀 ⇒ 同样拒、文件仍在**（该层由前缀定，只看 `layer` 就漏掉这条删项目内档的路）；带号单删放行 |
 | R3 §3 词表 | `status` §3 值 `评审通过` ⇒ 通过；值 `评审完成` ⇒ 拒（词表外）；旧档读侧 `评审完成` ⇒ 等义 pass |
 | R4 §5 段序门 | `§3` 无 `评审通过` 时 `append §5` ⇒ 拒，拒文逐字 = `§2.6` 的 `R-G2` 串；`§3` pass 后追加照写；`§1` 写 `> 不适用：§3` ⇒ 照拒（声明不再是出路） |
-| R5 收口门 | `§3` 无 pass 时 `close` ⇒ 拒，拒文含 `§3 状态行 = <value>`；既有四段内容臂**照判**（`§2`/`§4`/`§6` **各须有内容**——声明已停用）；`completed` 漏列一条 `在途` 行 ⇒ 写档前拒（档未冻结、令牌未消费、台账零写）；点名行同事务两跳至 `已核销`，收口后本批零 `在途` 零 `待核销` 行 |
-| R6 核销门只判工作证据 | 换会话（槽内无归属）核销一条合格行 ⇒ 通过；锚批未收口 / 批档不在盘 / `§3` 非 pass 三条各一拍 ⇒ **都通过**（核销不读批档状态）；`evidence` 空白或本笔以空白覆盖 ⇒ 拒、行不变（判据单源 = `docs/core/design/LEDGER.md` §10.2） |
+| R5 收口门 | 正常批 `§3` 无 pass 或四段缺内容 ⇒ 拒；`completed` 漏列在途行 ⇒ 写档前拒，点名行同事务两跳至已核销。全归档补关的正负例 = `docs/core/design/BATCH-RECORD.md` §4.18-C |
+| R6 证据与锚批双门 | 换会话且锚批已收口 ⇒ 通过；锚批未收口 ⇒ 拒并指回 batch close；档不在盘与 retro-close 放行且留痕；§3 非 pass 不拦；证据空白 ⇒ 拒且行不变。判据 = `docs/core/design/LEDGER.md` §11.2 |
 | R7 重锚分流 | 收口含 1 行 `在途`（已点名）+ 1 行 `待讨论` ⇒ 前者两跳落 `已核销`、后者落 `条件`（点火违规兜底，`§2.7`），回执两行；同夹具把该 `在途` 行移出 `completed` ⇒ 收口拒、两行状态与 `trigger` 均不变 |
 | R8 迁移表 | `update` 一条 `待讨论` 行 → `在途` ⇒ 通过 |
 | R9 存量不回填 | 盘上带 `评审完成` 的存量档字节零改、读侧等义 pass；写 `评审完成` ⇒ 词表外拒 |
@@ -2012,7 +2011,7 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 | R21 迁移枚举与状态机逐边相等 | `thincoder-core/tool-docs/ledger.md` 的 `update` 枚举边集合 = `thincoder-core/ledger-db.mjs` 的 `ALLOWED_MIGRATIONS` 边集合（含 `待讨论→在途` · `待核销→在途` · `在途→待讨论` · `待核销→待讨论`，且不含任何归档态出边）；本批按 `docs/core/design/LEDGER.md` §10.3 在迁移表上增两条退回边、删 `已核销` 出边，描述面与之逐边相等（逐边枚举 = `§2.8`） |
 | R22 `§5` 门判据 2 | `§3` 状态行 = 评审通过 ∧ 最近一轮轮次块无 pass 裁定 ⇒ `append §5` 拒（`R-G2b` 串）、§5 字节不变；末块同携 pass 与打回两行 ⇒ 判打回（合取第二项不成立）；块内补 `VERDICT: pass` ⇒ 写入；`§3` 无轮次块 ⇒ 拒；`§1` 写 `> 不适用：§3` ⇒ 照拒（判据 1 不成立，无豁免） |
 | R23 通过即置位（`§2.5`） | 夹具 = 骨架原形批档（§3 无状态行）：一笔 `append §3` 携 `VERDICT: pass` ⇒ 段内出现 `**状态行**：评审通过`、`readSectionStatusWord(src,3)` = `评审通过`、轮次块 +1、留痕行 0；同档再 append 一笔携 pass ⇒ 状态行字节零改、留痕行仍 0；写前 = `进行中（第 3 轮打回）` 的一笔携 pass ⇒ 状态行回 `评审通过`；一笔同携 pass 与打回两行 ⇒ 判打回（`进行中（第 N 轮打回）`；计划函数直调取证，`append §3` 已写不进去）；一笔无裁定行 ⇒ 状态行字节零改；`append §6` 携 pass 行 ⇒ 状态行零改；写前 = pass 的一笔携打回行 ⇒ 既有重置行为逐字不变（零回归）；`thincoder-core/tool-docs/batch.md` 的 `status` 条目含置位句（逐字 = `§2.5`）；**定位面收窄**：写前 §3 段头区无状态行、正文含一行 `**状态行**：进行中（引述）` 的一笔携 `VERDICT: pass` ⇒ 引述行逐字节不变 ∧ 段头区出现 `**状态行**：评审通过` ∧ `readSectionStatusWord(src,3)` = `评审通过` ∧ 轮次块 +1 ∧ 留痕行 0；同形但引述行本身写 `**状态行**：评审通过` ⇒ 置位仍触发（段头区补出 `**状态行**：评审通过`）；写前段头区 = `评审通过` 的一笔携打回行、正文引述 `**状态行**：进行中（上一轮）` ⇒ 段头区 = `进行中（第 N 轮打回）` ∧ 引述行字节不变 ∧ 留痕行 1；`status` 写 §2（段头区有行、`###` 之下另有一行同形）⇒ 段头区那行改写、`###` 之下那行字节不变 |
-| R24 段级状态行只有一个取值区（`§2.5`） | 夹具 = §3 段头区无状态行、块正文含一行 `**状态行**：评审通过`：① `append §5` ⇒ 拒（`R-G2`）② `close` ⇒ 拒、拒文含 `§3 状态行 = （无状态行）` ③ `ledger close` 核销该档行 ⇒ 通过（核销只判 `evidence`，不读 `§3`；前置 = 行在 `待核销` 且证据非空）④ 派设计评审 ⇒ 拒签（`status-not-passed`）⑤ `batch list` 该档 `§3` = 空 ⑥ 同档落一笔携 `VERDICT: pass` 的 `§3` ⇒ 段头区出现 `**状态行**：评审通过`，①②④⑤ 翻绿（③ 本就不受本判据约束）；同形夹具把引述行换成 `**状态行**：进行中` 时 ⑥ 仍成立（置位的第三合取读段头区 = 空 ⇒ 触发），引述行逐字节不变；⑦ 可跑文件 = **实施轮落的** `test/integration/batch-status-auto-set.test.mjs`（`node --test test/integration/batch-status-auto-set.test.mjs`，其 27-1 用例断言「评审写一笔即签字」；27-1 现态 = `test/RTM.md` 在册、「待执行」、用例本体随实施轮落）；⑧ 改后 `thincoder-core/agent-tools/batch-skeleton.mjs` 行数不高于改前（含空行计数；两读同口径 = 行数读数面，读数住实施轮记录） |
+| R24 段级状态行只有一个取值区（`§2.5`） | 夹具 = §3 段头区无状态行、块正文含一行 `**状态行**：评审通过`：① `append §5` ⇒ 拒（`R-G2`）② `close` ⇒ 拒、拒文含 `§3 状态行 = （无状态行）` ③ `ledger close` 核销该档行 ⇒ 拒（档未收口；证据与 §3 都不替代 §1 门）④ 派设计评审 ⇒ 拒签（`status-not-passed`）⑤ `batch list` 该档 `§3` = 空 ⑥ 同档落一笔携 `VERDICT: pass` 的 `§3` ⇒ 段头区出现 `**状态行**：评审通过`，①②④⑤ 翻绿（③ 仍因锚批未收口拒；§3 修复不等于 §1 收口）；同形夹具把引述行换成 `**状态行**：进行中` 时 ⑥ 仍成立（置位的第三合取读段头区 = 空 ⇒ 触发），引述行逐字节不变；⑦ 可跑文件 = **实施轮落的** `test/integration/batch-status-auto-set.test.mjs`（`node --test test/integration/batch-status-auto-set.test.mjs`，其 27-1 用例断言「评审写一笔即签字」；27-1 现态 = `test/RTM.md` 在册、「待执行」、用例本体随实施轮落）；⑧ 改后 `thincoder-core/agent-tools/batch-skeleton.mjs` 行数不高于改前（含空行计数；两读同口径 = 行数读数面，读数住实施轮记录） |
 | R25 重开自愈整链（`§2.5` 改判清单的现成本处置） | 夹具 = **新档自开行 + 三档同形的 `§3`**（`§3` 段头区无状态行、块首一行 `**状态行**：评审通过`）；行的行程写死 = `在途` → 收口 `待核销` → 重开回收 `在途` → 再收口 `待核销` → `ledger close` 勾销。断言：`status` 把 `§1` 写回 `进行中`（重开）⇒ `append §3` 携 `VERDICT: pass` ⇒ `§3` 段头区出现 `**状态行**：评审通过` ⇒ `close` 放行、该行的 `ledger close` 通过；全程不手改状态行。**三档本体的行是 `已核销`**（终态，重开不回收，`§2.13`）⇒ 照本体搭夹具最后一步必不通过；那三档要再结账须另立新行，夹具因此用新档自开行 |
 | R26 收窄的终态拒文点名出路（`§2.5`） | 夹具 = 某档 `§1` 状态行落在段头区外（`###` 之下），**两个出口都断言**：① `status` 写 `§1` ⇒ 拒（冻结门 `assertGateOpen`）② 绑定调用方（子代理 / 评审实例）`append` 任一段 ⇒ 拒（`thincoder-core/agent-tools/batch.mjs` 的段绑定拒面）。两条拒文逐字含「inside the section header zone」与「move it up under `## §1`」两句（字面 = `§2.5`）；全仓 `.mjs` 实走 `Ask the record's creator to set the §1 status line` 命中 = 0（假出路句不许有一条以上）；把该行移进段头区后同一 `status` 写 ⇒ 通过（读到 `open` / `closed`，工具面恢复）；不加任何回落 |
 | R27 §3 写入闸（`§2.6.1`） | 评审写一笔 §3 无裁定行 ⇒ 拒（拒文逐字 = `R-G3`：含 `VERDICT: pass` ∥ `VERDICT: changes-required` ∥ `no round number was consumed`），档字节零改、轮次块数不变；写 `**结论** = VERDICT: pass` ⇒ 同拒；写 `结论：通过` ∥ `结论：通过。` ∥ `VERDICT: 通过` ∥ `VERDICT: 通过。` ∥ `VERDICT: changes-required` 五笔各写入、块数各 +1（两锚中文分支尾句号同判）；写 `结论：不通过` ∥ `结论：不通过。` ∥ `VERDICT: 不通过` ∥ `VERDICT: 不通过。` 四笔照写入（打回那几笔同笔重置 `§3` 状态行，写前 = `评审通过` 时）；判定输入 = 净化后 `body`（自带 `### 轮次 N` 标题的一笔按净化后正文判）；一笔同携两行 ⇒ 拒（块内裁定 = 两者同携）；`grep -rn "export const VERDICT_PASS_LINE" thincoder-core` = 1 命中（判据只一份）；拒文自身读成「无裁定行」（`verdictGapOf(R-G3 全文)` = `无裁定行`，非 `两者同携`）；以代码围栏引用 `R-G3` 全文并另写一行 `VERDICT: pass` 的一笔 ⇒ 写入（纯文本粘贴同形撞既有文档机检门的段落阈值——本闸已放行，与本闸无关）；eng-designer §2 ∥ eng-coder §5 ∥ depth-0 §1 三笔写入不受本闸影响 |
@@ -2061,8 +2060,8 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 | 错误 | 台账库不可开 | 拒，拒文带原始错误 |
 | 错误 | `close` 时 `§3` = `进行中` | 拒，点名 §3 |
 | 边界 | 核销 `§3` 非 pass 的档的行（行在 `待核销`、`evidence` 非空） | 通过——核销不读 `§3` |
-| 边界 | 核销一份「已收口 ∧ `§3` 无状态行 ∧ `§1` 有 `> 不适用：§3 —— <理由>`」的存量档的行 | 通过——核销只判 `evidence`，不读 `§1` / `§3`（`§3` 不可声明的事由收口门判，与本面无关） |
-| 边界 | `§1` 写 `> 不适用：§3`（带不带理由同判）的档走到核销 | 收口面 `malformedInapplicableLine` 先拒（`§3` ∉ 可声明集 ⇒ 形不合），新档停在 `进行中`；该档的行核销仍只看 `evidence`——两道门判两件不同的事 |
+| 边界 | 核销一份「已收口 ∧ `§3` 无状态行 ∧ `§1` 有 `> 不适用：§3 —— <理由>`」的存量档的行 | 通过——证据有效且档已收口；`§3` 不参与核销（其不可声明的事由收口门判） |
+| 边界 | `§1` 写 `> 不适用：§3`（带不带理由同判）的档走到核销 | 收口面 `malformedInapplicableLine` 先拒（`§3` ∉ 可声明集 ⇒ 形不合），新档停在 `进行中`；该档的行由 `ledger close` 单独核销时被锚批门拒——须先完成或补关批档 |
 | 错误 | 有活设计槽、台账无在途行时写 `thincoder-core/vendor/` 或 `target/` 下的 `.mjs` | 拒（产品面——第三方目录可能带手写补丁）；**由 12-5 覆盖**：与 `node_modules` / `dist` / `test/integration` 断言同一个业务结果（未声明目录 ⇒ 产品面 ⇒ 拒），只是输入不同，不单开行 |
 | 错误 | `§3` = `进行中` 时 `append §5` | 拒（`R-G2` 串），§5 字节不变 |
 | 正常 | 评审 `append §3` 正文携 `VERDICT: pass` | 写入；块 +1；§3 段级状态行由工具置 `评审通过` |
@@ -2231,7 +2230,7 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 | 行 | 原断言 | 本批之后 |
 |---|---|---|
 | 2-1 / 2-2 / 2-3（`test/RTM.md` 的这三行） | 未立项写产品源文件 ⇒ **文件确实写入**，只多一行 `[pen check]`，第二次不再提示 | 被裁定 ⑤ 取代：无在途台账行写产品码 ⇒ **拒**，文件零改。故事节 2 退役，由新故事 12 接替（决策 8） |
-| 10-3（`test/RTM.md` 的 10-3 行） | 核销门 ③ 判「槽内有归属」：已收口但槽内无归属 ⇒ 拒 | ③ 只判工作证据：`evidence` 非空白 ⇒ **通过**，不读槽、不读批档在盘与收口、不读 `§3`；拒因 = 证据空白（单源 = `docs/core/design/LEDGER.md` §10.2） |
+| 10-3（`test/RTM.md` 的 10-3 行） | 核销门 ③ 判「槽内有归属」：已收口但槽内无归属 ⇒ 拒 | 现行判据 = 工作证据 + 锚批 closed，不读槽或 §3；例外与拒因 = `docs/core/design/LEDGER.md` §11.2 |
 | 14-6（`test/RTM.md` 的 14-6 行） | 重开后「产品码写当场可写（台账里又有该档的在途行）」——建在旧判据上 | 改成两半：夹具带入档头号（重开后该行即在途）⇒ 带 `ledger:"#N"` 写照写；不带号写同一目标 ⇒ 拒。断言对象不变（重开 ⇒ 后续写能不能做） |
 
 **冗余的行**：2-1 / 2-2 / 2-3（前提被取代，见上表）。其余 34 行无冗余。
@@ -2405,9 +2404,9 @@ node -e "const fs=require('fs');for(const p of process.argv.slice(1))console.log
 
 | 行 | 改法 |
 |---|---|
-| 10-3 | 核销门只判工作证据：d 档由「声明档 ⇒ 拒」改为「通过」 |
+| 10-3 | 证据门不读 §3；锚批门的现行 delta = `docs/core/design/LEDGER.md` §11.9 |
 | 10-5 | 核销源态负例保留，判据句随 §10.2 换述 |
-| 14-3 | 换会话凭工作证据核销，不再以锚批收口为前提 |
+| 14-3 | 换会话不读 token 槽；锚批门与补关的现行 delta = `docs/core/design/LEDGER.md` §11.9 |
 | 14-4 ∥ 14-5 | 两条收口通路都要 `completed`：漏列即写档前拒；「由重锚默认推进」那句退役，重复回执断言合并 |
 | 14-6 ∥ 14-7 | 手工回退与重开回收同写当前会话；已核销仍不回收 |
 | 14-9（新增） | 两条退回边：理由必填、解绑、`created_at` 保持、回执携理由 |

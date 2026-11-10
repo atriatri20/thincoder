@@ -282,7 +282,7 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 | 核 · 认领逻辑 | `thincoder-core/peer-claims.mjs`（认领存储 / 租约 / 命中判据 / 文案 / 合并写 / 节流 / `nowFn` 与重置缝；peers 路径与 `pathsOverlap` 归口于此） |
 | 核 · 接线 | `thincoder-core/peer-domains.mjs`（`peerCollabNote` 组合认领行 · `recordPeerWrites` 调认领登记 · `flushPeerDomains` 字段级合并写 + `_peerNoted` 首步清空 · 聚合载荷增 `claims`） |
 | 核 · 钩点 | `thincoder-core/agent/dispatch-run.mjs`（写前 / 写后两处——既有钩子内接线） |
-| 端 | `thincoder-vscode/src/extension/peer-domains.mjs`（就地扩；落盘若越 500 软线 ⇒ 认领块外提 `thincoder-vscode/src/extension/peer-claims.mjs`）· 钩点 = 核 `thincoder-core/agent/dispatch-run.mjs` · 去重集清空 = 核 `thincoder-core/agent/run-stages.mjs`（端已取核） |
+| 端 | `thincoder-vscode/src/extension/peer-domains.mjs`（就地扩；落盘若过 500 ⇒ 给拆分方案——认领块外提 `thincoder-vscode/src/extension/peer-claims.mjs`）· 钩点 = 核 `thincoder-core/agent/dispatch-run.mjs` · 去重集清空 = 核 `thincoder-core/agent/run-stages.mjs`（端已取核） |
 | 常量 / 文案锚 | `CLAIM_TTL_MS` · `CLAIM_RENEW_FLUSH_MS` · 认领软提示文案——双端各持副本，**测试对拍等值 / 逐字同串**（N-MI2 各端自持；跨端读取比对形态先例 = 端对拍单测；常量 / 文案同串面 = AC-IC11） |
 
 #### 4.4.7 判据（测试层）
@@ -540,7 +540,7 @@ thincoder-core/instance-inbox-watch.mjs  取件闩：createInboxWatch（自续�
 |---|---|
 | 感知面 L1/L2 | `thincoder-core/peer-instances.mjs`（`peerInstances` · `peerInstancesTool` · `groupSlotSessions`（具名导出——端侧引核，§3.1） · 测试缝两导出）+ **`thincoder-core/process-probe.mjs`（探测与判据单源）**：`batchAlive` / `probeCmdlines` 及其 `*Async` 对偶 · `probeOwnersSync` / `probeOwnersAsync` 束 · `ownerState` / `isProductProc` / `classifyEnd` / `filterDeadOwners` · **`isProcessAlive`（单 pid 兼容面，同步有界 2 s）**；陈旧清理面 = `thincoder-core/session-slot-claims.mjs`（`cleanDeadOwners`——定义同档；转口 = `thincoder-core/session-slots.mjs`；探针入参化，零自有 exec） |
 | 域面 L3 | `thincoder-core/peer-domains.mjs`（`HOT_WINDOW_MS` · `peerWriteTargets` · `peerDomains` · `conflicts` · `peerCollabNote` · `recordPeerWrites` · `flushPeerDomains` · 测试缝两导出；`pathsOverlap` 归口 `thincoder-core/peer-claims.mjs`——本档 re-export） |
-| 意图认领面 | `thincoder-core/peer-claims.mjs`（认领存储 / 租约 / 命中 / 文案 / 合并写 / `nowFn` 缝；peers 路径与 `pathsOverlap` 归口于此）· 接线 = `thincoder-core/peer-domains.mjs` §4.4.6 · 端 = `thincoder-vscode/src/extension/peer-domains.mjs` + `thincoder-vscode/src/extension/peer-claims.mjs`（认领块——越 500 软线外提）+ 钩点 = 核 `thincoder-core/agent/dispatch-run.mjs`（端已取核） |
+| 意图认领面 | `thincoder-core/peer-claims.mjs`（认领存储 / 租约 / 命中 / 文案 / 合并写 / `nowFn` 缝；peers 路径与 `pathsOverlap` 归口于此）· 接线 = `thincoder-core/peer-domains.mjs` §4.4.6 · 端 = `thincoder-vscode/src/extension/peer-domains.mjs` + `thincoder-vscode/src/extension/peer-claims.mjs`（认领块——过 500 时外提）+ 钩点 = 核 `thincoder-core/agent/dispatch-run.mjs`（端已取核） |
 | L1 注入装配 | `thincoder-core/agent/setup-reminders.mjs`（`pushPeerReminder`）· `thincoder-core/agent/setup.mjs`（注入时序：env-state 后 time 前） |
 | L3 钩子 | `thincoder-core/agent/dispatch-run.mjs` + `thincoder-core/agent/run-stages.mjs`（写前检测 / 成功记录 / 回合末 flush） |
 | 投递面（F-MI10） | 核新增三档（名册 / inbox / 取件闩——文件级落点、分层结论与量法 = §5.8）· 工具装配同 `peer_instances` 点 · 端取件装配三处落点与武装点 = §5.8 端取件表 |
@@ -570,7 +570,7 @@ thincoder-core/instance-inbox-watch.mjs  取件闩：createInboxWatch（自续�
 | D-MI18 | 认领时机 = **结构化写成功即登记**；落盘 = 新目标即刻 + 续约节流（`CLAIM_RENEW_FLUSH_MS = 60000`）；TTL = `CLAIM_TTL_MS = 30 * 60 * 1000` | 零新手工动作（写钩子既有）；租约以真实写为锚（零假足迹——D-MI5 口径不变） |
 | D-MI19 | 释放 = **租约到期 / 属主进程死亡 / 死清理**——无显式释放面 | — |
 | D-MI20 | 命中反馈 = **认领级软提示**（逐字锚）+ 每（目标 × 属主）每 run 一次去重；认领行**抑制同目标足迹行** | 同频道升级（D-MI6 零阻断不动）；去重防刷行（30 min 租约下每写都提示 = 噪音） |
-| D-MI21 | 双端 = **语义同源 · 各端自持**（核拆 `thincoder-core/peer-claims.mjs`；端就地扩——越 500 软线再拆） | N-MI2 实现各自独立；文案 / 两常量逐字对拍（测试断言） |
+| D-MI21 | 双端 = **语义同源 · 各端自持**（核拆 `thincoder-core/peer-claims.mjs`；端就地扩——过 500 再给拆分方案） | N-MI2 实现各自独立；文案 / 两常量逐字对拍（测试断言） |
 | D-MI22 | 足迹软提示**字面规范面 = §4.3 单源**；端侧按本字面**逐 target 出行**（单一形态） | 设计档逐字锚 + 核实现 / 核测试已逐字锁 ⇒ 端为唯一漂移点；多实现面默认消差（端侧聚合无结构性不对称——两端钩点同为多目标列表）；与认领面同族（逐 target / 同 tag `[peer-collab]`）；消差后逐字锚与 N-MI2 lockstep 由**跨端逐行对拍**机检（先例 = AC-IC11 认领文案对拍） |
 | D-MI23 | 端 L3 落盘原语 = **引核 `writeSessionFile`**（端档零本地原子写实现） | 单一实现 + **末级兜底支**随核原语到位（端侧自持版二次 rename 失败 ⇒ 旧记录已删、内容只存 `.tmp`——NF2 静默丢一次登记） |
 | D-MI24 | 分组半段 `groupSlotSessions` = **核具名导出 + 端引核**（消端侧逐字镜像） | 纯函数、零端差；端壳自持的 SWR 壳形（形态面——§3.1「端读面形态与缓存判据」条）不受影响（**共享半段 ≠ 委托整面**——端 `peerInstances` 仍自持）。单源化射程 = 纯函数与原语（无端差面）；壳形 / 行为语义面仍各端自持（D-MI21 不变）。**N-MI2 读法（射程口径单源 = 本行）**：『实现各自独立』射程 = 行为语义面；无端差纯函数 / 落盘原语（D-MI23）共享不属该射程——不构成独立性违反 |

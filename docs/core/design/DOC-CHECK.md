@@ -403,7 +403,7 @@ Node.js ∥ Mr.Smith  Node.js 的 .js 在清单内 ⇒ 候选（改前也是候�
 
 #### 受影响文件与档层结论
 
-**单源 = §4**：文档级受影响文件面（逐档改动 + 档层结论 + 档层读数的取法）住本档 §4 那张表，本节不另立一张。
+**两项各有一处**：**受影响文件面（逐档改动 + 档层读数的取法）= 本档 §4 那张表**；**档层结论行（哪些档跨档、拆分计划、函数档量法）= §2.9.7**。本节与 §2.9.7 都不另立文件清单：读清单去 §4，读结论去 §2.9.7。
 
 **本节只落判据面的两条**：抽取面吃哪一组常量（§2.6），豁免面在装配处分类、`hits` 只数未登记的（§2.7）。
 
@@ -510,16 +510,12 @@ Node.js ∥ Mr.Smith  Node.js 的 .js 在清单内 ⇒ 候选（改前也是候�
 
 | 新名字 | 在哪 | 叫什么 | 谁在用 |
 |---|---|---|---|
-| `alignZonesToFences` | `none found: thincoder-core/**`；本批首建，住 `thincoder-core/tools/doc-write-gate.mjs` | 本档命名（区对齐到围栏块） | `fragmentZones` 之后一道、写盘门前唯一调用点（§2.9.2） |
+| `alignZonesToFences` | 本批**退役**（原住 `thincoder-core/tools/doc-write-gate.mjs`）；唯一的存在理由 = 「片段起于围栏内」，身份改成目标档后该前提消失（§2.10.2） | 退役名，不另命名 | 无调用点——本批退役；围栏对齐与其导出区间表一并退场，扩区要问的「区落在哪个块里」仍留在 `judgeZones` 内部的 `fenceSpans`（不另立导出面）；处置 = 随族退场、域内零命中（AC-G13） |
 | `isExecutableSpan` | `none found: thincoder-core/**`；本批新建于 `thincoder-core/doc-check/paragraph.mjs` | 本档命名（段级命令谓词） | `isExecutableLine` 改读它 ∥ `checkAnchors` 的 `inSpan` 吃过滤后的段（§2.9.6） |
 | `STOCK_LINE` | `none found: thincoder-core/**`；本批新建于 `thincoder-core/doc-check/index.mjs` | 本档命名（存量读数句形的字面单源） | 批档 `edit` ∥ 收口两面报面，与 C-1 ∥ C-3 的断言同读这一串（字面住 §2.9.4） |
 | `环引读数行` 的字面 | `none found: thincoder-core/**` | 本档命名 | `gate` ∥ `report` 两面同出（字面住 §2.9.4，消费面 §2.9.3） |
 
 #### 2.9.2 ① 围栏状态没有随片段一起过去
-
-**根因两条，都在扩区面。** 其一，`paragraphRuns` 的正文行谓词逐行判「这一行是不是围栏行」，**不追围栏状态** —— 围栏块内部那些看起来像散文的行因此自成一段。其二，`fragmentZones` 只在「改动区与围栏块相交」时并入整块，而**纯空行 ∥ 零宽改动走另一支，那一支在围栏表之前就返回了**，围栏一次都不看。
-
-片段落盘后，`checkAnchors` 对每个档从「围栏外」起判。片段若起于块内，块内的示例行被当正文判 ⇒ 命中落在作者没动过的那一行上。
 
 **修法**：判域不切片 —— 见 §2.10。被判的是目标档的**整份文本**，围栏状态因此取自整份文本本身（§2.10.1 的 `texts`），「片段起于块内」这个前提不再存在。随之一并退场的两件（围栏对齐与其不变式）见 §2.10.2 的 D14 条：它们的全部理由都是「片段 ≠ 档」。
 
@@ -528,14 +524,7 @@ Node.js ∥ Mr.Smith  Node.js 的 .js 在清单内 ⇒ 候选（改前也是候�
 - 改后：放行。
 - 反面（同一用例在改前代码上）：把实现回退到本批改前，复跑该用例必须红。红不起来 = 用例没断住东西。
 
-**台账那个场景的复现状态（如实写）**：`#2267` 记的场景是「片段首行即围栏开启行时配对错位」，本席在现盘**复现不出**它——`writeFragment` 逐行切片、不加任何前缀，区起于开启标记行时片段首行就是那一行，配对本身成立。
-
-据此本节根因改按两条码内事实立论，两条都住在扩区面：
-
-- **事实一（纯空行支在围栏表之前返回）**：同档 `fragmentZones` 里 `if (onlyBlank) {` 那一支先算段落、`return mergeZones(picked)`，而消费围栏块的 `for (const b of fences)` 在它之后——纯空行 ∥ 零宽改动一次都不看围栏。
-- **事实二（段落按行判、不追围栏状态）**：同档 `paragraphRuns` 逐行判 `if (!isBodyLine(l)) {`、断段收段，围栏块内部那些像散文的行因此自成一段。
-
-台账那个场景不丢：它是用例表的 **A-3**，实施轮在它上面原样复跑——红不起来就把结论记在 §5，**不得反过来放宽判据**（拿判据去迎合事故叙述，与 §2.9.8 否掉的「改判法让它容忍不齐」同形）。
+**A-3 那一格不丢**：实施轮原样复跑——红不起来就把结论记在批档 §5，**不得反过来放宽判据**（拿判据去迎合事故叙述，与 §2.9.8 否掉的「改判法让它容忍不齐」同形）。
 
 #### 2.9.3 ② 环引被无条件压进每一组的命中集
 
@@ -576,6 +565,7 @@ Node.js ∥ Mr.Smith  Node.js 的 .js 在清单内 ⇒ 候选（改前也是候�
     - **逐行文本判据**：锚 ∥ 行号坐标 ∥ 行长在映射存活行上的既有命中 = 存量，只读数、不阻断。
     - **组合单元判据**：基线与落盘各跑一次同一判据，再按行映射比较段落 ∥ 围栏 ∥ 表格单元的成员行。落盘单元的成员映射后不等于任何一个基线单元 ⇒ 它是删除造成的新单元；只有它新产生的命中进阻断集，例如两段合并后段长跨线。基线已有的命中仍是存量。
     - **单元类型改变**：删除定界行使单元类型改变时，只有因新类型才进入判面的命中算新命中；原类型下已存在且相同的命中仍算存量。
+    - **基线怎么判**：基线那份字节走引擎的 `texts`（键 = 该档，`docs` 里仍是该档本身），身份因此是**目标档**——命中天然带基线行号，`file` ∥ `root` ∥ 豁免识别键全按目标档取（§2.10.2）。**不落临时档、不写盘**：基线副本一份不留，进程被杀也不再可能留下残档。判整份基线（不交 `zones`）：这一跑不划分本次与存量，只产出完整基线命中供行映射与单元比较；`zones` 只在落盘那一跑把命中分进阻断集与 `stockHits`（§2.10.1）。
   - **该档在那个基线提交里没有**（本批新建 ∥ 改名进来的那一侧）⇒ 整档判：路径在基线里不存在，整份就是本批的笔。
 - **写盘面区未定**（非 git 仓 ∥ 基线不可解析）⇒ 零强制 + 明示，因为收口面兜底。
 - **收口面区未定**（§1 无 `批起 sha` 记入行 ∥ 非 git 仓 ∥ git 跑不出）⇒ **整档判**（fail-closed）+ 回执点名未定原因。收口是最后一道，它倒向宽等于收口门什么都不挡。
@@ -629,25 +619,18 @@ Node.js ∥ Mr.Smith  Node.js 的 .js 在清单内 ⇒ 候选（改前也是候�
 - 改后：1 条 `档缺`，落在那个路径上。
 - 反面：把路径单独放一行、同行无命令段 ⇒ 改前改后都是 1 条 —— 证明放宽只留给真命令段，散文里的路径一分没松。
 
-#### 2.9.7 受影响文件与档层结论
+#### 2.9.7 档层结论
 
-| 文件 | 改什么 |
-|---|---|
-| `thincoder-core/tools/doc-write-gate.mjs` | 判域 = hunk 并集（§2.10.4）· 身份 = 目标档（§2.10.2）· 片段档一族退役 |
-| `thincoder-core/doc-check/anchors.mjs` | 码段豁免面收为段级（⑤）· `环引` 入闸条件（②） |
-| `thincoder-core/doc-check/paragraph.mjs` | 新增段级命令谓词，`isExecutableLine` 改为读它（⑤） |
-| `thincoder-core/doc-check/line-refs.mjs` | 命中对象带上坐标原文 `text`（④） |
-| `thincoder-core/doc-check/index.mjs` | 行号坐标载荷（④）· 存量读数句形（③）· 环引读数行（②） |
-| `thincoder-core/agent-tools/batch-gate.mjs` | `edit` 与收口的判域改为改动区 + 存量读数（③⑥） |
-| `thincoder-core/agent-tools/batch-regions.mjs` | 承接 git 改动区、片段路径与纯删映射（③⑥） |
-| `thincoder-core/agent-tools/doc-check.mjs` | 两处读数行透出（②③） |
-
+**受影响文件面 = 本档 §4 那张表**（每轮逐档列在那里，本节不另立清单）：两份清单必有一份是旧的，而旧的那份会被读成最新值。本节只给结论行——哪些档跨档、量法、拆分计划。
 **档层结论（本节是唯一一处结论行，读数与命令回执住批档）**：
 
 - **`thincoder-core/doc-check/index.mjs` 越 800 硬限**，必须拆。拆分放**另一批**执行，本批只改行为——同一批里既改行为又搬家，出问题时说不清是哪一边。
-- **`thincoder-core/agent-tools/batch-gate.mjs` ∥ `thincoder-core/doc-check/anchors.mjs` 越 500 软线**，`thincoder-core/agent-tools/batch-regions.mjs` 未越线：软线 = 主动审视，不触发拆单。
-- **函数档判据同过一次**（函数档 `≥300` 行触及即判）：两档的最长函数本席未取到可用读数——`.mjs` 无 LSP 服务，本轮标 `unverified`。
-- **量法** = `node` 词法行扫描按函数体花括号配对逐函数数行；实施轮跑一次、读数记进 §5，超 300 的函数按同一结论另批拆。
+  - **拆什么、搬到哪**：§4「接缝与现状」已经把那一族点齐了——定根 ∥ 分组 ∥ 报面布局（`rootOf` ∥ `perRootGroups` ∥ `reportLayout` ∥ `bucketLines` ∥ `rootsSuffix` ∥ `noRootItems`）已整族住在 `thincoder-core/doc-check/per-root.mjs`，`index.mjs` 只留 import 与装配。拆分批动的是**剩下的那一半**：判定装配件（`runDocCheck` 本体 ∥ 三个命中行构造器 ∥ 桶装配）与报面装配切成一档，`index.mjs` 只留入口与再导出。
+  - **承接批坐标**：台账当刻无该行；本批收口时由父侧挂一行（`kind` = 技术待办、指向本节、`trigger` = 条件、`resume_when` = 下一批触碰 `thincoder-core/doc-check/index.mjs` 时接手）。在那一行挂上之前，这一条以本节为锚，写作「另批」两个字不算坐标。
+- **`thincoder-core/agent-tools/batch-gate.mjs` ∥ `thincoder-core/doc-check/anchors.mjs` 越 500 软线**（过设计器硬线 500）；`thincoder-core/agent-tools/batch-regions.mjs` 与 `thincoder-core/agent-tools/batch-lifecycle.mjs` 已由本席用 `doc_check` 的 `lines` 面实测，未过线。档位语义 = `docs/core/design/DOC-GRAPH.md` §3，本节不另立判法；绝对读数与命令回执住批档。
+- **函数档判据同过一次**（函数档 `≥300` 行触及即判）：两档的最长函数本轮**尚未取到读数**——设计席无 `.mjs` 的 LSP 服务，故本行不写成「过」。**这一格的读数归父侧收口门**：按本节「量法与执行位」跑一次，把「结论 + 命令」记批档 §6；读数补齐之前，任何一方不得把本行读成通过。
+- **量法与执行位** = `node` 词法行扫描按函数体花括号配对逐函数数行（扫描器要求见下条）；执行位 = **父侧收口前的门**，命令与读数记批档 §6。它不随实施轮走：实施轮改的是行为，函数档量取是收口侧的一次性读数。
+- **超 300 的函数怎么处置** = 与越 800 那档同一条：排队等拆分批，不在本批动结构。
 - **扫描器不得直接数字符**：它必须有代码 ∥ 单双引号字符串 ∥ 行注释 ∥ 块注释 ∥ 模板原文 ∥ 模板 `${}` 表达式等词法状态，并处理转义。只有代码态与模板表达式态的花括号参与配对；模板原文里的 `${` 进入表达式、对应 `}` 返回原文，字符串 ∥ 注释 ∥ 模板原文里的花括号一律忽略。正则字面量也按词法上下文识别后排除，不能把每个除号都当成正则起点。
 
 #### 2.9.8 关键决策
@@ -701,8 +684,8 @@ Node.js ∥ Mr.Smith  Node.js 的 .js 在清单内 ⇒ 候选（改前也是候�
 
 引擎入口加两个**可选**入参（`thincoder-core/doc-check/index.mjs` 的 `runDocCheck`）：
 
-- **`texts`**：键 = 档的绝对路径，值 = 该档本次的完整新内容。给了它，该档的判定输入就是这份文本，不再读盘。
-- **`zones`**：键 = 档的绝对路径，值 = 区间表（按**改后档**行号，闭区间）。给了它，阻断集 = **命中行落在任一区内的那些**；区外的命中进 `stockHits` 读数桶，照列、不阻断（字面单源 = `STOCK_LINE`，§2.9.4）。
+- **`texts`**：键 = 档的绝对路径，值 = 该档本次判定所用的完整文本。给了它，该档的判定输入就是这份文本，不再读盘。
+- **`zones`**：键 = 档的绝对路径，值 = 区间表（按**改后档**行号，闭区间）。它的判定是**逐档**的：某档有键 ⇒ 该档阻断集 = **命中行落在任一区内的那些**，区外的命中进 `stockHits` 读数桶，照列、不阻断（字面单源 = `STOCK_LINE`，§2.9.4）；**某档在 `docs` 里而 `zones` 里没有它的键 ⇒ 该档整份进阻断集**，不是「区外」。所以「交了 `zones`」不等于「每档都有区」——append 腿把批档本体的键留空，正是用这一条让候选整份即本次（反读成「无区 ⇒ 全存量」会让候选文本里的悬空锚当场放行，AC-P7 钉住）。
 
 三条语义：
 
@@ -710,20 +693,25 @@ Node.js ∥ Mr.Smith  Node.js 的 .js 在清单内 ⇒ 候选（改前也是候�
 2. **`zones` 只改阻断集**：它决定一条已有命中算「本笔的」还是「存量的」，不决定什么算命中。
 3. **两个入参都缺席 ⇒ 与今日逐字相同**：交付面（`report` ∥ `gate`）零回归。
 
-**为什么是这个形**：判定输入本来就不是「盘上那份」，而是「本次要落的那份」。三处调用手里都恰好有它 —— 写前门有改后整份内容、批档 `edit` 有改后整档视图、收口面有落盘后的档。给一个替换输入 + 一个归属区间的入参，正是把三处手里已有的东西交出去，而不是让每个调用面各造一份临时档来假装它就是那份档。
+**为什么是这个形**：判定输入本来就不是「盘上那份」，而是「本次要判的那份」。写前门有改后整份内容、批档 `edit` 有改后整档视图、收口面有落盘后的档，纯删比较还持有基线全文。给一个替换输入 + 一个归属区间的入参，正是把调用方手里已有的东西交出去，而不是让每个调用面各造一份临时档来假装它就是那份档。
 
 **与既有注入形同族**：`checkAnchors` 的 `manifest` ∥ `exts` 两个入参已是这一形 —— 注入换来源、判定零改、缺省自读（§2.5 KD-7 ∥ §2.6）。本批把同一处置上提一层到 `runDocCheck`，不新造第二套形。
 
-**三处调用各交什么**（调用方只说自己要判哪份档、哪些区间）：
+**各次调用各交什么**（调用方只说自己要判哪份档、哪些区间；收门口的纯删基线另跑一遍）：
 
 | 调用点 | `docs` | `texts` | `zones` |
 |---|---|---|---|
 | 交付面（`doc_check` 两问法） | 调用方给的清单 | 不给（读盘） | 不给（整档即判域） |
 | 写前门（`thincoder-core/tools/doc-write-gate.mjs`） | 目标档一份 | 目标档 → 本次改后内容 | 目标档 → 各 hunk 经扩区表后的区 |
 | 批档 `edit`（`thincoder-core/agent-tools/batch-gate.mjs`） | 批档一份 | 批档 → 改后整档视图 | 批档 → `newText` 所占行区间经扩区表后的区 |
+| 批档 `append`（同档的候选文本腿） | 触达账各档 + 批档本体（身份 ∥ 豁免登记按它取） | 批档本体 → 候选全文 | 触达账各档的改动区；批档本体的键**不进** `zones`（候选整份即本次） |
 | 收口门（同档的 `close` 腿） | 本批笔域集 | 不给（已落盘） | 逐档 → `git diff -U0` 的 `+` 侧区间经扩区表后的区 |
+| 收门口的纯删基线那一跑 | 纯删目标档一份 | 目标档 → 基线全文 | 不给（整份基线都产出命中，供行映射与单元比较） |
 
-**判定只有一处**：上表四行的三条判据、抽取面、解析序全走同一个 `runDocCheck`。调用方不再各有判法，只各有「要判什么区间」。这也是 §2.9.1 的统一判据第一次真正落到一个入口上 —— 那一轮把**判域口径**统一了，入口仍是四处；本节把入口收成一。
+- **代价（用户 2026-11-11 裁定：接受）**：append 面不再对批档已落段出存量读数。`append` 只在段尾追加、改不动既有行，那里本来也只能明示、不阻写；可见性由 `edit` ∥ 收口两面承担，不为它多跑一次引擎——那一跑会把成本摊到每一次 append。
+- **代价谁兜底**：批档自身的存量债由 `edit`（替换区外的存量读数）与收口面（本批改动区外的存量读数）两面接住，两面出同一句 `STOCK_LINE` ⇒ 没有哪条存量只能靠 append 才看得见。
+
+**判定只有一处**：上表各次调用的三条判据、抽取面、解析序全走同一个 `runDocCheck`。调用方不再各有判法，只各有「要判什么区间」。这也是 §2.9.1 的统一判据第一次真正落到一个入口上 —— 那一轮把**判域口径**统一了，入口仍是四处；本节把入口收成一。
 
 #### 2.10.2 身份 = 目标档：豁免面三处同判
 
@@ -737,13 +725,7 @@ const own = pathKey(rel(t.root, h.file))
 const matched = t.items.find((it) => it.problem === undefined && it.fileKey === own && it.kind === k.kind && it.text === k.text)
 ```
 
-片段档名由 `thincoder-core/tools/doc-write-gate.mjs` 的 `DOCGATE_PREFIX` 前缀加进程号与随机串生成，落在目标档同目录：
-
-```text
-<目标档目录>/.docgate-<pid>-<随机串>-<序>.md
-```
-
-`rel(root, 片段档)` 因此恒是那串临时名，与任何登记条目的 `file` 都不等。
+**为什么身份取目标档**：登记要求的 `file` 是**项目根相对路径**，而片段档时代每条命中的 `file` 是那串临时名，两者永不相等。身份一改，豁免分类不必加第二个分支：它本来就按 `file` 找表，只是过去那份 `file` 是个临时名。
 
 ⇒ **「豁免在写前门不生效」不是一个漏调的函数**：写前门调的就是同一个 `runDocCheck`，豁免分类也在跑；错的是**被判那份档的身份**。逐条登记这条机制本身没有问题 —— 它在写前门面没有可匹配的身份。
 
@@ -756,7 +738,9 @@ const matched = t.items.find((it) => it.problem === undefined && it.fileKey === 
 - **扩区表照旧保留**：产出区间的那三件（段落区间表 ∥ 区间合并 ∥ 扩区表本体）仍产出区间，只是不再切片 —— 收口腿（`thincoder-core/agent-tools/batch-regions.mjs`）照旧消费它们，那一面本来只要区间。
 - **围栏对齐的抛错句退役**：它的抛错句说的是「片段区起于围栏内」—— 判整份文本后，区起于围栏内是**合法**的（作者就在块里改了一行），前提不存在，留着只会误抛。
 - **围栏块区间表随之退役**：它唯一的消费者是围栏对齐（实读：域内只见本档内部消费）。
-- **族怎么认**：五个符号名 —— `DOCGATE_PREFIX`（字面 `.docgate-`）∥ `writeFragment` ∥ `alignZonesToFences` ∥ `fenceBlocks` ∥ `zoneOf`（`refusalMessage` 内把片段档行号译回目标档的那条查表支的局部名）。域 = 跟踪面的 `*.mjs` ∥ `*.md`，扣 `docs/batches/**`。**预期残留数住批档 §2**（D12：规范面不载绝对读数）。
+- **族外的两腿同轮闭口**：纯删面的「基线副本」（`thincoder-core/agent-tools/batch-regions.mjs` 的 `pureDeleteStockEntries`）与批档 append 面的「候选文本片段档」（`thincoder-core/agent-tools/batch-gate.mjs` 的 append 装配）过去各落一份同目录临时档，同属「拿临时档假装它是那份文本」。改法同一条：字节走 `texts`，身份 = 交出的那份档——纯删基线取目标档、append 取批档本体（§2.10.1 的表）。
+- **两腿闭口后符号不留**：`FRAGMENT_PREFIX` ∥ `fragmentPathOf` 没有任何使用者 ⇒ 随本族整族退场；`thincoder-core/agent-tools/batch-lifecycle.mjs` 的在飞扫描不再按片段前缀排除，改按**两条**判：扩展名不是 `.md` 的不算批档 ∥ 点开头的不算批档。两条都要——`docs/batches/` 下与批档同目录并存的同名单测档（`<批档名>.test.mjs`）以日期开头，只按「点开头」一条挡不住它，挡住它的是扩展名那一条。这条判据不为任何残档设支：盘上没有旧实现留下的片段档，按残档写的支是自造夹具。
+- **族怎么认**：七个符号名 —— `DOCGATE_PREFIX`（字面 `.docgate-`）∥ `writeFragment` ∥ `alignZonesToFences` ∥ `fenceBlocks` ∥ `zoneOf`（`refusalMessage` 内把片段档行号译回目标档的那条查表支的局部名）∥ `FRAGMENT_PREFIX`（字面 `.gate-`）∥ `fragmentPathOf`。域 = 跟踪面的 `*.mjs` ∥ `*.md`，扣 `docs/batches/**`。**预期残留数住批档 §2**（D12：规范面不载绝对读数）。
 
 #### 2.10.3 锚抽取式的形分档：裸名按扩展名族分两类
 
@@ -831,9 +815,10 @@ return { start: head + 1, end: newLines.length - tail }
 
 - **对齐 `checkAnchors` 的 `manifest` ∥ `exts` 注入**（§2.5 KD-7 ∥ §2.6）：`texts` ∥ `zones` 照这一形上提一层 —— 注入换来源、判定零改、缺省自读。不新造「判域对象」这类第二套形。
 - **对齐 `thincoder-core/agent-tools/batch-gate.mjs` 的触达账腿**（改动区取自 diff、区外存量只出计数）：§2.10.4 的区间成员关系照这一件写。
+- **直系先例 = §2.10.1「各次调用各交什么」那张表里写前门那一行**：同一对入参、同一个 `runDocCheck`、同一张扩区表。批档 `edit` ∥ append ∥ 纯删基线三腿照抄它的入参形，不各自造形。
 - **对齐 `docNameExemption` 的「只免裸名」入参契约**（§3.24 条目 X）：形分档同样**只看有没有目录段**，不看末段名 —— 两处同一把尺，作者不必学第二种判法。
 - **偏离 `changeRegion` 的单区间返回**：偏离理由 = 能力面失败，不是口味 —— 单区间在多点写入上把未改行一律划进判域，这正是同一席被拒三次、只能靠窄笔分批绕过的那条现场。
-- **偏离 `isDocToken` 的「裸名与路径形同一把尺」**：这一支按**族**分，见 §2.10.3 的代价如实与 §2.10.7 的上抛项 —— 它与 `docs/core/requirements/DOC-CHECK.md` F18 ∥ F19 的字面相反，需求面的改口径不在本席笔域。
+- **偏离 `isDocToken` 的「裸名与路径形同一把尺」**：这一支按**族**分，见 §2.10.3 的代价如实。需求面 F18 ∥ F19 现文同向：带目录段的一族同判，裸名另须后缀落在文档名族。
 
 **公共源勘查**（范围 = 本仓 + manifest 声明的两个公共仓 `index.publicRepos`：`../thincoder.com` ∥ `../.thincoder`；检索面 = 注入文本判据 ∥ 改动区 hunk 并集 ∥ 裸名分族）：
 
@@ -857,7 +842,7 @@ return { start: head + 1, end: newLines.length - tail }
 
 #### 2.10.6 验收（回指本批条目）
 
-用例住 `docs/batches/<本批批档同名>.test.mjs`，逐条核法 = `node --test <该档>`（用毕即删）。**每条都带红侧** —— 一条只能变绿的用例没断住东西。
+单元用例住 `docs/batches/<本批批档同名>.test.mjs`，逐条核法 = `node --test <该档>`（用毕即删）。**每条单元用例都带红侧** —— 一条只能变绿的用例没断住东西。AC-P4 是父侧收口的集成复核，单列核法，不混进本批单元测试档。
 
 **第一组 · 形分档**：
 
@@ -868,7 +853,7 @@ return { start: head + 1, end: newLines.length - tail }
 
 **第二组 · 豁免三处同判**：
 
-- **AC-G5（写前门认登记）**：夹具档含一处已裁定的假阳命中，登记四字段齐全 ⇒ 写前门放行、字节落盘；同一命中在 `doc_check` 面判「豁免 1 条」。**红侧**：把 `texts` 的键改回片段档名（旧形）⇒ 写前门照拒、零字节。
+- **AC-G5（写前门认登记）**：夹具档含一处已裁定的假阳命中，登记四字段齐全 ⇒ 写前门放行、字节落盘；同一命中在 `doc_check` 面判「豁免 1 条」。**红侧**：恢复旧实现的整条调用——改动区切片落临时片段档、`docs` 改交该片段档且不交 `texts` ⇒ 写前门照拒、零字节。
 - **AC-G6（撤销即回拦）**：删掉那条登记 ⇒ 写前门与 `doc_check` 面**同时**回到拒 ∥ `REFUSED`。**红侧**：把豁免做成写前门面的缓存 ⇒ 本例前半仍放行。
 - **AC-G7（三处一个键）**：同一条命中在交付面 ∥ 写前门 ∥ 收口面各判一次，三处判决词逐字相同。**红侧**：三处各取一份登记表（而非同一个 `file` 键）⇒ 三处判决分叉。
 
@@ -882,16 +867,23 @@ return { start: head + 1, end: newLines.length - tail }
 
 - **AC-G11（判定一处实现）**：`grep` 于 `thincoder-core/**`，锚判的实现点只有一处；三个调用面各自的入参只含清单 ∥ 输入文本 ∥ 区间与模式。**红侧**：任一面自带一份锚判（哪怕只判「解析得到与否」）⇒ 该面出现第二个实现点。
 - **AC-G12（交付面零回归）**：同一份档清单跑 `report` ∥ `gate`，不带 `texts` ∥ `zones` ⇒ 报面与改前逐字相等。**红侧**：把 `texts` 缺省写成空串（而非「不覆盖」）⇒ 该档被判成空档、报面漂。
-- **AC-G13（片段档退役不留残）**：§2.10.2 那五个符号名与字面 `.docgate-` 在域内零命中（域 = §2.10.2 写的那一个）。`thincoder-core/agent-tools/batch-regions.mjs` 的 `FRAGMENT_PREFIX`（字面 `.gate-`）**不在射程**——那是批档 append 面的候选文本片段档，身份另定（§8 登记项 3）。**红侧**：留一个未接线的围栏块区间表导出 ⇒ 命中数 +1。
+- **AC-G13（片段档退役不留残）**：§2.10.2 那七个符号名与两个字面 `.docgate-` ∥ `.gate-` 在域内零命中（域 = §2.10.2 写的那一个）。**判罚面只有一类**：把退役角色当权威 ∥ 判据来源 ∥ 验收命令 ∥ 手跑面用的处；判据规格面与用例面的提及（§2.10.2 的族清单本身、§2.9.1.1 新名三问行的退役登记、本条）算**射程外**——逐档点名、零处置，不计命中。**红侧两拍**：① 留一个未接线的围栏块区间表导出（把退役符号当权威用）⇒ 命中 +1，本条红；② 把族清单自身的提及计成命中 ⇒ 本条同样红——射程外被计成红与射程内漏记是两种错，两拍各断一边。
 - **AC-G14（形分档落到行号面 · 一对）**：正例 = 正文写带目录段的代码族路径、紧跟冒号加数字 ⇒ 行号坐标照计一条；反例 = 同一份正文裸写同一文件名再跟冒号加数字 ⇒ 零条（代码族裸名在形分档挡下，两条判据同吃一个谓词）。**红侧**：行号面不再过 `isDocToken`（只看清单）⇒ 反例计一条、本条红；形分档写成「代码族一律不判」⇒ 正例零条、本条红。
+
+**第五组 · 判定输入：纯删基线 ∥ append 候选文本**：
+
+- **AC-P1（基线身份 = 目标档）**：夹具档在基线含一处已登记假阳，本笔只删其邻段 ⇒ 该命中按目标档身份对上登记，进 `exempted`、不进 `hits`。**红侧**：恢复旧实现的整条调用——基线字节落同目录临时档、`docs` 改交该临时档且不交 `texts` ⇒ 同一命中进 `hits`，且命中的 `file` 是那串临时名。
+- **AC-P2（行号对得上）**：同一夹具（删除点上方留两段、邻段各带既有死引文）⇒ 邻段存量退场、只出存量读数；基线两段各自不超长、删段间空行使两段合并后段长跨线 ⇒ 拒。**红侧**：把段类的基线识别换成「只比命中行号」——不比映射后单元的端点 ⇒ 合并那一格判成存量、放行，本条红。
+- **AC-P3（零临时档 / 零残留）**：结构机检读 `pureDeleteStockEntries` 函数体 ⇒ 零 `writeFileSync` ∥ `unlinkSync`，基线判定调用不含临时档路径；再跑一次含纯删的收口判，结束后目标档同目录零 `.gate-*` 基线副本。**红侧**：恢复旧实现的 `writeFileSync` 或 `unlinkSync` 任一处 ⇒ 结构断言当场红，不依赖进程恰好死在 `finally` 之前。
+- **AC-P4（父侧收口集成复核，非单元用例）**：`node --test test/integration/batch-close-gate.test.mjs test/integration/batch-touched-region-gate.test.mjs` 全绿，结果记批档 §6。纯删两场景的红侧由 AC-P2 承担，本条只读父侧收口回归结果。
+- **AC-P5（纯删调用点退场 · 结构机检）**：`grep` 的 `fragmentPathOf\(` 于 `thincoder-core/agent-tools/**` ⇒ **零命中**（定义点与调用点同退，§2.10.2）。**红侧**：恢复纯删函数里的 `fragmentPathOf(file)` ⇒ 命中 +1，本条红。
+- **AC-P6（append 候选文本走 `texts` · 结构机检 + 身份读数）**：`thincoder-core/agent-tools/batch-gate.mjs` 的 append 装配 ⇒ 候选全文经 `texts`（键 = 批档本体）、零 `writeFileSync` ∥ `unlinkSync` ∥ `fragmentPathOf(`；同一笔的命中行渲染成「候选文本第 N 行」，N = 候选文本里的行号。**红侧**：恢复临时档形（候选字节落 `.gate-` 临时档、`docs` 交该临时档、不交 `texts`）⇒ 同一命中的 `file` 是那串临时名，且行号与候选文本对不上，本条红。
+- **AC-P7（`zones` 缺键 = 该档整份本次 · 逐档语义）**：一笔 append，候选文本里写一条解不到的路径（带目录段、落点不在任何批档基底根下——裸名在批档面内不入判，面判判据单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.29 条目 AC）；`zones` 只含触达账各档的键，批档本体的键不在其中 ⇒ 首行 `REFUSED（命中 1 条——候选文本（锚 1 条））`、命中行点名「候选文本第 N 行」。**红侧**：把「缺键」读成「无区 ⇒ 全存量」⇒ 同一笔放行、命中落进 `stockHits`，本条红。
+- **AC-P8（在飞扫描不把批档同名单测档当批档 · 结构机检）**：`thincoder-core/agent-tools/batch-lifecycle.mjs` 的排除支读两条（扩展名不是 `.md` ∥ 点开头），不含任何片段前缀字面。**红侧**：改回「点开头」单条 ⇒ 同目录并存的 `<批档名>.test.mjs` 被当成第二本在飞批，本条红。
 
 #### 2.10.7 上抛项（需求面口径，本席不改）
 
-**上抛 1 · 形分档与 F18 ∥ F19 的字面相反。** `docs/core/requirements/DOC-CHECK.md` 的 F18 ∥ F19 逐字写「**裸名与路径形同一把尺**」，而 §2.10.3 按族把裸名分了两类。两者不是措辞差异：同一份正文在两条判据下结论相反。
-
-**侧写清楚**：用户 2026-11-11 00:09 的裁向逐字是「**代码类必须带路径才算指针，不带路径的当散文提及不判**」——按指令优先级，它高于需求档的旧字面，本设计照它写；但需求档的改口径是主 agent 的笔，本席不写。**AC-16 ∥ AC-17 的现有构造不受影响**（实读：`test/integration/doc-check-recognition.test.mjs` 的真后缀夹具写的是路径形，`grep` 命中在册），所以这是**语义口径**要改、不是既有验收要重做。
-
-**上抛 2 · 写前门的 `hits` 读法。** 写前门今天读的是锚类与段类两数之和（不读行号类）。`zones` 落地后，区外命中进 `stockHits`、不进 `hits`，该读法**语义不变**（照旧只取两类）；但拒文要新增一行存量读数，而 F14 的字面是「判集 = 本笔触碰的段落」—— 它没说拒文能不能带存量读数行。本设计按「带一行读数、不进 `hits`」写（与 §2.9.4 的存量句同处置），请评审确认这不是新的口径。
+**写前门的 `hits` 读法。** 写前门今天读的是锚类与段类两数之和（不读行号类）。`zones` 落地后，区外命中进 `stockHits`、不进 `hits`，该读法**语义不变**（照旧只取两类）；但拒文要新增一行存量读数，而 F14 的字面是「判集 = 本笔触碰的段落」—— 它没说拒文能不能带存量读数行。本设计按「带一行读数、不进 `hits`」写（与 §2.9.4 的存量句同处置），请评审确认这不是新的口径。
 
 #### 2.10.8 边界（本节不做）
 
@@ -901,7 +893,6 @@ return { start: head + 1, end: newLines.length - tail }
 - **不动 §2.9 的判域口径**：本节只把 §2.9.1 的四入口收成一入口，判域规则本身（跟写入走 ∥ 存量只读数）不变。
 - **不拆档**：`thincoder-core/doc-check/index.mjs` 越 800 硬限的拆分仍归另批（§2.9.7），本节只加两个入参与一个桶。
 - **不动收口的基线取法**：`批起 sha` 自动行零改；本节只规定「区怎么从 diff 变成区间表」。
-- **不动批档 append 的 `writer` 面候选文本**：那一面今天把候选文本落成批档同目录的 `.gate-` 片段档（`thincoder-core/agent-tools/batch-regions.mjs` 的 `FRAGMENT_PREFIX`；判法住 `docs/core/design/DOC-DISCIPLINE.md` §3.20 的「候选文本的判法」块）。它与本节同属一个族（拿临时档假装它是那份文本），但它是**第四条腿**：append 的候选文本不是任何一份在盘档，身份另定。本节不碰它，处置条件与到期写进 §8 登记项 3。
 
 ## 3. 接口契约
 
@@ -924,14 +915,14 @@ return { start: head + 1, end: newLines.length - tail }
 
 | 文件 | 改动 |
 |---|---|
-| `thincoder-core/doc-check/index.mjs` | ① 每组一次 `readManifest` 并注入判法；返回 `domainTables`；`report` 面域表读数块（§2.5）。② **保留**：`excludeFaceOf` ∥ `splitExcluded` ∥ `excluded` 桶 ∥ `exemptedAll` 及其三处读它 ∥ 排除桶行——**排除面行为本批零改**（§2.7）。**增**：清单传递（把该根的 `index.docCheckExts` 交给判法面）、装配处的豁免分类（按 `rootOf` 取该根登记表，走 `readOf` 同一次读）、返回 `exempted` 桶、两面豁免块、`report` 末行带已裁定数（§2.7） |
-| `thincoder-core/doc-check/anchors.mjs` | ① 域表吃注入的 `manifest`（`docRootBaseKeys` ∥ `batchFaceContext` 两处）；判据面另有跨仓规则三笔（`resolveDoc` 传 `declaredRepos` · 环检出 `锚·环引` · 两处收集点收 `未核` 且不入 `hits`）——判据口径单源见 `docs/core/design/DOC-DISCIPLINE.md` §3.20。② 扩展名枚举换作 `DEFAULT_DOC_EXTS` ∥ `NAME_CH` ∥ `EXT_PART` ∥ `isExtension` ∥ `isDocToken`，**边界对转导出面**；三条抽取式改由这一组常量拼出并加 `u`；`docNameExemption` 的词干判定改吃 `isExtension`；四个豁免调用点各加一次 `isDocToken`（§2.6） |
-| `thincoder-core/doc-check/line-refs.mjs` | `NAME_RE` 改由同一组常量拼出（**含边界对**——本档自写的第二份字符类与第二份左界整条删除）并加 `u`；import 面换成新常量；`nameSpans` 的豁免调用点同加 `isDocToken`（§2.6） |
+| `thincoder-core/doc-check/index.mjs` | ① 每组一次 `readManifest` 并注入判法；返回 `domainTables`；`report` 面域表读数块（§2.5）。② **保留**：`excludeFaceOf` ∥ `splitExcluded` ∥ `excluded` 桶 ∥ `exemptedAll` 及其三处读它 ∥ 排除桶行——**排除面行为本批零改**（§2.7）。**增**：清单传递（把该根的 `index.docCheckExts` 交给判法面）、装配处的豁免分类（按 `rootOf` 取该根登记表，走 `readOf` 同一次读）、返回 `exempted` 桶、两面豁免块、`report` 末行带已裁定数（§2.7）；另：行号坐标载荷（§2.9.5 ④）· 存量读数句形（§2.9.4 ③）· 环引读数行（§2.9.3 ②） |
+| `thincoder-core/doc-check/anchors.mjs` | ① 域表吃注入的 `manifest`（`docRootBaseKeys` ∥ `batchFaceContext` 两处）；判据面另有跨仓规则三笔（`resolveDoc` 传 `declaredRepos` · 环检出 `锚·环引` · 两处收集点收 `未核` 且不入 `hits`）——判据口径单源见 `docs/core/design/DOC-DISCIPLINE.md` §3.20。② 扩展名枚举换作 `DEFAULT_DOC_EXTS` ∥ `NAME_CH` ∥ `EXT_PART` ∥ `isExtension` ∥ `isDocToken`，**边界对转导出面**；三条抽取式改由这一组常量拼出并加 `u`；`docNameExemption` 的词干判定改吃 `isExtension`；四个豁免调用点各加一次 `isDocToken`（§2.6）；另：码段豁免面收为段级（§2.9.6 ⑤） |
+| `thincoder-core/doc-check/line-refs.mjs` | `NAME_RE` 改由同一组常量拼出（**含边界对**——本档自写的第二份字符类与第二份左界整条删除）并加 `u`；import 面换成新常量；`nameSpans` 的豁免调用点同加 `isDocToken`（§2.6）；另：命中对象带上坐标原文 `text`（§2.9.5 ④） |
 | `thincoder-core/agent-tools/batch-paths.mjs` | `batchDocBases` 增可选 `manifest` 注入（缺省自读，既有调用零改） |
-| `thincoder-core/agent-tools/doc-check.mjs` | 改两处：① `target` 必填——缺 ∥ `null` ∥ 空串 ⇒ 拒、点名 `target`（缺省支删除）；schema 加 `required: ["target"]`；② `ambiguous` 守卫的「给了 `target`」判据 = 非空字符串（§3 ∥ §5 KD-10 ∥ AC-11）。工作区锚的提前返回已不在盘上，不重建 |
+| `thincoder-core/agent-tools/doc-check.mjs` | 改两处：① `target` 必填——缺 ∥ `null` ∥ 空串 ⇒ 拒、点名 `target`（缺省支删除）；schema 加 `required: ["target"]`；② `ambiguous` 守卫的「给了 `target`」判据 = 非空字符串（§3 ∥ §5 KD-10 ∥ AC-11）。工作区锚的提前返回已不在盘上，不重建；另：两处读数行透出（§2.9.3 ② ∥ §2.9.4 ③） |
 | `thincoder-core/manifest-schema.mjs` | `DEFAULT_MANIFEST.index` **保留 `docCheckExcludePaths`**（含它那条数组层判据），**新增** `docCheckExts: []` 与 `docCheckExemptions: []`。两键的校验面分开写：`docCheckExts` **进元素层**（与 `codeExtensions` ∥ `docExtensions` 同款——元素须为非空字符串，非串 ∥ 空串进 `errors`）；`docCheckExemptions` **两层都不入选校验**（条目形态在消费点判，KD-X3）；数组层两键都 `[]` 合法。节点数因此为 16 |
 | `thincoder-core/declaration.mjs` | **零改**——`splitExcluded` 保留，它的 `normalizePathList` 消费面也保留 |
-| `thincoder-core/tools/doc-write-gate.mjs` | 排除面零改；**判域面改它**：hunk 并集 ∥ 身份 = 目标档 ∥ 片段档一族退役（§2.10 ∥ §2.9.7 的表） |
+| `thincoder-core/tools/doc-write-gate.mjs` | 排除面零改；**判域面改它**：hunk 并集 ∥ 身份 = 目标档 ∥ 片段档一族退役（§2.10） |
 | `thincoder-core/tool-docs/doc_check.md` | 解析序句已换三行终稿；**保留**两处旧排除键的免责式说明（首行 `PASS` 那两句）；**增**豁免登记与第三档说明、清单可配一句 |
 | `thincoder-core/tool-docs/manifest.md` | 键面**新增两行**（`docCheckExemptions` ∥ `docCheckExts`），旧键行逐字保留；可写节点数句为 16；两键的说明句写「后缀在清单内 ∧ 形分档（裸名按扩展名族）才是候选」；全文压回 5,000 字符以内（删重复叙述，不删键面说明） |
 | `docs/core/design/MANIFEST.md` | §2.2 键面**恢复旧键**并新增两键（`docCheckExemptions` ∥ `docCheckExts`）· 元素层句保留旧键点名 · `DEFAULT_MANIFEST` 两处字面（§2.2 ∥ §2.11）· §2.10 键目录补两行 · 节点数 16 五处对齐（§2.10 领句 ∥ §2.11 白名单 ∥ AC-K2 ∥ KD-M1-42 ∥ KD-M1-45）· AC-47 口径 · **四处改成本轮口径（带目录段一族同判 · 裸名按扩展名族分档，判据句单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20）**（§2.2 键面条目 ∥ §2.10 键目录 ∥ §2.11 读声明面 ∥ AC-47）· **「读 manifest 四处」两处措辞改为指本档 §2.8（五处）**（§2.11 读声明面句 ∥ AC-47） |
@@ -939,6 +930,11 @@ return { start: head + 1, end: newLines.length - tail }
 | `docs/core/design/DOC-GRAPH.md` | **一处改指（D14）**：§1「起点事实」那处逐字依据（退役常量的声明行）改指活的扩展名清单（依据 `docs/core/design/DOC-CHECK.md` §2.6），否则实施轮改完该句即成 `引缺` |
 | `test/rtm/guard.md` ∥ `test/RTM.md` | **36-5 保留**（排除面行为未变），节注里指 `docs/core/design/DOC-CHECK.md` §2.6（排除目录）的那一笔改指 §2.7；故事 `CLI 44` ∥ `CLI 45` 与行 `44-1` ∥ `45-1`（§9） |
 | `test/integration/doc-check-exclude-paths.test.mjs` | **保留**——它断的免检放行仍在 |
+| `thincoder-core/doc-check/paragraph.mjs` | 新增段级命令谓词，`isExecutableLine` 改为读它（§2.9.6 ⑤） |
+| `thincoder-core/agent-tools/batch-gate.mjs` | `append` ∥ `edit` ∥ 收口三面的判域（§2.9.4 ③⑥）；`append` 与 `edit` 的判定输入走 `texts`、区间走 `zones`，零临时档（§2.10.1） |
+| `thincoder-core/agent-tools/batch-regions.mjs` | 承接 git 改动区与纯删映射（§2.9.4 ③⑥）；纯删基线走 `texts`、不落临时档；`fragmentPathOf` 的调用点随片段档一族整族退役（§2.10.2） |
+| `thincoder-core/agent-tools/batch-lifecycle.mjs` | 在飞扫描不再按片段前缀排除，改按两条判：扩展名不是 `.md` 的不算批档 ∥ 点开头的不算批档（§2.10.2） |
+| `docs/core/design/BATCH-RECORD.md` | §4.18 的 append 面描述 ∥ §4.22 拒文根格：候选文本以批档本体身份判，临时片段档那条退场（§2.10.1） |
 
 以下落地件由实施轮创建（`test/**` 不在本席笔域）：
 
@@ -948,11 +944,13 @@ test/rtm/guard.md                                        44-1 ∥ 45-1 两行与
 test/integration/**                                      集成用例文件（编号按 §9 落地）
 ```
 
-**档层结论单源 = §2.9.7**：本档只在那里给结论行，本节不立平行结论——同一份档里两行结论必然有一行是旧的，而那一行会被读成最新值。
+**档层结论单源 = §2.9.7**：本档只在那里给结论行，本节不立平行结论——同一份档里两行结论必然有一行是旧的，而那一行会被读成最新值。**受影响文件面反过来只在本节这张表**：每轮逐档列在这里（含 `thincoder-core/agent-tools/batch-lifecycle.mjs` ∥ `docs/core/design/BATCH-RECORD.md`），§2.9.7 不再立第二份清单。
 
-**接缝与现状**：软线的语义是「主动审视」，不是「拆」。定根 ∥ 分组 ∥ 报面布局这一族（`rootOf` ∥ `perRootGroups` ∥ `reportLayout` ∥ `bucketLines` ∥ `rootsSuffix` ∥ `noRootItems`）与判据本体之间只靠 `runDocCheck` 串联，所以它已整族住在 `thincoder-core/doc-check/per-root.mjs`，`thincoder-core/doc-check/index.mjs` 只留 import 与装配件。
+**接缝与现状**：档位语义单源 = `docs/core/design/DOC-GRAPH.md` §3——本节不另立判法。
 
-**这条接缝不是本批的拆分方案**：拆分去哪、搬哪些符号、什么时候落，§2.9.7 已给唯一一处，且另批执行。本节不再给第二个目的地。
+定根 ∥ 分组 ∥ 报面布局这一族（`rootOf` ∥ `perRootGroups` ∥ `reportLayout` ∥ `bucketLines` ∥ `rootsSuffix` ∥ `noRootItems`）与判据本体之间只靠 `runDocCheck` 串联，所以它已整族住在 `thincoder-core/doc-check/per-root.mjs`，`thincoder-core/doc-check/index.mjs` 只留 import 与装配件。
+
+**这条接缝是拆分的起点，不是方案本身**：拆什么、搬到哪、承接在哪个批，§2.9.7 已给唯一一处，本节不再给第二个目的地。
 
 ## 5. 关键决策记录
 
@@ -1074,10 +1072,6 @@ opencode ∥ MiMo-Code 的 lsp/server.ts
 1. **收口门的兜底臂**：`thincoder-core/agent-tools/batch-gate.mjs` 已按档定根（`owningProject(selfAbs, base)`），但 `?? batchProjectRoot(base)` 在无主时落会话根——与 KD-4 同形，却少一道「这份根是谁给的」的区分。复现路径：锚为工作区、`selfAbs` 属另一个项目 ⇒ 兜底根与档的根不同，报面路径随之相对错根显示。本批不改。
 2. **写前门的根入参**：`thincoder-core/tools/doc-write-gate.mjs` 把 `projectRoot` 传进 `runDocCheck`，片档落在目标档同目录。该根是不是目标档的所属项目根，本席未取证；若同病，本批登记、另轮处置。
 
-3. **批档 append 面的候选文本片段档**：`thincoder-core/agent-tools/batch-regions.mjs` 的 `FRAGMENT_PREFIX`（字面 `.gate-`）把 append 的候选文本落成批档同目录的片段档。它与 §2.10.2 退役的写前门片段档同族，身份病同形——豁免登记的 `file` 与片段档名永不相等。
-
-   本批不碰它（§2.10.8）。到期条件两条任一成立即在那一批按 §2.10.1 的 `texts` 形处置：现场出现「append 候选文本被拒、同一命中在 `doc_check` 面已登记」∥ 触碰 `thincoder-core/agent-tools/batch-gate.mjs` 的 append 腿。
-
 ## 9. 集成测试设计（RTM 增量）
 
 读 `test/RTM.md` 故事索引表与分册结构后按增量作答。
@@ -1134,3 +1128,20 @@ opencode ∥ MiMo-Code 的 lsp/server.ts
 - **`36-4` 不受影响**：四条空范围入口的清单本身不成立，与被裁定的假阳不是一件事。
 
 域表按档根行的**交互** = 引擎分组 → 域表按组根读 → 面判豁免；**业务可观察结果** = 该档零 `档缺` 命中。文件落 `test/integration/**`，与用例代码同目录；`test/**` 不属本席笔域，落地归实施轮。
+
+### 9.3 判定输入换载体那一笔（本档 §2.9.4 「基线怎么判」 ∥ §2.10.1 的 append 行）
+
+计数一行：改写 = **2** ∥ 冗余 = **0** ∥ 新增 = **0**。
+
+**这两号的坐标系**：表里的 `7-8` ∥ `7-12` 是 `test/rtm/guard.md` 的 **RTM 行号**（故事 `CLI 7`），与本档 §7 用例表的 `7-8`（无主档 + 声明根是多项目工作区）∥ `7-12`（跨项目清单，B 档引 B 自己的批档）同名不同事。本表一律写作 `RTM <号>`，免得读者把两张表当成一张。
+
+纯删那一腿只换基线的判定输入载体，目标档身份、豁免分类与两场景的业务判决均不变 ⇒ 无行被动。被改写的是 append 候选文本腿那两行——它们把拒文标签与行号写死在旧形上：
+
+| RTM 行 | 为什么变 | 改成什么 | 入口 | 服务需求 |
+|---|---|---|---|---|
+| `RTM 7-8` | 旧断言读 `本次写入文本:\d+`（片段档译回来的坐标）；候选文本改走 `texts` 后命中行号就是候选文本行号，标签也换了形 | 拒文读「候选文本第 N 行」，N 与提交的那段文本逐行对得上；批档字节仍逐字不变 | 子代理 `batch({action:"append"})` 的回执 | `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 ① |
+| `RTM 7-12` | 同上（`本次写入文本（锚 1 条）` 那个标签） | 首行读 `REFUSED（命中 1 条——候选文本（锚 1 条））`，命中行点名「候选文本第 N 行」与所指档 | 同上（同一次 append 调用面） | 同档 F13 ∥ AC-11 |
+
+**在飞扫描那一笔 = 零集成增量**：`thincoder-core/agent-tools/batch-lifecycle.mjs` 的排除判据从片段前缀换成两条（扩展名不是 `.md` ∥ 点开头），它判的是「哪份档算在飞批档」，没有用户可见入口，也没有既有行断言过它 ⇒ 改写 0 ∥ 冗余 0 ∥ 新增 0。这一笔不立新行，由 §2.10.6 的 AC-P8 结构机检钉住。
+
+C-5 ∥ C-6 由本批单元测试档承接，不称作既有集成断言；父侧收口的集成回归范围与记录位见 §2.10.6 AC-P4。

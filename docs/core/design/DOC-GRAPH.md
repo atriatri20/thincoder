@@ -56,7 +56,7 @@
 |---|---|---|
 | 工具名 `doc_graph` | `thincoder-core/agent-tools/doc-check.mjs` · `docCheckTool` · depth-0 ∥ eng-coder ∥ eng-designer 三段工具表 | **existing but unusable**：`doc_check` 的返回面是**判决**（首行 `DOC-CHECK GATE`），塞查询进去会让读者与脚本按判决解析（§4 KD-2）；新名与同族工具（`ledger` ∥ `team_ledger` ∥ `doc_check`）同一构词 |
 | 表名 `doc_edges` | `thincoder-core/ledger-db.mjs` · `items` · 台账读写面 | **existing but unusable**：`items` 是台账行，混进边会让六态查询与边查询互相污染；同库新表，名与工具的 `doc_` 前缀同族 |
-| 抽取纯函数档（§3 新档之一） | `thincoder-core/doc-check/anchors.mjs` · `ANCHOR_RE` · `checkAnchors` | **existing but unusable**：本档已越 500 软线（§3 分层表），三支新家族再塞进去是往超线档加载荷；纯函数拆出后本档只加调用 |
+| 抽取纯函数档（§3 新档之一） | `thincoder-core/doc-check/anchors.mjs` · `ANCHOR_RE` · `checkAnchors` | **existing but unusable**：本档改代码前已过 500（§3「分层结论」；方案见该表），三支新家族再塞进去是往越线档加载荷；纯函数拆出后本档只加调用 |
 | 编排档（§3 新档之二） | `thincoder-core/ledger-tools.mjs` · `ledgerTool` · 台账工具面 | **none found**（扫码 ∥ 落库 ∥ 三查询在仓内无同形编排件）；形对齐台账的「库档 ∥ 工具档两分」 |
 | 工具面档（§3 新档之三） | `thincoder-core/agent-tools/doc-check.mjs` · 同目录同形 | **existing**：照它的形状（入参校验 ∥ 动作分派 ∥ 文本回执）新建，目录与命名同族 |
 | 工具描述档（§3 新档之四） | `thincoder-core/tool-docs/` · 目录内一档一工具，名 = 工具名逐字 | **existing**：新增一档，命名逐字跟工具名 |
@@ -342,21 +342,67 @@ thincoder-core/tool-docs/doc_graph.md       模型可见描述（描述外置的
 
 理由：`scan` 写台账库，而子代理段拿到的台账是只读变体 ⇒ 扫由父侧做，子代理查同一份库。变体契约 = §2.5.5；装配矩阵单源 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.60.2。
 
-**分层结论（逐档，量法 = `doc_check(mode:"report", lines:[…])`，500 行为主动审视软线；每档的绝对行数只住批档的实施记录，本表只写结论）**：
+### 行数档位口径
 
-| 文件 | 结论 |
-|---|---|
-| `thincoder-core/doc-check/anchors.mjs` | **已越软线**（本批动手前就已越）。本批只加载回调管道与一处取形调用，十来行、职责零变 ⇒ **接受本次载荷**，并在同一交付里记一条拆分方案：把「抽取」与「判定」分居两档（`ANCHOR_RE` 家族与码段/围栏谓词搬新档，判定留本档）。拆分不本批做——改面越大越难评审，且本批改动面已铺开（见上表） |
-| `thincoder-core/ledger-db.mjs` | 未越线；本批加一段 DDL + 升号，同档既有职责（台账结构单源），不拆 |
-| `thincoder-core/agent-tools.mjs` ∥ `thincoder-core/agent/family-tools.mjs` | 未越线；各加一行 ∥ 一处取用，不拆 |
-| `thincoder-vscode/scripts/check-vsix.mjs` | 未越线；只改一个计数常量 |
-| `test/RTM.md` ∥ `test/rtm/tooling.md` ∥ `test/rtm/batch-ledger.md` ∥ `test/integration/doc-anchor-graph.test.mjs` | 都在 `test/` 本层：索引行 ∥ 分册一节（43-1 … 43-5）∥ 台账分册一行（21-1 的期望值）∥ 用例档五行用例。各自本层内改动、互不搬逻辑 ⇒ 不拆 |
-| `thincoder-core/doc-graph.mjs` | **越软线，未触硬线**（新建时已越）。**本批载荷之后仍在软线与硬线之间**——本批往里加的是自环拦截一处、按类计数与时效格两处读数（量法 = 本表标题）；结论不变 = **接受本次载荷，拆分另批**：现在不拆的理由——机制还在长（`path` 式直查那一轮会重排走查层），此刻切边界等于切两次；将来切法——**走查层**（分层 ∥ 宽度上限 ∥ 层内全序 ∥ 将来的 `path`）独立成一个新档，**编排层**（扫描 ∥ 落库 ∥ 降级读数 ∥ 盘上端点判定）留本档。新档名与边界由那一批定，本表只记切法 |
-| `thincoder-core/doc-check/graph-tokens.mjs` | 未越线；纯取形函数（三支 token 家族吃一行文本吐候选 token；RTM 面三件 `rtmFamilyOf` ∥ `rtmRowOf` ∥ `caseNumberOf` 吃一行原文吐族号 / 行首格 / 行末格），**无 IO、无跨行状态、无判定** ⇒ 不拆。那点跨行状态（当前节标题游标）住编排档（§2.2） |
-| `thincoder-core/agent-tools/doc-graph.mjs` | 未越线；工具面照 `agent-tools/doc-check.mjs` 的形（入参校验 ∥ 动作分派 ∥ 文本回执），职责单一 ⇒ 不拆 |
-| `docs/batches/<批档名>.test.mjs` | 未越线（当批单测档，与批档同名同目录，收口删除）⇒ 不按源档的寿命审视 |
-| `docs/README.md` | 未越线；地图档，登记一行 + 计数行改数，不拆 |
+**来源（用户原话，逐字）**：「500行其实也不应该再叫软线了，对于设计器来说，它就是硬线，只有设计器拿他做硬线。其他检查都是以800行为硬线。这样也就不用纠结该拆不该拆了。」
 
+**要的就是机械化**：两条都是硬线，不留「审视后自行判断」的余地，也不留第三个判断点。
+
+**同口径的另一处**：工作区根的 `AGENTS` 档（Coding Conventions · File size）写同一件事，逐字如下。
+
+```text
+File size (source and unit-test files only): two hard lines, no advisory tier.
+500 lines = the designer's hard line — at design time, measured on the file before this batch's changes
+800 lines = every other check's hard line — implementation, closeout and review judge only this one
+There is no third line and no "looked at it, decided not to split" verdict.
+```
+
+两处互指，不是一处说了算：任一处改动，须同轮改另一处；两处措辞打架时先停下对齐，不各写各的。
+
+**对象**：代码档（源文件 ∥ 测试文件）。文档面（设计 ∥ 需求 ∥ 批次 ∥ 台账）不受行数限制——依据 `docs/core/requirements/ENGINEERING-MODE-V2.md`「文档（设计 / 需求 / 批次 / 台账）不受行数限制——无任何行数义务」。
+
+**① 设计器硬线 = 500（只有设计轮用这一条）**
+
+- **过 500（> 500）⇒ 必须给分拆方案**：拆哪几族、切在哪、为什么切在那里。硬性义务，没有裁量空间——「接受本次载荷、拆分另批」不能替方案。
+- **未过 500（≤ 500）⇒ 不提分拆**：不进分拆讨论，不写方案，也不写「故不拆」一类判断。
+- **基准 = 改代码前的长度**：判本批改动**之前**该档的读数。不是改动之后的行数，也不是改动的预测增量。
+- **新建档没有「改前」**：判它落盘时的长度——它是本批写出来的那一档。
+- **履行位置**：方案住在设计档的「受影响文件清单与分层结论」一节（本档 §3），由设计轮自己写下，不另设检查面。
+
+**② 其他检查硬线 = 800（实施轮 ∥ 收口轮 ∥ 评审轮都只判这一条）**
+
+- **过 800（> 800）⇒ 先拆再落**：拆分是落地的前置条件，不与落地并行。
+- **未过 800（≤ 800）⇒ 不管**：500 不是这些面的判据，这些面不提拆分要求。
+
+**③ 档位只有两条硬线**：设计器硬线 500 ∥ 其他检查硬线 800。别处另立第三条档位线（例如在两者之间再加一条触发线），或把 500 说成非硬性的、要先自行审视的，都与本节相反。改法 = 指向本节。
+
+**检查法**：下列检索式命中处即上一条说的漂移。
+
+```text
+grep -rn "软线" docs/
+grep -rn "advisory" docs/
+grep -rn "650" docs/
+grep -rn "拆分触发" docs/
+grep -rn "主动审视" docs/
+```
+
+**已查档**：射程 = 全设计层 `docs/core/design/**/*.md`（量法 = `node` 行扫描，检索式见上条）。命中处分两类处置：**规则陈述**（说「现在该怎么做」）⇒ 改成 500 设计器硬线 ∥ 800 其他检查硬线，并指本节；**历批实施记录**（说「那批当时怎么判的」）⇒ 原样保留——改了等于改历史。命中档名单、条数与逐档处置按 D12 住批档，本节只写关系。
+
+**量法**：`doc_check(mode:"report", lines:[…])` 的逐档读数——同一个数只从这一把尺取。
+
+**分层结论**：无档跨层（逐档所属层见上表）。改代码前（新建档 = 落盘时）过 500 的改动档只有下表两档，各附分拆方案。
+
+其余六个代码档未过 500，不提分拆：
+
+- `thincoder-core/ledger-db.mjs` ∥ `thincoder-core/agent-tools.mjs` ∥ `thincoder-core/agent/family-tools.mjs`
+- `thincoder-vscode/scripts/check-vsix.mjs` ∥ `thincoder-core/doc-check/graph-tokens.mjs` ∥ `thincoder-core/agent-tools/doc-graph.mjs`
+
+表内四个 `test/` 面按「对象」行不判；其中集成用例档是代码档，实测未过 500。
+
+| 档 | 档位 | 分拆方案 |
+|---|---|---|
+| `thincoder-core/doc-check/anchors.mjs` | 已过 500 | **抽取 ∥ 判定分居两档**：`ANCHOR_RE` 家族与码段 / 围栏谓词搬新档，判定留本档。用户口径要的是方案；本批只给方案，执行排期归父侧 |
+| `thincoder-core/doc-graph.mjs` | 已过 500（新建档，判落盘长度） | **走查层独立成新档**（分层 ∥ 宽度上限 ∥ 层内全序 ∥ 将来的 `path`）；**编排层留本档**（扫描 ∥ 落库 ∥ 降级读数 ∥ 盘上端点判定）。新档名与边界由执行那一批定。本批只给方案，执行排期归父侧 |
 **跨层结论**：**无档跨层**。`thincoder-core` 内部各改动各自在本层；本批新建的四档（编排 ∥ 取形 ∥ 工具面 ∥ 工具描述）与单测档、地图档同样都落在自己的层里，没有一档换了层。唯一跨包的一处是 `check-vsix.mjs` 的计数常量——它不搬逻辑、只改一个数，跟着同一个交付走。
 
 **W8 契约②**：消费侧一律动态 import 台账库——`依据 thincoder-core/ledger-db.mjs「本档静态 import node:sqlite ⇒ 消费侧一律动态 import 本模块链（W8 契约②——KD-M2-3）」`。新加的两个 core 消费面（编排档 ∥ 工具面档）因此一律**动态** `import()`，与 `ledger-tools.mjs` 同一条纪律。

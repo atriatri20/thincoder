@@ -23,9 +23,9 @@
 - **不进既有目录的理由**：`scripts/` 是一次性仓维护脚本（无数据、无产物家、跑完即弃）；`.thincoder/tmp/` 被 gitignore（场景无法版本化）；`test/` 是集成套件家（夹具不替代集成测试，§7）；产品包会发布，夹具不发布。
 - **零依赖、不建 `package.json`**：仓根与各工具目录都不设 `package.json`，夹具沿用同一形态——仓根下 `node prompt-fixture/run.mjs …` 直接跑。
 
-**最接近的先例（结构面）**：仓根 2026-10-26 读数 = `.github` · `bench` · `bin` · `docs` · `scripts` · `test` · `thincoder-cli` · `thincoder-core` · `thincoder-desktop` · `thincoder-render-core` · `thincoder-server` · `thincoder-vscode`，根下不承载包清单。
+**最接近的先例（结构面）**：仓根目录 = `.github` · `bench` · `bin` · `docs` · `prompt-fixture` · `scripts` · `test` · `thincoder-cli` · `thincoder-core` · `thincoder-desktop` · `thincoder-render-core` · `thincoder-server` · `thincoder-vscode`，根下不承载包清单。
 
-- **对齐**：`bin/` 是单个薄入口（`thincoder.cjs`，683 字节），`node bin/…` 直跑、不设包；`test/` 是自足套件目录（`RTM.md` + `run.mjs` + `integration/`），`node --test` 直跑。本目录沿同形：自足、零 `package.json`、`node prompt-fixture/run.mjs` 直跑。
+- **对齐**：`bin/` 是单个薄入口（`thincoder.cjs`），`node bin/…` 直跑、不设包；`test/` 是自足套件目录（`RTM.md` + `run.mjs` + `integration/`），`node --test` 直跑。本目录沿同形：自足、零 `package.json`、`node prompt-fixture/run.mjs` 直跑。
 - **偏离一（产物家）**：`bin/` 只做转口、`test/` 的产物是 CI 读数，两者都不承担「一次运行 = 一份可回看的证据」——夹具的产物是读数，必须有自己的 `results/`。
 - **偏离二（版本轴与统计）**：`bin/` `test/` 都是无版本语义的运行时件；夹具的读数要跨 run 对读，得自带版本轴与区间估计。
 - **不落 `test/` 还有契约面的理由**：`test/` 的用途被 RTM 集成面占据（AC-11 要求本批零改），夹具进去要么改 RTM 要么把自己的工具当业务用例，两条都不成立。
@@ -289,7 +289,7 @@ node prompt-fixture/compare.mjs <a.json> <b.json>
 |---|---|---|---|
 | KD-1 | 夹具住新顶层目录 `prompt-fixture/`，与其它工具零 import 边 | 用户 18:30 令「彻底分开，不要互相拖累」；零 import 边是构造性隔离，不靠评审记得住 | ① 既有跑批工具目录下：共享模块把两边调用面绑在一起；② `scripts/`：那里是一次性维护脚本，无数据 / 产物 / 版本；③ `.thincoder/tmp/`：gitignore，场景不可版本化 |
 | KD-2 | 副本每次运行从正本**生成**，不落仓 | 一致性靠构造，不靠人守；正本一变副本自动跟随 | ① 把 baseline 副本提交进仓：手抄 / 快照必然漂移，正是要消灭的失败模式；② 直接读正本原地跑：无法同时存在两个副本做对照 |
-| KD-3 | 变体用 `find`/`replace` 声明，不用整档替换 | 68KB 档整档写进声明会复制内容并漂移；`find` 唯一性可机检 | ① 整档替换：声明体量等同正本，两处内容各自演化；② unified patch 档：要自带补丁解析器，收益不抵成本 |
+| KD-3 | 变体用 `find`/`replace` 声明，不用整档替换 | 正本整档写进声明会复制内容并漂移；`find` 唯一性可机检 | ① 整档替换：声明体量等同正本，两处内容各自演化；② unified patch 档：要自带补丁解析器，收益不抵成本 |
 | KD-4 | provider 调用直连核 `chat`，条目由 `parseModelRef` + `hasKey` 严格单发装配 | 夹具要「核真实跑一轮」，且**不许静默换模型**——核的运行时主径带回退序，被测渠道无 key 时会换渠道跑，读数失去身份 | ① 复用其它工具的传输包装：又一条跨工具 import 边；② 自己手写 HTTP：重试 / 续写 / 限流语义要么重写要么缺失，读数不可比；③ `resolveProviderPlan`：回退换模型 ⇒ 被测对象变了 |
 | KD-5 | 工具面 = 声明 4 件（`read` / `write` / `edit` / `subagent`），前三件用真实 schema | 场景判的是动作选择；工具描述换桩话术会测到另一个问题 | ① 全量内置工具面：多出判据不覆盖的路径，读数被稀释；② 沿 `builtinTools` 上限：`subagent` 进不来，「派工」分支不可达 |
 | KD-6 | 报告给区间与 p，但**不给判定** | 用户 17:39 令：门槛由当次使用者定 | 内置「显著即可用」阈值：把用户的判断权写进夹具，且样本小时会给出假确定 |

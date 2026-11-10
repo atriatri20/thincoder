@@ -435,7 +435,7 @@ advisor design review 标准维度补一条：
 
 ## 11. 配置
 
-- 项目级 `.thincoder/advisor.md`：评审准则覆盖——存在则替换内置默认准则（正确性 / 安全 / 一致性 / 完整性 / 可维护性五维）；项目可在覆盖文件里追加规则（如本仓的文件尺寸档 >500 advisory / >800 critical）。
+- 项目级 `.thincoder/advisor.md`：评审准则覆盖——存在则替换内置默认准则（正确性 / 安全 / 一致性 / 完整性 / 可维护性五维）；项目可在覆盖文件里追加规则（如本仓的文件尺寸档：过 500 须给拆分方案 ∥ 过 800 先拆再落，语义单源 = `docs/core/design/DOC-GRAPH.md` §3）。
 - `config.json`：`advisor.provider` / `advisor.model` 可选覆盖主 agent 的 provider / model；`advisor.guard` 为 completion guard 开关（默认 false）。
 - **轮次提示词硬加载**：四份提示词文件缺失即抛错（防静默降级到劣质内置 prompt）。
 
