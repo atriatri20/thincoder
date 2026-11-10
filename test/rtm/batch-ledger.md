@@ -47,7 +47,7 @@
 | 10-1 | 工程模式夹具里，让一次设计评审以 `batchDoc` 带上批档（签发一个槽；夹具须让该评审把 §3 写进批档——轮次块 + 状态行 = `评审通过`，否则 §3 落地门挡住签发、本行断言不可达），再调 `batch close` 收该批 | close 回执含 `[design tokens]` 且点名消费 1 枚；随后同 designId 的 eng-coder spawn 被机械拒；`design-slots` 里该槽不在 | — | `test/integration/batch-close-token-consume.test.mjs` |
 | 10-4 | 工程模式夹具里以 `batchDoc` 带批档跑一次设计评审（签发一个槽；夹具同上：该评审须把 §3 写进批档），再调 `subagent` `action:'design-slots'` | 该槽行 `batch=<批档 basename>`（不是 `—`）；其余列零变 | — | `test/integration/batch-close-token-consume.test.mjs` |
 | 10-2 | 同一夹具，把 `persistEngTokens` 注入为抛错后再 close | close 被拒且回执点名消费失败；§1 状态行字节不变；槽仍在盘（内存已回滚） | — | `test/integration/batch-close-token-consume.test.mjs` |
-| 10-3 | 分别让待核销行指向已收口、未收口、未评审与带存量声明的批档，凭既有工作证据核销；另造无证据行与空白覆盖行 | 前四种均核销成功且 `closed_at` 落值；无证据与空白覆盖均拒且整行不变。核销不读批档在盘、§1 或 §3 状态 | 回指 = `docs/core/design/LEDGER.md` §10.5 D2 | `test/integration/ledger-close-proof.test.mjs` |
+| 10-3 | 分别让待核销行指向已收口、未收口、未评审与带存量声明的批档：未收口那一档走 `ledger close` 与 `ledger update` 两条入口，已收口三档凭既有工作证据核销；证据负例（无证据 ∥ 空白覆盖）落在已收口夹具 | 未收口档下两条入口同拒（拒文含 `批档未收口` 且指回 `batch close`），行整笔不变；已收口三档均核销成功且 `closed_at` 落值（评审状态与存量声明行都不进归档判据）；无证据与空白覆盖均拒且整行不变 | 回指 = `docs/core/design/LEDGER.md` §11.5 P2-5-A1（证据负例移到 CLOSED 夹具 = 本批 delta） | `test/integration/ledger-close-proof.test.mjs` |
 | 10-5 | 待讨论 / 待设计 / 在途分别直接核销；待核销正常勾销；已核销再撤回，已废弃重复撤回及再核销 | 非待核销直接核销均拒且行不变；正常链成功；两种归档态都拒绝后续归档写入，状态与时间戳不变 | 回指 = `docs/core/design/LEDGER.md` §10.5 D4 / D5 | `test/integration/ledger-close-proof.test.mjs` |
 
 ## CLI 13. 建批档就有台账
@@ -67,13 +67,13 @@
 ## CLI 14. 评审过、完成清单收口、重开回
 
 > 目的：`§5` 只在评审通过后开写；两条收口通路都以 `completed` + `closeEvidence` 明确完成行，**一次收口即结算**（点名行两跳至 `已核销`、既有 `待核销` 行一并结清）；台账写失败 ⇒ 档回滚 + 拒（不静默成功），半状态可用 `batch check` 查出来；重开把 `待核销` 行带回工作位。
-> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 ∥ §2.6 ∥ §2.6.1 ∥ §2.7 ∥ §2.13 ∥ §2.17 与 `docs/core/design/LEDGER.md` §10；十二态（行序）= 14-1 错误 · 14-2 错误 · 14-3 正常 · 14-4 正常 · 14-5 正常 · 14-6 正常 · 14-7 错误 · 14-8 错误 · 14-9 正常 ∥ 错误 · 14-10 正常 ∥ 错误 · 14-11 错误 · 14-12 错误。
+> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 ∥ §2.6 ∥ §2.6.1 ∥ §2.7 ∥ §2.13 ∥ §2.17 与 `docs/core/design/LEDGER.md` §10 ∥ §11；十三态（行序）= 14-1 错误 · 14-2 错误 · 14-3 正常 ∥ 错误 · 14-4 正常 · 14-5 正常 · 14-6 正常 · 14-7 错误 · 14-8 错误 · 14-9 正常 ∥ 错误 · 14-10 正常 ∥ 错误 · 14-11 错误 · 14-12 错误 · 14-13 正常 ∥ 错误。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
 | 14-1 | `§3` 无结论时以 eng-coder 绑定 append `§5`；父侧派设计评审后评审 `append §3` 写一笔无裁定行（`batch append §3` ↔ `§3` 写入闸）；再夹具直写一笔含无裁定块的存量档（不经工具）并置 `§3 = 评审通过`，重试 `append §5`；最后补一块携 `VERDICT: pass` 的轮次块重试 | 第一次拒（拒文含 `§5 append refused`，§5 字节不变）；工具写无裁定行的 `§3` ⇒ 拒（拒文逐字 = `R-G3`，档字节不变、轮次块数不变）；存量无裁定块 ⇒ `append §5` 拒（拒文逐字 = `R-G2b`，块内裁定 = 无裁定行）；末块携 pass 裁定 ⇒ 写入成功。服务条目 = R4 + R27（`docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §5） | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-2 | `§3` 非 pass 时 `batch close` | 拒，拒文含 `§3 状态行 = …，须 = 评审通过`；§1 状态行字节不变 | — | `test/integration/batch-gates-reanchor.test.mjs` |
-| 14-3 | 换一个会话（ctx 无槽 / 无 designId）用 `ledger close` 核销一条带工作证据、锚批未收口且缺评审的行 | 核销成功（`status = 已核销`）——只判工作证据，不读锚批状态 | — | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-3 | 换一个会话（ctx 无槽 / 无 designId）用 `ledger close`：先核销一条指向未收口档的待核销行，再核销一条指向已收口档的同形行；另以未收口档执行在途行的放弃边 | 换会话不绕过锚批门：未收口 ⇒ 拒（拒文指回 `batch close`）、行整笔不变；已收口 ⇒ 放行；放弃边在未收口档拒且点出「先退回 待讨论」 | 回指 = `docs/core/design/LEDGER.md` §11.5 P2-5-A1 / A2 | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-4 | `batch close` 一个含 1 行 `在途` + 1 行 `待讨论` 的批，先携空 `completed`（并携证据），再点名在途行并携 `closeEvidence` | 空清单在写档前拒绝，令牌、批档、台账不变；点名行**同笔两跳至 `已核销`**、未动行落 `条件`；回执逐行点名该行（`在途 → 待核销 → 已核销`），无默认推进文案；末尾带 `[ledger consistency]` 一行 | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-5 | `batch status` 写 §1 `已收口`，先漏列在途行（仍携证据），再携其 id 与 `closeEvidence` | 与 close 共用预检和重锚；漏列时令牌、批档、台账不变；点名后同笔结清、`evidence` 带 `收口 <日期>：` 前缀，回执无默认推进与替行主人判断的文案 | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-6 | 以 `completed` + `closeEvidence` 收口后，用 `ledger update` 造一条 `待核销` 行（收口即结算，行已是归档终态），把它手工回退到在途并显式传旧 executor，再回待核销并以 `batch status` 重开（`§1 → 进行中` + note）；随后先不带号写产品码，再带重开那条在途号写同一目标 | 手工回退与重开后 executor 均为当前会话，显式旧值不覆盖；重开回执第一行点名 1 行；不带号写 ⇒ 拒且文件零改；带号写同一目标 ⇒ 照写 | 题设改写：收口后行已 `已核销`（重开不回收），夹具只能靠 `ledger update` 手工推进 | `test/integration/batch-gates-reanchor.test.mjs` |
@@ -83,6 +83,7 @@
 | 14-10 | 批含 1 行 `在途` + 1 行父侧已置 `待核销` + 1 行 `待讨论` + 1 行 `待设计`（`trigger = 认账不排期`）：先以三种空白 `closeEvidence` 收口，再一次收口携 `completed` + 证据 | 三次空证据均在写档前拒、档字节与台账零改、令牌未消费；一次收口后前两行都 `已核销`、证据带收口前缀；`待讨论` 行状态不动而 `trigger = 条件`，`认账不排期` 行零触；回执两种起点各一行；正常收口后 `check` 不命中 `closed-but-open-rows`、`consistent = true` | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-11 | 第二连接持台账写锁后 `batch close`，放开锁后 `check` 与重试；再以 `onWrite` 置只读 + 持锁分别执行「点名在途」「`completed: []` 待重锚」「`completed: []` 非空全归档」三次补偿失败收口并读 `check` | 回滚成功时拒文逐字 = 新第一条串、档账与 `check` 读数回到写前；重试成功。前两种残态命中 `closed-but-open-rows`；全归档且档头不缺号 ⇒ `record = closed · consistent = true`，不重开、不重试 | 回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.17 R38 ①②④；补偿失败用 `onWrite` 同步置只读作确定注入 | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-12 | 收口后造一条 `待核销` 行，记录重开前 `check`；持写锁重开，放开锁后复读；再以 `onWrite` 置只读 + 持锁执行补偿失败重开并 `check`，修复后重开；另以非空全归档起点执行失败重开 | 重开拒、拒文逐字 = 新第一条串、档回到已收口字节、行仍 `待核销`，`check` 与重开前逐项相等并点名旁行原态 `closed-but-settling`；修复后重开成功；残态命中 `open-but-unwritable`；全归档起点回滚后读数逐项相等且 `consistent = true` | 回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.17 R38 ③⑤ | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-13 | 全归档批（先正常收口结清行，再重开 ⇒ 档 open、行全归档）：分别以 `close` 与 `status` 写 §1 已收口补关；再以未签字的在途行现场与「全归档 + 档头号不在账」两种现场试补关 | 两路均补关成功：档冻结、§1 段尾落一行 `**补关记录**`（行数 +1、其余字节不变）、回执出 `[ledger repair]`、台账行字节不变，`check` 的 `open-but-settled` 读形补关后消失；在途行现场 ⇒ 链门照拒（档账零改）；额外半状态 ⇒ 补关拒、逐项点名半状态并指回 `batch({action:"check"})` | 新增（回指 = `docs/core/design/LEDGER.md` §11.5 P2-5-B / P2-5-C ∥ `BATCH-RECORD.md` §4.18-C） | `test/integration/batch-gates-reanchor.test.mjs` |
 
 ## CLI 17. 评审没写进批档就不算过
 

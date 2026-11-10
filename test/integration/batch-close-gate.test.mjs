@@ -2,7 +2,7 @@
  * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4 / 7-5 / 7-6 / 7-7 / 7-8 / 7-9 / 7-11 / 7-13 / 7-15（RTM CLI 端故事 7「收口只判本批改过的档」；
  * 判据原文 = `test/RTM.md` 第 7 节；7-1…7-3 的机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「② 的范围」，
  * 7-4 的机制 = `docs/core/design/TESTING.md` §3.5（零留存的收口门），
- * 7-6 / 7-7 / 7-8 的机制 = 同档 §3.20「结构兜底」（**批档自身恒在判域**：② 面命中即拒、① 面强制集 = 本次写入文本）；
+ * 7-6 / 7-7 / 7-8 的机制 = 同档 §3.20「结构兜底」（**批档自身恒在判域**：② 面命中即拒、① 面强制集 = 候选文本）；
  * 7-15 的机制 = 同档 §3.29 条目 AC（**批档面互引不判**：引用方与目标同在批档基底根下 ⇒ 不判、只留痕）。
  *
  * 业务入口 = 真 `batch` 工具（`agent-tools/batch.mjs`）的 depth-0 `close` 轨——不直调 `runBatchGate`：
@@ -350,7 +350,7 @@ test('CLI 7-7 正常 · 批档干净且笔域集只含批档自身 ⇒ 放行、
   assert.match(statusLineOf(root), /已收口/, "收口放行且落盘")
 })
 
-test('CLI 7-8 错误 · 子代理 append §2：本次写入文本含一条带目录段、不在批档根下的悬空路径 ⇒ 拒（零字节）；改全路径后同调用 ⇒ 落盘、前文零变', async () => {
+test('CLI 7-8 错误 · 子代理 append §2：候选文本含一条带目录段、不在批档根下的悬空路径 ⇒ 拒（零字节）；改全路径后同调用 ⇒ 落盘、前文零变', async () => {
   const root = makeProject("r78")
   gitRepo(root)
   const before = readFileSync(join(root, BATCH_REL), "utf8")
@@ -359,8 +359,9 @@ test('CLI 7-8 错误 · 子代理 append §2：本次写入文本含一条带目
     () => asDesigner.execute({ action: "append", segment: "§2", text: `本段引 ${OUTSIDE_DANGLING} 的判据。` }, designerCtx(root)),
     (e) => {
       assert.match(e.message, /文档机检门拒写/, `拒串点名门位：${e.message}`)
-      assert.match(e.message, /REFUSED（命中 1 条——本次写入文本/, `强制集指向本次写入文本：${e.message}`)
-      assert.match(e.message, /✗ 锚·档缺 本次写入文本:\d+ `thincoder-core\/tool-docs\/NO-SUCH-DOC\.md`/, `命中行点名本次写入文本：${e.message}`)
+      assert.match(e.message, /REFUSED（命中 1 条——候选文本/, `强制集指向候选文本：${e.message}`)
+      // 命中行 = 批档本体（身份）+ 候选文本里的行号（不译成批档坐标）
+      assert.match(e.message, /✗ 锚·档缺 docs\/batches\/fixture\.md 候选文本第 1 行 `thincoder-core\/tool-docs\/NO-SUCH-DOC\.md`/, `命中行点名候选文本第 1 行与所指档：${e.message}`)
       return true
     },
   )

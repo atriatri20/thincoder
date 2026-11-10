@@ -15,8 +15,9 @@
  * 「档此刻在不在盘」降为读数——读面导出 `ledgerBatchRows`、收口重锚单源 `ledgerReanchorBatch`。
  * 批量面（§3.3 P1）：选行单源 `resolveBatchRows` + 逐行落笔 `applyRowUpdate` / `applyRowClose`
  * （与单行形共函数——迁移表判 / 写门 / evidence 门逐行照判）。
- * 核销工作证据门：两处逐行写核先算应用本笔后的 evidence，再由 `ledger-close-proof.mjs`
- * 判其非空白；批档在盘、收口与评审状态不进入核销判据。
+ * 核销工作证据门：两处逐行写核先算应用本笔后的 evidence，再由 `ledger-close-proof.mjs` 判其非空白。
+ * 锚批结算门（§11.2 同一档）：归档两个目标态（`已核销` ∥ `已废弃`）另读锚批 `§1`——证据门与锚批门
+ * 互不替代（前者问「有没有工作事实」，后者问「档收口没有」）；四支豁免的原因走回执 `notices`。
  *
  * 接线（设计档 §2.2 命令面接线）：族出口 = `ledger.mjs`（re-export 两源——KD-M2-3）；查询命令 ←
  * tools/index.mjs（assembleBuiltinTools 全角色面）；写命令 ← agent/family-tools.mjs（assembleFamilyTools
@@ -172,7 +173,7 @@ export function ledgerUpdate({ cwd, id, patch, executorSessionId, boundary, agen
     const row = db.prepare("SELECT * FROM items WHERE id = ?").get(id)
     if (!row) throw new Error(`ledgerUpdate：行 ${id} 不存在`)
     const out = applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary, { agent, base: baseOf(cwd, boundary) })
-    return out.reason === undefined ? { id: out.id } : { id: out.id, reason: out.reason }
+    return { id: out.id, ...(out.reason === undefined ? {} : { reason: out.reason }), ...(out.notices ? { notices: out.notices } : {}) }
   } finally { db.close() }
 }
 
@@ -203,7 +204,8 @@ export function ledgerClose({ cwd, id, status, evidence, evidenceReplace, bounda
  *  并抛（零行改）——故「部分落地」只由逐行门拒产生，「中途失败」不留半批。
  *  `BEGIN IMMEDIATE`：写锁一次先把（逐行不升级锁 ⇒ 事务级失败在首行之前即失败）。
  *  核销只读应用本笔后的工作证据，本径不预读批档或令牌归属。
- *  @returns {{batch: string, status: string|null, applied: number[], skipped: {id: number, from: string, why: string}[]}} */
+ *  @returns {{batch: string, status: string|null, applied: number[], skipped: {id: number, from: string, why: string}[],
+ *    notices?: {id: number, reason: string, message: string}[]}} `notices` 仅在本笔命中锚批结算门豁免时出现（§11.2）*/
 export function ledgerUpdateBatch({ cwd, batch, patch = {}, executorSessionId, boundary, agent }) {
   const db = openLedger(cwd, { create: true, boundary })
   try {
@@ -212,13 +214,16 @@ export function ledgerUpdateBatch({ cwd, batch, patch = {}, executorSessionId, b
     const proof = { agent, base }
     db.exec("BEGIN IMMEDIATE")
     try {
-      const applied = [], skipped = []
+      const applied = [], skipped = [], notices = []
       for (const row of resolveBatchRows(db, base, abs)) {
-        try { applied.push(applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary, proof, true).id) }
-        catch (e) { skipped.push({ id: Number(row.id), from: row.status, why: String(e?.message ?? e) }) }
+        try {
+          const out = applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary, proof, true)
+          applied.push(out.id)
+          if (out.notices) notices.push(...out.notices) // 单行整笔回滚；豁免 notice 逐行汇总到顶层
+        } catch (e) { skipped.push({ id: Number(row.id), from: row.status, why: String(e?.message ?? e) }) }
       }
       db.exec("COMMIT")
-      return { batch, status: patch.status ?? null, applied, skipped, ...(patch.status === "待讨论" && patch.evidence != null ? { reason: patch.evidence } : {}) }
+      return { batch, status: patch.status ?? null, applied, skipped, ...(patch.status === "待讨论" && patch.evidence != null ? { reason: patch.evidence } : {}), ...(notices.length ? { notices } : {}) }
     } catch (e) { db.exec("ROLLBACK"); throw e }
   } finally { db.close() }
 }
@@ -229,17 +234,18 @@ export function ledgerUpdateBatch({ cwd, batch, patch = {}, executorSessionId, b
  *  不入 `skipped`——归档行本非结算对象，点名会让每批重跑刷屏）。`evidence` 逐行追加同一文本
  *  （`evidenceValue` 同源）。回执 `status` 恒 `已核销`（批量形缺省 = 勾销单值；携则守卫已收窄为
  *  `{已核销}`——§3.2 `whenPresent`）。事务语义同 `ledgerUpdateBatch`。
- *  @returns {{batch: string, status: string, applied: number[], skipped: {id: number, from: string, why: string}[]}} */
+ *  @returns {{batch: string, status: string, applied: number[], skipped: {id: number, from: string, why: string}[],
+ *    notices?: {id: number, reason: string, message: string}[]}} `notices` 仅在本笔命中锚批结算门豁免时出现（§11.2）*/
 export function ledgerCloseBatch({ cwd, batch, evidence, evidenceReplace, boundary, agent }) {
   const status = "已核销"
   const db = openLedger(cwd, { create: true, boundary })
   try {
     const base = baseOf(cwd, boundary)
     const abs = assertBatchArg("ledgerClose", base, batch)
-    const proof = { agent, base } // 保留既有调用签名；核销工作证据门不读批档或评审运行态
+    const proof = { agent, base } // `base` = 锚批结算门的指针解析基准（§11.2）；逐行门拒 ⇒ 本行计入 `skipped`
     db.exec("BEGIN IMMEDIATE")
     try {
-      const applied = [], skipped = []
+      const applied = [], skipped = [], notices = []
       for (const row of resolveBatchRows(db, base, abs)) {
         if (row.status === "已核销" || row.status === "已废弃") continue // 归档态静默不计
         if (row.status !== "待核销") {
@@ -247,11 +253,14 @@ export function ledgerCloseBatch({ cwd, batch, evidence, evidenceReplace, bounda
           skipped.push({ id: Number(row.id), from: row.status, why })
           continue
         }
-        try { applied.push(applyRowClose(db, row, status, evidence, evidenceReplace, proof).id) }
-        catch (e) { skipped.push({ id: Number(row.id), from: row.status, why: String(e?.message ?? e) }) }
+        try {
+          const out = applyRowClose(db, row, status, evidence, evidenceReplace, proof)
+          applied.push(out.id)
+          if (out.notices) notices.push(...out.notices) // 豁免 notice 逐行汇总到顶层
+        } catch (e) { skipped.push({ id: Number(row.id), from: row.status, why: String(e?.message ?? e) }) }
       }
       db.exec("COMMIT")
-      return { batch, status, applied, skipped }
+      return { batch, status, applied, skipped, ...(notices.length ? { notices } : {}) }
     } catch (e) { db.exec("ROLLBACK"); throw e }
   } finally { db.close() }
 }
@@ -379,14 +388,14 @@ export function ledgerReanchorBatch({ cwd, batch, boundary, completed, closeEvid
           if (!completedIds.has(Number(row.id))) throw new Error(`ledgerReanchorBatch：在途行 #${row.id} 未经完成清单点名`)
           // 跳 1（在途 → 待核销）：迁移表 + 写门逐跳判；出边自动清 executor
           applyRowUpdateTx(db, base, row, { status: "待核销" }, null, boundary, { base })
-          // 跳 2（待核销 → 已核销）：核销门判应用本笔后的 evidence，并落 closed_at
+          // 跳 2（待核销 → 已核销）：核销门判应用本笔后的 evidence，并落 closed_at；锚批门在 §1 已收口后读回 closed
           const hopped = db.prepare("SELECT * FROM items WHERE id = ?").get(row.id)
-          applyRowClose(db, hopped, "已核销", evidenceText, false)
+          applyRowClose(db, hopped, "已核销", evidenceText, false, { base })
           settled.push({ ...face, from: "在途" })
           continue
         }
         if (row.status === "待核销") {
-          applyRowClose(db, row, "已核销", evidenceText, false)
+          applyRowClose(db, row, "已核销", evidenceText, false, { base })
           settled.push({ ...face, from: "待核销" })
           continue
         }
@@ -433,6 +442,8 @@ const halfStateOf = (name, rows) => ({
  * 只按前两条判，会把每个「一行先做完、其余还在做」的合法在途批报成不一致，而恒报不一致的读数等于没有
  * 读数；加上第三条，它判的仍是同一件真事：该批此刻没有一条在途行，所以一个字也写不进去。
  * **`open-but-settled` 是预期读形**（重开一份非空全归档批的必然结果——`已核销` 不回收），不是缺陷；空行集不命中。
+ * 判据 = `record !== "closed"` ∧ 行集非空 ∧ 全归档（`docs/core/design/LEDGER.md` §11.2）：`unknown` 照报
+ * （不可判必须可见，不许静默当作已收口）；补关入口恒为 `record = open` 且 `halfStates` 恰为唯一本项目。
  * `closed-but-open-rows` 同读 `status` 与 `trigger`：在途恒算；等待态只在 trigger 非条件且非认账不排期时算。
  * `header-row-missing` 只判档头号在 items 无同号行；行存在但已解绑不计入。
  * @param {{cwd?:string, batch?:string, boundary?:string}} o — `cwd` = 批档所属项目根；`boundary` = 会话锚
@@ -473,7 +484,7 @@ export function batchLedgerConsistency({ cwd, batch, boundary } = {}) {
   if (record === "closed" && openRows.length) halfStates.push(halfStateOf("closed-but-open-rows", openRows))
   if (record === "closed" && settling.length) halfStates.push(halfStateOf("closed-but-settling", settling))
   if (record === "open" && inFlight.length === 0 && settling.length) halfStates.push(halfStateOf("open-but-unwritable", settling))
-  if (record === "open" && rows.length > 0 && archived.length === rows.length) halfStates.push(halfStateOf("open-but-settled", rows))
+  if (record !== "closed" && rows.length > 0 && archived.length === rows.length) halfStates.push(halfStateOf("open-but-settled", rows))
   if (stale.length) halfStates.push(halfStateOf("pointer-stale", stale))
   if (missingHeaderRows.length) halfStates.push(halfStateOf("header-row-missing", missingHeaderRows))
   return {

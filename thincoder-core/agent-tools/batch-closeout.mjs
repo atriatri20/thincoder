@@ -12,6 +12,9 @@
  *    轮次块自己携 pass 裁定行（块 = `lastRoundBlock`；裁定读数 = 骨架档 `verdictGapOf`，`append §3` 写入闸与
  *    签发面读同一个函数）。旧的第一条旁路（`§1` 声明 §3 不适用）已随本批删除：实现只发生在评审之后，没有例外段。
  * ③ `reanchorReceiptLine` —— 收口重锚回执三行（§2.11 逐字）。
+ * ④ **全归档补关面**（§4.18-C · `docs/core/design/LEDGER.md` §11.2）：拒文 `repairBlockedError`、档面
+ *    追记行 `repairTraceLine` 与回执段 `repairReceiptLine`。补关只跳过收口门的 ①② 两臂，③④ 与写序、
+ *    凭证消费、完成清单预检全部保留——「行全归档」不是「环节全免」；分派判据住 `batch-ledger-view.mjs`。
  *
  * 为什么 §3 内容臂留着（不换成只判状态词）：内容臂守的是「段里真跑过」，状态词臂守的是「跑的结论是
  * pass」——换掉内容臂 = 门被放宽（一段空着但状态词对就过），那正是本批要堵的洞。所以是**加**一条臂。
@@ -76,15 +79,19 @@ export function assertCloseoutChainComplete(src) {
  *   ③ 本批批内单测档门（仍在盘 ⇒ 拒——零留存的结构兜底）
  *   ④ 文档机检门（REFUSED ∥ ERROR ⇒ 拒）
  * 位次 = 既有拒因之后、写盘之前（任一被拒 ⇒ 档字节不变）。返回 `④` 的门结果供回执拼行（`null` = 未跑）。
- * @param {{abs:string, cwd:string, agent:object, src:string, action:"close"|"status"}} o
+ * @param {{abs:string, cwd:string, agent:object, src:string, action:"close"|"status", repair?:boolean}} o
  *   `src` = 调用方已读的写盘前全文（判据与写盘读同一份字节，不二次读盘）。
+ *   `repair` = 全归档补关分派（§4.18-C）：真 ⇒ **只跳过 ① 内容门与 ② §3 pass 臂**，③④ 照跑；
+ *   分派判据不在这里（住 `batch-ledger-view.mjs` 的一致性预读），本档只承接「已判定要补关」之后的判序。
  * @returns {object|null} 文档机检门结果
  */
-export function assertCloseoutGates({ abs, cwd, agent, src, action = "close" }) {
-  assertCloseoutChainComplete(src) // ① 链门（§2 / §3 / §4 / §6 各段须有内容）
-  // ② §3 状态词臂（无条件）：评审须真跑过并给 pass。旧旁路「§1 声明 §3 不适用」已随声明机制退役删除。
-  const s3 = readSectionStatusWord(src, 3)
-  if (s3 !== STATUS_WORDS[3].done) throw new Error(closeoutS3Error(s3 ?? "（无状态行）"))
+export function assertCloseoutGates({ abs, cwd, agent, src, action = "close", repair = false }) {
+  if (!repair) {
+    assertCloseoutChainComplete(src) // ① 链门（§2 / §3 / §4 / §6 各段须有内容）
+    // ② §3 状态词臂（无条件）：评审须真跑过并给 pass。旧旁路「§1 声明 §3 不适用」已随声明机制退役删除。
+    const s3 = readSectionStatusWord(src, 3)
+    if (s3 !== STATUS_WORDS[3].done) throw new Error(closeoutS3Error(s3 ?? "（无状态行）"))
+  }
   assertUnitTestFilesCleared(abs, action) // ③
   const gate = runBatchGate({ abs, cwd, agent, scope: "close" }) // ④
   if (gate.state === "refused" || gate.state === "error") throw new Error(gateRefusalMessage(gate, action))
@@ -93,6 +100,33 @@ export function assertCloseoutGates({ abs, cwd, agent, src, action = "close" }) 
 
 /** 读档（本档只读一面——写盘归 lifecycle 与 bind；读错上抛不伪装）。 */
 export function readCloseoutSource(abs) { return readFileSync(abs, "utf8") }
+
+// ─── 全归档补关（§4.18-C · `docs/core/design/LEDGER.md` §11.2）────────────────────────────
+
+/** 补关被其它半状态拦住（§4.18-C「其它不一致不放行」）：全归档但还命中 `header-row-missing` 等任一读形 ⇒
+ *  拒，**逐项列出全部半状态**并指回 `check` 按各出路先修——归属错误不得被冻成历史。
+ *  （无逐字原文；语域照 `batch` 族拒句：点名 + 下一步 + `Nothing was written.`）
+ *  @param {{name:string, rows:number[]}[]} halfStates — `batchLedgerConsistency` 的 `halfStates`
+ */
+export function repairBlockedError(halfStates) {
+  const list = halfStates.map((h) => `${h.name}${h.rows?.length ? ` #${h.rows.join(" · #")}` : ""}`).join("；")
+  return "batch: 全归档批的补关被拒（ledger repair blocked）— the record's ledger rows are all archived, but the " +
+    `consistency read hits more than one half state, so freezing would cement a ledger mismatch as history. Half states: ${list}. ` +
+    "Run batch({action:\"check\"}) and follow each exit, then retry close. Nothing was written."
+}
+
+/** 补关在档面留的追记行（逐字 = `docs/core/design/LEDGER.md` §11.2；载体 = `appendLineToSection`——只追加
+ *  不改写，EOL 取 §1 段头行）。为什么不能只靠瞬时回执：四个段均空、状态行又已收口，不写一行就没有人
+ *  看得出这个档为何能冻结。 */
+export const repairTraceLine = (date, rows) => `**补关记录**：${date} · 行集全归档（${rows} 行）· §3/§4/§6 未补写 · 操作者 = 主 agent`
+
+/** 补关回执段（§4.13「本档特有面」——补关成功另出 `[ledger repair]`）：把「零行改写」说成事实，
+ *  不把零行改写报成新结算。`null`（正常收口）⇒ 无该段。
+ *  @param {{rows:number, date:string}|null} result */
+export function repairReceiptLine(result) {
+  if (!result) return ""
+  return `\n[ledger repair] 全归档补关：本批 ${result.rows} 行全归档（已核销 / 已废弃）· 台账行零改写 · §3/§4/§6 未补写 · §1 段尾已追加一行 补关记录（${result.date}）`
+}
 
 /**
  * 判据 2 的块内裁定读数（设计档 §2.6「pass 谓词」）：`null` = pass；否则 = 拒文括注里的那一格。

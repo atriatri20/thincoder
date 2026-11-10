@@ -21,7 +21,7 @@ import { basename, isAbsolute, resolve } from "node:path"
 
 import { ALLOWED_MIGRATIONS, nowIso, openLedger, PENDING_STATUSES, resolveLedgerRoot } from "./ledger-db.mjs"
 import { declaredPublicRoots, resolveDeclaredRef } from "./declaration.mjs"
-import { assertCloseOutProof, filePartOf, isReservedPointer, namesPointer } from "./ledger-close-proof.mjs"
+import { assertAnchorBatchSettleable, assertCloseOutProof, filePartOf, isReservedPointer, namesPointer } from "./ledger-close-proof.mjs"
 
 /** 解析基准（设计档 §6.1 口径 2 同一子表达式——与台账库键同源）：`resolveLedgerRoot(cwd, boundary)?.root
  *  ?? resolve(cwd ?? ".")`。`boundary` = 会话锚（与 `openLedger` 同一枚上界——同一笔动作的判据不能两界）。 */
@@ -114,14 +114,14 @@ export function assertTaskBookGate(cwd, fnName, face, boundary) {
 
 /**
  * 单行落笔·update（单行形 ∥ 批量形 ∥ 建档形共函数）：迁移表判 → 本笔退回理由与 evidence 值计算 →
- * 工作证据门 → executor / 指针写门 → UPDATE。`to` = `patch.status ?? 行现态`——批量形纯字段
+ * 工作证据门 → **锚批结算门**（归档目标态，`docs/core/design/LEDGER.md` §11.2）→ executor / 指针写门 → UPDATE。`to` = `patch.status ?? 行现态`——批量形纯字段
  * 补丁（不携 `status`）时 `to === row.status` ⇒ 迁移表不判、`status` 零写（§3.3）；归档态显式同态重写仍拒。
  * `resume_when` = 普通可空字段补丁（`patch.resume_when ?? 行值`——§3.4）。
  * **事务归属**：`tx = true` ⇒ 调用方已开事务（本函数不 BEGIN——嵌套 BEGIN 会当场抛）；缺省 ⇒ 自开
  * `BEGIN IMMEDIATE` 包一条 UPDATE（半途抛 ⇒ 行零改）。
+ * @param {object} [proof] — `{ base }`：锚批结算门的指针解析基准（必传——归档目标态那一笔要读锚批 §1）
  */
 export function applyRowUpdateTx(db, cwd, row, patch, executorSessionId, boundary, proof = {}) {
-  void proof // 保留既有调用签名；工作证据门不读批档或评审运行态
   const to = patch.status ?? row.status
   const archivedRewrite = patch.status != null && to === row.status && (row.status === "已核销" || row.status === "已废弃")
   if (archivedRewrite) throw new Error(`ledgerUpdate：归档态 ${row.status} 为终态，拒绝再次写入该状态`)
@@ -135,6 +135,11 @@ export function applyRowUpdateTx(db, cwd, row, patch, executorSessionId, boundar
   const nextEvidence = evidenceValue("ledgerUpdate", row.evidence, patch.evidence, patch.evidenceReplace)
   assertEvidenceValue("ledgerUpdate", patch.evidence)
   if (to === "已核销") assertCloseOutProof("ledgerUpdate", nextEvidence)
+  // 锚批结算门（`docs/core/design/LEDGER.md` §11.2）：**两个归档目标态同过一门**——只挂 `已核销` 会留下
+  // `待核销 → 已废弃` 这条同等通路，绕过「挂未收口档的行不得单独归档」。豁免 notice 随返回形回传调用面。
+  const anchor = to === "已核销" || to === "已废弃"
+    ? assertAnchorBatchSettleable("ledgerUpdate", { taskBook: row.task_book, base: proof.base, to, from: row.status })
+    : null
   const nextExecutor = resolveExecutorTarget(row, to, patch, executorSessionId)
   const nextTaskBook = returning ? null : patch.task_book ?? row.task_book
   const nextTrigger = returning ? null : patch.trigger ?? row.trigger
@@ -148,7 +153,7 @@ export function applyRowUpdateTx(db, cwd, row, patch, executorSessionId, boundar
   const now = nowIso()
   db.prepare(`UPDATE items SET status = ?, title = ?, board = ?, req_doc = ?, task_book = ?, evidence = ?, trigger = ?, resume_when = ?, executor = ?, updated_at = ? WHERE id = ?`)
     .run(to, patch.title ?? row.title, patch.board ?? row.board, patch.req_doc ?? row.req_doc, nextTaskBook, nextEvidence, nextTrigger, patch.resume_when ?? row.resume_when, nextExecutor, now, row.id)
-  return { id: Number(row.id), status: to, ...(returning ? { reason: patch.evidence } : {}) }
+  return { id: Number(row.id), status: to, ...(returning ? { reason: patch.evidence } : {}), ...(anchor ? { notices: [{ id: Number(row.id), ...anchor }] } : {}) }
 }
 
 /**
@@ -179,9 +184,10 @@ function closeExitSentence(status) {
 
 /** 单行落笔·close（单行形 ∥ 批量形共函数）：核销只有 `待核销 → 已核销` 一条边。
  *  核销门读取应用本笔后的工作证据；撤回只允许未归档态，并清空 executor。
- *  `已核销 / 已废弃` 都是终态，重复撤回与归档态改写均拒绝。调用方恒已开事务。 */
+ *  `已核销 / 已废弃` 都是终态，重复撤回与归档态改写均拒绝。调用方恒已开事务。
+ *  **两个归档目标态同过锚批结算门**（`docs/core/design/LEDGER.md` §11.2，解析基准 = `proof.base`）：
+ *  单行 / batch / 收口重锚三条入口无一绕过；豁免 notice 随返回形回传调用面。 */
 export function applyRowClose(db, row, status, evidence, evidenceReplace, proof = {}) {
-  void proof // 保留既有调用签名；工作证据门不读批档或评审运行态
   if (status === "已核销" && row.status !== "待核销") throw new Error(`ledgerClose：核销仅限 待核销（现态 ${row.status}）：${closeExitSentence(row.status)}`)
   if (status === "已废弃" && (row.status === "已核销" || row.status === "已废弃")) {
     throw new Error(`ledgerClose：撤回仅限未归档态（现态 ${row.status}）：该行已归档，不可重复撤回或改写归档态`)
@@ -189,9 +195,12 @@ export function applyRowClose(db, row, status, evidence, evidenceReplace, proof 
   const nextEvidence = evidenceValue("ledgerClose", row.evidence, evidence, evidenceReplace)
   assertEvidenceValue("ledgerClose", evidence)
   if (status === "已核销") assertCloseOutProof("ledgerClose", nextEvidence)
+  const anchor = status === "已核销" || status === "已废弃"
+    ? assertAnchorBatchSettleable("ledgerClose", { taskBook: row.task_book, base: proof.base, to: status, from: row.status })
+    : null
   const now = nowIso()
   db.prepare("UPDATE items SET status = ?, closed_at = ?, updated_at = ?, executor = ?, evidence = ? WHERE id = ?").run(status, now, now, status === "已废弃" ? null : row.executor, nextEvidence, row.id)
-  return { id: Number(row.id), status }
+  return { id: Number(row.id), status, ...(anchor ? { notices: [{ id: Number(row.id), ...anchor }] } : {}) }
 }
 
 // ─── 批级写点（建档绑定 · 重开回收；与收口重锚同形对称）────────────────────────────────

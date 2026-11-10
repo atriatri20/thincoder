@@ -6,7 +6,7 @@
  *
  * 业务入口 = 真 `batch` 工具（`agent-tools/batch.mjs`）的写段轨（子代理 append）——不直调 `runBatchGate`：
  * 本例测的是「写者往档里写错引文、当场被拒」这件事的业务可观察结果（拒 ∥ 放行 + 批档落盘字节）。
- * 错引文写进**本次写入的正文**（不是别人已落盘的档）⇒ 命中落「本次写入文本」标签，拒串才带 `锚 1 条`。
+ * 错引文写进**本次写入的正文**（不是别人已落盘的档）⇒ 命中落「候选文本」标签（判定输入 = 候选全文，身份 = 批档本体），拒串才带 `锚 1 条`。
  *
  * 夹具 = 系统临时域（项目根 + 六段批档 + 一档引文来源档；`mkdtempSync`——零落仓、可并发）。
  * 台账重锚经测试缝 `_setLedgerDirForTest` 导向临时目录（不碰真实用户数据目录）。
@@ -101,7 +101,7 @@ const verdictLineOf = (text) => {
   return line
 }
 
-test("CLI 7-12 错误 · 写段面本次写入文本引文不逐字 ⇒ 拒（锚 1 条 · ✗ 锚·引缺）、零字节；改逐字后同一笔放行", async () => {
+test("CLI 7-12 错误 · 写段面候选文本引文不逐字 ⇒ 拒（锚 1 条 · ✗ 锚·引缺）、零字节；改逐字后同一笔放行", async () => {
   const root = makeProject("r712")
 
   // 前置（结构面）：写段门的类属集含 `引缺`——不增则该类被计成段类 `1 处引缺`，与 verdict 行「锚 N 条」相抵。
@@ -116,10 +116,11 @@ test("CLI 7-12 错误 · 写段面本次写入文本引文不逐字 ⇒ 拒（�
       assert.match(e.message, /文档机检门拒写/, `拒串点名门位：${e.message}`)
       assert.equal(
         verdictLineOf(e.message),
-        "DOC-CHECK GATE: REFUSED（命中 1 条——本次写入文本（锚 1 条））",
-        `verdict 首行逐字（引缺 归锚不归段）：${e.message}`,
+        "DOC-CHECK GATE: REFUSED（命中 1 条——候选文本（锚 1 条））",
+        `verdict 首行逐字（引缺 归锚不归段；标签 = 候选文本）：${e.message}`,
       )
-      assert.match(e.message, /✗ 锚·引缺 本次写入文本:1 `docs\/notes\/source\.md`/, `命中行点名本次写入文本与所指档：${e.message}`)
+      // 命中行 = 批档本体（身份）+ 候选文本里的行号（N 与提交的那段文本逐行对得上，不译成批档坐标）
+      assert.match(e.message, /✗ 锚·引缺 docs\/batches\/fixture\.md 候选文本第 1 行 `docs\/notes\/source\.md`/, `命中行点名候选文本第 1 行与所指档：${e.message}`)
       assert.match(e.message, /（引文不在该档内：「/, `命中行点名引文（读者不必回目标档自己找）：${e.message}`)
       assert.doesNotMatch(e.message, /处引缺/, `不得被计成段类：${e.message}`)
       return true

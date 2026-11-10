@@ -1,8 +1,10 @@
 /**
  * ledger-close-proof.test.mjs — 集成用例 CLI 10-3 ∥ 10-5。
  *
- * 业务入口 = 真 `ledger` 工具的 close / update action。核销只凭应用本笔后的工作证据，
- * 不读锚批在盘、§1 收口或 §3 评审状态；核销源态与两种归档终态仍在同一入口拒绝非法写入。
+ * 业务入口 = 真 `ledger` 工具的 close / update action。归档（已核销 ∥ 已废弃）过两道门：证据门只问
+ * 「有没有工作事实」，锚批门只问「档收口没有」（`docs/core/design/LEDGER.md` §11.2）——未收口的锚批
+ * 拒绝单笔归档并指回 `batch close`；评审状态与存量声明行都不进这两道门。核销源态与两种归档终态仍在
+ * 同一入口拒绝非法写入。
  * 夹具 = 独立项目、会话槽根与台账库目录，不触真实用户数据。
  *
  * 复跑（cwd = 仓根）：`node --test test/integration/ledger-close-proof.test.mjs`
@@ -90,16 +92,25 @@ async function rowAt(ctx, taskBook, title, steps = [], evidence = "工作完成�
 }
 const pendingCloseRow = (ctx, taskBook, title, evidence) => rowAt(ctx, taskBook, title, ["待设计", "在途", "待核销"], evidence)
 
-test("CLI 10-3 锚批未收口、缺评审或有存量声明均不阻断有效证据；无证据与空白覆盖仍拒", async () => {
+test("CLI 10-3 锚批门与证据门：OPEN 档下两入口同拒并指回 batch close；CLOSED 档缺评审 ∥ 存量声明仍可核销，证据负例同拒", async () => {
   const { root, agent } = fixture()
   const ctx = ctxOf(agent)
-  const cases = [
-    [CLOSED, "已收口且评审通过"],
-    [OPEN, "锚批未收口"],
-    [CLOSED_NO_REVIEW, "锚批未评审"],
-    [DECLARED, "存量声明档"],
-  ]
-  for (const [taskBook, title] of cases) {
+  // 拒面：OPEN（§1 进行中）——close 与 update 两条入口同一道门，行整笔不变
+  for (const [label, run] of [
+    ["ledger(close)", (id) => exec(ctx, { action: "close", id, status: "已核销" })],
+    ["ledger(update)", (id) => exec(ctx, { action: "update", id, status: "已核销" })],
+  ]) {
+    const id = await pendingCloseRow(ctx, OPEN, `未收口-${label}`)
+    const before = rowOf(root, id)
+    await assert.rejects(() => run(id), (e) => {
+      assert.match(e.message, /批档未收口/, `${label} 应报锚批未收口：${e.message}`)
+      assert.match(e.message, /batch close/, `${label} 拒文须指回 batch close：${e.message}`)
+      return true
+    })
+    assert.deepEqual(rowOf(root, id), before, `${label} 拒后整行不变（状态 / closed_at / evidence）`)
+  }
+  // 放面：已收口档（含缺评审、存量声明两形）——评审状态与声明行都不是核销条件
+  for (const [taskBook, title] of [[CLOSED, "已收口且评审通过"], [CLOSED_NO_REVIEW, "锚批未评审"], [DECLARED, "存量声明档"]]) {
     const id = await pendingCloseRow(ctx, taskBook, title)
     const receipt = await exec(ctx, { action: "close", id, status: "已核销" })
     assert.match(receipt, /"status":"已核销"/, `${title} 应凭工作证据核销：${receipt}`)
@@ -107,12 +118,13 @@ test("CLI 10-3 锚批未收口、缺评审或有存量声明均不阻断有效�
     assert.ok(rowOf(root, id).closed_at)
   }
 
-  const empty = await pendingCloseRow(ctx, OPEN, "无工作证据", null)
+  // 证据负例落在 CLOSED 夹具：OPEN 档下两道门都拦，分不出拒因是哪一道
+  const empty = await pendingCloseRow(ctx, CLOSED, "无工作证据", null)
   const emptyBefore = rowOf(root, empty)
   await assert.rejects(() => exec(ctx, { action: "close", id: empty, status: "已核销" }), /evidence|工作证据/)
   assert.deepEqual(rowOf(root, empty), emptyBefore)
 
-  const blank = await pendingCloseRow(ctx, OPEN, "空白覆盖证据")
+  const blank = await pendingCloseRow(ctx, CLOSED, "空白覆盖证据")
   const blankBefore = rowOf(root, blank)
   await assert.rejects(
     () => exec(ctx, { action: "close", id: blank, status: "已核销", evidence: "   ", evidenceReplace: true }),

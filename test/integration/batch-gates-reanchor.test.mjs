@@ -118,17 +118,38 @@ test("CLI 14-2 §3 非 pass ⇒ close 拒，回执含 `§3 状态行 =`；§1 �
   assert.equal(readFileSync(recOf(root), "utf8").match(/\*\*状态行\*\*：.*/)[0], before, "§1 状态行字节不变")
 })
 
-test("CLI 14-3 换会话凭工作证据核销，锚批未收口且缺评审也通过", async () => {
+test("CLI 14-3 换会话不绕过锚批门：OPEN 拒并指回 batch close，CLOSED 且无槽会话放行；放弃边在 OPEN 档拒并点出退回出路", async () => {
   const root = makeProject("14-3")
   writeFileSync(join(root, "docs/batches/open.md"), "# 未收口批\n\n## §1 讨论（主 agent）\n**状态行**：进行中\n")
-  const id = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title: "合格行", task_book: "docs/batches/open.md", trigger: "归批", evidence: "工作完成证据" }, boundary: root })
-  ledgerUpdate({ cwd: root, id, patch: { status: "待设计" }, boundary: root })
-  ledgerUpdate({ cwd: root, id, patch: { status: "在途" }, boundary: root })
-  ledgerUpdate({ cwd: root, id, patch: { status: "待核销" }, boundary: root })
-  // 真 `ledger` 工具入口；ctx 里没有任何槽 / designId（= 换了一个会话）
-  const out = JSON.parse(await ledgerTool.execute({ action: "close", id, status: "已核销" }, { depth: 0, agent: { cwd: root, config: { agent: { engineering: true } } } }))
+  writeFileSync(join(root, "docs/batches/closed.md"), "# 已收口批\n\n## §1 讨论（主 agent）\n**状态行**：已收口 2026-11-11\n")
+  // 真 `ledger` 工具入口；ctx 里没有任何槽 / designId（= 换了一个会话）——换人不换门
+  const ctx = { depth: 0, agent: { cwd: root, config: { agent: { engineering: true } } } }
+  const pendingRow = (taskBook, title) => {
+    const id = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title, task_book: taskBook, trigger: "归批", evidence: "工作完成证据" }, boundary: root })
+    for (const status of ["待设计", "在途", "待核销"]) ledgerUpdate({ cwd: root, id, patch: { status }, boundary: root })
+    return id
+  }
+  // 拒：未收口档下凭工作证据也不得单独结算
+  const blocked = pendingRow("docs/batches/open.md", "未收口行")
+  const blockedBefore = rowsOf(root).find((r) => r.id === blocked)
+  await assert.rejects(
+    () => ledgerTool.execute({ action: "close", id: blocked, status: "已核销" }, ctx),
+    (e) => /批档未收口/.test(e.message) && /batch close/.test(e.message),
+  )
+  assert.deepEqual(rowsOf(root).find((r) => r.id === blocked), blockedBefore, "拒后整行不变")
+  // 放：已收口档下同一无槽会话照旧可核销
+  const id = pendingRow("docs/batches/closed.md", "合格行")
+  const out = JSON.parse(await ledgerTool.execute({ action: "close", id, status: "已核销" }, ctx))
   assert.deepEqual(out, { id, status: "已核销" })
   assert.equal(rowsOf(root).find((r) => r.id === id).status, "已核销")
+  // 放弃边：未收口档下不得直接放弃活跃行，拒文给两步出路
+  const live = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title: "在途行", task_book: "docs/batches/open.md", trigger: "归批" }, boundary: root })
+  for (const status of ["待设计", "在途"]) ledgerUpdate({ cwd: root, id: live, patch: { status }, boundary: root })
+  await assert.rejects(
+    () => ledgerTool.execute({ action: "close", id: live, status: "已废弃" }, ctx),
+    (e) => /不得直接放弃活跃行/.test(e.message) && /先退回 待讨论/.test(e.message),
+  )
+  assert.equal(rowsOf(root).find((r) => r.id === live).status, "在途")
 })
 
 test("CLI 14-4 batch close 漏列在写档前拒绝；completed 点名在途行同笔结清，未动行改挂条件", async () => {
@@ -412,8 +433,10 @@ test("CLI 14-11 close 双失败两拍：回滚成功可重试；补偿失败按�
   const archivedRoot = await freshRecord("14-11-archived")
   await review(archivedRoot).execute({ action: "status", value: "评审通过" }, { agent: agentOf(archivedRoot) })
   const archivedWork = workOf(archivedRoot)
-  ledgerUpdate({ cwd: archivedRoot, id: archivedWork.id, patch: { status: "待核销", evidence: "工作证据" }, boundary: archivedRoot })
-  ledgerClose({ cwd: archivedRoot, id: archivedWork.id, status: "已核销", boundary: archivedRoot, agent: {} })
+  // 全归档现场只能这样造（P2-5 锚批门之后）：先正常收口结清该行，再重开——已核销不回收 ⇒ 档 open、行全归档。
+  // 这就是开批现场的存量形（13 份 open-but-settled），也正是补关的入径。
+  await parent.execute({ action: "close", path: recOf(archivedRoot), completed: [archivedWork.id], closeEvidence: "本批做完了" }, ctx0(archivedRoot))
+  await parent.execute({ action: "status", path: recOf(archivedRoot), segment: "§1", value: "进行中", note: "复核后重关" }, ctx0(archivedRoot))
   const archivedErr = await closeWithDoubleFailure(archivedRoot, [])
   assert.ok(archivedErr)
   assert.match(archivedErr.message, /if consistent=true, the batch is already closed and settled — do not retry\.$/)
@@ -487,3 +510,68 @@ test("CLI 14-12 重开回收失败注入 ⇒ 重开拒（逐字重开第一条�
   assert.equal(readFileSync(recOf(archivedRoot), "utf8"), archivedDoc)
   assert.deepEqual(batchLedgerConsistency({ cwd: archivedRoot, batch: REC, boundary: archivedRoot }), archivedBefore)
 })
+
+test("CLI 14-13 全归档批补关：close / status 两路都冻结并落 §1 追记行、台账行不变；在途行或额外半状态照拒；check 前后读形翻转", async () => {
+  // 夹具 = 开批现场的存量形：先正常收口结清行，再重开（已核销不回收）⇒ 档 open、行全归档。
+  const archivedRecord = async (tag) => {
+    const root = await freshRecord(tag)
+    await review(root).execute({ action: "status", value: "评审通过" }, { agent: agentOf(root) })
+    const work = workOf(root)
+    await parent.execute({ action: "close", path: recOf(root), completed: [work.id], closeEvidence: "本批做完了" }, ctx0(root))
+    await parent.execute({ action: "status", path: recOf(root), segment: "§1", value: "进行中", note: "复核后重关" }, ctx0(root))
+    return { root, work }
+  }
+  const TRACE = /\*\*补关记录\*\*：\d{4}-\d{2}-\d{2} · 行集全归档（1 行）· §3\/§4\/§6 未补写 · 操作者 = 主 agent/
+
+  // ① close 补关：冻结 + §1 段尾一行追记，台账行字节不变，check 的 open-but-settled 读形消失
+  {
+    const { root } = await archivedRecord("14-13-close")
+    const before = readFileSync(recOf(root), "utf8")
+    const rowsBefore = rowsOf(root)
+    assert.match(await parent.execute({ action: "check", path: recOf(root) }, ctx0(root)), /open-but-settled/, "补关前该读形在")
+    const msg = await parent.execute({ action: "close", path: recOf(root), completed: [], closeEvidence: "工作已由台账承认，仅补冻结" }, ctx0(root))
+    assert.match(msg, /\[ledger repair\]/, `回执出补关段：${msg}`)
+    const after = readFileSync(recOf(root), "utf8")
+    assert.match(after, /已收口/, "§1 状态行冻结")
+    assert.match(after, TRACE, "档面留一行追记（不靠瞬时回执）")
+    assert.equal(after.split("\n").length, before.split("\n").length + 1, "只追加一行（行数 +1）")
+    assert.deepEqual(rowsOf(root), rowsBefore, "补关不改台账行")
+    assert.doesNotMatch(await parent.execute({ action: "check", path: recOf(root) }, ctx0(root)), /open-but-settled/, "补关后读形消失")
+  }
+
+  // ② status 写 §1 已收口 走同一分流
+  {
+    const { root } = await archivedRecord("14-13-status")
+    const msg = await parent.execute({ action: "status", path: recOf(root), segment: "§1", value: "已收口", completed: [], closeEvidence: "补冻结" }, ctx0(root))
+    assert.match(msg, /\[ledger repair\]/, `status 路同分流：${msg}`)
+    assert.match(readFileSync(recOf(root), "utf8"), TRACE)
+  }
+
+  // ③ 仍有在途行 ⇒ 不是补关，链门照拒
+  {
+    const root = makeProject("14-13-live")
+    await parent.execute({ action: "create", path: REC, topic: "g", source: "集成夹具" }, ctx0(root))
+    const work = workOf(root)
+    const before = readFileSync(recOf(root), "utf8")
+    await assert.rejects(
+      () => parent.execute({ action: "close", path: recOf(root), completed: [work.id], closeEvidence: "证据" }, ctx0(root)),
+      (e) => /收口链未跑完/.test(e.message) && /Missing: /.test(e.message),
+    )
+    assert.equal(readFileSync(recOf(root), "utf8"), before, "拒面无字节变")
+    assert.equal(rowsOf(root).find((r) => r.id === work.id).status, "在途", "台账零写")
+  }
+
+  // ④ 全归档但档头号不在账（额外半状态）⇒ 补关拒，逐项点名并指回 check
+  {
+    const { root } = await archivedRecord("14-13-extra")
+    writeFileSync(recOf(root), readFileSync(recOf(root), "utf8").replace(/^> 台账 = #\d+/m, "> 台账 = #9999"))
+    const before = readFileSync(recOf(root), "utf8")
+    await assert.rejects(
+      () => parent.execute({ action: "close", path: recOf(root), completed: [], closeEvidence: "证据" }, ctx0(root)),
+      (e) => /补关被拒/.test(e.message) && /header-row-missing/.test(e.message) && /open-but-settled/.test(e.message)
+        && e.message.includes('batch({action:"check"})'),
+    )
+    assert.equal(readFileSync(recOf(root), "utf8"), before, "拒面无字节变")
+  }
+})
+

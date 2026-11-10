@@ -184,8 +184,10 @@ test("CLI 17-3 错误 · 批档的未决行被撤后发设计评审 ⇒ 拒发�
   const otherAbs = join(root, "docs/batches/other.md")
   writeFileSync(otherAbs, recordText({ blocks: 0, statusRow: null }))
 
-  // 本档那一行被撤回（`在途 → 已废弃`，撤回不设机检）⇒ 本档零未决行
+  // 本档那一行被撤回 ⇒ 本档零未决行。P2-5 锚批门之后，「在途 → 已废弃」必须先退回等待态
+  //（退回同时解绑指针，既有语义）——结果仍是本用例要的现场：该档不在账上。
   const withdrawn = seedRow(root, batchAbs)
+  ledgerUpdate({ cwd: root, id: withdrawn, patch: { status: "待讨论", evidence: "本批不做了，先退回" }, boundary: root })
   ledgerClose({ cwd: root, id: withdrawn, status: "已废弃", boundary: root })
   const alive = seedRow(root, otherAbs)
   assert.ok(alive > 0, "反证格的未决行已种上")

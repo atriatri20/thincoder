@@ -111,8 +111,8 @@ function insertIntoSection(src, seg, text, blockLead = "") {
  *    传 path ⇒ 拒，目标 = spawn/实例绑定；
  *  - 其余（gate / text 校验 / 剥凭证 / 骨架保护 / **状态行拒写（J3——行首形态行不得入档，§4.21.4）** /
  *    **死占位机检（F11-C）** / **文档机检门（§3.20 结构兜底 ①——
- *    **全部 append 同挂**（含 depth-0 与评审写 §3）：本次写入文本的命中 ⇒ 拒写，ERROR ⇒ 写 + 回执明示；
- *    批档已落段命中只入回执）** / 插入 / 记账 / 回执）逐字保持原语义（新增的一道 = 状态行拒写，其余未动）。
+ *    **全部 append 同挂**（含 depth-0 与评审写 §3）：候选文本命中 ⇒ 拒写，ERROR ⇒ 写 + 回执明示；
+ *    批档已落段不再入判）** / 插入 / 记账 / 回执）逐字保持原语义（新增的一道 = 状态行拒写，其余未动）。
  */
 export function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const agent = ctx?.agent ?? {}
@@ -197,9 +197,8 @@ export function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   }
   // 文档机检门（§3.20「结构兜底」①——门位 = 既有拒因全部之后、insertIntoSection / 写盘之前）：
   // **全部 append 同挂**（§1–§6，含 depth-0 与评审写 §3——规则一条，不按身份分支）；
-  // 强制集 = 本次写入文本 ∪ 写者触达账**改动区**（判面单源 = 设计档 §3.20「触达账腿的判面 = 本次改动区」），
-  // 批档已落段命中只入回执（不阻本次写）。
-  // `pending` = 本次段号与正文：门据此落同目录片段档判「你手里这段」，判法与批档本体逐字同源。
+  // 强制集 = 候选文本 ∪ 写者触达账**改动区**（判面单源 = 设计档 §3.20「触达账腿的判面 = 本次改动区」）。
+  // `pending` = 本次段号与正文：门把正文当 `texts` 判「你手里这段」（身份 = 批档本体，零临时档）。
   // REFUSED ⇒ throw（零字节落盘）；PASS ⇒ 照写；ERROR / 门自身异常 ⇒ 写 + 回执明示。
   const gate = runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body } })
   if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "append"))

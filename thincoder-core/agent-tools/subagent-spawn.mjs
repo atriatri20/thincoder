@@ -12,6 +12,7 @@
  * （批档绝对路径 + §2 指向句），任务书本体由子代理自读 §2。
  */
 
+import { relative } from "node:path"
 import {
   createAgent,
   readonlyToolNames, escapeXml, excludeSubagentTools,
@@ -47,6 +48,10 @@ import { resolveBatchReadPath, resolveBatchReadResult } from "./batch-paths.mjs"
 // `files` 落点单源 = 统一解析层（实调点 = `normalizeFileList`——`thincoder-core/agent-tools/subagent-scheduler.mjs`
 // 的 `const abs = resolvePathTarget(cwd, f, ...)`）：本档不再预解析（预解析会让该面的三条门判吃绝对形而漏判）。
 import { danglingSameNameHint } from "../path-resolve.mjs"
+// S5 文档坐标行（AGENT-LOOP-SUBAGENT.md §6.61）：三层坐标的取数三件（读档 ∥ 缺键判别 ∥ 路径解析）
+// 全走既有出口——本档零新解析、零新导出。`manifest.mjs` 早已在本档静态闭包内（`./batch-paths.mjs`
+// 同引），本行不新开依赖边。
+import { readManifest, docRootBase, docRootPaths } from "../manifest.mjs"
 
 /** 不可读拒文的追加提示（§2.6：既有文案逐字在前）——同名候选 ∥ 判不出唯一的候选全列；无提示 ⇒ 空串。 */
 function unreadableHint(cwd, given) {
@@ -195,6 +200,48 @@ function filesBlockOf(files) {
   return `Files declared for this spawn (the write domain this task declares, for scheduling):\n` +
     files.map((f) => `- ${f}`).join("\n") +
     `\n\nThis list is not an authorization boundary: touching a file outside it is allowed — report every out-of-list file you changed, with its reason. It is also not the whole change surface: other spawns on this task declare their own files, and what is listed here is your share only.`
+}
+
+/** §6.61 契约 ② 的两件常量：层键固定 = 这三层（`specs` ∥ `modules` ∥ `standards` 不读——多的层每发再付
+ *  一次 token，KD-DC3）；前缀逐字（英文——与兄弟块同语体），层串接在其后。 */
+const DOCS_COORDINATE_KEYS = ["requirements", "design", "batches"]
+const DOCS_COORDINATE_PREFIX = "Docs (project-root relative, declared by this project's PROJECT-MANIFEST.json docRoot):"
+
+/** S5 文档坐标行（AGENT-LOOP-SUBAGENT.md §6.61「子代理文档坐标行」）：本项目 manifest 声明的三层
+ *  文档坐标（`requirements` ∥ `design` ∥ `batches`），项目根相对形，一行随 system 固块下发；
+ *  未声明的层呈现 `(undeclared)`。
+ *
+ *  **「未声明」的判别单源 = `readManifest` 同次返回的 `missingKeys`**——它在**原始档**上算得，与补默认
+ *  后的值分属两个事实。不能看返回的 `manifest.docRoot[键]` 判：`readManifest` 的返回值已 `fillDefaults`，
+ *  `docs/design` 这类默认路径与一条真声明同形，打出去就是把项目从未声明的坐标当声明发给子代理
+ *  （KD-DC2——比不发更坏，它看起来像声明）。
+ *
+ *  **读不出（缺档 ∥ 坏档 ∥ 校验不过 ∥ 读抛）⇒ 返回 null，调用点不推块**：不加本行的结果 = 本批之前的
+ *  行为，业务结果零变（KD-DC4；这不是兜底式静默——坐标取不到不该赔掉一次 spawn）。
+ *
+ *  本档局部纯函数（D23-9：不外提模块——块文本一行、无逐字跨档消费者）。返回块文本 ∥ null。 */
+function docsCoordinatesBlockOf(cwd) {
+  let read
+  try {
+    read = readManifest(cwd)
+  } catch {
+    return null // 非 ENOENT 读错（权限 ∥ 目录等）：readManifest fail-closed 上抛，本处收住（契约 ④）
+  }
+  if (!read.ok || !read.manifest) return null // 缺档 ∥ 坏 JSON ∥ 校验不过（契约 ③ 读档格）
+  const missing = new Set(read.missingKeys ?? [])
+  // 整键缺 ∥ 非对象 ⇒ 三层皆按未声明。**不另设「三层全未声明」分支**：它就是下面这条逐层判据连用三次。
+  const wholeUndeclared = missing.has("docRoot")
+  const base = docRootBase(cwd)
+  const layers = DOCS_COORDINATE_KEYS.map((key) => {
+    if (wholeUndeclared || missing.has(`docRoot.${key}`)) return `${key} = (undeclared)`
+    const value = read.manifest.docRoot?.[key]
+    // 显式「本面无」（`null`）与缺键同呈现：`docRootPaths(null) = []` 已定那一读（MANIFEST.md §2.7）。
+    if (value === null || value === undefined) return `${key} = (undeclared)`
+    // 路径一律项目根相对、`/` 分隔；解析为空（声明 = 项目根自身）呈现为 `.`。
+    const roots = docRootPaths(value, cwd).map((abs) => relative(base, abs).replaceAll("\\", "/") || ".")
+    return `${key} = ${roots.join(", ")}`
+  })
+  return `${DOCS_COORDINATE_PREFIX} ${layers.join(" · ")}`
 }
 
 /**
@@ -411,8 +458,9 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 两处（批次档路径行 + 审计模板块）原随 user 首条下发，压缩把首条并入摘要即丢（长任务中后期
   // 既看不到批次档路径、也看不到审计模板 ⇒ 过度勘察的真病根）；固块值在 child 生命周期内恒定
   // ⇒ run 内 system 前缀逐字节稳定（前缀缓存不破），且不在 `agent.history` 内 ⇒ 压缩结构上吞不掉。
-  // 收集序 = 批次档行 → 审计块 → 写域行（S4，见下）；空数组 ⇒ 不绑定（depth-0 / explore / plan /
-  // consult 的 system 逐字节同改前——§6.26 缓存契约兼容证明）。
+  // 收集序 = 批次档行 → 审计块 → 写域行（S4，见下）→ 文档坐标行（S5，见下）；空数组 ⇒ 不绑定
+  // （depth-0 不进本函数、system 逐字节同改前——§6.26 缓存契约兼容证明）。S5 与角色无关 ⇒
+  // explore ∥ plan 的子代理也会带上它；它随本项目 manifest 声明而定、与 spawn 参数无关，同一 child 终身不变。
   const spawnBlocks = []
   // §2.11 第 1 点（FR16 载体 + FR17 铁律 #5 的机械面）：批次档**绝对路径**下发给工程角色
   // （eng-coder 实现 / eng-designer 写稿）——任务书本体 = 本档 §2；本行让子代理"拿到本档路径"。
@@ -425,6 +473,11 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // §6.26「写域行（S4）」：`files`（本 spawn 的预期写域，`prepareScheduling` 已归一化）非空 ⇒ 追加
   // 一格——写域此前只有调度器知道，子代理只能猜自己的改动面；空 / 未传 ⇒ 不推块，system 逐字节同改前。
   if (files.length > 0) spawnBlocks.push(filesBlockOf(files))
+  // §6.61「子代理文档坐标行（S5）」：本项目声明的三层文档坐标一行随 system 面下发。子代理此前也读得到
+  // `docRoot`（`manifestReadTool` 按需主动读），但那得先想到坐标记在 manifest 里、再知道键名——本行把
+  // 答案在 spawn 时就放进 system 面，省掉的只是那一趟（出口零新解析）。读不出 ⇒ 不推块。
+  const docsBlock = docsCoordinatesBlockOf(parent.cwd)
+  if (docsBlock) spawnBlocks.push(docsBlock)
   // The child's own task input rides the child object: D23-6 —— `_engTaskInput` 语义 = **一行机械
   // 任务书行**（批档绝对路径 + §2 指向句；不含固块）。
   if (engineeringRole) child._engTaskInput = input

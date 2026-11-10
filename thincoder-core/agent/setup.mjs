@@ -268,10 +268,10 @@ export async function prepareRun(agent, input, callbacks, {
   // const 声明会 TypeError: Assignment to constant variable（每次 run 必炸）。
   let systemPrompt = base
   // 派单固块（台账 #23 · AGENT-LOOP-SUBAGENT.md §6.26）：spawn 级固定的机制性指令（批次档路径行 /
-  // 审计模板）随 system 面下发——固块值在 child 生命周期内恒定 ⇒ run 内前缀逐字节稳定（前缀缓存
-  // 不破），且不在 `agent.history` 内 ⇒ 压缩只重建 history（吞不掉）。拼接位 = 槽位装配之后、
-  // 项目指令之前；`_spawnSystemBlock` 为 null/undefined ⇒ 分支不进（depth-0 / explore / plan /
-  // consult 的 system 逐字节同改前）。
+  // 审计模板 / 写域行 / 文档坐标行）随 system 面下发——固块值在 child 生命周期内恒定 ⇒ run 内前缀
+  // 逐字节稳定（前缀缓存不破），且不在 `agent.history` 内 ⇒ 压缩只重建 history（吞不掉）。拼接位 =
+  // 槽位装配之后、项目指令之前；`_spawnSystemBlock` 为 null/undefined ⇒ 分支不进（depth-0 的 system
+  // 逐字节同改前——它不走 `buildSpawnChild`）。子代理可有可无该块：四块里一个都没推 ⇒ 同样不进。
   if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
 
   // Time injection deliberately does NOT live here: system prompts must be byte-identical

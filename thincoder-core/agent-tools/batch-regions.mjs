@@ -1,5 +1,5 @@
 /**
- * agent-tools/batch-regions.mjs — 批档门的 git 改动区、片段路径与纯删基线映射。
+ * agent-tools/batch-regions.mjs — 批档门的 git 改动区与纯删基线映射。
  *
  * 判域单源 = `docs/core/design/DOC-CHECK.md` §2.9.4：写段与收口共用批起基线；
  * 纯删按前后端行号映射存活行，新组合单元不因邻段存量而放行。
@@ -7,23 +7,17 @@
  * 本档不再切片——区间表就是它交出去的那一件东西。
  */
 import { execFileSync } from "node:child_process"
-import { readFileSync, unlinkSync, writeFileSync } from "node:fs"
-import { dirname, join, relative } from "node:path"
+import { readFileSync } from "node:fs"
+import { dirname, relative } from "node:path"
 
 import { runDocCheck, DOC_CLASS } from "../doc-check/index.mjs"
 import { judgeZones, paragraphRuns } from "../tools/doc-write-gate.mjs"
 
-/** 片段档名前缀（与批档同目录的隐藏档——锚解析序 ② 与批档本体同源）。现存两个使用者：
- *  `append` 面的候选文本（`batch-gate.mjs` 的 `fragAbs`）与纯删基线副本（`pureDeleteStockEntries`）。
- *  **不包含 `edit` 面**：整档视图走 `runDocCheck` 的 `texts`，不再落整档副本（`docs/core/design/DOC-CHECK.md` §2.10.1）。
- *  **导出面**：`batch-lifecycle.mjs` 的在飞扫描靠它把片段档排除在外——片段档带批档同目录的骨架形
- *  （候选文本可能整段就是段体），不排除就会被当成第二本在飞批（假拒），进程被杀则残留一本永久 open 的幽灵档。 */
-export const FRAGMENT_PREFIX = ".gate-"
-
-/** 片段档路径（每次一个随机名：并发两次门不撞名，也不互删）。 */
-export function fragmentPathOf(abs) {
-  return join(dirname(abs), `${FRAGMENT_PREFIX}${process.pid}-${Math.random().toString(36).slice(2, 10)}.md`)
-}
+/**
+ * 片段档一族已整族退役（`docs/core/design/DOC-CHECK.md` §2.10.2 · D14）：前缀常量与落片段档的函数都不留——
+ * 本档那一条调用（纯删基线）的字节走引擎的 `texts`，身份 = 目标档；append 候选文本那一条住 `batch-gate.mjs`。
+ * 在飞扫描也不再按前缀排除：它改按「扩展名不是 `.md` 的不算批档 ∥ 点开头的不算批档」两条判。
+ */
 
 /** 平台路径键（win32 大小写不敏感——只作集比对，非判据面）。 */
 const pathKey = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
@@ -165,6 +159,11 @@ function survivingLineMap(hunks, newLength) {
 /**
  * 纯删面的存量识别：逐行文本判据要能在基线同一存活行找到同形命中；
  * 段类另比完整成员行，删除造成的新组合段不能借邻段的基线命中退场。
+ *
+ * 基线怎么判（单源 = `docs/core/design/DOC-CHECK.md` §2.9.4）：基线全文走引擎的 `texts`（键 = 目标档），
+ * `docs` 里仍是目标档本身——身份因此是目标档，命中的 `file` ∥ `root` ∥ 行号 ∥ 豁免识别键全按它取。
+ * **不落临时档、不写盘**：基线副本一份不留，进程被杀也不再可能留下残档。判整份基线（不交 `zones`）：
+ * 这一跑不划分本次与存量，只产出完整基线命中供行映射与单元比较。
  */
 export function pureDeleteStockEntries(entries, root, regions) {
   const stock = new Set()
@@ -179,42 +178,38 @@ export function pureDeleteStockEntries(entries, root, regions) {
   for (const { file, region, entries: list } of groups.values()) {
     const baseText = gitFileText(region.top, region.base, region.relPath)
     if (baseText === null) throw new Error(`纯删基线读不出：${region.relPath}`)
-    const baselineAbs = fragmentPathOf(file)
-    try {
-      writeFileSync(baselineAbs, baseText)
-      const baseline = runDocCheck(root, { mode: "gate", docs: [baselineAbs] })
-      const baseHits = [...baseline.anchorHits, ...baseline.paragraphHits, ...(baseline.lineRefHits ?? [])]
-      const currentLines = safeRead(file).split("\n")
-      const baseLines = baseText.split("\n")
-      const lineMap = survivingLineMap(region.hunks, currentLines.length)
-      const deletionZones = judgeZones(currentLines, region.hunks.filter((h) => h.newCount === 0)
-        .map((h) => ({ start: h.newStart, end: h.newStart - 1 })))
-      const currentParas = paragraphRuns(currentLines)
-      const baseParas = paragraphRuns(baseLines)
-      for (const entry of list) {
-        if (!deletionZones.some((z) => entry.line >= z.start && entry.line <= z.end)) continue
-        const oldLine = lineMap.get(entry.line)
-        if (oldLine === undefined) continue
-        if (entry.clazz === DOC_CLASS.para) {
-          const unit = currentParas.find((r) => r.start <= entry.line && entry.line <= r.end)
-          if (!unit) continue
-          const mapped = []
-          for (let line = unit.start; line <= unit.end; line++) {
-            const old = lineMap.get(line)
-            if (old === undefined) { mapped.length = 0; break }
-            mapped.push(old)
-          }
-          if (mapped.length !== unit.end - unit.start + 1) continue
-          const baseUnit = baseParas.find((r) => r.start === mapped[0] && r.end === mapped[mapped.length - 1])
-          if (baseUnit && baseHits.some((h) => h.clazz === DOC_CLASS.para && h.line === baseUnit.start)) stock.add(entry)
-          continue
+    const baseline = runDocCheck(root, { mode: "gate", docs: [file], texts: { [file]: baseText } })
+    // 完整基线命中 = 未登记那批 ∪ 已裁定那批：存量判的是「基线同一存活行上有没有同形命中」，
+    // 与豁免登记无关——按未登记那批取会漏判「基线那处是已登记假阳」的存量。
+    const baseHits = [...baseline.anchorHits, ...baseline.paragraphHits, ...(baseline.lineRefHits ?? []), ...(baseline.exempted ?? [])]
+    const currentLines = safeRead(file).split("\n")
+    const baseLines = baseText.split("\n")
+    const lineMap = survivingLineMap(region.hunks, currentLines.length)
+    const deletionZones = judgeZones(currentLines, region.hunks.filter((h) => h.newCount === 0)
+      .map((h) => ({ start: h.newStart, end: h.newStart - 1 })))
+    const currentParas = paragraphRuns(currentLines)
+    const baseParas = paragraphRuns(baseLines)
+    for (const entry of list) {
+      if (!deletionZones.some((z) => entry.line >= z.start && entry.line <= z.end)) continue
+      const oldLine = lineMap.get(entry.line)
+      if (oldLine === undefined) continue
+      if (entry.clazz === DOC_CLASS.para) {
+        const unit = currentParas.find((r) => r.start <= entry.line && entry.line <= r.end)
+        if (!unit) continue
+        const mapped = []
+        for (let line = unit.start; line <= unit.end; line++) {
+          const old = lineMap.get(line)
+          if (old === undefined) { mapped.length = 0; break }
+          mapped.push(old)
         }
-        if (baseHits.some((h) => h.line === oldLine && h.clazz === entry.clazz && String(h.token ?? "") === String(entry.token ?? ""))) {
-          stock.add(entry)
-        }
+        if (mapped.length !== unit.end - unit.start + 1) continue
+        const baseUnit = baseParas.find((r) => r.start === mapped[0] && r.end === mapped[mapped.length - 1])
+        if (baseUnit && baseHits.some((h) => h.clazz === DOC_CLASS.para && h.line === baseUnit.start)) stock.add(entry)
+        continue
       }
-    } finally {
-      try { unlinkSync(baselineAbs) } catch { /* 清理失败不覆盖判定 */ }
+      if (baseHits.some((h) => h.line === oldLine && h.clazz === entry.clazz && String(h.token ?? "") === String(entry.token ?? ""))) {
+        stock.add(entry)
+      }
     }
   }
   return stock
