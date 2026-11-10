@@ -1,5 +1,5 @@
 /**
- * doc-check-exemptions.test.mjs — 集成用例 45-1（RTM CLI 端故事 45「已裁定的假阳照列不阻断，撤销后重新计入」；
+ * doc-check-exemptions.test.mjs — 集成用例 45-1 ∥ 45-2（RTM CLI 端故事 45「已裁定的假阳照列不阻断，撤销后重新计入」；
  * 用例行原文 = `test/rtm/guard.md` 第 45 节）。
  *
  * 业务入口 = 真 `doc_check` 工具调用（`mode:"gate"` + 显式 `docs` + `target`），与 44-1 同一个入口。
@@ -116,4 +116,27 @@ test("CLI 45-1 逐条豁免：登记不阻断且逐条列出，撤销即回，�
   assert.equal(firstLine(g7), "DOC-CHECK GATE: PASS", g7)
   assert.equal(g7.includes("排除 1 档（manifest 排除面命中，未判）：docs/design/X.md"), true, g7)
   assert.equal(g7.includes("豁免 1 条"), false, `排除优先，豁免块不得出：\n${g7}`)
+})
+
+test("CLI 45-2 边界 · 行号坐标豁免键取整行原文；改一个字后重新入闸", () => {
+  const line = "见 docs/design/target.md:12。"
+  const root = fixture({
+    "PROJECT-MANIFEST.json": manifestText(null, undefined),
+    "docs/design/target.md": "# target\n",
+    "docs/design/X.md": `# X\n\n${line}\n`,
+  })
+  const run = () => docCheckTool.execute({ mode: "gate", docs: ["docs/design/X.md"], target: root }, { agent: { cwd: root } })
+  writeFileSync(join(root, "PROJECT-MANIFEST.json"), manifestText({
+    file: "docs/design/X.md", kind: "行号坐标", text: line,
+    why: "坐标形夹具已裁定", review: "下次改动",
+  }, undefined))
+  const exempt = run()
+  assert.equal(exempt.split("\n")[0], "DOC-CHECK GATE: PASS", exempt)
+  assert.match(exempt, /豁免 1 条（已裁定假阳，不阻断交付）/, exempt)
+  assert.doesNotMatch(exempt, /登记未命中/, exempt)
+
+  writeFileSync(join(root, "docs/design/X.md"), `# X\n\n${line.replace("见", "再看")}\n`)
+  const changed = run()
+  assert.equal(changed.split("\n")[0], "DOC-CHECK GATE: REFUSED（行号坐标 1 处）", changed)
+  assert.match(changed, /登记未命中 1 条/, changed)
 })

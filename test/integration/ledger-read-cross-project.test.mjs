@@ -128,7 +128,7 @@ test('CLI 21-1 正常 · 进程锚 A、--cwd B ⇒ ledger list --json 给 1 项�
   const [p] = payload.projects
   assert.equal(p.root, resolve(B), "项目项须是目标项目 B（不是进程锚 A）")
   assert.equal(p.name, basename(B), "项目名 = 目标项目目录名")
-  assert.equal(p.schemaVersion, 2, "schemaVersion = 库 PRAGMA user_version 如实回读（刻意按载荷值硬断，不引 LEDGER_SCHEMA_VERSION 常量）")
+  assert.equal(p.schemaVersion, 3, "schemaVersion = 库 PRAGMA user_version 如实回读（刻意按载荷值硬断，不引 LEDGER_SCHEMA_VERSION 常量）")
   assert.deepEqual(p.rows.map((x) => x.id), B_IDS, "行 id 集 = B 的行")
   assert.deepEqual(p.rows.map((x) => x.title), B_TITLES, "行集须是 B 的行（导出面不筛状态 ⇒ 含已废弃行）")
   assert.deepEqual(p.rows.filter((x) => A_TITLES.includes(x.title)), [], "零 A 行（旁项目不掺入）")

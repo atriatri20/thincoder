@@ -27,7 +27,7 @@ import { t } from "../i18n.mjs"
 import { _cwd, pushBusyQueued } from "./panel-messages.mjs"
 import { takeQueuedBatchItem } from "@thincoder/core/queued.mjs"
 import { suspensionSession, poolLive, backgroundStatus, loadSuspensionCore } from "./suspension.mjs"
-import { syncTimerWatch } from "./timer-watch.mjs" // §6.30.11 VSC 空闲面：回合尾武装点（单例惰性建 + 活体重读）
+import { syncTimerWatch, syncInboxWatch } from "./timer-watch.mjs" // §6.30.11 VSC 空闲面：回合尾武装点（单例惰性建 + 活体重读）
 // C-B2-6 细则⑥（busy-injection 批 fix 轮 2026-09-22）：送达侧贴图降级判决（已抽入
 // `image-handler.mjs`——本档零 import 主档纪律保持，该档为 leaf 向）。
 import { downgradeNonVisionImages } from "./image-handler.mjs"
@@ -157,6 +157,9 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
   // §6.30.11 VSC 空闲面武装点（忙态归位后·CLI agent-turn.mjs 回合链尾对位）：在途 timer ∧ 开关开
   // ⇒ 闩武装（无在途 / 开关关 ⇒ 撤旧零注册）；挂起会话退出后同点接管（suspension.mjs finally）。
   syncTimerWatch(panel)
+  // 跨实例取件闩同点补一拍（MULTI-INSTANCE-COLLAB §5.4 · D-MI31：**幂等补位、零存活职责**——闩自续，
+  // 存活不靠本点；回合起点不撤闩）
+  syncInboxWatch(panel)
 }
 
 /** 迁出自 `panel-chat.mjs`（本批逐字搬迁——段 B）：挂起会话接管（释放窗口判定 + 会话入口）。

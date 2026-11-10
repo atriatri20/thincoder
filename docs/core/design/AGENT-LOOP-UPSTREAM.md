@@ -294,7 +294,7 @@ it at its next turn boundary and keeps the rest of its discipline unchanged.
 | A3 | depth 门：depth-0 调 ⇒ 明确错误（T9）；文案族与 §6.7.2 fail-closed 形态同款 | 批 §2 条目 1（depth>0 专有——五角色装配 / depth-0 与 consult 不装配） |
 | A4 | 非阻塞 + 无答复路径：工具 execute 无父侧 await；**通道无拉取 / 等待导出**（导出面断言：仅 tool + push / drain + 常量）；未获答复的 ask 其队列消息**仍注入**（T7——信息不丢）；sync 形返回注不给「答复到达」承诺（T17——同用例两半） | 批 §2 条目 3 |
 | A5 | 三闸：未 drain ask ≤1（T10 红——窗口 = 未 drain：未 drain ⇒ 拒 / drain 后 ⇒ 放行，同用例两半）· 长度上限与队列上限（T11 / T12 红）· kind 枚举（T12 红） | 批 §2 条目 4 |
-| A7 | 提示词面：`thincoder-core/prompts/common.md` `##` 块数 = 11；核 `prompts/` 文件集仍 15；零新增 `{{inject:...}}` 锚 | 批 §2 条目 6 |
+| A7 | 提示词面：`thincoder-core/prompts/common.md` 的 `##` 块与核 `prompts/` 文件集零改；零新增 `{{inject:...}}` 锚 | 批 §2 条目 6 |
 | A8 | 文档一致：设计档 §6.27 ↔ 批档 §2 ↔ 需求档条目三方一致；`node scripts/doc-check.mjs --root .` 触碰档零新增悬空锚 / 零新增行宽违规 | 批档自身约束（无对应条目——三方一致 + doc-check 按档零新增） |
 
 ### 6.27.11 边界（不做）
@@ -326,11 +326,11 @@ it at its next turn boundary and keeps the rest of its discipline unchanged.
 
 等待栓（W1 面）本就在位**（`thincoder-vscode/src/extension/suspension.mjs`）——只补该面的消费与谓词。
 
-**挂起驱动坐标（核 + 两端——2026-09-29 收口轮实读）**：核 `thincoder-core/agent/suspension.mjs`（**297 行** · `startSuspension` · 等待单点 `waitForSettleOrWake`）·
-CLI `thincoder-cli/src/tui/suspension-drive.mjs`（**211 行** · `suspensionSession` · 核驱动装配面 + 壳）
+**挂起驱动坐标（核 + 两端）**：核 `thincoder-core/agent/suspension.mjs`（`startSuspension` · 等待单点 `waitForSettleOrWake`）·
+CLI `thincoder-cli/src/tui/suspension-drive.mjs`（`suspensionSession` · 核驱动装配面 + 壳）
 
 ·
-VSC `thincoder-vscode/src/extension/suspension.mjs`（**291 行** · `suspensionSession` · 核驱动装配面——核驱动动态装载）。
+VSC `thincoder-vscode/src/extension/suspension.mjs`（`suspensionSession` · 核驱动装配面——核驱动动态装载）。
 
 
 **核驱动现状（收编后现态）**：**挂起面单源 = 核驱动（三端消费）**——CLI ∕ VSC ∕ desktop 皆以 `startSuspension` 为唯一驱动，端差只在装配面（carrier ∕ hooks ∕ 输入缝）。
@@ -407,7 +407,7 @@ while (…) { sweepSettledToPending(agent)
 
 #### 6.27.12.5 接口契约（改前 → 改后）
 
-**A. `thincoder-core/agent-tools/async-settle.mjs`（293 行 → ~299 行）**
+**A. `thincoder-core/agent-tools/async-settle.mjs`**
 
 ```js
 // 改前（公共尾 ④）
@@ -429,7 +429,7 @@ export function wakeAsyncWaiters(parent) {
 
 ▸ **语义差分显式声明**：循环体逐字；唯一差分 = 读径由 `parent._asyncWaiters` 改 `carrierField(parent, "_asyncWaiters")`（父字段优先、缺则载体）——**严格超集**（父字段在场路径零差分；今日「父字段缺 + 载体有」= 漏唤醒 ⇒ 挂起僵死至下次用户输入，本点顺带补齐）。
 
-**B. `thincoder-core/agent-tools/parent-channel.mjs`（209 行 → ~231 行）**
+**B. `thincoder-core/agent-tools/parent-channel.mjs`**
 
 ```js
 // 新导出（谓词单点——三驱动第 2 步判据共用）
@@ -443,7 +443,7 @@ export function upstreamWaiting(carrier) {
   if (kind === "ask") wakeAsyncWaiters(parent)   // import 自 ./async-settle.mjs（既有边，零新增静态边）
 ```
 
-**C. `thincoder-core/agent/suspension.mjs`（234 行 → ~242 行）**——`startSuspension` 第 2 步判据 + 旗标贯通：
+**C. `thincoder-core/agent/suspension.mjs`**——`startSuspension` 第 2 步判据 + 旗标贯通：
 
 ```js
 // 改前
@@ -458,7 +458,7 @@ export function upstreamWaiting(carrier) {
           try { await runTurn("", { autoTurn: true, upstreamTurn: upstream }) }
 ```
 
-**D. `thincoder-cli/src/tui/suspension-drive.mjs`（现量 323 行）**——提示行权威节 = **F-UC8 按因两档 × 全档（manual / AUTO 同判）**；矩阵 / 携参 / 起跑行口径单源 = §6.27.12.13 ①–③；开轮判据零改：
+**D. `thincoder-cli/src/tui/suspension-drive.mjs`**——提示行权威节 = **F-UC8 按因两档 × 全档（manual / AUTO 同判）**；矩阵 / 携参 / 起跑行口径单源 = §6.27.12.13 ①–③；开轮判据零改：
 
 ```js
 // 开轮判据（F-UC7 落，零改）
@@ -480,11 +480,11 @@ export function upstreamWaiting(carrier) {
 
 实证 = `_inAutoTurn` 门在 CLI manual 档生效。）
 
-**E. `thincoder-core/agent.mjs`（436 行 → ~441 行）**——`runAgent` 签名解构读 `opts.upstreamTurn`；`_inAutoTurn` 落位；循环前域提醒选择（`upstreamTurn` → `UPSTREAM_TURN_DOMAIN`，否则 `AUTO_TURN_DIGEST_DOMAIN`；皆限 manual 档 `!getAuto()`）。
+**E. `thincoder-core/agent.mjs`**——`runAgent` 签名解构读 `opts.upstreamTurn`；`_inAutoTurn` 落位；循环前域提醒选择（`upstreamTurn` → `UPSTREAM_TURN_DOMAIN`，否则 `AUTO_TURN_DIGEST_DOMAIN`；皆限 manual 档 `!getAuto()`）。
 
-**F. `thincoder-core/agent/helpers.mjs`（383 行 → ~386 行）**——新增导出 `UPSTREAM_TURN_DOMAIN`（文本 = §6.27.12.8 逐字；**内容依据 = 机制文档，落笔 = eng-coder**）。
+**F. `thincoder-core/agent/helpers.mjs`**——新增导出 `UPSTREAM_TURN_DOMAIN`（文本 = §6.27.12.8 逐字；**内容依据 = 机制文档，落笔 = eng-coder**）。
 
-**G. `thincoder-vscode/src/agent.mjs`（485 行 → ~487 行）**——端壳 depth-0 循环的**消费点（drain）** + 载体表补款 + 域文本组合调用（常量块外提至 L ⇒ 净移出 8 行）：
+**G. `thincoder-vscode/src/agent.mjs`**——端壳 depth-0 循环的**消费点（drain）** + 载体表补款 + 域文本组合调用（常量块外提至 L）：
 
 ```js
 // ① 载体表（thincoder-vscode/src/agent.mjs 的 `CARRIER_FIELDS`）12 → 14 款（+ `_childUpstream` / `_childUpstreamSeq`
@@ -501,12 +501,12 @@ export function upstreamWaiting(carrier) {
   }
 ```
 
-**为什么是动态 import（非静态）**：`thincoder-core/agent-tools/parent-channel.mjs` 的**静态闭包实测可达 `node:sqlite`**（本席实测：126 档，`node:sqlite` 在 builtins 列——经 `thincoder-core/agent-tools/async-settle.mjs`）⇒ 静态引会破端壳静态闭包机判
+**为什么是动态 import（非静态）**：`thincoder-core/agent-tools/parent-channel.mjs` 的**静态闭包实测可达 `node:sqlite`**（实测：`node:sqlite` 在 builtins 列——经 `thincoder-core/agent-tools/async-settle.mjs`）⇒ 静态引会破端壳静态闭包机判
 （W8 契约②判据——单元测试树重建时回迁端侧单元测试档）。
 
 **零新增静态边**——与 `thincoder-vscode/src/extension/suspension.mjs` 同款先例。
 
-**H. `thincoder-vscode/src/extension/suspension.mjs`（397 行 → ~409 行）**——等待单点**零改**（W13 已双载体注册 `_asyncWaiters`：`thincoder-vscode/src/extension/suspension.mjs`）；第 2 步判据 + 旗标 + 日志标签：
+**H. `thincoder-vscode/src/extension/suspension.mjs`**——等待单点**零改**（W13 已双载体注册 `_asyncWaiters`：`thincoder-vscode/src/extension/suspension.mjs`）；第 2 步判据 + 旗标 + 日志标签：
 
 ```js
 // 会话进入（while 之前，会话进入判据邻位）：谓词取一次——动态 import（同上，W8 契约②）
@@ -531,9 +531,9 @@ export function upstreamWaiting(carrier) {
 **参照 CLI**：`runAgentTurn(ctx, "", { autoTurn: true, upstreamTurn, skipSession: true })`——VSC 的三跳 = 端壳自有循环的固有多层，非新面。
 （CLI 侧另有**两跳**：`thincoder-cli/src/tui/agent-turn.mjs` 解构 → 同档 opts 字面量 ⇒ 核 `runAgent` 才实收该旗标。）
 
-**J. `thincoder-vscode/src/agent/setup-reminders.mjs`（134 行 → ~136 行）**——核单源转口表（W15）**增两名**：`AUTO_TURN_DIGEST_DOMAIN` + `UPSTREAM_TURN_DOMAIN`（自核面 `thincoder-core/agent/helpers.mjs` 转口——端侧**零自持副本**；两名 = 端侧域文本组合的两个基座，消费点 = L）。
+**J. `thincoder-vscode/src/agent/setup-reminders.mjs`**——核单源转口表（W15）**增两名**：`AUTO_TURN_DIGEST_DOMAIN` + `UPSTREAM_TURN_DOMAIN`（自核面 `thincoder-core/agent/helpers.mjs` 转口——端侧**零自持副本**；两名 = 端侧域文本组合的两个基座，消费点 = L）。
 
-**K. `thincoder-cli/src/tui/suspension-drive.mjs`（301 行 → ~315 行）**——承父侧同轮裁定 ④「**宿主日志加 `upstream: true`** 区分唤醒轮与 digest 轮」（**两端同规**）：
+**K. `thincoder-cli/src/tui/suspension-drive.mjs`**——承父侧同轮裁定 ④「**宿主日志加 `upstream: true`** 区分唤醒轮与 digest 轮」（**两端同规**）：
 
 `digestTurn(ctx, upstream)` 内
 `logEvent("digest:start", { pendingN: pend0, ...(upstream ? { upstream: true } : {}) })` / `logEvent("digest:end", { …, ...(upstream ? { upstream: true } : {}) })`（CLI 面两点同式；
@@ -563,7 +563,7 @@ export function composeTurnDomain(upstreamTurn) {
 - **为什么不是另一边（括号外尾部追加 / 句内锚点插值）**：① 括号外追加 ⇒ overlay 落在 `]` 之外，破 system reminder 括号形态（两基座皆以 `]` 收尾）；② 句内锚点插值 ⇒ 端侧须持基座句串锚点，而基座文本内容权在核侧（§6.27.12.8）——核侧改字面即静默失效（漂移面）。
 - **核单源守护**：本档零核基座文本字面（基座只经转口 import 取）——机检锚 = §6.27.12.9 T-VS-U5 / §6.27.12.10 U12；端 overlay 住端侧 ⇒ **端特有述句不进核**。
 - **W8 契约②（零新增静态边）**：核 `thincoder-core/agent/helpers.mjs` 已在端壳静态闭包内（`thincoder-vscode/src/agent/setup-reminders.mjs` 转口——包名导入符形态）⇒ 本档不引新核侧静态边，`node:sqlite` 仍不入端壳静态链。
-- **行数收益**：`thincoder-vscode/src/agent.mjs` 原常量块（含 JSDoc）随本档外提 ⇒ 该档净移出 8 行（拆分触发面清零）。
+- **体量收益**：`thincoder-vscode/src/agent.mjs` 原常量块（含 JSDoc）随本档外提 ⇒ 该档净移出（拆分触发面清零）。
 
 #### 6.27.12.8 唤醒轮域文本（逐字建议——**内容依据 = 机制文档，落笔 = eng-coder**；本档只出文本）
 
@@ -612,7 +612,7 @@ spawning subagents, asking questions — those need a real user message. End the
 | U2 | 核挂起面用例全绿（含 T23 / T24——假 carrier / 假 runTurn 纯 Node 驱动，不加载端模块） | 条目 2 |
 | U3 | CLI 输入锁用例全绿（含 T-CL-U1 / U2——`driveRig` 直驱 `suspensionSession`，不触网） | 条目 4 |
 | U4 | 结构机检（ASCII 令牌，单行 `node -e`；四查：两定义点 + 两调用点）：`node -e "const fs=require('fs');const f=(p,s)=>{if(!fs.readFileSync(p,'utf8').includes(s))throw new Error(p+' missing: '+s)};f('thincoder-core/agent-tools/parent-channel.mjs','export function upstreamWaiting');f('thincoder-core/agent-tools/async-settle.mjs','export function wakeAsyncWaiters');f('thincoder-core/agent/suspension.mjs','upstreamWaiting(');f('thincoder-core/agent-tools/parent-channel.mjs','wakeAsyncWaiters(')"` | 条目 1 / 2 |
-| U5 | 零回归（**按包拆分**；仓根无 `package.json`）：cwd = `D:\teamcode\thincoder` ⇒ 核 ∥ cli 两包包级 `npm test` 均非门（核 = exit 1 + `requirement N20` 说明；cli = 空集说明器）——零回归读数走单档直跑 `node --test <档>` + 核语法门 `npm run prepublishOnly`——重点族落点：核包 = `core-hygiene` / `family-tools`；CLI 包 = `async-settle` / `queued-stop` / `input-lock` / `attention-state` / `subagent-observe-send` / `doc-check`（机检本体仍 = 仓根 `node scripts/doc-check.mjs --root .`——U8） | 不变量 ⑤ |
+| U5 | 零回归（**按包拆分**；仓根无包清单）：cwd = `D:\teamcode\thincoder` ⇒ 核 ∥ cli 两包包级 `npm test` 均非门（核 = exit 1 + `requirement N20` 说明；cli = 空集说明器）——零回归读数走单档直跑 `node --test <档>` + 核语法门 `npm run prepublishOnly`——重点族落点：核包 = `core-hygiene` / `family-tools`；CLI 包 = `async-settle` / `queued-stop` / `input-lock` / `attention-state` / `subagent-observe-send` / `doc-check`（机检本体仍 = 仓根 `node scripts/doc-check.mjs --root .`——U8） | 不变量 ⑤ |
 | U6 | 零新增计数 / 上限：`parent-channel.mjs` 导出常量集不变（3 个）；三驱动第 2 步**无新增数值常量** | 不变量 ③ |
 | U7 | 提示词面零行：`git diff --stat -- thincoder-core/prompts` 输出为空（主分支不需改承诺） | 批档禁触面 |
 | U9 | VSC 载体检修：VSC 上游对位用例（T-VS-U1–U7）+ 子代理生命周期集成用例全绿（含夹具同步） | 条目 7 / 8 / 9 |
@@ -630,7 +630,7 @@ spawning subagents, asking questions — those need a real user message. End the
 5. 不改提示词面（`prompts/**`）与 `notify_parent` 工具描述 / 返回注（主分支下承诺变真，无需改准）——**内容依据 = 机制文档，落笔 = eng-coder**（**限定**：§6.34 后接收侧句 ∥ `notify_parent` 返回注待机制文档定稿——`AGENT-LOOP-ASYNC-POOL.md` §6.34.5）。
 6. **降级分支（不落 · 备份路径）**：若父侧裁为 note-only 降级，则改准面 = 工具描述 `parent-channel.mjs` 的 `notify_parent` 段（承诺句）· `ASYNC_NOTE`（同档常量）· 提示词面 `thincoder-core/prompts/common.md`（父侧笔）· 需求 F-UC1 / F-UC2 / F-UC6 收紧（父侧笔）；机制零改。
 7. **note 面（登记）**：`note` 入队**不唤醒**（§6.27.12.4 ①）⇒ 挂起期 note 仍等下一交付轮（settle digest / ask / timer）——若父侧要求 note 一并唤醒，改动 = 入队尾的唤醒门（`kind === "ask"` 门控）+ `upstreamWaiting` 谓词（`q.some(...)` → `q.length > 0`）+ 用例 T19 / T24 反转；**代价 = 每条 note 一次父侧轮**（轮风暴面，故默认不开）。
-8. **VSC 面已并入（设计面；实现已落地）**：VSC 写域 = 文件表行 **12–21**（源 7 档 + 新测 1 档 + 登记 1 档 + 集成夹具 1 档）；**不动** webview 面（`digest` 消息族 / `suspension` 消息族 / 文案）与提示词面——细则 = §6.27.12.12。
+8. **VSC 面已并入（设计面；实现已落地）**：VSC 写域 = 文件表行 **12–21**（逐档见 §6.27.12.12 的文件表）；**不动** webview 面（`digest` 消息族 / `suspension` 消息族 / 文案）与提示词面——细则 = §6.27.12.12。
 9. 不改需求档正文（父侧笔）；不做「父→子」新动作 / 新管子（回复路径恒 = `send`）。
 
 
@@ -660,7 +660,7 @@ spawning subagents, asking questions — those need a real user message. End the
 
 ④ 端壳「自持 depth-0 循环」不是障碍——本项是**单点调用**（非把核循环搬端侧），与 W15 的「循环契约位移 = 调用期适配」同款。
   **备选（登记不采）**：端侧自持 drain 副本——收益 = 端侧可自定文案（本项无此需求）；代价 = 上文 ① 的漂移面。若父侧另裁，改动面 = 端侧新函数 + 夹具重组（本设计不预设）。
-- **W8 契约②（硬）**：`thincoder-core/agent-tools/parent-channel.mjs` 静态闭包实测**可达 `node:sqlite`**（本席实测 126 档）⇒ **必须动态 import**（静态引 ⇒ W8 契约②判据（单元测试树重建时回迁端侧单元测试档）即红）。
+- **W8 契约②（硬）**：`thincoder-core/agent-tools/parent-channel.mjs` 静态闭包实测**可达 `node:sqlite`** ⇒ **必须动态 import**（静态引 ⇒ W8 契约②判据（单元测试树重建时回迁端侧单元测试档）即红）。
 
 **② 载体表**
 
@@ -762,7 +762,7 @@ escalate reports: summarize the merged post-op work — further changes need a u
 
 **⑤ 接口契约（改点逐档）**
 
-**a. `thincoder-core/agent-tools/parent-channel.mjs`（231 行 → ~250 行）**——新导出：
+**a. `thincoder-core/agent-tools/parent-channel.mjs`**——新导出：
 
 ```js
 /** ask 提示行显示串上限（字符——模块内常量，不导出）。 */
@@ -780,14 +780,14 @@ export function upstreamAskLabelVars(carrier) {
 }
 ```
 
-**b. `thincoder-core/i18n.mjs`（106 行 → ~105 行）**——键面三笔：
+**b. `thincoder-core/i18n.mjs`**——键面三笔：
   - **改值** `digest.turnLabelAsk` → 携参形态（en `[auto-turn: answering ${from}: ${msg}]` / zh `自动回合：答复 ${from}：${msg}`）；
   - **删除** `digest.turnLabelAuto`（AUTO 泛句退场——D-SL1）；
   - **零新增键**（`digest.turnLabel` / `digest.start` 复用——CLI 新增消费点）。
 
-**c. `thincoder-cli/src/tui/suspension-drive.mjs`（323 行 → ~333 行）**——= §6.27.12.5 D 现态块；import 面 +1 名（`upstreamAskLabelVars`——零新静态边）；**X9 收尾行加 `pend0 > 0` 守卫**（ask-only 轮零收尾行——done / aborted 两形态同判，口径与理由见 ③ / ⑩）。
+**c. `thincoder-cli/src/tui/suspension-drive.mjs`**——= §6.27.12.5 D 现态块；import 面 +1 名（`upstreamAskLabelVars`——零新静态边）；**X9 收尾行加 `pend0 > 0` 守卫**（ask-only 轮零收尾行——done / aborted 两形态同判，口径与理由见 ③ / ⑩）。
 
-**d. `thincoder-vscode/src/extension/suspension.mjs`（430 行 → ~432 行）**——开轮判据 + 载荷（动态 import 解构 +1 名）：
+**d. `thincoder-vscode/src/extension/suspension.mjs`**——开轮判据 + 载荷（动态 import 解构 +1 名）：
 
 ```js
 // 改前（开轮判据）
@@ -799,7 +799,7 @@ export function upstreamAskLabelVars(carrier) {
         panel._panel?.webview.postMessage({ type: "digest", status: "start", n: pendingN, tier, ...(ask ?? {}) })
 ```
 
-**e. `thincoder-vscode/webview/chat.js`（445 行 → ~448 行）**——分档取键 + 计数元素规则：
+**e. `thincoder-vscode/webview/chat.js`**——分档取键 + 计数元素规则：
 
 ```js
     label.textContent = t(m.tier === "ask" ? "digest.turnLabelAsk" : "digest.turnLabel",
@@ -834,7 +834,7 @@ export function upstreamAskLabelVars(carrier) {
 | U-SL1 | 核零回归读数 = 单档直跑 `node --test <档>`（含 T-SL1–T-SL4 + A4 导出面 +1 名）+ 语法门 `npm run prepublishOnly`；包级 `npm test` 非门（exit 1 + `requirement N20` 说明） | 条 1 / 2 |
 | U-SL2 | cli 零回归读数 = 单档直跑 `node --test <档>`（含 T-SL-C1 / C2 / C3 + `input-lock` 四格收正）；包级 `npm test` = 空集说明器（非门） | 条 1 / 2 / 3 |
 | U-SL3 | VSC 零回归：`cd thincoder-vscode && npm test` 全绿 = **单元清单面**（含 T-SL-V1 / V2 + 协议档坐标面重出）；集成门 = 仓根 `node test/run.mjs` | 条 4 |
-| U-SL4 | 结构机检（ASCII 令牌，单行 `node -e`；四查 + 两否定）：核容器含 `"digest.turnLabelAsk"` ∧ `${from}` ∧ **不含** `digest.turnLabelAuto`；`suspension-drive.mjs` 含 `t("digest.turnLabel` ∧ `digest.start` ∧ **不含** `[auto-turn:`；`suspension.mjs` 含 `upstreamAskLabelVars(`；`chat.js` 不含 `digest.turnLabelAuto` | 条 1 / 4 |
+| U-SL4 | 结构机检（ASCII 令牌，单行 `node -e`；四查 + 两否定）：核容器含 `"digest.turnLabelAsk"` ∧ `${from}` ∧ **不含** `digest.turnLabelAuto`；`thincoder-cli/src/tui/suspension-drive.mjs` 含 `t("digest.turnLabel` ∧ `digest.start` ∧ **不含** `[auto-turn:`；`thincoder-core/agent/suspension.mjs` 含 `upstreamAskLabelVars(`；`chat.js` 不含 `digest.turnLabelAuto` | 条 1 / 4 |
 
 **⑨ 边界（不做）**
 
@@ -872,7 +872,7 @@ export function upstreamAskLabelVars(carrier) {
 
 
 ▸ **判据物选择**：`_touchedFiles` 是**去重路径集**（同一文件重复编辑每轮都计「零落笔」⇒ 误杀在产出的子代理）⇒ 采集点改读写序。
-  ▸ **`_touchedFiles` 记账本面零改**（约 20 个消费面：verify 变更集 / advisor 默认范围 / 审计块 / 子代理合入 / L3 调度域 / `recent_changes` / linter 等）——仅**采集点读的数量**由「路径数」换成「写序」。
+  ▸ **`_touchedFiles` 记账本面零改**（消费面：verify 变更集 / advisor 默认范围 / 审计块 / 子代理合入 / L3 调度域 / `recent_changes` / linter 等）——仅**采集点读的数量**由「路径数」换成「写序」。
 
 
   ▸ **判据式（单源谓词）**：`wroteSince(agent, mark)`——`const seq = agent._mutationSeq; return Number.isInteger(seq) ? seq !== mark : true`（`mark` = 上轮结账时的写序标 `_mutSeqMark`；返回 `false` ⇒ 零落笔）。谓词住 `thincoder-core/agent/helpers.mjs`（模块级导出——轮顶与收尾两处共用一份，且**可单测**：判据必须在改前红、改后绿，闭包只能靠文本扫描）。

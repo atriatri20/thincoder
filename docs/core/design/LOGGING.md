@@ -22,9 +22,9 @@
 
 **四要素明细**
 
-- **#42 `thincoder-core/log.mjs`**（同路径 · j 0.9290 · sha `388222697c48` / `ab12c7f0f694` · 195 / 196 行）
-  - 左端读数（CLI）：差异 = 5 行注释——指向本仓 LOGGING 档的指针（`docs/design/LOGGING`——CLI 侧该档存在）+ `§18.6` 等注记。
-  - 右端读数（VSC）：6 行注释——指向该仓需求层 LOGGING 档的指针（`docs/requirements/LOGGING`——VSC 侧该档存在，两仓文档约定不同、各自局部正确）+ 镜像注记（自述 CLI 侧 redactSecret 同实现——双端语义同构）。
+- **#42 `thincoder-core/log.mjs`**（同路径 · j 0.9290 · sha `388222697c48` / `ab12c7f0f694`）
+  - 左端读数（CLI）：差异 = 注释——指向本仓 LOGGING 档的指针（`docs/design/LOGGING`——CLI 侧该档存在）+ `§18.6` 等注记。
+  - 右端读数（VSC）：差异 = 注释——指向该仓需求层 LOGGING 档的指针（`docs/requirements/LOGGING`——VSC 侧该档存在，两仓文档约定不同、各自局部正确）+ 镜像注记（自述 CLI 侧 redactSecret 同实现——双端语义同构）。
   - 建议归一形态：取一侧 + 镜像注记删除、指针按仓约定订正（非语义）。
   - 影响面：无（仅注释；须用户裁 = —）。
 

@@ -95,7 +95,8 @@ export function collectLineRefs({ files = [], extsOf } = {}) {
         else if (before.length) form = "②" // 承名：本行前文有档名（反引号收尾的坐标归此形）
         else if (prevNames.length) form = "③" // 段落承名：本行无前文档名，取上一行最后一个档名
         else continue // 无主——判据句自然排除，不列例外表
-        const hit = { file: f, line: i + 1, form, fenced: inFence, snippet: snippet(l), text: l.trim() }
+        // `token` = 该行整行原文（载荷格，见 `./index.mjs` 的 `root` 载荷条）：`snippet` 只留前 40 字，拼不齐拒文四件的「内容」格。
+        const hit = { file: f, line: i + 1, form, fenced: inFence, snippet: snippet(l), text: l.trim(), token: l.trim() }
         ;(inFence ? fenced : body).push(hit)
       }
       prevNames = names

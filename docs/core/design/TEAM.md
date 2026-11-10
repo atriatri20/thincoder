@@ -146,45 +146,45 @@
 | D-TM8 | **登/退入口移出设置面**——设置卡/段 = 管理面（label ∥ 详情；零登/退）；主界面直达面（状态段/项 ∥ `/team`）承载登/退 | 用户 2026-10-10 14:46 裁（登/退不得要求先钻设置）+「两处不互抄」（各端需求卷） |
 | D-TM9 | **轮换 = 单把换发 + 端侧可达 + 确认一步**：核 `teamRotate` 单源 ∘ 三端管理面控件/子命令；确认 = 后果句一步（取消零动作） | 轮换本义 = 旧即失效（§2.7）；逐端各持一枚 ⇒ 单把（不连带他端 ∥ 沙盒 key——KD-SV-63 同拍）；确认一步 = 「后果明示须可见」口径延伸（凭据动作后果就地明示——就地构件，零原生弹窗）；**被否**：重登式（旧不失效——与本义相抵）∥ 全换（断他端）∥ 就地改 hash（离 revoke + issue 先例 ∥ 审计链断）∥ 零确认（凭据换发为不可见动作——点错无痕） |
 
-## 4. 受影响文件与行数预算
+## 4. 受影响文件与改动事由
 
-| 域 | 档 | 行数 |
-|---|---|---|
-| core | `thincoder-core/config.mjs` | **509**（`team` 段加载归一 +14；**越 500 软线 ⇒ 主动拆分评估层**——拆分预案指针 = `docs/core/design/CONFIG.md` §5（核内落点行数）→ `docs/core/design/CORE-UNIFICATION.md` §2.8.1「核内逐档行数与拆分计划」） |
-| core | `thincoder-core/config-io.mjs` | **282**（写面复用 `writeConfigAtomic`） |
-| CLI | `thincoder-cli/src/cli/team-command.mjs` | **246 ⇒ ≈292**（+≈46——`team rotate` 子命令 ∥ 确认问句 ∥ 结果行；三子命令 ∥ 旗标 ∥ 三态输入面照旧） |
-| CLI | `thincoder-cli/src/command-table.mjs` | **201（零改——`case "team"` 透传 args）** |
-| CLI | `thincoder-cli/bin/thincoder.mjs` | **190 ⇒ ≈191**（+1——USAGE 增 rotate 行） |
-| CLI | `thincoder-cli/src/completions.mjs` | **156 ⇒ ≈156**（三套补全 `team` 词面——增 `rotate` 四处，行数零变） |
-| CLI | `thincoder-cli/src/tui/cmd-team.mjs` | **235 ⇒ ≈258**（+≈23——`/team rotate` 支 ∥ 确认问句 ∥ usage 词面） |
-| CLI | `thincoder-cli/src/tui/model-picker.mjs` | **324**（`isDerivedProviderHidden` 再出口 ∥ 两处过滤（模型候选 ∥ 槽位面）；`Remove provider…` 守卫改用过滤后计数） |
-| CLI | `thincoder-cli/src/tui/provider-admin.mjs` | **248**（`isDerivedProviderHidden` 谓词单源 ∥ 三流过滤（remove ∥ key ∥ context）） |
-| VSC | `thincoder-vscode/webview/settings-team.js` | **132 ⇒ ≈178**（+≈46——轮换控件 ∥ 确认一步（确认/取消两键） ∥ 结果行；卡降管理面结构照旧） |
-| VSC | `thincoder-vscode/webview/settings.js` | **203**（+import ∥ 第 6 卡序尾合成） |
-| VSC | `thincoder-vscode/webview/chat-messages.js` | **295 ⇒ ≈297**（+2——`teamRotateResult` case ∥ import 名） |
-| VSC | `thincoder-vscode/src/extension/team.mjs` | **44 ⇒ ≈52**（+≈8——`teamRotate` 转口（转口五件）；零状态） |
-| VSC | `thincoder-vscode/src/extension/panel-messages.mjs` | **391 ⇒ ≈394**（+3——`teamRotate` import 名 + case） |
-| VSC | `thincoder-vscode/src/extension/panel-messages-settings.mjs` | **285 ⇒ ≈300**（+≈15——`handleTeamRotate`（成/失效 ⇒ 推送 + 团队面随动）） |
-| VSC | `thincoder-vscode/src/extension/settings.mjs` | **420**（+隐藏判据一处（`providerStatus`）∥ `pushTeamStatus`（推送点）） |
-| VSC | `thincoder-vscode/src/extension/panel-settings-push.mjs` | **124**（两条推送链调用（快照族拍）；推送点住 `thincoder-vscode/src/extension/settings.mjs`） |
-| VSC | `thincoder-vscode/locales/en.json` ∥ `zh.json` | **349 ∥ 349**（现读——**本批增量 ≈4 键/表**：控件词 ∥ 确认句 ∥ 成句 ∥ `invalid` 失效句；team 族累计 19 键/表——实读） |
-| 桌面 | `thincoder-desktop/renderer/views/settings-sections-team.mjs` | **143 ⇒ ≈200**（+≈57——轮换控件 ∥ 确认两键 ∥ 结果行增成句） |
-| 桌面 | `thincoder-desktop/renderer/views/settings.mjs` | **454 ⇒ 454**（行内改——team 支传 handlers（轮换出口按表入院）；行数零变） |
-| 桌面 | `thincoder-desktop/renderer/views/settings-sections.mjs` | **100**（`teamBody` re-export） |
-| 桌面 | `thincoder-desktop/renderer/mount-team.mjs`（并入后） | **324 ⇒ ≈352**（+≈28——轮换出口 ∥ 确认态 ∥ 复读两调用点同径） |
-| 桌面 | `thincoder-desktop/renderer/mount-settings.mjs` | **292**（`MODAL_READS` +1 行（`team → loadTeam`）∥ `SCOPES` 派生随动 ∥ team 读/出口装配） |
-| 桌面 | `thincoder-desktop/src/main/team.mjs` | **46 ⇒ ≈58**（+≈12——`team:rotate` 通道（转口）；零状态零自写盘） |
-| 桌面 | `thincoder-desktop/src/main/ipc-registry.mjs` | **102 ⇒ ≈103**（+1——`team:rotate` HANDLER） |
-| 桌面 | `thincoder-desktop/src/preload/preload.cjs` | **92 ⇒ ≈93**（+1——`teamRotate` CHANNEL） |
-| 桌面 | `thincoder-desktop/renderer/i18n-settings.mjs` | **208 ⇒ ≈212**（+≈4 键——控件词 ∥ 确认句 ∥ 成句 ∥ `invalid` 失效句） |
-| 桌面 | `thincoder-desktop/src/main/providers.mjs` | **311**（隐藏判据一处：`derived ∧ 无 key` ⇒ 滤除（`providerList`）） |
-| core | `thincoder-core/team.mjs` | **223 ⇒ ≈252**（+≈29——`teamRotate`（§2.7）；全档 = 登录 ∥ 退出 ∥ 状态 ∥ 标签 ∥ 条目 upsert/停用 ∥ 地址归一 ∥ 错误分类 ∥ `teamVerify`） |
-| core | `thincoder-core/i18n.mjs` | **≈120**（`status.team.invalid` 两语） |
+| 档 | 事由 |
+|---|---|
+| `thincoder-core/config.mjs` | `team` 段加载归一；越 500 软线 ⇒ 主动拆分评估层——拆分预案指针 = `docs/core/design/CONFIG.md` §5（核内落点行数）→ `docs/core/design/CORE-UNIFICATION.md` §2.8.1「核内逐档行数与拆分计划」 |
+| `thincoder-core/config-io.mjs` | 写面复用 `writeConfigAtomic` |
+| `thincoder-cli/src/cli/team-command.mjs` | `team rotate` 子命令 ∥ 确认问句 ∥ 结果行；三子命令 ∥ 旗标 ∥ 三态输入面照旧 |
+| `thincoder-cli/src/command-table.mjs` | 零改——`case "team"` 透传 args |
+| `thincoder-cli/bin/thincoder.mjs` | USAGE 增 rotate 行 |
+| `thincoder-cli/src/completions.mjs` | 三套补全 `team` 词面增 `rotate` |
+| `thincoder-cli/src/tui/cmd-team.mjs` | `/team rotate` 支 ∥ 确认问句 ∥ usage 词面 |
+| `thincoder-cli/src/tui/model-picker.mjs` | `isDerivedProviderHidden` 再出口 ∥ 两处过滤（模型候选 ∥ 槽位面）；`Remove provider…` 守卫改用过滤后计数 |
+| `thincoder-cli/src/tui/provider-admin.mjs` | `isDerivedProviderHidden` 谓词单源 ∥ 三流过滤（remove ∥ key ∥ context） |
+| `thincoder-vscode/webview/settings-team.js` | 轮换控件 ∥ 确认一步（确认/取消两键） ∥ 结果行；卡降管理面结构照旧 |
+| `thincoder-vscode/webview/settings.js` | import 一行 ∥ 第 6 卡序尾合成 |
+| `thincoder-vscode/webview/chat-messages.js` | `teamRotateResult` case ∥ import 名 |
+| `thincoder-vscode/src/extension/team.mjs` | `teamRotate` 转口（转口五件）；零状态 |
+| `thincoder-vscode/src/extension/panel-messages.mjs` | `teamRotate` import 名 + case |
+| `thincoder-vscode/src/extension/panel-messages-settings.mjs` | `handleTeamRotate`（成/失效 ⇒ 推送 + 团队面随动） |
+| `thincoder-vscode/src/extension/settings.mjs` | 隐藏判据一处（`providerStatus`）∥ `pushTeamStatus`（推送点） |
+| `thincoder-vscode/src/extension/panel-settings-push.mjs` | 两条推送链调用（快照族拍）；推送点住 `thincoder-vscode/src/extension/settings.mjs` |
+| `thincoder-vscode/locales/en.json` ∥ `zh.json` | 团队族键：控件词 ∥ 确认句 ∥ 成句 ∥ `invalid` 失效句 |
+| `thincoder-desktop/renderer/views/settings-sections-team.mjs` | 轮换控件 ∥ 确认两键 ∥ 结果行增成句 |
+| `thincoder-desktop/renderer/views/settings.mjs` | 行内改——team 支传 handlers（轮换出口按表入院） |
+| `thincoder-desktop/renderer/views/settings-sections.mjs` | `teamBody` re-export |
+| `thincoder-desktop/renderer/mount-team.mjs`（并入后） | 轮换出口 ∥ 确认态 ∥ 复读两调用点同径 |
+| `thincoder-desktop/renderer/mount-settings.mjs` | `MODAL_READS` 增一项（`team → loadTeam`）∥ `SCOPES` 派生随动 ∥ team 读/出口装配 |
+| `thincoder-desktop/src/main/team.mjs` | `team:rotate` 通道（转口）；零状态零自写盘 |
+| `thincoder-desktop/src/main/ipc-registry.mjs` | `team:rotate` HANDLER |
+| `thincoder-desktop/src/preload/preload.cjs` | `teamRotate` CHANNEL |
+| `thincoder-desktop/renderer/i18n-settings.mjs` | 团队族键：控件词 ∥ 确认句 ∥ 成句 ∥ `invalid` 失效句 |
+| `thincoder-desktop/src/main/providers.mjs` | 隐藏判据一处：`derived ∧ 无 key` ⇒ 滤除（`providerList`） |
+| `thincoder-core/team.mjs` | `teamRotate`（§2.7）；全档 = 登录 ∥ 退出 ∥ 状态 ∥ 标签 ∥ 条目 upsert/停用 ∥ 地址归一 ∥ 错误分类 ∥ `teamVerify` |
+| `thincoder-core/i18n.mjs` | `status.team.invalid` 两语 |
 
-- 单元测试档三件（跨档集——批内件随批档归档，零入链）：服务端单件（**305**）∥ 本册件（核 + 三端结构面——**410**——跨面件无宿主产品链）∥
-  桌面面单件（**364**——桌面包无 `prepublishOnly` 链）。
+- 逐档绝对行数与增量属读数：只出 `doc_check({mode:"lines"})` 的输出或当批批档（判据 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 的「行数」行）。
+- 单元测试档三件（跨档集——批内件随批档归档，零入链）：服务端单件 ∥ 本册件（核 + 三端结构面——跨面件无宿主产品链）∥ 桌面面单件（桌面包无 `prepublishOnly` 链）。
 - `thincoder-core/agent-tools/settings.mjs`（`team` 不入 `DEFAULTS`——工具面不受影响）。
-- 本批（轮换）单元测试档：与批档同名的单测档（≈**320**——服务端面 + 核面 + 三端结构机检；**不入链**——随批删，零留存）。
+- 单元测试档 = 与批档同名的单测档（服务端面 + 核面 + 三端结构机检；**不入链**——随批删，零留存）。
 
 ## 5. 验收判据（端侧面——回指 AC-31 ①–⑤）
 

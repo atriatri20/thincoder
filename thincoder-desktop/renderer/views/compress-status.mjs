@@ -66,10 +66,10 @@ export function syncCompress(root, slice, anchor = null) {
   else root.append(fresh)
 }
 
-/** 插点锚（**族首** —— 压缩行恒居到期触发行组 / 停止痕 / 帮助行族 / 卡节点 / 药丸之前；消化行族不锚 —— 流内落位批收正：
+/** 插点锚（**族首** —— 压缩行恒居到期触发行组 / 取件行组 / 停止痕 / 帮助行族 / 卡节点 / 药丸之前；消化行族不锚 —— 流内落位批收正：
  *  族元素逐轮就地、行创建点 = 流末）。单源 = 本档；**块不在本锚范围**（新块随流居本行下 —— 见档头；`blockAnchor` 链不收本行）。 */
 export function compressAnchorOf(root) {
   if (typeof root?.querySelector !== "function") return null
-  return root.querySelector("[data-timer]") ?? root.querySelector("[data-stopped]")
+  return root.querySelector("[data-timer]") ?? root.querySelector("[data-inbox]") ?? root.querySelector("[data-stopped]")
     ?? root.querySelector("[data-help]") ?? root.querySelector("[data-card]") ?? root.querySelector("[data-pill]")
 }

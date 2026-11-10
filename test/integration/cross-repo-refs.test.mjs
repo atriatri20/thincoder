@@ -8,7 +8,7 @@
  *
  * 四行对应关系（行号 = RTM 定死的号）：
  * 37-1 声明不免除存在性（但只在根在盘这一格）· 37-2 未声明即拒（文档面拒 / 台账面仍硬拒）·
- * 37-3 方向成环即拒 · 叶仓被声明后可解析 · 37-4 判不了就列报（未核）与「没看」在报面上分得开。
+ * 37-3 判集指向成环仓才拒、无关判集只出读数 · 叶仓被声明后可解析 · 37-4 判不了就列报（未核）与「没看」在报面上分得开。
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
@@ -130,15 +130,22 @@ test('CLI 37-2 文档门 × 同级目录：未声明仓名 ⇒ 锚·档缺 + 未
   )
 })
 
-// ── 37-3 方向：成环即拒；叶仓（无 manifest）被声明后其档可解析 ─────────────────
-test('CLI 37-3 文档门 × 出边图：A ↔ B 互声明 ⇒ 锚·环引 + REFUSED；叶仓被声明 ⇒ 零环引且其档可解析', { timeout: 60_000 }, async () => {
+// ── 37-3 方向：判集指向成环仓才拒；无关判集出读数；叶仓照常解析 ─────────────────
+test('CLI 37-3 文档门 × 出边图：指向 A ↔ B 环 ⇒ REFUSED；无关判集 ⇒ PASS + 环引读数；叶仓可解析', { timeout: 60_000 }, async () => {
   const club = makeWorld({
-    A: { publicRepos: ["../B"], files: { "docs/core/design/plain.md": "# 正文\n\n无指针一段。\n" } },
+    A: { publicRepos: ["../B"], files: {
+      "docs/core/design/plain.md": "# 正文\n\n见 ../B/PROJECT-MANIFEST.json。\n",
+      "docs/core/design/unrelated.md": "# 正文\n\nPROJECT-MANIFEST.json 是声明档名。\n",
+    } },
     B: { publicRepos: ["../A"], files: {} },
   })
   const ring = run(club.at("A"), "docs/core/design/plain.md", "gate")
-  assert.match(ring, /✗ 锚·环引 PROJECT-MANIFEST\.json（.*A）publicRepos 成环：A → B → A/, `成环即拒、链写全；实际：${ring}`)
+  assert.match(ring, /✗ 锚·环引 PROJECT-MANIFEST\.json（.*A）publicRepos 成环：A → B → A/, `指向成环仓仍拒、链写全；实际：${ring}`)
   assert.equal(firstLine(ring), "DOC-CHECK GATE: REFUSED（锚 1 条）", "环与档缺同计锚")
+  const unrelated = run(club.at("A"), "docs/core/design/unrelated.md", "gate")
+  assert.equal(firstLine(unrelated), "DOC-CHECK GATE: PASS", `无关判集放行：${unrelated}`)
+  assert.match(unrelated, /环引 1 条（本次判集未指向成环仓，不阻断交付）/, unrelated)
+  assert.doesNotMatch(unrelated, /✗ 锚·环引/, unrelated)
 
   // 叶仓：C 无 manifest、被 A 声明 ⇒ 零环引，且 C 内的在盘档照常可解析
   const leaf = makeWorld({

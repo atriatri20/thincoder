@@ -47,7 +47,8 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   const abortTombstones = new Set()
   /** 窗内时效面（timer 面 ∕ 空闲火面 ∕ 中止代次 —— 出档 `suspension-timers.mjs`）：宿主供读缝（`inWindow` =
    *  窗表判据 ∥ `busyOf` ∥ `takeOver`）+ **槽重装缝**（`reloadSlot` —— #799 窗内投递存活）+ 时钟三扇；
-   *  闩面三武装点接线住本档（`start` ∕ `closeWindow` ∕ `abort`）。 */
+   *  闩面接线住本档（`start` ∕ `closeWindow` ∕ `abort`）—— **入窗支只撤 timer 闩**（`timers.disarmTimer`），
+   *  取件闩留到 `abort` ∥ `abortAll` 两撤点（D-MI31：入窗不是会话死亡）。 */
   const timers = createSuspensionTimers({
     post, runTurn, busyOf, inWindow: (key) => windows.has(key), takeOver, reloadSlot, timer, clear, now,
   }) // `reloadSlot` 同源缝转口（#799：窗内 `deliver` 内先于投递重装——timer 轮重装单点）
@@ -242,7 +243,7 @@ function pendingSnapshot(agent) {
   function start(key, agent, { cwd = null } = {}) {
     if (windows.has(key)) return false // 同键已有窗 ⇒ 零动作（窗内 deadline 由 `timerFace` 单持——不另武装）
     if (!poolLive(agent)) { timers.sync(key, agent); return false } // 未入窗 ⇒ 武装空闲闩（§6.30.11 装配点①）
-    timers.disarm(key) // 入窗 ⇒ 撤空闲闩（同一 deadline 单持——零双注册）
+    timers.disarmTimer(key) // 入窗 ⇒ 只撤空闲闩（窗内同一 deadline 由 timerFace 单持——零双注册）；取件闩不撤（D-MI31）
     const controller = new AbortController()
     const entry = { key, agent, cwd, controller, frozen: null, handle: null, pending: [] }
     windows.set(key, entry)
@@ -291,7 +292,7 @@ function pendingSnapshot(agent) {
    *  续发期（`closeWindow` 摘窗之后）窗表无项 ⇒ 落**中止墓碑**（`resumeResidual` 检查点消费——免中止盲区）。 */
   function abort(key) {
     timers.bump(key) // #515③ 陈旧点火闸（先于早退——置位与撤闩同刻）
-    timers.disarm(key) // 会话清除面（§6.30.11 装配点③）：撤闩清点（无闩 ⇒ 零动作——返回语义不变：窗 ∥ 续发链）
+    timers.disarm(key) // 会话清除面（§6.30.11 装配点③ · D-MI31 撤点之一）：两族闩同撤（timer + 取件；无闩 ⇒ 零动作——返回语义不变：窗 ∥ 续发链）
     const entry = windows.get(key)
     if (!entry) {
       if (!resuming.has(key)) return false
@@ -329,7 +330,7 @@ function pendingSnapshot(agent) {
     abortAll() {
       let n = 0
       for (const key of new Set([...windows.keys(), ...resuming, ...timers.keys()])) if (abort(key)) n += 1 // 闩键同入（#515③：空闲态键不在窗表 ∕ 续发链——代次同落）
-      timers.disarmAll() // 切项目级联 ⇒ 撤闩清点（幂等——逐键 abort 已撤，兜底无闩面）
+      timers.disarmAll() // 切项目级联 ⇒ 两族闩同撤（幂等——逐键 abort 已撤，兜底无闩面；D-MI31 撤点之一）
       return n
     },
     /** 窗数读数（诊断 ∕ 测试）。 */

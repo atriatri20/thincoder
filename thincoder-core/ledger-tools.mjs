@@ -172,11 +172,11 @@ const ACTION_SPECS = {
         board: { type: "string", description: "归属板块（缺省 = 不变）" },
         req_doc: { type: "string", description: "需求档指针（缺省 = 不变）" },
         task_book: { type: "string", description: "任务书指针（缺省 = 不变）" },
-        evidence: { type: "string", description: "证据（缺省 = 不变；传入 = 追加——旧值非空 ⇒ 拼 `旧｜新`（「｜」零空格）、旧空直写；新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传）" },
+        evidence: { type: "string", description: "证据（缺省 = 不变；传入 = 追加——旧值非空 ⇒ 拼 `旧｜新`（「｜」零空格）、旧空直写；新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传）。在途 / 待核销 → 待讨论 时本笔必填，作为退回理由并随回执返回 reason" },
         evidenceReplace: { type: "boolean", description: "覆盖旗（布尔）：与 evidence 同传 = 整段替换（旧文零保留）；缺省 / false = 追加；旗独传（无新文）⇒ 拒" },
         trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "触发（缺省 = 不变）" },
         resume_when: { type: "string", description: "复启条件句（缺省 = 不变；值非空——空串 / 全空白 ⇒ 拒）" },
-        executor: { type: "string", description: "执行者 sessionId（可选——接手改写归属用；缺省 = 按状态迁移语义：进入待设计 / 在途自动写本会话；出在途 / 撤回清空）" },
+        executor: { type: "string", description: "执行者 sessionId（可选——普通接手改写归属用；缺省 = 按状态迁移语义：进入待设计 / 在途自动写本会话；出在途 / 撤回 / 退回待讨论清空；待核销 → 在途恒写本会话，显式值不覆盖）" },
       },
       additionalProperties: false,
     },
@@ -191,7 +191,7 @@ const ACTION_SPECS = {
         id: { type: "number", description: "条目 id（与 batch 恰携其一）" },
         batch: { type: "string", description: "批档指针（与 id 恰携其一）——批级批量结算：只销已到 待核销 的行；待讨论 / 待设计 点名跳过（须先 update 到 在途 认领）；在途 点名跳过（不可跳）" },
         status: { type: "string", enum: ["已核销", "已废弃"], description: "目标态（勾销 / 撤回）——携 batch 时可不给（缺省 = 勾销单值），给了只能是 已核销" },
-        evidence: { type: "string", description: "最小证据行（可选；传入 = 追加缺省——旧值非空 ⇒ 拼 `旧｜新`（「｜」零空格）、旧空直写；新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传）" },
+        evidence: { type: "string", description: "最小工作证据行（可选；传入 = 追加缺省——旧值非空 ⇒ 拼 `旧｜新`（「｜」零空格）、旧空直写；新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传）。核销只判应用本笔后的 evidence 非空白，不读锚批收口或评审状态" },
         evidenceReplace: { type: "boolean", description: "覆盖旗（布尔）：与 evidence 同传 = 整段替换（旧文零保留）；缺省 / false = 追加；旗独传（无新文）⇒ 拒" },
       },
       additionalProperties: false,
@@ -244,7 +244,7 @@ const UNION_PARAMETERS = {
     id: { type: "number", description: "条目 id（update / close：与 batch 恰携其一）" },
     batch: { type: "string", description: "批档指针（update / close：与 id 恰携其一）——批级批量：一次结算该批的行（update 携 status ⇒ 逐行迁移表重判；不携 status ⇒ 纯字段补丁；close 只销 待核销 行、status 可空）" },
     status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "状态（单行 close 必填 ∈ {已核销, 已废弃}；close 携 batch 时可空、给了只能是 已核销；update 迁移 / query 过滤——六态之一）" },
-    executor: { type: "string", description: "执行者 sessionId（update 可选——接手改写归属；缺省 = 按状态迁移语义：进入待设计 / 在途自动写本会话；出在途 / 撤回清空）" },
+    executor: { type: "string", description: "执行者 sessionId（update 可选——普通接手改写归属；缺省 = 按状态迁移语义：进入待设计 / 在途自动写本会话；出在途 / 撤回 / 退回待讨论清空；待核销 → 在途恒写本会话，显式值不覆盖）" },
   },
   additionalProperties: false,
 }
@@ -252,16 +252,19 @@ const UNION_PARAMETERS = {
 /** 变体构造（同名单对象、schema 窄化、两形永不同装配——先例 = `subagent` 工具 depth 面变体）：
  *  全量（depth-0 五 action；`writeFace:true` —— `readonly:false` + 动作级分类钩子，写面保持侧效门，
  *  query / count 归只读类 = 旧读二 `readonly:true` 同行为：planMode 放行 / 免审批）∥ 只读（depth>0
- *  二 action；`readonly:true`，写三 schema 级不可达）。形态显式声明（不按 actions 长度推导——增量
- *  变体不改错标文案）。 */
+ *  二 action；`readonly:true`，写三 schema 级不可达、写专用参数与写说明同样不出现）。
+ *  形态显式声明（不按 actions 长度推导——增量变体不改错标文案）。
+ *
+ *  **只读变体的参数面 = 本变体各 action 的 `ACTION_SPECS` 并集**（TOOLS.md §6.29 B6：按角色生成 schema）：
+ *  它拿不到 `title` / `evidence` / `id` 这类只有写动作消费的参数，也拿不到它们的说明；描述取自己的档
+ *  （`ledger-read.md`）——全量档 `ledger.md` 通篇讲五动作，只读角色读到它就是读到做不到的事。 */
 function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
   const entryTool = { name: "ledger", parameters: { type: "object", required: ["action"], properties: { action: { type: "string", enum: actions } } } }
-  return {
-    name: "ledger",
-    description: DESC("ledger"), // 文本单点 = tool-docs/ledger.md（五档要点合一）
-    parameters: {
-      ...UNION_PARAMETERS,
-      properties: {
+  const readProps = {}
+  if (readonly) for (const a of actions) Object.assign(readProps, ACTION_SPECS[a].parameters.properties)
+  const properties = readonly
+    ? { action: { type: "string", enum: actions, description: "操作（只读二值）：query 查询 / count 计数" }, ...readProps }
+    : {
         ...UNION_PARAMETERS.properties,
         action: {
           ...UNION_PARAMETERS.properties.action,
@@ -270,8 +273,11 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
             ? "操作（五值）：add 新增 / update 更新 / close 收口 / query 查询 / count 计数——写三仅主 agent 装配面"
             : "操作（只读二值）：query 查询 / count 计数",
         },
-      },
-    },
+      }
+  return {
+    name: "ledger",
+    description: readonly ? DESC("ledger-read") : DESC("ledger"), // 文本单点 = tool-docs/{ledger,ledger-read}.md
+    parameters: { type: "object", required: ["action"], properties, additionalProperties: false },
     readonly,
     isReadonlyAction(args) { return READ_ACTIONS.includes(args?.action) },
     async execute(args, ctx) {
@@ -299,8 +305,8 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
           const { cwd, id, batch, ...patch } = rest
           const target = startOf(ctx, anchor, cwd, batch, patch.task_book, patch.req_doc)
           let executorSessionId
-          if (patch.executor == null) {
-            // 显式 `null` ≡ 略去（§3.1 `null` 口径 · #474——与缺省同分支）；动态 import——零新静态边（K-LX1）
+          if (patch.executor == null || patch.status === "在途") {
+            // 回退到在途也必须供当前会话：显式旧 executor 不得覆盖机器语义。
             const { getSessionId } = await import("./session-slots.mjs")
             executorSessionId = getSessionId()
           }

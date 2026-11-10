@@ -77,8 +77,8 @@
 2. **剥离（显示面）**——恢复面 = `thincoder-desktop/src/main/session-slots.mjs` `pageHistory`（user 消息文本过核件 `stripAtRefs`；首屏 ∕ 回填同门；assistant ∕ tool 零动）∥ 标题源 = 核 `thincoder-core/generate-title.mjs` 读源处剥离（标题不得由 `[File: …]` 正文生成）。
    盘面 ∕ 机读线零触碰（注入形 = 落盘形——只剥离显示面）；落点同位 = `thincoder-vscode/src/extension/panel-session.mjs`。
 3. **欢迎条词值**——`welcome.shortcuts` 两语补 `@` 段：zh = 「输入 @ 引用文件 · Enter 发送 · Shift+Enter 换行」∥ en = 「Type @ for file references · Enter to send · Shift+Enter for newline」（plain-text 形；词条落点 = `thincoder-desktop/renderer/i18n-views.mjs`）。
-4. **判据**——机检 = 单元测试档 **9/9 绿**；真机 = 五用例（注入哨兵复述 · 切回剥离形 · 负向零围栏 · VSC 回归复读 · 欢迎条首屏）= 父侧探针。
-5. **计数（D3）**——词键 **0** 增退（`welcome.shortcuts` 值面）· 通道 **0** · 白名单 **0** · 段集零改；新档 **1**（`thincoder-desktop/src/main/file-refs.mjs` **19**）+ 核件 **1**（`thincoder-core/file-refs.mjs` **103**——上提单源，两端共享）。
+4. **判据**——机检 = 单元测试档；真机 = 五用例（注入哨兵复述 · 切回剥离形 · 负向零围栏 · VSC 回归复读 · 欢迎条首屏）= 父侧探针。
+5. **计数（D3）**——词键 **0** 增退（`welcome.shortcuts` 值面）· 通道 **0** · 白名单 **0** · 段集零改；新档 **1**（`thincoder-desktop/src/main/file-refs.mjs`）+ 核件 **1**（`thincoder-core/file-refs.mjs`——上提单源，两端共享）。
 
 **批注（slash 命令面）**：本注定形桌面 composer 的**斜杠命令面**（用户走查「桌面敲 `/model` 无反应」+「要啊」+「开批」；机制单源 = `docs/render-core/design/RENDER-CORE.md` §2 **KD-RC-12** ∥ §5 条 6）。本注只述端侧触发 ∥ 命令 ∥ 回落 ∥ 忙态面与判据，不重述核件机制。
 
@@ -161,21 +161,21 @@
 
 ## 3. 文件账（本域）
 
-### 3.1 本端文件清单与行数预算（本域族行）
+### 3.1 文件账（本域族行）
 
-| 文件 | 预估行数 | 说明 |
+| 文件 | 行数面 | 说明 |
 |---|---|---|
-| `thincoder-desktop/src/main/queued-input.mjs` | **78** | 宿主队列单源（队列 + 计划取批 + 核件形取项——单源 = 本档 §1 **KD-40**） |
-| `thincoder-desktop/src/main/window-queue.mjs` | **117**（+9——**出站单点 `emitDelivery`**（步边界消费帧改经此口——守卫恒在：缺省 ⇒ 零出站）） | 窗队投影 ∕ 帧构造面（面 = 条目形 ∕ 窗队投影 ∕ 六帧 ∕ 步边界取批 ∕ 送达面〔`prepare ⇒ degrade`——与 `turn-chain.mjs` 同判据〕；零宿主依赖（`postQueue` ∕ `prepare` ∕ `degrade` 三注入）⇒ 平 node 直测；单源 = 本档 §3.2） |
-| `thincoder-desktop/src/main/attachments.mjs` | **107** | 附件落盘面（渲染面 `dataURL` → 主进程落文件 + 核 `appendImagePointer` 锚点）；语义 / 上限 / 清理时点单源 = `docs/desktop/design/IPC.md` §2「附件注」 |
-| `thincoder-desktop/src/main/file-refs.mjs` | **19** | 端薄壳（核单源 = `thincoder-core/file-refs.mjs`）：`node:fs` 三件探针 + 核件注入转口 + `stripAtRefs` re-export；消费面 = 注入缝（`turn-driver.mjs`）∥ 恢复面剥离（`thincoder-desktop/src/main/session-slots.mjs`） |
-| `thincoder-desktop/src/main/at-complete.mjs` | **74** | `at:complete` 文件枚举过滤（@ 前缀剥离 → 项目树枚举 → 过滤 → 封顶 20；零改 `thincoder-desktop/src/main/file-links.mjs`） |
-| `thincoder-desktop/renderer/queue.mjs` | **40** | 队列面（三纯动作 + `QUEUE_MAX`） |
-| `thincoder-desktop/renderer/mount-composer.mjs` | **301** | 输入区挂载：两态落形 · Enter / Shift+Enter 键位 · 忙态入队（受理交宿主任判）· 满队提示（按键判）；附件条挂载（根锚 `data-attachments`——构树 / 采集住 `thincoder-desktop/renderer/attach.mjs`）+ 附件随 `msg:send` 载荷 `images` 出口 + `degraded` 提示行；`refreshCandidates` 透传导出（`sync.refreshCandidates`）+ 句柄注；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
-| `thincoder-desktop/renderer/composer-wire.mjs` | **301**（+3——**成功径清点**（本通道失败行随成功径清点 + 重绘）） | 输入区写面（通道往返归一 + 逐类型出站 handler：`msg:send` ∕ `msg:interrupt` ∕ `at:complete` ∕ `session:prefs` ∕ `session:flags` ∕ footer 三出口；本地先行块登记与退流 ∕ 失败态行源） |
-| `thincoder-desktop/renderer/composer-sync.mjs` | **343** | 输入面板随动派生面（`state` 读面 + 忙态 ∕ 守卫派生 + 模式位推送 + 候选面 + 两挂件锚窄刷（提示带 ∕ 末条复制控件）+ `syncPanel`）；候选面重写（`land` ∕ `fetchCatalog` ∕ `startRetryChain` ∕ `syncCandidates` ∕ `pushModels` ∕ `refreshCandidates`）；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
-| `thincoder-desktop/renderer/attach.mjs` | **54** | 附件采集与构树纯函数（输入区 `paste` → `FileReader` → `dataURL` 条目集 + 移除控件；**零 fs** ⇒ 平 node 直测）；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
-| `thincoder-desktop/renderer/chat-composer.css` | **136** | 输入区段样式：变量别名块（C2 唯一桥）+ 提示行锚 + 扁平化覆盖段；面板族本体单源 = 核件 `composer/composer.css`——两控件族 + `⧉` 字形 + 尾锚规则随摘 |
+| `thincoder-desktop/src/main/queued-input.mjs` | — | 宿主队列单源（队列 + 计划取批 + 核件形取项——单源 = 本档 §1 **KD-40**） |
+| `thincoder-desktop/src/main/window-queue.mjs` | —（+9——**出站单点 `emitDelivery`**（步边界消费帧改经此口——守卫恒在：缺省 ⇒ 零出站）） | 窗队投影 ∕ 帧构造面（面 = 条目形 ∕ 窗队投影 ∕ 六帧 ∕ 步边界取批 ∕ 送达面〔`prepare ⇒ degrade`——与 `turn-chain.mjs` 同判据〕；零宿主依赖（`postQueue` ∕ `prepare` ∕ `degrade` 三注入）⇒ 平 node 直测；单源 = 本档 §3.2） |
+| `thincoder-desktop/src/main/attachments.mjs` | — | 附件落盘面（渲染面 `dataURL` → 主进程落文件 + 核 `appendImagePointer` 锚点）；语义 / 上限 / 清理时点单源 = `docs/desktop/design/IPC.md` §2「附件注」 |
+| `thincoder-desktop/src/main/file-refs.mjs` | — | 端薄壳（核单源 = `thincoder-core/file-refs.mjs`）：`node:fs` 三件探针 + 核件注入转口 + `stripAtRefs` re-export；消费面 = 注入缝（`turn-driver.mjs`）∥ 恢复面剥离（`thincoder-desktop/src/main/session-slots.mjs`） |
+| `thincoder-desktop/src/main/at-complete.mjs` | — | `at:complete` 文件枚举过滤（@ 前缀剥离 → 项目树枚举 → 过滤 → 封顶 20；零改 `thincoder-desktop/src/main/file-links.mjs`） |
+| `thincoder-desktop/renderer/queue.mjs` | — | 队列面（三纯动作 + `QUEUE_MAX`） |
+| `thincoder-desktop/renderer/mount-composer.mjs` | — | 输入区挂载：两态落形 · Enter / Shift+Enter 键位 · 忙态入队（受理交宿主任判）· 满队提示（按键判）；附件条挂载（根锚 `data-attachments`——构树 / 采集住 `thincoder-desktop/renderer/attach.mjs`）+ 附件随 `msg:send` 载荷 `images` 出口 + `degraded` 提示行；`refreshCandidates` 透传导出（`sync.refreshCandidates`）+ 句柄注；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
+| `thincoder-desktop/renderer/composer-wire.mjs` | —（+3——**成功径清点**（本通道失败行随成功径清点 + 重绘）） | 输入区写面（通道往返归一 + 逐类型出站 handler：`msg:send` ∕ `msg:interrupt` ∕ `at:complete` ∕ `session:prefs` ∕ `session:flags` ∕ footer 三出口；本地先行块登记与退流 ∕ 失败态行源） |
+| `thincoder-desktop/renderer/composer-sync.mjs` | — | 输入面板随动派生面（`state` 读面 + 忙态 ∕ 守卫派生 + 模式位推送 + 候选面 + 两挂件锚窄刷（提示带 ∕ 末条复制控件）+ `syncPanel`）；候选面重写（`land` ∕ `fetchCatalog` ∕ `startRetryChain` ∕ `syncCandidates` ∕ `pushModels` ∕ `refreshCandidates`）；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
+| `thincoder-desktop/renderer/attach.mjs` | — | 附件采集与构树纯函数（输入区 `paste` → `FileReader` → `dataURL` 条目集 + 移除控件；**零 fs** ⇒ 平 node 直测）；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
+| `thincoder-desktop/renderer/chat-composer.css` | — | 输入区段样式：变量别名块（C2 唯一桥）+ 提示行锚 + 扁平化覆盖段；面板族本体单源 = 核件 `composer/composer.css`——两控件族 + `⧉` 字形 + 尾锚规则随摘 |
 
 ### 3.2 现有文件改动（本域）
 
@@ -184,13 +184,13 @@
 
 | 文件 | 落值（构成） |
 |---|---|
-| `thincoder-desktop/src/main/suspension-drive.mjs` | **340**（**（≤500 ⇒ 免拆）**；构成 = 注入转口（`postQueue` ∕ `prepare` ∕ `degrade`）· `pushInput(key, text, images)` 受理 · 窗内消费 ∕ 残续发调用点 · 窗中止清队 · `inputSnapshot` 读面；**步边界消费帧出站 = 窗队件 `emitDelivery` 单点**） |
-| `thincoder-desktop/src/main/turn-driver.mjs` | **291**（构成 = 挂起支回执 `queued` · `queueView` 并源 · `queueSnapshot` 读面 · 窗支携图受理 ∕ `createSuspensionDrive({ prepare })` 注入） |
-| `thincoder-desktop/renderer/views/chrome.mjs` | **198**（`suspActiveOf`——`busyOf` 邻位导出） |
-| `thincoder-desktop/renderer/composer-wire.mjs` | **176**（`sendDirect` 队形支退流 + 挂起空闲复位 · 失败径退流 · `noteEcho` null 登记） |
-| `thincoder-desktop/renderer/mount-composer.mjs` | **243**（`onUserEcho` 抑制面扩 susp + 恒登记 · wire deps `suspIdleOf`） |
-| `thincoder-desktop/renderer/composer-sync.mjs` | **188**（`turnState` 改用 `suspActiveOf`） |
-| `thincoder-desktop/src/main/turn-chain.mjs` | **99**（**零改**——帧构造单点保位） |
+| `thincoder-desktop/src/main/suspension-drive.mjs` | —（**（≤500 ⇒ 免拆）**；构成 = 注入转口（`postQueue` ∕ `prepare` ∕ `degrade`）· `pushInput(key, text, images)` 受理 · 窗内消费 ∕ 残续发调用点 · 窗中止清队 · `inputSnapshot` 读面；**步边界消费帧出站 = 窗队件 `emitDelivery` 单点**；入窗支只撤 timer 闩——`timers.disarmTimer`） |
+| `thincoder-desktop/src/main/turn-driver.mjs` | —（构成 = 挂起支回执 `queued` · `queueView` 并源 · `queueSnapshot` 读面 · 窗支携图受理 ∕ `createSuspensionDrive({ prepare })` 注入） |
+| `thincoder-desktop/renderer/views/chrome.mjs` | —（`suspActiveOf`——`busyOf` 邻位导出） |
+| `thincoder-desktop/renderer/composer-wire.mjs` | —（`sendDirect` 队形支退流 + 挂起空闲复位 · 失败径退流 · `noteEcho` null 登记） |
+| `thincoder-desktop/renderer/mount-composer.mjs` | —（`onUserEcho` 抑制面扩 susp + 恒登记 · wire deps `suspIdleOf`） |
+| `thincoder-desktop/renderer/composer-sync.mjs` | —（`turnState` 改用 `suspActiveOf`） |
+| `thincoder-desktop/src/main/turn-chain.mjs` | —（**零改**——帧构造单点保位） |
 | 核件 ∕ VSC ∕ `thincoder-render-core` | **0**（结构性零改） |
 | 测试覆盖 | 全清令：**集成测试不写 ∕ 不改 ∕ 不跑；批档本地用例随批留存（不入集成测试树）**；验收 = 判据句 + 真机读数——父侧闭合 |
 | `docs/desktop/design/{PROJECT,IPC,UI,RENDERER}.md` | 本档设计落定（已落——KD-23 ∕ KD-34 ∕ KD-40 ⑥ · IPC `ev:queue` ∕ `msg:send` 两行 · UI 两批注 + 输入区行 · RENDERER §1.1） |
@@ -199,13 +199,13 @@
 
 | 文件 | 落值（构成） |
 |---|---|
-| `thincoder-desktop/src/main/suspension-drive.mjs` | **337**（窗面接线（步边界取批 ∕ 窗优先组合）+ 容量满判（`"full"`）+ 残值按批 + 时序守卫面出档（⇒ `suspension-guard.mjs`）——**（≤500 ⇒ 免拆）**） |
-| `thincoder-desktop/src/main/suspension-guard.mjs`（新档） | **27**（`guardedDeliver`——hold 占位守卫序列） |
-| `thincoder-desktop/src/main/queued-input.mjs` | **78**（`peek` ∕ `take` 核件形取项 + `plan` 形） |
-| `thincoder-desktop/src/main/window-queue.mjs` | **103**（步边界取批 `stepPickup` + 五帧） |
-| `thincoder-desktop/src/main/turn-chain.mjs` | **99**（步边界 slash 即消费 + 尾径核件取项（`peek` ∕ `take`）） |
-| `thincoder-desktop/src/main/turn-driver.mjs` | **291**（步边界缝组合（窗优先）+ 窗支回执三态） |
-| 核 ∕ VSC ∕ CLI 三档 | 核 `queued.mjs` **90**（slash 单条取）· VSC `queued-merge` **11** ∕ `queued-pickup` **42** ∕ `panel-turn-stages` **250** ∕ `suspension` **290** · CLI 两档注释 |
+| `thincoder-desktop/src/main/suspension-drive.mjs` | —（窗面接线（步边界取批 ∕ 窗优先组合）+ 容量满判（`"full"`）+ 残值按批 + 时序守卫面出档（⇒ `suspension-guard.mjs`）——**（≤500 ⇒ 免拆）**） |
+| `thincoder-desktop/src/main/suspension-guard.mjs`（新档） | —（`guardedDeliver`——hold 占位守卫序列） |
+| `thincoder-desktop/src/main/queued-input.mjs` | —（`peek` ∕ `take` 核件形取项 + `plan` 形） |
+| `thincoder-desktop/src/main/window-queue.mjs` | —（步边界取批 `stepPickup` + 五帧） |
+| `thincoder-desktop/src/main/turn-chain.mjs` | —（步边界 slash 即消费 + 尾径核件取项（`peek` ∕ `take`）） |
+| `thincoder-desktop/src/main/turn-driver.mjs` | —（步边界缝组合（窗优先）+ 窗支回执三态） |
+| 核 ∕ VSC ∕ CLI 三档 | 核 `queued.mjs` · VSC `queued-merge` ∕ `queued-pickup` ∕ `panel-turn-stages` ∕ `suspension` · CLI 两档注释 |
 | 测试覆盖 | 全清令：**集成测试不写 ∕ 不改 ∕ 不跑；批档本地用例随批留存（不入集成测试树）**；验收 = 判据句 + 真机读数——父侧闭合 |
 | `docs/desktop/design/{PROJECT,UI}.md` + `docs/vsc/design/WEBVIEW-INPUT.md` | 本档设计档（KD-40 ①⑤⑥ 句 + 本档 §2「批注（slash 命令面）」 + WEBVIEW-INPUT 细则⑧） |
 
@@ -214,11 +214,11 @@
 
 | # | 档 | 落值 | 面 |
 |---|---|---|---|
-| 1 | `thincoder-desktop/renderer/slash-commands.mjs`（已落） | **65**（命令表 4 条 + 别名 2——全调 `ctx.actions`；零第二实现） | 端表层 |
-| 2 | `thincoder-desktop/renderer/mount-composer.mjs` | **≈282**（+import + `slash` deps 一处装配） | 装配面 |
-| 3 | `thincoder-desktop/renderer/i18n-views.mjs` | **348**（+3 键 × 2 语 + ⑬ 组注；**（≤500 ⇒ 免拆）**） | 词面 |
-| 4 | 核包（`thincoder-render-core/`） | `thincoder-render-core/composer/slash.mjs`（已落）**43** · `thincoder-render-core/composer/panel.mjs` **489**（**（≤500 ⇒ 免拆）**）· `thincoder-render-core/composer/model-menu.mjs` **456**（**（≤500 ⇒ 免拆）**）· `thincoder-render-core/composer/controls.mjs` **219**——逐档 = `docs/render-core/design/RENDER-CORE.md` §6 | 核面 |
-| 5 | 单元测试档 | 斜径命令面族（已建成 · 425 行——解析 ∥ 别名 ∥ 回落 ∥ 表纪律；随批留存 · 不进集成测试树） | 全批 |
+| 1 | `thincoder-desktop/renderer/slash-commands.mjs`（已落） | —（命令表 4 条 + 别名 2——全调 `ctx.actions`；零第二实现） | 端表层 |
+| 2 | `thincoder-desktop/renderer/mount-composer.mjs` | —（+import + `slash` deps 一处装配） | 装配面 |
+| 3 | `thincoder-desktop/renderer/i18n-views.mjs` | —（+3 键 × 2 语 + ⑬ 组注；**（≤500 ⇒ 免拆）**） | 词面 |
+| 4 | 核包（`thincoder-render-core/`） | `thincoder-render-core/composer/slash.mjs`（已落）· `thincoder-render-core/composer/panel.mjs` —（**（≤500 ⇒ 免拆）**）· `thincoder-render-core/composer/model-menu.mjs` —（**（≤500 ⇒ 免拆）**）· `thincoder-render-core/composer/controls.mjs` ———逐档 = `docs/render-core/design/RENDER-CORE.md` §6 | 核面 |
+| 5 | 单元测试档 | 斜径命令面族（解析 ∥ 别名 ∥ 回落 ∥ 表纪律；随批留存 · 不进集成测试树） | 全批 |
 | 6 | 设计档 | 本档 §3.2（本块）· `docs/desktop/design/UI.md` §1 输入区行 + 表行 15 + 批注 · `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-12 + §5 + §6 + §9 | 全批 |
 
 零触面：`renderer/composer-wire.mjs` ∥ `renderer/composer-sync.mjs` ∥ `thincoder-desktop/renderer/app.mjs` ∥ `thincoder-desktop/renderer/index.html` ∥ `composer.css` ∥ `docs/desktop/design/IPC.md`（**零新通道**）∥ CLI 全树 ∥ VSC 全树 ∥ `thincoder-core`。
@@ -228,21 +228,21 @@
 
 | # | 档 | 落值 | 面 |
 |---|---|---|---|
-| 1 | `thincoder-render-core/composer/slash.mjs` | **69**（+`formatHelp` 表→行集 ∥ 组序常量） | 核面 |
-| 2 | `thincoder-render-core/composer/panel.mjs` | **489**（零触——打印口 = 端侧表构造期闭包注入；`deps.slash`/`ctx` 零改 ∥ 距 800 硬限余 **311**） | 核面 |
-| 3 | `thincoder-desktop/renderer/slash-commands.mjs` | **65**（4 条补 `group`/`descKey` + `/help` 条（别名 `/h`）） | 端表层 |
-| 4 | `thincoder-desktop/renderer/mount-composer.mjs` | **296**（+`formatHelp` import ∥ `printHelp` 口 ∥ deps 装配补键） | 装配面 |
-| 5 | `thincoder-desktop/renderer/store.mjs` | **322**（+`helpLines` 槽 ∥ `setHelpLines` 纯动作；**越层在册——结构性触碰 ⇒ 拆档评估窗口触发；处置 = 续期**） | 状态树 |
-| 6 | `thincoder-desktop/renderer/views/chat-chrome.mjs` | **252**（+`helpGroupNode` ∥ `syncHelp` ∥ `helpAnchorOf` ∥ 锚链四件随动） | 帧刷面 |
-| 7 | `thincoder-desktop/renderer/views/chat-model.mjs` | **117**（+`help` 字段 ∥ `helpLinesOf`） | 模型面 |
-| 8 | `thincoder-desktop/renderer/views/chat-tree.mjs` | **153**（帮助行族入树——台账行组后） | 构树面 |
-| 9 | `thincoder-desktop/renderer/views/compress-status.mjs` | **75**（`compressAnchorOf` 链补） | 锚检查 |
-| 10 | `thincoder-desktop/renderer/frame-dispatch.mjs` | **53**（`CHAT_KEYS` += `helpLines`） | 帧分派 |
-| 11 | `thincoder-desktop/renderer/page-read.mjs` | **293**（+`clearHelpLines`——运行期痕五清） | 页读面 |
-| 12 | `thincoder-desktop/renderer/i18n-views.mjs` | **362**（+6 键 × 2 语 + ⑬ 组注；**（≤500 ⇒ 免拆）**） | 词面 |
-| 13 | `thincoder-desktop/renderer/i18n.mjs` | **404**（键数：`VIEWS_DICT` 135 ∥ `HOST_DICT` 308） | 词面 |
-| 14 | `thincoder-desktop/renderer/chat-fixes.css` | **124**（帮助行族三行类） | 样式面 |
-| 15 | 单元测试档 | 斜径命令面族 **425**（+用例 8–11；既有用例随动——别名集 + `/h` ∥ `/help` 条 ∥ `slash.unknown` 新值） | 全批 |
+| 1 | `thincoder-render-core/composer/slash.mjs` | —（+`formatHelp` 表→行集 ∥ 组序常量） | 核面 |
+| 2 | `thincoder-render-core/composer/panel.mjs` | —（零触——打印口 = 端侧表构造期闭包注入；`deps.slash`/`ctx` 零改 ∥ 距 800 硬限余 **311**） | 核面 |
+| 3 | `thincoder-desktop/renderer/slash-commands.mjs` | —（4 条补 `group`/`descKey` + `/help` 条（别名 `/h`）） | 端表层 |
+| 4 | `thincoder-desktop/renderer/mount-composer.mjs` | —（+`formatHelp` import ∥ `printHelp` 口 ∥ deps 装配补键） | 装配面 |
+| 5 | `thincoder-desktop/renderer/store.mjs` | —（+`helpLines` 槽 ∥ `setHelpLines` 纯动作；**越层在册——结构性触碰 ⇒ 拆档评估窗口触发；处置 = 续期**） | 状态树 |
+| 6 | `thincoder-desktop/renderer/views/chat-chrome.mjs` | —（+`helpGroupNode` ∥ `syncHelp` ∥ `helpAnchorOf` ∥ 锚链四件随动） | 帧刷面 |
+| 7 | `thincoder-desktop/renderer/views/chat-model.mjs` | —（+`help` 字段 ∥ `helpLinesOf`） | 模型面 |
+| 8 | `thincoder-desktop/renderer/views/chat-tree.mjs` | —（帮助行族入树——台账行组后） | 构树面 |
+| 9 | `thincoder-desktop/renderer/views/compress-status.mjs` | —（`compressAnchorOf` 链补） | 锚检查 |
+| 10 | `thincoder-desktop/renderer/frame-dispatch.mjs` | —（`CHAT_KEYS` += `helpLines`） | 帧分派 |
+| 11 | `thincoder-desktop/renderer/page-read.mjs` | —（+`clearHelpLines`——运行期痕六清） | 页读面 |
+| 12 | `thincoder-desktop/renderer/i18n-views.mjs` | —（+6 键 × 2 语 + ⑬ 组注；**（≤500 ⇒ 免拆）**） | 词面 |
+| 13 | `thincoder-desktop/renderer/i18n.mjs` | —（键数：`VIEWS_DICT` 135 ∥ `HOST_DICT` 308） | 词面 |
+| 14 | `thincoder-desktop/renderer/chat-fixes.css` | —（帮助行族三行类） | 样式面 |
+| 15 | 单元测试档 | 斜径命令面族（+用例 8–11；既有用例随动——别名集 + `/h` ∥ `/help` 条 ∥ `slash.unknown` 新值） | 全批 |
 
 零触面：`renderer/composer-wire.mjs` ∥ `renderer/composer-sync.mjs` ∥ `thincoder-desktop/renderer/app.mjs` ∥ `thincoder-desktop/renderer/index.html` ∥ `docs/desktop/design/IPC.md`（**零新通道**）∥ CLI 全树 ∥ VSC 全树 ∥ `thincoder-core`。
 
@@ -251,8 +251,8 @@
 
 | # | 档 | 落值 | 面 |
 |---|---|---|---|
-| 1 | `thincoder-desktop/renderer/i18n-views.mjs` | **≈399**（+6 键 × 2 语 + ② 组注；**（≤500 ⇒ 免拆）**） | 词面 |
-| 2 | `thincoder-desktop/renderer/i18n.mjs` | **≈419**（键数：`VIEWS_DICT` 144 ∥ `HOST_DICT` 314） | 词面 |
+| 1 | `thincoder-desktop/renderer/i18n-views.mjs` | —（+6 键 × 2 语 + ② 组注；**（≤500 ⇒ 免拆）**） | 词面 |
+| 2 | `thincoder-desktop/renderer/i18n.mjs` | —（键数：`VIEWS_DICT` 144 ∥ `HOST_DICT` 314） | 词面 |
 | 3 | 桌面端面（`thincoder-desktop/renderer/attach.mjs` ∥ `thincoder-desktop/renderer/composer-wire.mjs` ∥ `thincoder-desktop/renderer/composer-sync.mjs` ∥ `thincoder-desktop/renderer/mount-composer.mjs` ∥ `thincoder-desktop/renderer/chat-composer.css`） | **零触**（内联在核——文本档不经 `images` 列 ∥ 不经端写面） | 端面 |
 | 4 | 单元测试档 | 附件面族（已落——平 node + happy-dom；随批留存 · 不进集成测试树） | 全批 |
 | 5 | 设计档 | 本档 §2（本注）· §3.2（本块）· `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-13 + §5 + §6 + §9 | 全批 |
@@ -279,7 +279,7 @@
 - **真机** = **T-DSK48**（窗内携图提交 ⇒ 受理回执 ∧ 待发送带在场；消费 ⇒ 恰一枚入流 + 图随回合送达 + `degraded` 浮出）+ **核件 ∕ VSC ∕ `thincoder-render-core` 零改**（结构性判据）；**离线不可产面**（真 provider 回合 ⇒ 附件送达判决）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计条目（裁定）。
 
 - **斜径命令面批（验收）**：需求回指 = **D34**（斜杠命令族——行为标杆 = CLI 实形；5 条 + 别名 3）；设计单源 = `docs/render-core/design/RENDER-CORE.md` §2 **KD-RC-12** ∥ §5 条 6 ∥ 本档 §2（slash 命令面批注）。
-- **机检** = 单元测试档（**已建成 · 425 行 · 18 例全绿**——用例 1–9（含用例 6A–6J 面板拦截假 DOM 实跑）；随批留存 · 不进集成测试树）。
+- **机检** = 单元测试档（用例 1–9（含用例 6A–6J 面板拦截假 DOM 实跑）；随批留存 · 不进集成测试树）。
 - **真机** = **T-DSK56**（真 Electron：`/model` 开菜单 ∥ `/help` 流内打印 ∥ 回落 toast + 文本保留）；**离线不可产面**（真交互 ∥ 真菜单 ∥ 真 provider 回合）= 人工走查 + 父侧真跑闭合（**D16 义务**）；测试文件随修随加——不占设计条目（裁定）。
 
 ## 5. 用例
@@ -291,7 +291,7 @@
 | T-DSK23 | 边界 · 队列上限 | 连续在飞态下投满条数 > `QUEUE_MAX` | 达上限后提示行落地且**该条不入队**（回执 `queue-full`；队长不增、输入文本保留）；提示词出自词表键；**消费失败 ∕ 续发失败 ⇒ 该条留队**（队长不降 + `console.error`——零静默丢条） | — |
 | T-DSK28 | 边界 · 会话级偏好隔离 | 两会话（A 活动 / B 非活动）各改 provider / 模型 / 档位（含 `off` 与 `Auto` 各一例；另例：不可 `off` 模型——off 选项缺席）；另例：B 回合在飞时提交；另例：提交表外档位字面串；另例：只送 `provider`（不携 `model`）；另例：槽不可读 / 键不合法 | ① 各值只落本槽（`session:prefs` 回执 `meta` ⇒ 就地刷本行 · 不整页重挂 · 零乐观写）；② 切标签回读 = 各自槽值（互不波及）；③ 改 A 不改 B（B 只写盘——内存态不动）；④ 在飞 ⇒ 受理（写盘 + 回执携 `meta`）· 槽不可读 ⇒ 拒 `slot-missing` · 键不合法 ⇒ 拒 `bad-key`——拒径两档皆**零写**且失败缺 `meta` 键；⑤ 表外档位字面串 ⇒ 归一 `null`（未设——原非 `null` 亦置 `null`）、其余键照改；⑥ 槽往返不丢（`effort` 随 `saveSession` 落盘；老槽无键 ⇒ `null` 容忍 · 零回填）；⑦ 只送 `provider` ⇒ 拒 `model-required` 且**零写**（模型候选随动 = T-DSK7） | — |
 | T-DSK48 | 正常 · 挂起窗队列携图（D25 续） | 真 Electron：① 挂起窗在场时输入区提交文本 + 附件 ② 窗落定消费后观察入流与送达 ③ 另例换非视觉模型 | ① 回执 `{ ok: true, queued: true }` ∧ 待发送带 `[data-pending-item][data-raw]` = 提交文本逐字 ∧ 流内零块（`data-blocks` 不变）∧ 图不入快照 ② 消费 ⇒ 带项退场 ∧ 流内**恰一枚**用户块 ∧ 图随回合送达（落盘 + 指针段） ③ 降级码 `"non-vision"` 随消费回执 `delivered.degraded` 浮出（零静默）；核件 ∕ VSC ∕ `thincoder-render-core` 零改（结构性判据） | 机检 = 随批单元证据（**批档本地用例随批留存**——载体 = 窗队列 VSC 逐点对齐批单元测试档（T1–T9） · 不入集成测试树；全清令：集成测试不写 ∕ 不改 ∕ 不跑）；真机 = 父侧真跑闭合（D16 义务）；用例号自铸披露 |
-| T-DSK56 | 正常 / 边界 · 斜径命令面（D34 · 真 Electron） | 真 Electron：① 提交 `/model`（另例别名 `/m`）；② 提交 `/help`（另例别名 `/h`）；③ 提交未知命令 `/nope`；④ 携参 `/model x`；⑤ 忙态 `/model` ∥ `/plan` | ① 模型菜单开出（与模型钮**同一菜单同一门**——`.mm-overlay` 在场）∧ 输入框清空 ∧ 零消息上行（零 user 块）∧ `↑` 可召回；② 流内帮助行族 `[data-help]` 在场（三段形：标签 ∥ 组行 ∥ 命令行——内容 = 端表本体经核 `formatHelp`）∧ 回底；出站 `msg:send` ⇒ 行族退场（回合起跑门——负判）∧ 重开会话 ⇒ 行族失（首屏门五清——负判）；③ 回落 = toast「未知命令：/nope」+ 提交文本保留（不发送）；④ 携参 ⇒ `slash.args` 拒 + 文本保留；⑤ 忙态 `/model` ⇒ 菜单开出 ∧ 零 toast ∧ 文本清空，忙态 `/plan` ⇒ 钮态翻转（同钮门） | 机检 = 单元测试档（**已建成 · 425 行 · 18 例全绿**——用例 6A–6J 假 DOM 拦截面）；真机 = 父侧真跑闭合（**D16 义务**）；用例号自铸披露 |
+| T-DSK56 | 正常 / 边界 · 斜径命令面（D34 · 真 Electron） | 真 Electron：① 提交 `/model`（另例别名 `/m`）；② 提交 `/help`（另例别名 `/h`）；③ 提交未知命令 `/nope`；④ 携参 `/model x`；⑤ 忙态 `/model` ∥ `/plan` | ① 模型菜单开出（与模型钮**同一菜单同一门**——`.mm-overlay` 在场）∧ 输入框清空 ∧ 零消息上行（零 user 块）∧ `↑` 可召回；② 流内帮助行族 `[data-help]` 在场（三段形：标签 ∥ 组行 ∥ 命令行——内容 = 端表本体经核 `formatHelp`）∧ 回底；出站 `msg:send` ⇒ 行族退场（回合起跑门——负判）∧ 重开会话 ⇒ 行族失（首屏门六清——`clearHelpLines` 在清点列，负判）；③ 回落 = toast「未知命令：/nope」+ 提交文本保留（不发送）；④ 携参 ⇒ `slash.args` 拒 + 文本保留；⑤ 忙态 `/model` ⇒ 菜单开出 ∧ 零 toast ∧ 文本清空，忙态 `/plan` ⇒ 钮态翻转（同钮门） | 机检 = 单元测试档（用例 6A–6J 假 DOM 拦截面）；真机 = 父侧真跑闭合（**D16 义务**）；用例号自铸披露 |
 | T-DSK67 | 正常 / 边界 · 模型菜单行语义与写失败可见（真 Electron） | 真 Electron：① 点开模型菜单 ⇒ 点 provider 行（另例：同一点击再点一次）；② 点组体内模型条目；③ 喂 `session:prefs` 失败（槽不可读 ∥ 键不合法）；④ 喂 `defaultModel` 写回失败（`mtime-conflict` 类） | ① 行点击 = 展开⇄收起（两态可观测——组体在场 ⇔ `aria-expanded="true"`）∧ 菜单层恒在场（点外 ∥ Esc 才关）∧ 两态零 `post`（器下拦截计数为 0）∥ 零槽写（槽档、`defaultModel`、钮文本三面零动）；行无 `aria-selected`（✓ 勾选仅在组体内条目）；② 条目拾取恰一次（恰一发 `session:prefs`）∧ 菜单在场期换候选行集仍生效（`row` 直传——零丢点）∧ 钮文本 = 槽现值；③ 失败 ⇒ 失败行 `[data-notice="prefs-failed"]` 在场（词携 `${reason}`）∧ 钮 ∥ 选中态回滚槽现值 ∧ 槽零写；**随后成功受理 ⇒ 失败行随清点退场（重绘发生）**；负控：先喂 `msg:send` 失败、随后 prefs 成功 ⇒ 该失败行恒在场（source 门）；④ 写回失败 ⇒ 回执携 `carryover:{ ok:false, reason }` ⇒ 同一条失败行 ∧ 槽写照旧（不反扑） | 机检 = 单元测试档（用例 a ∥ b ∥ c ∥ d；随批留存 · 不进集成测试树）；真机 = 父侧真跑闭合（D16 义务）；**用例号 = T-DSK67**（并号裁定归号——沿 T-DSK37–T-DSK63 先例） |
 
 （T-DSK30 ∥ T-DSK43（附件 ∥ 复制 ∥ Esc 混装）∥ T-DSK16（守卫）与 T-DSK32（夹具先例）为跨域 ∕ 他档条目，留 `docs/desktop/design/PROJECT.md` §7 原址。单元测试档随批次档留存。）

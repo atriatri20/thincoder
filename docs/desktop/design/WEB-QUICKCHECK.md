@@ -21,7 +21,7 @@
 - **边界**：E2E = 真 Electron 全栈（真进程 ∥ 真 preload 白名单 ∥ 真 IPC ∥ `app://` scheme ∥ 真窗口截图）——**验收判据**；快筛 = 真浏览器 + 假宿主——**开发期回路**。快筛红 ⇒ 渲染面大概率真红（同一份文件被两端取用）；快筛绿 ⇒ 只证渲染面在 shim 契约内自洽，**IPC ∥ 主进程 ∥ 宿主面仍未验**。
 - **E2E-TESTING.md 面零触**：本体不改；其 §7 项 1「不做 web 快筛」边界句与 §8-1 上抛项的**状态随动 = §8 上抛 U1**（裁权归主 agent——「不扩已收口面」）。
 
-- **权威面裁定**：真 Electron 独有且不可脱的面 = preload 通道白名单（`thincoder-desktop/src/preload/preload.cjs` 的 `CHANNELS` **54 项** ∥ `EVENT_CHANNELS` **25 项**）· 真 IPC 处理体 · `app://` 特权 scheme（`thincoder-desktop/src/main/protocol.mjs`）· 主进程 / 会话 / 模型真链。
+- **权威面裁定**：真 Electron 独有且不可脱的面 = preload 通道白名单（`thincoder-desktop/src/preload/preload.cjs` 的 `CHANNELS` ∥ `EVENT_CHANNELS`）· 真 IPC 处理体 · `app://` 特权 scheme（`thincoder-desktop/src/main/protocol.mjs`）· 主进程 / 会话 / 模型真链。
 - ⇒ 裁定：**Electron 为唯一权威面**；web 快筛读数**不作验收结论 ∥ 不替代用户走查 ∥ 不入 `npm test` 门**；「快筛过了」不得作为交付依据（纪律句 = §3.4）。
 
 ## 2. 关键决策记录
@@ -123,16 +123,16 @@ stub 表（回执逐形 = 实读锚）：
 
 ## 4. 受影响文件清单
 
-| 档 | 行数 | 说明 |
-|---|---|---|
-| `thincoder-desktop/tools/web-quickcheck/serve.mjs`（已落） | **144** | 静态服务（§3.1） |
-| `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（已落） | **44** | host shim（§3.2） |
-| `thincoder-desktop/tools/web-quickcheck/run.mjs`（已落） | **191** | 快筛冒烟（§3.3） |
-| `thincoder-desktop/package.json` | **24**（内容行数口径——含 `quickcheck` script） | `devDependencies` 零改（`playwright-core` 在册复用；`dependencies` 零改） |
-| `docs/desktop/design/WEB-QUICKCHECK.md` | 本档 | 设计单源 |
-| `docs/desktop/design/PROJECT.md` | 1891 | §4.1 三行 + 值列 · §4.2 对应块 · §5 script 行（已落） |
-| `docs/desktop/design/SHELL.md` | 238 | §1 树一行 + `thincoder-desktop/package.json` 行（已落） |
-| `docs/README.md` | 141 | 地图（desktop 设计 7 ∕ 部分 8 ∕ 总 34）（已落） |
+| 档 | 说明 |
+|---|---|
+| `thincoder-desktop/tools/web-quickcheck/serve.mjs`（已落） | 静态服务（§3.1） |
+| `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（已落） | host shim（§3.2） |
+| `thincoder-desktop/tools/web-quickcheck/run.mjs`（已落） | 快筛冒烟（§3.3） |
+| `thincoder-desktop/package.json` | `quickcheck` script 在册；`devDependencies` 零改（`playwright-core` 在册复用；`dependencies` 零改） |
+| `docs/desktop/design/WEB-QUICKCHECK.md` | 本档（设计单源） |
+| `docs/desktop/design/PROJECT.md` | §4.1 三行 + 值列 · §4.2 对应块 · §5 script 行（已落） |
+| `docs/desktop/design/SHELL.md` | §1 树一行 + `thincoder-desktop/package.json` 行（已落） |
+| `docs/README.md` | 地图入册（已落） |
 
 **零改动面**（逐面）：
 
@@ -149,8 +149,8 @@ stub 表（回执逐形 = 实读锚）：
 |---|---|---|
 | ① host shim 契约 | §3.2 + `host-shim.mjs` | 单元测试档用例（5 通道逐形 ∥ 表外 reject ∥ 记录面）；冒烟 §3.3 步 9 `unstubbed = 0` |
 | ② 静态服务 | §3.1 + `serve.mjs` | 单元测试档用例（`/` 携注入 ∥ `/rc/` 实供 ∥ 逃逸 404 ∥ 表外扩展名 404） |
-| ③ 一条真浏览器冒烟 | §3.3 + `run.mjs` | `npm run quickcheck` exit 0（本机 `msedge`）+ 步 9 截图存在 + PNG magic；错误径（WQ-4）= 不存在通道名 ⇒ 非零退出 + stderr 含该通道名 |
-| ④ 权威面关系判据 | §1 裁定 + §3.4 纪律句 | diff 零触 `test/`（运行期产物根 `test/artifacts/` 除外——冒烟截图落点，已 gitignore） ∥ `src/` ∥ `renderer/`（触碰面 = `tools/` ∥ `package.json` ∥ `docs/`）；集成测试树 `npm test` 面零改 |
+| ③ 一条真浏览器冒烟 | §3.3 + `thincoder-desktop/tools/web-quickcheck/run.mjs` | `npm run quickcheck` exit 0（本机 `msedge`）+ 步 9 截图存在 + PNG magic；错误径（WQ-4）= 不存在通道名 ⇒ 非零退出 + stderr 含该通道名 |
+| ④ 权威面关系判据 | §1 裁定 + §3.4 纪律句 | diff 零触 `test/`（运行期产物根 `test/artifacts/` 除外——冒烟截图落点，已 gitignore） ∥ `src/` ∥ `renderer/`（触碰面 = `tools/` ∥ `thincoder-desktop/package.json` ∥ `docs/`）；集成测试树 `npm test` 面零改 |
 
 
 ## 6. 用例表
@@ -158,7 +158,7 @@ stub 表（回执逐形 = 实读锚）：
 | 编号 | 类型 | 输入 | 期望输出 | 处置 |
 |---|---|---|---|---|
 | `WQ-1` boot 冒烟 | 正常 | 起服务 ⇒ 系统浏览器 ⇒ §3.3 九段全序 | 九段全绿 + PNG 落点 + `unstubbed = 0` + exit 0 | ✅ 做 |
-| `WQ-2` 边界 | 边界 | 表外通道调用 ∥ 逃逸路径 `..%2Fsrc%2Fmain%2Fprotocol.mjs` ∥ 表外扩展名 | 拒（reject + `unstubbed` 记名）∥ 404 ∥ 404 | ✅ 做（单元测试档用例） |
+| `WQ-2` 边界 | 边界 | 表外通道调用 ∥ 逃逸路径（`..%2F` 前缀 + 越根档名——夹具按该形构造） ∥ 表外扩展名 | 拒（reject + `unstubbed` 记名）∥ 404 ∥ 404 | ✅ 做（单元测试档用例） |
 | `WQ-3` 错误 | 错误 | 注入锚缺失（夹具改 `thincoder-desktop/renderer/index.html` 脚本行） | 服务 500 + stderr 明示（fail-loud） | ✅ 做（单元测试档用例） |
 | `WQ-4` 错误 | 错误 | `--browser=<不存在通道名>` 直跑 `thincoder-desktop/tools/web-quickcheck/run.mjs` | 启动即败：非零退出 + stderr 含该通道名 | ✅ 做（单元测试档用例：非零退出 + stderr 含通道名） |
 | 设置面开合 ∥ provider 真链 ∥ 事件面 ∥ 像素回归 | — | — | 不作（§7 边界——不静默缩水：登记于此） | ❌ 不做 |
@@ -183,13 +183,13 @@ stub 表（回执逐形 = 实读锚）：
 
 ## 9. 文件账（本域）
 
-### 9.1 本端文件清单与行数预算（web 快筛族行）
+### 9.1 本端文件清单（web 快筛族）
 
-| 文件 | 预估行数 | 说明 |
-|---|---|---|
-| `thincoder-desktop/tools/web-quickcheck/serve.mjs`（已落） | **144** | 静态服务（三根映射：`/rc/` → 核包根 ∥ `/` → `renderer/` ∥ `/__quickcheck/` → 工具资产；MIME 白名单 + 逃逸 ∥ 点段门；`/` 注入 host shim 脚本行；`127.0.0.1` 绑定 · 端口 0）——机制 ∕ 判据单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.1 |
-| `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（已落） | **44** | host shim（`window.thincoder` 窄桥同形 + 有限 stub 表（9 通道）+ 表外拒 + `__quickcheck` 记录面）——单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.2 |
-| `thincoder-desktop/tools/web-quickcheck/run.mjs`（已落） | **191** | 快筛冒烟（系统浏览器 channel（缺省 `msedge`）+ 九段断言序 + 截图落 `thincoder-desktop/test/artifacts/quickcheck-boot.png`）——单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.3 |
+| 文件 | 说明 |
+|---|---|
+| `thincoder-desktop/tools/web-quickcheck/serve.mjs`（已落） | 静态服务（三根映射：`/rc/` → 核包根 ∥ `/` → `renderer/` ∥ `/__quickcheck/` → 工具资产；MIME 白名单 + 逃逸 ∥ 点段门；`/` 注入 host shim 脚本行；`127.0.0.1` 绑定 · 端口 0）——机制 ∕ 判据单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.1 |
+| `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（已落） | host shim（`window.thincoder` 窄桥同形 + 有限 stub 表 + 表外拒 + `__quickcheck` 记录面）——单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.2 |
+| `thincoder-desktop/tools/web-quickcheck/run.mjs`（已落） | 快筛冒烟（系统浏览器 channel（缺省 `msedge`）+ 九段断言序 + 截图落 `thincoder-desktop/test/artifacts/quickcheck-boot.png`）——单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.3 |
 
 **原址指针**：本族各行在 `docs/desktop/design/PROJECT.md` §4.1 有一行指针。
 

@@ -1,5 +1,5 @@
 /**
- * doc-check-recognition.test.mjs — 集成用例 44-1（RTM CLI 端故事 44「交付门认得中文档名与真后缀，代码表达式与版本号不误报」；
+ * doc-check-recognition.test.mjs — 集成用例 44-1 ∥ 44-2（RTM CLI 端故事 44「交付门认得中文档名与真后缀，代码表达式与版本号不误报」；
  * 用例行原文 = `test/rtm/guard.md` 第 44 节）。
  *
  * 业务入口 = 真 `doc_check` 工具调用（`mode:"gate"` / `mode:"report"` + 显式 `docs` + `target`）。
@@ -126,4 +126,21 @@ test("CLI 44-1 识别面：中文档名判得出、普通中文词与代码表�
     const gEscaped = docCheckTool.execute({ mode: "gate", docs: ["docs/g.md"], target: join(ws, "projA") }, { agent: { cwd: join(ws, "projA") } })
     assert.equal(gEscaped.split("\n")[0], "DOC-CHECK GATE: PASS", `写法出口未回到零命中：\n${gEscaped}`)
   }
+})
+
+test("CLI 44-2 边界 · 同行命令码段不连坐散文路径码段；无命令段时同一路径照判", () => {
+  const root = fixture({
+    "PROJECT-MANIFEST.json": manifestText(undefined),
+    "docs/design/mixed.md": "# mixed\n\n执行 `node script.mjs` 后见 `docs/design/missing.md`。",
+  })
+  const run = () => docCheckTool.execute({ mode: "gate", docs: ["docs/design/mixed.md"], target: root }, { agent: { cwd: root } })
+  const mixed = run()
+  assert.equal(mixed.split("\n")[0], "DOC-CHECK GATE: REFUSED（锚 1 条）", mixed)
+  assert.equal(hitLines(mixed).filter((l) => l.includes("docs/design/missing.md")).length, 1, mixed)
+  assert.equal(hitLines(mixed).some((l) => l.includes("script.mjs")), false, mixed)
+
+  writeFileSync(join(root, "docs/design/mixed.md"), "# mixed\n\n见 `docs/design/missing.md`。")
+  const plain = run()
+  assert.equal(plain.split("\n")[0], "DOC-CHECK GATE: REFUSED（锚 1 条）", plain)
+  assert.equal(hitLines(plain).filter((l) => l.includes("docs/design/missing.md")).length, 1, plain)
 })

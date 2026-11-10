@@ -30,6 +30,11 @@ import { closeAllMcp, pushMcpStatus, reconnectMcp, editMcp, testMcp } from "./pa
 // Settings 段整段外提（2026-09-25 file-tier-sweep 批 S1——同名薄委托传 `this`，外部调用点零改）。
 import { providerStatus, saveProviderKey, deleteProviderKey, saveMcpServer, deleteMcpServer, setAutoApprove, setPlanMode, engineeringOn, pushStatus, pushSettingsLight, pushSettings, agentSettingsSession } from "./panel-settings-push.mjs"
 import { initLedgerSurface, dispose as disposeLedgerSurface } from "./ledger-surface.mjs" // LEDGER-SURFACE（归档档 ENGINEERING-MODE.md §2.30.3.5）
+// 跨实例投递面（MULTI-INSTANCE-COLLAB §5.2 / §5.4 · D-MI28 ∥ D-MI34）：名册登记点 = 会话起点（面板创建）；
+// 取件闩**两处**撤闩（`dispose` ∥ view 销毁）与 `this._timerWatch?.disarm()` 同点——**转空工作区不撤取件闩**
+// （那一支只销毁载体，门交给 `ready()`；撤了没有「工作区回来」的重臂面）。
+import { registerInstance, unregisterInstance } from "@thincoder/core/instance-registry.mjs"
+import { syncInboxWatch, disarmInboxWatch } from "./timer-watch.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -141,6 +146,9 @@ export class ChatPanel {
         // 销毁点（工作区转空即换 cwd——agent 不跨项目复用）
         this._agent = null
         this._timerWatch?.disarm() // §6.30.11 撤闩（销毁点同族——本支不经 loadSession）
+        // **不撤取件闩**（D-MI31 ∥ D-MI34）：转空只销毁载体（上一行 `_agent = null`），门交给 `ready()` 闸住
+        // ——转空期零取件、待取非空跨阈出受阻行；转回非空的那一拍就是恢复点（闩从未撤，判据 ⑨）。
+        // 撤了没有「工作区回来」的重臂面（武装点只有面板创建 ∥ 切槽 ∥ 回合尾），闩就哑在面板里。
         releaseOldCwdClaims(oldCwd) // 旧 cwd 认领补一次同语义释放（单点 = panel-project.mjs；同 cwd ⇒ no-op）
         pushWorkspaceGuard(this, true)
         blockOnNoWorkspace(this, { once: true })
@@ -177,6 +185,11 @@ export class ChatPanel {
    */
   resolveWebviewView(webviewView, _context, _token) {
     this._panel = webviewView
+    // ② 跨实例投递面**会话起点**（MULTI-INSTANCE-COLLAB §5.4 / §5.8 · D-MI28）：面板创建即登记名册 +
+    // 装上取件闩——闩**无条件在位**（D-MI31），门开不开由就绪探针 `ready()` 闸住（D-MI34：面板在场 ∧
+    // 工作区在场）；载体未就绪时照拍、照计数（跨阈即出受阻行），不再「零注册等到首回合」。
+    registerInstance({ cwd: _cwd() ?? "" })
+    syncInboxWatch(this)
     // ① 无工作区守卫：面板启用即提示（每空窗**恰一次**——去重，`_wsGuardNotified`）。
     // 面板照常建（webview 要在位才能显示占位符/toast，且工作区变化时靠它投守卫态）——本点只提示。
     blockOnNoWorkspace(this, { once: true })
@@ -206,6 +219,8 @@ export class ChatPanel {
       // §11 销毁点：view 销毁 → 会话级 agent 随之销毁（面板重开经 ensurePanelAgent 重建）
       this._agent = null
       this._timerWatch?.disarm() // §6.30.11 撤闩（销毁点同族——view 销毁与 dispose / 切槽同判）
+      disarmInboxWatch(this) // 跨实例取件闩同族撤闩
+      unregisterInstance() // 名册条目随面板销毁删除（无取件面 ⇒ 不应在册）
       this._abortController?.abort()
       this._distillController?.abort()  // kill any in-flight async distillation — it belongs to the dying view
       closeAllMcp()
@@ -326,6 +341,8 @@ export class ChatPanel {
     this._susp?.abort?.abort()
     // §6.30.11 VSC 空闲面撤闩：面板销毁 ⇒ 闩撤（到期件随会话 agent 一并回收；重开面板重建闩面）
     this._timerWatch?.disarm()
+    disarmInboxWatch(this) // 跨实例取件闩同族撤闩
+    unregisterInstance() // 名册条目随面板销毁删除（D-MI28：正常退出删除）
     this._statusBar?.dispose()
     this._statusBar = null
     disposeLedgerSurface() // LEDGER-SURFACE：台账 item / 周期随面板释放（重载后 init 可重建）

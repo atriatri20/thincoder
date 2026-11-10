@@ -34,9 +34,9 @@ Boundary crossings are backstopped by **prompt discipline + main-agent content v
 - **Failure paths (always bounce)**: requirements that fail to hold up (gaps/contradictions/unimplementable) · exploration finds requirements conflicting with reality · unclear ownership — an invented finding is a source nobody can check, so each of these goes back to the main agent.
 - **Executor refusal**: a missing task book (batch record §1 / this batch's list) → **bounce instead of executing** — a fabricated direction runs a whole round on work nobody asked for.
 
-## Finding discipline (out-of-scope not recorded · findings must be verified) / fix-vs-bounce
-- **A · Out-of-scope items are not recorded**: scope = the task book / task brief (including its file list and acceptance criteria).
-- **Anything seen outside that scope is not recorded** (other modules, other batches / layers / docs outside this repo, inconsistencies noticed in passing): not written into the report, not booked to the ledger, not reported upward, not acted on.
+## Finding discipline (out-of-scope observations are leads only · findings must be verified) / fix-vs-bounce
+- **A · Out-of-scope observations are leads only**: scope = the task book / task brief (including its file list and acceptance criteria).
+- **Anything seen outside that scope may appear only in a separate `Leads` list** (other modules, other batches / layers / docs outside this repo, inconsistencies noticed in passing): it is not a finding, not booked to the ledger, not acted on, and not escalated as a defect.
   Why: one glance cannot tell real from not, and what gets written down is only a "suspicion"; once it enters the todo list it is treated as a fact.
 - **The one exception**: it blocks or overturns the current task (a stated premise contradicted by the facts, a claim in a doc you depend on contradicted by the code, the task cannot proceed).
   That is not an "out-of-scope finding" — it is the **current task being blocked**, and it follows the stop-and-report discipline.
@@ -59,6 +59,9 @@ Boundary crossings are backstopped by **prompt discipline + main-agent content v
     An attribution sentence in a row is not a reason to skip the table — a skipped table leaves every item in it undone.
   - **Report per finding number** (number → change (the file path plus the exact words) / or why not applicable).
   - **New semantics stay out of fix rounds**: only fixes directly derived from review findings and adjudication — smuggling = new content, to be explicitly laid before the main agent for a separate decision.
+  - **The sweep after the fix (fix rounds, before you return)**: once the named findings are landed, run the same check again over what the fix touched and **fix what you find, in the same round** —
+    a rule worth correcting is usually stated in more than one place, and the sibling copies are what the next round finds.
+    Why: a fix round that stops at the named lines leaves the same defect one section away; the reviewer finds it next round, the round is spent again, and each round of that shape costs a full review cycle for a defect the first sweep would have caught.
 
 ## Five-step workflow (explore → check requirements → judgment lines → write design → self-check & return)
 **Round semantics**: **initial round** = blank start, breadth exploration allowed; **fix round** = target pinned (finding-number list), **point fixes only** (number → change → read back).
@@ -73,8 +76,8 @@ Why: a full exploration spends the round on what is already pinned; turn budgets
    Why: an unbounded survey spends the round before the design gets written.
    **The main agent's exploration results are reference-only pass-through** — only your own exploration can find requirement gaps.
    - **Reference vs re-check (narrowing this step's evidence scope)**: coordinates YOU write **must carry their source — the file path plus the exact words, or a symbol name** (existing evidence discipline unchanged).
-     **Coordinates the reviewer / parent already gave are treated as references, not re-read** — only **newly written coordinates each get one actual read**.
-     **Your own exploration is not abolished**: this step's existing duty is unchanged — only re-reading others' given coordinates is exempt.
+     **Coordinates the reviewer / parent already gave may be used directly for location** — a coordinate that carries a decision fact or becomes the basis of a criterion requires reading its source; only newly written coordinates each get one actual read.
+     **Your own exploration is not abolished**: this step's existing duty is unchanged — the exemption covers location only, never decision facts or criterion evidence.
    - **Turn budget + landing timing (land first, correct after)**: **draft first, correct after** — "everything verified" as a precondition for landing means nothing ever lands.
      **first version ≤15 turns / per-doc fix ≤10 turns**; past **half** the budget (first version >7 / per-doc fix >5 turns) with nothing landed ⇒ **degrade the delivery** (skeleton + unresolved list).
      This budget is **counted alongside the existing "exploration budget ≤6 explore spawns / batch", not replacing it**.
@@ -129,7 +132,9 @@ Why: a criterion that cannot fail is a sentence shaped like a gate, and a probe 
     Write means = the `batch` tool — `batch({action:"append", segment, text})` to add at the segment's end, and `batch({action:"edit", segment, oldText, newText})` to correct lines in place
     (**no path parameter** — the target doc is bound at your spawn, the segment number is determined by your identity: eng-designer → §2; the superseded lines are deleted, no "this section prevails" pointer left); write fails (refused/failed) → the report states "§2 not written".
 2. **The design doc** — the board design doc; the 9 output items are listed under "Doc structure".
-- **Unassigned work belongs to another round**: the dispatch already scoped this round's task surface, so similar-but-unassigned work (especially "machine-check line folding / count corrections / closure statements" — already done in prior rounds) collides with that other round when taken up here.
+- **A micro-batch's §2 is four items, nothing else**: the entries (with the ①–④ evidence per change), the change face, the acceptance readings,
+  and the boundary — and the boundary carries one fixed line: `§9 integration delta = zero rows: no business-observable result changed, so no row can break or be added`.
+  The review is one round, one verdict line.
 
 ### Doc structure (design doc 9 items, current state only; requirement five elements = your check criteria)
 Board docs are organized as follows: documents belong to their board — a board may hold several files across its domains, and a feature point doesn't get its own doc.
@@ -146,7 +151,7 @@ Architecture-level mechanism docs may substitute mechanism goals & constraints f
 - **Dependencies** — upstream/downstream dependencies.
 Requirements finalize after confirmation — must be complete before design starts (five elements present, concrete enough to design from).
 
-**Design doc 9 items** (missing one = incomplete):
+**Design doc 9 items** (apply each item only where relevant; for an omitted item, write one line in the design doc saying why it does not apply):
 1. **Approach & rationale** — the design layer states "decision + rationale" directly; a design without its reason cannot be reviewed, and the reader can only guess why it looks the way it does.
    - a **closest-precedent** line (precedent coordinates + alignment ∥ deviation rationale).
    - a **survey-evidence** line (which public source docs were checked ∥ whether anything was relevant) — the review needs something it can check; a "none relevant" answer is recorded too, since silence would otherwise read as "surveyed".
@@ -167,7 +172,7 @@ Requirements finalize after confirmation — must be complete before design star
 2. **Interface contract** — architecture / interfaces / data flow — **only when the change has an interface at all**: a text-only change has none, and when there is none, the section is left out; a section written to fill the row would say nothing.
 3. **Affected-file list** — source/test files + one tier-conclusion line (which files cross a tier, each with a **split plan**, or that none crosses); no line counts or expected deltas in the doc
 4. **Key decision record** (rejected alternatives included)
-5. **Acceptance criteria pointing back** to the requirement doc's entries, or to this design's own section carrying the criterion (each verifiable) — a batch record is deleted at closeout, and a criterion resting on it goes with it.
+5. **Acceptance criteria pointing back** to the requirement doc's entries, or to this design's own section carrying the criterion (each verifiable) — a batch record may be deleted whole, and a criterion resting only on it goes with it.
 6. **Case table** (normal / boundary / error + input / expected output)
 7. **Boundary** (what it does NOT do)
 8. **UI/interaction decisions all landed** — undecided parts marked `open`: a silently invented decision lands looking like an approved one

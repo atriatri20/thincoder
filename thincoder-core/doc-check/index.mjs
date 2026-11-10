@@ -86,6 +86,12 @@ export { DOC_CLASS }
  *  **判集 = 正文面**（围栏块外）；围栏内那部分只作读数（`report` 清单的 `合计` 含它）——**合计是读数，不是判集**。 */
 export const LINE_REF_CLASS = "行号坐标"
 
+/** 批档 edit 与收口共用的存量读数句形；N = 整档命中中不属本次改动区的条数。 */
+export const STOCK_LINE = (n) => `存量命中 ${n} 条（不属本次改动区，不阻断交付；整档读数）`
+
+/** 判集未指向成环仓时的读数；该仓级事实不进本次阻断集。 */
+export const CYCLE_READ_LINE = (n) => `环引 ${n} 条（本次判集未指向成环仓，不阻断交付）`
+
 /** 行号坐标命中行（报面单源）：档 + 行定位 + 形别（①②③ 是读数分类，不是判据分级）+ 原文片段 ≤ 40 字
  *  （读者不打开源档就能判「这是引用还是举例」）。**只出正文面**（围栏内不入判、只出一行读数），故不带围栏标。
  *  `lay` = 报面路径形（§2.3）：行首项目标签（≥2 根才打）+ 行内路径相对该档自身的根。 */
@@ -287,8 +293,10 @@ function mergeAnchors(perGroup, fileOrder) {
   const suffixHits = []
   let batchRefs = 0
   let suffixBuilds = 0
+  const cycleReads = []
   for (const { res } of perGroup) {
     hits.push(...res.hits)
+    cycleReads.push(...(res.cycleReads ?? []))
     unverified.push(...(res.unverified ?? []))
     suffixHits.push(...(res.suffixHits ?? []))
     for (const u of res.unreadable ?? []) if (!unreadable.includes(u)) unreadable.push(u)
@@ -299,7 +307,7 @@ function mergeAnchors(perGroup, fileOrder) {
     const at = (h) => (fileOrder.has(h.file) ? fileOrder.get(h.file) : Number.MAX_SAFE_INTEGER)
     hits.sort((a, b) => at(a.file) - at(b.file) || (a.line ?? 0) - (b.line ?? 0))
   }
-  return { hits, unverified, unreadable, batchRefs, suffixHits, suffixBuilds }
+  return { hits, unverified, unreadable, batchRefs, suffixHits, suffixBuilds, cycleReads }
 }
 
 /** 不可判档的两因（闭集 · 判序 = 存在性 → 类型）：不在盘 ∥ 非 markdown 档（目录归后因）。 */
@@ -369,6 +377,7 @@ function noRootOutcome(items) {
     unreadable: [], lineReads: [],
     lineRefs: { body: [], fenced: [], total: 0, unreadable: [] },
     batchFaceRefs: 0,
+    cycleReads: [],
     suffixHits: [],
     suffixBuilds: 0,
     projectRoots: [],
@@ -627,7 +636,7 @@ const unreadableHead = (n) => `读不到 ${n} 档（未判，不得读作已检�
 /** gate 报面（固定句形——§3.20「报面（固定句形 · 交付门 gate）」）：首行 verdict = 唯一机判串。
  *  §2.3：verdict 只有一条；单根清单报面逐字不变（零回归的判据面）；≥2 根时范围行追加根清单、
  *  命中 ∥ 跳过 ∥ 读不到行带项目标签。 */
-function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable, anchors, paragraphs, lineRefs, exempted = [], exemptInvalid = [], exemptStale = 0 }) {
+function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable, anchors, paragraphs, lineRefs, cycleReads = [], exempted = [], exemptInvalid = [], exemptStale = 0 }) {
   // 第三条判据的**判集 = 正文面**（围栏块外）；围栏内那部分只进下面那行读数（口径 = §3.23「判面 = 正文面」块）。
   const bodyRefs = lineRefs.body.length
   const fencedRefs = lineRefs.fenced.length
@@ -676,6 +685,7 @@ function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable
   // `未核` 列报（判不了类——不进 `total`、不改 verdict）：位置 = 命中区之前（口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「报面」），
   // 末行仍留给结论 / 处置块。
   out.push(...unverifiedBlock(lay, anchors.unverified))
+  if (cycleReads.length) out.push(CYCLE_READ_LINE(cycleReads.length))
   if (checkFiles.length === 0 && !exemptedAll) {
     // 空范围不静默当通过（K6）——照实说明 + 给出补充通道（两侧都不得读成「已检」）。
     // 措辞按「有没有跳过行」分流：无跳过行时不得写「见上方跳过行」。
@@ -733,7 +743,10 @@ function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable
  *   suffixHits:{file:string, line:number, token:string, abs:string}[], suffixBuilds:number,
  *   domainTables:{root:string, manifest:boolean}[], exempted:Array, exemptInvalid:Array, exemptStale:number}}
  *   `lineRefs` = 行号坐标的采集结果，**两个问法返回同一份**（同一次采集）。
+ *   **每条命中携两格载荷**（`token` = 被拒的内容 ∥ `root` = 该命中的判定根）——拒文四件的「内容」与
+ *   「解析根」两格读它（设计单源 = `docs/core/design/BATCH-RECORD.md` §4.22）；载荷不进 `hits`、不改 verdict。
  *   `projectRoots` = 参与判定的根（升序；§2.3）。**消费者只有两处**：报面的根清单行（≥2 根才出）与本批用例的断言。
+ *   `cycleReads` = 判集未指向的成环事实（两问法同出读数行，不进 hits）；
  *   `domainTables` = 域表读数（§2.5：每组一根、按路径升序；`manifest` = 该根读到了 manifest）。
  *   **消费者只有两处**：`report` 面的域表读数块与本批用例的断言——不进 `hits`、不改 verdict（`gate` 面零改）。
  *   `batchFaceRefs` = 面判剔除的 token 数（批档面互引不判——读数，**不进 `hits`**、不改 verdict；只有 `report` 面报面出这一行）。
@@ -822,6 +835,14 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
   // 行号坐标的**唯一采集点**：放在两支分支之前——`report` 与 `gate` 读出的是同一份结果，不各采一次
   // （同源判 = 两个问法的 `lineRefs.body` 逐字相等；一套萃取式，不是一套宽一套窄）。
   const lineRefs = collectLineRefs({ files: checkFiles, extsOf: extsOfFile })
+  // 载荷格 `root`（**判据零改** · 设计单源 = `docs/core/design/BATCH-RECORD.md` §4.22「载荷两格」）：逐条命中补上
+  // 「该档的判定根」——批次档门拼拒文四件时读它（引擎的 `✗` 行里根只在部分命中类出现）。与 §2.7 给
+  // `paragraph.mjs` 加载荷字段 `text` 是同一处置：加一格载荷，不改抽取面、不改命中类、不改阈值、不改 verdict。
+  // 就地把三份命中数组各补一次：`paragraphs` 是带 `unreadable` 属性的数组，换新数组会把那件读数丢掉。
+  // `环引` 自带 `root`（= 该组根，同是该命中的判定根）⇒ 不覆盖。
+  for (const h of [...anchors.hits, ...paragraphs, ...lineRefs.body]) {
+    if (h.root === undefined) h.root = rootOf(h.file, base)
+  }
   // 读面并集（三条判据各带清单）：同一个未读档可能出现多次（一档三面都读不到）⇒ 去重保序
   const unreadable = [...new Set([
     ...(anchors.unreadable ?? []),
@@ -853,6 +874,7 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
     lineReads,
     // 面判读数（批档面互引不判——**不是命中**：不进 `hits`、不改 verdict；与 `lineRefs` 同层靠读数消费面取）
     batchFaceRefs: anchors.batchRefs ?? 0,
+    cycleReads: anchors.cycleReads ?? [],
     lineRefHits: lineRefHitsKept,
     lineRefs,
     // 已裁定假阳（§2.7）：与 `skipped` ∥ `unreadable` ∥ `hits` 各自一桶——消费面 = 两面豁免块与用例断言。
@@ -875,7 +897,7 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
     // `gate` 面：第三条判据的**正文面**计入 `hits` 与 `hits.total`（三数之和）；围栏内只作读数（不进 `hits`）。
     // 读不到列不计数但定判决词（`ERROR`）。**只数未登记的**（已裁定的进 `exempted`，§2.7 KD-X4）。
     const hits = { total: anchorCount + paragraphHitsKept.length + lineRefHitsKept.length, anchors: anchorCount, paragraph: paragraphHitsKept.length, lineRefs: lineRefHitsKept.length }
-    return { ...shared, hits, report: gateReport({ lay, docsSource: source, checkFiles, skipped: shared.skipped, excluded, unreadable, anchors: { ...anchors, hits: anchorHitsKept }, paragraphs: paragraphHitsKept, lineRefs: lineRefsKept, exempted: split.exempted, exemptInvalid: split.invalid, exemptStale: split.stale }) }
+    return { ...shared, hits, report: gateReport({ lay, docsSource: source, checkFiles, skipped: shared.skipped, excluded, unreadable, anchors: { ...anchors, hits: anchorHitsKept }, paragraphs: paragraphHitsKept, lineRefs: lineRefsKept, cycleReads: anchors.cycleReads ?? [], exempted: split.exempted, exemptInvalid: split.invalid, exemptStale: split.stale }) }
   }
 
   const hits = { total: anchorCount + paragraphHitsKept.length, anchors: anchorCount, paragraph: paragraphHitsKept.length }
@@ -889,6 +911,7 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
   ]
   for (const h of anchorHitsKept) out.push(anchorHitLine(lay, h))
   for (const w of paragraphHitsKept) out.push(paragraphHitLine(lay, w))
+  if ((anchors.cycleReads ?? []).length) out.push(CYCLE_READ_LINE(anchors.cycleReads.length))
   // 排除桶（§2.6 · 与读面同处——两者都是「未判」）：位于命中区之后、读面行之前；不进 `hits`。
   // N = 0 时不出行 ⇒ 未声明该键的 manifest 上报面与改动前逐字相等。
   out.push(...bucketLines(lay, excluded, (n) => `排除 ${n} 档（manifest 排除面命中，未判）：`))

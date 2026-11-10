@@ -49,11 +49,10 @@
 - `thincoder-core/model-ref.mjs` 的 `resolveRuntimeProvider`；
 - `thincoder-core/config.mjs` 的 `loadConfig` · `findProvider`；
 - `thincoder-core/tools/index.mjs` 的 `builtinTools`（**无** `subagent`；`subagent` 是 depth 绑定工具） · `thincoder-core/tools/shared.mjs` 的 `toOpenAISchema` · `thincoder-core/tool-docs/subagent.md`（真实派工工具描述）；
-- `thincoder-core/agent.mjs` 与 `thincoder-core/prompts/` 三档正本（被测对象）：
-  - `thincoder-core/prompts/persona-engineering.md` 471 行 / 67,515 字符
-  - `thincoder-core/prompts/common.md` 440 行 / 53,771 字符
-  - `thincoder-core/prompts/discipline-engineering.md` 358 行 / 45,726 字符
-  - 合计 167,012 字符
+- `thincoder-core/agent.mjs` 与 `thincoder-core/prompts/` 三档正本（被测对象；体量不入档，量法 = `doc_check` 的 `lines` 读数面）：
+  - `thincoder-core/prompts/persona-engineering.md`
+  - `thincoder-core/prompts/common.md`
+  - `thincoder-core/prompts/discipline-engineering.md`
 
 档地图核对（评审 #9）：`docs/README.md` 把「提示词系统（槽位 / 工具描述）」主题归 `docs/core/design/PROMPT-SYSTEM.md`。本档不描述提示词系统本身，描述**测提示词的工具**；两者主题不同、无覆盖关系。按 `docs/README.md` 的 core/design 其余档清单登记本档（受影响文件表有该行）。
 

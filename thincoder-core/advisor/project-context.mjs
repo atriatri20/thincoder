@@ -14,14 +14,19 @@
  * and unfixable by the user). Missing pieces now say so, and the reviewer is told
  * to state the limitation in its findings. The document map is derived from the
  * manifest's `docRoot` (the one place that says where the docs live); the standards face
- * is the project's OWN declaration too (`docRoot.standards`) — the probe was retired, the
- * declaration replaced guessing — and it degrades in three machine-distinguishable states:
+ * is the project's OWN declaration too (`docRoot.standards` — a document LAYER: a directory
+ * whose `.md` files, subdirectories included, are the standards) — the probe was retired, the declaration
+ * replaced guessing — and it degrades in three machine-distinguishable states:
  * undeclared (no path), declared but unreadable (the declared path is named), and injected.
  */
-import { readFileSync, existsSync } from "node:fs"
+import { readFileSync, readdirSync, existsSync, statSync } from "node:fs"
 import { resolve, join, relative, dirname, sep } from "node:path"
 import { providerSpec } from "../config.mjs"
 import { DEFAULT_MANIFEST, docRootPaths, manifestFilePath, readManifest } from "../manifest.mjs"
+// 去重键的折大小写尺子：同仓有两份同名函数——`doc-graph.mjs` 的私有副本（未导出）与
+// `doc-check/per-root.mjs` 导出的这一份；取已导出的那份（语义同形），不另造第三把。
+// 为何必须折：同一目录的两种大小写写法在 win32 上是同一个目录，不折就同一份档注入两次。
+import { pathKey } from "../doc-check/per-root.mjs"
 
 /** Project guide (AGENTS.md) injection budget — decision 2026-08-08:
  *  NO fixed truncation; long-context models (1M+) get up to 5% of their context
@@ -40,10 +45,11 @@ export const NO_STANDARDS_NOTICE = "(No project standards document — nothing i
 export const NO_GIT_NOTICE = "(No git repository detected — change-set context is unavailable; read the review-scope files directly.)"
 
 /**
- * 态 2 —— 声明了标准档，但一份都读不到（文案单源 = `docs/core/design/MANIFEST.md` §2.12）。
+ * 态 2 —— 声明了标准层，但一份都读不到（文案单源 = `docs/core/design/MANIFEST.md` §2.12）。
  * 与 `NO_STANDARDS_NOTICE` **不得同形**：那句说的是「没有任何东西声明」，而这里恰好是「声明了但
  * 读不到」。同形会让作者以为自己没声明过，回头去补一个其实已经有的声明——所以本句必带声明路径；
- * `reason` 两因分列（`no such file` 修路径 ∥ `read failed: <code>` 修权限）。
+ * `reason` 五值分列，对应三类可修面（KD-M1-65）：`no such directory` 改路径 ∥ `not a directory`
+ * 改形态 ∥ `no .md file` 往层里放档；`read failed: <code>` ∥ `manifest read failed: <code>` 修权限 / 修档。
  * @param {{path: string, reason: string}} p — 声明路径（绝对形）+ 读不到的原因
  * @returns {string}
  */
@@ -53,8 +59,9 @@ export const STANDARDS_UNREADABLE_NOTICE = ({ path, reason }) =>
   "Fix the path or the file — do NOT declare it again. State the limitation in your findings.)"
 
 /**
- * 半读句 —— 多份声明里有几份读不到（态 3 的下半；KD-M1-61 拒掉「只注入首份」：其余既不注入也不报
- * = 静默丢声明，与需求档 §5.1 验收 ③「任何一面都不得静默跳过」相抵）。
+ * 半读句 —— 一个层里（或声明的多个目录里）有几份读不到（态 3 的下半——零静默：余项既不注入也不报
+ * = 静默丢声明，与需求档 §5.1 验收 ③「任何一面都不得静默跳过」相抵；设计 = `MANIFEST.md` §2.12
+ * KD-M1-65 的原因分列）。
  * @param {{unreadable: string[]}} p — 逐份 `"<路径>: <原因>"`（路径绝对形）
  * @returns {string}
  */
@@ -235,19 +242,98 @@ export function injectDocumentMap(agent, parts, root) {
 /** 消息里的路径书写（\ → /）：与 `injectProjectGuide` 的根注记同款（`relative(...).split(sep).join("/")`），
  *  且让「声明路径字面」在消息里可 grep（`docs/nope` 而非 `docs\nope`）。读盘仍用原样路径。 */
 const displayPath = (p) => String(p).replaceAll("\\", "/")
+/**
+ * 标准层成员收集（模块私有——遍历 ∥ 序 ∥ 去重的单源；判据 ∥ 序 = `docs/core/design/MANIFEST.md` §2.12「接口契约」）。
+ *
+ * 递归：只下潜 `ent.isDirectory()`；**符号链接一律不跟**（`ent.isSymbolicLink()` 跳过，既不判文件也不下潜）——
+ * 环保险只落在这条上：无深度帽（会静默漏档）、无跳过表 ∥ 无条数帽（那两者属索引面策略，搬进来同样静默漏档）。
+ * 成员按**名字**认 `.md`（大小写不敏）；**文件侧**不按 dirent 类型预筛（目录必下潜、链接必跳）：读得成 = 可读，读不成 = 不可读（带该档自己的原因）。
+ * 序 = 成员**收完后对整集排一次**：目录序（声明序）→ 层根相对路径（`/` 归一）码点序——不是逐层下潜各按名序
+ * （递归后裸文件名不再唯一；两种读法只在「子目录名是层根档名的前缀」时给出相反的序）。
+ * 嵌套根（一根本身在另一根之内）⇒ 同一份档按**解析后的绝对档路径**去重、保留首次出现（首次出现的层根定排序键）；
+ * 去重键在 **win32 折小写**（尺子 = `pathKey`——同一目录的两种写法是同一个目录）；折小写**只作用于去重键**，
+ * 排序键与定位注仍用盘上的原字符串。
+ * 不去重则同一份档进两次正文、吃两份预算。
+ * @param {string[]} dirs — 声明目录的绝对路径（声明序；`docRootPaths` 已去重）
+ * @returns {{readable: {path: string, text: string}[], unreadable: {path: string, reason: string}[]}}
+ */
+function collectStandardDocs(dirs) {
+  const members = [] // { path, dirIndex, rel, text }——收完统一排序
+  const unreadable = []
+  dirs.forEach((dir, dirIndex) => {
+    // 逐目录四臂（判据 = §2.12「判据」块，逐臂对应）：路径不存在 ∥ stat 抛 ∥ 不是目录 ∥ 列不出来。
+    if (!existsSync(dir)) { unreadable.push({ path: dir, reason: "no such directory" }); return }
+    let st
+    try {
+      st = statSync(dir)
+    } catch (e) {
+      unreadable.push({ path: dir, reason: `read failed: ${e?.code ?? "unknown"}` })
+      return
+    }
+    if (!st.isDirectory()) { unreadable.push({ path: dir, reason: "not a directory" }); return }
+    let mdSeen = 0 // 整棵子树见过的 `.md` 名字数（零 ⇒ `no .md file`；被去重的那份也算见过——子树不是空的）
+    let listFailed = false // 有目录列不出来 ⇒ 子树内容未观察完，"零 `.md`" 就是一句没人观察到的事实
+    const stack = [[dir, ""]] // 显式栈：深处照样走（不限深度）；项 = [绝对路径, 层根相对前缀]
+    while (stack.length > 0) {
+      const [here, prefix] = stack.pop()
+      let entries
+      try {
+        entries = readdirSync(here, { withFileTypes: true })
+      } catch (e) {
+        // 任一下潜目录列不出来 ⇒ 该目录进不可读集、其余照走（与层根同一臂，不另立原因词）。
+        unreadable.push({ path: here, reason: `read failed: ${e?.code ?? "unknown"}` })
+        listFailed = true
+        continue
+      }
+      for (const ent of entries) {
+        if (ent.isSymbolicLink()) continue // 一律不跟：既不判文件也不下潜（环保险）
+        const rel = prefix ? `${prefix}/${ent.name}` : ent.name
+        if (ent.isDirectory()) { stack.push([join(here, ent.name), rel]); continue }
+        if (!/\.md$/i.test(ent.name)) continue
+        mdSeen++
+        const p = join(here, ent.name)
+        try {
+          members.push({ path: p, dirIndex, rel, text: readFileSync(p, "utf8") })
+        } catch (e) {
+          unreadable.push({ path: p, reason: `read failed: ${e?.code ?? "unknown"}` })
+        }
+      }
+    }
+    // 全子树零 `.md` ⇒ 该层根不可读（态 2 的第三因：声明对了、层里没档）。
+    // 但「列不出来」与「层里没档」是两类可修面（KD-M1-65）：目录列不完时子树内容未知，
+    // 再补一句 `no .md file` 就是拿没人观察到的事实指错方向（作者会去放档，该修的是权限）。
+    if (mdSeen === 0 && !listFailed) unreadable.push({ path: dir, reason: "no .md file" })
+  })
+  // 整集排一次：目录序 → 层根相对路径码点序（`a < b` 比较，不用 localeCompare——跨机器同序）
+  members.sort((a, b) => (a.dirIndex !== b.dirIndex ? a.dirIndex - b.dirIndex : a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0))
+  const seen = new Set()
+  const readable = []
+  for (const m of members) {
+    const key = pathKey(resolve(m.path).replaceAll("\\", "/")) // 嵌套根 ∥ 同目录大小写两种写法：同一份档（win32 折小写）
+    if (seen.has(key)) continue // 保留首次出现（先出现的层根排在前面 ⇒ 排序键取它的层根）
+    seen.add(key)
+    readable.push({ path: m.path, text: m.text })
+  }
+  return { readable, unreadable }
+}
 
 /**
  * Inject the project standards section (PO-2 · 判据 ∥ 文案单源 = `docs/core/design/MANIFEST.md` §2.12).
  *
+ * 标准层（`docRoot.standards`）= 一个**文档层（目录）**，不是一份档：层内成员 = 该目录**及其全部子目录**下的 `.md`
+ * （大小写不敏感），按**层根相对路径**码点序；符号链接一律不跟（KD-M1-63）。
+ *
  * 三态（**可机判互异**，本面立身之本 = 用声明、不猜固定名）：
- *   态 1 未声明 —— `docRoot.standards` 缺键 / `null` / 一个路径都没得来 ⇒ `NO_STANDARDS_NOTICE`
+ *   态 1 未声明 —— `docRoot.standards` 缺键 / `null` / 一个目录都没得来 ⇒ `NO_STANDARDS_NOTICE`
  *        （零路径字面、零 `declared`）。
- *   态 2 声明了但读不到 —— 声明了路径、逐份都不可读 ⇒ `STANDARDS_UNREADABLE_NOTICE`（点名**声明了
- *        的绝对路径** + 原因）。绝不与态 1 同形。
- *   态 3 读到 —— 正文注入（多份 = 按声明序拼接）；部分读不到时正文在前、半读句点名不可读的逐份。
+ *   态 2 声明了但读不到 —— 逐目录 / 逐档都不可读 ⇒ `STANDARDS_UNREADABLE_NOTICE`（点名该**目录或该档**的
+ *        绝对路径 + 原因）。绝不与态 1 同形。原因取值域 = `no such directory` ∥ `not a directory` ∥
+ *        `no .md file` ∥ `read failed: <code>` ∥ `manifest read failed: <code>`——三类可修面不同
+ *        （改路径 ∥ 改形态 ∥ 往层里放档；KD-M1-65）。
+ *   态 3 读到 —— 逐档「定位注 + 正文」（目录序 + 层根相对路径码点序）；部分读不到时正文在前、半读句逐项点名不可读者。
  *
  * 取值源 = `read.ok && read.manifest ? read.manifest : DEFAULT_MANIFEST`（同 `declaredDocRoots` 先例，
- * 不另立第二套判定）⇒ 整档缺失 / 非法一律 `std === null` ⇒ 态 1；`paths.length === 0 ⇒ 态 1` 是硬不
+ * 不另立第二套判定）⇒ 整档缺失 / 非法一律 `std === null` ⇒ 态 1；`dirs.length === 0 ⇒ 态 1` 是硬不
  * 变量——态 2 句永不含 `undefined` 路径。数据档本身读抛（非 ENOENT）收为态 2 族，不中断消息组装。
  *
  * @param {Object} agent — the parent agent（`cwd` / provider 取上下文窗口）
@@ -271,36 +357,30 @@ export function injectProjectStandards(agent, parts, root) {
   }
 
   const std = (read.ok && read.manifest ? read.manifest : DEFAULT_MANIFEST).docRoot.standards
-  // 态 1（两入口）：未声明（缺键 / null / undefined）∥ 声明了但一个合法路径都没得来。
+  // 态 1（两入口）：未声明（缺键 / null / undefined）∥ 声明了但一个合法目录都没得来。
   // 后者是硬不变量：宁可判「未声明」，也绝不发一句带 `undefined` 的「declared at …」。
-  const paths = std == null ? [] : docRootPaths(std, base)
-  if (paths.length === 0) {
+  const dirs = std == null ? [] : docRootPaths(std, base)
+  if (dirs.length === 0) {
     parts.push(NO_STANDARDS_NOTICE) // degraded — visible by contract
     parts.push("")
     return null
   }
 
-  const readable = []
-  const unreadable = []
-  for (const p of paths) {
-    if (!existsSync(p)) { unreadable.push({ path: p, reason: "no such file" }); continue }
-    try {
-      readable.push({ path: p, text: readFileSync(p, "utf8") })
-    } catch (e) {
-      unreadable.push({ path: p, reason: `read failed: ${e?.code ?? "unknown"}` })
-    }
-  }
-  // 态 2：声明了，一份都读不到。
+  // 遍历 ∥ 排序 ∥ 嵌套去重全在 `collectStandardDocs`（本函数只留三态组装与预算——可读单元不变）。
+  const { readable, unreadable } = collectStandardDocs(dirs)
+  // 态 2：声明了，一份都读不到（句中路径 = 不可读集第一项——目录项与文件项同形）。
   if (readable.length === 0) {
     parts.push(STANDARDS_UNREADABLE_NOTICE({ path: displayPath(unreadable[0].path), reason: unreadable[0].reason }))
     parts.push("")
     return null
   }
 
-  // 态 3：正文（多份 = 按声明序拼接，共用一次注入的同一预算——一次评审注入就是一个预算单位）。
-  parts.push("The file below is the project's standards document. Judge methodology compliance against it.")
+  // 态 3：正文（一个层的全部档共用一次注入的同一预算——按**注入序**（目录序 → 层根相对路径码点序）拼接后一次截断）。
+  // 逐档定位注先行（评审要知道读的是哪一份），多档多行、与正文同序。
+  parts.push("The documents below are the project's standards — the `.md` files of the declared standards layer. Judge methodology compliance against them.")
   parts.push("")
-  const body = readable.map((r) => r.text).join("\n\n")
+  const blocks = readable.map((r) => ({ path: r.path, text: `<!-- standards file: ${displayPath(r.path)} -->\n${r.text}` }))
+  const body = blocks.map((b) => b.text).join("\n\n")
   // 预算算式复用同两条常量、**逐注入独立计算**（不与指南共享池——两面语义不同，不该互相记账）。
   // providerSpec 取值在 body 之外算：上下文规格查不到也不得伪装成「没有标准档」。
   const resolvedProvider = agent.provider ?? agent._provider
@@ -313,17 +393,17 @@ export function injectProjectStandards(agent, parts, root) {
   if (chars.length > cap) {
     // 被截断的那一份（拼接期已有逐份偏移；偏移同以码点计）——恢复指针必须指向它，否则评审拿着残缺规矩判。
     let offset = 0
-    let cut = readable[readable.length - 1].path
-    for (const r of readable) {
-      const len = [...r.text].length
-      if (cap < offset + len) { cut = r.path; break }
+    let cut = blocks[blocks.length - 1].path
+    for (const b of blocks) {
+      const len = [...b.text].length
+      if (cap < offset + len) { cut = b.path; break }
       offset += len + 2 // +2 = 拼接分隔符 "\n\n"
     }
-    // 截断的风险不在大小，在**静默**：指南截断丢的是指针，标准档截断丢的是判据本身。
+    // 截断的风险不在大小，在**静默**：指南截断丢的是指针，标准层截断丢的是判据本身。
     shown = chars.slice(0, cap).join("") + `\n\n…(truncated at ${cap} of ${chars.length} chars — the standard set is PARTIAL;\nread the full file — ${displayPath(cut)} — for the rest)`
   }
   parts.push(shown)
-  // 半读句：正文在前，缺口逐份点名（零静默——KD-M1-61）。
+  // 半读句：正文在前，缺口逐项点名（零静默——KD-M1-65）。
   if (unreadable.length > 0) {
     parts.push(STANDARDS_PARTIAL_NOTICE({ unreadable: unreadable.map((u) => `${displayPath(u.path)}: ${u.reason}`) }))
   }

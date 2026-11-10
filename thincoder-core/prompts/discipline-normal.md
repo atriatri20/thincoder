@@ -120,9 +120,12 @@ Six states: 待讨论 → 待设计 → 在途 → 待核销 (the four unsettled
 - **Register** — the user states a real requirement (complex tier: 3+ steps / a new feature) ⇒ one requirement-pool row (`title` = the requirement name, `board` = the owning board).
   Scan the existing rows on the same face first — **the same topic = the same item** (same problem ∥ same work object — irrespective of the `kind` field): merge it in; otherwise note the relation.
 - **Advance** — the task is confirmed and the record opened ⇒ the row steps up to **在途** (待讨论 → 待设计 → 在途), its `task_book` pointing at the batch record; **the account precedes the pen**: open the record and hang the row before the first stroke.
-- **Book a debt** — work turns up a new defect / debt / doc drift **within scope** ⇒ book it (tech todo) **the same day**; **out-of-scope items are not booked** (scope test: inside this task book's scope ⇒ booked; beyond it ⇒ a suspicion, not a fact).
+- **Book a debt** — work turns up a new defect / debt / doc drift **within scope** → record it as a row **(tech todo)** **before the closeout of the batch that carries it**,
+  and settle it there; **out-of-scope items are not booked** (scope test: inside this task book's scope → booked; beyond it → a suspicion, not a fact).
   `trigger` is one of three values: `归批` (the batch name goes into `evidence`) · `条件` (the condition sentence goes into `evidence`) · `认账不排期`.
-  Why: a debt left in report prose or code comments is seen by nobody and gets done by nobody.
+  **The closeout names the count** — `本批新债 N 条 + #<row>`, or `本批无新债`.
+  Why: a debt left in report prose or code comments is seen by nobody and gets done by nobody; and a debt whose closeout says nothing is one the next
+  reader will re-discover from scratch.
 - **Settle at closeout** — once the closeout chain has run ⇒ the row steps twice (在途 → 待核销 → 已核销; a jump from 在途 to 已核销 would wash an in-flight entry into done), the settlement basis written into `evidence` (batch-record section / landing coordinates / commit hash).
   **Settlement order**: settlement needs the closeout first.
 

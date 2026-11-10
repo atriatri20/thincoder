@@ -467,6 +467,7 @@ advisor design review 标准维度补一条：
 | A-AC16 | 勘察证据行核查维度在位（「勘察证据行」：查过哪些公共源文档 ∥ 有无相关；缺行 ⇒ 未查或未记；无相关须照记）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 10 条；**已落笔**（EN 在盘——2026-10-14） | 勘察证据 |
 | A-AC17 | 分支出处核查维度在位（每条新增分支带「依据」：真实观测 ∥ 复现命令；两者都给不出 ⇒ 🔴；真防御给得出复现路径即过）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 `6b` 条（第 6 条与第 7 条之间） | 分支出处 |
 | A-AC18 | 集成测试设计段核查维度在位（设计档缺该段 ⇒ 🔴（设计不完整）；改动未触及业务行为 ⇒ 段内写明「无变化 + 理由」，理由须是「未触及业务行为」本身，以窗口上限为由不成立 ⇒ 仍 🔴；段内场景逐条回指业务需求）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 12 条（**逐字读核对**；机检限行为面 / 结构机检）；**已落笔**（EN 在盘——2026-10-24） | 集成测试设计段 |
+| A-AC19 | 评审侧工具执行面返回值归一：在评审工具集上跑一次 `doc_check`，拿到首行 `DOC-CHECK GATE:` 的结果（PASS ∥ REFUSED 都算通过），**不是** `Error (execution_error)`；去掉归一（`p.tool.execute(...)` 原样赋值）⇒ 该条转红 | §18 |
 
 **工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs` 的推入段（`messages` 的 assistant 消息）由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"`
 
@@ -492,7 +493,7 @@ advisor design review 标准维度补一条：
 
 ## 16. 分支出处核查（设计评审维度）
 
-> 权威链（指环单向化）：**义务** = 设计档每条针对输入 ∥ 状态的分支须带「依据」（真实观测 ∥ 可复现失败路径）= 纪律层设计步（需求 = `docs/core/requirements/METHODOLOGY.md` §2.1 F2-7）；**核查维度行为语义 = 本节**；执行实现 = 设计评审提示词的对应维度——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 `6b` 条（第 6 条与第 7 条之间）。
+> 权威链（指环单向化）：**义务** = 设计档每条针对输入 ∥ 状态的分支须带「依据」（真实观测 ∥ 可复现失败路径）= 纪律层设计步（需求 = `docs/core/standards/METHODOLOGY.md` §2.1 F2-7）；**核查维度行为语义 = 本节**；执行实现 = 设计评审提示词的对应维度——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 `6b` 条（第 6 条与第 7 条之间）。
 
 advisor design review 标准维度补一条：
 
@@ -522,3 +523,79 @@ advisor design review 标准维度补一条：
 ```
 
 **本批集成测试设计**：无新增集成场景——理由三条：① 本改动 = 评审判据文本（提示词 ∥ 过程面）；② 裁决面依赖模型输出，无可确定性断言的前端入口；③ 集成集只住三前端（`docs/core/requirements/TESTING.md` N20）。验证面 = 逐字读核对 + doc-check gate。
+
+## 18. 评审侧工具执行面：返回值归一
+
+**判据句**：工具循环在超时竞速之前把工具返回值归一成 Promise——`const toolPromise = Promise.resolve(p.tool.execute(...))`。
+
+- 同步返回字符串的工具与异步返回 Promise 的工具此后走同一条路径；收尾句 `.catch` 恒有对象可接。
+
+**这一条治的是什么**：
+
+- 工具的 `execute` 允许同步返回，`doc_check` 就是一个（`execute(args, ctx) {`——没有 `async`）。
+- 而循环在超时竞速的 `finally` 里对同一返回值挂 `.catch`：
+
+```text
+thincoder-core/advisor/loop.mjs
+  toolPromise = p.tool.execute(p.args, { cwd, agent, onOutput, signal })
+  return await Promise.race([toolPromise, timeoutPromise])
+  toolPromise?.catch(() => {})
+```
+
+- 同步返回值上没有 `.catch` ⇒ 收尾句抛 `TypeError`；它盖过竞速的结果，被外层 `catch` 归进 `: "execution_error"` 那一支。
+- 结果：一次成功的 `doc_check` 在评审路径上变成 `Error (execution_error)`。
+
+**两条修法，取第一条**：
+
+| # | 修法 | 处置 |
+|---|---|---|
+| A | 循环侧包一层 `Promise.resolve(...)`，一行 | **采用** |
+| B | 把 `thincoder-core/agent-tools/doc-check.mjs` 的 `execute` 改成 `async` | 弃 |
+
+- **A 的理由**：改一处，所有同步返回的工具一并治好；工具契约不动（可同步、可异步，与既有形态一致）；症状长在循环里，修法也落在循环里——下一个人读这一处就看到原因。
+- **B 为什么不够**：只治一个实例，下一个同步返回的工具照旧撞同一行。
+- **B 的第二个代价**：它把「工具必须返回 Promise」立成契约，而循环外唯一的调用点已用 `await` 收两者——收窄换不到东西。
+- **A 不改收尾句的目的**：那句本来是为「超时赢了、工具 Promise 还在飞」防未捕获拒绝；归一之后它终于作用在一个真 Promise 上。
+
+**为什么只有评审路径撞（这一句是给下一个人看的，别以为 advisor 特殊）**：
+
+- 主代理侧调用点 = `thincoder-core/agent/dispatch-run.mjs` 的 `rawResult = await item.tool.execute(item.args, toolCtx)`——`await` 对同步返回值与 Promise 同判，那里不产生 `.catch`。
+- 评审循环是唯一在 `finally` 里对工具返回值挂 `.catch` 的地方。
+- 所以不是「评审的工具集特殊」，而是**这一条收尾句特殊**：同一套工具挂在 `await` 收口的调用点上，一次也不会撞。
+
+**可红断言**：在评审工具集（`thincoder-core/advisor/loop.mjs` 的 `advisorToolsFor`）上跑一次 `doc_check`，拿到的是结果文本，**不是** `Error (execution_error)`。
+
+- 通过形 = 首行 `DOC-CHECK GATE:`（`PASS` ∥ `REFUSED` 都算）。
+- 坏法 = 去掉归一、把 `p.tool.execute(...)` 原样赋给 `toolPromise` ⇒ 该条转红。
+
+
+**零改面**：各工具实现的 `execute` 形态（同步的照旧同步）· 超时竞速与 `TOOL_TIMEOUT_MS` · 错误分类四支 · 工具表与装配面 · 结果截断与回填序。
+
+**先例行（对齐 ∥ 偏离）**：对齐 `thincoder-core/agent/dispatch-run.mjs` 的 `await item.tool.execute(...)`——同一件事（调用点自己对「同步 ∥ 异步」宽容）。
+
+- 偏离 = 评审循环不能只靠 `await`（它还要在 `finally` 里给遗留 Promise 挂 `.catch`），所以那份宽容要显式写出来。
+
+**分支出处**：本面只有一条分支 = 归一。
+
+- ① 生产上报——评审者在设计评审里调 `doc_check` 拿到 `Error (execution_error)`；评审既拿不到判决，B 面的死结也由此坐实。
+- ② 复现——在评审工具集上调一次 `doc_check`。
+
+**勘察证据行**：查过 = 本仓 `docs/core/design/BATCH-RECORD.md` §4.22（同一链的 B ∥ C 面）· `docs/core/design/DOC-CHECK.md` §8（引擎面边界）· `thincoder-core/advisor/loop.mjs` · `thincoder-core/agent/dispatch-run.mjs` · `thincoder-core/agent-tools/doc-check.mjs` —— **相关**。
+
+- 仓外声明源本面未查：判据全部落本仓代码与设计档，无外仓可对齐项（如实记）。
+
+**数据事实核对**：本面无数据断言——判据全部由读码得。
+
+**集成测试设计**：A 面是生产真发生过的问题 ⇒ 够格长一条集成用例（族 = `guard`）。
+
+- **交互** = 评审装配（`advisorToolsFor`）→ 工具循环 → 返回值归一 → 工具结果文本。
+- **业务可观察结果** = 评审拿到 `DOC-CHECK GATE:` 判决首行，而不是 `Error (execution_error)`。
+- **业务入口** = 主 agent 发起设计评审、评审者在评审里调 `doc_check`（与 B ∥ C 面同一次调用面）。
+- **回指业务需求** = `docs/core/requirements/ENGINEERING-MODE-V2.md` §8（交界面契约：产物落盘、消息只报告——评审的第一件产物就是它的判决）。
+- **号 = `47-1`，故事 = `CLI 47`**（族 = `guard`，住 `test/rtm/guard.md`）；用例标题逐字引用该号。RTM 现表（`test/RTM.md` 故事索引表）的读后差量 = **破 0 ∥ 冗余 0 ∥ 缺 1**（本行）。
+
+**验收回指**：A-AC19（§12 表）→ 本节。
+
+**边界（不做）**：不改任何工具的 `execute` 形态；不把「工具必须返回 Promise」立成契约；不改超时竞速与错误分类；不新增未捕获拒绝的处理机制。
+
+**UI / 交互决策**：本面无 UI / 交互面；**无 open 项**。

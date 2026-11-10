@@ -79,17 +79,18 @@
 - **「同批」的含义**：能力面（三端读写团队账）一次性到齐（核单源）；维护面（控制台页）同批落齐——**无端侧滞后项**。
 - **不做面**：逐端独立面板/状态行/命令行族（不在本档；如用户点名 ⇒ 三端同批另开批）。
 
-## 5. 受影响文件与行数预算
+## 5. 受影响文件与改动事由
 
-| 档 | 行数 | 职责 |
-|---|---|---|
-| `thincoder-core/team-ledger.mjs` | **282** | 工具声明 + 五 action 执行器 + 仓派生 + 登录态门 + 请求 |
-| `thincoder-core/tool-docs/team_ledger.md` | **9** | 工具描述文本单点（`DESC` 加载面） |
-| `thincoder-core/agent/family-tools.mjs` | **198**（+动态 import ∥ depth-0 段 + `teamLedgerTool` ∥ 子代理段 + `teamLedgerReadTool`——沿 `ledgerTool`/`ledgerReadTool` 同位） | 家族段装配 |
-| `thincoder-core/team.mjs` | **224**（传输 / 登录态现形复用） | 登录态/token 单源 |
+| 档 | 事由 |
+|---|---|
+| `thincoder-core/team-ledger.mjs` | 工具声明 + 五 action 执行器 + 仓派生 + 登录态门 + 请求 |
+| `thincoder-core/tool-docs/team_ledger.md` | 工具描述文本单点（`DESC` 加载面） |
+| `thincoder-core/agent/family-tools.mjs` | 家族段装配：动态 import ∥ depth-0 段 + `teamLedgerTool` ∥ 子代理段 + `teamLedgerReadTool`——沿 `ledgerTool`/`ledgerReadTool` 同位 |
+| `thincoder-core/team.mjs` | 登录态/token 单源（传输 / 登录态现形复用） |
 
 - 三端（CLI ∥ VSC ∥ 桌面）**零改动**（D-TL1）；服务端侧裁剪随动 = `docs/server/design/ledger/LEDGER.md` §9。
 - 单元测试档 = 本册件（与 server 面同档——§7 用例指入）。
+- 逐档绝对行数与增量属读数：只出 `doc_check({mode:"lines"})` 的输出或当批批档（判据 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 的「行数」行）。
 
 ## 6. 验收判据（AC-32 端侧面对位）
 

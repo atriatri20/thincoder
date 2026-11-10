@@ -112,7 +112,9 @@ above it, while what you cited — the section, its words, the symbol — stays 
 "Known behavior…" and "I'm confident…" rest on memory, which has a cut-off and misremembers, so no one can check a remembered API answer.
 Where the source is readable, a behavioral question is an EVIDENCE question, not a reasoning question.
 
-**Take evidence only for the assertions you are about to make**: facts the task book or context already gave you are cited as-is — no re-reading to verify them; pre-reading unrelated code spends survey time on assertions you are not making.
+**Take evidence only for the assertions you are about to make**: a locator supplied by the task book, parent or reviewer may be used directly to find the source; a fact that supports a decision or criterion must be read at its source.
+
+Pre-reading unrelated code spends survey time on assertions you are not making.
 
 **Evidence** is a line you read this turn, quoted as it stands. Copy the whole line from the open file, character for character, so a reviewer can put your quote beside the file and read the same text.
 A turn is the unit with a hard edge — one user message to one reply — so a line quoted from it stays checkable.
@@ -178,13 +180,14 @@ Code does not grant itself tolerance.
   No `~~strikethrough~~`, no "previously X ⇒ corrected Y", no corpse-marking "void / scrapped".
   Why: **residue makes readers re-open dead items as live work orders** — and in a RAG pipeline a stale statement is retrieved as if current, which is worse.
 - **A requirement/design doc carries no history at all**: history lives only in **git commits**.
-- **Prompt face — no document references**: a **citation** has no place in any text the model reads — prompt files · tool descriptions · schema text · strings returned to the model.
+- **Prompt face — no normative document references**: a **citation** that supplies the meaning of a rule has no place in any text the model reads — prompt files · tool descriptions · schema text · strings returned to the model.
   A citation = any token that sends the reader to **another document** for what the sentence means: a doc name, a doc name with a section number, a path carrying a line number into another doc, a **pointer sentence** such as "see the design doc".
   Why: its wording changes under the sentence, and a model reading it follows the pointer and guesses instead of reading the source — the sentence stands on its own.
   Disposal = delete, not re-point: the citation goes, the meaning stays in the sentence (they belong in docs or comments).
-  **The test — where does it point?** A **citation** points at content in **another document** (a design doc / a requirement doc / a reference repo): the reader must go read it, and its wording can change under the sentence — banned.
+  **The test — what work does it do?** A **citation** sends the reader to another document for the rule's wording or meaning, and that wording can change under the sentence — banned.
   A **machine coordinate** points at a position **inside the protocol the model is executing**, and stays.
   Machine coordinates include: the batch-record segment it writes (`batch record §2` = the task book itself; `§1`–`§6` = the segments) · a tool parameter name it passes (`batchDoc` / `segment` / `files` / `docs`) · a ledger state it moves · this file's own section numbers.
+  **An execution coordinate is allowed**: a task-book reference to the approved design tells the implementer which spec to read and follow; it carries the work, not the wording of a rule in this prompt.
   The model acts on it directly, and nothing outside can reword it.
   **Operand exemption**: `AGENTS.md` · `SKILL.md` · `README.md` · `MANIFEST.md` · `.thincoder/advisor.md` · `project_rules.md` · path forms · the `".md"` literal — names the model **reads, writes or passes**, not prose it has to chase; those stay.
 - **Know the what and the why before you write** (write with the why): when updating or adding any normative text (prompts ∥ docs ∥ batch records ∥ ledger evidence), three things hold.
@@ -457,8 +460,11 @@ The **state doc = requirement docs / design docs** — what is true now, and how
 ② **Retrieval side** — a stale value gets retrieved and **read as the current way** ⇒ this is not tidiness, it is **error propagation**.
 ③ **Lifetime side** — a state doc **lives long**; what goes in **cannot be cleaned out**. A process doc **can be cleaned up whole** (a maintainer may drop an entire record without losing normative content) ⇒ process has to live there to be **cleanable at all**.
 **The test is one question**: *would this sentence still mean something once this round is over?* Yes ⇒ it is state; keep it. No ⇒ it is process; delete it.
-**Process (delete-eligible in a state doc)**: symptom · root cause · problem statement · reproduction · trial readings · rejected options (and why rejected) · change trail · superseded values.
-**State (keep)**: the current rule · current value · current contract · current acceptance criterion · current boundary · decision + its one-line reason · mechanism-body sentences · directory-ownership sentences · template / placeholder forms · a date that is part of a rule.
+**Process (delete-eligible in a state doc)**: symptom · root cause · problem statement · reproduction · trial readings · experimental rejection details · change trail · superseded values.
+
+**State (keep)**: the current rule · current value · current contract · current acceptance criterion · current boundary · decision + its one-line reason · design-level rejected alternatives and their lasting reasons.
+
+Mechanism-body sentences, directory-ownership sentences, template / placeholder forms, and a date that is part of a rule also stay.
 **Common sense — every mode and every role**: this is not an engineering-mode rule; the same split holds in normal mode and for every role that writes a doc.
 
 ## Work structure (board → domain → file)

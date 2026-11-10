@@ -16,7 +16,13 @@ import {
   createAgent,
   readonlyToolNames, escapeXml, excludeSubagentTools,
 } from "../agent.mjs"
-import { allocRelay, wrapChildCallbacks, relayPrefixOf } from "../agent/spawn-child.mjs"
+import { allocRelay, wrapChildCallbacks, relayPrefixOf, chargeDesignerSurveySpawn, rootAgentOf } from "../agent/spawn-child.mjs"
+// B8（TOOLS.md §6.29 ④）：eng 两角色的受限父历史（同名 `read_history`，只在 extraTools 注入）
+import { makeBatchHistoryTool, recordBatchHistoryStart } from "./read-history.mjs"
+// B4（TOOLS.md §6.29 ①）：只读角色的 action 级变体派生（构造器单源 = `agent/helpers.mjs`，
+// 判据单源 = `agent/dispatch-gates.mjs` 的 `readonlyActionOf`）。
+import { deriveReadonlyTools } from "../agent/helpers.mjs"
+import { readonlyActionTest } from "../agent/dispatch-gates.mjs"
 // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §6.15）：子代理人读线窗口常量单源（store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 import { validateDesignToken } from "./advisor.mjs"
@@ -270,11 +276,29 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   let issuedToken
   if (role === "eng-coder") issuedToken = gateDesignToken(parent, args)
 
+  // ── B7（TOOLS.md §6.29 B7）：eng-designer 的勘察预算计数 ──────────────────────────
+  // 计的是**设计席发起的勘察**（`parent._role === "eng-designer"` 且本 spawn 的 role = explore），
+  // 不是设计师自己的被派次数——模型面承诺的是「≤6 explore spawns per batch」。
+  // 判据序（设计档原话「先完成角色、同步方式与 batchDoc 准入再计数」）：角色/同步两道门在
+  // `gateEngCoderSpawn`（调用方，本函数之前已过）；本角色的 batchDoc 绑定在设计师自己那一次 spawn
+  // 就过完了门（`parent._batchDoc`）；任务书门在本函数上方 ⇒ 到此处仍未拒的 spawn 才占额度。
+  // 载体 = depth-0 根 agent 的独立 Map（K5：挂一次性 designer child 上会在 fix respawn 归零）。
+  if (role === "explore" && parent?._role === "eng-designer" && parent._batchDoc) {
+    chargeDesignerSurveySpawn(rootAgentOf(parent), parent._batchDoc)
+  }
+
+  // ── B8（TOOLS.md §6.29 ④）：eng 两角色的限量父历史 ────────────────────────────────
+  // 绑定的是**父会话**（depth-0 根 agent）与**本批起点**；未绑定角色（explore/plan/coder/tester/consult）
+  // 一个新历史工具都拿不到（K7：新工具解决不了「没有 _batchDoc 时范围怎么定」）。
+  if (engineeringRole) recordBatchHistoryStart(rootAgentOf(parent), batchDocAbs, Date.now())
+
   // Filter tool set by role: explore/plan are read-only (plan is a planning agent, its deliverable is the plan itself)
   let tools
   if (role === "explore" || role === "plan") {
-    const allowed = readonlyToolNames(parent.tools)
-    tools = parent.tools.filter((t) => allowed.has(t.name))
+    // B4（TOOLS.md §6.29）：整把只读集 ∪ action 级只读变体——旧形只认 `t.readonly`，`git` / `memory` /
+    // `settings` / `process` 整把不是只读，于是它们的只读动作在只读角色里一起消失（需求 B4 的直接病因）。
+    // 判据单源 = 运行期 `readonlyActionOf`（经 `readonlyActionTest` 适配）——不另写一份只读动作名单。
+    tools = deriveReadonlyTools(parent.tools, readonlyActionTest)
   } else if (role === "tester") {
     // tester = the THIRD tool face (AGENT-LOOP-SUBAGENT.md §6.59.2 ④): read-only set ∪ {execute, bash},
     // minus {verify, advisor}.
@@ -441,6 +465,9 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     ...wrapChildCallbacks(relayPrefix, ctx.callbacks),
   }
   const childRunOpts = buildChildRunOpts(ctx)
+  // B8（TOOLS.md §6.29 ④）：eng 两角色各挂一枚**本批窗口**的受限 `read_history`（同名工具、
+  // 经 extraTools 注入——装配面在 `agent/setup.mjs` 的 `extraTools` 段）。未绑定角色不挂（K7）。
+  if (engineeringRole) childRunOpts.extraTools = [makeBatchHistoryTool(rootAgentOf(parent), batchDocAbs)]
   return { child, input, childOpts, childRunOpts, relayPrefix, childProvider }
 }
 

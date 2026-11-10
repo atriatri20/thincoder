@@ -279,7 +279,7 @@ function sectionBodySpan(src, seg) {
  * 判定与写盘**全部复用既有面**（零新写盘路径）：段域 = 同模式 append 白名单（§4.1 一处单源，一张表两个动作）· path 门（D-BR21）·
  * 冻结拒写（§4.9 门 ②，串与 append 逐字同）· 剥凭证（同一条 `sanitizeText`；§3 另丢伪造轮次戳——§4.7 不变量 5）· 骨架保护 ·
  * `newText` 单次上限 ∥ F11-C 死占位（§4.21.1 两道门，与 append 同一批判据）·
- * 文档机检门（**判集两类**：段长类判 `newText`、锚类判整档——§4.9 门 ④）· `onWrite` 记账 · 一次 `writeFileSync`。
+ * 文档机检门（段长类判 `newText`、锚类判改后视图的本次替换区）· `onWrite` 记账 · 一次 `writeFileSync`。
  * **不跑 §5 段序门**（§4.19「段序门」行：edit 须有既有锚 ⇒ 写不出原本不存在的内容，造不出「先实施」；
  * 反过来在 §3 进行中时拒掉 §5 的旧行，正是本批要消的那种死锁）。
  * **不做整段替换**（段体实测两成超 `MAX_TEXT_CHARS`——重发全文 = 静默丢内容）∥ **不做模糊匹配**（一次近似改写 = 一次
@@ -381,10 +381,8 @@ export function editBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const zoneBefore = zoneStatusCount(src, n)
   const zoneAfter = zoneStatusCount(postEdit, n)
   if (zoneAfter > zoneBefore) throw new Error(EDIT_STATUS_LINE_PROMOTION_ERROR(n, zoneBefore, zoneAfter))
-  // 文档机检门（§4.9 门 ④——**判集按命中类分两套**）：**段长类**（段落过长 · 行过长）判本次写入的文本 = `newText`
-  // （一条早先就在的超长段不再拦本段的无关改动）；**锚类**（档缺 · 节缺 · 引缺）判**整档**——引用完整性是档级属性。
-  // 「整档」= **改写后的**档（`recordView`）：#2021 的现场就是「那条死引文被这一次 edit 换掉」，拿改写前的盘上字节判，
-  // 那一行永远过不去（本批要消的就是那个死锁）。REFUSED ⇒ 拒（零字节落盘）∥ ERROR ⇒ 写 + 回执明示。
+  // 文档机检门：段长类判本次写入的 `newText`；锚类判改后视图 `recordView` 里的本次替换区。
+  // 区外锚类只出整档存量读数，别让另一段的失效引文与本段互锁。REFUSED ⇒ 拒（零字节落盘）∥ ERROR ⇒ 写 + 回执明示。
   const gate = runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body: replacement, recordView: postEdit } })
   if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "edit"))
   writeFileSync(abs, postEdit)

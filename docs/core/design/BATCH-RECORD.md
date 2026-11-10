@@ -105,9 +105,9 @@
 
 ### 4.4 §3 内容 = 每轮一块结论表 + 裁定行 + 计数
 
-每轮一个轮次块（`### 轮次 N（评审子代理）` 由工具生成）：**裁定结论表**（每行 = `#` ∥ 严重度 ∥ 状态 ∥ **一行依据**）+ `VERDICT` 行 + 计数；多轮各自成节（append）。
+每轮一个轮次块（`### 轮次 N（评审子代理）` 由工具生成）：**裁定结论表**（每行 = `#` ∥ 严重度 ∥ 状态 ∥ **证据**）+ `VERDICT` 行 + 计数；多轮各自成节（append）。
 
-**一行依据写指针，不抄评审原文**——依据格用指针（三形闭集 = §4.20，本条不复述），**行号不入指针**（理由同源）。**评审回执全文不进档**：每条发现的详细论证住评审回执与本批 git，档内只留结论与去哪查——整份回执搬进档 = 同一批字句两处各存一份，改一处漏一处。
+**证据格写指针，不抄评审原文**——该格用指针（三形闭集 = §4.20，本条不复述），**行号不入指针**（理由同源）。**评审回执全文不进档**：每条发现的详细论证住评审回执与本批 git，档内只留结论与去哪查——整份回执搬进档 = 同一批字句两处各存一份，改一处漏一处。
 
 §3 写在**批次档**——**§3 段不在评审对象清单内**（B9 只含批次档 **§2**）；追加 §3 **不改变被审内容**，故与冻结窗口不冲突。
 **每一笔追加都自带裁定行**：`§3` 的追加若读成「无裁定行」∥「两者同携」，**写不进去**；判打回的一笔照写。
@@ -124,7 +124,7 @@
 
 - 六段自写句 → 改为「用 `batch({action:"append"})` 加内容 · 用 `batch({action:"edit"})` 就地改己段 · 建批用 `batch({action:"create"})`」（designer / coder 各自 persona + 纪律层——prompt 面 7 处随批改）。
 - **调用侧**：设计评审**一律必传 `batchDoc`**（`type:"design"`——含普通面收口评审，§4.16）。没有批次档在飞 ⇒ 先 `batch create` 再发起评审；「只想让人看一眼某份档」的代价就是先建一本账，这是本判据明示接受的代价。
-- **评审层三条提示词 + 主 agent 调用句 + 普通面纪律档**（`advisor-design` · `advisor-round2` · `advisor-round3` · `persona-engineering` · `discipline-normal`）：均指示评审者在报告之外**调工具把本轮结论写进批次档 §3**。换写后的块形 = 写本轮**结论表**（`#` ∥ 严重度 ∥ 状态 ∥ 一行依据）+ `VERDICT` + 计数，依据用指针、**回执全文不进档**（判据单源 = §4.4 / §4.20）。
+- **评审层三条提示词 + 主 agent 调用句 + 普通面纪律档**（`advisor-design` · `advisor-round2` · `advisor-round3` · `persona-engineering` · `discipline-normal`）：均指示评审者在报告之外**调工具把本轮结论写进批次档 §3**。换写后的块形 = 写本轮**结论表**（`#` ∥ 严重度 ∥ 状态 ∥ 证据）+ `VERDICT` + 计数，证据格用指针、**回执全文不进档**（判据单源 = §4.4 / §4.20）。
 
   **改前基线（检索锚，不是现行指令）**：「write this round's findings table + VERDICT + counts **verbatim** into batch record §3」——这是换写前的原样，留作 grep 对照。
 
@@ -245,10 +245,10 @@
 | BR-86 | 边界 | 设计评审 `edit §3`，`newText` 含 `### 轮次 N（评审子代理）` 行 | 该行被丢弃（同 append 的 `sanitizeText(text, true)`）——来源戳只能由工具盖；其余文本落盘 |
 | BR-87 | 边界 | `§3` 状态行 = `进行中` 时 `edit §5` ∥ `append §5` | 前者成功（`edit` 须有既有锚 ⇒ 造不出「先实施」；段序门只挂 append）；后者拒（`§5` 段序门串逐字不变） |
 | BR-88 | 边界 | 机检判集两类各一拍（同一本夹具档）：① 段体里有早先就在的超长段，`edit` 一处无关字；② 档里有一条失效引文（`引缺`），`edit` 一处无关字 | ① 门 PASS（段长类只判 `newText`）；② REFUSED 且点名该 `引缺`（锚类判整档——§4.9 门 ④ 判集分两类） |
-| BR-89 | 正常 | 设计评审 `append §3`，块 = 结论表（`#` ∥ 严重度 ∥ 状态 ∥ 依据）+ `VERDICT: pass` + 计数；依据格 = 节号 / 符号名 / 逐字锚 | 成功；裁定行闸照判、`§3` 状态行照置位（机械面零变——§4.4 / §4.20） |
+| BR-89 | 正常 | 设计评审 `append §3`，块 = 结论表（`#` ∥ 严重度 ∥ 状态 ∥ 证据）+ `VERDICT: pass` + 计数；证据格 = 节号 / 符号名 / 逐字锚 | 成功；裁定行闸照判、`§3` 状态行照置位（机械面零变——§4.4 / §4.20） |
 | BR-90 | 错误 | 同形块但无裁定行 ∥ 两者同携 | 拒（`R-G3` 串逐字——瘦身不动拒面） |
 | BR-91 | 正常 | designer 写 §2：条目表 + 落点 `design §4.20` + 受影响文件 + 验收行，不重述机制 | 成功；机制叙述不在 §2（判读面 = 评审同轮核） |
-| BR-92 | 边界 | §2 / §3 的依据格写 `thincoder-core/agent-tools/batch-skeleton.mjs` 后接冒号行号 ∥ 「见上文」 ∥ 「见设计档」 | 机检不拦（无此项门）；判读 = 评审同轮核 + 收口对账（§4.19 D7 两半）——命中即判不合、重写该格 |
+| BR-92 | 边界 | §2 / §3 的证据格写 `thincoder-core/agent-tools/batch-skeleton.mjs` 后接冒号行号 ∥ 「见上文」 ∥ 「见设计档」 | 机检不拦（无此项门）；判读 = 评审同轮核 + 收口对账（§4.19 D7 两半）——命中即判不合、重写该格 |
 | BR-93 | 错误 | 档头台账行仍带 `#<编号>` 占位时 `edit §2`（锚合法） | throw（`placeholderResidueError` 逐字，逐行点名档头行号 + 原文）；档字节零变 |
 | BR-94 | 边界 | `edit` 的 `newText` 20000 ∥ 20001 字符 | 前者照写（回执点名替换字符数）；后者 throw 点名上限与分段写法，零字节落盘 |
 | BR-95 | 边界 | §1 段头区两条 `**状态行**：`（`已收口 …` ∥ `进行中`） | `readBatchStatusLine` = `unknown`；append / edit / status / close 全拒（冻结同判）；修 = 主 agent 普通文档写 |
@@ -272,7 +272,7 @@
    **行尾形态无关**（LF ∥ CRLF ∥ 混排同判——`\r` 归行分隔、不归行内容；行切分 = `/\r?\n/`）。
 2. **冻结拒写**：`已收口` / 不可解析 → throw（错误消息区分「已收口档不回改」/「状态行不可解析或缺失」）——覆盖 `batch` append / status / edit 通道；**唯一例外 = 重开合取**（§4.18-B：段 = §1 · depth-0 · 值关键词 = 进行中 · `note` 非空 ⇒ 放行并追加 §1 追记行；非合取一律走本拒写，串逐字零变）；主 agent 对 §1/§4/§6 的普通文档写不经本工具，兑底 = 写纪律。
 3. **链完整性门（2026-10-18 · 收口前置——§4.18-A）**：`close` ∥ `status` 写 §1「已收口」两路在写盘前同过 `assertCloseoutChainComplete(src)`——§2 / §3 / §4 / §6 各段须有内容（每一批都要有设计、评审、批准——段内不得声明不适用）；§5 段号豁免；不满足 ⇒ throw 并点名缺段。门位 = 门 ② 之后、门 ④ 之前（链未跑完先报结构缺口，不先跑机检）。判据逐段 / 声明形 / 三拒串 = §4.18-A（本条不重述）。
-4. **文档机检门（2026-10-18 · 结构兜底）**：`append` ∥ `edit`（全部段）、`status` 值「已收口」、`close` 各路在写盘前跑 `doc_check` 的 gate——`REFUSED` ⇒ 拒（append / edit 面档字节不变；close / status 面状态行不改）；`ERROR` ⇒ append / edit 放行 + 回执明示 ∥ close / status 拒（fail-closed）。契约 = §4.1 行 + `docs/core/design/DOC-DISCIPLINE.md` §3.20「结构兜底」；门位在既有拒因**之后**、写盘**之前**（零回归）。**判集分两类**：**段长类**（段落过长 / 行过长）判本次写入的文本——`append` 判追加文、`edit` 判 `newText`；**锚类**（`档缺` / `节缺` / `引缺`）+ 骨架 / 占位 / 状态行判**整档**——引用完整性是档级属性，改一处不能只看新文。`close` 面整档照判（既有 fail-closed 不变）。
+4. **文档机检门（2026-10-18 · 结构兜底）**：`append` ∥ `edit`（全部段）、`status` 值「已收口」、`close` 各路在写盘前跑 `doc_check` 的 gate——`REFUSED` ⇒ 拒（append / edit 面档字节不变；close / status 面状态行不改）；`ERROR` ⇒ append / edit 放行 + 回执明示 ∥ close / status 拒（fail-closed）。契约 = §4.1 行 + `docs/core/design/DOC-DISCIPLINE.md` §3.20「结构兜底」；门位在既有拒因**之后**、写盘**之前**（零回归）。**判集分两类**：**段长类**（段落过长 / 行过长）判本次写入的文本——`append` 判追加文、`edit` 判 `newText`；**锚类**（`档缺` / `节缺` / `引缺`）+ 骨架 / 占位 / 状态行判**整档**（证据格列的收窄见 §4.22）——引用完整性是档级属性，改一处不能只看新文。`close` 面整档照判（既有 fail-closed 不变）。
 
 收口两路（`close` ∥ `status` 值「已收口」）另过 **§4.13 单测档零留存门**——判序已定：本门位在 ③ 链完整性门**之后**、④ 文档机检门**之前**（判序单源 = `thincoder-core/agent-tools/batch-closeout.mjs` 的 `assertCloseoutGates`：① 链门 → ② `§3` 状态词臂 → ③ 本门 → ④ 机检门）；本清单只登记文档机检门，本门的判据与拒面 = `docs/core/design/TESTING.md` §3.5。
 
@@ -496,8 +496,8 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 
 **受影响面（行数 = 现行 · 落笔当刻实读）**：
 
-- **实现**：`thincoder-core/agent-tools/batch-skeleton.mjs`（219 行——多枚归一 + 渲染）· `thincoder-core/agent-tools/batch-lifecycle.mjs`（现行 = `docs/core/design/LEDGER.md` §3.5——收口两路（`close` ∥ `status` 写 §1「已收口」）共用单源 `reanchorOnClose`：取行集 + 调核内重锚单源 + 回执点名）；
-  其余：`thincoder-core/agent-tools/batch.mjs`（337 行——`ledger` schema 描述）；`thincoder-core/agent-tools/batch-lifecycle.mjs` 动态 import `thincoder-core/ledger.mjs`（零静态引 `node:sqlite`）。
+- **实现**：`thincoder-core/agent-tools/batch-skeleton.mjs`（多枚归一 + 渲染）· `thincoder-core/agent-tools/batch-lifecycle.mjs`（现行 = `docs/core/design/LEDGER.md` §3.5——收口两路（`close` ∥ `status` 写 §1「已收口」）共用单源 `reanchorOnClose`：取行集 + 调核内重锚单源 + 回执点名）；
+  其余：`thincoder-core/agent-tools/batch.mjs`（`ledger` schema 描述）；`thincoder-core/agent-tools/batch-lifecycle.mjs` 动态 import `thincoder-core/ledger.mjs`（零静态引 `node:sqlite`）。
 - **文档 / 描述面（模型可见文案——换写）**：本档 §4.8（BR-54 / BR-56）/ §4.10 / §4.11 / §4.13 · 本档 §7（D-BR29）/ §8 边界 12 · `thincoder-core/tool-docs/batch.md`（`ledger` 参数描述面）。
 - **零改面**：骨架与占位字面（`TEMPLATE_PLACEHOLDERS` ∥ `TOOLS.md` §6.20 判定域）逐字不动。
 
@@ -564,16 +564,16 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 
 **受影响面（行数 = 现行 · 落笔当刻实读）**：
 
-- **实现**：`thincoder-core/agent-tools/batch-skeleton.mjs`（219 → 305（+86）——`sectionContentState` ∥ `malformedInapplicableLine` ∥ `inapplicableDeclarationError`）
-∥ `thincoder-core/agent-tools/batch-lifecycle.mjs`（**506** 行 · node 实读——链门 + 重开径 + `appendLineToSection` + 两拒句）
-∥ `thincoder-core/agent-tools/batch.mjs`（337 → ≈ +2——`status` / `note` / `close` 三条 description 换写；**零新参数**）。
-- **描述面（模型可见文案——换写）**：`thincoder-core/tool-docs/batch.md`（2288 字符 · 单物理行——同三处换写，行数不变）· `docs/core/design/TOOLS.md` §6.24（1522 → 1553 行 · +31 · 实测）· 本档（522 → 636 行 · +114 · 实测）。
+- **实现**：`thincoder-core/agent-tools/batch-skeleton.mjs`（`sectionContentState` ∥ `malformedInapplicableLine` ∥ `inapplicableDeclarationError`）
+∥ `thincoder-core/agent-tools/batch-lifecycle.mjs`（链门 + 重开径 + `appendLineToSection` + 两拒句）
+∥ `thincoder-core/agent-tools/batch.mjs`（`status` / `note` / `close` 三条 description 换写；**零新参数**）。
+- **描述面（模型可见文案——换写）**：`thincoder-core/tool-docs/batch.md`（单物理行——同三处换写，行数不变）· `docs/core/design/TOOLS.md` §6.24 · 本档（两处 `.md` 的体量随换写上行，绝对值与增量住批档 §5）。
   触达节 = §4.8（BR-57–BR-69 · BR-38 射程限定）∥ §4.9（门清单四道 + 冻结拒写行）∥ §4.1（fail-closed 行）∥ §4.12 ∥ §4.13 ∥ §7（D-BR30 / D-BR31 / D-BR32）∥ §8（边界 13）。
-- **读数随动**：`docs/core/design/PROMPT-SYSTEM.md` §6.11 = 描述面预算读数的唯一权威处（`batch` **6,553** 字符 · top5 · 当前 **142,991** = **1.381 × 基线**——已按 2026-10-18 实施轮实测回填）——三处 description 换写会改该读数 ⇒ 实施轮跑 `node scripts/tool-schema-size.mjs` 后回填（先例口径 = `TOOLS.md` §6.20 报告发现条「叶子计数须与本批键面同步」）。
+- **读数随动**：`docs/core/design/PROMPT-SYSTEM.md` §6.11 = 描述面预算读数的唯一权威处（量法 = `node scripts/tool-schema-size.mjs` 的汇总行；`batch` 的现值、top5 位次与相对基线的倍数只住该命令输出与批档）——三处 description 换写会改该读数 ⇒ 实施轮跑 `node scripts/tool-schema-size.mjs` 后回填（先例口径 = `TOOLS.md` §6.20 报告发现条「叶子计数须与本批键面同步」）。
 - **测试面**：当批定向单测 `docs/batches/<批档名>.test.mjs`（新增 · 收口随批删 · 零留存；读数一行落 §5）。
 - **零改面**：`STATUS_WORDS` 字面 · 六段作者表 · append 段白名单 · 冻结门对已收口档 append/status 的拒（逐字）· `close` 的 §6 单段拒串（唯一缺段时逐字）· `thincoder-core/agent-tools/batch-read.mjs` 读面 · 台账。
 
-**贴线判（500 软线 / 800 硬限）**：最高实现档 = `thincoder-core/agent-tools/batch-lifecycle.mjs` **506 行**（node 实读；500 软线之上、800 硬限未触）⇒ **本批不拆**（拆分 = 新结构，设计未授权）；**触发 = 该档过 650 行**（与 `thincoder-core/config.mjs` 同口径）。
+**贴线判（500 软线 / 800 硬限）**：最高实现档 = `thincoder-core/agent-tools/batch-lifecycle.mjs`（同尺复跑 ⇒ 500 软线之上、800 硬限未触；读数住批档）⇒ **本批不拆**（拆分 = 新结构，设计未授权）；**触发 = 该档过 650 行**（与 `thincoder-core/config.mjs` 同口径）。
 
 **验收回指（条目 → 判据 → 机检形）**：
 
@@ -602,7 +602,7 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 
 **不做整段替换**：段体可能超 `MAX_TEXT_CHARS`（20000——`thincoder-core/agent-tools/batch.mjs` 实读）。整段替换要模型把全文重发一遍，缺一段就是静默丢内容。
 
-**实测**（`docs/batches/**` 全 **283** 本带 §2 的档，逐本读段体字符数——本轮复测）：**56 本（约两成）的 §2 超过 20000 字符**；最大一本 = 2026-10-15-doc-ref-direction-cleanup（批档已清），其 §2 **128,888 字符 ≈ 上限的 6.4 倍**。
+**实测**（`docs/batches/**` 带 §2 的各本逐本读段体字符数——本轮复测）：**约两成的 §2 超过 `MAX_TEXT_CHARS`**；最大一本的段体达上限的数倍（那本已随其收口清档，档名与读数住批档 §5）。
 
 **不做模糊匹配**：一次近似改写 = 一次没人看见的错改。**匹配 = 逐字节，含行尾**：`\r\n` 档上的 LF 锚零命中 ⇒ 拒（安全方向，不会误改）。
 
@@ -703,7 +703,7 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 | 段序 / 戳 | §4.19「段序门」行 ∥ 「来源戳」行 | BR-86（戳行被丢弃）· BR-87（§3 进行中时 `edit §5` 放行、`append §5` 仍拒） |
 | 收口对账两半 | §4.19「取什么」两条 ∥ §7 D-BR37 | 非单测：收口时两行读数记 §6（§2 ↔ 设计档 · §2 ↔ §5）；机检形 = §6 里两行都在（缺一行 = 对账未跑） |
 
-**集成测试设计（`test/RTM.md` 读面 → 本批增量 = 0）**：全表逐条对照（CLI 端 31 条业务故事 + VS Code 1 条 + Desktop 1 条）。**结论 = 零破 / 零冗余 / 零缺行**，本批不长任何集成用例，也不改任何既有行。
+**集成测试设计（`test/RTM.md` 读面 → 本批增量 = 0）**：全表逐条对照（CLI 端 ∥ VS Code ∥ Desktop 三段各自的业务故事节）。**结论 = 零破 / 零冗余 / 零缺行**，本批不长任何集成用例，也不改任何既有行。
 
 **判据句（为何是 0）**：本批改的是 `batch` 工具内部的段域常量与机检判集，**工具行为属内部机制**——它不改变任何业务可感结果（六段仍由同样的身份、同样的门决定；改写不新增、不删除生命周期里的任何一步）。
 
@@ -723,7 +723,7 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 
 **为什么行号除外**：设计轮写下的指针指向的是**还在动或还不存在**的坐标。行号是**位置寻址**——任何一次插入都把下游整体下移，档越长漂得越多；节号 / 符号名 / 原文锚是**内容寻址**，搬动不失效。
 
-**指针形态闭集（单源——§2 / §3 的依据格只能用这三种）**：
+**指针形态闭集（单源——§2 与 §3 里放归因指针的那一格只能用这三种；§3 的列名 = `证据`，§4.22）**：
 
 | 形态 | 写法 | 例 |
 |---|---|---|
@@ -737,7 +737,7 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 
 **禁入形**：`<path>:<line>` / `<path>:<line>-<line>`（行号——`docs/batches/<x>.md:120` 同判）· 「见上文」「见前述」（相对指针）· 无落点的「见设计档」（读者不知道翻哪节）。
 
-**射程**：闭集只判**批次档** §2 / §3 的依据格。设计档的落点另按 `docs/core/design/DOC-DISCIPLINE.md` 的「行号一律不作引用形态（强制 · 无例外）」判——三形同（节名 ∥ 符号名 ∥ 逐字引文），射程不同，别互推：批档是**派单前**写的指针，设计档是**实读时**的指认。
+**射程**：闭集只判**批次档** §2 / §3 里放归因指针的那一格（§3 = 证据格）。设计档的落点另按 `docs/core/design/DOC-DISCIPLINE.md` 的「行号一律不作引用形态（强制 · 无例外）」判——三形同（节名 ∥ 符号名 ∥ 逐字引文），射程不同，别互推：批档是**派单前**写的指针，设计档是**实读时**的指认。
 
 **§2 任务书最薄形**：条目表 + 落点节号 + 受影响文件 + 验收行。机制与设计正文住设计档（既有只引不抄句，承载 = `docs/core/design/PROMPT-SYSTEM.md` §6.37）；§2 只写派单需要的东西——照 §2 能开工，机制为什么这样不在 §2 里找。
 
@@ -745,7 +745,7 @@ batch: §6 收口段为空（non-empty gate）— close refuses: the closeout se
 
 **机械面零改（有意）**：裁定行闸（§4.4 `R-G3`）· 轮次块计数 · V3 判据 · token 签发判据全读「块在不在 + 裁定行是什么」，与块内写多少字无关 ⇒ 瘦身不动一行代码判据，改的是提示词与工具描述的措辞。
 
-**判据不机判的部分（如实写下）**：「行号不入指针」不新增机检——正则会把合法内容误判（一句原文锚里带 `:12`、一个文件名带版本号），判据本身也在语义面（这一格指向的东西对不对）。判读点 = 评审同轮核（评审自己写依据格）+ 收口对账（D7 两半）；机检候选登记 = D-BR39 被否条。
+**判据不机判的部分（如实写下）**：「行号不入指针」不新增机检——正则会把合法内容误判（一句原文锚里带 `:12`、一个文件名带版本号），判据本身也在语义面（这一格指向的东西对不对）。判读点 = 评审同轮核（评审自己写证据格）+ 收口对账（D7 两半）；机检候选登记 = D-BR39 被否条。
 
 **逐字目标形（英文围栏块 · 唯一副本 = 本条）**
 
@@ -803,7 +803,7 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 **新名三问（逐名——既有件 ∥ 新造）**
 
 - **结论表**：`existing` = `thincoder-core/prompts/advisor-design.md` 的 `findings table` 句 · name 逐字 `findings table` · consumers = 评审三档 + 主 agent 调用句 + 普通面纪律档 ⇒ 换写后进 §3 的那个名；逐字映射 = 中文「结论表」↔ 英文 `conclusion table`。**`findings table` 不退役**——它仍是评审**回执内**那张全表的名称（列 = `#` / Category / Severity / Issue / Suggestion），与 §3 结论表是两件东西；本批退役的是「把它逐字抄进 §3」这条指令，不是这个词。
-- **一行依据**：`existing` = 同句的依据格 · name 逐字 `evidence` · consumers 同上 ⇒ 中文「一行依据」↔ 英文 `evidence` / `evidence cell`（格内只放指针）。
+- **证据格**：`existing` = 同句的那一格 · name 逐字 `evidence` · consumers 同上 ⇒ 中文「证据」/「证据格」↔ 英文 `evidence` / `evidence cell`（格内只放指针）。
 - **归因指针**：`existing` = 本条闭集三形（节号 ∥ 符号名 ∥ 逐字锚）· name = 无第二个英文名 ⇒ 中文「归因指针」只作三形的统称，提示词面不新造英文词。
 - **任务书最薄形**：`existing` = `docs/core/design/PROMPT-SYSTEM.md` §6.37 规则 1 · name 逐字 `§2 只引不抄` ⇒ 本条的「最薄形」= 那条规则的形态展开（条目表 + 落点节号 + 受影响文件 + 验收行），不是第二个规则。
 - **`none found`** = `conclusion table` ∥ `evidence cell`：`thincoder-core/` 全档实扫各 **0**（本席本轮 `node` 实算 2026-11-05）⇒ 两个英文名本批新造，映射已在上两条登记。
@@ -833,11 +833,11 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 - **描述面预算读数**：`docs/core/design/PROMPT-SYSTEM.md` §6.11 是描述面预算读数的唯一权威处；`batch` 描述换写会改该读数 ⇒ 实施轮跑 `node scripts/tool-schema-size.mjs` 后回填（先例 = 本档 §4.18 同款条）。
 - **跨仓**：VSC 侧锚句族 A5 / A6 / A8（§6.2）须同步，**落笔归 VSC 轮**（跨仓写禁——本仓只出机制与锚句）。
 
-**分层结论**：无 schema 变更、无数据迁移——六处提示词 + 两处描述面是文案换写，`thincoder-core/agent-tools/batch.mjs` 只改一条 description 字符串、动作分派零动。**贴线判（层档读数）**：该档现行 **541** 行（本席 `node` 实读 2026-11-05）——**在 500 软线之上、拆分触发（650）之下、硬限（800）之下** ⇒ **零拆分义务**（阈值与触发判据单源 = §4.18 贴线判）。
+**分层结论**：无 schema 变更、无数据迁移——六处提示词 + 两处描述面是文案换写，`thincoder-core/agent-tools/batch.mjs` 只改一条 description 字符串、动作分派零动。**贴线判（层档读数）**：该档现读数按 `doc_check` 的 `lines` 面复跑（数值住批档 §5）——**在 500 软线之上、拆分触发（650）之下、硬限（800）之下** ⇒ **零拆分义务**（阈值与触发判据单源 = §4.18 贴线判）。
 
 **集成测试设计（`test/RTM.md` 读面 → 本批增量 = 0）**：本批改的是档内写法与模型可见文案，不改任何业务可观察结果 ⇒ **零破 / 零冗余 / 零缺行**：不长集成用例、不改既有行。
 
-**RTM 读数（本席本轮 `node` 实算 2026-11-05）**：`test/RTM.md` **425** 行 / `^## ` **5** 段 / `^### ` **33** 个业务故事节 / `^\|` 表行 **197**。
+**RTM 读数（量法 = `node` 逐行扫描；结论只用关系，绝对值住批档 §5）**：`test/RTM.md` 的行数 / `^## ` 段数 / `^### ` 业务故事节数 / `^\|` 表行数取同一命令的一次输出。
 
 **近邻四行（在盘实读）**：14-1 · 14-8 · 17-1 · 27-1 —— 四条在 `test/RTM.md` 内各命中（本席本轮 `node` 实算）；四行断言的机械对象（`§3` 写入闸 / 状态行置位 / 评审记录完整性）本批零动 ⇒ 不长新行、不改既有行。
 
@@ -1006,7 +1006,7 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 - 该档的**改前 ∥ 改后**：改前 = 首命中 ⇒ `closed`；改后 = 两条 ⇒ `unknown`。两者同属 fail-closed（冻结）⇒ 该档行为零变，变的只是结论的理由；修 = 主 agent 普通文档写（删次条）。
 - **区内零条 = 1 档**：2026-10-15-doc-ref-direction-cleanup 的 records 卷宗件（批档已清）——它是原批档 §5 的卷宗件，**没有 `## §1` 段头**。
 - 该档的**改前 ∥ 改后同判 = `unknown`**（读面取段头区，段头缺失即 `unknown`）⇒ 读面不因本条翻面。
-- **其余 304 档区内恰一条** ⇒ 判定零变。
+- **其余各档区内恰一条** ⇒ 判定零变。
 - **§4.9 门① 的解析面 = §1 段头区**（与写面 `updateSectionStatusLine` 同一条定位面），读面判据 = 区内恰一条才取值（两条以上 ⇒ `unknown`）；本批把 §4.9 列进校正清单，门面描述与实装对齐。
 - 实装那一面 = 依据 `thincoder-core/agent-tools/batch-segment-vocab.mjs`「段级状态行的唯一住所：`## §N` 标题行之后、下一个」
 
@@ -1040,8 +1040,8 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 
 **贴线判（两档判据）**：量法 = `node` 逐档实读行数（2026-11-05）。
 
-- **文件档（500 软线 / 拆分触发 650 / 硬限 800）**：`thincoder-core/agent-tools/batch-lifecycle.mjs` **375** · `thincoder-core/agent-tools/batch-record-write.mjs` **369** · `thincoder-core/agent-tools/batch-skeleton.mjs` **316** · `thincoder-core/agent-tools/batch-segment-vocab.mjs` **231** · `thincoder-core/agent-tools/batch.mjs` **199** · `thincoder-core/agent-tools/batch-ledger-bind.mjs` **185** ⇒ **无一档越过 500 软线** ⇒ 零拆分义务。§4.20 的「`thincoder-core/agent-tools/batch.mjs` 541 行」是 KD-4 拆分前该档的前身读数，拆分后同一功能面分散在上列各档，本条不据它下结论。
-- **函数档（单函数体行数 > 120 ⇒ 动它就得拆它）**：现读数 = `appendBatchRecord` **131**（越线）· `editBatchRecord` **88** · `statusBatchRecord` **88** · `isBatchRecord` **79**。审视结论：本批只给这三件各加一道闸（≈ +8 / +15 / +10 行），不重排内部结构 ⇒ `appendBatchRecord` 保持越线，登记为「下一轮触达该函数时拆」（可拆边 = 形态校验 / 门 / 落笔三段）；其余两件在 120 之下，本批增量不越线。
+- **文件档（500 软线 / 拆分触发 650 / 硬限 800）**：本节判的六档 = `thincoder-core/agent-tools/batch-lifecycle.mjs` · `…/batch-record-write.mjs` · `…/batch-skeleton.mjs` · `…/batch-segment-vocab.mjs` · `…/batch.mjs` · `…/batch-ledger-bind.mjs` ⇒ **无一档越过 500 软线** ⇒ 零拆分义务（逐档读数住批档 §5）。§4.20 那一行是 KD-4 拆分前该档的前身读数，拆分后同一功能面分散在上列各档，本条不据它下结论。
+- **函数档（单函数体行数 > 120 ⇒ 动它就得拆它）**：`appendBatchRecord` 越线（读数住批档 §5）；`editBatchRecord` ∥ `statusBatchRecord` ∥ `isBatchRecord` 在 120 之下。审视结论：本批只给这三件各加一道闸（≈ +8 / +15 / +10 行），不重排内部结构 ⇒ `appendBatchRecord` 保持越线，登记为「下一轮触达该函数时拆」（可拆边 = 形态校验 / 门 / 落笔三段）；其余两件在 120 之下，本批增量不越线。
 
 **验收回指（条目 → 判据 → 机检形）**：
 
@@ -1053,7 +1053,7 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 | ④ 作者由机器判 | §4.21.4 判据句 + 代价段 | BR-99（append 闸）· BR-100（三态读面）· BR-105（区内歧义时 `status` 拒并给修复句） |
 | 零回归 | 本条「零改面」+ 四件不动单写者 | BR-95（§1 歧义 ⇒ unknown 冻结）· `STATUS_WORDS` deepEqual · 14-1 / 27-1 既有行 |
 
-**集成测试设计（`test/RTM.md` 读面 → 本批增量 = 0）**：全表逐条对照（CLI 端 33 个业务故事节 + VSC 与 Desktop 各自的节）。**结论 = 零破 / 零冗余 / 零缺行**：不长集成用例，不改任何既有行。
+**集成测试设计（`test/RTM.md` 读面 → 本批增量 = 0）**：全表逐条对照（CLI 端 ∥ VSC ∥ Desktop 三段各自的业务故事节）。**结论 = 零破 / 零冗余 / 零缺行**：不长集成用例，不改任何既有行。
 
 **判据句（为何是 0）**：四件改的是 `batch` 工具内部的拒因面与状态行读法，属内部机制——没有业务用户在这个面上进入产品；本批也不新增业务可观察结果（拒因只多不少、账仍冻结、段仍一段一作者）。
 
@@ -1065,6 +1065,135 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 - `27-1 评审写一笔 §3 就够`——该行明写「不手写状态行」，本批的 `append` 闸只拒手写的那条，正路（块 + 工具置位）零触。
 
 **UI / 交互决策**：本批无 UI / 交互面（改动是拒句、读面判据与一个新动作，逐字在本条定形）；**无 open 项**。
+
+### 4.22 证据格 = 指针面（写面）∥ 拒文四件
+
+**判据**：批次档门判锚面时，落在**证据格**里的 token 只判「判得了的」；判不了存在性的那一类改列读数，不进 `hits`。**同一条判据在门的三条腿上同判**（本次写入文本 ∥ 批档整档 ∥ 收口面整档）。
+
+**证据格怎么认（识别器判据，不写成散文）**：
+
+- **认的字面**：同一张 markdown 表，表头行**最后一个单元格**去首尾空白、去包裹反引号后，**全等**于 `证据` 或 `evidence` ⇒ 该列的表体单元是证据格。
+- **闭集，别的一律不认**：`依据` ∥ `一行依据` ∥ `判据落点` 等任何别的字面 ⇒ **不是**证据格，照旧阻写。失败方向是拒（fail-closed）：作者拿到四件齐备的拒文，照着把表头改成 `证据` 再写一笔。
+- **一名一事（对齐面）**：这一列在六段里就一个名字 = **`证据`**（英文 `evidence`）。§4.4 · §4.8 `BR-89` · §4.20 · §5 一律用这个名字；「一行依据」一类说法说的是**格内放什么**（一个归因指针），不是列名。
+- **表头行由写者写在同一笔文本里**，门不另设声明面。
+
+**三条腿同判（与「整档视图」的接缝，写死）**：门有三条腿——本次写入文本（片段档）∥ 批档整档（`edit` 的改写后视图 ∥ `append` 的已落段）∥ 收口面整档。证据格判据判的是「**哪些命中阻写**」，与看哪一份视图无关 ⇒ 三条腿同一条判据，一条都不收窄。
+
+- **只在本次文本上收窄的后果 = 本批要消的那个死锁**：§3 一旦落下一行指盘上没有的路径，其后**每一次** `edit`（锚类判整档）与**每一次** `close` 都会拒，而唯一能改那一行的人是 §3 作者 ⇒ 与 §4.19 消掉的「死引文改不动」同形。
+- **清路的人 = 不需要有**：证据格里的 `档缺` 在三条腿上都不阻写、不阻收口；它在指针读数行里可见（见下「代价」）。
+
+**判得了的照判**：`节缺` ∥ `引缺` 的前提是目标档在盘——判得出来就该判，照旧进 `hits`、照旧阻写。
+
+**判不了存在性的只列读数**：`档缺`（该 token 在解析根下解不到）⇒ 出「指针读数」行，不进 `hits`、不动首行 verdict。
+
+**正文与其他列一字不放**：同一 token 写在正文里、或写在同一张表的其他列 ⇒ 照旧 `REFUSED`。
+
+**为什么**：证据格的职责是**指向**，不是**证明该档存在**。把指向当存在证明判，等于要求评审先造出它正要引用的每一份档。
+
+**代价（如实）**：证据格里一条真悬空的路径不再当轮拦下。兜底不是没有——收口面照旧整档判（只是这一列按本判据不阻），读者也在指针读数行里看见它。
+
+**拒文四件（不变量）**：每条被拒的命中行恒含四件 = **哪一份档 + 位置 + 被拒的内容 + 该命中的解析根**。四件的取值按命中类取，**一格不空**：
+
+| 命中类 | 档 | 位置 | 内容 | 解析根 |
+|---|---|---|---|---|
+| 锚类 `档缺` ∥ `节缺` ∥ `引缺` | 引用方档 | 行号 | 被抽出的 token | 该档的判定根 |
+| 段类 | 命中档 | 行号 | 该段整段原文 | 同上 |
+| 行类 | 命中档 | 行号 | 该行整行原文 | 同上 |
+| `环引` | 该根的 `PROJECT-MANIFEST.json` | **无行号**——环是仓级事实 | 成环的仓链 | 该根 |
+
+- **`环引` 是四件里的异形（如实）**：它的产出形 = `{ file, line: null, clazz, root, chain }`——**无行号、无档内文本**；`file` 取该根的 `PROJECT-MANIFEST.json`，`chain` 是成环的仓链。
+- 「位置」格对它取「无行号」这个如实值，不编一个行号；「内容」格拿仓链，不拿 token。口径单源 = `docs/core/design/DOC-CHECK.md` §2.7 的「它是仓级命中（无行号、无档内文本）」。
+- **它照旧挡写，四件因此照样一件不缺**：`thincoder-core/agent-tools/batch-gate.mjs` 的 `ANCHOR_CLASSES` 含 `环引` ⇒ 它出现在拒面上，缺件与别的类同样红（用例见下表「`环引` 单」）。
+- **四件由命中对象拼，不靠引擎报面行**：引擎的 `✗` 行不齐四件——`paragraphHitLine` 只出 `✗ <类> <档>:<行>`（无原文、无根）；`anchorHitLine` 有 token，根只在 ≥2 根时以项目标签出现；`lineRefHitLine` 有形别与片段，无根。⇒ **显示行按命中类统一组装**，引擎行齐四件的才直接用。
+- **载荷两格（引擎侧，判据零改）**：命中对象补 `token`（段类 = 原段原文；行类 = 该行原文；锚类已有）与 `root`（该命中的解析根 = **该档的判定根**）。与 §2.7 要 `paragraph.mjs` 加载荷字段 `text` 是**同一处置、同一先例**：加一格载荷，不改抽取面、不改命中类、不改阈值、不改 verdict。
+- **本次写入文本的命中怎么显示根**：片段档不属任何项目，它的根就是调用方给的声明根 ⇒ 该格显示 `<声明根>`。
+- **对齐与否不影响四件**：`aligned`（引擎 `✗` 行数与命中数是否同序）**降为读数，不删**——不同序时回执出固定一行 `命中行与引擎报面不同序（N 处）——四件仍由命中对象拼齐，此行只作闸自身的一致性读数`。**这句不许删**：它是显示面与引擎报面漂移的唯一可见信号（`aligned` 曾长期恒假、整个门的显示面静默退化过）。
+- **为什么**：被拒的人必须知道改哪一处；不点名 = 让他整段重写，而重写又要再撞一次同一道门。
+
+**事前可知（第三件随上两条闭合）**：拒面恒点名原文与解析根 ⇒ 作者当笔就知道该改成指针形（挪进证据格）还是该修正路径，不必先跑一次报告探路。
+
+**红判据（每条都要能失败）**：
+
+| 面 | 绿的做法 | 坏法（应当转红） |
+|---|---|---|
+| 证据格识别 | 表头末列写 `证据`、格内一条盘上不存在的路径 ⇒ 写入落盘、回执出指针读数行；正文写同一路径 ⇒ `REFUSED` 且点名该 token；同一笔把表头改写成 `依据` ⇒ 照旧 `REFUSED` | 撤掉证据格判据（全列照判）⇒ 第一分句转 `REFUSED`；把识别放宽成「含『依据』」⇒ 第三分句转绿 |
+| 三条腿同判 | ① 上一笔已落下一行证据格悬空指针，随后同档一次无关 `edit` ⇒ 放行；② 同档 `close` ⇒ 首行 `PASS` | 证据格判据只在本次文本上生效（其余两腿照判）⇒ ① 与 ② 都转 `REFUSED` |
+| 拒文四件 · 对齐真单 | 一笔写入里造三类命中各一条（`档缺` ∥ 段 · 文字太长 ∥ 行号坐标），引擎 `✗` 行数与命中数相等（`aligned = true`）⇒ **三条命中行各含四件** | 显示行直接取引擎 `✗` 行 ⇒ 段类与行类那两条缺原文与根 ⇒ 红 |
+| 拒文四件 · `环引` 单（第四类） | 临时根（夹具在系统临时域，零落仓）的 `PROJECT-MANIFEST.json` 声明一条走回本根的仓链 ⇒ 该命中行含 档（该根 manifest）+「无行号」+ 仓链 + 根 | 位置格按 `<档>:<行号>` 组装 ⇒ 该行显示 `null`、仓链缺席 ⇒ 红 |
+| 拒文四件 · 降级单 | 对齐失败的那一笔写入 ⇒ 拒文仍含四件 | 自造行改回 `✗ <档>:<行>` ⇒ 该条红 |
+| 漂移可见 | 对齐失败时回执出 `命中行与引擎报面不同序（N 处）` | 删掉这一行 ⇒ 零出 ⇒ 红 |
+
+**同类先例（对齐 ∥ 偏离）**：
+
+- **对齐 `docs/core/design/DOC-CHECK.md` §2.7 的三处形制**：命中按类分流（进 `hits` ∥ 进读数桶）∥ 读数桶不进 verdict ∥ 报面另起固定句形一行——本条的「指针读数桶」是同一个形。
+- **对齐本档 §4.9 门 ④ 的「判集分两类」**：段长类只判本次文本、锚类判整档；本条不新增第三类判集，改的是**锚类里的一列**判什么。
+- **偏离 = 收窄落在「列」上，不落在「段」上**。偏离理由 = 能力面失败，不是口味：按段号豁免会把 §3 的正文一起放宽（结论表与裁定行就在同一段）；给证据格另建声明面是多一份要维护的清单，而表头本来就在这一笔文本里。
+
+**勘察证据行**：查过下面各处，**相关**。
+
+- `docs/core/design/DOC-CHECK.md` §2.6 ∥ §2.7 ∥ §8。
+- `thincoder-core/agent-tools/batch-gate.mjs`（`hitEntries` ∥ `blocks` ∥ `evaluate` 三条腿）。
+- `thincoder-core/doc-check/index.mjs` 三个命中行构造器：`paragraphHitLine` ∥ `anchorHitLine` ∥ `lineRefHitLine`。
+- `thincoder-core/doc-check/paragraph.mjs`（载荷 `text` 的先例）。
+- 本档 §4.4 ∥ §4.9 门 ④ ∥ §4.19 ∥ §4.20 ∥ §4.21。
+- 声明源 = `PROJECT-MANIFEST.json` `index.publicRepos` = **`[]`** ⇒ 无仓外声明源可查（照记）。
+
+**新名三问（逐名）**：
+
+- **`pointerCells`（识别器的落点）**：在哪 = `thincoder-core/agent-tools/batch-gate.mjs` 的 `hitEntries` 旁；叫什么 = `pointerCells(src)`，返回该文本里证据格表体所在的行区集合；谁在用 = `hitEntries` 一个消费点。**既有件不能复用**：`isDocToken`（`thincoder-core/doc-check/anchors.mjs`）判的是「这个 token 算不算档名候选」，与「这个 token 落在哪一列」是两件事；命中记录的形状（`file` ∥ `line` ∥ `clazz` ∥ `token`）不带列信息 ⇒ 必须新加一格。
+- **指针读数桶（`pointerReads`）**：在哪 = 门回执的附加行族（`notes`，与「触达账存量命中」同族）；叫什么 = 同层既有名 = `unverified` ∥ `exempted`（`docs/core/design/DOC-CHECK.md` §2.3 ∥ §2.7）；凭什么 = 同一条形制（不进 `hits`、不动 verdict、出固定句形行）；谁在用 = 两面回执的行构造 + 本批用例。
+
+**档层结论**：`thincoder-core/agent-tools/batch-gate.mjs` **越 500 软线、未越 800 硬限** ⇒ 软线语义是「主动审视」不是「拆」，本批**不拆**，登记「下一轮触达该档时审视可拆边（命中行组装 ∥ 判集分腿 ∥ 报面组装三族）」；`thincoder-core/advisor/loop.mjs` **在线内** ⇒ 零拆分义务。量法 = `doc_check({mode:"report", lines:[…]})` 的档位标记（读数存批档，本档不载数值）。
+
+**逐字目标形（`thincoder-core/tool-docs/batch.md` · 唯一副本 = 本条）**：落点 = §3 自己的规则列表**之后**、`Document-check gate` 一节**之前**。
+
+- **实际位置单说**：不是紧接 `A §3 write that reads as no verdict line` 那一条——照字面插在那一条之后会把该列表断成两截（三段门面的话夹在 §3 的规则中间）。判据面零改，只挪位置。
+- **落成三段，英文一字未改**：
+
+```text
+A hit inside an evidence cell that only fails existence still lets the write land: the receipt lists it as a pointer reading, not as a refusal — the cell points at something, it does not prove the file exists.
+
+Every refused hit line names four things: the file, the position, the offending text and the root it was resolved under — the token for an anchor hit, the paragraph or the line itself for a length hit.
+
+A cycle hit is a repo-level fact with no line number: its position reads that way, and its text is the repo chain.
+```
+
+- **为什么是三段，不是设计原写的两段**：第二段 316 字符，而 `thincoder-core/tool-docs/batch.md` 走**文档面**段判据（阈值 300；`isPromptFace` 只认 `thincoder-core/prompts/`）。逐字照落会让实施席自己的 §5 写入被同一道门判 `REFUSED` ⇒ 在该段两句的句号处断一个空行。
+- **这是形变，不是简化**：一个字都没改，改的是分节。那两句本就是两件事（四件怎么取 ∥ `环引` 的异形）。
+- **那条判据的口径**：段判据罚的是「一段长得读不动」，不是「一件事必须写在一段里」。
+
+**受影响面（路径 · 落笔归实施轮）**：
+
+- `thincoder-core/agent-tools/batch-gate.mjs`——`pointerCells`（表头末列识别 · 闭集两字面）· 指针读数桶 · 拒文四件组装 · `aligned` 降为读数行。
+- `thincoder-core/doc-check/index.mjs` ∥ `thincoder-core/doc-check/paragraph.mjs` ∥ `thincoder-core/doc-check/line-refs.mjs`——**只加载荷**：命中对象补 `token`（段类 ∥ 行类原文）与 `root`（该档判定根）；抽取面 ∥ 命中类 ∥ 阈值 ∥ verdict **零改**（先例 = `docs/core/design/DOC-CHECK.md` §4 对 `paragraph.mjs` 载荷 `text` 的处置）。
+- `thincoder-core/tool-docs/batch.md`——围栏块两句（逐字目标形 = 本条）。
+- 单元测试档 `docs/batches/<批档名>.test.mjs`（用毕即删）。
+
+**集成测试设计（`test/RTM.md` 读面 → 本批增量 = 1 行）**：
+
+- **破 = 0**：guard 族既有各行断的是 `doc_check` 的判据与报面（`36-x` 定根 ∥ 域表、`26-x` 行号坐标、`38-1` 花括号组、`44-1` ∥ `45-1` 识别面 ∥ 豁免面），本批不改命中、分类与 verdict ⇒ 无一行被打破。
+- **冗余 = 0**：没有一行断言过「证据格里的悬空指针」或「拒文四件的齐备」——`7-8` 断的是本次写入文本带悬空路径被拒（正文面，本批零改）。
+- **缺 = 1 行**，号 = **`48-1`**（族 = `guard`，故事 = **`CLI 48`**，住 `test/rtm/guard.md`）：
+  - **交互** = `batch` 写面 → 批次档门（证据格识别 → 锚面分流 → 拒文组装）。
+  - **业务可观察结果** = 证据格里一条盘上不存在的路径不阻写、回执出指针读数行；正文里同一条路径照拒，且拒文四件齐备（按本条「拒文四件」的四格表取值——本例的命中类是锚类 `档缺`，故四件 = 引用方档 ∥ 行号 ∥ 该 token ∥ 该档的判定根）；表头写成闭集外的名字 ⇒ 照拒。
+  - **业务入口** = 评审 ∥ 设计席用 `batch({action:"append"})` 写 §2 ∥ §3 时读回执。
+  - **回指业务需求** = `docs/core/requirements/ENGINEERING-MODE-V2.md` §8（交界面契约：产物落盘、消息只报告——拒文就是「改哪一处」那份报告）。
+- **落地两处**：`test/rtm/guard.md` 的 `48-1` 行 + `test/RTM.md` 故事索引表的 `CLI 48` 一行。索引是「一个故事一行」的完整枚举，加故事不加行即自相矛盾；两处标题逐字一致。
+
+**边界（不做）**：
+
+- 不放宽正文面与其他列的锚判据；证据格是唯一的收窄面。
+- 不动写前门的拒文：`thincoder-core/tools/doc-write-gate.mjs` 判的是单档正文，没有证据格这一形（`docs/core/design/EDIT.md` D-11）。
+- 不新增 `dryRun` 一类预探动作：四件齐备后，拒文本身已经回答「改哪一处」。
+- 不给证据格另建声明面 ∥ 不按段号豁免（理由见「同类先例」的偏离段）。
+- **已知：`环引` 的作用面溢出，另账 `#2268`**：`环引` 的 `file` 取该根的 `PROJECT-MANIFEST.json`，既不是批档自身、也不在触达账里 ⇒ 批次档门分腿时落进「只可能是本次写入文本」那一支，恒被强制；环一旦进判集，作者写什么都挡不住。本批不改该支（与 `#2268` 同形，另轮处置）。
+- **写前门（`thincoder-core/tools/doc-write-gate.mjs`）的片段围栏配对错位不在本批**：现场形态 = 改动区首行即围栏开启行时配对在片段里错位、一笔干净的改动被判 `REFUSED`；本席**未取证**（未复现、无读数），本轮不改该门、不立判据，登记为另处处置。
+
+**A 面（已裁：属本批 · 设计单源 = `docs/core/design/ADVISOR-CONVERGENCE.md` §18）**
+
+- **为什么属本批**：B 的死结——作者没法在写入前预探哪个 token 解析得到——成立，正因为 A 让评审跑不了 `doc_check`。把 A 推给另批，修完 B ∥ C 死结还在。
+- **本条只留指针**：根因、修法选型、「为什么只有评审路径撞」、可红断言与集成行号全部住该档 §18。
+
 ## 5. 行为纪律（提示词层，EN 单份）
 
 | 纪律 | 内容 | 落点 |
@@ -1075,7 +1204,7 @@ An evidence cell holds a pointer: a section number, a symbol name, or the exact 
 | **澄清必经主 agent** | 子代理撞到需用户决定的事 → 打回主代理（无旁路） | 纪律层 |
 | **三方条目一致** | 批次档 §2 条目 = 设计档验收回指 = 需求档条目 | 纪律层 |
 | **批次档生命周期** | 一次实现轮的界 / 长度·轮次护栏 / 闭合退役（收口前置 = 链门 §4.18-A ∥ 已收口档重开径 §4.18-B） / 新档↔旧档接续 / 判定权 = 主 agent / **条目在别处完成的结账依据记录**（§5.2） | `thincoder-core/prompts/persona-engineering.md`「批次档生命周期（五条）」+ `thincoder-core/prompts/persona-eng-coder.md`「批次档纪律」（执行者侧）+ 本档 §5.1 / §5.2 |
-| **结论 + 归因指针** | §3 每轮 = 结论表（依据格用指针）+ 裁定行 + 计数，回执全文不进档；§2 = 任务书（条目 / 落点节号 / 受影响文件 / 验收行），不重述设计正文；指针走 §4.20 的三形闭集，**行号不入指针** | 评审三档 + `persona-engineering` 评审调用句 + `discipline-normal` + `persona-eng-designer`；判据单源 = §4.20 |
+| **结论 + 归因指针** | §3 每轮 = 结论表（证据格用指针）+ 裁定行 + 计数，回执全文不进档；§2 = 任务书（条目 / 落点节号 / 受影响文件 / 验收行），不重述设计正文；指针走 §4.20 的三形闭集，**行号不入指针** | 评审三档 + `persona-engineering` 评审调用句 + `discipline-normal` + `persona-eng-designer`；判据单源 = §4.20 |
 
 **锚断言口径**：关键句进 **fail-when-unchanged** 家族（提示词内容断言）；**新增的 persona 文件必须进断言清单**，否则首行格式断言与表行宽断言**不覆盖它**（漏覆盖即漏防）。
 

@@ -1,6 +1,6 @@
 # 文档纪律与机检对账（DOC-DISCIPLINE）· 设计
 
-> 板块：文档体系——**更新纪律（D1–D16）** · **机械校验判据（V1–V6）** · **文档机制边界（跨仓引用形态 / 表格行豁免 / 拆分债 / 机检零落仓 / 坐标尾形态 / 文档行数规则废除 / 死指针 sweep 两分口径 / 死名/旧指针收正二轮 / 尺寸档登记 / 判据行工具形态（中文串） / 旧编号/坐标族 sweep（三族） / 端差措辞族（限定语）复核与防复发 / 拆档判据与板块定义 / 历史区带豁免 / 部分内按域拆分（条目 O） / 值行形态（条目 P） / 段判据口径（条目 Q） / 行数声明面退役（条目 R） + 机检内建为产品工具（条目 S——报告态 ∥ 交付门 gate） + 行号引判据式（条目 T——三形闭枚举 ∥ 判定面二分） + 判据与读数写法（条目 U——扫串／量取／计数形态／用词／判类／数随表走／判 delta） + 行号坐标清单与 gate 判据（条目 W——report 清点 ∥ gate 拦 ∥ 存量当轮清 ∥ 三形归属窗 ∥ 量法自承） + 档名豁免判定（条目 X——导出谓词 ∥ 三处消费） + 依据行逐字引文（条目 Y——写法 ∥ 并入锚判据 ∥ 评审面回原文） + 写前文档机检门（条目 Z——判本笔触碰的段落 ∥ 与批档门分工 ∥ 与收口面分工） + 档名可定位落笔要求（条目 AA——七落点 ∥ 三件齐 ∥ 不改判据） + 示例进围栏（条目 AB——机制四面 ∥ 成块样例进围栏 ∥ 行内尖括号占位 ∥ 落点五行七档） + 批档面互引不判（条目 AC——面判两头 ∥ 目标按拼路径判 ∥ 方向纪律照判 ∥ 报告态留痕））** · **文档↔实装对账三层**。
+> 板块：文档体系——**更新纪律（D1–D16）** · **机械校验判据（V1–V6）** · **文档机制边界（跨仓引用形态 / 表格行豁免 / 拆分债 / 机检零落仓 / 坐标尾形态 / 文档行数规则废除 / 死指针 sweep 两分口径 / 死名/旧指针收正二轮 / 尺寸档登记 / 判据行工具形态（中文串） / 旧编号/坐标族 sweep（三族） / 端差措辞族（限定语）复核与防复发 / 拆档判据与板块定义 / 历史区带豁免 / 部分内按域拆分（条目 O） / 值行形态（条目 P） / 段判据口径（条目 Q） / 行数声明面退役（条目 R） + 机检内建为产品工具（条目 S——报告态 ∥ 交付门 gate） + 行号引判据式（条目 T——三形闭枚举 ∥ 判定面二分） + 判据与读数写法（条目 U——扫串／量取／计数形态／用词／判类／数随表走／判 delta） + 行号坐标清单与 gate 判据（条目 W——report 清点 ∥ gate 拦 ∥ 存量当轮清 ∥ 三形归属窗 ∥ 量法自承） + 档名豁免判定（条目 X——导出谓词 ∥ 三处消费） + 依据行逐字引文（条目 Y——写法 ∥ 并入锚判据 ∥ 评审面回原文） + 写前文档机检门（条目 Z——判本笔触碰的段落 ∥ 与批档门分工 ∥ 与收口面分工） + 档名可定位落笔要求（条目 AA——六组 ∥ 三件齐 ∥ 不改判据） + 示例进围栏（条目 AB——机制四面 ∥ 成块样例进围栏 ∥ 行内尖括号占位 ∥ 落点五行六档） + 批档面互引不判（条目 AC——面判两头 ∥ 目标按拼路径判 ∥ 方向纪律照判 ∥ 报告态留痕））** · **文档↔实装对账三层**。
 
 > 需求层指针 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.1（文档更新纪律 D1–D16 + 机械校验边界）· §13.4（各仓自持）· 本档 §4（V5 对账判据规格）。
 > 兄弟档：`docs/core/design/DOC-SYSTEM.md`（**落点规划 / 命名规则 / 归属判据 / 交叉引用形态**——本档不重述；该档 §7 明指「锚判据全文」住本档）·
@@ -19,7 +19,7 @@
 | D2 | 单一权威源 | 一条机制只在一处详述，其余处只引用不重述（**模板同理**——批次档模板只在需求侧机制档 §1.12） |
 | D3 | 计数·枚举纪律 | 「N 项/处/条」与列表**同时改**；机判 = **无**（V2 无机检器，§4.2.6）；本项归文本纪律面 + 评审核验 |
 | D4 | 指针纪律 | 指针形态 = `文档:节`；行号不作指针形态（行号随后续改动漂移，读者照旧行号找不到规则——落点写节名）；禁“见上/见该节”式相对指针；**档名与代码坐标都写得能解到盘上那一件**（细则见下方 D4 块）；机判 = **V5 · V1**（V1 判据面 = 产品内建 §3.20 判据 ①；§4.2.6） |
-| D5 | 冻结窗口 | 评审在途不改被审文档——**「在途」的下界定义 + 在途写入拦截**见 `docs/core/design/ADVISOR-GUARDS.md` |
+| D5 | 冻结窗口 | 评审在途不改**被审内容**：设计档与批档路径的 `write` / `edit` 都整档机制拦；`batch` 段写不在扫面内，批档 §1 ∥ §2 纪律守、§3–§6 照写——**射程表 + 「在途」下界定义 + 在途写入拦截**见 `docs/core/design/ADVISOR-GUARDS.md` §5 |
 | D6 | 回读核对 | 任何写入后回读核实再报完成（写入静默失败、编辑吞标题均已实证） |
 | D7 | 变更留痕 + 核销同步 | 每批核销跑**核销同步清单**（**每批批次档 §6 段槽位** = 核销同步清单执行位——**非** `docs/core/design/BATCH-RECORD.md` §6〔后者 = VSC 端镜像〕）：角色表 / 状态行 / 计数 / 指针 / 待办勾销（**含前批遗留核对**——条目已完成而挂靠批档未收口 ⇒ 兜底核销路径 = `docs/core/design/BATCH-RECORD.md` §5.2）/ **修正轮落地前置**（close 前——实施后修正轮须先落地并经核验；口径 = `docs/core/design/BATCH-RECORD.md` §5.3）/ **搁置清单回核**（程序级收口——设计档登记 ∕ 搁置项（§10 类）逐条核：已兑现 ∥ 未兑现转新批；口径 = `docs/core/design/BATCH-RECORD.md` §5.3）/ **暂缓批复核**（暂缓批逐条对复核条件——口径 = `docs/core/design/BATCH-RECORD.md` §5.1 L8 ∕ §5.3；无暂缓批记「无」一行）/ **用户文档面同拍**（触及用户可感能力 ⇒ 按板块设计档「用户文档面」节逐面对照——口径 = `docs/core/design/BATCH-RECORD.md` §5.3；无涉面记「无」一行）/ **台账可见面（收口行）** |
 | D8 | **失效表达必删** | 现役规范面（功能点 / AC / 判据句 / 纪律句 / 边界 / 现状陈述）内表达一旦失效（被判否 / 对象消失 / 被取代）⇒ **删除**——不留 `~~划改~~`、「原记 X ⇒ 收正 Y」、「已作废 / 裁撤」挂尸；历史去向 = **git 提交**（档内**不留任何历史行**——变更记录段 / 历史沿革 已废除）。细则见下方 D8 块 |
@@ -30,21 +30,22 @@
 | D13 | **「待裁」不是终态** | 带「待裁」的行**三件齐**才算标：**谁裁**（人 ∥ 批）· **什么条件下裁** · **到期条件**。缺一件 ⇒ 不许叫「待裁」——改写成**已裁陈述**，或改写成**台账行**。存量 = **触碰即改**（改到某档时清该档内的行，**不做全量**）；机判 = **无**（文本纪律面 + 评审核验），判读点 = 设计评审 ∥ 收口核销。细则见下方 D13 块 |
 | D14 | **退役对象一次扫完** | 一个**键 ∥ 入口 ∥ 常量**退休 ⇒ **同一笔**全仓扫它的名字（**域由执行者写死并写明**），逐处归**三类处置**之一（**删** ∥ **改指** ∥ **转台账并给到期条件**），并**事前写明预期残留数**。收口判据 = **实测命中数 = 事前写明数**，差一不收口。机判 = **无**（量法由执行者写死、工具只复算）；判读点 = 设计评审 ∥ 收口核销。细则见下方 D14 块 |
 | D15 | **一把尺子量一种读数** | **射程 = 任何读数，不论哪一种**——同一件事的每次读数**取之同一把尺子**，只有同一把尺子上的两个数才可比。本项目的两把尺子：长度类由 `doc_check` 报出；文本类由 `node` 行扫描 ∥ 内置 `grep` 取（工具路由表 = `thincoder-core/prompts/common.md`）；**落在这两把之外的读数，先问「它的尺子是哪把」**，定不出来就记 `unverified`。**别的取法不是「另一种口径」，是另一套解码标准**——两个数之间不存在比较关系，而错尺子给出的零与真的没有**印出来一模一样**，看的人分不出自己看的是哪一个。**读数落在哪归 D12**（本条只管用哪把尺子量）；**阈值本身照写**（软线 500 ∥ 硬限 800 ∥ 提示词单行 ≤300）。谈**口径 ∥ 定义 ∥ 量法 ∥ 计数式**的讨论段，**下笔前先量**：量法与结论进文字，数值留在命令输出（D12）；没量 ⇒ 这段讨论本身是缺陷；用了别式 ⇒ 该段讨论作废，**重测**。机判 = **无**；判读点 = 设计评审 ∥ 收口核销。细则见下方 D15 块 |
-| D16 | **示例进围栏** | 语义 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.1 的 D16（需求侧权威，D2：本行不重述）；机械面与细则住本档 §3.28 条目 AB（成块示例进围栏 ∥ 行内假设名走尖括号占位形 ∥ 落点七档）。**无机械门**（文本纪律面 + 评审核验）；判读点 = 设计评审 ∥ 收口核销 |
+| D16 | **示例进围栏** | 语义 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.1 的 D16（需求侧权威，D2：本行不重述）；机械面与细则住本档 §3.28 条目 AB（成块示例进围栏 ∥ 行内假设名走尖括号占位形 ∥ 落点六档）。**无机械门**（文本纪律面 + 评审核验）；判读点 = 设计评审 ∥ 收口核销 |
 
 **D5 细则（一轮之内，不是一批之内）**：
 
-- **窗口 = 一支评审的在途期**：起点 = 评审点火受理，终点 = 结算；机制定义与在途写入拦截的单源 = `docs/core/design/ADVISOR-GUARDS.md` §5（本节不重述算式与拦截面，D2）。
+- **窗口 = 一支评审的在途期**：起点 = 评审点火受理，终点 = 结算。设计档与批档路径的 `write` / `edit` 都按整档机制拦；`batch` 段写不在扫面内，只有这条工具路按段守纪律——批档 §1 ∥ §2 不改、§3–§6 照写。机制定义、射程表与在途写入拦截的单源 = `docs/core/design/ADVISOR-GUARDS.md` §5（本节不重述判据与拦截面，D2）。
 
-- **由此定的次序**：设计轮把落点写齐 → 评审（此期被审档冻结）→ 修正轮改被审档 → 下一轮评审读新对象。**轮次之间改被审档 = 修正轮的本职，合规；一轮之内改 = 违规**——评审读的是点火那一刻的对象，改完它判的东西就不在了。
+- **由此定的次序**：设计轮把落点写齐 → 评审（此期被审内容冻结）→ 修正轮改被审内容 → 下一轮评审读新对象。**轮次之间改被审内容 = 修正轮的本职，合规；一轮之内改 = 违规**——评审读的是点火那一刻的对象，改完它判的东西就不在了。
 
-- **与 D11 不冲突**：D11 管写权收口（一条规则的同批各写域各落），D5 管在途窗口（一份被审档在一轮评审在飞期间不改）。同一批里两条都要，次序按上一条：先落齐，再评审，改在评审之后。
+- **与 D11 不冲突**：D11 管写权收口（一条规则的同批各写域各落），D5 管在途窗口（一份**被审内容**在一轮评审在飞期间不改）。同一批里两条都要，次序按上一条：先落齐，再评审，改在评审之后。
 
 - **修正轮的义务 = 改了要记**：逐处写明改了被审档的哪一句、改成什么，供下一轮评审对着读。缺陷不在「改了」，在「改了没记」——没记的改动，评审只能从 diff 里猜，而 diff 不说意图。
 
-- **不属本条射程的**：代码评审在途写（不入窗口判定）；评审员自己写批档的评审段（不落父侧变更日志，窗口判定看不见）。
+- **不属本条射程的**：代码评审在途写（不入窗口判定）；`batch` 工具写批档 §3–§6（被审内容之外，且 `batch` 不在 `FILE_MUTATORS` 内 ⇒ 这条工具路没有段级机制判据，也没有放行臂，只有纪律。机制判据 = `docs/core/design/ADVISOR-GUARDS.md` §5（d）。）
+- **不能把上一句外推到文件写工具**：`write` / `edit` 打在批档路径上，由 `freezeWindowConflict` 的 `run.batchDoc` 分支按整档路径拒绝；机制不分 §1–§6，§3–§6 也照拒。要改先等报告或 cancel，不得换工具绕开。
 
-- **同口径的三处**：`docs/core/requirements/ENGINEERING-MODE-V2.md` §13.1 的 D5 行 ∥ `thincoder-core/prompts/discipline-engineering.md` 的 D5 行 ∥ 本条——读的都是「一支评审的在途期」，不另立语义。
+- **同口径的三处**：`docs/core/requirements/ENGINEERING-MODE-V2.md` §13.1 的 D5 行 ∥ `thincoder-core/prompts/discipline-engineering.md` 的 D5 行 ∥ 本条——读的都是「一支评审的在途期」与「被审内容」两个词，不另立语义。
 
 - **机判**：**无**（文本纪律面 + 评审核验）——窗口机制自身的机判归 `docs/core/design/ADVISOR-GUARDS.md` §5 的机制面。
 
@@ -189,7 +190,7 @@
 - **为什么两条规则不打架**：D9 判的是「理由说得清、来源指认得出」，不判「指向哪一档」。一条 why 只有指着某处才立得住，说明理由本身没写出来——先例坐标在这里既非必要、也不合法。
 
 - **处置 = 删引用片段，不是改指别处**：批档可随时整体清理 ⇒ 任何指向批档的引用**没有落点**，改指 = 写下立刻要断的指针。故 = 减法（删片段 + 保住句子其余语义）。
-- **成因（两条实证）**：① 清过两轮、每轮再生——只删不立规即回潮；② **649 档批档实删** ⇒ 长期面引用 **4776 处**当场成死（批档树之外零副本）。
+- **成因（两条实证）**：① 清过两轮、每轮再生——只删不立规即回潮；② **批档实删** ⇒ 长期面上的引用当场成死（批档树之外零副本）。
 
 - **存量无豁免**：既有存量（含历史行）同属违规，**不得以「存量 / 入基线」申请豁免**（阈值 = 0）。
 - **机判**：**无**（文本纪律面 + 评审核验）——清理工序与判据见 **§4.5**（D2——本节不重述）。
@@ -230,7 +231,7 @@
 - **为什么台账行号先清后立**：阈值 0 立在一个非零的面上，第一次跑就全红；红的部分不分对错，读者分不出「这行违规」与「这个面本来就这样」，判据从落地那天起被忽略。清账是另一件事，清完再立引擎。
 
 - **示形怎么不被判成违规**（宁可判不出）：教写法的地方必须给出这个形（例：夹具里的 `ledger:"#999999"`）——抽取面与锚判同源，免判区只有两处：围栏整块 ∥ 可执行行的码段区间。
-  散文行没有码段豁免——行内反引号里的 token 照抽照判。依据 `thincoder-core/doc-check/anchors.mjs`「const spans = isExecutableLine(scan) ? codeSpans(scan) : []」（反证 = §3.28 的 DD-206）。
+  散文行没有码段豁免——行内反引号里的 token 照抽照判。依据 `thincoder-core/doc-check/anchors.mjs`「const spans = codeSpans(scan).filter(isExecutableSpan)」（反证 = §3.28 的 DD-206）。
   两处免判区之外，示形只剩一种写法落进判面：写在正文裸写面——那时它已不是示形，是把示例当数据引用。
   **判不出是可接受的结果，判错不是**：假阳会拦一次合法收口，而假阳的成因（示形与引用同形）判据本身看不见。
 
@@ -550,9 +551,9 @@ docs/core/design/PORTABILITY.md             tool-gates.mjs                  → 
 |---|---|---|---|
 | OBL-1 自指节 | `体量与拆分规划\|档位与拆分说明` | **节内各节**；该模式**节外 0**（仅命中节标题与节内文本；逐档清单为一次性产物，不入本档） | 节内整节删 |
 | OBL-1b 节外指称（含读数合并计） | `R24a\|体量\|拆分规划\|行数标注\|行数读数\|行数义务` | 活档命中 ⇒ **须逐条判入处置面（三分支）或保留面**（判据句 = 本档 §3.7「保留面」；逐行清单为一次性产物） | 按上表三分支逐处处置 |
-| OBL-2 文档行数义务句 | 族正则 = 下方「OBL 模式集」码块 OBL-2 行 | **活档 2 处**（旧需求档的 F12 句——该档已随归档清理删除 · `docs/core/design/ADVISOR-CONVERGENCE.md` 的 `纯 .md 文档豁免` 变体）；域外余量 = **不处置 + 理由**（一次性材料 / 规则自述 / 只读参照树 / 产品代码），**不公布不可复现的全树总数** | 活档 **2** 处逐处收正（R3 / R6）；提示词 = 零改核验；其余**不处置 + 理由登记** |
-| OBL-3 文档档行数读数 | `实测行数\|行数读数\|(实测\|声明)\s*\*{0,2}\d{2,4}\s*\*{0,2}\s*行` | 活档 **25 行**（域 / 排除口径同 OBL-1b；与 OBL-1b ② 分量**口径独立**——不互为分量） | 随条目 1 / 条目 2 处置（同 ② 分支） |
-| OBL-5 文档面标注义务句 | 族正则 = 下方「OBL 模式集」码块 OBL-5 行 | 活档 **26 行** | 收正面 = R 表逐处（R1 / R2 / R4 / R5 / R6 / R7 / R8，各 1 行）；其余命中 = **零改**（判据 = 指称对象为源 / 单元测试档：代码面清单表头与列定义、维度名、已限面句） |
+| OBL-2 文档行数义务句 | 族正则 = 下方「OBL 模式集」码块 OBL-2 行 | 活档命中（旧需求档的 F12 句——该档已随归档清理删除 · `docs/core/design/ADVISOR-CONVERGENCE.md` 的 `纯 .md 文档豁免` 变体）；域外余量 = **不处置 + 理由**（一次性材料 / 规则自述 / 只读参照树 / 产品代码），**不公布不可复现的全树总数** | 活档命中逐处收正（R3 / R6）；提示词 = 零改核验；其余**不处置 + 理由登记** |
+| OBL-3 文档档行数读数 | `实测行数\|行数读数\|(实测\|声明)\s*\*{0,2}\d{2,4}\s*\*{0,2}\s*行` | 活档命中（域 / 排除口径同 OBL-1b；与 OBL-1b ② 分量**口径独立**——不互为分量） | 随条目 1 / 条目 2 处置（同 ② 分支） |
+| OBL-5 文档面标注义务句 | 族正则 = 下方「OBL 模式集」码块 OBL-5 行 | 活档命中 | 收正面 = R 表逐处（R1 / R2 / R4 / R5 / R6 / R7 / R8）；其余命中 = **零改**（判据 = 指称对象为源 / 单元测试档：代码面清单表头与列定义、维度名、已限面句） |
 
 ```regex
 OBL-1b 节外指称       = R24a|体量|拆分规划|行数标注|行数读数|行数义务
@@ -565,7 +566,7 @@ OBL-5  文档面标注义务 = 带当前行数\s*\+?\s*预计增量|行数标注
 
 | # | 档:行 | 现状（指认） | 收正后 |
 |---|---|---|---|
-| R1 | `docs/core/requirements/METHODOLOGY.md`（F-R24a） | 判定句「新建 / 迁移文件标预计规模」未限面；范围边界列「纯文档 .md 豁免标注」 | 判定句限**源 / 单元测试档**；范围边界列改「**文档档零标注义务**（不标行数 / 不写预计增量 / 不写拆分规划）」 |
+| R1 | `docs/core/standards/METHODOLOGY.md`（F-R24a） | 判定句「新建 / 迁移文件标预计规模」未限面；范围边界列「纯文档 .md 豁免标注」 | 判定句限**源 / 单元测试档**；范围边界列改「**文档档零标注义务**（不标行数 / 不写预计增量 / 不写拆分规划）」 |
 | R2 | 旧需求档（批次档模板节——该档已随归档清理删除） | `### 受影响文件（带当前行数 + 预计增量）` | `### 受影响文件（本批改哪些档 + 动作 + 行数 / 增量读数——**该表只住批档 §2**，设计 / 需求档不设）` |
 | R3 | 同上 `:292`（F12） | 「文档不受行数限制——超长**只作提示 / 登记**，不拆」 | 「文档不受行数限制——**无任何行数义务**（不限行数、不登记读数、不写拆分规划）」 |
 | R4 | `docs/core/design/ADVISOR-CONVERGENCE.md` | 「行数标注义务 = 纪律层文档规范节」 | 义务限**源 / 单元测试档**；文档规范节**不再承载**行数义务 |
@@ -679,7 +680,7 @@ OBL-5  文档面标注义务 = 带当前行数\s*\+?\s*预计增量|行数标注
 
 - **附加口径 ③（死名书写纪律）**：本条内死名一律**裸名**形态（不带目录段 / 不带坐标尾）——承 §3.8 形态纪律，防本条目自带新增悬空；改后坐标一律写成**能解析的形**且盘上可解析。
 
-#### J-1（#61）depth 门族旧编号 → 现锚（门文案 7 处 / 4 档 + 描述串 3 行 / 8 编号 token）
+#### J-1（#61）depth 门族旧编号 → 现锚
 
 改指目标 = **`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.2**（depth 可用性**规则住所**——该档逐字「**本表 = 锚 `§6.7.2` 的规则住所**」+「`status` 与 `observe` / `send` / `escalate` / `cancel` / `panel freeze` **同为 depth 0 专有**」）；
 
@@ -687,40 +688,18 @@ OBL-5  文档面标注义务 = 带当前行数\s*\+?\s*预计增量|行数标注
 
 **射程（J-1 的边界 · 判定口径单源）**：
 
-- **射程内 = depth 门族 token**（旧编号族 → 现行锚 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.2 · `AGENT-LOOP-ASYNC-POOL.md` §6.10；`§11.2` **仅 `thincoder-core/agent-tools/advisor.mjs` 的 advisor 门一处**）。位点 = 下表 10 处（门文案 7 + 描述串 3 行）。
+- **射程内 = depth 门族 token**（旧编号族 → 现行锚 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.2 · `AGENT-LOOP-ASYNC-POOL.md` §6.10；`§11.2` **仅 `thincoder-core/agent-tools/advisor.mjs` 的 advisor 门一处**）。位点 = 门文案族与工具描述串族两族（逐处坐标与清账读数住批档——D12）。
 
 - **射程外 = J-1 残差**：
   - 其余机制族 token 位点（`§18` · `§25` · `§15` · `§20` · `§11.1` · `§17` · `§21.1` · `§23.3.1` · `§28` · `§29` · `§10` · `§22` · `§2.6` 等）+ **同 token 在射程位点之外的复用**（`thincoder-core/agent-tools/advisor.mjs` 内两处 `§18.8` / `§11.2`；`thincoder-core/agent-tools/advisor-async.mjs` 内一处 `§11.2`——**不在射程内**）。
 
-  - **面别不设限**：注释 / 头注 / 模型可见串一律同判（残差清单见下）。
+  - **面别不设限**：注释 / 头注 / 模型可见串一律同判（残差清单与逐处坐标住批档）。
 - **授权面依据**：单元测试档点名 = depth 门族旧编号 + 工具描述串位点；其余机制族**不扩张**（扩张 = 另轮）。
 - **同 token 双位点判法**：`§11.2` 属「射程内 1 处 + 射程外 2 处」——**改一处不改两处**，判据只判射程内那一处（A-DD19 ②）。
 
-**门文案（模型可见错误串 · 现锚）**：
+**J-1 余项（定义 = token 族 + 域）**：
 
-| # | 档 | 行 | 现锚 |
-|---|---|---|---|
-| 1 | `thincoder-core/agent-tools/subagent-actions.mjs` | 门文案一处 | `(docs/core/design/AGENT-LOOP-SUBAGENT.md §6.7.2)` |
-| 2 | 同上 | 门文案一处 | 同 1 |
-| 3 | 同上 | `:309` | 同 1 |
-| 4 | `thincoder-core/agent-tools/subagent-async.mjs` | 门文案一处 | 同 1 |
-| 5 | 同上 | 门文案一处 | 同 1 |
-| 6 | `thincoder-core/agent-tools/subagent-panel.mjs` | 门文案一处 | 同 1 |
-| 7 | `thincoder-core/agent-tools/advisor.mjs` | 门文案一处 | `(AGENT-LOOP-ASYNC-POOL.md §6.10)` |
-
-**工具描述串（模型可见 schema 描述 · 现锚）**：
-
-| # | 档 | 行 | 现锚 |
-|---|---|---|---|
-| 8 | `thincoder-core/agent-tools/subagent.mjs` | 描述串一处 | `(docs/core/design/AGENT-LOOP-SUBAGENT.md §6.7–§6.7.5 + SUBAGENT-OBSERVE-SEND)` |
-| 9 | 同上 | 描述串一处 | `§6.7.2 touched-files summary` |
-| 10 | 同上 | `:145` | 三处均 `— §6.7.2` |
-
-**目标锚存在性实核**：`docs/core/design/AGENT-LOOP-SUBAGENT.md` 含 `## 6.7` · `### 6.7.2` · `### 6.7.3` · `### 6.7.5` ∧ `AGENT-LOOP-ASYNC-POOL.md` 含 `## 6.10`——五锚齐备（改指后零悬空）。
-
-**J-1 余项（定义 = token 族 + 域 + 逐处坐标清单）**：
-
-- **族定义**：`AGENT-LOOP.md §NN` 型**死编号**引用（现档 `docs/core/design/AGENT-LOOP.md` 无该节者；活节如 `§2.3` **不入族**）+ 同行共现的 `D-*` 决策编号。**面别不设限**——注释 / 头注 / **模型可见串**（工具 `description` · 参数 `description` · 内联错误串 · 注入模板）同判。原表述「代码注释 / 头注面 …≈50 处 / 12 档」= **定义失准**（残差 ≠ 面别；且量级失准）⇒ 本条即其收正。
+- **族定义**：`AGENT-LOOP.md §NN` 型**死编号**引用（现档 `docs/core/design/AGENT-LOOP.md` 无该节者；活节如 `§2.3` **不入族**）+ 同行共现的 `D-*` 决策编号。**面别不设限**——注释 / 头注 / **模型可见串**（工具 `description` · 参数 `description` · 内联错误串 · 注入模板）同判。
 
 - **域**：三代码树 `thincoder-core/**` · `thincoder-cli/src/**` · `thincoder-vscode/src/**`（`.mjs`）。
 
@@ -738,79 +717,7 @@ OBL-5  文档面标注义务 = 带当前行数\s*\+?\s*预计增量|行数标注
 node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).forEach(f=>{if(!/^thincoder-(core|cli[\\/]src|vscode[\\/]src)[\\/](?!test[\\/]).*\.mjs$/.test(f))return;n+=(fs.readFileSync(f,'utf8').match(/^.*AGENT-LOOP\.md §\d.*$/gm)||[]).length});console.log('RAW',n)"
 ```
 
-  **读数 = 116 − 在册活节（§2.x）引用 8 行 = 108**；该 8 行逐坐标 =
-  `thincoder-core/agent/suspension.mjs` · `thincoder-core/agent-tools/async-settle.mjs` · `thincoder-core/agent-tools/parent-channel.mjs` ·
-
-  `thincoder-core/agent-tools/subagent-run.mjs` · `thincoder-vscode/src/agent.mjs`。命中清单 = §3.9 J-1 残差块「逐处坐标清单」（44 档逐处坐标）。
-
-- **模型可见位点点名（10 处——全在册）**：
-  `thincoder-core/agent-tools/advisor.mjs` · `thincoder-core/agent-tools/advisor-async.mjs` · `thincoder-core/agent-tools/subagent.mjs`（十处——档与门别见下表）
-  ——**均不在本节射程内**（归残差；坐标与 token 详见 §3.9 J-1 残差块「逐处坐标清单」）。
-- **逐处坐标清单（全量 · 行号 as-of——落笔前逐处回读）**：
-
-| 档 | 处 | 坐标（行 §号） |
-|---|---|---|
-| `thincoder-cli/src/tui/display-budget.mjs` | 1 | `§23.3.1` |
-| `thincoder-cli/src/tui/interaction.mjs` | 1 | `§16` |
-| `thincoder-cli/src/tui/layout.mjs` | 1 | `§7.2.1` |
-| `thincoder-cli/src/tui/subagent-blocks.mjs` | 1 | `§7.2` |
-| `thincoder-cli/src/tui/subagent-freeze.mjs` | 1 | `§17.5.5` |
-| `thincoder-cli/src/tui/subagent-panel.mjs` | 1 | `§7.2.1` |
-| `thincoder-cli/src/tui/suspension-drive.mjs` | 4 | `§9` · `§9.2` · `§11.3` · `§17` |
-| `thincoder-core/abort-provenance.mjs` | 3 | `§20.3`（一处；余两处无节号） |
-| `thincoder-core/advisor/messages.mjs` | 1 | `§18.8` |
-| `thincoder-core/agent-tools/advisor-async.mjs` | **5** | `§11.2`（注释 ∥ 模型可见错误串）· `§6.10`（注释 · **B**——行内带日期 ∥ **A**——无时点锚） |
-| `thincoder-core/agent-tools/advisor.mjs` | **3** | `§18.8`（描述串）· `§11.2`（描述串）· `§6.10`（注释 · **B**——行内带日期） |
-| `thincoder-core/agent-tools/async-settle.mjs` | 1 | `§10` |
-| `thincoder-core/agent-tools/consult.mjs` | 2 | `§25`（一处；余一处无节号） |
-| `thincoder-core/agent-tools/digest-budget.mjs` | 1 | `§22` |
-| `thincoder-core/agent-tools/escalate-async.mjs` | 4 | `§25` · `§15`（各一处） |
-| `thincoder-core/agent-tools/spawn-gates.mjs` | 1 | `§28` |
-| `thincoder-core/agent-tools/subagent-actions.mjs` | 1 | `§19.6`（注释——射程内同 token 的域外位点） |
-| `thincoder-core/agent-tools/subagent-async.mjs` | 4 | `§19` · `§11.1` · `§20` |
-| `thincoder-core/agent-tools/subagent-run.mjs` | 2 | `§15` · `§20` |
-| `thincoder-core/agent-tools/subagent-scheduler.mjs` | 7 | `§20` · `§28` · `§21.1` · `§15` |
-| `thincoder-core/agent-tools/subagent-spawn.mjs` | 12 | `§23.3.1` · `§20` · `§18.7` · `§18.5` · `§7.2` · `§15` |
-| `thincoder-core/agent-tools/subagent.mjs` | **8** | `§19` · `§25` · `§18` · `§15` / `§11.1` · `§20`（模型可见描述串 · **A**——断言现态 ∧ 无时点锚） |
-| `thincoder-core/agent.mjs` | 2 | `§23.3.1` · `§7.2`（二轮坐标收正） |
-| `thincoder-core/agent/dispatch.mjs` | 4 | `§29` · `§19` · `§7.2` |
-| `thincoder-core/agent/family-tools.mjs` | 3 | `§18` · `§19` |
-| `thincoder-core/agent/helpers.mjs` | 1 | `§17` |
-| `thincoder-core/agent/record-results.mjs` | 1 | `§29` |
-| `thincoder-core/agent/run-stages.mjs` | 4 | `§21` · `§25` · `§15` · `§17` |
-| `thincoder-core/agent/spawn-child.mjs` | 6 | `§7.2` · `§18` · `§23.3.1` |
-| `thincoder-core/agent/suspension.mjs` | 1 | `§9` |
-| `thincoder-core/auto-think.mjs` | 1 | `§18.7` |
-| `thincoder-core/config.mjs` | 1 | `§11.1` |
-| `thincoder-core/provider/core.mjs` | 1 | `§18.6` |
-| `thincoder-core/text-budget.mjs` | 1 | `§23.3.1` |
-| `thincoder-core/traces/trace-store.mjs` | 1 | `§18.6` |
-| `thincoder-vscode/src/agent.mjs` | 2 | `§17` · `§11` |
-| `thincoder-vscode/src/agent/setup-tooltable.mjs` | 1 | `§19.6` |
-| `thincoder-vscode/src/agent/setup.mjs` | 1 | `§11` |
-| `thincoder-vscode/src/extension/chat-panel.mjs` | 1 | `§11` |
-| `thincoder-vscode/src/extension/panel-chat.mjs` | 4 | `§7` · `§11` · `§11.1` |
-| `thincoder-vscode/src/extension/panel-session.mjs` | 1 | `§11` |
-| `thincoder-vscode/src/extension/suspension.mjs` | 3 | `§7` |
-
-- **消解路径** = ① / ② 族已全处置（读数 = 下行收正行）；余 **B 类在册残差**（非销项对象）与**另族**（父侧裁定：AGENT-LOOP 族外者 = 另族 · 续轮候选 · 已另册）逐处实读随**下一产品码注释轮**（锚实核逐处人判——现态指针 vs 改动沿革记录）。**到期条件** = 该轮落定，或该族任一纳入机检扫描域时（现况 = 机检域 = `docs/**`，代码面不扫）。
-
-- **§11 子族登记**：全形 · 注释面**已处置**；余面（`§7.2` / `§15` / `§17`–`§29` 等 + 文案 / 裸形面）**已随文档面收尾处置**（① 族 **231 行 / 68 档** · ② 族 **41 行 / 16 档**——A 类零死编号；§17 面他档残余 = 域外另族，见下行）。
-
-- **登记**：**裸形 §10–§14 子族（89 处 / 14 档 · 三树源码面）已处置**；域外裸形面（改集 33 档之外）与 TUI 旧号余面**已随文档面收尾落定**（TUI 旧号 = ② 族 **41 行 / 16 档**；域外余项 = 另族在册）；VSC §11.x/§12.x/§17 待核族已裁已处置（见下行登记）。零新语义。
-
-- **登记**：本行更新上文「VSC §11.x/§12.x/§17 待核族 ⇒ 随扩面轮」所称——本族**已裁已处置**（改指 8 处 + 删指称 15 处 + 判保留 4 处）；
-  **§17 面他档残余**——面板/驱动族 5 档（实读 ≥30 处）；域外裸形新面——`thincoder-core/advisor/**`（§14.x / §16.x / §18.x 族——实读 37 处 / 6 档）·
-
-  `thincoder-core/tools/**`（TOOLS.md 旧号 §10–§17 族——实读 23 处 / 8 档）——**父侧裁定 = 另族**（AGENT-LOOP 族外者、续轮候选 · 已另册）；消解径 = 下一产品码注释轮（逐靶实读）；到期 = 该轮落定或对应档下次触碰。零新语义。
-
-- **登记**：advisor / tools 两面逐处处置落定（改指 / 去号——逐文件表为一次性产物）；VSC 面板族（`§12.2.x` / `§12.5`）复扫 = **活形**（靶节实存——`docs/vsc/design/VSC-DEBT.md` §12.2.1–§12.2.4 / §12.5）⇒ 无需处置。**另族消解径关闭**（原「下一产品码注释轮」已履行；余项 = 判保留登记）。零新语义。
-
-- **登记**：**裸形面 + `docs/cli/design/TUI.md`（原 §15.x 族） 族 + 退役台账两行**编入本档 **§3.12 条目 K**（族别口径 / 二态处置表 / 销项收口口径单源在 §3.12——本行不重述）；本块**销项 / 收口**已随实施轮读数落定（收正 = 下行收正行；裸形面口径退场 = 上行「口径边界」行）。零新语义。
-
-- **收正行（承实施轮读数——本块按 §3.12「销项 / 收口口径」三条收口）**：① **三族全处置** = ① 族（裸形旧编号面）**231 行 / 68 档** · ② 族（`docs/cli/design/TUI.md`（原 §15.x 族））**41 行 / 16 档** · ③ 族（退役台账两行）**零 diff**（B 类）；
-
-  ② **行 / 档双计** = 本块各登记行（含本行）；③ 余项 = **B 类在册残差**（非销项对象）+ **另族**（另册）——逐条携消解路径 + 到期条件（上行「消解路径」行）。复扫（①② 族 A 类零死编号）与判类清单单源 = 本档 §3.12（二态处置表）。零新语义。
+- **消解路径** = ① / ② 族已全处置；余 **B 类在册残差**（非销项对象）与**另族**（父侧裁定：AGENT-LOOP 族外者 = 另族）逐处实读随**下一产品码注释轮**（锚实核逐处人判——现态指针 vs 改动沿革记录）。清账读数与逐处坐标住批档（D12）。**到期条件** = 该轮落定，或该族任一纳入机检扫描域时（现况 = 机检域 = `docs/**`，代码面不扫）。
 
 #### J-2（#68）测试头注 4 处 + §4.2.8 存史块 1 处——**逐处判类**
 
@@ -823,10 +730,10 @@ node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).for
 
 #### J-3（#69）tool-docs 计数收正（D3 计数与列表同改）
 
-**判据**：唯一值 = 判时实读 `git ls-files thincoder-core/tool-docs` 的行数，声明值须等于它（D3——档数与列表同改）。目录档数随工具增减漂移，故读数只作锚：as-of 2026-10-27 实读 = **54**，判时按实读重取。
+**判据**：唯一值 = 判时实读 `git ls-files thincoder-core/tool-docs` 的行数，声明值须等于它（D3——档数与列表同改）。目录档数随工具增减漂移，故不写死任何一次读出的数——声明值按判时实读取代。
 checklist 描述档已随工具废除（承接档已随归档清理删除）——该档退场后本族按实读收正。
 
-- **射程补正**：本条目 A 类射程初记 **4 档 7 处**，实为部分完成：`CORE-UNIFICATION.md` 的计数句另有 16 处属同一族（逐处坐标住 §3.9 J-1 残差块），其中一处是**派生数**（两端提示词面总档数 = 槽位档 + 工具描述档）——派生物不另判，按两项实读重算（D3）。
+- **射程补正**：本条目 A 类射程为部分完成：`CORE-UNIFICATION.md` 的计数句另有同族句（逐处坐标住批档），其中一处是**派生数**（两端提示词面总档数 = 槽位档 + 工具描述档）——派生物不另判，按两项实读重算（D3）。
 
     **未并面并族**：需求侧 `docs/core/requirements/CORE-UNIFICATION.md` · 产品文本面 `thincoder-vscode/AGENTS.md` · `thincoder-cli/AGENTS.md`（全档无计量句）三面并入本族；判法同上——声明值 = 判时实读档数，不记读数（机判 = §5 A-DD19 ④ 的候选行清单命令）。
 **A 类（现态陈述 / 判据句）7 处 / 4 档——该轮已按实读收正**：
@@ -865,7 +772,7 @@ checklist 描述档已随工具废除（承接档已随归档清理删除）—�
 
 #### J-6（#59·U2）`docRoot.modules` 空指 = **保留（数据档零改）**
 
-**实核**：`docs/core/design/modules/` = **空目录**（`dir` 零项 + `git ls-files` 零跟踪——空目录 git 天然不跟踪）· 模块档 9 档已归档 `docs/core/design/_archive/modules/` · 消费面 = `thincoder-core/agent/write-gate.mjs` 再导出的 `REVIEW_ROOT_KEYS`（评审目标解析单点）。
+**实核**：`docs/core/design/modules/` = **空目录** · 模块档已归档 `docs/core/design/_archive/modules/` · 消费面 = `thincoder-core/agent/write-gate.mjs` 再导出的 `REVIEW_ROOT_KEYS`（评审目标解析单点）。
 
 | 候选 | 判 | 裁定 |
 |---|---|---|
@@ -879,8 +786,7 @@ checklist 描述档已随工具废除（承接档已随归档清理删除）—�
 **代码 / 单元测试档（行 1–5）= eng-coder**（设计 token 门）；**数据档（行 13）= 零改**（J-6 裁定——若父侧覆裁则另立批）。
 实施 = **两轮**：设计档文本轮（eng-designer）+ 代码 / 测试轮（eng-coder）；**各轮 `git status --porcelain` ⊆ 本表 ∪ 批次档**（A-DD19 ⑨ 按轮判）。
 
-**行数读数口径（as-of + 浮动注）**：全表读数 = **as-of**；本机多会话共写一仓 ⇒ **行数读数随并行写入浮动**，口径以**结构变动**为准（§4.2.7 同式）。
-**Δ 列不受影响**（= 本节预计增量，与基线读数无关）；**实施轮基线以各轮执行者首动作前复测为准**（相对判据 = A-DD19 ⑧）。
+**读数口径**：本机多会话共写一仓 ⇒ **行数读数随并行写入浮动**，口径以**结构变动**为准；**实施轮基线以各轮执行者首动作前复测为准**（相对判据 = A-DD19 ⑧）。清账读数住批档（D12）。
 
 **尺寸档（三档 · 一律 Δ0——不拆 + 理由 + 触发 + 拆分计划登记）**
 
@@ -903,8 +809,8 @@ checklist 描述档已随工具废除（承接档已随归档清理删除）—�
 
 | # | 类 | 输入 | 期望 |
 |---|---|---|---|
-| DD-39 | 正常 | 条目 J-1：门文案 7 处 + 描述串 3 行（10 处坐标）改指后 | 逐处与上表「改后」列**逐字相等**；射程内零命中（判据 = A-DD19 ②） |
-| DD-40 | 边界 | 条目 J-1：`status` 门文案（`subagent-actions-query.mjs` 的 `status is only available at depth 0` 先例——本节零改） | 逐字不变；`grep -c "only available at depth 0"` 三档计数 = **4 / 1 / 1**（改前 = 改后） |
+| DD-39 | 正常 | 条目 J-1：门文案族 ∥ 工具描述串族改指后 | 逐处与现锚行**逐字相等**（`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.2 ∥ `AGENT-LOOP-ASYNC-POOL.md` §6.10）；射程内零命中（判据 = A-DD19 ②） |
+| DD-40 | 边界 | 条目 J-1：`status` 门文案（`subagent-actions-query.mjs` 的 `status is only available at depth 0` 先例——本节零改） | 逐字不变；`grep -c "only available at depth 0"` 三档计数改前 = 改后（读数住批档） |
 | DD-41 | 错误 | 条目 J-1：任一改指目标盘上不存在（如 `§6.7.2` 拼写漂移） | 判**违规**——`grep` 目标锚存在性复核先于实施（§3.8 用例 I-5 同判） |
 | DD-42 | 正常 | 条目 J-2：A 类 2 档测试头注改述后 | 目标档删除真相在句（无死名坐标形态）· `node --test` 两档全绿 |
 | DD-44 | 正常 | 条目 J-3：计数收正后 | 四档内每处指目录档数的 `tool-docs` 声明 = 实读 `git ls-files thincoder-core/tool-docs` 的行数（判时现算，不写死）；as-of 2026-10-27 = **54**（判据 = A-DD19 ④——判据不含数字） |
@@ -996,7 +902,7 @@ checklist 描述档已随工具废除（承接档已随归档清理删除）—�
 ### 3.13 条目 L：端差措辞族（限定语）复核与防复发——**文档面收尾**
 
 **族定义**：`原文自持` / `各自保留` / `不加面间同步依赖` / `互不追赶` / `各写一份` / `不做逐字硬一致` / `不做 byte-identical` 类措辞（多实现面**形态**陈述）——被读成「差异保留许可」的实读事故已一例（`docs/vsc/design/WEBVIEW.md` 档头句）；
-规范单源 = 需求层 `docs/core/requirements/METHODOLOGY.md` F7-3（**D2——本条不重述其内容，只落复核判据与写作要求**）。
+规范单源 = 需求层 `docs/core/standards/METHODOLOGY.md` F7-3（**D2——本条不重述其内容，只落复核判据与写作要求**）。
 
 **判据（用户裁定 · 本档落点）**：**用户可见端差 = 缺陷（唯一例外 = 宿主能力面，须实证）；「登记后保留」形不判合格**。**上游同步（三态）**：需求层 F7-3 ∕ N4 ∕ N-AP4 ∕ §4 端差登记标题 = **已落**（父侧笔）· 提示词面第 6 条 = **在途**（落笔 = eng-coder 域）；本档 = 该判据的设计面落点（下两处判据已随改）。
 
@@ -1351,7 +1257,7 @@ checklist 描述档已随工具废除（承接档已随归档清理删除）—�
 |---|---|---|---|
 | DD-69 | 正常 | 改后源面复扫（`grep`） | `scripts/doc-check.mjs` 五处接线段全空 · `node --check` 过 · 全仓**跟踪面** `doc-check-linecounts` import 点 = 0（A-DD28 ①——排除 `.thincoder/**` 草稿） |
 | DD-70 | 边界 | 直读 manifest：五键在 ∥ 临时把 `lineCounts`（旧 `checkConfig` 子键）加回 | 五键在 ⇒ `validateManifest` `ok:true`（缺键 = `missingKeys` 非拒）；加回 ⇒ 落 `unknownKeys`（非拒）∧ 源面零消费点（不读、不报、不入 `CRITERIA_KEYS`——静态可判） |
-| DD-71 | 错误 | 改动集越界（动 `doc-check-anchors.mjs` ∥ `doc-check-width.mjs` ∥ 锚 / 行宽相关件） | 判**违规**——`git diff --stat` 改动集须 ⊆ 本次任务书声明的文件清单（A-DD28 ④） |
+| DD-71 | 错误 | 改动集越界（动已退役的锚 / 行宽探针档，或任何锚 / 行宽相关件） | 判**违规**——`git diff --stat` 改动集须 ⊆ 本次任务书声明的文件清单（A-DD28 ④） |
 
 ### 3.20 条目 S：机检内建为产品工具（起步两条判据 + 声明面 + 交付门 gate）
 
@@ -1517,7 +1423,7 @@ bare names only — `AGENTS.md`, `SKILL.md`, `project_rules.md`. The other four 
 
 - **准据引擎 = 产品核 `thincoder-core/doc-check/**`**（`runDocCheck`）：verdict 只由它产出；调用链 = `thincoder-core/agent-tools/doc-check.mjs` / `thincoder-core/agent-tools/batch-gate.mjs` → `thincoder-core/doc-check/index.mjs`。
 
-- **非准据源 = `scripts/doc-check.mjs`（91 行）**——仓内 V5 专用面（六键声明面 + V5 三锚：用例号 / 路径坐标 / 符号窄宽），判据集与产品引擎**不同形**（V5 三锚 + 六键 vs 起步两判据：锚 + 段长）。
+- **非准据源 = `scripts/doc-check.mjs`**——仓内 V5 专用面（六键声明面 + V5 三锚：用例号 / 路径坐标 / 符号窄宽），判据集与产品引擎**不同形**（V5 三锚 + 六键 vs 起步两判据：锚 + 段长）。
   它的读数不构成 `PASS` / `REFUSED` / `ERROR` 任何一形，也不作交付取证——两引擎同日实跑读数差两百余条，混接即全批假拒。
 
 - **处置 = 保留在盘 · 从判据链退场**（与「本仓自建脚本的处置」表同口径）；档头「单引擎入口」自述失效 ⇒ 改为「V5 专用面 · 非 gate 判据源」（一行注释 · 机械改 · 实施轮落）。
@@ -1640,7 +1546,7 @@ bare names only — `AGENTS.md`, `SKILL.md`, `project_rules.md`. The other four 
 
 **扩区（单源 = §3.26 的扩区表）**：区间表按那张表扩成片段区——段落整段 ∥ 与围栏块相交则整块连标记行 ∥ 只动空行时并入紧邻两段。「什么叫一段」仍只由 `thincoder-core/doc-check/paragraph.mjs` 的谓词族定。
 
-**命中分流**：区内 ⇒ 强制集（当场拒，与本次写入文本腿同权）；区外 ⇒ 明示集，只出一行计数（`触达账存量命中 N 条——不属本次改动区，不阻本次写；收口面整档判`），不逐条列——137 条逐条列正是本批消掉的现场，收口面照旧逐条列。
+**命中分流**：区内 ⇒ 强制集（当场拒，与本次写入文本腿同权）；区外 ⇒ 明示集，只出一行计数（`触达账存量命中 N 条——不属本次改动区，不阻本次写；收口面整档判`），不逐条列——逐条列正是本批消掉的现场，收口面照旧逐条列。
 
 **首行标签**：拒写首行按腿分列，第三段 = `触达账改动区（…）`；前两段（本次写入文本 ∥ 批档整档）字面不变。这一段判的是改动区，读的人据此知道该改哪一处，不必自己分辨拒的是整档还是本笔。
 
@@ -1864,7 +1770,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 - **登记面**：`thincoder-core/agent-tools.mjs`（导出）+ `thincoder-core/agent/family-tools.mjs`（装配段）+ `thincoder-core/package.json` `files` 白名单含 `doc-check/`（**发布闭包**——白名单漏目录曾致装机崩）。
 
-**谓词单源**：谓词族 / 域扫描 / 段判据的**实现单源 = 产品档位**；`scripts/doc-check-paragraph.mjs` = **再出口缝**（8 行 · 零逻辑 · 逐名再出口）。
+**谓词单源**：谓词族 / 域扫描 / 段判据的**实现单源 = 产品档位**；`scripts/doc-check-paragraph.mjs` = **再出口缝**（零逻辑 · 逐名再出口）。
 **本仓不留第二份谓词实现**——换项目时谓词随产品走，标准不随仓漂移。
 
 **本仓自建脚本的处置（归因）**：
@@ -1872,7 +1778,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 | 件 | 处置 | 归因 |
 |---|---|---|
 | `scripts/doc-check{,-anchors,-targets,-linecounts}.mjs` | **保留在盘 · 从判据链退场** | 判据角色由产品工具承接；四档 = 仓内专用面（V5 三类锚 / 用例号 / 符号 / 采集面 / 行数面），**不入产品**（起步两条判据不用） |
-| `scripts/doc-check-paragraph.mjs` | **再出口缝**（8 行 · 零逻辑） | 谓词单源住产品档位（上条）——盘上不留第二份实现；消费面经缝零改 |
+| `scripts/doc-check-paragraph.mjs` | **再出口缝**（零逻辑） | 谓词单源住产品档位（上条）——盘上不留第二份实现；消费面经缝零改 |
 | `.github/workflows/test.yml` | **零触** | 该步已停用（禁调令）；指称对象仍在盘 ⇒ 非死指针 |
 | `thincoder-vscode/package.json`（`doc:check`） | **零触** | 同上（对象 `scripts/doc-check.mjs` 仍在盘） |
 | **物理删除（五档）** | 未决 · 另批 | 删后射程 = §4 V5 判据规格（判据句 + 实装坐标）与 §7 契约面整体退场 + 两消费面收正 |
@@ -2190,7 +2096,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 依据 `thincoder-core/doc-check/index.mjs`「lineRefHits: lineRefs.body.map((h) => ({ ...h, clazz: LINE_REF_CLASS })),」
 
-依据 `thincoder-core/agent-tools/batch-gate.mjs`「const aligned = lines.length === hits.length」
+依据 `thincoder-core/agent-tools/batch-gate.mjs`「const aligned = drift === 0」
 
 **可执行行不再整行跳过（判集补齐 · 2026-11-05 定）**：
 
@@ -2203,7 +2109,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 **该面的读数与分组住批档**（量法 = 本节抽取式的可执行行面 · 域 = `docs/**` 扣 `_archive`；绝对值与逐档处数随每次复量变）：本条只认判据值 = **0 处**与终点，处数不入判据。旧尺（可执行行整行跳过）下宣布的清零，在新尺下不成立——分组基数随尺变，落批前按新尺复量后装填。
 
-**代价：已宣布的「0 处」按旧尺成立、按新尺不成立**——`docs/core/design/DOC-DISCIPLINE.md` ∥ `docs/core/design/PROMPT-SYSTEM.md` 两档正落在这一面（判集补齐轮已把两档清到 0，清前各余 4 处 ∥ 31 处）。分组基数随尺变，落批前按新尺复量后装填；终点不变（全规范面合计 0 处）。
+**代价：已宣布的「0 处」按旧尺成立、按新尺不成立**——`docs/core/design/DOC-DISCIPLINE.md` ∥ `docs/core/design/PROMPT-SYSTEM.md` 两档正落在这一面（判集补齐轮已把两档清到 0）。分组基数随尺变，落批前按新尺复量后装填；终点不变（全规范面合计 0 处）。
 
 **存量当轮清（与本判据同时生效）**：`gate` 判**整档的正文面**（围栏内不入判）⇒ 正文面存量不清就过不了门；围栏内的存量由 `report` 清单的 `合计` 读着清，不进 verdict。清债是本条的第二个效力，不是另一件事：
 
@@ -2432,9 +2338,9 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 **判面取法（机械面 · 四步）**：
 
 1. 目标档不在盘（新建）⇒ 判面 = 整份新内容——新建档没有旧字可分，整份都是本笔。
-2. 落盘内容与盘上旧档逐字相同 ⇒ 判面为空 ⇒ 零判、不建片段档。
-3. 其余（既有档，含 `write` 整档重写）⇒ 盘上旧档与本次新内容逐行剥公共前 / 后缀，剩余行区间 = 改动区（行号按改后档计）；再按下方扩区表把改动区扩成片段区。
-4. 片段区相邻 ∥ 重叠 ⇒ 并区；每区落一个同目录片段档，逐行照抄改后内容，一字不改。
+2. 落盘内容与盘上旧档逐字相同 ⇒ 判面为空 ⇒ 零判。
+3. 其余（既有档，含 `write` 整档重写）⇒ 盘上旧档与本次新内容剥公共前 / 后缀，中段再剥**内部公共段**得**区间表**（各 hunk，行号按改后档计；详见 `docs/core/design/DOC-CHECK.md` §2.10.4）；各 hunk 两侧各取 2 行上下文、相邻者并区，再按下方扩区表扩成**判定区**。
+4. 判定区相邻 ∥ 重叠 ⇒ 并区；**不切片** —— 判定输入（改后整份内容）与判定区两个入参交引擎，判定区只决定哪些命中归本笔（机制单源 = `docs/core/design/DOC-CHECK.md` §2.10.1）。
 
 **按「档在不在盘」分流，不按 op 分流**：`write` 只有一条分界——新建（第 1 步）∥ 既有档（第 3 步）。既有档整档重写与 `edit` 同判，因为「本笔写了哪些字」由前后缀剥出，与工具名无关。
 
@@ -2444,13 +2350,13 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 | 2 | 改动区只含空行 ∥ 宽度为零（纯删行） | 加上紧邻两侧的段落（一段拆两段 ⇒ 两段；两段并一段 ⇒ 并出来的那一段） |
 | 3 | 改动区与围栏块相交 | 扩到该围栏块的开启标记行到闭合标记行；未闭合 ⇒ 到档尾 |
 
-**「段落」的单源**：段划法 = `thincoder-core/doc-check/paragraph.mjs` 的谓词族（`isTableRow` ∥ `isListItem` ∥ `isQuoteLine` ∥ `fenceMark` ∥ 标题行式 `^(#{1,6})\s`）——本门只借谓词定边界，不另立「什么叫一段」的第二套判法。围栏块必须连标记行一起抄进片段：块内代码行若裸抄，引擎会按段长判它（现盘即假阳）。
+**「段落」的单源**：段划法 = `thincoder-core/doc-check/paragraph.mjs` 的谓词族（`isTableRow` ∥ `isListItem` ∥ `isQuoteLine` ∥ `fenceMark` ∥ 标题行式 `^(#{1,6})\s`）——本门只借谓词定边界，不另立「什么叫一段」的第二套判法。围栏状态不由门的切片决定 —— 判整份文本后它取自文本本身（`docs/core/design/DOC-CHECK.md` §2.10.2）。
 
-**扩区表的第二消费面**：批档门的触达账腿复用这张表与它背后的四个函数（`changeRegion` ∥ `fragmentZones` ∥ `paragraphRuns` ∥ `fenceBlocks`，由 `thincoder-core/tools/doc-write-gate.mjs` 导出）；本门判面与判据零改，两张表不并存（D2；消费面判面单源 = §3.20「触达账腿的判面 = 本次改动区」）。
+**扩区表的第二消费面**：批档门的触达账腿复用这张表与它背后的函数（由 `thincoder-core/tools/doc-write-gate.mjs` 导出）；本门判面与判据零改，两张表不并存（D2；消费面判面单源 = §3.20「触达账腿的判面 = 本次改动区」）。
 
 **判法（写前 · 零字节）**：门入口 = `thincoder-core/tools/doc-write-gate.mjs` 导出的 `runDocWriteGate({ abs, content, root })`。
 
-每区落成**目标档同目录**的隐藏片段档（`.docgate-<pid>-<rand>-<n>.md`）⇒ 锚解析序 ②＝引用方档所在目录，与落盘后的真实解析同源；`runDocCheck(root, {mode:"gate", docs:[各片段档]})` 判这几档；命中 ⇒ throw（拒写，**零字节落盘**），`finally` 删片段档。判面为空 ⇒ 不建片段档、不判。
+判定 = **一次 `runDocCheck`，判目标档本身**：入参 `docs` = 目标档、`texts` = 改后整份内容、`zones` = 判定区（三件的形状与语义单源 = `docs/core/design/DOC-CHECK.md` §2.10.1）。身份 = 目标档 ⇒ 锚解析序 ② 与落盘后同源，豁免登记与面判也按目标档匹配（根因与修法单源 = 同档 §2.10.2）；判定区内命中 ⇒ throw（拒写，**零字节落盘**），区外命中只出读数行。判面为空 ⇒ 不判。
 
 **入参缝（`root` 与面判定）**：`root` 是显式参数，缺省回落 = `owningProject(target, parse(target).root)`——上溯界取**目标所在盘根**，与面判定的上溯无界同界，不另立项目根发现逻辑。依据 thincoder-core/tools/doc-write-gate.mjs「const projectRoot = root ? resolve(root) : owningProject(target, parse(target).root)」
 
@@ -2477,13 +2383,13 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 **报面**：拒串首行照抄引擎 verdict 词（`DOC-CHECK GATE: REFUSED（…）`，字面单源 = `thincoder-core/doc-check/index.mjs`）；随后命中行、判面行、处置块。处置块字面单源 = 引擎导出的 `PARA_DISPOSE`，本档零副本。
 
-**判面行固定串**：`判面：改动区 {M} 区 · 片段区 {N} 区 · 目标档段首行 {R}`——M = 改动区数、N = 片段区数、R = 该片段区在**目标档**的起始行号（1-based，按改后档计）。写者据 R 直接落回自己的档，不必读片段档坐标；多片段区时一行一区。
+**判面行固定串**：`判面：改动区 {M} 区 · 判定区 {N} 区`——M = 本笔 hunk 数、N = 扩区并区后的判定区数（两者都是按本笔实算的读数）。命中行直接用**目标档**行号：没有片段档，也就没有要译回来的坐标。
 
 **与收口面全档检查的分工（判据句）**：`docs/core/requirements/DOC-CHECK.md` AC-1「改过的档全文检查」的对象 = **收口 ∥ 轮末交付检查**，不是写前门。两个检查点并存、各有各的判面：写前门挡「本笔写进去的字当场就不合规」，收口门挡「整档累积下来的历史遗留」。写前门判得比收口门窄，兜底在后者；本批不删、不改收口面的全档检查。
 
 **不判面（边界）**：不判「该不该有这段」（缺用例 ∥ 缺先例行 ∥ 缺三问——既不是锚也不是段长）；不判依据对不对（`引缺` 只判引文在不在，「注释当契约」归评审）；不做写入前美化 ∥ 自动重排；不缓存 manifest 读数（性能先量一条读数）；不改判据本体（阈值与两支判据 = `thincoder-core/doc-check/**` 零改）。
 
-**最近先例（对齐 ∥ 偏离）**：先例 = 批档门的写段面（`thincoder-core/agent-tools/batch-gate.mjs`）。**对齐** = 同目录片段档 ∥ verdict 词 ∥ 处置块单源 ∥ 零字节拒写。**偏离** = 批档门判本次写入文本（批档是本批自己的档，作者改得动整档）；本门判触碰段落（没碰到的段落不归本笔，碰到了就整段归本笔）。
+**最近先例（对齐 ∥ 偏离）**：先例 = 批档门的写段面（`thincoder-core/agent-tools/batch-gate.mjs`）。**对齐** = 同一个 `runDocCheck` 入口 ∥ verdict 词 ∥ 处置块单源 ∥ 零字节拒写。**偏离** = 批档门判本次写入文本（批档是本批自己的档，作者改得动整档）；本门判触碰段落（没碰到的段落不归本笔，碰到了就整段归本笔）。
 
 **三问（新档落点 · 名 · 写权）**：`existing but unusable:` `thincoder-core/agent-tools/batch-gate.mjs` · name `fragmentPathOf` ∥ `gateRefusalMessage` · failed on：前者同档私有、未导出；后者动作词与范围标签全绑批档（「本次段写入未落盘」∥「Do NOT close the record」），并消费批档门的 `gate` 对象形——片段档装配与拒串装配两套都不搬。
 
@@ -2500,7 +2406,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 | 列 | 内容 |
 |---|---|
 | 用例 | 夹具项目内以 `edit` 往一篇设计档的**新段落**写一笔含悬空档名的文本 |
-| 交互组件 | `write-path.writeThroughPath`（`op === "write"` 调门）⟷ `doc-write-gate.runDocWriteGate`（片段档 ⇒ `runDocCheck`）⟷ `thincoder-core/doc-check` 的锚判据（`档缺`） |
+| 交互组件 | `write-path.writeThroughPath`（`op === "write"` 调门）⟷ `doc-write-gate.runDocWriteGate`（改后内容 + 判定区 ⇒ `runDocCheck`）⟷ `thincoder-core/doc-check` 的锚判据（`档缺`） |
 | 断言（业务可观察） | 写调用被拒、目标档字节逐字不变；改成在盘全路径后同一笔落盘成功 |
 | 回指 | 需求 `docs/core/requirements/DOC-CHECK.md`（F14 ∥ AC-12） |
 | 用例档 | 新增 `test/integration/doc-write-gate.test.mjs` |
@@ -2510,7 +2416,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 **待实读后定（open · 一条）**：`thincoder-core/package.json` 的 `files` 是否按目录整体收纳 `tools/`——若逐目录列举，新增档须同批补上；归实施轮首动作实读定论。
 
 **验收与用例**：§5 的 `A-DD40`；用例 = DD-164–DD-173。
-### 3.27 条目 AA：档名可定位落笔要求（七落点 · 每个写档名的面都带这一句）
+### 3.27 条目 AA：档名可定位落笔要求（六组 · 每个写档名的面都带这一句）
 
 **治的病**：只写文件名、不带仓根段的写法（下称裸档名）反复写进批档各段与回复正文，被门拒一次、重发一次，习惯不改。成因三条：
 
@@ -2534,33 +2440,32 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 **为什么后果拆两半**：解析序见 §4.2.2（单源；裸名只在能唯一定位时才过）。若写成「裸名一律拒写」，同目录那一半就是一句不会发生的承诺——模型在门上过了关，反倒学成「裸名是安全写法」，而它一旦有同名兄弟上盘就当场转红。两半都说，才是这台机器真实的行为。
 
-**九档逐字同一行（单一源 = 本节；实施轮逐档照抄，照抄时不得折行）**：
+**八档逐字同一行（单一源 = 本节；实施轮逐档照抄，照抄时不得折行）**：
 
 ```text
 - **Doc names: any form that resolves — a bare name is fine while the name is unique.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass. A bare name goes red the day a `same name` file appears — then write the distinguishing form.
 ```
 
-**落点表（七组 · 九档）**：
+**落点表（六组 · 八档）**：
 
 | # | 档（仓根全路径） | 落点（按节名 ∥ 逐字定位，不写行号） | 为什么是它 |
 |---|---|---|---|
 | 1 | `thincoder-core/prompts/discipline-engineering.md` | 「**D4 pointer discipline**」条 | 规则本体所在；补「每一次提及」与「同目录也算」 |
 | 2 | `thincoder-core/tool-docs/batch.md` | 「A dead citation anywhere in the record therefore refuses an unrelated edit — and replacing that very line is the way through, which is why the record is judged as it will stand, not as it sits.」句**之后另起一条** | 拒写就发生在这个工具的写入文本腿；读参数说明那一刻最该看到 |
-| 3 | `thincoder-core/prompts/persona-engineering.md` | 「**Doc-check gate**」条（审批 / 结算 / 收口前跑 `doc_check`） | 主 agent 写批档 §1 ∥ §4 ∥ §6 |
-| 4 | `thincoder-core/prompts/persona-eng-designer.md` | 「**Doc-check gate (delivery precondition)**」块 | 设计席写批档 §2 |
-| 5 | `thincoder-core/prompts/persona-eng-coder.md` | 「⑦ **Doc-check gate**」条 | 实施席写批档 §5 |
-| 6 | `thincoder-core/prompts/advisor-design.md` ∥ `thincoder-core/prompts/advisor-round2.md` ∥ `thincoder-core/prompts/advisor-round3.md` | `thincoder-core/prompts/advisor-design.md` 的「Citation Discipline」节 ∥ `thincoder-core/prompts/advisor-round2.md` 的「**Host verification**」句与「**A citation is one CONTIGUOUS substring of the cited line**」句 ∥ `thincoder-core/prompts/advisor-round3.md` 的「**Host verification**」句 | 评审写批档 §3；上一批的裸名就栽在这三档的产物上 |
-| 7 | `thincoder-core/tool-docs/doc_check.md` | 「`docs` (required)」段的解析口径段：一句引句 `A pointer resolves through these legs, in this order:` 下列四条解析腿（仓根 ∥ 本档目录 ∥ 声明仓 ∥ `the unique-suffix fallback`），紧接第二句 `A bare name resolves through the last-resort unique-suffix leg: while exactly one file in the repo carries that name it resolves and passes; with two or more, or none, it is judged 档缺.` | 判据说明面：写清「解得到」是唯一通过形。四条腿逐条在册——第 ④ 条唯一后缀腿是裸名句的立足点，与同段九档句同向 |
+| 3 | `thincoder-core/prompts/persona-eng-designer.md` | 「**Doc-check gate (delivery precondition)**」块 | 设计席写批档 §2 |
+| 4 | `thincoder-core/prompts/persona-eng-coder.md` | 「⑦ **Doc-check gate**」条 | 实施席写批档 §5 |
+| 5 | `thincoder-core/prompts/advisor-design.md` ∥ `thincoder-core/prompts/advisor-round2.md` ∥ `thincoder-core/prompts/advisor-round3.md` | `thincoder-core/prompts/advisor-design.md` 的「Citation Discipline」节 ∥ `thincoder-core/prompts/advisor-round2.md` 的「**Host verification**」句与「**A citation is one CONTIGUOUS substring of the cited line**」句 ∥ `thincoder-core/prompts/advisor-round3.md` 的「**Host verification**」句 | 评审写批档 §3；上一批的裸名就栽在这三档的产物上 |
+| 6 | `thincoder-core/tool-docs/doc_check.md` | 「`docs` (required)」段的解析口径段：一句引句 `A pointer resolves through these legs, in this order:` 下列四条解析腿（仓根 ∥ 本档目录 ∥ 声明仓 ∥ `the unique-suffix fallback`），紧接第二句 `A bare name resolves through the last-resort unique-suffix leg: while exactly one file in the repo carries that name it resolves and passes; with two or more, or none, it is judged 档缺.` | 判据说明面：写清「解得到」是唯一通过形。四条腿逐条在册——第 ④ 条唯一后缀腿是裸名句的立足点，与同段八档句同向 |
 
-表行 = 7，行内档 = 9（第 6 行含三档）——两个数都写出来，免得拿行数当档数（D3）。
+表行 = 6，行内档 = 8（第 5 行含三档）——两个数都写出来，免得拿行数当档数（D3）。
 
 **同批修的三处示例路径（不改判据）**：`thincoder-core/prompts/advisor-round2.md` 的两处与 `thincoder-core/prompts/advisor-round3.md` 的一处，把以 `src/` 开头的示例档名当反例写进了评审表——锚判按「带目录段的路径 token」判它们 `档缺`，与本条同病（示例被当指针判死）。
 
 修法 = **改成不指真档的占位形 `src/<file>.mjs`**：目录段留着（示例说的本就是源码树下的产物），`<…>` 使可抽取的 token 只剩裸占位名 `file.mjs`，而裸占位名按豁免谓词不判（判定面 = 本档 §3.24 条目 X）。
 
-**为什么它仍是教学样例**：那张表要教的是「一行一条评审发现」的形（序号 ∥ 档 ∥ 严重度 ∥ 状态 ∥ 证据），档名只是占位；写成不指真档的占位名反而更对——示例不该把读者指向一个不存在的档。修完后九档 `doc_check` 的 gate 首行回到绝对判据（A-DD42 ④）。
+**为什么它仍是教学样例**：那张表要教的是「一行一条评审发现」的形（序号 ∥ 档 ∥ 严重度 ∥ 状态 ∥ 证据），档名只是占位；写成不指真档的占位名反而更对——示例不该把读者指向一个不存在的档。修完后八档 `doc_check` 的 gate 首行回到绝对判据（A-DD42 ④）。
 
-**落点边界（在盘但不作落点的档）**：`thincoder-core/prompts/advisor-round1.md` 不作落点——它出的是建议、不写批档 §3（本席实读该档，全文无批档段写入句）。记下这一条，为的是让「七组」这一数闭得住：少一组即漏。
+**落点边界（在盘但不作落点的档）**：`thincoder-core/prompts/advisor-round1.md` 不作落点——它出的是建议、不写批档 §3（本席实读该档，全文无批档段写入句）。记下这一条，为的是让「六组」这一数闭得住：少一组即漏。
 
 **边界（本条不做）**：
 
@@ -2575,11 +2480,11 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 **数据事实**：本批零数据面断言（改动 = 提示词与工具描述文本）——无 claim 需要读数据。
 
-**尺寸档位**：九档这九个 `.md` **行数不入判**（文档档零行数义务，口径 = 本档 §3.7）；本批唯一受尺寸档位约束的是改面单元测试档（`.mjs`）——**实施轮以 `doc_check` 的 `lines` 量一次，只点名越线的档**（档名 + 越的哪条线），**读数不写进任何文字**（口径 = 本档 §1 的 D12 细则 ∥ §3.20「行数读数」块）；阈值照旧（软线 500 ∥ 硬限 800），越线即拆。
+**尺寸档位**：八档这八个 `.md` **行数不入判**（文档档零行数义务，口径 = 本档 §3.7）；本批唯一受尺寸档位约束的是改面单元测试档（`.mjs`）——**实施轮以 `doc_check` 的 `lines` 量一次，只点名越线的档**（档名 + 越的哪条线），**读数不写进任何文字**（口径 = 本档 §1 的 D12 细则 ∥ §3.20「行数读数」块）；阈值照旧（软线 500 ∥ 硬限 800），越线即拆。
 
-**受影响文件**：落点表九档（产品文本面）+ 本档（§1 D4 细则 · §3.27 条目 AA · §5 A-DD42 与其上五行索引）+ 批次档 + 改面单元测试档（随批删除）。
+**受影响文件**：落点表八档（产品文本面）+ 本档（§1 D4 细则 · §3.27 条目 AA · §5 A-DD42 与其上五行索引）+ 批次档 + 改面单元测试档（随批删除）。
 
-**跨层结论**：零跨层——九档全在 `thincoder-core/prompts/` 与 `thincoder-core/tool-docs/` 内，不触 CLI ∥ VSC ∥ Desktop ∥ Server 任一端；无拆分计划。**改面单元测试档的档位结论与判法**：它是本批唯一代码档，住 `docs/batches/`、**名随批次档**（惯例 = 与批次档同名、名尾加 `test`、扩展名 `.mjs`）；设计档**不写死它的路径**（实施轮建档才上盘，写死即一条悬空锚），实施轮按该惯例在批档目录内定位并跑 `node --test <该档>`（cwd = 仓根）。
+**跨层结论**：零跨层——八档全在 `thincoder-core/prompts/` 与 `thincoder-core/tool-docs/` 内，不触 CLI ∥ VSC ∥ Desktop ∥ Server 任一端；无拆分计划。**改面单元测试档的档位结论与判法**：它是本批唯一代码档，住 `docs/batches/`、**名随批次档**（惯例 = 与批次档同名、名尾加 `test`、扩展名 `.mjs`）；设计档**不写死它的路径**（实施轮建档才上盘，写死即一条悬空锚），实施轮按该惯例在批档目录内定位并跑 `node --test <该档>`（cwd = 仓根）。
 
 **集成测试差量（对 `test/RTM.md`）**：破 0 行 · 冗余 0 行 · 新增 0 行——本批不改任何业务可观察结果（门的行为零改，只改模型读到的文本）。**`7-8` 是否仍断言本批验收第 ③ 条 = 待实施轮回读确认**：首动作 = 实读 `test/RTM.md` 第 7 节，核该行输入（本次写入文本含裸档名 ⇒ 拒）与预期（改成能解到的形 ⇒ 落盘）仍与本批同义；不成立 ⇒ 该行按实读改写，差量随收正。本席未读该档，记 unverified。
 
@@ -2631,17 +2536,17 @@ AB-1 与 AB-3 都落在这两处件上，本批不新建任何一件。
 
 **行号坐标一类与围栏同面（判面单源 = §3.23 条目 W）**：围栏内坐标不入判、只出读数行；围栏外的坐标照判——围栏藏不住坐标。豁免的理由是「证据钉的是原文、不随盘面漂」，不是「围栏是举例的家」；两条理由各行其是，不互相导出。
 
-**落点表（五行 · 七档）**——规则落在「教怎么写文档」的面，以及写文档的人读的那一面：
+**落点表（五行 · 六档）**——规则落在「教怎么写文档」的面，以及写文档的人读的那一面：
 
 | # | 档（仓根全路径） | 落点（节名 ∥ 逐字定位） | 为什么是它 |
 |---|---|---|---|
 | 1 | `thincoder-core/prompts/common.md` | 「**Document writing discipline**」节 | 公共层：每个角色都读；规则的详述点 |
 | 2 | `thincoder-core/tool-docs/doc_check.md` | 「Fenced blocks count too」句**之后另起一段**（并进原段会越 300 字符段阈） | 判据说明面：写者读到「围栏跳过」时，正是该知道示例往哪放的时刻 |
 | 3 | `thincoder-core/prompts/discipline-engineering.md` | 「**Doc discipline**」节 | 工程模式的落笔纪律面 |
-| 4 | `thincoder-core/prompts/persona-eng-designer.md` ∥ `thincoder-core/prompts/persona-eng-coder.md` ∥ `thincoder-core/prompts/persona-engineering.md` | 三档各自的「Doc-check gate」块 | 写 §2 ∥ §5 ∥ §1 的三个席：示例表行最先在批档里长出来 |
+| 4 | `thincoder-core/prompts/persona-eng-designer.md` ∥ `thincoder-core/prompts/persona-eng-coder.md` | 两档各自的「Doc-check gate」块 | 写 §2 ∥ §5 的两个席：示例表行最先在批档里长出来 |
 | 5 | `thincoder-core/tool-docs/batch.md` | 「A dead citation anywhere in the record therefore refuses an unrelated edit — and replacing that very line is the way through, which is why the record is judged as it will stand, not as it sits.」句**之后另起一条** | 本批自己的拒绝面就在这个工具的写入文本腿（A-DD43 ⑤）；写在正文的示例表行正是在这里被拒 |
 
-表行 = 5，行内档 = 7（第 4 行含三档、第 5 行单档）——两个数都写出来，免得拿行数当档数（D3）。
+表行 = 5，行内档 = 6（第 4 行含两档、第 5 行单档）——两个数都写出来，免得拿行数当档数（D3）。
 
 **落点句（单一源 = 本节；实施轮逐档照抄，不折行、整行 ≤300 字符）**：
 
@@ -2662,16 +2567,16 @@ Examples — sample rows, commands, paths — go in a fenced block, which the an
 
 **数据事实**：本批零数据面断言（改动 = 文本与示例形态）——无 claim 需要读数据。
 
-**尺寸档位**：落点七档与示例三档都是 `.md`，文档档零行数义务（口径 = 本档 §3.7）；本批零代码面 ⇒ 无源档尺寸档位问题。
+**尺寸档位**：落点六档与示例三档都是 `.md`，文档档零行数义务（口径 = 本档 §3.7）；本批零代码面 ⇒ 无源档尺寸档位问题。
 
 **受影响文件**：
 
-- 落点表七档（产品文本面）。
+- 落点表六档（产品文本面）。
 - 示例表行三档：`thincoder-core/prompts/advisor-round1.md` ∥ `thincoder-core/prompts/advisor-round2.md` ∥ `thincoder-core/prompts/advisor-round3.md`。
 - 本档 `docs/core/design/DOC-DISCIPLINE.md`：§3 标题括注枚举 · 档头枚举 · §1 表补 `D16` 行与 `D1–D15` → `D1–D16` 的计数句 · §1 的 D10 行与 D10 细则的免判区句 · §3.23 边界的码段守卫句 · §3.28 · §5 A-DD43 与用例表。
 - 批次档。
 
-**跨层结论**：零跨层——十档全在 `thincoder-core/prompts/` 与 `thincoder-core/tool-docs/` 内，不触 CLI ∥ VSC ∥ Desktop ∥ Server 任一端；无拆分计划；本批零代码档、无单元测试档。
+**跨层结论**：零跨层——九档全在 `thincoder-core/prompts/` 与 `thincoder-core/tool-docs/` 内，不触 CLI ∥ VSC ∥ Desktop ∥ Server 任一端；无拆分计划；本批零代码档、无单元测试档。
 
 **集成测试差量（对 `test/RTM.md`）**：破 0 行 · 冗余 0 行 · 新增 0 行——本批不改任何业务可观察结果（门的行为零改，只改文本形态与示例位置）。既有 `7-8` 行（实读原文：「子代理 append §2，本次写入文本把要求档写成不带目录段的名字」）与本批的假路径同走 `档缺` 一条拒路 ⇒ 该行断言不随本批改变。
 
@@ -2748,6 +2653,122 @@ A pointer whose referring document and whose target both sit under a `docRoot.ba
 
 **验收与用例**：本档 §5 的 `A-DD44`；用例 = 本档 §5 用例表内条目 AC 那一组（以表为准——本处不列号）。
 
+### 3.30 设计档绝对读数收敛（P2-1）
+
+**方案与理由**：D12 与 §3.22 的 U-5 / U-6 已是规则单源，本批不改 D12 行，也不另立一套读数定义。实施只清退规范面中回答「那次跑出了多少」的档数、条数和行数；量法、阈值、对象清单与可复核的关系判据保留。绝对值移入当批批档，不以「实读」「基线」「只作记录」等标签免责。
+
+**最近先例**：`docs/core/design/PROMPT-SYSTEM.md` §6.96 的落点登记与本档 §3.22 的读数判面。对齐 = 规范面只留量法和关系，读数只住可丢弃载体；偏离 = 本节只给清理落点，不修改判据本体。
+
+**公共源勘察**：`doc_search` 查询「C10 体量收敛 重复规则 persona discipline 绝对读数 量法 阈值」，命中本仓需求与设计档；声明公共源未见相关规则。已查，无相关公共源。
+
+**数据事实**：清理对象是文档中的既有数字，不是业务数据。每个候选数值必须回到所在节判类，不能由正则命中直接推断为读数。
+
+**Interface contract**：不适用。只改设计文本，没有接口、协议或数据流变更。
+
+#### 3.30.1 三类读数的撤法与量法留点
+
+| 类型 | 撤哪个面 | 量法与判据留点 |
+|---|---|---|
+| 档数 | `docs/core/design/**` 规范面中的当前库存、一次扫描覆盖量、命中档数和无本节目表支撑的合计 | 保留目录全集、文件闭集、扫描域与排除面；用目录扫描和清单求集合差。数值只出命令或批档 |
+| 条数 | 同面中的当前条数、命中处数、样本量、一次清账结果及由其派生的比例和倍数 | 保留条目定义、正则、判定谓词与排除面；用内置 `grep` 或既有复算式取数。集合差、零新增和后置不超过前置等关系判据保留 |
+| 行数 | 同面中的当前行数、改前改后绝对行数、净增量和目标绝对行数 | 保留 `doc_check` 的 `lines` / `countContentLines` 量法及尺寸阈值；只写同尺比较和越线结论，不写绝对值 |
+
+判类直接读 §3.22：U-5 决定一次运行的数撤走，U-6 决定本节目表支撑的合计或构成保留。判据阈值、测试夹具的输入与预期、行为契约中的数量，以及闭集表的结构数不按读数误删。删除数值后，同句的「已落」「越线」「在盘」「零改」等断言按 U-5 补条重新核盘，不成立即同轮收正。
+
+#### 3.30.2 落点与实施顺序
+
+- `docs/core/design/PROMPT-SYSTEM.md`：按所在节清理库存、扫描、命中、样本和行数读数；保留提示词装配链、检查器、扫描域、逐项清单和验收关系。
+- `docs/core/design/DOC-DISCIPLINE.md`：按所在节清理历史复核、原型基线、文件尺寸和变更体量读数；D12、U-5、U-6、阈值与复算命令不动。
+- 其余 `docs/core/design/**`：逐档逐节按同一判类清理实际命中；不得只删勘察清单中曾经出现的示例，也不得把零正则命中当作完成证明。
+
+实施顺序 = 先记录改前量法与输出，再逐节删数值并保留规则，再复核派生断言和本节目表合计，最后运行文档门。每处修改按「节名 + 现文逐字引文」登记，读数只住批档。
+
+#### 3.30.3 受影响文件与分层结论
+
+下列文件按所在节的实际读数类清理；清单只界定受影响文件，不表示档内每个数字都删除。
+
+- `docs/core/design/ADVISOR-CONVERGENCE.md`
+- `docs/core/design/ADVISOR-GUARDS.md`
+- `docs/core/design/AGENT-LOOP.md`
+- `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`
+- `docs/core/design/AGENT-LOOP-SUBAGENT.md`
+- `docs/core/design/AGENT-LOOP-UPSTREAM.md`
+- `docs/core/design/ANCHOR-DEBT-REPAIR.md`
+- `docs/core/design/ARCHITECTURE.md`
+- `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md`
+- `docs/core/design/BATCH-RECORD.md`
+- `docs/core/design/BROWSER-TOOL.md`
+- `docs/core/design/CHECKPOINT.md`
+- `docs/core/design/CONFIG.md`
+- `docs/core/design/CONSULTATION.md`
+- `docs/core/design/CONTEXT-COMPACTION.md`
+- `docs/core/design/CORE-UNIFICATION.md`
+- `docs/core/design/CROSS-REPO-WRITE.md`
+- `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md`
+- `docs/core/design/DOC-CODE-RECONCILE.md`
+- `docs/core/design/DOC-DISCIPLINE.md`
+- `docs/core/design/DOC-GRAPH.md`
+- `docs/core/design/DOC-SYSTEM.md`
+- `docs/core/design/EDIT.md`
+- `docs/core/design/EDIT-HELPERS.md`
+- `docs/core/design/ENGINEERING-MODE-V2.md`
+- `docs/core/design/I18N.md`
+- `docs/core/design/LEDGER.md`
+- `docs/core/design/LOGGING.md`
+- `docs/core/design/MANIFEST.md`
+- `docs/core/design/MEMORY.md`
+- `docs/core/design/MODEL-BENCH.md`
+- `docs/core/design/MODEL-SPECS.md`
+- `docs/core/design/MULTI-INSTANCE-COLLAB.md`
+- `docs/core/design/PATH-RESOLUTION.md`
+- `docs/core/design/PORTABILITY.md`
+- `docs/core/design/PROMPT-FIXTURE.md`
+- `docs/core/design/PROMPT-SYSTEM.md`
+- `docs/core/design/PROVIDER.md`
+- `docs/core/design/PROXY.md`
+- `docs/core/design/SESSION.md`
+- `docs/core/design/SESSION-OBSERVABILITY.md`
+- `docs/core/design/SETTINGS-TOOL.md`
+- `docs/core/design/STRUCTURE-DEBT.md`
+- `docs/core/design/TEAM.md`
+- `docs/core/design/TEAM-LEDGER.md`
+- `docs/core/design/TESTING.md`
+- `docs/core/design/TIMEOUT-DIGEST.md`
+- `docs/core/design/TOOL-PARAM-ZERO-DEFAULTS.md`
+- `docs/core/design/TOOLS.md`
+- `docs/core/design/TURN-CAP-CONTINUE.md`
+- `docs/core/design/TWO-REPO-MERGE.md`
+- `docs/core/design/VERIFY-REDESIGN.md`
+- `docs/core/design/WORKSPACE.md`
+
+写域分工 = 上述设计档由 eng-designer 清理；`thincoder-core/prompts/persona-engineering.md` 与 `thincoder-core/prompts/discipline-engineering.md` 由 eng-coder 按 `docs/core/design/PROMPT-SYSTEM.md` §6.97 去重。两写域同批落地，运行时代码零改。
+
+**分层结论 = 无档跨分层**：改动均为 `.md` 文本，无代码档位与拆分计划。
+
+#### 3.30.4 验收、用例与边界
+
+| 场景 | 输入 / 动作 | 期望 |
+|---|---|---|
+| 正常 · 档数 | 读取原库存或扫描合计所在节 | 绝对值已撤；目录、闭集与集合差量法仍可复跑 |
+| 正常 · 条数 | 读取原命中或样本量所在节 | 绝对值及其派生比例已撤；谓词、域和关系判据仍在 |
+| 正常 · 行数 | 读取原文件体量所在节 | 绝对行数已撤；`doc_check` 量法和阈值仍在 |
+| 边界 · 表格构成 | 读取有本节目表支撑的合计 | 按 U-6 保留，表与合计仍同源 |
+| 边界 · 行为契约 | 读取测试输入、预期命中和输出上限 | 数量仍表达行为，不按库存读数误删 |
+| 错误 · 免责留数 | 数值旁写「实读」「历史」「只作记录」 | 判红；标签不改变规范面仍携带绝对读数 |
+| 错误 · 删数留假断言 | 删除旧数但未复核「已落 / 越线 / 在盘」 | 判红；按盘重核并收正 |
+
+读者验收 = 逐节检查改动处，能指出保留的是量法、阈值、结构数或行为数量，而不是一次运行的绝对值；再运行 `doc_check(mode:"gate")`。不为「零绝对读数」新造一个会误伤阈值和夹具的全仓数字正则门。
+
+**关键决策**：D12 行不改；按 U-5 / U-6 判类而非按数字形状批量删除；其他设计档按同一规则同批清理；不新增机检器、单元测试档或常驻夹具。
+
+**边界**：不改需求档、提示词正文、代码、工具行为、阈值和测试语义；不把有表支撑的结构数当作读数；不把扫描零命中替代逐节判读。
+
+**UI / 交互决策**：无界面面，无未决交互。
+
+**集成测试设计**：`test/RTM.md` 的故事索引没有设计档读数清理的业务入口；本项不改变既有用例断言的业务可观察结果，也没有新产品业务场景或生产问题入口。破行、冗余、新增均为零，不新增集成用例。
+
+**上抛项**：无。
+
 ## 4. 文档↔实装对账（V5 判据规格 + 清账 + 防回潮）
 
 **判据权威（单一权威源——D2 + 本节裁定）**：本档 §4 = **V5 判据规格的单一权威源**（抽取 / 射程 / 存在性域 / 注记 / 假阳类 / 两态 / 清账 / 反查与巡检）；`docs/core/design/DOC-CODE-RECONCILE.md` §3 = **引擎级接口契约面**（源域与目标域 / 引擎与入口布局 / 预处理 / 实装坐标），**不重述判据句**。
@@ -2782,10 +2803,10 @@ A pointer whose referring document and whose target both sit under a `docRoot.ba
 
   **实现口径（右界守卫转义——防回退）**：围栏抽取式以**字符串拼装**构造——转义层级须为**单层**（源串 `"(?![\\w])"` ⇒ 正则源 `(?!\w)`）；双转义（源串 `"(?![\\\\w])"` ⇒ 正则源 `(?![\\w])` = 「字面反斜杠 / 字面 `w`」二字符类）⇒ **右界守卫失效**：`…/package.json` 被截为 `…/package.js`。
 
-  实装坐标见 §4.2.7 判据登记；实测 35 条；复跑判据 = 「token 以 `.js` 收尾且同行原文含同名 `.json` 串」的行 = **0**；形变行转绿 **34**（分解见 §5 A-DD17）。
+  复跑判据 = 「token 以 `.js` 收尾且同行原文含同名 `.json` 串」的行 = **0**（读数与分解住批档）。
 
   **实现口径（左界守卫 `@` 排除——防回退）**：左界守卫须排除前导 `@`——`@thincoder/core/<subpath>` 包规格形（import 规格符 · 运行时解析）**不入锚**；否则 token 落成仓内路径形 ⇒ 悬空假阳。
-  实装坐标见 §4.2.7 判据登记；字面与本节判据规格围栏行**逐字一致**（单层转义形态——只增 `@`，其余字符类零改）。
+  字面与本节判据规格围栏行**逐字一致**（单层转义形态——只增 `@`，其余字符类零改）。
 
   **形式裁定**：形态 = **识别排除**（本口径照准）。
   **判据与护栏（同批）**：判据句 = `@` 紧邻路径形**零锚** ∧ 同形去 `@` 照判存在性（反证）；护栏 = **单元测试档**（单元测试档惯例——T-DC-18 ∕ T-DC-19 例目在册）。
@@ -2857,7 +2878,7 @@ V5-B: /(?<![A-Za-z0-9-])((?:T-[A-Z]{1,5}\d{1,3}(?:-\d{1,3})?|T-\d{1,3}|T[A-Z]?\d
 | 7 | 对端仓符号 / 对端相对路径 | **随 v2 单引擎收敛失效**：对端仓根一步已删（§4.2.2）——合并仓布局下三子仓同在域根，路径面直接可解析 |
 | 9 | 裸 `T<数>.<数>`（台账/条目号） | V5-B 排除式 ② |
 | 10 | 标识符撞用例号形态（`TLS12` / `TAB123`） | V5-B 形态收紧（裸 `T` 后 ≤1 字母且直接数字——不入抽取） |
-| 11 | 包说明符伪影（npm 域前缀形态 `@scope/pkg/<子路径>` 被抽为仓内路径 token） | **判据修正**（左界守卫补 `@`）——**已实装**：本族照红归 **0**（§4.2.7 判据登记第 5 条）；文档侧**零触碰**（原文 = 正确包说明符形态）；**不得打标记**（防滥用② 同源） |
+| 11 | 包说明符伪影（npm 域前缀形态 `@scope/pkg/<子路径>` 被抽为仓内路径 token） | **判据修正**（左界守卫补 `@`）——**已实装**：本族照红归 **0**；文档侧**零触碰**（原文 = 正确包说明符形态）；**不得打标记**（防滥用② 同源） |
 
 #### 4.2.5 报告态 → 阻断态（切换条件与阈值）
 
@@ -2879,32 +2900,6 @@ V5-B: /(?<![A-Za-z0-9-])((?:T-[A-Z]{1,5}\d{1,3}(?:-\d{1,3})?|T-\d{1,3}|T[A-Z]?\d
 | V3 批次档 §3 轮次行 | 批次档——V5 扫描域**不含批档** | 域不交 |
 | V4 跨仓形态合规 | 对端仓**直引形态**（枚举外） | **文本纪律面（无机检器）**：对端步删除后，V5 按合并仓解析序照判（§4.2.2）；形态规范 = §2 V1 跨仓边界（**两形态射程**并入该处）；**声明源前缀形（§4.2.2 ⑥） = 合规坐标**（非 V4 违规形态——判据 = `docs/core/design/LEDGER-SELF-CONTAINED.md` §4.1 声明源条） |
 | V6 编号引用可解析 | 家族编号**跨节 / 跨档引用**的被引处定义存在性 | 面不交（V5 不判编号引用；V6 不判路径 / 坐标 / 符号存在性） |
-
-#### 4.2.7 设计期实测基线（作量级与清单预估）
-
-| 锚类 | 候选（射程内） | 悬空（未过） | 备注 |
-|---|---|---|---|
-| 用例号（V5-B） | 1552 | **16** | 均真悬空（退场/清空批的旧引用行无本地注记） |
-| 路径 / 坐标（V5-A） | 2894 | **103** | 含退役/归档档引用、已删/已并单元测试档、已归档设计档、设计备选档名 |
-| 符号·窄形态（V5-C 入闸） | 34 | **2** | 均真命中（死事件声明 / 生成点行号指针） |
-| 符号·宽形态（报告面） | 2629 | 196 | 不入闸（假阳类 2/7/8 为主）；统计面 = 全域 |
-
-**数字口径注**：上表 = **设计期原型**（规则集 as-of；未含实现期新增规则与注记集的完整生效）；统计面 = 本仓扫描域全域——**与单档实测为两个不同统计面**（同值不同量，勿互读）；**最终清单 = 实现落地首跑的输出**（以它为准；本表只作量级与分档预估）。
-
-**复跑读数（三域 · 复核两遍：默认 / 强扫 `--engine v5`——口径注见下行）**：仓根域 125 档 / 悬空 **8**（全为索引面影子档假阳——判据修正后**预期 0**）。
-`thincoder-cli` 域 99 档 / 悬空 **37** · `thincoder-vscode` 域 99 档 / 悬空 **193**（case 12 / path 180 / symbol 1）⇒ `exit 1`；**判据修正 + 族豁免后 = `exit 0`（验收态——A-DD11）**。
-
-宽形态报告面（不入闸）同跑读数：仓根 610 · CLI 505 · VSC 325。本表 = 上面「设计期原型」表的**现态复读**（规则集同源；差异 = 域集 3 域 + 索引面影子档效应）。**读数口径注**：`thincoder-vscode` 读数（悬空 193 · 宽 325）= `--engine v5` 强扫读数（默认调用下该域走 VSC 引擎——命中 0 · 报告态）；仓根 / CLI 读数两调用同值。
-
-**判据登记（「三元素 ⇏ 九元素」）**：
-
-1. **实装现态**：扫描域常量 `SCAN_DIRS` = **九元素** + 逐字快照断言（**原用例第 1 条**——载体档已删除）——**二者均随 v2 单引擎收敛删除**：判定范围 = **调用方传入的文件清单**（无目录扫描、无声明面），锚判据承 §2 V5 落点。
-
-2. **文本面差（本条对象）**：参照历史面的迁移批验收文本（旧 ENGINEERING-MODE 档——该档已随归档清理删除）仍记**「三元素」**（AC-V5-16 · T-V5-16）——与实装现态差 = 射程三次扩展；**处置 = 本追加条（基准层补写）**；参照历史面**不回改**（只读红线——§4.2.8）。
-
-3. **残留射程 + 源登记**：快照断言为**逐字全等** ⇒ 扫描域再扩仍会再红（测试登记——不阻断本节）；D3 更新落笔 = 设计档本处（#1 行）+ 同处（#1 取 (b) 理由——设计档明文要求逐字快照、只按新值更新）。
-
-5. **包说明符伪影族（立案 5 条 · 零触碰）**：`@thincoder/core/…` 形态被抽为仓内路径 token ⇒ 悬空；原文 = **正确包说明符形态** ⇒ 文档侧无正当修法；处置 = **保留原文 + 本登记 + §4.2.4 行 11**；到期条件 = 判据面轮实装左界守卫 `@` 排除——**已达成**（已实装）。
 
 #### 4.2.8 参照历史树（两树 · 只读红线 ∥ 不在扫描域）
 
@@ -2952,7 +2947,7 @@ V5-B: /(?<![A-Za-z0-9-])((?:T-[A-Z]{1,5}\d{1,3}(?:-\d{1,3})?|T-\d{1,3}|T[A-Z]?\d
 
 **提示词落笔面**：跨仓批派单语义**以多仓泛化形随本节落笔——提示词实体落笔 = 本节实施轮**（跨多仓任务 ⇒ 各仓分别建档、分别开批；跨仓耦合只经接口）；**反查脚本一条 = 落笔未做**（在册——去留归父侧裁）；**脚本名不写进提示词**——可移植性口径。
 
-**规则自身的复核依据（自加规则的存续判据）**：本条的规则本体（含出身依据）= `docs/core/requirements/METHODOLOGY.md` §2.3b；本段只落**设计面**的执行问法，不复述规则句。
+**规则自身的复核依据（自加规则的存续判据）**：本条的规则本体（含出身依据）= `docs/core/standards/METHODOLOGY.md` §2.3b；本段只落**设计面**的执行问法，不复述规则句。
 
 - **与既有判据句的关系**：§3.20 结构兜底段的「每条纪律必须能回答『靠哪个结构兜底』」判的是**结构与门**（射程 = 全部纪律）；本段在其上**扩一层**——加问「值不值」，射程收到**自加规则**。
 - **为什么**：自加规则没有用户裁定背书，唯一的存在理由就是它挡住的那个结构问题；理由说不出来，它挡住的东西也就不存在了。
@@ -3045,12 +3040,12 @@ V5-B: /(?<![A-Za-z0-9-])((?:T-[A-Z]{1,5}\d{1,3}(?:-\d{1,3})?|T-\d{1,3}|T[A-Z]?\d
 
 **扫描式 = 正则（非枚举）**：`(批档|批次档|各批|板档)[^\n]{0,30}?(§\s*[\d.]+|\`:\s*\d+\`)`（不含路径字面，故判据 1 查不出）。① **例外 = 规则正文 / 机制本体句**（描述批档机制本身——归例外①；借该路径作通用样例者归例外② · 目录级归属句归例外③——三条见 §4.5.4）② **语义判面（命中后必判）**：该处**操作数是否解析到批次档**？——解析到**活设计档**（board 义，如 `板档 \`docs/core/requirements/PROJECT.md\``）⇒ **不命中**；
 
-解析到批次档（`docs/batches/*` 或「某次执行」）⇒ **命中**。**❌ 枚举写法禁用**（实测：枚举必漏——**四例写法先后漏掉 `各批`、`<批名> §N`、变体形共 298 处 / 45 档**）。
+解析到批次档（`docs/batches/*` 或「某次执行」）⇒ **命中**。**❌ 枚举写法禁用**——枚举必漏：`各批`、`<批名> §N` 与变体形都会漏网（清账读数住批档）。
 
    **⇒ 判据的**真形式是语义的**（不是那张形表）：**规范档内不得出现指向「某一次具体执行」的标记**——不论其形。**形表只是扫面；判定靠一问**：**这句话离开本次执行还有意义吗？**
    无意义 ⇒ **命中**（例：`（本批）` ∥ `本批新增 X` ∥ `本批修复 Y` ∥ `本批实核 Z` ∥ `<具体批名> 批` ∥ `批档 §N`）。有 ⇒ 不命中（机制叙述 ∥ 规则正文 ∥ 目录归属）。
 
-   **⚠️ 裸「本批」+ 动词/名词形**（`本批修复`/`本批落地`/`本批改法`）**是该族的**主要体量**——只清括注式与坐标式 = 采样口径不完备（实测：严格正则 127 处 ∥ 裸形 **623 处**）。
+   **⚠️ 裸「本批」+ 动词/名词形**（`本批修复`/`本批落地`/`本批改法`）**是该族的主要体量**——只清括注式与坐标式 = 采样口径不完备（量法 = 上行正则；读数住批档）。
 
    **⇒ 子判（**档内相对序号 ≠ 批档坐标**——逐处判时最常撞的一对）**：
    - **档内相对序号**（`对齐第 N 批` / `第 N 批对齐` / `第二批 · 六件`）⇒ **不命中 · 保留**——它指**该档内第 N 次工作**，**离开本次执行仍有意义**（是档内现行规范标识，KD 行/验收行按它索引）；**改动它 = 改规范**，非清账。
@@ -3060,8 +3055,8 @@ V5-B: /(?<![A-Za-z0-9-])((?:T-[A-Z]{1,5}\d{1,3}(?:-\d{1,3})?|T-\d{1,3}|T[A-Z]?\d
 
 4. **同档死指针 = 0** —— **三式并列**：① `见\s*§` / `详见\s*§` / `见上文` / `见该节` / `见变更记录` ② **`入\s*§`**（“入 §N.M”类，无「见」字）③ **裸 `§\d+(\.\d+)*`**（无引出词）；**逐处核该节号现在是否还存在**；不存在 ⇒ 同轮收正。**❌ 单式必漏**（实测：只写「见」字式 ⇒ 漏 `NORMAL-MODE.md` / `DESIGN-TOKEN-SETTLEMENT.md` 两档里各一处「(d) 类入 §N.M」）。
 
-**为何单列「无路径字面」判据**（判据面完整性——实测代价）：现行扫描式只查 `docs/batches/` **路径字面** ⇒ **同义形全漏网**。实测单批 15 档即漏 **77 处**（`批档 §N` / `批次档 §N` / `板档 §N`（误用形）/ `见批档 §N`）——它们**不含路径字面**，机器扫不出。
-**前例（假达标）**：`TEAM.md`「见批档 §2 未裁点」使「命中集 = 0」成为**假达标**，靠人工扩扇才拓出同形 11 处。
+**为何单列「无路径字面」判据**（判据面完整性）：现行扫描式只查 `docs/batches/` **路径字面** ⇒ **同义形全漏网**——`批档 §N` / `批次档 §N` / `板档 §N`（误用形）/ `见批档 §N` 这些写法**不含路径字面**，机器扫不出（单批读数住批档）。
+**前例（假达标）**：`TEAM.md`「见批档 §2 未裁点」使「命中集 = 0」成为**假达标**，靠人工扩扇才拓出同形（读数住批档）。
 **依据**：用户「**文档不能引用批次档！**」——无路径字面**不改变"引用批次档"的性质**。
 
 **为何单列「同档死指针」判据**：多档的**节号本身是批次的产物**（段 / 族删后 §5 / §6 / §8 整段消失）⇒ 引用它们的句子全变死指针，而**它们不含 `docs/batches/` 字面** ⇒ 前两条**查不出**。
@@ -3298,7 +3293,7 @@ grep -rEn "R24a|体量|拆分规划|行数标注|行数读数|行数义务" docs
 1. **跑整个入口**：集成门 = 仓根 `node test/run.mjs`（收口时父侧跑一次）⇒ exit 0 ∧ `fail 0`；cli 包级 `cd thincoder-cli && npm test` 恒 exit 1 + 仓根指引（非门——集成层已上移仓根）；单档跑 = `node --test docs/batches/<批次档>.test.mjs`（单元测试档惯例；cwd = 仓根）。
 
    **证据**：探针 / 零落仓 / 并发免疫用例（单元测试档惯例——用毕即删）与夹具纪律均入**单元测试档**。
-2. **零落仓**：运行前后 `git status --porcelain -- docs` 零差异 ∧ 全仓 `_doc-consistency-probe.md` 0 命中 ∧ 仓域扫描目录无新档。
+2. **零落仓**：运行前后 `git status --porcelain -- docs` 零差异 ∧ 全仓零运行期探针档残留 ∧ 仓域扫描目录无新档。
 3. **并发免疫**：同档两实例同回合并发启动 ⇒ 两实例均 exit 0。
 4. 夹具根 = `tmpdir()`（结构机检：档内不再出现「仓域路径常量 + 探针名」组合）。
 
@@ -3338,7 +3333,7 @@ grep -rEn "R24a|体量|拆分规划|行数标注|行数读数|行数义务" docs
 
    - **裸形不入本条射程（防下轮误判）**：同一 token 的**裸形**（不带档名前缀）在本域**仍在位**——实证 `thincoder-core/agent-tools/subagent-async.mjs` 四处（`§19.5 D-M6`）⇒ 按裸串 grep 判「本轮未达标」= **误判**；裸形面归 §3.9 J-1 残差块（另轮读数域）。
 
-3. **`status` 门文案零改（回归锁）**：`grep -c "only available at depth 0"` 于 `subagent-actions.mjs` / `subagent-async.mjs` / `subagent-panel.mjs` ⇒ **4 / 1 / 1**（与改前同）——CLI ∥ VSC 两侧单测档的逐字断言仍绿。
+3. **`status` 门文案零改（回归锁）**：`grep -c "only available at depth 0"` 于 `subagent-actions.mjs` / `subagent-async.mjs` / `thincoder-core/agent-tools/subagent-panel.mjs` ⇒ **4 / 1 / 1**（与改前同）——CLI ∥ VSC 两侧单测档的逐字断言仍绿。
 
 4. **计数收正（相对判据 · 声明值对实读档数）**：四档（`docs/core/design/ARCHITECTURE.md` / `DOC-SYSTEM.md` / `PROMPT-SYSTEM.md` / `TOOLS.md`）内每处**指工具描述档目录档数**的 `tool-docs` 计数声明，其值 = **判时实读** `git ls-files thincoder-core/tool-docs` 的行数；不符 ⇒ 判红，点名（档名 + 该处现文逐字引文）+ 声明值 ∥ 实读值。
 
@@ -3384,7 +3379,7 @@ node -e "const s=require('fs').readFileSync('docs/core/design/_archive/DOC-MIGRA
 1. **① 族复扫（相对判据）**：复扫命令（`node` 逐行 · 域 = §3.12 族别口径 ①）⇒ 处置后 **A 类位点零死编号**；B 类位点照报（在册残差）——基线 = 执行者首动作前复测（绝对读数随并行链 / 他批写入漂移）。判类清单 = 处置登记面（二态处置表）——同源 · 可逐行核对。
 2. **② 族零命中 + 改后实存**：域内 `docs/cli/design/TUI.md` 与 `§15` 的相邻串 ⇒ **0**；改后坐标串在目标档实存（逐处回读）。
 
-3. **③ 族零 diff**：`docs/TODO.md` / `docs/TODO-archive.md` 两行在处置轮 `git diff` 内 **hunk 0**。
+3. **③ 族零 diff**：`docs/TODO.md` 一行在处置轮 `git diff` 内 **hunk 0**。
 
 4. **机检零新增**：`doc_check`（gate 模式）（cwd = 仓根）⇒ 本轮**新增**悬空 **0** + **非豁免类 ∧ 非区带内** 的新增超宽 **0**（相对判据——同 A-DD18 / A-DD19 ⑧ 句式）。
 5. **行数守恒**：逐行替换类档的行数与改前相等（无拆分义务触发）——行数一律按 D15 的同一把尺子取（`doc_check` 报出），本条不写命令。
@@ -3740,9 +3735,9 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 9. **判面不静默 + 零落盘**：DD-170 绿——判面为空 ⇒ 不建片段档、不判、目标档零字节改动；判面行固定串 `判面：改动区` 在拒串中出现（`grep` `thincoder-core/tools/doc-write-gate.mjs` ≥1）。
 10. **扩区两形可跑**：DD-171 绿（删空行并段越阈 ⇒ 拒）∧ DD-172 绿（围栏块内改一行、块内某代码行超 300 ⇒ 整块连标记入判 ⇒ 块内长代码行不按段长误判、放行；反证：同内容裸抄则被判 `文字太长，难于阅读`）。
 11. **漏斗断言**：DD-173 绿——同夹具经 `insert_after` 写一句越阈文本 ⇒ 拒写（各内容写点落 `op === "write"` 这条漏斗由此钉死）。
-12. **零误伤**：`git status --porcelain` ⊆ **任务书声明的文件清单**——`thincoder-core/tools/doc-write-gate.mjs` · `thincoder-core/tools/write-path.mjs` · `docs/batches/2026-11-05-doc-write-gate.test.mjs` · `test/RTM.md` · `test/integration/doc-write-gate.test.mjs` · `thincoder-core/package.json`（条件性：`files` 若逐目录列举则同批补）· 需求档 `docs/core/requirements/DOC-CHECK.md`（F14 ∥ AC-12，主 agent 笔）——∪ 批档自身。
+12. **零误伤**：`git status --porcelain` ⊆ **任务书声明的文件清单**——`thincoder-core/tools/doc-write-gate.mjs` · `thincoder-core/tools/write-path.mjs` · 本批改面单元测试档（名随批次档，收口已删） · `test/RTM.md` · `test/integration/doc-write-gate.test.mjs` · `thincoder-core/package.json`（条件性：`files` 若逐目录列举则同批补）· 需求档 `docs/core/requirements/DOC-CHECK.md`（F14 ∥ AC-12，主 agent 笔）——∪ 批档自身。
 
-**可跑形**：`node --test docs/batches/2026-11-05-doc-write-gate.test.mjs`（cwd = 仓根）；用例 = DD-164–DD-173。
+**可跑形**：本批改面单元测试档（名随批次档，随批收口删除）——`node --test <该档>`（cwd = 仓根）；用例 = DD-164–DD-173。
 
 **A-DD41 判据（机器可验 · 条目 S 的行数读数 = `lines` 参数）：**
 
@@ -3758,17 +3753,17 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 
 **A-DD42 判据（机器可验 · 条目 AA = 档名可定位落笔要求）：**
 
-1. **判据句在册（D3）**：§3.27 含落点表七行 ∥ 九档 ∥ 三件齐要求 ∥ 「三件落在同一 bullet 的一行内」的裁定与理由（含不折行的理由、≤300 的判法与「分面两套形已裁不作」）∥ 后果两半 ∥ 底线的两段（含「今天解得出」性质句）∥ 三处 `src/` 示例路径的占位形改法 ∥ 落点边界 ∥ 边界 ∥ 最近先例 ∥ 集成差量块；§3 标题括注枚举与档头枚举**均**含「档名可定位落笔要求」（枚举与条目同轮改）。
+1. **判据句在册（D3）**：§3.27 含落点表六行 ∥ 八档 ∥ 三件齐要求 ∥ 「三件落在同一 bullet 的一行内」的裁定与理由（含不折行的理由、≤300 的判法与「分面两套形已裁不作」）∥ 后果两半 ∥ 底线的两段（含「今天解得出」性质句）∥ 三处 `src/` 示例路径的占位形改法 ∥ 落点边界 ∥ 边界 ∥ 最近先例 ∥ 集成差量块；§3 标题括注枚举与档头枚举**均**含「档名可定位落笔要求」（枚举与条目同轮改）。
 
-2. **九档逐档一行三件齐（源面 grep）**：九档各 `grep` 设计句 ⇒ ≥1，且三串（`resolves` ∥ `档缺` ∥ `same name`）**同在一个 bullet 的同一行之内**——不得折行（续行与首行并段求和即越线），整行 ≤300 字符；档数 = 落点表列出的九档，多一档少一档都不收口（D3）。
+2. **八档逐档一行三件齐（源面 grep）**：八档各 `grep` 设计句 ⇒ ≥1，且三串（`resolves` ∥ `档缺` ∥ `same name`）**同在一个 bullet 的同一行之内**——不得折行（续行与首行并段求和即越线），整行 ≤300 字符；档数 = 落点表列出的八档，多一档少一档都不收口（D3）。
 
 3. **真写入验证（本批主判据 · 红绿两半都跑）**：经 `batch({action:"append", segment:"§5"})` 提交一段含**解不到**的 token（同名 ≥2 ∥ 零命中）的文本 ⇒ 被拒，拒串含 `档缺` 并点名盘上正确路径；同一段改成**解得到的裸名**（该名全仓恰一处）⇒ 落盘、回执首行 `DOC-CHECK GATE: PASS`。**段 = 执行者自己有写权的段**：实施席 = `eng-coder`，§5 才是它的段；写 §2 先撞身份拒因，取不到 `档缺` 那一条。读法 = 实施轮实跑，两次回执入批档 §5。
 
-4. **零命中（绝对判据）**：九档各一句**单行 ≤300 字符**且三串同在这一行之内 ⇒ 提示词面逐行判与工具描述面按段判同时成立；落地后 `doc_check({mode:"gate", docs:[九档]})` 的**首行 = `DOC-CHECK GATE: PASS`**（锚 ∥ 段 ∥ 行三类同判——三处 `src/` 示例路径同批改占位形，基线不再带存量）。**结论只点名越线的档**（档名 + 越的哪条线），读数不进任何文字（口径 = 本档 §1 的 D12 细则）。
+4. **零命中（绝对判据）**：八档各一句**单行 ≤300 字符**且三串同在这一行之内 ⇒ 提示词面逐行判与工具描述面按段判同时成立；落地后 `doc_check({mode:"gate", docs:[八档]})` 的**首行 = `DOC-CHECK GATE: PASS`**（锚 ∥ 段 ∥ 行三类同判——三处 `src/` 示例路径同批改占位形，基线不再带存量）。**结论只点名越线的档**（档名 + 越的哪条线），读数不进任何文字（口径 = 本档 §1 的 D12 细则）。
 
 5. **判据本体零改 + 抽取面一支（花括号）**：`git diff --stat -- thincoder-core/doc-check/` **只点名两档**——`thincoder-core/doc-check/anchors.mjs`（抽取面加花括号组展开）与 `thincoder-core/doc-check/index.mjs`（命中行渲染）；两档的改动**不得触及**那四样（解析序 ∥ 判决词 ∥ 豁免谓词 ∥ 阈值），判法 = 逐 hunk 对四样的现文读。
 
-6. **零误伤**：`git status --porcelain` ⊆ 本批声明面（九档 + 本档 + 批档 + 改面单元测试档）。
+6. **零误伤**：`git status --porcelain` ⊆ 本批声明面（八档 + 本档 + 批档 + 改面单元测试档）。
 
 **可跑形**：本批改面单元测试档（名随批次档，住 `docs/batches/`，随批收口删除）——`node --test <该档>`（cwd = 仓根）；用例住本档 §5 的用例表（本条目那一组，以表为准——号段不在本条重写）。**此处不写死该档路径**：它在实施轮建档时才上盘，写死就是一条悬空锚。
 
@@ -3850,7 +3845,7 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 | DD-191 | 错误 | `lines: []` ∥ 全空白元素 | 报错——空清单不指任何档，什么都没量 |
 | DD-192 | 错误 | `lines` 条目为非字符串（数字 ∥ null） | 报错点名该下标；零读数 |
 | DD-193 | 边界 | `lines` 与 `docs` 同时给（`docs` 一档有存量悬空） | 读数面与被判集各自独立：读数逐档出数，`hits` 只来自 `docs` |
-| DD-194 | 正常 | 九档逐档 `grep` §3.27 的设计句 | 逐档 ≥1，三串同在一个 bullet 的同一行之内 ∧ 整行 ≤300 字符（九档全中） |
+| DD-194 | 正常 | 八档逐档 `grep` §3.27 的设计句 | 逐档 ≥1，三串同在一个 bullet 的同一行之内 ∧ 整行 ≤300 字符（八档全中） |
 | DD-195 | 错误 | `batch append`（§5）提交一段在正文里只写文件名（不带仓根段）的文本 | 拒；拒串含 `档缺` + 盘上正确路径；批档字节逐字不变 |
 | DD-196 | 正常 | 同一段改成 `thincoder-core/prompts/persona-engineering.md`（解得到的形），同经 §5 提交 | 落盘；回执首行 `DOC-CHECK GATE: PASS`；前文零变 |
 | DD-197 | 边界 | 同目录裸名（批档 §5 引本批目录内的档，写作只带文件名） | **人判面判违规**（书写规则无例外）；机检零命中——同目录走解析序 ② 命中，这一半只能人判，本条不谎称有闸 |
@@ -3861,7 +3856,7 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 | DD-202 | 边界 | 行内写 `<area>/<name>.md` | **0 条**——抽取后只剩裸名 `name.md`，词干在 `PLACEHOLDER_STEMS`（实读） |
 | DD-203 | 错误（反证） | 行内写带目录段的假路径（把尖括号去掉）∥ 裸名且词干不在占位表、长于一个字符 | 各 **1 条 `档缺`**——占位形不是装饰 |
 | DD-204 | 正常 | 围栏块内一行带一处行号坐标 | `gate` `PASS` ∧ `hits.lineRefs = 0`；报面出读数行「围栏内行号坐标 1 处」；`report` 清单照列该处并标「围栏内」——判集 = 正文面 |
-| DD-205 | 正常 | 七档落点句逐档 `grep`（`fenced block` ∥ `档缺` ∥ `<area>/<name>.md`） | 逐档 ≥1 ∧ 三串同一行 ∧ 整行 ≤300 字符 |
+| DD-205 | 正常 | 六档落点句逐档 `grep`（`fenced block` ∥ `档缺` ∥ `<area>/<name>.md`） | 逐档 ≥1 ∧ 三串同一行 ∧ 整行 ≤300 字符 |
 | DD-206 | 边界（反证） | 示例路径写在可执行行的行内码段内 ∥ 同一写法放在散文行（非可执行行）的行内码段内 | 前者 **0 条**（码段豁免）；后者 **1 条 `档缺`**——码段不是示例的第二条出路 |
 | DD-207 | 正常 | 本档全文扫旧计数形（闭枚举末位仍为旧的 15 ∥ 「十五」条） | 正文裸写面各 **0**；档头 ∥ §1 标题 ∥ §1 引言 ∥ 需求层指针行一律读 `D1–D16` 与「十六条」；§1 表含 `D16` 行 |
 | DD-208 | 正常 | 条目 AC 夹具：批档以仓根全路径引本批目录内已删除的单元测试档 | 锚 **0 条** ∧ `batchRefs = 1`（死锁消失） |
@@ -3887,19 +3882,19 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 
 **A-DD43 判据（机器可验 · 条目 AB = 示例进围栏）：**
 
-1. **判据句在册（D3）**：§3.28 含 AB-1–AB-3 三行 ∧ 机制面四条实读 ∧ 「为什么三条不是一条」∧ 三问形 ∧ AB-3 的成立依据与两种仍判缺的写法 ∧ 与条目 AA 的分工 ∧ 行号坐标归属句 ∧ 落点表五行七档 ∧ 落点句 ∧ 边界 ∧ 最近先例 ∧ 集成差量块；§3 标题括注枚举与档头枚举**均**含「示例进围栏」——**判法 = 前缀命中，条目名不带尾括号**（与 A-DD42 ① 同形；档头写作「示例进围栏（条目 AB——…）」，带尾括号的整串在那里零命中）。
+1. **判据句在册（D3）**：§3.28 含 AB-1–AB-3 三行 ∧ 机制面四条实读 ∧ 「为什么三条不是一条」∧ 三问形 ∧ AB-3 的成立依据与两种仍判缺的写法 ∧ 与条目 AA 的分工 ∧ 行号坐标归属句 ∧ 落点表五行六档 ∧ 落点句 ∧ 边界 ∧ 最近先例 ∧ 集成差量块；§3 标题括注枚举与档头枚举**均**含「示例进围栏」——**判法 = 前缀命中，条目名不带尾括号**（与 A-DD42 ① 同形；档头写作「示例进围栏（条目 AB——…）」，带尾括号的整串在那里零命中）。
 
 2. **四处示例进围栏（本批主判据 · 两半）**：三档四处各被同形围栏包住 ∧ **围栏内示例逐字仍在**（教学不丢）；`doc_check({mode:"gate", docs:[三档]})` 首行 = `DOC-CHECK GATE: PASS`。
 
 3. **正文面假路径零命中（相对判据）**：三档围栏外 `grep` 示例路径 token ⇒ **0**；围栏内命中照留并另报一个数——静默排除与「那儿没有」读起来一样（口径 = 本档 §3.23 两面并列）。量法写进句子，数值留在输出（D12）。
 
-4. **七档落点句在盘（源面 grep）**：七档各 `grep` 三串（`fenced block` ∥ `档缺` ∥ `<area>/<name>.md`）⇒ 各 ≥1，同在一行内、整行 ≤300 字符（提示词面逐行判与工具描述面按段判同时成立）；档数 = 落点表列出的七档（D3）。
+4. **六档落点句在盘（源面 grep）**：六档各 `grep` 三串（`fenced block` ∥ `档缺` ∥ `<area>/<name>.md`）⇒ 各 ≥1，同在一行内、整行 ≤300 字符（提示词面逐行判与工具描述面按段判同时成立）；档数 = 落点表列出的六档（D3）。
 
 5. **真写入两半（本席自己有 §2 写权）**：经 `batch({action:"append", segment:"§2"})` 提交一段把示例表行写在正文的文本 ⇒ **被拒**、拒串含 `档缺`、§2 字节不变；绿半 = §2 正文自身携一个围栏示例块 ⇒ 落盘、回执首行 `DOC-CHECK GATE: PASS`。两次回执入批档 §5。
 
 6. **判据本体零改**：`thincoder-core/doc-check/**` 本批 `git diff` 空；行号面行为零改。
 
-7. **零误伤**：`git status --porcelain` ⊆ 本批声明面（落点七档 + 示例三档 + 本档 + 批档）；需求档零 diff（主 agent 笔）。
+7. **零误伤**：`git status --porcelain` ⊆ 本批声明面（落点六档 + 示例三档 + 本档 + 批档）；需求档零 diff（主 agent 笔）。
 
 8. **`D1–D16` 计数与列表同轮对齐（D3）**：本档档头「更新纪律（D1–D16）」∧ §1 标题与引言（「十六条纪律」）∧ 需求层指针行读 `D1–D16`；§1 表含 `D16` 行（语义指针 = 需求档 §13.1，机械面 = 本档 §3.28）；全文旧闭枚举的**正文裸写面** = 0（判读面口径 = 本档 §3.22 U-3：行内码段里的串是提及，不是残留）。只改计数不改列表即违 D3。
 
@@ -3990,7 +3985,6 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 
 **先红判据**：每条判据修正（右界守卫 / 谓词集 / 路径段排除 / 用例定义面 / 族判定）须有一条**修正后绿**的用例在册，且实施轮留「修正前实测输出」为红证据。
 
-净变化：**5 档 ~830 行**（`check-ledger*` 2 档为真砍，其余 6 档合并 + 收敛）。
 
 **验收（回指 AC-M8）**：
 

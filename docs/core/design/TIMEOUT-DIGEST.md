@@ -111,7 +111,7 @@ if (depth === 0 && !agent.config?.agent?.engineering && !poolLive(agent)
 
 - `poolLive` 取自 `thincoder-core/agent/suspension.mjs`（已导出）——与挂起尾巴同一判据，不立第二口径。
 - `thincoder-core/agent-tools/task.mjs` 的 `_taskPushbacks = 0` 语义**不动**：池空（`!poolLive`）时列表一更新仍获一次新提醒；池里有在飞条目时门不触发，归零不再变成「拖回合」。
-- 若 `thincoder-core/agent/completion.mjs` → `thincoder-core/agent/suspension.mjs` 在实施时成环（`node --check` / 启动自检报 TDZ 或循环初始化），把 `poolLive` 判据体迁到叶子 `thincoder-core/agent/pool-live.mjs`，`suspension.mjs` 保留同名 re-export——消费面零改。这是模块图的机械约束，不是新语义。
+- 若 `thincoder-core/agent/completion.mjs` → `thincoder-core/agent/suspension.mjs` 在实施时成环（`node --check` / 启动自检报 TDZ 或循环初始化），把 `poolLive` 判据体迁到独立叶子模块，`thincoder-core/agent/suspension.mjs` 保留同名 re-export——消费面零改。这是模块图的机械约束，不是新语义。
 
 ### 2.4 首 chunk 窗与流中途空闲窗分计
 
@@ -233,7 +233,7 @@ T5–T8 均经 `_setDigestOffloadDirForTest(沙箱)` 执行、`finally` 复位�
 - 不提供「禁用空闲超时」开关（`0` 语义未获判据）。
 - 不改 `agent.fetchTimeoutMs` 的可见性：它仍不在 `settings list` 里；首 chunk 分窗只是让它多一个消费面，不扩其配置面。
 - `bg` / `browser` 两族注入器不改（`subagent-async.mjs` 已分流；其摘要形态见各自板）。
-- 不改 `docs/README.md` 权威地图（本批不写该档）：该档裸名锚在 doc-check 门内不跨目录解析（只认仓根 ∥ 指向档自身目录），写它会把本批的门拖红。**地图登记 = 父侧收口动作**：登记 `TIMEOUT-DIGEST.md` + 计数收正为「`core/design/` 实档 63 = 登记 62 + 待补登 1（`SESSION-OBSERVABILITY.md`）」（实读 2026-10-24），由主 agent 在收口清单里落行。
+- 不改 `docs/README.md` 权威地图（本批不写该档）：该档裸名锚在 doc-check 门内不跨目录解析（只认仓根 ∥ 指向档自身目录），写它会把本批的门拖红。**地图登记 = 父侧收口动作**：登记 `TIMEOUT-DIGEST.md`，并按目录实读收正地图里的档数计数（同批待补登的还有 `SESSION-OBSERVABILITY.md`）——由主 agent 在收口清单里落行。
 - **不改 `agent.bodyIdleTimeoutMs` 的默认值与 `≤0` 语义**：「能否禁用空闲超时」是另一个问题、无现场判据，本批不夹带（`thincoder-core/config-defaults.mjs` 的注释口径不动）。
 - **传输层看门狗未处置**：`thincoder-core/proxy-transport.mjs` 的首 chunk 窗不在本批（无现场、无复现路径——§4 D8 ∥ §8 上抛①）；代理径在首个 body 字节之前仍只有 `bodyIdleMs` 一个窗在计时。相应不新建 `_firstChunkMs` 传参面（`thincoder-core/proxy.mjs` / `proxy-transport.mjs` / `anthropic.mjs` / `responses.mjs` 均不动）。
 - **不给 anthropic 直连读侧新增空闲定时器，也不向它传首 chunk 窗**：该径现状无读侧 timer（`thincoder-core/provider/anthropic.mjs` 只有代理传输分支的 `_bodyIdleMs`），代理径首 chunk 窗随传输面另批——既有边界不变。

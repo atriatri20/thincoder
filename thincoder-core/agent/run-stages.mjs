@@ -27,6 +27,9 @@ import { discardAbortedPool, discardAbortedAdvisors, discardAbortedBgTasks, disc
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3a)：回合末域登记 flush（写工具钩子累积 →
 // 整写一次本实例 peers 文件——无写入跳过；失败容忍不抛）
 import { flushPeerDomains } from "../peer-domains.mjs"
+// 投递面名册（MULTI-INSTANCE-COLLAB §5.2 · D-MI28）：回合收尾刷新 `updatedAt`（与足迹 flush 同点；
+// 不在册 ⇒ 零动作——入册只发生在取件面装配处）
+import { refreshInstance } from "../instance-registry.mjs"
 // 第 30 批 D1（Stop 钩子——AGENT-LOOP.md §6.13）：主会话 run 终止事件（触发块见 finalizeAgentTurn）
 import { runHooks } from "../hooks.mjs"
 
@@ -228,6 +231,9 @@ export async function finalizeAgentTurn(agent, ctx) {
   // R10 L3（MULTI-INSTANCE-COLLAB §2a.5 D-L3a）：回合末登记 flush——本回合写足迹整写
   // 一次（首行执行：收尾链后续任何异常都不吞登记）；无写入 → 跳过（hot 窗口自然衰减）。
   flushPeerDomains(agent)
+  // 投递面名册走时（MULTI-INSTANCE-COLLAB §5.2 · D-MI28：回合收尾刷新 `updatedAt`，与足迹 flush 同点）——
+  // 只刷新已在册条目；失败容忍（吞掉——名册写失败不得影响收尾链后续任何一步）。
+  try { refreshInstance({ cwd: agent?.cwd }) } catch { /* NF2：失败容忍 */ }
   // 第 30 批 D1（Stop 钩子）：主会话 run 终止 → fire-and-forget（非阻塞；失败静默——与 PostToolUse 同语义）。
   // 排除用户中止（Ctrl+C / Ctrl+I——中止后 TUI 重建 controller 续跑或已显式停回合）与 AbortError 展开。
   if (depth === 0 && !signal?.aborted && thrownError?.name !== "AbortError") {

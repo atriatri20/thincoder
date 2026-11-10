@@ -73,12 +73,12 @@
 3. **输入区禁用判据不因引导而变**——`disabled` 判据恒 = **活动会话在场**（无 ⇒ `disabled: true` · 锚恒在）；`no-project` / `no-session` 引导面在场**不解除**禁用。依据 = 需求档首启链（选工作目录 ⇒ 可用 = `docs/desktop/requirements/PROJECT.md` §3.3）；本面作用 = 把「为何不能输入」与「下一步点哪」显式化，**不代行建会话**（建会话仍须经 `session:create` 出口）。
 4. **词键（两语各两键 · 共 2 键）** = `chat.guide.noProject` / `chat.guide.noSession`（住 `thincoder-desktop/renderer/i18n.mjs` 对话流段 = `chat.empty.hint` 邻位）。
    文本形（zh）=「未打开工作目录——先打开一个目录即可开始」/「尚无会话——新建一个会话即可开始对话」；（en）=「No working directory open — open a folder to start」/「No session yet — create one to start chatting」。
-   计数随动（同笔）：总键数 **122 ⇒ 124**（两语相等不变）· 对话流桶 **8 ⇒ 10**——单词表四处同笔为纪律（测试树 2026-09-28 全清重置后承载 = 随批单元证据）。
+   计数随动（同笔）：总键数与对话流桶同笔随动（两语相等不变；读数住批档——D12）——单词表四处同笔为纪律（测试树 2026-09-28 全清重置后承载 = 随批单元证据）。
 
 **批注（可见面修复 · 四件）**
 口径 = **对齐 CLI / VSC 既有语义**（`docs/desktop/requirements/PROJECT.md` §3.5 用户原话），不新增功能面；裁决与理由 = `docs/desktop/design/PROJECT.md` §2 KD-23 / KD-24。
 
-1. **输入区样式（#457）**——落点 = `thincoder-desktop/renderer/chat.css`（**既有档 · 不新立档**：五类 + 两附属行增量 ≲45 行，该档 254 ⇒ 保持 ≲300；分档理由 = `docs/desktop/design/PROJECT.md` §4.1 分档先例句〔样式总档实读 284 贴 300 层〕）。
+1. **输入区样式（#457）**——落点 = `thincoder-desktop/renderer/chat.css`（**既有档 · 不新立档**：五类 + 两附属行增量，该档落笔后仍在 ≲300 内——越线与否由 `doc_check` 的 `lines` 量，绝对值不进本档；分档理由 = `docs/desktop/design/PROJECT.md` §4.1 分档先例句）。
    形（沿既有控件单形 = `.question-input` / `.chat-backfill` / `.approval-action` 家族，零新样式体系）：根 = `.composer#toolbar`（`thincoder-desktop/renderer/index.html`——挂载根）；顶线 = `#toolbar { border-top: 1px solid var(--border) }`（核件 `thincoder-render-core/composer/composer.css`）——**扁平化（2026-09-30）裁「输入区上线保留」**；
 
    输入框（核件面板 `#input`——`thincoder-render-core/composer/composer.css`） = `flex: 1`（**撑满中区余宽**）+ `min-width: 0`（**可缩**——窄窗不撑破栅格）+ `min-height` + 原生 `resize: vertical` + 既有文本控件面（边框 / 圆角 / `--bg` 底 / `font: inherit`）；
@@ -148,13 +148,13 @@
 3. **会话流经共享渲染核（D19 · 含改判）**——文本面经核 Markdown 呈现（**「零 Markdown」口径改判**——裁决 = `docs/render-core/design/RENDER-CORE.md` §2 **KD-RC-4**）。
    真代码块（围栏切分 / 语法高亮 / 代码块复制）随核落（本注已裁）；**推理块** = 新接线（核回调 `onReasoning` + 活流推理块——块型 `reasoning` 已在**页读域（六型全员——#719）**内；壳 = 核件结构同形）；**文件链接承载**（「对齐第三批」D19 收正——宿主验存链 + 核包裹 + `file:open`；单源 = `docs/desktop/design/PROJECT.md` §2 **KD-39**）；
 
-   块容器 / 工具卡 / 卡族（审批 / 提问 / 计划）**桌面外壳留存**（三锚 / 滚动 · 回填 · 裁剪 / 卡壳四段头 · 耗时 · 改动摘要不动）——「会话流经核」= **渲染逻辑单源**（核件分件消费：`md` / `attachCopyButtons` / `renderReasoning`〔结构同形〕/ `capText`），否「整件替换核 DOM」（逐机制对位表 22 行 = 核档 §4）。
+   块容器 / 工具卡 / 卡族（审批 / 提问 / 计划）**桌面外壳留存**（三锚 / 滚动 · 回填 · 裁剪 / 卡壳四段头 · 耗时 · 改动摘要不动）——「会话流经核」= **渲染逻辑单源**（核件分件消费：`md` / `attachCopyButtons` / `renderReasoning`〔结构同形〕/ `capText`），否「整件替换核 DOM」（逐机制对位表 = 核档 §4）。
 
 4. **会话面板元数据族（D18 · 对齐 VSC 会话栏）**：→ 迁 `docs/desktop/design/SESSIONS.md` §2.2。
 **批注（D21 · 会话流 / 会话面板视觉对齐 · 两项）**：本注补本档 §1「对话流」/「会话控制面」两行的**视觉对齐**（用户 2026-09-28 04:42 桌面走查：①「样式与 VSC 区别很大」②「桌面端的会话面板与 vsc 端完全不同，我之前要求过对齐的」⇒ 裁定向 VSC 靠拢 · 需求卷 **D21**）。
 **结构零动**——会话控制面（R13 换装后）行族 / 行内换形 / 元数据族 / 行控件皆沿在册（需求 D18「本端结构差异不削」）；本注只述视觉值面与边界，**值表分处单源**（内容面 = 核档 §5；会话面板面 = 下项 2）。
 
-1. **内容面视觉（核产出件）**——落点 = `thincoder-desktop/renderer/core.css`（核类名 → 桌面值）+ 值变量 = 主题表 `thincoder-desktop/renderer/theme.css`；**逐面映射表 21 面 / 内容面新增变量 12 个 / 端差 2 项 = `docs/render-core/design/RENDER-CORE.md` §5 / §9**（本档不重述值面）。
+1. **内容面视觉（核产出件）**——落点 = `thincoder-desktop/renderer/core.css`（核类名 → 桌面值）+ 值变量 = 主题表 `thincoder-desktop/renderer/theme.css`；**逐面映射表 / 内容面新增变量 / 端差三项 = `docs/render-core/design/RENDER-CORE.md` §5 / §9**（面数与变量数住核档表，本档不重述值面）。
    边界：**外壳零动**——块壳 / 卡族 / 标签条 / 池 / 输入区 / 状态行（`thincoder-desktop/renderer/chat.css` · 同档 `chrome.css` 外壳段 · `thincoder-desktop/renderer/pool.css` · `thincoder-desktop/renderer/settings.css`）零规则改动；推理块**壳层**（边框 / 底色 / 圆角 / 斜体 muted）沿 `.block-reasoning`；VSC 侧 `thincoder-vscode/webview/**` 零改（值源）。
 
    验收 = 逐面真机比对（走查面 = T-DSK21）+ 值面机检两处（值落点锁 ∕ 真 Electron computed style 读数——测试树 2026-09-28 全清重置后承载 = 随批单元证据；真机 = 人工走查 + 父侧真跑闭合）。
@@ -203,7 +203,7 @@
    **就绪入状态词闭枚举**（词形来源单列 = CLI 静息值 `Ready`；核 i18n 无同源词 ⇒ 例外注明 = 本档「状态词」行 / §3 借用项 9）。
 4. **重审③ 键位尾（逐件）**——`Enter: send`（CLI enterHint 静息值）⇒ **补**：表行 14 输入提示判据（静 ⇒ `Enter: send` · 忙 ∧ 队空 ⇒ 排队句 · 队 ≥ 1 ⇒ 条数句；**2026-09-29 扩四路**——窗在 ∧ 非忙 ⇒ 排队句）；**其余四件维持不适用**（逐件理由 = 表行 15）——用户 2026-09-26 裁定只覆盖 `/:` 件，其余四件本端无对位面（非静默打折——给理由）。
 5. **重审④ 滚动位（裁定 = 维持旁置）**——偏离底部（`!following`）⇒ 药丸在场（判据单源 = `docs/desktop/design/RENDERER.md` §3）· 回底 ⇒ 药丸退场——同信息（偏离底部状态可见）；行数读数（HTML 渲染行 ≠ 终端行）无对位物 ⇒ 不搬；观感复核 = 真机对照（T-DSK39）。
-6. **计数随动（D3）**——状态行词键 10 ⇒ **16**（新增 `status.ready` / `status.enter.send` + 四态 `status.banner.plan` / `.auto` / `.advisor` / `.eng`）；宿主键总数 **139 ⇒ 145**；会话头字段 5 ⇒ **3**——承载 = 词表四处同笔（测试树 2026-09-28 全清重置后 = 随批单元证据）。
+6. **计数随动（D3）**——状态行词键（新增 `status.ready` / `status.enter.send` + 四态 `status.banner.plan` / `.auto` / `.advisor` / `.eng`）∥ 宿主键总数 ∥ 会话头字段数三处同笔随动（读数住批档；两语相等不变）——承载 = 词表四处同笔（测试树 2026-09-28 全清重置后 = 随批单元证据）。
 7. **桌内翻转刷新（并入本注——2026-09-28 评审轮 1 修正定形）**——桌内 AUTO 翻转（always 放行置位 = `thincoder-desktop/src/main/suspensions.mjs`）后 `flags` **即时刷新**，最小可落路径 = 置位通道回执携 `flags`：
    `approval:respond` 成功径回执叠加 `{ key, flags }`（宿主 `flagsOf(key)` 活值投影——与页读同一函数，零算法副本；提问门径 / 失败径零叠加）⇒ 渲染面以回执写 `sessionFlags[key]` 切片（写点 = 归约面纯动作，与页读同点）⇒ 状态行随切片重挂。
 
@@ -279,7 +279,7 @@
      - **不消费**（登记非缺口）：`planBusyQueued`（宿主快照对账面 = VSC 专有——桌面快照形 = `ev:queue` 的**文本串数组**显示镜面（A9 收正），无合并 / 去重语义）；`clearPending`（桌面交接 = 组项退场 + 块入场（节点换代），非原地清标）。
    - **队列按会话分键**：`pending: { [会话键]: string[] }`——**快照镜面**（条目 = 文本串——A9 收正）（写者 = `ev:queue` 归约；权威 = 宿主内存表按会话分键——「回合中插入」批收正：原三纯动作 `enqueue` / `dequeue` / `drainQueue` 随本地队列退场）。
      分键两由（不变）：① 待发送件按会话归属（带面随活动会话）⇒ 队列须带键（否则未受理件随切会话漂页）；② 消费目标 = **事件键**（切会话后不会把 A 的队发进 B）。
-   - 落点：`thincoder-desktop/src/main/queued-input.mjs`（已落 · 实读 **78**（2026-09-29——队列取项边缘收正后）· 队列单源）· `thincoder-desktop/renderer/queue.mjs`（快照应用纯动作）· `thincoder-desktop/renderer/events.mjs`（`ev:queue` 归约——镜面 + 用户块）· `thincoder-desktop/src/main/ipc.mjs`（`history:page` 回执 `queue` 键——冷启 ∕ 重载镜面重建）；
+   - 落点：`thincoder-desktop/src/main/queued-input.mjs`（已落 · 队列单源）· `thincoder-desktop/renderer/queue.mjs`（快照应用纯动作）· `thincoder-desktop/renderer/events.mjs`（`ev:queue` 归约——镜面 + 用户块）· `thincoder-desktop/src/main/ipc.mjs`（`history:page` 回执 `queue` 键——冷启 ∕ 重载镜面重建）；
      `thincoder-desktop/renderer/views/chat-pending.mjs`（带面构树——形零改）· `thincoder-desktop/renderer/views/statusline.mjs`（段 14 读镜面）· `thincoder-desktop/renderer/app.mjs`（`CHAT_KEYS` 增 `pending`）· `thincoder-desktop/renderer/chat.css`（气泡形）。
    - **形态与落位**：`[data-pending]` 组 = **输入区上方待发送带**（**非流内**——零 `data-block-id` ⇒ 块序与 `data-blocks` 不变式不受影响）；落位 = 输入行上方带（贴输入框上沿——消费面 = `paintNotices` 每帧重挂整组）；
      项 = 待发送气泡（`.block.block-user` 形 · `.msg-label` 由核原语落笔 · 文本面 `mdInline`——与用户块同面）。
@@ -326,7 +326,7 @@
      块序 = 消费轮**族后**（归档块居其消费轮行族**之后**——本注 2026-10-01 翻转；**#765 座次机拆除 + 锚整删（F2 零存储）**；单源 = `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条））③ 表项留存为**墓碑**（`region: "flow"`——迟来事件按 `drop-frozen` 消化：不复活 / 不重复补桩）；表项 `rows` 随归档交给流内快照（**内容单留存处**）。
    - **归档块落位 = 消费轮族后（随到达入流）**（**零存储**——无边界标 ∥ 无边界行取面 ∥ 无挂载算术；行族在流末时即「放族后」——起跑窗为常型；迟到 ⇒ 随到入流——单源 = `docs/desktop/design/RENDERER.md` §1.1「消化行入流与重放规则」条；裁定 = `docs/desktop/design/PROJECT.md` §2 **KD-33** ∥ **KD-62**——本注 2026-10-01 翻转 ∥ **#765 锚整删（F2 零存储）**（座次机拆除——2026-10-01））；
   `clearAwaiting` 由核件清标志后刷新（端侧照模型态派生——核 effects 表**不逐条执行**，端面动作由模型态幂等派生；登记理由 = 桌面无 DOM 区概念，`connectedOf` / `regionOf` 由模型字段供给）。
-   - 落点：`thincoder-desktop/renderer/events.mjs`（`region` 写 + 流内块快照追加；`archiveFrozen` 删）· `thincoder-desktop/renderer/views/chat.mjs` + **`thincoder-desktop/renderer/views/chat-subagent.mjs`**（已落 · 实读 **75**（2026-09-29）· 归档块构树）·
+   - 落点：`thincoder-desktop/renderer/events.mjs`（`region` 写 + 流内块快照追加；`archiveFrozen` 删）· `thincoder-desktop/renderer/views/chat.mjs` + **`thincoder-desktop/renderer/views/chat-subagent.mjs`**（已落 · 归档块构树）·
      `thincoder-desktop/renderer/views/activity.mjs`（表项 `region` 过滤）· `thincoder-desktop/renderer/chat.css`（`.block-subagent` 透传壳）。
    - 判据：**机检** = 归约用例（终态 ⇒ 表项 `region:"flow"` ∧ `blocks` 尾块 `kind:"subagent"`；`settled` ⇒ 等待消化（池内）不归档；后到 `done` ⇒ 归档；**下回合起不清出**——对拍旧口径）+ 视图用例（流内冻结形在场 · 右列退场）；
      **真机** = 子 agent 跑完 ⇒ 流内留 `[✓ …]` 块（右列退场）。
@@ -337,7 +337,7 @@
 
 **计数（本注 · D3）**：六件 = **A1 推理钉底** · **A2 排队非流内 + 队列分键** · **A3 子 agent 核件同款** · **A4 说话人标识** · **A5 折叠 + 归档入流** · **A6 右列 ×2**；受触碰形态行 = 四行（对话流 / 输入区 / 状态栏 / §2 项 1）+ 布局 / 断点连带（项 6）；
 
-新档 **2**（功能档——`views/chat-pending.mjs`（已落 · 实读 **69**（2026-09-29）） · `views/chat-subagent.mjs`（已落 · 实读 **75**（2026-09-29）· 归档块构树））+ **拆分产出 2**（`renderer/page-read.mjs` · `thincoder-desktop/renderer/queue.mjs`——结构拆分 · 本注执行，见 §4.2）；新通道 **1**（`ev:subchunk`——单源 = `docs/desktop/design/IPC.md` §1）。
+新档 **2**（功能档——`views/chat-pending.mjs`（已落） · `views/chat-subagent.mjs`（已落 · 归档块构树））+ **拆分产出 2**（`renderer/page-read.mjs` · `thincoder-desktop/renderer/queue.mjs`——结构拆分 · 本注执行）；新通道 **1**（`ev:subchunk`——单源 = `docs/desktop/design/IPC.md` §1）。
 
 **批注（对齐第三批 · 小修族 23 + 相抵 2）**：本注定形「小修族 23 条 + 两条相抵」的**对齐形**（用户 07:11 裁定：**不存在「用户的不做」——流程自划的例外一律按对齐办**；需求档 §3.1:51 / §5.1 已收正）；用户 07:13「剩下的你自动跑完吧」授权下立。口径 = 需求档 §3.6（**「对齐」= VSC 的形 + 行为**）；交底 = 逐条「现状 → 对齐形 → 落点 → 判据」。
 
@@ -408,7 +408,7 @@
 3. **滚动策略族工厂化（#607）**：→ 见 `docs/desktop/design/RENDERER.md` §3（滚动策略族工厂化条）；核档单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-8 ④。
 4. **留端未接族（#608）**——① 痕迹 ∕ 丢弃痕 = 端观测面（桌面无诊断上行面）⇒ 不接（给由——零行为差异）；② `resetActivity` = 已在位（桌面 `resetSubBlocks` 同义）；③ 说明行判重 = **挂载根旗标**（`root._subDescShown`——一次置位不重置，沿 #630 KD-EC-4，与 VSC 同判）；真机 P9。单源 = §2.6。
 5. **段 14 判据四路（#581）**——窗在场 ∧ 队空 ∧ 非忙 ⇒ 排队句（窗内 Enter = 入队——现制该角落出 send 句 = 显示说谎残留）；形态 ∕ 其余 16 段零改；零键增（复用 `status.queue.enter`）；单源 = 表行 14。
-6. **计数（D3）**——新档 **1**（`thincoder-desktop/renderer/view-state.mjs`（已落 · 实读 **299**））· 通道 **0** · 白名单 **0** · 词键 **0** 增退；判据载体 = 单元测试档两档（M-604 a–c ∕ M-606 a–c ∕ M-607 a–c ∕ M-608 a–c ∕ M-581 + P1–P9）；全清令（集成测试不写 ∕ 不改 ∕ 不跑）。
+6. **计数（D3）**——新档 **1**（`thincoder-desktop/renderer/view-state.mjs`（已落））· 通道 **0** · 白名单 **0** · 词键 **0** 增退；判据载体 = 单元测试档两档（M-604 a–c ∕ M-606 a–c ∕ M-607 a–c ∕ M-608 a–c ∕ M-581 + P1–P9）；全清令（集成测试不写 ∕ 不改 ∕ 不跑）。
 
 **批注（排版统一 · D29）**：本注定形桌面排版统一（用户 2026-09-30 18:18 ∥ 18:20 走查两条 + 18:23「开」；需求卷 **D29**）；决策单源 = `docs/desktop/design/PROJECT.md` §2 **KD-57**（本注只述外壳面值面与判据，不重述决策）。
 
@@ -476,13 +476,13 @@
 
 | # | 借用项 | 本端落形（本档 §1 规则行） | 来源坐标 | 级别 |
 |---|---|---|---|---|
-| 7 | 标签条形态 | **不适用（R13 后）**——标签条随会话模型轮裁撤退场 | opencode `titlebar-tab-strip.tsx`（行 91 ∥ 行 147 宽域 · 行 215 溢出横滚）；渐隐端 = 外部端的新体渐隐样式（行 66–85） | 外部转引 |
-| 8 | 左列壳折叠 | **不适用（R13 后）**——零断点（单源 = 本档「断点」行）；左列壳随会话模型轮裁撤退场 | opencode `sidebar-shell.tsx`（行 43–46 `inert` 开关） | 外部转引 |
+| 7 | 标签条形态 | **不适用（R13 后）**——标签条随会话模型轮裁撤退场 | opencode `titlebar-tab-strip`（.tsx——行 91 ∥ 行 147 宽域 · 行 215 溢出横滚）；渐隐端 = 外部端的新体渐隐样式（行 66–85） | 外部转引 |
+| 8 | 左列壳折叠 | **不适用（R13 后）**——零断点（单源 = 本档「断点」行）；左列壳随会话模型轮裁撤退场 | opencode `sidebar-shell`（.tsx——行 43–46 `inert` 开关） | 外部转引 |
 | 9 | 状态词闭枚举 | **8 词**闭集（排队中 / 运行中 / 待审批 / 完成 / 已停止 / **已中断** / 错误 / 就绪——已中断 = 工具卡中止形（「对齐第三批」项 5）；就绪 2026-09-28 重审判定入集） | `thincoder-core/i18n.mjs`（运行中 / 排队中 / 已停止 / 完成 / 错误）· 需求档 §3.5（待审批位）· `thincoder-cli/src/tui/tui-state.mjs`（就绪——CLI 静息值 `Ready`，词形来源单列） | 本仓实读 |
 | 10 | 用量警示 + 单点重建 | 上下文 ≥ 80% 转警示色；状态行单点重建（唯一 writer） | `thincoder-vscode/webview/status-bar.js`（≥ 80%）· 同档（单点重建） | 本仓实读 |
-| 11 | 审批卡形态 | 键 1 / 2 / 3 + **初始焦点目标** = 「拒绝」（标记锚 + `thincoder-desktop/renderer/chat.css` 高亮；置焦执行 = 本注落——「对齐第三批」F-置焦）；大 patch 超阈 ⇒ 摘要 + 增删计数（**不采**外部查看器） | `thincoder-vscode/webview/permission.js`（超阈先例 ∥ 外部查看器先例——本端**不采** ∥ 焦点 deny，三处）；外部 = kimi-web `ApprovalCard.vue` | 本仓实读 + 外部转引 |
+| 11 | 审批卡形态 | 键 1 / 2 / 3 + **初始焦点目标** = 「拒绝」（标记锚 + `thincoder-desktop/renderer/chat.css` 高亮；置焦执行 = 本注落——「对齐第三批」F-置焦）；大 patch 超阈 ⇒ 摘要 + 增删计数（**不采**外部查看器） | `thincoder-vscode/webview/permission.js`（超阈先例 ∥ 外部查看器先例——本端**不采** ∥ 焦点 deny，三处）；外部 = kimi-web `ApprovalCard`（.vue） | 本仓实读 + 外部转引 |
 
-计数：**形态面 5 行（第 7–11 项）**；实现工艺面 6 行（第 1–6 项，其中第 4 行 = 首屏面补行）住 `docs/desktop/design/RENDERER.md` §4——合 **11 行 = 10 项借用 + 1 补行**；外部档引用 = 参考仓文件名 + 行号（参考仓非本仓，不展开路径）。
+计数：**形态面 5 行（第 7–11 项）**；实现工艺面 6 行（第 1–6 项，其中第 4 行 = 首屏面补行）住 `docs/desktop/design/RENDERER.md` §4——合 **11 行 = 10 项借用 + 1 补行**；外部档引用 = 参考仓组件名 + 行号（参考仓非本仓，不展开路径；**不写档后缀**——带后缀的形会被读成指向本仓的档，判 `档缺`）。
 
 **批注（主题切换 · D33）**：本注定形桌面主题三态（用户 2026-09-30 20:17 走查「我看到过你测试时有暗色的主题，但是并不知道怎么切换主题。」+ 23:40 批次点火令；需求卷 **D33**——亮 ∥ 暗 ∥ 跟随系统三态切换 + 记住（重启恢复）；落面二择一 = 实读裁定取**渲染面覆盖径**——判由 = `docs/desktop/design/PROJECT.md` §2 **KD-61**）；
 本注只述形态 ∥ 交互面，不重述决策。
@@ -503,115 +503,28 @@
 
 ## 4. 文件账
 
-### 4.1 本端文件清单与行数预算
+### 4.1 本端文件清单
 
-| 文件 | 预估行数 | 说明 |
-|---|---|---|
-| `thincoder-desktop/renderer/index.html` | **57**（实读 2026-10-02——设置体系升级（#817）实施落盘（56 ⇒ 57：+`settings-modal.css` 链行——`thincoder-desktop/renderer/settings.css` 后））；前读 **56**（实读 2026-09-30——右栏宽度拖动（#742）后（`.pool` 首子拖柄节点一行）；前读 55（撤会话头落形：槽行删 ∕ 注释随动）；越线档结构轮实施读 56——增 `session-list.css` link 一行（位次 = chrome.css 后 ∕ skin.css 前）） | 骨架 + CSP（经 `app://` 的真实 origin 方可收紧）+ 设置面板容器与入口位 + 输入区单容器 `[data-slot="composer"]`+ **R1 静态引导层**（`data-boot` 消费面；写者单点零改） |
-| `thincoder-desktop/renderer/theme.css`（R13 四拆分产） | **70**（实读 2026-10-01——主题切换实施后（96 ⇒ 70：双块收敛单块 + `@media` 退场）；前读 96（设计轮实读——D29 排版统一落盘后值 + 右栏宽度拖动（+1））；更前 95（实读 2026-09-29——滞后）） | 主题变量段 + 基面（**三态（D33）**：单块 `light-dark()` 值对 + `color-scheme` 三态——变量唯一集中处；主题事实源 = 渲染面 `data-theme` 状态（单写者 `renderer/theme.mjs`）） |
-| `thincoder-desktop/renderer/chrome.css`（R13 四拆分产） | **281**（实读 2026-09-30——右栏宽度拖动（#742）后（栅格行改 `clamp(15rem, var(--pool-w), …)` + `.pool-resizer` 规则族；269 ⇒ 281）；前读 269（门复读值）；更前 268 ∕ 撤会话头落形：`.session-head` 槽行与 `.head-fields` / `.head-field` 字段族删（291 ⇒ 268）；前史：原 **450** 拆后落值——会话列表面全量迁出 `thincoder-desktop/renderer/session-list.css`（**已落** · **170**）（desktop-residuals-round3 波 C（#617-CJ）后）；越 300 消解；保位注一行落原切点位） | 中区外壳面（两列栅格 + 会话控制条〔VSC 形换装〕+ 状态栏；窄窗断点随左列裁撤消解——零断点） |
-| `thincoder-desktop/renderer/skin.css`（R13 四拆分产） | **13**（实读 2026-09-30——撤会话头落形：`.head-field` 交互态三值行删；前读 18（W6 届盘复读——首屏引导层 +5）） | 皮肤与交互态尾段（滚动条皮肤 + R1 引导层样式；会话头 chip 交互态两族随撤会话头退场） |
-| `thincoder-desktop/renderer/theme.mjs`（主题切换 · 已落） | **85**（实读 2026-10-01——实施后对账终值；前读 86；设计轮预估 ≈70） | 主题三态面（chrome 级状态）：键 `thincoder.desktop.theme` ∥ `THEMES` 闭集 ∥ `initTheme`（读存储 ⇒ 应用 `dataset.theme`）∥ `setTheme`（校验 ⇒ 应用 + 落存储）；注入缝 `{ doc, storage }` ⇒ 平 node 直测——机制 ∕ 判据单源 = `docs/desktop/design/PROJECT.md` §2 **KD-61**（未迁行） ∥ `docs/desktop/design/RENDERER.md` §1.4 |
-| `thincoder-desktop/renderer/search.mjs`（R6 落） | **28**（实读 2026-10-10——尾行收口（#711②）实施后（净 +2：import + `reveal` 实参 + 档头披露缝行）；前读 **26**（实读 2026-09-29——内容行数口径）） | 会话内搜索端壳（`/rc/search.mjs` 直取 + `[data-slot="flow"]` 根绑定；Ctrl+F 键位注册随核件工厂——R6 上提；**#711② 披露缝** = `reveal: revealSegmentAt`（巨块隐藏段命中放窗）；单源 = `docs/render-core/design/RENDER-CORE.md` §3 行 32） |
-| `thincoder-desktop/renderer/views/chrome.mjs` | **35**（实读 2026-09-30——撤会话头落形：头族全段退场（`headModel` ∕ `headTree` ∕ `mountHead` ∕ 控件原语族 ∕ `sessionMetaOf` ∕ 两常量表；252 ⇒ 35）；前史：#119 合并实施轮 ∕ RF 波 2 后） | 中区外壳共用件（会话头面退场后）：位标词键表 `BADGE_WORD` + `busyOf` / `suspActiveOf`（同源判据） + 状态行三同名再出口（`mountStatus` / `statusModel` / `statusTree`——消费面零改）；形态单源 = 本档 §1（会话头行已退役） |
-| `thincoder-desktop/renderer/views/statusline.mjs`（R3a） | **实读 264**（2026-10-13 清账轮现读——登录面补全落盘后（+`team` 段装配 ∥ 段点击/键盘接线）；设计估 ≈222）；前读 **204**（实读 2026-10-01——复核扫面收正实施后（206 ⇒ 204——M7 透传去）；更前实读 2026-09-29——RF 波 5 后） | 状态行族档：承载段构树单源 + `STATUS_SEGMENTS` 段闭集（**18 码**——登录面补全 +`team`）+ `mountStatus` 薄挂载（自 `chrome.mjs` 拆出；同名再出口 —— 消费面零改）；拆档落形 = banner 段组出档（下行） |
-| `thincoder-desktop/renderer/views/statusline-segments.mjs`（R4 拆档产出） | **实读 259**（2026-10-13 清账轮现读——登录面补全落盘后：+`teamSegment` 三态（未登录入口 ∥ 成员名（悬停 = 服务器）∥ 已失效）；设计估 ≈254）；前读 **227**（实读 2026-09-29——I2 ∕ I3 ＋ RF 波 5 后） | 状态行段构建器族（切片 → 段模型；`STATUS_SEGMENTS` 闭集序归主档；**登录面补全** +`teamSegment`） |
-| `thincoder-desktop/renderer/mount-team.mjs`（已落——登录面补全） | **实读 354**（2026-10-16 收正轮现读；前读 324（2026-10-13 清账轮现读））——团队面接线：段数据读 ∥ 面板开合 ∥ 两写出口 ∥ 活校验 `team:verify`（自 原团队接线档 迁入——单实现） | 团队面接线（状态段 + 就地登/退面板 + 设置面管理读数；登录面补全 §1 批注；原团队接线档 净删——迁入本档） |
-| `thincoder-desktop/renderer/views/statusline-banner.mjs`（状态栏对齐新档） | **25**（实读 2026-09-28——≤300） | banner 段组（`BANNER_CODES` + `bannerSegments`——四态段构树自 `statusline.mjs` 拆出；严格真 ⇒ 在场 · 假 / 缺 / 非布尔 ⇒ 零节点） |
-| `thincoder-desktop/renderer/mount-status.mjs`（R3a） | **45**（实读 2026-10-13——登录面补全落盘后（`+settings` 订阅切片）；前读 **43**（实读 2026-09-29——RF 波 2 后）） | 状态行挂载：槽锚 `STATUS_SLOT` + 订阅切片键面 `STATUS_KEYS` + `attachStatus()` |
-| `thincoder-desktop/renderer/core.css`（R3c） | **335**（实读 2026-10-05——现行；前读 338（实读 2026-10-01——扁平化随动收口（#713）落盘后（339 ⇒ 338））；更前实读 2026-10-01——轻通道轮四码面笔后（333 ⇒ 339〔门实读〕）；前读 **333**〔实读 2026-09-30——门回填〕；更前 331；前史 332（口子清零二轮（面 20 段覆盖）后）；**≤500 ⇒ 免拆（500/800 口径更换）**） | 核类名 → 桌面变量映射（md 产出 / 推理块 / 复制钮 / `tk-*` 高亮族；**#518**：+两值规则（子块内容高 60px ∕ 表头 0.75——值源 = `thincoder-vscode/webview/chat.css`；**让位修复**：+出口钮规则（`sub-follow-btn`）——现行 ⇒ 规则住所 = `docs/desktop/design/ACTIVITY.md` §1 **KD-47**）） |
-| `thincoder-desktop/renderer/core-markdown.css`（#510 拆档产出） | **191**（实读 2026-09-29） | 核 Markdown 产出 → 桌面变量映射（面 1–17；自 `core.css` 拆出） |
-| `thincoder-desktop/renderer/i18n.mjs` | **452**（实读 2026-10-11——首启保存面收正（#1277）实施落盘（设计估 ≈450——吻合；−`wizard.save` + 4 键 × 两语 + 键数链注（合并表 346 ⇒ 349）））；前读 **441**（实读 2026-10-11——登录面补全落盘后）；前读 **436**（实读 2026-10-10——B1（#1212）实施落盘（键数链注续链）；前读 **432**（实读 2026-10-09——#1054 落盘 ∥ 清除键数链随动（`HOST_DICT` 323 ⇒ 322——`settings.providers.activeToggle` 退场））；前读 **≈421**（本注 #1054 触碰登记——键数链注续链；实施后回填）；前读 **420**（实读 2026-10-07——三端对齐（#1027–#1035）实施落盘（416 ⇒ 420——键数链注续链；非结构性触碰 ⇒ **续期**；≤500 ✓）；前读 **416**（实读 2026-10-05——附件扩展（attach-file-support）实施落盘（413 ⇒ 416——键数链注续链（`VIEWS_DICT` 138 ⇒ 144 ∥ `HOST_DICT` 308 ⇒ 314）；非结构性触碰 ⇒ **续期**；≤500 ✓）；前读 **413**（实读 2026-10-04——渠道档位退役实施落盘（415 ⇒ 413——`effort.auto` ∥ `effort.off` 两语净删 + 族条整条去 + 两语段注子句去 + 链尾 **312 ⇒ 309**；非结构性触碰 ⇒ **续期**）；前读 **415**（实读 2026-10-03——轻通道轮八（412 ⇒ 415——键数链注续链（`VIEWS_DICT` 138 ⇒ 139 ∥ `HOST_DICT` 313 ⇒ 314）——fallback 澄清键两语 + 链注三行）；非结构性触碰 ⇒ **续期**；**≤500 ✓（500/800 口径更换）**））；前读 **412**（实读 2026-10-03——首跑渠道提示修复（#840）实施落盘（408 ⇒ 412——键数链注续链（`VIEWS_DICT` 137 ⇒ 138 ∥ `HOST_DICT` 312 ⇒ 313）；非结构性触碰 ⇒ **续期**）；前读 **408**（实读 2026-10-02——**桌面 UX 收尾（#697）实施落盘**（404 ⇒ 408——键数链注续链（`HOST_DICT` 308 ⇒ 312——届盘实读））；前读 **404**（实读 2026-10-01——**#761 落盘后**（394 ⇒ 404——键数链回填：`HOST_DICT` ⇒ 308）；前读 **394**（实读 2026-09-30——门回填（池宽拖动等近批词键随动）；前读 391（撤会话头后）；前史：i18n 拆分落值 500 ⇒ 393（`settings.*` 族 55 键出档 ⇒ 新档 `thincoder-desktop/renderer/i18n-settings.mjs`）））） | 词表面：核域键取 `config:read` 语言面下发投影（`docs/desktop/design/IPC.md` §2）+ 宿主 UI 专有键（两语——设置面 / 向导两族 ∥ 输入区 / 提问卡 / 计划卡 / 队列满四族）+ `t()`；**四族**：会话头三值 / 附件（含 `nonvision` / `partial` 两降级提示）/ 复制 / 状态栏读数；批 A 后**越 300**：拆分预案 = 词族按视图面拆第二档（**本注落形**——新档 `thincoder-desktop/renderer/i18n-views.mjs`（**已落**）承本注新增词族）；**追加轮**：增引导面两键（`chat.guide.noProject` / `chat.guide.noSession`——zh / en 各一）；**i18n 拆分（2026-09-29）**：设置面词族（`settings.*` 55 键）出档第四档 `thincoder-desktop/renderer/i18n-settings.mjs` ⇒ 本档自有 142 ⇒ 87 键（合并表 `HOST_DICT` **294** 值零动）；**撤会话头**：`head.field.*` 三键两语退场（`head.*` 段注收正） |
-| `thincoder-desktop/renderer/i18n-views.mjs`（对齐第三批拆分产出） | **436**（实读 2026-10-16——注入开关键（#1420 #1465）实施落盘（422 ⇒ 436——两批合计：三键 × 两语键值 + 键面注行）；**前读 422**（实读 2026-10-14——#1420 实施落盘（416 ⇒ 422——两键 × 两语（`settings.injectDocs` ∥ `settings.injectMemories`）；非结构性 ⇒ 续期；≤500 ✓））；前读 **416**（实读 2026-10-10——回填轮按现盘收正）；前读 **410**（实读 2026-10-09——#1054 触碰落盘 + 近批随动）；前读 **≈408**（本注 #1054 触碰登记——+1 键 × 两语（`settings.consultAddTitle`）；实施后回填）；前读 **406**（**MCP 键值行式输入（#1036）实施落盘（398 ⇒ 406——kv 四新键 × 两语 + 值改 2）；≤500 ✓；2026-10-07**）；前读 **398**（实读 2026-10-05——附件扩展（attach-file-support）实施落盘（386 ⇒ 398——六键 × 两语）；≤500 ✓） | 词族第二档（按视图面分组；合并点 = `initDict` 装配——自 `thincoder-desktop/renderer/i18n.mjs`） |
-| `thincoder-desktop/renderer/i18n-composer.mjs`（输入面板上提拆档产出） | **151**（实读 2026-10-15） | 输入面板词族第三档（两语 VSC 逐字——核件 composer 组取词面） |
-| `thincoder-desktop/renderer/i18n-settings.mjs`（i18n 拆分产出） | **230**（实读 2026-11-06——本批读数收正；前读 **214**（实读 2026-10-16——收正轮现读）；前读 **208**（实读 2026-10-15——桌面行数滞读回填轮（206 ⇒ 208））；前读 **206**（实读 2026-10-11——现盘收正；登录面补全实施落盘后——设计 +7 键 × 两语（路由屏两卡四句 ∥ 回退 ∥ 以后再说 ∥ 本地钮）；键族 77 ⇒ 84））；前读 **190**（实读 2026-10-10——B1（#1212）实施落盘（键族 62 ⇒ 77——+15 键 × 两语）；前读 **156**（实读 2026-10-09——#1054 触碰落盘 + 清除向导死控退场（键族 60 ⇒ 62：+3 ∥ −1；行数 ≈158 ⇒ 156））；前读 **≈158**（本注 #1054 触碰登记——+3 键 × 两语（`settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle`）；键族 60 ⇒ 63；实施后回填）；前读 **152**（实读 2026-10-07——三端对齐（#1027–#1035）实施落盘（150 ⇒ 152——词键净 +1：`settings.addProvider` 新增；键族 **59 ⇒ 60**）；前读 **150**（实读 2026-10-04——渠道档位退役实施落盘（152 ⇒ 150——`settings.model.tier` 两语净删 + U1 段名值改两处）；前读 **152**（实读 2026-10-04——泛化编辑器退役实施落盘（156 ⇒ 152：`settings.agent.readonly` ∥ `.save` 两键两语净删））） | 设置面词族第四档（`SETTINGS_DICT` 两语各 **77** 键（实读 2026-10-10——B1 +15 键（62 ⇒ 77）；更前 **62**（实读 2026-10-09——#1054 增三键（60 ⇒ 63）∥ 清除净删一键（`settings.providers.activeToggle`——63 ⇒ 62）；更前 **60**（实读 2026-10-07——三端对齐 59 ⇒ 60；更前 = 泛化 62 ⇒ 60 + 渠道档位退役 −`settings.model.tier` ⇒ 59；键集相等且同序））——自 `thincoder-desktop/renderer/i18n.mjs` 整族出档（纯搬 + 原位展开）；合并点 = `HOST_DICT` 两语展开——单一装配点仍 = `initDict`） |
-| `thincoder-desktop/src/main/project-info.mjs` | **171**（实读 2026-10-10——桌面行为残渣（#831）实施落盘（169 ⇒ 171——档头「歧义锚」注两行（锚不可解析 ⇒ 拒 ∥ cwd 可解析而库缺 ⇒ 空读——两域界限明写））；前读 **169**（实读 2026-10-04——#913 落盘（181 ⇒ 169——`pending` ∥ `LINE_COLORS` ∥ `payload.lines` ∥ 注入面退场）；前读 **181**（实读 2026-09-30——桌面残债 #686 拒绝面两注句随动后；Δ0——前读 2026-09-29 同值）） | 项目级信息族（`ledger:read` / `batch:status`——台账经核动态 import；相位 = `readManifest(cwd)` **回执 `manifest.phase`**（无顶层 `phase`；非 ENOENT 读错上抛直传））——**判域在册（切片 3）：归本域**（台账读数出站 = KD-38 ∥ 开项目成功链持有面） |
+| 文件 | 说明 |
+|---|---|
+| `thincoder-desktop/renderer/index.html` | 骨架 + CSP（经 `app://` 的真实 origin 方可收紧）+ 设置面板容器与入口位 + 输入区单容器 `[data-slot="composer"]` + **R1 静态引导层**（`data-boot` 消费面；写者单点零改） |
+| `thincoder-desktop/renderer/theme.css`（R13 四拆分产） | 主题变量段 + 基面（**三态（D33）**：单块 `light-dark()` 值对 + `color-scheme` 三态——变量唯一集中处；主题事实源 = 渲染面 `data-theme` 状态（单写者 `renderer/theme.mjs`）） |
+| `thincoder-desktop/renderer/chrome.css`（R13 四拆分产） | 中区外壳面（两列栅格 + 会话控制条〔VSC 形换装〕+ 状态栏；窄窗断点随左列裁撤消解——零断点）；会话列表面全量已迁出 `thincoder-desktop/renderer/session-list.css`——本档只留保位注 |
+| `thincoder-desktop/renderer/skin.css`（R13 四拆分产） | 皮肤与交互态尾段（滚动条皮肤 + R1 引导层样式；会话头 chip 交互态两族随撤会话头退场） |
+| `thincoder-desktop/renderer/theme.mjs`（主题切换 · 已落） | 主题三态面（chrome 级状态）：键 `thincoder.desktop.theme` ∥ `THEMES` 闭集 ∥ `initTheme`（读存储 ⇒ 应用 `dataset.theme`）∥ `setTheme`（校验 ⇒ 应用 + 落存储）；注入缝 `{ doc, storage }` ⇒ 平 node 直测——机制 ∕ 判据单源 = `docs/desktop/design/PROJECT.md` §2 **KD-61**（未迁行） ∥ `docs/desktop/design/RENDERER.md` §1.4 |
+| `thincoder-desktop/renderer/search.mjs`（R6 落） | 会话内搜索端壳（`/rc/search.mjs` 直取 + `[data-slot="flow"]` 根绑定；Ctrl+F 键位注册随核件工厂——R6 上提；**#711② 披露缝** = `reveal: revealSegmentAt`（巨块隐藏段命中放窗）；单源 = `docs/render-core/design/RENDER-CORE.md` §3） |
+| `thincoder-desktop/renderer/views/chrome.mjs` | 中区外壳共用件（会话头面退场后）：位标词键表 `BADGE_WORD` + `busyOf` / `suspActiveOf`（同源判据） + 状态行三同名再出口（`mountStatus` / `statusModel` / `statusTree`——消费面零改）；形态单源 = 本档 §1（会话头行已退役） |
+| `thincoder-desktop/renderer/views/statusline.mjs`（R3a） | 状态行族档：承载段构树单源 + `STATUS_SEGMENTS` 段闭集（**18 码**——登录面补全 +`team`）+ `mountStatus` 薄挂载（自 `chrome.mjs` 拆出；同名再出口 —— 消费面零改）；拆档落形 = banner 段组出档（下行）；体量由 `doc_check` 的 `lines` 量，绝对值不进本档 |
+| `thincoder-desktop/renderer/views/statusline-segments.mjs`（R4 拆档产出） | 状态行段构建器族（切片 → 段模型；`STATUS_SEGMENTS` 闭集序归主档；**登录面补全** +`teamSegment`） |
+| `thincoder-desktop/renderer/mount-team.mjs`（已落——登录面补全） | 团队面接线：段数据读 ∥ 面板开合 ∥ 两写出口 ∥ 活校验 `team:verify`（自 原团队接线档 迁入——单实现） |
+| `thincoder-desktop/renderer/views/statusline-banner.mjs`（状态栏对齐新档） | banner 段组（`BANNER_CODES` + `bannerSegments`——四态段构树自 `statusline.mjs` 拆出；严格真 ⇒ 在场 · 假 / 缺 / 非布尔 ⇒ 零节点） |
+| `thincoder-desktop/renderer/mount-status.mjs`（R3a） | 状态行挂载：槽锚 `STATUS_SLOT` + 订阅切片键面 `STATUS_KEYS` + `attachStatus()` |
+| `thincoder-desktop/renderer/core.css`（R3c） | 核类名 → 桌面变量映射（md 产出 / 推理块 / 复制钮 / `tk-*` 高亮族；**#518**：+两值规则（子块内容高 60px ∕ 表头 0.75——值源 = `thincoder-vscode/webview/chat.css`；**让位修复**：+出口钮规则（`sub-follow-btn`）——规则住所 = `docs/desktop/design/ACTIVITY.md` §1 **KD-47**））；越线与否由 `doc_check` 的 `lines` 量 |
+| `thincoder-desktop/renderer/core-markdown.css`（#510 拆档产出） | 核 Markdown 产出 → 桌面变量映射（面 1–17；自 `core.css` 拆出） |
+| `thincoder-desktop/renderer/i18n.mjs` | 词表面：核域键取 `config:read` 语言面下发投影（`docs/desktop/design/IPC.md` §2）+ 宿主 UI 专有键（两语——设置面 / 向导两族 ∥ 输入区 / 提问卡 / 计划卡 / 队列满四族）+ `t()`；**四族**：会话头三值 / 附件（含 `nonvision` / `partial` 两降级提示）/ 复制 / 状态栏读数；词族按视图面拆四档（`i18n-views.mjs` ∥ `i18n-composer.mjs` ∥ `i18n-settings.mjs` 各持一族，合并点 = `initDict`）；引导面两键（`chat.guide.noProject` / `chat.guide.noSession`）在册；`head.field.*` 三键两语已退场（撤会话头） |
+| `thincoder-desktop/renderer/i18n-views.mjs`（对齐第三批拆分产出） | 词族第二档（按视图面分组；合并点 = `initDict` 装配——自 `thincoder-desktop/renderer/i18n.mjs`） |
+| `thincoder-desktop/renderer/i18n-composer.mjs`（输入面板上提拆档产出） | 输入面板词族第三档（两语 VSC 逐字——核件 composer 组取词面） |
+| `thincoder-desktop/renderer/i18n-settings.mjs`（i18n 拆分产出） | 设置面词族第四档（`SETTINGS_DICT` 两语键集相等且同序——自 `thincoder-desktop/renderer/i18n.mjs` 整族出档（纯搬 + 原位展开）；合并点 = `HOST_DICT` 两语展开——单一装配点仍 = `initDict`） |
+| `thincoder-desktop/src/main/project-info.mjs` | 项目级信息族（`ledger:read` / `batch:status`——台账经核动态 import；相位 = `readManifest(cwd)` **回执 `manifest.phase`**（无顶层 `phase`；非 ENOENT 读错上抛直传））——**判域在册（切片 3）：归本域**（台账读数出站 = KD-38 ∥ 开项目成功链持有面） |
 
-### 4.2 现有文件改动 · 批块
-
-**（i18n 拆分）行「实读落值」**：
-
-| 文件 | 实读落值（构成） | 批 |
-|---|---|---|
-| `thincoder-desktop/renderer/i18n.mjs` | **393**（500 ⇒ 393——`settings.*` 族 55 键出档（M1–M5 五处改点）；Δ = −107 · 护栏 ≤400 ✓ · 余量 107 ≥ 100；**≤500 ⇒ 免拆**（500/800 口径更换）） | i18n 拆分 |
-| `thincoder-desktop/renderer/i18n-settings.mjs`（新档） | **137**（第四档——`SETTINGS_DICT` 两语各 55 键 · 键集相等同序；合并点 = `HOST_DICT` 两语展开） | i18n 拆分 |
-| 测试覆盖 | 单元测试档（**129** 行 · A1–A6 5/5 pass）+ 基线件（**595** 行——搬前 294×2 键序 ∕ 键值冻结） | i18n 拆分 |
-| `docs/desktop/design/PROJECT.md` + `docs/desktop/design/SHELL.md` | 文档面登记轮（§4.1 两行 + 越层段；SHELL §1 树两节点行；本档词面指涉复核 = 零需改） | 本注（已落） |
-
-**（撤会话头 + 工具头色）行「现行 ⇒ 实读落值」**：
-
-| # | 档 | 现行 ⇒ 实读落值 | 面 |
-|---|---|---|---|
-| 1 | `thincoder-desktop/renderer/index.html` | **56 ⇒ 55**（会话头槽行删 ∕ 骨架注释随动） | 撤会话头 |
-| 2 | 会话头接线档 | **155 ⇒ 0**（**退役 · 删档——已落**（2026-09-29）；纯会话头接线（候选面 ∕ 写路 ∕ 回执刷行）退场；状态栏面住 `mount-status.mjs`，不动） | 撤会话头 |
-| 3 | `thincoder-desktop/renderer/views/chrome.mjs` | **252 ⇒ 35**（头族全段退场；余 = `busyOf` ∕ `suspActiveOf` ∕ `BADGE_WORD` + 状态行三再出口） | 撤会话头 |
-| 4 | `thincoder-desktop/renderer/app.mjs` | **299 ⇒ 289**（头接线八处退场：文档行 ∕ 两导入 ∕ 槽锚 ∕ 实例 ∕ `paintHead` ∕ 候选首取 ∕ 面表键） | 撤会话头 |
-| 5 | `thincoder-desktop/renderer/frame-dispatch.mjs` | **55 ⇒ 52**（`HEAD_KEYS` + 头面行删；六面 ⇒ 五面） | 撤会话头 |
-| 6 | `thincoder-desktop/renderer/chrome.css` | **291 ⇒ 268**（`.session-head` ∕ `.head-fields` ∕ `.head-field` 族删） | 撤会话头 |
-| 7 | `thincoder-desktop/renderer/skin.css` | **18 ⇒ 13**（`.head-field` 交互态三值行删） | 撤会话头 |
-| 8 | `thincoder-desktop/renderer/i18n.mjs` | **393 ⇒ 391**（`head.field.*` 三键两语退场 + 段注收正） | 撤会话头 |
-| 9 | `thincoder-desktop/renderer/chat.css` | **327 ⇒ 329**（整行两态三规则退场 ∕ 段级四规则 + `time` 段落 ∕ 注释收正——净值近零） | 工具头色 |
-| 10 | 设计档（`UI.md` ∕ `SHELL.md` ∕ `RENDERER.md` ∕ `IPC.md`） | 面名 ∕ 面数 ∕ 行族随动 | 两目 |
-| 11 | 测试覆盖 | 单元测试档（不登记 · **实读 135 行 · 5 用例**〔T1–T5 · 复跑 5/5 绿〕）；集成测试树（`thincoder-desktop/test/files.mjs` 空清单）零动 | 两目 |
-| 12 | `docs/desktop/requirements/PROJECT.md` | §3.1 修订（**已落——父侧落笔 · 2026-09-29**：会话头行撤 ∕ 三值归属句 ⇒ 输入区控件行；图 ∕ 状态栏去重句同笔；需求档同笔） | 撤会话头 |
-
-**（主题切换 · D33）行「现行 ⇒ 预期」**（机制 ∕ 判据单源 = `docs/desktop/design/PROJECT.md` §2 **KD-61**（未迁行） ∥ 本档 §1「批注（主题切换 · D33）」∥ `docs/desktop/design/RENDERER.md` §1.4）：
-
-| # | 档 | 现行 ⇒ 预期 | 面 |
-|---|---|---|---|
-| 1 | `thincoder-desktop/renderer/theme.css` | **96 ⇒ ≈65**（双块收敛为单块 `light-dark()` 值对——24 对 + `--error-fg` 单值 + `color-scheme` 三态；`@media` 退场；基线四值逐字保原；非色变量（`--mono`）暗块同值重声明随块消解——单块单留；不入 `light-dark()`；档头注 ∥ 暗块互引注随正） | 值面单源 |
-| 2 | `thincoder-desktop/renderer/theme.mjs`（已落） | — ⇒ **85**（实读 2026-10-02；三态面模块：键 ∥ `THEMES` 闭集 ∥ `initTheme` ∥ `setTheme`；注入缝 `{ doc, storage }` ⇒ 平 node 直测） | 状态单写者 |
-| 3 | `thincoder-desktop/renderer/app.mjs` | **300 ⇒ ≈303**（装配期 `initTheme()` + 切片播种 + 注释——**≤500 ⇒ 免拆（500/800 口径更换）**） | 装配 |
-| 4 | `thincoder-desktop/renderer/store.mjs` | **303 ⇒ 304**（顶层切片 `theme` 初态 `"system"`——行级小修（≤500 ⇒ 免拆——500/800 口径更换）） | 状态树 |
-| 5 | `thincoder-desktop/renderer/mount-settings.mjs` | **184 ⇒ 185**（`SETTINGS_KEYS` 增 `theme`——设置面重绘触发键） | 重绘接线 |
-| 6 | `thincoder-desktop/renderer/mount-settings-exits.mjs` | **227 ⇒ ≈240**（主题出口：`onSetTheme` ⇒ `setTheme` + 切片写 + 注释） | 出口族 |
-| 7 | `thincoder-desktop/renderer/views/settings.mjs` | **336 ⇒ ≈357**（面头三态钮族 + 面模型 `theme` 读数 + 注释——**≤500 ⇒ 免拆（500/800 口径更换）**） | 视图面 |
-| 8 | `thincoder-desktop/renderer/settings.css` | **298 ⇒ ≈301**（主题钮族带上：容器 ∥ 当前态两规则 + 同族六组并入——**≤500 ⇒ 免拆（500/800 口径更换）**） | 样式面 |
-| 9 | `thincoder-desktop/renderer/i18n-settings.mjs` | **141 ⇒ ≈151**（四键 × 两语：`settings.theme` ∥ `.system` ∥ `.light` ∥ `.dark`——键链 `SETTINGS_DICT` **56 ⇒ 60** ∥ `HOST_DICT`（合并表）**295 ⇒ 299**；链行续写 = 实施轮） | 词面 |
-| 10 | `thincoder-desktop/src/main/window.mjs` | **227 ⇒ 227**（注释两处随正——主题句 ⇒ 渲染面 `data-theme` 消费；`resolveTheme` 注释补系统事实面——**零行为改**） | 宿主注释 |
-| 11 | 单元测试档 | 主题切换族（已建成 · 267 行——六用例；随批留存 · 不进集成测试树） | 全批 |
-| 12 | 设计档 | `docs/desktop/design/PROJECT.md` §2 **KD-61**（未迁行） ∕ §4.1 行（新档 + 三行实读收正 + 越层段）∥ §6.1 ∥ §7 **T-DSK54** ∥ §8 · 本档（§1 批注 + §4.2 本节块）· `docs/desktop/design/{IPC,SHELL}.md` 档头 | 全批 |
-
-**（排版统一 · D29）行「现行 ⇒ 预期」**：
-
-| # | 档 | 现行 ⇒ 预期 | 面 |
-|---|---|---|---|
-| 1 | `thincoder-desktop/renderer/theme.css` | **89 ⇒ ≈95**（`--font` 改指 `var(--mono)` + `--fs` ∥ `--lh` ∥ `--ls` 三变量（`--ls: normal`）+ body `font` 简写取 `--fs`/`--lh`/`--font` ∥ `letter-spacing: var(--ls)` 独立一行——基面单源） | 变量单源 |
-| 2 | `thincoder-desktop/renderer/core-markdown.css` | **191 ⇒ 191**（值改零增行——正文族 ∥ 号 ∥ 行高改变量引用；`.code-lang` 10px ⇒ `var(--fs)`；标题 ∥ 码 ∥ 表相对修饰**不动**） | 内容面 |
-| 3 | `thincoder-desktop/renderer/core.css` | **331 ⇒ 331**（值改零增行——推理 ∥ 复制钮 ∥ 子块 ∥ 卡族 10–12px ⇒ 基线；`font-weight` 去粗 ∥ tracking 撤（随基线）；**≤500 ⇒ 免拆（500/800 口径更换）**） | 内容面 |
-| 4 | `thincoder-desktop/renderer/chat.css` | **350 ⇒ 350**（值改零增行——工具卡 ∥ 结果区 ∥ 摘要 ∥ 消化 ∥ 待发送带 11 ∥ 12px 族 ⇒ 基线；`msg-label` 700 ∥ `chat-pending-label` 600 ⇒ 400；行高两处 ⇒ `var(--lh)`；**≤500 ⇒ 免拆（500/800 口径更换）**） | 对话流 |
-| 5 | `thincoder-desktop/renderer/chat-fixes.css` | **118 ⇒ 118**（值改零增行——错误详情 ∥ 台账行 ∥ 压缩行 ∥ diff 族 ∥ 欢迎条归基线；`welcome-heading` 600 ⇒ 400 ∥ 行高 ⇒ `var(--lh)`） | 小修族 |
-| 6 | `thincoder-desktop/renderer/chrome.css` | **269 ⇒ 269**（值改零增行——状态行三段 ∥ 会话控制 ∥ 确认面 ∥ 引导行归基线；`.session-title` 500 ⇒ 400；8px ∥ 18px 两字形 ⇒ 基线；`line-height: 1` 两处 ⇒ `var(--lh)`） | 外壳 |
-| 7 | `thincoder-desktop/renderer/session-list.css` | **169 ⇒ 169**（值改零增行——标题 13px ∥ 500 ⇒ 基线 ∥ 400；元数据 ∥ 位标 ∥ 两钮 ∥ 改名形归基线） | 会话面 |
-| 8 | `thincoder-desktop/renderer/chat-cards.css` | **152 ⇒ 152**（值改零增行——审批 ∥ 提问 ∥ 计划 ∥ 目标卡族归基线；`question-mark` 700 ⇒ 400（accent 色位已有）） | 卡族 |
-| 9 | `thincoder-desktop/renderer/pool.css` | **113 ⇒ 113**（值改零增行——池头 ∥ 读数 ∥ 族标 ∥ 计数钮归基线；`pool-title` 600 ⇒ 400 ∥ tracking 归零） | 池面 |
-| 10 | `thincoder-desktop/renderer/settings.css` | **294 ⇒ 294**（值改零增行——标题 ∥ 段标 ∥ 标记 ∥ 提示 ∥ 向导步 ∥ 信息行归基线；两处 600 ⇒ 400；tracking 归零；关闭字形 `line-height: 1` ⇒ `var(--lh)`） | 设置面 |
-| 11 | `thincoder-desktop/renderer/chat-composer.css` | **70 ⇒ ≈100**（**核件消费面覆盖段（新增）**——输入面板 ∥ 模型菜单 ∥ 搜索条 ∥ `auto-confirm` 同位族：特征度提升选择器 ⇒ 字号 ∥ 字重归基线（盒值 ∥ 描边零动）） | 核件消费面 |
-| 12 | `thincoder-desktop/renderer/index.html` | **55 ⇒ 55（零改）** | 骨架 |
-| 13 | 测试覆盖 | 单元测试档两档——源扫描用例（已建成 · 278 行 · 平 node：12 档 CSS + `thincoder-desktop/renderer/index.html` 骨架源判据）+ 真机 computed 扫描用例（已建成 · 389 行 · 真 Electron 全栈扫描）；随批留存 · 不进集成测试树（全清令）；真机走查 = 父侧闭合（D16 义务） | 全批 |
-| 14 | 设计档 | `docs/desktop/design/PROJECT.md` §2 **KD-57**（未迁行）（决策）∥ §6.1 ∥ §7 **T-DSK51** · 本档（§1 批注 + §4.2 本节块）· `docs/render-core/design/RENDER-CORE.md` §5 块 | 全批 |
-
-**值列口径**（本块）：「现行」= 实读（内容行数口径）；「预期」= 设计估算（值改类档 = 净 ±0；新段档 = 估增）。
-
-**（登录面补全）行「现行 ⇒ 预期」**：
-
-| # | 档 | 现行 ⇒ 预期 | 面 |
-|---|---|---|---|
-| 1 | `thincoder-desktop/renderer/views/statusline.mjs` | **204 ⇒ ≈222**（+`team` 段装配 ∥ 段点击/键盘接线 ∥ 闭集 18 码） | 状态行 |
-| 2 | `thincoder-desktop/renderer/views/statusline-segments.mjs` | **227 ⇒ ≈254**（+`teamSegment` 三态（未登录入口 ∥ 成员名（悬停 = 服务器）∥ 已失效）） | 状态行 |
-| 3 | `thincoder-desktop/renderer/mount-team.mjs`（已落） | **已落 ≈150**（段数据读 ∥ 面板开合 ∥ 两写出口 ∥ 活校验——`createTeam` 迁入单实现） | 团队面 |
-| 4 | | **131 ⇒ 净删**（并入 `mount-team.mjs`——单实现；迁后两写出口 ∥ 复读两调用点零语义改） | 团队面 |
-| 5 | `thincoder-desktop/renderer/views/settings.mjs` | **448 ⇒ ≈449**（段分派改渲 `teamAdminBody`；±1） | 设置面 |
-| 6 | `thincoder-desktop/renderer/views/settings-sections.mjs` | **100 ⇒ ≈101**（hub re-export 改 `teamAdminBody`；±1） | 设置面 |
-| 7 | `thincoder-desktop/renderer/app.mjs` | **338 ⇒ ≈360**（启动读写者 + 段/面板接线） | 装配 |
-| 8 | `thincoder-desktop/renderer/i18n.mjs` | **436 ⇒ ≈440**（+1 宿主键 × 两语——`status.team.entry`；`status.team.invalid` 走核投影——零副本） | 词表 |
-| 9 | `thincoder-desktop/renderer/i18n-settings.mjs` | **190 ⇒ ≈206**（+7 键 × 两语——路由屏两卡四句 ∥ 回退 ∥ 以后再说 ∥ 本地钮；键族 77 ⇒ 84） | 词表 |
-| 10 | `thincoder-desktop/renderer/views/onboarding.mjs` | **161 ⇒ ≈250**（+route 屏（两卡 + 说明 + 以后再说）∥ 团队表单（三字段 + 失败行 + 回退）——步闭集 `"route"` ∥ `"team"` ∥ 1–3） | 向导 |
-| 11 | `thincoder-desktop/renderer/mount-onboarding.mjs` | **96 ⇒ ≈130**（+`chooseRoute` ∥ `backToRoute` ∥ 团队提交（`team:login`）成/败两径） | 向导 |
-| 12 | `thincoder-desktop/renderer/mount-settings.mjs` | **292 ⇒ ≈295**（团队读数注入改指 `mount-team.mjs`） | 设置面 |
-| 13 | `thincoder-desktop/src/main/team.mjs` | **35 ⇒ ≈45**（+`team:verify` 转口） | 主进程 |
-| 14 | `thincoder-desktop/src/main/ipc-registry.mjs` | **99 ⇒ ≈100**（+`team:verify` HANDLERS 行） | 通道 |
-| 15 | `thincoder-desktop/src/preload/preload.cjs` | **87 ⇒ ≈88**（+1 CHANNEL——白名单 **+1**） | 通道 |
-| 16 | 测试覆盖 | 单元测试档（拟——段三态 ∥ 面板树两形 ∥ 段位序 ∥ 闭集 18 ∥ 路由屏/团队表单树 ∥ 通道四件套结构）；随批留存 · 不进集成测试树；真机 = **T-DSK69**（`docs/desktop/design/SETTINGS.md` §5） | 全批 |
-| 17 | 设计档 | `docs/desktop/design/UI.md`（§1 状态栏行 + 裁定表 16 行 + 计数 + 批注 + §4 本节块）· `docs/desktop/design/SETTINGS.md`（§2.6 + §2.22 + §3 + §4/§5）· `docs/desktop/design/IPC.md`（§2 团队族行 + 白名单 + §3 行数面）· `docs/core/design/TEAM.md` §2.5/§2.6/§3/§4/§5/§6/§7 | 全批 |
 

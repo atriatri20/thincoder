@@ -142,7 +142,7 @@ test("CLI 10-1 正常 · 收口即清账：回执点名消费 1 枚、spawn 机�
   const ctx = { depth: 0, agent }
   const tool = batchTool(null)
 
-  const receipt = await tool.execute({ action: "close", path: BATCH_REL }, ctx)
+  const receipt = await tool.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, ctx)
 
   assert.match(receipt, /\[design tokens\] 消费 1 枚/, `回执应点名消费 1 枚：${receipt}`)
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
@@ -167,7 +167,7 @@ test("CLI 10-2 错误 · 消费落盘失败 ⇒ close 被拒、§1 字节不变�
   mkdirSync(tmpBlocker)
 
   await assert.rejects(
-    () => tool.execute({ action: "close", path: BATCH_REL }, ctx),
+    () => tool.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, ctx),
     (e) => {
       assert.match(e.message, /consume-design: 1 slot\(s\) were removed in memory but could NOT be durably deleted/, `拒绝原因应点名消费失败：${e.message}`)
       return true
@@ -179,6 +179,6 @@ test("CLI 10-2 错误 · 消费落盘失败 ⇒ close 被拒、§1 字节不变�
 
   // 可重试：注入解除后同一 close 即收口（「被拒的收口没有收口」）
   removeTempDirBestEffort(tmpBlocker)
-  const receipt = await tool.execute({ action: "close", path: BATCH_REL }, ctx)
+  const receipt = await tool.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, ctx)
   assert.match(receipt, /\[design tokens\] 消费 1 枚/, `重试即收口：${receipt}`)
 })

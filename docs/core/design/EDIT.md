@@ -132,7 +132,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 ```
 
 - **批量落盘的做法与先例**（对齐优先，偏离给理由）：先例坐标 = `docs/core/design/APPLY-PATCH.md` §4「多文件原子」与 §6.1 的实现坐标（`thincoder-core/tools/patch.mjs` 的 `applyPatchTool`）——它走 `writeThroughPath` 的 `stage:true` → `op:"commit"` 两段缝，回执在提交段失败时抛裸 `rename` 错误、不报已提交清单。**本批不走那条缝**：用户撤掉「失败即全无」之后，暂存的唯一产物消失（§8 D-12），就地写反而保住模式位、符号链接、硬链接、属主。偏离理由 = **前提消失**，不是先例不好；`patch.mjs` 本批零改，它自己的两段式原样在位。
-- **公开源调研证据**：`doc_search` 查「批量 edits 原子落盘 两段式 失败回执 暂存档」⇒ 命中 8 条全在 `thincoder/docs/**`（`EDIT-HELPERS.md` §7.3 批帧 · 本档 §5/§6/§8 三条 · `TOOL-OUTPUT-LIMITS.md` §3 · `BATCH-RECORD.md` §4.19 · `AGENT-LOOP-SUBAGENT.md` §6.58.3 · `TOOLS.md` §4.2），无一条讲多档落盘的原子性做法；`index.publicRepos` 声明的 `../.thincoder` · `../thincoder.com` 零相关命中。
+- **公开源调研证据**：`doc_search` 查「批量 edits 原子落盘 两段式 失败回执 暂存档」⇒ 命中全在 `thincoder/docs/**`（`EDIT-HELPERS.md` §7.3 批帧 · 本档 §5/§6/§8 三条 · `TOOL-OUTPUT-LIMITS.md` §3 · `BATCH-RECORD.md` §4.19 · `AGENT-LOOP-SUBAGENT.md` §6.58.3 · `TOOLS.md` §4.2），无一条讲多档落盘的原子性做法；`index.publicRepos` 声明的 `../.thincoder` · `../thincoder.com` 零相关命中。
 
 ## 7. 集成测试设计（RTM 增量）
 
@@ -140,7 +140,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 
 | 行 | 断 ∥ 冗余 ∥ 缺 | 组件交互 | 断言什么业务结果 | 用户可见入口 | 回指 |
 |---|---|---|---|---|---|
-| `CLI 41-1` | 不断、不冗：它判核 `edit` 批面，本批不动那一面行为 | `edit` 的 `edits` 形 ⟷ 逐档就地写 ⟷ 写前文档门 | 一条失败只废那一条；末行 `edit batch: 2/3 entries applied, 1 failed — 1 file(s) written: alpha.txt` | 真 `edit` 调用 | `F16` |
+| `CLI 41-1` | 不断、不冗：它判核 `edit` 批面，本批不动那一面行为 | `edit` 的 `edits` 形 ⟷ 逐档就地写 ⟷ 写前文档门 | 一条失败只废那一条；末行 `edit batch: 2/3 entries applied, 1 failed — 1 file(s) written: <name>.txt` | 真 `edit` 调用 | `F16` |
 | `CLI 41-2` | **缺**（新增，用例已落）——它判桥面逐条成败；`CLI 41-1` 判的是核批面，判不到这一面 | ACP 桥 `editBatch` ⟷ IDE 缓冲读写（`fs/read_text_file` ∥ `fs/write_text_file`） ⟷ 帧排 ∥ `onEntryError:"collect"` | 一条 `old_string` 匹配不到 ⇒ 回执 `edits[1] — failed: …` + 末行 `edit batch: 2/3 entries applied, 1 failed — 2 file(s) written: …`，IDE 缓冲只含成功条 | ACP 客户端（IDE）发起一次批量编辑 | `F16` · `F17` |
 | `CLI 42-1`（新故事 `CLI 42`） | **缺**（新增，用例已落）——它判 `apply_patch` 写盘段的回执；两个 `edit` 批面的行都判不到 | `apply_patch` 提交段 ⟷ 注入径即时提交 ⟷ 批级记账 | 第 2 档失败 ⇒ 抛错正文逐档行（`modified a.md` ∥ `b.md — failed: …` ∥ `not committed c.md`）+ 末行 `apply_patch: 1/3 file(s) applied, 2 failed: a.md`，盘上 `a.md` 已改 | 真 `apply_patch` 调用 | `F17` |
 

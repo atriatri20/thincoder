@@ -27,6 +27,8 @@ import { hasWorkspaceFolder, pushWorkspaceGuard } from "./workspace-guard.mjs"
 import { reassertLiveChildren } from "./suspension.mjs"
 // F-MI7：同伴快照预热（SWR 写面——慢段预热，读面零 exec）
 import { prewarmPeerInstances } from "./peer-instances.mjs"
+// 跨实例取件闩：切槽点 = **撤旧立新**（重臂）——见 `loadSession` 内注（D-MI31）。
+import { syncInboxWatch } from "./timer-watch.mjs"
 import * as vscode from "vscode"
 
 // ─── 写面转口（四档拆分批 2026-09-18 · VSC-DEBT §12.2.4）：既有导出名零改 ──────────────
@@ -125,6 +127,11 @@ export function loadSession(panel) {
     // §6.30.11 VSC 空闲面撤闩（切槽销毁点 = 六路汇合处）：旧会话的闩随 agent 一并停（持旧 agent
     // 的闩已失效——fire 零动作；disarm 避免悬持一次性 timer）；新会话经回合尾武装点重同步。
     panel._timerWatch?.disarm()
+    // 跨实例取件闩：切槽 = **撤旧立新**（重臂），不是「撤了就等别人来装」。timer 闩按「在途 timer」现算，
+    // 撤掉与不撤等价；取件闩撤了就**没人再装**（全仓武装点只有面板创建与回合尾两处）——而名册条目不随
+    // 切槽删 ⇒ 发送方拿到「已送达」、消息躺在 inbox 无人取。故本点重臂（核 `sync()` 幂等、闩无条件在位）：
+    // D-MI31「闩的在位不依赖任何别的代码路径」——**切槽不在撤闩列**（取件闩只两处撤：`dispose` ∥ view 销毁）。
+    syncInboxWatch(panel)
     // 心跳源新鲜度（D-W24——2026-09-19）：会话切换 / 新建点置空 `_liveLines`（newSession /
     // switchSession / deleteSession / onProjectChanged / openSessionContent 五路汇合于本函数）
     // ⇒ 心跳 / 再断言回落 `panel._susp?.lines`，不把旧会话池块每 2 s 投进新面板。

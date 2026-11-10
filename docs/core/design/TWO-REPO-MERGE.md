@@ -29,7 +29,7 @@ thincoder/                          ← 单一 git 仓（默认分支 main）
 
 | 产品 | 包 | 发布链 |
 |---|---|---|
-| CLI | npm 包 `thincoder` | `prepack` 之外无构建；发布门 = `prepublishOnly` → lint → 单入口集成门 = 仓根 `node test/run.mjs`（包级 `npm test` = 空集说明器，非门）（CLI 设计档 `docs/cli/design/RELEASE.md`） |
+| CLI | npm 包 `thincoder` | `prepack` 之外无构建；发布门 = `prepublishOnly` → lint → 单入口集成门 = 仓根 `node test/run.mjs`（包级 `npm test` = 空集说明器，非门）（发布链 = `docs/RELEASE.md` §5） |
 | VSC | vsix `thincoder-vscode` | `vscode:prepublish` = lint + 文档机检 + 单元清单面 `cd thincoder-vscode && npm test`（本包显式清单，非集成门）；集成门 = 仓根 `node test/run.mjs`；发布 = Marketplace + Open VSX |
 
 两产品**互不触发**：`thincoder-cli/package.json` ∥ `thincoder-vscode/package.json`（lockfile 同形：`thincoder-cli/package-lock.json` ∥ `thincoder-vscode/package-lock.json`）各自留在子目录内（**不合并 lockfile**）；发布动作本身仍是各自的既有流程，合并只改变**执行目录**。
@@ -79,7 +79,7 @@ git blame thincoder-vscode/package.json                # blame 跨 graft 无需�
 
 ## 4. 提示词承载（单源）
 
-现状结构：唯一副本 = `thincoder-core/prompts/`（16 档，运行期加载面，两产品共用）；两产品 `docs/` 下的提示词档（15 档 × 2）已归档到 `_archive/`（历史参照，不再维护）。
+现状结构：唯一副本 = `thincoder-core/prompts/`（运行期加载面，两产品共用；档数 = 实读）；两产品 `docs/` 下的提示词档已归档到 `_archive/`（历史参照，不再维护）。
 
 | 层 | 对象 | 处置 |
 |---|---|---|
@@ -91,7 +91,7 @@ git blame thincoder-vscode/package.json                # blame 跨 graft 无需�
 
 合并后两套同名机检脚本不能各留一份（判据都建立在「本仓 vs 对端」二分上，单仓内该二分不存在）——收为**仓根一份**：
 
-- **档名**：沿用 `scripts/doc-anchors.mjs` · `scripts/check-doc-width.mjs` · `scripts/check-ledger.mjs`（命令形态 `node scripts/<name>.mjs` 零改）；
+- **档名**：沿用原三档机检脚本的档名（命令形态 `node scripts/<name>.mjs` 零改）；
 - **执行根**：一律自合并仓根执行；
 - **调用**：两产品门禁链各自调用仓根统一脚本并**传入本产品域**（避免发布门禁相互牵连）；
 - **扫描域两态**：无域参 = **全域**（CI 全域调用与现行文档命令形态）；产品域态（门禁——显式传本产品域）；

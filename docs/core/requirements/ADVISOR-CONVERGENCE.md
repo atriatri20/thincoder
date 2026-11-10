@@ -106,7 +106,7 @@
 |---|---|---|
 | 项目指南 | `AGENTS.md`：从评审范围逐级上溯、以 cwd 为界（`thincoder-core/advisor/project-context.mjs` 的 `findGuideRoot`） | `NO_GUIDE_NOTICE` —— 要求拟合回落到对话 |
 | 文档地图 | manifest `docRoot` 的五面（design ∥ requirements ∥ specs ∥ modules ∥ batches；`findDocumentMap`：各声明根的 `README.md` 先、共同祖先次） | `NO_DOC_MAP_NOTICE` —— 明说「Document ownership 判据无法核」 |
-| 项目标准（方法论） | manifest `docRoot.standards`——**项目自己声明的标准档路径**（项目根相对的文件；单份 ∥ 多份数组）；三态判据与文案单源 = `docs/core/design/MANIFEST.md` §2.12 | 未声明 ⇒ `NO_STANDARDS_NOTICE`；**声明了但读不到 ⇒ `STANDARDS_UNREADABLE_NOTICE`**（点名声明路径 + 原因，**不得与未声明同形**） |
+| 项目标准（方法论） | manifest `docRoot.standards`——**项目自己声明的标准档目录**（项目根相对的**目录**，是 `docRoot` 的一个层；单目录 ∥ 多目录数组；层内成员 = 该目录**及其全部子目录**下的 `.md`，按**层根相对路径**码点序注入）；三态判据与文案单源 = `docs/core/design/MANIFEST.md` §2.12 | 未声明 ⇒ `NO_STANDARDS_NOTICE`；**声明了但读不到 ⇒ `STANDARDS_UNREADABLE_NOTICE`**（点名声明路径 + 原因，**不得与未声明同形**） |
 
 **边界**：不设「猜固定名」的便利 fallback —— `docs/README.md` ∥ 根级 `METHODOLOGY.md` 那类探测已退场，它正是静默失败的来源。标准档的路径**只从项目自己的声明取**（`docRoot.standards`）：声明是项目的口，猜是我们的口——这条界线不因本键而松，故本键**不带**任何默认路径（默认 = `null`）。
 

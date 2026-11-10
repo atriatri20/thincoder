@@ -1,9 +1,9 @@
 /**
  * events.mjs — 渲染面事件归约核心（事件通道 → 切片写者**单源** · 批档 §2.2(e) / §2.11⑧ · `docs/desktop/design/IPC.md` §1）：
  * 切片写者的**单源**——主进程只产事件 / 回执，值面落树全在本档；订阅接线面出档 `renderer/events-subscribe.mjs`
- *（二十五通道表 · `attachEvents` · 回合尾窄口携键 —— 300 行拆分层落形）；问题 / 任务切片面出档 `renderer/questions.mjs`、
- * **宿主唤醒面三切片**（挂起 ∕ 消化 ∕ 到期）= **出档 `renderer/events-wake.mjs`**（R5 先拆后改 —— 本档触 500
- * 硬限；三归约体 + 共件 `countOf` 迁入该档，本档引三件分派，无环）；
+ *（二十六通道表 · `attachEvents` · 回合尾窄口携键 —— 300 行拆分层落形）；问题 / 任务切片面出档 `renderer/questions.mjs`、
+ * **宿主唤醒面四切片**（挂起 ∕ 消化 ∕ 到期 ∕ 取件）= **出档 `renderer/events-wake.mjs`**（R5 先拆后改 —— 本档触 500
+ * 硬限；四归约体 + 共件 `countOf` 迁入该档，本档引四件分派，无环）；
  * 位标面出档 `renderer/badges.mjs`（桌面残余批拆档产物 —— `clearQuestion` 本档 re-export 保导出名面）；
  * **页读径出档 `renderer/page-read.mjs`**（「对齐第二批」拆分产出 —— 硬限 500 顶格，在册预案本批执行：
  * `applyPage` / `blockOfMessage` 两消费面改引该档 = `renderer/session-wire.mjs` / 测试；本档不引页读档，无环）；
@@ -36,8 +36,8 @@
  *   `isTurnTail(ev)`           回合尾判据**单源**（**三径** = `ev:activity` 无 `fields` 的 `done` / `stopped` ∥ `ev:error` —— `onActivity` / `onError` 与订阅面 `events-subscribe.mjs` 同用）
  *
  * 纪律：块面写（`blocks`）须 `ev.key === state.activeSession`（否则原引用 —— 非活动会话的事件不落本会话流）；
- *   `tabBadges` 任意键可写 · `sessionMeta` / `usage` / 卡面两切片（`questions` / `tasks`）· 挂起 / 消化两切片（`susp` / `digest` —— 空闲唤醒批）· 到期触发切片（`timerNotice` —— timer-wake 阶段 2）按 key 写（切片同键就地替换 · 首写自种 · 零键门 —— 活态切片「切回即见」；
- *   **行痕族例外**：`digest` 轮集随首屏页读五清（存量轮切回即失——未结末轮保），单源 = `docs/desktop/design/RENDERER.md` §1.1 事件归约面条）（§2.2(e) 值面写者表）· 状态行读数槽五（`turns` / `turnStarts` /
+ *   `tabBadges` 任意键可写 · `sessionMeta` / `usage` / 卡面两切片（`questions` / `tasks`）· 挂起 / 消化两切片（`susp` / `digest` —— 空闲唤醒批）· 到期触发切片（`timerNotice` —— timer-wake 阶段 2）· 取件行切片（`inboxNotice` —— 跨实例取件面，行痕族第四员；单源 = `docs/desktop/design/IPC.md` §2「取件行注」）按 key 写（切片同键就地替换 · 首写自种 · 零键门 —— 活态切片「切回即见」；
+ *   **行痕族例外**：`digest` 轮集随首屏页读六清（存量轮切回即失——未结末轮保），单源 = `docs/desktop/design/RENDERER.md` §1.1 事件归约面条）（§2.2(e) 值面写者表）· 状态行读数槽五（`turns` / `turnStarts` /
  *   `tokens` / `timers` / `lastOutputAt`〔停滞轻显形批 —— 写径 = `reduce` 可见输出通道集单点 + `onActivity` turn 起刻〕）同判（R3a · D17 承载段数据源）· `subBlocks` 按会话键分槽（R3b · D20 —— 归约径住
  *   `renderer/subagent-reduce.mjs`：块面内容回显 = 核件 tail-3 / 展开（「对齐第二批」项 3 收正：原「零内容回显」
  *   口径撤销）；态机单源 = 核 `/rc/subblocks/state.mjs` `subBlocksReduce`）· 池切片 **摘工具行**（`pool.blocks` 不再在册 —— 工具调用面 = 对话流工具卡；折叠头
@@ -64,9 +64,9 @@ import { onFlags } from "./events-flags.mjs"
 export { applyFlags, sameRecord } from "./events-flags.mjs"
 // 状态面归约径出档（R4 —— 本批拆分产出）：两归约体 + 活动恢复即清清点居该档；本档引三件分派（见 `reduce`）。
 import { expireStatusText, onCompress, onStatusText } from "./events-status.mjs"
-// 宿主唤醒面三切片归约径出档（R5 —— 先拆后改：本档触 500 硬限；挂起 ∕ 消化 ∕ 到期三归约体 + 共件
-// `countOf` 迁入该档；本档引三件分派 —— 无环）。
-import { onDigest, onSusp, onTimer } from "./events-wake.mjs"
+// 宿主唤醒面四切片归约径出档（R5 —— 先拆后改：本档触 500 硬限；挂起 ∕ 消化 ∕ 到期三归约体 + 共件
+// `countOf` 迁入该档；本档引四件分派 —— 无环；第四件 `onInbox` = 跨实例取件行（行痕族第四员））。
+import { onDigest, onInbox, onSusp, onTimer } from "./events-wake.mjs"
 // 块面归约径出档（#510 留守拆档 · 2026-09-29）：块面五归约体 + 四原语（键门 / 游标 / 扇扫 / 工具块定位）——
 // 本档 `reduce` 分派 + `onActivity` ∕ `onError` 复用原语（无环：该档零反向 import）。
 import { clearCursor, forActive, onReasoning, onToken, onToolCall, onToolOutput, onToolResult, sweepRunningTools } from "./events-blocks.mjs"
@@ -99,7 +99,7 @@ function withPool(state, { approvals = null, running = null } = {}) {
   return { ...state, pool: { ...pool, approvals: nextApprovals, approval: nextApprovals.length, running: nextRunning } }
 }
 
-// ─── 纯归约（二十三通道 → 切片；`ev:config` = 纯信号窄口不入归约）────────────
+// ─── 纯归约（二十四通道 → 切片；`ev:config` = 纯信号窄口不入归约）────────────
 
 /** `ev:approval`——待决项入池（载荷白名单 `APPROVAL_KEYS` + 去 `undefined` ⇒ 零新载荷键；条目另携**起源键**
  *  `item.key = ev.key ?? null` —— 内部簿记，消费面读取集零扩）· `pool.approval` = 待决数 ·
@@ -234,6 +234,8 @@ export function reduce(state, ev, now = Date.now()) {
     case "ev:susp": return onSusp(state, ev, now)
     case "ev:digest": return onDigest(state, ev)
     case "ev:timer": return onTimer(state, ev)
+    // 跨实例取件行（行痕族第四员 —— 一类一槽；出站两径 = onTake reject ∥ onBlocked）
+    case "ev:inbox": return onInbox(state, ev)
     case "ev:queue": return onQueue(state, ev)
     case "ev:usage": return onUsage(state, ev)
     case "ev:ledger": return onLedger(state, ev)

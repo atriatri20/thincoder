@@ -138,37 +138,62 @@ export function assertSectionFiveGate(src) {
   if (gap !== null) throw new Error(sectionFiveVerdictBlockError(src, gap))
 }
 
-/**
- * 收口重锚回执段（设计档 §2.11 逐字三行；空行不出）：
- *   `[ledger reanchor] 本批在途行 → 待核销 N 行：#12 「…」；#15 「…」 —— 认领行只有两种终局：…`
- *   `[ledger reanchor] 本批未动行 → 条件 M 行：#16 「…」 —— 这些行不是本批的活（未认领却被绑在本档 = 点火违规）…`
- *   `[ledger reanchor] 本批 N+M 行由重锚默认推进，父侧未显式处置：#12, #15, #16`
- * **建议句贴在自己那一类行上**：第一行只装 `在途` 行、第二行只装 `待讨论` / `待设计` 行——两类的出路相反
- * （认领行只有两种终局；未认领行本来就不该在本批），一句管两类正是要收的病句；汇总行因此只点名、不给建议。
- * 第三行只在 N+M > 0 时出现（父侧全处置过 ⇒ 零该行，回执不噪）。失败 ⇒ 只出失败行（台账零写、冻结照常）。
- * @param {{reanchored:Array, failed:string|null}|null} result — `ledgerReanchorBatch` 返回形
+/** 收口重锚回执段（设计档 §2.17 收口步序 7）——**逐行点名每一枚被结清的行，两种起点各一行**：
+ *  `<#id> 在途 → 待核销 → 已核销` 与 `<#id> 待核销 → 已核销`。后者是「已做完、没结账」的行被静默结清，
+ *  不点名就平账了（口径同 `docs/core/design/LEDGER.md` §3.3 安全阀）。
+ *  台账失败不再走本段：失败 ⇒ 补偿回滚档 + 抛拒（`closeLedgerFailedError` / `closeHalfStateError`），
+ *  收口那次调用根本没有回执。`conditioned` = 本批未动行改挂条件的既有段。
+ * @param {{settled?:Array, conditioned?:Array}|null} result — `ledgerReanchorBatch` 返回形
  */
 export function reanchorReceiptLine(result) {
   if (!result) return ""
-  if (result.failed) return `\n[ledger reanchor] 未重锚：${result.failed}——台账零写；记录冻结照常完成`
   const face = (r) => `#${r.id} 「${r.title}」`
-  const toSettle = (result.reanchored ?? []).filter((r) => r.to === "待核销")
-  const toCondition = (result.reanchored ?? []).filter((r) => r.to === "条件")
-  const lines = []
-  // 建议句各贴其行（§2.11）：第一行只装认领行、第二行只装未认领行，第三行只点名。
-  if (toSettle.length) {
-    lines.push(`\n[ledger reanchor] 本批在途行 → 待核销 ${toSettle.length} 行：${toSettle.map(face).join("；")}` +
-      " —— 认领行只有两种终局：做完的 close 勾销（待核销 → 已核销），判定不做的 update → 已废弃 并写判据（认领即承诺，没有第三种）")
-  }
-  if (toCondition.length) {
-    lines.push(`\n[ledger reanchor] 本批未动行 → 条件 ${toCondition.length} 行：${toCondition.map(face).join("；")}` +
-      " —— 这些行不是本批的活（未认领却被绑在本档 = 点火违规）；已落 trigger = 条件 + 复启句，由下一批接手，本批不再处置")
-  }
-  const all = result.reanchored ?? []
-  if (all.length) {
-    lines.push(`\n[ledger reanchor] 本批 ${all.length} 行由重锚默认推进，父侧未显式处置：${all.map((r) => `#${r.id}`).join(", ")}`)
+  const lines = (result.settled ?? []).map((r) =>
+    `\n[ledger reanchor] ${face(r)} ${r.from === "在途" ? "在途 → 待核销 → 已核销" : "待核销 → 已核销"}`)
+  const conditioned = result.conditioned ?? []
+  if (conditioned.length) {
+    lines.push(`\n[ledger reanchor] 本批未动行 → 条件 ${conditioned.length} 行：${conditioned.map(face).join("；")}` +
+      " —— 已落 trigger = 条件 + 复启句，由下一批接手")
   }
   return lines.join("")
+}
+
+/** 收口台账失败拒文（设计档 §2.17 收口步序 6 第一条串，逐字）：档已回滚到写前字节 ⇒ 可原样重试。 */
+export function closeLedgerFailedError(cause) {
+  return `batch: close failed — 台账事务未提交（${cause}）；批档已回滚到写前字节，可原样重试。Ledger: no committed change from this call (it never reached COMMIT).`
+}
+
+/** 收口补偿也失败拒文（同节第二条串，逐字——**不得复用第一条**：第一条声称已回滚，此时事实相反）：
+ *  批档可能仍为已收口；是否半状态由 `check` 按实际行集判，全归档终态不重试，其余残态先修账再重开。 */
+export function closeHalfStateError(abs, cause, rollbackCause) {
+  return `batch: close failed — 台账事务未提交（${cause}）；批档回滚也失败（${rollbackCause}）——批档可能仍为已收口。` +
+    `Read it with batch({action:"check", path:"${abs}"}); if consistent=false, repair the ledger and reopen before retrying; if consistent=true, the batch is already closed and settled — do not retry.`
+}
+
+/** `[ledger consistency]` 行（设计档 §2.17「暴露面两处」第二条）：`close` ∥ `reopen` ∥ `status` 回执末尾
+ *  **恒带一行**——一致 ⇒ `一致（本批 N 行）`；不一致 ⇒ 逐项点名 + 出路。查询面单源 =
+ *  `batchLedgerConsistency`（本档只格式化，不另判）。 */
+export function consistencyReceiptLine(result) {
+  if (!result) return ""
+  // 读不出（台账库坏 / 打不开）⇒ 如实点名，**不吞成「一致」**：一条说「一致」却根本没读的读数，
+  // 比没有这行更坏——它正是本批要消掉的静默。
+  if (result.error) return `\n[ledger consistency] 读不出（${result.error}）——半状态面不可用，按批档 §1 与台账行各自的状态自行核对`
+  if (result.consistent) return `\n[ledger consistency] 一致（本批 ${result.rows.length} 行）`
+  const items = result.halfStates.map((h) =>
+    `\n  ${h.name}${h.rows.length ? ` #${h.rows.join(" · #")}` : ""}——出路：${h.exit}`)
+  return `\n[ledger consistency] 不一致（本批 ${result.rows.length} 行）：${items.join("")}`
+}
+
+/** `batch({action:"check"})` 回执（设计档 §2.17「暴露面两处」第一条）：逐行打印查询面读数——`record`
+ *  三态、行集逐行 `{id, status, trigger, title}`、档头号集 `{id, inLedger}`、半状态项与出路、`consistent`。只读动作，零写。 */
+export function checkReceipt(result, abs) {
+  const lines = [
+    `batch: ledger consistency — ${abs}`,
+    `  record = ${result.record} · rows = ${result.rows.length} · consistent = ${result.consistent}`,
+    ...result.rows.map((r) => `  #${r.id} ${r.status} 「${r.title}」 · trigger = ${r.trigger ?? "—"}`),
+    ...(result.headerRows ?? []).map((h) => `  headerRows #${h.id} inLedger = ${h.inLedger}`),
+  ]
+  return lines.join("\n") + consistencyReceiptLine(result)
 }
 
 /** 新事理由的 `evidence` 前缀（单源 = `docs/core/design/LEDGER.md` §6.3「参数面」；写入侧由

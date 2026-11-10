@@ -92,7 +92,7 @@
 - 其它板块 / 迁入档 **3**：`core/requirements/DOC-SYSTEM.md` · `core/requirements/PHILOSOPHY.md` · `core/requirements/TWO-REPO-MERGE.md`；
 - 工作流档 **1**：`core/requirements/CORE-UNIFICATION.md`（登记表 · 事实基线 —— 计入实档计数）；
 - 工程模式 V2 面 **11**：`core/requirements/ENGINEERING-MODE-V2.md` + `ENGINEERING-MODE-V2-SPEC-{BATCH-SEGMENT,CHECKLIST-REMOVAL,DELEGATION,LEDGER,MACHINE-CHECK,MANIFEST,PROMPT-PIPELINE,REVIEW-CREDENTIAL,TEST-DISCIPLINE,WRITE-GATE}.md`；
-- 其余机制 / 流程 / 文档面 **18**：`core/requirements/ADVISOR-CONVERGENCE.md` · `core/requirements/AGENT-PARAMS.md` · `core/requirements/BROWSER-TOOL.md` · `core/requirements/DESIGN-TOKEN-SETTLEMENT.md` · `core/requirements/DOC-CHECK.md` · `core/requirements/ENG-TOKEN-BINDING.md` · `core/requirements/ESCALATE.md` · `core/requirements/METHODOLOGY.md` · `core/requirements/MULTI-INSTANCE-COLLAB.md`
+- 其余机制 / 流程 / 文档面 **18**：`core/requirements/ADVISOR-CONVERGENCE.md` · `core/requirements/AGENT-PARAMS.md` · `core/requirements/BROWSER-TOOL.md` · `core/requirements/DESIGN-TOKEN-SETTLEMENT.md` · `core/requirements/DOC-CHECK.md` · `core/requirements/ENG-TOKEN-BINDING.md` · `core/requirements/ESCALATE.md` · `core/standards/METHODOLOGY.md` · `core/requirements/MULTI-INSTANCE-COLLAB.md`
   余 9 档（`NORMAL-MODE` · `PORTABILITY` · `PROJECT` · `SEND-STALL-DISTILL` · `SETTINGS-TOOL` · `STRUCTURE-DEBT` · `TESTING` · `TURN-CAP-CONTINUE` · `VERIFY-REDESIGN`）同住 `core/requirements/`（档名见目录列举）。
 
 **计数核对（按名对账）**：`core/requirements/` 实档 **48** = 本图登记 **48** + **待补登 0**（逐名相等）。

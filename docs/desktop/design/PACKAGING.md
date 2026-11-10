@@ -9,10 +9,10 @@
 | # | 决策 | 理由 |
 |---|---|---|
 | KD-6 | 打包工具 = **`electron-builder`**（**构建期 devDep**，非运行期依赖） | 三目标（win / mac / linux）一套声明 + 产物类型齐全（NSIS / dmg / AppImage / deb）；校验与分发脚本可挂——照扩展端 `package` → `postpackage` → `publish:all` 三段先例（`thincoder-vscode/package.json` 的 `package` → `postpackage` → `publish:all` 三段 script） |
-| KD-64 | **桌面打包分发 · 阶段一**（需求 D32 分期令）：① **作用域**——阶段一 = 打包链（`electron-builder.yml`）+ **Windows NSIS x64 安装包**（签名就绪）+ 官网（thincoder.com）托管直链；阶段二 = 免安装包 ∥ macOS ∥ Linux 产物 ∥ 应用商店（Windows 商店 ∥ Snap）（**自动更新 = 本档 §1 KD-71**）；② **配置契约** = §2.1 单源表（`appId` `com.thincoder.desktop` ∥ `productName` `ThinCoder` ∥ `win.target = nsis`(x64) ∥ `artifactName = ThinCoder-Setup-${version}.${ext}` ∥ `win.icon = build/icon.ico` ∥ asar 缺省 ∥ `files` 白名单（`src/**` + `renderer/**` + `thincoder-desktop/package.json`——app 面；生产依赖（两核包）由 node-module 收集器独立随装——实读 `app-builder-lib/out/fileMatcher.js`「grab only excludes」+ `out/platformPackager.js` 两 matcher 分列）∥ NSIS assisted 四参）；③ **两核包内嵌 = 物化（源树实拷 · 自脚本 `scripts/materialize-deps.mjs`）**——判由 = electron-builder **无 follow-symlinks 面**（junction 经 `lstat` 入账 ≢ directory ⇒ 不入递归队列（`out/util/NodeModuleCopyHelper.js` 的目录判定）；symlink 入 asar = `{type:"link"}` 节点（`out/asar/asarUtil.js` 的 symlink 节点形）⇒ 装后断链）+ §2.3 纪律「打包物化一律源自源树」；④ **构建序列** = 物化（`prepackage` 自跑）→ `npm run package`（`postpackage` = check-dist 闸 → dev 链自愈〔`dev-link --force --win32-only`〕）→ `--check` = 0（终态）；⑤ **签名就绪**（GlobalSign EV 已到位：`CN=Shanghai Xinbo Technology Co., Ltd.` ∥ 指纹 `1B89F84D20EF2BE361D178EE2EA41228879CBE02` ∥ eToken 5300 ∥ SAC 10.9）——`win.signtoolOptions.sign` = **hook**（`scripts/win-sign.mjs`：指纹探测 ⇒ 在位实签（载体二择——详 §2.3；RFC3161 时间戳）∥ 缺席跳过 + 明示——两态同管线）；时间戳 = GlobalSign RFC3161（URL 实现期实测选定；备选 = DigiCert 缺省）；构建期要求 = eToken 5300 + SAC + PIN（构建者在场）；签名态读数 = check-dist 读 PE 证书表（信息行——发布版要求 = 已签）；⑥ **图标** = `build/icon.ico`（多尺寸 16–256）· 生成器 `scripts/make-icon.mjs`（零依赖 ∥ 确定性 ∥ `</>` + `#2563eb` = 站点 favicon 同形）；⑦ **版本源** = `thincoder-desktop/package.json` `version` 单源（桌面号段 · 首版 **0.10.1**——发布窗定号）；⑧ **check-dist 续填** = §2.5 断言表（安装包名形 × 版本 ∥ 预载 ∥ 渲染面 ∥ 签名态）；⑨ **官网托管** = 键形 `downloads/ThinCoder-Setup-<号>.exe` + 独立上传小件（站点仓；不并 `thincoder.com/scripts/deploy-oss.mjs`：全量遍历 + prune 误删面（`thincoder.com/scripts/deploy-oss.mjs` 的 prune 段）⇒ 附带 `downloads/` 前缀豁免加固）；⑩ **发布线** = `docs/RELEASE.md` 阶段 3b（构建 → 产物校验 → 上传 → 官网挂载；发布动作 = 用户门）；**边界** = 更新通道扩展（beta ∥ 回滚）= 不做（自动更新 = **KD-71**）∥ 阶段二余项零触 ∥ 站点仓零写（规格 = **KD-72**——§2.9） | 需求 D32 分期令；机制实读 = `app-builder-lib`（v26.15.3 在盘）四档；VSC 先例对位 = `docs/RELEASE.md` §5.5（分器分流：vsce = link + follow ∥ electron-builder = 物化） |
-| KD-71 | **桌面自动更新（阶段二）= electron-updater + generic feed（三件面同批落）**：① **应用侧**——`thincoder-desktop/src/main/update.mjs`（已落 · 策略面零 `electron` ∥ 零 `electron-updater` 顶层 import ∥ 注入缝——先例 = `thincoder-desktop/src/main/heap-watch.mjs`）+ `main.mjs` 装配（`createRequire` 取 `autoUpdater`）；**行为合同** = 启动自检（`app.whenReady()` 后 10s 一次/会话；门 = `isPackaged ∧ 非 --smoke`）→ 静默下载（`autoDownload = true` 显式）→ 提示重启（通知一次/版本 + 帮助菜单「检查更新…」状态机——§2.8.1 表）；安装 = `autoInstallOnAppQuit = true`（退出即安静安装）∥ 菜单点按 = 确认框 ⇒ `quitAndInstall(true, true)`（安静 + 装后重拉——6.8.9 源读在册）；**零新事件通道**（主进程原生面——`onNative` 缝 +1〔`update` 第四项〕；`ev:menu` 六值 ∥ `EVENT_CHANNELS` **25** ∥ 白名单 **54** 零动；渲染面零接线）；② **构建侧**——`publish` = `{ provider: generic, url: https://thincoder.com/downloads/ }`（§2.1 行）；生成物 = 「构建生成的更新索引」（落 dist 根）+ 「构建生成的更新器配置」（随 `resources/`——源读在册——§2.8.2）；check-dist +4 断言；依赖 = `electron-updater ^6.8.9` 入 `dependencies`（**首个第三方运行依赖**——声明面三处收正）；③ **站点侧** = feed 三件（`thincoder.com/downloads/` 下：exe ∥ blockmap ∥ 「构建生成的更新索引」——§2.8.3；上传序 exe→blockmap→更新索引 ∥ prune 豁免 ∥ 版本四点对盘）；**边界** = 单通道（beta ∥ 回滚 ∥ 降级不做）∥ 周期拍不做 ∥ 渲染面更新面不做（须新通道）∥ 发布动作 = 用户门 | （用户「开始」令 = 采用）；可行性 = 标准件（electron-updater 6.8.9 ∥ v6.8.9 源读）；触发面 = D36 菜单批「检查更新（归 #810）」挂点承接 |
-| KD-72 | **官网桌面面（阶段二）= 站点仓页集扩建 + 发布随动（一次性规格）**：① **页集**——`thincoder.com/www/desktop.html`（桌面新页，照 `thincoder.com/www/cli.html`/`thincoder.com/www/vscode.html` 先例，§2.9.2 章节规格）∥ `thincoder.com/www/download.html` 桌面卡置首（直链安装包 + 版本 ∥ 系统要求行 ∥ 更新句——§2.9.3）∥ `thincoder.com/www/index.html`（三条入口 ∥ meta——§2.9.4）∥ `thincoder.com/www/about.html`（版本行 + 桌面——§2.9.5）∥ `thincoder.com/www/changelog.html`（桌面节——首发 v0.10.1——§2.9.6）∥ 导航全站同拍（桌面项在 VS Code 后）∥ `sitemap.xml` ∥ **零图**（截图位 = 不设——沿全站零 `<img>` 先例）；② **脚本**——`thincoder.com/scripts/gen-changelog.mjs` desktop 分支 ∥ `thincoder.com/scripts/deploy-oss.mjs` prune 豁免 ∥ `thincoder.com/scripts/upload-download.mjs` 新档（feed 上传——§2.9.7）；③ **版本面三处**（about ∥ download ∥ changelog 页头）= 号随发布（`docs/RELEASE.md` §6.1/§6.5 口径——桌面 = 源树）；**执行 = 父侧轮**（站点仓独立仓——子代理零写；本档 = 规格单源）；**边界** = 零样式 ∕ 零设计体系改动（只加内容面与既有类）∥ 零构建保持 ∥ `thincoder.com/www/install.html` 主体不做（桌面安装步骤归 desktop 页——阶段一边界保持）∥ Linux ∕ mac 面不做 | （用户「网站要更新加上桌面版的介绍」）；形态 = 照 cli/vscode 先例（用户「开始」= 采用）；与 #810 咬合面 = 更新 feed 托管（§2.8.3） |
-| KD-73 | **桌面 Linux 产物（AppImage ∥ deb · 构建机链 · 更新面分流）**（需求 D42）：① **产物与目标**——`AppImage`（免安装单文件——主 ∥ 自动更新单元）+ `deb`（Debian/Ubuntu 系——手动升级单元）双目标 × x64；`artifactName` 承全局模板（`ThinCoder-Setup-${version}.${ext}`——首跑实产在册，零改）；② **构建通道 = 内网构建机**（代号 ha-proxy · `10.0.0.5` · Ubuntu 22.04.5 · x86_64 · 首跑全链实证——配方 = §2.11.1；**备用** = GitHub Actions（`.github/workflows/linux-build.yml` 在册——org 账单锁未解，零动）；WSL 两代判死）；③ **仓内修复三处**（现状 ⇒ 修法 ⇒ 判据 = §2.11.2 表 3）：**图标**（Linux 拒 `.ico` ⇒ 入库 `build/icon.png`（256×256 · 2872 B——`build/icon.ico` 第 4 帧字节切片 · 零转换）+ `linux.icon` 显式）∥ **deb 元数据**（fpm 要 homepage + author.email ⇒ `thincoder-desktop/package.json` 补 `homepage` ∥ `author`——用户定值）∥ **feed 分流**（「构建生成的 Linux 更新索引」 不得含 deb 条目 ⇒ `deb.publish: null`——deb = 手动升级单元，不产 update-info）；④ **更新面分流**（AppImage 跟 D40：feed 单条目 ⇒ `AppImageUpdater` 拾取；deb = **无自动更新**——双保险：feed 无 deb 条目 + 武装门扩「Linux 仅 AppImage 运行（`APPIMAGE` 在）」；上游事实在案：`electron-builder` 仍向 deb 资源面写 `package-type: deb` ∥ 「构建生成的更新器配置」（electron-builder 的 PublishManager 的目标级 publish 段——该径不过）⇒ 分流真值由我方门承担）；⑤ **产物校验** = check-dist **Linux 分支**（+9 断言——§2.11.3；平台分支同脚本）；⑥ **验收**（可自动面 = check-dist 绿 + AppImage 结构提取读数；人工面 = 用户真机走查——**WSLg 面不可行**〔WSL2 判死〕⇒ 重裁 = §2.11.3）；⑦ **站点与发布**（feed 上传序 = AppImage → deb → 「构建生成的 Linux 更新索引」 末传 ∥ `downloads/` prune 豁免沿用 ∥ 站点区块规格 = §2.11.5；发布线 = `docs/RELEASE.md` §5.6 Linux 分支）；⑧ **取回落位** = `D:\WSL\artifacts\<版本>\`（版本子目录——消 「构建生成的 Linux 更新索引」 跨版本覆盖范围）；**边界** = rpm ∥ Snap ∥ macOS 不做（D42）∥ 构建机图形冒烟（xvfb/GUI 栈）不做 ∥ CI 矩阵待账单锁解 ∥ 站点执行 = 父侧轮 ∥ Linux 签名面不做（两产物均不签） | 需求 D42 + 首跑三缺项 + 实产读数；机制实读 = `app-builder-lib@26.15.3` ∥ `electron-updater@6.8.9`（在盘）八处（electron-builder 的 FpmTarget 的 deb 资源面段 ∥ electron-builder 的 PublishManager 的目标级 publish 两段 ∥ electron-builder 的 AppImageTarget 的 update-info 段 ∥ electron-builder 的 platformPackager 的目标序段 ∥ electron-builder 的 LinuxTargetHelper 的 category 与 syncDesktopName 两段 ∥ electron-builder 的 iconConverter 的候选发现段）；拾取面 = electron-updater 的 Provider 的 feed 拾取段） |
+| KD-64 | **桌面打包分发 · 阶段一**（需求 D32 分期令）：① **作用域**——阶段一 = 打包链（`electron-builder.yml`）+ **Windows NSIS x64 安装包**（签名就绪）+ 官网（thincoder.com）托管直链；阶段二 = 免安装包 ∥ macOS ∥ Linux 产物 ∥ 应用商店（Windows 商店 ∥ Snap）（**自动更新 = 本档 §1 KD-71**）；② **配置契约** = §2.1 单源表（`appId` `com.thincoder.desktop` ∥ `productName` `ThinCoder` ∥ `win.target = nsis`(x64) ∥ `artifactName = ThinCoder-Setup-${version}.${ext}` ∥ `win.icon` = `thincoder-desktop/build/icon.ico` ∥ asar 缺省 ∥ `files` 白名单（`src/**` + `renderer/**` + `thincoder-desktop/package.json`——app 面；生产依赖（两核包）由 node-module 收集器独立随装——实读 `app-builder-lib` 的 fileMatcher 模块「grab only excludes」+ `platformPackager` 模块两 matcher 分列）∥ NSIS assisted 四参）；③ **两核包内嵌 = 物化（源树实拷 · 自脚本 `scripts/materialize-deps.mjs`）**——判由 = electron-builder **无 follow-symlinks 面**（junction 经 `lstat` 入账 ≢ directory ⇒ 不入递归队列（app-builder-lib 的 NodeModuleCopyHelper 模块目录判定）；symlink 入 asar = `{type:"link"}` 节点（app-builder-lib 的 asarUtil 模块 symlink 节点形）⇒ 装后断链）+ §2.3 纪律「打包物化一律源自源树」；④ **构建序列** = 物化（`prepackage` 自跑）→ `npm run package`（`postpackage` = check-dist 闸 → dev 链自愈〔`dev-link --force --win32-only`〕）→ `--check` = 0（终态）；⑤ **签名就绪**（GlobalSign EV 已到位：`CN=Shanghai Xinbo Technology Co., Ltd.` ∥ 指纹 `1B89F84D20EF2BE361D178EE2EA41228879CBE02` ∥ eToken 5300 ∥ SAC 10.9）——`win.signtoolOptions.sign` = **hook**（`scripts/win-sign.mjs`：指纹探测 ⇒ 在位实签（载体二择——详 §2.3；RFC3161 时间戳）∥ 缺席跳过 + 明示——两态同管线）；时间戳 = GlobalSign RFC3161（URL 实现期实测选定；备选 = DigiCert 缺省）；构建期要求 = eToken 5300 + SAC + PIN（构建者在场）；签名态读数 = check-dist 读 PE 证书表（信息行——发布版要求 = 已签）；⑥ **图标** = `thincoder-desktop/build/icon.ico`（多尺寸 16–256）· 生成器 `scripts/make-icon.mjs`（零依赖 ∥ 确定性 ∥ `</>` + `#2563eb` = 站点 favicon 同形）；⑦ **版本源** = `thincoder-desktop/package.json` `version` 单源（桌面号段 · 首版 **0.10.1**——发布窗定号）；⑧ **check-dist 续填** = §2.5 断言表（安装包名形 × 版本 ∥ 预载 ∥ 渲染面 ∥ 签名态）；⑨ **官网托管** = 键形 `downloads/ThinCoder-Setup-<号>.exe` + 独立上传小件（站点仓；不并 `thincoder.com/scripts/deploy-oss.mjs`：全量遍历 + prune 误删面（`thincoder.com/scripts/deploy-oss.mjs` 的 prune 段）⇒ 附带 `downloads/` 前缀豁免加固）；⑩ **发布线** = `docs/RELEASE.md` 阶段 3b（构建 → 产物校验 → 上传 → 官网挂载；发布动作 = 用户门）；**边界** = 更新通道扩展（beta ∥ 回滚）= 不做（自动更新 = **KD-71**）∥ 阶段二余项零触 ∥ 站点仓零写（规格 = **KD-72**——§2.9） | 需求 D32 分期令；机制实读 = `app-builder-lib`（v26.15.3 在盘）四档；VSC 先例对位 = `docs/RELEASE.md` §5.5（分器分流：vsce = link + follow ∥ electron-builder = 物化） |
+| KD-71 | **桌面自动更新（阶段二）= electron-updater + generic feed（三件面同批落）**：① **应用侧**——`thincoder-desktop/src/main/update.mjs`（已落 · 策略面零 `electron` ∥ 零 `electron-updater` 顶层 import ∥ 注入缝——先例 = `thincoder-desktop/src/main/heap-watch.mjs`）+ `main.mjs` 装配（`createRequire` 取 `autoUpdater`）；**行为合同** = 启动自检（`app.whenReady()` 后 10s 一次/会话；门 = `isPackaged ∧ 非 --smoke`）→ 静默下载（`autoDownload = true` 显式）→ 提示重启（通知一次/版本 + 帮助菜单「检查更新…」状态机——§2.8.1 表）；安装 = `autoInstallOnAppQuit = true`（退出即安静安装）∥ 菜单点按 = 确认框 ⇒ `quitAndInstall(true, true)`（安静 + 装后重拉——6.8.9 源读在册）；**零新事件通道**（主进程原生面——`onNative` 缝 +1〔`update` 第四项〕；`ev:menu` 六值 ∥ `EVENT_CHANNELS` ∥ 白名单零动；渲染面零接线）；② **构建侧**——`publish` = `{ provider: generic, url: https://thincoder.com/downloads/ }`（§2.1 行）；生成物 = 「构建生成的更新索引」（落 dist 根）+ 「构建生成的更新器配置」（随 `resources/`——源读在册——§2.8.2）；check-dist +4 断言；依赖 = `electron-updater ^6.8.9` 入 `dependencies`（**首个第三方运行依赖**——声明面三处收正）；③ **站点侧** = feed 三件（`thincoder.com/downloads/` 下：exe ∥ blockmap ∥ 「构建生成的更新索引」——§2.8.3；上传序 exe→blockmap→更新索引 ∥ prune 豁免 ∥ 版本四点对盘）；**边界** = 单通道（beta ∥ 回滚 ∥ 降级不做）∥ 周期拍不做 ∥ 渲染面更新面不做（须新通道）∥ 发布动作 = 用户门 | （用户「开始」令 = 采用）；可行性 = 标准件（electron-updater 6.8.9 ∥ v6.8.9 源读）；触发面 = D36 菜单批「检查更新（归 #810）」挂点承接 |
+| KD-72 | **官网桌面面（阶段二）= 站点仓页集扩建 + 发布随动（一次性规格）**：① **页集**——`thincoder.com/www/desktop.html`（桌面新页，照 `thincoder.com/www/cli.html`/`thincoder.com/www/vscode.html` 先例，§2.9.2 章节规格）∥ `thincoder.com/www/download.html` 桌面卡置首（直链安装包 + 版本 ∥ 系统要求行 ∥ 更新句——§2.9.3）∥ `thincoder.com/www/index.html`（三条入口 ∥ meta——§2.9.4）∥ `thincoder.com/www/about.html`（版本行 + 桌面——§2.9.5）∥ `thincoder.com/www/changelog.html`（桌面节——首发 v0.10.1——§2.9.6）∥ 导航全站同拍（桌面项在 VS Code 后）∥ `thincoder.com/www/sitemap.xml` ∥ **零图**（截图位 = 不设——沿全站零 `<img>` 先例）；② **脚本**——`thincoder.com/scripts/gen-changelog.mjs` desktop 分支 ∥ `thincoder.com/scripts/deploy-oss.mjs` prune 豁免 ∥ `thincoder.com/scripts/upload-download.mjs` 新档（feed 上传——§2.9.7）；③ **版本面三处**（about ∥ download ∥ changelog 页头）= 号随发布（`docs/RELEASE.md` §6.1/§6.5 口径——桌面 = 源树）；**执行 = 父侧轮**（站点仓独立仓——子代理零写；本档 = 规格单源）；**边界** = 零样式 ∕ 零设计体系改动（只加内容面与既有类）∥ 零构建保持 ∥ `thincoder.com/www/install.html` 主体不做（桌面安装步骤归 desktop 页——阶段一边界保持）∥ Linux ∕ mac 面不做 | （用户「网站要更新加上桌面版的介绍」）；形态 = 照 cli/vscode 先例（用户「开始」= 采用）；与 #810 咬合面 = 更新 feed 托管（§2.8.3） |
+| KD-73 | **桌面 Linux 产物（AppImage ∥ deb · 构建机链 · 更新面分流）**（需求 D42）：① **产物与目标**——`AppImage`（免安装单文件——主 ∥ 自动更新单元）+ `deb`（Debian/Ubuntu 系——手动升级单元）双目标 × x64；`artifactName` 承全局模板（`ThinCoder-Setup-${version}.${ext}`——首跑实产在册，零改）；② **构建通道 = 内网构建机**（代号 ha-proxy · `10.0.0.5` · Ubuntu 22.04.5 · x86_64 · 首跑全链实证——配方 = §2.11.1；**备用** = GitHub Actions（`.github/workflows/linux-build.yml` 在册——org 账单锁未解，零动）；WSL 两代判死）；③ **仓内修复三处**（现状 ⇒ 修法 ⇒ 判据 = §2.11.2 表 3）：**图标**（Linux 拒 `.ico` ⇒ 入库 `thincoder-desktop/build/icon.png`（256×256——`thincoder-desktop/build/icon.ico` 第 4 帧字节切片 · 零转换）+ `linux.icon` 显式）∥ **deb 元数据**（fpm 要 homepage + author.email ⇒ `thincoder-desktop/package.json` 补 `homepage` ∥ `author`——用户定值）∥ **feed 分流**（「构建生成的 Linux 更新索引」 不得含 deb 条目 ⇒ `deb.publish: null`——deb = 手动升级单元，不产 update-info）；④ **更新面分流**（AppImage 跟 D40：feed 单条目 ⇒ `AppImageUpdater` 拾取；deb = **无自动更新**——双保险：feed 无 deb 条目 + 武装门扩「Linux 仅 AppImage 运行（`APPIMAGE` 在）」；上游事实在案：`electron-builder` 仍向 deb 资源面写 `package-type: deb` ∥ 「构建生成的更新器配置」（electron-builder 的 PublishManager 的目标级 publish 段——该径不过）⇒ 分流真值由我方门承担）；⑤ **产物校验** = check-dist **Linux 分支**（+9 断言——§2.11.3；平台分支同脚本）；⑥ **验收**（可自动面 = check-dist 绿 + AppImage 结构提取读数；人工面 = 用户真机走查——**WSLg 面不可行**〔WSL2 判死〕⇒ 重裁 = §2.11.3）；⑦ **站点与发布**（feed 上传序 = AppImage → deb → 「构建生成的 Linux 更新索引」 末传 ∥ `downloads/` prune 豁免沿用 ∥ 站点区块规格 = §2.11.5；发布线 = `docs/RELEASE.md` §5.6 Linux 分支）；⑧ **取回落位** = `D:\WSL\artifacts\<版本>\`（版本子目录——消 「构建生成的 Linux 更新索引」 跨版本覆盖范围）；**边界** = rpm ∥ Snap ∥ macOS 不做（D42）∥ 构建机图形冒烟（xvfb/GUI 栈）不做 ∥ CI 矩阵待账单锁解 ∥ 站点执行 = 父侧轮 ∥ Linux 签名面不做（两产物均不签） | 需求 D42 + 首跑三缺项 + 实产读数；机制实读 = `app-builder-lib@26.15.3` ∥ `electron-updater@6.8.9`（在盘）八处（electron-builder 的 FpmTarget 的 deb 资源面段 ∥ electron-builder 的 PublishManager 的目标级 publish 两段 ∥ electron-builder 的 AppImageTarget 的 update-info 段 ∥ electron-builder 的 platformPackager 的目标序段 ∥ electron-builder 的 LinuxTargetHelper 的 category 与 syncDesktopName 两段 ∥ electron-builder 的 iconConverter 的候选发现段）；拾取面 = electron-updater 的 Provider 的 feed 拾取段） |
 
 ## 2. 打包链与发行面（需求卷 D12 ∕ D32）
 
@@ -26,7 +26,7 @@
 | `productName` | `ThinCoder` | 安装目录 ∕ 快捷方式 ∕ 卸载项显示名 |
 | `directories.output` | `dist`（缺省） | 产物落点（check-dist 读面） |
 | `win.target` | `nsis`（`arch: ["x64"]`） | 阶段一单目标；免安装 zip = 阶段二 |
-| `win.icon` | `build/icon.ico` | 图标资产（§2.4） |
+| `win.icon` | `thincoder-desktop/build/icon.ico` | 图标资产（§2.4） |
 | `artifactName` | `ThinCoder-Setup-${version}.${ext}` | 产物名携版本（§2.5 断言） |
 | `asar` | `true`（缺省保持） | 应用包 = `dist/win-unpacked/resources/app.asar`（核包断言） |
 | `files` | `["src/**", "renderer/**", "thincoder-desktop/package.json"]` | 显式白名单（`scripts/**` ∥ `tools/**` ∥ `test/**` 不入包）；**生产依赖独立随装**（实读 electron-builder 的 fileMatcher——node-module matcher 只取 `!` 排除、不受 include 白名单约束） |
@@ -42,8 +42,8 @@
 
 ### 2.2 构建序列（发布窗内）
 
-1. **物化**：`node scripts/materialize-deps.mjs`——两核包 junction ⇒ 真目录（**源树实拷**：`../thincoder-core` ∥ `../thincoder-render-core` 直读；排 `test/**` ∥ `.thincoder/**`；`core` 携 `prompts/` 16 + `tool-docs/` 54）；`prepackage` = 自动前置（`npm run package` 一条链自足）
-2. **打包 + 校验**：`ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ npm run package`（`postpackage` 自动跑 check-dist——闸；**产物面 = 安装包 + `.blockmap` + 「构建生成的更新索引」**（update-info——§2.8.2）∥ `resources/app-update.yml` 随包）
+1. **物化**：`node scripts/materialize-deps.mjs`——两核包 junction ⇒ 真目录（**源树实拷**：`../thincoder-core` ∥ `../thincoder-render-core` 直读；排 `test/**` ∥ `.thincoder/**`；`core` 携 `prompts/` ∥ `tool-docs/` 全量）；`prepackage` = 自动前置（`npm run package` 一条链自足）
+2. **打包 + 校验**：`ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ npm run package`（`postpackage` 自动跑 check-dist——闸；**产物面 = 安装包 + `.blockmap` + 「构建生成的更新索引」**（update-info——§2.8.2）∥ 「构建生成的更新器配置」 随包（`win-unpacked/resources/` 下））
 3. **恢复 dev 链**（收窗）：自愈已入链（`postpackage` 第三腿 = `node ../scripts/dev-link.mjs --force --win32-only`——win32 面；构建机 Linux 本机 no-op）；手跑 = 复判 ∥ 兜底：`node scripts/dev-link.mjs --check` = 0（终态判据）
 
 （签名 = 内联（hook 自动）；证书在位 ⇒ 实签 ∥ 缺席 ⇒ 跳过 + 明示。物化后忘恢复 = dev 链 `materialized` 态——`--force` 恢复，窗口内预期态。`publish`（§2.1）——generic 契约 ⇒ update-info（「构建生成的更新索引」）∥ 「构建生成的更新器配置」 随构建生成（§2.8.2）；官网上传 = 站点小件（§2.8.3）——链完整至 `postpackage` 闸。）
@@ -85,7 +85,7 @@
 | `signtool` 缺席（备载体不可得） | Windows SDK 未装 ∥ `winCodeSign` 缓存未下载 | **回退主载体**（PowerShell `Set-AuthenticodeSignature`——零依赖 ∥ 本机已证）——不回退为「跳过」 |
 | Electron ∥ NSIS 二进制下载失败 | 网络 | 镜像：`ELECTRON_MIRROR` ∥ `ELECTRON_BUILDER_BINARIES_MIRROR`（实读 electron-builder 的 electronGet 环境变量族） |
 | dev 链 `materialized` 残留 | 物化后未恢复（构建中止——`postpackage` 未跑完） | 自愈已入链（`postpackage` 第三腿）；中止径手跑 = `node scripts/dev-link.mjs --force` → `--check` = 0 |
-| nsis 尾段崩溃：`Cannot read properties of null (reading 'channel')`（`updateInfoBuilder.ts`） | `publish` **缺省（undefined）** ⇒ v26 update-info 路径 `computeChannelNames` 读 null——整链非零退出 ⇒ `postpackage` 闸被截断未跑 | 显式 `publish` 契约（§2.1——generic provider 形；**须显式**：undefined 即崩；`null` = 官方「don't publish」形——二择皆显式）⇒ update-info ∥ 「构建生成的更新器配置」 路径按契约启停；修后链完整过闸 |
+| nsis 尾段崩溃：`Cannot read properties of null (reading 'channel')`（electron-builder 的 update-info 构建段） | `publish` **缺省（undefined）** ⇒ v26 update-info 路径 `computeChannelNames` 读 null——整链非零退出 ⇒ `postpackage` 闸被截断未跑 | 显式 `publish` 契约（§2.1——generic provider 形；**须显式**：undefined 即崩；`null` = 官方「don't publish」形——二择皆显式）⇒ update-info ∥ 「构建生成的更新器配置」 路径按契约启停；修后链完整过闸 |
 
 ### 2.7 其余面（阶段一）
 
@@ -97,7 +97,7 @@
 | 验证（三层） | ① **产物存在性**：check-dist（§2.5——机检闸）；② **产物可启**：真机冒烟（装 → 启 → 卸——§5 **T-DSK55**；CI 面随三平台 CI 批）；③ **三端共享契约零回归**：与另两端互读互写同一份配置与会话（需求档 A2） |
 | CI | `.github/workflows/test.yml` 增平台矩阵（需求档 A3：本机 Windows 实跑，另两平台以 CI 为验证——随阶段二） |
 | 版本与升级 | 版本号 = CalVer（各端同制，`docs/RELEASE.md` §4——桌面 = 新号段 · 首版 `0.10.1`）；**升级路径 = 自动更新（主——§2.8）∥ 手动下载覆盖（兜底——两径并存）**；产物名 = §2.1 `artifactName` |
-| 依赖镜像纪律（补构建工具链镜像） | **依赖安装 ∕ 打包带镜像**：`ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`（Electron 二进制——命令形 = `ELECTRON_MIRROR=… npm install` ∕ `ELECTRON_MIRROR=… npm run package`）＋ **`ELECTRON_BUILDER_BINARIES_MIRROR`**（NSIS 等构建工具——实测选定 = `https://npmmirror.com/mirrors/electron-builder-binaries/`；环境变量族实读 = `app-builder-lib/out/util/electronGet.js` 的镜像环境变量段）；同指 = `thincoder-desktop/scripts/check-dist.mjs` 头注（指向本节） |
+| 依赖镜像纪律（补构建工具链镜像） | **依赖安装 ∕ 打包带镜像**：`ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`（Electron 二进制——命令形 = `ELECTRON_MIRROR=… npm install` ∕ `ELECTRON_MIRROR=… npm run package`）＋ **`ELECTRON_BUILDER_BINARIES_MIRROR`**（NSIS 等构建工具——实测选定 = `https://npmmirror.com/mirrors/electron-builder-binaries/`；环境变量族实读 = `app-builder-lib` 的 electronGet 模块镜像环境变量段）；同指 = `thincoder-desktop/scripts/check-dist.mjs` 头注（指向本节） |
 
 ### 2.8 自动更新（阶段二 · electron-updater ∕ generic feed）
 
@@ -129,11 +129,11 @@
   `checking` ∥ `downloading` 态点按无效（disabled——库内重入返在途 promise，双保险）。
   **下载期失败（含手动检查转入下载者）** = **保留全静默**（与自动面 fail-soft 同款——不弹框 ∥ 状态回 `idle`；零 nag ∥ 可再点菜单重试 ∥ 自动重试 = 下次启动面）——**有意为之**：对话框仅覆检查期 `error`。
 - **提示重启（两原生面 · 零新事件通道）**：① **通知**——`update-downloaded` 时一次/版本（native `Notification`；句 = 「更新已就绪——重启后自动安装（v<号>）」；点击 ⇒ 聚焦主窗（reveal 先例）——**不直接安装**：安装入口唯一 = 菜单项）；② **菜单项**——帮助组「检查更新…」（状态机上行；状态迁移 ⇒ `refreshMenu()` 重建）。
-  **零新通道（判据）**：`ev:menu` 动作集六值零动 ∥ `EVENT_CHANNELS` **25** 零动 ∥ preload 白名单 **54** 零动 ∥ 渲染面零接线（`onNative` 缝 **+1**——`update` = 宿主自办第四项）。
+  **零新通道（判据）**：`ev:menu` 动作集六值零动 ∥ `EVENT_CHANNELS` 零动 ∥ preload 白名单零动 ∥ 渲染面零接线（`onNative` 缝 **+1**——`update` = 宿主自办第四项）。
 - **安装时机（两径）**：① `autoInstallOnAppQuit = true`（显式落定）——**正常退出即安静安装**（下次启动 = 新版本）；
   ② 菜单点按径 = 原生确认框（「重启并安装更新（v<号>）？进行中的任务将被中断。」∥ 按钮「重启安装」/「取消」）⇒ `quitAndInstall(true, true)`（**安静安装 + 装后重拉新版本**——v6.8.9 源读：`isSilent ⇒ /S` ∥ `isForceRunAfter ⇒ --force-run`）。
 - **失败面（自动面 · fail-soft）**：全静默——stderr 详情行 + 状态回 `idle`（**零 nag ∥ 零自动重试 ∥ 零弹框**）；更新面失败不影响应用使用；「重启安装未起」兜底 = 下次退出 `onQuit` 径再试（真机用例 = T-DSK60）。
-- **词面**：菜单四项（`checkUpdate` ∥ `checkingUpdate` ∥ `downloadingUpdate` ∥ `restartUpdate`）+ 对话框/通知七项——值住 `menu-words.mjs`（扩键 32 ⇒ 43——zh/en 对照；消费 = 装配面注入；该档宪章句随拍扩为「应用菜单与更新面词表」）。
+- **词面**：菜单四项（`checkUpdate` ∥ `checkingUpdate` ∥ `downloadingUpdate` ∥ `restartUpdate`）+ 对话框与通知词——值住 `menu-words.mjs`（词键随拍扩——zh/en 对照；消费 = 装配面注入；该档宪章句随拍扩为「应用菜单与更新面词表」）。
 - **边界（不做）**：周期拍 ∥ beta/alpha 通道 ∥ 回滚 ∥ 降级安装 ∥ 更新历史 UI ∥ 应用内进度 UI ∥ 渲染面更新面（须新通道）∥ 更新设置开关（零配置键——单行为）。
 
 #### 2.8.2 构建侧（publish 契约 ∥ 生成物 ∥ 断言 ∥ 依赖）
@@ -166,8 +166,8 @@
 **2.9.1 页集与导航（触点全集）**
 
 - 新页 `thincoder.com/www/desktop.html`（桌面专页，照 `thincoder.com/www/cli.html`/`thincoder.com/www/vscode.html` 先例）：结构 = nav（同站）→ `page-header`（h1「桌面版指南」+ 副句）→ `main#main.content` 六节（§2.9.2）。
-- 导航全站同拍（**11 档** = 10 现行页 + 新页）：每页 `nav-links` 增一行 `<li><a href="thincoder.com/www/desktop.html">桌面</a></li>`——插位 = 「VS Code」行后；`thincoder.com/www/desktop.html` 本页项携 `class="active"`。
-- `www/sitemap.xml`：`<url><loc>https://thincoder.com/desktop.html</loc></url>` 增行（`thincoder.com/www/vscode.html` 行后——与导航同序）。
+- 导航全站同拍（**站点仓 `www/` 的每一页** + 新页）：每页 `nav-links` 增一行 `<li><a href="thincoder.com/www/desktop.html">桌面</a></li>`——插位 = 「VS Code」行后；`thincoder.com/www/desktop.html` 本页项携 `class="active"`。
+- `thincoder.com/www/sitemap.xml`：`<url><loc>https://thincoder.com/desktop.html</loc></url>` 增行（`thincoder.com/www/vscode.html` 行后——与导航同序）。
 - **零图**（沿全站零 `<img>` 先例）；截图位 = **不设**（如后续要点图：唯一预留位 = `page-header` 下全宽单幅——非本轮范围）。
 
 **2.9.2 thincoder.com/www/desktop.html 章节（六节 · 文案要点）**
@@ -271,7 +271,7 @@
 | `author` | `liwei <liwei@thincoder.com> (上海新舶)` | fpm 硬前置（`author.email` 缺 ⇒ 构建失败——electron-builder 的 FpmTarget 的 author 前置 ∥ electron-builder 的 errorMessages 的缺项文案）；deb `Maintainer` 派生 = `liwei <liwei@thincoder.com>`（company 后缀不入派生） |
 | `desktopName` | `thincoder.desktop` | 窗口关联（Electron `app_id` ∥ WM_CLASS 源——与 `linux.syncDesktopName: true` 成对；electron-builder 的 scheme 描述 syncDesktopName 描述） |
 
-**（c）图标资产**：`build/icon.png` 入库——256×256 · 2872 B · `build/icon.ico` **第 4 帧字节切片**（零转换；本档实核：`icon.ico` 4 帧（16 ∥ 32 ∥ 48 ∥ 256），第 4 帧 offset 1279 · size 2872——与提取件逐字节相等，sha256 `08fe76b9…b57d`）；生成物入库形同 `build/icon.ico` 先例；**漂移检测** = 单元测试档断言「PNG ≡ ICO 第 4 帧」。
+**（c）图标资产**：`thincoder-desktop/build/icon.png` 入库——256×256 · `thincoder-desktop/build/icon.ico` **第 4 帧字节切片**（零转换；本档实核：该 ico 4 帧（16 ∥ 32 ∥ 48 ∥ 256），第 4 帧与提取件逐字节相等）；生成物入库形同 `thincoder-desktop/build/icon.ico` 先例；**漂移检测** = 单元测试档断言「PNG ≡ ICO 第 4 帧」。
 
 **2.11.3 产物校验（check-dist Linux 分支）与验收**
 
@@ -280,7 +280,7 @@
   ⑤ `ThinCoder-Setup-<源版本>.AppImage` 在（名形 × 版本逐字）；⑥ `ThinCoder-Setup-<源版本>.deb` 在；⑦ 「构建生成的更新器配置」（`linux-unpacked/resources/` 下）在 ∧ `provider: generic` ∧ `url` = 契约值；
   ⑧ 「构建生成的 Linux 更新索引」 在 ∧ `version` = 源 ∧ `files[0].url` = AppImage 名（逐字）∧ `files` 恰一条 ∧ `path` = 同名 AppImage ∧ `sha512` = AppImage 实算（基 64 填充不敏感）**∧ 全条目不携 `.deb`**（feed 分流判据）；
   ⑨ dist 残留扫（`.AppImage` ∥ `.deb` 名携非源版本 ⇒ 红——扩现行 guard）。
-  （行数：225 ⇒ 339——**500 顾问线内 ⇒ 保留单档**（500/800 口径更换批）：① 各分支共享同一产物读面与同一 fail-closed 闸——分档增跨档间接；② 距 800 硬限余量充足；③ 先例 = `src/main/window.mjs`（336——保留形）。）
+  （**500 顾问线内 ⇒ 保留单档**（500/800 口径更换批）：① 各分支共享同一产物读面与同一 fail-closed 闸——分档增跨档间接；② 距 800 硬限余量充足；③ 先例 = `thincoder-desktop/src/main/window.mjs`（保留形）。）
 - **构建机命令级判据（check-dist 外——不可纯读面）**：`dpkg-deb -f dist/ThinCoder-Setup-<号>.deb Maintainer` = `liwei <liwei@thincoder.com>` ∧ `Homepage` = `https://thincoder.com`（deb 控制段 = xz 压缩——node 纯读不可及 ⇒ 住构建机清单；读数入 §5）。
 - **AppImage 结构提取读数（可自动面 ∥ 构建机）**：`./ThinCoder-Setup-<号>.AppImage --appimage-extract` ⇒ `squashfs-root/`：① `resources/app.asar` 在；② `resources/package-type` **不在**（AppImage 不得携 deb 面）；
   ③ `.desktop` 文件名 = `thincoder.desktop` ∧ 含 `StartupWMClass=thincoder`；④ 图标在（`.DirIcon` ∥ `usr/share/icons/...`——读数记录）。提取不可执行 ⇒ 记读数 + 停下上报（不得静默略过）。
@@ -329,20 +329,21 @@
 
 ## 3. 文件账
 
-### 3.1 本端文件清单与行数预算（打包族行）
+### 3.1 本端文件清单（打包族行）
 
-| 文件 | 预估行数 | 说明 |
-|---|---|---|
-| `thincoder-desktop/electron-builder.yml`（已落） | **63** | 打包配置契约单源（**阶段一**：Windows NSIS x64 ∥ 签名 hook ∥ files 白名单 ∥ NSIS 四参——逐项 = §2.1） |
-| `thincoder-desktop/scripts/check-dist.mjs` | **422** | 产物校验（照扩展端 `check-vsix` 先例；fail-closed——缺一即 exit 1） |
-| `thincoder-desktop/scripts/materialize-deps.mjs`（新档） | **146** | 两核包物化（源树实拷：junction ⇒ 真目录 ∥ 运行必需件筛 ∥ 落位自检——§2.2 ∥ §1 KD-64③） |
-| `thincoder-desktop/scripts/win-sign.mjs`（新档） | **163** | Windows 签名 hook（指纹探测 ∥ 实签 ∥ 缺席跳过 + 明示——§2.3） |
-| `thincoder-desktop/scripts/make-icon.mjs`（新档） | **171** | 图标生成器（零依赖——PNG 编码 ∥ ICO 封包 ∥ `</>` 品牌笔——§2.4） |
-| `thincoder-desktop/package.json`（切片 3 判域迁入——脚本 ∥ 发布面；原址指针在册） | **29** | 包定性：`main` 入口 + script **六条**（`test` / `start` / `prepackage` / `package` / `postpackage` / `quickcheck`——**单源 = 本档 §2**）；devDeps = `electron` + `electron-builder`（构建期·非运行期）+ **`playwright-core`**（E2E 驱动·测试 + **web 快筛驱动**）；`dependencies` = `electron-updater ^6.8.9`（**首个第三方运行依赖**） |
-| `thincoder-desktop/build/icon.ico`（新档 · 二进制） | 4 151 B（多尺寸 16 ∕ 32 ∥ 48 ∥ 256——二进制资产不入行数账） | 图标资产（构建输入 ∥ 生成物入库） |
-| `thincoder-desktop/CHANGELOG.md`（发布窗首建 · 已落） | **108** | 桌面 CHANGELOG（首发段——本档 §2.2 ∥ `docs/RELEASE.md` §5.2 步 2） |
+| 文件 | 说明 |
+|---|---|
+| `thincoder-desktop/electron-builder.yml`（已落） | 打包配置契约单源（**阶段一**：Windows NSIS x64 ∥ 签名 hook ∥ files 白名单 ∥ NSIS 四参——逐项 = §2.1） |
+| `thincoder-desktop/scripts/check-dist.mjs` | 产物校验（照扩展端 `check-vsix` 先例；fail-closed——缺一即 exit 1） |
+| `thincoder-desktop/scripts/materialize-deps.mjs`（新档） | 两核包物化（源树实拷：junction ⇒ 真目录 ∥ 运行必需件筛 ∥ 落位自检——§2.2 ∥ §1 KD-64③） |
+| `thincoder-desktop/scripts/win-sign.mjs`（新档） | Windows 签名 hook（指纹探测 ∥ 实签 ∥ 缺席跳过 + 明示——§2.3） |
+| `thincoder-desktop/scripts/make-icon.mjs`（新档） | 图标生成器（零依赖——PNG 编码 ∥ ICO 封包 ∥ `</>` 品牌笔——§2.4） |
+| `thincoder-desktop/package.json`（切片 3 判域迁入——脚本 ∥ 发布面；原址指针在册） | 包定性：`main` 入口 + script **六条**（`test` / `start` / `prepackage` / `package` / `postpackage` / `quickcheck`——**单源 = 本档 §2**）；devDeps = `electron` + `electron-builder`（构建期·非运行期）+ **`playwright-core`**（E2E 驱动·测试 + **web 快筛驱动**）；`dependencies` = `electron-updater ^6.8.9`（**首个第三方运行依赖**） |
+| `thincoder-desktop/build/icon.ico`（新档 · 二进制） | 图标资产（多尺寸 16 ∕ 32 ∥ 48 ∥ 256；**二进制资产不入行数账**） |
+| `thincoder-desktop/CHANGELOG.md`（发布窗首建 · 已落） | 桌面 CHANGELOG（首发段——本档 §2.2 ∥ `docs/RELEASE.md` §5.2 步 2） |
+| `thincoder-desktop/src/main/update.mjs`（新档 · 已落） | 自动更新（应用侧——策略面） |
 
-| `thincoder-desktop/src/main/update.mjs`（新档 · 已落） | **227** | 自动更新（应用侧——策略面） |
+**行数判据（本表不载行数）**：文件体量按 `doc_check` 的 `lines` 读数面量取，阈值为 500 顾问线 ∥ 800 硬限；结论只写「越线与否」与同尺比较，不写绝对值（口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 行数行）。
 ## 4. 验收回指（D12 ∥ D32）
 
 ### 4.1 功能点（D12）
@@ -361,7 +362,7 @@
 
 - **需求回指** = 需求卷 **D40**（自动更新）∥ **D41**（官网桌面面）∥ D32（发行渠道 · 阶段二片）∥ D36（帮助菜单——「检查更新（归 #810）」挂点承接）；
 - **设计单源** = 本档 §1 **KD-71** ∥ **KD-72** ∥ §2.8（2.8.1–2.8.3）∥ §2.9（2.9.1–2.9.7）∥ §2.10（承接表）；
-- **机检** = ① **check-dist 断言 +4**（「构建生成的更新索引」 两读 ∥ sha512 对盘 ∥ 「构建生成的更新器配置」——§2.8.2）② 单元测试档（状态机替身面 ∥ 菜单映射（`update` 注入→label/enabled）∥ 词键集（32 ⇒ 43）∥ yml publish 契约 ∥ 站点脚本源扫（prune 豁免 ∥ `--side desktop`）∥ 旧单元测试档 L5 断言翻新）③ **站点面核读**（§2.9 逐页清单：页面 ∥ 链接 ∥ 文案要点 ∥ 导航 11 档 ∥ sitemap ∥ 版本面三处）；
+- **机检** = ① **check-dist 断言 +4**（「构建生成的更新索引」 两读 ∥ sha512 对盘 ∥ 「构建生成的更新器配置」——§2.8.2）② 单元测试档（状态机替身面 ∥ 菜单映射（`update` 注入→label/enabled）∥ 词键集 ∥ yml publish 契约 ∥ 站点脚本源扫（prune 豁免 ∥ `--side desktop`）∥ 旧单元测试档 L5 断言翻新）③ **站点面核读**（§2.9 逐页清单：页面 ∥ 链接 ∥ 文案要点 ∥ 导航全站同拍 ∥ sitemap ∥ 版本面三处）；
 - **真机** = **T-DSK60**（自动更新链——真机 · 发布窗）∥ 站点三处版本面 + feed（`docs/RELEASE.md` §6.5 判据 1 ∥ 4）；测试文件随修随加——不占设计条目。
 
 > **需求侧（已落：D40 ∥ D41）**：自动更新 ∥ 官网桌面面已入需求卷——引 `docs/desktop/requirements/PACKAGING.md` 的「自动更新」∥「官网桌面面」两行；本档验收回指 = D40 ∥ D41（§4.3 同拍）。
@@ -390,9 +391,9 @@
 
 | 行 | 内容 | 状态 | 单源 |
 |---|---|---|---|
-| DE | **上抛四件**：① **图标资产复用建议**——`build/icon.ico` 的源生成器可顺产 PNG（站点 OG ∕ 下载页卡面用）——站点轮可选采（跨仓 = 主 agent 轮）② **`thincoder.com/scripts/deploy-oss.mjs` prune 加固**（站点仓）：`OSS_DELETE=1` 时 prune 面 = 全桶键 − 本地 `www/` 键（`thincoder.com/scripts/deploy-oss.mjs` 的 prune 过滤行）⇒ 桶内 `downloads/**` 会被判陈旧一并删除——建议 prune 面加 `downloads/` 前缀豁免（或维持 `OSS_DELETE` 恒关——现缺省）③ **签名时间戳 URL 实测选定**（GlobalSign RFC3161——实施期实测；落档 = 本档 §2.3）④ **站点仓 changelog 生成器（`thincoder.com/scripts/gen-changelog.mjs`）desktop 分支**：现只含 cli ∥ vsc（`--side` 两值）；`docs/RELEASE.md` §6.4 档面已含桌面 `thincoder-desktop/CHANGELOG.md` 输入（随动已落）⇒ 余动作 = 该脚本增 desktop 分支（站点轮随动） | 上抛（①③④随站点 ∥ 实施轮；②站点仓加固） | 单源 = 本档 §1 **KD-64** ∥ §2；站点面 = §2.11.5 |
+| DE | **上抛四件**：① **图标资产复用建议**——`thincoder-desktop/build/icon.ico` 的源生成器可顺产 PNG（站点 OG ∕ 下载页卡面用）——站点轮可选采（跨仓 = 主 agent 轮）② **`thincoder.com/scripts/deploy-oss.mjs` prune 加固**（站点仓）：`OSS_DELETE=1` 时 prune 面 = 全桶键 − 本地 `www/` 键（`thincoder.com/scripts/deploy-oss.mjs` 的 prune 过滤行）⇒ 桶内 `downloads/**` 会被判陈旧一并删除——建议 prune 面加 `downloads/` 前缀豁免（或维持 `OSS_DELETE` 恒关——现缺省）③ **签名时间戳 URL 实测选定**（GlobalSign RFC3161——实施期实测；落档 = 本档 §2.3）④ **站点仓 changelog 生成器（`thincoder.com/scripts/gen-changelog.mjs`）desktop 分支**：现只含 cli ∥ vsc（`--side` 两值）；`docs/RELEASE.md` §6.4 档面已含桌面 `thincoder-desktop/CHANGELOG.md` 输入（随动已落）⇒ 余动作 = 该脚本增 desktop 分支（站点轮随动） | 上抛（①③④随站点 ∥ 实施轮；②站点仓加固） | 单源 = 本档 §1 **KD-64** ∥ §2；站点面 = §2.11.5 |
 
 | DK | **`T-DSK60` 用例号自铸披露 + 披露五件**（沿 T-DSK37–T-DSK59 先例——自铸；若实施批 ∥ 并行批占用同号 ⇒ 请父侧并号裁定）：① 用例行随测试文件修加——不进设计面条目；② **`electron-updater` = 首个第三方运行依赖**（声明面三处收正：`thincoder-desktop/package.json` description ∥ `AGENTS.md` ∥ 本档——「零第三方」旧句作废；由 = 差分更新 ∥ 安装器生命周期 ∥ 验签链均为库面能力，手搓 = 重造块图算法）；③ **桌面下载卡图标收正**（阶段一前案 `</>` ⇒ 🖥️——emoji 先例；`</>` 系品牌位形）；④ **`docs/RELEASE.md` 指针代际**（`docs/desktop/design/PROJECT.md` §5 已迁 `docs/desktop/design/PACKAGING.md` §2——重组后死指针，已收正；同族：CHANGELOG「拟新增」四标）；⑤ **需求卷侧已收正**（主 agent 笔面——已落）：**D40**（自动更新）∥ **D41**（官网桌面面）已入需求卷——引 `docs/desktop/requirements/PACKAGING.md` 的 D40 ∥ D41 两行 | 登记（自铸披露 + 四处披露；⑤ 已收正） | 单源 = 本档 §1 **KD-71** ∥ **KD-72** |
 
-| D42 | **披露与上抛**：① **用例号自铸**（T-DSK61–63——沿先例；若并行批占号 ⇒ 并号裁定）；② **需求卷收正（主 agent 笔面——已落）**：D42 行两处收正已落——**构建通道**（设计轮前案「GitHub Actions 云构建」⇒ 内网构建机（ha-proxy）为主 ∥ GH Actions = 备用（账单锁待解）——收正所在 = `docs/desktop/requirements/PACKAGING.md` 的 D42 行）∥ **验收冒烟测试**（设计轮前案「WSLg 冒烟（可自动面）+ 真机走查」⇒ check-dist + AppImage 提取读数（可自动）∥ 真机走查（人工）——收正记录 = `docs/desktop/requirements/PACKAGING.md` 的 D42 行）；③ **站点执行 = 父侧轮**（规格 = §2.11.5——页面增量 ∥ feed 上传 ∥ 版本面）；④ `build/icon.png` = 二进制入库（生成物形——同 `build/icon.ico` 先例；源 = `icon.ico` 第 4 帧字节切片）；⑤ **构建机凭据零入库**（scp/ssh 会话 = 父侧自持） | ①③登记；②已收正（主 agent 笔面——已落）；④⑤登记 | 单源 = 本档 §1 **KD-73** ∥ §2.11 |
+| D42 | **披露与上抛**：① **用例号自铸**（T-DSK61–63——沿先例；若并行批占号 ⇒ 并号裁定）；② **需求卷收正（主 agent 笔面——已落）**：D42 行两处收正已落——**构建通道**（设计轮前案「GitHub Actions 云构建」⇒ 内网构建机（ha-proxy）为主 ∥ GH Actions = 备用（账单锁待解）——收正所在 = `docs/desktop/requirements/PACKAGING.md` 的 D42 行）∥ **验收冒烟测试**（设计轮前案「WSLg 冒烟（可自动面）+ 真机走查」⇒ check-dist + AppImage 提取读数（可自动）∥ 真机走查（人工）——收正记录 = `docs/desktop/requirements/PACKAGING.md` 的 D42 行）；③ **站点执行 = 父侧轮**（规格 = §2.11.5——页面增量 ∥ feed 上传 ∥ 版本面）；④ `thincoder-desktop/build/icon.png` = 二进制入库（生成物形——同 `thincoder-desktop/build/icon.ico` 先例；源 = 该 ico 第 4 帧字节切片）；⑤ **构建机凭据零入库**（scp/ssh 会话 = 父侧自持） | ①③登记；②已收正（主 agent 笔面——已落）；④⑤登记 | 单源 = 本档 §1 **KD-73** ∥ §2.11 |
 

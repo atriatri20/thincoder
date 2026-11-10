@@ -173,9 +173,10 @@ export const verifyTool = {
     // 1b. Doc-only fast path: every changed file is documentation (docs/, *.md,
     // LICENSE…) — syntax checks and a verification declaration are meaningless
     // for doc changes, and the task list/self-review checklist add nothing either.
-    // Paths inside a declared code segment (default: src — incl. prompts/*.md) are
-    // product code — excluded from the fast path, consistent with the design gate.
-    // The project's own layout is declarable (the manifest's codePaths).
+    // Paths inside a declared code segment are product code — excluded from the fast
+    // path, consistent with the design gate. There is no default segment: the layout is
+    // what the project declares (`codePaths` in its manifest), so a project that never
+    // declares one has no code segment at all (a `.md` under `src/` then reads as a doc).
     // Empty list (no changes / git unavailable)
     // intentionally falls through to the normal path below.
     const conv = loadProjectDeclaration(cwd)

@@ -20,13 +20,22 @@
  * 失败清理只删**本笔所建**的档：步 3 是 `wx` 独占创建，撞已有同名档时抛 EEXIST，无条件 unlink 会删掉
  * 别人的档（第 4 轮评审 🟡2）。`created` 旗由写回调置位，清理只认它。
  *
+ * **attach 的失败补偿**（A4 写序套到补挂路径；与收口 ∥ 重开同一条纪律）：attach 的档是**既有档**、删不得，
+ * 台账那一半失败 ⇒ 用**写前全文**（函数开头那份 `src`）回写档头，再抛拒；回写本身也失败 ⇒ 出第二条串并
+ * 点名半状态（两条串各一个导出，互不复用）。零写的两支不回写：`already` 支（号本来就在列表里）与所有
+ * 写前拒（门态 / 同面 / `BEGIN IMMEDIATE` / 档头写本身失败）——那几处没有半状态，回写只会抹掉别人这一
+ * 窗口里加的号。
+ *
  * 依赖单向（KD-4）：`skeleton ← closeout ← bind ← reopen ← lifecycle`——本档不 import lifecycle。
  */
+import { execFileSync } from "node:child_process"
 import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs"
 import { dirname, relative } from "node:path"
 
 import { appendLedgerNoToHeader, batchSkeleton, readBatchStatusLine } from "./batch-skeleton.mjs"
 import { resolveBatchCreatePath } from "./batch-paths.mjs"
+// B8（TOOLS.md §6.29 ④）：父会话历史窗口起点（建批成功即记一次）
+import { recordBatchHistoryStart } from "./read-history.mjs"
 
 /** 可读文件判据（存在且为文件——目录/缺失同判不可读；与主档同名 helper 同型——KD-4 单向依赖下各自持有，
  *  三行谓词不构成第二权威源）。 */
@@ -75,6 +84,18 @@ function normalizeNewDebt(raw) {
 function sameFaceReceiptLine(check) {
   if (!check) return ""
   return `\nsame-face check: face = ${check.face ?? "no board"} · unsettled on this face = ${check.n} (n = 0 ⇒ nothing to take over; n > 0 ⇒ declared a new debt: ${check.declared ?? "—"}) · unsettled on other faces = ${check.m} (a reading; never blocks).`
+}
+
+/** 建档前的 HEAD；取不到时把原因写进 §1，绝不伪造提交号。 */
+function baseShaForCreate(root) {
+  try {
+    const sha = execFileSync("git", ["-C", root, "rev-parse", "HEAD"], {
+      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 8000,
+    }).trim()
+    return /^[0-9a-f]{40}$/i.test(sha) ? sha : "未取到（git rev-parse HEAD 未返回 40 位提交号）"
+  } catch {
+    return "未取到（git rev-parse HEAD 跑不出）"
+  }
 }
 
 /**
@@ -133,13 +154,14 @@ export async function createBatchRecord({ args, ctx, review, cwd, bases, onWritt
     throw new Error(`batch: the new record's project root cannot be derived — the ledger row cannot be opened without it (fail-closed). Path: ${abs}. Nothing was written.`)
   }
   const taskBook = relative(root, abs).replace(/\\/g, "/")
+  const baseSha = baseShaForCreate(root)
   // executor = 本会话（AC-M2-7「进入在途的迁移带 executor = 会话 sessionId」）——与 `ledger-tools.mjs` 同一取值面
   let executorSessionId = null
   try { executorSessionId = (await import("../session-slots.mjs")).getSessionId() } catch { executorSessionId = null }
   mkdirSync(dirname(abs), { recursive: true })
   const writeRecord = (id) => {
     try {
-      writeFileSync(abs, batchSkeleton({ date, topic, source, prev, ledger: `#${id}`, board, mode }), { flag: "wx" })
+      writeFileSync(abs, batchSkeleton({ date, topic, source, prev, baseSha, ledger: `#${id}`, board, mode }), { flag: "wx" })
     } catch (e) {
       if (e?.code === "EEXIST") {
         throw new Error(`batch: create target already exists — refusing to overwrite an existing batch record (fail-closed, BR-20): ${raw}`)
@@ -167,18 +189,26 @@ export async function createBatchRecord({ args, ctx, review, cwd, bases, onWritt
       agent: ctx?.agent ?? {},
     }, writeRecord)
   } catch (e) {
-    // 失败清理只删本笔所建的档（`created` 旗——撞同名档时我们什么都没建，不得 unlink 别人的档）
-    let residue = ""
+    // 失败清理只删本笔所建的档（`created` 旗——撞同名档时我们什么都没建，不得 unlink 别人的档）。
+    // 拒文只写当场握有的事实：台账未走到 COMMIT；档那一半按 unlink 的实际结果报，不断言 ROLLBACK 成功。
+    let recordResult = ""
     if (created.flag) {
-      try { unlinkSync(abs) } catch (unlinkErr) { residue = ` 档残留 ${abs}（清理失败：${unlinkErr?.message ?? unlinkErr}）` }
+      try {
+        unlinkSync(abs)
+        recordResult = `本笔所建的档已删 ${abs}`
+      } catch (unlinkErr) {
+        recordResult = `档残留 ${abs}（清理失败：${unlinkErr?.message ?? unlinkErr}）`
+      }
     }
-    const rollbackNote = e?.ledgerRollbackFailed ? "台账回滚失败——行可能残留，收口前请人工核对。" : ""
-    const note = `${rollbackNote}${residue}`
-    if (!note) throw e
-    const wrapped = new Error(`${e?.message ?? e}${note ? `\n（${note}）` : ""}`)
-    throw wrapped
+    if (!recordResult) throw e // 写前拒保持原串；本笔尚未落档，不另加清理结果。
+    throw new Error(`${e?.message ?? e}\n（台账事务未提交：本笔未走到 COMMIT；${recordResult}）`)
   }
-  const took = result.tookOver === "new" ? "opened" : result.tookOver === "live" ? "taken over (already live — zero ledger write)" : "taken over"
+  const took = result.claimed
+    ? "claimed (a reserved row pointing at this path is now this record's row — no new row was opened)"
+    : result.tookOver === "new" ? "opened" : result.tookOver === "live" ? "taken over (already live — zero ledger write)" : "taken over"
+  // B8（TOOLS.md §6.29 ④）：父会话历史窗口的起点 = 本批创建时刻（depth-0 根 agent 上按规范化批档存）。
+  // 旧批没有起点时由首次绑定 spawn 记一次（`subagent-spawn.mjs`）——那里不回填更早的消息。
+  recordBatchHistoryStart(ctx?.agent, abs, Date.now())
   return `batch: created ${abs} — six-section skeleton written (§1 status line carries the gate-legal 「进行中」 placeholder); ledger row #${result.id} ${took} in the same call (row status = 在途 · task_book = ${taskBook} · trigger = 归批). header 台账 line filled (#${result.id} · ${board ?? "—"}).${sameFaceReceiptLine(result.sameFace)}`
 }
 
@@ -195,6 +225,19 @@ function todayLocalIso() {
  *  §1 段头区不可解析 ⇒ fail-closed 同判（与其余写门一条口径——修 = 普通文档写）。 */
 const attachClosedError = () => "batch: attach refused — the record is frozen (§1 status line carries 「已收口」). Two ways on: reopen it first (batch status §1 → 进行中 with note = the reason, which appends the reopen record) and then attach; or start a new batch record (create) instead. Nothing was written."
 const attachUnresolvedError = () => "batch: attach refused — the record has no readable §1 status line inside its section header zone (zero lines or two or more; fail-closed, the same judgement every other write gate makes). Repair the §1 zone with an ordinary document write so it holds exactly one status line, then attach. Nothing was written."
+/** attach 的台账失败拒文（第一条串，逐字——档头已回写到写前字节，故可原样重试）：写序与收口 ∥ 重开同一条
+ *  （档先写、台账后写；台账回滚由 `ledgerBindBatch` 自己做），本档只负责把档那一半回档并喊出来。 */
+export function attachLedgerFailedError(cause) {
+  return `batch: attach failed — 台账事务未提交（${cause}）；档头已回滚到写前字节，可原样重试。Ledger: no committed change from this call (it never reached COMMIT).`
+}
+
+/** attach 的补偿也失败拒文（同节第二条串——**不得复用第一条**：第一条声称已回滚，此时事实相反）：
+ *  残态 = 档头留着 `#N`、台账无该行；`check` 以第六类 `header-row-missing` 点名。 */
+export function attachHalfStateError(abs, id, cause, rollbackCause) {
+  return `batch: attach failed — 台账事务未提交（${cause}）；档头回滚也失败（${rollbackCause}）——半状态成立：档头留着 #${id}，台账里没有这一行。` +
+    `Read it with batch({action:"check", path:"${abs}"}) — it names header-row-missing; repair by dropping #${id} from the header 台账 line (an ordinary document write), or run attach again.`
+}
+
 /** 开新行缺标题拒串（`title` 只在**开新行**时必填——接管既有行的标题已在行上）。 */
 const attachTitleError = () => "batch: attach needs title when it opens a new ledger row — the row's title says what this new debt is: a reopened record takes on a new piece of work, and reusing the batch's own subject would make the ledger read it as a second copy of the original debt. Pass title:\"<one line>\", or take over an existing unsettled row with ledger:\"#<id>\". Nothing was written."
 
@@ -215,7 +258,9 @@ const attachTitleError = () => "batch: attach needs title when it opens a new le
  * 幂等：行号已在档头列表 ⇒ 零写 + 回执点名「已在列表」——为的是同一个回调在 `ledgerBindBatch` 的
  * 「行已 live、零台账写」分支上也安全（重放 `attach{ledger:"#N"}` 落到的就是那条）。
  * 拒面（全 fail-closed：档零字节 / 台账零写）：门态非 `进行中` · 档头 `台账` 行缺失 · 本面有未决行而无 `newDebt` ·
- * 开新行而缺 `title` · 台账库不可达 ∥ 事务失败（回滚语义沿用 `create`）。
+ * 开新行而缺 `title` · 台账库不可达 ∥ 事务失败。
+ * **台账事务失败**（写档头之后那一半）⇒ 用写前全文回写档头再抛拒（第一条串）；回写也失败 ⇒ 第二条串点名
+ * 半状态（档头留号 ∥ 台账无该行）。零写的两支不回写（`already` ∥ 写前拒）——见本档头注释。
  * @returns {Promise<string>} 成功消息（含行号、改写后的档头行与同面判读数）
  */
 export async function attachBatchRecord({ args, ctx, review, cwd, pickTarget, onWritten }) {
@@ -243,7 +288,8 @@ export async function attachBatchRecord({ args, ctx, review, cwd, pickTarget, on
   // executor = 本会话（AC-M2-7，与 create 同一取值面）
   let executorSessionId = null
   try { executorSessionId = (await import("../session-slots.mjs")).getSessionId() } catch { executorSessionId = null }
-  const header = { id: null, line: null, already: false }
+  /** `wrote` = 本笔**落过盘**（回档不回退——口径同 `batch-lifecycle.mjs` 的记账注释）；`already` ⇒ 恒 `false`。 */
+  const header = { id: null, line: null, already: false, wrote: false }
   /** 步 3（回调）：把真实行号补进档头 `台账` 行。已在列表 ⇒ 零写（幂等）；写盘成功才记 `_batchWrites`。 */
   const writeHeader = (id) => {
     const current = readFileSync(abs, "utf8")
@@ -252,22 +298,39 @@ export async function attachBatchRecord({ args, ctx, review, cwd, pickTarget, on
     header.line = edited.line
     if (edited.already) { header.already = true; return }
     writeFileSync(abs, edited.src)
+    header.wrote = true
     if (ctx?.agent) ctx.agent._batchWrites = (ctx.agent._batchWrites ?? 0) + 1 // §6.6 `wrote` 判据（写盘成功才增）
     onWritten?.(ctx?.agent ?? {}, abs)
   }
-  const result = await ledgerBindBatch({
-    cwd: root,
-    ledgerNo,
-    newDebt,
-    targetAbs: abs,
-    taskBook,
-    title: title ?? "",
-    kind: board ? "requirement" : "tech_todo",
-    board,
-    boundary: anchor,
-    executorSessionId,
-    agent: ctx?.agent ?? {},
-  }, writeHeader)
+  let result
+  try {
+    result = await ledgerBindBatch({
+      cwd: root,
+      ledgerNo,
+      newDebt,
+      targetAbs: abs,
+      taskBook,
+      title: title ?? "",
+      kind: board ? "requirement" : "tech_todo",
+      board,
+      boundary: anchor,
+      executorSessionId,
+      agent: ctx?.agent ?? {},
+    }, writeHeader)
+  } catch (e) {
+    // 台账那一半由 `ledgerBindBatch` 自己 ROLLBACK；档这一半是本档的账——**既有档删不得，只能回写**。
+    // 回写用函数开头那份**全文**（`src`），不做「把号删掉」的局部手术：局部手术会碰坏档头其余字节。
+    // 零写的两支不回写：`already` 支（号本来就在列表里，回写等于把别的会话刚加的号抹掉）与所有写前拒
+    // （门态 / 同面 / `BEGIN IMMEDIATE` / 档头写本身失败）——那几处没有半状态可报，原样上抛。
+    if (!header.wrote) throw e
+    const cause = String(e?.message ?? e)
+    try {
+      writeFileSync(abs, src)
+    } catch (rollbackErr) {
+      throw new Error(attachHalfStateError(abs, header.id, cause, String(rollbackErr?.message ?? rollbackErr)))
+    }
+    throw new Error(attachLedgerFailedError(cause))
+  }
   const head = header.already
     ? `batch: ledger row #${result.id} is already in the header 台账 line of ${abs} — zero write (idempotent: the row is live and already listed; nothing changed).`
     : `batch: attached ledger row #${result.id} to ${abs} — header 台账 line is now \`${header.line}\` (row status = 在途 · task_book = ${taskBook} · trigger = 归批).`

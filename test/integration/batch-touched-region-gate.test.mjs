@@ -1,11 +1,11 @@
 /**
- * batch-touched-region-gate.test.mjs — 集成用例 7-16（RTM CLI 端故事 7「收口只判本批改过的档」；
+ * batch-touched-region-gate.test.mjs — 集成用例 7-16 ∥ 7-19（RTM CLI 端故事 7「收口只判本批改过的档」；
  * 判据原文 = `test/RTM.md` 第 7 节）。
  *
- * 这一行判的是**写门判改动区、收口面仍整档**两面并列的那条边界（机制单源 =
+ * 这一行判的是**写门与收口都判改动区、整档存量只出读数**的统一边界（机制单源 =
  * `docs/core/design/DOC-DISCIPLINE.md` §3.20「触达账腿的判面 = 本次改动区」∥「两面的分工」）：
  *   ① 一档带存量悬空锚、本轮只改了别处 ⇒ 写段放行，存量只出一行计数（不逐条列、不阻写）；
- *   ② 同一夹具收口 ⇒ 整档照判、`REFUSED`（收口面没被放宽）；
+ *   ② 同一夹具收口 ⇒ 存量不阻断、`PASS` + 统一存量读数；
  *   ③ 同一次改动里改动区自带一处悬空 ⇒ 当场拒（改动区判据没失效），存量那处不进拒面。
  *
  * 业务入口 = 真 `batch` 工具（`agent-tools/batch.mjs`）的三个动作——子代理 `append`（写段面）与 depth-0 `close`
@@ -156,7 +156,7 @@ const gateLineOf = (receipt) => {
 /** §1 状态行原文（拒收口 ⇒ 逐字不变）。 */
 const statusLineOf = (root) => readFileSync(join(root, BATCH_REL), "utf8").split("\n").find((l) => l.startsWith("**状态行**："))
 
-test('CLI 7-16 正常 · 写段面判改动区（带存量锚的档改过一行 ⇒ 放行、只出计数行）∥ 收口面仍整档（同夹具照拒）∥ 改动区自带悬空 ⇒ 拒写', async () => {
+test('CLI 7-16 正常 · 写段与收口均判改动区（存量只出统一读数）∥ 改动区自带悬空 ⇒ 拒写', async () => {
   // ── 前半：档上另有存量锚、本轮只改了别处 ⇒ 写段放行，存量只出一行计数 ──
   const root = makeProject("r716")
   gitRepo(root)
@@ -168,24 +168,16 @@ test('CLI 7-16 正常 · 写段面判改动区（带存量锚的档改过一行 
   assert.match(receipt, /appended \d+ characters to §2/, `写入放行且落盘：${receipt}`)
   assert.match(gateLineOf(receipt), /^\[doc-check gate\] DOC-CHECK GATE: PASS · 范围 \d+ 档$/, `写段面放行（判域 = 触达账 ∪ 批档自身 ∪ 本次写入文本）：${receipt}`)
   // 存量那处只出一行计数：不逐条列、不阻写，且计数行是固定字面（N 是唯一变量）
-  assert.match(receipt, /^触达账存量命中 1 条——不属本次改动区，不阻本次写；收口面整档判$/m, `存量只出计数行、且逐字固定：${receipt}`)
+  assert.match(receipt, /^存量命中 1 条（不属本次改动区，不阻断交付；整档读数）$/m, `存量只出统一计数行：${receipt}`)
   assert.doesNotMatch(receipt, /✗ /, `拒面零该档命中行（存量一条也没摆进命中面）：${receipt}`)
   assert.doesNotMatch(receipt, /old-gap/, `存量那处连名字都不出现在回执里：${receipt}`)
 
-  // ── 中半：同一夹具收口 ⇒ 整档照判、被拒（收口面没被本批放宽）──
-  const beforeClose = readFileSync(join(root, BATCH_REL), "utf8")
-  await assert.rejects(
-    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, touched)),
-    (e) => {
-      assert.match(e.message, /文档机检门拒收口/, `拒串点名门位：${e.message}`)
-      assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, `收口面整档判：${e.message}`)
-      assert.match(e.message, /✗ 锚·档缺 docs\/notes\/design\.md:\d+/, `逐条点名该档的存量命中：${e.message}`)
-      assert.match(e.message, /old-gap/, `存量那条在收口面照旧逐条列出：${e.message}`)
-      return true
-    },
-  )
-  assert.equal(readFileSync(join(root, BATCH_REL), "utf8"), beforeClose, "拒收口 ⇒ 档全文逐字不变（§1 状态行字节不变）")
-  assert.match(statusLineOf(root), /进行中/, "§1 状态行仍「进行中」")
+  // ── 中半：同一夹具收口 ⇒ 存量锚不阻，整档读数照出 ──
+  const closeReceipt = await depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, touched))
+  assert.match(gateLineOf(closeReceipt), /^\[doc-check gate\] DOC-CHECK GATE: PASS · 范围 \d+ 档$/, `收口放行：${closeReceipt}`)
+  assert.match(closeReceipt, /^存量命中 1 条（不属本次改动区，不阻断交付；整档读数）$/m, `收口存量读数：${closeReceipt}`)
+  assert.doesNotMatch(closeReceipt, /old-gap/, `存量不逐条列进拒面：${closeReceipt}`)
+  assert.match(statusLineOf(root), /已收口/, "收口已落盘")
 
   // ── 后半：同一次改动里改动区自带一处悬空 ⇒ 当场拒（改动区判据没失效），存量那处不进拒面 ──
   // 另起一份夹具（上面的批档已有一次 append 落盘，两件事互不干扰）。
@@ -206,3 +198,31 @@ test('CLI 7-16 正常 · 写段面判改动区（带存量锚的档改过一行 
   )
   assert.equal(readFileSync(join(root2, BATCH_REL), "utf8"), beforeWrite, "拒写 ⇒ 批档字节逐字不变（零字节落盘）")
 })
+
+test('CLI 7-19 边界 · 收口按批级改动区放行存量；区未定则整档判并点名原因', async () => {
+  const root = makeProject("r719")
+  gitRepo(root)
+  writeFileSync(join(root, DESIGN_REL), DESIGN_EDIT_CLEAN)
+  const touched = [join(root, DESIGN_REL)]
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, touched))
+  assert.match(gateLineOf(receipt), /DOC-CHECK GATE: PASS/, receipt)
+  assert.match(receipt, /^存量命中 1 条（不属本次改动区，不阻断交付；整档读数）$/m, receipt)
+
+  const unknown = makeProject("r719b")
+  gitRepo(unknown)
+  writeFileSync(join(unknown, DESIGN_REL), DESIGN_EDIT_CLEAN)
+  const batchAbs = join(unknown, BATCH_REL)
+  writeFileSync(batchAbs, readFileSync(batchAbs, "utf8").split("\n").filter((l) => !l.includes("批起 sha =")).join("\n"))
+  const before = readFileSync(batchAbs, "utf8")
+  await assert.rejects(
+    () => depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(unknown, [join(unknown, DESIGN_REL)])),
+    (e) => {
+      assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, e.message)
+      assert.match(e.message, /收口改动区未定——整档判/, e.message)
+      assert.match(e.message, /§1 无有效批起 sha 记入行/, e.message)
+      return true
+    },
+  )
+  assert.equal(readFileSync(batchAbs, "utf8"), before, "未定拒收口 ⇒ 批档字节不变")
+})
+

@@ -83,7 +83,7 @@ reasoning, provider, images? } → extension _chat()
 
 string / 对象双分支在 payload 构造处统一推导（对象载荷字段透传、string 分支字段 `undefined` 安全降级）。
 
-### 3.2 协议增量登记（三十五项——只增不改）
+### 3.2 协议增量登记（三十六项——只增不改）
 
 | # | 消息面 | 增量 | 发射点 | 接收点 |
 |---|---|---|---|---|
@@ -127,8 +127,18 @@ string / 对象双分支在 payload 构造处统一推导（对象载荷字段�
 | 33 | `secretInputResponse`（**新消息**——webview → host） | `{ values:{…}|null, promptId }`——凭据卡应答（提交 = 值包 ∥ 取消 = `null`；host 按 `promptId` 精确配对，迟到 / 错序不误 resolve 队头） | `webview/secret-input.js`（发射位——同档字面量构造） | `src/extension/panel-messages.mjs` `case` → `panel-messages-turn.mjs` `handleSecretInputResponse` |
 | 34 | `secretInputCancelled`（**新消息**——host → webview） | `{ promptId }`——abort（Stop）释放未答凭据卡（`questionCancelled` 同构：按 `promptId` 精确移除；无 `promptId`（旧 host）⇒ 移除全部凭据卡） | `src/extension/panel-callbacks.mjs`（`makeAskSecretInPanel` onAbort） | `webview/chat-messages.js` `case`（摘 `.secret-card`） |
 | 35 | `saveProviderModelContext` ∥ `providerContextSaved`（**新消息对**——上行 webview → host ∥ 下行 host → webview 回执） | 上行 `{ name, model, k }`——`k` = K 单位正整数；空 ∥ `null` = 清除（有已声明值时先过确认层）。下行 `{ name, model, k, kText }`——保存成功受理回执（`kText` = 宿主经核 `formatDeclaredContextK(k)` 出词——`128K` / `1M`；拒径零回执 ⇒ 拒因走既有 `providerError`；语义单源 = `SETTINGS.md` §2.21） | `webview/settings-provider-dialog.js`（表单保存上发；入口 = `webview/settings-providers.js` `Context…`） | `src/extension/panel-messages.mjs` `case` → `panel-messages-settings.mjs` `handleSaveProviderModelContext` → `src/extension/provider-context.mjs`；回执消费 = `webview/chat-messages.js` → `webview/settings-providers.js` |
+| 36 | `inbox`（**新消息**——host → webview） | `{ text }`——跨实例取件闩的两条可见行原文：`text` = 核 `inboxTakeLostLine(messages)` ∥ `inboxBlockedLine(ms, pending)` 的逐字串（本端零构造；非非空串 ⇒ 零动作）；两条模板 = `docs/core/design/MULTI-INSTANCE-COLLAB.md` §5.4；**既有件候选 = `existing but unusable: timer`**（同键 `type` 覆盖 + timer 专族载荷 `status:"fired"`；细目见表后「第 36 项落点依据」） | `thincoder-vscode/src/extension/timer-watch.mjs`（`syncInboxWatch`：`onTake` reject 分支发丢失行 · `onBlocked` 发受阻行） | `webview/chat-messages.js` `case "inbox"` → `addInboxLine`（append-only 行 · 零 state 槽） |
 
-纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–35 即全部在案增量；表外增量不入）。
+纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–36 即全部在案增量；表外增量不入）。
+
+**第 36 项 `inbox` 的落点依据**（最近先例 · 新名三问答 · 调研面）：
+
+- **最近先例 = 本表第 19 项 `timer`**（host → webview 的 append-only 落流行）。**对齐** = 方向同 · 落法同（webview 流内追加一行、零 state 槽）· 发射点同档（`thincoder-vscode/src/extension/timer-watch.mjs`）。**偏离三处，各有据**：
+  - 载荷：`timer` 携 `{ status:"fired", text }`，本项只携 `{ text }`——两条行不分状态档，`kind` 已在核的拼串里。
+  - 渲染：`timer` webview 侧裁 ≤3 行 + `…`，本项**零裁行**——裁了就把 `{msgIds}` ∥ `{pending}` 裁掉，行失去用处。
+  - 文本源：`timer` 的 `text` 是交付原文（核 reminder 现体），本项 `text` 由核 `inboxTakeLostLine(messages)` ∥ `inboxBlockedLine(ms, pending)` 构造，端侧零构造（N-MI2 跨端逐字对拍因此可机检）。
+- **新名三问答（消息名 `inbox`）**：何处住 = 本节第 36 项 · 逐字名 = `inbox` · 谁用 = 发射 `thincoder-vscode/src/extension/timer-watch.mjs` 的 `syncInboxWatch` 两径、消费 `webview/chat-messages.js` 的 `addInboxLine`。既有件候选 = 第 19 项 `timer` ⇒ **`existing but unusable: timer`**：复用要按同键 `type` 覆盖，等于把两条取件行塞进 timer 专族载荷、再让 webview 从 `text` 猜来源——两族语义混成一条通道，日后任一族改载荷都打到另一族。
+- **调研面**：查 `docs/vsc/design/` 全目录（`落流行` ∥ `addTimerLine` ∥ `系统行` 零命中）∥ 本档 §12 收面全量表 ∥ `docs/core/design/MULTI-INSTANCE-COLLAB.md` §5.4 两条模板——**无「通用系统落流行」既有件**（现存 host → webview 的落流行只有 `timer` 专族一条）⇒ 本项按「新增一族」落地，不借别族通道。
 
 发射 / 接收落点：`thincoder-vscode/src/extension/panel-callbacks.mjs`（statusText · turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs` · `thincoder-vscode/webview/chat.js` · `thincoder-vscode/webview/status-bar.js`。
 
@@ -346,7 +356,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | D-P8 | 状态文本载体 = **结构化 `statusText` 消息**（kind 判别 → webview 按 locale 渲染） |
 | D-P9 | Send 可见性 = running 期**隐藏** |
 | D-P10 | `scrolled N` 段不设——滚动状态 = 悬浮回底钮（§6.1 滚动行：实证例外——行为证据） |
-| D-P11 | 协议增量 = **只增不改**、**三十五项**登记（§3.2） |
+| D-P11 | 协议增量 = **只增不改**、**三十六项**登记（§3.2） |
 | D-P12 | 合并权限卡**并入 `promptId` 族**（单一释放通道 `releasePermission` + id 精确匹配 + 孤儿回写） |
 | D-P13 | `waiting` 判据含**批权限队列** + **释放即刷**（刷新点 = 释放通道单点 `releasePermission`） |
 | D-P14 | 诊断上行 `panelDiag` = **新消息（行 8 登记）**——出生 / 终态事件面痕迹入主侧日志 |
@@ -403,6 +413,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `goal` | src/extension/panel-callbacks.mjs | webview/chat-messages.js | `活` | — |
 | `historyPage` | src/extension/panel-session.mjs | webview/chat-messages.js | `活` | — |
 | `i18n` | src/extension/chat-panel.mjs ∕ src/extension/panel-messages.mjs | webview/chat-messages.js | `活` | — |
+| `inbox` | thincoder-vscode/src/extension/timer-watch.mjs（`syncInboxWatch` 两处：`onTake` reject ∥ `onBlocked`） | webview/chat-messages.js | `活` | 跨实例取件闩的两条可见行（载荷 `{ text }` = 核逐字串，本端零构造；消费 → `addInboxLine`——append-only 行 · 零 state 槽；§3.2 行 36） |
 | `indexStatus` | src/extension/panel-index.mjs | webview/chat-messages.js | `活` | 打开拍回批（`_pushIndexStatus`——F-W8） |
 | `loading` | src/extension/chat-panel.mjs ∕ src/extension/panel-chat.mjs ∕ src/extension/panel-turn-stages.mjs | webview/chat-messages.js | `活` | — |
 | `mcpStatus` | src/extension/panel-mcp.mjs | webview/chat-messages.js | `活` | — |

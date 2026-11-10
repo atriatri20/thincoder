@@ -175,7 +175,7 @@ test('CLI 7-1 正常 · 笔域集内各档零命中 ⇒ 收口放行、回执 DO
 
   // 触达账只落 1 档、提交 diff 3 档（批档自身 + 本批两档）⇒ 笔域集 = 并集 3 档：「范围 3 档」因此能证明
   // diff 腿参与（若 diff 腿失效、仅触达账 ∪ 批档自身入判，范围会掉成 2 档）。
-  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [join(root, CLEAN_A)]))
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, [join(root, CLEAN_A)]))
 
   assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 3 档", `PASS 且范围 = 笔域集 3 档：${receipt}`)
   assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `收口放行且落盘：${receipt}`)
@@ -193,7 +193,7 @@ test('CLI 7-2 边界 · 工作树内范围外脏档 ⇒ 不入判、收口放行
   const probe = runDocCheck(root, { mode: "gate", docs: [join(root, OUT_REL)], docsSource: "explicit" })
   assert.ok(probe.anchorHits.length >= 1, `前置：范围外档须真含悬空指针 —— ${probe.report}`)
 
-  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B)]))
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B)]))
 
   assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 3 档", `范围外档不入判、档数 = 笔域集 3 档：${receipt}`)
   assert.doesNotMatch(receipt, /out-of-range/, `回执零该档行（连档名都不出现）：${receipt}`)
@@ -210,7 +210,7 @@ test('CLI 7-3 错误 · 笔域集内一档含悬空指针 ⇒ 收口被拒（thr
   const before = readFileSync(join(root, BATCH_REL), "utf8")
 
   await assert.rejects(
-    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B), join(root, DIRTY_REL)])),
+    () => depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B), join(root, DIRTY_REL)])),
     (e) => {
       assert.match(e.message, /文档机检门拒收口/, `拒串点名门位：${e.message}`)
       assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, `拒串携 verdict 首行：${e.message}`)
@@ -220,6 +220,19 @@ test('CLI 7-3 错误 · 笔域集内一档含悬空指针 ⇒ 收口被拒（thr
   )
   assert.equal(readFileSync(join(root, BATCH_REL), "utf8"), before, "拒收口 ⇒ 档全文逐字不变（§1 状态行字节不变）")
   assert.match(statusLineOf(root), /进行中/, "§1 状态行仍「进行中」")
+
+  // 同一行另一格：悬空指针在批起基线里、本批没有改它 ⇒ 只出存量读数，不阻收口。
+  const stockRoot = makeProject("r73-stock")
+  writeFileSync(join(stockRoot, DIRTY_REL), DIRTY)
+  const stockSha = gitRepo(stockRoot)
+  assertBatchCommitted(stockRoot, stockSha)
+  const stockReceipt = await depth0.execute(
+    { action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" },
+    parentCtx(stockRoot, [join(stockRoot, CLEAN_A), join(stockRoot, CLEAN_B), join(stockRoot, DIRTY_REL)]),
+  )
+  assert.match(gateLineOf(stockReceipt), /DOC-CHECK GATE: PASS/, stockReceipt)
+  assert.match(stockReceipt, /^存量命中 1 条（不属本次改动区，不阻断交付；整档读数）$/m, stockReceipt)
+  assert.doesNotMatch(stockReceipt, /✗ /, `存量不逐条进拒面：${stockReceipt}`)
 })
 
 test('CLI 7-4 错误 · 批档同目录留本批自己的单测档 ⇒ 收口被拒（点名绝对路径 + 修法）、删档后同跑放行', async () => {
@@ -233,7 +246,7 @@ test('CLI 7-4 错误 · 批档同目录留本批自己的单测档 ⇒ 收口被
   const before = readFileSync(join(root, BATCH_REL), "utf8")
 
   await assert.rejects(
-    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B)])),
+    () => depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B)])),
     (e) => {
       assert.match(e.message, /本批批内单测档仍在盘/, `拒串点名本门：${e.message}`)
       assert.match(e.message, /unit test file\(s\) still on disk/, `拒串携机检锚串：${e.message}`)
@@ -250,7 +263,7 @@ test('CLI 7-4 错误 · 批档同目录留本批自己的单测档 ⇒ 收口被
   // 删档（门只拒、不代删）⇒ 同跑收口放行
   removeTempDirBestEffort(join(root, OWN_TEST_REL))
   removeTempDirBestEffort(join(root, OWN_VARIANT_REL))
-  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B)]))
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B)]))
   assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `删档后收口放行且落盘：${receipt}`)
   assert.doesNotMatch(receipt, /本批批内单测档/, `放行零回执（本门不出回执段）：${receipt}`)
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
@@ -279,7 +292,7 @@ test("CLI 7-5 嵌套围栏档内层代码不入段判据：收口放行，对照
   const probe = runDocCheck(root, { mode: "gate", docs: [join(root, "docs/notes/nested-fence.md")], docsSource: "explicit" })
   assert.equal(probe.paragraphHits.length, 0, `嵌套围栏档应零段命中（内层代码不入段），实读：${probe.report}`)
 
-  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, []))
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, []))
   assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 4 档", `批档 + 本批两档 + 嵌套围栏档 = 4 档且全清：${receipt}`)
   assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `收口放行且落盘：${receipt}`)
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
@@ -293,7 +306,7 @@ test("CLI 7-5 嵌套围栏档内层代码不入段判据：收口放行，对照
   assert.equal(controlProbe.paragraphHits.length, 1, `对照档应恰 1 条段命中（阈值没动）：${controlProbe.report}`)
 
   await assert.rejects(
-    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root2, [])),
+    () => depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root2, [])),
     (e) => {
       assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, `拒串携 verdict 首行：${e.message}`)
       assert.match(e.message, /✗ 文字太长，难于阅读 docs\/notes\/plain\.md:\d+/, `拒串点名该档与段命中行：${e.message}`)
@@ -310,7 +323,7 @@ test('CLI 7-6 错误 · 批档 §1 含一条带目录段、不在批档根下的
   const before = readFileSync(join(root, BATCH_REL), "utf8")
 
   await assert.rejects(
-    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [])),
+    () => depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, [])),
     (e) => {
       assert.match(e.message, /文档机检门拒收口/, `拒串点名门位：${e.message}`)
       assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, `拒串携 verdict 首行：${e.message}`)
@@ -328,7 +341,7 @@ test('CLI 7-7 正常 · 批档干净且笔域集只含批档自身 ⇒ 放行、
   // 无 git 仓 + 触达账零档 ⇒ 笔域集 = 批档自身：范围「1 档」只能是「批档自身进了判域」的结果
   writeFileSync(join(root, BATCH_REL), record("0".repeat(40)))
 
-  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, []))
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, []))
   const line = gateLineOf(receipt)
   assert.match(line, /^\[doc-check gate\] DOC-CHECK GATE: PASS · 范围 \d+ 档$/, `PASS + 范围行：${receipt}`)
   const engine = runDocCheck(root, { mode: "gate", docs: [join(root, BATCH_REL)], docsSource: "explicit" })
@@ -372,7 +385,7 @@ test('CLI 7-11 错误 · 批档 §1 写「> 不适用：§3」声明 ⇒ 收口�
   const before = readFileSync(join(root, BATCH_REL), "utf8")
 
   await assert.rejects(
-    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [])),
+    () => depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, [])),
     (e) => {
       assert.match(e.message, /`不适用` 声明已停用（inapplicability declaration retired）/, `拒串点名机制已停用：${e.message}`)
       assert.match(e.message, /no declaration is accepted: §2 \/ §3 \/ §4 \/ §6 must each carry content \(§5 exempt\)/, `拒串说清每段各自要有内容：${e.message}`)
@@ -388,7 +401,7 @@ test('CLI 7-11 错误 · 批档 §1 写「> 不适用：§3」声明 ⇒ 收口�
   const root2 = makeProject("r711b")
   writeFileSync(join(root2, BATCH_REL), record("0".repeat(40)).replace("**状态行**：评审通过\n\n", ""))
   await assert.rejects(
-    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root2, [])),
+    () => depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root2, [])),
     (e) => {
       assert.match(e.message, /§3 状态行 = （无状态行），须 = 评审通过/, `拒串点名 §3 状态行缺失：${e.message}`)
       assert.match(e.message, /Missing: §3\. Nothing was written\./, `拒串只点名真正缺的那一段：${e.message}`)
@@ -413,7 +426,7 @@ test('CLI 7-9 错误 · 笔域集内一档在工具描述面（400 字符段 + �
   const before = readFileSync(join(root, BATCH_REL), "utf8")
 
   await assert.rejects(
-    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, touched)),
+    () => depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, touched)),
     (e) => {
       assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 2 条）/, `拒串应恰 2 条（锚 1 + 段 1——该面不再被跳过）：${e.message}`)
       assert.match(e.message, /✗ 锚·档缺 thincoder-core\/tool-docs\/probe\.md:\d+/, `拒串点名锚与该档行号：${e.message}`)
@@ -427,7 +440,7 @@ test('CLI 7-9 错误 · 笔域集内一档在工具描述面（400 字符段 + �
   // 只删裸档名（锚那条清掉、段落一字未动）⇒ 仍拒、只剩段那条：证明段命中不是被锚命中带出来的。
   writeFileSync(join(root, TOOLDOC_REL), "# 探针\n\n" + LONG + "\n")
   await assert.rejects(
-    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, touched)),
+    () => depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, touched)),
     (e) => {
       assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, `锚清后应只剩段 1 条：${e.message}`)
       assert.match(e.message, /✗ 文字太长，难于阅读 thincoder-core\/tool-docs\/probe\.md:\d+/, `段判据仍拦：${e.message}`)
@@ -438,7 +451,7 @@ test('CLI 7-9 错误 · 笔域集内一档在工具描述面（400 字符段 + �
 
   // 拆段（两段各 200 ≤ 阈值）⇒ 同一条门放行：判据没松，是病治好了。
   writeFileSync(join(root, TOOLDOC_REL), "# 探针\n\n" + "长".repeat(200) + "\n\n" + "长".repeat(200) + "\n")
-  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, touched))
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, touched))
   assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `拆段后收口放行且落盘：${receipt}`)
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
 })
@@ -470,7 +483,7 @@ test("CLI 7-13 正常 · 中文项目符号三族档入笔域集 ⇒ 收口放�
   const probe = runDocCheck(root, { mode: "gate", docs: bullets.map(([rel]) => join(root, rel)), docsSource: "explicit" })
   assert.equal(probe.paragraphHits.length, 0, `三份中文列表档应零段命中：${probe.report}`)
 
-  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, []))
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, []))
   assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 6 档", `三档 + 本批两档 + 批档自身 = 6 档：${receipt}`)
   assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `收口放行且落盘：${receipt}`)
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
@@ -485,7 +498,7 @@ test("CLI 7-13 正常 · 中文项目符号三族档入笔域集 ⇒ 收口放�
   assert.equal(controlProbe.paragraphHits.length, 1, `对照档应恰 1 条段命中（阈值没动）：${controlProbe.report}`)
 
   await assert.rejects(
-    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root2, [])),
+    () => depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root2, [])),
     (e) => {
       assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, `拒串携 verdict 首行：${e.message}`)
       assert.match(e.message, /✗ 文字太长，难于阅读 docs\/notes\/cn-plain\.md:\d+/, `拒串点名该档与段命中行：${e.message}`)
@@ -508,7 +521,7 @@ test("CLI 7-15 正常 · 批档引已删的本批单测档 ⇒ 收口放行（�
   removeTempDirBestEffort(join(root, OWN_TEST_REL))
   assert.equal(existsSync(join(root, OWN_TEST_REL)), false, "前置：目标档已删——死锁只在目标不在盘时发生")
 
-  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, []))
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, []))
   assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 3 档", `目标已删仍不判、收口放行：${receipt}`)
   assert.match(statusLineOf(root), /已收口/, "收口放行且落盘")
 

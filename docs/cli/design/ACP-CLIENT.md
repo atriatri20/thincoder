@@ -129,7 +129,7 @@ ACP 官方 SDK 是 npm 依赖——违反零依赖哲学，故自写精简层。
 ### 3.5 处理器模块划分（函数档判据驱动）
 
 **判据**：**函数档是第一判据**——文件 ≤800 行而内含 ≥300 行单体函数**仍不合规**
-（`docs/core/requirements/METHODOLOGY.md` F3-1「函数 ≥300 必拆」+ `thincoder-core/prompts/advisor-design.md` 第 8 条）。
+（`docs/core/standards/METHODOLOGY.md` F3-1「函数 ≥300 必拆」+ `thincoder-core/prompts/advisor-design.md` 第 8 条）。
 现状 `buildAcpHandlers`（`acp.mjs` 的 handler 装配段 = **368 行**，含 jsdoc 375 行）越线；既改其大半正文（12 个 handler 中 10 个改形），**当轮拆**——不留给「下次触碰」。
 
 | 模块（无扩展名形态，见下注） | 装什么 | 关键缝 |

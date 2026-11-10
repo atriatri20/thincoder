@@ -287,13 +287,17 @@ export function sectionHasStatusLine(src, seg) {
  * `## §1–§6` 段头（含职责署名）+ 档头 boilerplate（**两句形**：六段一段一作者句 + 每段只有一个作者句（作者对本段可 `append` 加内容 ∥ 可 `edit` 就地改，§4.10「档头两句」/ §4.19），加编制行 + 台账/前情指针行）+ §1 段内
  * **占位状态行**（含 gate 合法关键字「进行中」——建档即过 gate；整行不含「已收口」——gate 已收口优先，占位
  * 行不得携带冻结词）+ 各段模板子标题占位。已知实参替换：date / topic / **source** / prev（§4.11 参数面 +
- * F11-B——source 必填、prev 入值过幂等剥前缀，归一化在 lifecycle 面）；`ledger` = **必填**（2026-10-27 起建档
+ * F11-B——source 必填、prev 入值过幂等剥前缀，归一化在 lifecycle 面）；`baseSha` = create 在建档前实读的
+ * `HEAD` 或「未取到（原因）」，自动落 §1；`ledger` = **必填**（2026-10-27 起建档
  * 同拍建台账行——真实行号由绑定事务回填，永不落回 `#<编号>` 占位）；`board` 可选（未给 ⇒ 括注写 `—`——`board`
  * 是分类不是身份，不拒）。本批改形删除（F11-B）：旧 `# …（<BATCH-ID>）` 后缀与 `来源 = <讨论来源>` 占位实参化。
- * 模式取形（§4.16——普通模式变体**四处替换**、余行逐字同；`mode` 缺省 = "engineering" ⇒ 工程产出逐字不变）：
+ * 模式取形（§4.16——普通模式变体**四处替换**、余行逐字同；`mode` 缺省 = "engineering"）：
  * ① 汇总行 §2/§5 标签；② `## §2` 段头；③ §2 状态占位句；④ `## §5` 段头。
  */
-export function batchSkeleton({ date, topic, source, prev, ledger = null, board = null, mode = "engineering" }) {
+export function batchSkeleton({ date, topic, source, prev, baseSha, ledger = null, board = null, mode = "engineering" }) {
+  if (typeof baseSha !== "string" || baseSha.trim() === "") {
+    throw new Error("batchSkeleton: baseSha is required — pass the pre-create HEAD, or 未取到（<原因>） when git cannot supply it.")
+  }
   const normal = mode === "normal"
   const designerSeat = normal ? "主 agent" : "eng-designer" // ① 汇总行 §2 标签 ∥ ② §2 段头
   const implementerSeat = normal ? "实施者：主 agent ∥ coder" : "eng-coder" // ① 汇总行 §5 标签 ∥ ④ §5 段头
@@ -305,6 +309,7 @@ export function batchSkeleton({ date, topic, source, prev, ledger = null, board 
     `> 台账 = ${ledger ?? "#<编号>"}（${board ?? (ledger ? "—" : "<板块>")} · 归批）。前情 = ${prev}。`,
     "## §1 讨论（主 agent）",
     `**状态行**：🔄 ${STATUS_WORDS[1].open}（…）`,
+    `批起 sha = ${baseSha}`,
     "<§1 模板占位：本批条目 / 关键判据 / 授权口径>",
     `## §2 批次任务与设计（${designerSeat}）`,
     `**状态行**：（${normal ? "主 agent" : "eng-designer"} 写入时更新）`, // ③ §2 状态占位句
@@ -327,6 +332,35 @@ const LEDGER_HEADER_MISSING_ERROR = "batch: the record has no `> 台账 = …` l
 /** 档头行无可接编号位拒串（既无 `#<编号>` 也无真编号——无处可接，不猜形）。 */
 const LEDGER_HEADER_NO_SLOT_ERROR = "batch: the record's header 台账 line carries neither a ledger number nor the `#<编号>` placeholder — there is no slot to extend, and attach does not invent one. Fix that line by file edit first. Nothing was written."
 
+/** 档头 `台账` 行定位（读写共用）：只认首个 `## §N` 之前的档头域；CRLF 的行尾单独留住。 */
+function ledgerHeaderLineOf(src) {
+  const lines = src.split("\n")
+  const firstSection = lines.findIndex((line) => /^## §\d/.test(line))
+  const limit = firstSection < 0 ? lines.length : firstSection
+  const idx = lines.findIndex((line, i) => i < limit && LEDGER_HEADER_RE.test(line))
+  if (idx < 0) return null
+  const cr = lines[idx].endsWith("\r") ? "\r" : ""
+  return { lines, idx, cr, text: cr ? lines[idx].slice(0, -1) : lines[idx] }
+}
+
+/** 号集合切分（读写共用）：第一个 `（` 起的括注组不参与，前置列表逐枚取 `#\d+`。 */
+function ledgerNumberMatches(text) {
+  const open = text.indexOf("（")
+  return [...text.slice(0, open < 0 ? text.length : open).matchAll(LEDGER_NO_RE)]
+}
+
+/**
+ * 档头 `台账` 行号集只读解析器（§2.17 `headerRows` 的单源）：与 `appendLedgerNoToHeader`
+ * 共用 `ledgerHeaderLineOf` 与 `ledgerNumberMatches`，档头语法只此一份。无档头行 ⇒ 空集。
+ * @param {string} src — 批档全文
+ * @returns {number[]} 档头登记的台账行号（保持登记顺序）
+ */
+export function readLedgerHeaderNumbers(src) {
+  if (typeof src !== "string") return []
+  const header = ledgerHeaderLineOf(src)
+  return header ? ledgerNumberMatches(header.text).map((m) => Number(m[0].slice(1))) : []
+}
+
 /**
  * 档头 `台账` 行补编号（设计档 §4.21.3「档头拆分的规则」——纯函数 · 零 fs）。
  * 行形 = `> 台账 = #a · #b（core · 归批）。前情 = …`；四条规则：
@@ -344,17 +378,13 @@ export function appendLedgerNoToHeader(src, n) {
   if (!Number.isInteger(no) || no <= 0) {
     throw new Error(`batch: a ledger entry number is required to extend the header 台账 line — got ${JSON.stringify(n ?? null)}. Nothing was written.`)
   }
-  const lines = src.split("\n")
-  const firstSection = lines.findIndex((line) => /^## §\d/.test(line))
-  const limit = firstSection < 0 ? lines.length : firstSection
-  const idx = lines.findIndex((line, i) => i < limit && LEDGER_HEADER_RE.test(line))
-  if (idx < 0) throw new Error(LEDGER_HEADER_MISSING_ERROR)
-  const cr = lines[idx].endsWith("\r") ? "\r" : ""
-  const text = cr ? lines[idx].slice(0, -1) : lines[idx]
+  const header = ledgerHeaderLineOf(src)
+  if (!header) throw new Error(LEDGER_HEADER_MISSING_ERROR)
+  const { lines, idx, cr, text } = header
   const open = text.indexOf("（")
   const preEnd = open < 0 ? text.length : open
   const pre = text.slice(0, preEnd)
-  const nums = [...pre.matchAll(LEDGER_NO_RE)]
+  const nums = ledgerNumberMatches(text)
   if (nums.some((m) => Number(m[0].slice(1)) === no)) return { src, already: true, line: text }
   let next
   if (nums.length) {

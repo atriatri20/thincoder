@@ -71,14 +71,18 @@ export function codeSpans(line) {
   return spans
 }
 
-/** 行内可执行坐标（命令 / 搜索模式串码段）——锚判据**只跳码段区间**用（证据与命令保字面；码段外的散文照抽照判）；
- *  段判据不豁免（段 = 读者所见）。判面 = **码段之内**：切分单源 = `codeSpans`，锚判按每段区间判 `inSpan`，空档不判。 */
-export function isExecutableLine(line) {
-  return codeSpans(line).some(({ text: t }) => (
-    t.includes("&&") || // 命令链（cd … && …）
+/** 单个码段的可执行谓词（命令 / 搜索模式串）：判域只是这一段的文本，不连同同一行的其他码段。 */
+export function isExecutableSpan(span) {
+  const t = typeof span === "string" ? span : String(span?.text ?? "")
+  return t.includes("&&") || // 命令链（cd … && …）
     /\b(?:cd|node|npm|npx|grep|rg|git)\s/.test(t) || // 码段内命令词
     /(?:\[\^|\\\.|\(\?<|\(\?:|\{\d)/.test(t) // 码段内搜索模式串片段
-  ))
+}
+
+/** 行内可执行坐标（命令 / 搜索模式串码段）——锚判据**只跳满足段谓词的码段区间**用；
+ *  段判据不豁免（段 = 读者所见）。行谓词保留既有语义 = 任一码段满足 `isExecutableSpan`。 */
+export function isExecutableLine(line) {
+  return codeSpans(line).some(isExecutableSpan)
 }
 
 /** 行内位置是否在反引号码段内（引述面不判）——与 `isExecutableLine` 同取 `codeSpans` 的配对（一处配对规则、两处消费）。
@@ -147,7 +151,8 @@ export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files
         const len = [...l].length
         // `text` = 该行整行原文（首尾去空白）——豁免登记的识别键取它（§2.7「`text` 取什么」）：
         // 只给行号不给文本，登记就只能靠行号匹配，插一行整片失效。
-        if (len > lineMax) hits.push({ file: f, line: i + 1, len, clazz: DOC_CLASS.line, text: l.trim() })
+        // `token` = 该行整行原文（载荷格，见 `./index.mjs` 的 `root` 载荷条）：拒文四件的「内容」那一格读它。
+        if (len > lineMax) hits.push({ file: f, line: i + 1, len, clazz: DOC_CLASS.line, text: l.trim(), token: l.trim() })
       })
       continue
     }
@@ -158,7 +163,11 @@ export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files
     const flush = () => {
       // `text` = 该段整段原文（首尾去空白、内部逐字）——豁免登记的识别键取它（§2.7「`text` 取什么」）。
       // 段文本就是本循环已经在数的那些行，不另读一次档、不另拆一次段。
-      if (para !== null && para.len > paragraphMax) hits.push({ file: f, line: para.start, len: para.len, clazz: DOC_CLASS.para, text: para.text.join("\n").trim() })
+      // `token` = 该段整段原文（载荷格 · 与上一条同源）；`text` 同时是豁免登记的识别键，两格不合并。
+      if (para !== null && para.len > paragraphMax) {
+        const body = para.text.join("\n").trim()
+        hits.push({ file: f, line: para.start, len: para.len, clazz: DOC_CLASS.para, text: body, token: body })
+      }
       para = null
     }
     lines.forEach((l, i) => {

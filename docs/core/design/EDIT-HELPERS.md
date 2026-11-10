@@ -32,7 +32,7 @@ findCandidates(lines, oldString, topN=3, threshold=0.5) → [{ line, preview, sc
 - **findCandidates 阈值 / 预算**：`score = LCS(old_string, line).length / max(len(old_string), len(line))`，≥0.5 才进候选；top 3。参与 LCS 的 `old_string` 与行**各截断到 500 字符**再算分（防 minified 爆预算；预览本就截 80 字符）。
   - `old_string` 多行时**只对首行**找候选（输出前缀标 `old_string line 1:`——多行 `old_string` 的失败通常首行对不上，各报 top 3 噪音大）；
   - **行数上限**：超过 5000 行只扫前 5000 行（失败路径单文件 <1MB 下 <10ms 的 NFR 兜底）。
-- **majorityEol 性能**：最多扫 20 个文件、每文件只读首 4KB 判首行换行符——目录内文件多也不慢；`write` 调用路径上的开销可忽略。
+- **majorityEol 性能**：只扫候选档、每档只读首块判首行换行符——目录内文件多也不慢；`write` 调用路径上的开销可忽略。
 
 ## 4. 行尾语义（消费方现行行为）
 

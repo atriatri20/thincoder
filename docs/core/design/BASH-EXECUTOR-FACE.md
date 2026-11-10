@@ -21,7 +21,7 @@
 
 ## 2. 接口契约（机制 / 数据流）
 
-**单源**：核内新档 `thincoder-core/shell-identity.mjs`（≈70 行）——`resolveShellIdentity(configShell)` ⇒ `{ raw, name, kind, known }`：
+**单源**：核内新档 `thincoder-core/shell-identity.mjs`——`resolveShellIdentity(configShell)` ⇒ `{ raw, name, kind, known }`：
 
 - 入参 = spawn 侧同一取值（`ctx.agent?.config?.shell ?? null`，调用方传）；纯函数（不读环境外的状态；win32 分支内读 `%COMSPEC%`）；
 - 出参四键：`raw`（链终值：config.shell 原串 ∥ %COMSPEC% ∥ "cmd.exe" ∥ SHELL ∥ "/bin/sh"）· `name`（显示名）· `kind`（语法族：`cmd` ∥ `powershell` ∥ `posix` ∥ `unknown`）· `known`（是否命中知名字）；

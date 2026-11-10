@@ -50,7 +50,7 @@ function fixture(tag) {
   mkdirSync(join(root, "scripts"), { recursive: true })
   // 骨架原形：`ledger` / `board` 给值 ⇒ 档头两处死占位当场填掉（否则首个 append 被占位机检拒）
   writeFileSync(join(root, BATCH_REL), batchSkeleton({
-    date: "2026-11-01", topic: "fixture", source: "集成夹具", prev: "无（独立批）", ledger: "#1999", board: "core",
+    date: "2026-11-01", topic: "fixture", source: "集成夹具", prev: "无（独立批）", baseSha: "未取到（夹具直调骨架）", ledger: "#1999", board: "core",
   }))
   writeFileSync(join(root, DESIGN_REL), "# 设计夹具\n\n夹具正文。\n")
   writeFileSync(join(root, DELIVERED_REL), "export const delivered = 1\n")

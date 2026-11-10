@@ -9,8 +9,10 @@
  * ① `rewriteAsReopen` —— 一次写盘、两处落笔：状态行原位改写 + §1 段尾追记行（append-only：行数 +1、
  *    仅状态行原位替换、余行逐字节不变）。
  * ② `reclaimOnReopen` —— 台账写点（`ledgerReclaimBatch`）：`待核销 → 在途`（行回工作位）；`已核销` 不动
- *    （终态）+ 回执点名；其余状态零触。**失败不否决重开**（重开是从误冻结里出来的唯一通路，台账库忙不该
- *    把档锁死）——失败 ⇒ 重开照成、回执点名失败原文 + 后果 + 出路。
+ *    （终态）+ 回执点名；其余状态零触。**失败即回滚档并抛拒**（设计档 `UNIFY.md` §2.17 重开步序 4）：
+ *   判据 = 「档已开、行仍 `待核销`」会让写锁拒每一笔写盘且没有任何提示——那比「重开做不成」更坏，
+ *    所以本档只出**失败返回形**，回滚与两条拒文由 `batch-lifecycle.mjs` 的 `ledgerAfterRecordWrite` 收口。
+ *    代价（认下）：台账库长期不可用时重开也做不成，只能等人修库。
  *
  * 触发判据**不在这里**：只由 `batch-lifecycle.mjs` 的 `reopen` 合取触发（`seg === 1 ∧ depth0 ∧ ¬review ∧
  * 值 = 进行中 ∧ 前态 = closed`）——两处各推一次必然漂移，本档只承接「已判定要重开」之后的动作。
@@ -98,7 +100,7 @@ export function rewriteAsReopen(src, note) {
  * 工具层零 SQL）。`cwd` = **批档所属项目根**（`resolveLedgerRoot(dirname(<batchDoc>), boundary)?.root`——
  * 不用会话锚：多根工作区锚会收到别的项目根 ⇒ 选行零命中 ⇒ 唯一的机器写静默失效）；`boundary` = 会话锚。
  * 无根 ⇒ 传 `null`（核心不取行，`failed` 点名——不落兜底基准）。
- * **失败不抛**（台账忙 ∥ 无根均不否决重开——档面写与台账库分属两存储）。
+ * **失败以 `failed` 返回**：调用方 `ledgerAfterRecordWrite` 随即回滚档并抛拒，不把半状态留成成功。
  * @param {string} abs — 本批批档绝对路径
  * @param {string} boundary — 会话锚（上溯上界）
  * @returns {Promise<{batch:string, reclaimed:Array, unreclaimable:Array, failed:string|null}>}
@@ -116,27 +118,37 @@ export async function reclaimOnReopen(abs, boundary) {
       executorSessionId: getSessionId(),
     })
   } catch (e) {
-    // 非预期异常（模块加载失败 ∥ 根推导内读声明抛）同样不得否决重开——降为同一返回形（台账零改）
+    // 模块加载与根推导异常也降为失败返回形；调用方回滚档并抛拒，绝不把它当成重开成功。
     return { batch: abs, reclaimed: [], unreclaimable: [], failed: String(e?.message ?? e) }
   }
 }
 
 /**
- * 重开回收回执（设计档 §2.13 逐字；空行不出）：`failed` 非空 ⇒ 只出第三行（替代前两行）。
- * 第三行 = 失败原文 + 后果 + 出路——「行仍 `待核销` ⇒ 台账里没有该档的在途行（写锁会拒每一笔写盘），
- * 库恢复后 update → 在途」。
- * @param {{reclaimed:Array, unreclaimable:Array, failed:string|null}|null} result
+ * 重开回收回执（设计档 §2.13 逐字；空行不出）。
+ * 失败不再走本段：回收失败 ⇒ 补偿回滚档 + 抛拒（`reopenLedgerFailedError` / `reopenHalfStateError`），
+ * 重开那次调用根本没有回执——「档已开、行仍 `待核销`」正是本批要消掉的那一形（写锁会拒每一笔写盘
+ * 且没有任何提示）。
+ * @param {{reclaimed:Array, unreclaimable:Array}|null} result
  */
 export function reopenReceiptLine(result) {
   if (!result) return ""
   const face = (r) => `#${r.id} 「${r.title}」`
-  if (result.failed) {
-    return `\n[ledger reopen] 回收失败：${result.failed}——台账零改；行仍 待核销 的，台账里没有该档的在途行（写锁会拒每一笔写盘），库恢复后 update → 在途`
-  }
   const lines = []
   if ((result.reclaimed ?? []).length) lines.push(`\n[ledger reopen] 本批待核销行 → 在途 ${result.reclaimed.length} 行：${result.reclaimed.map(face).join("；")}`)
   if ((result.unreclaimable ?? []).length) {
     lines.push(`\n[ledger reopen] 本批已核销行不可回收 ${result.unreclaimable.length} 行：${result.unreclaimable.map(face).join("；")}——已核销为终态，重开不回收；要继续做须另立新行（新档 §1「前情」指回本档）`)
   }
   return lines.join("")
+}
+
+/** 重开台账失败拒文（设计档 §2.17 重开步序 4 第一条串，逐字）：档已回滚（= 仍为已收口）⇒ 可原样重试。 */
+export function reopenLedgerFailedError(cause) {
+  return `batch: reopen failed — 台账事务未提交（${cause}）；批档仍为已收口（已回滚），可原样重试。Ledger: no committed change from this call (it never reached COMMIT).`
+}
+
+/** 重开补偿也失败拒文（同节第二条串，逐字——**不得复用第一条**）：残态 = 档已开、本批行仍 `待核销`，
+ *  写锁会拒每一笔写盘；查询面同刻必命中 `open-but-unwritable`，所以拒文点名查询面。 */
+export function reopenHalfStateError(abs, cause, rollbackCause) {
+  return `batch: reopen failed — 台账事务未提交（${cause}）；批档回滚也失败（${rollbackCause}）——半状态成立：批档已开，本批行仍待核销。` +
+    `Read it with batch({action:"check", path:"${abs}"}), then repair the ledger before any further write.`
 }

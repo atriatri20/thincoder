@@ -106,7 +106,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | 支撑 | `thincoder-vscode/src/repomap.mjs`（余为核单源——现体经 `@thincoder/core` 引用） | 记忆 / 向量索引 · MCP 客户端 · 仓库大纲 | `docs/core/design/MEMORY.md` · `docs/core/design/MCP.md` · `docs/core/design/CONTEXT-COMPACTION.md` |
 | Webview | `thincoder-vscode/webview/**`（chat/streaming/ui/activity/panels/send/md/…） | 前端渲染 / 交互（隔离 iframe——只经 postMessage、无共享状态） | `docs/vsc/design/WEBVIEW*.md`（三档——结构 ∥ 协议 ∥ 输入） |
 
-测试树：`thincoder-vscode/test/`（`package.json` `"test"` = `node thincoder-vscode/test/run.mjs`——**单入口（收口时跑一次）**；显式清单 `thincoder-vscode/test/files.mjs` = 单一来源，清单↔盘上两向自检；权威 = `docs/core/design/TESTING.md` §10）。
+测试树：`thincoder-vscode/test/`（`thincoder-vscode/package.json` 的 `"test"` = `node thincoder-vscode/test/run.mjs`——**单入口（收口时跑一次）**；显式清单 `thincoder-vscode/test/files.mjs` = 单一来源，清单↔盘上两向自检；权威 = `docs/core/design/TESTING.md` §10）。
 
 ## 4. 模块接口速览
 

@@ -169,16 +169,21 @@ export async function buildToolTable({ depth, role, engineering, provider, mcpSe
   // ── ③ 基础集：subagent role-based tool filtering —— explore/plan/consult get read-only tools only；
   // `tester` 取第三面（AGENT-LOOP-SUBAGENT.md §6.59.2 ⑥）：只读集 ∪ `{execute, bash}` − `{verify, advisor}`；
   // depth>0 面另剔 depth-excluded 工具（核单源 `SUBAGENT_TOOL_EXCLUSIONS`——TOOLS.md §6.16）。
-  // 端侧两条成文规则（§6.59.2 ⑥「端侧只读集怎么取」——勿自择）：只读集 = `builtinTools.filter((t) => t.readonly)`
-  // （就是下面这一行的现成形，端侧不调核 `readonlyToolNames`）；`TRIMMED` 端侧自持同形字面量（§6.24
-  // 「端镜像面不 import 核常量，同集由判据锁死」）。两枚减法按名显式做，不看 `readonly` 旗标——
-  // 旗标说的是「不写盘」，不是「不产出结论」（`verify` = 宣布达标 ∥ `advisor` = 开评审出判断，都是结论）。
+  // `tester` 的只读集仍 = `builtinTools.filter((t) => t.readonly)`（端侧成形，不调核 `readonlyToolNames`）；
+  // `TRIMMED` 端侧自持同形字面量（§6.24「端镜像面不 import 核常量，同集由判据锁死」）。两枚减法按名显式做，
+  // 不看 `readonly` 旗标——旗标说的是「不写盘」，不是「不产出结论」（`verify` = 宣布达标 ∥ `advisor` = 开评审出判断）。
   const isReadOnlyRole = depth > 0 && (role === "explore" || role === "plan" || role === "consult")
   const isTesterRole = depth > 0 && role === "tester"
   const TESTER_TRIMMED = new Set(["verify", "advisor"])
+  // B4（TOOLS.md §6.29 ①）：只读角色的面 = 整把只读集 ∪ action 级只读变体——构造器与判据都取核
+  // （变体登记表 = 核 `agent/helpers.mjs` 的 `READONLY_VARIANT_DOCS`；判据 = 核 `readonlyActionOf`）。
+  // 判据面**动态** import：核 `dispatch-gates.mjs` 经 `agent-tools/advisor-async.mjs` 静态可达核
+  // agent 栈（W8 契约②）——端壳静态闭包不得触达，同 `agent-tools.mjs` 那几处纪律。
+  const { deriveReadonlyTools } = await import("@thincoder/core/agent/helpers.mjs")
+  const { readonlyActionTest } = await import("@thincoder/core/agent/dispatch-gates.mjs")
   const baseTools = [
     ...(isReadOnlyRole
-      ? builtinTools.filter((t) => t.readonly)
+      ? deriveReadonlyTools(builtinTools, readonlyActionTest)
       : isTesterRole
         ? builtinTools
             .filter((t) => t.readonly || t.name === "execute" || t.name === "bash")

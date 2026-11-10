@@ -66,6 +66,10 @@ export async function assembleBuiltinTools({ memory, cwd, projectDir = null, aut
   const { repoOutlineTool } = await import("./repomap.mjs");
   const { settingsTool } = await import("../agent-tools/settings.mjs");
   const { peerInstancesTool } = await import("../peer-instances.mjs");
+  // 投递面工具两件（MULTI-INSTANCE-COLLAB §5.2 / §5.8）：装配点 = `peer_instances` 同点——核基集一处，
+  // 两壳（CLI / VSC）同得；`instance_list` 随名册档、`instance_send` 随 inbox 档。
+  const { instanceListTool } = await import("../instance-registry.mjs");
+  const { instanceSendTool } = await import("../instance-inbox.mjs");
   const imageOk = Boolean(specForModel(model)?.multimodal);
   return [
     ...builtinTools,
@@ -77,6 +81,8 @@ export async function assembleBuiltinTools({ memory, cwd, projectDir = null, aut
     repoOutlineTool(memory?.db, cwd),
     settingsTool(),
     peerInstancesTool,
+    instanceListTool,
+    instanceSendTool,
     // 台账工具面（统一入口 `ledger`——含读二）随家族段 `agent/family-tools.mjs`（2026-10-05 统一入口批：本基集清零）
   ];
 }

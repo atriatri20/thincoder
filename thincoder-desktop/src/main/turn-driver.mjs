@@ -36,6 +36,8 @@ import { injectAtRefs } from "./file-refs.mjs"
 import { loadAgentSlot } from "./session-io.mjs"
 import { slotOfKey } from "./session-slots.mjs"
 import { createNotifier } from "./notify.mjs"
+// 跨实例投递面名册（MULTI-INSTANCE-COLLAB §5.2 · D-MI28）：登记点 = 会话起点（本键 agent 装配成功处）
+import { registerInstance } from "@thincoder/core/instance-registry.mjs"
 import { createQueuedInput, textOf } from "./queued-input.mjs"
 import { createSuspensionDrive } from "./suspension-drive.mjs"
 import { createTurnChain } from "./turn-chain.mjs"
@@ -157,10 +159,24 @@ export function createTurnDriver({
   /** 回合输入面（msg 双通道族出档 `turn-input.mjs` —— 见档头 ⑤；返回面同名转口 ⇒ 调用面零改）：`interrupt` 预检
    *  所需 cap 登记表与宿主 `askContinue` ∥ `dispose` 共享引用（#656）。 */
   const { send, interrupt } = createTurnInput({
-    post, ensure, flights, queued, chain, suspension, drive, projects, denyGates, capPending,
+    post, ensure: ensureSession, flights, queued, chain, suspension, drive, projects, denyGates, capPending,
   })
 
-  /** 回合驱动尾（`send` ∥ 续发两径**同源**）：成功径 ⇒ 档①通知 + 接管；失败径 ⇒ 接管（后台项不因回合失败而失管）。 */
+  /** 会话起点（键槽创建 = 本键 agent 装配成功那一刻）：登记名册 + 装取件闩（MULTI-INSTANCE-COLLAB §5.4 ·
+   *  §5.8 · D-MI28）。桌面宿主按会话键**懒装配** ⇒ 「会话起点」在此定义；一个回合都没跑过的会话在桌面
+   *  根本没有 agent（也就没有取件面）⇒ 不入册，正是 D-MI28 要的形态。登记 / 装闩失败不阻断装配。 */
+  async function ensureSession(key, slot) {
+    const agent = await ensure(key, slot)
+    if (agent) {
+      try { registerInstance({ cwd: projects?.currentCwd() ?? "" }) } catch { /* 名册写失败不阻断装配 */ }
+      suspension?.armInbox(key, agent)
+    }
+    return agent
+  }
+
+  /** 回合驱动尾（`send` ∥ 续发两径**同源**）：成功径 ⇒ 档①通知 + 接管；失败径 ⇒ 接管（后台项不因回合失败而失管）。
+   *  **回合起点不撤取件闩**（MULTI-INSTANCE-COLLAB §5.4 · D-MI31 自续闩）：在飞期零 stat 由 `isBusy()`
+   *  臂早退承担——撤闩会让取件面落到「哪段代码跑到没跑到」上。 */
   function drive(key, agent, text, attached) {
     void executeTurn(key, agent, text, { attached }).then(
       () => { suspension.turnDone(key, agent); takeOver(key, agent) }, // 成功径 ⇒ 提示面档①（`!autoTurn` —— send 径恒非 auto）

@@ -1,4 +1,8 @@
-Read the project manifest (PROJECT-MANIFEST.json) — the project-level state file: version / phase / docRoot (the root of each document layer: requirements / specs / design / modules / batches, plus `standards` = the project's standards document, by file path) / codePaths / index.
+Read the project manifest (PROJECT-MANIFEST.json) — the project-level state file: version / phase / docRoot / codePaths / index.
+
+`docRoot` holds one entry per document layer, each a directory (a string | a multi-root array | `null` = absent): requirements / specs / design / modules / batches.
+
+`standards` is the standards **layer** — a directory whose `.md` files — subdirectories included, in layer-root-relative path order — are the standards; a file path is not accepted (one key, one meaning).
 
 Read-only: the only action is `read`. Creating or editing a manifest belongs to the main agent — this subagent variant has no init / write action.
 

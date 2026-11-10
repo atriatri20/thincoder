@@ -14,20 +14,18 @@
  *      `REFUSED`（K ≥ 1）∥ `ERROR` ⇒ 调用面 throw（fail-closed）。
  *      **单集**：范围内不设第二集——工作树里范围外的档不入判、不入报面（用户 2026-10-25 裁定「只判指定文件」）。
  *
- * **批档自身恒在判域（两 scope 同）**：批档生于此轮、冻结于此轮（`close` 之后整档冻结）⇒ 其全文字面
- * 即本轮的笔面，档内没有「别轮写的存量」可排；存量 = 别批的档，已由单集规则排除。于是：
- *   · ① 面**已落段命中**的处置按动作分两种（判集 = `docs/core/design/BATCH-RECORD.md` §4.9 门 ④ 判集两句）：
- *     `append` ⇒ 只入回执、不阻本次写——追加不碰既有行，拒一个改不动的人只会让这一段永远写不进
- *     （无账之笔）；本次追加文（片段档）与触达账**改动区**命中当场拒（改动区取法 = 下面那段四态判定）。
- *     `edit`（携 `pending.recordView` = **改写后的整档**）⇒ **判集两类**：段长类（段落过长 · 行过长）只判
- *     `newText`（片段档）——一条早先就在的超长段不拦本段的无关改动；**锚类判整档、当场拒**——引用完整性
- *     是档级属性，且这一段的作者改得动那一行。盘上旧字节不参判（拿改写前的档判，#2021 那条死引文
- *     永远过不去）；
- *   · ② 面命中即 K，且命中落在批档内时逐条带 `§N（作者：<角色>）`（答「谁该改」；作者取自档头
- *     「一段一作者」映射，取不到 ⇒ 只出 `§N`，不猜）。
+ * **批档自身恒在判域（两 scope 同）**，阻断集仍只跟本次改动走：
+ *   · ① 面 `append` 的已落段命中只入回执；本次追加文与触达账改动区命中当场拒。
+ *     `edit` 携改写后的整档视图：段长类只判 `newText`；锚类只判改后视图里的本次替换区，区外命中出整档读数。
+ *   · ② 面按批起 sha 求每档的本批改动区，区内命中即 K；区外与纯删邻段的存量只出 `STOCK_LINE`。
+ *     区未定则整档阻断。批档内强制命中逐条带 `§N（作者：<角色>）`，取不到作者就只出段号。
  *
  * 判据零变：本档不新增判据——只决定「判谁」与「何时强制」；判据与裁定串由产品引擎
  * `doc-check/index.mjs` 产出（判据源唯一）。
+ *
+ * **证据格 = 判据面的一列收窄（不是新判据）**：证据格里只失败存在性的 `档缺` 降为读数、不进强制集；
+ * 口径单源 = `docs/core/design/BATCH-RECORD.md` §4.22——本档只实现「哪些命中阻写」，引擎的命中、分类与
+ * verdict 一字不动。拒文四件的显示行同样照该节组装（引擎 `✗` 行齐四件的才直接用，其余按命中类补齐）。
  *
  * **触达账腿判改动区（① 面·单源 = 设计档 §3.20「触达账腿的判面 = 本次改动区」）**：写者本 run 写进
  * 那一档的那些字才进强制集，整档累积的存量债归收口面。改动区取自 git 基线（写工具不提交 ⇒ 本 run 的
@@ -36,8 +34,7 @@
  *   · ① 在仓 ∧ 在跟踪面 ∧ 基线可解析 ⇒ `git diff -U0 <基线> -- <该档>` 的区间表，按扩区表扩成片段区；
  *   · ② 在仓 ∧ **不在**跟踪面 ⇒ 整档（未跟踪的 `.md` 只可能是本轮新建的档，整本即本轮的笔）；
  *   · ③ 在跟踪面 ∧ 基线不可解析 ∥ ④ 非 git 仓 ⇒ **未定**：本次零强制 + 回执明示（降级方向 = 不阻写）。
- * 区外命中只出一行计数、不逐条列（137 条逐条列正是本批消掉的现场）；收口面照旧整档判、逐条列——
- * `close` 范围与判面一字不动。
+ * 区外命中只出一行 `STOCK_LINE`、不逐条列；收口面也按本批改动区阻断，区未定才整档判。
  *
  * 两条边界（设计与实测同口径）：
  * ① **本次写入文本的判法** = 落批档同目录的隐藏片段档（`.gate-<pid>-<rand>.md`）——锚解析序 ② 是
@@ -47,14 +44,14 @@
  * ② **提交 diff 腿的基 sha 只读批档 §1 的记入行**（`批起 sha = <sha>`——取行内首个 40 位十六进制串）；
  *    取不到（无该行 ∥ 形态不合 ∥ git 跑不出该 diff）⇒ 只认触达账 + 回执明示「基 sha 未定」（不静默）。
  */
-import { execFileSync } from "node:child_process"
 import { readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
 
 import { owningProject, readManifest } from "../manifest.mjs"
-import { runDocCheck, PARA_DISPOSE, DOC_CLASS } from "../doc-check/index.mjs"
+import { runDocCheck, PARA_DISPOSE, DOC_CLASS, STOCK_LINE, CYCLE_READ_LINE } from "../doc-check/index.mjs"
 // 扩区表单源（D2）：两门判的是同一件事（本笔触碰的那几段），各写一张表必然漂移 ⇒ 只调用、不复制。
-import { fragmentZones, mergeZones } from "../tools/doc-write-gate.mjs"
+import { committedDocs, FRAGMENT_PREFIX, fragmentPathOf, pureDeleteStockEntries, touchedRegions } from "./batch-regions.mjs"
+export { FRAGMENT_PREFIX } from "./batch-regions.mjs"
 import { sectionHeaderRe } from "./batch-skeleton.mjs"
 import { batchProjectRoot } from "./batch-paths.mjs"
 
@@ -74,15 +71,96 @@ function docPaths(list, base) {
  *  （声明出边走回本根——仓级事实，与 `档缺` 同计锚、不新增判决词）。 */
 const ANCHOR_CLASSES = new Set(["档缺", "节缺", "引缺", "环引"])
 
-/** 片段档名前缀（与批档同目录的隐藏档——锚解析序 ② 与批档本体同源）。**导出面**：`batch-lifecycle.mjs` 的在飞
- *  扫描要靠它把两类片段档排除在外——`edit` 面的 `recordView` 是**整档副本**（`## §1` 段头 + `进行中` 都在），
- *  不排除就会被当成第二本在飞批（假拒），进程被杀则残留一本永久 open 的幽灵档。 */
-export const FRAGMENT_PREFIX = ".gate-"
+/** 证据格识别器的**字面闭集**（判据单源 = `docs/core/design/BATCH-RECORD.md` §4.22「证据格怎么认」）：
+ *  只有这两个字面。`依据` ∥ `一行依据` ∥ `判据落点` 等一律**不是**证据格 ⇒ 照旧阻写（失败方向 = 拒，fail-closed）。 */
+const EVIDENCE_HEADERS = new Set(["证据", "evidence"])
 
-/** 片段档路径（每次一个随机名：并发两次门不撞名，也不互删）。 */
-function fragmentPathOf(abs) {
-  return join(dirname(abs), `${FRAGMENT_PREFIX}${process.pid}-${Math.random().toString(36).slice(2, 10)}.md`)
+/** 表格分隔行（`|---|:--:|`）：表头 = 它上面那一行——本档不带表格状态机，只借这一行认出表头在哪。 */
+const DELIM_ROW_RE = /^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/
+
+/** 一行的**末格跨度**（`{start, end}`，0 基；不以 `|` 收尾 ⇒ `null`）。
+ *  末格 = 倒数第二个 `|` 之后、收尾 `|` 之前；本档只认这一格的文字与范围。 */
+function lastCellSpan(line) {
+  const t = String(line).replace(/\s+$/, "")
+  if (!t.endsWith("|")) return null
+  const close = t.length - 1
+  const open = t.lastIndexOf("|", close - 1)
+  return open < 0 ? null : { start: open + 1, end: close }
 }
+
+/** 格内文字（判据 = 去首尾空白、去包裹反引号后**全等**）：`证据` ∥ `` `证据` `` ∥ `` `evidence` `` 都认，别的都不认。 */
+const cellLabel = (raw) => String(raw).trim().replace(/^`+/, "").replace(/`+$/, "").trim()
+
+/**
+ * 证据格识别器：同一张 markdown 表内，表头行**最后一个单元格**落在闭集里 ⇒ 该表**表体所在的行区集合**。
+ * @param {string} src 一份文本（本次写入文本 ∥ 批档整档 ∥ 收口面各档——三条腿各喂自己那份视图）
+ * @returns {Map<number, number>} 1 基行号 → 该行**末格起点列**（0 基）
+ *   **为什么连列起点一起返回**：命中的粒度是「一行」，判据的粒度是「一格」——同一行别的列照旧阻写（§4.22
+ *   「正文与其他列一字不放」），于是调用面还要知道末格从第几个字符起。行不在表体 ⇒ 不在 Map 里（照判）。
+ *   **不按段号豁免**：按段号会把 §3 的正文一起放宽（结论表与裁定行同在一段）——理由单源 = 该节「同类先例 · 偏离」。
+ */
+export function pointerCells(src) {
+  const out = new Map()
+  const lines = String(src ?? "").split("\n")
+  let active = false
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const span = lastCellSpan(line)
+    if (DELIM_ROW_RE.test(line)) {
+      // 分隔行：上面那一行即表头——末格落进闭集才认这张表的表体。
+      const head = i > 0 ? lastCellSpan(lines[i - 1]) : null
+      active = head !== null && EVIDENCE_HEADERS.has(cellLabel(lines[i - 1].slice(head.start, head.end)))
+      continue
+    }
+    // 表体行 = 以 `|` 起、以 `|` 收（与段判据的表格行谓词同一形）；其余行一律断表。
+    if (span === null || !/^\s*\|/.test(line)) { active = false; continue }
+    if (active) out.set(i + 1, span.start)
+  }
+  return out
+}
+
+/** 这条命中是不是落在**证据格**里（§4.22：证据格里只判「判得了的」）：
+ *  ① 命中类必须是 `档缺`（`节缺` ∥ `引缺` 的前提是目标档在盘——判得出来就照判）；
+ *  ② 该行必须在证据格表体内；
+ *  ③ 被拒的 token 必须真的落在**末格**里（同一行别的列照旧阻写）。
+ *  `环引` 没有行号（仓级事实）⇒ 恒不在证据格；读不到那一行 ⇒ 不在（照判，不往宽里掉）。 */
+function inEvidenceCell(h, rowsOf, srcOf) {
+  if (h.clazz !== "档缺" || typeof h.line !== "number") return false
+  const start = rowsOf(h.file).get(h.line)
+  if (start === undefined) return false
+  const token = String(h.token ?? "")
+  if (token === "") return false
+  const line = String(srcOf(h.file) ?? "").split("\n")[h.line - 1] ?? ""
+  return line.indexOf(token, start) >= start
+}
+
+/** 多行原文压成一行（段类的内容格是整段原文，段内换行在本行里显形——`⏎` 不是省略号，字一个没少）。 */
+const oneLine = (s) => String(s ?? "").replace(/\s*\n\s*/g, " ⏎ ")
+
+/**
+ * 拒文四件的**显示行**（判据单源 = §4.22「拒文四件」）：档 + 位置 + 被拒的内容 + 解析根，按命中类取值、一格不空。
+ * **引擎 `✗` 行齐四件的才直接用**：`环引` 那一行本就有根（`（<root>）`）与仓链，照用。
+ * 不齐的按命中类补齐——引擎行不齐不是它的错：`paragraphHitLine` 只出档与行号（无原文、无根）；`lineRefHitLine`
+ * 只出形别与前 40 字；锚行的根只在声明仓提示里出现。
+ * `engineLine` 为 `null`（`aligned` 假、配不上对）⇒ 按命中对象现造，四件仍齐。
+ */
+function displayLineOf(h, engineLine, shown, root) {
+  const at = h.root ?? root
+  if (h.clazz === "环引") {
+    return engineLine ?? `✗ 锚·环引 ${shown(h.file)}（${at}）publicRepos 成环：${h.chain ?? ""}`
+  }
+  if (ANCHOR_CLASSES.has(h.clazz)) {
+    const base = engineLine ?? `✗ 锚·${h.clazz} ${shown(h.file)}:${h.line} \`${h.token ?? ""}\``
+    return String(base).includes(String(at)) ? base : `${base}（根：${at}）`
+  }
+  const base = engineLine ?? `✗ ${h.clazz} ${shown(h.file)}:${h.line}${h.snippet === undefined ? "" : ` ${h.form ?? ""} ${h.snippet}`}`
+  const content = oneLine(h.token)
+  // 行号坐标的引擎行已带整行原文（片段 = 全长时）⇒ 内容格不重复；否则补原文。
+  const hasContent = h.snippet !== undefined && h.snippet === content
+  const tail = [hasContent ? "" : `原文：${content}`, `根：${at}`].filter(Boolean).join(" —— ")
+  return `${base} —— ${tail}`
+}
+
 
 /** 同目录 `.gate-*` 残留（进程在写片段后、清理前被杀）：**只扫不删**——并发进程的活片段是别人正在判的档。 */
 function strayFragmentsOf(dir, ownAbs) {
@@ -95,6 +173,24 @@ function strayFragmentsOf(dir, ownAbs) {
 /** 读档（读不到 ⇒ 空串：归属标注取不到就只出 `§N`，不猜）。 */
 function safeRead(abs) {
   try { return readFileSync(abs, "utf8") } catch { return "" }
+}
+
+/** 命中所在文本的**读取器**（证据格判据要读原文：表头与末格范围都在文本里，不在命中对象里）：
+ *  本次写入文本 ⇒ `pendingBody`；`edit` 面的改写后整档视图 ⇒ `viewBody`；其余 ⇒ 盘上读。
+ *  按路径记一次——一笔里多命中同档时不重复读盘。读不到 ⇒ 空串（于是 `inEvidenceCell` 判「不在证据格」，照判不往宽里掉）。 */
+function srcOfOf({ viewAbs, viewBody, fragAbs, pendingBody }) {
+  const memo = new Map()
+  return (abs) => {
+    const key = pathKey(abs)
+    let src = memo.get(key)
+    if (src === undefined) {
+      src = viewAbs !== null && key === pathKey(viewAbs) ? String(viewBody ?? "")
+        : fragAbs !== null && key === pathKey(fragAbs) ? String(pendingBody ?? "")
+        : safeRead(abs)
+      memo.set(key, src)
+    }
+    return src
+  }
 }
 
 /** 批档档头骨架行的「一段一作者」映射（`batch` create 落骨架时写入）——取不到 ⇒ 空表。 */
@@ -172,113 +268,52 @@ function baseShaOf(abs) {
   return null
 }
 
-/**
- * 本批提交 diff 腿（`git diff --name-only <sha> HEAD`——只取清单，判定归引擎）：路径以**仓根**
- * （`rev-parse --show-toplevel`）为基还原——项目根住大仓子目录时条目不丢（清单相对仓根）。
- * `-c core.quotepath=false`：不关此开关时 git 把含非 ASCII 字节的路径整串加引号转义，
- * 下流 `endsWith(".md")` 判据会判假 ⇒ 非 ASCII 档名的档静默掉出范围（正是本批要关的「范围跑偏」）。
- * 跑不出（非仓 / sha 不可解析）⇒ `ok: false` + 空集（调用面按「基 sha 未定」明示，不静默）。
- */
-function committedDocs(root, sha) {
-  const run = (cwd, argv) => execFileSync("git", ["-C", cwd, "-c", "core.quotepath=false", ...argv], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 8000 })
-  try {
-    const top = run(root, ["rev-parse", "--show-toplevel"]).trim() || root
-    const files = run(top, ["diff", "--name-only", sha, "HEAD"]).split(/\r?\n/).filter(Boolean)
-    return { ok: true, base: top, files }
-  } catch {
-    return { ok: false, base: root, files: [] }
-  }
-}
-
-/** git 输出（成功 = trim 后的 stdout；跑不出 ⇒ `null`——非仓 ∥ 无 git 二进制 ∥ 无该对象同一支，由调用面按四态分流）。 */
-function gitOut(cwd, argv) {
-  try {
-    return execFileSync("git", ["-C", cwd, "-c", "core.quotepath=false", ...argv], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 8000 }).trim()
-  } catch { return null }
-}
-
-/**
- * `git diff -U0` 输出 → 该档的**改后**行号区间表（`@@ -a,b +c,d @@` 的 `+` 侧；一次改动可多段）。
- * `d === 0`（纯删段）⇒ 宽度为零 `{start:c+1,end:c}`——与写前门「纯删行」同一形，扩区表据此并入紧邻两段。
- * 只认 `+++ b/<该档>` 之下、`--- /dev/null` 的整档新建不认（那一形由「未跟踪档 ⇒ 整档」承接，不在这里混判）。
- */
-function diffRangesOf(text, relPath) {
-  const out = []
-  const want = `+++ b/${relPath}`
-  let active = false
-  for (const line of String(text ?? "").split(/\r?\n/)) {
-    if (line.startsWith("+++ ")) { active = line.trim() === want; continue }
-    if (!active) continue
-    const m = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line)
-    if (!m) continue
-    const start = Number(m[1])
-    const count = m[2] === undefined ? 1 : Number(m[2])
-    out.push(count === 0 ? { start: start + 1, end: start } : { start, end: start + count - 1 })
-  }
-  return out
-}
-
-/**
- * 触达账腿的改动区（四态判定 · 判据单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「改动区取法（基线两级 · 四态判定）」）：
- * **先问「在不在 git 仓」、再问「该档在不在跟踪面」**——问序反了就把 ④ 吃掉（非 git 仓里所有档都「不在跟踪面」，
- * 会被 ② 判成整档，而那正是本批要治的病）。返 `Map<pathKey, {kind:'region',zones}|{kind:'whole'}|{kind:'unknown',why}>`。
- * 扩区只调用写前门的导出（单源）：「什么叫一段」仍只由 `thincoder-core/doc-check/paragraph.mjs` 的谓词族定。
- * 逐档一次 `git diff -U0 <基线> -- <该档>`；任何一步问不出（无 git ∥ 抛错）⇒ `unknown` + `why`，**不抛给门体**
- * （降级方向 = 不阻写 + 回执明示，由收口面整档判兜底）。
- */
-function touchedRegions(docs, baseSpec) {
-  const out = new Map()
-  // 同一次门内按仓缓存：仓根 ∥ 跟踪面清单 ∥ 基线解析——省下的是「每档三次」的机跑，判据一点不改。
-  const tops = new Map() // dirname → 仓根 ∥ null（非仓）
-  const indexes = new Map() // 仓根 → Set(相对路径) ∥ null（清单跑不出）
-  const bases = new Map() // 仓根 → 基线 sha ∥ null（不可解析）
-  for (const abs of docs) {
-    try {
-      const dir = dirname(abs)
-      if (!tops.has(dir)) tops.set(dir, gitOut(dir, ["rev-parse", "--show-toplevel"]))
-      const top = tops.get(dir)
-      if (!top) { out.set(pathKey(abs), { kind: "unknown", why: "不在 git 仓" }); continue }
-      if (!indexes.has(top)) {
-        const list = gitOut(top, ["ls-files", "-z"])
-        indexes.set(top, list === null ? null : new Set(list.split("\0").filter(Boolean)))
-      }
-      const index = indexes.get(top)
-      if (index === null) { out.set(pathKey(abs), { kind: "unknown", why: "git ls-files 跑不出" }); continue }
-      const relPath = relative(top, abs).replace(/\\/g, "/")
-      // ② 在仓而**不在**跟踪面 ⇒ 整档：写工具不提交 ⇒ 未跟踪的 `.md` 只可能是本轮新建的档。
-      if (!index.has(relPath)) { out.set(pathKey(abs), { kind: "whole" }); continue }
-      if (!bases.has(top)) bases.set(top, gitOut(top, ["rev-parse", "--verify", "--quiet", `${baseSpec}^{commit}`]))
-      const base = bases.get(top)
-      if (!base) { out.set(pathKey(abs), { kind: "unknown", why: `基线不可解析（${baseSpec}）` }); continue }
-      const diff = gitOut(top, ["diff", "-U0", base, "--", relPath])
-      if (diff === null) { out.set(pathKey(abs), { kind: "unknown", why: "git diff 跑不出" }); continue }
-      const lines = safeRead(abs).split("\n")
-      const zones = mergeZones(diffRangesOf(diff, relPath).flatMap((r) => fragmentZones(lines, r)))
-      out.set(pathKey(abs), { kind: "region", zones })
-    } catch {
-      out.set(pathKey(abs), { kind: "unknown", why: "判定抛错" })
-    }
-  }
-  return out
+/** `edit` 的替换区：改后整档视图里 `newText` 所占的行区间；纯删为零宽。 */
+function replacementRegionOf(oldBody, newBody) {
+  const oldLines = String(oldBody ?? "").split("\n")
+  const newLines = String(newBody ?? "").split("\n")
+  const min = Math.min(oldLines.length, newLines.length)
+  let head = 0
+  while (head < min && oldLines[head] === newLines[head]) head++
+  let tail = 0
+  while (tail < min - head && oldLines[oldLines.length - 1 - tail] === newLines[newLines.length - 1 - tail]) tail++
+  return { start: head + 1, end: newLines.length - tail }
 }
 
 
-/** 命中 → `{ aligned, entries }`：`file` / `line` / `clazz` = 判定用（引擎给绝对路径）；
- *  显示行取引擎已产出的 `✗` 行（报面单源不重写），过 `translate` 换掉片段档的临时路径；
- *  行数与命中数不等（引擎报面行序变动）⇒ `aligned: false` + 自造行，由调用面回执明示。 */
-function hitEntries(res, root, translate) {
+
+
+/** 命中 → `{ aligned, drift, entries }`：`file` / `line` / `clazz` / `token` / `root` = 判定用（引擎给绝对路径，两格载荷 = 引擎补的）；
+ *  显示行 = **拒文四件**（单源 = `docs/core/design/BATCH-RECORD.md` §4.22「拒文四件」）：档 + 位置 + 被拒的内容 + 解析根，
+ *  按命中类取值、一格不空；`pointerRead` = 这一条落在证据格里且只失败存在性（只列读数、不阻写）。
+ *  `aligned`（引擎 `✗` 行数与命中数是否同序）**降为读数**：不同序时引擎行不可逐条配对 ⇒ 显示行按命中对象现造，
+ *  判定仍按命中对象（那句读数由调用面出固定一行）。 */
+function hitEntries(res, root, translate, srcOf) {
   const lines = res.report.split("\n").filter((l) => l.startsWith("✗ "))
   // 三条判据的命中按**报面行序**串起（锚 ∥ 段 ∥ 行号坐标）——引擎的命中数组顺序即报面行序，
-  // 少串一类就会让 `aligned` 永为 false（显示行全走自造形，拒面丢掉引擎原句）。
+  // 少串一类就会让 `aligned` 永为 false（显示行全走自造形）。
   const hits = [...res.anchorHits, ...res.paragraphHits, ...(res.lineRefHits ?? [])]
-  const aligned = lines.length === hits.length
+  const drift = Math.abs(lines.length - hits.length)
+  const aligned = drift === 0
+  const shown = (f) => relative(root, f).replace(/\\/g, "/")
+  // 证据格表体（一行一次 `pointerCells`）：同一笔里多命中同档时不重扫。
+  const rowsMemo = new Map()
+  const rowsOf = (file) => {
+    const key = pathKey(file)
+    let rows = rowsMemo.get(key)
+    if (rows === undefined) { rows = pointerCells(srcOf(file)); rowsMemo.set(key, rows) }
+    return rows
+  }
   const entries = hits.map((h, i) => ({
     file: h.file,
     line: h.line,
     clazz: h.clazz,
-    text: translate(aligned ? lines[i] : `✗ ${relative(root, h.file).replace(/\\/g, "/")}:${h.line}`),
+    token: h.token,
+    where: translate(`${shown(h.file)}:${h.line}`),
+    pointerRead: inEvidenceCell(h, rowsOf, srcOf),
+    text: translate(displayLineOf(h, aligned ? lines[i] : null, shown, root)),
   }))
-  return { aligned, entries }
+  return { aligned, drift, entries }
 }
 
 /** 报面组装：首行 verdict + 强制集命中行 + 明示集命中行 + 附注行 + 处置块（只跟段命中走——仅锚 ∥ 仅行命中不得叫人对段落动手；
@@ -287,7 +322,7 @@ function hitEntries(res, root, translate) {
 function composeReport({ first, forcedLines, disclosedLines, disclosedHeader, notes, disposePara }) {
   const out = [first, ...forcedLines]
   if (disclosedLines.length) {
-    out.push(disclosedHeader ?? "—— 批档已落段命中（只明示、不阻本次写；收口面 fail-closed 当场拦）：", ...disclosedLines)
+    out.push(disclosedHeader ?? "—— 批档已落段命中（只明示、不阻本次写；收口按本批改动区判）：", ...disclosedLines)
   }
   out.push(...notes)
   if (disposePara) out.push(...PARA_DISPOSE)
@@ -352,20 +387,22 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
   // 改写后的整档视图（`edit` 面——锚类判它，不判盘上旧字节：本批要消的正是「死引文那行改不动」那个死锁）。
   const viewBody = !close && pending && typeof pending.recordView === "string" ? pending.recordView : null
   const viewAbs = viewBody === null ? null : fragmentPathOf(selfAbs)
+  const editRegion = viewBody === null ? null : replacementRegionOf(safeRead(selfAbs), viewBody)
   // 判域内「哪一档是批档本体」：有视图时 = 视图（同目录、同骨架、同引用解析序）；判据与属性标注都读它。
   const selfKey = pathKey(viewAbs ?? selfAbs)
-  // 触达账腿的改动区（① 面·单源 = 设计档 §3.20）。`close` 面判整档 ⇒ 不取改动区（收口面一字不动）；
-  // 批档自身（及其改写后视图）不进这张表——它的判法不动（档生于此轮，档内没有别轮存量可排）。
-  // 基线两级：§1 有 `批起 sha = <sha>` 记入行 ⇒ 该 sha；无该行 ⇒ `HEAD`（写工具不提交 ⇒ 本 run 的笔迹在工作树里）。
+  const closeDocs = [...touched, ...diffDocs, selfAbs]
+  // 收口也按批起 sha 求本批改动区；没有基线时每档都是 unknown，由 blocks 向严整档阻断。
   const regions = close
-    ? new Map()
+    ? (baseSha
+      ? touchedRegions(closeDocs, baseSha)
+      : new Map(closeDocs.map((p) => [pathKey(p), { kind: "unknown", why: "§1 无有效批起 sha 记入行" }])))
     : touchedRegions(touched.filter((p) => pathKey(p) !== pathKey(selfAbs)), baseShaOf(selfAbs) ?? "HEAD")
 
   try {
     // 片段档写在 try 内：写失败也走同一条 finally（不存在就 unlink 失败无害）
     if (fragAbs) writeFileSync(fragAbs, pendingBody.endsWith("\n") ? pendingBody : `${pendingBody}\n`)
     if (viewAbs) writeFileSync(viewAbs, viewBody)
-    const docs = close ? [...touched, ...diffDocs, selfAbs] : [...touched, viewAbs ?? selfAbs, ...(fragAbs ? [fragAbs] : [])]
+    const docs = close ? closeDocs : [...touched, viewAbs ?? selfAbs, ...(fragAbs ? [fragAbs] : [])]
     const res = runDocCheck(root, { mode: "gate", docs, docsSource: close ? "explicit" : "session" })
     const basis = !close
       ? (pendingBody ? "pending+touched" : "touched")
@@ -391,41 +428,60 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
       let out = fragRel ? text.split(fragRel).join("本次写入文本") : text
       return viewRel ? out.split(viewRel).join(selfRel) : out // 视图档显示成批档自身的相对路径（读者不必知道临时档名）
     }
-    const { aligned, entries } = hitEntries(res, root, translate)
+    const rawHits = hitEntries(res, root, translate, srcOfOf({ viewAbs, viewBody, fragAbs, pendingBody }))
+    const { aligned, drift } = rawHits
+    // edit 的锚类只取改后视图的替换区；片段里的同一锚不再重复计数。append 无视图，行为不变。
+    const entries = viewAbs === null ? rawHits.entries : rawHits.entries.filter((e) =>
+      !fragAbs || pathKey(e.file) !== pathKey(fragAbs) || !ANCHOR_CLASSES.has(e.clazz))
 
     const selfSrc = viewBody ?? safeRead(selfAbs)
     const authors = authorMapOf(selfSrc)
-    const labeled = entries.map((e) => {
+    // 证据格只改「哪些命中阻写」，不改「是不是命中」（单源 = `BATCH-RECORD.md` §4.22）：
+    // 这批命中不强制、不明示，只入指针读数桶 `pointerReads`——与「触达账存量命中」同族（不进 `hits`、不动 verdict）。
+    const pointerReads = entries.filter((e) => e.pointerRead)
+    const judged = entries.filter((e) => !e.pointerRead)
+    const labeled = judged.map((e) => {
       const inSelf = pathKey(e.file) === selfKey
       return { ...e, inSelf, text: inSelf ? `${e.text}${attributionOf(selfSrc, e.line, authors)}` : e.text }
     })
     // ① 面（**三层腿分开判**——批档自身腿的判集单源 = `BATCH-RECORD.md` §4.9 门 ④ 判集两句）：
     //   · 本次写入文本（片段档）⇒ 当场拒；
     //   · 批档自身：append（无视图）⇒ 已落段命中只明示、不阻写（追加不碰既有行，拒一个改不动的人 = 无账之笔）；
-    //     edit（有视图）⇒ **判集两类**：锚类当场拒（引用完整性是档级属性）；段长类只明示（它只判 `newText`）；
+    //     edit（有视图）⇒ 锚类只判本次替换区；段长类只判 `newText`，其余出存量读数；
     //   · 触达账 ⇒ **改动区内**的命中当场拒（与本次文本同权）；区外存量只入回执计数；改动区未定 ⇒ 零强制 + 明示。
-    // ② 面：范围内全部命中即 K（收口面整档判，不分区内区外）。
+    // ② 面：本批改动区内命中即 K；纯删扩进来的存活旧命中须先过基线映射。
+    const pureDeleteStock = close ? pureDeleteStockEntries(labeled, root, regions) : new Set()
     const blocks = (e) => {
-      if (e.inSelf) return viewAbs !== null && ANCHOR_CLASSES.has(e.clazz)
+      if (close) {
+        const region = regions.get(pathKey(e.file))
+        if (!region || region.kind !== "region") return true
+        const inZone = region.zones.some((z) => e.line >= z.start && e.line <= z.end)
+        return inZone && !pureDeleteStock.has(e)
+      }
+      if (e.inSelf) {
+        return viewAbs !== null && ANCHOR_CLASSES.has(e.clazz) && editRegion !== null &&
+          e.line >= editRegion.start && e.line <= editRegion.end
+      }
       const region = regions.get(pathKey(e.file))
       if (!region) return true // 判域内既非批档自身也非触达账 ⇒ 只可能是本次写入文本（片段档）——整段强制
       if (region.kind === "whole") return true // ② 未跟踪档 ⇒ 整档即本轮的笔
-      if (region.kind === "unknown") return false // ③ ④ 未定 ⇒ 本次零强制（收口面整档判兜底）
+      if (region.kind === "unknown") return false // 写段面未定 ⇒ 零强制；收口面独立按批起基线判定
       return region.zones.some((z) => e.line >= z.start && e.line <= z.end)
     }
-    const disclosed = close ? [] : labeled.filter((e) => !blocks(e))
-    const forced = close ? labeled : labeled.filter(blocks)
+    const disclosed = labeled.filter((e) => !blocks(e))
+    const forced = labeled.filter(blocks)
     const k = forced.length
     const forcedLines = forced.map((e) => e.text)
     // 明示集一分为二：批档自身的已落段命中**逐条列**（作者改得动、收口人看得懂）；触达账区外存量**只出计数**
     // （137 条逐条列正是本批消掉的现场——它们本就不该在这一轮被要求修）。
-    const selfDisclosed = disclosed.filter((e) => e.inSelf)
+    const selfDisclosed = disclosed.filter((e) => !close && e.inSelf && viewAbs === null)
     const outsideHits = disclosed.filter((e) => !e.inSelf)
+    const stockHits = close || viewAbs !== null ? disclosed : outsideHits
     const disclosedLines = selfDisclosed.map((e) => e.text)
 
     const inFrag = (e) => !!fragAbs && pathKey(e.file) === pathKey(fragAbs)
     const textHits = forced.filter(inFrag)
-    const recordHits = forced.filter((e) => e.inSelf) // 仅 edit 面可达：整档锚类命中
+    const recordHits = forced.filter((e) => e.inSelf) // 仅 edit 面可达：本次替换区的锚类命中
     const touchHits = forced.filter((e) => !inFrag(e) && !e.inSelf)
     let first = "DOC-CHECK GATE: PASS"
     if (k >= 1) {
@@ -434,16 +490,34 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
       } else {
         const parts = []
         if (textHits.length) parts.push(`本次写入文本（${classifyCounts(textHits)}）`)
-        if (recordHits.length) parts.push(`批档整档（${classifyCounts(recordHits)}）`)
+        if (recordHits.length) parts.push(`批档替换区（${classifyCounts(recordHits)}）`)
         if (touchHits.length) parts.push(`触达账改动区（${classifyCounts(touchHits)}）`)
         first = `DOC-CHECK GATE: REFUSED（命中 ${k} 条——${parts.join(" · ")}）`
       }
     }
 
-    // 附加行（不静默面）：命中行不可对齐 / 收口面取不到基 / 拒后零字节 / 本次文本已判行数 /
+    // 附加行（不静默面）：命中行与引擎报面不同序 / 指针读数 / 收口面取不到基 / 拒后零字节 / 本次文本已判行数 /
     // 已落段命中（谁该改、为什么不阻本次写）/ 同目录片段档残留（只明示、不代删）。
     const notes = []
-    if (!aligned) notes.push("命中行不可对齐（引擎报面 ✗ 行数与命中数不等）——显示行按自造形，判定按命中对象")
+    // 读数行（设计单源 = `BATCH-RECORD.md` §4.22「`aligned` 降为读数、不删」）：不同序时出固定一行——
+    // 它是显示面与引擎报面漂移的**唯一可见信号**（`aligned` 曾长期恒假、整个门的显示面静默退化过）。
+    if (!aligned) notes.push(`命中行与引擎报面不同序（${drift} 处）——四件仍由命中对象拼齐，此行只作闸自身的一致性读数`)
+    // 指针读数桶（与「触达账存量命中」同族：不进 `hits`、不动 verdict）：证据格里解不到的指针**不阻写**，
+    // 但必须看得见——一颗真悬空的指针沉进绿里，收口人就得自己再找一遍。
+    if (pointerReads.length) {
+      const list = pointerReads.map((e) => `${e.where} \`${e.token}\``).join(" ∥ ")
+      notes.push(`指针读数 ${pointerReads.length} 处（证据格里解不到的指针——不阻断交付；正文与其他列照判）：${list}`)
+    }
+    if ((res.cycleReads ?? []).length) notes.push(CYCLE_READ_LINE(res.cycleReads.length))
+    if (close) {
+      const undetermined = [...new Map(closeDocs.map((p) => [pathKey(p), p])).values()]
+        .map((p) => [p, regions.get(pathKey(p))])
+        .filter(([, r]) => !r || r.kind === "unknown")
+      if (undetermined.length) {
+        const named = undetermined.map(([p, r]) => `${relative(root, p).replace(/\\/g, "/")}（${r?.why ?? "改动区缺失"}）`).join(" · ")
+        notes.push(`收口改动区未定——整档判（${named}）`)
+      }
+    }
     if (close && !diff.ok) notes.push("基 sha 未定——本批笔域集只认触达账")
     if (!close && k >= 1) {
       notes.push("本次写入文本尚未落盘——一个字没写（档字节逐字不变：append 面另有段号不前进、轮次 N 不推进；edit 面另有目标区间以外逐字不变）")
@@ -452,19 +526,15 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
       const segLabel = Number.isInteger(pending?.section) ? `§${pending.section}` : "本段"
       const lineCount = pendingBody.split("\n").length
       notes.push(viewAbs !== null
-        ? `本次写入文本（${segLabel}）${lineCount} 行已判——段长类只判这一段（档内既有超长段不进你的拒面）；锚类判整档（引用完整性是档级属性）`
+        ? `本次写入文本（${segLabel}）${lineCount} 行已判——段长类只判这一段；锚类只判本次替换区（区外命中出整档读数）`
         : `本次写入文本（${segLabel}）${lineCount} 行已判——强制集只有这一段（别人的段字面改不动，不进你的拒面）`)
     }
     if (selfDisclosed.length) {
       const list = selfDisclosed.map((e) => landedSummary(selfSrc, e, authors)).join(" · ")
-      notes.push(viewAbs !== null
-        ? `档内段长类命中 ${selfDisclosed.length} 条：${list}—— 段长类判集 = 本次写入文本，档级旧段不入判、不阻本次写；收口面 fail-closed 会拦`
-        : `已落段命中 ${selfDisclosed.length} 条：${list}—— 不属本次笔面，不阻本次写；收口面 fail-closed 会拦`)
+      notes.push(`已落段命中 ${selfDisclosed.length} 条：${list}—— 不属本次笔面，不阻本次写；区外存量收口只出读数`)
     }
-    // 区外存量：只出一行计数（N 是唯一变量，行是固定字面）；未定支点名降级原因——静默与「那儿真的干净」读起来一样。
-    if (outsideHits.length) {
-      notes.push(`触达账存量命中 ${outsideHits.length} 条——不属本次改动区，不阻本次写；收口面整档判`)
-    }
+    // edit 与收口的区外命中共用同一整档读数句；append 的触达账区外命中也读这一句。
+    if (stockHits.length) notes.push(STOCK_LINE(stockHits.length))
     const undetermined = touched
       .filter((p) => pathKey(p) !== pathKey(selfAbs))
       .map((p) => [p, regions.get(pathKey(p))])
@@ -472,7 +542,7 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
     if (undetermined.length) {
       // 点名到档、点名原因（「未定」与「那儿真的干净」否则读起来一样）；句首固定字面单源 = 设计档 §3.20「未定的处置」。
       const named = undetermined.map(([p, r]) => `${relative(root, p).replace(/\\/g, "/")}（${r.why}）`).join(" · ")
-      notes.push(`触达账改动区未定——只明示、不阻本次写；收口面整档判（${named}）`)
+      notes.push(`触达账改动区未定——只明示、不阻本次写；收口面按批起基线独立判定（${named}）`)
     }
     if (strays.length) {
       notes.push(`\`.gate-*\` 残留 ${strays.length} 档（异常退出的片段档）—— 手工删除后再提交`)
@@ -509,7 +579,7 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
 }
 
 /** 成功回执行（append / close / status 三面同形；`null` 门 ⇒ 零改——非挂门路径回执逐字旧形）。
- *  两件 = verdict + `范围 N 档` 事实行；附注行（「基 sha 未定」∥ 命中行不可对齐 ∥ 已落段命中 ∥ 片段档残留）紧随其后
+ *  两件 = verdict + `范围 N 档` 事实行；附注行（「基 sha 未定」∥ 命中行与引擎报面不同序 ∥ 指针读数 ∥ 已落段命中 ∥ 片段档残留）紧随其后
  *  **逐字**列出——不静默吞掉可见性。 */
 export function gateReceiptLine(gate) {
   if (!gate) return ""

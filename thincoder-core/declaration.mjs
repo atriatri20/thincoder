@@ -77,6 +77,7 @@ function buildDeclaration(m, root = null) {
   const docExtensions = normalizeExtensions(m?.index?.docExtensions)
   const excludePaths = normalizePathList(m?.index?.excludePaths)
   const publicRepos = normalizePathList(m?.index?.publicRepos)
+  const writableRepos = normalizePathList(m?.index?.writableRepos)
   const batchRecords = batchSegments(m?.docRoot?.batches) // §6.14 面⑥ 声明值投影（`declared` 旗不涉——docRoot 族现状零改）
   const defaults = normalizeCodePaths(DEFAULT_MANIFEST.codePaths) ?? []
   const pathsDiffer = codePaths.length !== defaults.length || codePaths.some((p, i) => p !== defaults[i])
@@ -90,6 +91,9 @@ function buildDeclaration(m, root = null) {
       docExtensions: Object.freeze(docExtensions),
       excludePaths: Object.freeze(excludePaths),
       publicRepos: Object.freeze(publicRepos),
+      // 写权声明（机制 = `docs/core/design/CROSS-REPO-WRITE.md` §2.1）：投影值，`declared` 旗不涉——
+      // 与 `docCheckExcludePaths` 族同款；写名单本身不是「本仓声明偏离默认」的证据。
+      writableRepos: Object.freeze(writableRepos),
     }),
     root,
   })
@@ -260,15 +264,34 @@ export function isInDeclaredScope(rel, scope, base = null) {
  */
 export function declaredPublicRoots(cwd) {
   const decl = loadProjectDeclaration(cwd)
-  const list = decl?.index?.publicRepos
+  return absoluteDeclaredRoots(decl?.index?.publicRepos, decl, cwd)
+}
+
+/** 声明项 → 绝对根集（`declaredPublicRoots` ∥ `declaredWritableRoots` 共用的**取基法**，只有一份）：
+ *  值形层逐项 `resolve(声明项目的项目根, p)` ⇒ 绝对根集（去重保序）；存在性判归消费面（本层不判）。
+ *  两键不同族（读名单 / 写名单），但「从哪个根解析、怎么去重」是同一条规则——写第二份就会漂。 */
+function absoluteDeclaredRoots(list, decl, cwd) {
   if (!Array.isArray(list) || list.length === 0) return []
-  const base = typeof decl.root === "string" && decl.root !== "" ? decl.root : resolve(cwd ?? ".")
+  const base = typeof decl?.root === "string" && decl.root !== "" ? decl.root : resolve(cwd ?? ".")
   const out = []
   for (const p of list) {
     const abs = resolve(base, p)
     if (!out.includes(abs)) out.push(abs)
   }
   return out
+}
+
+/**
+ * 声明**可写外部目录**的绝对根集（机制 = `docs/core/design/CROSS-REPO-WRITE.md` §2.1 解析层）：
+ * 写门的跨仓判据用它回答「这个目标在写方声明的授权面里吗」——基数 = 声明项目的项目根，
+ * 缺省 `[]` ⇒ `[]`（零行为）。与 `declaredPublicRoots` 同形同基，但两键**不互派**（读名单 ≠ 写名单）。
+ * 不判存在性：声明根不在盘时它的前缀含不住任何真实目标，存在性归消费面。
+ * @param {string} [cwd] 会话锚（项目根经 manifest.mjs 解析）
+ * @returns {string[]} 绝对路径（去重保序）
+ */
+export function declaredWritableRoots(cwd) {
+  const decl = loadProjectDeclaration(cwd)
+  return absoluteDeclaredRoots(decl?.index?.writableRepos, decl, cwd)
 }
 
 /** 引用解析单点（§6.1 口径 4/5——写门 ∥ 迁移旗同消费，不得二写）：① 仓根解析 `resolve(base, part)`
@@ -328,7 +351,8 @@ function warnRetiredCarrier(root) {
  * per cache miss (content zero-parsed, zero effect on the readings — KD-M1-34).
  * @param {string} cwd — project dir / anchor (root resolved by manifest.mjs)
  * @returns {Readonly<{declared: boolean, codePaths: readonly string[], batchRecords: readonly (readonly string[])[],
- *   index: {codeExtensions: string[], docExtensions: string[], excludePaths: string[], publicRepos: string[]},
+ *   index: {codeExtensions: string[], docExtensions: string[], excludePaths: string[], publicRepos: string[],
+ *   writableRepos: string[]},
  *   root: string|null}>}
  */
 export function loadProjectDeclaration(cwd) {

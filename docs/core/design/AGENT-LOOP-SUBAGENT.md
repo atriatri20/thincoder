@@ -2,7 +2,7 @@
 
 > 归属 = `docs/core/design/AGENT-LOOP.md` 的**机制族拆分面**——「子代理工具契约与装配面」族。
 > **三分**——自本档迁出：后台异步池 / 挂起回合与 digest / 评审实例面 ⇒ `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`（§6.8 · §6.10 · §6.11 · §6.18 · §6.19 · §6.20）；子 → 父上行与唤醒面 ⇒ `docs/core/design/AGENT-LOOP-UPSTREAM.md`（§6.27 全族）。
-> **节号沿用母档全局编号**（本档承接 §6.7 · §6.9 · §6.12 · §6.21–§6.26 · §6.28–§6.30；本档自有 §6.58 · §6.59）——全仓既有指针**只改档名、不改节号**；母档续 §6.1–§6.6 + §6.13–§6.17。
+> **节号沿用母档全局编号**（本档承接 §6.7 · §6.9 · §6.12 · §6.21–§6.26 · §6.28–§6.30；本档自有 §6.58 · §6.59 · §6.60）——全仓既有指针**只改档名、不改节号**；母档续 §6.1–§6.6 + §6.13–§6.17。
 > 母档 = `docs/core/design/AGENT-LOOP.md`（归属与范围 / 核模块裁决行 / 须用户裁条目 / 对外契约 / 受影响文件 / 主循环机制面 §6.1–§6.6 / 诊断与预算面 §6.13–§6.16 / 关键决策 / 沿革）。
 > 工作流档 = `docs/core/design/CORE-UNIFICATION.md`；需求层 = `docs/core/requirements/AGENT-LOOP.md`（含 §4 需求条目面）。
 
@@ -99,7 +99,7 @@
 
 **settle 统一机制**：四族（subagent / advisor / escalate / consult）settle 公共收尾单点 = `settleAsyncEntry`（`thincoder-core/agent-tools/async-settle.mjs`）：
 
- - 落 done / status、日志三连、cancelled / parentAborted / 挂起分流、`settleSeq` 唤醒 waiter、腾槽补位（subagent / escalate 族恒补；**advisor 同补（ED-4 起——原「豁免」句废）**；consult 豁免）；
+ - 落 done / status、日志三连、cancelled / parentAborted / 挂起分流、`settleSeq` 唤醒 waiter、腾槽补位（subagent / escalate 族恒补；**advisor 同补（ED-4 起）**；consult 豁免）；
 - 守卫统一 `!parentAborted`（严格版：ctx.signal aborted 或条目 controller aborted）；族特有段作 `onAccounting` hook（advisor 陈旧判定 / token 落盘记账；escalate 三分类 merge 决策）；
 - **pending 单容器** `_pendingAsyncResults` + role；**done-in-pool 统一表示** = 留池 `done: true` + pending 单容器（`_inPending` 标记防重复移交）；
 - **池 accessor** = `getAsyncPool(parent, role)`；**`buildChildSignal`** = `_sessionSignal ?? ctx.signal ?? null` 单点。
@@ -192,7 +192,7 @@
 - 后缀出现条件 = `err.abortInfo` 存在 ∨ `signal?.aborted` ∨ `err.name ∈ { AbortError, TimeoutError }`；
 - unknown 形态（告警）= `· abort(unknown@<layer>:no reason on signal)`；未标注回落 `unknown@unrecorded`；总长 ≤300 字符（超长优先截 detail）。
 
-**站点规则（覆盖勘察外漏网）**：**对单个任务目标的定向中止 = cancel；整批 / 会话 / 回合级停止 = stop；用户按键 = user；定时器 = timeout；无标注 = unknown**（unknown 即告警——不得静默）。站点面（产生 / 传播 / 取消停止 / 定时器四类）与报告面合成点（settle 族 5 处）的逐档坐标属**实现面快照**——以本档词汇表 + 模块接口为契约面，坐标随实现演进（旧档 §20 站点总表原文见来源档）。
+**站点规则（覆盖勘察外漏网）**：**对单个任务目标的定向中止 = cancel；整批 / 会话 / 回合级停止 = stop；用户按键 = user；定时器 = timeout；无标注 = unknown**（unknown 即告警——不得静默）。站点面（产生 / 传播 / 取消停止 / 定时器四类）与报告面合成点（settle 族各合成点）的逐档坐标属**实现面快照**——以本档词汇表 + 模块接口为契约面，坐标随实现演进（旧档 §20 站点总表原文见来源档）。
 
 ## 6.21 spawn 站点取号断言（防静默覆写）
 
@@ -554,7 +554,7 @@ export function writeTombstone(parent, id, status, role) {
 
 | # | 判据（机判） | 回指 |
 |---|---|---|
-| A1 | `depth:1` ⇒ 上列错误串**逐字相等**；九动作族源码 `only available at depth 0` 命中计数 **5 → 6**（既存五处文案逐字零改 + `status` 新增一处）。命令：`grep -rn "only available at depth 0" thincoder-core/agent-tools/subagent-actions.mjs thincoder-core/agent-tools/subagent-async.mjs thincoder-core/agent-tools/subagent-panel.mjs` ⇒ 逐档 **4 / 1 / 1**（改前 3 / 1 / 1）。**族外不计**：`advisor.mjs`（advisor 族另一文案）与单元测试档断言在 `agent-tools/` 全目录 grep 中会额外命中 ⇒ 搜索根 = 上列三档 | — |
+| A1 | `depth:1` ⇒ 上列错误串**逐字相等**；九动作族源码 `only available at depth 0` 命中计数 **5 → 6**（既存五处文案逐字零改 + `status` 新增一处）。命令：`grep -rn "only available at depth 0" thincoder-core/agent-tools/subagent-actions.mjs thincoder-core/agent-tools/subagent-async.mjs thincoder-core/agent-tools/subagent-panel.mjs` ⇒ 逐档 **4 / 1 / 1**（改前 3 / 1 / 1）。**族外不计**：`thincoder-core/agent-tools/advisor.mjs`（advisor 族另一文案）与单元测试档断言在 `agent-tools/` 全目录 grep 中会额外命中 ⇒ 搜索根 = 上列三档 | — |
 | A1b | 拒返回形 ≡ **observe / send 既存拒形态**（引例 = `thincoder-core/agent-tools/subagent-actions-query.mjs` 的两处拒形态）：`JSON.parse(返回)` ⇒ 两键 `{status:"error", error:<A1 串>}`（**对象形**；escalate 的 `Error:` 字符串形不在同款族） | — |
 | A2 | `depth` 缺省 / 0 路径：CLI 与 VSC 两侧 status 用例全绿、返回体逐字不变 | — |
 | A3 | 部分 parent 夹具（U3）：队列剔除 + `position` 重编号生效 | — |
@@ -999,13 +999,13 @@ batchDoc is already in flight — spawn refused. Batch record: <abs path>. Occup
 
 - `existing but unusable: thincoder-core/agent-tools/subagent-spawn.mjs · name: "explore" / "plan"（只读面分支）· failed on: 能力面——`readonlyToolNames` 只收 `readonly` 旗标为真的工具（`thincoder-core/agent/helpers.mjs`），而执行面的 `readonly` 均为 false（`thincoder-core/tools/execute.mjs` ∥ `thincoder-core/tools/bash.mjs`）⇒ 该集里没有执行面，照抄即违 F-TT2。`
 - `existing but unusable: 同一处 · name: "coder"（全量面分支）· failed on: 契约面——`parent.tools` 全集含 `write` / `edit` / `apply_patch` 等写面，与 F-TT3「不写任何档」相抵；且减出来的面随父侧工具表漂（D-TT1）。`
-- `none found: 既有五个 spawn 角色（explore / plan / coder / eng-coder / eng-designer）无一承担「跑验证、交读数、不改不写」这一职责——`thincoder-core/prompts/` 与 `docs/core/design/TESTING.md`（1349 行）内零命中（见下方勘察证据行）。`
+- `none found: 既有五个 spawn 角色（explore / plan / coder / eng-coder / eng-designer）无一承担「跑验证、交读数、不改不写」这一职责——`thincoder-core/prompts/` 与 `docs/core/design/TESTING.md` 内零命中（见下方勘察证据行）。`
 
 **勘察证据行**：
 
 - `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7 ∥ §6.22 ∥ §6.58（子代理角色、spawn 门、批档复用护栏）。
 - `docs/core/design/TOOLS.md` §6.2 ∥ §6.25（注册与 schema、令牌门）。
-- `docs/core/design/TESTING.md` §4 ∥ §11 ∥ §13（集成集承载与执行、RTM、测试纪律两层 why）——该档 1349 行内零「tester」，无现成角色面可对齐。
+- `docs/core/design/TESTING.md` §4 ∥ §11 ∥ §13（集成集承载与执行、RTM、测试纪律两层 why）——该档内零「tester」，无现成角色面可对齐。
 - `docs/core/requirements/AGENT-LOOP.md` §4.20。
 - `index.publicRepos` = 空 ⇒ 无外仓可查（已查，无）。
 
@@ -1042,10 +1042,10 @@ batchDoc is already in flight — spawn refused. Batch record: <abs path>. Occup
 - 两枚减法都按名显式做，不看 `readonly` 旗标分流：旗标说的是「不写盘」，不是「不产出结论」。
 - 其后调用的 `excludeSubagentTools(tools)`（`thincoder-core/agent/helpers.mjs`）照旧生效、顺序不变。它做两件事，tester 全继承：① 排 `question` / `ssh`（`SUBAGENT_TOOL_EXCLUSIONS`，`thincoder-core/agent/helpers.mjs`）；② 对 `bash` / `browser` **删掉 `async` 参**（`thincoder-core/agent/helpers.mjs`）⇒ **`bash` 的后台形在 depth>0 本来就不存在**，`execute` 不在该表内、其 `async` 保留。因此 F-TT2 的「`async` 不裁」= 本设计不新增收窄，不等于 bash 有后台形。
 
-**⑤ 段级工具段**——`thincoder-core/agent/family-tools.mjs` 的 depth>0 角色段**不加新分支**，tester 走兜底段 `[parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool]`。
+**⑤ 段级工具段**——`thincoder-core/agent/family-tools.mjs` 的 depth>0 角色段**不加新分支**，tester 走兜底段 `[parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool]` 再加 §6.60 的两件文档工具（`doc_check` ∥ `doc_graph` 只读变体）。
 
 - 该段给它的正是要的面：`notify_parent`、台账只读、manifest 只读——能上抛、不能写账。
-- `batch` / `doc_check` 不在该段 ⇒ 语法面不可达。
+- `batch` 不在该段 ⇒ 语法面不可达。`doc_check` 与 `doc_graph` 的只读变体按 §6.60 在该段——两者都是只读机检／查询，不产出结论、不写账，故不碰本角色的读数契约。
 - `advisor` 也不在该段，但它是只读工具、会从基础集进来：挡住它的是 ④ 的显式减法，不是这一段。
 
 **⑥ 端侧角色面**——`thincoder-vscode/src/agent/tool-table.mjs`（同一角色集在 VS Code 端的活体描述，与核那五处并列）：
@@ -1148,7 +1148,7 @@ test/integration/*.test.mjs
    - ② 父侧对照：派单前取一次 `git status --porcelain`，子 settle 后再取一次，两次差集里凡属产品代码 / 需求 / 设计 / 批次档的路径 = 越权。
    - **残余面说清**：`bash` 能跑 `git checkout` / `git stash` 把改动抹平，`porcelain` 差集可能为空——这一层**不可观测**。堵它靠沙箱，而本节不做沙箱；要更强保障就用父侧 `checkpoint` 快照对照（派单前建、settle 后 `checkpoint cat` 比），那是父侧操作纪律，不写成 tester 的契约。
 3. 不改 `agent.toolExclusions` / 权限门 / planMode 语义。
-4. 三个动作、两个来源：**开评审**做不到 = 工具表里没有 `advisor`（§6.59.2 ④ 的显式减法）；**签设计令牌** ∥ **做收口判断**做不到 = `batch` / `doc_check` 不在 depth>0 的角色段（§6.59.2 ⑤ 的段级排除）。两类都是工具不在表里，不是靠它自己克制。
+4. 三个动作、两个来源：**开评审**做不到 = 工具表里没有 `advisor`（§6.59.2 ④ 的显式减法）；**签设计令牌** ∥ **做收口判断**做不到 = `batch` 不在 depth>0 的角色段（§6.59.2 ⑤ 的段级排除）。两类都是工具不在表里，不是靠它自己克制。`doc_check` 在表内（§6.60）不构成第三类：它出一份机检读数，签令牌与收口判断仍走 `batch`。
 5. 不改 explore/plan/coder/eng-coder/eng-designer 五个角色的任何一条既有判据（模式门、令牌门、批档护栏照旧）。
 6. 不做「测试命令库」或「自动选题」——选题是父侧的事（F-TT5）。
 7. 不新增第三方依赖、不动 `test/` 目录结构。
@@ -1225,5 +1225,175 @@ test/integration/*.test.mjs
 
 - 父侧是**你的用户**：报告是给他看的，不是给别人。
 - 你不进评审通道、不签发设计令牌、不派子代理、不做收口判断。「这批能不能收口」是父侧的话，不是你的。
+## 6.60 子代理文档工具面装配（`doc_check` ∥ `doc_graph` 只读变体）
+
+**需求** = `docs/core/requirements/DOC-GRAPH.md` §4 AC-10（全部子代理角色的装配表里有 `doc_check`；`doc_graph` 同在，但其 action 枚举里没有 `scan`）。本节只写装配机制；变体自身的契约（action 枚举 ∥ 拒绝文案 ∥ 回执形）住 `docs/core/design/DOC-GRAPH.md` §2.5.5，本节回指不复述。
+
+**角色串一处**：需求档 §2 的 F7 与 §4 的 AC-10 现在举同一串八个角色（`eng-coder` ∥ `eng-designer` ∥ `coder` ∥ `plan` ∥ `explore` ∥ `tester` ∥ `consult` ∥ `advisor`）。本节按这串收口：前七名由五个 family 段供给（`explore` ∥ `plan` ∥ `tester` 同走兜底段），`advisor` 走 ③ 那一处——AC-DT1 测 family 侧七名，AC-DT5 测 advisor。
+
+### 6.60.1 做法与理由
+
+**做法**：`thincoder-core/agent/family-tools.mjs` 新增一个二元数组 `docTools = [docCheckTool, docGraphReadTool]`，**展开进全部五个 depth>0 分支**（eng-coder ∥ eng-designer ∥ coder ∥ consult ∥ 兜底段）；`thincoder-core/advisor/loop.mjs` 的 `advisorToolsFor` 另加这两件（advisor 不经过 family 段）。depth-0 段照旧挂全量 `docGraphTool`，一行不改。
+
+**为什么子代理拿到的是只读变体**：`scan` 是一次写（按 `scope` 整档重写共享边表），而 depth>0 的每个角色段拿到的台账都是只读变体 ⇒ 同一段里没有可依的写面；且多个子代理并发 `scan` 会重写同一张共享边表，它们也没有在途台账号可绑这笔写。父侧扫一次、子代理查同一份库，是既有的「扫的结果是库里的共享事实」这条口径的延伸，不是新机制。
+
+**已知代价：子代理查到的是父侧上一次 `scan` 的图。** 子代理不再能自己扫，于是它读到的图可能落后于盘上现状——这一刀由同族的时效格补上：四个回执末尾各印一行「图建于何时 · 此后 N 档变更 · N 档已不在盘」（契约单源 = `docs/core/design/DOC-GRAPH.md` §2.5.4），读者据此判这份图还能不能信。图旧了要新的，上抛父侧重扫，而不是就地扫。
+
+**为什么 `doc_check` 不要变体**：它本来就是只读工具、没有可收窄的写 action（`readonly: true`）⇒ 同一个对象挂到每个 depth>0 段即可；造变体只会多一份字面而没有多一道约束。
+
+**最近先例**：`existing: thincoder-core/ledger-tools.mjs` · name: `ledgerReadTool` · consumers: `thincoder-core/agent/family-tools.mjs` 的全部 depth>0 段。**对齐** = 同名对象 + 动作枚举收窄 + `readonly: true` + 两变体互斥装配（同档既有口径：「两变体互斥装配，同名不塌缩」）。**偏离** = 无——不新开通路、不新建模块。
+
+**勘察证据（本批实读，逐字）**：
+
+- 依据 thincoder-core/agent/family-tools.mjs「**两变体互斥装配**——本段（depth-0）挂全量四动作；」——「互斥装配」是本节的装配口径：全量变体只进 depth-0 段，只读变体只进 depth>0 各段，同名不塌缩。
+- 依据 thincoder-core/agent/family-tools.mjs「const docTools = [docCheckTool, docGraphReadTool]」——「一处写、五处展开」的落点：五个 depth>0 段各展开这一个常量。
+- 依据 thincoder-core/agent/family-tools.mjs「台账只读变体（query / count）——全部 depth>0 角色段（含 consult ∕ 兜底；写三 schema 级不可达）」——「全部 depth>0 角色段」是本节的装配面口径来源。
+- 依据 thincoder-core/agent-tools/doc-graph.mjs「export const docGraphTool = makeDocGraphTool(ALL_ACTIONS, { readonly: false })」——全量变体的写性与动作集同出这一个调用点：`readonly: false` 由参数给，动作闭集 = `ALL_ACTIONS`。
+- 依据 thincoder-core/agent-tools/doc-check.mjs「readonly: true,」——`doc_check` 无写面，直接复用。
+- 依据 thincoder-core/ledger-tools.mjs「export const ledgerReadTool = makeLedgerTool(READ_ACTIONS, { readonly: true })」——变体先例的可引形。
+- 依据 thincoder-core/advisor/loop.mjs「const tools = [readTool, globTool, grepTool, lsTool, lspTool, advisorCodeSearchTool(agent), docCheckTool, docGraphReadTool]」——advisor 的工具集自持一处，family 段不到它；本批两件就加在这个数组里。
+- 依据 thincoder-core/advisor/loop.mjs「toolPromise = Promise.resolve(p.tool.execute(p.args, { cwd, agent, onOutput, signal }))」——advisor 的调用 ctx 已带 `cwd` 与 `agent`，故 `target` 的相对形在 advisor 面可解析，不需要额外接线。
+- 已查 `test/integration/tester-role.test.mjs`：它把家族段按 `assembleFamilyTools({ depth: 1, role: "tester", … })` 逐名排除后再与端侧基础集比 ⇒ 家族段加名**不进**那条比较；其写面黑名单为 `["write", "edit", "insert_after", "hashline_edit", "apply_patch", "delete", "file_ops", "git", "verify", "advisor"]`，不含本节两件 ⇒ 30-1 不破（RTM delta 见 §6.60.9）。
+
+- **已查库外：无**——本节改动面 = 同一核内的调用清单（`thincoder-core/agent/family-tools.mjs` ∥ `thincoder-core/advisor/loop.mjs`）与一个同族工具面的收窄变体；不引外部 API ∥ 协议 ∥ 第三方版本，也不对本仓外系统下任何断言 ⇒ **库外无可查项**（是「查的对象为零」，不是「未查」）。
+
+**数据事实检查**：本节无需要读数据才能定的断言——角色装配面、工具只读性、advisor 工具集三处都是源码事实，已在上面逐字取到；不查库、不读文档内容，故无数据面待定项。
+
+**现有件三问**：
+
+| 新落点 | 现有（坐标 · 名 · 消费者） | 结论 |
+|---|---|---|
+| `docGraphReadTool` | `thincoder-core/ledger-tools.mjs` · `ledgerReadTool` · family 全部 depth>0 段 | **existing（同形先例）**：照「同名 + 枚举收窄 + readonly」建，不新造交互形 |
+| `docTools` 常量 | `thincoder-core/agent/family-tools.mjs` 的五个 depth>0 分支 | **none found**：现文五段各写各的字面清单，无共享工具组常量；一处置放、五处展开是本批新增的写法 |
+| `doc_check` 的子代理面 | `thincoder-core/agent-tools/doc-check.mjs` · `docCheckTool` · eng-coder ∥ eng-designer 两段 | **existing（直接复用）**：只读、无写 action ⇒ 不造变体 |
+| advisor 段的两件 | `thincoder-core/advisor/loop.mjs` · `advisorToolsFor` · 评审工具循环 | **existing**：该函数是本面唯一装配点，两件追加进同一数组 |
+
+### 6.60.2 接口契约（装配矩阵 ∥ 变体形 ∥ advisor 面）
+
+**① 装配矩阵（改后 = 盘上真身）**——`thincoder-core/agent/family-tools.mjs`：
+
+| depth>0 段 | 现文清单 | 改后 |
+|---|---|---|
+| `eng-coder` | `[parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool, advisorTool, verifyTool, batchTool(batchDoc), docCheckTool, …engChildSubagent]` | **删掉字面 `docCheckTool`**、尾部追加 `...docTools`，其余逐字不变 ⇒ `doc_check` 仍一件（改由展开供给）、新增 `doc_graph` 只读变体 |
+| `eng-designer` | `[parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool, batchTool(batchDoc), docCheckTool, …engChildSubagent]` | 同上：**删掉字面 `docCheckTool`**、尾部追加 `...docTools`，其余逐字不变 |
+| `coder` | `[parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool, verifyTool, advisorTool, …batch]` | 同上 **＋ 两件** |
+| `consult` | `[recentChangesTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool]` | 同上 **＋ 两件** |
+| 兜底段（explore ∥ plan ∥ tester ∥ 未列名 depth>0） | `[parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool]` | 同上 **＋ 两件** |
+
+- **一处写、五处展开**：五段的清单尾部统一追加 `...docTools`（`const docTools = [docCheckTool, docGraphReadTool]`）——五处各写一遍字面就是五份会各自漂的单子；亦不改成「五段都换成同一段位清单」，那会把各段自己的差异（`advisorTool` ∥ `verifyTool` ∥ `batch`）一并抹掉。
+- **两段的字面 `docCheckTool` 必须删**：`eng-coder` ∥ `eng-designer` 现文各带一个字面（`thincoder-core/agent/family-tools.mjs`「batchTool(batchDoc), docCheckTool,」）。字面留着、尾部又展开 `...docTools` ⇒ 同一段里 `doc_check` 挂两次，provider 侧同名工具直接报错；AC-DT1 的同名唯一断言即此事实的机检。
+- **depth-0 段零改**：`docCheckTool` 与全量 `docGraphTool` 原样留在原位置（同一族、同段）。
+- **段 ↔ 角色（AC-10 八角色的算术）**：`eng-coder` 段 → `eng-coder`；`eng-designer` 段 → `eng-designer`；`coder` 段 → `coder`；`consult` 段 → `consult`；兜底段 → `explore` ∥ `plan` ∥ `tester` ∥ 任何未列名的 depth>0 角色；`advisor` 不经 family 段（③ 是它唯一的装配点）。五段供七名 + advisor 一名，合计覆盖 AC-10 的八角色，无遗漏也无第二段重复供给。
+
+**② 变体形**——`thincoder-core/agent-tools/doc-graph.mjs`：
+
+- **构造 = 参数化工厂，两变体同体**（先例逐字 = `thincoder-core/ledger-tools.mjs`「function makeLedgerTool(actions, { readonly = false, writeFace = false } = {})」∥「export const ledgerReadTool = makeLedgerTool(READ_ACTIONS, { readonly: true })」）：本档抽 `makeDocGraphTool(actions, { readonly = false, description })`，再以两个调用点产出两变体——`docGraphTool = makeDocGraphTool(ALL_ACTIONS, { readonly: false })`、`docGraphReadTool = makeDocGraphTool(READ_ACTIONS, { readonly: true, description: DESC("doc_graph") + READONLY_SUFFIX })`。
+- **动作集全档一处字面**：`ALL_ACTIONS = ["scan", "forward", "reverse", "chain"]`，`READ_ACTIONS` 由它派生（`ALL_ACTIONS.filter(a => a !== "scan")`）。schema 的 `enum`、execute 的护栏、拒文里的取值集三处取同一个 `actions` 参数 ⇒ 同一闭集不再有第二份字面，变体也不写第二份字面对象。
+- **name 逐字不变** = `doc_graph`（同名不塌缩，两变体互斥装配：depth-0 挂全量、depth>0 挂只读）。
+- **`isReadonlyAction` 一视同仁**：工厂内 `isReadonlyAction(args) { return args?.action !== "scan" }`；只读变体的动作集不含 `scan` ⇒ 它恒为真，与 `readonly: true` 同向，不需要第二份实现。
+- **枚举 ∥ `readonly` 旗标 ∥ 调 `scan` 的拒绝形**：契约单源 = `docs/core/design/DOC-GRAPH.md` §2.5.5，本节不复述逐字值——本节只定它由哪个参数供给（上两条）与描述面那句追加说明（末条）。
+- **描述面**：`description` = `DESC("doc_graph")`（模型可见文本单点仍是 `thincoder-core/tool-docs/doc_graph.md`）**追加一句**说明本变体只有三个查询动作、`scan` 归主 agent。追加句逐字：
+
+```text
+This variant carries the three query actions only — `scan` belongs to the main agent (one shared edge table, one scanner); ask the parent to scan, then query here.
+```
+
+- **参数集两变体同形（只读变体仍带 `scan` 的 `scope`）**：工厂两变体共一份 `properties` 字面 ⇒ 只读变体的 schema 里仍有 `scope`。两句不矛盾——`scope` 自己的说明以「`scan` only」起头，追加句又说 `scan` 归主 agent，读者被告知的是「这个参数属本变体没有的那个动作」。留着比删掉便宜：删它要在工厂里加一条按 `actions` 派生 `properties` 的分支，而「按动作忽略不相关入参」是本族一贯行为（全量变体对 `forward` 带 `scope` 亦然），不新增失败面。
+
+**③ advisor 面**——`thincoder-core/advisor/loop.mjs`：
+
+- `advisorToolsFor` 的数组尾部追加 `docCheckTool` 与 `docGraphReadTool`。该函数**已导出**（依据 thincoder-core/advisor/loop.mjs「export { advisorToolsFor, advisorToolsFor as _advisorToolsFor }」）⇒ 本批对导出面零改；AC-DT5 直取既有导出面拿装配产物，不必起一次真评审。
+- **零写面不变**：两件皆 `readonly: true`；该面原有的 `batchTool`（绑定才挂）不受影响。
+- **advisor 为何可以不调用它们**（工具在场 ≠ 义务）：advisor 的判据来自文档本体——一项设计对不对，是读那一节、与代码和需求对出来的，不是机检读数给的；`doc_check` 的一个 PASS 只说明锚点与段长合规，`doc_graph` 只回答「谁引了谁」。两者都不是评审的判据面，故 advisor 拿到它们是为了「需要核一个锚在不在盘」这类局部事实时不必上抛，而不是给它一条结论捷径。**这条界线写成纪律而不是机检**：没有机制禁止它调用，也不该有——一个在读文档时顺手验一下锚的评审，没有做错什么。**这条纪律的正本就是本节这一段**：本批不改 advisor 的任何提示词档，故 §6.60.3 受影响文件表里没有 advisor 一行——没有承载体，就没有第二处会漂的地方。
+
+### 6.60.3 受影响文件清单与分层结论
+
+**改（本批）**：
+
+| 文件 | 改动 |
+|---|---|
+| `thincoder-core/agent/family-tools.mjs` | 新增 `docTools` 常量；五个 depth>0 分支尾部各展开一次（其中 `eng-coder` ∥ `eng-designer` 两段删掉字面 `docCheckTool`）；取用 agent-tools 的那一行**加一个名字 `docGraphReadTool`**（`docGraphTool` 已在取用行，仍只进 depth-0 段）；depth-0 段零改；`docGraphTool` 上方那段「只挂 depth-0」的注释改为两变体事实 |
+| `thincoder-core/agent-tools/doc-graph.mjs` | 抽参数化工厂 `makeDocGraphTool`（全量变体同走工厂、行为逐字不变）；新导出 `docGraphReadTool`（三动作 ∥ `readonly: true` ∥ execute 拒 `scan` ∥ 描述面追加一句） |
+| `thincoder-core/agent-tools.mjs` | 再导出加一个名字（与 `docGraphTool` 同形一行） |
+| `thincoder-core/advisor/loop.mjs` | `advisorToolsFor` 的数组追加两件（该函数已导出，导出面零改） |
+| `test/integration/tester-role.test.mjs` | 新增 `test("CLI 30-2 …")`（§6.60.9 的行） |
+| `test/rtm/tooling.md` | 故事 30 节加一行 `30-2` |
+
+**不改**：`thincoder-core/agent-tools/doc-check.mjs`（只读、无变体）；`thincoder-vscode/src/agent/tool-table.mjs`（家族段由核 `assembleFamilyTools` 追加，端侧基础集不含家族段——`test/integration/tester-role.test.mjs` 的「家族段逐名排除」比较即此事实的机检）；`thincoder-core/agent-tools/subagent-spawn.mjs`（按角色过滤的是**父侧工具表**，与家族段无关）。
+
+**分层结论**：**无档跨层，无拆分计划**。
+
+- 四个代码档（`family-tools.mjs` ∥ `agent-tools/doc-graph.mjs` ∥ `agent-tools.mjs` ∥ `advisor/loop.mjs`）各留 `thincoder-core` 本层，职责不变。
+- 两个测试面留 `test/` 本层。
+- **量法** = `doc_check(mode:"report", lines:[…])`，逐档取内容行数；软线 500 行 = 主动审视线（量法与软线同源 = `docs/core/design/DOC-GRAPH.md` §3 标题行）。
+- 四档本批的载荷都不改职责、不搬逻辑；逐档读数按上一条量法取，绝对值住批档实施记录，本表只写结论。
+
+### 6.60.4 关键决策记录
+
+| # | 决策 | 否决的替代 | 理由 |
+|---|---|---|---|
+| D-DT1 | 子代理面只给查询三动作 | 连 `scan` 一起挂 | `scan` 整档重写共享边表；depth>0 段无写面可依、无在途台账号可绑，多子代理并发扫同一张表是自伤。父侧扫一次、子代理查同一份库，代价为零 |
+| D-DT2 | 变体用同名对象、不用新工具名 | 叫 `doc_query` ∥ `doc_graph_read` | 同一件事一个名字：工具名与描述档名一致才读得通；先例 `ledgerReadTool` ∥ `manifestReadTool` 同名单对象 + 枚举收窄，两变体互斥装配 |
+| D-DT3 | `doc_check` 不造变体 | 为对称造一个 `docCheckReadTool` | 它没有可收窄的写 action——造出来的变体与本体逐字相同，多一份字面而已 |
+| D-DT4 | 装配面用一处 `docTools` 常量、五段展开 | 五段各写一遍；或五段并成一段 | 五份字面会各自漂（新加一件要改五处）；并段会抹掉各段真实差异 |
+| D-DT5 | advisor 挂上、但不改它的判据纪律 | 不给 advisor；或给它加「必须先跑 doc_check」的硬门 | AC-10 点名的八角色含 advisor；而把机检读数变成评审的必经步，等于让工具替评审下判断——工具在场 ≠ 义务，界线写成纪律 |
+
+### 6.60.5 验收判据（逐条回指 AC-10）
+
+改面单测档 = 与批档同名同目录的那个单测档（`node --test` 一个目标），收口删除。
+
+| # | 判据（可机判） | 回指 |
+|---|---|---|
+| AC-DT1 | 七个 family 角色各取一次装配产物：`assembleFamilyTools({ depth: 1, role, … })` 对 `eng-coder` ∥ `eng-designer` ∥ `coder` ∥ `consult` ∥ `explore` ∥ `tester` ∥ `plan` 的名字集合**都含** `doc_check` 与 `doc_graph`；`advisorToolsFor(agent, "code", null)` 的 `byName` 同样含这两名；且每段装配出的名字数组去重前后等长（`names.length === new Set(names).size`）——`doc_check` 在一个段里只挂一次 | AC-10 前半 |
+| AC-DT2 | depth>0 取到的那把 `doc_graph`，其 `parameters.properties.action.enum` 逐字等于 `["forward","reverse","chain"]`（不含 `scan`；证本 = `docs/core/design/DOC-GRAPH.md` §2.5.5），且 `readonly === true` | AC-10 中段 |
+| AC-DT3 | 对变体调 `execute({ action: "scan", target })` ⇒ 抛错，报文含 `scan` 且印出的取值集只有三值（不把 `scan` 列为可用）；对同一变体调 `forward` / `reverse` / `chain` ⇒ 正常出回执（夹具库已扫过） | AC-10 后半 |
+| AC-DT4 | **零回归**：depth-0 装配里 `doc_graph` 的 action 枚举仍四值、`readonly === false`、`scan` 仍可用；depth-0 工具名集合与本批改前**逐名相等** | AC-10（不改深 0 职责） |
+| AC-DT5 | advisor 面的两件皆 `readonly: true`，且 `advisorToolsFor` 的其余名字集合与改前逐名相等（只加两件） | AC-10 前半 |
+| AC-DT6 | 文档门：本批触碰档 `doc_check(mode:"gate")` 首行 `DOC-CHECK GATE: PASS` | 交付前置 |
+
+### 6.60.6 用例表
+
+| # | 类 | 输入 | 期望 |
+|---|---|---|---|
+| 1 | 正常 | 七个 family 角色各一次 `assembleFamilyTools({ depth: 1, … })`（`explore` ∥ `plan` ∥ `tester` 同走兜底段） | 名字集合各含 `doc_check` ∥ `doc_graph`（AC-DT1） |
+| 2 | 正常 | depth-0 装配 | `doc_graph` 四动作、`readonly: false`；名集合与改前逐名相等（AC-DT4） |
+| 3 | 边界 | 取 depth>0 的 `doc_graph` 变体，读其 schema | `enum` = 三动作、`readonly: true`（AC-DT2） |
+| 4 | 错误 | 变体 `execute({action:"scan", target})` | 抛错、报文点名 `scan` 且只印三值可用（AC-DT3） |
+| 5 | 正常 | 变体 `execute({action:"forward", node:"req:F16", target})`（夹具库已有边） | 正常回执，首行含 `doc_graph(forward)` |
+| 6 | 边界 | `advisorToolsFor(agent, "code", null)` | `byName` 含两名；每件 `readonly === true`；余名不变（AC-DT5） |
+| 7 | 边界 | 兜底段的一个未列名 depth>0 角色（如 `plan`） | 两名同样在表（兜底段即全部未列名角色） |
+
+### 6.60.7 边界（本节不做）
+
+1. **不给子代理 `scan`**（D-DT1）；要新图由父侧扫。
+2. **不改 `doc_check` 本体、不加新参数**：两件工具的入参面一个字不改。
+3. **不改端侧 tool-table**：家族段由核 `assembleFamilyTools` 在同一处追加，端侧基础集不涉。
+4. **不给 advisor 加调用义务**：工具在场 ≠ 义务，界线写成纪律（§6.60.2 ③），不设机检门。
+5. **不新增「子代理专用」描述档**：变体只有一句追加说明，其余描述仍取自 `thincoder-core/tool-docs/doc_graph.md`。
+6. **不改 `scan` 的写面语义**：全量变体与 `doc_edges` 的写入路径零改。
+
+### 6.60.8 UI / 交互决策
+
+无 UI 面：两件工具都是文本回执，装配面不对用户可见。`open` 项为零。
+
+### 6.60.9 集成测试设计（RTM delta）
+
+**读索引的结论**（`test/RTM.md` 故事索引表：`| CLI 30 | 读数子代理：派一个 tester 跑验证 | tooling | 有 | 缺 | 缺 |`）：本批**不新开故事**，行落故事 30 的 `tooling` 分册节。
+
+| 项 | 答案 |
+|---|---|
+| 被破坏的现有行 | **0 条**。30-1 的断言面 = 受理 ∥ 写面黑名单 ∥ 家族段逐名在位 ∥ 核端基础集逐名相等；本批只在家族段加两件只读工具 ⇒ 黑名单不含它们、家族段本来就被逐名排除在核端比较之外（§6.60.1 勘察证据末条） |
+| 冗余可删的行 | 0 条 |
+| 缺的行 | **1 条**：`30-2`（落 `test/rtm/tooling.md` 故事 30 节；用例落 `test/integration/tester-role.test.mjs`） |
+
+**30-2 的四要素**：
+
+| 构造（组件间交互） | 断言的业务可观察结果 | 服务的需求 | 入口 |
+|---|---|---|---|
+| 父侧派一个 `tester`（真门 + 真装配）→ 抓取子代理那一发的请求体工具表 | 子代理的工具表里有 `doc_check` 与 `doc_graph` 两件；`doc_graph` 的 action 枚举三值、无 `scan`（读请求体里的 schema 即得）；同一次派单的父侧 depth-0 表里 `doc_graph` 仍是四值 | AC-10（角色串见本节前言） | 父侧派单（CLI 端，与 30-1 同一入口） |
+
+**为什么用 tester 作载体**：它是 AC-10 点名的八角色之一，且已有可用的真入口夹具（`test/integration/tester-role.test.mjs` 的假端点 + 真 `subagent` 门）；其余六角色的表内成员由 `AC-DT1` 在单测面覆盖——集成面不该为同一件事起六次真派单。
+
+**规模**：本批净加 1 行；故事 30 由 1 行变 2 行，仍在 50–100 的窗内。
 
 

@@ -261,7 +261,7 @@ on 分支默认 effort 契约 = 取 `spec.reasoningEffortEnum` 的**首个非 `"
 **零变面五 guard**：无枚举名 / 显式档在场（档位优先）/ 枚举不含 `none` / 百炼 qwen（`enable_thinking:false` 照发 + 同义多携该字段）/ 
 路由形态名（含 `/`）；后台调用路径（`thincoder-core/context.mjs` / `thincoder-core/explore-distill.mjs` 的 `{...provider, thinking:null}`）同命 = 有意认账
 
-（不再空想，与 qwen 侧同方向）。判据 = `doc:MODEL-SPECS.md:§9.6`（D-14）+ 用例 B-5；落点 = `thincoder-core/provider/core.mjs` 载荷组装段（+~5 行）。
+（不再空想，与 qwen 侧同方向）。判据 = `doc:MODEL-SPECS.md:§9.6`（D-14）+ 用例 B-5；落点 = `thincoder-core/provider/core.mjs` 载荷组装段。
 
 **off 形不得在解析链上被抹（本节谓词的前置条件单源）**：谓词首款 `provider.thinking === null` 要求 **off 标记活着到达载荷层**——
 advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdvisorProvider`）**须保形**（`cfg.thinking === null` ⇒ 结果对象 `thinking` 保持 `null`，不得归一为 `undefined`）
@@ -301,7 +301,7 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
     **HTTP 级分类零改**（`isNonRetryableError` 照旧——码级映射只服务流内错误面）。
   - **`max_output_tokens` 显式才发**——仅 `provider.maxTokens` 显式设定时发送；
     `spec.maxOutput` 退出**发送面**（内部用途保留：§6.11 预设对齐不变式 ∥ 压缩预算）。
-    判据 = 参考面双例（opencode `openai-responses.ts:493` 显式才发 + codex 强制不发）+
+    判据 = 参考面双例（opencode 侧 responses 适配档显式才发 + codex 强制不发）+
     本仓同病实锤（opencode-go-anthropic `max_tokens` 未设落规格行值超渠道口径——§6.11 在案）+ 规格值非渠道合同值。
     认账：无显式值时输出上限 = 服务端默认；responses 面无续写循环，截断面零变。
 
@@ -669,7 +669,7 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
 |---|---|
 | `providers[].context`（既有配置键） | **existing but unusable**：坐标 = `thincoder-core/config.mjs`（装载归一）∥ 乘点 `thincoder-core/model-specs.mjs`（`providerSpecResolution`）；失败面 = ① 粒度 = 渠道级（用户 17:31 裁定按模型）② 单位事故两起（K 当 token 填 ⇒ ×1024 后 2.68 亿 / 10.7 亿 token）⇒ 不复用为 L1，退居 L2 |
 | `modelContext`（既有键名） | **existing**: `thincoder-core/config.mjs`（装载归一）∥ `thincoder-core/model-context.mjs` `manualContextK`（L1 取值）∥ 三端写面 ∥ 载荷 |
-| `model-context.mjs`（既有模块） | **existing**: `thincoder-core/model-context.mjs`（111 行——缓存 ∥ 键归一 ∥ `manualContextK` ∥ `listedContextTokens`） |
+| `model-context.mjs`（既有模块） | **existing**: `thincoder-core/model-context.mjs`（缓存 ∥ 键归一 ∥ `manualContextK` ∥ `listedContextTokens`） |
 | `providerSpecResolution` / `formatDeclaredContextK`（既有导出） | **existing**: `thincoder-core/model-specs.mjs` 的 `providerSpecResolution` · `formatDeclaredContextK`（收 K）；token 口径另为 `formatContextK`（收 token）——两导出分工见「读面回显」节末 |
 | 八键 i18n / `Context…` 钮文案 | **existing**: `thincoder-vscode/locales/zh.json` 八键已落（`contextSaved` · `contextClearConfirm` 两键在内，模板尾不带 `K`）；桌面 `thincoder-desktop/renderer/i18n-settings.mjs` 同名键七键（`contextSaved` 死键已删） |
 
@@ -711,7 +711,7 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
   - **只精确匹配 `${sessionId}`**：替换按这一个固定串做，值里出现别的 `${…}` 按字面原样出站——**构造上不存在「未识别变量」这回事**，故没有识别失败要处置，也没有兜底路径。写法笔误（如 `${sessionIDd}`）出站就是该字面、不抛错：定制头值是通道值域，抛错会把历史合法值变成硬中断；代价只是路由 ∥ 缓存不优化。
     值类型面同此判据：替换只作用于字符串值，非字符串值原样留在头对象里（同 `thincoder-core/env-ref.mjs` 的类型门）；`providers[].headers` 经装载面净化只留字符串值并剥 `authorization`（`thincoder-core/config-normalize.mjs`），故配置链路到不了非字符串头值——该类型门只兜直接调 `withUserAgent` 的面（单测 ∥ 编程调用），不是业务分支。
   - **closest-precedent**：`existing: thincoder-core/env-ref.mjs · name: "resolveEnvRefs" · consumers: thincoder-core/config.mjs（装载面）`。对齐 = 值位模板（整值与内嵌同解、一值可含多引用、解析产物不回写配置）；**偏离** = 解析落在请求装配面而非装载面（值要每次请求现取，不能冻结进 provider 对象），且未命中不抛——`env-ref` 的「未设即抛」是密钥面判据，模板面不适用。
-  - **三问行**：`existing: thincoder-core/session-slots.mjs · name: "getSessionId" · consumers: thincoder-vscode/src/extension/session-io.mjs（re-export）∥ 台账执行者面`——取现有函数，不新建取值器；`session-identity.mjs`（新叶档名）= `none found`（仓根 `**/*.mjs` 扫该名零命中）；`${sessionId}`（模板变量名）= `none found`（既有值位命名空间只有 `${env:NAME}`）。新叶只把 `getSessionId` 的 9 行搬到零 import 档，符号名沿用既有。
+  - **三问行**：`existing: thincoder-core/session-slots.mjs · name: "getSessionId" · consumers: thincoder-vscode/src/extension/session-io.mjs（re-export）∥ 台账执行者面`——取现有函数，不新建取值器；`session-identity.mjs`（新叶档名）= `none found`（仓根 `**/*.mjs` 扫该名零命中）；`${sessionId}`（模板变量名）= `none found`（既有值位命名空间只有 `${env:NAME}`）。新叶只把 `getSessionId` 的实现搬到零 import 档，符号名沿用既有。
   - **与 `${env:VAR}` 的关系**：两个命名空间互不相交——`${env:}` 在装载面解析（`env-ref.mjs`，未设即抛），`${sessionId}` 在请求装配面解析（每次请求取当前值）；两者解析产物都不回写配置。
   - **公开来源核查（survey-evidence）**：检索域 = `opencode.ai/docs/go/`（官方档，原文已引于本块「实测依据」行）——相关，给出该头为必需、且按 conversation 一个稳定 id 的口径；其余无相关项（模板解析时机 ∥ 注入点 ∥ 未命中处置是我方实现选择，没有外部规范约束它们）。
   - **实测依据**：OpenCode Go 两个可用端点（`https://opencode.ai/zen/go/v1` ∥ `https://opencode.ai/inference/go/openai/v1`）同 key 同模型，带该头 `HTTP 200`、不带 `HTTP 400 {"type":"MissingSessionID"}`；官方档要求原文 `Send a stable session ID in x-opencode-session for each conversation so we can optimize routing and prompt caching.` ⇒ 该头是**必需**，不是可选遥测。
@@ -780,7 +780,7 @@ desktop 物化面：`thincoder-desktop/scripts/materialize-deps.mjs` 按源树�
 | 7 | 模型清单三分支 | `list-models.mjs` 三个 format 各跑一次（桩 fetch） | 三处请求头都含我们的 UA |
 | 8 | 会话标题 | `thincoder-core/generate-title.mjs` 一次（桩 fetch） | 请求头含我们的 UA |
 | 9 | embedding | `requestWithRetry` 一次（桩 fetch） | 请求头含我们的 UA；未引入定制头字段 |
-| 10 | CLI 接线 | import `thincoder-cli/src/command-table.mjs`（九薄命令 + 交互三命令的分发点；导入零输出） | `clientIdentity()` = `{surface:"cli", version:<thincoder-cli/package.json>}` |
+| 10 | CLI 接线 | import `thincoder-cli/src/command-table.mjs`（薄命令 + 交互命令的分发点；导入零输出） | `clientIdentity()` = `{surface:"cli", version:<thincoder-cli/package.json>}` |
 | 11 | desktop 接线 | import `thincoder-desktop/src/main/session-slots.mjs` | `{surface:"desktop", version:<thincoder-desktop/package.json>}` |
 | 12 | VSC 接线 | import `thincoder-vscode/src/extension/session-slots.mjs` | `{surface:"vscode", version:<thincoder-vscode/package.json>}` |
 | 13 | server 接线 | import `thincoder-server/bin/thincoder-server.mjs`（main-guard 生效，不跑 `run()`） | `{surface:"server", version:"0.1.0"}` |
@@ -795,7 +795,7 @@ desktop 物化面：`thincoder-desktop/scripts/materialize-deps.mjs` 按源树�
 
 **判据文件与跑法（本块用例 #15–#19）**：批内单测档（住 `docs/batches/`、名随批次档、收口删除）· `node --test <批档>.test.mjs`（cwd = 仓根）。
 
-住 `docs/batches/` 是收集面与收口门的硬约束、不是风格偏好（单源 = `docs/core/design/TESTING.md` 的「单元测试现行 = 单元测试档形态」段）：包内 `test/` 树的收集面反查把任何 `*.test.mjs` 判错位（`thincoder-core/test/run.mjs` 的收集面反查 ⇒ 该包 `npm test` 恒红）；收口门只按批档所在目录认领本批档（`thincoder-core/agent-tools/batch-unit-test-gate.mjs` 的认领段）⇒ 落进包测试树的档收口不被点名，会永久留盘。
+住 `docs/batches/` 是收集面与收口门的硬约束、不是风格偏好（单源 = `docs/core/design/TESTING.md` 的「单元测试现行 = 单元测试档形态」段）：包内 `test/` 树的收集面反查把任何测试后缀档判错位（`thincoder-core/test/run.mjs` 的收集面反查 ⇒ 该包 `npm test` 恒红）；收口门只按批档所在目录认领本批档（`thincoder-core/agent-tools/batch-unit-test-gate.mjs` 的认领段）⇒ 落进包测试树的档收口不被点名，会永久留盘。
 
 ### 6.18 图片输入与贴图降级链（VSC 端 · 终收批并入）
 
@@ -1174,7 +1174,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 | AC-3 | 非图像错误零误伤（history 不变、原错照抛） | 本单环③ ∥ R23 ②（同档 §4.7） | T-3 绿 + T-1 反样本绿 |
 | AC-4 | 无重试风暴（每失败回合至多一次剥除 + 一次重发；剥除后自熄） | 本单环③ ∥ R23 ③（同档 §4.7） | T-6 绿 ∥ W-1 请求计数 = 2 |
 | AC-5 | R11 零回归：多模态放行 ∥ 32MB 累计驱逐 ∥ 15MB 单图闸判据逐字不变 | R23 ④（同档 §4.7）∥ R11（同档——`read_image` 门放行，放行语义须含「不被图片反噬」） | T-9 绿（`capHistoryImages` 缺省参输出逐字断言）+ `git diff -U0 thincoder-core/provider/normalize.mjs` 检读：判据行零触及（值 ∥ 驱逐 ∥ 多模态放行三处）∧ `git diff --stat` 无 `thincoder-core/tools/file.mjs`（15MB 闸） |
-| AC-6 | 兜底面零改（compaction ∥ degrade 不触） | 本单环④ ∥ R23 ⑤（同档 §4.7） | `git diff --stat` 无 `context.mjs` ∥ `context-degrade.mjs` |
+| AC-6 | 兜底面零改（compaction ∥ degrade 不触） | 本单环④ ∥ R23 ⑤（同档 §4.7） | `git diff --stat` 无 `thincoder-core/context.mjs` ∥ `thincoder-core/context-degrade.mjs` |
 
 **关键决策**：D-PR39 ∥ D-PR40（§7）。
 
@@ -1312,7 +1312,7 @@ tier 判定：本层触及的两档均未过 500 行软线，不触发拆分；`
 
 - **最近先例（夹具形态）**：`existing: test/integration/context-overflow-guard.test.mjs · name: "compressCalls ∥ turnCalls" · consumers: 该档 11-1–11-9 各行`。**对齐** = 本地脚本化假端点、零外网、请求按类分列计数（摘要请求 ∥ 回合请求）、断言只落业务可观察结果；**偏离** = 本节的分类判据按**请求内容**认——越窗桩的请求种类由调用相位决定，打个标记就够，不需要内容识别。
 - **先例（夹具层级）**：同档 §6.27 的单元层用例表（T-1–T-16）与本节分工——**对齐** = 两层不重复持有同一断言（内部形态归单元层，业务结果归本节 G1–G3）；**偏离** = 本节把夹具本体从用例档提为独立档：识别谓词要脱离 CLI 场景单独驱动。
-- **公开来源核查**：本节不引入新的上游请求形态，无新增外部源；§6.27 已核的 Messages API 请求体形态（`content` 为字符串 ∥ text 块数组）沿用，本档不重述。核查面 = 仓根 `test/integration/` 实读（现状 22 档用例 + `fixtures/` 1 档）。
+- **公开来源核查**：本节不引入新的上游请求形态，无新增外部源；§6.27 已核的 Messages API 请求体形态（`content` 为字符串 ∥ text 块数组）沿用，本档不重述。核查面 = 仓根 `test/integration/` 目录实读。
 - **三问行（既有件核对）**：`test/integration/fixtures/anthropic-endpoint.mjs` = **在盘**（夹具本体已落地）⇒ **指向它，不新建**；文件名沿内容命名惯例（同族 `anthropic-tool-roundtrip.test.mjs`）；搬迁符号 `fakeAnthropic` ∥ `isSummaryRequest` ∥ `SUMMARY_SIG` 名不改——一个概念一个名字。
 
 **边界**：只落 CLI 实例（本档持有的业务入口）；VSC ∥ desktop 的实例化按 F14 各端原文自持，不在本档单源。

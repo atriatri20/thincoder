@@ -207,22 +207,26 @@ const UNION_PARAMETERS = {
   additionalProperties: false,
 }
 
-/** 变体构造（同名单对象、schema 窄化、两形永不同装配——先例 = `ledger` 工具 depth 面变体）。 */
+/** 变体构造（同名单对象、schema 窄化、两形永不同装配——先例 = `ledger` 工具 depth 面变体）。
+ *  只读变体的参数面 = 本变体各 action 的 `ACTION_SPECS` 并集（B6：它拿不到 `title` / `detail` 这类只有
+ *  写动作消费的参数与说明），描述取自己的档 `team_ledger-read.md`。 */
 function makeTeamLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
-  return {
-    name: "team_ledger",
-    description: DESC("team_ledger"), // 文本单点 = tool-docs/team_ledger.md（DESC 加载面）
-    parameters: {
-      ...UNION_PARAMETERS,
-      properties: {
+  const readProps = {}
+  if (readonly) for (const a of actions) Object.assign(readProps, ACTION_SPECS[a].properties)
+  const properties = readonly
+    ? { action: { type: "string", enum: actions, description: "操作（只读二值）：query 查询 / count 计数" }, ...readProps }
+    : {
         ...UNION_PARAMETERS.properties,
         action: {
           ...UNION_PARAMETERS.properties.action,
           enum: actions,
           description: writeFace ? "操作（五值）：query 查询 / count 计数 / add 新增 / update 更新 / close 收口或撤回——写三仅主 agent 装配面" : "操作（只读二值）：query 查询 / count 计数",
         },
-      },
-    },
+      }
+  return {
+    name: "team_ledger",
+    description: readonly ? DESC("team_ledger-read") : DESC("team_ledger"), // 文本单点 = tool-docs/{team_ledger,team_ledger-read}.md
+    parameters: { type: "object", required: ["action"], properties, additionalProperties: false },
     readonly,
     isReadonlyAction(args) { return READ_ACTIONS.includes(args?.action) },
     async execute(args, ctx) {

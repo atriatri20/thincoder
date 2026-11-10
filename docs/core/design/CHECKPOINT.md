@@ -28,12 +28,12 @@
 
 **四要素明细**
 
-- **#48 `tools/git-checkpoint.mjs`**（同路径 · j 0.9091 · sha `7b56f04cc565` / `5d9a226a1321` · 143 / 150 行）
+- **#48 `tools/git-checkpoint.mjs`**（同路径 · j 0.9091 · sha `7b56f04cc565` / `5d9a226a1321`）
   - 左端读数（CLI）：`escapeXml` 经 `thincoder-core/tools/git-checkpoint.mjs` 由 `thincoder-core/agent/helpers.mjs` 导入（共享实现）；checkpoint 子系统依赖 `thincoder-core/git/checkpoint.mjs`（同档 import 段）。
   - 右端读数（VSC）：`escapeXml` 本地定义（VSC 侧同名档，其注释曾自述镜像 CLI 版本；该副本已并入核）；依赖同目录 checkpoint 档（已并入核 `thincoder-core/git/checkpoint.mjs`）；头注含「CLI 镜像：」行。
   - 建议归一形态：融合——`escapeXml` 下沉核内单一实现（消除本地副本）；依赖 / 路径按核内闭包归一。
   - 影响面：无行为差——两 `escapeXml` 实现逐字相同（同款 5 链替换、同序）；差异属组织面（共享函数本地副本化 + 子系统模块位置）⇒ 不命中三口径（须用户裁 = —）。
-- **#49 `tools/git-ext.mjs`**（同路径 · j 0.9071 · sha `682c67b71974` / `0cfaddecef28` · 173 / 174 行）
+- **#49 `tools/git-ext.mjs`**（同路径 · j 0.9071 · sha `682c67b71974` / `0cfaddecef28`）
   - 左端读数（CLI）：注释 + 依赖 `thincoder-core/git/checkpoint.mjs`（动态导入 `thincoder-core/tools/git-ext.mjs`）；函数体与右端逐字相同。
   - 右端读数（VSC）：注释（含「CLI 镜像：」注记，同档头注）+ 依赖同目录 checkpoint 档（已并入核 `thincoder-core/git/checkpoint.mjs`）；函数体逐字相同（filterLines / runGitStrict / validateRef / gitConfigArgs / snapshotBefore / executeExtAction）。
   - 建议归一形态：融合——注释归一（删镜像注记）+ 依赖路径按核内闭包。

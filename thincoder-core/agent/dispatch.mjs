@@ -114,8 +114,11 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       }
       if (blocked) {
         // Undeclared project → point at ITS declaration file (§4.3 降级可见契约; #1102).
+        // 文案不列段名：本支只在 `!conv.declared` 时发，而 `declared` 是值比较（`buildDeclaration`）
+        // ⇒ 未声明 ⇒ `codePaths` 与缺省逐项相等 = 空。默认段自 2026-11-10 起清空（KD-M1-31），
+        // 原先 `code paths: ${…join}` 的空集渲染会印出一句残句，故改述判据来源（兜底分类）。
         const convNote = noteConv
-          ? ` — this path was classified as product code by the default conventions (code paths: ${noteConv.codePaths.join(", ")}); declare project conventions in ${manifestFilePath(noteConv.root)} to adjust.`
+          ? ` — this path fell through to product code (no code segment is declared: code paths are empty); declare project conventions in ${manifestFilePath(noteConv.root)} to adjust.`
           : ""
         prepared.push({
           toolCall, tool, denied: true,
@@ -162,9 +165,10 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // 写锁（第三道 · 2026-11-03 笔-账绑定批 · 设计档 §2.3）：本笔报的 `ledger:"#N"` 必须是**目标所属项目**
     // 台账里一条 `status = 在途` 的行。位次 = 既有两道之后（既有拒因先报）；判序 = 先判目标所属项目
     // （出辖 ⇒ 门不管），再按号查该根台账；台账读不到 ⇒ 拒（业务门）。
-    // 入口集 = 十二把（写盘七件 + `bash` ∥ `execute` + `manifest` ∥ `memory` + `ssh`）——`bash` ∥ `execute`
+    // 入口集 = 十一把（写盘七件 + `bash` ∥ `execute` + `memory` + `ssh`）——`bash` ∥ `execute`
     // 与写盘工具同一判据、不按命令内容分类（决策 36）；`ssh` 只对 `get` 要号。`git` **不在集内**（决策 37 改判）：
-    // 它不落新字节，写型与只读同为不要号 ⇒ 本门不问它的 action。
+    // 它不落新字节，写型与只读同为不要号 ⇒ 本门不问它的 action；`manifest` **不在集内**（决策 44）：本门自己要
+    // 读它写的那份档（取根 ∥ 写权表），把它也放在门后即构成环 ⇒ 三动作一概不要号。
     // 只在工程模式生效（`agent.config.agent.engineering`）∥ 只在 depth 0（子代理走既有 token 门）。
     // 路径集与 `args.ledger` 由判据函数自己取（调形只传 tool + toolName + args）。
     const ledgerConflict = await ledgerBindWriteConflict(agent, depth, tool, toolCall.name, args)

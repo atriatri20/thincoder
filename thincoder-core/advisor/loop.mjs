@@ -13,6 +13,18 @@ import { providerSpec, assistantToolCallMessage } from "../config.mjs"
 import { toOpenAISchema } from "../tools/index.mjs"
 import { truncateAdvisorResult } from "./truncate.mjs"
 import { batchTool } from "../agent-tools/batch.mjs"
+// 文档工具面（`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.60.2 ③ · 需求 `docs/core/requirements/DOC-GRAPH.md`
+// §4 AC-10）：评审段拿到两件只读工具：`doc_check` 本体 ∥ `doc_graph` 只读变体（三动作、无 `scan`）。
+// **工具在场 ≠ 义务**：评审的判据来自文档本体（读那一节、与代码和需求对出来），机检的 PASS 只说明锚点与段长
+// 合规、`doc_graph` 只回答「谁引了谁」——两者都不是判据面。拿到它们是为了「核一个锚在不在盘」这类局部事实时
+// 不必上抛，而不是给它一条结论捷径；没有机制禁止它调用，也不该有。静态 import（同 `batchTool` 那条）：
+// `doc-graph.mjs` 的静态闭包不达 `node:sqlite`（机制档只在 execute 里动态 import）；`doc-check.mjs` 的静态闭包
+// 经 `doc-check/index.mjs → declaration.mjs → memory/file-walk.mjs` 到达 `node:sqlite`。而本档**原有**的 `batchTool`
+// 静态链早已同达（可逐跳核到的一条：`agent-tools/batch.mjs → batch-paths.mjs → path-resolve.mjs →
+// declared-repos.mjs → declaration.mjs → memory/file-walk.mjs → memory/schema.mjs`）⇒ 本条不是本批新引入的
+// 通路；本批只按同一条静态 import 先例接入，模块域零新增 TLA（两档都不是 TLA import）。
+import { docCheckTool } from "../agent-tools/doc-check.mjs"
+import { docGraphReadTool } from "../agent-tools/doc-graph.mjs"
 import {
   shouldBudgetNudge, budgetNudgeText, timeoutTail, renderTimeline, compactContextIfNeeded,
   MAX_ADVISOR_TURNS, advisorContextBudget, TOOL_TIMEOUT_MS, REVIEW_TIMEOUT_MS, MAX_RESULT_CHARS,
@@ -25,7 +37,8 @@ const { lspTool } = await import("../tools/lsp.mjs")
 const { codeSearchTool } = await import("../memory/code-sync.mjs")
 
 /**
- * Advisor tool set — ZERO git, every round：只读六件 + 绑定档时追加 `batch`（该通道写面限 `§3`）。
+ * Advisor tool set — ZERO git, every round：只读六件 + 文档工具面两件（`doc_check` ∥ `doc_graph` 只读变体）
+ * + 绑定档时追加 `batch`（该通道写面限 `§3`）。
  * The change surface comes from the
  * review scope (paths / _touchedFiles injected by the caller), never from git: git output misled
  * reviews (committed fixes never show in `git diff HEAD`, so "no changes" was read as "not
@@ -50,7 +63,7 @@ function advisorCodeSearchTool(agent) {
  * @returns {{schemas: object[], byName: Map<string, object>}}
  */
 function advisorToolsFor(agent, reviewType = "code", batchDoc = null) {
-  const tools = [readTool, globTool, grepTool, lsTool, lspTool, advisorCodeSearchTool(agent)]
+  const tools = [readTool, globTool, grepTool, lsTool, lspTool, advisorCodeSearchTool(agent), docCheckTool, docGraphReadTool]
   // BATCH-RECORD.md §4.3：**绑了批次档就额外拿到写通道，与评审轨无关**（判据单源 =
   // `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）。工具面批走代码轨，评审员要写 `§3`
   // 就靠这一条；不注册 ⇒ 绑定落不到任何一处，`§3` 只能编。未绑定 → 不挂载（fail-closed）。
@@ -263,7 +276,12 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
         })
         let toolPromise
         try {
-          toolPromise = p.tool.execute(p.args, { cwd, agent, onOutput, signal })
+          // 归一成 Promise（设计单源 = `docs/core/design/ADVISOR-CONVERGENCE.md` §18）：工具的 `execute` 允许同步
+          // 返回（`doc_check` 就是一个），而下面 `finally` 里要给同一返回值挂 `.catch`——同步值上没有 `.catch`，
+          // 收尾句抱 `TypeError` 盖过竞速结果，一次成功的工具调用被归成 `: "execution_error"`。
+          // **别以为评审的工具集特殊**：主代理侧是 `await item.tool.execute(...)`，`await` 对同步值与 Promise 同判，
+          // 那里不产生 `.catch`；评审循环是唯一在 `finally` 里挂 `.catch` 的地方，于是只有它撞。
+          toolPromise = Promise.resolve(p.tool.execute(p.args, { cwd, agent, onOutput, signal }))
           return await Promise.race([toolPromise, timeoutPromise])
         } finally {
           clearTimeout(timeoutId)

@@ -24,7 +24,7 @@ import { applyFlags } from "./events.mjs"
 import { endBackfill, setProviderState, withFlowOp } from "./store.mjs"
 // 排队镜面（「回合中插入」批 —— `history:page` 回执 `queue` 键 = 冷启 ∕ 重载重建面；写者两处同源）。
 import { applyQueue } from "./queue.mjs"
-// 消化轮集清点（运行期痕**五清**之四 —— 判据单源 = 消化行族档 `renderer/views/chat-digest-rows.mjs`）。
+// 消化轮集清点（运行期痕**六清**之四 —— 判据单源 = 消化行族档 `renderer/views/chat-digest-rows.mjs`）。
 import { clearDigest } from "./views/chat-digest-rows.mjs"
 // 消化记录折叠（留档批 · #719 —— 归约体**直复用**：记录形 = 事件形，单一实现零副本）。
 import { onDigest } from "./events-wake.mjs"
@@ -213,6 +213,16 @@ function clearTimerNotice(table, key) {
   return next
 }
 
+/** 取件行清点（行痕族第四员 · 2026-11-10 —— 单源 = 本档）：首屏页读（`before == null`）⇒ 摘本键行组切片
+ *  （运行期痕 —— **非落盘件**：重开 ∕ 切回页读即失；一类一槽 `{ lost?, blocked? }` **整键摘**（零分槽处理）；
+ *  **本族清点 = 两门**——首屏门 + 回合起跑门（`msg:send` 出站即清——`clearTurnTraces`；单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74 第四员）；无痕 ⇒ 原引用（零写）。 */
+function clearInboxNotice(table, key) {
+  if (table === null || typeof table !== "object" || table[key] === undefined) return table
+  const next = { ...table }
+  delete next[key]
+  return next
+}
+
 /** 压缩状态行清点（R4 —— 单源 = 本档）：首屏页读（`before == null`）⇒ 摘本键压缩行（运行期痕 —— **非落盘件**：
  *  重开 / 切回页读即失，对位 VSC「session view clears recreate it」）；无行 ⇒ 原引用（零写）。 */
 function clearCompress(table, key) {
@@ -237,8 +247,8 @@ function clearHelpLines(table, key) {
  *  `flags` 与 `meta` **同一写点**（`applyFlags` —— 状态栏对齐批；每次页读皆携 ⇒ 回填径同写）；
  *  **provider 态**（#841）⇒ 顶层 `providerState` 切片写（每次页读皆携；键缺席 ⇒ 零写 —— 「provider 态投影注」）；
  *  `key !== activeSession` ⇒ 跳块 / 历史写（`sessionMeta[key]` / `sessionFlags[key]` 仍写）；
- *  首屏（`before == null`）⇒ 块整置 + 回底（`following = true` / `pendingNew = 0`；空页同径）+ **运行期痕五清**
- *  （停止痕 `stopMark` ∕ 到期触发痕 `timerNotice` ∕ 压缩行 `compress`（R4）∕ 消化轮集 `digest`（终态轮整清——未结末轮保；
+ *  首屏（`before == null`）⇒ 块整置 + 回底（`following = true` / `pendingNew = 0`；空页同径）+ **运行期痕六清**
+ *  （停止痕 `stopMark` ∕ 到期触发痕 `timerNotice` ∕ 取件行 `inboxNotice`（行痕族第四员） ∕ 压缩行 `compress`（R4）∕ 消化轮集 `digest`（终态轮整清——未结末轮保；
  *  归属过滤住并入点 `withFoldedDigest`）∕
  *  `/help` 行族 `helpLines`（`/help` 增量）—— 同首屏门）
  *  + **留档记录折叠**（`digest` 记录 ⇒ **复列全量**采入 —— 未结轮照现（末页 = `before == null`）∥ 并入 = **未结轮归属过滤**
@@ -265,11 +275,13 @@ export function applyPage(state, receipt, { key, before } = {}) {
   if (before == null) {
     const stopMark = clearStopMark(flagged.stopMark, key)
     const timerNotice = clearTimerNotice(flagged.timerNotice, key)
+    const inboxNotice = clearInboxNotice(flagged.inboxNotice, key)
     const compress = clearCompress(flagged.compress, key)
     const helpLines = clearHelpLines(flagged.helpLines, key)
     const digest = withFoldedDigest(clearDigest(flagged.digest, key), key, folded)
     const first = {
       ...flagged, ...(stopMark === flagged.stopMark ? {} : { stopMark }), ...(timerNotice === flagged.timerNotice ? {} : { timerNotice }),
+      ...(inboxNotice === flagged.inboxNotice ? {} : { inboxNotice }),
       ...(compress === flagged.compress ? {} : { compress }), ...(digest === flagged.digest ? {} : { digest }), ...(helpLines === flagged.helpLines ? {} : { helpLines }),
       ...seedPatch(flagged, key, receipt.seed), blocks: page, sessionMeta, history, following: true, pendingNew: 0,
     }

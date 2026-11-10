@@ -40,7 +40,7 @@ import { DESC } from "../tools/shared.mjs"
 import { SEGMENT_BY_ROLE } from "./batch-skeleton.mjs"
 import { batchDocBases, resolveBatchDocPath } from "./batch-paths.mjs"
 import { createBatchRecord, attachBatchRecord } from "./batch-ledger-bind.mjs"
-import { closeBatchRecord, findInFlightBatch, statusBatchRecord } from "./batch-lifecycle.mjs"
+import { checkBatchRecord, closeBatchRecord, findInFlightBatch, statusBatchRecord } from "./batch-lifecycle.mjs"
 import { appendBatchRecord, editBatchRecord } from "./batch-record-write.mjs"
 
 export { SEGMENT_BY_ROLE, batchDocBases, resolveBatchDocPath }
@@ -82,87 +82,150 @@ export function batchDocForReview(agent, documents, callbacks = null) {
 }
 
 /**
- * 批次档生命周期工具工厂（主名 `batch`——单工具五 action）。
+ * 身份 profile（TOOLS.md §6.29 ②）：depth-0 = 全量六动作；子代理与评审 = 自己那一段的
+ * append / edit / status（段域仍由既有身份白名单裁决，本档只裁**动作面与参数面**）。
+ * 描述取各自一份档——全量档 `batch.md` 通篇讲六个动作，子代理读到它就是读到做不到的事（B6）。
+ */
+const PROFILE_ACTIONS = ["append", "edit", "status"]
+const PROFILE_SEGMENTS = { "eng-designer": 2, "eng-coder": 5, coder: 5, review: 3 }
+const PROFILE_DOCS = { "eng-designer": "batch-eng-designer", "eng-coder": "batch-eng-coder", coder: "batch-eng-coder", review: "batch-review" }
+/** profile 面保留的参数（其余参数只服务 create / attach / close / path，profile 执行不到 ⇒ 不出现）。 */
+const PROFILE_PROPS = ["segment", "text", "oldText", "newText", "value", "note"]
+/** profile 面的 `segment` 参数（只点名自己那段——全量档那句把六个身份的白名单一起列出来，
+ *  子代理读到的是别的身份的写域）。 */
+function profileSegmentProp(profileKey) {
+  const seg = PROFILE_SEGMENTS[profileKey]
+  return {
+    type: "string",
+    description: `append/edit/status only — the batch-record section you are writing: §${seg} is your pen on this record (e.g. "§${seg}"). Declares the section number only; the identity bound to this spawn decides what is actually writable.`,
+  }
+}
+
+/** 全量参数面（depth-0 六动作）：schema 单源——profile 面从它取所需格，见 `PROFILE_PROPS`。 */
+function fullParameters() {
+  return {
+    type: "object",
+    properties: {
+      action: {
+        type: "string",
+        enum: ["create", "attach", "append", "edit", "status", "close", "check"],
+        description: "Which lifecycle step to run: create (new record) / attach — hang a ledger row on an ALREADY EXISTING in-flight record (depth-0 only: a reopened record taking on a new piece of work; opens a new row, or takes over an unsettled one with ledger:\"#<id>\", and writes its number into the header 台账 line) / append (add text to the END of your section) / edit — replace one anchored range inside YOUR OWN section (§1–§6 alike; your identity decides which section) / status (your section's status line) / close (freeze the record — this settles the batch's ledger rows in the same action) / check (depth-0 only, read-only: print this record's half-state readings — §1 open|closed, its ledger rows, and every record↔ledger inconsistency with the way out).",
+      },
+      path: {
+        type: "string",
+        description: "depth-0 only (D-BR21) — the batch record to operate on (若传则须可读). Omit it to target the unique in-flight record (0 or ≥2 in flight ⇒ refuse). Sub-agents and design reviews: do NOT pass path — your target record arrives via the spawn binding / the review instance key.",
+      },
+      segment: {
+        type: "string",
+        description: "append/edit/status only — the batch-record section you are writing (e.g. \"§4\"). Declares the section number only; your identity decides what is actually writable (main agent: append/edit §1/§4/§6 · status §1 (engineering) / append/edit §1/§2/§4/§5/§6 · status §1/§2/§5 (normal); eng-designer §2; eng-coder §5; normal-mode coder with a batchDoc binding §5; design review §3). edit reads the same whitelist as append — one table, two actions: the section you may append is the section you may rewrite in place.",
+      },
+      text: {
+        type: "string",
+        description: "append only — the markdown to append (for a design review §3: the round's conclusion table — one row per finding, its evidence a pointer — plus the VERDICT line and the counts; the report's own text stays out). Limit 20000 characters per call; longer content is refused — split it into multiple calls (each call becomes its own section, N continues). A line that STARTS with the status-line form (`**状态行**：…`) is refused — that line has one writer (`status`); quote it with a leading `> ` instead, or write it as prose.",
+      },
+      oldText: {
+        type: "string",
+        description: "edit only — oldText must match exactly once, byte for byte (line endings included), inside the section body; newText replaces that range, and an empty newText deletes it. Refused with nothing written: a blank oldText, zero hits, two or more hits (the matching lines are named), an anchor crossing the section boundary, an anchor touching the section's PROTECTED status line (the first `**状态行**：` line of its header zone — one writer: `status`; deleting a status line elsewhere, e.g. a surplus copy, is allowed), any replacement that introduces a `**状态行**：` line, and any edit that would leave MORE status lines in the header zone than before.",
+      },
+      newText: {
+        type: "string",
+        description: "edit only — the replacement text for the anchored range; an empty string deletes the range. Limit 20000 characters per call (same cap as append); longer is refused — split it into several edits of one anchored range each. Credentials are stripped mechanically (same as append); a `## §N` heading line is refused (skeleton protection), and on §3 a `### 轮次 N（评审子代理）` line is dropped (the round stamp is tool-generated only).",
+      },
+      value: {
+        type: "string",
+        description: "status only — the new status-line value (single line; exactly one legal keyword of your section's STATUS_WORDS entry: §1 进行中/已收口 · §2 设计完成 · §3 评审通过 · §5 实施完成 — plus decoration only: surrounding symbols / a trailing ISO date / whitespace; prose goes to `note`).",
+      },
+      note: {
+        type: "string",
+        description: "status only — prose that lands as a parenthetical on the status line (`**状态行**：进行中（note）`). Single line; must carry no STATUS_WORDS keyword (those go in `value`) and no skeleton placeholders. Omit for a plain value. On the reopen path (a frozen record, §1 → 进行中) `note` is REQUIRED and lands verbatim in the §1 reopen record instead of the status-line parenthetical (it may name the frozen keyword there).",
+      },
+      completed: {
+        type: "array",
+        items: { type: "number" },
+        description: "close / status writing §1 已收口 only — REQUIRED: the ledger ids completed by this batch. Every id must be unique, belong to this record, and currently be 在途; every 在途 row must be listed. [] is valid only when the batch has no 在途 rows. Other actions do not accept this parameter. Invalid or omitted ids are refused before tokens or the record are written; return unfinished rows to 待讨论 first. Those rows are settled to 已核销 in the same transaction, and this batch's existing 待核销 rows are settled with them — closing leaves zero 在途 and zero 待核销 behind.",
+      },
+      closeEvidence: {
+        type: "string",
+        description: "close / status writing §1 已收口 only — REQUIRED: one line of work evidence for this closeout (what this batch actually did). It is written into every settled row's evidence with a `收口 <YYYY-MM-DD>：` prefix, so human evidence and the closeout evidence stay distinguishable on the row. Blank (missing / empty / whitespace) is refused before anything is written — the machine never invents this line, because a machine-written sentence turns the close-proof gate into decoration.",
+      },
+      topic: {
+        type: "string",
+        description: "create only — the batch subject word shared by the record header (keep the file name aligned with it).",
+      },
+      source: {
+        type: "string",
+        description: "create only — REQUIRED: the record's origin line (来源 = …; single line). It fills the header's 编制 line; without it the skeleton's placeholder would block the record's first append/status (topic-style fail-closed). Nothing is written when it is missing.",
+      },
+      ledger: {
+        type: "string",
+        description: "create / attach — optional: an existing ledger entry number to take over (e.g. \"#1830\"; a leading # is optional) — on attach that is how a reopened record takes over an unsettled row. Omit it and the call opens a NEW ledger row in the same call (status 在途 · task_book = this record · trigger 归批; attach needs title for that) — but only when no unsettled row exists on the same face (board); otherwise it is refused and lists the candidates, and you pass either ledger:\"#<id>\" to take one over or newDebt:\"<why this is not one of them>\". Pass an archived / settled / foreign-owned row and it is refused. The row and the record are one action — there is no separate registration step.",
+      },
+      newDebt: {
+        type: "string",
+        description: "create / attach — optional: one line saying why this is a NEW debt rather than one of the unsettled rows already on the same face (board). Required only when you omit ledger while that face has unsettled rows; the reason lands in the new row's evidence and is quoted in this record's closeout receipt. Omit both ledger and newDebt while unsettled rows exist ⇒ refused with the candidate list.",
+      },
+      board: {
+        type: "string",
+        description: "create / attach — optional: the owning board for the header's 台账 line (e.g. \"core\"). Given, the opened/taken-over row is a requirement and carries this board; omitted, the row is a tech_todo. create writes it into the header 括注 (未给 ⇒ 「—」); attach never rewrites the parenthesis group — it only appends to the number list.",
+      },
+      title: {
+        type: "string",
+        description: "attach only — REQUIRED when attach opens a new ledger row (not needed when you take one over with ledger): the row's own subject, i.e. what this new piece of work is. It is the same thing as the ledger row's title (one concept, one name); do not reuse the batch's original subject — a reopened record taking on a new debt is not a second copy of the old one.",
+      },
+      date: {
+        type: "string",
+        description: "create only — the record date (YYYY-MM-DD); defaults to today.",
+      },
+      prev: {
+        type: "string",
+        description: "create only — the predecessor pointer line (前情); a leading `前情 = ` prefix is stripped automatically (idempotent — repeated prefixes included); defaults to 无（独立批）.",
+      },
+    },
+    required: ["action"],
+  }
+}
+
+/**
+ * 批次档生命周期工具工厂（主名 `batch`——**六 action**：create / attach / append / edit / status / close）。
  * @param {string|null} batchDoc — 绑定的目标档（spawn：`child._batchDoc`；评审：实例键；
  *   depth-0 主 agent 挂载时 = null——目标走 D-BR21 可选 path / 在飞扫描）
- * @param {{review?: boolean}} [opts] — review=true 表示"设计评审实例"形态（写 §3 + 工具盖戳）
+ * @param {{review?: boolean, role?: string|null}} [opts] — review=true 表示"设计评审实例"形态
+ *   （写 §3 + 工具盖戳）；`role` = 装配面的角色身份（`family-tools.mjs` 传；缺省 = depth-0 全量面）
  */
-export function batchTool(batchDoc = null, { review = false } = {}) {
+export function batchTool(batchDoc = null, { review = false, role = null } = {}) {
+  const profileKey = review ? "review" : (role && PROFILE_DOCS[role] ? role : null)
+  const full = fullParameters()
+  const profileParameters = profileKey
+    ? {
+        type: "object",
+        required: ["action"],
+        properties: {
+          action: {
+            type: "string",
+            enum: PROFILE_ACTIONS,
+            description: `Which step this face carries: ${PROFILE_ACTIONS.join(" / ")} — append (add text to the END of your section) / edit (replace one anchored range inside it) / status (your section's status line).`,
+          },
+          ...Object.fromEntries(PROFILE_PROPS.map((k) => [k, k === "segment" ? profileSegmentProp(profileKey) : full.properties[k]])),
+        },
+      }
+    : full
   return {
     name: "batch",
-    description: DESC("batch"), // 模型可见文本 = tool-docs/batch.md
-    parameters: {
-      type: "object",
-      properties: {
-        action: {
-          type: "string",
-          enum: ["create", "attach", "append", "edit", "status", "close"],
-          description: "Which lifecycle step to run: create (new record) / attach — hang a ledger row on an ALREADY EXISTING in-flight record (depth-0 only: a reopened record taking on a new piece of work; opens a new row, or takes over an unsettled one with ledger:\"#<id>\", and writes its number into the header 台账 line) / append (add text to the END of your section) / edit — replace one anchored range inside YOUR OWN section (§1–§6 alike; your identity decides which section) / status (your section's status line) / close (freeze the record).",
-        },
-        path: {
-          type: "string",
-          description: "depth-0 only (D-BR21) — the batch record to operate on (若传则须可读). Omit it to target the unique in-flight record (0 or ≥2 in flight ⇒ refuse). Sub-agents and design reviews: do NOT pass path — your target record arrives via the spawn binding / the review instance key.",
-        },
-        segment: {
-          type: "string",
-          description: "append/edit/status only — the batch-record section you are writing (e.g. \"§4\"). Declares the section number only; your identity decides what is actually writable (main agent: append/edit §1/§4/§6 · status §1 (engineering) / append/edit §1/§2/§4/§5/§6 · status §1/§2/§5 (normal); eng-designer §2; eng-coder §5; normal-mode coder with a batchDoc binding §5; design review §3). edit reads the same whitelist as append — one table, two actions: the section you may append is the section you may rewrite in place.",
-        },
-        text: {
-          type: "string",
-          description: "append only — the markdown to append (for a design review §3: the round's conclusion table — one row per finding, its evidence a pointer — plus the VERDICT line and the counts; the report's own text stays out). Limit 20000 characters per call; longer content is refused — split it into multiple calls (each call becomes its own section, N continues). A line that STARTS with the status-line form (`**状态行**：…`) is refused — that line has one writer (`status`); quote it with a leading `> ` instead, or write it as prose.",
-        },
-        oldText: {
-          type: "string",
-          description: "edit only — oldText must match exactly once, byte for byte (line endings included), inside the section body; newText replaces that range, and an empty newText deletes it. Refused with nothing written: a blank oldText, zero hits, two or more hits (the matching lines are named), an anchor crossing the section boundary, an anchor touching the section's PROTECTED status line (the first `**状态行**：` line of its header zone — one writer: `status`; deleting a status line elsewhere, e.g. a surplus copy, is allowed), any replacement that introduces a `**状态行**：` line, and any edit that would leave MORE status lines in the header zone than before.",
-        },
-        newText: {
-          type: "string",
-          description: "edit only — the replacement text for the anchored range; an empty string deletes the range. Limit 20000 characters per call (same cap as append); longer is refused — split it into several edits of one anchored range each. Credentials are stripped mechanically (same as append); a `## §N` heading line is refused (skeleton protection), and on §3 a `### 轮次 N（评审子代理）` line is dropped (the round stamp is tool-generated only).",
-        },
-        value: {
-          type: "string",
-          description: "status only — the new status-line value (single line; exactly one legal keyword of your section's STATUS_WORDS entry: §1 进行中/已收口 · §2 设计完成 · §3 评审通过 · §5 实施完成 — plus decoration only: surrounding symbols / a trailing ISO date / whitespace; prose goes to `note`).",
-        },
-        note: {
-          type: "string",
-          description: "status only — prose that lands as a parenthetical on the status line (`**状态行**：进行中（note）`). Single line; must carry no STATUS_WORDS keyword (those go in `value`) and no skeleton placeholders. Omit for a plain value. On the reopen path (a frozen record, §1 → 进行中) `note` is REQUIRED and lands verbatim in the §1 reopen record instead of the status-line parenthetical (it may name the frozen keyword there).",
-        },
-        topic: {
-          type: "string",
-          description: "create only — the batch subject word shared by the record header (keep the file name aligned with it).",
-        },
-        source: {
-          type: "string",
-          description: "create only — REQUIRED: the record's origin line (来源 = …; single line). It fills the header's 编制 line; without it the skeleton's placeholder would block the record's first append/status (topic-style fail-closed). Nothing is written when it is missing.",
-        },
-        ledger: {
-          type: "string",
-          description: "create / attach — optional: an existing ledger entry number to take over (e.g. \"#1830\"; a leading # is optional) — on attach that is how a reopened record takes over an unsettled row. Omit it and the call opens a NEW ledger row in the same call (status 在途 · task_book = this record · trigger 归批; attach needs title for that) — but only when no unsettled row exists on the same face (board); otherwise it is refused and lists the candidates, and you pass either ledger:\"#<id>\" to take one over or newDebt:\"<why this is not one of them>\". Pass an archived / settled / foreign-owned row and it is refused. The row and the record are one action — there is no separate registration step.",
-        },
-        newDebt: {
-          type: "string",
-          description: "create / attach — optional: one line saying why this is a NEW debt rather than one of the unsettled rows already on the same face (board). Required only when you omit ledger while that face has unsettled rows; the reason lands in the new row's evidence and is quoted in this record's closeout receipt. Omit both ledger and newDebt while unsettled rows exist ⇒ refused with the candidate list.",
-        },
-        board: {
-          type: "string",
-          description: "create / attach — optional: the owning board for the header's 台账 line (e.g. \"core\"). Given, the opened/taken-over row is a requirement and carries this board; omitted, the row is a tech_todo. create writes it into the header 括注 (未给 ⇒ 「—」); attach never rewrites the parenthesis group — it only appends to the number list.",
-        },
-        title: {
-          type: "string",
-          description: "attach only — REQUIRED when attach opens a new ledger row (not needed when you take one over with ledger): the row's own subject, i.e. what this new piece of work is. It is the same thing as the ledger row's title (one concept, one name); do not reuse the batch's original subject — a reopened record taking on a new debt is not a second copy of the old one.",
-        },
-        date: {
-          type: "string",
-          description: "create only — the record date (YYYY-MM-DD); defaults to today.",
-        },
-        prev: {
-          type: "string",
-          description: "create only — the predecessor pointer line (前情); a leading `前情 = ` prefix is stripped automatically (idempotent — repeated prefixes included); defaults to 无（独立批）.",
-        },
-      },
-      required: ["action"],
-    },
+    description: profileKey ? DESC(PROFILE_DOCS[profileKey]) : DESC("batch"), // 模型可见文本 = tool-docs/batch*.md
+    parameters: profileParameters,
     async execute(args, ctx) {
+      // 第二道门（§6.29 ② · B6）：schema 的 enum 只是提示，provider 不保证执行它——profile 面
+      // 收到本身份执行不了的动作，必须在任何写盘 / 台账事务之前拒，并点名动作与可用集。
+      if (profileKey && !PROFILE_ACTIONS.includes(args?.action)) {
+        throw new Error(`batch: action ${JSON.stringify(args?.action ?? null)} is not available to this caller — this face carries ${PROFILE_ACTIONS.join(" / ")} only (its own section of the record). Nothing was written.`)
+      }
+      const closingCall = args?.action === "close" || (args?.action === "status" && typeof args?.value === "string" && args.value.includes("已收口"))
+      if (args?.completed !== undefined && !closingCall) {
+        throw new Error("batch: completed is accepted only by close or by status writing §1 已收口. Nothing was written.")
+      }
+      if (args?.closeEvidence !== undefined && !closingCall) {
+        throw new Error("batch: closeEvidence is accepted only by close or by status writing §1 已收口. Nothing was written.")
+      }
       const agent = ctx?.agent ?? {}
       const cwd = agent.cwd
       const bases = batchDocBases(cwd) // 歧义锚 ⇒ 候选项目基底并集（#828——create / 在飞 / 写门基底集同源）
@@ -194,8 +257,10 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
           return statusBatchRecord({ args, ctx, review, pickTarget, onWritten })
         case "close":
           return closeBatchRecord({ args, ctx, review, pickTarget, onWritten })
+        case "check":
+          return checkBatchRecord({ args, ctx, review, pickTarget })
         default:
-          throw new Error(`batch: unknown action ${JSON.stringify(args?.action ?? null)} — pass one of create / attach / append / edit / status / close.`)
+          throw new Error(`batch: unknown action ${JSON.stringify(args?.action ?? null)} — pass one of create / attach / append / edit / status / close / check.`)
       }
     },
   }

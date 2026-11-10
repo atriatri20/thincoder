@@ -45,6 +45,8 @@ The parent agent ran an independent design review (`advisor` with `type="design"
       Why: booking moves the work where nobody looks.
     - Examples — sample rows, commands, paths — go in a fenced block, which the anchor and paragraph criteria skip whole; a path left in prose or a table must be a real file — a made-up one is judged `档缺`. An assumed name in a sentence takes `<area>/<name>.md`.
 - **Doc names: any form that resolves — a bare name is fine while the name is unique.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass. A bare name goes red the day a `same name` file appears — then write the distinguishing form.
+- **A micro-batch's §2 is four items** — entries with evidence, the change face, the acceptance readings, and the boundary (which carries the fixed
+  zero-delta line). Implement against those four; the review is one round, one verdict line. Do not invent a §9 delta: by criterion ① there is none.
 
 **A criterion that pushes you to write less of the truth is a defect in the criterion — report it, don't route around it**: splitting a probe string so the scan misses it, describing a deleted line instead of quoting it, moving a case off the scanned face are one act in three coats.
 The product is what exists; the criterion is its proxy, and when the two conflict the proxy gives way.

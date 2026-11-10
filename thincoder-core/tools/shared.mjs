@@ -22,15 +22,13 @@ export const MAX_READ_LINES = 2000
 export const MAX_OUTPUT_CHARS = 200_000
 
 // ─── 写门 `ledger` 参数（2026-11-03 笔-账绑定批 · 设计档 §2.3「工具 schema 面」）───────────────
-// 描述单源：十二把入口工具的 `parameters.properties.ledger` 共用下面这一条（文面逐字 = 设计档 §2.3）。
-// 为什么放这里：同一个参数在十二处各写一遍 = 同一机制十二份描述，措辞一旦漂移，模型读到的规则就有十二版；
-// 而 `manifest` ∥ `memory` ∥ `ssh` 的差异只是各接一句「本工具的哪一径要号」——差异走后缀，不复制全文。
-// 为什么不进 `required`（决策 35）：`required` 是静态字面，而这十二把工具在两模式、子代理、出辖目标下共用；
+// 描述单源：入口集十一把工具的 `parameters.properties.ledger` 共用下面这一条（文面逐字 = 设计档 §2.3）。
+// 为什么放这里：同一个参数在十一处各写一遍 = 同一机制十一份描述，措辞一旦漂移，模型读到的规则就有十一版；
+// 而 `memory` ∥ `ssh` 的差异只是各接一句「本工具的哪一径要号」——差异走后缀，不复制全文。
+// 为什么不进 `required`（决策 35）：`required` 是静态字面，而这十一把工具在两模式、子代理、出辖目标下共用；
 // 静态必填会让普通模式读到一条不成立的强制（写锁仅工程模式），也让子代理读到一条没人核的要求。
 // 机械强制在门（缺号即拒），schema 只负责让模型知道有这个参数；拒文因此是唯一教学面（决策 38）。
 export const LEDGER_PARAM_DESC = '本笔调用服务的在途台账号，`"#N"` 或 `"N"`；工程模式下父侧不带 = 拒'
-/** `manifest`：只有 `init` ∥ `write` 写项目内档（决策 39）。 */
-export const LEDGER_PARAM_DESC_MANIFEST = LEDGER_PARAM_DESC + '；仅 `init` ∥ `write` 要号，`read` 不要'
 /** `memory`：只有 `layer:"project"` 写项目内 `.thincoder/memory/**`（决策 39；`put` 缺省 `personal`）。 */
 export const LEDGER_PARAM_DESC_MEMORY = LEDGER_PARAM_DESC
   + '；仅落 project 层的写型 action 要号：`layer:"project"`，或省略 `layer`、单条删除且 id 以 `project:` 开头（此时层由前缀定；`personal` ∥ `team` 落用户数据目录，不要号）'
@@ -40,8 +38,8 @@ export const LEDGER_PARAM_DESC_MEMORY = LEDGER_PARAM_DESC
  *  为什么写盘七件也各带一格（2026-11-08 工作区根窄口批 · 设计档 §2.3.1）：它们的定位参数是一支支目标路径，
  *  而「目标取不到项目根」真会发生（工作区根的文件）——那时 `project` 是唯一可用的判据点，schema 不给
  *  这一格，门里的口子就永远触发不了（模型不知道有这个参数，第一次撞的还是拒文）。
- *  描述住本档、零手写副本：同一参数在十二处各写一遍就是十二版规则。 */
-export const PROJECT_PARAM_DESC = '本笔调用服务的项目根——带 `PROJECT-MANIFEST.json` 的那个目录（绝对路径，或相对会话 cwd）；工程模式下父侧 `bash` ∥ `memory` 必带，`execute` ∥ `manifest` 在定位参数缺位时必带，写盘七件在目标取不到项目根时必带。纯声明：不改执行目录（`bash` 仍在会话 cwd 执行，`workdir` 才是改执行目录的那个）。'
+ *  描述住本档、零手写副本：同一参数在十处各写一遍就是十版规则。 */
+export const PROJECT_PARAM_DESC = '本笔调用服务的项目根——带 `PROJECT-MANIFEST.json` 的那个目录（绝对路径，或相对会话 cwd）；工程模式下父侧 `bash` ∥ `memory` 必带，`execute` 在定位参数缺位时必带，写盘七件在目标取不到项目根时必带，写盘七件在目标属另一个项目、要用**本仓**在途号写它时也必带（本仓 `index.writableRepos` 声明表据此参与判）。纯声明：不改执行目录（`bash` 仍在会话 cwd 执行，`workdir` 才是改执行目录的那个）。'
 
 const ENCODING_DETECT_MAX_TRIM = 3
 const SYNTAX_CHECK_TIMEOUT = 10000

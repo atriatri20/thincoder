@@ -3,7 +3,7 @@
 > 需求 = 批档 `docs/batches/2026-11-07-tool-param-zero-defaults.md` §1（用户 2026-11-07 18:59「工具参数应该先清默认值」· 19:05「不用等，这个已经确定了，就是缺了就拒！」）。判据总纲 = `docs/core/design/PROMPT-SYSTEM.md` §6.77（`#2149` 已立）。
 > 改动面 = §4 清单；处数单源 = §2 各表行数（一处一行，不另设概数）。
 >
-> **处数口径**（与批档 §1 档头概数不同源，逐处以本档各表行为准）：第四层 = §2.1 五行（`thincoder-core/agent-tools/batch-ledger-bind.mjs` 的 bind ∥ attach 各占一行）；第一层 = §2.2 五行、六个落点（第 5 行是 `manifest` 两个工具面各一处 schema）；第三层 = §2.3 三行（第 2 行随 §2.2 第 1 行消形，不单列改法）。批档 §1 档头写「第四层…6 处」而它自表只列五个兜底落点 ⇒ 以本档 §2.1 的五行为准。
+> **处数口径**（逐处以本档各表行为准）：第四层 = §2.1 五行（`thincoder-core/agent-tools/batch-ledger-bind.mjs` 的 bind ∥ attach 各占一行）；第一层 = §2.2 五行、六个落点（第 5 行是 `manifest` 两个工具面各一处 schema）；第三层 = §2.3 三行（第 2 行随 §2.2 第 1 行消形，不单列改法）。
 
 ## 1. 模块目标与判据
 
@@ -219,7 +219,7 @@ node --test docs/batches/2026-11-07-tool-param-zero-defaults.test.mjs
 
 ## 7. 集成测试设计（RTM 增量）
 
-读 `test/RTM.md`（36 故事索引 + 分册）与故事 36 的分册 `test/rtm/guard.md`、故事 29 的 `test/rtm/paths.md` 后按增量作答。
+读 `test/RTM.md` 与故事 36 的分册 `test/rtm/guard.md`、故事 29 的 `test/rtm/paths.md` 后按增量作答。
 
 **两行的改前现状（逐字）**：
 
@@ -240,7 +240,7 @@ node --test docs/batches/2026-11-07-tool-param-zero-defaults.test.mjs
 
 ## 8. 边界（本批不做）
 
-- 全仓 100+ 处函数签名默认参——判据已立（`docs/core/design/PROMPT-SYSTEM.md` §6.77），清存量另批。
+- 全仓其余函数的签名默认参——判据已立（`docs/core/design/PROMPT-SYSTEM.md` §6.77），清存量另批。
 - 只描述 optional、缺参**不造值**的参数（`advisor.type` ∥ `read-history.path` ∥ `subagent`/`verify` 一族）——不动。
 - 判空形 `?? null`（只为报错信息显示）——不属造值。
 - `thincoder-core/agent-tools/` 之外的目录另有的消费形（`thincoder-core/agent/` ∥ `thincoder-core/advisor/` 等）——不在盘点面；本批只碰 §2.5 第 6 条那一句（`PROJECT_PARAM_DESC` 的规则句被本批改假，D11 同轮改齐）。

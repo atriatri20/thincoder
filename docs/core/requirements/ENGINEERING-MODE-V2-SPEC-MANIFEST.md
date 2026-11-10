@@ -26,10 +26,11 @@
 4. **缺键 fallback**：manifest 存在但缺某键 → 用默认值（便利 fallback，不拒绝）。
 5. **写门**：唯一作者 = 主 agent（非主 agent 写 → 拒）。
 6. **`docRoot` 值形态（多根数组 + `null`）**：值可以是非空字符串、非空数组，或 `null`。`null` 表示「本面没有」，是合法值；此时解析为空、键留着不被默认值顶回来。数组仍是完整声明，不与默认合并。空字符串、空数组、混合数组仍然拒绝，不静默通过。多根数组与 `null` 均为合法值。
+   - **层内成员 = 递归**：六个目录键逐个声明的目录，其**成员 = 该目录及其所有子目录下的 `.md`**（大小写不敏，按相对路径码点名序）；不因层级深浅而漏计。理由：目录层是「文档放在哪」的声明，不是树的层数声明；不递归会把作者按目录分层组织的事实当成缺失。
 7. **agent 工具面**：主 agent 对 manifest 的**全键读写**出口。现状 = 机制代码在场但无出口——装配侧内部调用之外，agent 侧唯一写点 = 工程模式翻转对缺档锚建默认档。五项：
    - **读**：现档 + 校验态（`ok` / `missingKeys` / `unknownKeys` / `errors` / 缺档报明）——`readManifest` 语义；
    - **建**：缺档 ⇒ 建默认档（`initManifest`；默认档 = `DEFAULT_MANIFEST`）；
-   - **写**：**五键逐节点**可改——`version` / `phase` / `docRoot.*`（六子键）/ `codePaths` / `index.*`（五子键）/ 另含台账指针面；落盘前经 `validateManifest`（非法 ⇒ 拒 + 盘零变，fail-closed 照旧）；已退役三键（`promptsLanding` / `checkConfig` / `advisor`）写入时静默剥离，读面不报、不上界面；
+   - **写**：**五键逐节点**可改——`version` / `phase` / `docRoot.*`（六子键）/ `codePaths` / `index.*`（八子键，含 `writableRepos`——写面声明，见 `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-CROSS-REPO-WRITE.md`）/ 另含台账指针面；落盘前经 `validateManifest`（非法 ⇒ 拒 + 盘零变，fail-closed 照旧）；已退役三键（`promptsLanding` / `checkConfig` / `advisor`）写入时静默剥离，读面不报、不上界面；
    - **目标面**：显式目标目录参数（缺省 = 会话锚 / 按用点解析语义——歧义不猜、多候选列报）；
    - **权限面**：写面（`init` / `write`）只挂**主 agent**（沿写门不变）；读面（`read`）子代理另有**只读变体**（同名工具、`action` 枚举只剩 `read`，写动作 schema 级不可达 + execute 入口再拒一次）。子代理写面两道防线不动（写动作不在其装配 + `files` 域拒）。
 

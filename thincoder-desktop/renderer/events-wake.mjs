@@ -1,17 +1,18 @@
 /**
- * events-wake.mjs — **宿主唤醒面三切片归约径**出档（R5 · 桌面功能对位批「先拆后改」：归约核心档
+ * events-wake.mjs — **宿主唤醒面四切片归约径**出档（R5 · 桌面功能对位批「先拆后改」：归约核心档
  * `renderer/events.mjs` 届盘 483 行，R5 增目标切片与态机两触发后触 500 硬限 ⇒ 该族先出档 —— 结构拆分
  * 零语义；口径 = `docs/desktop/design/PROJECT.md` §2 KD-T7「越层档一律先拆后改」）。
- * 三面（皆**宿主自产**，非回调映射 —— 单源 = `docs/desktop/design/IPC.md` §1 三行）：
+ * 四面（皆**宿主自产**，非回调映射 —— 单源 = `docs/desktop/design/IPC.md` §1 诸行）：
  *   ① `onSusp`（`ev:susp` —— 挂起窗计数切片；空闲唤醒批）+ **R5（#522②）**：`active:false` 出窗帧兼走
  *      **退出兜底**（本键子 agent 块全体归档 —— `freezeAllSubBlocks` 直取；挂起窗内 live 块出窗即收口）
  *   ② `onDigest`（`ev:digest` —— 消化轮切片（**全轮累积**——`start` **追加本轮**（切片 = […旧轮, 本轮]；
  *      行**出即留**——零清理机器）∕ `cap`·`end` 就末轮更新；本批 2026-10-01 收正——用户 2026-10-01 07:54 ∥ 07:58）；
  *      空闲唤醒批）——轮记录 = `{ status, n, tier, from, msg }`（**零位置面**：位置 ∥ 编号 ∥ 轮序标随拆净 —— 本批 #765）
  *   ③ `onTimer`（`ev:timer` —— 到期触发切片；timer-wake 阶段 2）
+ *   ④ `onInbox`（`ev:inbox` —— 跨实例取件行切片；一类一槽，行痕族第四员）
  * 共件 `countOf`（三切片共用归一口径 —— 随迁，单一实现零副本）。
  * 依赖单向：本档 → `renderer/events-flags.mjs`（`sameRecord`）· `renderer/subagent-reduce.mjs`（退出兜底）；
- * 主档 `renderer/events.mjs` 反向引本档三件分派 —— **无环**。
+ * 主档 `renderer/events.mjs` 反向引本档四件分派 —— **无环**。
  * 纪律：纯归约（零 DOM / 零 IPC ⇒ 平 node 直测）；文案零硬编码（本档不出词）。
  */
 import { sameRecord } from "./events-flags.mjs"
@@ -102,4 +103,28 @@ export function onTimer(state, ev) {
   const record = { text: ev.text }
   if (sameRecord(table[ev.key], record)) return state
   return { ...state, timerNotice: { ...table, [ev.key]: record } }
+}
+
+/** `ev:inbox` —— `kind` 闭集（表外 ⇒ 零写；端侧只搬运不判类）。 */
+const INBOX_KINDS = Object.freeze(["lost", "blocked"])
+
+/** `ev:inbox`——跨实例取件行切片（按会话 `key` 分槽 · **一类一槽** `{ lost?, blocked? }`；行痕族第四员）：
+ *  同类新行替换本类旧行（受阻行每跨一阈重发一条、`ms` 增长 ⇒ 替换即其本义），**异类互不覆盖**——`lost` 行携
+ *  丢失的 msgId 列表，是端侧唯一留痕，被 `blocked` 盖掉即不可追（单源 = `docs/desktop/design/IPC.md` §2「取件行注」项 2 ∥ 项 3）。
+ *  `kind` 闭集 = `lost` ∥ `blocked`：**端侧只搬运不判类**——`kind` 由出站面点名，本档不读行文内容嗅探（禁第二判据）；
+ *  `text` = 核拼串逐字（`inboxTakeLostLine` ∥ `inboxBlockedLine`），端侧零构造 ∥ 零改写。
+ *  零写门：`kind` 表外 ∥ `text` 非非空串 ⇒ **零写**（禁假造空行，沿 `onTimer` 同句）。
+ *  消费 = 流内行组 `[data-inbox]`（构树 ∥ 帧尾同刷住 `renderer/views/chat-chrome.mjs` `syncInbox`）；
+ *  生命期 = **运行期痕**（非落盘件 —— 清点两门：首屏页读整置即失 + 回合起跑门 = `msg:send` 出站即清；
+ *  晚到到达照写照显 · 留至下一回合门——同判 KD-74⑥ 晚到 `ev:timer`；本员**零丢弃机制**，不读 `stopHold`；
+ *  单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74 第四员）。 */
+export function onInbox(state, ev) {
+  if (!INBOX_KINDS.includes(ev.kind)) return state
+  if (typeof ev.text !== "string" || ev.text === "") return state
+  const table = state.inboxNotice ?? {}
+  const prev = table[ev.key]
+  const kept = prev !== null && typeof prev === "object" ? prev : {}
+  const record = { ...kept, [ev.kind]: ev.text }
+  if (sameRecord(prev, record)) return state
+  return { ...state, inboxNotice: { ...table, [ev.key]: record } }
 }

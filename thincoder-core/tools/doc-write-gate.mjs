@@ -60,21 +60,32 @@ const isBodyLine = (l) => {
 }
 
 /** 段落区间表（1-based 闭区间；非正文行断段——与引擎的段合并口径同源）。
- *  **导出面**（本批）：`thincoder-core/agent-tools/batch-gate.mjs` 的触达账腿要按同一张扩区表判改动区——
- *  两门判的是同一件事，各写一张表必然漂移（D2 单源）。行为零改。 */
+ *  **导出面**：`thincoder-core/agent-tools/batch-gate.mjs` 的触达账与收口腿按同一张扩区表判改动区。
+ *  扫描带围栏状态，块内正文形行不自成段。 */
 export function paragraphRuns(lines) {
   const runs = []
   let cur = null
+  let fence = null
+  const flush = () => {
+    if (cur) runs.push(cur)
+    cur = null
+  }
   lines.forEach((l, i) => {
-    if (!isBodyLine(l)) {
-      if (cur) runs.push(cur)
-      cur = null
+    const mark = fenceMark(l)
+    if (mark !== null) {
+      flush()
+      if (fence === null) fence = mark
+      else if (isFenceClose(mark, fence)) fence = null
+      return
+    }
+    if (fence !== null || !isBodyLine(l)) {
+      flush()
       return
     }
     if (cur) cur.end = i + 1
     else cur = { start: i + 1, end: i + 1 }
   })
-  if (cur) runs.push(cur)
+  flush()
   return runs
 }
 
@@ -92,11 +103,11 @@ export function fenceBlocks(lines) {
       return
     }
     if (isFenceClose(mark, fence)) {
-      blocks.push({ start, end: i + 1 })
+      blocks.push({ start, end: i + 1, closed: true })
       fence = null
     }
   })
-  if (fence !== null) blocks.push({ start, end: lines.length })
+  if (fence !== null) blocks.push({ start, end: lines.length, closed: false })
   return blocks
 }
 
@@ -124,6 +135,31 @@ export function mergeZones(zones) {
   return out
 }
 
+/** 合并后的区对齐到完整围栏块；加宽压进邻块时重判到稳定。 */
+export function alignZonesToFences(zones, fences) {
+  let out = mergeZones(zones)
+  for (;;) {
+    const aligned = out.map((zone) => {
+      let { start, end } = zone
+      for (const b of fences) {
+        if (b.start < start && start <= b.end) start = b.start
+        if (b.start <= end && end < b.end) end = b.end
+      }
+      return { start, end }
+    })
+    const next = mergeZones(aligned)
+    if (next.length === out.length && next.every((z, i) => z.start === out[i].start && z.end === out[i].end)) {
+      for (const z of next) {
+        if (fences.some((b) => b.start < z.start && z.start <= b.end)) {
+          throw new Error(`doc-write-gate: 片段区起于围栏内（${z.start}–${z.end}）——扩区装配错误，不判这份不齐的片段。`)
+        }
+      }
+      return next
+    }
+    out = next
+  }
+}
+
 /**
  * 片段区（扩区表三行逐条落）：
  *   · 与段落相交 ⇒ 该段整段；
@@ -141,12 +177,17 @@ export function fragmentZones(lines, region) {
     const around = (n) => paras.find((r) => r.start <= n && n <= r.end)
     const picked = []
     for (const run of [around(start - 1), around(end + 1)]) if (run && !picked.includes(run)) picked.push(run)
-    return mergeZones(picked)
+    for (const b of fences) {
+      const intersects = b.start <= end && start <= b.end
+      const deletesUnclosedTail = start > end && start === b.end + 1 && b.closed === false
+      if (intersects || deletesUnclosedTail) picked.push(b)
+    }
+    return alignZonesToFences(picked, fences)
   }
   const picked = [{ start, end }]
   for (const r of paras) if (r.start <= end && start <= r.end) picked.push(r)
   for (const b of fences) if (b.start <= end && start <= b.end) picked.push(b)
-  return mergeZones(picked)
+  return alignZonesToFences(picked, fences)
 }
 
 /** 落片段档（目标档同目录 · 隐藏档 · 每次一随机名：并发两笔不撞名、不互删）。 */

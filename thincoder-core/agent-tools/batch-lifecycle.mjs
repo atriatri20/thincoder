@@ -4,7 +4,7 @@
  * 本档只留 **status / close 两条 action 与在飞批定位**。三条支线住各自的新档（依赖单向：
  * `skeleton ← closeout ← bind ← reopen ← lifecycle`）：
  *  - 建档 = 建台账行 → `batch-ledger-bind.mjs`（§2.4）；
- *  - 收口四道判据 + 重锚回执三行 → `batch-closeout.mjs`（§2.6 / §2.11）；
+ *  - 收口判据与重锚回执 → `batch-closeout.mjs`；
  *  - 重开写盘 + 台账回收 → `batch-reopen.mjs`（§2.13）。
  *
  * 判定字面全部单源自 batch-skeleton.mjs（SEGMENT_BY_ROLE / STATUS_WORDS /
@@ -19,14 +19,20 @@
  *
  * 四道门（2026-10-27 · 设计档 §2.6）：写锁 = `agent/write-gate.mjs`（不在本档）；§5 写入门 =
  * `batch.mjs` append 面；**收口门** = `batch-closeout.mjs`（链门 + §3 状态词臂 + 单测档门 + 机检门）；
- * 核销门 ③ = `ledger-close-proof.mjs`（档面 §3）。
+ * 核销工作证据门 = `ledger-close-proof.mjs`（只判应用本笔后的 evidence 非空白）。
  *
  * 收口重锚（§6.2 · C · AC-M2-30）：收口有两条通路——`close` ∥ `status` 写 §1「已收口」——两路都冻结档、
  * 都让批「收口了」，故**两路同调**单源 `reanchorOnClose`（本档下方），调点均在状态行写盘之后。
  * 一次收口只出一份 `[ledger reanchor]` 回执段（判据 = 前态未冻结：已冻结档在两路都被冻结门早拒）。
+ * **写序与补偿**（设计档 `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.17）：只读预检 → 档写盘 →
+ * 台账单事务 →（台账失败 ⇒ 用**写前全文**回滚档 + 抛拒）。两路都过 `ledgerAfterRecordWrite`，失败不静默；
+ * 回滚本身也失败时出第二条串（点名半状态与 `batch({action:"check"})`）。
  *
  * 重开回收（§2.13 · E13）：`status` 写 §1 `进行中` 而前态 `closed` ⇒ 重开；写盘后同调 `reclaimOnReopen`
- * （`待核销 → 在途`）。**其余 status 用法零台账写**——尤其「§3 写评审通过」不动台账。
+ * （`待核销 → 在途`），失败同样回滚档 + 抛拒（「档已开、行仍 待核销」会让写锁拒每一笔写盘）。
+ * **其余 status 用法零台账写**——尤其「§3 写评审通过」不动台账。
+ * 两路回执末尾**恒带一行** `[ledger consistency]`（半状态查询面单源 = `batchLedgerConsistency`）；
+ * `check` action 是同一读数的完整打印面。
  *
  * 收口自动消费本批设计凭证（DESIGN-TOKEN-SETTLEMENT §10 · 2026-10-26）：同一两路在**写状态行之前**
  * 调 `consumeBatchDesignTokens`（判据 = 槽的批次归属旁列；口径单源见该档 §10）。消费失败 ⇒ 原样上抛、
@@ -40,8 +46,8 @@ import {
   findPlaceholderResidue, placeholderResidueError, readBatchStatusLine, sectionHasStatusLine,
   updateSectionStatusLine, zoneStatusCount,
 } from "./batch-skeleton.mjs"
-import { assertCloseoutGates, newDebtReasonOf, newDebtReasonReceiptLine, readCloseoutSource, reanchorReceiptLine } from "./batch-closeout.mjs"
-import { assertSingleLineNote, reclaimOnReopen, reopenReasonError, reopenReceiptLine, rewriteAsReopen, todayLocal } from "./batch-reopen.mjs"
+import { assertCloseoutGates, checkReceipt, closeHalfStateError, closeLedgerFailedError, consistencyReceiptLine, newDebtReasonOf, newDebtReasonReceiptLine, readCloseoutSource, reanchorReceiptLine } from "./batch-closeout.mjs"
+import { assertSingleLineNote, reclaimOnReopen, reopenHalfStateError, reopenLedgerFailedError, reopenReasonError, reopenReceiptLine, rewriteAsReopen, todayLocal } from "./batch-reopen.mjs"
 import { FRAGMENT_PREFIX, gateReceiptLine } from "./batch-gate.mjs"
 import { batchPathKey, executeConsumeDesignAction, unionBatches, unionSlots } from "./design-slots.mjs"
 
@@ -201,9 +207,11 @@ function STATUS_LINE_AMBIGUOUS_ERROR(seg, count) {
  * **段头区歧义拒写**（§4.21.4 写面第二道）：目标段段头区两条以上状态行 ⇒ 拒并给修复句（非 §1 = 先
  * `edit` 删多余那条再 `status`；§1 = 普通文档写）——位次 = 读档之后、重开合取之前（两路都是拒）。
  * **收口第二通路**：值余核 = §1「已收口」时本 action 同样收口（收口门 + 单测档门 + 机检门 + 冻结与
- * close 同序）⇒ 状态行写盘后同调 `reanchorOnClose`，回执携同一 `[ledger reanchor]` 段。
+ * close 同序）⇒ 状态行写盘后同调 `reanchorOnClose`，回执携同一 `[ledger reanchor]` 段；`completed` 与
+ * `closeEvidence` 与 `close` 同两条必填，台账失败同样回滚档并抛拒。
  * **重开径**（§4.18-B · §2.13）：前态 closed ∧ 值 = 进行中 ∧ note 非空 ⇒ 重开；写盘后同调
- * `reclaimOnReopen`（`待核销 → 在途`），回执携 `[ledger reopen]` 段。**其余一切用法零台账写。**
+ * `reclaimOnReopen`（`待核销 → 在途`），回执携 `[ledger reopen]` 段；回收失败 ⇒ 档回滚到冻结态并抛拒。
+ * **其余一切用法零台账写**；本 action 的回执末尾恒带一行 `[ledger consistency]`。
  * @returns {Promise<string>} 成功消息
  */
 export async function statusBatchRecord({ args, ctx, review, pickTarget, onWritten }) {
@@ -266,27 +274,46 @@ export async function statusBatchRecord({ args, ctx, review, pickTarget, onWritt
     // 重开（§4.18-B · §2.13）：一次写盘、两处落笔（状态行改写 + §1 段尾追记行）——不跑收口门
     //（值非「已收口」；写后门态 = open，后续 append/status 恢复放行）。
     writeFileSync(abs, rewriteAsReopen(src, note))
+    // 记账口径同 status 径（记「落过盘」，回档不回退）——见 `statusBatchRecord` 写盘处的注释。
     if (ctx?.agent) ctx.agent._batchWrites = (ctx.agent._batchWrites ?? 0) + 1 // §6.6 `wrote` 判据（写盘成功才增）
     onWritten?.(ctx?.agent ?? {}, abs)
-    // ② 台账回收（§2.13 位次：写盘之后）：失败不否决重开——回执点名失败原文 + 后果 + 出路。
-    const reclaim = await reclaimOnReopen(abs, ctx?.agent?.cwd)
-    return `batch: §1 reopened — status line → 「进行中（重开 ${todayLocal()}）」 + reopen record appended to §1 (reason lands verbatim in the record line). Append/status are writable again (BR-64); the closeout chain gate still applies at the next close.${reopenReceiptLine(reclaim)}`
+    // ② 台账回收（§2.17 重开步序 3–4 · 写序：档先写、台账后写）：失败 ⇒ 用写前全文（冻结态）补偿回滚档，
+    // 然后抛拒——「档已开、行仍 待核销」的残态会让写锁拒每一笔写盘且没有任何提示，正是本批要消掉的那一形。
+    const reclaim = await ledgerAfterRecordWrite({
+      side: "reopen", abs, src, run: () => reclaimOnReopen(abs, ctx?.agent?.cwd),
+    })
+    return `batch: §1 reopened — status line → 「进行中（重开 ${todayLocal()}）」 + reopen record appended to §1 (reason lands verbatim in the record line). Append/status are writable again (BR-64); the closeout chain gate still applies at the next close.${reopenReceiptLine(reclaim)}${consistencyReceiptLine(await consistencyOf(abs, ctx?.agent?.cwd))}`
   }
   // 收口门（§2.6——链门 + §3 状态词臂 + 单测档门 + 机检门）：本笔把 §1 写成「已收口」⇒ 四道同判。
   // 段号守卫只写这一次（`STATUS_WORDS[1].closed` 只属 §1 项，`assertStatusValue` 亦拒他段该值）。
   const closingValue = seg === 1 && stripDecorations(value) === STATUS_WORDS[1].closed
+  if (!closingValue && args?.completed !== undefined) {
+    throw new Error("batch: completed is accepted only by close or by status writing §1 已收口. Nothing was written.")
+  }
+  if (!closingValue && args?.closeEvidence !== undefined) {
+    throw new Error("batch: closeEvidence is accepted only by close or by status writing §1 已收口. Nothing was written.")
+  }
   const gate = closingValue ? assertCloseoutGates({ abs, cwd: ctx?.agent?.cwd, agent: ctx?.agent ?? {}, src, action: "status" }) : null
-  // 收口自动消费（§10——第二通路与 close 同效：位次 = 全部门之后、状态行写盘之前）
+  // 完成清单预检位于既有收口门之后、凭证消费与批档写盘之前；拒绝时令牌、档、账均不变。
+  // `closeEvidence` 与 `completed` 同一格（收口即结算：证据由本笔给，机器不代写）。
+  if (closingValue) await assertCloseDisposition(abs, ctx?.agent?.cwd, args?.completed, args?.closeEvidence)
   const designTokens = closingValue ? consumeBatchDesignTokens(ctx?.agent ?? {}, abs) : null
   const written = updateSectionStatusLine(src, seg, lineValue)
   writeFileSync(abs, written)
+  // 记账口径（明示，不改行为）：`_batchWrites` 与端侧记账记的是「本笔**落过盘**」，位次 = 写盘成功那一刻；
+  // 台账失败由 `ledgerAfterRecordWrite` 把档回档后本计数不回退（档字节净变 = 零，而写盘事实发生过）。
+  // 它不进任何判据（§6.6 `wrote` 只问「有没有写过」），故不以回档为准重算。
   if (ctx?.agent) ctx.agent._batchWrites = (ctx.agent._batchWrites ?? 0) + 1 // §6.6 `wrote` 判据（写盘成功才增）
   onWritten?.(ctx?.agent ?? {}, abs)
   // 收口重锚（§6.2 · C · AC-M2-30）：值余核 = §1「已收口」⇒ 本 action 就是收口 ⇒ 同调单源
-  // `reanchorOnClose`（不复制 close 径逻辑）；次序位 = 状态行写盘之后。本笔被任一拒因拒 ⇒ 上面各门
-  // 早 throw，台账零写（被拒的收口没有收口）。一次收口只出一份清单。
-  const reanchor = closingValue && readBatchStatusLine(src) !== "closed" ? await reanchorOnClose(abs, ctx?.agent?.cwd) : null
-  return `batch: §${seg} status line updated to ${JSON.stringify(lineValue)} — the freeze gate (§1) is a read-only domain for non-§1 writes (frozen truth stays = the §1 line).${gateReceiptLine(gate)}${designTokensReceiptLine(designTokens)}${reanchorReceiptLine(reanchor)}${newDebtReasonReceiptLine(reanchor)}`
+  // `reanchorOnClose`（不复制 close 径逻辑）；次序位 = 状态行写盘之后（写序单源 = §2.17）。
+  // 本笔被任一拒因拒 ⇒ 上面各门早 throw，台账零写（被拒的收口没有收口）。一次收口只出一份清单。
+  // 台账失败 ⇒ 用写前全文回滚档并抛拒——冻结与结账要么一起成，要么一个都不成（除非回滚本身也失败，
+  // 那时第二条串点名半状态与查询面）。
+  const reanchor = closingValue && readBatchStatusLine(src) !== "closed"
+    ? await ledgerAfterRecordWrite({ side: "close", abs, src, run: () => reanchorOnClose(abs, ctx?.agent?.cwd, args?.completed, args?.closeEvidence) })
+    : null
+  return `batch: §${seg} status line updated to ${JSON.stringify(lineValue)} — the freeze gate (§1) is a read-only domain for non-§1 writes (frozen truth stays = the §1 line).${gateReceiptLine(gate)}${designTokensReceiptLine(designTokens)}${reanchorReceiptLine(reanchor)}${newDebtReasonReceiptLine(reanchor)}${consistencyReceiptLine(await consistencyOf(abs, ctx?.agent?.cwd))}`
 }
 
 /**
@@ -307,16 +334,23 @@ export async function closeBatchRecord({ args, ctx, review, pickTarget, onWritte
   if (readBatchStatusLine(src) !== "open" && sectionHasStatusLine(src, 1)) assertGateOpen(src)
   // 收口门（§2.6）：链门 → §3 状态词臂 → 单测档门 → 机检门（位次 = 既有拒因之后、写盘之前）
   const gate = assertCloseoutGates({ abs, cwd: ctx?.agent?.cwd, agent: ctx?.agent ?? {}, src, action: "close" })
-  // 收口自动消费本批设计凭证（§10——位次 = 全部拒因之后、写盘之前；失败 ⇒ 原样上抛、本函数拒）
+  // 完成清单预检位于既有收口门之后、凭证消费与批档写盘之前；拒绝时令牌、档、账均不变。
+  // `closeEvidence` 与 `completed` 同一格（收口即结算：证据由本笔给，机器不代写——代写一句就把核销门
+  // 变成摆设）。
+  await assertCloseDisposition(abs, ctx?.agent?.cwd, args?.completed, args?.closeEvidence)
   const designTokens = consumeBatchDesignTokens(ctx?.agent ?? {}, abs)
   const date = todayLocal()
   const written = updateSectionStatusLine(src, 1, `已收口 ${date}`)
   writeFileSync(abs, written)
+  // 记账口径同 status 径（记「落过盘」，回档不回退）——见 `statusBatchRecord` 写盘处的注释。
   if (ctx?.agent) ctx.agent._batchWrites = (ctx.agent._batchWrites ?? 0) + 1 // §6.6 `wrote` 判据（写盘成功才增）
   onWritten?.(ctx?.agent ?? {}, abs)
   // 收口重锚（§6.2 · C · AC-M2-30）：顺序位 = 全部拒因通过、§1 状态行写盘**之后**——close 被拒 ⇒ 台账零写。
-  const reanchor = await reanchorOnClose(abs, ctx?.agent?.cwd)
-  return `batch: §1 status line → 「已收口 ${date}」 — the record is frozen: append is refused from now on, and status is refused except the reopen conjunction (§1 → 进行中 with a note) (整档冻结；改 = 新批新档; §6 内容与台账核销仍走既有通道).${gateReceiptLine(gate)}${designTokensReceiptLine(designTokens)}${reanchorReceiptLine(reanchor)}${newDebtReasonReceiptLine(reanchor)}`
+  // 台账失败 ⇒ 用写前全文回滚档 + 抛拒（§2.17 写序；不可逆的一方排最后）。
+  const reanchor = await ledgerAfterRecordWrite({
+    side: "close", abs, src, run: () => reanchorOnClose(abs, ctx?.agent?.cwd, args?.completed, args?.closeEvidence),
+  })
+  return `batch: §1 status line → 「已收口 ${date}」 — the record is frozen: append is refused from now on, and status is refused except the reopen conjunction (§1 → 进行中 with a note) (整档冻结；改 = 新批新档; §6 内容与台账核销仍走既有通道).${gateReceiptLine(gate)}${designTokensReceiptLine(designTokens)}${reanchorReceiptLine(reanchor)}${newDebtReasonReceiptLine(reanchor)}${consistencyReceiptLine(await consistencyOf(abs, ctx?.agent?.cwd))}`
 }
 
 // ─── 收口自动消费本批设计凭证（DESIGN-TOKEN-SETTLEMENT §10——单源，close ∥ status 两通路同调）──
@@ -360,21 +394,72 @@ function designTokensReceiptLine(result) {
   return `\n[design tokens] 消费 ${result.consumed} 枚 · 留槽无归属 ${result.unattributed} 枚`
 }
 
+/** 收口完成清单只读预检：在凭证消费和批档写盘之前调用核心单源。 */
+async function assertCloseDisposition(abs, boundary, completed, closeEvidence) {
+  try {
+    const { assertLedgerCloseDisposition, resolveLedgerRoot } = await import("../ledger.mjs")
+    const root = resolveLedgerRoot(dirname(abs), boundary)?.root ?? null
+    const batch = root ? relative(root, abs).replace(/\\/g, "/") : abs
+    return assertLedgerCloseDisposition({ cwd: root, batch, boundary, completed, closeEvidence })
+  } catch (e) {
+    throw new Error(`batch: close disposition refused — ${String(e?.message ?? e)} Nothing was written.`)
+  }
+}
+
+/**
+ * 写序第 4 步（设计档 §2.17「写序」）：**档先写、台账后写，台账失败即用写前全文补偿回滚档**——
+ * 不可逆的一方（核销）排最后。`run()` 返回的那一笔台账写失败（返回形 `failed`）⇒ 覆盖回写前字节并抛拒；
+ * **补偿本身也失败** ⇒ 出那一侧的第二条串（不得复用第一条——第一条声称已回滚，此时事实相反），
+ * 它是唯一允许半状态成立的时点，且必须喊出来（含 `batch({action:"check"})` 指路）。
+ * 两条串的单源：收口侧 = `batch-closeout.mjs`，重开侧 = `batch-reopen.mjs`。
+ */
+async function ledgerAfterRecordWrite({ side, abs, src, run }) {
+  const result = await run()
+  if (!result?.failed) return result
+  try {
+    writeFileSync(abs, src)
+  } catch (rollbackErr) {
+    const rollbackCause = String(rollbackErr?.message ?? rollbackErr)
+    throw new Error(side === "close"
+      ? closeHalfStateError(abs, result.failed, rollbackCause)
+      : reopenHalfStateError(abs, result.failed, rollbackCause))
+  }
+  throw new Error(side === "close" ? closeLedgerFailedError(result.failed) : reopenLedgerFailedError(result.failed))
+}
+
+/**
+ * 批-账半状态读数（设计档 §2.17「暴露面两处」——`batch({action:"check"})` 与回执末尾的
+ * `[ledger consistency]` 行读**同一份**）：查询面单源 = `batchLedgerConsistency`，本档只供 `cwd` 基准。
+ * 读不出（台账库坏 / 打不开）⇒ 返回 `{ error }`，由回执如实点名——**不吞成「一致」**（那正是本批要消掉的
+ * 静默）；`check` action 那一路不吞，直接抛。
+ */
+async function consistencyOf(abs, boundary) {
+  try {
+    const { batchLedgerConsistency, resolveLedgerRoot } = await import("../ledger.mjs")
+    const root = resolveLedgerRoot(dirname(abs), boundary)?.root ?? null
+    const batch = root ? relative(root, abs).replace(/\\/g, "/") : abs
+    return batchLedgerConsistency({ cwd: root, batch, boundary })
+  } catch (e) {
+    return { error: String(e?.message ?? e) }
+  }
+}
+
 /** 收口重锚（设计档 §6.2 · C · §2.7 分流）——收口两条通路共调（同一单源，不复制逻辑）；写入单源 =
- *  `ledgerReanchorBatch`（本档只供 `cwd` 基准；工具层零 SQL）。
+ *  `ledgerReanchorBatch`（本档只供 `cwd` 基准与完成清单；工具层零 SQL）。
  *  `cwd` = **批档所属项目根** = `resolveLedgerRoot(dirname(<batchDoc>), boundary)?.root`——**不用会话锚**
  *  （多根工作区锚会收到别的项目根 ⇒ 选行零命中 ⇒ 唯一的机器写静默失效）。
  *  `boundary` = 上溯上界 = **会话锚**（**必传**——缺值即当场失败，回执以 `failed` 点名；不落进程 cwd）。无根 ⇒ 传 `null`（核心不取行、不重锚，`failed` 点名）。
- *  `batch` = 项目根相对路径（复启句的 `<批名>` 即其文件部分）。失败**不抛**（台账忙 ∥ 无根均不否决收口）。
+ *  `batch` = 项目根相对路径（复启句的 `<批名>` 即其文件部分）。失败**不抛**（本档的 `failed` 由调用方
+ *  `ledgerAfterRecordWrite` 转成「回滚档 + 抛拒」——收口要么一起成、要么一个都不成）。
  *  **返回形** = `ledgerReanchorBatch` 返回形 + `newDebtReasons`（本批行中 `evidence` 带 `新事理由：` 前缀者；
  *  取不到本批行 ⇒ 空集）——**只取不写**，格式化成回执段的是 `newDebtReasonReceiptLine`。 */
-async function reanchorOnClose(abs, boundary) {
+async function reanchorOnClose(abs, boundary, completed, closeEvidence) {
   try {
     const { ledgerBatchRows, ledgerReanchorBatch, resolveLedgerRoot } = await import("../ledger.mjs") // 动态 import：ledger-db 静态引 node:sqlite（W8 契约②）
     const root = resolveLedgerRoot(dirname(abs), boundary)?.root ?? null
     // 句内路径统一正斜杠（与 `task_book` 列值同形——`<批名>` 是给人读的事实句，不是平台路径）
     const batch = root ? relative(root, abs).replace(/\\/g, "/") : abs
-    const result = ledgerReanchorBatch({ cwd: root, batch, boundary })
+    const result = ledgerReanchorBatch({ cwd: root, batch, boundary, completed, closeEvidence })
     // 新事理由读面（设计档 §6.3）：本批行（任意状态）中 `evidence` 带 `新事理由：` 前缀者随返回形带回——
     // **只引不写**（行改写语义零动）；取不到本批行 ⇒ 空集（不出该段、收口不被否决，同 `failed` 降级口径）
     let newDebtReasons = []
@@ -386,6 +471,24 @@ async function reanchorOnClose(abs, boundary) {
     return { ...result, newDebtReasons }
   } catch (e) {
     // 非预期异常（模块加载失败 ∥ 根推导内读声明抛）同样不得否决收口——降为同一返回形（台账零写）
-    return { batch: abs, reanchored: [], alreadyAnchored: [], failed: String(e?.message ?? e), newDebtReasons: [] }
+    return { batch: abs, settled: [], conditioned: [], alreadyAnchored: [], failed: String(e?.message ?? e), newDebtReasons: [] }
   }
+}
+
+/**
+ * check——半状态查询（设计档 §2.17「暴露面两处」第一条；**只读动作，depth-0 only**）：回执逐行打印
+ * `batchLedgerConsistency` 的读数——`record` 三态 ∥ 本批行集 ∥ 半状态五类与各自出路 ∥ `consistent`。
+ * 这就是「明确的半状态查询面」：人不必靠一次失败的写去猜，半状态可查、可照着出路恢复。
+ * **零写**：不改行、不改档（半状态自动修复被拒——修复要走人裁的那一步：重开 ∥ 收口 ∥ 改指针）。
+ * @returns {Promise<string>} 回执（含 `[ledger consistency]` 行）
+ */
+export async function checkBatchRecord({ args, ctx, review, pickTarget }) {
+  if (review || !isDepthZero(ctx)) {
+    throw new Error("batch: check is main-agent-only — the half-state query face is depth-0 only (eng sub-agents and design reviews are refused).")
+  }
+  const abs = pickTarget(args?.path)
+  const { batchLedgerConsistency, resolveLedgerRoot } = await import("../ledger.mjs")
+  const root = resolveLedgerRoot(dirname(abs), ctx?.agent?.cwd)?.root ?? null
+  const batch = root ? relative(root, abs).replace(/\\/g, "/") : abs
+  return checkReceipt(batchLedgerConsistency({ cwd: root, batch, boundary: ctx?.agent?.cwd }), abs)
 }

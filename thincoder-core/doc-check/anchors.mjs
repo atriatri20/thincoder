@@ -34,7 +34,7 @@
  *   命中就判解析到那一处，并在载荷标 `how:"suffix"`（逐处进 `suffixHits`，报面据此出读数与清账清单：唯一后缀证明「能定位」，
  *   不证明「是你想指的那个」，不标它就混进绿里）；多处 ∥ 零处仍判 `档缺`（零命中仍红是这条腿的反向控制）。
  *   口径单源 = 同档 §2.8。
- * 环检（`锚·环引`）：判之前先按组根走一遍声明出边图（`../declared-repos.mjs`），走回组根成环 ⇒ 一条 `环引`；
+ * 环检（`锚·环引`）：按组根走声明出边图（`../declared-repos.mjs`），走回组根成环；仅当判集 token 归一后的首段指向环上仓时入 `hits`，否则入 `cycleReads` 读数桶；
  *   走查在「声明根不在本机」的节点止步，那些节点进 `unverified`（触发 = 环走查止步）——「没找到环」与
  *   「没看过去」因此在报面上分得开。环与 `档缺` 同计「锚 N 条」，不新增判据条数、不新增 verdict 词。
  * 节在盘：**只读解析命中的那一档**（点查，不遍历）——目标档内存在标题行，其标题编号
@@ -53,14 +53,27 @@
  *   不进 `hits`、不读目标档、不计 `unreadable`，只计 `batchRefs`。目标按**拼路径**判（不等解析结果——要治的正是
  *   目标已删那一形）。两处消费同判：锚分支 ∥ 依据行分支。
  *   方向纪律：规范档引批档**照判**——引用方不在批档根下 ⇒ 面判不成立（D4 细则二的最后一道机检）。
+ * 边旁挂面（**可选入参 `onEdge`** · 机制单源 = `docs/core/design/DOC-GRAPH.md` §2.6）：同一个逐行循环里顺手把
+ *   「这一处引了谁」交出去，交给 `../doc-graph.mjs` 落成边。三条契约（实现不得自行放宽）：
+ *   ① 调用点钉在**全部跳过谓词之后**（围栏 ∥ 码段区间 ∥ 花括号区间 ∥ 引文占位 ∥ 档名豁免 ∥ 扩展名清单 ∥ 面判）——
+ *      与 `hits` 同一批 token，边与判定因此不会各说一套；② 回调**不得抛**：本档用 `try/catch` 包住每次调用，
+ *      抛了只计数（`edgeCallbackErrors`），`hits` 与其余读数零改；③ 回调只增 `edgeCallbackErrors` 返回键，
+ *      判定与环引指向集合都不依赖回调是否在场。
+ *   三支新 token 家族（`cites-req` ∥ `mentions-case` ∥ `cites-symbol`，取形纯函数住 `./graph-tokens.mjs`）在
+ *   **同一个 `forEach` 行体里**取形、**只喂回调、不进 `hits`**——它们是「引用关系」，不是判据；
+ *   跑 `doc_check` 的人不该因为多了一套图而多出命中。`cites-symbol` 的取形面就是码段本身（`codeSpans`），
+ *   故 `inSpan` 对它不成立（它抽的正是那里），其余跳过谓词照过。
+ *   边的三态与本档判决词同源：`resolved` ⇒ `ok`；`dangling` ∥ `ambiguous` ∥ 节不在盘 ⇒ `目标不在盘`
+ *   （边指的落点不在盘：整档在、那一节不在，同一个事实的两种粒度）；`unverified` ⇒ `判不了存在性`。
  */
 import { readFileSync } from "node:fs"
-import { dirname, join, resolve } from "node:path"
+import { dirname, join, posix, resolve } from "node:path"
 import { batchDocBases, baseContaining } from "../agent-tools/batch-paths.mjs"
 import { declaredCycles } from "../declared-repos.mjs"
 import { MANIFEST_REL, docRootPaths, readManifest } from "../manifest.mjs"
 import { createResolutionSession, resolvePathTarget } from "../path-resolve.mjs"
-import { codeSpans, fenceMark, headingMark, isFenceClose, isExecutableLine, isPromptFace } from "./paragraph.mjs"
+import { caseRefsOf, reqRefsOf, symbolRefsOf } from "./graph-tokens.mjs"
+import { codeSpans, fenceMark, headingMark, isExecutableSpan, isFenceClose, isPromptFace } from "./paragraph.mjs"
 
 /** `docRoot` 各键 → 绝对根集（**只作同名候选的扫描根**，不作受理边界——受理面仍是「档在盘 / 节在盘」）。
  *  读声明面单源 = `docRootPaths`（本档零自持根判定）；无 manifest / 非法 ⇒ 空集。
@@ -276,20 +289,21 @@ function headingNumber(line) {
 }
 
 /** 节在盘：目标档内任一标题行的编号 = 指针节号（字符串逐字等值——两处同归一形）。
- *  **同档一次读**：标题号集合按绝对路径记在 `cache` 里（一次调用内同一档只读一次——与引文面 `citedTextReader`
- *  同一窗口口径：文件不变，记与不记逐字同值；跨轮缓存照禁）。**读不到 ⇒ 记 unreadable**（不当「无该节」：
- *  把「没读成」报成 `节缺` 是指错方向），集合仍为空。 */
+ *  **同档一次读**：标题「编号 → 标题文本」映射按绝对路径记在 `cache` 里（一次调用内同一档只读一次——与引文面
+ *  `citedTextReader` 同一窗口口径：文件不变，记与不记逐字同值；跨轮缓存照禁）。存文本是为边的 `dst_label`
+ *  （节号漂了还认得出）——判定只读 `has`，映射的其余部分不参与判据。
+ *  **读不到 ⇒ 记 unreadable**（不当「无该节」：把「没读成」报成 `节缺` 是指错方向），映射仍为空。 */
 function sectionOnDisk(path, num, cache, unreadable) {
-  let set = cache.get(path)
-  if (!set) {
-    set = new Set()
+  let map = cache.get(path)
+  if (!map) {
+    map = new Map()
     for (const l of readText(path, unreadable).split("\n")) {
       const n = headingNumber(l)
-      if (n !== null) set.add(n)
+      if (n !== null && !map.has(n)) map.set(n, (headingMark(l)?.text ?? "").trim())
     }
-    cache.set(path, set)
+    cache.set(path, map)
   }
-  return set.has(num)
+  return map.has(num)
 }
 
 /** 批档面（面判）上下文：基底根单源 = `batchDocBases`（声明面 ∪ 缺省回退 `docs/batches`，恒非空）。
@@ -365,13 +379,17 @@ function docResolver(base, scanBases, session) {
 /**
  * 锚判据主行程：传入档逐档逐行抽取 + 解析 + 节在盘判定。
  * @param {string} root 项目根（解析序 ① 的基准）
- * @param {{files?:string[], manifest?:{ok:boolean, manifest?:object|null}, exts?:string[]}} o `files` = **判定集兼解析集**（调用方传入的档清单——判定范围 = 解析范围，
+ * @param {{files?:string[], manifest?:{ok:boolean, manifest?:object|null}, exts?:string[], onEdge?:Function}} o `files` = **判定集兼解析集**（调用方传入的档清单——判定范围 = 解析范围，
  *   无目录遍历、无全域索引：清单外的档既不判也不参与解析）；
  *   `manifest` = **可选注入**——引擎按本根已读的那份（每根一次读，§2.5 KD-7），给了就吃它、
  *   缺省仍自读（直调判法本体的夹具零改）；它同时供 `docRoot` 扫描根与批档基底两处（判定面零改）；
  *   `exts` = **生效扩展名清单**（引擎按该根装配好的那张：缺省 ∪ 项目追加项，已过一次取形过滤，§2.6）——
- *   缺省 ∥ 空数组 ⇒ `DEFAULT_DOC_EXTS`（空清单会让全部 token 静默不成候选，那是假绿的方向，不接）
- * @returns {{hits:Array, unverified:Array, unreadable:string[], batchRefs:number, suffixHits:Array, suffixBuilds:number}} hits = 命中（`档缺` / `节缺` / `引缺` / `环引`——`档缺` 携 `sameName` 同名候选与声明仓四格，
+ *   缺省 ∥ 空数组 ⇒ `DEFAULT_DOC_EXTS`（空清单会让全部 token 静默不成候选，那是假绿的方向，不接）；
+ *   `onEdge` = **可选回调**（边旁挂面，口径见头注）：每次一个 token 走完全部跳过谓词后调用一次，载荷 =
+ *   `{kind, file, line, token, section, state, abs, sectionLabel, text}`（只读副本——拿不到 `hits`，改了也没人读）。
+ *   缺席 ⇒ 返回对象不多一个键、判定面与读数面零改。
+ * @returns {{hits:Array, unverified:Array, unreadable:string[], batchRefs:number, suffixHits:Array, suffixBuilds:number,
+ *   edgeCallbackErrors?:number}} hits = 命中（`档缺` / `节缺` / `引缺` / `环引`——`档缺` 携 `sameName` 同名候选与声明仓四格，
  *   `引缺` 携 `quote` 引文原文与 `target` 命中的档，`环引` 携 `root` 与 `chain`）；
  *   `unverified` = "判得了仓名、判不了存在性"的列报（声明根不在本机——**零命中、不入闸**；两个产出方：
  *   `trigger:"pointer"` 的逐指针行 ∥ `trigger:"walk"` 的环走查止步节点——按声明根汇总在引擎面做）；
@@ -379,9 +397,12 @@ function docResolver(base, scanBases, session) {
  *   `batchRefs` = 面判剔除的 token 数（批档面互引不判——**不是命中**，不进 `hits`、不改 verdict）；
  *   `suffixHits` = 第 6′ 步解析出来的指针（逐处 `{file, line, token, abs}`）——**读数，不是命中**：同一条指针
  *   本来判 `档缺`，现在解析出了；它不是新增 ∥ 删掉的命中，而是「本来就该解析、只是写法与解析面不匹配」那一批的账；
- *   `suffixBuilds` = 后缀索引建表次数（读数 `后缀索引建 N 次`；同一次调用里恒 1）
+ *   `suffixBuilds` = 后缀索引建表次数（读数 `后缀索引建 N 次`；同一次调用里恒 1）；
+ *   `cycleReads` = 判集未指向的成环事实（只读数、不入 hits）；
+ *   `edgeCallbackErrors` = 回调抛异常的次数（**只在给了 `onEdge` 时出现**）。
+ *   回调抛了不算判据失败：`hits` 与其余读数零改，那一处边由调用方按读数自处（`doc_graph` 回执末行印数）。
  */
-export function checkAnchors(root, { files = [], manifest, exts } = {}) {
+export function checkAnchors(root, { files = [], manifest, exts, onEdge } = {}) {
   const base = resolve(root)
   // 生效扩展名清单（§2.6）：引擎按本根装配好传进来（并集 + 取形过滤已做过）；直调判法本体的夹具不传 ⇒ 缺省清单。
   // **空数组不是「什么都判不了」**：它是上游装配失败的一种形态，那样会让全部 token 静默不成候选（假绿）——向严回缺省。
@@ -396,11 +417,18 @@ export function checkAnchors(root, { files = [], manifest, exts } = {}) {
   const resolveToken = docResolver(base, scanBases, session) // 解析面同轮记忆（引用方目录 ∥ token）
   const face = batchFaceContext(base, manifest) // 面判上下文（批档基底根）——一次调用建一份（吃注入的 manifest）
   let batchRefs = 0 // 面判剔除的 token 数（读数：不进 `hits`、不改 verdict；`report` 面据此出一行留痕）
-  const sectionCache = new Map() // 节在盘：标题号集合按绝对路径记忆（同档一次读）
-  // 环检（§2.7「环检」）：按组根走一遍声明出边图——走回本根成环 ⇒ 一条 `环引`（与 `档缺` 同计「锚 N 条」）；
-  // 走查在「声明根不在本机」的节点止步 ⇒ 那些节点进 `unverified`（触发 = 环走查止步，零命中、不入闸）。
+  const sectionCache = new Map() // 节在盘：标题号 → 标题文本（按绝对路径记忆，同档一次读；文本供边的 `dst_label`）
+  // 环引入闸只问判集实际抽到的 token；`onEdge` 缺席时这张集合照记。
+  const citedTokens = new Set()
+  let edgeCallbackErrors = 0
+  const emit = (edge) => {
+    if (edge.kind === "cites") citedTokens.add(edge.token)
+    if (typeof onEdge !== "function") return
+    try { onEdge(edge) } catch { edgeCallbackErrors++ }
+  }
+  // 环走查仍按组根执行；成环事实先入读数桶，待判集扫描完后按指向决定是否入 hits。
   const cycles = declaredCycles(base)
-  for (const c of cycles.cycles) hits.push({ file: join(base, MANIFEST_REL), line: null, clazz: "环引", root: base, chain: c.names.join(" → ") })
+  const cycleReads = []
   for (const s of cycles.stopped) unverified.push({ declaredRepo: s.name, declaredRoot: s.root, declarationEntry: s.entry, trigger: "walk" })
   /** `档缺` 两处产出点共用一形（路径线 ∥ 依据行——同一 token 不得两套载荷）。 */
   const danglingHit = (file, line, token, r) => ({
@@ -431,7 +459,7 @@ export function checkAnchors(root, { files = [], manifest, exts } = {}) {
       const scan = stripOperands ? stripCanonOperands(l) : l // 提示词面：操作数先剥再抽；文档面 = 原行
       // **区间与位置取同一个字符串**：剥除会删字符、位置整体前移，拿原行的区间去比剥除后的下标，码段之后的
       // 真指针会被当成「在码段内」而不抽（漏报），反方向则把命令字面量当指针（假阳）。⇒ 一律按 `scan` 切。
-      const spans = isExecutableLine(scan) ? codeSpans(scan) : []
+      const spans = codeSpans(scan).filter(isExecutableSpan)
       const inSpan = (at) => spans.some((s) => at >= s.start && at < s.end)
       // ── 依据行（§3.25 条目 Y）：一行多处各自判；路径 token 的区间要记下来——锚抽取得跳过它，
       //    否则一个解析不到的档路径会被两条判法各报一次（同一处缺陷两条命中）。
@@ -454,12 +482,19 @@ export function checkAnchors(root, { files = [], manifest, exts } = {}) {
           // 面判（批档面互引不判）：与锚分支同判——同一 token 不得一面判一面不判。区间已占 ⇒ 锚面不再重报。
           if (isBatchFaceRef(f, token, face)) { batchRefs++; continue }
           const r = resolveToken(token, f)
-          if (r.state === "unverified") { unverified.push({ file: f, line: i + 1, token, trigger: "pointer", ...r }); continue } // 判不了存在性：列报，不入闸（同锚面）
+          if (r.state === "unverified") {
+            unverified.push({ file: f, line: i + 1, token, trigger: "pointer", ...r }) // 判不了存在性：列报，不入闸（同锚面）
+            emit({ kind: "cites", file: f, line: i + 1, token, section: null, state: "判不了存在性", abs: null, sectionLabel: null, text: l })
+            continue
+          }
           if (r.state !== "resolved") { // 路径先判存在性——两因不混（路径错 ⇒ `档缺`，引文错 ⇒ `引缺`）
             hits.push(danglingHit(f, i + 1, token, r))
+            // 边照落（AC-6）：目标不在盘也是一个事实，静默丢弃正好丢掉「这档没了但还有人在引它」那个信号。
+            emit({ kind: "cites", file: f, line: i + 1, token, section: null, state: "目标不在盘", abs: null, sectionLabel: null, text: l })
             continue
           }
           if (r.how === "suffix") suffixHits.push({ file: f, line: i + 1, token, abs: r.abs })
+          emit({ kind: "cites", file: f, line: i + 1, token, section: null, state: "ok", abs: r.abs, sectionLabel: null, text: l })
           // 引文面：只判「是不是该档里的一段连续子串」——不折叠空白、不换全半角、不换算大小写（§3.25 边界）
           if (!citedTextOf(r.abs).includes(quote)) hits.push({ file: f, line: i + 1, token, clazz: "引缺", quote, target: r.abs })
         }
@@ -491,13 +526,27 @@ export function checkAnchors(root, { files = [], manifest, exts } = {}) {
         // 面判（批档面互引不判 · §3.29 条目 AC）：引用方与目标同在批档基底根下 ⇒ 不解析、不判，只计数。
         if (isBatchFaceRef(f, token, face)) { batchRefs++; continue }
         const r = resolveToken(token, f)
-        if (r.state === "unverified") { unverified.push({ file: f, line: i + 1, token, trigger: "pointer", ...r }); continue } // 判不了存在性：列报，不入闸
+        if (r.state === "unverified") {
+          unverified.push({ file: f, line: i + 1, token, trigger: "pointer", ...r }) // 判不了存在性：列报，不入闸
+          emit({ kind: "cites", file: f, line: i + 1, token, section: num, state: "判不了存在性", abs: null, sectionLabel: null, text: l })
+          continue
+        }
         if (r.state !== "resolved") {
           hits.push(danglingHit(f, i + 1, token, r))
+          emit({ kind: "cites", file: f, line: i + 1, token, section: num, state: "目标不在盘", abs: null, sectionLabel: null, text: l })
           continue
         }
         if (r.how === "suffix") suffixHits.push({ file: f, line: i + 1, token, abs: r.abs })
-        if (num !== null && !sectionOnDisk(r.abs, num, sectionCache, unreadable)) hits.push({ file: f, line: i + 1, token, clazz: "节缺", section: num, target: r.abs })
+        const sectionPresent = num === null || sectionOnDisk(r.abs, num, sectionCache, unreadable)
+        if (!sectionPresent) hits.push({ file: f, line: i + 1, token, clazz: "节缺", section: num, target: r.abs })
+        // 边照落：`节缺` 的落点也「不在盘」——整档在、那一节不在，是同一个事实的另一种粒度（头注三态）。
+        emit({
+          kind: "cites", file: f, line: i + 1, token, section: num,
+          state: sectionPresent ? "ok" : "目标不在盘",
+          abs: r.abs,
+          sectionLabel: num === null ? null : (sectionCache.get(r.abs)?.get(num) ?? null),
+          text: l,
+        })
       }
       // 花括号组形逐名判（区间已在上方占下）：展开成具体名后走**同一**解析序（复用 `resolveToken`，不新增第二套解析）；
       // 每个解不到的展开名出一条 `档缺`，携 `expanded`——报面据此同时点名原 token 与缺的那个名字。
@@ -509,14 +558,53 @@ export function checkAnchors(root, { files = [], manifest, exts } = {}) {
           if (docNameExemption(name) !== null) continue // 类名 ∥ 占位两免与锚面同判（同一 token 不得两套口径）
           if (isBatchFaceRef(f, name, face)) { batchRefs++; continue } // 面判同判（与锚 ∥ 依据两条分支同一谓词）
           const r = resolveToken(name, f)
-          if (r.state === "unverified") { unverified.push({ file: f, line: i + 1, token: group.token, trigger: "pointer", ...r }); continue }
+          if (r.state === "unverified") {
+            unverified.push({ file: f, line: i + 1, token: group.token, trigger: "pointer", ...r })
+            emit({ kind: "cites", file: f, line: i + 1, token: group.token, expanded: name, section: null, state: "判不了存在性", abs: null, sectionLabel: null, text: l })
+            continue
+          }
           // 第 6′ 步解出来的也记读数：与锚分支同一口径（**不标就混进绿里**）——`i18n-{zh,en}-core.mjs` 这类真实形
           // 展开后往往只剩后缀腿可解，不记的话同一 token 写成裸名有清账行、写成组形却是无读数的一格绿。
           if (r.how === "suffix") suffixHits.push({ file: f, line: i + 1, token: group.token, abs: r.abs })
           if (r.state !== "resolved") hits.push({ ...danglingHit(f, i + 1, group.token, r), expanded: name })
+          emit({
+            kind: "cites", file: f, line: i + 1, token: group.token, expanded: name, section: null,
+            state: r.state === "resolved" ? "ok" : "目标不在盘",
+            abs: r.state === "resolved" ? r.abs : null,
+            sectionLabel: null,
+            text: l,
+          })
         }
+      }
+      // ── 三支新 token 家族（`cites-req` ∥ `mentions-case` ∥ `cites-symbol`）：**只喂回调、不进 `hits`**。
+      //    取形纯函数住 `./graph-tokens.mjs`（不在这里写第二份正则）；解析面不参与——这三族的 `state`
+      //    一律「判不了存在性」（符号不是档、用例号要另一张清单、需求编号全仓唯一假设），不冒充 `ok`。
+      //    位置 = 全部跳过谓词之后（围栏已 return、码段区间与花括号区间已算好）：`F16` ∥ `CLI 41-1` 写在
+      //    表格行 ∥ 散文行的反引号里照抽（可执行行只跳码段区间那一条对它同样成立）；
+      //    `cites-symbol` 例外——它的取形面**就是码段本身**，故不吃 `inSpan`。
+      for (const t of reqRefsOf(scan)) {
+        if (inSpan(t.start)) continue
+        emit({ kind: "cites-req", file: f, line: i + 1, token: t.token, section: null, state: "判不了存在性", abs: null, sectionLabel: null, text: l })
+      }
+      for (const t of caseRefsOf(scan)) {
+        if (inSpan(t.start)) continue
+        emit({ kind: "mentions-case", file: f, line: i + 1, token: t.token, section: null, state: "判不了存在性", abs: null, sectionLabel: null, text: l })
+      }
+      for (const t of symbolRefsOf(scan)) {
+        emit({ kind: "cites-symbol", file: f, line: i + 1, token: t.token, section: null, state: "判不了存在性", abs: null, sectionLabel: null, text: l })
       }
     })
   }
-  return { hits, unverified, unreadable, batchRefs, suffixHits, suffixBuilds: session.suffixBuilds() }
+  const firstRepoSegment = (token) => {
+    const normalized = posix.normalize(String(token).replace(/\\/g, "/")).replace(/^(?:\.\.?\/)+/, "")
+    return normalized.split("/")[0]
+  }
+  for (const c of cycles.cycles) {
+    const hit = { file: join(base, MANIFEST_REL), line: null, clazz: "环引", root: base, chain: c.names.join(" → ") }
+    const names = new Set(c.names)
+    if ([...citedTokens].some((token) => names.has(firstRepoSegment(token)))) hits.push(hit)
+    else cycleReads.push(hit)
+  }
+  const out = { hits, unverified, unreadable, batchRefs, suffixHits, suffixBuilds: session.suffixBuilds(), cycleReads }
+  return typeof onEdge === "function" ? { ...out, edgeCallbackErrors } : out
 }

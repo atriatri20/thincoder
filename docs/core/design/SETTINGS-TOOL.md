@@ -29,7 +29,7 @@ agent 工具面**无任何配置调整工具**——`/config` 是用户 TUI 命�
 ### 2.3 热应用 + 写盘（磁盘真相最小化）
 
 `set` = `setKeyPath(agent.config, key, value)`（内存即热——agent.config 是运行读取源）→ 写盘 `writeConfigAtomic(cfgPath, fn)`
-（**D-F5b 语义**：磁盘新鲜读 + 只改被设键——**默认值不固化**——+ mtime 门控；冲突 / 畸形抛错 → 内存不热应用，零虚假成功——语义权威 = `MULTI-INSTANCE-COLLAB.md` §6.3）。
+（**D-F5b 语义**：磁盘新鲜读 + 只改被设键——**默认值不固化**——+ mtime 门控；冲突 / 畸形抛错 → 内存不热应用，零虚假成功——语义权威 = `MULTI-INSTANCE-COLLAB.md` §6.2）。
 **不整 reload**（直接改内存对象等价且无副作用）。
 
 **promoted 视图同步（本机制设计单源）**：`agent.config` 的部分段是**装载期派生副本**——`thincoder-core/config.mjs` 的 `loadConfig` 把 `agent.advisor` promote 成顶层 `advisor`，而运行读面读的是**副本**（`thincoder-core/advisor/loop.mjs`——端侧 advisor 镜像已退役，两端读同一核档）。
@@ -64,7 +64,7 @@ agent 工具面**无任何配置调整工具**——`/config` 是用户 TUI 命�
 - **调用点**（四处单点同一谓词）：list 行 `formatLine` · get 行（同函数）· set 回显 · **错误文案**值位 `_shownValue`（D-ST8）。
 - **父对象形态**：`get` 打在敏感**父对象**上（如 `mcp.servers.0.headers`）⇒ 回显 `••••（masked） (object)`；非敏感父对象 ⇒ **`JSON.stringify` 化渲染**（`thincoder-core/agent-tools/settings.mjs` 的 `formatLine` 段）。
 - **判据**：夹具键集**逐键**断言（敏感族全遮 ∧ 非敏感键不误遮 ∧ 明文零出现）。
-- **DEFAULTS 实核**：`flatten(DEFAULTS)` 叶子数按盘现读（本档不载值）；新谓词（两句取或）命中面 = **仅 `websearch.apiKey`**（族句命中 0——DEFAULTS 无 `headers` / `env` 段）⇒「除 `websearch.apiKey` 外零 masked」前提成立。
+- **DEFAULTS 实核**：`flatten(DEFAULTS)` 叶子数按盘现读（本档不载值）；新谓词（两句取或）命中面 = **仅 `websearch.apiKey`**（DEFAULTS 无 `headers` / `env` 段）⇒「除 `websearch.apiKey` 外零 masked」前提成立。
 
 ### 2.5 值解析（parseValue——引号语义 = 用户裁定 ① 去引号）
 
@@ -99,7 +99,7 @@ parse 失败 → 字符串字面（`return s`——裸 `abc`）。两端语义�
 
 - **端关系**：W16——VSC 端 = **同一核工具实例化**（`thincoder-vscode/src/agent/setup.mjs` 取 `settingsTool(opts)` 工厂；写盘 = 核 `writeConfigAtomic`）；热应用 = `ctx.agent.config` 内存对象；注册于 depth-0 agentTools（动作级只读分类同款机制，`isReadonlyAction` 端面）。
 - **键空间**：核 `DEFAULTS` 全量（A5 已裁「以 CLI 为准（全量类型校验）」）。
-- **端测试**：VSC 端 9 例（双缝并用：写侧 `settingsTool({ configPath })` + 读侧 `_setConfigPathForTest`）——单元测试树重建时回迁。
+- **端测试**：VSC 端用例双缝并用（写侧 `settingsTool({ configPath })` + 读侧 `_setConfigPathForTest`）——单元测试树重建时回迁。
 - **端差（W16 登记——热应用载体键面）**：热应用落点 = 端 `ctx.agent.config` 载体，而 VSC 载体键面 = `{advisor, agent, hooks, proxy, shell, providersList, websearch, fetch, traces}`（`thincoder-vscode/src/agent/agent-state.mjs` 的载体键面字面量）。
 - **端差后果**：无 `providers` / `memory` / `embedding` / `mcp` 段 ⇒ 这些键在 VSC 端的「运行中已生效」回显不落端侧运行读取源（端侧运行读盘面 `loadRaw()`，如 `resolveProviders`）；该面以「写盘为准」（持久化生效，进程内热应用仅限上列键面）。
 
@@ -127,7 +127,7 @@ parse 失败 → 字符串字面（`return s`——裸 `abc`）。两端语义�
 | D-ST12 | **双端同批**（用户拍板） | VSC config 存储差异以偏差注处理；键空间归一（§2.8） |
 | D-ST13 | **敏感谓词扩面 = 词表扩面 + 开口键族整族遮罩**（两句取或——§2.4） | 实证 `mcp.servers.0.headers.Authorization` 明文回显。段内复合段名（refreshToken 类）残余登记 = D-ST17 |
 | D-ST14 | **`env` 并入开口键族**（与 `headers` 同句） | 同族同因：`mcp.servers.*.env.*` 子键名由用户 / 对端任意取（实证：`env` 段任意变量名的值明文回显）；代价 = 少数无害 env 值被遮——方向安全且**键名仍可见**（只丢值） |
-| D-ST15 | **遮蔽面用例落新档**（单元测试树重建时回迁该档形） | 单档行数超 500 行硬限（工具面 480 行 + 遮蔽面用例 ≈95 行 ⇒ ≈575）；分档 = 工具面 / 遮蔽面，新档登记进该包测试清单（未登记即跑器自检失败） |
+| D-ST15 | **遮蔽面用例落新档**（单元测试树重建时回迁该档形） | 工具面与遮蔽面用例合档即越 500 行硬限；分档 = 工具面 / 遮蔽面，新档登记进该包测试清单（未登记即跑器自检失败） |
 | D-ST16 | **`${env:VAR}` 引用形态 = 已受理做** | 属新增能力（配置内放引用 + 消费侧展开）；机制（解析点 ∕ 生效面 ∕ 语义 ∕ 与遮蔽关系）单源 = `doc:CONFIG.md:§6.3`——本档遮蔽谓词零改（引用串同住敏感值位 ⇒ 族遮罩内）；解析产物永不回显 |
 | D-ST17 | **段内复合段名入遮 = 采纳**（camelCase / 前缀复合敏感名） | 谓词扩段内边界（形如 `refreshToken` / `clientSecret` / `privateKey`）；假阳取舍 = 方向安全（只丢值、键名仍可见）；**先红夹具格**（§2.4 / §4 同拍） |
 | D-ST18 | **`advisor.timeoutMs` 非法值在写面即拒**（收 `null` ∥ 有限正数） | 读面「非法一律回退默认」是给手写 `config.json` 的兜底，不是写面的许可证：收下 `0` 再回显「运行中已生效」= D-ST6 要防的静默面（写了等于没写）。拒绝句点名键与可消费形态 |
@@ -151,13 +151,6 @@ parse 失败 → 字符串字面（`return s`——裸 `abc`）。两端语义�
 | 原子写盘 | `thincoder-core/config.mjs`（`writeConfigAtomic` 导出；`configPath` 同档；`DEFAULTS` 在 `thincoder-core/config-defaults.mjs`） |
 | CLI 装配 | 核 `thincoder-core/agent/assemble.mjs` 装配 + `thincoder-cli/src/cli/make-agent.mjs` 留面（MCP ∕ 剔除经 `toolsFinalize` 缝）；dispatch 动作级只读分类（list/get 放行） |
 | 读取器判据点 | `thincoder-core/config.mjs`（defaultModel 非串→null）· 核 `thincoder-core/agent/assemble.mjs`（`!team?.repo`）· `thincoder-core/agent-tools/subagent-spawn.mjs`（subagentModels 回落）· `thincoder-core/tools/bash.mjs`（`shell ?? true`） |
-| 单元测试档 | CLI 端 480 行 · T-S2 族 25 例 · T-S3 族 3 例 · 遮蔽面档夹具键集逐键 6 例（D-ST15）· VSC 端 9 例（W16 改指核工具；双缝并用）——单元测试树重建时回迁 |
+| 单元测试档 | CLI 端（T-S2 族 ∥ T-S3 族 ∥ 遮蔽面档夹具键集逐键，D-ST15）· VSC 端（W16 改指核工具；双缝并用）——单元测试树重建时回迁 |
 
-**受影响文件（本批——promote 同步 ∥ 写面校验；行数 = `split("\n").length − 1` 实读 · 2026-10-24）**：
-
-| 档 | 改动前 | 本批 Δ | 实施后（实读）∥ 说明 |
-|---|---|---|---|
-| `thincoder-core/config.mjs` | 438 | +19 / −1（净 +18；其中 4 行为在跑批次的 `bodyIdleTimeoutMs`，本批净 +14） | **456** — 导出 `promoteAgentViews(config)`；`loadConfig` 改调该函数（行为逐字不变；软线超限已在册，本批不重构） |
-| `thincoder-core/agent-tools/settings.mjs` | 315 | +45 / −3 | **357** — set 腿（子键键级同步 ∥ 整段 promote）· `null` 腿删副本同子键 · `advisor.timeoutMs` 写面校验（校验谓词与两条调用腿同档） |
-
-本档自身 = 设计面单源（文档行数不入表）；`AGENT-PARAMS.md` 本批零代码改动。
+本档自身 = 设计面单源（文档行数不入表）。

@@ -13,7 +13,7 @@
 **为什么走「自启 + CDP 直控」**（对位需求 §4 边界）：
 
 - **无接管**：不连用户正在用的浏览器实例、不做扩展——工具自拉一份独立实例（`--user-data-dir` 非默认），像 `scripts/console-walkthrough.mjs` 的 spawn 段那样一次 spawn 全部搞定，零握手前置。
-- **零第三方依赖**（N-BT1）：CDP 传输 = Node 原生 `WebSocket`（walkthrough 的 40 行客户端已证可用）；浏览器 = 系统已装（N-BT5 候选表）。
+- **零第三方依赖**（N-BT1）：CDP 传输 = Node 原生 `WebSocket`（walkthrough 的客户端已证可用）；浏览器 = 系统已装（N-BT5 候选表）。
 - **平台化清理**（walkthrough 清理段实证）：win32 `taskkill /PID <pid> /T /F`；POSIX `process.kill(-pid, "SIGKILL")` + `child.kill` 兜底（spawn 时 `detached: true`）。
 
 **模块结构（设计定形——文件拆分与边界钉死）**：
@@ -375,7 +375,7 @@ browser({action:"storage", op:"get", area:"localStorage", key:"token"})
 
 **示例名判法（AC-BT8「示例参数名集 ⊆ schema 属性名集」的落法）**：
 
-- **顶层键** ⊆ `thincoder-core/tools/browser.mjs` 的 `parameters.properties` 键集（35 个——含 `async`）；
+- **顶层键** ⊆ `thincoder-core/tools/browser.mjs` 的 `parameters.properties` 键集（含 `async`）；
 - **属性值内部的键**（`cookies:[{…}]` 每项的键）不是 schema 属性名 ⇒ 按 §2.1 声明的**条目字段集**判：`name` ∥ `value` ∥ `domain` ∥ `path` ∥ `expires` ∥ `httpOnly` ∥ `secure` ∥ `sameSite`；
 - 两层不能合：嵌套键并进顶层判，一条合法示例当场判红；顶层判松成「名字像参数」，判据就失效。
 
@@ -383,7 +383,7 @@ browser({action:"storage", op:"get", area:"localStorage", key:"token"})
 
 **机检落点**：本批批次单测档（与批次档同名同目录，随批收口删；该档收口即删，写全路径在删后成死指针，故只按同名同目录定位）的 T54——读描述文本 + 导 `browserTool.parameters.properties` 键集，断言四条：
 
-① 触发句落在路由区间内 ∧ 三锚词与两个动作名同在一行 ∥ ② `cookies` ∥ `storage` 各 ≥1 条示例，且落在各自 bullet 的行内 ∥ ③ 示例顶层键 ⊆ 35 属性名 ∧ `cookies[]` 条目内键 ⊆ 8 字段 ∥ ④ 触发句与示例确实进了 `browserTool.description`（描述单源未断链）。
+① 触发句落在路由区间内 ∧ 三锚词与两个动作名同在一行 ∥ ② `cookies` ∥ `storage` 各 ≥1 条示例，且落在各自 bullet 的行内 ∥ ③ 示例顶层键 ⊆ schema 属性名 ∧ `cookies[]` 条目内键 ⊆ 8 字段 ∥ ④ 触发句与示例确实进了 `browserTool.description`（描述单源未断链）。
 
 第 ④ 条的理由：本批病灶是「写得全、模型看不见」——描述单源一旦不取这份文本，前三条照样全绿。
 
@@ -397,12 +397,12 @@ browser({action:"storage", op:"get", area:"localStorage", key:"token"})
 
 | 档 | 动作 | 分层结论 |
 |---|---|---|
-| `thincoder-core/tool-docs/browser.md` | 路由段 +1 行触发句 · 两动作 bullet 内 +示例 | 产品文本面；文档无软线，不跨层 |
+| `thincoder-core/tool-docs/browser.md` | 路由段加触发句 · 两动作 bullet 内加示例 | 产品文本面；文档无软线，不跨层 |
 | 本批批次单测档（与批次档同名同目录） | 新增 T54（AC-BT8 机检） | 批次单测档；随批收口删 |
 
 跨层结论一句：无档跨层——改面里没有产品代码档；`thincoder-core/tool-docs/browser.md` 是描述文本，批次单测档随批消失。
 
-**勘察证据行**：查过的面 = 需求档 `docs/core/requirements/BROWSER-TOOL.md`（F-BT19 ∥ AC-BT8）· 本档 §7 F-BT19 行 · `thincoder-core/tool-docs/browser.md` 全文 · `thincoder-core/tools/browser.mjs` 的 schema 35 属性 · `thincoder-core/tool-docs/doc_check.md` 的段落判据 · `test/RTM.md` 故事 35 三行。
+**勘察证据行**：查过的面 = 需求档 `docs/core/requirements/BROWSER-TOOL.md`（F-BT19 ∥ AC-BT8）· 本档 §7 F-BT19 行 · `thincoder-core/tool-docs/browser.md` 全文 · `thincoder-core/tools/browser.mjs` 的 schema 属性集 · `thincoder-core/tool-docs/doc_check.md` 的段落判据 · `test/RTM.md` 故事 35 三行。
 
 公共源仓 = 无（`PROJECT-MANIFEST.json` 的 `index.publicRepos` 实读 `[]`）。
 
@@ -518,10 +518,10 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | KD-6 | screenshot 落盘返路径（非图像块） | 结果契约 = 字符串；视觉模型经 read_image 查看（既有通道）；非视觉模型不毒化会话 |
 | KD-7 | 不设 SSRF 私网拦截 | 本机 dev 服务首要用例；agent 已有 bash 网络能力——拦截零增益 |
 | KD-8 | 空闲 15 分钟 = **摘自己**（关自己的标签页），不等于关浏览器：池内仍有活条目 ⇒ 浏览器留着，无活条目 ⇒ 末关（§12） | 长驻宿主（桌面）资源卫生不变——一个实例闲着不能关掉别人在用的浏览器；共享后「自动关」的对象从浏览器换成自己那份登记。进程退出的杀树兜底只对**拉起者**成立（pid 来源 = 自己的 `state.child`） |
-| KD-9 | 描述面英文、约 45 行 | 沿既有 tool-docs 惯例（用户面语言 = 模型面英文）；schema 预算（`scripts/tool-schema-size.mjs` 报告态） |
+| KD-9 | 描述面英文 | 沿既有 tool-docs 惯例（用户面语言 = 模型面英文）；schema 预算（`scripts/tool-schema-size.mjs` 报告态） |
 | KD-10 | 裁决项②：click / type 内部机制**不迁** Input 域 | 零回归（回执 / 寻址 / 旧用例逐条）；分工保留且互补：click = DOM 级语义激活（`el.click()`——`isTrusted=false`，遮挡 / `pointer-events` 面仍可激活）∥ mouse = 真指针输入（真命中测试 + 受信事件）；真输入需求由 press / mouse / insert 全覆盖 |
 | KD-11 | 裁决项①：门面逐动作分类 = §3.1 表（press ∥ mouse ∥ drag ∥ touch 点按 ∥ clipboard 全量过门；hover ∥ wheel ∥ insert ∥ touch 手势免审） | 判据沿 F-BT7（不可逆 / 提交类）逐动作推得；同一 `isReadonlyAction` 钩子按参数分类——机制零新增（需求 §4） |
-| KD-12 | `thincoder-core/browser/session.mjs` 拆分（五档——§1 模块结构） | 拆后五档合计 ≈1,110 行（net ≈+674）——不拆单档破 800 硬限；域界按「动作实施 ∥ 输入引擎 ∥ 会话机制 ∥ 剪贴板」切 |
+| KD-12 | `thincoder-core/browser/session.mjs` 拆分（五档——§1 模块结构） | 拆后各档皆在硬限内——不拆单档破 800 硬限；域界按「动作实施 ∥ 输入引擎 ∥ 会话机制 ∥ 剪贴板」切 |
 | KD-13 | 剪贴板路径 = 页面 API（`navigator.clipboard`）+ Browser 域授权（§3.5） | CDP 无剪贴板直控方法（官方议题未决——实读）；`setPermission` 现代形 + `grantPermissions` 回落护版本漂移 |
 | KD-14 | 触屏分工：tap / doubleTap / swipe 走 `dispatchTouchEvent` 显式序列；pinch 走 `synthesizePinchGesture` | 实测（本机 Edge）：`synthesizeTapGesture` 不产 click（事件面仅 pointerdown / touchstart / touchend——无头 ∥ 有头同、加 touchEmulation 亦同）；显式 touchStart + touchEnd ⇒ 全链 mousedown / mouseup / click（`isTrusted`）；doubleTap = 两条序列、间隔 60ms（同一双击窗内）⇒ click:2 + dblclick:2（计数由浏览器管）；pinch 走 `synthesizePinchGesture` 实测有效（scale 1 → 2.0000005——保持）；swipe 需手指路径语义（from → to）——显式序列直配契约且可做单元测试（兜底：若冒烟证 swipe 不驱卷动 ⇒ 改 `synthesizeScrollGesture`——距离语义换算） |
 | KD-15 | 几何渲染口径 = 数据全员携、回执仅 `[outside]` 标记 | 在屏行零几何后缀 ⇒ 旧行文法与旧用例（`$` 锚断言）零回归；`[outside]` = F-BT14「视口外标记」落面 |
@@ -575,7 +575,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | **F-BT16** 冷启预算 | §2.4 冷启预算 ∥ §2.9 ∥ §6 KD-26 | 单元测试 T47（假自启 12s + 首动作 `type` 15s ⇒ 动作拿满 15s、不超时；旧形态 ⇒ `timed out after 15000ms (stuck in launch browser)`——红/绿对照）∥ T48（首动作 `navigate`：假自启 12s + 导航 40s ⇒ 不超时、总墙钟 52s；旧形态 ⇒ 45s 含自启 ⇒ 33s 到点、卡点步名 = 导航步——红/绿对照 = 预算表与 §2.4 同口径的机判格） |
 | **F-BT17** 外部关闭可感知与自愈 | §2.10 ∥ §2.4 | 单元测试 T31–T33 · T44（新档——假 WS close ∥ 假 child exit ⇒ 在飞即时拒（下一事件循环内——非墙钟界）+ 态复位 + 重开计数 + 注记；探针三检；外部关闭遇排队条目不呆等）；冒烟 S20；走查 W1（真关窗——用户复核） |
 | **F-BT18** 异步通道 | §2.11 ∥ §2.5 | 单元测试 T34–T39（新档——ack ∥ 池 ∥ 结算 ∥ 摘要文法 ∥ kill 两态（即时展开——非墙钟界）∥ 帽 ∥ depth 门）；冒烟 S21 / S22 |
-| **F-BT19** 用法认知（描述面） | §2.12 ∥ `thincoder-core/tool-docs/browser.md`（路由段触发句 ∥ 两动作调用示例） | 单元测试 T42（描述档四小节存在）+ 批次单测 T54（随批收口删：触发句落在路由区间内 ∧ 三锚词与两动作名同在一行 ∥ 两动作各 ≥1 条可照抄示例且落在自己 bullet 行内 ∥ 示例顶层键 ⊆ schema 35 属性名、条目内键 ⊆ 8 字段 ∥ 描述单源带上这两样——AC-BT8） |
+| **F-BT19** 用法认知（描述面） | §2.12 ∥ `thincoder-core/tool-docs/browser.md`（路由段触发句 ∥ 两动作调用示例） | 单元测试 T42（描述档四小节存在）+ 批次单测 T54（随批收口删：触发句落在路由区间内 ∧ 三锚词与两动作名同在一行 ∥ 两动作各 ≥1 条可照抄示例且落在自己 bullet 行内 ∥ 示例顶层键 ⊆ schema 属性名、条目内键 ⊆ 8 字段 ∥ 描述单源带上这两样——AC-BT8） |
 | **F-BT20** 会话态读写（cookie） | §2.1 ∥ §2.2 cookies ∥ §3.4 会话态面 ∥ §6 KD-27 / KD-28 / KD-29 / KD-30 | 单元测试 T50（三形调用面：`Network.getAllCookies` 取全量 ∥ `Network.setCookie` 逐字段映射（httpOnly ∥ secure ∥ sameSite ∥ expires 秒）∥ `Network.deleteCookies` 逐条 ∥ `Network.clearBrowserCookies` 全清 ∥ 写后回读核对（按 `name`+`domain` 定位、逐字核 `value`，`path` 给了才核；未落地 ∥ 值不符 ⇒ 点名实际落点；同名覆盖写的旧值不假通过；`path` 落错 ⇒ 点出实际 `path`（U92））∥ 取面回执畸形 ⇒ 明示错（U88）∥ 逐项 `domain: null` ⇒ 拒 ∥ `domain` 非裸主机 ⇒ 客户端拒 ∥ 形的不对一律按一条规则拒（`domain` / `key` / `area` / 逐项字段：键不存在 = 没给，给了但不是声明类型或不在值域 ⇒ 显式拒——U86 ∥ U91）∥ 无 `domain` 且 `about:blank` ⇒ 明示拒（U87）∥ 带域 `clear` 只删该域及其子域（U85）∥ IP 字面量只走全等（U90）∥ 带端口的 `domain` ⇒ 明示拒（U93））∥ T51（域过滤 ∥ 不给 domain ⇒ 不依赖当前页源 ∥ 回执零遮挡）；冒烟 S23（AC-BT1 对照 + 跨域直写）；集成 35-1（四判据同一行——§14） |
 | **F-BT21** 会话态读写（storage） | §2.1 ∥ §2.2 storage ∥ §3.4 会话态面 ∥ §6 KD-27 | 单元测试 T52（三形 × 两域：全量 ∥ 单键 ∥ 全清 ∥ 键不在 = `not set` 正例 ∥ `area` 给了 `null` ∥ 非串 ⇒ 拒、不落缺省（U86）∥ 全量面回执缺 `entries` ⇒ 明示错、不回 `0 key(s)`（U94））∥ T53（值往返：换行 ∥ 引号 ∥ 中文 ∥ 2KB 串——JSON 转义面无损）；冒烟 S24（两域不串档 + 值逐字往返）；集成 35-2 |
 | **N-BT10** 挂起可诊断 | §2.9 步名 ∥ §2.11 摘要面 | 单元测试 T30（新档——错误句携步名）∥ T38–T40 ∥ T43（终态墓碑 / 摘要必达；Stop 收尾——墓碑 `discarded` ∥ 出池 ∥ 整批提醒 ∥ 竞态窗兜底停靠） |
@@ -677,7 +677,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | U91 | 错误 | `cookies set` 一条 `{name:"sid", value:"v", httpOnly:"true"}` ∥ `secure:1` ∥ `sameSite:""` ∥ `expires:""` ∥ `path:123` | 五条各拒：`Error: cookies set "httpOnly" must be a boolean (omit it for false)` ∥ 同句（`secure`）∥ `Error: cookies set "sameSite" must be Strict, Lax or None` ∥ `Error: cookies set "expires" must be Unix seconds (omit it for a session cookie)` ∥ `Error: cookies set "path" must be a string starting with "/"`——一律在写之前拒、零 `Network.setCookie`；`httpOnly:"true"` 那一格正是 AC-BT1 的假通过面（收成 `false` 会得到一条不是 httpOnly 的 cookie 加一张成功回执） | 单元测试 T50 |
 | U92 | 错误 | 请求 `{name:"sid", value:"new", domain:"example.test", path:"/a"}`，浏览器把它落到 `path:"/"`（值对、落点错） | `Error: cookies set "sid" @ example.test did not land — the browser holds "new" at path "/"`（错句点出不符的维度 = `path`；只报值会被读成「浏览器里就是你要的值」） | 单元测试 T50 |
 | U93 | 错误 | `cookies{op:"get", domain:"localhost:3000"}` ∥ `cookies{op:"clear", domain:"localhost:3000"}` ∥ `cookies set` 一项带 `domain:"localhost:3000"` | `Error: cookies "domain" must be a non-empty host string (omit it to address every domain)` ∥ 同句 ∥ `Error: cookies set "<name>" domain must be a bare host such as "example.test" (no scheme, no path, no port)`——带端口一律拒；不放行成零匹配过滤（`0 cookie(s)` ∥ `0 removed` 读起来像「本来就没有」） | 单元测试 T50 |
-| U95 | 正常 | 读 `thincoder-core/tool-docs/browser.md`：路由段触发句 ∥ `cookies` ∥ `storage` 的示例 | 三锚词（`move a login state in` ∥ `manufacture a test state` ∥ `assert the login took effect`）与两个动作名同在一行且落在路由区间内；两动作各 ≥1 条 `browser({action:…})` 示例且落在自己 bullet 行内；示例顶层键 ⊆ 35 属性名、`cookies[]` 条目键 ⊆ 8 字段；`browserTool.description` 带上这两样（AC-BT8） | 批次单测 T54（随批收口删） |
+| U95 | 正常 | 读 `thincoder-core/tool-docs/browser.md`：路由段触发句 ∥ `cookies` ∥ `storage` 的示例 | 三锚词（`move a login state in` ∥ `manufacture a test state` ∥ `assert the login took effect`）与两个动作名同在一行且落在路由区间内；两动作各 ≥1 条 `browser({action:…})` 示例且落在自己 bullet 行内；示例顶层键 ⊆ schema 属性名、`cookies[]` 条目键 ⊆ 8 字段；`browserTool.description` 带上这两样（AC-BT8） | 批次单测 T54（随批收口删） |
 
 **单元测试档用例**：单元测试（T1–T15——假传输 + 打桩，零真实浏览器/文件系统）与冒烟（S1–S7——真 Edge/Chrome 无头 + 进程内 fixture 服务）＝ §7 表逐格引用面（**落点列** = U 条执行档；无编号者 = 单元测试组内，格内归属以 §7 判据列为准）；先红后绿。
 扩展轮件 = 批次本地单元测试档 ∥ 批次本地冒烟档——T16–T26 ∥ S8–S18（剪贴板端到端 = 本机 OS 面——Windows 以 PowerShell `Get-Clipboard` / `Set-Clipboard` 为对照）。
@@ -732,7 +732,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 - **窗到点的时长半不入发布门**：要判「这个值真当期限用」得有常驻不退出、又不写 `DevToolsActivePort` 的替身可执行档；`launchBrowser` 的 spawn 不带 shell（`thincoder-core/browser/launch.mjs`）⇒ Windows 上 `.cmd` / `.js` 不能当 exe 起，造这种档等于往仓里加包装器。该半由单测 T45（取值）∥ `thincoder-core/browser/launch.mjs` 的 `deadline = Date.now() + timeoutMs`（同一值即期限）判。
 - **冷启首动作的墙钟半同理不入门**：真机自启耗时可复现但不可控；判据住单测 T47 / T48（假传输，两格红/绿），真机面 = 冒烟 S1（首动作 `navigate` 成功）。I-BT3 是门内那一格的真机抽样：宿主无 Chromium ⇒ skip 并打印 `no Chromium-based browser — I-BT3 skipped`（沿 §7 S7 先例），跳过不算绿。
 - **慢机（启动 13–17s）不再 12s 早夭不设门内格**：要一台真慢机或人工降速；证据面 = Gitee IKP6ZI 现场 + 用户机走查。设计侧不为此造假慢分支。
-- **落点**：`test/integration/browser-start-window.test.mjs`（仓根——常驻、不随批删；随仓根 `node test/run.mjs` 走）。收集面 = 仓根 `test/run.mjs` 的单层 glob（`test/integration/*.test.mjs`）；`test/integration/` 之外的档被启动前反查拒收集。批次单测档（T45–T48）仍随批删，与集成档是两个对象。
+- **落点**：`test/integration/browser-start-window.test.mjs`（仓根——常驻、不随批删；随仓根 `node test/run.mjs` 走）。收集面 = 仓根 `test/run.mjs` 的单层 glob（`test/integration/` 目录下一层的用例档）；`test/integration/` 之外的档被启动前反查拒收集。批次单测档（T45–T48）仍随批删，与集成档是两个对象。
 
 ## 12. 多实例共享浏览器（单池 · 引用计数）
 
@@ -937,7 +937,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 |---|---|---|
 | `thincoder-core/browser/session-state.mjs` | 新增：六形实现 ∥ 域过滤 ∥ 写后回读核对 ∥ 回执文法 ∥ 页侧表达式 | 新档——F-BT20 ∥ F-BT21 的主体住这里（不动任何既有档的行数曲线） |
 | `thincoder-core/browser/session.mjs` | +1 import ∥ `ACTION_TABLE` 加一个 spread | **不跨层**：软线 500 行，改后仍在线内 |
-| `thincoder-core/browser/queue.mjs` | `ACTION_BUDGETS` +2 行 | 不跨层：无软线 |
+| `thincoder-core/browser/queue.mjs` | `ACTION_BUDGETS` 加两项 | 不跨层：无软线 |
 | `thincoder-core/tools/browser.mjs` | 动作枚举 +2 · schema +4 属性（`cookies` / `domain` / `area` / `value`）· `validateArgs` 两段条件校验 | 不跨层：无软线 |
 | `thincoder-core/tool-docs/browser.md` | 动作枚举 +2 · 两动作描述段（英文，模型面） | 不跨层：无软线；**产品面**——由 eng-coder 落笔，设计只给内容要求（动作名 ∥ 免审 ∥ 值不打码 ∥ storage 只作于当前页 origin ∥ `domain` 的 IP 只走全等 ∥ `area` 形不对即拒、不落缺省 ∥ `domain` 不带端口（带端口的写法明示拒）∥ 全量面读不出 ⇒ 明示错、不报 `0` 条 ∥ `httpOnly` ∥ `secure` ∥ `sameSite` ∥ `expires` ∥ `path` 形不对即拒、不静默收缺省——`httpOnly:"true"` 会得到一条不是 httpOnly 的 cookie） |
 | `test/integration/browser-session-state.test.mjs` | 新增（常驻——35-1 ∥ 35-2 ∥ 35-3） | 不跨层 |

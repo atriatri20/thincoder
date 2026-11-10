@@ -136,7 +136,7 @@ export function verdictGateFailure(rawResult) {
 
 - **与回显链的并存关系（显式声明）**：回显链判定（§5.1——全串 ∥ 截断容忍 ∥ 恒定标记 ∥ 剥离单源）**本体零改**；签发判定式 = **回显 ∧ 裁定 pass**——本闸 = 回显路内追加的**必要合取**；非回显径（M1）与未完成径（§5）不达本闸、原样。
 - **行形容忍边界**：行首 / 行尾空白与行两侧 markdown 强调符（`*` `_` 反引号）容忍；大小写按逐字面（不折叠——`VERDICT` 大写 ∥ `pass` / `changes-required` 小写 = 提示词面既有逐字形）；行序与「裁定行紧邻回显」不校验；不区分正文 ∥ 代码块（同形行即命中——误引同形行按方向拆分：误引 `changes-required` 同形行 ⇒ 拒（fail-closed、重评可解）∥ 误引独立 `pass` 同形行（无 changes 行）⇒ 可能放行（回显在场即签发））。
-- **提示面随动（产品码——`thincoder-core/advisor/messages.mjs` `buildDesignApprovalBlock`）**：`echo` 串之后新增独立数组项（现体返回数组内、`echo` 与 `🟡` 段之间——designId 在场形 ∥ token-only 降级形两分支同载，单点实现；净 +1 行）；逐字：
+- **提示面随动（产品码——`thincoder-core/advisor/messages.mjs` `buildDesignApprovalBlock`）**：`echo` 串之后新增独立数组项（现体返回数组内、`echo` 与 `🟡` 段之间——designId 在场形 ∥ token-only 降级形两分支同载，单点实现）；逐字：
 
 ```text
 The verdict line is checked mechanically: without a `VERDICT: pass` line, or with a `VERDICT: changes-required` line, no token is issued even when the token is echoed.

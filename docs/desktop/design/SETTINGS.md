@@ -94,7 +94,7 @@
 4. **复选控件 = 拨杆形**（源 = VSC `.switch`）：`input.settings-field[type="checkbox"]` ⇒ `appearance: none` + 轨道 30×16（圆角 8px · 底 `--line`）
    + 圆钮 12px（`#fff` 字面——两主题同值，沿 VSC）+ 选中轨道 `--accent` + 钮右移（`left: 16px`）。**文本输入 ∥ 下拉细边保持（D24 保留面零动）**——仅复选子域换形。
 5. **端差登记（逐条给由 · 不追）**：① 圆角——VSC 6px 族（实读 `thincoder-vscode/webview/settings.css` 八处——卡仅一例）∥ 桌面 `--radius: 0`（扁平化定版）；**卡界（`.prov-row`）例已随用户 10:27 裁定同形**（项 1 ③）——余域不追；② 状态点不采用（项 2）；③ 字级——VSC 12px/600 ∥ `--fs` 14px/400（D29 基线）；④ 表单标位——VSC 标上行 ∥ 桌面标左（`flex: 0 0 6rem`——48rem 列宽域；本次保持）。
-6. **判据**——机检 = 单元测试档（**已建成 · 219 行 · 五组用例 · 9 用例**：行结构断言 ∥ 断行恒定源扫 ∥ 样式纪律（零新变量 ∥ 零新断点）∥ 拨杆四规则 ∥ 卡界源扫（`1px solid var(--line)` + 圆角 6px））；真机 = **T-DSK58**（用户实拍可比）。测试文件随修随加——不占设计面条目。
+6. **判据**——机检 = 单元测试档（**已建成 · 五组用例 · 9 用例**：行结构断言 ∥ 断行恒定源扫 ∥ 样式纪律（零新变量 ∥ 零新断点）∥ 拨杆四规则 ∥ 卡界源扫（`1px solid var(--line)` + 圆角 6px））；真机 = **T-DSK58**（用户实拍可比）。测试文件随修随加——不占设计面条目。
 7. **边界**——交互语义 ∥ 功能增删 ∥ 七段信息架构（段集 ∥ 段序）∥ 布局面（48rem 居中列——零动）· 核 ∥ `thincoder-render-core` ∥ CLI ∥ VSC 侧零触 · 主题变量表 ∥ 断点 ∥ D29 基线零改（**零新变量 ∥ 零新断点**）。
 8. **计数（D3）**——收正段 **7** · 渠道卡结构件（两行 + 一条件行）· 端差 **4** · 新增变量 **0** · 新断点 **0** · 词键 **0**（零新文案）· 新档 **1**（拆档产出）。
 
@@ -287,13 +287,13 @@
 
 **受影响文件（内容行数口径（文末换行不计））**：
 
-| # | 文件 | 行数 |
-|---|---|---|
-| 1 | `thincoder-desktop/renderer/mount-settings-segments.mjs` | **164** |
-| 2 | `thincoder-desktop/renderer/mount-settings-segments-providers.mjs` | **161** |
-| 3 | `thincoder-desktop/renderer/mount-settings-exits.mjs` | **312** |
-| 4 | `thincoder-vscode/webview/settings-models.js` | **217** |
-| 5 | 重建保真 M604 单元测试档 | **529** |
+| # | 文件 |
+|---|---|
+| 1 | `thincoder-desktop/renderer/mount-settings-segments.mjs` |
+| 2 | `thincoder-desktop/renderer/mount-settings-segments-providers.mjs` |
+| 3 | `thincoder-desktop/renderer/mount-settings-exits.mjs` |
+| 4 | `thincoder-vscode/webview/settings-models.js` |
+| 5 | 重建保真 M604 单元测试档 |
 
 全量（含设计档自身行账）= 本域文件账。
 
@@ -381,8 +381,8 @@
    - 退路：**✕（恒在场）∥ 零 Esc ∥ 零背板**（沿现行为——向导零 Esc 绑定——实读 `thincoder-desktop/renderer/views/onboarding.mjs` 档头句）；
    - 与「以后再说」出口（§2.22 项 4）的关系：**「以后再说」= 显式退场（零改）**——④ 只收「完成」的静默退场径，不撤任何既有出口；护栏「仍要退出」= 与 ✕ / 以后再说 同语义（`dismissWizard`），差异仅在时机（被拦后二次确认）。
 
-4. **词表**——`thincoder-desktop/renderer/i18n.mjs`：删 `wizard.save`（两语——消费归零 ⇒ 键面随退，零残键）；增 4 键 × 两语 = `wizard.saveAndNext` ∥ `wizard.finishGuard` ∥ `wizard.finishGuardGo` ∥ `wizard.finishGuardExit`（净 +3——合并表 **349**）；
-   en 零 CJK；`settings.save`（多面共用词）零动；**校验面（⑤ · #1278）零新键**——复用既有五键（`settings.providers.verify` ∥ `.ok` ∥ `.fail` ∥ `.okShort` ∥ `.failShort`——实读 `thincoder-desktop/renderer/i18n-settings.mjs`）⇒ 链不变（**349**）。
+4. **词表**——`thincoder-desktop/renderer/i18n.mjs`：删 `wizard.save`（两语——消费归零 ⇒ 键面随退，零残键）；增 4 键 × 两语 = `wizard.saveAndNext` ∥ `wizard.finishGuard` ∥ `wizard.finishGuardGo` ∥ `wizard.finishGuardExit`（净 +3）；
+   en 零 CJK；`settings.save`（多面共用词）零动；**校验面（⑤ · #1278）零新键**——复用既有五键（`settings.providers.verify` ∥ `.ok` ∥ `.fail` ∥ `.okShort` ∥ `.failShort`——实读 `thincoder-desktop/renderer/i18n-settings.mjs`）⇒ 链不变。
 
 5. **判据（机检 ∥ 真机）**——机检 = 单元测试档（拟——**六用例**：构树 ∥ 逐态接线 ∥ 护栏 ∥ 弹窗负控 ∥ 词表 ∥ **校验消费**（项 8——树面四径 + 投影对拍 + 共序负控））；真机 = **T-DSK70**（§5——含 ⑧⑨ 校验用例）。
 
@@ -424,18 +424,18 @@
 - **会话选定写回链零动**（`src/extension/panel-messages.mjs` ⇒ `carryoverDefaultModel`）。
 6. **受影响文件（口径 = 内容行数——文末换行不计；实读 2026-10-16）**：
 
-| # | 文件 | 现行 ⇒ 预期 |
+| # | 文件 | 改面 |
 |---|---|---|
-| 1 | `thincoder-desktop/renderer/views/settings.mjs` | **454 ⇒ ≈452**（−导入 `modelBody` ∥ −`model` 分派支 ∥ 注释随正——含档头「八段」⇒「七段」） |
-| 2 | `thincoder-desktop/renderer/views/settings-sections.mjs` | **101 ⇒ ≈96**（`modelBody` 净删） |
+| 1 | `thincoder-desktop/renderer/views/settings.mjs` |（−导入 `modelBody` ∥ −`model` 分派支 ∥ 注释随正——含档头「八段」⇒「七段」） |
+| 2 | `thincoder-desktop/renderer/views/settings-sections.mjs` |（`modelBody` 净删） |
 | 3 | `thincoder-desktop/renderer/mount-settings.mjs` | `MODAL_READS` 去 `model` 行 ∥ 注释随正 |
-| 4 | `thincoder-desktop/renderer/mount-settings-exits.mjs` | **312 ⇒ 312**（`useModel` 失败 scope 字面改 `panel`） |
-| 5 | `thincoder-desktop/renderer/i18n-settings.mjs` | **216 ⇒ ≈214**（`settings.section.model` 两语净退——两语各 −1 键） |
-| 6 | `thincoder-desktop/renderer/store.mjs` | **374 ⇒ 374**（结构不变 · `settings.modal` 闭集注释十一 ⇒ 十随正） |
-| 7 | `thincoder-vscode/webview/settings-providers.js` | **193 ⇒ ≈139**（行 HTML + hint 节点 ∥ `_setDefaultModel` ∥ `_defaultModelMenu` ∥ 绑定全退 ∥ 注释全退） |
-| 8 | `thincoder-vscode/src/extension/settings-panel-write.mjs` | **223 ⇒ ≈215**（载荷支 + 探支净删——消费面唯一生产者已撤） |
-| 9 | `thincoder-vscode/webview/ui.js` | **255 ⇒ ≈256**（`onChoose` 出口重指 + 注释随正） |
-| 10 | `thincoder-vscode/locales/en.json` ∥ `zh.json` | 各 **353 ⇒ 350**（−3 键 × 两语——`settings.pickModel` 保留；两语键集相等机检） |
+| 4 | `thincoder-desktop/renderer/mount-settings-exits.mjs` |（`useModel` 失败 scope 字面改 `panel`） |
+| 5 | `thincoder-desktop/renderer/i18n-settings.mjs` |（`settings.section.model` 两语净退——两语各 −1 键） |
+| 6 | `thincoder-desktop/renderer/store.mjs` |（结构不变 · `settings.modal` 闭集注释十一 ⇒ 十随正） |
+| 7 | `thincoder-vscode/webview/settings-providers.js` |（行 HTML + hint 节点 ∥ `_setDefaultModel` ∥ `_defaultModelMenu` ∥ 绑定全退 ∥ 注释全退） |
+| 8 | `thincoder-vscode/src/extension/settings-panel-write.mjs` |（载荷支 + 探支净删——消费面唯一生产者已撤） |
+| 9 | `thincoder-vscode/webview/ui.js` |（`onChoose` 出口重指 + 注释随正） |
+| 10 | `thincoder-vscode/locales/en.json` ∥ `zh.json` | 各（−3 键 × 两语——`settings.pickModel` 保留；两语键集相等机检） |
 | 11 | 单元测试档（两档 · 拟） | desktop（**六用例**：段闭集七段 ∥ `SCOPES` 十 ∥ `MODAL_READS` 十行 ∥ 分派零 `model` 支 ∥ 词键零残 ∥ 写回链——会话选定 ⇒ `defaultModel` 同拍在场 ∥ 同值重选 ⇒ 零写（负控））∥ VSC（三用例：卡树零 `#prov-defaultmodel-row` ∥ `_defaultModelMenu` 零在场 ∥ banner `onChoose` 指向会话菜单）；**用毕即删（零留存）** · 不进集成测试树 |
 | 12 | 触及的在册机检族（设置族 ∥ 设置菜单组项族） | 零留存纪律下**无留档**（`thincoder-desktop/test/files.mjs` = 空清单——2026-09-28 全清重置；盘上仅 `.thincoder/tmp/**` 暂存副本，不参与机检）⇒ 无「变红面」，与「集成面零新增」不抵；实施期按当期实读重建（档头注 + 收口互指——沿 `docs/desktop/design/MENU.md` §6 **DJ** ② 先例） |
 
@@ -446,43 +446,43 @@
 
 ## 3. 文件账（本域）
 
-### 3.1 本端文件清单与行数预算（设置族行）
+### 3.1 文件账（设置族行）
 
-| 文件 | 行数 | 说明 |
-|---|---|---|
-| `thincoder-desktop/src/main/settings.mjs` | **297** | 设置写面（`config:write`——键白名单仅 `locale`）+ 模型面（`model:list`——**逐模型元素投影 `{ id, effortEnum, thinkOff }`**：主进程引核 `specForModel(model).reasoningEffortEnum` / `thinkOffPath(spec)` = 零副本，KD-18；**模型菜单全渠**：`modelCatalog()` 全渠扇出处理体（`hasKeyOf` 渠滤 + `Promise.allSettled` 逐渠核探针 + `unavailable` 诊断项）+ `modelList` 探针径对齐（U1——过代理 ∕ 落账；回执行逐字零变）；单源 = `docs/desktop/design/IPC.md` §2「模型清单注」）+ agent 参数面板（`settings:agent`）——三面共用核 `loadConfig` / `writeConfigAtomic`（零自写盘）；patch 清除面（`null` ⇒ 删键）· slot 权威键拒（`slot-authority`）· advisor 档 helper 单源（`applyAdvisorEffort`）；`indexStatus()` 回执透传 `dbBytes` ∥ `origins`（核只读出口——端侧零 SQL） |
-| `thincoder-desktop/src/main/providers.mjs` | **311** | provider 族**八通道**（`provider:list` / `save` / `remove` / `verify` + **四增**：`setKey` / `delKey` / `models` / `setProxy`——值面住核，端侧零形状构造；S3 写后探单点）；`provider:save` 补写支（`defaultModel` 仅缺失——设计面 KD-5） |
-| `thincoder-desktop/src/main/mcp-servers.mjs` | **262** | MCP 族**六通道**（`mcp:list` / `save` / `remove` / `tools` + **两增**：`update`（原位替换——仅落盘） ∕ `reconnect`（先断后连）——探活失败 ⇒ 零写盘） |
-| `thincoder-desktop/src/main/settings-values.mjs` | **106** | 设置族值面 ∕ 遮罩族（`MASK = MASKED`（**核单源**——S13 import 核 `thincoder-core/agent-tools/settings.mjs`）∕ 叶展平 ∕ 点分路径写——自 `thincoder-desktop/src/main/settings.mjs` 拆出） |
-| `thincoder-desktop/src/main/config-watch.mjs` | **41** | config.json 外部写盘感知落子壳（事件源；去抖 ∕ 自写抑制在核件） |
-| `thincoder-desktop/src/main/index-status.mjs` | **72** | 语义索引面处理体（`index:build` ∕ `index:status` 两通道）；**#697**：`readIndexCounts` 透传 `dbBytes` ∥ `origins`（KD-69） |
-| `thincoder-desktop/src/main/settings-env.mjs` | **93** | 主侧 env 族处理体（`settings:env` 读 ∕ 写 ∕ TestProxy 三支——写经核 `writeConfigAtomic`；**S17**：shell 候选 = 核单源 `thincoder-core/shell-candidates.mjs` 薄壳 re-export） |
-| `thincoder-desktop/src/main/settings-tools.mjs` | **79** | 主侧 tools 族处理体（`settings:tools` 读 ∕ 写两支——密钥值零下发） |
-| `thincoder-desktop/renderer/views/settings.mjs` | **454 ⇒ ≈452** | 设置面七段（**KD-80**：八 ⇒ 七——「模型」段撤场；段体族住 `thincoder-desktop/renderer/views/settings-sections*.mjs`；模型候选消费随 `model:list` 元素形——逐项 `.id`，随动一行；控件族 ∕ 空态 ∕ 确认门 ∕ 拒码词键——形单源 = 本档 §2.2「批注（设置面余面 + 首屏引导门）」） |
-| `thincoder-desktop/renderer/views/settings-sections.mjs` | **101 ⇒ ≈96** | 设置面段体面（渠道 / MCP 两体 + 出档段体 re-export（**KD-80**：`modelBody` 净删——两导出面保留）——自 `thincoder-desktop/renderer/views/settings.mjs` 拆出〔拆分落形 · 300 行层 · 零语义变化〕；导出 `modelHeadNode` / `modelChoicesTree` 供首启向导第二步复用（单一 owner）——零 import 反向〔无环〕） |
-| `thincoder-desktop/renderer/views/settings-agent.mjs` | **193** | 设置面 agent 段体（具名控件表 `NAMED_FIELDS` + `agentBody`——**纯具名**（泛化编辑器全消——#635① · 2026-10-04：桌面同 VSC）；子代理模型槽六件 ∕ advisor 档枚举 ∕ guard 开关） |
-| `thincoder-desktop/renderer/views/settings-controls.mjs` | **193** | 设置面两导出面（`channelFormTree` ∕ `verifyControl`——渠道段与向导第二步共用单 owner；拉取模型控件 ∕ 预设标签形） |
-| `thincoder-desktop/renderer/views/settings-sections-env.mjs` | **129** | 设置面 Environment 段体（proxy ∕ shell 两子节 + TestConnection） |
-| `thincoder-desktop/renderer/views/settings-sections-mcp.mjs` | **261** | 设置面 MCP 段体（行 + Tools ∕ Test 两展开面 + 编辑 ∕ 重连钮与结构化三型表单；**#1036**：env ∥ headers = 行式键值行件——§2.17） |
-| `thincoder-desktop/renderer/views/settings-sections-models.mjs` | **186** | 设置面 Consultation & Advisor 段体（consult 行族 ≤5 + advisor 两 picker） |
-| `thincoder-desktop/renderer/views/settings-sections-providers.mjs` | **212** | 设置面渠道段体（`providersBody` + 行族：两行卡 ∥ 动作簇 ∥ 编辑态 ∥ 第三行——自 `thincoder-desktop/renderer/views/settings-sections.mjs` 出档；决策单源 = 本档 §1 **KD-66**） |
-| `thincoder-desktop/renderer/views/settings-sections-tools.mjs` | **208** | 设置面「工具与服务」段体（embedding ∕ websearch 键行 + 索引状态行 + **S12** index 空态（`no-key`））；**#697**：索引状态行增两读（库大小 ∥ 逐 origin 行数——缺位 ⇒ 零节点） |
-| `thincoder-desktop/renderer/views/onboarding.mjs` | **307** | 首启向导（无终端可完成；闸 = `config:read` 回执 `configured`（配置档存在性）——形态单源 = `docs/desktop/design/UI.md` §1 首启向导行；**登录面补全** 首屏两路——§2.22） |
-| `thincoder-desktop/renderer/mount-settings.mjs` | — | 设置面 / 向导接线出档（自 `thincoder-desktop/renderer/app.mjs` 拆出——拆分落形；通道接线与表单装配，视图构树住 `thincoder-desktop/renderer/views/settings.mjs` / `thincoder-desktop/renderer/views/onboarding.mjs`；读数供给 ∕ 出口 ∕ 段出口三族另档 = 下行四行；**模型菜单全渠**：`onProvidersChanged` 注入转口；**KD-80**：`MODAL_READS` 十一 ⇒ 十行 ∥ `SCOPES` 派生十） |
-| `thincoder-desktop/renderer/mount-settings-reads.mjs` | **210** | 设置面七段读数供给族（各段 load 面 + 激活渠道投影）——候选改由 `model:list` 切片派生（设计 +≤8 预算未用） |
-| `thincoder-desktop/renderer/mount-settings-exits.mjs` | **312** | 设置面出口族 + 写路辅助（形式取值 ∕ Esc 关闭绑定；**模型菜单全渠**：deps 解构 + 两写成功点调用——`provider:save` ∕ `provider:remove` ⇒ `onProvidersChanged`；渠道段出口出行——见 `mount-settings-segments-providers.mjs`） |
-| `thincoder-desktop/renderer/mount-settings-segments-mcp.mjs` | **327** | 设置面 MCP 段出口族（增 ∕ 改 ∥ 编辑 ∥ 类型切换 ∥ 移除 ∥ 工具 ∥ 探活 ∥ 重连 + **kv 行令牌两出口**——自 `mount-settings-segments.mjs` 出档；缝 = 同形工厂 `create*Exits(deps)`；装配点 `mount-settings-exits.mjs` 装配即合并——单一 `handlers` 表对外零改） |
-| `thincoder-desktop/renderer/mount-settings-segments.mjs` | **164** | 设置面段出口族（env ∥ 工具与服务；**#1036**：MCP 族出档 `mount-settings-segments-mcp.mjs`） |
-| `thincoder-desktop/renderer/mount-settings-segments-models.mjs` | **192** | 设置面 models 段出口族（consult ∕ advisor 八出口） |
-| `thincoder-desktop/renderer/mount-settings-segments-providers.mjs` | **161** | 设置面渠道段出口族（S1 ∕ S2 ∕ S5 六出口——自 `mount-settings-exits.mjs` 按族续拆，债注③预案落形；两形提交 ∕ 钥存 ∕ 取消径三处声明缝） |
-| `thincoder-desktop/renderer/mount-settings-segments-agent.mjs` | **98** | 设置面 agent 段出口族（S10 ∕ S11 ∕ S14b 出口与单键 patch 写路——**即改即存**（零保存键：泛化批净删；写面 = `namedOut` 单键 patch）） |
-| `thincoder-desktop/renderer/settings-confirm.mjs` | **80** | 设置面删除确认件（不可复得类四门前置确认——`.auto-confirm` 族复用 · 零新 CSS；`onConfirm` = 开框时捕获闭包；形对位 VSC `settings-widgets.js`） |
-| `thincoder-desktop/renderer/settings-modal.mjs` | **70** | 设置组弹窗宿主（背板 z-20 ∥ 居中卡 z-21；挂 `document.body`——沿 `settings-confirm.mjs` 先例；决策单源 = 本档 §1 **KD-68**） |
-| `thincoder-desktop/renderer/settings-modal.css` | **51** | 设置组弹窗样式（不进 `thincoder-desktop/renderer/settings.css`——在册越线档零触） |
-| `thincoder-desktop/renderer/mount-onboarding.mjs` | **235** | 向导接线族（自 `thincoder-desktop/renderer/mount-settings.mjs` 拆出——`presetValue` / `pickDir` / `nextStep` / `finishWizard` / `wizardHandlers`；共享项 `submitChannel` / `verifyChannel` / `loadModels` 留原档 ⇒ deps 注入）；通道面 = `docs/desktop/design/IPC.md` §2 设置族注；形态单源 = `docs/desktop/design/UI.md` §1 首启向导行 |
-| `thincoder-desktop/renderer/settings.css` | **357** | 设置面板 / 向导样式（分档理由 = 样式总档曾贴 300 层（已拆）——沿 `thincoder-desktop/renderer/chat.css` / `pool.css` 先例）；**主题钮族（D33）带上**——次级键族成员（计数镜随 #713 收口以 `docs/desktop/design/UI.md` §1 为单源） |
-| `thincoder-desktop/renderer/views/settings-sections-team.mjs` | **143** | 设置面团队段体 —— 卡降管理面（label ∥ 详情；零登/退）；登/退形（`teamBody`）迁就地面板（`mount-team.mjs` 消费） |
-| `thincoder-desktop/src/main/team.mjs` | **46** | 团队通道主进程处理体（核 `thincoder-desktop/src/main/team.mjs` 转口；+verify 转口） |
+| 文件 | 说明 |
+|---|---|
+| `thincoder-desktop/src/main/settings.mjs` | 设置写面（`config:write`——键白名单仅 `locale`）+ 模型面（`model:list`——**逐模型元素投影 `{ id, effortEnum, thinkOff }`**：主进程引核 `specForModel(model).reasoningEffortEnum` / `thinkOffPath(spec)` = 零副本，KD-18；**模型菜单全渠**：`modelCatalog()` 全渠扇出处理体（`hasKeyOf` 渠滤 + `Promise.allSettled` 逐渠核探针 + `unavailable` 诊断项）+ `modelList` 探针径对齐（U1——过代理 ∕ 落账；回执行逐字零变）；单源 = `docs/desktop/design/IPC.md` §2「模型清单注」）+ agent 参数面板（`settings:agent`）——三面共用核 `loadConfig` / `writeConfigAtomic`（零自写盘）；patch 清除面（`null` ⇒ 删键）· slot 权威键拒（`slot-authority`）· advisor 档 helper 单源（`applyAdvisorEffort`）；`indexStatus()` 回执透传 `dbBytes` ∥ `origins`（核只读出口——端侧零 SQL） |
+| `thincoder-desktop/src/main/providers.mjs` | provider 族**八通道**（`provider:list` / `save` / `remove` / `verify` + **四增**：`setKey` / `delKey` / `models` / `setProxy`——值面住核，端侧零形状构造；S3 写后探单点）；`provider:save` 补写支（`defaultModel` 仅缺失——设计面 KD-5） |
+| `thincoder-desktop/src/main/mcp-servers.mjs` | MCP 族**六通道**（`mcp:list` / `save` / `remove` / `tools` + **两增**：`update`（原位替换——仅落盘） ∕ `reconnect`（先断后连）——探活失败 ⇒ 零写盘） |
+| `thincoder-desktop/src/main/settings-values.mjs` | 设置族值面 ∕ 遮罩族（`MASK = MASKED`（**核单源**——S13 import 核 `thincoder-core/agent-tools/settings.mjs`）∕ 叶展平 ∕ 点分路径写——自 `thincoder-desktop/src/main/settings.mjs` 拆出） |
+| `thincoder-desktop/src/main/config-watch.mjs` | config.json 外部写盘感知落子壳（事件源；去抖 ∕ 自写抑制在核件） |
+| `thincoder-desktop/src/main/index-status.mjs` | 语义索引面处理体（`index:build` ∕ `index:status` 两通道）；**#697**：`readIndexCounts` 透传 `dbBytes` ∥ `origins`（KD-69） |
+| `thincoder-desktop/src/main/settings-env.mjs` | 主侧 env 族处理体（`settings:env` 读 ∕ 写 ∕ TestProxy 三支——写经核 `writeConfigAtomic`；**S17**：shell 候选 = 核单源 `thincoder-core/shell-candidates.mjs` 薄壳 re-export） |
+| `thincoder-desktop/src/main/settings-tools.mjs` | 主侧 tools 族处理体（`settings:tools` 读 ∕ 写两支——密钥值零下发） |
+| `thincoder-desktop/renderer/views/settings.mjs` |（**KD-80**：八 ⇒ 七——「模型」段撤场；段体族住 `thincoder-desktop/renderer/views/settings-sections*.mjs`；模型候选消费随 `model:list` 元素形——逐项 `.id`，随动一行；控件族 ∕ 空态 ∕ 确认门 ∕ 拒码词键——形单源 = 本档 §2.2「批注（设置面余面 + 首屏引导门）」） |
+| `thincoder-desktop/renderer/views/settings-sections.mjs` | 设置面段体面（渠道 / MCP 两体 + 出档段体 re-export（**KD-80**：`modelBody` 净删——两导出面保留）——自 `thincoder-desktop/renderer/views/settings.mjs` 拆出〔拆分落形 · 300 行层 · 零语义变化〕；导出 `modelHeadNode` / `modelChoicesTree` 供首启向导第二步复用（单一 owner）——零 import 反向〔无环〕） |
+| `thincoder-desktop/renderer/views/settings-agent.mjs` |（具名控件表 `NAMED_FIELDS` + `agentBody`——**纯具名**（泛化编辑器全消——#635① · 2026-10-04：桌面同 VSC）；子代理模型槽六件 ∕ advisor 档枚举 ∕ guard 开关） |
+| `thincoder-desktop/renderer/views/settings-controls.mjs` |（`channelFormTree` ∕ `verifyControl`——渠道段与向导第二步共用单 owner；拉取模型控件 ∕ 预设标签形） |
+| `thincoder-desktop/renderer/views/settings-sections-env.mjs` | 设置面 Environment 段体（proxy ∕ shell 两子节 + TestConnection） |
+| `thincoder-desktop/renderer/views/settings-sections-mcp.mjs` | 设置面 MCP 段体（行 + Tools ∕ Test 两展开面 + 编辑 ∕ 重连钮与结构化三型表单；**#1036**：env ∥ headers = 行式键值行件——§2.17） |
+| `thincoder-desktop/renderer/views/settings-sections-models.mjs` | 设置面 Consultation & Advisor 段体（consult 行族 ≤5 + advisor 两 picker） |
+| `thincoder-desktop/renderer/views/settings-sections-providers.mjs` | 设置面渠道段体（`providersBody` + 行族：两行卡 ∥ 动作簇 ∥ 编辑态 ∥ 第三行——自 `thincoder-desktop/renderer/views/settings-sections.mjs` 出档；决策单源 = 本档 §1 **KD-66**） |
+| `thincoder-desktop/renderer/views/settings-sections-tools.mjs` | 设置面「工具与服务」段体（embedding ∕ websearch 键行 + 索引状态行 + **S12** index 空态（`no-key`））；**#697**：索引状态行增两读（库大小 ∥ 逐 origin 行数——缺位 ⇒ 零节点） |
+| `thincoder-desktop/renderer/views/onboarding.mjs` | 首启向导（无终端可完成；闸 = `config:read` 回执 `configured`（配置档存在性）——形态单源 = `docs/desktop/design/UI.md` §1 首启向导行；**登录面补全** 首屏两路——§2.22） |
+| `thincoder-desktop/renderer/mount-settings.mjs` | 设置面 / 向导接线出档（自 `thincoder-desktop/renderer/app.mjs` 拆出——拆分落形；通道接线与表单装配，视图构树住 `thincoder-desktop/renderer/views/settings.mjs` / `thincoder-desktop/renderer/views/onboarding.mjs`；读数供给 ∕ 出口 ∕ 段出口三族另档 = 下行四行；**模型菜单全渠**：`onProvidersChanged` 注入转口；**KD-80**：`MODAL_READS` 十一 ⇒ 十行 ∥ `SCOPES` 派生十） |
+| `thincoder-desktop/renderer/mount-settings-reads.mjs` | 设置面七段读数供给族（各段 load 面 + 激活渠道投影）——候选改由 `model:list` 切片派生（设计 +≤8 预算未用） |
+| `thincoder-desktop/renderer/mount-settings-exits.mjs` | 设置面出口族 + 写路辅助（形式取值 ∕ Esc 关闭绑定；**模型菜单全渠**：deps 解构 + 两写成功点调用——`provider:save` ∕ `provider:remove` ⇒ `onProvidersChanged`；渠道段出口出行——见 `mount-settings-segments-providers.mjs`） |
+| `thincoder-desktop/renderer/mount-settings-segments-mcp.mjs` | 设置面 MCP 段出口族（增 ∕ 改 ∥ 编辑 ∥ 类型切换 ∥ 移除 ∥ 工具 ∥ 探活 ∥ 重连 + **kv 行令牌两出口**——自 `mount-settings-segments.mjs` 出档；缝 = 同形工厂 `create*Exits(deps)`；装配点 `mount-settings-exits.mjs` 装配即合并——单一 `handlers` 表对外零改） |
+| `thincoder-desktop/renderer/mount-settings-segments.mjs` | 设置面段出口族（env ∥ 工具与服务；**#1036**：MCP 族出档 `mount-settings-segments-mcp.mjs`） |
+| `thincoder-desktop/renderer/mount-settings-segments-models.mjs` | 设置面 models 段出口族（consult ∕ advisor 八出口） |
+| `thincoder-desktop/renderer/mount-settings-segments-providers.mjs` | 设置面渠道段出口族（S1 ∕ S2 ∕ S5 六出口——自 `mount-settings-exits.mjs` 按族续拆，债注③预案落形；两形提交 ∕ 钥存 ∕ 取消径三处声明缝） |
+| `thincoder-desktop/renderer/mount-settings-segments-agent.mjs` | 设置面 agent 段出口族（S10 ∕ S11 ∕ S14b 出口与单键 patch 写路——**即改即存**（零保存键：泛化批净删；写面 = `namedOut` 单键 patch）） |
+| `thincoder-desktop/renderer/settings-confirm.mjs` | 设置面删除确认件（不可复得类四门前置确认——`.auto-confirm` 族复用 · 零新 CSS；`onConfirm` = 开框时捕获闭包；形对位 VSC `settings-widgets.js`） |
+| `thincoder-desktop/renderer/settings-modal.mjs` | 设置组弹窗宿主（背板 z-20 ∥ 居中卡 z-21；挂 `document.body`——沿 `settings-confirm.mjs` 先例；决策单源 = 本档 §1 **KD-68**） |
+| `thincoder-desktop/renderer/settings-modal.css` | 设置组弹窗样式（不进 `thincoder-desktop/renderer/settings.css`——在册越线档零触） |
+| `thincoder-desktop/renderer/mount-onboarding.mjs` | 向导接线族（自 `thincoder-desktop/renderer/mount-settings.mjs` 拆出——`presetValue` / `pickDir` / `nextStep` / `finishWizard` / `wizardHandlers`；共享项 `submitChannel` / `verifyChannel` / `loadModels` 留原档 ⇒ deps 注入）；通道面 = `docs/desktop/design/IPC.md` §2 设置族注；形态单源 = `docs/desktop/design/UI.md` §1 首启向导行 |
+| `thincoder-desktop/renderer/settings.css` | 设置面板 / 向导样式（分档理由 = 样式总档曾贴 300 层（已拆）——沿 `thincoder-desktop/renderer/chat.css` / `pool.css` 先例）；**主题钮族（D33）带上**——次级键族成员（计数镜随 #713 收口以 `docs/desktop/design/UI.md` §1 为单源） |
+| `thincoder-desktop/renderer/views/settings-sections-team.mjs` | 设置面团队段体 —— 卡降管理面（label ∥ 详情；零登/退）；登/退形（`teamBody`）迁就地面板（`mount-team.mjs` 消费） |
+| `thincoder-desktop/src/main/team.mjs` | 团队通道主进程处理体（核 `thincoder-desktop/src/main/team.mjs` 转口；+verify 转口） |
 
 ## 4. 验收回指（本域需求条目 · 判据全文）
 
@@ -497,7 +497,7 @@
 | **D24**（设置面面） | 外壳视觉降噪——设置面映射 9 面（6 改 + 3 保留）；主条 = `docs/desktop/design/UI.md` §1「批注（外壳视觉降噪 · D24）」；本档半边 = §2.1（外壳降噪句）+ §2.5 项 1 ③（卡界让位） | 本档 §2 各节 |
 
 **设置面样式收正批（验收 · 需求 D37）**：需求回指 = **D37**（设置面样式对 VSC 端对齐——收正全七段；功能面不删 ∥ 七段信息架构 ∥ 布局面零动）；设计单源 = 本档 §1 **KD-66** ∥ 本档 §2.5。
-机检 = 单元测试档（**已建成 · 219 行 · 五组用例 · 9 用例**：① 行结构断言（渠道行平 node 直测：两行结构 ∥ 动作簇四件序 = 修改 ∥ ✕ ∥ 校验 ∥ 移除名（现盘序——本档 §1 KD-66 ②））；
+机检 = 单元测试档（**已建成 · 五组用例 · 9 用例**：① 行结构断言（渠道行平 node 直测：两行结构 ∥ 动作簇四件序 = 修改 ∥ ✕ ∥ 校验 ∥ 移除名（现盘序——本档 §1 KD-66 ②））；
 ② 断行恒定（`thincoder-desktop/renderer/settings.css` 源扫：`.settings-row` `nowrap` ∥ 省略四件 ∥ 原因句豁免（`[data-unavailable-reason]`——置位 = `thincoder-desktop/renderer/views/settings-sections-providers.mjs`）保 `white-space: normal`；
 补则——MCP 展开面豁免（`.settings-mcp-detail` 域值面 `white-space: normal`——行族通则本体零动））；
 ③ 样式纪律（零新变量（`--` 定义数 0）∥ 零 `@media`（零新断点））；④ 拨杆形四规则在位；⑤ 卡界源扫（`.settings-row` = `1px solid var(--line)` 描边 + 圆角 `6px` 在位——用户 2026-10-02 10:27 直裁形落））；随批留存 · 不进集成测试树。
@@ -559,7 +559,7 @@
 | T-DSK64 | 正常 / 边界 · 缺激活渠道态补设（#842） | ① `defaultModel` 缺 ∧ 双已配渠 ⇒ 入向导步 2（另例：输入区模型钮全渠菜单——设置页「模型」段已随 **KD-80** 撤场）② 行「采用」点击 ③ catalog 失败（探针不可达） ④ 无已配渠 ⑤ 缺激活渠道态入向导步 2（同链推证） | ① 段 `ready` + 全渠候选行（`provider · id`） ② `settings:agent` 写 `defaultModel=<provider>:<id>` ⇒ 回读后段转常规（激活渠出现） ③ 段 `none` + 失败面（零静默）+ 零假造候选 ④ 候选空 + 空态词（禁假造——既有） ⑤ 向导候选面 = 全渠（同一 `loadModels` 注入引用）∧「采用」⇒ 落 `defaultModel` | 单元测试档（#842 用例四：全渠候选 ∥ 采用写盘 ∥ 空 / 失败态 ∥ 向导同链） |
 | T-DSK32 | 正常 · 首启空态引导（真 Electron） | 空 fixture 家（无 config ⇒ 无项目 / 无会话；另**预置**会话槽族档一枚〔`cwd` = 项目根——resume 开页落点〕）——新装首启 | ① 向导退场后：`[data-guide="no-project"]` 在场（含 `button[data-action="project:open"]`）∧ 输入框 `disabled` ② **真点**会话控制面项目钮（`button.session-project`——对话框夹具 `PROJ`，照 `docs/desktop/design/E2E-TESTING.md` §3.5 第 6 步）⇒ `[data-guide="no-message"]` ∧ 输入框非 `disabled` ③ 键入 + Enter ⇒ 输入值保留 ∧ `data-blocks="0"` ∧ console 出 `[composer] msg:send failed: `（不静默丢文本） | 机检 = 单元测试档惯例（原集成测试档随 2026-09-28 全清重置退场——重建时按 §4.1 登记）；十序断言单源 = `docs/desktop/design/E2E-TESTING.md` §3.5 |
 | T-DSK43 ④⑤ | 正常 · 小修族（设置面面 · 对齐第三批） | 设置面 agent 段具名控件 + `change` 即改即存；设置面开 ⇒ `Escape` ⇒ 关闭 | ④ 设置面 agent 段 = 具名控件 ∧ `change` ⇒ 即改即存（回执后回读同值）——离线可产；⑤ 设置面开 ⇒ `Escape` ⇒ 关闭（`[data-slot="settings"]` 清空）——离线可产（**F-Esc 判据**） | 判据载体 = 本档 §2.4；单源行（T-DSK43 全行）= `docs/desktop/design/PROJECT.md` §7（混装行——留原址） |
-| T-DSK58 | 正常 / 边界 · 设置面样式收正（D37 · 真 Electron） | 真 Electron（fixture 家 `{"locale":"en"}`——`isConfigured` = 档存在）⇒ 启动 ⇒ 开设置面（`[data-slot="settings"]`） | ① 渠道段每行 = 两行卡（主行：名 + 钥面 + 动作簇（修改 ∥ ✕ ∥ 校验 ∥ 移除名）∥ 副行：`模型 · URL` + 代理开关）（**轮六**：校验钮触发 ⇒ 该行按钮 = 态短形（校验通过 ∥ 校验失败——锚 `data-verify-state`）+ 该行明细行；无行渲出结果（名不在列表 ∥ kind 表外）⇒ 段末回退）；② 长名 ∥ 长 URL ⇒ 省略不折、动作簇恒右对齐（窄窗拖至 ~800px 结构不变）；③ 钥编辑态 = 输入 + 存/消（代理 ∥ 移除 ∥ 校验暂撤——取消即回）；④ 复选控件 = 拨杆形（选中 `--accent`——亮 ∥ 暗两模式）；⑤ 全七段行族零参差折行；⑥ 全程零 `pageerror` | 机检 = 单元测试档（已建成 · 219 行 · 五组用例 · 9 用例；随批留存 · 不进集成测试树）；用例号自铸披露 = 本档 §6 **DH**（在册） |
+| T-DSK58 | 正常 / 边界 · 设置面样式收正（D37 · 真 Electron） | 真 Electron（fixture 家 `{"locale":"en"}`——`isConfigured` = 档存在）⇒ 启动 ⇒ 开设置面（`[data-slot="settings"]`） | ① 渠道段每行 = 两行卡（主行：名 + 钥面 + 动作簇（修改 ∥ ✕ ∥ 校验 ∥ 移除名）∥ 副行：`模型 · URL` + 代理开关）（**轮六**：校验钮触发 ⇒ 该行按钮 = 态短形（校验通过 ∥ 校验失败——锚 `data-verify-state`）+ 该行明细行；无行渲出结果（名不在列表 ∥ kind 表外）⇒ 段末回退）；② 长名 ∥ 长 URL ⇒ 省略不折、动作簇恒右对齐（窄窗拖至 ~800px 结构不变）；③ 钥编辑态 = 输入 + 存/消（代理 ∥ 移除 ∥ 校验暂撤——取消即回）；④ 复选控件 = 拨杆形（选中 `--accent`——亮 ∥ 暗两模式）；⑤ 全七段行族零参差折行；⑥ 全程零 `pageerror` | 机检 = 单元测试档（已建成 · 五组用例 · 9 用例；随批留存 · 不进集成测试树）；用例号自铸披露 = 本档 §6 **DH**（在册） |
 | **T-DSK66** | 正常 / 边界 · MCP 键值行式输入（#1036 · 真 Electron） | 真 Electron：设置页 ∥ 弹窗两态——① stdio 新增：env 加两行（① `A=1` ② `TOKEN=va,lue`）⇒ 保存 ⇒ 重开编辑 ② http 新增：headers 加一行（`Authorization=Bearer x`——值含空格）∥ ✕ 删一行 ∥ 加空行不填 ∥ 类型切 http↔ws↔stdio 来回 | ① 值含逗号逐字存活（config.json `env.TOKEN === "va,lue"`）；重开回显 = 两行两格逐字 ② headers 值含空格存活；✕ ⇒ 行即摘；空行保存后消失（不落盘）；切换来回 ⇒ 已输入行不丢（令牌不复用 ⇒ 无残值复活）；零 `pageerror` | 机检 = 单元测试档（已落（实读 2026-10-10） · 四用例；随批留存 · 不进集成测试树）；用例号裁归（T-DSK66——并号裁定归号） |
 | **R1** | 正常 · 一级全渠与选取（真机） | 配 ≥2 有 key 渠（含自定义） | 菜单一级行数 = 渠数 ∧ 行序 = 配置序 ∧ 每渠悬停列模型 ∧ 选取 ⇒ 槽写生效（跨端同槽复核） | 真机（父侧收口 · 桌面 + VSC 同配置对拍） |
 | **R2** | 正常 · 跨端集合对照（真机） | 桌面 ∥ VSC 同 config | 桌面一级行集合 = VSC 一级行集合（集合相等——按 provider 键取集合，勿按显示文本：桌面分组标题 = 渠名 ∕ VSC = `providerLabel`） | 真机（父侧收口） |
@@ -577,7 +577,7 @@
 
 （本域用例全文迁讫（T-DSK8 ∥ 9 ∥ 10 ∥ 13 ∥ 32 ∥ 58 + **R1–R7**——真机条目，模型菜单全渠）。
 
-- **批注齐平** = **模型菜单全渠注**（机检 = 单元测试档——**300** 行 · 9 用例：handler 面（真核探针径 + 本地回环 HTTP 桩）· 通道四件套结构机检 · store 纯动作 · 触发六径）。
+- **批注齐平** = **模型菜单全渠注**（机检 = 单元测试档——9 用例：handler 面（真核探针径 + 本地回环 HTTP 桩）· 通道四件套结构机检 · store 纯动作 · 触发六径）。
 - **不新增 T-DSK 用例号**——真机收口面，沿 flow 批「真机走查面登记」先例；**离线不可产面**（真 provider 往返 ∥ 真机交互）⇒ 人工走查 + 父侧真跑闭合（D16 义务）。
 （T-DSK27（E2E 域）∥ T-DSK43 余项（外围混装）∥ T-DSK16–19 留 `docs/desktop/design/PROJECT.md` §7 原址。）
 

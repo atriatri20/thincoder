@@ -482,7 +482,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 判据（本节定 · 三条）：
 
 - **判据 A（范围单位 = 工作集）**：origin 的索引范围 = 用户会编辑 ∕ 需要检索的项目树；「多个互不相干项目的容器」（非 git 仓、子目录各为独立 git 仓）全量入索引无判据支撑。
-- **判据 B（成本 ∝ 行数）**：每回合召回扫描成本 ∝ 该 origin 行数（§6.10 实测 65,704 行 ≈ 1.71 s）；参考系树（只读分析材料）与工作树同权入索引 ⇒ 成本由全部行付、价值只从少数行来。
+- **判据 B（成本 ∝ 行数）**：每回合召回扫描成本 ∝ 该 origin 行数（§6.10 的实测形：成本随行数线性增长）；参考系树（只读分析材料）与工作树同权入索引 ⇒ 成本由全部行付、价值只从少数行来。
 - **判据 C（范围可声明）**：产品不硬编码「哪些目录是参考系」——范围由**项目声明**给出（单一声明载体 = `PROJECT-MANIFEST.json`——KD-M1-31）。
 
 落面（三件）：
@@ -509,7 +509,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 |---|---|---|---|
 | B1 | 每回合 `docSearch` 向量扫描（`thincoder-core/agent/setup.mjs` → `thincoder-core/memory/docs.mjs`） | 分块 + 50 ms 预算让出（§6.10 A2）；墙钟 ≈ 26 µs ∕ 行 | **留**——成本上界由面 ③ 行预算约束 |
 | B2 | 每回合 embedding 回填探针（`thincoder-core/memory/core.mjs` · `thincoder-core/memory/code-sync.mjs` · `thincoder-core/memory/docs.mjs`） | **无索引全表扫**——计划实读 = `SCAN code_chunks` ∕ `SCAN doc_chunks`；depth-0 回合三趟（doc ×2 + code ×1）· 零命中白扫 | **改**：schema v10 增**部分索引**——可建 DDL = `CREATE INDEX code_chunks_embedding_null ON code_chunks(embedding) WHERE embedding IS NULL`（doc 表同款 `doc_chunks_embedding_null`）⇒ 探针 O(待回填)；**预期计划读数（实测形）** = `SEARCH <表> USING INDEX <名> (embedding=?)`。键列取 `embedding`——**`rowid` 不可作索引键列**（本机实测 `no such column: rowid`；鉴别句入 D-MEM22） |
-| B3 | 每回合 `COUNT(*) FROM doc_chunks`（`thincoder-core/agent/setup.mjs` 的计数行） | 覆盖索引全扫（77,629 行）且**跨 origin** | **改**：origin 限定 + 有界计数——**界值 = `INDEX_ORIGIN_ROW_WARN`（100,000）复用**（「+」界 = WARN 线随动——正常规模给真实数 ∕ 越界给「+」形 `100000+`） |
+| B3 | 每回合 `COUNT(*) FROM doc_chunks`（`thincoder-core/agent/setup.mjs` 的计数行） | 覆盖索引全扫且**跨 origin** | **改**：origin 限定 + 有界计数——**界值 = `INDEX_ORIGIN_ROW_WARN`（100,000）复用**（「+」界 = WARN 线随动——正常规模给真实数 ∕ 越界给「+」形 `100000+`） |
 | B4 | 每会话一次 `buildSummary`（`thincoder-core/agent/setup.mjs` → `thincoder-core/tools/repomap.mjs`） | `SELECT DISTINCT path FROM code_chunks`（**跨 origin**）+ 逐文件读盘 | **改**：origin 过滤 + 文件数上界——**上界 = `INDEX_ORIGIN_ROW_WARN` 值复用（随 WARN = 100,000）**（越界 = 提示行 + 跳过：不构建大纲，附指路 `index.excludePaths`） |
 | B5 | 每写一次 `reindexFile`（`thincoder-core/agent/record-results.mjs` 的 fire-and-forget 处） | 单文件事务 + 探针（B2 切后即消） | **留** |
 | B6 | 全量同步 `codeSync` ∕ `docSync`（CLI `thincoder-cli/src/tui/startup.mjs` ∥ 桌面 `thincoder-desktop/src/main/index-status.mjs` ∥ VSC `thincoder-vscode/src/extension/panel-index.mjs`） | 逐文件 `yieldTick`；**收尾 stale 删除循环零让出**（`thincoder-core/memory/code-sync.mjs` ∕ `thincoder-core/memory/docs.mjs` 的收尾段） | **改**：收尾循环加让出（同款时间片预算）+ stale 判据对排除命中路径短路（面① 收尾保护位）——**现体 = `thincoder-core/memory/sync-tail.mjs` `sweepStaleRows`**（单源；两入口消费 = `thincoder-core/memory/code-sync.mjs` ∕ `thincoder-core/memory/docs.mjs`） |
@@ -565,14 +565,14 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 
 **位置族**（`AppData` ∥ `Application Data` ∥ `Desktop` ∥ `Documents` ∥ `Downloads` ∥ `Music` ∥ `Pictures` ∥ `Videos` ∥ `OneDrive` ∥ `Contacts` ∥ `Favorites` ∥ `Links` ∥ `Saved Games` ∥ `Searches` ∥ `Library` ∥ `go` ∥ `Program Files` ∥ `Program Files (x86)` ∥ `Windows` ∥ `$Recycle.Bin`）**全平台精确**
 
-（位置语义；全表折误剪合法同名面 443 行——见下）；POSIX 一律精确。
+（位置语义；全表折会误剪合法同名面——见下）；POSIX 一律精确。
 **枚举对账（全列可核）**：
 - 上两族枚举 + **`.git` 单列** = 与 `thincoder-core/memory/schema.mjs` 名表常量块**逐名对齐的全集**（垃圾族 18 = 既有 12 + 新六 ∥ 位置族 20 ∥ `.git` 1——合计 39 名 = 既有 33 + 新六）。
 - **`.git` 处置点名** = **点段规则覆盖**（`thincoder-core/memory/file-walk.mjs` 的点段规则——`.` 起始段一律跳；折与不折不影响判定 ⇒ 行为零变），不入两族。
 
 谓词 = 精确命中（`SKIP_DIRS`）∨ 前缀命中（`bazel-`——POSIX 字面 ∥ win32 折）∨（win32 ∧ `SKIP_DIRS_FOLD` 折叠命中）。签名 `isSkippedRelPath(rel, platform = process.platform)`（平台入参仅供直测双道；**既有调用点零改**）。**与 §6.11 origin 归一无关**（名表判定 ≠ 路径键折叠）——§6.11「非盘符段不折」口径不动；`thincoder-core/memory/schema.mjs` 的表头自注。
 
-**折叠范围裁决 = 族分折**——垃圾 ∕ 产物族 win32 折 ∥ 位置族全平台精确 ∥ POSIX 一律精确。证据 = 全表折会误剪合法同名面 443 行（`desktop` 428：本仓 `thincoder/docs/desktop/**` 286 ∥ `opencode/packages/desktop` 98 ∥ `openclaw` 44 · `library` 15：`openclaw/src/skills/library`）——族分折下二者保持入索引（判假围栏锁）；需求档 F-S9（族分折口径）在册。
+**折叠范围裁决 = 族分折**——垃圾 ∕ 产物族 win32 折 ∥ 位置族全平台精确 ∥ POSIX 一律精确。证据 = 全表折会误剪合法同名面（`desktop`：本仓 `thincoder/docs/desktop/**` ∥ `opencode/packages/desktop` ∥ `openclaw` · `library`：`openclaw/src/skills/library`）——族分折下二者保持入索引（判假围栏锁）；需求档 F-S9（族分折口径）在册。
 
 **三路同谓词（单源不变 · 零消费者改动）**：`isSkippedRelPath` 即唯一跳过判定——消费面全部现存：walk 双守卫（`thincoder-core/memory/file-walk.mjs`）· git 列面（`thincoder-core/memory/file-list.mjs`）· gitSync diff 缝（`thincoder-core/memory/code-sync.mjs` 的 diff 缝）· 单文件缝（`thincoder-core/memory/code-sync.mjs` 的 `reindexFile` 缝）；
 
@@ -584,7 +584,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 |---|---|---|---|
 | 1 | 近似名 | `output` ∥ `outbox` ∥ `outside` · `objc` ∥ `objects` · `vendors` · `bower-components` · `third-party` | 精确 basename（非前缀 ∕ 非子串）；下划线 ∕ 连字符不同名 |
 | 2 | 前缀护栏 | `bazel`（无 `-`）· `bazel_x`（下划线） | 前缀字面 = `bazel-` |
-| 3 | 位置族大小写变体（win32 亦判假） | `desktop` ∥ `library` ∥ `documents` ∥ `windows` | 族分折——位置族全平台精确（「全表折」误剪面 443 行的护栏锁） |
+| 3 | 位置族大小写变体（win32 亦判假） | `desktop` ∥ `library` ∥ `documents` ∥ `windows` | 族分折——位置族全平台精确（「全表折」误剪面的护栏锁） |
 | 4 | 垃圾族 POSIX 变体 | POSIX 上 `Node_Modules` ∥ `OBJ` ∥ `Vendor` ∥ `Bazel-bin` | POSIX 一律精确——不折 |
 | 5 | 用户裁定面 | `bin`（任意深度） | 不进排除表——保持入索引 |
 | 6 | 文件名形 | `out.md` ∥ `out.js`（带扩展名） | 段名精确不中；无扩展名同名文件（裸 `out`）判真但本不入索引（扩展名门）——净零影响 |
@@ -595,9 +595,9 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 
 **读数**（候选谓词原型逐例跑 + 实库只读；库活跃——读数为时点值）：
 
-- **谓词矩阵（族分折版）**：47 例（垃圾族正例 ∥ 位置族正例 ∥ 位置族变体判假 ∥ 判假围栏 · win32 ∥ POSIX 双道）**零不一致**——垃圾族变体 win32 真 ∕ POSIX 假；位置族变体两道皆假；
-- **实库段命中**（`code_chunks` + `doc_chunks` 段级）：`obj` ∥ `vendor` **现值 = 0（已清）**；`out` ∥ `Pods` ∥ `bower_components` ∥ `third_party` ∥ `bazel-*` = 0；`bin` = 45 行（不进排除表，零触碰）；
-- 位置族变体 = 443 行（`desktop` 428 ∥ `library` 15——族分折下**不剪**，见「折叠范围裁决」块）。
+- **谓词矩阵（族分折版）**：垃圾族正例 ∥ 位置族正例 ∥ 位置族变体判假 ∥ 判假围栏 · win32 ∥ POSIX 双道 —— **零不一致**——垃圾族变体 win32 真 ∕ POSIX 假；位置族变体两道皆假；
+- **实库段命中**（`code_chunks` + `doc_chunks` 段级）：`obj` ∥ `vendor` **现值 = 0（已清）**；`out` ∥ `Pods` ∥ `bower_components` ∥ `third_party` ∥ `bazel-*` = 0；`bin` 不进排除表（零触碰）；
+- 位置族变体（`desktop` ∥ `library`——族分折下**不剪**，见「折叠范围裁决」块）。
 
 **存量收敛（二路——机制面通则）**：本机制只管**未来**（新名即时不再入索引）；存量行收敛二路：① **显式** `memory sweep --origin <o> --path <前缀>`（备份先行 · 干跑默认 · 写后回读——§6.13 安全三件；前缀语义 = 恰等 ∨ 后随 `/`——`thincoder-core/memory/sweep.mjs` 的前缀语义段）；
 
@@ -636,7 +636,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 
 - **L-⑤（排除名单补强）**：① **谓词矩阵（族分折）**——面④判假围栏表逐例 + 垃圾族正例（精确 ∕ 任意深度 ∕ win32 大小写变体）+ 位置族正例（精确拼写）+ 位置族变体判假（`desktop` ∥ `library`——win32 同锁），`isSkippedRelPath(rel, platform)` 直调双道（win32 ∥ POSIX）判真 ∕ 判假逐例断言；
 ② **单源结构性**——`SKIP_DIRS` ∕ `SKIP_DIRS_FOLD` ∕ `SKIP_DIR_PREFIXES` 在产品码内仅经 `isSkippedRelPath` 消费（匹配点唯一）∧ 行为双径（非 git 夹具走 walk ∥ git 夹具走 `ls-files`）同剪（新名 + 判假围栏各断）；
-③ **零回归**——POSIX 逐字（含垃圾族）；位置族全平台逐字（判定同）；win32 折仅垃圾族（有意面——`Node_Modules` 类）∥ 位置族变体判假锁（全表折误剪面 443 行的判别形）；
+③ **零回归**——POSIX 逐字（含垃圾族）；位置族全平台逐字（判定同）；win32 折仅垃圾族（有意面——`Node_Modules` 类）∥ 位置族变体判假锁（全表折误剪面的判别形）；
 
 ④ **存量收敛（ops 判据）**——`sweep --origin <o> --path <前缀>` 干跑 = 仅命中行动作 `delete`；`--confirm`（沙箱库）⇒ 命中行 0 ∧ 非命中行逐键不变 ∧ 备份 `integrity_check` ok；实库存量现值 = 0（obj ∥ vendor 已清——在册）。
 
@@ -774,7 +774,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 
 ② **子目录条目**：`dir` 的**直接子目录**逐目录判——非跳过段（`isSkippedRelPath(name)`——点目录 ∥ 内建名单，防 `.thincoder/tmp` 类伪档）∧ 该目录根下 `MANIFEST_REL` 在场 ⇒ 一条目（`root` = 该子目录）。**一层、纯向下、绝不向上**（发现纪律在案）。
 档在场但**非法**（坏 JSON ∥ 形态错）⇒ 该条目**按默认值**参与 + 既有可见告警（KD-M1-32 链零改）；档**缺** ⇒ **无此条目**（缺档 ≠ 档非法——KD-M1-2）。
-- **条目三键** = `root`（仓根绝对路径）∥ `docPaths`（`docRoot.*` 五子键值**合并**展开——串 ∥ 串数组 ∥ `null`（本面无 ⇒ 零根）；解析基 = 该仓根（`docRootPaths` 单源）；去重保序）∥ `codePaths`（段名数组——缺键 ⇒ `["src"]`；`[]` = 无段面；归一既有）。
+- **条目三键** = `root`（仓根绝对路径）∥ `docPaths`（`docRoot.*` 五子键值**合并**展开——串 ∥ 串数组 ∥ `null`（本面无 ⇒ 零根）；解析基 = 该仓根（`docRootPaths` 单源）；去重保序）∥ `codePaths`（段名数组——缺键 ⇒ `[]`（无默认段）；`[]` = 无段面；归一既有）。
 - **文件命中（纯谓词）**：`rel` 经 `resolve(base, rel)` 绝对化（同面① `base` 换算口径；越根 ⇒ 不命中）⇒ 取归属条目（abs ∈ `root` 子树；无 ⇒ **未声明** ⇒ 不命中）⇒ 两面试任一中即入范围：
   · **文档面** = 条目根相对面**字面前缀**（恰等 ∨ 后随 `/`——路径及子树；值指向文件（如 `docs/RELEASE.md`）⇒ 恰该文件）；
   · **代码面** = 条目根相对面**段序列任意深度命中**（`codePaths` **键语义零改**——本规 = 新增消费点；大小写不敏感 = 既有谓词口径）。
@@ -785,7 +785,11 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 | 键 | 面 | 值形 ∥ 缺省 | 空值语义 | 命中判据 |
 |---|---|---|---|---|
 | `docRoot.*`（五子键） | 文档面 | 串 ∥ 串数组 ∥ `null`；缺键 ⇒ 默认五路径（schema 单源——**档在场才补**） | `null` = 本面无（零根）；`[]` 非法（既有判据零改） | 根相对字面前缀（恰等 ∨ `/` 后随）——路径及子树；文件值 = 恰该文件 |
-| `codePaths` | 代码面 | 段名数组；缺键 ⇒ `["src"]`；非数组 ⇒ 默认（既有归一） | `[]` ⇒ 代码面零命中 | 段序列任意深度命中（大小写不敏感） |
+| `codePaths` | 代码面 | 段名数组；缺键 ⇒ `[]`（无默认段）；非数组 ⇒ 默认（既有归一） | `[]` ⇒ 代码面零命中 | 段序列任意深度命中（大小写不敏感） |
+
+**默认无段之后，代码面靠显式声明活着**：`codePaths` 的默认值 = `[]` ⇒ 未声明的档在代码面零命中。**本仓 manifest 显式声明 `"codePaths": ["src"]`**（`thincoder-cli/src/**` 等按段名任意深度命中）；任何靠 `src` 布局要代码面的仓，照此在自己档里写一句。
+
+**不写这一句的后果（明写）**：该仓代码面不进索引（`declaredIndexScope` 条目 `codePaths` = `[]`），文档面仍由 `docRoot` 进——收回路径 = 补声明，即时回归（零重读重嵌，见本节「无 manifest 行为」条 ④）。
 
 **无 manifest 行为（三格）**：① 锚无管辖 manifest ⇒ 锚条目缺席——**不落默认五路径**（默认值只在「档在场、键缺」时生效）；② 一级子目录无 manifest ⇒ 该子目录**整树不进**；③ 锚与子目录皆无 ⇒ **零索引**（不回落全树）；④ **补 manifest（∥ 补声明）即回归**——存量行不删（见下）⇒ 回归 = 即时可见、零重嵌（写门工具写档成功即清缓存——fix 轮接线；手工改档 ⇒ 重启生效）。
 
@@ -812,7 +816,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 | 区域 | 落规后 | 依据 ∕ 补救 |
 |---|---|---|
 | `thincoder/docs/{core,cli,vsc,desktop,server}/requirements` ∥ `thincoder/docs/{core,cli,vsc,desktop,server,render-core}/design`（+ `modules`）∥ `docs/batches` ∥ `docs/RELEASE.md` | **入** | thincoder 条目 `docRoot` 值（requirements 五面 ∥ design 六面——按档实值分列） |
-| `thincoder/thincoder-{cli,vscode,desktop,server}/src/**` | **入** | thincoder 条目 `codePaths: ["src"]`（段序列任意深度） |
+| `thincoder/thincoder-{cli,vscode,desktop,server}/src/**` | **入** | thincoder 条目 `codePaths: ["src"]`（段序列任意深度）——**这是该档里的显式值，不是默认值**（默认 = 无段，见键面表 `codePaths` 行）；判据与显式声明同形，故本行不随缺省值改动 |
 | `thincoder/thincoder-core/**`（核库全树——`memory/**` ∥ `agent/**` ∥ `prompts/**` …） | **出** | 无 `src` 段 ∥ 无 docRoot 声明——补救 = `codePaths` 补段（如 `thincoder-core`） |
 | `thincoder/thincoder-{cli,vscode,desktop}/*/docs/**`（子项目文档——`-cli/docs` ∥ `-vscode/docs` 在册读数 3,878 ∥ 2,033） | **出** | 未声明（docRoot 指 `docs/…`，非 `thincoder-cli/docs/…`）——补救 = `docRoot` 各角色值补路径 |
 | `thincoder/thincoder-cli/{test,bin,scripts}/**` ∥ `thincoder-desktop/{renderer,test,tools}/**` ∥ `bench/**` ∥ `scripts/**` | **出** | 未声明（段面不含这些名）——按需补 `codePaths` |
@@ -918,7 +922,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 | D-MEM29 | 声明载体 = `PROJECT-MANIFEST.json → index.publicRepos`（嵌 index 族——顶层键族与默认档计数零扰动；缺省 `[]` = 零行为） | 声明载体唯一化既有裁定（KD-M1-31——单一项目声明档）；嵌 index 族的理由 = 检索范围声明（同款先例 = `index.excludePaths`——同为解析期路径列表，元素层归一宽容 ∕ 数组层 fail-closed）。 |
 | D-MEM30 | 接入形 = **多根同步 + 读面 origin 集**（复用既有 origin 机制——不新造索引系统；展开一层不递归；单 origin 快径逐字零变） | 语料单根 + 读面等值过滤 ⇒ 语料加根（多 origin）+ 读面集化；「不新造索引系统」= 既有 origin ∥ 同步 ∥ 读面机制原样。 |
 | D-MEM31 | 毒行两道防线 = **发送前 `sanitizeLoneSurrogates`（主修）∥ 400 类批失败逐条隔离（兜底）** | 单条孤立代理毒行 ⇒ 硅基流动 400/20015 ⇒ 补嵌 backlog 永久堵死。清洗令存量毒行发前净化；逐条隔离只兜未知毒形（不引 schema 变更 / 持久标记——过度工程）。 |
-| D-MEM32 | 排除表补强 = **通用生态名入表**（精确 basename + `bazel-` 前缀）+ **族分折**（垃圾 ∕ 产物族 win32 折 ∥ 位置族全平台精确 ∥ POSIX 一律精确）；`bin` 不进排除表 | 名 = 目录身份，但**族不同判不同**：垃圾名 = 「这类目录」语义（拼写变体同物 ⇒ win32 折）；位置名 = 「某位置」语义（变体非同物 ⇒ 精确；全表折误剪 443 行）。精确 ∥ 前缀收的是「名」不是「模式」（`out` 不吞 `output`）。否决「全表折」（误剪合法同名面）·「全平台折」（POSIX 上 `Pods` ∥ `pods` 是两个目录）·「维持全精确」（win32 上 `Node_Modules` 与 `node_modules` 是同一目录——不折 = 漏剪，F-S9 源起面）·「`bazel-*` 逐名枚举」（含工作区名——不可穷举）·「折叠扩至路径键」（§6.11 口径——两回事）。 |
+| D-MEM32 | 排除表补强 = **通用生态名入表**（精确 basename + `bazel-` 前缀）+ **族分折**（垃圾 ∕ 产物族 win32 折 ∥ 位置族全平台精确 ∥ POSIX 一律精确）；`bin` 不进排除表 | 名 = 目录身份，但**族不同判不同**：垃圾名 = 「这类目录」语义（拼写变体同物 ⇒ win32 折）；位置名 = 「某位置」语义（变体非同物 ⇒ 精确；全表折误剪合法同名面）。精确 ∥ 前缀收的是「名」不是「模式」（`out` 不吞 `output`）。否决「全表折」（误剪合法同名面）·「全平台折」（POSIX 上 `Pods` ∥ `pods` 是两个目录）·「维持全精确」（win32 上 `Node_Modules` 与 `node_modules` 是同一目录——不折 = 漏剪，F-S9 源起面）·「`bazel-*` 逐名枚举」（含工作区名——不可穷举）·「折叠扩至路径键」（§6.11 口径——两回事）。 |
 | D-MEM33 | 自愈轮 = **单引擎单入口**（`thincoder-core/memory/maintain.mjs` `maintainMemory`——自动拍 ∥ 工具同一单点）；三动作 = 鬼行 GC ∥ 压实 ∥ 轮转 | N-S8「同一引擎同一安全口径」的单点形；三动作共享备份先行 ∥ 读数随行 ∥ 写后回读。否决「各端各实现维护」（安全口径漂移）·「自动 ∥ 工具两套引擎」 |
 | D-MEM34 | 鬼行 GC = **逐档 ENOENT 双路径判亡** + **origin 树亡短路**；不折叠 | 承 §6.13 探针口径（仅 ENOENT；fail-safe）；双路径 = `treeState` 同形（单源）；树亡短路 = 同一判据免逐档探针。否决「时间 ∕ mtime 判据」（§6.13 既有否决）·「自动删『看起来无关』的活行」（维护 ≠ 收录裁决） |
 | D-MEM35 | 压实判据 = **freelist 双式联立**（`≥ 64 MiB` ∧ `freelist ∕ db ≥ 20%`——核常量 · 缺省值 = 用户拍项） | 两点：3 MiB ⇒ 零收益（§6.14 面③）∥ ~1 GiB ∕ 51% ⇒ 实清；比值防「大库小益」·下限防「小库频压」。否决「尺寸独立触发」（VACUUM 成本 ∝ 全库重写——freelist 小 = 纯成本）·「纯绝对阈值」 |

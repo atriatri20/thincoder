@@ -16,9 +16,9 @@
 | # | 债 | 现状判 | 证据 |
 |---|---|---|---|
 | **#3** | **`_` 状态字段摊平 + 手写生命周期清单**：agent 对象的运行态字段无 schema / 无封装，复位与继承靠**手写键清单**；新增或漏删字段即状态泄漏 | **现行** | 继承 = 手写键清单：`thincoder-core/agent/run-start.mjs`（`_inheritedGuard` 逐键回灌）；复位 = 逐字段块：`thincoder-core/agent/run-start.mjs`（逐字段复位段） |
-| **#4** | **eng-token 语义跨端重复**：核内已单点化，VSC 端无同名实现——自持槽语义与校验副本 | **跨端仍分叉**（CLI / 核侧已消解） | 核内单点 = `thincoder-core/token-ttl.mjs`（286 行）；VSC 侧消费面 = 核 `thincoder-core/agent-tools/design-token.mjs`（VSC 无自有消费档） |
+| **#4** | **eng-token 语义跨端重复**：核内已单点化，VSC 端无同名实现——自持槽语义与校验副本 | **跨端仍分叉**（CLI / 核侧已消解） | 核内单点 = `thincoder-core/token-ttl.mjs`；VSC 侧消费面 = 核 `thincoder-core/agent-tools/design-token.mjs`（VSC 无自有消费档） |
 | **#8** | **跨仓复制漂移**（架构伞项）：state / tools / prompts / advisor 层双端整片存在 | **收敛中**（核统一批推进） | 「一个核 + 两个薄壳」= `docs/core/design/CORE-UNIFICATION.md`；跨端剩余差面登记 = `docs/vsc/design/VSC-MIGRATION.md` |
-| **#9** | **扫描面四档越 300 软线**（职责边界待评估） | **部分消解** | 实核行数：`thincoder-core/memory/schema.mjs` **453** ∥ `thincoder-core/memory/core.mjs` **301**——照挂；`thincoder-core/memory/docs.mjs` **222**（拆 `thincoder-core/memory/memory-tool.mjs`）∥ `thincoder-core/memory/code-sync.mjs` **258**（拆 `thincoder-core/memory/code-search.mjs` / `thincoder-core/memory/file-list.mjs`）——已消解；复评触发 = 该面下次触碰 |
+| **#9** | **扫描面四档越 300 软线**（职责边界待评估） | **部分消解** | 实核：`thincoder-core/memory/schema.mjs` ∥ `thincoder-core/memory/core.mjs` 仍越 300 软线——照挂；`thincoder-core/memory/docs.mjs`（拆 `thincoder-core/memory/memory-tool.mjs`）∥ `thincoder-core/memory/code-sync.mjs`（拆 `thincoder-core/memory/code-search.mjs` / `thincoder-core/memory/file-list.mjs`）已落到软线内——已消解；复评触发 = 该面下次触碰 |
 
 
 **注**：`#6` 的 VSC 侧对位面 = 核 `thincoder-core/tools/file.mjs` ∥ `thincoder-core/tools/patch.mjs` ∥ `thincoder-core/tools/search.mjs`（已归位）；该面归 VSC 轮，不计入核面债。
@@ -29,8 +29,8 @@
 |---|---|---|
 | #1 | 设计文档单行整节坏格式 | 宽度机检 0 行超限（基准层 + 两产品文档面） |
 | #2 | 双端 async 状态容器分叉（双查询 / 双删 / 容器名分叉） | 单载体 + 单点结算：`thincoder-core/agent-tools/async-settle.mjs` 的 `settleAsyncEntry`；核内 `history?._X ?? agent._X` 双查询 grep 零命中 |
-| #5 | CLI 单档 `system.mjs` 超 500 行（4 工具合装——迁移前形态） | 该档已不存在；拆为 `thincoder-core/tools/bash.mjs`（269 行）· `thincoder-core/tools/search.mjs`（249 行）· `thincoder-core/tools/question.mjs`（27 行） |
-| #6 | 工具寄生 / 名不符实（CLI 侧） | `question` 已独立成档：`thincoder-core/tools/question.mjs`（27 行，不再寄生 git 工具档） |
+| #5 | CLI 单档 `system.mjs` 超 500 行（4 工具合装——迁移前形态） | 该档已不存在；拆为 `thincoder-core/tools/bash.mjs` · `thincoder-core/tools/search.mjs` · `thincoder-core/tools/question.mjs` |
+| #6 | 工具寄生 / 名不符实（CLI 侧） | `question` 已独立成档：`thincoder-core/tools/question.mjs`（不再寄生 git 工具档） |
 | #7 | async settle 逻辑重复（四族同构逻辑副本） | 单点 helper 四族同调：`thincoder-core/agent-tools/async-settle.mjs` 的 `settleAsyncEntry`（消费方 = `advisor-async.mjs` · `consult.mjs` · `escalate-async.mjs` · `subagent-run.mjs`） |
 
 ## 4. 清理纪律

@@ -95,12 +95,17 @@ function timerRearmBlocked(state, agent) {
 /** runAgentTurn 本体（LOGGING 包装之外——见上方包装器）：**链尾收口层**——正文（`runAgentTurnBody`）
  *  之后收「链尾闩重同步」（§6.30.5 载体②武装点——履行原正文内同点调用；#448②：入 `finally` ⇒
  *  异常 ∕ 中止逃逸的回合同样重武装；守卫 = `timerRearmBlocked`）。attention 仍在正文链尾原位
- *  （谓词读 `_pendingTimers`、不读闩状态 ⇒ 与 sync 无相对序依赖）。 */
+ *  （谓词读 `_pendingTimers`、不读闩状态 ⇒ 与 sync 无相对序依赖）。
+ *  **跨实例取件闩**（MULTI-INSTANCE-COLLAB §5.4 · D-MI31）：**回合起点不撤**（自续闩——撤闩 =
+ *  「要靠别人再把你叫醒」，而那个「别人」正是会漏掉叫醒的地方）；链尾 `sync()` 为**幂等补位**（换的是
+ *  「轮尾 ≤ 1 ms 取件」而非「≤ 1 s」），**不进 `timerRearmBlocked` 守卫**——那道守卫管的是「要不要无人自动
+ *  开一轮」，管不着「门还能不能开」（闩哑掉不会让守卫少开一轮，只会让消息躺在盘上没人取）。 */
 async function runAgentTurnInner(ctx, text, opts) {
   try {
     await runAgentTurnBody(ctx, text, opts)
   } finally {
     if (!timerRearmBlocked(ctx?.state, ctx?.agent)) ctx?.timerWatch?.sync()
+    ctx?.inboxWatch?.sync() // 补位点（幂等 · 零存活职责）——守卫只管 timer 面
   }
 }
 

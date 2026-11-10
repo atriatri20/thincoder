@@ -194,13 +194,13 @@
 
 | 面 | 落点 | 现行 | 改后 |
 |---|---|---|---|
-| 清点 / 消费核 | `thincoder-core/agent-tools/design-slots.mjs`（305 行） | 现行落点：`executeDesignSlotsAction` ∥ `executeConsumeDesignAction` ∥ `unionSlots` ∥ `batchOf` ∥ `basenameOfPath` ∥ 行拼装段（单行 `map`，行末恒携 `designToken`）；reveal 面 `grep` 零命中（U-SL14 机检在册） | 清点 / 消费 / 并集零改（批列来源见 §10）；本节改动已落地——无待改项 |
-| 动作分派 + 参数 schema | `thincoder-core/agent-tools/subagent.mjs`（422 行） | 九动作分派段 · `designId` 参数 · `reveal` schema 键 · 档头回收句 | 分派零改；`reveal` 键删行 · 档头回收句删行 · `designId` 描述删末句（删除面 D9–D11） |
-| 分类面 | `thincoder-core/agent/dispatch-gates.mjs`（151 行） | `design-slots` ∈ `isSubagentReadonlyAction` | ±0（参数面变化不动只读分类） |
-| 描述面 | `thincoder-core/tool-docs/subagent.md`（44 行） | design-slots 条目 | 逐字 = 「描述面 / 提示面」表 tool-docs 两行建议文本（后两行并一；首行的行契约补 `designToken`） |
-| 端面 | `thincoder-vscode/src/agent/tool-table.mjs`（187 行） | `vscSubagentFace` readonly 谓词 | ±0 |
-| 动作表 | `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.2（673 行） | design-slots 行 | 逐字 = 「描述面 / 提示面」表动作表行建议文本（参数列 `designId?`；返回列含 `expiresAt`） |
-| 英文运行期面 | `thincoder-core/prompts/persona-engineering.md`（494 行 · 2026-11-01 按 `split('\n').length - 1` 实算） | 同源句 = 上行 `**In-flight token recovery**` 条 | 逐字 = 同表英文运行期面行建议文本 |
+| 清点 / 消费核 | `thincoder-core/agent-tools/design-slots.mjs` | 现行落点：`executeDesignSlotsAction` ∥ `executeConsumeDesignAction` ∥ `unionSlots` ∥ `batchOf` ∥ `basenameOfPath` ∥ 行拼装段（单行 `map`，行末恒携 `designToken`）；reveal 面 `grep` 零命中（U-SL14 机检在册） | 清点 / 消费 / 并集零改（批列来源见 §10）；本节改动已落地——无待改项 |
+| 动作分派 + 参数 schema | `thincoder-core/agent-tools/subagent.mjs` | 九动作分派段 · `designId` 参数 · `reveal` schema 键 · 档头回收句 | 分派零改；`reveal` 键删行 · 档头回收句删行 · `designId` 描述删末句（删除面 D9–D11） |
+| 分类面 | `thincoder-core/agent/dispatch-gates.mjs` | `design-slots` ∈ `isSubagentReadonlyAction` | ±0（参数面变化不动只读分类） |
+| 描述面 | `thincoder-core/tool-docs/subagent.md` | design-slots 条目 | 逐字 = 「描述面 / 提示面」表 tool-docs 两行建议文本（后两行并一；首行的行契约补 `designToken`） |
+| 端面 | `thincoder-vscode/src/agent/tool-table.mjs` | `vscSubagentFace` readonly 谓词 | ±0 |
+| 动作表 | `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.2 | design-slots 行 | 逐字 = 「描述面 / 提示面」表动作表行建议文本（参数列 `designId?`；返回列含 `expiresAt`） |
+| 英文运行期面 | `thincoder-core/prompts/persona-engineering.md` | 同源句 = 上行 `**In-flight token recovery**` 条 | 逐字 = 同表英文运行期面行建议文本 |
 
 
 **删除面（改前 → 改后——删净为机制本体；落定后由 U-SL14 机检）**：
@@ -306,7 +306,7 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 - **读不到的处置**：上述三种以外的 I/O 错（`EACCES` ∥ `EISDIR` ∥ `EIO`…）∥ 解析失败 ⇒ 严格形抛 ⇒ **close 被拒**、档零字节变、可重试。分界理由：「读不到」与「没有」是两件事——宽容形对两者返回同一个 `null`，把前者当后者，收口就落成「已收口而凭证仍在」，正是 F-D8 要消的窗口；失败面按「无法判定归属 = 无法证明清账」处理（FAIL-CLOSED 方向只更严）。
 - **槽号解析层同判（manifest 层）**：`_slot` 未钉时，槽号来自 manifest 的 `active`（`currentSlotNoReadOnly`，`thincoder-core/token-ttl.mjs`；其内调 `loadManifest`）。这一层若走宽容形，manifest 不可读就被读成「无槽号」⇒ 严格形返回空集、close 照常落「已收口而凭证仍在」，与旁列同一个洞。故同判：**manifest 文件不存在（`ENOENT`）⇒ 无槽号（合法缺省）；manifest 在盘但读失败 ∥ 解析失败 ⇒ 抛**（`loadManifest` 的 `catch` 在 `thincoder-core/session-slots-manifest.mjs`）。
 - **manifest 严格形的落法** = `loadManifest(cwd, { strict = false } = {})`：与 `readEngTokenBatchesFromSlot` 同一两形先例（同一读函数、同一判据、缺省宽容）——strict 形 `ENOENT` ⇒ 默认空账本，其余错 ⇒ 抛（携 manifest 路径 + 底层消息）。**被拒的另一条路** = 在 `token-ttl.mjs` 里另写一个只读 `.active` 的严格读函数：那会把「没有 vs 读不到」判据落到第三处（`loadManifest` 宽容形 ∥ 旁列读 ∥ manifest 严格读），三处必漂，且 manifest 形状出现第二个读者。
-- **manifest 层边界与代价**：文件可读而 `active` 缺席 ∥ 非整数 ⇒ 无槽号（合法缺省——「读到了，说没有」）。代价 = `loadManifest` 从一个读法变两形，后续调用点须自选——规则 = 展示 / 尽力面用缺省宽容形，收口门面用 strict；现行全部调用点缺省零改。新面登记 = `thincoder-core/session-slots-manifest.mjs`（264 行，247 → +17）。
+- **manifest 层边界与代价**：文件可读而 `active` 缺席 ∥ 非整数 ⇒ 无槽号（合法缺省——「读到了，说没有」）。代价 = `loadManifest` 从一个读法变两形，后续调用点须自选——规则 = 展示 / 尽力面用缺省宽容形，收口门面用 strict；现行全部调用点缺省零改。新面登记 = `thincoder-core/session-slots-manifest.mjs`（新增档；体量由 `doc_check` 的 `lines` 读数面取）。
 - **落地状态**：两形已落——`loadManifest(cwd, { strict })`（`thincoder-core/session-slots-manifest.mjs`）∥ `currentSlotNoReadOnly(agent, { strict })` 透传（`thincoder-core/token-ttl.mjs`）。`close` ∥ `status §1→已收口` 两通路经 `unionBatches(agent, { strict: true })` 一路到底：manifest 在盘但读失败 ∥ 解析失败 ⇒ 两通路被拒、档零字节变、可重试。
 - **未单独设例的一类（如实登记）**：manifest 位的非 `ENOENT` I/O 错（`EACCES` ∥ `EISDIR`）没有独立用例——同一条判别式（`err.code === "ENOENT"`）在槽文件位已有 `EISDIR` 证据（U-BG11 支二），manifest 位再补一支只是同一判据的第二处取样，不增加信息。manifest 位的「没有 vs 读不到」由 U-BG14 ∥ U-BG15 守；`active: null`（非整数支）同属此列——与「缺席」同一表达式（`thincoder-core/token-ttl.mjs` 的 `Number.isInteger` 支），不单独设例。
 

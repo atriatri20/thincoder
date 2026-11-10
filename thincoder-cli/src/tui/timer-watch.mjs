@@ -12,10 +12,14 @@ import {
   fireTimerWake as coreFireTimerWake,
   timerWakeEnabled,
 } from "@thincoder/core/agent/timers.mjs"
+// 跨实例投递面（MULTI-INSTANCE-COLLAB §5.4 / §5.8）：取件闩 + 消息形态 + 名册——核转口（本档零自持闩）。
+import { createInboxWatch as coreCreateInboxWatch, crossMessageText, inboxTakeLostLine, inboxBlockedLine } from "@thincoder/core/instance-inbox-watch.mjs"
+import { registerInstance, unregisterInstance } from "@thincoder/core/instance-registry.mjs"
 import { C } from "./ansi.mjs"
 import { REMINDER_CAP } from "./tool-display.mjs"
 
 export { timerWakeEnabled } // 判据单源转口（§6.30.3 门三件③ D-TW5）：默认开——只有显式 `false` 才关（键 `agent.timerWake`）
+export { registerInstance, unregisterInstance, crossMessageText, inboxTakeLostLine, inboxBlockedLine }
 
 /** 「唤醒会武装」判据（`docs/cli/design/TUI.md` §7.1 awaiting 行除外 / §7.2 置位谓词）：主 agent 在途 timer
  *  非空 ∧ 开关开 ⇒ 自动续跑在途（不计 attention / 闩会在回合链尾武装）。 */
@@ -47,6 +51,31 @@ export function createTimerWatch({ agent, onFire, timer = setTimeout, clear = cl
  *  面——由 `state.processing` 门承担，不入本判据）。 */
 export function modalOpen(state) {
   return state?.picker != null || state?.wizard != null || state?.teamAsk != null
+}
+
+/** 跨实例取件闩（MULTI-INSTANCE-COLLAB §5.4 · §5.8 · D-MI28 ∥ D-MI31 ∥ D-MI34）：核 `createInboxWatch` 转口。
+ *
+ *  **就绪判据 `ready: () => true`**：本端 `agent` 是 `startTUI` 的入参，开轮面 `turn` 与闩取同一份闭包捕获
+ *  （`createTurnFace({ agent, … })`）⇒ 「这一端此刻能不能开一轮」在 CLI 恒真（设计 §5.9：换会话 = 重建回合面，
+ *  闩同点重建——不存在「只换 agent、不重建回合面」的路径）。恒真是**结论**不是占位：核闩要求的那个判据在本端
+ *  没有假侧，另包一层 probe 只是把 `true` 搬个家。
+ *
+ *  **在飞判据** = 回合在跑 ∥ 挂起两态 ∥ 用户自发模态（模态期取件会把人拽进一个看不见的回合——关闭后由
+ *  `reevalTimerWake` 补一次 `sync()`，但存活不靠它）。
+ *
+ *  `onTake` = 取件后开轮面（普通用户回合：`autoTurn` 缺省 false——手动态照常走审批面），**返回 promise**
+ *  （resolve = 已登记为在飞；reject = 开轮没成——失败单源，见核档交接契约）；**不收 agent**——载体住本档闭包捕获
+ *  （D-MI34：核闩不从端壳对象上推载体）。
+ *  `onBlocked(ms, pending)` = 受阻跨阈可见行（`pushLine` 侧接线 = `index.mjs`）。 */
+export function createInboxWatch({ state, onTake, onBlocked = null, timer = setTimeout, clear = clearTimeout } = {}) {
+  return coreCreateInboxWatch({
+    ready: () => true, // 本端无假侧（见上条理据）——不是替核闩猜的值，是本端的实际判定
+    isBusy: () => Boolean(state?.processing || state?.suspended || state?._suspPending || modalOpen(state)),
+    onTake,
+    onBlocked,
+    timer,
+    clear,
+  })
 }
 
 /**

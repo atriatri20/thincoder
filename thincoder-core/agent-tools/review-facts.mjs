@@ -35,8 +35,12 @@ export function docSetKey(documents, cwd) {
 
 /** **写门面**评审根的 docRoot 键集（`agent/write-gate.mjs` 的 `resolveReviewTargetPaths` 消费）——
  *  设计评审**受理面不再消费**本键集（受理 = 项目内现存 `.md`，判据单源 = `ADVISOR-GUARDS.md` §12）。
- *  2026-10-04 自 `agent/write-gate.mjs` 迁入（键集本体零变；write-gate 同名再出口）。 */
-export const REVIEW_ROOT_KEYS = ["requirements", "specs", "design", "modules", "batches"]
+ *  2026-10-04 自 `agent/write-gate.mjs` 迁入（键集本体零变；write-gate 同名再出口）。
+ *
+ *  **六层**（`docs/core/design/MANIFEST.md` §2.5「键集」条）：末位 `standards` = 标准层（目录语义，
+ *  见同档 §2.12）。键集只在本处改——写面 `agent/write-face.mjs`、评审候选扫描、文档锚点图
+ *  `doc-graph.mjs` 三处共用这一份，不各持字面（KD-M1-64）。 */
+export const REVIEW_ROOT_KEYS = ["requirements", "specs", "design", "modules", "batches", "standards"]
 
 /**
  * 写门评审根解析单点（按用点形——2026-09-21 收口 · 台账 #828；2026-10-04 自 `agent/write-gate.mjs`

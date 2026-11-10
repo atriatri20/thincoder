@@ -25,17 +25,17 @@
 | **F6** | 非 git 项目行为有定义 | 索引：无 git → 全量 walk + per-file mtime 回退（核面现体 `thincoder-core/memory/code-sync.mjs`）；评审：`NO_GIT_NOTICE` 降级句、评审照常 |
 | **F7** | 门禁面同源 | 工程写门禁按声明分类判定（`thincoder-core/agent/dispatch.mjs`——VSC 随核单源）——不以 `src/` 硬编码 / `docs/` 前缀放行 |
 | **F8** | 提示词面不假定本仓形态 | 提示词内指令性引用零本仓指涉（「本产品自研仓 =」标注形态除外——判据式见 `PORTABILITY（VSC 侧）`） |
-| **F9** | 父侧写域缺省 | 工程模式**父侧门**分类缺省：路径段 `test` / `tests` / `scripts`（**项目根相对面** · 根内任意深度——根外 / 根未知 ⇒ 面不可判 ⇒ 缺省不命中）与 `.thincoder/tmp/**` **判非代码面** ⇒ 父侧无令牌可写；**代码段优先级在前**（`src/test/**` 仍判 code）；范围 = **父侧门**（`thincoder-core/agent/dispatch.mjs`——VSC 随核单源）；**eng-coder 门不动**；项目可用 `codePaths` 声明（F2）收回该缺省。判据 = `classifyPath` 四例（`test/<x>.mjs` ≠ code · `scripts/<x>.mjs` ≠ code · `.thincoder/tmp/<a>.mjs` ≠ code · `src/test/<x>.mjs` = code） |
+| **F9** | 父侧写域 = 判产品面的一律要令牌 | 工程模式**父侧门**只放行非产品面（`docRoot` 前缀命中的文档面 ∥ 项目 manifest 本体 ∥ 出辖）；`test` / `tests` / `scripts`（项目根相对面 · 根内任意深度）与 `.thincoder/tmp/**` **判产品面 ⇒ 无令牌拒**——**用户 2026-11-10 裁定：「工程模式下不能允许没令牌的时候写脚本。」** 代码段只来自项目声明、无内置默认；声明 `codePaths` 不改变本门判据（门用面判 `faceOf`、不读分类器）。范围 = **父侧门**（`thincoder-core/agent/dispatch.mjs`——VSC 随核单源）；**eng-coder 门不动**。判据单源 = 设计面 `PORTABILITY.md` §3.7 行 1（`faceOf` 四格） |
 
 | **F10** | 项目状态档父侧可写 | 分类器新增第五值 `state`。判定：文件名是 `project-manifest.json`（不分大小写），或路径含 `~/.thincoder/conventions.json` 这一段，就算状态档，不算代码。效果：主 agent 在工程模式下可以直接写这两个文件，父侧门放行，不需要令牌；唯一作者不变。优先级在 aux 之后、兜底之前，所以 `src/state/<x>.json` 这类仍然算代码。只动父侧门：eng-coder 门不动，VSC 跟着核走。判定函数 `isStatePath`，在 `thincoder-core/conventions.mjs`。 |
 
-| **F11** | 门禁辖域 = manifest 树以内 | 父侧门（`thincoder-core/agent/dispatch.mjs`）辖域判定改按**目标祖先链**：任一级祖先带 `PROJECT-MANIFEST.json` ⇒ 在辖——判据声明面 = **目标所属项目**（最近祖先，nearest wins），不再取会话 cwd；**找不到 manifest ⇒ 一律放行**。项目内判定零改（code 段 / fail-closed / aux·temp·doc·state 豁免）；**不可解析目标保守拦截不变**；未声明 hint 改指名所属项目。 |
+| **F11** | 门禁辖域 = manifest 树以内 | 父侧门（`thincoder-core/agent/dispatch.mjs`）辖域判定改按**目标祖先链**：任一级祖先带 `PROJECT-MANIFEST.json` ⇒ 在辖——判据声明面 = **目标所属项目**（最近祖先，nearest wins），不再取会话 cwd；**找不到 manifest ⇒ 一律放行**。项目内判定零改（面判 `faceOf`：文档面 ∥ manifest 本体 ∥ 出辖 放行，其余产品面 fail-closed）；**不可解析目标保守拦截不变**；未声明 hint 改指名所属项目。 |
 
 ## 3. 非功能性需求
 
 | # | 维度 | 标准（含度量） |
 |---|---|---|
-| **N1** | 零假阳 | 默认判据（`src` 为代码面）对既有项目行为与修复前一致——专项用例零误报 + 全量回归全绿 |
+| **N1** | 零假阳 | 声明了代码段的项目（`codePaths` 显式声明）分类与修复前一致——专项用例零误报 + 全量回归全绿；**未声明代码段的项目按无代码段分类**（同一路径由 code 转 doc ∥ aux 是有意变更，不算假阳） |
 | **N2** | 降级不崩溃 | 声明损坏 / 不可读 → 默认 + `console.warn` + `logEvent`（不抛）；注入缺失 → 降级句（不抛） |
 | **N3** | 全接线 | 消费点逐处换源（评审 / 门禁 / 索引 / 提示词四族）——「修一处漏三处」在用例上反证 |
 | **N4** | 测试 | 专项用例在位且 `npm test` 全绿：`thincoder-vscode/test/portability-vsc-classification.test.mjs` · `portability-vsc-advisor-context.test.mjs`；索引面核用例承接入 `thincoder-vscode/test/memory-index-face.test.mjs` |

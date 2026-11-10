@@ -60,7 +60,7 @@
 **排版统一（D29）收正指针（2026-09-30）**：本表行 4 ∥ 5 ∥ 6（行标题 ∥ 元数据族 ∥ 行内动作钮）桌面落法栏的**字号 ∥ 字重值被排版基线接管**——13px ∥ 500 ∥ 11px ∥ 12px 族 ⇒ `var(--fs)`（14px——轻通道轮五）∥ 400（盒值 ∥ 色 ∥ 结构零动）；
 单源 = `docs/desktop/design/UI.md` §1「批注（排版统一 · D29）」项 1 ∥ 项 5。
 
-**计数（D3）**：**9 面**（1–9 = 行容器 ∥ 行 hover ∥ 活动行态 ∥ 行标题 ∥ 元数据族 ∥ 行内动作钮 ∥ 字形面 ∥ 空态行 ∥ 行聚焦）；本面新增变量 **2**（`--diff-del-bg` · `--error-fg`；与内容面共用者不重复计）；**桌面新增变量合计 = 14**（内容面 12 + 本面 2）。
+**计数（D3）**：**9 面**（1–9 = 行容器 ∥ 行 hover ∥ 活动行态 ∥ 行标题 ∥ 元数据族 ∥ 行内动作钮 ∥ 字形面 ∥ 空态行 ∥ 行聚焦）；本面新增变量 **2**（`--diff-del-bg` · `--error-fg`；与内容面共用者不重复计）；**桌面新增变量合计 = 内容面新增 + 本面 2**（内容面计数单源 = `docs/desktop/design/UI.md` §1）。
 
 ### 2.4 会话面板七条对位处置（2026-09-29 重审 · 盘清 · #673）
 
@@ -88,7 +88,7 @@
    - **zh 附句** =「损坏现场档保留 30 天」/ **en 附句** =「Corrupted-scene files kept 30 days」。
    - **合成条件**：`ledger.scene === true` 时合成「主句 + 分隔符 + 附句」（zh「；」/ en「; 」按当前 `locale()` 直取；缺 / false ⇒ 仅主句）。
    - **与 VSC 两键 / CLI 同口径**（三端同一句话的条件附形态——2026-09-28 修正轮定形）；`${reason}` 值 = `ledger.reason` 逐字。
-   - 计数随动：宿主键总数 **144**（键数门 = 四处同笔为纪律——测试树 2026-09-28 全清重置后承载 = 随档单元证据）。
+   - 计数随动：键总数按 `rail.*` 族现文计（键数门 = 四处同笔为纪律——承载 = 随档单元证据）。
 4. **数据链**——`refreshRail`（`thincoder-desktop/renderer/mount-sessions.mjs`——**唯一写路径**）在 `sessions:list` 回执到后写 `ledger` 切片（重挂键面 `SESSION_KEYS` = `thincoder-desktop/renderer/app.mjs` 的键面常量含 `ledger`）；构树读切片出注记节点（`thincoder-desktop/renderer/views/session-control.mjs`——`sessionModel` 携 `ledger` ⇒ 下拉首行出注记）。
    **不做推送**：可见刷新 = 端侧下一次列表渲染自见（沿核 §6.25「行级刷新不做推送」口径）。
 5. **判据（机检）**——① 回执面：`ledger` 在场 ⇔ `refused > 0 ∨ scene`；缺席 = 正常（负断言）——用例 = 随档单元证据；
@@ -114,55 +114,57 @@
 - **主题 ↔ 设置面头控件半 / 会话 ↔ CHAT · ACTIVITY 半**：按各档单源指针引用，本档不复制。
 
 ## 3. 文件账
-### 3.1 本端文件清单与行数预算（会话族行）
+### 3.1 本端文件清单（会话族行）
 
-| 文件 | 预估行数 | 说明 |
-|---|---|---|
-| `thincoder-desktop/renderer/session-list.css` | **169**（自 `thincoder-desktop/renderer/chrome.css` 出档：头注 6 + 迁出块 127 ∕ 37 逐字〔原两段全量迁出〕） | 会话列表面（下拉 + 条目全族 + 空态 + 账本注记 + 行内动作两钮 + 条目内改名形；链序 = chrome 后 ∕ skin 前） |
-| `thincoder-desktop/src/main/session-io.mjs` | **77**（留档（#719）`appendRecord` 薄壳（核 `pushReal` 直复用 ∥ fail-soft）；前读 2026-09-29 = 46（R3 后）） | 会话槽 I-O 出档（自 `agent-host.mjs` 拆出——批 8 §1.14 ①②）：装载 `loadAgentSlot`（槽缺 ⇒ false；命中 ⇒ 应用槽值 + 重钉 `agent._slot`——防切会话 / 跨端切槽后落错槽）+ 回合尾落盘 `saveAgentSlot`（**不抛**——写盘失败不掀回合）· 零算法副本（`docs/desktop/design/SHELL.md` §4 项 1 / 项 4）；**R3 增**：`saveDistilledSlot`（#520 蒸馏落位）+ `saveAgentSlot(agent, label)` 单实现 + **留档**：`appendRecord(agent, record)`（人读线记录入档薄壳——核 `pushReal` 直复用 ∥ fail-soft；载体形半提取 ∥ 机器线零触） |
-| `thincoder-desktop/src/main/session-slots.mjs` | **271**（实读 2026-10-09——清除 fix 轮（270 ⇒ 271——`openingSeed` 链第二档入参 `defaultModel: config.defaultModel` 补入；清除 §1）；前读 **270**（实读 2026-10-08——届盘实读收正（表载 259 ⇒ 270；文档卫生行数面回填）；前读 **259**（实读 2026-10-03——无效渠道态逻辑归一（#841）实施落盘（235 ⇒ 259——`providerStateOf` 三回执族同形载荷单源 ∥ `pageHistory` 回执携 `providerState`）；前读 **235**（实读 2026-09-30——留档（#719）`pageHistory` 开直通（`{ records: true }`——增派义务，设计 §2 ② 已明）；前读 2026-09-29 = 231（@ 文件引用对齐后）；R1 会话维护线族转口五名；前史 = 残余档 180 ⇒ 194 ⇒ 195；前一轮末实读 154）） | 端壳：端名声明（`END = "desktop"` + `setSessionEnd(END)`）+ **转口八项**（marker 三项〔端参绑定〕+ 会话族五项：端参绑定 3〔`resumeSlot` / `switchToSlot` / `deleteSlot`〕· 同形转口 1〔`newSession`〕· 纯 re-export 1〔`renameSlot`〕）——零算法副本（先例 = 扩展端端壳 77 行）+ `history:page` 薄处理体（核 `loadSlotFile` + `historyWindow` 转口——零算法副本；**留档**：`{ records: true }` 直通——记录随页入回执）；`effort` 槽字段落地 ⇒ `slotMeta` 的配置回落支（`?? str(loadConfig()?.provider?.reasoningEffort)`）删除 + 陈旧注释（「`effort` 槽无字段」）收正 ⇒ 槽值优先（KD-17；`loadConfig` 若成未用导入随删）；**R1**：会话维护族转口五名（`listColdCwds` ∕ `deleteColdCwd` ∕ `listStaleCwds` ∕ `scheduleSessionGC` ∕ `scheduleSessionIndexPass`——惰性包装） |
-| `thincoder-desktop/src/main/session-maintenance.mjs`（R1 会话维护线新档） | **112** | 会话生命周期维护处理体三面：① `runSessionGcMaintenance`（候选并集去重 ⇒ 确认缝 ⇒ 逐组 `deleteColdCwd`〔TOCTOU 重校验〕⇒ 汇总）② `runSessionIndexMaintenance`（清四表 → 全量重扫 → 摘要；核索引面惰性载入）③ `scheduleSessionMaintenancePasses`（启动拍两枚）；**零 `electron` 依赖** ⇒ 平 node 直测；核零改（出口全在——转口经 `thincoder-desktop/src/main/session-slots.mjs` 五名） |
-| `thincoder-desktop/src/main/session-actions.mjs` | **79** | 会话族动作层：五通道（create / switch / rename / delete / resume）+ 回执信封 `{ ok, reason: null|string, cwd, slot }`（`docs/desktop/design/IPC.md` §2 会话族注） |
-| `thincoder-desktop/src/main/sessions.mjs` | **45**（R3c 37 ⇒ 45〔账本警示面回执 `ledger` 投影〕） | 会话族读面：`sessions:list` 载荷投影（核 `listSlots` 条目 → 会话控制条目）——零新增算法（`docs/desktop/design/IPC.md` §2 会话族注） |
-| `thincoder-desktop/src/main/projects.mjs` | **175** | 当前项目（内存态）+ 最近目录面 + **重启自动重开**（本端记录面回读 ∥ 启动恢复导出——本机制；**KD-56**）——读面 = 核会话槽面回读、零新存储（`docs/desktop/design/IPC.md` §2 项目面注 · KD-9） |
-| `thincoder-desktop/renderer/mount-sessions.mjs` | **299**（越线档结构轮拆后（原 **406**；会话族接线面全量迁出 `thincoder-desktop/renderer/session-wire.mjs`——**194**）＋ RF 波 2 增量；未越 300；缝 = 同名再出口七名——`thincoder-desktop/renderer/app.mjs` 零改） | 会话控制面**挂载与交互**（VSC 形；自 `thincoder-desktop/renderer/app.mjs` 拆出——拆分落形；**R13-B 硬限拆分**纯构树三件出档 `thincoder-desktop/renderer/views/session-control.mjs`；**拆接线面**出档〔同上行〕）：`FACE` WeakMap ∕ `wireFace` ∕ 打开外关 ∕ 草稿两助手 ∕ `submitRename` ∕ 确认 popover；刷新面单源 = `docs/desktop/design/RENDERER.md` §1.1 |
-| `thincoder-desktop/renderer/session-wire.mjs`（越线档结构轮实施产出） | **202**（实读 2026-10-01——**#764 落盘后**（关页 `build` 作业点 `withFlowOp` 同笔）；前读 **199**（实读 2026-09-29——自 `thincoder-desktop/renderer/mount-sessions.mjs` 出档：头注 + 五源 import 面 + 窄桥 + 迁出块 163 逐字〔原接线面全量〕；缝 = 同名再出口——`thincoder-desktop/renderer/app.mjs` 零改） | 会话族接线面：`refreshRail`（唯一写路径）· 开页链（`openPage` + `loadPage`）· 会话路三出口（`activateSession` ∕ `createSession` ∕ `resumeOpened`）· `confirmRename` · `deleteSession` + `takeover` · 归一助手（`isProject` ∕ `slotOf` ∕ `reasonOf`）；自持 `host` 窄桥 |
-| `thincoder-desktop/renderer/views/session-control.mjs` | **238**（实读 2026-09-29——桌面收尾（#659 形内判源）后；R13-B 新档 ∕ RF 波 2 后） | 会话控制面纯构树三件：`sessionModel` ∕ `sessionBarTree` ∕ `sessionDropdownTree`（+ 节点助手族；import = `thincoder-desktop/renderer/i18n.mjs` ∕ `thincoder-desktop/renderer/store.mjs` ∕ `thincoder-desktop/renderer/views/chrome.mjs`——零 `node:` ∕ 零裸包） |
-| `thincoder-desktop/src/main/session-flags.mjs`（R1 输入面板移植新档） | **96** | 模式位四写面（`session:flags`——核 `setSlot*` 四写 + 活代理重施 + `flagsOf` 回执 + ENG×PLAN 互斥） |
+| 文件 | 说明 |
+|---|---|
+| `thincoder-desktop/renderer/session-list.css` | 会话列表面（下拉 + 条目全族 + 空态 + 账本注记 + 行内动作两钮 + 条目内改名形；自 `thincoder-desktop/renderer/chrome.css` 出档：头注 + 迁出块两段全量逐字；链序 = chrome 后 ∕ skin 前） |
+| `thincoder-desktop/src/main/session-io.mjs` | 会话槽 I-O 出档（自 `agent-host.mjs` 拆出——批 8 §1.14 ①②）：装载 `loadAgentSlot`（槽缺 ⇒ false；命中 ⇒ 应用槽值 + 重钉 `agent._slot`——防切会话 / 跨端切槽后落错槽）+ 回合尾落盘 `saveAgentSlot`（**不抛**——写盘失败不掀回合）· 零算法副本（`docs/desktop/design/SHELL.md` §4 项 1 / 项 4）；**R3 增**：`saveDistilledSlot`（#520 蒸馏落位）+ `saveAgentSlot(agent, label)` 单实现 + **留档**：`appendRecord(agent, record)`（人读线记录入档薄壳——核 `pushReal` 直复用 ∥ fail-soft；载体形半提取 ∥ 机器线零触） |
+| `thincoder-desktop/src/main/session-slots.mjs` | 端壳：端名声明（`END = "desktop"` + `setSessionEnd(END)`）+ **转口八项**（marker 三项〔端参绑定〕+ 会话族五项：端参绑定 3〔`resumeSlot` / `switchToSlot` / `deleteSlot`〕· 同形转口 1〔`newSession`〕· 纯 re-export 1〔`renameSlot`〕）——零算法副本（先例 = 扩展端端壳）+ `history:page` 薄处理体（核 `loadSlotFile` + `historyWindow` 转口——零算法副本；**留档**：`{ records: true }` 直通——记录随页入回执）；`effort` 槽字段落地 ⇒ `slotMeta` 的配置回落支（`?? str(loadConfig()?.provider?.reasoningEffort)`）删除 + 陈旧注释（「`effort` 槽无字段」）收正 ⇒ 槽值优先（KD-17；`loadConfig` 若成未用导入随删）；**R1**：会话维护族转口五名（`listColdCwds` ∕ `deleteColdCwd` ∕ `listStaleCwds` ∥ `scheduleSessionGC` ∥ `scheduleSessionIndexPass`——惰性包装） |
+| `thincoder-desktop/src/main/session-maintenance.mjs`（R1 会话维护线新档） | 会话生命周期维护处理体三面：① `runSessionGcMaintenance`（候选并集去重 ⇒ 确认缝 ⇒ 逐组 `deleteColdCwd`〔TOCTOU 重校验〕⇒ 汇总）② `runSessionIndexMaintenance`（清四表 → 全量重扫 → 摘要；核索引面惰性载入）③ `scheduleSessionMaintenancePasses`（启动拍两枚）；**零 `electron` 依赖** ⇒ 平 node 直测；核零改（出口全在——转口经 `thincoder-desktop/src/main/session-slots.mjs` 五名） |
+| `thincoder-desktop/src/main/session-actions.mjs` | 会话族动作层：五通道（create / switch / rename / delete / resume）+ 回执信封 `{ ok, reason: null|string, cwd, slot }`（`docs/desktop/design/IPC.md` §2 会话族注） |
+| `thincoder-desktop/src/main/sessions.mjs` | 会话族读面：`sessions:list` 载荷投影（核 `listSlots` 条目 → 会话控制条目）——零新增算法（`docs/desktop/design/IPC.md` §2 会话族注）；R3c 增账本警示面回执 `ledger` 投影 |
+| `thincoder-desktop/src/main/projects.mjs` | 当前项目（内存态）+ 最近目录面 + **重启自动重开**（本端记录面回读 ∥ 启动恢复导出——本机制；**KD-56**）——读面 = 核会话槽面回读、零新存储（`docs/desktop/design/IPC.md` §2 项目面注 · KD-9） |
+| `thincoder-desktop/renderer/mount-sessions.mjs` | 会话控制面**挂载与交互**（VSC 形；自 `thincoder-desktop/renderer/app.mjs` 拆出——拆分落形；**R13-B 硬限拆分**纯构树三件出档 `thincoder-desktop/renderer/views/session-control.mjs`；**拆接线面**出档 `thincoder-desktop/renderer/session-wire.mjs`）：`FACE` WeakMap ∕ `wireFace` ∕ 打开外关 ∕ 草稿两助手 ∕ `submitRename` ∕ 确认 popover；刷新面单源 = `docs/desktop/design/RENDERER.md` §1.1；**拆分后同尺比较未越 300 硬线** |
+| `thincoder-desktop/renderer/session-wire.mjs`（越线档结构轮实施产出） | 会话族接线面：`refreshRail`（唯一写路径）· 开页链（`openPage` + `loadPage`）· 会话路三出口（`activateSession` ∕ `createSession` ∕ `resumeOpened`）· `confirmRename` · `deleteSession` + `takeover` · 归一助手（`isProject` ∕ `slotOf` ∕ `reasonOf`）；自持 `host` 窄桥；自 `thincoder-desktop/renderer/mount-sessions.mjs` 出档：头注 + 五源 import 面 + 窄桥 + 迁出块逐字；缝 = 同名再出口七名（`thincoder-desktop/renderer/app.mjs` 零改） |
+| `thincoder-desktop/renderer/views/session-control.mjs` | 会话控制面纯构树三件：`sessionModel` ∕ `sessionBarTree` ∕ `sessionDropdownTree`（+ 节点助手族；import = `thincoder-desktop/renderer/i18n.mjs` ∕ `thincoder-desktop/renderer/store.mjs` ∕ `thincoder-desktop/renderer/views/chrome.mjs`——零 `node:` ∕ 零裸包） |
+| `thincoder-desktop/src/main/session-flags.mjs`（R1 输入面板移植新档） | 模式位四写面（`session:flags`——核 `setSlot*` 四写 + 活代理重施 + `flagsOf` 回执 + ENG×PLAN 互斥） |
+
+**行数口径（本块）**：文件体量按 `doc_check` 的 `lines` 读数面量取（500 顾问线 ∥ 800 硬限），结论只写越线与否与同尺比较，不写绝对值（口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 行数行）。
 
 ### 3.2 现有文件改动（本域）
 
 **会话标题接线行**（机制 ∕ 判据单源 = 本档 §1 **KD-41**；链单源 = `docs/core/design/SESSION.md` §6.7）：
 
-| 文件 | 现行 ⇒ 预期（构成） | 批 |
+| 文件 | 改动（构成） | 批 |
 |---|---|---|
-| `thincoder-desktop/src/main/turn-face.mjs` | **129 ⇒ ≈139**（Δ ≈ +10 = `settleTurn` ≈8 行 + 核件导入 1 行 − 2 + 档头注 ≈3；组成 = 回合尾结算单实现（标题 → 落盘；中止墓碑两查位——U-7 原样）+ 两 `saveAgentSlot` 结算行改两调用——取位按符号） | 已落 |
-| `thincoder-desktop/test/files.mjs` | **3 ⇒ 3**（零新登记——空清单 `export default []` 原样；单元测试档不登记；集成测试登记 = 基建重建落盘时 +1 行） | 已落 |
-| 测试覆盖 | **单元测试档**（会话标题族——已建成 · 284 行——链路 ∕ 时序 ∕ 短路 ∕ 失败 + 窗内受理 E5 ∕ 窗内中止 E6 六例；零真实网络 = `globalThis.fetch` 换桩；随档留存 · 不入集成测试树）+ 集成域（**T-DSK46**——转父侧真机冒烟闭合，集成登记待基建重建）；测试文件随修随加——不占设计条目（2026-09-27 裁定） | 已落 |
-| `docs/desktop/design/PROJECT.md` · `docs/core/design/SESSION.md` | 设计落定（本档 §1 **KD-41** ∥ `PROJECT.md` §6.1 ∕ §7 · 核档 §6.7 第三端）；联动面三档（`IPC.md` ∕ `UI.md` ∕ `RENDERER.md`）零触碰 | 已落 |
+| `thincoder-desktop/src/main/turn-face.mjs` | 回合尾结算单实现（`settleTurn` + 核件导入 + 档头注；组成 = 标题 → 落盘；中止墓碑两查位——U-7 原样）+ 两 `saveAgentSlot` 结算行改两调用——取位按符号 | 已落 |
+| `thincoder-desktop/test/files.mjs` | 零新登记——空清单 `export default []` 原样；单元测试档不登记；集成测试登记 = 基建重建落盘时补 | 已落 |
+| 测试覆盖 | **单元测试档**（会话标题族——已建成；链路 ∕ 时序 ∕ 短路 ∕ 失败 + 窗内受理 E5 ∕ 窗内中止 E6 六例；零真实网络 = `globalThis.fetch` 换桩；随档留存 · 不入集成测试树）+ 集成域（**T-DSK46**——转父侧真机冒烟闭合，集成登记待基建重建）；测试文件随修随加——不占设计条目（2026-09-27 裁定） | 已落 |
+| `docs/desktop/design/PROJECT.md` · `docs/core/design/SESSION.md` | 设计落定（本档 §1 **KD-41** ∥ `PROJECT.md` §6.1 ∕ §7 · 核档 §6.7 第三端）；联动面三档（`IPC.md` ∥ `UI.md` ∥ `RENDERER.md`）零触碰 | 已落 |
 
-**structure-split-round（越线档结构轮 · 实施轮）拆分落形**（切点 ∕ 缝 / 行数 = 越线档结构轮 §2；值 = 实施轮实读）：
+**structure-split-round（越线档结构轮 · 实施轮）拆分落形**（切点 ∕ 缝 = 越线档结构轮 §2）：
 
 | 文件 | 改动 | 归属 |
 |---|---|---|
-| `thincoder-desktop/renderer/chrome.css` | **450 ⇒ 287**（会话列表面出档——两段共 164 行全量逐字迁出；保位注一行落原切点位） | 已落 |
-| `thincoder-desktop/renderer/session-list.css` | **— ⇒ 170**（新档：头注 6 + 迁出块 164 逐字；链序 = chrome 后 ∕ skin 前） | 已落 |
-| `thincoder-desktop/renderer/index.html` | **55 ⇒ 56**（增 `session-list.css` link——位次 = chrome.css 之后 ∕ skin.css 之前） | 已落 |
-| `thincoder-desktop/renderer/mount-sessions.mjs` | **406 ⇒ 235**（接线面全量出档——原 163 行逐字迁出 + import 面收 ∕ 头注收 ∕ 窄桥随迁；尾空行清理） | 已落 |
-| `thincoder-desktop/renderer/session-wire.mjs` | **— ⇒ 194**（新档：头注 + 五源 import 面 + 窄桥 + 迁出块 163 逐字；缝 = 同名再出口七名） | 已落 |
+| `thincoder-desktop/renderer/chrome.css` | 会话列表面出档——两段全量逐字迁出；保位注一行落原切点位 | 已落 |
+| `thincoder-desktop/renderer/session-list.css` | 新档（头注 + 迁出块逐字；链序 = chrome 后 ∕ skin 前） | 已落 |
+| `thincoder-desktop/renderer/index.html` | 增 `session-list.css` link——位次 = chrome.css 之后 ∕ skin.css 之前 | 已落 |
+| `thincoder-desktop/renderer/mount-sessions.mjs` | 接线面全量出档（原接线面逐字迁出 + import 面收 ∕ 头注收 ∕ 窄桥随迁；尾空行清理） | 已落 |
+| `thincoder-desktop/renderer/session-wire.mjs` | 新档（头注 + 五源 import 面 + 窄桥 + 迁出块逐字；缝 = 同名再出口七名） | 已落 |
 | `thincoder-desktop/renderer/app.mjs` | **零改**（缝 = 同名再出口——import 面解析零变；单元测试档 C 用例同引用实证） | 已落 |
-| `docs/desktop/design/PROJECT.md` | 随动实读回填（§4.1 两新档行——`session-list.css` ∥ `session-wire.mjs` 已迁本档 §3.1；chrome ∕ mount ∕ `thincoder-desktop/renderer/index.html` 三行收正；越层段二档除名） | 已落 |
+| `docs/desktop/design/PROJECT.md` | 随动实读回填（§4.1 两新档行——`thincoder-desktop/renderer/session-list.css` ∥ `thincoder-desktop/renderer/session-wire.mjs` 已迁本档 §3.1；chrome ∕ mount ∥ `thincoder-desktop/renderer/index.html` 三行收正；越层段二档除名） | 已落 |
 
 **桌面重启自动重开（#734）行**（机制 ∕ 判据单源 = `docs/desktop/design/IPC.md` §2 项目面注项 7）：
 
-| # | 档 | 现行 ⇒ 预期 | 面 |
+| # | 档 | 改动 | 面 |
 |---|---|---|---|
-| 1 | `thincoder-desktop/src/main/projects.mjs` | **120 ⇒ ≈175**（记录面读 `lastOpenedCwd`（族标记最新 → 族数据文件 `cwd`）+ 启动恢复导出 `restoreLastProject`（纯读 ∥ `isDirectory` 门 ∥ 落位）+ 落位动作与 `openProject` 共用提取） | #734 |
-| 2 | `thincoder-desktop/src/main/main.mjs` | **183 ⇒ ≈187**（窗口创建前一次恢复调用 + 注释——单实例锁分支后、`createWindow()` 前） | #734 |
-| 3 | 单元测试档 | 重启自动重开族（已建成 · 215 行——五用例：命中（上次打开 ≠ 最近活跃）∕ 端分离（`.cli` ∕ `.vscode` 零影响）∕ 降级·目录已删（⇒ 冷态 + 零抛）∕ 降级·族无可读 `cwd`（标记在盘而族数据文件缺 ∕ 坏 ⇒ 冷态 + 零抛 + 不误落次新族）∕ 零记录（零写 + 冷态）；**测试用例以显式 mtime 落盘**（免粒度依赖）；随档留存 · 不进集成测试树） | #734 |
-| 4 | 设计档随动 | `docs/desktop/design/IPC.md` §2 项目面注项 7（机制单源）+ 项 4 收正 · `docs/desktop/design/SHELL.md` §1 树两行 · 本档 §1 **KD-56** ∕ **KD-9** 两处收正 ∕ `PROJECT.md` §4.1 两行说明（`main.mjs` → `docs/desktop/design/SHELL.md` §5.1；`thincoder-desktop/src/main/projects.mjs` → 本档 §3.1）∥ §6.1 **D1** ∕ §7 **T-DSK50** ∕ §8 边界行 | #734 |
+| 1 | `thincoder-desktop/src/main/projects.mjs` | 记录面读 `lastOpenedCwd`（族标记最新 → 族数据文件 `cwd`）+ 启动恢复导出 `restoreLastProject`（纯读 ∥ `isDirectory` 门 ∥ 落位）+ 落位动作与 `openProject` 共用提取 | #734 |
+| 2 | `thincoder-desktop/src/main/main.mjs` | 窗口创建前一次恢复调用 + 注释——单实例锁分支后、`createWindow()` 前 | #734 |
+| 3 | 单元测试档 | 重启自动重开族（已建成——五用例：命中（上次打开 ≠ 最近活跃）∕ 端分离（`.cli` ∕ `.vscode` 零影响）∕ 降级·目录已删（⇒ 冷态 + 零抛）∕ 降级·族无可读 `cwd`（标记在盘而族数据文件缺 ∕ 坏 ⇒ 冷态 + 零抛 + 不误落次新族）∕ 零记录（零写 + 冷态）；**测试用例以显式 mtime 落盘**（免粒度依赖）；随档留存 · 不进集成测试树） | #734 |
+| 4 | 设计档随动 | `docs/desktop/design/IPC.md` §2 项目面注项 7（机制单源）+ 项 4 收正 · `docs/desktop/design/SHELL.md` §1 树两行 · 本档 §1 **KD-56** ∕ **KD-9** 两处收正 ∕ `PROJECT.md` §4.1 两行说明（`thincoder-desktop/src/main/main.mjs` → `docs/desktop/design/SHELL.md` §5.1；`thincoder-desktop/src/main/projects.mjs` → 本档 §3.1）∥ §6.1 **D1** ∕ §7 **T-DSK50** ∥ §8 边界行 | #734 |
 
-**值列口径**（本块）：「现行」= 判时按盘现读（内容行数口径——文末换行不计）；「预期」= 设计预估（对账后回填——与文件账行值列同源：本档 §3.1 ∥ `docs/desktop/design/SHELL.md` §5.1）。
+**行数口径（本块）**：同上 §3.1 末行（`doc_check` 的 `lines` 读数面；阈值 500 ∥ 800；只写越线结论与同尺比较）。
 ## 4. 验收回指（本域需求条目 · 判据全文）
 
 | 需求 | 机检判据（点回需求卷） | 验证 |
@@ -171,13 +173,13 @@
 | **D2** | 新建 / 列表 / 切换 / 删除 / 重命名 / 接续六操作各有往返读数；跨端接续 = 与另两端读写同一 sessions 目录（A2）；列表条目 `createdBy` 读面 = 会话行来源端标注（缺键 ⇒ 不标注——本档 §2.7） | T-DSK3 / T-DSK12 / T-DSK20 |
 | **D18** | 会话面板对齐 VSC：元数据族**三值**（provider · N msgs · updated）逐项裁定在册（provider = 槽投影 `activeProvider` 补载——本档 §1 **KD-28**）；**多标签保留**（本端结构差异不削）；单源 = 本档 §2.2 | T-DSK34 |
 | **D23** | 列表计数不撒谎：count 不可得 ⇒ **显示不可得**——桌面 = **段缺席**（既有 `Number.isFinite` 门零改——`thincoder-desktop/renderer/views/session-control.mjs`）∥ CLI / VSC / `read_history` = 「—」；设计面单源 = `docs/core/design/SESSION.md` §6.25 判据句 4（台账可靠）；计数面本端零改（既有 `Number.isFinite` 门）；**账本异常警示面（账本可靠 · 桌面微轮）** = 会话控制面下拉首行 dim 注记（`div.session-ledger-notice` · `data-ledger-notice` · 非可点；触发 = `refused > 0 ∨ scene`——单源 = 本档 §2.5 / `docs/desktop/design/IPC.md` §2「会话族注」项 6） | T-DSK40 + 既有门（计数段缺席零改） |
-| **D26** | 会话标题链：标题生成 ⇒ 落盘 ⇒ 左列行 ∕ 标签条 ∕ 状态行 `title` 段三面随动（标题先于落盘 · 结算单实现）——单源 = 本档 §1 **KD-41** ∕ 核档 `docs/core/design/SESSION.md` §6.7（第三端） | T-DSK46 + 单元测试档（会话标题族——已建成 · 284 行 · 随档留存） |
+| **D26** | 会话标题链：标题生成 ⇒ 落盘 ⇒ 左列行 ∕ 标签条 ∕ 状态行 `title` 段三面随动（标题先于落盘 · 结算单实现）——单源 = 本档 §1 **KD-41** ∕ 核档 `docs/core/design/SESSION.md` §6.7（第三端） | T-DSK46 + 单元测试档（会话标题族——已建成 · 随档留存） |
 
 **会话标题接线（验收 · 2026-09-28）**：
 
 - **需求回指**：**D26**「会话标题链接线」（已落——`docs/desktop/requirements/PROJECT.md`；同族 = **D17** 状态行 `title` 段 ∕ **D18** 会话面板）。
 - **设计单源**：本档 §1 **KD-41** ∕ 核档 `docs/core/design/SESSION.md` §6.7（链单源——第三端）。
-- **机检 = 单元测试档**（会话标题族——已建成 · 284 行）：链路 ∕ 时序 ∕ 短路 ∕ 失败 + **E5** 窗内受理零丢失 ∕ **E6** 窗内中止零标题零写——六例；零真实网络 = `globalThis.fetch` 换桩；随档留存 · 不入集成测试树。
+- **机检 = 单元测试档**（会话标题族——已建成）：链路 ∕ 时序 ∕ 短路 ∕ 失败 + **E5** 窗内受理零丢失 ∕ **E6** 窗内中止零标题零写——六例；零真实网络 = `globalThis.fetch` 换桩；随档留存 · 不入集成测试树。
 - **真机**：**T-DSK46**——**本轮不重建 E2E 基建**（测试覆盖全清重置后集成域空）：转**父侧真机冒烟**闭合，集成用例登记待基建重建。
 - **离线不可产面**（真 provider 回合 ⇒ 标题生成 ⇒ 落盘 ⇒ 左列 ∕ 标签条 ∥ 状态行三面随动 + 失焦通知携标题）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计条目（2026-09-27 裁定）。
 

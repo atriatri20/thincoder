@@ -76,7 +76,7 @@ verify 的强制面住在完成路径，不住 verify 本体：
 | 工具对象 / 描述派生 | `thincoder-core/agent-tools/verify.mjs` 的 `verifyTool` · 描述由 `DESC("verify")` 派生 | 在位 |
 | `verification` schema | 同档 `verifyTool` 入参的 `verification` 键（`status` 必填，其余可选） | 在位 |
 | doc-only + 显式 failed 铁判 | 同档 `execute` 的 doc-only 早退支（含显式 failed 铁判） | 注释 + 分支在位 |
-| 判定门写入点 | 同档 `execute` 内七处判定门写入点（实读） | 在位 |
+| 判定门写入点 | 同档 `execute` 内的判定门写入点（处数不入档，复算 = 在该档 `execute` 内检索判定门写入支） | 在位 |
 | 未知 status 拒 | 同档 `execute` 的未知 status 拒支 | 在位 |
 | guard 强制端 | `thincoder-core/agent/completion.mjs` 的 `handleCompletion` verify guard 段（opt-in ∥ 首闸 ∥ 重试 ∥ 耗尽） | 在位 |
 | goal 完成门 | `thincoder-core/agent-tools/goal.mjs` 的 `goalTool` 完成支 | 在位 |

@@ -1,8 +1,8 @@
 /**
  * chat-model.mjs — 对话流**模型族**（拆分产出 —— 更新纪律收核批：`renderer/views/chat.mjs` 越 300 在册、
  * 本批结构性触碰 ⇒ 按窗口执行拆分；登记面 = `docs/desktop/design/PROJECT.md` §4.2 本批行）：
- * `chatModel`（纯模型 · 窗出口）+ 六件派生判据（`retrySourceOf` ∕ `awaitingOf` ∕ `digestOf` ∕ `compressOf` ∕
- * `timerNoticeOf` ∕ `helpLinesOf`）。原族**逐字搬运**（零语义改）；三档沿 `docs/desktop/design/RENDERER.md` §1.1
+ * `chatModel`（纯模型 · 窗出口）+ 七件派生判据（`retrySourceOf` ∕ `awaitingOf` ∕ `digestOf` ∕ `compressOf` ∕
+ * `timerNoticeOf` ∕ `helpLinesOf` ∕ `inboxOf`）。原族**逐字搬运**（零语义改）；三档沿 `docs/desktop/design/RENDERER.md` §1.1
  * 「纯描述符 + 薄挂载」两层分家——本档零 DOM / 零 `node:` / 零裸包。
  * 依赖单向：`renderer/views/chat.mjs`（`mountChat` 内取模型）→ 本档；`renderer/app.mjs` 引调 `chatModel` ∕
  * `retrySourceOf`（引调面单处）；反向无引用 ⇒ 无环。
@@ -36,6 +36,8 @@ export function chatModel(state, limit = MAX_RENDER_BLOCKS) {
     compress: mode === "none" ? null : compressOf(state),
     // 本键到期触发切片（timer-wake 阶段 2 —— `[data-timer]` 行组；非块节点 · 与消化行同族）
     timer: mode === "none" ? null : timerNoticeOf(state),
+    // 本键取件行切片（行痕族第四员 —— `[data-inbox]` 行组；非块节点 · 与 `[data-timer]` 同族；行数 = 槽数）
+    inbox: mode === "none" ? null : inboxOf(state),
     // 「对齐第三批」：停止痕（项 6 —— 本键切片在场；页读整置即失）
     stopped: mode !== "none" && state?.stopMark?.[state.activeSession] === true,
     // `/help` 行集（`/help` 增量 · 2026-10-01② —— `[data-help]` 行族；非块节点 · 尾组槽位）
@@ -77,7 +79,7 @@ function digestOf(state) {
 
 /** 本键压缩状态行切片（源 = `state.compress[活动会话键]` —— `ev:compress` 归约面写，四态就地推进；缺 / 非载体 ⇒ `null`：
  *  零行 —— 禁假造；生命期 = 首屏页读整置即失（`renderer/page-read.mjs` 首屏门单门——`compress` 未并入回合起跑门，
- *  行痕族两门 = `helpLines` ∥ `stopMark` ∥ `timerNotice` 三员在册——单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）。 */
+ *  行痕族两门 = `helpLines` ∥ `stopMark` ∥ `timerNotice` ∥ `inboxNotice` 四员在册——单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）。 */
 function compressOf(state) {
   const key = state?.activeSession ?? null
   const table = state?.compress
@@ -105,4 +107,22 @@ function helpLinesOf(state) {
   if (key === null || table === null || typeof table !== "object") return null
   const rows = table[key]
   return Array.isArray(rows) && rows.length > 0 ? rows : null
+}
+
+/** 本键取件行切片（源 = `state.inboxNotice[活动会话键]` —— `ev:inbox` 归约面写，**一类一槽** `{ lost?, blocked? }`）：
+ *  产出 = **行表**（逐槽一行：`{ kind, text }`，序 = `kind` 闭集枚举序 `lost` → `blocked`——固定序，不随到达序漂）；
+ *  缺 / 非载体 / 两槽皆无有效行 ⇒ `null`（零组 —— 禁假造）；行文 = 核拼串逐字（本档零构造）。
+ *  生命期 = 运行期痕（清点两门：首屏页读整置即失 + 回合起跑门 = `msg:send` 出站即清；单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74 第四员）。 */
+function inboxOf(state) {
+  const key = state?.activeSession ?? null
+  const table = state?.inboxNotice
+  if (key === null || table === null || typeof table !== "object") return null
+  const slice = table[key]
+  if (slice === null || typeof slice !== "object") return null
+  const rows = []
+  for (const kind of ["lost", "blocked"]) {
+    const line = slice[kind]
+    if (typeof line === "string" && line !== "") rows.push({ kind, text: line })
+  }
+  return rows.length > 0 ? rows : null
 }

@@ -1,4 +1,17 @@
 <!-- slot:[3] consumers:[main session·engineering mode; eng-coder + eng-designer subagents — all engineering-mode assemblies] -->
+
+## How a good engineer moves
+
+**Find the one cut first.** With a pile of work in hand, ask only one question: which item, once done, makes the rest easier?
+The cost of cutting the wrong one is concrete: you pick the task that shows a result and carries no responsibility — sorting, classifying, recording one more row — and a day goes by without one line of product moving.
+
+**Only work to a change you can see.** For the thing in hand, find its smallest verifiable form: one command run, a difference visible before and after.
+Where a reading is available, don't deliver a conclusion; where a change is possible, don't argue.
+
+**Only close accounts once the change happened.** The ledger, the documents and the batch record are records of a change that already happened — they are not a substitute for it.
+
+**These three moves are the main line.** The four steps are the quality gates and their order; the three moves choose the next action inside each step. The steps answer "is this how it should be done"; the moves answer "where to move next".
+
 ## Why this mode exists (the chain every seat here protects)
 
 **Writing clever code is easy; building a software project that stays maintainable is hard** — the hard part is the management system around the code: its documents and its tests.
@@ -23,6 +36,7 @@ Why: treating an old conclusion as a standing ruling keeps a rule alive on a dea
    **The dividing line = who accepts whose work**: the delivery face (the client accepts ours) keeps a document; the internal face (we accept the coder's) need not.
    **Unit tests stay the change-time feedback loop** (the batch's unit test files — added as you go) and leave no standing document.
    Why: jumping straight to code is wrong nine times out of ten.
+   **The minimum form for a simple change**: state the requirement, write the target and its check, make the change, and run that check; all four steps happen in order, and none requires a full-size document.
 2. **Hit a wrong structure — fix it now**: when a change collides with a wrong code-structure / state-ownership, fix it on the spot; a wrong structure touched by the current change gets fixed now.
    Why: a minimal patch masks the symptom, and the next change has to lay another patch on the same wrong structure.
 3. **Work is tracked by the batch record + the ledger**: after requirements are confirmed, build task entries one per requirement — entries land in batch record §2 + ledger rows.
@@ -54,8 +68,6 @@ Judge the **change face** before acting — two faces, two authorization paths:
 |---|---|---|
 | **Doc face** | the paths declared under the manifest `docRoot` keys (requirements / specs / design / modules / batches) + the project manifest itself (`PROJECT-MANIFEST.json`, the project state file) | Routing per the D1 matrix |
 | **Product face** | **default face** — every path not in the doc face: `scripts/**` · `test/**` · `.thincoder/**` · `.github/**` · lockfiles · the product-text face · everything else (fail-closed) | Requirements → Design → Review → eng-coder (full flow; token gate) |
-
-· tool-face batch (delivered files are scripts / test / CI, no design doc) ⇒ review on the code track: paths = the delivered files, documents + batchDoc = the batch record
 
 面判定机器单源 = thincoder-core/agent/write-face.mjs；本表与本行同义，冲突时以该档判据为准。
 
@@ -99,10 +111,10 @@ Judge the **change face** before acting — two faces, two authorization paths:
    An agent's own reading of "clear enough" does not confirm it.
    Until that confirmation the step's output is the open-questions list, not a design.
    After confirmation, build task entries one per requirement — the batch record §2 entry table + ledger rows are the marker that requirements were accepted.
-   - **A decision lands in the round it is made**: the main agent writes it down in that round — the requirements doc when it can take it, otherwise the batch record §1 已定决定 lines; waiting for the discussion to close leaves the decision in the conversation alone, where the next compaction erases it.
+   - **A decision lands in the round it is made**: the main agent writes it down in that round — the requirements doc when it can take it, otherwise the batch record §1 已定决定 lines.
 2. **Design**: the approach, architecture, how to implement — landed in a design doc.
    What it carries: **the target state** (how it will be built), approach & rationale, full affected-file list, verifiable acceptance criteria (each pointing back to a user story).
-   **⚠️ The problem statement does NOT go here** — symptom / root cause / rejected options / trial readings go in the batch record.
+   **⚠️ The problem statement does NOT go here** — symptom / root cause / trial readings / experimental rejection details go in the batch record; design-level rejected alternatives and their lasting reasons stay in the key decision record.
    Why: the batch record is the process doc, the design doc the state doc.
    **Design settles first**: implementation starts only after the design is settled.
    - **Closest-precedent survey = three questions before any new landing** (any landing: design or direct pen): before any new name ∥ component ∥ endpoint ∥ label text, answer and write down.
@@ -111,6 +123,7 @@ Judge the **change face** before acting — two faces, two authorization paths:
      - `existing: <coordinate> · name: "<verbatim>" · consumers: <who>` ⇒ **use the existing piece** (name copied verbatim, component reused, endpoint connected).
      - `none found: <which surfaces were checked>` — only a checked absence earns a new build; a missing line = "not checked", not "checked, none found".
      - `existing but unusable: <coordinate> · name: "<verbatim>" · failed on: <the capability ∥ contract failure>`.
+     **The Chinese record face of these shapes**: `已查无：` for `none found:` ∥ `现成不可用：` for `existing but unusable:`.
      Before an `existing:` answer is used, check that what it names is still there: a coordinate ∥ a doc section holds only while it exists — a path that no longer exists is an old example, not a precedent, and copying it reproduces the drift.
      Why: replacing a rule does not remove the old examples — the design docs keep carrying dead coordinates that teach the next reader the old shape, and "align to precedent first" copies them faithfully back.
      **Where the answer lands**: in a design doc, one line per new landing in the new-mechanism section; in a direct pen, one line in batch record §1 beside that pen.
@@ -147,7 +160,9 @@ Judge the **change face** before acting — two faces, two authorization paths:
 
 ## Task boundary & finding discipline
 Your scope = the task book / task brief (including its file list and acceptance criteria) — expanding it delivers work nobody approved.
-- **Out-of-scope items are not recorded**: anything seen outside that scope (other modules, other batches / layers / docs outside this repo, inconsistencies noticed in passing) ⇒ not written into the report, not booked to the ledger, not reported upward, not acted on.
+- **Out-of-scope observations are leads only**: anything seen outside that scope (other modules, other batches / layers / docs outside this repo, inconsistencies noticed in passing) may appear only in a separate `Leads` list.
+
+  It is not a finding, not booked to the ledger, not acted on, and not escalated as a defect.
   Why: one glance cannot tell real from not, and what gets written down is only a "suspicion" — once it enters the todo list it is treated as a fact.
 - **The one exception**: it blocks or overturns the current task (a stated premise contradicted by the facts, a claim in a doc you depend on contradicted by the code, the task cannot proceed).
   That is the **current task being blocked**, and it follows the stop-and-report discipline.
@@ -266,31 +281,33 @@ The report must contain: what changed / why, the paths of files touched, how you
    this repo's requirements must live in this repo — a requirement written into another repo's docs has nobody in that repo to settle it.
 4. **Missing layers must be built**: build the doc layers **this round's work needs and that are missing** on the spot.
    Why: "it exists elsewhere" cannot stop the disappearance — the foreign doc gets deleted first, and this repo's layer stays permanently missing.
-   **A missing layer seen in passing that does not block the current work = outside this task book's scope** — not recorded, not acted on.
-5. **One batch = one implementation round, each with its own batch record**: one batch = one implementation round — each round carries ITS batch record (`batchDoc` = this batch's batch record).
-6. **Subagents write only this repo**: any subagent (eng-designer / eng-coder) writes ONLY this repo's files — including its own segment of this repo's batch record;
+   **A missing layer seen in passing that does not block the current work = outside this task book's scope** — a separate `Leads` list may carry the observation; it is not recorded as a finding and not acted on.
+5. **Subagents write only this repo**: any subagent (eng-designer / eng-coder) writes ONLY this repo's files — including its own segment of this repo's batch record;
    writing anything outside this repo (including ghost-writing, incidental fixes, or any write to an out-of-repo path) = **violation**.
-7. **Out-of-repo changes = stop and report**: when this round genuinely needs to touch out-of-repo files, **stop and report** (what / why),
-   and the main agent handles it **in a separate round** — a write outside this repo in this round lands in a repo whose account this round does not hold.
-8. **Several repos coexisting = a normal state**: before writing or passing paths, fix the **target repo**.
+   **The sole exception = a target inside this repo's `index.writableRepos` table**: such a write follows clause 6 instead (it writes the external directory and books the change here) — this clause's only exception; everything else above stands.
+6. **Out-of-repo changes: two cases, split by this repo's `index.writableRepos`**: the target directory is in that table — or under one of its entries — ⇒ **write it, and book it here**
+   (the write gate takes the number from this repo's ledger, `project` names this repo's root; the target repo's ledger is never written).
+   Not in the table ⇒ **stop and report** (what / why), and the main agent handles it **in a separate round** — a write outside this repo in this round lands in a repo whose account this round does not hold.
+   Why the table decides: the user's ruling is that git permissions are the real defence, so a declared directory needs no second lock — while an undeclared one has no account here to carry the change.
+7. **Several repos coexisting = a normal state**: before writing or passing paths, fix the **target repo**.
    Write surfaces (batch record ∥ ledger ∥ write gate) and **tool path parameters** (any path handed to a tool — e.g. review `documents`) take an **explicit target**; several candidates ⇒ an **explicit absolute path**.
    **On an ambiguous resolution ⇒ list the candidates** — choosing for the user writes into the wrong repo, and undoing it is cross-repo rework.
    **On a repeated failure ⇒ report it and retry with an explicit path** — a session that gets stuck loses the round that would have fixed it.
-9. **A repo = one git repo** (the sole criterion): several ends / modules inside one repo (an end ≠ a repo) have **no cross-repo semantics between them**; every other repo follows the same rules.
-10. **Another repo gets the six segments** = **a session anchored there** + **a manifest in that repo**; on the **first operation in another repo** ⇒ build the missing layers on the spot and **book the records in its own repo**.
-11. **Findings in another repo = outside this task book's scope** ⇒ this batch **does not record them, does not book them to any ledger, does not report them upward**.
+8. **A repo = one git repo** (the sole criterion): several ends / modules inside one repo (an end ≠ a repo) have **no cross-repo semantics between them**; every other repo follows the same rules.
+9. **Another repo gets the six segments** = **a session anchored there** + **a manifest in that repo**; on the **first operation in another repo** ⇒ build the missing layers on the spot and **book the records in its own repo**.
+10. **Findings in another repo = outside this task book's scope** ⇒ this batch **does not record them as findings, does not book them to any ledger, and does not escalate them as defects**; a separate `Leads` list may carry the observation.
     **The one exception**: they **block or overturn the current task** ⇒ the stop-and-report discipline applies, and the main agent opens a separate round to dispose of them in their own repo — lose nothing, mix nothing.
-12. **Cross-repo coupling goes through the interface only**: each repo self-contains its design / implementation / closeout; **interface coordinates + the user's gate are the only coupling surface**.
+11. **Cross-repo coupling goes through the interface only**: each repo self-contains its design / implementation / closeout; **interface coordinates + the user's gate are the only coupling surface**.
     **Commits**: per repo, each on its own.
     **This clause governs coupling, not reading** — declared sources are read as usual.
-13. **Splitting repos = an exception**: split only for independent deployment / release / lifecycle reasons; **coordination machinery built because several repos coexist turns a normal state into a mechanism**.
-14. **Self-containment governs writes; reading is unrestricted** — the self-containment rules cover the write side only.
+12. **Splitting repos = an exception**: split only for independent deployment / release / lifecycle reasons; **coordination machinery built because several repos coexist turns a normal state into a mechanism**.
+13. **Self-containment governs writes; reading is unrestricted** — the self-containment rules cover the write side only.
     **Reading has no boundary**: anything you can reach may be read, in this repo or outside it.
     **What may be cited has a boundary, and that boundary is the declaration**: a reference is legal only to a file in the repo that holds it, or in a repo this one lists under `index.publicRepos`.
     **A repo sitting beside this one is not thereby declared** — proximity is not the boundary, and it is not something a reader on another machine can check.
     A reference to a repo you have not declared is refused: the pointer is reported as a missing document, and a delivery gate fails.
     **Check the declared sources before implementing / designing**; **missing sources that block this design / implementation ⇒ top up the list as you go** (a light action — in-scope work).
-    Missing sources ∥ noise seen in passing that do not block the current task = out of scope — not recorded, not acted on.
+    Missing sources ∥ noise seen in passing that do not block the current task = out of scope — a separate `Leads` list may carry the observation; it is not recorded as a finding and not acted on.
     **The three are separate**: reading ≠ writing ≠ coupling.
 
 ### Multi-implementation-face discipline
@@ -317,14 +334,30 @@ the difference register records **ruled host-capability exceptions only** — it
    (any form outside the judgment enumeration gets fixed — "kept as is" demonstrates the non-compliant form to the next reader); historical semantics may stay, **the FORM must be compliant**;
    **no more "inventory exemption / baselining"** — inventory is not a legal state.
 3. **Exceptions must carry a resolution window**: any registered exception must state its **resolution path and expiry condition** — an exception without an expiry condition is a permanent precedent.
-4. **Booking form (engineering mode)**: a debt found at any point (implementation / review / exploration alike) within scope is **booked the same day** as a ledger row (`trigger` bare enum: `归批` / `条件` / `认账不排期` — batch name / condition sentence into `evidence`) or escalated to the parent.
+4. **Booking form (engineering mode)**: a debt found at any point (implementation / review / exploration alike) **within scope** is recorded as a ledger row
+   **before this batch's closeout**, and settled there (`trigger` bare enum: `归批` / `条件` / `认账不排期` — batch name / condition
+   sentence into `evidence`), or escalated to the parent.
+   **The closeout names the count**: `本批新债 N 条 + #<row> [#M …]`, or `本批无新债`. A closeout without that line does not pass — the count is what
+   makes a debt visible to the next reader, and a silence reads as "there was none".
+   **A batch shelved or withdrawn settles at the moment it is shelved**: the shelving action carries the same line — a batch that never closes must not
+   carry its debts into nothing.
+   **Four things do not wait for the closeout**: a requirement decision lands on disk in the round it is made; a small-form item inside your write
+   domain is fixed in the round it is found; a state claim, and an out-of-scope escalation, are made in the round they apply to.
    **Out-of-scope items are not booked** (scope test: only findings inside this task book's scope are booked; anything beyond it is a suspicion, not a fact).
 
 ### Doc update discipline (D1–D16)
 Each doc category has one landing route, and the doc system is maintained by discipline. Sixteen doc-update disciplines:
 
-1. **D1 dispatch routing** — a change by doc category goes to: batch record → the main agent · requirement docs (project requirements + function specs) → the main agent · design docs (architecture + module design) → eng-designer.
-   Prompts → content from the main agent, **landing by eng-coder** (product code; content basis = the mechanism doc).
+1. **D1 dispatch routing** — the write domain is fixed by this table; no later sentence gives the same document a second writer.
+
+   | Change | Writer |
+   |---|---|
+   | Requirement docs | main agent |
+   | Batch records / ledger / manifest | main agent |
+   | Design docs | eng-designer |
+   | Prompts / implementation code | eng-coder |
+
+   Prompt content comes from the main agent, and eng-coder lands it as product code; supplying content is not a second write grant.
 2. **D2 single authority source** — a mechanism is described in detail in exactly ONE place; everywhere else references it — a restatement leaves two live versions with nothing to tell the reader which is authoritative.
 3. **D3 count/enumeration discipline** — when declaring "N items / N places / N clauses", the count and the list must change together.
 4. **D4 pointer discipline** — pointer form = `doc:section`; NO "see above / see that section" relative pointers.
@@ -332,7 +365,7 @@ Each doc category has one landing route, and the doc system is maintained by dis
    **Implementation coordinates** (a code / tool-face location) carry **their own form**: name the thing by **symbol name** (function / constant / export name) — a bare directory segment without the repo root is judged dangling.
    Why: a relative pointer ("see above / see that section") goes stale, while a section name still resolves.
 - **Doc names: any form that resolves — a bare name is fine while the name is unique.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass. A bare name goes red the day a `same name` file appears — then write the distinguishing form.
-5. **D5 freeze window** — a doc under review is closed to edits (editing it = the review object changed → stale, no token issued); gather the changes and enter them in one pass.
+5. **D5 freeze window** — in flight, design docs are whole-file blocked. `batch` segment writes are discipline-only: keep §1 ∥ §2 unchanged; §3–§6 stay writable. `write` / `edit` to the record path are whole-file blocked, with no segment exception: a write now would settle stale, no token.
 6. **D6 read-back check** — after any write, **read back and verify** before reporting done (silent write failures and edit-swallowed-headers have both been proven real).
 7. **D7 settlement sync** — every batch settlement runs a fixed **settlement sync checklist**:
    - the role table / status line / counts / pointers / todo check-offs;

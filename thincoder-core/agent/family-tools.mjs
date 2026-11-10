@@ -26,7 +26,7 @@ export async function assembleFamilyTools({
   decorate = null,       // object   端差面：{ subagent?, consultStart?, consultStop?, settings? }
 } = {}) {
   // CORE-UNIFICATION TOOLS #83：consult 家族随统一登记册自 `../agent-tools.mjs` 取用（单一来源）
-  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, contextTool, batchTool, manifestTool, manifestReadTool, consultStartTool, consultStopTool, parentChannelTool, docCheckTool } = await import("../agent-tools.mjs")
+  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, contextTool, batchTool, manifestTool, manifestReadTool, consultStartTool, consultStopTool, parentChannelTool, docCheckTool, docGraphTool, docGraphReadTool } = await import("../agent-tools.mjs")
   // 台账统一入口（2026-10-05 统一入口批——台账 #923）：全量变体 = depth-0 段 ∥ 只读变体 = 全部
   // depth>0 段。动态 import——ledger 链静态达 node:sqlite（W8 契约②）；两变体同名单对象、schema 窄化。
   const { ledgerTool, ledgerReadTool } = await import("../ledger.mjs")
@@ -148,6 +148,12 @@ export async function assembleFamilyTools({
     ? [decorate?.consultStart ?? withPool(consultStartTool), decorate?.consultStop ?? consultStopTool]
     : []
 
+  // 文档工具面（`AGENT-LOOP-SUBAGENT.md` §6.60.1 · 需求 `docs/core/requirements/DOC-GRAPH.md` §4 AC-10）：
+  // **一处写、五处展开**——`doc_check` 本就只读（无写 action 可收窄）⇒ 本体直挂；`doc_graph` 挂只读变体
+  // （三动作、无 `scan`：子代理段的台账是只读变体，扫由父侧做——D-DT1）。五段各写一遍字面就是五份会各自漂的
+  // 单子（D-DT4）；并成一段又会抹掉各段真实差异。depth-0 段不展开本组：那边挂的是全量 `docGraphTool` + `docCheckTool`。
+  const docTools = [docCheckTool, docGraphReadTool]
+
   const depthOnly = depth === 0
     ? [decorate?.subagent ?? filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, readHistoryTool, contextTool, advisorTool, batchTool(null),
       ...consultTools,
@@ -158,9 +164,13 @@ export async function assembleFamilyTools({
       // manifest 工具（`MANIFEST.md` §2.10 · 2026-10-08 · 台账 #1098）：主 agent 读写出口——
       // **两模式同挂**（需求未设模式门）；全量变体仅 depth-0——子代理各角色段挂只读变体（见下 depth>0 各段）。
       manifestTool,
-      // 文档纪律机检（`DOC-DISCIPLINE.md` §3.20 条目 S）：只读报告态——depth-0 主 agent 段；
-      // 写文档 / 设计档的角色段（eng-coder / eng-designer）另挂（见下两分支）。
+      // 文档纪律机检（`DOC-DISCIPLINE.md` §3.20 条目 S）：只读报告态——depth-0 主 agent 段挂本体；
+      // 全部 depth>0 角色段由下方 `docTools` 展开供给（`AGENT-LOOP-SUBAGENT.md` §6.60）。
       docCheckTool,
+      // 文档锚点图（`DOC-GRAPH.md` §2.5 · 需求 F1–F6）：**两变体互斥装配**——本段（depth-0）挂全量四动作；
+      // 全部 depth>0 角色段挂只读变体（三动作、无 `scan`，契约 = `DOC-GRAPH.md` §2.5.5，装配矩阵单源 =
+      // `AGENT-LOOP-SUBAGENT.md` §6.60.2）。位置与 `docCheckTool` 同段（同一族：文档纪律面）。
+      docGraphTool,
       // 端差（decorate.settings——VSC depth-0 主 agent 面；缺省不追加）：核默认形态里
       // settings 住**基础集**（`tools/index.mjs` `assembleBuiltinTools`），端侧自持清单
       // 无该面 ⇒ 端以 decorate 补位（收敛通道 = 将来去 decorate 项即归核位）。
@@ -191,13 +201,13 @@ export async function assembleFamilyTools({
     // 团队台账只读变体（team-ledger 批）同律。
     // manifest 只读变体（MANIFEST.md §2.10.1 · 2026-10-22 · 台账 #1738）：同名 `manifest`、action 枚举只剩 `read`；
     // 与上两条只读先例同律挂在全部 depth>0 角色段（全量变体仅 depth-0——两变体互斥装配，同名不塌缩）。
-    : engChildRole === "eng-coder" ? [parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool, advisorTool, verifyTool, batchTool(batchDoc), docCheckTool,
+    : engChildRole === "eng-coder" ? [parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool, advisorTool, verifyTool, batchTool(batchDoc, { role: "eng-coder" }), ...docTools,
       ...(engChildSubagent ? [engChildSubagent] : [])]
-    : engChildRole === "eng-designer" ? [parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool, batchTool(batchDoc), docCheckTool,
+    : engChildRole === "eng-designer" ? [parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool, batchTool(batchDoc, { role: "eng-designer" }), ...docTools,
       ...(engChildSubagent ? [engChildSubagent] : [])]
-    : role === "coder" ? [parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool, verifyTool, advisorTool, ...(batchDoc ? [batchTool(batchDoc)] : [])]
-    : role === "consult" ? [recentChangesTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool]
-    : [parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool]
+    : role === "coder" ? [parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool, verifyTool, advisorTool, ...docTools, ...(batchDoc ? [batchTool(batchDoc, { role: "coder" })] : [])]
+    : role === "consult" ? [recentChangesTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool, ...docTools]
+    : [parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool, ...docTools]
 
   // 固定段（装配序 = agent.tools → 固定段 → 家族段 → extraTools）：timer 全模式全深度；
   // plan 随模式位——ENG-PLAN-EXCLUSION（FR31 ① · KD8 卸载而非「注册 + 报错」· KD11 全深度两端）；
