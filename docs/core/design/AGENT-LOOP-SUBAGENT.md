@@ -234,7 +234,7 @@
 | A1 | 漏调路径**必红**：T5-5 / T5-6 / T5-7 三例断言抛错（`assert.throws`——非静默通过） | — |
 | A2 | 断言在位可机检：`thincoder-core/agent-tools/subagent-run.mjs` / `thincoder-core/agent-tools/escalate-async.mjs` / `thincoder-core/agent-tools/advisor-async.mjs` 消费点各含令牌断言、三入池点各含键守卫（grep 断言句 + 抛错分支） | — |
 | A4 | 范围守恒（机检）：diff 不触取号公式行（`thincoder-core/agent-tools/subagent-scheduler.mjs`）与池键形态（`String(id)`）；`thincoder-vscode/**` 零写入 | — |
-| A5 | 触碰源档按其他检查硬线 800 判（>800 ⇒ 先拆再落；≤800 ⇒ 不管）；档位口径 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」 | — |
+| A5 | 触碰源档按设计器硬线 500 判（>500 ⇒ 设计轮必给分拆方案，无裁量）；收口面按其他检查硬线 800 判（>800 ⇒ 先拆再落）；档位口径 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」 | — |
 
 ### 6.21.8 边界（本条目不做）
 
@@ -667,7 +667,8 @@ This list is not an authorization boundary: touching a file outside it is allowe
   「system = 槽位装配 + 项目指令 + skills」下的**充分形态**，非必要条件。
 - 固块值 = spawn 参数派生（批次档绝对路径 / 审计快照），**在 child 生命周期内恒定** ⇒ 同一 child 的任意两次请求 system 逐字节相同 ⇒ **命中不破**。
 - 跨 spawn 不同值（不同批次档）不构成损失：新 child 的首个请求本来即缓存写（首现无前缀可复用）。
-- 零回归：`_spawnSystemBlock` 为 null ⇒ 拼接分支不进入 ⇒ system 逐字节同改前。null 两形 = **depth-0**（不走 `buildSpawnChild`）∥ **depth>0 但一块都没推**（manifest 读不出 ∧ 无 `files` ∧ 非工程角色）。`depth>0` 本身不是 null 的充分条件——S5 文档坐标行对任何 `depth>0` 角色都推（§6.61.2 ①）。
+- 零回归：`_spawnSystemBlock` 为 null ⇒ 拼接分支不进入 ⇒ system 逐字节同改前。null 两形 = **depth-0**（不走 `buildSpawnChild`）∥ **depth>0 但四格全空**（`batchBound` 为假 ∧ `engAuditAttempt === null` ∧ `files` 空 ∥ 未传 ∧ 文档坐标块不推）。`depth>0` 本身不是 null 的充分条件——S5 对任何 `depth>0` 角色都推（§6.61.2 ①）。
+- **四格要逐格写，不能压成「非工程角色」**：`batchBound = engineeringRole || (role === "coder" && !!batchDocAbs)` ⇒ 带绑定的 `coder` 不是工程角色、却推批档行；审计块由 `engAuditAttempt !== null` 单判，也不是工程角色的反面。压成一句就漏掉这两种 child。
 
 **压缩面不变量（AC 机判对象）**：
 
@@ -705,11 +706,11 @@ This list is not an authorization boundary: touching a file outside it is allowe
 | U2 | 正常 | 审计 spawn（eng-coder 父 + role `explore` + attempt 非 null） | `systemPrompt` 含五锚：`[Audit instructions — mechanical template` · A2 块头 · `Zero-git scope authority` · `[Audit budget — mechanical]` · `[Audit report format — mechanical template` | **红**：五锚只在 `input` |
 | U3 | 边界 | 长史（> 切割面）→ 压缩（`compressFallback` 零网络；另跑 `compressIfNeeded` + stub provider 一条） | system 五锚仍在 ∧ `agent.history` 无五锚 | **红**：两处皆无（压缩吞首条 = 病根复现） |
 | U4 | 边界 | 同一 child 连跑两次 `prepareRun` | 两次 `systemPrompt` 逐字节相等（缓存契约） | 现态绿（基线——改后须保持绿） |
-| U5 | 边界 | `_spawnSystemBlock` 为 null（depth-0；或 depth>0 但 manifest 读不出 ∧ 无 `files` ∧ 非工程角色） | `systemPrompt` 与改前逐字节相同（零回归） | 现态绿（基线） |
+| U5 | 边界 | `_spawnSystemBlock` 为 null（depth-0；或 depth>0 但**四格全空**：`batchBound` 假 ∧ `engAuditAttempt` null ∧ `files` 空 ∧ 文档坐标块不推） | `systemPrompt` 与改前逐字节相同（零回归） | 现态绿（基线） |
 | U6 | 边界 | designer 勘察 spawn（attempt = null） | system 不含审计五锚 ∧ 不含批次档行 | 现态绿（基线；改后须保持） |
 | U7 | 边界 | 整请求体（system + history）文本计数 | 固块文本恰出现 **1** 次（独占性） | **红**：现态在 history 中出现（而压缩后为 0） |
 | U8 | 正常 | eng-coder spawn，`files` = 两条真路径（真 `buildSpawnChild` + 真 `prepareRun`） | `systemPrompt` 含两条绝对路径（逐条一行）∧ 含两句语义逐字 ∧ `input`（`_engTaskInput`）不含所声明的写域路径 | **红**：现态 system 零路径——写域只有调度器知道 |
-| U9 | 边界 | 同一 spawn 去掉 `files`（`batchDoc` 仍在） | 块内无写域行（不含 `Files declared for this spawn`）；批档行与文档坐标行照旧在位（S4 未推块） | 现态绿（基线——改后须保持） |
+| U9 | 边界 | 同一 spawn 去掉 `files`（`batchDoc` 仍在）；夹具 = 临时项目目录，带可读 manifest 且三层已声明——`docRoot` 不可读时坐标行本就不推（§6.61.2 ④），那时「照旧在位」无从判 | 块内无写域行（不含 `Files declared for this spawn`）；批档行与文档坐标行照旧在位（S4 未推块） | 现态绿（基线——改后须保持） |
 | U10 | 边界 | explore spawn 带 `files`（无 `batchDoc`、无审计）；同 child 连跑两次 `prepareRun` | system 含写域行 ∧ 不含批次档行 ∧ 两次 `systemPrompt` 逐字节相等 | **红**：现态零路径 |
 
 **验收标准（逐条可机判）**：
@@ -719,8 +720,8 @@ This list is not an authorization boundary: touching a file outside it is allowe
 | A23-1 | `prepareRun(engChild).systemPrompt` 含批次档行 ∧ `input` 不含（U1） |
 | A23-2 | 审计 spawn 的 system 含五锚 ∧ `input` 不含（U2） |
 | A23-3 | 压缩后五锚仍在 system ∧ 不在 history（U3）——**先红**：现态两处皆无 |
-| A23-4 | 同 child 两次装配 system 逐字节相等（U4）；`_spawnSystemBlock` 为 null ⇒ 逐字节同改前（U5） |
-| A23-5 | 分类裁定表 15 行逐处有裁定（本档表——含「同类已解」第 11 行） |
+| A23-4 | 同 child 两次装配 system 逐字节相等（U4）；`_spawnSystemBlock` 为 null ⇒ 逐字节同改前（U5——null 的枚举逐格见 U5 输入格，不收成「非工程角色」） |
+| A23-5 | 分类裁定表 **16** 行逐处有裁定（本档表——含「同类已解」第 11 行 ∧ 文档坐标行（S5）第 16 行） |
 | A23-6 | `doc_check(mode:"gate")` 对触碰档 PASS（判据为绝对量：零悬空锚 / 零超长段——机检无 delta 语义） |
 | A23-7 | `files` 非空 ⇒ `prepareRun(child).systemPrompt` 含每条声明路径（逐条一行）∧ `_engTaskInput` 不含所声明的写域路径（U8） |
 | A23-8 | `files` 空 / 未传 ⇒ 块内无写域行，其余块不受 S4 影响（U9） |
@@ -1103,7 +1104,8 @@ test/integration/*.test.mjs
 
 - 本轮零跨层——只写设计面二档（`AGENT-LOOP-SUBAGENT.md` ∥ `TOOLS.md`）。
 - 实施轮跨入产品代码面（走实施席 + 设计令牌）；`test/RTM.md` 与 `test/integration/` 属产品面（走全链）。
-- **实施面只判 800 硬线**：实施轮五个代码档（`thincoder-core/agent-tools/subagent.mjs` ∥ `thincoder-core/agent/family-tools.mjs` ∥ `thincoder-core/agent-tools/subagent-spawn.mjs` ∥ `thincoder-core/prompt-overlays.mjs` ∥ 端侧 `thincoder-vscode/src/agent/tool-table.mjs`），连同表内两处注释面档（`thincoder-core/agent-tools/spawn-gates.mjs` ∥ `thincoder-core/agent-tools/subagent-async.mjs`），均未过 800（档位口径 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」；500 不是实施面的判据）。
+- **长度只在设计轮与收口面判，本节不判**：实施轮五个代码档（`thincoder-core/agent-tools/subagent.mjs` ∥ `thincoder-core/agent/family-tools.mjs` ∥ `thincoder-core/agent-tools/subagent-spawn.mjs` ∥ `thincoder-core/prompt-overlays.mjs` ∥ 端侧 `thincoder-vscode/src/agent/tool-table.mjs`），连同表内两处注释面档（`thincoder-core/agent-tools/spawn-gates.mjs` ∥ `thincoder-core/agent-tools/subagent-async.mjs`），均未过 800（档位口径 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）。
+- **设计面（① 500 硬线）的判读与分拆方案不在本节**：`thincoder-core/agent-tools/subagent-spawn.mjs` 那一档住 §6.61.3。
 
 ### 6.59.4 关键决策记录
 
@@ -1397,7 +1399,7 @@ This variant carries the three query actions only — `scan` belongs to the main
 
 ## 6.61 子代理文档坐标行（spawn 固块 S5）
 
-**需求** = 父侧本批派单（用户 2026-11-11 02:20「project-manifest 跟 advisor 和子 agent 是否应该建立关联？这样它们能知道哪类内容应该从哪里找」→ 02:22「我觉得要」）。
+**需求** = `docs/core/requirements/AGENT-LOOP.md` §4.7 `F3`（子代理携文档坐标；条目句 =「未声明与读不出两种状态必须可区分」）。该条目由父侧本批派单落地（用户 2026-11-11 02:20「project-manifest 跟 advisor 和子 agent 是否应该建立关联？这样它们能知道哪类内容应该从哪里找」→ 02:22「我觉得要」）。
 
 本节只说机制：子代理的提示里为什么多一行、这一行从哪取、取不到时怎么办。
 
@@ -1460,7 +1462,7 @@ if (docsBlock) spawnBlocks.push(docsBlock)
 ```
 
 - **收集序**：批次档行 → 审计块 → 写域行 → **文档坐标行**（追加在既有三块之后，三处推块语句零改、零换序）。
-- **可达的复合态（块集不是自由组合）**：审计块只在「工程父下的 `explore` 子代理」出现（`thincoder-core/agent/spawn-child.mjs` 的 `gateEngCoderSpawn` 只放行 `role='explore'`，designer 勘察路径返回 `null` ⇒ 不注审计块），而批次档行只在工程角色 ∥ 绑定 `coder` 出现（`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `batchBound = engineeringRole || (role === "coder" && !!batchDocAbs)`）⇒ **两块互斥、永不共存**。可达的完整集只有两条：工程角色 + `files` ⇒ [批档行, 写域行, Docs 行]；审计子代理 + `files` ⇒ [审计块, 写域行, Docs 行]。验收只断言这两条。
+- **可达的复合态（块集不是自由组合）**：审计块只在「工程父下的 `explore` 子代理」出现（`thincoder-core/agent/spawn-child.mjs` 的 `gateEngCoderSpawn` 只放行 `role='explore'`，designer 勘察路径返回 `null` ⇒ 不注审计块），而批次档行只在工程角色 ∥ 绑定 `coder` 出现（`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `batchBound = engineeringRole || (role === "coder" && !!batchDocAbs)`）⇒ **两块互斥、永不共存**。**三块态**只有两条：**批档行在场者**（工程角色 ∥ 绑定 `coder`）+ `files` ⇒ [批档行, 写域行, Docs 行]；审计子代理 + `files` ⇒ [审计块, 写域行, Docs 行]。三块之外还有**两块态**，例如非工程父下的 `explore` + `files` 收 [写域行, Docs 行]（§6.26 U10）· 无 `files` 的批档行在场者收 [批档行, Docs 行] · 无 `files` 的审计子代理收 [审计块, Docs 行]。**这一段列的是本批验收所要的块集，不是可达态的全分类**：验收只断上面两条三块态，其余态不在本批验收内。
 - **角色无关**：任何 `depth>0` 角色都收本行；它的价值对 `explore` ∥ `eng-designer` 最高，但按角色分叉会多一份文案而无第二个场景（同 S4 判法）。
 - §6.26 的「改后 = 盘上真身节选」代码块是**节选**，本行不在其列——节选不承诺穷举，收集序的正本 = 本节。
 
@@ -1514,7 +1516,9 @@ fillDefaults(f3).docRoot.batches        // ⇒ null（原值保持）
 
 **④ 读错收口**：`readManifest` 对非 ENOENT 的读错上抛 ⇒ 调用点包 `try/catch`，抛出即按「读不出」处理 ⇒ 不推块。
 
-**护栏宽度 = 整段坐标计算**（读档 + 基数解析 + 路径映射 + 串拼装），不是只包 `readManifest` 那一句：基数取法 `docRootBase(cwd)` 走项目发现链（`resolveProjectRoot` → `projectRootView` 的 `owningProject` ∥ `discoverProjects`），它同样读盘、同样可能抛。只把读档那一句包进护栏，「读不出不赔掉一次 spawn」这条承诺就只兑现了一半。
+**护栏宽度 = 整段坐标计算**（读档 + 基数解析 + 路径映射 + 串拼装），不是只包 `readManifest` 那一句：基数取法 `docRootBase(cwd)` 走项目发现链（`resolveProjectRoot` → `projectRootView`），而树根那一环 `owningProject` 的 `statSync(dir, { throwIfNoEntry: false })` **无护栏** ⇒ 该链的 I/O 异常照原样上抛。只把读档那一句包进护栏，「读不出不赔掉一次 spawn」这条承诺就只兑现了一半。验收 = AC-DC-8。
+
+这条链会不会抛的口径**单源** = `docs/core/design/MANIFEST.md` §2.2 `owningProject` 条（同档 `projectRootView` / `projectView` 的「不抛」均已随之收窄成「状态面不抛」）；本档只引用该口径，不复述它的判据（D2）。
 
 取不到一行坐标，不得让一次 spawn 失败——**这条不是兜底式静默**：不加本行的结果 = 本批之前的行为，业务结果不变（子代理仍从任务书 ∥ `files` ∥ 自行读取取坐标）。
 
@@ -1532,7 +1536,7 @@ fillDefaults(f3).docRoot.batches        // ⇒ null（原值保持）
 
 | 文件 | 改动 |
 |---|---|
-| `thincoder-core/agent-tools/subagent-spawn.mjs` | 新增局部纯函数 `docsCoordinatesBlockOf(cwd)` ∥ 收集点一行推块 ∥ `const spawnBlocks = []` 上方那段收集序注释补 S5 一句 |
+| `thincoder-core/agent-tools/subagent-spawn.mjs` | 新增局部纯函数 `docsCoordinatesBlockOf(cwd)`（护栏 = 整段坐标计算：读档 ∥ 基数解析 ∥ 路径映射 ∥ 串拼装全在 `try` 内）∥ 收集点一行推块 ∥ `const spawnBlocks = []` 上方那段收集序注释补 S5 一句 |
 | `thincoder-core/agent/setup.mjs` | 拼接分支 `if (agent._spawnSystemBlock)` 上方那段注释的块枚举补「文档坐标行」，块计数与收集点同数（四块）；注释面，零行为变更 |
 | `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.61 ∥ §6.26 表 | 写（本节）；S5 一行入表（回指本节） |
 | `docs/batches/<batch record name>.test.mjs` | 改面单测档（实施轮创建）：本批自写自跑，收口随批删除（零留存）；测试面，不进产品档的分层判断 |
@@ -1570,9 +1574,11 @@ fillDefaults(f3).docRoot.batches        // ⇒ null（原值保持）
 | AC-DC-1 | 夹具 F1（临时项目目录：`docRoot.requirements` = `docs/requirements` 单串 · `docRoot.design` = `["docs/core/design", "docs/vsc/design"]` 两根 · `docRoot.batches` = `docs/batches` 单串）⇒ Docs 行**逐字等于**契约 ② 的示例串（同层 `, ` 并列、层间 ` · `）；路径项目根相对、`/` 分隔 | 夹具 F1 ⇒ 取 `_spawnSystemBlock` 逐字断言 |
 | AC-DC-2 | **红侧一格**：档内缺 `docRoot.design` ⇒ 该项为 `(undeclared)`，且全文**不含** `docs/design`（默认值） | 同夹具删该键 ⇒ 两断言并取 |
 | AC-DC-3 | **红侧二格**：`docRoot.batches = null` ⇒ 该项为 `(undeclared)` | 夹具 `null` ⇒ 断言同上 |
-| AC-DC-4 | **红侧三格**：无档 ∥ 坏 JSON ∥ 读抛 ⇒ spawn 正常返回，`_spawnSystemBlock` 不含 `Docs (` | 三格各一次；断言不抛。夹具 = 临时目录，且其祖链上无 `PROJECT-MANIFEST.json`——否则「无档」格取到的是别处的档，用例读的不是它自己造的状态 |
-| AC-DC-5 | 零回归 + 两条**可达**复合态各自块内相对序（不主张四块共存——审计块与批次档行互斥，见契约 ①）。甲：工程角色（`eng-designer`）+ `files` ⇒ 批档行（首）→ 写域行 → Docs 行（末），块内无审计块；乙：`eng-coder` 父下的 `explore` + `files` ⇒ 审计块（首）→ 写域行 → Docs 行（末），块内**没有独立的批档行块**（首块不以 `Batch record (batchDoc):` 开头；该串在块内唯一出现处是审计块模板自身带的那句批档路径，见 `thincoder-core/agent-tools/audit-block.mjs`）——判法是块级，「全文无该串」在审计块零改的前提下不可达 | 两条各一次 `buildSpawnChild`，断言块内相对序 + 首块块头 |
+| AC-DC-4 | **红侧三格**：无档 ∥ 坏 JSON ∥ 读抛 ⇒ spawn 正常返回，`_spawnSystemBlock` 不含 `Docs (` | 三格各一次；断言不抛。夹具 = 临时目录，且其祖链上无 `PROJECT-MANIFEST.json`——否则「无档」格取到的是别处的档，用例读的不是它自己造的状态。「读抛」格的触发手段 = 把 `PROJECT-MANIFEST.json` 造成**目录**：`readFileSync` 抛 `EISDIR`（非 ENOENT）⇒ `thincoder-core/manifest.mjs` 的 `throw e` 上抛（同形夹具先例 = `docs/core/design/MANIFEST.md` AC-57） |
+| AC-DC-5 | 零回归 + 两条可达**三块态**各自的块集与相对序（不主张四块共存——审计块与批次档行互斥，见契约 ①）。甲：工程角色（`eng-designer`）+ `files` ⇒ **恰三块**：批档行（首）→ 写域行 → Docs 行（末），块内无审计块；乙：`eng-coder` 父下的 `explore` + `files` ⇒ **恰三块**：审计块（首，块头 = `[Audit scope — mechanical context`）→ 写域行 → Docs 行（末），且**无独立的批档行块**——判法 = 块数 3（多一块批档行就是 4）+ 首块块头为审计块头；该串在块内唯一出现处是审计块模板自身带的那句批档路径（`thincoder-core/agent-tools/audit-block.mjs`），而「全文无该串」在审计块零改的前提下不可达 | 两条各一次 `buildSpawnChild`，断言 `_spawnSystemBlock` 的块数 + 各块相对序 + 首块块头；零回归半（用例 12）= 在 AC-DC-4 的「无档」夹具上真装配一次（工程角色 + `files`），整块**恰两块**且序 = 批档行（首）→ 写域行——即该夹具本批改前的期望（不从成品串剪接读出）+ 装配前后目录内容不变 |
 | AC-DC-6 | 文档门：本批触碰档 `doc_check(mode:"gate")` 首行 `DOC-CHECK GATE: PASS` | `doc_check` |
+| AC-DC-7 | **整键格**：`docRoot` 整键缺 ∥ 值非对象 ⇒ 三层皆 `(undeclared)`，且全文不含默认路径（`docs/requirements` ∥ `docs/design` ∥ `docs/batches`） | 夹具删整键 ∥ `docRoot` 写成字符串 ⇒ 两断言并取 |
+| AC-DC-8 | **护栏宽度 = 整段坐标计算**：`docsCoordinatesBlockOf` 的 `try` 覆盖 `readManifest` ∥ `docRootBase` ∥ `docRootPaths` 三处调用（都在 `try {` 与 `catch` 之间），且 `try {` 之前与 `catch` 之后两面都不留同调用 | 源码面结构断言（读 `thincoder-core/agent-tools/subagent-spawn.mjs`，切出 `docsCoordinatesBlockOf` 函数体后断三处调用的位置）。**红侧 = 护栏变窄**：`try` 只包 `readManifest`、基数与路径映射留在护栏外——这是**本批实施加宽前的形**（`docsCoordinatesBlockOf` 本批新增，本批落地前无该函数的盘面承载体，故不称「改前档面」）；取法 = 把护栏收窄成只包 `readManifest` 后重跑用例 11，须转红 |
 
 ### 6.61.6 用例表
 
@@ -1586,8 +1592,10 @@ fillDefaults(f3).docRoot.batches        // ⇒ null（原值保持）
 | 6 | 错误 | manifest 坏 JSON | 同上（AC-DC-4） |
 | 7 | 正常 | 工程角色（`eng-designer`）+ `files` 两条 | 批档行（首）→ 写域行 → Docs 行（末）；无审计块（AC-DC-5 甲） |
 | 8 | 正常 | 审计子代理（`eng-coder` 父 + `role` = `explore`）+ `files` | 审计块（首，块头 = `[Audit scope — mechanical context`）→ 写域行 → Docs 行（末）；无独立批档行块（AC-DC-5 乙） |
-| 9 | 边界 | `docRoot` 整键缺 ∥ 值非对象 | 三层皆 `(undeclared)`——`missingKeys` 含整键名 `docRoot`（契约 ③ 整键格；「三层全未声明」不是另设分支，同一逐层判据连用三次的结果） |
-| 10 | 错误 | manifest 读抛（非 ENOENT 的读错） | 不推块；spawn 照常返回（AC-DC-4 第三格） |
+| 9 | 边界 | `docRoot` 整键缺 ∥ 值非对象 | 三层皆 `(undeclared)`，且全文不含默认路径（`docs/requirements` ∥ `docs/design` ∥ `docs/batches`）——`missingKeys` 含整键名 `docRoot`（AC-DC-7；契约 ③ 整键格；「三层全未声明」不是另设分支，同一逐层判据连用三次的结果） |
+| 10 | 错误 | manifest 读抛（`PROJECT-MANIFEST.json` 造为目录 ⇒ `EISDIR`） | 不推块；spawn 照常返回（AC-DC-4 第三格） |
+| 11 | 结构 | `docsCoordinatesBlockOf` 函数体（源码面） | `try` 块含 `readManifest` ∥ `docRootBase` ∥ `docRootPaths` 三处调用，且 `try {` 之前与 `catch` 之后都不留同调用（AC-DC-8） |
+| 12 | 正常 | AC-DC-4 的「无档」夹具 + 工程角色 + `files` 两条（真 `buildSpawnChild`；该夹具下 Docs 块本就不推） | 整块**恰两块**且序 = 批档行（首）→ 写域行——即该夹具本批改前的期望（真装配读出，不是从成品串剪掉 Docs 行）；装配前后目录内容不变（零落盘）（AC-DC-5 零回归半） |
 
 ### 6.61.7 边界（本节不做）
 
@@ -1614,6 +1622,6 @@ fillDefaults(f3).docRoot.batches        // ⇒ null（原值保持）
 
 **为什么不立行**：集成用例只从两个入口长出——产品真需要的业务场景，或生产真发生过的问题。本行是提示面的一行坐标，子代理读它之后**用户能看见的结果**不变（同一任务、同一报告）；两侧入口皆不成立，故不造用例。
 
-**这不是缺陷**：没有用例盯这一面，不等于这一面有洞——它的正确性由 AC-DC-1–AC-DC-5 的单测读数负责，收口随批删除。
+**这不是缺陷**：没有用例盯这一面，不等于这一面有洞——它的正确性由 AC-DC-1–AC-DC-8 的单测读数负责，收口随批删除。
 
 

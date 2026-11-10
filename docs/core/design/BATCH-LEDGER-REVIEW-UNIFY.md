@@ -1420,7 +1420,7 @@ Why：机判只认日期锚（`docs/core/design/LEDGER.md` §3.7 的 `resume_due
 | `closed-but-open-rows` | `record = closed` ∧ 本批存在以下任一行：① `status = 在途`；② `status ∈ {待讨论, 待设计}` ∧ `trigger` 既非 `条件` 也非 `认账不排期`（含 `trigger` 为空） | 重开（`status` §1 `进行中` + note）后重试收口 |
 | `closed-but-settling` | `record = closed` ∧ 本批存在 `待核销` 行 | 同上，或 `ledger` 批量结算单笔补齐 |
 | `open-but-unwritable` | `record = open` ∧ 本批**无** `在途` 行 ∧ 存在 `待核销` 行 | 收口一次把它结清；或把它退到 `在途` 继续做。**这一形两种来头同一读法**：真做完提前推进的行，与重开补偿失败（档回滚失败）的残态——两种都使该批写盘全被拒（写锁只认 `在途` 行） |
-| `open-but-settled` | `record ≠ closed` ∧ 本批行集**非空** ∧ 全部为归档态 | 直接补关；唯一命中此类时可不补写历史过程段，完整条件 = `docs/core/design/BATCH-RECORD.md` §4.18-C。要继续做须另立新行认领 |
+| `open-but-settled` | `record ≠ closed` ∧ 本批行集**非空** ∧ 全部为归档态 | **读形随 `record` 两分，类名与条件不分**：`record = open` ⇒ 直接补关；唯一命中此类时可不补写历史过程段，完整条件 = `docs/core/design/BATCH-RECORD.md` §4.18-C；要继续做须另立新行认领。`record = unknown`（§1 状态行缺行 ∥ 不可解析）⇒ 照报这类（不可判必须可见），但出路是**待修态、不是补关入口**：先修 §1 状态行，修好再跑 `batch({action:"check"})`；修好前不按直接补关办（单源 = `docs/core/design/LEDGER.md` §11.2「`unknown` 是待修态，不是补关入口」） |
 | `pointer-stale` | 行 `task_book` 解析失败 ∥ 所指档不在盘 | 改指针，或把该行退回 `待讨论` 交还。**预定行（值尾带 `（预定）` 标记）不计入**：档未建是它的合法态（单源 = `docs/core/design/LEDGER.md` §6.4）。本面**结构不可达**（读数与理由 = `docs/core/design/LEDGER.md` §8.1 AC-M2-40）⇒ 不为它接一条喂不到输入的分支 |
 | `header-row-missing` | 档头 `台账` 行登记的某个 `#N`，台账 `items` 里**没有**同号行（`SELECT 1 FROM items WHERE id = N` 空） | **主路径 = 把该号从档头 `台账` 行删掉**（普通文档写，零台账写、无前置条件）；改完 `check` 转一致。**次路 = 重跑 `attach`**，只在它真能补上那一行时可用：`attach` 省略 `ledger` 而开新行时受同面判约束（`docs/core/design/LEDGER.md` §6.3「模型可见描述面」逐字「but only when no unsettled row exists on the same face (board); otherwise it is refused and lists the candidates」）⇒ 同面还有未决行时那一笔被拒，此时须带显式 `ledger:"#N"`（接手一行，同面判零判）或改用主路径。本批还有活要记时另立新行 |
 
@@ -1464,7 +1464,7 @@ Why：机判只认日期锚（`docs/core/design/LEDGER.md` §3.7 的 `resume_due
 | `test/integration/batch-gates-reanchor.test.mjs`、`test/integration/batch-ledger-bind.test.mjs` | 按 §9 delta 改题设与断言 |
 | `test/rtm/batch-ledger.md` | 登记本批 RTM delta（编号先落，再写用例标题） |
 
-档位量法（实施前后各跑一次，读数只记批档 §5）：
+档位量法（记录用：读数只记批档 §5，不在实施面作拆分判定；档位判据单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）：
 
 ```text
 doc_check({
@@ -1488,7 +1488,7 @@ doc_check({
 ```
 
 - **文件层结论**：各档均在软线内，无拆分计划。
-- **接近软线的三档**（按本节量法复跑，读数住批档 §5）：`thincoder-core/agent-tools/batch-lifecycle.mjs`、`thincoder-core/ledger-cmd.mjs` 与 `thincoder-core/ledger-write-ops.mjs` 现均未越线。后续变更若使其中之一越线，先拆再交付——拆点：`batch-lifecycle.mjs` 的收口 ∥ 重开两路写序与补偿回滚段整段迁出到 `thincoder-core/agent-tools/<新档>.mjs`（两路各只剩一行调用）；`ledger-write-ops.mjs` 的批级写点段（`assertBatchArg` ∥ `resolveBatchRows` ∥ `ledgerReclaimBatch`）整段迁出；`ledger-cmd.mjs` 的指针判据面（`ledgerBatchRows` ∥ `closeDisposition` ∥ `ledgerReanchorBatch` ∥ `batchLedgerConsistency`）整段迁出。三处都在既有档头已划出的单向依赖边界上。
+- **接近软线的三档**（按本节量法复跑，读数住批档 §5）：`thincoder-core/agent-tools/batch-lifecycle.mjs`、`thincoder-core/ledger-cmd.mjs` 与 `thincoder-core/ledger-write-ops.mjs` 现均未越线。
 - **单函数层结论**：新增 `batchLedgerConsistency` 与改写后的 `ledgerReanchorBatch` 都是单一函数，无拆分计划。
 - **绝对读数不写进本设计**：它们只记批档 §5 实施记录。
 

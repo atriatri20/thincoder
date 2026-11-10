@@ -366,13 +366,24 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 
 行数与坐标 = 本轮实读（行号口径 = 末行行号）；实施轮的行号随动——判据以内容机检为准（U-BG9 ∥ U-SL14 同口径），行号只用于定位。
 
-**跨 500 软线登记与拆分计划**：六档产品码里只有 `batch-lifecycle.mjs` 越线（556 → 612）；`token-ttl.mjs` 306 → 370、`design-slots.mjs` 245 → 305、`thincoder-core/session-slot-write.mjs` 240 → 260、`design-token.mjs` 184 → 200、`session-slots-manifest.mjs` 247 → 264 均未触线；六档均未触 800 硬限。
+**档位登记（本批六档；判据 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」①）**：
 
-`batch-lifecycle.mjs` 已越 500 软线：**拆分触发条件** = 本批之后任一改动触及该档时先拆，或任一时刻行数 ≥ 700（硬限 800 前留 100 行余量）。
+- **改代码前未过 500（四档）** ⇒ 按 ① 不提分拆：`token-ttl.mjs` ∥ `design-slots.mjs` ∥ `thincoder-core/session-slot-write.mjs` ∥ `design-token.mjs`。
+- **新增档（一档）** ⇒ 无「改前」，按 ① 判落盘长度，未过 500 ⇒ 不提分拆：`thincoder-core/session-slots-manifest.mjs`。
+- **改代码前已过 500（一档）**：`batch-lifecycle.mjs`——分拆方案已执行，见下。
 
-**切法** = 收口链（`closeBatchRecord` ∥ `statusBatchRecord` 的收口合流 + `reanchorOnClose` + 链完整性门调用面）整体搬进新档 `thincoder-core/agent-tools/batch-closeout.mjs`，`create` ∥ `append` ∥ `status` 的段写面留在原档；两档共享的读档 / 解析工具另置 `batch-read.mjs`。
+逐档读数（改前 ∥ 改后 ∥ 现行）按 D12 住批档，本节只写关系：登记里写成数，就成了下一个人要回来核的过期账。
 
-本批不拆的理由：本次只加一个薄壳与两个调用点，拆分会把本批的验收面与一次纯搬移混在一轮。
+**分拆方案的执行结果（`batch-lifecycle.mjs`）**：
+
+- **已拆出**：收口面四道判据与回执 → `thincoder-core/agent-tools/batch-closeout.mjs`。该档头注逐字：「收口面的四道判据与回执（从 `batch-lifecycle.mjs` 拆出，2026-10-27）」。
+- **仍留原档**：`closeBatchRecord` ∥ `statusBatchRecord` ∥ `reanchorOnClose` 与段写面；读档 / 解析工具住 `thincoder-core/agent-tools/batch-read.mjs`。
+- **现行档位**：该档的 `doc_check` `lines` 读数已落到 500 之下（读数按 D12 住批档，本节只写关系）⇒ 按 §3 ① 后续批不提分拆。
+
+**该档此后的义务**：
+
+- 设计轮：改前未过 500 ⇒ 按 `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」① 不提分拆。
+- 收口面：在 800 之下 ⇒ 按同节 ② 不提拆分要求。
 
 **用例（当批单测 U-BG 组）**：
 

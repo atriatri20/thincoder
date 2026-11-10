@@ -38,15 +38,7 @@
       "../.thincoder",
       "../thincoder.com"
     ],
-    "docCheckExemptions": [
-      {
-        "file": "docs/batches/2026-11-11-p2-6-repair-close-discoverability.md",
-        "kind": "锚·档缺",
-        "text": "thincoder/docs/README.md",
-        "why": "第 3 轮评审块内的证据格把它写成仓根相对外的旧形，实际档为 docs/README.md。评审轮次块归评审席（batch 工具按身份拒主 agent 写 §3），故裁定为不阻断；缺陷本身记在台账 #2325，下一轮评审在自家块内改用正确形后删除本登记。",
-        "review": "下一轮评审写 §3 时改用 docs/README.md；该块仍带旧形时本条继续有效，直到该档被冻结。"
-      }
-    ],
+    "docCheckExemptions": [],
     "docCheckExts": [],
     "writableRepos": []
   }

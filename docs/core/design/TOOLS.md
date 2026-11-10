@@ -2468,11 +2468,11 @@ test/integration/tool-role-fitting.test.mjs
 - **增量面**：既有装配叶、工具面、描述档与测试面的增量；新描述档只按变体区分，不形成第二套动作判据。
 - **越 500 行主动审视线、未越 800 行硬限的五档**：`thincoder-core/doc-graph.mjs`、`thincoder-core/agent/write-gate-ledger.mjs`、`thincoder-core/agent/helpers.mjs`、`thincoder-core/agent-tools/subagent-spawn.mjs`、`test/integration/batch-live-batch-lock.test.mjs`。
 - **逐档处置**（同一条判据：本批是否新增职责面——新增才拆）：
-  - `thincoder-core/doc-graph.mjs`：只加未建图只读空态一条分支，职责仍在图查询 ⇒ 不拆分，进评审主动审视面。
-  - `thincoder-core/agent/write-gate-ledger.mjs`：只换 `LEDGER_HANG_STEPS` 的文本，写门判据与流程不动 ⇒ 不拆分，进评审主动审视面。
-  - `thincoder-core/agent/helpers.mjs`：新增只读变体构造器，与档内既有 `readonlyToolNames` ∥ `SUBAGENT_TOOL_EXCLUSIONS` 同属「工具名集合与变体派生」这一职责 ⇒ 不拆分，进评审主动审视面。
-  - `thincoder-core/agent-tools/subagent-spawn.mjs`：只在既有 spawn 路径上接线（派生面、计数调用、`extraTools` 注入），计数状态住 `thincoder-core/agent/spawn-child.mjs`，职责面未增 ⇒ 不拆分，进评审主动审视面。
-  - `test/integration/batch-live-batch-lock.test.mjs`：只改写 12-1 的既有断言 ⇒ 不拆分，进评审主动审视面。
+  - `thincoder-core/doc-graph.mjs`：只加未建图只读空态一条分支，职责仍在图查询 ⇒ 不拆分。
+  - `thincoder-core/agent/write-gate-ledger.mjs`：只换 `LEDGER_HANG_STEPS` 的文本，写门判据与流程不动 ⇒ 不拆分。
+  - `thincoder-core/agent/helpers.mjs`：新增只读变体构造器，与档内既有 `readonlyToolNames` ∥ `SUBAGENT_TOOL_EXCLUSIONS` 同属「工具名集合与变体派生」这一职责 ⇒ 不拆分。
+  - `thincoder-core/agent-tools/subagent-spawn.mjs`：只在既有 spawn 路径上接线（派生面、计数调用、`extraTools` 注入），计数状态住 `thincoder-core/agent/spawn-child.mjs`，职责面未增 ⇒ 不拆分。
+  - `test/integration/batch-live-batch-lock.test.mjs`：只改写 12-1 的既有断言 ⇒ 不拆分。
 - **读数口径**：行数按 `doc_check` 的 `lines` 量法取，档级事实以实施后的实际行数为准（实施轮已落，本节按该轮行数复判）；本档不记绝对值。
 
 #### 关键决策记录

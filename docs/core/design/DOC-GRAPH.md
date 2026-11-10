@@ -344,24 +344,43 @@ thincoder-core/tool-docs/doc_graph.md       模型可见描述（描述外置的
 
 ### 行数档位口径
 
-**来源（用户原话，逐字）**：「500行其实也不应该再叫软线了，对于设计器来说，它就是硬线，只有设计器拿他做硬线。其他检查都是以800行为硬线。这样也就不用纠结该拆不该拆了。」
+**来源（用户原话，逐字）**：「我觉得我中间别为代码长度纠结了，就设计器判一次，收口检查判一次，中间其他地方对代码长度的检查一概都取消，这样最干净。」
 
-**要的就是机械化**：两条都是硬线，不留「审视后自行判断」的余地，也不留第三个判断点。
+**要的就是机械化**：判定时点只有两个，中间零判断点。中间每加一处长度判断，就多一个要解释、要豁免、要吵「这算不算超」的点；两头各判一次，规则才真机械。
 
-**同口径的另一处**：工作区根的 `AGENTS` 档（Coding Conventions · File size）写同一件事，逐字如下。
+**同口径的另一处**：工作区根的 `AGENTS` 档（Coding Conventions · File size）写同一件事。**全引**（字句未改）——只引半条，「两处互指」就不成立：
 
 ```text
-File size (source and unit-test files only): two hard lines, no advisory tier.
-500 lines = the designer's hard line — at design time, measured on the file before this batch's changes
-800 lines = every other check's hard line — implementation, closeout and review judge only this one
-There is no third line and no "looked at it, decided not to split" verdict.
+File size (source and unit-test files only): judged exactly twice, nowhere else. **At design time** the designer judges the length **before** this batch's changes: above 500 lines ⇒ the design must carry a split plan; at or below ⇒ nothing to judge. **At closeout** the check judges 800 lines: above ⇒ split before landing; at or below ⇒ leave it alone. **Every step in between judges nothing about file length** — implementation, code review and any other middle step do not measure it at all (not a softer threshold — no check). There is no advisory tier and no "looked at it, decided not to split" verdict. **Documents (`.md`) are under no size obligation** — no line limits, no line-count readings, no split plans. The rule measures whether a code file has grown past what one person can hold; a document's size is a reading about its content, not a defect in it.
 ```
+
+引文与 `AGENTS` 档逐字一致。
 
 两处互指，不是一处说了算：任一处改动，须同轮改另一处；两处措辞打架时先停下对齐，不各写各的。
 
+**数值与语义各一个家**：
+
+- **数值**（两条线各是多少）= 产品常量 `fileSoftMax` ∥ `fileHardMax`（`DOC_CHECK_BUILTINS`；消费面 = `thincoder-core/doc-check/index.mjs`）。
+- **语义**（哪条线管哪一面、过线判什么）= 本节。改数改常量，改判法改本节——两件事不共用一个家。
+- 依据 `docs/core/design/DOC-DISCIPLINE.md`「**数值**（两条线各是多少）= 产品常量 `DOC_CHECK_BUILTINS` 的 `fileSoftMax` / `fileHardMax`，值随常量走，他处不得另写一套数对；**语义**（哪条线管哪一面、过线判什么）= `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」」。
+
+**最近先例**：
+
+- **坐标**：`docs/core/design/DOC-DISCIPLINE.md` §3.10「读数口径（两半各一个家）」。
+- **对齐**：同一分家法（数值随常量走、语义只在一处写），同一「`.md` 档零行数义务」。
+- **偏差**：本节写**判定时点与该时点判什么**（设计时 ∥ 收口时）；§3.10 写**读数面的印法**（`lines` 回执与档位标记）。两节互为指针，不各写一份判法。
+- **同形先例另两处**：`docs/core/design/CORE-UNIFICATION.md` §2.5 注 ∥ `docs/core/design/LEDGER.md` 的「档位判据」句——都是「阈值指本节、读数住批档」。
+
+**勘察证据**：
+
+- **库外**：行数阈值是本仓的工程内部约定，公开源里没有与之对应的规范可引。
+- **已查**：声明源（`PROJECT-MANIFEST.json` 的 `index.publicRepos`）两处。`../.thincoder` 的 `advisor.md` 带同主题的**旧**措辞（「exceeding 500 lines — advisory」）——跨仓、属产品面，未动；`../thincoder.com` 有站点页行数读数与一份拆分记录，对象是 HTML 页，不是代码档的档位口径。
+- **结论**：两处都不是本口径的语义源头——外部没有可引的权威，本口径的家在本仓（本节 ∥ 产品常量）。
+- **库内**：先例即上一条。
+
 **对象**：代码档（源文件 ∥ 测试文件）。文档面（设计 ∥ 需求 ∥ 批次 ∥ 台账）不受行数限制——依据 `docs/core/requirements/ENGINEERING-MODE-V2.md`「文档（设计 / 需求 / 批次 / 台账）不受行数限制——无任何行数义务」。
 
-**① 设计器硬线 = 500（只有设计轮用这一条）**
+**① 设计时判一次 = 500（设计器判；判的是改代码前的长度）**
 
 - **过 500（> 500）⇒ 必须给分拆方案**：拆哪几族、切在哪、为什么切在那里。硬性义务，没有裁量空间——「接受本次载荷、拆分另批」不能替方案。
 - **未过 500（≤ 500）⇒ 不提分拆**：不进分拆讨论，不写方案，也不写「故不拆」一类判断。
@@ -369,14 +388,14 @@ There is no third line and no "looked at it, decided not to split" verdict.
 - **新建档没有「改前」**：判它落盘时的长度——它是本批写出来的那一档。
 - **履行位置**：方案住在设计档的「受影响文件清单与分层结论」一节（本档 §3），由设计轮自己写下，不另设检查面。
 
-**② 其他检查硬线 = 800（实施轮 ∥ 收口轮 ∥ 评审轮都只判这一条）**
+**② 收口时判一次 = 800（只有收口检查判这一条）**
 
 - **过 800（> 800）⇒ 先拆再落**：拆分是落地的前置条件，不与落地并行。
-- **未过 800（≤ 800）⇒ 不管**：500 不是这些面的判据，这些面不提拆分要求。
+- **未过 800（≤ 800）⇒ 不管**：500 不是收口面的判据，收口不提拆分要求。
 
-**③ 档位只有两条硬线**：设计器硬线 500 ∥ 其他检查硬线 800。别处另立第三条档位线（例如在两者之间再加一条触发线），或把 500 说成非硬性的、要先自行审视的，都与本节相反。改法 = 指向本节。
+**③ 判定时点只有两个，中间一概不判**：设计时（500）∥ 收口时（800）。实施轮 ∥ 代码评审 ∥ 其他任何中间环节都**不作代码长度检查**——不是「也判 800」，是**不判**。别处给中间环节排一个长度检查点、另立第三个判定时点（例如在两条线之间再加一条触发线），或把 500 说成非硬性的、要先自行审视的，都与本节相反。改法 = 指向本节。
 
-**检查法**：下列检索式命中处即上一条说的漂移。
+**检查法**：下列检索式只负责**找出候选**，本身不判漂移。**漂移的判据 = 那一处把长度判定派给了谁**：派给设计时 ∥ 收口时 ⇒ 不是漂移；派给别的时点（实施轮 ∥ 代码评审 ∥ 其他中间环节）、另立一条线，或把 500 说成可自行审视的 ⇒ 是漂移。每一处命中按下面两类各落一次处置。
 
 ```text
 grep -rn "软线" docs/
@@ -386,9 +405,22 @@ grep -rn "拆分触发" docs/
 grep -rn "主动审视" docs/
 ```
 
-**已查档**：射程 = 全设计层 `docs/core/design/**/*.md`（量法 = `node` 行扫描，检索式见上条）。命中处分两类处置：**规则陈述**（说「现在该怎么做」）⇒ 改成 500 设计器硬线 ∥ 800 其他检查硬线，并指本节；**历批实施记录**（说「那批当时怎么判的」）⇒ 原样保留——改了等于改历史。命中档名单、条数与逐档处置按 D12 住批档，本节只写关系。
+**两类处置（判法自足：只看那一句，不必去翻任何批档）**：
+
+- **① 规则陈述**：对**将来**下命令、或陈述**当前义务**的那一类——句中带「须 ∥ 必 ∥ 不得」，或写成「过 X ⇒ 要 Y」「触发 = …」「未过 X ⇒ …」。这类**改成**两个判定时点并指本节；判不了的一律按 ① 办（宁改勿留）。
+- **② 历批实施记录**：说**某一次已经发生的判断**的那一类——句中带批名 ∥ 「当时」∥「本批」∥「已落」「改后」这类时间锚，且不外推成对别档、别轮的义务。这类**原样保留**，改它等于改历史。
+- **② 升 ① 的唯一条件**：那句记录里的判据会被读者当成现行规则去复跑（形如「按 >500 审视线判 ⇒ 不拆」——今天的档照它判一次，它就落进 ① 了）；升级后按 ① 处置。
+- **650 那一族只删不点名**：「650 已废」这种话把一个死值放回检索面，写的人以为在清理，读的人以为它还在。
+
+**已查档**：射程 = 全设计层 `docs/core/design/**/*.md`（量法 = `node` 行扫描，检索式见上条）。
+
+- **判据 = 射程内「把长度判定派给中间环节」的陈述 0 处**——它有失败面：任一处给实施轮 ∥ 代码评审 ∥ 其他中间环节排了长度检查，本节即红，按上面的处置改到 0。
+- **未到 0 的部分逐档排期清**：谁清、并入哪一批 = 批的事，本节只管这条线在不在。
+- **逐次读数**（命中档数 ∥ 分类条数 ∥ 逐档处置）按 D12 住批档，本节只写阈值与关系。
 
 **量法**：`doc_check(mode:"report", lines:[…])` 的逐档读数——同一个数只从这一把尺取。
+
+**集成用例差量 = 零行**：本节是规则陈述，不改变任何业务可观察结果——`test/RTM.md` 无行被破坏、无冗余、无缺失，故不修订也不新增集成用例。用例只从两个入口长出来（业务真要的场景 ∥ 生产真出现的问题），本节两个都不沾。
 
 **分层结论**：无档跨层（逐档所属层见上表）。改代码前（新建档 = 落盘时）过 500 的改动档只有下表两档，各附分拆方案。
 

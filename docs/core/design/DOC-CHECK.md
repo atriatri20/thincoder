@@ -627,7 +627,7 @@ Node.js ∥ Mr.Smith  Node.js 的 .js 在清单内 ⇒ 候选（改前也是候�
 - **`thincoder-core/doc-check/index.mjs` 越 800 硬限**，必须拆。拆分放**另一批**执行，本批只改行为——同一批里既改行为又搬家，出问题时说不清是哪一边。
   - **拆什么、搬到哪**：§4「接缝与现状」已经把那一族点齐了——定根 ∥ 分组 ∥ 报面布局（`rootOf` ∥ `perRootGroups` ∥ `reportLayout` ∥ `bucketLines` ∥ `rootsSuffix` ∥ `noRootItems`）已整族住在 `thincoder-core/doc-check/per-root.mjs`，`index.mjs` 只留 import 与装配。拆分批动的是**剩下的那一半**：判定装配件（`runDocCheck` 本体 ∥ 三个命中行构造器 ∥ 桶装配）与报面装配切成一档，`index.mjs` 只留入口与再导出。
   - **承接批坐标**：台账当刻无该行；本批收口时由父侧挂一行（`kind` = 技术待办、指向本节、`trigger` = 条件、`resume_when` = 下一批触碰 `thincoder-core/doc-check/index.mjs` 时接手）。在那一行挂上之前，这一条以本节为锚，写作「另批」两个字不算坐标。
-- **`thincoder-core/agent-tools/batch-gate.mjs` ∥ `thincoder-core/doc-check/anchors.mjs` 越 500 软线**（过设计器硬线 500）；`thincoder-core/agent-tools/batch-regions.mjs` 与 `thincoder-core/agent-tools/batch-lifecycle.mjs` 已由本席用 `doc_check` 的 `lines` 面实测，未过线。档位语义 = `docs/core/design/DOC-GRAPH.md` §3，本节不另立判法；绝对读数与命令回执住批档。
+- **`thincoder-core/agent-tools/batch-gate.mjs` ∥ `thincoder-core/doc-check/anchors.mjs` 过设计器硬线 500**；`thincoder-core/agent-tools/batch-regions.mjs` 与 `thincoder-core/agent-tools/batch-lifecycle.mjs` 已由本席用 `doc_check` 的 `lines` 面实测，未过线。档位语义 = `docs/core/design/DOC-GRAPH.md` §3，本节不另立判法；绝对读数与命令回执住批档。
 - **函数档判据同过一次**（函数档 `≥300` 行触及即判）：两档的最长函数本轮**尚未取到读数**——设计席无 `.mjs` 的 LSP 服务，故本行不写成「过」。**这一格的读数归父侧收口门**：按本节「量法与执行位」跑一次，把「结论 + 命令」记批档 §6；读数补齐之前，任何一方不得把本行读成通过。
 - **量法与执行位** = `node` 词法行扫描按函数体花括号配对逐函数数行（扫描器要求见下条）；执行位 = **父侧收口前的门**，命令与读数记批档 §6。它不随实施轮走：实施轮改的是行为，函数档量取是收口侧的一次性读数。
 - **超 300 的函数怎么处置** = 与越 800 那档同一条：排队等拆分批，不在本批动结构。
