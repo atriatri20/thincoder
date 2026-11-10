@@ -114,7 +114,7 @@
 - **主题 ↔ 设置面头控件半 / 会话 ↔ CHAT · ACTIVITY 半**：按各档单源指针引用，本档不复制。
 
 ## 3. 文件账
-### 3.1 本端文件清单（会话族行）
+### 3.1 文件账（会话族行）
 
 | 文件 | 说明 |
 |---|---|
@@ -132,39 +132,6 @@
 
 **行数口径（本块）**：文件体量按 `doc_check` 的 `lines` 读数面量取（500 顾问线 ∥ 800 硬限），结论只写越线与否与同尺比较，不写绝对值（口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 行数行）。
 
-### 3.2 现有文件改动（本域）
-
-**会话标题接线行**（机制 ∕ 判据单源 = 本档 §1 **KD-41**；链单源 = `docs/core/design/SESSION.md` §6.7）：
-
-| 文件 | 改动（构成） | 批 |
-|---|---|---|
-| `thincoder-desktop/src/main/turn-face.mjs` | 回合尾结算单实现（`settleTurn` + 核件导入 + 档头注；组成 = 标题 → 落盘；中止墓碑两查位——U-7 原样）+ 两 `saveAgentSlot` 结算行改两调用——取位按符号 | 已落 |
-| `thincoder-desktop/test/files.mjs` | 零新登记——空清单 `export default []` 原样；单元测试档不登记；集成测试登记 = 基建重建落盘时补 | 已落 |
-| 测试覆盖 | **单元测试档**（会话标题族——已建成；链路 ∕ 时序 ∕ 短路 ∕ 失败 + 窗内受理 E5 ∕ 窗内中止 E6 六例；零真实网络 = `globalThis.fetch` 换桩；随档留存 · 不入集成测试树）+ 集成域（**T-DSK46**——转父侧真机冒烟闭合，集成登记待基建重建）；测试文件随修随加——不占设计条目（2026-09-27 裁定） | 已落 |
-| `docs/desktop/design/PROJECT.md` · `docs/core/design/SESSION.md` | 设计落定（本档 §1 **KD-41** ∥ `PROJECT.md` §6.1 ∕ §7 · 核档 §6.7 第三端）；联动面三档（`IPC.md` ∥ `UI.md` ∥ `RENDERER.md`）零触碰 | 已落 |
-
-**structure-split-round（越线档结构轮 · 实施轮）拆分落形**（切点 ∕ 缝 = 越线档结构轮 §2）：
-
-| 文件 | 改动 | 归属 |
-|---|---|---|
-| `thincoder-desktop/renderer/chrome.css` | 会话列表面出档——两段全量逐字迁出；保位注一行落原切点位 | 已落 |
-| `thincoder-desktop/renderer/session-list.css` | 新档（头注 + 迁出块逐字；链序 = chrome 后 ∕ skin 前） | 已落 |
-| `thincoder-desktop/renderer/index.html` | 增 `session-list.css` link——位次 = chrome.css 之后 ∕ skin.css 之前 | 已落 |
-| `thincoder-desktop/renderer/mount-sessions.mjs` | 接线面全量出档（原接线面逐字迁出 + import 面收 ∕ 头注收 ∕ 窄桥随迁；尾空行清理） | 已落 |
-| `thincoder-desktop/renderer/session-wire.mjs` | 新档（头注 + 五源 import 面 + 窄桥 + 迁出块逐字；缝 = 同名再出口七名） | 已落 |
-| `thincoder-desktop/renderer/app.mjs` | **零改**（缝 = 同名再出口——import 面解析零变；单元测试档 C 用例同引用实证） | 已落 |
-| `docs/desktop/design/PROJECT.md` | 随动实读回填（§4.1 两新档行——`thincoder-desktop/renderer/session-list.css` ∥ `thincoder-desktop/renderer/session-wire.mjs` 已迁本档 §3.1；chrome ∕ mount ∥ `thincoder-desktop/renderer/index.html` 三行收正；越层段二档除名） | 已落 |
-
-**桌面重启自动重开（#734）行**（机制 ∕ 判据单源 = `docs/desktop/design/IPC.md` §2 项目面注项 7）：
-
-| # | 档 | 改动 | 面 |
-|---|---|---|---|
-| 1 | `thincoder-desktop/src/main/projects.mjs` | 记录面读 `lastOpenedCwd`（族标记最新 → 族数据文件 `cwd`）+ 启动恢复导出 `restoreLastProject`（纯读 ∥ `isDirectory` 门 ∥ 落位）+ 落位动作与 `openProject` 共用提取 | #734 |
-| 2 | `thincoder-desktop/src/main/main.mjs` | 窗口创建前一次恢复调用 + 注释——单实例锁分支后、`createWindow()` 前 | #734 |
-| 3 | 单元测试档 | 重启自动重开族（已建成——五用例：命中（上次打开 ≠ 最近活跃）∕ 端分离（`.cli` ∕ `.vscode` 零影响）∕ 降级·目录已删（⇒ 冷态 + 零抛）∕ 降级·族无可读 `cwd`（标记在盘而族数据文件缺 ∕ 坏 ⇒ 冷态 + 零抛 + 不误落次新族）∕ 零记录（零写 + 冷态）；**测试用例以显式 mtime 落盘**（免粒度依赖）；随档留存 · 不进集成测试树） | #734 |
-| 4 | 设计档随动 | `docs/desktop/design/IPC.md` §2 项目面注项 7（机制单源）+ 项 4 收正 · `docs/desktop/design/SHELL.md` §1 树两行 · 本档 §1 **KD-56** ∕ **KD-9** 两处收正 ∕ `PROJECT.md` §4.1 两行说明（`thincoder-desktop/src/main/main.mjs` → `docs/desktop/design/SHELL.md` §5.1；`thincoder-desktop/src/main/projects.mjs` → 本档 §3.1）∥ §6.1 **D1** ∕ §7 **T-DSK50** ∥ §8 边界行 | #734 |
-
-**行数口径（本块）**：同上 §3.1 末行（`doc_check` 的 `lines` 读数面；阈值 500 ∥ 800；只写越线结论与同尺比较）。
 ## 4. 验收回指（本域需求条目 · 判据全文）
 
 | 需求 | 机检判据（点回需求卷） | 验证 |

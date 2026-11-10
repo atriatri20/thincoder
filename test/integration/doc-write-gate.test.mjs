@@ -7,7 +7,7 @@
  * 业务入口 = 真 `edit` 工具（`tools/file.mjs`）往一篇**设计档**写一笔——不直调 `runDocWriteGate`：
  * 本例测的是「写者把坏字写进规范档、当场被拒、盘上逐字不变」这件事的业务可观察结果。
  * 交互组件 = `write-path.writeThroughPath`（`op === "write"` 调门）⟷ `doc-write-gate.runDocWriteGate`
- * （片段档 ⇒ `runDocCheck`）⟷ `doc-check` 的锚判据（`档缺`）。
+ * （改后整份内容 + 判定区 ⇒ `runDocCheck` 的 `texts` ∥ `zones`）⟷ `doc-check` 的锚判据（`档缺`）。
  *
  * 夹具 = 系统临时域（项目根 + 自带 `PROJECT-MANIFEST.json`，`docRoot.design = docs/design`）——零落仓、可并发；
  * 面与解析基准随夹具走，不读本仓 manifest。
@@ -16,7 +16,7 @@
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 // 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
@@ -59,13 +59,11 @@ test("CLI 7-14 错误 · 设计档直写盘带悬空档名 ⇒ 拒写、目标�
     (e) => {
       assert.match(e.message, /^DOC-CHECK GATE: REFUSED（锚 1 条）/, `拒串首行 = 引擎 verdict 词：${e.message}`)
       assert.match(e.message, /✗ 锚·档缺 docs\/design\/fixture\.md:3/, `命中行落回目标档坐标：${e.message}`)
-      assert.match(e.message, /判面：改动区 1 区 · 片段区 1 区 · 目标档段首行 3/, `判面行点名触碰段：${e.message}`)
-      assert.doesNotMatch(e.message, /\.docgate-/, "片段档是门的内部实现，不出现在写者读到的拒串里")
+      assert.match(e.message, /判面：改动区 1 区 · 判定区 1 区/, `判面行点名本笔改动区与判定区：${e.message}`)
       return true
     },
   )
   assert.equal(readFileSync(join(root, DOC_REL), "utf8"), before, "拒写 ⇒ 目标档字节逐字不变（零字节落盘）")
-  assert.deepEqual(readdirSync(join(root, "docs/design")).filter((n) => n.startsWith(".docgate-")), [], "零 `.docgate-*` 残留")
 
   // ② 改成在盘全路径 ⇒ 同一笔落盘成功（门不是「一律拦」，判的还是这段字）
   const receipt = await editTool.execute({ path: DOC_REL, old_string: "现有段落。", new_string: `现有段落，另见 \`${REAL_REL}\`。` }, ctx)
@@ -75,7 +73,7 @@ test("CLI 7-14 错误 · 设计档直写盘带悬空档名 ⇒ 拒写、目标�
   assert.equal(after.slice(0, after.indexOf("现有段落")), before.slice(0, before.indexOf("现有段落")), "目标段之前逐字不变")
 })
 
-test("CLI 7-18 边界 · 只动围栏块内一个空行 ⇒ 整块对齐后放行，块内示例路径不入判", async () => {
+test("CLI 7-18 边界 · 只动围栏块内一个空行 ⇒ 判定区取到整份文本、块内示例路径不入判", async () => {
   const root = makeProject("r718")
   const fenced = "# 围栏夹具\n\n```text\ndocs/design/example-only.md\n\n```\n"
   writeFileSync(join(root, DOC_REL), fenced)
@@ -86,5 +84,4 @@ test("CLI 7-18 边界 · 只动围栏块内一个空行 ⇒ 整块对齐后放�
   }, { cwd: root })
   assert.match(receipt, /Edited docs\/design\/fixture\.md/, receipt)
   assert.equal(readFileSync(join(root, DOC_REL), "utf8"), fenced.replace("example-only.md\n\n```", "example-only.md\n```"))
-  assert.deepEqual(readdirSync(join(root, "docs/design")).filter((n) => n.startsWith(".docgate-")), [], "零片段残留")
 })

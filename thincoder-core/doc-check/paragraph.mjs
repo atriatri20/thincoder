@@ -120,8 +120,11 @@ export function headingMark(l) {
  *  ∥ 类型不对 ⇒ **抛**：静默失效的方向是**假绿**，而假绿没人会去查。
  *
  *  读面（读不到 ≠ 干净）：档在盘但读不到 ⇒ **不静默当零命中**，记入返回值的 `unreadable` 清单（口径 = §3.20「读面」块）。
- *  返回形仍是命中数组（既有消费面 `for` ∥ `.filter` ∥ `.length` 零改）；清单随属性带出——`hits.unreadable`。 */
-export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files } = {}, ...rest) {
+ *  返回形仍是命中数组（既有消费面 `for` ∥ `.filter` ∥ `.length` 零改）；清单随属性带出——`hits.unreadable`。
+ *
+ *  `textOf`（可选）= **判定输入替换**（`docs/core/design/DOC-CHECK.md` §2.10.1）：给这一档返回文本就不读盘，返回
+ *  `undefined` 走既有读盘路。它只换「读哪份字节」，阈值 ∥ 段划法 ∥ 命中类一字不改。 */
+export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files, textOf } = {}, ...rest) {
   // 配置缺失 = 硬错，不是静默不命中。
   // `para.len > undefined` 恒 false ⇒ **永不命中 = 假绿**；而误报会被人发现，假绿不会。
   // 实测来源（本档原注记）：围栏批（2026-10-27）调试时把配置当第二参数传，一度以为修复无效——
@@ -145,7 +148,11 @@ export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files
   const unreadable = [] // 读面：档在盘但读不到 ⇒ 入此清单（与静默跳过分开：跳过读起来就是「这档干净」）
   for (const f of files) {
     let text = ""
-    try { text = readFileSync(f, "utf8") } catch { unreadable.push(f); continue }
+    // 判定输入替换（`docs/core/design/DOC-CHECK.md` §2.10.1）：给了这一档的文本就不读盘。
+    // 「读哪份字节」换掉，判据本体一字不改；没给 ⇒ 既有读盘路。
+    const given = typeof textOf === "function" ? textOf(f) : undefined
+    if (given !== undefined) text = given
+    else try { text = readFileSync(f, "utf8") } catch { unreadable.push(f); continue }
     if (isPromptFace(f)) {
       text.split("\n").forEach((l, i) => {
         const len = [...l].length

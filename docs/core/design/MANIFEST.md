@@ -169,7 +169,7 @@
   - **只能逐条具名**：`kind` 与 `text` 不接受通配 ∥ 前缀 ∥ 目录；按类排除不作数。
   - **形态在消费点判**：不进 `validateManifest` 的 `errors`——一个写坏的条目不该把整份 manifest 打掉（manifest 不可用 ⇒ 域表空集 ⇒ 批档面互引一律 `档缺`）。
   - 机制 = `docs/core/design/DOC-CHECK.md` §2.7。
-- `index.docCheckExts`（缺省 `[]`）= **`doc_check` 的扩展名追加项**（数组）。**裸名与带路径分隔符的形同一把尺**：后缀落在清单内才是候选。单字符后缀与归档内层（`gz` ∥ `tar` ∥ `zip`）写了也不生效——装配处拼清单时一并剔除，谁写的都一样。引擎缺省清单 = `DEFAULT_DOC_EXTS`，本键**只追加、不替换**——收窄判集是排除面的事。机制 = 同档 §2.6。
+- `index.docCheckExts`（缺省 `[]`）= **`doc_check` 的扩展名追加项**（数组）。**后缀落在清单内才是候选**，且带目录段的一族与裸名**不按同一把尺判**：带目录段的一族同判，裸名须后缀落在文档名族 `BARE_NAME_EXTS` 内（判据 = `docs/core/design/DOC-CHECK.md` §2.10.3）。单字符后缀与归档内层（`gz` ∥ `tar` ∥ `zip`）写了也不生效——装配处拼清单时一并剔除，谁写的都一样。引擎缺省清单 = `DEFAULT_DOC_EXTS`，本键**只追加、不替换**——收窄判集是排除面的事。机制 = 同档 §2.6 ∥ §2.10.3。
 - 形态判据（`validateManifest`，**非法即 `errors`——与 `docRoot` 子键同款**）两层分列：
   · **元素层**：`codePaths` / `index.{codeExtensions,docExtensions,docCheckExts}` 各元素须为非空字符串（`trim` 后非空）；`index.excludePaths` / `index.docCheckExcludePaths` / `index.publicRepos` / `index.writableRepos` 元素层宽容（空 ∕ 非串元素由归一剔除——数组层仍 fail-closed）。`index.docCheckExemptions` 两层都不入选校验：条目形态在消费点判（KD-X3）。
   · **数组层**：`codePaths` / `index.*` 数组**自身可空**（`[]` 合法）——空数组语义逐键：`codePaths:[]` = 无段名代码面（合法）；`index.*:[]` = 追加零项 ∕ 排除零项（合法，即默认）。
@@ -755,7 +755,7 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 | | `publicRepos` | 公共仓路径数组（从本仓根可解析）= 本仓**出边表**；接入公共仓索引 / 声明仓引用时动；写错 ⇒ 该公共仓检索不可达，且指向它的指针落 `档缺`、交付门被拒（见上「变更记账面」③） |
 | | `docCheckExcludePaths` | `doc_check` 的排除目录（项目根相对路径前缀数组）；要把某片区域整体不看时动；写错 ⇒ 该目录的档仍入判、照出命中（全落进去才免检放行） |
 | | `docCheckExemptions` | `doc_check` 的逐条豁免登记（数组；一条 = `file` · `kind` · `text` · `why` · `review` 五字段，识别键 = 前三者全等、不含行号）；某处命中已裁定为假阳、又不该改文档时动；写错 ⇒ 该条不生效、命中照拦（字段缺一即整条不算；按类 / 通配 / 前缀不作数） |
-| | `docCheckExts` | `doc_check` 的扩展名追加项（并集，只增不减；裸名与路径形同一把尺）；某类真后缀不被认成档名时动；写错 ⇒ 该后缀一律不成候选、带该后缀的真悬空路径少报（单字符与归档内层写了不生效——装配处剔除，谁写都一样） |
+| | `docCheckExts` | `doc_check` 的扩展名追加项（并集，只增不减；清单内才成候选，裸名另须后缀落在文档名族 `BARE_NAME_EXTS` 内，带目录段的一族同判）；某类真后缀不被认成档名时动；写错 ⇒ 该后缀一律不成候选、带该后缀的真悬空路径少报（单字符与归档内层写了不生效——装配处剔除，谁写都一样） |
 | | `writableRepos` | 可写外部**目录**表（目录不是仓；从本仓根可解析）= 本仓的写权声明，单向；要用**本仓的账**去改外部目录时才动（不声明就只能用目标仓自己的台账号写它）；写错 ⇒ 该目录写门照拒（拒文点名 `writableRepos` 与目标），或把不该给写权的目录放进表（真防线 = git 权限） |
 
 > 目录只给「用点必需」的最小事实；值形归一细则 / 消费面清单 / 判据仍读本档对应节（§2.2）。两族整键写（`docRoot` / `index`）⇒ 拒（须点改子键）——此句属**动作面**，住描述既有段。

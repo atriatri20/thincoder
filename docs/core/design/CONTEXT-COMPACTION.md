@@ -582,7 +582,7 @@ Compaction so far: {none | last summary freed {freed} tokens | last fallback tru
 - **`cwd` 缺省态（登记 · 降级形）**：`_slot` 在场而 `cwd` 缺省 ⇒ 落**未绑定分支**（判据 = 上表未绑定行**析取**），`cwd` 字面取 `undefined`（回执形 `read_history path="cwd:undefined"`）——工具内**不抛**（fail-soft 守卫 = `thincoder-core/agent-tools/context.mjs`）。
   该态在两端生产链**不可达**（建链面恒带 `cwd`：核 `thincoder-core/agent/assemble.mjs`（`createAgent` 携 `cwd`）+ CLI 值源 `thincoder-cli/src/cli/make-agent.mjs`；VSC `thincoder-vscode/src/agent/setup.mjs` 每轮重指 `agent.cwd`），仅直调 / 退化夹具可达 ⇒ 不另设分支、不改形（登记入降级面）。
 
-**6.16.8 模块拆分与行数预算（500 软线）**
+**6.16.8 模块拆分与预算（500 软线）**
 
 - **新档 `thincoder-core/token-window.mjs`**（**已落**）：自 `thincoder-core/context.mjs` **逐字迁出**计量 / 窗口 / 边界三族，三族现以本档为单源：
 

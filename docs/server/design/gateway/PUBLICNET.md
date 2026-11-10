@@ -120,32 +120,32 @@ limiter.noteBurst(payload)                     // 由判点在超限分支调用
 - 序列化加条件 `Secure`：请求经 TLS（`req.socket.encrypted === true`）⇒ 附 `Secure`；明文内网/测试不加（浏览器会丢弃明文下的 `Secure` cookie）。前置可信代理终止 TLS（`trustProxy: true`）时后端是明文 ⇒ 判据为假、不附 `Secure`——这条部署形要附须显式开关，本批不做（§7 边界）。
 - 形：`tc_session=<t>; Path=/; HttpOnly; SameSite=Strict; Max-Age=604800[; Secure]`。两处调用（`src/accounts/routes.mjs` ∥ `src/client/routes.mjs`）统一走 `sessionCookie(token, { secure })`，判据助手 `isSecureRequest(req)` 与序列化同档。
 
-## 3. 受影响文件（行数 = 本档写就时实读）
+## 3. 受影响文件
 
-| 文件 | 现况 | 预期增量 |
+| 文件 | 行数面 | 改动 |
 |---|---|---|
-| `thincoder-server/src/gateway/server.mjs` | 274 行 | `+tls` 分支（`node:https` 建服）+ `limits` 判点，≤+25 行；仍 < 500 |
-| `thincoder-server/src/gateway/limits.mjs` | 新建 | ≈120 行 |
-| `thincoder-server/src/ops/config.mjs` | 360 行 | `validateTlsConfig` + `validateRateLimits` + 归一出参，≤+75 行；< 500 |
-| `thincoder-server/src/gateway/config-admin.mjs` | 182 行 | 白名单两组 + 子键级合并 + GET 回显，≤+30 行 |
-| `thincoder-server/bin/thincoder-server.mjs` | 241 行 | 读证书 / 建 tls 参数 / 重定向监听（含绑定失败拒启）/ `SIGHUP` / 停机并关 / 注入 `onBurst`，≤+50 行；< 500 |
-| `thincoder-server/src/accounts/audit.mjs` | 133 行 | 枚举加一项 + 注释，≤+5 行 |
-| `thincoder-server/src/accounts/session.mjs` | 96 行 | `secure` 选项 + `isSecureRequest`，≤+15 行 |
-| `thincoder-server/src/accounts/routes.mjs` | 161 行 | 一处调用改携 `secure` + 限流判点，≤+4 行 |
-| `thincoder-server/src/client/routes.mjs` | 90 行 | 同上，≤+3 行 |
-| `thincoder-server/src/store/migrations.mjs` | 799 行 | **先拆后改**：拆后 = 注册表 + `migrate` ∥ `readVersion`，≈70 行；v26 段加在拆后第三档，≈+45 行 |
-| `thincoder-server/src/store/migrations/ddl-v1-v11.mjs` | 新建 | ≈300 行（`DDL_V1`–`DDL_V11` 逐字迁入） |
-| `thincoder-server/src/store/migrations/ddl-v12-v20.mjs` | 新建 | ≈305 行（`DDL_V12`–`DDL_V20` 逐字迁入） |
-| `thincoder-server/src/store/migrations/ddl-v21-v26.mjs` | 新建 | ≈190 行（`DDL_V21`–`DDL_V25` 逐字迁入 + 新增 `DDL_V26`） |
-| `thincoder-server/public/views-system-config.mjs` | 166 行 | TLS 段 + 限流段，≤+65 行 |
-| `thincoder-server/public/views-audit.mjs` | 272 行 | `security_event` 行模板，≤+20 行 |
-| `thincoder-server/public/i18n-zh-system.mjs` | 222 行 | 新增文案键，≤+12 行 |
-| `thincoder-server/public/i18n-en-system.mjs` | 222 行 | 同上（两表同步），≤+12 行 |
-| `thincoder-server/README.md` | 259 行 | §11 整段改写（删 nginx 样例），≤−20 行 |
-| `thincoder-server/Dockerfile` | 41 行（实读 2026-10-19） | `HEALTHCHECK` 探针换 §5.9 新形（TLS 分支 + `statusCode` 判定），≤+3 行 |
-| `thincoder-server/docker-compose.yml` | 22 行（实读 2026-10-19） | 端口加 `"8443:8443"` + 证书卷 `./certs:/app/certs:ro`，≤+3 行 |
-| `docs/server/design/ops/OPS.md` | 419 行（`wc -l` 实读 2026-10-19） | §5.6 ∥ §5.7 ∥ §5.9 ∥ §1 ∥ §4.1 ∥ §6 ∥ §7 随动（逐行见 §8） |
-| `docs/README.md` | — | server 设计 29 → 30 档，gateway 1 → 2 档 |
+| `thincoder-server/src/gateway/server.mjs` | — | `+tls` 分支（`node:https` 建服）+ `limits` 判点，仍 < 500 |
+| `thincoder-server/src/gateway/limits.mjs` | 新建 | 限流窗与端点类判定 |
+| `thincoder-server/src/ops/config.mjs` | — | `validateTlsConfig` + `validateRateLimits` + 归一出参，< 500 |
+| `thincoder-server/src/gateway/config-admin.mjs` | — | 白名单两组 + 子键级合并 + GET 回显 |
+| `thincoder-server/bin/thincoder-server.mjs` | — | 读证书 / 建 tls 参数 / 重定向监听（含绑定失败拒启）/ `SIGHUP` / 停机并关 / 注入 `onBurst`，< 500 |
+| `thincoder-server/src/accounts/audit.mjs` | — | 枚举加一项 + 注释 |
+| `thincoder-server/src/accounts/session.mjs` | — | `secure` 选项 + `isSecureRequest` |
+| `thincoder-server/src/accounts/routes.mjs` | — | 一处调用改携 `secure` + 限流判点 |
+| `thincoder-server/src/client/routes.mjs` | — | 同上 |
+| `thincoder-server/src/store/migrations.mjs` | — | **先拆后改**：拆后 = 注册表 + `migrate` ∥ `readVersion`；v26 段加在拆后第三档 |
+| `thincoder-server/src/store/migrations/ddl-v1-v11.mjs` | 新建 | `DDL_V1`–`DDL_V11` 逐字迁入 |
+| `thincoder-server/src/store/migrations/ddl-v12-v20.mjs` | 新建 | `DDL_V12`–`DDL_V20` 逐字迁入 |
+| `thincoder-server/src/store/migrations/ddl-v21-v26.mjs` | 新建 | `DDL_V21`–`DDL_V25` 逐字迁入 + 新增 `DDL_V26` |
+| `thincoder-server/public/views-system-config.mjs` | — | TLS 段 + 限流段 |
+| `thincoder-server/public/views-audit.mjs` | — | `security_event` 行模板 |
+| `thincoder-server/public/i18n-zh-system.mjs` | — | 新增文案键 |
+| `thincoder-server/public/i18n-en-system.mjs` | — | 同上（两表同步） |
+| `thincoder-server/README.md` | — | §11 整段改写（删 nginx 样例） |
+| `thincoder-server/Dockerfile` | — | `HEALTHCHECK` 探针换 §5.9 新形（TLS 分支 + `statusCode` 判定） |
+| `thincoder-server/docker-compose.yml` | — | 端口加 `"8443:8443"` + 证书卷 `./certs:/app/certs:ro` |
+| `docs/server/design/ops/OPS.md` | — | §5.6 ∥ §5.7 ∥ §5.9 ∥ §1 ∥ §4.1 ∥ §6 ∥ §7 随动（待改项 = §8） |
+| `docs/README.md` | — | 档地图随动（server 设计档与 gateway 档名） |
 
 **拆分计划（`migrations.mjs` 越 800 硬顶——先于 v26 落地）**：
 
@@ -238,29 +238,15 @@ limiter.noteBurst(payload)                     // 由判点在超限分支调用
 - 不在 `tls.enabled` 之外开第二个明文监听：探针不另开例外口，重定向口只发 308。
 - 前置可信代理终止 TLS（`trustProxy: true`）的部署形下会话 cookie 不附 `Secure`；「可信代理即视为 secure」的开关不做（KD-PN-11）。
 
-## 8. 既有口径改口（D8：删除，不留「曾用 nginx」）
+## 8. 待改清单（实施轮）
 
-> 行号读数日 = 2026-10-19（`docs/server/design/ops/OPS.md` 本轮改后实读）。
-
-| 落点 | 改后状态 | 责任面 |
+| 落点 | 待改内容 | 责任面 |
 |---|---|---|
-| `docs/server/design/ops/OPS.md` §5.6（现 `272` 行起） | 已改写为「TLS 内置与证书轮换」：配置六键 ∥ `SIGHUP` 轮换 ∥ 308 重定向 ∥ `trustProxy` 只在可信代理前置时开 | 设计轮（本轮已落） |
-| `docs/server/design/ops/OPS.md` §1 配置表（`33` 行 `trustProxy` ∥ 新增 `36` / `37` 行 `tls` / `rateLimits`） | 已改 / 已增 | 设计轮（本轮已落） |
-| `docs/server/design/ops/OPS.md` 边界（`412` / `415` 行） | 已删「TLS 终结（前置反代）」，改为「证书签发/ACME 自动续期不做」 | 设计轮（本轮已落） |
-| `docs/server/design/ops/OPS.md` KD-SV-25 ∥ AC-13 | 判据已改为「README §11 = TLS 内置完整段（配置 + 轮换 + 重定向）」 | 设计轮（本轮已落） |
-| `docs/README.md` 档地图（`17` 行） | 已改：server 设计 30 档、gateway 2 档、部分档 194 | 设计轮（本轮已落） |
-| `thincoder-server/README.md` §11（现 `215`–`243` 面） | 待改：整段重写为「TLS 内置（`tls` 段 + 证书轮换 + 重定向）」，nginx 配置块整段删除 | 实施轮（产品文档面 = eng-coder） |
-| `thincoder-server/README.md` `255` 行 ∥ `46` 行 | 待改：`255` 行删「TLS 终结（前置反代）」；`46` 行改「前置于可信反代时才开；直连/内置 TLS 部署保持 false」 | 实施轮（同上） |
-| `docs/server/design/ops/OPS.md` §5.9（探针命令） | 已改：`tls.enabled` ⇒ `node:https`（`rejectUnauthorized: false`，只探活）；判定 = `statusCode === 200`（两支共用同一判定函数；`r` 是 `IncomingMessage`，无 fetch `Response.ok`）——明文支语义不变，形随 TLS 分支合一 | 设计轮（本轮已落） |
-| `docs/server/design/ops/OPS.md` §5.7（Docker 路） | 已增 TLS 追加段：证书目录挂卷 `./certs:/app/certs:ro` ∥ `tls` 六键 ∥ 端口映射 `"8787:8787"` + `"8443:8443"` ∥ `ps` 见 healthy | 设计轮（本轮已落） |
-| `docs/server/design/ops/OPS.md` §5.1 compose 样例 | 已改：`ports` 加 `"8443:8443"`，`volumes` 加 `./certs:/app/certs:ro` | 设计轮（本轮已落） |
-| `docs/server/design/ops/OPS.md` §1 配置写面可写项 ∥ 启动校验清单 ∥ `host` 行 ∥ §7 非功能行 | 已改：两段进白名单与校验清单；口径改「默认内网部署；公网部署须开 `tls`」 | 设计轮（本轮已落） |
-| `docs/server/design/ops/OPS.md` §6 行数预算 | 已改：`bin` 241 ∥ `thincoder-server/src/ops/config.mjs` 360 ∥ `README.md` 259（实读 `wc -l` 口径，与本档 §3 同源） | 设计轮（本轮已落） |
-| `docs/server/design/ops/OPS.md` §4.1 | 已增：A7 不变量 + `onAssembled` 增 `redirectServer` | 设计轮（本轮已落） |
-| `docs/server/design/accounts/ACCOUNTS.md` §2.1 审计型表 | 待改：十七型 → 十八型（+ `security_event`），列形随动；本档未读该档（`unverified`），改时以本档 §2 审计面为准 | 实施轮 |
-| `thincoder-server/Dockerfile`（`HEALTHCHECK`） | 待改：探针命令换 §5.9 新形（TLS 分支） | 实施轮（产品代码面） |
-| `thincoder-server/docker-compose.yml` | 待改：端口两行 + 证书卷 | 实施轮（产品代码面） |
-
+| `thincoder-server/README.md` §11 | 整段重写为「TLS 内置（`tls` 段 + 证书轮换 + 重定向）」，nginx 配置块整段删除 | 实施轮（产品文档面 = eng-coder） |
+| `thincoder-server/README.md` TLS 终结句 ∥ 前置反代句 | 删「TLS 终结（前置反代）」；`trustProxy` 句改「前置于可信反代时才开；直连/内置 TLS 部署保持 false」 | 实施轮（同上） |
+| `docs/server/design/accounts/ACCOUNTS.md` §2.1 审计型表 | 十七型 → 十八型（+ `security_event`），列形随动；改时以本档 §2 审计面为准 | 实施轮 |
+| `thincoder-server/Dockerfile`（`HEALTHCHECK`） | 探针命令换 §5.9 新形（TLS 分支） | 实施轮（产品代码面） |
+| `thincoder-server/docker-compose.yml` | 端口两行 + 证书卷 | 实施轮（产品代码面） |
 ## 9. 控制台与交互落点（UI 决策已落）
 
 **界面落点两处，不动既有交互**：

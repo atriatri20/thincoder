@@ -221,7 +221,7 @@ test('CLI 29-6 文档门判「包内相对」写法：唯一后缀 ⇒ PASS 且�
     "thincoder-vscode/src/dup.mjs": "export {}\n",
     "thincoder-core/src/dup.mjs": "export {}\n",
     "docs/core/design/suffix-ok.md": "# 绿侧\n\n① src/extension/workspace-guard.mjs\n",
-    "docs/core/design/suffix-bad.md": "# 红侧\n\n① src/dup.mjs\n\n② no-such-file-xyz.mjs\n",
+    "docs/core/design/suffix-bad.md": "# 红侧\n\n① src/dup.mjs\n\n② missing/no-such-file-xyz.mjs\n", // ② 写成带目录段的形：裸写的代码族档名在形分档下不成候选（`docs/core/design/DOC-CHECK.md` §2.10.3）
   })
   const run = (doc, mode) => String(docCheckTool.execute({ mode, docs: [doc], target: root }, ctx0(root)))
 
@@ -239,7 +239,7 @@ test('CLI 29-6 文档门判「包内相对」写法：唯一后缀 ⇒ PASS 且�
   const badReport = run("docs/core/design/suffix-bad.md", "report")
   assert.match(badReport, /✗ 锚·档缺 docs\/core\/design\/suffix-bad\.md:3 `src\/dup\.mjs`/, `同名两处仍判缺，实际：${badReport}`)
   assert.match(badReport, /后缀命中 2 处：/, `候选走后缀命中集（不并进「盘上同名」），实际：${badReport}`)
-  assert.match(badReport, /✗ 锚·档缺 docs\/core\/design\/suffix-bad\.md:5 `no-such-file-xyz\.mjs`/, `零命中仍判缺（反向控制），实际：${badReport}`)
+  assert.match(badReport, /✗ 锚·档缺 docs\/core\/design\/suffix-bad\.md:5 `missing\/no-such-file-xyz\.mjs`/, `零命中仍判缺（反向控制），实际：${badReport}`)
   assert.doesNotMatch(badReport, /后缀兜底读数/, "红侧零处：没有解析出的指针，就没有清账清单")
 })
 

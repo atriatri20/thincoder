@@ -196,40 +196,31 @@
 | KD-SV-201 | **成员侧 = 同清单挂载**（问题⑤——落地：形预留三条 ⇒ 落地三条：① 清单位 = 服务器级单份（§3.1 同表）；② 执行侧 = `face.mjs` 单源（复用零改——`{names, schemas, invoke}` 由桥消费）；③ 接线 = 盒内装配点（`extraTools` 并面 ＋ 桥两端点——§6）） | 用户「如果也给成员侧会话用就更好」= 动因（触发已发未承接——清账复核补挂）；秘密零出服务器（密列纪律）；协议/命名/冷却全在 server（零第二实现）；盒零会话态（生命周期归 §2.2 既有链） |
 | KD-SV-214 | **成员侧挂载形 = 桥（server 执行 ＋ 盒并面）**（问题⑤机制全文 = §6）：盒逐回合取工具表（`GET /api/box/mcp`——零秘密）⇒ 桩件 `extraTools` 并面；调用 `POST /api/box/mcp/call`（工作区 key）⇒ `face.mjs` 执行；审批随核门挡；审计 = `chat_call` 零新 kind；命名 = 核单源 ＋ 盒侧防撞；子代理不携（顶层径） | 秘密零出服务器（§6.2）；复用零改（连接/冷却/命名全在件）；读时读沿 KD-SV-199；「同一清单」逐字；盒零态（无关闭链） |
 
-## 10. 本域文件与行数预算（本域族行）
+## 10. 文件账（本域族行）
 
-| 档 | 行数（实读——设计估） | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/src/mcp/store.mjs` | 实读 **339** | 行读写（增删改查） ∥ 形校验 ∥ 核 config 形映射（`toCoreConfig`） ∥ 密文列读写（`credential-crypto.mjs`） |
-| `thincoder-server/src/mcp/face.mjs` | 实读 **196**（本批 +`readonlyOf` ≈ +1–3） | 工具面装配（逐回合：读行 ⇒ 核建连 ⇒ 归一 `{ ok, subject, summary, output }` ∥ 失败冷却 ∥ 跨面重名防御 ∥ 会话关闭出口——面无关（成员面复用面）） |
-| `thincoder-server/src/mcp/routes.mjs` | 实读 **137** | 五端点（清单四 + 探活一） ∥ 判权 ∥ `mcp_event` 三写入点 |
-| `thincoder-server/src/mcp/admin-tools.mjs` | 实读 **222**（本批 +`readonlyOf` ≈ +1–3） | 管面工具执行器（`mcp` 五动词）：寻址 ∥ 形校验转 `thincoder-server/src/mcp/store.mjs` 单源 ∥ `mcp_event` 三写入点 ∥ 探活（核件装载 ＋ 冷却清理）∥ 关会话（删/停用） |
-| `thincoder-server/src/agent/chat.mjs`（已落盘） | 实读 **737**（**拆档线 720 已越**；处置 = `docs/server/design/agent/ADMIN-AGENT.md` §9 KD-SV-208） | 聊天式驱动（§11——机制单源 = `docs/server/design/agent/ADMIN-AGENT.md`） |
-| `thincoder-server/src/agent/run.mjs`（已落盘） | 实读 **33** | 核装载共用件（预算常量 ∥ `loadCoreChat` ∥ `providerModelRefs` ∥ 裁剪面清单——任务式环已退场删净） |
-| `thincoder-server/src/store/migrations.mjs`（已落盘） | **795/796**（v24 段 +≈20——建表 + 审计 CHECK 重建；越 800 硬限余 ≈4 行——拆案在案，见 `docs/server/design/sandbox/SANDBOX.md` §13） | 迁移链（开库/PRAGMA/语句封装 = `db.mjs`——实读 **36/37**，拆案已落） |
-| `thincoder-server/bin/thincoder-server.mjs`（已落盘） | ≈**247**（注册行 + 停机收尾） | 装配/启动/停机 |
-| `thincoder-server/src/accounts/audit.mjs`（已落盘） | ≈**122**（+≈1——`AUDIT_TYPES` += `mcp_event`） | 审计事件目录 ∥ 落库/查询/清理（§5 三写入点必经） |
-| `thincoder-server/public/views-mcp.mjs`（已落盘） | ≈**320**（按页分档线 300 越线——预案 = 弹窗体外抽（对象角色，未在盘），先例 = providers） | MCP 页（清单表 ∥ 探活读数 ∥ 增/改/删弹窗） |
-| `thincoder-server/public/i18n-zh-mcp.mjs` ∥ `i18n-en-mcp.mjs`（已落盘） | ≈**75** ∥ ≈**75**（`admin.mcp.*` ≈55 键/表 + 档头） | 文案表·mcp 部件（域界 = 键二级前缀） |
-| `thincoder-server/public/i18n-zh.mjs` ∥ `i18n-en.mjs`（已落盘） | ≈**17**（+1 import——门面展开合体） | 文案表·聚合门面 |
-| `thincoder-server/public/i18n-zh-shell.mjs`（已落盘） | ≈**81**（+1——`nav.page.admin.mcp` 键） | 文案表·zh·shell 部件（导航族） |
-| `thincoder-server/public/i18n-en-shell.mjs`（已落盘） | ≈**79**（+1——同键） | 文案表·en·shell 部件（导航族） |
-| `thincoder-server/public/views-audit.mjs`（已落盘） | ≈**252**（+1——类型枚举增 `mcp_event`） | 审计页（类型枚举——全型收编先例） |
-| `thincoder-server/public/i18n-zh-system.mjs`（已落盘） | **219**（实读 2026-10-16——含 `audit.type.mcp_event` 键） | 文案表·zh·system 部件（审计键区） |
-| `thincoder-server/public/i18n-en-system.mjs`（已落盘） | **219**（实读 2026-10-16——同键） | 文案表·en·system 部件（审计键区） |
-| `thincoder-server/public/nav.mjs`（已落盘） | ≈**107**（+1 项） | 导航单源（`docs/server/design/webui/WEBUI.md` §2） |
-| `thincoder-server/public/app.mjs`（已落盘） | ≈**209**（+1 import + 1 `PAGES` 行） | 入口/路由分派 |
+| `thincoder-server/src/mcp/store.mjs` | — | 行读写（增删改查） ∥ 形校验 ∥ 核 config 形映射（`toCoreConfig`） ∥ 密文列读写（`credential-crypto.mjs`） |
+| `thincoder-server/src/mcp/face.mjs` | —（本批 +`readonlyOf`） | 工具面装配（逐回合：读行 ⇒ 核建连 ⇒ 归一 `{ ok, subject, summary, output }` ∥ 失败冷却 ∥ 跨面重名防御 ∥ 会话关闭出口——面无关（成员面复用面）） |
+| `thincoder-server/src/mcp/routes.mjs` | — | 五端点（清单四 + 探活一） ∥ 判权 ∥ `mcp_event` 三写入点 |
+| `thincoder-server/src/mcp/admin-tools.mjs` | —（本批 +`readonlyOf`） | 管面工具执行器（`mcp` 五动词）：寻址 ∥ 形校验转 `thincoder-server/src/mcp/store.mjs` 单源 ∥ `mcp_event` 三写入点 ∥ 探活（核件装载 ＋ 冷却清理）∥ 关会话（删/停用） |
+| `thincoder-server/src/agent/chat.mjs`（已落盘） | —（**拆档线 720 已越**；处置 = `docs/server/design/agent/ADMIN-AGENT.md` §9 KD-SV-208） | 聊天式驱动（§11——机制单源 = `docs/server/design/agent/ADMIN-AGENT.md`） |
+| `thincoder-server/src/agent/run.mjs`（已落盘） | — | 核装载共用件（预算常量 ∥ `loadCoreChat` ∥ `providerModelRefs` ∥ 裁剪面清单——任务式环已退场删净） |
+| `thincoder-server/src/store/migrations.mjs`（已落盘） | —（v24 段建表 + 审计 CHECK 重建；越 800 硬限——拆案在案，见 `docs/server/design/sandbox/SANDBOX.md` §13） | 迁移链（开库/PRAGMA/语句封装 = `db.mjs`——实读 **36/37**，拆案已落） |
+| `thincoder-server/bin/thincoder-server.mjs`（已落盘） | —（注册行 + 停机收尾） | 装配/启动/停机 |
+| `thincoder-server/src/accounts/audit.mjs`（已落盘） | —（`AUDIT_TYPES` += `mcp_event`） | 审计事件目录 ∥ 落库/查询/清理（§5 三写入点必经） |
+| `thincoder-server/public/views-mcp.mjs`（已落盘） | —（按页分档线 300 越线——预案 = 弹窗体外抽（对象角色，未在盘），先例 = providers） | MCP 页（清单表 ∥ 探活读数 ∥ 增/改/删弹窗） |
+| `thincoder-server/public/i18n-zh-mcp.mjs` ∥ `i18n-en-mcp.mjs`（已落盘） | —（`admin.mcp.*` 键族 + 档头） | 文案表·mcp 部件（域界 = 键二级前缀） |
+| `thincoder-server/public/i18n-zh.mjs` ∥ `i18n-en.mjs`（已落盘） | —（门面展开合体） | 文案表·聚合门面 |
+| `thincoder-server/public/i18n-zh-shell.mjs`（已落盘） | —（`nav.page.admin.mcp` 键） | 文案表·zh·shell 部件（导航族） |
+| `thincoder-server/public/i18n-en-shell.mjs`（已落盘） | —（同键） | 文案表·en·shell 部件（导航族） |
+| `thincoder-server/public/views-audit.mjs`（已落盘） | —（类型枚举增 `mcp_event`） | 审计页（类型枚举——全型收编先例） |
+| `thincoder-server/public/i18n-zh-system.mjs`（已落盘） | —（含 `audit.type.mcp_event` 键） | 文案表·zh·system 部件（审计键区） |
+| `thincoder-server/public/i18n-en-system.mjs`（已落盘） | —（同键） | 文案表·en·system 部件（审计键区） |
+| `thincoder-server/public/nav.mjs`（已落盘） | —（+1 项） | 导航单源（`docs/server/design/webui/WEBUI.md` §2） |
+| `thincoder-server/public/app.mjs`（已落盘） | —（+1 import + 1 `PAGES` 行） | 入口/路由分派 |
 
-- **小计 ≈ +946**（新增五档 ≈900 ∥ 存量改 ≈+46）。
-- **server-mcp-admin-tools 批 另计 ≈+190（落地实读 **+226** = 222 + 4）**：`thincoder-server/src/mcp/admin-tools.mjs` 实读 **222** ∥ `thincoder-server/src/agent/chat.mjs` 净 **+4**（实读 737——微触；拆档评估 = `docs/server/design/agent/ADMIN-AGENT.md` §9 KD-SV-208）；零新端点 ∥ 零迁移；
-  **单元测试档 1 档**（实读 **423** 行；**不入任何门**）。
-- **成员面挂载批 另计 ≈+245 ⇒ 落地实读 +195**：`thincoder-server/src/mcp/member-bridge.mjs`（已落盘｜实读 **70**——取表/调用两处理器 ∥ schema 映射 ∥ 中止接线）∥ `thincoder-server/src/agent/box-routes.mjs`（实读 **172**——+6：单行 import ∥ 两注册行 ∥ 头注/jsdoc 同拍；两处理器在桥件 70 内计）。
-  - **盒侧** = `thincoder-server/deploy/sandbox/member-shell/mcp-tools.mjs`（已落盘｜实读 **106**——取表/建桩/防撞）∥ `thincoder-server/deploy/sandbox/member-shell/core-run.mjs`（实读 **654**——取表并面 + 降级 + 审批接线）。
-  - **复用零改** = `thincoder-server/src/mcp/face.mjs`（实读 **196**）∥ `thincoder-server/src/mcp/store.mjs`（实读 **339**）；零迁移 ∥ 盒族 +2 端点；部署 = 盒镜像重建。
-  - **单元测试档 1 档**（已落盘｜实读 **428** 行；**不入任何门**）。
-- >500 软线复核：三新服务端档实读 **339 ∥ 196 ∥ 137**（>500 软线均未越）；`views-mcp.mjs` ≈320（预案在案——§上表）；`thincoder-server/src/agent/chat.mjs` 实读 **737**（**拆档线 720 已越**；处置 = `docs/server/design/agent/ADMIN-AGENT.md` §9 KD-SV-208）；
-  `migrations.mjs` **795/796**（>500 软线越线；距 800 硬限余 ≈4 行——拆案在案，见 `docs/server/design/sandbox/SANDBOX.md` §13）。
-- **口径声明**：本表行数沿 **split 计行口径**为主；个别行为**内容行口径**（±1 之差在案，不逐行收）；`thincoder-server/public/i18n-zh-system.mjs` ∥ `thincoder-server/public/i18n-en-system.mjs` 标 220 = 内容口径值，**现盘 = 221 内容 ∥ 222 split**——增量（+1 键）照加。`docs/server/design/webui/MCP.md` 零改（其「缺省勾」= 依据句——缺省明写已落本档 §3.2 ∥ `docs/server/design/gateway/API.md` §2.13 两契约档，足）。
+- **口径声明**：本表行数面量法以 **split 计行口径**为主；个别行为**内容行口径**（±1 之差在案，不逐行收）。`docs/server/design/webui/MCP.md` 零改（其「缺省勾」= 依据句——缺省明写已落本档 §3.2 ∥ `docs/server/design/gateway/API.md` §2.13 两契约档，足）。
 
 ## 11. 验收判据（机检）
 

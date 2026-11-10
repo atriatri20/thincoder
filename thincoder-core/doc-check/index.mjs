@@ -48,6 +48,12 @@
  * 扩展名清单（manifest 的 `index.docCheckExts`——机制单源 = 同档 §2.6）：
  *   装配处的**一处拼装**：`DEFAULT_DOC_EXTS ∪ 该根 index.docCheckExts`，再过一次取形过滤（单字符后缀 ∥ 归档内层剔除）；
  *   清单透传给判法面的 `isDocToken`（锚 ∥ 花括号 ∥ 依据行 ∥ 行号面四处同吃）。`report` 面出读数一行（该仓写了这项才出）。
+ * 判定输入与判定区（**一个判定、两个入参**——机制单源 = `docs/core/design/DOC-CHECK.md` §2.10.1）：
+ *   `texts`（可选，键 = 档、值 = 该档本次完整新内容）—— 给了它，该档的判定输入就是这份文本，不再读盘；
+ *     它替换的是「读哪份字节」，三条判据 ∥ 四条抽取面 ∥ 解析序 ∥ 豁免谓词一字不动。
+ *   `zones`（可选，键 = 档、值 = 区间表，按**改后档**行号、闭区间）—— 给了它，阻断集 = **命中行落在任一区内**的那些；
+ *     区外命中进 `stockHits` 读数桶（照列、不阻断；句形单源 = `STOCK_LINE`）。**两个入参都缺席 ⇒ 与今日逐字相同**。
+ *   身份不再造临时片段档：命中的 `file` / `root` / 豁免识别键 / 报面坐标全部是**目标档**的（§2.10.2）。
  */
 import { readFileSync, statSync } from "node:fs"
 import { resolve } from "node:path"
@@ -328,8 +334,10 @@ function assertEntryShapes(docs) {
   }
 }
 
-/** 清单 → 可判集（去重保序）+ 不可判档两类（`missing` ∥ `notMarkdown`）。条目的形状由 `assertEntryShapes` 先拒。 */
-function resolveRange(base, docs) {
+/** 清单 → 可判集（去重保序）+ 不可判档两类（`missing` ∥ `notMarkdown`）。条目的形状由 `assertEntryShapes` 先拒。
+ *  **给了 `texts` 的那一档不看盘面**（§2.10.1）：判定输入就是那份文本，新建档（还没落盘）因此同样可判；
+ *  形态不变形：非 `.md` 仍归 `notMarkdown`（判据面只看 markdown 档，这条与读盘与否无关）。 */
+function resolveRange(base, docs, textOf) {
   const seen = new Set()
   const check = []
   const undecidable = []
@@ -338,6 +346,11 @@ function resolveRange(base, docs) {
   docs.forEach((d) => {
     const abs = resolve(base, d)
     const key = pathKey(abs)
+    if (textOf(abs) !== undefined) {
+      if (!abs.toLowerCase().endsWith(".md")) { undecidable.push({ abs, reason: "not a markdown document" }); notMarkdown.push(abs) }
+      else if (!seen.has(key)) { seen.add(key); check.push(abs) }
+      return
+    }
     const reason = undecidableReason(abs)
     if (reason === null) { if (!seen.has(key)) { seen.add(key); check.push(abs) } return }
     undecidable.push({ abs, reason })
@@ -345,6 +358,61 @@ function resolveRange(base, docs) {
     else notMarkdown.push(abs)
   })
   return { check: check.sort(), undecidable, missing, notMarkdown }
+}
+
+/** `texts` 归一一处（§2.10.1）：调用方交的是「档 → 该档本次完整新内容」，键按 `docs` 同一条解析（相对声明根或绝对）。
+ *  没给 ⇒ 一个恒 `undefined` 的查表（那一路与改前逐字相同：一律读盘）。
+ *  形态错（非 Map/对象、键不是路径、值不是字符串）⇒ **抛**：静默忽略会让「判定输入替换」落空，
+ *  而落空的样子与「判过了」一模一样（业务门纪律：该失败就失败）。 */
+function textLookupOf(base, texts) {
+  if (texts === undefined) return () => undefined
+  const raw = texts instanceof Map
+    ? [...texts.entries()]
+    : (texts !== null && typeof texts === "object" && !Array.isArray(texts) ? Object.entries(texts) : null)
+  if (raw === null) {
+    throw new Error('doc_check: `texts` must be a Map or a plain object keyed by document path, value = that document\'s full new text — nothing was judged.')
+  }
+  const table = new Map()
+  for (const [k, v] of raw) {
+    if (typeof k !== "string" || k.trim() === "") {
+      throw new Error('doc_check: every `texts` key must be a document path — an empty or non-string key names no document; nothing was judged.')
+    }
+    if (typeof v !== "string") {
+      throw new Error(`doc_check: \`texts\` value for ${k} is not a string — the judged input must be that document's full text; nothing was judged.`)
+    }
+    table.set(pathKey(resolve(base, k)), v)
+  }
+  return (abs) => table.get(pathKey(abs))
+}
+
+/** `zones` 归一一处（§2.10.1）：调用方交的是「档 → 区间表」，区间按**改后档**行号、闭区间；`start > end` = 宽度为零。
+ *  没给 ⇒ `null`（阻断集不按区间切分，与改前逐字相同）。
+ *  形态错（非 Map/对象、值不是数组、区间不是整数行号）⇒ **抛**：一个写坏的区间表会把阻断集静默算成空集。 */
+function zoneTableOf(base, zones) {
+  if (zones === undefined) return null
+  const raw = zones instanceof Map
+    ? [...zones.entries()]
+    : (zones !== null && typeof zones === "object" && !Array.isArray(zones) ? Object.entries(zones) : null)
+  if (raw === null) {
+    throw new Error('doc_check: `zones` must be a Map or a plain object keyed by document path, value = an array of { start, end } — nothing was judged.')
+  }
+  const table = new Map()
+  for (const [k, v] of raw) {
+    if (!Array.isArray(v)) {
+      throw new Error(`doc_check: \`zones\` value for ${k} is not an array of zones — pass [{ start, end }]; nothing was judged.`)
+    }
+    const list = []
+    for (const z of v) {
+      const start = Number(z?.start)
+      const end = Number(z?.end)
+      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < 0) {
+        throw new Error(`doc_check: a \`zones\` entry for ${k} is not a line range — every zone is { start, end } with 1-based integers (start > end = zero width); nothing was judged.`)
+      }
+      list.push({ start, end })
+    }
+    table.set(pathKey(resolve(base, k)), list)
+  }
+  return table
 }
 
 /** 域表读数块的**句形单源**（§2.5 读数口径——块首行 ∥ 无 manifest 根那一行，逐字）：
@@ -386,6 +454,7 @@ function noRootOutcome(items) {
     exempted: [],
     exemptInvalid: [],
     exemptStale: 0,
+    stockHits: [],
   }
 }
 
@@ -636,7 +705,7 @@ const unreadableHead = (n) => `读不到 ${n} 档（未判，不得读作已检�
 /** gate 报面（固定句形——§3.20「报面（固定句形 · 交付门 gate）」）：首行 verdict = 唯一机判串。
  *  §2.3：verdict 只有一条；单根清单报面逐字不变（零回归的判据面）；≥2 根时范围行追加根清单、
  *  命中 ∥ 跳过 ∥ 读不到行带项目标签。 */
-function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable, anchors, paragraphs, lineRefs, cycleReads = [], exempted = [], exemptInvalid = [], exemptStale = 0 }) {
+function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable, anchors, paragraphs, lineRefs, cycleReads = [], exempted = [], exemptInvalid = [], exemptStale = 0, stockHits = [] }) {
   // 第三条判据的**判集 = 正文面**（围栏块外）；围栏内那部分只进下面那行读数（口径 = §3.23「判面 = 正文面」块）。
   const bodyRefs = lineRefs.body.length
   const fencedRefs = lineRefs.fenced.length
@@ -715,6 +784,8 @@ function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable
   }
   // 豁免块（§2.7 · **两问法同出**）：位置 = 命中区之后（处置块之后）；不进 `hits`、不改 verdict。
   // N = 0 时零出 ⇒ 未登记任何豁免的仓，gate 报面与改动前逐字相等（零回归）。
+  // 区外命中读数（§2.10.1）：与 `report` 面同一句形、同一位置（命中区之后、豁免块之前）；N = 0 时零出。
+  if (stockHits.length) out.push(STOCK_LINE(stockHits.length))
   out.push(...exemptBlock(lay, exempted))
   out.push(...invalidExemptionBlock(lay, exemptInvalid))
   if (exemptStale > 0) out.push(EXEMPT_STALE(exemptStale))
@@ -726,7 +797,8 @@ function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable
  * @param {string} root **声明根**（调用方给出的坐标系；相对 `docs` 条目按它解析，无 manifest 祖先的档也落它）。
  *   语义变了：它不再是整批共用的坐标系——每个档的判定根 = 该档自己的落点（§2.1）；
  *   缺省 ∥ 空串 ∥ 非字符串 ⇒ **整清单不判**（§2.4：`gate` 面 `ERROR（无法定根 N 档）`、`report` 面抛错）。
- * @param {{docs?:string[], mode?:'report'|'gate', docsSource?:'session'|'explicit', lines?:string[]}} [o]
+ * @param {{docs?:string[], mode?:'report'|'gate', docsSource?:'session'|'explicit', lines?:string[],
+ *   texts?:Map<string,string>|Object<string,string>, zones?:Map<string,Array<{start:number,end:number}>>|Object<string,Array<{start:number,end:number}>>}} [o]
  *   `mode` 缺省 = `report`；`docs` = 被判档清单（相对 `root` 或绝对）——**必填**（两种问法同）：
  *   缺省 ∥ 非数组 ⇒ 报错要求显式清单（零遍历、零全域兜底）；`report` 面**空数组也报错**，`gate` 面空数组 ⇒
  *   不抛错、照出「0 档受检」实况与空范围说明，但首行判 `ERROR（0 档受检——空范围不判 PASS）`（判了 0 档读不成「全清」）；
@@ -736,12 +808,23 @@ function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable
  *   `lines` = 读数面清单（相对 `root` 或绝对；收任意在盘档）——**读数，不是判据**：
  *   把它给 `mode:"gate"` 是不支持的用法 ⇒ 开判之前抛错（静默忽略会让调用方以为量过）；
  *   `report` 面逐档出一行内容行数，并给源 / 单元测试档的尺寸档位标记。
+ *   `texts` = **判定输入替换**（可选；键 = 档、值 = 该档本次完整新内容，相对 `root` 或绝对）：给了它，该档不再读盘，
+ *   判定输入就是这份文本。它只换「读哪份字节」——三条判据 ∥ 四条抽取面 ∥ 解析序 ∥ 面判 ∥ 豁免谓词一字不改（§2.10.1 语义一）。
+ *   `zones` = **归属区间表**（可选；键 = 档、值 = 该档的区间表，按改后档行号、闭区间；`start > end` = 宽度为零）：
+ *   给了它，阻断集 = 命中行落在任一区内的那些；区外命中进 `stockHits`（读数桶，照列、不阻断）。
+ *   它只改阻断集，不决定什么算命中（语义二）。**两个入参都缺席 ⇒ 与改前逐字相同**（交付面零回归，语义三）。
+ *   某档交了 `zones` 却没有该档的区间表 ⇒ 整档即本次（fail-closed：不静默放过）；没有行号的仓级命中（`环引`）
+ *   不按区间归属，照旧入闸。
  * @returns {{report:string, hits:{total:number, anchors:number, paragraph:number, lineRefs?:number}, anchorHits:Array,
  *   paragraphHits:Array, lineRefHits:Array, files:string[], checkFiles:string[], excluded:string[], paragraphMax:number,
  *   skipped:{missing:string[], notMarkdown:string[]}, unreadable:string[], lineReads:{file:string, lines:number, tier:'hard'|'soft'|null}[],
  *   lineRefs:{body:Array, fenced:Array, total:number, unreadable:string[]}, batchFaceRefs:number, projectRoots:string[],
  *   suffixHits:{file:string, line:number, token:string, abs:string}[], suffixBuilds:number,
- *   domainTables:{root:string, manifest:boolean}[], exempted:Array, exemptInvalid:Array, exemptStale:number}}
+ *   domainTables:{root:string, manifest:boolean}[], exempted:Array, exemptInvalid:Array, exemptStale:number,
+ *   stockHits:Array}}
+ *   `stockHits` = 区外命中（交了 `zones` 才有；与 `hits` 各自一桶——**不进 `hits`**、不改 verdict，两面报面各出一行 `STOCK_LINE`）。
+ *   它的属主次序：豁免分类跑在前面（登记表的 `used` ∥ `登记未命中` 计数与四件报面都以全量命中为准），
+ *   已裁定的进 `exempted`、余下的才分「区内 ∥ 区外」——两桶互斥，不重列同一条。
  *   `lineRefs` = 行号坐标的采集结果，**两个问法返回同一份**（同一次采集）。
  *   **每条命中携两格载荷**（`token` = 被拒的内容 ∥ `root` = 该命中的判定根）——拒文四件的「内容」与
  *   「解析根」两格读它（设计单源 = `docs/core/design/BATCH-RECORD.md` §4.22）；载荷不进 `hits`、不改 verdict。
@@ -768,7 +851,7 @@ function gateReport({ lay, docsSource, checkFiles, skipped, excluded, unreadable
  *   （两处 `hits` 形状不同：要读行号类读数一律取 `lineRefs` 的 `body` ∥ `fenced` ∥ `total`，别读 `hits.lineRefs`）。
  *   消费面判「清」须读 `report` 首行（gate）∥ `hits.total`（report），不得只看其中一个。
  */
-export function runDocCheck(root, { docs, mode = "report", docsSource, lines } = {}) {
+export function runDocCheck(root, { docs, mode = "report", docsSource, lines, texts, zones } = {}) {
   const base = declaredRoot(root)
   const gate = mode === "gate"
   // 读数不是判据 ⇒ 门面不接（开判之前拒绝，不静默忽略）：静默忽略会让调用方以为量过（业务门纪律：该失败就失败）。
@@ -798,7 +881,11 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
     }
     return noRootOutcome(items)
   }
-  const range = resolveRange(base, docs)
+  // 两个入参在开判之前归一（形态错 ⇒ 抛，不静默降级）：`textOf` = 判定输入替换，`zoneTable` = 归属区间表。
+  // 缺省那一路两个都是空形 —— `textOf` 恒 `undefined`（全读盘）、`zoneTable` = `null`（不切分阻断集）。
+  const textOf = textLookupOf(base, texts)
+  const zoneTable = zoneTableOf(base, zones)
+  const range = resolveRange(base, docs, textOf)
   // 报告态 fail-closed：清单里有一个不可判档 ⇒ 报错点名、整次零判定——清单写错却报 0 命中就是「没跑」装成「跑了且清」。
   if (!gate && range.undecidable.length) {
     const named = range.undecidable.map((u) => `${rel(base, u.abs)}（${u.reason}）`).join(" ∥ ")
@@ -824,17 +911,17 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
     const entry = readOf(g.root)
     return { root: g.root, ok: entry.ok, manifest: entry.res }
   })
-  const perGroup = groups.map((g, i) => ({ root: g.root, res: checkAnchors(g.root, { files: g.files, manifest: domainTables[i].manifest, exts: extsOfRoot(g.root) }) }))
+  const perGroup = groups.map((g, i) => ({ root: g.root, res: checkAnchors(g.root, { files: g.files, manifest: domainTables[i].manifest, exts: extsOfRoot(g.root), textOf }) }))
   const anchors = groups.length === 1
     ? perGroup[0].res
     : mergeAnchors(perGroup, new Map(checkFiles.map((f, i) => [f, i])))
   const projectRoots = [...new Map(groups.map((g) => [pathKey(g.root), g.root])).values()].sort()
   const lay = reportLayout(base, projectRoots)
-  const paragraphs = checkParagraphs({ paragraphMax, lineMax, exemptZones: paragraphExemptZones, files: checkFiles })
+  const paragraphs = checkParagraphs({ paragraphMax, lineMax, exemptZones: paragraphExemptZones, files: checkFiles, textOf })
 
   // 行号坐标的**唯一采集点**：放在两支分支之前——`report` 与 `gate` 读出的是同一份结果，不各采一次
   // （同源判 = 两个问法的 `lineRefs.body` 逐字相等；一套萃取式，不是一套宽一套窄）。
-  const lineRefs = collectLineRefs({ files: checkFiles, extsOf: extsOfFile })
+  const lineRefs = collectLineRefs({ files: checkFiles, extsOf: extsOfFile, textOf })
   // 载荷格 `root`（**判据零改** · 设计单源 = `docs/core/design/BATCH-RECORD.md` §4.22「载荷两格」）：逐条命中补上
   // 「该档的判定根」——批次档门拼拒文四件时读它（引擎的 `✗` 行里根只在部分命中类出现）。与 §2.7 给
   // `paragraph.mjs` 加载荷字段 `text` 是同一处置：加一格载荷，不改抽取面、不改命中类、不改阈值、不改 verdict。
@@ -857,9 +944,31 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
     lineRefHits: lineRefs.body.map((h) => ({ ...h, clazz: LINE_REF_CLASS })),
     base, roots: projectRoots, readOf,
   })
-  const anchorHitsKept = split.anchorHits
-  const paragraphHitsKept = split.paragraphHits
-  const lineRefHitsKept = split.lineRefHits
+  const anchorHitsRaw = split.anchorHits
+  const paragraphHitsRaw = split.paragraphHits
+  const lineRefHitsRaw = split.lineRefHits
+  // 判定区（§2.10.1 的 `zones`）：区内的命中 = 本次（照拦），区外的进 `stockHits` 读数桶（照列、不阻断）。
+  // **属主次序 = 豁免分类跑在前面**（本次设计未定处，实现选向）：登记表的 `used` ∥ `登记未命中` 计数与四件报面
+  // 都以**全量命中**为准——一条已裁定的假阳落到区外就变成「登记未命中」，而它并没有失效（§2.7）。
+  // 两桶因此互斥：已裁定 > 存量，同一条不会在两处各列一次。
+  // 没有行号的仓级命中（`环引`）不按区间归属：它不是档内的一行，本笔没写它也不等于它是存量（照旧入闸）。
+  // 某档交了 `zones` 却没有该档的区间表 ⇒ 整档即本次（fail-closed：没交区间不等于没改）。
+  const stockHits = []
+  const inZone = (h) => {
+    if (typeof h.line !== "number") return true
+    const zs = zoneTable === null ? undefined : zoneTable.get(pathKey(h.file))
+    if (zs === undefined) return true
+    return zs.some((z) => h.line >= z.start && h.line <= z.end)
+  }
+  const partition = (list) => {
+    if (zoneTable === null) return list
+    const kept = []
+    for (const h of list) (inZone(h) ? kept : stockHits).push(h)
+    return kept
+  }
+  const anchorHitsKept = partition(anchorHitsRaw)
+  const paragraphHitsKept = partition(paragraphHitsRaw)
+  const lineRefHitsKept = partition(lineRefHitsRaw)
   // `gate` 的命中行与 `hits` 只吃未登记那批；`report` 的清账清单块仍列全量（清单 = 读数，不是判据）。
   const lineRefsKept = { ...lineRefs, body: lineRefHitsKept }
   const anchorCount = anchorHitsKept.length
@@ -882,6 +991,8 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
     exempted: split.exempted,
     exemptInvalid: split.invalid,
     exemptStale: split.stale,
+    // 区外命中（交了 `zones` 才有）：与 `hits` 各自一桶——不进 `hits`、不改 verdict，两面报面各出一行 `STOCK_LINE`。
+    stockHits,
     // 后缀兜底（第 6′ 步）的两件读数：逐处的 `suffixHits`（不是命中）与建表次数。消费者 = `report` 面读数块与用例断言。
     suffixHits: anchors.suffixHits ?? [],
     suffixBuilds: anchors.suffixBuilds ?? 0,
@@ -895,9 +1006,10 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
   }
   if (gate) {
     // `gate` 面：第三条判据的**正文面**计入 `hits` 与 `hits.total`（三数之和）；围栏内只作读数（不进 `hits`）。
-    // 读不到列不计数但定判决词（`ERROR`）。**只数未登记的**（已裁定的进 `exempted`，§2.7 KD-X4）。
+    // 读不到列不计数但定判决词（`ERROR`）。**只数未登记的**（已裁定的进 `exempted`，§2.7 KD-X4），
+    // 也**只数区内的**（区外的进 `stockHits`，§2.10.1）。
     const hits = { total: anchorCount + paragraphHitsKept.length + lineRefHitsKept.length, anchors: anchorCount, paragraph: paragraphHitsKept.length, lineRefs: lineRefHitsKept.length }
-    return { ...shared, hits, report: gateReport({ lay, docsSource: source, checkFiles, skipped: shared.skipped, excluded, unreadable, anchors: { ...anchors, hits: anchorHitsKept }, paragraphs: paragraphHitsKept, lineRefs: lineRefsKept, cycleReads: anchors.cycleReads ?? [], exempted: split.exempted, exemptInvalid: split.invalid, exemptStale: split.stale }) }
+    return { ...shared, hits, report: gateReport({ lay, docsSource: source, checkFiles, skipped: shared.skipped, excluded, unreadable, anchors: { ...anchors, hits: anchorHitsKept }, paragraphs: paragraphHitsKept, lineRefs: lineRefsKept, cycleReads: anchors.cycleReads ?? [], exempted: split.exempted, exemptInvalid: split.invalid, exemptStale: split.stale, stockHits }) }
   }
 
   const hits = { total: anchorCount + paragraphHitsKept.length, anchors: anchorCount, paragraph: paragraphHitsKept.length }
@@ -944,6 +1056,9 @@ export function runDocCheck(root, { docs, mode = "report", docsSource, lines } =
   // 清单块位置 = 命中区之后、末行 `结论：…` 之前（报面的末行恒是结论句，清单不抢它的位）。
   // **清账清单吃全量**（含已裁定那几处）：它是读数不是判据——把已裁定的坐标从清单里抹掉，下一轮就没人知道那里还躺着一处。
   out.push(...lineRefsBlock({ base, files: checkFiles, refs: lineRefs }))
+  // 区外命中读数（§2.10.1 · 仅交了 `zones` 才有行）：位置 = 命中区之后、豁免块之前，两面同形；
+  // N = 0 时零出 ⇒ 未交 `zones` 的调用面（交付面）报面与改前逐字相等。
+  if (stockHits.length) out.push(STOCK_LINE(stockHits.length))
   // 豁免块（§2.7 · 两问法同出）：位置 = 清账清单之后、末行 `结论：…` 之前；N = 0 时零出（零回归）。
   out.push(...exemptBlock(lay, split.exempted))
   out.push(...invalidExemptionBlock(lay, split.invalid))

@@ -80,30 +80,29 @@
 
 ## 3. 文件账（本面文件行）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/public/views-sandbox.mjs`（已落盘） | **365**（托管接入块删净 + `#1235` 接线提示块 ∥ `#1259` 承载确认 ∥ `#1519` 删除节点读败第三态后实读——500 软线内） | 管理·沙盒页 |
-| `thincoder-server/public/sandbox-remove-gate.mjs`（已落） | **31**（删除节点判门纯件 `removeRunnerGate({ containerReachable, listedCount, workspacesOk, boundCount, boundConfirmed }) → { confirmDisabled, hintKey, retry }`——四态：不可达 ∥ 无承载 ∥ 有承载未勾 ∥ 读败；并存态 = 读败键优先；零 DOM 读写——本档 §2.1① 删除节点弹窗） | 管理·沙盒页件（判门纯件） |
-| `thincoder-server/public/views-sandbox-containers.mjs`（已落） | **433**（容器区件：容器表 + 详情窗（信息/挂载/端口/环境/用量块/强杀）∥ 日志窗 ∥ 建/删窗；第七钮接线 +7；本档 §2.1①） | 管理·沙盒页件（容器面） |
-| `thincoder-server/public/views-sandbox-images.mjs`（已落盘） | **228** ⇒ **≈227**（area 题行去重 −1） | 管理·沙盒页件（镜像族） |
-| `thincoder-server/public/views-sandbox-image-sources.mjs`（已落盘） | **361** | 管理·沙盒页件（镜像源族） |
-| `thincoder-server/public/views-sandbox-base.mjs`（已落） | **240**（两卡：底座卡（说明行 + 工作区表 + 设底座弹窗 + 构建钮/在飞态）+ 私有仓凭据卡（表 + 增/改弹窗 + 删除确认）；复用 `modal.mjs`；本档 §2.1①） | 管理·沙盒页件（底座/凭据） |
-| `thincoder-server/public/views-sandbox-connection.mjs`（已落） | **148**（连接段共用件：二择（明文/TLS） + 三件输入（零回填） ∥ 编辑窗（提交/自检中/就地人话/切回明文确认句） ∥ 复用 `modal.mjs`；本档 §2.1①） | 管理·沙盒页件（连接方式） |
-| `thincoder-server/public/views-sandbox-volumes.mjs`（已落） | ≈**130**（卷区件：卷表（名 ∥ 创建时间 ∥ 删除）+ 删除确认窗（后果句 ∥ 在用拒删就地呈）；本档 §2.1①） | 管理·沙盒页件（卷族） |
-| `thincoder-server/public/host-credential.mjs`（已落） | ≈**110**（**两页共用的主机凭据弹窗件**：SSH 端口/用户/认证/秘密输入/sudo 口令 ∥ 元数据只读呈（密文零回填）∥ 撤销（二次确认）∥ 校验人话；挂载 = 沙盒页节点行动作 ∥ 对话页会话条钮——`docs/server/design/webui/CHAT.md` §2.1；机制 = `docs/server/design/sandbox/SANDBOX.md` §3） | 管理·沙盒页件（主机凭据） |
-| `thincoder-server/public/views-sandbox-terminal.mjs`（已落） | **125**（终端窗（控制台消费件）：`modal.mjs` 壳（大窗类）∥ 状态行 ∥ 重连钮 ∥ i18n 文案 ∥ 关窗收口；核族 = `docs/server/design/webui/TERMINAL.md` §3） | 管理·沙盒页件（容器终端） |
-| `thincoder-server/public/terminal-core.mjs`（已落） | **495**（越线拆案已触发落地——拆出两档见下行；终端核·纯件：字符网格（宽字符/卷回 1000/备用屏/滚动区）∥ 键盘编码 ∥ 增量 UTF-8；零 DOM/零网络/零控制台依赖——`docs/server/design/webui/TERMINAL.md` §2.1） | 终端核件·网格 + 装配（可复用——`docs/server/design/webui/TERMINAL.md` §2.6） |
-| `thincoder-server/public/terminal-vt.mjs`（已落） | **117** | 终端核件·VT 解析面 |
-| `thincoder-server/public/terminal-codec.mjs`（已落） | **89** | 终端核件·编解码面 |
-| `thincoder-server/public/terminal-render.mjs`（已落） | **361**（DOM 渲染 + 输入捕获：脏行重渲 ∥ 光标元素 ∥ 卷回视口 ∥ `ResizeObserver` 量宽 ∥ 隐藏输入区（IME/粘贴/特殊键）） | 终端核件（渲染面） |
-| `thincoder-server/public/terminal-link.mjs`（已落） | **133**（WS 传输客户端：建链 ∥ 二进制/文本帧分派 ∥ 心跳 ∥ 断开态上抛（文案归宿主）） | 终端核件（传输面） |
-| `thincoder-server/public/views-me-sandbox.mjs`（已落） | **124**——我的·工作区：表列（含所属 runner）；待批提示/轮询两件已删；本档 §2.2 | 我的·工作区 |
-| `thincoder-server/public/i18n-zh-sandbox.mjs`（已落盘） | **284**（键 251——本批 +5 键：接线提示 2 ∥ 承载确认 2 ∥ 操作记录截断 1；`#1519` +1 键 `admin.sandbox.workspacesUnreachable`） | 文案表·zh·沙盒面 |
-| `thincoder-server/public/i18n-en-sandbox.mjs`（已落盘） | **284**（同 zh 行） | 文案表·en·沙盒面 |
+| `thincoder-server/public/views-sandbox.mjs`（已落盘） | —（托管接入块删净 + `#1235` 接线提示块 ∥ `#1259` 承载确认 ∥ `#1519` 删除节点读败第三态后实读——500 软线内） | 管理·沙盒页 |
+| `thincoder-server/public/sandbox-remove-gate.mjs`（已落） | —（删除节点判门纯件 `removeRunnerGate({ containerReachable, listedCount, workspacesOk, boundCount, boundConfirmed }) → { confirmDisabled, hintKey, retry }`——四态：不可达 ∥ 无承载 ∥ 有承载未勾 ∥ 读败；并存态 = 读败键优先；零 DOM 读写——本档 §2.1① 删除节点弹窗） | 管理·沙盒页件（判门纯件） |
+| `thincoder-server/public/views-sandbox-containers.mjs`（已落） | —（容器区件：容器表 + 详情窗（信息/挂载/端口/环境/用量块/强杀）∥ 日志窗 ∥ 建/删窗；第七钮接线 +7；本档 §2.1①） | 管理·沙盒页件（容器面） |
+| `thincoder-server/public/views-sandbox-images.mjs`（已落盘） | —（area 题行去重） | 管理·沙盒页件（镜像族） |
+| `thincoder-server/public/views-sandbox-image-sources.mjs`（已落盘） | — | 管理·沙盒页件（镜像源族） |
+| `thincoder-server/public/views-sandbox-base.mjs`（已落） | —（两卡：底座卡（说明行 + 工作区表 + 设底座弹窗 + 构建钮/在飞态）+ 私有仓凭据卡（表 + 增/改弹窗 + 删除确认）；复用 `modal.mjs`；本档 §2.1①） | 管理·沙盒页件（底座/凭据） |
+| `thincoder-server/public/views-sandbox-connection.mjs`（已落） | —（连接段共用件：二择（明文/TLS） + 三件输入（零回填） ∥ 编辑窗（提交/自检中/就地人话/切回明文确认句） ∥ 复用 `modal.mjs`；本档 §2.1①） | 管理·沙盒页件（连接方式） |
+| `thincoder-server/public/views-sandbox-volumes.mjs`（已落） | —（卷区件：卷表（名 ∥ 创建时间 ∥ 删除）+ 删除确认窗（后果句 ∥ 在用拒删就地呈）；本档 §2.1①） | 管理·沙盒页件（卷族） |
+| `thincoder-server/public/host-credential.mjs`（已落） | —（**两页共用的主机凭据弹窗件**：SSH 端口/用户/认证/秘密输入/sudo 口令 ∥ 元数据只读呈（密文零回填）∥ 撤销（二次确认）∥ 校验人话；挂载 = 沙盒页节点行动作 ∥ 对话页会话条钮——`docs/server/design/webui/CHAT.md` §2.1；机制 = `docs/server/design/sandbox/SANDBOX.md` §3） | 管理·沙盒页件（主机凭据） |
+| `thincoder-server/public/views-sandbox-terminal.mjs`（已落） | —（终端窗（控制台消费件）：`modal.mjs` 壳（大窗类）∥ 状态行 ∥ 重连钮 ∥ i18n 文案 ∥ 关窗收口；核族 = `docs/server/design/webui/TERMINAL.md` §3） | 管理·沙盒页件（容器终端） |
+| `thincoder-server/public/terminal-core.mjs`（已落） | —（越线拆案已触发落地——拆出两档见下行；终端核·纯件：字符网格（宽字符/卷回 1000/备用屏/滚动区）∥ 键盘编码 ∥ 增量 UTF-8；零 DOM/零网络/零控制台依赖——`docs/server/design/webui/TERMINAL.md` §2.1） | 终端核件·网格 + 装配（可复用——`docs/server/design/webui/TERMINAL.md` §2.6） |
+| `thincoder-server/public/terminal-vt.mjs`（已落） | — | 终端核件·VT 解析面 |
+| `thincoder-server/public/terminal-codec.mjs`（已落） | — | 终端核件·编解码面 |
+| `thincoder-server/public/terminal-render.mjs`（已落） | —（DOM 渲染 + 输入捕获：脏行重渲 ∥ 光标元素 ∥ 卷回视口 ∥ `ResizeObserver` 量宽 ∥ 隐藏输入区（IME/粘贴/特殊键）） | 终端核件（渲染面） |
+| `thincoder-server/public/terminal-link.mjs`（已落） | —（WS 传输客户端：建链 ∥ 二进制/文本帧分派 ∥ 心跳 ∥ 断开态上抛（文案归宿主）） | 终端核件（传输面） |
+| `thincoder-server/public/views-me-sandbox.mjs`（已落） | —（我的·工作区：表列（含所属 runner）；待批提示/轮询两件已删；本档 §2.2） | 我的·工作区 |
+| `thincoder-server/public/i18n-zh-sandbox.mjs`（已落盘） | —（键 251——本批 +5 键：接线提示 2 ∥ 承载确认 2 ∥ 操作记录截断 1；`#1519` +1 键 `admin.sandbox.workspacesUnreachable`） | 文案表·zh·沙盒面 |
+| `thincoder-server/public/i18n-en-sandbox.mjs`（已落盘） | —（同 zh 行） | 文案表·en·沙盒面 |
 
-**面小计**：**4058**（口径 = §3 表内 18 行值之和，本轮实算；`≈` 行按本档原值计）——域合计 = 各面之和（不单列）；以实施当刻盘面实读为准。
-- `views-sandbox.mjs` 拆分预案：**托管接入件外拆预案已随退场消解**（托管接入块删净 ⇒ 越 500 软线随解）；现行实读 **365** ≤ 500 软线 ⇒ **不触发**（沿拆档先例：越线再现才落拆案）。
-  **删量两说已消解**：现行读数 = **365** 行（值单源 = 本档 §3；`docs/server/design/webui/WEBUI.md` §5 该档行指本档 §3，零重复值）。
+- `views-sandbox.mjs` 拆分预案：**托管接入件外拆预案已随退场消解**（托管接入块删净 ⇒ 越 500 软线随解）；现行 ≤ 500 软线 ⇒ **不触发**（沿拆档先例：越线再现才落拆案）。
+  **删量两说已消解**：值单源 = 本档 §3；`docs/server/design/webui/WEBUI.md` §5 该档行指本档 §3，零重复值。
 
 ## 4. 验收（本面 AC 行）
 

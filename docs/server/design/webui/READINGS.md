@@ -53,13 +53,11 @@
 
 ## 3. 文件账（本面文件行 ∥ 键族登记）
 
-| 档 | 行数（实读） | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/public/views-usage.mjs`（已落盘） | **139**（全队用量：过滤（+端点） ∥ 报表（概览卡 ∥ CSS 柱趋势 ∥ 聚合/排行两表） ∥ 导出（blob 下载） ∥ 明细表——本档 §2.1②） | 管理·用量看板 |
-| `thincoder-server/public/views-overview.mjs`（已落盘） | **74**（总览卡集六枚（今日/成员/健康/更新/快捷入口）——本档 §2.1③） | 管理·总览 |
-| `thincoder-server/public/views-audit.mjs`（已落盘） | **271**（审计列表：过滤三轴 ∥ 按型模板渲染 ∥ 空态——本档 §2.1④） | 管理·审计 |
-
-**面小计**：484（口径 = 本面表内逐行值之和；域合计 = 各面之和——不单列）。
+| `thincoder-server/public/views-usage.mjs`（已落盘） | —（全队用量：过滤（+端点） ∥ 报表（概览卡 ∥ CSS 柱趋势 ∥ 聚合/排行两表） ∥ 导出（blob 下载） ∥ 明细表——本档 §2.1②） | 管理·用量看板 |
+| `thincoder-server/public/views-overview.mjs`（已落盘） | —（总览卡集六枚（今日/成员/健康/更新/快捷入口）——本档 §2.1③） | 管理·总览 |
+| `thincoder-server/public/views-audit.mjs`（已落盘） | —（审计列表：过滤三轴 ∥ 按型模板渲染 ∥ 空态——本档 §2.1④） | 管理·审计 |
 
 **键族登记**（自 `webui/WEBUI.md` §2.2 归位——逐字）：
 

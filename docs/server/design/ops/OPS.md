@@ -338,28 +338,27 @@ services:
 - **生命周期**：停机收尾关闭全部 MCP 会话（stdio 子进程杀树——`thincoder-server/bin/thincoder-server.mjs`）；`kill -9` ⇒ 子进程残留（如实披露——`docs/server/design/mcp/MCP.md` §12 R86③）。
 - **运维读数**：探活 = 控制台行内动作（`POST /api/admin/mcp/probe`——零副作用）；失败原因就地人话。
 
-## 6. 本域文件与行数预算（本域族行）
+## 6. 文件账（本域族行）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/bin/thincoder-server.mjs` | **241**（实读 2026-10-19；本批 ＋≈40——族表驱动 ＋ 探针缝 ＋ 停机句柄） | argv ∥ 配置加载 ∥ 首启引导 ∥ 启动 ∥ 停机 |
-| 装配面常駻断言档（计划档——对象角色，未在盘） | 新档 ≈220 | 装配面常驻断言（A1–A7 ＋ 反证注释——§4.1） |
-| `thincoder-server/src/ops/config.mjs` | **360** | 读档 ∥ 校验（fail-closed） ∥ `env:` 解析 ∥ 缺省值 ∥ 预设展开接线 |
-| `thincoder-server/src/ops/update.mjs` | **239** | 更新机制 |
-| `thincoder-server/src/ops/presets.mjs` | **52** | 预设表（`SERVER_PRESETS`——起步 **21** 家 `{ baseURL }`；**2026-10-09 清除批：零 `model` 键**） ∥ 展开（`expandProviderEntry`：`name` 缺省 ∥ 覆盖 ∥ 未知预设拒启） |
-| `thincoder-server/src/ops/log.mjs` | **35** | 单行 JSON 日志（stdout） |
-| `thincoder-server/src/ops/cli.mjs` | **≈215** | 运维 CLI（成员/密钥/对账） |
-| `thincoder-server/config.example.json` | **38** | 配置模板（无真 key——预设形 ∥ 手写形并存） |
-| `thincoder-server/deploy/thincoder-server.service` | **34** | systemd unit 模板（裸机路——Restart=always ∥ 开机自启 ∥ journald） |
-| `thincoder-server/deploy/docker-entrypoint.sh` | **7** | 容器入口（壳——`exec … --config /app/config/config.json`） |
-| `thincoder-server/deploy/converge.mjs` | **197** | 壳引导收敛（零 App 依赖——自足） |
-| `thincoder-server/Dockerfile` | **41**（实读 2026-10-19；本批探针换形 ≤+3） | 镜像构建（壳 + 构建期预装——§5.1） |
-| `thincoder-server/.dockerignore` | **12** | 构建上下文排除（config.json ∥ config/ ∥ data ∥ docs ∥ .git） |
-| `thincoder-server/docker-compose.yml` | **22** | 容器样例（端口 ∥ 卷（配置目录 rw ∥ 数据） ∥ env_file ∥ restart: unless-stopped） |
-| `thincoder-server/deploy/backup.mjs` | **86** | 备份（命令化——定时器样例在 README §9） |
-| `thincoder-server/deploy/sandbox/Dockerfile` | **46** | 沙盒盒镜像 |
-| `thincoder-server/README.md` | **259** | 运维面：安装（npm ∥ Docker） ∥ 部署（systemd ∥ compose） ∥ 启动（首启引导） ∥ CLI 用法 ∥ 控制台 |
-| **小计** | ——（逐档见上表） | —— |
+| `thincoder-server/bin/thincoder-server.mjs` | —（族表驱动 ＋ 探针缝 ＋ 停机句柄） | argv ∥ 配置加载 ∥ 首启引导 ∥ 启动 ∥ 停机 |
+| 装配面常駻断言档（计划档——对象角色，未在盘） | — | 装配面常驻断言（A1–A7 ＋ 反证注释——§4.1） |
+| `thincoder-server/src/ops/config.mjs` | — | 读档 ∥ 校验（fail-closed） ∥ `env:` 解析 ∥ 缺省值 ∥ 预设展开接线 |
+| `thincoder-server/src/ops/update.mjs` | — | 更新机制 |
+| `thincoder-server/src/ops/presets.mjs` | — | 预设表（`SERVER_PRESETS`——起步 **21** 家 `{ baseURL }`；**2026-10-09 清除批：零 `model` 键**） ∥ 展开（`expandProviderEntry`：`name` 缺省 ∥ 覆盖 ∥ 未知预设拒启） |
+| `thincoder-server/src/ops/log.mjs` | — | 单行 JSON 日志（stdout） |
+| `thincoder-server/src/ops/cli.mjs` | — | 运维 CLI（成员/密钥/对账） |
+| `thincoder-server/config.example.json` | — | 配置模板（无真 key——预设形 ∥ 手写形并存） |
+| `thincoder-server/deploy/thincoder-server.service` | — | systemd unit 模板（裸机路——Restart=always ∥ 开机自启 ∥ journald） |
+| `thincoder-server/deploy/docker-entrypoint.sh` | — | 容器入口（壳——`exec … --config /app/config/config.json`） |
+| `thincoder-server/deploy/converge.mjs` | — | 壳引导收敛（零 App 依赖——自足） |
+| `thincoder-server/Dockerfile` | —（本批探针换形 ≤+3） | 镜像构建（壳 + 构建期预装——§5.1） |
+| `thincoder-server/.dockerignore` | — | 构建上下文排除（config.json ∥ config/ ∥ data ∥ docs ∥ .git） |
+| `thincoder-server/docker-compose.yml` | — | 容器样例（端口 ∥ 卷（配置目录 rw ∥ 数据） ∥ env_file ∥ restart: unless-stopped） |
+| `thincoder-server/deploy/backup.mjs` | — | 备份（命令化——定时器样例在 README §9） |
+| `thincoder-server/deploy/sandbox/Dockerfile` | — | 沙盒盒镜像 |
+| `thincoder-server/README.md` | — | 运维面：安装（npm ∥ Docker） ∥ 部署（systemd ∥ compose） ∥ 启动（首启引导） ∥ CLI 用法 ∥ 控制台 |
 
 ## 7. 验收判据（机检）
 

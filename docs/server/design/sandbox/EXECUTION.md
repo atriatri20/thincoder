@@ -291,46 +291,41 @@ HostConfig:
 | B88 | 边界 | 执行面（壳更新面） | 缓存槽复用复验（假件——假 fs 根）：① 槽 <H2> 在场且材料化（登记 ∥ 链 ∥ 槽内状态件）⇒ 复验过 ② 槽内源件被改（复验 ≠） ③ 槽内材料化产物被改（覆盖集外） | ① ④ 腿命中 ⇒ 换执行恰一次（spawn 计数 1 ∥ 零取件——承接进程就地跑、零自旋） ② 槽失效（清）⇒ 不得复用（重取件 ∥ 内建顶上） ③ 复验照过（判据稳定——④ 腿不受材料化影响） |
 | E65 | 错误 | 执行面（壳更新面） | 换执行后崩：子进程非零退出、未收终止信号 | 回退内建一次（跳过引导旗标 ⇒ 零递归）+ 该槽失效（清——防复用）；版本行两行（首 = 取件/缓存子 ∥ 末 = 回退内建——判读取末行）；子正常退出 ∥ 收 SIGTERM ⇒ 零回退 + 槽留（镜像退出码） |
 
-## 14. 本域文件与行数预算（执行面）
+## 14. 文件账（执行面）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/src/sandbox/box.mjs`（已落） | **652/653** | 盒生命周期动作链 ∥ 建盒参数集 ∥ 放置与补放置 ∥ 卷目录准备 ∥ 定时器（空闲/墙钟/周期快照） |
-| `thincoder-server/src/sandbox/quota.mjs`（已落） | **285/286** | 磁盘限额（探明 ∥ 项目配额/loopback ∥ 读回核）——`chattr` 项目标记 = 目录/文件分治（目录 `-type d … +P {} +` ∥ 文件 `-type f … {} +`，**两句各自成步**、同一步标签）；本批落地后复读同值（Δ 0） |
-| `thincoder-server/src/sandbox/workspace-routes.mjs`（已落） | **306/307** | 工作区面四路由 + 快照列表（自 `thincoder-server/src/sandbox/routes.mjs` 拆出——拆案首选执行 + 重写为直调） |
-| `thincoder-server/src/sandbox/derive.mjs`（已落——本增补） | **243/244** | 底座可换：派生 tag 计算 ∥ Dockerfile 生成 ∥ 上下文 tar ∥ 镜像就位四步 ∥ 构建流解析（§8 底座可换块） |
-| `thincoder-server/src/sandbox/registry-creds.mjs`（已落——本增补） | **174/175** | 私有仓凭据：形校验 ∥ 主机归一/判据 ∥ 加密 CRUD（复用 `credential-crypto.mjs`）∥ `X-Registry-Auth` 组装 |
-| `thincoder-server/src/sandbox/registry-cred-routes.mjs`（已落——本增补） | **95/96** | 私有仓凭据四端点（列/增/改/删——响应零秘密） |
-| `thincoder-server/src/sandbox/registry.mjs` | **419/420** | 登记/读数/可用性/放置 |
-| `thincoder-server/src/sandbox/routes.mjs` | **304/305** | 余面端点 |
-| `thincoder-server/src/sandbox/docker.mjs` | **425/426**（未越 500 软线——拆案撤回，见 `docs/server/design/sandbox/SANDBOX.md` §13） | Docker 客户端 |
-| `thincoder-server/src/sandbox/docker-tls.mjs`（已落——本增补 #2） | **133/134** | 连接面 TLS：三件形校验 ∥ 材料加解密存取（复用 `credential-crypto.mjs`）∥ 连接元数据视图 ∥ `node:https` 传输适配件（§2.1 ∥ `docs/server/design/sandbox/SANDBOX.md` §3） |
-| `thincoder-server/src/sandbox/image-routes.mjs` | **144/145** | 镜像族路由（§3） |
-| `thincoder-server/src/sandbox/container-routes.mjs`（**324/325**） | 已触碰（清单外）：`config`/`requestImpl` 两参透传（TLS 档） | 容器面路由（§3） |
-| `thincoder-server/src/sandbox/volume-routes.mjs`（**103/104**） | 已触碰：同上（两参透传） | 卷族路由（§3） |
-| `thincoder-server/src/sandbox/terminal-routes.mjs`（**362/363**） | 已触碰：两参透传 + **TLS 终端腿 +20**（材料感知升级传输 `execUpgradeTransportFor`） | 容器终端升级路（§9 ∥ `docs/server/design/sandbox/SANDBOX.md` §3） |
-| `thincoder-server/src/agent/chat-tools.mjs`（**562/563**——**越 500 软线在册**） | 已触碰：`config`/`requestImpl` 透传（管理面 chat `docker` 工具——TLS 材料解密；域账 = `docs/server/design/agent/ADMIN-AGENT.md` §6） | agent 工具面 |
-| `thincoder-server/src/agent/chat.mjs`（**736/737**——**越 500 软线在册**） | 已触碰：同列透传 | agent chat 驱动 |
-| `thincoder-server/src/sandbox/hosts.mjs`（**134/135**） | 已触碰：`stdin` 透传（恢复备径 sudo 口令行） | 主机凭据面（§2.2） |
-| `thincoder-server/src/sandbox/ssh.mjs`（**226/227**） | 已触碰：`stdin` 透传（载荷体） | SSH 传输（§2.2） |
-| `thincoder-server/src/store/db.mjs` | **36/37**（迁移段已外拆 `src/store/migrations.mjs`（已落）**795/796**） | 开库/PRAGMA/语句封装 |
-| `thincoder-server/deploy/sandbox-probe.mjs`（已落） | **537/538**（越 500 软线在册） | 探针执行器（余腿驱动 ∥ 一次性容器径 ∥ PASS/FAIL/SKIP/退出码） |
-| `thincoder-server/bin/thincoder-server.mjs` | **241/242** | 装配 |
-| `thincoder-server/deploy/sandbox/Dockerfile` | **46/47**（本档定义契约） | 盒镜像 |
-| `thincoder-server/deploy/pack-box-shell.mjs`（本批） | **72** | 壳工件打包（树哈希（引 `bootstrap.mjs` 单源） ∥ tar 写 ∥ manifest ∥ 打包自检（回读复算） ∥ 旧件留 3 修剪）——§8 壳更新面块 |
-| `thincoder-server/package.json`（本批——拟改） | **31** ⇒ +1 | `prepack` 挂钩（⇒ `deploy/pack-box-shell.mjs`——§8 壳更新面块） |
-| `thincoder-server/deploy/sandbox/member-shell/bootstrap.mjs`（本批；档账随正 = `docs/server/design/agent/MEMBER-AGENT.md` §5） | **418** | 盒内壳引导（树哈希单源 ∥ manifest/工件取件 ∥ 解包校验 ∥ 缓存槽 ∥ 换执行与回退） |
-| `thincoder-server/deploy/sandbox/member-shell/index.mjs`（本批） | **361** ⇒ +9（实读 **370**） | `main()` 引导接线（先于核装载）+ 版本行 |
-| 本批单测档（批次面，收口即删） | **478**（不越 500 软线） | N89 ∥ B85–B88 ∥ E65（随批档存——收口随批删） |
-| `.gitignore`（仓根——本批拟改） | **41** ⇒ +1 | `thincoder-server/public/box-shell/`（构建产物不进 git） |
-| **小计** | **≈ +2221** ∥ **≈ −1117** | —— |
-| **单元测试档** | **主体 795**（动作链 ∥ 参数集 ∥ 放置 ∥ 定时器 ∥ 实时门 ∥ v22 迁移 ∥ #1351 事务 ∥ 拆案读判）∥ `-base` **543**（派生 tag/Dockerfile 逐行 ∥ 镜像就位四步 ∥ 凭据 CRUD/注入 ∥ 绑定 PATCH ∥ 零变化腿）∥ `-base-ui` **437**（两卡渲染 ∥ 弹窗 ∥ i18n 键集）∥ `-tls` **711**（三件形校验/加密往返 ∥ 适配件选项逐值（假 `https.request`）∥ 连接端点两腿 ∥ 明文零行为变化腿）∥ `-tls-ui` **378**（添加窗连接段 ∥ 行「连接」钮 ∥ 编辑窗 ∥ i18n 键集）——**越 500 软线在册 = 主体 ∥ `-base` ∥ `-tls`**；本批新增一件单测档（批次面，收口即删；`chattr` 分治命令串断言——恢复/降级/读回核腿不破）：**既列五档结构零变**（新档规模以实施当刻实读为准）；**上列五读数 = 收正前读数**（实施后复读随正） | 随批档存 |
+| `thincoder-server/src/sandbox/box.mjs`（已落） | — | 盒生命周期动作链 ∥ 建盒参数集 ∥ 放置与补放置 ∥ 卷目录准备 ∥ 定时器（空闲/墙钟/周期快照） |
+| `thincoder-server/src/sandbox/quota.mjs`（已落） | — | 磁盘限额（探明 ∥ 项目配额/loopback ∥ 读回核）——`chattr` 项目标记 = 目录/文件分治（目录 `-type d … +P {} +` ∥ 文件 `-type f … {} +`，**两句各自成步**、同一步标签）；本批落地后复读同值（Δ 0） |
+| `thincoder-server/src/sandbox/workspace-routes.mjs`（已落） | — | 工作区面四路由 + 快照列表（自 `thincoder-server/src/sandbox/routes.mjs` 拆出——拆案首选执行 + 重写为直调） |
+| `thincoder-server/src/sandbox/derive.mjs`（已落——本增补） | — | 底座可换：派生 tag 计算 ∥ Dockerfile 生成 ∥ 上下文 tar ∥ 镜像就位四步 ∥ 构建流解析（§8 底座可换块） |
+| `thincoder-server/src/sandbox/registry-creds.mjs`（已落——本增补） | — | 私有仓凭据：形校验 ∥ 主机归一/判据 ∥ 加密 CRUD（复用 `credential-crypto.mjs`）∥ `X-Registry-Auth` 组装 |
+| `thincoder-server/src/sandbox/registry-cred-routes.mjs`（已落——本增补） | — | 私有仓凭据四端点（列/增/改/删——响应零秘密） |
+| `thincoder-server/src/sandbox/registry.mjs` | — | 登记/读数/可用性/放置 |
+| `thincoder-server/src/sandbox/routes.mjs` | — | 余面端点 |
+| `thincoder-server/src/sandbox/docker.mjs` | —（未越 500 软线——拆案撤回，见 `docs/server/design/sandbox/SANDBOX.md` §13） | Docker 客户端 |
+| `thincoder-server/src/sandbox/docker-tls.mjs`（已落——本增补 #2） | — | 连接面 TLS：三件形校验 ∥ 材料加解密存取（复用 `credential-crypto.mjs`）∥ 连接元数据视图 ∥ `node:https` 传输适配件（§2.1 ∥ `docs/server/design/sandbox/SANDBOX.md` §3） |
+| `thincoder-server/src/sandbox/image-routes.mjs` | — | 镜像族路由（§3） |
+| `thincoder-server/src/sandbox/container-routes.mjs` | 已触碰（清单外）：`config`/`requestImpl` 两参透传（TLS 档） | 容器面路由（§3） |
+| `thincoder-server/src/sandbox/volume-routes.mjs` | 已触碰：同上（两参透传） | 卷族路由（§3） |
+| `thincoder-server/src/sandbox/terminal-routes.mjs` | 已触碰：两参透传 + **TLS 终端腿**（材料感知升级传输 `execUpgradeTransportFor`） | 容器终端升级路（§9 ∥ `docs/server/design/sandbox/SANDBOX.md` §3） |
+| `thincoder-server/src/agent/chat-tools.mjs`（**越 500 软线在册**） | 已触碰：`config`/`requestImpl` 透传（管理面 chat `docker` 工具——TLS 材料解密；域账 = `docs/server/design/agent/ADMIN-AGENT.md` §6） | agent 工具面 |
+| `thincoder-server/src/agent/chat.mjs`（**越 500 软线在册**） | 已触碰：同列透传 | agent chat 驱动 |
+| `thincoder-server/src/sandbox/hosts.mjs` | 已触碰：`stdin` 透传（恢复备径 sudo 口令行） | 主机凭据面（§2.2） |
+| `thincoder-server/src/sandbox/ssh.mjs` | 已触碰：`stdin` 透传（载荷体） | SSH 传输（§2.2） |
+| `thincoder-server/src/store/db.mjs` | —（迁移段已外拆 `src/store/migrations.mjs`（已落）） | 开库/PRAGMA/语句封装 |
+| `thincoder-server/deploy/sandbox-probe.mjs`（已落） | —（越 500 软线在册） | 探针执行器（余腿驱动 ∥ 一次性容器径 ∥ PASS/FAIL/SKIP/退出码） |
+| `thincoder-server/bin/thincoder-server.mjs` | — | 装配 |
+| `thincoder-server/deploy/sandbox/Dockerfile` | —（本档定义契约） | 盒镜像 |
+| `thincoder-server/deploy/pack-box-shell.mjs`（本批） | — | 壳工件打包（树哈希（引 `bootstrap.mjs` 单源） ∥ tar 写 ∥ manifest ∥ 打包自检（回读复算） ∥ 旧件留 3 修剪）——§8 壳更新面块 |
+| `thincoder-server/package.json`（本批——拟改） | — | `prepack` 挂钩（⇒ `deploy/pack-box-shell.mjs`——§8 壳更新面块） |
+| `thincoder-server/deploy/sandbox/member-shell/bootstrap.mjs`（本批；档账随正 = `docs/server/design/agent/MEMBER-AGENT.md` §5） | — | 盒内壳引导（树哈希单源 ∥ manifest/工件取件 ∥ 解包校验 ∥ 缓存槽 ∥ 换执行与回退） |
+| `thincoder-server/deploy/sandbox/member-shell/index.mjs`（本批） | — | `main()` 引导接线（先于核装载）+ 版本行 |
+| 本批单测档（批次面，收口即删） | —（不越 500 软线） | N89 ∥ B85–B88 ∥ E65（随批档存——收口随批删） |
+| `.gitignore`（仓根——本批拟改） | — | `thincoder-server/public/box-shell/`（构建产物不进 git） |
+| **单元测试档** | —（动作链 ∥ 参数集 ∥ 放置 ∥ 定时器 ∥ 实时门 ∥ v22 迁移 ∥ #1351 事务 ∥ 拆案读判）∥ `-base`（派生 tag/Dockerfile 逐行 ∥ 镜像就位四步 ∥ 凭据 CRUD/注入 ∥ 绑定 PATCH ∥ 零变化腿）∥ `-base-ui`（两卡渲染 ∥ 弹窗 ∥ i18n 键集）∥ `-tls`（三件形校验/加密往返 ∥ 适配件选项逐值（假 `https.request`）∥ 连接端点两腿 ∥ 明文零行为变化腿）∥ `-tls-ui`（添加窗连接段 ∥ 行「连接」钮 ∥ 编辑窗 ∥ i18n 键集）——**越 500 软线在册 = 主体 ∥ `-base` ∥ `-tls`**；本批新增一件单测档（批次面，收口即删；`chattr` 分治命令串断言——恢复/降级/读回核腿不破）；既列五档结构零变 | 随批档存 |
 
-（**行数读数**（口径 = `\n` 换行计数；总行 = 换行数 +1——±1 级差在案）：`box` 652/653 ∥ `quota` 285/286 ∥ `workspace-routes` 306/307 ∥ `derive` 243/244 ∥ `registry-creds` 174/175 ∥ `registry-cred-routes` 95/96 ∥ `docker-tls` 133/134 ∥ `docker` 425/426 ∥
-
-  `registry` 419/420 ∥ `routes` 304/305 ∥ `image-routes` 144/145 ∥ `container-routes` 324/325 ∥ `volume-routes` 103/104 ∥ `terminal-routes` 362/363 ∥ `chat-tools` 562/563 ∥ `chat` 736/737 ∥ `hosts` 134/135 ∥ `ssh` 226/227 ∥
-
-  `probe` 537/538 ∥ `bin` 241/242 ∥ `Dockerfile` 46/47 ∥ `db` 36/37 ∥ `migrations` 795/796（越 800 硬限余量 ≈4 行——拆案在案，见 `docs/server/design/sandbox/SANDBOX.md` §13）；档位超线在册 = `box` ∥ `migrations` ∥ `chat-tools` ∥ `chat` ∥ `probe` ∥ `-tls` 单测。小计列 = 设计估和——实读总账以盘面复读为准。）
+- **行数口径**：行数面量法 = `\n` 换行计数（总行 = 换行数 +1——±1 级差在案）；档位超线在册 = `box` ∥ `migrations` ∥ `chat-tools` ∥ `chat` ∥ `probe` ∥ `-tls` 单测。
 
 ## 15. 关键决策（本域——执行面）
 

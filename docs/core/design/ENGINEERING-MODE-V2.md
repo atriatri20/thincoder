@@ -397,26 +397,26 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
                              · render-frame.mjs（PLAN 常量行 ∕ `bannerPrefix`）· session.mjs（槽保存）；VSC 载体面 / 槽写面同类面见 §2.4 依赖表行）
 ```
 
-**受影响文件表**（行数 = 实测——口径 = 内容行数、不含文末空行；测试落点 = T10–T14 的建议就近档）：
+**受影响文件表**（测试落点 = T10–T14 的建议就近档；体量按 `doc_check` 的 `lines` 量，不落绝对值）：
 
-| file | 行数 | 改动面 |
+| file | 行数面 | 改动面 |
 |---|---|---|
-| 核 `thincoder-core/agent/family-tools.mjs` | 174 | 固定段按 `engineering` 裁剪（返回式 + 注释）；解构形态零改 |
-| 核 `thincoder-core/agent-tools/plan.mjs` | 86 | 新增 `clearPlanMode(agent)` + 拒绝文案常量（TUI / ACP 两面共用一条；VSC 面提示 = webview i18n 键 `toolbar.planDisabled`） |
-| 核 `thincoder-core/agent-tools/eng.mjs` | 102 | `enter` 分支（翻态后）调 `clearPlanMode` |
-| 核 `thincoder-core/session-lifecycle.mjs` | 305 | 槽恢复面清零（planMode 与 engineering 判定之后——清 `planMode` + 未注入提示语；CLI 槽在下次保存随内存值收正） |
-| CLI `thincoder-cli/src/tui/cmd-plan.mjs` | 10 | 工程模式拒绝分支（提示行 + 零翻转） |
-| CLI `thincoder-cli/src/tui/cmd-eng.mjs` | 94 | ON 翻转后 `clearPlanMode` + 槽 `data.planMode = false` + 清零提示行 |
-| CLI `thincoder-cli/src/acp/handlers-session.mjs` | 240 | **两 handler 前置判**（`session/set_config_option` / `session/set_mode`）⇒ 携共用文案的 `INVALID_PARAMS`；`applyConfigOption` 布尔契约零改（同档）；`normal` 照常（唯一合法态，幂等） |
-| VSC `thincoder-vscode/src/agent/setup.mjs` | 495 | 装配块下移至模式判定后 + 传 `engineering`；水合发现槽 `planMode:true` ∧ engineering ⇒ 槽回写 false（先例同档）；拆分方案见下 |
-| VSC `thincoder-vscode/src/agent/agent-state.mjs` | 149 | 生效值收正（engineering ⇒ `_planMode=false`，优先于槽 `planMode`；纯函数面零 IO） |
-| VSC `thincoder-vscode/src/extension/chat-panel.mjs` | 441 | `_setPlanMode` 工程模式拒绝（真值 = `agentSettings(_agentSettingsSession()).engineering`；不写槽 + 回弹） |
-| VSC `thincoder-vscode/src/extension/panel-messages-settings.mjs` | 202 | `handleSetEngineeringEnabled` ON ⇒ 调 `panel._setPlanMode(false)` |
-| VSC `thincoder-vscode/webview/mode-buttons.js` | 119 | 工程模式 plan 按钮 disabled + title（`toolbar.planDisabled`）+ 点击守卫（`applyModeButtons` ∥ 点击两处） |
-| VSC `thincoder-vscode/src/extension/panel-session.mjs` | 295 | 装载推送改读生效值（工程真值 ⇒ `planMode` 推送 `active:false`） |
-| VSC `thincoder-vscode/src/extension/panel-messages.mjs` | 294 | 取槽同源 engineering 传入 `runVisionReader` |
-| VSC `thincoder-vscode/src/extension/image-handler.mjs` | 87 | 旁路 runAgent 携 `engState: { enabled }`（工程真值同源） |
-| VSC `thincoder-vscode/locales/en.json` · `thincoder-vscode/locales/zh.json` | 263 · 263 | 新增 `toolbar.planDisabled` 一键（两 locale 同步） |
+| 核 `thincoder-core/agent/family-tools.mjs` | — | 固定段按 `engineering` 裁剪（返回式 + 注释）；解构形态零改 |
+| 核 `thincoder-core/agent-tools/plan.mjs` | — | 新增 `clearPlanMode(agent)` + 拒绝文案常量（TUI / ACP 两面共用一条；VSC 面提示 = webview i18n 键 `toolbar.planDisabled`） |
+| 核 `thincoder-core/agent-tools/eng.mjs` | — | `enter` 分支（翻态后）调 `clearPlanMode` |
+| 核 `thincoder-core/session-lifecycle.mjs` | — | 槽恢复面清零（planMode 与 engineering 判定之后——清 `planMode` + 未注入提示语；CLI 槽在下次保存随内存值收正） |
+| CLI `thincoder-cli/src/tui/cmd-plan.mjs` | — | 工程模式拒绝分支（提示行 + 零翻转） |
+| CLI `thincoder-cli/src/tui/cmd-eng.mjs` | — | ON 翻转后 `clearPlanMode` + 槽 `data.planMode = false` + 清零提示行 |
+| CLI `thincoder-cli/src/acp/handlers-session.mjs` | — | **两 handler 前置判**（`session/set_config_option` / `session/set_mode`）⇒ 携共用文案的 `INVALID_PARAMS`；`applyConfigOption` 布尔契约零改（同档）；`normal` 照常（唯一合法态，幂等） |
+| VSC `thincoder-vscode/src/agent/setup.mjs` | — | 装配块下移至模式判定后 + 传 `engineering`；水合发现槽 `planMode:true` ∧ engineering ⇒ 槽回写 false（先例同档）；拆分方案见下 |
+| VSC `thincoder-vscode/src/agent/agent-state.mjs` | — | 生效值收正（engineering ⇒ `_planMode=false`，优先于槽 `planMode`；纯函数面零 IO） |
+| VSC `thincoder-vscode/src/extension/chat-panel.mjs` | — | `_setPlanMode` 工程模式拒绝（真值 = `agentSettings(_agentSettingsSession()).engineering`；不写槽 + 回弹） |
+| VSC `thincoder-vscode/src/extension/panel-messages-settings.mjs` | — | `handleSetEngineeringEnabled` ON ⇒ 调 `panel._setPlanMode(false)` |
+| VSC `thincoder-vscode/webview/mode-buttons.js` | — | 工程模式 plan 按钮 disabled + title（`toolbar.planDisabled`）+ 点击守卫（`applyModeButtons` ∥ 点击两处） |
+| VSC `thincoder-vscode/src/extension/panel-session.mjs` | — | 装载推送改读生效值（工程真值 ⇒ `planMode` 推送 `active:false`） |
+| VSC `thincoder-vscode/src/extension/panel-messages.mjs` | — | 取槽同源 engineering 传入 `runVisionReader` |
+| VSC `thincoder-vscode/src/extension/image-handler.mjs` | — | 旁路 runAgent 携 `engState: { enabled }`（工程真值同源） |
+| VSC `thincoder-vscode/locales/en.json` · `thincoder-vscode/locales/zh.json` | — | 新增 `toolbar.planDisabled` 一键（两 locale 同步） |
 | 核 | — | 工程模式固定段断言（depth-0 + 子代理面）；普通面既有断言零改 |
 | CLI | — | `/plan` 工程拒绝 + 普通模式回归 |
 | CLI | — | 清零断言（内存位 + 槽位） |

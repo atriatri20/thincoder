@@ -38,13 +38,15 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 
 ## 3. 文件结构（现行）
 
-`thincoder-vscode/webview/index.html`（shell——CSP 注入 + CSS/JS URI 占位）→ 前端模块（`thincoder-vscode/webview/`，**52 档模块**（`.js` / `.mjs`；CSS 5 档 + `thincoder-vscode/webview/index.html` shell 另列））：
+`thincoder-vscode/webview/index.html`（shell——CSP 注入 + CSS/JS URI 占位）→ 前端模块（`thincoder-vscode/webview/`，`.js` / `.mjs` 两形；CSS 5 档 + `thincoder-vscode/webview/index.html` shell 另列）：
+
+**体量口径**：模块体量按 `doc_check` 的 `lines` 量，不落绝对值。
 
 | 模块 | 职责 |
 |---|---|
-| `thincoder-vscode/webview/chat.js` | 编排层（装配 + 全局键 / 点击 + 启动握手）：init 装配（welcome / autocomplete / settings / onboarding / toolbar / 文件链接 / ⏹ 取消委托）+ 命令块 `initMessageLoop(deps)`（**原址**注册消息监听——D-C1）+ `dismissLoadingScreen` 族；启动握手 `webviewReady` 投递（`thincoder-vscode/webview/chat.js`）· **142 行** |
-| `thincoder-vscode/webview/chat-messages.js` | host → webview **消息分发循环**（`initMessageLoop`——`window.addEventListener("message")` + `case` 单表整块；D-C2 不拆族）；**271 行** |
-| `thincoder-vscode/webview/chat-status.js` | **显示状态元素一族**（`clearStatusText` / `handleStatusText` / `showCompressStatus` / `showDigestStatus`——压缩状态行 + 状态段 + digest 轮可见面；模块级 `_digestRoundEl` 随迁）；**163 行** |
+| `thincoder-vscode/webview/chat.js` | 编排层（装配 + 全局键 / 点击 + 启动握手）：init 装配（welcome / autocomplete / settings / onboarding / toolbar / 文件链接 / ⏹ 取消委托）+ 命令块 `initMessageLoop(deps)`（**原址**注册消息监听——D-C1）+ `dismissLoadingScreen` 族；启动握手 `webviewReady` 投递（`thincoder-vscode/webview/chat.js`） |
+| `thincoder-vscode/webview/chat-messages.js` | host → webview **消息分发循环**（`initMessageLoop`——`window.addEventListener("message")` + `case` 单表整块；D-C2 不拆族） |
+| `thincoder-vscode/webview/chat-status.js` | **显示状态元素一族**（`clearStatusText` / `handleStatusText` / `showCompressStatus` / `showDigestStatus`——压缩状态行 + 状态段 + digest 轮可见面；模块级 `_digestRoundEl` 随迁） |
 | `thincoder-vscode/webview/streaming.js` | token/reasoning 流式渲染（rAF 节流 + ≥50ms 重排门——核 `thincoder-render-core/flow/stream.mjs` 两处；端实例 = 本档 `subScroll` 循环）+ 回合收尾（含未结算工具卡清扫 `sweepUnsettledToolCards`——M1）+ 子代理块路由（`subagentChunk`）+ code-block 复制按钮（核 `thincoder-render-core/flow/stream.mjs` 的复制件） |
 | `thincoder-vscode/webview/ui.js` | 端壳面：欢迎条 / 横幅 + `ctx` 装配（气泡 / 工具卡 / advisor 块经核构件——`thincoder-render-core/flow/block.mjs` / `thincoder-render-core/flow/tool-card.mjs`）+ 滚动族（`scrollDown` / `maybeScrollDown` / `maybeScrollActivity` / `initScrollFollow` / `trimOldMessages`）——leaf：不 import `thincoder-vscode/webview/state.js` |
 | `thincoder-vscode/webview/md.js` | markdown 渲染（核单源 = `thincoder-render-core/md.mjs`——`md()` ∥ 内联引擎 `inline()`；契约见 `WEBVIEW-INPUT.md`） |
@@ -59,7 +61,7 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 | `thincoder-vscode/webview/diff.js` · `thincoder-vscode/webview/tool-card-restore.mjs` | diff 预览（apply_patch）/ 恢复会话的工具卡折叠语义（R2 迁核：核 `thincoder-render-core/flow/tool-card-restore.mjs`；本端 = 2 行 shim——仅测试消费） |
 | `thincoder-vscode/webview/tool-summary.js` | 工具结果**一行式摘要单源**（`formatToolSummary` 分派：advisor / read / write / grep / glob / bash / 默认分支）——活卡 `finishToolCard` 与恢复卡 `buildToolHistory` 共用（X3 · X7） |
 | `thincoder-vscode/webview/settings.js` + `settings-*.js` | 设置面板（providers / agent / models / tools / env / widgets / state）——信息架构见同层 `SETTINGS.md` |
-| `thincoder-vscode/webview/settings-mcp.js` | MCP 面（服务器列表 + add ∕ edit 表单 + env ∥ headers 行式键值编辑器）——自 `thincoder-vscode/webview/settings-tools.js` 拆出；**126 行**；`thincoder-vscode/webview/settings-tools.js` **212 行** |
+| `thincoder-vscode/webview/settings-mcp.js` | MCP 面（服务器列表 + add ∕ edit 表单 + env ∥ headers 行式键值编辑器）——自 `thincoder-vscode/webview/settings-tools.js` 拆出 |
 | `thincoder-vscode/webview/model-picker.js` / `thincoder-vscode/webview/model-menu.js` | 模型选择两级菜单 |
 | `thincoder-vscode/webview/history.js` | 懒历史分页（`applyHistoryPage` · `loadOlder` 投递） |
 | `thincoder-vscode/webview/scroll.js` | 滚动族装配 + 悬浮回底钮（`updateScrollBottomVisibility`——非近底判据取核 `nearBottom`，自持 120 已退场） |
@@ -391,8 +393,8 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
   **唯一例外 = 顾问名支**——顾问产出走 `toolOutput` 通道（`thincoder-core/agent-tools/advisor.mjs` 的 `onOutput: ctx.onOutput`），而输出面按设计从不入状态词 ⇒ 顾问跑着的整段时间标题空白（用户 2026-10-21 18:01「跑advisor的时候就完全没起作用了」）；只写「正在跑 advisor」这个名字：名字是事实，正文是内容，两者不进同一个面。
 
   **落点 = 核 `thincoder-render-core/subblocks/activity-view.mjs`（桌面同源）∥ CLI 零改**（F-W23 AC④）：VSC 经 2 行 shim 取同件；桌面经协议根 `/rc/` 直映射同件；CLI 自带 `thincoder-cli/src/tui/subagent-panel.mjs`，零改。
-- **受影响面（F-W23 · T-A15 同口径）**：核 `thincoder-render-core/subblocks/activity-view.mjs` 现 **231** 行（think 例外支 ∥ 顾问名支；≪ 500 ⇒ 零拆分计划，结构不变）·
-  - 核 `thincoder-render-core/flow/block.mjs` **167** 行（`appendLineText` 行首子标）· 核 `thincoder-render-core/subblocks/state.mjs` **334** 行（`block.queued` 条件化 + 注文随改）· 端档 `thincoder-vscode/webview/activity-view.js`（2 行 shim）零改
+- **受影响面（F-W23 · T-A15 同口径）**：核 `thincoder-render-core/subblocks/activity-view.mjs`（think 例外支 ∥ 顾问名支；≪ 500 ⇒ 零拆分计划，结构不变）·
+  - 核 `thincoder-render-core/flow/block.mjs`（`appendLineText` 行首子标）· 核 `thincoder-render-core/subblocks/state.mjs`（`block.queued` 条件化 + 注文随改）· 端档 `thincoder-vscode/webview/activity-view.js`（2 行 shim）零改
   - `docs/render-core/design/RENDER-CORE.md`（机制单源 = 其 §2 **KD-RC-15**）· 本档规则块 + 用例行 + 登记面行
 
 用例 = **T-A33 ∥ T-A38 ∥ T-A41–T-A45**（用例号 N1–N5 ∥ S1–S3；单元用例件 = 批次本地件（名随批档、住批档目录，收口前删净；清单状态见 §5.7 用例首段）——本档不落具体档名）。
@@ -502,7 +504,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 
 **webview 侧痕迹与上行（NFR-A2 webview 侧）**：
 
-- 痕迹面迁出至新档 `thincoder-vscode/webview/activity-diag.js`（已落——`thincoder-vscode/webview/activity.js` 现 **263 行**；痕迹整体迁出，`thincoder-vscode/webview/activity.js` 只留调用点）；环形 `SUB_TRACE_MAX = 50` 与 `_subTraceLog` 载体同迁（`thincoder-vscode/webview/state.js` 的两处载体退场）。
+- 痕迹面迁出至新档 `thincoder-vscode/webview/activity-diag.js`（已落——痕迹整体迁出，`thincoder-vscode/webview/activity.js` 只留调用点）；环形 `SUB_TRACE_MAX = 50` 与 `_subTraceLog` 载体同迁（`thincoder-vscode/webview/state.js` 的两处载体退场）。
 - kind 族（**七类**）：既有三类 `takeover` / `late-terminal-stub` / `drop-unknown-role` + `birth`（新块出生——正收据）/ `drop-frozen`（冻结键吞掉的非出生消息——① 静默面）/ `drop-tombstone` / `reassert-hit`（心跳命中已 live 块——正收据，每频道每生命周期一条）。
   **退场一类**：`skip-key-unrebuildable`（旧射程登记用）——consult / escalate 射程收正后该分支不存在（见「终态必现」）。
 - **留痕节律**：出生 / 状态面**逐条**；内容 chunk 面**每频道每生命周期首条**（高频面按频道去重——上界与 `content-first` 同族）。
@@ -632,7 +634,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
   `thincoder-vscode/webview/ui.js` 四函数（`scrollDown` ∕ `maybeScrollDown` ∕ `maybeScrollActivity` ∕ `initScrollFollow`）改工厂调用；旗标宿主 `ctx`：`_pinBottom` ∕ `_pinActivity` 键名与跨档共读面保持；
 
 事件集 `wheel` ∕ `touchmove` ∕ `scroll` 保持；
-  核 `thincoder-render-core/subblocks/block.mjs` 两导出 = 薄包——**零行为变更**（`thincoder-vscode/webview/ui.js` **255 行**）；判据 = M-607 a–c + 真机 P6。
+  核 `thincoder-render-core/subblocks/block.mjs` 两导出 = 薄包——**零行为变更**；判据 = M-607 a–c + 真机 P6。
   - **让位期出口**：让位期（`_pinFollow === false` ∧ 内容可滚 ∧ 块展开）⇒ 块内**右下 overlay** 钮 `.sub-follow-btn`（核件自持——本端零 JS；样式 = `thincoder-vscode/webview/base.css`（`.activity-new-btn` 邻位））；
     两态文案 = `sub.follow.new`（让位期间有新行）∕ `sub.follow.bottom`；
     点击 ⇒ 回底 + 复跟 + 钮退场（清账三路：点击 ∕ 近底复跟 ∕ 元素重建——同区首计数钮对位）；折叠态钮不显（CSS 兜底）。键登记 = `WEBVIEW-PROTOCOL.md` §6.3。

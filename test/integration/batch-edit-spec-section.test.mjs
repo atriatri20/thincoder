@@ -91,12 +91,14 @@ test("CLI 7-10 错误 · 同一句在 §2 段体出现两处 ⇒ 锚不唯一，
 })
 
 test("CLI 7-17 边界 · 批档 edit 两段互锁解除；本次替换区里的失效引文仍拒", async () => {
+  // 两条失效引文各在**自己那一段**：判域 = 本笔触碰的段落（整段入判，§2.9.1 推论 2 ∥ §2.10.1 的 `zones`），
+  // 别段的失效引文不进本笔阻断集（F-1）；同一段里的照拒（F-2，下面那一半）。
   const interlock = fixture("interlock")
   mkdirSync(join(interlock.root, "docs/design"), { recursive: true })
   writeFileSync(join(interlock.root, "docs/design/target.md"), "# target\n\n正确引文。\n")
   const abs = join(interlock.root, BATCH_REL)
   writeFileSync(abs, readRecord(interlock.root)
-    .replace("验收 A10：四档六处旧说法清零。", "依据 docs/design/target.md「§2 旧错引文」\n验收 A10：四档六处旧说法清零。")
+    .replace("验收 A10：四档六处旧说法清零。", "依据 docs/design/target.md「§2 旧错引文」\n\n验收 A10：四档六处旧说法清零。")
     .replace("## §5 实施记录（eng-coder）", "## §5 实施记录（eng-coder）\n依据 docs/design/target.md「§5 旧错引文」"))
   const receipt = await batchTool(BATCH_REL).execute(
     { action: "edit", segment: "§2", oldText: OBSOLETE, newText: REPLACEMENT }, interlock.ctx,

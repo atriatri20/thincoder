@@ -97,6 +97,9 @@ export function symbolRefsOf(line) {
     if (!SYMBOL_SHAPE_RE().test(token)) continue
     if (!/\p{L}/u.test(token)) continue
     if (/^[.\-]/.test(token)) continue
+    // 档 token 归锚面（不重复成符号边）。**形分档之后**：裸写的代码族名不再算档 token（`docs/core/design/DOC-CHECK.md`
+    // §2.10.3）⇒ `` `file.mjs` `` 这类散文提及会落到本支成为 `cites-symbol` 候选。它只动图的边、不入 verdict
+    // （本支产出的 `state` 一律「判不了存在性」），但设计 §2.10.3 的「四条分支」漏计了这一面——已随交付报告上抛。
     if (isDocToken(token)) continue
     out.push({ token, start: span.start, end: span.end })
   }
@@ -133,6 +136,8 @@ export function rtmRowOf(line) {
   let pick = null
   re.lastIndex = 0
   let m
+  // 末格的档 token 判定同样吃形分档（§2.10.3）：末格若写成**裸代码族名**，本支不再产 `case-file` 边——
+  // 实体用例行末格写的是带目录段的用例档路径，两条腿都过，行为零变；此句只为把代价写清楚。
   while ((m = re.exec(last)) !== null) if (isDocToken(m[0])) pick = m[0]
   return { num: head[1].replace(/\s+/g, " "), fileToken: pick }
 }

@@ -517,44 +517,43 @@
 
 **执行面用例 = `EXECUTION.md` §13**（N65/N66/N69/N70 ∥ B67–B70 ∥ E50–E55——本档不复制；用例链引用：B39 ⇒ N69 ∥ E33 ⇒ B67/P7）。
 
-## 13. 本域文件与行数预算（控制面）
+## 13. 文件账（控制面）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/src/sandbox/routes.mjs` | **304/305** | 余面端点（§8/§9） |
-| `thincoder-server/src/sandbox/registry.mjs` | **419/420** | 登记/读数 ∥ 可用性门 ∥ 放置 |
-| `thincoder-server/src/sandbox/hosts.mjs`（已落） | **134/135**（凭据写/撤销（形校验 + 加密 + 审计两 kind）∥ 主机 SSH 视图 ∥ `execOnHost`（解密 + `thincoder-server/src/sandbox/ssh.mjs` 执行 + 临时私钥清理——chat `exec` 工具与主机运维共用）；假件注入 = 供测试用） | 主机凭据面（§3 主机凭据块） |
-| `thincoder-server/src/sandbox/docker.mjs` | **425/426** | Docker API 客户端（§3） |
-| `thincoder-server/src/sandbox/container-routes.mjs` | **324/325** | 容器面路由（§3 家族——拆分档） |
-| `thincoder-server/src/sandbox/image-routes.mjs`（已落盘） | **144/145**（拉取径零触——拉取径单源——§3 一键拉取块） | 镜像族路由（§3） |
-| `thincoder-server/src/sandbox/volume-routes.mjs` | **103/104** | 卷族路由（§3——按族拆档，沿容器/镜像族之例） |
-| `thincoder-server/src/sandbox/image-sources.mjs` | **140/141** | 镜像源清单模型（§3） |
-| `thincoder-server/src/sandbox/registry-client.mjs`（已落盘） | **225**（v2 `_catalog`/`tags/list` ∥ Hub 公共 API ∥ 匿名 Bearer 挑战 ∥ 有界/`Link` 截断 ∥ 五分类错误映射；`fetchImpl` 注入 = 供测试用） | 远端源客户端（§3） |
-| `thincoder-server/src/sandbox/image-source-routes.mjs`（已落盘） | **150**（七端点：列/预选/增/改/删/目录/标签 ∥ 校验与错误映射 ∥ 头注） | 镜像源端点（§9） |
-| `thincoder-server/src/sandbox/ssh.mjs`（已落） | **226/227**（SSH 传输：spawn openssh（key `-i` ∥ `sshpass -e`） ∥ keyfile/known_hosts 落数据目录 ∥ 指纹 TOFU ∥ 超时/输出截断；`execImpl` 注入 = 供测试用） | 主机执行传输（§3） |
-| `thincoder-server/src/sandbox/credentials.mjs`（已落） | **31** | 工作区 key（§7） |
-| `thincoder-server/src/store/db.mjs` | **36/37**（迁移段已外拆 `migrations.mjs`） | 开库 ∥ PRAGMA ∥ 迁移/版本引用（单源 = `migrations.mjs`——§2） |
-| `thincoder-server/src/accounts/audit.mjs` | **133/134**（零新 kind —— CHECK 零动） | 十七型（§2） |
-| `thincoder-server/src/gateway/errors.mjs`（已落盘） | **66/67**（零新码） | `sandbox_unavailable`（§9） |
-| `thincoder-server/src/sandbox/docker-exec.mjs`（已落） | **192/193**（Docker exec 升级传输：建 exec ∥ 升级 start（`Connection: Upgrade` + `Upgrade: tcp`——`node:http` 劫持；**归一地址缺端口明拒**——TLS 腿 = 同函数另一传输，不按 URL scheme 判传输）∥ resize ∥ inspect ∥ 收口（`\x04` + destroy）；超时档同族（读类 3s ∥ 动作类 15s）） | 容器终端会话链（§3 容器终端块） |
-| `thincoder-server/src/sandbox/terminal-routes.mjs`（已落） | **362/363**（升级路一枚：路径匹配 ∥ 判权/同源门（101 前）∥ 会话桥（字节双向 ∥ 控制帧 ∥ 心跳 ∥ 收口幂等）∥ 会话表（停机全收口）∥ 审计两 kind） | 容器终端升级路（§9 ∥ §3） |
-| `thincoder-server/bin/thincoder-server.mjs` | **241/242** | import + 注册行 + 装配 |
-| `thincoder-server/src/sandbox/box.mjs`（已落） | **652/653** | 盒生命周期动作链 ∥ 建盒参数集 ∥ 放置/补放置 ∥ 卷目录准备 ∥ 定时器（空闲/墙钟/周期快照——`EXECUTION.md` §3） |
-| `thincoder-server/src/sandbox/quota.mjs`（已落） | **285/286** | 磁盘限额（探明 ∥ 项目配额/loopback ∥ 就位判据与自愈 ∥ 卸除件 ∥ 读回核——§4） |
-| `thincoder-server/src/sandbox/workspace-routes.mjs` | ≈**280**（`baseImage` 键 ∥ derive 端点 ∥ 列表行字段） | 工作区面四路由 + 快照列表（自 `thincoder-server/src/sandbox/routes.mjs` 拆出——拆案首选执行） |
-| `thincoder-server/src/store/migrations.mjs`（已落） | **795/796**（距 800 硬限余量 ≈4 行——拆案在案，见下） | 迁移段链（v1–v24——自 `db.mjs` 外提，纯搬移零语义） |
-| `thincoder-server/deploy/sandbox-probe.mjs`（已落） | ≈**530** | 探针执行器（余腿 ∥ 一次性容器径 ∥ PASS/FAIL/SKIP/退出码——§10） |
-| **小计** | ——（逐档见上表） | —— |
+| `thincoder-server/src/sandbox/routes.mjs` | — | 余面端点（§8/§9） |
+| `thincoder-server/src/sandbox/registry.mjs` | — | 登记/读数 ∥ 可用性门 ∥ 放置 |
+| `thincoder-server/src/sandbox/hosts.mjs`（已落） | —（凭据写/撤销（形校验 + 加密 + 审计两 kind）∥ 主机 SSH 视图 ∥ `execOnHost`（解密 + `thincoder-server/src/sandbox/ssh.mjs` 执行 + 临时私钥清理——chat `exec` 工具与主机运维共用）；假件注入 = 供测试用） | 主机凭据面（§3 主机凭据块） |
+| `thincoder-server/src/sandbox/docker.mjs` | — | Docker API 客户端（§3） |
+| `thincoder-server/src/sandbox/container-routes.mjs` | — | 容器面路由（§3 家族——拆分档） |
+| `thincoder-server/src/sandbox/image-routes.mjs`（已落盘） | —（拉取径零触——拉取径单源——§3 一键拉取块） | 镜像族路由（§3） |
+| `thincoder-server/src/sandbox/volume-routes.mjs` | — | 卷族路由（§3——按族拆档，沿容器/镜像族之例） |
+| `thincoder-server/src/sandbox/image-sources.mjs` | — | 镜像源清单模型（§3） |
+| `thincoder-server/src/sandbox/registry-client.mjs`（已落盘） | —（v2 `_catalog`/`tags/list` ∥ Hub 公共 API ∥ 匿名 Bearer 挑战 ∥ 有界/`Link` 截断 ∥ 五分类错误映射；`fetchImpl` 注入 = 供测试用） | 远端源客户端（§3） |
+| `thincoder-server/src/sandbox/image-source-routes.mjs`（已落盘） | —（七端点：列/预选/增/改/删/目录/标签 ∥ 校验与错误映射 ∥ 头注） | 镜像源端点（§9） |
+| `thincoder-server/src/sandbox/ssh.mjs`（已落） | —（SSH 传输：spawn openssh（key `-i` ∥ `sshpass -e`） ∥ keyfile/known_hosts 落数据目录 ∥ 指纹 TOFU ∥ 超时/输出截断；`execImpl` 注入 = 供测试用） | 主机执行传输（§3） |
+| `thincoder-server/src/sandbox/credentials.mjs`（已落） | — | 工作区 key（§7） |
+| `thincoder-server/src/store/db.mjs` | —（迁移段已外拆 `migrations.mjs`） | 开库 ∥ PRAGMA ∥ 迁移/版本引用（单源 = `migrations.mjs`——§2） |
+| `thincoder-server/src/accounts/audit.mjs` | —（零新 kind —— CHECK 零动） | 十七型（§2） |
+| `thincoder-server/src/gateway/errors.mjs`（已落盘） | —（零新码） | `sandbox_unavailable`（§9） |
+| `thincoder-server/src/sandbox/docker-exec.mjs`（已落） | —（Docker exec 升级传输：建 exec ∥ 升级 start（`Connection: Upgrade` + `Upgrade: tcp`——`node:http` 劫持；**归一地址缺端口明拒**——TLS 腿 = 同函数另一传输，不按 URL scheme 判传输）∥ resize ∥ inspect ∥ 收口（`\x04` + destroy）；超时档同族（读类 3s ∥ 动作类 15s）） | 容器终端会话链（§3 容器终端块） |
+| `thincoder-server/src/sandbox/terminal-routes.mjs`（已落） | —（升级路一枚：路径匹配 ∥ 判权/同源门（101 前）∥ 会话桥（字节双向 ∥ 控制帧 ∥ 心跳 ∥ 收口幂等）∥ 会话表（停机全收口）∥ 审计两 kind） | 容器终端升级路（§9 ∥ §3） |
+| `thincoder-server/bin/thincoder-server.mjs` | — | import + 注册行 + 装配 |
+| `thincoder-server/src/sandbox/box.mjs`（已落） | — | 盒生命周期动作链 ∥ 建盒参数集 ∥ 放置/补放置 ∥ 卷目录准备 ∥ 定时器（空闲/墙钟/周期快照——`EXECUTION.md` §3） |
+| `thincoder-server/src/sandbox/quota.mjs`（已落） | — | 磁盘限额（探明 ∥ 项目配额/loopback ∥ 就位判据与自愈 ∥ 卸除件 ∥ 读回核——§4） |
+| `thincoder-server/src/sandbox/workspace-routes.mjs` | —（`baseImage` 键 ∥ derive 端点 ∥ 列表行字段） | 工作区面四路由 + 快照列表（自 `thincoder-server/src/sandbox/routes.mjs` 拆出——拆案首选执行） |
+| `thincoder-server/src/store/migrations.mjs`（已落） | —（拆案在案，见下） | 迁移段链（v1–v24——自 `db.mjs` 外提，纯搬移零语义） |
+| `thincoder-server/deploy/sandbox-probe.mjs`（已落） | — | 探针执行器（余腿 ∥ 一次性容器径 ∥ PASS/FAIL/SKIP/退出码——§10） |
 
-- `thincoder-server/src/sandbox/routes.mjs` 拆分预案（**两项均已执行**——① 容器面拆 `container-routes.mjs`（**313**）∥ ② 工作区面拆 `workspace-routes.mjs`（已落）；实读 **304/305** ⇒ 越线已消）：
+- `thincoder-server/src/sandbox/routes.mjs` 拆分预案（**两项均已执行**——① 容器面拆 `container-routes.mjs` ∥ ② 工作区面拆 `workspace-routes.mjs`（已落）；越线已消）：
   **触发点 = 越 500 软线**（复现 ⇒ 次选候选（落域内、端点路径零变）= 设置面独立成档）。
-- `registry.mjs` 拆分预案（**419/420**）：**销**——拆案对象 = 队列/心跳死件，已删净。
-- `migrations.mjs` 拆分预案（**795/796**）：**拆（必）**——距 800 硬限余量 ≈4 行；拆案候选 = DDL 常量段（v1–v24 字符串块）外提，`MIGRATIONS` 链与回填留档（纯搬移零语义——沿 `db.mjs` ⇒ `migrations.mjs` 先例）；**窗口 = 下一迁移触碰批动工第一步**。
-- `docker.mjs` 拆分预案（**423**）：**未越 500 软线，拆案撤回**（沿容器族拆档先例）。
+- `registry.mjs` 拆分预案：**销**——拆案对象 = 队列/心跳死件，已删净。
+- `migrations.mjs` 拆分预案：**拆（必）**——贴近 800 硬限；拆案候选 = DDL 常量段（v1–v24 字符串块）外提，`MIGRATIONS` 链与回填留档（纯搬移零语义——沿 `db.mjs` ⇒ `migrations.mjs` 先例）；**窗口 = 下一迁移触碰批动工第一步**。
+- `docker.mjs` 拆分预案：**未越 500 软线，拆案撤回**（沿容器族拆档先例）。
 - 执行面预算随执行面档重建；webui 预算 = `docs/server/design/webui/WEBUI.md` §5；单元测试档预算见下；板账 = `docs/server/design/PROJECT.md` §6。
-- **成员写面 + 上限**：`thincoder-server/src/sandbox/routes.mjs`（**304/305**——成员写面四路由 + 上限校验；**越 500 软线已消**（工作区面已独立成档））
-  ∥ `registry.mjs`（**419/420**——上限设置读/创建校验在件） ∥ `deploy/sandbox/member-shell/**`（新 ≈730——**档账入 `docs/server/design/agent/MEMBER-AGENT.md` §5，本域不重计**）。
-- **控制面成员面**：控制面（egress 面随退场——`rules.mjs` 段 = 退场前记录） = `rules.mjs`（**498–499**；**随出站闸退场**）∥ `thincoder-server/src/sandbox/routes.mjs`（**304/305**）∥ `registry.mjs`（**419/420**——越线已消，拆分预案销在册）；
+- **成员写面 + 上限**：`thincoder-server/src/sandbox/routes.mjs`（成员写面四路由 + 上限校验；**越 500 软线已消**（工作区面已独立成档））
+  ∥ `registry.mjs`（上限设置读/创建校验在件） ∥ `deploy/sandbox/member-shell/**`（**档账入 `docs/server/design/agent/MEMBER-AGENT.md` §5，本域不重计**）。
+- **控制面成员面**：控制面（egress 面随退场——`rules.mjs` 段 = 退场前记录） = `rules.mjs`（**随出站闸退场**）∥ `thincoder-server/src/sandbox/routes.mjs` ∥ `registry.mjs`（越线已消，拆分预案销在册）；
   前端 = `views-me-sandbox.mjs`（已落）**124** ∥ `thincoder-server/public/app.mjs` **204** ∥ `nav.mjs` **102**；
   - i18n = `i18n-zh-me.mjs` **184** ∥ `i18n-en-me.mjs` **185** ∥ `i18n-zh-shell.mjs` **83** ∥ `i18n-en-shell.mjs` **81**；`style.css`（提示行/状态标）；
   - **单元测试档两件**（**379** ∥ 成员端点逐值 ∥ **374**；成员页渲染 ∥ 提示/轮询 ∥ i18n 键集 ∥ nav 计数）。

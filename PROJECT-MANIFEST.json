@@ -38,57 +38,7 @@
       "../.thincoder",
       "../thincoder.com"
     ],
-    "docCheckExemptions": [
-      {
-        "file": "test/rtm/tooling.md",
-        "kind": "锚·档缺",
-        "review": "CLI 41/42 重写回执形时一并重核",
-        "text": "alpha.txt",
-        "why": "CLI 41/42 期望回执里内联的夹具档名，不是真档；回执原文是逐字断言的对象，换成真档路径会破坏该故事的回执断言"
-      },
-      {
-        "file": "test/rtm/tooling.md",
-        "kind": "锚·档缺",
-        "review": "同上",
-        "text": "beta.txt",
-        "why": "同上：CLI 41/42 期望回执内的夹具档名"
-      },
-      {
-        "file": "test/rtm/tooling.md",
-        "kind": "锚·档缺",
-        "review": "同上",
-        "text": "gamma.txt",
-        "why": "同上：CLI 41/42 期望回执内的夹具档名"
-      },
-      {
-        "file": "test/rtm/tooling.md",
-        "kind": "锚·档缺",
-        "review": "同上",
-        "text": "docs/design/notes.txt",
-        "why": "同上：CLI 41 期望回执内的夹具路径，不是仓内真档"
-      },
-      {
-        "file": "docs/core/design/MEMORY.md",
-        "kind": "锚·档缺",
-        "review": "MEMORY.md 该句改写（不再写裸文件名），或判据面区分运行时档名与仓内文档时撤",
-        "text": "memory.db",
-        "why": "运行时记忆库的文件名（住用户数据目录，不在仓内），不是仓内文档；判据把它当路径 token 判档缺是解析面的假阳——两处散文陈述的是代码事实，改成别的说法会把字面档名丢掉"
-      },
-      {
-        "file": "docs/core/design/TOOLS.md",
-        "kind": "锚·档缺",
-        "review": "TOOLS.md 该句改写（不再写裸文件名），或判据面区分密钥件名与仓内文档时撤",
-        "text": "id_ed25519.pub",
-        "why": "ssh 公钥的文件名（住用户 ~/.ssh，不在仓内），不是仓内文档；判据按 .pub 当扩展名判成路径 token 是解析面的假阳——句子陈述的是密钥件名这一代码事实"
-      },
-      {
-        "file": "docs/core/requirements/ENGINEERING-MODE-V2.md",
-        "kind": "锚·档缺",
-        "review": "该句改写（不再写裸文件名），或判据面区分运行时库件名与仓内文档时撤",
-        "text": "ledger.db",
-        "why": "台账库的文件名（住用户数据目录，不在仓内），不是仓内文档；判据按 .db 当扩展名判成路径 token 是解析面的假阳——句子陈述的是库件名这一事实"
-      }
-    ],
+    "docCheckExemptions": [],
     "docCheckExts": [],
     "writableRepos": []
   }

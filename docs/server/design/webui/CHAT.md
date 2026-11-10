@@ -155,29 +155,22 @@
 
 ## 3. 文件账（本面文件行 ∥ 键族登记）
 
-| 档 | 行数（实读——设计估） | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/public/views-chat.mjs` | **440** ⇒ ≈**465**（本批 +ask 帧分发/清卡/重挂钩 ≈+25） | 管理面对话页（本档 §2.1）：页四段装配 ∥ 会话条 ∥ 消息装配（核 `flow/block.mjs`——回读/活流）∥ NDJSON 帧分发（`delta`/`call`/`result`/`turn`/`usage`/`end`/`ask`）∥ 队列 ∥ 新会话弹窗 ∥ 取数 ∥ 审批卡接线（`views-chat-cards.mjs`） |
-| `thincoder-server/public/views-chat-cards.mjs` | ≈**110** | 审批卡族（本档 §2.1 审批卡面条；机制 = `docs/server/design/agent/ADMIN-AGENT.md` §11.5）：`createAskCards`（`append`/`clear`/`remount`）+ 核两卡件适配 + 应答单点（非乐观——失败重挂）；键族零增（核卡面键 = core 两表已册） |
-| `thincoder-server/public/views-chat-messages.mjs` | ≈**105** | 消息面（本档 §2.1②）：NDJSON 行/帧纯函数（`splitLines`/`parseFrame`/`argsText`）∥ notice 行文案映射（五值）∥ 工具结果文案（失败判据 = 核 `isToolFailure`）∥ 回读装配（库行 ⇒ 核 `buildUserMessage`/`buildAssistantRestore`/`renderToolHistory`——`messageNodes`）；`views-chat.mjs` 面 `export … from` 兼容重导出（**用例级**：既有纯函数/键消费两用例经重导出零改——文件级改动清单 = 本 § 末段 ∥ §6⑥）；拆档缘由 = `views-chat.mjs` 500 软线已贴满（增行前必须先外拆） |
-| `thincoder-server/public/views-chat-composer.mjs` | ≈**318** | 输入区与状态行（本档 §2.1③④——核件全件消费适配层；拆档缘由 = `views-chat.mjs` 并入后 ≈630——越 500 软线（拆档审查；800 硬限未越）） |
-| `thincoder-server/public/i18n-zh-core.mjs` | ≈**62** | 文案表·zh·核件词面（键 = 核件原名；值逐字同 VSC locales——slash 族源 = 桌面 `thincoder-desktop/renderer/i18n-views.mjs` 同键） |
-| `thincoder-server/public/i18n-en-core.mjs` | ≈**62** | 文案表·en·核件词面 |
-| `thincoder-server/public/views-me-chat.mjs` | **499** | 成员面对话页（本档 §2.2） |
-| `thincoder-server/public/views-me-chat-messages.mjs` | **124** | 消息面（帧面纯函数 ∥ 回读装配——沿管理面同形） |
-| `thincoder-server/public/views-me-chat-composer.mjs` | **456** | 输入区与状态行（核件全件消费适配层——沿管理面同构） |
-| `thincoder-server/public/views-me-chat-sessions.mjs` | **280** | 会话条（标题/位标/meta ∥ 行内重命名 ∥ 删除确认 ∥ 工作区切换） |
-| `thincoder-server/public/views-me-chat-cards.mjs` | **180** | 卡族（核卡适配 + 页内秘密卡 + diff 弹窗 + 块头审批态） |
-| `thincoder-server/public/views-me-chat-subs.mjs` | **162** | 子代理块链（核 subblocks 消费 ∥ 效果表 ∥ 停单件） |
-| `thincoder-server/public/views-me-chat-pull.mjs` | **218** | 拉取弹窗（四态轮询）+ 凭据就地绑 + 四纯函数（`pullDetailText` 等） |
+| `thincoder-server/public/views-chat.mjs` | —（本批 +ask 帧分发/清卡/重挂钩） | 管理面对话页（本档 §2.1）：页四段装配 ∥ 会话条 ∥ 消息装配（核 `flow/block.mjs`——回读/活流）∥ NDJSON 帧分发（`delta`/`call`/`result`/`turn`/`usage`/`end`/`ask`）∥ 队列 ∥ 新会话弹窗 ∥ 取数 ∥ 审批卡接线（`views-chat-cards.mjs`） |
+| `thincoder-server/public/views-chat-cards.mjs` | — | 审批卡族（本档 §2.1 审批卡面条；机制 = `docs/server/design/agent/ADMIN-AGENT.md` §11.5）：`createAskCards`（`append`/`clear`/`remount`）+ 核两卡件适配 + 应答单点（非乐观——失败重挂）；键族零增（核卡面键 = core 两表已册） |
+| `thincoder-server/public/views-chat-messages.mjs` | — | 消息面（本档 §2.1②）：NDJSON 行/帧纯函数（`splitLines`/`parseFrame`/`argsText`）∥ notice 行文案映射（五值）∥ 工具结果文案（失败判据 = 核 `isToolFailure`）∥ 回读装配（库行 ⇒ 核 `buildUserMessage`/`buildAssistantRestore`/`renderToolHistory`——`messageNodes`）；`views-chat.mjs` 面 `export … from` 兼容重导出（**用例级**：既有纯函数/键消费两用例经重导出零改——文件级改动清单 = 本 § 末段 ∥ §6⑥）；拆档缘由 = `views-chat.mjs` 500 软线已贴满（增行前必须先外拆） |
+| `thincoder-server/public/views-chat-composer.mjs` | — | 输入区与状态行（本档 §2.1③④——核件全件消费适配层；拆档缘由 = `views-chat.mjs` 并入后 ≈630——越 500 软线（拆档审查；800 硬限未越）） |
+| `thincoder-server/public/i18n-zh-core.mjs` | — | 文案表·zh·核件词面（键 = 核件原名；值逐字同 VSC locales——slash 族源 = 桌面 `thincoder-desktop/renderer/i18n-views.mjs` 同键） |
+| `thincoder-server/public/i18n-en-core.mjs` | — | 文案表·en·核件词面 |
+| `thincoder-server/public/views-me-chat.mjs` | — | 成员面对话页（本档 §2.2） |
+| `thincoder-server/public/views-me-chat-messages.mjs` | — | 消息面（帧面纯函数 ∥ 回读装配——沿管理面同形） |
+| `thincoder-server/public/views-me-chat-composer.mjs` | — | 输入区与状态行（核件全件消费适配层——沿管理面同构） |
+| `thincoder-server/public/views-me-chat-sessions.mjs` | — | 会话条（标题/位标/meta ∥ 行内重命名 ∥ 删除确认 ∥ 工作区切换） |
+| `thincoder-server/public/views-me-chat-cards.mjs` | — | 卡族（核卡适配 + 页内秘密卡 + diff 弹窗 + 块头审批态） |
+| `thincoder-server/public/views-me-chat-subs.mjs` | — | 子代理块链（核 subblocks 消费 ∥ 效果表 ∥ 停单件） |
+| `thincoder-server/public/views-me-chat-pull.mjs` | — | 拉取弹窗（四态轮询）+ 凭据就地绑 + 四纯函数（`pullDetailText` 等） |
 
-**面小计**：≈**754**（设计估）⇒ 逐批步进如下：
-- 实读和 ≈**958**（2026-10-12 盘面实读：`views-chat.mjs` **500** + `views-chat-composer.mjs` **321** + 两 i18n core **70**/**67**——含 console-reasoning-levels 批已落步进，不重计）。
-- ⇒ ≈**994**（console-chat-live-step 批：≈**+36** = 分项和〔`views-chat.mjs` 净 ≈−69（活流分步 +≈25 ∥ 帧面/回读装配外拆 −≈94） + 新档 ≈105〕）。
-- ⇒ ≈**1004**（admin-chat-creds-merge 批：`views-chat.mjs` +≈10——两批在途；**实施次序 = live-step 先 ∥ creds-merge 后**〔先降基数，免 `views-chat.mjs` 先越 500 软线机检〕；以实施当刻实读为准；域合计 = 各面之和——不单列）。
-- ⇒ ≈**1139**（admin-approval-cards 批：+≈135 = `views-chat.mjs` ≈+25（ask 帧分发 + 清卡/重挂钩） + 新档 `views-chat-cards.mjs` ≈110——以实施当刻实读为准）。
-
-**面小计（成员面）**：**1,919**（2026-10-15 实读——七档：`views-me-chat.mjs` 499 ∥ `views-me-chat-composer.mjs` 456 ∥ `views-me-chat-sessions.mjs` 280 ∥ `views-me-chat-pull.mjs` 218 ∥ `views-me-chat-cards.mjs` 180 ∥ `views-me-chat-subs.mjs` 162 ∥ `views-me-chat-messages.mjs` 124）。
 - 两 i18n me 表就表扩键 `me.chat.*`（零新档——行账 = `docs/server/design/webui/ME.md` §3）；shell 两表 +1 键/表。
 
 - **随正件①**：`thincoder-server/public/i18n-zh-admin.mjs` ∥ `thincoder-server/public/i18n-en-admin.mjs`（`admin.chat.*` +9 键/表——文件行账 = `docs/server/design/webui/ADMIN.md` §3）∥ `style.css`（本面新面登记——行账 = `docs/server/design/webui/STYLE.md` §3）∥ `views-chat.mjs` 拆档另见上行。

@@ -52,7 +52,7 @@
 - **操作列**（五钮恒显——需求 44③「手动拉取钮永在」= 「立即同步」三模式下恒在）：「立即同步」（进行中禁 + 终态刷新结果列与时间；失败 ⇒ 分类人话）∥「拉列表」（§2.2 对话框预选本行源）∥「体检」（PAT 体检——就地读数：成 ⇒ ok 行；败 ⇒ 分类人话 + 该行 PAT 列标红 + `token_state` 提示）∥「编辑」∥「删除」。
 - **PAT 失效标红**（需求 44⑤）：行级红标（`token_state='invalid'`——体检或同步 auth 失败置位）+ 结果列人话「凭据失效——请更新 PAT」；更新 PAT（编辑窗重填）⇒ 下次体检/同步转 ok。
 - **添源/编辑弹窗**（`modal.mjs` 家族）：名字 ∥ 平台选单（四值——「自建」选中才显基址输入）∥ 基址（自建——占位 `https://git.example.com`）∥ 组织/组（scope——非 gitee 与组织/企业态共用；占位「组织 / 组名——填后才能同步成员」）∥
-  **gitee 范围三态**（选择器「个人 ∥ 组织 ∥ 企业」——仅 gitee 显（非 gitee 隐）；创建态无默认（占位「请选择」）+ 必选门；个人 ⇒ 范围输入隐（附注「无成员表」）∥ 组织/企业 ⇒ 范围输入显且必填（`scope_kind`/`scope` 逐值回读——KD-SV-151）；
+- **gitee 范围三态**（选择器「个人 ∥ 组织 ∥ 企业」——仅 gitee 显（非 gitee 隐）；创建态无默认（占位「请选择」）+ 必选门；个人 ⇒ 范围输入隐（附注「无成员表」）∥ 组织/企业 ⇒ 范围输入显且必填（`scope_kind`/`scope` 逐值回读——KD-SV-151）；
   **跨态切换**：切「个人」⇒ 范围输入清空并提交（`scope: ""`——清除形）∥ 切非 gitee ⇒ `scopeKind` 不携/置空（清空形——不撞「仅 gitee 适用」400））∥ PAT（密码形输入；编辑态留空 = 不改——三态沿 provider apiKey 口径）∥ 启用勾
   ∥ 同步方式（选单两值恒列：「定时拉取」（间隔分钟输入 5–1440，缺省 60）∥「事件」——**仅 github 可选**（其余平台选中即禁 + 括注「该平台无成员事件——走定时拉取」；github 括注「近实时；需在 GitHub 登记 webhook——登记前按定时对账」）。
 - **不符报错显示**（KD-SV-151）：拉列表败 ⇒ 窗内分类人话 + 服务端原文（「{scope}」在 {组织|企业}端点不存在……改选「范围类型」——`readErrorNodes` 既有面）；源表同步结果列 ⇒ `result.message` 优先于分类词（该句可达）。
@@ -63,19 +63,19 @@
 
 ## 3. 文件账（本面文件行 ∥ 键族登记）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/public/views-projects.mjs`（已落盘） | **415** | 我的·项目页 + 共用构建器（项目详情弹窗（权限感知 + 删除钮/确认窗）∥ 添加仓对话框——导出） |
-| `thincoder-server/public/views-admin-projects.mjs`（已落盘） | **69** | 管理·项目页（两标签壳——面板①全量表 + 「添加仓」入口 ∥ 面板② `renderGitSources`） |
-| `thincoder-server/public/views-git-sources.mjs`（已落盘） | **278** | Git 源面板（源表 + 添/编/删/确认三窗 + 行动作五钮 + 事件块） |
-| `thincoder-server/public/i18n-zh-project.mjs`（已落盘） | **169** | 文案表·zh·项目面（新部件） |
-| `thincoder-server/public/i18n-en-project.mjs`（已落盘） | **169** | 文案表·en·项目面（新部件；零 CJK） |
-| `thincoder-server/public/nav.mjs`（已落盘） | **105** | IA 单源 |
-| `thincoder-server/public/app.mjs`（已落盘） | **204** | 页面挂载 |
-| `thincoder-server/public/views-audit.mjs`（已落盘） | **271**（型表 + `project_event` + 详情支（kind 族）） | 审计面 |
-| `thincoder-server/public/i18n.mjs`（已落盘） | **137**（门面两档 `i18n-{zh,en}.mjs` 各 2 行） | 部件装配 |
-| `thincoder-server/public/style.css`（已落盘） | **358**（+1 全局 `[hidden]` 兜底 ∥ −2 按例补丁删——`webui/STYLE.md` §2.3） | 样式 |
-| 跨批单元测试档（旧批静态面结构单测档——批次面，收口即删；已落盘 · 实读 **168**） | **在册**（守卫现盘含 `project` 域：`ledger` 域 ∥ 指纹 zh `3a3cdf31…` ∥ en `1d8e1612…` ∥ 键数 **970 ∥ 975**；复跑 6/6 绿）；**零新档**（PARTS/DOMAINS 零动）；行数核清单在册者 = `thincoder-server/public/app.mjs`（≤300——204，绿） ∥ `views-admin-projects.mjs` ∥ `views-git-sources.mjs`（三视图 ≤500——69 ∥ 278，绿）；`nav.mjs` ∥ `style.css` 零在册 | 结构守卫（零改） |
+| `thincoder-server/public/views-projects.mjs`（已落盘） | — | 我的·项目页 + 共用构建器（项目详情弹窗（权限感知 + 删除钮/确认窗）∥ 添加仓对话框——导出） |
+| `thincoder-server/public/views-admin-projects.mjs`（已落盘） | — | 管理·项目页（两标签壳——面板①全量表 + 「添加仓」入口 ∥ 面板② `renderGitSources`） |
+| `thincoder-server/public/views-git-sources.mjs`（已落盘） | — | Git 源面板（源表 + 添/编/删/确认三窗 + 行动作五钮 + 事件块） |
+| `thincoder-server/public/i18n-zh-project.mjs`（已落盘） | — | 文案表·zh·项目面（新部件） |
+| `thincoder-server/public/i18n-en-project.mjs`（已落盘） | — | 文案表·en·项目面（新部件；零 CJK） |
+| `thincoder-server/public/nav.mjs`（已落盘） | — | IA 单源 |
+| `thincoder-server/public/app.mjs`（已落盘） | — | 页面挂载 |
+| `thincoder-server/public/views-audit.mjs`（已落盘） | —（型表 + `project_event` + 详情支（kind 族）） | 审计面 |
+| `thincoder-server/public/i18n.mjs`（已落盘） | —（门面两档 `i18n-{zh,en}.mjs` 各 2 行） | 部件装配 |
+| `thincoder-server/public/style.css`（已落盘） | —（+1 全局 `[hidden]` 兜底 ∥ −2 按例补丁删——`webui/STYLE.md` §2.3） | 样式 |
+| 跨批单元测试档（旧批静态面结构单测档——批次面，收口即删；已落盘） | —（在册：守卫现盘含 `project` 域——PARTS/DOMAINS 零动；行数核清单在册者 = `thincoder-server/public/app.mjs` ∥ `views-admin-projects.mjs` ∥ `views-git-sources.mjs` 三档，`nav.mjs` ∥ `style.css` 零在册） | 结构守卫（零改） |
 
 **面小计**：≈1172（本面档行和）。
 

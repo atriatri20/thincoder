@@ -33,17 +33,16 @@
 - **注册面**：`thincoder-server/bin/thincoder-server.mjs` 一行注册（沿既有注册行制——装配面 = `registerClientRoutes`（**既有**——`thincoder-server/src/client/routes.mjs` 导出在册；本批 rotate 入同一注册面，零新注册行））。
 - **判权口径**：无 ∥ 无效 token ⇒ 401 `invalid_api_key`（三态不区分——防信息泄露，沿 /v1 面）。
 
-## 3. 本域文件与行数预算（本域族行）
+## 3. 文件账（本域族行）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/src/client/routes.mjs`（已落） | **77 ⇒ ≈92**（+15——rotate 处理器 ≈13 ∥ 档头一句；复用 members/keys/guard/audit 单源——零改） | 客户端面（§1 ∥ §2——login ∥ logout ∥ rotate ∥ me 四处理） |
-| `thincoder-server/bin/thincoder-server.mjs`（已落盘） | **≈184** | 装配面 |
-| **小计** | **≈276**（92 + 184） | —— |
+| `thincoder-server/src/client/routes.mjs`（已落） | —（本批 +rotate 处理器 ∥ 档头一句；复用 members/keys/guard/audit 单源——零改） | 客户端面（§1 ∥ §2——login ∥ logout ∥ rotate ∥ me 四处理） |
+| `thincoder-server/bin/thincoder-server.mjs`（已落盘） | — | 装配面 |
 
-- `thincoder-server/package.json`（30 行）：`prepublishOnly` = 3×`node --check` 单行（`bin/thincoder-server.mjs` ∥ `src/ops/update.mjs` ∥ `deploy/converge.mjs`——现读）；**批内单测不入链**（现行纪律——见下行）；**store 域零改**（本域零迁移——结构版本现读 v24）。
-- 单元测试档：客户端接入单元测试档（服务端面——估 ≈260 行）；**本批（轮换）单元测试档** = 随批自持、收口即删的单元测试档（≈**320**——服务端面 + 核面 + 三端结构机检）。
-  **入链判定 = 不入链**——本件跨面（服务端 + 核 + 三端结构），沿「跨面件无宿主产品链」先例（`docs/core/design/TEAM.md` §4）；现行纪律 = 批内单测随批档归档、不进产品链（`docs/core/design/TESTING.md`）⇒ **零随正**（`package.json` `prepublishOnly` 保持 3×`node --check`；门禁件数断言件现无在盘件）。
+- `thincoder-server/package.json`：`prepublishOnly` = 3×`node --check` 单行（`bin/thincoder-server.mjs` ∥ `src/ops/update.mjs` ∥ `deploy/converge.mjs`）；**批内单测不入链**（现行纪律——见下行）；**store 域零改**（本域零迁移——结构版本现读 v24）。
+- 单元测试档：客户端接入单元测试档（服务端面）；**本批（轮换）单元测试档** = 随批自持、收口即删的单元测试档（服务端面 + 核面 + 三端结构机检）。
+  **入链判定 = 不入链**——本件跨面（服务端 + 核 + 三端结构），沿「跨面件无宿主产品链」先例（`docs/core/design/TEAM.md` §4）；现行纪律 = 批内单测随批档归档、不进产品链（`docs/core/design/TESTING.md`）⇒ **零随正**（`thincoder-server/package.json` 的 `prepublishOnly` 保持 3×`node --check`；门禁件数断言件现无在盘件）。
 
 ## 4. 验收判据（机检——回指 AC-31）
 

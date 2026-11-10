@@ -93,18 +93,16 @@
 
 ## 3. 文件账（本面文件行 ∥ 键族登记）
 
-| 档 | 行数（实读——设计估） | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/public/views-admin.mjs` | **331** | 管理·成员页 |
-| `thincoder-server/public/views-providers.mjs` | **61** | Provider 页（列表） |
-| `thincoder-server/public/views-providers-modals.mjs` | **385**（后端批落地后实读） | Provider 弹窗件 |
-| `thincoder-server/public/views-models.mjs` | **209** | 服务模型页（列表 + 详情/配置） |
-| `thincoder-server/public/model-specs-snapshot.mjs` | 103 | 展示元数据快照 |
-| `thincoder-server/public/modal.mjs` | **77** | 公共弹窗组件 |
-| `thincoder-server/public/i18n-zh-admin.mjs` | **316**（沙盒族已外拆） | 文案表·zh·管理面 |
-| `thincoder-server/public/i18n-en-admin.mjs` | **320**（沙盒族已外拆） | 文案表·en·管理面 |
-
-**面小计**：≈1599（本面档行现读和——估值面，实施实读为准；域合计 = 各面之和——不单列）。
+| `thincoder-server/public/views-admin.mjs` | — | 管理·成员页 |
+| `thincoder-server/public/views-providers.mjs` | — | Provider 页（列表） |
+| `thincoder-server/public/views-providers-modals.mjs` | — | Provider 弹窗件 |
+| `thincoder-server/public/views-models.mjs` | — | 服务模型页（列表 + 详情/配置） |
+| `thincoder-server/public/model-specs-snapshot.mjs` | — | 展示元数据快照 |
+| `thincoder-server/public/modal.mjs` | — | 公共弹窗组件 |
+| `thincoder-server/public/i18n-zh-admin.mjs` | —（沙盒族已外拆） | 文案表·zh·管理面 |
+| `thincoder-server/public/i18n-en-admin.mjs` | —（沙盒族已外拆） | 文案表·en·管理面 |
 
 **键族登记**（自 `docs/server/design/webui/WEBUI.md` §2.2 归位——逐字）：
 

@@ -56,11 +56,9 @@
 
 ## 3. 文件账（本面文件行）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/public/tabs.mjs`（已落） | ≈**120**（档头 ∥ `createTabs` 壳 ∥ ARIA/键盘 ∥ 懒建 ∥ `onChange`/`active`；零依赖——仅取 `thincoder-server/public/i18n.mjs` 的 `t`） | 公共标签页组件（§2.1） |
-
-**面小计**：≈120（域合计 = 各面之和——不单列）。
+| `thincoder-server/public/tabs.mjs`（已落） | —（档头 ∥ `createTabs` 壳 ∥ ARIA/键盘 ∥ 懒建 ∥ `onChange`/`active`；零依赖——仅取 `thincoder-server/public/i18n.mjs` 的 `t`） | 公共标签页组件（§2.1） |
 
 **消费面文件账**（沙盒页四档 + 路由两档 + 样式 + i18n 两档）：沙盒页四档 + i18n 两档 ⇒ `webui/SANDBOX.md` §3 ∥ 样式 ⇒ `webui/STYLE.md` §3 ∥ 路由两档（`nav.mjs` ∥ `thincoder-server/public/app.mjs`）⇒ `webui/WEBUI.md` §5（本档不复制）。
 

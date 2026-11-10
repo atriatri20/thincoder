@@ -87,22 +87,22 @@
 - **端侧（三端）** = 核工具 `team_ledger`（读写经 `/api/client/ledger*`）——三端由**核单源**保障（全文 = `docs/core/design/TEAM-LEDGER.md`）。
 - **不做逐端独立面板**（CLI 状态行 ∥ VSC 面板 ∥ 桌面卡片）——承载分工与理由 = `docs/core/design/TEAM-LEDGER.md` §4；如需 ⇒ 另轮三端同做。
 
-## 9. 本域文件与行数预算（本域族行）
+## 9. 文件账（本域族行）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/src/ledger/items.mjs` | 310 | 域逻辑：入参归一 ∥ 六态迁移校验 ∥ 老化计算 ∥ 可见/写权判定（消费 B2 能力矩阵）∥ 四动作 + 审计行 |
-| `thincoder-server/src/ledger/routes.mjs` | 51 | 控制台面（会话 + 能力矩阵；`repos[]` 派生） |
-| `thincoder-server/src/ledger/client-routes.mjs` | 50 | 端侧面（Bearer——复用 `requireApiKey`；`repo` 原文归一） |
-| `thincoder-server/src/store/migrations/ddl-v12-v20.mjs` | 211 | v20 段（DDL 单源 = `docs/server/design/store/STORE.md` §2 v20 段）；`src/store/db.mjs`（30 行）= 开库/PRAGMA + 迁移链再导出，逐段 DDL 在 `src/store/migrations/` |
-| `thincoder-server/bin/thincoder-server.mjs` | 314 | 装配面（注册行制） |
-| `thincoder-server/src/agent/run.mjs` | **±0**（`TRIMMED_FACES` 表项同行扩——数组单行；注释同拍——服务端 admin agent 零团队登录 ⇒ 工具不可用；裁剪 = 零 token 税 + 结构不可达） | 服务端 agent 工具裁剪面 |
-| `thincoder-server/src/project/projects.mjs` | **±0**（`normalizeAddress` 域外直引——零复制零改） | 归一单源（KD-SV-144） |
-| `thincoder-server/src/accounts/audit.mjs` | 121（`AUDIT_TYPES` += `ledger_event`——十五型；头注计数同拍） | 审计型目录（型面单源——`docs/server/design/accounts/ACCOUNTS.md` §2.1 随正） |
+| `thincoder-server/src/ledger/items.mjs` | — | 域逻辑：入参归一 ∥ 六态迁移校验 ∥ 老化计算 ∥ 可见/写权判定（消费 B2 能力矩阵）∥ 四动作 + 审计行 |
+| `thincoder-server/src/ledger/routes.mjs` | — | 控制台面（会话 + 能力矩阵；`repos[]` 派生） |
+| `thincoder-server/src/ledger/client-routes.mjs` | — | 端侧面（Bearer——复用 `requireApiKey`；`repo` 原文归一） |
+| `thincoder-server/src/store/migrations/ddl-v12-v20.mjs` | — | v20 段（DDL 单源 = `docs/server/design/store/STORE.md` §2 v20 段）；`src/store/db.mjs` = 开库/PRAGMA + 迁移链再导出，逐段 DDL 在 `src/store/migrations/` |
+| `thincoder-server/bin/thincoder-server.mjs` | — | 装配面（注册行制） |
+| `thincoder-server/src/agent/run.mjs` | —（`TRIMMED_FACES` 表项同行扩——数组单行；注释同拍——服务端 admin agent 零团队登录 ⇒ 工具不可用；裁剪 = 零 token 税 + 结构不可达） | 服务端 agent 工具裁剪面 |
+| `thincoder-server/src/project/projects.mjs` | —（`normalizeAddress` 域外直引——零复制零改） | 归一单源（KD-SV-144） |
+| `thincoder-server/src/accounts/audit.mjs` | —（`AUDIT_TYPES` += `ledger_event`——十五型；头注计数同拍） | 审计型目录（型面单源——`docs/server/design/accounts/ACCOUNTS.md` §2.1 随正） |
 
-- **行数口径**：上表 = 档总行数（**LF 计数** = `split(/\r?\n/)`，与字节侧 `\n` 计数同值——2026-11-02 实读）。不用 `Get-Content … .Count`：它在纯 LF 档上偏低（同一档实测 `.Count` = 289、LF = 310，差 21 行；核侧同错差 140 行）⇒ 换把尺子，别再吃这个亏。**余行仍为旧尺读数**，量法统一轮重读一遍（本域最大 = `items.mjs` 310，已按 LF 校正）；`±0` = 本域零改动档。
+- **行数口径**：行数面量法 = **LF 计数**（`split(/\r?\n/)`，与字节侧 `\n` 计数同值）。不用 `Get-Content … .Count`：它在纯 LF 档上偏低——换把尺子，别再吃这个亏。行数与越线读数不住本表。
 - **测试档 = 无**：本域零测试档 ⇒ 本域 §11 用例表是判据设计，没有可跑的机检载体。
-- **软线读数**：本域各档均低于 500 软线（本域最大 = `src/ledger/items.mjs` 310，LF 口径）；表内另两行 = 跨域读数（装配面 `bin/thincoder-server.mjs` 314 ∥ 域外 `src/project/projects.mjs` 352），本域只记不判。`docs/server/design/store/STORE.md` §4 的 >700 触发线不涉本域。
+- **软线结论**：本域各档均低于 500 软线；越线读数与档长读数住批档。表内另两行 = 跨域读数（装配面 ∥ 域外 `src/project/projects.mjs`），本域只记不判。`docs/server/design/store/STORE.md` §4 的 >700 触发线不涉本域。
 
 ## 10. 验收判据（AC-32 ①–⑥ 对位）
 
@@ -123,7 +123,7 @@
 | # | 用例 | 判据 |
 |---|---|---|
 | N1 | 未登录 ⇒ 端侧 `team_ledger query` | 明示「未登录」人话；零网络调用；本机账（`ledger query`）照常可用 |
-| N2 | 端侧建一条（cwd 于仓 A——origin 形 `git@host:org/repo.git`） | 落行：`repo` = 归一形 `host/org/repo` ∥ `status` = 待讨论 ∥ `created_by` = token 主体 ∥ `owner` = 创建者（缺省） |
+| N2 | 端侧建一条（cwd 于仓 A——origin 形 `git@host:<组织>/<仓>`） | 落行：`repo` = 归一形 `host/org/repo` ∥ `status` = 待讨论 ∥ `created_by` = token 主体 ∥ `owner` = 创建者（缺省） |
 | N3 | 端侧 `query`（缺省 scope） | 仅该仓行；`scope:"team"` ⇒ 跨仓行（编号连续） |
 | N4 | 仓 A/仓 B 各建一条 | 编号不重（全局一号空间）；界面/工具同显 |
 | N5 | 同题两条先后写 | 两条皆落（零去重）；零门槛（无 403 除权属判定） |

@@ -290,7 +290,7 @@ MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完
 **调研证据行**：仓外声明源 = `PROJECT-MANIFEST.json` 的 `index.publicRepos` 实读两条（`../.thincoder` ∥ `../thincoder.com`）——两仓无工具面相关档 ⇒ 无仓外档可依据（读数与查法 = 本档 §6.29「调查证据行」）。仓内实读：
 
 - `thincoder-core/prompt-files.mjs` 的 `loadToolDoc` —— `return readFileSync(join(TOOL_DOCS_DIR, `${name}.md`), "utf8")`：整档原样进 `description`，无渲染、无摘要。
-- `thincoder-core/tool-docs/` —— 档数 = 实测，量法 = `node` 读 `readdirSync` 计 `.md` 档（字符合计同法）；绝对值单源 = `docs/core/design/PROMPT-SYSTEM.md` §6.11 预算表，本档不记绝对值。
+- `thincoder-core/tool-docs/` —— 档数 = 实测，量法 = `node` 读 `readdirSync` 计 `.md` 档（字符合计同法）；绝对值取数 = `docs/core/design/PROMPT-SYSTEM.md` §6.11 预算表的机检行，本档不记绝对值。
 - `docs/core/design/PROMPT-SYSTEM.md` §6.11 —— 预算表与「枚举工具数 ∥ 目录档数」两读的口径（两数不必相等；本批不并入，见先例行）。
 - `docs/core/design/TOOLS.md` §6.7 —— 每工具一句「要旨」的既有汇总面。
 - `test/RTM.md` —— 全文零命中 `描述` ∥ `description` ∥ `tool-docs` ⇒ 无一行断言描述文本（本批集成增量为 0 的根据）。
@@ -319,7 +319,7 @@ VS Code 端在 extension host 内运行的**端独有增强**（CLI 无对应面
 - **权限审批面**：webview 逐工具弹窗 + 批合并询问（`thincoder-vscode/src/extension/permission-gate.mjs` / `batchPermissionGate`）+ 逐项 diff 预览；子代理（depth>0）审批卡（归属 `<child key> · <tool>`——`makeChildPermission`）+ Stop 释放挂起门
   （abort → resolve(false)/deny，循环不悬挂——接线 = `docs/core/design/AGENT-LOOP.md` §6.18）。**端增量**：git 工具动作级只读分类（`isReadonlyAction`）住 VSC 装配面 `thincoder-vscode/src/tools/index.mjs`（核 git 工具无此概念）；
   审批层还消费 `configureGitApproval` / `configureEditReceipt` 缝（按缺省不覆盖——端审批在工具执行前）。
-- **描述装载面**：两端同源 = 核包 `tool-docs/*.md`（`DESC()` = 核 `loadToolDoc` 单一解析面；锚替换调用期应用）；描述档全档随包发布，档数 = 实测（量法 = `node` 计 `thincoder-core/tool-docs` 下 `.md` 档），绝对值单源 = `docs/core/design/PROMPT-SYSTEM.md` §6.11 预算表（`.vscodeignore` 不排除 `node_modules/@thincoder/core/**`——打包面 N6 需求侧承载）。
+- **描述装载面**：两端同源 = 核包 `tool-docs/*.md`（`DESC()` = 核 `loadToolDoc` 单一解析面；锚替换调用期应用）；描述档全档随包发布，档数 = 实测（量法 = `node` 计 `thincoder-core/tool-docs` 下 `.md` 档），绝对值取数 = `docs/core/design/PROMPT-SYSTEM.md` §6.11 预算表的机检行（`.vscodeignore` 不排除 `node_modules/@thincoder/core/**`——打包面 N6 需求侧承载）。
 - **工具面接线**：① **派发面 hooks 三调用点**（核 `thincoder-core/agent/dispatch.mjs` PreToolUse〔可阻断——阻断结果逐字同核〕· `thincoder-core/agent/dispatch-run.mjs` PostToolUse ∕ PostToolUseFailure；机制 = `AGENT-LOOP.md` §6.13 / §6.18）；
   ② **台账工具面随核家族段装配**（统一入口 `ledger`——读二 `action=query` / `action=count` 随核 `assembleFamilyTools` 到达 ⇒ 模型面 + 子代装配面同核口径；写三 `action=add` / `action=update` / `action=close` 随核家族段在端可达）。
 
@@ -2442,7 +2442,7 @@ depth-0 保持全量六动作。
 | 模型文本 | `thincoder-core/tool-docs/subagent.md`、`read_history.md` 及下栏新变体描述 | 排除项、角色能力、受限历史说明 |
 | 验证 | `test/integration/batch-live-batch-lock.test.mjs`、`test/integration/batch-ledger-bind.test.mjs`、`test/integration/tester-role.test.mjs`、下栏新集成档、随批单元档 | B3 旧断言更新、B4–B8 正负例与 RTM 对照 |
 | RTM 面 | `test/RTM.md`、`test/rtm/tooling.md`、`test/rtm/guard.md` | `test/RTM.md` 索引加 CLI 49 节；`test/rtm/tooling.md` 写 49 故事节与 49-1～49-3；`test/rtm/guard.md` 改写 12-1。编号先落 RTM，再写用例标题 |
-| 描述预算读数 | `docs/core/design/TOOLS.md` §6.9 ∥ §6.11、`docs/core/design/PROMPT-SYSTEM.md` §6.11 | 档数绝对值只记在预算表（同档声明为唯一权威处），新增描述档时按实测同步；本档两处只写量法，不记档数绝对值 |
+| 描述预算读数 | `docs/core/design/TOOLS.md` §6.9 ∥ §6.11、`docs/core/design/PROMPT-SYSTEM.md` §6.11 | 档数绝对值不落设计档：取数 = 预算表的机检行（`node scripts/tool-schema-size.mjs`），新增描述档时按实测同步；本档两处只写量法，不记档数绝对值 |
 
 实施轮新建的变体描述与测试档如下；这些名字是交付时的实际落点，不注册新工具名或新角色：
 

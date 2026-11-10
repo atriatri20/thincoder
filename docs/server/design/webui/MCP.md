@@ -45,16 +45,15 @@
 
 ## 3. 文件账（本面文件行 ∥ 键族登记）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/public/views-mcp.mjs`（已落） | **259**（页件行数在 300 软线内——**抽档预案未触发**；预案备查 = 弹窗体抽件（档名待抽时定），先例 = `thincoder-server/public/views-providers-modals.mjs`） | MCP 页（清单表 ∥ 行内探活读数 ∥ 增/改/删弹窗） |
-| `thincoder-server/public/i18n-zh-mcp.mjs`（已落） | **56**（`admin.mcp.*` 40 键 + 导航键 1） | 文案表·zh·mcp 部件 |
-| `thincoder-server/public/i18n-en-mcp.mjs`（已落） | **56**（同键集——en 零 CJK） | 文案表·en·mcp 部件 |
-| `thincoder-server/public/i18n-zh-shell.mjs`（已落盘） | ≈**81** | 文案表·zh·shell 部件（导航族） |
-| `thincoder-server/public/i18n-en-shell.mjs`（已落盘） | ≈**79** | 文案表·en·shell 部件（导航族） |
+| `thincoder-server/public/views-mcp.mjs`（已落） | —（该档在 300 软线内——**抽档预案未触发**；预案备查 = 弹窗体抽件（档名待抽时定），先例 = `thincoder-server/public/views-providers-modals.mjs`） | MCP 页（清单表 ∥ 行内探活读数 ∥ 增/改/删弹窗） |
+| `thincoder-server/public/i18n-zh-mcp.mjs`（已落） | —（`admin.mcp.*` 40 键 + 导航键 1） | 文案表·zh·mcp 部件 |
+| `thincoder-server/public/i18n-en-mcp.mjs`（已落） | —（同键集——en 零 CJK） | 文案表·en·mcp 部件 |
+| `thincoder-server/public/i18n-zh-shell.mjs`（已落盘） | — | 文案表·zh·shell 部件（导航族） |
+| `thincoder-server/public/i18n-en-shell.mjs`（已落盘） | — | 文案表·en·shell 部件（导航族） |
 
 - **键族登记**：`admin.mcp.*`（键集 = 页题/表头五列/三钮/两弹窗（标题/各字段 label/提示句/清除勾）/探活三态（进行中/成/败）/空态/删除后果句/flash 两键）——**两表逐键同步 ∥ en 零 CJK ∥ 占位符一致**（`docs/server/design/webui/I18N.md` §2.1）；`nav.page.admin.mcp` 键入 **shell 部件**（导航族）；部件拆分口径 = §2.1 拆表（新部件 `thincoder-server/public/i18n-zh-mcp.mjs` ∥ `thincoder-server/public/i18n-en-mcp.mjs`——域界 = 键二级前缀 `admin.mcp.*`）。
-- 面文件行合计 ≈**472**（两 i18n 部件 + 页件 + shell 两行——`webui/WEBUI.md` §5 收录行首）。
 
 ## 4. 验收（本面 AC 行）
 

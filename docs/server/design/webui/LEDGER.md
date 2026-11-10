@@ -29,17 +29,17 @@
 
 ## 3. 文件账（本面文件行 ∥ 键族登记）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/public/views-ledger.mjs` | **300** | 页（筛选行 ∥ 表 ∥ 详情/编辑弹窗 ∥ 新建弹窗 ∥ 撤回确认） |
-| `thincoder-server/public/nav.mjs` | **104**（我的组含 `#/me/ledger`——末位；头注计数同拍） | IA 单源 |
-| `thincoder-server/public/app.mjs` | **206** | 页面挂载 |
-| `thincoder-server/public/i18n-zh-ledger.mjs` / `thincoder-server/public/i18n-en-ledger.mjs` | **84 ∥ 84**（键 **65/表**——en 零 CJK） | 文案表·ledger 面（部件对——域界 = `me.ledger.*` 前缀） |
-| `thincoder-server/public/i18n-zh.mjs` / `thincoder-server/public/i18n-en.mjs` | **16 ∥ 16**（import + 展开项） | 部件装配 |
-| `thincoder-server/public/i18n-zh-shell.mjs` / `thincoder-server/public/i18n-en-shell.mjs` | **80 ∥ 78**（键 **61 ∥ 61**，含 `nav.page.me.ledger`） | 导航文案 |
-| `thincoder-server/public/i18n-zh-system.mjs` / `thincoder-server/public/i18n-en-system.mjs` | **208 ∥ 208**（键 **185 ∥ 185**，含 `audit.type.ledger_event`） | 审计型名 |
-| `thincoder-server/public/views-audit.mjs` | **238**（型表 ∥ 详情支含 `ledger_event`） | 审计面随正 |
-| 跨批单元测试档 | **168** | 结构守卫（PARTS/DOMAINS + `ledger` 域 + `me.ledger`） |
+| `thincoder-server/public/views-ledger.mjs` | — | 页（筛选行 ∥ 表 ∥ 详情/编辑弹窗 ∥ 新建弹窗 ∥ 撤回确认） |
+| `thincoder-server/public/nav.mjs` | —（我的组含 `#/me/ledger`——末位；头注计数同拍） | IA 单源 |
+| `thincoder-server/public/app.mjs` | — | 页面挂载 |
+| `thincoder-server/public/i18n-zh-ledger.mjs` / `thincoder-server/public/i18n-en-ledger.mjs` | —（键 **65/表**——en 零 CJK） | 文案表·ledger 面（部件对——域界 = `me.ledger.*` 前缀） |
+| `thincoder-server/public/i18n-zh.mjs` / `thincoder-server/public/i18n-en.mjs` | —（import + 展开项） | 部件装配 |
+| `thincoder-server/public/i18n-zh-shell.mjs` / `thincoder-server/public/i18n-en-shell.mjs` | —（键 **61 ∥ 61**，含 `nav.page.me.ledger`） | 导航文案 |
+| `thincoder-server/public/i18n-zh-system.mjs` / `thincoder-server/public/i18n-en-system.mjs` | —（键 **185 ∥ 185**，含 `audit.type.ledger_event`） | 审计型名 |
+| `thincoder-server/public/views-audit.mjs` | —（型表 ∥ 详情支含 `ledger_event`） | 审计面随正 |
+| 跨批单元测试档 | — | 结构守卫（PARTS/DOMAINS + `ledger` 域 + `me.ledger`） |
 
 - **键族登记**：部件 `me.ledger.*`（**65 键/表**；页题/筛选标签/六态词/列头/空错态/弹窗字段/动作/后果句/老化标）；随动键 = shell 两部件 `nav.page.me.ledger` ∥ system 两部件 `audit.type.ledger_event`。
 - **键数总账**：门面 **959 ∥ 964**。

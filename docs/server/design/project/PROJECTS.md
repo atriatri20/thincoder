@@ -123,24 +123,23 @@
 
 ⇒ 见 `docs/server/design/webui/PROJECTS.md`（页族/导航位/入口/键族/判据——单源；KD-SV-123 的页面落点）。
 
-## 8. 本域文件与行数预算
+## 8. 文件账
 
-| 档 | 行数（设计估——实施实读为准） | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/src/project/git-sources.mjs`（已落） | ≈**290**（`scope_kind` 三态形门 ∥ `sourceView` 增键） | 源存储与校验（形/重名/掩码视图/CRUD/状态列）+ webhook 密钥面（生成/轮换/掩码——§13）+ gitee 范围三态 |
-| `thincoder-server/src/project/platform-client.mjs`（已落） | ≈**307**（范围三态路由 ∥ 不符报错 ∥ 嵌套行解析 ∥ 超时口径） | 三平台客户端（仓列表/名册/体检——原生 fetch ∥ 超时 ∥ 分页 ∥ 六分类 ∥ gitee 三态路由） |
-| `thincoder-server/src/project/projects.mjs`（已落） | ≈190 | 项目存储 + 成员行 + 能力矩阵判定（§3）+ 删除事务（级联/审计——§14） |
-| `thincoder-server/src/project/sync.mjs`（已落） | ≈**241**（`scopeKind` 携传 ∥ 超时口径） | 成员同步引擎（算法/单事务/锁/结果）+ 调度器 + 事件触发入口/待跑旗（§13） |
-| `thincoder-server/src/project/routes.mjs`（已落） | ≈200 | 成员面六端点（列表/详情/成员增删改/项目改） |
-| `thincoder-server/src/project/admin-routes.mjs`（已落） | ≈**224**（拉列表携 `scopeKind` ∥ 超时口径） | 管理面十端点（源 CRUD/同步/体检/拉列表/加仓 + webhook 密钥 + 项目删除） |
-| `thincoder-server/src/project/webhooks.mjs`（已落） | ≈90 | 事件接收端（路由/验签/触发/忽略面——载荷不解析；§13） |
-| `thincoder-server/src/store/credential-crypto.mjs`（已落——KD-SV-119） | ≈65 | 凭据三件 + 键路径派生 `credentialKeyPath`（自 onboarding 逐字抽出——双消费方共享单源） |
-| `thincoder-server/src/store/db.mjs`（已落盘 · 实读 675） | ≈+14（v21 段——`scope_kind` 列 + 存量回填）；**>500 软线复核 = `docs/server/design/store/STORE.md` §4——维持 + 上限 700（触发外拆）** ⇒ 实读 ≈690 未触线 | 迁移段（细段 = `docs/server/design/store/STORE.md` §2 单源） |
-| `thincoder-server/src/accounts/audit.mjs`（已落盘 · 实读 116） | +1 型（`project_event` 入 `AUDIT_TYPES`——≈+2 行含注释） | 型面 十三 ⇒ 十四 |
-| `thincoder-server/bin/thincoder-server.mjs`（已落盘 · 实读 192） | +≈8（三注册行（含接收面）+ 调度器接线） | 装配 |
-| `thincoder-server/package.json`（已落盘 · 实读 30） | 机械（2026-10-12 已落：`prepublishOnly` = 3×`node --check`——链撤；单元测试档不入任何门，零剩余改动） | 发布钩 |
+| `thincoder-server/src/project/git-sources.mjs`（已落） | —（`scope_kind` 三态形门 ∥ `sourceView` 增键） | 源存储与校验（形/重名/掩码视图/CRUD/状态列）+ webhook 密钥面（生成/轮换/掩码——§13）+ gitee 范围三态 |
+| `thincoder-server/src/project/platform-client.mjs`（已落） | —（范围三态路由 ∥ 不符报错 ∥ 嵌套行解析 ∥ 超时口径） | 三平台客户端（仓列表/名册/体检——原生 fetch ∥ 超时 ∥ 分页 ∥ 六分类 ∥ gitee 三态路由） |
+| `thincoder-server/src/project/projects.mjs`（已落） | — | 项目存储 + 成员行 + 能力矩阵判定（§3）+ 删除事务（级联/审计——§14） |
+| `thincoder-server/src/project/sync.mjs`（已落） | —（`scopeKind` 携传 ∥ 超时口径） | 成员同步引擎（算法/单事务/锁/结果）+ 调度器 + 事件触发入口/待跑旗（§13） |
+| `thincoder-server/src/project/routes.mjs`（已落） | — | 成员面六端点（列表/详情/成员增删改/项目改） |
+| `thincoder-server/src/project/admin-routes.mjs`（已落） | —（拉列表携 `scopeKind` ∥ 超时口径） | 管理面十端点（源 CRUD/同步/体检/拉列表/加仓 + webhook 密钥 + 项目删除） |
+| `thincoder-server/src/project/webhooks.mjs`（已落） | — | 事件接收端（路由/验签/触发/忽略面——载荷不解析；§13） |
+| `thincoder-server/src/store/credential-crypto.mjs`（已落——KD-SV-119） | — | 凭据三件 + 键路径派生 `credentialKeyPath`（自 onboarding 逐字抽出——双消费方共享单源） |
+| `thincoder-server/src/store/db.mjs`（已落盘） | —（v21 段——`scope_kind` 列 + 存量回填）；**>500 软线复核 = `docs/server/design/store/STORE.md` §4——维持 + 上限 700（触发外拆）** ⇒ 未触线 | 迁移段（细段 = `docs/server/design/store/STORE.md` §2 单源） |
+| `thincoder-server/src/accounts/audit.mjs`（已落盘） | —（`project_event` 入 `AUDIT_TYPES`；型面 十三 ⇒ 十四） | 型面 十三 ⇒ 十四 |
+| `thincoder-server/bin/thincoder-server.mjs`（已落盘） | —（三注册行（含接收面）+ 调度器接线） | 装配 |
+| `thincoder-server/package.json`（已落盘） | 机械（2026-10-12 已落：`prepublishOnly` = 3×`node --check`——链撤；单元测试档不入任何门，零剩余改动） | 发布钩 |
 
-|（webui 面文件与 i18n 键族 = `docs/server/design/webui/PROJECTS.md` §3 单源；域小计 = 服务端七档行和 **≈1545**（四档 ≈+70——`platform-client` ≈+40 ∥ `git-sources` ≈+25 ∥ `sync` ≈+3 ∥ `admin-routes` ≈+2）+ 共享件改动 **≈+109** 净（≈+95 ＋ `db.mjs` v21 ≈+14；实施实读为准）。）
 
 ## 9. 验收判据（AC-44 ①–⑨ 对位）
 

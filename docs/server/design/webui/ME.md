@@ -74,14 +74,12 @@
 
 ## 3. 文件账（本面文件行 ∥ 键族登记）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/public/views-auth.mjs` | **31** | 登录视图 |
-| `thincoder-server/public/views-me.mjs` | **398** | 我的·key/用量/账户三页 |
-| `thincoder-server/public/i18n-zh-me.mjs` | **184** | 文案表·zh·我的面 |
-| `thincoder-server/public/i18n-en-me.mjs` | **185** | 文案表·en·我的面 |
-
-**面小计**：≈798（域合计 = 各面之和——不单列）。
+| `thincoder-server/public/views-auth.mjs` | — | 登录视图 |
+| `thincoder-server/public/views-me.mjs` | — | 我的·key/用量/账户三页 |
+| `thincoder-server/public/i18n-zh-me.mjs` | — | 文案表·zh·我的面 |
+| `thincoder-server/public/i18n-en-me.mjs` | — | 文案表·en·我的面 |
 
 **键族登记**：
 

@@ -50,7 +50,7 @@
 6. **agent 段（S10 ∕ S11 ∕ S14b）**——子代理模型槽六件 = `select` + 复合候选 + 占位（清空 ⇒ 删键）；advisor 推理档 = 选项控件（Auto + off + 逐模型枚举）；guard 开关 = `session:flags` 槽写（值 = `sessionFlags` 投影；未知 ⇒ `disabled`——禁假造）；
    **slot 权威键 `agent.engineering`** = 会话槽面键——**设置面零行**（泛化编辑器全消；写面 = `session:flags` 槽写 ∥ 输入区模式钮）；写面归属 ∕ 拒码 = 本档 §1 **KD-49**。
 7. **S3 端差处置（消）**——行标面补 VSC `failure` 分档（hostBusy ⇒「宿主繁忙」+ 抑制失败句）：原「能力缺失」不成立（欠做）⇒ 补做三件 =
-   ① 新档 `thincoder-desktop/src/main/loop-sampler.mjs`（port ≈45 行——源 = `thincoder-vscode/src/extension/loop-sampler.mjs`）
+   ① 新档 `thincoder-desktop/src/main/loop-sampler.mjs`（port——源 = `thincoder-vscode/src/extension/loop-sampler.mjs`）
    ② 行面 `failure` 键贯链（`thincoder-desktop/src/main/providers.mjs` 的行面 → 通道 → 渲染——渲染档点名 = `thincoder-desktop/renderer/views/settings-sections.mjs`）
    ③ 词键（落 `renderer/i18n-settings.mjs`）；判据 = 同宿主忙态两端行面同词 + 同抑制形。上抛行 = 本档 §6 **CG**（同拍定形）。
 8. **首屏引导门（R1）**——`data-boot` 补渲染消费：`≠ "ok"` 期间引导层在场；`"error"` ⇒ 错误面（可读原因）；`"ok"` ⇒ 撤（**零残留**）；写者单点零改（`thincoder-desktop/renderer/dom.mjs`）。
@@ -251,7 +251,7 @@
 3. **两出口**——`onMcpKvAdd(group)` ∥ `onMcpKvRemove(group, t)`：先自读 DOM 行集（无 DOM ⇒ 空转——同 `readMcpForm` 退化式）→ 写切片 → 重挂；**类型切换出口**同拍同步当前组行集（**行值捕获径 = 与加删出口同一「自读 DOM 行集」面**——不采 `readMcpForm` 快照；切换不丢手——沿 `draft` 先例）；`readMcpForm` 草稿快照**不采行件**（重复 `name` 单值槽会塌缩——行值保真归令牌 + 草稿闸两层）。
    **现读面**：`mcpFormNode()` = 文档序末位 `[data-form="mcp"]`（页体 ∥ 组弹窗体两宿主同判——弹窗体挂 `body` 尾 ⇒ 在场即交互面）；加删 ∥ 类型切换两出口与 `readMcpForm` 同一读面（`thincoder-desktop/renderer/mount-settings-segments-mcp.mjs` 的 `mcpFormNode()`）。
 4. **提交**—— `mcpConfigFrom` 自 FormData 按 DOM 序配对（`getAll("<group>-k")` ∥ `getAll("<group>-v")`）：trim；空键 ∥ 空值行不提交；重复键后行胜；全空 ⇒ 字段键缺席（`env` ∥ `headers` 删除——沿现判）。
-5. **拆档**——MCP 族出档 `thincoder-desktop/renderer/mount-settings-segments-mcp.mjs`（已落 · **327** 行；沿 `thincoder-desktop/renderer/mount-settings-segments-models.mjs` / `thincoder-desktop/renderer/mount-settings-segments-providers.mjs` / `thincoder-desktop/renderer/mount-settings-segments-agent.mjs` 先例；缝 = 同形工厂 `create*Exits(deps)`；装配点 `mount-settings-exits.mjs` 装配即合并——单一 `handlers` 表对外零改）；触发 = 本档 §3.1 该行在册预案（「MCP 族再出一档」——MCP 族结构性触碰）。
+5. **拆档**——MCP 族出档 `thincoder-desktop/renderer/mount-settings-segments-mcp.mjs`（已落；沿 `thincoder-desktop/renderer/mount-settings-segments-models.mjs` / `thincoder-desktop/renderer/mount-settings-segments-providers.mjs` / `thincoder-desktop/renderer/mount-settings-segments-agent.mjs` 先例；缝 = 同形工厂 `create*Exits(deps)`；装配点 `mount-settings-exits.mjs` 装配即合并——单一 `handlers` 表对外零改）；触发 = 本档 §3.1 该行在册预案（「MCP 族再出一档」——MCP 族结构性触碰）。
 6. **计数（D3）**——词键 +4（`settings.mcp.kvAdd` ∥ `.kvRemove` ∥ `.kvKey` ∥ `.kvValue`）∥ 值改 2（`.env` ∥ `.headers`——去「comma-separated」形）；通道 0 新（`mcp:save` ∥ `mcp:update` 载荷形零改——仍 `{name, config}`，env ∥ headers 仍为对象）；store 键 +1（`settings.mcp.form.kv`——表单面态内部形，非切片新族）；新档 1；CSS 0。
 7. **判据**——机检 = 单元测试档（L1 构树 ∥ L2 出口配对四态 ∥ L3 VSC 真 webview ∥ L4 词面源扫）；真机 = 人工走查（设置页 ∥ 弹窗两态：值含逗号 token 存取 ∥ 加删行 ∥ 类型切换保真 ∥ 保存后重开回显逐字同）。
 
@@ -285,7 +285,7 @@
 - **源面锁（判据第三用例 · 定义）**：扫描域 = 本修两件（`renderer/mount-settings-segments.mjs` ∥ `renderer/mount-settings-segments-providers.mjs`）；判据形状 = ① 负向——槽作用域现读形（选择器模板串含 `${slot}` 插值）零残留；② 正向——`document.querySelectorAll` 末位取件形在每个现读点在场；③ 三读点逐点断言（`keySave` ∥ `saveProviderKey` ∥ `cancelKeyEdit`）。
 - **同族出口覆盖（点名 + 结论）**：现读点全集 = 上述三件（扫描域内）；删钥径（`keyDelete` `renderer/mount-settings-segments.mjs` ∥ `deleteProviderKey` `renderer/mount-settings-segments-providers.mjs`）= 零 DOM 现读（按名发送）⇒ **非同面 · 零改**；其余出口无槽作用域现读（`fetchModels` = `FormData(formOf(event))` 直读——宿主无关形）；向导占槽径 = 上句边界保持。
 
-**受影响文件（内容行数口径（文末换行不计））**：
+**受影响文件**：
 
 | # | 文件 |
 |---|---|
@@ -422,7 +422,7 @@
 - **`saveAgentSettings` 载荷 `defaultModel` 支净删**（`src/extension/settings-panel-write.mjs` 的载荷支与探支——消费面唯一生产者已撤）。
 - **banner 动作钮重指会话级模型菜单**（`webview/ui.js` 的 `onChoose`——`docs/vsc/design/WEBVIEW.md` §4.8「钮不开会话级模型菜单」句已翻转；由 = 撤设置面模型面后原指向成死端，而用户的定音即「模型选择归会话界面」）。
 - **会话选定写回链零动**（`src/extension/panel-messages.mjs` ⇒ `carryoverDefaultModel`）。
-6. **受影响文件（口径 = 内容行数——文末换行不计；实读 2026-10-16）**：
+6. **受影响文件**：
 
 | # | 文件 | 改面 |
 |---|---|---|
@@ -522,7 +522,7 @@
 **设置菜单组项收窄（验收 · 设置半 · 需求 D39）**：需求回指 = **D39** 收正句（菜单组项 七 ⇒ 六；设置页面七段零动）；本次设置域零触——校验面 `SCOPES` 十名宽容（支 A 裁定——零改）。
 
 - **决策单源** = 本档 §1 **KD-68** ④。
-- **机检**（已建成 · 3/3 绿）= 用例③（弹窗仍达六组 + `model` 宽容受理——单源 = `docs/desktop/design/MENU.md` §3.4 ∥ §4）。
+- **机检**（已建成 · 3/3 绿）= 用例③（弹窗仍达六组 + `model` 宽容受理——单源 = `docs/desktop/design/MENU.md` §4）。
 - **真机** = **T-DSK59**（条目面随正——六组项）；**离线不可产面**= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计面条目。
 
 **轻通道轮六（验收 · 设置半）**：需求回指 = **D7**（key 校验面——反馈呈现）+ **D37**（渠道段行形态——校验钮态）+ **D39**（弹窗体——头行粘顶）。
@@ -585,7 +585,7 @@
 
 | 行 | 项 | 类型 | 处置建议 |
 |---|---|---|---|
-| **CG** | **S3 行标面未携 VSC `failure` 分档**（hostBusy ⇒「宿主繁忙」+ 抑制失败句） | **裁 = 消（补做）**：桌面无宿主采样器 = **欠做**（非能力缺失）；补做三件 = `thincoder-desktop/src/main/loop-sampler.mjs`（port ≈45 行）· `failure` 键贯链 · 词键（`i18n-settings.mjs`） | 单源 = 本档 §2.2 项 7（同拍收正）；判据 = 同宿主忙态两端同词 + 同抑制形 |
+| **CG** | **S3 行标面未携 VSC `failure` 分档**（hostBusy ⇒「宿主繁忙」+ 抑制失败句） | **裁 = 消（补做）**：桌面无宿主采样器 = **欠做**（非能力缺失）；补做三件 = `thincoder-desktop/src/main/loop-sampler.mjs`（port）· `failure` 键贯链 · 词键（`i18n-settings.mjs`） | 单源 = 本档 §2.2 项 7（同拍收正）；判据 = 同宿主忙态两端同词 + 同抑制形 |
 | **CH** | **`agent.engineering` 泛化行读面形未裁**（S14a 只裁写面——写必拒 `slot-authority` 而读面仍呈可编辑泛化行） | **裁：读面收窄**（假可供性消除；泛化行整体退役——设置面 agent 段纯具名，本项闭合） | 写面判据 = 本档 §1 **KD-49** |
 | **DH** | **`T-DSK58` 用例号自铸披露 + 设置面样式收正批两项已裁**（沿 T-DSK37–T-DSK57 先例——本次自铸；若实施批 ∥ 并行批占用同号 ⇒ 请父侧并号裁定）：① 用例行随测试文件修加——不进设计面条目；② **卡界载体 = 已裁**——按 VSC 实形收（1px 描边 + 圆角 6px——`thincoder-vscode/webview/settings.css`；D24 描边归零基线全局零动——仅本卡界让位；用户裁定）；③ **拨杆形 = 已裁**——保留（**零改**限定对象 = 值面照搬 VSC（`thincoder-vscode/webview/settings.css`）；**相对现盘 = 新增四规则**（现盘复选无形——`thincoder-desktop/renderer/settings.css` 仅 `align-self`）；形变可逆——单点回退：删四规则还原原生复选）；**附 · 原则句**：跨端差异项后续变更两端保持同步（用户裁定「以后要改一起改」——本裁定 = 首例） | **已裁（自铸披露在册 · ②③ 两裁落）** | 单源 = 本档 §1 **KD-66**。 |
 | **DM** | **需求卷设置页段数口径**：需求卷 `SETTINGS.md` D37 ∥ D39 记「设置面全**七**段」（D39 并写「设置页面七段零动」），而设计档现值与盘面均为**八段**（含「模型」段）——**两档计数相抵（改前即在）**；撤「模型」段后面页 = 七段，仅当需求句「七段」原义 = 「不含模型段的其余各段」时两档自洽 | **前抛（需求档笔 = 主 agent）**：请主 agent 核口径并回笔（若「七段」非此义 ⇒ 需求卷需收正）；本席不写需求档。本档侧：页面七段 = **KD-80** 落定 | 单源 = 本档 §1 **KD-80** ∥ §2.24 |

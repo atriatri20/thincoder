@@ -32,7 +32,7 @@
 
 | 面 | 落点 | 状态 |
 |---|---|---|
-| 分类裁判 + 声明装载 | 分类裁判 = `thincoder-core/conventions.mjs`（`classifyPath` · `isCodePath` · `isDocPath` · `isTempPath` · `isAuxPath`）；声明装载 = `thincoder-core/declaration.mjs`（`loadProjectDeclaration` · `clearDeclarationCache` · `DEFAULT_DECLARATION`——经 `conventions.mjs` 转口可达）；档级行数 = `conventions.mjs` **172** 行 ∥ `declaration.mjs` **173** 行 | 在位 |
+| 分类裁判 + 声明装载 | 分类裁判 = `thincoder-core/conventions.mjs`（`classifyPath` · `isCodePath` · `isDocPath` · `isTempPath` · `isAuxPath`）；声明装载 = `thincoder-core/declaration.mjs`（`loadProjectDeclaration` · `clearDeclarationCache` · `DEFAULT_DECLARATION`——经 `conventions.mjs` 转口可达）；档级行数面 = `conventions.mjs` ∥ `declaration.mjs`（体量按 `doc_check` 的 `lines` 量，不落绝对值） | 在位 |
 | 默认判据（数据常量） | `thincoder-core/manifest-schema.mjs` `DEFAULT_MANIFEST.codePaths` = `[]`（**无默认段**；**单源**——裁判档经 `DEFAULT_DECLARATION` 取用；`docs/core/design/MANIFEST.md` §2.4 KD-M1-31） | 在位 |
 | 声明装载载体 | `PROJECT-MANIFEST.json` 两族键（`codePaths` / `index.*`——schema 权威 = `docs/core/design/MANIFEST.md` §2.2） | 在位 |
 | 父侧设计门禁 | `thincoder-core/agent/dispatch.mjs` 的父侧门段（**判据 = `faceOf`**（`thincoder-core/agent/write-face.mjs`）——文档面放行 ∥ 其余一切产品面（fail-closed）；分类器不参与；辖域 = 目标所属项目（`declarationForTarget`——F11）；保守拦截 = 非串 ∥ 空串。同判据句 = §3.7 行 1 ∥ §3.8 行 1） | 在位 |

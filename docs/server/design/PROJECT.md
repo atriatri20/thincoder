@@ -46,7 +46,7 @@
 | ledger | `thincoder-server/src/ledger/`（档单/计数 = `docs/server/design/ledger/LEDGER.md` §9——单源） | 团队台账：团队共享工作台账（全局编号 ∥ 键 = git 源（归一地址） ∥ 全局一本）∥ 两面族端点（控制台 `/api/ledger*` ∥ 端侧 `/api/client/ledger*`）∥ 判权 = B2 能力矩阵（`can.view`/`can.write`）∥ 六态/老化/审计 `ledger_event` ∥ 上送（零跨账代码路径） | `docs/server/design/ledger/LEDGER.md` |
 | mcp | `thincoder-server/src/mcp/`（档单/计数 = `docs/server/design/mcp/MCP.md` §10——单源） | MCP 服务器清单（server 全局单份 ∥ 密列凭据零回显） ∥ 管理会话工具面挂载（`@thincoder/core/mcp.mjs` 四导出原文复用 ∥ 失败冷却）∥ 探活 ∥ 端点族 `/api/admin/mcp*` ∥ 审计 `mcp_event`（配置变更）+ `chat_call`（调用） ∥ **管面工具（`mcp` 第九件——管理会话管清单；机制 = `docs/server/design/agent/ADMIN-AGENT.md` §12.2）** | `docs/server/design/mcp/MCP.md` |
 
-（各域「不做」面 = 各域档「本域边界」段；全局范围 = 头注「范围注」；逐档行数 = 各域档「本域文件与行数预算」。）
+（各域「不做」面 = 各域档「本域边界」段；全局范围 = 头注「范围注」；逐档行数 = 各域档「文件账」。）
 
 ### 2.2 数据流（两条主链）
 
@@ -106,12 +106,12 @@
 | `docs/server/design/webui/WEBUI.md` | 域 | webui | 壳面：静态面 ∥ 控制台 IA（§2——页集/档目链单源） ∥ 判权与自托管 ∥ 壳面文件与预算余行 ∥ 验收（非功能·前端自洽 ∥ AC-12） ∥ 边界；面档 **13** = `docs/server/design/webui/ADMIN.md`（管理数据面） ∥ `docs/server/design/webui/CHAT.md`（管理面对话） ∥ `docs/server/design/webui/I18N.md`（多语言） ∥ `docs/server/design/webui/ME.md`（我的面） ∥ `docs/server/design/webui/READINGS.md`（读数面——可见面二轮六面） ∥ `docs/server/design/webui/SANDBOX.md`（沙盒面） ∥ `docs/server/design/webui/STYLE.md`（样式与版式） ∥ `docs/server/design/webui/SYSTEM.md`（系统页） ∥ `docs/server/design/webui/PROJECTS.md`（团队项目与权限面） ∥ `docs/server/design/webui/TABS.md`（公共标签页组件） ∥ `docs/server/design/webui/LEDGER.md`（团队台账面） ∥ `docs/server/design/webui/TERMINAL.md`（终端核——可复用件） ∥ `docs/server/design/webui/MCP.md`（MCP 面）——各档 §1 KD ∥ §2 机制 ∥ §3 文件账/键族 ∥ §4 验收 ∥ §5 边界 ∥ §6 上抛/余项 |
 | `docs/server/design/ops/OPS.md` | 域 | ops | 配置面 ∥ 首启引导 ∥ 运维 CLI ∥ 启动/停机/部署面 ∥ 日志 ∥ 本域文件与预算 ∥ 验收判据 ∥ 用例 |
 | `docs/server/design/client/CLIENT.md` | 域 | client | 客户端接入：客户端 token 面 ∥ `/api/client/*` 数据面骨架 ∥ 端点表 ∥ 本域文件与预算 ∥ 验收判据（AC-31）∥ 用例 ∥ 边界 ∥ 上抛/余项（§8） |
-| `docs/server/design/sandbox/SANDBOX.md` | 域 | sandbox | 沙盒：形态 ∥ 对象模型与存储（v11–v13 ∥ v15） ∥ 节点与容器（最小切片——§3；**容器面补齐 + 镜像族——§3**；**镜像源族——§3**；**卷族——§3**；**主机凭据——§3**） ∥ 工作区生命周期与节点绑定 ∥ 盒内凭据 ∥ 控制台四面（必交面——每配置项有 UI 写入口；出站规则/待批队列退场） ∥ 端点与判权 ∥ 已裁决策与披露 ∥ 验收判据 ∥ 用例 ∥ 本域文件与行数预算 ∥ 决策（含 KD-SV-79/80/81/84/85/92–100 ∥ 104/105 ∥ **133–135**） ∥ 边界 ∥ 上抛/余项（§16） |
+| `docs/server/design/sandbox/SANDBOX.md` | 域 | sandbox | 沙盒：形态 ∥ 对象模型与存储（v11–v13 ∥ v15） ∥ 节点与容器（最小切片——§3；**容器面补齐 + 镜像族——§3**；**镜像源族——§3**；**卷族——§3**；**主机凭据——§3**） ∥ 工作区生命周期与节点绑定 ∥ 盒内凭据 ∥ 控制台四面（必交面——每配置项有 UI 写入口；出站规则/待批队列退场） ∥ 端点与判权 ∥ 已裁决策与披露 ∥ 验收判据 ∥ 用例 ∥ 文件账 ∥ 决策（含 KD-SV-79/80/81/84/85/92–100 ∥ 104/105 ∥ **133–135**） ∥ 边界 ∥ 上抛/余项（§16） |
 | `docs/server/design/sandbox/EXECUTION.md` | 域 | sandbox | 执行面（第二档 · 单源）：形态与三证（零驻留） ∥ 通道三件（Docker API ∥ SSH ∥ 盒出向） ∥ 盒生命周期直调链与建盒参数集 ∥ 主机侧件（磁盘限额） ∥ 写门实时化 ∥ 盒运行时通道（核同件 + 最小壳） ∥ 底座可换（派生构建 ∥ 私有仓凭据） ∥ **连接面 TLS 档（可选——形态/传输/材料/审计——增补 #2）** ∥ v22 收正/迁移拆案 ∥ 探针执行器（余腿）∥ 验收判据 ∥ 用例 ∥ 本域预算 ∥ KD-SV-160–163 ∥ 166–174 ∥ 184–191 ∥ **192–195** ∥ 上抛/余项（§17） |
 | `docs/server/design/agent/ADMIN-AGENT.md` | 域 | agent | 管理面 agent：形态与定位 ∥ 无人值守裁剪 ∥ **聊天式驱动（§11）** ∥ **工具面扩展九件（§12——§12.1 模型测试 ∥ §12.2 MCP 管理工具）** ∥ **环境感知与环境工具面（§14——四块装配 ∥ 六族八件 ∥ 限幅 ∥ 审计详情与 timer 投递 ∥ 核可达性）** ∥ **唤醒与投递面（§15——唤醒器一器两源 ∥ 投递汇 ∥ 对齐表 ∥ 开放点四条）** ∥ **会话历史与出口改道（§16——`read_history` ∥ 网关链 loopback ∥ 管理面 sk）** ∥ **与核的取核形（§17——件清单 ∥ 开放点 ∥ 核面零改声明）** ∥ **模型测试（§12.1——`models.test` 网关链 loopback ＋ 五读数）** ∥ **MCP 管理工具（§12.2——`mcp` 第九件工具）** ∥ 本域预算 ∥ 验收 ∥ 本域决策（KD-SV-82/87/88/89/90/91 ∥ **107/108/109/110** ∥ **112/113/114** ∥ **125/126 ∥ 129/130/131** ∥ **136 ∥ 205 ∥ 206/207/208**） ∥ 边界∥ 上抛/余项（§13） |
 | `docs/server/design/agent/MEMBER-AGENT.md` | 域 | agent | 成员面 agent（第四壳 · 会话面）：定位与形态 ∥ 关键决策（KD-SV-152–159 ∥ 203/204 ∥ 216–223——五题裁定 ∥ 工具面归属 ∥ 记忆面压后 ∥ 会话管理面 ∥ 成员 git 凭据 ∥ 三端对齐面） ∥ 机制（全链三段 ∥ **会话真源在盒内（核原生——零上送/零回灌）** ∥ 盒接入（SSE + NDJSON + `cmd` 指令）∥ 回合模型 ∥ 生命周期接线 ∥ 首次进入与拉仓 ∥ 权限与上限 ∥ 移动端接口形 ∥ 记忆面 ∥ 三端对齐面（§3.11） ∥ 盒内壳与核） ∥ 端点索引 ∥ 本域文件与预算 ∥ 验收（AC-50 对位——①–⑦） ∥ 用例 ∥ 边界 ∥ 上抛/余项（§9——R75–R90） |
 | `docs/server/design/project/PROJECTS.md` | 域 | project | 团队项目与权限：定位与词表 ∥ 关键决策（KD-SV-115–123 ∥ **127/128** ∥ **151**） ∥ 权限模型（能力矩阵/判据句九条） ∥ 平台接入（能力矩阵 + 角色映射表四张 + 客户端口径） ∥ 同步机制（三径/调度/算法/锁/体检/源生命周期/加仓两径 ∥ **事件接收端 §13**） ∥ **项目删除（§14）** ∥ 端点摘要（单源 = `docs/server/design/gateway/API.md` §2.9） ∥ 界面承载（⇒ `docs/server/design/webui/PROJECTS.md`） ∥ 本域文件与预算 ∥ 验收（AC-44 ①–⑨ + ⑬ 对位 + R63/R64 补面） ∥ 用例 ∥ 边界 ∥ 上抛/余项（§12） |
-| `docs/server/design/ledger/LEDGER.md` | 域 | ledger | 团队台账：定位与形态 ∥ 关键决策（KD-SV-139–147） ∥ 数据形（单表/全局编号/仓标记/老化） ∥ 写路径 ∥ 读路径与端点摘要 ∥ 上送（零跨账代码路径） ∥ 审计 ∥ 承载指针 ∥ 本域文件与行数预算 ∥ 验收（AC-32 ①–⑥ 对位） ∥ 用例 ∥ 边界 ∥ 上抛/余项（§13——R74） |
+| `docs/server/design/ledger/LEDGER.md` | 域 | ledger | 团队台账：定位与形态 ∥ 关键决策（KD-SV-139–147） ∥ 数据形（单表/全局编号/仓标记/老化） ∥ 写路径 ∥ 读路径与端点摘要 ∥ 上送（零跨账代码路径） ∥ 审计 ∥ 承载指针 ∥ 文件账 ∥ 验收（AC-32 ①–⑥ 对位） ∥ 用例 ∥ 边界 ∥ 上抛/余项（§13——R74） |
 | `docs/server/design/mcp/MCP.md` | 域 | mcp | MCP 面：定位与形态（三件/拓扑/最近先例） ∥ 解裁与挂载（`TRIMMED_FACES` 收正 ∥ chat 面接法 ∥ 失败冷却 ∥ 生命周期） ∥ 配置面（v24 表 ∥ 五端点 ∥ 探活 ∥ 控制台落点） ∥ 核件复用（引件清单 +1） ∥ 安全/审批/审计（`mcp_event`） ∥ 成员侧挂载 ∥ 边界 ∥ 用例（N1–N6 ∥ B1–B4 ∥ E1–E3） ∥ 关键决策（KD-SV-196–201 ∥ 214） ∥ 本域文件与预算 ∥ 验收（AC-54 ∥ AC-54⑤ 对位——已入册） ∥ 上抛/余项（§12——R86）（**管面（agent 侧 `mcp` 工具）机制 = `docs/server/design/agent/ADMIN-AGENT.md` §12.2**） |
 
 ## 4. 决策索引（KD-SV-1–223——域 → 域档 KD 节）
@@ -150,7 +150,7 @@
 
 ## 6. 域账索引（域 → 域档文件账节）
 
-> 逐档行数/预算/迁移读数 = 各域档「本域文件与行数预算」节（单一权威源）；本表 = 域级索引 + 板级件行（实读指针——不载存量数）。
+> 逐档行数/预算/迁移读数 = 各域档「文件账」节（单一权威源）；本表 = 域级索引 + 板级件行（实读指针——不载存量数）。
 
 | 域 | 文件账节 |
 |---|---|

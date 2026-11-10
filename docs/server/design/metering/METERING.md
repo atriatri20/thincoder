@@ -95,16 +95,15 @@
 | AC-26（功能点 26——我的用量页图表化） | `GET /api/me/usage/summary`：① 判权 = 本人（无会话 ⇒ 401；user ∥ admin 会话 ⇒ 200 且恒本人——双成员注入 ⇒ 响应只含本人值）∥ ② 逐值/零填充（totals 四字段 = 明细归并（日对齐窗）——prompt/completion/total 各自相等 ∥ trend 按日零填充全长 ∥ 两维序逐（维值 × 日）零填充（缺日 = 0） ∥ byModel 降序）∥ ③ 过滤器同门（model ∥ endpoint ∥ from/to 生效；非法 endpoint ⇒ 400——五读端点同门）∥ ④ 空集 ⇒ totals 全 0 + trend 全零全长 + 两维序/排行空数组（零错）∥ ⑤ admin 端点零动（`/api/usage/summary` 响应形与既有件回归零改） | 单元测试档 |
 | AC-29④（功能点 29——成员面随动；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 配额/禁用键 = 对外标识（配别名模型 ⇒ 别名形写入；键形校验 = 非空 ∥ 无首尾空白 ∥ 含斜杠时两段非空（裸名 = 别名形合法））∥ 记账对外标识 = 别名（读面回映射：`/api/usage` 行 `model` ∥ 导出 ∥ summary/totals 维值 ∥ `/api/me/usage/summary` 两维序 ∥ `memberView.modelUsage`——逐值 = 别名；内部两字段真名零改）∥ `model` 过滤 = 对外标识（别名先解析）∥ 改别名/清别名 ⇒ 读面当即随动（旧形键 = 离表键保留、不生效——无历史/迁移）；用例 = §7 N34/B26/E23 | 单元测试档 + 收口轮 |
 
-## 5. 本域文件与行数预算（本域族行）
+## 5. 文件账（本域族行）
 
-| 档 | 行数（实读——设计估） | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/src/metering/usage.mjs`（已落盘） | 实读 **177** | 记账（单写点） ∥ 明细查询 ∥ 导出 ∥ 过滤构建 ∥ 保留清理 ∥ 时间助手 |
-| `thincoder-server/src/metering/aggregates.mjs`（已落盘） | ≈**183**（`monthlyCountersByMember` 月表读两形 ∥ `--fix` 事务合围重排 ∥ 月表回映射，外标回拼换形） | 派生两表写（`usage_daily` ∥ `quota_counters` upsert） ∥ 计数点查 ∥ 成员月表读 ∥ 对账重算 ∥ 派生清理 |
-| `thincoder-server/src/metering/report.mjs`（已落盘） | ≈**252**（`memberUsageSummary`（调 `usageSummary({ memberId })` + 独立拆 totals 查询 + 两维序） ∥ `byModel`/`trendByModel` 回映射（映射后排序）+ 过滤别名反查） | 汇表面读（summary ∥ totals ∥ key 窗 ∥ 成员月累计——读 `usage_daily`） |
-| `thincoder-server/src/metering/quota.mjs`（已落盘） | 实读 **40** | 配额准入（点查——非 SUM） ∥ 429 形 |
-| `thincoder-server/src/metering/routes.mjs`（已落盘） | 实读 **117** | 用量查询 ∥ 配额设置端点（分模型覆盖） |
-| **小计** | ≈**774**（usage ≈182 ∥ aggregates ≈183 ∥ report ≈252） | —— |
+| `thincoder-server/src/metering/usage.mjs`（已落盘） | — | 记账（单写点） ∥ 明细查询 ∥ 导出 ∥ 过滤构建 ∥ 保留清理 ∥ 时间助手 |
+| `thincoder-server/src/metering/aggregates.mjs`（已落盘） | —（`monthlyCountersByMember` 月表读两形 ∥ `--fix` 事务合围重排 ∥ 月表回映射，外标回拼换形） | 派生两表写（`usage_daily` ∥ `quota_counters` upsert） ∥ 计数点查 ∥ 成员月表读 ∥ 对账重算 ∥ 派生清理 |
+| `thincoder-server/src/metering/report.mjs`（已落盘） | —（`memberUsageSummary`（调 `usageSummary({ memberId })` + 独立拆 totals 查询 + 两维序） ∥ `byModel`/`trendByModel` 回映射（映射后排序）+ 过滤别名反查） | 汇表面读（summary ∥ totals ∥ key 窗 ∥ 成员月累计——读 `usage_daily`） |
+| `thincoder-server/src/metering/quota.mjs`（已落盘） | — | 配额准入（点查——非 SUM） ∥ 429 形 |
+| `thincoder-server/src/metering/routes.mjs`（已落盘） | — | 用量查询 ∥ 配额设置端点（分模型覆盖） |
 
 ## 6. 关键决策（本域）
 

@@ -4,7 +4,8 @@
  *
  * 业务入口 = 真 `doc_check` 工具调用（`mode:"gate"` / `mode:"report"` + 显式 `docs` + `target`）。
  * 业务可观察结果 = 七段：① 中文悬空名判红、中文在盘档与普通中文词零命中；② 真后缀判红；③ 伪后缀 ∥ 数字形 ∥
- * 代码表达式 ∥ 版本区间 ∥ 归档名全零命中；④ 项目增补的后缀只在它自己那个仓生效；⑤ `report` 的清单读数只在该仓出；
+ * 代码表达式 ∥ 版本区间 ∥ 归档名全零命中；④ 项目增补的后缀只在它自己那个仓生效（裸名位不成候选——增补项是后缀清单，
+ * 不是族划分面，§2.10.3）；⑤ `report` 的清单读数只在该仓出；
  * ⑥ 项目把清单收窄成 `md` 时缺省项照旧生效（并集不替换）；⑦ 中文散文紧贴的形**多报一条整段 token**（该形的实测方向），
  * 两条写法出口（反引号包住 ∥ 与前后汉字留一个空格）回到零命中。
  * 判据 = `docs/core/design/DOC-CHECK.md` §2.6（名字字符类 ∥ 扩展名形护 ∥ 生效清单 = 缺省 ∪ 项目项，装配处过滤）
@@ -63,13 +64,14 @@ test("CLI 44-1 识别面：中文档名判得出、普通中文词与代码表�
       "代码表达式：JSON.parse 与 console.log 与 process.env",
       "版本区间：20.x/22.x",
       "归档名：build/app.tar.gz",
-      "增补后缀：x.tsv",
+      "增补后缀：docs/x.tsv（带目录段的形；裸写的 `x.tsv` 不成候选——形分档只看文档名族）",
+      "裸名增补后缀：x.tsv",
       "",
     ].join("\n"),
     "projA/docs/子目录/设计.md": "# 在盘的中文档\n\n干净，没有指针。\n",
     "projA/docs/在盘档.md": "# 另一个在盘的中文档\n\n干净，没有指针。\n",
     "projB/PROJECT-MANIFEST.json": manifestText(undefined),
-    "projB/docs/b.md": "# 乙档\n\n增补后缀 token：x.tsv\n",
+    "projB/docs/b.md": "# 乙档\n\n增补后缀 token：docs/x.tsv\n",
   })
   const docs = [join(ws, "projA/docs/a.md"), join(ws, "projB/docs/b.md")]
   const run = (mode) => docCheckTool.execute({ mode, docs, target: ws }, { agent: { cwd: ws } })

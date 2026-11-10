@@ -160,38 +160,6 @@
 | `thincoder-desktop/renderer/chat-fixes.css` | — | 「对齐第三批」小修族尾段（工具头两态色 ∥ 错误横幅 ∥ 停止痕 / diff 预览 / 文件链接 / 欢迎条 / 压缩状态行） |
 | `thincoder-desktop/src/main/file-links.mjs` | — | 验存链接纯函数面（`extractFileLinks(cwd, text)`——路径 token + 盘上存在闸 + 去重 + 封顶；零 electron ⇒ 平 node 直测） |
 
-### 3.2 现有文件改动
-
-**digest 对位行**：
-
-| # | 档 | 行数 |
-|---|---|---|
-| 1 | `thincoder-desktop/renderer/events-wake.mjs` | — |
-| 2 | `thincoder-desktop/renderer/views/chat-model.mjs` | — |
-| 3 | `thincoder-desktop/renderer/views/chat-chrome.mjs` | — |
-| 4 | `thincoder-desktop/renderer/views/chat.mjs` | — |
-| 5 | `thincoder-desktop/renderer/page-read.mjs` | — |
-| 6 | `thincoder-desktop/renderer/chat.css` | — |
-| 7 | `thincoder-desktop/renderer/events.mjs` | — |
-| 8 | 单元测试档 | digest 对位族（随批留存 · 不进集成测试树） |
-
-**复制面对齐 VSC 行**（机制 ∕ 判据单源 = 本档 §2「批注（复制面对齐 VSC）」；决策 = `docs/desktop/design/PROJECT.md` §2 **KD-43** + 本档 §1 KD-22）：
-
-| 文件 | 预期（构成） | 批 |
-|---|---|---|
-| `thincoder-desktop/src/main/context-menu.mjs`（已落） | —（`contextMenuLabels` + `contextMenuTemplate` 两纯函数；零 `electron`） | 已落 |
-| `thincoder-desktop/src/main/window.mjs` | —（`context-menu` 落子（`Menu.buildFromTemplate(…).popup({ window })`）+ `loadConfig` 现读 + 档头注） | 已落 |
-| 复制面档 | **删档** | 已落 |
-| `thincoder-desktop/renderer/views/chat-text.mjs` | — | 已落 |
-| `thincoder-desktop/renderer/views/chat.mjs` | —（**≤500 ⇒ 免拆**） | 已落 |
-| `thincoder-desktop/renderer/mount-composer.mjs` | — | 已落 |
-| `thincoder-desktop/renderer/composer-sync.mjs` | — | 已落 |
-| `thincoder-desktop/renderer/app.mjs` | — | 已落 |
-| `thincoder-desktop/renderer/chat-composer.css` | — | 已落 |
-| `thincoder-desktop/renderer/i18n.mjs` | —（**≤500 ⇒ 免拆**——拆档第二 ∕ 三档已落（`thincoder-desktop/renderer/i18n-views.mjs` ∕ `thincoder-desktop/renderer/i18n-composer.mjs`）） | 已落 |
-| 测试覆盖 | **零改**——全清令：**集成测试不写 ∕ 不改 ∕ 不跑；批档本地用例随批留存（不入集成测试树）**；验收 = 设计判据句 + 真机走查由父侧闭合 | 已落 |
-| `docs/desktop/design/{UI,PROJECT,SHELL,RENDERER,IPC}.md` | 设计落定 | 已落 |
-
 ## 4. 验收回指
 
 | 需求 | 机检判据（点回需求卷） | 验证 |

@@ -72,33 +72,33 @@
 
 **先决约束（硬性）**：**动态载入面（`await import()` 动态载核登记册）必须留在 `thincoder-vscode/src/agent/setup.mjs`**——迁出即破该结构约束。
 
-**档一：`thincoder-vscode/src/agent/setup.mjs`（654 → 目标 ≤500）**
+**档一：`thincoder-vscode/src/agent/setup.mjs`（目标 ≤500 软线）**
 
-| 段（`wc -l` 复核；执行时逐段复验） | 行数 | 处置 | 去向 |
+| 段（执行时逐段复验） | 行数面 | 处置 | 去向 |
 |---|---|---|---|
-| W9 记账缝注入（`configureBatchSegment` 头注 + 调用处） | 10 | **迁出** | `thincoder-vscode/src/agent/setup-tooltable.mjs` |
-| W14 三缝接线：诊断段 `vscodeDiagnosticsSection`（`JSDoc` + 函数体）+ 注册行 · `wireAgentToolSeams`（同档） | ≈62 | **迁出** | 同左 |
-| 池装配装饰 `withPool` | ≈21 | **迁出** | 同左 |
-| 子代理面 `vscSubagentFace` · 终态回显族（`VSC_TERMINAL_ECHO` · `vscStatusTerminalEcho`） | ≈65 | **迁出** | 同左 |
-| `modeRoleField` | ≈28 | **迁出** | 同左 |
+| W9 记账缝注入（`configureBatchSegment` 头注 + 调用处） | — | **迁出** | `thincoder-vscode/src/agent/setup-tooltable.mjs` |
+| W14 三缝接线：诊断段 `vscodeDiagnosticsSection`（`JSDoc` + 函数体）+ 注册行 · `wireAgentToolSeams`（同档） | — | **迁出** | 同左 |
+| 池装配装饰 `withPool` | — | **迁出** | 同左 |
+| 子代理面 `vscSubagentFace` · 终态回显族（`VSC_TERMINAL_ECHO` · `vscStatusTerminalEcho`） | — | **迁出** | 同左 |
+| `modeRoleField` | — | **迁出** | 同左 |
 | **迁出合计** | **≈186**（+ 段间空行/注记 ⇒ 净减 ≈200） | — | `thincoder-vscode/src/agent/setup.mjs` 654 → **≈455**（净减 ≥154 硬需：满足，余量 ≈46） |
-| settings 工具实例 `coreSettingsTool()`（四行） | 4 | 保留 | 装配调用点在 `hydrateRun` 体内 |
-| `buildTopLevelAgent` | ≈32 | 保留 | 对外缝 |
-| `hydrateRun`（工具装配 · config 读段 · 槽 reconcile · `toolSchemas` · 绑定/注入/system prompt 组装） | ≈354 | 保留 | 本轮 opts / `engineering` 体内求值（穿缝需 8+ 每轮实参）· **动态载核面约束**（本节先决） |
-| `setupAgentRun` | 5 | 保留 | 对外缝 |
+| settings 工具实例 `coreSettingsTool()`（四行） | — | 保留 | 装配调用点在 `hydrateRun` 体内 |
+| `buildTopLevelAgent` | — | 保留 | 对外缝 |
+| `hydrateRun`（工具装配 · config 读段 · 槽 reconcile · `toolSchemas` · 绑定/注入/system prompt 组装） | — | 保留 | 本轮 opts / `engineering` 体内求值（穿缝需 8+ 每轮实参）· **动态载核面约束**（本节先决） |
+| `setupAgentRun` | — | 保留 | 对外缝 |
 | 提醒面（`push*Reminder` / `pushInjections` / `appendImagePointer`） | — | **不动** | 已迁 `thincoder-vscode/src/agent/setup-reminders.mjs`（`thincoder-vscode/src/agent/setup.mjs` 仅转口 + 调用点） |
 
-预计：`thincoder-vscode/src/agent/setup.mjs` 654 → **≈455**；`setup-tooltable.mjs` ≈220（均 ≤500）。迁出实现全部走**既有静态边**（诊断缝 / 池装饰 / 子代理面 = 既有 import 面）⇒ W8 引擎楼层守卫契约②（静态闭包）零影响。
+预计：迁出后 `thincoder-vscode/src/agent/setup.mjs` ∥ `setup-tooltable.mjs` 均 ≤500 软线，净减硬需（≥154）满足。迁出实现全部走**既有静态边**（诊断缝 / 池装饰 / 子代理面 = 既有 import 面）⇒ W8 引擎楼层守卫契约②（静态闭包）零影响。
 
-**档二：`thincoder-vscode/src/extension/panel-messages.mjs`（529 → 目标 ≤500）**
+**档二：`thincoder-vscode/src/extension/panel-messages.mjs`（目标 ≤500 软线）**
 
 | 段 | 处置 | 去向 |
 |---|---|---|
-| 会话族 handler（`newSession` / `switchSession` / `deleteSession` / `renameSession` / `setProject` · 历史分页 `loadOlder` / `historyPage`） | **迁出** | 新档 `thincoder-vscode/src/extension/panel-messages-session.mjs`（**114** 行） |
+| 会话族 handler（`newSession` / `switchSession` / `deleteSession` / `renameSession` / `setProject` · 历史分页 `loadOlder` / `historyPage`） | **迁出** | 新档 `thincoder-vscode/src/extension/panel-messages-session.mjs`（新建） |
 | 消息分发骨架 + 模型/推理选择面 | 保留 | `panel-messages.mjs` |
 | 子代理取消面（该段——与 advisor 池耦合，`cancelAsyncAdvisor` 动态 import） | 保留 | `panel-messages.mjs` |
 
-预计：`panel-messages.mjs` 529 → ≈420；`panel-messages-session.mjs` ≈110（均 ≤500）。
+预计：两档迁出后均 ≤500 软线。
 
 **缝保持（两档同法）**：迁出段的**既有导出名一个不改**——`thincoder-vscode/src/agent/setup.mjs` 以 `export { … } from "thincoder-vscode/src/agent/setup-tooltable.mjs"` re-export；
 `panel-messages.mjs` 内分发表仍指向同名 handler。⇒ 既有消费档（`thincoder-vscode/src/agent.mjs` 等）**零改**。
@@ -137,7 +137,7 @@
 | A5 | 复跑零未处置 | `cd thincoder-vscode && node --test test/protocol-coverage.test.mjs` ⇒ pass | `WEBVIEW.md` §3 N-W7 |
 | A6 | 删项后零悬空引用 | `grep -rn -e "_advisorBlock" -e "_advisorScrollDirty" -e "advisorChunk" thincoder-vscode/src thincoder-vscode/webview thincoder-vscode/test thincoder-vscode/AGENTS.md`（大小写敏感——`appendAdvisorChunk`/`buildAdvisorBlock` 保留不误伤）⇒ 0 命中 | `WEBVIEW.md` §3 N-W7 |
 | A7 | 拆后各档 ≤500 | `wc -l` 逐档读数（`thincoder-vscode/src/agent/setup.mjs` / `panel-messages.mjs` / 两新档） | `docs/vsc/requirements/PROJECT.md` §6 N-P3 |
-| A8 | 缝保持（既有用例零回归） | `npm test` 全绿；`agent-tools-registry.test.mjs` 绿 | `docs/vsc/requirements/PROJECT.md` §6 N-P3 |
+| A8 | 缝保持（既有用例零回归） | `npm test` 全绿（单元 + 集成清单） | `docs/vsc/requirements/PROJECT.md` §6 N-P3 |
 | A9 | 门禁全绿 + 文档锚零悬空 | `npm run lint` → `npm test`；`npm run doc:check` | 全部 |
 
 > **A6 射程口径**：grep 面 = 产品树活代码面（`src` / `webview` / `test`）+ 端壳登记档 `AGENTS.md`；`thincoder-vscode/docs/**`（冻结参照历史）与批次档**命中不判悬空**（B 式迁移前旧档 + 批材料，原地一字不改）。
@@ -190,42 +190,42 @@
 
 > 判据源 = `docs/vsc/requirements/PROJECT.md` §6 **N-P3**（产品树限源 / 测试档，任一档 ≤800 行；越档 ⇒ 结构拆分并保持对外缝）。软线 = **500 行**（>500 主动审视，无拆分义务）。
 
-### 12.1 越线登记（现行读数 · 口径 `wc -l`）
+### 12.1 越线登记（越线状态 · 量法 `wc -l`）
 
 **触发判据（单源）**：软线 **500 行**（>500 主动审视）/ 硬限 **800 行**（>800 必须拆）（判据源 = `docs/vsc/requirements/PROJECT.md` §6 **N-P3**——产品树限源 / 测试档，任一档 ≤800 行；越档 ⇒ 结构拆分并保持对外缝）。
 **逐档触线（单源）**：`thincoder-vscode/src/agent.mjs` · `thincoder-vscode/src/agent/setup.mjs`——**行数超线（拆分）复核触发**；未列档触发 = 触碰时复核（拆分候选按 §12.2 各档）。
 
-| 档 | 现行读数 | 越线状态 |
+| 档 | 行数面 | 越线状态 |
 |---|---|---|
-| `thincoder-vscode/src/extension/chat-panel.mjs` | **426** | 在 500 软线内——触发未到 |
-| `thincoder-vscode/src/extension/panel-messages.mjs` | **357** | 同上（越线登记在册） |
-| `thincoder-vscode/src/extension/panel-session.mjs` | **322** | 同上（越线登记在册） |
-| `thincoder-vscode/src/extension/panel-turn-loop.mjs` | **311** | 同上（首登）——**触发式（未预拆）**：候选线 = 循环外适配 ∕ 绑定族（`newTurnController` ∕ `bindPanelAgent` ∕ `bindCarrierFace`〔+ 载体表〕∕ `attachToolDrivenLegs`——≈109 行）出档〔新档名实施批定〕；消解窗口 = 该档下次结构性触碰的批（注释 ∕ 坐标 ∕ 词值 ∕ 行级小修不计） |
-| `thincoder-vscode/src/extension/settings.mjs` | **409** | 在 500 软线内——触发未到 |
-| `thincoder-vscode/webview/ui.js` | **494** | 同上——触发 = 下次实质触碰 ∨ 余量 ≤5（未到） |
-| `thincoder-vscode/src/extension/panel-turn-stages.mjs` | **250** | ≤500 软线 ⇒ 不入本登记 |
-| `thincoder-vscode/src/extension/panel-chat.mjs` | **260** | 同上 |
-| `thincoder-vscode/src/agent/setup.mjs` | **298** | 触发线 **>497**——未触 |
-| `thincoder-vscode/src/extension/suspension.mjs` | **290** | **越线登记关闭** |
-| `thincoder-vscode/src/agent.mjs` | **9** | **越线登记关闭**（主循环归核） |
-| `thincoder-vscode/webview/chat.js` | **147** | **越线登记关闭** |
-| 其余现行读数（均 ≤500 软线 ⇒ 无拆分义务） | — | `thincoder-vscode/src/agent/run-helpers.mjs` **88** · `thincoder-vscode/src/agent/setup-reminders.mjs` **41** · `thincoder-vscode/src/agent/tool-table.mjs` **181** · `thincoder-vscode/src/agent/turn-domains.mjs` **37** · `thincoder-vscode/src/agent/agent-state.mjs` **158** · `thincoder-vscode/src/extension/skills.mjs` **5** · `thincoder-vscode/src/extension/peer-claims.mjs` **34** · `thincoder-vscode/src/extension/peer-domains.mjs` **32** · `thincoder-vscode/src/extension/peer-instances.mjs` **20** · `src/extension/image-handler.mjs` **51** · `src/extension/panel-settings-push.mjs` **119** · `src/extension/provider-probe-window.mjs` **122** · `src/extension/panel-messages-settings.mjs` **205** · `src/extension/panel-messages-turn.mjs` **215** · `src/extension/panel-subagent-relay.mjs` **270** · `src/extension/panel-session-write.mjs` **144** · `webview/chat-messages.js` **238**（≤500 软线 ⇒ 不入本登记——值随 `WEBVIEW.md` §3 文件表同拍） · `webview/settings-tools.js` **212**（拆档已落 = §13.3） |
-| CLI 面（登记载体 = 本档 §12.1——KD-26） | — | `thincoder-cli/src/tui/suspension-drive.mjs` **210**（核驱动装配 + 壳） |
-| CSS 类记录值（零拆分计划——引既有裁定「CSS 不入门」：N-P3 模块缝语义 + 评审先例「按既有裁定不升级、不重开」） | — | `thincoder-vscode/webview/chat.css` **514** · `webview/controls.css` **658** |
+| `thincoder-vscode/src/extension/chat-panel.mjs` | — | 在 500 软线内——触发未到 |
+| `thincoder-vscode/src/extension/panel-messages.mjs` | — | 同上（越线登记在册） |
+| `thincoder-vscode/src/extension/panel-session.mjs` | — | 同上（越线登记在册） |
+| `thincoder-vscode/src/extension/panel-turn-loop.mjs` | — | 同上（首登）——**触发式（未预拆）**：候选线 = 循环外适配 ∕ 绑定族（`newTurnController` ∕ `bindPanelAgent` ∕ `bindCarrierFace`〔+ 载体表〕∕ `attachToolDrivenLegs`）出档〔新档名实施批定〕；消解窗口 = 该档下次结构性触碰的批（注释 ∕ 坐标 ∕ 词值 ∕ 行级小修不计） |
+| `thincoder-vscode/src/extension/settings.mjs` | — | 在 500 软线内——触发未到 |
+| `thincoder-vscode/webview/ui.js` | — | 同上——触发 = 下次实质触碰 ∨ 余量 ≤5（未到） |
+| `thincoder-vscode/src/extension/panel-turn-stages.mjs` | — | ≤500 软线 ⇒ 不入本登记 |
+| `thincoder-vscode/src/extension/panel-chat.mjs` | — | 同上 |
+| `thincoder-vscode/src/agent/setup.mjs` | — | 触发线 **>497**——未触 |
+| `thincoder-vscode/src/extension/suspension.mjs` | — | **越线登记关闭** |
+| `thincoder-vscode/src/agent.mjs` | — | **越线登记关闭**（主循环归核） |
+| `thincoder-vscode/webview/chat.js` | — | **越线登记关闭** |
+| 其余在册档（均 ≤500 软线 ⇒ 无拆分义务） | — | `thincoder-vscode/src/agent/run-helpers.mjs` · `thincoder-vscode/src/agent/setup-reminders.mjs` · `thincoder-vscode/src/agent/tool-table.mjs` · `thincoder-vscode/src/agent/turn-domains.mjs` · `thincoder-vscode/src/agent/agent-state.mjs` · `thincoder-vscode/src/extension/skills.mjs` · `thincoder-vscode/src/extension/peer-claims.mjs` · `thincoder-vscode/src/extension/peer-domains.mjs` · `thincoder-vscode/src/extension/peer-instances.mjs` · `src/extension/image-handler.mjs` · `src/extension/panel-settings-push.mjs` · `src/extension/provider-probe-window.mjs` · `src/extension/panel-messages-settings.mjs` · `src/extension/panel-messages-turn.mjs` · `src/extension/panel-subagent-relay.mjs` · `src/extension/panel-session-write.mjs` · `webview/chat-messages.js`（≤500 软线 ⇒ 不入本登记） · `webview/settings-tools.js`（拆档已落 = §13.3） |
+| CLI 面（登记载体 = 本档 §12.1——KD-26） | — | `thincoder-cli/src/tui/suspension-drive.mjs`（核驱动装配 + 壳） |
+| CSS 类记录值（零拆分计划——引既有裁定「CSS 不入门」：N-P3 模块缝语义 + 评审先例「按既有裁定不升级、不重开」） | — | `thincoder-vscode/webview/chat.css` · `webview/controls.css` |
 
 ### 12.2 逐档方案（职责分面 · 六新档）
 
-#### 12.2.1 `panel-chat.mjs`（目标 ≈240）—— 回合驱动面
+#### 12.2.1 `panel-chat.mjs` —— 回合驱动面
 
-| 迁出面 | 行段（实测） | 行数 | 去向 |
+| 迁出面 | 行段（实测） | 行数面 | 去向 |
 |---|---|---|---|
-| 回合执行循环 + controller 工厂 | `newTurnController` 43-65 · `runTurnLoop` 385-498 | 137 | `panel-turn-loop.mjs`（**186**） |
-| 回合阶段：provider / 模型解析 | `runPanelChatImpl` 内 178-235 | 58 | `panel-turn-stages.mjs`（**240**） |
-| 回合阶段：收尾落盘与状态归位 | finally 体 311-350 | 40 | 同上 |
-| 回合阶段：挂起会话接管 | 352-382 | 31 | 同上 |
+| 回合执行循环 + controller 工厂 | `newTurnController` 43-65 · `runTurnLoop` 385-498 | — | `panel-turn-loop.mjs` |
+| 回合阶段：provider / 模型解析 | `runPanelChatImpl` 内 178-235 | — | `panel-turn-stages.mjs` |
+| 回合阶段：收尾落盘与状态归位 | finally 体 311-350 | — | 同上 |
+| 回合阶段：挂起会话接管 | 352-382 | — | 同上 |
 
-新档职责（一句话）：`panel-turn-loop.mjs` ≈157 行 = **回合执行循环面**（runAgent 续跑 / ContinueError / Ctrl+I 中断续跑 + 回合 controller 工厂）；
-`panel-turn-stages.mjs` ≈154 行 = **回合阶段函数面**（`panel-callbacks.mjs` 头注既立的「骨干—细节两层」细节层：provider/模型解析 · 收尾落盘 · 挂起接管）。
+新档职责（一句话）：`panel-turn-loop.mjs` = **回合执行循环面**（runAgent 续跑 / ContinueError / Ctrl+I 中断续跑 + 回合 controller 工厂）；
+`panel-turn-stages.mjs` = **回合阶段函数面**（`panel-callbacks.mjs` 头注既立的「骨干—细节两层」细节层：provider/模型解析 · 收尾落盘 · 挂起接管）。
 
 **保留（不得迁出 · 硬约束）**：`runPanelChatImpl` 入口守卫段 112-177 —— 单元测试档用例 B（单元测试树重建时回迁端侧单元测试档）直读本档源文本，断言
 「`ensurePanelAgent(panel, turnSlot)` 之后在本档内出现 `ensureMemoryHandle()`」（句柄创建点同址）；该段迁出 ⇒ 既有结构机检红。
@@ -255,15 +255,15 @@
 
 **两段共性纪律**：逐字搬迁（注释一并随迁）· 闭包变量**参数化入 deps**（与 `runTurnLoop` ∥ finally 段同形）· 不新增分支 / 不改判据。
 
-#### 12.2.2 `panel-messages.mjs`（目标 ≈245）—— 消息分发面
+#### 12.2.2 `panel-messages.mjs` —— 消息分发面
 
-| 迁出面 | case 行段（实测） | 行数 | 去向 |
+| 迁出面 | case 行段（实测） | 行数面 | 去向 |
 |---|---|---|---|
-| 设置 / provider / guard / MCP 族（28 case：saveProviderKey … testProxy） | 327-416 · 451-485 | 125 | `panel-messages-settings.mjs`（**205**） |
-| 回合交互族（10 case：abort / cancelSubagent / interrupt / openFile / openDiff / questionResponse / setAutoApprove / atComplete / permissionResponse / batchPermissionResponse） | 167-272 · 274-326 | 159 | `panel-messages-turn.mjs`（**215**） |
+| 设置 / provider / guard / MCP 族（28 case：saveProviderKey … testProxy） | 327-416 · 451-485 | — | `panel-messages-settings.mjs` |
+| 回合交互族（10 case：abort / cancelSubagent / interrupt / openFile / openDiff / questionResponse / setAutoApprove / atComplete / permissionResponse / batchPermissionResponse） | 167-272 · 274-326 | — | `panel-messages-turn.mjs` |
 
-新档职责：`panel-messages-settings.mjs` ≈160 行 = **设置类消息 handler 面**（渠道 / 密钥 / MCP / Shell / 代理 / guard / 计划模式）；
-`panel-messages-turn.mjs` ≈189 行 = **回合交互 handler 面**（中止 / 子代理取消 / 问答 / 权限 / approve-all / 编辑器动作）。
+新档职责：`panel-messages-settings.mjs` = **设置类消息 handler 面**（渠道 / 密钥 / MCP / Shell / 代理 / guard / 计划模式）；
+`panel-messages-turn.mjs` = **回合交互 handler 面**（中止 / 子代理取消 / 问答 / 权限 / approve-all / 编辑器动作）。
 
 手法 = `panel-messages-session.mjs` 既定先例（case 体逐字搬出为 `handleXxx(panel, msg)` 导出；case 包裹大括号去除 · 中途 `break` → `return` · 尾 `break` 去除）。
 **分发表骨架 + 全部 case 标签留主档**（转发行 `case "x": await handleX(panel, msg); break`）——保证 case 标签集合零变化（对表机检的提取集不动）。
@@ -272,14 +272,14 @@
 
 留主档：`_cwd` / `setProjectFolder` / `clearProjectOverride` / `routeUserTurn` / `handlePanelMessage` 骨架 + `webviewReady` + `userMessage` / `selectModel` / `selectReasoning` / `retry` / 会话族转发。
 
-#### 12.2.3 `panel-callbacks.mjs`（目标 ≈255）—— 回调装配面
+#### 12.2.3 `panel-callbacks.mjs` —— 回调装配面
 
-| 迁出面 | 行段（实测） | 行数 | 去向 |
+| 迁出面 | 行段（实测） | 行数面 | 去向 |
 |---|---|---|---|
-| relay 中继面（事件 token + 内容 chunk + `emitToolPanel`） | 23-124 | 102 | `panel-subagent-relay.mjs`（**270**） |
-| 任务可见性投递队列（`WV_OUTBOX_MAX` / `postSubagentEvent` / `flushSubagentOutbox`） | 126-159 | 34 | 同上 |
+| relay 中继面（事件 token + 内容 chunk + `emitToolPanel`） | 23-124 | — | `panel-subagent-relay.mjs` |
+| 任务可见性投递队列（`WV_OUTBOX_MAX` / `postSubagentEvent` / `flushSubagentOutbox`） | 126-159 | — | 同上 |
 
-新档职责：`panel-subagent-relay.mjs` ≈158 行 = **子代理 → webview 投递面**（核 relay 前缀 token/chunk 转换 + 暗窗口投递队列）。
+新档职责：`panel-subagent-relay.mjs` = **子代理 → webview 投递面**（核 relay 前缀 token/chunk 转换 + 暗窗口投递队列）。
 留主档：`makeAskInPanel` / `statusTextPayload` / `postDigestCap` / `buildPanelCallbacks`（回调工厂——本档核心职责）。
 
 ⚠ **RELAYS 登记与 1-hop 解析面（硬）**：持 RELAYS 行的档须自带字面量构造点——`relayLiterals` **只在同档**扫 `fn(` 调用点取载荷 `type:` 字面量。
@@ -295,14 +295,14 @@
 
 **失败形态（两个方向都不静默）**：新档无字面量构造点 ⇒ `relayLiterals` 空 ⇒ 既有计数断言红；只漏 `subagentApproval` 一半 ⇒ 该判别式退出 host 提取集 ⇒ T-6 `wrongDisp` 红（表记 `活` ∕ 实得 `删`）。
 
-#### 12.2.4 `panel-session.mjs`（目标 ≈259）—— 会话装配面
+#### 12.2.4 `panel-session.mjs` —— 会话装配面
 
-| 迁出面 | 行段（实测） | 行数 | 去向 |
+| 迁出面 | 行段（实测） | 行数面 | 去向 |
 |---|---|---|---|
-| 槽写装配面 `saveLines`（字段往返契约） | 64-138 | 75 | `panel-session-write.mjs`（**144**） |
-| 标题写面 `generateTitle` | 256-278 | 23 | 同上 |
+| 槽写装配面 `saveLines`（字段往返契约） | 64-138 | — | `panel-session-write.mjs` |
+| 标题写面 `generateTitle` | 256-278 | — | 同上 |
 
-新档职责：`panel-session-write.mjs` ≈122 行 = **会话写面**（双线落盘装配 + 标题生成）。
+新档职责：`panel-session-write.mjs` = **会话写面**（双线落盘装配 + 标题生成）。
 留主档：`ensureSlot` / `activeData` / `activeHistory` / `activeLines` / `loadModelPrefs` / `loadSession` / `loadOlder` / `sendHistoryPage` / `newSession` / `deleteSession` / `pushSessions` / `openSessionContent` / `status`（读面 + 会话操作面）。
 
 ### 12.3 对外缝清单（既有导出名 · 零改判据）
@@ -332,7 +332,7 @@
 ### 12.4 零语义判据（命令级）
 
 1. `cd thincoder-vscode && npm test`（= `node test/run.mjs`，单元 + 集成清单）⇒ **exit 0**，用例计数 ≥ 基线（本晚 661+；实现轮先记录基线读数，再逐步对齐）。
-2. `cd thincoder-vscode && npm run lint`（`scripts/check-syntax.mjs`）⇒ exit 0。
+2. `cd thincoder-vscode && npm run lint`（`thincoder-vscode/scripts/check-syntax.mjs`）⇒ exit 0。
 3. **缝核**（逐条 grep，零改判据）：
    `grep -rn "panel-\(messages\|chat\|callbacks\|session\)\.mjs" thincoder-vscode/src thincoder-vscode/test --include=*.mjs`
    ⇒ 既有 import 行**逐字不变**（只允许新增行——新档间的 import；既有行的路径 + 符号名集合零改）。
@@ -380,7 +380,7 @@
 | KD-13 | `newTurnController` 随回合循环迁出（re-export 保缝） | 留主档 ⇒ 新档反向 import 主档（平白多一环）；且它与 `runTurnLoop` 的 controller 重建语义同族 |
 | KD-14 | `panel-turn-stages.mjs` 合并「准备 + 收尾」两面（不拆两档） | 拆两档 ⇒ 各 ≈60-80 行碎片档；两面同属「impl 阶段细节层」（`panel-callbacks.mjs` 头注既立手法） |
 | KD-15 | 收尾 `finally` 体**迁出**（非保留） | 保留 ⇒ 主档 ≈277；迁出后主档 ≈240 |
-| KD-16 | **不动**范围外三越档（`chat-panel.mjs` / `thincoder-vscode/src/extension/suspension.mjs` / `thincoder-vscode/src/extension/settings.mjs`——读数与登记 = §12.1，D2 单源） | 越范围 ⇒ 属"改需求面"；登记 §12.1（触发条件同 N-P3） |
+| KD-16 | **不动**范围外三越档（`chat-panel.mjs` / `thincoder-vscode/src/extension/suspension.mjs` / `thincoder-vscode/src/extension/settings.mjs`——登记 = §12.1，D2 单源） | 越范围 ⇒ 属"改需求面"；登记 §12.1（触发条件同 N-P3） |
 | KD-17 | 投递面两转口（`postSubagentStatus` / `postSubagentApproval`）随 relay 面入新档；原 `onSubagent` / `onSubagentApproval` 改委托 | `relayLiterals` 只扫**同档** ⇒ 字面量构造面必须同在持 RELAYS 行的档（副本 = 重复构造点，违 D2） |
 | KD-18 | 段 B 的 `runPanelChat` 回调**注入**（`deps.runChat`），不登记环 | 注入零语义且免一条环登记（登记环 = 平白多一环） |
 | KD-19 | 文档档（`.md`）行数**不承载**拆分 / 标注义务 | 依据 = 用户裁定 + `docs/core/design/DOC-DISCIPLINE.md` §3.7（文档行数规则废除——给本档补拆分规划即违该裁定） |
@@ -411,8 +411,8 @@
 ### 12.10 边界（不做）
 
 1. 不改**任何行为 / 协议 / 消息类型**——纯结构搬移 + 既有导出 re-export（零语义变更）。
-2. 不动四档之外的越档面（`chat-panel.mjs` · `thincoder-vscode/src/extension/suspension.mjs` · `thincoder-vscode/src/extension/settings.mjs`——读数与登记 = §12.1，D2 单源）。
-3. 不改需求档 `docs/vsc/requirements/PROJECT.md`（§5/§6 读数同步 = 父侧笔——本档给待同步读数）。
+2. 不动四档之外的越档面（`chat-panel.mjs` · `thincoder-vscode/src/extension/suspension.mjs` · `thincoder-vscode/src/extension/settings.mjs`——登记 = §12.1，D2 单源）。
+3. 不改需求档 `docs/vsc/requirements/PROJECT.md`（§5/§6 同步 = 父侧笔）。
 4. 不新增测试文件（新档注册行落 `test/` 既有登记面；`thincoder-vscode/test/files.mjs` 零改）。
 5. 不改 `_archive/**`、不改已收口批档。
 6. 不做"顺手优化"（不合并 / 不改名既有导出、不改注释语义、不清理既有死码）。
@@ -433,7 +433,7 @@
 
 **上抛项（写域外 · 待父侧裁）**
 
-1. `docs/vsc/requirements/PROJECT.md` §5 / §6 读数同步（父侧笔）：§5 越档面指针节 + §6 N-P3 判定句不变；建议 §5 补实测读数行（§12.1 表）。
+1. `docs/vsc/requirements/PROJECT.md` §5 / §6 同步（父侧笔）：§5 越档面指针节 + §6 N-P3 判定句不变。
 2. `thincoder-vscode/AGENTS.md` 模块地图行——六新档名是否同步（该档 = 产品文本面，不在写域）。
 
 **文档档零行数义务**：本档（及 `WEBVIEW-PROTOCOL.md`）**无拆分义务**——`.md` 档不适用程序代码的尺寸档位线；判据单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.7。
@@ -453,11 +453,11 @@
 
 **拆点**：
 
-| 迁出面 | 行段 | 行数 | 去向 |
+| 迁出面 | 行段 | 行数面 | 去向 |
 |---|---|---|---|
-| 设置委派族 | 该段八函数（`_providerStatus` ∥ `_saveProviderKey` ∥ `_deleteProviderKey` ∥ `_saveMcpServer` ∥ `_deleteMcpServer` ∥ `_setAutoApprove` ∥ `_setPlanMode` ∥ `_engineeringOn`） | ≈40 | `src/extension/panel-settings-push.mjs`（**119**） |
-| 设置推送链 | 该段三函数（`_pushStatus` ∥ `_pushSettingsLight` ∥ `_pushSettings`） | ≈34 | 同上 |
-| 会话访问器 | 该段（`_agentSettingsSession`） | ≈6 | 同上 |
+| 设置委派族 | 该段八函数（`_providerStatus` ∥ `_saveProviderKey` ∥ `_deleteProviderKey` ∥ `_saveMcpServer` ∥ `_deleteMcpServer` ∥ `_setAutoApprove` ∥ `_setPlanMode` ∥ `_engineeringOn`） | — | `src/extension/panel-settings-push.mjs` |
+| 设置推送链 | 该段三函数（`_pushStatus` ∥ `_pushSettingsLight` ∥ `_pushSettings`） | — | 同上 |
+| 会话访问器 | 该段（`_agentSettingsSession`） | — | 同上 |
 
 **缝** = 类内薄委托：`ChatPanel` 保留同名方法（一行委托）；外档调用点逐字零改——`_pushSettingsLight` 11 处 · `_pushSettings` 7 处 · `_pushStatus` ≥4 处 · `_agentSettingsSession` 2 处（+ 档内自用 3 处）。`_pushSettings` 内对 `_pushMcpStatus` / `_pushIndexStatus` 经 panel 实例直呼（零注入 / 零环）。
 
@@ -468,14 +468,14 @@
 
 ### 13.3 `thincoder-vscode/src/extension/settings.mjs` / `settings-tools.js` 计划重锚（`settings-tools.js` 拆档已落 ∥ `thincoder-vscode/src/extension/settings.mjs` 零执行）
 
-拆点区间按现读（本节 = 现行单源）：
+拆点区间（本节 = 现行单源）：
 
-| 档 | 现读数 | 拆点（现读区间 → 目标档 · 缝） | 触发（未到） |
+| 档 | 行数面 | 拆点（段 → 目标档 · 缝） | 触发（未到） |
 |---|---|---|---|
-| `thincoder-vscode/src/extension/settings.mjs` | **409** | 环境面七件 = `shellCandidates` · `proxySettings` · `websearchSettings` · `saveWebsearchKeyFromPanel` · `deleteWebsearchKeyFromPanel` · `saveProxySettingsFromPanel` · `testProxyConnection`（≈91 行）→ `settings-env.mjs`（缝 = re-export） | 净增 ≥40 ∨ 下次触碰（代理 / 检索面） |
-| `thincoder-vscode/webview/settings-tools.js` | **212** | MCP 面 = `renderMcpList` ∥ `updateMcpTools` ∥ `updateMcpTestResult` ∥ `parseHeadersLike` ∥ `openMcpForm` ∥ `kvToInput` ∥ `bindToolsControls` MCP 段 ∥ `toolsCardHtml` 表单段（≈170 行）→ `settings-mcp.js`（缝 = `mcpFormHtml()` ∥ `bindMcpControls()`） | **拆档已执行**（判定口径 = KD-20） |
+| `thincoder-vscode/src/extension/settings.mjs` | — | 环境面七件 = `shellCandidates` · `proxySettings` · `websearchSettings` · `saveWebsearchKeyFromPanel` · `deleteWebsearchKeyFromPanel` · `saveProxySettingsFromPanel` · `testProxyConnection` → `settings-env.mjs`（缝 = re-export） | 净增 ≥40 ∨ 下次触碰（代理 / 检索面） |
+| `thincoder-vscode/webview/settings-tools.js` | — | MCP 面 = `renderMcpList` ∥ `updateMcpTools` ∥ `updateMcpTestResult` ∥ `parseHeadersLike` ∥ `openMcpForm` ∥ `kvToInput` ∥ `bindToolsControls` MCP 段 ∥ `toolsCardHtml` 表单段 → `settings-mcp.js`（缝 = `mcpFormHtml()` ∥ `bindMcpControls()`） | **拆档已执行**（判定口径 = KD-20） |
 
-两档：`thincoder-vscode/src/extension/settings.mjs` 触发未到 —— 零执行；`settings-tools.js` —— **拆档已落**（判定口径 = KD-20）：本档 **212** ∥ 新档 `settings-mcp.js` **126**。
+两档：`thincoder-vscode/src/extension/settings.mjs` 触发未到 —— 零执行；`settings-tools.js` —— **拆档已落**（判定口径 = KD-20）：本档与新档 `settings-mcp.js` 分列，体量按 `doc_check` 的 `lines` 量，绝对值不进本档。
 
 ### 13.4 `thincoder-vscode/src/agent.mjs`（目标 ≤460）——响应后处理段外提
 

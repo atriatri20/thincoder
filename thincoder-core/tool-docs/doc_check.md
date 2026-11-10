@@ -15,9 +15,17 @@ Parameters:
 What it checks: three criteria, with built-in thresholds that no project declaration changes:
 - **Anchors** — a documentation pointer must resolve. Four hit classes, all counted into one `锚` total (no separate verdict word): `档缺` (the file is not on disk), `节缺` (the section indicator matches no heading in the target), `引缺` (the line claims its own basis as `依据 <path>「<quotation>」` and the quotation is not a contiguous substring of that file), and `环引` (the repos this project declares cycle back to the group root - a repo-level finding, reported against the declaration file itself, with no line number).
 
-  A pointer is a token whose suffix is on the extension list; a bare name and a path-shaped name sit under **one ruler** - a path separator alone never makes a token a document name.
+  A pointer is a token whose suffix is on the extension list, plus a shape split. A path-shaped token (one carrying a `/`) counts on that suffix alone.
+
+  A bare name counts only when its suffix is a document-name extension (`md`, `markdown`). A bare name whose suffix is only a code extension is prose mention - not resolved, not judged; write it with its directory to have it judged.
 
   The list = the built-in `DEFAULT_DOC_EXTS` united with `index.docCheckExts` (add-only, never a replacement; a single-character suffix or an archive inner layer never takes effect). A project writing that key gets one reading line in `report` mode.
+
+  Two optional engine inputs narrow what counts as this write's own hits, and this tool passes neither.
+
+  `texts` (a document's full new text) replaces the file read; `zones` (per-document line ranges) makes only hits inside those ranges block, listing the rest as a stock reading.
+
+  With both absent, every listed document is judged whole - which is what `doc_check` always does.
 
   A pointer resolves through these legs, in this order:
 

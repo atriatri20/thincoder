@@ -144,16 +144,16 @@
 
 - 系统字体 ∥ 表格 + 表单 ∥ 桌面优先（宽表横滚）；全自托管（无外部资源引用）；侧栏分组导航（§2）∥ 窄屏降级 = §2 末条。
 
-## 5. 本域文件与行数预算（本域族行）
+## 5. 文件账（本域族行）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/src/webui/static.mjs`（已落盘） | **114** | `public/` 直发 ∥ mime ∥ 防穿越 ∥ no-cache ∥ **`/rc/*` → 核包目录（第二根——`@thincoder/render-core`）** |
-| `thincoder-server/public/index.html`（已落盘） | **20** | 前端壳（挂载点 + 模块入口） |
-| `thincoder-server/public/app.mjs`（已落盘） | **209** | 入口：路由分派 ∥ fetch 封装 ∥ 会话态 ∥ 启动装配 |
-| `thincoder-server/public/dom.mjs`（已落盘） | **118**（`h` ∥ `table` ∥ `fmtTs`/`fmtValue`/`fmtModelQuotas` ∥ `showSecret`/`copyText` ∥ `usageTable` ∥ `dataShell` ∥ `flash`（携 `flashEl`/计时器）） | 渲染助手 ∥ 格式化 ∥ 提示条 |
-| `thincoder-server/public/health.mjs`（已落盘） | **62**（`HEALTH_POLL_MS` ∥ 三态文案键 ∥ `healthSnapshot` ∥ `onHealth` ∥ 灯直更 ∥ `pollHealth` ∥ 启停 ∥ 订阅清零口） | 健康轮询（`docs/server/design/webui/READINGS.md` §2.1⑤ 三落点共源） |
-| `thincoder-server/public/nav.mjs`（已落盘） | **107** | IA 单源（§2 ∥ §2.1） |
+| `thincoder-server/src/webui/static.mjs`（已落盘） | — | `public/` 直发 ∥ mime ∥ 防穿越 ∥ no-cache ∥ **`/rc/*` → 核包目录（第二根——`@thincoder/render-core`）** |
+| `thincoder-server/public/index.html`（已落盘） | — | 前端壳（挂载点 + 模块入口） |
+| `thincoder-server/public/app.mjs`（已落盘） | — | 入口：路由分派 ∥ fetch 封装 ∥ 会话态 ∥ 启动装配 |
+| `thincoder-server/public/dom.mjs`（已落盘） | —（`h` ∥ `table` ∥ `fmtTs`/`fmtValue`/`fmtModelQuotas` ∥ `showSecret`/`copyText` ∥ `usageTable` ∥ `dataShell` ∥ `flash`（携 `flashEl`/计时器）） | 渲染助手 ∥ 格式化 ∥ 提示条 |
+| `thincoder-server/public/health.mjs`（已落盘） | —（`HEALTH_POLL_MS` ∥ 三态文案键 ∥ `healthSnapshot` ∥ `onHealth` ∥ 灯直更 ∥ `pollHealth` ∥ 启停 ∥ 订阅清零口） | 健康轮询（`docs/server/design/webui/READINGS.md` §2.1⑤ 三落点共源） |
+| `thincoder-server/public/nav.mjs`（已落盘） | — | IA 单源（§2 ∥ §2.1） |
 | `thincoder-server/public/views-auth.mjs` | ⇒ `docs/server/design/webui/ME.md` §3 | —— |
 | `thincoder-server/public/views-me.mjs` | ⇒ `docs/server/design/webui/ME.md` §3（账户页「Git 凭据」卡） | —— |
 | `thincoder-server/public/views-admin.mjs` | ⇒ `docs/server/design/webui/ADMIN.md` §3 | —— |

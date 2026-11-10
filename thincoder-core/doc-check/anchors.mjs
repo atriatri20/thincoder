@@ -18,9 +18,11 @@
  *   命中行同时点名原花括号 token 与缺的那个展开名（`expanded`）——只报展开名，读者拿到的是一个他档里从没写过的名字；
  *   只报原 token，他看不出该改哪一处。三条不展开的形（取值枚举 ∥ 模板占位 ∥ 嵌套）见 `expandBraceToken` 的头注。
  *   提示词面另剥 CANON 操作数（面判据 = `./paragraph.mjs` 的 `isPromptFace`——按**整 token 边界**剥除后再抽，见 `CANON_OPERANDS`）。
- * 档 token 的后缀族 = **生效扩展名清单**（缺省 `DEFAULT_DOC_EXTS` ∪ 该档所属项目的 `index.docCheckExts`；判定 = `isDocToken`，
- *   与 `./line-refs.mjs` 的行号面同一组）：代码路径同样入判——只认 `.md` 时悬空的代码路径一条不报，读者按指针找不到实现
- *   （§3.20「扩展名清单」条；机制 = `docs/core/design/DOC-CHECK.md` §2.6）。名字字符类走 Unicode 字母与数字（中文档名同样入判）。
+ * 档 token 的两条腿 = **生效扩展名清单**（缺省 `DEFAULT_DOC_EXTS` ∪ 该档所属项目的 `index.docCheckExts`）**∧ 形分档**
+ *   （判定 = `isDocToken`，与 `./line-refs.mjs` 的行号面同一组）：带目录段的 token 一族同判（代码路径同样入判——只认 `.md`
+ *   时悬空的代码路径一条不报，读者按指针找不到实现）；**裸名须后缀落在文档名族 `BARE_NAME_EXTS` 内**，代码族裸名按散文
+ *   提及处置（不解析、不判）。判据句单源 = `docs/core/design/DOC-CHECK.md` §2.10.3，清单那条腿 = §2.6。
+ *   名字字符类走 Unicode 字母与数字（中文档名同样入判）。
  * 读面（读不到 ≠ 干净）：判据读取面遇到「档在盘但读不到」（权限 / 文件锁 / I/O 错）⇒ 记入返回值的 `unreadable` 清单，
  *   **不静默当零命中**；引擎并集上报、`gate` 面据此判 `ERROR`（口径 = 同档 §3.20「读面」块）。
  * 解析序（算法单源 = `../path-resolve.mjs` 的统一解析层，本档只声明本面参数）：**前两级基根**＝
@@ -136,14 +138,27 @@ export function isExtension(ext, exts = DEFAULT_DOC_EXTS) {
   return (exts ?? DEFAULT_DOC_EXTS).some((x) => String(x ?? "").trim().replace(/^\./, "").toLowerCase() === e)
 }
 
-/** 候选谓词（**清单的判定落点** · §2.6「清单落在哪一层」）：只看 token 末段最后一个点之后那一段——
- *  有没有目录段在这里没有分支（裸名与路径形**同一把尺**）。清单由引擎按该档所属项目根装配好再传进来，
- *  本谓词只按字面查已过滤的表，不另设第二支、不逐条列被挡下的 token（数量大，列出来正是真命中被淹没的成因）。 */
+/** 文档名族（**裸名可判的扩展名族** · 判据句单源 = `docs/core/design/DOC-CHECK.md` §2.10.3）：
+ *  裸名（不带目录段）的 token 后缀落在这张表里才是候选；后缀只在代码族里 ⇒ 不是候选，按散文提及处置（不解析、不判）。
+ *  **与生效清单不是一件事**：清单 `index.docCheckExts` 是后缀清单、不是族划分面——它追加进来的后缀在裸名位不成为候选；
+ *  要按文档名族判，改这张表（走评审），不新增第二个可配面（`docs/core/design/DOC-DISCIPLINE.md` §3.20 F3「判据不分适用面」）。
+ *  **带目录段的 token 不吃这张表**：路径本身给出了定位，代码族与文档名族在这一形上没有差别。 */
+export const BARE_NAME_EXTS = Object.freeze(["md", "markdown"])
+
+/** 候选谓词（**两条腿的判定落点** · 清单腿 = §2.6「清单落在哪一层」，形分档腿 = §2.10.3）：
+ *  ① 后缀落在生效清单内（只看 token 末段最后一个点之后那一段，这一步不分有没有目录段）；
+ *  ② 形分档：带目录段 ⇒ 候选，一族同判；裸名 ⇒ 后缀须落在文档名族 `BARE_NAME_EXTS` 内。
+ *  **两条腿同坐一处**：锚 ∥ 花括号组 ∥ 依据行 ∥ 行号面四条分支都只调本谓词，不存在绕过形分档的第二条判路。
+ *  清单由引擎按该档所属项目根装配好再传进来，本谓词只按字面查已过滤的表、不逐条列被挡下的 token
+ *  （数量大，列出来正是真命中被淹没的成因）。 */
 export function isDocToken(token, exts = DEFAULT_DOC_EXTS) {
-  const base = String(token ?? "").split("/").pop()
+  const raw = String(token ?? "")
+  const base = raw.split("/").pop()
   const dot = base.lastIndexOf(".")
   if (dot <= 0 || dot === base.length - 1) return false
-  return isExtension(base.slice(dot + 1), exts)
+  if (!isExtension(base.slice(dot + 1), exts)) return false
+  if (raw.includes("/")) return true
+  return isExtension(base.slice(dot + 1), BARE_NAME_EXTS)
 }
 
 /** 文档指针 token：`(目录段/)*名<扩展名的形护>` + 可选行号坐标尾 + 可选节指示（`§` + 编号）——两界取自上面那一对；
@@ -379,12 +394,15 @@ function docResolver(base, scanBases, session) {
 /**
  * 锚判据主行程：传入档逐档逐行抽取 + 解析 + 节在盘判定。
  * @param {string} root 项目根（解析序 ① 的基准）
- * @param {{files?:string[], manifest?:{ok:boolean, manifest?:object|null}, exts?:string[], onEdge?:Function}} o `files` = **判定集兼解析集**（调用方传入的档清单——判定范围 = 解析范围，
+ * @param {{files?:string[], manifest?:{ok:boolean, manifest?:object|null}, exts?:string[], textOf?:(abs:string)=>string|undefined, onEdge?:Function}} o `files` = **判定集兼解析集**（调用方传入的档清单——判定范围 = 解析范围，
  *   无目录遍历、无全域索引：清单外的档既不判也不参与解析）；
  *   `manifest` = **可选注入**——引擎按本根已读的那份（每根一次读，§2.5 KD-7），给了就吃它、
  *   缺省仍自读（直调判法本体的夹具零改）；它同时供 `docRoot` 扫描根与批档基底两处（判定面零改）；
  *   `exts` = **生效扩展名清单**（引擎按该根装配好的那张：缺省 ∪ 项目追加项，已过一次取形过滤，§2.6）——
  *   缺省 ∥ 空数组 ⇒ `DEFAULT_DOC_EXTS`（空清单会让全部 token 静默不成候选，那是假绿的方向，不接）；
+ *   `textOf` = **判定输入替换**（`docs/core/design/DOC-CHECK.md` §2.10.1）：给这一档返回文本就不读盘，返回 `undefined`
+ *   走既有读盘路。它只换「读哪份字节」，抽取面 ∥ 解析序 ∥ 命中类 ∥ 豁免谓词一字不改；
+ *   它**不**替换被引目标档的读法（引文面 ∥ 节在盘仍读盘——那些读的是**别的**档）；
  *   `onEdge` = **可选回调**（边旁挂面，口径见头注）：每次一个 token 走完全部跳过谓词后调用一次，载荷 =
  *   `{kind, file, line, token, section, state, abs, sectionLabel, text}`（只读副本——拿不到 `hits`，改了也没人读）。
  *   缺席 ⇒ 返回对象不多一个键、判定面与读数面零改。
@@ -402,7 +420,7 @@ function docResolver(base, scanBases, session) {
  *   `edgeCallbackErrors` = 回调抛异常的次数（**只在给了 `onEdge` 时出现**）。
  *   回调抛了不算判据失败：`hits` 与其余读数零改，那一处边由调用方按读数自处（`doc_graph` 回执末行印数）。
  */
-export function checkAnchors(root, { files = [], manifest, exts, onEdge } = {}) {
+export function checkAnchors(root, { files = [], manifest, exts, textOf, onEdge } = {}) {
   const base = resolve(root)
   // 生效扩展名清单（§2.6）：引擎按本根装配好传进来（并集 + 取形过滤已做过）；直调判法本体的夹具不传 ⇒ 缺省清单。
   // **空数组不是「什么都判不了」**：它是上游装配失败的一种形态，那样会让全部 token 静默不成候选（假绿）——向严回缺省。
@@ -440,7 +458,9 @@ export function checkAnchors(root, { files = [], manifest, exts, onEdge } = {}) 
       : {}),
   })
   for (const f of files) {
-    const text = readText(f, unreadable) // 读不到 ⇒ 入 unreadable，不再静默当零命中
+    // 读面：给了这一档的文本就不读盘（判定输入替换，`docs/core/design/DOC-CHECK.md` §2.10.1）；没给 ⇒ 既有读盘路。
+    const given = typeof textOf === "function" ? textOf(f) : undefined
+    const text = given !== undefined ? given : readText(f, unreadable) // 读不到 ⇒ 入 unreadable，不再静默当零命中
     const re = new RegExp(ANCHOR_RE.source, "gu") // 每档一份实例（零共享 lastIndex 状态）
     const citeRe = new RegExp(CITE_RE_SRC, "gu") // 同上（引文标记面）
     const braceRe = new RegExp(BRACE_GROUP_RE.source, "gu") // 同上（花括号组形）

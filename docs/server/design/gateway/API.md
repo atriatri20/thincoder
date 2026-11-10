@@ -361,27 +361,27 @@
 - **上游已到达的错误**（4xx/5xx）：状态码与 body **原样透传**（不包不改）；仍记 error 行（token 未知记 NULL）。
 - **消息语言口径**：服务端消息 = 中文单语（机器面零改——CLI/curl 消费方口径不变）；控制台按 `code` 前端映射本地化（中文 ∥ English——机制 = `docs/server/design/webui/I18N.md` §2.1）；上游透传错误照原样（控制台原文回显）。
 
-## 4. 本域文件与行数预算（本域族行）
+## 4. 文件账（本域族行）
 
-| 档 | 行数（实读——设计估） | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/src/gateway/server.mjs`（已落盘） | **274** | http 服务 ∥ 注册行分派 ∥ body 读限（32 MiB） ∥ 请求日志 ∥ **升级路挂点** |
-| `thincoder-server/src/gateway/ws.mjs`（已落盘） | **311**（最小 WebSocket 服务端：握手（`Sec-WebSocket-Accept`） ∥ 帧编解码（掩码/两档长度/分片/控制帧） ∥ ping/pong ∥ close ∥ 上界（1 MiB/帧 ∥ 4 MiB 缓冲）；机制 = `docs/server/design/sandbox/SANDBOX.md` §3；零依赖） | 升级面传输件（可复用——非沙盒专用） |
-| `thincoder-server/src/gateway/routes.mjs`（已落盘） | **114** | chat ∥ models ∥ embeddings 三处理 |
-| `thincoder-server/src/gateway/forward.mjs`（已落盘） | **241** | 上游 fetch ∥ 流式/非流式透传 ∥ tap 接线 ∥ 断连中止 ∥ 记账号 |
-| `thincoder-server/src/gateway/proxy.mjs`（已落盘） | **267** | 上游代理传输：`proxyFetch`（fetch-like——无 uri ⇒ 原生 fetch 直连 ∥ https ⇒ CONNECT 隧道 ∥ http ⇒ 经典转发；loopback 旁路；超时族；响应适配）；KD-SV-55 |
-| `thincoder-server/src/gateway/sse-tap.mjs`（已落盘） | **90** | `data:` 行增量扫描 ∥ usage 提取 ∥ 有界缓冲 |
-| `thincoder-server/src/gateway/providers.mjs`（已落盘） | **253** | provider 注册 ∥ 模型派发 ∥ 派发失败形 ∥ 运行时（§2.2） |
-| `thincoder-server/src/gateway/provider-admin.mjs`（已落盘） | **365** | provider 管理面（控制台——仅 admin） |
-| `thincoder-server/src/gateway/reasoning-levels.mjs`（已落） | **87** | 档位值域单源桥（核 `thincoder-core/model-specs.mjs`——服务端零第二清单；消费 = `provider-admin` GET ∥ `chat-routes` PATCH 校验 ∥ `thincoder-server/src/agent/chat.mjs` 装配过滤） |
-| `thincoder-server/src/gateway/ratelimit.mjs`（已落盘） | **64**（进程内 60s 定窗计数（`check` ∥ `record`） ∥ `Retry-After` 计算 ∥ 纯函数可直测；§6 KD-SV-35） | 模型限流（per-model RPM/TPM） |
-| `thincoder-server/src/gateway/system.mjs`（已落盘） | **61** | 系统面（healthz ∥ system） |
-| `thincoder-server/src/gateway/embedding-admin.mjs`（已落盘） | **112** | 向量服务面（控制台——仅 admin） |
-| `thincoder-server/src/gateway/config-admin.mjs`（已落盘） | **182** | 配置面（控制台——仅 admin） |
-| `thincoder-server/src/gateway/proxy-admin.mjs`（已落盘） | **81** | 代理连通测试（控制台——仅 admin） |
-| `thincoder-server/src/gateway/overview.mjs`（已落盘） | **27** | 管理总览读数（控制台——仅 admin） |
-| `thincoder-server/src/gateway/errors.mjs`（已落盘） | **66** | 错误形构造 ∥ 发送助手（含账号面码） |
-| **小计** | **2595**（本表逐行实读和——口径 = `\n` 换行计数；各档 ±1 之差在案） | —— |
+| `thincoder-server/src/gateway/server.mjs`（已落盘） | — | http 服务 ∥ 注册行分派 ∥ body 读限（32 MiB） ∥ 请求日志 ∥ **升级路挂点** |
+| `thincoder-server/src/gateway/ws.mjs`（已落盘） | —（最小 WebSocket 服务端：握手（`Sec-WebSocket-Accept`） ∥ 帧编解码（掩码/两档长度/分片/控制帧） ∥ ping/pong ∥ close ∥ 上界（1 MiB/帧 ∥ 4 MiB 缓冲）；机制 = `docs/server/design/sandbox/SANDBOX.md` §3；零依赖） | 升级面传输件（可复用——非沙盒专用） |
+| `thincoder-server/src/gateway/routes.mjs`（已落盘） | — | chat ∥ models ∥ embeddings 三处理 |
+| `thincoder-server/src/gateway/forward.mjs`（已落盘） | — | 上游 fetch ∥ 流式/非流式透传 ∥ tap 接线 ∥ 断连中止 ∥ 记账号 |
+| `thincoder-server/src/gateway/proxy.mjs`（已落盘） | — | 上游代理传输：`proxyFetch`（fetch-like——无 uri ⇒ 原生 fetch 直连 ∥ https ⇒ CONNECT 隧道 ∥ http ⇒ 经典转发；loopback 旁路；超时族；响应适配）；KD-SV-55 |
+| `thincoder-server/src/gateway/sse-tap.mjs`（已落盘） | — | `data:` 行增量扫描 ∥ usage 提取 ∥ 有界缓冲 |
+| `thincoder-server/src/gateway/providers.mjs`（已落盘） | — | provider 注册 ∥ 模型派发 ∥ 派发失败形 ∥ 运行时（§2.2） |
+| `thincoder-server/src/gateway/provider-admin.mjs`（已落盘） | — | provider 管理面（控制台——仅 admin） |
+| `thincoder-server/src/gateway/reasoning-levels.mjs`（已落） | — | 档位值域单源桥（核 `thincoder-core/model-specs.mjs`——服务端零第二清单；消费 = `provider-admin` GET ∥ `chat-routes` PATCH 校验 ∥ `thincoder-server/src/agent/chat.mjs` 装配过滤） |
+| `thincoder-server/src/gateway/ratelimit.mjs`（已落盘） | —（进程内 60s 定窗计数（`check` ∥ `record`） ∥ `Retry-After` 计算 ∥ 纯函数可直测；§6 KD-SV-35） | 模型限流（per-model RPM/TPM） |
+| `thincoder-server/src/gateway/system.mjs`（已落盘） | — | 系统面（healthz ∥ system） |
+| `thincoder-server/src/gateway/embedding-admin.mjs`（已落盘） | — | 向量服务面（控制台——仅 admin） |
+| `thincoder-server/src/gateway/config-admin.mjs`（已落盘） | — | 配置面（控制台——仅 admin） |
+| `thincoder-server/src/gateway/proxy-admin.mjs`（已落盘） | — | 代理连通测试（控制台——仅 admin） |
+| `thincoder-server/src/gateway/overview.mjs`（已落盘） | — | 管理总览读数（控制台——仅 admin） |
+| `thincoder-server/src/gateway/errors.mjs`（已落盘） | — | 错误形构造 ∥ 发送助手（含账号面码） |
+- **行数口径**：行数面量法 = `\n` 换行计数；各档 ±1 之差在案。
 
 ## 5. 验收判据（机检）
 

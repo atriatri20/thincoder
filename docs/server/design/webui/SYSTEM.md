@@ -17,12 +17,14 @@
   - **版本与更新**：当前版本 ∥ 更新档位（`mode`：`false`/`notify`/`auto`）∥ 最近自检（`lastCheckAt`——本地化时间；`null` = 未检）∥ 更新提示（`latest` 在场 ⇒ 「有新版本可用：vX.Y.Z（升级见部署文档）」；不在场 ⇒ 「未发现新版本」——自检失败同面，静默口径 = `gateway/API.md` §2.3）。
   - **成员接入卡**：baseURL（`location.origin` + `/v1`——运行时装配）∥ 团队 API Key 提示（`sk-tc-…` 形——签发 = `#/me/keys`）∥ 四端示例（CLI ∥ VSC ∥ 桌面 ∥ 其他 OpenAI 兼容——字段 = name/baseURL/model/apiKey；model = `provider/model` 形）∥ curl 冒烟一行（`GET /v1/models`）。
   - **向量服务**（admin——`webui/READINGS.md` §2.1①）：**配置面**（引擎地址 ∥ 模型 ∥ API Key 三输入——值 = 文件面（`GET /api/admin/config`）；保存 ⇒ `PATCH /api/admin/config`（重启生效）；API Key 掩码回显（`env:` 保形 ∥ 明文 ⇒ `…`+末 4）——**提交/探活三态 = 未编辑 ⇒ 不携 `apiKey`（保存 = 不变 ∥ 探活 = 运行配置回落） ∥ 编辑 ⇒ 明传 ∥ 清除勾 ⇒ 显式空（`""`）**——掩码/引用回显形恒不作明传值）
-    ∥ 可达性状态（渲染自动探活 + 「重新检测」——`POST /api/admin/embedding/test`——**按表单草稿值探活**（标量三项明传优先——KD-SV-54 口径镜像；未保存亦可先验；**掩码/引用字段未编辑 ⇒ 不携——落运行配置回落**））∥ `/v1/embeddings` 调用 snippet ∥ 用法一句 ∥ 试跑（短文本 ⇒ 维度 ∥ 耗时——不落库不计量）。
-    ∥ **未配置态（缺 `embedding` 段）**：三输入空 ∥ 状态行 = 「未配置」（**不自动探活**——无值可探）∥ 提示句在册（填写并保存后启用——重启生效）；**「用法」行随段显隐**（未配置态不渲染——「填为 {model}」无值可填；显隐实现零新键）；填写后「重新检测」/试跑按草稿照常（未保存亦可先验）；保存 = 创建段（同一 PATCH——缺段合并建段）。
-  **服务配置**（admin——配置控制台；定则 = 用户「任何配置项必须有配置界面」）：**只读行** = 监听地址（host） ∥ 端口（port） ∥ 数据库（db）——部署拓扑项（改端口 = 自断连接 ∥ 改库 = 迁移动作）；**只读展示 + 注「改动需编辑配置档并重启」——定则例外显式说明** ∥
-  **可写行** = 更新档位（autoUpdate——三档 select：关 ∥ 通知 ∥ 自动） ∥ 信任反代 IP 头（trustProxy——勾选） ∥ 用量/审计保留天数（usageRetentionDays——正整数 ∥ 「不限」勾选） ∥ 上游代理地址（`proxy.uri`——第四写控件；空 = 不启用 ∥ 空串 ⇒ 删段） ∥
-  **指针行** = providers（首启种子——常态管理 = Provider 页） ∥ bootstrap（引导账号——一次性（建号后失效）；口令永不回显） ∥ 保存 = `PATCH /api/admin/config`（可写四项提交——所见即所存）⇒ flash「已保存——重启服务后生效」；非法 ⇒ 就地提示（前端先行 ∥ 服务端复核 400）；值渲染 = 文件面（缺省值回填展示——有效值）。**全部可写项统一标「重启生效」**（配置文件不热载——`ops/OPS.md` §10 不破）。
-  **计数口径**：卡面可写四 = 配置面白名单五键 − 向量卡 `embedding`；面级计数 = 五（需求 AC-28 同源）。
+    - **可达性状态**：渲染自动探活 + 「重新检测」（`POST /api/admin/embedding/test`）——**按表单草稿值探活**（标量三项明传优先——KD-SV-54 口径镜像；未保存亦可先验；**掩码/引用字段未编辑 ⇒ 不携——落运行配置回落**）。
+    - **其余面**：`/v1/embeddings` 调用 snippet ∥ 用法一句 ∥ 试跑（短文本 ⇒ 维度 ∥ 耗时——不落库不计量）。
+    - **未配置态（缺 `embedding` 段）**：三输入空 ∥ 状态行 = 「未配置」（**不自动探活**——无值可探）∥ 提示句在册（填写并保存后启用——重启生效）；**「用法」行随段显隐**（未配置态不渲染——「填为 {model}」无值可填；显隐实现零新键）；填写后「重新检测」/试跑按草稿照常；保存 = 创建段（同一 PATCH——缺段合并建段）。
+  - **服务配置**（admin——配置控制台；定则 = 用户「任何配置项必须有配置界面」）：
+    - **只读行** = 监听地址（host） ∥ 端口（port） ∥ 数据库（db）——部署拓扑项（改端口 = 自断连接 ∥ 改库 = 迁移动作）；**只读展示 + 注「改动需编辑配置档并重启」——定则例外显式说明**。
+    - **可写行** = 更新档位（autoUpdate——三档 select：关 ∥ 通知 ∥ 自动） ∥ 信任反代 IP 头（trustProxy——勾选） ∥ 用量/审计保留天数（usageRetentionDays——正整数 ∥ 「不限」勾选） ∥ 上游代理地址（`proxy.uri`——第四写控件；空 = 不启用 ∥ 空串 ⇒ 删段）。
+    - **指针行** = providers（首启种子——常态管理 = Provider 页） ∥ bootstrap（引导账号——一次性（建号后失效）；口令永不回显） ∥ 保存 = `PATCH /api/admin/config`（可写四项提交——所见即所存）⇒ flash「已保存——重启服务后生效」；非法 ⇒ 就地提示（前端先行 ∥ 服务端复核 400）；值渲染 = 文件面（缺省值回填展示——有效值）。**全部可写项统一标「重启生效」**（配置文件不热载——`ops/OPS.md` §10 不破）。
+    - **计数口径**：卡面可写四 = 配置面白名单五键 − 向量卡 `embedding`；面级计数 = 五（需求 AC-28 同源）。
   **排版 = 逐项竖排**（`.provider-form.stacked`——三规则 = 块级（`display: block`） ∥ label 列形（标题行 + 控件成对） ∥ `.key-clear` 行形还原（勾选型项 = 勾选框 + 文案同行）；保存钮 = 表单块流末行（后随重启注 ∥ 指针行表））。
   **连通测试块（卡内第二表单）**：目标输入（缺省预填首个 provider `baseURL`）+「测试」钮 + 读数行（真打 ∥ 所见即所测——机制全文 = 本档 §2.2）。
   - **服务健康**：状态（`ok`/`degraded`）∥ DB ∥ 运行时长 ∥ 最近检查（本地化时间）——数据 = 前端健康共享态（`webui/READINGS.md` §2.1⑤；30s 自动刷新）。
@@ -48,21 +50,20 @@
 
 ## 3. 文件账（本面文件行 ∥ 键族登记）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/public/views-system.mjs`（已落盘） | **237** | 系统页 |
-| `thincoder-server/public/views-system-config.mjs`（已落盘） | **166** | 系统页·服务配置卡 |
-| `thincoder-server/public/i18n-zh-system.mjs`（已落盘） | **221** | 文案表·zh·系统与看板面 |
-| `thincoder-server/public/i18n-en-system.mjs`（已落盘） | **221** | 文案表·en·系统与看板面 |
-
-**面小计**：845（口径 = 本面表内逐行值之和；域合计 = 各面之和——不单列）。
+| `thincoder-server/public/views-system.mjs`（已落盘） | — | 系统页 |
+| `thincoder-server/public/views-system-config.mjs`（已落盘） | — | 系统页·服务配置卡 |
+| `thincoder-server/public/i18n-zh-system.mjs`（已落盘） | — | 文案表·zh·系统与看板面 |
+| `thincoder-server/public/i18n-en-system.mjs`（已落盘） | — | 文案表·en·系统与看板面 |
 
 **键族登记**：
 
-- **键族登记（`thincoder-server/public/i18n-zh-system.mjs` ∥ `thincoder-server/public/i18n-en-system.mjs` 部件）**：`system.*` 配置族 ≈23（`configTitle` ∥ `configHint` ∥ `cfgHost`/`cfgPort`/`cfgDb` ∥ `cfgTopologyNote` ∥ `cfgAutoUpdate` + 三档选项（`cfgAutoUpdateOff`/`Notify`/`Auto`） ∥
-  `cfgTrustProxy` ∥ `cfgRetention`/`cfgRetentionUnlimited`/`cfgRetentionInvalid` ∥ `cfgProxyUri`/`cfgProxyUriPh` ∥ `cfgProvidersRow`/`cfgProvidersValue` ∥ `cfgBootstrapRow`/`cfgBootstrapValue` ∥ `cfgSaved`/`cfgLoadFailed`）∥
-  `vector.*` 六键（`apiKey`/`apiKeyPh`/`clearApiKey`/`draftNote` ∥ `unconfigured`（「未配置」/「Not configured」） ∥ `unconfiguredHint`（「嵌入引擎未配置——填写并保存后启用（重启生效）」/ 英文同义））∥ `audit.*` 两键（`type.config_update`/`keys`）；
-  `admin.providers.useProxy`（提示改向「系统 → 服务配置」——界面文案不得指向界面外入口）；表体量：`i18n-zh-system` ≈151 ∥ `i18n-en-system` ≈151 ∥ `i18n-{zh,en}-admin` 138 ∥ 142（实施实读为准）。
+- **键族登记（`thincoder-server/public/i18n-zh-system.mjs` ∥ `thincoder-server/public/i18n-en-system.mjs` 部件）**：`system.*` 配置族 ≈23 键，逐名：
+  - `configTitle` ∥ `configHint` ∥ `cfgHost`/`cfgPort`/`cfgDb` ∥ `cfgTopologyNote` ∥ `cfgAutoUpdate` + 三档选项（`cfgAutoUpdateOff`/`Notify`/`Auto`） ∥
+  - `cfgTrustProxy` ∥ `cfgRetention`/`cfgRetentionUnlimited`/`cfgRetentionInvalid` ∥ `cfgProxyUri`/`cfgProxyUriPh` ∥ `cfgProvidersRow`/`cfgProvidersValue` ∥ `cfgBootstrapRow`/`cfgBootstrapValue` ∥ `cfgSaved`/`cfgLoadFailed`；
+  - `vector.*` 六键（`apiKey`/`apiKeyPh`/`clearApiKey`/`draftNote` ∥ `unconfigured`（「未配置」/「Not configured」） ∥ `unconfiguredHint`（「嵌入引擎未配置——填写并保存后启用（重启生效）」/ 英文同义））∥ `audit.*` 两键（`type.config_update`/`keys`）；
+  - `admin.providers.useProxy`（提示改向「系统 → 服务配置」——界面文案不得指向界面外入口）；表体量读数住批档（实施实读为准）。
 - **键族登记（`proxy.*`——`thincoder-server/public/i18n-zh-system.mjs` ∥ `thincoder-server/public/i18n-en-system.mjs` 部件；15 键）**：
   - **代理行键**：`proxy.uriLabel`（「上游代理地址」） ∥ `proxy.uriPh`（`http://host:port`——留空 = 不启用） ∥ `proxy.hint`（经代理的请求范围句）。
   - **测试块键**：`proxy.testTitle`（「连通测试」） ∥ `proxy.testHint`（真打说明——不落库不计量） ∥ `proxy.targetLabel`（「测试目标」） ∥ `proxy.targetPh` ∥ `proxy.testBtn`（「测试」） ∥ `proxy.testing`（「测试中……」）。

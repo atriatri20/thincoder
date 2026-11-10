@@ -56,8 +56,10 @@ function nameSpans(line, exts) {
 
 /**
  * 采集：逐档逐行找行号坐标，定归属窗，分两面。
- * @param {{files?:string[], extsOf?:(abs:string)=>string[]}} o `files` = 扫描域（调用方传入的档清单——本档不遍历目录、不做全仓扫描）；
- *   `extsOf` = 按档取生效扩展名清单的回调（引擎给的——每档按自己的项目根读，§2.6）；缺省 ⇒ `DEFAULT_DOC_EXTS`
+ * @param {{files?:string[], extsOf?:(abs:string)=>string[], textOf?:(abs:string)=>string|undefined}} o `files` = 扫描域（调用方传入的档清单——本档不遍历目录、不做全仓扫描）；
+ *   `extsOf` = 按档取生效扩展名清单的回调（引擎给的——每档按自己的项目根读，§2.6）；缺省 ⇒ `DEFAULT_DOC_EXTS`；
+ *   `textOf` = **判定输入替换**（`docs/core/design/DOC-CHECK.md` §2.10.1）：给这一档返回文本就不读盘，
+ *   返回 `undefined` 走既有读盘路。抽取式 ∥ 归属窗 ∥ 计分面三样一字不改。
  * @returns {{body:Array, fenced:Array, total:number, unreadable:string[]}}
  *   `body` = 正文面的处（围栏块外，**含可执行行**）；`fenced` = 围栏内独有的处；每处 = `{file, line, form, fenced, snippet, text}`
  *   （`text` = 该行整行原文、首尾去空白——豁免登记的识别键取它，§2.7「`text` 取什么」）
@@ -65,14 +67,16 @@ function nameSpans(line, exts) {
  *   **两个问法共用这一份**：`report` 面出清单块，`gate` 面逐处成 `✗ 行号坐标 …` 命中行（**只取 `body`**）并计
  *   `hits.lineRefs`；`fenced` 那批只进一行读数。
  */
-export function collectLineRefs({ files = [], extsOf } = {}) {
+export function collectLineRefs({ files = [], extsOf, textOf } = {}) {
   const extsFor = typeof extsOf === "function" ? extsOf : () => DEFAULT_DOC_EXTS
   const body = []
   const fenced = []
   const unreadable = []
   for (const f of files) {
     let text = ""
-    try { text = readFileSync(f, "utf8") } catch { unreadable.push(f); continue }
+    const given = typeof textOf === "function" ? textOf(f) : undefined
+    if (given !== undefined) text = given
+    else try { text = readFileSync(f, "utf8") } catch { unreadable.push(f); continue }
     let fence = null // 围栏标记（` ∥ ~）；null = 不在块内
     let prevNames = [] // 上一行的档名位置（③ 段落承名取其中最后一个）
     text.split("\n").forEach((l, i) => {

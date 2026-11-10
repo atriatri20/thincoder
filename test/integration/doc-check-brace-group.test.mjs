@@ -48,23 +48,25 @@ after(() => { for (const d of TMP) removeTempDirBestEffort(d) })
 
 test("CLI 38-1 花括号组形：解不到判红并点名缺的展开名 ∥ 都在盘判绿 ∥ 取值枚举不展开", () => {
   // ── 红半：两个展开名都不在盘 ⇒ 一处写成两件，逐条点名（原 token + 缺的那个名字）
-  const red = fixture({ "d.md": "# 设计档\n\n门面 `i18n-{zh,en}-core.mjs` 一处。\n" })
+  //    组形写成**带目录段**的形：形分档下裸写的代码族档名不是候选（判据 = `docs/core/design/DOC-CHECK.md` §2.10.3），
+  //    而本用例要断的是「花括号组展开后逐名判存在性」这件事。
+  const red = fixture({ "d.md": "# 设计档\n\n门面 `tools/i18n-{zh,en}-core.mjs` 一处。\n" })
   const redOut = gate(red, "d.md")
   const redLines = redOut.split("\n")
   assert.equal(redLines[0], "DOC-CHECK GATE: REFUSED（锚 2 条）", redOut)
   const redHits = redLines.filter((l) => l.startsWith("✗ "))
   assert.equal(redHits.length, 2, redOut)
   // 两条命中行都要同时点名原 token 与缺的那个展开名——只报其一，读的人要么看不出该改哪一行，要么拿到一个从没写过的名字
-  for (const [line, missing] of [[redHits[0], "i18n-zh-core.mjs"], [redHits[1], "i18n-en-core.mjs"]]) {
-    assert.ok(line.includes("i18n-{zh,en}-core.mjs"), redOut)
+  for (const [line, missing] of [[redHits[0], "tools/i18n-zh-core.mjs"], [redHits[1], "tools/i18n-en-core.mjs"]]) {
+    assert.ok(line.includes("tools/i18n-{zh,en}-core.mjs"), redOut)
     assert.ok(line.includes(missing), redOut)
   }
 
   // ── 绿半：同一行、两展开名都落到盘 ⇒ 解得到 ⇒ 放行（写法不限，解得出就是对的）
   const green = fixture({
-    "d.md": "# 设计档\n\n门面 `i18n-{zh,en}-core.mjs` 一处。\n",
-    "i18n-zh-core.mjs": "export default {}\n",
-    "i18n-en-core.mjs": "export default {}\n",
+    "d.md": "# 设计档\n\n门面 `tools/i18n-{zh,en}-core.mjs` 一处。\n",
+    "tools/i18n-zh-core.mjs": "export default {}\n",
+    "tools/i18n-en-core.mjs": "export default {}\n",
   })
   const greenOut = gate(green, "d.md")
   assert.equal(greenOut.split("\n")[0], "DOC-CHECK GATE: PASS", greenOut)

@@ -702,12 +702,12 @@ ALTER TABLE agent_chats ADD COLUMN auto_approve INTEGER NOT NULL DEFAULT 0;
 - v25 = `agent_chats.auto_approve` 增列（审批卡面 `always` 槽）：**加列**（`ALTER TABLE … ADD COLUMN`——表不重建；见 §2 v25 段）；旧库（v1–v24）启动自动升 ∥ 空库直落 v25；
     判据（单元测试档）= 空库读数 25 ∥ v24 库升后读数 25 ∥ v25 段幂等（再开零变）∥ 列面 **8 列**在场 ∥ 存量行 `0` 零变。
 
-## 4. 本域文件与行数预算（本域族行）
+## 4. 文件账（本域族行）
 
-| 档 | 行数（实读——设计估） | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/src/store/db.mjs`（已落盘） | 实读 **37**（迁移段已外拆）；DDL/迁移链 = `thincoder-server/src/store/migrations.mjs` 实读 **795** ⇒ ≈**804**（本批 +v25 段 ≈+9——**越 800 硬限** ⇒ 先拆后落：拆案 = DDL 段常量外拆成独立一份（纯数据搬迁零语义；档名待拆时定）∥ 或 v25 段压缩 ≤5 行；触发 = 实读 >800） | 开库 ∥ PRAGMA ∥ 语句封装（DDL/迁移链 = `thincoder-server/src/store/migrations.mjs`） |
-| `thincoder-server/src/store/credential-crypto.mjs`（已落——KD-SV-119） | ≈65（设计估——凭据三件（`loadOrCreateCredentialKey` ∥ `encryptSecret` ∥ `decryptSecret`）自沙盒任务面逐字抽出 + **键路径派生 `credentialKeyPath(config)` 同件收口**（单一出处——两域同址；消第二份路径规则）——sandbox ∥ project 两域共享） | 凭据加解密（AES-256-GCM + `data/credentials.key`——首用生成 ∥ 0600 ∥ 不落库） |
+| `thincoder-server/src/store/db.mjs`（已落盘） | —（迁移段已外拆）；DDL/迁移链 = `thincoder-server/src/store/migrations.mjs`（本批 +v25 段后**越 800 硬限** ⇒ 先拆后落：拆案 = DDL 段常量外拆成独立一份（纯数据搬迁零语义；档名待拆时定）∥ 或 v25 段压缩 ≤5 行；触发 = 实读 >800） | 开库 ∥ PRAGMA ∥ 语句封装（DDL/迁移链 = `thincoder-server/src/store/migrations.mjs`） |
+| `thincoder-server/src/store/credential-crypto.mjs`（已落——KD-SV-119） | —（凭据三件（`loadOrCreateCredentialKey` ∥ `encryptSecret` ∥ `decryptSecret`）自沙盒任务面逐字抽出 + **键路径派生 `credentialKeyPath(config)` 同件收口**（单一出处——两域同址；消第二份路径规则）——sandbox ∥ project 两域共享） | 凭据加解密（AES-256-GCM + `data/credentials.key`——首用生成 ∥ 0600 ∥ 不落库） |
 
 ## 5. 关键决策（本域）
 

@@ -24,22 +24,22 @@
 - **模型出口**：**管理会话（chat）** = **本 server 网关链的进程内客户端**（loopback——本机监听地址 + 管理面 sk〔`admin-agent`〕；鉴权/派发/准入/记账全链逐字复用，零第二份——机制全文 = §16.2/§16.3）。
   出口代理旗随 provider 条目（复核点——`docs/server/design/sandbox/SANDBOX.md` §16 R53③）。
 
-## 6. 本域文件与行数预算（本域族行）
+## 6. 文件账（本域族行）
 
-| 档 | 行数（设计估） | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/src/agent/run.mjs`（已落盘） | 实读 **33** ⇒ ≈**34**（本批删 `TRIMMED_FACES` 之 `"approval"`——KD-SV-224；保留 = 预算常量 ∥ `loadCoreChat` ∥ `providerModelRefs`） | 核装载共用件（chat 会话装配 ∥ 预算常量 ∥ `providerModelRefs` ∥ 裁剪面清单） |
-| `thincoder-server/src/agent/tools.mjs`（已落盘） | ≈**20**（**保留 = `maskSecrets`**——掩蔽单源（chat `exec` ∥ 主机凭据面共用）） | 掩蔽单源（`maskSecrets`——KD-SV-136 同件） |
-| `thincoder-server/src/agent/chat.mjs`（已落盘） | 实读 **745**（口径 = `split("\n").length − 1`；本批 +4/−1 ⇒ ≈**748**；越 500 咨询线——微触不拆判据 = §9 KD-SV-208/228） | 聊天式驱动（§11）：会话装配（系统简报 + 历史重放）∥ 回合环（预算 ∥ 工具循环 ∥ 中止检查点）∥ 帧流编解码（七型 + `end` 两可字段）∥ 逐条落库 ∥ 终态收尾（五形） |
-| `thincoder-server/src/agent/chat-compact.mjs`（已落盘） | 实读 **334**（口径 = `split("\n").length − 1`；本批 +50/−3 ⇒ ≈**381**） | A3 压缩面（§17.3）：核件动载（`thincoder-core/context.mjs`）∥ 压缩调用与垫片 ∥ 覆盖区间差分求 ∥ 标记行落库 ∥ 阈值取数（`compactThresholdOf`——按在用模型现算，与核同源） |
-| `thincoder-server/src/agent/chat-routes.mjs`（已落盘） | 实读 **223** ⇒ **224**（本轮 `#1617` +1；结构不变） | 会话面**七**端点（§11——契约 = `docs/server/design/gateway/API.md` §2.8；+ask 应答 = KD-SV-224）∥ 判权 ∥ 在途门 ∥ 重启恢复钩（running ⇒ idle + notice） |
-| `thincoder-server/src/agent/chat-asks.mjs`（已落盘） | 实读 **242**（口径 = `split("\n").length − 1`——沿 `thincoder-server/src/agent/chat.mjs` 行） | 审批 ask 宿主（§11.5——KD-SV-224）：写类调用 ⇒ `ask` 帧构造 ∥ 应答 ⇒ 结算续跑 ∥ 拒值三径（回合收 ∥ 中止 ∥ 流断）∥ 置库（`auto_approve`） |
-| `thincoder-server/src/agent/chat-tools.mjs`（已落盘） | 实读 **562**（口径 = `split("\n").length − 1`——沿 `thincoder-server/src/agent/chat.mjs` 行） ⇒ ≈**590**（越 500 软线——上限 700：触发 = 实读 >700 ⇒ 起拆档审查；本批 +只读判类表/`readonlyOf` = KD-SV-225）∥ `mcp` 第九件 = 独立面 `thincoder-server/src/mcp/admin-tools.mjs`（已落盘——实读 **222**），§12.2 | 管理面**九件**（§12——九中之八在本档；`mcp` = 独立面，§12.2）：members ∥ providers ∥ models ∥ usage ∥ audit ∥ runners ∥ docker ∥ exec——参数校验 ∥ 结果结构化 ∥ 审计包装（进程内直取域件） |
-| `thincoder-server/src/agent/docker-ops.mjs`（已落盘） | 实读 **91** | Docker 十动词执行器（任务面/聊天面两驱动单源；客户端 = `sandbox/docker.mjs`） |
-| `thincoder-server/src/agent/chat-env.mjs`（已落盘） | ≈**97**（能力段行：`bash.async` 可用 ∥ timer 空闲唤醒；管理族句含 `exec`） | 环境块装配（§14.1）：时空 ∥ 所在/身份 ∥ 所管现况一行（三活体——块级降级）∥ 能力与边界段（`CHAT_LIMITS_BLOCK`——系统简报第四块） |
-| `thincoder-server/src/agent/chat-env-tools.mjs`（已落盘） | 实读 **328** ⇒ ≈**336**（+ `readonlyOf`（核旗逐字）——KD-SV-225） | 环境工具面六族八件（§14.2/§14.3）：核件动载 ∥ ctx 适配 ∥ 结果归一 `{ ok, subject, summary, output }` ∥ `bash` 限幅（超时 ∥ 输出 ∥ 工作目录）∥ timer/后台任务垫片与投递汇（§15——唤醒器接线 ∥ 投递落库 ∥ 异步池宿主） |
-| `thincoder-server/src/agent/chat-store.mjs`（已落盘） | 实读 **155** | 库面单源（库面段 + `parseJson` + `CHAT_ROLES`/`CHAT_EXCERPT_MAX` 抽出；11 名重导出同引用 ∥ 零反引 `thincoder-server/src/agent/chat.mjs`） |
-| `thincoder-server/src/agent/chat-wake.mjs`（已落盘） | 实读 **141** | 唤醒器（§15.1）：会话键面闩表（核 `createTimerWatch` 复用——零第二套闩）∥ 空闲判定（会话行 `status` 单源）∥ 火策略（核 `fireTimerWake`）∥ 结算钩子（`_asyncWaiters`——先自再武装再评估）∥ 再武装三链尾 ∥ 零轮询 |
+| `thincoder-server/src/agent/run.mjs`（已落盘） | —（本批删 `TRIMMED_FACES` 之 `"approval"`——KD-SV-224；保留 = 预算常量 ∥ `loadCoreChat` ∥ `providerModelRefs`） | 核装载共用件（chat 会话装配 ∥ 预算常量 ∥ `providerModelRefs` ∥ 裁剪面清单） |
+| `thincoder-server/src/agent/tools.mjs`（已落盘） | —（**保留 = `maskSecrets`**——掩蔽单源（chat `exec` ∥ 主机凭据面共用）） | 掩蔽单源（`maskSecrets`——KD-SV-136 同件） |
+| `thincoder-server/src/agent/chat.mjs`（已落盘） | —（口径 = `split("\n").length − 1`；越 500 咨询线——微触不拆判据 = §9 KD-SV-208/228） | 聊天式驱动（§11）：会话装配（系统简报 + 历史重放）∥ 回合环（预算 ∥ 工具循环 ∥ 中止检查点）∥ 帧流编解码（七型 + `end` 两可字段）∥ 逐条落库 ∥ 终态收尾（五形） |
+| `thincoder-server/src/agent/chat-compact.mjs`（已落盘） | —（口径 = `split("\n").length − 1`） | A3 压缩面（§17.3）：核件动载（`thincoder-core/context.mjs`）∥ 压缩调用与垫片 ∥ 覆盖区间差分求 ∥ 标记行落库 ∥ 阈值取数（`compactThresholdOf`——按在用模型现算，与核同源） |
+| `thincoder-server/src/agent/chat-routes.mjs`（已落盘） | —（结构不变） | 会话面**七**端点（§11——契约 = `docs/server/design/gateway/API.md` §2.8；+ask 应答 = KD-SV-224）∥ 判权 ∥ 在途门 ∥ 重启恢复钩（running ⇒ idle + notice） |
+| `thincoder-server/src/agent/chat-asks.mjs`（已落盘） | —（口径 = `split("\n").length − 1`——沿 `thincoder-server/src/agent/chat.mjs` 行） | 审批 ask 宿主（§11.5——KD-SV-224）：写类调用 ⇒ `ask` 帧构造 ∥ 应答 ⇒ 结算续跑 ∥ 拒值三径（回合收 ∥ 中止 ∥ 流断）∥ 置库（`auto_approve`） |
+| `thincoder-server/src/agent/chat-tools.mjs`（已落盘） | —（口径 = `split("\n").length − 1`——沿 `thincoder-server/src/agent/chat.mjs` 行；越 500 软线——上限 700：触发 = 实读 >700 ⇒ 起拆档审查；本批 +只读判类表/`readonlyOf` = KD-SV-225）∥ `mcp` 第九件 = 独立面 `thincoder-server/src/mcp/admin-tools.mjs`（已落盘），§12.2 | 管理面**九件**（§12——九中之八在本档；`mcp` = 独立面，§12.2）：members ∥ providers ∥ models ∥ usage ∥ audit ∥ runners ∥ docker ∥ exec——参数校验 ∥ 结果结构化 ∥ 审计包装（进程内直取域件） |
+| `thincoder-server/src/agent/docker-ops.mjs`（已落盘） | — | Docker 十动词执行器（任务面/聊天面两驱动单源；客户端 = `sandbox/docker.mjs`） |
+| `thincoder-server/src/agent/chat-env.mjs`（已落盘） | —（能力段行：`bash.async` 可用 ∥ timer 空闲唤醒；管理族句含 `exec`） | 环境块装配（§14.1）：时空 ∥ 所在/身份 ∥ 所管现况一行（三活体——块级降级）∥ 能力与边界段（`CHAT_LIMITS_BLOCK`——系统简报第四块） |
+| `thincoder-server/src/agent/chat-env-tools.mjs`（已落盘） | —（+ `readonlyOf`（核旗逐字）——KD-SV-225） | 环境工具面六族八件（§14.2/§14.3）：核件动载 ∥ ctx 适配 ∥ 结果归一 `{ ok, subject, summary, output }` ∥ `bash` 限幅（超时 ∥ 输出 ∥ 工作目录）∥ timer/后台任务垫片与投递汇（§15——唤醒器接线 ∥ 投递落库 ∥ 异步池宿主） |
+| `thincoder-server/src/agent/chat-store.mjs`（已落盘） | — | 库面单源（库面段 + `parseJson` + `CHAT_ROLES`/`CHAT_EXCERPT_MAX` 抽出；11 名重导出同引用 ∥ 零反引 `thincoder-server/src/agent/chat.mjs`） |
+| `thincoder-server/src/agent/chat-wake.mjs`（已落盘） | — | 唤醒器（§15.1）：会话键面闩表（核 `createTimerWatch` 复用——零第二套闩）∥ 空闲判定（会话行 `status` 单源）∥ 火策略（核 `fireTimerWake`）∥ 结算钩子（`_asyncWaiters`——先自再武装再评估）∥ 再武装三链尾 ∥ 零轮询 |
 
 - `thincoder-server/package.json`（`@thincoder/core` 版本声明依赖——实读 `^0.10.7`）与**带核发布形**（版本对位口径）= 服务端设计档 `docs/server/design/PROJECT.md` §2.3（单源；核先于/同拍发行）。**地板 = 含 A3 阈值算式的核版本**：导出在场 ≠ 算式同位（0.10.7/0.10.8 的 `resolveCompactThreshold` = `floor(usable × 0.6)`；仓内现行 = `min(usable, ⌊window × 0.8⌋)`——读数差额 = §13 R92）。
 - sandbox 域件（`thincoder-server/src/sandbox/ssh.mjs` ∥ 主机凭据件）= `docs/server/design/sandbox/SANDBOX.md` §13（本档不重复）；`thincoder-server/bin/thincoder-server.mjs` **±0**（节点/凭据端点经 `thincoder-server/src/sandbox/routes.mjs` 转注册——装配行计入 sandbox 域预算）。

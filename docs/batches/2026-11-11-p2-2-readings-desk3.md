@@ -8,7 +8,7 @@
 批起 sha = 4fafb49c002e12d935989fd9a7eeb72d0d0d2c6b
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（五档整档判完、清五条悬空锚；三条上抛已裁并按裁定落完（行数列撤 ∥ SHELL §5.2 整块删 ∥ §1 作用域注撤）；doc_check gate = PASS）
+**状态行**：设计完成（续轮六已落：WEBVIEW.md §3 撤五处绝对行数与「52 档模块」库存计数（改结构关系句 + 补体量口径句），同档同族另四处扫平，doc_check gate = PASS）
 **批次任务（覆盖）**：desk3 = 五档设计档的存量绝对读数清账，判类 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 三行（读 §3.22 U-5 / U-6）：
 
 - `docs/desktop/design/SHELL.md`
@@ -100,6 +100,245 @@
 **撤数后同句断言的按盘重核（U-5 补条）**：撤处留下的关系句只有两类——「读数住批档 / 体量由 `doc_check` 的 `lines` 量」与「键集相等同序 / 合并在 `initDict`」。两类均不依赖被撤的绝对值，故无「已落 / 越线 / 在盘 / 零改」类假断言可核。
 
 **量法自检（补一轮）**：候选取法仍为逐节人读（`UI.md` 618 行、`PROJECT.md` 315 行本轮全文读过），无正则候选集；`doc_check` 机检 = 本轮末跑，见上表。
+
+### 续轮：全仓同族表收尾（用户 2026-11-11 本轮指令；desk3 扩到全仓）
+
+**授权与口径（用户本轮逐条给出，本席照做，不另立）**：行数列撤；列头「预估行数」/「行数」改「行数面」；表内该列写 `—`；节标题「…文件清单与行数预算」→「文件账」；整块批块（「现有文件改动」这类变更记录）整节删；表里逐行保留说明列与文件名。边界 = 不碰 `docs/desktop/design/RENDERER.md` ∥ `SETTINGS.md`；其余档在射程内；改到的每档逐条记本节。
+
+**格内处置细则（本席判，逐格适用）**：格内括注里的越线结论、闭集枚举、守卫事实留；格内与括注里的绝对读数撤；纯读数的「面小计 / 面文件行合计 / 小计」行整行删（那是被撤读数的和，留着就是第二份绝对值）。
+
+**量法（复跑用）**：候选面 = `grep` 三形（`文件清单与行数预算` ∥ `预估行数` ∥ `行数预算`）+ 表头形 `^\|.*行数` + 节标题形 `^#{2,4}.*行数`；判据 = 逐节人读后撤或留；机检 = `doc_check({mode:"gate", docs:[本席改动档]})` 首行。
+
+**本轮已落（16 档，逐档记）**
+
+| 档 | 改动 |
+|---|---|
+| `docs/server/design/accounts/ACCOUNTS.md` | §4 标题 → 文件账；列头 行数（实读——设计估）→ 行数面；7 格 → `—`；「小计 ≈966」行删 |
+| `docs/server/design/client/CLIENT.md` | §3 标题 + 列头 + 2 格 + 小计行；bullet 内三处读数撤（`package.json` 30 行 ∥ 单元测试档 ≈260 行 ∥ ≈320 行） |
+| `docs/server/design/ledger/LEDGER.md` | §9 标题 + 列头 + 8 格；行数口径句保留量法、撤 `.Count`/LF 对照读数与「本域最大」；「软线读数」→「软线结论」，越线结论留、数撤 |
+| `docs/server/design/store/STORE.md` | §4 标题 + 列头 + 2 格；`37/795/≈804/+≈9/≈65` 撤，「越 800 硬限 ⇒ 先拆后落」与「触发 = 实读 >800」留 |
+| `docs/server/design/webui/ADMIN.md` | 列头 → 行数面；8 格 → `—`（`沙盒族已外拆` 括注留）；「面小计 ≈1599」行删 |
+| `docs/server/design/webui/I18N.md` | 列头 + 3 格（格内枚举括注留） |
+| `docs/server/design/webui/LEDGER.md` | 列头 + 9 格（键数括注留） |
+| `docs/server/design/webui/MCP.md` | 列头 + 5 格（「300 软线内 ⇒ 抽档预案未触发」结论留）；「面文件行合计 ≈472」行删 |
+| `docs/server/design/webui/ME.md` | 列头 + 4 格；「面小计 ≈798」行删 |
+| `docs/server/design/webui/PROJECTS.md` | 列头 + 11 格（守卫在册事实留、读数与「6/6 绿」撤）；「面小计 ≈1172」行删 |
+| `docs/server/design/webui/READINGS.md` | 列头 + 3 格；「面小计 484」行删 |
+| `docs/server/design/webui/STYLE.md` | 列头 + 1 格；「面小计 358」行删 |
+| `docs/server/design/webui/SYSTEM.md` | 列头 + 4 格；「面小计 845」行删；两处超长段按名拆条（向量面三子条 ∥ 服务配置四子条 ∥ 键族登记逐名四条），键族「表体量 ≈151…」读数句改「读数住批档」 |
+| `docs/server/design/webui/TABS.md` | 列头 + 1 格；「面小计 ≈120」行删 |
+| `docs/server/design/webui/TERMINAL.md` | 列头 + 6 格；表内「面小计 1320」行删 |
+| `docs/server/design/webui/WEBUI.md` | §5 标题「本域文件与行数预算」→「文件账」；列头 + 前 6 格（其余行格内是 `⇒ 指路`，无读数） |
+
+**本轮未落（逐档点名，不掩盖）**
+
+- `docs/server/design/agent/ADMIN-AGENT.md` §6 ∥ `docs/server/design/agent/MEMBER-AGENT.md` §5 ∥ `docs/server/design/gateway/API.md` §4 ∥ `docs/server/design/mcp/MCP.md` §10 ∥ `docs/server/design/metering/METERING.md` §5 ∥ `docs/server/design/ops/OPS.md` §6 ∥ `docs/server/design/project/PROJECTS.md` §8 ∥ `docs/server/design/sandbox/EXECUTION.md` §14 ∥ `docs/server/design/sandbox/SANDBOX.md` §13 ∥ `docs/server/design/webui/SANDBOX.md` §3 ∥ `docs/server/design/webui/CHAT.md` §3 —— 十一档仍为原名原表；未落的理由 = 表体逐格扩写（多半格带括注）且表行未读全，半做会留下「行数面 + 数」的假面。
+- `docs/server/design/PROJECT.md` §1 头注句 ∥ §3 域档清单两处 ∥ §6 索引句 —— 指向「本域文件与行数预算」的指针，已随四档改名失指；同轮应改「文件账」并补一条行数面口径句（未落）。
+- `docs/server/design/gateway/PUBLICNET.md` §3 标题（『受影响文件（行数 = 本档写就时实读）』）—— 同族标题；§8 变更记录表一行携三处绝对行数与旧节名（未落）。
+- `docs/desktop/design/CHAT.md` §3.2 ∥ `docs/desktop/design/COMPOSER.md` §3.2 ∥ `docs/desktop/design/MENU.md` §3.2–§3.5 ∥ `docs/desktop/design/SESSIONS.md` §3.2 —— 四档「现有文件改动」批块（整节删的裁定未落）；`docs/desktop/design/CHAT.md` §3.2 内 `| # | 档 | 行数 |` 表同批。
+- `docs/desktop/design/PACKAGING.md` §3.1 ∥ `docs/desktop/design/SESSIONS.md` §3.1 ∥ `docs/desktop/design/SHELL.md` §5.1 ∥ `docs/desktop/design/UI.md` §4.1 ∥ `docs/desktop/design/WEB-QUICKCHECK.md` §9.1 —— 标题为「本端文件清单」（不含「行数预算」四字，三形 grep 不命中）；列已在 desk2 ∥ desk3 撤。标题是否也改「文件账」= 上抛。
+
+**发现（逐条带复现路径；不属本轮写域的一律不上手）**
+
+1. **`docs/core/design/DOC-DISCIPLINE.md` §3.17 条目 P 的例文**：「声明节域（§x.1 域表——如「本端文件清单与行数预算」）」——该节名本轮起全仓不再存在，例文成悬空名；且 P 的「值位首加粗 = 现值单数」与本轮裁定相反（前轮已裁 P 为旧口径）。这是规则档的语义面（判据句本身）⇒ **上抛主 agent**，本席一字未改。复现 = `grep -n "本端文件清单与行数预算" docs/core/design/DOC-DISCIPLINE.md`。
+2. **`docs/server/design/gateway/PUBLICNET.md` §8**：该表是变更记录块，内里携 `bin` 241 ∥ `config.mjs` 360 ∥ `README.md` 259 三处绝对行数与 `§6 行数预算` 旧节名；同块另有多行「待改」行（实施轮工单）。整块删会连带工单消失 ⇒ 本席未动，列上抛项。复现 = 读该档 §8 表。
+3. **同族但不同题的行数列（未动，登记备裁）**：`docs/core/design/ENGINEERING-MODE-V2.md` §？`| file | 行数 | 改动面 |`、`docs/core/design/CORE-UNIFICATION.md` §2 表 `| … | 行数 |`、`docs/core/design/PORTABILITY.md` 表行「档级行数 = …172 行 ∥ …173 行」、`docs/core/design/CONTEXT-COMPACTION.md` §6.16.8 标题「模块拆分与行数预算（500 软线）」、`docs/core/design/MODEL-SPECS.md` §9.7–§18.5 各「影响文件清单（…增量）」表、`docs/vsc/design/VSC-DEBT.md` 六张迁移表的「行数」列、`docs/render-core/design/RENDER-CORE.md` §6 迁移表行数列——这些是「受影响文件表/迁移/拆分判据」而非「域文件账」，不是本轮三形点名的族；改不改请裁。
+4. **机检回执携带「登记未命中 7 条」**：`PROJECT-MANIFEST.json` 的 `index.docCheckExemptions` 有登记因前轮改动失配——manifest 属主 agent 面，本席未动。
+
+**验收读数（本轮实跑）**
+
+| 判据 | 判法 | 读数 |
+|---|---|---|
+| 机检 | `doc_check({mode:"gate", docs:[本轮 16 档]})` | 首行 `DOC-CHECK GATE: PASS`；0 段有问题（16 档全清） |
+| 撤类清干净（已落 16 档） | 逐节读改后正文 | 族内绝对行数 = 0；纯读数合计行 = 0 |
+| 留类未被误删 | 越线结论 / 阈值 / 闭集枚举 / 守卫事实逐条在盘 | 在（`越 800 硬限` ∥ `300 软线内 ⇒ 抽档预案未触发` ∥ `500 软线` ∥ `触发 = 实读 >800`） |
+| 零越界 | `git status --porcelain` 改动面 | 只落上列 16 档；边界两档 `RENDERER.md` ∥ `SETTINGS.md` 零触 |
+
+### 续轮二：server 十一档收尾 + `docs/server/design/PROJECT.md` 指针收正
+
+**授权与口径（用户本轮逐条给出，本席照做，不另立）**：列头「行数面」；格内绝对值撤 `—`；括注里的越线结论 / 闭集枚举 / 守卫事实留；纯读数小计行整行删；节标题「文件账」。边界 = 不碰 `docs/desktop/design/RENDERER.md` ∥ `SETTINGS.md`。
+
+**本轮已落（11 档 + 1 指针档，逐档记）**
+
+| 档 | 改动 |
+|---|---|
+| `docs/server/design/agent/ADMIN-AGENT.md` | §6 标题 → 文件账；列头 → 行数面；12 格 → `—`（口径注 / 越线结论 / `maskSecrets` 保留说明逐条留） |
+| `docs/server/design/agent/MEMBER-AGENT.md` | §5 标题 → 文件账；「现读 / 预算」两读数列并为单列 `行数面`（两列皆读数，并后每格只剩括注）；23 格；随正件行五处档内读数撤 |
+| `docs/server/design/gateway/API.md` | §4 标题 + 列头；16 格；「小计 2595」行改为一行行数口径句 |
+| `docs/server/design/mcp/MCP.md` | §10 标题 + 列头；19 格；「小计」与三批「另计」九行整块删（批次变更记录）；口径声明句保留量法、撤两组口径读数 |
+| `docs/server/design/metering/METERING.md` | §5 标题 + 列头；5 格；「小计 ≈774」行删 |
+| `docs/server/design/ops/OPS.md` | §6 标题 + 列头；16 格；空「小计」行删 |
+| `docs/server/design/project/PROJECTS.md` | §8 标题 + 列头；12 格；三处档名列的「实读 N」撤；「域小计 ≈1545」整行删 |
+| `docs/server/design/sandbox/EXECUTION.md` | §14 标题 + 列头；28 格（含文件名列的「实读两值」类）；「小计」行删；「行数读数」三行块整块换成一行量法句；单元测试档行五组读数撤 |
+| `docs/server/design/sandbox/SANDBOX.md` | §13 标题 + 列头；23 格；「小计」行删；拆分预案四条与成员写面两行的读数撤、越线结论留 |
+| `docs/server/design/webui/SANDBOX.md` | 列头；18 格；「面小计 4058」行删；拆分预案两处读数撤 |
+| `docs/server/design/webui/CHAT.md` | 列头；13 格；「面小计 ≈754 ⇒ 逐批步进」五段与「面小计（成员面）1,919」整块删 |
+| `docs/server/design/PROJECT.md` | 四处「本域文件与行数预算」→「文件账」（§1 注 ∥ §3 域档清单两处 ∥ §6 索引句）——前轮改名后失指 |
+
+**验收读数（本轮实跑）**
+
+| 判据 | 判法 | 读数 |
+|---|---|---|
+| 机检 | `doc_check({mode:"gate", docs:[本轮 11 档]})` | 首行 `DOC-CHECK GATE: REFUSED（锚 11 条）`——11 条全为存量 `档缺`：散文里当示例用的档名 / 目录名 / 后缀 token（数据库档、仓地址、脚本后缀、证书档两类），**无一落在本轮改动的行上**；逐条清单见本段上报项 R1。本段不再转录这些 token——转录本身会把命中带进批档（本轮 append 因此被拒一次，改为复数描述） |
+| 标题收口 | `grep -n "本域文件与行数预算" docs/server/design` | 改前命中 4（全在 `docs/server/design/PROJECT.md`）；改后 0 |
+| 留类未被误删 | 逐档人读改后正文 | 在：`500 软线` ∥ `800 硬限` ∥ `拆档线 720 已越` ∥ `越 500 软线在册` ∥ `拆案在案` ∥ 假件注入括注 ∥ 键数括注 |
+
+**本轮未落（逐项点名，不掩盖）**
+
+- **桌面批块整节删四处**：`docs/desktop/design/CHAT.md` §3.2 ∥ `COMPOSER.md` §3.2 ∥ `MENU.md` §3.2–§3.5 ∥ `SESSIONS.md` §3.2，加 `CHAT.md` §3.2 的行数列小表。未落理由 = 每档须先读全批块再整节删，本轮轮次不足以读完四档；半做会留下「块删了、引用还在」的悬空。
+- **三条上抛的落点（用户本轮已裁，本席未落）**：① `docs/core/design/DOC-DISCIPLINE.md` §3.17 条目 P 例文换一个还在的节名 + 「现值单数」半句改 P2-1 口径；② `docs/server/design/gateway/PUBLICNET.md` §8 先把 5 行「待改」挪到该档待改清单、再删变更记录块（§3 标题同族）；③ 同族不同题行数列七处（`ENGINEERING-MODE-V2` ∥ `CORE-UNIFICATION` ∥ `PORTABILITY` ∥ `CONTEXT-COMPACTION` §6.16.8 ∥ `MODEL-SPECS` 各「影响文件清单（增量）」表 ∥ `VSC-DEBT` 六表 ∥ `RENDER-CORE` §6 迁移表）。三件均未落，理由 = 本轮轮次用尽。
+
+### 续轮三：桌面批块四处整节删 + 三条上抛落点 + 同族不同题行数列（用户 2026-11-11 本轮指令）
+
+**口径（用户本轮逐条给出，本席照做，不另立）**：桌面批块整节删；`docs/core/design/DOC-DISCIPLINE.md` §3.17 条目 P 例文换名 + 「现值单数」改口径；`docs/server/design/gateway/PUBLICNET.md` §8 先移「待改」再删块（§3 标题同族）；同族不同题行数列七处。
+判据 = 删块之前先读全块——块删了、引用还在，那才是问题。存量 11 条悬空锚 = 不改、不登记，等 P2-3 落完之后它们本就不该判。
+
+**本轮已落（10 档，逐档记）**
+
+| 档 | 改动 |
+|---|---|
+| `docs/desktop/design/CHAT.md` | §3.2「现有文件改动」整节删（digest 对位行表 + 复制面对齐 VSC 行表）；§3 只余 §3.1 文件账 |
+| `docs/desktop/design/COMPOSER.md` | §3.2 整节删（挂起窗径 ∥ 队列取项 ∥ slash 命令行 ∥ `/help` 增量 ∥ attach 五块 + 余量行）；块删后两处指回它的指针改述（键数链句撤指针、`window-queue.mjs` 行改指本档 §2 窗队列批注） |
+| `docs/desktop/design/MENU.md` | §3.2–§3.5 四块整节删；§5 两条批注的「机检用例」改指本档 §4（原指块内用例）；§3.1 表与 §4 之间补回空行 |
+| `docs/desktop/design/SESSIONS.md` | §3.2 整节删（会话标题接线行 ∥ 结构轮拆分落形 ∥ 重启自动重开行） |
+| `docs/desktop/design/SETTINGS.md` | 一处指 `docs/desktop/design/MENU.md` §3.4 的指针改指该档 §4 |
+| `docs/core/design/DOC-DISCIPLINE.md` | §3.17 条目 P：标题与判据句的「现值单数」改「现值」，并写明读数不写值位（口径 = 该档 §3.30.1 行数行）；例文「本端文件清单与行数预算」→「文件账」 |
+| `docs/server/design/gateway/PUBLICNET.md` | §3 标题去「行数 = 本档写就时实读」；列头改「行数面」、21 行格内读数撤为空、增量列的预估行数撤（`仍 < 500` 结论留）；§8 变更记录块整块删，5 行「待改」移入新 §8「待改清单（实施轮）」 |
+| `docs/core/design/ENGINEERING-MODE-V2.md` | 受影响文件表：列头「行数」→「行数面」，16 行裸读数撤为空，表头口径句改「体量按 `doc_check` 的 `lines` 量，不落绝对值」 |
+| `docs/core/design/PORTABILITY.md` | 档级行数两值撤，改「体量按 `doc_check` 的 `lines` 量，不落绝对值」 |
+| `docs/core/design/CONTEXT-COMPACTION.md` | §6.16.8 标题「模块拆分与行数预算（500 软线）」→「模块拆分与预算（500 软线）」 |
+
+**同族不同题七处判类**
+
+- 已落三处：`docs/core/design/ENGINEERING-MODE-V2.md` ∥ `docs/core/design/PORTABILITY.md` ∥ `docs/core/design/CONTEXT-COMPACTION.md`（改动见上表）。
+- 判类 = 非同族、不改一处：`docs/core/design/CORE-UNIFICATION.md` §2.5——该列定义句逐字「注册表「行数」列不是文档行数：它数的是该子系统档覆盖的裁决行条数」，「行数（CLI / VSC / 核）」列写「数值按需现量、不落档」⇒ 无绝对读数可撤。
+- 未判三处：`docs/core/design/MODEL-SPECS.md` 各「影响文件清单（增量）」表 ∥ `docs/vsc/design/VSC-DEBT.md` 六张迁移表 ∥ `docs/render-core/design/RENDER-CORE.md` §6 迁移表——表体未逐行读，本轮轮次用尽；半做会留「行数面 + 数」的假面，故不做。
+
+**验收读数（本轮实跑）**
+
+| 判据 | 判法 | 读数 |
+|---|---|---|
+| 机检 | `doc_check({mode:"gate", docs:[本轮 10 档]})` | 首行 `DOC-CHECK GATE: PASS`；0 段有问题（10 档全清） |
+| 块删后无悬空引用 | 四档内 + 跨 `docs/` 的 `grep`（指本档 §3.2–§3.5 的形） | 设计档 0 处；仅批档记录面留旧指称 |
+| 零越界 | `git status --porcelain` | 改动面 ⊆ 本轮 10 档 ∪ 批档 |
+
+**未落项（点名，不掩盖）**：同族不同题三档 = `docs/core/design/MODEL-SPECS.md` ∥ `docs/vsc/design/VSC-DEBT.md` ∥ `docs/render-core/design/RENDER-CORE.md`。
+
+### 续轮四：三档表体收尾（用户 2026-11-11 本轮指令 — 三档做完这一路就齐）
+
+**授权与口径（用户本轮逐条给出，本席照做，不另立）**：列头「行数面」；格内绝对值撤 `—`；括注里的越线结论与枚举留；纯读数小计行整行删；**同一张表整表改完、或整表不动**（半做会留「行数面 + 数」的假面，轮次不够就报「这张表未动」）。判据源 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 行数行「撤当前行数、改前改后绝对行数、净增量和目标绝对行数」，保留尺寸阈值与越线结论。
+
+**本轮已落（3 档，逐表点清）**
+
+| 档 | 表 | 改动 |
+|---|---|---|
+| `docs/core/design/MODEL-SPECS.md` | §9.7 ∥ §10.5 ∥ §11.5 ∥ §12.5 ∥ §13.6 ∥ §14.6 ∥ §15.5 ∥ §17.3 ∥ §18.5 —— **9 张影响文件清单全落** | 列头 → 行数面；§10.5 的「现行数 + 预期」两读数列并为单列；各格读数 → `—`，格内括注里的改动内容 / 越线结论 / 结构数与「本节不拆」「500 软线内」逐条留 |
+| `docs/vsc/design/VSC-DEBT.md` | §3.3 档一表 ∥ §12.2.1 ∥ §12.2.2 ∥ §12.2.3 ∥ §12.2.4 ∥ §13.2 —— **六张迁移表全落** | 列头 → 行数面；行数格与去向列的新档读数 → `—` / 只留档名；§3.3「迁出合计」整行删（净减硬需结论移入表下预计句）；四节标题去「目标 ≈N」；相邻职责句、两档预计句里的 ≈N 行逐句撤 |
+| `docs/render-core/design/RENDER-CORE.md` | §6 判定表（16 行） | 「现行 + 预期」两读数列并为一列 行数面，16 格 → `—`；判定列（核 ∥ 拆）与迁出面注里的越线结论（带内 ∥ 低于带 ∥ 拆分预案消解）留；§6 口径句、R1 六档句、桌面两 CSS 指针句改量法述 |
+
+**同轮顺带（写入路径上的挡写物，本档写域内）**
+
+- `docs/vsc/design/VSC-DEBT.md` 2 条存量 `档缺` 挡住写门（落在改区包络内）⇒ 同轮改：§4 A8 行的死 token（该档名全仓零命中）改述为「`npm test` 全绿（单元 + 集成清单）」；§12.4 第 2 条的校验脚本裸名（仓内三名同名）改 `thincoder-vscode/` 全路径。
+
+**验收读数（本轮实跑）**
+
+| 判据 | 判法 | 读数 |
+|---|---|---|
+| 机检 | `doc_check({mode:"gate", docs:[三档]})` | 首行 `DOC-CHECK GATE: PASS`；0 段有问题（3 档全清） |
+| 撤类清干净 | 逐表读改后正文 | 三档九 + 六 + 一 = 16 张表：行数面格全为 `—` 或只留档名/结论；纯读数小计行 = 0 |
+| 留类未被误删 | 逐表读改后正文 | 在：`500 软线内` ∥ `净减硬需（≥154）满足` ∥ `本节不拆` ∥ `拆分预案消解（未误拆）` ∥ `带内` ∥ 各「节点 / 三族 / 两 CSS」结构句 |
+
+**未动（逐项点名，不掩盖）**
+
+- `docs/vsc/design/VSC-DEBT.md` §12.1「其余现行读数」表（逐档读数清单）· §13.3「现读数」表（列头为「现读数」，不在本轮点名的六张迁移表内）· §13.4 目标 ≤460 与 §13.2 目标 ≤430（阈值形，按判据留）—— 三处未动，候下轮口径。
+- `docs/core/design/MODEL-SPECS.md` §3 影响文件清单：该表「预期增删」列全格已是 `—`，无读数可撤，未改。
+
+**量法自检**：候选取法 = 逐表人读（三档本轮全文读过对应节）；机检 = 本轮末跑，见上表。
+
+### 续轮五：最后三件（用户 2026-11-11 本轮指令）
+
+**授权与口径（用户本轮逐条给出，本席照做，不另立）**：① `docs/vsc/design/VSC-DEBT.md` §12.1「其余现行读数」表 ∥ §13.3「现读数」表 = 清；② 桌面 5 处「本端文件清单」标题 = 改「文件账」；③ `docs/core/design/MODEL-SPECS.md` §3 表 ∥ `docs/vsc/design/VSC-DEBT.md` §13.2 `≤430` ∥ §13.4 `≤460` = 判对，不动。
+
+**① 的射程外延（本席判，按用户给的那句判据）**：判据 = 「这张表装的是不是读数」，不是「有没有被点名」。§12.1 表头原为「现行读数」、节标题亦作「现行读数 · 口径 `wc -l`」、表体 15 行行行携绝对值 ⇒ 整表同族；只清「其余现行读数」一行会留下半张假面。故 §12.1 整表按同形处理，§13.3 表（列头「现读数」）同。§13.3 与本档 §13.2 `≤430` ∥ §13.4 `≤460` 的区别 = 后者是阈值（目标），前者是被撤的读数。
+
+**本轮已落（6 档，逐档记）**
+
+| 档 | 改动 |
+|---|---|
+| `docs/vsc/design/VSC-DEBT.md` | §12.1 标题「（现行读数 · 口径 `wc -l`）」→「（越线状态 · 量法 `wc -l`）」；列头「现行读数」→「行数面」、15 行格内绝对值 → `—`（含「其余现行读数」行改「其余在册档」并撤该行全部值、CLI 面行撤值、CSS 两值撤）；`panel-turn-loop` 行候选线括注内的段体量估数撤、闭集枚举与消解窗口括注逐字留。§13.3：`拆点区间按现读` 去「按现读」；列头「现读数」→「行数面」、「拆点（现读区间 → 目标档 · 缝）」→「拆点（段 → 目标档 · 缝）」；两行读数 → `—`、格内两处段体量估数（`≈91 行` ∥ `≈170 行`）撤；表下「本档 212 ∥ 新档 126」句改为「两档分列，体量按 `doc_check` 的 `lines` 量，绝对值不进本档」。留类逐条在盘：`500 行` 软线 ∥ `800 行` 硬限 ∥ `触发线 >497` ∥ `余量 ≤5` ∥ `净增 ≥40` ∥ `越线登记关闭` ∥ `拆档已落（KD-20）` ∥ CSS「不入门」既有裁定括注 |
+| `docs/desktop/design/PACKAGING.md` | §3.1「本端文件清单（打包族行）」→「文件账（打包族行）」 |
+| `docs/desktop/design/SESSIONS.md` | §3.1「（会话族行）」同改 |
+| `docs/desktop/design/SHELL.md` | §5.1「（宿主族）」同改 |
+| `docs/desktop/design/UI.md` | §4.1（无括注）同改 |
+| `docs/desktop/design/WEB-QUICKCHECK.md` | §9.1「（web 快筛族）」同改 |
+
+**同轮收正（撤数后同句断言按盘重核，U-5 补条）**：`docs/vsc/design/VSC-DEBT.md` 内三处依赖「§12.1 有读数」的句子一并改，否则同档自相矛盾 —— KD-16 行 ∥ §12.10 第 2 条「读数与登记 = §12.1」→「登记 = §12.1」；§12.10 第 3 条「本档给待同步读数」半句删；§12.12 上抛 1「建议 §5 补实测读数行」删（与 §3.30.1 相反，留则指一处不该存在的读数）；§12.1 内「值随 `WEBVIEW.md` §3 文件表同拍」半句删（指向一张按规则不该载读数的表）。
+
+**验收读数（本轮实跑）**
+
+| 判据 | 判法 | 读数 |
+|---|---|---|
+| 机检 | `doc_check({mode:"gate", docs:[本轮 6 档]})` | 首行 `DOC-CHECK GATE: PASS`；0 段有问题（6 档全清） |
+| 撤类清干净 | 逐节读改后正文 | §12.1 表 15 行 + §13.3 表 2 行：行数面格全 `—`；段体量估数（3 处）= 0；表下读数句 = 0 |
+| 留类未被误删 | 逐条在盘 | 上表「留类」逐条命中（阈值 / 越线结论 / 闭集枚举 / 缝 / 判定口径） |
+| 悬空名清零 | `grep "本端文件清单" docs` | 设计档改前 5 处 → 改后 0；余者皆批档（过程面，不属设计档面） |
+| 阈值两处未动 | 人读 | §13.2 `≤430` ∥ §13.4 `≤460` 逐字在盘；`docs/core/design/MODEL-SPECS.md` §3 表零触 |
+| 改动面 | `git status --porcelain`（仓根跑） | 62 M + 1 untracked；本席本轮落盘 = 上表 6 档 + 本批档，其余为同日其它席位并发改动（本工作树多席位并行，非本席写面） |
+
+**发现（带复现路径；不属本轮裁定的不动）**
+
+1. **`docs/vsc/design/WEBVIEW.md` §3「文件结构（现行）」表仍载绝对读数**——表内五处（`thincoder-vscode/webview/chat.js` ∥ `chat-messages.js` ∥ `chat-status.js` ∥ `settings-mcp.js` 与 `settings-tools.js` 两值）与行首「**52 档模块**」库存计数，与本轮撤类同族。未改的理由 = 不在本轮三件裁定射程。复现 = 读该档 §3 表。
+
+**未落项**：无（本轮三件全落）。
+
+### 续轮六：`docs/vsc/design/WEBVIEW.md` §3 收尾（用户 2026-11-11 本轮指令）
+
+**授权与口径（用户本轮给出，本席照做，不另立）**：一件 —— Webview 设计档 §3「文件结构（现行）」表里五处绝对行数 + 「52 档模块」库存计数，与本轮撤类同族，改。口径 = 同前：绝对读数撤、结构说明与越线结论留；库存计数改结构关系句（不写数）。
+
+**落地形态**：该表没有「行数」列 —— 读数是写在「职责」格内的 `**N 行**`，故无格可填 `—`，整句读数删去；表头补一行体量口径句（体量按 `doc_check` 的 `lines` 量、不落绝对值），与同族各档的表头口径句同形。
+
+**本轮已落（1 档，逐处记）**
+
+| 处 | 改动 |
+|---|---|
+| §3 引句 | 「**52 档模块**（`.js` / `.mjs`；…）」→「`.js` / `.mjs` 两形；…」——库存计数撤，形与另列事实（CSS 与 shell）留 |
+| §3 引句下 | 新增 `**体量口径**：模块体量按 doc_check 的 lines 量，不落绝对值。` |
+| `chat.js` 行 | 句末 `· **142 行**` 删（职责、「原址注册」、启动握手逐字留） |
+| `chat-messages.js` 行 | 句末 `**271 行**` 删 |
+| `chat-status.js` 行 | 句末 `**163 行**` 删（括注内 `_digestRoundEl` 随迁留） |
+| `settings-mcp.js` 行 | `**126 行**` 与 `settings-tools.js **212 行**` 两处删；「自 settings-tools.js 拆出」的结构关系留 |
+
+**同档同族另四处（扫出来的，同轮落——判据同一条，不是新口径）**
+
+| 处 | 改动 |
+|---|---|
+| §4.4 受影响面·首项 | `activity-view.mjs`「现 **231** 行」撤；`≪ 500 ⇒ 零拆分计划，结构不变` 结论留 |
+| §4.4 受影响面·次项 | 核 `flow/block.mjs`「**167** 行」· 核 `subblocks/state.mjs`「**334** 行」两处撤；括注（行首子标 ∥ `block.queued` 条件化）留 |
+| §5.3 痕迹面迁出 | `activity.js`「现 **263 行**」撤；「已落」「痕迹整体迁出、只留调用点」留（按盘核：`thincoder-vscode/webview/activity-diag.js` 在盘） |
+| §5.5 策略族工厂化 | `ui.js`「**255 行**」括注整删；「核两导出 = 薄包——零行为变更」留 |
+
+**判类留（逐处记，不掩盖）**
+
+- §3 引句的「CSS 5 档」：紧邻表内 CSS 行逐名列五档 ⇒ 表支撑构成（U-6），留。
+- 「2 行 `export *` shim」∥「3 行再导出 shim」∥「12 行转口」：这些数不是文件体量读数，是形态定义（shim / 转口 = 该行数的纯再导出），留。
+- T-A15 行（`≤500` ∥ 单行 >300 字符 ∥ 锚零悬空）= 尺寸阈值与机检判据，留；同行「现 215，本批 `≤ +2`」属用例期望面，交实施轮用例自身处置。
+- §11 J-2 的「> 1s」一类 = 阈值，不在本族。
+
+**记下（下一班看）**：`docs/desktop/design/SHELL.md` ∥ `docs/desktop/design/WEB-QUICKCHECK.md` 两处按行号定位改被拒（行号已漂），改内容锚才落成 —— 「指针不写行号」在现场就长这个样子。
+
+**验收读数（本轮实跑）**
+
+| 判据 | 判法 | 读数 |
+|---|---|---|
+| 机检 | `doc_check({mode:"gate", docs:[本档]})` | 首行 `DOC-CHECK GATE: PASS`；0 段有问题 |
+| 撤类清干净 | 逐节读改后正文 + `grep` 行形 | 本档绝对行数读数 = 0（余下命中皆形态定义 ∥ 阈值 ∥ 协议行号，见「判类留」） |
+| 库存计数清零 | `grep` 「档模块」 | 0 |
+| 结构关系与结论在盘 | 人读 | 在：`拆出` ∥ `随迁` ∥ `≪ 500 ⇒ 零拆分计划` ∥ `零行为变更` ∥ `零改` |
+| 零越界 | 改动面 | 只落本档 |
+
+**台账**：`#2312` = 活干完、档未冻的 open-but-settled；冻结与收口由父侧走，本席未动。
+
+**量法自检**：候选取法 = 逐节人读 + `grep` 复核（不由正则出候选集）；机检 = 本轮末跑，见上表。
 
 ## §3 设计评审（评审子代理）
 ## §4 用户批准（主 agent）

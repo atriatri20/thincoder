@@ -346,38 +346,38 @@
 | 成员 git 凭据（我的·账户） | `GET/PUT /api/me/git-credentials` ∥ `DELETE /api/me/git-credentials/:host`（加密零回显 ∥ 审计行） | 本人 | `docs/server/design/gateway/API.md` §2.11 |
 | 盒接入（盒出向） | `GET /api/box/events`（SSE——含 `cmd` 指令下行 ∥ `answer` 应答下行 ∥ `abort` 携 `key`）∥ `POST /api/box/sessions/:id/turns`（流式体——纯转发；帧集 = §3.11(1) 增补后全表）∥ `POST /api/box/commands/:cmdId/result` ∥ `POST /api/box/ping`（保活应答）∥ `POST /api/box/credential`（git 凭据取件）∥ `GET /api/box/mcp`（MCP 工具表——零秘密）∥ `POST /api/box/mcp/call`（MCP 调用） | 工作区 key（第二门——KD-SV-154） | `docs/server/design/gateway/API.md` §2.12 |
 
-## 5. 本域文件与行数预算（成员面）
+## 5. 文件账（成员面）
 
 > 服务端件拟新增于 `thincoder-server/src/agent/`（域内拆分）；盒壳件于 `thincoder-server/deploy/sandbox/member-shell/`（镜像构建上下文；档账入本档，`docs/server/design/sandbox/SANDBOX.md` §13 不重计）。**行数 = 预算（以实施当刻实读为准）**；**实读口径 = 换行计数**（`\n` 个数；带末尾换行的档比 read 工具末行号少 1）。
 
-| 件 | 现读 | 预算 | 角色 |
-|---|---|---|---|
-| `src/agent/member-relay.mjs` | **410** | ≈220（设计） | 盒连接登记 ∥ 下行队列 ∥ 回合状态机（在途门/收尾三径——**内存态**）∥ 在线态 ∥ ask 在途表 |
-| `src/agent/ask-vocab.mjs` | **37** | ≈30（设计） | 应答词表叶子（**零 import**）：`ASK_KINDS` ∥ `ITEM_VERDICTS` ∥ `BATCH_VERDICTS` ∥ `askAnswerBodyOf`——`member-relay.mjs` 以 import + 重导出同源（公共面零变） |
-| `src/agent/member-routes.mjs` | **557** | ≈250（设计） | 成员面会话端点（读/建/改 = 盒指令转发）+ 工作区扩四端点 + git 凭据三端点（ask/delete/files 三端点 = 已外迁 `member-asks.mjs`） |
-| `src/agent/member-asks.mjs` | **69** | ≈90 | ask/delete/files 三端点（自 `member-routes.mjs` 外迁——越线拆案） |
-| `src/agent/box-routes.mjs` | **172** | ≈220（设计） | 盒三口 + SSE 下行 + 凭据取件口 + MCP 两口 |
-| `src/agent/member-cred.mjs` | **118** | ≈90（设计） | 成员 git 凭据行存取（`credential-crypto.mjs` 复用 ∥ 密列零回显） |
-| `src/agent/member-pull.mjs` | **104** | ≈130（设计） | 拉仓：项目/源解析 ∥ 命令组装与结果对位（凭据不随命令） |
-| `src/store/db.mjs` | **36** | **±0**——v23 段入 `migrations.mjs` | —— |
-| `src/store/migrations.mjs` | **795** | ≈**745**（+≈35——v23 段：凭据表 + 索引 + 审计 CHECK 重建（十六型）+ 迁移段） | 迁移链（v23 = 成员面段） |
-| `deploy/sandbox/member-shell/{index,protocol,pull,git-cred,bootstrap}.mjs` | **1306**（370 ∥ 318 ∥ 114 ∥ 86 ∥ 418——index ∥ bootstrap 为本轮实测，余三件沿既有读数） | ≈730（设计） | 壳：连挂/读指令族 ∥ 帧编解码 ∥ 拉仓执行 ∥ git 凭据助手 ∥ 版本化引导（自取/自换/回退） |
-| `deploy/sandbox/member-shell/core-run.mjs` | **490** | < 500（咨询线） | 核回合驱动（回合装配 ∥ 十一回调 ∥ 落槽；纯件已外提 `core-run-util.mjs`） |
-| `deploy/sandbox/member-shell/core-run-util.mjs` | **179** | ≈180（设计） | 纯件叶子（八常/类 + 八纯函数；`core-run.mjs` re-export 原 11 名——import 面零改） |
-| `deploy/sandbox/member-shell/member-tools.mjs` | **125** | ≈180 | 盒内 server 域四件（`workspace_{create,start,stop,destroy}`——KD-SV-222） |
-| `deploy/sandbox/member-shell/mcp-tools.mjs` | **106** | ≈130 | 盒侧 MCP 桩件（取表/建桩/防撞——机制全文 = `docs/server/design/mcp/MCP.md` §6.1） |
-| `deploy/sandbox/Dockerfile` | **46** | ≈35（设计） | 核装 + 壳 COPY（含 git 凭据助手）+ 助手登记 + CMD（件位契约 = `/opt/thincoder/app`——`sandbox/EXECUTION.md` §8） |
-| `.dockerignore`（仓根） | **+4/−1** | —— | 盒镜像构建上下文 = 仓根 ⇒ 核 pack 取件必需（白名单三包——`docs/server/design/ops/OPS.md` §5.1） |
-| `public/views-me-chat.mjs` | **499** | ≈380（拆后） | 成员对话页壳（四轴沿 `docs/server/design/webui/CHAT.md` §2.1 + 成员差异：工作区维度/盒态动作/拉仓引导） |
-| `public/views-me-chat-sessions.mjs` | **280** | ≈220 | 会话条（自绘下拉/行内控件——§3.11(6)） |
-| `public/views-me-chat-cards.mjs` | **180** | ≈190 | ask 卡族（核件直用装配——§3.11(2)） |
-| `public/views-me-chat-subs.mjs` | **162** | ≈200 | 子代理面（核 subblocks 栈消费——§3.11(5)） |
-| `public/views-me-chat-pull.mjs` | **218** | ≈180 | 拉取弹窗（项目选择/目录 ∥ 四态轮询 ∥ **凭据就地绑**（预检/表单/自动续拉/无效更新——KD-SV-215）∥ 纯件两枚（`pullStateLabel` ∥ `pullDetailText`）∥ 自加守卫三枚（§3.6）） |
-| `public/views-me-chat-messages.mjs` | **124** | ≈130 | 消息面（帧面纯函数 ∥ 回读装配——沿管理面同形） |
-| `public/views-me-chat-composer.mjs` | **456** | ≈390 | 输入区与状态行（核件全件消费适配层——沿管理面同构；四旗读面/出站 + 状态行段扩 + `images` 放行 + `atComplete` 桥 + **钮可见性适配层开关**（`#toolbar` 挂 `data-flags="live"`）） |
-| `thincoder-server/public/i18n-zh-me.mjs` ∥ `thincoder-server/public/i18n-en-me.mjs` | **184 ∥ 185** | 各 ⇒ ≈200 ∥ ≈200 | 文案表·me 部件扩键 |
-| 随正件 | —— | 小 | `public/app.mjs`（**209**） ∥ `nav.mjs`（**107**） ∥ `views-me.mjs`（**398**——账户页「Git 凭据」卡；行账 = `docs/server/design/webui/ME.md` §3） ∥ `style.css`（**445**——卡族/下拉/搜索/子代理块类名 + 钮可见性作用域覆写；行账 = `docs/server/design/webui/STYLE.md` §3） ∥ shell 两表（+1/表——键 `nav.page.me.chat`） ∥ `src/sandbox/routes.mjs` ∥ `registry.mjs`（写面判据点 + 上限） ∥ `thincoder-server/bin/thincoder-server.mjs`（**241**） |
-| 测试（单元测试档——**不入任何门**；随批收口用后即删——零留存） | —— | —— | 用例 = §7（成员面 N71–N87 ∥ B69–B76 ∥ E54–E61） |
+| 件 | 行数面 | 角色 |
+|---|---|---|
+| `src/agent/member-relay.mjs` | —（设计） | 盒连接登记 ∥ 下行队列 ∥ 回合状态机（在途门/收尾三径——**内存态**）∥ 在线态 ∥ ask 在途表 |
+| `src/agent/ask-vocab.mjs` | —（设计） | 应答词表叶子（**零 import**）：`ASK_KINDS` ∥ `ITEM_VERDICTS` ∥ `BATCH_VERDICTS` ∥ `askAnswerBodyOf`——`member-relay.mjs` 以 import + 重导出同源（公共面零变） |
+| `src/agent/member-routes.mjs` | —（设计） | 成员面会话端点（读/建/改 = 盒指令转发）+ 工作区扩四端点 + git 凭据三端点（ask/delete/files 三端点 = 已外迁 `member-asks.mjs`） |
+| `src/agent/member-asks.mjs` | — | ask/delete/files 三端点（自 `member-routes.mjs` 外迁——越线拆案） |
+| `src/agent/box-routes.mjs` | —（设计） | 盒三口 + SSE 下行 + 凭据取件口 + MCP 两口 |
+| `src/agent/member-cred.mjs` | —（设计） | 成员 git 凭据行存取（`credential-crypto.mjs` 复用 ∥ 密列零回显） |
+| `src/agent/member-pull.mjs` | —（设计） | 拉仓：项目/源解析 ∥ 命令组装与结果对位（凭据不随命令） |
+| `src/store/db.mjs` | —（**±0**——v23 段入 `migrations.mjs`） | —— |
+| `src/store/migrations.mjs` | —（v23 段：凭据表 + 索引 + 审计 CHECK 重建（十六型）+ 迁移段） | 迁移链（v23 = 成员面段） |
+| `deploy/sandbox/member-shell/{index,protocol,pull,git-cred,bootstrap}.mjs` | —（设计） | 壳：连挂/读指令族 ∥ 帧编解码 ∥ 拉仓执行 ∥ git 凭据助手 ∥ 版本化引导（自取/自换/回退） |
+| `deploy/sandbox/member-shell/core-run.mjs` | —（< 500 咨询线） | 核回合驱动（回合装配 ∥ 十一回调 ∥ 落槽；纯件已外提 `core-run-util.mjs`） |
+| `deploy/sandbox/member-shell/core-run-util.mjs` | —（设计） | 纯件叶子（八常/类 + 八纯函数；`core-run.mjs` re-export 原 11 名——import 面零改） |
+| `deploy/sandbox/member-shell/member-tools.mjs` | — | 盒内 server 域四件（`workspace_{create,start,stop,destroy}`——KD-SV-222） |
+| `deploy/sandbox/member-shell/mcp-tools.mjs` | — | 盒侧 MCP 桩件（取表/建桩/防撞——机制全文 = `docs/server/design/mcp/MCP.md` §6.1） |
+| `deploy/sandbox/Dockerfile` | —（设计） | 核装 + 壳 COPY（含 git 凭据助手）+ 助手登记 + CMD（件位契约 = `/opt/thincoder/app`——`sandbox/EXECUTION.md` §8） |
+| `.dockerignore`（仓根） | —— | 盒镜像构建上下文 = 仓根 ⇒ 核 pack 取件必需（白名单三包——`docs/server/design/ops/OPS.md` §5.1） |
+| `public/views-me-chat.mjs` | —（拆后） | 成员对话页壳（四轴沿 `docs/server/design/webui/CHAT.md` §2.1 + 成员差异：工作区维度/盒态动作/拉仓引导） |
+| `public/views-me-chat-sessions.mjs` | — | 会话条（自绘下拉/行内控件——§3.11(6)） |
+| `public/views-me-chat-cards.mjs` | — | ask 卡族（核件直用装配——§3.11(2)） |
+| `public/views-me-chat-subs.mjs` | — | 子代理面（核 subblocks 栈消费——§3.11(5)） |
+| `public/views-me-chat-pull.mjs` | — | 拉取弹窗（项目选择/目录 ∥ 四态轮询 ∥ **凭据就地绑**（预检/表单/自动续拉/无效更新——KD-SV-215）∥ 纯件两枚（`pullStateLabel` ∥ `pullDetailText`）∥ 自加守卫三枚（§3.6）） |
+| `public/views-me-chat-messages.mjs` | — | 消息面（帧面纯函数 ∥ 回读装配——沿管理面同形） |
+| `public/views-me-chat-composer.mjs` | — | 输入区与状态行（核件全件消费适配层——沿管理面同构；四旗读面/出站 + 状态行段扩 + `images` 放行 + `atComplete` 桥 + **钮可见性适配层开关**（`#toolbar` 挂 `data-flags="live"`）） |
+| `thincoder-server/public/i18n-zh-me.mjs` ∥ `thincoder-server/public/i18n-en-me.mjs` | — | 文案表·me 部件扩键 |
+| 随正件 | — | `public/app.mjs` ∥ `nav.mjs` ∥ `views-me.mjs`（账户页「Git 凭据」卡；行账 = `docs/server/design/webui/ME.md` §3） ∥ `style.css`（卡族/下拉/搜索/子代理块类名 + 钮可见性作用域覆写；行账 = `docs/server/design/webui/STYLE.md` §3） ∥ shell 两表（+1/表——键 `nav.page.me.chat`） ∥ `src/sandbox/routes.mjs` ∥ `registry.mjs`（写面判据点 + 上限） ∥ `thincoder-server/bin/thincoder-server.mjs` |
+| 测试（单元测试档——**不入任何门**；随批收口用后即删——零留存） | —— | 用例 = §7（成员面 N71–N87 ∥ B69–B76 ∥ E54–E61） |
 
 ## 6. 验收（AC-50 对位——机检）
 

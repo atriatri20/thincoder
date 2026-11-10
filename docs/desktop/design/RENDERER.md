@@ -431,36 +431,36 @@
 | `docs/render-core/design/RENDER-CORE.md` + `docs/desktop/design/{RENDERER,PROJECT}.md` | 本档设计落定（KD-RC-10 + KD-RC-9 口径收正 ∕ 本档 §1 两行 ∕ 本档 §1.2 增条 ∕ 本档 §2 对齐判据 ∕ 本档 §3 尾段挂载 ∕ 本档 §1.6 KD-50 + 本档 §5.2（本块））——需求档性能行收正 = 父侧落笔 | 已落 |
 **桌面流面对账面重写行**
 
-| # | 档 | 行数（构成） | 面 |
+| # | 档 | 构成 | 面 |
 |---|---|---|---|
-| 1 | `thincoder-desktop/renderer/views/chat-stream.mjs` | **72**（重写——留 `blockKey` + 结算纯件 `flowStep`） | 结算面 |
-| 2 | `thincoder-desktop/renderer/app.mjs` | **299**（`paintChat`：两径 = 构造（首帧 ∥ 整置 ∥ 词面变）∥ 结算（作业单消费 + 结算后清）；帧记账 `chatFrame` 增 `hidden`；**≤500 ⇒ 免拆**） | 装配 ∥ 帧出口 |
-| 3 | `thincoder-desktop/renderer/views/chat.mjs` | **204**（`settleFrame` 改结算式（签 = `(root, model, scroll, handlers, account)`）；`patchTail` 泛化 `refreshNode`；头段 = 摘 ∥ 造按数；**④′ 位次步 ∥ `_blockAt`/`_blockSeat` 记账保留零动**） | 帧尾面 |
-| 4 | `thincoder-desktop/renderer/store.mjs` | **332**（+`flowOps` 切片 ∥ `withFlowOp` 纯动作——**≤500 ⇒ 免拆**） | 状态树 |
-| 5 | `thincoder-desktop/renderer/page-read.mjs` | **235**（两作业点：首屏 `build` ∥ 回填 `prepend`） | 页读面 |
-| 6 | `thincoder-desktop/renderer/subagent-reduce.mjs` | **258**（零作业点；**≤500 ⇒ 免拆**） | 归约面 |
-| 7 | `thincoder-desktop/renderer/composer-wire.mjs` | **262**（退流一作业点 `cut` + 摘空并 `build`） | 输入区 |
-| 7b | `thincoder-desktop/renderer/session-wire.mjs` | **202**（关页一作业点 `build`——mid-life 关页（唯一会话删除 ∥ 列表空）同笔 `withFlowOp`；`none` 态引导面由构造径承接） | 会话族接线面 |
+| 1 | `thincoder-desktop/renderer/views/chat-stream.mjs` | （重写——留 `blockKey` + 结算纯件 `flowStep`） | 结算面 |
+| 2 | `thincoder-desktop/renderer/app.mjs` | （`paintChat`：两径 = 构造（首帧 ∥ 整置 ∥ 词面变）∥ 结算（作业单消费 + 结算后清）；帧记账 `chatFrame` 增 `hidden`；**≤500 ⇒ 免拆**） | 装配 ∥ 帧出口 |
+| 3 | `thincoder-desktop/renderer/views/chat.mjs` | （`settleFrame` 改结算式（签 = `(root, model, scroll, handlers, account)`）；`patchTail` 泛化 `refreshNode`；头段 = 摘 ∥ 造按数；**④′ 位次步 ∥ `_blockAt`/`_blockSeat` 记账保留零动**） | 帧尾面 |
+| 4 | `thincoder-desktop/renderer/store.mjs` | （+`flowOps` 切片 ∥ `withFlowOp` 纯动作——**≤500 ⇒ 免拆**） | 状态树 |
+| 5 | `thincoder-desktop/renderer/page-read.mjs` | （两作业点：首屏 `build` ∥ 回填 `prepend`） | 页读面 |
+| 6 | `thincoder-desktop/renderer/subagent-reduce.mjs` | （零作业点；**≤500 ⇒ 免拆**） | 归约面 |
+| 7 | `thincoder-desktop/renderer/composer-wire.mjs` | （退流一作业点 `cut` + 摘空并 `build`） | 输入区 |
+| 7b | `thincoder-desktop/renderer/session-wire.mjs` | （关页一作业点 `build`——mid-life 关页（唯一会话删除 ∥ 列表空）同笔 `withFlowOp`；`none` 态引导面由构造径承接） | 会话族接线面 |
 | 8 | 单元测试档 | 桌面流面对账面重写族（**已建成 · 六用例**；用例集 = 修复轮 1 ∥ 修复轮 2 修正块：用例 1 结算纯件八例（含混帧——`prepend` + `cut` 同帧；关页例——`build` 作业承 `none` 态：引导节点唯一子）∥ 用例 2 同尺复测（全量换新 = 0）∥ 用例 3 滚动补偿 ∥ 用例 4 序 / 内容（含构造径终态对拍）∥ 用例 5 禁词 + 写点白名单（五作业点）；随批留存 · 不进集成测试树） | 全批 |
 | 9 | 设计档 | `docs/desktop/design/RENDERER.md` §1 索引两行 + §1.1（作业单 ∥ 结算步 ∥ 建 ∥ 帧尾态刷条 ∥ 快照族条）+ §1.2 ② + §2 四条 + §3 两条 · 本档 §1.6 **KD-63** ∥ **KD-48③** ∥ **KD-50②** ∥ `docs/desktop/design/PROJECT.md` §4.1 `chat-stream.mjs` 行 ∥ 本档 §5.2 本块（含修复轮 2 补行 7b） · `docs/desktop/design/UI.md` §1 追加注项 2（修复轮 2） | 全批 |
 零触面：`renderer/views/chat-scroll.mjs` ∥ `renderer/frame-dispatch.mjs`（`flowOps` 不入面键集）∥ `renderer/views/chat-chrome.mjs` ∥ `renderer/views/chat-model.mjs` ∥ 核包 ∥ CLI ∥ VSC ∥ 宿主面 ∥ 记录面 ∥ **消化面（座次步 ∥ 归档面零触）**。
 
 **跨实例取件行批行**（机制 ∕ 判据单源 = 本档 §1.6 **KD-74** 第四员 ∥ `docs/desktop/design/IPC.md` §2「取件行注」）：
 
-| # | 档 | 行数 | 面 |
+| # | 档 | 构成 | 面 |
 |---|---|---|---|
-| 1 | `thincoder-desktop/renderer/events-subscribe.mjs` | **106**（`CHANNELS` 增 `ev:inbox`） | 订阅表 |
-| 2 | `thincoder-desktop/renderer/events.mjs` | **289**（`reduce` 增 `case "ev:inbox"`） | 归约分派 |
-| 3 | `thincoder-desktop/renderer/events-wake.mjs` | **130**（新 `onInbox` + `INBOX_KINDS`） | 归约面 |
-| 4 | `thincoder-desktop/renderer/store.mjs` | **383**（`inboxNotice` 切片 + `clearTurnTraces` 第四员） | 状态树 |
-| 5 | `thincoder-desktop/renderer/frame-dispatch.mjs` | **54**（`CHAT_KEYS` 增 `inboxNotice`） | 帧分派 |
-| 6 | `thincoder-desktop/renderer/page-read.mjs` | **298**（`clearInboxNotice` + 首屏支接入） | 页读面 |
-| 7 | `thincoder-desktop/renderer/views/chat-model.mjs` | **128**（`inboxOf` 投影 `inbox`——空 ⇒ `null`） | 模型面 |
-| 8 | `thincoder-desktop/renderer/views/chat-chrome.mjs` | **249**（`inboxGroupNode` ∕ `syncInbox` ∥ `inboxAnchorOf`） | 行组面 |
-| 9 | `thincoder-desktop/renderer/views/chat-tree.mjs` | **147**（构树径补 `inboxGroupNode`——换会话 ∕ 整置的重建帧不掉行组） | 构树径 |
-| 10 | `thincoder-desktop/renderer/views/compress-status.mjs` | **75**（`compressAnchorOf` 链首插 `[data-inbox]`——压缩行恒居取件行组之前） | 族内序 |
-| 11 | `thincoder-desktop/renderer/views/chat-digest-rows.mjs` | **288**（清点计数「运行期痕六清之四」） | 清点面 |
-| 12 | `thincoder-desktop/renderer/views/chat.mjs` | **208**（头注镜像收正：尾组族内序 ∥ 根子序 ∥ `syncChrome` 面列 ∥ 模型形 ⑤ 补 `inbox`） | 头注 |
+| 1 | `thincoder-desktop/renderer/events-subscribe.mjs` | （`CHANNELS` 增 `ev:inbox`） | 订阅表 |
+| 2 | `thincoder-desktop/renderer/events.mjs` | （`reduce` 增 `case "ev:inbox"`） | 归约分派 |
+| 3 | `thincoder-desktop/renderer/events-wake.mjs` | （新 `onInbox` + `INBOX_KINDS`） | 归约面 |
+| 4 | `thincoder-desktop/renderer/store.mjs` | （`inboxNotice` 切片 + `clearTurnTraces` 第四员） | 状态树 |
+| 5 | `thincoder-desktop/renderer/frame-dispatch.mjs` | （`CHAT_KEYS` 增 `inboxNotice`） | 帧分派 |
+| 6 | `thincoder-desktop/renderer/page-read.mjs` | （`clearInboxNotice` + 首屏支接入） | 页读面 |
+| 7 | `thincoder-desktop/renderer/views/chat-model.mjs` | （`inboxOf` 投影 `inbox`——空 ⇒ `null`） | 模型面 |
+| 8 | `thincoder-desktop/renderer/views/chat-chrome.mjs` | （`inboxGroupNode` ∕ `syncInbox` ∥ `inboxAnchorOf`） | 行组面 |
+| 9 | `thincoder-desktop/renderer/views/chat-tree.mjs` | （构树径补 `inboxGroupNode`——换会话 ∕ 整置的重建帧不掉行组） | 构树径 |
+| 10 | `thincoder-desktop/renderer/views/compress-status.mjs` | （`compressAnchorOf` 链首插 `[data-inbox]`——压缩行恒居取件行组之前） | 族内序 |
+| 11 | `thincoder-desktop/renderer/views/chat-digest-rows.mjs` | （清点计数「运行期痕六清之四」） | 清点面 |
+| 12 | `thincoder-desktop/renderer/views/chat.mjs` | （头注镜像收正：尾组族内序 ∥ 根子序 ∥ `syncChrome` 面列 ∥ 模型形 ⑤ 补 `inbox`） | 头注 |
 | 13 | 测试 ∕ 探针 | 单元测试档 = 上一批（跨实例取件行批）改面件——A1–A9 + A7b · 十一例；收口删 · **不计线**——KD-4；集成测试 = 不写 ∕ 不改 ∕ 不跑（`test/RTM.md` 缺行登记归父侧） | 全批 |
 | 14 | 设计档 | `docs/desktop/design/IPC.md` §1 `ev:inbox` 行 + §2「取件行注」· 本档 §1.1 跨实例取件行条 ∥ §1.6 **KD-74** 第四员 ∥ §5.1 ∥ §5.2（本块）· `docs/desktop/design/SHELL.md` §1 树 ∥ §5.1 · `docs/desktop/design/{PROJECT,CHAT,ACTIVITY}.md` 计数随动 | 全批 |
 

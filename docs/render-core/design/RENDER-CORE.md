@@ -445,48 +445,47 @@
 - ★上抛①（字族）= **全端排版基线**（`--font: var(--mono)`——观感变化最大一项）；否决 ⇒ 回退配方 = `docs/desktop/design/PROJECT.md` §2 **KD-57** ⑥。
 - **`select` 本体行高豁免（真机判据 · 平台面）**：Blink 把 `select` 本体 computed `line-height` 固定 `normal`（内联 ∥ 表则 ∥ `!important` 均不可达——页面 CSS 不可承载）⇒ 白名单外平台豁免（同壳 `option` ∥ `input` ∥ `button` 可控已归基线）；证据 = 单元测试档读数 `selectExemption` 段。
 **会话面板面（桌面会话控制面）映射表 = `docs/desktop/design/UI.md` §1 批注项 2**（端壳面，非核产出件——本档不重述）。
-**落点与预算（内容面口径）**：`thincoder-desktop/renderer/core.css`（行数判时现读，内容行数口径）；
-  `thincoder-desktop/renderer/theme.css`（行数判时现读，内容行数口径；主题表 12 变量在册）；逐面真机比对 = 需求 §4 D21 验收。
+**落点与预算（内容面口径）**：`thincoder-desktop/renderer/core.css` ∥ `thincoder-desktop/renderer/theme.css`——体量按 `doc_check` 的 `lines` 量，不落绝对值（主题表 12 变量在册）；逐面真机比对 = 需求 §4 D21 验收。
 
 ## 6. 受影响文件与测试（三端）
 
-口径：内容行数（文末换行不计）；「结构不变」= 档职责边界不动；「现行」列 = 该行落笔时的读数，判时按盘现读（不载 as-of 快照）。
+口径：内容行数（文末换行不计）；「结构不变」= 档职责边界不动；体量按 `doc_check` 的 `lines` 量，不落绝对值（判时按盘现读）。
 
 **核包（新建——R1 已落）**：`thincoder-render-core/package.json`。
 
-- **R1 六档**（逐字搬迁；行数 = VSC 原档现行值，见下表）：`thincoder-render-core/md.mjs` · `thincoder-render-core/highlight.mjs` · `thincoder-render-core/diff.mjs` · `thincoder-render-core/lib.mjs` · `thincoder-render-core/tool-summary.mjs` · `thincoder-render-core/i18n.mjs`。
+- **R1 六档**（逐字搬迁）：`thincoder-render-core/md.mjs` · `thincoder-render-core/highlight.mjs` · `thincoder-render-core/diff.mjs` · `thincoder-render-core/lib.mjs` · `thincoder-render-core/tool-summary.mjs` · `thincoder-render-core/i18n.mjs`。
 
   - **R2 三族**：`flow/*.mjs`（块 / 工具卡 / 推理 / 缝合）· `cards/*.mjs`（审批 / 提问 / 计划）· `subblocks/*.mjs`（态机 / 块面）。
 - **测试**：`test/` 下平 node 直测用例（**纯函数层 + 态机层**）。
 
   **DOM 构件层用例宿主 = 消费端测试树**（非核包）——核包自身零 devDep（C1 机检恒可过），不引 happy-dom ∥ 不另立第二假 root。
 
-**扩展端（判定表 16 档 + 发行三件）**——逐档「现行 ⇒ 预期」（核 9 = 迁核；拆 7 = 纯面迁核 · 端留守）：
+**扩展端（判定表 16 档 + 发行三件）**——逐档「迁出判定」（核 9 = 迁核；拆 7 = 纯面迁核 · 端留守）：
 
-| 档（`thincoder-vscode/webview/`） | 现行 | 预期 | 判定 | 迁出面 / 注（越层档带拆分预案） |
+| 档（`thincoder-vscode/webview/`） | 行数面 | 判定 | 迁出面 / 注（越层档带拆分预案） |
 |---|---|---|---|---|
-| `thincoder-vscode/webview/md.js` | 266 | 核 ±0（266） | 核 | 逐字搬迁；VSC 侧原档不再持逻辑——2 行 shim（零逻辑再导出） |
-| `thincoder-render-core/highlight.mjs`（R1 迁核 · VSC 原档删除） | 198 | 核 ±0（198） | 核 | 逐字搬迁；零消费面——原唯一消费者 `thincoder-vscode/webview/md.js` 已核化 |
-| `thincoder-vscode/webview/diff.js` | 99 | 核 ±0（99） | 核 | 核 `thincoder-render-core/diff.mjs` = 逐字性**唯一例外**（引用行重指 `esc as escHtml` ← 核内 `thincoder-render-core/md.mjs`——`escHtml`〔`thincoder-vscode/webview/ui.js`〕 ≡ `esc`〔核 `thincoder-render-core/md.mjs`〕同构；对拍 225 项 0 mismatch）；VSC 档 = 2 行 shim；桌面不消费——§4 行 10 |
-| `thincoder-vscode/webview/lib.js` | 99 | 核 ±0（99） | 核 | 核 `thincoder-render-core/lib.mjs` 逐字搬迁；VSC 档 = 2 行 shim |
-| `thincoder-vscode/webview/tool-summary.js` | 122 | 核 ±0（122） | 核 | 核 `thincoder-render-core/tool-summary.mjs` 逐字搬迁；VSC 档 = 2 行 shim |
-| `thincoder-vscode/webview/i18n.js` | 33 | 核 ±0（33） | 核 | 核 `thincoder-render-core/i18n.mjs` 逐字搬迁；VSC 档 = 2 行 shim |
-| `thincoder-vscode/webview/activity-view.js` | 200 | 核 ±0（200） | 核 | 核 `thincoder-render-core/subblocks/activity-view.mjs` 逐字搬迁（一处引用行重指）；VSC 侧 = 2 行 `export *` shim |
-| `thincoder-vscode/webview/toast.js` | 22 | 核 ±0（22） | 核 | 核 `thincoder-render-core/toast.mjs` 字节全同；VSC 侧 = 2 行 `export *` shim（`showToast._t` 同一函数对象） |
-| `thincoder-vscode/webview/tool-card-restore.mjs` | 82 | 核 ±0（82） | 核 | 核 `thincoder-render-core/flow/tool-card-restore.mjs` 逐字搬迁（三处引用行重指）；VSC 侧 = 2 行 shim（仅测试消费） |
-| `thincoder-vscode/webview/activity.js` | 450 | ≈ 260–320 | 拆 | 迁出态机迁移判据 ⇒ 核 `thincoder-render-core/subblocks/state.mjs` + `thincoder-render-core/subblocks/channel.mjs`；低于带（实迁出量大于估值——另承接 `renderSubBlock` / 判据族等原档内联段）⇒ 拆分预案消解（未误拆） |
-| `thincoder-vscode/webview/ui.js` | 469 | **222**（内容行数口径） | 拆 | 迁出四构件面（块容器 / 工具卡 / 恢复面 / 错误横幅）⇒ 核 `thincoder-render-core/flow/block.mjs` + `thincoder-render-core/flow/tool-card.mjs`；带内 ⇒ 拆分预案消解（未误拆） |
-| `thincoder-vscode/webview/streaming.js` | 262 | ≈ 150–190 | 拆 | 迁出 rAF 缝合 + md 重渲 + 推理块 + 复制钮 + chunk 构图 ⇒ 核 `thincoder-render-core/flow/stream.mjs` / `thincoder-render-core/flow/reasoning.mjs` / `thincoder-render-core/subblocks/block.mjs`；带内 |
-| `thincoder-vscode/webview/panels.js` | 142 | ≈ 90–110 | 拆 | 构树 + 显隐判据 ⇒ 核 `thincoder-render-core/cards/panel.mjs`；略高于带（端侧保 2s 定时器与消息分流）；挂起 / 回合态 / 分流留守 |
-| `thincoder-vscode/webview/permission.js` | 122 | ≈ 80–95 | 拆 | 构树 ⇒ 核 `thincoder-render-core/cards/permission.mjs`；低于带（实迁出量大于估值）；三出口留守（端注入） |
-| `thincoder-vscode/webview/question.js` | 89 | ≈ 60–70 | 拆 | 构树 ⇒ 核 `thincoder-render-core/cards/question.mjs`；低于带；出站留守 |
-| `thincoder-vscode/webview/search.js` | 165 | 改指核件 ⇒ **18**（内容行数口径） | **拆** | 端壳（`root` 绑定 + 侧效应注册）——实现整件入核 `thincoder-render-core/search.mjs` |
+| `thincoder-vscode/webview/md.js` | — | 核 | 逐字搬迁；VSC 侧原档不再持逻辑——2 行 shim（零逻辑再导出） |
+| `thincoder-render-core/highlight.mjs`（R1 迁核 · VSC 原档删除） | — | 核 | 逐字搬迁；零消费面——原唯一消费者 `thincoder-vscode/webview/md.js` 已核化 |
+| `thincoder-vscode/webview/diff.js` | — | 核 | 核 `thincoder-render-core/diff.mjs` = 逐字性**唯一例外**（引用行重指 `esc as escHtml` ← 核内 `thincoder-render-core/md.mjs`——`escHtml`〔`thincoder-vscode/webview/ui.js`〕 ≡ `esc`〔核 `thincoder-render-core/md.mjs`〕同构；对拍 225 项 0 mismatch）；VSC 档 = 2 行 shim；桌面不消费——§4 行 10 |
+| `thincoder-vscode/webview/lib.js` | — | 核 | 核 `thincoder-render-core/lib.mjs` 逐字搬迁；VSC 档 = 2 行 shim |
+| `thincoder-vscode/webview/tool-summary.js` | — | 核 | 核 `thincoder-render-core/tool-summary.mjs` 逐字搬迁；VSC 档 = 2 行 shim |
+| `thincoder-vscode/webview/i18n.js` | — | 核 | 核 `thincoder-render-core/i18n.mjs` 逐字搬迁；VSC 档 = 2 行 shim |
+| `thincoder-vscode/webview/activity-view.js` | — | 核 | 核 `thincoder-render-core/subblocks/activity-view.mjs` 逐字搬迁（一处引用行重指）；VSC 侧 = 2 行 `export *` shim |
+| `thincoder-vscode/webview/toast.js` | — | 核 | 核 `thincoder-render-core/toast.mjs` 字节全同；VSC 侧 = 2 行 `export *` shim（`showToast._t` 同一函数对象） |
+| `thincoder-vscode/webview/tool-card-restore.mjs` | — | 核 | 核 `thincoder-render-core/flow/tool-card-restore.mjs` 逐字搬迁（三处引用行重指）；VSC 侧 = 2 行 shim（仅测试消费） |
+| `thincoder-vscode/webview/activity.js` | — | 拆 | 迁出态机迁移判据 ⇒ 核 `thincoder-render-core/subblocks/state.mjs` + `thincoder-render-core/subblocks/channel.mjs`；低于带（实迁出量大于估值——另承接 `renderSubBlock` / 判据族等原档内联段）⇒ 拆分预案消解（未误拆） |
+| `thincoder-vscode/webview/ui.js` | — | 拆 | 迁出四构件面（块容器 / 工具卡 / 恢复面 / 错误横幅）⇒ 核 `thincoder-render-core/flow/block.mjs` + `thincoder-render-core/flow/tool-card.mjs`；带内 ⇒ 拆分预案消解（未误拆） |
+| `thincoder-vscode/webview/streaming.js` | — | 拆 | 迁出 rAF 缝合 + md 重渲 + 推理块 + 复制钮 + chunk 构图 ⇒ 核 `thincoder-render-core/flow/stream.mjs` / `thincoder-render-core/flow/reasoning.mjs` / `thincoder-render-core/subblocks/block.mjs`；带内 |
+| `thincoder-vscode/webview/panels.js` | — | 拆 | 构树 + 显隐判据 ⇒ 核 `thincoder-render-core/cards/panel.mjs`；略高于带（端侧保 2s 定时器与消息分流）；挂起 / 回合态 / 分流留守 |
+| `thincoder-vscode/webview/permission.js` | — | 拆 | 构树 ⇒ 核 `thincoder-render-core/cards/permission.mjs`；低于带（实迁出量大于估值）；三出口留守（端注入） |
+| `thincoder-vscode/webview/question.js` | — | 拆 | 构树 ⇒ 核 `thincoder-render-core/cards/question.mjs`；低于带；出站留守 |
+| `thincoder-vscode/webview/search.js` | — | **拆** | 端壳（`root` 绑定 + 侧效应注册）——实现整件入核 `thincoder-render-core/search.mjs` |
 
 **发行三件 + 测试**：`thincoder-vscode/package.json`（依赖 +1）· `.vscodeignore`（反排除 +1 行）· `thincoder-vscode/scripts/check-vsix.mjs`（断言 +1）。
 
 **桌面端**：`thincoder-desktop/package.json`（依赖 +1）· `thincoder-desktop/src/main/protocol.mjs`（双根 + `/rc/`）· `thincoder-desktop/scripts/check-dist.mjs`（产物断言）· `renderer/*` 三面重定位（R3a–R3c）。
 
-  `thincoder-desktop/renderer/core.css` ∥ `thincoder-desktop/renderer/theme.css` 的现行读数见本档 §5「落点与预算」；两值规则——值源 = `thincoder-vscode/webview/chat.css`。
+  `thincoder-desktop/renderer/core.css` ∥ `thincoder-desktop/renderer/theme.css` 的体量口径见本档 §5「落点与预算」；两值规则——值源 = `thincoder-vscode/webview/chat.css`。
 
 **文档面**：本档（新）· `docs/desktop/design/{UI,IPC,PROJECT,RENDERER}.md` · `docs/vsc/design/WEBVIEW.md`（接入形）· `docs/core/design/ARCHITECTURE.md` + `docs/README.md`（模块地图补行——父侧面，§10 上抛）。
 

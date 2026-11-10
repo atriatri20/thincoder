@@ -134,18 +134,17 @@
 - **双角色规则**：角色判定与写权限强制在服务端（页面显隐非判据）；`user` 触管理端点 ⇒ 403 `forbidden`；admin 兼有自助面；无 ∥ 过期会话 ⇒ 401 `unauthorized`。
 - **跨站防护**：`SameSite=Strict`（跨站不携 cookie）+ 写端点仅 JSON + 无 CORS 放行头。
 
-## 4. 本域文件与行数预算（本域族行）
+## 4. 文件账（本域族行）
 
-| 档 | 行数（实读——设计估） | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/src/accounts/keys.mjs`（已落盘） | **≈180** | key 校验 ∥ key 签发/吊销/轮转（页面与 CLI 共用） |
-| `thincoder-server/src/accounts/members.mjs`（已落盘） | **241** | 成员 CRUD ∥ scrypt 散列/校验 ∥ 角色 ∥ 临时密码 ∥ 首启引导 |
-| `thincoder-server/src/accounts/session.mjs`（已落盘） | **95** | 会话签发/校验/吊销 ∥ cookie 序列化/解析 ∥ 过期清理 |
-| `thincoder-server/src/accounts/routes.mjs`（已落盘） | **≈160** | 自助端点：login ∥ logout ∥ me ∥ me/password ∥ me/keys/issue ∥ me/keys/:keyId/revoke ∥ me/keys/rotate |
-| `thincoder-server/src/accounts/routes-admin.mjs`（已落盘） | **109** | 管理端点：members 列表/建 ∥ 吊销 ∥ 重置 ∥ 审计列表 |
-| `thincoder-server/src/accounts/login-guard.mjs`（已落盘） | **≈125** | 登录防爆破 |
-| `thincoder-server/src/accounts/audit.mjs`（已落盘） | **133** | 审计事件（§2.1） |
-| **小计** | **≈966** | —— |
+| `thincoder-server/src/accounts/keys.mjs`（已落盘） | — | key 校验 ∥ key 签发/吊销/轮转（页面与 CLI 共用） |
+| `thincoder-server/src/accounts/members.mjs`（已落盘） | — | 成员 CRUD ∥ scrypt 散列/校验 ∥ 角色 ∥ 临时密码 ∥ 首启引导 |
+| `thincoder-server/src/accounts/session.mjs`（已落盘） | — | 会话签发/校验/吊销 ∥ cookie 序列化/解析 ∥ 过期清理 |
+| `thincoder-server/src/accounts/routes.mjs`（已落盘） | — | 自助端点：login ∥ logout ∥ me ∥ me/password ∥ me/keys/issue ∥ me/keys/:keyId/revoke ∥ me/keys/rotate |
+| `thincoder-server/src/accounts/routes-admin.mjs`（已落盘） | — | 管理端点：members 列表/建 ∥ 吊销 ∥ 重置 ∥ 审计列表 |
+| `thincoder-server/src/accounts/login-guard.mjs`（已落盘） | — | 登录防爆破 |
+| `thincoder-server/src/accounts/audit.mjs`（已落盘） | — | 审计事件（§2.1） |
 
 ## 5. 验收判据（机检）
 

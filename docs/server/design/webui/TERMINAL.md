@@ -82,15 +82,14 @@
 
 ## 3. 文件账（本面文件行）
 
-| 档 | 行数 | 职责 |
+| 档 | 行数面 | 职责 |
 |---|---|---|
-| `thincoder-server/public/terminal-core.mjs` | **495** | 网格模型 + 装配（§2.1） |
-| `thincoder-server/public/terminal-vt.mjs` | **117** | VT 解析面（§2.1） |
-| `thincoder-server/public/terminal-codec.mjs` | **89** | 编解码面（§2.1） |
-| `thincoder-server/public/terminal-render.mjs` | **361** | DOM 渲染 + 输入捕获（§2.1） |
-| `thincoder-server/public/terminal-link.mjs` | **133** | WS 传输 + 心跳（§2.1/§2.5） |
-| `thincoder-server/public/views-sandbox-terminal.mjs` | **125** | 控制台消费件（终端窗——本期唯一落地点） |
-| **面小计** | **1320**（六档：495 ∥ 117 ∥ 89 ∥ 361 ∥ 133 ∥ 125） | —— |
+| `thincoder-server/public/terminal-core.mjs` | — | 网格模型 + 装配（§2.1） |
+| `thincoder-server/public/terminal-vt.mjs` | — | VT 解析面（§2.1） |
+| `thincoder-server/public/terminal-codec.mjs` | — | 编解码面（§2.1） |
+| `thincoder-server/public/terminal-render.mjs` | — | DOM 渲染 + 输入捕获（§2.1） |
+| `thincoder-server/public/terminal-link.mjs` | — | WS 传输 + 心跳（§2.1/§2.5） |
+| `thincoder-server/public/views-sandbox-terminal.mjs` | — | 控制台消费件（终端窗——本期唯一落地点） |
 
 ## 4. 验收（本面 AC 行）
 
