@@ -28,7 +28,7 @@
 |---|---|---|
 | `host` | 是 | 监听地址：**默认内网部署**填内网接口地址（如 `192.168.x.x` ∥ `10.x.x.x`）；公网部署须同时开 `tls` 段（机制 = `docs/server/design/gateway/PUBLICNET.md` §2）；填 `0.0.0.0` 时启动警告（仅单接口机可接受） |
 | `port` | 否 | 缺省 `8787` |
-| `db` | 否 | SQLite 库路径（相对 = 本配置档所在目录）；缺省 `data/gateway.db` |
+| `db` | 否 | SQLite 库路径（相对 = 本配置档所在目录）；缺省 = 配置档同级 `data` 目录内的 `gateway.db`（仓内 checkout 落点 = `thincoder-server/data/gateway.db`） |
 | `autoUpdate` | 否 | 更新档位：`false`（关——零检查） ∥ `"notify"`（检查 + 日志） ∥ `"auto"`（检查 + 自装）；缺省 `"notify"`；非法值 ⇒ 拒启（机制 = §5.4） |
 | `trustProxy` | 否 | 客户端 IP 口径：`false`（缺省——IP = 连接对端地址） ∥ `true`（读 `X-Real-IP` 头——仅当服务前置于可信代理；直连 ∥ 内置 TLS 部署保持 `false`）；登录防爆破 IP 维消费（`docs/server/design/accounts/ACCOUNTS.md` §2） |
 | `proxy` | 否 | 上游出口代理（形 = `{ "uri": "http://host:port" }`——代理目标本体，非门槛）：在场时仅**逐渠 `proxy: true`** 的 provider 上游请求（chat 转发 ∥ 模型发现）经此代理（逐渠独立——无全局闸）；缺省/缺位 = 零代理；非对象形态（数组 ∥ 数字）∥ `uri` 非法（非字符串 ∥ 空串 ∥ 非 URL ∥ scheme 非 `http:`——仅 `http:` 收）⇒ 拒启（fail-closed）；启动 warn 两条（触发/文案 = `docs/server/design/gateway/API.md` §6 KD-SV-55）——① 明文 `http:` uri（密钥外发提示）∥ ② 任一条目旗 `true` 而 `uri` 缺位（直连——旗未生效）；改动生效 = 重启（配置文件不热载——§10 在案）；机制全文 = `docs/server/design/gateway/API.md` §6 KD-SV-55 |
@@ -276,7 +276,7 @@ services:
   - 周期建议：随发布 ∥ 季度（部署方流程——脚本即判据；不设 timer，按需执行）。
 - 定时器样例（systemd——README §9 全文）：`thincoder-server-backup.service`（`Type=oneshot`；`ExecStart=node <deploy>/backup.mjs --config <配置档>`）+ `thincoder-server-backup.timer`（`OnCalendar=daily` ∥ `Persistent=true`）。
 - 容器路 = 宿主对卷内库执行同命令：`docker compose exec server node /app/deploy/backup.mjs --config /app/config/config.json --out /app/data/backups`（镜像含 `deploy/`；产物落卷）。
-- **恢复步**（README §9 备份节成文）：停服 → 以快照替换库（`gateway-<时间戳>.db` ⇒ `data/gateway.db`）+ 清 `-wal`/`-shm` 伴档 → 起服；换库前建议先跑演练脚本（对同一快照——判据过了再换）。
+- **恢复步**（README §9 备份节成文）：停服 → 以快照替换库（`gateway-<时间戳>.db` ⇒ 配置档同级 `data` 目录内的 `gateway.db`——仓内 checkout 即 `thincoder-server/data/gateway.db`）+ 清 `-wal`/`-shm` 伴档 → 起服；换库前建议先跑演练脚本（对同一快照——判据过了再换）。
 - **WAL 归档口径（KD-SV-79）**：SQLite 的 WAL **不可独立重放**（分段归档 = PostgreSQL 语义）——本仓形态 = **快照（一致点）+ 检查点（限额复位）**；「归档」实义 = 快照序列本身（每个快照 = 完整一致归档件）。
 - **环境回退**：若 `backup()` 环境核验不过 ⇒ 回退 = 停写窗快照方案（README 明示）。
 - 边界：进程内自动备份面不做（备份 = 部署侧面）；轮转/保留 = 部署方自管（不做）。
