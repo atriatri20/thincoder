@@ -4,7 +4,7 @@
 > 编制：主 agent · 2026-11-11 · 来源 = 用户 2026-11-11 02:15 提问「现在这些台账补关逻辑，模型清楚吗？知道怎么用吗？」——查工具描述面发现两处缺口，02:17「补吧」。。
 > 台账 = #2319（core · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-11-11
 批起 sha = f3c69ca7d406450b7c184fcae82371d447f45942
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
@@ -69,7 +69,7 @@ Whether this record qualifies is a reading, not a guess: when its §1 status lin
 
 依据 thincoder-core/agent-tools/batch-ledger-view.mjs「if (read.record !== "open" || rows === 0) return { repair: false, rows }」
 
-依据 thincoder-core/ledger-cmd.mjs「if (record !== "closed" && rows.length > 0 && archived.length === rows.length) halfStates.push(halfStateOf("open-but-settled", rows))」
+依据 thincoder-core/ledger-cmd.mjs「halfStateOf("open-but-settled", rows, UNKNOWN_RECORD_EXIT)」
 
 依据 thincoder-core/agent-tools/batch-segment-vocab.mjs「if (value.includes(STATUS_WORDS[1].open)) return "open"」
 
@@ -281,6 +281,14 @@ VERDICT: changes-required
 VERDICT: pass
 
 ## §4 用户批准（主 agent）
+
+**批准 = 用户两句指令，逐字留档。**
+
+- **2026-11-11 02:15**：用户原话「**现在这些台账补关逻辑，模型清楚吗？知道怎么用吗？**」——提出可发现性问题本身。
+- **2026-11-11 02:17**：用户原话「**补吧。**」——批准动描述面。
+
+**批准射程**：只动 `thincoder-core/tool-docs/batch.md` 的 `close` 入口句与 `check` 括注两处；机制本体、代码、`docs/core/design/**` 一律零改。第 4 轮评审把 `check` 括注并入本批（同轮收窄），仍在该档内、仍属描述面 ⇒ 未越批准射程。
+
 ## §5 实施记录（eng-coder）
 **状态行**：实施完成（两处描述面改写（close 入口句 ∥ check 括注）· 机制与代码零改 · 审计 DIVERGENCE: none · 代码评审 VERDICT: pass · 终态 clean）
 
@@ -471,3 +479,26 @@ Whether this record qualifies is a reading, not a guess: when its §1 status lin
 交付面结论：本批唯一被改的产品档 `thincoder-core/tool-docs/batch.md` 单档 `DOC-CHECK GATE: PASS`；把本批档一并整档入判时首行为 `REFUSED`，两条命中均在他人笔面，按笔域纪律上抛父侧路由，不在这里改成绿。
 
 ## §6 验证与收口（父代理）
+
+**验证（父侧复跑 + 实施席读数）**
+
+| 项 | 命令 / 来源 | 结果 |
+|---|---|---|
+| 本档机检门 | `doc_check(mode:"gate", docs:["thincoder-core/tool-docs/batch.md"])` | 首行 `DOC-CHECK GATE: PASS` |
+| 记录面整档门 | `doc_check(mode:"gate")`（本批档 + 目标档） | `PASS`（§2 那行假 `依据` 修正后转绿） |
+| 单档尺寸机检 | `node scripts/tool-schema-size.mjs` | 退出码 0；越 8,000 名单同集 7 档，未新增档名 |
+| 反侧读数（实施席实跑，非沿用上轮记数） | `the record is not frozen` ∥ `§1 line reads 进行中` | 1 → 0 ∥ 0 → 2 |
+
+**两条入口现在同格**
+
+- `close` 条目：「when its §1 status line reads 进行中, run `check` first」
+- `check` 括注：「the entry condition for a repair close only when the §1 line reads 进行中 — an unreadable §1 line is a reading here, not an entry」
+
+两处与 `thincoder-core/agent-tools/batch-ledger-view.mjs` 的 `repairDecisionOf`（`if (read.record !== "open" || rows === 0) return { repair: false, rows }`）同宽。
+
+**收口账**
+
+- 本批只改描述面，机制与代码零改；单测档、集成用例均无（不改变任何业务可观测结果，RTM 破 0 ∥ 冗 0 ∥ 增 0）。
+- 已知边角：`check` 的 `open-but-settled` 出路句对 `unknown` 仍固定印「直接收口」，与补关入口不等宽 —— 已挂 `#2322`（产品代码面，另批）。
+- 同档两处入口日后须同改：只改一面就回到本批要消灭的两面两说 —— 已写进 §2 与 §5。
+- **本批新债 0 条**。
