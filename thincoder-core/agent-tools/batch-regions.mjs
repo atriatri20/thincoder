@@ -11,6 +11,9 @@ import { readFileSync } from "node:fs"
 import { dirname, relative } from "node:path"
 
 import { runDocCheck, DOC_CLASS } from "../doc-check/index.mjs"
+// 路径键单源（判域族 `thincoder-core/doc-check/per-root.mjs` 的既有导出）：本档产出的区表键与编排档的查询键
+// 必须是同一份——各写一份必然漂，漂了不崩，是 `blocks` 落进 fail-closed 支、悄悄全拒。
+import { pathKey } from "../doc-check/per-root.mjs"
 import { judgeZones, paragraphRuns } from "../tools/doc-write-gate.mjs"
 
 /**
@@ -19,11 +22,10 @@ import { judgeZones, paragraphRuns } from "../tools/doc-write-gate.mjs"
  * 在飞扫描也不再按前缀排除：它改按「扩展名不是 `.md` 的不算批档 ∥ 点开头的不算批档」两条判。
  */
 
-/** 平台路径键（win32 大小写不敏感——只作集比对，非判据面）。 */
-const pathKey = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
-
-/** 读档（读不到 ⇒ 空串：归属标注取不到就只出 `§N`，不猜）。 */
-function safeRead(abs) {
+/** 读档（读不到 ⇒ 空串：归属标注取不到就只出 `§N`，不猜）。
+ *  **导出**：本档与编排档 `thincoder-core/agent-tools/batch-gate.mjs` 用的是同一句读法，各写一份必然漂移
+ *  ——单源放这里（本档本来就 import 了 `node:fs`），编排档与命中行族都从这里取。 */
+export function safeRead(abs) {
   try { return readFileSync(abs, "utf8") } catch { return "" }
 }
 

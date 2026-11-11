@@ -27,7 +27,9 @@ The agent has written a design document and is asking you to review it before an
 Evaluate the design against these dimensions:
 1. **Requirements coverage**: Does the design address every requirement? Are there gaps?
 2. **Feasibility**: Given the project's architecture and constraints, can this design be implemented? Are there obvious blockers?
-3. **Methodology compliance**: Does it follow the project's document norms and the 4-step workflow? Is the design doc itself present (at any tier) — no doc ⇒ 🔴.
+3. **Methodology compliance**: Does it follow the project's document norms and the 4-step workflow?
+   The norms are the ones the review message carries under the fixed section header `## Project Standards` — judge the design against those standards files, not against norms you infer from the design itself.
+   Is the design doc itself present (at any tier) — no doc ⇒ 🔴
 4. **Clarity**: Is the design specific enough to implement? Are the affected files identified?
 5. **Acceptance criteria**: Are they verifiable? Do they cover normal paths, edge cases, and error conditions?
 6. **Scope**: Is the scope appropriate? Are there opportunities to simplify? Is there scope creep?

@@ -262,7 +262,7 @@ test/integration/cross-repo-refs.test.mjs              集成用例（故事 CLI
 - `thincoder-core/path-resolve.mjs` — 第 6′ 步（唯一后缀兜底）+ 会话内一份后缀索引（§2.8）+ 新增后缀索引自持的跳过面常量 `SUFFIX_SKIP_DIR_NAMES` 与候选封顶 `SUFFIX_CANDIDATE_MAX`（既有 `SAME_NAME_SKIP` 一字不动 ⇒ 同名候选行为零变）；第 6′ 步的**前置** `isDeclaredRepoForm`（声明仓形不进兜底，两支：声明出边 ∥ 同级目录名）与它复用的 `siblingRepoNames`、`declaredEdgeFor`（与声明仓腿同一处匹配）；`siblingDirs` ∥ `siblingRepoNames` 的帽值上移成调用方的参（提示尾传 `SIBLING_MAX`、判定面传 `Infinity`）
 - `thincoder-core/doc-check/anchors.mjs` — `resolveDoc` 改调本层，传 `declaredRepos`；`unverified` 收集（**不入 `hits`** ⇒ 不改 verdict）；按组根接环检、产 `锚·环引`；`档缺` 载荷透传；**第 6′ 步参数 `suffixFallback: true` 与 `suffixHits` 收集**
 - `thincoder-core/doc-check/index.mjs` — `unverified` 的并集 ∥ 条数行 ∥ 逐声明根行（与 `unreadable` 块同处）＋ `锚·档缺` 行的 `missing` / `sameName` / `declaredRepo` / `siblingRepos` 括注 ＋ `锚·环引` 类名；**`report` 面后缀兜底读数行 ∥ 清账清单 ∥ 返回值并集 `suffixHits`**
-- `thincoder-core/agent-tools/batch-gate.mjs` — `ANCHOR_CLASSES` 增 `环引`：`锚·环引` 与其余三属同计 `锚 N 条`，批档门的拒串不把它切成段类
+- `thincoder-core/agent-tools/batch-gate-hit.mjs` — `ANCHOR_CLASSES` 增 `环引`：`锚·环引` 与其余三属同计 `锚 N 条`，批档门的拒串不把它切成段类
 - `thincoder-core/tools/doc-write-gate.mjs` — 拒串映射增仓级命中一分支：`环引` 没有行号，取引擎那一行原文，不把 `null` 当行号写进写者眼前
 - `thincoder-core/ledger-db.mjs` — `noRootMessage` 改由本层候选驱动
 - `thincoder-core/agent-tools/subagent-scheduler.mjs` — `files` 的实际解析落点（`kind:"none"` 只做调度）；门在 spawn 侧，解析在调度侧——绝对形不得提前交给 spawn 的判据

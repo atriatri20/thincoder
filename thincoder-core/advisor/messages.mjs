@@ -103,6 +103,9 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
   if (declaration) parts.push(declaration)
   const docList = Array.isArray(documents) ? documents.filter((d) => typeof d === "string" && d.trim()) : []
   const pathList = Array.isArray(paths) ? [...new Set(paths.filter((p) => typeof p === "string" && p.trim()))] : []
+  // 评审范围项 = 指南 ∥ 标准层 ∥ 文档地图共用的**同一份操作数**（序 = 喂给 `findGuideRoot` 的那个序）。
+  // 只算一处：两条 base 推导同源的前提是三个调用点拿到的确实是同一份列表。
+  const scopeFiles = [...pathList, ...docList]
 
   // Project guide FIRST in EVERY review path (code AND design round 0): the map
   // to the requirements docs is needed for design reviews too (design must fit
@@ -110,7 +113,7 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
   // below — the guide must be injected before that return. Project root is
   // discovered from the review scope (code paths AND design-doc paths, so a
   // documents-only design review still finds the subproject guide).
-  const guideRoot = injectProjectGuide(agent, parts, [...pathList, ...docList])
+  const guideRoot = injectProjectGuide(agent, parts, scopeFiles)
 
   // Design review: simplified message — focus on the design doc, not code
   if (reviewType === "design" && (agent._advisorRound || 0) === 0) {
@@ -159,13 +162,17 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
     // Engineering mode: the project standards section — read from the project's own
     // declaration (`docRoot.standards`); three states, each machine-distinguishable:
     // undeclared / declared-but-unreadable / injected. Never a probed convention name (PO-2).
+    // The base is derived inside the injector from this review's scope (the owning project of
+    // those paths) — NOT from `guideRoot`: the guide's root is the nearest AGENTS.md, which is a
+    // different question, and under a workspace anchor it is the anchor (no manifest ⇒ state 1).
     if (agent.config?.agent?.engineering) {
-      injectProjectStandards(agent, parts, guideRoot)
+      injectProjectStandards(agent, parts, scopeFiles)
     }
 
     // Document map: derived from the manifest `docRoot` (declared roots' README, then their common
-    // ancestor); neither → explicit degradation sentence (never a silent skip).
-    injectDocumentMap(agent, parts, guideRoot ?? agent.cwd)
+    // ancestor); neither → explicit degradation sentence (never a silent skip). Same base as the
+    // standards face (one derivation, two consumers).
+    injectDocumentMap(agent, parts, scopeFiles)
 
     parts.push("## Instructions")
     if (docList.length > 0) {
@@ -250,9 +257,10 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
   parts.push("")
 
   // Engineering mode: project standards (declaration-only, same helper as the
-  // design path) — undeclared degrades visibly (PO-2).
+  // design path) — undeclared degrades visibly (PO-2). Base = this review's scope's owning
+  // project (same derivation as the document map), not `guideRoot`.
   if (agent.config?.agent?.engineering) {
-    injectProjectStandards(agent, parts, guideRoot)
+    injectProjectStandards(agent, parts, scopeFiles)
   }
 
   // Instructions — round-aware: re-reviews skip convention discovery entirely.

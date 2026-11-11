@@ -22,7 +22,7 @@
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs"
 import { resolve, join, relative, dirname, sep } from "node:path"
 import { providerSpec } from "../config.mjs"
-import { DEFAULT_MANIFEST, docRootPaths, manifestFilePath, readManifest } from "../manifest.mjs"
+import { DEFAULT_MANIFEST, docRootPaths, manifestFilePath, projectRootView, readManifest } from "../manifest.mjs"
 // 去重键的折大小写尺子：同仓有两份同名函数——`doc-graph.mjs` 的私有副本（未导出）与
 // `doc-check/per-root.mjs` 导出的这一份；取已导出的那份（语义同形），不另造第三把。
 // 为何必须折：同一目录的两种大小写写法在 win32 上是同一个目录，不折就同一份档注入两次。
@@ -104,6 +104,50 @@ export function findGuideRoot(cwd, scopeFiles) {
   // checked as the walk's final step for scope files; for empty scopes, check
   // it explicitly so a bare cwd project still gets its guide).
   if (existsSync(join(cwd, "AGENTS.md"))) return cwd
+  return null
+}
+
+/**
+ * 评审注入面的**项目根**推导（标准层与文档地图共用；判据 = `docs/core/design/MANIFEST.md`
+ * §2.12「判据」块的 `base` 行）。`findGuideRoot` 答的是另一问（最近的 `AGENTS.md`），不在此函数的
+ * 射程内。三段，按序、任一命中即止：
+ *   ① 评审范围项的归属项目根 —— 逐项 `resolve(cwd, item)` → `projectRootView(item)`，首个 `state === "ok"` 的
+ *      `root`；序 = 喂给 `findGuideRoot` 的同一个序（`[...pathList, ...docList]`）。判据用「数据档归属」而
+ *      不用「最近的 `AGENTS.md`」——本键的基数必须是项目根（`docRoot` 的值一律相对项目根解析）。
+ *   ② 会话锚自身的归属项目根 —— `projectRootView(cwd).root`，仅 `state === "ok"` 时；`workspace` 不向下取
+ *      子项目（KD-M1-30），故工作区锚不会被猜成某个子项目。
+ *   ③ 两腿皆空 ⇒ `null` —— 调用方落 `agent.cwd`（既有缺省；本函数不给项目指南的根，那仍归 `findGuideRoot`）。
+ * **护栏**：①② 的每一次 `projectRootView` 调用各自包 `try`（抛 ⇒ 跳过该项 / 该腿，其余照走；两腿全空 ⇒ ③）。
+ * 依据 `thincoder-core/manifest-discovery.mjs` 的契约行「I/O 异常照原样上抛」——`owningProject` 取根那一环
+ * 无护栏，同档明写调用点要自己包护栏；而注入器自己的 `try` 只包 `readManifest`，腿 ② 一抛就穿过去。
+ * **第三参零缺省**：`scopeFiles` 不是数组即当场拒（`undefined` 与 `null` 同拒），拒因点名该参数与收到的值；
+ * **不归一成 `[]`**——「忘了传」与「范围为空」语义相反（前者是调用方写错，后者是一次真空范围的评审）。
+ * @param {string} cwd — 会话锚（绝对路径）
+ * @param {string[]} scopeFiles — 评审范围路径（cwd 相对或绝对；**无缺省**，空评审传 `[]`）
+ * @returns {string|null} 被评审范围的归属项目根（绝对路径）；无项目可指 ⇒ null
+ */
+export function findProjectContextRoot(cwd, scopeFiles) {
+  if (!Array.isArray(scopeFiles)) {
+    const got = scopeFiles === undefined ? "undefined" : scopeFiles === null ? "null" : typeof scopeFiles
+    throw new TypeError(`findProjectContextRoot: scopeFiles must be an array (got ${got}) — pass the review scope as a list of paths, or [] for an empty one`)
+  }
+  for (const f of scopeFiles) {
+    try {
+      const view = projectRootView(resolve(cwd, f))
+      if (view.state === "ok") return view.root
+    } catch (e) {
+      // 该项解析抛（参数值异常 ∥ 权限 ∥ 链接环）⇒ 只跳过这一项，其余照走。
+      // 留一行告警：空吞会让「走了 ③」与「范围项本就无项目」在盘上不可分（同档另两处降级同形）。
+      console.warn(`[advisor] project-context root probe failed at ${String(f)} (cwd ${cwd}): ${e?.code ?? e?.message ?? "unknown"}`)
+    }
+  }
+  try {
+    const view = projectRootView(cwd)
+    if (view.state === "ok") return view.root
+  } catch (e) {
+    // 同 ①：护栏住推导函数，不中断评审消息组装；告警让这一步可追。
+    console.warn(`[advisor] project-context root probe failed at cwd ${cwd}: ${e?.code ?? e?.message ?? "unknown"}`)
+  }
   return null
 }
 
@@ -214,10 +258,14 @@ export function findDocumentMap(base) {
 /**
  * Inject the project document map (PO-1), derived from `docRoot`. Degrades visibly: the reviewer
  * must know the Document-ownership criterion is unchecked — never a silent skip.
+ * @param {Object} agent — the parent agent
+ * @param {string[]} parts — message parts (mutated)
+ * @param {string[]} scopeFiles — 评审范围路径；base = 它们的归属项目根（`findProjectContextRoot`，与标准层同一条
+ *   推导；无根 ⇒ `agent.cwd`）。**无缺省**——非数组由该函数当场拒，拒因点名参数与收到的值。
  * @returns {string|null} the injected map path, or null when degraded
  */
-export function injectDocumentMap(agent, parts, root) {
-  const base = root ?? agent.cwd
+export function injectDocumentMap(agent, parts, scopeFiles) {
+  const base = findProjectContextRoot(agent.cwd, scopeFiles) ?? agent.cwd
   const mapPath = findDocumentMap(base)
   parts.push("## Document Map")
   let text = null
@@ -338,13 +386,15 @@ function collectStandardDocs(dirs) {
  *
  * @param {Object} agent — the parent agent（`cwd` / provider 取上下文窗口）
  * @param {string[]} parts — message parts (mutated)
- * @param {string|null} [root] — project root from the guide walk（`null` ⇒ `agent.cwd`；与
- *   `injectDocumentMap` 同一 base）
+ * @param {string[]} scopeFiles — 评审范围路径；base = 它们的归属项目根（`findProjectContextRoot`；无根 ⇒
+ *   `agent.cwd`）。与 `injectDocumentMap` 同一 base、同一条推导。**无缺省**——非数组由该函数当场拒，拒因点名
+ *   参数与收到的值。
  * @returns {string|string[]|null} 注入的标准档绝对路径（单份 = 串，多份 = 数组）；降级 ⇒ null
  */
-export function injectProjectStandards(agent, parts, root) {
+export function injectProjectStandards(agent, parts, scopeFiles) {
+  // base 先算：第三参不合契约时在改动 parts 之前就抛（消息里不留半段）。
+  const base = findProjectContextRoot(agent.cwd, scopeFiles) ?? agent.cwd
   parts.push("## Project Standards")
-  const base = root ?? agent.cwd
 
   // 数据档本身读抛（权限 / 目录等——`readManifest` fail-closed 上抛）：收为态 2 族，不冒 `undefined`。
   let read

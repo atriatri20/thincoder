@@ -105,8 +105,10 @@ test("CLI 7-12 错误 · 写段面候选文本引文不逐字 ⇒ 拒（锚 1 �
   const root = makeProject("r712")
 
   // 前置（结构面）：写段门的类属集含 `引缺`——不增则该类被计成段类 `1 处引缺`，与 verdict 行「锚 N 条」相抵。
-  const batchGateSrc = readFileSync(new URL("../../thincoder-core/agent-tools/batch-gate.mjs", import.meta.url), "utf8")
-  assert.match(batchGateSrc, /const ANCHOR_CLASSES = new Set\(\["档缺", "节缺", "引缺", "环引"\]\)/, "锚类集含 `引缺` ∥ `环引`（源面直读）")
+  // 读面 = 锚类集**现在的落点**：2026-11-11 分拆把它随「命中行组装」一族搬进 `batch-gate-hit.mjs`（门体不再持有它）。
+  // 断言本体（正则与判词）一字未改——那串少一项，本用例照样当场红。
+  const anchorClassSrc = readFileSync(new URL("../../thincoder-core/agent-tools/batch-gate-hit.mjs", import.meta.url), "utf8")
+  assert.match(anchorClassSrc, /const ANCHOR_CLASSES = new Set\(\["档缺", "节缺", "引缺", "环引"\]\)/, "锚类集含 `引缺` ∥ `环引`（源面直读）")
 
   const before = readFileSync(join(root, BATCH_REL), "utf8")
 

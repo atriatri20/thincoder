@@ -1350,7 +1350,7 @@ checklist 描述档已随工具废除（承接档已随归档清理删除）—�
 
    **名物分开**：本节这一面叫**剥除面**，不叫「提示词面」——`PROMPT-SYSTEM.md` §6.6 的「提示词面」含 `tool-docs/**`（见下「面界差」），两个名指两个面；写成「提示词面」会把 `tool-docs/**` 一起拉进剥除面。
 
-   `AGENTS.md` / `SKILL.md` / `project_rules.md` 三个**裸名**另有 ① 类名免接住（`.thincoder/advisor.md` 带目录段 ⇒ 免不到）；`README.md` / `MANIFEST.md` 在剥除面之外一律照报（含 `tool-docs/**`——剥除面只到 `prompts/**`）；集成索引那名（`test/RTM.md` 的档名）**只在剥除面、且只剥裸名形**——剥除面之外一律不剥，裸名照按指针判（引用方目录下解析不到即 `档缺`）；写成路径形则任何面都按指针判（可解析即免）。
+   `AGENTS.md` / `SKILL.md` / `project_rules.md` 三个**裸名**另有 ① 类名免接住（带目录段的形如 `<dir>/<name>.md` ⇒ 免不到）；`README.md` / `MANIFEST.md` 在剥除面之外一律照报（含 `tool-docs/**`——剥除面只到 `prompts/**`）；集成索引那名（`test/RTM.md` 的档名）**只在剥除面、且只剥裸名形**——剥除面之外一律不剥，裸名照按指针判（引用方目录下解析不到即 `档缺`）；写成路径形则任何面都按指针判（可解析即免）。
 
 - **面界差（登记差异 · 不扩面）**：剥除面窄于 `PROMPT-SYSTEM.md` §6.6 的「提示词面」定义（`prompts/**` + `tool-docs/**`）。裁定 = **接受差异**，理由三条：
 
@@ -1535,6 +1535,7 @@ bare names only — `AGENTS.md`, `SKILL.md`, `project_rules.md`. The other four 
 - **「未定」的处置（③ ④ 同一支）**：触达账腿本次零强制 + 回执明示「触达账改动区未定——只明示、不阻本次写」。**降级方向 = 不阻写，不是判整档**：这一支由收口面兜底——收口面的区来自批档 §1 的 `批起 sha` 记入行与提交 diff，区未定才整档判（单源 = `docs/core/design/DOC-CHECK.md` §2.9.4 的收口门）。回执点名降级原因，不静默。
 
 - **② 为什么不归进「未定」**：这一支正是这条腿最该守的那类写入——新建档里写坏的锚，归进未定就照放。
+- **② 态的出路（未跟踪档）**：**先提交，再改**——提交后该档进 ① 态，改动区可算，判面回到本笔。未跟踪档在盘上没有提交面，本 run 起点那份内容无人记账，判不出哪几行是本轮的笔 ⇒ 保持 ②、给路不改判据（2026-11-11 裁定；推它的那天见 `docs/core/design/DOC-CHECK.md` §2.10.1 的逐档语义）。
 
 **场景出处（② ③ ④ 各一条，均非设想）**：
 
@@ -1546,7 +1547,7 @@ bare names only — `AGENTS.md`, `SKILL.md`, `project_rules.md`. The other four 
 
 **扩区（单源 = §3.26 的扩区表）**：区间表按那张表扩成片段区——段落整段 ∥ 与围栏块相交则整块连标记行 ∥ 只动空行时并入紧邻两段。「什么叫一段」仍只由 `thincoder-core/doc-check/paragraph.mjs` 的谓词族定。
 
-**命中分流**：区内 ⇒ 强制集（当场拒，与候选文本腿同权）；区外 ⇒ 明示集，只出一行计数（`触达账存量命中 N 条——不属本次改动区，不阻本次写`），不逐条列——逐条列正是本批消掉的现场；同一句的判法单源 = `docs/core/design/DOC-CHECK.md` §2.9.4 的 `STOCK_LINE`（收口面与 `edit` 面共用）。
+**命中分流**：区内 ⇒ 强制集（当场拒，与候选文本腿同权）；区外 ⇒ 明示集，只出引擎那一行 `STOCK_LINE` 读数，不逐条列——逐条列正是本批消掉的现场；句形与判法单源 = `docs/core/design/DOC-CHECK.md` §2.9.4 的 `STOCK_LINE`（收口面与 `edit` 面共用），本节不复制该串。
 
 **首行标签**：拒写首行按腿分列——候选文本那一段逐字 `候选文本（锚 N 条）`，触达账那一段（有命中时）逐字 `触达账改动区（锚 N 条）`；`edit` 面的替换区那一段逐字 `批档替换区（锚 N 条）`。这一段判的是改动区，读的人据此知道该改哪一处，不必自己分辨拒的是整档还是本笔。
 
@@ -2083,7 +2084,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 | 1 | `collectLineRefs`（`thincoder-core/doc-check/line-refs.mjs`） | **采集口径零改**——`body` ∥ `fenced` ∥ `total` 已分列，围栏判定借 `fenceMark` ∥ `isFenceClose` |
 | 2 | `gate` 分支的 `hits`（`thincoder-core/doc-check/index.mjs`） | `lineRefs` 取正文面（`lineRefs.body` 里经豁免分类后留下的那批）；`hits.total` 只加正文面 |
 | 3 | `gateReport`（同档） | 首行 `行号坐标 N 处` 的 N 取正文面；`✗` 行只出 `lineRefs.body`；`lineRefs.fenced` 改出一行读数行（句形见上「只作读数」段），不入命中集 |
-| 4 | `lineRefHits`（同档） | 只装 `body`。**必改项，不是附带改动**：`thincoder-core/agent-tools/batch-gate.mjs` 的 `hitEntries` 按「`✗` 行数 == 命中数」判 `aligned`；围栏内那批留在 `lineRefHits` 里却不再出 `✗` 行 ⇒ `aligned` 永假、整个门的显示面静默退化 |
+| 4 | `lineRefHits`（同档） | 只装 `body`。**必改项，不是附带改动**：`thincoder-core/agent-tools/batch-gate-hit.mjs` 的 `hitEntries` 按「`✗` 行数 == 命中数」判 `aligned`；围栏内那批留在 `lineRefHits` 里却不再出 `✗` 行 ⇒ `aligned` 永假、整个门的显示面静默退化 |
 | 5 | `lineRefsBlock`（`thincoder-core/doc-check/line-refs.mjs`） | **零改**——`report` 面那两个读数是清账用的，`合计` 是读数不是判据 |
 
 两处现形（依据行，逐字取自源档）：
@@ -2092,7 +2093,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 依据 `thincoder-core/doc-check/index.mjs`「lineRefHits: lineRefs.body.map((h) => ({ ...h, clazz: LINE_REF_CLASS })),」
 
-依据 `thincoder-core/agent-tools/batch-gate.mjs`「const aligned = drift === 0」
+依据 `thincoder-core/agent-tools/batch-gate-hit.mjs`「const aligned = drift === 0」
 
 **可执行行不再整行跳过（判集补齐 · 2026-11-05 定）**：
 
@@ -2387,9 +2388,9 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 **最近先例（对齐 ∥ 偏离）**：先例 = 批档门的写段面（`thincoder-core/agent-tools/batch-gate.mjs`）。**对齐** = 同一个 `runDocCheck` 入口 ∥ verdict 词 ∥ 处置块单源 ∥ 零字节拒写。**偏离** = 批档门判本次写入文本（批档是本批自己的档，作者改得动整档）；本门判触碰段落（没碰到的段落不归本笔，碰到了就整段归本笔）。
 
-**三问（新档落点 · 名 · 写权）**：`existing but unusable:` `thincoder-core/agent-tools/batch-gate.mjs` · name `gateRefusalMessage` · failed on：动作词与范围标签全绑批档（「本次段写入未落盘」∥「Do NOT close the record」），并消费批档门的 `gate` 对象形——拒串装配不搬。
+**三问（新档落点 · 名 · 写权）**：`existing but unusable:` `thincoder-core/agent-tools/batch-gate-report.mjs` · name `gateRefusalMessage` · failed on：动作词与范围标签全绑批档（「本次段写入未落盘」∥「Do NOT close the record」），并消费批档门的 `gate` 对象形——拒串装配不搬。
 
-新档 = `thincoder-core/tools/doc-write-gate.mjs`，写权 = eng-coder。**可复用的只有引擎侧导出**：`runDocCheck`、verdict 词与 `PARA_DISPOSE`（`thincoder-core/doc-check/index.mjs`）——本门只装配判面与拒串骨架，判据本体零副本。依据 thincoder-core/agent-tools/batch-gate.mjs「export function gateRefusalMessage(gate, action = "append") {」
+新档 = `thincoder-core/tools/doc-write-gate.mjs`，写权 = eng-coder。**可复用的只有引擎侧导出**：`runDocCheck`、verdict 词与 `PARA_DISPOSE`（`thincoder-core/doc-check/index.mjs`）——本门只装配判面与拒串骨架，判据本体零副本。依据 thincoder-core/agent-tools/batch-gate-report.mjs「export function gateRefusalMessage(gate, action = "append") {」
 
 **尺寸结论**：`thincoder-core/tools/write-path.mjs` 254 行（`readFileSync(p,'utf8').split("\n").length - 1`，本席实测）——挂点只加一处调用，不跨 500。新档 `thincoder-core/tools/doc-write-gate.mjs` 与改面单元测试档预计各 < 500 行，无拆分计划、无跨层。
 
@@ -3528,9 +3529,9 @@ doc_check({ mode: "report", docs: [...] })   # 指定档
 
    **档头改述（实施轮 · grep 可判）**：`scripts/doc-check.mjs` 头注含字面 `V5 专用面` ∧ 字面 `非 gate 判据源`，且失效自述 `单引擎入口` 命中 = 0（一行注释 · 结构不变）。
 
-8. **触达账腿判改动区（本批主判据 · DD-214）**：夹具设计档含 1 条存量悬空锚、该档在写者 `_touchedFiles`、本 run 改过该档另一段 ⇒ `batch({action:"append"})` **写入成功** ∧ 回执含 `[doc-check gate] DOC-CHECK GATE: PASS` ∧ 回执出 `触达账存量命中 1 条` 计数行 ∧ 拒面零该档命中。反证（判面无豁免口子）= 同一夹具把该档置为 git 仓内的**新建未跟踪档** ⇒ 改动区 = 整档 ⇒ 档内那 1 条存量照拒、第三段读 `触达账改动区（锚 1 条）`；「改动区未定」= 非 git 仓 ∥ 基线不可解析（后者只在跟踪面上才可能——未跟踪已归整档），四态单源 = §3.20「改动区取法（基线两级 · 四态判定）」，读法 = 对一份无 `批起 sha` 记入行的档跑 `close` 的既有回执行（DD-119 同式），不静默放行。
+8. **触达账腿判改动区（本批主判据 · DD-214）**：夹具设计档含 1 条存量悬空锚、该档在写者 `_touchedFiles`、本 run 改过该档另一段 ⇒ `batch({action:"append"})` **写入成功** ∧ 回执含 `[doc-check gate] DOC-CHECK GATE: PASS` ∧ 回执出 `STOCK_LINE(1)` 计数行 ∧ 拒面零该档命中。反证（判面无豁免口子）= 同一夹具把该档置为 git 仓内的**新建未跟踪档** ⇒ 改动区 = 整档 ⇒ 档内那 1 条存量照拒、第三段读 `触达账改动区（锚 1 条）`；「改动区未定」= 非 git 仓 ∥ 基线不可解析（后者只在跟踪面上才可能——未跟踪已归整档），四态单源 = §3.20「改动区取法（基线两级 · 四态判定）」，读法 = 对一份无 `批起 sha` 记入行的档跑 `close` 的既有回执行（DD-119 同式），不静默放行。
 9. **区内命中照拒（DD-215 ∥ DD-216）**：同夹具，改动区里新写一处悬空 ⇒ `append` throw、首行第三段标签逐字 `触达账改动区（锚 1 条）`、批档字节逐字不变；`edit` 面同判（`newText` 落在改动区内且自带悬空 ⇒ 拒，目标区间与其余字节不变）。
-10. **区外存量不阻写、仍明示（DD-217）**：夹具档 3 条存量命中全在改动区外 ⇒ 放行 + 计数行读 `触达账存量命中 3 条`；该 3 条不逐条列（拒面 ∥ 明示面均零该档命中行）。
+10. **区外存量不阻写、仍明示（DD-217）**：夹具档 3 条存量命中全在改动区外 ⇒ 放行 + 计数行读 `STOCK_LINE(3)`；该 3 条不逐条列（拒面 ∥ 明示面均零该档命中行）。
 11. **收口面同样收窄到改动区（DD-219）**：同 DD-214 夹具直接 `close` ⇒ **放行** ∧ 回执带一行 `STOCK_LINE`（那条存量命中在改动区外，只出读数）；反证 = 把那条悬空指针放进本批改动区 ⇒ `REFUSED` ∧ §1 状态行仍「进行中」。判据单源 = `docs/core/design/DOC-CHECK.md` §2.9.4 的收口门 ∥ 用例 `C-1`。
 
    **可跑形**：改面单元测试档（名随批次档）——`node --test docs/batches/2026-11-07-touched-gate-scope.test.mjs`（cwd = 仓根）；用例 = DD-214–DD-219。
@@ -3688,7 +3689,7 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 
 8. **围栏内不入判（本批主判据 · DD-220 – DD-223）**：夹具档围栏块内一处坐标 ⇒ `gate` `PASS` ∧ 报面出读数行 `围栏内行号坐标 1 处` ∧ `report` 清单读 `正文面 0 处 · 围栏内 1 处 · 合计 1 处`；同夹具把坐标挪到围栏外 ⇒ `REFUSED` ∧ `hits.lineRefs = 1`。**同一判面（反证 · DD-223）**：围栏外的 `档缺` 照拒（判面没放宽）；围栏块内的 `档缺` 照旧 `0 条`、`gate` `PASS`——锚面整块跳过围栏是既有行为，本批零改。
 
-   **必改项同判（`lineRefHits`）**：围栏内那处零 `✗` 命中行 ∧ `lineRefHits` 长度 = 1，且 `thincoder-core/agent-tools/batch-gate.mjs` 的 `aligned` 仍为真（`✗` 行数 == 命中数）——不收这一项，批档门显示面静默退化。
+   **必改项同判（`lineRefHits`）**：围栏内那处零 `✗` 命中行 ∧ `lineRefHits` 长度 = 1，且 `thincoder-core/agent-tools/batch-gate-hit.mjs` 的 `aligned` 仍为真（`✗` 行数 == 命中数）——不收这一项，批档门显示面静默退化。
 
    **可跑形**：改面单元测试档（名随批次档）——`node --test docs/batches/2026-11-07-touched-gate-scope.test.mjs`；用例 = DD-220–DD-223。
 
@@ -3717,7 +3718,7 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 7. **verdict 词零新增**：`thincoder-core/doc-check/index.mjs` 的命中类分支含 `引缺`，而 `DOC-CHECK GATE:` 三串逐字不变（无第四种首行）。
 8. **零存量（DD-156）**：量法 = §3.25「量法（复跑用）」节（围栏 ∥ 可执行行跳过）；域 = `docs/**` 扣 `_archive` 与 `docs/batches/**` ⇒ 主读 标记形 **0 行**；副读（含批档的全字面域）⇒ `引缺` **0 条**——档数不入判据（档一增就漂）。
 9. **清单外零改动**：`git status --porcelain` ⊆ **本次任务书声明的文件清单**（不挂批档——批档可整体清理）∪ 批次档自身。
-10. **写段面拒串含 `锚 1 条`**：`thincoder-core/agent-tools/batch-gate.mjs` 的类属集含 `引缺`；同夹具经 `batch({action:"append"})` ⇒ 拒串含 `候选文本（锚 1 条）`——`引缺` 不得被计成段类（`1 处引缺`）。
+10. **写段面拒串含 `锚 1 条`**：`thincoder-core/agent-tools/batch-gate-hit.mjs` 的类属集含 `引缺`；同夹具经 `batch({action:"append"})` ⇒ 拒串含 `候选文本（锚 1 条）`——`引缺` 不得被计成段类（`1 处引缺`）。
 
 **可跑形**：改面单元测试档随批建立、随批收口删除（名随批次档）——`node --test <批档>.test.mjs`（cwd = 仓根）；用例 = DD-151–DD-156。
 
@@ -3866,10 +3867,10 @@ process.exit(Object.values(zero).every(v => v === 0) ? 0 : 1);
 | DD-212 | 正常 ∥ 边界 | 同夹具跑 `report` ∥ `gate` | `report` 含 `批档面互引未判 N 处`（0 也出）；`gate` 首行与行形零改 |
 | DD-213 | 边界 | 同一夹具去掉 manifest 的 `docRoot.batches` 键 ∥ 键为 `null` ∥ 根目录不在盘 | 基底**恒非空**（与批档面同源）：缺键 ∥ `null` ⇒ 回退默认基底 `docs/batches` ⇒ **面判照常成立**（引用方在默认基底内则豁免、否则照判）；根目录不在盘 ⇒ 引用照判 `档缺`。三种均**不抛错** |
 
-| DD-214 | 正常 | 夹具：设计档含 1 条存量 `档缺`，该档在写者 `_touchedFiles`，本 run 改过该档另一段；随后 `batch({action:"append", segment:"§2"})` | 写入成功；回执 `[doc-check gate] DOC-CHECK GATE: PASS`；回执含 `触达账存量命中 1 条` 行；拒面零该档命中 |
+| DD-214 | 正常 | 夹具：设计档含 1 条存量 `档缺`，该档在写者 `_touchedFiles`，本 run 改过该档另一段；随后 `batch({action:"append", segment:"§2"})` | 写入成功；回执 `[doc-check gate] DOC-CHECK GATE: PASS`；回执含 `STOCK_LINE(1)` 行；拒面零该档命中 |
 | DD-215 | 错误 | 同夹具，改动区内新写一处悬空锚 | throw；首行第三段逐字 `触达账改动区（锚 1 条）`；批档字节逐字不变 |
 | DD-216 | 边界 | 同夹具走 `edit` 面（`newText` 落改动区内且自带悬空） | throw 同 DD-215；目标区间与其余字节逐字不变 |
-| DD-217 | 边界 | 同夹具，3 条存量命中全在改动区外 | 放行；计数行读 `触达账存量命中 3 条`；明示面零逐条行 |
+| DD-217 | 边界 | 同夹具，3 条存量命中全在改动区外 | 放行；计数行读 `STOCK_LINE(3)`；明示面零逐条行 |
 | DD-218 | 边界 | 四态各跑一次（四态均可构造）：① git 仓、无 `批起 sha` 行（回 `HEAD`）② git 仓、该档未跟踪 ③ git 仓、该档已 `git add` 而仓内零提交（`HEAD` 不可解析）④ 无 `.git` 的临时目录 | ① 按改动区判（同 DD-214 / DD-215）② **改动区 = 整档** ⇒ 档内那 1 条存量照拒、第三段读 `触达账改动区（锚 1 条）` ③ ④ 各出「触达账改动区未定——只明示、不阻本次写」并放行；四态都不静默 |
 | DD-219 | 正常 ∥ 错误（反证） | 同 DD-214 夹具直接跑 `close`；反证 = 把那条悬空指针放进本批改动区再 `close` | 放行 + 一行 `STOCK_LINE`（存量在改动区外，只读数、不阻断）；反证 `REFUSED`、§1 状态行仍「进行中」——收口面与写面同一张扩区表 |
 

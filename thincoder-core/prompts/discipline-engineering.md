@@ -66,7 +66,7 @@ Judge the **change face** before acting — two faces, two authorization paths:
 
 | Change face | Domain | Authorization path |
 |---|---|---|
-| **Doc face** | the paths declared under the manifest `docRoot` keys (requirements / specs / design / modules / batches) + the project manifest itself (`PROJECT-MANIFEST.json`, the project state file) | Routing per the D1 matrix |
+| **Doc face** | the paths declared under the manifest `docRoot` keys (the key set is `REVIEW_ROOT_KEYS` in `thincoder-core/agent-tools/review-facts.mjs` — not retyped here) + the project manifest itself (`PROJECT-MANIFEST.json`, the project state file) | Routing per the D1 matrix |
 | **Product face** | **default face** — every path not in the doc face: `scripts/**` · `test/**` · `.thincoder/**` · `.github/**` · lockfiles · the product-text face · everything else (fail-closed) | Requirements → Design → Review → eng-coder (full flow; token gate) |
 
 面判定机器单源 = thincoder-core/agent/write-face.mjs；本表与本行同义，冲突时以该档判据为准。
@@ -79,6 +79,12 @@ Judge the **change face** before acting — two faces, two authorization paths:
   When they disagree ⇒ **stop and report**.
   Why: pressing the routing against the gate only turns the gate off.
 - **Judgment line**: paths not in the doc face ⇒ full flow as the product face (fail-closed).
+
+## The standards layer (project norms)
+
+**The standards layer is `docRoot.standards` in the project manifest**: a directory whose `.md` files, subdirectories included, are the project's own rules — the programming standards,
+the manual, the conventions the project settled on. What each step owes it is stated in the seat that owns the step.
+Why: the layer sits on disk and nothing forces a step to open it — a rule nobody reads is a rule the project pays for and does not get.
 
 ## Basic flow (four steps, in order)
 

@@ -121,7 +121,7 @@
 ## CLI 24. 评审的方法论符合度不再恒空
 
 > 目的：项目声明了标准层（一个目录），评审就拿到层内正文、按它判方法论；没声明 ∥ 声明了读不到，各自说清是哪一种——不再对任何项目都空着。
-> 节注：回指 = `docs/core/requirements/ADVISOR-CONVERGENCE.md` §5.1「项目标准」行 ∥ 验收 ③④（③ = 任何一面都不得静默跳过——24-2 的第二半与 24-3 的负向锁都断在它上面）；判据 ∥ 文案单源 = `docs/core/design/MANIFEST.md` §2.12；交互组件 = 项目数据档 `docRoot.standards`（目录层）→ 数据档读取 → 层读取 → 注入器 → 评审消息组装面；进入口 = 工程模式会话里对一本批档发起一次设计评审（`batchDoc` 绑定）；三态（行序）= 24-1 正常 · 24-2 错误 · 24-3 边界 · 24-4 正常 · 24-5 错误 · 24-6 正常。
+> 节注：回指 = `docs/core/requirements/ADVISOR-CONVERGENCE.md` §5.1「项目标准」行 ∥ 验收 ③④（③ = 任何一面都不得静默跳过——24-2 的第二半与 24-3 的负向锁都断在它上面）；判据 ∥ 文案单源 = `docs/core/design/MANIFEST.md` §2.12；交互组件 = 项目数据档 `docRoot.standards`（目录层）→ 数据档读取 → 层读取 → 注入器 → 评审消息组装面；进入口 = 工程模式会话里对一本批档发起一次设计评审（`batchDoc` 绑定）；三态（行序）= 24-1 正常 · 24-2 错误 · 24-3 边界 · 24-4 正常 · 24-5 错误 · 24-6 正常 · 24-7 正常。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -131,6 +131,7 @@
 | 24-4 | 同一夹具层内放两份档（`b.md` · `a.md`），再发起一次设计评审 | 两份正文都在，且注入序 = `a.md` 在前（层根相对路径码点序——同目录即名序） | — | `test/integration/review-standards-injection.test.mjs` |
 | 24-5 | 把声明值改成一个文件路径（旧值形），再发起一次设计评审 | 出现态 2 句含 `not a directory`；零正文；评审照常收尾（不抛） | — | `test/integration/review-standards-injection.test.mjs` |
 | 24-6 | 夹具层内建一个子目录，把一份标准档放进该子目录，再发起一次设计评审 | 该档正文与绝对路径定位注都在评审消息里（层内成员递归）；注入序按层根相对路径码点序 | — | `test/integration/review-standards-injection.test.mjs` |
+| 24-7 | 夹具 = 工作区锚（无数据档、有 AGENTS.md）+ 其下子项目（数据档声明 docRoot.standards，子项目内有 docs/README.md），设计档在子项目内；agent.cwd = 锚，发起一次设计评审 | 评审消息 `## Project Standards` 段含该标准档正文与绝对路径定位注、不含 NO_STANDARDS_NOTICE，**且** `## Document Map` 段含子项目 docs/README.md 正文、不含 NO_DOC_MAP_NOTICE | — | `test/integration/review-standards-injection.test.mjs` |
 
 ## CLI 27. 评审写一笔 §3 就够：状态行由工具置位
 

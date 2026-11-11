@@ -1063,7 +1063,7 @@ export const REVIEW_ROOT_KEYS = ["requirements", "specs", "design", "modules", "
 
 - ① 实现坐标 · 键位与值形态 — `existing: thincoder-core/manifest-schema.mjs`（`isValidDocRootValue`：串 ∥ 非空串数组 ∥ `null` 本面无）· 逐字复用，零新谓词。
 - ① 实现坐标 · 路径解析 — `existing: docRootPaths`（展开 + `trim` + `\` 归一 + 基数 = 项目根 + 去重保序）· 逐字复用：标准层与其余五层走同一条解析管线。
-- ① 实现坐标 · 注入形 — `existing: thincoder-core/advisor/project-context.mjs` 的 `injectDocumentMap`（段头 + 一行用途 + 正文 + 显式降级，同一 `base = root ?? agent.cwd`）· 对齐其形。
+- ① 实现坐标 · 注入形 — `existing: thincoder-core/advisor/project-context.mjs` 的 `injectDocumentMap`（段头 + 一行用途 + 正文 + 显式降级）· 对齐其形；**base 同源**：两者共用同一条根推导（见「判据」块 base 行）——同一工作区锚下，标准层与文档地图一起出正文，一起降级。
 - ① 实现坐标 · 取值源回退 — `existing: 同档`逐字「const docRoot = (read.ok && read.manifest ? read.manifest : DEFAULT_MANIFEST).docRoot ?? {}」· 同款，不另立判定。
 - ② 档内节 — `existing: 本档 §2.10` 键目录的 `standards` 行（键描述单源）∥ `existing: 本档 §2.11` 的 `DEFAULT_MANIFEST` 行（六子键含 `standards: null` 默认）· 两节本批同句义改，不各写一份。
 - ③ 迁移语义 — `existing: 本档 §2.11` 的 AC-6 形（旧档残留值非拒 + 写盘收敛、零迁移脚本）· 同款：旧文件值不被静默跳过，得到一句可读原因（见「已知代价（旧值形）」）。
@@ -1094,7 +1094,11 @@ export const REVIEW_ROOT_KEYS = ["requirements", "specs", "design", "modules", "
 **判据（三段式，三态互异）**
 
 ```text
-base  = root ?? agent.cwd                      （与 injectDocumentMap 同一 base）
+base  = 标准层 ∥ 文档地图共用的根（三段，任一命中即止——本模块唯一的根推导 = findProjectContextRoot）
+        ① 评审范围项的归属项目根（projectRootView，首个 ok）
+        ② 会话锚自身的归属项目根 projectRootView(agent.cwd).root（仅 state === "ok"）
+        ③ 两腿皆空 ⇒ 返回 null，调用方落 agent.cwd（既有缺省；项目指南的根不由此函数给）
+        护栏 = ①② 每次 projectRootView 调用各自包 try（抛 ⇒ 跳过该腿、其余照走；两腿全抛 ⇒ ③）
 read  = readManifest(base)                     （读抛 ⇒ catch，见「读抛」行）
 std   = (read.ok && read.manifest ? read.manifest : DEFAULT_MANIFEST).docRoot.standards
 std == null                    ⇒ 态 1  未声明（缺键 / 显式 null / 项目根本没有 manifest）
@@ -1116,6 +1120,13 @@ R 非空 ∧ U 空                  ⇒ 态 3  声明且全部读到
 R 非空 ∧ U 非空                ⇒ 态 3 + 半读句（逐项点名 U）
 ```
 
+- **两个消费者、一条 base，只一条推导**：`injectProjectStandards` 与 `injectDocumentMap` 的 base 都是 `findProjectContextRoot(agent.cwd, scopeFiles) ?? agent.cwd`，两者都不再吃 `guideRoot`。文档地图的派生梯（各声明根的 `README.md` → 全部声明根的公共祖先的 `README.md`）与 `DOC_ROOT_ORDER` 零改——本批只换它读到的那个 base。
+  **`injectProjectGuide` 不在此列**：它的根 = 最近的 `AGENTS.md`（`findGuideRoot`），工作区有自己的指南不是错，本批不动。
+  依据 `thincoder-core/advisor/project-context.mjs`「const base = findProjectContextRoot(agent.cwd, scopeFiles) ?? agent.cwd」——两个函数体内各一行、逐字同一条表达式。
+
+- **第三参零缺省（`undefined` 与 `null` 同拒）**：`findProjectContextRoot` ∥ `injectProjectStandards` ∥ `injectDocumentMap` 的 `scopeFiles` 不是数组即当场拒，拒因点名该参数与收到的值；**不归一成 `[]`**——「忘了传」与「范围为空」语义相反（前者是调用方写错，后者是一次真空范围的评审）。先例 = `thincoder-core/prompts/persona-eng-designer.md`「a tool-schema parameter or an exported function signature carries no `= default`」。
+
+- **调用点实读（档数与位置不变，实参换成范围项）**：`thincoder-core/advisor/messages.mjs` 里 `injectDocumentMap` 恰一处（设计评审轮 0 路）、`injectProjectStandards` 两处，三处一律传 `scopeFiles`（该档组装函数头把 `[...pathList, ...docList]` 算一次，四个调用点共用）；`injectProjectGuide` 一处照旧 ⇒ 代码评审路不注文档地图。
 - `std == null` 用**宽松相等**一次覆盖 `null` ∥ `undefined`；取值后一律归一为「有值 ∥ `null`」，不再往下传 `undefined`。
 - **态 2 句必含至少一个绝对路径字面、绝不出现 `undefined`**：由 AC-51 的「声明目录不存在」格与 AC-58⑤（整棵子树零 `.md`）两行断言。这条把「未声明项目收到 `declared at undefined`」整类误判挡在判据里。
 - **`dirs.length === 0 ⇒ 态 1` 是防御支，不配验收格**：非法形态（空串 / 空数组 / 空白串）已被 `validateManifest` 拒 ⇒ 实读路径只经 `std == null` 落态 1。这一支的唯一作用是「一个路径都没得来时绝不发态 2 句」，不是第二条业务出路。
@@ -1127,9 +1138,13 @@ R 非空 ∧ U 非空                ⇒ 态 3 + 半读句（逐项点名 U）
 
 | 分支 | 出处 |
 |---|---|
+| base ①：范围项的归属项目根 | 实读现象 + 复现：会话锚 = 工作区根（有 `AGENTS.md`、无 `PROJECT-MANIFEST.json`），被评审文档在其下的子项目里 ⇒ `findGuideRoot` 返回锚（最近一处 `AGENTS.md`）⇒ `readManifest(锚)` 返 `ok:false / reason:"missing"` ⇒ `DEFAULT_MANIFEST.docRoot.standards = null` ⇒ 态 1 句「nothing in the project declares one」，而子项目数据档明写 `docs/core/standards`。基线读数：同一份范围项，base = 锚 ⇒ 得态 1 句；base = 项目根 ⇒ 得该层首份档 |
+| base ②：会话锚自身的归属项目根 | 等价保底，不是新出路：单项目会话里今日 `root ?? agent.cwd` 落到的地方就是项目根，②把它原样保住；没有它，①取不到根时（一次评审的范围项为空 ∥ 范围项全在项目之外）今日跑绿的单项目会话退回态 1。`projectRootView` 的 `workspace` 态不向下取子项目，故工作区锚不会被猜成某个子项目 |
+| base ③：两腿皆空 ⇒ 调用方落 `agent.cwd` | 既有出路，语义零改——无项目可指时落到今日那条腿；本批不给它新场景 |
+| 护栏：①② 每次调用各自包 `try` | 实读 `thincoder-core/manifest-discovery.mjs` 的 `projectRootView` 契约行「故调用点要自己包护栏」——`owningProject` 取根那一环无护栏，`statSync(..., { throwIfNoEntry: false })` 只把「不存在」变成 `undefined`。复现：`projectRootView("a\u0000b")` 抛 `ERR_INVALID_ARG_VALUE`（`node` 直调）；护栏撤掉 ⇒ 该抛穿过 `injectProjectStandards` 只包 `readManifest` 的 `try`，评审消息组装中断。**两腿各须有一格能红**：腿 ① 命中即止，故「某一范围项抛」只测得到腿 ①；腿 ② 须用无抛错范围项的直调才落得上（`findProjectContextRoot(<含 NUL 字节的 cwd>, [])` ⇒ `null`、不抛） |
 | 态 1：未声明（键缺 / `null`） | 实读 `thincoder-core/advisor/project-context.mjs`——现行句逐字 "nothing in the project declares one" 已在用；未声明项目即走此态 |
-| 态 1：项目根本没有 manifest | 实读 `thincoder-core/manifest.mjs` 的 missing 支：`return { ok: false, reason: "missing", … manifest: null }` ⇒ `read.ok` 假。复现：空目录为锚直调 `injectProjectStandards` |
-| 态 1：manifest 非法 | 实读 `thincoder-core/manifest.mjs` 的非法档两支（`reason:"invalid"`, `manifest:null`）。复现：档内写非法 JSON，跑一次设计评审 ⇒ 态 1 句（报明面在状态行） |
+| 态 1：项目根本没有 manifest | 实读 `thincoder-core/manifest.mjs` 的 missing 支：`return { ok: false, reason: "missing", … manifest: null }` ⇒ `read.ok` 假。复现：空目录为锚、范围项传 `[]` 直调 `injectProjectStandards` |
+| 态 1：manifest 非法 | 实读 `thincoder-core/manifest.mjs` 的 `reason:"invalid"` 三支，`manifest` 取值分两类：JSON 解析失败 ∥ 顶层非对象 ⇒ `manifest: null`；`validateManifest` 不过 ⇒ `manifest` 非 `null`（补默认后的对象）而 `ok` 假。注入面按 `read.ok` 取值，两类同归态 1。复现：档内写非法 JSON，跑一次设计评审 ⇒ 态 1 句（报明面在状态行） |
 | 态 2：目录不存在 | 复现：`manifest write key=docRoot.standards value=docs/nope` ⇒ 跑一次设计评审 ⇒ 态 2 句（含 `docs/nope` + `no such directory`） |
 | 态 2：声明值是个文件 | 复现：声明值指向一份在盘档（旧值形）⇒ 态 2 句含 `not a directory`。出处 = 本仓迁移前的声明就是这种值形（键值直接写一份档的路径），真实存在过，不是假想输入 |
 | 态 2：层里没有 `.md` | 复现：建一个空目录并声明为该层 ⇒ 态 2 句含 `no .md file`。出处 = 层语义落地后第一次声明就能撞到（声明对了、档还没放进去） |
@@ -1205,6 +1220,7 @@ The documents below are the project's standards — the `.md` files of the decla
 - 先例 = `thincoder-core/manifest-discovery.mjs` 的 `scanChildren`（单源结构断言，T54 同法）。
 - 判据 = 源码面断言：`thincoder-core/advisor/project-context.mjs` 内 `readdirSync` **恰 1 处**且居 `collectStandardDocs` 体内，`injectProjectStandards` 体内零 `readdirSync`（AC-60③）。
 - 拆分预案 = 无（不新增档；函数体不再承载遍历细节）。
+- `findProjectContextRoot` 的单函数层结论（判据 + 失败侧）：体 = 三条腿 + 逐腿护栏，不承载遍历、不嵌子臂；`injectProjectStandards` ∥ `injectDocumentMap` 体内只把 base 表达式换成一次调用，不新增分支与循环。设计约束 = ≤ 40 行（同形先例 `findGuideRoot`）；超过 ⇒ 把「逐项取根 + 护栏」抽成模块私有 predicate。
 
 **本仓的标准层**
 
@@ -1290,7 +1306,7 @@ The documents below are the project's standards — the `.md` files of the decla
 **边界（不做）**：
 
 - 不探测任何固定档名（不许探根级标准档 ∥ 故意猜固定名）；不改 `AGENTS.md` 那条路。
-- 不改文档地图派生（`DOC_ROOT_ORDER` 零改）；不改 `REVIEW_ROOT_KEYS` 之外的评审面（token 门 / 批档门 / 门序 / 冻结窗口）。
+- 不改文档地图的派生梯（`DOC_ROOT_ORDER` 零改）——只换它读到的 base（与标准层同一条根推导）；不改 `REVIEW_ROOT_KEYS` 之外的评审面（token 门 / 批档门 / 门序 / 冻结窗口）。
 - 不为 `missingKeys` 加过滤分支；不为「档非法」另造报面；不加迁移脚本；不做「文件 ∥ 目录」双读法。
 - 不为其余五个目录键加成员枚举面：它们在代码里是前缀根，递归可见性由 AC-61 的图扫描格钉住；其余消费面不写断言（恒绿，够不上判据）。
 

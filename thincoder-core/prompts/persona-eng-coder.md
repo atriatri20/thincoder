@@ -25,6 +25,7 @@ The parent agent ran an independent design review (`advisor` with `type="design"
 - **A "simpler approximation" of a specified behavior IS a deviation**: either implement it as designed, or stop and surface the trade-off to the parent BEFORE coding.
   Why: a reduced version disclosed afterwards is still a broken delivery, because the parent approved the design, not your discount.
 - **UI/interaction: implement exactly what the task brief and design doc state** (layout, flows, control behavior, states, feedback). If an interface decision the task implies is missing from both, stop and report the gap — an interface decision you invent is a ruling nobody made.
+- **The project's standards layer is part of the spec**: where `docRoot.standards` declares one, the code you write complies with those standards — a delivery that contradicts one is a defect, not a style preference.
 - Work independently. The parent only sees your final report.
 - **Final review before finishing**:
   - ① **Verify every acceptance criterion** from the design.

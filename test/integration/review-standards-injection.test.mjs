@@ -1,5 +1,5 @@
 /**
- * review-standards-injection.test.mjs —— 集成用例 24-1 / 24-2 / 24-3 / 24-4 / 24-5 / 24-6（RTM CLI 端故事 24「评审的
+ * review-standards-injection.test.mjs —— 集成用例 24-1 / 24-2 / 24-3 / 24-4 / 24-5 / 24-6 / 24-7（RTM CLI 端故事 24「评审的
  * 方法论符合度不再恒空」；判据 ∥ 文案单源 = `docs/core/design/MANIFEST.md` §2.12「标准层声明口」）。
  *
  * 业务进入点 = 工程模式会话里对一本批档发起一次设计评审（真 `advisor` 工具的同步设计评审轨，`batchDoc` 绑定）；
@@ -27,7 +27,8 @@ import { dirname, join, relative, resolve } from "node:path"
 import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { advisorTool } from "../../thincoder-core/agent-tools/advisor.mjs"
-import { injectProjectStandards, NO_STANDARDS_NOTICE } from "../../thincoder-core/advisor/project-context.mjs"
+import { buildAdvisorUserMessage } from "../../thincoder-core/advisor/messages.mjs"
+import { injectProjectStandards, NO_STANDARDS_NOTICE, NO_DOC_MAP_NOTICE } from "../../thincoder-core/advisor/project-context.mjs"
 import { providerSpec } from "../../thincoder-core/model-specs.mjs"
 // 台账模块静态链入 `node:sqlite`（W8 契约）——消费侧一律动态取（先例 `test/integration/batch-close-token-consume.test.mjs`）。
 const { _resetLedgerDirForTest, _setLedgerDirForTest, ledgerAdd, ledgerUpdate } = await import("../../thincoder-core/ledger.mjs")
@@ -111,15 +112,20 @@ function seedPendingRow(root) {
   ledgerUpdate({ cwd: root, id, patch: { status: "在途", task_book: rel }, boundary: root })
 }
 
-/** 夹具项目根：数据档 + 设计档 + 批档 + 标准层目录（层内放什么由各格自己决定）。 */
-function fixture(tag) {
-  const root = mkdtempSync(join(tmpdir(), `rsi-${tag}-`))
-  roots.push(root)
+/** 在给定目录里铺一个项目（数据档由调用方写）：设计档 + 批档 + 标准层目录。 */
+function projectFiles(root) {
   mkdirSync(dirname(join(root, DESIGN_REL)), { recursive: true })
   mkdirSync(dirname(join(root, BATCH_REL)), { recursive: true })
   mkdirSync(join(root, STANDARDS_DIR), { recursive: true })
   writeFileSync(join(root, DESIGN_REL), "# 设计夹具\n\n夹具正文。\n")
   writeFileSync(join(root, BATCH_REL), RECORD)
+}
+
+/** 夹具项目根：数据档 + 设计档 + 批档 + 标准层目录（层内放什么由各格自己决定）。 */
+function fixture(tag) {
+  const root = mkdtempSync(join(tmpdir(), `rsi-${tag}-`))
+  roots.push(root)
+  projectFiles(root)
   return root
 }
 
@@ -174,9 +180,11 @@ async function designReview(t, root) {
 
 /** 从评审消息里切出 `## Project Standards` 段（段尾 = 装配序中恒定的下一个段头）。
  *  不能用「下一个 `## `」兜底切：层内标准档自带二级标题（真实标准档常见）会被误当成段尾，
- *  断言随正文内容而红/绿（`advisor/messages.mjs` 的装配序：Standards → Document Map → Instructions）。 */
+ *  断言随正文内容而红/绿（`advisor/messages.mjs` 的装配序：Standards → Document Map → Instructions）。
+ *  **段头按「行首 + 段名」认**（请求体里是转义换行 `\\n`）：系统提示词（`advisor-design.md` 的
+ *  Review Criteria）也按名点这一段，只搜裸段名会先命中那句引用、把切段起点挪进系统提示词。 */
 function standardsSection(body) {
-  const head = "## Project Standards"
+  const head = "\\n## Project Standards"
   const start = body.indexOf(head)
   assert.ok(start >= 0, "评审消息含 Project Standards 段")
   const rest = body.slice(start + head.length)
@@ -202,9 +210,9 @@ test("CLI 24-1 声明了标准层 ⇒ 评审上下文拿到层内该档的正文
   assert.ok(section.includes("规则甲：写代码之前先读文档。"), `该档正文首行在场：${section}`)
   assert.ok(!section.includes(NO_STANDARDS_NOTICE), "态 3 不带降级句（拿到了正文就不是降级）")
 
-  // 行 24-1 的第二半「返该档绝对路径」：注入面的回执（同一夹具、同一数据档）。
+  // 行 24-1 的第二半「返该档绝对路径」：注入面的回执（同一夹具、同一数据档；第三参无缺省 —— 空范围传 `[]`）。
   const parts = []
-  const ret = injectProjectStandards({ cwd: root, provider: { model: "gpt-4o" } }, parts, null)
+  const ret = injectProjectStandards({ cwd: root, provider: { model: "gpt-4o" } }, parts, [])
   assert.equal(ret, resolve(root, STANDARDS_FILE), "返该档绝对路径")
 })
 
@@ -281,4 +289,45 @@ test("CLI 24-6 标准档住进子目录 ⇒ 评审上下文照样拿到（层内
   assert.ok(section.includes(`<!-- standards file: ${absRoot} -->`), `层根档的定位注也在场：${section}`)
   assert.ok(section.indexOf("条款内") < section.indexOf("条款根"), `注入序 = 层根相对路径码点序（sub/nei.md 在 zhi.md 前）：${section}`)
   assert.ok(!section.includes(NO_STANDARDS_NOTICE), "态 3 不带降级句")
+})
+
+/** 从消息里切出某一段（段尾 = 装配序里紧随其后的段头之一）；**真换行**——本用例吃的是
+ *  `buildAdvisorUserMessage` 的直接产物，不是 JSON 请求体（24-1…24-6 吃请求体，故各自转义）。 */
+function sliceSection(text, head, nextHeads) {
+  const start = text.indexOf(head)
+  assert.ok(start >= 0, `评审消息含「${head}」段`)
+  const rest = text.slice(start + head.length)
+  const ends = nextHeads.map((h) => rest.indexOf(h)).filter((i) => i >= 0)
+  return (ends.length ? rest.slice(0, Math.min(...ends)) : rest).trim()
+}
+
+test("CLI 24-7 会话锚 = 工作区根（无数据档）⇒ 标准层与文档地图都按被评审项目的项目根注入", { timeout: 120_000 }, async () => {
+  // 夹具 = 锚（有 AGENTS.md、无 PROJECT-MANIFEST.json）+ 其下一个子项目（数据档声明 docRoot.standards，
+  // 子项目内有 docs/README.md）；设计档与批档都在子项目内。用户的实际用法正是这一种。
+  const anchor = mkdtempSync(join(tmpdir(), "rsi-247-"))
+  roots.push(anchor)
+  writeFileSync(join(anchor, "AGENTS.md"), "# 工作区指南\n\n工作区级说明。\n")
+  const project = join(anchor, "proj")
+  mkdirSync(project, { recursive: true })
+  projectFiles(project)
+  writeStandard(project, STANDARDS_FILE, STANDARDS_BODY)
+  writeManifest(project, STANDARDS_DIR)
+  const MAP_BODY = "# 文档地图\n\n地图正文：各节归属见下。\n"
+  writeFileSync(join(project, "docs", "README.md"), MAP_BODY)
+
+  // 从消息组装面进（不是 advisor 工具入口）：被测交互 = 数据档 → 层读取 → 注入 → 评审消息；
+  // 工具入口的类型 / 准入（batchDoc）/ 账链三道门不是被测面（工作区锚下 `documents` 还会先被范围门拒）。
+  const agent = { cwd: anchor, provider: { model: "gpt-4o" }, config: { agent: { engineering: true } }, history: [] }
+  const body = buildAdvisorUserMessage(agent, null, "design", null, [relative(anchor, join(project, DESIGN_REL)).replace(/\\/g, "/")])
+  const absStd = resolve(project, STANDARDS_FILE).replace(/\\/g, "/")
+
+  // 一段夹具、两段断言：一条根推导喂两个消费者。
+  const std = sliceSection(body, "## Project Standards", ["## Document Map", "## Instructions"])
+  assert.ok(std.includes(`<!-- standards file: ${absStd} -->`), `标准档绝对路径定位注在场（base = 子项目根）：${std}`)
+  assert.ok(std.includes("规则甲：写代码之前先读文档。"), `标准档正文在场：${std}`)
+  assert.ok(!std.includes(NO_STANDARDS_NOTICE), "态 3 不带「没有任何东西声明」那句降级语")
+
+  const map = sliceSection(body, "## Document Map", ["## Instructions"])
+  assert.ok(map.includes(MAP_BODY.trim()), `子项目 docs/README.md 正文在场（同一 base）：${map}`)
+  assert.ok(!map.includes(NO_DOC_MAP_NOTICE), "地图不降级")
 })

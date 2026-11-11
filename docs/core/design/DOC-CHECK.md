@@ -703,7 +703,7 @@ Node.js ∥ Mr.Smith  Node.js 的 .js 在清单内 ⇒ 候选（改前也是候�
 |---|---|---|---|
 | 交付面（`doc_check` 两问法） | 调用方给的清单 | 不给（读盘） | 不给（整档即判域） |
 | 写前门（`thincoder-core/tools/doc-write-gate.mjs`） | 目标档一份 | 目标档 → 本次改后内容 | 目标档 → 各 hunk 经扩区表后的区 |
-| 批档 `edit`（`thincoder-core/agent-tools/batch-gate.mjs`） | 批档一份 | 批档 → 改后整档视图 | 批档 → `newText` 所占行区间经扩区表后的区 |
+| 批档 `edit`（`thincoder-core/agent-tools/batch-gate.mjs`） | 触达账各档 + 批档本体 | 批档 → 改后整档视图 | 批档 → `newText` 所占行区间经扩区表后的区 **∪ 触达账各档的改动区**（与 `append` 行同一个 `zoneTablesOf`；只收 `kind:"region"` 的档，未定 ∥ 未跟踪态不交、由 `blocks` 另判） |
 | 批档 `append`（同档的候选文本腿） | 触达账各档 + 批档本体（身份 ∥ 豁免登记按它取） | 批档本体 → 候选全文 | 触达账各档的改动区；批档本体的键**不进** `zones`（候选整份即本次） |
 | 收口门（同档的 `close` 腿） | 本批笔域集 | 不给（已落盘） | 逐档 → `git diff -U0` 的 `+` 侧区间经扩区表后的区 |
 | 收门口的纯删基线那一跑 | 纯删目标档一份 | 目标档 → 基线全文 | 不给（整份基线都产出命中，供行映射与单元比较） |

@@ -130,7 +130,11 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
 **Writing it by hand splits the state from the tool's assumptions**: the next read then applies another set of rules.
 **When to act**: the moment the stage is crossed or a declared directory moves — update the file then; a stale declaration silently misleads every later reader.
 **Dividing it from the other two ledgers**: this file answers "what state is the project in now" (it takes no part in closeout); the ledger answers "what is still to be done"; the batch record answers "how one piece of work was done".
-**Document directories are declared, not assumed**: the five `docRoot` subkeys — `requirements` / `specs` / `design` / `modules` / `batches` — say where each document class lives; the declared value is the path to use, and no directory path in this prompt is fixed.
+**Document directories are declared, not assumed**: the `docRoot` subkeys — the layer set is `REVIEW_ROOT_KEYS` in `thincoder-core/agent-tools/review-facts.mjs`, not a list retyped here —
+say where each document class lives; the declared value is the path to use, and no directory path in this prompt is fixed.
+
+**The requirement step reads the project's standards layer before it settles what is wanted**: where `docRoot.standards` declares one, the requirement set — acceptance criteria and
+boundary included — is settled against it, and a requirement that contradicts a standard goes to the user as a conflict to rule, never written as if the standard were not there.
 
 ## Batch-record lifecycle (five rules)
 1. **One implementation round's boundary**: one batch = one delivery target + one set of same-batch entries + one batch record.

@@ -2,7 +2,7 @@
  * agent-tools/batch-gate.mjs — 文档机检门（`batch` 工具两机械点的**单源门**）。
  *
  * 权威规格 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「结构兜底」（判据 / 范围 / 适用面 /
- * ERROR 消费分野 / 门自身异常 / 不检面）——本档只实现，**不重述口径**（D2）。需求 = `DOC-CHECK.md` F9 / AC-7。
+ * ERROR 消费分野 / 门自身异常 / 不检面）——本门只实现，**不重述口径**（D2）。需求 = `DOC-CHECK.md` F9 / AC-7。
  *
  * 调用面（`scope` 语义 = 规范「调用面开关，无第三值」）：
  *   ① `batch.mjs` append——**全部 append 同挂**（§1–§6，含 depth-0 与评审写 §3）⇒ `scope: "writer"`；
@@ -17,16 +17,16 @@
  * **批档自身恒在判域（两 scope 同）**，阻断集仍只跟本次改动走：
  *   · ① 面 `append` 的判定输入 = 候选全文（`texts`，身份 = 批档本体）：命中就是这一段候选，当场拒；
  *     批档已落段不再入判 ⇒ 那一面不出存量读数（KD-P6；可见性归 `edit` ∥ 收口两面）。
- *     `edit` 携改写后的整档视图：`texts` = 视图、`zones` = `newText` 所在区间经扩区表后的区 —— 命中行本就是批档本体坐标，
- *     区外命中只出存量读数（§2.10.1 ∥ §2.10.2）。
+ *     `edit` 携改写后的整档视图：`texts` = 视图、`zones` = `newText` 所在区间经扩区表后的区 ∪ 触达账各档改动区
+ *     —— 命中行本就是批档本体坐标，区外命中只出存量读数（§2.10.1 ∥ §2.10.2）。
  *   · ② 面按批起 sha 求每档的本批改动区（`zones`），区内命中即 K；区外与纯删邻段的存量只出 `STOCK_LINE`。
  *     区未定则整档阻断。批档内强制命中逐条带 `§N（作者：<角色>）`，取不到作者就只出段号。
  *
- * 判据零变：本档不新增判据——只决定「判谁」与「何时强制」；判据与裁定串由产品引擎
+ * 判据零变：本门不新增判据——只决定「判谁」与「何时强制」；判据与裁定串由产品引擎
  * `doc-check/index.mjs` 产出（判据源唯一）。
  *
  * **证据格 = 判据面的一列收窄（不是新判据）**：证据格里只失败存在性的 `档缺` 降为读数、不进强制集；
- * 口径单源 = `docs/core/design/BATCH-RECORD.md` §4.22——本档只实现「哪些命中阻写」，引擎的命中、分类与
+ * 口径单源 = `docs/core/design/BATCH-RECORD.md` §4.22——本门只实现「哪些命中阻写」，引擎的命中、分类与
  * verdict 一字不动。拒文四件的显示行同样照该节组装（引擎 `✗` 行齐四件的才直接用，其余按命中类补齐）。
  *
  * **触达账腿判改动区（① 面·单源 = 设计档 §3.20「触达账腿的判面 = 本次改动区」）**：写者本 run 写进
@@ -42,24 +42,39 @@
  * ① **`append` 候选文本的判法** = 候选全文直接当 `texts`（键 = 批档本体）——锚解析序 ② 是「引用方档所在目录相对」，
  *    身份 = 批档本体 ⇒ 判法与批档本体逐字同源；命中行号因此是**候选文本里的行号**，回执渲染成
  *    「候选文本第 N 行」，不译成批档坐标、不落临时档、不留映射表（`texts` 单源 = `docs/core/design/DOC-CHECK.md` §2.10.1）。
- *    **`edit` 同一形**：整档视图走 `texts`、替换区走 `zones`（§2.10.1）——同样零临时档。
+ *    **`edit` 同一形**：整档视图走 `texts`、区表走 `zones`（替换区 ∪ 触达账各档的改动区，§2.10.1）——同样零临时档。
  * ② **提交 diff 腿的基 sha 只读批档 §1 的记入行**（`批起 sha = <sha>`——取行内首个 40 位十六进制串）；
  *    取不到（无该行 ∥ 形态不合 ∥ git 跑不出该 diff）⇒ 只认触达账 + 回执明示「基 sha 未定」（不静默）。
+ *
+ * **三族落点（分拆后本档只余编排与范围解析）**：命中行组装 = `thincoder-core/agent-tools/batch-gate-hit.mjs` ∥
+ * 判集分腿 = `thincoder-core/agent-tools/batch-gate-judge.mjs` ∥ 报面组装 = `thincoder-core/agent-tools/batch-gate-report.mjs`。
+ * 本档留 `runBatchGate` 入口、`evaluate` 编排与范围解析——它们是「判谁」的事，不属上面任何一族。
+ * **共享小件不在本档自持**：`pathKey` 取 `thincoder-core/doc-check/per-root.mjs` 的既有导出、`safeRead` 取
+ * `thincoder-core/agent-tools/batch-regions.mjs` 的既有实现（改为导出后两族共用）——族档反向 import 编排档
+ * 会成环，且是层次倒挂（单测一个族档要连整个编排档与引擎一起拖进来）。
  */
 import { readFileSync } from "node:fs"
 import { relative, resolve } from "node:path"
 
 import { owningProject, readManifest } from "../manifest.mjs"
-import { runDocCheck, PARA_DISPOSE, DOC_CLASS, STOCK_LINE, CYCLE_READ_LINE } from "../doc-check/index.mjs"
+import { runDocCheck, DOC_CLASS, STOCK_LINE, CYCLE_READ_LINE } from "../doc-check/index.mjs"
+// 路径键单源（判域族 `thincoder-core/doc-check/per-root.mjs` 的既有导出）：族档与编排档共用一份，各写一份必然漂。
+import { pathKey } from "../doc-check/per-root.mjs"
 // 扩区表单源（D2）：两门判的是同一件事（本笔触碰的那几段），各写一张表必然漂移 ⇒ 只调用、不复制。
-import { committedDocs, pureDeleteStockEntries, touchedRegions } from "./batch-regions.mjs"
+// 读档小件 `safeRead` 同住 `batch-regions.mjs`（它本就 import 了 `node:fs`）：同一句读法两处各写一份必然漂移，只留那一份。
+import { committedDocs, pureDeleteStockEntries, safeRead, touchedRegions } from "./batch-regions.mjs"
 // 扩区表本体与区间合并同住写前门（§3.26「扩区表的第二消费面」句）：本档只调用。
 import { judgeZones } from "../tools/doc-write-gate.mjs"
 import { sectionHeaderRe } from "./batch-skeleton.mjs"
 import { batchProjectRoot } from "./batch-paths.mjs"
-
-/** 平台路径键（win32 大小写不敏感——只作集比对，非判据面）。 */
-const pathKey = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
+// 三族各一档（`docs/core/design/BATCH-RECORD.md` §4.22「档层结论」）：本档只编排，族的判定体各住各档。
+import { hitEntries, srcOfOf } from "./batch-gate-hit.mjs"
+import { blocks, zoneTablesOf } from "./batch-gate-judge.mjs"
+import { composeReport, classifyCounts, attributionOf, authorMapOf, emptyRange, errorState } from "./batch-gate-report.mjs"
+// 再出口（对外导出面零改：四个消费档 `batch-closeout.mjs` ∥ `batch-lifecycle.mjs` ∥ `batch-record-write.mjs`
+// ∥ `batch-supersede.mjs` 照旧 import 本档，一个 import 行都不用改）：实现在三族各档，导出位仍在本档。
+export { pointerCells } from "./batch-gate-hit.mjs"
+export { gateReceiptLine, gateRefusalMessage } from "./batch-gate-report.mjs"
 
 /** 文档档谓词 + 绝对化（触达账 / 提交 diff 同形；非 `.md` 不进范围）。 */
 const isDocPath = (p) => typeof p === "string" && p.trim() !== "" && p.toLowerCase().endsWith(".md")
@@ -67,187 +82,6 @@ function docPaths(list, base) {
   const out = []
   for (const p of Array.isArray(list) ? list : []) if (isDocPath(p)) out.push(resolve(base, p))
   return out
-}
-
-/** 锚类命中（引擎大类中的锚面；其余 clazz = 段判据命中 —— 另加引擎的第三类 `行号坐标`（按**处**计，不是按「条」）。类名由引擎产出，本档只作切分。
- *  四属同计「锚 N 条」：`档缺` / `节缺` / `引缺`（引文不在所指档内——同属锚判据，不是段类）/ `环引`
- *  （声明出边走回本根——仓级事实，与 `档缺` 同计锚、不新增判决词）。 */
-const ANCHOR_CLASSES = new Set(["档缺", "节缺", "引缺", "环引"])
-
-/** 证据格识别器的**字面闭集**（判据单源 = `docs/core/design/BATCH-RECORD.md` §4.22「证据格怎么认」）：
- *  只有这两个字面。`依据` ∥ `一行依据` ∥ `判据落点` 等一律**不是**证据格 ⇒ 照旧阻写（失败方向 = 拒，fail-closed）。 */
-const EVIDENCE_HEADERS = new Set(["证据", "evidence"])
-
-/** 表格分隔行（`|---|:--:|`）：表头 = 它上面那一行——本档不带表格状态机，只借这一行认出表头在哪。 */
-const DELIM_ROW_RE = /^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/
-
-/** 一行的**末格跨度**（`{start, end}`，0 基；不以 `|` 收尾 ⇒ `null`）。
- *  末格 = 倒数第二个 `|` 之后、收尾 `|` 之前；本档只认这一格的文字与范围。 */
-function lastCellSpan(line) {
-  const t = String(line).replace(/\s+$/, "")
-  if (!t.endsWith("|")) return null
-  const close = t.length - 1
-  const open = t.lastIndexOf("|", close - 1)
-  return open < 0 ? null : { start: open + 1, end: close }
-}
-
-/** 格内文字（判据 = 去首尾空白、去包裹反引号后**全等**）：`证据` ∥ `` `证据` `` ∥ `` `evidence` `` 都认，别的都不认。 */
-const cellLabel = (raw) => String(raw).trim().replace(/^`+/, "").replace(/`+$/, "").trim()
-
-/**
- * 证据格识别器：同一张 markdown 表内，表头行**最后一个单元格**落在闭集里 ⇒ 该表**表体所在的行区集合**。
- * @param {string} src 一份文本（候选文本 ∥ 批档整档 ∥ 收口面各档——三条腿各喂自己那份视图）
- * @returns {Map<number, number>} 1 基行号 → 该行**末格起点列**（0 基）
- *   **为什么连列起点一起返回**：命中的粒度是「一行」，判据的粒度是「一格」——同一行别的列照旧阻写（§4.22
- *   「正文与其他列一字不放」），于是调用面还要知道末格从第几个字符起。行不在表体 ⇒ 不在 Map 里（照判）。
- *   **不按段号豁免**：按段号会把 §3 的正文一起放宽（结论表与裁定行同在一段）——理由单源 = 该节「同类先例 · 偏离」。
- */
-export function pointerCells(src) {
-  const out = new Map()
-  const lines = String(src ?? "").split("\n")
-  let active = false
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    const span = lastCellSpan(line)
-    if (DELIM_ROW_RE.test(line)) {
-      // 分隔行：上面那一行即表头——末格落进闭集才认这张表的表体。
-      const head = i > 0 ? lastCellSpan(lines[i - 1]) : null
-      active = head !== null && EVIDENCE_HEADERS.has(cellLabel(lines[i - 1].slice(head.start, head.end)))
-      continue
-    }
-    // 表体行 = 以 `|` 起、以 `|` 收（与段判据的表格行谓词同一形）；其余行一律断表。
-    if (span === null || !/^\s*\|/.test(line)) { active = false; continue }
-    if (active) out.set(i + 1, span.start)
-  }
-  return out
-}
-
-/** 这条命中是不是落在**证据格**里（§4.22：证据格里只判「判得了的」）：
- *  ① 命中类必须是 `档缺`（`节缺` ∥ `引缺` 的前提是目标档在盘——判得出来就照判）；
- *  ② 该行必须在证据格表体内；
- *  ③ 被拒的 token 必须真的落在**末格**里（同一行别的列照旧阻写）。
- *  `环引` 没有行号（仓级事实）⇒ 恒不在证据格；读不到那一行 ⇒ 不在（照判，不往宽里掉）。 */
-function inEvidenceCell(h, rowsOf, srcOf) {
-  if (h.clazz !== "档缺" || typeof h.line !== "number") return false
-  const start = rowsOf(h.file).get(h.line)
-  if (start === undefined) return false
-  const token = String(h.token ?? "")
-  if (token === "") return false
-  const line = String(srcOf(h.file) ?? "").split("\n")[h.line - 1] ?? ""
-  return line.indexOf(token, start) >= start
-}
-
-/** 多行原文压成一行（段类的内容格是整段原文，段内换行在本行里显形——`⏎` 不是省略号，字一个没少）。 */
-const oneLine = (s) => String(s ?? "").replace(/\s*\n\s*/g, " ⏎ ")
-
-/**
- * 拒文四件的**显示行**（判据单源 = §4.22「拒文四件」）：档 + 位置 + 被拒的内容 + 解析根，按命中类取值、一格不空。
- * **引擎 `✗` 行齐四件的才直接用**：`环引` 那一行本就有根（`（<root>）`）与仓链，照用。
- * 不齐的按命中类补齐——引擎行不齐不是它的错：`paragraphHitLine` 只出档与行号（无原文、无根）；`lineRefHitLine`
- * 只出形别与前 40 字；锚行的根只在声明仓提示里出现。
- * `engineLine` 为 `null`（`aligned` 假、配不上对）⇒ 按命中对象现造，四件仍齐。
- * `at` = 命中位置那一段的**显示形**（`<档>:<行>` ∥ append 面 `<档> 候选文本第 N 行`）——引擎行里那一截逐字换掉，
- * 其余字节一字不改（四件的档与位置两格因此始终是同一个写法）。
- */
-function displayLineOf(h, engineLine, at, shown, root) {
-  const where = h.root ?? root
-  const line = typeof h.line === "number" ? String(engineLine ?? "").split(`${shown(h.file)}:${h.line}`).join(at) : engineLine
-  if (h.clazz === "环引") {
-    return line ?? `✗ 锚·环引 ${shown(h.file)}（${where}）publicRepos 成环：${h.chain ?? ""}`
-  }
-  if (ANCHOR_CLASSES.has(h.clazz)) {
-    const base = line ?? `✗ 锚·${h.clazz} ${at} \`${h.token ?? ""}\``
-    return String(base).includes(String(where)) ? base : `${base}（根：${where}）`
-  }
-  const base = line ?? `✗ ${h.clazz} ${at}${h.snippet === undefined ? "" : ` ${h.form ?? ""} ${h.snippet}`}`
-  const content = oneLine(h.token)
-  // 行号坐标的引擎行已带整行原文（片段 = 全长时）⇒ 内容格不重复；否则补原文。
-  const hasContent = h.snippet !== undefined && h.snippet === content
-  const tail = [hasContent ? "" : `原文：${content}`, `根：${where}`].filter(Boolean).join(" —— ")
-  return `${base} —— ${tail}`
-}
-
-
-/** 写段 ∥ 收口两腿的区间表（§2.10.1 的表）：只交「改动区已定」的那些档（`kind:"region"`）。
- *  一档都交不出 ⇒ `undefined`（与「没给 `zones`」同形：整档判）。
- *  **各腿各交哪些档**（差异只在这一层，判定体一处）：
- *   · `append` 交**触达账各档**，批档本体的键**不进**——引擎的逐档语义（某档在 `docs` 里而 `zones` 里没有它的键 ⇒
- *     该档整份进阻断集）因此让候选整份即本次：`append` 改不动批档的既有行，候选全文就是这一笔的全部（AC-P7）。
- *   · `edit` 只交批档本体（替换区），触达账各档交给 `blocks` 逐条判。
- *   · 收口腿交逐档——整档（本轮新建的笔）∥ 未定（无基线）就不交该档，引擎按整档判（fail-closed）。
- *     写段面的「未定 ⇒ 零强制」走另一条路：那条路由本档的 `blocks` 判，不经引擎（两面倒向本来就不同，§2.9.4）。 */
-function zoneTablesOf(regions, docs) {
-  const out = new Map()
-  for (const p of docs) {
-    const r = regions.get(pathKey(p))
-    if (r && r.kind === "region" && r.zones.length > 0) out.set(p, r.zones)
-  }
-  return out.size > 0 ? out : undefined
-}
-
-/** 读档（读不到 ⇒ 空串：归属标注取不到就只出 `§N`，不猜）。 */
-function safeRead(abs) {
-  try { return readFileSync(abs, "utf8") } catch { return "" }
-}
-
-/** 命中所在文本的**读取器**（证据格判据要读原文：表头与末格范围都在文本里，不在命中对象里）：
- *  批档本体那一档 ⇒ `inputBody`（`edit` 的改后整档视图 ∥ `append` 的候选全文——两者都是批档本体的判定输入）；其余 ⇒ 盘上读。
- *  按路径记一次——一笔里多命中同档时不重复读盘。读不到 ⇒ 空串（于是 `inEvidenceCell` 判「不在证据格」，照判不往宽里掉）。 */
-function srcOfOf({ selfAbs, inputBody }) {
-  const memo = new Map()
-  return (abs) => {
-    const key = pathKey(abs)
-    let src = memo.get(key)
-    if (src === undefined) {
-      src = inputBody !== null && selfAbs !== null && key === pathKey(selfAbs) ? String(inputBody) : safeRead(abs)
-      memo.set(key, src)
-    }
-    return src
-  }
-}
-
-/** 批档档头骨架行的「一段一作者」映射（`batch` create 落骨架时写入）——取不到 ⇒ 空表。 */
-function authorMapOf(src) {
-  const map = new Map()
-  for (const line of String(src ?? "").split("\n")) {
-    if (!line.includes("一段一作者")) continue
-    for (const m of line.matchAll(/§\s*(\d+)\s*[^（(]*[（(]([^）)]+)[）)]/g)) {
-      const n = Number(m[1])
-      if (!map.has(n)) map.set(n, m[2].trim())
-    }
-  }
-  return map
-}
-
-/** 行号 → 所属段号（`## §N` 段头分段；首个段头之前 ⇒ null）。 */
-function sectionOfLine(src, line) {
-  const lines = String(src ?? "").split("\n")
-  const end = Math.min(line, lines.length)
-  let cur = null
-  for (let i = 0; i < end; i++) {
-    const m = /^## §(\d+)(?=\s|$)/.exec(lines[i])
-    if (m) cur = Number(m[1])
-  }
-  return cur
-}
-
-/** 命中行落在批档内时的归属标注：` §N（作者：<角色>）`；作者取不到 ⇒ 只出 ` §N`（不猜）。 */
-function attributionOf(src, line, authors) {
-  const seg = sectionOfLine(src, line)
-  if (seg === null) return ""
-  const who = authors.get(seg)
-  return who ? ` §${seg}（作者：${who}）` : ` §${seg}`
-}
-
-/** 命中集按类分列（`锚 A 条 · P 处<类名>`）——引擎报面行形不动，只在这里做计数。 */
-function classifyCounts(entries) {
-  const parts = []
-  const anchor = entries.filter((e) => ANCHOR_CLASSES.has(e.clazz)).length
-  if (anchor) parts.push(`锚 ${anchor} 条`)
-  const byClass = new Map()
-  for (const e of entries) if (!ANCHOR_CLASSES.has(e.clazz)) byClass.set(e.clazz, (byClass.get(e.clazz) ?? 0) + 1)
-  for (const [clazz, n] of byClass) parts.push(`${n} 处${clazz}`)
-  return parts.join(" · ")
 }
 
 /**
@@ -284,62 +118,6 @@ function replacementRegionOf(oldBody, newBody) {
   while (tail < min - head && oldLines[oldLines.length - 1 - tail] === newLines[newLines.length - 1 - tail]) tail++
   return { start: head + 1, end: newLines.length - tail }
 }
-
-
-
-
-/** 命中 → `{ aligned, drift, entries }`：`file` / `line` / `clazz` / `token` / `root` = 判定用（引擎给绝对路径，两格载荷 = 引擎补的）；
- *  显示行 = **拒文四件**（单源 = `docs/core/design/BATCH-RECORD.md` §4.22「拒文四件」）：档 + 位置 + 被拒的内容 + 解析根，
- *  按命中类取值、一格不空；`pointerRead` = 这一条落在证据格里且只失败存在性（只列读数、不阻写）。
- *  `aligned`（引擎 `✗` 行数与命中数是否同序）**降为读数**：不同序时引擎行不可逐条配对 ⇒ 显示行按命中对象现造，
- *  判定仍按命中对象（那句读数由调用面出固定一行）。 */
-function hitEntries(res, root, atOf, srcOf) {
-  const lines = res.report.split("\n").filter((l) => l.startsWith("✗ "))
-  // 三条判据的命中按**报面行序**串起（锚 ∥ 段 ∥ 行号坐标）——引擎的命中数组顺序即报面行序，
-  // 少串一类就会让 `aligned` 永为 false（显示行全走自造形）。
-  const hits = [...res.anchorHits, ...res.paragraphHits, ...(res.lineRefHits ?? [])]
-  const drift = Math.abs(lines.length - hits.length)
-  const aligned = drift === 0
-  const shown = (f) => relative(root, f).replace(/\\/g, "/")
-  // 证据格表体（一行一次 `pointerCells`）：同一笔里多命中同档时不重扫。
-  const rowsMemo = new Map()
-  const rowsOf = (file) => {
-    const key = pathKey(file)
-    let rows = rowsMemo.get(key)
-    if (rows === undefined) { rows = pointerCells(srcOf(file)); rowsMemo.set(key, rows) }
-    return rows
-  }
-  const entries = hits.map((h, i) => {
-    const at = atOf(h)
-    return {
-      file: h.file,
-      line: h.line,
-      clazz: h.clazz,
-      token: h.token,
-      where: at,
-      pointerRead: inEvidenceCell(h, rowsOf, srcOf),
-      text: displayLineOf(h, aligned ? lines[i] : null, at, shown, root),
-    }
-  })
-  return { aligned, drift, entries }
-}
-
-/** 报面组装：首行 verdict + 强制集命中行 + 存量命中行 + 附注行 + 处置块（只跟段命中走——仅锚 ∥ 仅行命中不得叫人对段落动手；
- *  字面单源 = 引擎导出的 `PARA_DISPOSE`，本档零字面副本）。明示集 = 不属本次改动区的命中（收口面纯删映射重分类的那批 ∥
- *  写段面区外存量）——它们是读数不是判决，因此只明示、不阻交付。 */
-function composeReport({ first, forcedLines, disclosedLines, notes, disposePara }) {
-  const out = [first, ...forcedLines]
-  if (disclosedLines.length) {
-    out.push("—— 区外存量命中（不属本次改动区，只读数、不阻交付；整档读数）：", ...disclosedLines)
-  }
-  out.push(...notes)
-  if (disposePara) out.push(...PARA_DISPOSE)
-  return out.join("\n")
-}
-
-/** 空范围返回形（`range` 恒在场——回执要读 `范围 N 档`）。 */
-const emptyRange = (basis) => ({ count: 0, k: 0, basis })
-const errorState = (first, range = emptyRange("none")) => ({ state: "error", first, report: first, hitLines: [], noteLines: [], disposePara: false, range })
 
 /**
  * 跑一次门（**非抛错**：两因之外的门自身异常收为 `error` 态，由调用面按 `scope` 消费）。
@@ -412,14 +190,19 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
     // 三处调用各只说自己要判哪份档、哪些区间（§2.10.1 的表）：
     //   交付面（不在这里）—— 两个入参都不交；
     //   写段面 `append` —— `texts` = 候选全文（键 = 批档本体）、`zones` = 触达账各档的改动区（批档本体的键**不进**）；
-    //   写段面 `edit` —— `texts` = 改后整档视图、`zones` = 本次替换区经扩区表后的区；
+    //   写段面 `edit` —— `texts` = 改后整档视图、`zones` = 本次替换区经扩区表后的区 ∪ 触达账各档的改动区（与 `append` 同一张表）；
     //   收口门 —— `zones` = 逐档 `git diff -U0` 的 `+` 侧区间经扩区表后的区（已落盘，不交 `texts`）。
     const docs = close ? closeDocs : [...touched, selfAbs]
     const texts = inputBody === null ? undefined : new Map([[selfAbs, inputBody]])
+    // `edit` 与 `append` 交**同一张扩区表**（差别只在批档本体那一键：`edit` 另交替换区）。区表缺键在引擎侧的含义是
+    // 「该档整档即本次」（§2.10.1 逐档语义），而 `edit` 改得动批档的既有行、改不动触达账各档的存量债 ⇒
+    // 触达账各档必须有自己的区，否则一档与本笔无关的存量死锚就以逐条 `✗` 进明示面（DD-217 要求只出计数）。
+    // 触达账各档的区先铺、批档本体那一键**最后落**：自档的键因此永不被别处的表覆盖（今天的 `regions` 已滤掉自档，
+    // 这一次序让「自档判替换区」这条不变式就在这一行上成立，不靠上游那行 filter 记着）。
     const zones = close
       ? zoneTablesOf(regions, closeDocs)
       : viewBody !== null
-        ? new Map([[selfAbs, judgeZones(viewBody.split("\n"), [editRegion])]])
+        ? new Map([...(zoneTablesOf(regions, touched) ?? []), [selfAbs, judgeZones(viewBody.split("\n"), [editRegion])]])
         : zoneTablesOf(regions, touched)
     const res = runDocCheck(root, { mode: "gate", docs, docsSource: close ? "explicit" : "session", texts, zones })
     const basis = !close
@@ -471,25 +254,12 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
     //   · 触达账 ⇒ **改动区内**的命中当场拒（与本次候选同权）；区外存量只入回执计数；改动区未定 ⇒ 零强制 + 明示。
     // ② 面：本批改动区内命中即 K（引擎已按 `zones` 切过）；纯删扩进来的存活旧命中须先过基线映射。
     const pureDeleteStock = close ? pureDeleteStockEntries(labeled, root, regions) : new Set()
-    const blocks = (e) => {
-      if (close) {
-        const region = regions.get(pathKey(e.file))
-        if (!region || region.kind !== "region") return true
-        const inZone = region.zones.some((z) => e.line >= z.start && e.line <= z.end)
-        return inZone && !pureDeleteStock.has(e)
-      }
-      if (e.inSelf) return viewBody !== null || candidate
-      const region = regions.get(pathKey(e.file))
-      if (!region) return true // 判域内既非批档自身也非触达账 ⇒ 构造异常；照强制断住（fail-closed）
-      if (region.kind === "whole") return true // ② 未跟踪档 ⇒ 整档即本轮的笔
-      if (region.kind === "unknown") return false // 写段面未定 ⇒ 零强制；收口面独立按批起基线判定
-      return region.zones.some((z) => e.line >= z.start && e.line <= z.end)
-    }
-    const disclosed = labeled.filter((e) => !blocks(e))
-    const forced = labeled.filter(blocks)
+    const isBlocked = blocks({ regions, close, pureDeleteStock, viewBody, candidate })
+    const disclosed = labeled.filter((e) => !isBlocked(e))
+    const forced = labeled.filter(isBlocked)
     const k = forced.length
     const forcedLines = forced.map((e) => e.text)
-    // 存量读数 = 本档重分类掉的那批（收口面纯删基线映射 ∥ 写段面区外）**加上**引擎交出的区外命中（§2.10.1 的 `stockHits`）——
+    // 存量读数 = 本门重分类掉的那批（收口面纯删基线映射 ∥ 写段面区外）**加上**引擎交出的区外命中（§2.10.1 的 `stockHits`）——
     // 两边各是一批，相加才是这一轮真正「不属本次」的条数，不重复（引擎那批根本没有进 entries）。
     const stockCount = disclosed.length + (res.stockHits?.length ?? 0)
     const disclosedLines = disclosed.map((e) => e.text)
@@ -543,10 +313,10 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
       const segLabel = Number.isInteger(pending?.section) ? `§${pending.section}` : "本段"
       const lineCount = pendingBody.split("\n").length
       notes.push(viewBody !== null
-        ? `批档替换区（${segLabel}）${lineCount} 行已判——段长类只判这一段；锚类只判本次替换区（区外命中出存量读数）`
+        ? `批档替换区（${segLabel}）${lineCount} 行已判——段长类只判这一段；锚类只判本次区表（替换区 ∪ 触达账各档改动区；区外命中出存量读数）`
         : `候选文本（${segLabel}）${lineCount} 行已判——强制集只有这一段（别人的段字面改不动，不进你的拒面）`)
     }
-    // 存量读数句（字面单源 = 引擎的 `STOCK_LINE`）：引擎交出的区外命中 + 本档重分类掉的那批（纯删基线映射 ∥ 写段面区外）。
+    // 存量读数句（字面单源 = 引擎的 `STOCK_LINE`）：引擎交出的区外命中 + 本门重分类掉的那批（纯删基线映射 ∥ 写段面区外）。
     if (stockCount) notes.push(STOCK_LINE(stockCount))
     const undetermined = touched
       .filter((p) => pathKey(p) !== pathKey(selfAbs))
@@ -579,43 +349,4 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
       range: { count: res.checkFiles.length, k, basis },
     }
   }
-}
-
-/** 成功回执行（append / close / status 三面同形；`null` 门 ⇒ 零改——非挂门路径回执逐字旧形）。
- *  两件 = verdict + `范围 N 档` 事实行；附注行（「基 sha 未定」∥ 命中行与引擎报面不同序 ∥ 指针读数 ∥ 存量读数）紧随其后
- *  **逐字**列出——不静默吞掉可见性。 */
-export function gateReceiptLine(gate) {
-  if (!gate) return ""
-  if (gate.state === "not-applicable") return "\n[doc-check gate] 未跑（本项目无声明面）"
-  const head = `\n[doc-check gate] ${gate.first} · 范围 ${gate.range?.count ?? 0} 档`
-  return [head, ...(gate.noteLines ?? []).map((l) => `\n${l}`)].join("")
-}
-
-/**
- * 拒绝串（throw 载荷；两机械点同源措辞）：`batch:` 前缀 + verdict 首行 + 逐条 `✗` 行 + 附注行 + 处置面。
- * **处置面按命中类分形**（本批裁定）：
- *   · 段命中 ⇒ **空行 + 五行处置块**（字面单源 = 引擎的 `PARA_DISPOSE`）。块末行逐字就是「同轮修正后复跑；不转台账」，
- *     故旧尾句那一截删去——留着就是两句「处置：」+ 一句重复；收尾的裁决指引与「Nothing was written」两句不重复，随原因面照出。
- *   · 仅锚 ∥ 仅行命中 ⇒ **照旧一句**（那五条出路是给「段」的，对错误的面对动手比不给方向更贵）。
- * ① 写盘面两路（`append` 段尾 ∥ `edit` 段内区间）同路既有句「失败 ⇒ 勿 close」（字面同 append 既有拒因，不新造措辞）。
- */
-export function gateRefusalMessage(gate, action = "append") {
-  const writeFace = action === "append" || action === "edit" // 写盘面两路：段尾追加 ∥ 段内区间改写
-  const lead = action === "edit"
-    ? "batch: 文档机检门拒写（doc-check gate · 结构兜底 ①）—— 本次段内就地改未落盘，档字节不变。"
-    : writeFace
-      ? "batch: 文档机检门拒写（doc-check gate · 结构兜底 ①）—— 本次段写入未落盘，档字节不变。"
-      : `batch: 文档机检门拒收口（doc-check gate · 结构兜底 ②）—— ${action === "close" ? "close" : "status → 已收口"} 被拒绝，§1 状态行字节不变。`
-  const detail = gate.state === "error" ? String(gate.report ?? "").split("\n").slice(1) : gate.hitLines
-  const routing = "拿不准 ⇒ 上抛主 agent 裁决（主 agent 拿不准 ⇒ 转呈用户）。"
-  // 尾句按动作取形：`edit` 拒后段里本就有内容，劝「勿 close」把两件事说成一件（那句防的是收口冻结一个空段）。
-  const noBytes = writeFace
-    ? action === "edit"
-      ? "Nothing was written — the target range and every other byte of the record are unchanged."
-      : "Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close)."
-    : "Nothing was written."
-  const head = [lead, gate.first, ...(detail ?? []), ...(gate.noteLines ?? [])]
-  // 段命中：原因面 + 空行 + 五行块（处置面 = 块，不再另起一句「处置：同轮修正后复跑…」）
-  if (gate.disposePara) return [...head, `${routing}${noBytes}`, "", ...PARA_DISPOSE].join("\n")
-  return [...head, `处置：同轮修正后复跑（改文档 ∥ 修引擎）；不转台账；${routing}${noBytes}`].join("\n")
 }

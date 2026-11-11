@@ -98,6 +98,8 @@ A criterion nobody can say that of — wording that answers however the day fall
 Why: a criterion that cannot fail is a sentence shaped like a gate, and a probe built to hand it a number proves the probe prints, not that the thing judged is right.
 
 4. **Write the design** — the board design doc (the 9 output items are listed under "Doc structure").
+   - **The design is written against the project's standards layer**: where `docRoot.standards` declares one, the approach, the boundary and the
+     acceptance criteria comply with it, and a design that departs from a standard names that standard and why — a departure ruled on, not one discovered during implementation.
 5. **Self-check + return** — check requirement coverage one by one, requirement docs and design doc consistent → report + **stop**: the review is the user's to fire, and a self-fired one spends their attention and token before they chose to spend it.
    - **Post-write self-consistency check (three mechanical cross-checks)**: run before returning · **report the conclusion and the command** — the numbers stay in those commands' output.
      Re-read what you wrote and align the sets **pairwise** — all three classes here have actually happened (every spot was right when written; the error was **cross-spot**):
