@@ -7,7 +7,7 @@
    树面锚：`views/settings.mjs`（头 / 段 / 体）· `views/settings-sections*.mjs`（段体 · 行 / 表单——D37 渠道族拆出
    `views/settings-sections-providers.mjs`）· `views/onboarding.mjs`（向导：路由两卡 ∥ 团队表单 ∥ 本地三歩）。字形面 = 关闭 / 退场两控件的 ✕（`content` ——
    **视图档零字形字面**，沿 `pool.css` 折叠控件同纪律）；变量单源 = `theme.css` `:root`（零新变量 · 零断点常量）。
-   **该档越 300 顾问线，在册**（实读 **357** 行——口径 `split("\n").length−1`；2026-10-11 首启保存面收正批 +`.wizard-save` 四组 ∥ 完成护栏族后随正）。 */
+   **本档读数**：实读 **357** 行（口径 `split("\n").length−1`；2026-10-11 首启保存面收正批 +`.wizard-save` 四组 ∥ 完成护栏族后随正）；拆分与否按设计轮判定（`docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）。 */
 
 /* ── ① 设置 / 向导：窗口级覆盖层面 ─────────────────────────────────────── */
 [data-slot="settings"] {

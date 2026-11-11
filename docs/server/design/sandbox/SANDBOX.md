@@ -546,7 +546,7 @@
 | `thincoder-server/deploy/sandbox-probe.mjs`（已落） | — | 探针执行器（余腿 ∥ 一次性容器径 ∥ PASS/FAIL/SKIP/退出码——§10） |
 
 - `thincoder-server/src/sandbox/routes.mjs` 拆分预案（**两项均已执行**——① 容器面拆 `container-routes.mjs` ∥ ② 工作区面拆 `workspace-routes.mjs`（已落）；越线已消）：
-  **触发点 = 越 500 软线**（复现 ⇒ 次选候选（落域内、端点路径零变）= 设置面独立成档）。
+  **触发点 = 设计时判过 500（判据单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）**（复现 ⇒ 次选候选（落域内、端点路径零变）= 设置面独立成档）。
 - `registry.mjs` 拆分预案：**销**——拆案对象 = 队列/心跳死件，已删净。
 - `migrations.mjs` 拆分预案：**拆（必）**——贴近 800 硬限；拆案候选 = DDL 常量段（v1–v24 字符串块）外提，`MIGRATIONS` 链与回填留档（纯搬移零语义——沿 `db.mjs` ⇒ `migrations.mjs` 先例）；**窗口 = 下一迁移触碰批动工第一步**。
 - `docker.mjs` 拆分预案：**未越 500 软线，拆案撤回**（沿容器族拆档先例）。

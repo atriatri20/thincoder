@@ -2,7 +2,7 @@
 
 > 面 = **打包与发行面**——打包链（`electron-builder.yml`）· Windows NSIS x64 安装包（签名就绪）· 官网（thincoder.com）托管（阶段一）· **自动更新（electron-updater ∥ generic feed——§2.8）** · **官网桌面面（站点仓规格——§2.9）**；本档是该面的单源设计。
 > 需求侧 = 需求分卷（本域卷 = `docs/desktop/requirements/PACKAGING.md`——**D12 ∥ D32 ∥ D40 ∥ D41 ∥ D42**；查卷口 = `docs/desktop/requirements/PROJECT.md` §4 **D 表索引**）；总览 ∥ 跨域决策 ∥ 索引 = `docs/desktop/design/PROJECT.md`；发布线 = `docs/RELEASE.md`（阶段 3b）。
-> **行数纪律（500 建议 ∕ 800 硬限）只对代码档**（`.mjs` ∥ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
+> **行数纪律（设计器硬线 500 ∕ 其他检查硬线 800）只对代码档**（`.mjs` ∥ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
 
 ## 1. 关键决策（KD-6 ∥ KD-64）
 
@@ -280,7 +280,7 @@
   ⑤ `ThinCoder-Setup-<源版本>.AppImage` 在（名形 × 版本逐字）；⑥ `ThinCoder-Setup-<源版本>.deb` 在；⑦ 「构建生成的更新器配置」（`linux-unpacked/resources/` 下）在 ∧ `provider: generic` ∧ `url` = 契约值；
   ⑧ 「构建生成的 Linux 更新索引」 在 ∧ `version` = 源 ∧ `files[0].url` = AppImage 名（逐字）∧ `files` 恰一条 ∧ `path` = 同名 AppImage ∧ `sha512` = AppImage 实算（基 64 填充不敏感）**∧ 全条目不携 `.deb`**（feed 分流判据）；
   ⑨ dist 残留扫（`.AppImage` ∥ `.deb` 名携非源版本 ⇒ 红——扩现行 guard）。
-  （**500 顾问线内 ⇒ 保留单档**（500/800 口径更换批）：① 各分支共享同一产物读面与同一 fail-closed 闸——分档增跨档间接；② 距 800 硬限余量充足；③ 先例 = `thincoder-desktop/src/main/window.mjs`（保留形）。）
+  （**500/800 口径更换批当时判过保留单档**：① 各分支共享同一产物读面与同一 fail-closed 闸——分档增跨档间接；② 该批读数距 800 收口线余量充足；③ 先例 = `thincoder-desktop/src/main/window.mjs`（保留形）。）
 - **构建机命令级判据（check-dist 外——不可纯读面）**：`dpkg-deb -f dist/ThinCoder-Setup-<号>.deb Maintainer` = `liwei <liwei@thincoder.com>` ∧ `Homepage` = `https://thincoder.com`（deb 控制段 = xz 压缩——node 纯读不可及 ⇒ 住构建机清单；读数入 §5）。
 - **AppImage 结构提取读数（可自动面 ∥ 构建机）**：`./ThinCoder-Setup-<号>.AppImage --appimage-extract` ⇒ `squashfs-root/`：① `resources/app.asar` 在；② `resources/package-type` **不在**（AppImage 不得携 deb 面）；
   ③ `.desktop` 文件名 = `thincoder.desktop` ∧ 含 `StartupWMClass=thincoder`；④ 图标在（`.DirIcon` ∥ `usr/share/icons/...`——读数记录）。提取不可执行 ⇒ 记读数 + 停下上报（不得静默略过）。
@@ -343,7 +343,7 @@
 | `thincoder-desktop/CHANGELOG.md`（发布窗首建 · 已落） | 桌面 CHANGELOG（首发段——本档 §2.2 ∥ `docs/RELEASE.md` §5.2 步 2） |
 | `thincoder-desktop/src/main/update.mjs`（新档 · 已落） | 自动更新（应用侧——策略面） |
 
-**行数判据（本表不载行数）**：文件体量按 `doc_check` 的 `lines` 读数面量取，阈值为 500 顾问线 ∥ 800 硬限；结论只写「越线与否」与同尺比较，不写绝对值（口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 行数行）。
+**行数判据（本表不载行数）**：文件体量按 `doc_check` 的 `lines` 读数面量取，阈值为设计器硬线 500 ∥ 其他检查硬线 800（语义单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）；结论只写「越线与否」与同尺比较，不写绝对值（口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 行数行）。
 ## 4. 验收回指（D12 ∥ D32）
 
 ### 4.1 功能点（D12）

@@ -693,17 +693,17 @@ Error: engineering mode is ON — task is unavailable (the batch record + the le
   **次序句**：create（给参即填 ∥ 未给留占位 + 回执提示填法）⇒ 主 agent 填档头（`#<编号>` → 台账编号 · `<板块>` → 板块名）⇒ 本档首次 append/status 开放；未填 ⇒ 首写被 F11-C 拒（错误句逐行列残留行号 = 提示填充位置）——机检 = 次序约束的兜底，**非死锁**（填后立即放行）。
 - **close 不拦**（收口是主 agent 终态动作，残留面由既有通道自查）+ **create 不拦**（骨架本身合法含占位）；gate 在写入面（append/status），挂点：append 于 gate/text 校验后 `insertIntoSection` 前（主档）；status 于 `assertStatusValue` 后写盘前（lifecycle）。
 
-**行数与拆分评估（越 300 / 500 面——实施后预估；逐档结论 = 登记 / 拆分 / 触发）**：
+**行数与拆分评估（判据 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」；本节只记本批设计轮作出的判定与其候选拆分位）**：
 
-- **`thincoder-core/agent-tools/batch-lifecycle.mjs`——跨过 300 软线 ⇒ 须登记**。拆分候选位逐评：① **create 面**（`createBatchRecord` + `assertInsideBases`——自包含：参数面 + 越界判据 + 写盘）⇒ **首选拆分位**；② status 值域 + note 面（与 gate / 状态行落盘共享 `updateSectionStatusLine` 与词表单源消费，拆出需回指）⇒ 收益低；③ 占位机检挂点 ⇒ 体量不足独立成档。
-**结论 = 不拆**（登记 + 计划 + 触发）：改动 = 事务面共址（create / status / close + gate 单源纪律），距硬限尚有余量；**拆分计划** = 拆出候选位①为候选姊妹档；**消解条件 = 越 500 硬限 或 该档下次实质改动时**（先例：`thincoder-core/session-lifecycle.mjs` 305 / `thincoder-core/process-probe.mjs` 315）。
+- **`thincoder-core/agent-tools/batch-lifecycle.mjs`**：拆分候选位逐评：① **create 面**（`createBatchRecord` + `assertInsideBases`——自包含：参数面 + 越界判据 + 写盘）⇒ **首选拆分位**；② status 值域 + note 面（与 gate / 状态行落盘共享 `updateSectionStatusLine` 与词表单源消费，拆出需回指）⇒ 收益低；③ 占位机检挂点 ⇒ 体量不足独立成档。
+**本批结论 = 不拆**：改动 = 事务面共址（create / status / close + gate 单源纪律）；**候选拆分位** = 拆出候选位①为候选姊妹档（先例：`thincoder-core/session-lifecycle.mjs` 305 / `thincoder-core/process-probe.mjs` 315）。
 
 计划中的候选姊妹档名（盘上尚未产出，仅记计划）：
 
 ```text
 thincoder-core/agent-tools/batch-lifecycle-create.mjs
 ```
-- **`thincoder-core/agent-tools/batch.mjs`（已越 300 软线的既有登记档）**——**维持登记不拆**（KD-4 已拆一轮：skeleton / lifecycle 外提；本次 = schema 增参 + 描述同步 + 挂点——点状）；**拆分位（后手）** = append 迁移面（`sanitizeText` / `insertIntoSection`）外提；消解条件 = 越 500 硬限 或 该档下次实质改动时。
+- **`thincoder-core/agent-tools/batch.mjs`**——**本批结论 = 维持现结构不拆**（KD-4 已拆一轮：skeleton / lifecycle 外提；本次 = schema 增参 + 描述同步 + 挂点——点状）；**候选拆分位（后手）** = append 迁移面（`sanitizeText` / `insertIntoSection`）外提。
 两端运行面（CLI/VSC 产品代码）：**除该副本 pending 分支一处外零端改**——task/batch 实现与描述住核单源，两端装配同调核 `assembleFamilyTools`（单源即双端一致·F3/F7 语义）。
 **守卫面 = 双源结构**（守卫副本非核单源——端差默认 = 消）：催更门在两端各持一份守卫——核 `thincoder-core/agent/completion.mjs` · VSC 副本（`maybeGuardPushbacks`）。
 
@@ -1331,7 +1331,7 @@ configDir/ssh-credentials.json
 - **谁挂它**：传输面判据句（S10 / S11 / NS8）与传输面各格（N11 / N12 / B20 / B21 / E12–E17）的替身全挂这一缝。**E17 例外**：它过真门、不起 `scp`，不挂缝。
 - **会话侧不动**：仍挂既有 `_setSshBinaryForTest`——两条缝各管一个二进制，不合并。
 
-**⑥ 受影响文件与档位结论**（档位判读 = 与软线 ∥ 硬线同尺比较，不记绝对行数）
+**⑥ 受影响文件与档位结论**（档位判读 = 设计器硬线 500 ∥ 其他检查硬线 800，不记绝对行数）
 
 | 文件 | 改动 | 档位判读 |
 |---|---|---|
@@ -2466,7 +2466,7 @@ test/integration/tool-role-fitting.test.mjs
 **层级结论**
 
 - **增量面**：既有装配叶、工具面、描述档与测试面的增量；新描述档只按变体区分，不形成第二套动作判据。
-- **越 500 行主动审视线、未越 800 行硬限的五档**：`thincoder-core/doc-graph.mjs`、`thincoder-core/agent/write-gate-ledger.mjs`、`thincoder-core/agent/helpers.mjs`、`thincoder-core/agent-tools/subagent-spawn.mjs`、`test/integration/batch-live-batch-lock.test.mjs`。
+- **设计时判过 500（必给分拆方案）、未越 800 的五档**：`thincoder-core/doc-graph.mjs`、`thincoder-core/agent/write-gate-ledger.mjs`、`thincoder-core/agent/helpers.mjs`、`thincoder-core/agent-tools/subagent-spawn.mjs`、`test/integration/batch-live-batch-lock.test.mjs`。
 - **逐档处置**（同一条判据：本批是否新增职责面——新增才拆）：
   - `thincoder-core/doc-graph.mjs`：只加未建图只读空态一条分支，职责仍在图查询 ⇒ 不拆分。
   - `thincoder-core/agent/write-gate-ledger.mjs`：只换 `LEDGER_HANG_STEPS` 的文本，写门判据与流程不动 ⇒ 不拆分。

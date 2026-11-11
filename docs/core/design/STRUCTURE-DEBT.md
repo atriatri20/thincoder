@@ -18,7 +18,7 @@
 | **#3** | **`_` 状态字段摊平 + 手写生命周期清单**：agent 对象的运行态字段无 schema / 无封装，复位与继承靠**手写键清单**；新增或漏删字段即状态泄漏 | **现行** | 继承 = 手写键清单：`thincoder-core/agent/run-start.mjs`（`_inheritedGuard` 逐键回灌）；复位 = 逐字段块：`thincoder-core/agent/run-start.mjs`（逐字段复位段） |
 | **#4** | **eng-token 语义跨端重复**：核内已单点化，VSC 端无同名实现——自持槽语义与校验副本 | **跨端仍分叉**（CLI / 核侧已消解） | 核内单点 = `thincoder-core/token-ttl.mjs`；VSC 侧消费面 = 核 `thincoder-core/agent-tools/design-token.mjs`（VSC 无自有消费档） |
 | **#8** | **跨仓复制漂移**（架构伞项）：state / tools / prompts / advisor 层双端整片存在 | **收敛中**（核统一批推进） | 「一个核 + 两个薄壳」= `docs/core/design/CORE-UNIFICATION.md`；跨端剩余差面登记 = `docs/vsc/design/VSC-MIGRATION.md` |
-| **#9** | **扫描面四档越 300 软线**（职责边界待评估） | **部分消解** | 实核：`thincoder-core/memory/schema.mjs` ∥ `thincoder-core/memory/core.mjs` 仍越 300 软线——照挂；`thincoder-core/memory/docs.mjs`（拆 `thincoder-core/memory/memory-tool.mjs`）∥ `thincoder-core/memory/code-sync.mjs`（拆 `thincoder-core/memory/code-search.mjs` / `thincoder-core/memory/file-list.mjs`）已落到软线内——已消解；复评触发 = 该面下次触碰 |
+| **#9** | **扫描面四档的职责边界**（长度判据 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」，不在本行另立档位） | **部分消解** | 已消解两档：`thincoder-core/memory/docs.mjs`（拆 `thincoder-core/memory/memory-tool.mjs`）∥ `thincoder-core/memory/code-sync.mjs`（拆 `thincoder-core/memory/code-search.mjs` / `thincoder-core/memory/file-list.mjs`）；照挂两档：`thincoder-core/memory/schema.mjs` ∥ `thincoder-core/memory/core.mjs`——职责边界未再评估 |
 
 
 **注**：`#6` 的 VSC 侧对位面 = 核 `thincoder-core/tools/file.mjs` ∥ `thincoder-core/tools/patch.mjs` ∥ `thincoder-core/tools/search.mjs`（已归位）；该面归 VSC 轮，不计入核面债。

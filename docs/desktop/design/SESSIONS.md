@@ -6,7 +6,7 @@
 > 域档：活动池与消化面域 = `docs/desktop/design/ACTIVITY.md` · 输入区域 = `docs/desktop/design/COMPOSER.md` · 对话流域 = `docs/desktop/design/CHAT.md` · 设置域 = `docs/desktop/design/SETTINGS.md`。
 > 域档续：菜单体系 = `docs/desktop/design/MENU.md` · 打包与发行 = `docs/desktop/design/PACKAGING.md` · 端到端测试基建 = `docs/desktop/design/E2E-TESTING.md` · web 快筛 = `docs/desktop/design/WEB-QUICKCHECK.md`。
 > 核机制面（会话 / 配置 / 记忆 / 工具）**只住核**——本档只做**接入面**设计，不重述核语义（单一权威源）。
-> **行数纪律（500 建议 ∕ 800 硬限）只对代码档**（`.mjs` ∕ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
+> **行数纪律（设计器硬线 500 ∕ 其他检查硬线 800）只对代码档**（`.mjs` ∕ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
 
 ## 1. 关键决策记录
 
@@ -130,7 +130,7 @@
 | `thincoder-desktop/renderer/views/session-control.mjs` | 会话控制面纯构树三件：`sessionModel` ∕ `sessionBarTree` ∕ `sessionDropdownTree`（+ 节点助手族；import = `thincoder-desktop/renderer/i18n.mjs` ∕ `thincoder-desktop/renderer/store.mjs` ∕ `thincoder-desktop/renderer/views/chrome.mjs`——零 `node:` ∕ 零裸包） |
 | `thincoder-desktop/src/main/session-flags.mjs`（R1 输入面板移植新档） | 模式位四写面（`session:flags`——核 `setSlot*` 四写 + 活代理重施 + `flagsOf` 回执 + ENG×PLAN 互斥） |
 
-**行数口径（本块）**：文件体量按 `doc_check` 的 `lines` 读数面量取（500 顾问线 ∥ 800 硬限），结论只写越线与否与同尺比较，不写绝对值（口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 行数行）。
+**行数口径（本块）**：文件体量按 `doc_check` 的 `lines` 读数面量取（设计器硬线 500 ∥ 其他检查硬线 800），结论只写越线与否与同尺比较，不写绝对值（口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 行数行）。
 
 ## 4. 验收回指（本域需求条目 · 判据全文）
 

@@ -391,7 +391,7 @@
 | `thincoder-render-core/flow/block.mjs`（核共享面） | 顾问 ∕ 子代理块内容面（`appendAdvisorChunk`——文本 ∕ 推理 ∕ toolOutput 续写支）；**E2 命中分支** = 续写改并入末文本节点（语义等价）（单源 = 本档 §5.2） |
 **越层结论（本批改动面 · 渲染面）**：本表各档皆**免拆**；`thincoder-desktop/renderer/store.mjs` 为**既有在册**越层档（拆档预案在册，本批不改变其既判）。
 
-**行数不入本档**：量法 = `doc_check` 的 `lines`（`countContentLines` 单尺）；阈值 500 顾问线 ∥ 800 硬限；只写越线结论，不写绝对值。
+**行数不入本档**：量法 = `doc_check` 的 `lines`（`countContentLines` 单尺）；阈值 = 设计器硬线 500 ∥ 其他检查硬线 800（单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）；只写越线结论，不写绝对值。
 
 
 
@@ -405,12 +405,12 @@
 | `thincoder-render-core/flow/stream.mjs` | （+`appendToolOutput`） | 已落 |
 | `thincoder-render-core/test/run.mjs` | （零改——帧归并用例住单元测试档；全清令） | 已落 |
 | `thincoder-vscode/webview/chat-messages.js` | （toolOutput 支改指核件——零行为变更） | 已落 |
-| `thincoder-desktop/renderer/app.mjs` | （贴线 ≤300；帧接装：进口 ∕ 构造 ∕ 订阅改 `mark` ∕ 分派引调 ∕ `returnToLatest`（app 侧回底入口）flush 点；分派体出档） | 已落 |
+| `thincoder-desktop/renderer/app.mjs` | （当时读数在 300 行内；帧接装：进口 ∕ 构造 ∕ 订阅改 `mark` ∕ 分派引调 ∕ `returnToLatest`（app 侧回底入口）flush 点；分派体出档） | 已落 |
 | `thincoder-desktop/renderer/frame-dispatch.mjs`（新档） | （键集 → 六面分派纯件——回调注入） | 已落 |
 | `thincoder-desktop/renderer/views/chat-model.mjs`（拆分产出） | （模型族七件出档——越 300 消解） | 已落 |
 | `thincoder-desktop/renderer/views/chat.mjs` | （机械面就地化：工具支零重建 ∕ 扫描收敛 ∕ gating；拆分后——越 300 消解） | 已落 |
-| `thincoder-desktop/renderer/views/chat-tool.mjs` | （贴线 ≤300；结果区增量刷新助手——`appendToolOutput` 消费 + 记账） | 已落 |
-| `thincoder-desktop/renderer/views/chat-chrome.mjs` | （零改——帧内锚查询实测 ≈0.32ms/帧 ⇒ 无功能必要；**贴层**登记仍有效） | 已落 |
+| `thincoder-desktop/renderer/views/chat-tool.mjs` | （当时读数在 300 行内；结果区增量刷新助手——`appendToolOutput` 消费 + 记账） | 已落 |
+| `thincoder-desktop/renderer/views/chat-chrome.mjs` | （零改——帧内锚查询实测 ≈0.32ms/帧 ⇒ 无功能必要） | 已落 |
 | `thincoder-desktop/renderer/views/chat-scroll.mjs` | （`stickToBottom` 写超值不读 + 读数裁剪助手） | 已落 |
 | `thincoder-desktop/renderer/views/statusline.mjs` | （面内差分门——模型等价 ⇒ 零写） | 已落 |
 | 测试 ∕ 探针 | 单元测试档两档 = 更新纪律收核批件（平 node 机检）+ 真机探针（真机计时扩面）；集成测试不写 ∕ 不改 ∕ 不跑（射程 = 五仓测试树：core ∕ cli ∕ vsc ∕ desktop ∕ render-core） | 已落 |

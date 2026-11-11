@@ -2,7 +2,7 @@
  * ssh-transport.mjs — SSH 传输面单点（askpass 链 ∥ 子进程 ∥ 沉降 ∥ 输出帽）。
  * 设计 = `docs/core/design/TOOLS.md` §6.22（D-TO17/D-TO18 · 台账 #1436）。
  *
- * 拆档由 = 机制档触 500 顾问线（§6.22 落点表「触 500 顾问线 ⇒ 实施轮先审拆分」）——本档收**运行面**
+ * 拆档由 = 设计轮判定机制档改前读数过 500（`docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）——本档收**运行面**
  * （与会话语义无关的传输原语），`ssh-session.mjs` 收**会话面**（池 / 生命周期 / 动作）。条目形
  * （entry）由 `ssh-session.mjs` 定义并持有；本档只经其字段工作（`buf` / `mask` / `_waiters` /
  * `promptRe` / `state` / `child` / `logStream` / `_notify` / `lastDataAt` / `bytes`）。

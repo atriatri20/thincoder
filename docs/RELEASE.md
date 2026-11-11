@@ -193,7 +193,7 @@
 
 ### 5.3 阶段 1 · 发核（`@thincoder/core`）
 
-> **为什么先发核**：两产品 `dependencies` 依赖 `@thincoder/core`（生产装机按 registry 解析）——核版本未上 registry 时，CLI/VSC 装机即坏（消费者 E404；首发前实证 = E404 实测 2026-09-20）；VSC vsix 更是直接**内嵌**核（marketplace 无依赖解析）。开发期两产品靠 `npm link` 本地链接解析（`CORE-UNIFICATION.md` §2.6.1），生产期只能靠 registry。
+> **为什么先发核**：两产品 `dependencies` 依赖 `@thincoder/core`（生产装机按 registry 解析）——核版本未上 registry 时，CLI/VSC 装机即坏（消费者 E404；首发前实证 = E404 实测 2026-09-20）；VSC vsix 更是直接**内嵌**核（marketplace 无依赖解析）。开发期两产品靠 `npm link` 本仓核（口径与依据 = `docs/core/design/CORE-UNIFICATION.md`）。
 
 **首发一次性前置**：`npm whoami` + `@thincoder` scope 归属确认；核包 `prepublishOnly` 门禁**已在位**（语法门 `check-syntax`——`npm publish` 自动先跑；核仓无集成测试集，测试职责在前端包）。
 
@@ -235,7 +235,7 @@ npm publish                    # prepublishOnly 自动跑 release:check（lint �
 
 ### 5.5 阶段 3 · 发 VSC（`thincoder-vscode`）
 
-**第 1 步 · 物化核依赖（link → 真实安装态）**：开发机 `node_modules/@thincoder/core` 是 `npm link` 符号链接——**vsce 不打包 symlink**（2026-09-21 实证：vsix 静默无核，段 1.5 断言 B 拦下）⇒ 发布前先物化（发布路径依赖按 `CORE-UNIFICATION.md` §2.6.1 由 registry 解析）：
+**第 1 步 · 物化核依赖（link → 真实安装态）**：开发机 `node_modules/@thincoder/core` 是 `npm link` 符号链接——**vsce 不打包 symlink**（2026-09-21 实证：vsix 静默无核，段 1.5 断言 B 拦下）⇒ 发布前先物化（发布路径依赖按 `docs/core/design/CORE-UNIFICATION.md` §2.6.1 由 registr
 
 ```bash
 cd thincoder-vscode
@@ -296,7 +296,7 @@ ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ npm run package   # prep
 
 **判据**：check-dist exit 0（全断言 = `docs/desktop/design/PACKAGING.md` §2.5 + §2.8.2 update-info 四断言——暂缓态断言面 = win32 分支：全集为 Windows 产物断言（零 Linux 产物断言；Linux 分支断言 +9 住同档 §2.11.3）⇒ Windows-only 构建按 win32 分支过闸）+ **签名态读数 = 已签**（未签 ⇒ 止步核查：eToken 5300 ∥ SAC ∥ PIN——同本阶段「构建机要求」行；未签版仅限测试）。
 
-（本步产物面 = 安装包 + `.blockmap` + **`latest.yml`**（update-info）+ `resources/app-update.yml`——publish 契约 = 同档 §2.1 ∥ §2.8.2；`npm run package` 不触发发布（generic 无上传面）——上传恒走步骤 4。）
+（本步产物面 = 安装包 + `.blockmap` + **`latest.yml`**（update-info）+ `electron-builder 生成的 update-info 附档（安装包同目录）`——publish 契约 = 同档 §2.1 ∥ §2.8.2；`npm run package` 不触发发布（generic 无上传面）——上传恒走步骤 4。）
 
 **步骤 3 · 恢复 dev 链**（收窗——**在 `thincoder` 仓根执行**）：
 
@@ -410,4 +410,4 @@ node scripts/deploy-oss.mjs                           # 实传（脚本只读环
 - 不改站点仓设计 / 样式 / 结构（只加内容面与标签行；**页面集扩建 = 发行面一次性变更——单源 = `docs/desktop/design/PACKAGING.md` §2.9**，不在本节（每发布同步）循环面）· 不重写站点技术栈（零构建保持）
 - 不改 §5 既有阶段结构（发布单元扩展随同法增补——桌面 = 阶段 3b）· 不改三端产品码（桌面零触同判）
 - 核不入页（§6.1）· 窗口之前的历史不重建（§6.3）· 号层面零动作（官网不占号、不进 §4 定号规则）
-- **changelog 页体量不适用仓内源码档位**：追平后约 530 行（现 183 + ≈350）越 500 软线——该档位（≤500 建议 / ≤800 硬限 = 工作区编码约定）面向**仓内源码档**；本页 = **独立站点项目**（`thincoder.com`）内容页，站点仓无行数规约（实核 2026-09-23：其 `AGENTS.md` 仅技术栈与部署面）⇒ 不为档位拆分；若站点仓日后引入档位 ⇒ 超限面以分页 / 归档处置（后续备案）。
+- **changelog 页体量不适用仓内源码档位**：追平后约 530 行（现 183 + ≈350）越设计器硬线 500——该档位（设计器硬线 500 / 其他检查硬线 800 = 工作区编码约定）面向**仓内源码档**；本页 = **独立站点项目**（`thincoder.com`）内容页，站点仓无行数规约（实核 2026-09-23：其 `AGENTS.md` 仅技术栈与部署面）⇒ 不为档位拆分；若站点仓日后引入档位 ⇒ 超限面以分页 / 归档处置（后续备案）。

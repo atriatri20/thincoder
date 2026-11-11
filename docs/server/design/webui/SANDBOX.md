@@ -101,7 +101,7 @@
 | `thincoder-server/public/i18n-zh-sandbox.mjs`（已落盘） | —（键 251——本批 +5 键：接线提示 2 ∥ 承载确认 2 ∥ 操作记录截断 1；`#1519` +1 键 `admin.sandbox.workspacesUnreachable`） | 文案表·zh·沙盒面 |
 | `thincoder-server/public/i18n-en-sandbox.mjs`（已落盘） | —（同 zh 行） | 文案表·en·沙盒面 |
 
-- `views-sandbox.mjs` 拆分预案：**托管接入件外拆预案已随退场消解**（托管接入块删净 ⇒ 越 500 软线随解）；现行 ≤ 500 软线 ⇒ **不触发**（沿拆档先例：越线再现才落拆案）。
+- `views-sandbox.mjs` 拆分预案：**托管接入件外拆预案已随退场消解**（托管接入块删净 ⇒ 当时越的 500 线随解）。现行长度按 `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」在设计轮判一次，本档不另立越线触发条。
   **删量两说已消解**：值单源 = 本档 §3；`docs/server/design/webui/WEBUI.md` §5 该档行指本档 §3，零重复值。
 
 ## 4. 验收（本面 AC 行）

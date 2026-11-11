@@ -3,7 +3,7 @@
 > 面 = **应用菜单面**——五组双语原生菜单 + 菜单 ↔ 渲染面两条窄通道（命令下行 `ev:menu` ∥ 勾选态回读 `theme:state`）；本档是该面的单源设计。
 > 需求侧 = 需求分卷（本域卷 = `docs/desktop/requirements/MENU.md`——**D36 ∥ D38**；查卷口 = `docs/desktop/requirements/PROJECT.md` §4 **D 表索引**）；
 > 总览 ∥ 跨域决策 ∥ 索引 = `docs/desktop/design/PROJECT.md`；通道面 = `docs/desktop/design/IPC.md` §1 `ev:menu` 行 ∥ §2 `theme:state` 行；宿主面 = `docs/desktop/design/SHELL.md` §1 树行 + §2 菜单行；界面总则 = `docs/desktop/design/UI.md`。
-> **行数纪律（500 建议 ∕ 800 硬限）只对代码档**（`.mjs` ∥ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
+> **行数纪律（设计器硬线 500 ∕ 其他检查硬线 800）只对代码档**（`.mjs` ∥ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
 
 ## 1. 关键决策（KD-65）
 

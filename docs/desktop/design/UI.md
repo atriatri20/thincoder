@@ -7,7 +7,7 @@
 > 续：活动池与消化面 = `docs/desktop/design/ACTIVITY.md` · 打包与发行 = `docs/desktop/design/PACKAGING.md` · 端到端测试基建 = `docs/desktop/design/E2E-TESTING.md` · web 快筛 = `docs/desktop/design/WEB-QUICKCHECK.md`。
 > 核机制面（agent 主循环 / 工具 / 记忆 / 配置 / 会话）**只住核**——本档只做**接入面**设计，不重述核语义（单一权威源）。
 > 仓根 = `thincoder/`。
-> **行数纪律（500 建议 ∕ 800 硬限）只对代码档**（`.mjs` ∕ `.cjs` ∕ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
+> **行数纪律（设计器硬线 500 ∕ 其他检查硬线 800）只对代码档**（`.mjs` ∕ `.cjs` ∕ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
 
 ## 1. 界面形态落定（UI / 交互决策）
 
@@ -78,7 +78,7 @@
 **批注（可见面修复 · 四件）**
 口径 = **对齐 CLI / VSC 既有语义**（`docs/desktop/requirements/PROJECT.md` §3.5 用户原话），不新增功能面；裁决与理由 = `docs/desktop/design/PROJECT.md` §2 KD-23 / KD-24。
 
-1. **输入区样式（#457）**——落点 = `thincoder-desktop/renderer/chat.css`（**既有档 · 不新立档**：五类 + 两附属行增量，该档落笔后仍在 ≲300 内——越线与否由 `doc_check` 的 `lines` 量，绝对值不进本档；分档理由 = `docs/desktop/design/PROJECT.md` §4.1 分档先例句）。
+1. **输入区样式（#457）**——落点 = `thincoder-desktop/renderer/chat.css`（**既有档 · 不新立档**：五类 + 两附属行增量；行数面按 `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」在设计轮判一次，绝对值不进本档）。
    形（沿既有控件单形 = `.question-input` / `.chat-backfill` / `.approval-action` 家族，零新样式体系）：根 = `.composer#toolbar`（`thincoder-desktop/renderer/index.html`——挂载根）；顶线 = `#toolbar { border-top: 1px solid var(--border) }`（核件 `thincoder-render-core/composer/composer.css`）——**扁平化（2026-09-30）裁「输入区上线保留」**；
 
    输入框（核件面板 `#input`——`thincoder-render-core/composer/composer.css`） = `flex: 1`（**撑满中区余宽**）+ `min-width: 0`（**可缩**——窄窗不撑破栅格）+ `min-height` + 原生 `resize: vertical` + 既有文本控件面（边框 / 圆角 / `--bg` 底 / `font: inherit`）；

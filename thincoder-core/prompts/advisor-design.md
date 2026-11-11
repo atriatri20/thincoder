@@ -41,7 +41,7 @@ Evaluate the design against these dimensions:
    **Pure `.md` documents are exempt** from that tier judgment.
    **Any file crossing a file tier must carry a split plan in the design** — the tier is judged on the length **before** the code change.
    >500 lines → the design must give a split plan (no discretion); >800 lines → must split, and the split lands before the change (hard cap, no exemption channel).
-   **The 500 line belongs to the design round alone** — the implementation, closeout and review faces judge only the 800 line.
+   **Judged at two points, nowhere else**: the design round judges the 500 line, the closeout check judges the 800 line — the implementation, code review and every other step in between judge nothing at all (not the 800 line either).
    **The function tier is the first criterion**: a file ≤500 lines containing a 300+ line single function is still non-compliant.
    **Tier authority**: the code-structure criteria stated in this bullet.
    **Spot-check**: sample the table's source/test files, size each one yourself, and verify the conclusion line against them.

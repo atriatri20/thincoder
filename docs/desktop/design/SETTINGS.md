@@ -6,7 +6,7 @@
 > 域档：会话域 = `docs/desktop/design/SESSIONS.md` · 输入区域 = `docs/desktop/design/COMPOSER.md` · 活动池与消化面域 = `docs/desktop/design/ACTIVITY.md` · 对话流域 = `docs/desktop/design/CHAT.md`。
 > 域档续：菜单体系 = `docs/desktop/design/MENU.md` · 打包与发行 = `docs/desktop/design/PACKAGING.md` · 端到端测试基建 = `docs/desktop/design/E2E-TESTING.md` · web 快筛 = `docs/desktop/design/WEB-QUICKCHECK.md`。
 > 核机制面（配置 / 供应商与模型 / MCP / 会话）**只住核**——本档只做**接入面**设计，不重述核语义（单一权威源）。
-> **行数纪律（500 建议 ∕ 800 硬限）只对代码档**（`.mjs` ∕ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
+> **行数纪律（设计器硬线 500 ∕ 其他检查硬线 800）只对代码档**（`.mjs` ∕ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
 
 ## 1. 关键决策记录（本域行）
 
