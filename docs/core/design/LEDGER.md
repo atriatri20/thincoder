@@ -1600,7 +1600,7 @@ import { readBatchStatusLine, readLedgerHeaderNumbers } from "./agent-tools/batc
 
 **两个归档目标态同过一门**：`已核销`（结算）与 `已废弃`（放弃）都在两个逐行核上可达。只挂 `applyRowClose` 会留下一条同等通路：允许迁移表有 `待核销 → 已核销`，`ledger({action:"update", id, status:"已核销"})` 与 `update --batch --status 已核销` 因此同样能落账，而扫不进门。
 
-调用方必须传 `proof.base`；`ledgerReanchorBatch` 的两处调用也传该值，使正常 `batch close` 在 §1 写为已收口后通过同一门。
+调用方必须传 `proof.base`；`ledgerReanchorBatch` 的调用方（收口两路与 `supersede`，同经 `reanchorOnClose`）也传该值，使收口在 §1 写为已收口后通过同一门。
 
 | 分支 | 观察 / 复现 | 行为 |
 |---|---|---|
@@ -1651,6 +1651,13 @@ import { readBatchStatusLine, readLedgerHeaderNumbers } from "./agent-tools/batc
 载体 = `appendLineToSection`（§4.18-B 重开记录同款，只追加不改写；EOL 取 §1 段头行）。台账行零改写——「补关不改行」说的是台账行，不是档面。
 
 补关契约与门序单源 = `docs/core/design/BATCH-RECORD.md` §4.18-C。正常收口仍由 `batch close` 同笔结算；本门不另开一条“先结行、后补档”的推荐路径。
+
+**批未收口的第三个出口 = 被取代收口**：本门要的只是「档已冻结」这一读数（`readBatchStatusLine` = closed），不问它是怎么冻的。
+
+对象已消失、永不实施的批档走 `batch({action:"supersede"})`（判据单源 = `docs/core/design/BATCH-RECORD.md` §4.18-D）。其 `待核销` 行照常结算（`收口 <日期>：` 前缀，同一证据门）；未点名的 `在途` 行两步退回 `待讨论`，再改挂 `trigger=条件` + 续启句。
+
+故收口之后本门读到的每一行要么已归档、要么已解绑——不产生新的 `open-but-settled`。
+
 
 ### 11.3 受影响文件与层级
 

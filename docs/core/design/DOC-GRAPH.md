@@ -348,15 +348,19 @@ thincoder-core/tool-docs/doc_graph.md       模型可见描述（描述外置的
 
 **要的就是机械化**：判定时点只有两个，中间零判断点。中间每加一处长度判断，就多一个要解释、要豁免、要吵「这算不算超」的点；两头各判一次，规则才真机械。
 
-**同口径的另一处**：工作区根的 `AGENTS` 档（Coding Conventions · File size）写同一件事。**全引**（字句未改）——只引半条，「两处互指」就不成立：
+**同口径的其余各档**：工作区根的 `AGENTS` 档（Coding Conventions · File size）写同一件事。下面这段是**目标形**——五处同轮落齐之后即为逐字引文；落齐之前，本节按判法句判：
 
 ```text
-File size (source and unit-test files only): judged exactly twice, nowhere else. **At design time** the designer judges the length **before** this batch's changes: above 500 lines ⇒ the design must carry a split plan; at or below ⇒ nothing to judge. **At closeout** the check judges 800 lines: above ⇒ split before landing; at or below ⇒ leave it alone. **Every step in between judges nothing about file length** — implementation, code review and any other middle step do not measure it at all (not a softer threshold — no check). There is no advisory tier and no "looked at it, decided not to split" verdict. **Documents (`.md`) are under no size obligation** — no line limits, no line-count readings, no split plans. The rule measures whether a code file has grown past what one person can hold; a document's size is a reading about its content, not a defect in it.
+File size (source and unit-test files only): judged exactly twice, nowhere else. **At design time** the designer judges the length **before** this batch's changes: above 500 lines ⇒ the design must carry a split plan and the split lands inside this batch (no deferral to another batch); at or below ⇒ nothing to judge. **At closeout** the check judges 800 lines: above ⇒ split before landing; at or below ⇒ leave it alone. **Every step in between judges nothing about file length** — implementation, code review and any other middle step do not measure it at all (not a softer threshold — no check). There is no advisory tier and no "looked at it, decided not to split" verdict. **Documents (`.md`) are under no size obligation** — no line limits, no line-count readings, no split plans. The rule measures whether a code file has grown past what one person can hold; a document's size is a reading about its content, not a defect in it.
 ```
 
-引文与 `AGENTS` 档逐字一致。
+**「逐字一致」是目标状态，不是当前读数**：
 
-两处互指，不是一处说了算：任一处改动，须同轮改另一处；两处措辞打架时先停下对齐，不各写各的。
+- **盘上现状**（本轮读数）：工作区根 `AGENTS` 该句仍是旧的一半——`above 500 lines ⇒ the design must carry a split plan; at or below ⇒ nothing to judge`，缺 `and the split lands inside this batch (no deferral to another batch)` 那半句。
+- **落齐条件**：五处落齐后，上面引文块与工作区根 `AGENTS` ∥ `thincoder-cli/AGENTS.md` 逐字一致；期间任何一处先落、其余未落，按「未对齐」读。
+- **判据**：四处各读该句——措辞须含「分拆在本批内实施」，且无逃生口（不出现 `no split` ∥「另起一批」∥「体量过大可另批」）。
+
+同口径共五处：本节（判据单源）∥ 工作区根 `AGENTS` ∥ `thincoder-cli/AGENTS.md` ∥ `thincoder-core/prompts/advisor-design.md` 第 8 条判据 ∥ `thincoder-core/prompts/persona-eng-designer.md` 的受影响文件清单。任一处改动，须同轮改其余四处；措辞打架时先停下对齐，不各写各的。
 
 **数值与语义各一个家**：
 
@@ -376,7 +380,7 @@ File size (source and unit-test files only): judged exactly twice, nowhere else.
 - **库外**：行数阈值是本仓的工程内部约定，公开源里没有与之对应的规范可引。
 - **已查**：声明源（`PROJECT-MANIFEST.json` 的 `index.publicRepos`）两处。
   - `../.thincoder` **曾有一份 workspace 级评审标准档**，带同主题的**旧**措辞（把 500 行标成 advisory）——该档已于 2026-11-11 按用户裁定整份删除，用户原话「这个文件整个删掉吧，现阶段不要有自定义的评审设置」。故本档不以它为前例、不引它的原文。
-  - 评审席现读的判据读本 = `thincoder-core/prompts/advisor-design.md`，其第 8 条判据「Affected-file tier check」的两条线已按本节对齐：「>500 lines → the design must give a split plan (no discretion); >800 lines → must split, and the split lands before the change (hard cap, no exemption channel).」
+  - 评审席现读的判据读本 = `thincoder-core/prompts/advisor-design.md`，其第 8 条判据「Affected-file tier check」**按本节目标形落笔、待同批落齐**——盘上现为旧半条（只要求给方案），落笔 = eng-coder；目标形 = 「>500 lines → the design must give a split plan (no discretion), and the split lands inside this batch (no deferral to another batch); >800 lines → must split, and the split lands before the change (hard cap, no exemption channel).」同节「「逐字一致」是目标状态，不是当前读数」条是这条的唯一口径处。
   - `../thincoder.com` 有站点页行数读数与一份拆分记录，对象是 HTML 页，不是代码档的档位口径。
 - **结论**：两处都不是本口径的语义源头——外部没有可引的权威，本口径的家在本仓（本节 ∥ 产品常量）。
 - **库内**：先例即上一条。
@@ -385,7 +389,7 @@ File size (source and unit-test files only): judged exactly twice, nowhere else.
 
 **① 设计时判一次 = 500（设计器判；判的是改代码前的长度）**
 
-- **过 500（> 500）⇒ 必须给分拆方案**：拆哪几族、切在哪、为什么切在那里。硬性义务，没有裁量空间——「接受本次载荷、拆分另批」不能替方案。
+- **过 500（> 500）⇒ 必须给分拆方案，且分拆在本批内实施**：拆哪几族、切在哪、为什么切在那里，拆出的档在本批落地。硬性义务，没有裁量空间——「另起一批拆」不是方案，「另批再说」一类措辞即逃生口，与本节相反。
 - **未过 500（≤ 500）⇒ 不提分拆**：不进分拆讨论，不写方案，也不写「故不拆」一类判断。
 - **基准 = 改代码前的长度**：判本批改动**之前**该档的读数。不是改动之后的行数，也不是改动的预测增量。
 - **新建档没有「改前」**：判它落盘时的长度——它是本批写出来的那一档。

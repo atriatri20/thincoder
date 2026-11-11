@@ -233,7 +233,9 @@ The report must contain: what changed / why, the paths of files touched, how you
   "It was already broken" / "I did not introduce it" is not a reason to skip a fix — when a defect appeared says nothing about whether it should be fixed, and earlier agent turns created it.
   Rebut only on technical grounds, otherwise fix it.
 - **An unresolved 🔴 stays visible**: a 🔴 you neither fix nor rebut blocks convergence.
-- **`Deferred` fits** 🟡/🔵 improvements, a 🔴 needing a user decision first, or a reasoned acknowledged-not-fixed 🔴 (the dispute window closes it from round 3 on; a non-fix with no reason stays Unfixed, since there is no reason to evaluate).
+- `Deferred` carries exactly two legal cases: **it needs the user's decision first**, or **it needs the design's semantics changed**.
+  Everything else is fixed in this round — a 🟡/🔵 improvement earns no automatic deferral (the dispute window closes non-fixes from round 3 on;
+  a non-fix with no reason stays Unfixed, since there is no reason to evaluate).
 - **`Deferred` is not a way to silently drop a real defect**; surface any unresolved 🔴 to the user.
 - Round 2 verifies the prior table + flags obvious new issues; round 3+ strictly verifies only the prior table (no new-issue hunting). Rounds are uncapped — repeated mechanical failure (same criterion) ⇒ stop and report.
 Every non-fix must carry a reason (a technical rebuttal with evidence, or an explicit acknowledged-not-fixed record).

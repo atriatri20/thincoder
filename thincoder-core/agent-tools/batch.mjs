@@ -3,7 +3,8 @@
  * 评审实例绑定 + #84 记账缝**）。
  *
  * 单工具 `batch`，action = create（建档，§4.11）/ attach（给现役档补挂台账行，§4.21.3）/ append（段写入）/ edit
- * （段内就地改，§4.19）/ status（段属主状态行流转，§4.12）/ close（收口冻结，§4.13）。写入面**按段分权、不按段分处置**：
+ * （段内就地改，§4.19）/ status（段属主状态行流转，§4.12）/ close（收口冻结，§4.13）/ supersede
+ * （被取代的收口，§4.18-D——对象已消失、永不实施、且能点名取代者的批档）。写入面**按段分权、不按段分处置**：
  * 六段各自只有一个作者，作者对本段可 append 加内容 ∥ edit 就地改既有行（§4.19）；状态行只有一个写者（status）。
  * 权威规格 = `docs/core/design/BATCH-RECORD.md` §4（契约/挂载/用例 §4.8/骨架 §4.10/
  * 参数面 §4.11–§4.13 · §4.21）。
@@ -41,6 +42,7 @@ import { SEGMENT_BY_ROLE } from "./batch-skeleton.mjs"
 import { batchDocBases, resolveBatchDocPath } from "./batch-paths.mjs"
 import { createBatchRecord, attachBatchRecord } from "./batch-ledger-bind.mjs"
 import { checkBatchRecord, closeBatchRecord, findInFlightBatch, statusBatchRecord } from "./batch-lifecycle.mjs"
+import { supersedeBatchRecord } from "./batch-supersede.mjs"
 import { appendBatchRecord, editBatchRecord } from "./batch-record-write.mjs"
 
 export { SEGMENT_BY_ROLE, batchDocBases, resolveBatchDocPath }
@@ -108,8 +110,8 @@ function fullParameters() {
     properties: {
       action: {
         type: "string",
-        enum: ["create", "attach", "append", "edit", "status", "close", "check"],
-        description: "Which lifecycle step to run: create (new record) / attach — hang a ledger row on an ALREADY EXISTING in-flight record (depth-0 only: a reopened record taking on a new piece of work; opens a new row, or takes over an unsettled one with ledger:\"#<id>\", and writes its number into the header 台账 line) / append (add text to the END of your section) / edit — replace one anchored range inside YOUR OWN section (§1–§6 alike; your identity decides which section) / status (your section's status line) / close (freeze the record — this settles the batch's ledger rows in the same action) / check (depth-0 only, read-only: print this record's half-state readings — §1 open|closed, its ledger rows, and every record↔ledger inconsistency with the way out).",
+        enum: ["create", "attach", "append", "edit", "status", "close", "supersede", "check"],
+        description: "Which lifecycle step to run: create (new record) / attach — hang a ledger row on an ALREADY EXISTING in-flight record (depth-0 only: a reopened record taking on a new piece of work; opens a new row, or takes over an unsettled one with ledger:\"#<id>\", and writes its number into the header 台账 line) / append (add text to the END of your section) / edit — replace one anchored range inside YOUR OWN section (§1–§6 alike; your identity decides which section) / status (your section's status line) / close (freeze the record — this settles the batch's ledger rows in the same action) / supersede — freeze a record whose object is gone and will never be implemented, naming what replaced it (supersededBy); it never writes §3/§4/§6, settles the 待核销 rows and returns the unnamed 在途 rows to 待讨论 with trigger 条件 (depth-0 only) / check (depth-0 only, read-only: print this record's half-state readings — §1 open|closed, its ledger rows, and every record↔ledger inconsistency with the way out).",
       },
       path: {
         type: "string",
@@ -142,11 +144,15 @@ function fullParameters() {
       completed: {
         type: "array",
         items: { type: "number" },
-        description: "close / status writing §1 已收口 only — REQUIRED: the ledger ids completed by this batch. Every id must be unique, belong to this record, and currently be 在途; every 在途 row must be listed. [] is valid only when the batch has no 在途 rows. Other actions do not accept this parameter. Invalid or omitted ids are refused before tokens or the record are written; return unfinished rows to 待讨论 first. Those rows are settled to 已核销 in the same transaction, and this batch's existing 待核销 rows are settled with them — closing leaves zero 在途 and zero 待核销 behind.",
+        description: "close / status writing §1 已收口 / supersede — REQUIRED for close and status: the ledger ids completed by this batch. Every id must be unique, belong to this record, and currently be 在途; every 在途 row must be listed. [] is valid only when the batch has no 在途 rows. On supersede the list is optional: an unnamed 在途 row goes back to 待讨论 with trigger 条件 (the work was not done — that is what this closeout says), so [] or omitting it is the main path there. Other actions do not accept this parameter. Invalid or omitted ids are refused before tokens or the record are written; return unfinished rows to 待讨论 first. Those rows are settled to 已核销 in the same transaction, and this batch's existing 待核销 rows are settled with them — closing leaves zero 在途 and zero 待核销 behind.",
+      },
+      supersededBy: {
+        type: "string",
+        description: "supersede only — REQUIRED: who replaced this record. Three forms, each machine-checked: a batch record path (docs/batches/<x>.md, must be on disk) / a document plus a section (docs/<area>/<name>.md §<N>, the section number must hit a heading line) / a commit (40 hex, must be reachable in the version store). A planned or never-done successor does not resolve and is refused — the machine never invents this fact. It lands verbatim in the §1 supersede record line and in the receipt.",
       },
       closeEvidence: {
         type: "string",
-        description: "close / status writing §1 已收口 only — REQUIRED: one line of work evidence for this closeout (what this batch actually did). It is written into every settled row's evidence with a `收口 <YYYY-MM-DD>：` prefix, so human evidence and the closeout evidence stay distinguishable on the row. Blank (missing / empty / whitespace) is refused before anything is written — the machine never invents this line, because a machine-written sentence turns the close-proof gate into decoration.",
+        description: "close / supersede / status writing §1 已收口 — REQUIRED on all three: one line of work evidence for this closeout (what this batch actually did). It is written into every settled row's evidence with a `收口 <YYYY-MM-DD>：` prefix, so human evidence and the closeout evidence stay distinguishable on the row. Blank (missing / empty / whitespace) is refused before anything is written — the machine never invents this line, because a machine-written sentence turns the close-proof gate into decoration.",
       },
       topic: {
         type: "string",
@@ -186,7 +192,8 @@ function fullParameters() {
 }
 
 /**
- * 批次档生命周期工具工厂（主名 `batch`——**六 action**：create / attach / append / edit / status / close）。
+ * 批次档生命周期工具工厂（主名 `batch`——**七 action**（+ `check` 只读面）：create / attach / append / edit /
+ * status / close / supersede）。
  * @param {string|null} batchDoc — 绑定的目标档（spawn：`child._batchDoc`；评审：实例键；
  *   depth-0 主 agent 挂载时 = null——目标走 D-BR21 可选 path / 在飞扫描）
  * @param {{review?: boolean, role?: string|null}} [opts] — review=true 表示"设计评审实例"形态
@@ -219,12 +226,12 @@ export function batchTool(batchDoc = null, { review = false, role = null } = {})
       if (profileKey && !PROFILE_ACTIONS.includes(args?.action)) {
         throw new Error(`batch: action ${JSON.stringify(args?.action ?? null)} is not available to this caller — this face carries ${PROFILE_ACTIONS.join(" / ")} only (its own section of the record). Nothing was written.`)
       }
-      const closingCall = args?.action === "close" || (args?.action === "status" && typeof args?.value === "string" && args.value.includes("已收口"))
+      const closingCall = args?.action === "close" || args?.action === "supersede" || (args?.action === "status" && typeof args?.value === "string" && args.value.includes("已收口"))
       if (args?.completed !== undefined && !closingCall) {
-        throw new Error("batch: completed is accepted only by close or by status writing §1 已收口. Nothing was written.")
+        throw new Error("batch: completed is accepted only by close, by supersede, or by status writing §1 已收口. Nothing was written.")
       }
       if (args?.closeEvidence !== undefined && !closingCall) {
-        throw new Error("batch: closeEvidence is accepted only by close or by status writing §1 已收口. Nothing was written.")
+        throw new Error("batch: closeEvidence is accepted only by close, by supersede, or by status writing §1 已收口. Nothing was written.")
       }
       const agent = ctx?.agent ?? {}
       const cwd = agent.cwd
@@ -257,10 +264,12 @@ export function batchTool(batchDoc = null, { review = false, role = null } = {})
           return statusBatchRecord({ args, ctx, review, pickTarget, onWritten })
         case "close":
           return closeBatchRecord({ args, ctx, review, pickTarget, onWritten })
+        case "supersede":
+          return supersedeBatchRecord({ args, ctx, review, pickTarget, onWritten })
         case "check":
           return checkBatchRecord({ args, ctx, review, pickTarget })
         default:
-          throw new Error(`batch: unknown action ${JSON.stringify(args?.action ?? null)} — pass one of create / attach / append / edit / status / close / check.`)
+          throw new Error(`batch: unknown action ${JSON.stringify(args?.action ?? null)} — pass one of create / attach / append / edit / status / close / supersede / check.`)
       }
     },
   }

@@ -3,13 +3,15 @@
  *
  * 为什么拆：收口分流（§4.18-C）往 `batch-lifecycle.mjs` 里加了「读一致性 → 判补关」这一步，当年该件因此过了 500 行；
  * 设计档 `docs/core/design/LEDGER.md` §11.3 的失败侧点名两条出路，本条取「拆补关分流」。
- * 三件同住本档，因为它们共一条口径：**批档绝对路径 → 项目根 + 项目相对指针**（`cwd` 基单一处），
+ * 四件同住本档，因为它们共一条口径：**批档绝对路径 → 项目根 + 项目相对指针**（`cwd` 基单一处），
  * 再交给台账只读面；分住两处则同一条路径换算要写三遍（收口重锚已在 `batch-lifecycle.mjs` 用同一式）。
  *
- * 三件都是**读**或**只读预检**，不写盘、不写账：
+ * 四件都是**读**或**只读预检**，不写盘、不写账：
  * ① `consistencyOf` —— 回执末尾 `[ledger consistency]` 行的读数（读不出如实点名，不吞成「一致」）；
  * ② `repairDecisionOf` —— 全归档补关的分流判据（§4.18-C：判「正常收口」∥「补关」∥「拒」）；
- * ③ `assertCloseDisposition` —— 收口完成清单 + 本笔证据的只读预检（单源 = `assertLedgerCloseDisposition`）。
+ * ③ `assertCloseDisposition` —— 收口完成清单 + 本笔证据的只读预检（单源 = `assertLedgerCloseDisposition`）；
+ * ④ `archivedStateOf` —— 被取代的收口（§4.18-D D-3）只要的那一问：本批行集是否**全归档**（薄封装，
+ *    与 ② 同一份 `batchLedgerConsistency` 读数，不另造归档判定）。
  *
  * 依赖单向（KD-4）：`closeout ← 本档 ← lifecycle`——本档不 import `batch-lifecycle.mjs`（防环）。
  */
@@ -69,13 +71,39 @@ export async function repairDecisionOf(abs, boundary) {
 }
 
 /** 收口完成清单只读预检（单源 = `assertLedgerCloseDisposition`）：在凭证消费和批档写盘之前调用。
- *  `cwd`/`batch` 换算同上；拒因包一层 `batch:` 前缀（工具面语域）后上抛。 */
-export async function assertCloseDisposition(abs, boundary, completed, closeEvidence) {
+ *  `cwd`/`batch` 换算同上；拒因包一层 `batch:` 前缀（工具面语域）后上抛。
+ *  `requireAllInFlight` = 完成清单的元判据（**无缺省**，§4.18-D「③ 的实现面」）：正常两路传 `true`，
+ *  被取代的收口传 `false`——本档只透传，不另立一套。 */
+export async function assertCloseDisposition(abs, boundary, completed, closeEvidence, requireAllInFlight) {
   try {
     const { assertLedgerCloseDisposition } = await import("../ledger.mjs")
     const { root, batch } = await ledgerCoordsOf(abs, boundary)
-    return assertLedgerCloseDisposition({ cwd: root, batch, boundary, completed, closeEvidence })
+    return assertLedgerCloseDisposition({ cwd: root, batch, boundary, completed, closeEvidence, requireAllInFlight })
   } catch (e) {
     throw new Error(`batch: close disposition refused — ${String(e?.message ?? e)} Nothing was written.`)
   }
+}
+
+/**
+ * 归档态读数（§4.18-D D-3——**只回答「行集是否全归档」这一问**）：与 `repairDecisionOf` 同一份
+ * `batchLedgerConsistency` 读数、同一 `cwd` 换算，**不另造归属或归档判定**。
+ * 为什么不直接复用 `repairDecisionOf`：它的三态分派是补关口径（全归档 + 唯一 `open-but-settled` 才补关，
+ * 其余半状态 ⇒ 拒），而 D-3 只要「全归档」这一个判据——薄封装，不新造归档判定。
+ * **行集为空也算未全归档**（空集没有可归档的行 ⇒ 被取代仍可用）；全归档 ⇒ 被取代一律拒（那条拒面同时封掉
+ * 最大的滥用面：把「活做完了、档冻不了」说成「被取代」）。读不出 ⇒ throw（D-2：判不了归档态就分不清那一条反例
+ * ——不降级放行）。
+ * @returns {Promise<{record:"open"|"closed"|"unknown", rows:object[], allArchived:boolean}>}
+ */
+export async function archivedStateOf(abs, boundary) {
+  let read
+  try {
+    const { batchLedgerConsistency } = await import("../ledger.mjs")
+    const { root, batch } = await ledgerCoordsOf(abs, boundary)
+    read = batchLedgerConsistency({ cwd: root, batch, boundary })
+  } catch (e) {
+    // 读不出 ⇒ 拒（fail-closed）：判不了归档态就分不清「活做完了」与「活没人做」，宁可拒。
+    throw new Error(`batch: 取代前的归档态读不出（ledger supersede read failed）— ${String(e?.message ?? e)} Without that read the all-archived case cannot be told apart from a real supersede. Nothing was written.`)
+  }
+  const archived = read.rows.filter((r) => r.status === "已核销" || r.status === "已废弃")
+  return { record: read.record, rows: read.rows, allArchived: read.rows.length > 0 && archived.length === read.rows.length }
 }

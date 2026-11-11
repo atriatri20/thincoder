@@ -79,14 +79,17 @@ export function assertCloseoutChainComplete(src) {
  *   ③ 本批批内单测档门（仍在盘 ⇒ 拒——零留存的结构兜底）
  *   ④ 文档机检门（REFUSED ∥ ERROR ⇒ 拒）
  * 位次 = 既有拒因之后、写盘之前（任一被拒 ⇒ 档字节不变）。返回 `④` 的门结果供回执拼行（`null` = 未跑）。
- * @param {{abs:string, cwd:string, agent:object, src:string, action:"close"|"status", repair?:boolean}} o
+ * @param {{abs:string, cwd:string, agent:object, src:string, action:"close"|"status", mode?:"normal"|"repair"|"supersede"}} o
  *   `src` = 调用方已读的写盘前全文（判据与写盘读同一份字节，不二次读盘）。
- *   `repair` = 全归档补关分派（§4.18-C）：真 ⇒ **只跳过 ① 内容门与 ② §3 pass 臂**，③④ 照跑；
- *   分派判据不在这里（住 `batch-ledger-view.mjs` 的一致性预读），本档只承接「已判定要补关」之后的判序。
+ *   `mode` = **哪一条收口边在跑**（三值闭集；两臂跳过由这一处决定）：
+ *   `normal` = 正常收口（两臂全跑）∥ `repair` = 全归档补关（§4.18-C）∥ `supersede` = 被取代的收口（§4.18-D）。
+ *   `repair` ∥ `supersede` 两条都**只跳过 ① 内容门与 ② §3 pass 臂**，③④ 照跑；分派判据不在这里
+ *   （补关住 `batch-ledger-view.mjs` 的一致性预读，取代由 `batch-supersede.mjs` 自己持），本档只承接
+ *   「已判定走哪条边」之后的判序。
  * @returns {object|null} 文档机检门结果
  */
-export function assertCloseoutGates({ abs, cwd, agent, src, action = "close", repair = false }) {
-  if (!repair) {
+export function assertCloseoutGates({ abs, cwd, agent, src, action = "close", mode = "normal" }) {
+  if (mode === "normal") {
     assertCloseoutChainComplete(src) // ① 链门（§2 / §3 / §4 / §6 各段须有内容）
     // ② §3 状态词臂（无条件）：评审须真跑过并给 pass。旧旁路「§1 声明 §3 不适用」已随声明机制退役删除。
     const s3 = readSectionStatusWord(src, 3)

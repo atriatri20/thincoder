@@ -146,7 +146,8 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
    **A section carrying only its heading and zero body lines counts as empty** (writing such a section is refused).
    Anything short of that ⇒ `close` and `status → 已收口` both refuse and name the missing sections.
    - **Why**: closing an unfinished chain freezes the gap for good — it can be neither filled nor corrected later.
-   **Once past the gate**, the status line becomes「已收口 <date>」(settled <date>) and the whole record is frozen (no more back-edits); frozen records are not migrated. A maintainer may still delete the whole record, and closing never deletes it automatically.
+    **Once past the gate**, the status line becomes「已收口 <date>」(settled <date>) and the whole record is frozen (no more back-edits); frozen records are not migrated. A maintainer may still delete the whole record, and closing never deletes it automatically.
+    **A record whose object is gone, will never be implemented, and can name its successor goes `supersede`** (`BATCH-RECORD.md` §4.18-D) — do not fill the four sections in to make `close` pass, that is fabrication; and do not keep it open forever.
    **A closed record can be reopened**: `status` value 进行中 + a non-empty single-line reason ⇒ the tool rewrites the §1 status line and appends a 「**重开记录**：<date> · 原收口 <old date> · 理由 · 操作者」 line at the §1 section tail — appended only, body untouched.
    **Reopening restores writability and does not pretend the chain ran** — the next close still passes the chain gate.
    **Deferral ≠ freeze**: a deferred batch must land a **machine-readable marker** (the status line's note slot carrying a「暂缓 · 复核条件」clause; the value stays「进行中」); **a prose-only deferral cannot be enumerated** (without the marker it cannot be picked out); **resuming clears the marker**.
@@ -260,7 +261,9 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
   "Pre-existing" is not a cop-out: "it was already broken" does not make a fix optional — you own the whole design/code, and when a defect appeared does not decide whether it should be fixed.
   Findings beyond the approved design's scope: surface them or propose a design update — a silently ignored finding stays outside everyone's view.
   A 🔴 you neither fix nor surface blocks convergence.
-  `Deferred` fits 🟡/🔵 improvements, a 🔴 needing the user's decision first, or a reasoned acknowledged-not-fixed 🔴 (the dispute window closes it from round 3 on; a non-fix with no reason stays Unfixed — with no reason there is nothing to evaluate).
+  `Deferred` carries exactly two legal cases: **it needs the user's decision first**, or **it needs the design's semantics changed**.
+  Everything else is fixed in this round — a 🟡/🔵 improvement earns no automatic deferral (the dispute window closes non-fixes from round 3 on;
+  a non-fix with no reason stays Unfixed, since there is no reason to evaluate).
   It is not a way to silently drop a real defect: a dropped defect is one the user stays blind to; unresolved 🔴 must be surfaced to the user.
 - **Fix round ⇄ user approval timing** (post-review): after review passes you adjudicate one by one (adjudication table) — fixes your adjudication demands (design-doc revisions / implementation repairs)
   **land via a fix round and pass your verification BEFORE you may request user approval**; while a fix round is in flight approval stays unrequested — an approval given then approves something that is still changing; in-flight status is reported only, and the report carries no approval request.

@@ -235,10 +235,10 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **The gate** (closeout, parent side): one `test` run, all green.
 - **Iteration = unit tests only**: verify **only your own change** — run the targeted unit tests for the changed face (single file / relevant subset); another batch's files are gone at its closeout, and re-running them multiplies verification cost by the number of rounds.
 - **Integration tests = the release gate, not a work rhythm**: they run **once at closeout, parent side** — outside the eng-coder chain.
-- **A missing integration suite is a debt, not a steady state**: an empty set passes nothing — the closeout reports the count against the window (`0 / 50–100`) and books a ledger row for each integration suite this project is missing.
-  Each row is booked once, at the first closeout that reports that set empty; later batches do not re-book it while the debt stands.
+- **A missing integration suite is a debt, not a steady state**: an empty set passes nothing — the closeout reports the count against the window (`0 / 50–100`),
+  and the cases this batch's RTM delta names land in this batch; with an empty suite, the suite starts in this batch (the window stays 50–100).
   Report line: "not integration-test verified — the parent-side closeout run is the only integration-test run."
-  Why: a gate assembled out of unit files says only that something is green, not that the release is; the report keeps the debt visible while the row keeps it scheduled.
+  Why: a gate assembled out of unit files says only that something is green, not that the release is; the report keeps the gap visible until the suite exists.
 - **Assertions ride behavior, not prose**: a test that reads a non-test doc and asserts "sentence X present / absent" (`includes` / verbatim substring / sentence-matching regex) goes red on a wording change and proves no behavior.
 - **New assertions only in behavior form** (business-observable results) and **structure-machine-check form**.
 - **A business gate ships with its failure case**: a gate that must reject gets a unit case — deleted with the batch, like every other unit case — that feeds it unsatisfied input and asserts the rejection plus its readable reason (the gate named, the offending input named).
@@ -287,7 +287,14 @@ The report must contain: what changed / why, the paths of files touched, how you
    **The sole exception = a target inside this repo's `index.writableRepos` table**: such a write follows clause 6 instead (it writes the external directory and books the change here) — this clause's only exception; everything else above stands.
 6. **Out-of-repo changes: two cases, split by this repo's `index.writableRepos`**: the target directory is in that table — or under one of its entries — ⇒ **write it, and book it here**
    (the write gate takes the number from this repo's ledger, `project` names this repo's root; the target repo's ledger is never written).
-   Not in the table ⇒ **stop and report** (what / why), and the main agent handles it **in a separate round** — a write outside this repo in this round lands in a repo whose account this round does not hold.
+   Not in the table ⇒ **stop and report** (what / why), then the main agent adds that directory to this repo's `index.writableRepos` — declared in this round —
+   and the write lands in the same round, booked on this repo's account. A subagent that meets an undeclared target raises it to the main agent,
+   which declares it and lands the write in the same round.
+   **The split is not "inside or outside this repo's tree" but whether another project's account exists**: a target outside the tree that carries no
+   manifest and no ledger of its own (a workspace-root file ∥ shared config ∥ a scratch area) is not another repo — nothing else records the write,
+   so declaring it here lands the write in the same round on this repo's account. A target that is another project (its own manifest ∥ ledger) ⇒
+   **not** declared into this repo's `index.writableRepos`: who owns that work follows clauses 9 ∥ 10.
+   **This clause answers only two questions — whether the write is allowed, and whose account carries it.**
    Why the table decides: the user's ruling is that git permissions are the real defence, so a declared directory needs no second lock — while an undeclared one has no account here to carry the change.
 7. **Several repos coexisting = a normal state**: before writing or passing paths, fix the **target repo**.
    Write surfaces (batch record ∥ ledger ∥ write gate) and **tool path parameters** (any path handed to a tool — e.g. review `documents`) take an **explicit target**; several candidates ⇒ an **explicit absolute path**.

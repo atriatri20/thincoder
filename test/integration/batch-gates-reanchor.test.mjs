@@ -1,5 +1,5 @@
 /**
- * batch-gates-reanchor.test.mjs — 集成用例 14-1 … 14-12（RTM CLI 端故事 14「评审过、完成清单收口、重开回」）。
+ * batch-gates-reanchor.test.mjs — 集成用例 14-1 … 14-14（RTM CLI 端故事 14「评审过、完成清单收口、重开回、被取代冻结」）。
  *
  * 判据原文 = `test/RTM.md` 第 14 节；机制 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 / §2.6 /
  * §2.6.1 / §2.7 / §2.13 与 `docs/core/design/LEDGER.md` §10。**进入口 = 父侧工具面**（`batch` / `ledger` / `write`）——断言业务可观察结果
@@ -574,4 +574,94 @@ test("CLI 14-13 全归档批补关：close / status 两路都冻结并落 §1 �
     assert.equal(readFileSync(recOf(root), "utf8"), before, "拒面无字节变")
   }
 })
+
+test("CLI 14-14 对象已消失的批由 supersede 冻结：命名取代者、不伪造 §3/§4/§6；待核销结清、在途退回条件；四种拒面档账零改", async () => {
+  // 现场形：一本 §5 空、永不实施的批，行 = 3 `待核销` + 8 `在途`（建档那一行也在途）。
+  const liveRoot = async (tag) => {
+    const root = await freshRecord(tag)
+    const inFlight = []
+    for (let n = 2; n <= 8; n++) {
+      const id = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title: `没做完 ${n}`, task_book: REC, trigger: "归批", evidence: "工作证据" }, boundary: root })
+      for (const s of ["待设计", "在途"]) ledgerUpdate({ cwd: root, id, patch: { status: s }, boundary: root })
+      inFlight.push(id)
+    }
+    const settling = [pushToSettling(root, "做完没结账 1"), pushToSettling(root, "做完没结账 2"), pushToSettling(root, "做完没结账 3")]
+    writeFileSync(join(root, "docs/batches/succ.md"), "# 2026-11-11 · succ\n")
+    return { root, inFlight, settling }
+  }
+  const { root, settling } = await liveRoot("14-14")
+  const before = readFileSync(recOf(root), "utf8")
+  const successor = "docs/batches/succ.md"
+  const msg = await parent.execute({ action: "supersede", path: recOf(root), supersededBy: successor, completed: [], closeEvidence: "本批从未实施，由后继批接手" }, ctx0(root))
+  const after = readFileSync(recOf(root), "utf8")
+  // 档面：状态行（被取代）+ §1 段尾一行取代记录；§3 / §4 / §6 逐字节不变；此后 append 拒
+  assert.match(after, /\*\*状态行\*\*：已收口 \d{4}-\d{2}-\d{2}（被取代）/, "状态行 = 已收口 <日期>（被取代）")
+  assert.match(after, /\*\*取代记录\*\*：\d{4}-\d{2}-\d{2} · 由 docs\/batches\/succ\.md 取代 · 本批无实施记录（§5 未写）· §3\/§4\/§6 未补写 · 结算 3 行 · 改挂条件 8 行 · 操作者 = 主 agent/)
+  assert.equal(after.split("\n").length, before.split("\n").length + 1, "档面只追加一行（除状态行外其余字节不变）")
+  const cut = (s, seg) => s.slice(s.indexOf(`## ${seg}`), s.indexOf(`## ${seg}`) + 400)
+  for (const seg of ["§3", "§4", "§6"]) assert.equal(cut(after, seg), cut(before, seg), `${seg} 字节不变（不补写）`)
+  const coder = batchTool(REC)
+  await assert.rejects(
+    () => coder.execute({ action: "append", segment: "§5", text: "x" }, { depth: 1, agent: { ...agentOf(root), _role: "eng-coder", _batchDoc: REC } }),
+    /已收口档不回改/,
+  )
+  // 台账：3 行结清为已核销（证据带收口前缀）；8 行退回待讨论并改挂条件（续启句入 resume_when，指针与执行者清空）
+  const sentence = `原批 ${REC} 已收口，须另起批次接手`
+  for (const id of settling) {
+    const row = rowsOf(root).find((r) => r.id === id)
+    assert.equal(row.status, "已核销", `#${id} 结清`)
+    assert.match(row.evidence, /收口 \d{4}-\d{2}-\d{2}：本批从未实施，由后继批接手$/)
+  }
+  const retreated = rowsOf(root).filter((r) => r.status === "待讨论")
+  assert.equal(retreated.length, 8)
+  for (const row of retreated) {
+    assert.equal(row.trigger, "条件")
+    assert.equal(row.resume_when, sentence)
+    assert.equal(row.task_book, null)
+    assert.equal(row.executor, null)
+  }
+  assert.match(msg, /\[ledger supersede\] 被取代收口/, msg)
+  assert.match(msg, /\[ledger consistency\] 一致/)
+  assert.match(await parent.execute({ action: "check", path: recOf(root) }, ctx0(root)), /consistent = true/)
+
+  // 四种拒面（各自档账零改）：取代者空白 ∥ 解不到 ∥ 指回本档 ∥ 行集全归档（指回 close / 补关）
+  const { root: refuseRoot } = await liveRoot("14-14-refuse")
+  const refuseBefore = readFileSync(recOf(refuseRoot), "utf8")
+  const refuseRows = rowsOf(refuseRoot)
+  const ctx = ctx0(refuseRoot)
+  for (const [supersededBy, re] of [
+    ["   ", /supersede refused \(successor\)/],
+    ["docs/batches/2099-01-01-never-existed.md", /supersede refused \(successor unresolved\)/],
+    [REC, /supersede refused \(self\)/],
+  ]) {
+    await assert.rejects(
+      () => parent.execute({ action: "supersede", path: recOf(refuseRoot), supersededBy, completed: [], closeEvidence: "证据" }, ctx),
+      (e) => re.test(e.message) && /Nothing was written\./.test(e.message),
+      `拒面 ${JSON.stringify(supersededBy)}`,
+    )
+  }
+  assert.equal(readFileSync(recOf(refuseRoot), "utf8"), refuseBefore, "拒面：档字节零改")
+  assert.deepEqual(rowsOf(refuseRoot), refuseRows, "拒面：台账零改")
+  // 全归档现场：先收口结行、再重开（已核销不回收）⇒ 档 open、行全归档 ⇒ 拒并指回 close
+  const archivedRoot = await freshRecord("14-14-archived")
+  await review(archivedRoot).execute({ action: "status", value: "评审通过" }, { agent: agentOf(archivedRoot) })
+  const archivedWork = workOf(archivedRoot)
+  await parent.execute({ action: "close", path: recOf(archivedRoot), completed: [archivedWork.id], closeEvidence: "本批做完了" }, ctx0(archivedRoot))
+  await parent.execute({ action: "status", path: recOf(archivedRoot), segment: "§1", value: "进行中", note: "复核后重关" }, ctx0(archivedRoot))
+  const archivedBefore = readFileSync(recOf(archivedRoot), "utf8")
+  await assert.rejects(
+    () => parent.execute({ action: "supersede", path: recOf(archivedRoot), supersededBy: "docs/batches/succ.md", completed: [], closeEvidence: "证据" }, ctx0(archivedRoot)),
+    (e) => /supersede refused \(ledger supersede\)/.test(e.message) && /Use `close` \(all-archived records take the repair path/.test(e.message),
+    "全归档 ⇒ 指回 close",
+  )
+  assert.equal(readFileSync(recOf(archivedRoot), "utf8"), archivedBefore)
+
+  // completed 点名的正路：点名 1 条在途 ⇒ 它结清，其余 7 条退回
+  const { root: namedRoot, inFlight } = await liveRoot("14-14-named")
+  const named = inFlight[0]
+  await parent.execute({ action: "supersede", path: recOf(namedRoot), supersededBy: successor, completed: [named], closeEvidence: "就这一条在本批做完了" }, ctx0(namedRoot))
+  assert.equal(rowsOf(namedRoot).find((r) => r.id === named).status, "已核销", "点名那条结清")
+  assert.equal(rowsOf(namedRoot).filter((r) => r.status === "待讨论").length, 7, "其余 7 条退回")
+})
+
 

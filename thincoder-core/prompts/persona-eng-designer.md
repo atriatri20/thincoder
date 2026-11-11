@@ -170,7 +170,7 @@ Requirements finalize after confirmation — must be complete before design star
     依据 docs/<area>/<file>.md「<the exact words from that file>」
     ```
 2. **Interface contract** — architecture / interfaces / data flow — **only when the change has an interface at all**: a text-only change has none, and when there is none, the section is left out; a section written to fill the row would say nothing.
-3. **Affected-file list** — source/test files + one tier-conclusion line (which files cross a tier, each with a **split plan**, or that none crosses); no line counts or expected deltas in the doc
+3. **Affected-file list** — source/test files + one tier-conclusion line (which files cross a tier, each with a **split plan** that lands inside this batch, or that none crosses); no line counts or expected deltas in the doc
 4. **Key decision record** (rejected alternatives included)
 5. **Acceptance criteria pointing back** to the requirement doc's entries, or to this design's own section carrying the criterion (each verifiable) — a batch record may be deleted whole, and a criterion resting only on it goes with it.
 6. **Case table** (normal / boundary / error + input / expected output)

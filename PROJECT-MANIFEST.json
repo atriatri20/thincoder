@@ -38,44 +38,10 @@
       "../.thincoder",
       "../thincoder.com"
     ],
-    "docCheckExemptions": [
-      {
-        "file": "docs/core/design/MODEL-BENCH.md",
-        "kind": "锚·档缺",
-        "text": "docs/a.txt",
-        "why": "工具探针题面里的夹具假想路径，不指向本仓：该节题面逐字冻结（改题需 TOOL_PROBE_VERSION+1），判定只看参数成形。",
-        "review": "题面版本号递增或该节解冻时重看"
-      },
-      {
-        "file": "docs/core/design/MODEL-BENCH.md",
-        "kind": "锚·档缺",
-        "text": "docs/notes.txt",
-        "why": "同上：工具探针题面（pair·edit↔write ∥ pair·edit↔insert_after）里的夹具假想路径，冻结题面的一部分。",
-        "review": "题面版本号递增或该节解冻时重看"
-      },
-      {
-        "file": "docs/core/design/MODEL-BENCH.md",
-        "kind": "锚·档缺",
-        "text": "docs/plan.txt",
-        "why": "同上：工具探针题面（pair·edit↔write）里的夹具假想路径，冻结题面的一部分。",
-        "review": "题面版本号递增或该节解冻时重看"
-      },
-      {
-        "file": "docs/core/design/MODEL-BENCH.md",
-        "kind": "锚·档缺",
-        "text": "docs/CHANGELOG.txt",
-        "why": "同上：工具探针题面（pair·edit↔insert_after）里的夹具假想路径，冻结题面的一部分。",
-        "review": "题面版本号递增或该节解冻时重看"
-      },
-      {
-        "file": "docs/core/design/MODEL-BENCH.md",
-        "kind": "锚·档缺",
-        "text": "tmp/scratch.txt",
-        "why": "同上：工具探针题面（pair·delete↔bash）里的夹具假想路径，冻结题面的一部分。",
-        "review": "题面版本号递增或该节解冻时重看"
-      }
-    ],
+    "docCheckExemptions": [],
     "docCheckExts": [],
-    "writableRepos": []
+    "writableRepos": [
+      ".."
+    ]
   }
 }
