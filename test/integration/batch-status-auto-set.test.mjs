@@ -1,6 +1,7 @@
 /*
- * batch-status-auto-set.test.mjs — 集成用例 27-1 ∥ 27-2（RTM CLI 端故事 27「评审写一笔 §3 就够：状态行由工具置位」；
- * 回指 = 批档条目 R23；机制 + 判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 ∥ §5 R23 ∥ §2.15）。
+ * batch-status-auto-set.test.mjs — 集成用例 27-1 ∥ 27-2 ∥ 27-3（RTM CLI 端故事 27「评审写一笔 §3 就够：状态行由工具置位」；
+ * 回指 = 批档条目 R23；机制 + 判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 ∥ §5 R23 ∥ §2.15；
+ * 27-3 的签字一半 = `docs/core/design/BATCH-RECORD.md` §4.23）。
  *
  * 业务入口 = 真 `batch` 工具的评审追加轨（`batchTool(batchDoc, { review: true })`）→ 真结算
  * （`settleDesignReview`）→ 真的 `append §5`——三面都从工具面进，不直调内部计划函数。
@@ -8,6 +9,8 @@
  * 27-2 = 工具面批（无设计档）：走**代码轨**并携 `batchDoc`，评审员从真 `advisor` 工具里拿到 `batch` 写通道并把
  * `§3` 写进绑定档（判据单源 = 同档 §2.15）。
  * 27-2 负半幅 = 同一入口不携 `batchDoc` ⇒ 工具表无 `batch`、§3 轮次块 = 0（写通道只能由绑定开出）。
+ * 27-3 = 评审用 `edit §3` 写结论（`edit` 不挂裁定行闸 ⇒ 块进了、状态行没进）⇒ 签字由结算补上，
+ * 而不是靠 `append §3` 那一笔的通过置位。
  *
  * 夹具 = 骨架原形批档（`batchSkeleton` 产出：§3 **无**段级状态行——新批首轮 pass 的常态形）+
  * 系统临时域的项目根（带项目声明，文档机检门照跑）；27-2 的模型侧 = `node:http` 本机假 OpenAI SSE 端点
@@ -48,6 +51,9 @@ function fixture(tag) {
   mkdirSync(join(root, "docs/batches"), { recursive: true })
   mkdirSync(join(root, "docs/core/design"), { recursive: true })
   mkdirSync(join(root, "scripts"), { recursive: true })
+  // 骨架模板的 §2 占位行点了一份真档（示例行）⇒ 夹具里让它真在盘：档名解得到，哪一面都不因它出一条悬空命中。
+  mkdirSync(join(root, "thincoder-core/agent-tools"), { recursive: true })
+  writeFileSync(join(root, "thincoder-core/agent-tools/batch-tier-gate.mjs"), "// 夹具：骨架模板示例行点名的档\n")
   // 骨架原形：`ledger` / `board` 给值 ⇒ 档头两处死占位当场填掉（否则首个 append 被占位机检拒）
   writeFileSync(join(root, BATCH_REL), batchSkeleton({
     date: "2026-11-01", topic: "fixture", source: "集成夹具", prev: "无（独立批）", baseSha: "未取到（夹具直调骨架）", ledger: "#1999", board: "core",
@@ -94,6 +100,46 @@ test("CLI 27-1 正常 · 绑本档的评审只写一笔携 pass 的 §3（不另
   assert.equal(agent._engDesignTokens.get(DESIGN_ID), TOKEN, "槽里是该 designId 的全串 token")
 
   // ③ 随后 `append §5` 放行：段序门两判据（状态词 ∥ 末块自带 pass 裁定）都由「那一笔」满足
+  const coderCtx = { depth: 1, agent: { cwd: root, config: { agent: { engineering: true } }, _role: "eng-coder", _batchDoc: BATCH_REL } }
+  const five = await batchTool(BATCH_REL).execute({ action: "append", segment: "§5", text: "实现落地。" }, coderCtx)
+  assert.match(five, /appended/, `§5 应写入：${five}`)
+  assert.equal(readSectionStatusWord(readRecord(root), 3), "评审通过", "§5 那一笔不改 §3 状态行")
+})
+
+test("CLI 27-3 正常 · 评审用 `edit §3` 写进 pass 结论（状态行未置）⇒ 结算补签、签发；§5 门随后放行", async () => {
+  const { root, agent } = fixture("r273")
+  const review = batchTool(BATCH_REL, { review: true })
+  // ① 评审这一轮：块由工具戳标题落进 §3，正文裁定经 `edit §3` 改成 pass——`edit` 不挂裁定行闸（正路允许），
+  //    但它也不经「通过即置位」⇒ 块进了、§3 状态行没进（本行要消掉的那一步）。
+  const appended = await review.execute(
+    { action: "append", segment: "§3", text: "两份设计档逐节核过，三处已回写。\n\nVERDICT: changes-required" },
+    { agent },
+  )
+  assert.match(appended, /### 轮次 1（评审子代理）/, `回执应点名本轮块：${appended}`)
+  const edited = await review.execute(
+    { action: "edit", segment: "§3", oldText: "VERDICT: changes-required", newText: "VERDICT: pass" },
+    { agent },
+  )
+  assert.match(edited, /edited §3/, `edit 应写入：${edited}`)
+  const afterReview = readRecord(root)
+  assert.equal(countRoundBlocks(afterReview, 3), 1, "轮次块 +1")
+  assert.equal(readSectionStatusWord(afterReview, 3), null, "前置：§3 状态行仍未置（edit 写块不置位）")
+
+  // ② 结算面：同一档、同一实例键 ⇒ 签字是结算自己的一笔（§3 状态行由它补，不靠评审再签一次）
+  const run = {
+    designId: DESIGN_ID,
+    batchDoc: resolve(root, BATCH_REL),
+    docSetKey: docSetKey([DESIGN_REL], root),
+    section3BlocksAtStart: 0, // 点火基线 = 评审写块之前读到的块数
+    open: true,
+  }
+  const settled = settleDesignReview(agent, run, TOKEN, `评审正文。\n[DESIGN-TOKEN: ${TOKEN}]\n\nVERDICT: pass`)
+  assert.equal(settled.passed, true, `应签发（修前红：edit 写的块不置状态行 ⇒ status-not-passed）— ${settled.output}`)
+  assert.match(settled.output, /Approved\. Pass this exact token to eng-coder/, "回执带已批准后缀（token 已签发）")
+  assert.equal(readSectionStatusWord(readRecord(root), 3), "评审通过", "§3 段级状态行由结算补签")
+  assert.equal(agent._engDesignTokens.get(DESIGN_ID), TOKEN, "槽里是该 designId 的全串 token")
+
+  // ③ 随后 `append §5` 放行：段序门两判据（状态词 ∥ 末块自带 pass 裁定）此刻都成立
   const coderCtx = { depth: 1, agent: { cwd: root, config: { agent: { engineering: true } }, _role: "eng-coder", _batchDoc: BATCH_REL } }
   const five = await batchTool(BATCH_REL).execute({ action: "append", segment: "§5", text: "实现落地。" }, coderCtx)
   assert.match(five, /appended/, `§5 应写入：${five}`)

@@ -20,7 +20,8 @@
  * （settle 落盘 / 门禁回读 / 链终清理三面齐备）；本档只承载其**保存面合并规则**
  * （`mergeEngTokensForSave`——空态保留 + 并集 + 新铸者胜，纯函数）。批次归属旁列
  * （`engDesignTokenBatches`）同款分层：槽 I/O 在 `token-ttl.mjs`，本档只持其保存面合并规则
- * （`mergeEngTokenBatchesForSave`）。槽标题写面同样不在
+ * （`mergeEngTokenBatchesForSave`）。评审封印旁列（`engDesignTokenSeals`，§10.2）同一分层，
+ * 合并规则 = `mergeEngTokenSealsForSave`。槽标题写面同样不在
  * 本档——单源 = `session-rename.mjs` 的 `renameSlot`（同 `{ok, reason}` 契约 + mtime 门控）。
  */
 
@@ -205,6 +206,24 @@ export function mergeEngTokensForSave(incoming, existing) {
  *  理由：忙时保存把归属写丢 ⇒ 收口 no-op ⇒ 凭证留存，正是 §10 要消的窗口。
  */
 export function mergeEngTokenBatchesForSave(incoming, existing) {
+  if (incoming === undefined) return existing ?? null
+  const hasNew = incoming && typeof incoming === "object" && !Array.isArray(incoming) && Object.keys(incoming).length > 0
+  const slotHas = existing && typeof existing === "object" && !Array.isArray(existing) && Object.keys(existing).length > 0
+  if (!hasNew) return slotHas ? existing : null
+  if (!slotHas) return incoming
+  return { ...existing, ...incoming }
+}
+
+/**
+ * 保存面「评审封印旁列」合并规则（DESIGN-TOKEN-SETTLEMENT §10.2——纯函数）：与
+ * `mergeEngTokenBatchesForSave` **同形**（槽独有项保留；同 key 冲突以新写者胜——封印值是
+ * `{ hash, docs, docHashes }`，同一 designId 的新值来自更晚的一次评审，不比时刻、就是新写者）。
+ *  - `incoming === undefined`（调用方未携带该字段）⇒ 保留槽值；
+ *  - incoming 空值 ⇒ 槽有值则保留槽、槽也空 ⇒ null（写 null = 清字段）；
+ *  - 两端都有 ⇒ 并集：槽独有项保留、incoming 覆盖同 key。
+ *  理由同批归属：忙时保存把封印写丢 ⇒ 闸面落进「无封印值 ⇒ 不拦」，正是 §10.2 要消的窗口。
+ */
+export function mergeEngTokenSealsForSave(incoming, existing) {
   if (incoming === undefined) return existing ?? null
   const hasNew = incoming && typeof incoming === "object" && !Array.isArray(incoming) && Object.keys(incoming).length > 0
   const slotHas = existing && typeof existing === "object" && !Array.isArray(existing) && Object.keys(existing).length > 0

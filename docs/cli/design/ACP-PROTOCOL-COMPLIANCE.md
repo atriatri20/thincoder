@@ -267,7 +267,7 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 | AC-3（#873） | `set_config_option` / `new` / `load` / `resume` 响应 `configOptions` 全形（判别键 + 现值 + select `options`） | T6–T8 |
 | AC-4（#872） | new id ∈ 随后 list；load/resume 原 id 全方法命中；同 id 在存处置（load/resume/new 三途）；两通知字段收正 | T9–T14 |
 | AC-5（#870） | 整文 ∥ 选区内联形；降级词表；上限三态；无文本仅引用可走；无 confine | T15–T20 |
-| AC-6（面） | 单元测试档全绿（先红后绿）+ `node scripts/doc-check.mjs --root .` exit 0 + 语法检查 | 命令面 |
+| AC-6（面） | 单元测试档全绿（先红后绿）+ `doc_check(mode:"gate")` 首行 `DOC-CHECK GATE: PASS` + 语法检查 | 命令面 |
 | AC-7（#862） | 拆批裁定在档（§6）+ 台账维持待设计 | 记录面 |
 
 ## 10. 用例表（单元测试档——先红后绿）
@@ -314,7 +314,7 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 
 ## 12. 落定与实施注意
 
-3. 单元测试档先红后绿；`node scripts/doc-check.mjs --root .` 复跑 exit 0 为验收项。
+3. 单元测试档先红后绿；`doc_check(mode:"gate")` 首行 `DOC-CHECK GATE: PASS` 为验收项。
 4. 同拍收正 `docs/cli/design/ACP-CLIENT.md`（§5 表十处）。
 5. 需求面补笔 = 主 agent 笔（§1.3 / §7 表末行）——实施轮零触需求档。
 6. 边界登记（§11 各项）随收口入台账（父侧）。

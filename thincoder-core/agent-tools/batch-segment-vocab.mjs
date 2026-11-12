@@ -210,6 +210,65 @@ export function readBatchStatusLine(src) {
   return "unknown"
 }
 
+/** 机读清单块标题（**形单源** = `batch-skeleton.mjs` 的 §2 模板占位）：行首即认，尾随标点不计。 */
+const MACHINE_LIST_HEAD_RE = /^\s*\*\*受影响文件（机读清单）\*\*/
+/** 表行判据（与 `doc-check/paragraph.mjs` 的 `isTableRow` 同形）。 */
+const MACHINE_LIST_ROW_RE = /^\s*\|.*\|\s*$/
+/** 子块界：一个块头只管到下一个标题行 ∥ 下一个块头。 */
+const MACHINE_LIST_HEADING_RE = /^\s*#{1,6}\s/
+/** 占位格判据（`<仓根相对路径>` 这类模板 token）：模板示例行不是记录。 */
+const MACHINE_LIST_PLACEHOLDER_RE = /^<.*>$/
+/** 分隔行判据（`|---|---|`）。 */
+const MACHINE_LIST_SEPARATOR_RE = /^:?-{3,}:?$/
+/** 表头首格（`| 档 | 分拆方案 |`）——只用来跳过表头行。 */
+const MACHINE_LIST_HEADER_CELLS = Object.freeze(["档", "file"])
+
+/** 格内文本（去首尾空白与 markdown 装饰符——写手会写成 `` `x` `` ∥ `**x**`）。 */
+const cellTextOf = (s) => String(s ?? "").replace(/[`*]/g, "").trim()
+
+/**
+ * 解析 §2 的机读清单（纯函数 · 零 fs）：逐个 `**受影响文件（机读清单）**` 块头，取它**之后的第一张表**；
+ * 找表范围止于下一个标题行 ∥ 下一个块头。看头不看行——同一份档里块头可能出现不止一次（先举例、再写真清单
+ * 是正常写法），逐行跟读会把示例当档案。读不成 2–3 格的行跳过而不抛：那三个消费面都只为「点名哪些档」。
+ * **2 格 ∥ 3 格都收，加列不移位**：第三列「行数」是追加的读数格，两格旧行照旧解得开（`reading` = 空串，
+ * 由消费面按「该列没有数」判）；4 格以上仍跳过（多出来的列没有判据，读了就是替写手猜）。
+ * @param {string} src 档全文
+ * @returns {{path:string, plan:string, reading:string}[]} `path` 去装饰符；`plan` = 第二列原值去首尾空白；
+ *   `reading` = 第三列原值去首尾空白（**两格行 = 空串**——不是 `null`：缺列与空格在这里同判「缺读数」）
+ */
+export function machineListRowsOf(src) {
+  const lines = String(src ?? "").split(/\r?\n/)
+  const rows = []
+  lines.forEach((l, at) => {
+    if (!MACHINE_LIST_HEAD_RE.test(l)) return
+    const table = firstMachineListTable(lines, at)
+    if (table === null) return
+    table.forEach((raw, k) => {
+      const cells = raw.trim().replace(/^\|/, "").replace(/\|$/, "").split("|")
+      if (cells.length < 2 || cells.length > 3) return
+      if (cells.every((c) => MACHINE_LIST_SEPARATOR_RE.test(c.trim()))) return
+      if (k === 0 && MACHINE_LIST_HEADER_CELLS.includes(cellTextOf(cells[0]).toLowerCase())) return
+      const path = cellTextOf(cells[0])
+      if (MACHINE_LIST_PLACEHOLDER_RE.test(path)) return
+      rows.push({ path, plan: cells[1].trim(), reading: cells.length === 3 ? cells[2].trim() : "" })
+    })
+  })
+  return rows
+}
+
+/** 块头之后的第一张表（连续表行；找不到 ⇒ `null`）——扫描范围止于下一个标题行 ∥ 下一个块头。 */
+function firstMachineListTable(lines, at) {
+  for (let i = at + 1; i < lines.length; i++) {
+    const raw = lines[i]
+    if (MACHINE_LIST_HEADING_RE.test(raw) || MACHINE_LIST_HEAD_RE.test(raw)) return null
+    if (!MACHINE_LIST_ROW_RE.test(raw)) continue // 空行 ∥ 围栏行 ∥ 散文：都不划块界
+    const table = []
+    for (let j = i; j < lines.length && MACHINE_LIST_ROW_RE.test(lines[j]); j++) table.push(lines[j])
+    return table
+  }
+  return null
+}
+
 /**
  * 段内状态行**单行改写**（status / close / 重开三处共用——改写面之一，域限状态行；另两处 = §2 段体区间改写
  * （`edit`，§4.19）∥ 重开追记行（§4.18-B），三处都不动其余字节）：定位 `## §N` 段

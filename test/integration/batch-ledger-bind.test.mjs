@@ -1,7 +1,7 @@
 /**
  * batch-ledger-bind.test.mjs — 集成用例 13-1 … 13-6（RTM CLI 端故事 13「建批档就有台账」）。
  *
- * 判据原文 = `test/RTM.md` 第 13 节；机制 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.4。
+ * 判据原文 = `test/rtm/batch-ledger.md` 第 13 节；机制 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.4。
  * **进入口 = 父侧 `batch` 工具**（create 的真实调用面）——断言的是**终态**（档在盘 + 行在途 + 档头真实 #N），
  * 事务内步序不进判据（§2.4 末条）。
  *
@@ -37,6 +37,9 @@ function makeProject(tag) {
   fixtures.push(root)
   writeFileSync(join(root, "PROJECT-MANIFEST.json"), JSON.stringify({ version: 1, docRoot: { batches: "docs/batches" } }, null, 2))
   mkdirSync(join(root, "docs/batches"), { recursive: true })
+  // 骨架模板的 §2 占位行点了一份真档（示例行）⇒ 夹具里让它真在盘：档名解得到，哪一面都不因它出一条悬空命中。
+  mkdirSync(join(root, "thincoder-core/agent-tools"), { recursive: true })
+  writeFileSync(join(root, "thincoder-core/agent-tools/batch-tier-gate.mjs"), "// 夹具：骨架模板示例行点名的档\n")
   return root
 }
 const ctxOf = (root) => ({ depth: 0, agent: { cwd: root, config: { agent: { engineering: true } } } })

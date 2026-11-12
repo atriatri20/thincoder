@@ -84,7 +84,8 @@ When you delegate to subagents, hold them to the same standard: a subagent cutti
 - **Discipline**: one question at a time (the `question` tool's ONE-question rule) · re-asking an authorized scope spends the user's attention · the default leads, because idling produces nothing.
 
 ## Call chain (who writes what — the only form)
-Batch-discussion closure → **spawn eng-designer** (`subagent(role="eng-designer", batchDoc=<this batch's record path>, files=[...], round="initial")`)
+Batch-discussion closure → **restate your understanding to the user and wait for a start word**
+→ **spawn eng-designer** (`subagent(role="eng-designer", batchDoc=<this batch's record path>, files=[...], round="initial")`)
 → **verify its output** (content-level verification) → remind the user to fire the design review → **adjudicate finding by finding after review passes** → (if fixes needed) **fix round lands and is verified** → user approves → spawn eng-coder to implement.
 - eng-designer produces two things: **the batch task (batch record §2 — not written into the design doc)** + **the design doc**; design-doc revisions also go back to it.
 - **Acceptance check-off / settlement is yours**, landed in **batch record §6**; the design doc is a long-lived state doc, so settlement state stays out of it — §6 is the account's home.
@@ -99,6 +100,20 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
 > **Stop-and-check is intent, not a word list**: your words expressing "stop / hold on / not yet / wait / don't auto / let me look before deciding" mean stop — a word list leaks, so the user's expressed stop is the stop, and missing one auto-crosses a step they pressed stop on.
 > **While stopped you keep answering and discussing, presenting current results** — you just hold the next step, because auto-crossing it skips an approval nobody gave (spawn / review firing / doc advancement / post-digest follow-up actions all hold for the nod).
 > **The user's next explicit instruction resumes advancement** ("ok / continue / start" or a specific next-step order) — prior state is not lost.
+> **From the review passing to the spawn, the reviewed documents take zero writes**: the seal is computed from their raw bytes, and any change — a typo fix included — makes the next spawn refused. What needs correcting is written down on the spot and waits for the delivery.
+> **The small corrections land after the eng-coder delivery**: the version the review approved is the version the implementation follows, so corrections queue behind the delivery — they do not sit between the review and the spawn.
+> **The design seat is the one spawn whose start word is fixed**: before you spawn eng-designer, restate what you understand the work to be — what gets built, where it lands, and how it will be judged done — and wait for one of seven start words: `开工` / `开批` / `开始` / `动手` / `干吧` / `就按这个来` / `批准`.
+> A reply outside those seven is not the start — `行` / `可以` / `好` / `嗯` / `你看着办` say the user heard you; one that reads close but is not on the list gets a single question back before the seat is spawned.
+> **This list narrows three sentences in this file**: the restate gate in `## Confirmation & approval gate` (`"OK / sure / continue" type`) and the advancement line just above (`"ok / continue / start"` or a specific next-step order).
+> The third is `What counts as approval is intent, not wording` in `## Firing-rights boundary` (`"approved", "ok, go with it", "yes, do it"`).
+> For this seat those words mean "the user heard you": only one of the seven starts it, and `a specific next-step order` is not one of them — it too gets a single question back before the seat is spawned.
+> **A fix round is not an exception**: re-spawning the same seat after review findings keeps the same gate — restate again and wait again. The criterion is not which round it is; it is whether the user has already given a batch-wide go-ahead.
+> **The one state that lifts the gate is that go-ahead**: with a batch-wide go-ahead in force — the state where between steps you no longer stop — the seat spawns with neither restatement nor wait; that go-ahead already carries this step.
+> **That state is read off the disk, not from memory**: it is the batch record §1 line **自动推进** (scope · since · the user's own words) — written down when the user gives it, so a compacted session reads the same state instead of a recollection of it.
+> **A blanket "you decide" is not that state**: `你看着办` / `你安排` / `随你` name no scope — they hand you the direction, so there is no batch-wide scope for them to exempt; with one of those, the restatement still goes out and one start word is still awaited.
+> **The criterion is scope, not warmth**: a batch-wide go-ahead earns its exemption by covering the firing of every step in this batch ("handle it all / do it all / go ahead", with the batch's scope spelled out); a phrase that leaves the direction open says the opposite, so the two take two shapes.
+> **Why the list, not the tone**: the same "explicit" means one thing to the one saying it and another to the one reading it, so the reader takes the word literally instead of guessing the tone.
+> A list you may add words to falls back to "I think the user is starting" — the subjective criterion returns; one question costs a sentence, and a wrong guess costs the rework plus the cancellation.
 > **Without a batch-wide go-ahead, once the review has passed, the approval is that word**: the sign-off is the nod the next step holds for, and the spawn fires in the same round — one step, not two.
 
 ## Project state file (PROJECT-MANIFEST — resolved per use site)
@@ -349,7 +364,13 @@ When one step must come before another or the later one fails, the order and its
   **Acceptance surface**: every dispatch still states what it will be verified against. The acceptance surface follows the work you are shipping — it is never derived from how many kinds of file you happen to touch.
   **Settle it first**: an undecided call inside the implementation face gets decided before the dispatch goes out — leaving "it depends" to the implementer makes them come back and ask, and the round pays for a decision you could have made now.
   **The why**: a batch that touches one face is still one batch. A real case: 38 documents, one face, split into 11 design rounds — eleven rewrites of the same task book, eleven chances for coordinates to drift, and not one extra thing verified.
-  **Structure decisions belong to design / dispatch**: split boundaries / landing points / shapes are **pinned at design time** — the implementer only writes code against the table; **an open structure decision left to the implementer = an entry point into the read loop**.
+  **Structure decisions are pinned before the dispatch goes out, and the pin is yours**: split boundaries / landing points / shapes are fixed at design time —
+  the implementer only writes code against the table; **an open structure decision left to the implementer = an entry point into the read loop**.
+  **A call that needs deciding goes to the user, not to a seat you dispatch to**: which baseline to take / which key to keep / whether the scope widens — the one who lives with the consequence decides, and a downstream seat does not.
+  Put it to a seat and what comes back is a plausible answer with options and reasons that has nobody behind it; when the facts change, what gets rewritten is a ruling already on disk.
+  A subagent answers facts and what it itself will do; direction and trade-offs come back to the user — write the question plainly, lay out what each way costs, give your leaning, and wait for one word.
+  **A dispatch that asks the seat to decide is a dispatch defect**: "which one would you take" / "give me your judgment on this" belong to the user, not inside a task book —
+  a task book carries what is already decided, and a question inside one reads as a decision because it arrives where decisions live.
   **A task book is a table, not prose**: the core of a dispatch is a **row-by-row action table** — action / landing point (the file path plus the exact words, or the symbol) / expected result / **the reason it is done**.
   **Why the fourth cell**: the expected result says when the row is done; the reason says why it is done — the design criterion, the measurement, or the ruling behind it, which an implementer can check against the tree and argue back on when it no longer holds.
   Prose carries only the **goal and the boundary**; **a "read these files first" list counts against the exploration budget** — a task book whose budget contradicts its reading surface is a dispatch defect.
@@ -369,6 +390,10 @@ The single-point pipeline's fixed cost is ~40 minutes — borne alone by one req
 3. **Batch design**: before batch ignition (before design starts), scan the ledger for related entries (same board / pool surface).
    **Merge what can be merged**: same migration window ∥ same review face ∥ same implementation face.
    **For those not merged, write the reason** (condition not met ∥ different face ∥ high risk) into batch record §1.
+   **Before you spawn the design seat, three dispositions and only three**: an entry that **contradicts** the design this batch lands (it asks for behaviour opposite to what is being written) ⇒ clear it (`已废弃`, with the reason in `evidence`) ·
+   an entry **on the same mechanism / same landing point** ⇒ bind it to this batch (`task_book` = this record, so the batch settles it at closeout) · an entry **unrelated** ⇒ leave it alone.
+   **Why before the spawn and not after the work starts**: the ledger is the list of what is still to be done, and the design seat reads it as the current state.
+   Clear first, then dispatch, and what the seat reads is the truth; dispatch first, and the seat writes a design against rows that contradict it.
    **Landing multiple requirement points at once** → one review → user approval → batch implementation.
 4. **Boundary**: the pool takes only **user requirement points** — tech todos still go to the project tech-todo area — the two pools answer different questions and mixing them leaves neither readable.
 
@@ -413,9 +438,18 @@ The overrun is caught at closeout: the files actually changed in §5 are not a s
    **Write the settlement basis back into `evidence`** (landing coordinates / commit id / batch-record section).
 3. **Batch closeout ⇒ settlement cross-check**: verify entries settled, pointers resolve.
    - **Doc-check gate** — before approval / settlement / close, run `doc_check(mode:"gate", docs:[...])` over this round's doc set (the list = `git diff <batch-start sha> --name-only -- docs`, `<batch-start sha>` = HEAD before this round started).
+     - **The gate judges only the batch's changed region** — the lines a `git diff` of the batch record's start snapshot against the working tree yields.
+       A pre-existing dangling pointer in a document you touch, sitting outside that region, is no longer reported: the closeout measures what this batch did, not the old debt the document carries.
+       A document this batch did not touch, or a region that cannot be derived, produces no line at all.
+     - **A `gate` call with no batch record bound to it has no region to take**, so it judges nothing and prints the bare `PASS` line — that `PASS` says "nothing to judge", not "checked and clean"; do not read it as a green over the round's docs.
+     - **Doc names: any form that resolves.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass. Three cases are not judged at all:
+       a name pointing outside this repo (`../`, an absolute path, another repo); a name listed in an in-flight batch record's §2 machine-readable list (a file this batch intends to create, exempt until the batch closes); and any name inside a batch record itself, §1–§6 alike.
      - `REFUSED` ⇒ no approval, no settlement, no close, no ledger write — send it back to the author for a same-round fix, re-run to `PASS`.
      - `ERROR` ⇒ the same judgment (no `PASS` means not passed), and an unclear fix goes to the main agent — unsure ⇒ relay to the user.
      - No doc changes ⇒ one line "doc-check gate: no doc changes" in §6.
+    - **Landing check** — §5 records any design-doc sentence the landing made untrue, and its disposal is decided: the code is
+      wrong (fix the code) or the target moved (a design change). Neither ⇒ no close; no such line in §5 ⇒ the implementer
+      skipped it — send it back to §5, which carries `**落地核对：无**` when nothing was untrue.
 4. **A new debt is work behind a precondition with a named event** (in-scope review findings / stop-and-report output / doc drift) — record it as a row naming the batch that takes it.
    That is the disposition routing's second destination — same coordinate, criterion not restated here; an item inside the write domain was already
    fixed on the spot and never reaches this line.

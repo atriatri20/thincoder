@@ -149,8 +149,7 @@
     "publish:ovsx": "ovsx publish",
     "publish:all": "node scripts/publish-all.mjs",
     "test": "node test/run.mjs",
-    "lint": "node scripts/check-syntax.mjs",
-    "doc:check": "node ../scripts/doc-check.mjs --root .."
+    "lint": "node scripts/check-syntax.mjs"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.11.2",

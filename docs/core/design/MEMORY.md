@@ -871,7 +871,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 **不取**「`origin IN (…)` + 全 PK 游标」形（与 D-MEM22 否决形同构相邻——未取证形不引）；**合并** = 各趟候选统一收集后经既有稳定排序，并列分数定序 = **PK 元组升序**（`origin` → `path` → `line_start`——单 origin 面即扫描序；与趟序 / 到达序无关）。`thincoder-core/agent/setup.mjs` 每回合召回注入与计数行（B3）同用该集。
 
 注入块**按来源分取**（本仓来源 ∥ 声明来源）——`docSearch` 可选 `origins` 覆盖参：缺省 `null` ⇒ 本函数自取 `searchOrigins`（现行为逐字）∥ 给定 ⇒ 以其为 origin 集（复用既有单/多 origin SQL 形）∥ 空数组 ⇒ 现「不过滤」语义；配额策略 = `AGENT-LOOP.md` §6.3（本档不复述）。
-3. **跨仓引用（可核形——记录面同用）**：形态 / 解析序 / 处置 = `docs/core/design/DOC-DISCIPLINE.md` §4.2.2；记录面有界例外 = `docs/core/design/LEDGER-SELF-CONTAINED.md` §4.1；本档登记**解析消费面** = 锚机检声明源候选（`scripts/doc-check-anchors.mjs` 接线）。
+3. **跨仓引用（可核形——记录面同用）**：形态 / 解析序 / 处置 = `docs/core/design/DOC-DISCIPLINE.md` §4.2.2；记录面有界例外 = `docs/core/design/LEDGER-SELF-CONTAINED.md` §4.1；本档登记**解析消费面** = 锚机检声明源候选（`thincoder-core/doc-graph/anchors.mjs` 接线）。
 
 **判据项（机检——单源 = §2；号 = §6.15 面）**：
 

@@ -199,7 +199,7 @@ Code does not grant itself tolerance.
   **The unit that carries it is the entry, not the clause**: a top-level entry (a `- **…**` or `N. **…` line at column 0) carries one `Why` — one line, not a paragraph.
   Sub-items and continuation lines inherit their parent's why and write none of their own.
   **Touching a rule without its why is the gap**: add it in the same write and leave the rest of the entry as it stands — the why is for the skeleton of the rules, not for every clause; a prompt grown into a book of reasons loses the rules inside it.
-- Examples — sample rows, commands, paths — go in a fenced block, which the anchor and paragraph criteria skip whole; a path left in prose or a table must be a real file — a made-up one is judged `档缺`. An assumed name in a sentence takes `<area>/<name>.md`.
+- An assumed name in a sentence takes `<area>/<name>.md`.
 
 ## Stop and report
 Conflict, gap, can't-do — stop and report; a silent adaptation or shrink leaves the user holding a delivery nobody approved, and the gap gets stated while it can still be ruled on:

@@ -1,10 +1,10 @@
 /**
- * doc-check/doc-batch-face.mjs — **批档面判族**：批档 ↔ 批档互引不判——实现族（基底根 ∥ 拼路径 ∥ 谓词）整族住本档，
+ * thincoder-core/doc-graph/doc-batch-face.mjs — **批档面判族**：批档 ↔ 批档互引不判——实现族（基底根 ∥ 拼路径 ∥ 谓词）整族住本档，
  * 应用点 = `./anchors.mjs` 的三条抽取分支（那三处只调 `isBatchFaceRef`，不自持第二份）。
  *
  * 判据单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.29 条目 AC（一个 token 判之前先过面判——引用方与目标
  * **同在**一个批档基底根下 ⇒ 不判：不进 `hits`、不读目标档、不计 `unreadable`，只计 `batchRefs`）。
- * 分拆落点 = 归批档 §2 的机读清单（`thincoder-core/doc-check/anchors.mjs` 越 500 设计器硬线）。
+ * 分拆落点 = 归批档 §2 的机读清单（`thincoder-core/doc-graph/anchors.mjs` 越 500 设计器硬线）。
  * **只搬不改**：搬前搬后 `doc_check` 两模式报面与判决逐字相等——本档只把已经写好的四个函数整族搬出来。
  *
  * 为什么这一族立得住：它只回答「这个 token 归不归本门判」，不抽 token、不解析、不判存在性、不改 verdict；

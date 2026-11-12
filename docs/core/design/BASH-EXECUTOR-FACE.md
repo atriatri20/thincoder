@@ -120,7 +120,7 @@ win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 s
 | AC5 | `grep -r "SHELL_NOTES" thincoder-vscode/src` ⇒ 0 命中（死常量清除） | §3.3 |
 | AC6 | 三端实测取证在档：CLI / VSC / 桌面各跑一次探针命令（`$PSVersionTable.PSVersion.Major` ∥ `echo %COMSPEC%`），读数与本机 config.shell 链一致（三端同链 ⇒ 同值） | 验收标准② |
 | AC7 | 探测不到路径（config.shell = 未知名——U4 夹具 `"myweirdshell"`）⇒ 注入 unknown 中性句（fail-open——不猜）；`_setComSpecForTest("")` + shell=null ⇒ `kind:"cmd"`、注入 cmd 行（链终值 = 兜底字面 `cmd.exe`——spawn 镜像，探测值 = 实际执行器） | 用户裁定③ |
-| AC8 | 核语法门 `npm run prepublishOnly`（= `node scripts/check-syntax.mjs`）exit 0；核包级 `npm test` = exit 1 + 说明（空集说明器、非门——`thincoder-core/test/run.mjs` 逐字「无集成测试集 = 什么也没验——exit 1 如实」）；CLI 包级 `npm test` = exit 1 + 说明（非门——集成层在仓根）；VSC `npm test` = 单元清单面（exit 0，非集成门）；集成门 = 仓根 `node test/run.mjs`（收口时父侧跑一次）；桌面装配产物断言（AC2 同式：桌面 `applyPromptInjections(DESC("bash"))` 产物含 `Executor:` 行 ∥ 零 `{{inject:` 字面——桌面集成测试树存在与否实施轮核：在 ⇒ 入集成测试跑，不在 ⇒ 装配探针直断）；`node scripts/doc-check.mjs --root .` exit 0 | 验收标准③ |
+| AC8 | 核语法门 `npm run prepublishOnly`（= `node scripts/check-syntax.mjs`）exit 0；核包级 `npm test` = exit 1 + 说明（空集说明器、非门——`thincoder-core/test/run.mjs` 逐字「无集成测试集 = 什么也没验——exit 1 如实」）；CLI 包级 `npm test` = exit 1 + 说明（非门——集成层在仓根）；VSC `npm test` = 单元清单面（exit 0，非集成门）；集成门 = 仓根 `node test/run.mjs`（收口时父侧跑一次）；桌面装配产物断言（AC2 同式：桌面 `applyPromptInjections(DESC("bash"))` 产物含 `Executor:` 行 ∥ 零 `{{inject:` 字面——桌面集成测试树存在与否实施轮核：在 ⇒ 入集成测试跑，不在 ⇒ 装配探针直断） | 验收标准③ |
 
 ## 7. 用例表（正常 / 边界 / 错误）
 

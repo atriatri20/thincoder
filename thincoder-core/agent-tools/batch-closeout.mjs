@@ -7,13 +7,18 @@
  * 本档承载三件（都不碰 fs 写、只读与判）：
  * ① `assertCloseoutGates` —— 收口两路（`close` ∥ `status` 写 `§1 已收口`）共调的判序：
  *    链完整性门（§2/§3/§4/§6 各段须有内容——`不适用` 声明机制已退役）→ **`§3` 状态词臂**（无条件 = `评审通过`）
- *    → 本批批内单测档门（`TESTING.md` §3.5）→ 文档机检门（`DOC-DISCIPLINE.md` §3.20）。
+ *    → 本批批内单测档门（`TESTING.md` §3.5）→ 文档机检门（判据 = `docs/core/design/DOC-CHECK.md` §1–§6；
+ *    调用点 = 同档 §7「落点」三处之一「批档写入与收口」）→ **档位臂**
+ *    （`batch-tier-gate.mjs` 的 `assertTierPlan`——同一臂两节，一条拒文：本批改动面里在盘的码档，§2 必须有
+ *    它的行读数且与批起快照一致（判法 ∥ 拒文 = `docs/core/design/DOC-CHECK.md` §8）；其中实测越了设计时线的
+ *    源档，§2 还必须有它的正向形分拆方案。两节判的都是**记录缺件**，不是代码长短；语义单源 =
+ *    `docs/core/standards/CODE-TIER.md` §2 ②，位次 = 本档的判序第 ⑤ 臂）。
  * ② `assertSectionFiveGate` —— §5 写入门（段序门）：两条合取——① `§3` 状态行 = `评审通过`；② `§3` 最近一轮
  *    轮次块自己携 pass 裁定行（块 = `lastRoundBlock`；裁定读数 = 骨架档 `verdictGapOf`，`append §3` 写入闸与
  *    签发面读同一个函数）。旧的第一条旁路（`§1` 声明 §3 不适用）已随本批删除：实现只发生在评审之后，没有例外段。
  * ③ `reanchorReceiptLine` —— 收口重锚回执三行（§2.11 逐字）。
  * ④ **全归档补关面**（§4.18-C · `docs/core/design/LEDGER.md` §11.2）：拒文 `repairBlockedError`、档面
- *    追记行 `repairTraceLine` 与回执段 `repairReceiptLine`。补关只跳过收口门的 ①② 两臂，③④ 与写序、
+ *    追记行 `repairTraceLine` 与回执段 `repairReceiptLine`。补关只跳过收口门的 ①②⑤ 三臂，③④ 与写序、
  *    凭证消费、完成清单预检全部保留——「行全归档」不是「环节全免」；分派判据住 `batch-ledger-view.mjs`。
  *
  * 为什么 §3 内容臂留着（不换成只判状态词）：内容臂守的是「段里真跑过」，状态词臂守的是「跑的结论是
@@ -21,7 +26,12 @@
  *
  * 依赖单向（KD-4）：`skeleton ← closeout ← bind ← reopen ← lifecycle`——本档不 import lifecycle。
  */
+import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
+import { isAbsolute, relative, resolve } from "node:path"
+
+import { owningProject } from "../manifest.mjs"
+import { batchProjectRoot } from "./batch-paths.mjs"
 
 import {
   countRoundBlocks, inapplicableDeclarationError, lastRoundBlock, malformedInapplicableLine, readSectionStatusWord,
@@ -30,7 +40,10 @@ import {
 // 裁定读数 = 骨架档 `verdictGapOf` 一个函数（设计档 §2.6.1「判据单源」）：`§5` 门判据 2 与签发面判的是同一份
 // 回执文本，组合序各写一遍必然一处变一处不变。本档不再 import 两条裁定锚——锚与序都在那个函数里。
 import { assertUnitTestFilesCleared } from "./batch-unit-test-gate.mjs"
-import { gateRefusalMessage, runBatchGate } from "./batch-gate.mjs"
+import { assertTierPlan } from "./batch-tier-gate.mjs"
+import { baseShaOf, gateRefusalMessage, runBatchGate } from "./batch-gate.mjs"
+// 本批提交 diff 腿（现成的改动面——不另造一套登记）：`committedDocs` 与本档无依赖方向冲突。
+import { committedDocs } from "./batch-regions.mjs"
 
 /** 链判段集（§2/§3/§4/§6——§5 段号豁免恒不判；§1 主 agent 自述段不设前置）。 */
 const CHAIN_SEGMENTS = [2, 3, 4, 6]
@@ -73,17 +86,23 @@ export function assertCloseoutChainComplete(src) {
 }
 
 /**
- * 收口两路共调判序（设计档 §2.4–§2.6 · 2026-10-27 四道门）：
+ * 收口两路共调判序（设计档 §2.4–§2.6 · 2026-10-27 四道门 + 2026-11-11 第 ⑤ 臂）：
  *   ① 链完整性门（§2 / §3 / §4 / §6 各段须有内容）
  *   ② **`§3` 状态词臂**：`§3` 状态行 = `评审通过`（无条件）
  *   ③ 本批批内单测档门（仍在盘 ⇒ 拒——零留存的结构兜底）
  *   ④ 文档机检门（REFUSED ∥ ERROR ⇒ 拒）
+ *   ⑤ **档位臂**（`batch-tier-gate.mjs` 的 `assertTierPlan`）：两节一趟判完，一条拒文——
+ *      ① 读数支：本批改动面里在盘的码档，§2 机读清单那一行须带行读数且与**批起快照**一致；
+ *      ② 越线方案支：其中实测越了设计时线的档，§2 须带它的正向形分拆方案。无在盘码档就两节都不启动
+ *      （**§2 缺块不是拒因**）；判的是**记录缺件**，不是代码长短（代码 > 800 仍由 ④ 那条判）。
+ *      基线内容由本档交进去（`baseTextReaderOf`——门自己不读 git）。
  * 位次 = 既有拒因之后、写盘之前（任一被拒 ⇒ 档字节不变）。返回 `④` 的门结果供回执拼行（`null` = 未跑）。
  * @param {{abs:string, cwd:string, agent:object, src:string, action:"close"|"status", mode?:"normal"|"repair"|"supersede"}} o
  *   `src` = 调用方已读的写盘前全文（判据与写盘读同一份字节，不二次读盘）。
- *   `mode` = **哪一条收口边在跑**（三值闭集；两臂跳过由这一处决定）：
- *   `normal` = 正常收口（两臂全跑）∥ `repair` = 全归档补关（§4.18-C）∥ `supersede` = 被取代的收口（§4.18-D）。
- *   `repair` ∥ `supersede` 两条都**只跳过 ① 内容门与 ② §3 pass 臂**，③④ 照跑；分派判据不在这里
+ *   `mode` = **哪一条收口边在跑**（三值闭集；跳过集由这一处决定）：
+ *   `normal` = 正常收口（五臂全跑）∥ `repair` = 全归档补关（§4.18-C）∥ `supersede` = 被取代的收口（§4.18-D）。
+ *   `repair` ∥ `supersede` 两条都**只跳过 ①②⑤ 三臂**，③④ 照跑——补关与取代按定义没有可判的 §2，
+ *   而单测档门与机检门在那两条边上照旧生效；分派判据不在这里
  *   （补关住 `batch-ledger-view.mjs` 的一致性预读，取代由 `batch-supersede.mjs` 自己持），本档只承接
  *   「已判定走哪条边」之后的判序。
  * @returns {object|null} 文档机检门结果
@@ -98,7 +117,79 @@ export function assertCloseoutGates({ abs, cwd, agent, src, action = "close", mo
   assertUnitTestFilesCleared(abs, action) // ③
   const gate = runBatchGate({ abs, cwd, agent, scope: "close" }) // ④
   if (gate.state === "refused" || gate.state === "error") throw new Error(gateRefusalMessage(gate, action))
+  // ⑤ 档位臂：与 ①② 同属 `mode === "normal"` 组（`repair` ∥ `supersede` 按定义没有可判的 §2）。
+  if (mode === "normal") {
+    const root = tierRootOf(abs, cwd)
+    assertTierPlan(src, root, changedSurface(abs, root, agent), baseTextReaderOf(abs, root))
+  }
   return gate
+}
+
+/** 本批改动面（**取材 = 现成两面**：写工具触达账 ∪ 提交 diff；本档不另造登记）——交绝对路径，供档位臂量长度。
+ *  触达账条目本就是绝对路径（写工具记账）；提交清单以 **git 仓根**为基，故按 `committedDocs` 回的 `base`
+ *  还原成绝对路径——项目根住大仓子目录时也不丢条目。基 sha 未定 ⇒ 只以触达账为准（那正是本会话写过的档）。
+ *  @returns {string[]} 改动面条目（可能含非源档——后缀筛在门档里） */
+function changedSurface(abs, root, agent) {
+  const touched = Array.isArray(agent?._touchedFiles) ? agent._touchedFiles : []
+  const baseSha = baseShaOf(abs)
+  if (baseSha === null) return [...touched]
+  const diff = committedDocs(root, baseSha)
+  return [...touched, ...(diff.files ?? []).map((f) => resolve(diff.base, f))]
+}
+
+/** 仓根（§2 机读清单的第一列是仓根相对路径）——解析式与文档机检门同式
+ *  （`batch-gate.mjs` 的 `evaluate`：`owningProject(批档) ?? batchProjectRoot(cwd)`）：
+ *  两臂判同一批档、同一套相对路径，根不同就会一处判到档、一处判到空。 */
+function tierRootOf(abs, cwd) {
+  const base = resolve(cwd)
+  return owningProject(resolve(abs), base) ?? batchProjectRoot(base)
+}
+
+// ─── 读数支的基线内容（本档读 git 的唯一一处：门自己不读，内容由这里交进去）──────────────────
+
+/** 一次 git 调用（`-C <cwd>`）：失败不抛、返 `null`——分流判据在调用方（对象在不在 ∥ 路径在不在）。 */
+function gitRun(cwd, argv) {
+  try {
+    return execFileSync("git", ["-C", cwd, ...argv], {
+      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 8000,
+    })
+  } catch {
+    return null
+  }
+}
+
+/** 档在 git 树里的路径：快照的树以 **git 仓根**为基，§2 清单以**项目根**为基——项目根住大仓子目录时
+ *  两基不同（解析式与 `committedDocs` 的 `base` 同一条）。 */
+function gitPathOf(top, root, relPath) {
+  const abs = isAbsolute(relPath) ? relPath : resolve(root, relPath)
+  const rel = relative(top, abs).replace(/\\/g, "/")
+  return rel === "" || rel.startsWith("../") || isAbsolute(rel) ? String(relPath).replace(/\\/g, "/") : rel
+}
+
+/**
+ * 读数支的基线取值函数（判法单源 = `docs/core/design/DOC-CHECK.md` §8「两个失败怎么分开」）：
+ * `git show <sha>:<档>` 对「快照里没这一档」与「对象读不到」报的错同形，照错文分流会把每个有新建档的批整批拒
+ * （`新` 正是那条判据的地基）。故按三步问、各问一件：对象在不在 ⇒ 路径在不在 ⇒ 取内容。
+ * **拒绝条件只有一条 = 记入行的 sha 指向的对象读不到**（`undefined`）；`refs/thincoder/baseline/<批档名>`
+ * 在不在不进判据——ref 只负责让那个对象不被回收，不是取内容的入口。
+ * @param {string} abs — 批档绝对路径（记入行 `批起 sha` 的取法单源 = `baseShaOf`）
+ * @param {string} root — 项目根（清单第一列的基）
+ * @returns {(relPath:string) => string|null|undefined} 串 = 该档在快照里的内容 ∥ `null` = 快照里没有这一档 ∥
+ *   `undefined` = 基线不可判（门按整批一条拒）
+ */
+function baseTextReaderOf(abs, root) {
+  const sha = baseShaOf(abs)
+  if (sha === null) return () => undefined
+  const top = (gitRun(root, ["rev-parse", "--show-toplevel"]) ?? "").trim() || root
+  let commitReadable = null // 一次收口只问一遍对象在不在
+  return (relPath) => {
+    if (commitReadable === null) commitReadable = gitRun(top, ["cat-file", "-e", `${sha}^{commit}`]) !== null
+    if (!commitReadable) return undefined
+    const gitPath = gitPathOf(top, root, relPath)
+    if (gitRun(top, ["cat-file", "-e", `${sha}:${gitPath}`]) === null) return null
+    const text = gitRun(top, ["show", `${sha}:${gitPath}`])
+    return text === null ? undefined : text // 取不到内容同样按「基线不可判」，不静默读成 `新`
+  }
 }
 
 /** 读档（本档只读一面——写盘归 lifecycle 与 bind；读错上抛不伪装）。 */

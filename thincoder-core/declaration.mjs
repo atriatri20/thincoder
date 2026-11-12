@@ -50,7 +50,7 @@ function normalizeCodePaths(v) {
 }
 
 /** 路径列表归一（单源——`index.excludePaths` §6.14 ∥ `index.publicRepos` §6.15 同款）：首部 `./` 剥离 · `\`→`/` · 去尾斜杠 · 空 ∕ 非串剔除 · 去重保序。
- *  **导出**：第三个消费面 = `doc_check` 的排除面（`index.docCheckExcludePaths`——机制见 `docs/core/design/DOC-CHECK.md` §2.6）。
+ *  **导出**：第三个消费面 = `doc_check` 的排除面（`index.docCheckExcludePaths`——机制见 `docs/core/design/DOC-CHECK.md` §10）。
  *  两个键各写一份归一，语义必然漂；差别只该在「谁吃这个清单」，不应在「怎么认路径」。 */
 export function normalizePathList(v) {
   if (!Array.isArray(v)) return []

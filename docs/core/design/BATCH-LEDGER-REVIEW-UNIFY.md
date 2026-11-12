@@ -1464,7 +1464,7 @@ Why：机判只认日期锚（`docs/core/design/LEDGER.md` §3.7 的 `resume_due
 | `test/integration/batch-gates-reanchor.test.mjs`、`test/integration/batch-ledger-bind.test.mjs` | 按 §9 delta 改题设与断言 |
 | `test/rtm/batch-ledger.md` | 登记本批 RTM delta（编号先落，再写用例标题） |
 
-档位量法（记录用：读数只记批档 §5，不在实施面作拆分判定；档位判据单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）：
+档位量法（记录用：读数只记批档 §5，不在实施面作拆分判定；档位判据单源 = `docs/core/standards/CODE-TIER.md`）：
 
 ```text
 doc_check({

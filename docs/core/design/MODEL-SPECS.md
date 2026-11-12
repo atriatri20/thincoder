@@ -1224,7 +1224,7 @@ CLI `/think` 面板与 VSC 思考下拉的可见面：新建行未声明枚举�
 | `thincoder-vscode/webview/settings-widgets.js` | — | `buildEffortSelect`（= **换模型重建径**）同源化；空枚举返 null 语义不变（`view === null`） |
 | `thincoder-vscode/webview/settings-models.js` | — | `collectConsultRows` 落盘前 `effortPayloadValue` 归一（「—」/`none`/空 → null ⇒ 删键）+import；读取面保持原始值 |
 | `thincoder-vscode/webview/settings-state.js` | — | 新 `effortSelectView`（levels = 「—」+ 枚举；selected = 已存值 > 注册默认∈枚举 > 「—」；枚举空 ⇒ null）与 `effortPayloadValue`（「—」/`none`/空 → null ⇒ 删键）；`defaultEffortFor` 并入删除（零调用者） |
-| `thincoder-cli/src/tui/cmd-config.mjs` | — | 抽 `effortMenuLevels` 导出；**行数面 = 两条硬线**（判据同全仓 = `docs/core/design/DOC-GRAPH.md` §3） |
+| `thincoder-cli/src/tui/cmd-config.mjs` | — | 抽 `effortMenuLevels` 导出；**行数面 = 两条硬线**（判据同全仓 = `docs/core/standards/CODE-TIER.md`） |
 | `thincoder-cli/src/tui/cmd-advisor.mjs` | — | 归一 + 删档 + 回执 |
 | `thincoder-cli/src/tui/cmd-think.mjs` | — | 码面零改 |
 | DOC 侧（就地改写） | — | — |

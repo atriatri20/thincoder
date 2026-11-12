@@ -14,7 +14,7 @@
 > `thincoder-core/advisor/citations.mjs`（host-verified citations）· `thincoder-core/advisor/history.mjs`（响应表 / 对话背景提取）·
 > `thincoder-core/advisor/repos.mjs`（评审范围采集）· `thincoder-core/agent-tools/advisor.mjs` / `advisor-async.mjs`（工具面与异步池）·
 > `thincoder-core/agent-tools/advisor-settle.mjs`（结算 / 陈旧判定）· `thincoder-core/agent/record-results.mjs`（工具结果记账）· `thincoder-core/agent/completion.mjs`（完成 guard 推回）。
-> 尺寸档位义务（限源 / 测试文件：现量判定尺寸档位、行数与增量不落档）= 纪律层代码结构判据节——文档规范节不承载该义务；核查用的尺寸档位判据数值 = `docs/core/design/DOC-DISCIPLINE.md` §3.10「尺寸档补充登记」（**数值单源**）；评审核查维度行为 = 本档 §9 ∥ §14 ∥ §15 ∥ §16 ∥ §17。
+> 尺寸档位义务（限源 / 测试文件：现量判定尺寸档位、行数与增量不落档）= 纪律层代码结构判据节——文档规范节不承载该义务；评审席核查本批源码档该不该拆时按这一条找数与判法：数值 = 代码与提示词面的字面量：500 落在 `thincoder-core/agent-tools/batch-tier-gate.mjs` 的 `FILE_SOFT_MAX`，800 没有常量承载；判法语义单源 = `docs/core/standards/CODE-TIER.md`；评审核查维度行为 = 本档 §9 ∥ §14 ∥ §15 ∥ §16 ∥ §17。
 
 ## 1. 目标
 
@@ -417,11 +417,11 @@ if (!pending                          // 异步评审在飞/排队 → 未决不
 
 ## 9. 源码档尺寸档位核查（设计评审维度）
 
-> 权威链（指环单向化）：尺寸档位**义务**（限源 / 测试文件；量出来的数只用于定尺寸档位，不落档）= 纪律层代码结构判据节；**判据数值单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.10「尺寸档补充登记」**；核查维度行为语义 = 本节；执行实现 = 设计评审提示词的对应维度。
+> 权威链（指环单向化）：尺寸档位**义务**（限源 / 测试文件；量出来的数只用于定尺寸档位，不落档）= 纪律层代码结构判据节；**评审席核查本批源码档尺寸档位时按这一条找数与判法：数值 = 代码与提示词面的字面量：500 落在 `thincoder-core/agent-tools/batch-tier-gate.mjs` 的 `FILE_SOFT_MAX`，800 没有常量承载；判法语义单源 = `docs/core/standards/CODE-TIER.md`**；核查维度行为语义 = 本节；执行实现 = 设计评审提示词的对应维度。
 
 advisor design review 标准维度补一条：
 
-- **源码档尺寸档位核查**：本批要动的源 / 测试档（清单取自**批档 §2**——**设计档不设「受影响文件」表**：那张表答的是「这一批改了哪些档」，是一次性执行记录，住状态档就是一份没人回来更新的过期账），评审席按样本抽样、**逐档自行现量**，按 `docs/core/design/DOC-DISCIPLINE.md` §3.10 的判据数值判它该不该拆。**判据两条**：① 越档者逐档给拆分计划（点名拆点与迁入档）；② **设计档内不出现行数 / 增量数值——出现即报**（数值带时刻，抄进状态档即从「某刻的事实」变成「一句明天就旧的话」）。`.md` 档零尺寸档位义务（不判尺寸档位 / 不写拆分计划）。
+- **源码档尺寸档位核查**：本批要动的源 / 测试档（清单取自**批档 §2**——**设计档不设「受影响文件」表**：那张表答的是「这一批改了哪些档」，是一次性执行记录，住状态档就是一份没人回来更新的过期账），评审席按样本抽样、**逐档自行现量**，评审席判它该不该拆时按这一条找数与判法：数值 = 代码与提示词面的字面量：500 落在 `thincoder-core/agent-tools/batch-tier-gate.mjs` 的 `FILE_SOFT_MAX`，800 没有常量承载；判法语义单源 = `docs/core/standards/CODE-TIER.md`。**判据两条**：① 越档者逐档给拆分计划（点名拆点与迁入档）；② **设计档内不出现行数 / 增量数值——出现即报**（数值带时刻，抄进状态档即从「某刻的事实」变成「一句明天就旧的话」）。`.md` 档零尺寸档位义务（不判尺寸档位 / 不写拆分计划）。
 
 ## 10. 工程模式集成（收敛相关）
 
@@ -435,7 +435,7 @@ advisor design review 标准维度补一条：
 
 ## 11. 配置
 
-- 项目级 `.thincoder/advisor.md`：评审准则覆盖——存在则替换内置默认准则（正确性 / 安全 / 一致性 / 完整性 / 可维护性五维）；项目可在覆盖文件里追加规则（如本仓的文件尺寸档：过 500 须给拆分方案 ∥ 过 800 先拆再落，语义单源 = `docs/core/design/DOC-GRAPH.md` §3）。
+- 项目级配置目录 `.thincoder/` 里的 `advisor` 覆盖文件：评审准则覆盖——存在则替换内置默认准则（正确性 / 安全 / 一致性 / 完整性 / 可维护性五维）；项目可在覆盖文件里追加规则（如本仓的文件尺寸档：过 500 须给拆分方案 ∥ 过 800 先拆再落，语义单源 = `docs/core/standards/CODE-TIER.md`）。
 - `config.json`：`advisor.provider` / `advisor.model` 可选覆盖主 agent 的 provider / model；`advisor.guard` 为 completion guard 开关（默认 false）。
 - **轮次提示词硬加载**：四份提示词文件缺失即抛错（防静默降级到劣质内置 prompt）。
 
@@ -580,7 +580,7 @@ thincoder-core/advisor/loop.mjs
 - ① 生产上报——评审者在设计评审里调 `doc_check` 拿到 `Error (execution_error)`；评审既拿不到判决，B 面的死结也由此坐实。
 - ② 复现——在评审工具集上调一次 `doc_check`。
 
-**勘察证据行**：查过 = 本仓 `docs/core/design/BATCH-RECORD.md` §4.22（同一链的 B ∥ C 面）· `docs/core/design/DOC-CHECK.md` §8（引擎面边界）· `thincoder-core/advisor/loop.mjs` · `thincoder-core/agent/dispatch-run.mjs` · `thincoder-core/agent-tools/doc-check.mjs` —— **相关**。
+**勘察证据行**：查过 = 本仓 `docs/core/design/BATCH-RECORD.md` §4.9（同一链的 B ∥ C 面）· `docs/core/design/DOC-CHECK.md` §8（引擎面边界）· `thincoder-core/advisor/loop.mjs` · `thincoder-core/agent/dispatch-run.mjs` · `thincoder-core/agent-tools/doc-check.mjs` —— **相关**。
 
 - 仓外声明源本面未查：判据全部落本仓代码与设计档，无外仓可对齐项（如实记）。
 

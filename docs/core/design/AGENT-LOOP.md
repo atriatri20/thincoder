@@ -72,7 +72,7 @@
 
 两面语义同源（挂起状态机：池 live → 挂起；用户输入优先 → 消化轮 → 池空退出）、差异面 = **载体**与**呈现** ⇒ 按「机制归核 + 注入面」落核（非机械随迁——故 S1 报告列为未完成面）。
 
-**核内模块**：`thincoder-core/agent/suspension.mjs`（新档 · ≤500，设计器硬线；档位语义单源 = `docs/core/design/DOC-GRAPH.md` §3）。
+**核内模块**：`thincoder-core/agent/suspension.mjs`（新档 · ≤500，设计器硬线；档位语义单源 = `docs/core/standards/CODE-TIER.md`）。
 内容 = 挂起状态机：池 live 判据 · 竞态清扫（settle 未及移交 → pending）· 主循环（用户输入优先 → pending 消化轮 → 池空退出 → 等待 settle / 唤醒）· 消化轮驱动 · 唤醒栓 · 退出清场（abort = 清池不注入 / idle = 残余直注入）。**核内零文案、零渲染、零端名分支**（契约 5 / 10）。
 
 **现态**：**挂起面单源 = 核驱动（三端消费）**——CLI ∕ VSC ∕ desktop 皆以 `startSuspension` 为唯一驱动，端差只在装配面（carrier ∕ hooks ∕ 输入缝）。

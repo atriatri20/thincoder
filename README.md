@@ -23,11 +23,9 @@ Every command runs inside the product directory — all paths are product-relati
 ```bash
 cd thincoder-cli && npm install && npm run lint && npm test
 cd thincoder-vscode && npm install && npm run lint && npm test
-cd thincoder-vscode && npm run doc:check   # repo-root domain doc check — not a gate step; same command as the CI docs job
 ```
 
-Entry points: `thincoder-cli/AGENTS.md` · `thincoder-cli/docs/README.md` (CLI) and `thincoder-vscode/AGENTS.md` ·
-`thincoder-vscode/docs/README.md` (extension).
+Entry points: `thincoder-cli/AGENTS.md` (CLI) and `thincoder-vscode/AGENTS.md` (extension).
 
 ## History notes
 
@@ -41,25 +39,27 @@ Entry points: `thincoder-cli/AGENTS.md` · `thincoder-cli/docs/README.md` (CLI) 
 
 ## Project docs
 
-Project-level documents — the cross-product layer (ledger · board requirements/design · batch records) — live under
-`docs/`. See `docs/README.md` for the map and the **staged migration policy**: new project-level documents go there
-from now on; existing ones stay where they are as **references** and migrate when their surface is next touched.
-Per-product docs remain in each product tree (`thincoder-cli/docs/` · `thincoder-vscode/docs/`).
+Project-level documents — the cross-product layer (board requirements/design · batch records) — live under `docs/`.
+See `docs/README.md` for the map and the **staged migration policy**.
+
+New project-level documents go there from now on; existing ones stay where they are as **references** and migrate when
+their surface is next touched.
+
+The per-product document trees are retired: `thincoder-cli/docs/` keeps only the phase-1 files left in place, and the
+extension tree has none.
 
 ## Merge record
 
 Requirements, design and batch record for the layout change (phase 1 · TWO-REPO-MERGE) still live in the CLI tree as
 references pending migration:
+
 `thincoder-cli/docs/requirements/TWO-REPO-MERGE.md` · `thincoder-cli/docs/design/TWO-REPO-MERGE.md` ·
 `thincoder-cli/docs/batches/2026-09-13-TWO-REPO-MERGE.md`.
 
 ## Project ledger
 
-The merged repository keeps a single project ledger at the repository root — the two per-product ledgers
-were retired in the 2026-09-13 single-ledger consolidation:
+The project ledger (open requirement points + tech backlog) is not a repository file: it is a SQLite database in the
+user data directory, keyed by the project root, read through the `ledger` query surface.
 
-| Path | What it holds |
-|---|---|
-| `docs/TODO.md` | open items — requirement pool (user requirement points) + tech backlog (design debt / review findings) |
-| `docs/TODO-archive.md` | closed items (resolved / withdrawn), moved out of the live file |
+`docs/TODO.md` is the retired markdown predecessor, kept on disk as history.
 

@@ -343,7 +343,7 @@
 | `thincoder-desktop/CHANGELOG.md`（发布窗首建 · 已落） | 桌面 CHANGELOG（首发段——本档 §2.2 ∥ `docs/RELEASE.md` §5.2 步 2） |
 | `thincoder-desktop/src/main/update.mjs`（新档 · 已落） | 自动更新（应用侧——策略面） |
 
-**行数判据（本表不载行数）**：文件体量按 `doc_check` 的 `lines` 读数面量取，阈值为设计器硬线 500 ∥ 其他检查硬线 800（语义单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）；结论只写「越线与否」与同尺比较，不写绝对值（口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 行数行）。
+**行数判据（本表不载行数）**：文件体量按 `doc_check` 的 `lines` 读数面量取，阈值为设计器硬线 500 ∥ 其他检查硬线 800（语义单源 = `docs/core/standards/CODE-TIER.md`）；结论只写「越线与否」与同尺比较，不写绝对值（口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.30.1 行数行）。
 ## 4. 验收回指（D12 ∥ D32）
 
 ### 4.1 功能点（D12）

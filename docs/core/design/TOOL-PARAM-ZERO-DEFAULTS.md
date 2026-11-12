@@ -129,7 +129,7 @@
 
 **清单行数 = 下表行数**（不另设概数）。
 
-**档层结论**：越线 0 档——本表 10 个源档全部落在工具内置软线 ∥ 硬线之内，无一档需拆分。量法 = 对下表 10 个源档跑一次 `doc_check({action:"report", lines:[…]})`（命令 = `doc_check` 的 `lines` 读数）；逐档行数留在批档与交付报告，不写进本档。
+**档层结论**：越线 0 档——本表 10 个源档全部落在工具内置软线 ∥ 硬线之内，无一档需拆分。量法 = 对下表 10 个源档跑一次 `countContentLines`（`thincoder-core/agent-tools/batch-tier-gate.mjs`——末行换行不计）；逐档行数留在批档与交付报告，不写进本档。
 
 ### 4.1 源档
 
@@ -228,12 +228,12 @@ node --test docs/batches/2026-11-07-tool-param-zero-defaults.test.mjs
 
 **两行对同一个调用断言相反结论**（一行「不传 ⇒ `PASS`」，一行「不传 ⇒ `ERROR`」）。盘上真值 = 不传 ⇒ 取会话锚作声明根 ⇒ 照判（`thincoder-core/agent-tools/doc-check.mjs` 逐字「`target` 缺省时锚即声明根——工作区锚照它判」）⇒ `36-1` 是真账，`29-2` 是假账（今天就是红的）。本批的裁定让真值反转（`target` 必填 ⇒ 不传 ⇒ 拒），两行都要动：
 
-- **破行 = 3**（`target` 变必填后，入参不带 `target` 的调用一律被拒 ⇒ 判据不再成立；三行同属 `test/integration/doc-check-per-file-root.test.mjs`，改写形一律 = 入参补 `target` = 该工作区的绝对路径——工作区作声明根是合法值，各档仍按自身根判）：
-  1. `test/rtm/guard.md` 的 `36-1`——期望三句不变（首行 `PASS` + 两个项目根 + 一条 verdict）；异常列删「缺省 = 会话锚即声明根」半句、改「`target` 必填：不传 ⇒ 拒、点名 `target`；本行钉的是『目标 = 工作区、清单跨两项目 ⇒ 各档按自身根判』」。跑者 = `test/integration/doc-check-per-file-root.test.mjs`（入参补 `target`）。
-  2. 同档 `36-2`——入参同样不带 `target`（逐字「一次交付调用 `doc_check({mode:"gate", docs:[两档]})`」）；判据（两条互不相同的行首标签 + 一条 verdict）不变。跑者 = `test/integration/doc-check-per-file-root.test.mjs`（入参补 `target`）。
-  3. 同档 `36-3`——入参逐字「一次交付调用 `doc_check({mode:"gate", docs:[A 档, B 档]})`，不传 `target`」；判据（首行 `REFUSED（锚 1 条）` + 唯一命中属 A 档）不变。跑者 = `test/integration/doc-check-per-file-root.test.mjs`（入参补 `target`）。
+- **破行 = 3**（`target` 变必填后，入参不带 `target` 的调用一律被拒 ⇒ 判据不再成立；改写形一律 = 入参补 `target` = 该工作区的绝对路径——工作区作声明根是合法值，各档仍按自身根判）：
+  1. `test/rtm/guard.md` 的 `36-1`——期望三句不变（首行 `PASS` + 两个项目根 + 一条 verdict）；异常列删「缺省 = 会话锚即声明根」半句、改「`target` 必填：不传 ⇒ 拒、点名 `target`；本行钉的是『目标 = 工作区、清单跨两项目 ⇒ 各档按自身根判』」。
+  2. 同档 `36-2`——入参同样不带 `target`（逐字「一次交付调用 `doc_check({mode:"gate", docs:[两档]})`」）；判据（两条互不相同的行首标签 + 一条 verdict）不变。
+  3. 同档 `36-3`——入参逐字「一次交付调用 `doc_check({mode:"gate", docs:[A 档, B 档]})`，不传 `target`」；判据（首行 `REFUSED（锚 1 条）` + 唯一命中属 A 档）不变。
 - **假账改正 = 1**：`test/rtm/paths.md` 的 `29-2`——判据列的「文档门照判不拒」在盘上早已不成立（真值是拒），本批把该笔改成新契约下的报明形「拒 + 报文点名 `target`」（三面仍是「各一笔报明形」的故事）；「工作区作声明根照判」那一面移入 `36-1` 的改写形，不在两行重复断。跑者 = `test/integration/path-resolution.test.mjs`（入参补 `target`；判据按本条改写）。
-- **跑者同改 = 6 档**：参数改必填即改契约，契约的调用点必须同改——入参补 `target`（各档夹具根）∥ `async:false`，判据除 `29-2` 那笔外一字未动：`test/integration/doc-check-per-file-root.test.mjs` ∥ `test/integration/doc-check-fence-verdict.test.mjs` ∥ `test/integration/doc-check-line-counts.test.mjs` ∥ `test/integration/doc-check-line-refs.test.mjs` ∥ `test/integration/batchdoc-reuse-guard.test.mjs` ∥ `test/integration/path-resolution.test.mjs`。
+- **跑者同改 = 2 档**：参数改必填即改契约，契约的调用点必须同改——入参补 `target`（各档夹具根）∥ `async:false`，判据除 `29-2` 那笔外一字未动：`test/integration/batchdoc-reuse-guard.test.mjs` ∥ `test/integration/path-resolution.test.mjs`。
 - **冗余行 = 0**。
 - **缺的行 = 0**：缺参拒这一面已落在改写后的 `29-2` 第三笔上（同一业务面、同一报文）；另立一行会与它断言同一行为。若评审裁定该面须归故事 36 自己的账，`test/rtm/guard.md` 故事 36 下 `36-4` 号未占（`36-1` ∥ `36-2` ∥ `36-3` 在盘），行名与落行由实施轮的 RTM 改动落定。
 - **单元档**：与批档同名同目录（命令见 §6.2），AC-1..AC-8 各一法，用毕即删。

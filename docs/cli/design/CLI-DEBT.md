@@ -1,8 +1,8 @@
 # CLI 产品树残留债（CLI-DEBT）· CLI 面 · 设计
 
 > 板块 = **CLI 产品树残留债**——`thincoder-cli/**` 的**档位（行数档）登记活账** + 结构 / 一致性尾项登记。
-> 对位册 = `docs/vsc/design/VSC-DEBT.md` §12.1（VSC 越档登记）· 核内对应登记面 = `docs/core/design/DOC-DISCIPLINE.md` §3.10（尺寸档补充登记——该节只给指针、不复述判法）。
-> 判据源 = 单源 `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」（设计时判一次 500 ∥ 收口时判一次 800，中间一概不判）+ 各批既有裁定（逐条注源）。
+> 对位册 = `docs/vsc/design/VSC-DEBT.md` §12.1（VSC 越档登记）· 本册登记 CLI 越档活账，读者顺着它要找判据与数值：数值 = 代码与提示词面的字面量：500 落在 `thincoder-core/agent-tools/batch-tier-gate.mjs` 的 `FILE_SOFT_MAX`，800 没有常量承载；判法语义单源 = `docs/core/standards/CODE-TIER.md`。
+> 判据源 = 单源 `docs/core/standards/CODE-TIER.md`（设计时判一次 500 ∥ 收口时判一次 800，中间一概不判）+ 各批既有裁定（逐条注源）。
 > 论域 = `thincoder-cli/**`（`node_modules/` · `docs/_archive/` 除外；含 `bin/` `src/` `test/`）。
 
 ## 1. 定位与收录口径（判据句）

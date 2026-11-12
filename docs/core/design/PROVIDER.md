@@ -1338,7 +1338,7 @@ R7 畸形参数的处置只在单元层断言（T-7）——它不是生产报�
 
 **survey-evidence**：
 
-- **外部源**：`PROJECT-MANIFEST.json` 的 `index.publicRepos` 实读 = `["../.thincoder","../thincoder.com"]`；两仓在盘目录清单（`../.thincoder/advisor.md` ∥ `../thincoder.com/AGENTS.md` 等）文件名无渠道准入机制档特征，未逐档打开。
+- **外部源**：`PROJECT-MANIFEST.json` 的 `index.publicRepos` 实读 = `["../.thincoder","../thincoder.com"]`；两仓在盘目录清单（`../thincoder.com/AGENTS.md` 等）文件名无渠道准入机制档特征，未逐档打开。
 - **本仓**：需求层 `docs/core/requirements/`、设计层 `docs/core/design/CONFIG.md`、本档既有条目过滤先例。
 - **结论**：**none relevant**——外部源无渠道条目准入规则可对位；取形 = 用户 2026-11-08 裁定「甲（丢弃 + 告警）」+ F-4 软失败先例；盘面 = 不重写被丢弃那条 = **父侧裁定**（用户未就此表态）。
 
@@ -1522,7 +1522,7 @@ export function buildProviderEntries({ providers, activeProvider, activeModel, d
 
 重读本体 = `thincoder-core/config-reload.mjs` 的 `reloadProviders(agent)`，返回 `{ ok, dropped, error? }`（`dropped` 恒为 `string[]`，无丢弃即 `[]`），不 throw——出词归调用方。
 
-该档从 `thincoder-core/config.mjs` 整段抽出（越 `docs/core/design/DOC-DISCIPLINE.md` §3.10 的 500 行软线后按本节候选线移出）；`thincoder-core/config.mjs` 以 re-export（`export { reloadProviders }`）保持导入面，调用点零改。
+该档从 `thincoder-core/config.mjs` 整段抽出（越 `docs/core/standards/CODE-TIER.md` 的设计时 500 行线后按本节候选线移出）；`thincoder-core/config.mjs` 以 re-export（`export { reloadProviders }`）保持导入面，调用点零改。
 
 **重读点**：`thincoder-cli/src/tui/model-picker.mjs` 的 `openModelPicker()`——构造条目之前先重读，再把 `agent.providers` 与 `agent.config.providersDropped` 喂给抽出的 `buildProviderEntries`（import 自新模块）。
 

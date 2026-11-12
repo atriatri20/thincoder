@@ -206,14 +206,14 @@ list : unknown — no project owns this write's target
 
 **tier 结论**：**无 tier 跨界**——无目录迁移、无模块边界挪动；本批新增的唯一档是本批单测档（与批档同名同目录，随收口删除，不是常驻件）。`declaration.mjs` 的新导出经 `conventions.mjs` 转口一行，与既有 `declaredPublicRoots` 同形，不是第二套解析。
 
-**尺寸越线两处（点名 + 分拆方向）**：两个档过 500（设计器硬线；读数住批档 §2）——各须给分拆方案，方向如下；最终切点与档名由执行那一批定（判据单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）。
+**尺寸越线两处（点名 + 分拆方向）**：两个档过 500（设计器硬线；读数住批档 §2）——各须给分拆方案，方向如下；最终切点与档名由执行那一批定（判据单源 = `docs/core/standards/CODE-TIER.md`）。
 
 - `test/integration/batch-live-batch-lock.test.mjs`：按故事号分档——`12-` 一族用例搬新档，本档留其余故事。
 - `thincoder-core/agent/write-gate-ledger.mjs`：判序独立成档（`ledgerGateTargets` 的判序 ①–⑥ 各支），表可读性与两条拒文留本档。
 
-其余在表 source ∥ test 档现行读数未过 500——不提分拆；在表 `.md` 档（工具描述 ∥ 提示词 ∥ RTM）不受行数限制（口径单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」的「对象」行；逐档读数住批档 §2 的读数块）。
+其余在表 source ∥ test 档现行读数未过 500——不提分拆；在表 `.md` 档（工具描述 ∥ 提示词 ∥ RTM）不受行数限制（口径单源 = `docs/core/standards/CODE-TIER.md`的「对象」行；逐档读数住批档 §2 的读数块）。
 
-**核法**：上表每个 source ∥ test 档各按行数量一次（`doc_check` 的 `lines` 读数）；档位判据与失败侧单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」，本档不另写阈值。读数住批档 §2，不入本档。
+**核法**：上表每个 source ∥ test 档各按行数量一次（`doc_check` 的 `lines` 读数）；档位判据与失败侧单源 = `docs/core/standards/CODE-TIER.md`，本档不另写阈值。读数住批档 §2，不入本档。
 
 **取面入口的实读坐标（两条，均本批零改）**：
 
@@ -260,7 +260,7 @@ thincoder-core/agent/dispatch.mjs       : import { faceOf } from "./write-face.m
 | AC-3 | R3 口子开 | 写方 `W` 声明目标目录、带 `W` 的**在途**号、`project:<W>` ⇒ 写放行且字节落盘；同夹具把号换成 `W` 的 `已核销` 行 ⇒ 拒且 `errors` 点名该状态词、目标字节零变（sha256） |
 | AC-4 | R4 未声明照拒 + 目标仓零影响 | 目标属另一项目、`W` 有声明而表不含 ⇒ 拒——**无条件**，目标仓账上有没有这个号都拒；拒文含 `target belongs to another project and index.writableRepos` 与 `does not declare it`。**负向锁**：同夹具**不带 `project`** ⇒ 与本批前逐字同（`row #N does not exist in this project's ledger`）。目标仓台账 `query` 前后逐行相等（门不写目标仓账） |
 | AC-5 | R4 零回归 | 未声明 / 缺键 `index.writableRepos` 的档：**同项目写（钉成 `R = W`：本笔不带 `project`，或 `project` 恰是目标自己的项目根）** · `bash` ∥ `memory` ∥ `execute` 声明支 · 工作区窄口（12-16 两格 + 12-18 第一格：表空 ⇒ 维持现状）逐条与改前等值；`manifest` 三动作不属本格——它整把不进本门（行 = 12-15，判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.3）。写方树内另一个带 manifest 的项目**不在此格**（`R ≠ W`，见 AC-14） |
-| AC-6 | R6 提示词 / 工具面同拍 | `thincoder-core/tool-docs/manifest.md` 含 `17 writable nodes` 与 `index's 8 sub-keys`，键目录含 `index.writableRepos` 一条；`thincoder-core/prompts/persona-engineering.md` 台账节含 `index.writableRepos` 且带「本仓」归属句；`thincoder-core/prompts/discipline-engineering.md` 第 7 条含 `index.writableRepos`（表内照写 ∥ 表外停下上报两句都在档） |
+| AC-6 | R6 提示词 / 工具面同拍 | `thincoder-core/tool-docs/manifest.md` 含 `16 writable nodes` 与 `index's 7 sub-keys`（= 3 整键 + `docRoot` 6 子键 + `index` 7 子键；两个数字随 schema 变，以 `MANIFEST_SCHEMA` 为准，键目录单源 = `docs/core/design/MANIFEST.md` §2.2），键目录含 `index.writableRepos` 一条；`thincoder-core/prompts/persona-engineering.md` 台账节含 `index.writableRepos` 且带「本仓」归属句；`thincoder-core/prompts/discipline-engineering.md` 第 7 条含 `index.writableRepos`（表内照写 ∥ 表外停下上报两句都在档） |
 | AC-7 | R7 外部仓面判与本地等同（复核、零改） | 外部仓（有 manifest，`docRoot.design` = `<仓>/docs/design`）：① `<仓>/docs/design/x.md` 为目标 ⇒ 单测缝上 `faceDetail(<目标>).reason` = `doc-root`，**设计门不问**（文档面 = 放行面，与本地同一处逐条相同），写门仍按 §2.2 ① 判本仓号 ⇒ 带本仓在途号放行；② `<仓>/src/x.mjs` 为目标 ⇒ `reason` = `product`，设计门按产品面拦：无活设计槽 ⇒ 拒，带活设计槽 ⇒ 过；③ 声明目录祖先链无 manifest ⇒ `reason` = `out-of-jurisdiction`（辖界不是面，设计门不管——该句 `reason !== "product"` 即 `continue`），写门仍判号。`W` 的 `docRoot` 改成什么都改不动这三条结果 |
 | AC-8 | R1 边界：读 ≠ 写 | 夹具：本仓 `index.publicRepos:["../other"]`、`index.writableRepos` 缺键；`../other` 带 `PROJECT-MANIFEST.json`（与 AC-9 的 B 同款——新串的出现条件要求 `R` 有）；目标 `<..>/other/src/x.mjs`；本仓在途号 + `project:<本仓根>` ⇒ 拒，新串点名 `index.writableRepos`。同一夹具把 `../other` 挪进 `writableRepos` ⇒ 同一笔放行。两格放行结果不同即成立 |
 | AC-9 | R1 边界：不推导 | 夹具：会话锚下两个带 manifest 的兄弟项目 A（本仓）∥ B，`index.writableRepos` 缺键；目标 `<锚>/B/src/x.mjs`；A 的在途号 + `project:<A>` ⇒ 拒（② 无条件拒——与 B 的账上有没有同号行无关 ⇒ 新串）。把 `<锚>/B` 写进 A 的 `writableRepos` ⇒ 同一笔放行；工作区窄口两格逐字零变 |

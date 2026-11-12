@@ -1,14 +1,13 @@
 /**
- * path-resolution.test.mjs — 集成用例 29-1 … 29-5（RTM CLI 端故事 29「路径解析统一层」）。
+ * path-resolution.test.mjs — 集成用例 29-1 … 29-4（RTM CLI 端故事 29「路径解析统一层」）。
  *
- * 判据原文 = `test/RTM.md` 第 29 节；机制 = `docs/core/design/PATH-RESOLUTION.md` §2 / §2.6 / §2.7。
+ * 判据原文 = `test/rtm/paths.md` 第 29 节；机制 = `docs/core/design/PATH-RESOLUTION.md` §2。
  * 业务入口全部是真工具调用（`batch` / `ledger` / `doc_check`），断言的是**回执文本与落盘结果**——
  * 不是内部函数返回值。夹具 = 系统临时域（零落仓 + 并发免疫）；台账缝 `_setLedgerDirForTest` 隔离真实用户目录。
  *
- * 五行对应关系（行号 = RTM 定死的号）：
+ * 四行对应关系（行号 = RTM 定死的号）：
  * 29-1 裸档名 ⇒ 批档写入落盘、门不再判档缺 · 29-2 三面同一句报明（拒 + 候选全列）·
- * 29-3 文档门：缺哪一段 + 同名候选 · 29-4 声明出边：已声明在盘照判 / 未声明即拒 · 29-5 形态错仍阻断（文档面 / 台账面两面差）·
- * 29-6 唯一后缀兜底：恰一处 ⇒ 解析并标解析方式；两处 ∥ 零处 ⇒ 仍判档缺（红绿并置）。
+ * 29-3 仓外一律不判（出仓的在盘 ∥ 不在盘都零输出）· 29-4 同名多处在册算「在」、零命中照拒。
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
@@ -70,9 +69,8 @@ const manifestOf = (publicRepos = []) => JSON.stringify({
 }, null, 2)
 
 function makeProject(files = {}, publicRepos = []) {
-  // **建在私有父目录下**（`<私有>/proj`）：第 6′ 步的前置读「项目根的同级目录名」，夹具根若直接落在
-  // `tmpdir()` 下，同级集合就是共享的系统临时目录 ⇒ 多段 token 那几行（29-6 的包内相对形）会隐含依赖
-  // 「/tmp 里没有同名目录」这件环境事实。
+  // **建在私有父目录下**（`<私有>/proj`）：夹具根不直接落在 `tmpdir()` 下，免得同级目录里的东西
+  // （别的夹具、系统临时物件）参与判定——每个夹具只答自己那一档的事。
   const parent = mkdtempSync(join(tmpdir(), "pr-int-proj-"))
   TMP.push(parent)
   const root = join(parent, "proj")
@@ -138,109 +136,49 @@ test('CLI 29-2 工作区锚：批档 / 台账 / 文档门三面各一笔报明�
   assert.doesNotMatch(gate, /DOC-CHECK GATE: ERROR（多项目工作区：请指名 target）/, `target 必填后不再走歧义支，实际：${gate}`)
 })
 
-// ── 29-3 文档门：裸档名不在任何基根 ⇒ 报「缺哪一段」+ 同名候选 ───────────────
-//    夹具的裸名在**两处**深处同名：唯一后缀（恰一处）自 2026-11-08 起由第 6′ 步解析（见 29-6），
-//    所以本行要守的「候选不产受理」必须落在「定位得到、但不是唯一那处」这一形上。
-test('CLI 29-3 文档门判档：裸名两层基根零命中 ⇒ 报缺哪一段 + 同名候选（"你是不是指这个"）', { timeout: 60_000 }, async (t) => {
+// ── 29-3 仓外一律不判（需求 F4 ∥ AC-4）──────────────────────────────
+// 判据单源 = `docs/core/design/DOC-CHECK.md` §4「仓外一律不看」：`../` 开头的 token 一个字都不出——
+// 在盘的不报、不在盘的也不报（门不知道别的仓长什么样）。反向控制：仓内真悬空照拦。
+test('CLI 29-3 仓外一律不判：`../` 出仓（在盘 ∥ 不在盘）零输出、首行 PASS；仓内真悬空照拒', { timeout: 60_000 }, async () => {
   const root = makeProject({
-    "docs/core/design/modules/域/guide-topic.md": "# 深处的档\n\n正文。\n",
-    "docs/core/design/modules/另一域/guide-topic.md": "# 另一份深处的档\n\n正文。\n",
+    "docs/outside.md": "# 域外两条\n\n① ../../outside/docs/hit.md\n\n② ../../outside/docs/miss.md\n",
+    "docs/inside.md": "# 仓内真悬空（反向控制）\n\n① docs/ghost-in-proj.md\n",
   })
-  put(root, "docs/core/design/prose.md", "# 正文面\n\n去读 guide-topic.md 那份。\n")
-  const report = String(docCheckTool.execute({ mode: "report", docs: ["docs/core/design/prose.md"], target: root }, ctx0(root)))
+  // 域外那一侧放一份**真实存在**的档：在盘与不在盘两种都零输出，才是「一律不判」
+  mkdirSync(join(dirname(root), "outside", "docs"), { recursive: true })
+  writeFileSync(join(dirname(root), "outside", "docs", "hit.md"), "# 域外在盘档\n")
+  // 判据走**诊断面**（`report` = 判整份）：`gate` 只判本批变更区，而这里没有绑定的批档 —— 没有变更区就没东西可判。
+  const run = (doc) => String(docCheckTool.execute({ mode: "report", docs: [doc], target: root }, ctx0(root)))
 
-  assert.match(report, /✗ 锚·档缺 docs\/core\/design\/prose\.md:3/, `命中原行，实际：${report}`)
-  assert.match(report, /缺「guide-topic\.md」/, `报缺的那一段，实际：${report}`)
-  assert.match(report, /盘上同名：.*modules\/域\/guide-topic\.md/, `列同名候选（不产命中档），实际：${report}`)
-  assert.match(report, /后缀命中 2 处：/, `两处同名 ⇒ 后缀兜底也判不出唯一（候选只提示，实际：${report}`)
+  const out = run("docs/outside.md")
+  assert.equal(out.split("\n")[0], "DOC-CHECK GATE: PASS", `仓外两条都不判：${out}`)
+  assert.doesNotMatch(out, /这个档不存在/, `仓外连命中行都不出：${out}`)
+
+  // 反向控制：仓外不判不是「凡解不到就不判」——仓内真悬空照拦（红侧）
+  const inside = run("docs/inside.md")
+  assert.match(inside, /DOC-CHECK GATE: REFUSED/, `仓内真悬空照拦：${inside}`)
+  assert.match(inside, /docs\/inside\.md docs\/ghost-in-proj\.md/, `命中行点名该档与该 token：${inside}`)
 })
 
-// ── 29-4 声明出边：已声明且根在盘 ⇒ 照判（含节号）；未声明的仓名 ⇒ 拒（不再是读数行）──
-test('CLI 29-4 文档门判跨仓引用：已声明且根在盘 ⇒ 零命中 PASS · 错节号 ⇒ 锚·节缺 · 未声明仓名 ⇒ 锚·档缺 + 同级候选与未声明注解 · 项目根下另配同后缀路径亦不兜底', { timeout: 60_000 }, async (t) => {
-  const parent = mkdtempSync(join(tmpdir(), "pr-int-cross-"))
-  TMP.push(parent)
-  const proj = join(parent, "proj")
-  mkdirSync(proj, { recursive: true })
-  writeFileSync(join(proj, "PROJECT-MANIFEST.json"), manifestOf(["../thin2"]))
-  // 已声明仓（本机在盘、有 manifest、档在盘、首节号 = 1）
-  mkdirSync(join(parent, "thin2", "docs"), { recursive: true })
-  writeFileSync(join(parent, "thin2", "PROJECT-MANIFEST.json"), manifestOf())
-  writeFileSync(join(parent, "thin2", "docs", "guide.md"), "# 对面仓\n\n## 1. 一节\n")
-  // 未声明仓：与 proj 同级、无 manifest
-  mkdirSync(join(parent, "otherside", "docs"), { recursive: true })
-  writeFileSync(join(parent, "otherside", "docs", "guide.md"), "# 对面仓\n")
-  put(proj, "docs/core/design/declared-ok.md", "# 已声明在盘\n\n① thin2/docs/guide.md\n")
-  put(proj, "docs/core/design/bad-section.md", "# 错节号\n\n① thin2/docs/guide.md §9.9\n")
-  put(proj, "docs/core/design/undeclared.md", "# 未声明\n\n① otherside/docs/guide.md\n")
-  // 同后缀路径（AC-20 ① 的守卫）：项目根下这一处使 `otherside/docs/guide.md` 在全仓恰一处后缀相符。
-  // 没这一处，本行只是「今天没撞上」；有它，兜底一旦在声明仓形上成立，未声明那一条即刻转绿。
-  put(proj, "pkg/otherside/docs/guide.md", "# 同后缀的假目标\n")
-  const run = (doc, mode) => String(docCheckTool.execute({ mode, docs: [doc], target: proj }, ctx0(proj)))
-
-  // ① 已声明 ∧ 根在盘 ∧ 档在盘 ⇒ 静默（与仓内指针同形）
-  const ok = run("docs/core/design/declared-ok.md", "gate")
-  assert.match(ok, /^DOC-CHECK GATE: PASS/, `已声明在盘档零命中，实际：${ok}`)
-  assert.doesNotMatch(ok, /锚·档缺|跨仓引用：/, `已声明形不再出读数行，实际：${ok}`)
-  // ② 已声明 ∧ 根在盘 ∧ 节号不在 ⇒ 锚·节缺（跨仓指针从此也管节号）
-  const sec = run("docs/core/design/bad-section.md", "report")
-  assert.match(sec, /✗ 锚·节缺 docs\/core\/design\/bad-section\.md:3/, `跨仓指针管节号，实际：${sec}`)
-  assert.match(sec, /无 §9\.9/, `点名缺的节号，实际：${sec}`)
-  assert.match(run("docs/core/design/bad-section.md", "gate").split("\n")[0], /REFUSED（锚 1 条）/, "节缺进闸")
-  // ③ 未声明仓名 ⇒ 锚·档缺 + 同级目录候选 + 一句未声明（从读数行变成拒绝）
-  const undeclared = run("docs/core/design/undeclared.md", "report")
-  assert.match(undeclared, /✗ 锚·档缺 docs\/core\/design\/undeclared\.md:3/, `未声明即拒，实际：${undeclared}`)
-  assert.match(undeclared, /本机同级目录：.*otherside/, `列同级候选，实际：${undeclared}`)
-  assert.match(undeclared, /该名未在 index\.publicRepos 声明/, `点名未声明，实际：${undeclared}`)
-  assert.doesNotMatch(undeclared, /后缀兜底读数/, `声明仓形不进兜底——没有解析出的指针，就没有读数块，实际：${undeclared}`)
-  assert.match(run("docs/core/design/undeclared.md", "gate").split("\n")[0], /REFUSED（锚 1 条）/, "未声明进闸")
-})
-
-// ── 29-5 形态错的跨仓引用：文档面仍阻断；改台账面 ⇒ 硬拒（KD-10 的可见差）──
-test('CLI 29-5 形态错的跨仓引用：文档门仍判缺（阻断）；同输入改台账面 ⇒ 硬拒', { timeout: 60_000 }, async (t) => {
-  const root = makeProject({ "docs/core/design/bad-form.md": "# 形态错\n\n借道：thin2/../escape.md\n" }, ["thin2"])
-  const report = String(docCheckTool.execute({ mode: "report", docs: ["docs/core/design/bad-form.md"], target: root }, ctx0(root)))
-  assert.match(report, /✗ 锚·档缺 docs\/core\/design\/bad-form\.md:3/, `形态错仍阻断，实际：${report}`)
-
-  // 台账面：同形跨仓指针（task_book 指向外部仓）⇒ 写门硬拒（L4 判据零改）
-  await seedRow(root, "docs/batches/2026-11-02-bad.md", { writeRecord: true })
-  const ledger = ledgerTool
-  const id = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title: "夹具行 · 跨仓指针" }, boundary: root })
-  await assert.rejects(
-    () => ledger.execute({ action: "update", id, status: "在途", task_book: "thin2/../escape.md" }, ctx0(root)),
-    /task_book 指向的档不存在/,
-    "台账面跨仓指针硬拒（文档面放宽、台账面不放宽）",
-  )
-})
-
-// ── 29-6 唯一后缀兜底：恰一处 ⇒ 解析（首行 PASS · 报面读数行计 1）；两处 ∥ 零处 ⇒ 仍判档缺 ──
-test('CLI 29-6 文档门判「包内相对」写法：唯一后缀 ⇒ PASS 且报面读数行计 1 · 同名两处 ∥ 零命中 ⇒ 锚·档缺', { timeout: 60_000 }, async (t) => {
+// ── 29-4「有就行」，不判唯一（用户 2026-11-12 裁定）──────────────────
+// 判据单源 = `docs/core/design/DOC-CHECK.md` §3：仓内任一档以该 token 结尾 ⇒ 在，不报；
+// 一份都没有 ⇒ 报。红绿并置：只留绿侧的话，把判据关掉的实现也能绿。
+test('CLI 29-4 同名多处在册 ⇒ 零输出、首行 PASS（不判唯一）；仓内零命中 ⇒ 拒、点名该 token', { timeout: 60_000 }, async () => {
   const root = makeProject({
-    // 唯一后缀：token 写成包内相对形（仓根相对不存在，靠第 6′ 步定位）
-    "thincoder-vscode/src/extension/workspace-guard.mjs": "export const guard = true\n",
-    // 同名两处：`src/dup.mjs` 后缀命中两个仓
-    "thincoder-vscode/src/dup.mjs": "export {}\n",
     "thincoder-core/src/dup.mjs": "export {}\n",
-    "docs/core/design/suffix-ok.md": "# 绿侧\n\n① src/extension/workspace-guard.mjs\n",
-    "docs/core/design/suffix-bad.md": "# 红侧\n\n① src/dup.mjs\n\n② missing/no-such-file-xyz.mjs\n", // ② 写成带目录段的形：裸写的代码族档名在形分档下不成候选（`docs/core/design/DOC-CHECK.md` §2.10.3）
+    "thincoder-vscode/src/dup.mjs": "export {}\n",
+    "docs/dup-ok.md": "# 同名两份\n\n① src/dup.mjs\n",
+    "docs/dup-bad.md": "# 零命中\n\n① missing/no-such-file-xyz.mjs\n",
   })
-  const run = (doc, mode) => String(docCheckTool.execute({ mode, docs: [doc], target: root }, ctx0(root)))
+  const run = (doc) => String(docCheckTool.execute({ mode: "report", docs: [doc], target: root }, ctx0(root)))
 
-  // ① 恰一处：路径解析出（节号没有 ⇒ 零命中），报面把解析方式与清账清单显式标出来
-  const okGate = run("docs/core/design/suffix-ok.md", "gate")
-  assert.match(okGate, /^DOC-CHECK GATE: PASS/, `唯一后缀应解析出、零命中，实际：${okGate}`)
-  const okReport = run("docs/core/design/suffix-ok.md", "report")
-  assert.match(okReport, /后缀兜底读数：how="suffix" 1 处/, `报面标出解析方式与处数，实际：${okReport}`)
-  assert.match(okReport, /src\/extension\/workspace-guard\.mjs ⇒ .*（1 处）/, `清账清单行形 = token ⇒ 绝对路径（N 处），实际：${okReport}`)
-  assert.match(okReport, /共 1 条 token · 1 处/, "末行总数行（N 与 M 由当次载荷算出）")
+  const ok = run("docs/dup-ok.md")
+  assert.equal(ok.split("\n")[0], "DOC-CHECK GATE: PASS", `同名两份是「在」、不是第三种结果：${ok}`)
+  assert.doesNotMatch(ok, /这个档不存在/, `gate 面一个命中行都不出：${ok}`)
 
-  // ② 两处 ∥ 零处：仍判档缺（兜底只答「能定位」，答不了「是哪一处」与「根本不存在」）
-  const badGate = run("docs/core/design/suffix-bad.md", "gate")
-  assert.match(badGate.split("\n")[0], /^DOC-CHECK GATE: REFUSED（锚 2 条）/, `两红同计，实际：${badGate}`)
-  const badReport = run("docs/core/design/suffix-bad.md", "report")
-  assert.match(badReport, /✗ 锚·档缺 docs\/core\/design\/suffix-bad\.md:3 `src\/dup\.mjs`/, `同名两处仍判缺，实际：${badReport}`)
-  assert.match(badReport, /后缀命中 2 处：/, `候选走后缀命中集（不并进「盘上同名」），实际：${badReport}`)
-  assert.match(badReport, /✗ 锚·档缺 docs\/core\/design\/suffix-bad\.md:5 `missing\/no-such-file-xyz\.mjs`/, `零命中仍判缺（反向控制），实际：${badReport}`)
-  assert.doesNotMatch(badReport, /后缀兜底读数/, "红侧零处：没有解析出的指针，就没有清账清单")
+  const bad = run("docs/dup-bad.md")
+  assert.match(bad, /DOC-CHECK GATE: REFUSED/, `零命中照拒：${bad}`)
+  assert.match(bad, /docs\/dup-bad\.md missing\/no-such-file-xyz\.mjs/, `命中行点名该 token：${bad}`)
 })
 
 /** 种一行未决账（批档写门 / 台账面用法与既有夹具同形）。 */

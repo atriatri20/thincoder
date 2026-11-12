@@ -68,7 +68,7 @@
 | M5 | 委派与 spawn 门 | `thincoder-core/agent-tools/subagent-spawn.mjs`（435 行·**修改**·as-of 2026-10-24，**拆分候选**）+ `thincoder-core/agent-tools/subagent-scheduler.mjs`（428 行·**修改**，**拆分候选**） | 工程角色任务书 = 批次档 §2（零任务书文本参数，命中即点名拒收）+ `round` + designToken；非工程角色 = 四项核心 + `scope`；files 声明面拦截 | §8.1–8.2 · §9.3 |
 | M6 | 评审凭证（advisor + token） | `thincoder-core/advisor.mjs`（274 行·**修改**）+ `thincoder-core/token-ttl.mjs`（286 行·**零改（继承）**）+ `thincoder-core/agent-tools/design-token.mjs`（118 行·**零改（继承）**） | 评审对象来源读 `docRoot`（唯一微调，继承 v1 不重写） | §8.5 |
 | M7 | checklist 废除 | 删 checklist 族 3 档 + 摘挂载/移除注入（核 2 + VSC 2）+ 死指针 2 + 门禁 1 + 测试 5——完整清单见接线表 | 待办跟踪统一到台账六态 | §5.2 · §10.1 |
-| M8 | 机检引擎 | `scripts/doc-check.mjs`（现状档 = 手跑面、零判据角色；判据面 = `thincoder-core/doc-check/index.mjs`） | 单引擎（锚 + 段判据）+ 参数内置常量（判据参数不落声明面）；台账一致性由 SQLite schema 承接（`check-ledger` 作废） | §8.7 |
+| M8 | 机检引擎 | `thincoder-core/doc-check/`（引擎：三条判据）∥ `thincoder-core/agent-tools/doc-check.mjs`（工具面：`target` / `mode` / `docs`） | 单引擎（三条判据）+ 参数内置常量（判据参数不落声明面）；台账一致性由 SQLite schema 承接（`check-ledger` 作废） | §8.7 |
 | M9 | 提示词单源承载 | `thincoder-core/prompts/`（16 档，唯一副本，运行期加载——落点 = 产品源码内固定路径，不读 manifest） | 提示词 = 产品代码单源（只承载「怎么执行」）；规则本体 = 机制文档 | §8.4 |
 | M10 | 测试纪律 | 产品各包清单档（**修改**）+ `test/run-fast|full|integration|slow-gate|slow`（**修改/删除**） | 三层门禁 → 一条 `test` 全绿 | §8.6 |
 | M11 | plan 面排除（FR31） | 核 `thincoder-core/agent/family-tools.mjs`（174 行·**修改**）+ `thincoder-core/agent-tools/plan.mjs`（86 行·**修改**）+ `thincoder-core/agent-tools/eng.mjs`（102 行·**修改**）+ `thincoder-core/session-lifecycle.mjs`（305 行·**修改**）；两端侧文件见接线表 + §2.3 E7 | 工程模式 plan 工具不入表 + 命令面拒绝（含 ACP 出口形态 / VSC 提示载体）+ `planMode` 清零（内存 + 槽） | §13.9 |

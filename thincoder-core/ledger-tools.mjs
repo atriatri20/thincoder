@@ -13,7 +13,7 @@
 import { existsSync } from "node:fs"
 import { isAbsolute, dirname, join, resolve } from "node:path"
 import { ledgerAdd, ledgerClose, ledgerCloseBatch, ledgerCount, ledgerQuery, ledgerUpdate, ledgerUpdateBatch } from "./ledger-cmd.mjs"
-import { noRootMessage, resolveLedgerRoot } from "./ledger-db.mjs"
+import { QUERY_PAGE_SIZE, noRootMessage, resolveLedgerRoot } from "./ledger-db.mjs"
 import { DESC } from "./tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/ledger.md（DESC 单解析面）
 
 /** 指针值 → 文件路径（剥 `§N` 段号；空值跳过）。 */
@@ -54,6 +54,53 @@ const startOf = (ctx, anchor, explicit, ...ptrs) => (explicit != null ? resolve(
 function assertLedgerStart(start, boundary) {
   if (!existsSync(start)) return
   if (!resolveLedgerRoot(start, boundary)) throw new Error(noRootMessage(start, boundary))
+}
+
+// ── 分页（设计档 `LEDGER.md` §7.2「分页」条——`query` 工具面；核仍全量） ───────────────
+
+/** 排序键（§7.2「无时间戳行的位置」）：`updated_at ?? created_at ?? ""`（两列皆空的存量行键 = 空串）。
+ *  写入侧 `ledgerAdd` 恒置两列 ⇒ 空串形只来自迁移进来的存量行。定宽 UTC ISO 串（`nowIso`）⇒ 字典序 =
+ *  时序，游标按串比较即成立；空串字典序最小 ⇒ 倒序里恒居末位（当最旧处理）。 */
+const pageSortKeyOf = (r) => r.updated_at ?? r.created_at ?? ""
+
+/** 倒序比较：排序键倒序，同键按 `id` 倒序（兜底键——同刻多行才有确定次序）。 */
+const pageSortDesc = (a, b) => {
+  const ka = pageSortKeyOf(a), kb = pageSortKeyOf(b)
+  return ka === kb ? b.id - a.id : ka < kb ? 1 : -1
+}
+
+/** 游标形判（§7.2「游标形」）：`"<排序键>|<id>"`——首个 `|` 之前是排序键（任意串、可为空），之后是十进制
+ *  正整数；不合 ⇒ 拒，**不静默回首页**（静默回退把「游标打错」伪装成「已翻到头」，读的人不会再核第二遍）。
+ *  判于 `ledgerQuery` 之前 ⇒ 非法游标零库动作。 */
+function parseQueryCursor(raw) {
+  const bad = () => new Error(`ledger(query)：cursor 非法：${argPreview(raw)}（应为「<updated_at>|<id>」，照上一页尾行原样传入）`)
+  if (typeof raw !== "string") throw bad()
+  const sep = raw.indexOf("|")
+  const idText = sep < 0 ? "" : raw.slice(sep + 1)
+  if (!/^[0-9]+$/.test(idText) || Number.parseInt(idText, 10) <= 0) throw bad()
+  return { key: raw.slice(0, sep), id: Number.parseInt(idText, 10) }
+}
+
+/** 回显段（§7.2「回显段」）：本页生效的过滤原样带上，形如 `, status:"在途"`；一枚没给 ⇒ 空串（`cursor`
+ *  前不留逗号）。**回显是「照抄尾行就翻同一本账」的前提**——不回显则第二页按未过滤全集取行、`<N>` 从过滤集
+ *  换成全库，且零报错。`cwd` 同一道理：换锚就换了库。 */
+const QUERY_ECHO_KEYS = ["status", "kind", "board", "trigger", "task_book", "cwd"]
+const queryEchoOf = (args) => QUERY_ECHO_KEYS.filter((k) => args[k] != null).map((k) => `, ${k}:${JSON.stringify(args[k])}`).join("")
+
+/** 分页切片 + 尾行（§7.2「回执逐字」四态）。`rows` = 核返回的**全量**行集（本函数不读库；排序在副本上
+ *  就地做，核的 `ORDER BY id` 零改）：`<N>` = 同一行集的长度（不另跑 `count`——两数出自同一次读，不会互相
+ *  打架）；`<P>` / `<A>–<B>` = 同一行集的序号；`cursor` 越过末行 ⇒ 本页空（与「候选集空」同一行）。 */
+function queryPageOf(rows, cursor, echo) {
+  const ordered = [...rows].sort(pageSortDesc)
+  const total = ordered.length
+  const hit = cursor ? ordered.findIndex((r) => { const k = pageSortKeyOf(r); return k < cursor.key || (k === cursor.key && r.id < cursor.id) }) : 0
+  const from = hit < 0 ? total : hit
+  const page = ordered.slice(from, from + QUERY_PAGE_SIZE)
+  if (page.length === 0) return { page, tail: `共 ${total} 行 · 本页无行` }
+  const span = `第 ${Math.floor(from / QUERY_PAGE_SIZE) + 1} 页（第 ${from + 1}–${from + page.length} 行，按 updated_at 倒序）`
+  if (from + page.length >= total) return { page, tail: `共 ${total} 行 · ${span}· 已到末页` }
+  const last = page[page.length - 1]
+  return { page, tail: `共 ${total} 行 · ${span}· 下一页：ledger({action:"query"${echo}, cursor:"${pageSortKeyOf(last)}|${last.id}"})` }
 }
 
 // ── 工具层参数守卫（设计档 §3.2 · 2026-09-27 快车道修复 · Gitee #IKIQGK / 台账 #472） ──
@@ -209,6 +256,7 @@ const ACTION_SPECS = {
         board: { type: "string", description: "按归属板块过滤（需求档文档名）" },
         trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "按技术待办触发过滤（三枚举，缺省 = 不过滤——无触发（NULL）不过滤）" },
         task_book: { type: "string", description: "按任务书指针过滤（原值等值——批→行反查；缺省 = 不过滤）" },
+        cursor: { type: "string", description: "分页游标（可空）：照上一页尾行原样传入（形 `<updated_at>|<id>`）。缺省 = 首页（自最新一行起）；形不合 ⇒ 拒，不静默回首页" },
       },
       additionalProperties: false,
     },
@@ -245,6 +293,7 @@ const UNION_PARAMETERS = {
     batch: { type: "string", description: "批档指针（update / close：与 id 恰携其一）——批级批量：一次结算该批的行（update 携 status ⇒ 逐行迁移表重判；不携 status ⇒ 纯字段补丁；close 只销 待核销 行、status 可空）" },
     status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "状态（单行 close 必填 ∈ {已核销, 已废弃}；close 携 batch 时可空、给了只能是 已核销；update 迁移 / query 过滤——六态之一）" },
     executor: { type: "string", description: "执行者 sessionId（update 可选——普通接手改写归属；缺省 = 按状态迁移语义：进入待设计 / 在途自动写本会话；出在途 / 撤回 / 退回待讨论清空；待核销 → 在途恒写本会话，显式值不覆盖）" },
+    cursor: { type: "string", description: "分页游标（query，可空）：照上一页尾行原样传入（形 `<updated_at>|<id>`）；形不合 ⇒ 拒，不静默回首页" },
   },
   additionalProperties: false,
 }
@@ -321,9 +370,13 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
           return JSON.stringify({ ...ledgerClose({ cwd: target, id: rest.id, status: rest.status, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace, boundary: anchor, agent: ctx?.agent }) })
         }
         case "query": {
+          // 分页（§7.2）：游标形判先落（非法游标零库动作）→ 核取全量行 → 工具面排序切片 + 尾行。
           const target = startOf(ctx, anchor, rest.cwd, rest.task_book)
+          const cursor = rest.cursor == null ? null : parseQueryCursor(rest.cursor)
           assertLedgerStart(target, anchor)
-          return JSON.stringify(ledgerQuery({ cwd: target, boundary: anchor, status: rest.status, kind: rest.kind, board: rest.board, trigger: rest.trigger, task_book: rest.task_book }), null, 2)
+          const rows = ledgerQuery({ cwd: target, boundary: anchor, status: rest.status, kind: rest.kind, board: rest.board, trigger: rest.trigger, task_book: rest.task_book })
+          const { page, tail } = queryPageOf(rows, cursor, queryEchoOf(rest))
+          return `${JSON.stringify(page, null, 2)}\n\n${tail}`
         }
         case "count": {
           const target = startOf(ctx, anchor, rest.cwd, rest.task_book)

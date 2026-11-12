@@ -345,7 +345,7 @@ I1 → 集成用例（扩）。
 | A4 | `depInfo` 对 `discarded` 墓碑不再返 `ok`；非 AUTO 依赖者 depc、AUTO 可启动 | F4 |
 | A5 | 文案 / 动作序 / 事件名与对侧同源；判据口径 = controller 支（与对侧同判——D-AD6）；端差清单已登记（D-AD8a·b·c）· 重复实现登记（D-AD7——已收口） | N1 |
 | A6 | 用例表逐条有对应断言；核用例入口 = `npm run prepublishOnly`（语法门——核仓无集成测试集，CI 同式 `.github/workflows/test.yml`）；`lint` 全绿；包级 `npm test` 各归其面（核 ∥ cli = exit 1 + 说明，非门；VSC = 单元清单面）；集成门 = 仓根 `node test/run.mjs`（收口时父侧跑一次） | N2 |
-| A7 | 触碰源档的长度只在两个时点判：设计时判改代码前的长度（>500 ⇒ 必给分拆方案）、收口时判 800（>800 ⇒ 先拆再落）；实施轮 ∥ 代码评审 ∥ 其他中间环节一概不判（单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」） | N3 |
+| A7 | 触碰源档的长度只在两个时点判：设计时判改代码前的长度（>500 ⇒ 必给分拆方案）、收口时判 800（>800 ⇒ 先拆再落）；实施轮 ∥ 代码评审 ∥ 其他中间环节一概不判（单源 = `docs/core/standards/CODE-TIER.md`） | N3 |
 
 ### 6.20.8 边界（不做）
 
@@ -478,7 +478,6 @@ T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13（端侧）与 T-TW11（`/timer
 | A-TW3 | 跨形态行为表 | §6.30.5 五形态逐格定义（自唤醒 / 不支持，各带理由）；桌面 / VSC 两行 ✅ 的落点 = §6.30.10–§6.30.11 |
 | A-TW4 | 端面枚举（各形态自唤醒 ∥ 不支持，各带理由） | `docs/cli/design/TUI.md` §7.6（TUI 落点）+ §6.30.5 逐格枚举；桌面 / VSC 落点 = §6.30.10–§6.30.11 |
 | A-TW6 | 验证形态（可复现） | §6.30.7 T-TW1–T-TW13（假 timer / 假到期 / 空转态直驱——零真实等待）；端面按各自既有测法 |
-| A-TW7 | 机检零新增 | 仓根 `node scripts/doc-check.mjs --root .`——对比**开工基线**（悬空 48 / 行宽 22）；逐档零新增（实施后复测：四档零命中——行宽 31 的 +9 全来自他批在途） |
 
 ### 6.30.9 边界（不做）
 
@@ -575,7 +574,6 @@ T-TW22 / T-TW23–T-TW27 = 同一批开发期用例（随批收口删除——`t
 | A-TW10 | 桌面自唤醒 + 可见面 | §6.30.11 桌面块逐条落点（闩 / 装配点 / 火面 / 透传 / `ev:timer`）；T-TW17–T-TW21 全绿；**D16 真机义务在册**（改可见面 ⇒ 真 Electron 使用面用例，验收由父侧真跑闭合——需求档 `docs/desktop/requirements/PROJECT.md`） |
 | A-TW11 | VSC 自唤醒 + 可见面 | §6.30.11 VSC 块逐条落点；T-TW22–T-TW27 全绿；协议增量登记 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §3.2（两行） |
 | A-TW12 | 口径收正（B3） | §6.30.5 表桌面 / VSC 行 ✅；`docs/core/design/TOOLS.md` §6.7 timer 行支持面句；timer 工具描述端限定句 = 父侧逐字定稿（§6.30.3 合同句） |
-| A-TW13 | 机检零新增 | 仓根 `node scripts/doc-check.mjs --root .`——对比开工基线（悬空 / 行宽字面随实施轮实测登记）；文档逐档零新增 |
 
 ### 6.30.15 边界（阶段 2）
 
@@ -744,7 +742,6 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs`（判据副本�
 | A-TW16 | 一次性零回归 | T-TW45 ∥ T-TW49（一次性行）∥ 存量单元测试档复跑全绿 |
 | A-TW17 | 四端同得（零改面守） | 零改面清单 ＋ 消费面全经 take（接缝句）；服务面随彼批部署收口 |
 | A-TW18 | 口径明示（AC-45③） | 时区 ∥ 跨日 ∥ 重启三口径句（本节）在册 |
-| A-TW19 | 机检零新增 | 仓根 `node scripts/doc-check.mjs --root .` 对比开工基线（2026-10-12 设计轮实测：**悬空 25 ∥ 行宽 0 ∥ 行数面 18 报告**——四档逐档零新增） |
 
 **边界（不做）**：cron 全语法 ∥ 条件触发（「当 X 发生时」——非定时）∥ 持久化 ∥ 重启存续（D-TW3 既有语义）∥ 端专属取消 UI ∥ 唤醒器设计（兄弟批）∥ 一次性 `seconds` 语义 ∥ 文案零变 ∥ 低费式（提请项）∥ 子代理 timer 面（读对象 = 主 agent——既有构造性边界）。
 
@@ -798,7 +795,7 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs`（判据副本�
 
 - **核包例外**：`thincoder-core/test/run.mjs` 零目标集合、不跑用例，对 `test/` 下任何单元测试档一律报 `uncollected test file`——该报错文案逐字写「unit test files live in docs/batches/」⇒ 核包单元档落 `docs/batches/`，以 `node --test <档>` 直达。
 
-**验收（A-TW20–A-TW22）**：A-TW20 = 本条规范句 ＋ §6.30.16 零变不变量 ④ 同拍在册；A-TW21 = 忙期零武装的反证：删 `sync()` 内 `busy` 判定行 ⇒ T-TW52 红（读数落实施记录）；A-TW22 = 机检零新增：`node scripts/doc-check.mjs --root .` 对比开工基线（悬空 ∥ 行宽逐档零新增）。
+**验收（A-TW20–A-TW21）**：A-TW20 = 本条规范句 ＋ §6.30.16 零变不变量 ④ 同拍在册；A-TW21 = 忙期零武装的反证：删 `sync()` 内 `busy` 判定行 ⇒ T-TW52 红（读数落实施记录）。
 
 **边界**：不改交付轮形态 ∥ 域文本 ∥ 帽 ∥ 零跨轮预算；回退面逐字保持；「轮内消化」不做（自旋无上界）。
 
@@ -959,7 +956,7 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs`（判据副本�
 | A-DA5 | 结束信号缺席（F-DA5） | 四 transport 归一逐条；缺席（clean ∧ ¬partial）⇒ 提醒恰一条 + `ev:finish-missing` 恰一条；partial ⇒ 零提醒；既有异常处理零变 |
 | A-DA6 | 空停（F-DA6） | 纯空白 ⇒ 空响应支（≤2）后抛；非空半句零触；重试预算 / 文案零变 |
 | A-DA7 | 零回归（N1） | 全覆盖轮零提醒零事件；用户输入优先 / `maxTurns` / 注入格式 / 预算 / 归档时点 / 面板块面逐条零改；fallback 面 = 缺省条逐字旧行为 + `_daDelivered` 条跳过且留容器（#45 落码终态） |
-| A-DA8 | 机检与回指（N2） | 单元测试档全绿；仓根 `node scripts/doc-check.mjs --root .` 文档面零新增悬空 / 零行宽 |
+| A-DA8 | 机检与回指（N2） | 单元测试档全绿 |
 
 #### 6.31.12 边界（不做）
 
@@ -1077,7 +1074,6 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs`（判据副本�
 | A-AD4 | 空闲投递成立（T-AD3；窗 ∥ 闩两面） | F-AD3 / N1 |
 | A-AD5 | §4.15 全保（T-AD4；账目 / 升级 / 清场逐条零改——引 §6.31） | N2 |
 | A-AD6 | 端差异零增（核单点收窄 = run-start 门 ∥ drain 门 ∥ post-turn 门三处；端侧零改） | N3 |
-| A-AD7 | 机检零新增：`node scripts/doc-check.mjs --root .` 对比开工基线（悬空 / 行宽逐档零新增） | 批档自身约束 |
 
 ### 6.34.9 关键决策记录（KD-AD）
 

@@ -391,7 +391,7 @@
 | `thincoder-render-core/flow/block.mjs`（核共享面） | 顾问 ∕ 子代理块内容面（`appendAdvisorChunk`——文本 ∕ 推理 ∕ toolOutput 续写支）；**E2 命中分支** = 续写改并入末文本节点（语义等价）（单源 = 本档 §5.2） |
 **越层结论（本批改动面 · 渲染面）**：本表各档皆**免拆**；`thincoder-desktop/renderer/store.mjs` 为**既有在册**越层档（拆档预案在册，本批不改变其既判）。
 
-**行数不入本档**：量法 = `doc_check` 的 `lines`（`countContentLines` 单尺）；阈值 = 设计器硬线 500 ∥ 其他检查硬线 800（单源 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）；只写越线结论，不写绝对值。
+**行数不入本档**：量法 = `doc_check` 的 `lines`（`countContentLines` 单尺）；阈值 = 设计器硬线 500 ∥ 其他检查硬线 800（单源 = `docs/core/standards/CODE-TIER.md`）；只写越线结论，不写绝对值。
 
 
 

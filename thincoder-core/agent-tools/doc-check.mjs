@@ -1,25 +1,27 @@
 /**
- * agent-tools/doc-check.mjs — `doc_check` 工具：文档纪律机检（产品内建 · 两种问法）。
+ * agent-tools/doc-check.mjs — `doc_check` 工具：文档机检（只判三件事）。
  *
- * 设计 = `docs/core/design/DOC-DISCIPLINE.md` §3.20 条目 S（判据 = 锚 ∥ 段判据 | 行号坐标 · 参数内置常量）。
- * 工具形：**无动作枚举**——`mode` = 同一条判据的两种问法（`report` = 报告态 ∥ `gate` = 交付时点的裁定）；
- * **只读**（零副作用 · 免审批 · 可并行）；参数 `target` / `mode` / `docs` / `lines`。
- * `target` = **声明根**（不是整批的坐标系）：清单里每个档用它**自己的项目根**判（判据单源 = `docs/core/design/DOC-CHECK.md` §2）；
- *   普通目录 ∥ 多项目工作区都能当声明根，照它判——工作区锚不再提前返回；`target` **必填**（缺 ⇒ 拒点名），锚只作相对形基根。
- * 判据参数 = 引擎内置常量 `DOC_CHECK_BUILTINS`——不读 manifest、不硬编码本仓路径、不扫目录。
+ * 判据句单源 = `docs/core/design/DOC-CHECK.md`：① 一段太长 ∥ ② 拿行号做锚 ∥ ③ 悬空指针。
+ * 工具形：**无动作枚举**——`mode` 只是这一笔的意图，而两个 mode 的**判域不同**（单源 = 同档 §6）：
+ * `report` = 诊断面，判整份；`gate` = 交付判定，只判**本批变更区**。同一句话不许两面各说一套。
+ * **时点 = 收口**（§9）：它读的是已经在盘的档，与收口同处境——批档面整份不进判域（两个 mode 同此一判）。
+ * `gate` 的基线取**绑定给本席的批档**（`ctx.agent._batchDoc`）§1 的记入行：没有绑定 ⇒ 没有「本批」可指
+ * ⇒ 没有要判的行，一个档也不判（不猜一份在途批档来当基线）。
+ * **`report` 面只读（零副作用 · 免审批 · 可并行）**；**`gate` 面写索引**：判之前对它此行判的那几份档逐个
+ * `git add -- <该档>`（按路径限定，不 `git add -A`）——索引外的新档 `git diff` 看不见，那不是「没改」（§6）。
+ * 两面都不写档字节、都不问审批。参数 `target` / `mode` / `docs`。
+ * `target` = 基根（相对 `docs` 条目按它解析）；每份档的项目根沿它自己往上找（单源 = 引擎）。
  * 判定范围 = 调用方传入的档：`report` 面 `docs` 必填（不给 ⇒ 明确报错，零遍历）；
  * `gate` 面缺省 = 本会话触达记账里的 `.md`（交付面按轮次收窄的唯一来源）。
- * `lines` = 只读数面（内容行数 + 源 / 单元测试档的尺寸档位标记）——**不是判据**：本面只透传，
- * 校验与拒绝全住引擎（抛错单源 = `../doc-check/index.mjs`），`gate` + `lines` 在开判之前拒绝、不产 verdict 首行。
- * `report` 非门禁（硬）：输出不得被读作拒执行的理由（用户令 > 机检——§2 总则族）；
- * `gate` 的强制面住交付协议 + 批次档 §6 前置，工具本体同样不阻断任何动作。
  * 描述外置：模型可见文本单点 = `tool-docs/doc_check.md`（`DESC` 单一解析面）。
  * 装配段 = `agent/family-tools.mjs` 三处（depth-0 / eng-coder / eng-designer）——写文档 / 设计档的角色面。
  */
 import { isAbsolute, resolve } from "node:path"
 import { projectRootView } from "../manifest.mjs"
 import { resolvePathTarget } from "../path-resolve.mjs"
-import { runDocCheck } from "../doc-check/index.mjs"
+import { runDocCheck, MOMENT } from "../doc-check/index.mjs"
+import { baseShaOf } from "./batch-gate.mjs"
+import { changedRegionsOf, stageDocs } from "./batch-regions.mjs"
 import { DESC } from "../tools/shared.mjs"
 
 export const docCheckTool = {
@@ -28,10 +30,9 @@ export const docCheckTool = {
   parameters: {
     type: "object",
     properties: {
-      target: { type: "string", description: "The declared root for this call — not one coordinate system for the whole list. Each document is judged against its own project root (the nearest ancestor holding PROJECT-MANIFEST.json); `target` supplies only the base for relative `docs` entries and the root for a document whose ancestors hold no manifest. Required — pass the project root you mean: there is no default, the session anchor is the base for relative paths and never a substitute for `target`. A plain directory or a multi-project workspace is a legal value — it is judged as given, not refused; a relative `target` that matches several existing directories is still ambiguous and refused." },
-      mode: { type: "string", enum: ["report", "gate"], description: "How to ask the same three-criteria check. \"report\" (default): a non-gating report over the documents you list in docs. \"gate\": the delivery gate — the documents this round touched (docs, or this session's written documents when docs is omitted), whole-file judged, first line a machine-readable verdict (DOC-CHECK GATE: PASS / REFUSED / ERROR)." },
-      docs: { type: "array", items: { type: "string" }, description: "The documents to judge, as paths relative to the project root or absolute — each is judged whole; nothing else is read except the targets those documents point at. Required in \"report\" mode (there is no default range: omitting it is refused, not widened). Omitted in \"gate\" mode ⇒ the Markdown documents this session wrote. A path that is not on disk or is not a Markdown document is an error (no document judged) in report mode and a visible skipped line in gate mode." },
-      lines: { type: "array", items: { type: "string" }, description: "Files to measure, as paths relative to the project root or absolute — a reading, never a criterion. One line of content count per file, source, unit-test and Markdown files alike; source and unit-test files also carry a size-tier mark once they pass a threshold. `report` mode only: `gate` refuses it (passing it there is an error, not an ignored argument), because a reading must not move a verdict. Every listed file must be on disk and readable — a list that cannot be measured whole is an error, never a partial reading." },
+      target: { type: "string", description: "The base root for this call: relative `docs` entries resolve against it, and a document that belongs to no project falls back to it. Required — there is no default; the session anchor is the base for relative paths, never a substitute for `target`." },
+      mode: { type: "string", enum: ["report", "gate"], description: "What this call is for. \"report\" (default): the diagnostic face — every named document is judged whole. \"gate\": the delivery-time verdict — only this batch's changed region inside each named document is judged (docs, or this session's written documents when docs is omitted). Both judge the same three things and print the same sentences; the first line is DOC-CHECK GATE: PASS or REFUSED." },
+      docs: { type: "array", items: { type: "string" }, description: "The documents to judge, as paths relative to `target` or absolute. In \"report\" mode each is judged whole (the diagnostic face); in \"gate\" mode only this batch's changed region inside it is judged, so a pre-existing dangling pointer outside the region is not reported. Required in \"report\" mode (there is no default range: omitting it is refused, not widened). Omitted in \"gate\" mode ⇒ the Markdown documents this session wrote." },
     },
     required: ["target"],
   },
@@ -39,20 +40,11 @@ export const docCheckTool = {
   execute(args, ctx) {
     const anchor = ctx?.agent?.cwd ?? ctx?.cwd
     const mode = args?.mode === undefined ? "report" : String(args.mode)
-    if (mode !== "report" && mode !== "gate") return `doc_check: unknown mode "${mode}" — use "report" (a report over the documents you list) or "gate" (this round's documents).`
-    // `target` 的路径判定经统一解析层（`kind:"dir"` / `order:"root-first"`）：判不出唯一根 ⇒ 报明候选（KD-5
-    // 的形），解析出 ⇒ 用。`dangling` 不阻断本面——本面判据 = 内置常量、不读声明面，任可判目录都能跑
-    // （受判档由 `docs` 给定），故无项目根时按显式 `target` 照跑（受理判据归本面）。
-    // `ambiguous` 只在**调用方给了 `target`** 时才是真歧义（相对目标在多个候选基根上各有一份，挑一个就是替用户改路径）。
-    // `target` 必填——缺 ∥ 空串 ∥ `null` ⇒ 拒点名，零判定（不拿锚替调用方选根）。
-    // 「给了」判据 = **一个非空字符串**：`undefined` ∥ `null` ∥ 空串同归「缺」一支——守卫若判「键存在」就把 `null`
-    // 形当成「给了」而进拒支，两处判据必须同一条线。
+    if (mode !== "report" && mode !== "gate") return `doc_check: unknown mode "${mode}" — use "report" (look at the documents you list) or "gate" (this round's documents).`
     const givenTarget = typeof args?.target === "string" && args.target.trim() !== "" ? args.target : undefined
     if (givenTarget === undefined) {
-      return "doc_check: `target` is required — pass the project root you mean (an absolute path, or a path relative to the session anchor). There is no default: the session anchor is the base for relative paths, never a substitute for `target`."
+      return "doc_check: `target` is required — pass the base root you mean (an absolute path, or a path relative to the session anchor). There is no default: the session anchor is the base for relative paths, never a substitute for `target`."
     }
-    // 锚只作**相对形**的基根（KD-9）：锚缺位 + 相对形 ⇒ 拒、点名锚——不许落 `process.cwd()`
-    // （`thincoder-core/path-resolve.mjs` 的 `const start = resolve(anchor ?? ".")` 就是那个隐藏兜底）。
     if (!anchor && !isAbsolute(givenTarget)) {
       return "doc_check: no session anchor is available (`ctx.agent.cwd` / `ctx.cwd` both empty) — pass `target` as an absolute path; a relative `target` has no base to resolve against, and this tool will not fall back to `process.cwd()`."
     }
@@ -76,21 +68,28 @@ export const docCheckTool = {
     if (explicit && explicit.some((d) => typeof d !== "string")) {
       return "doc_check: every `docs` entry must be a path string — a non-string entry is refused rather than coerced (no document was judged)."
     }
-    // 工作区**不再提前返回**（§3）：声明根不因自身不是项目（普通目录 ∥ 多项目工作区）而被拒——照它判，
-    // 各档的根由引擎按自己的落点定。`root` = 归属命中的项目根 ∥ 声明根（`none` / `workspace` 两支同此式）。
     const view = projectRootView(target)
     const root = view.state === "ok" ? view.root : target
-    // `lines` 只透传：校验 / 抛错 / gate 面拒绝全住引擎（单源）——本面不另写一份校验，否则就多一份会漂的判据。
-    const lineArg = args?.lines
     if (mode === "gate") {
       const docs = explicit ?? (Array.isArray(ctx?.agent?._touchedFiles) ? ctx.agent._touchedFiles : [])
         .filter((p) => typeof p === "string" && p.toLowerCase().endsWith(".md"))
-      return runDocCheck(root, { mode: "gate", docs, docsSource: explicit ? "explicit" : "session", lines: lineArg }).report
+      if (docs.length === 0) return "DOC-CHECK GATE: ERROR（0 档受检——本轮没有碰过 .md）"
+      // 判域只是一部分：先按**收口时点**裁掉批档面（§9），再只判**本批变更区**（§6）——区内照判三件、区外一个字都不出。
+      // 基线 = 绑定给本席的批档（谁在判，谁已经知道自己是哪一批）：不猜一份在途批档，不去扫发现面。
+      // 没有绑定 ⇒ 没有「本批」可指 ⇒ 没有要判的行 ⇒ 一档也不判（空表 = 每一档都没有条目）。
+      const bound = typeof ctx?.agent?._batchDoc === "string" && ctx.agent._batchDoc.trim() !== "" ? ctx.agent._batchDoc : null
+      const sha = bound ? baseShaOf(bound) : null
+      const absDocs = docs.map((d) => resolve(root, d))
+      // `gate` 面在判之前会 `git add` 它此行判的那几份档（§6）：索引外的新档 `git diff` 看不见，那不是「没改」。
+      // 按路径限定、不 `git add -A`。没有绑定的批档 ⇒ 没有基线 ⇒ 没有要取的区，索引也不动。
+      if (sha) stageDocs(root, absDocs)
+      const regions = sha ? changedRegionsOf(root, sha, absDocs).regions : new Map()
+      return runDocCheck(root, { docs, moment: MOMENT.close, regions }).report
     }
-    // 报告态：清单是唯一范围来源——不给就是拒绝（不是「全域」）。
     if (explicit === null) {
       return "doc_check: `docs` is required in report mode — pass the explicit list of documents to judge (e.g. docs: [\"docs/design/X.md\"]). There is no default range: nothing is scanned unless you name it."
     }
-    return runDocCheck(root, { docs: explicit, docsSource: "explicit", lines: lineArg }).report
+    // `report` = 诊断面：判整份（`regions: null`）。时点不按 mode 分，按**谁在调**分（§9）——批档面两个 mode 都不进判域。
+    return runDocCheck(root, { docs: explicit, moment: MOMENT.close, regions: null }).report
   },
 }

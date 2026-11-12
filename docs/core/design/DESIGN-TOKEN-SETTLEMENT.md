@@ -154,7 +154,7 @@
 
 - **决策与理由**：清点行**恒携** `designToken` 全串值——用户 2026-10-17 裁定「没必要把 token 藏起来，agent 要就告诉他」。理由：值不列时 agent 取用仍要绕回台账找回，而分层取用（开关 / 值形态取舍 / 单槽限）只增机制、不减取用成本 ⇒ 收为一条行契约：照列（用户同日 19:22 同裁「不希望让机制进一步复杂化」）。
 - **最相近先例**：同节 F-SL1 清点面（同一行契约 ∥ 同一并集视图 `unionSlots` ∥ 同一 fail-closed 拒形）；实现坐标（现行）= `thincoder-core/agent-tools/design-slots.mjs` 的 `executeDesignSlotsAction`（清点核）∥ 同档的行拼装段；先例批号 = 未在档内可考；对齐 = 令牌列 = 行契约的末位字段，不新立参数 / 动作 / 存储；偏差 = 无。
-- **公开源核查**：项目声明 `PROJECT-MANIFEST.json` 的 `index.publicRepos` = 空 ⇒ 无公开源档可查；核内最近先例 = `consume-design` 回执（照列 designId，无值形态取舍）——「按形态取舍后恒显」查无既有先例，以用户裁定为准。
+- **公开源核查**：`index.publicRepos` 的实读与结论单源 = §10.1 那条（本节不另记读数）；核内最近先例 = `consume-design` 回执（照列 designId，无值形态取舍）——「按形态取舍后恒显」查无既有先例，以用户裁定为准。
 - **参数面**：唯一参数 `designId`（可选——过滤到单槽；trim 后精确匹配；空串视同缺省；未知 ⇒ 拒 + 列在场 id）。
 - **畸形口径**：槽值不可解析（`tokenExpiryMs` = null）⇒ `designToken=—`，`ageDays` / `expiresAt` 同 `—`；过期槽**照列值**——`status=expired` 已标态，且过期 token 在任何门禁都过不了，值本身不构成授权。
 - **日志互作（在案——工具输出恒含令牌，日志面单点剥离）**：工具结果前 200 字符经 `agent/dispatch-run.mjs` 的 `tool:done` 事件 `head` 字段落盘；`thincoder-core/log.mjs` `SECRET_FORM` 含 token 值形（`[0-9a-f]{8}-…-[0-9a-f]{12}:\d{10,16}`）⇒ `sanitizeString` 在形态前截断，字段名黑名单含 `designtoken`。**日志面零改**；令牌列置行尾 ⇒ 截断只吃掉值本身，其余列在日志里仍完整。
@@ -293,7 +293,7 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 - 既有的 tokens 版只有端面一个消费者（`thincoder-vscode/src/extension/panel-session-write.mjs`）；旁列版端面尚未接线。
 - ⇒ A6（U-BG10）只验纯函数面：「核内保存会不会写丢归属」在本形态下不发生（`thincoder-core/session.mjs` 那个展开点就是内存快照，旁列随 `engTokenSlotFields` 一并入档）。两个并集函数是端面 / 防御面预留，与本批要消的窗口无因果关系。
 
-**射程划分（旁列 ≠「不为恢复便利扩展机制」）**：需求档 §5 末条已明写「批归属的旁列（F-D7）不属本条射程」（`docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md` §5 末条）——旁列承载**归属**（让写门判「本笔改动属于哪一批」），不承载**恢复**（不为把过期 ∥ 已消费凭证捞回来）。该裁定的正文单源在需求档，本节不复述（D2）。
+**射程划分（旁列 ≠「不为恢复便利扩展机制」）**：需求档 §5 末条已明写「**批归属的旁列（F-D7）∥ 评审封印的旁列（F-D9）不属本条射程**」（`docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md` §5 末条）——两条旁列承载的是判据（「这笔改动属于哪一批」∥「评审看过的是哪一版」），不是恢复（不为把过期 ∥ 已消费凭证捞回来）。该裁定的正文单源在需求档，本节不复述（D2）。
 
 **缺失时仍是如实降级**：旁列读不到（旁列启用前签发的旧槽）⇒ 清点「批」列照旧 `—`（F-SL1 既有降级）、收口不消费该槽并如实点名计数（下「无归属槽」）——单一降级层级，不新增态。
 
@@ -333,7 +333,7 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 
 **最相近先例**：同批族 F-SL1 清点面（`thincoder-core/agent-tools/design-slots.mjs` 的 `executeDesignSlotsAction` 起）——对齐 = 同一批归属派生、同一槽文件权威台账、同一「落盘失败 ⇒ 内存回滚 + 抛」形（同档的消费核段）；偏差 = ①归属从显示用升为持久化 + 消费判据 ②新增一次 settle 期写（旁列）。偏差理由：显示面跨重启降级为 `—` 是既知代价，消费判据不能建立在「不可得即 `—`」上——判据要确定性，故须持久化。
 
-**公开源核查**：`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（本轮 `manifest read` 实读）⇒ 无公开源档可查（单仓声明）；核内最近先例 = 上述 F-SL1 批列派生 + F-D6 链终消费。
+**公开源核查**：读数单源 = §10.1（本节不另记）；核内最近先例 = 上述 F-SL1 批列派生 + F-D6 链终消费。
 
 **新名字的三问答案**（落地名一律沿既有件，无一件新造形态）：
 
@@ -347,6 +347,12 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 | `batchAbsPathOfRun` | `existing but unusable: thincoder-core/agent-tools/design-slots.mjs batchAbsPath（只认 docSetKey 一个源）· failed on: 不读 run.batchDoc——本笔要的是两源定序，单参单源的函数表达不了` ⇒ 同形外壳（同一返回形：绝对路径 ∥ `null`；同一 `lastIndexOf("batches")` 判据），入参从 `docSetKey` 扩为 run |
 | `unionBatches` | `existing: thincoder-core/agent-tools/design-slots.mjs（本名即其定义）· consumers: 同档 batchOf ∥ batch-lifecycle.mjs consumeBatchDesignTokens` ⇒ 无新名（本笔只透传 `{ strict }`） |
 | `mergeEngTokenBatchesForSave` | `existing: thincoder-core/session-slot-write.mjs（本名即其定义）· consumers: 核内零调用点（端面未接线，见「写面如实登记」）` ⇒ 无新名 |
+| `engDesignTokenSeals` | `existing: thincoder-core/token-ttl.mjs engTokenSlotFields · name: "engDesignTokenBatches" · consumers: thincoder-core/session.mjs saveSession ∥ token-ttl.mjs persistEngTokens` ⇒ 对齐（同族槽字段、同一序列化点）；偏差 = 新增一个键（无既有键承载封印） |
+| `readEngTokenSealsFromSlot` | `existing but unusable: thincoder-core/token-ttl.mjs readEngTokenBatchesFromSlot · failed on: 字段名硬编码（只返回 data.engDesignTokenBatches，不读封印）` ⇒ 同形兄弟函数（同一两形读法：宽容返回 `null` ∥ 严格抛） |
+| `mergeEngTokenSealsForSave` | `existing: thincoder-core/session-slot-write.mjs mergeEngTokenBatchesForSave · consumers: 核内零调用点（端面未接线）` ⇒ 对齐同形（纯函数、槽独有项保留、同 key 新写者胜） |
+| `designSealHash` | `existing but unusable: thincoder-core/agent-tools/subagent-run.mjs taskSeal · failed on: 只接一个串、sha256 截断到 12 位——封印要接档数组（逐档原始字节 + `\n` 分隔、路径不进 hash、全长 digest）` ⇒ 一处定义、两处同调（settle 算 ∥ 闸面复算），不新造第二套字节法 |
+| `docHashes` | `existing: thincoder-core/agent-tools/design-token.mjs` 的 settle 面已存同一份清单（`engDesignTokenSeals[designId].docs`）· consumers: 闸面复算（`gateDesignToken` 第 ⑥ 步）∥ 拒文点名 | ⇒ **不是新清单**，是同一份 `docs` 的逐档 hash 旁列：同一清单、同一读点、同一字节口径（逐档原始字节全长 sha256）。它是**报面字段，不参与判定**——判定值仍是 `hash`（K4 口径） |
+| 闸面批归属步（`gateDesignToken` 第 ⑤ 步） | `existing: thincoder-core/agent-tools/subagent-design-token.mjs gateDesignToken 的四步核 · consumers: thincoder-core/agent-tools/subagent-spawn.mjs 的 buildSpawnChild` ⇒ 在既有门里加一步，不新造入口；偏差 = 门由「只判凭证」扩为「凭证 + 归属 + 封印」 |
 
 **集成测试设计（从 `test/RTM.md` 起读）**：本改动改的是「收口」这一业务动作的可观测结果——收口成功即该批凭证不再放行写产品码；收口被拒即凭证仍活、状态行未变。逐故事结论：
 
@@ -354,36 +360,50 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 |---|---|
 | 护行（既有用例断言的业务结果被改写） | 10-1：入口形由「`documents` 带批档」改为**生产形「`batchDoc` 带批档」**——原写法只验证了兜底派生，正好绕开了本批要消的缺陷；断言（`[design tokens]` 消费 1 枚 · 后续 spawn 被拒 · 槽不在）逐字不变。故事 7 的夹具是普通模式项目、无设计槽 ⇒ 消费步 no-op，三条断言不变；故事 8 ∥ 9 ∥ 14 不经此派生。 |
 | 冗余行 | 无。 |
-| 缺失行 | 一处：故事 10 新行 **10-4**「清点「批」列显名」——业务可观测结果 = 父侧靠 `design-slots` 认槽归属（今天 24 枚全 `—`）；manifest 层严格读不新增行（原因同下）。 |
+| 缺失行 | 两处：故事 10 新行 **10-4**「清点「批」列显名」（业务可观测结果 = 父侧靠 `design-slots` 认槽归属——今天 24 枚全 `—`）与 **10-5**「闸面两向各拒一次」（业务可观测结果 = 批不符与封印不符各得一条拒文，改回原字节后放行）；manifest 层严格读不新增行（原因同下）。 |
 
 | 编号 | 怎么做 | 怎么算通过（业务可观测） | 交互组件 | 进入口 | 回指 |
 |---|---|---|---|---|---|
 | 10-1 | 工程模式夹具里，让一次设计评审以 `batchDoc` 带上批档（签发一个槽），再调 `batch close` 收该批。**夹具须让该评审把 §3 写进批档**（轮次块 + 状态行 = `评审通过`）——否则 §3 落地门（单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.1）挡住签发，本行断言不可达 | close 回执含 `[design tokens]` 且点名消费 1 枚；随后同 designId 的 eng-coder spawn 被机械拒；`design-slots` 里该槽不在 | `batch-lifecycle.mjs` 收口通路 ↔ `design-slots.mjs` 消费核 ↔ 槽文件 I/O | 父侧经 `batch` 工具收口（工程模式） | F-D7 ∥ F-D8 |
 | 10-4 | 工程模式夹具里以 `batchDoc` 带批档跑一次设计评审（签发一个槽），再调 `subagent` `action:'design-slots'`（夹具同上：该评审须把 §3 写进批档） | 该槽行 `batch=<批档 basename>`（不是 `—`）；其余列零变 | `thincoder-core/agent-tools/advisor.mjs` 实例绑定 ↔ `design-token.mjs` settle 旁列 ↔ `design-slots.mjs` 清点行 | 父侧调 `design-slots`（工程模式） | F-SL1 ∥ F-D7 |
 | 10-2 | 同一夹具，把 `persistEngTokens` 注入为抛错后再 close | close 被拒且回执点名消费失败；§1 状态行字节不变；槽仍在盘（内存已回滚） | 同上 | 同上 | F-D8 |
+| 10-5 | 工程模式夹具：`batchDoc` = A 批跑一次评审签一枚槽，再用同一枚令牌派 `batchDoc` = B 批的 eng-coder；第二半：评审后改一个被审档即派单，再改回原字节派一次（夹具须含 §3 落地，同 10-1） | 第一次 spawn 被拒，拒文 = batch-mismatch 逐字（两个批档都点名）；第二次被拒，拒文含**变了的那几份档路径**、多份按 `docs` 原序（逐字单源 = `docs/core/design/TOOLS.md` §6.25 ③）；改回原字节那次放行。夹具须让封印由**本版**签出（封印行带 `docHashes`）——旧封印行是无路径形，属另一条分支，不在本行断言面 | `subagent-design-token.mjs` 的 `gateDesignToken` ↔ 槽文件两条旁列 ↔ 被审档读盘 | 父侧经 `subagent` 派 eng-coder（工程模式） | F-D7 ∥ F-D9 |
+
+**既有行不被封印改写（一句回答）**：10-1 ∥ 10-4 ∥ 10-2 三行的夹具在评审之后写的是**批档**（§3 轮次块 ∥ §5 ∥ §6），而封印的被算集合排除 `docRoot.batches` 之下的档 ⇒ 三次收口都不改封印，三行断言零改。
 
 落点：两行编号与文字落 `test/RTM.md`、用例落 `test/integration/batch-close-token-consume.test.mjs`（实现轮由 eng-coder 落，见下表）。
 
 行数与坐标 = 本轮实读（行号口径 = 末行行号）；实施轮的行号随动——判据以内容机检为准（U-BG9 ∥ U-SL14 同口径），行号只用于定位。
 
-**档位登记（本批六档；判据 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」①）**：
+**档位登记（本批九档；判据 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」①）**：
 
-- **改代码前未过 500（四档）** ⇒ 按 ① 不提分拆：`token-ttl.mjs` ∥ `design-slots.mjs` ∥ `thincoder-core/session-slot-write.mjs` ∥ `design-token.mjs`。
-- **新增档（一档）** ⇒ 无「改前」，按 ① 判落盘长度，未过 500 ⇒ 不提分拆：`thincoder-core/session-slots-manifest.mjs`。
-- **改代码前已过 500（一档）**：`batch-lifecycle.mjs`——分拆方案已执行，见下。
+- **改代码前未过 500（五档）** ⇒ 按 ① 不提分拆：`token-ttl.mjs` ∥ `design-slots.mjs` ∥ `thincoder-core/session-slot-write.mjs` ∥ `design-token.mjs` ∥ `thincoder-core/agent-tools/subagent-design-token.mjs`（§10.1 ⑤ ∥ §10.2 ⑥ 的落点档）。
+- **新增档（两档）** ⇒ 无「改前」，按 ① 判落盘长度：`thincoder-core/session-slots-manifest.mjs`（未过 500 ⇒ 不提分拆）· `advisor-launch.mjs`（`advisor-async.mjs` 的分拆产物，同目录，见下）。
+- **改代码前已过 500（两档）**：`batch-lifecycle.mjs`（分拆已执行，见下）· `advisor-async.mjs`（本批碰了它 ⇒ 分拆在本批内实施，见下）。
 
-逐档读数（改前 ∥ 改后 ∥ 现行）按 D12 住批档，本节只写关系：登记里写成数，就成了下一个人要回来核的过期账。
+各代码档的原始行数按 D12 住批档 §2 的档位登记段：本节只写关系，登记里写成数就成了下一个人要回来核的过期账。
 
 **分拆方案的执行结果（`batch-lifecycle.mjs`）**：
 
 - **已拆出**：收口面四道判据与回执 → `thincoder-core/agent-tools/batch-closeout.mjs`。该档头注逐字：「收口面的四道判据与回执（从 `batch-lifecycle.mjs` 拆出，2026-10-27）」。
 - **仍留原档**：`closeBatchRecord` ∥ `statusBatchRecord` ∥ `reanchorOnClose` 与段写面；读档 / 解析工具住 `thincoder-core/agent-tools/batch-read.mjs`。
-- **现行档位**：该档的 `doc_check` `lines` 读数已落到 500 之下（读数按 D12 住批档，本节只写关系）⇒ 按 §3 ① 后续批不提分拆。
+- **现行档位**：该档已落到 500 之下（读数按 D12 住批档，本节只写关系）⇒ 按 §3 ① 后续批不提分拆。
 
 **该档此后的义务**：
 
 - 设计轮：改前未过 500 ⇒ 按 `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」① 不提分拆。
 - 收口面：在 800 之下 ⇒ 按同节 ② 不提拆分要求。
+
+**分拆方案（`advisor-async.mjs`，本批内实施）**：
+
+- **拆出哪一族**：**实例与池判定**（对池与队列只读）——实例注册表读（`advisorRunsRead` · `advisorRuns` · `openCodeRun` · `openDesignRun`）、launch 实例解析（`resolveAdvisorLaunch` · `effectiveAdvisorRound`）、池上限与同 scope 守卫（`ADVISOR_POOL_LIMIT` · `resolveAdvisorPoolLimit` · `advisorPoolLimitFor` · `runningAdvisorOfScope` · `runningAdvisorCount` · `advisorReviewPending`）→ 新档 `advisor-launch.mjs`（与 `advisor-async.mjs` 同目录）。
+- **切在哪**：原档「Review-instance registry」分节起、到 `cancelAsyncAdvisor` 之前的整段；`cancelAsyncAdvisor` 及其后（relay · 出队 ∥ 刷新 ∥ 补位 · `launchAsyncAdvisor` · `closeOpenCodeAdvisorRuns`）留在原档。
+- **为什么切在这里**：
+  - **① 两族的读写面不交叉**：拆出的一族只回答「哪条实例接这一轮、池让不让起」，全是只读判定，不碰队列、不碰控制器、不写池；留下的一族是「起 ∥ 停 ∥ 排 ∥ 关」的写动作。
+  - **② 依赖方向单一**：拆出族只依赖六项——`carrierField` ∥ `getAsyncPool`（`async-settle.mjs`）∥ `docSetKey` ∥ `resolveReviewDocPaths` ∥ `scopeAdvisorMirror`（`review-facts.mjs`）∥ `randomUUID`（`node:crypto`）；原档反向 import 它的判定函数，两档之间是单向边。
+  - **②-1 那一环是既有的，不是本次新增的**：与 `async-settle.mjs` 之间的一环是拆分前既有的（该档静态 import `refillAdvisorQueue`，拆出族 import `carrierField` ∥ `getAsyncPool`）——拆分后同一环多经 `advisor-launch.mjs` 一格，环数不变、本次未新增环，环上无模块级求值（两侧都只在函数体内调用）。
+  - **③ 拆出段的体量**：拆出段占原档三成左右，原档剩下的写动作一族落到 500 之下。
+  - **④ 既有 import 面零改**：原档按本档既有两次拆分的同一先例（`design-token.mjs` ∥ `advisor-settle.mjs` 的 re-export 块）继续 re-export 拆出族的导出：`thincoder-core/agent/completion.mjs` 的 `advisorReviewPending` ∥ `effectiveAdvisorRound`、`advisor.mjs` 的整组导出、测试面，都仍从 `advisor-async.mjs` 取。
 
 **用例（当批单测 U-BG 组）**：
 
@@ -398,6 +418,12 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 | U-BG7 | 边界 | 普通模式批档收口 | no-op，不报错 |
 | U-BG8 | 边界 | 评审文档集不含批档（且 `run.batchDoc` = 空） | 旁列无该条目；清点「批」列 = `—`（不猜） |
 | U-BG16 | 正常（生产形） | settle 一份 `run.batchDoc` = 批档绝对路径、`docSetKey` = 设计档集的评审 | 旁列 = 该批档绝对路径；清点「批」列 = 该档 basename（不再是 `—`） |
+| U-BG17 | 错误（闸面批不符） | 槽的批归属 = A 批，spawn 的 `batchDoc` = B 批，令牌正确 | 拒；拒文逐字 = batch-mismatch 句（两个批档路径都点名）；槽未删 |
+| U-BG18 | 正常（闸面批相符） | 槽的批归属 = A 批，spawn 的 `batchDoc` = A 批，令牌正确，封印未变 | 放行；返回槽内令牌 |
+| U-BG19 | 正常（封印未动） | 评审后未改任何被审档即派单 | 重算的 sha256 = 记下的值 ⇒ 放行 |
+| U-BG20 | 错误（封印不符） | 评审后改被审档一个字节即派单 | 拒；拒文逐字 = seal-mismatch 句；改回原字节后再派单放行（红侧对照） |
+| U-BG21 | 边界（旧槽无值） | 槽无批归属旁列 ∥ 无封印值，令牌正确 | 两步都跳过（不拦）；返回槽内令牌 |
+| U-BG22 | 错误（封印不可读） | 槽有封印值，清单里一份被审档从盘上删掉（缺档 ∥ 权限错）后派单 | 拒；拒文逐字 = seal-unreadable 句（含那份额档的路径）；不落进「无值 ⇒ 不拦」；按原字节放回那份档后再派单 ⇒ 放行 |
 | U-BG9 | 机检（内容判据） | 四段判据文本：`dispatch.mjs` 放行条件句 ∥ `anyLiveDesignSlot` 判据体 ∥ `TOKEN_TTL_DEFAULT_MS` 行 ∥ `consume-design` 选择器句 | 四段逐字等于改动前快照（期望串写死在测试里；不靠 git） |
 | U-BG10 | 边界（合并 · 纯函数面） | 合并函数五条断言：来参未携该字段 ∥ 来参空快照 ∥ 并集 ∥ 同 key 冲突 ∥ 两端皆空（槽侧已有 `{A: 批1}`） | 槽独有项保留（`{A: 批1}` 仍在）∥ 同 key 新写者胜 ∥ 两端皆空 ⇒ `null`——核内保存面不经过该函数（见「写面如实登记」） |
 | U-BG11 | 错误（读不到） | 两支：① 槽文件截断（`JSON.parse` 失败）∥ ② 槽位换成目录（`EISDIR`，非 `ENOENT`）后 close 该批 | close 被拒并点名读失败（支二另断言拒因不含 `ENOENT`——非 ENOENT 的 I/O 错不得判成「不存在」）；§1 状态行字节不变；槽文件字节不变（零消费）；恢复可读后同一 close 成功 |
@@ -406,7 +432,7 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 | U-BG14 | 错误（manifest 层读不到） | 两支（`_slot` 未钉）：① manifest 在盘但截断 ② 干净会话：manifest 不存在（从未创建） | ① close 被拒、§1 字节不变、零消费、修复后同一 close 成功 ② 无槽号 = 合法缺省 ⇒ close 照常收口（「没有」≠「读不到」） |
 | U-BG15 | 边界（manifest 读到了、说没有） | manifest 在盘且合法，但 `active` 缺席（`_slot` 未钉） | close 照常收口（不抛）· 零消费（无槽号 ⇒ 该批槽集为空）· 回执点名「消费 0 枚」· manifest 不被本通路改写（`batch-lifecycle.mjs` 内 `saveManifest` 零命中）· 探针反向验证：`thincoder-core/token-ttl.mjs` 的 `Number.isInteger` 支改成 `1` ∥ `0` ∥ `2` ∥「缺 `active` 即抛」四种错法各使本例如红（还原后绿） |
 
-**编号对齐**：需求档 `docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md` 所称 `U-7` = 上表 `U-BG16`；所称 `U-8` = 上表 `U-BG8`（同一用例，编号以本表为准）。**夹具前置**：`U-BG16` 的夹具须含 §3 落地（轮次块 + 状态行 = `评审通过`）——§3 落地门（单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.1）在 `run.batchDoc` 非空时生效，未落地则 settle 不签发、本行断言不可达。
+**夹具前置**：`U-BG16` 的夹具须含 §3 落地（轮次块 + 状态行 = `评审通过`）——§3 落地门（单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.1）在 `run.batchDoc` 非空时生效，未落地则 settle 不签发、本行断言不可达。
 
 **验收（回指批次档 §2 条目）**：
 
@@ -417,8 +443,9 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 - A5 = U-BG9（放行条件句 ∥ 活槽判据体 ∥ TTL 常量 ∥ `consume-design` 选择器句逐字零变）
 - A6 = U-BG10（并集规则的纯函数面；核内保存面未接该函数——见「写面如实登记」）
 - A7 = U-BG16（生产调用形下旁列有值、清点「批」列不再是 `—`）+ U-BG8（无归属不猜）
+- A8 = U-BG17 + U-BG18 + U-BG19 + U-BG20 + U-BG21 + U-BG22（闸面：批不符 ⇒ 拒；批相符 ⇒ 放行；封印未动 ⇒ 放行；封印动一个字节 ⇒ 拒；旧槽无值 ⇒ 跳过；封印不可读 ⇒ 拒）
 
-**验证命令**：`node --test docs/batches/2026-10-26-pen-gate-batch-scope.test.mjs`（当批单测，本批的验收命令）；集成用例 `test/integration/batch-close-token-consume.test.mjs` 由父侧收口一并跑，不入本批验收命令。
+**验证命令**：`node --test test/integration/batch-close-token-consume.test.mjs`（A8 的六条用例住该档，父侧收口时一并跑）。
 
 **关键决策记录**：
 
@@ -434,5 +461,103 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 | KD-BG8 | manifest 层按同一「没有 vs 读不到」判据分判，严格形落在 `loadManifest(cwd, { strict })` | 在 `token-ttl.mjs` 另写只读 `.active` 的严格读函数——判据落第三处、manifest 形状出现第二读者，三处必漂 |
 | KD-BG9 | 同拍两读形（旁列严格 ∥ token 侧宽容）**不收敛**，按已知限制登记 | 同拍单读——须改造消费核 `executeConsumeDesignAction` 的槽读取形（超出本节）；触发条件是非确定性竞态（外部在两次相邻读之间改文件可读性） |
 | KD-BG10 | 批归属派生 = **`run.batchDoc` 优先、`docSetKey` 兜底**（`batchAbsPathOfRun`） | ① 并进 `documents` 再算 `docSetKey`——实例键 / 在跑判定 / 冻结窗口的 scope 全被批档污染（否决）；② 只用 `run.batchDoc`、删掉兜底——把既有「批档写进 `documents`」的调用形（U-BG1 ∥ U-BG8 ∥ RTM 10-1）降成无归属，本批外零收益、却让一条已验收的路径变差 |
+| KD-BG11 | 闸面批归属 = 比 spawn 的 `batchDoc` 绝对路径，槽侧走**严格读** | ① 比 `docSetKey`——它不含批档（KD-BG10 已拒）；② 槽侧宽容读——读不到被读成「旁列无值 ⇒ 不拦」，正是本步要堵的那条放行 |
+| KD-BG12 | 评审封印 = settle 固化被审档 sha256（排除批档），派单复算 | ① 只验凭证——凭证签发后被审档仍可改，门照样放行（评审 #58 后的实况）；② 比 mtime ∥ 大小——两者都是近似值，改一个字节可以不动量级 |
 
-**边界（不做）**：不改 `thincoder-core/agent/dispatch.mjs` 的放行条件 · 不改 `anyLiveDesignSlot` 判据语义 · 不改 TTL · 不放宽「无凭证 ⇒ 拒」（只可能更严） · 不改 `consume-design` 语义 · 不跨会话槽消费（只消费本会话槽内该批的槽，别会话凭证靠 TTL） · 不做时间戳等其它字段扩展 · 不加「工程模式评审必带批档」的强制面（无归属槽的敞口按上文如实划界）。
+**边界（不做）**：不改 `thincoder-core/agent/dispatch.mjs` 的放行条件 · 不改 `anyLiveDesignSlot` 判据语义 · 不改 TTL · 不放宽「无凭证 ⇒ 拒」（只可能更严） · 不改 `consume-design` 语义 · 不跨会话槽消费（只消费本会话槽内该批的槽，别会话凭证靠 TTL） · 不做时间戳等其它字段扩展（§10.1–§10.2 的两条旁列在内，其它字段扩展在外） · 不加「工程模式评审必带批档」的强制面（无归属槽的敞口按上文如实划界）。
+
+### 10.1 闸面批归属（eng-coder spawn）
+
+**比较对象 = 本次 spawn 的 `batchDoc` 参数解析后的绝对路径**：`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `buildSpawnChild` 里 batchDoc 门已把它解析成 `batchDocAbs`，而该门先于 token 门。
+
+**入参面**：`gateDesignToken(parent, args, { batchDocAbs })`——第三参就是上面那个已解析的值（解析单源 = `buildSpawnChild` 的 batchDoc 门，本步不再解析 `args.batchDoc`）。⑥ 封印步不添入参：它读的是槽里的 `docs`。
+
+**没有「本次 spawn 缺 `batchDoc`」这一支**——eng-coder 缺它时更早的门就拒了。旁列无值是**槽**的属性（旧槽 ∥ 该次评审不带批档），不是派单参数的属性；两件事不能混成一条「缺席怎么办」。
+
+**读形 = 严格形**：`readEngTokenBatchesFromSlot(agent, { strict: true })`（`thincoder-core/token-ttl.mjs`）。槽文件读不到（非 `ENOENT` 的 I/O 错 ∥ 解析失败）⇒ 抛，携槽文件路径 + 底层消息；**不落进「旁列无值 ⇒ 不拦」**——那一支只认「读到了、没有这个 designId 的行」。
+
+**判定**：旁列有值 ∧ 归一后 ≠ 本次 `batchDoc` 绝对路径 ⇒ 拒。拒文单源 = `docs/core/design/TOOLS.md` §6.25 ③ 的 batch-mismatch 行，逐字：
+
+```text
+designToken batch mismatch — the eng-coder spawn is refused: this token was issued for <bound batch>, but this spawn implements <given batch>. Use the token from this batch's design review.
+```
+
+旁列无值（旁列启用前的旧槽 ∥ 该次评审不带批档）⇒ 不拦。归一 = §9 那条既有匹配规则（两侧 `node:path` 解析后绝对路径、分隔符归一、`win32` 不区分大小写）。
+
+**落点 = `gateDesignToken` 的第 ⑤ 步**（`thincoder-core/agent-tools/subagent-design-token.mjs`）：四步既有核之后、`return issuedToken` 之前。四步核 = `resolveDesignSlot`（两条 designId 诊断）→ 参数在场 `missing` → 值相等 `mismatch` → `validateDesignToken` 的 `expired` ∥ `invalid`。
+
+**为什么排在封印之前**：归属不符时不必逐档读盘算 hash，先判便宜的那条。判据顺序单源 = `docs/core/design/TOOLS.md` §6.25 ③ 的顺序行。
+
+**分支出处（复现路径 · 复现驱动的防御）**：以 `batchDoc` = A 批跑一次设计评审铸一枚槽，再用同一枚令牌派 `batchDoc` = B 批的 eng-coder——四步核全过、派单放行；本步拒的就是这一面。未留下「归属与派单批不同」的会话实况记录，故本条按复现路径立、不按实况立。
+
+**最相近先例**：`existing: docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §9 F-SL1 清点面（同一槽文件、同一并集视图、同一 `batchAbsPathOfRun` 派生）。对齐 = 同一旁列、同一归一判据；偏差 = 读形从缺省宽容升为严格。偏差理由 = 清点面缺值只错标一列，闸面缺值等于放行一枚可能属于别批的令牌。
+
+**公开源核查**：`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `["../.thincoder","../thincoder.com"]`（本轮实读）；两处都无令牌门 ∥ 槽文件契约 ⇒ 无外部源可查（结论 = 无相关）。
+
+### 10.2 评审封印
+
+**被算集合 = 该次评审 `documents` 里的非批档**：`docRoot.batches` 之下的档排除。理由 = 批档在评审通过后还要被写（§5 实施记录 ∥ §6 收口），把它算进封印就是让每一次正常收口都自毁封印。
+
+**这组路径按受理面那把尺解析**：`documents` 走 `thincoder-core/agent-tools/review-facts.mjs` 的 `resolveReviewDocPaths(documents, agent.cwd)`，结果随实例落 `run.docAbs`，封印计算与派单复算都读这一组。实例键 `docSetKey` 只对旧实例（无 `docAbs`）兜底——它走 cwd 拼法，cwd 非项目根时与受理路径不是同一组。
+
+**清单与 hash 一起存进槽**：`engDesignTokenSeals[designId] = { hash, docs: [绝对路径…], docHashes: [{ path, hash }] }`。派单侧**只读槽里的 `docs` 复算，不自己推清单**——自己推等于允许两处各自定义「被审档」是什么。`docHashes` 按同一字节口径逐档各算一次，只服务拒文点名；判定值仍是 `hash`。
+
+**字节口径**：按 `docs` 数组顺序，逐档读原始字节，档与档之间放一个 `\n` 分隔；路径不进 hash。算法 = `node:crypto` 的 `createHash("sha256")`。
+
+**落点（七处）**：
+
+| 面 | 落点 |
+|---|---|
+| settle 算封印 | `thincoder-core/agent-tools/design-token.mjs` 的 `settleDesignReview`——与写批归属旁列同拍 |
+| 派单复算 | `thincoder-core/agent-tools/subagent-design-token.mjs` 的 `gateDesignToken` **第 ⑥ 步**（批归属之后） |
+| 读形 | `thincoder-core/token-ttl.mjs` 的 `readEngTokenSealsFromSlot(agent, { strict: true })`——与 `readEngTokenBatchesFromSlot` 同形兄弟；闸面严格形，槽文件读不到 ⇒ 抛 |
+| 序列化字段 | 同档的 `engTokenSlotFields` 增 `engDesignTokenSeals` |
+| 落盘 | 同档的 `persistEngTokens`（逐字段复制，旁列同处落盘） |
+| 合并 | `thincoder-core/session-slot-write.mjs` 的 `mergeEngTokenSealsForSave`，紧邻 `mergeEngTokenBatchesForSave`；同 key 冲突 = **新写者胜** |
+| 恢复 | `thincoder-core/token-ttl.mjs` 的 `restoreEngTokens` 同拍读入 |
+
+**判定**：有封印值 ∧ 重算的 sha256 ≠ 记下的值 ⇒ 拒。拒文单源 = `docs/core/design/TOOLS.md` §6.25 ③。
+
+**拒文点名变了的那几份档**：重算不一致时逐档比对 `docHashes`，命中了差异的路径按 `docs` 原顺序写进拒文，逐字：
+
+```text
+designToken seal mismatch — the reviewed documents changed after the review passed: <path>[, <path>…] — re-run the review, or revert those files to the version the review approved.
+```
+
+**没有 `docHashes` 的封印行（本改动之前写下的）⇒ 拒文保留无路径形**，逐字：
+
+```text
+designToken seal mismatch — the reviewed documents changed after the review passed (this seal records no per-document hashes, so no path can be named) — re-run the review, or revert the change.
+```
+
+这一支的业务结果与有逐档 hash 时相同（照旧拒），少的是报面的一个名字；现算一份今天的 hash 去当名字，点的是评审没看过的那一份，比不给名字坏。
+
+**三参形（拒文构造器 · 本档定义，别处只指过来）**：`designTokenRefusal(kind, designId, scope)`。第三参 `scope` 只装「报面要点的名字」，不参与任何判定。
+
+**必传，不设默认值**：无名字可点的态传 `{}`；缺参在构造器入口拒，并点名 `scope`——缺省值会默默代调用方决定“没有名字”，而错位的判决三条层下去了才看得出来。
+
+四个带名字的态各自入参：`mismatch` ⇒ `designId` 走第二参、`scope` 传 `{}` · `batch-mismatch` ⇒ `{ boundBatch, givenBatch }` 两个绝对路径 · `seal-mismatch` ⇒ `{ changed: [<可变路径…>] }`（按 `docs` 原序；空数组 ⇒ 无路径形，用于没有 `docHashes` 的旧封印行）· `seal-unreadable` ⇒ `{ path }`。
+
+**状态名是报面标签，`kind` 收的是代码字面量**：`mismatch` ⇒ `"mismatch"` · `batch-mismatch` ⇒ `"batch"` · `seal-mismatch` ⇒ `"seal"` · `seal-unreadable` ⇒ `"seal-unreadable"`。照状态名传 `"seal-mismatch"` 落不到点名那条分支（构造器未识别的 `kind` 一律走 `invalid` 的拒文），对应关系因此写在这里。
+
+签名与入参名只在本段写一次（`docs/core/design/TOOLS.md` §6.25 ④ 与 `docs/core/design/PROMPT-SYSTEM.md` §6.100 都指回本段）；要加一个新名字，先在这里加一行再落地。
+
+无封印值（旧槽）⇒ 不拦。**被审档缺档 ∥ 不可读 ⇒ 拒**（fail-closed——判不了就不放行），拒文逐字：
+
+```text
+designToken seal unreadable — the eng-coder spawn is refused: the reviewed document <path> cannot be read, so the seal cannot be checked. Restore that file, or re-run the review, and spawn again.
+```
+
+**settle 面算不出 ⇒ 拒签，不 throw**：`settleDesignReview` 读被审档失败时返回 `{passed:false, sign:null}`，并在**任何写之前**返回（槽与 §3 签字都不动）。标记句单源 = `thincoder-core/agent-tools/design-token.mjs` 的 `SEAL_UNREADABLE_MARK`。
+
+**为什么拒签而不是 throw**：这是数据条件（评审看过的档在结算前被移走 ∥ 锁住），读回执的人要的是一句可重评的拒文。throw 会穿过 `settleAdvisorRun` 的 `onAccounting`（该调用串无 catch），跳过结算尾（挂起 ∥ 事件 ∥ 唤醒 ∥ 补位）——可重评的拒签会变成未捕获异常。
+
+**闸面不随此改**：闸面读不到被审档仍抛（§10.2 落点表的「读形」行），因为那里没有可回的结算面。
+
+**分支出处（本次会话实况）**：评审 #58 过后改过被审档再派单——当时四步核全过、放行。本步治的是「凭证有效、评审看过的那一版已经不是这一版」那一面。
+
+**最相近先例**：**未勘察到同形先例**——仓内没有第二处「评审时固化被审档、派单时复算」的读数。仍做的理由 = 四步核只验凭证本身，凭证签发之后被审档还能改，而「评审看过的是哪一版」在盘上没有第二个出处；代价 = 每份被审档在 settle 与每次派单各读一遍（档集小，纯读）。
+
+**公开源核查**：同 §10.1 一条——`index.publicRepos` 两处都无相关契约。
+
+token 值形零改——仍 `<uuid>:<expiryMs>` 两段（三段会让全部槽失效）。

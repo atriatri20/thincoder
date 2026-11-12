@@ -29,8 +29,9 @@
  * 依赖单向（KD-4）：`skeleton ← closeout ← bind ← reopen ← lifecycle`——本档不 import lifecycle。
  */
 import { execFileSync } from "node:child_process"
-import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs"
-import { dirname, relative } from "node:path"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { basename, dirname, join, relative, resolve } from "node:path"
 
 import { appendLedgerNoToHeader, batchSkeleton, readBatchStatusLine } from "./batch-skeleton.mjs"
 import { resolveBatchCreatePath } from "./batch-paths.mjs"
@@ -86,16 +87,69 @@ function sameFaceReceiptLine(check) {
   return `\nsame-face check: face = ${check.face ?? "no board"} · unsettled on this face = ${check.n} (n = 0 ⇒ nothing to take over; n > 0 ⇒ declared a new debt: ${check.declared ?? "—"}) · unsettled on other faces = ${check.m} (a reading; never blocks).`
 }
 
-/** 建档前的 HEAD；取不到时把原因写进 §1，绝不伪造提交号。 */
-function baseShaForCreate(root) {
+/** 批起快照的 ref 前缀（`refs/thincoder/baseline/<批档名>`）：ref 只负责让那个游离提交不被 `git gc` 回收，
+ *  不是取内容的入口——收口读内容照旧走记入行的 sha（`docs/core/design/DOC-CHECK.md` §8）。 */
+const BASELINE_REF_PREFIX = "refs/thincoder/baseline/"
+
+/** 批档名 → ref 末段：去 `.md`；git ref 禁用字符（空白 ∥ 波浪号 ∥ 尖号 ∥ 冒号 ∥ 问号 ∥ 星号 ∥ 方括号 ∥ 反斜杠）换成 `-`，
+ *  `..` 折叠，首尾的 `.` ∥ `-` 剔掉。 */
+function baselineRefOf(abs) {
+  const name = basename(abs).replace(/\.md$/i, "")
+  const safe = name.replace(/[\s~^:?*[\\]/g, "-").replace(/\.\.+/g, ".").replace(/^[.-]+|[.-]+$/g, "")
+  return `${BASELINE_REF_PREFIX}${safe === "" ? "batch" : safe}`
+}
+
+/**
+ * 批起快照（`docs/core/design/DOC-CHECK.md` §8「快照怎么取」）= 建档那一刻**工作树的形状**，不是「已提交的那一份」：
+ * `read-tree HEAD` → `add -A` → `write-tree` → `commit-tree -p HEAD`，全程走**临时索引**，不碰工作区、不动真索引。
+ * 临时索引住仓外（放仓里会被 `add -A` 自己收进树里，快照多出两个不存在的档）。
+ * `add -A` 只走**项目根那一段路径**（项目根住大仓子目录时）：判域与 §2 清单都以项目根为界，根外那些脏档
+ * 进不进基线对判据没有意义，而全仓 `add -A` 会把无关改动整片扫一遍。
+ * 建好挂 `refs/thincoder/baseline/<批档名>`：`commit-tree` 产出的是**游离提交**，没有 ref 指着它，`gc` 一收就没了
+ * ——批档里写一个随时会消失的 sha，等于把基线建在沙上。
+ * 为什么不用 `git stash create`：它只收已跟踪的改动，未跟踪档不入快照 ⇒ 每个未跟踪码档都开一个「不必量」的口。
+ * @returns {{sha:string}|{error:string}} 提交号 ∥ 取不到的原因（调用方写进 §1，不伪造）
+ */
+function batchStartSnapshot(root, abs) {
+  // 身份显式给定：`commit-tree` 要它，而快照提交的作者不是本机制要记的事——不靠全局 git 配置（没有时会静默失败）。
+  const git = (cwd, argv, env) => execFileSync(
+    "git", ["-C", cwd, "-c", "user.name=thincoder-batch", "-c", "user.email=batch@thincoder.local", ...argv],
+    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 30000, env },
+  )
+  const why = (e) => String(e?.stderr ?? e?.message ?? e).split(/\r?\n/).find((l) => l.trim() !== "") ?? "未知"
+  let tmpDir = null
   try {
-    const sha = execFileSync("git", ["-C", root, "rev-parse", "HEAD"], {
-      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 8000,
-    }).trim()
-    return /^[0-9a-f]{40}$/i.test(sha) ? sha : "未取到（git rev-parse HEAD 未返回 40 位提交号）"
-  } catch {
-    return "未取到（git rev-parse HEAD 跑不出）"
+    const top = git(root, ["rev-parse", "--show-toplevel"]).trim() || root
+    // 项目根在仓里的路径（`''` = 项目根就是仓根）；仓根就是项目根时走 `.`。
+    const scope = relative(top, resolve(root)).replace(/\\/g, "/")
+    tmpDir = mkdtempSync(join(tmpdir(), "thincoder-batch-index-"))
+    const env = { ...process.env, GIT_INDEX_FILE: join(tmpDir, "index") }
+    git(top, ["read-tree", "HEAD"], env)
+    git(top, ["add", "-A", "--", scope === "" || scope.startsWith("..") ? "." : scope], env) // 未跟踪档一并入树：「上一批建好、还没提交」正是本仓的常见形状
+    const tree = git(top, ["write-tree"], env).trim()
+    if (!/^[0-9a-f]{40,64}$/i.test(tree)) return { error: "git write-tree 未返回树号" }
+    const sha = git(top, ["commit-tree", tree, "-p", "HEAD", "-m", "batch-start snapshot"], env).trim()
+    if (!/^[0-9a-f]{40,64}$/i.test(sha)) return { error: "git commit-tree 未返回提交号" }
+    git(top, ["update-ref", baselineRefOf(abs), sha], env)
+    return { sha }
+  } catch (e) {
+    return { error: why(e) }
+  } finally {
+    if (tmpDir !== null) {
+      try { rmSync(tmpDir, { recursive: true, force: true }) } catch { /* 临时索引清不掉不改业务结果 */ }
+    }
   }
+}
+
+/**
+ * 建档前的基线 sha（`§1` 记入行 `批起 sha = <sha>` 的值）：单源 = 全树快照（`docs/core/design/DOC-CHECK.md` §8）。
+ * 取不到 ⇒ `未取到（原因）`，**绝不退回 HEAD**：HEAD 只是一份提交，未跟踪 ∥ 未提交的改动不在其中；拿它当基线，
+ * 任何带着未提交改动的档读数都对不上——门会拒掉一个完全没错的设计席（§8 拒文样里那句「拿已提交的 HEAD
+ * 当（了）基线」正是这个错）。取不到就不给基准，收口按「批起基线不可判」拒：放行等于没核。
+ */
+function baseShaForCreate(root, abs) {
+  const snap = batchStartSnapshot(root, abs)
+  return snap.sha ?? `未取到（${snap.error}）`
 }
 
 /**
@@ -154,7 +208,7 @@ export async function createBatchRecord({ args, ctx, review, cwd, bases, onWritt
     throw new Error(`batch: the new record's project root cannot be derived — the ledger row cannot be opened without it (fail-closed). Path: ${abs}. Nothing was written.`)
   }
   const taskBook = relative(root, abs).replace(/\\/g, "/")
-  const baseSha = baseShaForCreate(root)
+  const baseSha = baseShaForCreate(root, abs)
   // executor = 本会话（AC-M2-7「进入在途的迁移带 executor = 会话 sessionId」）——与 `ledger-tools.mjs` 同一取值面
   let executorSessionId = null
   try { executorSessionId = (await import("../session-slots.mjs")).getSessionId() } catch { executorSessionId = null }

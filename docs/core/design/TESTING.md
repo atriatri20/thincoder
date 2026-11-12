@@ -1017,16 +1017,16 @@ U-5 夹具错位档 = test/x.test.mjs
 
 **操作数族登记面的检索读数**：检索式 = `CANON_OPERANDS` ∥ `CANON 操作数` ∥ `Six names` ∥ `六名`，域 = 跟踪面（`docs/**` 非批档 ∥ `thincoder-core/**` ∥ `scripts/**`；批档 ∥ `.thincoder/tmp/**` ∥ `_archive` = 记录面，不入判）。
 
-命中且须随本批改 = 上表五行，**零第六处**：`docs/core/design/PROMPT-SYSTEM.md`（两处计数词）· `docs/core/design/DOC-DISCIPLINE.md`（五处计数词）· `thincoder-core/doc-check/anchors.mjs`（三处）·
+命中且须随本批改 = 上表五行，**零第六处**：`docs/core/design/PROMPT-SYSTEM.md`（两处计数词）· `docs/core/design/DOC-DISCIPLINE.md`（五处计数词）· `thincoder-core/doc-graph/anchors.mjs`（三处）·
 
 仓根 `scripts/prompt-refs-check.mjs`（三处）· `thincoder-core/tool-docs/doc_check.md`（一处）。
 
 
 同形不同指（不属本族，零改）= 「六名」另四义：菜单组名（`docs/desktop/design/IPC.md` ∥ `docs/desktop/design/MENU.md`）· 跳过目录族（`docs/core/design/MEMORY.md`）· 模型名（`docs/core/design/MODEL-SPECS.md`）· 事件名（`docs/cli/design/ACP-CLIENT.md`）。
 
-**第七名的既有件三问**：名逐字 = `RTM.md`（`none found:`——登记面已查：`grep -rn "RTM\.md" thincoder-core/doc-check/anchors.mjs thincoder-core/tool-docs/doc_check.md docs/core/design/PROMPT-SYSTEM.md docs/core/design/DOC-DISCIPLINE.md` 零命中）；
+**第七名的既有件三问**：名逐字 = `RTM.md`（`none found:`——登记面查过 `CANON_OPERANDS` 的既有六名与 `scripts/prompt-refs-check.mjs` 的 J1 白名单，无一名是它；`RTM.md` 由本批落为第七位）；
 
-住 = `CANON_OPERANDS` 第七位（`thincoder-core/doc-check/anchors.mjs`）· 消费 = J1 白名单（`scripts/prompt-refs-check.mjs`）∥ doc-check 围栏名单（`thincoder-core/tool-docs/doc_check.md`）∥ 两份判据源档（两处）。
+住 = `CANON_OPERANDS` 第七位（`thincoder-core/doc-graph/anchors.mjs`）· 消费 = J1 白名单（`scripts/prompt-refs-check.mjs`）∥ doc-check 围栏名单（`thincoder-core/tool-docs/doc_check.md`）∥ 两份判据源档（两处）。
 
 **操作数族同批的理由（结论 = 同批，不另批）**：RTM 总表的档名（全大写 + `.md`）命中 J1，而 J1 白名单直接取自该表——仓根 `scripts/prompt-refs-check.mjs` 的 `const J1_WHITELIST = new Set(CANON_OPERANDS)`。
 提示词三处写入 RTM 总表路径而不扩表，仓根 `scripts/prompt-refs-check.mjs` 即报三处命中；判据源（§6.6「三面逐字一致」）与代码表分叉 = 代码与其判据源互相矛盾。
@@ -1302,7 +1302,7 @@ console.log('bad-column-rows', badColumnRows);
 > 目的：同一条规则只在一册里活一份；端只作为行内一列，端差靠一列值 + 覆盖矩阵显形，不靠分档固化。
 > 依据 `docs/core/requirements/TESTING.md`「分册按能力族，不按端」· 同档 F29「端只作为行内一列」。
 > 先例对齐：落点 ∥ 列定义 ∥ 双向对应三件原样沿用 §11.2 ∥ §11.3 ∥ §11.4；先例批 = 无（批档为一次性载体、可整体清理）。偏离一项 = 「一份总表」改为「索引 + 分册」，理由 = §11.18.7。实施坐标 = 索引 `test/RTM.md` ∥ 分册目录 `test/rtm/`（六档，名单见 §11.18.8）∥ 用例标题 = `test/integration/` 各档 `test()` 的首参。
-> 新名三问（`test/rtm/` 目录 + 七个族名）：`none found: 已查本档 §11 全文 ∥ docs/core/requirements/TESTING.md §7 ∥ thincoder-core/doc-check/anchors.mjs 的 CANON_OPERANDS（七名，无族名）∥ scripts/prompt-refs-check.mjs 实跑（命中 0）`——族册是本形态新起的落点，落点根沿 `test/`（§11.2），不新起仓根目录；族名只作册的档名，消费方 = 实施席（建档）· 设计席（读 delta）· 交付门（§11.18.10 AC-IX-5 的判域）；提示词面不写族册路径，只写 `test/RTM.md`，故白名单不动。
+> 新名三问（`test/rtm/` 目录 + 七个族名）：`none found: 已查本档 §11 全文 ∥ docs/core/requirements/TESTING.md §7 ∥ thincoder-core/doc-graph/anchors.mjs 的 CANON_OPERANDS（七名，无族名）∥ scripts/prompt-refs-check.mjs 实跑（命中 0）`——族册是本形态新起的落点，落点根沿 `test/`（§11.2），不新起仓根目录；族名只作册的档名，消费方 = 实施席（建档）· 设计席（读 delta）· 交付门（§11.18.10 AC-IX-5 的判域）；提示词面不写族册路径，只写 `test/RTM.md`，故白名单不动。
 > 公共源勘察：树内已查 `test/RTM.md`（现盘结构与故事节）∥ `test/integration/` 的用例标题形 ∥ `docs/core/requirements/TESTING.md` §7（F29 ∥ F30 ∥ N22）；外部公共源 = 列集依据已由 §11.7 持，本形态不新增。
 
 #### 11.18.1 索引：`test/RTM.md`
@@ -1390,12 +1390,12 @@ console.log('bad-column-rows', badColumnRows);
 
 | 册 | 故事（分册 H2 里 `. ` 之前的部分） |
 |---|---|
-| `guard` | CLI 7 · CLI 12 · CLI 26 · CLI 36 |
+| `guard` | CLI 7 · CLI 12 · CLI 47 |
 | `batch-ledger` | CLI 5 · 6 · 8 · 10 · 13 · 14 · 17 · 20 · 21 · 24 · 27 |
-| `tooling` | CLI 1 · 3 · 4 · 22 · 28 · 30 · 31 · 34 · 35 |
+| `tooling` | CLI 1 · 3 · 4 · 22 · 28 · 30 · 31 · 34 · 35 · 41 · 42 · 43 · 46 · 49 |
 | `loop` | CLI 11 · 15 · 16 · 18 · 19 · 23 · 25 · 32 |
 | `paths` | CLI 9 · 29 |
-| `ends` | CLI 33 · VSC 1 · VSC 2 |
+| `ends` | CLI 33 · CLI 39 · CLI 40 · VSC 1 · VSC 2 |
 
 **册路径**（六档，本批新建）：
 
@@ -1646,7 +1646,7 @@ test/rtm/ends.md
 | `docs/core/design/TESTING.md`（本档） | 本节 §13（设计笔；行数随本节自身变动，不设读数） |
 | 代码面 | **零改** |
 
-行数口径 = `doc_check` 的 `lines` 读数面（`countContentLines`——末行没有换行的档，最后一段照计）；绝对值不入档，读数随批档带出。
+行数口径 = `countContentLines`（`thincoder-core/agent-tools/batch-tier-gate.mjs`——末行没有换行的档，最后一段照计）；绝对值不入档，读数随批档带出。
 
 ### 13.4 关键决策记录
 

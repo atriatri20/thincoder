@@ -23,10 +23,9 @@ import { readFileSync, readdirSync, existsSync, statSync } from "node:fs"
 import { resolve, join, relative, dirname, sep } from "node:path"
 import { providerSpec } from "../config.mjs"
 import { DEFAULT_MANIFEST, docRootPaths, manifestFilePath, projectRootView, readManifest } from "../manifest.mjs"
-// 去重键的折大小写尺子：同仓有两份同名函数——`doc-graph.mjs` 的私有副本（未导出）与
-// `doc-check/per-root.mjs` 导出的这一份；取已导出的那份（语义同形），不另造第三把。
-// 为何必须折：同一目录的两种大小写写法在 win32 上是同一个目录，不折就同一份档注入两次。
-import { pathKey } from "../doc-check/per-root.mjs"
+// 去重键的折大小写尺子（本档私有）：同一目录的两种大小写写法在 win32 上是同一个目录，
+// 不折就同一份档注入两次。
+const pathKey = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
 
 /** Project guide (AGENTS.md) injection budget — decision 2026-08-08:
  *  NO fixed truncation; long-context models (1M+) get up to 5% of their context

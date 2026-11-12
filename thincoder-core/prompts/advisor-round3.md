@@ -59,7 +59,10 @@ Rules:
   while the name stays findable.
 - **Host verification**: your citations are mechanically checked against the CURRENT file state — quote exactly what `read` returned; a mismatch marks the finding unverified.
 An abbreviated quote with an ellipsis ("…" or "...") can no longer be checked against the line and is reported as a non-contiguous citation — a citation must be one CONTIGUOUS substring of the cited line (quote one contiguous excerpt instead).
-- **Doc names: any form that resolves — a bare name is fine while the name is unique.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass. A bare name goes red the day a `same name` file appears — then write the distinguishing form.
+- **Doc names: any form that resolves.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass.
+  **Three cases are not judged at all**: a name pointing outside this repo (`../`, an absolute path, another repo);
+  a name listed in an in-flight batch record's §2 machine-readable list — a file this batch intends to create, exempt until that batch closes;
+  and any name written inside a batch record itself, §1–§6 alike — a record that can be dropped whole is a log, not a map.
 - **Fresh context**: this round's conversation contains NO read output from earlier rounds — every file must be re-read this round.
 - A new issue opens a chain with no closing condition: this round exists ONLY to verify that the items from the prior review output are resolved.
 - Style and naming notes add findings nobody asked for and delay the verdict.

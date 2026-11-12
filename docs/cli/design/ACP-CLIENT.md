@@ -409,7 +409,7 @@ ACP 不转发工具输出流式增量——**父工具与子代理工具同口�
 |---|---|---|
 | **一手（主据）** | 上游仓 `agent-client-protocol`（`agentclientprotocol` 组织）· `main` 分支 · `schema/v1` 目录的 v1 schema | 经 `gh-proxy.com` 镜像取 `raw.githubusercontent.com`；**实取 as-of 2026-09-18** |
 | **二手（语义解释）** | `agentclientprotocol.com/protocol/{initialization,authentication}`（v1） | 版本协商规则 / 能力缺省语义 / terminal 认证流程的**规范性表述**（逐字引用见 §11.2–§11.4） |
-| **交叉印证（四份本地实现）** | `kimi-code/packages/acp-adapter/src/**` · `oh-my-pi/packages/coding-agent/src/modes/acp/**` · `MiMo-Code/packages/opencode/src/acp/agent.ts` · `openclaw/src/acp/**` | 只用于**印证**上游结论与取「同构判据」，不用于**定形**（形态一律以 schema 为准） |
+| **交叉印证（四份本地实现）** | `kimi-code/packages/acp-adapter/src/**` · `oh-my-pi/packages/coding-agent/src/modes/acp/**` · `MiMo-Code`（opencode 派生）的 ACP agent 实现 · `openclaw/src/acp/**` | 只用于**印证**上游结论与取「同构判据」，不用于**定形**（形态一律以 schema 为准） |
 
 **置信边界（明写）**：schema 取自 `main` 分支、**非 tag 冻结** ⇒ 本节字段结论以该 as-of 为限。
 文档逐字：「This version is only incremented when breaking changes are introduced」+ 新能力一律经 capabilities 引入（非破坏性）
@@ -599,7 +599,7 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 - **AC-862-2**：字段投影逐态正确（turn / approval 轮号对；queued 位次 + 原因文；零字段态 ⇒ 仅 role/id/state；无值键缺席）。
 - **AC-862-3**：负向三条——无终止符 `⟦ev⟧` 文本**仍转发**（零结构化）；文本中段 `⟦ev⟧` 仍转发；无前缀形态事件仅剥离零发射。
 - **AC-862-4**：既有面零回归——`[model]` 剥离、relay 前缀剥离、内容转发语义零改（回归两例 = 单元测试档 T-862-11/12）。
-- **AC-862-5**：单元测试档全绿（先红后绿）+ `node scripts/doc-check.mjs --root .` 复跑 + 语法检查。
+- **AC-862-5**：单元测试档全绿（先红后绿）+ `doc_check(mode:"gate")` 首行 `DOC-CHECK GATE: PASS` + 语法检查。
 - 用例表 = T-862-1…12。
 
 ### 12.6 边界与登记（不做）

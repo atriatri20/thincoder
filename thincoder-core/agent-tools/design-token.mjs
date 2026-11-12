@@ -11,14 +11,19 @@
  * （设计档 ENG-TOKEN-BINDING.md §5.1——不经 advisor-async re-export）。
  */
 
-import { randomUUID } from "node:crypto"
-import { readFileSync } from "node:fs"
+import { createHash, randomUUID } from "node:crypto"
+import { readFileSync, writeFileSync } from "node:fs"
+import { parse, resolve } from "node:path"
 import { tokenExpiryMs } from "../token-ttl.mjs"
+// 评审封印的「被审档」面判：批档面（`docRoot.batches` 之下）排除——判据与 doc-check 的批档面
+// 同源（`batchDirs` 一处），本档不自持第二份「哪个目录算批档」的判定（§10.2 被算集合）。
+import { isBatchFace } from "../doc-check/existence.mjs"
+import { owningProject } from "../manifest-discovery.mjs"
 // 段面读判据单源（骨架档）：轮次块计数 ∥ 段级状态行 ∥ §3 完成词——§3 落地门与写入面读同一形态。
 // 裁定行锚（`_V_PRE` / `_V_SUF` / `VERDICT_CHANGES_LINE`）同住骨架档锚块，组合序也只在那一档（`verdictGapOf`）：
 // 本档的裁定闸判据、写入面（`append §3` 的打回重置 `statusResetPlan`）与 `§5` 写入门读同一个函数——
 // 锚与序都只此一份，三处不各写一遍。
-import { countRoundBlocks, readSectionStatusWord, STATUS_WORDS, VERDICT_PASS_LINE, verdictGapOf } from "./batch-skeleton.mjs"
+import { countRoundBlocks, readSectionStatusWord, STATUS_WORDS, statusPassPlan, updateSectionStatusLine, VERDICT_PASS_LINE, verdictGapOf } from "./batch-skeleton.mjs"
 // 批归属派生（DESIGN-TOKEN-SETTLEMENT §10）——两源定序 `batchAbsPathOfRun`：`run.batchDoc` 优先、
 // `docSetKey` 的批档兜底（判据与清点面同源）。
 // 本档 ⇄ `design-slots.mjs` 为**静态环**（对方取 `effectiveTokenTtlMs`）：两侧绑定只在函数体内
@@ -143,14 +148,108 @@ const RECORD_BATCH_UNREADABLE = "batch-unreadable"
  * 另起一行落在其后——指名当前值，但不把证据塞进那个机器可 grep 的括号里。 */
 const REVIEW_RECORD_MARK = (reason, evidence) => `评审记录不合格——token 未签发 (review record incomplete — no design token was issued; reason: ${reason})\n补写该批档 §3（发现 + VERDICT —— 状态行由工具随块落）后重跑设计评审；未补写不得按已核处理。${evidence ? `\n证据：${evidence}` : ""}`
 
+/** §10.2 封印在结算面算不出（被审档读不到）的恒定标记（逐字可 grep）：结算拒签、零字节写、可重评。
+ *  **为什么是返回的拒签而不是 throw**：这是**数据条件**（评审看过的那份档在结算前被移走 / 锁住），
+ *  不是接线故障——读回执的人要的是一句话与下一步。throw 会穿过 `settleAdvisorRun` 的
+ *  `onAccounting` 钩子（那里没有 catch），跳过结算尾（挂起 / 事件 / 唤醒 / 补位），把一个可重评的
+ *  拒签变成一次未捕获异常。位置 = 任何写之前（§3 签字与槽都在它之下）。 */
+const SEAL_UNREADABLE_MARK = (path) => `评审封印无法计算——token 未签发 (the review seal cannot be computed — no design token was issued: the reviewed document ${path} cannot be read; restore that file, or re-run the review; nothing was written)`
+
+/** 写档字节的**单通道**（模块级引用）：初值 = `fs.writeFileSync` 本体，生产路径从不替换。
+ *  结算签字与落盘失败后的回退写都经这一个引用 ⇒ 两条写都只有一条路径，单测也能对两笔同时注入失败
+ *  （「写抛错」∥「只写半截」），不必去动盘上的权限——不可写的地方先不可读，落到的是 `batch-unreadable`。 */
+let recordWriter = writeFileSync
+/** 测试缝（生产路径不调）：换掉写通道；传非函数 ⇒ 还原本体（用例 `t.after` 收尾）。 */
+export function __setRecordWriterForTest(fn) {
+  recordWriter = typeof fn === "function" ? fn : writeFileSync
+}
+
+/** 评审封印的字节口径（DESIGN-TOKEN-SETTLEMENT §10.2，单源——settle 与 spawn 两侧同调本函数）：
+ *  按 `docs` 数组顺序逐档读**原始字节**，档与档之间放一个 `\n`，路径不进 hash；算法 = sha256。
+ *  读不到（缺档 ∥ 权限错）⇒ 抛，`err.sealPath` = 那一份读不到的档的路径（拒文要点它的名）——
+ *  「判不了」与「一致」是两件事，闸面按 fail-closed 处置。
+ *  @param {string[]} docs 被审档绝对路径（顺序 = settle 时记下的顺序）
+ *  @returns {string} sha256 十六进制 */
+export function designSealHash(docs) {
+  const h = createHash("sha256")
+  docs.forEach((p, i) => {
+    let buf
+    try {
+      buf = readFileSync(p)
+    } catch (e) {
+      const err = new Error(`design seal: the reviewed document cannot be read (${p}: ${e?.message ?? e})`)
+      err.sealPath = p
+      err.cause = e
+      throw err
+    }
+    if (i > 0) h.update("\n")
+    h.update(buf)
+  })
+  return h.digest("hex")
+}
+
+/** 逐档 hash（DESIGN-TOKEN-SETTLEMENT §10.2「清单与 hash 一起存进槽」）：单档**原始字节**的 sha256，
+ *  与 `designSealHash` 同一读取面、同一失败形（读不到 ⇒ 抛，`err.sealPath` = 那一份档的路径）。
+ *  它只服务拒文点名：判定值仍是组合 `hash`，这一列不参与任何判定。
+ *  @param {string} absPath 被审档绝对路径
+ *  @returns {string} sha256 十六进制 */
+export function designDocHash(absPath) {
+  let buf
+  try {
+    buf = readFileSync(absPath)
+  } catch (e) {
+    const err = new Error(`design seal: the reviewed document cannot be read (${absPath}: ${e?.message ?? e})`)
+    err.sealPath = absPath
+    err.cause = e
+    throw err
+  }
+  return createHash("sha256").update(buf).digest("hex")
+}
+
+/** 封印行的逐档列（§10.2）：按 `docs` 原序逐档各算一次，成形 = `[{ path, hash }]`。
+ *  @param {string[]} docs 被审档绝对路径（顺序 = settle 时记下的顺序）
+ *  @returns {{path: string, hash: string}[]} */
+export function designDocHashes(docs) {
+  return docs.map((p) => ({ path: p, hash: designDocHash(p) }))
+}
+
+/** 该次评审的封印文档集 = 被审文档集里的**非批档**（§10.2「被算集合」）：
+ *  批档评审通过后还要被写（§5 ∥ §6），把它算进封印就是让每一次正常收口都自毁封印。
+ *  「哪一份是批档」的判据不在这里新定义——`isBatchFace` 是 doc-check 那一侧同一个批档面谓词
+ *  （`docRoot.batches` 一处；显式 `null` = 本面无）。项目根按每份档自己上溯（多仓评审各归各仓）。
+ *  清单来源**首选** = 受理面同一把尺解析出的受理绝对路径（`run.docAbs`，`advisor-async.mjs` 起评时落）；
+ *  只有旧实例 ∥ 手建实例没有它时才退回实例键 `docSetKey`（`normAbs` 的 cwd 拼法——cwd 非项目根时
+ *  与受理路径可不同）。顺序与去重：沿用来源的序；同档多种写法按平台大小写归一后去重。 */
+function sealDocSetOf(run) {
+  let list = null
+  if (Array.isArray(run?.docAbs)) list = run.docAbs
+  else { try { list = JSON.parse(run?.docSetKey ?? "null") } catch { return [] } }
+  if (!Array.isArray(list)) return []
+  const out = []
+  const seen = new Set()
+  for (const raw of list) {
+    if (typeof raw !== "string" || !raw.trim()) continue
+    const abs = resolve(raw)
+    const key = process.platform === "win32" ? abs.toLowerCase() : abs
+    if (seen.has(key)) continue
+    seen.add(key)
+    const root = owningProject(abs, parse(abs).root)
+    if (root && isBatchFace(abs, root)) continue
+    out.push(abs)
+  }
+  return out
+}
+
 /**
- * Shared design-review settlement (sync wrapper + async settle): the token echo
  * IS the verdict — the advisor echoes it only on approval. On echo (full string
  * OR truncated — uuid present; §5.1①): slot the token under designId (always the
  * FULL token; + eng-coder gate flag; single-value mirror retired per
  * DESIGN-TOKEN-SETTLEMENT D3), record its batch attribution (`_engDesignTokenBatches`
  * — `batchAbsPathOfRun(run)`: the instance's bound `batchDoc`, else the reviewed doc-set's
- * `batches/` file, §10; neither ⇒ no attribution) and return the clean output with the
+ * `batches/` file, §10; neither ⇒ no attribution), seal the reviewed documents
+ * (`_engDesignTokenSeals` — the non-batch documents' sha256 + their list + the per-document
+ * hashes the refusal names, §10.2; an empty set drops the previous seal for this designId)
+ * and return the clean output with the
  * Approved suffix (truncated echo: the M2 marker sits before the suffix); the review
  * instance CLOSES (a later review of the same doc-set starts a fresh full
  * review). On non-echo: strip every echo form (single source §5.1③) and return
@@ -164,12 +263,17 @@ const REVIEW_RECORD_MARK = (reason, evidence) => `评审记录不合格——tok
  *   非空）——设计评审必携 `batchDoc`（准入门，判据 = 同档 §2 第 6 条）⇒ 到结算面仍为空只是接线故障，
  *   在 `boundBatch` 判定处断言并 throw（程序不变量，早于写槽；不设对外拒因值，不返回判决）；已过回显闸 ⇒ 两次判：① 轮次块数 > 点火基线
  *   `run.section3BlocksAtStart`（**无条件**——changes-required 轮同判；嵌在裁定闸之前）② 段级状态行 = `评审通过`
- *   （只在签发路径上判）。不满足 ⇒ `{passed:false}` + 恒定标记，槽零写、实例不翻 open（补写后同实例可重评）。
- * @returns {{passed: boolean, output: string}}
+ *   ——**由结算自己签字**（计划 → 写 → 回读；只在签发路径上判；一笔的顺序、回退与测试缝 =
+ *   `docs/core/design/BATCH-RECORD.md` §4.23）。不满足 ⇒ `{passed:false}` + 恒定标记，槽零写、实例不翻 open
+ *   （补写后同实例可重评）；签字已落那一笔的落盘与回退靠返回的 `sign`（下文 `@returns`）。
+ *   §10.2 封印算不出（被审档读不到）⇒ 同一形：`{passed:false, sign:null}` + 恒定标记，且在任何写入之前返回。
+ * @returns {{passed: boolean, output: string, sign: {before: string, rollback: () => void}|null}} —— `sign` 非空 =
+ *   本笔在批档上落了一条签字：`before` = 签字前的档全文（落盘失败时写回它），`rollback()` = 写回那一笔
+ *   （写通道单源 = 本模块的 `recordWriter`，故回退走同一个注入点）。判据 2 已在 `评审通过` ⇒ 零写、`sign: null`。
  */
 export function settleDesignReview(agent, run, designToken, rawResult, opts = {}) {
   if (!designToken || typeof rawResult !== "string") {
-    return { passed: false, output: rawResult ?? "" }
+    return { passed: false, output: rawResult ?? "", sign: null }
   }
   // A（F11/ADVISOR-GUARDS.md §1 消费点 1）：未完成即不签发——判据与 code 完成守卫同源（单谓词）。
   const incomplete = opts?.incomplete ?? null
@@ -178,6 +282,7 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
     return {
       passed: false,
       output: `${stripped}\n\n评审未完成——token 未签发 (review incomplete — no design token issued; reason: ${incomplete})\n以更小范围重跑设计评审（逐档 / 逐节拆分，或拆到两次评审），或调大 agent.advisor.timeoutMs 后重试；补充检查未完成的部分不得按已核处理。`.trim(),
+      sign: null,
     }
   }
   // §5.1① 截断容忍：全串匹配 ∨ 截断形（本 token 的 uuid 值出现——空 uuid 不构成「值」）
@@ -187,7 +292,7 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
   const truncatedEcho = !fullEcho && uuid.length > 0 && rawResult.includes(uuid)
   if (!fullEcho && !truncatedEcho) {
     const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
-    return { passed: false, output: [stripped, NO_VALID_ECHO_MARK].filter(Boolean).join("\n\n") }
+    return { passed: false, output: [stripped, NO_VALID_ECHO_MARK].filter(Boolean).join("\n\n"), sign: null }
   }
   // §3 落地门判据 1（**无条件**——pass 与 changes-required 都判）—— 嵌在回显闸之后、裁定闸之前。
   // 设计单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.1；**一次读档、两次判**（判据 2 复用同一 src）。
@@ -228,26 +333,88 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
   if (reason !== null) {
     // 槽零写、`run.open` 不翻 ⇒ 补写 §3 后同一实例可重评（与裁定闸同形）。
     const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
-    return { passed: false, output: [stripped, REVIEW_RECORD_MARK(reason, detail)].filter(Boolean).join("\n\n") }
+    return { passed: false, output: [stripped, REVIEW_RECORD_MARK(reason, detail)].filter(Boolean).join("\n\n"), sign: null }
   }
   // §5.2 裁定闸（#940）：签发 = 回显 ∧ 裁定行——缺 `VERDICT: pass` 行或含 `VERDICT: changes-required` 行
   // ⇒ 拒签（与 M1 径同形：剥净回显 + 恒定标记；槽零写 ∥ 实例保持——修后重评）。
   const gateFailure = verdictGateFailure(rawResult)
   if (gateFailure !== null) {
     const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
-    return { passed: false, output: [stripped, VERDICT_GATE_MARK(gateFailure)].filter(Boolean).join("\n\n") }
+    return { passed: false, output: [stripped, VERDICT_GATE_MARK(gateFailure)].filter(Boolean).join("\n\n"), sign: null }
+  }
+  // §10.2（DESIGN-TOKEN-SETTLEMENT）评审封印：**先算，后写**。位置 = 裁定闸之后、§3 签字之前：
+  // 被审档读不到 ⇒ 结算拒签（恒定标记），而此刻签字 ∥ 槽表 ∥ 批归属都还没动。
+  // 不抛的理由 = 文件头标记注释；被算集合 = 被审文档集里的非批档；口径单源 = `designSealHash`。
+  const sealDocs = sealDocSetOf(run)
+  let sealHash = null
+  let sealDocHashes = []
+  if (sealDocs.length > 0) {
+    try {
+      sealHash = designSealHash(sealDocs)
+      // 逐档列与组合值同一个 `try`：两笔都是「读被审档」，读不到时同一条拒签出去（§10.2）。
+      sealDocHashes = designDocHashes(sealDocs)
+    } catch (e) {
+      const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
+      return { passed: false, output: [stripped, SEAL_UNREADABLE_MARK(e?.sealPath ?? "(unknown)")].filter(Boolean).join("\n\n"), sign: null }
+    }
   }
   // 判据 2（**只在签发路径上判**）——裁定行已判 pass、批档已读到（读不到已在上述判据 1 退场）。
   // 段级 = 唯一状态行写面（`batch-skeleton.mjs` `updateSectionStatusLine`）的同一处——写它的是工具：
   // `append §3` 那一笔随裁定行置位 ∥ 重置（`statusPassPlan` ∥ `statusResetPlan`），`status` 是同面上的
   // 可选手写口——也是下游 `§5` 写入门读的那一处；轮次块只由工具戳标题、块内无状态行落点 ⇒
   // 读块内状态行是读一行没人写的字。旧字面 `评审完成` 由 `readSectionStatusWord` 读侧等义。
-  const word = readSectionStatusWord(batchSrc, 3)
-  if (word !== STATUS_WORDS[3].done) {
-    const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
-    const detail = `§3 状态行 = ${word ?? "（缺）"}；须 = ${STATUS_WORDS[3].done}（块落盘时由工具置位）`
-    return { passed: false, output: [stripped, REVIEW_RECORD_MARK(RECORD_STATUS_NOT_PASSED, detail)].filter(Boolean).join("\n\n") }
+  //
+  // **签字是结算自己的一笔**（`docs/core/design/BATCH-RECORD.md` §4.23）：挂在写通道上，换一条通道（`edit §3`）
+  // 就漏；挂在结算的判决上，判决只有一个来源。三件一笔 = 算计划 → 写档 → 回读，与 token 落盘同成同败
+  // （落盘那一半在 `settleAdvisorRun`）。计划函数与写函数都复用既有单源 ⇒ 零新函数、零第二条写路径。
+  const plan = statusPassPlan(batchSrc, 3, rawResult, "")
+  let sign = null
+  // ① 计划非空 ⇒ 要签；空 = §3 状态行已是完成词（幂等零写——同一本档的第二次结算写不进一个字节）。
+  if (plan) {
+    // ② 写 + 回读：回读的是**盘上字节**，不是刚算出的内存结果——写没落盘、写半截、被别处改回，都在这里现形。
+    // 算全文这一步留在 `try` 之外：§3 段头缺失由写面 throw（接线故障该炸得响，不配一条给用户看的拒因——
+    // 与 `boundBatch` 同判）；只有 `recordWriter` 那一次 fs 写才是「写失败」这一支。
+    const signedSrc = updateSectionStatusLine(batchSrc, 3, plan.statusValue)
+    let failure = ""
+    try {
+      recordWriter(boundBatch, signedSrc, "utf8")
+    } catch (e) {
+      failure = `写档失败: ${e?.message ?? String(e)}`
+    }
+    let signed = null
+    if (!failure) {
+      try {
+        signed = readFileSync(boundBatch, "utf8")
+      } catch (e) {
+        failure = `签字回读失败: ${e?.message ?? String(e)}`
+      }
+    }
+    if (!failure) {
+      const back = readSectionStatusWord(signed, 3)
+      if (back !== STATUS_WORDS[3].done) {
+        // 回读不等 ⇒ 盘上可能已是半截档（写完但 §3 那行不在）⇒ 写回签字前原文：验收行要的是
+        // 「写档失败 ⇒ 零写不留半张」，而半截写恰恰会留半张（截断的批档再没有别的恢复路径）。
+        // 写回失败不吞：与 §4.23 ③ 的回退同一条处置——两处并报，token 未签。
+        failure = `回读 §3 状态行 = ${back ?? "（缺）"}；须 = ${STATUS_WORDS[3].done}`
+        try {
+          recordWriter(boundBatch, batchSrc, "utf8")
+        } catch (e) {
+          failure += `；写回签字前原文也失败: ${e?.message ?? String(e)}`
+        }
+      }
+    }
+    if (failure) {
+      // 槽零写、`run.open` 不翻 ⇒ 补写后同实例可重评（与裁定闸同形）；拒因不新增值——写失败与回读不等
+      // 都落在同一个后置事实上（`status-not-passed` = 结算后那行不是 `评审通过`），detail 句点名真因。
+      const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
+      return { passed: false, output: [stripped, REVIEW_RECORD_MARK(RECORD_STATUS_NOT_PASSED, failure)].filter(Boolean).join("\n\n"), sign: null }
+    }
+    // ③ 签字已落：交出去的是**签字前原文**与写回那一笔——落盘失败时 `settleAdvisorRun` 用它回退两处
+    //   （档字节 + 槽 Map）。回退写经同一个 `recordWriter` ⇒ 写通道只有一条，单测的注入对两笔同时生效。
+    sign = { before: batchSrc, rollback: () => recordWriter(boundBatch, batchSrc, "utf8") }
   }
+  // §10.2（DESIGN-TOKEN-SETTLEMENT）评审封印：`sealDocs` / `sealHash` 已在裁定闸之后算好
+  // （先算后写——被审档读不到时结算已在那一处拒签，没有任何字节落盘）。
   // Echoed the token → review passed. Issue it to the parent for eng-coder.
   agent._engDesignTokens ??= new Map()
   agent._engDesignTokens.set(run.designId, designToken)
@@ -260,6 +427,16 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
     agent._engDesignTokenBatches.set(run.designId, batchAbs)
   } else if (agent._engDesignTokenBatches instanceof Map) {
     agent._engDesignTokenBatches.delete(run.designId)
+  }
+  // §10.2：封印与清单一并存进槽（派单侧只读槽里的 `docs` 复算，不自己推清单）。
+  // 空集 ⇒ **删**该 designId 的旧行（与批归属同一分支理由）：同一 designId 的复评若只审了批档，
+  // 旧封印留着会让下一次派单拿上一轮的版本去比这一轮的档。
+  if (sealHash) {
+    agent._engDesignTokenSeals ??= new Map()
+    // `docHashes` 只服务拒文点名（§10.2「清单与 hash 一起存进槽」）：`hash` 仍是判定值，口径零改。
+    agent._engDesignTokenSeals.set(run.designId, { hash: sealHash, docs: sealDocs, docHashes: sealDocHashes })
+  } else if (agent._engDesignTokenSeals instanceof Map) {
+    agent._engDesignTokenSeals.delete(run.designId)
   }
   // DESIGN-TOKEN-SETTLEMENT D3（2026-09-08）：单值镜像 `_engDesignToken` 退役——
   // 只写多槽 Map（AC3 零镜像写）；settle 落盘由调用方（settleAdvisorRun）当场做。
@@ -277,5 +454,6 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
     // §5.1② 标记位置不变式：M2 恒居 approvedSuffix 之前、suffix 恒居文末
     // （stripApprovedSuffix 的精确截断依赖此形——尾部追加改动不得破坏）。
     output: [clean, truncatedEcho ? TRUNCATED_ECHO_MARK : null, run.approvedSuffix].filter(Boolean).join("\n\n"),
+    sign,
   }
 }

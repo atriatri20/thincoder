@@ -38,9 +38,6 @@
 | **A2 目标域** | **合并仓代码面**——各域代码树（`src` / `webview` / `scripts` / `test`）+ 入口模块，域集并集 | `scripts/doc-check-targets.mjs`（`collectTestTrees`）· 同档的 `collectCodeTokens` |
 | **A3 目标域** | 本仓现态面（解析判序 = 锚引擎自持） | 锚引擎（解析序自持） |
 
-引擎与入口（单包装根，`--domain` 参数化）：入口 / 域驱动 / 报告 = `scripts/doc-check.mjs`；
-判据面 = `thincoder-core/doc-check/anchors.mjs`；采集面 = `scripts/doc-check-targets.mjs`。
-
 ### 3.2 预处理（整块 / 整行跳过）
 
 | # | 规则 | 判据 |
@@ -84,12 +81,11 @@
 
 ### 3.6 注记识别形态（判据的「已消解」通道）
 
-**判据句**：注记**必须携带消解信息**——仅含「已废」二字**不构成通过**（防注记滥用 = 变相豁免）。历史实现 = 手跑入口 `scripts/doc-check-anchors.mjs`（注记标记集判定）；现役引擎无该通道，见下「未实现面」。
+**判据句**：注记**必须携带消解信息**——仅含「已废」二字**不构成通过**（防注记滥用 = 变相豁免）。现役引擎无该通道，见下「未实现面」。
 
 **未实现面（规格有、现役引擎无——不许写成「口径已对齐」）**：
 
-- **现役引擎无注记识别通道**：`doc_check` 的引擎 = `thincoder-core/doc-check`——其 `anchors.mjs` 只有 `FILENAME_CLASSES` / `PLACEHOLDER_STEMS` / `CANON_OPERANDS` 三张豁免表，无注记标记集；按本节 N-1–N-4 打的注记，现役引擎不识别。
-- **`NOTE_MARKERS` 14 词（豁免 / 披露族，唯「本机检注记」不属该两族；逐词登记 = `docs/core/design/ANCHOR-DEBT-REPAIR.md` §8 发现 1）住手跑入口**：只在 `scripts/doc-check-anchors.mjs` 声明——该支纪律档已禁跑、禁引其读数，CI 步已停用；消费面（注记标记集）= 手跑入口 `scripts/doc-check.mjs`（`checkAnchors` 调用方，禁跑）；`thincoder-cli/scripts/doc-impact.mjs` 只 import 同模块的 `extractAnchors`（抽取器，**不涉**注记标记集）；`doc_check` 现役引擎零 import 它。
+- **现役引擎无注记识别通道**：锚判据的引擎 = `thincoder-core/doc-graph/anchors.mjs`——不带注记标记集；按本节 N-1–N-4 打的注记，现役引擎不识别。
 - **判据以哪侧为准**：本节 N-1–N-4（须携带消解信息）——**规格侧要求**，不因现役引擎未实现而失效。
 - **现盘**：注记不被识别（无通道）；收正落判据轮。
 

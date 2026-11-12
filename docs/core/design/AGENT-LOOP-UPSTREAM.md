@@ -295,7 +295,7 @@ it at its next turn boundary and keeps the rest of its discipline unchanged.
 | A4 | 非阻塞 + 无答复路径：工具 execute 无父侧 await；**通道无拉取 / 等待导出**（导出面断言：仅 tool + push / drain + 常量）；未获答复的 ask 其队列消息**仍注入**（T7——信息不丢）；sync 形返回注不给「答复到达」承诺（T17——同用例两半） | 批 §2 条目 3 |
 | A5 | 三闸：未 drain ask ≤1（T10 红——窗口 = 未 drain：未 drain ⇒ 拒 / drain 后 ⇒ 放行，同用例两半）· 长度上限与队列上限（T11 / T12 红）· kind 枚举（T12 红） | 批 §2 条目 4 |
 | A7 | 提示词面：`thincoder-core/prompts/common.md` 的 `##` 块与核 `prompts/` 文件集零改；零新增 `{{inject:...}}` 锚 | 批 §2 条目 6 |
-| A8 | 文档一致：设计档 §6.27 ↔ 批档 §2 ↔ 需求档条目三方一致；`node scripts/doc-check.mjs --root .` 触碰档零新增悬空锚 / 零新增行宽违规 | 批档自身约束（无对应条目——三方一致 + doc-check 按档零新增） |
+| A8 | 文档一致：设计档 §6.27 ↔ 批档 §2 ↔ 需求档条目三方一致 | 批档自身约束（无对应条目——三方一致） |
 
 ### 6.27.11 边界（不做）
 
@@ -612,7 +612,7 @@ spawning subagents, asking questions — those need a real user message. End the
 | U2 | 核挂起面用例全绿（含 T23 / T24——假 carrier / 假 runTurn 纯 Node 驱动，不加载端模块） | 条目 2 |
 | U3 | CLI 输入锁用例全绿（含 T-CL-U1 / U2——`driveRig` 直驱 `suspensionSession`，不触网） | 条目 4 |
 | U4 | 结构机检（ASCII 令牌，单行 `node -e`；四查：两定义点 + 两调用点）：`node -e "const fs=require('fs');const f=(p,s)=>{if(!fs.readFileSync(p,'utf8').includes(s))throw new Error(p+' missing: '+s)};f('thincoder-core/agent-tools/parent-channel.mjs','export function upstreamWaiting');f('thincoder-core/agent-tools/async-settle.mjs','export function wakeAsyncWaiters');f('thincoder-core/agent/suspension.mjs','upstreamWaiting(');f('thincoder-core/agent-tools/parent-channel.mjs','wakeAsyncWaiters(')"` | 条目 1 / 2 |
-| U5 | 零回归（**按包拆分**；仓根无包清单）：cwd = `D:\teamcode\thincoder` ⇒ 核 ∥ cli 两包包级 `npm test` 均非门（核 = exit 1 + `requirement N20` 说明；cli = 空集说明器）——零回归读数走单档直跑 `node --test <档>` + 核语法门 `npm run prepublishOnly`——重点族落点：核包 = `core-hygiene` / `family-tools`；CLI 包 = `async-settle` / `queued-stop` / `input-lock` / `attention-state` / `subagent-observe-send` / `doc-check`（机检本体仍 = 仓根 `node scripts/doc-check.mjs --root .`——U8） | 不变量 ⑤ |
+| U5 | 零回归（**按包拆分**；仓根无包清单）：cwd = `D:\teamcode\thincoder` ⇒ 核 ∥ cli 两包包级 `npm test` 均非门（核 = exit 1 + `requirement N20` 说明；cli = 空集说明器）——零回归读数走单档直跑 `node --test <档>` + 核语法门 `npm run prepublishOnly`——重点族落点：核包 = `core-hygiene` / `family-tools`；CLI 包 = `async-settle` / `queued-stop` / `input-lock` / `attention-state` / `subagent-observe-send` / `doc-check` | 不变量 ⑤ |
 | U6 | 零新增计数 / 上限：`parent-channel.mjs` 导出常量集不变（3 个）；三驱动第 2 步**无新增数值常量** | 不变量 ③ |
 | U7 | 提示词面零行：`git diff --stat -- thincoder-core/prompts` 输出为空（主分支不需改承诺） | 批档禁触面 |
 | U9 | VSC 载体检修：VSC 上游对位用例（T-VS-U1–U7）+ 子代理生命周期集成用例全绿（含夹具同步） | 条目 7 / 8 / 9 |
@@ -1122,7 +1122,6 @@ rounds produced no file write`
 | A-ZW3 | 文案两面逐字 = 代码叶档单源：A 面（`zero-write-watch.mjs` 的两处常量） ∧ B 面（`checkpoint.mjs` 的读数 ∥ 载荷）；A 面携 `from`（`role#id`）+ 轮数——U-ZW12 逐字断言 | F-ZW4 |
 | A-ZW4 | 送达 = 同队列 note：条目 `{from, kind:"note", message}`；**不唤醒**（静态机检：watch 档零引唤醒面）；`UPSTREAM_*` / drain 文案零改 | F-ZW5 |
 | A-ZW5 | 零回归面（收正后）：`_touchedFiles` 记账（两写入点 + ~20 消费面）零改 · 写序记账面（`noteExecutedMutation` / `noteMutations` / `_mutLog`）零改 · `zero-write-watch.mjs` ±0 · `notify_parent` / `UPSTREAM_*` / drain 零改；现役可红面 = 批次本地单元测试档 7 例（U-ZW9–U-ZW12 的谓词级投影 + 接线静态断言 · 随批档留存）——U-ZW1–U-ZW8 从未落到可执行测试档（§6.32.8 头注），补建须另立批次 | F-ZW6 |
-| A-ZW6 | `node scripts/doc-check.mjs --root .` 触碰档零新增悬空锚 / 零新增行宽违规 | 批档自身约束 |
 | A-ZW7 | 口径判定表逐条在盘：同文件重复编辑 ⇒ 计落笔；只读 / `git` / `bash` / `batch` / `file_ops` ⇒ 不计；写失败 ⇒ 不计；未跟踪（非整数）⇒ 不判——U-ZW9 / U-ZW10 / U-ZW11 绿 | F-ZW1（收正） |
 | A-ZW8 | B 面读数带分母 + 缺字段不渲染 + `_zeroWriteTurns ≤ _segmentTurns` 不变量在盘——U-ZW10 / U-ZW12 绿 | F-ZW4 |
 
@@ -1244,7 +1243,7 @@ your own disposition as the user's words.
 | A-UM1 | 渲染映射单点：`drainChildUpstream` 行——`ask` ⇒ `[上抛·待裁]` ∥ `note` ⇒ `[上抛·知会]`；形如 `标识 · from: msg`（多条目 `- ` 前缀）——U-UM1/2/3 绿 | §2 条目 1 |
 | A-UM2 | 零改面实证：header ∥ 结束注脚 ∥ 三闸 ∥ `child:upstream` 日志 ∥ `upstreamAskLabelVars` 逐字零改——U-UM4/5/6/8 绿 | §2 条目 2 |
 | A-UM3 | 提示词面三处落盘 + 语义一致（对照 §6.33.4 逐字）；`node scripts/prompt-refs-check.mjs` ⇒ 零命中；`notify_parent.md` 单档 ≤ 8k | §2 条目 3 |
-| A-UM4 | 文档一致：本档 §6.33 ↔ 批档 §2；`node scripts/doc-check.mjs --root .` 触碰档零新增闸态悬空 / 零行宽违规 | 批档自身约束 |
+| A-UM4 | 文档一致：本档 §6.33 ↔ 批档 §2 | 批档自身约束 |
 | A-UM5 | 零回归：空队列 no-op 逐字同；挂起信号行 / 唤醒域文本 / 池 / wake 面零触（静态核） | §2 条目 2 / 边界 4 |
 
 ### 6.33.8 边界（不做）

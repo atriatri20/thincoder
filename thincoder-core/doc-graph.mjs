@@ -39,8 +39,8 @@ import { basename, dirname, join, relative, resolve } from "node:path"
 // `agent/write-face.mjs` 同一组 docRoot 子键；两份清单漂移就是「图扫的 / 写面拦的」各说各话）。
 // 层键集只在那一个常量里改，本档不另持字面。
 import { REVIEW_ROOT_KEYS } from "./agent-tools/review-facts.mjs"
-import { checkAnchors } from "./doc-check/anchors.mjs"
-import { caseNumberOf, rtmFamilyOf, rtmRowOf } from "./doc-check/graph-tokens.mjs"
+import { checkAnchors } from "./doc-graph/anchors.mjs"
+import { caseNumberOf, rtmFamilyOf, rtmRowOf } from "./doc-graph/graph-tokens.mjs"
 import { docRootPaths, readManifest } from "./manifest.mjs"
 import { createResolutionSession, resolvePathTarget } from "./path-resolve.mjs"
 

@@ -112,6 +112,8 @@ export function inflightDesignReviewConflict(agent, absPaths) {
  *     mirror retired per DESIGN-TOKEN-SETTLEMENT D3) + D1 settle-time slot persist
  *     (persistEngTokens — write failure = settle failure: no registration, no
  *     Approved echo, re-review — 评审 #1);
+ *     **签字与落盘同成一笔**（先签后落盘；落盘失败 ⇒ 档字节回写签字前原文 + 槽 Map 回 `preMap`）
+ *     —— 一笔的范围、顺序与回退 = `docs/core/design/BATCH-RECORD.md` §4.23。
  *  4. fix B — branch-shaped report output (the caller writes it back to
  *     entry.report; digest injects the CLEANED form): pass → stripped +
  *     Approved/designId suffix (sync 参照形态); persist-failed → stripped +
@@ -180,9 +182,25 @@ export function settleAdvisorRun(agent, entry) {
           else delete agent._engDesignTokens
           run.approvedSuffix = null
           persistFailed = true
+          // §4.23 ③（回退两处）：档字节写回**签字前原文**——只回退 Map 会在档上留一个没有 token 的签字，
+          // 下一轮读它以为已签（判据 2 幂等零写），而 §5 门照旧锁死。回退写也失败 ⇒ 两处并报、不静默
+          // （token 才是 spawn 的凭据，残留签字不授予假授权；下一次评审的签字幂等）。
+          // 范围如实 = **两处**（档字节 ∥ 槽 Map）：`settleDesignReview` 同拍翻的实例态（`run.open` ∥
+          // `priorOutput`）不回退 ⇒ 失败后重跑是全新一轮评审，不是同一实例重评（同档 §4.23 ③ 的两处口径）。
+          let rollbackErr = null
+          if (settled.sign) {
+            try {
+              settled.sign.rollback()
+            } catch (e) {
+              rollbackErr = e?.message ?? String(e)
+            }
+          }
           logEvent("advisor:error", { id: `advisor#${entry.id}`, err: "engDesignTokens slot persist failed — settle failed (re-review)" })
           const stripped = stripDesignTokenEcho(String(result), entry.designToken).trim()
-          report = `${stripped}\n\nD1: the design review passed but the token could NOT be durably written to the session ledger (slot persist failed) — re-run advisor(type='design') to re-issue; no eng-coder spawn is authorized for this review (评审通过但 token 未能持久化——需重评).`.trim()
+          const rollbackNote = rollbackErr
+            ? `\n\n并报：签字回写也失败了——批档 §3 上留着一条没有 token 的签字 (the signature rollback failed too; the record keeps a signature that grants no authorization; reason: ${rollbackErr})。下一次评审的签字幂等，直接重跑即可。`
+            : ""
+          report = `${stripped}\n\nD1: the design review passed but the token could NOT be durably written to the session ledger (slot persist failed) — re-run advisor(type='design') to re-issue; no eng-coder spawn is authorized for this review (评审通过但 token 未能持久化——需重评；整笔未签发)。${rollbackNote}`.trim()
         }
       } else {
         report = settled.output

@@ -1,9 +1,12 @@
 /**
  * subagent-spawn.mjs — spawn 路径装配（2026-09-05 module-split：subagent.mjs 726
- * > 500 硬限——spawn 前置 helpers（effectiveSubagentModel/resolveDesignSlot——审计块
- * 构造器 2026-09-22 起另立 ./audit-block.mjs）+ AGENT-LOOP-SUBAGENT.md §6.9 调度参数准入（prepareScheduling）+ child 装配
+ * > 500 硬限——spawn 前置 helpers（effectiveSubagentModel）+ AGENT-LOOP-SUBAGENT.md §6.9 调度参数准入（prepareScheduling）+ child 装配
  * （buildSpawnChild）verbatim 迁入（仅闭包变量参数化），语义零变；executeAsyncSpawn
  * 另在 subagent-run.mjs。subagent.mjs execute 经本文件 import 调用。
+ * **本轮（档位 500 设计器硬线）再切两族**：任务书与 system 固块拼装 → `./subagent-brief.mjs`、
+ * 设计令牌门 → `./subagent-design-token.mjs`（落点 = `docs/core/design/PATH-RESOLUTION.md` §3 末条）。
+ * **两族的对外面各不相同、各自守住**：设计令牌族**原样再导出**（`subagent.mjs` 的再导出行与用例的 import 行零改）；
+ * 任务书族由本档直接 import 消费，不对外导出（今天没有任何调用点从本档取它）。
  * 2026-09-07：executeConsumeDesignAction 消费执行器（token 链终消费制——与 spawn 侧
  * slot 族同域——ENGINEERING-MODE.md §2.6 F1——removeDesignTokenSlot 自 token-ttl.mjs）。
  * 2026-09-22（台账 #23 · AGENT-LOOP-SUBAGENT.md §6.26）：审计块构造器外提 `./audit-block.mjs`；
@@ -12,7 +15,6 @@
  * （批档绝对路径 + §2 指向句），任务书本体由子代理自读 §2。
  */
 
-import { relative } from "node:path"
 import {
   createAgent,
   readonlyToolNames, escapeXml, excludeSubagentTools,
@@ -26,8 +28,8 @@ import { deriveReadonlyTools } from "../agent/helpers.mjs"
 import { readonlyActionTest } from "../agent/dispatch-gates.mjs"
 // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §6.15）：子代理人读线窗口常量单源（store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
-import { validateDesignToken } from "./advisor.mjs"
-import { tokenExpired, removeDesignTokenSlot, reconcileEngTokensFromSlot } from "../token-ttl.mjs"
+// 设计令牌门（七态拒句 ∥ 槽解析 ∥ 令牌判定）本体落 `./subagent-design-token.mjs`；本档只吃判定。
+import { gateDesignToken } from "./subagent-design-token.mjs"
 import { resolveChildProvider, buildChildRunOpts, enqueueAsk } from "./subagent-async.mjs"
 import { nextSubagentId } from "./subagent-scheduler.mjs"
 import {
@@ -36,9 +38,11 @@ import {
 // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.3）：任务书 round 枚举 + 五项结构化参数校验/拼装本体落
 // spawn-gates.mjs（纯谓词零依赖）——本处只加 import 调用。
 import {
-  validateRoundParam, validateTaskBookParams, composeTaskBookBrief,
+  validateRoundParam, validateTaskBookParams,
   isEngineeringRole, rejectEngFreeTextParams,
 } from "./spawn-gates.mjs"
+// 任务书与 system 固块拼装（任务书播报 ∥ 写域行 S4 ∥ 文档坐标行 S5）落 `./subagent-brief.mjs`。
+import { docsCoordinatesBlockOf, filesBlockOf, taskBriefOf } from "./subagent-brief.mjs"
 // 台账 #23（AGENT-LOOP-SUBAGENT.md §6.26 · D23-3）：审计块构造器外提（`buildAuditBlock` 纯函数）
 // ——spawn 档只做「收集 + 绑定」；块文本逐字搬移（D23-4）。
 import { buildAuditBlock } from "./audit-block.mjs"
@@ -48,10 +52,6 @@ import { resolveBatchReadPath, resolveBatchReadResult } from "./batch-paths.mjs"
 // `files` 落点单源 = 统一解析层（实调点 = `normalizeFileList`——`thincoder-core/agent-tools/subagent-scheduler.mjs`
 // 的 `const abs = resolvePathTarget(cwd, f, ...)`）：本档不再预解析（预解析会让该面的三条门判吃绝对形而漏判）。
 import { danglingSameNameHint } from "../path-resolve.mjs"
-// S5 文档坐标行（AGENT-LOOP-SUBAGENT.md §6.61）：三层坐标的取数三件（读档 ∥ 缺键判别 ∥ 路径解析）
-// 全走既有出口——本档零新解析、零新导出。`manifest.mjs` 早已在本档静态闭包内（`./batch-paths.mjs`
-// 同引），本行不新开依赖边。
-import { readManifest, docRootBase, docRootPaths } from "../manifest.mjs"
 
 /** 不可读拒文的追加提示（§2.6：既有文案逐字在前）——同名候选 ∥ 判不出唯一的候选全列；无提示 ⇒ 空串。 */
 function unreadableHint(cwd, given) {
@@ -62,14 +62,6 @@ function unreadableHint(cwd, given) {
   }
   if (r.state === "ambiguous") return `；Candidates: ${r.candidates.join(" ∥ ")}`
   return ""
-}
-
-/** 任务书播报文本：该角色名集拼装 + 可选 task 自由文本（拼装空 ⇒ 原 task 逐字——旧形零变）。 */
-function taskBriefOf(args, role) {
-  const composed = composeTaskBookBrief(args, role)
-  if (!composed) return args.task
-  const extra = typeof args.task === "string" ? args.task.trim() : ""
-  return extra ? `${composed}\n\n${extra}` : composed
 }
 
 /** 原 #309 任务书 token 观测（`child:batchdoc-ref`）已废止——2026-10-24 用户裁定
@@ -92,47 +84,6 @@ export function effectiveSubagentModel(parent, role, modelArg) {
   if (modelArg && String(modelArg).toLowerCase() !== "default") return modelArg
   const cfg = parent.config?.agent ?? {}
   return cfg.subagentModels?.[role] ?? cfg.subagentModel ?? null
-}
-
-/**
- * Resolve the design-token slot for an eng-coder spawn (2026-09-01 multi-design, FR3):
- * - designId given → exact slot lookup (no match = explicit error, never a fuzzy guess)
- * - designId omitted → exactly ONE slot must exist (single-design compatibility); with
- *   multiple slots we refuse rather than pick one (T16: never silently aim the wrong design)
- * Returns { token } on success; throws with a parent-actionable message otherwise.
- * R16 (2026-09-06): the slot Map is the authority; the format/TTL check itself stays in
- * validateDesignToken (2026-09-06: HMAC 防伪层已删——token 为无签名流程凭证——见
- * ENGINEERING-MODE.md 2026-09-06 段）。
- * DESIGN-TOKEN-SETTLEMENT D2（2026-09-08）：内存 Map miss（指定 designId 不在 / 空 Map）
- * 时回读槽文件权威台账 reconcile + 判定（reconcileEngTokensFromSlot——与 dispatch 写门
- * D3 同源）——覆盖"进程重启后槽有但 Map 未及回填/缓存与槽不一致"（槽文件 = 权威台账）。
- * TTL 过滤保留（reconcile 只并入未过期项）。单值镜像 `_engDesignToken` 已随 D3 退役——
- * 本门禁不再读镜像（AC3 零命中）。
- */
-export function resolveDesignSlot(parent, designIdArg) {
-  let slots = parent._engDesignTokens
-  const hasSlots = slots instanceof Map && slots.size > 0
-  // D2：内存 miss（指定 designId 不在 或 空 Map）→ 权威槽回读 reconcile + 判定
-  if (designIdArg ? !(hasSlots && slots.has(designIdArg)) : !hasSlots) {
-    const rec = reconcileEngTokensFromSlot(parent)
-    if (rec && rec !== slots) slots = rec
-  }
-  // F2d: both refusal branches carry the HELD id list — after a
-  // persistence restore the parent has no digest to look the id up in; the error
-  // list is the only discovery path (ids are not credentials — the token is).
-  const size = slots instanceof Map ? slots.size : 0
-  const heldIds = size > 0 ? [...slots.keys()].join(", ") : "(none)"
-  if (designIdArg) {
-    if (!(slots instanceof Map) || !slots.has(designIdArg)) {
-      throw new Error(`designId not found — no approved design review holds this id. Run advisor with type='design' again and pass the designId echoed with the token. (session holds ${size} approved design slot(s); held design ids: ${heldIds})`)
-    }
-    return { token: slots.get(designIdArg) }
-  }
-  if (size > 1) {
-    throw new Error(`Multiple approved designs in this session (${size}) — pass the designId parameter (echoed with each token) to choose which design this eng-coder spawn belongs to. Held design ids: ${heldIds}`)
-  }
-  if (size === 1) return { token: [...slots.values()][0] }
-  throw designTokenRefusal("missing")
 }
 
 /**
@@ -190,62 +141,6 @@ export function prepareScheduling(parent, filesRaw, dependsRaw, wantAsync) {
     }
   }
   return { files, dependsOn, errorJson: null }
-}
-
-/** S4 写域行（AGENT-LOOP-SUBAGENT.md §6.26「写域行（S4）」）：表头 + 逐条绝对路径 + 两句语义——
- *  本档局部纯函数（D23-9：不外提模块）。两句不可省：缺① 子代理读成「我只能写这些」⇒ 该写的漏掉；
- *  缺② 仍把任务书 §2 全文当成自己的改动面（本块的病因）。清单不截断——截断正是本块要消除的
- *  「看不见」。返回块文本（块间分隔由装配侧 `join("\n\n")` 施加）。 */
-function filesBlockOf(files) {
-  return `Files declared for this spawn (the write domain this task declares, for scheduling):\n` +
-    files.map((f) => `- ${f}`).join("\n") +
-    `\n\nThis list is not an authorization boundary: touching a file outside it is allowed — report every out-of-list file you changed, with its reason. It is also not the whole change surface: other spawns on this task declare their own files, and what is listed here is your share only.`
-}
-
-/** §6.61 契约 ② 的两件常量：层键固定 = 这三层（`specs` ∥ `modules` ∥ `standards` 不读——多的层每发再付
- *  一次 token，KD-DC3）；前缀逐字（英文——与兄弟块同语体），层串接在其后。 */
-const DOCS_COORDINATE_KEYS = ["requirements", "design", "batches"]
-const DOCS_COORDINATE_PREFIX = "Docs (project-root relative, declared by this project's PROJECT-MANIFEST.json docRoot):"
-
-/** S5 文档坐标行（AGENT-LOOP-SUBAGENT.md §6.61「子代理文档坐标行」）：本项目 manifest 声明的三层
- *  文档坐标（`requirements` ∥ `design` ∥ `batches`），项目根相对形，一行随 system 固块下发；
- *  未声明的层呈现 `(undeclared)`。
- *
- *  **「未声明」的判别单源 = `readManifest` 同次返回的 `missingKeys`**——它在**原始档**上算得，与补默认
- *  后的值分属两个事实。不能看返回的 `manifest.docRoot[键]` 判：`readManifest` 的返回值已 `fillDefaults`，
- *  `docs/design` 这类默认路径与一条真声明同形，打出去就是把项目从未声明的坐标当声明发给子代理
- *  （KD-DC2——比不发更坏，它看起来像声明）。
- *
- *  **读不出（缺档 ∥ 坏档 ∥ 校验不过 ∥ 读抛 ∥ 项目根解析链 I/O 异常）⇒ 返回 null，调用点不推块**：不加本行
- *  的结果 = 本批之前的行为，业务结果零变（KD-DC4；这不是兜底式静默——坐标取不到不该赔掉一次 spawn）。
- *
- *  **护栏宽度 = 整段坐标计算**（读档 + 基数解析 + 路径映射 + 串拼装），不是只包读档那一句（§6.61.2 ④ ·
- *  AC-DC-8）：基数取法 `docRootBase(cwd)` 走项目发现链，而树根那一环 `owningProject` 的 `statSync` 无护栏
- *  ⇒ 该链的 I/O 异常照原样上抛；只包读档那一句，「读不出不赔掉一次 spawn」就只兑现一半。
- *
- *  本档局部纯函数（D23-9：不外提模块——块文本一行、无逐字跨档消费者）。返回块文本 ∥ null。 */
-function docsCoordinatesBlockOf(cwd) {
-  try {
-    const read = readManifest(cwd)
-    if (!read.ok || !read.manifest) return null // 缺档 ∥ 坏 JSON ∥ 校验不过（契约 ③ 读档格）
-    const missing = new Set(read.missingKeys ?? [])
-    // 整键缺 ∥ 非对象 ⇒ 三层皆按未声明。**不另设「三层全未声明」分支**：它就是下面这条逐层判据连用三次。
-    const wholeUndeclared = missing.has("docRoot")
-    const base = docRootBase(cwd)
-    const layers = DOCS_COORDINATE_KEYS.map((key) => {
-      if (wholeUndeclared || missing.has(`docRoot.${key}`)) return `${key} = (undeclared)`
-      const value = read.manifest.docRoot?.[key]
-      // 显式「本面无」（`null`）与缺键同呈现：`docRootPaths(null) = []` 已定那一读（MANIFEST.md §2.7）。
-      if (value === null || value === undefined) return `${key} = (undeclared)`
-      // 路径一律项目根相对、`/` 分隔；解析为空（声明 = 项目根自身）呈现为 `.`。
-      const roots = docRootPaths(value, cwd).map((abs) => relative(base, abs).replaceAll("\\", "/") || ".")
-      return `${key} = ${roots.join(", ")}`
-    })
-    return `${DOCS_COORDINATE_PREFIX} ${layers.join(" · ")}`
-  } catch {
-    // 读档非 ENOENT 读错（权限 ∥ 目录等）· 项目根解析链的 I/O 异常：一律收成「读不出」（契约 ④）
-    return null
-  }
 }
 
 /**
@@ -321,11 +216,13 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     validateTaskBookParams(args, role)
   }
 
-  // eng-coder token gate（TOOLS.md §6.25 ④）：判定本体 = gateDesignToken（本档模块尾）——
-  // missing / mismatch / expired / invalid 四态各出互异拒句；拒绝集合与旧三条件合取全等。
+  // eng-coder token gate（TOOLS.md §6.25 ④⑤⑥）：判定本体 = `./subagent-design-token.mjs` 的 `gateDesignToken`——
+  // missing / mismatch / expired / invalid / batch-mismatch / seal-mismatch / seal-unreadable 七态各出互异拒句；
+  // 前四态的拒绝集合与旧三条件合取全等。第三参 = 本函数上方 batchDoc 门已解析好的绝对路径
+  // （§10.1 的比较对象；本门不二次解析 `args.batchDoc`）。
   // 返回值 = 槽内令牌，必须落回 issuedToken：下方 `child._engDesignId` 回写依赖它。
   let issuedToken
-  if (role === "eng-coder") issuedToken = gateDesignToken(parent, args)
+  if (role === "eng-coder") issuedToken = gateDesignToken(parent, args, { batchDocAbs })
 
   // ── B7（TOOLS.md §6.29 B7）：eng-designer 的勘察预算计数 ──────────────────────────
   // 计的是**设计席发起的勘察**（`parent._role === "eng-designer"` 且本 spawn 的 role = explore），
@@ -527,32 +424,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   if (engineeringRole) childRunOpts.extraTools = [makeBatchHistoryTool(rootAgentOf(parent), batchDocAbs)]
   return { child, input, childOpts, childRunOpts, relayPrefix, childProvider }
 }
-
-// ── design-token 门（TOOLS.md §6.25 ③④——四态互异拒句；拒绝集合与旧三条件合取全等） ──
-
-/** 四态拒句（逐字 = TOOLS.md §6.25 ③）：missing / mismatch / expired / invalid。
- *  mismatch 可携 designId（非凭证）；四句均零令牌值回显。 */
-export function designTokenRefusal(kind, designId) {
-  if (kind === "missing") return new Error("designToken missing — the eng-coder spawn is refused: no usable token for an approved design slot came with this spawn. Pass the designToken parameter with the exact value from the subagent action:'design-slots' row (the text after designToken=), copied verbatim; if that list is empty, no design review has been approved in this session yet — run advisor with type='design' first. No token value is echoed here.")
-  if (kind === "mismatch") return new Error("designToken mismatch — the eng-coder spawn is refused: the value passed does not equal the token held for this design slot. Re-read the subagent action:'design-slots' row and pass the value after designToken= verbatim, unchanged. No token value is echoed here." + (designId ? ` (designId: ${designId})` : ""))
-  if (kind === "expired") return new Error("designToken expired — the eng-coder spawn is refused: the token matches this design slot but is past its TTL. The expired slot has been removed; run advisor with type='design' again on the current design and pass the newly issued token — an expired authorization cannot be retried. No token value is echoed here.")
-  return new Error("designToken invalid — the eng-coder spawn is refused: the value passed equals this design slot's stored token, but that stored value is not a well-formed token, so no expiry can be judged and the slot was left in place. Run advisor with type='design' to issue a fresh token for this design; a malformed record never passes the gate. No token value is echoed here.")
-}
-
-/** eng-coder spawn 的令牌门（TOOLS.md §6.25 ④）：resolveDesignSlot 的既有两条 designId
- *  诊断零改 → 参数在场 → 值相等 → 值有效。槽删除只在 tokenExpired(given) 成立时发生
- *  （D-R16c ③）；mismatch / invalid 不删槽（T-R16d）。返回槽内令牌（调用方回写 designId
- *  依赖它）；sync / async 两路共经 buildSpawnChild——一处判定双路生效。 */
-export function gateDesignToken(parent, args) {
-  const issuedToken = resolveDesignSlot(parent, args?.designId).token
-  // 非字符串 ⇒ 空串 ⇒ missing（本意——T9 锁定）
-  const given = typeof args?.designToken === "string" ? args.designToken : ""
-  if (!issuedToken || !given.trim()) throw designTokenRefusal("missing")
-  if (given !== issuedToken) throw designTokenRefusal("mismatch", args?.designId)
-  if (!validateDesignToken(given)) {
-    const expired = tokenExpired(given)
-    if (expired) removeDesignTokenSlot(parent, args?.designId, given)
-    throw designTokenRefusal(expired ? "expired" : "invalid")
-  }
-  return issuedToken
-}
+// 设计令牌门（七态拒句 ∥ eng-coder spawn 的令牌判定）已搬 `./subagent-design-token.mjs`（分拆落点 =
+// `docs/core/design/PATH-RESOLUTION.md` §3 末条）；本档**原样再导出**其导出面 ⇒ `subagent.mjs` 的再导出行与
+// 用例的 import 行零改。
+export { designTokenRefusal, gateDesignToken, resolveDesignSlot } from "./subagent-design-token.mjs"

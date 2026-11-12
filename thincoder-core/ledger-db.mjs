@@ -147,6 +147,12 @@ export const AGING_DAYS = 30
  *  `evidenceTooLong` ∥ `count` 回报）。 */
 export const EVIDENCE_TOO_LONG_MAX = 300
 
+/** `query` 工具面每页行数（设计档 `LEDGER.md` §7.2「常量单源」）：分页在工具面做（核仍全量），
+ *  带不带过滤条件都是这个数。**本档 = 唯一字面**——工具面取本常量；描述面两档（`tool-docs/ledger.md`
+ *  ∥ `ledger-read.md`）写死该数字（模型读不到常量），同步判据 = 文案数字恒等 `String(QUERY_PAGE_SIZE)`。 */
+export const QUERY_PAGE_SIZE = 10
+
+
 /** 台账库结构版本（N2 标记**单源**——`PRAGMA user_version` 落标：写面开库 `v < 本值 ⇒ 置`；
  *  读面如实回读（旧库未标 = 0）；结构变更（新列 / 新表）同步升号——2026-10-03 read-data-interface 批。
  *  2 = `resume_when` 可空列（设计档 §3.4 P5）。

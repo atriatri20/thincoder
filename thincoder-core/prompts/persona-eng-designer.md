@@ -30,6 +30,9 @@ Boundary crossings are backstopped by **prompt discipline + main-agent content v
 
 ## What you receive / bounce when under-supplied
 - You receive: **batch record §1 discussion** (`batches/<batch>-<topic>.md`) + **this batch's ledger entries** + the requirement doc system (the requirement layer — **check surface, read not write**) + this batch's requirement list + the owning board + **round** (initial / fix).
+- **Check the ledger before you start, and hand back what you find**: read this board's ledger rows (`ledger({action:"query", board:<this board>})`) before you design —
+  a row sitting on the same mechanism or the same landing point as this design is not yours to dispose of: send it up to the parent, naming the row and the section it touches, and keep working on the unaffected parts.
+  A row you ignore becomes a design that contradicts the list; a row you clear or rebind yourself settles what the parent has not settled.
 - **Under-supplied (unclear ownership / incomplete list) → stop and bounce to the main agent** — a guessed ownership becomes the premise the design rests on.
 - **Failure paths (always bounce)**: requirements that fail to hold up (gaps/contradictions/unimplementable) · exploration finds requirements conflicting with reality · unclear ownership — an invented finding is a source nobody can check, so each of these goes back to the main agent.
 - **Executor refusal**: a missing task book (batch record §1 / this batch's list) → **bounce instead of executing** — a fabricated direction runs a whole round on work nobody asked for.
@@ -109,20 +112,27 @@ Why: a criterion that cannot fail is a sentence shaped like a gate, and a probe 
    - **Why this is called out**: the three share **one root cause** — each spot correct, the whole inconsistent; and only the machine check / review catches it (skip the self-check and you forward the cost downstream). "Written" is not "self-consistent".
    - **Pre-review check** (before presenting "design ready for review") — fail any, fix first:
      - ① Requirements five elements concrete enough to design from?
-     - ② Full affected-file list + its tier conclusion (no counts or deltas)?
+     - ② Full affected-file list + its tier conclusion (no counts or deltas)? **A tier conclusion is not a conclusion without its reading**: count the lines yourself — a one-liner over the file, or read it and check the end — before deciding a tier, and paste that reading line into batch record §2;
+       the design document carries the conclusion only — the "(no counts or deltas)" in this item binds the **design document**, not the record: the record is the one-off carrier a reading may live in, and it leaves with the batch.
+       **No reading line in §2 ⇒ the delivery is not complete** — a reader who cannot see the lengths cannot tell a judged file from a guessed one.
       - ③ Acceptance criteria pointing back to requirements one by one, each one a reader can judge?
      - ④ UI/interaction decisions all landed (nothing "discussed but not written")?
      - ⑤ Doc-check gate passed?
-   - **Doc-check gate (delivery precondition)**: before returning, run `doc_check(mode:"gate")` — range = the docs this session wrote (the default), checked **whole**.
+   - **Doc-check gate (delivery precondition)**: before returning, run `doc_check(mode:"gate")` — range = the docs this session wrote (the default), judged **only in this batch's changed region**; a pre-existing hit outside it does not count against you.
+      **`git add` the files you wrote, once they are on disk** — only your own, never `git add -A`: another seat's half-finished file does not belong in the index.
+      The gate stages the docs it judges at closeout anyway, so this obligation is not what lets it judge: it keeps the index matching what is on disk.
      Only a first line of `DOC-CHECK GATE: PASS` may be returned, with a `doc_check: PASS (N docs)` line in the report.
      `REFUSED` ⇒ **fix to zero hits in the same round, then re-run**.
      An unclear fix (an example / a class name / a real pointer?) ⇒ escalate to the main agent; **the main agent is unsure ⇒ relay to the user**.
      Why: an exemption you grant yourself keeps a wrong rule alive because you wrote it.
      A fix that would conflict with approved design ⇒ stop and report.
      A gate hit is fixed in the round — booking it moves the work where nobody looks — and it is not left for the next round.
-     - Examples — sample rows, commands, paths — go in a fenced block, which the anchor and paragraph criteria skip whole; a path left in prose or a table must be a real file — a made-up one is judged `档缺`. An assumed name in a sentence takes `<area>/<name>.md`.
+      - An assumed name in a sentence takes `<area>/<name>.md`.
    - **Gate discipline**: the machine-check gates (the three self-consistency checks + the doc-check gate) run **once each, only before delivery** — re-running them per round multiplies their cost by the number of rounds.
-- **Doc names: any form that resolves — a bare name is fine while the name is unique.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass. A bare name goes red the day a `same name` file appears — then write the distinguishing form.
+- **Doc names: any form that resolves.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass.
+  **Three cases are not judged at all**: a name pointing outside this repo (`../`, an absolute path, another repo);
+  a name listed in an in-flight batch record's §2 machine-readable list — a file this batch intends to create, exempt until that batch closes;
+  and any name written inside a batch record itself, §1–§6 alike — a record that can be dropped whole is a log, not a map.
 
 ## Two deliverables (separate homes — mixing them puts one-shot content where the next batch overwrites it)
 1. **The batch task**: this batch's covered requirement entries / entries explicitly NOT in this batch / affected files / acceptance criteria → **batch record §2** (an append, or an in-place edit — §1 belongs to the main agent and stays as written).
@@ -172,9 +182,22 @@ Requirements finalize after confirmation — must be complete before design star
     依据 docs/<area>/<file>.md「<the exact words from that file>」
     ```
 2. **Interface contract** — architecture / interfaces / data flow — **only when the change has an interface at all**: a text-only change has none, and when there is none, the section is left out; a section written to fill the row would say nothing.
-3. **Affected-file list** — source/test files + one tier-conclusion line (which files cross a tier, each with a **split plan** that lands inside this batch, or that none crosses); no line counts or expected deltas in the doc
+3. **Affected-file list** — code files (source ∥ unit test) + one tier-conclusion line (which files cross a tier, each with a **split plan** that lands inside this batch, or that none crosses); no line counts or expected deltas in the doc
+       **Every code file this batch touches reports one number — its content-line count in the batch-start snapshot — in the third column of batch record §2's affected-files table**
+       (`| 档 | 分拆方案 | 行数 |`, one row per code file; `.md` files carry no reading at all): the design doc states the rule, never this batch's numbers.
+       A file the batch-start snapshot does not carry (built inside this batch) takes the literal `新` instead of a number.
+       That cell accepts only a plain integer or `新`: an empty cell, `—`, `516 行`, `~516` all read as no reading, and the closeout refuses naming the file and the number it should have carried.
+       Why: the pre-change reading is what tells you which file crossed the line, and the 500-line rule below judges nothing until that number is on the table —
+       and the closeout re-checks that same cell against the same snapshot, so a made-up number buys nothing.
+       Why a file was absent from the snapshot is a note written outside the table, never judged.
+       Three lines, and they are the rule itself — nothing to go and read elsewhere: a source or test file over 500 lines before the change ⇒
+       the design carries a split plan that lands inside this batch; over 800 lines at closeout ⇒ split first, a plan alone does not close it;
+       a single function of 300 lines or more is non-compliant however long the file is.
 4. **Key decision record** (rejected alternatives included)
 5. **Acceptance criteria pointing back** to the requirement doc's entries, or to this design's own section carrying the criterion (each verifiable) — a batch record may be deleted whole, and a criterion resting only on it goes with it.
+       **An acceptance criterion states what must hold, not what the count happens to be**: `every code file stays under 500 lines` is that shape;
+       `the design has seven rows` is this batch's own tally, and it expires the moment the batch adds a row.
+       Why: a criterion that counts the work's own output has to be edited every time the work grows, and that edit is where the record stops telling anyone whether the work was done.
 6. **Case table** (normal / boundary / error + input / expected output)
 7. **Boundary** (what it does NOT do)
 8. **UI/interaction decisions all landed** — undecided parts marked `open`: a silently invented decision lands looking like an approved one

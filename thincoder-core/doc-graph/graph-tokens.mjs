@@ -15,7 +15,7 @@
  */
 
 import { NAME_CH, TOKEN_LEFT_GUARD, TOKEN_RIGHT_GUARD, isDocToken } from "./anchors.mjs"
-import { codeSpans } from "./paragraph.mjs"
+import { codeSpans } from "../doc-check/paragraph.mjs"
 
 /** RTM 用例行首格：`41-1`（可带族名——盘上分册写作纯号、索引写作 `CLI 41`）。 */
 const RTM_ROW_RE_BODY = "^\\s*\\|\\s*`?((?:[A-Z]{2,6}\\s+)?\\d+-\\d+)`?\\s*\\|"

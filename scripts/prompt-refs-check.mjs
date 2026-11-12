@@ -18,7 +18,7 @@
 import { readFileSync, readdirSync } from "node:fs"
 import { dirname, join, relative, extname } from "node:path"
 import { fileURLToPath } from "node:url"
-import { CANON_OPERANDS, docNameExemption, stripCanonOperands } from "../thincoder-core/doc-check/anchors.mjs"
+import { CANON_OPERANDS, docNameExemption, stripCanonOperands } from "../thincoder-core/doc-graph/anchors.mjs"
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, "..")
@@ -39,7 +39,7 @@ const J2_RE = /§\s*(?:\d{2,}(?![\d\\.])|\d+\.\d)/g
 const J3_RE = /[a-z][a-z0-9-]*\.md/g
 // J3 豁免 = CANON 操作数族（与 J1 白名单同构）：逐行先整串删除再扫。
 // 另加**档名豁免**一层（占位形 ∥ 类名）——判定不写在本档，走引擎谓词 `docNameExemption`（见本档 `lineHits`）。
-// 表与剥除函数的**定义单源** = `thincoder-core/doc-check/anchors.mjs`（`CANON_OPERANDS` / `stripCanonOperands`）——
+// 表与剥除函数的**定义单源** = `thincoder-core/doc-graph/anchors.mjs`（`CANON_OPERANDS` / `stripCanonOperands`）——
 // 本档只 import、不复制（同一张表两处消费：本档 J3 豁免 ∥ 锚判的提示词面裁剪）。反方向不成立：
 // 引擎对 `scripts/**` 的 import 点 = 0（`docs/core/design/DOC-DISCIPLINE.md` A-DD29 ⑤），且本档是零参主程序，
 // 被 import 即整轮扫描执行。导出面保留（`stripCanonOperands` 在本档导出史与 API 契约在册）：仓内现无消费点——

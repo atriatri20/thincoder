@@ -135,10 +135,21 @@
 
 ## CLI 27. 评审写一笔 §3 就够：状态行由工具置位
 
-> 目的：绑了批档的评审写一笔携 `VERDICT: pass` 的 §3 就完成该轮——段级状态行由工具在同一笔写盘里置位，评审不必记得再签一次 `status`；漏签不再白跑一轮评审。
-> 节注：回指 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §5.3（§3 状态行由工具置位）；批档条目 = R23；机制 + 判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 ∥ §5 R23 ∥ §2.15（27-2）；交互组件 = `batch append §3`（`thincoder-core/agent-tools/batch.mjs` 的追加轨）⟷ §3 段级状态行（`updateSectionStatusLine`）⟷ 结算面（`settleDesignReview`）∥ `§5` 写入门（`assertSectionFiveGate`）；进入口 = 父侧派设计评审（工程模式 depth-0，`batchDoc` 绑定）→ 读回执 → 派 eng-coder（与 17-1 同一入口、同一格回执）；两态（行序）= 27-1 正常 · 27-2 正常（工具面批走代码轨）。
+> 目的：绑了批档的评审写完 §3 就完成该轮——`append §3` 那一笔随裁定行置位，`edit §3` 写块的那一笔由结算当场补签；评审不必记得再签一次 `status`，漏签不再白跑一轮评审。
+> 节注：回指 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §5.3（§3 状态行由工具置位）；批档条目 = R23；机制 + 判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 ∥ §5 R23 ∥ §2.15（27-2）∥ `docs/core/design/BATCH-RECORD.md` §4.23（27-3 的签字一半）；交互组件 = `batch append §3` ∥ `batch edit §3`（`thincoder-core/agent-tools/batch.mjs` 的两条写作轨）⟷ §3 段级状态行（`updateSectionStatusLine`）⟷ 结算面（`settleDesignReview`）∥ `§5` 写入门（`assertSectionFiveGate`）；进入口 = 父侧派设计评审（工程模式 depth-0，`batchDoc` 绑定）→ 读回执 → 派 eng-coder（与 17-1 同一入口、同一格回执）；三态（行序）= 27-1 正常 · 27-2 正常（工具面批走代码轨）· 27-3 正常（`edit §3` 写块、签字由结算补）。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
 | 27-1 | 带 `batchDoc` 绑定的设计评审对**骨架原形批档**（§3 无段级状态行）只写一笔 §3，正文携 `VERDICT: pass`——**不另调 `status`、不手写状态行**；随后读回执、结算、由 eng-coder 追加 §5 | §3 段内出现 `**状态行**：评审通过`（轮次块 +1、零留痕行、读侧 `readSectionStatusWord` 同值）；结算签发 token（回执带 `Approved. Pass this exact token to eng-coder`、槽内为该 designId 的全串）；随后同一档 `append §5` 放行 | 修前红 = 那一笔之后 §3 仍无状态行 ⇒ 结算面拒 `status-not-passed`（「补一次签字」正是本行要消掉的那一步） | `test/integration/batch-status-auto-set.test.mjs` |
 | 27-2 | 工具面批（交付件全在仓根 `scripts/**`，无设计档）：父侧 fire 一轮**代码轨**评审，携 `batchDoc` = 本批批次档、`documents` = 同档、`paths` = 交付件 | 评审员工具表含 `batch`（请求体 `tools` 里有该名）⇒ 它把 §3 写进绑定档、段级状态行由工具置位成 `评审通过`；收口门与核销门③随后放行 | 未携 `batchDoc` ⇒ 工具表不含 `batch`、§3 写不进去（fail-closed） | `test/integration/batch-status-auto-set.test.mjs` |
+| 27-3 | 绑 `batchDoc` 的设计评审只用 `edit §3` 把本轮结论写成 pass（`edit` 不挂裁定行闸 ⇒ 块进了、状态行没进），全程不调 `status`、不手写状态行；随后结算、由 eng-coder 追加 §5 | 结算当场补签：§3 段内出现 `**状态行**：评审通过`（`readSectionStatusWord` 同值）、回执带 `Approved. Pass this exact token to eng-coder`、槽内为该 designId 的全串；随后同一档 `append §5` 放行 | 签字仍挂回写通道面（`append §3` 的通过置位）⇒ 本行结算拒 `status-not-passed`（「另发一轮评审补签」正是本行要消掉的那一步） | `test/integration/batch-status-auto-set.test.mjs` |
+
+## CLI 51. 台账查询分页：每页十条，翻页仍读同一本账
+
+> 目的：`ledger({action:"query"})` 候选超过十条时只把当前页交给模型，尾行给出「总数 + 本页位次 + 下一页命令」；照抄尾行整条翻页仍是同一本账（过滤不丢、总数不变）；`count` 与页总数各按自己口径成立。
+> 节注：回指 = `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-LEDGER.md` §④ `AC-M2-41`；机制 + 判据单源 = `docs/core/design/LEDGER.md` §7.2「分页（`query` 工具面）」；交互组件 = 工具面 `query` 分支（`thincoder-core/ledger-tools.mjs`）⟷ 核 `ledgerQuery`（`thincoder-core/ledger-cmd.mjs`，仍回全量）⟷ 键控库读；进入口 = 模型调 `ledger({action:"query"})`；用例 = 51-1（正常 ∥ 边界 ∥ 错误同一条：首回 ∥ 连翻 ∥ 带过滤翻页 ∥ 末页 ∥ `count` 另一本账 ∥ 游标形不合被拒）。
+
+| 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
+|---|---|---|---|---|
+| 51-1 | 夹具项目种 30 行（25 条技术待办 + 5 条需求，其中 3 条撤回 `已废弃`），调 `ledger({action:"query"})`；再按尾行给出的命令（回显的过滤 + `cursor` 整条照抄）连翻；另带 `kind` 过滤重复一遍；调 `ledger({action:"count"})`；最后把尾行游标截断（丢 `|`）再调一次 | 无过滤首回恰 10 行 + 尾行「共 30 行 · 第 1 页（第 1–10 行，按 updated_at 倒序）· 下一页」；照抄尾行 ⇒ 第 2 页 10 行、`<N>` 不变；带 `kind` 过滤命中 25 行 ⇒ 仍 10 行一页、三页全是该过滤集、`<N>` 恒 25、末页 = `已到末页`；`count` = 27（只数未决四态）≤ 页总数 30；游标截断 ⇒ 拒（拒文含 `cursor 非法`）、不回首页、行集零返回；形对而游标落在末行之后 ⇒ `共 30 行 · 本页无行` | 无 | `test/integration/ledger-query-paging.test.mjs` |
+

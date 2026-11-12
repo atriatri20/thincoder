@@ -9,6 +9,11 @@ The other filters:
 - `trigger` — the tech-todo trigger.
 - `task_book` — the task-book pointer, i.e. the row → batch lookup.
 
+Rows come back 10 per page, with or without filters — a filter narrows what is eligible, not how many rows a page carries.
+
+- Every page ends with a tail line giving the total, this page's rank range, and — when another page exists — the command for it: `ledger({action:"query"<the filters in force>, cursor:"<cursor>"})`. Run that line whole: it repeats this page's filters, and copying only the `cursor` drops them. Omit `cursor` for the first page; a malformed one is refused, never treated as page one.
+- `count` is a different book: it counts the four unsettled states only, while a page's total covers all six.
+
 Every returned row carries a reading about itself:
 
 - `aged` — unsettled and older than 30 days.

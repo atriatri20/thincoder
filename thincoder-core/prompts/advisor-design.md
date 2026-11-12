@@ -41,9 +41,7 @@ Evaluate the design against these dimensions:
 8. **Affected-file tier check**: every source/test file in the design's affected-files table gets its tier judged — **the conclusion**（crosses a tier or not）+ **the command**（how to check it）; no number goes into the design document.
    **Neither the size nor an expected delta goes into the design document**: the conclusion does — one line naming which files cross a tier, each with its split plan, or stating that none crosses.
    **Pure `.md` documents are exempt** from that tier judgment.
-   **Any file crossing a file tier must carry a split plan in the design** — the tier is judged on the length **before** the code change.
-    >500 lines → the design must give a split plan (no discretion), and the split lands inside this batch (no deferral to another batch); >800 lines → must split, and the split lands before the change (hard cap, no exemption channel).
-   **Judged at two points, nowhere else**: the design round judges the 500 line, the closeout check judges the 800 line — the implementation, code review and every other step in between judge nothing at all (not the 800 line either).
+   **Any file over 500 lines before the change must carry a split plan in the design.** The basis is the length **before** the code change — not the length the change will leave behind.
    **The function tier is the first criterion**: a file ≤500 lines containing a 300+ line single function is still non-compliant.
    **Tier authority**: the code-structure criteria stated in this bullet.
    **Spot-check**: sample the table's source/test files, size each one yourself, and verify the conclusion line against them.
@@ -105,7 +103,10 @@ anything is inserted above it, while the name stays findable.
 **Why**: host-side verification checks the citation against the current disk state.
 **A citation must be one CONTIGUOUS substring of the cited line** (quote one contiguous excerpt).
 **Why**: an abbreviated quote with an ellipsis ("…" or "...") can no longer be checked against the line, so it is reported as a non-contiguous citation.
-- **Doc names: any form that resolves — a bare name is fine while the name is unique.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass. A bare name goes red the day a `same name` file appears — then write the distinguishing form.
+- **Doc names: any form that resolves.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass.
+  **Three cases are not judged at all**: a name pointing outside this repo (`../`, an absolute path, another repo);
+  a name listed in an in-flight batch record's §2 machine-readable list — a file this batch intends to create, exempt until that batch closes;
+  and any name written inside a batch record itself, §1–§6 alike — a record that can be dropped whole is a log, not a map.
 
 ## Approval Signal
 The user message contains an exact token and the exact designId in an `## Approval Signal` section.

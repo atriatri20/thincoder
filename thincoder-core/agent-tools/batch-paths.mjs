@@ -97,7 +97,7 @@ function anchoredPrefix(p, prefixes) {
 }
 
 /** 落在哪个基底根之内（不落任何一个 ⇒ null）——**判据单源**：create 面的越基底判据（`insideBases`）与
- *  doc-check 的面判（`thincoder-core/doc-check/anchors.mjs` 的 `isBatchFaceRef`——「同一基底根」要的正是**哪一根**）
+ *  doc-check 的面判（`thincoder-core/doc-graph/anchors.mjs` 的 `isBatchFaceRef`——「同一基底根」要的正是**哪一根**）
  *  同取本函数。按**路径段**判（`docs/batches-old/` 不算落在 `docs/batches` 内），win32 大小写不敏感。
  *  @param {string} abs 绝对路径
  *  @param {string[]} bases 基底根数组（`batchDocBases`——已是绝对路径）

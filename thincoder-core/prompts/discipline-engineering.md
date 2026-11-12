@@ -260,7 +260,7 @@ The report must contain: what changed / why, the paths of files touched, how you
   A second name for the same thing is a defect.
   **A new name anchors to a concept the product already carries**: a UI label ∥ field name ∥ button text is that concept's direct translation, and the doc writes the mapping down.
   With no counterpart, the new name is registered together with what it replaces ∥ extends.
-- Examples — sample rows, commands, paths — go in a fenced block, which the anchor and paragraph criteria skip whole; a path left in prose or a table must be a real file — a made-up one is judged `档缺`. An assumed name in a sentence takes `<area>/<name>.md`.
+- An assumed name in a sentence takes `<area>/<name>.md`.
 
 ### Board ownership & the four ownership questions
 - **Judge each sentence's slot/file ownership before writing**: same slot no duplication, same slot reuse.
@@ -358,8 +358,8 @@ the difference register records **ruled host-capability exceptions only** — it
    domain is fixed in the round it is found; a state claim, and an out-of-scope escalation, are made in the round they apply to.
    **Out-of-scope items are not booked** (scope test: only findings inside this task book's scope are booked; anything beyond it is a suspicion, not a fact).
 
-### Doc update discipline (D1–D16)
-Each doc category has one landing route, and the doc system is maintained by discipline. Sixteen doc-update disciplines:
+### Doc update discipline (D1–D17)
+Each doc category has one landing route, and the doc system is maintained by discipline. Seventeen doc-update disciplines:
 
 1. **D1 dispatch routing** — the write domain is fixed by this table; no later sentence gives the same document a second writer.
 
@@ -377,7 +377,10 @@ Each doc category has one landing route, and the doc system is maintained by dis
    **What this pointer-form rule reaches = pointers** (a citation into another doc's section).
    **Implementation coordinates** (a code / tool-face location) carry **their own form**: name the thing by **symbol name** (function / constant / export name) — a bare directory segment without the repo root is judged dangling.
    Why: a relative pointer ("see above / see that section") goes stale, while a section name still resolves.
-- **Doc names: any form that resolves — a bare name is fine while the name is unique.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass. A bare name goes red the day a `same name` file appears — then write the distinguishing form.
+- **Doc names: any form that resolves.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass.
+  **Three cases are not judged at all**: a name pointing outside this repo (`../`, an absolute path, another repo);
+  a name listed in an in-flight batch record's §2 machine-readable list — a file this batch intends to create, exempt until that batch closes;
+  and any name written inside a batch record itself, §1–§6 alike — a record that can be dropped whole is a log, not a map.
 5. **D5 freeze window** — in flight, design docs are whole-file blocked. `batch` segment writes are discipline-only: keep §1 ∥ §2 unchanged; §3–§6 stay writable. `write` / `edit` to the record path are whole-file blocked, with no segment exception: a write now would settle stale, no token.
 6. **D6 read-back check** — after any write, **read back and verify** before reporting done (silent write failures and edit-swallowed-headers have both been proven real).
 7. **D7 settlement sync** — every batch settlement runs a fixed **settlement sync checklist**:
@@ -428,14 +431,20 @@ Each doc category has one landing route, and the doc system is maintained by dis
    Every hit takes one of **three dispositions**: **delete** ∥ **re-point** ∥ **book a ledger row whose `evidence` carries the expiry condition**; closeout = **measured hits = the count stated in advance**, off by one ⇒ not closed.
    **A live module's legitimate reference is not a residue** — an `import` point, an interface registration, a judgment spec or a test surface names something still on disk, so it is outside the sweep, not deferred.
    **Why**: one retired object split across several lines, several batches and several "zero-touch" notes — every line believes another one is handling it.
-15. **D15 one ruler per reading** — a line count is reported by `doc_check`, and a line count taken any other way is **not "another convention" but a different decoding standard**: the two numbers have no comparison between them, and a wrong ruler's zero prints identically to a real absence.
-    **The reach is every reading, whatever kind it is**: every reading compares only with a reading off that same ruler. Two rulers carry this project — `doc_check` for length-type readings, a `node` line scan ∥ the built-in `grep` for text-type readings.
+15. **D15 one ruler per reading** — a line count is reported by a node line scan, and a line count taken any other way is **not "another convention" but a different decoding standard**: the two numbers have no comparison between them, and a wrong ruler's zero prints identically to a real absence.
+    **The reach is every reading, whatever kind it is**: every reading compares only with a reading off that same ruler. Two rulers carry this project — a node line scan for length-type readings, and the built-in `grep` for text-type readings.
     A reading that sits under neither first asks which ruler it has, and is recorded `unverified` where no ruler can be named — the reach is open, not a list of families.
    A discussion about **convention ∥ definition ∥ measuring method ∥ counting formula** carries one count taken **this round** with that ruler, written in the D12 form; none ⇒ the paragraph itself is a defect — measure first; another ruler used ⇒ that paragraph is void, **measure again**.
    **A measured disagreement is still argued out**: the rule fixes the ruler, not which side wins — measure first with it, then argue.
    **Why**: four rulers measured one document to four numbers, and "report your method" made all four legal — that is not four conventions, it is nobody measuring right. A ruler left in a script has to be remembered; built into the tool it sits in the hand.
 16. **D16 a cell filled by inference says so** — a row, a coordinate or a count derived from a pattern — a title match, a neighbouring line, the shape of a row — is an inference, and it is written `inferred from …`, never as a reading.
    Why: a section number guessed off a title is how a dispatch sends readers to a section that held something else — the inference lands looking exactly like a reading taken that day.
+17. **D17 carrier boundary** — a design or requirement document states what should be now, never how this batch will change it: no
+    "this batch will…", no "will be added", no "to be verified". The plan lives in the batch record — §2 for what changes, §5 for what
+    changed. A design sentence the landing contradicts is only ever one of two things: the code is wrong, or the target moved (a design
+    change). There is no third case "stale but both are right" — that case only exists when a plan was written into the design.
+    Why: the document lags because the wrong thing was written in the wrong place, not because a step was missing — no write-back round
+    can fix a sentence that never belonged there.
 
 ### Docs must be human-readable
 When writing/editing docs (requirement layer / design layer — roots are `docRoot.requirements` / `docRoot.design`, read with `manifest read`) — **content complete, format readable**: markdown with normal line breaks (headings/tables/lists/rules separated by blank lines and breaks).

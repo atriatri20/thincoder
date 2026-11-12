@@ -1,72 +1,71 @@
-Check a project's documents for documentation-discipline findings and report them.
+Check a project's documents for the three things this project judges, and print every hit as one plain sentence.
 
-Read-only: it writes nothing, asks for no approval, and is safe to run beside other calls.
+`mode` says what the call is for, and the two modes judge **different ranges** and sit differently on the index.
 
-Two modes:
-- `report` (default) — a non-gating report. It never blocks, never sets an exit code, and its output is never a reason to refuse a task or a user instruction.
-- `gate` — the delivery gate, for the end of a design or development round. Every listed document is judged **whole**: a pre-existing dangling pointer or an overlong paragraph anywhere in it counts, not only this round's lines.
+- `report` is read-only: it writes no document and no index entry, asks for no approval, and is safe to run beside other calls.
+- `gate` writes no document either, but with a batch record bound to it, it stages the documents it was given before judging (`git add` by path, never `git add -A`) — a document this batch created and never staged has no changed region otherwise.
+- With no batch record bound, `gate` has no changed region to take: it judges nothing, and the index is not touched either.
+
+`report` is the diagnostic face and judges each document **whole**. `gate` is the delivery verdict and judges only **this batch's changed region** inside each document. Both judge the same three things and print the same sentences.
+
+This tool stands where the reading happens: the documents are already on disk, so it judges them at that moment. A batch record is a record of a past round read back after the fact — this tool judges nothing in it, and writing it is where it does get judged.
+
+What it checks — three things, nothing else:
+
+- **A paragraph too long** — one paragraph over 300 characters. A paragraph is a run of adjacent non-blank body lines; headings, tables, list items, quote lines and fenced blocks break it and do not count into it. A file under `thincoder-core/prompts/` is judged line by line instead, because there a newline is layout, not a paragraph break. 300 is a constant: no project setting changes it, and changing it is a code change.
+- **A line number used as an anchor** — a file name followed by `:` and digits. One line inserted above shifts every number below it, so whoever follows the number lands on something else.
+- **A dangling pointer** — a file name written in the text that cannot be found inside the repository. A name carrying a directory segment is looked up once at the project root: it passes when that path is on disk, or when any file in the repository ends with that whole token; it is reported only when neither holds. Several files of the same name all count as present — the check asks whether the thing is there, not whether it is unique. A bare name (no directory segment) has no place to look, so this check does not judge it; a bare name can still be a hit for the line-number rule above.
+
+Four cases are not reported at all — none of them is an error:
+
+- **Outside this repository** — a name starting with `../`, a name starting with `/` (an absolute path), or a path whose first segment is a sibling directory that is itself a project. The check does not know what other repositories hold, so it says nothing about them: not a hit, not a count, not a warning. A wrong outside path therefore stays invisible, and the fix is to write the path in full — not to make the check guess.
+- **A file this batch intends to create** — a name listed in the §2 machine-readable list of an in-flight batch record. A design document has to be able to name the file it is about to create, and that file cannot be on disk yet.
+
+  - **How to get a path onto that list**: the record's §2 机读清单 is a block headed `**受影响文件（机读清单）**`, then a three-column table (header `| 档 | 分拆方案 | 行数 |`, one row per path in the first column). The batch skeleton's §2 placeholder shows the exact form.
+  - Write the path the way the document will write it: root-relative with `/` separators. A leading `./` is ignored; case is ignored on Windows.
+  - The list is built once per project root from every record in the batch directory that is a batch record and is not closed (`doc-check/existence.mjs`, `plannedPathsOf`) — no registry to maintain, no comment syntax to get right.
+  - The exemption lasts exactly as long as that record: its §1 status line is not `已收口`.
+  - Once the record closes, the same path goes straight back to "not found ⇒ reported", so nothing needs cleaning up. A path that never gets created is reported the round the record closes — while someone can still act on it.
+
+- **A batch record, whole** — a document under `docRoot.batches` is not judged by this tool at all, §1 through §6 alike, and it is not counted as a judged document either (`checkFiles` leaves it out). A batch record is an execution record that can be dropped whole, not a map: nobody follows its §2 to look a file up. Two moments are kept apart here — while the record is being written (`batch`'s `append` ∥ `edit`, and the gate before any `.md` lands), a paragraph over 300 characters and a line number used as an anchor are still refused, while a name that cannot be found is not; once the round is over and the record is read back, that paragraph and that anchor measure the distance between the record and today's tree rather than a defect, so nothing in it is judged. Judging the whole record here would also keep "this file does not exist" from ever being written down. A project that declares no batch face (`docRoot.batches` is `null`) has nothing to exempt.
+
+- **A document its project declares excluded** — a project may name path prefixes in `index.docCheckExcludePaths` of its manifest; a document under one of those prefixes is not judged at all (none of the three things), produces no line, and is not counted as a judged document either (`checkFiles` leaves it out). The two moments do not divide here: an excluded document is out of the domain whether it is being written or read. A project that declares nothing, or whose manifest cannot be read, excludes nothing — every named document is judged.
+
+Receipt — the first line is the machine verdict, then one plain sentence per hit:
+
+```text
+DOC-CHECK GATE: PASS
+```
+
+```text
+DOC-CHECK GATE: REFUSED
+docs/x/y.md 这个档不存在
+docs/x/y.md 第 3 段 412 字，超过 300
+docs/x/y.md 第 12 行的 foo.md:120 用行号做锚，行号会漂
+```
+
+No hit ⇒ `PASS` and not one further line. Any hit ⇒ `REFUSED` first, then every hit on its own line — none dropped, no statistics line added.
+
+In `gate` mode the range is this batch's changed region, so a line outside it produces nothing at all: not a hit, not a name, not a note, and the document is not counted as judged either.
+
+Before taking that region, `gate` stages the documents named in the call — `git add` by path, never `git add -A`, so another seat's half-finished file does not enter the index.
+
+That is what gives a document this batch created a changed region at all: an unstaged file does not show up in the diff, so the gate stages it and judges it. `report` never touches the index.
+
+Nothing to judge and nothing judged read the same on purpose — a document this batch did not touch has no work for anyone to do, and every extra sentence only sends the reader guessing.
+
+A document that was not judged says so and counts as neither a hit nor clean (`… 不在盘，未判` / `… 读不到，未判`): a `PASS` over nothing judged would read as "all checked, all clean".
+
+A batch record is out of the judged set, so it gets no such line: a call naming only batch records prints `DOC-CHECK GATE: PASS` and nothing else — that means there was nothing else to judge, not that anything was verified.
 
 Parameters:
-- `target` (required): the declared root for this call. Each document is judged against its own project root (the nearest ancestor holding `PROJECT-MANIFEST.json`); `target` supplies only the base for relative `docs` entries. Omitting it is refused. A plain directory or a multi-project workspace is a legal value, judged as given; only a relative target that matches several existing directories is refused as ambiguous.
-- `mode`: `report` (default) or `gate`.
-- `docs`: the documents to judge, as paths relative to the project root or absolute. Required in `report` mode — there is no default range: omitting it, or passing an empty list, is refused rather than widened. In `gate` mode, omitting it means the Markdown documents this session wrote. A path that is not on disk or is not a Markdown document is an error in `report` mode; in `gate` mode such paths are listed as skipped.
-- `lines` (`report` mode only): the files to measure — one content-line count each, source files, unit-test files and Markdown files alike. Source and unit-test files carry a size-tier mark once they pass a threshold (the soft line asks for a review, the hard line means split); Markdown files report a number only. This is a reading, not a criterion: it never enters the hit count and never moves the verdict. `gate` refuses `lines` outright rather than ignoring it, so you cannot believe a file was measured when it was not.
-
-What it checks: three criteria, with built-in thresholds that no project declaration changes:
-- **Anchors** — a documentation pointer must resolve. Four hit classes, all counted into one `锚` total (no separate verdict word): `档缺` (the file is not on disk), `节缺` (the section indicator matches no heading in the target), `引缺` (the line claims its own basis as `依据 <path>「<quotation>」` and the quotation is not a contiguous substring of that file), and `环引` (the repos this project declares cycle back to the group root - a repo-level finding, reported against the declaration file itself, with no line number).
-
-  A pointer is a token whose suffix is on the extension list, plus a shape split. A path-shaped token (one carrying a `/`) counts on that suffix alone.
-
-  A bare name counts only when its suffix is a document-name extension (`md`, `markdown`). A bare name whose suffix is only a code extension is prose mention - not resolved, not judged; write it with its directory to have it judged.
-
-  The list = the built-in `DEFAULT_DOC_EXTS` united with `index.docCheckExts` (add-only, never a replacement; a single-character suffix or an archive inner layer never takes effect). A project writing that key gets one reading line in `report` mode.
-
-  Two optional engine inputs narrow what counts as this write's own hits, and this tool passes neither.
-
-  `texts` (a document's full new text) replaces the file read; `zones` (per-document line ranges) makes only hits inside those ranges block, listing the rest as a stock reading.
-
-  With both absent, every listed document is judged whole - which is what `doc_check` always does.
-
-  A pointer resolves through these legs, in this order:
-
-  - the project root (full path);
-  - the pointing document's own directory;
-  - a repo this project declares under `index.publicRepos` (first segment = that repo's directory name);
-  - the unique-suffix fallback, reached only when the legs above find nothing - exactly one file in the repo whose path ends with the whole token.
-
-  A bare name resolves through the last-resort unique-suffix leg: while exactly one file in the repo carries that name it resolves and passes; with two or more, or none, it is judged 档缺.
-
-  A pointer whose referring document and whose target both sit under a `docRoot.batches` root is not judged - `report` mode counts them as a reading and they never enter a verdict; a spec document pointing at the batch face is still judged.
-- **Paragraph length** — adjacent non-blank body lines merge into one paragraph and are judged as a whole; blank lines, table rows, headings, list items, quote-block lines and fenced code blocks do not count into a paragraph and break it. A prompt-face file is judged line by line instead, with no structural exemption. No face is exempt: a tool-description file, this one included, is judged too.
-- **Line-number coordinates** — a filename token followed by `:` and digits is a hit. Both modes collect them: `report` prints the inventory (a measure line, the totals, one line per hit) and `gate` counts the body-face ones into its total and names them in the REFUSED line as `行号坐标 N 处`. A coordinate inside a fenced block is a reading, never a hit.
-
-Gate receipt — the first line is the machine-readable verdict, and consumers judge by that prefix:
-- `DOC-CHECK GATE: PASS` — every listed document is clean, or every listed document sits inside the manifest's `index.docCheckExcludePaths` face: those are exempt, not judged, and the receipt names them in the exclusion bucket.
-- `DOC-CHECK GATE: REFUSED（命中 K 条）` — K hits; fix them in the same round. K counts only hits **not** registered as adjudicated false positives.
-- `DOC-CHECK GATE: ERROR（reason）` — nothing was judged, so neither `PASS` nor `REFUSED` was produced. Fail-closed: no `PASS` means not passed.
-
-**Adjudicated false positives (the third bucket)** - a hit you have ruled a false positive, and whose document should stand, is registered in the manifest's `index.docCheckExemptions` (an array, read per project root).
-
-One entry = five fields, all required: `file` (project-root-relative) · `kind` (hit class) · `text` (hit text) · `why` (the ruling and its basis) · `review` (when to re-examine).
-
-A registered hit still appears in every receipt under `豁免 N 条（已裁定假阳，不阻断交付）：`, listing all four items, and it no longer blocks the gate.
-
-- Matched on `file` + `kind` + `text` verbatim, never on a line number: inserting a line above the hit does not void the entry; editing the hit text does, and the hit blocks again. Deleting the entry puts the hit back in the blocking count - nothing is memoised.
-- An entry missing a field, or carrying a `kind` outside the closed set, does not apply: the hit still blocks and the receipt names it (`豁免登记无效 N 条`). An entry matching no hit is reported as `登记未命中 N 条（原文已变或已不在判集，复核后删）`.
-- Never a class rule: a directory, a prefix or a wildcard does not count. Keeping a whole region unjudged is the exclusion face's job - "not looked at", against "looked at, ruled, not blocking". The two are not interchangeable.
-
-`ERROR` is what you get for three things:
-- a document that is on disk but cannot be read — a file the check could not read is not a clean file.
-- a range that judges no document at all: an empty `docs` list, a round that wrote no `.md`, a list whose paths are all off disk.
-  A list whose documents all sit inside the manifest's `index.docCheckExcludePaths` face is not this case: those documents are exempt from judging, and the first line is still `DOC-CHECK GATE: PASS`.
-- a rootless call (`无法定根`), where every document is named with its reason and no hit line is printed.
-
-In each case, pass explicit `docs` and re-run.
+- `target` (required): the base root. Relative `docs` entries resolve against it, and a document belonging to no project falls back to it. Each document is judged against its own project root — the nearest ancestor holding `PROJECT-MANIFEST.json`. A relative target matching several directories is refused as ambiguous; a workspace holding several projects is refused with the candidates named — pass the project root.
+- `mode`: `report` (default) — the diagnostic face, every named document judged whole; or `gate` — the delivery verdict, only this batch's changed region inside each named document judged, so a pre-existing dangling pointer outside the region is not reported.
+- `docs`: the documents to judge, relative to `target` or absolute. In `report` mode each is judged whole — a pre-existing dangling pointer in a document you touch is reported too. In `gate` mode only the changed region is judged; the region is what a `git diff` of the bound batch record's start snapshot against the working tree yields, and a document with no changed lines has nothing to judge. Required in `report` mode: a bare string, an empty list and a missing list are all refused — nothing is scanned unless you name it. In `gate` mode, omitting it means the Markdown documents this session wrote; a session that wrote no `.md` gets `ERROR（0 档受检——本轮没有碰过 .md）`. A `gate` call with no batch record bound to it has no "this batch" to take a region from, so it judges nothing and prints the bare `PASS` line.
 
 Misuse:
 - Do not wire `report` mode as a gate or a CI step — that is what `mode:"gate"` is for.
-- Never treat a finding as a reason to refuse an instruction: a machine check never outranks a user instruction. An explicit go-ahead is followed, with the hits written into it.
-- A line number is never a pointer: write the section or the symbol name instead. Fenced blocks are skipped whole by the anchor and paragraph criteria, so commands, samples and before/after readings go in a fence.
-- A pointer into a repo this project has not declared under `index.publicRepos` is refused, not merely noted: it is reported as a missing document and a `gate` run fails the delivery.
+- A line number is never a pointer: write the section name or a symbol name instead.
+- Never treat a finding as a reason to refuse an instruction: an explicit go-ahead is carried out, with the hits written into it.
 
-Use it when you write or revise a project's documents and want the discipline checked in one pass. It is not a reader: use `doc_search` / `read` to read documents and `grep` to search them.
+Use it when you write or revise a project's documents. It is not a reader: use `doc_search` / `read` to read documents and `grep` to search them.

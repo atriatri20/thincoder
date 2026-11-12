@@ -1,13 +1,12 @@
 /**
  * doc-write-gate.test.mjs — 集成用例 7-14 ∥ 7-18（RTM CLI 端故事 7；判据原文 = `test/rtm/guard.md` 第 7 节）。
  *
- * 机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.26 条目 Z（写前文档机检门：判本笔触碰的段落）∥ §5 `A-DD40`
- * ③⑤；需求 = `docs/core/requirements/DOC-CHECK.md` F14 ∥ AC-12。
+ * 机制 = `docs/core/design/DOC-CHECK.md` §5（报什么）∥ §9（写时点：写门判改后整份）；需求 = `docs/core/requirements/DOC-CHECK.md` F1 ∥ F3 ∥ AC-1 ∥ AC-3。
  *
  * 业务入口 = 真 `edit` 工具（`tools/file.mjs`）往一篇**设计档**写一笔——不直调 `runDocWriteGate`：
  * 本例测的是「写者把坏字写进规范档、当场被拒、盘上逐字不变」这件事的业务可观察结果。
  * 交互组件 = `write-path.writeThroughPath`（`op === "write"` 调门）⟷ `doc-write-gate.runDocWriteGate`
- * （改后整份内容 + 判定区 ⇒ `runDocCheck` 的 `texts` ∥ `zones`）⟷ `doc-check` 的锚判据（`档缺`）。
+ * （改后整份内容判全文 ⇒ `doc-check` 的三条判据：段长 ∥ 行号锚 ∥ 悬空指针）。
  *
  * 夹具 = 系统临时域（项目根 + 自带 `PROJECT-MANIFEST.json`，`docRoot.design = docs/design`）——零落仓、可并发；
  * 面与解析基准随夹具走，不读本仓 manifest。
@@ -57,9 +56,9 @@ test("CLI 7-14 错误 · 设计档直写盘带悬空档名 ⇒ 拒写、目标�
   await assert.rejects(
     () => editTool.execute({ path: DOC_REL, old_string: "现有段落。", new_string: `现有段落，另见 \`docs/design/nope.md\`。` }, ctx),
     (e) => {
-      assert.match(e.message, /^DOC-CHECK GATE: REFUSED（锚 1 条）/, `拒串首行 = 引擎 verdict 词：${e.message}`)
-      assert.match(e.message, /✗ 锚·档缺 docs\/design\/fixture\.md:3/, `命中行落回目标档坐标：${e.message}`)
-      assert.match(e.message, /判面：改动区 1 区 · 判定区 1 区/, `判面行点名本笔改动区与判定区：${e.message}`)
+      assert.match(e.message, /^doc_write_gate: 文档机检门拒写/, `拒串首行 = 写门报位：${e.message}`)
+      assert.match(e.message, /DOC-CHECK GATE: REFUSED/, `拒串携引擎 verdict 词：${e.message}`)
+      assert.match(e.message, /docs\/design\/fixture\.md docs\/design\/nope\.md 这个档不存在/, `命中行落回目标档：${e.message}`)
       return true
     },
   )

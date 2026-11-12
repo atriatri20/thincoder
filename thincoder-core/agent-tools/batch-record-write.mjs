@@ -381,7 +381,7 @@ export function editBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const zoneAfter = zoneStatusCount(postEdit, n)
   if (zoneAfter > zoneBefore) throw new Error(EDIT_STATUS_LINE_PROMOTION_ERROR(n, zoneBefore, zoneAfter))
   // 文档机检门：段长类判本次写入的 `newText`；锚类判改后视图 `recordView` 里的本次替换区。
-  // 区外锚类只出整档存量读数，别让另一段的失效引文与本段互锁。REFUSED ⇒ 拒（零字节落盘）∥ ERROR ⇒ 写 + 回执明示。
+  // 区外锚类不入判集、也不出行（判域 = 本次替换区），别让另一段的失效引文与本段互锁。REFUSED ⇒ 拒（零字节落盘）∥ ERROR ⇒ 写 + 回执明示。
   const gate = runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body: replacement, recordView: postEdit } })
   if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "edit"))
   writeFileSync(abs, postEdit)

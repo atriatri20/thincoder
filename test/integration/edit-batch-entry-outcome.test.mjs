@@ -70,14 +70,14 @@ test("CLI 41-1 批量改多档：一条失败只废那一条（成了的留在�
 
   // ② 某档最终内容被写前门拒（段落超长）——只连坐该档，其他档照落
   const root2 = fixture("gate", true)
-  const okPath = join(root2, "docs/design/notes.txt")
+  const okPath = join(root2, "notes.txt")
   const docPath = join(root2, "docs/design/notes.md")
   writeFileSync(okPath, "plain line\n")
   writeFileSync(docPath, "first line\nsecond line\n")
   const docBefore = sha(docPath)
 
   const gated = await editTool.execute({ edits: [
-    { path: "docs/design/notes.txt", old_string: "plain", new_string: "PLAIN" },
+    { path: "notes.txt", old_string: "plain", new_string: "PLAIN" },
     { path: "docs/design/notes.md", old_string: "first line", new_string: "x".repeat(400) },
     { path: "docs/design/notes.md", old_string: "second line", new_string: "SECOND LINE" },
   ] }, { cwd: root2 })
@@ -86,7 +86,7 @@ test("CLI 41-1 批量改多档：一条失败只废那一条（成了的留在�
   assert.equal(sha(docPath), docBefore, "被门拒的那档字节逐字不变（零字节）")
   const failed = gated.split("\n").filter((l) => /^edits\[\d+\] — failed: /.test(l))
   assert.equal(failed.length, 2, `该档两条都失败、各占一行：${gated}`)
-  assert.equal(gated.split("本次写入未落盘——目标档字节逐字不变（零字节）。").length - 1, 2,
+  assert.equal(gated.split("文档机检门拒写（doc-check gate）").length - 1, 2,
     "失败原因 = 门拒文原文（对它报的那一档为真）")
-  assert.equal(gated.split("\n").at(-1), "edit batch: 1/3 entries applied, 2 failed — 1 file(s) written: docs/design/notes.txt")
+  assert.equal(gated.split("\n").at(-1), "edit batch: 1/3 entries applied, 2 failed — 1 file(s) written: notes.txt")
 })

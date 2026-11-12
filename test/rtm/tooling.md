@@ -68,7 +68,7 @@
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
-| 30-1 | 父侧在工程模式经 `subagent` 派 `role:"tester"`（任务书五项），两条断言各一跑：必败 `node --test test/failing.test.mjs` ∥ 必过 `node --test test/passing.test.mjs`；同用例内再取一次两端工具面（同一份输入表 = 核内置表 + `verify` + `advisor`：核侧 = 真派单请求体减家族段，端侧 = 真跑 VS Code 端 `buildToolTable`，`vscode` 宿主模块桩掉） | 受理：回来的是一份子代理报告，无任何门的拒句；tester 请求体里的工具表无写面（无 `write` / `edit` / `apply_patch` / `git` / `verify` / `advisor`）且含 `bash` ∥ `execute`；必败跑报告带命令原文 + 跑者 `fail 1` + 失败用例名 + `exit code 1`，必过跑报告带 `pass 1` + `exit code 0`；核 ∥ 端基础集逐名相等，且核侧实得名集 = 公式快照（只读集 ∪ `{execute, bash}` − `{verify, advisor}`，再经 `SUBAGENT_TOOL_EXCLUSIONS`） | 无 | `test/integration/tester-role.test.mjs` |
+| 30-1 | 父侧在工程模式经 `subagent` 派 `role:"tester"`（任务书五项），两条断言各一跑：必败 `node --test failing.test.mjs` ∥ 必过 `node --test passing.test.mjs`（两份夹具档造在临时项目根下）；同用例内再取一次两端工具面（同一份输入表 = 核内置表 + `verify` + `advisor`：核侧 = 真派单请求体减家族段，端侧 = 真跑 VS Code 端 `buildToolTable`，`vscode` 宿主模块桩掉） | 受理：回来的是一份子代理报告，无任何门的拒句；tester 请求体里的工具表无写面（无 `write` / `edit` / `apply_patch` / `git` / `verify` / `advisor`）且含 `bash` ∥ `execute`；必败跑报告带命令原文 + 跑者 `fail 1` + 失败用例名 + `exit code 1`，必过跑报告带 `pass 1` + `exit code 0`；核 ∥ 端基础集逐名相等，且核侧实得名集 = 公式快照（只读集 ∪ `{execute, bash}` − `{verify, advisor}`，再经 `SUBAGENT_TOOL_EXCLUSIONS`） | 无 | `test/integration/tester-role.test.mjs` |
 | 30-2 | 父侧在工程模式经同一个 `subagent` 入口派 `role:"tester"`（真门 + 真装配），抓子代理那一发的请求体工具表；同一次派单所在父进程再取一次 depth-0 家族段（核 `assembleFamilyTools({ depth: 0, … })` 的真输出——夹具父表只喂基础集，家族段由核按 depth 在同一处追加） | 子代理的工具表里有 `doc_check` 与 `doc_graph` 两件；`doc_graph` 的 `action` 枚举逐字三值（`forward` ∥ `reverse` ∥ `chain`）、不含 `scan`（读请求体里的 schema 即得）；父侧 depth-0 的 `doc_graph` 仍四值（含 `scan`）且 `readonly` 仍为 false | — | `test/integration/tester-role.test.mjs` |
 
 ## CLI 31. 过程档内容在工具输出的命中处就标出不可作依据
@@ -116,7 +116,7 @@
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
-| 41-1 | 临时项目里调 `edit` 的 `edits` 形，两段各一批：① 两档各一条 + 同档再补一条，其中一条给匹配不到的 `old_string`；② 带 `PROJECT-MANIFEST.json` 的项目里一份 `docRoot` 内的 `.md`，两条编辑让该档最终内容触发写前门（段落超长），同批另给一份 `.txt` 一条合法编辑 | ① 成了的条目都在盘上（同档两条合成一次写）、败的那档字节逐字不变（改前改后哈希相同）；回执按调用序逐条一行（`edits[1] — failed: old_string not found in beta.txt`），末行逐字 `edit batch: 2/3 entries applied, 1 failed — 1 file(s) written: alpha.txt`，全文零 `nothing written` ∥ `no files written`；② `.txt` 档照落、`.md` 档字节逐字不变，该档两条都是失败行且原因含门拒文那句，末行逐字 `edit batch: 1/3 entries applied, 2 failed — 1 file(s) written: docs/design/notes.txt` | 修前红 = 任一条失败整批抛错、前面各档零字节（用户为此改成一档一调 + 逐次回读）——本行断言的就是那条已退场的旧行为 | `test/integration/edit-batch-entry-outcome.test.mjs` |
+| 41-1 | 临时项目里调 `edit` 的 `edits` 形，两段各一批：① 两档各一条 + 同档再补一条，其中一条给匹配不到的 `old_string`；② 带 `PROJECT-MANIFEST.json` 的项目里一份 `docRoot` 内的 `.md`，两条编辑让该档最终内容触发写前门（段落超长），同批另给一份 `.txt` 一条合法编辑 | ① 成了的条目都在盘上（同档两条合成一次写）、败的那档字节逐字不变（改前改后哈希相同）；回执按调用序逐条一行（`edits[1] — failed: old_string not found in beta.txt`），末行逐字 `edit batch: 2/3 entries applied, 1 failed — 1 file(s) written: alpha.txt`，全文零 `nothing written` ∥ `no files written`；② `.txt` 档照落、`.md` 档字节逐字不变，该档两条都是失败行且原因含门拒文那句，末行逐字 `edit batch: 1/3 entries applied, 2 failed — 1 file(s) written: notes.txt` | 修前红 = 任一条失败整批抛错、前面各档零字节（用户为此改成一档一调 + 逐次回读）——本行断言的就是那条已退场的旧行为 | `test/integration/edit-batch-entry-outcome.test.mjs` |
 | 41-2 | 以 ACP 会话入口（`buildAcpCallbacks`）的 `toolRouter("edit", { edits })` 发起一次批量编辑，读写两侧都打到桩 IDE 对端（反向 `fs/read_text_file` ∥ `fs/write_text_file`）：IDE 里开着三档，其中第 2 条给匹配不到的 `old_string`；再跑一批全成的（同档两条 + 另一档一条） | ① 第 2 条以 `edits[1] — failed: ` 起头、另两条是桥面成功形（`OK: edited … via IDE`）；IDE 缓冲只含成功条（败的那档逐字未动）；末行逐字 `edit batch: 2/3 entries applied, 1 failed — 2 file(s) written: alpha.txt, gamma.txt`，全文零 `nothing written` ∥ `no files written`；② 全成批末行 `edit batch: 3/3 entries applied, 0 failed — 2 file(s) written: a.txt, b.txt`，同档两条只写回一次；另：盘面无新增档（桥写的是 IDE 缓冲） | 修前红 = 桥面「全过才写」：任一条失败整批抛错（前缀 `edit aborted (atomic — no files written): `）、缓冲一条都不写 | `test/integration/acp-bridge-batch-outcome.test.mjs` |
 
 ## CLI 42. 补丁改多档：写盘段中途失败，回执说清哪几档已落盘
@@ -131,7 +131,7 @@
 ## CLI 43. 文档锚点图：一条链从一个需求走到用例入口符号
 
 > 目的：文档各层之间的引用关系能反查——「这条决定是怎么来的」「这一节还被哪几处说着」从人工核对变成一条查询。图的边与台账行住同一个库（`doc_edges` 表），边的抽取复用 `doc_check` 那一次逐行遍历（同一份文档只有一套解析器），查询面 = 一个工具四种问法（`scan` ∥ `forward` ∥ `reverse` ∥ `chain`）。
-> 节注：回指 = 需求 `docs/core/requirements/DOC-GRAPH.md`（F1–F5 ∥ F7 ∥ 边界七条 ∥ AC-1–AC-9）；机制单源 = `docs/core/design/DOC-GRAPH.md` §2.2（边的形状与来源）∥ §2.3（表结构与出处形）∥ §2.5.0（按类计数）∥ §2.5.2（走查规则）∥ §2.5.4（时效格）；交互组件 = `thincoder-core/doc-check/anchors.mjs` 的逐行遍历（回调 `onEdge`）⟷ `thincoder-core/doc-graph.mjs`（扫描 ∥ 落库 ∥ 查询）⟷ `thincoder-core/ledger-db.mjs` 的同一库同一句柄 ⟷ 真工具面 `doc_graph`；进入口 = CLI 会话里让助手调 `doc_graph`（`scan` 一次、再按四种问法查）；五态（行序）= 43-1 正常 · 43-2 正常 · 43-3 边界 · 43-4 边界 · 43-5 正常。
+> 节注：回指 = 需求 `docs/core/requirements/DOC-GRAPH.md`（F1–F5 ∥ F7 ∥ 边界七条 ∥ AC-1–AC-9）；机制单源 = `docs/core/design/DOC-GRAPH.md` §2.2（边的形状与来源）∥ §2.3（表结构与出处形）∥ §2.5.0（按类计数）∥ §2.5.2（走查规则）∥ §2.5.4（时效格）；交互组件 = `thincoder-core/doc-graph/anchors.mjs` 的逐行遍历（回调 `onEdge`）⟷ `thincoder-core/doc-graph.mjs`（扫描 ∥ 落库 ∥ 查询）⟷ `thincoder-core/ledger-db.mjs` 的同一库同一句柄 ⟷ 真工具面 `doc_graph`；进入口 = CLI 会话里让助手调 `doc_graph`（`scan` 一次、再按四种问法查）；五态（行序）= 43-1 正常 · 43-2 正常 · 43-3 边界 · 43-4 边界 · 43-5 正常。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|

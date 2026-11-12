@@ -109,13 +109,12 @@ const { buildToolTable: vscBuildToolTable } = await import("../../thincoder-vsco
 function makeProject(tag, extra = {}) {
   const root = mkdtempSync(join(SCRATCH, `tt-${tag}-`))
   mkdirSync(join(root, "docs/batches"), { recursive: true })
-  mkdirSync(join(root, "test"), { recursive: true })
   writeFileSync(join(root, "PROJECT-MANIFEST.json"), JSON.stringify({ version: 1, docRoot: { batches: "docs/batches" } }, null, 2))
   writeFileSync(join(root, "docs/batches/probe.md"), "# probe\n\n## §2 批次任务与设计\n\n占位。\n")
-  writeFileSync(join(root, "test/failing.test.mjs"),
+  writeFileSync(join(root, "failing.test.mjs"),
     `import { test } from "node:test"\nimport assert from "node:assert/strict"\n`
     + `test("${FAIL_CASE}", () => { assert.equal(2 + 2, 5) })\n`)
-  writeFileSync(join(root, "test/passing.test.mjs"),
+  writeFileSync(join(root, "passing.test.mjs"),
     `import { test } from "node:test"\nimport assert from "node:assert/strict"\n`
     + `test("TT-30-1 passing assertion", () => { assert.equal(2 + 2, 4) })\n`)
   for (const [rel, content] of Object.entries(extra)) writeFileSync(join(root, rel), content)
@@ -230,7 +229,7 @@ test("CLI 30-1 派一个 tester 跑一条必败 ∥ 必过断言：受理 · 工
   })
 
   // ── 必败断言 ──
-  const failing = await runTester({ root, command: "node --test test/failing.test.mjs", fixture: "failing", callsId: "tu_30_1_fail" })
+  const failing = await runTester({ root, command: "node --test failing.test.mjs", fixture: "failing", callsId: "tu_30_1_fail" })
   runs.push(failing)
   const failReport = failing.report
 
@@ -246,13 +245,13 @@ test("CLI 30-1 派一个 tester 跑一条必败 ∥ 必过断言：受理 · 工
   await assertSameToolFace(failing.endpoint, "必败跑")
 
   // ③ 必败跑的报告把读数原样带回：命令原文 ∥ 跑者汇总行 ∥ 失败用例名（都来自本地跑者）
-  assert.ok(failReport.includes("node --test test/failing.test.mjs"), `报告须带命令原文：${failReport.slice(0, 400)}`)
+  assert.ok(failReport.includes("node --test failing.test.mjs"), `报告须带命令原文：${failReport.slice(0, 400)}`)
   assert.match(failReport, /fail 1/, `报告须带跑者给的 fail 计数：${failReport.slice(-800)}`)
   assert.ok(failReport.includes(FAIL_CASE), `报告须带失败用例名：${failReport.slice(-800)}`)
   assert.match(failReport, /\(exit code 1\)/, `报告须带这次跑的 exit code：${failReport.slice(-500)}`)
 
   // ── 必过断言（§6.59.9：同一交互，只差可观察结果 —— 合并在本行的第二条断言）──
-  const passing = await runTester({ root, command: "node --test test/passing.test.mjs", fixture: "passing", callsId: "tu_30_1_pass" })
+  const passing = await runTester({ root, command: "node --test passing.test.mjs", fixture: "passing", callsId: "tu_30_1_pass" })
   runs.push(passing)
   const passReport = passing.report
   assert.equal(passing.res.ok, true, `派 tester 必须受理（必过跑），实得：${passReport.slice(0, 400)}`)

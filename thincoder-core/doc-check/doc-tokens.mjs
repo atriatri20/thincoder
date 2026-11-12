@@ -33,8 +33,7 @@ export const EXT_PART = "\\.[A-Za-z][A-Za-z0-9]{0,9}"
 /** 缺省扩展名清单（**物理单源**；退役件 `DOC_EXTS` 的**改名 + 改值**——位置与消费面不变）：
  *  取形六条（§2.6）：改前认得的 12 项全留（扔掉即零回归面破）· F19 点名的五项（AC-17 钉在这几个后缀上）·
  *  真实文件类型补入 · 代码表达式 ∥ 字段访问的末段一律不进 · 单字符后缀不入（`.x` 是 `20.x/22.x` 的来源）·
- *  归档内层不入（`build/app.tar.gz` 的末段是 `gz`，不在清单 ⇒ 整串不当档名）。
- *  项目追加项 = `index.docCheckExts`（并集、只增不减）；装配处并集后过一次取形过滤，谓词只查那张已过滤的表。 */
+ *  归档内层不入（`build/app.tar.gz` 的末段是 `gz`，不在清单 ⇒ 整串不当档名）。 */
 export const DEFAULT_DOC_EXTS = [
   // 改前认得的 12 项
   "md", "mjs", "cjs", "js", "json", "css", "html", "svg", "yml", "yaml", "sh", "ps1",
@@ -56,7 +55,7 @@ export function isExtension(ext, exts = DEFAULT_DOC_EXTS) {
 
 /** 文档名族（**裸名可判的扩展名族** · 判据句单源 = `docs/core/design/DOC-CHECK.md` §2.10.3）：
  *  裸名（不带目录段）的 token 后缀落在这张表里才是候选；后缀只在代码族里 ⇒ 不是候选，按散文提及处置（不解析、不判）。
- *  **与生效清单不是一件事**：清单 `index.docCheckExts` 是后缀清单、不是族划分面——它追加进来的后缀在裸名位不成为候选；
+ *  **与生效清单不是一件事**：`DEFAULT_DOC_EXTS` 是后缀清单、不是族划分面——清单内的代码族后缀在裸名位不成为候选；
  *  要按文档名族判，改这张表（走评审），不新增第二个可配面（`docs/core/design/DOC-DISCIPLINE.md` §3.20 F3「判据不分适用面」）。
  *  **带目录段的 token 不吃这张表**：路径本身给出了定位，代码族与文档名族在这一形上没有差别。 */
 export const BARE_NAME_EXTS = Object.freeze(["md", "markdown"])
@@ -76,6 +75,9 @@ export function isDocToken(token, exts = DEFAULT_DOC_EXTS) {
   if (raw.includes("/")) return true
   return isExtension(base.slice(dot + 1), BARE_NAME_EXTS)
 }
+/** 档名 token（不带 `§N` / `:N` 尾——判据 ③「在不在盘」要的就是路径本身）：
+ *  目录段可选。与下面几条抽取式共用同一对边界常量，不另立一份。 */
+export const NAME_RE = new RegExp(`${TOKEN_LEFT_GUARD}((?:${NAME_CH}+\\/)*${NAME_CH}+${EXT_PART})${TOKEN_RIGHT_GUARD}`, "gu")
 
 /** 文档指针 token：`(目录段/)*名<扩展名的形护>` + 可选行号坐标尾 + 可选节指示（`§` + 编号）——两界取自上面那一对；
  *  后缀算不算数由 `isDocToken` 在消费点判（形护在这里，清单在那里——两条各坐一处）。 */

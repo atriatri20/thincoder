@@ -234,7 +234,7 @@
 | A1 | 漏调路径**必红**：T5-5 / T5-6 / T5-7 三例断言抛错（`assert.throws`——非静默通过） | — |
 | A2 | 断言在位可机检：`thincoder-core/agent-tools/subagent-run.mjs` / `thincoder-core/agent-tools/escalate-async.mjs` / `thincoder-core/agent-tools/advisor-async.mjs` 消费点各含令牌断言、三入池点各含键守卫（grep 断言句 + 抛错分支） | — |
 | A4 | 范围守恒（机检）：diff 不触取号公式行（`thincoder-core/agent-tools/subagent-scheduler.mjs`）与池键形态（`String(id)`）；`thincoder-vscode/**` 零写入 | — |
-| A5 | 触碰源档按设计器硬线 500 判（>500 ⇒ 设计轮必给分拆方案，无裁量）；收口面按其他检查硬线 800 判（>800 ⇒ 先拆再落）；档位口径 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」 | — |
+| A5 | 触碰源档按设计器硬线 500 判（>500 ⇒ 设计轮必给分拆方案，无裁量）；收口面按其他检查硬线 800 判（>800 ⇒ 先拆再落）；档位口径 = `docs/core/standards/CODE-TIER.md` | — |
 
 ### 6.21.8 边界（本条目不做）
 
@@ -681,7 +681,7 @@ This list is not an authorization boundary: touching a file outside it is allowe
 
 拼接分支 = `thincoder-core/agent/setup.mjs`；缓存契约精化句 = `docs/core/design/AGENT-LOOP.md` §6.3；装配事实行 = `docs/core/design/PROMPT-SYSTEM.md` §6.2。
 
-> 行数纪律：**文档档不受行数限制**（代码档档位口径 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」，与工作区根 `AGENTS` 档同口径）；档位归属（三分）——§6.8 / §6.10 / §6.11 / §6.18 / §6.19 / §6.20 ⇒ `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`；
+> 行数纪律：**文档档不受行数限制**（代码档档位口径 = `docs/core/standards/CODE-TIER.md`，与工作区根 `AGENTS` 档同口径）；档位归属（三分）——§6.8 / §6.10 / §6.11 / §6.18 / §6.19 / §6.20 ⇒ `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`；
 > §6.27 全族 ⇒ `docs/core/design/AGENT-LOOP-UPSTREAM.md`；本档留子代理工具契约与装配面。
 
 **关键决策记录**：
@@ -875,7 +875,7 @@ subagent(role="explore", goal="…", knownFacts="…", scope="…", acceptance="
 
 ## 6.58 批次档复用护栏：同一档的在飞 spawn 拒发
 
-**来源**：2026-10-28 事故——两个 spawn 共用一本批档、文件域互不重叠，结果语法坏档 + 一席复原。提示词面当天已补（`thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `One batch record serves one spawn at a time`），机制面不拦：`batchDoc` 门只判「参数在 + 路径可读」，`thincoder-core/agent-tools/subagent.mjs` 的描述仍是单数措辞、无禁令。
+**来源**：2026-10-28 事故——两个 spawn 共用一本批档、文件域互不重叠，结果语法坏档 + 一席复原。提示词面当天已补（`thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `One batch record is one task book`），机制面不拦：`batchDoc` 门只判「参数在 + 路径可读」，`thincoder-core/agent-tools/subagent.mjs` 的描述仍是单数措辞、无禁令。
 
 本节的判据把提示词的软约束落成写不出来的硬拒。
 
@@ -887,7 +887,7 @@ subagent(role="explore", goal="…", knownFacts="…", scope="…", acceptance="
 
 - 池与条目面：`thincoder-core/agent-tools/subagent-scheduler.mjs`（`depInfo` · `fileKey` · `effectiveFiles` · `describeBlockers`）· `thincoder-core/agent-tools/subagent-run.mjs`（条目 `_batchDoc`）· `thincoder-core/agent-tools/async-settle.mjs`（`carrierField` · 载体吸收 · 留池）。
 - spawn 门面：`thincoder-core/agent-tools/subagent-spawn.mjs`（`buildSpawnChild` · batchDoc 门 · coder 面 · 任务书门）· `thincoder-core/agent-tools/subagent.mjs`（`batchDoc` 描述 · sync 不入池）· `thincoder-core/tool-docs/subagent.md`。
-- 纪律与验收面：`thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `One batch record serves one spawn at a time` 条（含顺序交接边界与 `Why` 两行）· `test/RTM.md` · `docs/core/design/TOOLS.md` §6.4。
+- 纪律与验收面：`thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `One batch record is one task book` 条（含顺序交接边界与 `Why` 两行）· `test/RTM.md` · `docs/core/design/TOOLS.md` §6.4。
 
 外部公开源档未查——本节判据全部取自本仓既有件（池访问器 · `fileKey` · 载体吸收），无外部同机制实现可引；同机制在本仓亦为首案。
 
@@ -958,7 +958,7 @@ batchDoc is already in flight — spawn refused. Batch record: <abs path>. Occup
 
 ### 6.58.7 边界（本节不做）
 
-1. 不改提示词——`thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `One batch record serves one spawn at a time` 零改。
+1. 不改提示词——`thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `One batch record is one task book` 零改。
 2. 不做文本匹配式拦截（`TOOLS.md` §6.4）。
 3. 不校验档**内容**（判据仍只看路径与池状态）。
 4. 不覆盖跨进程（KD-BG4）。
@@ -1104,7 +1104,7 @@ test/integration/*.test.mjs
 
 - 本轮零跨层——只写设计面二档（`AGENT-LOOP-SUBAGENT.md` ∥ `TOOLS.md`）。
 - 实施轮跨入产品代码面（走实施席 + 设计令牌）；`test/RTM.md` 与 `test/integration/` 属产品面（走全链）。
-- **长度只在设计轮与收口面判，本节不判**：实施轮五个代码档（`thincoder-core/agent-tools/subagent.mjs` ∥ `thincoder-core/agent/family-tools.mjs` ∥ `thincoder-core/agent-tools/subagent-spawn.mjs` ∥ `thincoder-core/prompt-overlays.mjs` ∥ 端侧 `thincoder-vscode/src/agent/tool-table.mjs`），连同表内两处注释面档（`thincoder-core/agent-tools/spawn-gates.mjs` ∥ `thincoder-core/agent-tools/subagent-async.mjs`），均未过 800（档位口径 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）。
+- **长度只在设计轮与收口面判，本节不判**：实施轮五个代码档（`thincoder-core/agent-tools/subagent.mjs` ∥ `thincoder-core/agent/family-tools.mjs` ∥ `thincoder-core/agent-tools/subagent-spawn.mjs` ∥ `thincoder-core/prompt-overlays.mjs` ∥ 端侧 `thincoder-vscode/src/agent/tool-table.mjs`），连同表内两处注释面档（`thincoder-core/agent-tools/spawn-gates.mjs` ∥ `thincoder-core/agent-tools/subagent-async.mjs`），均未过 800（档位口径 = `docs/core/standards/CODE-TIER.md`）。
 - **设计面（① 500 硬线）的判读与分拆方案不在本节**：`thincoder-core/agent-tools/subagent-spawn.mjs` 那一档住 §6.61.3。
 
 ### 6.59.4 关键决策记录
@@ -1326,7 +1326,7 @@ This variant carries the three query actions only — `scan` belongs to the main
 
 **分层结论**：**无档跨层**。四个代码档（`family-tools.mjs` ∥ `agent-tools/doc-graph.mjs` ∥ `agent-tools.mjs` ∥ `advisor/loop.mjs`）各留 `thincoder-core` 本层；两个测试面留 `test/` 本层。
 
-- **量法** = `doc_check(mode:"report", lines:[…])`，逐档取内容行数；档位口径（设计器硬线 500 ∥ 其他检查硬线 800）= `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」，本节不复述。
+- **量法** = `countContentLines`（`thincoder-core/agent-tools/batch-tier-gate.mjs`）逐档数内容行数——末行换行不计；档位口径（设计器硬线 500 ∥ 其他检查硬线 800）= `docs/core/standards/CODE-TIER.md`，本节不复述。
 - 本节各档按 ① 判改代码前长度，无一档过 500 ⇒ 本节不给分拆方案（逐档读数按上一条量法取，绝对值住批档实施记录）。
 
 ### 6.60.4 关键决策记录
@@ -1545,7 +1545,7 @@ fillDefaults(f3).docRoot.batches        // ⇒ null（原值保持）
 
 **层级结论**：无档跨层。`thincoder-core/agent-tools/subagent-spawn.mjs` **改代码前已过 500** ⇒ 按 ① 必须给分拆方案（下列），不给裁量。
 
-- **量法** = `doc_check(mode:"report", lines:[…])`，逐档取内容行数；档位口径（设计器硬线 500 ∥ 其他检查硬线 800）= `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」，本节不复述。
+- **量法** = `countContentLines`（`thincoder-core/agent-tools/batch-tier-gate.mjs`）逐档数内容行数——末行换行不计；档位口径（设计器硬线 500 ∥ 其他检查硬线 800）= `docs/core/standards/CODE-TIER.md`，本节不复述。
 - **读数结论**：该档改代码前已过 500（绝对值按上一条量法取，不进本节）。
 - **分拆方案（本批不执行）**：按「谁与谁常一起变」切三族，该档每段归一族；某段归不进任一族 ⇒ 族界划错，执行那一批先修族界再切。
   - **调度族**：搬出 `buildSpawnChild` 及其调用面 ∥ 派发 ∥ 队列与依赖编排。

@@ -107,6 +107,9 @@ export function resolveReviewDocPaths(documents, cwd) {
       invalid.push({ doc, resolved: r.tried?.[0] ?? null, reason: "not-doc-file", sameName: r.sameName })
       continue
     }
+    // 其余非 `resolved` 态（`unverified` ∥ `outOfDomain`）：本面不传 `declaredRepos` / `domainRoots`，两者今天都不会出现，
+    // 但消费面必须**总覆盖**——拿不到 `abs` 的态一律按「解析无果」拒（fail-closed），不让 undefined 流进 `isInside`。
+    if (r.state !== "resolved") { invalid.push({ doc, resolved: null, reason: "dangling-path" }); continue }
     const p = r.abs
     if (!abs && !isInside(p, view.root)) { invalid.push({ doc, resolved: p, reason: "outside-project" }); continue }
     if (abs && !owningProject(p, cwd)) { invalid.push({ doc, resolved: p, reason: "outside-project" }); continue }
