@@ -110,9 +110,10 @@ function insertIntoSection(src, seg, text, blockLead = "") {
  *  - 目标定位（D-BR21）：depth-0 path 可选（缺省 = findInFlightBatch 唯一在飞批）；子代理/评审
  *    传 path ⇒ 拒，目标 = spawn/实例绑定；
  *  - 其余（gate / text 校验 / 剥凭证 / 骨架保护 / **状态行拒写（J3——行首形态行不得入档，§4.21.4）** /
- *    **死占位机检（F11-C）** / **文档机检门（§3.20 结构兜底 ①——
- *    **全部 append 同挂**（含 depth-0 与评审写 §3）：候选文本命中 ⇒ 拒写，ERROR ⇒ 写 + 回执明示；
- *    批档已落段不再入判）** / 插入 / 记账 / 回执）逐字保持原语义（新增的一道 = 状态行拒写，其余未动）。
+ *    **死占位机检（F11-C）** / 插入（候选全文成形 = 盘上现文 + 这一段 + 状态行改写） / **文档机检门
+ *    （§3.20 结构兜底 ①——**全部 append 同挂**（含 depth-0 与评审写 §3）：判的是候选全文里这一笔写的行
+ *    （判面单源 = `docs/core/design/DOC-CHECK.md` §6「写时点怎么取区间」），命中 ⇒ 拒写且零字节（写盘在门之后），
+ *    ERROR ⇒ 写 + 回执明示；批档已落段不再入判）** / 写盘 / 记账 / 回执）逐字保持原语义（新增的一道 = 状态行拒写）。
  */
 export function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const agent = ctx?.agent ?? {}
@@ -195,13 +196,6 @@ export function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
     const gap = verdictGapOf(body)
     if (gap === "无裁定行" || gap === "两者同携") throw new Error(SECTION3_VERDICT_GAP_ERROR)
   }
-  // 文档机检门（§3.20「结构兜底」①——门位 = 既有拒因全部之后、insertIntoSection / 写盘之前）：
-  // **全部 append 同挂**（§1–§6，含 depth-0 与评审写 §3——规则一条，不按身份分支）；
-  // 强制集 = 候选文本 ∪ 写者触达账**改动区**（判面单源 = 设计档 §3.20「触达账腿的判面 = 本次改动区」）。
-  // `pending` = 本次段号与正文：门把正文当 `texts` 判「你手里这段」（身份 = 批档本体，零临时档）。
-  // REFUSED ⇒ throw（零字节落盘）；PASS ⇒ 照写；ERROR / 门自身异常 ⇒ 写 + 回执明示。
-  const gate = runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body } })
-  if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "append"))
   // 裁定行 → 状态行（BLRU §2.5——**工具被动写**，两个方向共用同一处判定与同一条写入路径）：
   // 打回即重置（三合取：本笔写 §3 ∧ 本笔命中打回裁定行 ∧ 写前 §3 状态行 = 评审通过）⇒ 本轮块首留痕行
   // （随 `blockLead` 进插入）+ 状态行重置；通过即置位（本笔写 §3 ∧ 本笔命中 pass 裁定行且不命中打回行 ∧
@@ -214,6 +208,14 @@ export function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const plan = statusResetPlan(src, n, body, date) ?? statusPassPlan(src, n, body, date)
   const { written: inserted, roundN } = insertIntoSection(src, n, body, plan?.traceLine ?? "")
   const written = plan ? updateSectionStatusLine(inserted, 3, plan.statusValue) : inserted
+  // 文档机检门（§3.20「结构兜底」①——门位 = 既有拒因全部之后、写入之前）：
+  // **全部 append 同挂**（§1–§6，含 depth-0 与评审写 §3——规则一条，不按身份分支）。
+  // `pending.body` = **候选全文**（`written`：盘上现文加上这一段及其状态行改写的整档视图）——门拿它与盘上现文两份
+  // 求变更区，判的就是这一笔写的行（判面单源 = `docs/core/design/DOC-CHECK.md` §6「写时点怎么取区间」）。
+  // 交半段文本就与盘上现文不同形，求出来的区间不是这一笔的行。REFUSED ⇒ throw（零字节落盘——`writeFileSync` 在门之后）；
+  // PASS ⇒ 照写；ERROR / 门自身异常 ⇒ 写 + 回执明示。
+  const gate = runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body: written } })
+  if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "append"))
   writeFileSync(abs, written)
   // #84：记账面按端注入（缺省 no-op = CLI 语义零行为变——端装配经 configureBatchSegment 覆盖，缝住 `batch.mjs`）。
   // 本条 = `AGENT-LOOP.md` §6.6 `wrote` 判据的计数面（成功写盘才增；上面各门已过）。

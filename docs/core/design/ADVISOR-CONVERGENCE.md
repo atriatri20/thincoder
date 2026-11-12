@@ -463,11 +463,12 @@ advisor design review 标准维度补一条：
 | A-AC12 | 争议窗与接受收口（F32）：轮 2 可对不修理由出打回（轮 1 无 prior——窗语义不入，§2.5）、轮 3+ 对携理由不修项接受收口；零理由项任一轮保持未解（提示词逐字在位 + 表列 `Accepted` 词表行逐字可核——**逐字读核对**；机检限行为面 / 结构机检） | §2.5 |
 | A-AC13 | pass 判据随动（F33）：轮 3+ prior 🔴 全部 ∈ {fixed, accepted} 才可 pass；零理由未解项 ⇒ 不可 pass（轮 2 / 3 裁决句逐字 + 设计回显条件句在位——**逐字读核对**；机检限行为面 / 结构机检） | §2.4 / §2.5 |
 | A-AC14 | 跨评审隔离：并发 / 延迟下消息构建取本评审实例值（排队启动复核）；轮 2+ 响应表取件不小于本评审投递水印（前向取首表；无水印回落全文倒扫） | §4.3 / `AGENT-LOOP-ASYNC-POOL.md` §6.10 |
-| A-AC15 | 同类先例核查维度在位（「同类先例」行：先例坐标 + 对齐 ∥ 偏离理由；偏离理由显式判据；无先例须显式声明）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 9 条；**已落笔**（EN 在盘——2026-10-10） | 同类先例 |
-| A-AC16 | 勘察证据行核查维度在位（「勘察证据行」：查过哪些公共源文档 ∥ 有无相关；缺行 ⇒ 未查或未记；无相关须照记）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 10 条；**已落笔**（EN 在盘——2026-10-14） | 勘察证据 |
+| A-AC15 | 同类先例核查维度在位（批档 §2 的「同类先例」行：先例坐标 + 对齐 ∥ 偏离理由；偏离理由显式判据；无先例须显式声明）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 9 条；**已落笔**（EN 在盘——2026-10-10） | 同类先例 |
+| A-AC16 | 勘察证据行核查维度在位（批档 §2 的「勘察证据行」：查过哪些公共源文档 ∥ 有无相关；缺行 ⇒ 未查或未记；无相关须照记）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 10 条；**已落笔**（EN 在盘——2026-10-14） | 勘察证据 |
 | A-AC17 | 分支出处核查维度在位（每条新增分支带「依据」：真实观测 ∥ 复现命令；两者都给不出 ⇒ 🔴；真防御给得出复现路径即过）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 `6b` 条（第 6 条与第 7 条之间） | 分支出处 |
-| A-AC18 | 集成测试设计段核查维度在位（设计档缺该段 ⇒ 🔴（设计不完整）；改动未触及业务行为 ⇒ 段内写明「无变化 + 理由」，理由须是「未触及业务行为」本身，以窗口上限为由不成立 ⇒ 仍 🔴；段内场景逐条回指业务需求）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 12 条（**逐字读核对**；机检限行为面 / 结构机检）；**已落笔**（EN 在盘——2026-10-24） | 集成测试设计段 |
+| A-AC18 | 集成测试设计段核查维度在位（批档 §2 缺该段 ⇒ 🔴（设计不完整）；改动未触及业务行为 ⇒ 段内写明「无变化 + 理由」，理由须是「未触及业务行为」本身，以窗口上限为由不成立 ⇒ 仍 🔴；段内场景逐条回指业务需求）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 12 条（**逐字读核对**；机检限行为面 / 结构机检）；**已落笔**（EN 在盘——2026-10-24） | 集成测试设计段 |
 | A-AC19 | 评审侧工具执行面返回值归一：在评审工具集上跑一次 `doc_check`，拿到首行 `DOC-CHECK GATE:` 的结果（PASS ∥ REFUSED 都算通过），**不是** `Error (execution_error)`；去掉归一（`p.tool.execute(...)` 原样赋值）⇒ 该条转红 | §18 |
+| A-AC20 | 一次性内容核查维度在位（设计档携本批条目 ∥ 受影响文件表 ∥ 验收行 ∥ 用例表 ∥ 集成差量 ⇒ 🟡，判据留在评审手里不升 🔴）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §Review Criteria 第 14 条 | §19 |
 
 **工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs` 的推入段（`messages` 的 assistant 消息）由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"`
 
@@ -479,7 +480,7 @@ advisor design review 标准维度补一条：
 
 advisor design review 标准维度补一条：
 
-- **同类先例核查**：设计档是否含**「同类先例」行**——先例坐标（实现坐标 ∥ 设计档对应节 ∥ 先例批）+ 对齐 ∥ 偏离理由；**有意偏离 ⇒ 理由须显式**（可核形 = 指认所勘先例 + 说清既有形为何不适用——缺任一即未显式）；**无同类先例可勘 ⇒ 显式声明**（不得静默省行）。
+- **同类先例核查**：批档 §2 是否含**「同类先例」行**——先例坐标（实现坐标 ∥ 设计档对应节 ∥ 先例批）+ 对齐 ∥ 偏离理由；**有意偏离 ⇒ 理由须显式**（可核形 = 指认所勘先例 + 说清既有形为何不适用——缺任一即未显式）；**无同类先例可勘 ⇒ 显式声明**（不得静默省行）。
 - **与方案选型对比互邻**（F2-6 边界）：先例 = 对比的输入面——对比在场（候选 ≥2）时先例即其判据输入；本维度只核「同类先例」行，不引入候选对比要求。
 
 ## 15. 勘察证据行核查（设计评审维度）
@@ -489,7 +490,7 @@ advisor design review 标准维度补一条：
 
 advisor design review 标准维度补一条：
 
-- **勘察证据行核查**：设计档是否携**勘察证据行**——查过哪些公共源文档（尤其独立文档仓）∥ 有没有相关。**缺行 ⇒ 未查或未记**；**无相关 ⇒ 也须照记**（不得静默省行）——复核链本无此项；「没查」得有地方现形。
+- **勘察证据行核查**：批档 §2 是否携**勘察证据行**——查过哪些公共源文档（尤其独立文档仓）∥ 有没有相关。**缺行 ⇒ 未查或未记**；**无相关 ⇒ 也须照记**（不得静默省行）——复核链本无此项；「没查」得有地方现形。
 
 ## 16. 分支出处核查（设计评审维度）
 
@@ -505,21 +506,21 @@ advisor design review 标准维度补一条：
 
 > 权威链（指环单向化）：集成测试设计段**义务**（业务设计一并设计集成测试——场景 + 业务可观察判据 + 逐条回指业务需求）= 纪律层设计步（需求 = `docs/core/requirements/TESTING.md` F34 条，该条明书「不是评估项、不是可选项」）；**核查维度行为语义 = 本节**；执行实现 = 设计评审提示词的对应维度——落点 = `thincoder-core/prompts/advisor-design.md` §Review Criteria 第 12 条。
 
-- **核查**：设计档是否含集成测试设计段——本次改动新增 ∥ 修改的集成场景表、每场景断言的业务可观察结果，且**逐条回指业务需求**（F34「场景表 + 判据，逐条回指业务需求」）。
+- **核查**：批档 §2 是否携集成差量——本次改动新增 ∥ 修改的集成场景表、每场景断言的业务可观察结果，且**逐条回指业务需求**（F34「场景表 + 判据，逐条回指业务需求」）。
 - **缺段 ⇒ 🔴**（设计不完整）；改动未触及业务行为 ⇒ 该段写明「无变化 + 理由」，这是唯一替代形态。
 - **理由不成立 ⇒ 仍判 🔴**：理由须是「改动未触及业务行为」本身；以集成窗口已满（50–100 用例）为由不成立——F34 明书该窗口是**上限约束**（超窗裁减旧场景），不是「不新增」的理由。
 - **同类先例**：先例 = 本档 §14 ∥ §15 ∥ §16 的同一形（权威链引块 + 核查条目 + A-AC 行 + 提示词逐字建议）；实现 = `thincoder-core/prompts/advisor-design.md` 评审标准第 9 条 ∥ 第 10 条。**对齐**：本节整形复用，不另立专名。**偏离**：无。
-- **勘察证据**：`index.publicRepos` = `[]`（`PROJECT-MANIFEST.json` 清单项）⇒ **零仓外声明源**（无相关也照记）。本节成形所据的树内公共源 = `docs/core/requirements/TESTING.md`（F34 = 唯一需求依据 ∥ N20 = 集成集只住三前端）· 本档 §14 ∥ §15 ∥ §16（同形先例）。
+- **勘察证据**：`index.publicRepos` = `["../.thincoder","../thincoder.com"]`（`PROJECT-MANIFEST.json` 清单项实读 2026-11-12，与 §19 同一读数）。本节成形所据的公共源全在树内 = `docs/core/requirements/TESTING.md`（F34 = 唯一需求依据 ∥ N20 = 集成集只住三前端）· 本档 §14 ∥ §15 ∥ §16（同形先例）。
 - **为什么必须查**：集成测试是唯一从用户可见入口走的验收回路；批内单测档收口即删——设计时没定下集成场景，这个改动收口后就没有验收了。
 
 **【提示词逐字建议】`thincoder-core/prompts/advisor-design.md` §Review Criteria 第 12 条**：
 
 ```text
-12. **Integration-test design**: the design document must contain an integration-test design section — the scenarios this change requires, the business result each asserts, and the business requirement each traces back to.
-    **A design missing that section ⇒ 🔴 (design incomplete)**; a change that alters no business behavior states so, with its reason, in that section.
+12. **Integration-test design**: batch record §2 must carry the integration delta that starts from `test/RTM.md` — the scenarios this change requires, the business result each asserts, and the business requirement each traces back to.
+    **A record missing that delta ⇒ 🔴 (design incomplete)**; a change that alters no business behavior states so, with its reason, in that delta.
     **A reason that is not "this change alters no business behavior" does not stand** — e.g. the 50–100 case window being full ⇒ still 🔴.
 
-    **Why**: integration tests are the only acceptance run that starts from a user-visible entry, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves the change with no acceptance at all.
+    **Why**: integration tests are the only acceptance run that starts from a user-visible entry, and the batch's unit-test files are deleted at closeout — a record that never names those scenarios leaves the change with no acceptance at all.
 ```
 
 **本批集成测试设计**：无新增集成场景——理由三条：① 本改动 = 评审判据文本（提示词 ∥ 过程面）；② 裁决面依赖模型输出，无可确定性断言的前端入口；③ 集成集只住三前端（`docs/core/requirements/TESTING.md` N20）。验证面 = 逐字读核对 + doc-check gate。
@@ -599,3 +600,28 @@ thincoder-core/advisor/loop.mjs
 **边界（不做）**：不改任何工具的 `execute` 形态；不把「工具必须返回 Promise」立成契约；不改超时竞速与错误分类；不新增未捕获拒绝的处理机制。
 
 **UI / 交互决策**：本面无 UI / 交互面；**无 open 项**。
+
+## 19. 一次性内容核查（设计评审维度）
+
+> 权威链（指环单向化）：设计档只留状态的**义务** = `docs/core/design/PROMPT-SYSTEM.md` §6.104（归属判据 = 这一批收口之后还成立吗）；**核查维度行为语义 = 本节**；执行实现 = 设计评审提示词的对应维度——落点 = `thincoder-core/prompts/advisor-design.md` §Review Criteria 第 14 条。
+
+advisor design review 标准维度补一条：
+
+- **一次性内容核查**：设计档是否携本批的账——本批条目 ∥ 受影响文件表 ∥ 验收行 ∥ 用例表 ∥ 集成差量 ⇒ **🟡**：这些随批收口即不成立，去处是批档 §2。
+- **判 🟡 不判 🔴**：放错载体是形态问题，不该拦下整批；与 §17 的分工——缺内容是设计不完整（🔴），放错载体是形态（🟡）；同一改动的内容既缺又放错 ⇒ 先报 §17 那一条 🔴。
+- **不判设计档的长短**：本维度判携不携本批的账，不判写了几条。四条目都没有、而本批确有相应内容 ⇒ 那是 §16 ∥ §17 的缺项，不归本节。
+- **同类先例**：先例 = 本档 §14 ∥ §15 ∥ §16 ∥ §17 的同一形（权威链引块 + 核查条目 + A-AC 行 + 提示词逐字建议）；实现 = `thincoder-core/prompts/advisor-design.md` 评审标准第 14 条。**对齐**：本节整形复用，不另立专名。**偏离**：无。
+- **勘察证据**：`index.publicRepos` = `["../.thincoder","../thincoder.com"]`（`PROJECT-MANIFEST.json` 清单项实读）。成形所据的树内公共源 = `docs/core/design/PROMPT-SYSTEM.md` §6.104（规则本体）· 本档 §14 ∥ §15 ∥ §16 ∥ §17（同形先例）· `docs/core/standards/METHODOLOGY.md` F2-4 ∥ F7-1（本轮已收正为「本批的验收 ∥ 用例表 ∥ 受影响文件清单住批档 §2」）。**查过，相关**。
+- **为什么必须查**：只核「该写的在不在」核不出「不该写的在不在」；设计档装着本批的账，收口后那份账没人回来更新，后来的读者把它当现况读。
+
+**【提示词逐字建议】`thincoder-core/prompts/advisor-design.md` §Review Criteria 第 14 条**：
+
+```text
+14. **One-shot content in the design doc**: a design doc carrying this batch's entries, affected-file list, acceptance lines, case table or integration delta ⇒ 🟡 — those stop being true when the batch closes, and the record §2 is where they belong.
+
+    **Why**: the design doc outlives the batch, so a table frozen at the copying moment is read as current by everyone after it.
+```
+
+**本批集成测试设计**：无新增集成场景——理由三条：① 本改动 = 评审判据与设计档结构（提示词 ∥ 过程面）；② 裁决面依赖模型输出，无可确定性断言的前端入口；③ 集成集只住三前端（`docs/core/requirements/TESTING.md` N20）。验证面 = 逐字读核对 + doc-check gate。
+
+**验收回指**：A-AC20（§12 表）→ 本节。

@@ -476,10 +476,10 @@ run.mjs 改前: timeoutId = setTimeout(...)  ⇒  run.mjs 改后: timeoutId = se
 
 **勘察证据行（本席实读 · 2026-11-04）**：
 
-- 落点档形：`thincoder-core/prompts/advisor-design.md` 的 `## Review Criteria` 节内条目编号止于 `12.`，另有 `6b.` 一条字母后缀条目；节后即时 `## Output Format`。
+- 落点档形：`thincoder-core/prompts/advisor-design.md` 的 `## Review Criteria` 节内条目编号止于 `14.`，另有 `6b.` 一条字母后缀条目；节后即时 `## Output Format`。
 - 判据本体实读：`docs/core/design/DOC-DISCIPLINE.md` 的 D4 细则含上述两句逐字。
 - 注入面实读：`thincoder-core/advisor/history.mjs` 的 `loadAdvisorMd(cwd)` 读 `<cwd>/.thincoder/advisor.md`，读不到才回落 `DEFAULT_CRITERIA`（一份五条代码评审清单）；`thincoder-core/advisor/messages.mjs` 把该值作为 `## Review Criteria` 块推进**用户消息**。⇒ 该档即使存在，其内容也只是用户消息里的附加块，**不取代**提示词（系统面）⇒ 改提示词在该 cwd 同样生效。
-- 公共源：本仓 `PROJECT-MANIFEST.json` 的 `index.publicRepos` = `["../.thincoder","../thincoder.com"]`（实读 2026-11-10）⇒ 无仓外声明源可查（已查无）；口径与 §2 第 7 条同。
+- 公共源：本仓 `PROJECT-MANIFEST.json` 的 `index.publicRepos` = `["../.thincoder","../thincoder.com"]`（实读 2026-11-10）⇒ 两个仓外声明源在册；本节成形所据的公共源全在树内，未引仓外源；口径与 §2 第 7 条同。
 - 近面涉否：`test/` 下无档引用 `advisor-design` 的判据条数 ⇒ 本笔不破既有用例的夹具。
 
 **验收（AC13-1 … AC13-6 · 每条写清跑什么、期望什么）**：
@@ -487,7 +487,7 @@ run.mjs 改前: timeoutId = setTimeout(...)  ⇒  run.mjs 改后: timeoutId = se
 | # | 判据 | 量法 |
 |---|---|---|
 | AC13-1 | 落笔块逐行相等 | `node` 逐行 `===`：`thincoder-core/prompts/advisor-design.md` 落地块与本节围栏块整行相等（首末行含） |
-| AC13-2 | 编号与位置 | 节切（`## Review Criteria` 至下一个 `^## `）内 `^[0-9]+\. \*\*` 计数 = **13**（`6b.` 不占整数编号）；第 13 条在 `## Output Format` 之前 |
+| AC13-2 | 编号与位置 | 节切（`## Review Criteria` 至下一个 `^## `）内 `^[0-9]+\. \*\*` 计数 = **14**（`6b.` 不占整数编号）；第 13 条在 `## Output Format` 之前 |
 | AC13-3 | 分档未回来 | 落地块扫 `pre-existing` ∥ `one count line` ∥ `the round did not touch` ⇒ **0** |
 | AC13-4 | 行宽 | 落地块逐行 ≤300；该档 `>300` 行数**不增加**（基线 = 实施轮首动作前复测，读数记 §5） |
 | AC13-5 | 提示词不带项目细则 | 落地块扫 `docs/` ∥ `_archive` ∥ `thincoder-` ⇒ **0** |
@@ -809,7 +809,7 @@ export function outputReserve(provider, spec) {
 | A-AG25 | 批归属「批」列派生（`thincoder-core/agent-tools/design-slots.mjs` 的 `batchOf`）：旁列有值 ⇒ 取该批档绝对路径的 basename；旁列缺失（旁列启用前签发的旧槽）⇒ 会话内评审实例注册表按 designId 命中的 run 逆序取最近一个能派生出批档的（`run.batchDoc` 优先、`docSetKey` 段档兜底）；皆不可得（跨重启 ∥ 模式重进 ∥ 注册表回收）⇒ `—`（如实降级，不猜一个批名）；与 settle 写旁列同一派生 `batchAbsPathOfRun`——清点面不拿另一个派生读同一事实 | 批归属 · 清点显名（U-7 ∥ U-8） |
 | A-AG27 | 账链门（§2 第 7 条）：`type="design"` ∧ `batchDoc` 可读 ⇒ 本档须有 ≥1 行 ∈ `PENDING_STATUSES`（选行 = `resolveBatchRows` 同址，台账 `thincoder-core/ledger-write-ops.mjs`；未决 = `thincoder-core/ledger-db.mjs`）；不满足 ⇒ 拒发（`criterion=batchdoc-no-ledger`，`reason` 三值 `no-pending-row` ∥ `no-ledger-root` ∥ `ledger-unreadable`）+ `_advisorRefusals` 登记，零实例 / 零 token / 零槽 / 零 LLM；**失败路径全落拒、零路径落放行**（`if (!db)` 放行与 throw 外逸都不算答案）；**零模式位**（新增代码对 `agent.engineering` 零命中）⇒ 普通模式同判；结算面（`settleDesignReview`）零台账读 | E1 / E2 / E3 / E4 |
 | A-AG26 | 设计评审准入门（AC-M6-6）：`advisor(type="design")` 未携 `batchDoc`（缺失 / `null` / 空串 / 纯空白）⇒ 拒发串（前缀 + `batchDoc` 必填句 + Why + 两种期望形 + 「先建档」下一步 + `Nothing was sent` 行 + 标识行 `criterion=batchdoc-missing`），登记 `agent._advisorRefusals`，零实例 / 零 token / 零槽 / 零轮次 / 零 LLM；携了但不可读 ⇒ 既有 `resolveBatchDocPath` 文案逐字（不改）；`type="code"` 不受本门约束；携了可读的设计评审零回归；**槽数读面单源 = `agent._engDesignTokens`**（槽存储本体；`subagent(action:'design-slots')` 清点读同一 Map——`thincoder-core/agent-tools/design-slots.mjs` 实读） | AC-M6-6 |
-| A-AG28 | 参照形态判据（提示词第 13 条）：落地块与本节围栏块逐行相等；节内整数编号 = 13 ∧ 第 13 条在 `## Output Format` 之前；落地块零分档串、零项目细则字面、逐行 ≤300，该档 `>300` 行数不增加；无例外——归档档同判（判据 = 本节 AC13-1 … AC13-5） | 参照形态判据（提示词第 13 条） |
+| A-AG28 | 参照形态判据（提示词第 13 条）：落地块与本节围栏块逐行相等；节内整数编号 = 14 ∧ 第 13 条在 `## Output Format` 之前；落地块零分档串、零项目细则字面、逐行 ≤300，该档 `>300` 行数不增加；无例外——归档档同判（判据 = 本节 AC13-1 … AC13-5） | 参照形态判据（提示词第 13 条） |
 
 ## 11. 边界
 

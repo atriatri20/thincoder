@@ -691,7 +691,7 @@ Error: engineering mode is ON — task is unavailable (the batch record + the le
   （档头 boilerplate 不在段白名单内——改写 `> 台账 = …` 行；实态先例 = 批档档头 `> 台账 = #214/#215（TOOLS.md · 归批）`）。
 
   **次序句**：create（给参即填 ∥ 未给留占位 + 回执提示填法）⇒ 主 agent 填档头（`#<编号>` → 台账编号 · `<板块>` → 板块名）⇒ 本档首次 append/status 开放；未填 ⇒ 首写被 F11-C 拒（错误句逐行列残留行号 = 提示填充位置）——机检 = 次序约束的兜底，**非死锁**（填后立即放行）。
-- **close 不拦**（收口是主 agent 终态动作，残留面由既有通道自查）+ **create 不拦**（骨架本身合法含占位）；gate 在写入面（append/status），挂点：append 于 gate/text 校验后 `insertIntoSection` 前（主档）；status 于 `assertStatusValue` 后写盘前（lifecycle）。
+- **close 不拦**（收口是主 agent 终态动作，残留面由既有通道自查）+ **create 不拦**（骨架本身合法含占位）；**这一道门（占位残留机检）**在写入面（append/status），挂点：append 于 gate/text 校验后、`insertIntoSection` 前（`thincoder-core/agent-tools/batch-record-write.mjs`）；status 于 `assertStatusValue` 后写盘前（lifecycle）。append 上另有一道门更靠后——文档机检门在 `insertIntoSection` 与状态行改写之后、写盘之前，判集 = 候选全文；两道挂点不是同一道门，不按一个位置核另一个。
 
 **行数与拆分评估（判据 = `docs/core/design/DOC-GRAPH.md` §3「行数档位口径」；本节只记本批设计轮作出的判定与其候选拆分位）**：
 

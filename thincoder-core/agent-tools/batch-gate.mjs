@@ -16,8 +16,9 @@
  * 引擎的 `judgedDomainDocs` 算——写时点原样交回，收口时点移出批档面。两处各写一份「批档免不免」，就会让
  * `范围 N 档` 与 `doc_check` 的 `checkFiles` 迟早不同数，而 `CLI 7-7` 断的就是两数相等。
  *
- * **判域 = 本批变更区**（§6）：收口那一刻，一份档进了判域不等于它整份进来判——只判 `git diff -U0 <批起 sha>`
- * 量出的那几行，区内照判三件、区外一个字都不出。写时点交 `null`（判整份 ∥ 候选文本）。
+ * **判域 = 本批变更区**（§6）：一份档进了判域不等于它整份进来判——只判量出的那几行，区内照判三件、区外一字不出。
+ * 两个时点取法不同源：收口读 `git diff -U0 <批起 sha>`（`changedRegionsOf`）；写时点读盘上现文与这一笔要写的候选
+ * 全文两份（`changedRegionOf`），表里只装这一笔在写的那一档。
  * 取区之前，收口臂自己把要判的档 `git add` 掉（`stageDocs`，按路径限定、不 `git add -A`）——索引外的档
  * `git diff` 看不见，那不是「没改」（§6「收口门自己把要判的档 `git add` 掉」）。写时点不动索引。
  * 不拦的那一层不出声：门内没有「判了但不阻断」的读数行（用户令：不拦截的就不要报数）。
@@ -26,7 +27,7 @@ import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
 import { owningProject, readManifest } from "../manifest.mjs"
-import { displayPath, hitLine, judgeText, judgedDomainDocs, MOMENT } from "../doc-check/index.mjs"
+import { changedRegionOf, displayPath, hitLine, judgeText, judgedDomainDocs, MOMENT } from "../doc-check/index.mjs"
 import { plannedPathsOf } from "../doc-check/existence.mjs"
 import { changedRegionsOf, committedDocs, stageDocs } from "./batch-regions.mjs"
 import { sectionHeaderRe } from "./batch-skeleton.mjs"
@@ -144,18 +145,30 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
   // 判它量的是几小时前的记录与现态的距离，不是缺陷；写时点原样交回（§9 表第一行）。
   const penDomain = [...new Map([...touched, ...diffDocs, selfAbs].map((p) => [pathKey(p), p])).values()]
   const docs = judgedDomainDocs(penDomain, { moment: close ? MOMENT.close : MOMENT.writer, root })
-  // 收口：再按**本批变更区**收窄到行（§6）——取不到基线 ∥ 旧形批 ∥ 非 git 目录 ⇒ 空表 ⇒ 每一档都没有要判的行。
-  // 收口门自己把要判的档 add 掉再取区（§6）：索引外的档 `git diff` 看不见，那不是「没改」；
-  // 没有基线就没有要取的区 ⇒ 索引也不动。
-  // 写时点：交 `null` = 判整份（`append` 交候选全文、`edit` 交改写后整档视图）。
-  if (close && baseSha) stageDocs(root, docs)
-  const regions = close ? changedRegionsOf(root, baseSha, docs).regions : null
 
   // 本次写入的判定输入（写时点）：`edit` = 改写后整档视图；`append` = 候选全文。
   const viewBody = !close && pending && typeof pending.recordView === "string" ? pending.recordView : null
   const body = !close && pending && typeof pending.body === "string" && pending.body.trim() ? pending.body : null
   const fromCandidate = viewBody === null && body !== null
   const inputBody = viewBody ?? body
+
+  // 判哪几行（§6）：两个时点取法不同源。
+  // 收口：按**本批变更区**收窄到行（取不到基线 ∥ 旧形批 ∥ 非 git 目录 ⇒ 空表 ⇒ 每一档都没有要判的行）。
+  // 收口门自己把要判的档 add 掉再取区：索引外的档 `git diff` 看不见，那不是「没改」；没有基线就没有要取的区 ⇒ 索引也不动。
+  // 写时点：表**只装这一笔在写的那一档**——该档区间 = 盘上现文与候选全文两份直接求（`changedRegionOf`），
+  // 与写门同一句；盘上读不到该档现文 ⇒ 那一格 `null` = 整份判（新档同一条）；本笔没有候选文本 ⇒ 不进表 ⇒ 零输出。
+  // 其余进笔域集的档本笔一字未写 ⇒ 不在表里 ⇒ 不判、不数（走下面 `region === undefined ⇒ continue`）。
+  if (close && baseSha) stageDocs(root, docs)
+  let regions = null
+  if (close) {
+    regions = changedRegionsOf(root, baseSha, docs).regions
+  } else if (inputBody !== null) {
+    let current = null
+    try { current = readFileSync(selfAbs, "utf8") } catch { current = null }
+    regions = new Map([[resolve(selfAbs), current === null ? null : changedRegionOf(current, inputBody)]])
+  } else {
+    regions = new Map()
+  }
 
   const planned = plannedPathsOf(root)
   const hits = []
@@ -181,7 +194,8 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
     try { text = readFileSync(doc, "utf8") } catch (e) {
       // 区间面、区内只有纯删的缝、且盘上真没了（ENOENT）= 这一档在建档之后被删掉整份 ⇒ 不出一行（§6）。
       // 还在地盘上却读不到 ⇒ 它不是那个情形，照实点名（否则一条读失败就被吞成零输出了）。
-      if (regions !== null && (region.rows ?? []).length === 0 && e?.code === "ENOENT") continue
+      // `region === null`（这一档判整份）不是那个情形——那一格走的是读盘后的整份判。
+      if (regions !== null && region !== null && (region.rows ?? []).length === 0 && e?.code === "ENOENT") continue
       unjudged.push(e?.code === "ENOENT" ? `${displayPath(root, doc)} 不在盘，未判` : `${displayPath(root, doc)} 读不到，未判`)
       continue
     }

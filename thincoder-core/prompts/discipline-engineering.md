@@ -119,7 +119,8 @@ Why: the layer sits on disk and nothing forces a step to open it — a rule nobo
    After confirmation, build task entries one per requirement — the batch record §2 entry table + ledger rows are the marker that requirements were accepted.
    - **A decision lands in the round it is made**: the main agent writes it down in that round — the requirements doc when it can take it, otherwise the batch record §1 已定决定 lines.
 2. **Design**: the approach, architecture, how to implement — landed in a design doc.
-   What it carries: **the target state** (how it will be built), approach & rationale, full affected-file list, verifiable acceptance criteria (each pointing back to a user story).
+    What it carries: **the target state** (how it will be built), approach & rationale, the interface contract where there is one, and the boundary.
+    The affected-file list, the acceptance criteria and the case table are this batch's own account and live in the batch record §2.
    **⚠️ The problem statement does NOT go here** — symptom / root cause / trial readings / experimental rejection details go in the batch record; design-level rejected alternatives and their lasting reasons stay in the key decision record.
    Why: the batch record is the process doc, the design doc the state doc.
    **Design settles first**: implementation starts only after the design is settled.
@@ -226,7 +227,9 @@ The report must contain: what changed / why, the paths of files touched, how you
   Why: an unconditional `none` let any change close against an empty set, so the set stayed empty while every closeout read green.
 - **Integration tests** combine components and test the **interaction between components** — the **pre-release acceptance loop**, which this project enters from a user-visible entry.
 - **The integration index is `test/RTM.md`** — the RTM (UAT acceptance matrix: one section per business story, one row per integration case).
-  A design round opens by reading it and answers as a delta — rows broken, rows redundant, rows missing — never a blank "which scenarios does this change need" list; a row's number is fixed in the RTM before its case title is written.
+  A design round opens by reading it and answers as a delta — the case it rewrites, the case it deletes, the case it adds, each named by its own title — never a blank "which scenarios does this change need" list;
+  how many of each is a reading, so it lives in the batch record rather than in the design section.
+  A case's number is fixed in the RTM before its case title is written — `test('CLI 1-1 …')`, the same number verbatim.
   Why: without the index a designer sees only this batch's scenes, so every case lands as a new one and the existing set is never revised.
 - **Project assets**: business scenarios + production-problem additions, asserting only business-observable results.
 - **The integration window is an upper bound**: a repo's suite budget stays ≈50–100 cases — over the window, trim old scenarios rather than turn away a case a business change earned.
@@ -451,6 +454,11 @@ When writing/editing docs (requirement layer / design layer — roots are `docRo
 **A whole section/table/rule compressed into one over-long block makes it unreadable** (a paragraph running past 300 characters).
 Docs are read by humans (reviewers/leaders included) — an unreadable doc equals an unwritten one.
 **Check**: verify per the project's own doc conventions (generic criteria: no paragraph over 300 characters, normal breaks and separations; project declarations win where they exist).
+- **The prompt face is judged line by line** (`thincoder-core/prompts/**`): each line there is its own paragraph,
+  so the gate measures every line on its own and one past 300 characters is a hit however short the block around it is.
+  Break those lines where a sentence or a clause ends,
+  change not one word, and do not copy the wrapping of a design document's fenced block — that wrapping is laid out for a page, and the face it lands on counts lines.
+  Why: the gate refuses the byte, not the paragraph, so a block written the doc way costs a re-break round after the words are already approved.
 - **Chinese strings in an AC or a verification command are one instance of D15**: the reading goes through `node` (a line scan) or the built-in `grep`, and every reading of the same string is taken the same way — the numbers only compare while they come off one ruler.
   A shell tool decodes those bytes under a different encoding standard, so what it reports is not a smaller count but a number from another ruler, and readings taken off two standards have nothing to say about each other.
   The consequence is why this earns a rule: the wrong ruler's zero and a real absence print identically, and the reader cannot tell which one is on the page.

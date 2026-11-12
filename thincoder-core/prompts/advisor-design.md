@@ -30,26 +30,26 @@ Evaluate the design against these dimensions:
 3. **Methodology compliance**: Does it follow the project's document norms and the 4-step workflow?
    The norms are the ones the review message carries under the fixed section header `## Project Standards` — judge the design against those standards files, not against norms you infer from the design itself.
    Is the design doc itself present (at any tier) — no doc ⇒ 🔴
-4. **Clarity**: Is the design specific enough to implement? Are the affected files identified?
-5. **Acceptance criteria**: Are they verifiable? Do they cover normal paths, edge cases, and error conditions?
+4. **Clarity**: The affected files belong to batch record §2 — check the design does not carry them.
+5. **Acceptance criteria**: Read them in batch record §2: are they verifiable, and do they cover normal paths, edge cases and error conditions?
 6. **Scope**: Is the scope appropriate? Are there opportunities to simplify? Is there scope creep?
 6b. **Branch provenance**: every branch the design adds for an input ∥ state names where its scene comes from — a real observation (a data reading ∥ a log line ∥ a user report, quoted) or a reproducible failure path (the command that reproduces it).
    **Neither given** ⇒ the branch guards a scene that has not happened ⇒ **🔴**.
    **Why**: a branch brings four companions of its own — an alert, copy, cross-end consistency and test material; with no scene none of the four can be verified, and nobody later dares delete the branch.
    **A real defence passes**: give the reproduction path and it walks — this kills the branch that cannot name its scene, not defence itself.
 7. **Document ownership**: Does the change amend the document that already owns its topic (per the project's document map, when the review context provides one), or does it fragment by creating a new file for an existing section? Does the wording duplicate or contradict existing documents?
-8. **Affected-file tier check**: every source/test file in the design's affected-files table gets its tier judged — **the conclusion**（crosses a tier or not）+ **the command**（how to check it）; no number goes into the design document.
-   **Neither the size nor an expected delta goes into the design document**: the conclusion does — one line naming which files cross a tier, each with its split plan, or stating that none crosses.
+8. **Affected-file tier check**: every source/test file in batch record §2's affected-files table gets its tier judged — **the conclusion**（crosses a tier or not）+ **the command**（how to check it）; no number goes into the design document.
+   **Neither the size nor an expected delta goes into the design document**: the conclusion does — one line in batch record §2 naming which files cross a tier, each with its split plan, or stating that none crosses.
    **Pure `.md` documents are exempt** from that tier judgment.
-   **Any file over 500 lines before the change must carry a split plan in the design.** The basis is the length **before** the code change — not the length the change will leave behind.
+   **Any file over 500 lines before the change must carry a split plan in batch record §2.** The basis is the length **before** the code change — not the length the change will leave behind.
    **The function tier is the first criterion**: a file ≤500 lines containing a 300+ line single function is still non-compliant.
    **Tier authority**: the code-structure criteria stated in this bullet.
    **Spot-check**: sample the table's source/test files, size each one yourself, and verify the conclusion line against them.
-9. **Closest-precedent check**: check whether the design doc carries a closest-precedent line — precedent coordinates (implementation coordinates ∥ the matching design-doc section ∥ precedent batches) + alignment ∥ deviation rationale.
+9. **Closest-precedent check**: check whether batch record §2 carries a closest-precedent line — precedent coordinates (implementation coordinates ∥ the matching design-doc section ∥ precedent batches) + alignment ∥ deviation rationale.
    **For an intended deviation the rationale must be explicit**: it names the surveyed precedent and states why the existing form does not apply — missing either = not explicit.
    **No precedent**: an explicit declaration is required.
    **Why**: a line left out is indistinguishable from a survey that did not happen.
-10. **Survey-evidence check**: check whether the design doc carries a survey-evidence line — which public source docs were checked (independent doc repos above all) ∥ whether anything was relevant.
+10. **Survey-evidence check**: check whether batch record §2 carries a survey-evidence line — which public source docs were checked (independent doc repos above all) ∥ whether anything was relevant.
     **A missing line**: not surveyed, or not recorded.
     **A "none relevant" answer**: record it too.
     **Why**: its absence reads as "not surveyed", and "not surveyed" needs a place to surface — the review chain had no such item.
@@ -57,12 +57,14 @@ Evaluate the design against these dimensions:
     **The answer takes one of three forms**: `existing: …` · `none found: …` · `existing but unusable: …`.
     **Unused existing piece**: an existing piece left unused with no reason it is unusable ⇒ 🔴.
     **A missing line** stays 🟡.
-12. **Integration-test design**: the design document must contain an integration-test design section that starts from `test/RTM.md` — the RTM: one section per business story, one row per integration case.
-    The section answers as a delta against it — which rows this change breaks, which are redundant, which are missing;
-    each row names the **interaction between components** each evaluates, the business result each asserts, the project's entry (where a user enters the business — a business-observable point), and the business requirement each traces back to.
+12. **Integration-test design**: batch record §2 must carry the integration delta that starts from `test/RTM.md` — the RTM: one section per business story, one row per integration case.
+    The section answers as a delta against it — the case this change rewrites, the case it deletes, the case it adds, each named by its own title;
+    each named case carries the **interaction between components** it evaluates, the business-observable result it asserts, the requirement it serves,
+    and this project's entry (where a user enters the business — a business-observable point).
     **An integration section that starts from a blank "which scenarios do we need" list, with no RTM read, ⇒ 🔴.**
-    A missing row's number is fixed in the RTM before its case title is written — `test('CLI 1-1 …')`, the same number verbatim.
-    **A design missing that section ⇒ 🔴 (design incomplete)**; a change that alters no business-observable result an existing case asserts and adds no scenario the product really needs states so, with its reason, in that section.
+    **A section answering with a tally of rows instead of their names ⇒ 🟡** — the tally is a reading and belongs to the batch record; a named case still resolves after rows move.
+    A case's number is fixed in the RTM before its case title is written — `test('CLI 1-1 …')`, the same number verbatim.
+    **A record missing that delta ⇒ 🔴 (design incomplete)**; a change that alters no business-observable result an existing case asserts and adds no scenario the product really needs states so, with its reason, in that section.
     **Only one reason stands: this change alters no business-observable result an existing case asserts and adds no scenario the product really needs. Anything else — e.g. the 50–100 case window being full — is still 🔴.**
     **A case grows from exactly two entries**: a business scenario the product really needs, or a problem production really produced — crossing components is not an entry.
     **Why**: no other acceptance run evaluates the business result from a user-visible entry, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves that result with no acceptance at all.
@@ -72,6 +74,8 @@ Evaluate the design against these dimensions:
 13. **Reference form — no line numbers**: a citation into code or docs identifies its target by a stable name, never by a line number.
     `path:123` and `line 123` both drift the moment a line is inserted above, and the drift is silent — the reader lands on an unrelated line and cannot tell.
     Name the symbol (function / constant / field / message / section heading); when no symbol exists, name the file together with the section heading that owns it.
+14. **One-shot content in the design doc**: a design doc carrying this batch's entries, affected-file list, acceptance lines, case table or integration delta ⇒ 🟡 — those stop being true when the batch closes, and the record §2 is where they belong.
+    **Why**: the design doc outlives the batch, so a table frozen at the copying moment is read as current by everyone after it.
 
 ## Output Format
 Produce a table with your findings:

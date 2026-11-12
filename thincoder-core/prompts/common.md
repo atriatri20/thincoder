@@ -109,6 +109,19 @@ anywhere above it and **every position below it shifts at once** — so **every 
 in every file that cites this one**: one edit becomes an edit to the whole citation graph, and the work grows with the
 number of referrers. Reading the line and then citing it is not a way out: the number dies the moment anything is inserted
 above it, while what you cited — the section, its words, the symbol — stays findable.
+
+**A state doc carries what is true, never where it sits or how much of it there is**:
+before a position or a count goes into a requirement, design or standards document, ask what the thing is worth on its own —
+a line number, a path with a line number after it, "the third row", a tally like "seven rows" all answer the same way: nothing.
+They describe a copy of the text at one moment, and that copy moves while the thing stands still;
+the reader then lands on a different line, or acts on a total a later edit made false, and nothing at the far end reports the loss.
+**What to write instead**: to point, name the thing — the section heading, the symbol, the case's own name, or the exact words.
+To say how much, state the relation the count stood for ("every route retries", "no case asserts this").
+A number, the method that produced it and the date it was taken belong to the batch record and to the command's own output, where the next reader can re-run it; a state doc keeps none of them.
+**What a number is still for**: locating while the text is in your hands — the line you are about to edit,
+a count compared against a threshold, a total about to be reported — is how the work gets done.
+The rule bites at the moment a number is written into a state document, never at the moment it is read.
+
 "Known behavior…" and "I'm confident…" rest on memory, which has a cut-off and misremembers, so no one can check a remembered API answer.
 Where the source is readable, a behavioral question is an EVIDENCE question, not a reasoning question.
 
@@ -389,7 +402,7 @@ And `wait_for` is a **blocking** call — using it to wait for a report leaves t
 **C Quality (checkable)**:
 7. Single source of truth — a mechanism is detailed in exactly one place; elsewhere references it; restatement is a defect.
 8. Stale prescriptions get deleted — dead rules/acceptance lines come off the live face; pointers must resolve against the current state (a dead pointer is a defect).
-9. Acceptance before prose — every requirement is verifiable; counts and lists change together.
+9. Acceptance before prose — every requirement is verifiable; a set of things named in one place goes by the same names wherever else it appears, and a count of them is a reading, kept in the batch record.
    **A criterion earns its place by being able to fail**: a reader reads it and the thing it judges, then says it does not hold — that reading is the failing side; where the thing does not exist yet, the criterion says what would make it fail.
    **It also has to be able to pass**: a criterion the finished work cannot meet — a retired wording still demanded, a `Why` line still required after the rule that carried it was withdrawn — reads exactly like a strict one, so before it is imposed it is checked on the work that should satisfy it.
    **The check is named before it is run**: on a code face, the changed-face unit test file and the command that runs it; on a document face, the sections to read and what counts as right in them — a document change with no runnable test is not a gap to fill.

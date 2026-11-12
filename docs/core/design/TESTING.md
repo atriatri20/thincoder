@@ -1245,55 +1245,28 @@ console.log('bad-column-rows', badColumnRows);
 
 **读数面**：本表的行数与标题条数不在本档写死——关系判据 = 上行（§1.3）；绝对值由实施轮跑上述脚本、读数随批档带出。
 
-### 11.17 提示词落点（三处逐字）
+### 11.17 提示词落点（三处 · 词句单源 = `docs/core/design/PROMPT-SYSTEM.md` §6.102）
 
-> 提示词是产品码（落地 = 实施轮）；本节持最终文字，三处同一句：**索引在哪（仓根 `test/` 下的 RTM 总表）· 叫什么（RTM）· 设计从哪开始（读它出 delta）**。
+> 提示词是产品码（落地 = 实施轮）；本节只记落在哪三档的哪一处，**词句不在这里复制**（单源 = `docs/core/design/PROMPT-SYSTEM.md` §6.102）。三处同一句：**索引在哪（仓根 `test/` 下的 RTM 总表）· 叫什么（RTM）· 设计从哪开始（读它出 delta）**。
 
 **先例对齐**：提示词条目形对位三档各自现行体式——persona 的编号项（重点句加粗 + 一句 Why）· advisor 的第 12 条（一段判定 + 一条 🔴）· discipline 的集成段（一条纪律 + 一句 Why）；同句三处共用 = 本档 §11.15 的 delta 三问（D-1 ∥ D-2 ∥ D-3）。先例批 = **无**（理由同 §11.1）。偏离：无。
 
 **公共源勘察**：工作目录树内公共源已查——`thincoder-core/prompts/persona-eng-designer.md`（第 9 项现文）· `thincoder-core/prompts/advisor-design.md`（第 12 条现文）· `thincoder-core/prompts/discipline-engineering.md`（集成段现文）· 本档 §11.15 ∥ §11.16（所持的机制与编号规则）。结论 = 三处均有现行条目可指，无新建条目；外部公共源 = 本批未引（提示词文字属项目自有体式）。
 
-**`#87` 保留件的并存口径（写死）**：① ② 一律「**替换开篇口径、`#87` 的字段句与注解逐字保留**」。
-
-**三个用名（一处定名，本节各条共用）**：**字段句** = 字段列举句；**注解括注** = 字段句内那句 `(where a user enters the business — a business-observable point)`（「注解」与「注解括注」是同一个东西）；**触发行** = 以 `A change that alters …` 开局、判该不该有用例的那一行。
-
-注解括注在字段句之内 ⇒ 保留字段句即保留注解：① 的保留件 = 字段句 + 触发行；② 的 = 字段句 + 该行（缺段 🔴 与行字段句，按原样保留）。
-不取「只加不删」——留着 `the scenarios this change earns` 就是留着本批被取代的起点口径（批 §1 已定：设计步起点 = 读 RTM 出 delta，不再是「这次要什么场景」），两套起点并存比删更坏。
-也不取「整项替换」——`#87` 的判据轴、注解与触发行是上一批的交付物，替换即删。保留件逐处列在各小条里。
+**本节只管「落在哪一档的哪一处」**：词句、保留件与命名的账都在 `docs/core/design/PROMPT-SYSTEM.md` §6.102，本节不复制——状态档里只留一处写着词句。
 
 **写形（三段共用）**：一条规则一行、逐行 ≤300 字符；一段装不下 ⇒ **重新组织语言重写**——断行只在规则边界，不按字符数挪断点。
 三档提示词逐行 ≤300 是硬约束（多一行超宽即破写形；各档现宽随文字变，量法 = `doc_check` 的提示词面逐行判）。
 
-**① `thincoder-core/prompts/persona-eng-designer.md` 第 9 项（现 137–138 行）替换为**（保留件 = 字段句 `each row naming … business-observable point).`（含注解括注）与触发行，逐字不动）：
+**三处落点（词句单源 = `docs/core/design/PROMPT-SYSTEM.md` §6.102；本节不复制词句，只记落在哪一档的哪一处）**
 
-```text
-9. **Integration test design — start from the index**: `test/RTM.md` is the RTM (UAT acceptance matrix: one section per business story, one row per integration case, 5 columns).
-   Read it before designing, then answer as a delta: which rows this change breaks (rewrite them), which rows are redundant (delete them), which rows are missing (new rows) —
-   with each row naming the **interaction between components** it evaluates, the business-observable result it asserts, the requirement it serves, and this project's entry (where a user enters the business — a business-observable point).
-   A new row's number is fixed in the RTM before its case title is written — `test('CLI 1-1 …')`, the same number verbatim.
-   A change that alters a business-observable result an existing case asserts names the case it revises — "no change" is not an answer there.
-   A change that crosses components but starts from no user-visible entry earns no case: an integration case grows from exactly two entries — a business scenario the product really needs, or a problem production really produced.
-```
+| # | 落点 | 这一处落什么（词句坐标） |
+|---|---|---|
+| ① | `thincoder-core/prompts/persona-eng-designer.md` 第 9 项（设计档条目 9） | 答法一段 + 用例号句 = §6.102 落点 ② ∥ ⑦-1 |
+| ② | `thincoder-core/prompts/advisor-design.md` 第 12 条 | 答法一段 + 一条 🟡 判据 + 用例号句 = §6.102 落点 ⑤ ∥ ⑦-2 |
+| ③ | `thincoder-core/prompts/discipline-engineering.md` 集成索引段 | 答法一段 + 用例号句 = §6.102 落点 ④ ∥ ⑦-3 |
 
-**② `thincoder-core/prompts/advisor-design.md` 第 12 条（现 52–59 行）首句替换、并加一条 🔴**（保留件 = 字段句 `the **interaction between components** … each traces back to`（含注解括注），逐字不动）：
-
-```text
-12. **Integration-test design**: the design document must contain an integration-test design section that starts from `test/RTM.md` — the RTM: one section per business story, one row per integration case.
-    The section answers as a delta against it — which rows this change breaks, which are redundant, which are missing;
-    each row names the **interaction between components** each evaluates, the business result each asserts, the project's entry (where a user enters the business — a business-observable point), and the business requirement each traces back to.
-    **An integration section that starts from a blank "which scenarios do we need" list, with no RTM read, ⇒ 🔴.**
-    A missing row's number is fixed in the RTM before its case title is written — `test('CLI 1-1 …')`, the same number verbatim.
-```
-
-（该条其余现有行——缺段 🔴 与行号句、验收例外与两条 Why——原样保留、逐字不动；判据三行按本档 §13.2 落点 ⑤ 替换为单臂。）
-
-**③ `thincoder-core/prompts/discipline-engineering.md` 集成段（现 181 行之后）新增一条**（该段无 `#87` 保留件；该档的验收例外句在新条之后，原文不动）：
-
-```text
-- **The integration index is `test/RTM.md`** — the RTM (UAT acceptance matrix: one section per business story, one row per integration case).
-  A design round opens by reading it and answers as a delta — rows broken, rows redundant, rows missing — never a blank "which scenarios does this change need" list; a row's number is fixed in the RTM before its case title is written.
-  Why: without the index a designer sees only this batch's scenes, so every case lands as a new one and the existing set is never revised.
-```
+第 ② 处的其余现有行（缺段 🔴 与行号句、验收例外与两条 Why）原样保留、逐字不动；判据三行按本档 §13.2 落点 ⑤ 替换为单臂。
 
 - 三处禁写文件名以外的引用语（不写「见设计档 §11.4」式指针）；RTM 总表路径是模型要读写的路径（操作数），保留。
 

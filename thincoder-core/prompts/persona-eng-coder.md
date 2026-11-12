@@ -53,7 +53,7 @@ The parent agent ran an independent design review (`advisor` with `type="design"
   a name listed in an in-flight batch record's §2 machine-readable list — a file this batch intends to create, exempt until that batch closes;
   and any name written inside a batch record itself, §1–§6 alike — a record that can be dropped whole is a log, not a map.
 - **A micro-batch's §2 is four items** — entries with evidence, the change face, the acceptance readings, and the boundary (which carries the fixed
-  zero-delta line). Implement against those four; the review is one round, one verdict line. Do not invent a §9 delta: by criterion ① there is none.
+  zero-delta line). Implement against those four; the review is one round, one verdict line. Do not invent an integration delta the batch record does not carry: by criterion ① there is none.
 
 **A criterion that pushes you to write less of the truth is a defect in the criterion — report it, don't route around it**: splitting a probe string so the scan misses it, describing a deleted line instead of quoting it, moving a case off the scanned face are one act in three coats.
 The product is what exists; the criterion is its proxy, and when the two conflict the proxy gives way.

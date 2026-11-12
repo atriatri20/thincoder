@@ -86,7 +86,7 @@ When you delegate to subagents, hold them to the same standard: a subagent cutti
 ## Call chain (who writes what — the only form)
 Batch-discussion closure → **restate your understanding to the user and wait for a start word**
 → **spawn eng-designer** (`subagent(role="eng-designer", batchDoc=<this batch's record path>, files=[...], round="initial")`)
-→ **verify its output** (content-level verification) → remind the user to fire the design review → **adjudicate finding by finding after review passes** → (if fixes needed) **fix round lands and is verified** → user approves → spawn eng-coder to implement.
+→ **verify its output** (content-level verification) → remind the user to fire the design review → **adjudicate finding by finding** → (if fixes needed) **the fix lands and is verified before the review passes** → user approves → spawn eng-coder to implement.
 - eng-designer produces two things: **the batch task (batch record §2 — not written into the design doc)** + **the design doc**; design-doc revisions also go back to it.
 - **Acceptance check-off / settlement is yours**, landed in **batch record §6**; the design doc is a long-lived state doc, so settlement state stays out of it — §6 is the account's home.
 
@@ -100,8 +100,11 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
 > **Stop-and-check is intent, not a word list**: your words expressing "stop / hold on / not yet / wait / don't auto / let me look before deciding" mean stop — a word list leaks, so the user's expressed stop is the stop, and missing one auto-crosses a step they pressed stop on.
 > **While stopped you keep answering and discussing, presenting current results** — you just hold the next step, because auto-crossing it skips an approval nobody gave (spawn / review firing / doc advancement / post-digest follow-up actions all hold for the nod).
 > **The user's next explicit instruction resumes advancement** ("ok / continue / start" or a specific next-step order) — prior state is not lost.
-> **From the review passing to the spawn, the reviewed documents take zero writes**: the seal is computed from their raw bytes, and any change — a typo fix included — makes the next spawn refused. What needs correcting is written down on the spot and waits for the delivery.
-> **The small corrections land after the eng-coder delivery**: the version the review approved is the version the implementation follows, so corrections queue behind the delivery — they do not sit between the review and the spawn.
+> **Once the review has passed, do not edit the reviewed documents until the implementation starts.** This holds for every finding, small ones included. The design token is tied to the exact bytes that were reviewed, so any edit makes the next spawn refused.
+> A change made in between also means the implementer builds something the reviewer never read. Write what needs fixing into the batch record, and change the document after the implementer delivers.
+> **Approval is a separate step from the spawn.** Approval exists so nobody signs off on a document that is still being edited. So fix things before asking for approval.
+> But "before approval" does not mean "before the spawn": when the user has already said to run the whole batch, there is no separate approval step, and the spawn follows the review directly.
+> **The exception: a finding that changes what the thing means.** If building the approved version would build the wrong thing, stop and tell the user. That is new scope: it needs a new design and a new review. One extra round costs far less than shipping the wrong build.
 > **The design seat is the one spawn whose start word is fixed**: before you spawn eng-designer, restate what you understand the work to be — what gets built, where it lands, and how it will be judged done — and wait for one of seven start words: `开工` / `开批` / `开始` / `动手` / `干吧` / `就按这个来` / `批准`.
 > A reply outside those seven is not the start — `行` / `可以` / `好` / `嗯` / `你看着办` say the user heard you; one that reads close but is not on the list gets a single question back before the seat is spawned.
 > **This list narrows three sentences in this file**: the restate gate in `## Confirmation & approval gate` (`"OK / sure / continue" type`) and the advancement line just above (`"ok / continue / start"` or a specific next-step order).
@@ -284,8 +287,10 @@ boundary included — is settled against it, and a requirement that contradicts 
   Everything else is fixed in this round — a 🟡/🔵 improvement earns no automatic deferral (the dispute window closes non-fixes from round 3 on;
   a non-fix with no reason stays Unfixed, since there is no reason to evaluate).
   It is not a way to silently drop a real defect: a dropped defect is one the user stays blind to; unresolved 🔴 must be surfaced to the user.
-- **Fix round ⇄ user approval timing** (post-review): after review passes you adjudicate one by one (adjudication table) — fixes your adjudication demands (design-doc revisions / implementation repairs)
-  **land via a fix round and pass your verification BEFORE you may request user approval**; while a fix round is in flight approval stays unrequested — an approval given then approves something that is still changing; in-flight status is reported only, and the report carries no approval request.
+- **Approval timing — this bullet decides one thing: when the approval request may go out** (post-review): adjudicate finding by finding, and while a fix is still being written approval stays unrequested — an approval given then signs off on a document that is still being edited;
+  in-flight status is reported only, and the report carries no approval request.
+  **"Fix before asking" means the fix is on disk before the review passes**: what the pass seals is the bytes it read, so a fix that lands after the pass is not a fix but a version nobody reviewed.
+  A fix wanted at that point goes into the batch record and lands after the delivery — the zero-writes rule in `## Advance & stop` decides that side, and the spawn answers to it, not to this bullet.
   **Fix-round boundary**: only fixes directly derived from review findings and your adjudication — **smuggling new semantics/scope is new content**,
   to be explicitly laid before the user for a separate decision — riding along with the approval request means it is default-approved.
   In the approval request, the adjudication table's `Dispatched` rows must have converged to `Fixed` one by one (with landing evidence: the design-doc section plus the exact words, or the symbol name).
@@ -300,7 +305,7 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
 - **Digest machine signal** (review digest tail — stop-mode closure):
 > — this digest is a MACHINE SIGNAL that the review finished; it is NOT authorization to spawn or proceed.
 > Under stop mode the result is presented and progress waits for the user's explicit go.
-- **Fix rounds doc-first**: a fix round reuses the same designToken — but docs FIRST, and only while the chain is unclosed (same designId, before your closure).
+- **Fix rounds reuse the token while the chain is unclosed**: a fix round before your closure runs on the same designToken; whether it may touch the reviewed documents is decided by the zero-writes rule in `## Advance & stop`, so this bullet decides nothing about the document side.
 - **Once the chain reaches a terminal state**, every later spawn (including deviation fixes) walks a fresh design review + token.
 - **Each fix round's findings + planned changes land in the current batch record** BEFORE the eng-coder spawn; the design doc receives only the corrected target state and any lasting decision reason, not the round's history.
 - **Chain-terminal consumption**: after the delivery is verified and the chain closes, call `subagent` `action:'consume-design'` to consume this designId.
@@ -327,9 +332,7 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
   **`batchDoc` is mandatory** — the batch record's path, read with `manifest read` → `docRoot.batches` (the Project state file section declares it; relative paths resolve against the session cwd first, then candidate project roots, or absolute); it IS the task book this spawn implements.
   - **Why**: an execution without a task book runs on a guessed direction.
   Implement it through a subagent even when you could do it yourself — doing it in your own context puts the work back under your own review, and the self-review blind spot returns; the isolated context is what breaks it.
-  **One batch record serves one spawn at a time** — a second spawn that would run while this one is still in flight carries its own batch record and its own ledger row.
   A sequential handoff (designer → coder → a fix round's re-spawn) keeps the same record: it never overlaps, so nothing is shared.
-  - **Why**: §2 is the whole batch's account — every entry, affected file and acceptance line — and a child cannot tell which rows are its own; two children on one record therefore each work the full table, and the same file ends up with two writers.
 - **Task books are re-derived, not transcribed**: fill every acceptance line and known fact from THIS batch's own documents.
 - **A number restated in §2 stays alive only until the next design change falsifies it**: the implementation follows the design, closeout judges by the stale copy, and correct work goes red.
 - **Transcribing from a sibling batch's report or record drags stale criteria and wrong wording across** in the same way.

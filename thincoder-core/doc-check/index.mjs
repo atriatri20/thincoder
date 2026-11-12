@@ -5,8 +5,10 @@
  * ∥ ③ 悬空指针（`./existence.mjs`）。**这三件之外不判**——节号、引文、行数、跨仓都不在射程（§1 ∥ §4）。
  * 面别只决定判据 ③：批档面（`docRoot.batches` 之下的档）整份不判悬空（§3）——它的读者不照着 §1–§6 去找档。
  *
- * 判域 = 交给门的那几档里的**本批变更区**（§6）：收口那一刻区内照判三件、区外一个字都不出；判整份的只有
- * 诊断面（`doc_check` 的 `report` mode）与写时点（写门交 `null`）。区间由调用方算好交进来——引擎不读 git。
+ * 判域 = 交给门的那几档里的**本批变更区**（§6）：区内照判三件、区外一个字都不出。两个时点取法不同源：收口那一刻
+ * 读 `git diff`（`changedRegionsOf`，`agent-tools/batch-regions.mjs`），写时点读**两份文本**——盘上现文与这一笔要写的
+ * 改后整份（`changedRegionOf`，本档）。判整份的只有诊断面（`doc_check` 的 `report` mode）与写时点的新档 / 读不到
+ * 现文那一支。区间由调用方算好交进来——引擎不读 git。
  *
  * 报面（§5）：首行是机器判的，后面每行一句人话；没有命中 ⇒ `PASS` 一行，不再添任何一行。
  * 两个调用点共用这套句子，差别只在拿不拿它挡这一笔写：写盘前 / 批档写入与收口 / `doc_check` 工具面。
@@ -118,6 +120,109 @@ export function judgedDomainDocs(docs, { moment, root } = {}) {
 }
 
 /**
+ * 单行长度表（`y` 侧一维滚动）：`out[k]` = `x` 与 `y[0…k-1]` 的最长公共子序列长度。
+ * 只留一行 ⇒ 空间线性于 `y`；这是 Hirschberg 的「一遍长度重算」。
+ */
+function lcsRowOf(x, y) {
+  const out = new Array(y.length + 1).fill(0)
+  for (let i = 0; i < x.length; i += 1) {
+    let diag = 0 // = 上一行在 k-1 处的值（LCS(x[0…i-1], y[0…k-2])）
+    for (let k = 1; k <= y.length; k += 1) {
+      const carried = out[k]
+      out[k] = x[i] === y[k - 1] ? diag + 1 : out[k] >= out[k - 1] ? out[k] : out[k - 1]
+      diag = carried
+    }
+  }
+  return out
+}
+
+/**
+ * 按行对齐求最长公共子序列的**配对**（Hirschberg：正反各算一遍长度表，再按中分点分段回溯）。
+ * 返回 `[[i, j], …]`（两侧 0-based 下标，按序）。空间线性于较短那一份——行×行全表在文档面上装不下。
+ */
+function lcsPairs(x, y) {
+  if (x.length === 0 || y.length === 0) return []
+  if (x.length === 1) {
+    const j = y.indexOf(x[0])
+    return j < 0 ? [] : [[0, j]]
+  }
+  const mid = Math.floor(x.length / 2)
+  const forward = lcsRowOf(x.slice(0, mid), y)
+  const backward = lcsRowOf(x.slice(mid).reverse(), y.slice().reverse())
+  let cut = 0
+  let best = -1
+  for (let k = 0; k <= y.length; k += 1) {
+    const v = forward[k] + backward[y.length - k]
+    if (v > best) {
+      best = v
+      cut = k
+    }
+  }
+  const left = lcsPairs(x.slice(0, mid), y.slice(0, cut))
+  const right = lcsPairs(x.slice(mid), y.slice(cut))
+  return left.concat(right.map(([i, j]) => [i + mid, j + cut]))
+}
+
+/**
+ * 两份文本求变更区（**写时点**的取区法；判据句单源 = `docs/core/design/DOC-CHECK.md` §6「写时点怎么取区间」）。
+ *
+ * 输入 = 调用方手上的两份整档文本：「盘上现文」与「这一笔要写的改后整份」。输出形与收口面的
+ * `changedRegionsOf`（`thincoder-core/agent-tools/batch-regions.mjs` 读 `git diff -U0`）**逐字同形**：
+ * `{rows, gaps}`——`rows` = 改后文本里变了的行（1-based），`gaps` = 纯删那一处的缝（缝前那一行在改后文本里的
+ * 行号，档头写 `0`）。两条链一个形状、一个消费面（`judgeText` ∥ `paragraphHits`），不各造一套语义。
+ *
+ * 算法 = 按行对齐求最长公共子序列；没被对齐的旧行与没被对齐的新行成**组**：组里有新行 ⇒ 新行全部进 `rows`；
+ * 组里没有新行 ⇒ 纯删，落一个 `gaps`。**不按前后缀裁剪了事**——那样两处远处的改动会连成一片，中间没变的行
+ * 被算成变更行，与「没变的行一条都不出」相反。前后缀只**减量**：剥掉公共前后缀后中段仍按行对齐求组，精度一字不减。
+ * 回溯用两遍长度重算（Hirschberg），空间线性于较短那一份——行数之积是时间上界，而文档面上有上万行的档，
+ * 行×行全表装不下。
+ *
+ * 本函数**不收 `null`**：两参都是字符串（不是字符串 ⇒ 当场抛）。「盘上取不到现文」这件事由调用方判（它改交
+ * `region: null`），不由本函数猜——猜了就是把「整份判」这条决定替调用方做了。
+ *
+ * @param {string} oldText 盘上现文
+ * @param {string} newText 这一笔要写的改后整份文本
+ * @returns {{rows:number[], gaps:number[]}}
+ */
+export function changedRegionOf(oldText, newText) {
+  for (const [name, value] of [["oldText", oldText], ["newText", newText]]) {
+    if (typeof value !== "string") {
+      throw new Error(`changedRegionOf: \`${name}\` must be a string (got ${value === null ? "null" : typeof value}) — "no old text on disk" is the caller's call: it passes \`region: null\` (judge the whole document) instead of calling this function, and this function never guesses it.`)
+    }
+  }
+  const before = oldText.split("\n")
+  const after = newText.split("\n")
+  const limit = Math.min(before.length, after.length)
+  let head = 0
+  while (head < limit && before[head] === after[head]) head += 1
+  let tail = 0
+  while (tail < limit - head && before[before.length - 1 - tail] === after[after.length - 1 - tail]) tail += 1
+  const olds = before.slice(head, before.length - tail)
+  const news = after.slice(head, after.length - tail)
+  const rows = []
+  const gaps = []
+  // 一组 = 没被对齐的旧行 [oldFrom, oldTo) 与没被对齐的新行 [newFrom, newTo)。
+  // 组里有新行 ⇒ 新行全部进 `rows`（取代 ∥ 插入同一处置）；组里没有新行 ⇒ 纯删，缝前那一行的行号 = `head + newFrom`。
+  const emit = (oldFrom, oldTo, newFrom, newTo) => {
+    if (oldFrom === oldTo && newFrom === newTo) return
+    if (newFrom === newTo) {
+      gaps.push(head + newFrom)
+      return
+    }
+    for (let j = newFrom; j < newTo; j += 1) rows.push(head + j + 1)
+  }
+  let oi = 0
+  let ni = 0
+  for (const [pi, pj] of lcsPairs(olds, news)) {
+    emit(oi, pi, ni, pj)
+    oi = pi + 1
+    ni = pj + 1
+  }
+  emit(oi, olds.length, ni, news.length)
+  return { rows, gaps }
+}
+
+/**
  * 判一份文本的三件事（**判据的唯一入口**：读盘的、还没落盘的，都从这里过）。
  * @param {string} text 档全文
  * @param {{file:string, root:string, planned?:Set<string>, indexPath?:Set<string>|null,
@@ -170,7 +275,8 @@ export function hitLine(root, h) {
  *   `moment` = 这一刻谁在调（**必填**，判法单源 = `judgedDomainDocs`）：收口时点落进批档面的那些档整份不进判域
  *   ⇒ 它们连「不在盘，未判」都不出一行（那一句留给判域内读不到的档）；调用方交进来的清单因此可能判完 0 档。
  *   `regions` = 本批变更区（**必填，不收缺省值**，判据句单源 = `docs/core/design/DOC-CHECK.md` §6）：
- *   `null` = 判整份（写时点 ∥ 诊断面）；表 = 只判表里那几行，键 = `resolve(<档>)`。
+ *   `null` = 判整份（诊断面 ∥ 写时点的新档与读不到现文那一支）；表 = 只判表里那几行，键 = `resolve(<档>)`；
+ *   **表里某一格可以是 `null`**（= 这一档判整份；写时点那一臂用它在「盘上读不到现文」时交整份）。
  *   **没有要判的行 ⇒ 这一档一行也不出**（不在表里 ∥ 表里没它的条目）：不点名、不解释，也不计入 `checkFiles`。
  * @returns {{report:string, verdict:'PASS'|'REFUSED', hits:Array, checkFiles:string[],
  *   missing:string[], unreadable:string[]}}
@@ -180,7 +286,7 @@ export function hitLine(root, h) {
 export function runDocCheck(root, { docs, moment, regions } = {}) {
   const base = resolve(String(root ?? "."))
   if (regions === undefined) {
-    throw new Error("doc_check: `regions` must be given on every call — null (judge each document whole: the diagnostic face and the writer) or the changed-region table keyed by `resolve(<doc>)` (judge only those lines). It is never defaulted: the default would decide the domain on the caller's behalf.")
+    throw new Error("doc_check: `regions` must be given on every call — null (judge each document whole: the diagnostic face, or a write-time document with no old text to compare) or the changed-region table keyed by `resolve(<doc>)` (judge only those lines). It is never defaulted: the default would decide the domain on the caller's behalf.")
   }
   if (!Array.isArray(docs)) {
     throw new Error(`doc_check: \`docs\` must be an array of paths (got ${typeof docs}) — a bare string is refused rather than read as a whole-domain request; pass ["<path>"].`)
@@ -215,7 +321,7 @@ export function runDocCheck(root, { docs, moment, regions } = {}) {
       // 区间面、区内只有纯删的缝（`rows` 空）、且盘上真没了（ENOENT）= 这一档在建档之后被删掉整份
       // ⇒ 没有文本可判 ⇒ 一行也不出（§6）。两个条件缺一条就不是那个情形：还在地盘上却读不到，
       // 那一句「读不到，未判」仍然是留给它的（§9）。
-      if (regions !== null && (region.rows ?? []).length === 0 && e?.code === "ENOENT") continue
+      if (regions !== null && region !== null && (region.rows ?? []).length === 0 && e?.code === "ENOENT") continue
       if (e?.code === "ENOENT") missing.push(abs)
       else unreadable.push(abs)
       continue

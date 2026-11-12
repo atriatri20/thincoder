@@ -131,7 +131,7 @@ docs/x/y.md 第 12 行的 foo.md:120 用行号做锚，行号会漂
 
 **这不是 `zones` 回来**：没有逐档键表、没有 `region ∥ whole ∥ unknown` 三态、没有扩区表。调用方交的是一条按改动行算出来的区间表，装配处只做一次行号归属判定。
 
-**两个 mode，一支判据**：`doc_check` 的 `gate` mode 是交付判定，判**变更区**；`report` mode 是诊断面，判**整份**。同一句话不许两面各说一套：`gate` 与 `batch close` ∥ `status → 已收口` 走同一支，`report` 与写门走另一支。
+**两个 mode，一支判据**：`doc_check` 的 `gate` mode 是交付判定，判**变更区**；`report` mode 是诊断面，判**整份**。同一句话不许两面各说一套：`gate` 与 `batch close` ∥ `status → 已收口` 走同一支（区间来自批起快照）；`report` 判整份、写门判这一笔改的行——两者同走 `judgeText(text, { region })` 这一个入参，区间来路不同（写时点的来路见本节「写时点怎么取区间」）。
 
 **基线怎么取（三选一，取 ②）**：
 
@@ -153,17 +153,80 @@ docs/x/y.md 第 12 行的 foo.md:120 用行号做锚，行号会漂
 - `thincoder-core/agent-tools/batch-regions.mjs` 出 `changedRegionsOf(root, sha, files)`——`git diff -U0` 的解析面，与同档既有 `committedDocs` 共用同一条 git 腿。
 - 同档另出 `stageDocs(root, files)`——门自己那一笔按路径限定的 `git add`（不 `git add -A`）：写索引，取区不写索引。
 - `thincoder-core/doc-check/index.mjs` 的 `judgeText` 收 `region` 入参，**必填、不收缺省值**：`null` = 判整份，区间表 = 只判这几行——两件事由调用方明说，不靠谁替它决定。
+
+  区间形 = `{rows, gaps}`，与 `changedRegionsOf` 交的同形：`rows` = 变更行（按改后文本 1-based），`gaps` = 纯删那一处的缝（缝前那一行的行号，档头写 `0`）。**`gaps` 只喂段长**：`paragraphHits` 拿它认缝上那一份归谁；行号锚与悬空指针只认 `rows`（`inRegion`）——删掉的行在改后文本里没有可指的行。
 - 段长那一半的归属判定落在 `thincoder-core/doc-check/paragraph.mjs` 的 `paragraphHits`，因为**一段跨哪几行只有它知道**（命中只带段首行与字数，跨行从命中里读不出来）。
 - `runDocCheck(root, { docs, moment, regions })`：`regions` 同样必填（表 ∥ `null`）；引擎不读 git，区间由调用方交进来（同形先例 = §8 的 `baseTextOf`）。
 
-**变更区的两个调用方**：`batch-gate.mjs` 的 `evaluate`（`scope === "close"`）与 `doc_check` 的 `gate` mode。写门与 `report` mode 交 `null`。
+**变更区的调用方**：`batch-gate.mjs` 的 `evaluate`（`scope === "close"`）与 `doc_check` 的 `gate` mode 从批起快照取区（`changedRegionsOf`）；写时点有两个臂——`.md` 落盘的写门与 `batch-gate.mjs` 的写时点臂——都从「盘上现文」与「这一笔要写的整档文本」两份直接求区（`changedRegionOf`，见下节）；`report` mode 交 `null` 判整份。
 
-**四个新名的三问**（住哪 · 叫什么 · 谁）：
+**写时点怎么取区间：两份文本直接求，不借 git**
+
+- **手上已有的两份文本**：`thincoder-core/tools/doc-write-gate.mjs` 已经读到 `old`（`readFileSync(target, "utf8")`，**盘上现文**）与 `content`（改后整份文本）。这两份就是「改前 / 改后」——写门不需要 git、不需要批起 sha、不需要基线。
+
+- **归属 = `thincoder-core/doc-check/index.mjs` 的 `changedRegionOf(oldText, newText)`**。理由两条：① 区间语义是判据自己的词汇（`rows` 落在改后文本、`gaps` 是缝上的行号，认法只在 `judgeText` ∥ `paragraphHits` 里），生产者与消费者同档才不会各有一套；② 写门自述「本档只装配，不重述口径」（依据 thincoder-core/tools/doc-write-gate.mjs「本档只装配，不重述口径」），把 diff 算法放进去就是第二处口径。
+
+- **形状与 `changedRegionsOf` 逐字同形**：`{rows:number[], gaps:number[]}`。两条链一个形状、一个消费面（`judgeText` ∥ `paragraphHits`），不各造一套语义；取法不同源——那条读 `git diff -U0`，这条读两份文本。
+
+- **算法**：按行对齐求最长公共子序列，没被对齐的旧行与没被对齐的新行成组。组里有新行 ⇒ 新行全部进 `rows`（取代 ∥ 插入同一处置）；组里没有新行 ⇒ 纯删，落一个 `gaps`（= 该缝前那一行在改后文本里的行号，前面没有行就写 `0`）。**不做前缀 / 后缀裁剪了事**：那样两处远处的改动会连成一片，中间没变的行被算成变更行，与「没变的行一条都不出」相反。**代价上界与实现约束**：两份文本的行数之积是这一步的时间上界，而写门看见的就是仓内文档面的 `.md`——本仓最大的一份是 `docs/core/design/PROMPT-SYSTEM.md`，它的内容行数与自身相乘是一张常规二维数组装不下的表（两个数都在批档 §2 的读数行里，本节不抄）。所以**实现不得建行×行全表**：先剥公共前后缀（只减量、不减精度），中段仍按行对齐求组，回溯用**两遍长度重算**（Hirschberg：正反各算一遍长度表，再按中分点分段回溯），空间因此线性于较短那一份——「空间线性」由此有唯一落法，不是一句愿望。上面那句拒掉的是「只剥前后缀、把中段整片当变更」，不是剥前后缀本身。
+
+- **两臂的区间读数不要求逐字相等**：收口链解 `git diff -U0` 的文本，写时链按行对齐回溯两份文本；档里存在完全相同的行时，同一处改动可以被算进相邻的、同样合法的那一组里，两条链因此可能给出不同的行号。差别停在「哪几行算进区」这一级：两臂各判自己的区间，不互相核行号——要核的只有各自那一句（区外不出行 ∥ 区内照判）。把它当成「应当逐字相等」来核，会把一个合法对齐读成缺陷。
+
+- **新档（盘上还没有这份档）⇒ 整份判**：这一笔写的每一行都是变更行，写门交 `region: null`。函数本身不收 `null`——两参都是字符串，「取不到盘上现文」这件事由写门判，不由函数猜。
+
+- **读不到盘上现文的其他情形在这个位置与「新档」不可分**（`old` 都经 `catch` 落成 `null`），取「整份判」这一侧。**这一支的入口只有 `readFileSync` 抛错**（依据 thincoder-core/tools/doc-write-gate.mjs「try { old = readFileSync(target, "utf8") } catch { old = null }」），真造得出来的两条：目标是一份目录（读 `docs` ⇒ `EISDIR: illegal operation on a directory, read`，读数住批档 §2）· 目标是读不到的一份档（权限拒绝 ⇒ `EACCES`）。取整份判的理由不是「多加一层保险」，而是 `catch` 把两种情形落成同一个 `null`：另一个取法（不判）就是放行一笔没人判过的写，而写门的契约是「命中即 throw、零字节」。代价照实认：这是 F10「区外不出行」唯一会被整份判顶掉的状态。站得住的是实现事实：`catch` 把两种情形落成同一个 `null`，这一支只剩「整份判」与「不判」两条路，而不判就是放行一笔没人判过的写。
+
+- **`apply_patch` 一次改多处 ⇒ `rows` 是并集**：同一份 `old` 对同一个 `content`，多处自然落成多个组，不必按 hunk 分别求。
+
+- **写径不分叉**：`.md` 落盘的内容写点都走 `thincoder-core/tools/write-path.mjs` 的 `writeThroughPath`（依据 thincoder-core/tools/doc-write-gate.mjs「挂点唯一 = `./write-path.mjs` 的 `writeThroughPath`」）——`write` ∥ `edit` ∥ `apply_patch` 的第一段都在其中，门只认「盘上现文」与「改后整份文本」两份。**三件到门时 `op` 都等于 `"write"`，不是各自的工具名**：门那一跳的判据逐字是 `if (op === "write") await runDocWriteGate({ abs, content })`，`op` 取 `meta.op ?? "write"`（依据 thincoder-core/tools/write-path.mjs「if (op === "write") await runDocWriteGate({ abs, content })」）。各写点显式传的也是 `op: "write"`：`write` ∥ `insert_after` ∥ `hashline_edit`（`thincoder-core/tools/file.mjs` 三处）· `edit`（`thincoder-core/tools/edit-diff.mjs`）· `edits` 批形（`thincoder-core/tools/edit-batch.mjs`）· `apply_patch` 第一段（`thincoder-core/tools/patch.mjs`，`{ op: "write", stage: true }`）。第二段 `{ op: "commit" }` 与 `delete` ∥ `rmdir` ∥ `copy` ∥ `move` ∥ `rename` 不写文档内容 ⇒ 不调门。
+
+- **批档段写是第二个写时点臂，只是不经过 `writeThroughPath`**：它挂在自己那条路上——`thincoder-core/agent-tools/batch-gate.mjs` 直接 import `judgeText`（依据 thincoder-core/agent-tools/batch-gate.mjs「import { displayPath, hitLine, judgeText, judgedDomainDocs, MOMENT } from "../doc-check/index.mjs"」）。两臂同一时点、同一套判据、同一套报面句子，只有接线不同。
+
+- **那一臂手上的两份文本也是整档**：`append` 交候选全文、`edit` 交改写后整档视图（依据 thincoder-core/agent-tools/batch-gate.mjs「本次写入的判定输入（写时点）：`edit` = 改写后整档视图；`append` = 候选全文。」），与盘上现文同形 ⇒ 一份 `changedRegionOf(盘上现文, 候选文本)` 直接求区，与写门同一句。
+
+- **`append` 的追加段因此整段进 `rows`**：组里有新行、无旧行；缝上的旧末行没被改动，不进区。与写门的 `apply_patch` 多处改动同一条规则——组里有新行，新行全部进 `rows`。
+
+- **写时点交的表只装这一笔在写的那一档**：其余进笔域集的档，本笔一个字没写它们 ⇒ 不在表里 ⇒ 不判、不数（依据 thincoder-core/agent-tools/batch-gate.mjs「if (regions !== null && region === undefined) continue」）。它们在各自那一笔写时已经判过，不在这里按整份判第二遍。
+
+- **盘上读不到这一档的现文 ⇒ 那一格写 `null` = 整份判**：与本档「新档整份判」同一条规则，两臂不各定一次。本笔没有候选文本 ⇒ 这一档不进表 ⇒ 零输出：没有要写的文本，就没有变更行。
+
+- **逐字未变已在门前早退**（依据 thincoder-core/tools/doc-write-gate.mjs「if (old !== null && old === content) return { judged: false, hits: 0 }」），所以进到求区间这一步的两份文本必然不同。
+
+**验收（回指 `docs/core/requirements/DOC-CHECK.md` F10 ∥ AC-13 ∥ AC-14；每条都要能红）**
+
+- **AC-13 前半 · 区外存量不拦**：一份设计档区外带存量三样（350 字段 ∥ 行号锚 ∥ 悬空档名），本笔只改其中一行无关文字 ⇒ 落盘、零命中。红侧：把 `region` 传成 `null` 复跑同一笔 ⇒ 三样各一条命中、拒写。
+
+- **AC-13 后半 · 区内照判、段按段扩**：同一笔改到那段 350 字的段内某一行 ⇒ 拒写、点名该段；把一处行号锚写进被改的那一行 ⇒ 拒写、点名该行。红侧：只把「被改的那一行」进 `rows` 而不按段扩 ⇒ 超长段放行（漏判）。
+
+- **AC-14 · 纯删的缝合挂在 `gaps` 上**：删的是两段之间的**空行**，两段因此接成一段、接出来的段超 300 字 ⇒ 拒写、点名该段；同一笔里**同时把其中一段删短到不超** ⇒ 零输出（两段接起来仍短于阈值）。红侧：把 `changedRegionOf` 返回的 `gaps` 丢掉、只交 `rows` ⇒ 前半放行——这一条断的就是那个返回值。附加例：删掉的那个空行使接起来的两段都还短 ⇒ 同样零输出。
+
+- **新档整份判**：盘上还没有这份档、写一笔带 350 字段的新档 ⇒ 拒写。红侧：把 `old === null` 当「没有变更行」（交空 `rows`）⇒ 放行。
+
+- **多处改动取并集**：`apply_patch` 一次改两处，一处干净一处悬空 ⇒ 拒写、只点名悬空那一处；同一夹具只改干净那一处 ⇒ 落盘。红侧：只取第一处改动的近似算法 ⇒ 第二处悬空不被点名。
+
+- **三条写点都过门（`op` 那一支）**：`write` ∥ `insert_after` ∥ `hashline_edit` 各落一笔带 350 字段的写 ⇒ 三支都拒写、点名该段、目标档字节逐字不变。红侧：把其中任意一支传的 `op: "write"` 临时改成 `"edit"` ⇒ 同一笔落盘、零命中（门那一跳的判据是 `op === "write"`，写成别的值它就不跑）——三支同一条红侧，哪一支写错就哪一支露出来。
+
+- **批档段写那一臂 · 缺陷现场**：往一份带存量三样（350 字段 ∥ 行号锚 ∥ 悬空档名）的批档 §2 追加一段干净文本 ⇒ 落盘、零命中，拒文不列别的档的悬空。红侧：那一格仍交 `null`（判整份）⇒ 笔域集里四份别的档的悬空各一条、拒写。这一条同时断掉「写时点笔域集里别的档不再判」这个结果——那条结果的集成 delta 见 §9「写时点那一臂的另一条行为变化」。
+
+- **批档段写那一臂 · 追加段自身照判**：追加段自身含 350 字段 ⇒ 拒写、点名追加段那一处；同一笔往光文档追加同一段 ⇒ 落盘。
+
+判读人 = 本批改动面的单测档，命令 `node --test <该档>`（档名与读数住批档 §2；本档不点名——那份单测档随本批收口删除，写在这里就是一条注定失效的指针）。
+
+**同类先例**：`thincoder-core/agent-tools/batch-regions.mjs` 的 `changedRegionsOf`（sha 腿取区间，形状 `{rows, gaps}`）。对齐：同形、同一个消费面、纯删同样落零宽区间。偏离：基准不同源——那一条量「批起快照 → 现工作树」，这一条量「盘上现文 → 改后文本」；写门没有 sha，硬套它的 git 腿等于要一个写那一刻不存在的基线。
+
+**库内 = 已查**：`写门 区间 两份文本` → `thincoder-core/tools/doc-write-gate.mjs`（早退四条与 `old` 读盘）· `thincoder-core/doc-check/index.mjs` 的 `judgeText`（`region` 必填、`gaps` 只进 `paragraphHits`）· `thincoder-core/doc-check/paragraph.mjs` 的 `owned`（缝的归属判法）。
+
+这三处加上 `thincoder-core/agent-tools/batch-regions.mjs` 的 `regionsOfDiff`（它解的是 `git diff -U0` 的输出，不是两份文本），四处都没有「两份文本求区间」的函数。
+
+**库外 = 已查**：同本节既有那一行（`index.publicRepos` 两仓 grep `doc_check` ∥ `判域` ∥ `changed region` 零命中）；本节的改动面仍是仓内判定逻辑，外部断言 = 零。
+
+**五个新名的三问**（住哪 · 叫什么 · 谁）：
 
 - `changedRegionsOf` = `none found:`（`thincoder-core/**` 与 `thincoder-cli/**` 的 `.mjs` 里 `changedRegionsOf` ∥ `replacementRegionOf` 零命中；最近的相邻件是 `thincoder-core/agent-tools/batch-regions.mjs` 的 `committedDocs`，它只出档清单、不出区间）· 住 `thincoder-core/agent-tools/batch-regions.mjs`，与 `committedDocs` 同档、共用一条 git 腿 · 谁 = 属主同一档；消费方两个 = `batch-gate.mjs` 的 `evaluate`（`scope === "close"`）∥ `doc_check` 的 `gate` mode。
 - `region`（`judgeText` 的入参）= `none found:` `judgeText` 现在只收 `{ file, root, planned, indexPath }`，没有区间入参（依据 thincoder-core/doc-check/index.mjs「planned = new Set(), indexPath = null」）· 住 `judgeText` 的入参面 · 谁 = 属主 = `runDocCheck`（唯一传参方）；读它的是 `judgeText` 本体。
 - `regions`（`runDocCheck` 的入参）= `none found:` `runDocCheck` 现在只收 `{ docs, moment }`（依据 thincoder-core/doc-check/index.mjs「{ docs, moment }」）· 住 `runDocCheck` 的入参面 · 谁 = 属主 = 调用方算好交进来（`batch-gate.mjs` 的 `evaluate` ∥ `doc_check` 的 `gate` mode；写门与 `report` mode 交 `null`）。
 - `stageDocs(root, files)` = `none found:`（全仓 `.mjs` 里这个名字只落在本批三份档上、共 8 行——定义一行、两个消费点各一行，其余是注释与 import；批起快照上同档只导出 `safeRead` ∥ `committedDocs`，该名 0 命中。最近的相邻件 = `thincoder-core/tools/git.mjs` 的 `add` 动作——那是给模型用的 `git` 工具面，按调用方给的 `path` 加，不是收口门自己的前置动作）· 叫什么 = `stageDocs`，语义 = 门自己那一笔按路径限定的 `git add`（不 `git add -A`）· 住 `thincoder-core/agent-tools/batch-regions.mjs`，与 `changedRegionsOf` 同档 · 谁 = 属主同一档；消费方两个 = `thincoder-core/agent-tools/batch-gate.mjs` 的 `evaluate`（`scope === "close"`）∥ `thincoder-core/agent-tools/doc-check.mjs` 的 `gate` 支；`report` 面与写门不调它。
+- `changedRegionOf(oldText, newText)` = `none found:`（`thincoder-core/**` 的 `.mjs` 里零命中；最近的相邻件 = `thincoder-core/agent-tools/batch-regions.mjs` 的 `regionsOfDiff`，它解的是 `git diff -U0` 的输出，不是两份文本）· 住 `thincoder-core/doc-check/index.mjs`，与 `judgeText` ∥ `paragraphHits` 同档 · 谁 = 属主同一档；消费方两个 = `thincoder-core/tools/doc-write-gate.mjs` ∥ `thincoder-core/agent-tools/batch-gate.mjs` 的写时点臂。
 
 **基线从哪一批来：谁在判，谁已经知道自己是哪一批。** 门不去找「那一份在途批档」——怎么找都是猜，猜出来的候选不是本批。基线就取**判它的那一批**批档 §1 的记入行（取法单源 = §8）：
 
@@ -192,17 +255,17 @@ docs/x/y.md 第 12 行的 foo.md:120 用行号做锚，行号会漂
 - 同一份设计档：变更区干净、区外一条悬空指针 ⇒ `batch close` 放行、零附加行；把那条指针挪进变更区 ⇒ `REFUSED`。
 - 同一份档：区外一段 400 字 ⇒ 放行；区内某段含变更行、整段超 300 字 ⇒ `REFUSED`。
 - 两个 mode 不同源：同一份档、同一条区外悬空，`report` ⇒ `REFUSED`，`gate` ⇒ `PASS`。
-- 纯删：删掉两段之间的一行使两段并成一段、并出来的段超 300 字 ⇒ `REFUSED`；同一笔在整档下的旧悬空照旧不出行。
+- 纯删：删的是两段之间的空行，两段因此接成一段、接出来的段超 300 字 ⇒ `REFUSED`；同一笔在整档下的旧悬空照旧不出行。
 - 新档没 add 也照判：夹具里本批写一份新档、不 `git add`、跑 `batch close` ⇒ 收口臂先 add 再取区 ⇒ 该档整份即变更区，区内有命中即 `REFUSED`（不是零输出）；删掉那条命中复跑同一笔 ⇒ 放行。同一半在 `doc_check` 的 `gate` mode 上也立：手写一份新档、不 add、交给 `doc_check(mode:"gate")` ⇒ 先 add 再判，区内有命中即 `REFUSED`。
 - 加不进索引的档 ⇒ 零输出：`.gitignore` 挡住的档，以及持着 `.git/index.lock` 时仍在索引外的新档 ⇒ `batch close` 放行、回执只有 `PASS` 一行、不点名该档、不计入 `范围 N 档`；同一笔里已跟踪的档照判。不造拒绝、不造兜底。
 
 **判读人**：上面六条由本批改动面的单测档判读（命令 `node --test <该档>`；本节不点它的名——那份单测档随本批收口删除，写在这里就是一条注定失效的指针）。
 
-第六条 `.gitignore` 那一半的用例标题逐字「加不进索引的档（`.gitignore` 挡住）⇒ 变更区落空 ⇒ 零输出（取舍钉成读数，不造拒绝）」；持锁那一半按本节「加不进去的例外」的复现读。AC-10 ∥ AC-11 那两半另有常驻集成行，见 §9「缺的」表的最后两行，父侧收口前跑一次。
+第六条 `.gitignore` 那一半的用例标题逐字「加不进索引的档（`.gitignore` 挡住）⇒ 变更区落空 ⇒ 零输出（取舍钉成读数，不造拒绝）」；持锁那一半按本节「加不进去的例外」的复现读。AC-10 ∥ AC-11 那两半另有常驻集成行——`7-24` ∥ `7-25`（§9 集成 delta 表按号列），父侧收口前跑一次。
 
-**同类先例**：`thincoder-core/agent-tools/batch-gate.mjs` 的 `evaluate`（现判整份）∥ §3 第二条例外（批档整份不判悬空）。对齐：三处共用同一套三件判据与同一套报面句子，只加减**哪些档**进判域。偏离：两处先例按**档**加减（整份进、整份出），本节按**行**收窄——同一份档里判哪些行，段长再按段扩。既有形不适用：档级开关落不到「本笔改的是哪几行」这个问题上，它只能整份放或整份拦。
+**同类先例**：`thincoder-core/agent-tools/batch-gate.mjs` 的 `evaluate`（判域按**档**加减：收口臂整份进、整份出）∥ §3 第二条例外（批档整份不判悬空）。对齐：三处共用同一套三件判据与同一套报面句子，只加减**哪些档**进判域。偏离：两处先例按**档**加减（整份进、整份出），本节按**行**收窄——同一份档里判哪些行，段长再按段扩。既有形不适用：档级开关落不到「本笔改的是哪几行」这个问题上，它只能整份放或整份拦。
 
-**库内 = 已查**：`判域 收口 变更区 diff` → 本档 §8（快照取法）∥ §9（两个时点）· `thincoder-core/agent-tools/batch-regions.mjs`（只出档清单：`committedDocs` ∥ `diffBaseOf`）· `thincoder-core/agent-tools/batch-gate.mjs` 的 `evaluate`（现判整份，无区间筛选）· `thincoder-core/doc-check/paragraph.mjs` 的 `paragraphHits`（只带段首行与字数）。
+**库内 = 已查**：`判域 收口 变更区 diff` → 本档 §8（快照取法）∥ §9（两个时点）· `thincoder-core/agent-tools/batch-regions.mjs`（只出档清单：`committedDocs` ∥ `diffBaseOf`）· `thincoder-core/agent-tools/batch-gate.mjs` 的 `evaluate`（判域加减的唯一处；区间由本节两条入口交进来）· `thincoder-core/doc-check/paragraph.mjs` 的 `paragraphHits`（只带段首行与字数）。
 
 **库外 = 已查**：声明源 = `PROJECT-MANIFEST.json` 的 `index.publicRepos` 两处（`../.thincoder` ∥ `../thincoder.com`）→ 两仓逐仓 grep 过 `doc_check` ∥ `判域` ∥ `changed region`，**零命中**，无相关：这两个仓不是本门的判据面。改动面全在仓内判定逻辑，外部断言 = 零。
 
@@ -369,14 +432,14 @@ batch: 批起基线不可判（收口前置门 · tier-reading gate）— close 
 
 **冗余的 = 无**。
 
-**缺的 = 两行**，都是这次新判定自己的面：
+**缺的 = 无**：这一条判定自己的断言面早已落地——下表两行是它在盘上的那两行，不是待补的编号。
 
-| 新行 | 组件交互 | 断言的业务结果 | 服务需求 | 入口 |
+| 行 | 组件交互 | 断言的业务结果 | 服务需求 | 入口 |
 |---|---|---|---|---|
 | `7-19` | `batch close`（父侧）⟷ 收口臂 `assertTierPlan` ⟷ 批起快照（`git show`） | 改动面里一个码档、§2 那格缺读数 ⇒ 收口被拒，拒文首句含 `tier-reading gate` 并点名该档；补上快照读数 ⇒ 同一次收口放行 | F5（§2 机读清单的形与取值）∥ `docs/core/standards/METHODOLOGY.md` F-R24a（逐档报原始行数） | 真 `batch close` |
 | `7-20` | 同上，判的是读数那一半 | 那格写的数与快照读数不等 ⇒ 拒，拒文逐档写出「写的是几、基线是几」；改成快照读数 ⇒ 放行 | 同上 | 真 `batch close` |
 
-两行的编号已在 `test/rtm/guard.md` 的 `CLI 7` 表里（`7-19` ∥ `7-20`），用例标题按号写，证据档 = `test/integration/batch-close-gate.test.mjs`。
+两行都已落地：`test/rtm/guard.md` 的 `CLI 7` 表上有这两号，`test/integration/batch-close-gate.test.mjs` 里有同号案例（标题逐字 `CLI 7-19 …` ∥ `CLI 7-20 …`）。
 
 ## 9. 两个时点：批档只在「写」的那一刻判
 
@@ -424,9 +487,11 @@ batch: 批起基线不可判（收口前置门 · tier-reading gate）— close 
 
 **判域跟着缩，两个面同一个数**：`范围 N 档` 的定义是「真判过的档」（`thincoder-core/agent-tools/batch-gate.mjs` 的 `range.count`）——不在判域却计入，就是让回执说一件没发生的事。`doc_check` 工具面的 `checkFiles` 同理。`CLI 7-7` 断的正是这两个数相等，所以它们只能一起动：笔域集只含批档自身时，回执读作 `PASS · 范围 0 档`。
 
-**写时点判据照 §1 那三件，一件不加**（用户 15:07 ②「写门保留」）：`thincoder-core/tools/doc-write-gate.mjs` 落盘前判改后整份，交 `judgeText` 的判据、拒文与报面句子按 §1 ∥ §5；它在入参上把这一刻报成 `MOMENT.writer`。
+**写时点判据照 §1 那三件，一件不加**（用户 15:07 ②「写门保留」）：两个臂都判**这一笔改的行**，区间都来自「盘上现文」与「这一笔要写的整档文本」两份（§6「写时点怎么取区间」）——`thincoder-core/tools/doc-write-gate.mjs`（`.md` 落盘前）与 `thincoder-core/agent-tools/batch-gate.mjs`（批档 `append` ∥ `edit`）。判据、拒文与报面句子按 §1 ∥ §5；两臂都在入参上把这一刻报成 `MOMENT.writer`。
 
-那个实参的消费方 = `judgedDomainDocs`：写时点它把清单原样交回，所以写门拿交回的清单当判域时，里面必须仍是目标档自己。判域与目标档对不上 ⇒ 接线错了，当场抛带门名的错（场景见上「两条守卫各自的活场景」），不转发 `resolve(undefined)` 那类语言错，也不静默判零条——判零条会交一个「门没判过却报干净」的 `hits: 0` 放行。
+那个实参的消费方 = `judgedDomainDocs`：写时点它把清单原样交回，**排除面上的档除外**——那些档按 §10 在这一刻也不进判域。回执因此三种：判域里仍是目标档自己 ⇒ 照判；判域为空、而目标档落在声明排除面上 ⇒ 不判、零命中。
+
+**第三种回执才是拒面，空判域不算兜底**：判域非空却不含目标档 ⇒ 接线错了，当场抛带门名的错（场景见上「两条守卫各自的活场景」），不转发 `resolve(undefined)` 那类语言错。空判域的零命中只在目标档确实落在排除面上时才成立——那是 F9 要的结果，判据由 `judgedDomainDocs` 一处给出，不由一位静默返回的 `hits: 0` 替它决定。
 
 **边界**：
 
@@ -442,12 +507,12 @@ batch: 批起基线不可判（收口前置门 · tier-reading gate）— close 
 - **覆盖的判域分支**：`judgedDomainDocs`——`docs` 非数组 ⇒ 抛 · `moment` 非闭集 ⇒ 抛 · `writer` 原样交回 · `close` 把批档面整份移出 · `root` 给出 ∥ 缺省两形 · 绝对条目与 `root` 并存时以条目为准。`runDocCheck`——`docs` 非数组 ∥ 空清单 ⇒ 抛 · 清单全在判域外 ⇒ `PASS` 一行、`checkFiles` 为空 · 判域内某档不在盘 ⇒ 出「不在盘，未判」，既不当命中也不当干净。§8 那一支的三值（串 ∥ `null` ∥ `undefined`）不属本批改动面，它的判读人 = §8 集成 delta 的 `7-19` ∥ `7-20` 两行。
 - **行为面的三条结论**（同一次夹具各断一句）：一份三样俱全的批档跑收口 ⇒ `PASS`、三样零出、`范围 0 档`；同一份批档在写时点写 350 字正文段 ⇒ 拒、写悬空档名 ⇒ 零输出；同形内容写进设计档 ⇒ 两个时点都照报三样。
 - **回指**：`docs/core/requirements/DOC-CHECK.md` F1（段长）∥ F3（悬空）∥ F6（两个时点）；行号锚一条 = 同档 AC-2。
-- **常驻的恢复 = `CLI 7-21` ∥ `7-22` ∥ `7-23`**：批档一关，单测档随之删掉，这三行接着看同三条结论。
+- **常驻的恢复 = `CLI 7-21` ∥ `7-22`**：批档一关，单测档随之删掉，这两行接着看同三条结论。`7-23` 是同一结论在带病批档上的那一行——表上有号、盘上还没有案例，它落下之后这三条结论才有第二处常驻面。
 
 **同类先例与库内调查**
 
 - **同类先例**：§3 第二条例外（批档整份不判悬空）。对齐：同一个谓词 `isBatchFace`、同一个理由（记录不是导航）；偏离：那条只管悬空、且不分时点——收口那一刻段长与行号锚照判。
-- **库内 = 已查**：`批档 面别 时点 收口` → `docs/core/design/DOC-CHECK.md` §3 ∥ §7（现役判据与三个调用点）· `thincoder-core/doc-check/index.mjs` 的面别支 · `thincoder-core/agent-tools/batch-gate.mjs` 的 `scope` 两值 · `test/rtm/guard.md` 故事 `CLI 7`（十九态现役用例，含 `7-19`–`7-23`）。四处现状都按「批档只免悬空」写。
+- **库内 = 已查**：`批档 面别 时点 收口` → `docs/core/design/DOC-CHECK.md` §3 ∥ §7（现役判据与三个调用点）· `thincoder-core/doc-check/index.mjs` 的面别支 · `thincoder-core/agent-tools/batch-gate.mjs` 的 `scope` 两值 · `test/rtm/guard.md` 故事 `CLI 7`（表上**登记**到 `7-26`；本节这一节点到的 `7-19`–`7-23` 五个号表上都有，`test/integration/batch-close-gate.test.mjs` 里**有案例**的是 `7-19` ∥ `7-20` ∥ `7-21` ∥ `7-22`，`7-23` 有号无案例）。四处现状都按「批档只免悬空」写。
 - **库外 = 已查**：声明源 = `PROJECT-MANIFEST.json` 的 `index.publicRepos` 两处（`../.thincoder` ∥ `../thincoder.com`）→ 两仓 grep 过 `doc_check` ∥ `判域` ∥ `changed region`，零命中、无相关：本节的改动面全是仓内判定逻辑与仓内测试，外部断言 = 零。
 - **受影响码档与逐档快照读数住批档 §2**（读数不进本档）。改前盘上长度无一越过 500，本批无拆档方案——怎么核的 = `countContentLines`（`thincoder-core/agent-tools/batch-tier-gate.mjs`，量法单源 = 本档 §1）逐档量改前盘上内容，每档一个数，读数住批档 §2「档位结论」。
 - **函数档**：本批动到的函数 = `judgeText` ∥ `runDocCheck` ∥ `judgedDomainDocs`（`thincoder-core/doc-check/index.mjs`）· `paragraphHits`（`thincoder-core/doc-check/paragraph.mjs`）· `evaluate`（`thincoder-core/agent-tools/batch-gate.mjs`）· `changedRegionsOf`（`thincoder-core/agent-tools/batch-regions.mjs`，本批新建）；逐个都在函数档线（300 行）之下，无拆函数方案，逐函数读数住批档 §2。
@@ -456,10 +521,21 @@ batch: 批起基线不可判（收口前置门 · tier-reading gate）— close 
 
 入口 = 父侧 depth-0 的 `batch close` ∥ 子代理 `append`（故事 `CLI 7` 同一条轨）。
 
-**破的 = 两行。**
+**破的 = 三行。**
 
 - `7-22`：两个 mode 各断一半——`report` 判整份 ⇒ `REFUSED`，`gate` 只判变更区 ⇒ `PASS` 且一行不出。
-- `7-14`：判据格指 §9 写时点（判据格是回指，断言本身不随它变）。
+- `7-14`：判据格指 §9 写时点（判据格是回指，断言本身不随它变）——不过那段回指里的「写门判改后整份」要改成「写门判这一笔改的行」。
+- `7-18`：判定句「改后整份入判」不再成立——写门只判变更行。断言（只动围栏内空行 ⇒ 放行）仍立：那一行是变更行、它不进任何段 ⇒ 段长无命中。
+
+**写时点那一臂的另一条行为变化，没有现役行断着它**：写时点交出去的表只装这一笔在写的那一档（§6），于是笔域集里**别的档**——写者本轮触达过、而这一笔一个字没写的那些——不再进判。
+
+今天它们按整份判（写时点 `regions` 交 `null`），带存量悬空的会拒写；改后它们既不判、也不计入 `范围 N 档`。
+
+**这一条不单独占一行**：它不是新的产品结果，而是 F10 同一句落在写时点这一臂上的形状——判域 = 这一笔改的行；笔域集里别的档这一笔一字未改 ⇒ 零变更行 ⇒ 零输出（§6「没有要判的行 ⇒ 不出任何行」）。
+
+`7-27` 断的正是这一句（区外存量不出行），差别只在那笔存量落在另一份档里、还是同一份档的另一行：同一判据、第二个夹具，不是第二行。跨档这一形也没有新场景可断——写者在别的档上落笔时，那一笔在它的写时点已被同一套判据判过，这里再判一遍才是重复。
+
+三行都不看这个结果：写时点的现役两行（`7-8` ∥ `7-21`）都走 `designerCtx(root)`，而该夹具的缺省触达账是空的（依据 test/integration/close-gate-fixture.mjs「export const designerCtx = (root, touched = []) =>」），笔域集只含批档自身。
 
 **另一组六行不属于「断的东西变了」**：`7-1` ∥ `7-2` ∥ `7-3` ∥ `7-5` ∥ `7-9` ∥ `7-13` 的范围数与拒绝断言按本节口径成立。
 
@@ -467,22 +543,30 @@ batch: 批起基线不可判（收口前置门 · tier-reading gate）— close 
 
 **`7-7` 不在破的里**：它断的是 `范围 0 档` = `checkFiles` 0 这个等式（见「判域跟着缩，两个面同一个数」），两处同数正是它要看着的。
 
-**冗余的 = 无**：现役二十一行里已有四行断着写时点那一半——`7-6` ∥ `7-8` 断「批档整份不判悬空」（同一句搬进设计档照判）、`7-5` ∥ `7-13` 断段判据的围栏与列表语义。它们各断一半，没有一行把「段长拒 ∥ 悬空放」摆在同一份批档上；`7-21` 是这一对同场的第一行，因此不是重复。
+**冗余的 = 无**：现役用例里已有四行断着写时点那一半——`7-6` ∥ `7-8` 断「批档整份不判悬空」（同一句搬进设计档照判）、`7-5` ∥ `7-13` 断段判据的围栏与列表语义。它们各断一半，没有一行把「段长拒 ∥ 悬空放」摆在同一份批档上；`7-21` 是这一对同场的第一行，因此不是重复。
 
-**缺的 = 两行**（`7-24` ∥ `7-25`）：判的是本节新增的判别性一半。
+态数只在这一句算一次：`7-1`–`7-11` · `7-13` · `7-14` · `7-18`–`7-26` ＋ 本节新加的 `7-27` ∥ `7-28`；`7-12` 与 `7-15`–`7-17` **表上无此号**（`test/rtm/guard.md` 的 `CLI 7` 表里没有这几行，不是漏列），两张表由此闭合。别处不再报总数。
 
-| 新行 | 组件交互 | 断言的业务结果 | 服务需求 | 入口 |
+**缺的 = 无**：本节点到的四行都在表上、盘上各有同号案例——`7-24` ∥ `7-25` 判收口面的判别性一半，落在 `test/integration/batch-close-gate.test.mjs`；`7-27` ∥ `7-28` 判写门面的，落在 `test/integration/doc-write-gate.test.mjs`。
+
+| 行 | 组件交互 | 断言的业务结果 | 服务需求 | 入口 |
 |---|---|---|---|---|
 | `7-24` | `batch close`（父侧）⟷ `runBatchGate(scope: close)` ⟷ `changedRegionsOf` ⟷ `judgeText` | 一份设计档：一条悬空指针与一段 400 字都落在本批变更区之外 ⇒ 收口放行、回执零附加行；把同一条指针挪进区内（本批改到那一行）⇒ 同一笔 `REFUSED` 并点名该处——两半都成立才算过 | F8 ∥ AC-10 | 真 `batch close` |
 | `7-25` | 同一夹具，判的是段长那一半 | 区外一段 400 字 ⇒ 放行；区内某段含变更行、整段超 300 字 ⇒ `REFUSED`——两半都成立才算过 | F8 ∥ AC-11 | 真 `batch close` |
+| `7-27` | `edit` ∥ `write`（写盘面）⟷ `write-path.writeThroughPath` ⟷ `doc-write-gate.runDocWriteGate` ⟷ `doc-check.changedRegionOf` ⟷ `judgeText` | 一份设计档区外带存量三样（350 字段 ∥ 行号锚 ∥ 悬空档名），本笔只改一行无关文字 ⇒ 落盘、零命中；同一笔改到那段 350 字的段内某一行 ⇒ 拒写、点名该段——两半都成立才算过 | F10 | 真 `edit` 工具写一份设计档 |
+| `7-28` | 同一夹具，判的是纯删那一半 | 删掉两段之间的空行、使两段接成一段且接出来的段超 300 字 ⇒ 拒写、点名该段；同一笔里同时把其中一段删短到不超 ⇒ 零输出——两半都成立才算过 | F10 ∥ AC-14 | 真 `edit` 工具删一行 |
 
-`7-21` ∥ `7-23` 各看一半：一行看写时点那一半，一行看「收口时点批档整份不进判域」；`7-22` 见上「破的」。
+`7-21` ∥ `7-23` 各看一半（后者表上有号、案例未落，见「常驻的恢复」）：一行看写时点那一半，一行看「收口时点批档整份不进判域」；`7-22` 见上「破的」。
 
 **描述面与注释面与行为同一口径**：`thincoder-core/tool-docs/doc_check.md` 是 `doc_check` 的模型可见描述单源。工具面在收口时点不判批档、`checkFiles` 也不数它，这一口径同样写在那份描述里——描述与行为不一致时，模型照描述去用这个工具。
 
-**另三处写着本节的口径**：`test/integration/batch-close-gate.test.mjs` 档头 · `test/integration/close-gate-fixture.mjs` 注释（取材面含批档自身，收口判域才滤）· `test/rtm/guard.md` 的 `CLI 7` 目的句与节注（二十二态在表上，`7-24` ∥ `7-25` ∥ `7-26` 含在内；`7-7` 断 `范围 0 档`）。
+**另三处写着本节的口径**：`test/integration/batch-close-gate.test.mjs` 档头 · `test/integration/close-gate-fixture.mjs` 注释（取材面含批档自身，收口判域才滤）· `test/rtm/guard.md` 的 `CLI 7` 目的句与节注（`7-24`–`7-28` 五态含在内；`7-7` 断 `范围 0 档`）。
 
-`CLI 7` 表现二十二态，各管哪一半：`7-21` ∥ `7-23` 看两个时点，`7-22` 看两个 mode 分家，`7-24` ∥ `7-25` 看区外放行与区内照判，`7-26` 看排除面（声明前缀下的档不进判域）。用例标题按号写，证据档 = `test/integration/batch-close-gate.test.mjs`。
+**`test/rtm/guard.md` 的「交互组件」那一句**：`doc-write-gate.runDocWriteGate`（交盘上现文与改后文本两份求出的区间，区外存量不出行）。
+
+`CLI 7` 表上每一态各管哪一半：`7-21` ∥ `7-23` 看两个时点，`7-22` 看两个 mode 分家，`7-24` ∥ `7-25` 看区外放行与区内照判，`7-26` 看排除面（声明前缀下的档不进判域），`7-27` ∥ `7-28` 看写门判这一笔改的行。
+
+用例标题按号写。证据档逐行对，三条互不重叠：`test/integration/batch-close-gate.test.mjs`（`7-1`–`7-9` · `7-11` · `7-13` · `7-19`–`7-22` · `7-24`–`7-26`，`7-23` 表上有号、案例未落）∥ `test/integration/batch-edit-spec-section.test.mjs`（`7-10`）∥ `test/integration/doc-write-gate.test.mjs`（`7-14` · `7-18` · `7-27` · `7-28`）。
 
 
 ## 10. 排除面：`index.docCheckExcludePaths`
@@ -534,7 +618,7 @@ batch: 批起基线不可判（收口前置门 · tier-reading gate）— close 
 - 键与数组层校验 = `thincoder-core/manifest-schema.mjs`（注释写「今天无消费面」）。
 - 归一单源 = `thincoder-core/declaration.mjs` 的 `normalizePathList`，与 `index.excludePaths` 同款。
 - 判域唯一一处 = `thincoder-core/doc-check/index.mjs` 的 `judgedDomainDocs`，三个调用面共用。
-- 现役用例 = `test/rtm/guard.md` 故事 `CLI 7`：表里没有排除面一行，本节补 `7-26`。
+- 现役用例 = `test/rtm/guard.md` 故事 `CLI 7` 的 `7-26`（本节这一半，表上有号、盘上有同号案例）。
 
 **库外 = 已查**：声明源 = `PROJECT-MANIFEST.json` 的 `index.publicRepos` 两处（`../.thincoder` ∥ `../thincoder.com`）。两仓 grep 过 `docCheckExcludePaths` ⇒ 零命中；`排除面` 在 `../.thincoder` 只命中 `tmp/` 下的历史工作副本（本仓旧拷贝，不是该仓的文档面），`../thincoder.com` 侧零命中。无相关：本节改动面全是仓内判定逻辑，外部断言 = 零。
 
@@ -556,11 +640,11 @@ batch: 批起基线不可判（收口前置门 · tier-reading gate）— close 
 
 **冗余的 = 无。** `7-2` 断的是「范围外的档不入判」——那一档不在笔域集里；本节说的是「档在笔域集里、被 manifest 声明排除」：一个由笔域集定，一个由 manifest 定，不是同一件事。`7-7` 断的是 `范围 0 档` = `checkFiles` 0 这个等式：本节改的是判域大小，不是这个等式。
 
-**缺的 = 一行**（`7-26`），判的是本节新增的那一半：
+**缺的 = 无**：本节新增的那一半由 `7-26` 判，表上有号、盘上（`test/integration/batch-close-gate.test.mjs`）有同号案例。
 
-| 新行 | 组件交互 | 断言的业务结果 | 服务需求 | 入口 |
+| 行 | 组件交互 | 断言的业务结果 | 服务需求 | 入口 |
 |---|---|---|---|---|
 | `7-26` | `batch close`（父侧）⟷ 收口臂 `evaluate` ⟷ `judgedDomainDocs` ⟷ 该档项目的 manifest（`index.docCheckExcludePaths`，归一 = `normalizePathList`） | 夹具 manifest 声明 `docs/tmp`、前缀下一份档带三样病 ⇒ 收口放行、零附加行、`范围 N 档` 数不到它；撤掉那条声明、同一份夹具 ⇒ `REFUSED` 三条照出；同级目录 `docs/tmp-x` 下的档 ⇒ 照报——三半都成立才算过 | F9 ∥ AC-12 | 真 `batch close` |
 
-编号先落 `test/rtm/guard.md` 的 `CLI 7` 表，再写用例标题（`test('CLI 7-26 …')`）——编号在表上定了，用例标题才照号写。
+`7-26` 的用例标题与表行同号（`test('CLI 7-26 …')`）：编号先定在 `test/rtm/guard.md` 的 `CLI 7` 表上，一个号只有一处来源。
 
