@@ -1,532 +1,167 @@
-# 工程模式 v2 · 架构设计（ENGINEERING-MODE-V2）
+# 工程模式（ENGINEERING-MODE-V2）· 架构设计
 
-> 板块 = 工程模式 v2（研发机制本体重构）· **架构设计**（项目一份）。
-> 依据 = `docs/core/requirements/ENGINEERING-MODE-V2.md`（v2 需求草案，11 章——**只引用、不改写**）。
-> 写权 = eng-designer（v2 §7.1 写权矩阵：设计档唯一作者）。
-> 定位（v2 §6.2）：架构设计承载**技术选型 + 模块划分 + 模块间接口/依赖 + 关键技术决策 + 整体数据流**——其中**模块划分是本档的权威产出**，后续按它拆 Function Spec 与模块设计。
+> 需求 = `docs/core/requirements/ENGINEERING-MODE-V2.md`。
+> 最近先例：`docs/core/design/ARCHITECTURE.md` 的共享核与端壳边界。对齐 = 工程机制进 core；偏离 = 本档只描述工程流程与模块关系。
+> 勘察证据：已读当前工程需求、MANIFEST、PORTABILITY、TESTING 和工具角色契约。相关 = 当前角色、写门、批次和凭证关系。
 
 ## 1. 需求层
 
-### 1.1 总体需求（定位）
+### 1.1 总体设计
 
-工程模式 v2 是机制本身的重构：把工程纪律从「靠自觉 / 靠提示词背诵」翻转到「靠结构 / 靠机检」（v2 §1「约束即结构」）。本架构设计回答机制本体怎么落成结构——七条目（三账 / 文档体系 / 角色 / 规则 / 情境 / 评审凭证 / plan 面排除）逐条给架构级方案；不写实现代码，实现与细化归后续 Function Spec + 模块设计。
+工程模式把流程放在实际工具与记录结构中：批次档承载过程，角色限定产物，advisor 提供独立评审，designToken 将批准设计绑定到实施，verify 记录验证结果。
 
-### 1.2 功能需求（回指 v2 需求）
+### 1.2 架构条目
 
-本档覆盖七条目（逐条对应 v2 需求章节）：
-
-| # | 条目 | 需求依据 |
+| # | 条目 | 设计归属 |
 |---|---|---|
-| E1 | 三账架构（PROJECT-MANIFEST + 台账 + 批次档 + 两账咬合） | v2 §5 |
-| E2 | 文档体系（四层关系 + 目录约定 + 声明面覆盖） | v2 §6 |
-| E3 | 角色架构（四角色 + 写权矩阵机械门禁 + 互锁） | v2 §7 |
-| E4 | 规则架构（交接契约 / 委派治理 / 纪律兑底 / 提示词单源承载 / 测试纪律 / 机检引擎） | v2 §8 |
-| E5 | 情境架构（阶段 / 轮次旋钮 → manifest 字段 + 情境值模型注入） | v2 §9 |
-| E6 | 评审凭证（advisor 评审 + token 门——继承 v1，只微调） | v2 §8.5 |
-| E7 | 工程模式 plan 面排除（装配裁剪 + 命令面禁 + 残留清零） | v2 §13.9（FR31） |
+| E1 | manifest、台账、批次 | MANIFEST · LEDGER · BATCH-RECORD |
+| E2 | 文档层与声明 | DOC-SYSTEM · DOC-DISCIPLINE |
+| E3 | 角色与写权 | 本档 · PROMPT-SYSTEM · AGENT-LOOP |
+| E4 | 委派、验证和检查 | AGENT-LOOP-SUBAGENT · TESTING · DOC-CHECK |
+| E5 | phase 与 round | MANIFEST · AGENT-LOOP-SUBAGENT |
+| E6 | 设计凭证 | ENG-TOKEN-BINDING · DESIGN-TOKEN-SETTLEMENT |
+| E7 | plan 排除 | 本档 · AGENT-LOOP |
 
-### 1.3 非功能需求
+### 1.3 非功能要求
 
-| # | 维度 | 标准（度量，v2 §11） |
-|---|---|---|
-| N1 | 结构优先 | 每块痛点有结构兜底——每条纪律能答「靠哪个结构」，不靠自觉 |
-| N2 | 可机判 | 验收点可机判（判据句机检），禁散文判据 |
-| N3 | 可迁移 | 不写死本仓路径——声明面（manifest `docRoot`）承载 |
-| N4 | 耗时 | 修复轮小改分钟级（修复轮回合/时长上限，v2 §11） |
+规则可迁移、失败可见、模块独立验证、正常路径无多余等待。语义判断不伪装成机械检查。
 
-### 1.4 范围边界（不做）
+### 1.4 边界
 
-- 只出架构设计，**不做实现**（实现 = 阶段 2 起的 Function Spec 批）。
-- 委托开发方法论与对甲方交付物（v2 §4）→ 阶段 2，不展开。
-- 不立即删 v1 老档（v2 §10.1），不动。
-- 不改需求草案、不改 v1 老档、不改代码。
+本档不复制各模块的字段、状态机和详细算法，不保存迁移清单或历史实施计划。
 
 ## 2. 设计层
 
-### 2.1 技术选型（决定 + 理由）
+### 2.1 技术选型
 
-| # | 选型点 | 决定 | 理由 |
-|---|---|---|---|
-| 1 | 台账存储 | SQLite（`node:sqlite`） | 需求已裁定（v2 §5.2）；md 已被 v1 实证腐化（计数漂移）、JSON 无事务无 COUNT 查询；`node:sqlite` 零第三方依赖（Node 标准库），风险见 KD7 |
-| 2 | manifest 格式 | JSON | 需求已裁定（v2 §5.1）；标准库 `JSON.parse` + schema 校验即可机检，无第三方解析器 |
-| 3 | 批次档格式 | md | 需求已裁定（v2 §5.3）；批次档含大量叙述（讨论/发现表/交付摘要），md 人读性不可替代；继承 v1 六段结构：段内一个写面——作者可 `append` 加内容、可就地 `edit` 自己那一段，§2 与 §1/§3/§5/§6 同一处置（判据单源 = `docs/core/design/BATCH-RECORD.md` §4.19） |
-| 4 | 机检引擎 | 单引擎 + 声明面 | 需求已裁定（v2 §8.7）；单引擎 + 声明面 = 判据单源、项目自声明；砍 v1 双引擎（漂移源） |
-| 5 | 写权门禁落点 | 机械 + 行为分层 | 语义写权（谁写需求谁写设计）不可机判；纯提示词无兜底；机械可判的落代码门禁（继承 v1），语义写权落提示词 + 互锁兜底（见 KD3） |
-| 6 | 台账访问面 | 查询命令 | 需求已裁定（v2 §5.2）；直接读 DB 暴露 schema、md 摘要重蹈计数漂移；查询命令只读 + 写命令只在主 agent 装配（写权面） |
-
-### 2.2 模块划分（权威源——对现有代码模块的变更）
-
-> 本表 = 后续 Function Spec 的权威拆分批据。每模块 = 一个机制变更单元，**锚定现有代码模块**（现有 file/dir → 变更类型），不设抽象目标模块。
-> 行数 = 勘察实测值（非承诺——精确行数与增量由各模块设计现量判定尺寸档位得出，尺寸档位结论落设计档，数值不落档）。
-
-| # | 模块 | 现有模块（file/dir → 变更） | 职责（一句话） | v2 依据 |
-|---|---|---|---|---|
-| M1 | 项目状态档 manifest | `thincoder-core/manifest.mjs`（**新增**）——机制代码在核，操作对象 = 被开发项目**项目根（= 带 manifest 的目录——**git 非前提**；归属 = 最近祖先优先 / 发现梯 = 纯向下一层；用户裁定——明细 = `docs/core/design/MANIFEST.md` §2.2 / §2.9）**的 `PROJECT-MANIFEST.json`（数据档，N3 迁移点）；`thincoder-core/agent/setup-reminders.mjs` + `thincoder-core/agent/run-stages.mjs`（**修改**——情境行注入，E5.1） | JSON schema + 读/写/校验（五键 version/phase/docRoot/codePaths/index——后两键 = 声明两族）+ 情境值 → 模型注入行 | §5.1 · §6 · §9 |
-| M2 | 台账（SQLite） | `thincoder-core/ledger.mjs`（228 行·**修改**）+ `thincoder-core/ledger-surface.mjs`（77 行·**修改**）+ CLI/VSC 端 `thincoder-cli/src/tui/ledger-surface.mjs` ∥ `thincoder-vscode/src/extension/ledger-surface.mjs`（70/119 行·**修改**，完整清单见接线表） | md 读面 → `node:sqlite` 读面 + 写命令 + 六态 CHECK schema | §5.2 |
-| M3 | 批次档生命周期工具 | `thincoder-core/agent-tools/batch.mjs`（原批段工具档改名；265 行·**修改**——action 分发扩 create/status/close，超硬顶则拆 `thincoder-core/agent-tools/batch-skeleton.mjs` 模板档） | 批次档生命周期（create/append/status/close）+ 段白名单 + 状态行冻结拒写 | §5.3 · `docs/core/design/BATCH-RECORD.md` §4.11–§4.13 |
-| M4 | 写权门禁（token 门 + 冻结窗口） | `thincoder-core/agent/dispatch.mjs`（490 行·**修改**）+ 新档 `thincoder-core/agent/write-gate.mjs`（`resolveReviewTargetPaths` + 冻结窗口判据组装） | token 门 + D5 冻结窗口——评审对象/被审文件读 manifest `docRoot`（去硬编码 docs/） | §7 · §8.5 |
-| M5 | 委派与 spawn 门 | `thincoder-core/agent-tools/subagent-spawn.mjs`（435 行·**修改**·as-of 2026-10-24，**拆分候选**）+ `thincoder-core/agent-tools/subagent-scheduler.mjs`（428 行·**修改**，**拆分候选**） | 工程角色任务书 = 批次档 §2（零任务书文本参数，命中即点名拒收）+ `round` + designToken；非工程角色 = 四项核心 + `scope`；files 声明面拦截 | §8.1–8.2 · §9.3 |
-| M6 | 评审凭证（advisor + token） | `thincoder-core/advisor.mjs`（274 行·**修改**）+ `thincoder-core/token-ttl.mjs`（286 行·**零改（继承）**）+ `thincoder-core/agent-tools/design-token.mjs`（118 行·**零改（继承）**） | 评审对象来源读 `docRoot`（唯一微调，继承 v1 不重写） | §8.5 |
-| M7 | checklist 废除 | 删 checklist 族 3 档 + 摘挂载/移除注入（核 2 + VSC 2）+ 死指针 2 + 门禁 1 + 测试 5——完整清单见接线表 | 待办跟踪统一到台账六态 | §5.2 · §10.1 |
-| M8 | 机检引擎 | `thincoder-core/doc-check/`（引擎：三条判据）∥ `thincoder-core/agent-tools/doc-check.mjs`（工具面：`target` / `mode` / `docs`） | 单引擎（三条判据）+ 参数内置常量（判据参数不落声明面）；台账一致性由 SQLite schema 承接（`check-ledger` 作废） | §8.7 |
-| M9 | 提示词单源承载 | `thincoder-core/prompts/`（16 档，唯一副本，运行期加载——落点 = 产品源码内固定路径，不读 manifest） | 提示词 = 产品代码单源（只承载「怎么执行」）；规则本体 = 机制文档 | §8.4 |
-| M10 | 测试纪律 | 产品各包清单档（**修改**）+ `test/run-fast|full|integration|slow-gate|slow`（**修改/删除**） | 三层门禁 → 一条 `test` 全绿 | §8.6 |
-| M11 | plan 面排除（FR31） | 核 `thincoder-core/agent/family-tools.mjs`（174 行·**修改**）+ `thincoder-core/agent-tools/plan.mjs`（86 行·**修改**）+ `thincoder-core/agent-tools/eng.mjs`（102 行·**修改**）+ `thincoder-core/session-lifecycle.mjs`（305 行·**修改**）；两端侧文件见接线表 + §2.3 E7 | 工程模式 plan 工具不入表 + 命令面拒绝（含 ACP 出口形态 / VSC 提示载体）+ `planMode` 清零（内存 + 槽） | §13.9 |
-
-**现状勘察摘要（用于两端接线锚定）**：
-
-- 三包结构：`thincoder-core/`（核，单一权威源）· `thincoder-cli/`（CLI 端）· `thincoder-vscode/`（VSC 端）。两端均经 `@thincoder/core` 引入核，端侧只保留薄装配面 / 面特有段。
-- `thincoder-core/tools/index.mjs` 的挂载面与 VSC 工具表三处一并收正（清单式坐标移出本节，随各自收口）。
-  并有死指针（`thincoder-core/agent-tools/task.mjs` · `thincoder-core/memory/memory-tool.mjs`）与 `thincoder-core/agent-tools/subagent-scheduler.mjs` 门禁族；受影响文件清单以 M7 spec 为准。
-- 机检脚本落仓根 `scripts/`（非三包产品代码）：`check-doc-width*.mjs` 双引擎 + `doc-anchors*.mjs` 四套 + `check-ledger*.mjs` 双引擎 = M8 合并/砍的对象。
-
-**两端接线（core + CLI + VSC）**：
-
-> 每条机制变更必须答「核改哪、CLI 改哪、VSC 改哪」；「零改」处显式标注。路径相对各包根（核 = `thincoder-core/`，CLI = `thincoder-cli/`，VSC = `thincoder-vscode/`）。仓根 `scripts/` 属产品面，M8/M9 落于仓根、三包皆零改。精确编辑点（函数级）到各模块设计定——本表锚定到**文件**。
-
-| 模块 | 核（thincoder-core/） | CLI（thincoder-cli/） | VSC（thincoder-vscode/） |
-|---|---|---|---|
-| M1 manifest | 新增 `thincoder-core/manifest.mjs` + 修改 `thincoder-core/agent/setup-reminders.mjs` / `thincoder-core/agent/run-stages.mjs`（情境行注入——E5.1） | 修改 `thincoder-cli/src/cli/make-agent.mjs`（装配层读/初始化 manifest） | 修改 `thincoder-vscode/src/agent/setup.mjs`（装配层读/初始化 manifest）+ `thincoder-vscode/src/agent.mjs` / `thincoder-vscode/src/agent/setup-reminders.mjs`（情境行端镜） |
-| M2 台账 | 修改 `thincoder-core/ledger.mjs` + `thincoder-core/ledger-surface.mjs` + 命令注册 `thincoder-core/tools/index.mjs` + `thincoder-core/agent/family-tools.mjs` | 修改 `thincoder-cli/src/tui/ledger-surface.mjs`（70 行） | 修改 `thincoder-vscode/src/extension/ledger-surface.mjs`（119 行） |
-| M3 批次档 | 修改 `thincoder-core/agent-tools/batch.mjs`（原批段工具档改名——符号名随批改 `batchTool`） | 零改（核内工具，端经 import 装配） | 零改（核内工具，端经 import 装配） |
-| M4 写权门禁 | 修改 `thincoder-core/agent/dispatch.mjs` | 零改（核内门禁） | — |
-| M5 委派 spawn | 修改 `thincoder-core/agent-tools/subagent-spawn.mjs` + `thincoder-core/agent-tools/subagent-scheduler.mjs` | 零改（端经核单源 import） | 零改（端经核单源 import） |
-| M6 评审凭证 | 修改 `thincoder-core/advisor.mjs` + `thincoder-core/token-ttl.mjs` + `thincoder-core/agent-tools/design-token.mjs` | 零改 | 零改（已 import `validateDesignToken` 自核） |
-| M7 checklist 废除 | 删 checklist 族 + 摘挂载 `thincoder-core/tools/index.mjs` + 移除注入 `thincoder-core/agent/setup.mjs` + 死指针 + 门禁 + 注释 + 测试 3 档（清单见 M7 模块设计档） | 零改 | VSC 摘挂载/移除注入/死指针 + 编排注记（±0）+ 测试 2 档（清单见 M7 模块设计档） |
-| M8 机检 | 零改（引擎在仓根 `scripts/`） | 零改 | 零改 |
-| M9 提示词 | 零改（提示词 = 产品代码，由 coder 按机制文档落笔） | 零改 | 零改 |
-| M10 测试 | 修改 各包清单档 + `test/` | 修改 各包清单档 + `test/` | 修改 各包清单档 + `test/` |
-| M11 plan 面排除 | 修改 `thincoder-core/agent/family-tools.mjs` · `thincoder-core/agent-tools/plan.mjs` · `thincoder-core/agent-tools/eng.mjs` · `thincoder-core/session-lifecycle.mjs` | 修改 `thincoder-cli/src/tui/cmd-plan.mjs` · `thincoder-cli/src/tui/cmd-eng.mjs` · `thincoder-cli/src/acp/handlers-session.mjs` | 修改 `thincoder-vscode/src/agent/setup.mjs` · `thincoder-vscode/src/agent/agent-state.mjs` · `thincoder-vscode/src/extension/chat-panel.mjs` · `thincoder-vscode/src/extension/panel-messages-settings.mjs` · `thincoder-vscode/src/extension/panel-messages.mjs` · `thincoder-vscode/src/extension/panel-session.mjs` · `thincoder-vscode/src/extension/image-handler.mjs` · `thincoder-vscode/webview/mode-buttons.js` · `thincoder-vscode/locales/en.json` · `thincoder-vscode/locales/zh.json`（逐档改动面 = §2.3 E7 表） |
-
-**依赖方向**（实现顺序 = Function Spec 拆分参考）：
-
-```text
-M1 manifest（被读面：docRoot / phase / codePaths / index）
-  ├──► M4 写权门禁（读 docRoot 去硬编码）
-  ├──► M6 评审凭证（评审对象来源读 docRoot）
-  ├──► M8 机检（读 docRoot = 目录落点；判据参数内置）
-  ├──► M3 批次档（第二基底复判读 docRoot.batches）
-  └──► M9 提示词（落点 = 产品源码内固定路径，不读 manifest）
-M2 台账 ⇄ M3 批次档（两账咬合：条目 task_book 指针 → 批次档 §2）
-M4 写权门禁 ──► M6 评审凭证（token 门读 M6 签发的槽文件）
-M5 委派 spawn ──► M4 写权门禁（eng-coder spawn 需活 token）
-M7 checklist 废除（独立删除，无依赖）
-M10 测试（独立简化，无依赖）
-```
-
-### 2.3 六条目架构方案（逐条）
-
-#### E1 三账架构（v2 §5）
-
-**三账分工**：manifest = 声明/情境账（机器读：`docRoot` / `phase` / `codePaths` / `index`） · 台账 = 待办总账（条目级落地状态）· 批次档 = 流程账（人读、全链路贯穿）。三者**不互相替代、不重述**——一批的「谈成什么」只住批次档，条目的「做到哪」只住台账，机制的「现在什么情境」只住 manifest。
-
-**PROJECT-MANIFEST（JSON）字段 schema**（M1 产出）：
-
-```json
-{
-  "version": 1,
-  "phase": "initial-dev | production",
-  "docRoot": {
-    "requirements": "docs/requirements",
-    "specs": "docs/requirements/specs",
-    "design": "docs/design",
-    "modules": "docs/design/modules",
-    "batches": "docs/batches"
-  },
-  "codePaths": ["src"],
-  "index": { "codeExtensions": [], "docExtensions": [], "excludePaths": [], "publicRepos": [] }
-}
-```
-
-- `phase` = 情境旋钮落点（E5，模型侧经 E5.1 情境行注入）；`docRoot` = 文档体系声明面（E2）；`codePaths` / `index` = 项目声明两族（分类段名 / 索引扩展名与排除面）。提示词落点 = 产品源码内固定路径、机检参数 = 内置常量——**两者都不入 manifest**（产品内部事实，不是用户项目的状态）。
-- `codePaths` / `index` = **项目声明两族键**（分类段名 / 索引扩展名与排除面）；声明语义 = `docs/core/design/PORTABILITY.md` §3.1，形态 / 缺省 / 校验 = `docs/core/design/MANIFEST.md` §2.2。
-- **`docRoot` 值形态**（用户裁定）：非空字符串（单根——默认档即此形态）或**非空字符串数组**（多根：一个文档层跨多个根目录——数组 = 完整声明，不与默认合并）。值域 / 解析 / 消费面单一权威源 = `docs/core/design/MANIFEST.md` §2.7（D2——本档不重述）。
-- 校验：schema 枚举字段（phase 取值、docRoot 各键存在）+ **`docRoot` 子键值形态**（非空串 | 非空且元素皆非空串的数组——非法形态拒）+ **两族声明键形态**（`codePaths` / `index.*`——KD-M1-32）由 M1 的校验器机械判。
-
-**台账（SQLite）表结构**（M2 产出）：
-
-```text
-表 items（单表 + status 枚举，归档 = 状态子集——软删除语义）
-  id            INTEGER PRIMARY KEY
-  kind          TEXT NOT NULL CHECK(kind IN ('requirement','tech_todo'))
-  status        TEXT NOT NULL CHECK(status IN ('待讨论','待设计','在途','待核销','已核销','已废弃'))
-  title         TEXT NOT NULL          -- 需求句 / 待办句（一行一条，不展开细节）
-  board         TEXT                   -- 归属板块
-  req_doc       TEXT                   -- 需求档指针（需求类：<档> §X）
-  task_book     TEXT                   -- 任务书指针（在途/待核销必填：批次档 §2）
-  evidence      TEXT                   -- file:line + 症状（技术类最小证据行）
-  trigger       TEXT CHECK(trigger IN ('归批','条件','认账不排期') OR trigger IS NULL)
-  created_at    TEXT  ·  updated_at TEXT  ·  closed_at TEXT
-```
-
-- 状态机 = v2 六态（未决四态 待讨论/待设计/在途/待核销 + 归档两态 已核销/已废弃）；`status`/`kind` NOT NULL + CHECK 枚举机械锁死（CHECK 对 NULL 不判——NOT NULL 兜底）。
-- 计数 = `SELECT COUNT(*) WHERE status IN (未决四态)`——单源。
-- 访问面 = 查询命令（只读，全角色可见）+ 写命令（仅主 agent 装配）。
-
-**批次档（md）六段**（M3 产出，段名按 v2 §5.3）：
-
-| 段 | 作者 | 写入手段 |
+| 面 | 选择 | 理由 |
 |---|---|---|
-| §1 目标 + 前情 + 条目 | 主 agent | 普通文档写 |
-| §2 任务书 | eng-designer | `batch` append（段 = §2，无路径参数） |
-| §3 发现表 | 评审子代理（advisor） | `batch` append（段 = §3，工具已挂载时） |
-| §4 核验与裁决 | 主 agent | 普通文档写 |
-| §5 实施记录 | eng-coder | `batch` append（段 = §5） |
-| §6 收口 + 状态行 | 父代理 | 普通文档写 |
+| manifest | JSON | 机器状态与 schema 校验 |
+| 台账 | SQLite | 状态约束、查询和事务 |
+| 批次 | Markdown | 人读讨论、评审和交付记录 |
+| 提示词 | core 内产品文本 | 运行期单一正本 |
+| 写权 | 机械门与角色纪律分层 | 路径和凭证可机判，语义责任由角色承担 |
+| 文档检查 | core 单引擎 | 判据、范围和解析统一 |
 
-**两账咬合（状态机 + 事务边界）**：
+### 2.2 模块划分
 
-```text
-需求状态机（台账 items.status）：
-  待讨论 ─► 待设计 ─► 在途 ─► 待核销 ─► 已核销（勾销入归档）
-      └──────────────► 已废弃（需求撤回 / 批次废弃）
-
-批次状态机（批次档状态行）：
-  开批(§1) ─► 设计(§2) ─► 评审(§3) ─► 裁决(§4) ─► 实施(§5) ─► 收口(§6) ─► 冻结
-  （多批可同时在飞——各批各档各状态行，链上无「当前批次」单槽）
-
-咬合点（唯一事务边界 = 收口）：
-  收口一次事务 = ① 批次档 §6 非空（验收结论） ② 台账条目状态推进（在途→已核销/已废弃，SQLite 事务）
-                ③ 计数/枚举同步（D3）
-```
-
-- **事务边界**：台账侧 SQLite 事务保证原子；批次档段内一个写面——作者可 `append` 加内容、可就地 `edit` 自己那一段，收口落的是 §6 的追加。收口 = **两账**（台账 + 批次档）一次性同步，任一失败即回滚（台账回滚 + §6 不写）。manifest 不参与收口事务。
-- **咬合判据（两账）**：条目 `status=在途/待核销` 必带 `task_book` 指针；`task_book` 指向的批次档必须存在。
-
-#### E2 文档体系（v2 §6）
-
-**四层关系**：
-
-```text
-需求层   项目需求（Project Requirements，项目一份 · 主 agent）
-            └─► 功能规格（Function Spec，一模块一份 · 主 agent）
-设计层   架构设计（Architecture Design，项目一份 · eng-designer）── 本档
-            └─► 模块设计（Module Design，一模块一份 · eng-designer）
-状态/过程层  manifest（状态账）· 台账（待办总账）· 批次档（流程账）
-```
-
-- **模块划分权威源 = 架构设计（本档 §2.2）**——Function Spec 按它拆、模块设计按它写。
-- **目录约定（默认值）**：`requirements/`（项目需求 + `specs/` 功能规格）· `design/`（架构 + `modules/` 模块设计）· `batches/`（批次档）· `PROJECT-MANIFEST.json`（项目根）。
-- **声明面覆盖机制**：默认值被 manifest 声明面（`docRoot`）覆盖——产品启动时读 manifest，各机制（文档地图 / 批次档落点 / 评审对象来源）从 `docRoot` 取路径，不硬编码。机检范围 = 调用方传入的文件清单，提示词落点 = 产品源码内固定路径——**两者不从 manifest 取**（产品内部事实）。
-  **缺某键（含 `docRoot` 各键）→ 用默认值（便利 fallback）；缺 manifest（整档）→ 会话照常起 + 按用点报明 / 走建档流**（用户裁定——启动零拒绝；**项目落地 = 建 manifest**，轻动作，落点默认 = 会话锚）。
-
-  **口径限定**：以上读面与前置门槛均为**工程模式会话**口径（判据取**会话权威值**：槽优先 + config 回退）；普通会话**装配钩子**零 manifest I/O（不读 / 不拒 / 不建档；下游仍读盘消费面不在此限）；模式门判据与取值点、钩子执行点、装配钩子非 fatal、建档三格（梯②④⑤ ⇒ 就地建档）、按用点解析两段（归属 ∨ 发现）见 `docs/core/design/MANIFEST.md` §2.2 / §2.9（D2——本档不重述）。
-- **值形态（用户裁定）**：`docRoot` 各键 = 非空字符串 \| 非空字符串数组（多根声明——数组为完整声明、不追加默认；非法形态拒）；解析基数 = 项目根。值域与消费面见 `docs/core/design/MANIFEST.md` §2.7（单一权威源）。
-
-#### E3 角色架构（v2 §7）
-
-**四角色**：
-
-| 角色 | 职责 | 写权（唯一作者） |
+| 模块 | 当前职责 | 详细设计 |
 |---|---|---|
-| 主 agent | 目标确认 · 派单 · 台账落笔 · 核验裁决 | manifest · 台账 · 批次档 §1/§4/§6 · 项目需求/功能规格 |
-| eng-designer | 架构/模块设计 · 核对主 agent 写的 Function Spec 合规（五要素，不合规打回） | 设计档（架构 + 模块）· 批次档 §2 |
-| eng-coder | 按任务书实现 + 自测 | 产品代码 · 批次档 §5 · 提示词落地档（主 agent 内容权 + coder 落笔） |
-| advisor | 独立评审（设计 / 代码） | 批次档 §3（写通道按 `batchDoc` 在场判定、与轨无关；评审读面仍只读六件，写权仅此一段） |
+| M1 manifest | 项目声明、读取、写入、情境 | `MANIFEST.md` |
+| M2 ledger | 工作项、状态机、结算 | `LEDGER.md` |
+| M3 batch | 批次生命周期和段写权 | `BATCH-RECORD.md` |
+| M4 write gate | 目标面、写权和冻结窗口 | `PORTABILITY.md` · `BATCH-LEDGER-REVIEW-UNIFY.md` |
+| M5 subagent | 角色、任务书、调度和凭证校验 | `AGENT-LOOP-SUBAGENT.md` |
+| M6 advisor | 设计/代码评审与收敛 | `ADVISOR-CONVERGENCE.md` |
+| M8 doc check | 文档检查与锚点图 | `DOC-CHECK.md` · `DOC-GRAPH.md` |
+| M9 prompt | 提示词与工具描述 | `PROMPT-SYSTEM.md` |
+| M10 testing | 单元、集成和发布验证 | `TESTING.md` |
+| M11 plan exclusion | 工具、命令和模式状态 | 本档 E7 |
 
-（辅助角色 explore = 只读勘察，无写权；plan = 待定。）
+模块可以共享 core 接口，但不通过另一份配置或文本复制业务规则。
 
-**写权矩阵 → 机械门禁落点**（分层）：
+### 2.3 架构方案
 
-| 层面 | 门禁 | 落点 | 继承 |
+#### E1 三类记录
+
+manifest 是项目声明，ledger 是工作项，batch 是一轮过程。批次与台账在收口时通过同一工具事务结算；manifest 不携带当前批次指针。
+
+#### E2 文档体系
+
+docRoot 决定文档层和落点。需求、设计、标准和过程各自归属；文档地图只负责导航。
+
+#### E3 角色架构
+
+| 角色 | 输入 | 输出 | 结构约束 |
 |---|---|---|---|
-| 机械面 | token 门（eng-coder 写产品代码需活 designToken） | M4 `thincoder-core/agent/dispatch.mjs` | v1 |
-| 机械面 | `batch` append 段白名单（越段即拒） | M3 `batch` 工具 | v1 |
-| 机械面 | `batchDoc` 参数门（缺参/不可读即拒） | M5 spawn 门 | v1 |
-| 机械面 | 台账/清单写命令仅主 agent 装配（SQLite 写门） | M2 ledger 命令装配 | **新增** |
-| 机械面 | manifest 写门（唯一作者 = 主 agent） | M1 manifest 读写装配 | **新增** |
-| 行为面 | 语义写权（需求=主 agent · 设计=designer） | 提示词层（D1 矩阵） | v1 |
+| 主 agent | 用户意图、项目事实 | 需求、派单、裁决、收口 | 管理与确认面 |
+| eng-designer | 批次 §1、当前文档 | 设计与批次 §2 | 设计写权 |
+| eng-coder | 批次 §2、designToken | 实现、验证、批次 §5 | 凭证与批次绑定 |
+| advisor | 明确评审对象与证据 | 评审结论与批次 §3 | 只读代码与文档，限段写入 |
+| explore | 结构化勘察任务 | 证据报告 | 只读 |
 
-**互锁**（谁写谁把关、机械打回）：
+#### E4 规则架构
 
-- designer 产出 → **advisor 独立评审**（设计八维）把关；
-- coder 产出 → **父侧验收 + advisor 代码评审**把关；
-- 机械打回：`batchDoc` 缺参 / 段越界 / 无 token 写产品代码 / 台账非主 agent 写 → 门禁拒（fail-closed）。
+- 工程角色从批次 §2 获取任务书。
+- 非工程角色使用 goal、knownFacts、scope、acceptance、reportFormat。
+- files 用于冲突串行，dependsOn 用于结果依赖。
+- 评审对象由参数与批次定义，不靠遍历仓库猜测。
+- 写门使用 faceOf 与目标项目归属。
+- 提示词与工具描述随规则变更同批更新。
+- 测试与文档检查按当前业务面验证，不使用散文锚代替行为。
 
-#### E4 规则架构（v2 §8）
+#### E5 情境架构
 
-**交接契约（任务类型 → 角色路由表）**：
+phase 由 manifest 保存。顶层工程会话通过 transient 情境行注入，保持幂等、单活体和压缩后恢复。
 
-| 任务类型 | 角色 | 门槛 |
-|---|---|---|
-| 勘察 / 排查 / 调研现状 | explore | 只读 |
-| 设计 / 文档撰写 / 需求澄清 | eng-designer | `batchDoc`（§1 为输入源） |
-| 实现（多文件 / 跨模块 / 有批准设计） | eng-coder | `designId` + `designToken` + `batchDoc`（§2 任务书） |
-| 评审 | advisor | 设计评审需 Approval Signal |
+round 是工程角色 spawn 参数。fix 复用 designId 与 designToken，并在文档先行后处理评审发现。
 
-**委派治理（门槛 + 任务书单通道）**（M5 落点，2026-10-24 收口）：sized 实现批默认委派 coder；**工程角色（eng-coder / eng-designer）的任务书只有一个来源 = 批次档 §2**（设计席写、经评审），spawn 不携带任何任务书文本参数（`goal` / `knownFacts` / `designPoints` / `acceptance` / `reportFormat` / `scope` / `task` / `context` 命中即点名拒收）。
+#### E6 评审凭证
 
-**非工程角色（explore / plan / coder）不动**：四项核心（`goal` / `knownFacts` / `acceptance` / `reportFormat`）+ `scope`，缺一 / 空白 / 非字符串即拒。
-另加 **轮次（`round`：初始/修复——eng-coder / eng-designer 必带）**。**范围判据**：只读角色改不动任何东西，通道不构成风险；有写权的角色必须只有一个任务来源。缺参 = 派单缺陷；§2 内容够不够由执行者打回兜底。
+设计评审通过后，设计与会话槽中保存有效凭证。eng-coder spawn 校验 batchDoc、designId、designToken 和 round。
 
-**纪律兜底（纪律 → 机检映射）**（M8 落点）：
+凭证缺失、不匹配、过期和已消费是不同状态。批次完成后消费凭证，后续工作需要新评审与新凭证。
 
-| 纪律 | 挂哪条机检 |
+#### E7 plan 面排除
+
+| 面 | 当前设计 |
 |---|---|
-| D3 计数枚举纪律 | 机检器「计数 vs 列表一致」 |
-| D4 指针纪律（`文档:节`） | 机检器「段引用可解析」 |
-| D5 冻结窗口（评审在途不改被审文档） | M4 门禁拦截（写时拦）+ 结算陈旧 |
-| 需求池不展开细节（一行一条） | 台账 schema（单行 title）+ 机检 |
-| 两账不互相替代（台账 ⇄ 批次档） | 已落半幅 = M2 咬合 CHECK（`task_book` 非空——`docs/core/design/LEDGER.md` §2 · AC-M2-5） |
+| 工具装配 | 工程模式不提供 plan；普通模式保留 |
+| CLI 与 ACP | 工程模式进入 plan 时明确拒绝 |
+| VSC | 面板禁用或拒绝，并回弹实际状态 |
+| 状态恢复 | engineering=true 时清除 planMode 与未注入 plan 提示 |
+| 子代理 | 工程角色与工程子会话同样不获得 plan |
 
-**提示词 = 代码单源**（M9 落点，v2 §8.4）：「唯一副本 = `thincoder-core/prompts/`（机器执行物，只承载「怎么执行」）；规则的**人读权威** = 中文机制文档（`docs/core/design/` 纪律族——用中文因读者是中文用户，与提示词的性质无关）。更新流程 = 改规则 → 先改机制文档 → coder 依它改 `thincoder-core/prompts/` 对应档。无机检门（用户裁定）」。
-
-**测试纪律（简化）**（M10 落点，v2 §8.6）：「门禁 = 一条 `test` 全绿」；慢测层归册（慢就慢，照跑）；处置按需求 `docs/core/requirements/TESTING.md` §2 F6 ∕ F9（批次收口逐条）——具体裁剪到模块设计定，本档只定「简化」方向。
-
-**机检引擎（一个引擎 + 内置参数）**（M8 落点，v2 §8.7）：内核 = 「锚检查 / 行宽检查 / 台账一致性（由 SQLite schema 承接，check-ledger 作废）」；判据参数（行宽阈值 / 区带 / 豁免谓词）= 内置常量 `DOC_CHECK_BUILTINS`，判定范围 = 调用方传入的文件清单——不扫目录、不读 manifest、不硬编码本仓路径；这是「可迁移」（N3）的结构承载点。
-
-#### E4.1 提示词系统接口（行为面载体）
-
-> 提示词系统权威源（两层，本档只交叉引用、不重述——D2）：**需求层** `docs/core/requirements/PROMPT-SYSTEM.md`（内容大纲 = §2.2 人格层 ∥ §2.3 公共层 ∥ §2.4 纪律层）· **设计层** `docs/core/design/PROMPT-SYSTEM.md`（机制面 = §6.1 提示词承载与落笔分工 ∥ §6.2 装配实现事实 + §2 核模块裁决行）。
-
-**纪律分流（v2「约束即结构」核心命题）**：
-
-| 纪律面 | 载体 | 落点 |
-|---|---|---|
-| 语义写权（谁写需求/设计）· 角色职责（designer 核对 Function Spec 合规、coder 勘察边界）· 互锁（谁写谁把关） | **行为面——提示词**（不可机判） | persona 模板 + `discipline-engineering` |
-| token 门 · 段白名单 · 冻结窗口 · 机检判据 | **机械面——代码**（可机判，M1–M8） | 产品代码 + manifest 声明面 |
-
-**模板落点**（各装什么）：persona ×7（engineering=主 agent / coder / eng-coder / eng-designer / explore / plan / normal）· discipline ×2（engineering / normal）· common · advisor ×4 · consult-base——权威内容大纲见需求层 `PROMPT-SYSTEM.md` §2.2 人格层 ∥ §2.3 公共层 ∥ §2.4 纪律层（不在此重述）。
-
-**提示词承载**：唯一副本 = `thincoder-core/prompts/`（产品代码面，只承载「怎么执行」）；规则本体 = 机制文档——流程见设计层 `PROMPT-SYSTEM.md` §6.1。
-
-**变更点（v2 对提示词系统的改动，落 `PROMPT-SYSTEM.md` 同步）**：M9 提示词单源承载（§6.1 收正——规则先落机制文档，coder 改 `thincoder-core/prompts/` 对应档）· 纪律分流（搬到结构后从提示词移除）· designer 职责收正（§7.3）· 删「方案选型对比」纪律。
-
-#### E5 情境架构（v2 §9）
-
-**情境旋钮 → manifest 字段**：
-
-| 旋钮 | 取值 | manifest 字段 |
-|---|---|---|
-| 阶段 | 初始开发 / 上线运行 | `phase` |
-| 轮次 | 第 N 次实现轮 | （不落字段——随批次档生命周期，批次档 §5 轮次计数承载） |
-
-
-
-`phase` 字段保留（阶段旋钮落 manifest 不变）——**其模型侧可感知性由下方 E5.1 情境行承载**。
-
-轮次窄带（v2 §9.3）：「修复轮……**禁全量勘察**。派单必带 `round` 参数，修复轮小事回到分钟级」——轮次约束由结构化参数 `round` 承载（必填集合见模块设计 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.22.1）。
-
-#### E5.1 情境值 → 模型注入（#28）
-
-定案如下（逐条机判，判据 = 模块设计 `docs/core/design/MANIFEST.md` §2.6 + §3.1 AC-N1–AC-N6、AC-N3b）：
-
-| # | 定案点 | 结论 |
-|---|---|---|
-| 1 | 注入形态 | **逐回合 transient 机器行**（`{role:"user", content:"[System reminder: …]", transient:true}`——与 env 行同族，不进人读记录） |
-| 2 | 字段集 | `phase`（唯一模型侧无其他载体的情境值）；`docRoot` **不入本行**（路径已由提示词层承载，注入五路径 = 噪声 + 双源冲突） |
-| 3 | 逐字行形 | `[System reminder: project state: phase: <值> (rigor: <light\|strict>).]`（未知 phase → 无标签：`…phase: <值>.]`，只出值、不编判据） |
-| 4 | 推送时机 | **depth-0 逐回合**（CLI = `thincoder-core/agent/run-stages.mjs` 回合注入组 · VSC = `thincoder-vscode/src/agent.mjs` 同点）；**幂等**——history 已有同文行即不推（零副作用） |
-| 5 | 压缩生存 | **活体守卫自愈重推**——压缩吞掉该行 → 下一回合守卫判「无活体」→ 重推；**不落 system 槽**（system 提示词 = 静态槽文件装配 + 前缀缓存契约，写可变值即破缓存语义；system 槽方案不适用于本行） |
-| 6 | 值变化 | **单活体**：值变（如阶段推进 `initial-dev` → `production`）→ 就地摘旧行 + 推新行（保 `history` 数组引用） |
-| 7 | 注入深度 | **仅 depth-0**（manifest 是主 agent 的状态账；子代理读任务书，M5 零 manifest 读面——§2.4） |
-| 8 | 模式门 | **仅工程模式**——判据 = **会话权威值**（恢复槽带 `engineering` 字段 ? 槽值 : `config.agent.engineering`——槽优先 + config 回退）；口径 = 本档 §2.3 E2，机制权威 = `docs/core/design/MANIFEST.md` §2.2；**归属分层**：模式状态 = **会话级**（槽字段——`SESSION.md` §6.3 / §6.4），项目级 = 台账 · `PROJECT-MANIFEST.json`（含声明两族键——同档）；唯一耦合 = 本门读 manifest 作 ON 准入判据；normal 模式无 manifest 纪律，不注入 |
-
-**行的语义**：`phase` = 纪律强度档（需求 v2 §9.1「初始开发（探索方向，纪律可轻）/ 上线运行（防回归，纪律要强）」——行内标签是对 §9.1 的**呈现**，不新增判据）。**值 → 行为的完整映射**（各档具体怎么调纪律）住提示词层——只落「模型可感知」；提示词侧映射句属提示词内容权（主 agent），不在本档。
-
-#### E6 评审凭证（v2 §8.5）
-
-**评审 + token 门机制**（`DESIGN-TOKEN-SETTLEMENT` + `ENG-TOKEN-BINDING` + `ADVISOR-CONVERGENCE`）——不取消、不重写（只微调）：
-
-- advisor 设计评审 → 通过签发 `designId:token`（`uuid:expiresAt`，TTL 7 天可配）→ 入槽文件（会话态，凭证不落文档）；
-- token 门 = eng-coder spawn 的机械门（无活槽即拒，fail-closed）——M4 写权门禁；
-- 链终消费（`consume-design` 清槽，同 id 再 spawn 机械拒）；
-- 轮次衰减 / 会话隔离 / 失败护栏（六 kind 不签发） / 失败结论。
-
-**微调点（本档裁定，唯一差异）**：评审对象清单来源 = **manifest `docRoot`（声明面）**（M6 落点），不再硬编码本仓 `docs/` 路径——与 v2「可迁移」（N3）对齐；评审语义判据 / 凭证机制本体 / 门禁 / consume 零改。
-
-#### E7 工程模式 plan 面排除（FR31 · v2 §13.9）
-
-**三结构面（= FR31 三条裁决，各带判据）**：
-
-| # | 面 | 结构 | 判据（可机判） |
-|---|---|---|---|
-| ① | 装配面 | `assembleFamilyTools` 固定段按模式裁剪（`thincoder-core/agent/family-tools.mjs` 的固定段）：工程模式固定段 = `[timer]`——task / plan 皆不入表（KD8 / F10 同处置）——**模型不可见** | 工程模式装配名集不含 `plan` ∧ 不含 `task`；普通模式两者皆含（回归） |
-| ② | 命令面 | `/plan`（`thincoder-cli/src/tui/cmd-plan.mjs`）· ACP 两入口（`thincoder-cli/src/acp/handlers-session.mjs` `applyConfigOption` `mode` 分支 · `session/set_mode`）· VSC 面板开关（`thincoder-vscode/src/extension/chat-panel.mjs` `_setPlanMode`）工程模式一律拒绝 + 提示可见 | 拒绝后 `planMode` 不变 + 提示可见（非静默失败） |
-| ③ | 残留清零 | 单点 `clearPlanMode(agent)`（`thincoder-core/agent-tools/plan.mjs`）：清 `planMode` + 两 reminder 计数 + **未注入的 plan 提示语**；三个翻转点 + 两个恢复点复用；恢复面**槽值一并收正** | 工程模式真值 ⇒ `planMode` 恒 false（内存 + 槽位） |
-
-**命令面逐面钉定（工程真值来源 / 拒绝出口形态 / 提示可见载体）**：
-
-| 面 | 工程真值来源 | 拒绝出口形态 | 提示可见载体 |
-|---|---|---|---|
-| CLI `/plan`（`thincoder-cli/src/tui/cmd-plan.mjs`） | `agent.config.agent.engineering`（核单源同键） | 前置判 → 零翻转（不写 `planMode`） | TUI 提示行（共用文案常量逐字） |
-| ACP 两入口（`thincoder-cli/src/acp/handlers-session.mjs`） | `agent.config?.agent?.engineering === true` | **handler 前置判**（`session/set_config_option`：`configId==="mode" && value==="plan"` · `session/set_mode`：`params.mode==="plan"`）⇒ `{ ...ACP_ERRORS.INVALID_PARAMS, message: 共用文案常量 }`；`applyConfigOption` 布尔契约零改（`false` 仍 = `unknown configId`——工程拒绝不经该路径，同档既有的误导文案不再可达） | ACP 错误响应 `message`（共用文案常量逐字） |
-| VSC 面板开关（`thincoder-vscode/src/extension/chat-panel.mjs` `_setPlanMode`） | `agentSettings(_agentSettingsSession()).engineering`（槽权威面——先例 `thincoder-vscode/src/extension/chat-panel.mjs` ∥ `thincoder-vscode/src/extension/settings.mjs`） | 不写槽 + 回推 `{type:"planMode", active:false}`（回弹） | webview plan 按钮 **disabled + title**（`applyModeButtons`——`thincoder-render-core/composer/controls.mjs` 置 `planBtn.disabled = _engOn === true`；title = 新增键 `toolbar.planDisabled`，`thincoder-vscode/locales/en.json` + `thincoder-vscode/locales/zh.json` 同步）+ 点击守卫（同档） |
-
-**排除面矩阵（FR31 边界项——本档裁定，逐格给理由）**：
-
-| 面 | 是否排除 | 理由 |
-|---|---|---|
-| depth-0 主 agent · CLI | 是 | 需求本体（用户实测场景）；`/eng` 与核 `eng` 工具两处翻转点须清零 |
-| depth-0 主 agent · VSC | 是 | 同一产物两端同源（§13.2「两端同一套、各自实现」）；端差仅在「模式位由谁传」（见下） |
-| depth>0 子代理（eng-coder / eng-designer / explore · 工程模式） | **是** | ① 子代理的「计划」= 任务书（父侧已做）——入 plan 只会自我只读化，与其职责（写设计 / 实现审计 / 勘察）冲突；② 话术冲突同在主代理；③ 角色面已排除而工具面留口 = 半排除：工程模式 role enum 已无 `plan`（`thincoder-core/agent/family-tools.mjs` 的 role enum）+ spawn 门机械拒 `role='plan'`（`thincoder-core/agent-tools/subagent.mjs` 的门段）；④ 判据句最短「工程模式则无 plan 工具」，不带深度分支 |
-| 普通模式（全深度、两端） | 否 | FR31 边界：普通模式零改（`thincoder-core/prompts/persona-normal.md` 的 plan 引导照常有效） |
-
-**端差面（两产品各自实现，语义同源）**：
-
-- CLI 路径 = 核 `thincoder-core/agent/setup.mjs` 的装配段，**已传** `engineering`（同段取 `agent.config?.agent?.engineering === true`）⇒ 核改一处即生效；
-- VSC 路径 = `thincoder-vscode/src/agent/setup.mjs` 的装配段 **未传** `engineering`（端差原因：该参数的既有唯一消费点 `filteredSubagent` 被端侧 `decorate.subagent` 整体替换 ⇒ 端侧无消费点）。**新增的固定段裁剪不被 `decorate` 覆盖** ⇒ VSC 须补传，且装配块须下移至模式判定（`applySlotSessionState`，同档）之后方能取值——两个产品从此同口径：装配入参 = 工程模式真值。
-- **VSC 侧 depth>0 装配面（两条活体面，逐条钉定真值来源）**：
-  ① **spawn 子代**（eng-coder / eng-designer / coder / explore 经 `subagent` 装配）：真值 = 核强制位（`thincoder-core/agent-tools/subagent-spawn.mjs` 的工程角色置 `engineering: true` 处）；
-
-  子代执行走核 `runChildPipeline → runAgent`（`thincoder-core/agent-tools/subagent-async.mjs` 两处）⇒ 子代面闭环（以强制位为准）。
-
-  ② **VSC 旁路面**（视觉渠道子代理：`thincoder-core/vision-reader.mjs` 的 `runAgent(..., { depth: 1, role: "explore", maxTurns: 10 })`——不传 `engState` / `engPersist`）：
-
-  该面工程真值回落**用户配置文件**的镜像（`thincoder-vscode/src/agent/setup.mjs` · `thincoder-vscode/src/agent/agent-state.mjs`），经核 `eng` 工具 / CLI 侧开的工程会话可派生 false ⇒ 该子代理装配仍含 `plan`。
-
-本条里「用户配置文件」的原件名（用户态配置，不是仓内清单——围栏块内不构成指针）：
+### 2.4 模块依赖
 
 ```text
-config.json
+MANIFEST → 文档根、项目归属、phase
+LEDGER ↔ BATCH-RECORD → 工作项与过程结算
+ADVISOR → 设计评审 → design token
+SUBAGENT → token + batchDoc → ENG-CODER
+WRITE GATE → 目标面 + 在途工作项
+DOC-CHECK / DOC-GRAPH → 当前文档与变更区
+VERIFY → 实际验证声明
 ```
 
-
-  **补传**（真值 = 槽权威同源）：`thincoder-vscode/src/extension/panel-messages.mjs` 取 `agentSettings(panel._agentSettingsSession()).engineering` 传入 `runVisionReader`，`thincoder-core/vision-reader.mjs` 携 `engState: { enabled }` ⇒ 该面与 depth-0 同源。
-- **在飞回合翻转窗（边界）**：VSC 翻转点（`thincoder-vscode/src/extension/panel-messages-settings.mjs` 的 `handleSetEngineeringEnabled` / `thincoder-vscode/src/extension/chat-panel.mjs` 的 `_setPlanMode`）
-  在**在飞回合内**只收正槽位——活体 `agent.config.agent.engineering` / `planMode` 由下一次 hydrate 收正 ⇒ 该回合剩余轮次内 `planMode` 可仍为 true、当轮表内仍有 `plan`。
-  **不新增机械门**（真值 = 槽权威）；**零残留**（下一轮 hydrate 收正）。窗口限定与 AC12 / AC14 / T12 的判据行同口径（非条件断言，均为「仅 VSC · 在飞回合内 · 下一轮 hydrate 收正」）。
-
-**判据链（不变量式，消费面零改）**：
-
-```text
-engineering 真值 ──► 固定段裁剪（plan / task 不入表）──────► 模型不可见（①）
-                ├──► 命令面拒绝（/plan · ACP · VSC 面板）─► 半状态不产生（②）
-                └──► clearPlanMode（三翻转 + 两恢复）────► planMode 恒 false（③）
-                         └─► 消费面零改（core 侧五处为示例：dispatch.mjs · run-stages.mjs · context.mjs
-                             · render-frame.mjs（PLAN 常量行 ∕ `bannerPrefix`）· session.mjs（槽保存）；VSC 载体面 / 槽写面同类面见 §2.4 依赖表行）
-```
-
-**受影响文件表**（测试落点 = T10–T14 的建议就近档；体量按 `doc_check` 的 `lines` 量，不落绝对值）：
-
-| file | 行数面 | 改动面 |
-|---|---|---|
-| 核 `thincoder-core/agent/family-tools.mjs` | — | 固定段按 `engineering` 裁剪（返回式 + 注释）；解构形态零改 |
-| 核 `thincoder-core/agent-tools/plan.mjs` | — | 新增 `clearPlanMode(agent)` + 拒绝文案常量（TUI / ACP 两面共用一条；VSC 面提示 = webview i18n 键 `toolbar.planDisabled`） |
-| 核 `thincoder-core/agent-tools/eng.mjs` | — | `enter` 分支（翻态后）调 `clearPlanMode` |
-| 核 `thincoder-core/session-lifecycle.mjs` | — | 槽恢复面清零（planMode 与 engineering 判定之后——清 `planMode` + 未注入提示语；CLI 槽在下次保存随内存值收正） |
-| CLI `thincoder-cli/src/tui/cmd-plan.mjs` | — | 工程模式拒绝分支（提示行 + 零翻转） |
-| CLI `thincoder-cli/src/tui/cmd-eng.mjs` | — | ON 翻转后 `clearPlanMode` + 槽 `data.planMode = false` + 清零提示行 |
-| CLI `thincoder-cli/src/acp/handlers-session.mjs` | — | **两 handler 前置判**（`session/set_config_option` / `session/set_mode`）⇒ 携共用文案的 `INVALID_PARAMS`；`applyConfigOption` 布尔契约零改（同档）；`normal` 照常（唯一合法态，幂等） |
-| VSC `thincoder-vscode/src/agent/setup.mjs` | — | 装配块下移至模式判定后 + 传 `engineering`；水合发现槽 `planMode:true` ∧ engineering ⇒ 槽回写 false（先例同档）；拆分方案见下 |
-| VSC `thincoder-vscode/src/agent/agent-state.mjs` | — | 生效值收正（engineering ⇒ `_planMode=false`，优先于槽 `planMode`；纯函数面零 IO） |
-| VSC `thincoder-vscode/src/extension/chat-panel.mjs` | — | `_setPlanMode` 工程模式拒绝（真值 = `agentSettings(_agentSettingsSession()).engineering`；不写槽 + 回弹） |
-| VSC `thincoder-vscode/src/extension/panel-messages-settings.mjs` | — | `handleSetEngineeringEnabled` ON ⇒ 调 `panel._setPlanMode(false)` |
-| VSC `thincoder-vscode/webview/mode-buttons.js` | — | 工程模式 plan 按钮 disabled + title（`toolbar.planDisabled`）+ 点击守卫（`applyModeButtons` ∥ 点击两处） |
-| VSC `thincoder-vscode/src/extension/panel-session.mjs` | — | 装载推送改读生效值（工程真值 ⇒ `planMode` 推送 `active:false`） |
-| VSC `thincoder-vscode/src/extension/panel-messages.mjs` | — | 取槽同源 engineering 传入 `runVisionReader` |
-| VSC `thincoder-vscode/src/extension/image-handler.mjs` | — | 旁路 runAgent 携 `engState: { enabled }`（工程真值同源） |
-| VSC `thincoder-vscode/locales/en.json` · `thincoder-vscode/locales/zh.json` | — | 新增 `toolbar.planDisabled` 一键（两 locale 同步） |
-| 核 | — | 工程模式固定段断言（depth-0 + 子代理面）；普通面既有断言零改 |
-| CLI | — | `/plan` 工程拒绝 + 普通模式回归 |
-| CLI | — | 清零断言（内存位 + 槽位） |
-| CLI | — | `set_mode` / `set_config_option` 拒绝断言 |
-| CLI | — | 恢复清零断言（槽 `engineering` + `planMode` 双真；恢复后槽 `planMode` 收正） |
-| VSC | — | 槽恢复清零断言（`_planMode` 内存位 + 槽位） |
-| VSC | — | `_setPlanMode` 拒绝断言（不写槽 + 回弹） |
-| VSC | — | plan 按钮 disabled + title 断言（happy-dom 真 `thincoder-vscode/webview/chat.js` 驱动全量 id fixture；`agentSettings` engineering=true 注入面） |
-
-**VSC `thincoder-vscode/src/agent/setup.mjs` 拆分**：装配段（家族段装配 / MCP 连接 / 基础集 · 全表 · `toolByName` · `toolSchemas` 构建；同档的装配段）⇒ 迁入既有邻档 `thincoder-vscode/src/agent/setup-tooltable.mjs`
-
-（纯结构搬移零语义；缝 = 导出函数 `buildToolTable`；落位与行数见 `docs/core/design/MANIFEST.md` §2.3 的档级行数表）。
-触发条件（拆分后沿用）= 越 800 硬限，或下一次触碰该档的批。拆后估算：`thincoder-vscode/src/agent/setup.mjs` ≈432 · `thincoder-vscode/src/agent/setup-tooltable.mjs` ≈325。
-
-**提示词面（评估结论 = 零改，理由三条）**：① 工程两档（`thincoder-core/prompts/persona-engineering.md` / `thincoder-core/prompts/discipline-engineering.md`）与中文模板零处指示 plan 模式（实读 grep 命中仅「并发池上限：其他角色（explore/plan/coder）池」= 角色域枚举，非 plan 模式指令）。
-
-  ② 工具不注册已由结构兜底——再加「不要用 plan 模式」句 = 为不可见选项写限制（承反模式之裁）；③ `ENG_ON_REMINDER`（`thincoder-core/agent/helpers.mjs`）无 plan 字样，无悬挂指令。
-
-**边界（不做什么）**：普通模式零改（工具 / 命令 / ACP / 恢复四路径全带宽）· **三条 reminder 文本本体不改**——`PLAN_EXIT_REMINDER` 现行 = `thincoder-core/agent-tools/plan.mjs`（同档三处引用位，普通模式仍用）；
-
-不新增机械门（拒绝点 = 既有命令面与既有翻转点）· 不改 `_setPlanMode` 的既有槽写契约（合法态仍 = 槽写 + 回推面板；工程态拒绝 = 不写槽 + 回弹）· VSC 新增 i18n 键仅 `toolbar.planDisabled` 一条（plan 按钮禁用态 title，两 locale 同步）。
-
-### 2.4 模块间接口 / 依赖
-
-| 依赖 | 方向 | 接口（契约） |
-|---|---|---|
-| M4/M6/M8/M9 → M1 | 读 | manifest schema 字段（`docRoot` / `phase` / `codePaths` / `index`） |
-| M3 → M1 | 读 | `docRoot.batches`（第二基底复判——双基底落点；缺键用 M1 默认值 fallback） |
-| M1 → 模型上下文 | 写 | 情境行（`phase`——transient 机器行，E5.1；depth-0 + 工程模式门） |
-| M2 ⇄ M3 | 互指 | 两账咬合（条目 `task_book` 指针 → 批次档 §2） |
-| M4 → M1 | 读写 | manifest 写门 + 台账写命令装配（仅主 agent） |
-| M4 → M6 | 读 | 槽文件（token 门读 M6 签发的凭证，无活槽即拒） |
-| M6 → M4 | 读 | `resolveReviewTargetPaths`（M4 拆出的 `thincoder-core/agent/write-gate.mjs` 单一权威源——M6 复用，避免 advisor → dispatch 循环依赖） |
-| M5 → M1 | **零读面** | spawn 门判据不依赖 manifest |
-| M5 → M4 | 读 | eng-coder spawn 需活 token（活槽判据） |
-| M8 → M1 | 读 | `docRoot`（目录落点）；判据参数 = 内置常量，不读 manifest |
-| M6 → M1 | 读 | 评审对象来源 = manifest `docRoot`（声明面，E6 微调点） |
-| M11 ← VSC 装配 | 读 | `engineering` 模式位（端差面：VSC 装配块下移后取派生值——E7） |
-| M11 → planMode 消费面 | 不变量 | 「工程模式 ⇒ `planMode` 恒 false」——core 侧五处（示例）：`thincoder-core/agent/dispatch.mjs` · `thincoder-core/agent/run-stages.mjs` · `thincoder-core/context.mjs` · `thincoder-cli/src/tui/render-frame.mjs`（两处）· `thincoder-core/session.mjs`（槽保存）；同不变量下另有 VSC 载体面（`thincoder-vscode/src/agent.mjs`）与槽写面（`thincoder-core/token-ttl.mjs` · `thincoder-core/session-slot-write.mjs` · `thincoder-core/session-lifecycle.mjs`）——**全部零改** |
+依赖通过 core 导出和工具参数表达，端侧只传宿主状态。
 
 ### 2.5 整体数据流
 
-```text
-进入（按用点解析 manifest：归属 ∨ 发现；缺档 ⇒ 落点 = 会话锚建档；情境值随后由 E5.1 情境行进模型上下文）
-  └─► 需求进台账（items.status=待讨论，主 agent）
-        └─► 攒批（阈值触发）→ 开批（批次档 §1）
-              └─► eng-designer 设计（§2 任务书 + 架构/模块设计档）
-                    └─► advisor 设计评审（§3 发现表）
-                          └─► 用户批准 → token 签发（槽文件）
-                                └─► eng-coder 实现（§5 实施记录 + token 门放行）
-                                      └─► 父侧验收 + 代码评审
-                                            └─► 收口（一次事务：§6 非空 + 台账核销归档）
-                                                  └─► 批次档冻结
-（多批并行：各批按本链各走一份——批次档 / 台账条目 / 共享文档层可同时在飞；
-  链上无全局互斥点、无「当前批次」单槽）
-```
+1. 主 agent 与用户确认需求并登记。
+2. 开批并绑定工作项。
+3. eng-designer 调查并写设计。
+4. advisor 评审，必要时修复。
+5. 用户批准或既有整批授权生效。
+6. eng-coder 按设计与凭证实施。
+7. 实施者审计、自修和验证。
+8. 必要时进行代码评审与修复。
+9. 主 agent 完成文档对账、用户确认、收口和结算。
 
 ### 2.6 关键技术决策
 
 | # | 决策 | 理由 |
 |---|---|---|
-| KD1 | 台账 = SQLite 单表 + `status` CHECK 枚举（归档 = 状态子集） | 单表更简、枚举机械锁死、COUNT 单源；归档语义用 `status` 值表达足够 |
-| KD2 | 机检参数 = 内置常量 `DOC_CHECK_BUILTINS`，不落声明面 | 硬编码本仓路径不可迁移（N3 违）；参数化的前提是不同项目确需不同判据——实测没人改过，可配即会漂（判据不漂 = 参数源不漂） |
-| KD3 | 写权门禁 = 机械面（继承）+ 行为面（提示词）分层 | 语义写权不可机判（谁写需求 = 语义），纯提示词无机械兜底 |
-| KD4 | 机检引擎 = 单引擎 + 内置参数（判据参数不落声明面） | 双引擎双源域 = 漂移源（v2 §8.7 明确要砍） |
-| KD5 | 提示词 = 代码单源（`thincoder-core/prompts/`）；规则的人读权威 = 中文机制文档 | 用户裁定：不设机检；一致性由收口核对兜底 |
-| KD6 | token 门 = 继承 v1 零改，仅评审对象来源改读 `docRoot` | 重写 token 门无必要（v2 §8.5 明示「继承 v1 只微调」） |
-| KD7 | 台账直用 `node:sqlite`（零依赖） | 引入第三方 SQLite 包违零依赖硬约束（ARCHITECTURE §1.1 约束 4） |
-| KD8 | plan 排除形态 = 卸载（不注册）而非「注册 + 报错」 | 用户裁决①：看不见的选项不会被选；注册但报错 = 白烧干扰回合 |
-| KD9 | 裁剪落点 = 核单源 `thincoder-core/agent/family-tools.mjs`（端壳不二次过滤） | 同一条规则两端各实现一次 = 两份矩阵 ⇒ 端侧只补传模式位 |
-| KD10 | 清零 = 单点 `clearPlanMode`（三翻转 + 两恢复复用） | 清零点含「未注入 plan 提示语」过滤（否则 `PLAN_EXIT_REMINDER` 可跨模式落地）；内联 = 五份副本 |
-| KD11 | 排除面 = 全深度（含子代理）+ 两端 | 见 §2.3 E7 矩阵：角色面已排除（role enum + spawn 门），工具面留口即半排除；判据句最短 |
+| KD1 | 三类记录分开 | 项目声明、待办和过程回答不同问题 |
+| KD2 | 文档判据内置，路径声明外置 | 判据稳定，项目结构可迁移 |
+| KD3 | 机械与行为责任分层 | 防止把语义责任交给路径检查 |
+| KD4 | 提示词只有产品正本 | 避免运行期文本双源 |
+| KD6 | 凭证绑定设计和会话 | 防止批准被复用到另一项工作 |
+| KD8 | 工程模式卸载 plan | 避免与已有设计批准链竞争 |
+| KD9 | 调度声明 files 与 dependsOn | 文件重叠和结果依赖由调度器处理 |
 
-> **KD7 风险登记**：`node:sqlite` 在 Node 24（24.18.0）可用、无需 `--experimental-sqlite`——建表（含 `trigger` 裸列）/ INSERT / CHECK 拒非法值 / NOT NULL 拒 NULL 均实测通过（M2 模块档 AC-6 / AC-M2-6 记录）。回退方案（第三方 SQLite 包）不再需要。
+## 3. 验证
 
-## 3. 测试层
+### 3.1 验收面
 
-### 3.1 验收标准（逐条回指需求；可机判项或显式标注人工评审项）
+- 每类记录的作者、状态和写权。
+- 设计评审、用户批准、凭证签发与消费。
+- eng-coder 参数缺失、错误和过期。
+- 批次收口与工作项结算的成功和失败回滚。
+- 普通模式与工程模式的工具差异。
+- plan 的工具、命令、面板和恢复行为。
+- 文档检查只执行当前三项判据。
 
-| # | 验收标准 | 回指 |
-|---|---|---|
-| AC1 | 七条目 E1–E7 各有架构级方案，无空条目 | E1–E7（覆盖） |
-| AC2 | 模块划分（§2.2）每行带 v2 依据（章号落在 §5–§9）+ 锚定现有代码模块（现有 file/dir → 变更类型），无抽象目标模块、无缺失行 | §2.2（覆盖） |
-| AC3 | manifest schema 字段枚举完整（**五键**：`version` / `phase` / `docRoot` / `codePaths` / `index`——枚举判据 = phase 取值 · docRoot 五子键 · 两族声明键形态） | E1/E2/E5 |
-| AC4 | 台账 schema 含六态 CHECK 枚举 + 咬合必填约束 | E1 |
-| AC5 | 写权矩阵每条写权能答「靠哪个门禁」（机械/行为） | E3（N1 结构优先） |
-| AC6 | 机检引擎 = 单引擎 + 参数内置常量（`DOC_CHECK_BUILTINS`）、范围 = 传入清单，无硬编码本仓路径 | E4（N3 可迁移） |
-| AC7 | token 门声明「继承 v1 + 唯一微调点（评审对象来源读 `docRoot`）」，无其他改动 | E6 |
-| AC8 | 与 v2 需求草案无矛盾（引用不越界、不改写需求原文）——**人工评审项**（语义判据，不标可机判） | 全局 |
-| AC10 | 每条机制变更带两端接线（§2.2 接线表：核 + CLI + VSC 各命名文件，零改处显式标「零改」） | 全局（重做锚） |
-| AC11 | 情境值进模型上下文（#28）：逐字行形 / 幂等 / 值变单活体 / 压缩后自愈重推 / depth-0 + 工程模式门——判据 = 模块设计 `docs/core/design/MANIFEST.md` §3.1 AC-N1–AC-N6、AC-N3b | E5.1（#28） |
-| AC12 | 装配面：工程模式装配名集不含 `plan`（depth-0 + 子代理面：核 spawn 子代 + VSC 旁路面），普通模式名集含 `plan`——判据 = T10；核单源（两端传模式位）；**窗口限定**（VSC 在飞回合内翻转 ⇒ 当轮余轮表内可有 `plan`，下一轮 hydrate 收正——端差面边界句） | FR31 ① |
-| AC13 | 命令面：`/plan` · ACP `session/set_mode` / `set_config_option` · VSC 面板开关在工程模式下拒绝且提示可见（ACP = 错误响应携共用文案；VSC = plan 按钮 disabled + title）、状态不变 | FR31 ② |
-| AC14 | 残留清零：开工程模式（核 `eng` 工具 / `/eng` / VSC 面板开关）与槽恢复（CLI / VSC）后 `planMode` 恒 false（内存 + 槽位——恢复面槽值一并收正）——判据 = T12 + T13；**窗口限定**：仅 VSC · 在飞回合内 · 下一轮 hydrate 收正（当拍槽位已收正、活体内存值随下轮 hydrate 归位） | FR31 ③ |
-| AC15 | 普通模式全带宽零回归（工具注册 / `/plan` / ACP mode / 槽恢复四路径）——判据 = T14 | FR31 ④ |
+### 3.2 验证纪律
 
-### 3.2 用例表
-
-| # | 场景 | 输入 | 预期输出 |
-|---|---|---|---|
-| T1 | 正常：两账收口一次事务 | §6 验收结论 + 台账条目状态推进 | 两者同步；任一步失败即回滚（台账回滚 + §6 不写） |
-| T2 | 正常：写权机械门禁 | 无 token 写产品代码 / 越段写批次档 | 门禁拒（fail-closed） |
-| T3 | 正常：机检参数内置 | 清单含一档（含 >300 字符行）· 同清单改 manifest 任意键 | 按常量 300 判红，读数不随 manifest 变（无参数声明面） |
-| T4 | 边界：台账六态枚举 | 写入枚举外 status | schema CHECK 拒 |
-| T5 | 边界：manifest 缺字段 | 缺 `docRoot` 键 | 用默认值（便利 fallback） |
-| T7 | 错误：token 过期 | spawn 带过期 token | 门禁拒 + 清理槽 |
-| T8 | 正常：情境行进模型上下文 | 工程模式 + depth-0 + manifest 有 `phase` | 逐回合恰一行情境行（`…phase: <值> (rigor: <light\|strict>).`）；值不变不重复、值变换新 |
-| T9 | 边界：压缩吞掉情境行 | 压缩后 history 无该行 | 下一回合自动重推（活体守卫自愈） |
-| T10 | 正常：固定段模式裁剪 | `assembleFamilyTools({depth:0, engineering:true})` / `{depth:1, role:"eng-coder", engineering:true}` / `{depth:0}` / `{depth:1, role:"plan"}` + VSC 旁路面（视觉渠道子代理携 `engState.enabled:true`） | 工程面名集不含 `plan` ∧ 不含 `task`（含该子代理）；后两者含（普通面回归）；普通面固定段序契约（task → plan → timer）保持 |
-| T11 | 边界：命令面拒绝 | 工程模式下 `/plan` · ACP `set_mode{mode:"plan"}` · `set_config_option{configId:"mode", value:"plan"}` · VSC `setPlanMode{value:true}` | 四处均拒 + 提示可见；`planMode` 保持 false；ACP 拒绝携共用文案（非 `unknown configId`）；VSC 按钮 disabled + title + 回弹；ACP `mode:"normal"` 照常接受 |
-| T12 | 边界：翻转清零 | `planMode=true` 后开工程模式（核 `eng` 工具 / `/eng` / VSC 面板开关） | `planMode=false` + 槽 `planMode=false`（CLI `/eng` · VSC）+ 未注入的 plan 提示语被摘除；**VSC 在飞回合内窗口**（AC14 限定）：当拍只收正槽位 ⇒ 该回合余轮内存值可仍 true，下一轮 hydrate 收正 |
-| T13 | 边界：恢复清零 | 槽 `{engineering:true, planMode:true}` → CLI `applySession` / VSC `applySlotSessionState` | 恢复后 `planMode`（VSC `_planMode`）= false，**槽 `planMode` 一并收正**（装载推送不再重推 plan-active） |
-| T14 | 错误：普通模式零回归 | 普通模式装配 / `/plan` 切换 / ACP `mode:"plan"` / 槽 `planMode:true` 恢复 | 四条路径全带宽不变（**除所列矩阵镜像收正**外，既有测试零改全绿） |
+使用真实工具调用、结构化状态和可观察结果。不要用提示词某句存在、历史用例编号或一次计数作为当前机制正确的替代证据。

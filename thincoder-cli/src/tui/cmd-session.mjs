@@ -1,5 +1,6 @@
 import { listSlots, switchToSlot, applySession, renameSlot, activeSlot, slotOccupancy, readEndMarker, sessionDescriptor, loadSlotFile, ledgerHealth } from "@thincoder/core/session.mjs"
 import { resolveEngineeringManifest } from "@thincoder/core/manifest.mjs"
+import { resolveSessionWorkMode } from "@thincoder/core/config.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { restoreLines } from "./startup.mjs"
 import { stringWidth, sliceByWidth } from "./render.mjs"
@@ -100,8 +101,7 @@ export async function handleSessionCommand(ctx) {
   // `workspace` ⇒ 放行——放行 ⇒ **零附着**）。拒 ⇒ 切槽整体不发生（switchToSlot /
   // applySession 均不调——零副作用）+ 原因行；准 ⇒ 既有切换 + applySession 之后一行附着。
   const preview = loadSlotFile(agent.cwd, e.slot)
-  const slotEng = preview?.engineering
-  const targetEng = preview != null && (slotEng !== undefined ? slotEng === true : agent.config?.agent?.engineering === true)
+  const targetEng = preview != null && resolveSessionWorkMode(preview, agent.config?.agent) === "engineering"
   let manifestAfterSwitch = null
   if (targetEng) {
     const r = resolveEngineeringManifest(agent.cwd, { writer: "main" })

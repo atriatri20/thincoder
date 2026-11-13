@@ -23,7 +23,9 @@ import { formatDeclaredContextK } from "@thincoder/core/model-specs.mjs"
 import { loadMcpServers } from "../config-mcp.mjs"
 import { removeProviderFlow, setKeyFlow, probeProviderAdmission, ui } from "./provider-flows.mjs"
 import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection, postProviderError, pushTeamStatus, saveProviderModelContext } from "./settings.mjs"
-import { setSlotAdvisorGuard, setSlotEngineering } from "./session-io.mjs"
+import { setSlotAdvisorGuard } from "./session-io.mjs"
+import { setSlotMode } from "@thincoder/core/session-slot-write.mjs"
+import { WORK_MODES } from "@thincoder/core/config-migrate.mjs"
 import { teamLogin, teamLogout, teamRotate } from "./team.mjs"
 // F-W21（登录面补全批）：状态栏团队 item 随动（webview 登/退成拍——命令流外的第二条写径）
 import { refreshTeamSurface } from "./team-surface.mjs"
@@ -241,16 +243,15 @@ export function handleSetAdvisorGuard(panel, msg) {
   panel._pushSettingsLight()
 }
 
-/** 迁出自 `panel-messages.mjs` 的 case "setEngineeringEnabled"。 */
-export function handleSetEngineeringEnabled(panel, msg) {
-  const on = !!msg.value
-  // ENG-PLAN-EXCLUSION（FR31 ③ / T12——翻转点③·VSC）：ON 先清 plan 残留（槽 planMode=false
-  // + 回推面板）——清在工程位写槽之**前**（此刻 panel 读到的仍是旧模式位——走 `_setPlanMode`
-  // 既有槽写契约；工程位写后 plan 面才是拒绝态）。否则槽 `{engineering:true, planMode:true}`
-  // 半状态每次装载复活（FR31 ③ 要消灭的形态）。
-  if (on) void panel._setPlanMode(false)
-  try { setSlotEngineering(_cwd(), panel._ensureSlot(), on) } catch {}
-  panel._pushSettingsLight()
+/** 当前会话工作模式：固定三值，非法载荷零写；进入 engineering 前先清 PLAN。 */
+export async function handleSetMode(panel, msg) {
+  if (!WORK_MODES.includes(msg.value)) {
+    console.error(`[setMode] invalid value: ${JSON.stringify(msg.value)}`)
+    return
+  }
+  if (msg.value === "engineering") await panel._setPlanMode(false)
+  try { setSlotMode(_cwd(), panel._ensureSlot(), msg.value) } catch {}
+  await panel._pushSettingsLight()
 }
 
 /** 迁出自 `panel-messages.mjs` 的 case "setPlanMode"。 */

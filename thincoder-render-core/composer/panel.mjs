@@ -291,6 +291,7 @@ export function createComposerPanel(deps = {}) {
     toggleAuto: controls.toggleAuto,
     togglePlan: controls.togglePlan,
     toggleEng: controls.toggleEng,
+    setMode: controls.setMode,
   }
 
   // ── 提交面（`send.js` 逐字；DOM 查询 → 元素引用；跨面副作用 → ⑤ hooks）──

@@ -294,7 +294,7 @@ export const applyPatchTool = {
       for (const p of planned) {
         inFlight = p
         await mkdir(dirname(p.abs), { recursive: true })
-        const r = await writeThroughPath(p.abs, p.content, { op: "write", stage: true })
+        const r = await writeThroughPath(p.abs, p.content, { op: "write", stage: true, agent: ctx.agent })
         if (r.via === "editor") {
           committedByEditor.add(p.abs)
           committed.add(p.abs) // 注入径无暂存档（即时提交）⇒ 它已经在盘上了

@@ -20,7 +20,7 @@
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 
 import { removeTempDirBestEffort } from "../teardown.mjs"
 import { countContentLines } from "../../thincoder-core/agent-tools/batch-tier-gate.mjs"
@@ -123,42 +123,55 @@ test('CLI 7-4 错误 · 批档同目录留本批自己的单测档 ⇒ 收口被
   assert.doesNotMatch(receipt, /本批批内单测档/, `放行零回执（本门不出回执段）：${receipt}`)
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
 })
-// 7-5：段判据的围栏语义——**嵌套围栏**（外层四反引号包内层三反引号）的内层代码不入段。
-// 缺口来源 = 2026-10-27 围栏闭合判定缺陷：闭合只比字符不比长度 ⇒ 外层开启行被内层的三反引号提前「闭合」，
-// 内层代码行落回正文、被并成一段 ⇒ 合法档被判「文字太长」而拒。两半都成立才算过：
-// 嵌套档 0 段命中（收口放行）∥ 同字数去围栏对照档恰 1 条（收口照拒）。
+// 7-5：段判据排除围栏与缩进代码块——嵌套围栏、四格空格、Tab 与提示词面都不入段。
+// 对照侧保留同字数去围栏正文：代码块 0 段命中（收口放行）∥ 普通正文恰 1 条（收口照拒）。
 const CODE_LINES = Array.from({ length: 5 }, (_, i) => `const v${i} = "${"c".repeat(66)}"`)
 const CODE_CHARS = CODE_LINES.reduce((n, l) => n + [...l].length, 0)
 /** 嵌套围栏档：外层 ```` 包内层 ```js（内层代码合计 > 300 字——认不出围栏就是一段 395 字）。 */
 const nestedFenceDoc = () => ["# 嵌套围栏档", "", "````", "```js", ...CODE_LINES, "```", "````", ""].join("\n")
-/** 对照档：同一批行去掉围栏标记（同字数、同内容，唯一差别 = 围栏）。 */
-const plainDoc = () => ["# 无围栏对照档", "", ...CODE_LINES, ""].join("\n")
+const indentedCodeDoc = () => ["# 缩进代码档", "", `    ${"四".repeat(350)}`, "", `\t${"制".repeat(350)}`, ""].join("\n")
 
-test("CLI 7-5 嵌套围栏档内层代码不入段判据：收口放行，对照档照拒", async () => {
+const promptCodeDoc = () => ["# 提示词代码档", "", `    ${"码".repeat(350)}`, ""].join("\n")
+
+test("CLI 7-5 围栏与缩进代码块不入段判据：收口放行，普通正文对照照拒", async () => {
   assert.ok(CODE_CHARS > 300, `夹具前提：内层代码合计 ${CODE_CHARS} 字 > 段判据阈值 300——认不出围栏就是超长段`)
 
   // 两半 = 两份夹具、两次收口：一次 `batch close` 只能给一个 verdict（跑一次同时断「放行」与「被拒」不可能），
   // 故按 RTM 句末「两半都成立才算过」逐半各断一次——先例 = 本档 7-11（前半 ∥ 后半）∥ 7-13（另起一份夹具）。
-  // 前半：嵌套围栏档入笔域集 ⇒ 0 段命中、收口放行
+  // 前半：围栏与缩进代码档入笔域集 ⇒ 0 段命中、收口放行
   const root = makeProject("r75")
   gitRepo(root)
-  writeFileSync(join(root, "docs/notes/nested-fence.md"), nestedFenceDoc())
-  commit(root, "嵌套围栏档")
-  const probe = runDocCheck(root, { docs: [join(root, "docs/notes/nested-fence.md")], moment: "close", regions: null })
-  assert.equal(probe.hits.filter((h) => h.kind === "paragraph").length, 0, `嵌套围栏档应零段命中（内层代码不入段），实读：${probe.report}`)
+  const codeDocs = [
+    ["docs/notes/nested-fence.md", nestedFenceDoc()],
+    ["docs/notes/indented-code.md", indentedCodeDoc()],
+    ["thincoder-core/prompts/code.md", promptCodeDoc()],
+  ]
+  for (const [rel, text] of codeDocs) {
+    mkdirSync(dirname(join(root, rel)), { recursive: true })
+    writeFileSync(join(root, rel), text)
+  }
+  commit(root, "围栏与缩进代码档")
+  const probe = runDocCheck(root, { docs: codeDocs.map(([rel]) => join(root, rel)), moment: "close", regions: null })
+  assert.equal(probe.hits.filter((h) => h.kind === "paragraph").length, 0, `围栏与缩进代码档应零段命中：${probe.report}`)
 
   const receipt = await depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, []))
-  assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 3 档", `批档 + 本批两档 + 嵌套围栏档 = 4 档，批档面移出 ⇒ 判域 3 档且全清：${receipt}`)
+  assert.equal(gateLineOf(receipt), `[doc-check gate] DOC-CHECK GATE: PASS · 范围 ${codeDocs.length + 2} 档`, `代码档与本批两档入判域且全清：${receipt}`)
   assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `收口放行且落盘：${receipt}`)
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
 
-  // 后半 = 反证，另起一份夹具（前一本批档已冻结）：同字数、去围栏 ⇒ 一段 395 字，段判据照拦
+  // 后半 = 反证，另起一份夹具：普通正文与其后的连续缩进续行必须合成同一段、逐字计入长度
   const root2 = makeProject("r75b")
   gitRepo(root2)
-  writeFileSync(join(root2, "docs/notes/plain.md"), plainDoc())
-  commit(root2, "去围栏对照档")
+  const continuationHead = "    接续"
+  const continuationLong = `\t${"续".repeat(350)}`
+  const controlText = ["# 无围栏对照档", "", ...CODE_LINES, continuationHead, continuationLong, ""].join("\n")
+  const controlLength = CODE_CHARS + [...continuationHead].length + [...continuationLong].length
+  writeFileSync(join(root2, "docs/notes/plain.md"), controlText)
+  commit(root2, "普通正文与缩进续行对照档")
   const controlProbe = runDocCheck(root2, { docs: [join(root2, "docs/notes/plain.md")], moment: "close", regions: null })
-  assert.equal(controlProbe.hits.filter((h) => h.kind === "paragraph").length, 1, `对照档应恰 1 条段命中（阈值没动）：${controlProbe.report}`)
+  const controlHits = controlProbe.hits.filter((h) => h.kind === "paragraph")
+  assert.equal(controlHits.length, 1, `对照档应恰 1 条段命中（阈值没动）：${controlProbe.report}`)
+  assert.equal(controlHits[0].len, controlLength, `缩进续行不能中途被误认成代码块而漏计：${controlProbe.report}`)
 
   await assert.rejects(
     () => depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root2, [])),
@@ -299,35 +312,43 @@ test('CLI 7-9 错误 · 笔域集内一档在工具描述面（400 字符段 + �
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
 })
 
-// 7-13：段判据的列表项符号集认得出中文族（`·` ∥ `•` ∥ 圈号 `①`–`⑳`）。
-// 现场是写门那一侧：中文列表被并成一段、超 300 ⇒ 写入当场被拒 ⇒ 仓里留不下这种行（「盘上零处」不是「没命中」）。
-// 故本例走真收口轨：三份中文列表档入笔域集 ⇒ 放行；同内容去标记的 400 字一段 ⇒ 照拒。
+// 7-13：段判据排除完整列表块与表格块；列表符号集同时覆盖中文族（`·` ∥ `•` ∥ 圈号 `①`–`⑳`）。
+// 现场是写门那一侧：结构行被并成一段、超 300 ⇒ 写入当场被拒 ⇒ 仓里留不下这种行（「盘上零处」不是「没命中」）。
+// 故本例走真收口轨：列表、表格及其续行入笔域集 ⇒ 放行；同内容去标记的 400 字一段 ⇒ 照拒。
 const CN_ITEM = "文".repeat(80)
 const CIRCLED5 = "①②③④⑤"
 /** 五项一项一行的中文列表档（每项 80 字 ⇒ 认不出列表项时它就是 400+ 字的长段）。 */
 const cnList = (mark) => "# 中文列表\n\n" + Array.from({ length: 5 }, (_, i) => mark(i)).join("\n") + "\n"
 
-test("CLI 7-13 正常 · 中文项目符号三族档入笔域集 ⇒ 收口放行；同内容去标记的 400 字对照档 ⇒ 收口被拒（文字太长，难于阅读）", async () => {
+test("CLI 7-13 正常 · 列表块与表格块整体免段长、普通正文对照照拒", async () => {
   const root = makeProject("r713")
   gitRepo(root)
   const bullets = [
     ["docs/notes/cn-dot.md", cnList(() => "· " + CN_ITEM)],
     ["docs/notes/cn-bullet.md", cnList(() => "• " + CN_ITEM)],
     ["docs/notes/cn-circled.md", cnList((i) => `${CIRCLED5[i]} ${CN_ITEM}`)],
+    ["docs/notes/list-continuation.md", `# 列表续行\n\n- 列表项\n  ${"续".repeat(350)}\n\n  ${"松".repeat(350)}\n\n普通正文。\n`],
+    ["docs/notes/list-fence.md", ["# 列表围栏", "", "- 列表项", "  ```text", "  示例。", "  ```", `  ${"围".repeat(350)}`, ""].join("\n")],
+    ["docs/notes/bare-table.md", ["项目 | 内容", "--- | ---", `长内容 | ${"表".repeat(350)}`, "", "项目 \\| 说明 | 内容", "--- | ---", `转义 | ${"转".repeat(350)}`, "", "`项目 | 说明` | 内容", "--- | ---", `码段 | ${"码".repeat(350)}`, ""].join("\n")],
+    ["docs/notes/pipe-table.md", `| 项目 | 内容 |\n| --- | --- |\n| 长内容 | ${"表".repeat(350)} |\n`],
+    ["thincoder-core/prompts/list.md", [`- ${"提".repeat(350)}`, "  ```text", "  示例。", "  ```", `  ${"示".repeat(350)}`, ""].join("\n")],
   ]
-  for (const [rel, text] of bullets) writeFileSync(join(root, rel), text)
-  commit(root, "中文项目符号三档")
+  for (const [rel, text] of bullets) {
+    mkdirSync(dirname(join(root, rel)), { recursive: true })
+    writeFileSync(join(root, rel), text)
+  }
+  commit(root, "列表块与表格块")
 
-  // 前置：三份档的列表行字面确实超阈（认不出符号 ⇒ 必被并成 410 字长段），否则本例空转、什么都证不了
+  // 前置：各结构档的行字面确实超阈；认不出完整块就会被并成长段，否则本例空转、什么都证不了
   for (const [rel, text] of bullets) {
     const merged = text.split("\n").filter((l) => l.trim() !== "" && !l.startsWith("#")).reduce((n, l) => n + [...l].length, 0)
     assert.ok(merged > 300, `前置：${rel} 的列表行字面合计 ${merged} > 300——认不出符号就是长段`)
   }
   const probe = runDocCheck(root, { docs: bullets.map(([rel]) => join(root, rel)), moment: "close", regions: null })
-  assert.equal(probe.hits.filter((h) => h.kind === "paragraph").length, 0, `三份中文列表档应零段命中：${probe.report}`)
+  assert.equal(probe.hits.filter((h) => h.kind === "paragraph").length, 0, `列表块与表格块应零段命中：${probe.report}`)
 
   const receipt = await depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, []))
-  assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 5 档", `三档 + 本批两档 + 批档自身 = 6 档，批档面移出 ⇒ 判域 5 档：${receipt}`)
+  assert.equal(gateLineOf(receipt), `[doc-check gate] DOC-CHECK GATE: PASS · 范围 ${bullets.length + 2} 档`, `结构档 + 本批两档入判域且全清：${receipt}`)
   assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `收口放行且落盘：${receipt}`)
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
 
@@ -335,10 +356,11 @@ test("CLI 7-13 正常 · 中文项目符号三族档入笔域集 ⇒ 收口放�
   const root2 = makeProject("r713b")
   gitRepo(root2)
   const controlRel = "docs/notes/cn-plain.md"
-  writeFileSync(join(root2, controlRel), cnList(() => CN_ITEM))
-  commit(root2, "去标记对照档")
+  const controlText = `${cnList(() => CN_ITEM)}\n  ${"正".repeat(350)}\n`
+  writeFileSync(join(root2, controlRel), controlText)
+  commit(root2, "去标记与缩进正文对照档")
   const controlProbe = runDocCheck(root2, { docs: [join(root2, controlRel)], moment: "close", regions: null })
-  assert.equal(controlProbe.hits.filter((h) => h.kind === "paragraph").length, 1, `对照档应恰 1 条段命中（阈值没动）：${controlProbe.report}`)
+  assert.equal(controlProbe.hits.filter((h) => h.kind === "paragraph").length, 2, `去标记与无前列表的缩进正文各应有一条段命中：${controlProbe.report}`)
 
   await assert.rejects(
     () => depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root2, [])),

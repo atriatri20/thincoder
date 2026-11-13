@@ -14,7 +14,7 @@
 import { existsSync, readFileSync } from "node:fs"
 import { parseModelRef, resolveChannelModel, resolveProviderPlan, resolveRuntimeProvider, defaultModelReason } from "./model-ref.mjs"
 // 老形态迁移核（M7 v2——纯函数零依赖——本文件超 500 行硬限拆分，VSC 同构文件）
-import { migrateLegacyModelFields } from "./config-migrate.mjs"
+import { migrateLegacyModelFields, resolveWorkMode } from "./config-migrate.mjs"
 import { expandHome } from "./expand-home.mjs"
 // 核内单一读写面 + 预设表（§2.5 #129 / #131——拆档以容纳 500 行硬限）
 import {
@@ -23,6 +23,7 @@ import {
 } from "./config-io.mjs"
 
 export { parseModelRef, resolveChannelModel, resolveProviderPlan, resolveRuntimeProvider, defaultModelReason, migrateLegacyModelFields }
+export { WORK_MODES, resolveWorkMode, resolveSessionWorkMode, setConfigWorkMode } from "./config-migrate.mjs"
 export { PROVIDER_PRESETS, presetToEntry, configDir, configPath, _setConfigPathForTest, _resetConfigPathForTest }
 // 核内单一写盘执行体（已迁 `config-io.mjs`）——本档 re-export 保持既有导入面（§2.5 #131）。
 export { writeConfigAtomic }
@@ -278,6 +279,11 @@ export function loadConfig() {
     traces: { ...DEFAULTS.traces, ...config.traces },
     diagnostics: { ...DEFAULTS.diagnostics },
   }
+
+  // Work mode is normalized from the raw input: a valid mode wins; legacy engineering is read
+  // only when mode is absent. The old boolean remains a derived runtime view, never a second authority.
+  merged.agent.mode = resolveWorkMode(config.agent)
+  merged.agent.engineering = merged.agent.mode === "engineering"
 
   // 丢弃要看得见（同节「丢弃要看得见 · 数据面载体」）：载体只在有丢弃时有值（无丢弃 ⇒ undefined，
   // 与 `[]` 同义）。一条一句挂数据层；出词归消费面——本批唯一消费方 = `/model` L1 列表首行

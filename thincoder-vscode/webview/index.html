@@ -55,7 +55,11 @@
         <button id="reasoning-btn" class="ctrl-btn active" title="Reasoning effort" aria-label="Reasoning effort" aria-haspopup="listbox">max</button>
         <button id="auto-btn" class="ctrl-btn" title="Auto-approve tools" aria-label="Toggle auto-approve">AUTO</button>
         <button id="advisor-btn" class="ctrl-btn" title="Advisor review" aria-label="Toggle advisor review">ADVISOR</button>
-        <button id="eng-btn" class="ctrl-btn" title="Engineering mode" aria-label="Toggle engineering mode">ENG</button>
+        <select id="mode-select" class="ctrl-btn mode-select" title="Session work mode" aria-label="Session work mode">
+          <option value="minimal">MIN</option>
+          <option value="normal" selected>NORMAL</option>
+          <option value="engineering">ENG</option>
+        </select>
         <button id="plan-btn" class="ctrl-btn" title="Plan mode (read-only exploration)" aria-label="Toggle plan mode">PLAN</button>
         <button id="settings-btn" class="ctrl-btn" title="Settings" aria-label="Open settings">⚙</button>
         <div id="model-dropdown" class="dropdown" role="listbox" aria-label="Model list" style="display:none"></div>

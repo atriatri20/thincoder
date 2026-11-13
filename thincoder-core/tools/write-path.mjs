@@ -254,7 +254,8 @@ export async function writeThroughPath(abs, content, meta = {}) {
   // **写前文档机检门**（`docs/core/design/DOC-DISCIPLINE.md` §3.26 条目 Z）：只挂内容写点，且写在两条落盘径
   // 之前——命中即 throw，于是目标档与暂存档都还是零字节。其余 op（commit ∥ delete ∥ rmdir ∥ copy ∥ move ∥
   // rename）不写文档内容 ⇒ 零门调用。`apply_patch` 两段式的第一段（`op:"write"` + `stage`）判，提交段不判。
-  if (op === "write") await runDocWriteGate({ abs, content })
+  // 普通模式（meta.agent.config.agent.engineering === false）不运行内容写门；无 agent 的低层调用保持原行为。
+  if (op === "write" && meta.agent?.config?.agent?.engineering !== false) await runDocWriteGate({ abs, content })
   // `op="commit"` = 默认径两段式的收尾（暂存档 → 目标）——编辑器径是即时提交、不产生暂存
   // 档 ⇒ 无端侧载体，不再问注入面（避免无意义的门禁调用；目标档的门禁已在 staging 问过）。
   if (op !== "commit") {

@@ -1,182 +1,58 @@
-# 会话与历史（SESSION）· 核心统一子系统需求档
+# 会话与历史（SESSION）· 需求
 
-> 板块归属 = **核心统一**（phase 2——「一个核 + 两个薄壳」）；本档 = 该板块的**子系统需求档**（三层归属之需求层）。
-> **工作流档**（需求层）= `docs/core/requirements/CORE-UNIFICATION.md` §1–§4 + §5 登记表（统一目标 / 边界原则 / 量级读数基线 / 范围边界）——本档**不复制**（D2 单一权威源）。
-> **设计层** = `docs/core/design/SESSION.md`（本子系统设计与测试）；工作流设计档 = `docs/core/design/CORE-UNIFICATION.md`。
-> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见仓文档地图 `docs/README.md` §4；三层归属见同档 §1。
-> **需求条目面**（§4）：既有需求条目正文（编号承旧档）。
+> 设计 = `docs/core/design/SESSION.md`；压缩 = `CONTEXT-COMPACTION.md`；凭证 = `DESIGN-TOKEN-SETTLEMENT.md`。
 
-## 1. 总体定位
+## 1. 存储与恢复
 
-会话与历史面 = 会话数据层（`thincoder-core/session.mjs` · `session-store.mjs` · `session-segments.mjs` · `session-guard.mjs` · `session-migrate.mjs` · `session-rename.mjs`）**+** 槽位 **+** 清理（`session gc`）**+** 历史读取工具（`agent-tools/read-history.mjs`）。
+- 会话按规范化 cwd 隔离，使用完整哈希与递增槽号。
+- 槽 JSON 保存 version、cwd、title、provider/model、双线 history、任务、模式、目标和会话状态。
+- 会话同时保存跨轮任务状态；恢复机读历史时使用用户请求、最终回复和任务状态，含压缩检查点与没有轮记录可依的在途段，完整工具过程从人读记录按需回查。
+- 本端恢复使用本端 end marker；共享 active 只作兼容和一次性继承。
+- 本端无记录时可继承可用共享槽；显式 slot:null 表示删除后全新开始。
+- 槽文件是列表和恢复的存在性来源，manifest 摘要不是权威清单。
+- 旧短哈希与旧单文件格式有当前读取/迁移兼容。
 
-VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `thincoder-vscode/src/extension/session-slot-write.mjs` · `thincoder-vscode/src/extension/session-slots.mjs` · `thincoder-vscode/src/extension/session-gc.mjs`。
+## 2. 并发与认领
 
-本板块对本子系统的要求 = 该面归一为**核内单一实现**，且两端**存储契约不变**（历史无缝续读）。
+- 活进程占用的槽不得被另一进程双写。
+- 属主探测使用三态；未知不等于死亡。
+- agent._slot 在绑定后粘性保存，不能因共享 active 改变而迁移。
+- 新建、切换、关闭、项目切换和优雅退出释放旧绑定认领。
+- 拒绝的面板切换不修改 active、端标记、认领集或解析缓存。
+- ACP 同进程多会话显式钉槽，必要时 fork。
 
-> 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/SESSION.md` §1–§2（不复制）。
+## 3. 双线与记录
 
-## 2. 功能性需求
+- 真实消息同时进入人读线与机读线；系统提醒等只进机读线。
+- 人读线可 slim，机读 contextHistory 保留模型所需结构。
+- 记录存储以 append-only sidecar 保存完整人读记录，内存只保留当前尾窗。
+- 绑定恢复时先校验会话身份，再按存储与槽 JSON 的完整性对账。
+- 删除槽与冷项目清理同步处理记录存储。
+- digest 与 subagent 归档记录只进人读线，不喂模型。
 
-### 2.1 本子系统条目
+## 4. read_history
 
-- 会话与历史面归一为**核内单一实现**：数据层 / 槽位 / 记录存储 / 段 / 归属守卫 / 改名 / 旧短哈希迁移各面按核内结构归位；`read-history` 取 **CLI 语义**（相对路径按 cwd 解析 + 宽松 `version` 校验 + 本会话**磁盘全量可查**）。
-  源 = 设计档 `docs/core/design/SESSION.md` §2.1 · §2.2 · §3.1 A14。
+- 默认查本会话，支持 path、cwd:、all、role、keyword、tool、时间窗、limit、direction。
+- 本会话从记录存储流式读取；跨会话优先派生索引，不可用时回落槽 JSON。
+- 大会话可经索引检索，索引不是权威，绝不写回主存。
+- all 使用 FTS 词/短语，只覆盖已索引会话；行内带原文件回查锚。
+- 无 ts 的记录不匹配时间窗；内容截断保持当前契约。
 
-### 2.2 适用工作流条目（回指 · 不复制）
+## 5. 列表、账本与 GC
 
-| 条目 | 适用于本子系统的哪一面 |
-|---|---|
-| F11 | 对称面**进核**的准入（会话面属「进核」集合） |
-| F6 | 裁决**逐条落实**（`read-history` 的行为变更 = 裁决结果） |
-| F13 | 对外契约面：两端读写同一批档同一 `version` ⇒ 登记为**已兼容**（无破坏） |
-| F12 | 凡改可观察行为 / 对外契约者**逐条提交裁定** |
-| F3 | 核内实现**只从两侧提取**（来源可追溯） |
+- 列表枚举盘面槽文件，坏档不因不可读而隐形。
+- 摘要可从槽文件/记录存储自动重建；不需要用户修复命令。
+- 计数不可得用 null/— 表达，不冒充真零。
+- manifest 损坏或不可信时拒写并保全现场，写后读回。
+- 启动 GC 与摘要核实离开同步热路径，读放大有界。
+- 残留与冷 cwd 清理有保留期、活数据排除、干跑和确认面。
 
-### 2.3 会话认领释放与拒绝零副作用
+## 6. 偏好与标题
 
-**模块目标**：多端并存下，槽认领与共享指针的纪律——**认领随绑定走**（离开即释放），**被拒操作零副作用**（四不动：不翻共享指针 / 不写端标记 / 不改认领集 / 不写解析缓存）。
+provider、activeModel、effort 与互斥 mode 随槽保存和恢复；老槽缺 effort 时回退配置，缺 mode 时按旧 engineering 布尔值迁移，二者都缺时使用 normal。
 
-- **F-CR1（认领随绑定）**：任一进程成功切换 / 新建、绑定迁至槽 B 后，**释放**其对旧槽 A 的认领（判据 = A ≠ B ∧ `slotSessions[A]` = 本进程 ∧ 本进程绑定已不再指 A）；`/new` · 启动恢复 · VSC 端壳同名落点同判。边界情形（目标被占 ⇒ 不认领 + fork 面）由设计钉。
-  **释放覆盖范围扩展**：① **ACP `session/close` 关闭面**同样释放该会话槽认领；② **跨 cwd 释放**（项目切换时释放旧 cwd manifest 的认领）；③ VSC 端壳释放面（`newSlot` / `switchToSlot` 的 `release` 传参）加端壳级机判——三条实现口径 = 设计档 `docs/core/design/SESSION.md` §6.16。
-- **F-CR2（拒绝零副作用）**：目标槽被另一活进程占用而**拒绝切换**的路径（**作用域 = 面板路径**：受占 ⇒ 判据前置、不进入 `switchToSlot`），**共享 `active` 指针、端标记、认领集、解析缓存四不动**（VSC `handleSwitchSession` = 判据前置或回滚）；**核 / CLI 受占路径不属本面**——切换成立（警告 + 继续）：指针 / 记录按 D-6 / D-4 落点 + 保留集 = 空释放旧认领（fork 依赖该指针——设计 D-SE33）。
-- **F-CR3（零回归）**：恢复目标选择（§4.1 F1–F4）· 死主清理 · fork 防互覆 · 端分离（NF1）零回归；**ACP 语义**（`sameProcessPinned` 例外核）**除 F-CR1 的 `session/close` 释放面外**零回归。
+标题来自首条真实用户消息，经 core 生成并随整档保存。列表和状态栏使用同一标题/回退语义。
 
-**边界（不做什么）**：不改槽文件格式与 `version` · 不改端标记语义 / 落点集 · 不引入跨端共享可变字段（NF1）· 不新增机械门 · 提示面不动 · `deleteSlot` 既有释放语义不动。
+## 7. 验收
 
-**验收（可机判）**：① 绑定 41 → 切 40：`slotSessions["41"]` 不再含本进程 ∧ `slotSessions["40"]` = 本进程；再切回 41 ⇒ 41 重新认领；
-② **面板拒绝路径**前记 `m.active` / 端标记 / 认领集 / 解析缓存 → 受占切换被拒 → 四者与前态逐字段相等；**核 / CLI 受占** ⇒ 切换成立（指针翻至目标槽 + 记录按 D-4 + 保留集 = 空释放旧认领）∧ 下次保存 fork（与 ③ 同源）；
-③ 甲进程离开 X 后乙进程认领 X：甲经 `/session X` 再切入 ⇒ 甲不认领 X（占用判）∧ 下次保存 fork（既有语义）；④ 双端对称（CLI 与 VSC 端壳**同名落点**同判据——F-CR1 释放面；F-CR2 零副作用面 = 面板拒绝路径：端壳函数内受占分支零写 ∧ 调用面前置判据）。
-
-**依赖**：核槽面（`session-lifecycle.mjs` `switchToSlot`/`newSession`/`slotOccupancy`）· VSC 端壳（`thincoder-vscode/src/extension/session-io.mjs` `switchToSlot`/`newSlot` · `panel-messages-session.mjs`）· 设计档 `docs/core/design/SESSION.md` · ACP 例外核。
-
-### 2.4 启动等待：会话 GC 热路径 + sessions 存量
-
-**模块目标**：CLI / VSC 启动时，会话面的磁盘工作**不得同步阻塞主线程**，且耗时不随 sessions 存量线性劣化——现状实测：`~/.thincoder/sessions/` = **20,227 项**（9,358 个 cwd 前缀遗留）⇒ 启动钩子 `gcResidue` 同步 `readdir` **单次 ≈10s**（启动 9.6–16s 的 ~95%；空 HOME 对照 495ms）。
-
-- **F-SL1（热路径零同步阻塞）**：`resumeSlot` → `scheduleSessionGC` → `gcResidue` 链在启动关键路径上**不得有 ≥50ms 同步 fs 阻塞**（重活异步化，或将全量扫描推迟至首帧后）。判定句：多量 sessions 目录下启动路径同步 fs 阻塞样本 ≤50ms（机检 = CPU profile 同步 `readdir` 自时 / 埋点）。
-- **F-SL2（存量治理）**：陈旧 cwd 组（cwd 目录已不存在 / 属主死 / 无活数据文件）可由**自动或显式命令面**清理——现冷判据（manifest mtime > 90 天）覆盖不到近期海量遗留；判据 / 保留期 / 执行面由设计钉，零误删活数据。
-  **⇒ 显式命令面**双端都要有**——VSC 有端侧入口（命令 + 报告 / 确认），机制 = 核单源共用（核 `listColdCwds` / `deleteColdCwd`；VSC 转口在位）。
-  判定句：清理面存在且逐项判据可核；清理后目录量级回落（存量 9,358 前缀组可处理）。
-- **边界**：不动活数据（活主 / 近期写 / 绑定面）· 不引入常驻进程 · 不改槽文件与端标记形态 · VSC 端壳 resume 路径（同源调用）同判零端差。
-- **验收**：① 启动路径同步阻塞 ≤50ms（对照 ≈10s）；② CLI 启动到 TTY 门 ≤ **2s**（对照 9.6–16s；空 HOME 0.495s + 真装配 ~1.0s 为参考下界）；③ 三端测试全绿；④ 存量清理面执行后 sessions 项数回落且零活数据误删。
-- **依赖**：`session-lifecycle.mjs`（resumeSlot）· `thincoder-core/session-gc.mjs`（gcResidue / listColdCwds）· CLI `bin/thincoder.mjs` 启动序 · VSC 端壳（`thincoder-vscode/src/extension/session-io.mjs` resumeSlot 包装）· 设计档 `docs/core/design/SESSION.md` §6.12。
-
-### 2.5 优雅退出认领释放
-
-**模块目标**：正常退出（CLI `Ctrl+C`×2 / `/exit`；VSC deactivate）时，进程对自己的槽认领**随退随释**——下次启动恢复不依赖「旧进程已被 OS 探测明确判死」，直接经「无属主即可用」路径回到退出前会话。
-
-- **F-XR1（退出释放）**：优雅退出路径在进程结束前**释放本进程全部槽认领**——判据复用 F-CR1 同族释放谓词（`staleClaims`，保留集空 = 全释放）；释放失败不阻断退出（尽力面——退出动作恒达）。
-- **F-XR2（路标保留）**：端标记（D-4）**保持指向退出前槽，不置空**——释放后的恢复判定链 = 读端标记 → 槽无属主 → 直接认领恢复（`usableSlot` 无属主分支直达，零探测）。
-- **F-XR3（崩溃面零变）**：非优雅退出（kill / 终端窗口直接关闭 / V8 fatal）**不经过本路径**——属主记录原样保留，恢复仍走既有探测三态判据（D-MI10 unknown ⇒ 不认领），语义零变。
-- **F-XR4（双端同源）**：释放机制 = **核内单一实现**（薄函数，两端接线各几行）；CLI 接线点 = `key-handler.mjs` 空闲退出分支 + `/exit` 命令路径（两入口同一退出语义，`cmd-exit.mjs` 经 `ctx.exit` 同收口）；VSC 接线点 = extension `deactivate`（改 async——可 await 写盘完成再退）。
-
-**边界（不做什么）**：不改探测三态判据（D-MI10——它防双进程同槽互踩，方向正确）· 不改端分离（NF1——CLI `.cli` / VSC `.vscode` 各写各的端标记）· 不改槽文件格式 / `version` · **不做「按时间窗猜死活」启发式**（在猜测上叠猜测）· ACP `session/close` 多会话语义不动 · Ctrl+C 单按（中止回合）与两按（全停后台）**不属退出、不释放**。
-
-**验收（可机判）**：
-① T1 造认领 → 跑退出释放 → manifest 无本进程 `slotSessions` 条目 ∧ 端标记仍指原槽 ∧ 槽文件完好；
-② T2 释放后 `resumeSlot` 返回 `{slot: 原槽, data}`，且属主缺失分支直达（**探测零 exec**——`probeOwnersAsync` 入参清单为空早退）；
-③ T3 崩溃路径回归——认领在 + 探测 unknown ⇒ 仍全新分配槽（现状不变）；
- ④ T4 CLI 退出分支 e2e——注入 `exitDelay`（测试缝，`key-handler.mjs` 既有）+ 捕获 `exitTimer`：断言「先释放后定时器注册、桩收 exit(0)、失败容忍（核面释放失败返回 false 不抛 ⇒ 退出零阻——**容忍面在核 D-SE41，接线层零防护**；如测试驱动接线层抛错形态须以模块 mock 显式命名缝）」；
-⑤ T5 VSC `deactivate` 后 manifest 无本进程条目（端壳机判）；
-⑥ 既有 session 系 / key-handler 系测试全绿。
-
-**依赖**：核槽面（`thincoder-core/session-slots-manifest.mjs` `saveManifest`/`staleClaims`）· CLI `thincoder-cli/src/tui/key-handler.mjs` 退出分支 · VSC `thincoder-vscode/extension.mjs` deactivate · 设计档 `docs/core/design/SESSION.md`（§6.10 D-2/D-4）。
-
-## 3. 非功能性需求
-
-本子系统无独立非功能条目。适用工作流条目（回指）= **N1**（未涉面不得无故回归）· **N2**（建核段两产品零改动 · 可回退）· **N3**（核独立可验证）· **N5**（单一权威源）· **N8**（结构尺度）。
-
-## 4. 需求条目
-
-> 条目**编号 = 既有引用锚**（重编号会再制造引用漂移）。
-
-### 4.1 会话恢复与端分离
-
-**总体需求**：同一项目下 CLI 与 VS Code 并存时，任一端退出重进都回到**本端**上次的会话；两端对「当前会话」的记录不再互相覆盖。
-
-- **F1**：CLI TUI 重启 → 恢复 CLI 自己退出前的会话；恢复依据 = CLI 本端持久记录。
-- **F2**：迁移一次性继承——本端从无记录（升级 / 该项目首用）时：共享 active 指向的槽若属主已死 / 无属主且文件存在 → 认领继承一次并写下本端记录；属主为活进程 → 绝不继承。
-- **F3**：VS Code 面板同构（F1/F2 镜像）。
-- **F4**：`/new` / `/session N` / 面板「打开历史会话」→ 更新本端记录；删除本端记录指向的槽 → 记录**显式置空**，下次启动全新起步。
-- **F5（会话列表 = 盘面实读）**：会话列表（CLI `/session` · VSC 面板下拉 · 桌面左列）的条目来源 = **会话目录盘面实读**（本 cwd 槽文件枚举）；**manifest 不参与清单条目集**（职责 = 认领 / active 指针 / 摘要复用）；盘上存在的会话文件必须在列表可见，不因 manifest 条目缺失而隐形。
-  判定句：存在「文件在盘 ∧ manifest 无条目」的槽 ⇒ 列表含该条（回退链照旧）；槽文件删除 ⇒ 列表即消失。
-
-**范围边界**：ACP 会话行为不变、**不读本端记录**；混合版本局部退化（数据安全不变）；手动跨端接续保留；数据零丢失。
-**非功能**：NF1 **不新增跨端共享可变字段**（本端记录是本端单写者文件）· NF2 记录写入原子（.tmp+rename）且失败容忍 · NF3 启动成本不增 · NF4 跨端并发语义不回归（活槽绝不双写）。
-
-### 4.2 运行环境自我感知
-
-**总体需求**：env-state 行补 `slot: {N}` 字段（agent 自知当前会话槽号）+ resumed 语义从「进程级一次性」完善为「按会话跟踪」——双端同机制。
-
-- **F1（slot 字段）**：As a agent, I want env-state 行含 `slot: {N}`（当前会话槽号）, so that 我自知落在哪个会话槽。
-- **F2（resumed 按会话跟踪）**：每次会话恢复（进程重启 resume / 中途切换会话到有历史的槽）的首个回合得一次 `resumed: yes`。
-- **F3（CLI 伪触发修复）**：消除全新会话 turn 2 误报 `process restarted` / `resumed: yes` 的伪触发。
-
-**非功能**：N1 双端同机制（模板同构，只差 END 常量）· N2 slot = **粘性当前会话槽**（非 manifest active 共享指针）· N3 无绑定窗口 → 如实 `slot: null`（不读共享 active 回退）· N4 判定守卫保持（depth-0 / 非 resume / 非 autoTurn）· N5 判据统一（「载入历史非空」）· N6 注入句解耦（`process restarted` 与 `resumed` 语义分离）。
-
-### 4.3 跨会话历史检索与检索族消歧
-
-- **F-R19a（跨会话检索）**：检索任意会话（本 cwd 或指定目录）的消息历史——跨会话找回裁定 / 决策 / 过去讨论。
-- **F-R19b（检索族消歧）**：检索 / 记忆族工具描述互指消歧（何时用哪个）。
-- **F-R19c（索引优先检索 · 大会话可查）**：As a user, I want 超大会话（>200k 行 / >50k 消息）不再整档拒，so that 长命会话在最需回查时也能检索。判定句：超限会话经索引返回命中（不触整档拒）；索引不可用 / 库内无行 ⇒ 回落既有读径与护栏（逐字保留——零回归）。
-- **F-R19d（跨会话全库检索）**：As a user, I want 不知目录时也能跨会话检索（`all` 面：FTS 词 / 短语），so that 任意历史会话的裁定 / 决策可被找回。边界：单会话 `keyword` 保持既有子串语义（契约不变）；**主存零改**（索引 = 派生面 · 零权威 · 可重建 · 丢失自愈）；不做向量检索 / 自动淘汰 / 跨端索引协议。
-- **F-R19c / F-R19d 设计落点**：`docs/core/design/SESSION.md` §6.19（+ §6.13 / §6.14 收正）。
-- **NF-R19**：readonly；depth-0 only；会话文件为只读检索对象（不写不改）；性能 = **索引优先（派生索引库——可重建）· 主存回落**（索引不可用 ⇒ 既有逐文件流式读路径）；隐私 = 本机会话文件。
-
-### 4.4 长会话记录内存有界
-
-**总体需求**：会话的人读记录以**磁盘为准**（append-only 冷存——进程崩溃不丢）；运行期内存只保**最近一数窗口**（有界——不随会话长度增长）；恢复展示 / 向上翻页 / 本会话检索（`read_history`）从磁盘按需回读；槽文件的跨端 JSON 投影保持不变——VS Code 端零感知。
-
-- **F-S1（磁盘为准——append-only 记录存储）**：每条真实消息在 `pushReal` 时点追加进本槽的**记录存储**；条目形态与槽 JSON `history` 逐字节同形；追加单点 = `thincoder-core/context.mjs` `pushReal`。
-- **F-S2（内存窗口）**：运行期人读线只保最近 **200 条**（`RECORD_WINDOW_MESSAGES`）；**范围 = 绑定态**（未绑定路径维持既有全量行为）。
-- **F-S3（分页源 = 磁盘）**：TUI 懒加载的数据源改为记录存储按**绝对序号**取页；翻页不再往内存累积、活消息增长不使翻页错位。
-- **F-S4（read_history 走盘）**：本会话检索（无 `path`）读记录存储；跨会话 `path=` **索引优先 + 主存回落**（索引命中 ⇒ 索引检索；索引不可用 / 库内无行 ⇒ 既有槽文件 JSON 读径与护栏——逐字保留、零回归）。
-- **F-S5（完整性对账 + 崩溃恢复）**：存储 append-only；启动恢复时对账——存储 ≥ 槽 JSON → 以存储为准；JSON 更长 → 以 JSON 为准并重建存储。
-- **F-S6（生命周期联动）**：删除槽 → 连带删除其记录存储；冷项目清理（`session gc`）连带删除；`/new` 换槽后新记录落新槽存储。
-- **F-S7（消化生命周期面记录）**：消化生命周期面**两族**（`digest` 痕三型〔`start` ∕ `cap` ∕ `end`〕+ `subagent` 归档快照）以**记录条目**入本槽记录存储（**人读线**——`pushReal` 同面追加 ∥ **不入机器线**——不喂模型）；
-  读面 = `historyWindow` `{records: true}` **opt-in 直通**（**默认关**——CLI ∥ VSC 现行径逐字等价）；槽 JSON 投影与消息同节律（回合尾）。**端侧恢复重建**（痕 ∥ 归档块）为各端消费义务；机制形状与单源位置——现单源住桌面设计档 `docs/desktop/design/RENDERER.md` §1.1「留档记录」条）。
-
-**非功能**：N-S1 有界性可测 · N-S2 零回归 · N-S3 **VSC 兼容红线**（槽 JSON version 2 字段与形态不变、`history` 仍为全量数组、sidecar 对 VSC 不可见）· N-S4 恢复速度 · N-S5 可移植 · N-S6 尽力面（追加失败不阻断回合）。
-
-**判定句（验收语义）**：
-
-- F-S1 连续 pushReal 10,000 条 → 存储条数 = 10,000；进程被杀后下次启动可见全部已追加条目。
-- F-S2 同上模拟（绑定态）→ `agent._fullHistory.length ≤ 200` 且恰为最新 200 条（未绑定路径负断言 = 维持全量）。
-- F-S3 恢复后翻页至最早 → 页内容与磁盘对应条逐条相等；翻页过程 `state.lines` 字符总量 ≤ 设计额度。
-- F-S4 内存窗口外的旧消息用 keyword 可命中（匹配基准 = 存储文本——slim 截断面 delta 已登记）。
-- F-S5 两向对账（存储 ≥ JSON / JSON 更长）。F-S6 `deleteSlot` 后 sidecar 目录不存在；`session gc --confirm` 清冷前缀后 sidecar 不存在。
-- N-S3 CLI 写出的槽文件 `history` 数组（version 2 + history 数组）未进入 VSC 可枚举面。
-
-**范围边界（不做）**：不改槽 JSON 的 version / 字段形态 / 路径约定（VSC 兼容红线）；不改机器线（`contextHistory`）的压缩语义与保存策略；
-不做记录存储的跨端读取协议（VSC 读 sidecar——另案）；不做历史文件格式迁移；`read_history` 跨会话 `path=` 的 JSON 读取路径与护栏**保留为回落面**（索引优先 + 主存回落；护栏逐字保留）。
-
-### 4.5 VSC 端条目
-
-语义同源——VSC 档 F-N1–F-N8 / N-N1–N-N5 与 §4.1–§4.4 逐条同义（不重并）；**VSC 端差（登记）**：① marker `END = "vscode"`——只写 `.manifest.vscode`、永不碰 `.cli`（认领面隔离）·
-② 历史分页步长 **200**（`HISTORY_PAGE_SIZE`——`thincoder-vscode/src/extension/history-window.mjs`，对端 20）· ③ 恢复呈现 = assistant 帧容器 + 嵌套工具卡（配对语义同源）·
-④ 冷 cwd 手动 GC 无 shell 通道（只接线自动残留 GC）——**注销**：VSC 已补命令入口 `thincoder.sessionGc`（数据面 API——双端同面；见 `docs/core/design/SESSION.md` §6.17 D-SE38）
-· ⑤ 记录存储形态 = **端面事实**（本端零该机制——非端差，如实登记；**写缝 = `pushRecord` 注入面**（`thincoder-core/context.mjs`——`pushReal` 双胞）；承载 = 端面 ∥ 单源 = §4.4 F-S7）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。
-落点＝ `thincoder-vscode/src/extension/session-slots.mjs` · `thincoder-vscode/src/extension/session-io.mjs` · `panel-session.mjs` · `thincoder-vscode/src/extension/session-gc.mjs`。
-
-**二态化裁定行**：① = **保留**（结构性不对称——端 marker 单侧存在：只写 `.manifest.vscode`、永不碰 `.cli`）；②③⑥ = **保留**（形态类——显示 / 互斥面；类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）；④ = **注销**（VSC 有命令入口，双端同面）；⑤ = **端面事实**（非端差）。
-
-### 4.6 会话账本摘要可靠化
-
-**总体需求**：会话账本（会话级槽索引——`{hash}.json.manifest`，住用户目录 `~/.thincoder/sessions/`，下称**账本**）的**摘要面**（标题 / 计数 / 日期 / provider / model）服务于会话列表展示与快速读取——它必须**靠谱**：任何时刻损坏 / 缺失 / 降级都不得造成错误信息，且能自愈。
-
-**派生面判据（承 F-R19c / F-R19d 先例）**：摘要面 = **派生面 · 零权威 · 可重建 · 丢失自愈**。
-
-- **F-L1（零权威）**：摘要仅作展示与提速——删掉 / 损坏 / 全缺不影响任何功能（清单 = 盘面实读〔F5〕；准入 = 盘面单判；保存 = 直写槽文件）。
-- **F-L2（可重建）**：摘要**必须可从槽文件完全重建**（单源 = 槽文件）——**重建全自动**（无人操作——**不设用户操作入口**，CLI 命令 / 桌面按钮皆不设）。
-- **F-L3（丢失自愈 · 懒核实）**：读面（列表）遇到**不可信摘要**（缺失 / 过期 / 计数不可得）⇒ **当场核实该档**（单档读）+ **回写摘要**（自愈）——核实后该档回到快路（**不重复**）；读放大受既有预算线约束（F-SL1 50 ms 首答**不得被拖慢**——核实预算 / 异步 / 行级刷新由设计定形）。
-- **F-L4（失效可见 · 不撒谎）**：摘要不可得 ⇒ 屏面显示**不可得**（「—」或缺席——计数 0 与「不知道」必须可区分）；账本写入被拒 / 损坏现场 / 拒写 ⇒ **用户可见信号**（不得只 `console.error`）。
-- **F-L5（写安全）**：拒写不可信基座 + `.corrupted` 现场保全之上，原子写 / 写后读回 / 并发合并语义 = 设计定形（现状 = 读-合并-写）。
-
-**非功能**：N-L1 列表性能零回退（F-SL1 50 ms / 单次 4 MiB 预算不变）· N-L2 零回归（槽 JSON 形态 / VSC 兼容红线不动）· N-L3 多端并发（CLI / VSC / 桌面同账本——合并语义保持）· N-L4 命名口径（本档一律「会话账本」——与项目状态档 `PROJECT-MANIFEST.json` 无关系）。
-
-**不做**：不设用户操作入口（修复 = 系统职责，不是用户任务——重建 / 回填全自动）。
-
-**依赖（上下游）**：上游 = 槽文件（单源）· 会话账本 `{hash}.json.manifest`；下游 = 三端列表（CLI `/session` · VSC 会话栏 · 桌面左列）· `read_history` 的 `cwd:` 发现面 · ACP `session/list`（协议面 `?? 0` 保持——登记）。无新增外部依赖。
-
-**落点**：设计落点 = `docs/core/design/SESSION.md`（待设计舱定形）。
+验证跨端恢复、活槽互斥、三态探测、拒绝零副作用、双线恢复、任务状态恢复、压缩检查点与在途段恢复、sidecar 对账、索引回退、盘面列表、摘要自愈、GC 和偏好。

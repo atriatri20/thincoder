@@ -147,6 +147,7 @@ export async function applyEditBatch(args, ctx) {
       // 单一写路径点：默认 = writeFile + 记账；写前文档门挂在这一跳之前（命中即 throw、该档一个字节没动）
       await writeThroughPath(g.abs, joinWithEol(normalizeEOL(g.content).split("\n"), g.raw), {
         op: "write",
+        agent: ctx.agent,
         record: { type: "edit", startLine, shift },
       })
     } catch (err) {

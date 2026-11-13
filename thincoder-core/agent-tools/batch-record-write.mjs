@@ -209,12 +209,12 @@ export function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const { written: inserted, roundN } = insertIntoSection(src, n, body, plan?.traceLine ?? "")
   const written = plan ? updateSectionStatusLine(inserted, 3, plan.statusValue) : inserted
   // 文档机检门（§3.20「结构兜底」①——门位 = 既有拒因全部之后、写入之前）：
-  // **全部 append 同挂**（§1–§6，含 depth-0 与评审写 §3——规则一条，不按身份分支）。
+  // **工程模式 append 同挂**（§1–§6，含 depth-0 与评审写 §3——规则一条，不按身份分支）；普通模式跳过内容门。
   // `pending.body` = **候选全文**（`written`：盘上现文加上这一段及其状态行改写的整档视图）——门拿它与盘上现文两份
   // 求变更区，判的就是这一笔写的行（判面单源 = `docs/core/design/DOC-CHECK.md` §6「写时点怎么取区间」）。
   // 交半段文本就与盘上现文不同形，求出来的区间不是这一笔的行。REFUSED ⇒ throw（零字节落盘——`writeFileSync` 在门之后）；
   // PASS ⇒ 照写；ERROR / 门自身异常 ⇒ 写 + 回执明示。
-  const gate = runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body: written } })
+  const gate = ctx.agent?.config?.agent?.engineering === false ? null : runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body: written } })
   if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "append"))
   writeFileSync(abs, written)
   // #84：记账面按端注入（缺省 no-op = CLI 语义零行为变——端装配经 configureBatchSegment 覆盖，缝住 `batch.mjs`）。
@@ -382,9 +382,9 @@ export function editBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const zoneBefore = zoneStatusCount(src, n)
   const zoneAfter = zoneStatusCount(postEdit, n)
   if (zoneAfter > zoneBefore) throw new Error(EDIT_STATUS_LINE_PROMOTION_ERROR(n, zoneBefore, zoneAfter))
-  // 文档机检门：段长类判本次写入的 `newText`；锚类判改后视图 `recordView` 里的本次替换区。
+  // 文档机检门：工程模式的段长类判本次写入的 `newText`；锚类判改后视图 `recordView` 里的本次替换区；普通模式跳过。
   // 区外锚类不入判集、也不出行（判域 = 本次替换区），别让另一段的失效引文与本段互锁。REFUSED ⇒ 拒（零字节落盘）∥ ERROR ⇒ 写 + 回执明示。
-  const gate = runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body: replacement, recordView: postEdit } })
+  const gate = ctx.agent?.config?.agent?.engineering === false ? null : runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body: replacement, recordView: postEdit } })
   if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "edit"))
   writeFileSync(abs, postEdit)
   // #84：记账面按端注入（与 append 同一条缝——缺省 no-op = CLI 语义零行为变）。

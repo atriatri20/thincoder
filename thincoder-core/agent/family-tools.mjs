@@ -17,6 +17,8 @@
  * 核内先例 = 登记册头注「Loaded from agent.mjs via dynamic import to avoid ESM circular
  * dependencies」（本档先于 `agent/setup.mjs` 的调用点载入，同一语义）。
  */
+import { knowledgeTool } from "../tools/knowledge.mjs"
+
 export async function assembleFamilyTools({
   depth,                 // number   0 = 主 agent；>0 = 子代理
   role = null,           // string   子代理角色（eng-coder / eng-designer / coder / consult / explore / …）
@@ -217,6 +219,6 @@ export async function assembleFamilyTools({
   // 判据 = 单一模式位 `engineering`（不带深度分支——子代理面随同排除，role enum
   // `subagentRoles` + spawn 门 / task execute 门已同向）。
   return engineering
-    ? [timerTool, ...depthOnly]
-    : [taskTool, planTool, timerTool, ...depthOnly]
+    ? [timerTool, knowledgeTool, ...depthOnly]
+    : [taskTool, planTool, timerTool, knowledgeTool, ...depthOnly]
 }

@@ -1,65 +1,39 @@
-# ThinCoder — merged repository
+# ThinCoder
 
-Single git repository hosting both ThinCoder products. Each product keeps its own package root,
-its own release chain and its own documentation tree; their shared runtime code is the first-party `@thincoder/core` plus the shared render core `@thincoder/render-core`.
+ThinCoder is a multi-package repository for the CLI, VS Code extension, desktop application, and team server. Shared runtime and rendering code live in first-party core packages.
 
 ## Layout
 
-| Path | What it is | Release chain |
-|---|---|---|
-| `thincoder-cli/` | ThinCoder CLI (npm package `thincoder`) | npm `publish` — gate = lint → test |
-| `thincoder-vscode/` | ThinCoder VS Code extension (vsix `thincoder-vscode`) | Marketplace / Open VSX — gate = lint → test |
-| `thincoder-render-core/` | Shared render core — browser primitives embedded into the VS Code extension and desktop artifacts | — (never published — `private: true`) |
-| `.github/workflows/test.yml` | CI: one job per product (repo-root workflow) | GitHub Actions |
-| `.gitattributes` · `.gitignore` | repository-root settings shared by both products | — |
+| Path | Purpose |
+|---|---|
+| `thincoder-core/` | Shared agent runtime, providers, tools, memory, document services, and traces |
+| `thincoder-cli/` | Terminal application published as the npm package `thincoder` |
+| `thincoder-vscode/` | VS Code extension and webview |
+| `thincoder-desktop/` | Electron desktop application |
+| `thincoder-render-core/` | Host-independent rendering core shared by the extension and desktop application |
+| `thincoder-server/` | Team gateway, collaboration services, and web console |
+| `bench/` | Model and tool-call benchmark suites |
+| `docs/` | Project requirements, design documents, standards, release process, and batch records |
+| `test/` | Repository-level integration tests and the requirements traceability matrix |
+| `scripts/` | Repository-level maintenance and verification scripts |
 
-`thincoder-cli/` is the original CLI repository relocated one level down. `thincoder-vscode/` was merged in
-together with its git history through `git subtree add --prefix=thincoder-vscode`.
+Package-specific contributor instructions live in each package's `AGENTS.md` or `README.md`.
 
-## Running a product's gates
+## Documentation
 
-Every command runs inside the product directory — all paths are product-relative.
+`docs/README.md` is the authoritative document map. Requirements and designs are organized by board under `docs/<board>/requirements/` and `docs/<board>/design/`.
+
+`PROJECT-MANIFEST.json` declares the document roots used by search and validation tools. Shared standards live in `docs/core/standards/`; the release process lives in `docs/RELEASE.md`.
+
+The project ledger is stored outside the work tree and is accessed through the `ledger` tool. Integration coverage is indexed by `test/RTM.md` and the volumes under `test/rtm/`.
+
+## Development
+
+Run each package's own checks from its package directory. For example:
 
 ```bash
 cd thincoder-cli && npm install && npm run lint && npm test
 cd thincoder-vscode && npm install && npm run lint && npm test
 ```
 
-Entry points: `thincoder-cli/AGENTS.md` (CLI) and `thincoder-vscode/AGENTS.md` (extension).
-
-## History notes
-
-- The CLI tree's history is the repository history — the relocation was a pure rename, so `git log` /
-  `git blame` follow CLI files across it unchanged.
-- Extension history is joined through a subtree graft. Per-path traversal needs merge-aware `--follow`:
-  `git log --follow -m -- thincoder-vscode/package.json` (plain `git log --follow` returns nothing across a
-  subtree graft). `git blame` crosses the graft without extra flags.
-- Release tags belong to the CLI line; the extension repository keeps its own tags at its original remote,
-  so the two tag sets never collide here.
-
-## Project docs
-
-Project-level documents — the cross-product layer (board requirements/design · batch records) — live under `docs/`.
-See `docs/README.md` for the map and the **staged migration policy**.
-
-New project-level documents go there from now on; existing ones stay where they are as **references** and migrate when
-their surface is next touched.
-
-The per-product document trees are retired: `thincoder-cli/docs/` keeps only the phase-1 files left in place, and the
-extension tree has none.
-
-## Merge record
-
-Requirements, design and batch record for the layout change (phase 1 · TWO-REPO-MERGE) still live in the CLI tree as
-references pending migration:
-
-`thincoder-cli/docs/requirements/TWO-REPO-MERGE.md` · `thincoder-cli/docs/design/TWO-REPO-MERGE.md` ·
-`thincoder-cli/docs/batches/2026-09-13-TWO-REPO-MERGE.md`.
-
-## Project ledger
-
-The project ledger (open requirement points + tech backlog) is not a repository file: it is a SQLite database in the
-user data directory, keyed by the project root, read through the `ledger` query surface.
-
-`docs/TODO.md` is the retired markdown predecessor, kept on disk as history.
-
+Before changing project documentation, locate the owning document through `docs/README.md`. Requirements describe what the product must do; designs describe how it works. Batch records carry execution history, while requirement and design documents describe the current state.

@@ -19,7 +19,7 @@ import { resolve } from "node:path"
 import { configureBatchSegment } from "@thincoder/core/agent-tools/batch.mjs" // 静态链零 node:sqlite（W8 契约②）——静态面安全
 import { configureVerifyDiagnostics } from "@thincoder/core/agent-tools/verify.mjs" // 叶子面（闭包 4 档零 node:sqlite）——静态面安全
 import { loadSkills, readSkill } from "../extension/skills.mjs"
-import { setSlotEngineering } from "../extension/session-slot-write.mjs"
+import { setSlotMode } from "@thincoder/core/session-slot-write.mjs"
 
 // ─── W9（2026-09-15）：batch 记账面注入（核缝 #84 —— `configureBatchSegment`）──────────
 // VSC 特有增量随删旧迁入端壳（四步协议 ②）：核 `agent-tools/batch.mjs` 的写入回调默认
@@ -84,11 +84,11 @@ export async function wireAgentToolSeams() {
   configureSkillLoader({ loadSkills, readSkill })
   const { configureEngMirror } = await import("@thincoder/core/agent-tools/eng.mjs")
   configureEngMirror({
-    onToggle: (enabled, ctx) => {
+    onToggle: (mode, ctx) => {
       const agent = ctx?.agent
       try {
         const p = agent?._engPersist
-        if (p) setSlotEngineering(p.cwd, p.slot, enabled)
+        if (p) setSlotMode(p.cwd, p.slot, mode)
       } catch { /* slot unwritable — the slot is the only persistence face (no config mirror) */ }
     },
   })

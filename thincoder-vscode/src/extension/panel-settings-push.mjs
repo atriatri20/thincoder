@@ -57,8 +57,8 @@ export async function setAutoApprove(panel, value) {
  *  ENG-PLAN-EXCLUSION（FR31 ② / AC13/T11）：工程模式 ⇒ **开方向拒绝**——不写槽 + 回弹
  *  `{type:"planMode", active:false}`（真值 = 槽权威面 `agentSettings(_agentSettingsSession())`
  *  ——`_agentSettingsSession` 先例；不读 `_agent`，恢复后的工程会话首回合前也不
- *  fail-open）。关方向（value:false）是归零语义（`handleSetEngineeringEnabled` ON 时就地调它），
- *  照常走既有契约（槽写 + 回推）——工程态下它只会把残留半状态清干净。 */
+ *  fail-open）。关方向（value:false）是归零语义（`handleSetMode` 进入工程档时就地调它），
+ *  照常走既有契约（槽写 + 回推）——`handleSetMode` 进入工程档时就地调它清残留。 */
 export async function setPlanMode(panel, value) {
   if (value === true && panel._engineeringOn()) {
     panel._panel?.webview.postMessage({ type: "planMode", active: false })
@@ -72,7 +72,7 @@ export async function setPlanMode(panel, value) {
 
 /** 工程模式真值（槽权威面——`agentSettings` 槽优先/ config 回退；读失败 ⇒ 非工程——不制造假拒）。 */
 export function engineeringOn(panel) {
-  try { return agentSettings(panel._agentSettingsSession()).engineering === true } catch { return false }
+  try { return agentSettings(panel._agentSettingsSession()).mode === "engineering" } catch { return false }
 }
 
 export function pushStatus(panel) {

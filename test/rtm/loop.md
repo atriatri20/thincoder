@@ -1,12 +1,12 @@
 # RTM 分册 · loop
 
-> 本册护的机制 = 会话环与 provider（压缩 ∥ 断流 ∥ 空响应 ∥ 后台投递 ∥ 撞帽 ∥ 提醒预算）；族表与归属判据 = docs/core/design/TESTING.md §11.18.3。
+> 本册护的机制 = 会话环与 provider（压缩 ∥ 断流 ∥ 空响应 ∥ 后台投递 ∥ 撞帽 ∥ 提醒预算）；族表与归属判据 = docs/core/design/TESTING.md。
 > 索引回指 = test/RTM.md：故事索引表（含端覆盖矩阵）∥「异常与更正」∥ 签署面只住索引；本册只装故事节与用例行。
 
 ## CLI 11. 超窗守卫与内部阶段豁免（absent 档全档同判）
 
 > 目的：越窗时要么先压一次再发，要么带三实数当场报错——不把同一条超限请求丢给服务端吃 400；压缩只在压完能落到线下时发生——不为一次没有净减的摘要白付请求，用户照常拿到答复。
-> 节注：回指 = `docs/core/design/CONTEXT-COMPACTION.md` §6.2 ∥ §6.17；交互组件 = `thincoder-core/agent/run-stages.mjs`（守卫）· `thincoder-core/provider/{core,anthropic,google,responses}.mjs`（净判）· `thincoder-core/provider/errors.mjs`（400 分类）；需求回指 = `docs/core/requirements/CONTEXT-COMPACTION.md` §2.1（压缩线目标 60% ∥ 触发可达性门 ∥ F-CC2 主动压缩）；三态（行序）= 11-1 正常 · 11-2 错误 · 11-3 边界 · 11-4a 错误 · 11-4b 错误 · 11-5 边界 · 11-6 正常 · 11-7 边界 · 11-8 边界 · 11-9 错误。
+> 节注：回指 = `docs/core/design/CONTEXT-COMPACTION.md`「触发与越窗」；交互组件 = `thincoder-core/agent/run-stages.mjs`（守卫）· `thincoder-core/provider/{core,anthropic,google,responses}.mjs`（净判）· `thincoder-core/provider/errors.mjs`（400 分类）；需求回指 = `docs/core/requirements/CONTEXT-COMPACTION.md`「自动压缩」∥「context 工具」；三态（行序）= 11-1 正常 · 11-2 错误 · 11-3 边界 · 11-4a 错误 · 11-4b 错误 · 11-5 边界 · 11-6 正常 · 11-7 边界 · 11-8 边界 · 11-9 错误。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -15,7 +15,7 @@
 | 11-3 | `absent` 档（deepseek-flash 形状）两半段：越线 620,000 ∥ 未越线 100,000，另加退化档 `doubao-seed-2-1-turbo-260628` | 越线：强压 1 · 回合请求 1 · 零 400；未越线：零压缩 · 请求照发；退化档：零压缩 · 请求照发（地板不误伤） | — | `test/integration/context-overflow-guard.test.mjs` |
 | 11-4a | provider 桩首回合回 400 越窗报文，重试回合回 200 | 压缩事件恰 1（自适应压一次）· 压缩请求 1 · 回合请求 2（首 400 + 重试）· 用户拿到答复而非错误 | — | `test/integration/context-overflow-guard.test.mjs` |
 | 11-4b | 同一夹具，压缩后重试仍回 400 越窗（二次越窗） | typed 错误浮出（`kind = "context_overflow"` · `retryable === false`）· 压缩恰 1（不再压）· 回合请求恰 2（无第三次）· 不静默截断 | — | `test/integration/context-overflow-guard.test.mjs` |
-| 11-5 | 恢复带样本的会话（槽带 `estimateSample`：`num 723_272` / `den 491_000` ⇒ 比 ≈ 1.473；provider `maxTokens: 393_216` ⇒ `limit` 606,784），发一条消息 | 首请求估算支 ≈ 723,272 > `limit` ⇒ 触发压缩而非吃 400；业务可观察 = 重启后继续大会话不再 400 | 缺口来源 = 2026-10-27 上下文预算低估批；回指 = `docs/core/requirements/CONTEXT-COMPACTION.md` F-CC7 · `docs/core/design/CONTEXT-COMPACTION.md` §6.17.1 链二 | `test/integration/context-overflow-guard.test.mjs` |
+| 11-5 | 恢复带样本的会话（槽带 `estimateSample`：`num 723_272` / `den 491_000` ⇒ 比 ≈ 1.473；provider `maxTokens: 393_216` ⇒ `limit` 606,784），发一条消息 | 首请求估算支 ≈ 723,272 > `limit` ⇒ 触发压缩而非吃 400；业务可观察 = 重启后继续大会话不再 400 | 缺口来源 = 2026-10-27 上下文预算低估批；回指 = `docs/core/requirements/CONTEXT-COMPACTION.md`「估算与校准」· `docs/core/design/CONTEXT-COMPACTION.md`「估算与样本」∥「触发与越窗」 | `test/integration/context-overflow-guard.test.mjs` |
 | 11-6 | CLI 会话用 128,000 窗档（压缩线 76,800），provider 桩带巨型工具 schema 使 `system + tools` 估算 > 76,800、`history` 仅数条短消息（复刻一次真实超窗事故的现场），发一条消息 | 压缩事件 0（`agent._lastCompressInfo` 未置位）· 摘要请求 0（`logCtx.stage === "compress"` 零发）· 回合请求 1 · 用户拿到答复 · 无 400 | 缺口来源 = 压缩判据把固定开销算进被判定的一侧 | `test/integration/context-overflow-guard.test.mjs` |
 | 11-7 | 同一档，`history` 堆出足量可摘中段，使 `history − middle + 注记 + 占位 + 开销` 的估算 ≤ 76,800，再发一条消息 | 压缩事件恰 1（`agent._lastCompressInfo.mode === "summary"`）· 摘要请求恰 1 · 回合请求恰 1 · 回复引用工具结果 | 同上 | `test/integration/context-overflow-guard.test.mjs` |
 | 11-8 | CLI 会话里让模型主动调 `context{action:'compact'}`——用户说一句「压一下上下文」即进入该回合，且压后仍超压缩线 | 压缩仍执行恰 1——门只拦阈值面，`force` 全文豁免 | — | `test/integration/context-overflow-guard.test.mjs` |
@@ -24,7 +24,7 @@
 ## CLI 15. 偶发空响应不打断会话
 
 > 目的：提供端瞬时吐空之后，用户照常拿到答复，而不是 `LLM returned empty response`；只有连续空才抛。
-> 节注：回指 = `docs/core/design/AGENT-LOOP.md` §6.5①（清零判据 ∥ 额度 ∥ 清零点）· `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31.8（判空加宽）；缺口来源 = 用户 2026-10-27 报告「deepseek-flash 一直报 empty response，点 retry 又能继续」。三态（行序）= 15-1 正常 · 15-2 错误 · 15-3 边界。
+> 节注：回指 = `docs/core/design/AGENT-LOOP.md`（清零判据 ∥ 额度 ∥ 清零点）· `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`（判空加宽）；缺口来源 = 用户 2026-10-27 报告「deepseek-flash 一直报 empty response，点 retry 又能继续」。三态（行序）= 15-1 正常 · 15-2 错误 · 15-3 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -35,7 +35,7 @@
 ## CLI 16. 状态行百分比与压缩判据同尺
 
 > 目的：用户看到的上下文百分比就是压缩实际用的那把尺子——校准比生效，不是低报的裸估算。
-> 节注：需求回指 = `docs/core/requirements/CONTEXT-COMPACTION.md`（F-CC1 感知「模型可查当前上下文的用量与构成」∥ 报面「同名输出不得两个无名百分比并存」）；设计回指 = `docs/core/design/CONTEXT-COMPACTION.md`（stats 面「与状态行 ctx% 的单源关系」条：单源 = 核 `historyReading`）；交互组件 = 槽 `estimateSample` → 核 `sampleRatio` / `restoreTokenSample` → CLI 渲染缓存 `ctxCacheOf` → 状态行渲染（四组件）；进入口 = CLI 恢复带样本的会话，用户肉眼读状态行；三态（行序）= 16-1 正常。
+> 节注：需求回指 = `docs/core/requirements/CONTEXT-COMPACTION.md`「估算与校准」∥「context 工具」；设计回指 = `docs/core/design/CONTEXT-COMPACTION.md`「stats」（与状态行读数共用核 `historyReading`）；交互组件 = 槽 `estimateSample` → 核 `sampleRatio` / `restoreTokenSample` → CLI 渲染缓存 `ctxCacheOf` → 状态行渲染（四组件）；进入口 = CLI 恢复带样本的会话，用户肉眼读状态行；三态（行序）= 16-1 正常。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -44,7 +44,7 @@
 ## CLI 18. 一条后台报告只投递一次，未签收时才升级
 
 > 目的：一条后台报告在会话里出现一次之后**不再被注入**——空回合不把它再推一遍；未签收累积到上限才升级（终局披露一次 + 一条 UNSETTLED 提醒），此后零自动投递。
-> 节注：回指 = `docs/core/requirements/AGENT-LOOP.md` §4.15（F-DA1 / F-DA2 / F-DA3 · N2 / N4）；机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31.5（判定两支 ∥ 未签收上限 ∥ 升级支）∥ §6.31.11（A-DA3 / A-DA9）；交互组件 = 会话链路（`createAgent` + `runAgent` 消化轮）⟷ 见账 pass（`accountDigestRound`——含升级终局披露）⟷ 会话流与 status 面；进入口 = CLI 会话里一条后台报告被投递之后的连续消化轮；三态（行序）= 18-1 正常。
+> 节注：回指 = `docs/core/requirements/AGENT-LOOP.md`「消化账务」；机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`「三阶段」∥「升级」；交互组件 = 会话链路（`createAgent` + `runAgent` 消化轮）⟷ 见账 pass（`accountDigestRound`——含升级终局披露）⟷ 会话流与 status 面；进入口 = CLI 会话里一条后台报告被投递之后的连续消化轮；三态（行序）= 18-1 正常。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -53,7 +53,7 @@
 ## CLI 19. 首 token 慢的长上下文请求不再被当断流
 
 > 目的：等首 token 与流中途停摆分开计时——prefill 久不算断流，中途真停摆仍按空闲窗及时报错。
-> 节注：回指 = docs/core/design/TIMEOUT-DIGEST.md §2.4（判据 A11 ∥ A13）；交互组件 = provider 读侧看门狗（`thincoder-core/provider/sse.mjs` 两态臂）⟷ 两个取值点 `effectiveFetchTimeoutMs` / `effectiveBodyIdleMs`（传输层看门狗本批不动——另批，见该档 §7）；进入口 = CLI 里对慢 prefill 的 provider 桩发一条长上下文消息；两态（行序）= 19-1 正常 · 19-2 边界。
+> 节注：回指 = `docs/core/design/TIMEOUT-DIGEST.md`「响应超时」；交互组件 = provider 读侧看门狗（`thincoder-core/provider/sse.mjs` 两态臂）⟷ 两个取值点 `effectiveFetchTimeoutMs` / `effectiveBodyIdleMs`（传输层看门狗本批不动——另批，见该档）；进入口 = CLI 里对慢 prefill 的 provider 桩发一条长上下文消息；两态（行序）= 19-1 正常 · 19-2 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -63,7 +63,7 @@
 ## CLI 23. 配了 OpenCode Go 的会话能发出话
 
 > 目的：配好渠道后发一句话就有回复，不再吃 `400 MissingSessionID`。
-> 节注：回指 = `docs/core/requirements/PROVIDER.md` §4.11（R38 头值 = 每会话一个 ∥ R39 模板按渠道声明 ∥ R40 预设自带缺省，用户 2026-11-01 01:04 裁定「每会话一个」）；交互组件 = 配置装载（`providers[].headers` 的 `${sessionId}` 模板）⟷ 请求装配（`withUserAgent`）⟷ 本地假上游 HTTP；进入口 = 用户在 `/config` 配好 `opencode-go` 后发一句话，看的是助手回复那一格；三态（行序）= 23-1 正常。
+> 节注：回指 = `docs/core/requirements/PROVIDER.md`「请求头」（`${sessionId}` 每会话一个，模板按渠道声明）；交互组件 = 配置装载（`providers[].headers` 的 `${sessionId}` 模板）⟷ 请求装配（`withUserAgent`）⟷ 本地假上游 HTTP；进入口 = 用户在 `/config` 配好 `opencode-go` 后发一句话，看的是助手回复那一格；三态（行序）= 23-1 正常。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -72,7 +72,7 @@
 ## CLI 25. 撞帽了，用户看得见自己转了多久
 
 > 目的：撞帽卡上同时给出本段轮数与链内累计轮数——用户据此判「继续还是停」。
-> 节注：回指 = `docs/core/requirements/TURN-CAP-CONTINUE.md`（撞帽提示条目）；判据 = `docs/core/design/TURN-CAP-CONTINUE.md` §6；交互组件 = 核回合环（每轮 `++_turnSeq` ∥ `ContinueError` 抛点）⟷ CLI 撞帽分支（询问行 ∥ 待答状态行）；进入口 = CLI 会话里让一个任务连撞两次轮帽，读第二次的卡面；两态（行序）= 25-1 正常 · 25-2 边界。
+> 节注：回指 = `docs/core/requirements/TURN-CAP-CONTINUE.md` F7 ∥ F10；判据 = `docs/core/design/TURN-CAP-CONTINUE.md`；交互组件 = 核回合环（每轮 `++_turnSeq` ∥ `ContinueError` 抛点）⟷ CLI 撞帽分支（询问行 ∥ 待答状态行）；进入口 = CLI 会话里让一个任务连撞两次轮帽，读第二次的卡面；两态（行序）= 25-1 正常 · 25-2 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -82,7 +82,7 @@
 ## CLI 32. advisor guard 的提醒到顶就停，未评审要说出来
 
 > 目的：推回提醒不会因为中间读了几次文件就回满重来——同一未评审周期里提醒有硬上限，两层（进展窗口 ∥ 周期）任一停推就推恰好一条诚实提醒，然后放行收尾、不静默。
-> 节注：回指 = `docs/core/design/ADVISOR-CONVERGENCE.md` §6.4（A ∥ B 两层口径 · 到顶行为）；缺口来源 = 用户来信 2026-10-29「advisor guard 死锁：提醒可无限重复（实测单会话 624 轮）」；交互组件 = 回合环工具批执行处的预算复位（`thincoder-core/agent/turn-loop.mjs` 的写序比）⟷ 完成守卫推回判定（`thincoder-core/agent/completion.mjs`）⟷ 子代理合并推进写序（`thincoder-core/agent-tools/subagent-async.mjs`）⟷ guard 状态携带（`thincoder-core/agent/helpers.mjs` 的 `INHERITED_GUARD_KEYS`）；进入口 = CLI 会话开 `advisor.guard` 后，让助手改代码再一路只读、始终不调 `advisor`；四态（行序）= 32-1 正常（层 1 先耗尽）· 32-2 正常（推满 5 条）· 32-3 边界（子代理合并算进展）· 32-4 边界（诚实提醒位随新进展复位）。
+> 节注：回指 = `docs/core/design/ADVISOR-CONVERGENCE.md`「推回预算」；缺口来源 = 用户来信 2026-10-29「advisor guard 死锁：提醒可无限重复（实测单会话 624 轮）」；交互组件 = 回合环工具批执行处的预算复位（`thincoder-core/agent/turn-loop.mjs` 的写序比）⟷ 完成守卫推回判定（`thincoder-core/agent/completion.mjs`）⟷ 子代理合并推进写序（`thincoder-core/agent-tools/subagent-async.mjs`）⟷ guard 状态携带（`thincoder-core/agent/helpers.mjs` 的 `INHERITED_GUARD_KEYS`）；进入口 = CLI 会话开 `advisor.guard` 后，让助手改代码再一路只读、始终不调 `advisor`；四态（行序）= 32-1 正常（层 1 先耗尽）· 32-2 正常（推满 5 条）· 32-3 边界（子代理合并算进展）· 32-4 边界（诚实提醒位随新进展复位）。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|

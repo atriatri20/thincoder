@@ -213,7 +213,7 @@ export const writeTool = {
     const eol = prev != null ? detectFileEol(prev) : majorityEol(dirname(abs))
     const content = eol === "\r\n" ? normalizeEOL(args.content).replace(/\n/g, "\r\n") : args.content
     // 单一写路径点：默认 = writeFile + 记账；端侧注入 ⇒ 编辑器径（§2.13.5）。
-    await writeThroughPath(abs, content, { op: "write", record: { type: "write", startLine: 1, shift: 0 } }) // 全文重写——全文件受影响
+    await writeThroughPath(abs, content, { op: "write", agent: ctx.agent, record: { type: "write", startLine: 1, shift: 0 } }) // 全文重写——全文件受影响
     const diff = await gitDiffOne(ctx.cwd, abs)
     return `Wrote ${args.content.length} chars to ${args.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
   },
@@ -352,6 +352,7 @@ export const insertAfterTool = {
     const updated = joinWithEol(lines, raw)
     await writeThroughPath(abs, updated, {
       op: "write",
+      agent: ctx.agent,
       record: { type: "insert", startLine: targetLine, shift: normalizeEOL(args.content).split("\n").length },
     })
     const diff = await gitDiffOne(ctx.cwd, abs)
@@ -449,6 +450,7 @@ export const hashlineEditTool = {
     const updated = joinWithEol(lines, raw)
     await writeThroughPath(abs, updated, {
       op: "write",
+      agent: ctx.agent,
       record: { type: "edit", startLine: pos + 1, shift: newLines.length - target.length },
     })
     const diff = await gitDiffOne(ctx.cwd, abs)

@@ -16,6 +16,7 @@ import { sanitizeConsultModels } from "./presets.mjs"
 import { probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
 import { overrideAdmissionIfHostBusy } from "./loop-sampler.mjs"
 import { specForModel } from "../specs.mjs"
+import { WORK_MODES } from "@thincoder/core/config-migrate.mjs"
 
 /** VSC 端 `$schema` 指针（§2.5 #80 端差——本端写盘注入；CLI 不注入）。 */
 export const VSC_CONFIG_SCHEMA = "https://thincoder.dev/schemas/config.json"
@@ -61,7 +62,13 @@ function probeDefaultModelChannel(dm) {
 /** Panel persistence: build the agent.* patch from a webview payload (CLI-parity field names).
  *  语义 verbatim（单写通道——所有字段经一次 persistRaw——冲突提示同 saveAgentSettings）。 */
 export function saveAgentSettingsFromPanel(payload) {
+  // 非法 mode 整载荷零写；合法写入同时退役旧 engineering 布尔。
+  if (payload.mode !== undefined && !WORK_MODES.includes(payload.mode)) return `Invalid agent.mode: ${JSON.stringify(payload.mode)}`
   const patch = {}
+  if (payload.mode !== undefined) {
+    patch.mode = payload.mode
+    patch.engineering = undefined
+  }
   if (payload.maxTurns != null) patch.maxTurns = Number(payload.maxTurns) || undefined
   if (payload.subagentTurns != null) patch.subagentTurns = Number(payload.subagentTurns) || undefined
   // "in payload" guards let explicit undefined (cleared field) flow through as deletion

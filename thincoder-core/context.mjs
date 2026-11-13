@@ -16,6 +16,10 @@ import { buildCompressMessages } from "./compress-form.mjs"
 import { contextUsage, estimateTokens, keepTailSize, splitHistory, SUMMARY_TOKEN_ESTIMATE, tailBudgetTokens } from "./token-window.mjs"
 import { COMPACTION_PLACEHOLDER, withPlaceholderPrefix } from "./context-echo.mjs"
 import { shrinkOversized } from "./context-degrade.mjs"
+// 固定开销越线判据的另一半（#2398）：`limit` 单源 = `requestBudget`（与守卫面同一个数）。
+import { requestBudget } from "./config.mjs"
+// 覆盖条数（#2399）：按折叠身份账算——轮投影与压缩共用同一张账，不在本档另立一份判据。
+import { coveredTurnCount } from "./agent/turn-projection.mjs"
 
 export const SUMMARIZE_PROMPT = `The conversation above is our work log so far — summarize it into a compact summary for use as context in the ongoing conversation.
 Requirements:
@@ -84,6 +88,11 @@ function anchorText(agent) {
 
 /** Replace middle with a note, then re-inject task/plan state (shared by LLM summary and truncation fallback) */
 function applyCompression(agent, headEnd, tailStart, note) {
+  // 在途段起点（#2397）：压缩重建整个机读数组，旧下标落在更短的数组上就是另一条消息——
+  // 先记下它指向的那条消息对象，重建后按身份找回下标（CONTEXT-COMPACTION.md §1.1）。
+  const inFlightAnchor = Number.isInteger(agent._turnStartLen) ? agent.history[agent._turnStartLen] : null
+  // 覆盖条数（#2399）：按折叠身份账算——该轮记录消息全部落在切割点之前才算覆盖（一轮被切开不记）。
+  const turnsCovered = coveredTurnCount(agent, tailStart)
   // _fullHistory already holds every real message (written at the source via pushReal),
   // so compaction only shrinks the machine line — nothing to preserve here.
   // head is normally empty (KEEP_HEAD = 0) — the summary note becomes the first message,
@@ -159,6 +168,16 @@ function applyCompression(agent, headEnd, tailStart, note) {
       content: "[System reminder: plan mode is active. Explore the codebase read-only, design your solution, then call plan with action='exit' to present it for user approval.]",
     })
   }
+
+  // 在途段起点按消息身份重定（CONTEXT-COMPACTION.md §1.1）：找不回（那条已进摘要）⇒ 取注记与占位之后的第一条
+  // 原文（= 本轮 `_runStartHistoryLen` 的口径）。终点 `_turnResponseEnd` 在轮循环返回处才采集，压缩先于它发生，不受影响。
+  // 放在函数尾：上面的摘旧行与回注都会挪下标，重定必须在数组定形之后。
+  if (Number.isInteger(agent._turnStartLen)) {
+    const at = inFlightAnchor ? agent.history.indexOf(inFlightAnchor) : -1
+    agent._turnStartLen = at >= 0 ? at : agent._runStartHistoryLen
+  }
+  // 压缩成果落内存载体（#2399）：槽保存取它、恢复播种取它（SESSION.md §2 ∥ CONTEXT-COMPACTION.md §6）。
+  agent._compactCheckpoint = { note, turnsCovered }
 }
 
 /**
@@ -195,6 +214,9 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   // 单源（§6.16.4）：total 与 stats 面同一函数（既有内联式改调 contextUsage，判定语义零改）
   const usage = contextUsage(agent, extras)
   const tokens = usage.total
+  // 固定开销单独越线（#2398 · §5）：history 归零后 `total` 仍等于固定开销 ⇒ 压缩无解。强压面直接 no-op、
+  // 不发摘要请求（守卫面照抛 typed error；`/compact` 回执报同一原因）——压一次白付一次摘要请求，压完仍抛同一个错。
+  if (extras.force && usage.fixedFloor > requestBudget(agent.provider).limit) return false
   if (!extras.force && tokens <= threshold) return false
 
   const keepTail = keepTailSize(agent.provider, history.length)

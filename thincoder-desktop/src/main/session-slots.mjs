@@ -56,7 +56,7 @@ import {
   loadSlotFile, sessionReading,
 } from "@thincoder/core/session.mjs"
 // 装配面（打开态播种出参）：`providersList` / `provider` 两值由核 `loadConfig` 出（单源）。
-import { loadConfig } from "@thincoder/core/config.mjs"
+import { loadConfig, resolveSessionWorkMode } from "@thincoder/core/config.mjs"
 // 历史页读面（本批增）：窗口切分与页尺的**单源**在核。
 import { HISTORY_PAGE_SIZE, historyWindow } from "@thincoder/core/history-window.mjs"
 // 会话级偏好写面（本批增）：核写口转口 —— 本档零算法副本（只补回读投影）。
@@ -108,9 +108,8 @@ export const writeEndMarker = (cwd, slot) => coreWriteEndMarker(cwd, slot, END)
  *  兜底 `allocateFresh`）。**async**（核入口一次异步束）—— 调用面须 `await`。 */
 export const resumeSlot = (cwd) => coreResumeSlot(cwd, { end: END })
 
-/** 新建会话（同形转口）：核 `newSession` 的 marker 写**无端参** ⇒ 端名由
- *  本档声明覆盖 —— 端层不传端参。**async**（核入口一次异步束）；返回 = 新槽号。 */
-export const newSession = (cwd) => coreNewSession(cwd)
+/** 新建会话：core 负责槽分配与 marker；agent.mode 只播种新会话默认模式。 */
+export const newSession = (cwd) => coreNewSession(cwd, { mode: loadConfig().agent.mode })
 
 /** 槽切换（端参绑定）：核 `switchToSlot` 的 marker 写（核 `session-lifecycle.mjs`）走末位端参 ⇒ 绑 `END`。
  *  同步；返回体 = 槽数据 ∥ `null`（非整数槽 / 清单无项 / 数据文件不可读 —— 核 `switchToSlot` 三因同档）。 */
@@ -149,12 +148,13 @@ function slotMeta(data) {
 /** 模式位**槽投影**（`flags` 回执键 · 状态栏对齐批 —— 单源 = `docs/desktop/design/IPC.md` §2「模式位投影注」
  *  项 2；合并口径 = 活值优先、**agent 不在场 ⇒ 本投影兜底**）：四布尔逐项取自槽字段（会话状态的权威存储 ——
  *  与 D17 `seed` 同源同形）；字段缺 / 非布尔 ⇒ 该键 `false`（负向锁 —— 显示面零节点，禁假造）。 */
-function slotFlags(data) {
+export function slotFlags(data, agentConfig) {
+  const mode = resolveSessionWorkMode(data, agentConfig)
   return {
-    planMode: data.planMode === true,
+    planMode: mode !== "engineering" && data.planMode === true,
     autoApprove: data.autoApprove === true,
     advisorGuard: data.advisor?.guard === true,
-    engineering: data.engineering === true,
+    mode,
   }
 }
 
@@ -213,14 +213,11 @@ export function pageHistory(cwd, payload) {
   const total = history.length
   const end = before == null ? total : Math.max(0, Math.min(before, total))
   const next = hasOlder ? Math.max(0, end - HISTORY_PAGE_SIZE) : null
-  const receipt = { ok: true, messages, hasOlder, next, meta: slotMeta(data), flags: slotFlags(data) }
-  // provider 态投影（#841 —— 「provider 态投影注」：每次页读皆携；配置不可读 ⇒ 键缺席 + 记错
-  // （零静默 —— 读面 fail-soft）。
-  try {
-    receipt.providerState = providerStateOf(loadConfig())
-  } catch (error) {
-    console.error("[session-slots] provider state unavailable:", error)
-  }
+  // 同一次配置读同时供旧槽模式回退与 provider 投影；失败时 mode 走 core 的 normal 缺省。
+  let config = null
+  try { config = loadConfig() } catch (error) { console.error("[session-slots] config unavailable:", error) }
+  const receipt = { ok: true, messages, hasOlder, next, meta: slotMeta(data), flags: slotFlags(data, config?.agent) }
+  if (config !== null) receipt.providerState = providerStateOf(config)
   if (before == null) receipt.seed = openingSeed(data)
   return receipt
 }

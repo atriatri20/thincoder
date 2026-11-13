@@ -16,6 +16,7 @@
  * 零宿主依赖：核函数全部经 `deps` 取值（缺省 = 核单源）⇒ 平 node 直测（零 `electron`）。
  */
 import { assembleAgent as coreAssemble, DEFAULT_DEPS, gitAuthor, teamConfig, validateProvider } from "@thincoder/core/agent/assemble.mjs"
+import { resolveWorkMode, resolveSessionWorkMode } from "@thincoder/core/config.mjs"
 import { resolveEngineeringManifest, projectView } from "@thincoder/core/manifest.mjs"
 import { loadSlotFile } from "@thincoder/core/session.mjs"
 // 执行面两缝（R3 · #523② —— 核件转口，零副本；接线在本档尾）。
@@ -88,9 +89,10 @@ async function projectMcpJsonServers(cwd, configNames) {
  *  @param {{cwd?: string, slotData?: object|null}} [opts] — `slotData` = 本键槽记录（桌面槽面读）
  *  @returns {object|null} 附着后的 manifest / 非 ok 态与普通会话 null */
 export function attachManifest(agent, { cwd, slotData } = {}) {
-  const slotEng = slotData?.engineering
-  const engineering = slotEng !== undefined ? slotEng === true : agent.config?.agent?.engineering === true
-  if (!engineering) {
+  const mode = slotData === undefined
+    ? resolveWorkMode(agent.config?.agent)
+    : resolveSessionWorkMode(slotData, agent.config?.agent)
+  if (mode !== "engineering") {
     agent.manifest = null // 清残留附着（跨模式防陈旧——同 CLI）——普通会话不读 ∕ 不拒 ∕ 不建档
     return null
   }

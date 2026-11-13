@@ -388,7 +388,7 @@ export function persistEngTokens(agent) {
       tasks: agent.tasks ?? [],
       planMode: agent.planMode ?? false,
       autoApprove: agent.autoApprove ?? false,
-      engineering: agent.config?.agent?.engineering ?? false,
+      mode: agent.config?.agent?.mode ?? (agent.config?.agent?.engineering === true ? "engineering" : "normal"),
       goal: agent.goal ?? null,
       advisor: agent.config?.advisor ?? null,
       // 会话级档位（#441③ 键齐——与 `newSlotData` 规范结构 / `saveSession` 携带面同源：
@@ -401,6 +401,10 @@ export function persistEngTokens(agent) {
       createdBy: agent._slotCreatedBy ?? sessionEnd(),
     }
   }
+  // Migrate legacy slots at the same write: removing the old boolean without mode would lose
+  // the session's engineering state if the process stops before the next full saveSession.
+  data.mode = agent.config?.agent?.mode ?? (agent.config?.agent?.engineering === true ? "engineering" : "normal")
+  delete data.engineering
   const fields = engTokenSlotFields(agent)
   if (fields.engDesignTokens !== undefined) data.engDesignTokens = fields.engDesignTokens
   else delete data.engDesignTokens

@@ -26,6 +26,7 @@ import { generateTitle as generateSessionTitle } from "./generate-title.mjs"
 // D7（2026-09-21）：标题源谓词单源——核 `isRealUserMsg`（角色 user ∧ content 为串 ∧ 非
 // `[System reminder:` 前缀）——端壳不再自持 `m.type ?? m.role` 变体。
 import { isRealUserMsg } from "@thincoder/core/history-window.mjs"
+import { WORK_MODES } from "@thincoder/core/config-migrate.mjs"
 import { _cwd } from "./panel-messages.mjs"
 import { ensureSlot, ensureSlotAsync } from "./panel-session.mjs"
 
@@ -68,6 +69,7 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
   const slotProvider = typeof existing.activeProvider === "string" && existing.activeProvider !== "" ? existing.activeProvider : null
   const slotModel = existing.activeModel || null
   const seed = extra.seed ?? null
+  const slotMode = extra.mode !== undefined ? extra.mode : existing.mode
   saveSessionToSlot(cwd, slot, {
     ...existing,
     version: 2, cwd, updatedAt: Date.now(),
@@ -94,12 +96,9 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
     goal: extra.goal !== undefined ? extra.goal : (existing.goal ?? null),
     autoApprove: existing.autoApprove ?? false,
     advisor: advisorOut,
-    // Engineering state persisted by runAgent (agentState): design token survives turns;
-    // the engineering flag is slot-authoritative (2026-08-29); end-side config.json mirror write retired.
-    // `!== undefined` (not ??): a legacy slot with NO engineering field must stay field-less
-    // when the run didn't speak (abort/finally saves) — hard-writing `false` here would pin
-    // the session off and kill the config.json fallback (compat contract, see tests).
-    engineering: extra.engineering !== undefined ? extra.engineering : existing.engineering,
+    // mode 是会话唯一权威；合法 mode 落槽即退役旧布尔，无合法 mode 的旧槽仍保留迁移来源。
+    mode: slotMode,
+    engineering: WORK_MODES.includes(slotMode) ? undefined : existing.engineering,
     // DESIGN-TOKEN-SETTLEMENT D2/D5 (2026-09-08): 单值镜像字段 engDesignToken 已退役——
     // agentState 不再携带（agentState 去镜像），此处不再写该字段（旧槽残留经 ...existing
     // spread 原样往返保留，仅供 setup 一次性迁移读——AC3 运行时零镜像写）。
@@ -114,6 +113,11 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
     // ⇒ 保留槽值——写成 undefined 会因 full-overwrite 令键随序列化消失、槽内既有样本被抹。
     // 跨模型的旧样本由核 `restoreTokenSample` 校验③（key 同源）自清。
     estimateSample: extra.estimateSample !== undefined ? extra.estimateSample : (existing.estimateSample ?? null),
+     // 轮记录写面（SESSION §2 · CONTEXT-COMPACTION §1.1 · 台账 #2395）：本回合载荷（`agentState.turns`）
+     // **覆盖**槽值——不只做 `...existing` 保留：内存里的轮记录是当前权威（本回合完成的轮已在内）。
+     // 键缺席（abort / switch-model / timer-wake 等不携 agentState 的保存）⇒ 保留槽值；
+     // `agentState` 在核未惰性建立 `_turns` 时返回 `null`（键在场但非数组）⇒ 同样保留，不把槽写空。
+     turns: Array.isArray(extra.turns) ? extra.turns : (Array.isArray(existing.turns) ? existing.turns : []),
     pendingReminders: extra.pendingReminders !== undefined ? extra.pendingReminders : (existing.pendingReminders ?? []), sessionStart: existing.sessionStart ?? new Date().toISOString(),
     // 2026-09-01 会诊 kimi/qwen 🔴：sessionStart 是 F2 覆盖防护的会话身份——VS Code
     // 此前从不赋值（恒 null）→ diskStart 恒 null → F2 轮转条件永不触发（纯 VS Code

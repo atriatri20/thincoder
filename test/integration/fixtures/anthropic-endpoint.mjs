@@ -3,8 +3,9 @@
  *
  * 消费面：`test/integration/anthropic-tool-roundtrip.test.mjs`（集成场景 1-1 / 1-2 / 1-3）与批次探针
  * （判定「夹具按请求内容认摘要请求」这一条规则本身）。夹具本体与场景分居两档，因为识别规则要能被
- * 单独核对：它与场景同住时不可 import，而本套件的固定开销吃掉压缩线 ⇒ 压缩支在三个场景里从不触发，
- * 识别规则**从不走真支**，直接读不到（`#1833` 的失真红就出在这条规则上）。
+ * 单独核对：它与场景同住时不可 import，而本套件（128K 窗格档：压缩线 76800）的固定开销吃掉压缩线
+ * ⇒ 压缩支在三个场景里从不触发，识别规则**从不走真支**，直接读不到（`#1833` 的失真红就出在这条规则上）。
+ * （1M 窗格档的消费面见 `turn-history-projection.test.mjs`：那边压缩线 600K 在固定开销之上，不触发的原因是历史短。）
  *
  * 回**三态**：`tool_use` 回合 · 文本回合 · 摘要回合（按请求内容认，不按请求序号）。
  * 本档只做逐字搬迁（语义零变）：场景档的三例断言一字未动，读数前后一致。
@@ -66,7 +67,7 @@ const textEvents = (text) => [
 ]
 
 /**
- * 摘要请求的识别锚 = `SUMMARIZE_PROMPT` 首句（`thincoder-core/context.mjs:20` 起那段指令的唯一开局句）。
+ * 摘要请求的识别锚 = `SUMMARIZE_PROMPT` 首句（`thincoder-core/context.mjs` 里那段指令的唯一开局句）。
  * 压缩摘要在压缩前不存在，只能按**请求内容**认——不用序号：压缩随时可能插在某次对话之前，
  * 「第 1 个请求必是对话」这一序号假设曾把产品的红伪装成夹具的红（`#1833` 失真链）。
  */
@@ -83,12 +84,13 @@ export const isSummaryRequest = (messages) => {
 
 /**
  * 起本地假 Anthropic 端点，返回 `{ port, requests, rejections, close }`。
- * `calls` = **首个对话请求**派发的工具调用；其余对话请求一律文本回合（一回合一个请求，不重派），
- * 摘要请求（`summary: true`）一律回一段摘要文本。
- * 对话回合上限是有意为之：若转换层退化成「角色合法、但 assistant 的 tool_use 没了」，这里直接回文本，
- * 回复里没有工具结果，断言当场给出可读失败，而不是反复派工具直到超时。
+ * `calls` = **首个对话请求**派发的工具调用；`callsAt` = 按**对话请求序号**派发（`{ 4: [call] }`——
+ * 多回合场景用它把工具调用放到第 N 次对话上）；其余对话请求文本回合（一回合一个请求，不重派），
+ * 摘要请求（`summary: true`）一律回摘要文本。
+ * `failAt` = 按对话请求序号回 400（非可重试的普通入参错，不带越窗特征）：模拟「回合中途上游拒」——
+ * 该回合不登记，但进程仍在。这两种旋钮是给多回合 / 异常回合场景的，默认不开。
  */
-export function fakeAnthropic({ calls = [] } = {}) {
+export function fakeAnthropic({ calls = [], callsAt = null, failAt = null } = {}) {
   const requests = []
   const rejections = []
   const server = createServer((req, res) => {
@@ -114,7 +116,16 @@ export function fakeAnthropic({ calls = [] } = {}) {
       }
       if (record.summary) return sseReply(res, textEvents("SUMMARY: earlier work compressed."))
       const dialogueRequests = requests.filter((r) => !r.summary).length
-      if (calls.length > 0 && dialogueRequests === 1) return sseReply(res, toolUseEvents(calls))
+      // 脚本掉的「回合中途上游拒」：记在请求档上（status = 400），不进 `rejections`（那是**非预期**的 role 违规面）
+      if (failAt != null && (Array.isArray(failAt) ? failAt.includes(dialogueRequests) : dialogueRequests === failAt)) {
+        record.status = 400
+        return jsonReply(res, 400, {
+          type: "error",
+          error: { type: "invalid_request_error", message: "fixture-injected upstream rejection (failAt knob)" },
+        })
+      }
+      const scripted = callsAt?.[dialogueRequests] ?? (calls.length > 0 && dialogueRequests === 1 ? calls : null)
+      if (scripted?.length) return sseReply(res, toolUseEvents(scripted))
       return sseReply(res, textEvents(replyText(messages, toolResultTexts(messages))))
     })
   })

@@ -32,7 +32,7 @@ import { resolve } from "node:path"
 import { sessionEnd } from "../session-slots.mjs"
 import { peerInstances } from "../peer-instances.mjs"
 import { specForModel } from "../config.mjs"
-import { manifestFilePath, readManifest, projectView } from "../manifest.mjs"
+import { docRootPaths, manifestFilePath, readManifest, projectView } from "../manifest.mjs"
 
 /** env-state line builder — 对入参 + 进程端名确定（§6.20 端名缝 sessionEnd()；setSessionEnd 注入 ⇒ 单元测试可用）。
  *  §6.11（F1）：slot 字段入行——位置在 model 后 resumed 前（N3：无绑定 → 显式 null——
@@ -52,7 +52,8 @@ export function envStateLine({ mode, model, slot, resumed }) {
  * a missing config/history never throws (T-E13).
  */
 export function pushEnvStateReminder(agent) {
-  const mode = agent.config?.agent?.engineering ? "eng" : "normal"
+  const workMode = agent.config?.agent?.mode ?? (agent.config?.agent?.engineering ? "engineering" : "normal")
+  const mode = workMode === "engineering" ? "eng" : workMode
   const model = agent.activeModel ?? agent.provider?.model ?? "unknown"
   const slot = agent._slot ?? null
   const resumed = agent._envResumed === true
@@ -137,6 +138,12 @@ function refreshManifest(agent) {
   }
   if (!m.ok) return // 读回非法 / 缺失 ⇒ 保守（沿用旧值）
   agent.manifest = m.manifest
+  // 设计 ∥ 需求文档根的绝对路径表（#2400 `changedDocs` 的过滤面）：manifest 就在手，同一处解析一次——
+  // 轮投影保持零 IO（`buildTurnTaskState` 只收 `facts.docRoots`，不自读 manifest），取走的是这条已算好的表。
+  agent._docRoots = [
+    ...docRootPaths(m.manifest?.docRoot?.design, agent.cwd),
+    ...docRootPaths(m.manifest?.docRoot?.requirements, agent.cwd),
+  ]
   agent._manifestMtime = mtimeMs
 }
 

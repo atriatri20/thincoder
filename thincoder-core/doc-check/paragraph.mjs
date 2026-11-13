@@ -2,7 +2,7 @@
  * doc-check/paragraph.mjs — 判据 ①「一段太长」+ 全仓共用的结构谓词族。
  *
  * 判据句单源 = `docs/core/design/DOC-CHECK.md` §2：一段 = 相邻的非空正文行合起来的那一片文字；
- * 标题 ∥ 表格 ∥ 列表 ∥ 引用 ∥ 围栏块各自成界（它们断开段，自己也不算进段）；超过 300 字 ⇒ 报。
+ * 标题 ∥ 表格 ∥ 列表 ∥ 引用 ∥ 围栏块 ∥ 缩进代码块各自成界（它们断开段，自己也不算进段）；超过 300 字 ⇒ 报。
  * 提示词面（`thincoder-core/prompts/`）每行自成一界——那里的换行排的是版式，不是分段。
  * 阈值 300 是常量：判据不读项目配置，要改就改代码、走评审（§2 末行）。
  *
@@ -32,6 +32,102 @@ export const isQuoteLine = (l) => /^\s*>/.test(String(l))
 
 /** 列表项谓词（无序 `-` ∥ `*` ∥ `+` · 有序 `数字 + . ∥ ） ∥ 、` · 中文标记 `·` ∥ `•`；圈号 `①`–`⑳` 另起一式）。 */
 export const isListItem = (l) => /^\s*(?:[-*+]|\d+[.)、]|[·•])\s/.test(String(l)) || /^\s*[①-⑳]/.test(String(l))
+
+/** 缩进代码行：四格空格或 Tab 起头；是否成块还要看前一行是否为空或也是代码。 */
+const isIndentedCodeLine = (l) => /^(?: {4}|\t)/.test(String(l))
+
+/** 表格单元：只把未转义且在码段外的竖线当分隔符；外侧竖线形成的空单元再剥掉。 */
+function tableCells(l) {
+  const s = String(l).trim()
+  if (!s.includes("|")) return null
+  const cells = []
+  let start = 0
+  let codeTicks = 0
+  let i = 0
+  while (i < s.length) {
+    if (s[i] === "\\" && s[i + 1] === "|" && codeTicks === 0) { i += 2; continue }
+    if (s[i] === "`") {
+      let end = i + 1
+      while (s[end] === "`") end += 1
+      const ticks = end - i
+      if (codeTicks === 0) codeTicks = ticks
+      else if (codeTicks === ticks) codeTicks = 0
+      i = end
+      continue
+    }
+    if (s[i] === "|" && codeTicks === 0) {
+      cells.push(s.slice(start, i))
+      start = i + 1
+    }
+    i += 1
+  }
+  cells.push(s.slice(start))
+  if (s.startsWith("|") && cells[0].trim() === "") cells.shift()
+  if (s.endsWith("|") && cells.at(-1).trim() === "") cells.pop()
+  return cells.map((cell) => cell.trim())
+}
+
+/** 无首尾竖线的表头只能由下一行的分隔行确认；列数必须一致，避免把普通竖线文本误判成表。 */
+function startsTable(lines, i) {
+  const header = tableCells(lines[i])
+  const delimiter = i + 1 < lines.length ? tableCells(lines[i + 1]) : null
+  return header !== null && delimiter !== null && header.length === delimiter.length && delimiter.every((cell) => /^:?-{3,}:?$/.test(cell))
+}
+
+/** 空行之后仍是缩进内容或下一列表项 ⇒ 这是疏松列表的内部空行，不是列表结束。 */
+function listContinuesAfterBlank(lines, i) {
+  for (let j = i + 1; j < lines.length; j += 1) {
+    if (lines[j].trim() === "") continue
+    return isListItem(lines[j]) || /^\s{2,}\S/.test(lines[j])
+  }
+  return false
+}
+
+/** 表格块、列表块与缩进代码块的整行排除表；围栏截断表格，但缩进围栏不截断它所属的列表。
+ *  列表项之后的普通行是 Markdown 的懒惰续行，同样属于列表；表格体延续到第一个无竖线的非空行。 */
+function structuralExclusionLines(lines) {
+  const excluded = new Array(lines.length).fill(false)
+  let fence = null
+  let inList = false
+  let inTable = false
+  let inIndentedCode = false
+  lines.forEach((l, i) => {
+    const mark = fenceMark(l)
+    if (mark !== null) {
+      const nestedInList = inList && /^\s{2,}\S/.test(l)
+      if (fence === null) fence = mark
+      else if (isFenceClose(mark, fence)) fence = null
+      if (!nestedInList) inList = false
+      inTable = false
+      inIndentedCode = false
+      return
+    }
+    if (fence !== null) return
+    const previous = i === 0 ? "" : lines[i - 1]
+    const codeBoundary = i === 0 || previous.trim() === "" || inIndentedCode
+    inIndentedCode = isIndentedCodeLine(l) && codeBoundary
+    if (inIndentedCode) {
+      excluded[i] = true
+      inTable = false
+      return
+    }
+    if (startsTable(lines, i)) {
+      inTable = true
+      inList = false
+    }
+    if (isTableRow(l) || (inTable && tableCells(l) !== null)) {
+      excluded[i] = true
+      inList = false
+      return
+    }
+    inTable = false
+    if (headingMark(l)) inList = false
+    else if (isListItem(l)) inList = true
+    else if (inList && l.trim() === "") inList = listContinuesAfterBlank(lines, i)
+    if (inList) excluded[i] = true
+  })
+  return excluded
+}
 
 /** 提示词面谓词（`thincoder-core/prompts/**`）：模型读原始文本，一行就是一个块 ⇒ 该面逐行判。 */
 export const isPromptFace = (abs) => /(?:^|\/)thincoder-core\/prompts\//i.test(String(abs).replace(/\\/g, "/"))
@@ -106,6 +202,8 @@ export function bodyLines(text) {
  */
 export function paragraphHits(text, { promptFace = false, region = null } = {}) {
   const src = String(text ?? "")
+  const lines = src.split("\n")
+  const excluded = structuralExclusionLines(lines)
   // 段的归属：变更行在段内，或纯删的缝贴在段首之前 ∥ 落在段内；**缝落在档头（`g = 0`）则取第一段**。
   // 第一段只有把段收齐之后才指得出来，所以本函数先收段、再按 `i` 判第一段。
   const owned = (s, e, i) => {
@@ -119,7 +217,9 @@ export function paragraphHits(text, { promptFace = false, region = null } = {}) 
   }
   if (promptFace) {
     const spans = []
-    src.split("\n").forEach((l, i) => spans.push({ line: i + 1, end: i + 1, len: [...l].length }))
+    lines.forEach((l, i) => {
+      if (!excluded[i]) spans.push({ line: i + 1, end: i + 1, len: [...l].length })
+    })
     return spans.filter((s, i) => s.len > PARAGRAPH_MAX && owned(s.line, s.end, i)).map(({ line, len }) => ({ line, len }))
   }
   const spans = []
@@ -129,7 +229,7 @@ export function paragraphHits(text, { promptFace = false, region = null } = {}) 
     if (cur !== null) spans.push(cur)
     cur = null
   }
-  src.split("\n").forEach((l, i) => {
+  lines.forEach((l, i) => {
     const mark = fenceMark(l)
     if (mark !== null) {
       if (fence === null) fence = mark
@@ -138,7 +238,7 @@ export function paragraphHits(text, { promptFace = false, region = null } = {}) 
       return
     }
     if (fence !== null) { flush(); return } // 围栏块内整行断段（未闭合 ⇒ 至档尾免）
-    if (headingMark(l) || l.trim() === "" || isTableRow(l) || isListItem(l) || isQuoteLine(l)) { flush(); return }
+    if (excluded[i] || headingMark(l) || l.trim() === "" || isQuoteLine(l)) { flush(); return }
     if (cur === null) cur = { line: i + 1, end: i + 1, len: 0 }
     cur.end = i + 1
     cur.len += [...l].length

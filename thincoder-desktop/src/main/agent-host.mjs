@@ -36,6 +36,7 @@
  * 文件枚举过滤 + `seq` 原样回携）；本档只留 import + 装配 ∕ 暴露两行（拆分评审结论 = 批档 §2.7 本档行）。
  */
 import { runAgent } from "@thincoder/core/agent.mjs"
+import { resolveWorkMode } from "@thincoder/core/config.mjs"
 import { historyReading, tokenRatioOf } from "@thincoder/core/token-window.mjs"
 // 会话键语义（`String(slot)` 单源）与端壳同档 —— 键面归一不造第二口径；偏好写面（`writeSlotPrefs`）同档。
 import { slotOfKey, writeSlotPrefs } from "./session-slots.mjs"
@@ -275,11 +276,12 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     if (key === undefined || key === null) return null
     const agent = agents.get(String(key))
     if (!agent) return null
+    const mode = resolveWorkMode(agent.config?.agent)
     return {
-      planMode: agent.planMode === true,
+      planMode: mode !== "engineering" && agent.planMode === true,
       autoApprove: agent.autoApprove === true,
       advisorGuard: agent.config?.advisor?.guard === true,
-      engineering: agent.config?.agent?.engineering === true,
+      mode,
     }
   }
 

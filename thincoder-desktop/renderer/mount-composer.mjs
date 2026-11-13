@@ -209,7 +209,7 @@ export function attachComposer(host, deps = {}) {
     store.set(returnToBottom(setHelpLines(store.get(), key, formatHelp(slashCommands, t))))
     return true
   }
-  const slashCommands = createSlashCommands(printHelp) // 命令表一处构造（`/help` 条闭包持打印口）
+  const slashCommands = createSlashCommands(printHelp, () => sync.state.flags().mode) // slash 与 MODE 控件共用 setMode
 
   // ─── 装配 ────────────────────────────────────────────────────────────────
 

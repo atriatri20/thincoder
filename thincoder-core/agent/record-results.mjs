@@ -34,6 +34,9 @@ import { looksLikeReviewOutput, advisorIncompleteMarker } from "../advisor/run.m
 import { noteReviewDelivered } from "../agent-tools/review-facts.mjs"
 // #1178：动作级只读分类（settings get ∥ manifest read 类）不失效 verify——谓词单源 = dispatch-gates。
 import { isReadonlyAction } from "./dispatch-gates.mjs"
+// 跨轮投影的**账本采集点**（CONTEXT-COMPACTION.md §1.1 · 台账 #2395）：每一条工具结果入史的同时记一笔
+// 运行记账（验证命令与结果摘要）；变更文件面仍走 `_touchedFiles` 既有归集（不另立第二份清单）。
+import { noteTurnToolFacts } from "./turn-projection.mjs"
 
 let _reindexFile = null
 
@@ -51,6 +54,8 @@ export async function recordToolResults(agent, toolByName, results) {
 
   for (const { toolCall, result, ok } of results) {
     const tool = toolByName.get(toolCall.name)
+    // 运行记账先于三条入史分支（多模态 ∥ 普通 ∥ 非视觉提醒）——一条结果只记一次。
+    noteTurnToolFacts(agent._turnLedger, { toolCall, result, ok })
     // Multimodal tools return JSON { text, images } — inject as multimodal user message
     if (tool?.multimodal && ok) {
       try {

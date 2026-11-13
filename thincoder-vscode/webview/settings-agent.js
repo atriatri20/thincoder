@@ -13,6 +13,8 @@ export function agentCardHtml() {
   // ─── Agent card (run parameters + subagent model assignments) ───
   const as = SS.agentSettings || {}
   html += `<section class="settings-card"><h4 class="settings-card-title">${t("settings.agentSection")}</h4><div class="settings-card-body">`
+  const defaultMode = ["minimal", "normal", "engineering"].includes(as.defaultMode) ? as.defaultMode : "normal"
+  html += `<div class="key-field"><label title="${t("settings.agent.modeHelp")}">${t("settings.agent.mode")}</label><select id="ag-mode">${["minimal", "normal", "engineering"].map((mode) => `<option value="${mode}" ${defaultMode === mode ? "selected" : ""}>${t(`settings.agent.mode${mode[0].toUpperCase()}${mode.slice(1)}`)}</option>`).join("")}</select></div>`
   html += `<div class="key-field"><label title="${t("settings.maxTurnsHelp")}">${t("settings.maxTurns")}</label><input id="ag-maxturns" type="number" min="1" value="${as.maxTurns ?? 200}"></div>`
   html += `<div class="key-field"><label title="${t("settings.subagentTurnsHelp")}">${t("settings.subagentTurns")}</label><input id="ag-subturns" type="number" min="1" value="${as.subagentTurns ?? 100}"></div>`
   // §11.1/§11.2（R14/R13——POOL-CONFIG-UNIFIED 2026-09-09）：并发池三域容量
@@ -96,6 +98,7 @@ export function bindAgentControls() {
     const models = collectConsultRows()
     return {
       settings: {
+        mode: get("ag-mode") || undefined,
         maxTurns: get("ag-maxturns") || undefined,
         subagentTurns: get("ag-subturns") || undefined,
         // §11.1/§11.2（R14/R13——POOL-CONFIG-UNIFIED 2026-09-09）：并发池三域容量——
@@ -150,6 +153,7 @@ export function bindAgentControls() {
   // P2-3（#677 I15）：差异提交——change 只发被编辑控件所属字段（未编辑字段不入载荷 ⇒ 默认值不物化）；
   // `fields === null`（无主控件路径）⇒ 全量兜底；池 ∕ 槽 ∕ consult 组 = 其载荷字段（写面原子单位）。
   const EDIT_FIELDS = {
+    "ag-mode": ["mode"],
     "ag-maxturns": ["maxTurns"], "ag-subturns": ["subagentTurns"], "ag-compact": ["compactThreshold"],
     "ag-verifyguard": ["verifyGuard"], "ag-autothink": ["autoThink"], "ag-pool-engcoder": ["poolLimits"],
     "ag-injectprojectrules": ["injectProjectRules"],

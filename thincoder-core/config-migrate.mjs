@@ -21,6 +21,35 @@
  *    本档被 `config.mjs` import ⇒ 不得反向 import（循环）——故 ② 保持纯函数形态。
  */
 
+export const WORK_MODES = Object.freeze(["minimal", "normal", "engineering"])
+
+/** The only work-mode authority. A present but invalid mode falls back to normal; legacy
+ * engineering is consulted only when the mode key is absent. */
+export function resolveWorkMode(agentConfig = {}) {
+  if (agentConfig && typeof agentConfig === "object" && Object.hasOwn(agentConfig, "mode")) {
+    return WORK_MODES.includes(agentConfig.mode) ? agentConfig.mode : "normal"
+  }
+  return agentConfig?.engineering === true ? "engineering" : "normal"
+}
+
+/** Restore prefers a valid slot mode, then migrates the legacy slot boolean, then uses config. */
+export function resolveSessionWorkMode(data, agentConfig = {}) {
+  if (data && typeof data === "object" && WORK_MODES.includes(data.mode)) return data.mode
+  if (data && typeof data === "object" && data.engineering !== undefined) {
+    return data.engineering === true ? "engineering" : "normal"
+  }
+  return resolveWorkMode(agentConfig)
+}
+
+/** Update the sole mode and derive the compatibility boolean for old runtime consumers. */
+export function setConfigWorkMode(config, mode) {
+  if (!WORK_MODES.includes(mode)) throw new Error(`work mode must be one of ${WORK_MODES.join("/")} — got ${JSON.stringify(mode)}`)
+  config.agent ??= {}
+  config.agent.mode = mode
+  config.agent.engineering = mode === "engineering"
+  return mode
+}
+
 export function migrateLegacyModelFields(raw) {
   if (!raw || typeof raw !== "object") return false
   const providers = Array.isArray(raw.providers) ? raw.providers : []

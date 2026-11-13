@@ -1,9 +1,9 @@
 /**
  * member-routes.mjs — 成员面对话面 + 工作区写面 + git 凭据（`gateway/API.md` §2.11 ∥ `agent/MEMBER-AGENT.md` §3.2–§3.8；
- * member-face-chat 批 · KD-SV-152–157/203/204；member-face-parity 批扩——在途门会话级 ∥ 四旗/标题写面 ∥
+ * member-face-chat 批 · KD-SV-152–157/203/204；member-face-parity 批扩——在途门会话级 ∥ 会话控件/标题写面 ∥
  * 工作区 key 第三门 ∥ 图片通道 ∥ 行扩四键）：会话读/建/改 = **盒指令转发**（`cmd`——会话真源在盒内，服务器零会话落库；
  * 盒离线 ⇒ 409 `workspace_offline`）∥ 工作区写面四端点（建/启停销毁/拉仓——本人资源自管 + `memberWorkspaceLimit` 上限）∥
- * git 凭据三端点（`member-cred.mjs`）；ask 应答/会话删除/`@` 候选三端点住 `member-asks.mjs`（拆档——越 500 行）。
+ * git 凭据三端点住 `member-git-credentials.mjs`（拆档——越 500 行）；ask 应答/会话删除/`@` 候选三端点住 `member-asks.mjs`（同拆）。
  *
  * 判权 = **双鉴权同判权**（控制台 cookie ∥ 登录 token `Authorization: Bearer`——KD-SV-157）+ **恒本人**
  * （他人资源 ⇒ 列表零出现 ∥ 直取 404 不辨）+ **工作区 key 第三门**（`/api/me/sandbox/*` 写面——盒内工具面：
@@ -29,7 +29,8 @@ import { workspaceView } from "../sandbox/workspace-routes.mjs"
 import { registerBoxRoutes } from "./box-routes.mjs"
 import { assertChatImages } from "./chat-routes.mjs"
 import { registerMemberAskRoutes } from "./member-asks.mjs"
-import { listMemberCredentials, revokeMemberCredential, setMemberCredential } from "./member-cred.mjs"
+import { registerMemberSessionPatchRoutes } from "./member-session-patch.mjs"
+import { registerMemberGitCredentialRoutes } from "./member-git-credentials.mjs"
 import { createPullRegistry, pullProjectOf } from "./member-pull.mjs"
 import { SESSION_BUSY_MESSAGE, createMemberRelay } from "./member-relay.mjs"
 import { providerModelRefs } from "./run.mjs"
@@ -37,8 +38,9 @@ import { providerModelRefs } from "./run.mjs"
 /** 成员面工作区动作集（§3.7——本人资源自管四件；轮换/快照恢复 = 管理面）。 */
 export const MEMBER_WORKSPACE_ACTIONS = Object.freeze(["start", "stop", "destroy"])
 
-/** 会话设置面字段集（PATCH 一次一件——换模型 ∥ 设档 ∥ 四旗 ∥ 标题；§2.11）。 */
-export const SESSION_SETTING_KEYS = Object.freeze(["model", "reasoning", "title", "autoApprove", "planMode", "engineering", "advisorGuard"])
+/** 会话设置面字段集（PATCH 一次一件）。旧 engineering 只读迁移，不接受写入。 */
+export const WORK_MODES = Object.freeze(["minimal", "normal", "engineering"])
+export const SESSION_SETTING_KEYS = Object.freeze(["model", "reasoning", "title", "autoApprove", "planMode", "mode", "advisorGuard"])
 
 /** 子代理键形（`<role>#<id>`——核 `agent/relay-prefix.mjs` 文法同形；`abort { key }` 形门）。 */
 const SUBAGENT_KEY_RE = /^[A-Za-z_][\w.-]*#\d+$/
@@ -82,10 +84,11 @@ export function parseSessionId(raw) {
 }
 
 /** 会话行形（§2.11——建/列表/详情/PATCH 四处同源；盒行键两形兼容：核形 `activeModel`/`effort`/`timestamp`）。
- *  member-face-parity 批扩四键：`title`（槽标题）∥ `count`（槽 history 长）∥ `flags`（槽四旗——KD-SV-218）∥
+ *  行携 `title`（槽标题）∥ `count`（槽 history 长）∥ `flags`（三布尔开关 + mode）∥
  *  `awaitingApproval`（在决 ask 读数——relay 内存，需调用侧注入（缺省假））。 */
 export function sessionRowOf(workspace, raw = {}, { awaitingApproval = false } = {}) {
   const slot = raw.slot ?? raw.id ?? ""
+  const mode = WORK_MODES.includes(raw.flags?.mode) ? raw.flags.mode : (raw.flags?.engineering === true ? "engineering" : "normal")
   return {
     id: `${workspace.id}:${slot}`,
     workspaceId: workspace.id,
@@ -96,9 +99,9 @@ export function sessionRowOf(workspace, raw = {}, { awaitingApproval = false } =
     count: Number.isInteger(raw.count) ? raw.count : 0,
     flags: {
       autoApprove: raw.flags?.autoApprove === true,
-      planMode: raw.flags?.planMode === true,
-      engineering: raw.flags?.engineering === true,
+      planMode: mode !== "engineering" && raw.flags?.planMode === true,
       advisorGuard: raw.flags?.advisorGuard === true,
+      mode,
     },
     status: String(raw.status ?? "idle"),
     excerpt: String(raw.excerpt ?? raw.firstMessage ?? raw.title ?? ""),
@@ -243,7 +246,7 @@ export function registerMemberRoutes(routes, { db, config = {}, log = null, rela
       detail: { kind: "chat_start", sessionId: `${workspace.id}:${slot}` },
       ts: now(),
     })
-    sendJson(res, 200, { session: sessionRowOf(workspace, { slot, model }) })
+    sendJson(res, 200, { session: sessionRowOf(workspace, detail.session ?? { slot, model }) })
   })
 
   // ── ④ 会话详情（`session.read` 指令——盒离线 ⇒ 409）───────────────────────────────
@@ -260,61 +263,12 @@ export function registerMemberRoutes(routes, { db, config = {}, log = null, rela
     })
   })
 
-  // ── ⑤ 会话设置面（一次一件——`session.update` ∥ `session.rename` 指令：换模型 ∥ 设档 ∥ 四旗 ∥ 标题；盒离线 ⇒ 409）─
-  routes.add("PATCH", "/api/me/chat/sessions/:id", async (req, res, ctx) => {
-    const member = requireMember(db, req)
-    const parsed = parseSessionId(ctx.params.id)
-    if (parsed === null) throw new HttpError("not_found", `会话不存在：${ctx.params.id}`)
-    const workspace = workspaceOr404(db, member, parsed.workspaceId)
-    if (!relay.online(workspace.id)) throw new HttpError("workspace_offline", offlineMessage(workspace))
-    const body = await readJsonBody(req)
-    const present = SESSION_SETTING_KEYS.filter((key) => body?.[key] !== undefined)
-    if (present.length !== 1) {
-      throw new HttpError("invalid_request_error", `一次一件：body 须恰携一件（${SESSION_SETTING_KEYS.join(" ∥ ")}——实携 ${present.length} 件）`)
-    }
-    const field = present[0]
-    let command = "session.update"
-    let args
-    if (field === "model") {
-      const model = typeof body.model === "string" ? body.model.trim() : ""
-      if (model === "") throw new HttpError("invalid_request_error", "model 必填（会话内换模型——下回合生效）")
-      if (!providerModelRefs(listProviderEntries(db)).includes(model)) {
-        throw new HttpError("invalid_request_error", `模型不可用：${model}（不在开放清单——库零变）`)
-      }
-      args = { slot: parsed.slot, model, reasoning: null } // 换模型 ⇒ 档位清（§3.4）
-    } else if (field === "reasoning") {
-      const reasoning = body.reasoning
-      if (reasoning !== null && typeof reasoning !== "string") {
-        throw new HttpError("invalid_request_error", "reasoning 须为字符串或 null（null = 清空档位）")
-      }
-      if (reasoning !== null) {
-        const current = valueOf(await relay.runCommand(workspace.id, "session.read", { slot: parsed.slot }), { notFoundMessage: `会话不存在：${ctx.params.id}` }) ?? {}
-        const currentModel = sessionRowOf(workspace, current.session ?? { slot: parsed.slot }).model
-        let levels = []
-        try {
-          levels = await levelsOfRef(db, currentModel) // 值域 = 当刻模型核枚举（§3.4——server 先校验）
-        } catch (e) {
-          noteDegraded(log, "member-chat-patch", e)
-          throw new HttpError("invalid_request_error", `${e.message}——档位面暂不可写（库零变）`)
-        }
-        if (!levels.includes(reasoning)) {
-          throw new HttpError("invalid_request_error", `思考档位不在当前模型枚举内：${reasoning}（模型 ${currentModel}）——库零变`)
-        }
-      }
-      args = { slot: parsed.slot, reasoning }
-    } else if (field === "title") {
-      // 重命名（KD-SV-203——行内输入 ⇒ 核 `renameSlot`；空串 = 清标题）
-      if (typeof body.title !== "string") throw new HttpError("invalid_request_error", "title 须为字符串（空串 = 清标题）")
-      command = "session.rename"
-      args = { slot: parsed.slot, title: body.title }
-    } else {
-      // 四模式旗（KD-SV-218——槽四字段；下回合装配生效；ENG⇒PLAN 互斥随核）
-      if (typeof body[field] !== "boolean") throw new HttpError("invalid_request_error", `${field} 须为布尔（四模式旗）`)
-      args = { slot: parsed.slot, [field]: body[field] }
-    }
-    const detail = valueOf(await relay.runCommand(workspace.id, command, args), { notFoundMessage: `会话不存在：${ctx.params.id}` }) ?? {}
-    const raw = detail.session ?? (detail !== null && typeof detail === "object" ? detail : {})
-    sendJson(res, 200, { session: sessionRowOf(workspace, { slot: parsed.slot, ...raw }, { awaitingApproval: relay.pendingAskOf(workspace.id, parsed.slot) }) })
+  // ── ⑤ 会话设置面（拆档 `member-session-patch.mjs`——族内助手经 `helpers` 注入）──────────────
+  registerMemberSessionPatchRoutes(routes, {
+    db,
+    relay,
+    log,
+    helpers: { requireMember, parseSessionId, workspaceOr404, offlineMessage, valueOf, sessionRowOf, SESSION_SETTING_KEYS, WORK_MODES },
   })
 
   // ── ⑥ 发消息（NDJSON 帧流——流前门四则；帧 = 转发即弃，零落库）──────────────────────────
@@ -496,35 +450,12 @@ export function registerMemberRoutes(routes, { db, config = {}, log = null, rela
     sendJson(res, 200, { ok: true, action, ...result })
   })
 
-  // ── ⑫ git 凭据三端点（§3.6 ∥ KD-SV-204——加密零回显；审计 member-cred）──────────────────
-  routes.add("GET", "/api/me/git-credentials", (req, res) => {
-    const member = requireMember(db, req)
-    sendJson(res, 200, { credentials: listMemberCredentials(db, member.id) })
-  })
-
-  routes.add("PUT", "/api/me/git-credentials", async (req, res) => {
-    const member = requireMember(db, req)
-    const body = await readJsonBody(req)
-    let credential
-    try {
-      credential = setMemberCredential(db, { member, host: body?.host, username: body?.username, secret: body?.secret, config, now })
-    } catch (e) {
-      throw new HttpError("invalid_request_error", e.message) // 形非法 ⇒ 400 库零变
-    }
-    sendJson(res, 200, { credential })
-  })
-
-  routes.add("DELETE", "/api/me/git-credentials/:host", (req, res, ctx) => {
-    const member = requireMember(db, req)
-    let view
-    try {
-      view = revokeMemberCredential(db, { member, host: ctx.params.host, now })
-    } catch (e) {
-      if (e instanceof HttpError) throw e
-      throw new HttpError("invalid_request_error", e.message)
-    }
-    void view
-    sendJson(res, 200, { ok: true })
+  // ── ⑫ git 凭据三端点（拆档 `member-git-credentials.mjs`——族内助手经 `helpers` 注入）────────
+  registerMemberGitCredentialRoutes(routes, {
+    db,
+    config,
+    now,
+    helpers: { requireMember },
   })
 
   // ── ⑬ ask 应答 / 会话删除 / `@` 候选三端点（拆档 `member-asks.mjs`——族内助手经 `helpers` 注入）───

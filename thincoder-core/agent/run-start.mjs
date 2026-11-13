@@ -4,6 +4,9 @@
  * 接口 = beginRun(agent, input, callbacks, opts) → 主循环装配面（`tools` 死绑定去——KD-8）。
  */
 import { prepareRun } from "./setup.mjs"
+// 跨轮机读投影（CONTEXT-COMPACTION.md §1.1 ∥ SESSION.md §2 · 台账 #2395）：安全接缝 = 本档——
+// 蒸馏得到之后、注入异步结果与本轮输入之前先把上一完成轮折叠掉。
+import { applyTurnProjection, createTurnLedger, findTurnStartIndex } from "./turn-projection.mjs"
 import {
   restoreGuard, // digest D-S6 读侧单点（AGENT-LOOP-ASYNC-POOL.md §6.8；P2 机制层端差批 §2.18——键清单归核）
   AUTO_TURN_DIGEST_DOMAIN,
@@ -22,6 +25,20 @@ export async function beginRun(agent, input, callbacks, {
     const p = agent._pendingDistill
     agent._pendingDistill = null
     await p
+  }
+  // ── 跨轮机读投影（CONTEXT-COMPACTION.md §1.1 · 台账 #2395）──
+  // 安全接缝三条理由（设计 §2）：①上一轮已完成且已登记（`_turnPending`）⇒ 把它的原始机读过程
+  // 折叠为「用户请求 ∥ 最终回复 ∥ 任务状态」；②投影在 `await _pendingDistill` **之后**——蒸馏会
+  // 异步替换 `agent.history`，先等待才作用在最终数组上，不被后到的替换覆盖；③投影在注入异步结果
+  // 与本轮输入**之前**——本轮得到的工具过程原样完整（轮内第二次请求照旧看得见）。
+  applyTurnProjection(agent)
+  // 本轮原始段起点（续跑沿用链起点——链是同一轮）：**用户输入消息**所在位——输入之前的运行注入
+  // （环境行 ∥ 文档与记忆注入 ∥ 异步结果）属于上下文，不随折叠消失。尚未推到输入（续跑）⇒ 不动。
+  if (!resume) agent._turnStartLen = null
+  // 账本：续跑沿用同一本（链内各段一笔账）；新回合重开一本（中止 ∥ 异常后也不沿用旧账）。
+  // 自动 / 上行 / 定时轮不伪造用户请求（设计 §2；三类均无用户输入）。
+  if (!resume) {
+    agent._turnLedger = createTurnLedger({ input, autoTurn: autoTurn || upstreamTurn || timerTurn, goal: agent.goal ?? null })
   }
   // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S3: suspension-settled async results inject before EVERY run's prepareRun
   // (user + auto-turn); spliced = consumed. collectSettledAsync owns a different
@@ -86,6 +103,9 @@ export async function beginRun(agent, input, callbacks, {
     }
   }
   agent._inAutoTurn = autoTurn // spawn gate for manual-tier digests (AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6/N3；上行唤醒轮同持 autoTurn——§6.27.12.4 ①)
+  // 投影段起点的搜索下界（台账 #2395）：本次 `prepareRun` 将要推入的区间起点——
+  // 只在本次推入的消息里找输入（不会误取上一轮的同文请求）。
+  const prePrepareLen = agent.history.length
   const { maxTurns, threshold, toolSchemas, toolByName, systemPrompt } = await prepareRun(
     // G1/G2（施工②）：prompt 装配收口 prepareRun 内部（assemblePrompt——prompt-overlays.mjs
     // 槽位常量，与子代理角色常量同源——单一权威锚 D1）；本调用不再携带 prompt 常量。
@@ -96,6 +116,11 @@ export async function beginRun(agent, input, callbacks, {
   // Exploration-distillation boundary (CONTEXT-COMPACTION §5): prepareRun already
   // pushed input + injections — appended from here counts as "this run's" work.
   agent._runStartHistoryLen = agent.history.length
+  // 跨轮机读投影的段起点（台账 #2395）：本轮输入消息的下标——`prepareRun` 已把输入与其后的
+  // 回合注入推进历史，投影的「本轮原始段」就从那条输入开始（输入之前的运行注入留在机读线）。
+  if (!Number.isInteger(agent._turnStartLen)) {
+    agent._turnStartLen = resume ? agent.history.length : findTurnStartIndex(agent.history, input, prePrepareLen)
+  }
 
   // Per-run bookkeeping reset — PRESERVED on `resume` (ContinueError continuation):
   // mutation/guard continuity and the convergence budget must survive a continuation.

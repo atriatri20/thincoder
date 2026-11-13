@@ -302,7 +302,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 场景映射落到 assemblePrompt("eng-coder"/"eng-designer")（persona-{role} + common +
   // discipline-engineering）；designer 也必须 engineering=true 才能装配工程纪律槽。
   const childConfig = engineeringRole
-    ? { ...parent.config, agent: { ...parent.config.agent, engineering: true } }
+    ? { ...parent.config, agent: { ...parent.config.agent, mode: "engineering", engineering: true } }
     : parent.config
 
   const child = createAgent({

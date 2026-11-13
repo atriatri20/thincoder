@@ -23,6 +23,15 @@ export function compactNoopNote() {
   return `${CONTEXT_NOTE_PREFIX} did nothing right now (no middle section — the history is too short to summarize). The context is unchanged.]`
 }
 
+/** 压缩 no-op 注记——固定开销单独越线（`CONTEXT-COMPACTION.md` §5）：与守卫抛出的 typed error **同一个原因**，
+ *  回执里带 `reason`、固定开销、limit 与 window 三数，并说清压缩解不了——不把方向指到会话内容上。 */
+export function compactOverheadNote(fixedFloor, limit, window) {
+  return `${CONTEXT_NOTE_PREFIX} did nothing right now: the fixed overhead (system + tools) ~${fixedFloor} tokens alone` +
+    ` exceeds the limit ${limit} (window ${window}) — reason: overhead_exceeds_limit.` +
+    ` Compaction cannot help (the overhead stays after the history is summarized): lower max_tokens,` +
+    ` switch to a larger-window model, or trim the system prompt / tools declaration.]`
+}
+
 /** 压缩失败注记（§6.16.2 回执面②——模型面告知缺口；失败链本体复用既有：连续 3 次降级确定性截断）。 */
 export function compactFailureNote(message, attempt) {
   return `${CONTEXT_NOTE_PREFIX} failed (attempt ${attempt} of ${COMPRESS_FAILURE_LIMIT}): ${message}]`

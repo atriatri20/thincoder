@@ -19,6 +19,7 @@
  */
 import { degradedCode, degradedNotice } from "./attach.mjs"
 import { reasonOf } from "./composer-wire.mjs"
+import { modeOfFlags } from "./events-flags.mjs"
 import { build, clear } from "./dom.mjs"
 import { t } from "./i18n.mjs"
 import { setModelCandidates } from "./store.mjs"
@@ -214,12 +215,13 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
   function pushFlags(state1) {
     const key = state1?.activeSession ?? null
     const flags = key === null ? {} : state1?.sessionFlags?.[key] ?? {}
-    const signature = [key, flags.planMode === true, flags.autoApprove === true, flags.advisorGuard === true, flags.engineering === true].join("|")
+    const mode = modeOfFlags(flags)
+    const signature = [key, flags.planMode === true, flags.autoApprove === true, flags.advisorGuard === true, mode].join("|")
     if (signature === lastFlags) return
     lastFlags = signature
     push({ type: "autoApprove", value: flags.autoApprove === true })
-    push({ type: "planMode", active: flags.planMode === true })
-    push({ type: "agentSettings", settings: { advisor: { guard: flags.advisorGuard === true }, engineering: flags.engineering === true } })
+    push({ type: "planMode", active: mode !== "engineering" && flags.planMode === true })
+    push({ type: "agentSettings", settings: { advisor: { guard: flags.advisorGuard === true }, mode } })
   }
 
   // ─── 候选面（全渠扇出 · 六径 —— 批档 §2.5）───────────────────────────────────────────────

@@ -38,7 +38,7 @@ export function normalizeTools(tools) {
 
 /**
  * Convert OpenAI-format messages to Gemini contents array.
- * Gemini: [{ role: "user"|"model", parts: [{ text }] }]
+ * Gemini: [{ role: "user"|"model", parts: [{ text } | { functionCall } | { functionResponse }] }]
  * system → systemInstruction (top-level in request body)
  */
 export function convertMessages(messages) {
@@ -50,7 +50,7 @@ export function convertMessages(messages) {
     const role = m.role === "assistant" ? "model" : "user"
 
     const parts = []
-    if (typeof m.content === "string") {
+    if (typeof m.content === "string" && m.role !== "tool") {
       parts.push({ text: m.content })
     } else if (Array.isArray(m.content)) {
       for (const part of m.content) {
@@ -63,6 +63,23 @@ export function convertMessages(messages) {
           }
         }
       }
+    }
+    if (m.role === "assistant") {
+      for (const call of m.tool_calls ?? []) {
+        let args = {}
+        const rawArguments = call.function?.arguments ?? call.arguments
+        try { args = JSON.parse(rawArguments || "{}") } catch { /* 与公共工具参数读取一致：畸形参数按空对象投影 */ }
+        const part = { functionCall: { name: call.function?.name ?? call.name, args } }
+        const thoughtSignature = call.extra_content?.google?.thought_signature
+        if (typeof thoughtSignature === "string" && thoughtSignature) part.thoughtSignature = thoughtSignature
+        parts.push(part)
+      }
+    }
+    if (m.role === "tool") {
+      const callId = String(m.tool_call_id ?? "")
+      const name = m.name || (/_\d+$/.test(callId) ? callId.replace(/_\d+$/, "") : "")
+      if (!name) throw new Error("Google tool result is missing its function name")
+      parts.push({ functionResponse: { name, response: { result: String(m.content ?? "") } } })
     }
     if (parts.length === 0) continue
 
@@ -212,7 +229,7 @@ export async function parseGeminiStream(response, { onToken, onReasoning, signal
           slot = { id: part.functionCall.name + "_" + result.toolCalls.length, name: part.functionCall.name, arguments: JSON.stringify(part.functionCall.args || {}) }
           result.toolCalls.push(slot)
         }
-        // §6.24 原生路签名捕获（字段名 `thoughtSignature`——官方口径 unverified；在场才建 ⇒ 字段名不符零副作用）
+        // Gemini Function Calling 原生签名：字段名 `thoughtSignature`，统一历史中存为 extra_content.google.thought_signature。
         if (typeof part.thoughtSignature === "string" && part.thoughtSignature) {
           slot.extra_content = { google: { thought_signature: part.thoughtSignature } }
         }

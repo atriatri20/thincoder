@@ -20,7 +20,7 @@
  * supplies values via `configurePromptInjections`. Unconfigured = identity; missing key = throw.
  */
 
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -30,6 +30,70 @@ const ROOT = dirname(fileURLToPath(import.meta.url))
 export const PROMPTS_DIR = join(ROOT, "prompts")
 /** Core package-internal `tool-docs/` directory (tool descriptions). */
 export const TOOL_DOCS_DIR = join(ROOT, "tool-docs")
+/** Prompt topics may inline into full prompts; query topics never inline in any mode. */
+export const KNOWLEDGE_DIR = join(PROMPTS_DIR, "knowledge")
+export const QUERY_KNOWLEDGE_DIR = join(ROOT, "knowledge")
+const KNOWLEDGE_SOURCES = Object.freeze([
+  { kind: "prompt", dir: KNOWLEDGE_DIR },
+  { kind: "query", dir: QUERY_KNOWLEDGE_DIR },
+])
+const KNOWLEDGE_ID_RE = /^[a-z0-9-]+$/
+
+function readKnowledgeEntries(sources = KNOWLEDGE_SOURCES) {
+  const entries = []
+  const seen = new Set()
+  for (const source of sources) {
+    const files = readdirSync(source.dir).filter((name) => name.endsWith(".md") && name.toLowerCase() !== "readme.md").sort()
+    for (const file of files) {
+      const id = file.slice(0, -3).toLowerCase()
+      if (!KNOWLEDGE_ID_RE.test(id)) throw new Error(`knowledge: invalid topic identifier "${id}"`)
+      if (seen.has(id)) throw new Error(`knowledge: duplicate topic identifier "${id}" across bundled resource directories`)
+      seen.add(id)
+      const path = join(source.dir, file)
+      let content
+      try { content = readFileSync(path, "utf8") }
+      catch (error) { throw new Error(`knowledge: topic "${id}" is unavailable at ${path} — ${error.message}`, { cause: error }) }
+      const title = content.match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim() || id
+      entries.push({ id, title, content, kind: source.kind })
+    }
+  }
+  return entries.sort((a, b) => a.id.localeCompare(b.id))
+}
+
+/** Read one complete topic from the global namespace. Full-prompt expansion excludes query-only topics. */
+export function loadKnowledgeTopic(id, { promptOnly = false } = {}) {
+  if (typeof id !== "string" || !KNOWLEDGE_ID_RE.test(id)) {
+    throw new Error(`knowledge: unknown topic ${JSON.stringify(id)} — call list for valid topic identifiers`)
+  }
+  const entry = readKnowledgeEntries().find((item) => item.id === id)
+  if (!entry || (promptOnly && entry.kind !== "prompt")) {
+    throw new Error(`knowledge: unknown topic "${id}" — call list for valid topic identifiers`)
+  }
+  return entry.content
+}
+
+/** Stable combined topic inventory. README files are documentation, not topics. */
+export function listKnowledgeTopics(sources = KNOWLEDGE_SOURCES) {
+  return readKnowledgeEntries(sources).map(({ id, title }) => ({ id, title }))
+}
+
+const KNOWLEDGE_ANCHOR_RE = /\{\{knowledge:([a-z0-9-]+)\}\}/g
+
+/** Expand the shared master for full mode, or remove standalone topic anchors for minimal. */
+export function expandKnowledgeTopics(text, { minimal = false } = {}) {
+  const seen = new Set()
+  // In minimal mode an anchor owns its following line break and blank line; the preceding
+  // separator keeps the surrounding hard sections apart without a global whitespace rewrite.
+  const pattern = minimal ? /\{\{knowledge:([a-z0-9-]+)\}\}(?:\r?\n){0,2}/g : KNOWLEDGE_ANCHOR_RE
+  const result = text.replace(pattern, (anchor, id) => {
+    if (seen.has(id)) throw new Error(`prompt knowledge anchor duplicated: ${id}`)
+    seen.add(id)
+    return minimal ? "" : loadKnowledgeTopic(id, { promptOnly: true })
+  })
+  const unresolved = result.match(/\{\{knowledge:[^{}]*\}\}/)
+  if (unresolved) throw new Error(`prompt knowledge anchor cannot be resolved: ${unresolved[0]}`)
+  return result
+}
 
 /**
  * Slot prompt (`prompts/<name>`) — missing file ⇒ "" (silent). The caller (the assembly

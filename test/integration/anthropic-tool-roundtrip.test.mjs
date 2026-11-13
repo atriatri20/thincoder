@@ -22,126 +22,18 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { spawn } from "node:child_process"
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
 // 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
 import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { estimateText } from "../../thincoder-core/provider/rate.mjs"
 import { requestBudget } from "../../thincoder-core/config.mjs"
 import { fakeAnthropic } from "./fixtures/anthropic-endpoint.mjs"
+import { openSession, say, startCli } from "./fixtures/acp-cli.mjs"
 
-const HERE = dirname(fileURLToPath(import.meta.url))
-const CLI_ENTRY = join(HERE, "..", "..", "thincoder-cli", "bin", "thincoder.mjs")
-/** 单个场景的上限（一次真进程装配 + 两回合；须覆盖下面两个回合上限之和，否则卡死时报的是裸测试超时）。 */
 const SCENE_TIMEOUT_MS = 240_000
-/** 一句对话的上限（进程已起好，只等回合走完；本地假端点，不需要长窗）。 */
-const TURN_TIMEOUT_MS = 90_000
-
-// ---------- 真 CLI 子进程（ACP 客户端驱动器）----------
-
-/** 关掉 CLI 进程并等它真的退出；不退出则在宽限后强杀（清理不得把收尾挂住）。 */
-const stopProcess = (child) => new Promise((resolve) => {
-  if (child.exitCode !== null || child.signalCode !== null) return resolve()
-  const force = setTimeout(() => child.kill("SIGKILL"), 5_000)
-  force.unref?.()
-  child.once("close", () => { clearTimeout(force); resolve() })
-  child.kill()
-})
-
-/**
- * 起一个真 CLI 子进程（`acp` 命令）并返回 JSON-RPC 客户端面。
- * 隔离：HOME ∥ USERPROFILE 指向假家目录（config.json 与 sessions 都落在其中）。
- */
-function startCli({ home, cwd }) {
-  const child = spawn(process.execPath, [CLI_ENTRY, "acp"], {
-    cwd,
-    env: { ...process.env, HOME: home, USERPROFILE: home },
-    stdio: ["pipe", "pipe", "pipe"],
-  })
-  const messages = []
-  const pending = new Map()
-  let buffer = ""
-  let stderr = ""
-  let nextId = 1
-  let exited = false
-
-  const send = (obj) => child.stdin.write(JSON.stringify(obj) + "\n")
-  // 子进程已死时对 pipe 的写入会抛 unhandled `error`（EPIPE）——吞掉，交给 `exited` 报可读错
-  child.stdin.on("error", () => {})
-
-  child.on("close", () => {
-    exited = true
-    for (const waiter of pending.values()) waiter({ error: { message: "CLI process exited before responding" } })
-    pending.clear()
-  })
-  child.stderr.setEncoding("utf8")
-  child.stderr.on("data", (chunk) => { stderr += chunk })
-  child.stdout.setEncoding("utf8")
-  child.stdout.on("data", (chunk) => {
-    buffer += chunk
-    for (let nl = buffer.indexOf("\n"); nl >= 0; nl = buffer.indexOf("\n")) {
-      const line = buffer.slice(0, nl).trim()
-      buffer = buffer.slice(nl + 1)
-      if (!line) continue
-      let msg
-      try {
-        msg = JSON.parse(line)
-      } catch {
-        continue // 非协议行（诊断输出）不参与协议
-      }
-      messages.push(msg)
-      // agent → client 反向请求：按真实客户端应答（本套件的工具全为只读，正常零到达）
-      if (msg.method !== undefined && msg.id !== undefined) {
-        const result = msg.method === "session/request_permission"
-          ? { outcome: { outcome: "selected", optionId: "approve_once" } }
-          : {}
-        send({ jsonrpc: "2.0", id: msg.id, result })
-        continue
-      }
-      if (msg.id !== undefined && pending.has(msg.id)) {
-        const waiter = pending.get(msg.id)
-        pending.delete(msg.id)
-        waiter(msg)
-      }
-    }
-  })
-
-  const request = (method, params, timeoutMs = 120_000) => new Promise((resolve, reject) => {
-    if (exited) return reject(new Error(`CLI 已退出，无法发送 ${method}｜stderr: ${stderr.slice(-1500)}`))
-    const id = nextId++
-    const timer = setTimeout(() => {
-      pending.delete(id)
-      reject(new Error(`ACP ${method} 超时 ${timeoutMs}ms｜stderr: ${stderr.slice(-1500)}`))
-    }, timeoutMs)
-    pending.set(id, (msg) => {
-      clearTimeout(timer)
-      resolve(msg)
-    })
-    send({ jsonrpc: "2.0", id, method, params })
-  })
-
-  const updates = () => messages
-    .filter((m) => m.method === "session/update")
-    .map((m) => m.params?.update)
-    .filter(Boolean)
-
-  return {
-    child,
-    request,
-    updates,
-    get stderr() { return stderr },
-    /** 第 `from` 条 update 之后的助手文本（会话流里的模型回复）。 */
-    textSince: (from) => updates().slice(from)
-      .filter((u) => u.sessionUpdate === "agent_message_chunk" && u.content?.type === "text")
-      .map((u) => String(u.content.text))
-      .join(""),
-    stop: () => stopProcess(child),
-  }
-}
 
 // ---------- 场景骨架 ----------
 
@@ -162,9 +54,13 @@ async function scene(t, { files = {}, calls = [] } = {}) {
     writeFileSync(join(cwd, rel), content)
   }
   mkdirSync(join(home, ".thincoder"), { recursive: true })
+  // `maxTokens: 4096` 是**本档夹具的前提**，不是被测行为：这题要的正是「128K 窗格下固定开销越过压缩线」
+  // 那一格（见下方 `assertFixedOverheadOverLine`），而 #2398 的发送前守卫要求 prompt + max_tokens ≤ 窗格——
+  // 默认 reserve（32K）会把 limit 压到 96000、落在本仓固定开销（≈110K）之下，于是守卫先抛错、场景跑不到。
+  // 显式调小 max_tokens 让 limit 回到窗口近旁，压缩线（76800）仍低于固定开销 ⇒ 原判据与可达性门一格不动。
   writeFileSync(join(home, ".thincoder", "config.json"), JSON.stringify({
     defaultModel: "fake-anthropic:claude-fake-1",
-    providers: [{ name: "fake-anthropic", baseURL: `http://127.0.0.1:${endpoint.port}/v1`, format: "anthropic", apiKey: "test-key" }],
+    providers: [{ name: "fake-anthropic", baseURL: `http://127.0.0.1:${endpoint.port}/v1`, format: "anthropic", apiKey: "test-key", maxTokens: 4096 }],
   }, null, 2))
   const launch = () => {
     const cli = startCli({ home, cwd })
@@ -174,24 +70,6 @@ async function scene(t, { files = {}, calls = [] } = {}) {
   return { cwd, endpoint, launch }
 }
 
-/** 真实 ACP 客户端开场序：initialize → session/new（返回槽号串）。 */
-async function openSession(cli, cwd) {
-  const init = await cli.request("initialize", { protocolVersion: 1, clientCapabilities: {} })
-  assert.equal(init.error, undefined, `initialize 被拒：${JSON.stringify(init.error)}`)
-  const created = await cli.request("session/new", { cwd, mcpServers: [] })
-  assert.equal(created.error, undefined, `session/new 被拒：${JSON.stringify(created.error)}｜stderr: ${cli.stderr.slice(-1500)}`)
-  assert.ok(created.result?.sessionId, `session/new 未给会话号：${JSON.stringify(created)}`)
-  return String(created.result.sessionId)
-}
-
-/** 发一句话，等这一回合走完；返回本回合的助手文本。 */
-async function say(cli, sessionId, text) {
-  const from = cli.updates().length
-  const res = await cli.request("session/prompt", { sessionId, prompt: [{ type: "text", text }] }, TURN_TIMEOUT_MS)
-  assert.equal(res.error, undefined, `对话被拒（生产症状：上游 400 Unexpected role "tool"）：${JSON.stringify(res.error)}｜stderr: ${cli.stderr.slice(-2000)}`)
-  assert.equal(res.result?.stopReason, "end_turn", `回合未正常收尾：${JSON.stringify(res.result)}`)
-  return cli.textSince(from)
-}
 
 // ---------- G1 正常 / G2 边界 / G3 边界 ----------
 
@@ -204,7 +82,7 @@ function assertFixedOverheadOverLine(endpoint) {
   const turn = endpoint.requests.find((r) => !r.summary)
   assert.ok(turn, "至少一发对话请求（本档的会话确实发过话）")
   const fixed = estimateText(String(turn.body.system ?? "")) + estimateText(JSON.stringify(turn.body.tools ?? []))
-  const threshold = requestBudget({ model: "claude-fake-1" }).threshold
+  const threshold = requestBudget({ model: "claude-fake-1", format: "anthropic", maxTokens: 4096 }).threshold
   assert.ok(fixed > threshold, `夹具前提：固定开销估算 ${fixed} 应越过压缩线 ${threshold}`)
 }
 
@@ -258,7 +136,7 @@ test('CLI 1-2 边界：一轮两个工具调用后继续对话 —— 两个结�
   assertFixedOverheadOverLine(s.endpoint)
 })
 
-test('CLI 1-3 边界：关进程重开同一会话，历史从盘回放后继续 —— 回复引用上一程的工具结果，无 400', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
+test('CLI 1-3 边界：关进程重开同一会话，历史从盘回放后继续 —— 回复接上新问题，无 400（跨轮机读投影：重开的请求带请求 ∥ 回复 ∥ 任务状态，不再带工具过程）', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
   const s = await scene(t, {
     files: { "note.txt": "PINEAPPLE-42\n" },
     calls: [{ id: "toolu_g3", name: "read", input: { path: "note.txt" } }],
@@ -274,7 +152,7 @@ test('CLI 1-3 边界：关进程重开同一会话，历史从盘回放后继续
   const requestsBefore = s.endpoint.requests.length
   const rejectionsBefore = s.endpoint.rejections.length
 
-  // 第二程：重开 CLI、装载同一会话（历史从盘上回放）、再发一句话
+  // 第二程：重开 CLI、装载同一会话（机读线从槽回放）、再发一句话
   const second = s.launch()
   const init = await second.request("initialize", { protocolVersion: 1, clientCapabilities: {} })
   assert.equal(init.error, undefined, `第二程 initialize 被拒：${JSON.stringify(init.error)}`)
@@ -282,10 +160,19 @@ test('CLI 1-3 边界：关进程重开同一会话，历史从盘回放后继续
   assert.equal(loaded.error, undefined, `装载同一会话失败：${JSON.stringify(loaded.error)}｜stderr: ${second.stderr.slice(-2000)}`)
 
   const reply = await say(second, sessionId, "what did the file say?")
-  assert.match(reply, /PINEAPPLE-42/, `重开后的回复应接上原上下文（引用上一程的工具结果），实际：${reply}`)
   assert.match(reply, /what did the file say\?/, `模型应看见本程的新问题，实际：${reply}`)
   assert.equal(s.endpoint.rejections.length - rejectionsBefore, 0, `第二程无 role 类 400：${s.endpoint.rejections.slice(rejectionsBefore).join("｜")}`)
   assert.ok(s.endpoint.requests.length > requestsBefore, "第二程确实向模型发了请求（回放的历史 + 新问题）")
+
+  // 新跨轮语义（CONTEXT-COMPACTION §1.1）：机读线只带上一程的用户请求、最终回复与任务状态——
+  // 原始工具过程不再常驻注入（回查走 `read_history`，见 CLI 1-5）。
+  const reopened = s.endpoint.requests.slice(requestsBefore).filter((r) => !r.summary)[0]
+  const wire = JSON.stringify(reopened.body.messages)
+  assert.ok(!wire.includes('"tool_result"'), `重开后的请求不得再装上一程的工具结果：${wire.slice(0, 1500)}`)
+  assert.ok(!wire.includes('"tool_use"'), "也不得装上一程的工具调用")
+  assert.ok(wire.includes("Read note.txt and tell me what it says."), "重开后的请求应带上一程的用户请求")
+  assert.ok(wire.includes("Answer to"), "重开后的请求应带上一程的最终回复")
+  assert.ok(wire.includes("[Task state]"), "重开后的请求应带任务状态")
   assert.equal(s.endpoint.requests.filter((r) => r.summary).length, 0, "两程零摘要请求——固定开销吃掉压缩线时不白付一次压缩（§6.17 可达性门）")
   assertFixedOverheadOverLine(s.endpoint)
 })

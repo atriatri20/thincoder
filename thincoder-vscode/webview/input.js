@@ -37,7 +37,7 @@ const OUT = {
   setKey: (p) => vscode.postMessage({ type: "setKey", ...p }),
   setAutoApprove: (p) => vscode.postMessage({ type: "setAutoApprove", ...p }),
   setAdvisorGuard: (p) => vscode.postMessage({ type: "setAdvisorGuard", ...p }),
-  setEngineeringEnabled: (p) => vscode.postMessage({ type: "setEngineeringEnabled", ...p }),
+  setMode: (p) => vscode.postMessage({ type: "setMode", ...p }),
   setPlanMode: (p) => vscode.postMessage({ type: "setPlanMode", ...p }),
 }
 
@@ -56,7 +56,7 @@ export const pushComposer = (m) => _push?.(m)
 //    静态档成死面）；`#status-line` 属状态行面（A12）⇒ 不入 R1 实施面，留守原位。
 const SKELETON_IDS = [
   "at-dropdown", "input-row", "file-input", "input", "attach-btn", "send-btn", "abort-btn", "paste-bar", "paste-badge",
-  "controls-row", "model-btn", "reasoning-btn", "auto-btn", "advisor-btn", "eng-btn", "plan-btn", "settings-btn",
+  "controls-row", "model-btn", "reasoning-btn", "auto-btn", "advisor-btn", "mode-select", "plan-btn", "settings-btn",
   "model-dropdown", "reasoning-dropdown",
 ]
 for (const id of SKELETON_IDS) document.getElementById(id)?.remove()
@@ -69,7 +69,7 @@ const composerState = {
   turnState: () => S._turnState,
   queue: () => ({ count: S._busyQueuedCount }),
   models: () => ctx._models,
-  flags: () => ({ autoApprove: S._autoApprove, advisorGuard: S._advisorOn, engineering: S._engOn, planMode: S._planActive }),
+  flags: () => ({ autoApprove: S._autoApprove, advisorGuard: S._advisorOn, mode: S._mode, planMode: S._planActive }),
   workspaceRequired: () => S._workspaceRequired,
   subscribe: (fn) => { _push = fn },
 }
@@ -120,7 +120,7 @@ composerHooks.onStatusRefresh = (status) => { // `setLoading` ∕ `handlePlanMod
 composerHooks.syncModeState = (flags) => { // 跨面状态同步（`renderStatusBar` 同面读 `S._planActive`）
   S._autoApprove = flags.autoApprove
   S._advisorOn = flags.advisorGuard
-  S._engOn = flags.engineering
+  S._mode = flags.mode
   S._planActive = flags.planMode
 }
 composerHooks.closeSiblingDropdowns = () => { // `handleModelsMessage`（会话下拉让位）

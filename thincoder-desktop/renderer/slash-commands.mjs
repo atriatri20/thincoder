@@ -22,7 +22,7 @@
  *  （`mount-composer.mjs`）绑定之 /help 打印口（返 boolean——`true` = 已打印）；条目 `run` 仍只返布尔
  *  ⇒ 核件面板 ∥ `ctx` 零触（缺参形 = 不传 `deps.slash` ⇒ 现行为零变——VSC 零接缝）。
  *  消费面 = `mount-composer.mjs` `mount` 一处装配 `deps.slash = { commands }`；在册 5 条 + 别名 3。 */
-export function createSlashCommands(printHelp) {
+export function createSlashCommands(printHelp, currentMode = () => "normal") {
   return [
     {
       name: "/model",
@@ -49,7 +49,19 @@ export function createSlashCommands(printHelp) {
       name: "/eng",
       group: "Agent",
       descKey: "slash.desc.eng",
-      run: (ctx) => ctx.actions.toggleEng(), // ENG 钮径（宿主入口门 = `setEngineeringEnabled` 单源）
+      run: (ctx) => ctx.actions.toggleEng(), // 与 MODE 控件共用 render-core 的 setMode 路径
+    },
+    {
+      name: "/minimal",
+      group: "Agent",
+      descKey: "slash.desc.minimal",
+      run: (ctx) => ctx.actions.setMode(currentMode() === "minimal" ? "normal" : "minimal"),
+    },
+    {
+      name: "/normal",
+      group: "Agent",
+      descKey: "slash.desc.normal",
+      run: (ctx) => ctx.actions.setMode("normal"),
     },
     {
       // `/help`（本批增量 · KD-S7）：流内打印形——打印口构造时闭包注入（`run` 零参 ⇒ 面板 ∥ `ctx` 零触）；

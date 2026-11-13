@@ -1,8 +1,8 @@
 /**
- * doc-write-gate.test.mjs — 集成用例 7-14 ∥ 7-18 ∥ 7-27 ∥ 7-28（RTM CLI 端故事 7；判据原文 = `test/rtm/guard.md` 第 7 节）。
+ * doc-write-gate.test.mjs — 集成用例 7-14 ∥ 7-18 ∥ 7-27 ∥ 7-28 ∥ 7-29 ∥ 7-30（RTM CLI 端故事 7；判据原文 = `test/rtm/guard.md` 第 7 节）。
  *
  * 机制 = `docs/core/design/DOC-CHECK.md` §5（报什么）∥ §6（写时点怎么取区间）∥ §9（写时点）；
- * 需求 = `docs/core/requirements/DOC-CHECK.md` F1 ∥ F3 ∥ F10 ∥ AC-1 ∥ AC-3 ∥ AC-13 ∥ AC-14。
+ * 需求 = `docs/core/requirements/DOC-CHECK.md` F1 ∥ F3 ∥ F10 ∥ F12 ∥ AC-1 ∥ AC-3 ∥ AC-13 ∥ AC-14 ∥ AC-19。
  *
  * 业务入口 = 真 `edit` 工具（`tools/file.mjs`）往一篇**设计档**写一笔——不直调 `runDocWriteGate`：
  * 本例测的是「写者把坏字写进规范档、当场被拒、盘上逐字不变」这件事的业务可观察结果。
@@ -22,7 +22,8 @@ import { join } from "node:path"
 // 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
 import { removeTempDirBestEffort } from "../teardown.mjs"
 
-import { editTool } from "../../thincoder-core/tools/file.mjs"
+import { editTool, writeTool } from "../../thincoder-core/tools/file.mjs"
+import { batchTool } from "../../thincoder-core/agent-tools/batch.mjs"
 import { judgeText } from "../../thincoder-core/doc-check/index.mjs"
 
 const DOC_REL = "docs/design/fixture.md"
@@ -162,4 +163,64 @@ test("CLI 7-28 边界 · 删掉两段之间的空行使两段接成 320 字的�
     mergeDoc().replace(`${MERGE_A}\n\n${MERGE_B}`, `${"甲".repeat(100)}\n${MERGE_B}`),
     "两段接成一段、只有甲段变短",
   )
+})
+
+// 7-29：同一笔 350 字正文写入，普通模式落盘；工程模式拒绝且目标零改。
+test("CLI 7-29 边界 · 普通模式文档内容写门不拦，工程模式同笔仍拒", async () => {
+  const normalRoot = makeProject("r729n")
+  const engineeringRoot = makeProject("r729e")
+  const args = { path: DOC_REL, old_string: "现有段落。", new_string: "长".repeat(350) }
+
+  const receipt = await editTool.execute(args, { cwd: normalRoot, agent: { config: { agent: { engineering: false } } } })
+  assert.match(receipt, /Edited docs\/design\/fixture\.md/)
+  assert.equal(readFileSync(join(normalRoot, DOC_REL), "utf8"), BODY.replace("现有段落。", "长".repeat(350)))
+  await writeTool.execute(
+    { path: "docs/design/new.md", content: "长".repeat(350) },
+    { cwd: normalRoot, agent: { config: { agent: { engineering: false } } } },
+  )
+  assert.equal(readFileSync(join(normalRoot, "docs/design/new.md"), "utf8"), "长".repeat(350))
+
+  const before = readFileSync(join(engineeringRoot, DOC_REL), "utf8")
+  await assert.rejects(
+    () => editTool.execute(args, { cwd: engineeringRoot, agent: { config: { agent: { engineering: true } } } }),
+    /第 \d+ 段 350 字，超过 300/,
+  )
+  assert.equal(readFileSync(join(engineeringRoot, DOC_REL), "utf8"), before)
+})
+
+// 7-30：同一批档 append/edit，普通模式不调内容门；工程模式同笔拒绝且目标逐字不变。
+test("CLI 7-30 边界 · 普通模式批档 append/edit 长正文落盘且无门行，工程模式仍拒", async () => {
+  const root = makeProject("r730")
+  mkdirSync(join(root, "docs/batches"), { recursive: true })
+  const batchRel = "docs/batches/fixture.md"
+  const record = [
+    "# 夹具批", "", "## §1 讨论", "**状态行**：进行中", "", "夹具。", "",
+    "## §2 批次任务与设计", "**状态行**：设计完成", "", "现有内容。", "",
+    "## §3 设计评审", "", "## §4 用户批准", "", "## §5 实施记录", "", "## §6 验证与收口", "",
+  ].join("\n")
+  writeFileSync(join(root, batchRel), record)
+  const tool = batchTool(batchRel)
+  const args = { action: "append", segment: "§2", text: "长".repeat(350) }
+  const normal = { depth: 1, agent: { cwd: root, _role: "eng-designer", config: { agent: { engineering: false } } } }
+  const engineering = { depth: 1, agent: { cwd: root, _role: "eng-designer", config: { agent: { engineering: true } } } }
+
+  const receipt = await tool.execute(args, normal)
+  assert.match(receipt, /appended \d+ characters to §2/)
+  assert.doesNotMatch(receipt, /DOC-CHECK GATE/)
+  assert.ok(readFileSync(join(root, batchRel), "utf8").includes("长".repeat(350)))
+
+  const beforeEngineering = readFileSync(join(root, batchRel), "utf8")
+  await assert.rejects(() => tool.execute(args, engineering), /第 \d+ 段 350 字，超过 300/)
+  assert.equal(readFileSync(join(root, batchRel), "utf8"), beforeEngineering)
+
+  const editArgs = { action: "edit", segment: "§2", oldText: "现有内容。", newText: "改".repeat(350) }
+  await tool.execute(editArgs, normal)
+  assert.ok(readFileSync(join(root, batchRel), "utf8").includes("改".repeat(350)))
+
+  const beforeEngineeringEdit = readFileSync(join(root, batchRel), "utf8")
+  await assert.rejects(
+    () => tool.execute({ action: "edit", segment: "§2", oldText: "改".repeat(350), newText: "工".repeat(350) }, engineering),
+    /第 \d+ 段 350 字，超过 300/,
+  )
+  assert.equal(readFileSync(join(root, batchRel), "utf8"), beforeEngineeringEdit)
 })

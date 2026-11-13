@@ -1,23 +1,26 @@
 # RTM 分册 · tooling
 
-> 本册护的机制 = 工具实现面（fetch ∥ browser ∥ ssh ∥ grep ∥ subagent ∥ timer ∥ 工具结果回路）；族表与归属判据 = docs/core/design/TESTING.md §11.18.3。
+> 本册护的机制 = 工具实现面（fetch ∥ browser ∥ ssh ∥ grep ∥ subagent ∥ timer ∥ 工具结果回路）；族表与归属判据 = docs/core/design/TESTING.md。
 > 索引回指 = test/RTM.md：故事索引表（含端覆盖矩阵）∥「异常与更正」∥ 签署面只住索引；本册只装故事节与用例行。
 
 ## CLI 1. 对话里用工具，结果必须回到模型
 
-> 目的：工具结果原样回到模型，对话能接着走。
-> 节注：回指 = docs/core/requirements/PROVIDER.md §4.9（R33 工具历史回放）；三态（行序）= 1-1 正常 · 1-2 边界 · 1-3 边界。
+> 目的：工具结果原样回到模型，对话能接着走；轮内完整保留，跨轮只留用户请求、最终回复与任务状态。
+> 节注：回指 = `docs/core/requirements/PROVIDER.md`「图像与工具回放」∥ `docs/core/design/CONTEXT-COMPACTION.md` §1.1「轮次机读投影」；交互组件 = `thincoder-core/agent/turn-projection.mjs` 的 `machineLineForSlot` ∥ `activeTurnRaw` ∥ `restoreMachineFromTurns` ⟷ `thincoder-core/session-lifecycle.mjs` 的 `applySession` ⟷ 槽 JSON；进入口 = 真 CLI 里压缩后关进程重开同一会话再问一句；六态（行序）= 1-1 正常 · 1-2 边界 · 1-3 边界 · 1-4 边界（Google 原生工具回放）· 1-5 正常（跨轮机读投影）· 1-6 正常（压缩检查点恢复）。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
 | 1-1 | 在 CLI 里让助手调用一次工具，然后继续同一段对话 | 会话流里有这次调用与它的结果，助手回复引用了结果，没有 400 | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
 | 1-2 | 同一轮里让助手连续调用两个工具，再继续对话 | 两个结果都回到模型，回复正常，没有 400 | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
-| 1-3 | 关掉进程，重开同一会话，历史回放后继续对话 | 回复引用了上一程的工具结果，没有 400 | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
+| 1-3 | 关掉进程，重开同一会话，历史回放后继续对话 | 回复接上新问题，没有 400；重开后的请求带上一程的用户请求、最终回复与任务状态，不再带上一程的工具过程 | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
+| 1-4 | 用本地假 Gemini 端点让真 CLI 调用 read，再继续对话 | 后续请求含带原签名的 functionCall 与含文件正文的 functionResponse；回复引用正文，无协议错误 | 无 | `test/integration/google-tool-roundtrip.test.mjs` |
+| 1-5 | 真 CLI 连续两轮对话：第一轮用一次工具，第二轮的工具结果回来后上游拒掉那次请求（该轮不登记、进程仍在），随关进程重开同一会话再问一句 | 重开后的请求仍带上一程已登记轮的用户请求、最终回复与任务状态，以及未登记那一段的原文（在途 ∥ 异常段不丢）；已登记轮的工具过程不再携带；恢复后经 `read_history` 仍可取回原始工具结果 | 无 | `test/integration/turn-history-projection.test.mjs` |
+| 1-6 | 真 CLI 里让上下文压过一次（本套件由模型主动调用 `context` 工具触发强制压缩：压缩线是 1M 窗格的 600K，固定开销（system + tools）只占其中一小段，自动阈值在本套件跑不到），再关进程重开同一会话问一句 | 重开后的请求以摘要注记开头，其后只装切割点之后的轮记录，不含被摘要轮的原文；压缩不重做（重开后首请求的 system ∥ tools 前缀与压缩后一次同形，摘要调用零新增）；被摘要轮仍可从 `read_history` 取回 | 无 | `test/integration/turn-history-projection.test.mjs` |
 
 ## CLI 3. 网页抓取的后端故障不外溢
 
 > 目的：单个后端故障不影响其它通路，无渠道时零变化。
-> 节注：回指 = docs/core/requirements/TOOLS.md 条目 W3 ∥ W4 ∥ NW1；三态（行序）= 3-1 错误 · 3-2 错误 · 3-3 边界。
+> 节注：回指 = `docs/core/requirements/TOOLS.md`「网络」；三态（行序）= 3-1 错误 · 3-2 错误 · 3-3 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -28,7 +31,7 @@
 ## CLI 4. 浏览器起不来的等待窗口可调
 
 > 目的：默认 25s、可调，失败后会话仍可用。
-> 节注：回指 = docs/core/requirements/BROWSER-TOOL.md 条目 F-BT16b；三态（行序）= 4-1 正常 · 4-2 正常 · 4-3 边界。
+> 节注：回指 = `docs/core/requirements/BROWSER-TOOL.md`「共享与生命周期」；三态（行序）= 4-1 正常 · 4-2 正常 · 4-3 边界。
 > 池隔离前提：该档把 `HOME` ∥ `USERPROFILE` 指到临时目录——共享浏览器在场时 `navigate` 走接入而不拉起，不隔离即假绿（同前提见故事 34）。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
@@ -37,12 +40,12 @@
 | 4-2 | 不设该变量启动浏览器 | 失败句含 within 25s（默认窗口），不再出现 12s 时代的句子 | 无 | `test/integration/browser-start-window.test.mjs` |
 | 4-3 | 真机上首个动作是 navigate | 自启段不吃动作预算；宿主无 Chromium 则该例 skip 并打印 | 无 | `test/integration/browser-start-window.test.mjs` |
 
-★ 4-3：该例仅在宿主有 Chromium 时实跑，无则 skip——skip 不算验过（skip 也计入 tests 数，不据「15/15 绿」推定）；该行不标运行状态，某轮「已验」与否由 `node test/run.mjs` 那一次跑的输出体现（未跑不算通过 = docs/core/design/TESTING.md §11.3），故实跑之后本行无需改动。
+★ 4-3：该例仅在宿主有 Chromium 时实跑，无则 skip——skip 不算验过（skip 也计入 tests 数，不据「15/15 绿」推定）；该行不标运行状态，某轮「已验」与否由 `node test/run.mjs` 那一次跑的输出体现（未跑不算通过 = docs/core/design/TESTING.md），故实跑之后本行无需改动。
 
 ## CLI 22. SSH 接网络设备：读得清、拿得全、判得准
 
 > 目的：接真网络设备时输出干净、长配置取得全、慢操作不误判就绪。
-> 节注：回指 = `docs/core/requirements/TOOLS.md` §4.8（S3 ∥ S4 ∥ NS2 ∥ S10 ∥ S11 ∥ NS8）；交互组件 = `ssh` 工具面 ⟷ 会话池 ⟷ 传输面（剥离 ∥ 帽窗 ∥ 四门）；进入口 = CLI 会话里让助手调 `ssh` 工具，用户看的是那一格工具结果回执；五态（行序）= 22-1 正常 · 22-2 正常 · 22-3 边界 · 22-4 正常 · 22-5 边界。
+> 节注：回指 = `docs/core/requirements/TOOLS.md`「SSH」；交互组件 = `ssh` 工具面 ⟷ 会话池 ⟷ 传输面（剥离 ∥ 帽窗 ∥ 四门）；进入口 = CLI 会话里让助手调 `ssh` 工具，用户看的是那一格工具结果回执；五态（行序）= 22-1 正常 · 22-2 正常 · 22-3 边界 · 22-4 正常 · 22-5 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -55,7 +58,7 @@
 ## CLI 28. 拿行号改文档不会静默改错行
 
 > 目的：同一会话里先写过一笔、再从旧快照拿行号去改 ⇒ 当场拒（点名路径 / 上次写入行 / 漂移量 / 两条下一步），文件字节零改。改前那里是「静默改到隔壁几行、回执还写成成功」。
-> 节注：回指 = `docs/core/design/EDIT-HELPERS.md` §7（行号锚护栏，判据单源）；机制单源 = `docs/core/design/EDIT-HELPERS.md` §7.1 ∥ §7.2 ∥ §7.3；交互组件 = 编辑族行号形（`edit` 的 `line` / `startLine`+`endLine`）⟷ 写入记账面（`lastWriteOf` / `isDirty`，`thincoder-core/tools/write-path.mjs`）⟷ 会话工具结果面；进入口 = 同一会话内两次编辑工具调用（子代理与主 agent 共用一张记账表）；一态（行序）= 28-1 错误。
+> 节注：回指 = `docs/core/design/EDIT-HELPERS.md`（行号锚护栏，判据单源）；机制单源 = `docs/core/design/EDIT-HELPERS.md`「行号锚」；交互组件 = 编辑族行号形（`edit` 的 `line` / `startLine`+`endLine`）⟷ 写入记账面（`lastWriteOf` / `isDirty`，`thincoder-core/tools/write-path.mjs`）⟷ 会话工具结果面；进入口 = 同一会话内两次编辑工具调用（子代理与主 agent 共用一张记账表）；一态（行序）= 28-1 错误。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -64,7 +67,7 @@
 ## CLI 30. 读数子代理：派一个 tester 跑验证
 
 > 目的：父侧派一个只跑不改的子代理去跑验证，拿回来的是读数（命令原文、跑者计数、失败用例名、摘要）——父侧据它自己重新判断，子代理不改任何东西。
-> 节注：回指 = 需求 `docs/core/requirements/AGENT-LOOP.md` §4.20（F-TT1 ∥ F-TT2 ∥ F-TT3）· 需求 `docs/core/requirements/DOC-GRAPH.md` §4 AC-10（两件文档工具面在每个子代理角色的表里）；机制单源 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.59（工具面 §6.59.2 · 报告形态 §6.59.10）∥ §6.60（文档工具面装配 · 集成行 §6.60.9）· 工具面一侧 = `docs/core/design/TOOLS.md` §6.27 ∥ `docs/core/design/DOC-GRAPH.md` §2.5.5（两变体契约）；交互组件 = 角色白名单（`thincoder-core/agent-tools/subagent.mjs`）⟷ 工具面过滤（核 `thincoder-core/agent-tools/subagent-spawn.mjs` ⟷ 端 `thincoder-vscode/src/agent/tool-table.mjs`）⟷ 家族段装配（核 `thincoder-core/agent/family-tools.mjs`）⟷ 提示词装配（`thincoder-core/prompt-overlays.mjs`）⟷ 子代理报告；进入口 = 父侧派单跑验证（核入口 + VS Code 端入口，同一用例内各取一次）∥ 父侧派单取子代理工具表；三态（行序）= 30-1 正常 · 30-2 边界。
+> 节注：回指 = 需求 `docs/core/requirements/AGENT-LOOP.md`「tester」· 需求 `docs/core/requirements/DOC-GRAPH.md` F7（子代理可读图、scan 限 depth-0）；机制单源 = `docs/core/design/AGENT-LOOP-SUBAGENT.md`「tester 工具面」∥「文档工具」· 工具面一侧 = `docs/core/design/TOOLS.md` ∥ `docs/core/design/DOC-GRAPH.md`「工具面」；交互组件 = 角色白名单（`thincoder-core/agent-tools/subagent.mjs`）⟷ 工具面过滤（核 `thincoder-core/agent-tools/subagent-spawn.mjs` ⟷ 端 `thincoder-vscode/src/agent/tool-table.mjs`）⟷ 家族段装配（核 `thincoder-core/agent/family-tools.mjs`）⟷ 提示词装配（`thincoder-core/prompt-overlays.mjs`）⟷ 子代理报告；进入口 = 父侧派单跑验证（核入口 + VS Code 端入口，同一用例内各取一次）∥ 父侧派单取子代理工具表；三态（行序）= 30-1 正常 · 30-2 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -74,7 +77,7 @@
 ## CLI 31. 过程档内容在工具输出的命中处就标出不可作依据
 
 > 目的：助手查一个词把批档旧话捞出来时，读输出的人当场看见「这行不能作为设计依据」——不靠模型记得去核状态档。
-> 节注：回指 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.19 3-补（判据 = `docs/core/design/TOOLS.md` §6.28 验收 1–14）；交互组件 = `grep` ∥ `bash` ∥ `execute` 的输出渲染 ⟷ `isExcludedRelPath` 声明谓词 ⟷ 盘上路径解析；进入口 = 用户在会话里让助手查一个词；两态（行序）= 31-1 正常 · 31-2 边界。
+> 节注：回指 = `docs/core/requirements/TOOLS.md` ∥ `docs/core/design/TOOLS.md`（过程档输出标记的工具面 owner）；交互组件 = `grep` ∥ `bash` ∥ `execute` 的输出渲染 ⟷ `isExcludedRelPath` 声明谓词 ⟷ 盘上路径解析；进入口 = 用户在会话里让助手查一个词；两态（行序）= 31-1 正常 · 31-2 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -84,7 +87,7 @@
 ## CLI 34. 多实例共用一个浏览器（首开末关 · 用者计数）
 
 > 目的：两个（或更多）会话同时要用浏览器时——全机一台共享浏览器、各开自己的标签页；后到者被告知沿用的是哪个模式；关掉一个不带走别人在用的那台。
-> 节注：回指 = docs/core/requirements/BROWSER-TOOL.md 条目 F-BT6b（全机一个共享浏览器）∥ F-BT6（登录态）∥ F-BT2（模式由首实例定、后到沿用）；判据 = docs/core/design/BROWSER-TOOL.md §12 ∥ §12.1；交互组件 = `thincoder-core/browser/pool.mjs`（四形判定 ∥ 用者登记 ∥ 末关）⟷ `thincoder-core/browser/session.mjs`（接线）⟷ 真工具面；进入口 = 同一临时 `HOME` 下两个真 node 进程各发一条 `browser{navigate}`；三态（行序）= 34-1 正常 · 34-2 边界 · 34-3 正常。
+> 节注：回指 = `docs/core/requirements/BROWSER-TOOL.md`「共享与生命周期」；判据 = `docs/core/design/BROWSER-TOOL.md`「会话与池」；交互组件 = `thincoder-core/browser/pool.mjs`（四形判定 ∥ 用者登记 ∥ 末关）⟷ `thincoder-core/browser/session.mjs`（接线）⟷ 真工具面；进入口 = 同一临时 `HOME` 下两个真 node 进程各发一条 `browser{navigate}`；三态（行序）= 34-1 正常 · 34-2 边界 · 34-3 正常。
 > 池隔离前提：该档把 `HOME` ∥ `USERPROFILE` 指到临时家目录（`browserPaths()` 落在其中）——开发机上真跑着的共享浏览器不得被用例接入。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
@@ -98,7 +101,7 @@
 ## CLI 35. 会话态的读写在浏览器工具里（cookie 含 httpOnly · storage 两域自分 · 六形免审）
 
 > 目的：调用方手里已有的会话态能原样搬进搬出——`cookies get` 读得到 httpOnly 的登录令牌（`document.cookie` 读不到那一类），`cookies set` 给什么域写什么域；`storage` 两域各写各读、值逐字往返。
-> 节注：回指 = docs/core/requirements/BROWSER-TOOL.md 条目 F-BT20（cookie 三形、含 httpOnly、跨域直写）∥ F-BT21（storage 三形 × 两域、自分不串档）∥ N-BT7（六形免审）；判据 = docs/core/design/BROWSER-TOOL.md §14（AC-BT1 ∥ AC-BT2 ∥ AC-BT3 ∥ AC-BT4 ∥ AC-BT5 ∥ AC-BT6 ∥ AC-BT7）；交互组件 = `thincoder-core/browser/session-state.mjs`（六形）⟷ `thincoder-core/browser/session.mjs`（分发表）⟷ 真工具面；进入口 = 本地夹具页回一条 `Set-Cookie: …; HttpOnly` 后逐个调 `browser`；三态（行序）= 35-1 正常 · 35-2 正常 · 35-3 正常。
+> 节注：回指 = `docs/core/requirements/BROWSER-TOOL.md`「动作」（cookie/storage 与免审面）∥「数据与失败」；判据 = `docs/core/design/BROWSER-TOOL.md`「状态与剪贴板」；交互组件 = `thincoder-core/browser/session-state.mjs`（六形）⟷ `thincoder-core/browser/session.mjs`（分发表）⟷ 真工具面；进入口 = 本地夹具页回一条 `Set-Cookie: …; HttpOnly` 后逐个调 `browser`；三态（行序）= 35-1 正常 · 35-2 正常 · 35-3 正常。
 > 池隔离前提：该档把 `HOME` ∥ `USERPROFILE` 指到临时家目录（`browserPaths()` 落在其中）——开发机上真跑着的共享浏览器不得被用例接入。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
@@ -112,7 +115,7 @@
 ## CLI 41. 批量改多档：一条失败只废那一条，成了的不返工，回执逐条说清
 
 > 目的：一次批量改多档时，某一条改不成只反馈那一条——已经改成的档留在盘上、不需要重做整批；某档最终内容被写前门拒只连坐该档；回执按调用序逐条说清哪条成、哪条败，末行给计数。改前那里是「任一条失败 ⇒ 整批抛错、盘上零字节」，用户为此改成一档一调 + 逐次回读。
-> 节注：回指 = `docs/core/requirements/TOOLS.md` F16 ∥ F17；机制单源 = `docs/core/design/EDIT.md` §5「`edits` 数组（逐条成败）」∥「批量回执（逐条 + 末行计数）」∥「桥面同口径」· §8 D-5 ∥ D-9 ∥ D-10 ∥ D-14 ∥ D-15 ∥ D-16；交互组件 = `edit` 工具的 `edits` 形 ⟷ 逐档就地写 ⟷ 写前文档门（41-1）∥ ACP 桥的批量编辑 ⟷ IDE 缓冲读写（`fs/read_text_file` ∥ `fs/write_text_file`）⟷ 帧排 ∥ `onEntryError:"collect"`（41-2）；进入口 = 真 `edit` 工具调用 ∥ ACP 客户端（IDE）发起一次批量编辑；态数（行序）= 41-1 错误 · 41-2 错误。
+> 节注：回指 = `docs/core/requirements/TOOLS.md`「文件与命令」；机制单源 = `docs/core/design/EDIT.md`「参数」∥「匹配与应用」∥「写与桥」；交互组件 = `edit` 工具的 `edits` 形 ⟷ 逐档就地写 ⟷ 写前文档门（41-1）∥ ACP 桥的批量编辑 ⟷ IDE 缓冲读写（`fs/read_text_file` ∥ `fs/write_text_file`）⟷ 帧排 ∥ `onEntryError:"collect"`（41-2）；进入口 = 真 `edit` 工具调用 ∥ ACP 客户端（IDE）发起一次批量编辑；态数（行序）= 41-1 错误 · 41-2 错误。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -122,7 +125,7 @@
 ## CLI 42. 补丁改多档：写盘段中途失败，回执说清哪几档已落盘
 
 > 目的：一次补丁改多档、写到一半失败时，回执要说清「哪几档已经在盘上、哪一档败了、哪几档没动」——已经落盘的不回滚、不假装没发生。改前那里抛的是一句裸 `rename` 错误：没有清单、不说哪一档失败，用户只能自己一档一档去猜。
-> 节注：回指 = `docs/core/requirements/TOOLS.md` F17；机制单源 = `docs/core/design/APPLY-PATCH.md` §4「返回值（未全成）」∥「两个失败段」· §7 D-P2 ∥ D-P4 · 回执骨架单源 = `docs/core/design/EDIT-HELPERS.md` §7.6；交互组件 = `apply_patch` 提交段 ⟷ 注入径即时提交（编辑器已打开的档在暂存段就落盘）⟷ 批级记账；进入口 = 真 `apply_patch` 调用（三档补丁，其中一档的提交段必失败）；态数（行序）= 42-1 错误。
+> 节注：回指 = `docs/core/requirements/TOOLS.md`「文件与命令」；机制单源 = `docs/core/design/APPLY-PATCH.md`「定位与原子性」∥「回执与记账」· 回执骨架单源 = `docs/core/design/EDIT-HELPERS.md`「批量帧」；交互组件 = `apply_patch` 提交段 ⟷ 注入径即时提交（编辑器已打开的档在暂存段就落盘）⟷ 批级记账；进入口 = 真 `apply_patch` 调用（三档补丁，其中一档的提交段必失败）；态数（行序）= 42-1 错误。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -131,20 +134,20 @@
 ## CLI 43. 文档锚点图：一条链从一个需求走到用例入口符号
 
 > 目的：文档各层之间的引用关系能反查——「这条决定是怎么来的」「这一节还被哪几处说着」从人工核对变成一条查询。图的边与台账行住同一个库（`doc_edges` 表），边的抽取复用 `doc_check` 那一次逐行遍历（同一份文档只有一套解析器），查询面 = 一个工具四种问法（`scan` ∥ `forward` ∥ `reverse` ∥ `chain`）。
-> 节注：回指 = 需求 `docs/core/requirements/DOC-GRAPH.md`（F1–F5 ∥ F7 ∥ 边界七条 ∥ AC-1–AC-9）；机制单源 = `docs/core/design/DOC-GRAPH.md` §2.2（边的形状与来源）∥ §2.3（表结构与出处形）∥ §2.5.0（按类计数）∥ §2.5.2（走查规则）∥ §2.5.4（时效格）；交互组件 = `thincoder-core/doc-graph/anchors.mjs` 的逐行遍历（回调 `onEdge`）⟷ `thincoder-core/doc-graph.mjs`（扫描 ∥ 落库 ∥ 查询）⟷ `thincoder-core/ledger-db.mjs` 的同一库同一句柄 ⟷ 真工具面 `doc_graph`；进入口 = CLI 会话里让助手调 `doc_graph`（`scan` 一次、再按四种问法查）；五态（行序）= 43-1 正常 · 43-2 正常 · 43-3 边界 · 43-4 边界 · 43-5 正常。
+> 节注：回指 = 需求 `docs/core/requirements/DOC-GRAPH.md`「功能需求」∥「边界」∥「验收」；机制单源 = `docs/core/design/DOC-GRAPH.md`「节点与边」∥「存储」∥「查询细节」；交互组件 = `thincoder-core/doc-graph/anchors.mjs` 的逐行遍历（回调 `onEdge`）⟷ `thincoder-core/doc-graph.mjs`（扫描 ∥ 落库 ∥ 查询）⟷ `thincoder-core/ledger-db.mjs` 的同一库同一句柄 ⟷ 真工具面 `doc_graph`；进入口 = CLI 会话里让助手调 `doc_graph`（`scan` 一次、再按四种问法查）；五态（行序）= 43-1 正常 · 43-2 正常 · 43-3 边界 · 43-4 边界 · 43-5 正常。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
-| 43-1 | 真工具调用 `doc_graph`：`scan` 扫本仓 → `chain` 以 `req:F16` 起、`depth` 取 6 → 五跳的每条边再用 `forward` ∥ `reverse` 逐条直查 | `scan` 回执首行 = `全仓 · 扫 N 档`（**不带任何混合边总数**），紧跟按类计数行（每类后跟「已验存在 ∥ 目标不在盘 ∥ 判不了存在性」三格，`cites` 与 `cites-symbol` 各占一格），末行是时效格（`图建于 … · 此后 N 档变更 · D 档已不在盘`）；`chain` 首行印走查口径（起点 / 深度 / 命中边数 / 节点数 / 生效 kind 集合）；第 1 跳（小层）含设计档与批档；每条宽度截断自述行按层印出且该层确实只印 200 条（M = 该层真实条数、须大于印出条数；点名的 `kind` 在闭集内；「M 与库内该层条数逐字相等」由单测夹具对库内行数核，常驻面押的是这三条关系）；五跳的每条边逐条断言（设计档 `--cites-req-->` `req:F16` ∥ 批档 `--cites-->` 设计档 ∥ 批档 `--mentions-case-->` `case:CLI 41-1` ∥ `--case-file-->` 用例档 ∥ 用例档 `--imports-->` `symbol:editTool`），每边带出处 | 修前红 = 这类关系只能靠人一处一处读出来（需求档 §1 三个实证）；本行断言的就是「一条命令复原那条链」+ 回执说清「验过几条、抽出来几条、这张图多旧」 | `test/integration/doc-anchor-graph.test.mjs` |
-| 43-2 | 真工具调用 `doc_graph(reverse)`：查 `doc:docs/core/design/EDIT.md#5` | 首行断到 `kind = 全部十类：` 为止（**不带入边条数**），紧跟按类计数行且 `cites` 自占一格、带三格；需求档与批档两条引用方都在，各带出处（需求档那条的出处原句带 `F16`）；整档引用与按节引用逐条按真实身份打印（按档折叠、身份不归一） | 修前红 = 「谁引用了这一节」今天完全答不了（反向查是 F3 ② 的原话） | `test/integration/doc-anchor-graph.test.mjs` |
-| 43-3 | 真工具调用 `doc_graph`：带声明档的夹具项目里先 `scan`，把被引的目标档移走 → 再 `scan` → `forward` 查引用方 | 该边仍列出且状态为「目标不在盘」；目标不被换成盘上另一份同名档（不猜替代目标） | 修前红 = 文档改了或删了，引用处悄悄过期，收口面照着过期的那份判（需求档 §1 第二个实证） | `test/integration/doc-anchor-graph.test.mjs` |
-| 43-4 | 构造一份引用自身的夹具档（一行引自身整档、一行引自身 `§5`）→ `scan` 后 `forward` 查它 | 自指那一行不成边（自环 = `src` 与 `dst` 逐字相同，设计 §2.2）：`forward` 里没有 `src` ∥ `dst` 逐字相同的那一行，按类行只记一条 `cites`；引自身 `§5` 那一行照常落边、`dst` 落 `#5`、照常印出（两个节点） | 修前红 = 自指那一行进表，`forward` 里「这档引了谁」的第一行就是它自己 | `test/integration/doc-anchor-graph.test.mjs` |
-| 43-5 | 夹具仓 `scan` → 改一档（改后 `mtime` 晚于该档时刻）→ 再读任一回执 | 首份回执末行写「图建于 …」与「此后 0 档变更」；改后回执末行写「此后 ≥1 档变更」；两读的「K 档」非空（`K` = 库里 `scope` 的去重数，逐字相等判在单测档） | 修前红 = 回执不报图建于何时，读者无从判断这份图还能不能信（AC-9 的失效面：写着「此后 0 档变更」而盘上确有变） | `test/integration/doc-anchor-graph.test.mjs` |
+| 43-1 | 真工具调用 `doc_graph`：`scan` 扫本仓 → `chain` 以 `req:F16` 起、`depth` 取 6 → 五跳的每条边再用 `forward` ∥ `reverse` 逐条直查 | `scan` 回执首行 = `全仓 · 扫 N 档`（**不带任何混合边总数**），紧跟按类计数行（每类后跟「已验存在 ∥ 目标不在盘 ∥ 判不了存在性」三格，`cites` 与 `cites-symbol` 各占一格），末行是时效格（`图建于 … · 此后 N 档变更 · D 档已不在盘`）；`chain` 首行印走查口径（起点 / 深度 / 命中边数 / 节点数 / 生效 kind 集合）；第 1 跳（小层）含设计档与批档；每条宽度截断自述行按层印出且该层确实只印 200 条（M = 该层真实条数、须大于印出条数；点名的 `kind` 在闭集内；「M 与库内该层条数逐字相等」由单测夹具对库内行数核，常驻面押的是这三条关系）；五跳的每条边逐条断言（设计档 `--cites-req-->` `req:F16` ∥ 批档 `--cites-->` 设计档 ∥ 批档 `--mentions-case-->` `case:CLI 41-1` ∥ `--case-file-->` 用例档 ∥ 用例档 `--imports-->` `symbol:editTool`），每边带出处 | 修前红 = 这类关系只能靠人一处一处读出来（需求档 三个实证）；本行断言的就是「一条命令复原那条链」+ 回执说清「验过几条、抽出来几条、这张图多旧」 | `test/integration/doc-anchor-graph.test.mjs` |
+| 43-2 | 真工具调用 `doc_graph(reverse)`：查 `doc:docs/core/design/EDIT.md` | 首行断到 `kind = 全部十类：` 为止（**不带入边条数**），紧跟按类计数行且 `cites` 自占一格、带三格；需求档与批档两条引用方都在，各带出处（需求档那条的出处原句带 `F16`）；整档引用与按节引用逐条按真实身份打印（按档折叠、身份不归一） | 修前红 = 「谁引用了这一节」今天完全答不了（反向查是 F3 ② 的原话） | `test/integration/doc-anchor-graph.test.mjs` |
+| 43-3 | 真工具调用 `doc_graph`：带声明档的夹具项目里先 `scan`，把被引的目标档移走 → 再 `scan` → `forward` 查引用方 | 该边仍列出且状态为「目标不在盘」；目标不被换成盘上另一份同名档（不猜替代目标） | 修前红 = 文档改了或删了，引用处悄悄过期，收口面照着过期的那份判（需求档 第二个实证） | `test/integration/doc-anchor-graph.test.mjs` |
+| 43-4 | 构造一份引用自身的夹具档（一行引自身整档、一行引自身 `§5`）→ `scan` 后 `forward` 查它 | 自指那一行不成边（自环 = `src` 与 `dst` 逐字相同，`docs/core/design/DOC-GRAPH.md`）：`forward` 里没有 `src` ∥ `dst` 逐字相同的那一行，按类行只记一条 `cites`；引自身 `§5` 那一行照常落边、`dst` 落 `#5`、照常印出（两个节点） | 修前红 = 自指那一行进表，`forward` 里「这档引了谁」的第一行就是它自己 | `test/integration/doc-anchor-graph.test.mjs` |
+| 43-5 | 夹具仓 `scan` → 改一档（改后 `mtime` 晚于该档时刻）→ 再读任一回执 | 首份回执末行写「图建于 …」与「此后 0 档变更」；改后回执末行写「此后 ≥1 档变更」；两读的「K 档」非空（`K` = 库里 `scope` 的去重数，逐字相等判在单测档） | 修前红 = 回执不报图建于何时，读者无从判断这份图还能不能信（`docs/core/requirements/DOC-GRAPH.md`「验收」的失效面：写着「此后 0 档变更」而盘上确有变） | `test/integration/doc-anchor-graph.test.mjs` |
 
 ## CLI 46. 跨实例发消息：一条消息送进另一实例并起一轮，回程带请求号
 
 > 目的：同一台机器上的两个实例（不同仓也算）能互相说话——把一段话直接送进对方会话，对方空闲就起一轮处理；对方正在跑一轮就等它跑完，绝不插进当前这一轮；对方回话靠请求号与首发对上。
-> 节注：回指 = 需求 `docs/core/requirements/MULTI-INSTANCE-COLLAB.md` F-MI10 ∥ N-MI8；机制单源 = `docs/core/design/MULTI-INSTANCE-COLLAB.md` §5（§5.2 名册 ∥ §5.3 回执与请求号 ∥ §5.4 投递与取件 ∥ §5.5 可达性四态）；交互组件 = 名册（`thincoder-core/instance-registry.mjs`）⟷ inbox（`thincoder-core/instance-inbox.mjs`）⟷ 取件闩与消息形态（`thincoder-core/instance-inbox-watch.mjs`）⟷ 工具面 `instance_send`；进入口 = 两个真 node 进程共用同一临时 `~/.thincoder` 等价根，A 端调 `instance_send` 发给 B；一态（行序）= 46-1 正常（含在飞回合不插队与末段不可达报错）。
+> 节注：回指 = 需求 `docs/core/requirements/MULTI-INSTANCE-COLLAB.md`「跨实例消息」；机制单源 = `docs/core/design/MULTI-INSTANCE-COLLAB.md`「名册」∥「发送」∥「取件闩」∥「消息落法」；交互组件 = 名册（`thincoder-core/instance-registry.mjs`）⟷ inbox（`thincoder-core/instance-inbox.mjs`）⟷ 取件闩与消息形态（`thincoder-core/instance-inbox-watch.mjs`）⟷ 工具面 `instance_send`；进入口 = 两个真 node 进程共用同一临时 `~/.thincoder` 等价根，A 端调 `instance_send` 发给 B；一态（行序）= 46-1 正常（含在飞回合不插队与末段不可达报错）。
 > 夹具前提：回合面与宿主定时器由 `test/integration/fixtures/cross-instance-harness.mjs` 驱动（真 CLI TUI 要 TTY、要真 provider）——`tick` = 跑掉夹具队里的定时器回调一拍（真宿主同形），`busy` = 在飞回合，`failTake` = 开轮面 reject，`advance` = 假钟推进（受阻跨阈不靠真实等待）。本行因此覆盖「名册 × inbox × 取件闩 × 消息形态 × 跨进程投递」这条链，不覆盖 TUI 渲染与真模型读法（人工走查）。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
@@ -153,10 +156,33 @@
 ## CLI 49. 子代理只拿得到角色允许的工具动作
 
 > 目的：子代理读到的工具说明 = 它真能用的能力。只读角色（explore ∥ plan ∥ consult）不因整把工具不是只读而失去真正的只读动作（git 历史、记忆检索、配置读数、进程列表），写动作既不出现在它的描述与 schema 里，直接调进来也在原执行之前被拒；设计席的「每批最多六次勘察」从一句承诺变成会拒的计数；eng 两角色能读到父会话里本批那一段被限量的历史，其余角色仍靠任务书。
-> 节注：回指 = 需求 `docs/core/requirements/ENGINEERING-SYSTEM-OPTIMIZATION.md` B3–B8；机制单源 = `docs/core/design/TOOLS.md` §6.29（① 共用 action 变体 ∥ ② 家族与角色 profile ∥ ③ doc_graph 未建图 ∥ ④ 受限父历史）；交互组件 = 只读变体构造器（`thincoder-core/agent/helpers.mjs`）⟷ 运行期动作判据（`thincoder-core/agent/dispatch-gates.mjs` 的 `readonlyActionOf`）⟷ 角色装配（核 `thincoder-core/agent/family-tools.mjs` ∥ `agent-tools/subagent-spawn.mjs` ∥ 端 `thincoder-vscode/src/agent/tool-table.mjs`）⟷ 工具面（`doc_graph` ∥ `ledger` ∥ `team_ledger` ∥ `batch` ∥ `read_history`）⟷ 子代理报告；进入口 = 主会话经 `subagent` 派单（子代理调用工具并把结果带回）∥ 设计席自己经内部通道派勘察；三态（行序）= 49-1 正常 · 49-2 边界 · 49-3 边界。
+> 节注：回指 = 需求 `docs/core/requirements/ENGINEERING-SYSTEM-OPTIMIZATION.md`「工具与角色」；机制单源 = `docs/core/design/TOOLS.md`「装配」∥「调度」∥ `docs/core/design/AGENT-LOOP-SUBAGENT.md`「文档工具」；交互组件 = 只读变体构造器（`thincoder-core/agent/helpers.mjs`）⟷ 运行期动作判据（`thincoder-core/agent/dispatch-gates.mjs` 的 `readonlyActionOf`）⟷ 角色装配（核 `thincoder-core/agent/family-tools.mjs` ∥ `agent-tools/subagent-spawn.mjs` ∥ 端 `thincoder-vscode/src/agent/tool-table.mjs`）⟷ 工具面（`doc_graph` ∥ `ledger` ∥ `team_ledger` ∥ `batch` ∥ `read_history`）⟷ 子代理报告；进入口 = 主会话经 `subagent` 派单（子代理调用工具并把结果带回）∥ 设计席自己经内部通道派勘察；三态（行序）= 49-1 正常 · 49-2 边界 · 49-3 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
 | 49-1 | 父侧在工程模式经 `subagent` 派 `role:"explore"`（任务书五项），本地脚本化假 Anthropic 端点在子代理首回合派三条真调用：`git log`（夹具仓有一条提交）∥ `settings list` ∥ `process`（不带 action）；同用例再从子代理请求体读它实际收到的四族 schema；随后以「原 execute 挂观察壳」的同一构造器造四族只读变体，逐个直接 execute 写动作（`git commit` ∥ `memory put` ∥ `settings set` ∥ `process kill`） | ① 三条只读调用真跑成功并回到父侧报告（提交原文 / 配置键 / `PID` 各自出现）；② 子代理 schema 面：`memory` = `search` ∥ `list`、`settings` = `list` ∥ `get`、`process` = `list`、`git` 含 `log` ∥ `show` ∥ `diff` 且不含 `commit` ∥ `push` ∥ `reset` ∥ `add`，四族均不出现写专用参数（`message` ∥ `name` ∥ `tags` ∥ `mode` ∥ `dest` ∥ `title` ∥ `content` ∥ `pid` 等）；③ 四次直接 execute 全拒，拒句点名动作并说清是只读面，**原 execute 一次都没跑**（观察壳零记录），仓内提交数仍为 1；④ tester 不顺扩：整把只读集不含 `git`，只读变体面才含 | 无 | `test/integration/tool-role-fitting.test.mjs` |
 | 49-2 | 未建图的夹具仓：经同一入口派 explore 子代理去 `doc_graph forward`，读它那一发请求体与报告；再直接 execute 只读变体的 `scan`；最后往台账库路径写入坏档，重跑一次查询 | ① 子代理收到的 `doc_graph` 枚举逐字三值（`forward` ∥ `reverse` ∥ `chain`）、不带只服务 `scan` 的 `scope`；② 未建图返回可区分空态（逐字 `doc_graph: graph not built yet (read-only empty state) — …`），既不冒充「该节点没有边」，也不要求父代先扫（描述里零 `ask the parent`、零 `scan` 用什么用）；③ 直接 `scan` 仍拒且拒句给出可用取值集；④ 坏档 ⇒ 读取失败原样抛出，绝不落成空图或未建图；depth-0 面仍四动作（含 `scan`） | 无 | `test/integration/tool-role-fitting.test.mjs` |
 | 49-3 | 建批走真入口（`batch create`），父会话摆两条消息（一条在本批起点之前、一条在之后）；派一发 eng-designer 取它的 `extraTools` 与窗口读数；再由**设计席自己的** `subagent` 变体连续派六次 explore，第七次同样的派单；随后换一个 designer child（`round:"fix"` 重派）再派一次；末段取一次 explore 的 `extraTools` 与家族段 | ① 第七次勘察拒且拒句点名「6 explore spawns per batch record」；② `round:"fix"` 的重派**不归零**（仍拒）——计数挂在 depth-0 根 agent 上；③ eng-designer 拿到的 `read_history` 只读本批窗口（起点之后那条读得到、起点之前那条读不到），`limit` 必传且 `51` 被拒（上限 50），`path` 直接拒；④ 未绑定角色（explore）既无 `extraTools` 里的历史工具，家族段里也不出现 `read_history` | 无 | `test/integration/tool-role-fitting.test.mjs` |
+
+
+## CLI 50. 三档模式切换、极简提示词与知识查询
+
+> 目的：同一互斥 mode 驱动命令、槽恢复和下一轮提示词；minimal 收窄自动注入并查询同一知识正文，完整档保持原语义。
+> 节注：回指 = `docs/core/requirements/PROMPT-SYSTEM.md` ∥ `docs/core/requirements/CONFIG.md` F13 ∥ `docs/core/requirements/SESSION.md`；机制单源 = 对应同名设计档；组件 = CLI 命令/会话槽 ⟷ prepareRun ⟷ 母版装配 ⟷ knowledge 资源；进入口 = 真 CLI 命令与本地脚本化模型端点；三态 = 50-1 正常 · 50-2 正常 · 50-3 边界。
+
+| 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
+|---|---|---|---|---|
+| 50-1 | 在真 CLI 依次执行 /minimal、/normal、/eng，恢复槽并发起下一轮本地模型请求 | 命令矩阵与槽 mode 一致；下一轮系统提示词换档；minimal 不自动注入文档/记忆/大纲，项目规则仍保留；完整档内容不变 | 无 | `test/integration/minimal-mode.test.mjs` |
+| 50-2 | 主代理与子代理分别调用 knowledge list/search/get，并查询未知主题、无匹配及纯查询主题 | 三档均有 knowledge；search 只定位、get 取完整主题；错误显式；纯查询主题不进入任何模式的提示词 | 无 | `test/integration/minimal-mode.test.mjs` |
+| 50-3 | 从真实 `thincoder-cli/src/tui.mjs` 入口装载完整 TUI 模块图 | startTUI 可用；cmd-advisor 不再引用 cmd-eng 已退役的 writeSessionFile 导出 | 回指 = `docs/cli/requirements/CRASH-REPORTS.md` F-CR1；旧实现由真实启动 SyntaxError 复现 | `test/integration/minimal-mode.test.mjs` |
+
+
+## CLI 52. ACP workMode 与 PLAN 分离
+
+> 目的：ACP 的工作模式三档使用 workMode，session/set_mode 继续只表示 PLAN/NORMAL。
+> 节注：回指 = `docs/cli/design/ACP-CLIENT.md`「会话身份与配置」；组件 = ACP stdio ⟷ sessionConfigOptions ⟷ set_config_option ⟷ 会话槽；进入口 = session/new、set_config_option、load/resume；两态 = 52-1 正常 · 52-2 错误。
+
+| 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
+|---|---|---|---|---|
+| 52-1 | 经真 ACP stdio 新建会话，写 minimal/engineering，再 load/resume | new/load/resume 的 workMode 快照一致；合法值落槽并全量通知；PLAN 的 currentModeId 不被工作 mode 污染 | 无 | `test/integration/acp-work-mode.test.mjs` |
+| 52-2 | 写非法 workMode，再读取当前配置与通知 | 非法值零状态变、零通知；合法快照保持原值 | 无 | `test/integration/acp-work-mode.test.mjs` |

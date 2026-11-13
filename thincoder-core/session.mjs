@@ -29,6 +29,9 @@ import { guardForeignSlotFile } from "./session-guard.mjs"
 import { engTokenSlotFields } from "./token-ttl.mjs"
 // §6.17.1 链二写面（估算校准样本随会话槽走）：本档只取写出值，读面在 `session-lifecycle.mjs`（applySession）。
 import { tokenSampleOf } from "./token-window.mjs"
+// 跨轮机读投影（CONTEXT-COMPACTION §1.1 ∥ SESSION §2 · 台账 #2395 ∥ #2397–#2401）：槽机读线与恢复面同一实现
+// ——同一份轮记录投影出同一条线（在途/异常段原样陪跑），再叠压缩检查点（摘要注记 + 已覆盖条数）。
+import { activeTurnRaw, machineLineForSlot, normalizeCheckpoint, slotTurns } from "./agent/turn-projection.mjs"
 // TUI-OOM-ROOTCAUSE 批（SESSION.md §6.14）：人读线记录存储（磁盘为准 + 内存窗口）。
 // slimForDisplay/isLegacyTransient 迁入 store 模块（§6.14 记录存储）——本文件 re-export 保持
 // 既有 import 面（session-slots.mjs 引 isLegacyTransient）。依赖方向单向：store 零项目内依赖。
@@ -115,17 +118,23 @@ function digestFromStore(fields, counters, mtimeMs) {
 export function saveSession(agent, opts = {}) {
   // _fullHistory is written at the source via pushReal — no flush needed here.
   // history        = FULL, never-compacted (human-readable; VS Code panel & CLI resume read this)
-  // contextHistory = machine context (possibly compacted) so CLI resume keeps the token savings
+  // contextHistory = 机读线副本（`turns` 的派生；恢复优先 `turns`，旧槽无 `turns` 时才读它）
   // Human line: transient machine injections never enter the readable record.
   // TUI-OOM-ROOTCAUSE 批（SESSION.md §6.14 追加时点）：绑定记录存储后 `history` 字段由
   // saveProjectedSlot 流式拼接段原文生成（磁盘为准——不物化全量数组）；未绑定
   // （模式 F：thincoder chat/测试/未覆盖路径）→ 既有全量物化路径逐字保留（D-SE26 模式 F 零回归）。
-  // Machine line (contextHistory): KEEP transient messages — resume must rebuild the
-  // machine line byte-identical to what the provider cache saw. Dropping them made every
-  // process restart diverge at the first injection position (git/OS/time reminders are
-  // re-injected with FRESH content) → whole-prefix cache miss on the CLI's very first
-  // request of each session (2026-08-16 cache-hit report; Kimi review).
-  const contextHistory = agent.history.filter((m) => !isLegacyTransient(m))
+  // Machine line (contextHistory)：机读线投影（SESSION.md §2 ∥ CONTEXT-COMPACTION.md §1.1）——三段按同一投影拼成：
+  // 摘要注记（`compactCheckpoint` 在场时）+ 检查点之后那些轮记录的投影 + 在途 ∨ 异常段原文，再丢弃 `transient` 标记的消息。
+  // 与 `applySession` 的重建面同一实现（保存 ∥ 恢复同尺），不在槽里重新写回完整工具过程；
+  // 任务状态串已在 `turns` 里，副本再存一份没有读者（它不可作恢复依据：恢复优先 `turns`）。
+  const turns = Array.isArray(agent._turns) ? agent._turns : []
+  // 压缩检查点（SESSION §2 表行）：内存载体 = `agent._compactCheckpoint`（`applyCompression` 产出）；
+  // 归一不过（无压缩 ∥ 形态坏）⇒ `null` ⇒ **键缺**（不写 `null`、不写空对象）。
+  const compactCheckpoint = normalizeCheckpoint(agent._compactCheckpoint, turns.length)
+  // 在途 ∥ 异常段（没有轮记录可依的那一段）：`transient` 标记的消息落槽前丢弃（与 `contextHistory` 同一条过滤口径）。
+  const activeRaw = activeTurnRaw(agent).filter((m) => !m?.transient && !isLegacyTransient(m))
+  const contextHistory = machineLineForSlot(turns, { checkpoint: compactCheckpoint, activeRaw })
+    .filter((m) => !m?.transient && !isLegacyTransient(m))
   // fields = 槽 JSON 数据面（history 由投影插入——键序与既有 data 形态同序，history/contextHistory 居后）
   const fields = {
     version: 2,
@@ -139,7 +148,7 @@ export function saveSession(agent, opts = {}) {
     tasks: agent.tasks ?? [],
     planMode: agent.planMode ?? false,
     autoApprove: agent.autoApprove ?? false,
-    engineering: agent.config?.agent?.engineering ?? false,
+    mode: agent.config?.agent?.mode ?? (agent.config?.agent?.engineering === true ? "engineering" : "normal"),
     ...engTokenSlotFields(agent),
     goal: agent.goal ?? null,
     advisor: agent.config?.advisor ?? null,
@@ -148,6 +157,13 @@ export function saveSession(agent, opts = {}) {
     // §6.17.1 链二写面：估算校准样本 `{key,num,den,est}`——空样本落 null（不造空对象）；
     // 只随回合尾保存走，不新增写路径、不逐样本落盘。
     estimateSample: tokenSampleOf(agent),
+    // 轮记录（SESSION §2：每项形如 `{ userRequest, finalResponse, taskState }`）——
+    // 机读线的**权威源**：恢复时 `turns` 在场即按同一投影重建（旧槽无该键 ⇒ 回退 `contextHistory`）。
+    ...(compactCheckpoint ? { compactCheckpoint } : {}),
+    turns: slotTurns(turns),
+    // 在途 ∥ 异常段原文：单列一键，不由 `contextHistory` 与投影长度的算术差推断（那份副本经 transient 过滤，
+    // 长度不等于投影长度）；`turns` 非空时恢复面只认 `turns`，这段因此必须自己能读回（#2401）。
+    activeRaw,
   }
   // 2026-09-05 §6.10 D-4：首认领（_slot 为 null——如 /session 切换后首保存、“查看对方活槽 →
   // 保存 fork 新槽”的落盘槽跟随）写本端记录——marker = 端内最后认领者；粘性 _slot 期间

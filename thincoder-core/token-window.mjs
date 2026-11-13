@@ -130,7 +130,9 @@ function tightenTailByBudget(history, start, floorStart, budgetTokens) {
  * `_lastPromptTokens + 增量(history.slice(_usageAtLen))`；无实测 = `estimateTokens(history) + system + tools`（固定开销面经 extras 随带）。
  * `threshold` = 该回合检查所用值（`agent._ctxBasis.threshold`——核 `agent.mjs` / VSC `checkAndCompact` 各一处暂存）；缺省回退 `resolveCompactThreshold`（退化面①）。
  * `window` = `providerSpec(agent.provider).context`。
- * @returns {{basis:"measured"|"estimated", total, history, system, tools, overhead, threshold, window}}
+ * `fixedFloor` = 固定开销按当前估算比缩放（与 `total` 的估算支同一把尺）——固定开销单独越过 `limit` 的判据面
+ * （`CONTEXT-COMPACTION.md` §5），两处消费：`enforceContextFit` 抛 typed error ∥ `compressIfNeeded` 的 `force` 支 no-op。
+ * @returns {{basis:"measured"|"estimated", total, history, system, tools, overhead, fixedFloor, threshold, window}}
  */
 export function contextUsage(agent, extras = {}) {
   const history = Array.isArray(agent?.history) ? agent.history : []
@@ -150,6 +152,8 @@ export function contextUsage(agent, extras = {}) {
     system,
     tools,
     overhead,
+    // 固定开销单独越线的判据值（§5）：与估算支同尺——压掉全部 history 后 total 只能落到这个量级。
+    fixedFloor: Math.round(overhead * ratio),
     threshold: agent?._ctxBasis?.threshold
       ?? resolveCompactThreshold(agent?.config?.agent?.compactThreshold, agent?.provider).value,
     window: providerSpec(agent?.provider).context,

@@ -456,6 +456,7 @@ export async function runSingleEdit(args, ctx) {
   // 单一写路径点：默认 = writeFile + 记账；端侧注入 ⇒ 编辑器径（§2.13.5）。
   await writeThroughPath(abs, joinWithEol(normalizeEOL(out.updated).split("\n"), raw), {
     op: "write",
+    agent: ctx.agent,
     record: { type: "edit", startLine: out.editStartLine, shift: out.lineShift },
   })
   const diff = await gitDiffOne(ctx.cwd, abs)

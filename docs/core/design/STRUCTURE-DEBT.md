@@ -1,41 +1,34 @@
-# 结构债评估与清理路线（STRUCTURE-DEBT）
+# 结构债处置（STRUCTURE-DEBT）· 设计
 
-> 板块 = **结构债**（横切——跨多板块的架构 / 文档 / 状态债评估与清理）。
-> 需求侧 = `docs/core/requirements/STRUCTURE-DEBT.md`。
+> 需求 = `docs/core/requirements/STRUCTURE-DEBT.md`。
+> 最近先例：`LEDGER.md` 的债务范围与 `CODE-TIER.md` 的结构判据。对齐 = 事实入账、当前任务优先修复。
+> 勘察证据：已读原结构债需求与当前 ledger/doc_check 规则。相关 = 不再保留平行债表。
 
-## 1. 定位与口径
+## 1. 处置顺序
 
-**结构债**（屎山度）= 架构 / 状态归属 / 文档格式 / 跨端复制四类**跨板块**的欠账。其特征是**病痛与治疗时机错开**：平时无症状、撞上才暴露——靠文档显式追踪防止「挂账不处理」。
+1. 确认问题在当前任务范围内，并走过实际调用或读取路径。
+2. 能随当前改动正确修复就直接修复。
+3. 修复改变已批准设计或交付目标时停止并交用户。
+4. 确需后续独立工作时，由主 agent 入 ledger，写清触发与证据。
+5. 范围外观察不写成发现，不入账。
 
-- **本档是总账 + 入口路由**，不承载单批设计正文——单批设计落各自板块档或批专属设计档。
-- **每批独立立项**：设计 → 评审 → 实现都在工程模式的四步（需求 → 设计 → 开发 → 测试）之内，不因「债」字跳过任一步。
-- **已消解项不计债**：消解即从 §2 移入 §3，并留一条消解证据（防回潮）。
+## 2. 结构判断
 
-## 2. 现行债
+- 先按函数职责、模块决策边界和可独立验证性判断。
+- 文件尺寸按 CODE-TIER 的当前时机与阈值，不另建中间检查。
+- 文档由 DOC-CHECK 判段长、行号锚和悬空指针。
+- 不把“文件很长”自动等同于“该拆”，也不把未越线当成结构合格证明。
 
-| # | 债 | 现状判 | 证据 |
-|---|---|---|---|
-| **#3** | **`_` 状态字段摊平 + 手写生命周期清单**：agent 对象的运行态字段无 schema / 无封装，复位与继承靠**手写键清单**；新增或漏删字段即状态泄漏 | **现行** | 继承 = 手写键清单：`thincoder-core/agent/run-start.mjs`（`_inheritedGuard` 逐键回灌）；复位 = 逐字段块：`thincoder-core/agent/run-start.mjs`（逐字段复位段） |
-| **#4** | **eng-token 语义跨端重复**：核内已单点化，VSC 端无同名实现——自持槽语义与校验副本 | **跨端仍分叉**（CLI / 核侧已消解） | 核内单点 = `thincoder-core/token-ttl.mjs`；VSC 侧消费面 = 核 `thincoder-core/agent-tools/design-token.mjs`（VSC 无自有消费档） |
-| **#8** | **跨仓复制漂移**（架构伞项）：state / tools / prompts / advisor 层双端整片存在 | **收敛中**（核统一批推进） | 「一个核 + 两个薄壳」= `docs/core/design/CORE-UNIFICATION.md`；跨端剩余差面登记 = `docs/vsc/design/VSC-MIGRATION.md` |
-| **#9** | **扫描面四档的职责边界**（长度判据 = `docs/core/standards/CODE-TIER.md`，不在本行另立档位） | **部分消解** | 已消解两档：`thincoder-core/memory/docs.mjs`（拆 `thincoder-core/memory/memory-tool.mjs`）∥ `thincoder-core/memory/code-sync.mjs`（拆 `thincoder-core/memory/code-search.mjs` / `thincoder-core/memory/file-list.mjs`）；照挂两档：`thincoder-core/memory/schema.mjs` ∥ `thincoder-core/memory/core.mjs`——职责边界未再评估 |
+## 3. 记录位置
 
+工作事实与证据进入当前批次和 ledger。状态文档只保留长期有效的结构规则与决策理由。
 
-**注**：`#6` 的 VSC 侧对位面 = 核 `thincoder-core/tools/file.mjs` ∥ `thincoder-core/tools/patch.mjs` ∥ `thincoder-core/tools/search.mjs`（已归位）；该面归 VSC 轮，不计入核面债。
+本档不列当前债项；当前债项只查 ledger。
 
-## 3. 已消解（勿当债）
+## 4. 验证
 
-| # | 原债 | 消解证据 |
-|---|---|---|
-| #1 | 设计文档单行整节坏格式 | 宽度机检 0 行超限（基准层 + 两产品文档面） |
-| #2 | 双端 async 状态容器分叉（双查询 / 双删 / 容器名分叉） | 单载体 + 单点结算：`thincoder-core/agent-tools/async-settle.mjs` 的 `settleAsyncEntry`；核内 `history?._X ?? agent._X` 双查询 grep 零命中 |
-| #5 | CLI 单档 `system.mjs` 超 500 行（4 工具合装——迁移前形态） | 该档已不存在；拆为 `thincoder-core/tools/bash.mjs` · `thincoder-core/tools/search.mjs` · `thincoder-core/tools/question.mjs` |
-| #6 | 工具寄生 / 名不符实（CLI 侧） | `question` 已独立成档：`thincoder-core/tools/question.mjs`（不再寄生 git 工具档） |
-| #7 | async settle 逻辑重复（四族同构逻辑副本） | 单点 helper 四族同调：`thincoder-core/agent-tools/async-settle.mjs` 的 `settleAsyncEntry`（消费方 = `advisor-async.mjs` · `consult.mjs` · `escalate-async.mjs` · `subagent-run.mjs`） |
+结构修改运行相关调用方测试、语法检查和当前集成入口。拆分还需保持测试与断言覆盖，不因搬移静默丢行为。
 
-## 4. 清理纪律
+## 5. 边界
 
-1. **每批独立走工程模式**：设计（受影响文件：源 / 测试档现量判定尺寸档位、结论落档）→ 评审 → 实现 → 验证；本档只路由。
-2. **撞到就修**：改动撞到**状态归属错误或结构错误** ⇒ 依纪律层「铁律②」（`docs/core/requirements/ENGINEERING-MODE-V2.md` §8 五条铁律；提示词面 = `thincoder-core/prompts/discipline-engineering.md`）走流程修——本面**清理时点 = 撞到那一刻（当场、不往后排）**。
-3. **消解即移档**：消解项从 §2 移入 §3，**留证据行**（档 / 行号或机检读数）——防「已消解」被当作债重复登记（防回潮）。
-4. **跨端债的落点**：跨端（CLI ↔ VSC）债的搬运与核验归**核统一批**（`docs/core/design/CORE-UNIFICATION.md`）；本档只登记条目与状态，不代写核统一设计。
+不建立“现行/已消解”历史表，不用旧提交或批档作为当前规范来源，不把结构治理扩成无关重构。

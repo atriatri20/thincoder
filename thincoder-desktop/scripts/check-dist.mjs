@@ -21,6 +21,7 @@ import { createHash } from "node:crypto"
 import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import { RESOURCE_DIRS, RESOURCE_EXPECT, repoMarkdownFace, resourceCount } from "./dist-resource-face.mjs"
 
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
 
@@ -122,22 +123,9 @@ function readAsarEntry({ header, dataStart }, fd, entry) {
   return buf
 }
 
-/** D 族口径（档数硬等——`prompts` 17 ∥ `tool-docs` 54；同源 = `thincoder-vscode/scripts/check-vsix.mjs` `EXPECT`——两处硬等，改一改二；实读 2026-11-04）。 */
-const PROMPT_FACE_EXPECT = { prompts: 17, "tool-docs": 54 }
-
-/** 源树提示词面（档名 → sha256；单源 = `thincoder-core/<dir>/*.md`）。 */
+/** 源树资源面：递归相对路径 → sha256；prompts/knowledge 与顶层 knowledge 不漏检。 */
 function repoPromptFace(dir) {
-  const base = join(
-    pkgRoot,
-    "..",
-    "thincoder-core",
-    dir,
-  )
-  return new Map(
-    readdirSync(base)
-      .filter((f) => f.endsWith(".md"))
-      .map((f) => [f, createHash("sha256").update(readFileSync(join(base, f))).digest("hex")]),
-  )
+  return repoMarkdownFace(join(pkgRoot, "..", "thincoder-core"), dir)
 }
 
 /** asar 内目录枚举（按目录路径下钻；叶件 **名 → 节点**（含 size/offset/unpacked）——缺目录 ⇒ null）。 */
@@ -161,7 +149,7 @@ function asarListDir(record, dirPath) {
 /** D 族断言（档数 + 名集 + 逐档 sha256——win ∥ linux 同 helper；返回读数行，失败入 `failures`）。 */
 function checkPromptFaces(record, fd, asarLabel, failures) {
   const lines = []
-  for (const dir of ["prompts", "tool-docs"]) {
+  for (const dir of RESOURCE_DIRS) {
     const repo = repoPromptFace(dir)
     const packed = asarListDir(record, `node_modules/@thincoder/core/${dir}`) ?? new Map()
     const packedMd = new Map([...packed].filter(([n]) => n.endsWith(".md")))
@@ -182,11 +170,20 @@ function checkPromptFaces(record, fd, asarLabel, failures) {
         differs.push(`${name}（不可读：${error.message}）`)
       }
     }
-    const label = `D 族/${dir}（${asarLabel} · 仓内 ${repo.size} 档 · 口径 ${PROMPT_FACE_EXPECT[dir]}）`
-    if (repo.size === PROMPT_FACE_EXPECT[dir] && !missing.length && !extra.length && !differs.length && !unpacked.length) {
-      lines.push(`${label}：档数达标 + 名集逐字 + sha256 逐档相同`)
+    const expected = RESOURCE_EXPECT[dir] ?? null
+    const count = resourceCount(dir, repo)
+    const countOff = expected !== null && count !== expected
+    const label = `D 族/${dir}（${asarLabel} · 仓内递归 ${repo.size} 档 · ${expected === null ? "递归全集" : `口径 ${expected}`}）`
+    if (!countOff && !missing.length && !extra.length && !differs.length && !unpacked.length) {
+      lines.push(`${label}：${expected === null ? "" : "档数达标 + "}名集逐字 + sha256 逐档相同`)
     } else {
-      failures.push(`${label}：仓内侧档数不符 [${repo.size}] · 缺 [${missing.join(",")}] · 多 [${extra.join(",")}] · 内容异 [${differs.join(",")}] · unpacked 守卫 [${unpacked.join(",")}]`)
+      const why = []
+      if (countOff) why.push(`仓内侧档数不符 [${count}]（口径 ${expected}）`)
+      if (missing.length) why.push(`缺 [${missing.join(",")}]`)
+      if (extra.length) why.push(`多 [${extra.join(",")}]`)
+      if (differs.length) why.push(`内容异 [${differs.join(",")}]`)
+      if (unpacked.length) why.push(`unpacked 守卫 [${unpacked.join(",")}]`)
+      failures.push(`${label}：${why.join(" · ")}`)
     }
   }
   return lines

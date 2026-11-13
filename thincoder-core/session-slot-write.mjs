@@ -37,6 +37,7 @@ import { tokenExpiryMs } from "./token-ttl.mjs"
 // 与 off 可达性（`thinkOffPath`）；两叶档（零 import）⇒ 不涉环，核内零第二份族别 / 枚举表。
 import { specForModel } from "./model-specs.mjs"
 import { thinkOffPath } from "./think-off.mjs"
+import { WORK_MODES } from "./config-migrate.mjs"
 
 /** mtime 缓存（键 = 槽文件路径 → 上次所见 mtimeMs）：同一槽连写时跳过重复解析。
  *  测试复位缝（与 `_setSessionsDirForTest` 同款）：缓存为进程级单例，用例间需可复位
@@ -48,10 +49,12 @@ export function _resetSlotMtimeCacheForTest() { slotMtimeCache.clear() }
  *  批起 `newSession` 与本构造器单源；`effort: null` = 会话级档位未设态——§6.21 判据句 5 规范
  *  结构同源；老槽无该键由读侧按 `null` 容忍）。首物化即记创建端（§6.20 判据句 4 写面：本端
  *  物化者 = 进程端名；「禁回填」不适用——本构造器只产全新槽）。 */
-export function newSlotData(cwd) {
+export function newSlotData(cwd, mode) {
+  if (mode !== undefined && !WORK_MODES.includes(mode)) throw new Error(`invalid session work mode: ${JSON.stringify(mode)}`)
   return {
     version: 2, cwd, title: "", updatedAt: Date.now(),
-    history: [], contextHistory: [], tasks: [],
+    history: [], contextHistory: [], tasks: [], turns: [],
+    ...(mode !== undefined ? { mode } : {}),
     planMode: false, goal: null, autoApprove: false, advisor: null, effort: null,
     pendingReminders: [], sessionStart: null,
     createdBy: sessionEnd(),
@@ -161,9 +164,19 @@ export function setSlotPlanMode(cwd, slot, value) {
   return writeFlag(cwd, slot, (d) => { d.planMode = value })
 }
 
-/** 会话级 engineering 开关——槽是会话真值来源（配置文件只作初始默认 / 跨端镜像）。 */
+/** 会话级互斥工作模式——槽是会话真值来源；旧 engineering 字段在写入时退役。 */
+export function setSlotMode(cwd, slot, value) {
+  if (!["minimal", "normal", "engineering"].includes(value)) return false
+  return writeFlag(cwd, slot, (d) => {
+    d.mode = value
+    if (value === "engineering") d.planMode = false
+    delete d.engineering
+  })
+}
+
+/** 旧调用面保留，但写入同样只落到唯一 mode。 */
 export function setSlotEngineering(cwd, slot, value) {
-  return writeFlag(cwd, slot, (d) => { d.engineering = value })
+  return setSlotMode(cwd, slot, value === true ? "engineering" : "normal")
 }
 
 /** advisor 守卫开关（`advisor: { guard }`——空值升格为对象）。 */

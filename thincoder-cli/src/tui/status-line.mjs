@@ -52,7 +52,8 @@ export function renderStatus(state, agent, cols, slashCommands) {
   const planBanner = agent.planMode ? `${C.tool} PLAN${ansi.reset}${ansi.dim}│` : ""
   const advisorBanner = agent.config?.advisor?.guard === true ? `${C.advisor} ADVISOR${ansi.reset}${ansi.dim}│` : ""
   const engBanner = agent.config?.agent?.engineering ? `${C.advisor} ENG${ansi.reset}${ansi.dim}│` : ""
-  const bannerPrefix = (agent.planMode ? " PLAN│ " : "") + (agent.autoApprove ? " AUTO│ " : "") + (agent.config?.advisor?.guard === true ? " ADVISOR│ " : "") + (agent.config?.agent?.engineering ? " ENG│ " : "")
+  const minimalBanner = agent.config?.agent?.mode === "minimal" ? `${C.tool} MINIMAL${ansi.reset}${ansi.dim}│` : ""
+  const bannerPrefix = (agent.planMode ? " PLAN│ " : "") + (agent.autoApprove ? " AUTO│ " : "") + (agent.config?.advisor?.guard === true ? " ADVISOR│ " : "") + (agent.config?.agent?.engineering ? " ENG│ " : "") + (agent.config?.agent?.mode === "minimal" ? " MINIMAL│ " : "")
   // 第 33 批（TUI §14.3(b)/(c)）：attention 态 = chip 行首 + 整行注意力色对包裹（blocked >
   // awaiting；blocked 内 permission > question——与按键分发优先级同序）；平态零注入。
   const kind = attentionKind(state)
@@ -61,7 +62,7 @@ export function renderStatus(state, agent, cols, slashCommands) {
   const attentionPad = chip ? `${chip} │ ` : ""
   // 宽度预算（N9④）：chip 占位计入——整行仍 ≤ cols − 1（既有口径）。
   const statusMax = cols - 1 - (bannerPrefix ? stringWidth(bannerPrefix) : 0) - (attentionPad ? stringWidth(attentionPad) : 0)
-  const inner = `${ansi.dim}${planBanner}${autoBanner}${advisorBanner}${engBanner}${sliceByWidth(statusLine, Math.max(10, statusMax))}`
+  const inner = `${ansi.dim}${planBanner}${autoBanner}${advisorBanner}${engBanner}${minimalBanner}${sliceByWidth(statusLine, Math.max(10, statusMax))}`
   // 负向锁（§14.3）：attention 为 null ⇒ 半态路径逐字节等价（不经包裹 / 零字节注入）。
   if (!chip) return `${inner}${ansi.reset}`
   // 底色存活（§14.3）：既有内容含内部 ansi.reset（banner / ctx 警示段）——每次内部复位后

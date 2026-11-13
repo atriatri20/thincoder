@@ -19,7 +19,7 @@
 
 import { existsSync } from "node:fs"
 // §6.17：auto 派生值只进显示面（compactThresholdResolved）——显式键 agent.compactThreshold 永不被改写
-import { resolveCompactThreshold } from "./config.mjs"
+import { resolveCompactThreshold, resolveSessionWorkMode, setConfigWorkMode } from "./config.mjs"
 // 槽面判据单源（#841 KD-841-2：槽渠道 key 门 + 模型面序——PROVIDER.md §6.22）。
 import { hasKey, resolveChannelModel, resolveProviderPlan } from "./model-ref.mjs"
 import {
@@ -36,6 +36,10 @@ import { loadSlotFile } from "./session.mjs"
 // 与 VSC `newSlot` / `loadSlotForWrite` 全新分支同一构造器；环 import 同上，函数体内运行时使用）。
 import { newSlotData } from "./session-slot-write.mjs"
 import { mergeAdjacentAssistantEchoes } from "./context.mjs"
+// 跨轮机读投影（SESSION.md §2 恢复面 · 台账 #2395 ∥ #2397–#2401）：`turns` 在场即以轮记录重建机读线（与
+// `beginRun` ∥ `saveSession` 同一投影函数）；本档同时拿归一化面来回填 `agent._turns`，并把压缩状态
+// （检查点 ∥ 折叠身份标记）播种回 agent。
+import { normalizeCheckpoint, normalizeSlotTurns, restoreMachineFromTurns } from "./agent/turn-projection.mjs"
 // 打开态读数公式（§6.24 判据句 2——与 CLI 状态行 / VSC 同一实现点的投影；零新公式，只组合）。
 import { historyPercent, restoreTokenSample, sampleRatio } from "./token-window.mjs"
 import { scheduleSessionGC } from "./session-gc.mjs"
@@ -75,6 +79,25 @@ function stripTruncatedToolArgs(m) {
   return changed ? { ...m, tool_calls } : m
 }
 
+/**
+ * 压缩状态恢复播种（SESSION.md §2「恢复也把压缩状态播种回 agent」）：只装回机读线而不播种，同一会话的
+ * 第二次压缩只见到重启之后的轮，`turnsCovered` 被写小、被摘要的轮又整条投影回来。
+ *  - `agent._compactCheckpoint` = 槽里的 `compactCheckpoint`；键缺 ∥ 形态坏 ⇒ 不设（与「本会话还没压过」同义）；
+ *  - 折叠身份标记按恢复出的轮记录重建（载体 `agent._turnFoldMarks`，口径见 `CONTEXT-COMPACTION.md` §6）：
+ *    机读线上每条轮记录的那几条消息对象登记为已折叠——下一回合的折叠与压缩按身份判覆盖时，看到的仍是整本账。
+ * 播种的键缺失等同没有：不报错，也不回写槽。
+ * @param {object} agent
+ * @param {object} data — 槽数据
+ * @param {{turns?: object[], marks?: object[][]}} restored — `restoreMachineFromTurns` 的出参
+ *   （归一后的轮记录 + 逐轮身份账，与装回线上的对象是同一批）
+ */
+function seedCompressionState(agent, data, restored = {}) {
+  const turns = Array.isArray(restored.turns) ? restored.turns : normalizeSlotTurns(data?.turns)
+  agent._compactCheckpoint = normalizeCheckpoint(data?.compactCheckpoint, turns.length)
+  const marks = Array.isArray(restored.marks) ? restored.marks : []
+  agent._turnFoldMarks = marks.map((msgs) => (Array.isArray(msgs) ? [...msgs] : []))
+}
+
 /** Apply loaded session data onto an agent object; returns `{ switched, droppedDesignTokens }`
  *  （`switched` = 运行态渠道是否被切——原布尔值；`droppedDesignTokens` = 离开本会话的未过期
  *  设计凭证数，设计档 §3.2）。2026-08-31 会诊 F1：清空 _slot/_slotMtime 缓存——切换后下次保存重新认领。
@@ -109,7 +132,13 @@ export function applySession(agent, data, opts = {}) {
   // 一次性闸（src/agent/setup-reminders.mjs——process restarted 句的进程级信号）。
   agent._envResumed = full.length > 0
   const ch = data.contextHistory
-  const machine = (Array.isArray(ch) && ch.length > 0) ? ch : full.map(stripTruncatedToolArgs)
+  const fallbackLine = (Array.isArray(ch) && ch.length > 0) ? ch : full.map(stripTruncatedToolArgs)
+  // 恢复权威顺序（SESSION.md §2 单点定义）：`turns` 存在 ⇒ 以轮记录重建机读线（与 `beginRun` ∥
+  // `saveSession` 同一投影函数）；否则用 `contextHistory`；两者皆缺时由 `history` 播种。
+  // 重建同时给出 `{ turns, marks }`（出参）——下面播种压缩状态要用同一批消息对象（不重投影：重投影产出新对象，
+  // 身份对不上线上那条线）。
+  const restoredLine = {}
+  const machine = restoreMachineFromTurns(data, restoredLine) ?? fallbackLine
   // D-CC19 恢复面回声归并（CONTEXT-COMPACTION §6.10 #8）：已落盘机读线原样装回会复活
   // D-CC18 病态形态（无 reasoning_content 的 assistant 紧邻 assistant ⇒ 首请求 400）——
   // machine 定线后、装线前扫描归并（干净输入返回同一引用——零拷贝零回归）。
@@ -117,6 +146,16 @@ export function applySession(agent, data, opts = {}) {
   // 绑定态（opts.slot 在场）：人读线 = 记录存储尾窗（下方绑定块填充）——不复制全量 JSON 数组
   agent._fullHistory = opts.slot != null ? [] : [...full]
   agent.history = [...machineMerged]
+  // 轮记录随槽回填（SESSION §2）：下一回合的折叠按同一本账续记；归零活动轮的三件临时载体——
+  // 上一进程的中止 ∥ 未完成链不得跨进程“续折”（异常轮不折叠）。旧槽无 `turns` ⇒ 空账，
+  // 机读线仍按上面的回退线走（旧槽零回归）。
+  agent._turns = Array.isArray(restoredLine.turns) ? restoredLine.turns : normalizeSlotTurns(data.turns)
+  // 压缩状态随槽播种（`compactCheckpoint` ∥ 折叠身份标记——见 `seedCompressionState`）。
+  seedCompressionState(agent, data, restoredLine)
+  agent._turnLedger = null
+  agent._turnPending = null
+  agent._turnStartLen = null
+  agent._turnResponseEnd = null
   agent.title = data.title ?? ""
   agent.tasks = data.tasks ?? []
   agent.planMode = data.planMode ?? false
@@ -126,13 +165,9 @@ export function applySession(agent, data, opts = {}) {
   agent._sessionStart = data.sessionStart ?? null
   // R16 token 字段恢复（过期过滤——见 token-ttl.mjs restoreEngTokens）；返回值 = 离开集计数（§3.2）
   const restored = restoreEngTokens(agent, data)
-  // engineering is session-level (2026-08-29): the slot value is the CLI session's authority
-  // — config.json is only the initial default / cross-end mirror. A legacy slot without the
-  // field keeps whatever config.json seeded (unchanged behavior).
-  if (data.engineering !== undefined) {
-    agent.config.agent ??= {}
-    agent.config.agent.engineering = data.engineering === true
-  }
+  // The slot's valid mode is authoritative. Legacy slots migrate their engineering boolean on
+  // read; slots with neither field keep the new-session default seeded from config.json.
+  setConfigWorkMode(agent.config, resolveSessionWorkMode(data, agent.config.agent))
   // ENG-PLAN-EXCLUSION（FR31 ③ / KD10——恢复点①·CLI `applySession`）：工程模式 ⇒ planMode 恒
   // false（内存位 + 未注入的 plan 提示语）——防「工程纪律 × plan 只读」半状态随槽恢复复活。
   // **槽不就地回写**：内存值在下一次 `saveSession` 随 `planMode` 字段自然收正（`session.mjs`）。
@@ -270,7 +305,7 @@ export async function newSession(cwd, opts = {}) {
   // VS Code newSlot 对齐（SESSION.md §6.3 v2 格式双端一致；两端读侧均有兜底，功能等价）。
   // SLOT-END-PARAM 批（§6.20 判据句 4 写面）：改用首物化构造器单源 `newSlotData(cwd)`
   // （原字面逐字同形——并入后随其带创建端 = 本端名）。
-  const data = newSlotData(cwd)
+  const data = newSlotData(cwd, opts.mode)
   writeSessionFile(slotPath(cwd, slot), data)
   // 摘要 `ts` 地板入参（#503 同族随动——保存面写后取 mtime；`slotMtime` 读失败 ⇒ null ⇒ 裸墙钟）
   m.slots[slot] = slotDigest(data, slotMtime(cwd, slot))
@@ -325,6 +360,16 @@ export function resetSessionState(agent) {
   agent._verifyRetries = 0
   agent._verifyPassed = undefined
   agent._runStartHistoryLen = 0
+  // 轮记录面（SESSION §2）：新会话无轮记录、无活动账本、无待折叠轮——旧会话的
+  // 轮记录不得跟新槽走（否则首回合折叠会把上一会话的账算进来）；压缩状态（检查点 ∥ 折叠身份标记）
+  // 同理：新会话没压过，旧检查点跟过去会让首回合的机读线被当成「已被摘要覆盖」。
+  agent._turns = []
+  agent._turnFoldMarks = []
+  agent._compactCheckpoint = null
+  agent._turnLedger = null
+  agent._turnPending = null
+  agent._turnStartLen = null
+  agent._turnResponseEnd = null
   agent._lastPromptTokens = null
   agent._usageAtLen = null
   // §6.17 估算自校准：新会话无样本（比 = 1）——跨会话不继承旧模型的估算偏差
@@ -400,7 +445,8 @@ export function slotOccupancy(cwd, slot) {
 
 /** 打开态读数（SESSION.md §6.24 · 桌面残余批——恢复态播种的读数**单源**）：槽数据 ⇒ 状态行上下文
  *  读数百分数（整数）。与 `applySession` 后读数**同源同式**（四事同判——组合既有件，零新公式）：
- *  ① 线选 = `contextHistory` 非空取之，否则 `history` 经 `stripTruncatedToolArgs` 回退（同 applySession）；
+ *  ① 线选 = `turns` 在场按同一投影重建（同 applySession 恢复权威顺序），否则 `contextHistory` 非空取之，
+ *     两皆缺时 `history` 经 `stripTruncatedToolArgs` 回退（同 applySession）；
  *  ② 回声归并 = `mergeAdjacentAssistantEchoes`（同 applySession 装线前一步）；
  *  ③ 渠道合并 = `providers` 命中 `data.activeProvider` ⇒ 槽模型（串值 `activeModel`；非串 ∕ 空串 = 未登记
  *     ⇒ 落链）∥ 无槽模型 ⇒ 现行模型链回落（`defaultModel` 属本渠道 ⇒ 其模型段；两档皆无 ⇒ `null`——
@@ -413,8 +459,9 @@ export function sessionReading(data, { providers, fallback, defaultModel } = {})
   if (data === null || typeof data !== "object") return 0
   const full = Array.isArray(data.history) ? data.history : []
   const ch = data.contextHistory
-  const machine = (Array.isArray(ch) && ch.length > 0) ? ch : full.map(stripTruncatedToolArgs)
-  const line = mergeAdjacentAssistantEchoes(machine)
+  const fallbackLine = (Array.isArray(ch) && ch.length > 0) ? ch : full.map(stripTruncatedToolArgs)
+  // 与 `applySession` 同尺（SESSION §2 恢复权威顺序）：带 `turns` 的槽按同一投影读数。
+  const line = mergeAdjacentAssistantEchoes(restoreMachineFromTurns(data) ?? fallbackLine)
   const entry = data.activeProvider ? providers?.find((pr) => pr.name === data.activeProvider && hasKey(pr)) : null
   // #638：非串 ∕ 空串 `activeModel` 归一（与 applySession 模型合并支 ① 同判）——脏值不达 `historyPercent`；
   // 未登记 ⇒ 落现行模型链（`defaultModel` 属本渠段 ∥ `null`——渠道单值退场，2026-10-09 清除批）。

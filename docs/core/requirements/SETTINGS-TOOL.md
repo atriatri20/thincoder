@@ -1,47 +1,41 @@
 # settings 工具（SETTINGS-TOOL）· 需求
 
-> 板块 = **`settings` 工具**（agent 可调的配置面）。
-> 本档 = 该机制的**需求层权威**（F-ST1–F-ST6 / N-ST1–N-ST4 判定句）。
-> 设计侧 = `docs/core/design/SETTINGS-TOOL.md`（**本板块设计权威**）· `docs/core/design/TOOLS.md`（工具面总体——本档不复制，D2）；配置面总体 = `docs/core/design/CONFIG.md`。
+> 设计 = `docs/core/design/SETTINGS-TOOL.md`；配置系统 = `docs/core/design/CONFIG.md`。
 
 ## 1. 总体定位
 
-agent 需要在不打断会话的前提下查看 / 修改运行配置（模型、轮次、压缩阈值、顾问、轨迹等）。
-`settings` 工具把该面收成**受形状护栏的读写通道**：写盘 = 两端共享的用户数据目录配置文件，热应用 = 当前会话的 live 配置；
-写入前做已知键校验与敏感键遮蔽，避免 agent 写出结构不符 / 泄漏凭据的内容。
+`settings` 让 agent 在会话中查看和修改配置。list/get 是只读动作；set 修改共享配置并更新适用的运行视图。
 
-## 2. 功能性需求
+## 2. 功能需求
 
-| # | 需求 | 判定句（可机器验证） |
+| # | 需求 | 验收 |
 |---|---|---|
-| **F-ST1** | 只读动作面 | 列表 / 取值类动作为只读——主 agent 面可调（与记忆工具同分类），不需写权限（注册面 `thincoder-vscode/src/agent/setup.mjs`） |
-| **F-ST2** | 写动作 = 写共享配置 | 设值类动作写共享配置（`thincoder-core/config-io.mjs`）+ 热应用到 live 配置（`thincoder-core/agent-tools/settings.mjs`）；**热应用语义**：回合边界读取的键（maxTurns / autoThink 等）下回合生效、会话内持续读取的键即时、重启不丢（写盘） |
-| **F-ST7** | 值解析两端统一（**去引号**） | `JSON.parse` 成功且为顶层标量 / 对象 / 数组 → 解析结果；**解析成功但结果为字符串 → 解析值（去引号）**；parse 失败 → 字符串字面——两端同一语义；不可消费形态两端同拒、磁盘零变化 |
-| **F-ST3** | 已知键校验 | 非空叶子由默认值表（agent / traces 默认集）**派生**——按规范全路径寻址，不手写镜像键表 |
-| **F-ST4** | 形状护栏 | 不可消费形态明确拒绝（不落盘、不热应用）；空叶子与跨面 / 同族键走显式形状表；**无静默判据**（F-S1.8）：对每个受约束键断言「接受集 == 应用侧可消费集 ∧ 拒绝集 == 应用侧不可消费集」（表驱动集合相等，判据取自应用侧读取器本体——`thincoder-core/config.mjs` · `thincoder-core/agent/assemble.mjs` · `thincoder-core/agent-tools/subagent-spawn.mjs` · `thincoder-core/tools/bash.mjs` · `thincoder-core/model-ref.mjs` 形态面），被拒值的写入尝试不改变磁盘与内存 |
-| **F-ST5** | 敏感键遮蔽 | 键段判定命中（密钥类键段名——**含段内复合名**：camelCase ∕ 前缀复合形，如 `refreshToken` ∕ `clientSecret` ∕ `privateKey`）⇒ 值遮蔽展示——读面不泄漏凭据；假阳方向安全（只丢值、键名可见） |
-| **F-ST6** | 并发写冲突可见 | 目标文件被并发改过 ⇒ 拒绝本次写并返回同型冲突提示（不静默覆盖） |
+| F-ST1 | 动作分类 | list/get 不需写权限；set 经过副作用与审批规则 |
+| F-ST2 | 持久化与热应用 | set 使用共享写链，更新 live config；不同键按实际读取时机生效 |
+| F-ST7 | 值解析 | JSON 可解析则使用解析值，包括字符串去引号；失败时按字面字符串 |
+| F-ST3 | 已知键校验 | 类型和形状从默认值与显式形状表派生，不维护第二份镜像 |
+| F-ST4 | 消费形状护栏 | 已知键的不可消费值拒绝；失败不改变磁盘或内存 |
+| F-ST5 | 敏感遮蔽 | 敏感段、headers 和 env 的值在列表、读取、回显和错误中遮蔽 |
+| F-ST6 | 并发冲突 | 文件被并发修改或无法安全写入时明确失败 |
+| F-ST8 | 点路径寻址 | 支持嵌套对象和数组下标，缺失路径给出可读错误 |
+| F-ST9 | null 清除 | 对支持 null 的键，null 表示清除并回到真实消费缺省 |
 
-## 3. 非功能性需求
+## 3. 非功能要求
 
 | # | 维度 | 标准 |
 |---|---|---|
-| **N-ST1** | 防漂移 | 形状表与默认值表同源；新增键 ⇒ 护栏同步（漂移由用例锁） |
-| **N-ST2** | 成功即生效 | 写盘成功 ⇒ 该配置对当前会话后续运行立即生效（无重启要求） |
-| **N-ST3** | 零凭据落输出 | 工具输出永不含明文凭据（敏感键段一律遮蔽） |
-| **N-ST4** | 可测试 | 工具形状、空叶子、跨面键、描述句由用例逐条断言；登记入测试清单 |
-| **N-ST5** | 零 npm 依赖 | `settings` 实现只 import `node:*` 与仓内模块（`thincoder-core/config.mjs`——DEFAULTS / writeConfigAtomic / configPath）——与 `thincoder-core/config.mjs` 同界 |
-| **N-ST6** | 描述纪律 | 工具描述写清：set = 持久配置变更；敏感值永不明文回显；热应用语义（回合边界）；`/config` 是用户等效手动面；类型校验口径（含 null 默认值键按真实消费形态） |
+| N-ST1 | 防漂移 | 默认值、形状表和实际消费者保持一致 |
+| N-ST2 | 诚实生效 | 回执区分持久化、live 更新、下回合读取和需要重启的键 |
+| N-ST3 | 凭据不出输出 | 敏感值、对象和错误文本不泄露明文 |
+| N-ST4 | 行为可验证 | 用真实工具动作验证读写、失败和热应用，不用描述句命中代替 |
+| N-ST5 | 依赖边界 | 只使用标准库和第一方配置模块 |
+| N-ST6 | 描述完整 | 描述说明动作、值解析、持久化、生效时机、敏感遮蔽和用户手动入口 |
 
-## 4. 范围边界（不做）
+## 4. 边界
 
-- 不做凭据管理通道（密钥仍由用户 / 配置面维护——工具只在读面遮蔽）。
-- **未知键 = 原样写入**
-  （全量域：已知节内任意嵌套允许；证据 = `thincoder-core/agent-tools/settings.mjs` 的两处
-  与双端工具描述「Unknown keys under a known section are stored as given」）。
-- **持久性边界**（文档级）：可写键限 **loadConfig 保留域**（顶层已知节内）——节外任意键写盘后下次启动被合并逻辑丢弃。
-- 不引入第二份配置存储（写面 = 共享配置文件单一权威）。
-- 不改 `DEFAULTS` / `AGENT_DEFAULTS` 键集与语义；不改读取侧（`thincoder-core/config.mjs` / `thincoder-cli/src/cli/make-agent.mjs` / `thincoder-core/tools/bash.mjs` / `thincoder-core/agent-tools/subagent-async.mjs`）。
-- 不改其它写面：`/config` · `/shell` · `/submodel` TUI、VSC 面板写面、`persistRaw` / `writeConfigAtomic` 写链。
-- 不校验渠道 / 模型 / 可执行文件存在性、角色名合法性（形状层止步——设计侧 D-ST9）；数组默认值键（`consultModels` / `streamRules` / `mcp.servers` / `providers`）维持既有豁免。
-- 不改任何用户配置文件内容（改用户值是运维动作）。
+- 已知节内的未知键按当前工具契约存储，不在所有未知键上发明全局白名单。
+- 持久性只承诺 loadConfig 实际保留的配置域。
+- 形状校验不代替外部服务、模型或可执行文件的可达性检查。
+- 不通过本工具维护团队登录段。
+- 不修改用户配置作为验证手段；验证使用隔离文件。
+- 不把敏感遮蔽解释为禁止写入；真实值仍可按明确动作保存。

@@ -50,6 +50,7 @@
     "tools/",
     "traces/",
     "prompts/",
+    "knowledge/",
     "tool-docs/"
   ]
 }

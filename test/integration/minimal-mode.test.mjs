@@ -1,0 +1,174 @@
+/**
+ * CLI 50 — three work modes and minimal knowledge queries. Real command handlers, core run loop,
+ * session slots and a local scripted Anthropic endpoint; no external model or network is used.
+ * Run from the repository root: node --test test/integration/minimal-mode.test.mjs
+ */
+import { test } from "node:test"
+import assert from "node:assert/strict"
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { pathToFileURL } from "node:url"
+import { removeTempDirBestEffort } from "../teardown.mjs"
+
+import { createAgent, runAgent } from "../../thincoder-core/agent.mjs"
+import { applySession, loadSlotFile } from "../../thincoder-core/session.mjs"
+import { newSlotData, saveSlotData } from "../../thincoder-core/session-slot-write.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../../thincoder-core/session-slots.mjs"
+import { assembleBuiltinTools } from "../../thincoder-core/tools/index.mjs"
+import { _upsertCodeFile, createMemory, docSync, put } from "../../thincoder-core/memory.mjs"
+import { normalizeOrigin } from "../../thincoder-core/memory/origin.mjs"
+import { handleMinimalCommand } from "../../thincoder-cli/src/tui/cmd-eng.mjs"
+import { buildSpawnChild } from "../../thincoder-core/agent-tools/subagent-spawn.mjs"
+import { fakeAnthropic } from "./fixtures/anthropic-endpoint.mjs"
+
+const MODEL = "claude-fake-1"
+const QUERY = "quixoticminimalmarker"
+
+function makeProject(tag) {
+  const root = mkdtempSync(join(tmpdir(), `minimal-int-${tag}-`))
+  writeFileSync(join(root, "PROJECT-MANIFEST.json"), JSON.stringify({ version: 1, phase: "initial-dev", docRoot: { design: "docs/design", batches: "docs/batches" } }))
+  writeFileSync(join(root, "AGENTS.md"), "PROJECT-RULE-MARKER: keep this rule in every mode.\n")
+  mkdirSync(join(root, "docs/design"), { recursive: true })
+  mkdirSync(join(root, "src"), { recursive: true })
+  writeFileSync(join(root, "docs/design/topic.md"), `# Searchable topic\n\n${QUERY} documentation body.\n`)
+  writeFileSync(join(root, "src/a.mjs"), "import { b } from './b.mjs'\nexport const a = b\n")
+  writeFileSync(join(root, "src/b.mjs"), "export const b = 1\n")
+  return root
+}
+
+function providerOf(port) {
+  return { name: "fake-anthropic", baseURL: `http://127.0.0.1:${port}/v1`, format: "anthropic", apiKey: "test-key", model: MODEL, context: 1000 }
+}
+
+async function agentOf(root, port, { mode = "normal", memory = null } = {}) {
+  const provider = providerOf(port)
+  const tools = await assembleBuiltinTools({ memory, cwd: root, model: MODEL })
+  const agent = createAgent({
+    provider, tools, memory, cwd: root,
+    config: { agent: { mode, engineering: mode === "engineering" }, providersList: [provider], defaultModel: `fake-anthropic:${MODEL}` },
+  })
+  agent.providers = [provider]
+  agent.activeProvider = provider.name
+  agent.activeModel = MODEL
+  return agent
+}
+
+function requestText(body) {
+  return JSON.stringify(body?.messages ?? [])
+}
+
+function toolNames(body) {
+  return (body?.tools ?? []).map((t) => t.name ?? t?.function?.name)
+}
+
+function count(haystack, needle) {
+  return haystack.split(needle).length - 1
+}
+
+test("CLI 50-1 mode command changes the next real request, narrows three injections and survives slot restore", { timeout: 180_000 }, async (t) => {
+  const root = makeProject("50-1")
+  const endpoint = await fakeAnthropic()
+  const store = mkdtempSync(join(tmpdir(), "minimal-int-store-"))
+  _setSessionsDirForTest(store)
+  const memory = createMemory({ dbPath: join(store, "memory.db") })
+  memory.codeOrigin = root
+  await put(memory, { type: "knowledge", title: QUERY, content: `${QUERY} previous-session memory.` })
+  _upsertCodeFile(memory, normalizeOrigin(root), "src/a.mjs", ["import { b } from './b.mjs'", "export const a = b"], "javascript", Date.now())
+  _upsertCodeFile(memory, normalizeOrigin(root), "src/b.mjs", ["export const b = 1"], "javascript", Date.now())
+  await docSync(memory, root)
+  t.after(async () => {
+    memory.db.close()
+    _resetSessionsDirForTest()
+    await endpoint.close()
+    removeTempDirBestEffort(root)
+    removeTempDirBestEffort(store)
+  })
+
+  const agent = await agentOf(root, endpoint.port, { memory })
+  agent._slot = 1
+  saveSlotData(root, 1, newSlotData(root))
+  await runAgent(agent, QUERY, {}, {})
+  const normal = endpoint.requests.at(-1).body
+  const normalText = requestText(normal)
+  assert.ok(normal.system.includes("## Evidence discipline"), "normal uses the full master")
+  assert.ok(normal.system.includes("PROJECT-RULE-MARKER"), "project rules stay present")
+  assert.ok(toolNames(normal).includes("knowledge"), "normal also provides the shared knowledge tool")
+  assert.ok(!normal.system.includes("PURE_QUERY_ONLY_MARKER"), "normal never inlines pure-query topics")
+  assert.ok(normalText.includes("Relevant documentation"), "normal really injects relevant docs")
+  assert.ok(normalText.includes("Relevant memories"), "normal really injects relevant memories")
+  assert.ok(normalText.includes("project dependency outline"), "normal really injects the project outline")
+
+  const ctx = { agent, pushLine() {}, pushLabel() {} }
+  await handleMinimalCommand(ctx)
+  assert.equal(loadSlotFile(root, 1).mode, "minimal")
+  await runAgent(agent, `${QUERY} next`, {}, {})
+  const minimal = endpoint.requests.at(-1).body
+  const minimalText = requestText(minimal)
+  assert.ok(minimal.system.includes("PROJECT-RULE-MARKER"), "minimal keeps project rules")
+  assert.ok(!minimal.system.includes("## Evidence discipline"), "minimal removes detailed topics")
+  assert.ok(toolNames(minimal).includes("knowledge"), "minimal provides the same knowledge tool")
+  assert.ok(!minimal.system.includes("PURE_QUERY_ONLY_MARKER"), "minimal never inlines pure-query topics")
+  assert.ok(minimalText.includes("mode: minimal"), "the next request sees the new mode")
+  assert.equal(count(minimalText, "Relevant documentation"), count(normalText, "Relevant documentation"), "switching does not rewrite history and adds no new doc injection")
+  assert.equal(count(minimalText, "Relevant memories"), count(normalText, "Relevant memories"), "no new memory injection")
+
+  const restored = await agentOf(root, endpoint.port, { mode: "normal", memory })
+  applySession(restored, loadSlotFile(root, 1))
+  assert.equal(restored.config.agent.mode, "minimal")
+  await runAgent(restored, QUERY, {}, {})
+  const restoredBody = endpoint.requests.at(-1).body
+  const restoredText = requestText(restoredBody)
+  assert.ok(toolNames(restoredBody).includes("knowledge"))
+  assert.ok(!restoredText.includes("Relevant documentation"))
+  assert.ok(!restoredText.includes("Relevant memories"))
+  assert.ok(!restoredText.includes("project dependency outline"))
+  assert.ok(restoredBody.system.includes("PROJECT-RULE-MARKER"))
+})
+
+test("CLI 50-2 main and child agents query knowledge through list/search/get with real tool results", { timeout: 180_000 }, async (t) => {
+  const root = makeProject("50-2")
+  const endpoint = await fakeAnthropic({ calls: [
+    { id: "k_list", name: "knowledge", input: { action: "list" } },
+    { id: "k_search", name: "knowledge", input: { action: "search", query: "business failure" } },
+    { id: "k_get", name: "knowledge", input: { action: "get", topic: "business-gates" } },
+  ] })
+  t.after(async () => {
+    await endpoint.close()
+    removeTempDirBestEffort(root)
+  })
+  const agent = await agentOf(root, endpoint.port, { mode: "minimal" })
+  const reply = await runAgent(agent, "Read the business-gates topic", {}, {})
+  assert.match(reply, /doc-lookup/)
+  assert.match(reply, /business-gates/)
+  assert.match(reply, /a business failure must fail/i)
+  const first = endpoint.requests[0].body
+  const last = endpoint.requests.at(-1).body
+  assert.ok(toolNames(first).includes("knowledge"))
+  assert.ok(requestText(last).includes("No such") === false, "the real calls returned content rather than a fixture refusal")
+
+  const childEndpoint = await fakeAnthropic({ calls: [
+    { id: "child_get", name: "knowledge", input: { action: "get", topic: "doc-lookup" } },
+  ] })
+  t.after(() => childEndpoint.close())
+  const parent = await agentOf(root, childEndpoint.port, { mode: "minimal" })
+  parent._subAgentCounter = 0
+  const built = buildSpawnChild(parent, { depth: 0, agent: parent, callbacks: {}, onPermissionRequest: async () => true }, {
+    role: "explore", goal: "Read the doc lookup topic.", knownFacts: "The topic id is doc-lookup.",
+    scope: "Read-only knowledge query; do not edit files.", acceptance: "Return the complete topic reading.",
+    reportFormat: "Quote the topic heading.", async: false,
+  }, "explore", false, [], [], null)
+  const childReply = await runAgent(built.child, built.input, built.childOpts, { ...built.childRunOpts, depth: 1 })
+  assert.match(childReply, /Check the docs before you ask or answer/)
+  const childBody = childEndpoint.requests[0].body
+  assert.ok(childBody.system.includes("Role: read-only scout"))
+  assert.ok(!childBody.system.includes("## Evidence discipline"))
+  assert.ok(toolNames(childBody).includes("knowledge"), "minimal children receive knowledge too")
+})
+
+test("CLI 50-3 startup loads the real TUI module graph without stale session-write imports", async () => {
+  // command-interactive 只在 tuiCommand 被调用时才动态 import tui.mjs，测试必须直指真实 TUI 图。
+  const entry = join(process.cwd(), "thincoder-cli", "src", "tui.mjs")
+  const loaded = await import(pathToFileURL(entry).href)
+  assert.equal(typeof loaded.startTUI, "function")
+})

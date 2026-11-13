@@ -12,7 +12,7 @@ import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "../c
 // §6.17/D-CC32 溢出守卫（兜底，非主修）：预算面单源 requestBudget ∥ 再估面 contextUsage（与压缩判定同一函数）
 import { requestBudget } from "../config.mjs"
 import { contextUsage } from "../token-window.mjs"
-import { contextOverflowError } from "../provider/errors.mjs"
+import { contextOverflowError, overheadOverflowError } from "../provider/errors.mjs"
 import { ensureAutoReminder, injectEngineeringReminder, ContinueError, snapshotGuard } from "./helpers.mjs"
 import { pushManifestStateReminder } from "./setup-reminders.mjs"
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
@@ -128,9 +128,15 @@ export async function runCompactionCheck(agent, ctx) {
       signal,
     )
     if (!compacted && pending) {
-      // 强制面无可压（短历史无中段）⇒ 记 no-op 注记后**照常**跑阈值面（阈值面不因模型请求让位）
-      const { compactNoopNote } = await import("../agent-tools/context.mjs")
-      agent.history.push({ role: "user", content: compactNoopNote(), transient: true })
+      // 强制面无可压：固定开销单独越线 ⇒ 回执报与守卫同一个原因（`CONTEXT-COMPACTION.md` §5），
+      // 否则 = 短历史无中段。两种 no-op 的处置不同，回执不能同一句。
+      const { compactNoopNote, compactOverheadNote } = await import("../agent-tools/context.mjs")
+      const forced = contextUsage(agent, compactionOverhead)
+      const budget = requestBudget(agent.provider)
+      const note = forced.fixedFloor > budget.limit
+        ? compactOverheadNote(forced.fixedFloor, budget.limit, budget.window)
+        : compactNoopNote()
+      agent.history.push({ role: "user", content: note, transient: true })
       compacted = await compressIfNeeded(agent, threshold, callbacks, compactionOverhead, signal)
     }
     if (compacted) bookkeepCompaction(agent, ctx)
@@ -164,6 +170,9 @@ export async function enforceContextFit(agent, ctx, { forceCompact = false } = {
   // 恒为正数、恒可判）。**判据不用 maxTokens**：未发时为 undefined ⇒ NaN ⇒ 守卫静默失效（§6.17）。
   const budget = requestBudget(agent.provider)
   let usage = contextUsage(agent, compactionOverhead)
+  // 固定开销单独越线（#2398 · `CONTEXT-COMPACTION.md` §5）：history 归零后 `total` 仍等于固定开销 ⇒ 压缩无解，
+  // 在强压**之前**抛 typed error（`forceCompact` 同样拦：强制压缩跳得过阈值，跳不过这条）。
+  if (usage.fixedFloor > budget.limit) throw overheadOverflowError(agent.provider, budget, usage.fixedFloor)
   if (!forceCompact && !(usage.total > budget.limit)) return false
   // 强压一次：失败走与阈值面同一条记账 / 降级链（不把摘要错误当回合错误直抛——
   // 记账后仍按「压后仍超」判：降级截断可能已把上下文压到线下）。
