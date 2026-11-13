@@ -7,7 +7,8 @@ import { execFile } from "node:child_process"
 import { readFileSync, existsSync, realpathSync, readdirSync, statSync, openSync, readSync, closeSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { loadToolDoc, applyPromptInjections } from "../prompt-files.mjs"
+import { loadToolDoc, applyPromptInjections, expandKnowledgeTopics } from "../prompt-files.mjs"
+import { WORK_MODES } from "../config-migrate.mjs"
 import { spawnGit, gitTimeoutNote, GIT_TIMEOUT_MS } from "./git-run.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -183,16 +184,31 @@ export function findCandidates(lines, oldString, topN = 3, threshold = 0.5) {
 /** Appended to hashline_edit results when the file contains U+FFFD (encoding-corruption probe). */
 export const FFFD_WARNING = "⚠ file contains U+FFFD (replacement char) — encoding may be corrupted; hash-based addressing may be unreliable. Consider fixing the file encoding first."
 
+/**
+ * 工具描述分档展开薄壳（设计 TOOLS §1 ∥ PROMPT-SYSTEM 设计档 §2 §7）：母版描述里的
+ * `{{knowledge:<id>}}` 锚在这里按档展开，展开体一律交 `prompt-files.mjs` 的 `expandKnowledgeTopics`
+ * ——壳只校验 mode 并选极简支，不复刻锚文法（另起一套展开器 = 逐字一致那条规则写在两处，漂一处查不出）。
+ * mode **必填、不给缺省**：缺省会让一次运行悄悄用上另一档的文本，而错处要到模型按错文本行事时才显形。
+ * 非字符串描述恒等过（无锚可展开——与下方 `applyPromptInjections` 同一判据）。
+ */
+export function expandToolDescription(text, mode) {
+  if (mode === undefined) throw new Error(`tool description: mode is required — pass one of ${WORK_MODES.join(" / ")}; no default is applied (a missing mode silently renders another tier's text)`)
+  if (!WORK_MODES.includes(mode)) throw new Error(`tool description: mode must be one of ${WORK_MODES.join(" / ")} — got ${JSON.stringify(mode)}`)
+  if (typeof text !== "string") return text
+  return expandKnowledgeTopics(text, { minimal: mode === "minimal" })
+}
+
 /** Convert to OpenAI tools parameter format.
- *  锚替换缝（CORE-UNIFICATION §2.13.8——U0）：`description` 经 `applyPromptInjections`
- *  （未配置 = 恒等）；两个调用点（`agent/setup.mjs` · `advisor/loop.mjs`）同经本函数。
+ *  分档缝 + 锚替换缝：`description` 先按 mode 展开知识锚（`expandToolDescription`）、再跑
+ *  `applyPromptInjections`。顺序不可倒——注入值由端侧提供，倒过来会把注入值当主题锚再展开一次。
+ *  调用点与各自传的档见设计 TOOLS §1 的表：主链按会话现读的 mode，其余五面取完整档 `"normal"`。
  *  非字符串 description 恒等过（无锚可替换）。*/
-export function toOpenAISchema(tool) {
+export function toOpenAISchema(tool, mode) {
   return {
     type: "function",
     function: {
       name: tool.name,
-      description: applyPromptInjections(tool.description),
+      description: applyPromptInjections(expandToolDescription(tool.description, mode)),
       parameters: tool.parameters,
     },
   }

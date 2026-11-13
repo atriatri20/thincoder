@@ -47,7 +47,7 @@ export function schemasFor(names = DECLARED_TOOL_NAMES) {
       throw new Error(`tool "${name}" is not part of the declared tool face (${DECLARED_TOOL_NAMES.join(" / ")})`)
     }
   }
-  return DECLARED_TOOL_NAMES.filter((name) => names.includes(name)).map((name) => toOpenAISchema(DECLARED_TOOLS[name]))
+  return DECLARED_TOOL_NAMES.filter((name) => names.includes(name)).map((name) => toOpenAISchema(DECLARED_TOOLS[name], "normal"))
 }
 
 /**

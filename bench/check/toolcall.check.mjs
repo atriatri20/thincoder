@@ -92,8 +92,8 @@ check("用例集 schema（14 例 / id 唯一 / 字段在场 / 期望名 ∈ 载�
 check("V0 = 实面逐字 · V1 − V0 差集恰好（5 档枚举块 + 7 项嵌套参数描述）· V2 参数面逐字节等值", () => {
   const model = "mimo-v2.6-flash"
   const v0 = variantOf(model, "V0").tools
-  assert.deepEqual(v0.slice(0, builtinTools.length), builtinTools.map(toOpenAISchema), "V0 静态表 23 档逐档等值")
-  assert.deepEqual(v0[builtinTools.length], toOpenAISchema(readImageTool), "能力位 read_image 在场（视觉档）")
+  assert.deepEqual(v0.slice(0, builtinTools.length), builtinTools.map((tool) => toOpenAISchema(tool, "normal")), "V0 静态表 23 档逐档等值")
+  assert.deepEqual(v0[builtinTools.length], toOpenAISchema(readImageTool, "normal"), "能力位 read_image 在场（视觉档）")
   const v1 = variantOf(model, "V1").tools
   const v2 = variantOf(model, "V2").tools
   const descDiff = []

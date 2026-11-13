@@ -18,8 +18,8 @@ export const VARIANT_IDS = ["V0", "V1", "V2"]
 
 /** V0 载荷逐档实面构造（能力位 `read_image` 同注册面判据）。 */
 function v0Tools(model) {
-  const tools = builtinTools.map(toOpenAISchema)
-  if (specForModel(model)?.multimodal) tools.push(toOpenAISchema(readImageTool))
+  const tools = builtinTools.map((tool) => toOpenAISchema(tool, "normal"))
+  if (specForModel(model)?.multimodal) tools.push(toOpenAISchema(readImageTool, "normal"))
   return tools
 }
 

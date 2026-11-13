@@ -168,13 +168,14 @@
 ## CLI 50. 三档模式切换、极简提示词与知识查询
 
 > 目的：同一互斥 mode 驱动命令、槽恢复和下一轮提示词；minimal 收窄自动注入并查询同一知识正文，完整档保持原语义。
-> 节注：回指 = `docs/core/requirements/PROMPT-SYSTEM.md` ∥ `docs/core/requirements/CONFIG.md` F13 ∥ `docs/core/requirements/SESSION.md`；机制单源 = 对应同名设计档；组件 = CLI 命令/会话槽 ⟷ prepareRun ⟷ 母版装配 ⟷ knowledge 资源；进入口 = 真 CLI 命令与本地脚本化模型端点；三态 = 50-1 正常 · 50-2 正常 · 50-3 边界。
+> 节注：回指 = `docs/core/requirements/PROMPT-SYSTEM.md` ∥ `docs/core/requirements/CONFIG.md` F13 ∥ `docs/core/requirements/SESSION.md`；机制单源 = 对应同名设计档；组件 = CLI 命令/会话槽 ⟷ prepareRun ⟷ 母版装配 ⟷ knowledge 资源；进入口 = 真 CLI 命令与本地脚本化模型端点；四态 = 50-1 正常 · 50-2 正常 · 50-3 边界 · 50-4 正常。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
 | 50-1 | 在真 CLI 依次执行 /minimal、/normal、/eng，恢复槽并发起下一轮本地模型请求 | 命令矩阵与槽 mode 一致；下一轮系统提示词换档；minimal 不自动注入文档/记忆/大纲，项目规则仍保留；完整档内容不变 | 无 | `test/integration/minimal-mode.test.mjs` |
 | 50-2 | 主代理与子代理分别调用 knowledge list/search/get，并查询未知主题、无匹配及纯查询主题 | 三档均有 knowledge；search 只定位、get 取完整主题；错误显式；纯查询主题不进入任何模式的提示词 | 无 | `test/integration/minimal-mode.test.mjs` |
 | 50-3 | 从真实 `thincoder-cli/src/tui.mjs` 入口装载完整 TUI 模块图 | startTUI 可用；cmd-advisor 不再引用 cmd-eng 已退役的 writeSessionFile 导出 | 回指 = `docs/cli/requirements/CRASH-REPORTS.md` F-CR1；旧实现由真实启动 SyntaxError 复现 | `test/integration/minimal-mode.test.mjs` |
+| 50-4 | 极简会话与完整会话各发一轮本地脚本化模型请求，读回请求体的工具面；同一极简会话里 `knowledge get tool-bash` 取一次展开面；再在极简会话内经 `consult_start` 起一次 consult 子代理，读它那一发请求体 | ① 极简档工具描述无锚字面、无展开面正文（`Output format:` ∥ `There is NO TTY` 均不在场），且等于母版去锚后的目标文本；② `knowledge get` 返回的正文逐字等于展开面原文；③ 完整档的 bash 描述逐字等于改造前全文（批起快照 `e82e704`）；④ 同一极简会话里 consult 的 `doc_check` 描述取完整档，主链仍取极简档；⑤ 工具数量与 schema 键集不缩水 | 无 | `test/integration/tool-description-tiers.test.mjs` |
 
 
 ## CLI 52. ACP workMode 与 PLAN 分离

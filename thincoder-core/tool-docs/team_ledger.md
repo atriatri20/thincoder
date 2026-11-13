@@ -4,7 +4,4 @@ The team ledger: one book on the server, shared by the whole team, usable once y
 - The repo tag is derived for you from the current project root's git origin; with no git repo, or no `remote.origin.url`, the call fails explicitly and sends no request. You cannot pick or change the repo.
 - `query`: `scope` = `"repo"` (default - the current repo) / `"team"` (every repo in the team); filters `status` (one of the six states `待讨论` / `待设计` / `在途` / `待核销` / `已核销` / `已废弃`) and `owner` (exact username). Each row carries `aged` when it sits in an unsettled state and is older than 30 days.
 - `count`: the same filters as `query`, and returns the total.
-- `add`: `title` required (non-blank, ≤200), `detail` (≤4000), `owner` (default = yourself). A new entry always lands in `待讨论`.
-- `update`: `id` required; at least one of `title` / `detail` / `owner` / `status`. `status` moves along the same six-state table as the local ledger - `待讨论→待设计` / `待讨论→在途` / `待设计→在途` / `在途→待核销` / `待核销→已核销` / `待核销→在途` / any state but `已废弃` → `已废弃` (`已废弃` has no way out); any edge off that list is refused.
-- `close`: `id` + `status` (`已核销` / `已废弃`). `已核销` settles, and only from `待核销` - from any other state it is refused, and the way out is to `update` that entry to `待核销` first. `已废弃` withdraws an entry from any non-archived state.
-- Login gate: not logged in ⇒ the call fails with a message saying so, and sends no request; 401 (token expired) ⇒ login expired, log in again; server unreachable ⇒ reported as such, with no offline fallback: a retry never serves an old value.
+{{knowledge:tool-team-ledger}}

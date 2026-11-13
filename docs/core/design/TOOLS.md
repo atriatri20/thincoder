@@ -12,20 +12,30 @@ DESC(name) 从 tool-docs 加载唯一描述。schema 与描述按当前只读变
 
 DESC 读的是母版原文，不清包含锚；分档展开在 schema 装配处发生：`toOpenAISchema(tool, mode)` 按 mode 拼接描述，完整档把锚替换成展开面，极简档移除锚。
 
+装配顺序是先在 schema 装配处展开锚、再跑 `applyPromptInjections`：注入值由端侧提供，顺序倒过来会把注入值当主题锚再展开一次。
+
 mode 是必填参数：缺它或取值不在 minimal / normal / engineering 之内即抛错并点名该参数。不给缺省值——缺省会让一次运行悄悄用上另一档的文本，而错处要到模型按错文本行事时才显形。
 
-因此 `tools.map(toOpenAISchema)` 这种直接把函数交给 `map` 的写法不成立：`map` 的第二手参（下标）会被当成 mode，首个元素即因取值非法而抛。调用点一律写成 `.map((tool) => toOpenAISchema(tool, mode))`。
+因此 `tools.map(toOpenAISchema)` 这种直接把函数交给 `map` 的写法不成立：`map` 的第二手参（下标）会被当成 mode，首个元素即因取值非法而抛。
 
-各调用点传哪一档：
+`map` 形态的第二个实参填该行「传哪一档」列给出的值，不填裸 `mode`：主链那一行的档位值是会话 mode 与 consult 的合取，写成 `.map((tool) => toOpenAISchema(tool, toolMode))`，`toolMode` 在 prepareRun 里先绑出。
 
-| 调用点 | 传哪一档 | 依据 |
-|---|---|---|
-| `thincoder-core/agent/setup.mjs` 的 prepareRun | 会话现读 mode（`resolveWorkMode(agent.config?.agent)`） | 主链按档装配（PROMPT-SYSTEM 设计档 §5） |
-| `thincoder-core/advisor/loop.mjs` 的 `schemas: tools.map(...)` | 完整档 `normal`，不读会话 mode | requirements §9.1「完整档工具描述和 consult/advisor 独立基底不被极简装配改写」；与 PROMPT-SYSTEM 设计档 §4 同一口径 |
-| `thincoder-server/src/agent/chat-env-tools.mjs` 的 `createEnvTools` | `normal` | 环境工具面不经极简装配，可见文本与本批改造前一致 |
-| `bench/check/toolcall.check.mjs` · `bench/toolcall/variants.mjs` · `prompt-fixture/tools.mjs` | `normal` | 三面都以「产品面实面逐字」为对照，对照文本 = 改造前全文 = 完整档装配 |
+下表其余五个面的作用域里没有会话档位，直接填实参 `"normal"`，例如 `.map((tool) => toOpenAISchema(tool, "normal"))`。非 `map` 形态同样把档位写在实参位：`toOpenAISchema(readImageTool, "normal")`、`core.toOpenAISchema(toolOf[name], "normal")`、`.map((name) => toOpenAISchema(DECLARED_TOOLS[name], "normal"))`。
 
-分档装配只覆盖主链工具面。advisor 与 consult 的独立基底、server 环境工具面、bench 与 prompt-fixture 的对照面都不随会话档位变化。
+各调用表达式传哪一档（`thincoder-vscode/src/tools/index.mjs` 只 re-export，不是调用点）：
+
+| 调用点 | 表达式 | 传哪一档 | 依据 |
+|---|---|---|---|
+| `thincoder-core/agent/setup.mjs` 的 prepareRun | `tools.map(toOpenAISchema)` | 会话现读 mode（`resolveWorkMode(agent.config?.agent)`）；`agent._role === "consult"` 时取完整档 | 主链按档装配（PROMPT-SYSTEM 设计档 §5） |
+| `thincoder-core/advisor/loop.mjs` 的 `advisorToolsFor` | `schemas: tools.map(toOpenAISchema)` | 完整档 `normal`，不读会话 mode | requirements §9.1「完整档工具描述和 consult/advisor 独立基底不被极简装配改写」；与 PROMPT-SYSTEM 设计档 §4 同一口径 |
+| `thincoder-server/src/agent/chat-env-tools.mjs` 的 `createEnvTools` | `core.toOpenAISchema(toolOf[name])` | `normal` | 环境工具面不经极简装配，可见文本与改造前一致 |
+| `bench/check/toolcall.check.mjs` | `builtinTools.map(toOpenAISchema)` ∥ `toOpenAISchema(readImageTool)` | `normal` | 对照面 = 产品面实面逐字，对照文本 = 改造前全文 = 完整档装配 |
+| `bench/toolcall/variants.mjs` | `builtinTools.map(toOpenAISchema)` ∥ `tools.push(toOpenAISchema(readImageTool))` | `normal` | 同上 |
+| `prompt-fixture/tools.mjs` | `.map((name) => toOpenAISchema(DECLARED_TOOLS[name]))` | `normal` | 同上 |
+
+consult 子代理与主链共用 prepareRun（`thincoder-core/agent-tools/consult.mjs` 以 `role: "consult"` 建子代理，再由 `thincoder-core/agent/run-start.mjs` 进同一条装配链），所以它的工具描述档位在 prepareRun 里按 `agent._role === "consult"` 取完整档，与系统提示词用的会话 mode 分开取——否则极简会话内的 consult 被极简档改写，就与 requirements §9.1 当场矛盾。
+
+分档装配只覆盖主链工具面：consult 虽在主链装配，取的是完整档、不随会话档位变化；advisor、server 环境工具面、bench 与 prompt-fixture 的对照面同样不随会话档位变化。
 
 ### 1.1 宿主侧对描述母版的行级改写
 

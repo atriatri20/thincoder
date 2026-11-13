@@ -227,7 +227,10 @@ export async function prepareRun(agent, input, callbacks, {
   })
   // 两段式：绑定值（基础集）→ 家族段 → caller 注入面（§2.3F 不相交义务在注入方）。
   const tools = [...agent.tools, ...familyTools, ...(Array.isArray(extraTools) ? extraTools : [])]
-  const toolSchemas = tools.map(toOpenAISchema)
+  // 工具描述按档装配（设计 TOOLS §1）：主链取会话现读的 mode；`agent._role === "consult"` 取完整档
+  // ——consult 与主链共用这处装配，取会话档就等于把 requirements §9.1「独立基底不被极简装配改写」撤掉。
+  const toolMode = agent._role === "consult" ? "normal" : mode
+  const toolSchemas = tools.map((tool) => toOpenAISchema(tool, toolMode))
   const toolByName = new Map(tools.map((t) => [t.name, t]))
   agent._onTaskUpdate = callbacks.onTaskUpdate
 

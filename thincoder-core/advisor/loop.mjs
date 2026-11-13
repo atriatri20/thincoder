@@ -69,7 +69,8 @@ function advisorToolsFor(agent, reviewType = "code", batchDoc = null) {
   // 就靠这一条；不注册 ⇒ 绑定落不到任何一处，`§3` 只能编。未绑定 → 不挂载（fail-closed）。
   // 绑了以后写面仍只有 `§3` 一段（段白名单按评审身份判），只读六件与零 git 不变。
   if (batchDoc) tools.push(batchTool(batchDoc, { review: true }))
-  return { schemas: tools.map(toOpenAISchema), byName: new Map(tools.map((t) => [t.name, t])) }
+  // 工具描述取完整档（设计 TOOLS §1）：评审是独立基底，不随会话 mode 变化（requirements §9.1）。
+  return { schemas: tools.map((tool) => toOpenAISchema(tool, "normal")), byName: new Map(tools.map((t) => [t.name, t])) }
 }
 // Test seam: the tool set is pure（恒在六工具 + 批次档绑定條件）。
 export { advisorToolsFor, advisorToolsFor as _advisorToolsFor }
