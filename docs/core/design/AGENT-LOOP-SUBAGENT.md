@@ -53,7 +53,11 @@ cancel 必须指定 id。运行条目中止 controller，排队条目出队；�
 
 batchDoc 与 round 必填。eng-coder 另需匹配 designId/designToken。
 
-任务书唯一来源是绑定批次 §2。goal、knownFacts、scope、acceptance、reportFormat、task、context 等自由文本不作为第二通道。
+工程角色的任务书 = 绑定批档，不带自由文本参数：goal、knownFacts、scope、acceptance、reportFormat、task、context 一律不作为任务书参数。
+
+- eng-coder 读 §2：实施与验收的唯一来源，作者是 eng-designer。
+- eng-designer 读整份批档：§1 承载父侧裁决且具约束力，§2 是它自己的笔；需求层只作核对面，不改写。
+  §2 的笔在设计席，主 agent 不得写；方向若不从 §1 到设计席，initial 轮就没有被授权的通道。
 
 ### 3.2 非工程角色
 
@@ -103,11 +107,11 @@ controller 链保留 reason，报告合成器在原消息后附来源，不用�
 
 buildSpawnChild 收集 spawn 级稳定块到 child._spawnSystemBlock，prepareRun 在角色槽之后、项目指令之前拼接。
 
-任务正文仍由子代理从批次读取，不把易变任务文本冻结进 system。
+任务正文仍由子代理从批档读取，不把易变任务文本冻结进 system。
 
 ### 8.2 块
 
-- 批次路径与 §2 指向。
+- 批档路径与目标段指向（eng-coder = §2）。
 - 工程审计上下文。
 - files 写域及“不是授权、只是本任务份额”。
 - 文档坐标。

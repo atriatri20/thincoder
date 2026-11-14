@@ -128,11 +128,38 @@ append/edit 使用同一身份段域。append 在段尾添加；edit 用 oldText
 
 提示词说明各角色的写入手段、拒收、失败上报和当前记录形状。工具描述是参数与动作的即时使用契约。报告侧结论表契约的承载面 = 四份 advisor 提示词（§4.4）。
 
-同一面上另有三处写到 `§3` 的写者，按各自覆盖的模式判读：
+写到 `§3` 写者的句子按模式 × 评审轨判读：工程设计轨的写者只有结算，评审席既拿不到批档写通道（§4.3），也没有可写的块（§4.4）。于是一句给评审席一个 `§3` 写口的句子，只在代码轨与普通模式下成立；写成无条件形，读者照它去 `append`，落不成还要报一句「§3 not written」——把一件本来正确的事报成失败。
 
-- `thincoder-core/prompts/persona-engineering.md`：「The reviewer thereby gets the `batch` tool write channel: the round's conclusion table + the VERDICT line + the counts go into §3」。这是工程模式档，而工程模式设计轨拿不到批档写通道（§4.3）；与 §4.4 的「评审席不写它」相反，该句须限定为代码轨。
-- `thincoder-core/prompts/knowledge/tool-batch.md`：「A design review's §3 append carries the round's conclusion table」，段域表也写「design review (review binding) — §3」。它模式无关：对普通模式成立（普通模式评审席自己写 `§3`，§4.4），对工程模式设计轨不成立（§4.3），须带模式限定。
-- `thincoder-core/prompts/knowledge/normal-work-management.md`：「the reviewer writes the conclusion table (each row's evidence = a pointer: a section number / a symbol name / the exact words of the line) + the VERDICT line + the counts into `§3`」。写的是普通模式收口，与 §4.4 普通模式那一支一致（那条路上结算整段跳过），不是残留。
+每一面的处置由「谁读得到这份档」推，不由「这句话真不真」推：同一句无条件的话，读它的人手里有没有那件工具，处置就不同。三份描述档的装配面：
+
+| 描述档 | 装配面（`thincoder-core/agent-tools/batch.mjs`） | 读者 |
+|---|---|---|
+| `tool-docs/batch.md`，内联 `knowledge/tool-batch` | `PROFILE_DOCS` 没有这个身份 ⇒ 走全量面（`batchTool` 的 `profileKey` 为空那一支） | depth-0 主 agent；两种模式、两条轨都在读它 |
+| `tool-docs/batch-review.md`，内联 `knowledge/tool-batch-review` | 评审实例（`review = true` ⇒ profile `review`） | 只发给已经拿到批工具的评审实例 |
+| `tool-docs/batch-eng-designer.md` ∥ `tool-docs/batch-eng-coder.md` | 按角色取 profile | 两个工程席位；两者都没有 `§3` 写面 |
+
+六面逐面判读：
+
+| 面 | 载体（档 + 拥有该句的条目 ∥ 段名） | 判读 |
+|---|---|---|
+| 主 agent 的派单 | `thincoder-core/prompts/persona-engineering.md`「## Review convergence」条目的 reviewer 派单句 | 两支写清：代码轨评审自己 `append` `§3`；设计轨的块由结算写，评审席没有该工具 |
+| 批工具写面表 | `thincoder-core/prompts/knowledge/tool-batch.md`「Who may write what」那一组里 `design review (review binding)` 的行 | 代码轨与普通模式成立；设计轨没有这一行对应的席位 |
+| 批工具 `§3` 规则 | 同档「§3 has its own rules」块的两句：结论表句 · 轮次戳句 | 两句同判：限定到代码轨与普通模式。设计轨的块成形于结算，评审席没有 `append`；轮次戳在那一路仍由工具盖（§4.7「工具生成轮次」），只是盖在结算写的块上 |
+| 评审席侧工具说明 | `thincoder-core/prompts/knowledge/tool-batch-review.md` 全档 | 不带模式限定：这句话随评审实例的工具一起发出，读到它的席位手里都有那件工具；设计轨既收不到这份描述，也没有能写的段（§4.3），限定句在那一路没有可执行的读者 |
+| 评审席自身提示词 | `thincoder-core/prompts/advisor-design.md` ∥ `advisor-round1.md` ∥ `advisor-round2.md` ∥ `advisor-round3.md`「## Batch-record §3 landing」段末部 | 按轨分两支写清：有工具的轨（代码轨 · 普通模式）照写，落档失败要报；工程设计轨没有该工具，块由结算写，段内明写一路沉默、不报「§3 not written」 |
+| 普通模式收口 | `thincoder-core/prompts/knowledge/normal-work-management.md` 的评审落档句 | 写的是普通模式收口，与 §4.4 普通模式那一支一致（那条路上结算整段跳过），不是残留 |
+
+为什么写面表与 `§3` 规则要加限定、评审席侧说明不加：前两面住在 `tool-batch.md`，那是全量面的描述——读它的是派单的主 agent，两条轨都读，句子里不带轨，读到的就是「评审席总能有 `§3` 写面」；后一份住在 `tool-batch-review.md`，随评审实例的工具一起发出，读到它的席位手里都有那件工具，在这样一份描述里写「本轨不适用」与手里的工具相矛盾——而设计轨那一路既收不到它，也没有可写的段。
+
+挂载面判「拿不拿得到」（§4.3），说明面判「拿到之后怎么用」，两件事分开写。
+
+为什么 `§3` 规则块里的两句同口径改：它们坐在一份档的同一个块里，说的是同一件事——评审席会 `append` `§3`。只限定前一句，读者读到的是「上一句被限定了、这一句没有」，比两句都没改更难判；同一份档、同一机制的句子按同一口径收窄。
+
+为什么 `persona-engineering.md` 一面写「code track only」而工具描述写「code track and normal mode」：那份档只在工程模式装配（`thincoder-core/prompt-overlays.mjs` 的 `SCENARIO_SLOT_FILES` 把 `persona-engineering.md` 列在 `engineering` 行，`normal` 行读的是 `persona-normal.md`），普通模式读不到它，故两句在各自读者面前说的是同一件事——限定只切设计轨，没有删掉普通模式。
+
+为什么四份 advisor 提示词的落档段要写「无工具则不写不报」：这四份档是评审席动手前读的最后一段，而它的读者分两轨——同一段文字进到工程设计轨的评审进程里，那里的工具集根本没有批工具（§4.3）。职责句不带这一支，评审席照它去落档，落不成还要报一句「§3 not written」，把一件本来正确的事报成失败。
+
+上表前三面的限定句还须保住原文里仍然成立的规则：代码轨与普通模式上，结论表四列、`VERDICT` 行、计数、「证据格放指针、推理正文不进块」与「轮次戳由工具盖、不自写标题」照旧成立。限定只收窄适用范围，不删这些句子。
 
 ### 4.6 文档与结构检查
 
