@@ -16,7 +16,7 @@
  * **到期触发行组**（`[data-timer]` —— timer-wake 阶段 2）：非块节点组 · 在场 ⟺ 本键 `timerNotice` 切片在场，
  * 构树 ∕ 帧尾同刷住 `renderer/views/chat-chrome.mjs`（与消化行族同族）；
  * **取件行组**（`[data-inbox]` —— 行痕族第四员 · 跨实例取件面）：非块节点组 · 在场 ⟺ 本键 `inboxNotice` 切片在场
- * （一类一槽 → 两行）；构树 ∕ 帧尾同刷同样住 `renderer/views/chat-chrome.mjs`（`inboxGroupNode` ∕ `syncInbox`）；
+ * （一类一槽 → 至多三行：`lost` ∥ `blocked` ∥ `pending`）；构树 ∕ 帧尾同刷同样住 `renderer/views/chat-chrome.mjs`（`inboxGroupNode` ∕ `syncInbox`）；
  * **归档子 agent 块**住 `renderer/views/chat-subagent.mjs`（项 5 新档 —— 壳构树 + 核件回显补装）；
  * 工具卡面与折叠纯函数 `toggleExpanded` 住 `renderer/views/chat-tool.mjs`（§2.3 拆分预案落形 —— 依赖单向：本档 → 它）；**文本面（核 Markdown 呈现）+ 推理块 + 就地更新 + 说话人标签**住 `renderer/views/chat-text.mjs`（R3c · D19；项 1 / 4 增推理画笔分流 + 标签落笔，复制面对齐批迁入 `blockTextOf` —— 依赖单向：本档 → 它）；首启空白态引导面（判据
  * `guideOf` + 构树 `guideNode` + 帧尾只摘态刷 `syncGuide`）住 `renderer/views/chat-guide.mjs`（UI.md §1「批 B 追加注」项 1 —— 依赖单向：本档 → 它）。

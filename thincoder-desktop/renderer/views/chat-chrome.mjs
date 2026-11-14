@@ -61,8 +61,8 @@ function syncTimer(root, model, anchor = null) {
 }
 
 /** 取件行组（行痕族第四员 —— **非块节点组**：零 `data-block-id` ⇒ 不占块序 ∕ 不动 `data-blocks` 不变式；
- *  **与 `[data-timer]` 行同族**）：逐行 `div[data-inbox-line]` + `data-inbox-kind`（`lost` ∥ `blocked`）；
- *  行文 = 核拼串逐字（**端侧零构造**）；本组**零显示裁**（行裁 = timer 专属，取件行不裁）；
+ *  **与 `[data-timer]` 行同族**）：逐行 `div[data-inbox-line]` + `data-inbox-kind`（`lost` ∥ `blocked` ∥ `pending`）；
+ *  行文 = 视图模型面产出的行文（`lost` ∥ `blocked` = 核拼串逐字，`pending` = 「待取 N 条消息」）；本组**零显示裁**（行裁 = timer 专属，取件行不裁）；
  *  单源 = `docs/desktop/design/RENDERER.md` §1.1「跨实例取件行」条。 */
 export function inboxGroupNode(rows) {
   const row = (line) => ({ tag: "div", props: { class: `chat-inbox-${line.kind}`, "data-inbox-line": "", "data-inbox-kind": line.kind }, children: [line.text] })

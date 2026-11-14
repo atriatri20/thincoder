@@ -105,15 +105,21 @@ export function onTimer(state, ev) {
   return { ...state, timerNotice: { ...table, [ev.key]: record } }
 }
 
-/** `ev:inbox` —— `kind` 闭集（表外 ⇒ 零写；端侧只搬运不判类）。 */
-const INBOX_KINDS = Object.freeze(["lost", "blocked"])
+/** `ev:inbox` —— `kind` 闭集（表外 ⇒ 零写；端侧只搬运不判类）。三帧 = `lost`（取件开轮失败）∥ `blocked`（受阻跨阈）
+ *  ∥ `pending`（待取条数）。 */
+const INBOX_KINDS = Object.freeze(["lost", "blocked", "pending"])
 
-/** `ev:inbox`——跨实例取件行切片（按会话 `key` 分槽 · **一类一槽** `{ lost?, blocked? }`；行痕族第四员）：
+/** `pending` 帧的条数读数（`text` = 条数原文——先解析再走共件 `countOf` 归一：非数 ⇒ 0，即摘除）。 */
+const inboxCountOf = (text) => countOf(Number.parseInt(String(text), 10))
+
+/** `ev:inbox`——跨实例取件行切片（按会话 `key` 分槽 · **一类一槽** `{ lost?, blocked?, pending? }`；行痕族第四员）：
  *  同类新行替换本类旧行（受阻行每跨一阈重发一条、`ms` 增长 ⇒ 替换即其本义），**异类互不覆盖**——`lost` 行携
- *  丢失的 msgId 列表，是端侧唯一留痕，被 `blocked` 盖掉即不可追（单源 = `docs/desktop/design/IPC.md` §2「取件行注」项 2 ∥ 项 3）。
- *  `kind` 闭集 = `lost` ∥ `blocked`：**端侧只搬运不判类**——`kind` 由出站面点名，本档不读行文内容嗅探（禁第二判据）；
- *  `text` = 核拼串逐字（`inboxTakeLostLine` ∥ `inboxBlockedLine`），端侧零构造 ∥ 零改写。
+ *  丢失的 msgId 列表，是端侧唯一留痕，被 `blocked` 盖掉即不可追（单源 = `docs/desktop/design/IPC.md` §1 `ev:inbox` 行）。
+ *  `kind` 闭集 = `lost` ∥ `blocked` ∥ `pending`：**端侧只搬运不判类**——`kind` 由出站面点名，本档不读行文内容嗅探（禁第二判据）。
+ *  `text` = 核拼串逐字（`inboxTakeLostLine` ∥ `inboxBlockedLine`）；`pending` 的 `text` = **条数原文**（显示形归
+ *  视图面——本档不造文案）。
  *  零写门：`kind` 表外 ∥ `text` 非非空串 ⇒ **零写**（禁假造空行，沿 `onTimer` 同句）。
+ *  **待取条数帧的摘除门**：条数 ≤ 0 ⇒ 摘该槽（「收到 0 ⇒ 渲染面摘除该行」）——槽空则该会话键整项摘除（零留项）。
  *  消费 = 流内行组 `[data-inbox]`（构树 ∥ 帧尾同刷住 `renderer/views/chat-chrome.mjs` `syncInbox`）；
  *  生命期 = **运行期痕**（非落盘件 —— 清点两门：首屏页读整置即失 + 回合起跑门 = `msg:send` 出站即清；
  *  晚到到达照写照显 · 留至下一回合门——同判 KD-74⑥ 晚到 `ev:timer`；本员**零丢弃机制**，不读 `stopHold`；
@@ -124,6 +130,15 @@ export function onInbox(state, ev) {
   const table = state.inboxNotice ?? {}
   const prev = table[ev.key]
   const kept = prev !== null && typeof prev === "object" ? prev : {}
+  if (ev.kind === "pending" && inboxCountOf(ev.text) <= 0) { // 取尽 ⇒ 摘槽（归零即摘除）
+    if (kept.pending === undefined) return state
+    const rest = { ...kept }
+    delete rest.pending
+    const next = { ...table }
+    if (Object.keys(rest).length > 0) next[ev.key] = rest
+    else delete next[ev.key]
+    return { ...state, inboxNotice: next }
+  }
   const record = { ...kept, [ev.kind]: ev.text }
   if (sameRecord(prev, record)) return state
   return { ...state, inboxNotice: { ...table, [ev.key]: record } }

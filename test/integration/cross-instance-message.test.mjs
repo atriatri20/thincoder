@@ -1,15 +1,19 @@
 /**
- * cross-instance-message.test.mjs — 集成用例 CLI 46-1（RTM 故事 CLI 46「跨实例发消息：一条消息送进另一实例
+ * cross-instance-message.test.mjs — 集成用例 CLI 46-1 ∥ 46-2（RTM 故事 CLI 46「跨实例发消息：一条消息送进另一实例
  * 并起一轮，回程带请求号」）。
  *
- * 判据原文 = `test/rtm/tooling.md` 故事 46 用例行 46-1；机制单源 =
- * `docs/core/design/MULTI-INSTANCE-COLLAB.md` §5（§5.3 回执 / §5.4 投递与取件 / §5.5 可达性四态 / §5.10 集成行）。
+ * 判据原文 = `test/rtm/tooling.md` 故事 46 用例行 46-1 ∥ 46-2；机制单源 =
+ * `docs/core/design/MULTI-INSTANCE-COLLAB.md`「名册」∥「发送」∥「取件闩」∥「消息落法」。
  *
- * 进入口 = **两个真 node 进程**共用同一临时 `~/.thincoder` 等价根：A 端发、B 端收（真核三档：名册 ∥ inbox ∥
- * 取件闩）。被替掉的只有**回合面与宿主定时器**——真 CLI TUI 要 TTY、要真 provider，夹具用 stdin 协议驱动
- * 「一拍 / 在飞回合开关 / 端壳就绪探针 / 开轮失败 / 假钟推进」五件（`test/integration/fixtures/cross-instance-harness.mjs`）。
- * 因此本档证明：跨进程投递落盘、取件一次性、起一轮、请求号回程、在飞回合零注入、**闩自续**、**两条可见行**、
- * **载体不就绪也出声**（端壳 `ready()` 假 ⇒ 零取件 + 受阻行 + 日志 `reason = carrier`，转真那一拍恢复取件）；
+ * 46-1 的进入口 = **两个真 node 进程**共用同一临时 `~/.thincoder` 等价根（夹具 = `cross-instance-harness.mjs`）：
+ * 验的是**核**取件闩与消息形态。46-2 的进入口 = 发送端照旧、接收端换成**生产 CLI 端壳**
+ * （`thincoder-cli/src/tui/timer-watch.mjs` 的 `createInboxWatch` ∥ `createInboxTake`，夹具 =
+ * `cross-instance-window-harness.mjs`）：验的是「有子代理在跑的挂起窗里，消息照常被取走并起轮、在飞回合不插队」。
+ * 两条用例的夹具都只替**宿主回合面与宿主定时器**（真 TUI 要 TTY、要真 provider），46-2 的夹具**不替端壳答「忙」**
+ * ——忙 ∥ 不忙由生产谓词从 `state.processing` 与 `state.suspended` 自己读出来。
+ *
+ * 因此本档证明：跳进程投递落盘、取件一次性、起一轮、请求号回程、在飞回合零注入、**闩自续**、**两条可见行**、
+ * **载体不就绪也出声**（46-1）；**挂起窗不算忙** ∥ **入窗队列与唤醒** ∥ **窗退出后残项续发**（46-2）；
  * **不**证明真 TUI 的渲染形态与真模型如何读这条消息（那两面 = 人工走查）。
  *
  * **一拍 = 跑夹具队里的定时器回调**（不是直呼 `fire()`）⇒「闩还在不在」是跑出来的读数（`armed`）：
@@ -30,12 +34,13 @@ import { INBOX_BLOCKED_MS } from "../../thincoder-core/instance-inbox-watch.mjs"
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const HARNESS = join(HERE, "fixtures", "cross-instance-harness.mjs")
+const WINDOW_HARNESS = join(HERE, "fixtures", "cross-instance-window-harness.mjs")
 
 /** 起一个实例壳；返回 `{ ask, close, pid }`（逐行 JSON 协议，回执按到达序配对）。
  *  投递面判据只有「在册 ∧ pid 活 ∧ inbox 可写」（§5.5「本面不判身份族」）⇒ 夹具不必装成 CLI 形态：
  *  这个进程的命令行与本产品族无关，也照常收得到消息。 */
-function startInstance(root) {
-  const child = spawn(process.execPath, [HARNESS, root], { stdio: ["pipe", "pipe", "pipe"] })
+function startInstance(root, harness = HARNESS) {
+  const child = spawn(process.execPath, [harness, root], { stdio: ["pipe", "pipe", "pipe"] })
   const rl = createInterface({ input: child.stdout })
   const queue = []
   const waiters = []
@@ -253,3 +258,83 @@ test("CLI 46-1 跨实例发消息：送进另一实例并起一轮，回程带�
   const raw = readFileSync(join(root, "instances", `${initA.sessionId}.json`), "utf8")
   assert.equal(JSON.parse(raw).sessionId, initA.sessionId, "名册条目仍在盘（发送失败不动名册）")
 })
+
+test("CLI 46-2 挂起窗里取走消息：有子代理在跑时消息照常取走并起轮，在飞回合不插队", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "cic46w-"))
+  const a = startInstance(root) // 发送端 = 46-1 那枚核端壳（投递面同源）
+  const b = startInstance(root, WINDOW_HARNESS) // 接收端 = 生产 CLI 端壳（挂起窗）
+  t.after(async () => {
+    a.close()
+    b.close()
+    for (let i = 0; i < 20; i += 1) {
+      try { rmSync(root, { recursive: true, force: true }); return } catch (e) {
+        if (i === 19) throw e
+        await new Promise((r) => setTimeout(r, 100))
+      }
+    }
+  })
+  const inboxB = () => { try { return readdirSync(join(root, "inbox", initB.sessionId)) } catch { return [] } }
+
+  const initA = await a.ask({ op: "init", cwd: "D:\\repo-a" })
+  const initB = await b.ask({ op: "init", cwd: "D:\\repo-b" })
+  assert.equal(initA.ok, true)
+  assert.equal(initB.ok, true)
+  assert.equal(initB.armed, 1, "会话起点装上取件闩 = 一拍待跑")
+
+  // ── ① 窗在场（有子代理在跑、无回合在飞）⇒ 下一拍取走并起一轮：消息落窗输入队列 + 恰一次唤醒，
+  //      宿主 `turn` 面零直接调用（「忙」由生产谓词从 state.suspended 读出，夹具不替它答） ──
+  const opened = await b.ask({ op: "window", v: true })
+  assert.equal(opened.suspended, true)
+  const sent1 = await a.ask({ op: "send", target: initB.sessionId, text: "窗里那条：有子代理在跑也该收得到" })
+  assert.equal(sent1.ok, true, JSON.stringify(sent1))
+  assert.equal(sent1.receipt.status, "delivered-to-inbox")
+  const tick1 = await b.ask({ op: "tick" })
+  assert.equal(tick1.turns, 1, "窗在场不算忙 ⇒ 该拍取走并由窗口起一轮")
+  assert.equal(tick1.directTurns, 0, "走窗队列时宿主 turn 面零直接调用")
+  assert.equal(tick1.wakes, 1, "唤醒恰一次")
+  assert.equal(tick1.queue, 0, "消息已离窗队列（窗步边界消费）")
+  assert.equal(tick1.processing, true, "该轮已登记为在飞")
+  const lineB = firstLine(tick1.took.at(-1)?.text ?? "")
+  assert.match(lineB, /^\[cross-instance message · from cli pid=\d+ session=\S+ cwd=\S+\]$/, lineB)
+  assert.deepEqual(inboxB(), [], "取件一次性——取后目录零残留")
+
+  // ── ② 该轮在飞期间再投一条 ⇒ 该轮回合数不变、消息留在 inbox；轮末下一拍起新轮 ──
+  const sent2 = await a.ask({ op: "send", target: initB.sessionId, text: "第二条：在飞期投来" })
+  assert.equal(sent2.ok, true)
+  const tickBusy = await b.ask({ op: "tick" })
+  assert.deepEqual(tickBusy.took, [], "在飞回合零取件")
+  assert.equal(tickBusy.turns, 1, "在飞 ⇒ 该轮回合数不变")
+  assert.deepEqual(inboxB(), [`${sent2.receipt.requestId}.json`], "消息留在 inbox，等这一轮跑完")
+  await b.ask({ op: "turn", v: false }) // 该轮结束
+  const tickIdle = await b.ask({ op: "tick" })
+  assert.equal(tickIdle.turns, 2, "轮结束后由下一拍起新轮")
+  assert.deepEqual(inboxB(), [], "取后零残留")
+
+  // ── ③ 窗先退出（非中止径）⇒ 残项以普通回合续发恰一次、零丢弃 ──
+  await b.ask({ op: "turn", v: false })
+  const frozen = await b.ask({ op: "window", v: true, consume: false }) // 窗在场但步边界不跑（退出在即）
+  assert.equal(frozen.consume, false)
+  const sent3 = await a.ask({ op: "send", target: initB.sessionId, text: "第三条：窗退出时还在队列里" })
+  assert.equal(sent3.ok, true)
+  const tick3 = await b.ask({ op: "tick" })
+  assert.equal(tick3.queue, 1, "窗不消费 ⇒ 消息停在窗输入队列")
+  assert.equal(tick3.turns, 2, "窗不消费 ⇒ 零新轮")
+  assert.equal(tick3.directTurns, 0)
+  assert.deepEqual(inboxB(), [], "已被取走（只是还没轮上）")
+  const closed = await b.ask({ op: "window", v: false })
+  assert.equal(closed.residual, 1, "窗退出 ⇒ 残项 1 条走回填")
+  const stateB = await b.ask({ op: "state" })
+  assert.equal(stateB.resumeTurns, 1, "残项以普通回合续发恰一次（零丢弃）")
+  assert.match(stateB.history.at(-1)?.content ?? "", /第三条：窗退出时还在队列里/, "续发的就是那一条")
+
+  // ── 末段（同 46-1）：目标不可达 ⇒ 当面报错点名，不落待取队列 ──
+  const missing = await a.ask({ op: "send", target: "999999-1-nope", text: "x" })
+  assert.equal(missing.ok, false)
+  assert.equal(missing.error.code, "no-session")
+  assert.match(missing.error.message, /999999-1-nope/)
+  assert.match(missing.error.message, /headless/)
+  const leftoverDir = join(root, "inbox", "999999-1-nope")
+  const leftovers = (() => { try { return readdirSync(leftoverDir) } catch { return [] } })()
+  assert.deepEqual(leftovers, [], "失败面盘上零残留（不落待取队列）")
+})
+

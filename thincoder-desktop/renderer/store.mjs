@@ -97,7 +97,7 @@ export function initialState() {
     tokens: {},
     timers: {},
     timerNotice: {},
-    inboxNotice: {}, // 取件行切片（按会话键 —— 一类一槽 `{ lost?, blocked? }`；写者 = 归约面 `ev:inbox`；读面 = `[data-inbox]` 行组）
+    inboxNotice: {}, // 取件行切片（按会话键 —— 一类一槽 `{ lost?, blocked?, pending? }`；写者 = 归约面 `ev:inbox`；读面 = `[data-inbox]` 行组；`pending` 归零即摘槽）
     statusText: {}, // R4：状态文本切片（按会话键 —— 五 kind；写者 = 归约面 `ev:statusText`；读面 = 状态行段 3 支③）
     compress: {}, // R4：压缩状态行切片（按会话键 —— 单元素四态；写者 = 归约面 `ev:compress`；读面 = 流内压缩行）
     helpLines: {}, // `/help` 行集切片（按会话键 —— `{ kind, text }[]`；写者 = `setHelpLines`；读面 = 流内帮助行族）
@@ -257,7 +257,7 @@ export function setHelpLines(state, key, rows) {
 /** 回合起跑门清点（纯动作 —— 行痕族消失时机批 · 2026-10-04 · 台账 #919；timer 员并入 · 2026-10-05 · 台账 #952；取件员并入 · 2026-11-10；单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）：
  *  `msg:send` 出站时刻同笔调用（写者两处 = `renderer/composer-wire.mjs` `sendDirect` ∥ `sendQueued` 的 `call("msg:send")` 前沿）——
  *  ① 摘本键 `helpLines`；② 摘本键 `stopMark`；③ 摘本键 `timerNotice`（晚到到达照写照显——留至下一回合门）；
- *  ④ 摘本键 `inboxNotice`（**行痕族第四员** —— 两槽一并摘：一类一槽的 `{ lost?, blocked? }` 整键摘，零分槽处理）；
+ *  ④ 摘本键 `inboxNotice`（**行痕族第四员** —— 三槽一并摘：一类一槽的 `{ lost?, blocked?, pending? }` 整键摘，零分槽处理）；
  *  ⑤ 置闩 `stopHold[key] = true`（晚到 `stopped` 丢弃闩——门簿记非痕，开门 = 本键回合首帧住 `renderer/events.mjs`）。
  *  两门 = 幂等并集：键无效 ⇒ 原引用；四痕已空 ∧ 闩已在 ⇒ 原引用（等值零通知）。
  *  `compress` ∥ `digest` 两族零触（未裁零动——`compress` 观察项）。 */

@@ -109,9 +109,10 @@ function helpLinesOf(state) {
   return Array.isArray(rows) && rows.length > 0 ? rows : null
 }
 
-/** 本键取件行切片（源 = `state.inboxNotice[活动会话键]` —— `ev:inbox` 归约面写，**一类一槽** `{ lost?, blocked? }`）：
- *  产出 = **行表**（逐槽一行：`{ kind, text }`，序 = `kind` 闭集枚举序 `lost` → `blocked`——固定序，不随到达序漂）；
- *  缺 / 非载体 / 两槽皆无有效行 ⇒ `null`（零组 —— 禁假造）；行文 = 核拼串逐字（本档零构造）。
+/** 本键取件行切片（源 = `state.inboxNotice[活动会话键]` —— `ev:inbox` 归约面写，**一类一槽** `{ lost?, blocked?, pending? }`）：
+ *  产出 = **行表**（逐槽一行：`{ kind, text }`，序 = `kind` 闭集枚举序 `lost` → `blocked` → `pending`——固定序，不随到达序漂）；
+ *  缺 / 非载体 / 三槽皆无有效行 ⇒ `null`（零组 —— 禁假造）；`lost` ∥ `blocked` 行文 = 核拼串逐字（本档零构造）；
+ *  `pending` 行文 = **待取条数帧的显示形**「待取 N 条消息」（沿 CLI「已排队 N 条消息」一脉——字段语义不当文案，不出裸数字）。
  *  生命期 = 运行期痕（清点两门：首屏页读整置即失 + 回合起跑门 = `msg:send` 出站即清；单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74 第四员）。 */
 function inboxOf(state) {
   const key = state?.activeSession ?? null
@@ -120,9 +121,17 @@ function inboxOf(state) {
   const slice = table[key]
   if (slice === null || typeof slice !== "object") return null
   const rows = []
-  for (const kind of ["lost", "blocked"]) {
+  for (const kind of ["lost", "blocked", "pending"]) {
     const line = slice[kind]
-    if (typeof line === "string" && line !== "") rows.push({ kind, text: line })
+    if (typeof line === "string" && line !== "") rows.push({ kind, text: inboxLineText(kind, line) })
   }
   return rows.length > 0 ? rows : null
+}
+
+/** 取件行的显示行文：`lost` ∥ `blocked` = 核拼串逐字（端侧零构造）；`pending` = 「待取 N 条消息」（条数原文 → 文案，
+ *  一物一名——与 CLI 同姓「N 条消息」；归零帧已在归约面摘除，此处不处理 0）。 */
+function inboxLineText(kind, text) {
+  if (kind !== "pending") return text
+  const n = Number.parseInt(text, 10)
+  return `待取 ${Number.isFinite(n) ? n : 0} 条消息`
 }

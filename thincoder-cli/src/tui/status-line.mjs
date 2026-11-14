@@ -174,6 +174,11 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   // 零在途 ⇒ 零注入（负向锁——半态逐字节等价）；到期态（任一在途项已过期未送达）⇒ 同段警示色。
   const timers = agent._pendingTimers ?? []
   const timerHint = timers.length === 0 ? "" : ` │ ${timers.some((t) => t.expiresAt <= Date.now()) ? `${ansi.reset}${C.warn}timer ${timers.length}${ansi.reset}${ansi.dim}` : `timer ${timers.length}`}`
+  // 跨实例待取提示（跨实例取件闩·等待期提示 —— `docs/cli/design/TUI.md`「4. 状态栏与活动」）：本端有一轮在飞且
+  // inbox 里有未取消息 ⇒ 状态段出一段待取条数（沿「已排队 N 条消息」一脉，同段样式）；归零即摘除（负向锁——
+  // 零条 ∥ 非在飞 ⇒ 零注入，整行逐字节等价）。值 = `onPending` 每拍交来的读数（`index.mjs` 写 `state.inboxPending`）。
+  const inboxN = state.inboxPending ?? 0
+  const inboxPendingHint = state.processing && inboxN > 0 ? ` │ 待取 ${inboxN} 条消息` : ""
   // D8（2026-09-21 块标题行对齐批——会话标题常显 · `docs/cli/design/TUI.md` §7.4）：状态段簇尾
   // （ledgerHint 后、键位组前）；取值 = `agent.title` 活读（每帧 recompute）· 40 列截断。
   // B6 消（#677）：空白 ⇒ 回退链值（对位 VSC 顶栏——生成前 ∕ 失败期两端同值；值逐字，行级超宽走 statusMax）。
@@ -182,7 +187,7 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const titleHint = ` │ ${titleShown}`
   // 团队登录态段（登录面补全批 · `docs/cli/design/TUI.md` §7.8）：簇尾末位（titleHint 后、`│ <enterHint>` 前）
   const teamHint = teamSegmentHint(state.team)
-  return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${scrollHint}${ledgerHint}${timerHint}${titleHint}${teamHint} │ ${enterHint} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
+  return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${scrollHint}${ledgerHint}${timerHint}${inboxPendingHint}${titleHint}${teamHint} │ ${enterHint} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
 }
 
 /** 团队状态段（TUI.md §7.8——三态闭集）：未登录 ⇒ `""`（**负控：零注入——整行逐字节等价**）；

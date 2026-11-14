@@ -5,10 +5,10 @@
  * 出窗交接由宿主调用面触发）② 窗内 `timerFace` 注入（核件 opt-in，§6.30.10 —— `deadline` 现算 + `deliver` 交付）
  * ③ 空闲火面（`fireTimerWake` 触发 + 轮后链尾接管）；**中止代次**（#515③ 陈旧点火闸）同持：武装刻代次 ↔ 现状比对，
  * `bump` 由宿主 `abort` ∕ `abortAll` 落位 ⇒ 「已点火（回调在队）恰逢中止」零交付 ∥ 零开轮。
- * ④ **取件面两行出站**（行痕族第四员 · 2026-11-10）—— `onTake` reject ⇒ `ev:inbox` `kind:"lost"`；`onBlocked` ⇒
- * `kind:"blocked"`（一类一槽、上屏与清点归渲染面）；行文 = 核拼串**逐字**（`inboxTakeLostLine` ∥ `inboxBlockedLine`
- * ——端侧零构造）；单源 = `docs/desktop/design/IPC.md` §2「取件行注」。
- * 宿主供五枚读缝（`post` 出站 ∥ `runTurn` 单回合 ∥ `busyOf` 在飞判据 ∥ `inWindow` 窗表判据 ∥ `takeOver` 回合尾接管）
+ * ④ **取件面三行出站**（行痕族第四员）—— `onTake` reject ⇒ `ev:inbox` `kind:"lost"`；`onBlocked` ⇒
+ * `kind:"blocked"`；`onPending` ⇒ `kind:"pending"`（待取条数帧；一类一槽、上屏与清点归渲染面）——前两行行文 =
+ * 核拼串**逐字**（`inboxTakeLostLine` ∥ `inboxBlockedLine` —— 端侧零构造）；单源 = `docs/desktop/design/IPC.md` §1 `ev:inbox` 行。
+ * 宿主供六枚读 ∕ 写缝（`post` 出站 ∥ `runTurn` 单回合 ∥ `busyOf` 在飞判据 ∥ `inWindow` 窗表判据 ∥ `takeOver` 回合尾接管 ∥ `windowTake` 取件窗缝）
  * + 时钟三扇（`timer` ∕ `clear` ∥ `now`）——零宿主依赖 ⇒ 平 node 直测；零文案。
  * **槽重装缝**（`reloadSlot` —— #799 修复轮）：窗内 `deliver` 内**重装先于投递**（整换 `agent.history` ⇒ 序反吞行——明细 = 核 `AGENT-LOOP-ASYNC-POOL.md` §6.30.17）。
  */
@@ -20,13 +20,14 @@ import { createTimerWatch, deliverExpiredTimers, fireTimerWake, timerWakeEnabled
 /** 时效面工厂：`post(channel, payload)` = 出站面 · `runTurn(key, agent, text, opts)` = 单回合执行面 ·
  *  `busyOf(key)` = 在飞回合判据（缺省 ⇒ 恒假）· `inWindow(key)` = 窗在场判据（缺省 ⇒ 恒假）·
  *  `takeOver(key, agent)` = 回合尾接管面（缺省 ⇒ 回落闩重同步）· `reloadSlot(key, agent, cwd)` = 本窗键槽重装（同源缝 = `createSuspensionDrive` 转口；先于投递调用——**须同步**；缺省 `null` ⇒ 零动作）·
+ *  `windowTake(key, text)` = **取件窗缝**（同 `reloadSlot` 形注入缝：窗在场 ⇒ 消息入窗输入队列 + 唤醒核句柄，返回 `true`；无窗 ⇒ `false`；缺省 `null` ⇒ 零动作——取件只走开轮面）·
  *  `timer` ∕ `clear` ∕ `now` = 闩时钟三扇注入缝。
  *  返回 `{ faceOf, bump, sync, disarm, disarmTimer, disarmAll, armInbox, size, keys, inboxLatches }`
  *  （键面 = 闩表武装 ∕ **撤清两族** ∕ 读数——撤闩编排归宿主；**撤点分族**（D-MI31）：入窗只撤 timer 闩
  *  （`disarmTimer` —— 窗内同一 deadline 由 `timerFace` 单持），取件闩只许三撤点撤（会话清除 ∥ 项目级联 ∥
  *  面板销毁 —— 走 `disarm` ∥ `disarmAll` 两径）；`armInbox` = 会话起点一处——**回合起点不撤**，
  *  D-MI31 自续闩：撤闩 = 「要靠别人再把你叫醒」，而那个「别人」正是会漏叫醒的地方）。 */
-export function createSuspensionTimers({ post, runTurn, busyOf = () => false, inWindow = () => false, takeOver = null, reloadSlot = null, timer = setTimeout, clear = clearTimeout, now = Date.now } = {}) {
+export function createSuspensionTimers({ post, runTurn, busyOf = () => false, inWindow = () => false, takeOver = null, reloadSlot = null, windowTake = null, timer = setTimeout, clear = clearTimeout, now = Date.now } = {}) {
   /** 中止代次（每键 —— #515③）：`bump` 由宿主中止面调用；到点回调携**武装刻代次**与现值比对 ⇒ 陈旧点火丢弃。 */
   const gens = new Map()
   const genOf = (key) => gens.get(key) ?? 0
@@ -41,27 +42,33 @@ export function createSuspensionTimers({ post, runTurn, busyOf = () => false, in
     timer, clear, now,
   })
 
-  /** 跨实例取件闩（MULTI-INSTANCE-COLLAB §5.4 / §5.8 · D-MI28 ∥ D-MI31 ∥ D-MI34 —— 桌面键面与 timer 闩同档）：
-   *  到点取件 ⇒ 以**普通用户回合**开轮（`autoTurn` 缺省 false——手动态照常走审批面；输入串 = 消息形态），
-   *  轮后链尾接管与 timer 轮同判（`takeOver` 在场 ⇒ 交接管面 ∥ 缺省 ⇒ 本档重臂）。
+  /** 跨实例取件闩（MULTI-INSTANCE-COLLAB「取件闩」· D-MI28 ∥ D-MI31 ∥ D-MI34 —— 桌面键面与 timer 闩同档）：
+   *  **在飞判据只认宿主回合**（`busyOf(key)`）；**窗在场不算忙**——窗口在跑不等于回合在跑，把窗口算忙就是
+   *  「有子代理在跑就永远收不到消息」（本机制最初的事故形态）⇒ `inWindow` 不进本谓词。
    *  `onTake(key, messages)` **不收 agent**（D-MI34：载体由端壳自持，本处经 `inbox.agentOf(key)` 从闩槽取）。
-   *  `onTake` 的 promise 契约（交接：失败单源 = reject）：`runTurn` = `executeTurn`，其**同步前缀**（首个
-   *  `await` 之前）已 `flights.set(key, …)` ⇒ 返回时 `busyOf(key)` 已可读；读到真 = 已登记为在飞，
+   *  **两条去路**（交接：失败单源 = reject）：
+   *  ① 窗在场 ⇒ 消息进窗输入队列（`entry.pending`，`windowTake` 缝）+ 唤醒核句柄 ⇒ resolve（窗在步边界起轮；
+   *    窗口先退出 ⇒ `resumeResidual` 把残项以普通回合续发——零丢弃）；
+   *  ② 无窗 ⇒ 开**普通用户回合**（`runTurn` = `executeTurn`，其**同步前缀**（首个 `await` 之前）已
+   *    `flights.set(key, …)` ⇒ 返回时 `busyOf(key)` 已可读；读到真 = 已登记为在飞 ⇒ resolve）。
    *  ＊否则（入口抛 ∕ 没起来）= 开轮没成 ⇒ reject（核记 `ev:inbox-watch-take-lost`，机器面可见）。
-   *  **两条可见行（行痕族第四员 · 2026-11-10）**：渲染面既有行组 `[data-inbox]` —— 本端两面各出一帧
+   *  **三帧可见行（行痕族第四员）**：渲染面既有行组 `[data-inbox]` —— 本端三面各出一帧
    *  `ev:inbox`（`{ key, kind, text }`）：① `onTake` reject 径（本函数 throw 前同笔）⇒ `kind:"lost"`；
-   *  ② `onBlocked` 径（闩受阻跨阈）⇒ `kind:"blocked"`。行文 = 核拼串**逐字**（`inboxTakeLostLine` ∥
-   *  `inboxBlockedLine`——端侧零构造），单源 = `docs/desktop/design/IPC.md` §2「取件行注」项 7。
-   *  只 post 已登记通道（未登记 = 零显示，等于写了个谎）——`ev:inbox` 在桥面白名单内（二十六条）。
-   *  两径均接（端侧行组 `[data-inbox]` 上屏）：`onTake` reject ⇒ `kind:"lost"` ∥ `onBlocked` ⇒ `kind:"blocked"`。 */
+   *  ② `onBlocked` 径（闩受阻跨阈）⇒ `kind:"blocked"`；③ `onPending` 径（闩每拍报待取条数）⇒ `kind:"pending"`
+   *  （`text` = 条数；收到 0 ⇒ 渲染面摘除该行）。前两行行文 = 核拼串**逐字**（`inboxTakeLostLine` ∥ `inboxBlockedLine`
+   *  ——端侧零构造），第三行的显示形归渲染面（单源 = `docs/desktop/design/IPC.md` §1 `ev:inbox` 行）。
+   *  只 post 已登记通道（未登记 = 零显示，等于写了个谎）——`ev:inbox` 在桥面白名单内（二十六条）。 */
   const inbox = createInboxWatch({
-    busyOf: (key) => busyOf(key) === true || inWindow(key),
+    busyOf: (key) => busyOf(key) === true,
     onTake: (key, messages) => {
-      // 载体从闩槽取（D-MI34：核闩不再把 agent 递回给 `onTake`——载体由端壳自持）；`ready()` 已门住无载体
-      // 的那一拍（零取件、只出受阻行）⇒ 走到本处的槽恒有载体。
+      const text = crossMessageText(messages)
+      // ① 窗在场 ⇒ 入窗队列 + 唤醒（窗在步边界起轮；宿主 `runTurn` 零调用）
+      if (typeof windowTake === "function" && windowTake(key, text) === true) return Promise.resolve()
+      // ② 无窗：开普通用户回合。载体从闩槽取（D-MI34：核闩不再把 agent 递回给 `onTake`）；`ready()` 已门住
+      // 无载体的那一拍（零取件、只出受阻行）⇒ 走到本处的槽恒有载体。
       const agent = inbox.agentOf(key)
       const settle = () => { if (takeOver) takeOver(key, agent); else inbox.sync(key, agent) }
-      const pending = runTurn(key, agent, crossMessageText(messages), {}) // 取件开轮恒为普通用户回合（不传 resume）
+      const pending = runTurn(key, agent, text, {}) // 取件开轮恒为普通用户回合（不传 resume）
       void Promise.resolve(pending).then(settle, settle)
       if (busyOf(key) === true) return Promise.resolve() // 已登记为在飞
       // 开轮没成（失败单源 = 本条 reject）—— 同笔出丢失行：消息已离盘、不重投，人读面是它唯一的痕
@@ -70,6 +77,8 @@ export function createSuspensionTimers({ post, runTurn, busyOf = () => false, in
     },
     // 受阻跨阈（待取非空且持续在飞）⇒ 受阻行；每跨一阈一条——同类新行替换本类旧行（`ms` 增长即其本义）
     onBlocked: (key, ms, pending) => post("ev:inbox", { key, kind: "blocked", text: inboxBlockedLine(ms, pending) }),
+    // 待取条数常驻面（等待期提示）：每拍一帧，同 kind 新帧替换旧帧；收到 0 ⇒ 渲染面摘除该行
+    onPending: (key, n) => post("ev:inbox", { key, kind: "pending", text: String(n) }),
     timer, clear,
   })
 

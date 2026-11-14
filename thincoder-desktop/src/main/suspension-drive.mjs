@@ -45,12 +45,25 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   const resuming = new Set()
   /** 续发期中止墓碑（键集）：链每轮起跑前 + 接管前查位——命中 ⇒ 停链，余值随会话终止（记错一行）。 */
   const abortTombstones = new Set()
+  /** **取件窗缝**（MULTI-INSTANCE-COLLAB「取件闩」· 形同 `reloadSlot` 注入缝）：窗在场 ⇒ 取件消息进窗输入队列
+   *  （载体数组单一 = `entry.pending`，与用户输入同数组、同受理帧）+ 唤醒核句柄（窗在步边界起轮）；返回是否受理。
+   *  窗不在 ⇒ `false`（取件走开轮面）。**不做容量拒**：`QUEUED_MAX_ITEMS` 是用户输入的受理门（人可再按一次 Enter），
+   *  而取件消息**已离盘**——拒了就是丢，故与 `pushInput` 分面。 */
+  function windowTake(key, text) {
+    const entry = windows.get(key)
+    if (entry === undefined) return false
+    queue.accept(key, entry.pending, text) // 同数组受理（富条目 `{ text, ts }`）+ 受理帧
+    entry.handle.wake() // 核件唤醒（新条目已在同数组——零第二写者）
+    return true
+  }
+
   /** 窗内时效面（timer 面 ∕ 空闲火面 ∕ 中止代次 —— 出档 `suspension-timers.mjs`）：宿主供读缝（`inWindow` =
-   *  窗表判据 ∥ `busyOf` ∥ `takeOver`）+ **槽重装缝**（`reloadSlot` —— #799 窗内投递存活）+ 时钟三扇；
+   *  窗表判据 ∥ `busyOf` ∥ `takeOver`）+ **槽重装缝**（`reloadSlot` —— #799 窗内投递存活）+ **取件窗缝**（`windowTake`）
+   *  + 时钟三扇；
    *  闩面接线住本档（`start` ∕ `closeWindow` ∕ `abort`）—— **入窗支只撤 timer 闩**（`timers.disarmTimer`），
    *  取件闩留到 `abort` ∥ `abortAll` 两撤点（D-MI31：入窗不是会话死亡）。 */
   const timers = createSuspensionTimers({
-    post, runTurn, busyOf, inWindow: (key) => windows.has(key), takeOver, reloadSlot, timer, clear, now,
+    post, runTurn, busyOf, inWindow: (key) => windows.has(key), takeOver, reloadSlot, windowTake, timer, clear, now,
   }) // `reloadSlot` 同源缝转口（#799：窗内 `deliver` 内先于投递重装——timer 轮重装单点）
 
   /** 计数帧（`ev:susp` —— 核 `backgroundCounts` 直传：`{ key, active, running, queued, pending, done }`）。 */
@@ -333,6 +346,10 @@ function pendingSnapshot(agent) {
       timers.disarmAll() // 切项目级联 ⇒ 两族闩同撤（幂等——逐键 abort 已撤，兜底无闩面；D-MI31 撤点之一）
       return n
     },
+    /** 会话起点武装点（会话键槽创建 = `turn-driver.mjs` 的 `ensure` 包装处）：只装取件闩（timer 闩由回合尾判据决定）。
+     *  **回合起点无对应撤闩面**（D-MI31 自续闩）。`suspension-timers.mjs` 的 `armInbox` 转口—— 调用面
+     *  `turn-driver.mjs` 一直在叫这个键：本档漏了这个出口就是「桌面取件面从不武装」（会话起点即抛、消息无人取）。 */
+    armInbox: (key, agent) => timers.armInbox(key, agent),
     /** 窗数读数（诊断 ∕ 测试）。 */
     size() { return windows.size },
     /** 闩数读数（诊断 ∕ 测试 —— 撤闩清点断言；闩表为档内私有面）。 */

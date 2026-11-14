@@ -28,7 +28,7 @@ preload 的 `EVENT_CHANNELS` 是实际可订阅闭集。除 `ev:config` 与 `ev:
 | `ev:error` | `{ key,text,techInfo? }`，回合错误结算；工具失败由 `ev:tool-result.ok=false` 承载，不混入本通道。 |
 | `ev:ledger` | `{ key,detailLines,marker? }`；marker 为 `{text,warn}` 或 null，首拍可显式清空。 |
 | `ev:timer` | `{ key,status:"fired",text }`，text 为到期提醒原文。 |
-| `ev:inbox` | `{ key,kind,text }`；kind 为 `lost` 或 `blocked`，text 为核生成的整行。 |
+| `ev:inbox` | `{ key,kind,text }`；kind 为 `lost`、`blocked` 或 `pending`。`lost` ∥ `blocked` 的 text 为核生成的整行（`inboxTakeLostLine` ∥ `inboxBlockedLine`）；`pending` 为待取条数帧，text = 条数，同 kind 新帧替换旧帧，收到 0 ⇒ 渲染面摘除该行。 |
 | `ev:flags` | `{ key,flags:{planMode,autoApprove,advisorGuard,mode} }`，写回执后的活值投影；mode 为 tiny/normal/engineering。 |
 | `ev:statusText` | `{ key,kind,... }`；kind 为 `rateWait/rateLimited/overloaded/quota/index`，可携 `seconds,message,phase,done,total`。 |
 | `ev:compress` | start `{ key,status:"start",messages? }`；done `{ status:"done",tokensFreed?,elapsedMs? }`；fallback `{ status:"fallback",tailMessages? }`；failed `{ status:"failed",error? }`，均携 key。 |

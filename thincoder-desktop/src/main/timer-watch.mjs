@@ -88,9 +88,10 @@ export async function fireTimerWake(key, { agent, post, runTurn, busy = false, i
  *  （闩按会话键分槽，键源在本层）⇒ 本层补键后透传；缺 ∥ 非函数 ⇒ 零动作（受阻事实仍留核
  *  `ev:inbox-watch-blocked` 日志面）。生产接法 = `suspension-timers.mjs` 的 `onBlocked` ⇒ `ev:inbox` `kind:"blocked"`（端侧行组 `[data-inbox]` 上屏）。零宿主依赖 ⇒ 平 node 直测。
  *  @param {Function} [p.onBlocked] 受阻跨阈回调 `(key, ms, pending) => void`
+ *  @param {Function} [p.onPending] 待取条数常驻面 `(key, n) => void`（核闩每拍报一次，取尽报 0；不传 ⇒ 不显示条数、也不花那次 stat）
  *  @param {Function} [p.onTake] 取件后开轮面 `(key, messages) => Promise`（载体从 `agentOf(key)` 取）
  */
-export function createInboxWatch({ onTake = null, onBlocked = null, busyOf = () => false, timer = setTimeout, clear = clearTimeout } = {}) {
+export function createInboxWatch({ onTake = null, onBlocked = null, onPending = null, busyOf = () => false, timer = setTimeout, clear = clearTimeout } = {}) {
   /** 闩表：会话键 → `{ agent, latch }`（**武装中才有项**——与核闩零注册态同构）。 */
   const slots = new Map()
   const slotFor = (key, agent) => {
@@ -103,6 +104,8 @@ export function createInboxWatch({ onTake = null, onBlocked = null, busyOf = () 
       onTake: typeof onTake === "function" ? (messages) => onTake(key, messages) : null,
       // 受阻跨阈：核闩形参无键（闩 = 按键分槽）⇒ 本层补键后透传给调用面（端侧出 `ev:inbox` `kind:"blocked"`）
       onBlocked: typeof onBlocked === "function" ? (ms, pending) => onBlocked(key, ms, pending) : null,
+      // 待取条数常驻面：同补键后透传（端侧出 `ev:inbox` `kind:"pending"`；归零同样报 0）
+      onPending: typeof onPending === "function" ? (n) => onPending(key, n) : null,
       timer,
       clear,
     })
