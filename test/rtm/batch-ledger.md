@@ -89,13 +89,14 @@
 ## CLI 17. 评审记录落进批档才签发（块写不进 ⇒ 拒签、档零字节）
 
 > 目的：评审通过后由结算把轮次块与段级状态行写进批档 §3——写不进即拒签、档字节零变；而没有批档绑定的设计评审根本发不出去（批次档是评审的前提，不是纸张）。下游 spawn 拿不到授权（代价不落到实施席头上）。
-> 节注：回指 = `docs/core/requirements/ADVISOR-CONVERGENCE.md` F11 ∥ F20；机制单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.2「§3 记录与结算判据」∥「点火顺序」∥「账链门」；交互组件 = 准入面（`advisor` 工具入参门）⟷ 账链面（台账库读取）⟷ 结算面（`settleDesignReview`）⟷ 批档 §3 读写 ⟷ spawn 门 ⟷ 槽清点；进入口 = 父侧发设计评审（工程模式 depth-0）→ 读回执 → 派 eng-coder；三态（行序）= 17-1 错误 · 17-2 错误 · 17-3 错误。
+> 节注：回指 = `docs/core/requirements/ADVISOR-CONVERGENCE.md` F11 ∥ F20；机制单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.2「§3 记录与结算判据」∥「点火顺序」∥「账链门」；交互组件 = 准入面（`advisor` 工具入参门）⟷ 账链面（台账库读取）⟷ 结算面（`settleDesignReview`）⟷ 批档 §3 读写 ⟷ spawn 门 ⟷ 槽清点；进入口 = 父侧发设计评审（工程模式 depth-0）→ 读回执 → 派 eng-coder；四态（行序）= 17-1 错误 · 17-2 错误 · 17-3 错误 · 17-4 正常。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
 | 17-1 | 工程模式设计轨夹具，批档 §3 无轮次块、无段级状态行，结算直接进场（评审席在工程模式没有 §3 通道）。正半幅 = 回 pass 的评审；失败半幅 = 注入块写失败后跑同一调用 | 正半幅 = §3 落本轮块 1 块（块内结算头点名已签发）、段级状态行 = `评审通过`、同 designId 的 spawn 门放行；失败半幅 = 不签发、回执含 `review record incomplete`、档字节 = 写前（零字节）、同 designId 的 eng-coder 机械拒 | — | `test/integration/advisor-record-gate.test.mjs` |
 | 17-2 | 不带 `batchDoc` 的设计评审（`documents` 只放设计档） | 当场拒发：回执首行点名 `batchDoc` 必填（标识行 `criterion=batchdoc-missing`）+ 两条期望形 + 无档时先 `batch create` 的下一步；拒发登记；跑前跑后槽数不变、零评审实例、零 LLM；随后同 designId 的 eng-coder spawn 因无授权被机械拒 | 修前红 = 准入判据未落地 ⇒ 不带 `batchDoc` 照常签发——本行断言的就是那条已退场的旧行为 | `test/integration/advisor-record-gate.test.mjs` |
 | 17-3 | 批档的未决行已被撤（`已废弃`）后，携该 `batchDoc` 发设计评审 | 拒发：回执含 `criterion=batchdoc-no-ledger` ∧ `reason=no-pending-row` ∧ `Record:` 读数 `unsettled: 0`；零实例 / 零 token / 零 LLM。反证格 = 另一本带未决行的批档发同调用 ⇒ 放行 | 修前红 = 账链门未落地 ⇒ 未决行被撤后照常发评审、token 照签而无收口能收 | `test/integration/advisor-record-gate.test.mjs` |
+| 17-4 | 工程模式设计轨夹具，喂一份「推理独白 + 四列结论表 + `VERDICT: pass`」的评审体走真 `settleDesignReview` | §3 新块只含结论三件，按序：四列表头行 → 表体 → 裁定行 → 计数行；块内对独白句零命中、对推理段落零命中，`VERDICT:` 恰一行；块正文行数 = 表体行数 + 4（结算头另计）；回执仍带剥净回显的全文 | 修前红 = 结算把评审原文整段缩进落档 ⇒ 独白在块内命中、块内 `计数：` 零命中、块正文行数 = 评审体行数 + 4（生产上出过：块被评审原文撑大，一条 finding 的处置要翻完通篇独白才看得到） | `test/integration/advisor-record-gate.test.mjs` |
 
 ## CLI 20. 一本批档只服务一个并发 spawn
 

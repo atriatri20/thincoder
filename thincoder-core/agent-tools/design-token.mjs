@@ -27,8 +27,9 @@ import { countRoundBlocks, nextRoundNumber, readSectionStatusWord, STATUS_WORDS,
 // 段尾追加（`appendLineToSection`）与日期戳（`todayLocal`）单源 = 重开档：结算的轮次块落进 §3 也是
 // 「段尾追加、既有字节零变」那一条判据，块形另有单源（`design-review-record.mjs`）。
 import { appendLineToSection, todayLocal } from "./batch-reopen.mjs"
-// 块文成形单源（叶档、纯函数、零 fs）：工具戳 + 结算头 + 评审原文缩进四格（`BATCH-RECORD.md` §4.4）。
-import { designReviewBlock } from "./design-review-record.mjs"
+// 块文成形单源（叶档、纯函数、零 fs）：工具戳 + 结算头 + 本轮结论三件（结论表 → 裁定行 → 计数行），
+// 单源 = `BATCH-RECORD.md` §4.4。
+import { designReviewBlock, verdictLineOf, DISPOSITION_PASS, DISPOSITION_CHANGES_REQUIRED, DISPOSITION_NO_PASS_LINE, DISPOSITION_NO_ECHO } from "./design-review-record.mjs"
 // 批归属派生（DESIGN-TOKEN-SETTLEMENT §10）——两源定序 `batchAbsPathOfRun`：`run.batchDoc` 优先、
 // `docSetKey` 的批档兜底（判据与清点面同源）。
 // 本档 ⇄ `design-slots.mjs` 为**静态环**（对方取 `effectiveTokenTtlMs`）：两侧绑定只在函数体内
@@ -135,23 +136,25 @@ export function verdictGateFailure(rawResult) {
   if (typeof rawResult !== "string") return "no-pass-line"
   const gap = verdictGapOf(rawResult)
   if (gap === null) return null
-  return gap === "无裁定行" ? "no-pass-line" : "changes-required"
+  return gap === "无裁定行" ? DISPOSITION_NO_PASS_LINE : DISPOSITION_CHANGES_REQUIRED
 }
 
 /** §5.2 rejection mark (verbatim — machine-greppable; reason = no-pass-line | changes-required). */
 const VERDICT_GATE_MARK = (reason) => `裁定非通过——token 未签发 (review verdict is not pass — no design token was issued; reason: ${reason}; the echoed token was stripped)`
 
+/** 非签发处置各自的回执尾（逐字——机器可 grep）：回显失败、裁定闸两词、宿主不完整族。 */
+function nonIssueMark(disposition) {
+  if (disposition === DISPOSITION_NO_ECHO) return NO_VALID_ECHO_MARK
+  if (disposition === DISPOSITION_CHANGES_REQUIRED || disposition === DISPOSITION_NO_PASS_LINE) {
+    return VERDICT_GATE_MARK(disposition)
+  }
+  return `评审未完成——token 未签发 (review incomplete — no design token issued; reason: ${disposition})\n以更小范围重跑设计评审（逐档 / 逐节拆分，或拆到两次评审），或调大 agent.advisor.timeoutMs 后重试；补充检查未完成的部分不得按已核处理。`
+}
+
 /** §3 记录判据的拒因（ADVISOR-GUARDS.md §1.2——两值；判据 1 的「批档可读」与判据 2 的「写进并回读」，
  * 两者都在任何写之前 ∥ 写坏之后现形）。 */
 const RECORD_STATUS_NOT_PASSED = "status-not-passed"
 const RECORD_BATCH_UNREADABLE = "batch-unreadable"
-
-/** 结算处置四值（§4.4「结算头的原因四个词」+ ADVISOR-GUARDS.md §1.2「判的是当前状态的评审都落一块」）：
- *  `pass` ∥ `changes-required` ∥ `no-pass-line` = 裁定闸的三格；`no-valid-echo` = 回显失败支（那一支只返回
- *  消息常量 `NO_VALID_ECHO_MARK`，没有自己的词，故与两个拒因词并列单列一个）。四者都落块——记录不拿凭证
- *  结果当过滤条件，凭证结局写在结算头。 */
-const DISPOSITION_PASS = "pass"
-const DISPOSITION_NO_ECHO = "no-valid-echo"
 
 /** §3 记录判据 rejection mark (verbatim — machine-greppable; reason = 上两值之一)。与裁定闸同形：
  * 槽零写、实例不翻 open——标记即回执，不进 `settlementCriterion`（§7 不新增判据值）。
@@ -271,17 +274,18 @@ function sealDocSetOf(run) {
  * @param {Object} [opts] — 第 11 批（A/F11）：`opts.incomplete` = 宿主尾族判定 kind
  *   （单谓词 `advisorIncompleteMarker`——结算方透传）。非空 ⇒ **一律不签发**（无论评审文本
  *   是否回显 token）：剥除全部 token 回显 + 追加未签发提示（原因 + 恢复指引），不写槽、
- *   不关实例（可重评）。
+ *   不关实例（可重评）；块照旧落（§4.4 该族一段），状态行不动。
  * @remarks §3 记录判据（`ADVISOR-GUARDS.md` §1.2）——本函数**自己写**本轮的轮次块：块形 = 工具戳 +
- *   结算头 + 评审原文缩进四格（`design-review-record.mjs`），N 取 `nextRoundNumber`；块与状态行进同一个
- *   字符串、经同一条写通道一次落盘、一次回读（一笔的顺序与回退 = `docs/core/design/BATCH-RECORD.md` §4.23）。
+ *   结算头 + 本轮结论三件（结论表 → 裁定行 → 计数行，`design-review-record.mjs`），N 取 `nextRoundNumber`；
+ *   块与状态行进同一个字符串、经同一条写通道一次落盘、一次回读（一笔的顺序与回退 = `docs/core/design/BATCH-RECORD.md` §4.23）。
  *   **前置 = 绑了批档**（`run.batchDoc` 非空）——设计评审必携 `batchDoc`（准入门，判据 = 同档 §2 第 6 条）
  *   ⇒ 到结算面仍为空只是接线故障，在 `boundBatch` 判定处断言并 throw（程序不变量，早于读档与写槽；
  *   不设对外拒因值，不返回判决）。
  *   §1.2 判据按序：① 批档可读——读不到 ⇒ `batch-unreadable`，零字节写；② 本轮块写进 §3 且回读见到它，
  *   pass 路径的段级状态行回读为「评审通过」，否则 ⇒ `status-not-passed` 并写回写前原文。
- *   处置四值（`pass` ∥ `changes-required` ∥ `no-pass-line` ∥ `no-valid-echo`）**都落一块**，凭证结局写进
- *   结算头；封印算不出（被审档在结算前变了）不落块、零字节写（§10.2 与 §4.4 KD5）。
+ *   处置四词与宿主不完整族的 kind 词（`pass` ∥ `changes-required` ∥ `no-pass-line` ∥ `no-valid-echo`
+ *   ∥ 该 kind 词）**都落一块**，凭证结局写进结算头；封印算不出（被审档在结算前变了）不落块、零字节写
+ *   （§10.2 与 §4.4 KD5）。
  *   §10.2 封印算不出 ⇒ `{passed:false, sign:null}` + 恒定标记，且在任何写入之前返回。
  * @returns {{passed: boolean, output: string, sign: {before: string, rollback: () => void}|null}} —— `sign` 非空 =
  *   本笔在该批档上落了本轮的块（+ 按处置改写的状态行）：`before` = 写前原文（落盘失败时写回它），
@@ -294,26 +298,23 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
   }
   // A（F11/ADVISOR-GUARDS.md §1 消费点 1）：未完成即不签发——判据与 code 完成守卫同源（单谓词）。
   const incomplete = opts?.incomplete ?? null
-  if (incomplete) {
-    const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
-    return {
-      passed: false,
-      output: `${stripped}\n\n评审未完成——token 未签发 (review incomplete — no design token issued; reason: ${incomplete})\n以更小范围重跑设计评审（逐档 / 逐节拆分，或拆到两次评审），或调大 agent.advisor.timeoutMs 后重试；补充检查未完成的部分不得按已核处理。`.trim(),
-      sign: null,
-    }
-  }
   // ── 处置（ADVISOR-GUARDS.md §1.2 + `BATCH-RECORD.md` §4.4）：先把处置算完——回显 → 裁定 ──
-  // 值域四词 = `pass` ∥ `changes-required` ∥ `no-pass-line` ∥ `no-valid-echo`：四者**都落一块**
-  // （判的是当前状态的评审都落一块——记录不拿凭证结果当过滤条件，凭证结局写在结算头）。
+  // 值域 = 处置四词 + 宿主不完整族的 kind 词：所有处置**都落一块**（判的是当前状态的评审都落一块——
+  // 记录不拿凭证结果当过滤条件，凭证结局写在结算头）。不完整族优先占这一格：那一轮的正文可能缺半，
+  // 处置词读不出可信的结论；它与裁定闸同走一条落块路，不另开一个早退分支。
   // §5.1① 截断容忍：全串匹配 ∨ 截断形（本 token 的 uuid 值出现——空 uuid 不构成「值」）⇒ 认回显；
   // 两者皆无 ⇒ `no-valid-echo`（含正文为空——N7 零静默）。
   const uuid = String(designToken).split(":")[0]
   const fullEcho = makeDesignTokenRegex(designToken).test(rawResult)
   const truncatedEcho = !fullEcho && uuid.length > 0 && rawResult.includes(uuid)
-  const disposition = (!fullEcho && !truncatedEcho)
-    ? DISPOSITION_NO_ECHO
-    : (verdictGateFailure(rawResult) ?? DISPOSITION_PASS)
-  // 凭证不落档：块正文一律取**剥净回显**的评审原文（剥除单源 §5.1③）。
+  const disposition = incomplete
+    ? incomplete
+    : (!fullEcho && !truncatedEcho)
+      ? DISPOSITION_NO_ECHO
+      : (verdictGateFailure(rawResult) ?? DISPOSITION_PASS)
+  const issuing = disposition === DISPOSITION_PASS
+  // 凭证不落档：块取的是**剥净回显**的评审原文末尾那张结论表（剥除单源 §5.1③）；回给父侧的 `output`
+  // 仍带剥净回显的全文——原文不丢，只是不进块。
   const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
   // 结算写 `§3` 只在工程模式的**设计轨**（`BATCH-RECORD.md` §4.4 ∥ `ADVISOR-GUARDS.md` §1.2 的第一句）：
   // 普通模式没有设计结算进场，`§3` 由绑定评审席位自己写（那一路的写通道保留）——留两个写者就有两块一轮。
@@ -361,22 +362,24 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
         sign: null,
       }
     }
-    // 块由结算成形（`designReviewBlock`：工具戳 + 结算头 + 原文缩进四格），N 取 `nextRoundNumber`
+    // 块由结算成形（`designReviewBlock`：工具戳 + 结算头 + 本轮结论三件），N 取 `nextRoundNumber`
     // （与 `append §3` 的盖戳同一枚计数），不另立第二套。段尾追加用 `appendLineToSection`（既有字节零变），
     // 状态行仍**只经 `updateSectionStatusLine` 这一个写入函数**改写——零新写路径、零新解析。
+    // 裁定行由结算按本轮处置给（不从评审体里挑）：块内裁定、结算头与凭证结局三处同源。
     // 状态行按处置写：`pass` 走 `statusPassPlan`（已是完成词则零写，幂等），`changes-required` 走
-    // `statusResetPlan`（重置为进行中，块首不再另留痕行——本轮结论由结算头与原文承载），其余处置不动它。
+    // `statusResetPlan`（重置为进行中，块首不再另留痕行——本轮结论由结算头与块内三件承载），其余处置不动它。
     const date = todayLocal()
     const eol = batchSrc.includes("\r\n") ? "\r\n" : "\n"
-    const plan = disposition === DISPOSITION_PASS
+    const plan = issuing
       ? statusPassPlan(batchSrc, 3, rawResult, "")
-      : disposition === "changes-required" ? statusResetPlan(batchSrc, 3, rawResult, date) : null
+      : disposition === DISPOSITION_CHANGES_REQUIRED ? statusResetPlan(batchSrc, 3, rawResult, date) : null
     const block = designReviewBlock({
       roundN: nextRoundNumber(batchSrc, 3),
-      signed: disposition === DISPOSITION_PASS,
+      signed: issuing,
       reason: disposition,
       date,
       body: stripped,
+      verdictLine: verdictLineOf(disposition),
       eol,
     })
     const inserted = appendLineToSection(batchSrc, 3, block)
@@ -403,7 +406,7 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
       const before = countRoundBlocks(batchSrc, 3)
       const after = countRoundBlocks(signedSrc, 3)
       if (after <= before) failure = `回读 §3 轮次块 ${after} 块（写前 ${before} 块）——本轮块不在 §3 里`
-      else if (disposition === DISPOSITION_PASS) {
+      else if (issuing) {
         const back = readSectionStatusWord(signedSrc, 3)
         // 回读不等 ⇒ 盘上可能已是半截档 ⇒ 写回写前原文（验收行要的是「写不进 ⇒ 零字节」，而半截写
         // 恰恰会留半张——截断的批档再没有别的恢复路径）。写回失败不吞：两处并报，token 未签。
@@ -425,13 +428,10 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
     // ⇒ 写通道只有一条，单测的注入对两笔同时生效。
     sign = { before: batchSrc, rollback: () => recordWriter(boundBatch, batchSrc, "utf8") }
   }
-  // 三个非签发处置到此为止（两种模式同一结论：凭证不发；工程模式那一笔已把块留住，普通模式本轮不写块）：
-  // 槽零写、`run.open` 不翻 ⇒ 修好后同一实例可重评；拒文与改前同形（三个恒定标记各自定位真因）。
-  if (disposition === DISPOSITION_NO_ECHO) {
-    return { passed: false, output: [stripped, NO_VALID_ECHO_MARK].filter(Boolean).join("\n\n"), sign }
-  }
-  if (disposition !== DISPOSITION_PASS) {
-    return { passed: false, output: [stripped, VERDICT_GATE_MARK(disposition)].filter(Boolean).join("\n\n"), sign }
+  // 非签发处置到此为止（两种模式同一结论：凭证不发；工程模式那一笔已把块留住，普通模式本轮不写块）：
+  // 槽零写、`run.open` 不翻 ⇒ 修好后同一实例可重评；拒文按处置各写自己的恒定标记。
+  if (!issuing) {
+    return { passed: false, output: [stripped, nonIssueMark(disposition)].filter(Boolean).join("\n\n"), sign }
   }
   // §10.2（DESIGN-TOKEN-SETTLEMENT）评审封印：`sealDocs` / `sealHash` 已在裁定闸之后算好
   // （先算后写——被审档读不到时结算已在那一处拒签，没有任何字节落盘）。

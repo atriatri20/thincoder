@@ -1,5 +1,5 @@
 /**
- * advisor-record-gate.test.mjs — 集成用例 17-1 / 17-2 / 17-3（RTM CLI 端故事 17「评审没写进批档就不算过」；
+ * advisor-record-gate.test.mjs — 集成用例 17-1 / 17-2 / 17-3 / 17-4（RTM CLI 端故事 17「评审没写进批档就不算过」；
  * 回指需求 F-A13；机制单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.2（结算判据：批档可读 ∥ 块写进并回读）∥
  * §2 第 6 条（准入面：设计评审必携 `batchDoc`）∥ §2 第 7 条（账链门：批档须挂未决台账行））。
  *
@@ -220,4 +220,45 @@ test("CLI 17-3 错误 · 批档的未决行被撤后发设计评审 ⇒ 拒发�
   ))
   assert.doesNotMatch(counter, /batchdoc-no-ledger/, `账在 ⇒ 不得以账链门拒发，实际：${counter}`)
   assert.equal(agent._advisorRefusals.has("t17-3b"), false, "未登记拒发（本门放行）")
+})
+
+test("CLI 17-4 正常 · 设计轨结算写进 §3 的轮次块只含结论表、裁定行与计数——评审的推理正文不进块", () => {
+  // 块正文三件（`docs/core/design/BATCH-RECORD.md` §4.4）：结论表行 → 裁定行 → 计数行。
+  // 评审的推理正文留在报告里——块里只留「每条 finding 的处置」，读块的人不必翻通篇独白。
+  const ok = fixture("r174", recordText({ blocks: 0, statusRow: null }))
+  const token = mintToken()
+  const monologue = "Let me double-check the design against the requirement line by line."
+  const body = [
+    monologue,
+    "",
+    "A reasoning paragraph that must stay out of the block.",
+    "",
+    "| # | Severity | Status | Evidence |",
+    "|---|---|---|---|",
+    "| 1 | 🔴 | Unfixed | §4.4「块形三件，按序」 |",
+    "| 2 | 🟡 | Fixed | ADVISOR-GUARDS.md §9 验收行 |",
+    "| 3 | 🔵 | Accepted | 协调项，非缺陷 |",
+    "",
+    "VERDICT: pass",
+    `[DESIGN-TOKEN: ${token}]`,
+  ].join("\n")
+
+  const settled = settleDesignReview(ok.agent, runOf(ok.root, ok.batchAbs), token, body)
+  assert.equal(settled.passed, true, `结算自写块后应签发：${settled.output}`)
+  const src = readFileSync(ok.batchAbs, "utf8")
+  const block = src.slice(src.indexOf("### 轮次 1（评审子代理）"))
+  const lines = block.split("\n").map((line) => line.replace(/^ {4}/, ""))
+  const headerAt = lines.indexOf("| # | Severity | Status | Evidence |")
+  const verdictAt = lines.findIndex((line) => /^VERDICT:/.test(line))
+  const countsAt = lines.findIndex((line) => /^计数：/.test(line))
+
+  assert.ok(headerAt >= 0, `块内有四列表头行：${block}`)
+  assert.ok(headerAt < verdictAt && verdictAt < countsAt, `三件按序：表头 ${headerAt} → 裁定 ${verdictAt} → 计数 ${countsAt}`)
+  assert.equal(lines.filter((line) => /^VERDICT:/.test(line)).length, 1, "块内裁定行恰一行")
+  assert.equal(lines[verdictAt], "VERDICT: pass", "裁定行 = 本轮处置（结算按处置写，不从评审体里挑）")
+  // 结论三件 = 表头 1 + 分隔 1 + 表体 3 + 裁定 1 + 计数 1 = 表体行数 + 4（结算头一行另计）。
+  assert.equal(lines.slice(headerAt, countsAt + 1).length, 3 + 4, "结论三件的行数 = 表体行数 + 4")
+  assert.equal(block.includes(monologue), false, "推理独白不进块")
+  assert.equal(block.includes("A reasoning paragraph"), false, "推理段落不进块")
+  assert.equal(settled.output.includes(monologue), true, "原文不丢——回执仍带剥净回显的全文")
 })

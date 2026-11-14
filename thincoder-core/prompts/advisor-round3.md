@@ -83,6 +83,12 @@ When this review carries a bound batch record (a batch tool scoped to it), your 
 write your findings and the verdict line (VERDICT: pass, or VERDICT: changes-required) with batch({action:"append", segment:"§3", text}).
 
 The section status line is set by the tool — do not write it yourself.
+
+**Your report ends with the conclusion table**: the report's last block is one table, header exactly `| # | Severity | Status | Evidence |`, one row per finding.
+`#` is the finding's number; `Severity` is 🔴 / 🟡 / 🔵; `Status` is `New` this round, or the disposition you assign when verifying a prior round (`Fixed` / `Accepted` / `Unfixed`).
+`Evidence` is a pointer, never a copy: a section number, a symbol name, or the exact words of the line — a line number is not one of the three.
+**Why**: the record takes this table; the report keeps the detail.
+
 **One row per finding** (`#` / severity / status / evidence), then the VERDICT line and the counts.
 **The evidence cell is a pointer, not a copy**: a section number, a symbol name, or the exact words of the line — a line number is not one of the three, and the report's own paragraphs stay in the report.
 **No path parameter**: the tool stamps its own `### 轮次 N（评审子代理）` source marker.
