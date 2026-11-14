@@ -1,3 +1,4 @@
+aliases: 提问, 询问用户
 Use when the task is ambiguous, you need a design decision, or you are stuck and need human judgment.
 
 Parameters:

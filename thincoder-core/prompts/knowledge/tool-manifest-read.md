@@ -1,3 +1,4 @@
+aliases: 清单, 项目档案, 只读
 The file holds version / phase / docRoot / codePaths / index.
 
 target — the project root or directory you mean; **required** — omitting it is refused. Relative paths resolve against the session anchor. A workspace target (several projects below it) is reported with the full candidate list — name the project root you mean and pass it as target.

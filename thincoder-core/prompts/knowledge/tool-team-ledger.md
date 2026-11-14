@@ -1,3 +1,4 @@
+aliases: 团队台账, 团队待办
 It is a separate book from the local `ledger` - two independent accounts, no sync between them, and this one keeps no offline copy. `action` = query / count / add / update / close.
 
 - `query` / `count` are read-only and open to every role; `add` / `update` / `close` write and reach the main agent only (a subagent gets the read-only two).

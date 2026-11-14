@@ -1,3 +1,4 @@
+aliases: 业务门, 业务规则, 业务失败
 ## Business gates — a business failure must fail
 
 A business system is correct when what should not pass does not pass. A **business gate** is a precondition the business states, not the code: the record exists, the state machine allows the move,

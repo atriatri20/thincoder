@@ -1,3 +1,4 @@
+aliases: 历史, 批次窗口, 会话历史
 The window is fixed by the batch, not by you.
 
 This face cannot leave the batch: there is no `path`, no other session, no older batch.

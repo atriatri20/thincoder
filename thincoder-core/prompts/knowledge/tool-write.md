@@ -1,3 +1,4 @@
+aliases: 写文件, 新建文件
 Parameters:
 - path (required): File path (relative to cwd or absolute)
 - content (required): Full content to write

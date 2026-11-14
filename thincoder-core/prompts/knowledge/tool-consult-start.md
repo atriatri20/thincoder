@@ -1,3 +1,4 @@
+aliases: 会诊, 咨询, 难题
 Use it for a hard problem you are stuck on: repeated failures, no headway. Call it directly when the user asks for 会诊 / consult - an explicit user request applies even when you are not stuck.
 
 The consultants are several configured models (up to 5, via `agent.consultModels`) that analyze the same problem independently and in parallel. With no pool configured the call fails explicitly.

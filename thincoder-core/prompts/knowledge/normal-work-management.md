@@ -1,3 +1,4 @@
+aliases: 工作管理, 批次档, 台账, 收口
 ## Work management (batch record + ledger + closeout)
 
 **The same management logic as engineering mode** — batch record + ledger + closeout; the only difference is constraint strength:

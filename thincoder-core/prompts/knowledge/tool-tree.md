@@ -1,3 +1,4 @@
+aliases: 目录树, 结构
 Use it to see quickly which modules exist and where files live. Skips dotfiles, .git/node_modules/dist/build/obj and other build/vendor dirs, and binary files.
 
 **Route to tree instead of bash:**

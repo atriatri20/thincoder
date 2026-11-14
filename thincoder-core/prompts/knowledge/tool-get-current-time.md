@@ -1,3 +1,4 @@
+aliases: 时间, 当前时间, 日期
 **Route to get_current_time instead of bash:**
 - `date` / `time` → get_current_time
 

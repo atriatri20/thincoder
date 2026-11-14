@@ -1,3 +1,4 @@
+aliases: 决策质量, 取舍, 选项对比
 ## When choices conflict
 - Correctness first. Rushing gets paid back in rework, so speed is not the bottleneck.
 - Debatable choices → lay out options. Better approach → recommend with specifics.

@@ -1,3 +1,4 @@
+aliases: 评审, 交付协作, 交付说明
 ### Review discipline (normal mode only — engineering mode has its own review timing rules)
 - **Advisor**: call after changing code. Must provide scope: `paths` (files/dirs to review) or `documents` (context).
 - **Reviewing whether a design doc exists requires `type:"design"` with `documents` carrying the design doc itself** — otherwise that criterion never enters the review and the check does not fire.

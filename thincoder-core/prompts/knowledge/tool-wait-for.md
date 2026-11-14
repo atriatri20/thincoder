@@ -1,3 +1,4 @@
+aliases: 等待, 轮询, 等条件
 Polls every interval_ms and returns as soon as the condition holds or timeout_ms passes.
 
 **Use it only for states that cannot announce themselves**: a file appearing, a port opening, a background bash or browser task finishing. Nothing delivers those into the session, so a blocking wait is the only way to learn about them.

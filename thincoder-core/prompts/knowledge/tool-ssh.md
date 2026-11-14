@@ -1,3 +1,4 @@
+aliases: 远程, 网络设备, 登录
 A session survives across tool calls. Password hosts get a credential window — the value never appears in tool args or results.
 
 **Route to ssh instead of bash:**

@@ -1,3 +1,4 @@
+aliases: 任务清单, 待办列表
 Each call replaces the entire list.
 
 Statuses: pending | in_progress | done - synonyms (completed/finished/complete, todo/open/waiting, active/running/working, …) are accepted and normalized with a warning.

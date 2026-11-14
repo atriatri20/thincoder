@@ -1,3 +1,4 @@
+aliases: 团队台账, 只读, 团队待办
 It is a separate book from the local `ledger` — two independent accounts, no sync between them, and this one keeps no offline copy.
 
 The actions this tool face carries: `query` (filtered entries) and `count` (how many). Both are read-only.

@@ -1,3 +1,4 @@
+aliases: 定时器, 提醒, 计时
 Set it before you start analyzing code: when the timer fires, a system reminder is injected suggesting you run code or add debug logs — N seconds to reason, then the reminder to act.
 
 Four schedule forms, one per call (`seconds`, `at`, `every` and `daily` are mutually exclusive - passing more than one is a validation error):

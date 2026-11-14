@@ -1,3 +1,4 @@
+aliases: 计划模式, 只读计划
 In plan mode you are restricted to READ-ONLY tools: read files, search code, run read-only shell commands.
 Use plan mode before complex multi-step tasks — explore the codebase, design the architecture, present a plan to the user.
 

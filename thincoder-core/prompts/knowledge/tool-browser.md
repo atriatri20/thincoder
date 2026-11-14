@@ -1,3 +1,4 @@
+aliases: 浏览器, 网页操作, 截图
 Not a takeover — it never attaches to a browser you already have open and needs no extension. Multi-step and stateful: `navigate`, `snapshot`, then act on the element references the snapshot returns.
 
 **Route to browser instead of fetch:**

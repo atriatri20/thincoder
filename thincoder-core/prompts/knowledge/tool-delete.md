@@ -1,3 +1,4 @@
+aliases: 删除, 删档
 Use it when the agent created a temporary or junk file or empty directory that should be cleaned up, or when the user explicitly asks to delete something.
 
 Refuses to delete git-tracked files as a safety measure - a tracked file should be edited, or removed through `bash` with the user's explicit confirmation.

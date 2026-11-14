@@ -1,3 +1,4 @@
+aliases: 进程, 只读进程
 Nothing here kills: no process tree and no background task is terminated.
 
 The action this tool face carries: `list` (the default). It returns one line per process (name / PID, plus memory on Windows).

@@ -1,3 +1,4 @@
+aliases: git, 只读, 版本库, 查看提交
 Nothing here writes: no commit, no staging, no branch or tag changes, no push, no checkout, no snapshot restore.
 
 The actions this tool face carries: diff / status / log / show / ls-remote / blame / checkpoint list·cat / tag list / branch list / stash list / remote list / worktree list.

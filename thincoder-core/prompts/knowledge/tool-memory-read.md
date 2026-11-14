@@ -1,3 +1,4 @@
+aliases: 记忆, 只读记忆, 检索记忆
 Two actions:
 
 - `search` — find knowledge saved in previous sessions. Each result row carries `[layer]` plus the entry id, and the id's prefix is the layer.

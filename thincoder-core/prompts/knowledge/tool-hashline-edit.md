@@ -1,3 +1,4 @@
+aliases: 按行哈希, 精确改行
 More reliable than `edit` when whitespace or encoding varies, because the addresses are line bytes as they sit on disk.
 
 Parameters:

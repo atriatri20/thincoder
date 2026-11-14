@@ -1,3 +1,4 @@
+aliases: 台账, 待办, 记账
 `action` = add / update / close / query / count.
 
 - `add`: a new entry lands in `待讨论`.

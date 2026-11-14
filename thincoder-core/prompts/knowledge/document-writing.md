@@ -1,3 +1,4 @@
+aliases: 文档, 写文档, 文档写作, 语义合并
 ## Document writing discipline — semantic merge, no script ghost-writing
 - **A script does not read semantics**: scripted section splicing, regex bulk replacement, whole-file appending, "verbatim porting" via script — all count, because what the splice loses is lost for every later reader.
   Why: a splice drops what the splicer did not read, and the loss is invisible to every later reader — the document keeps looking complete.

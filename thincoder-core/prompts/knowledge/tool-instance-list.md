@@ -1,3 +1,4 @@
+aliases: 实例列表, 多实例, 跨实例
 Any cwd — a target in another repository is addressable.
 
 Returns [{ sessionId, end, cwd, pid }]; never includes self; pure read — writes nothing.

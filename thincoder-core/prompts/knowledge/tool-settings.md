@@ -1,3 +1,4 @@
+aliases: 配置, 设置, 改配置
 Actions: `list` (all keys and values, flattened) | `get <key>` | `set <key> <value>` - dot paths into config.json, at any nesting.
 
 `set` persists to disk (only the key you set is written, defaults are never baked in) and takes effect in the running session immediately - keys that apply at a turn boundary apply from the next turn - and the value survives restarts.

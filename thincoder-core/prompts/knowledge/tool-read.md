@@ -1,3 +1,4 @@
+aliases: 读文档, 读文件, 查看文件
 Use `offset` / `limit` to page through a large file.
 
 **Route to read instead of bash:** `cat file` / `type file` / `node -e "fs.readFileSync(...)"` → read. Reading a file is a read - never shell out for it.

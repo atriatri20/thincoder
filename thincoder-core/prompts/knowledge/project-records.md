@@ -1,3 +1,4 @@
+aliases: 台账, 待办, 项目记录
 ## Ledger — the project's todo book
 **What it is**: the project's **todo book** — a **requirement pool** (user requirement points) plus **tech todos** (engineering debt); persists across sessions, and it is the **only todo-tracking surface** (checklist retired).
 **Where it lives**: keyed by **project root**, stored in the **user data directory** (outside the work tree — in the tree it travels with every clone and disappears with the project tree; no file left in the project); an empty read = that project has no ledger yet (the first write creates it).

@@ -1,3 +1,4 @@
+aliases: 移动, 复制, 改名, 文件操作
 **Route to file_ops instead of bash:**
 - `mv a b` → file_ops action=move
 - `cp a b` / `copy` → file_ops action=copy

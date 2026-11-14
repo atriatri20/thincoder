@@ -1,3 +1,4 @@
+aliases: 进程, 结束进程
 List returns one line per process (name / PID, plus memory on Windows); kill returns a one-line confirmation.
 
 **Route to process instead of bash:**

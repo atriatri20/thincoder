@@ -1,1 +1,2 @@
+aliases: 历史, 会话历史, 之前做过什么
 What has been tried, the exact errors, recent context. Ground your analysis in the actual failure trail instead of guessing. Output is capped (~60k chars — older messages are trimmed with a note).

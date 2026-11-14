@@ -1,3 +1,4 @@
+aliases: 文档检查, 文档校验, 交付门
 `mode` says what the call is for, and the two modes judge **different ranges** and sit differently on the index.
 
 - `report` is read-only: it writes no document and no index entry, asks for no approval, and is safe to run beside other calls.

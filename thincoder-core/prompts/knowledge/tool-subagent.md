@@ -1,3 +1,4 @@
+aliases: 子代理, 派单, 派活
 ONE tool, NINE actions — pick by what you need:
 
 - action:'spawn' (DEFAULT): run a sub-agent in its own isolated context — its reads, searches and tool calls never reach your history; only the final report comes back. Spawn MULTIPLE subagents in the SAME response for parallel work — they run concurrently.

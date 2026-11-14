@@ -1,3 +1,4 @@
+aliases: 命令行, 终端, 执行命令, shell
 Use for running commands, builds, tests.
 
 **Route to a dedicated tool instead of bash:**

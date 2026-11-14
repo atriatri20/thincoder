@@ -53,6 +53,7 @@
 | CLI 50 | 三档模式切换、极简提示词与知识查询 | tooling | 有 | 缺 | 缺 |
 | CLI 51 | 台账查询分页：每页十条，翻页仍读同一本账 | batch-ledger | 有 | 缺 | 缺 |
 | CLI 52 | ACP workMode 与 PLAN 分离 | tooling | 有 | 缺 | 缺 |
+| CLI 53 | knowledge 检索有界：宽词查询不吞窗口，0 命中指路 | tooling | 有 | 缺 | 缺 |
 | VSC 1 | 归档块重开 ∥ reload 后，子代理行还是子代理行 | ends | 缺 | 有 | 缺 |
 | VSC 2 | 流式输出中视口贴底 | ends | 缺 | 有 | 缺 |
 | VSC 9 | 三档模式从控件落到会话，重开后仍一致 | ends | 缺 | 有 | 缺 |

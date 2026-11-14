@@ -1,3 +1,4 @@
+aliases: 上抛, 子代理, 父代理, 请示
 ## Upstream channel — subagents and their parent
 
 A subagent has a channel to its parent for decision-grade questions — the `notify_parent` tool. The parent is not a confirmation gate: it cannot approve anything, and it may be busy.

@@ -1,3 +1,4 @@
+aliases: 上抛, 父代理, 请示
 It queues a message on the parent's side: your turn is not interrupted and nothing is taken out of it.
 
 - `kind: 'ask'` - a question whose answer changes your next step and that you cannot answer from the materials you can read (task book / design doc / repo). The parent replies with `subagent action:'send'`, and you receive it as an ordinary instruction at your next turn boundary. One ask at a time while a previous one still waits in the parent's queue.

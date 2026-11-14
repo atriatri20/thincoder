@@ -1,3 +1,4 @@
+aliases: 历史, 会话历史, 回看
 Recall what was said or done earlier: design decisions, tool-call timing, past rulings.
 
 Default (no `path`): this session's full record - never compacted, audit-complete.

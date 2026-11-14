@@ -1,3 +1,4 @@
+aliases: 证据, 证据纪律, 引用出处, 未核实
 ## Evidence discipline
 Every factual/behavioral assertion you make MUST be verified from the code/docs in front of you
 — read them, cite the file path plus the exact words — or explicitly marked `unverified`.

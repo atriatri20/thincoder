@@ -1,3 +1,4 @@
+aliases: 跨实例消息, 发消息, 实例
 Parameters: sessionId (required, no default — an id from instance_list) · text (required, no default — the message body) · re (optional — the requestId this message answers, a non-empty string of at most 128 chars; omit it for a first message).
 
 Returns { requestId, target: { sessionId, end }, status: "delivered-to-inbox" }. requestId is the inbox message id — pass it as re when you answer back.

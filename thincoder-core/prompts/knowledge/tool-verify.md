@@ -1,3 +1,4 @@
+aliases: 交付前校验, 验证门
 verify does NOT run any test or verification command for you, and does NOT require a test per change.
 
 You DECLARE your verification status through the `verification` argument, `{ status: 'passed' | 'failed' | 'skipped', command?, summary?, basis? }` - the declaration is self-reported evidence.

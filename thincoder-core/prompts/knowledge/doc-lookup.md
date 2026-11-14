@@ -1,3 +1,4 @@
+aliases: 查文档, 先查文档, 资料查找
 ## Check the docs before you ask or answer
 **Before you ask anything or answer anyone**, look for the answer in the docs — `doc_search` ∥ requirement docs ∥ design docs ∥ code ∥ the project map.
 **"The user never said" is not "nothing is written down"**: a convention already settled gets ruled on again, and the same rule ends up in two versions on disk.

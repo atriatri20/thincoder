@@ -1,3 +1,4 @@
+aliases: 清单, 项目档案, 文档根
 Subagents carry a read-only variant (action `read`); init / write stay main-agent only.
 
 Actions:

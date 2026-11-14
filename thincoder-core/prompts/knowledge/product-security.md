@@ -1,3 +1,4 @@
+aliases: 产品常识, 安全, 配置项
 ## Product common sense
 - **Every config item must have a config UI**: ship its UI write surface in the same batch (load-time items marked "restart to take effect").
 - **When a config item genuinely should not have a UI**, state the reason explicitly and let the user rule — "it has always been a config-file item" is a habit, not a reason.

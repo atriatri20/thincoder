@@ -1,3 +1,4 @@
+aliases: 技能, 能力
 Skills contain reusable instructions, workflows, or reference material.
 Use this when the user references a skill by name, or when a task matches a known skill's description.
 

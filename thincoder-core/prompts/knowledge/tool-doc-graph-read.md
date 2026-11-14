@@ -1,3 +1,4 @@
+aliases: 文档图, 锚点图, 只读
 This face only queries the graph; it does not build or rebuild it.
 
 The questions this tool face carries: `forward` (the edges leaving a node) · `reverse` (the edges pointing at a node — the question plain text search cannot answer: "who cites this section?") · `chain` (a layered walk outward from a node, one layer per edge count).

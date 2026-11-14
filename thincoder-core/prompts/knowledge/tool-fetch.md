@@ -1,3 +1,4 @@
+aliases: 抓取, 网页读取, 取页面
 Use it after websearch to read full pages. Internal, private and metadata addresses are refused before any request goes out.
 
 Parameters:

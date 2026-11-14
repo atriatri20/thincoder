@@ -1,3 +1,4 @@
+aliases: 文档, 文档体系, 文档评审, 文档标准
 ## Documentation system — evaluation criteria (generic ruler for projects you work on)
 
 > Premise: **judge by the target project's own conventions first**; use the generic criteria in this section only when the project has no written standard.

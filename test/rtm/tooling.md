@@ -147,12 +147,13 @@
 ## CLI 46. 跨实例发消息：一条消息送进另一实例并起一轮，回程带请求号
 
 > 目的：同一台机器上的两个实例（不同仓也算）能互相说话——把一段话直接送进对方会话，对方空闲就起一轮处理；对方正在跑一轮就等它跑完，绝不插进当前这一轮；对方回话靠请求号与首发对上。
-> 节注：回指 = 需求 `docs/core/requirements/MULTI-INSTANCE-COLLAB.md`「跨实例消息」；机制单源 = `docs/core/design/MULTI-INSTANCE-COLLAB.md`「名册」∥「发送」∥「取件闩」∥「消息落法」；交互组件 = 名册（`thincoder-core/instance-registry.mjs`）⟷ inbox（`thincoder-core/instance-inbox.mjs`）⟷ 取件闩与消息形态（`thincoder-core/instance-inbox-watch.mjs`）⟷ 工具面 `instance_send`；进入口 = 两个真 node 进程共用同一临时 `~/.thincoder` 等价根，A 端调 `instance_send` 发给 B；一态（行序）= 46-1 正常（含在飞回合不插队与末段不可达报错）。
+> 节注：回指 = 需求 `docs/core/requirements/MULTI-INSTANCE-COLLAB.md`「跨实例消息」；机制单源 = `docs/core/design/MULTI-INSTANCE-COLLAB.md`「名册」∥「发送」∥「取件闩」∥「消息落法」；交互组件 = 名册（`thincoder-core/instance-registry.mjs`）⟷ inbox（`thincoder-core/instance-inbox.mjs`）⟷ 取件闩与消息形态（`thincoder-core/instance-inbox-watch.mjs`）⟷ 工具面 `instance_send`；进入口 = 两个真 node 进程共用同一临时 `~/.thincoder` 等价根，A 端调 `instance_send` 发给 B；两态（行序）= 46-1 正常（含在飞回合不插队与末段不可达报错）· 46-2 挂起窗取件（交互组件 = 生产取件谓词（CLI `thincoder-cli/src/tui/timer-watch.mjs` 的 `createInboxWatch` ∥ Desktop `thincoder-desktop/src/main/suspension-timers.mjs` 装配的 `busyOf`）⟷ 取件闩 `thincoder-core/instance-inbox-watch.mjs` ⟷ 窗输入队列与唤醒 ⟷ 状态栏待取提示；进入口 = 一个真 node 进程先起后台子代理进窗，再由另一实例 `instance_send` 投递，夹具不替端壳答「忙」）。
 > 夹具前提：回合面与宿主定时器由 `test/integration/fixtures/cross-instance-harness.mjs` 驱动（真 CLI TUI 要 TTY、要真 provider）——`tick` = 跑掉夹具队里的定时器回调一拍（真宿主同形），`busy` = 在飞回合，`failTake` = 开轮面 reject，`advance` = 假钟推进（受阻跨阈不靠真实等待）。本行因此覆盖「名册 × inbox × 取件闩 × 消息形态 × 跨进程投递」这条链，不覆盖 TUI 渲染与真模型读法（人工走查）。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
 | 46-1 | 两个实例 A / B 共用同一临时根（名册目录 + inbox 目录各自缝到该根）：A 调 `instance_send` 发给 B，此时 B 的 `busy` 为真；B 取件一拍 → B 置空闲再取件一拍 → 回话时带 `re` = 首发回执的 `requestId` → A 取件一拍；最后 B 再置 `busy` 真，A 发第三条、B 两拍；**末段后增一步**：上一轮中止结束后来一条，且两个补位点（回合链尾 / 模态关闭）**一次都不调用**（由夹具直驱取件闩，不依赖 TUI 中止键） | ① B 会话出现一条 `role:"user"` 消息，首行逐字 `[cross-instance message · from cli pid=<N> session=<id> cwd=<p>]`（无 `re=`）、次行为空行、第三行 = 原文，并起一轮；② A 的回执带 `requestId`，其值 = B inbox 那枚 `msgId`（文件名即该号）；③ B 的回程消息落回 A 会话，标记行逐字带 ` · re=<requestId>`；④ B 在跑一轮时 A 再发 ⇒ B 该轮回合数不变、那条只在轮结束后才起新一轮（`turns` 由 1 变 2）；另：取件成功后目标 inbox 目录零残留；⑤ **自续补位**（同「怎么做」新步）：补位点一次都不调用 ∧ 在飞一拍之后仍有一拍待跑 ⇒ 中止结束那条下一拍仍取走并起新一轮（`turns` 再 +1）；⑥ **两条新可见面各恰好一行**——注入开轮 reject ⇒ 目标侧一行丢失行且 inbox 仍空（不重投）；`nowFn` 推过 `INBOX_BLOCKED_MS` 且 inbox 非空 ⇒ 一行受阻行，空则零行；⑦ **载体不就绪也出声**——假端 `ready() === false` ⇒ 零取件（inbox 仍有件）+ `nowFn` 推过 `INBOX_BLOCKED_MS` ⇒ 恰一行受阻行且日志 `reason === "carrier"`；`ready` 转真 ⇒ 下一拍取件恰一次、起轮恰一次 | 同档末段 = 目标不可达（无此会话：调 `instance_send` 指一个从未登记的 id）⇒ 发送面当场报错并点名该 id 与「无取件面的 headless 会话不入册」，该 id 的 inbox 目录在盘上不存在（不落待取队列），A 自己的名册条目不受影响 | `test/integration/cross-instance-message.test.mjs` |
+| 46-2 | 一个真 node 进程先起后台子代理进挂起窗（窗内有子代理在跑、无回合在飞），再由另一实例 `instance_send` 投递一条；该进程用**生产取件谓词**（CLI = `thincoder-cli/src/tui/timer-watch.mjs` 的 `createInboxWatch` ∥ Desktop = `thincoder-desktop/src/main/suspension-timers.mjs` 装配的 `busyOf`），夹具不得替端壳答「忙」；窗在场时跑一拍取件 → 消息入窗输入队列并唤醒窗口；再让窗先退出（非中止径），断言残项续发 | ① 窗在场（有子代理在跑、无回合在飞）⇒ 下一拍取走并起一轮（消息落窗输入队列 + 恰一次唤醒），宿主 `turn` 零直接调用；② 该轮在飞期间再投一条 ⇒ 该轮回合数不变、消息留在 inbox，轮末下一拍起新轮；③ 窗先退出 ⇒ 残项以普通回合续发恰一次、零丢弃 | 同档末段仍按 46-1 判据（目标不可达当场报错）；本行不新增异常态 | `test/integration/cross-instance-message.test.mjs` |
 ## CLI 49. 子代理只拿得到角色允许的工具动作
 
 > 目的：子代理读到的工具说明 = 它真能用的能力。只读角色（explore ∥ plan ∥ consult）不因整把工具不是只读而失去真正的只读动作（git 历史、记忆检索、配置读数、进程列表），写动作既不出现在它的描述与 schema 里，直接调进来也在原执行之前被拒；设计席的「每批最多六次勘察」从一句承诺变成会拒的计数；eng 两角色能读到父会话里本批那一段被限量的历史，其余角色仍靠任务书。
@@ -175,7 +176,7 @@
 | 50-1 | 真 CLI 起会话后执行 `/tiny` 切档进极简会话并发下一轮本地脚本化模型请求，再按槽文件恢复重开一个 agent 发一轮，读回两发请求体的 system 段与工具面；本行判的是母版装配 × 锚展开器的极简支 × 工具面三者同轮协作——母版供给一句常驻查询指引，锚展开器删掉锚与主题正文，工具面照旧给出 `knowledge` | ① 命令矩阵与槽 mode 一致，恢复后仍为 tiny；② 极简档常驻面含 `## Knowledge topics`，且触发句在英文原句 `When the method or a tool convention is unclear, query before acting` 上逐字命中（需求 §4 末条的中文口径即此句），项目规则仍保留；③ 极简档零个主题标题、零段主题正文（`prompts/knowledge` 与 `core/knowledge` 两类目录逐个判，不拿单条标题代全体）；④ 极简档不自动注入文档/记忆/大纲、不改写历史；⑤ 完整档同一节也在场（极简档删的是主题正文，不是这个入口） | 无 | `test/integration/tiny-mode.test.mjs` |
 | 50-2 | 主代理与子代理分别调用 knowledge list/search/get，并查询未知主题、无匹配及纯查询主题 | 三档均有 knowledge；search 只定位、get 取完整主题；错误显式；纯查询主题不进入任何模式的提示词 | 无 | `test/integration/tiny-mode.test.mjs` |
 | 50-3 | 从真实 `thincoder-cli/src/tui.mjs` 入口装载完整 TUI 模块图 | startTUI 可用；cmd-advisor 不再引用 cmd-eng 已退役的 writeSessionFile 导出 | 回指 = `docs/cli/requirements/CRASH-REPORTS.md` F-CR1；旧实现由真实启动 SyntaxError 复现 | `test/integration/tiny-mode.test.mjs` |
-| 50-4 | 极简会话与完整会话各发一轮本地脚本化模型请求，读回请求体的工具面；同一极简会话里 `knowledge get tool-bash` 取一次展开面；再在极简会话内经 `consult_start` 起一次 consult 子代理，读它那一发请求体 | ① 极简档工具描述无锚字面、无展开面正文（`Output format:` ∥ `There is NO TTY` 均不在场），且等于母版去锚后的目标文本；② `knowledge get` 返回的正文逐字等于展开面原文；③ 完整档的 bash 描述 = 常驻面与展开面正文在锚处拼合，且展开面正文逐字等于 `prompts/knowledge/tool-bash.md` 全文（不与批起快照的旧文比对）；④ 同一极简会话里 consult 的 `doc_check` 描述取完整档，主链仍取极简档；⑤ 工具数量与 schema 键集不缩水；⑥ 极简档与完整档请求体的每份工具 `input_schema` 逐字相等（含 `action` 枚举取值） | 无 | `test/integration/tool-description-tiers.test.mjs` |
+| 50-4 | 极简会话与完整会话各发一轮本地脚本化模型请求，读回请求体的工具面；同一极简会话里 `knowledge get tool-bash` 取一次展开面；再在极简会话内经 `consult_start` 起一次 consult 子代理，读它那一发请求体 | ① 极简档工具描述无锚字面、无展开面正文（`Output format:` ∥ `There is NO TTY` 均不在场），且等于母版去锚后的目标文本；② `knowledge get` 返回的正文逐字等于展开面原文；③ 完整档的 bash 描述 = 常驻面与展开面正文在锚处拼合，且展开面正文逐字等于 `prompts/knowledge/tool-bash.md` 的**正文**（首行 `aliases:` 声明不计入正文；不与批起快照的旧文比对）；④ 同一极简会话里 consult 的 `doc_check` 描述取完整档，主链仍取极简档；⑤ 工具数量与 schema 键集不缩水；⑥ 极简档与完整档请求体的每份工具 `input_schema` 逐字相等（含 `action` 枚举取值） | 无 | `test/integration/tool-description-tiers.test.mjs` |
 | 50-5 | 真 CLI 工程会话经 `/eng` 落槽后发一轮本地脚本化模型请求，读回请求体的工具面与 system 段 | 十一把入口工具仍带 `ledger`（带本地定位参数的十把另带 `project`，`ssh` 只按 `get` 判）且 `required` 逐字不变；两键 `description` 只剩一行身份句（本工具差异一句除外）；完整口径在工程会话的 system 段只出现一处，工具描述里不重述；写门十一把的 `input_schema` 在 normal 与 engineering 两档逐字相等 | 无 | `test/integration/tool-description-tiers.test.mjs` |
 | 50-6 | 真 CLI 用 1M 窗模型起会话，先经 `context` 工具 stats 读一组分母；`/tiny` 后发一轮本地脚本化请求再读同一组；再 `/normal` 后重读 | tiny 档 stats 首行分母 ∥ 请求预算窗口 ∥ 状态行百分比分母三处都是 262144，压缩线随之落在其下；切出后三处全部回到模型窗口（1M 夹具 = 1024000），不残留 262144；两档工具面与项目规则块不变 | 无 | `test/integration/tiny-mode.test.mjs` |
 
@@ -189,3 +190,13 @@
 |---|---|---|---|---|
 | 52-1 | 经真 ACP stdio 新建会话，写 tiny/engineering，再 load/resume | new/load/resume 的 workMode 快照一致；合法值落槽并全量通知；PLAN 的 currentModeId 不被工作 mode 污染 | 无 | `test/integration/acp-work-mode.test.mjs` |
 | 52-2 | 写非法 workMode，再读取当前配置与通知 | 非法值零状态变、零通知；合法快照保持原值 | 无 | `test/integration/acp-work-mode.test.mjs` |
+
+## CLI 53. knowledge 检索有界（宽词查询不吞窗口 · 0 命中指路）
+
+> 目的：search 的返回受主题数与字符数双上限约束并如实披露截断；全虚词查询与 0 命中都给出可执行的下一步。
+> 节注：回指 = `docs/core/requirements/PROMPT-SYSTEM.md` §6「按用户给出的关键词查找相关主题，并返回有界定位片段」∥ 同节末句「查询不到时如实返回无匹配」∥ §9.2「未知主题与无匹配有明确结果」；机制单源 = `docs/core/design/PROMPT-SYSTEM.md` §6「knowledge 工具」；组件 = knowledge 检索链（`thincoder-core/tools/knowledge.mjs` 的 `execute` search 支）⟷ 主题加载与别名剥离（`thincoder-core/prompt-files.mjs` 的 `readKnowledgeEntries`）⟷ 三档工具表（tiny ∥ normal ∥ engineering）⟷ 真 CLI 会话的模型请求体；进入口 = 真 CLI 起 tiny 档会话，本地脚本化模型端点首回合派三次 `knowledge` 调用（`{action:"search", query:"the"}` ∥ `{action:"search", query:"the evidence"}` ∥ 一次 0 命中查询），读第二回合请求体里带回的这三条工具结果；单态 = 53-1 正常。
+
+| 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
+|---|---|---|---|---|
+| 53-1 | 真 CLI 起 tiny 档会话（`handleTinyCommand` 落槽后掀下一轮），首回合一次派三条 `knowledge` search 调用：全虚词 `the` ∥ 含虚词的宽词 `the evidence` ∥ 必然 0 命中的查询；读第二回合请求体里回到模型的三条工具结果 | ① 全虚词查询在工具门口显式失败，报文点名 `query` 且给下一步，回执里零个主题片段；② 宽词查询的紧凑 JSON ≤ 6,000 字符、返回主题数 ≤ 10，外层报 `matched` ∥ `shown` ∥ `truncated` 且 `matched > shown`、`truncated: true`；③ 0 命中回执点名两条下一步（换单个英文关键词 ∥ 先 `list`），且不伪造主题 | 无 | `test/integration/knowledge-search-bounded.test.mjs` |
+

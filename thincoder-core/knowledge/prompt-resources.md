@@ -1,3 +1,4 @@
+aliases: 提示词资源, 知识资源, 随包资源
 # Prompt and knowledge resources
 
 Prompt-assembly topics live in `prompts/knowledge`. Full normal and engineering prompts inline those topics at their master anchors; tiny prompts omit the anchored bodies and allow on-demand queries.

@@ -38,8 +38,33 @@ const KNOWLEDGE_SOURCES = Object.freeze([
   { kind: "query", dir: QUERY_KNOWLEDGE_DIR },
 ])
 const KNOWLEDGE_ID_RE = /^[a-z0-9-]+$/
+const ALIAS_DECLARATION_PREFIX = "aliases"
+/** 别名分隔符：半角逗号 ∥ 全角逗号 ∥ 顿号——中文习惯里的 `，` 与 `、` 都要切得开。 */
+const ALIAS_SEPARATOR_RE = /[,，、]/
 
-function readKnowledgeEntries(sources = KNOWLEDGE_SOURCES) {
+/**
+ * 剥掉主题首行的 `aliases:` 声明，返回 `{ aliases, body }`。声明是元数据不是正文：`get`、完整档内联与
+ * 锚回填都只看剩下的 `body`，否则为检索加的元数据会随主题正文一起进系统提示词与 `get` 回执。
+ * 声明只有两种形态——没有这一行，或首行是一行 `aliases:` 加至少一个非空词；首行以 `aliases` 开头却不成形
+ * （无冒号或取不出词）就在加载期点名主题失败：静默丢掉别名会把「声明写坏了」说成「这个词本来不命中」，
+ * 两者在模型的失败回执上长得一模一样。
+ */
+function splitAliasDeclaration(id, content) {
+  const newline = content.indexOf("\n")
+  const firstLine = (newline < 0 ? content : content.slice(0, newline)).replace(/\r$/, "").trimStart()
+  if (!firstLine.toLowerCase().startsWith(ALIAS_DECLARATION_PREFIX)) return { aliases: [], body: content }
+  const declaration = firstLine.slice(ALIAS_DECLARATION_PREFIX.length).trim()
+  const words = declaration.startsWith(":")
+    ? declaration.slice(1).split(ALIAS_SEPARATOR_RE).map((word) => word.trim()).filter(Boolean)
+    : []
+  if (words.length === 0) {
+    throw new Error(`knowledge: topic "${id}" has a malformed aliases declaration on its first line — write "aliases: word, word", or drop the line`)
+  }
+  return { aliases: words, body: newline < 0 ? "" : content.slice(newline + 1) }
+}
+
+/** 主题条目面（标识 ∥ 标题 ∥ 别名 ∥ 正文）：List 与 search 共读一处，别名只在这里解析一次。 */
+export function readKnowledgeEntries(sources = KNOWLEDGE_SOURCES) {
   const entries = []
   const seen = new Set()
   for (const source of sources) {
@@ -50,11 +75,12 @@ function readKnowledgeEntries(sources = KNOWLEDGE_SOURCES) {
       if (seen.has(id)) throw new Error(`knowledge: duplicate topic identifier "${id}" across bundled resource directories`)
       seen.add(id)
       const path = join(source.dir, file)
-      let content
-      try { content = readFileSync(path, "utf8") }
+      let raw
+      try { raw = readFileSync(path, "utf8") }
       catch (error) { throw new Error(`knowledge: topic "${id}" is unavailable at ${path} — ${error.message}`, { cause: error }) }
-      const title = content.match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim() || id
-      entries.push({ id, title, content, kind: source.kind })
+      const { aliases, body } = splitAliasDeclaration(id, raw)
+      const title = body.match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim() || id
+      entries.push({ id, title, content: body, aliases, kind: source.kind })
     }
   }
   return entries.sort((a, b) => a.id.localeCompare(b.id))

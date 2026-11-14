@@ -1,3 +1,4 @@
+aliases: 工具纪律, 工具选择, 检索优先级
 ## Tool discipline
 ### Search tool priority
 **Check the tool table before any search**: MCP search tools (`*_web_search*` / `*_search_prime` etc.) are PRIMARY for technical verification and general search

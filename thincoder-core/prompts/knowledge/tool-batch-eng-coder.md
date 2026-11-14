@@ -1,3 +1,4 @@
+aliases: 批次档, 实施记录, 工程实施
 Three steps: `append` (add text to the END of §5), `edit` (replace one anchored range inside it), `status` (your section's status line).
 
 The record is the one bound to this spawn; its path arrives with the spawn, so there is no path parameter — one record serves one concurrent spawn, and yours is the in-flight one you were given.

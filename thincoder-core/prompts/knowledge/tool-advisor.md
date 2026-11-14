@@ -1,3 +1,4 @@
+aliases: 评审, 顾问, 设计评审, 代码评审
 `type` is REQUIRED — one of exactly two values, no default and no silent fallback.
 
 - `type="design"` — design review: reviews design / requirement documents BEFORE implementation. Pass `documents=[...]` and `batchDoc` — the batch record this review belongs to. **`batchDoc` is required**: a design review without it is refused before launch.

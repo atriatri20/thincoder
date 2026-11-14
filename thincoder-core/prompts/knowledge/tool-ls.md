@@ -1,3 +1,4 @@
+aliases: 目录, 列目录
 Directories listed first. Use to see what a directory contains (glob only matches files).
 
 **Route to ls instead of bash:** `dir /b` / `ls` / `dir` → ls. Listing a directory is a read — never shell out for it.

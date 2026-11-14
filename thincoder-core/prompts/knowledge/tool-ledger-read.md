@@ -1,3 +1,4 @@
+aliases: 台账, 只读, 待办查询
 `query` returns filtered rows, `count` returns how many. Nothing here adds, moves or settles a row.
 
 A row is one requirement point or one piece of engineering debt. The six states are `待讨论` / `待设计` / `在途` / `待核销` / `已核销` / `已废弃`; `status` filters to one of them.

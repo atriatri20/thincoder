@@ -1,3 +1,4 @@
+aliases: 联网搜索, 网页搜索, 搜索
 DeepSeek results also carry a `date · authority (0-4) · rerank (0-3)` line and a long summary.
 
 Search goes to DeepSeek when a DeepSeek provider is configured, otherwise to Tavily when a key is set, otherwise to Bing - `websearch.backend: "local"` takes DeepSeek out of the chain.

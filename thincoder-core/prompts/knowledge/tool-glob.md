@@ -1,3 +1,4 @@
+aliases: 文件匹配, 找文件, 通配
 Returns matching paths (relative to the search path), sorted, capped at 1000. Use it to discover file structure; use `grep` to search file contents.
 
 Parameters:

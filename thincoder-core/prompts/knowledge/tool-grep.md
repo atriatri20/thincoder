@@ -1,3 +1,4 @@
+aliases: 搜索内容, 正则, 查找文本
 **Route to grep instead of bash:** `findstr /c:"pat" file` / `grep -rn pat .` → grep. Searching file contents is a read - never shell out for it.
 
 Parameters:

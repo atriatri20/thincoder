@@ -1,3 +1,4 @@
+aliases: 定义, 引用, 符号, 代码导航
 Use this to understand code structure without grep-guessing function locations or type shapes. Find files with glob / repo_outline — use lsp for definition / references / diagnostics
 
 Parameters:

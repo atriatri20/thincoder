@@ -1,3 +1,4 @@
+aliases: 批次档, 评审轮次, 评审结论
 Three steps: `append` (add a round to the END of §3), `edit` (replace one anchored range inside it), `status` (your section's status line).
 
 The record is the one bound to this review instance; its path arrives with the instance key, so there is no path parameter.

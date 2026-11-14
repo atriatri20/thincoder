@@ -1,3 +1,4 @@
+aliases: 文档图, 锚点图, 引用关系
 The graph is stored as edges in the same SQLite file as the ledger (`doc_edges` beside `items`), so there is no second store to keep in step.
 
 Edges are collected by the same per-line pass that `doc_check` already runs over a document — one parser, two consumers — so an edge never disagrees with a pointer verdict.

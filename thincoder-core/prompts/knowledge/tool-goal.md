@@ -1,3 +1,4 @@
+aliases: 目标, 任务目标
 action='set': create or replace the goal — must have a verifiable completion criterion (a machine-checkable proof, not vague effort).
 
 action='complete': mark achieved — only after the criterion's check has actually passed.

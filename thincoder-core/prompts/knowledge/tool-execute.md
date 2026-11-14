@@ -1,3 +1,4 @@
+aliases: 执行脚本, 运行代码, node
 The child is a pure node ESM environment: top-level `await` and dynamic `import()` are available, and no globals are injected.
 
 File reads/writes/searches belong to the dedicated read/ls/glob/grep/write/edit tools — not to execute. If a script genuinely needs fs/path, `import` the `node:` module inside the code (one explicit import line).

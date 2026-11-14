@@ -1,3 +1,4 @@
+aliases: 语法检查, 静态检查
 Parameters:
 - path: File to check (default: most recently modified file)
 - full: Run the full language-aware cascade instead of just node --check (default false)

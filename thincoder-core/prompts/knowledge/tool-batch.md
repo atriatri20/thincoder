@@ -1,3 +1,4 @@
+aliases: 批次档, 批次记录, 任务书
 The author has two actions on that one section — `append` adds text at its end, `edit` rewrites its lines in place — and the section's status line has a single writer, `status`.
 
 Writing a record is never silent: every write runs the document-check gate first and can be refused. A pre-write refusal leaves the file byte-for-byte unchanged (`Nothing was written.`); a later failure rolls the record back, or names the rollback failure and points at `check`.

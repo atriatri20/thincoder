@@ -1,3 +1,4 @@
+aliases: 编辑, 改档, 修改文件
 Two targeting forms (mutually exclusive — use one):
 
 ① line-based: `line: N` replaces that single line, `startLine: N, endLine: M` replaces the inclusive 1-based line range — no old_string needed when you know the line number; give new_string to replace, or OMIT new_string to delete the line/range;

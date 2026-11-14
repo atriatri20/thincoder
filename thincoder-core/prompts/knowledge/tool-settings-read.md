@@ -1,3 +1,4 @@
+aliases: 配置, 只读配置
 Nothing here writes: no key is written or cleared.
 
 Two actions: `list` (all keys and values, flattened) and `get <key>` — dot paths into config.json, at any nesting.

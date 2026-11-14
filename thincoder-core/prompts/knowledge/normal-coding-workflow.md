@@ -1,3 +1,4 @@
+aliases: 编码流程, 改代码, 开发流程
 ## Coding workflow — before you write any code
 
 ### First step of any work: survey what already exists (existing-design check)

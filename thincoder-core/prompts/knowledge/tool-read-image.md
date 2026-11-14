@@ -1,3 +1,4 @@
+aliases: 图片, 看图, 截图
 Use this for screenshots, UI mockups, diagrams, or any visual content: the model only sees images through this tool, never by reading a file.
 
 Parameters:

@@ -1,3 +1,4 @@
+aliases: 记忆, 长期记忆, 存记忆
 The action parameter picks the operation:
 - search — find knowledge saved in previous sessions; each result row carries [layer] + entry id (the id's prefix = the layer)
 - put — save knowledge for future sessions; type = rule (coding standards) / knowledge (project facts) / decision (architecture decisions) / pattern (debugging/workflow patterns)
