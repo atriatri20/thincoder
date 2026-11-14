@@ -15,7 +15,8 @@ Returns a JSON array in chronological order:
 [{ts, role, name?, tool_call_id?, content (≈500 chars, truncated marker), tool_calls ([{name, arguments}] - arguments capped at 300 chars)}]
 ```
 
-Messages without `ts` return `ts: null`. `content` is truncated - the full text is in the session file.
+Messages without `ts` return `ts: null`. `content` is truncated to ≈500 chars, and the marker states what is actually retrievable -
+`user` / `assistant` bodies: the full text is in the session file; `tool` results: the session file keeps only those first 500 chars, so re-run the tool if you need more.
 
 Cross-session (`path`, optional): a session file path deep-queries THAT session with the same filters (a relative path resolves against the project cwd). A session too large to deep-query is refused as `session too large`.
 

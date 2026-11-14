@@ -136,7 +136,7 @@ test('CLI 1-2 边界：一轮两个工具调用后继续对话 —— 两个结�
   assertFixedOverheadOverLine(s.endpoint)
 })
 
-test('CLI 1-3 边界：关进程重开同一会话，历史从盘回放后继续 —— 回复接上新问题，无 400（跨轮机读投影：重开的请求带请求 ∥ 回复 ∥ 任务状态，不再带工具过程）', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
+test('CLI 1-3 边界：关进程重开同一会话，历史从盘回放后继续 —— 回复接上新问题，无 400（跨轮机读投影：重开的请求带请求 ∥ 最近两轮的工具段 ∥ 回复 ∥ 任务状态）', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
   const s = await scene(t, {
     files: { "note.txt": "PINEAPPLE-42\n" },
     calls: [{ id: "toolu_g3", name: "read", input: { path: "note.txt" } }],
@@ -164,12 +164,13 @@ test('CLI 1-3 边界：关进程重开同一会话，历史从盘回放后继续
   assert.equal(s.endpoint.rejections.length - rejectionsBefore, 0, `第二程无 role 类 400：${s.endpoint.rejections.slice(rejectionsBefore).join("｜")}`)
   assert.ok(s.endpoint.requests.length > requestsBefore, "第二程确实向模型发了请求（回放的历史 + 新问题）")
 
-  // 新跨轮语义（CONTEXT-COMPACTION §1.1）：机读线只带上一程的用户请求、最终回复与任务状态——
-  // 原始工具过程不再常驻注入（回查走 `read_history`，见 CLI 1-5）。
+  // 跨轮机读投影（CONTEXT-COMPACTION §1.1）：机读线带上一程的用户请求、工具段、最终回复与任务状态——
+  // 本场景只有一程，它就在保留窗内，工具段与结果成组跟回，且是原文（机读线不过 slim）。
   const reopened = s.endpoint.requests.slice(requestsBefore).filter((r) => !r.summary)[0]
   const wire = JSON.stringify(reopened.body.messages)
-  assert.ok(!wire.includes('"tool_result"'), `重开后的请求不得再装上一程的工具结果：${wire.slice(0, 1500)}`)
-  assert.ok(!wire.includes('"tool_use"'), "也不得装上一程的工具调用")
+  assert.ok(wire.includes('"tool_result"'), `重开后的请求应带上保留窗内的工具结果：${wire.slice(0, 1500)}`)
+  assert.ok(wire.includes('"tool_use"'), "也应带上它的工具调用（成组保留，不留孤立配对）")
+  assert.ok(wire.includes("PINEAPPLE-42"), "工具结果正文原文在")
   assert.ok(wire.includes("Read note.txt and tell me what it says."), "重开后的请求应带上一程的用户请求")
   assert.ok(wire.includes("Answer to"), "重开后的请求应带上一程的最终回复")
   assert.ok(wire.includes("[Task state]"), "重开后的请求应带任务状态")

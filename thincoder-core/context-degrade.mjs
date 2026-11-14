@@ -8,6 +8,8 @@
 import { collectStaleToolOutputs } from "./token-window.mjs"
 // 保护尾跟着**有效窗口**走（`CONTEXT-COMPACTION.md` §2.1 / §4）：档位自 agent 现取，不靠参数透传。
 import { resolveWorkMode } from "./config.mjs"
+// 保留窗起点（#2431）：prune 的合格集与压缩同一个切点——保留窗内那几轮的工具输出不被选中（§1.2）。
+import { retentionWindowStart } from "./agent/turn-projection.mjs"
 
 /** prune stub 逐字（§6.16.3）：只给「已清理 + 原长度 + 重跑路径」——prune 是**删**不是摘要，不声称可复原。 */
 const pruneStub = (chars) => `[pruned: stale tool output dropped (${chars} chars) — re-run the tool if you need it again.]`
@@ -20,7 +22,7 @@ const pruneStub = (chars) => `[pruned: stale tool output dropped (${chars} chars
  */
 export function pruneStaleToolOutputs(agent) {
   const history = agent.history
-  const stale = collectStaleToolOutputs(history, agent.provider, resolveWorkMode(agent.config?.agent))
+  const stale = collectStaleToolOutputs(history, agent.provider, resolveWorkMode(agent.config?.agent), retentionWindowStart(agent))
   const counts = {
     pruned: stale.indexes.length,
     freed: stale.tokens,

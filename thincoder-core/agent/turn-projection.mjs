@@ -1,22 +1,34 @@
 /**
- * agent/turn-projection.mjs — 跨轮机读历史投影（设计 = `docs/core/design/CONTEXT-COMPACTION.md` §1.1 ∥
- * `docs/core/design/SESSION.md` §2；批次 = `docs/batches/2026-11-13-turn-history-projection.md`；台账 #2395）。
+ * agent/turn-projection.mjs — 跨轮机读历史投影（设计 = `docs/core/design/CONTEXT-COMPACTION.md` §1.1 ∥ §1.2 ∥
+ * `docs/core/design/SESSION.md` §2；批次 = `docs/batches/2026-11-14-tool-output-retention.md`；台账 #2431）。
  *
- * 一轮完成后的机读形态 = 三条消息：用户请求 ∥ 最终回复 ∥ 任务状态。该轮的工具过程
- * （assistant tool_calls 与其 tool 结果）只在**本轮**内存线里原样保留（本轮内第二次请求照旧看得到），
- * 跨轮不再装入。人读线（`_fullHistory` ∥ 记录 sidecar）不动，`read_history` 仍可取回原始工具结果。
+ * 一轮完成后的机读形态 = 一条轮记录 `{ userRequest, finalResponse, taskState, toolProcess? }`。最近 2 轮
+ * （每轮 = 一次用户指令到执行完成，其间多次模型↔工具往返属于同一轮）另带 `toolProcess`——该轮原始段里
+ * 「第一次 `assistant(tool_calls)` 起、到最后一个 `tool` 结果止」的连续切片，投影时按消息逐条展开；
+ * 第 3 轮及更早只剩「用户请求 ∥ 最终回复 ∥ 任务状态」。人读线（记录 sidecar）不动；但长于 500 字符的工具结果
+ * 在它上面只留前段，`read_history` 对这些消息也只回前 500 字符（射程与标记见 `SESSION.md` §5）——需要原文就
+ * 重跑工具，两者都不许诺「原文仍在」。
  *
- * 三面同尺（这是本档存在的理由——**同一把尺**），账本与事实单列在 `turn-task-state.mjs`：
- *  - 折叠 `turnFoldPlan` ∥ `applyTurnFold` ∥ `registerFoldMarks`：按消息身份定位本轮原始段，替换为三条消息
+ * 工具段两道预算（§1.2，只做一次——投影 ∥ 保存 ∥ 恢复读同一份）：单条字符 ∥ 单轮 token；越限各带标记，
+ * 不靠沉默。保留窗与 prune 的保护尾是同一个尾：`retentionWindowStart` 供 `splitHistory` 的 `protectFrom`。
+ * 这一族（五个常量 ∥ 九个函数）实现在 `turn-tool-process.mjs`，本档按名取用并在原路径 re-export。
+ *
+ * 三面同尺（这是本档存在的理由——**同一把尺**），账本与事实单列在 `turn-task-state.mjs`，工具过程保留族单列在
+ * `turn-tool-process.mjs`：
+ *  - 折叠 `turnFoldPlan` ∥ `applyTurnFold` ∥ `registerFoldMarks`：按消息身份定位本轮原始段，替换为投影消息
  *    ——`beginRun`（下一轮起点）就地折叠并登记折叠身份（压缩按那张账判覆盖条数）；
- *  - 投影 `buildTurnRecord` ∥ `turnRecordMessages` ∥ `projectTurns`：一轮 → 三条消息的成形（三面共用）；
+ *  - 投影 `buildTurnRecord` ∥ `turnRecordMessages` ∥ `projectTurns`：一轮 → 机读消息的成形（三面共用）；
  *  - 恢复 `restoreMachineFromTurns` ∥ `machineLineForSlot`：槽带 `turns` 时按同一段拼法重建机读线——
  *    前者是读向（先做配对收口），后者是 `saveSession` 的写向（不改内存线的数组与对象）。
  * 装配接缝 `registerCompletedTurn` ∥ `applyTurnProjection`：轮边界上取用并清空账本、把待折段就地折掉。
  *
  * 为什么账本与事实搬到 `turn-task-state.mjs`：四块同住一档时内容行越过 500 的档位线（标准
- * `docs/core/standards/CODE-TIER.md` §3），而「一轮 → 三条消息」的投影判据只该有一处——拆档只动文件归属，
+ * `docs/core/standards/CODE-TIER.md` §2.1），而「一轮 → 三条消息」的投影判据只该有一处——拆档只动文件归属，
  * 不动判据；搬走的符号在本档原路径 re-export，调用方零改。
+ *
+ * 为什么工具过程保留族搬到 `turn-tool-process.mjs`：同一把档位尺——保留窗、两道预算与切片同住本档时内容行照样
+ * 越过那条线，而它们与投影三面不是一件事。拆法同上：只动文件归属，五个常量值 ∥ 九个函数体 ∥ 注释语义逐字照搬。
+ * 搬走的符号同样在本档原路径 re-export，既有 import 一字不改。
  *
  * 机读线在槽里分三段存（`SESSION.md` §2）：`compactCheckpoint`（摘要注记 + 已覆盖的轮记录条数）∥ `turns` ∥
  * `activeRaw`（没有轮记录可依的在途 ∥ 异常段）。保存与恢复两个方向是同一段拼法（`machineLineForSlot` ∥
@@ -33,23 +45,40 @@ export { TASK_STATE_MARK, buildTurnTaskState, createTurnLedger, noteTurnRunError
 // 可回查位置（`evidence` 面）：会话事件日志按天分档——路径取自核日志单源，本档不自造路径。
 // 折叠 no-op 的留痕（CONTEXT-COMPACTION.md §1.1）走同一通道。
 import { logEvent, todayLogPath } from "../log.mjs"
+// 工具过程保留族（五个常量 ∥ 九个函数）住在 `turn-tool-process.mjs`——拆档理由见该档头注（500 档位线 + 只搬不改）。
+// 搬走的符号在本档原路径 re-export：拆档不动调用方，三个导入方（`context.mjs` ∥ `context-degrade.mjs` ∥
+// `agent-tools/context.mjs`）一字不改。装配接缝仍在本档，故本档也按名取用它其中几个。
+import { TOOL_PROCESS_WINDOW, dropToolProcessFromLine, foldHintOf, toolProcessLostOf, toolProcessOf } from "./turn-tool-process.mjs"
+export {
+  FOLD_HINT_TOKENS, TOOL_PROCESS_DROP_MARK, TOOL_PROCESS_MSG_CHARS, TOOL_PROCESS_TURN_TOKENS,
+  TOOL_PROCESS_WINDOW, clampToolMessage, dropToolProcessFromLine, foldHintOf, isCallGroupStart,
+  retentionWindowStart, toolProcessLostOf, toolProcessOf, toolSliceOf, trimToolProcess,
+} from "./turn-tool-process.mjs"
 
 // ────────────────────────────── 轮记录与投影 ──────────────────────────────
 
-/** 轮记录成形（`{ userRequest, finalResponse, taskState }`——槽 `turns` 逐项形）。 */
+/** 轮记录成形（`{ userRequest, finalResponse, taskState, toolProcess? }`——槽 `turns` 逐项形）。
+ *  工具段只挂在保留窗内的轮记录上（§1.1）：空段不带键——键缺 = 这一轮的工具过程不在机读线上。 */
 export function buildTurnRecord(ledger, facts = {}) {
   const finalResponse = capText(facts.finalResponse) || null
-  return {
+  const record = {
     userRequest: ledger?.userRequest ?? null,
     finalResponse,
     taskState: buildTurnTaskState(ledger, facts),
   }
+  if (Array.isArray(facts.toolProcess) && facts.toolProcess.length > 0) record.toolProcess = facts.toolProcess
+  return record
 }
 
-/** 一条轮记录的机读消息（用户请求 ∥ 最终回复 ∥ 任务状态——顺序即线上顺序）。 */
+/** 一条轮记录的机读消息（用户请求 ∥ 工具段切片 ∥ 最终回复 ∥ 任务状态——顺序即线上顺序）。
+ *  工具段按消息逐条展开：切片里有几条发几条（§1.1）。工具段消息按**引用**发出——折叠把它们插进机读线之后，
+ *  窗口裁切要按身份把它们再摘下来（`dropToolProcessFromLine`）；读向只读不写，引用不会跨面改对象。 */
 export function turnRecordMessages(record) {
   const out = []
   if (str(record?.userRequest)) out.push({ role: "user", content: record.userRequest })
+  for (const m of Array.isArray(record?.toolProcess) ? record.toolProcess : []) {
+    if (m && typeof m === "object") out.push(m)
+  }
   if (str(record?.finalResponse)) out.push({ role: "assistant", content: record.finalResponse })
   const state = taskStateText(record?.taskState)
   // 任务状态是机器面（人读线已保留原始过程）——`transient` 只影响人读线落盘，发送前被剥离。
@@ -168,17 +197,41 @@ export function findTurnStartIndex(history, input, from) {
 
 // ────────────────────────────── 恢复 ──────────────────────────────
 
+/** 槽里 `toolProcess` 的归一（白名单保留该键——§2：存下去的形状读不回来，等于没存）。盘上是用户数据，
+ *  本函数不抛：只认消息面字段，坏项丢弃；全丢光 ⇒ `null`（= 键缺，与「已折叠」同义）。 */
+function normalizeToolProcess(value) {
+  if (!Array.isArray(value)) return null
+  const out = []
+  for (const m of value) {
+    if (!m || typeof m !== "object" || Array.isArray(m)) continue
+    if (typeof m.role !== "string" || !m.role) continue
+    const copy = { role: m.role }
+    if (typeof m.content === "string") copy.content = m.content
+    else if (Array.isArray(m.content)) copy.content = m.content
+    if (typeof m.reasoning_content === "string") copy.reasoning_content = m.reasoning_content
+    if (typeof m.name === "string") copy.name = m.name
+    if (typeof m.tool_call_id === "string") copy.tool_call_id = m.tool_call_id
+    if (Array.isArray(m.tool_calls) && m.tool_calls.length > 0) copy.tool_calls = m.tool_calls
+    if (typeof m.ts === "number") copy.ts = m.ts
+    out.push(copy)
+  }
+  return out.length > 0 ? out : null
+}
+
 /** 槽里的 `turns` 归一（旧槽缺键 ⇒ `[]`；非数组项丢弃——盘上是用户数据，不抛）。 */
 export function normalizeSlotTurns(turns) {
   if (!Array.isArray(turns)) return []
   const out = []
   for (const t of turns) {
     if (!t || typeof t !== "object") continue
-    out.push({
+    const record = {
       userRequest: str(t.userRequest) || null,
       finalResponse: str(t.finalResponse) || null,
       taskState: t.taskState && typeof t.taskState === "object" ? t.taskState : null,
-    })
+    }
+    const toolProcess = normalizeToolProcess(t.toolProcess)
+    if (toolProcess) record.toolProcess = toolProcess
+    out.push(record)
   }
   return out
 }
@@ -269,10 +322,23 @@ function logsPathOrNull() {
  *
  * 「本轮原始段」= `history[_turnStartLen, _turnResponseEnd)`：终点在 `runTurnLoop` 返回处采集——
  * 回合收尾注入的异步结果（子代理报告）落在此后，属于下一轮要看见的上下文，不随折叠丢弃。
+ *
+ * 工具段两步（`CONTEXT-COMPACTION.md` §1.1 ∥ §1.2）都在这里做一次：
+ *  ① 切片 + 两道预算（单条字符 ∥ 单轮 token），结果写进记录——投影 ∥ 保存 ∥ 恢复读同一份；
+ *  ② 本轮的记录把窗口外最旧那一轮的 `toolProcess` 挤出去：删键 + 按身份摘除机读线上那几条消息。
+ * 被折掉的量记在**触发它的这一轮**的任务状态上（`folded`，低于 `FOLD_HINT_TOKENS` 不出现）。
  */
 export function registerCompletedTurn(agent, { finalResponse = null, status = "completed" } = {}) {
   const ledger = agent?._turnLedger
   if (!ledger) return null
+  const history = Array.isArray(agent.history) ? agent.history : []
+  const end = Math.min(Number.isInteger(agent._turnResponseEnd) ? agent._turnResponseEnd : history.length, history.length)
+  const start = Math.min(Number.isInteger(agent._turnStartLen) ? agent._turnStartLen : 0, end)
+  const segment = history.slice(start, end)
+  const tool = toolProcessOf(segment)
+  if (!Array.isArray(agent._turns)) agent._turns = []
+  // 窗口外最旧那一轮：推入本记录之后它就是第 3 轮（`TOOL_PROCESS_WINDOW` 之外的第一个）
+  const expiring = agent._turns[agent._turns.length - TOOL_PROCESS_WINDOW] ?? null
   const record = buildTurnRecord(ledger, {
     finalResponse,
     status,
@@ -287,17 +353,19 @@ export function registerCompletedTurn(agent, { finalResponse = null, status = "c
     slotFile: agent._recordStore?.slotFile ?? null,
     batchDoc: agent._batchDoc ?? null,
     logsPath: logsPathOrNull(),
+    toolProcess: tool.messages ?? [],
+    folded: foldHintOf(tool.lost, toolProcessLostOf(expiring)),
   })
-  const history = Array.isArray(agent.history) ? agent.history : []
-  const end = Math.min(Number.isInteger(agent._turnResponseEnd) ? agent._turnResponseEnd : history.length, history.length)
-  const start = Math.min(Number.isInteger(agent._turnStartLen) ? agent._turnStartLen : 0, end)
-  const msgs = new Set(history.slice(start, end))
-  if (!Array.isArray(agent._turns)) agent._turns = []
+  const msgs = new Set(segment)
   agent._turns.push(record)
   agent._turnPending = msgs.size > 0 ? { record, msgs } : null
   agent._turnLedger = null
   agent._turnStartLen = null
   agent._turnResponseEnd = null
+  if (expiring && Array.isArray(expiring.toolProcess)) {
+    dropToolProcessFromLine(agent, expiring)
+    delete expiring.toolProcess
+  }
   return record
 }
 

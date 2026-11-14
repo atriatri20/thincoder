@@ -210,8 +210,10 @@ function windowReadings(stats) {
 test("CLI 50-6 tiny 档切进切出，窗口分母随档变化", { timeout: 180_000 }, async (t) => {
   const root = makeProject("50-6")
   // 三发 stats：起会话（normal）· `/tiny` 后 · `/normal` 后——每发工具回合占两次对话请求，故按请求序号派单。
-  const statsCall = [{ id: "ctx_stats", name: "context", input: { action: "stats" } }]
-  const endpoint = await fakeAnthropic({ callsAt: { 1: statsCall, 3: statsCall, 5: statsCall } })
+  // 每次调用用**不同**的调用 id：真实上游一次调用一个 id，同 id 重复会让配对面无法区分哪一条结果属于哪次调用
+  // （保留窗把上一轮的工具结果留在机读线上之后，同 id 就会把本轮结果挤成占位符）。
+  const statsCallAt = (n) => [{ id: `ctx_stats_${n}`, name: "context", input: { action: "stats" } }]
+  const endpoint = await fakeAnthropic({ callsAt: { 1: statsCallAt(1), 3: statsCallAt(3), 5: statsCallAt(5) } })
   const store = mkdtempSync(join(tmpdir(), "tiny-int-store-"))
   _setSessionsDirForTest(store)
   t.after(async () => {

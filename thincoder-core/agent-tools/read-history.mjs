@@ -19,9 +19,11 @@
  *
  * Returns a JSON array in chronological order. Every message without ts comes
  * back as ts:null and can never match a time window (legacy sessions). Content
- * is truncated to ~500 chars with an explicit marker — full text lives in the
- * session file. assistant tool_calls come back as [{name, arguments}] with the
- * stored argument string capped at 300 chars (matches the stored precision).
+ * is truncated to ~500 chars with an explicit marker that states what is actually
+ * retrievable: for `tool` results the session file stores only those first 500
+ * chars (re-run the tool for more), for `user` / `assistant` text the full text
+ * is in the session file. assistant tool_calls come back as [{name, arguments}]
+ * with the stored argument string capped at 300 chars (matches the stored precision).
  *
  * Cross-session (SESSION.md §6.13 D-R19a + §6.19 D-SE47 — 索引优先 + 主存回落):
  * path = a session file path (absolute, or relative to the project cwd) → when the derived
@@ -78,16 +80,21 @@ function messageText(m) {
   return ""
 }
 
-/** Truncate long content (~500 chars) with an explicit marker. The cut never splits a UTF-16
- *  surrogate pair (emoji etc.) — a lone high surrogate in tool output would be an eyesore at
- *  minimum; the send layer sanitizes it anyway, but clean output costs nothing
- *  (thincoder-core/text-budget.mjs `safeSliceUTF16` same rule). */
-function truncateContent(text) {
+/** Truncate long content (~500 chars) with an explicit marker whose wording is **true for the role**
+ *  (`SESSION.md` §5 取回面标记条): on the human line a `tool` result is stored as the first 500 chars
+ *  (`slimForDisplay`), so the session file holds no more than what already came back — “full text is in
+ *  the session file” would be a promise nobody can keep, and a model that believes it stops re-running
+ *  the tool. `user` / `assistant` bodies are never slimmed, so that promise still holds there.
+ *  The cut never splits a UTF-16 surrogate pair (emoji etc.) — `text-budget.mjs` `safeSliceUTF16` same rule. */
+function truncateContent(text, role) {
   const t = String(text ?? "")
   if (t.length <= CONTENT_CAP) return t
   let end = CONTENT_CAP
   if (t.charCodeAt(end - 1) >= 0xd800 && t.charCodeAt(end - 1) <= 0xdbff) end-- // high surrogate at the cut → step back
-  return t.slice(0, end) + `\n… (truncated: ${t.length - end} chars — full text is in the session file)`
+  const where = role === "tool"
+    ? "the session file keeps only the first 500 chars of a tool result — re-run the tool if you need it"
+    : "full text is in the session file"
+  return t.slice(0, end) + `\n… (truncated: ${t.length - end} chars — ${where})`
 }
 
 /** Tool name across both stored shapes ({function:{name}} and flat {name}). */
@@ -124,7 +131,7 @@ function toEntry(m) {
   }
   if (m.name !== undefined) entry.name = m.name
   if (m.tool_call_id !== undefined) entry.tool_call_id = m.tool_call_id
-  entry.content = truncateContent(messageText(m))
+  entry.content = truncateContent(messageText(m), m.role)
   if (Array.isArray(m.tool_calls) && m.tool_calls.length > 0) {
     const calls = toolCallEntries(m.tool_calls)
     if (calls.length > 0) entry.tool_calls = calls
@@ -259,7 +266,7 @@ function indexEntry(r) {
   const entry = { ts: typeof r.ts === "number" ? r.ts : null, role: r.role ?? null }
   if (r.name !== undefined && r.name !== null) entry.name = r.name
   if (r.tool_call_id !== undefined && r.tool_call_id !== null) entry.tool_call_id = r.tool_call_id
-  entry.content = truncateContent(r.content ?? "")
+  entry.content = truncateContent(r.content ?? "", r.role)
   if (Array.isArray(r.tool_calls) && r.tool_calls.length > 0) entry.tool_calls = r.tool_calls
   return entry
 }

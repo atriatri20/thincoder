@@ -29,11 +29,13 @@ version 2 含 history、contextHistory 与轮记录 turns。saveSession 写当�
 | `turns` | 全部轮记录，含被摘要覆盖的那些（人读回查仍靠它） |
 | `activeRaw` | 在途 ∥ 异常段原文——没有轮记录可依的那一段，含未登记就结束的轮。`transient` 标记的消息落槽前丢弃（与 `contextHistory` 的过滤口径同一条） |
 
-`contextHistory` 仍是派生副本（三段按同一投影拼成，再丢弃 `transient` 标记的消息），留给旧读者与旧槽回退，恢复不再以它为权威。任务状态串已在 `turns` 里，发送层发送前也剥离 transient。投影出哪几条消息归 `CONTEXT-COMPACTION.md` §1.1。
+`contextHistory` 仍是派生副本（三段按同一投影拼成，再丢弃 `transient` 标记的消息），留给旧读者与旧槽回退，恢复不再以它为权威。工具段随投影一起进副本，不另存一份。任务状态串已在 `turns` 里，发送层发送前也剥离 transient。投影出哪几条消息归 `CONTEXT-COMPACTION.md` §1.1。
 
 在途段单列一键，不由 `contextHistory` 与投影长度的算术差推断：那份副本经过 transient 过滤，长度不等于投影长度；而按投影重建时整段消失，等于中途崩掉的轮在重启后凭据全无。
 
-`turns` 每项形如 `{ userRequest, finalResponse, taskState }`。新增字段对旧 v2 槽是可选面：`turns` 非空才作权威源，空数组与缺键同视为没有——这类槽按以下回退恢复，不报错也不丢历史。
+`turns` 每项形如 `{ userRequest, finalResponse, taskState }`，最近 2 轮另带 `toolProcess`（该轮的工具段；保留窗口、预算与标记归 `CONTEXT-COMPACTION.md` §1.1 ∥ §1.2）。`toolProcess` 缺键 = 该轮工具过程不在机读线上，与「已折叠」同义。机读线（`turns` 与 `contextHistory`）不经过 `slimForDisplay`，`toolProcess` 逐字落盘，只受 `CONTEXT-COMPACTION.md` §1.2 两条预算约束；截断面的射程见 §5。
+
+读回槽时 `turns` 逐项归一，白名单保留 `toolProcess`——存下去的形状读不回来，等于没存。新增字段对旧 v2 槽是可选面：`turns` 非空才作权威源，空数组与缺键同视为没有——这类槽按以下回退恢复，不报错也不丢历史。
 
 applySession 的恢复权威顺序单点定义如下：
 
@@ -73,6 +75,12 @@ switchToSlot 直接读目标槽；被活外人占用时按宿主当前拒绝或 
 ## 5. 记录 sidecar
 
 pushReal 在写双线时向绑定 recordStore 追加 slim 后人读条目。pushRecord 写 digest/subagent 记录但不进机读线。
+
+盘上这条人读线是 slim 后的形态：`tool` 内容截到 500 字符、`tool_calls.arguments` 截到 300 字符。截断面的射程 = 人读线：槽 JSON 的 `history` 键与记录 sidecar 都按 slim 存；机读线（槽里的 `turns` 与 `contextHistory`）逐字落盘，不在截断面上（预算见 `CONTEXT-COMPACTION.md` §1.2）。
+
+`history` 一词在这里有两个所指，读的时候先认它是哪一个：内存里的 `agent.history` 是机读线那一条（逐字），槽 JSON 的 `history` 键是人读线那一条（slim）。同一条工具结果在两个位置上长度不同，那不是矛盾，是两条线。
+
+取回面 `read_history` 的截断标记必须与这一事实一致：它截断的正是盘上已经没有的那部分，标记只报截了多少，不把读者指向一个取不到全文的位置——一句假承诺让模型以为自己能取回原文，它就不再重跑那个工具、也不再问。
 
 sidecar 使用定长 JSONL 段，只有末段追加。meta 含 segSize、identity 和 degraded。
 

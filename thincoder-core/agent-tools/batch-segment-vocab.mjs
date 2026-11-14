@@ -232,12 +232,34 @@ export function readBatchStatusLine(src) {
   return "unknown"
 }
 
-/** 机读清单块标题（**形单源** = `batch-skeleton.mjs` 的 §2 模板占位）：行首即认，尾随标点不计。 */
-const MACHINE_LIST_HEAD_RE = /^\s*\*\*受影响文件（机读清单）\*\*/
+/** 机读清单的**块名**（块头两形共同的名字；**字面单源**——块头判据与收口拒文的触发判据同取它）。 */
+export const MACHINE_LIST_HEAD_NAME = "受影响文件（机读清单）"
+/** 块头形 ①（**行首粗体**）：行首即认，尾随标点不计。 */
+const MACHINE_LIST_BOLD_RE = new RegExp(`^\\s*\\*\\*${MACHINE_LIST_HEAD_NAME}\\*\\*`)
 /** 表行判据（与 `doc-check/paragraph.mjs` 的 `isTableRow` 同形）。 */
 const MACHINE_LIST_ROW_RE = /^\s*\|.*\|\s*$/
-/** 子块界：一个块头只管到下一个标题行 ∥ 下一个块头。 */
+/** 标题行判据（块界；块头形 ② 也是标题行，认不认由标题文字定——见 `machineListHeadOf`）。 */
 const MACHINE_LIST_HEADING_RE = /^\s*#{1,6}\s/
+
+/**
+ * 块头识别（三值 · 纯函数）：`"bold"` ∥ `"heading"` ∥ `null`。**形单源** = `docs/core/design/DOC-CHECK.md` §8.1。
+ *  - `bold`：行首 `**<块名>**`（尾随文字不计）；
+ *  - `heading`：标题行，标题文字剥掉粗体符 ∥ 行内代码符 ∥ 句末冒号与空白后**以块名结尾**——
+ *    `### 受影响文件（机读清单）` ∥ `### 3. 受影响文件（机读清单）` 算；
+ *    `### 受影响文件（机读清单）的写法` 不算：那一行是在提它，不是在开这一块（收进来就会把紧随其后的
+ *    无关表读成机读清单）。
+ *  **不设参数缺省**：判据只收一行字符串，给什么判什么。「缺省按粗体算」一类兜底不写——块头判错的后果正是
+ *  静默零行，兜底只会把错误藏得更深。
+ * @param {string} line — 档内一行（不含行尾）
+ * @returns {"bold"|"heading"|null} 块头形 ∥ `null`（不是块头）
+ */
+export function machineListHeadOf(line) {
+  const s = String(line)
+  if (MACHINE_LIST_BOLD_RE.test(s)) return "bold"
+  if (!MACHINE_LIST_HEADING_RE.test(s)) return null
+  const title = s.replace(/^\s*#{1,6}\s+/, "").replace(/[`*]/g, "").trim().replace(/[：:]+\s*$/, "").trim()
+  return title.endsWith(MACHINE_LIST_HEAD_NAME) ? "heading" : null
+}
 /** 占位格判据（`<仓根相对路径>` 这类模板 token）：模板示例行不是记录。 */
 const MACHINE_LIST_PLACEHOLDER_RE = /^<.*>$/
 /** 分隔行判据（`|---|---|`）。 */
@@ -249,7 +271,7 @@ const MACHINE_LIST_HEADER_CELLS = Object.freeze(["档", "file"])
 const cellTextOf = (s) => String(s ?? "").replace(/[`*]/g, "").trim()
 
 /**
- * 解析 §2 的机读清单（纯函数 · 零 fs）：逐个 `**受影响文件（机读清单）**` 块头，取它**之后的第一张表**；
+ * 解析 §2 的机读清单（纯函数 · 零 fs）：逐个块头（两形，判据见 `machineListHeadOf`），取它**之后的第一张表**；
  * 找表范围止于下一个标题行 ∥ 下一个块头。看头不看行——同一份档里块头可能出现不止一次（先举例、再写真清单
  * 是正常写法），逐行跟读会把示例当档案。读不成 2–3 格的行跳过而不抛：那三个消费面都只为「点名哪些档」。
  * **2 格 ∥ 3 格都收，加列不移位**：第三列「行数」是追加的读数格，两格旧行照旧解得开（`reading` = 空串，
@@ -262,7 +284,7 @@ export function machineListRowsOf(src) {
   const lines = String(src ?? "").split(/\r?\n/)
   const rows = []
   lines.forEach((l, at) => {
-    if (!MACHINE_LIST_HEAD_RE.test(l)) return
+    if (machineListHeadOf(l) === null) return
     const table = firstMachineListTable(lines, at)
     if (table === null) return
     table.forEach((raw, k) => {
@@ -278,11 +300,13 @@ export function machineListRowsOf(src) {
   return rows
 }
 
-/** 块头之后的第一张表（连续表行；找不到 ⇒ `null`）——扫描范围止于下一个标题行 ∥ 下一个块头。 */
+/** 块头之后的第一张表（连续表行；找不到 ⇒ `null`）——扫描**自块头行的下一行**起，止于下一个标题行 ∥ 下一个块头。
+ *  为什么从下一行起：标题形的块头自己也是标题行，把块头行当块界，每一份小标题形清单都会读成零行。
+ *  前一块无表、后一块有表时前一块得 `null`、后一块得那一张表——不串块，同一张表不被两块各算一遍。 */
 function firstMachineListTable(lines, at) {
   for (let i = at + 1; i < lines.length; i++) {
     const raw = lines[i]
-    if (MACHINE_LIST_HEADING_RE.test(raw) || MACHINE_LIST_HEAD_RE.test(raw)) return null
+    if (MACHINE_LIST_HEADING_RE.test(raw) || machineListHeadOf(raw) !== null) return null
     if (!MACHINE_LIST_ROW_RE.test(raw)) continue // 空行 ∥ 围栏行 ∥ 散文：都不划块界
     const table = []
     for (let j = i; j < lines.length && MACHINE_LIST_ROW_RE.test(lines[j]); j++) table.push(lines[j])

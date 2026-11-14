@@ -10,6 +10,9 @@
  * 窗口面（2026-11-14 · tiny 档上限批）：本档一切窗口读数取**有效窗口** `effectiveWindow`（`window-policy.mjs` §2.1），
  * 不再直读 `providerSpec().context`——`workMode` 无缺省（本档的窗口消费入口 `keepTailSize` ∥ `tailBudgetTokens` ∥
  * `historyReading` ∥ `historyPercent` 各自拒收，`collectStaleToolOutputs` 透传同一拒绝；必填清单的单一出处 = §2.3）。
+ * 保留窗面（2026-11-14 · tool-output-retention 批）：`splitHistory` 的第四参 `protectFrom` 必填、无缺省——尾起点不晚于
+ * 保留窗起点，压缩中段 ∥ prune 合格集 ∥ 尾部预算三面同源受益（`CONTEXT-COMPACTION.md` §1.2）；起点由 `agent` 面的
+ * `retentionWindowStart` 按消息身份当刻解析，本档只收这个下标（纯函数面不读 agent 状态）。
  * 依赖面 = `provider/rate.mjs`（`estimateText` / `ESTIMATOR_VERSION`）+ `config.mjs`（`resolveWorkMode` ∥ 有效窗口 ∥
  * 预算族转口）——**零 import 环**。
  */
@@ -69,8 +72,16 @@ export function tailBudgetTokens(provider, workMode) {
  * `budgetTokens` (optional, §6.4④ D-T1): when the candidate's estimate exceeds it, the boundary moves
  * forward until the tail fits — never below the D-T2 floor (10 msgs, or the candidate itself when
  * the 40% cap made it < 10 — short history).
+ * `protectFrom` (REQUIRED, no default — `CONTEXT-COMPACTION.md` §1.2 保留窗与保护尾): an index the tail
+ * must never start after, so the tool-process retention window always sits inside the protected tail.
+ * The relation is structural, not arithmetic — it holds for every window size and call-group count.
+ * No retention window ⇒ the caller passes `history.length` (== no tightening). A default here would
+ * decide the caller's protection amount for it, the very silent trade-off §1.2 removes.
  */
-export function splitHistory(history, keepTail, budgetTokens = null) {
+export function splitHistory(history, keepTail, budgetTokens = null, protectFrom) {
+  if (!Number.isInteger(protectFrom) || protectFrom < 0) {
+    throw new Error(`splitHistory: \`protectFrom\` is required (a history index, no default) — pass the retention-window start, or history.length when there is no retention window; got ${JSON.stringify(protectFrom)}`)
+  }
   if (history.length <= KEEP_HEAD + keepTail + 1) return null
   let headEnd = KEEP_HEAD
   // head must not end with dangling tool_calls: when assistant declares tool_calls, all its tool results must stay in head.
@@ -86,6 +97,13 @@ export function splitHistory(history, keepTail, budgetTokens = null) {
     const floor = repairedTailStart(history, headEnd, history.length - TAIL_FLOOR_MESSAGES)
     if (floor > candidate) tailStart = tightenTailByBudget(history, candidate, floor, budgetTokens)
   }
+  // 保留窗结构保护（§1.2）：切点一处收紧，压缩中段、prune 合格集与尾部预算三面同源受益。
+  // 收紧后仍走一遍配对修复：修得对了它会把起点**往前挪**（成组的 assistant 被拉进尾，尾变长），
+  // 但遇上孤立的 `tool` 消息（前面找不到 owner）时它会把起点往后跨过去——那是尾变短的方向。
+  // 保留窗起点落在这种位置上不可能：折叠按组成对进出，切片里不会有孤立结果（§1.1）。
+  tailStart = repairedTailStart(history, headEnd, Math.min(tailStart, protectFrom))
+  // 保护尾吃掉全部中段 ⇒ 无可压（与「历史太短」同一支：全史即保护尾，见 `collectStaleToolOutputs`）
+  if (tailStart <= headEnd) return null
   return { headEnd, tailStart }
 }
 
@@ -282,10 +300,13 @@ export const PRUNE_MIN_TOKENS = 200
  * **短历史（无中段）⇒ 合格集为空**（no-op——§6.16.3 边界）。
  * `workMode` 无缺省（§2.3）：它向 `keepTailSize` ∥ `tailBudgetTokens` 透传——保护尾与压缩面同取有效窗口，
  * 否则 tiny 档下「可以 prune 的面」会比「会被摘掉的面」大一圈。
+ * `protectFrom` 无缺省（`CONTEXT-COMPACTION.md` §1.2）：保留窗起点，原样转给 `splitHistory` 的第四参。
+ * 拿不到保留窗的调用方传 `history.length`（= 不收紧）；留一个缺省就是把「保留窗内该不该被清」
+ * 静默定给调用方——这一档正是本批要保护的格。
  */
-export function collectStaleToolOutputs(history, provider, workMode) {
+export function collectStaleToolOutputs(history, provider, workMode, protectFrom) {
   const h = Array.isArray(history) ? history : []
-  const split = splitHistory(h, keepTailSize(provider, h.length, workMode), tailBudgetTokens(provider, workMode))
+  const split = splitHistory(h, keepTailSize(provider, h.length, workMode), tailBudgetTokens(provider, workMode), protectFrom)
   // 无中段（短历史）⇒ 可摘要面为空 ⇒ **全史即保护尾**（tailStart = 0——合格集必为空，同压缩面 no-op）
   const tailStart = split ? split.tailStart : 0
   const r = { indexes: [], tokens: 0, candidates: 0, tailKept: 0, belowMin: 0, tailCount: h.length - tailStart }

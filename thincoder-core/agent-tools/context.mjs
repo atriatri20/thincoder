@@ -9,6 +9,8 @@ import { contextUsage, estimateTokens, collectStaleToolOutputs, historyReading, 
 // 预算面 = **有效窗口**（`CONTEXT-COMPACTION.md` §2.2：stats ∥ 守卫 ∥ 压缩同一个预算对象）
 import { policyBudget, resolveWorkMode } from "../config.mjs"
 import { pruneStaleToolOutputs, COMPRESS_FAILURE_LIMIT } from "../context.mjs"
+// 保留窗起点（#2431）：stats 的 prunable 读数与 prune 本体同一个合格集——两处传同一值，不自成第二套（§1.2）。
+import { retentionWindowStart } from "../agent/turn-projection.mjs"
 import { slotPath } from "../session-slots.mjs"
 // #15 描述外置：描述文本单点 = tool-docs/context.md（DESC 单解析面，缺档抛错语义不变）
 import { DESC } from "../tools/shared.mjs"
@@ -77,7 +79,7 @@ function statsReport(agent) {
   // 档位自 agent 现取（§2.3 握有 agent 的面自取）：本档三处读数（有效窗口预算 ∥ 保护尾 ∥ 状态行分母）同取它。
   const workMode = resolveWorkMode(agent?.config?.agent)
   const usage = contextUsage(agent, agent?._ctxBasis?.overhead ?? {})
-  const stale = collectStaleToolOutputs(agent?.history ?? [], agent?.provider, workMode)
+  const stale = collectStaleToolOutputs(agent?.history ?? [], agent?.provider, workMode, retentionWindowStart(agent))
   let toolOut = 0
   let toolCount = 0
   for (const m of agent?.history ?? []) {
@@ -125,7 +127,10 @@ function statsReport(agent) {
   ].join("\n")
 }
 
-/** prune 回执（§6.16.3：计数 + 扫过候选 / 保护尾内保留 / 门槛下跳过 + 记录面零改）。 */
+/** prune 回执（§6.16.3：计数 + 扫过候选 / 保护尾内保留 / 门槛下跳过 + 记录面零改）。
+ *  可回查面（`CONTEXT-COMPACTION.md` §7.2）：只报释放量与跳过项、请模型需要时重跑工具，**不指向任何回查位置**——
+ *  落盘的只有人读线那一份、且长工具结果只留 slim 后的前段（射程见 `SESSION.md` §5），写「全文仍在盘上」是一句
+ *  兑现不了的话；内存里的全史随进程走，重启之后没有第二条通道。 */
 function pruneReceipt(agent) {
   const r = pruneStaleToolOutputs(agent)
   const scan = `(scanned ${r.candidates} tool result(s): ${r.tailKept} inside the protected tail, ${r.belowMin} below the ${PRUNE_MIN_TOKENS}-token floor)`
@@ -133,7 +138,8 @@ function pruneReceipt(agent) {
     return `Nothing to prune — no stale tool output matched ${scan}. The context and the session record are unchanged.`
   }
   return `Pruned ${r.pruned} stale tool output(s) ≈${r.freed} tokens freed ${scan}. ` +
-    `Tool pairing is intact and the session record is unchanged — the full text is still on disk; re-run a tool if you need its output again.`
+    `Tool pairing is intact and the session record is unchanged. The record keeps only the front segment of a long tool result, ` +
+    `so this text is not retrievable from it — re-run the tool if you need that output again.`
 }
 
 /**

@@ -5,16 +5,16 @@
 
 ## CLI 1. 对话里用工具，结果必须回到模型
 
-> 目的：工具结果原样回到模型，对话能接着走；轮内完整保留，跨轮只留用户请求、最终回复与任务状态。
-> 节注：回指 = `docs/core/requirements/PROVIDER.md`「图像与工具回放」∥ `docs/core/design/CONTEXT-COMPACTION.md` §1.1「轮次机读投影」；交互组件 = `thincoder-core/agent/turn-projection.mjs` 的 `machineLineForSlot` ∥ `activeTurnRaw` ∥ `restoreMachineFromTurns` ⟷ `thincoder-core/session-lifecycle.mjs` 的 `applySession` ⟷ 槽 JSON；进入口 = 真 CLI 里压缩后关进程重开同一会话再问一句；六态（行序）= 1-1 正常 · 1-2 边界 · 1-3 边界 · 1-4 边界（Google 原生工具回放）· 1-5 正常（跨轮机读投影）· 1-6 正常（压缩检查点恢复）。
+> 目的：工具结果原样回到模型，对话能接着走；轮内完整保留，跨轮保留最近两轮的工具过程，更早轮只留用户请求、最终回复与任务状态。
+> 节注：回指 = `docs/core/requirements/PROVIDER.md`「图像与工具回放」∥ `docs/core/design/CONTEXT-COMPACTION.md` §1.1「轮次机读投影」；交互组件 = `thincoder-core/agent/turn-projection.mjs` 的 `machineLineForSlot` ∥ `activeTurnRaw` ∥ `restoreMachineFromTurns` ∥ `thincoder-core/agent/turn-tool-process.mjs` 的 `retentionWindowStart` ⟷ `thincoder-core/session-lifecycle.mjs` 的 `applySession` ⟷ 槽 JSON；进入口 = 真 CLI 里压缩后关进程重开同一会话再问一句；六态（行序）= 1-1 正常 · 1-2 边界 · 1-3 边界 · 1-4 边界（Google 原生工具回放）· 1-5 正常（跨轮机读投影）· 1-6 正常（压缩检查点恢复）。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
 | 1-1 | 在 CLI 里让助手调用一次工具，然后继续同一段对话 | 会话流里有这次调用与它的结果，助手回复引用了结果，没有 400 | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
 | 1-2 | 同一轮里让助手连续调用两个工具，再继续对话 | 两个结果都回到模型，回复正常，没有 400 | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
-| 1-3 | 关掉进程，重开同一会话，历史回放后继续对话 | 回复接上新问题，没有 400；重开后的请求带上一程的用户请求、最终回复与任务状态，不再带上一程的工具过程 | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
+| 1-3 | 关掉进程，重开同一会话，历史回放后继续对话 | 回复接上新问题，没有 400；重开后的请求带上一程的用户请求、最近两轮的工具过程、最终回复与任务状态，工具调用与结果逐条配对 | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
 | 1-4 | 用本地假 Gemini 端点让真 CLI 调用 read，再继续对话 | 后续请求含带原签名的 functionCall 与含文件正文的 functionResponse；回复引用正文，无协议错误 | 无 | `test/integration/google-tool-roundtrip.test.mjs` |
-| 1-5 | 真 CLI 连续两轮对话：第一轮用一次工具，第二轮的工具结果回来后上游拒掉那次请求（该轮不登记、进程仍在），随关进程重开同一会话再问一句 | 重开后的请求仍带上一程已登记轮的用户请求、最终回复与任务状态，以及未登记那一段的原文（在途 ∥ 异常段不丢）；已登记轮的工具过程不再携带；恢复后经 `read_history` 仍可取回原始工具结果 | 无 | `test/integration/turn-history-projection.test.mjs` |
+| 1-5 | 真 CLI 连续三轮对话（每轮用一次工具），第四轮的工具结果回来后上游拒掉那次请求（该轮不登记、进程仍在），随关进程重开同一会话再问一句 | 重开后的请求带最近两轮（第 2、3 轮）的工具过程、每一轮的用户请求、最终回复与任务状态，以及未登记那一段的原文（在途 ∥ 异常段不丢）；第 3 轮及更早（第 1 轮）的工具过程不再携带；机读线上每条工具调用都有对应的结果；恢复后经 `read_history` 仍可取回更早轮的工具结果 | 无 | `test/integration/turn-history-projection.test.mjs` |
 | 1-6 | 真 CLI 里让上下文压过一次（本套件由模型主动调用 `context` 工具触发强制压缩：压缩线是 1M 窗格的 600K，固定开销（system + tools）只占其中一小段，自动阈值在本套件跑不到），再关进程重开同一会话问一句 | 重开后的请求以摘要注记开头，其后只装切割点之后的轮记录，不含被摘要轮的原文；压缩不重做（重开后首请求的 system ∥ tools 前缀与压缩后一次同形，摘要调用零新增）；被摘要轮仍可从 `read_history` 取回 | 无 | `test/integration/turn-history-projection.test.mjs` |
 
 ## CLI 3. 网页抓取的后端故障不外溢

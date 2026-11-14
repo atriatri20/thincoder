@@ -217,20 +217,22 @@ function evidenceOf({ slotFile, batchDoc, logsPath, changedFiles }) {
 
 /**
  * 组装本轮任务状态（设计 §1.1 表逐字段；事实来自运行记账，不由最终回复反推）。
- * 无工具活动的简单问答 ⇒ `null`（设计：「没有工具活动的简单问答允许 taskState 为空」）。
+ * 无工具活动的简单问答 ⇒ `null`（设计：「没有工具活动的简单问答允许 taskState 为空」）——
+ * 但真的折掉了东西时不空：`folded` 那一行是给人看的交代，没有别的面装它。
  *
  * @param {object} ledger — `createTurnLedger` 产物
- * @param {object} facts — `{ status, goal, tasks, touchedFiles, docRoots, cwd, slotFile, batchDoc, logsPath }`
+ * @param {object} facts — `{ status, goal, tasks, touchedFiles, docRoots, cwd, slotFile, batchDoc, logsPath, folded }`
  * @returns {object|null}
  */
 export function buildTurnTaskState(ledger, {
   status = "completed", goal = null, tasks = [], touchedFiles = [], docRoots = [], cwd = null,
-  slotFile = null, batchDoc = null, logsPath = null,
+  slotFile = null, batchDoc = null, logsPath = null, folded = null,
 } = {}) {
   if (!ledger || typeof ledger !== "object") return null
   const changedFiles = changedPathsOf(touchedFiles, cwd)
   const toolCalls = ledger.toolCalls ?? 0
-  if (toolCalls === 0 && changedFiles.length === 0 && (ledger.verification?.length ?? 0) === 0) return null
+  const foldedHint = folded && typeof folded === "object" ? folded : null
+  if (toolCalls === 0 && changedFiles.length === 0 && (ledger.verification?.length ?? 0) === 0 && !foldedHint) return null
   const changedDocs = changedDocsOf(touchedFiles, docRoots, cwd)
   const state = {
     objective: ledger.objective ? ledger.objective : null,
@@ -242,6 +244,8 @@ export function buildTurnTaskState(ledger, {
     blockedBy: blockedOf(goal, ledger),
   }
   if (changedDocs) state.changedDocs = changedDocs
+  // `folded`（§1.1 表末行 ∥ §1.2）：本回合真的离开机读线的工具过程量——阈值门在取形处（`turn-projection.mjs`）
+  if (foldedHint) state.folded = foldedHint
   return state
 }
 
@@ -260,6 +264,11 @@ export function taskStateText(taskState) {
   if (taskState.evidence?.length) rows.push(`evidence: ${taskState.evidence.join(" · ")}`)
   if (taskState.remaining?.length) rows.push(`remaining: ${taskState.remaining.join("; ")}`)
   if (taskState.blockedBy) rows.push(`blockedBy: ${taskState.blockedBy}`)
+  // 只报量，不指回查位置（§1.2：落盘只留 slim 后的前段，「全文可取」是一句兑现不了的话）
+  if (taskState.folded) {
+    const f = taskState.folded
+    rows.push(`folded: ${f.results} tool result(s) ~${f.tokens} tokens (${f.turns} turn(s), ${f.groups} call group(s))`)
+  }
   if (rows.length === 0) return null
   return `${TASK_STATE_MARK}\n${rows.join("\n")}`
 }

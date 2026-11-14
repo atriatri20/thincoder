@@ -10,10 +10,13 @@
  *   ① **读数支**（触发物 = 本批改动面里有在盘的码档——几乎每批都有）：每个这样的档，§2 机读清单里它那一行的
  *      第三列须带行读数，且 = 该档**在批起快照上**的内容行数（不是收口时盘上的长度：本批实施就是要改它）。
  *      快照里没有这一档 ⇒ 那一格只认 `新`；写数即拒。
+ *      **读数之前先判表形**：档全文出现块名、清单却解析出零行 ⇒ 一条专门拒文（`tierListUnreadableError`），
+ *      不逐档报缺行——「表形不对」与「漏写行」的下一步动作不同（口径 = `docs/core/design/DOC-CHECK.md` §8.4）。
  *   ② **越线方案支**（触发物 = 实测 > `fileSoftMax`）：越线档须带正向形分拆方案。
  *
  * **读数支的实质是「与基线一致」，不是「有没有数」**：只查有没有数，写个 1 也能过。
  * **「§2 缺块」仍不是拒因**：块缺时拒的是「每个在盘码档都缺它那一行读数」，不是「格式没写对」。
+ * 而「档里有它的名字、清单零行」不是缺行——那是表形不对，另出一条拒文（见 ①）。
  * 判的也不是代码长短（代码 > 800 仍由文档机检那一条判，本臂不碰）。
  *
  * 入参 `(src, root, changed, baseTextOf)`：`src` = 调用方已读的**写盘前全文**；
@@ -29,7 +32,7 @@
 import { readFileSync, statSync } from "node:fs"
 import { isAbsolute, relative, resolve } from "node:path"
 
-import { machineListRowsOf } from "./batch-segment-vocab.mjs"
+import { MACHINE_LIST_HEAD_NAME, machineListRowsOf } from "./batch-segment-vocab.mjs"
 
 /** 设计器硬线（> 即越线）：数值单源 = `docs/core/standards/CODE-TIER.md` §4（该档登记本常量）。 */
 const FILE_SOFT_MAX = 500
@@ -234,6 +237,25 @@ function readingFindingsOf(files, rows, root, baseTextOf) {
   return findings
 }
 
+/** 拒文（清单读不出行）：档里明明写着块名，解析面却一行都没有——那是表形不对，不是漏写行。
+ *  形单源 = `docs/core/design/DOC-CHECK.md` §8.4；块名取解析器那一份字面（`MACHINE_LIST_HEAD_NAME`）。 */
+function tierListUnreadableError(files, root) {
+  // 逐个一行、与逐档发现同形（`  <仓根相对> — <gap>`）：这一份的 gap 对每档相同——清单读不出行，就没有它的行可读
+  const list = files.map((f) => `  ${displayPath(f.abs, root)} — 清单读不出行，无行可读`).join("\n")
+  return "batch: §2 的机读清单读不出行（收口前置门 · tier-reading gate）— close refuses: " +
+    "the batch record carries the block name in its text, yet §2's machine-readable list parses to zero rows — " +
+    `档里有它的名字，清单却解析出零行，本批每个在盘码档就没有行可读:` +
+    `\n${list}\n` +
+    "为什么零行（三者任一不满足都读不出）：① 块头形态不在两种之内——可接受的两形 = 行首粗体 " +
+    "`**受影响文件（机读清单）**`，或同名标题行（`#{1,6}` 起头、标题文字以这个名字结尾，如 " +
+    "`### 受影响文件（机读清单）` ∥ `### 3. 受影响文件（机读清单）`）；" +
+    "`### 受影响文件（机读清单）的写法` 这类「在提它」的标题不在两形之内。" +
+    "② 表不在 2–3 列（4 格以上的行跳过）。" +
+    "③ 表行不连续——中间夹一个空行即截断，其后的行读不到；只剩表头行或全是 `<…>` 占位行同样是零行。" +
+    "要写什么：把块头改成两形之一，其下紧跟一张连续的 2–3 列表（`| 档 | 分拆方案 | 行数 |`），一行一档。" +
+    "本门只拒、不代改。Nothing was written."
+}
+
 /**
  * 收口前置门（第 ⑤ 臂 · 档位臂）：**两节一趟判完，一条拒文**。
  * 判序：读数支在前（缺数是更前一件缺件），越线方案支在后；两节的触发物不同，各自启动。
@@ -257,6 +279,11 @@ export function assertTierPlan(src, root, changed, baseTextOf) {
   const files = codeFilesOf(changed, root)
   // ① 读数支：没有在盘码档 ⇒ 这一半不启动（连 §2 都不解析）。
   const rows = files.length ? machineListRowsOf(src) : []
+  // ①-前 表形自诊断：先判表形再判读数——整份读不出行时，每一条逐档比对都只是同一个原因的回声。
+  // 三条件全从既有入参算得（码档非空 ∥ 清单零行 ∥ 档全文出现块名），不新增参数、不设开关。
+  if (files.length && rows.length === 0 && String(src ?? "").includes(MACHINE_LIST_HEAD_NAME)) {
+    throw new Error(tierListUnreadableError(files, root))
+  }
   const readingFindings = files.length ? readingFindingsOf(files, rows, root, baseTextOf) : []
   // ② 越线方案支：只在实测 > 设计时线时才查（`§2 缺块本身不是拒因` 照旧成立）。
   const planFindings = []

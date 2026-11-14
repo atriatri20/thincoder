@@ -19,7 +19,8 @@ import { shrinkOversized } from "./context-degrade.mjs"
 // 固定开销越线判据的另一半（#2398）：`limit` 单源 = `policyBudget`（有效窗口——与守卫面同一个数）。
 import { policyBudget, resolveWorkMode } from "./config.mjs"
 // 覆盖条数（#2399）：按折叠身份账算——轮投影与压缩共用同一张账，不在本档另立一份判据。
-import { coveredTurnCount } from "./agent/turn-projection.mjs"
+// 保留窗起点（#2431）：`splitHistory` 的必填第四参——切点一处收紧，压缩与 prune 同源受益（§1.2）。
+import { coveredTurnCount, retentionWindowStart } from "./agent/turn-projection.mjs"
 
 export const SUMMARIZE_PROMPT = `The conversation above is our work log so far — summarize it into a compact summary for use as context in the ongoing conversation.
 Requirements:
@@ -223,7 +224,7 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   if (!extras.force && tokens <= threshold) return false
 
   const keepTail = keepTailSize(agent.provider, history.length, workMode)
-  const split = splitHistory(history, keepTail, tailBudgetTokens(agent.provider, workMode))
+  const split = splitHistory(history, keepTail, tailBudgetTokens(agent.provider, workMode), retentionWindowStart(agent))
   if (!split) {
     // History is too short (≤KEEP_HEAD+keepTail+1 messages) to find a middle section, but tokens exceed threshold — typically a single giant message
     // (large paste / huge injection). When summarization has no room, degrade to deterministic shrinking to ensure context always reduces
@@ -295,7 +296,7 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
 export function compressFallback(agent) {
   const workMode = resolveWorkMode(agent.config?.agent)
   const keepTail = keepTailSize(agent.provider, agent.history.length, workMode)
-  const split = splitHistory(agent.history, keepTail, tailBudgetTokens(agent.provider, workMode))
+  const split = splitHistory(agent.history, keepTail, tailBudgetTokens(agent.provider, workMode), retentionWindowStart(agent))
   if (!split) return false
   const tailMessages = agent.history.length - split.tailStart
   applyCompression(agent, split.headEnd, split.tailStart, FALLBACK_NOTE)

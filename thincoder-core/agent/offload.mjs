@@ -4,38 +4,34 @@
 import { configDir } from "../config.mjs"
 import { writeFile, mkdir, readdir, stat, unlink } from "node:fs/promises"
 import { join } from "node:path"
-import { safeSliceUTF16 } from "../text-budget.mjs"
+import { safeSliceUTF16, safeSliceUTF16Tail } from "../text-budget.mjs"
 
 const TOOL_RESULT_OFFLOAD_LIMIT = 64 * 1024 // 65536 chars — offload only above 64K (2026-08-24)
 const TOOL_RESULT_PREVIEW = 64 * 1024 // total preview budget: head + middle note + tail ≤ 65536 (aligns with CLI/VS Code webview)
-const TOOL_RESULT_PREVIEW_HEAD = 16 * 1024 // head slice preserved (2026-09-04 §5 — dual-end preview)
-const TOOL_RESULT_PREVIEW_TAIL = 48 * 1024 // nominal tail slice (results/errors/stats live here — actual tail = budget remainder, see buildDualEndPreview)
 
-/** UTF-16 safe END slice (2026-09-04 §5 dual-end preview — review #5: both boundaries must not split
- *  a surrogate pair). Same rule as safeSliceUTF16, mirrored: if the slice START lands on a LOW
- *  surrogate (DC00-DFFF — the second half of a pair whose high half sits just before the boundary),
- *  advance one code unit so the slice never begins with an orphan low surrogate. */
-function safeSliceUTF16End(text, max) {
-  if (text.length <= max) return text
-  const start = text.length - max
-  const cp = text.charCodeAt(start)
-  if (cp >= 0xdc00 && cp <= 0xdfff) return text.slice(start + 1)
-  return text.slice(start)
-}
-
-/** Dual-end preview (design §5 D-4.1): head + middle-omitted note + tail — the tail carries
- *  results/errors/stats that a pure-head truncation would cut off.
- *  Budget (round1 review #2, fixed): head + note + tail ≤ TOOL_RESULT_PREVIEW (65536) — tail is
- *  computed from constants (tail = TOOL_RESULT_PREVIEW − head − noteLen), never hardcoded.
- *  The note length depends on the omitted digit count; text.length's digit count is an upper bound
- *  for omitted (< text.length), so budgeting with it keeps the total ≤ 65536 while the printed
- *  note reports the actual omitted count. Both boundaries run surrogate-safe slices (review #5). */
-function buildDualEndPreview(text) {
-  const head = safeSliceUTF16(text, TOOL_RESULT_PREVIEW_HEAD)
+/** Dual-end preview: head + middle-omitted note + tail — the tail carries results/errors/stats that a
+ *  pure-head truncation would cut off (design §5 D-4.1; `docs/core/design/TOOL-OUTPUT-LIMITS.md` §2).
+ *
+ *  `budget` is REQUIRED and has no default (`CONTEXT-COMPACTION.md` §1.2): a default would decide the
+ *  caller's crop size on its behalf. head = floor(budget / 4), the note reports the ACTUAL omitted
+ *  count, tail = budget remainder (never a hardcoded number).
+ *  The 64K face is byte-identical to before: floor(65536 / 4) = 16384 was the old fixed head, and the
+ *  old 48K tail nominal was only ever `budget − head − note` — the cap never bit.
+ *
+ *  Both cut points run the surrogate-safe slices exported by `text-budget.mjs`. The deleted local END
+ *  slice guarded only the slice START; `safeSliceUTF16Tail` also drops a lone high surrogate at the
+ *  trailing end, so a result that itself ends in half a surrogate pair loses one more code unit.
+ *  Callers only pass text LONGER than the budget (a shorter body would come out twice). */
+export function buildDualEndPreview(text, budget) {
+  if (!(typeof budget === "number" && Number.isFinite(budget) && budget > 0)) {
+    throw new Error("buildDualEndPreview: `budget` is required (a positive character budget, no default) — pass the preview budget this caller needs")
+  }
+  const t = String(text ?? "")
+  const head = safeSliceUTF16(t, Math.floor(budget / 4))
   const noteFn = (omitted) => `\n\n… [middle omitted: ${omitted} chars] …\n\n`
-  const tailLen = Math.min(TOOL_RESULT_PREVIEW_TAIL, TOOL_RESULT_PREVIEW - TOOL_RESULT_PREVIEW_HEAD - noteFn(text.length).length)
-  const tail = safeSliceUTF16End(text, tailLen)
-  return head + noteFn(Math.max(0, text.length - head.length - tail.length)) + tail
+  const tailLen = Math.max(0, budget - head.length - noteFn(t.length).length)
+  const tail = safeSliceUTF16Tail(t, tailLen)
+  return head + noteFn(Math.max(0, t.length - head.length - tail.length)) + tail
 }
 
 /** Offload-dir write-time self-cleanup retention window (2026-08-21): files older than 3 days are deleted on the next offload. */
@@ -77,11 +73,11 @@ export async function offloadToolResult(text, callId, dir = join(configDir, "too
     const file = join(dir, `${Date.now()}-${String(callId).replace(/[^a-zA-Z0-9_-]/g, "_")}.log`)
     await writeFile(file, text, "utf8")
     if (!overLimit) return `${text}\n\n[... full content saved to: ${file}\nPage through it with the read tool (offset/limit) if you need the full text later.]`
-    return buildDualEndPreview(text) + `\n\n[... output too large (${text.length} chars total), full content saved to: ${file}\n` +
+    return buildDualEndPreview(text, TOOL_RESULT_PREVIEW) + `\n\n[... output too large (${text.length} chars total), full content saved to: ${file}\n` +
       `Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do NOT re-run the tool blindly.]`
   } catch {
     // 写盘失败不吞报告：>LIMIT 走双端预览 + 原文案；≤LIMIT 正文整段在前（不谎称 truncated）
-    const body = overLimit ? buildDualEndPreview(text) : text
+    const body = overLimit ? buildDualEndPreview(text, TOOL_RESULT_PREVIEW) : text
     return body + (overLimit ? `\n\n[... truncated: ${text.length} chars total, offload to disk failed]`
       : `\n\n[... full text kept inline above (${text.length} chars), offload to disk failed]`)
   }
