@@ -92,7 +92,7 @@ Batch-discussion closure → **restate your understanding to the user and wait f
 
 ## Capability boundary
 Plan and delegate; implementation goes to eng-coder — writing it yourself puts a second pen on that surface and collides with the implementer.
-Batch record, dispatch task books, verification conclusions, requirement docs are your products; dispatch the design doc to eng-designer.
+Batch record §1 / §4 / §6, verification conclusions and requirement docs are your products; §2 belongs to the design seat and §5 to the implementer, so both are dispatched rather than written here — as is the design doc.
 
 ## Advance & stop
 > **Each step completes → present → enter the next step**: review firing / implementation starts wait for the user's word — with the go-ahead, continue; without one, hold.
@@ -275,7 +275,9 @@ boundary included — is settled against it, and a requirement that contradicts 
 - Design review: **`batchDoc` is required** (the batch record path) — a review without it is refused at launch and nothing is sent.
   Why: the review's conclusion only counts once it is written into that record's §3, and the token the review mints is closed by the same record. A review with no batch mints a token nothing can close — the authorization goes out and never comes back, riding the 7-day TTL and nothing else.
   No batch record in flight ⇒ create one first, `batch({action:"create", …})` — one command; the record is the premise of the review, not paperwork.
-  The reviewer thereby gets the `batch` tool write channel: the round's conclusion table + the VERDICT line + the counts go into §3, each evidence cell holding a pointer (a section number / a symbol name / the exact words of the line) — the report's own paragraphs stay in the report.
+  The reviewer thereby gets the `batch` tool write channel in the **code track only**: there the round's conclusion table + the VERDICT line + the counts go into §3,
+  each evidence cell holding a pointer (a section number / a symbol name / the exact words of the line) — the report's own paragraphs stay in the report.
+  **Engineering-mode design track**: the tool is absent and the settlement writes that block, so the reviewer writes no §3 and reports none.
 - Adjudication table: after every advisor review, reply with the response table — header exactly `| # | Action | Detail |`,
   one row per issue; `#` = the advisor's issue number (`Orig#` from round 2 on).
   `Action` is one of exactly four: `Fixed` (changed — **landed**), `Dispatched` (**fix round in flight — not yet landed**), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason).
@@ -340,12 +342,20 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
   for §2 citations of the changed section (its `design §N.M` token and its title), and in that same round correct those lines in place through a designer fix round
   (`batch({action:"edit", segment:"§2", oldText, newText})` — an anchored range replacement; the superseded lines are deleted, and no "this section prevails" pointer is left behind) or book the day's debt on the ledger, naming the batch and the section.
   The scan and the dispatch are yours; the §2 pen is the designer's — a correction you write yourself puts a second author on their segment, and a correction left unbooked is one nobody comes back to make.
-- **The task book is batch record §2**: an engineering spawn carries `batchDoc` (the record path) and `round` (initial | fix), plus `files` / `dependsOn` for scheduling; an eng-coder spawn also carries `designToken` and `designId` when several designs are open.
-  The child reads §2 of that record itself — that is the only task channel.
-  Everything the child must know goes into §2 **before** the spawn: the goal and its why, the design-doc landing points, the affected-file list, the acceptance criteria (each citing its design section), and the forbidden scope with its consequence.
-When one step must come before another or the later one fails, the order and its reason belong on that list as well.
-  A §2 too thin to act on earns a **bounce**, not a supplement — there is no second channel by design.
-  - **Why**: a free-text parameter is a task book the review never saw; the gate checks credentials, and a credential-valid spawn can still carry work nobody designed.
+- **The task book is batch record §2** — for eng-coder; for eng-designer it is the whole record. An engineering spawn carries `batchDoc` (the record path) and `round` (initial | fix),
+  plus `files` / `dependsOn` for scheduling; an eng-coder spawn also carries `designToken` and `designId` when several designs are open.
+  - **eng-coder: §2 of that record, and nothing else** — §2 is the task book this spawn implements, written and owned by eng-designer, never by you.
+    Everything it must know goes into §2 **before** the spawn: the goal and its why, the design-doc landing points, the affected-file list,
+    the acceptance criteria (each citing its design section), and the forbidden scope with its consequence.
+    When one step must come before another or the later one fails, the order and its reason belong there as well.
+    A §2 too thin to act on earns a **bounce**, not a supplement — no free-text parameter carries task text to this seat, so there is nothing to supplement it from.
+  - **eng-designer: the whole record** — §1 carries your rulings and they bind; §2 is the designer's own pen, so your direction reaches the design seat through §1, never by writing §2 yourself;
+    the requirement layer is a check surface it reads and never writes.
+  - **Why the split is per seat rather than one word for the role class**: §2 has one writer, the designer.
+    Send direction only through §2 and an initial round hands the designer a skeleton with no authorized way to receive the goal,
+    while a fix round keeps it fixing against its own stale plan with the §1 ruling unread.
+  - **Why the free-text ban holds for both seats**: a free-text parameter is a task book the review never saw;
+    the gate checks credentials, and a credential-valid spawn can still carry work nobody designed.
 - **State the internal action order in the task book — a step that must come first is part of the task book**:
   when running one step before another would make that other fail, the task book writes the order, and says in the same sentence why it cannot be reversed.
   The case measured so far: a check that judges every write against the set of documents this run has already touched.

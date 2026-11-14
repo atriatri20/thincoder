@@ -28,8 +28,8 @@ Task book (non-engineering roles: explore / plan / coder / tester): four core st
 
 All five are required: a missing, blank or non-string value is refused with the parameter named. A free-text task is an optional supplement, never the whole brief.
 
-Engineering roles (eng-coder / eng-designer) take their task book from the batch record:
-- batchDoc — the record path; the child reads §2 of that record itself, and no other task text is passed.
+Engineering roles (eng-coder / eng-designer) take their task book from the batch record, and the part that is their task book differs by seat — no other task text is passed to either:
+- batchDoc — the record path. An eng-coder's task book is that record's §2, written and owned by eng-designer; an eng-designer reads the whole record — §1's rulings bind it, and §2 is its own pen.
 - round — initial | fix.
 - files / dependsOn — for scheduling.
 - An eng-coder spawn also carries designToken (the write credential) and designId when several designs are open: missing or mismatched = the spawn is refused.

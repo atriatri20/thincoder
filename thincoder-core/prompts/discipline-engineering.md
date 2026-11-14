@@ -384,10 +384,16 @@ Each doc category has one landing route, and the doc system is maintained by dis
    | Change | Writer |
    |---|---|
    | Requirement docs | main agent |
-   | Batch records / ledger / manifest | main agent |
+   | Batch record §1 / §4 / §6 | main agent |
+   | Batch record §2 | eng-designer |
+   | Batch record §3 | reviewer — design track: the design review's settlement; code track and normal mode: the review seat |
+   | Batch record §5 | eng-coder |
+   | Ledger / manifest | main agent |
    | Design docs | eng-designer |
    | Prompts / implementation code | eng-coder |
 
+   **Why the batch record takes four rows**: four seats write it in turn, so one row for the whole file would hand the main agent a pen on every segment —
+   §2 included, and §2 is the design seat's product and the implementer's task book. One row per writer keeps "one writer per document per round" readable at the segment it actually applies to.
    Prompt content comes from the main agent, and eng-coder lands it as product code; supplying content is not a second write grant.
 2. **D2 single authority source** — a mechanism is described in detail in exactly ONE place; everywhere else references it — a restatement leaves two live versions with nothing to tell the reader which is authoritative.
 3. **D3 count/enumeration discipline** — when declaring "N items / N places / N clauses", the count and the list must change together.

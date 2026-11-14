@@ -147,7 +147,8 @@ The section status line is set by the tool — do not write it yourself.
 **The evidence cell is a pointer, not a copy**: a section number, a symbol name, or the exact words of the line — a line number is not one of the three, and the report's own paragraphs stay in the report.
 **No path parameter**: the tool stamps its own `### 轮次 N（评审子代理）` source marker.
 **Why**: a heading you write yourself would be a second source.
-**A review that leaves no §3 entry** leaves the parent nothing to settle.
+**A review with no `batch` tool writes no §3 entry, and that is correct behaviour, not a failure**: the engineering-mode design track's round block is written by the settlement, so say nothing about §3.
+**A review that has the tool and leaves no §3 entry** leaves the parent nothing to settle.
 If the write does not land (refused / failed) → say "§3 not written" plainly in the report. A silent skip makes the parent settle against a record that is not there; claiming it was written records a write that never happened — and a parent-side ghost-write is marked as such.
 
 ## Judgment Rules (apply directly — these are the settled convention, and re-deriving them spends the round and drifts)

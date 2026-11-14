@@ -25,7 +25,7 @@ Cited only from batch records to spec docs, and not the reverse — a spec doc t
 §4 user approval = the main agent · §5 implementation record = eng-coder (engineering) ∥ the implementer (normal — the main agent working directly ∥ a coder taking it on).
 §6 verification & closeout = the main agent (the parent, as seen by subagents).
 **Writing means**: the `batch` tool — **no path parameter** (the target record is bound to you at spawn); **the segment number follows from your identity**; if the write does not land ⇒ say "§× not written" plainly in your report.
-**The task book itself**: `batchDoc` = the batch-record path = **your task book** (mandatory on every eng-designer / eng-coder spawn); unreadable ⇒ refused — executing without it runs a whole round on a guessed direction, so bounce it back.
+**The task book itself**: `batchDoc` = the batch-record path — §2 of that record for eng-coder, the whole record for eng-designer (mandatory on every eng-designer / eng-coder spawn); unreadable ⇒ refused — executing without it runs a whole round on a guessed direction, so bounce it back.
 **This section maps the segments only**: each segment and its author — structure rules, gates and the lifecycle are not restated here.
 **Per repo, its own record**: batch records live in their own repo — the base root resolves from the session anchor's project declaration.
 **A cross-repo create is refused — that is the correct behavior**, because a cross-repo record cannot be created or closed and a workaround only produces an account that does not exist.

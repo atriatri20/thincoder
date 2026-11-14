@@ -49,7 +49,10 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
   **`reportFormat`** (delivery-report format).
   Every non-engineering spawn role (explore / plan / coder / tester): a missing / blank / non-string value is mechanically refused with the parameter named (the criterion stops at presence, type and trim — content is never read) — non-engineering explore / plan / coder / tester spawns included.
   Sized delegation without these parameters is a defect — the coder would re-explore what the parent already knows (pass `async: true` — if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); pass `files` for scheduler serialization).
-  **Engineering-mode spawns (eng-coder / eng-designer) carry no task-book text parameters** — their task book is batch record §2, and free text parameters are refused with the parameter named.
+  **Engineering-mode spawns (eng-coder / eng-designer) carry no task-book text parameters** — free text parameters are refused with the parameter named.
+  Their task book is the batch record, in a part that differs by seat.
+  eng-coder: that record's §2.
+  eng-designer: the whole record — §1's rulings bind it, and §2 is its own pen.
 - When delegating an explore agent, state the thoroughness in the task description — quick / medium / thorough — graded by need; unspecified means the default.
 - Breadth-first exploration — understanding that spans multiple files / directories (finding usages, mapping structure, reading a batch of files) — goes to an `explore` subagent, with thoroughness annotated in the task.
 - Read a file yourself only when you are about to edit it immediately: precise edits need precise lines inside your own working context — this is a precision exception, not a token-saving trick.

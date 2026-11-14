@@ -45,7 +45,8 @@ Who may write what — identity decides, and a write outside your own section is
 - main agent (depth 0) — create / attach / close / supersede.
 - append / status domains are mode-dependent: engineering — append §1/§4/§6, status §1; normal — append §1/§2/§4/§5/§6, status §1/§2/§5 (the main agent holds the designer and implementer seats there).
 - edit reads the same whitelist as append — one table, two actions: the section you may append to is the section you may rewrite in place. Depth-0 gains §2 and §5 on edit in normal mode.
-- eng-designer — §2; eng-coder — §5; a normal-mode coder bound via `batchDoc` — §5; design review (review binding) — §3.
+- eng-designer — §2; eng-coder — §5; a normal-mode coder bound via `batchDoc` — §5; design review (review binding) — §3 **on the code track and in normal mode only**.
+  The engineering-mode design track has no row here: that record gets no `batch` tool, its `§3` round block is written by the design-review settlement, so no review seat has a `§3` write face on that track.
 
 Skeleton placeholders are dead literals in the record header's structural lines — `#<编号>` / `<板块>` and the older `<BATCH-ID>` / `<讨论来源>`. They block append / edit / status until they are filled:
 - create with ledger / board fills them at creation.
@@ -59,8 +60,10 @@ Target record:
 
 §3 has its own rules:
 - A §3 append must carry exactly one verdict on its own line — `VERDICT: pass` or `VERDICT: changes-required`; the localized whole-line forms count too (`结论：通过` / `结论：不通过`, and their 需修改 variants, with an optional trailing 。). A §3 write that reads as no verdict line, or as both at once, is refused with nothing written — no round number is consumed, so resend the same text with the verdict line added.
-- A design review's §3 append carries the round's conclusion table — one row per finding (`#` / severity / status / evidence) — plus the VERDICT line and the counts. An evidence cell holds a pointer: a section number, a symbol name, or the exact words of the line — never a line number; the report's own paragraphs stay out of the record.
-- A design review's append is stamped by the tool with a `### 轮次 N（评审子代理）` heading — N is tool-counted; do not write your own heading (it would be dropped).
+- **On the code track and in normal mode**, a design review's §3 append carries the round's conclusion table — one row per finding (`#` / severity / status / evidence) — plus the VERDICT line and the counts. An evidence cell holds a pointer: a section number, a symbol name, or the exact words of the line — never a line number; the report's own paragraphs stay out of the record.
+  **The engineering-mode design track has no `§3` append**: that record gets no `batch` tool, and the block — this table, the VERDICT line and the counts included — is written by the design-review settlement instead, so the reviewer appends nothing and reports no missing entry.
+- **On the code track and in normal mode**, a design review's append is stamped by the tool with a `### 轮次 N（评审子代理）` heading — N is tool-counted; do not write your own heading (it would be dropped).
+  **On the engineering-mode design track** the same tool-counted stamp still heads the block, written by the settlement together with the block itself — so there is no heading for a reviewer to write there either.
 
 Every hit line names the file and the offending thing: the token for a dangling pointer, the paragraph's start line and its length, or the line and the token for a line-number anchor.
 

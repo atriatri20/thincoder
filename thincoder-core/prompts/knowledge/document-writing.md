@@ -20,7 +20,7 @@ aliases: 文档, 写文档, 文档写作, 语义合并
   Disposal = delete, not re-point: the citation goes, the meaning stays in the sentence (they belong in docs or comments).
   **The test — what work does it do?** A **citation** sends the reader to another document for the rule's wording or meaning, and that wording can change under the sentence — banned.
   A **machine coordinate** points at a position **inside the protocol the model is executing**, and stays.
-  Machine coordinates include: the batch-record segment it writes (`batch record §2` = the task book itself; `§1`–`§6` = the segments) · a tool parameter name it passes (`batchDoc` / `segment` / `files` / `docs`) · a ledger state it moves · this file's own section numbers.
+  Machine coordinates include: the batch-record segment it writes (`batch record §2` = the eng-coder's task book; `§1`–`§6` = the segments) · a tool parameter name it passes (`batchDoc` / `segment` / `files` / `docs`) · a ledger state it moves · this file's own section numbers.
   **An execution coordinate is allowed**: a task-book reference to the approved design tells the implementer which spec to read and follow; it carries the work, not the wording of a rule in this prompt.
   The model acts on it directly, and nothing outside can reword it.
   **Operand exemption**: `AGENTS.md` · `SKILL.md` · `README.md` · `MANIFEST.md` · `.thincoder/advisor.md` · `project_rules.md` · path forms · the `".md"` literal — names the model **reads, writes or passes**, not prose it has to chase; those stay.

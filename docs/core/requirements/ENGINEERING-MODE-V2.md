@@ -145,7 +145,7 @@ explore 只读。普通模式的席位折叠由 NORMAL-MODE 规定。
 
 ### 8.1 委派
 
-工程角色只从批次 §2 读取任务书。eng-coder 必须携带 batchDoc、round、有效 designToken，并在多设计会话中携带 designId。
+工程角色的任务书来自绑定批档。eng-coder 取其中的 §2（成文任务书）；eng-designer 读整份记录——§1 承载父侧裁决且具约束力，§2 由它自己写。eng-coder 必须携带 batchDoc、round、有效 designToken，并在多设计会话中携带 designId。
 
 非工程角色使用当前结构化任务书。`files` 是调度清单，不是授权边界；`dependsOn` 表达真实依赖。
 
