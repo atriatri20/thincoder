@@ -104,7 +104,7 @@
 |---|---|---|
 | `composer/panel.mjs` `createComposerPanel(deps={})` | `{root,post,state,hooks,slash?}`；root 与 post 必填 | `{inputEl,setLoading,applyBusyLock,applyWords,isRunning,models}`；缺 root/post 抛错。忙时 running 才排队，Send 隐藏、Stop 显示；susp 不显示 Stop。 |
 | `composer/atmenu.mjs` `createAtMenu({post,inputEl}={})` | 出站函数、输入元素 | `{el,applyWords,showAtDropdown,closeAtDropdown,isOpen,handleAtInput}`；请求 `{query,cwd:"",seq}`，防抖 150ms。 |
-| `composer/controls.mjs` `createControlsRow({post,state,hooks,inputRow,inputEl}={})` | 出站、flags 读面、hooks、宿主元素 | `{el,modelBtn,reasoningBtn,modeBtn,applyWords,applyModeButtons,applyAutoApprove,applyAgentSettings,applyPlanMode,syncModeState,toggleAuto,togglePlan,toggleEng,setMode}`；AUTO 开启有确认，MODE 固定 minimal/normal/engineering，只有 engineering 时 PLAN 拒绝。 |
+| `composer/controls.mjs` `createControlsRow({post,state,hooks,inputRow,inputEl}={})` | 出站、flags 读面、hooks、宿主元素 | `{el,modelBtn,reasoningBtn,modeBtn,applyWords,applyModeButtons,applyAutoApprove,applyAgentSettings,applyPlanMode,syncModeState,toggleAuto,togglePlan,toggleEng,setMode}`；AUTO 开启有确认，MODE 固定 tiny/normal/engineering，只有 engineering 时 PLAN 拒绝。 |
 | `composer/model-menu.mjs` `effortSelection(levels,current,registeredDefault)` | 档位枚举、已存值、注册默认 | 已存有效值 > 有效默认值 > `null`；`current="none"` 且枚举无 none 时直接为 null。 |
 | 同档 `openModelMenu({anchorEl,models,value,onPick,footer=[],up=false})` | 锚、候选、现值、拾取与页脚回调 | 无返回值；`onPick({provider,model,row})`。null/非数组为 loading，空数组为 empty；provider 行只开合，模型条目 click 才拾取。 |
 | 同档 `closeModelMenu()` | — | 无返回值；摘 overlay 并移除监听，幂等。 |

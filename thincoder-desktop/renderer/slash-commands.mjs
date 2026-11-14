@@ -52,10 +52,10 @@ export function createSlashCommands(printHelp, currentMode = () => "normal") {
       run: (ctx) => ctx.actions.toggleEng(), // 与 MODE 控件共用 render-core 的 setMode 路径
     },
     {
-      name: "/minimal",
+      name: "/tiny",
       group: "Agent",
-      descKey: "slash.desc.minimal",
-      run: (ctx) => ctx.actions.setMode(currentMode() === "minimal" ? "normal" : "minimal"),
+      descKey: "slash.desc.tiny",
+      run: (ctx) => ctx.actions.setMode(currentMode() === "tiny" ? "normal" : "tiny"),
     },
     {
       name: "/normal",

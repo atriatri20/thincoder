@@ -52,7 +52,7 @@
 
 ## VSC 9. 三档模式从控件落到会话，重开后仍一致
 
-> 目的：MODE 的 minimal/normal/engineering 三选项是同一槽内 mode 的投影，非法输入不改状态，engineering 与 PLAN 保持互斥。
+> 目的：MODE 的 tiny/normal/engineering 三选项是同一槽内 mode 的投影，非法输入不改状态，engineering 与 PLAN 保持互斥。
 > 节注：回指 = `docs/vsc/requirements/WEBVIEW.md` F-W24；机制 = `docs/vsc/design/WEBVIEW.md`「AUTO 与会话模式」∥ `WEBVIEW-PROTOCOL.md`；组件 = webview MODE ⟷ host setMode ⟷ 会话槽 ⟷ agentSettings 快照；进入口 = VSC MODE 控件与设置页；两态 = 9-1 正常 · 9-2 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
@@ -68,7 +68,7 @@
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
 | 12-1 | 经 session:flags 写三档与非法补丁，读取 history:page 和 ev:flags，并恢复旧槽 | 三档在页读/回执/事件一致；非法整笔零写；旧 engineering 只读迁移；engineering 清 PLAN | 无 | `test/integration/desktop-work-mode.test.mjs` |
-| 12-2 | 在渲染进程分别执行 /minimal、/eng、/normal 和 MODE 控件动作，再读设置与状态行 | 命令与控件共用 setMode；切换矩阵正确；状态显示当前 MODE；设置页全局默认不覆盖当前槽 | 无 | `test/integration/desktop-work-mode.test.mjs` |
+| 12-2 | 在渲染进程分别执行 /tiny、/eng、/normal 和 MODE 控件动作，再读设置与状态行 | 命令与控件共用 setMode；切换矩阵正确；状态显示当前 MODE；设置页全局默认不覆盖当前槽 | 无 | `test/integration/desktop-work-mode.test.mjs` |
 
 ## Server 2. Web 三档模式通过真实 PATCH 与盒内槽生效
 
@@ -77,5 +77,5 @@
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
-| 2-1 | 在 Server composer 依次选择三档并执行对应 slash，观察真实适配器出站 | 控件与 slash 都发 setMode；minimal/eng 切换矩阵正确；中英文词表和 CSS 均有三档 | 无 | `test/integration/server-work-mode.test.mjs` |
+| 2-1 | 在 Server composer 依次选择三档并执行对应 slash，观察真实适配器出站 | 控件与 slash 都发 setMode；tiny/eng 切换矩阵正确；中英文词表和 CSS 均有三档 | 无 | `test/integration/server-work-mode.test.mjs` |
 | 2-2 | 经 member PATCH 写合法/非法 mode，并在盒内保存、恢复；再用旧 engineering 槽读取 | 合法值写盒内槽并恢复；非法和旧布尔不到达盒；旧槽只读迁移；合法 mode 优先 | 无 | `test/integration/server-work-mode.test.mjs` |

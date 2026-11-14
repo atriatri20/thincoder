@@ -1,3 +1,7 @@
+`action` = add / update / close / query / count.
+
+- `add`: a new entry lands in `待讨论`.
+  - `kind` = `requirement` (requirement pool) / `tech_todo` (engineering debt).
   - `trigger` = `归批` / `条件` / `认账不排期` (optional).
   - `resume_when` = the sentence saying when the entry resumes (optional; when given it may not be blank, and it may carry an anchor `@YYYY-MM-DD` (judged) or `@<event>` (not judged by machine)).
   - **The `task_book` gate** — same on `add` and `update`, judged on what this call writes. An entry that ends up in `在途` / `待核销`, or a call that sets `trigger` = `归批`, must carry `task_book`: absent / empty / blank is refused.
@@ -5,6 +9,18 @@
   - A call that does not touch the pointer is not judged: a stale pointer left by an earlier call never blocks a `status` / `evidence` / other-field update — "is the file on disk" is the `taskBookOnDisk` reading, not a gate.
   - **Reserved pointer** — put the marker `（预定）` at the tail of the value (`docs/batches/<x>.md（预定）`) to register the intent to work a record that does not exist yet; that pointer passes the gate while its file is absent (`taskBookOnDisk` stays `false`, a reading not a gate). It must be a project-relative path — no declared-repo prefix and no absolute path, or it is refused; and once that record is on disk the marker is surplus and refused (drop it).
   - `batch create` on that same path later **claims this row** instead of opening a second one: the pointer is rewritten to the plain form, the row goes to `在途`, and no new row appears. Omit `ledger` and `newDebt` there and a reserved row for the path wins before the same-face check. Two reserved rows on one path are refused and named one by one — picking one would silently drop the other's intent.
+- `close --batch`: settles only the rows already at `待核销`. `待讨论` / `待设计` rows are skipped and named (move them to `在途` first to claim them), `在途` rows are skipped and named (they cannot be jumped), settled and withdrawn rows are not counted.
+  - `status` may be omitted (default `已核销`) and can only be `已核销`.
+- `query`: equality filters (`status` / `kind` / `board` / `trigger` / `task_book`); with none given, every row is eligible. Rows come back 10 per page either way — a filter narrows which rows are eligible, not how many a page carries. Each row carries:
+  - `aged` — an unsettled state and older than 30 days.
+  - `evidenceTooLong` — the evidence text is too long to read; a reading, never a write refusal.
+  - `taskBookOnDisk` — the `task_book` file part resolves and that file is on disk.
+  - `overdue` — the exit state as a word: `resume_due` / `dangling` / `unlabeled` / `aged`, first match wins.
+  - The six states: `待讨论` / `待设计` / `在途` / `待核销` / `已核销` / `已废弃`.
+  - **Every page ends with a tail line** giving the total, this page's rank range, and — when another page exists — the command for it: `ledger({action:"query"<the filters in force>, cursor:"<cursor>"})`. **Run that line whole**: it repeats this page's filters, and copying only the `cursor` drops them, so the next page comes from the unfiltered set with no error. Omit `cursor` for the first page; a malformed one is refused, never treated as page one.
+  - `count` is a different book: it counts the four unsettled states only, while a page's total covers all six.
+- `count`: `{ count, overdue, evidenceTooLong }`. `count` = rows in the four unsettled states; `overdue` = how many of those are in an overdue exit state; `evidenceTooLong` = how many carry over-long evidence. Same equality filters as `query`.
+- `query` / `count` are read-only and open to every role; `add` / `update` / `close` write and are main-agent only.
 - `update`: moves an entry along the six-state table, edge by edge — `待讨论→待设计` / `待讨论→在途` / `待设计→在途` / `在途→待核销` / `在途→待讨论` / `待核销→已核销` / `待核销→在途` / `待核销→待讨论` / any unsettled state → `已废弃`. `已核销` and `已废弃` are terminal; every edge not on that list is refused.
   - `待讨论→在途` is the ignition path: opening a batch moves its coverage rows straight to `在途`, never through `待设计` (`待设计` means design is scheduled, not that ignition happened).
   - `待核销→在途` is the reopen or manual return path and always writes the current session as executor. An explicit old executor does not override it.

@@ -139,8 +139,8 @@ function effortOptions(section, current) {
 /** 新会话默认工作模式：固定三档，无自由文本或额外清除态。 */
 function modeOptions(fields) {
   const current = fields.get("agent.mode")?.value
-  const selected = ["minimal", "normal", "engineering"].includes(current) ? current : "normal"
-  return ["minimal", "normal", "engineering"].map((value) => ({
+  const selected = ["tiny", "normal", "engineering"].includes(current) ? current : "normal"
+  return ["tiny", "normal", "engineering"].map((value) => ({
     tag: "option",
     props: value === selected ? { value, selected: true } : { value },
     children: [t(`settings.agent.mode${value[0].toUpperCase()}${value.slice(1)}`)],

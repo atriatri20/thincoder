@@ -4,13 +4,17 @@
  * 旧 engineering 只在 mode 缺席时读取迁移，不写回渲染状态。
  */
 
-export const WORK_MODES = Object.freeze(["minimal", "normal", "engineering"])
+export const WORK_MODES = Object.freeze(["tiny", "normal", "engineering"])
 const BOOLEAN_FIELDS = ["planMode", "autoApprove", "advisorGuard"]
+
+/** 旧值读取别名（CONFIG §5.4）：`minimal` 是 tiny 的历史写法。只在此读取口归一，写面不收旧值。 */
+const LEGACY_MODE_ALIASES = Object.freeze({ minimal: "tiny" })
 
 /** 读取唯一 mode；旧布尔仅在 mode 键缺席时参与迁移。 */
 export function modeOfFlags(flags, fallback = "normal") {
   if (flags !== null && typeof flags === "object" && Object.hasOwn(flags, "mode")) {
-    return WORK_MODES.includes(flags.mode) ? flags.mode : fallback
+    const mode = LEGACY_MODE_ALIASES[flags.mode] ?? flags.mode
+    return WORK_MODES.includes(mode) ? mode : fallback
   }
   if (flags !== null && typeof flags === "object" && typeof flags.engineering === "boolean") {
     return flags.engineering ? "engineering" : "normal"

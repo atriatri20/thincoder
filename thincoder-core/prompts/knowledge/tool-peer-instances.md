@@ -1,0 +1,1 @@
+Returns [{ pid, end, sessionId, slots }]; never includes self; pure read — writes nothing.

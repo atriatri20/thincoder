@@ -22,7 +22,7 @@
 | F10 | 团队配置 | team 段只由团队登录与退出流程维护，不进入通用 settings 写面 |
 | F11 | 并发池 | agent.poolLimits 提供 engCoder、other、advisor 的正整数配置和当前默认值 |
 | F12 | 网络后端 | websearch.backend 与 fetch.backend 支持 auto / local，并使用当前消费规则 |
-| **F13** | 互斥工作模式 | agent.mode 只接受 minimal / normal / engineering，缺省 normal；不存在独立的极简开关或第二枚可写 engineering 布尔状态 |
+| **F13** | 互斥工作模式 | agent.mode 只接受 tiny / normal / engineering，缺省 normal；不存在独立的极简开关或第二枚可写 engineering 布尔状态 |
 
 ## 3. 非功能要求
 
@@ -55,6 +55,8 @@ agent.mode 是新会话默认工作模式的唯一配置来源。三个值分别
 
 旧配置只有 agent.engineering 时，装载器仅在读取兼容层迁移：true 对应 engineering，false 或缺省对应 normal。该旧字段不进入通用 settings 写面，不与 agent.mode 同时作为两份权威状态。
 
+枚举值取名 tiny 之前写下的 `minimal` 是同一档的历史写法：装载器与各端读取口把它归一为 `tiny`，老配置与老会话打开后仍是极简档，不回落 normal。写入面只产 `tiny`，不再把 `minimal` 当合法值。
+
 运行期旧消费者可读取由 mode 派生的 engineering 布尔事实，但它只服务于内部兼容。界面、settings 和新代码使用 mode。
 
 CLI、VSC 与 Desktop 使用固定三选项。修改全局默认模式不改变既有会话槽中保存的模式；当前会话由命令或会话模式控件切换，并从下一轮生效。
@@ -63,5 +65,6 @@ CLI、VSC 与 Desktop 使用固定三选项。修改全局默认模式不改变�
 
 - 三个合法值均可保存和读取，非法值、空值和布尔值明确拒绝。
 - 缺省为 normal；旧 engineering=true/false 配置分别恢复为 engineering/normal。
+- 旧值 `minimal` 在配置文件与会话槽里都恢复为 `tiny`；写入面拒绝 `minimal`。
 - settings 列表和界面不把派生 engineering 显示为第二个可写配置项。
 - 新会话采用配置默认，既有会话采用槽内 mode，两者不会互相覆盖。

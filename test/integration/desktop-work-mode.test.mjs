@@ -145,12 +145,12 @@ test("斜径 /eng 与控件 setMode 同走 session:flags → 槽写 → ev:flags
   assert.equal(pageHistory(cwd, { key: "1", before: null }).flags.mode, "engineering", "页读从槽恢复 mode")
 
   // 控件入口：MODE 下拉直接 setMode，同一条链。
-  wire.post("setMode", { value: "minimal" })
+  wire.post("setMode", { value: "tiny" })
   await flush()
-  assert.equal(store.get().sessionFlags["1"].mode, "minimal")
-  assert.equal(loadSlotFile(cwd, 1).mode, "minimal")
-  assert.equal(pageHistory(cwd, { key: "1", before: null }).flags.mode, "minimal")
-  assert.equal(events.at(-1).payload.flags.mode, "minimal")
+  assert.equal(store.get().sessionFlags["1"].mode, "tiny")
+  assert.equal(loadSlotFile(cwd, 1).mode, "tiny")
+  assert.equal(pageHistory(cwd, { key: "1", before: null }).flags.mode, "tiny")
+  assert.equal(events.at(-1).payload.flags.mode, "tiny")
 
   // engineering 下开 PLAN 仍被拒（同批双开清 PLAN 的既有规则在控件链同样成立）。
   wire.post("setMode", { value: "engineering" })

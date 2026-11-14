@@ -71,18 +71,18 @@ test("Server composer renders three localized modes and sends setMode through th
   })
   const select = root.querySelector("#mode-select")
   const plan = root.querySelector("#plan-btn")
-  assert.deepEqual(select.options.map((option) => option.value), ["minimal", "normal", "engineering"])
+  assert.deepEqual(select.options.map((option) => option.value), ["tiny", "normal", "engineering"])
   assert.deepEqual(select.options.map((option) => option.textContent), ["MIN", "NORMAL", "ENG"])
   assert.equal(select.value, "engineering")
   assert.equal(plan.disabled, true, "legacy plan residue must not survive engineering restore")
   assert.equal(plan.classList.contains("active"), false)
 
-  select.value = "minimal"
+  select.value = "tiny"
   select.dispatch("change")
   await Promise.resolve()
   await Promise.resolve()
-  assert.deepEqual(writes, [{ name: "mode", value: "minimal" }])
-  assert.equal(select.value, "minimal")
+  assert.deepEqual(writes, [{ name: "mode", value: "tiny" }])
+  assert.equal(select.value, "tiny")
   assert.equal(plan.disabled, false)
 
   flags = { ...flags, mode: "engineering", planMode: true }
@@ -93,9 +93,9 @@ test("Server composer renders three localized modes and sends setMode through th
 })
 
 test("Server mode reader migrates legacy engineering without exposing a second writable flag", () => {
-  assert.deepEqual(WORK_MODES, ["minimal", "normal", "engineering"])
+  assert.deepEqual(WORK_MODES, ["tiny", "normal", "engineering"])
   assert.deepEqual(FLAG_KEYS, ["autoApprove", "advisorGuard", "planMode"])
-  assert.equal(workModeOf({ mode: "minimal", engineering: true }), "minimal")
+  assert.equal(workModeOf({ mode: "minimal", engineering: true }), "tiny", "旧值 minimal 归一为 tiny（读兼容夹具）")
   assert.equal(workModeOf({ mode: "normal", engineering: true }), "normal")
   assert.equal(workModeOf({ engineering: true }), "engineering")
   assert.equal(workModeOf({ engineering: false }), "normal")
@@ -104,7 +104,7 @@ test("Server mode reader migrates legacy engineering without exposing a second w
   assert.ok(SESSION_SETTING_KEYS.includes("mode"))
 })
 
-test("Server slash commands share mode actions: minimal/eng toggle and normal is constant", () => {
+test("Server slash commands share mode actions: tiny/eng toggle and normal is constant", () => {
   let mode = "normal"
   const calls = []
   const commands = createSlashCommands({ mode: () => mode })
@@ -113,11 +113,11 @@ test("Server slash commands share mode actions: minimal/eng toggle and normal is
     setMode: (value) => { calls.push(value); return true },
   }
   const run = (name) => commands.find((command) => command.name === name).run({ actions })
-  assert.equal(run("/minimal"), true)
+  assert.equal(run("/tiny"), true)
   assert.equal(mode, "normal")
-  assert.equal(calls.pop(), "minimal")
-  mode = "minimal"
-  assert.equal(run("/minimal"), true)
+  assert.equal(calls.pop(), "tiny")
+  mode = "tiny"
+  assert.equal(run("/tiny"), true)
   assert.equal(calls.pop(), "normal")
   mode = "engineering"
   assert.equal(run("/normal"), true)
@@ -130,7 +130,7 @@ test("Server slash commands share mode actions: minimal/eng toggle and normal is
 test("Server row projection carries authoritative mode, legacy migration and effective PLAN", () => {
   const workspace = { id: 7, name: "ws" }
   const modern = sessionRowOf(workspace, { slot: 2, flags: { mode: "minimal", engineering: true, planMode: true } })
-  assert.deepEqual(modern.flags, { autoApprove: false, planMode: true, advisorGuard: false, mode: "minimal" })
+  assert.deepEqual(modern.flags, { autoApprove: false, planMode: true, advisorGuard: false, mode: "tiny" })
   const legacy = sessionRowOf(workspace, { slot: 3, flags: { engineering: true, planMode: true } })
   assert.deepEqual(legacy.flags, { autoApprove: false, planMode: false, advisorGuard: false, mode: "engineering" })
   assert.ok(!Object.hasOwn(legacy.flags, "engineering"))
@@ -140,10 +140,10 @@ test("Server row projection carries authoritative mode, legacy migration and eff
 })
 
 test("Server i18n and CSS expose the shared mode control in both locales", () => {
-  const keys = ["toolbar.mode", "toolbar.modeMinimal", "toolbar.modeNormal", "toolbar.modeEngineering"]
+  const keys = ["toolbar.mode", "toolbar.modeTiny", "toolbar.modeNormal", "toolbar.modeEngineering"]
   for (const table of [EN_CORE, ZH_CORE]) {
     for (const key of keys) assert.equal(typeof table[key], "string", key)
-    for (const key of ["slash.desc.auto", "slash.desc.plan", "slash.desc.eng", "slash.desc.minimal", "slash.desc.normal"]) {
+    for (const key of ["slash.desc.auto", "slash.desc.plan", "slash.desc.eng", "slash.desc.tiny", "slash.desc.normal"]) {
       assert.equal(typeof table[key], "string", key)
     }
   }
@@ -182,10 +182,10 @@ test("Server PATCH accepts only a valid mode and invalid/legacy values never rea
       await route.handler(req, res, { params: route.params })
       return res
     }
-    const ok = await invoke({ mode: "minimal" })
+    const ok = await invoke({ mode: "tiny" })
     assert.equal(ok.status, 200)
-    assert.equal(JSON.parse(ok.text).session.flags.mode, "minimal")
-    assert.deepEqual(calls, [{ workspaceId: 1, command: "session.update", args: { slot: "1", mode: "minimal" } }])
+    assert.equal(JSON.parse(ok.text).session.flags.mode, "tiny")
+    assert.deepEqual(calls, [{ workspaceId: 1, command: "session.update", args: { slot: "1", mode: "tiny" } }])
     await assert.rejects(() => invoke({ mode: "bad" }), /mode/)
     await assert.rejects(() => invoke({ engineering: true }), /一次一件/)
     assert.equal(calls.length, 1, "invalid values and the retired boolean cause zero box writes")
@@ -197,7 +197,7 @@ test("Server PATCH accepts only a valid mode and invalid/legacy values never rea
 test("Server box shell writes and restores one mode; invalid and legacy writes leave bytes unchanged", async () => {
   const root = tempDir("project")
   _setSessionsDirForTest(tempDir("slots"))
-  const config = { agent: { mode: "minimal" } }
+  const config = { agent: { mode: "tiny" } }
   const core = {
     loadConfig: () => config, resolveWorkMode, newSession, setSlotPrefs, setSlotMode,
     setSlotAutoApprove, setSlotPlanMode, setSlotAdvisorGuard, loadSlotFile, loadManifest, slotPath,
@@ -206,12 +206,12 @@ test("Server box shell writes and restores one mode; invalid and legacy writes l
   const created = await runner.createSession({ model: "server/demo" })
   const { id } = created
   let data = loadSlotFile(root, id)
-  assert.equal(data.mode, "minimal", "new sessions inherit agent.mode")
-  assert.equal(created.session.flags.mode, "minimal", "the create receipt exposes the same persisted mode")
+  assert.equal(data.mode, "tiny", "new sessions inherit agent.mode")
+  assert.equal(created.session.flags.mode, "tiny", "the create receipt exposes the same persisted mode")
 
   const restored = bareAgent(root, "normal")
   applySession(restored, data)
-  assert.equal(restored.config.agent.mode, "minimal")
+  assert.equal(restored.config.agent.mode, "tiny")
   assert.equal(restored.config.agent.engineering, false)
 
   runner.updateSession({ slot: id, planMode: true })
@@ -231,10 +231,10 @@ test("Server box shell writes and restores one mode; invalid and legacy writes l
   assert.throws(() => runner.updateSession({ slot: id, engineering: true }), /至少需要一个字段/)
   assert.equal(readFileSync(slotPath(root, id), "utf8"), beforeInvalid)
 
-  runner.updateSession({ slot: id, mode: "minimal" })
+  runner.updateSession({ slot: id, mode: "tiny" })
   runner.updateSession({ slot: id, planMode: true })
   data = loadSlotFile(root, id)
-  assert.equal(data.mode, "minimal")
+  assert.equal(data.mode, "tiny")
   assert.equal(data.planMode, true, "PLAN remains available outside engineering")
 })
 
@@ -332,10 +332,10 @@ async function renderChatPage({ sessions, api }) {
 }
 
 test("renderBar syncs flags across sessions with different modes", async () => {
-  const sessions = [sessionRowOfId("1:1", "minimal"), sessionRowOfId("1:2", "engineering")]
+  const sessions = [sessionRowOfId("1:1", "tiny"), sessionRowOfId("1:2", "engineering")]
   const mount = await renderChatPage({ sessions })
   const select = mount.querySelector("#mode-select")
-  assert.equal(select.value, "minimal", "auto-selected first session mode syncs into the composer")
+  assert.equal(select.value, "tiny", "auto-selected first session mode syncs into the composer")
 
   // 切到第二会话 ⇒ renderBar 必须重派生控件镜像（`syncFlags` 拆分语句）
   const rows = mount.querySelectorAll(".chat-item")
@@ -371,11 +371,11 @@ test("flag writes are serialized per session and apply in call order", async () 
   await flush(3)
   assert.equal(patchCalls.length, 1, "first flag write is issued")
 
-  select.value = "minimal"; select.dispatch("change")
+  select.value = "tiny"; select.dispatch("change")
   await flush(3)
   assert.equal(patchCalls.length, 1, "second write queues behind the in-flight first write")
 
   releaseFirst()
   await flush()
-  assert.deepEqual(patchCalls.map((body) => body.mode), ["engineering", "minimal"], "consecutive writes apply in call order")
+  assert.deepEqual(patchCalls.map((body) => body.mode), ["engineering", "tiny"], "consecutive writes apply in call order")
 })

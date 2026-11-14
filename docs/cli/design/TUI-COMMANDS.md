@@ -10,7 +10,7 @@ SLASH_COMMANDS/SLASH_ALIASES/HANDLERS 是注册面。非 busy 直接执行，bus
 
 /model 管理会话与 provider；/submodel 管理角色模型；/shell 管理执行器；/config 管理配置；/mcp 管理服务器；/advisor 管理评审；/undo 消费 undo-stack；/team 管理登录。
 
-/minimal、/normal、/eng 共用会话 mode 写点。当前 minimal 再执行 /minimal 返回 normal，否则进入 minimal；当前 engineering 再执行 /eng 返回 normal，否则进入 engineering；/normal 无条件进入 normal。三个命令都保存会话槽，/config 的 agent.mode 只负责新会话默认值并使用固定三选项。
+/tiny、/normal、/eng 共用会话 mode 写点。当前 tiny 再执行 /tiny 返回 normal，否则进入 tiny；当前 engineering 再执行 /eng 返回 normal，否则进入 engineering；/normal 无条件进入 normal。三个命令都保存会话槽，/config 的 agent.mode 只负责新会话默认值并使用固定三选项。
 
 ## 2. 选择与向导
 

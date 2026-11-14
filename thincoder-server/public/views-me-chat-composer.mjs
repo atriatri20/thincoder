@@ -39,12 +39,15 @@ export const QUIET_MS = 10000
 export const CONTEXT_WARN_PCT = 80
 /** 会话布尔开关与工作模式值域。旧 engineering 只在读面迁移，不是写面字段。 */
 export const FLAG_KEYS = Object.freeze(["autoApprove", "advisorGuard", "planMode"])
-export const WORK_MODES = Object.freeze(["minimal", "normal", "engineering"])
+export const WORK_MODES = Object.freeze(["tiny", "normal", "engineering"])
 export const CONTROL_KEYS = Object.freeze([...FLAG_KEYS, "mode"])
+/** 旧值读取别名（CONFIG §5.4）：`minimal` 是 tiny 的历史写法，只在读取口归一。 */
+const LEGACY_MODE_ALIASES = Object.freeze({ minimal: "tiny" })
 
-/** 会话工作模式读面：合法 mode 优先；旧槽仅从 engineering 布尔迁移。 */
+/** 会话工作模式读面：合法 mode 优先（旧值先归一）；旧槽仅从 engineering 布尔迁移。 */
 export function workModeOf(flags) {
-  if (WORK_MODES.includes(flags?.mode)) return flags.mode
+  const mode = LEGACY_MODE_ALIASES[flags?.mode] ?? flags?.mode
+  if (WORK_MODES.includes(mode)) return mode
   return flags?.engineering === true ? "engineering" : "normal"
 }
 
@@ -160,7 +163,7 @@ export function createSlashCommands(handlers = {}) {
     { name: "/auto", group: "Agent", descKey: "slash.desc.auto", run: (ctx) => ctx.actions.toggleAuto() === true },
     { name: "/plan", aliases: ["/p"], group: "Agent", descKey: "slash.desc.plan", rejectKey: "toolbar.planDisabled", run: (ctx) => ctx.actions.togglePlan() === true },
     { name: "/eng", group: "Agent", descKey: "slash.desc.eng", run: (ctx) => ctx.actions.toggleEng() === true },
-    { name: "/minimal", group: "Agent", descKey: "slash.desc.minimal", run: (ctx) => ctx.actions.setMode(handlers.mode?.() === "minimal" ? "normal" : "minimal") },
+    { name: "/tiny", group: "Agent", descKey: "slash.desc.tiny", run: (ctx) => ctx.actions.setMode(handlers.mode?.() === "tiny" ? "normal" : "tiny") },
     { name: "/normal", group: "Agent", descKey: "slash.desc.normal", run: (ctx) => ctx.actions.setMode("normal") },
     { name: "/new", aliases: ["/n"], group: "Session", descKey: "slash.desc.new", run: () => handlers.newChat?.() === true },
     { name: "/help", aliases: ["/h"], group: "System", descKey: "slash.desc.help", run: () => handlers.help?.() === true },

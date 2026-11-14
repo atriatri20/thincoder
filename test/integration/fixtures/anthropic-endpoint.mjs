@@ -94,9 +94,13 @@ export function fakeAnthropic({ calls = [], callsAt = null, failAt = null } = {}
   const requests = []
   const rejections = []
   const server = createServer((req, res) => {
-    let raw = ""
-    req.on("data", (chunk) => (raw += chunk))
+    let chunks = []
+    req.on("data", (chunk) => chunks.push(chunk))
     req.on("end", () => {
+      // 解码一次整块（不是逐块）：逐块 `raw += chunk` 会把跨块的 UTF-8 多字节字符撕成 U+FFFD，
+      // 于是「请求体里那串中文」与测试里那串不再相等——体越大越必现。合并后一次解码，字节边界无影响。
+      const raw = Buffer.concat(chunks).toString("utf8")
+      chunks = null
       let body
       try {
         body = JSON.parse(raw)

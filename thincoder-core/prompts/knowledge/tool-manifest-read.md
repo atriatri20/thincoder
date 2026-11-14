@@ -1,3 +1,7 @@
+The file holds version / phase / docRoot / codePaths / index.
+
+target — the project root or directory you mean; **required** — omitting it is refused. Relative paths resolve against the session anchor. A workspace target (several projects below it) is reported with the full candidate list — name the project root you mean and pass it as target.
+
 `docRoot` holds one entry per document layer, each a directory (a string | a multi-root array | `null` = absent): requirements / specs / design / modules / batches.
 
 `standards` is the standards **layer** — a directory whose `.md` files — subdirectories included, in layer-root-relative path order — are the standards; a file path is not accepted (one key, one meaning).

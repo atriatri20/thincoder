@@ -116,7 +116,9 @@ isRealUserMsg 统一标题源。generateTitle 统一请求，ensureSessionTitle 
 
 setSlotPrefs 写 provider/model/effort；resolveEffortPatch 按模型枚举归一。applySession 在模型恢复后施加 effort。保存必须携带 effort，避免整对象抹除。
 
-mode 是会话级 minimal/normal/engineering 权威值。新会话从 agent.mode 配置取默认；模式命令或宿主控件更新当前 agent 与槽。恢复时优先读槽内合法 mode，旧槽才回退到 engineering 布尔迁移。恢复后同步派生 config.agent.engineering，下一轮 prepareRun 使用同一 mode。
+mode 是会话级 tiny/normal/engineering 权威值。新会话从 agent.mode 配置取默认；模式命令或宿主控件更新当前 agent 与槽。恢复时优先读槽内合法 mode（旧字面 minimal 归一为 tiny，见 CONFIG §5.4），旧槽才回退到 engineering 布尔迁移。恢复后同步派生 config.agent.engineering，下一轮 prepareRun 使用同一 mode。
+
+槽写回面在写回前同样归一：`thincoder-vscode/src/extension/panel-session-write.mjs` 以核 `normalizeWorkMode` 处理读到的旧 mode，旧槽不会把 `minimal` 原样写回。
 
 ## 9. 可观测记录
 

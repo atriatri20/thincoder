@@ -44,17 +44,17 @@ export async function prepareRun(agent, input, callbacks, {
   // Read the sole mode on every run so commands and host controls affect the next request only.
   const mode = resolveWorkMode(agent.config?.agent)
   if (agent.config) setConfigWorkMode(agent.config, mode)
-  const minimal = mode === "minimal"
+  const tiny = mode === "tiny"
   // §6.17 每 run 现算：数值在场 = 显式原样；不在场 = auto 现算（按在用 provider——切模型后下一 run 跟手）。
   // 派生值不落 agent.compactThreshold（显式键永不被改写）。
   const threshold = resolveCompactThreshold(agent.config?.agent?.compactThreshold, agent.provider).value
   // 注入开关（PROMPT-SYSTEM.md §6.24 · 台账 #1420）：判据 `!== false`（缺省 = 现行为零变）——
   // 逐 run 现读 `agent.config` ⇒ `settings` 工具 ∕ `/config` 写入后本会话下一次组装即生效。
-  const injectDocs = !minimal && agent.config?.agent?.injectDocs !== false
+  const injectDocs = !tiny && agent.config?.agent?.injectDocs !== false
   // 2026-10-15（PROMPT-SYSTEM.md §6.27 · 台账 #1465）：项目指令块独立开关——与 `injectDocs`
   // 完全正交（用户 05:05 裁）；判点 = 下方 `projectRules` 装配支（原读 `injectDocs` ⇒ 换读本变量）。
   const injectProjectRules = agent.config?.agent?.injectProjectRules !== false
-  const injectMemories = !minimal && agent.config?.agent?.injectMemories !== false
+  const injectMemories = !tiny && agent.config?.agent?.injectMemories !== false
 
   agent._lastPromptTokens = null
   agent._usageAtLen = null
@@ -110,7 +110,7 @@ export async function prepareRun(agent, input, callbacks, {
         agent._processRestartPending = false
         agent.history.push({ role: "user", content: `[System reminder: process restarted at ${new Date().toISOString()}.]`, transient: true })
       }
-      if (!minimal && agent.memory && !agent.history.some((m) => typeof m.content === "string" && m.content.startsWith(OUTLINE_INJECT_PREFIX))) {
+      if (!tiny && agent.memory && !agent.history.some((m) => typeof m.content === "string" && m.content.startsWith(OUTLINE_INJECT_PREFIX))) {
         try {
           const { buildSummary } = await import("../tools/repomap.mjs")
           // §6.14 B4：origin 限定 + 文件数上界（越界 ⇒ 提示行 + 跳过大纲构建——见 repomap.mjs）

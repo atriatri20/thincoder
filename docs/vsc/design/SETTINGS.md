@@ -8,7 +8,7 @@
 
 Providers、Agent、Consult & Advisor、Tools & Services、Environment、团队按当前卡片组织。模型选择归会话输入面，不另建设置默认模型控件。
 
-各控件使用当前 picker/表单；会话模式使用 minimal/normal/engineering 固定选项；MCP env/headers 用行式键值，空键值不提交、重复后胜、全空删字段。
+各控件使用当前 picker/表单；会话模式使用 tiny/normal/engineering 固定选项；MCP env/headers 用行式键值，空键值不提交、重复后胜、全空删字段。
 
 ## 2. 打开与回填
 

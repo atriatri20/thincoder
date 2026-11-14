@@ -1,0 +1,5 @@
+- action='stats': current usage — total vs the compaction threshold, per-segment shares, and how much is prunable / reclaimable.
+- action='prune': drop the CONTENT of stale tool results (older than the protected tail) and replace it with a short stub — tool pairing stays intact, the session record keeps the full text, and the tool can simply be re-run.
+- action='compact': compact the earlier conversation now, with 'focus' — write what the UPCOMING work needs (1–3 sentences: goal, files, constraints that must survive); the summary is weighted toward that focus and the current task list + goal are attached automatically. It runs at the next safe point (before the next request — never mid-exchange); three consecutive failures fall back to deterministic truncation of the history. The receipt tells you where the full record is, with the `read_history` call that retrieves it.
+
+Nothing here runs on its own — the automatic threshold compaction stays in place as a fallback; whether to compact is your call. Errors come back as 'Error: ...' and change nothing.

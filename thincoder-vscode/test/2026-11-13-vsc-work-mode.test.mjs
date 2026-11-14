@@ -106,8 +106,8 @@ after(() => {
 })
 
 test("共享 MODE 固定三选项，三值均经 setMode 出站并同步单一 S._mode", () => {
-  assert.deepEqual([...modeSelect().options].map((o) => o.value), ["minimal", "normal", "engineering"])
-  for (const mode of ["minimal", "normal", "engineering"]) {
+  assert.deepEqual([...modeSelect().options].map((o) => o.value), ["tiny", "normal", "engineering"])
+  for (const mode of ["tiny", "normal", "engineering"]) {
     posted.length = 0
     modeSelect().value = mode
     change(modeSelect())
@@ -135,8 +135,8 @@ test("agentSettings 恢复三档与旧布尔；engineering×PLAN 在控件和入
   receive({ type: "planMode", active: true })
   assert.equal(S._planActive, false, "即使收到矛盾推送也不复活半状态")
 
-  receive({ type: "agentSettings", settings: { mode: "minimal" } })
-  assert.equal(modeSelect().value, "minimal")
+  receive({ type: "agentSettings", settings: { mode: "tiny" } })
+  assert.equal(modeSelect().value, "tiny")
   assert.equal(planBtn().disabled, false)
   planBtn().click()
   assert.equal(posted.at(-1).type, "setPlanMode")
@@ -154,12 +154,12 @@ test("host setMode 三值写当前槽；非法值零写；PLAN 互斥作用于�
   const legacyBefore = readFileSync(sessionIo.slotPath(proj, 1), "utf8")
   await handlePanelMessage(panel, { type: "setEngineeringEnabled", value: true })
   assert.equal(readFileSync(sessionIo.slotPath(proj, 1), "utf8"), legacyBefore, "旧 ENG 写消息不再提供第二个可写状态")
-  for (const value of [null, true, false, "", "ENG", "minimal ", 1, {}, undefined]) {
+  for (const value of [null, true, false, "", "ENG", "tiny ", 1, {}, undefined]) {
     const before = readFileSync(sessionIo.slotPath(proj, 1), "utf8")
     await handlePanelMessage(panel, { type: "setMode", value })
     assert.equal(readFileSync(sessionIo.slotPath(proj, 1), "utf8"), before, `非法值 ${JSON.stringify(value)} 零写`)
   }
-  for (const mode of ["minimal", "normal", "engineering"]) {
+  for (const mode of ["tiny", "normal", "engineering"]) {
     await handlePanelMessage(panel, { type: "setMode", value: mode })
     assert.equal(sessionIo.loadSlot(proj, 1).mode, mode)
     assert.equal(latestAgentMode(messages), mode, "每次合法写后经同一 agentSettings 快照重推")
@@ -176,20 +176,20 @@ test("host setMode 三值写当前槽；非法值零写；PLAN 互斥作用于�
 
 test("切槽与 reload 都从目标槽重推并回填 MODE", async () => {
   saveSlot(1, { mode: "normal" })
-  saveSlot(2, { mode: "minimal" })
+  saveSlot(2, { mode: "tiny" })
   const { panel, messages } = newPanel(1)
   await handlePanelMessage(panel, { type: "switchSession", slot: 2 })
   assert.equal(panel._slot, 2)
-  assert.equal(latestAgentMode(messages), "minimal")
+  assert.equal(latestAgentMode(messages), "tiny")
   receive({ type: "agentSettings", settings: agentSettings({ cwd: proj, slot: panel._slot }) })
-  assert.equal(modeSelect().value, "minimal")
+  assert.equal(modeSelect().value, "tiny")
 
   const reloaded = newPanel(2)
   await handlePanelMessage(reloaded.panel, { type: "webviewReady" })
   stopLiveHeartbeat(reloaded.panel)
-  assert.equal(latestAgentMode(reloaded.messages), "minimal", "reload 在槽绑定后重推目标槽 mode")
+  assert.equal(latestAgentMode(reloaded.messages), "tiny", "reload 在槽绑定后重推目标槽 mode")
   for (const m of reloaded.messages.filter((m) => m.type === "agentSettings")) receive(m)
-  assert.equal(modeSelect().value, "minimal")
+  assert.equal(modeSelect().value, "tiny")
 })
 
 test("旧槽 engineering 仅作读取迁移；合法槽 mode 优先", async () => {
@@ -198,7 +198,7 @@ test("旧槽 engineering 仅作读取迁移；合法槽 mode 优先", async () =
   saveSlot(3, { engineering: false })
   assert.equal(agentSettings({ cwd: proj, slot: 3 }).mode, "normal")
   saveSlot(3, { mode: "minimal", engineering: true })
-  assert.equal(agentSettings({ cwd: proj, slot: 3 }).mode, "minimal")
+  assert.equal(agentSettings({ cwd: proj, slot: 3 }).mode, "tiny", "旧槽 mode 读到即归一为 tiny")
   const writer = newPanel(3).panel
   writer._saveLines([], [], {}, 3)
   assert.equal(sessionIo.loadSlot(proj, 3).engineering, undefined, "合法 mode 保存后旧布尔退役")
@@ -208,11 +208,11 @@ test("旧槽 engineering 仅作读取迁移；合法槽 mode 优先", async () =
 
   const agent = { _engDesignTokens: null }
   const cfg = { mode: "normal", engineering: false, agentFields: {}, advisor: {} }
-  const applied = applySlotSessionState(agent, { slot: { mode: "minimal", planMode: true } }, { cfg })
-  assert.equal(applied.mode, "minimal")
-  assert.equal(agent.config.agent.mode, "minimal")
+  const applied = applySlotSessionState(agent, { slot: { mode: "tiny", planMode: true } }, { cfg })
+  assert.equal(applied.mode, "tiny")
+  assert.equal(agent.config.agent.mode, "tiny")
   assert.equal(agent.config.agent.engineering, false, "engineering 只是 mode 的派生兼容值")
-  assert.equal(agent._planMode, true, "minimal 不触发 PLAN 互斥")
+  assert.equal(agent._planMode, true, "tiny 不触发 PLAN 互斥")
 
   const legacy = { _engDesignTokens: null }
   applySlotSessionState(legacy, { slot: null }, { cfg: { mode: undefined, engineering: true, agentFields: {}, advisor: {} } })
@@ -235,15 +235,15 @@ test("配置 mode:null 是在场非法值，hydrateRun 与设置快照都回 nor
   assert.equal(agent.config.agent.engineering, false)
 })
 
-test("工具把 mode 改为 minimal 也触发统一设置重推，不只比较 engineering", () => {
+test("工具把 mode 改为 tiny 也触发统一设置重推，不只比较 engineering", () => {
   const pushed = []
-  const agent = { _modeShown: "normal", config: { agent: { mode: "minimal", engineering: false } } }
+  const agent = { _modeShown: "normal", config: { agent: { mode: "tiny", engineering: false } } }
   const result = syncToolDrivenDisplayState(agent, { onEngMode: (mode) => pushed.push(mode) })
-  assert.deepEqual(pushed, ["minimal"])
+  assert.deepEqual(pushed, ["tiny"])
   assert.equal(result.eng, true)
-  assert.equal(agent._modeShown, "minimal")
+  assert.equal(agent._modeShown, "tiny")
   syncToolDrivenDisplayState(agent, { onEngMode: (mode) => pushed.push(mode) })
-  assert.deepEqual(pushed, ["minimal"], "相同快照幂等，不重复推送")
+  assert.deepEqual(pushed, ["tiny"], "相同快照幂等，不重复推送")
 })
 
 test("ENG 工具镜像携带完整 mode 并写同一槽", async () => {
@@ -279,20 +279,20 @@ test("全局默认模式三档原子写、非法零写，且不改变当前会�
 
   posted.length = 0
   const defaultSelect = document.getElementById("ag-mode")
-  defaultSelect.value = "minimal"
+  defaultSelect.value = "tiny"
   change(defaultSelect)
-  assert.deepEqual(posted, [{ type: "saveAgentSettings", settings: { mode: "minimal" } }])
+  assert.deepEqual(posted, [{ type: "saveAgentSettings", settings: { mode: "tiny" } }])
   let raw = null
-  for (const mode of ["minimal", "normal", "engineering"]) {
+  for (const mode of ["tiny", "normal", "engineering"]) {
     assert.equal(saveAgentSettingsFromPanel({ mode }), null)
     raw = JSON.parse(readFileSync(cfgPath, "utf8"))
     assert.equal(raw.agent.mode, mode)
     assert.equal(raw.agent.engineering, undefined, "全局写 mode 时退役旧布尔")
   }
   assert.equal(sessionIo.loadSlot(proj, 4).mode, "engineering", "全局默认不得覆盖既有会话")
-  assert.equal(saveAgentSettingsFromPanel({ mode: "minimal", maxTurns: 201 }), null)
+  assert.equal(saveAgentSettingsFromPanel({ mode: "tiny", maxTurns: 201 }), null)
   raw = JSON.parse(readFileSync(cfgPath, "utf8"))
-  assert.deepEqual({ mode: raw.agent.mode, maxTurns: raw.agent.maxTurns }, { mode: "minimal", maxTurns: 201 }, "mode 与其他 agent 字段同一原子写载荷")
+  assert.deepEqual({ mode: raw.agent.mode, maxTurns: raw.agent.maxTurns }, { mode: "tiny", maxTurns: 201 }, "mode 与其他 agent 字段同一原子写载荷")
 
   const before = readFileSync(cfgPath, "utf8")
   for (const mode of ["", "normal ", true, null, 1, {}]) {

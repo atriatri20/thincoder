@@ -238,7 +238,7 @@ export const VIEWS_DICT = Object.freeze({
      "slash.desc.auto": "toggle auto-approve",
      "slash.desc.plan": "toggle plan mode (design first, then implement)",
      "slash.desc.eng": "toggle engineering ↔ normal work mode",
-     "slash.desc.minimal": "toggle minimal ↔ normal work mode",
+     "slash.desc.tiny": "toggle tiny ↔ normal work mode",
      "slash.desc.normal": "select normal work mode",
      "slash.desc.help": "this list",
     // ── ⑭ 凭据弹窗族（SSH 会话批 · 2026-10-14 —— 值逐字同 VSC `locales/en.json` 同名键）──
@@ -429,7 +429,7 @@ export const VIEWS_DICT = Object.freeze({
      "slash.desc.auto": "切换自动批准",
      "slash.desc.plan": "切换计划模式（先设计，再实现）",
      "slash.desc.eng": "切换工程 ↔ 普通工作模式",
-     "slash.desc.minimal": "切换极简 ↔ 普通工作模式",
+     "slash.desc.tiny": "切换极简 ↔ 普通工作模式",
      "slash.desc.normal": "选择普通工作模式",
      "slash.desc.help": "本清单",
     // ── ⑭ 凭据弹窗族（同上一一对应 —— 值逐字同 VSC `locales/zh.json` 同名键）──

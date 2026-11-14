@@ -11,6 +11,7 @@
 import { ansi, C } from "./ansi.mjs"
 import { sliceByWidth, stringWidth } from "./render.mjs"
 import { t } from "@thincoder/core/i18n.mjs" // 停滞轻显形（TUI.md §7.7）：句式键 status.quiet——词面单源（CLI 直取）
+import { resolveWorkMode } from "@thincoder/core/config.mjs" // 档名读取口归一单源（CONFIG §5.4——旧值 minimal 读成 tiny）
 import { isRealUserMsg } from "@thincoder/core/history-window.mjs" // B6 回退链：首条真实 user 消息谓词（纯件单源）
 import { isYesNoModal } from "./interaction.mjs" // X8 跟进①：y/n-only 族判据单源
 
@@ -52,8 +53,8 @@ export function renderStatus(state, agent, cols, slashCommands) {
   const planBanner = agent.planMode ? `${C.tool} PLAN${ansi.reset}${ansi.dim}│` : ""
   const advisorBanner = agent.config?.advisor?.guard === true ? `${C.advisor} ADVISOR${ansi.reset}${ansi.dim}│` : ""
   const engBanner = agent.config?.agent?.engineering ? `${C.advisor} ENG${ansi.reset}${ansi.dim}│` : ""
-  const minimalBanner = agent.config?.agent?.mode === "minimal" ? `${C.tool} MINIMAL${ansi.reset}${ansi.dim}│` : ""
-  const bannerPrefix = (agent.planMode ? " PLAN│ " : "") + (agent.autoApprove ? " AUTO│ " : "") + (agent.config?.advisor?.guard === true ? " ADVISOR│ " : "") + (agent.config?.agent?.engineering ? " ENG│ " : "") + (agent.config?.agent?.mode === "minimal" ? " MINIMAL│ " : "")
+  const tinyBanner = resolveWorkMode(agent.config?.agent) === "tiny" ? `${C.tool} TINY${ansi.reset}${ansi.dim}│` : ""
+  const bannerPrefix = (agent.planMode ? " PLAN│ " : "") + (agent.autoApprove ? " AUTO│ " : "") + (agent.config?.advisor?.guard === true ? " ADVISOR│ " : "") + (agent.config?.agent?.engineering ? " ENG│ " : "") + (resolveWorkMode(agent.config?.agent) === "tiny" ? " TINY│ " : "")
   // 第 33 批（TUI §14.3(b)/(c)）：attention 态 = chip 行首 + 整行注意力色对包裹（blocked >
   // awaiting；blocked 内 permission > question——与按键分发优先级同序）；平态零注入。
   const kind = attentionKind(state)
@@ -62,7 +63,7 @@ export function renderStatus(state, agent, cols, slashCommands) {
   const attentionPad = chip ? `${chip} │ ` : ""
   // 宽度预算（N9④）：chip 占位计入——整行仍 ≤ cols − 1（既有口径）。
   const statusMax = cols - 1 - (bannerPrefix ? stringWidth(bannerPrefix) : 0) - (attentionPad ? stringWidth(attentionPad) : 0)
-  const inner = `${ansi.dim}${planBanner}${autoBanner}${advisorBanner}${engBanner}${minimalBanner}${sliceByWidth(statusLine, Math.max(10, statusMax))}`
+  const inner = `${ansi.dim}${planBanner}${autoBanner}${advisorBanner}${engBanner}${tinyBanner}${sliceByWidth(statusLine, Math.max(10, statusMax))}`
   // 负向锁（§14.3）：attention 为 null ⇒ 半态路径逐字节等价（不经包裹 / 零字节注入）。
   if (!chip) return `${inner}${ansi.reset}`
   // 底色存活（§14.3）：既有内容含内部 ansi.reset（banner / ctx 警示段）——每次内部复位后

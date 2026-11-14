@@ -94,9 +94,17 @@ team 段由 `team.mjs` 的登录和退出流程写入。通用 settings 不写�
 
 DEFAULTS.agent.mode = normal。装载器先读取合法 agent.mode；只有该键缺席时，才把旧 agent.engineering 布尔值迁移为 engineering 或 normal。
 
+旧值 `minimal` 是 `tiny` 的历史写法：`resolveWorkMode` 与 `resolveSessionWorkMode` 读到它返回 `tiny`，不因为不在枚举内而回落 `normal`。写入面只产 `tiny`，不再把 `minimal` 当合法值。
+
+归一只在读取面发生，读取路径不写盘。理由 = 一次「打开会话」不该变成一次磁盘写入：历史读面只读，槽文件在多实例下还可能被另一进程同时写，读取时改写会制造一处谁先写的竞争。而不改写不累积成本——归一是一次字符串比较，每轮读一次归一次——磁盘上的旧字面留到该会话下一次写 mode（模式命令、宿主控件或设置写入）时才换成 `tiny`。
+
 运行配置可向旧消费者派生 agent.engineering = (mode === "engineering")。这个派生值不参与通用 settings 写入，也不能被界面单独修改。
 
-settings 的 agent.mode 写值只接受 minimal、normal、engineering。CLI、VSC、Desktop 共用同一键和值域，固定选项不使用自由文本。
+settings 的 agent.mode 写值只接受 tiny、normal、engineering。CLI、VSC、Desktop 共用同一键和值域，固定选项不使用自由文本。
+
+档名在这三档的每个称谓面同写：枚举值与槽值、斜杠命令名、状态栏横幅、i18n 键与英文值、用户可见的英文选项文案（设置页标签、命令说明、CLI 设置里的档位选项）、源码注释里陈述值域与命令名的行、以及代码里以档名命名的标识符（`thincoder-core/prompt-files.mjs` 的 `expandKnowledgeTopics` 档位选项一形）。旧名 `minimal` 只作为读兼容的输入值存在，不作第二称谓。
+
+只改键不改值，用户看见的仍是旧名：键与值是同一件事的两半，改名时两者同轮改。
 
 配置保存的是新会话默认值；会话槽保存既有会话模式。恢复和运行期切换见 SESSION 与 PROMPT-SYSTEM。
 
@@ -106,6 +114,18 @@ settings 的 agent.mode 写值只接受 minimal、normal、engineering。CLI、V
 - VSC：设置面板、宿主监视和旧宿主配置迁移。
 - Desktop：复用 core 装载与渲染界面。
 - 任一端都不能因为宿主差异改变共享配置的键语义。
+- 读到旧字面 `minimal` 的各端在各自读取口归一为 `tiny`（值域与时机见 §5.4）。以下五处现行各自定义模式字面、不 import 核，故各面就地实现同一句映射，语义以 §5.4 为源、互不 import：`thincoder-desktop/renderer/events-flags.mjs` · `thincoder-render-core/composer/controls.mjs` · `thincoder-server/public/views-me-chat-composer.mjs` · `thincoder-server/src/agent/member-routes.mjs` · `thincoder-server/deploy/sandbox/member-shell/core-run-util.mjs`。
+- 另两面走核归一、不另写映射：`thincoder-desktop/src/main/session-flags.mjs` 读槽 mode 走 `@thincoder/core/config.mjs` 的 `resolveSessionWorkMode`，其本地 `MODES` 数组只作写入校验；`thincoder-vscode/src/extension/panel-session-write.mjs` 在槽写回前以 `@thincoder/core/config-migrate.mjs` 的 `normalizeWorkMode` 归一 `extra.mode ?? existing.mode`，旧槽的 `minimal` 因此不会被原样写回。
+- 新会话默认档的选项表直接列出三个新值、不列 `minimal`：
+  - `thincoder-desktop/renderer/views/settings-agent.mjs` 的 `modeOptions`
+  - `thincoder-vscode/webview/settings-agent.js` 的 `agentCardHtml`
+  - `thincoder-vscode/webview/index.html` 的 `#mode-select`
+- VSC 那一面的输入已由核归一：`thincoder-vscode/src/extension/settings.mjs` 的 `loadAgentSettings` 以 `mode: resolveWorkMode(a)` 产出该值，`agentSettings` 把它下发为 `defaultMode`，所以 `minimal` 到不了这三张选项表。一面若可能收到旧字面，按上一条在读取口归一，不在选项表里留旧值。
+- 档位选项的标签由值派生（`settings.agent.mode${Mode}` 一形），故 i18n 键随值改：`toolbar.modeMinimal` → `toolbar.modeTiny`、`settings.agent.modeMinimal` → `settings.agent.modeTiny`、`slash.desc.minimal` → `slash.desc.tiny`。推理强度的 `reasoning.minimal` 是另一个值域，键名与同面的英文值 `Minimal` 都不动。
+- 英文值随档名走：`settings.agent.modeTiny` 显示 `Tiny`，`slash.desc.tiny` 是 `toggle tiny ↔ normal work mode`；非词表的内联说明同改，共两处：`thincoder-cli/src/tui/slash-commands.mjs` 的 `/tiny` 行，以及 `thincoder-cli/src/tui/cmd-config.mjs` 的档位选项文案 `tiny — compact prompts with on-demand knowledge`（同项的 `action` 也是值域取值）。
+- 源码注释里陈述值域的写法同改（`thincoder-core/config-defaults.mjs` 的一行、`thincoder-render-core/composer/controls.mjs` 的一行、`thincoder-cli/src/tui/cmd-eng.mjs` 的文件头注）：注释不改也跑得过测试，改后它教的是旧名。
+- 档位按钮缩写 `toolbar.modeTiny` 的值保持 `MIN`：它与 `NORMAL` ∥ `ENG` 同排，是宽度缩写，随排版而不随档名。
+- 中文值不动（`极简`）。
 
 ## 7. 关键决策
 

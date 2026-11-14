@@ -1,5 +1,5 @@
-/** Session work-mode commands. /eng toggles engineering↔normal; /minimal toggles
- * minimal↔normal; /normal always selects normal. All three write the same slot field. */
+/** Session work-mode commands. /eng toggles engineering↔normal; /tiny toggles
+ * tiny↔normal; /normal always selects normal. All three write the same slot field. */
 import { ansi, C } from "./ansi.mjs"
 import { activeSlot } from "@thincoder/core/session.mjs"
 import { setSlotMode } from "@thincoder/core/session-slot-write.mjs"
@@ -62,9 +62,9 @@ export async function handleEngCommand(ctx) {
   await selectWorkMode(ctx, current === "engineering" ? "normal" : "engineering", "/eng")
 }
 
-export async function handleMinimalCommand(ctx) {
+export async function handleTinyCommand(ctx) {
   const current = resolveWorkMode(ctx.agent.config?.agent)
-  await selectWorkMode(ctx, current === "minimal" ? "normal" : "minimal", "/minimal")
+  await selectWorkMode(ctx, current === "tiny" ? "normal" : "tiny", "/tiny")
 }
 
 export async function handleNormalCommand(ctx) {

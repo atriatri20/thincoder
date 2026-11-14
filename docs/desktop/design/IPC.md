@@ -29,7 +29,7 @@ preload 的 `EVENT_CHANNELS` 是实际可订阅闭集。除 `ev:config` 与 `ev:
 | `ev:ledger` | `{ key,detailLines,marker? }`；marker 为 `{text,warn}` 或 null，首拍可显式清空。 |
 | `ev:timer` | `{ key,status:"fired",text }`，text 为到期提醒原文。 |
 | `ev:inbox` | `{ key,kind,text }`；kind 为 `lost` 或 `blocked`，text 为核生成的整行。 |
-| `ev:flags` | `{ key,flags:{planMode,autoApprove,advisorGuard,mode} }`，写回执后的活值投影；mode 为 minimal/normal/engineering。 |
+| `ev:flags` | `{ key,flags:{planMode,autoApprove,advisorGuard,mode} }`，写回执后的活值投影；mode 为 tiny/normal/engineering。 |
 | `ev:statusText` | `{ key,kind,... }`；kind 为 `rateWait/rateLimited/overloaded/quota/index`，可携 `seconds,message,phase,done,total`。 |
 | `ev:compress` | start `{ key,status:"start",messages? }`；done `{ status:"done",tokensFreed?,elapsedMs? }`；fallback `{ status:"fallback",tailMessages? }`；failed `{ status:"failed",error? }`，均携 key。 |
 | `ev:goal` | `{ key,status,objective,criteria }`，goal 缺席时为 `{ key,status:"cancelled" }`。 |

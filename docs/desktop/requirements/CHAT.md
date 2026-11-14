@@ -11,7 +11,7 @@
 
 ## 2. 审批与模式
 
-- **D5**：逐项/批审批提供当前 once/always/reject 与 approveAll/deny/oneByOne；AUTO、PLAN 与三档 MODE 可见并与会话凭证一致。MODE 使用 minimal/normal/engineering，PLAN 的既有互斥只在 engineering 下生效。
+- **D5**：逐项/批审批提供当前 once/always/reject 与 approveAll/deny/oneByOne；AUTO、PLAN 与三档 MODE 可见并与会话凭证一致。MODE 使用 tiny/normal/engineering，PLAN 的既有互斥只在 engineering 下生效。
 - 提问卡支持选项、自由文本和取消，回执成功才退场。失败时保留同一张卡、promptId 和草稿，重试只重新调用 `question:respond`，不重发末条用户消息。错误横幅的重试才走末条用户消息的正常发送路径。
 
 ## 3. 渲染对齐

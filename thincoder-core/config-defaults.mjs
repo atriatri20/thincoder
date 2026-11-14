@@ -39,7 +39,7 @@ export const DEFAULTS = {
     streamRules: [],      // time-traveling stream rules: [{ pattern: "regex", message: "reminder", action: "abort"|"warn", repeat: "always"|"once" }]
     advisor: { guard: false },  // code review is always available; guard: true pushes completion back until reviewed (opt-in). Also accepts provider/model/thinking/reasoningEffort/timeoutMs overrides. Deprecated: enabled (2026-08-21)
     autoThink: false,     // auto-classify task difficulty and set reasoning effort per-turn
-    mode: "normal",       // sole work-mode authority for new sessions: minimal | normal | engineering
+    mode: "normal",       // sole work-mode authority for new sessions: tiny | normal | engineering
     engineering: false,   // derived runtime compatibility view only: mode === "engineering"
     // Async pool limits (AGENT-LOOP-ASYNC-POOL.md §6.10 D-24a/R14 + R13 — POOL-CONFIG-
     // UNIFIED 2026-09-09): { engCoder, other, advisor } — eng-coder pool / other-role

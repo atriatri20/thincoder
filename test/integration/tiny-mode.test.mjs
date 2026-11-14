@@ -1,7 +1,7 @@
 /**
- * CLI 50 — three work modes and minimal knowledge queries. Real command handlers, core run loop,
+ * CLI 50 — three work modes and tiny knowledge queries. Real command handlers, core run loop,
  * session slots and a local scripted Anthropic endpoint; no external model or network is used.
- * Run from the repository root: node --test test/integration/minimal-mode.test.mjs
+ * Run from the repository root: node --test test/integration/tiny-mode.test.mjs
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -18,15 +18,15 @@ import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../../thincode
 import { assembleBuiltinTools } from "../../thincoder-core/tools/index.mjs"
 import { _upsertCodeFile, createMemory, docSync, put } from "../../thincoder-core/memory.mjs"
 import { normalizeOrigin } from "../../thincoder-core/memory/origin.mjs"
-import { handleMinimalCommand } from "../../thincoder-cli/src/tui/cmd-eng.mjs"
+import { handleTinyCommand } from "../../thincoder-cli/src/tui/cmd-eng.mjs"
 import { buildSpawnChild } from "../../thincoder-core/agent-tools/subagent-spawn.mjs"
 import { fakeAnthropic } from "./fixtures/anthropic-endpoint.mjs"
 
 const MODEL = "claude-fake-1"
-const QUERY = "quixoticminimalmarker"
+const QUERY = "quixotictinymarker"
 
 function makeProject(tag) {
-  const root = mkdtempSync(join(tmpdir(), `minimal-int-${tag}-`))
+  const root = mkdtempSync(join(tmpdir(), `tiny-int-${tag}-`))
   writeFileSync(join(root, "PROJECT-MANIFEST.json"), JSON.stringify({ version: 1, phase: "initial-dev", docRoot: { design: "docs/design", batches: "docs/batches" } }))
   writeFileSync(join(root, "AGENTS.md"), "PROJECT-RULE-MARKER: keep this rule in every mode.\n")
   mkdirSync(join(root, "docs/design"), { recursive: true })
@@ -69,7 +69,7 @@ function count(haystack, needle) {
 test("CLI 50-1 mode command changes the next real request, narrows three injections and survives slot restore", { timeout: 180_000 }, async (t) => {
   const root = makeProject("50-1")
   const endpoint = await fakeAnthropic()
-  const store = mkdtempSync(join(tmpdir(), "minimal-int-store-"))
+  const store = mkdtempSync(join(tmpdir(), "tiny-int-store-"))
   _setSessionsDirForTest(store)
   const memory = createMemory({ dbPath: join(store, "memory.db") })
   memory.codeOrigin = root
@@ -100,22 +100,22 @@ test("CLI 50-1 mode command changes the next real request, narrows three injecti
   assert.ok(normalText.includes("project dependency outline"), "normal really injects the project outline")
 
   const ctx = { agent, pushLine() {}, pushLabel() {} }
-  await handleMinimalCommand(ctx)
-  assert.equal(loadSlotFile(root, 1).mode, "minimal")
+  await handleTinyCommand(ctx)
+  assert.equal(loadSlotFile(root, 1).mode, "tiny")
   await runAgent(agent, `${QUERY} next`, {}, {})
-  const minimal = endpoint.requests.at(-1).body
-  const minimalText = requestText(minimal)
-  assert.ok(minimal.system.includes("PROJECT-RULE-MARKER"), "minimal keeps project rules")
-  assert.ok(!minimal.system.includes("## Evidence discipline"), "minimal removes detailed topics")
-  assert.ok(toolNames(minimal).includes("knowledge"), "minimal provides the same knowledge tool")
-  assert.ok(!minimal.system.includes("PURE_QUERY_ONLY_MARKER"), "minimal never inlines pure-query topics")
-  assert.ok(minimalText.includes("mode: minimal"), "the next request sees the new mode")
-  assert.equal(count(minimalText, "Relevant documentation"), count(normalText, "Relevant documentation"), "switching does not rewrite history and adds no new doc injection")
-  assert.equal(count(minimalText, "Relevant memories"), count(normalText, "Relevant memories"), "no new memory injection")
+  const tiny = endpoint.requests.at(-1).body
+  const tinyText = requestText(tiny)
+  assert.ok(tiny.system.includes("PROJECT-RULE-MARKER"), "tiny keeps project rules")
+  assert.ok(!tiny.system.includes("## Evidence discipline"), "tiny removes detailed topics")
+  assert.ok(toolNames(tiny).includes("knowledge"), "tiny provides the same knowledge tool")
+  assert.ok(!tiny.system.includes("PURE_QUERY_ONLY_MARKER"), "tiny never inlines pure-query topics")
+  assert.ok(tinyText.includes("mode: tiny"), "the next request sees the new mode")
+  assert.equal(count(tinyText, "Relevant documentation"), count(normalText, "Relevant documentation"), "switching does not rewrite history and adds no new doc injection")
+  assert.equal(count(tinyText, "Relevant memories"), count(normalText, "Relevant memories"), "no new memory injection")
 
   const restored = await agentOf(root, endpoint.port, { mode: "normal", memory })
   applySession(restored, loadSlotFile(root, 1))
-  assert.equal(restored.config.agent.mode, "minimal")
+  assert.equal(restored.config.agent.mode, "tiny")
   await runAgent(restored, QUERY, {}, {})
   const restoredBody = endpoint.requests.at(-1).body
   const restoredText = requestText(restoredBody)
@@ -137,7 +137,7 @@ test("CLI 50-2 main and child agents query knowledge through list/search/get wit
     await endpoint.close()
     removeTempDirBestEffort(root)
   })
-  const agent = await agentOf(root, endpoint.port, { mode: "minimal" })
+  const agent = await agentOf(root, endpoint.port, { mode: "tiny" })
   const reply = await runAgent(agent, "Read the business-gates topic", {}, {})
   assert.match(reply, /doc-lookup/)
   assert.match(reply, /business-gates/)
@@ -151,7 +151,7 @@ test("CLI 50-2 main and child agents query knowledge through list/search/get wit
     { id: "child_get", name: "knowledge", input: { action: "get", topic: "doc-lookup" } },
   ] })
   t.after(() => childEndpoint.close())
-  const parent = await agentOf(root, childEndpoint.port, { mode: "minimal" })
+  const parent = await agentOf(root, childEndpoint.port, { mode: "tiny" })
   parent._subAgentCounter = 0
   const built = buildSpawnChild(parent, { depth: 0, agent: parent, callbacks: {}, onPermissionRequest: async () => true }, {
     role: "explore", goal: "Read the doc lookup topic.", knownFacts: "The topic id is doc-lookup.",
@@ -163,7 +163,7 @@ test("CLI 50-2 main and child agents query knowledge through list/search/get wit
   const childBody = childEndpoint.requests[0].body
   assert.ok(childBody.system.includes("Role: read-only scout"))
   assert.ok(!childBody.system.includes("## Evidence discipline"))
-  assert.ok(toolNames(childBody).includes("knowledge"), "minimal children receive knowledge too")
+  assert.ok(toolNames(childBody).includes("knowledge"), "tiny children receive knowledge too")
 })
 
 test("CLI 50-3 startup loads the real TUI module graph without stale session-write imports", async () => {

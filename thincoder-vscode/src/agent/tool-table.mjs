@@ -19,6 +19,12 @@ import { specForModel } from "../specs.mjs"
 // 子代面排除集（核单源——TOOLS.md §6.16；核 `agent/helpers.mjs` 静态安全——W8 扫描实测）
 import { SUBAGENT_TOOL_EXCLUSIONS } from "@thincoder/core/agent/helpers.mjs"
 
+/** 端面无该动作的行级剔除（#99 · CORE-UNIFICATION §2.13.4）：跑在 `toOpenAISchema` 把常驻面与展开面
+ *  拼完之后（设计 TOOLS §1.1）。顺序不可倒——`- action:'panel'` 一行按内容归属住在展开面，装配前剔它
+ *  看不到那一行；倒过来做，展开面里的端面行会原样回到 VSC 描述，带上端面没有的动作。 */
+const stripPanelActionLines = (description) =>
+  description.split("\n").filter((l) => !l.startsWith("- action:'panel'")).join("\n")
+
 /**
  * VSC subagent 工具面装饰（原 W13 端侧装饰 + 本批 role 面取核合并——**装饰体单点**）。
  * 面清单：
@@ -38,6 +44,7 @@ import { SUBAGENT_TOOL_EXCLUSIONS } from "@thincoder/core/agent/helpers.mjs"
  * @param {{engineering?: boolean, consultModels?: object[]}} [opts]
  */
 export function vscSubagentFace(tool, { engineering = false, consultModels = [] } = {}) {
+
   const { view, freeze, ...props } = tool.parameters.properties
   const actionProp = props.action
   // ① role 面（取核拷贝）：模式互斥——普通模式 coder ∕ 工程模式 eng-coder（+ eng-designer）；tester 两模式都可派
@@ -64,8 +71,10 @@ export function vscSubagentFace(tool, { engineering = false, consultModels = [] 
     : actionProp
   return {
     ...tool,
-    // ① 描述：先剔 panel 行（端面无该动作）**再**附 role suffix——后缀居尾（取核同位）
-    description: tool.description.split("\n").filter((l) => !l.startsWith("- action:'panel'")).join("\n") + subagentRoles.suffix,
+    // ① 描述：role suffix 仍居尾（取核同位）；panel 行的剔除改由 `descriptionPostProcess` 在**装配之后**跑
+    //    （设计 TOOLS §1.1）——该行按内容归属搬进了展开面，装配前剔它看不到那一行。
+    description: tool.description + subagentRoles.suffix,
+    descriptionPostProcess: stripPanelActionLines,
     parameters: {
       ...tool.parameters,
       properties: {

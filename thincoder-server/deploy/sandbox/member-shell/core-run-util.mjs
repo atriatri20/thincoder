@@ -28,7 +28,10 @@ export class ShellError extends Error {
 
 /** 会话布尔开关与三档工作模式。旧 engineering 只在读面迁移，不进入写面。 */
 export const FLAG_KEYS = Object.freeze(["autoApprove", "planMode", "advisorGuard"])
-export const WORK_MODES = Object.freeze(["minimal", "normal", "engineering"])
+export const WORK_MODES = Object.freeze(["tiny", "normal", "engineering"])
+/** 旧值读取别名（CONFIG §5.4）：`minimal` 是 tiny 的历史写法，只在读取口归一——写面仍只收旧值外的三档。 */
+const LEGACY_MODE_ALIASES = Object.freeze({ minimal: "tiny" })
+const normalizeMode = (mode) => LEGACY_MODE_ALIASES[mode] ?? mode
 
 export const FLAG_SETTERS = Object.freeze({
   autoApprove: "setSlotAutoApprove",
@@ -86,9 +89,10 @@ function textOf(content) {
   return ""
 }
 
-/** 槽工作模式读面：合法 mode 优先，旧槽才读 engineering 布尔。 */
+/** 槽工作模式读面：合法 mode 优先（旧值 `minimal` 先归一为 tiny），旧槽才读 engineering 布尔。 */
 export function workModeOf(data) {
-  if (WORK_MODES.includes(data?.mode)) return data.mode
+  const mode = normalizeMode(data?.mode)
+  if (WORK_MODES.includes(mode)) return mode
   return data?.engineering === true ? "engineering" : "normal"
 }
 
@@ -120,10 +124,11 @@ export function mergeSlotControl(agent, data) {
     agent.activeModel = data.activeModel
     if (agent.provider && typeof agent.provider === "object") agent.provider.model = data.activeModel
   }
-  // 工作模式（单源：合法 mode 优先，旧 engineering 布尔回落；盘面无 mode 信息 ⇒ 不动现行值）
-  if (WORK_MODES.includes(data.mode)) {
-    agent.config.agent.mode = data.mode
-    agent.config.agent.engineering = data.mode === "engineering"
+  // 工作模式（单源：合法 mode 优先（旧值先归一），旧 engineering 布尔回落；盘面无 mode 信息 ⇒ 不动现行值）
+  const restoredMode = normalizeMode(data.mode)
+  if (WORK_MODES.includes(restoredMode)) {
+    agent.config.agent.mode = restoredMode
+    agent.config.agent.engineering = restoredMode === "engineering"
   } else if (data.engineering !== undefined) {
     agent.config.agent.mode = data.engineering === true ? "engineering" : "normal"
     agent.config.agent.engineering = data.engineering === true

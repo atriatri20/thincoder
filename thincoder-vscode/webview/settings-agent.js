@@ -13,8 +13,8 @@ export function agentCardHtml() {
   // ─── Agent card (run parameters + subagent model assignments) ───
   const as = SS.agentSettings || {}
   html += `<section class="settings-card"><h4 class="settings-card-title">${t("settings.agentSection")}</h4><div class="settings-card-body">`
-  const defaultMode = ["minimal", "normal", "engineering"].includes(as.defaultMode) ? as.defaultMode : "normal"
-  html += `<div class="key-field"><label title="${t("settings.agent.modeHelp")}">${t("settings.agent.mode")}</label><select id="ag-mode">${["minimal", "normal", "engineering"].map((mode) => `<option value="${mode}" ${defaultMode === mode ? "selected" : ""}>${t(`settings.agent.mode${mode[0].toUpperCase()}${mode.slice(1)}`)}</option>`).join("")}</select></div>`
+  const defaultMode = ["tiny", "normal", "engineering"].includes(as.defaultMode) ? as.defaultMode : "normal"
+  html += `<div class="key-field"><label title="${t("settings.agent.modeHelp")}">${t("settings.agent.mode")}</label><select id="ag-mode">${["tiny", "normal", "engineering"].map((mode) => `<option value="${mode}" ${defaultMode === mode ? "selected" : ""}>${t(`settings.agent.mode${mode[0].toUpperCase()}${mode.slice(1)}`)}</option>`).join("")}</select></div>`
   html += `<div class="key-field"><label title="${t("settings.maxTurnsHelp")}">${t("settings.maxTurns")}</label><input id="ag-maxturns" type="number" min="1" value="${as.maxTurns ?? 200}"></div>`
   html += `<div class="key-field"><label title="${t("settings.subagentTurnsHelp")}">${t("settings.subagentTurns")}</label><input id="ag-subturns" type="number" min="1" value="${as.subagentTurns ?? 100}"></div>`
   // §11.1/§11.2（R14/R13——POOL-CONFIG-UNIFIED 2026-09-09）：并发池三域容量

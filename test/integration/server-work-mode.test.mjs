@@ -173,7 +173,7 @@ test("composer setMode walks the real PATCH into the box slot and the mode survi
   })
 
   const select = root.querySelector("#mode-select")
-  assert.deepEqual(select.options.map((option) => option.value), ["minimal", "normal", "engineering"], "三档模式")
+  assert.deepEqual(select.options.map((option) => option.value), ["tiny", "normal", "engineering"], "三档模式")
   assert.equal(select.value, "normal")
 
   select.value = "engineering"

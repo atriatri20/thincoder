@@ -206,7 +206,7 @@ export async function handleConfigCommand(ctx, args = []) {
 
     if (choice.action === "agent.mode") {
       const selected = await showPicker("New-session work mode", [
-        { type: "item", text: "minimal — compact prompts with on-demand knowledge", action: "minimal" },
+        { type: "item", text: "tiny — compact prompts with on-demand knowledge", action: "tiny" },
         { type: "item", text: "normal — full normal workflow", action: "normal" },
         { type: "item", text: "engineering — design-first engineering workflow", action: "engineering" },
       ])

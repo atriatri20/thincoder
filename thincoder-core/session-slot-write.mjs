@@ -166,7 +166,7 @@ export function setSlotPlanMode(cwd, slot, value) {
 
 /** 会话级互斥工作模式——槽是会话真值来源；旧 engineering 字段在写入时退役。 */
 export function setSlotMode(cwd, slot, value) {
-  if (!["minimal", "normal", "engineering"].includes(value)) return false
+  if (!["tiny", "normal", "engineering"].includes(value)) return false
   return writeFlag(cwd, slot, (d) => {
     d.mode = value
     if (value === "engineering") d.planMode = false

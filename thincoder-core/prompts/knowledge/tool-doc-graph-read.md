@@ -1,3 +1,9 @@
+This face only queries the graph; it does not build or rebuild it.
+
+The questions this tool face carries: `forward` (the edges leaving a node) · `reverse` (the edges pointing at a node — the question plain text search cannot answer: "who cites this section?") · `chain` (a layered walk outward from a node, one layer per edge count).
+
+Every call needs `target` — the project root (the directory carrying PROJECT-MANIFEST.json; a relative path resolves against the session anchor). There is no default for it and none for `node` / `depth`: a missing one is refused by name, never answered with an empty result.
+
 Arguments:
 
 - `node` (forward / reverse / chain) — the identity form: `req:F16` · `doc:<path>` · `doc:<path>#<section>` · `case:CLI 41-1` · `symbol:editTool` · `ledger:#2236`.

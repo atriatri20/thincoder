@@ -5,10 +5,10 @@
  * 「会话流」「多轮」「进程重开 + 历史从盘回放」的用户入口），本档扮演 ACP 客户端
  * （NDJSON JSON-RPC）。夹具 = `fixtures/acp-cli.mjs`（起子进程 + 发请求 + 收更新）。
  *
- * workMode 三档（minimal/normal/engineering）与 PLAN mode 是**两个正交字段**：
+ * workMode 三档（tiny/normal/engineering）与 PLAN mode 是**两个正交字段**：
  * `sessionConfigOptions` 顺序 = model → thinking → mode（PLAN）→ workMode；本档断言
  * ① session/new 按 config `agent.mode` 返回三档 workMode 且不碰 PLAN；
- * ② set_config_option 切 minimal/engineering 写当前 agent 与会话槽并全量重推；
+ * ② set_config_option 切 tiny/engineering 写当前 agent 与会话槽并全量重推；
  * ③ 非法 workMode 零状态变、零通知；
  * ④ load/resume 从槽恢复 workMode；
  * ⑤ PLAN（id=mode）字段不被 workMode 切换污染（仅 engineering 按既有规则清 PLAN）。
@@ -27,7 +27,7 @@ import { fakeAnthropic } from "./fixtures/anthropic-endpoint.mjs"
 import { startCli } from "./fixtures/acp-cli.mjs"
 
 const SCENE_TIMEOUT_MS = 240_000
-const WORK_MODES = ["minimal", "normal", "engineering"]
+const WORK_MODES = ["tiny", "normal", "engineering"]
 
 /** configOptions 里 id=workMode 的现值（新/load/resume/通知共用同一投影）。 */
 const workModeOf = (configOptions) => configOptions?.find((o) => o.id === "workMode")?.currentValue
@@ -92,24 +92,24 @@ test("session/new returns the configured workMode for all three values and never
   }
 })
 
-test("set_config_option switches workMode minimal→engineering with full notification, slot persistence and PLAN exclusion", { timeout: SCENE_TIMEOUT_MS }, async (t) => {
+test("set_config_option switches workMode tiny→engineering with full notification, slot persistence and PLAN exclusion", { timeout: SCENE_TIMEOUT_MS }, async (t) => {
   const s = await scene(t)
   const cli = s.launch()
   const { sessionId, configOptions: initialOptions } = await openSession(cli, s.cwd)
   assert.equal(workModeOf(initialOptions), "normal")
 
-  // 先开 PLAN，再切 workMode=minimal：minimal 不碰 PLAN（id=mode 保持 plan）。
+  // 先开 PLAN，再切 workMode=tiny：tiny 不碰 PLAN（id=mode 保持 plan）。
   const plan = await cli.request("session/set_mode", { sessionId, mode: "plan" })
   assert.equal(plan.error, undefined, `set_mode plan 被拒：${JSON.stringify(plan.error)}`)
 
-  const minimal = await cli.request("session/set_config_option", { sessionId, configId: "workMode", value: "minimal" })
-  assert.equal(minimal.error, undefined, `workMode=minimal 被拒：${JSON.stringify(minimal.error)}`)
-  assert.equal(workModeOf(minimal.result.configOptions), "minimal")
-  assert.equal(planModeOf(minimal.result.configOptions), "plan", "workMode=minimal 不污染 PLAN")
+  const tiny = await cli.request("session/set_config_option", { sessionId, configId: "workMode", value: "tiny" })
+  assert.equal(tiny.error, undefined, `workMode=tiny 被拒：${JSON.stringify(tiny.error)}`)
+  assert.equal(workModeOf(tiny.result.configOptions), "tiny")
+  assert.equal(planModeOf(tiny.result.configOptions), "plan", "workMode=tiny 不污染 PLAN")
 
   let updates = configOptionUpdates(cli)
-  assert.equal(updates.length, 1, "切 minimal 应发一次 config_option_update")
-  assert.equal(workModeOf(updates[0].configOptions), "minimal", "通知携带全量 configOptions（workMode=minimal）")
+  assert.equal(updates.length, 1, "切 tiny 应发一次 config_option_update")
+  assert.equal(workModeOf(updates[0].configOptions), "tiny", "通知携带全量 configOptions（workMode=tiny）")
   assert.equal(planModeOf(updates[0].configOptions), "plan", "通知里的 PLAN 保持 plan")
 
   // 切 engineering：按既有规则清 PLAN（mode=plan → normal）。
@@ -141,7 +141,7 @@ test("invalid workMode rejects with -32602, zero state change and zero notificat
 
   const invalid = await cli.request("session/set_config_option", { sessionId, configId: "workMode", value: "bad" })
   assert.equal(invalid.error?.code, -32602, `非法 workMode 应返 -32602：${JSON.stringify(invalid)}`)
-  assert.match(invalid.error.message, /workMode must be one of minimal\/normal\/engineering/)
+  assert.match(invalid.error.message, /workMode must be one of tiny\/normal\/engineering/)
 
   assert.equal(configOptionUpdates(cli).length, before, "非法值零通知")
 
@@ -156,19 +156,19 @@ test("workMode persists to the slot across process restart and restore keeps PLA
   const first = s.launch()
   const { sessionId } = await openSession(first, s.cwd)
 
-  const minimal = await first.request("session/set_config_option", { sessionId, configId: "workMode", value: "minimal" })
-  assert.equal(minimal.error, undefined, `workMode=minimal 被拒：${JSON.stringify(minimal.error)}`)
-  assert.equal(workModeOf(minimal.result.configOptions), "minimal")
-  assert.equal(planModeOf(minimal.result.configOptions), "normal", "minimal 不设 PLAN")
+  const tiny = await first.request("session/set_config_option", { sessionId, configId: "workMode", value: "tiny" })
+  assert.equal(tiny.error, undefined, `workMode=tiny 被拒：${JSON.stringify(tiny.error)}`)
+  assert.equal(workModeOf(tiny.result.configOptions), "tiny")
+  assert.equal(planModeOf(tiny.result.configOptions), "normal", "tiny 不设 PLAN")
   await first.stop() // 会话已在 set_config_option 时落盘
 
   const second = s.launch()
   const loaded = await second.request("session/load", { sessionId })
   assert.equal(loaded.error, undefined, `重开后 load 被拒：${JSON.stringify(loaded.error)}｜stderr: ${second.stderr.slice(-2000)}`)
-  assert.equal(workModeOf(loaded.result.configOptions), "minimal", "跨进程 load 恢复 workMode=minimal")
+  assert.equal(workModeOf(loaded.result.configOptions), "tiny", "跨进程 load 恢复 workMode=tiny")
   assert.equal(planModeOf(loaded.result.configOptions), "normal", "workMode 恢复不污染 PLAN")
 
   const resumed = await second.request("session/resume", { sessionId })
   assert.equal(resumed.error, undefined, `重开后 resume 被拒：${JSON.stringify(resumed.error)}｜stderr: ${second.stderr.slice(-2000)}`)
-  assert.equal(workModeOf(resumed.result.configOptions), "minimal", "跨进程 resume 恢复 workMode=minimal")
+  assert.equal(workModeOf(resumed.result.configOptions), "tiny", "跨进程 resume 恢复 workMode=tiny")
 })

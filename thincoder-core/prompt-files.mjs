@@ -79,16 +79,16 @@ export function listKnowledgeTopics(sources = KNOWLEDGE_SOURCES) {
 
 const KNOWLEDGE_ANCHOR_RE = /\{\{knowledge:([a-z0-9-]+)\}\}/g
 
-/** Expand the shared master for full mode, or remove standalone topic anchors for minimal. */
-export function expandKnowledgeTopics(text, { minimal = false } = {}) {
+/** Expand the shared master for full mode, or remove standalone topic anchors for tiny. */
+export function expandKnowledgeTopics(text, { tiny = false } = {}) {
   const seen = new Set()
-  // In minimal mode an anchor owns its following line break and blank line; the preceding
+  // In tiny mode an anchor owns its following line break and blank line; the preceding
   // separator keeps the surrounding hard sections apart without a global whitespace rewrite.
-  const pattern = minimal ? /\{\{knowledge:([a-z0-9-]+)\}\}(?:\r?\n){0,2}/g : KNOWLEDGE_ANCHOR_RE
+  const pattern = tiny ? /\{\{knowledge:([a-z0-9-]+)\}\}(?:\r?\n){0,2}/g : KNOWLEDGE_ANCHOR_RE
   const result = text.replace(pattern, (anchor, id) => {
     if (seen.has(id)) throw new Error(`prompt knowledge anchor duplicated: ${id}`)
     seen.add(id)
-    return minimal ? "" : loadKnowledgeTopic(id, { promptOnly: true })
+    return tiny ? "" : loadKnowledgeTopic(id, { promptOnly: true })
   })
   const unresolved = result.match(/\{\{knowledge:[^{}]*\}\}/)
   if (unresolved) throw new Error(`prompt knowledge anchor cannot be resolved: ${unresolved[0]}`)

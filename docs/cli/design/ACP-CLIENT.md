@@ -82,7 +82,7 @@ load/resume 同 id 已存在时先 cancel/delete/release，再创建新实例；
 - model：select，currentValue 为 `provider:model` 或裸 model，options 只含当前值。
 - thinking：boolean，currentValue 为 `thinking != null && thinking.type !== "disabled"`。
 - mode：select，currentValue 为 plan/normal，options 为 normal、plan。
-- workMode：select，currentValue 为 minimal/normal/engineering，options 为这三个固定值；new/load/resume 均返回同一活值。
+- workMode：select，currentValue 为 tiny/normal/engineering，options 为这三个固定值；new/load/resume 均返回同一活值。
 
 set_config_option 的 model 在首个冒号分割 provider/model；thinking 按 providerSpec 选择 enabled/disabled 或 effort 族的 null，关闭时删除 reasoningEffort；mode 只接受 plan/normal，只改 PLAN 内存态。workMode 严格校验三档，写当前 agent 与会话槽并重推全量配置；只有进入 engineering 时执行既有 PLAN 互斥和 manifest 规则。非法 workMode 零状态变、零通知。
 

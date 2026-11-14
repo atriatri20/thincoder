@@ -1,5 +1,3 @@
-Search the project's documentation (README, design docs, guides, markdown files) for relevant information. Use this to find design decisions, coding conventions, architecture docs, or project rules.
+Search the project's documentation (README, design docs, guides, markdown files) for relevant information.
 
-Prefer this over code_search when you need to understand the project's intended design rather than existing implementation. Returns matching doc chunks: path, heading, line range, relevance score, content excerpt.
-
-For what was said in sessions (conversation/chat history — decisions, rulings), use read_history.
+{{knowledge:tool-doc-search}}

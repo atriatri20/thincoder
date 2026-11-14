@@ -105,7 +105,7 @@
 | `webviewReady` | 无 | 推 turnState/i18n/agentSettings/uiPrefs/providerStatus，再打开会话、推 busyQueued、flush outbox 并重 assert live。 |
 | `setAutoApprove` | `{value:boolean}` | 更新 live AUTO 并写会话槽；写槽失败时 live 旗仍管当前回合。 |
 | `setPlanMode` / `setAdvisorGuard` | `{value:boolean}` | 写会话槽并推设置；只有当前 mode=engineering 时允许 PLAN 互斥分支。 |
-| `setMode` | `{value:"minimal"\|"normal"\|"engineering"}` | 写同一会话槽 mode 并推设置；非法值零写，进入 engineering 时先清 PLAN。 |
+| `setMode` | `{value:"tiny"\|"normal"\|"engineering"}` | 写同一会话槽 mode 并推设置；非法值零写，进入 engineering 时先清 PLAN。 |
 | `atComplete` | `{query,cwd,seq}` | 返回 atResults，迟到 seq 不覆盖新结果。 |
 
 ### 1.4 设置、provider、MCP 与团队动作（wv → ext）

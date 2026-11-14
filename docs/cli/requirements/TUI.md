@@ -23,7 +23,7 @@
 - **F15**：状态行按当前布局常显非空会话标题，超宽截断。
 - **F19**：首启向导提供本地 provider 与团队登录两路；失败给可读原因并允许改选。
 - **F20**：团队已登录时状态行显示当前成员与服务器摘要，未登录不伪造该段。
-- **F21**：`/minimal`、`/normal`、`/eng` 操作同一互斥会话 mode。`/minimal` 在 minimal 与 normal 间切换；`/eng` 在 engineering 与 normal 间切换；`/normal` 始终进入 normal。切换立即持久化，下一轮提示词生效。
+- **F21**：`/tiny`、`/normal`、`/eng` 操作同一互斥会话 mode。`/tiny` 在 tiny 与 normal 间切换；`/eng` 在 engineering 与 normal 间切换；`/normal` 始终进入 normal。切换立即持久化，下一轮提示词生效。
 
 ## 4. 队列、timer 与恢复
 

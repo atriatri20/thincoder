@@ -1,14 +1,19 @@
 /**
  * controls.mjs — 控件行、三档会话模式与 AUTO 确认工厂。
  *
- * `#mode-select` 只持 minimal/normal/engineering 一个状态；旧 `engineering` 推送只作读取迁移。
+ * `#mode-select` 只持 tiny/normal/engineering 一个状态；旧 `engineering` 推送只作读取迁移。
  * engineering × PLAN 互斥；其余两档不限制 PLAN。模式变更统一发 `setMode { value }`。
  */
 import { t } from "../i18n.mjs"
 
-const MODES = ["minimal", "normal", "engineering"]
+const MODES = ["tiny", "normal", "engineering"]
+// 旧值读取别名（CONFIG §5.4）：`minimal` 是 tiny 的历史写法，只在此读取口归一，写面不收旧值。
+const LEGACY_MODE_ALIASES = { minimal: "tiny" }
 const validMode = (value) => MODES.includes(value)
-const modeOf = (flags) => validMode(flags?.mode) ? flags.mode : (flags?.engineering === true ? "engineering" : "normal")
+const modeOf = (flags) => {
+  const mode = LEGACY_MODE_ALIASES[flags?.mode] ?? flags?.mode
+  return validMode(mode) ? mode : (flags?.engineering === true ? "engineering" : "normal")
+}
 
 /**
  * 控件行工厂。`deps`：`post` ∕ `state.flags()` 读面 ∕ `hooks`（见件头）· `inputRow`（`#input-row`——plan-active 类宿主）·

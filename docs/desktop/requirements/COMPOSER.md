@@ -17,4 +17,4 @@
 
 - **D25**：忙态按会话键入队，回执 queued；消费前不在消息流出块，待发送带可见。
 - 步边界优先、回合尾和挂起 driver 兜底；满队拒绝并保留文本。附件随条目，消费时降级结果可见。
-- **D34**：支持当前 model/auto/plan/minimal/normal/eng/help 与别名；/minimal 在 minimal↔normal、/eng 在 engineering↔normal、/normal 恒 normal；命令与对应按钮同一路径，未知命令不发送且保留文本。
+- **D34**：支持当前 model/auto/plan/tiny/normal/eng/help 与别名；/tiny 在 tiny↔normal、/eng 在 engineering↔normal、/normal 恒 normal；命令与对应按钮同一路径，未知命令不发送且保留文本。

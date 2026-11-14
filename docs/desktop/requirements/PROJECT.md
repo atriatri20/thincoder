@@ -12,7 +12,7 @@ Desktop 为不使用 VS Code 或终端的用户提供独立 Electron 入口。�
 
 - 单会话面板，顶部下拉切换/新建会话，无左侧项目树。
 - 中区为对话流、工具/审批/提问/计划/目标卡与输入区；右侧活动池承载子代理、consult、advisor 与队列，可折叠。
-- provider/model/effort 只在输入控件行编辑；AUTO/PLAN/ADVISOR/MODE 在状态行显示，MODE 当前值取自 minimal/normal/engineering。
+- provider/model/effort 只在输入控件行编辑；AUTO/PLAN/ADVISOR/MODE 在状态行显示，MODE 当前值取自 tiny/normal/engineering。
 - 对话包含流式正文、推理、工具结果、错误和代码复制；活动终态归档入流。
 - 状态行显示当前上下文、任务、耗时、turn、timer、标题、排队、团队态与跨会话提醒，缺失读数不伪造。
 - 首启可在无终端情况下配置 provider、校验、选择目录；已有配置直接进入。

@@ -16,7 +16,7 @@ import {
 import { attachManifest } from "./agent-assemble.mjs"
 import { slotFlags, slotOfKey } from "./session-slots.mjs"
 
-const MODES = Object.freeze(["minimal", "normal", "engineering"])
+const MODES = Object.freeze(["tiny", "normal", "engineering"])
 const FLAG_KEYS = Object.freeze(["planMode", "autoApprove", "advisorGuard", "mode"])
 const FLAG_WRITERS = Object.freeze({
   planMode: setSlotPlanMode,

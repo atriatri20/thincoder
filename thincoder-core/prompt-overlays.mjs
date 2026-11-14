@@ -78,7 +78,7 @@ export function assemblePrompt(scenario, mode = "normal") {
   for (const file of files) {
     const content = SLOT_CONTENTS[file]
     const expanded = file === "common.md" || file === "discipline-normal.md"
-      ? expandKnowledgeTopics(content, { minimal: mode === "minimal" })
+      ? expandKnowledgeTopics(content, { tiny: mode === "tiny" })
       : content
     if (expanded) parts.push(expanded)
     else warnings.push(slotWarning(file))

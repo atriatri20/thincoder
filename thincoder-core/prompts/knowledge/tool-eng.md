@@ -1,0 +1,1 @@
+In engineering mode, follow design-before-code: write a design document, run advisor design review, get user approval, then implement via eng-coder subagents. Returns the mode state — 'Engineering mode activated/exited' (an already-active state is acknowledged).

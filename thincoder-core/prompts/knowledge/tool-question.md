@@ -1,3 +1,11 @@
+Use when the task is ambiguous, you need a design decision, or you are stuck and need human judgment.
+
+Parameters:
+- `question` (required): the question to ask the user.
+- `options`: an array of single-choice options for the user to pick from (optional). They MUST be plain strings, e.g. `["A", "B", "C"]` - never objects.
+
+Notes:
+- The agent loop pauses until the user answers, and their reply arrives as the next user message: the chosen option or free text. The loop resumes when it arrives.
 - Use it sparingly - prefer making a reasonable decision when one exists.
 - Ask ONE question per call - never bundle several sub-questions into one question string; ask the next one after the answer arrives.
 - Keep the question text short, one or two sentences. Background, context and analysis belong in your normal reply text, NOT in the question.

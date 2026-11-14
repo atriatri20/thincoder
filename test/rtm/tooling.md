@@ -167,15 +167,16 @@
 
 ## CLI 50. 三档模式切换、极简提示词与知识查询
 
-> 目的：同一互斥 mode 驱动命令、槽恢复和下一轮提示词；minimal 收窄自动注入并查询同一知识正文，完整档保持原语义。
-> 节注：回指 = `docs/core/requirements/PROMPT-SYSTEM.md` ∥ `docs/core/requirements/CONFIG.md` F13 ∥ `docs/core/requirements/SESSION.md`；机制单源 = 对应同名设计档；组件 = CLI 命令/会话槽 ⟷ prepareRun ⟷ 母版装配 ⟷ knowledge 资源；进入口 = 真 CLI 命令与本地脚本化模型端点；四态 = 50-1 正常 · 50-2 正常 · 50-3 边界 · 50-4 正常。
+> 目的：同一互斥 mode 驱动命令、槽恢复和下一轮提示词；tiny 收窄自动注入并查询同一知识正文，完整档保持原语义。
+> 节注：回指 = `docs/core/requirements/PROMPT-SYSTEM.md` ∥ `docs/core/requirements/CONFIG.md` F13 ∥ `docs/core/requirements/SESSION.md`；机制单源 = 对应同名设计档；组件 = CLI 命令/会话槽 ⟷ prepareRun ⟷ 母版装配 ⟷ knowledge 资源；进入口 = 真 CLI 命令与本地脚本化模型端点；五态 = 50-1 正常 · 50-2 正常 · 50-3 边界 · 50-4 正常 · 50-5 正常。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
-| 50-1 | 在真 CLI 依次执行 /minimal、/normal、/eng，恢复槽并发起下一轮本地模型请求 | 命令矩阵与槽 mode 一致；下一轮系统提示词换档；minimal 不自动注入文档/记忆/大纲，项目规则仍保留；完整档内容不变 | 无 | `test/integration/minimal-mode.test.mjs` |
-| 50-2 | 主代理与子代理分别调用 knowledge list/search/get，并查询未知主题、无匹配及纯查询主题 | 三档均有 knowledge；search 只定位、get 取完整主题；错误显式；纯查询主题不进入任何模式的提示词 | 无 | `test/integration/minimal-mode.test.mjs` |
-| 50-3 | 从真实 `thincoder-cli/src/tui.mjs` 入口装载完整 TUI 模块图 | startTUI 可用；cmd-advisor 不再引用 cmd-eng 已退役的 writeSessionFile 导出 | 回指 = `docs/cli/requirements/CRASH-REPORTS.md` F-CR1；旧实现由真实启动 SyntaxError 复现 | `test/integration/minimal-mode.test.mjs` |
-| 50-4 | 极简会话与完整会话各发一轮本地脚本化模型请求，读回请求体的工具面；同一极简会话里 `knowledge get tool-bash` 取一次展开面；再在极简会话内经 `consult_start` 起一次 consult 子代理，读它那一发请求体 | ① 极简档工具描述无锚字面、无展开面正文（`Output format:` ∥ `There is NO TTY` 均不在场），且等于母版去锚后的目标文本；② `knowledge get` 返回的正文逐字等于展开面原文；③ 完整档的 bash 描述逐字等于改造前全文（批起快照 `e82e704`）；④ 同一极简会话里 consult 的 `doc_check` 描述取完整档，主链仍取极简档；⑤ 工具数量与 schema 键集不缩水 | 无 | `test/integration/tool-description-tiers.test.mjs` |
+| 50-1 | 在真 CLI 依次执行 /tiny、/normal、/eng，恢复槽并发起下一轮本地模型请求 | 命令矩阵与槽 mode 一致；下一轮系统提示词换档；tiny 不自动注入文档/记忆/大纲，项目规则仍保留；完整档内容不变 | 无 | `test/integration/tiny-mode.test.mjs` |
+| 50-2 | 主代理与子代理分别调用 knowledge list/search/get，并查询未知主题、无匹配及纯查询主题 | 三档均有 knowledge；search 只定位、get 取完整主题；错误显式；纯查询主题不进入任何模式的提示词 | 无 | `test/integration/tiny-mode.test.mjs` |
+| 50-3 | 从真实 `thincoder-cli/src/tui.mjs` 入口装载完整 TUI 模块图 | startTUI 可用；cmd-advisor 不再引用 cmd-eng 已退役的 writeSessionFile 导出 | 回指 = `docs/cli/requirements/CRASH-REPORTS.md` F-CR1；旧实现由真实启动 SyntaxError 复现 | `test/integration/tiny-mode.test.mjs` |
+| 50-4 | 极简会话与完整会话各发一轮本地脚本化模型请求，读回请求体的工具面；同一极简会话里 `knowledge get tool-bash` 取一次展开面；再在极简会话内经 `consult_start` 起一次 consult 子代理，读它那一发请求体 | ① 极简档工具描述无锚字面、无展开面正文（`Output format:` ∥ `There is NO TTY` 均不在场），且等于母版去锚后的目标文本；② `knowledge get` 返回的正文逐字等于展开面原文；③ 完整档的 bash 描述 = 常驻面与展开面正文在锚处拼合，且展开面正文逐字等于 `prompts/knowledge/tool-bash.md` 全文（不与批起快照的旧文比对）；④ 同一极简会话里 consult 的 `doc_check` 描述取完整档，主链仍取极简档；⑤ 工具数量与 schema 键集不缩水；⑥ 极简档与完整档请求体的每份工具 `input_schema` 逐字相等（含 `action` 枚举取值） | 无 | `test/integration/tool-description-tiers.test.mjs` |
+| 50-5 | 真 CLI 工程会话经 `/eng` 落槽后发一轮本地脚本化模型请求，读回请求体的工具面与 system 段 | 十一把入口工具仍带 `ledger`（带本地定位参数的十把另带 `project`，`ssh` 只按 `get` 判）且 `required` 逐字不变；两键 `description` 只剩一行身份句（本工具差异一句除外）；完整口径在工程会话的 system 段只出现一处，工具描述里不重述；写门十一把的 `input_schema` 在 normal 与 engineering 两档逐字相等 | 无 | `test/integration/tool-description-tiers.test.mjs` |
 
 
 ## CLI 52. ACP workMode 与 PLAN 分离
@@ -185,5 +186,5 @@
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
-| 52-1 | 经真 ACP stdio 新建会话，写 minimal/engineering，再 load/resume | new/load/resume 的 workMode 快照一致；合法值落槽并全量通知；PLAN 的 currentModeId 不被工作 mode 污染 | 无 | `test/integration/acp-work-mode.test.mjs` |
+| 52-1 | 经真 ACP stdio 新建会话，写 tiny/engineering，再 load/resume | new/load/resume 的 workMode 快照一致；合法值落槽并全量通知；PLAN 的 currentModeId 不被工作 mode 污染 | 无 | `test/integration/acp-work-mode.test.mjs` |
 | 52-2 | 写非法 workMode，再读取当前配置与通知 | 非法值零状态变、零通知；合法快照保持原值 | 无 | `test/integration/acp-work-mode.test.mjs` |

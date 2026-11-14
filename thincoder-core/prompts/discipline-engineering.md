@@ -80,6 +80,21 @@ Judge the **change face** before acting — two faces, two authorization paths:
   Why: pressing the routing against the gate only turns the gate off.
 - **Judgment line**: paths not in the doc face ⇒ full flow as the product face (fail-closed).
 
+## Write-gate parameters (`ledger` ∥ `project`)
+
+The write gate binds a parent-side write inside a project to the in-flight ledger row it serves. This is the one place the whole rule lives; a parameter row carries only its identity line and its own per-tool difference.
+Why: the same rule copied into every entry tool's schema is one copy per tool, and a copy that lags is a second rule running — the reader cannot tell which one is current.
+
+- **engineering mode only**: tiny and normal load no engineering discipline and no write gate, so neither key is required there.
+  Why: the gate is a process rule of engineering mode; demanding a row outside it would refuse work that has no row to name.
+- **eleven entry tools**: the seven disk writers (`write` · `edit` · `insert_after` · `apply_patch` · `delete` · `hashline_edit` · `file_ops`), the two command tools (`bash` · `execute`), `memory` judged by its action, and `ssh` — only `get` writes into the project, while `put` writes the remote host. Read-only calls are judged the same way: there is no command-line classification.
+- **`ledger`** — the in-flight ledger row this call serves, `"#N"` or `"N"`. On `ssh` only `get` needs it; on `memory` only the write actions that land in the project layer.
+- **`project`** — the project root that carries `PROJECT-MANIFEST.json`. `bash` and `memory` always need it; `execute` needs it when `workdir` is absent; the seven disk writers need it when the target resolves to no project root, and when the target belongs to another project while the call carries this repo's row number (`index.writableRepos` is that declaration table). Pure declaration: it changes no execution directory.
+- **a missing key is refused, never defaulted**: the refusal names both inputs the call lacked and the in-flight rows it could have carried.
+  Why: neither key sits in `required` — a static requirement would bind normal mode and the subagents to a rule that does not apply to them — so that refusal is the only place the model learns the gate exists.
+- **only an in-flight row carries write permission** (`在途`); every other state refuses the call before a byte is written.
+
+
 ## The standards layer (project norms)
 
 **The standards layer is `docRoot.standards` in the project manifest**: a directory whose `.md` files, subdirectories included, are the project's own rules — the programming standards,

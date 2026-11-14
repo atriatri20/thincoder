@@ -1,3 +1,19 @@
+Use for running commands, builds, tests.
+
+**Route to a dedicated tool instead of bash:**
+- `cat file` / `head` / `tail` → `read`
+- `ls` / `dir` → `ls`
+- `find` / glob search → `glob`
+- `grep` / `rg` → `grep`
+- `echo >` / `sed` / `printf >` / `cat << EOF` → `write` / `edit` / `hashline_edit` / `apply_patch` (preferred: write tools handle encoding/EOL correctly)
+- `git diff` / `git status` / `git log` → `git` tool
+
+Parameters:
+- command (required): Shell command to execute
+- timeout: Timeout in milliseconds (default 120000 for synchronous runs; background runs have no default — an explicit timeout still applies; no upper bound)
+- filter: Optional — a regex; only output lines matching it are returned (case-insensitive). Use instead of hand-writing a pipe into `findstr`/`grep`.
+- async: Run in the background (default false) — returns an ack at once (bash#<id>, log path); the result arrives as a digest when the process exits. Depth-0 only.
+
 Output format:
 ```
 [stdout]:

@@ -26,7 +26,7 @@ import { generateTitle as generateSessionTitle } from "./generate-title.mjs"
 // D7（2026-09-21）：标题源谓词单源——核 `isRealUserMsg`（角色 user ∧ content 为串 ∧ 非
 // `[System reminder:` 前缀）——端壳不再自持 `m.type ?? m.role` 变体。
 import { isRealUserMsg } from "@thincoder/core/history-window.mjs"
-import { WORK_MODES } from "@thincoder/core/config-migrate.mjs"
+import { WORK_MODES, normalizeWorkMode } from "@thincoder/core/config-migrate.mjs"
 import { _cwd } from "./panel-messages.mjs"
 import { ensureSlot, ensureSlotAsync } from "./panel-session.mjs"
 
@@ -69,7 +69,7 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
   const slotProvider = typeof existing.activeProvider === "string" && existing.activeProvider !== "" ? existing.activeProvider : null
   const slotModel = existing.activeModel || null
   const seed = extra.seed ?? null
-  const slotMode = extra.mode !== undefined ? extra.mode : existing.mode
+  const slotMode = normalizeWorkMode(extra.mode !== undefined ? extra.mode : existing.mode)
   saveSessionToSlot(cwd, slot, {
     ...existing,
     version: 2, cwd, updatedAt: Date.now(),

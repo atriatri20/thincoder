@@ -12,7 +12,7 @@ turn 帧划分活流步，文本与工具嵌当步块；回读按 assistant/tool
 
 ## 2. 输入与状态
 
-模型、逐模型 reasoning、附件、中止、斜杠和排队有真实后端。工作模式使用共享 minimal/normal/engineering 三档控件，读写同一盒内会话槽；/minimal 在 minimal↔normal、/eng 在 engineering↔normal、/normal 恒 normal。PLAN 与 engineering 的互斥沿用 core，其他管理或成员按钮按当前能力显隐。
+模型、逐模型 reasoning、附件、中止、斜杠和排队有真实后端。工作模式使用共享 tiny/normal/engineering 三档控件，读写同一盒内会话槽；/tiny 在 tiny↔normal、/eng 在 engineering↔normal、/normal 恒 normal。PLAN 与 engineering 的互斥沿用 core，其他管理或成员按钮按当前能力显隐。
 
 状态行仅显示真实 turn/usage/end/会话数据；缺源不显示。语言切换重注册核词表。
 

@@ -108,10 +108,10 @@ after(() => {
 })
 
 test("三档 MODE 控件出站 → host setMode 落槽 → agentSettings 快照恢复回填", async () => {
-  assert.deepEqual([...modeSelect().options].map((o) => o.value), ["minimal", "normal", "engineering"])
+  assert.deepEqual([...modeSelect().options].map((o) => o.value), ["tiny", "normal", "engineering"])
   const { panel, messages } = newPanel(1)
   saveSlot(1, { mode: "normal" })
-  for (const mode of ["minimal", "normal", "engineering"]) {
+  for (const mode of ["tiny", "normal", "engineering"]) {
     // ① 控件出站：改选三档 → 真实 webview 控件经 initMessageLoop 发 setMode
     posted.length = 0
     modeSelect().value = mode
@@ -131,7 +131,7 @@ test("三档 MODE 控件出站 → host setMode 落槽 → agentSettings 快照�
 test("host setMode 非法值零写，槽文件逐字节不变", async () => {
   saveSlot(1, { mode: "normal" })
   const { panel } = newPanel(1)
-  for (const value of [null, true, false, "", "ENG", "minimal ", 1, {}, undefined]) {
+  for (const value of [null, true, false, "", "ENG", "tiny ", 1, {}, undefined]) {
     const before = readFileSync(sessionIo.slotPath(proj, 1), "utf8")
     await handlePanelMessage(panel, { type: "setMode", value })
     assert.equal(readFileSync(sessionIo.slotPath(proj, 1), "utf8"), before, `非法值 ${JSON.stringify(value)} 零写`)

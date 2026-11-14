@@ -36,7 +36,7 @@ autoApprove 是会话槽字段，不是 VS Code settings 配置。面板构造�
 
 AUTO 控件开启方向先显示确认 popover，确认才发 `setAutoApprove { value:true }`；关闭方向直接发 false。approveAll 先释放当前及其余逐项审批，再开启 AUTO 并推 `autoApprove { value:true }`。
 
-MODE、PLAN、ADVISOR 与 AUTO 都从会话槽或活值镜像到控件。MODE 使用 minimal/normal/engineering 三选项，不再维护独立 ENG 布尔状态；只有 engineering 与 PLAN 保持既有互斥。agentSettings、mode 与 planMode 推送复用同一快照链，不另建平行状态。
+MODE、PLAN、ADVISOR 与 AUTO 都从会话槽或活值镜像到控件。MODE 使用 tiny/normal/engineering 三选项，不再维护独立 ENG 布尔状态；只有 engineering 与 PLAN 保持既有互斥。agentSettings、mode 与 planMode 推送复用同一快照链，不另建平行状态。
 
 ## 6. 验证
 

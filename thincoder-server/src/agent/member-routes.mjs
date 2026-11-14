@@ -39,7 +39,14 @@ import { providerModelRefs } from "./run.mjs"
 export const MEMBER_WORKSPACE_ACTIONS = Object.freeze(["start", "stop", "destroy"])
 
 /** 会话设置面字段集（PATCH 一次一件）。旧 engineering 只读迁移，不接受写入。 */
-export const WORK_MODES = Object.freeze(["minimal", "normal", "engineering"])
+export const WORK_MODES = Object.freeze(["tiny", "normal", "engineering"])
+/** 旧值读取别名（CONFIG §5.4）：`minimal` 是 tiny 的历史写法，只在读取口归一。 */
+const LEGACY_MODE_ALIASES = Object.freeze({ minimal: "tiny" })
+/** 会话行 mode 读面：合法 mode 优先（旧值先归一），旧槽仅从 engineering 布尔迁移。 */
+function workModeFromFlags(flags) {
+  const mode = LEGACY_MODE_ALIASES[flags?.mode] ?? flags?.mode
+  return WORK_MODES.includes(mode) ? mode : (flags?.engineering === true ? "engineering" : "normal")
+}
 export const SESSION_SETTING_KEYS = Object.freeze(["model", "reasoning", "title", "autoApprove", "planMode", "mode", "advisorGuard"])
 
 /** 子代理键形（`<role>#<id>`——核 `agent/relay-prefix.mjs` 文法同形；`abort { key }` 形门）。 */
@@ -88,7 +95,7 @@ export function parseSessionId(raw) {
  *  `awaitingApproval`（在决 ask 读数——relay 内存，需调用侧注入（缺省假））。 */
 export function sessionRowOf(workspace, raw = {}, { awaitingApproval = false } = {}) {
   const slot = raw.slot ?? raw.id ?? ""
-  const mode = WORK_MODES.includes(raw.flags?.mode) ? raw.flags.mode : (raw.flags?.engineering === true ? "engineering" : "normal")
+  const mode = workModeFromFlags(raw.flags)
   return {
     id: `${workspace.id}:${slot}`,
     workspaceId: workspace.id,

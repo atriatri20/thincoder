@@ -14,7 +14,7 @@ DESC 读的是母版原文，不清包含锚；分档展开在 schema 装配处�
 
 装配顺序是先在 schema 装配处展开锚、再跑 `applyPromptInjections`：注入值由端侧提供，顺序倒过来会把注入值当主题锚再展开一次。
 
-mode 是必填参数：缺它或取值不在 minimal / normal / engineering 之内即抛错并点名该参数。不给缺省值——缺省会让一次运行悄悄用上另一档的文本，而错处要到模型按错文本行事时才显形。
+mode 是必填参数：缺它或取值不在 tiny / normal / engineering 之内即抛错并点名该参数。不给缺省值——缺省会让一次运行悄悄用上另一档的文本，而错处要到模型按错文本行事时才显形。
 
 因此 `tools.map(toOpenAISchema)` 这种直接把函数交给 `map` 的写法不成立：`map` 的第二手参（下标）会被当成 mode，首个元素即因取值非法而抛。
 
@@ -39,11 +39,27 @@ consult 子代理与主链共用 prepareRun（`thincoder-core/agent-tools/consul
 
 ### 1.1 宿主侧对描述母版的行级改写
 
-宿主对母版的行级改写只在装配装饰层发生，且只对留在常驻面的整行生效：`thincoder-vscode/src/agent/tool-table.mjs` 的 `description: tool.description.split("\n").filter((l) => !l.startsWith("- action:'panel'")).join("\n")` 剔的是母版行，装配期的锚展开在它之后，看不到这次剔除。
+宿主对某端不存在的动作做的行级剔除跑在装配之后、对拼好的描述生效：`thincoder-vscode/src/agent/tool-table.mjs` 的 `stripPanelActionLines`（`description.split("\n").filter((l) => !l.startsWith("- action:'panel'")).join("\n")`）经 `toOpenAISchema` 的 `descriptionPostProcess` 钩子作用在装配完的那份描述上。
 
-两条由此成立：动作枚举行属常驻面（调一次就要看见动作名与参数），`thincoder-core/tool-docs/subagent.md` 的 `- action:'panel'` 一行因此不搬进展开面；反过来说，展开面里不得出现端面剔除行——否则完整档装配把那行放回，VSC 描述重新带上端面没有的动作。
+顺序不可倒：锚展开先发生，剔除在它之后；倒过来，展开面里的端面行原样回到 VSC 描述，带上端面没有的动作。
+
+`thincoder-core/tool-docs/subagent.md` 的 `- action:'panel'` 一行按内容归属属动作细则，落在展开面，不进常驻面；剔除点因此落在装配之后。
 
 展开文法与失败语义单点在 prompt-files.mjs（PROMPT-SYSTEM 设计档 §2）：锚独占一行、重复标识失败、未解析失败，与提示词母版同一套。
+
+### 1.2 写门参数的说明面
+
+写门挂在十一个入口工具上（`write` / `edit` / `insert_after` / `apply_patch` / `delete` / `hashline_edit` / `file_ops` / `bash` / `execute` / `memory` / `ssh`）：十一把的 schema 都带 `ledger`，其中带本地定位参数的十把另带 `project`，`ssh` 不带；`required` 不因档位或工具变化。
+
+`ssh` 不带 `project` 是因为它写的是远端主机，本机项目根对这笔写入没有语义——它的写门只按 action 判（`get` 往本机落盘）。缺键不是待补的缺口：补上它就动了参数 schema 的键集。
+
+参数说明只写这一笔要传什么：`ledger` = 本笔服务的在途行号（`"#N"` 或 `"N"`），`project` = 带 `PROJECT-MANIFEST.json` 的项目根。三处每工具差异留在参数行内，因为它们改的是「这一笔该传什么」：`memory` 只有落 project 层的写型 action 要号、`ssh` 只有 `get` 要号、`project` 是纯声明不改执行目录。
+
+这两行身份句的文本单点在 `thincoder-core/tools/write-gate-params.mjs`；`thincoder-core/tools/shared.mjs` 只转出同一常量，八处导入档的导入面不动——文本单点与导入面分开，改口径只改一处，消费面不跟着改名。
+
+完整口径只在工程纪律段讲一次（`thincoder-core/prompts/discipline-engineering.md` 的写门参数一节）：哪一档生效、哪些工具必带、缺什么怎么被拒。参数行不重述它——每个入口工具各带一份近乎逐字的副本，改一处口径就要改每一处，漏一处就是两套规则在跑。
+
+口径不进公共段：tiny 档不加载工程纪律、写门也不生效，公共段会为一条用不上的规则付常驻开销；反过来参数行必须自带身份，极简档里没有工程纪律段可看。
 
 ## 2. 调度
 
@@ -109,3 +125,5 @@ VERIFY-REDESIGN、CONTEXT-COMPACTION、BATCH-RECORD、LEDGER、DOC-CHECK、DOC-G
 ## 8. 验证
 
 验证角色工具表、描述与执行一致、权限与业务负例、批量部分写、git 零/多仓、后台退出、网络失败、SSH 凭据和输出回查。
+
+写门参数面另验三条：十一个入口工具的 schema 都带 `ledger`、带本地定位参数的十把另带 `project`，且 `required` 不变；两键的说明只剩一行身份句（逐份遍历，不抽样）；完整口径在工程纪律段只出现一处。

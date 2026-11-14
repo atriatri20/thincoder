@@ -79,8 +79,8 @@ test("session:flags 三档写唯一 mode，非法补丁整笔零写，活代理�
 
   const invalid = [
     null, [], {}, { engineering: true }, { mode: "ENG" }, { mode: null },
-    { mode: "minimal " }, { mode: true }, { planMode: "true" },
-    { mode: "minimal", extra: true }, { mode: "bad", planMode: true },
+    { mode: "tiny " }, { mode: true }, { planMode: "true" },
+    { mode: "tiny", extra: true }, { mode: "bad", planMode: true },
   ]
   for (const patch of invalid) {
     const before = readFileSync(slotPath(cwd, 1), "utf8")
@@ -88,16 +88,22 @@ test("session:flags 三档写唯一 mode，非法补丁整笔零写，活代理�
     assert.equal(readFileSync(slotPath(cwd, 1), "utf8"), before, `非法补丁 ${JSON.stringify(patch)} 零写`)
   }
 
-  const minimal = setFlags("1", { mode: "minimal" })
-  assert.equal(minimal.ok, true)
-  assert.equal(minimal.flags.mode, "minimal")
-  assert.equal(agent.config.agent.mode, "minimal")
-  assert.equal(agent.config.agent.engineering, false)
-  assert.equal(loadSlotFile(cwd, 1).mode, "minimal")
-  assert.equal(loadSlotFile(cwd, 1).engineering, undefined, "合法写后旧布尔退役")
-  assert.equal(events.at(-1).payload.flags.mode, "minimal")
+  // 旧值的写面输入（夹具保留字面）：`minimal` 是 tiny 的历史写法，写面只收新枚举 ⇒ 零写、零推送。
+  const legacyWrite = setFlags("1", { mode: "minimal" })
+  assert.equal(legacyWrite.ok, false, "旧值写面拒收")
+  assert.equal(legacyWrite.reason, "invalid-patch")
+  assert.equal(loadSlotFile(cwd, 1).mode, "normal", "旧值写面零写（槽停在上一次的 normal）")
 
-  assert.equal(setFlags("1", { planMode: true }).ok, true, "minimal 允许 PLAN")
+  const tiny = setFlags("1", { mode: "tiny" })
+  assert.equal(tiny.ok, true)
+  assert.equal(tiny.flags.mode, "tiny")
+  assert.equal(agent.config.agent.mode, "tiny")
+  assert.equal(agent.config.agent.engineering, false)
+  assert.equal(loadSlotFile(cwd, 1).mode, "tiny")
+  assert.equal(loadSlotFile(cwd, 1).engineering, undefined, "合法写后旧布尔退役")
+  assert.equal(events.at(-1).payload.flags.mode, "tiny")
+
+  assert.equal(setFlags("1", { planMode: true }).ok, true, "tiny 允许 PLAN")
   assert.equal(agent.planMode, true)
   const engineering = setFlags("1", { mode: "engineering", planMode: true })
   assert.equal(engineering.ok, true)
@@ -125,7 +131,7 @@ test("history:page 从槽恢复三档，旧 engineering 只读迁移且合法 mo
   saveSlot(3, { engineering: false })
   assert.equal(pageHistory(cwd, { key: "3", before: null }).flags.mode, "normal")
   saveSlot(4, { mode: "minimal", engineering: true })
-  assert.equal(pageHistory(cwd, { key: "4", before: null }).flags.mode, "minimal")
+  assert.equal(pageHistory(cwd, { key: "4", before: null }).flags.mode, "tiny", "旧槽 mode 读到即归一为 tiny")
   saveSlot(5, { mode: "invalid", engineering: true })
   assert.equal(pageHistory(cwd, { key: "5", before: null }).flags.mode, "engineering")
 })
@@ -145,7 +151,7 @@ test("host ev:flags 活值只携 mode，并在 engineering 下压住 PLAN", () =
 })
 
 test("settings:agent 的 agent.mode 只写新会话默认值，旧 engineering 不可写", () => {
-  for (const mode of ["minimal", "normal", "engineering"]) {
+  for (const mode of ["tiny", "normal", "engineering"]) {
     const receipt = settingsAgent({ patch: { "agent.mode": mode } })
     assert.equal(receipt.ok, true)
     assert.equal(receipt.fields.find((field) => field.path === "agent.mode")?.value, mode)
@@ -160,11 +166,11 @@ test("settings:agent 的 agent.mode 只写新会话默认值，旧 engineering �
 
 
 test("新建会话播种 agent.mode；无模式旧槽页读沿用同一配置默认", async () => {
-  assert.equal(settingsAgent({ patch: { "agent.mode": "minimal" } }).ok, true)
+  assert.equal(settingsAgent({ patch: { "agent.mode": "tiny" } }).ok, true)
   const slot = await newSession(cwd)
-  assert.equal(loadSlotFile(cwd, slot).mode, "minimal")
+  assert.equal(loadSlotFile(cwd, slot).mode, "tiny")
   saveSlot(slot + 100, {})
-  assert.equal(pageHistory(cwd, { key: String(slot + 100), before: null }).flags.mode, "minimal")
+  assert.equal(pageHistory(cwd, { key: String(slot + 100), before: null }).flags.mode, "tiny")
 })
 
 test("无活代理时写后规范 flags 回执与发布（slotFlags 兜底，成功回执恒携 flags）", () => {
