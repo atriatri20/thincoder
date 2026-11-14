@@ -1,7 +1,7 @@
 # 上下文压缩与文本预算（CONTEXT-COMPACTION）· 设计
 
 > 需求 = `docs/core/requirements/CONTEXT-COMPACTION.md`。
-> 最近先例：`ADVISOR-GUARDS.md` 的可用窗口预算、`SESSION.md` §2 的槽写面与恢复次序、`turn-projection.mjs` 的轮投影（投影 ∥ 折叠 ∥ 恢复三面在 `turn-projection.mjs`，轮事实账本与任务状态组装在 `turn-task-state.mjs`）。对齐 = 同源预算、记录不丢、一个面一处实现。
+> 最近先例：`ADVISOR-GUARDS.md` 的可用窗口预算、`SESSION.md` §2 的槽写面与恢复次序、`turn-projection.mjs` 的轮投影（投影 ∥ 折叠 ∥ 恢复三面在 `turn-projection.mjs`，轮事实账本与任务状态组装在 `turn-task-state.mjs`）。对齐 = 同源预算、记录不丢、一个面一处实现；「同源预算」的射程不含 advisor 的评审预算，那是 §2.1 的明确排除。
 > 勘察证据：已读触发、切割、降级、context 工具、预算和恢复决策；轮投影三面（验证面成员 `VERIFICATION_TOOLS`、原文通道 `capText`、槽机读副本的 transient 处置与恢复次序 `saveSession` ∥ `restoreMachineFromTurns`）。相关 = 当前 context 工具三动作、轮投影三面。
 
 ## 1. 双线与安全点
@@ -76,6 +76,12 @@ verification 面只收真正执行过命令的工具（bash、execute）。
 
 单点实现 = `thincoder-core/window-policy.mjs` 的 `effectiveWindow(provider, workMode)`：窗口派生的一切读数（threshold ∥ limit ∥ 尾部两式 ∥ 百分比分母）全从它取，端侧不另立算式。
 
+advisor 不在本射程，这是明确排除而不是漏项。
+
+`advisorContextBudget(provider)`（`thincoder-core/advisor/compaction.mjs`）自算 `usableWindow(spec.context, outputReserve(provider, spec))`：它按自身模型的窗口现算评审预算，没有 workMode 这个输入维度，也不看主会话的槽。
+
+把它拉进单源，得先给它一个它没有的档位维度，代价大于收益。代价写在这里供推翻：tiny 会话里跑评审时，advisor 的评审上下文不受 262144 约束。
+
 需求三条是这条策略的来处：`docs/core/requirements/CONTEXT-COMPACTION.md` §2 的「有效窗口 = `min(模型窗口, 262144)`」∥「切换档位即生效与解除」∥「一切以窗口为分母的量同取有效窗口」。本节是它的设计落地，不重述需求原文。
 
 ### 2.2 两个预算出口
@@ -114,6 +120,12 @@ contextUsage 有实测时使用 `_lastPromptTokens + 增量估算`，否则估�
 
 估算使用当前加权函数。自校准样本带估算器版本与模型键，随会话槽保存和恢复；不匹配时不复用。
 
+校准比有下界，承载者是 `sampleRatio` ∥ `recordTokenSample`（`thincoder-core/token-window.mjs`）：两处同取 `Math.max(1, num / den)`。
+
+样本坏或不在场时回中性值 1。偏差方向已知是估算偏低，所以比降到 1 以下会把该压的格判成不该压。
+
+这是需求 §3「比例不得低于当前安全下界」的落点：下界就是 1，不是一个另配的常数。
+
 压缩、恢复、prune 和结构变化后使实测基线失效。
 
 ## 4. 切割与降级
@@ -150,17 +162,37 @@ enforceContextFit 在发送前检查 usage.total > limit，可强压一次；仍
 
 不能靠压缩兜底的原因：压一次白付一次摘要请求，压完仍抛同一个错；而报文若把方向指到会话内容上，用户会一直 /compact。同一判据也拦强制压缩（`force` 跳过阈值却跳不过这条）：守卫面照上面抛，`/compact` 面按 no-op 回执报同一原因，不再发摘要请求。
 
+会话标题不在这份固定开销里，也不动 `fixedFloor`：`contextUsage` 的 overhead 只有 `system` 与 `tools` 两项（`const system = extras.systemPrompt ? estimateText(extras.systemPrompt) : 0`、`const overhead = system + tools`）。
+
+`assemblePrompt(scenario, mode)` 组 system 时不读会话标题；标题实体是 `agent.title`，落在槽头、会话索引、状态行与通知载荷上（`notify-policy.mjs` 的载荷取 `agent.title`），请求面读不到它。
+
+标题的文本预算是它自己那条生成请求：输入是首条用户消息，输出上限 `MAX_TITLE_TOKENS` = 100 与 `extract(data)?.trim().slice(0, 40)` 的 40 字符截断（`thincoder-core/generate-title.mjs`）。
+
+这是需求 §1「本档只管标题所占的文本预算」的落点：标题怎么来归 `SESSION.md` §8，它占多少文本由一个常量加一次截断回答；与会话请求的固定开销是两把尺，不同量也不同名。
+
 服务端越窗 400 按当前自适应链压缩并重试一次；二次失败显式报错。compress/distill/续写等止血内部请求按当前豁免处理。
 
 ## 6. 摘要与恢复
 
 SUMMARIZE_PROMPT 保留当前任务、决策、文件、未决和约束。摘要调用不接 onToken/onReasoning。
 
+长度目标是摘要指令里的一句话，不是一次硬切。
+
+`SUMMARIZE_PROMPT`（`thincoder-core/context.mjs`）要求「Stay under ~1K tokens (≈1000 Chinese chars / 4000 ASCII chars) — a hard target」，并给出超预算时的收紧次序：已完成项压成一行、文件 why 注压成裸路径、进行中散文收紧；设计锚点与未决项不许砍。
+
+同一目标在估算面单源承载 = `SUMMARY_TOKEN_ESTIMATE`（`token-window.mjs`），可达性门的 `post` 用它算注记成本。
+
+这是需求 §4「摘要有当前长度目标，但不靠硬切丢尾部」的落点：目标管摘要自身篇幅，尾部由切割判据保护，两者不是同一条预算。
+
 压缩成果必须能落槽：中段换成摘要注记之后，槽保存的是 `note` 原文 + 它已覆盖的前 `turnsCovered` 条轮记录，恢复按 `SESSION.md` §2 的次序拼成「摘要 + 其后轮次投影 + 在途段」。键形 `compactCheckpoint` = `{ note, turnsCovered }` 与在途段的写面归 `SESSION.md` §2；内存载体是 `agent._compactCheckpoint`（同形，无压缩 ⇒ 不设）与 `agent._turnFoldMarks`（折叠时登记的轮记录消息对象身份——压缩按它判一条消息是否已进中段）。
 
 原因：槽里的机读线由 `turns` 投影重算，压缩成果只活在内存里 ⇒ 重启后摘要消失、被摘要掉的轮记录整条投影回来，压缩白做一次，摘要里的决策与未决点随进程一起没了。
 
-摘要是「此前的机读线被压过」这一个事实，不是第二条事实源：轮记录仍是权威面，被覆盖的轮留在 `turns` 里供人读回查，机读线不再装它们。覆盖以轮记录为单位——该轮三条记录消息全部落在切割点之前才算覆盖；一轮被切开 ⇒ 该轮不记为已覆盖，恢复时宁可多装一轮，也不把半轮当整轮。
+摘要是「此前的机读线被压过」这一个事实，不是第二条事实源：轮记录仍是权威面，被覆盖的轮留在 `turns` 里供人读回查，机读线不再装它们。覆盖以轮记录为单位——该轮登记的全部记录消息都落在切割点之前才算覆盖；一轮被切开 ⇒ 该轮不记为已覆盖，恢复时宁可多装一轮，也不把半轮当整轮。
+
+判据不写固定条数：`turnRecordMessages`（`agent/turn-projection.mjs`）按字段条件 push——`userRequest` ∥ `finalResponse` 非空各一条、`taskState` 非空一条。
+
+无工具的简单问答因此只有两条（§1.1「没有工具活动的简单问答允许 taskState 为空」）。钉成三条会把这种轮永远判成未覆盖：恢复时它整轮重装，摘要已覆盖的轮又回到机读线。
 
 tail 首条 assistant 的回声占位按当前 copy-on-write 规则并入；恢复读取时归并病态相邻 assistant，tool_calls 配对优先。
 
@@ -176,6 +208,14 @@ tail 首条 assistant 的回声占位按当前 copy-on-write 规则并入；恢�
 压缩和蒸馏请求复用会话 system、真身中段、同声明 tools、同源 reasoningEffort 和尾部指令，不把记录文本再序列化成全新会话。
 
 ## 7. context 工具
+
+准入 = depth-0。装配面是 `thincoder-core/agent/family-tools.mjs` 的 `depthOnly` 段（`const depthOnly = depth === 0 ? [...]`），其中同时挂着 `readHistoryTool` 与 `contextTool`；depth>0 的各角色段不挂这个工具（`agent-tools/context.mjs` 头注「**depth>0 不给**」）。
+
+判据按装配段算，不逐角色算：这三个动作的准入由装配段一处决定，各角色段不会各自再判一次。
+
+为什么不给：需求 §6 给的理由是没有全史回查面——而这三个动作的回执都指向全史（`compact` 给槽文件路径或 cwd 发现面，`prune` 说全文仍在盘上、需要时重跑工具）。没有那个面，回执给不出可取回的位置。
+
+阈值兜底不受准入影响：自动压缩跑在 `runCompactionCheck`（`agent/run-stages.mjs`）的安全点上，不经过工具面——没有 `context` 工具的子代理照旧按阈值被压，只是不能主动触发。
 
 ### 7.1 stats
 
@@ -204,6 +244,20 @@ summarizeRunExplorations 在 run 最终返回前处理本轮探索突发，把�
 ## 9. 呈现
 
 onCompressStart/onCompress/onCompressFail 是核回调。TUI 面板、VSC 状态行和 Desktop 行组只呈现生命周期，不显示摘要正文。
+
+需求的五态各由一个回调产生，端侧不另造事件：
+
+| 态 | 由什么产生 |
+|---|---|
+| 开始 | `onCompressStart({ messages })`——摘要请求发出前触发（`context.mjs` 的 `callbacks?.onCompressStart?.({ messages: middle.length })`） |
+| 进行中 | 核不发第二个事件：宿主在开始态上按流逝时间渲染（CLI `ensureCompressPanel` 的 elapsed 计时），不新开通道 |
+| 成功 | `onCompress(info)` 且 `info.mode !== "fallback"` |
+| 降级 | `onCompress(info)` 且 `info.mode === "fallback"`——连续失败达 `COMPRESS_FAILURE_LIMIT` 后 `degradeIfCompressExhausted` 走 `compressFallback`，回执用同一回调、同一载荷位 |
+| 失败 | `onCompressFail(error)`，单次失败即发 |
+
+失败与降级不是同一件事：失败可以先来几次，达到上限那一步才降级；两个态各有自己的回调，端侧不必从失败次数反推降级。
+
+headless 没有回调 ⇒ 全链可选链（`callbacks?.onCompressStart?.` ∥ `callbacks?.onCompress?.` ∥ `callbacks?.onCompressFail?.`）⇒ 安全 no-op：压缩、降级与失败计数照常执行，只是没人接收。
 
 ## 10. 验证
 

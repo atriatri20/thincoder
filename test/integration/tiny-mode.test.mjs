@@ -16,6 +16,7 @@ import { applySession, loadSlotFile } from "../../thincoder-core/session.mjs"
 import { newSlotData, saveSlotData } from "../../thincoder-core/session-slot-write.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../../thincoder-core/session-slots.mjs"
 import { assembleBuiltinTools } from "../../thincoder-core/tools/index.mjs"
+import { listKnowledgeTopics, loadKnowledgeTopic } from "../../thincoder-core/prompt-files.mjs"
 import { _upsertCodeFile, createMemory, docSync, put } from "../../thincoder-core/memory.mjs"
 import { normalizeOrigin } from "../../thincoder-core/memory/origin.mjs"
 import { handleNormalCommand, handleTinyCommand } from "../../thincoder-cli/src/tui/cmd-eng.mjs"
@@ -95,6 +96,7 @@ test("CLI 50-1 mode command changes the next real request, narrows three injecti
   assert.ok(normal.system.includes("PROJECT-RULE-MARKER"), "project rules stay present")
   assert.ok(toolNames(normal).includes("knowledge"), "normal also provides the shared knowledge tool")
   assert.ok(!normal.system.includes("PURE_QUERY_ONLY_MARKER"), "normal never inlines pure-query topics")
+  assert.ok(normal.system.includes("## Knowledge topics"), "the full master carries the same knowledge query pointer")
   assert.ok(normalText.includes("Relevant documentation"), "normal really injects relevant docs")
   assert.ok(normalText.includes("Relevant memories"), "normal really injects relevant memories")
   assert.ok(normalText.includes("project dependency outline"), "normal really injects the project outline")
@@ -109,6 +111,15 @@ test("CLI 50-1 mode command changes the next real request, narrows three injecti
   assert.ok(!tiny.system.includes("## Evidence discipline"), "tiny removes detailed topics")
   assert.ok(toolNames(tiny).includes("knowledge"), "tiny provides the same knowledge tool")
   assert.ok(!tiny.system.includes("PURE_QUERY_ONLY_MARKER"), "tiny never inlines pure-query topics")
+  assert.ok(tiny.system.includes("## Knowledge topics"), "tiny keeps the knowledge query pointer (requirements §9.2)")
+  assert.ok(tiny.system.includes("When the method or a tool convention is unclear, query before acting"), "the pointer tells the model when to query")
+  // 判据不拿一条小节标题替全体主题：逐个主题标题与整段正文都断，别的主题正文留着也会撞红。
+  const topics = listKnowledgeTopics()
+  assert.ok(topics.length > 0, "the bundled topic inventory is non-empty — an empty list must not read as green")
+  for (const topic of topics) {
+    assert.ok(!tiny.system.includes(topic.title), `tiny carries no topic body: ${topic.id} (${topic.title})`)
+    assert.ok(!tiny.system.includes(loadKnowledgeTopic(topic.id).trim()), `tiny carries no topic body: ${topic.id} (full text)`)
+  }
   assert.ok(tinyText.includes("mode: tiny"), "the next request sees the new mode")
   assert.equal(count(tinyText, "Relevant documentation"), count(normalText, "Relevant documentation"), "switching does not rewrite history and adds no new doc injection")
   assert.equal(count(tinyText, "Relevant memories"), count(normalText, "Relevant memories"), "no new memory injection")

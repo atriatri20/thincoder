@@ -172,7 +172,7 @@
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
-| 50-1 | 在真 CLI 依次执行 /tiny、/normal、/eng，恢复槽并发起下一轮本地模型请求 | 命令矩阵与槽 mode 一致；下一轮系统提示词换档；tiny 不自动注入文档/记忆/大纲，项目规则仍保留；完整档内容不变 | 无 | `test/integration/tiny-mode.test.mjs` |
+| 50-1 | 真 CLI 起会话后执行 `/tiny` 切档进极简会话并发下一轮本地脚本化模型请求，再按槽文件恢复重开一个 agent 发一轮，读回两发请求体的 system 段与工具面；本行判的是母版装配 × 锚展开器的极简支 × 工具面三者同轮协作——母版供给一句常驻查询指引，锚展开器删掉锚与主题正文，工具面照旧给出 `knowledge` | ① 命令矩阵与槽 mode 一致，恢复后仍为 tiny；② 极简档常驻面含 `## Knowledge topics`，且触发句在英文原句 `When the method or a tool convention is unclear, query before acting` 上逐字命中（需求 §4 末条的中文口径即此句），项目规则仍保留；③ 极简档零个主题标题、零段主题正文（`prompts/knowledge` 与 `core/knowledge` 两类目录逐个判，不拿单条标题代全体）；④ 极简档不自动注入文档/记忆/大纲、不改写历史；⑤ 完整档同一节也在场（极简档删的是主题正文，不是这个入口） | 无 | `test/integration/tiny-mode.test.mjs` |
 | 50-2 | 主代理与子代理分别调用 knowledge list/search/get，并查询未知主题、无匹配及纯查询主题 | 三档均有 knowledge；search 只定位、get 取完整主题；错误显式；纯查询主题不进入任何模式的提示词 | 无 | `test/integration/tiny-mode.test.mjs` |
 | 50-3 | 从真实 `thincoder-cli/src/tui.mjs` 入口装载完整 TUI 模块图 | startTUI 可用；cmd-advisor 不再引用 cmd-eng 已退役的 writeSessionFile 导出 | 回指 = `docs/cli/requirements/CRASH-REPORTS.md` F-CR1；旧实现由真实启动 SyntaxError 复现 | `test/integration/tiny-mode.test.mjs` |
 | 50-4 | 极简会话与完整会话各发一轮本地脚本化模型请求，读回请求体的工具面；同一极简会话里 `knowledge get tool-bash` 取一次展开面；再在极简会话内经 `consult_start` 起一次 consult 子代理，读它那一发请求体 | ① 极简档工具描述无锚字面、无展开面正文（`Output format:` ∥ `There is NO TTY` 均不在场），且等于母版去锚后的目标文本；② `knowledge get` 返回的正文逐字等于展开面原文；③ 完整档的 bash 描述 = 常驻面与展开面正文在锚处拼合，且展开面正文逐字等于 `prompts/knowledge/tool-bash.md` 全文（不与批起快照的旧文比对）；④ 同一极简会话里 consult 的 `doc_check` 描述取完整档，主链仍取极简档；⑤ 工具数量与 schema 键集不缩水；⑥ 极简档与完整档请求体的每份工具 `input_schema` 逐字相等（含 `action` 枚举取值） | 无 | `test/integration/tool-description-tiers.test.mjs` |
