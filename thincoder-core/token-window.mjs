@@ -7,10 +7,14 @@
  * 新增族：`contextUsage`（与 `compressIfNeeded` 的 token 判定**同一函数**）· `historyReading` / `historyPercent`（状态行
  * 百分比——与 CLI ∥ VSC **同源**：一个实现点，端侧零自算式，消费面全是本档的投影）·
  * `collectStaleToolOutputs`（陈旧工具输出合格集）+ 门槛常量 `PRUNE_MIN_TOKENS`（**与合格集同住本档** ⇒ 消费方单向取用、零回指）。
- * 依赖面 = `provider/rate.mjs`（`estimateText` / `ESTIMATOR_VERSION`）+ `config.mjs`（`providerSpec` / `resolveCompactThreshold`）——**零 import 环**。
+ * 窗口面（2026-11-14 · tiny 档上限批）：本档一切窗口读数取**有效窗口** `effectiveWindow`（`window-policy.mjs` §2.1），
+ * 不再直读 `providerSpec().context`——`workMode` 无缺省（本档的窗口消费入口 `keepTailSize` ∥ `tailBudgetTokens` ∥
+ * `historyReading` ∥ `historyPercent` 各自拒收，`collectStaleToolOutputs` 透传同一拒绝；必填清单的单一出处 = §2.3）。
+ * 依赖面 = `provider/rate.mjs`（`estimateText` / `ESTIMATOR_VERSION`）+ `config.mjs`（`resolveWorkMode` ∥ 有效窗口 ∥
+ * 预算族转口）——**零 import 环**。
  */
 import { estimateText, ESTIMATOR_VERSION } from "./provider/rate.mjs"
-import { providerSpec, resolveCompactThreshold } from "./config.mjs"
+import { resolveWorkMode, effectiveWindow, resolveCompactThreshold } from "./config.mjs"
 
 const IMAGE_TOKEN_ESTIMATE = 2000 // rough estimate for image content tokens (CLI legacy 256 underestimated real image costs, delaying compaction)
 
@@ -43,17 +47,19 @@ const KEEP_HEAD = 0 // No dedicated head: earliest messages may be a COMPLETED e
 const TAIL_BUDGET_FRACTION = 0.15
 export const SUMMARY_TOKEN_ESTIMATE = 1000 // §6.9: summary output target ~1K tokens — reserved from the 15%；§6.17 可达性门的 `note` 项同取本常量
 const TAIL_FLOOR_MESSAGES = 10 // §6.4④ D-T2: the tail keeps ≥10 verbatim messages — floor beats budget
-export function keepTailSize(provider, historyLen) {
-  // provider is guaranteed at every call site (runAgent always builds one); providerSpec
+export function keepTailSize(provider, historyLen, workMode) {
+  // provider is guaranteed at every call site (runAgent always builds one); the window below
   // degrades to DEFAULT_SPEC (128K) only if provider is somehow absent — acceptable
   // because the 40% history cap still bounds the tail. providers[].context override
   // (K units) is honored here (PROVIDER.md §6.15 T-C2: tail formula follows the window).
-  const ctxWindow = providerSpec(provider).context
+  // 窗口 = **有效窗口**（§2.1/§4）：tiny 把窗口压小，尾部跟着变短，不另立一套尾部规则。
+  const ctxWindow = effectiveWindow(provider, workMode)
   return Math.min(Math.max(10, Math.floor((ctxWindow / 100_000) * 30)), Math.floor(historyLen * 0.4))
 }
 // §6.4④ D-T1 tail token budget: window×15% − summary ~1K — the compressed history segment (summary + placeholder + tail) lands ≈ 15% (B 口径 §6.4④).
-export function tailBudgetTokens(provider) {
-  return Math.max(0, Math.floor(providerSpec(provider).context * TAIL_BUDGET_FRACTION) - SUMMARY_TOKEN_ESTIMATE)
+// 窗口与 `keepTailSize` 同取有效窗口（§4「两条公式同取有效窗口」）。
+export function tailBudgetTokens(provider, workMode) {
+  return Math.max(0, Math.floor(effectiveWindow(provider, workMode) * TAIL_BUDGET_FRACTION) - SUMMARY_TOKEN_ESTIMATE)
 }
 
 /**
@@ -129,7 +135,8 @@ function tightenTailByBudget(history, start, floorStart, budgetTokens) {
  * 上下文用量单源（§6.16.4「取自哪里」）——与 `compressIfNeeded` 的 token 判定**同一函数**：实测优先 =
  * `_lastPromptTokens + 增量(history.slice(_usageAtLen))`；无实测 = `estimateTokens(history) + system + tools`（固定开销面经 extras 随带）。
  * `threshold` = 该回合检查所用值（`agent._ctxBasis.threshold`——核 `agent.mjs` / VSC `checkAndCompact` 各一处暂存）；缺省回退 `resolveCompactThreshold`（退化面①）。
- * `window` = `providerSpec(agent.provider).context`。
+ * `window` = **有效窗口** `effectiveWindow(agent.provider, 当前档)`（§2.1）——tiny 档下它就不是模型窗口了，
+ * 而这个值就是 stats 首行百分比 ∥ `Segments` 行的分母；模式自 `agent.config` 现取（agent 在场，不靠参数透传）。
  * `fixedFloor` = 固定开销按当前估算比缩放（与 `total` 的估算支同一把尺）——固定开销单独越过 `limit` 的判据面
  * （`CONTEXT-COMPACTION.md` §5），两处消费：`enforceContextFit` 抛 typed error ∥ `compressIfNeeded` 的 `force` 支 no-op。
  * @returns {{basis:"measured"|"estimated", total, history, system, tools, overhead, fixedFloor, threshold, window}}
@@ -143,6 +150,8 @@ export function contextUsage(agent, extras = {}) {
   const measured = agent?._lastPromptTokens != null
   // §6.3 / §6.17 估算自校准：估算值乘 `_tokRatio`；`_lastPromptTokens` 是服务端真值，不乘。
   const ratio = tokenRatioOf(agent) // 取比单源（同下 `historyReading` 的第三参来源）
+  // 档位只从 agent 现取（握有 agent 的面自己取模式，§2.3）——不存窗口位，不添第二个来源。
+  const workMode = resolveWorkMode(agent?.config?.agent)
   return {
     basis: measured ? "measured" : "estimated",
     total: measured
@@ -155,8 +164,8 @@ export function contextUsage(agent, extras = {}) {
     // 固定开销单独越线的判据值（§5）：与估算支同尺——压掉全部 history 后 total 只能落到这个量级。
     fixedFloor: Math.round(overhead * ratio),
     threshold: agent?._ctxBasis?.threshold
-      ?? resolveCompactThreshold(agent?.config?.agent?.compactThreshold, agent?.provider).value,
-    window: providerSpec(agent?.provider).context,
+      ?? resolveCompactThreshold(agent?.config?.agent?.compactThreshold, agent?.provider, workMode).value,
+    window: effectiveWindow(agent?.provider, workMode),
   }
 }
 
@@ -228,24 +237,26 @@ function validSample(sample, provider) {
  * 核读数（§6.16.4「与状态行 ctx% 的单源关系」）——这个量**只有本函数一个实现点**，五处消费面全是它的投影：
  * stats 第 6 行 · 打开态读数 · 桌面 `ev:usage` · VSC `specs.mjs` · CLI 状态行（经 `ctxCacheOf` 缓存）。
  * 一点出两值：`tokens` = 校准后的历史估算 `round(estimateTokens(history) × ratio)`、`pct` = 它 ÷ 窗口、
- * `window` = `providerSpec(provider).context`——同屏「context X% Yk」必须同尺，两值各自算一次就是两把尺；
+ * `window` = **有效窗口** `effectiveWindow(provider, workMode)`（§2.1）——同屏「context X% Yk」必须同尺，两值各自算一次就是两把尺；
  * `window` 随读带出，消费面不再二次派生同一个量。
  * `ratio` **无缺省**：忘传 ⇒ `estimateTokens × undefined` = `NaN` ⇒ `tokens` / `pct` 皆 `NaN`。三面显示门
  * 都把非正值读作「不显示」（CLI `ctxPct > 0` · VSC 分子为假回 `null` · 桌面 `usageFrameWanted` 不发帧）
  * ⇒ 读数**缺席**（不会是错数）；给缺省 1 则相反——忘传处静默显示未校准读数，看着完全正常而差一整个校准比。
  * 两种形状里只有后者会被当作事实读走，所以宁可缺席。
+ * `workMode` **同无缺省**（§2.3）：分母的取法只有一种，忘传就拒绝并点名参数——四个参数位次序 = (history, provider,
+ * ratio, workMode)，既有三参调用面只添末位，不前移。
  * 空历史 ⇒ 0（状态行的 `ctxPct > 0` 显示门在端侧，不入本函数面）。
  */
-export function historyReading(history, provider, ratio) {
-  const window = providerSpec(provider).context
+export function historyReading(history, provider, ratio, workMode) {
+  const window = effectiveWindow(provider, workMode)
   const tokens = Math.round(estimateTokens(history ?? []) * ratio)
   return { tokens, pct: Math.round((tokens / window) * 100), window }
 }
 
 /** 状态行百分比薄转口（名面与 export 不变）：`historyReading` 的 `pct`——与 stats ∥ CLI ∥ VSC **同源**
- * （各处全是这一实现点的投影，端侧零自算式）。第三参 `ratio` 同 `historyReading`：无缺省。 */
-export function historyPercent(history, provider, ratio) {
-  return historyReading(history, provider, ratio).pct
+ * （各处全是这一实现点的投影，端侧零自算式）。第三参 `ratio` ∥ 第四参 `workMode` 同 `historyReading`：无缺省。 */
+export function historyPercent(history, provider, ratio, workMode) {
+  return historyReading(history, provider, ratio, workMode).pct
 }
 
 /** 估算校准比（§6.17）——`agent._tokRatio` 的**唯一**读出点（中性值 1 的唯一出处）：
@@ -269,10 +280,12 @@ export const PRUNE_MIN_TOKENS = 200
  * 陈旧工具输出合格集（§6.16.3——三条件合取，单源实现）：① `role === "tool"`；② **保护尾之外**（复用 `splitHistory` 的同一 `tailStart`——不新增第二处切割判据）；③ 估算 ≥ `PRUNE_MIN_TOKENS`。
  * 返回逐条计数面（prune 回执 + stats 两处消费）：`indexes` 合格索引（升序）· `tokens` 合格集估算和 · `candidates` 全史 tool 结果数 · `tailKept` 保护尾内保留数 · `belowMin` 门槛下跳过数 · `tailCount` 保护尾消息数。
  * **短历史（无中段）⇒ 合格集为空**（no-op——§6.16.3 边界）。
+ * `workMode` 无缺省（§2.3）：它向 `keepTailSize` ∥ `tailBudgetTokens` 透传——保护尾与压缩面同取有效窗口，
+ * 否则 tiny 档下「可以 prune 的面」会比「会被摘掉的面」大一圈。
  */
-export function collectStaleToolOutputs(history, provider) {
+export function collectStaleToolOutputs(history, provider, workMode) {
   const h = Array.isArray(history) ? history : []
-  const split = splitHistory(h, keepTailSize(provider, h.length), tailBudgetTokens(provider))
+  const split = splitHistory(h, keepTailSize(provider, h.length, workMode), tailBudgetTokens(provider, workMode))
   // 无中段（短历史）⇒ 可摘要面为空 ⇒ **全史即保护尾**（tailStart = 0——合格集必为空，同压缩面 no-op）
   const tailStart = split ? split.tailStart : 0
   const r = { indexes: [], tokens: 0, candidates: 0, tailKept: 0, belowMin: 0, tailCount: h.length - tailStart }

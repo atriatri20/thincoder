@@ -15,7 +15,7 @@
  */
 import { countConvLines, renderRows } from "./render-frame.mjs"
 import { historyReading, tokenRatioOf } from "@thincoder/core/token-window.mjs"
-import { providerSpec } from "@thincoder/core/config.mjs"
+import { resolveWorkMode, effectiveWindow } from "@thincoder/core/config.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { isTuiActive } from "./tui-lifecycle.mjs" // F-2 渲染抑制守卫（RESIZE-MOUSE-LEAK-FIX）
 
@@ -23,8 +23,10 @@ const MIN_RENDER_INTERVAL_MS = 16
 
 /**
  * 上下文读数缓存（CONTEXT-COMPACTION.md §6.16.4 单源）：值全部来自核 `historyReading`，本档零自算式。
- * 失效键三项 = `history.length` · `ratio` · 解析后的窗口——只按长度会留陈旧读数：校准比可在长度不变时变
- * （槽样本恢复 / 口径版本切换），窗口可在切模型 ∥ 改人工声明时变。三项全等 ⇒ **原引用**（零重算）；
+ * 失效键三项 = `history.length` · `ratio` · **有效窗口**——只按长度会留陈旧读数：校准比可在长度不变时变
+ * （槽样本恢复 / 口径版本切换），窗口可在切模型 ∥ 改人工声明时变，**且切档位也变**（tiny 上限——
+ * `CONTEXT-COMPACTION.md` §2.1）。键取模型窗口就会在切档后继续命中旧缓存：1M 模型切进 tiny 模型窗口不变，
+ * `pct` 于是沿用旧分母，「切出即解除」在状态行这一格上不成立。三项全等 ⇒ **原引用**（零重算）；
  * 否则重取核读数。为何不每帧调核：`estimateTokens` 是全史线性扫描，每帧跑一次是渲染热路径的净开销。
  * **三项覆盖不到的一类变化（登记）**：内容变而长度不变——`pruneStaleToolOutputs` 原位换掉 tool 内容
  * （`thincoder-core/context-degrade.mjs:30`-35：数组长度不变、估算骤降）与 `applySession` 整体换机读线
@@ -36,9 +38,11 @@ const MIN_RENDER_INTERVAL_MS = 16
 export function ctxCacheOf(agent, prev) {
   const history = agent?.history ?? []
   const ratio = tokenRatioOf(agent)
-  const window = providerSpec(agent?.provider).context
+  // 档位自 agent 现取（§2.3）；窗口用**有效窗口**——它既是分母也是失效键的第三项。
+  const workMode = resolveWorkMode(agent?.config?.agent)
+  const window = effectiveWindow(agent?.provider, workMode)
   if (prev && prev.len === history.length && prev.ratio === ratio && prev.window === window) return prev
-  const { tokens, pct } = historyReading(history, agent?.provider, ratio)
+  const { tokens, pct } = historyReading(history, agent?.provider, ratio, workMode)
   return { len: history.length, ratio, window, tokens, pct }
 }
 

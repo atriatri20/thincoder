@@ -168,7 +168,7 @@
 ## CLI 50. 三档模式切换、极简提示词与知识查询
 
 > 目的：同一互斥 mode 驱动命令、槽恢复和下一轮提示词；tiny 收窄自动注入并查询同一知识正文，完整档保持原语义。
-> 节注：回指 = `docs/core/requirements/PROMPT-SYSTEM.md` ∥ `docs/core/requirements/CONFIG.md` F13 ∥ `docs/core/requirements/SESSION.md`；机制单源 = 对应同名设计档；组件 = CLI 命令/会话槽 ⟷ prepareRun ⟷ 母版装配 ⟷ knowledge 资源；进入口 = 真 CLI 命令与本地脚本化模型端点；五态 = 50-1 正常 · 50-2 正常 · 50-3 边界 · 50-4 正常 · 50-5 正常。
+> 节注：回指 = `docs/core/requirements/PROMPT-SYSTEM.md` ∥ `docs/core/requirements/CONFIG.md` F13 ∥ `docs/core/requirements/SESSION.md` ∥ `docs/core/requirements/CONTEXT-COMPACTION.md`；机制单源 = 对应同名设计档；组件 = CLI 命令/会话槽 ⟷ prepareRun ⟷ 母版装配 ⟷ knowledge 资源 ⟷ 有效窗口；进入口 = 真 CLI 命令与本地脚本化模型端点；六态 = 50-1 正常 · 50-2 正常 · 50-3 边界 · 50-4 正常 · 50-5 正常 · 50-6 正常。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
@@ -177,6 +177,7 @@
 | 50-3 | 从真实 `thincoder-cli/src/tui.mjs` 入口装载完整 TUI 模块图 | startTUI 可用；cmd-advisor 不再引用 cmd-eng 已退役的 writeSessionFile 导出 | 回指 = `docs/cli/requirements/CRASH-REPORTS.md` F-CR1；旧实现由真实启动 SyntaxError 复现 | `test/integration/tiny-mode.test.mjs` |
 | 50-4 | 极简会话与完整会话各发一轮本地脚本化模型请求，读回请求体的工具面；同一极简会话里 `knowledge get tool-bash` 取一次展开面；再在极简会话内经 `consult_start` 起一次 consult 子代理，读它那一发请求体 | ① 极简档工具描述无锚字面、无展开面正文（`Output format:` ∥ `There is NO TTY` 均不在场），且等于母版去锚后的目标文本；② `knowledge get` 返回的正文逐字等于展开面原文；③ 完整档的 bash 描述 = 常驻面与展开面正文在锚处拼合，且展开面正文逐字等于 `prompts/knowledge/tool-bash.md` 全文（不与批起快照的旧文比对）；④ 同一极简会话里 consult 的 `doc_check` 描述取完整档，主链仍取极简档；⑤ 工具数量与 schema 键集不缩水；⑥ 极简档与完整档请求体的每份工具 `input_schema` 逐字相等（含 `action` 枚举取值） | 无 | `test/integration/tool-description-tiers.test.mjs` |
 | 50-5 | 真 CLI 工程会话经 `/eng` 落槽后发一轮本地脚本化模型请求，读回请求体的工具面与 system 段 | 十一把入口工具仍带 `ledger`（带本地定位参数的十把另带 `project`，`ssh` 只按 `get` 判）且 `required` 逐字不变；两键 `description` 只剩一行身份句（本工具差异一句除外）；完整口径在工程会话的 system 段只出现一处，工具描述里不重述；写门十一把的 `input_schema` 在 normal 与 engineering 两档逐字相等 | 无 | `test/integration/tool-description-tiers.test.mjs` |
+| 50-6 | 真 CLI 用 1M 窗模型起会话，先经 `context` 工具 stats 读一组分母；`/tiny` 后发一轮本地脚本化请求再读同一组；再 `/normal` 后重读 | tiny 档 stats 首行分母 ∥ 请求预算窗口 ∥ 状态行百分比分母三处都是 262144，压缩线随之落在其下；切出后三处全部回到模型窗口（1M 夹具 = 1024000），不残留 262144；两档工具面与项目规则块不变 | 无 | `test/integration/tiny-mode.test.mjs` |
 
 
 ## CLI 52. ACP workMode 与 PLAN 分离

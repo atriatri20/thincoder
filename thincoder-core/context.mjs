@@ -16,8 +16,8 @@ import { buildCompressMessages } from "./compress-form.mjs"
 import { contextUsage, estimateTokens, keepTailSize, splitHistory, SUMMARY_TOKEN_ESTIMATE, tailBudgetTokens } from "./token-window.mjs"
 import { COMPACTION_PLACEHOLDER, withPlaceholderPrefix } from "./context-echo.mjs"
 import { shrinkOversized } from "./context-degrade.mjs"
-// 固定开销越线判据的另一半（#2398）：`limit` 单源 = `requestBudget`（与守卫面同一个数）。
-import { requestBudget } from "./config.mjs"
+// 固定开销越线判据的另一半（#2398）：`limit` 单源 = `policyBudget`（有效窗口——与守卫面同一个数）。
+import { policyBudget, resolveWorkMode } from "./config.mjs"
 // 覆盖条数（#2399）：按折叠身份账算——轮投影与压缩共用同一张账，不在本档另立一份判据。
 import { coveredTurnCount } from "./agent/turn-projection.mjs"
 
@@ -214,13 +214,16 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   // 单源（§6.16.4）：total 与 stats 面同一函数（既有内联式改调 contextUsage，判定语义零改）
   const usage = contextUsage(agent, extras)
   const tokens = usage.total
+  // 档位 = 本 run 的策略输入（§2.3 握有 agent 的面自取）：守卫、尾部两式、固定开销判据全从它派生有效窗口。
+  const workMode = resolveWorkMode(agent.config?.agent)
   // 固定开销单独越线（#2398 · §5）：history 归零后 `total` 仍等于固定开销 ⇒ 压缩无解。强压面直接 no-op、
   // 不发摘要请求（守卫面照抛 typed error；`/compact` 回执报同一原因）——压一次白付一次摘要请求，压完仍抛同一个错。
-  if (extras.force && usage.fixedFloor > requestBudget(agent.provider).limit) return false
+  // 判据窗口 = 有效窗口（§2.2）：tiny 把 limit 一起压下去，压缩线与守卫面同尺。
+  if (extras.force && usage.fixedFloor > policyBudget(agent.provider, undefined, workMode).limit) return false
   if (!extras.force && tokens <= threshold) return false
 
-  const keepTail = keepTailSize(agent.provider, history.length)
-  const split = splitHistory(history, keepTail, tailBudgetTokens(agent.provider))
+  const keepTail = keepTailSize(agent.provider, history.length, workMode)
+  const split = splitHistory(history, keepTail, tailBudgetTokens(agent.provider, workMode))
   if (!split) {
     // History is too short (≤KEEP_HEAD+keepTail+1 messages) to find a middle section, but tokens exceed threshold — typically a single giant message
     // (large paste / huge injection). When summarization has no room, degrade to deterministic shrinking to ensure context always reduces
@@ -290,8 +293,9 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
  * Drops the middle so the task can continue. Returns whether truncation happened.
  */
 export function compressFallback(agent) {
-  const keepTail = keepTailSize(agent.provider, agent.history.length)
-  const split = splitHistory(agent.history, keepTail, tailBudgetTokens(agent.provider))
+  const workMode = resolveWorkMode(agent.config?.agent)
+  const keepTail = keepTailSize(agent.provider, agent.history.length, workMode)
+  const split = splitHistory(agent.history, keepTail, tailBudgetTokens(agent.provider, workMode))
   if (!split) return false
   const tailMessages = agent.history.length - split.tailStart
   applyCompression(agent, split.headEnd, split.tailStart, FALLBACK_NOTE)

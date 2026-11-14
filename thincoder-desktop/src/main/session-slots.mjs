@@ -55,7 +55,10 @@ import {
   newSession as coreNewSession, switchToSlot as coreSwitchToSlot, deleteSlot as coreDeleteSlot,
   loadSlotFile, sessionReading,
 } from "@thincoder/core/session.mjs"
-// 装配面（打开态播种出参）：`providersList` / `provider` 两值由核 `loadConfig` 出（单源）。
+// 装配面（打开态播种出参）：`providersList` / `provider` 两值由核 `loadConfig` 出（单源）——
+// 档位取**本会话自己的槽**（`resolveSessionWorkMode(data, config.agent)`）：槽里的 `mode` 才是该会话的权威档，
+// 配置档只在槽未记档时兜底（`docs/core/design/SESSION.md` §8「mode 是会话级 tiny/normal/engineering 权威值」）。
+// 与同回执的 `slotFlags` 同源：打开态百分比与模式位不会一屏两个分母。
 import { loadConfig, resolveSessionWorkMode } from "@thincoder/core/config.mjs"
 // 历史页读面（本批增）：窗口切分与页尺的**单源**在核。
 import { HISTORY_PAGE_SIZE, historyWindow } from "@thincoder/core/history-window.mjs"
@@ -177,13 +180,20 @@ export function providerStateOf(config) {
 /** 打开态播种面（`history:page` 回执 `seed` —— 形态 / 在场 / 缺席降级单源 = `docs/desktop/design/IPC.md`
  *  §2「打开态播种注」）：`tasks` = 槽数据直取（非数组 ⇒ `[]`——沿核水合口径 `data.tasks ?? []`）；
  *  `usage` = 核 `sessionReading` 打开态读数（模型链入参 = `defaultModel`——2026-10-09 清除批；
+ *  档位 = 本会话自己的槽（`resolveSessionWorkMode(data, config.agent)`）——打开态分母与该会话实跑同一档；
  *  有效门 = 数字 ∧ `> 0`——否则键缺席，沿 `ev:usage` 同门）；
  *  配置不可读 / 读数计算抛 ⇒ `usage` 键缺席 + `console.error`（零静默；读面保持 fail-soft）。 */
 function openingSeed(data) {
   const seed = { tasks: Array.isArray(data.tasks) ? data.tasks : [] }
   try {
     const config = loadConfig()
-    const percent = sessionReading(data, { providers: config.providersList, fallback: config.provider, defaultModel: config.defaultModel })
+    const percent = sessionReading(data, {
+      providers: config.providersList,
+      fallback: config.provider,
+      defaultModel: config.defaultModel,
+      // 档位 = 本会话自己的槽（槽 `mode` 权威、配置档兜底）——与同回执 `slotFlags` 同源。
+      workMode: resolveSessionWorkMode(data, config.agent),
+    })
     if (typeof percent === "number" && percent > 0) seed.usage = percent
   } catch (error) {
     console.error("[session-slots] opening reading unavailable:", error)

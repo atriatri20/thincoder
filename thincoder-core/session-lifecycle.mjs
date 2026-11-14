@@ -19,7 +19,7 @@
 
 import { existsSync } from "node:fs"
 // §6.17：auto 派生值只进显示面（compactThresholdResolved）——显式键 agent.compactThreshold 永不被改写
-import { resolveCompactThreshold, resolveSessionWorkMode, setConfigWorkMode } from "./config.mjs"
+import { resolveCompactThreshold, resolveSessionWorkMode, resolveWorkMode, setConfigWorkMode } from "./config.mjs"
 // 槽面判据单源（#841 KD-841-2：槽渠道 key 门 + 模型面序——PROVIDER.md §6.22）。
 import { hasKey, resolveChannelModel, resolveProviderPlan } from "./model-ref.mjs"
 import {
@@ -226,7 +226,7 @@ export function applySession(agent, data, opts = {}) {
     // §6.17：恢复后 auto 派生线随槽模型跟手——只刷新显示面 compactThresholdResolved（显式键不写；
     // 判定阈值本身由 setup.mjs 每 run 现算，不依赖本值）
     if (switched && agent.config?.agent?.compactThresholdAuto && typeof agent.provider.model === "string" && agent.provider.model) {
-      agent.config.agent.compactThresholdResolved = resolveCompactThreshold(null, agent.provider).value
+      agent.config.agent.compactThresholdResolved = resolveCompactThreshold(null, agent.provider, resolveWorkMode(agent.config?.agent)).value
     }
     // 会话级档位施加（§6.21 判据句 4——在模型合并支之后，以**合并后**的 `provider.model` 判 spec；
     // 三端共用本施加面）：`"off"` 记号 ⇒ 该模型有 off 路径才设关思考形（effort 族该形为 `null`
@@ -452,10 +452,18 @@ export function slotOccupancy(cwd, slot) {
  *     ⇒ 落链）∥ 无槽模型 ⇒ 现行模型链回落（`defaultModel` 属本渠道 ⇒ 其模型段；两档皆无 ⇒ `null`——
  *     `resolveChannelModel`，2026-10-09 清除批：渠道单值模型退场，零静默回落）；未命中 ⇒ `fallback`
  *     （支 ②「静默保持现状」的装配口径 = `loadConfig().provider`）；
- *  ④ 公式 = 核 `historyReading`（与 CLI ∥ VSC 同一实现点的投影）；第三参 = 槽样本经 `sampleRatio` 取的校准比。
+ *  ④ 公式 = 核 `historyPercent`（= `historyReading` 的 `pct` 薄转口；与 CLI ∥ VSC 同一实现点的投影）；
+ *     第三参 = 槽样本经 `sampleRatio` 取的校准比；第四参 = `opts.workMode`——**必填**（缺 ∥ 非法值由
+ *     `historyPercent` 拒绝并点名 `workMode`）；本面只握槽数据与 provider、不握 agent，故档位由调用方
+ *     **当参透传**（`docs/core/design/CONTEXT-COMPACTION.md` §2.3 缺参即拒）。
+ *     本函数自己不读槽里的 `mode`（纯投影面：档位取哪一档由调用方定，这里不做第二次判定）。
+ *     调用方取**会话自己的槽档**——`openingSeed` 传 `resolveSessionWorkMode(data, config.agent)`：槽里的 `mode`
+ *     是会话级权威档（`docs/core/design/SESSION.md` §8「mode 是会话级 tiny/normal/engineering 权威值」），
+ *     打开态分母与该会话实跑同一档，同一会话不出现两个分母。需求 §2「切换档位即生效与解除，不落盘、
+ *     不跨会话带走」说的是**有效窗口本身不是持久状态、每次按档位现算**，不是「槽里的档不作数」。
  *  **零副作用**：`data` / `providers` / `fallback` / `defaultModel` 皆入参（不读盘、不写盘、不改任何进程态）；
  *  `data` 非对象 ⇒ `0`（与空历史同值——「非正 ⇒ 零节点」显示门归端侧，沿 `historyPercent` 空历史口径）。 */
-export function sessionReading(data, { providers, fallback, defaultModel } = {}) {
+export function sessionReading(data, { providers, fallback, defaultModel, workMode } = {}) {
   if (data === null || typeof data !== "object") return 0
   const full = Array.isArray(data.history) ? data.history : []
   const ch = data.contextHistory
@@ -469,5 +477,5 @@ export function sessionReading(data, { providers, fallback, defaultModel } = {})
   const provider = entry
     ? { ...entry, model: slotModel ?? resolveChannelModel(entry, defaultModel ?? null) }
     : fallback
-  return historyPercent(line, provider, sampleRatio(data.estimateSample, provider))
+  return historyPercent(line, provider, sampleRatio(data.estimateSample, provider), workMode)
 }

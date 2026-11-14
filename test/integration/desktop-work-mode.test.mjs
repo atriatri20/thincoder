@@ -6,6 +6,9 @@
  * 事件回投渲染面 `applyFlags`/`onFlags` → 槽恢复（`pageHistory`）读回唯一 `mode`。
  * 非法值（表外 mode）整笔零写：槽零动、零事件、渲染面 store 零动、回执 fail-loud。
  *
+ * 打开态分母（tiny 档上限批 · 用例 12-1 内）：首屏回执 `seed.usage` 的分母取该会话**槽里的档**——
+ * 槽 tiny ∥ 配置 normal 与反向两种配置各取一条读数，与核 `sessionReading` 显式传槽档的候选值对拍。
+ *
  * 主侧/渲染面模块均直接取当前源树（core 经 resolve 钩子指向 `../thincoder-core`，
  * 与包内 `thincoder-desktop/test/work-mode-main.test.mjs` 同式，避免开发目录物化副本落后）。
  */
@@ -35,7 +38,10 @@ registerHooks({
 })
 
 const { _setConfigPathForTest, _resetConfigPathForTest } = await import("@thincoder/core/config-io.mjs")
-const { loadSlotFile } = await import("@thincoder/core/session.mjs")
+// 打开态分母对拍面：`loadConfig` 与端面 `openingSeed` 同源取 providers ∥ fallback ∥ defaultModel，
+// `sessionReading` 是核读数面本身（读面只认调用方传入的档，故候选值由本用例点名档位）。
+const { loadConfig } = await import("@thincoder/core/config.mjs")
+const { loadSlotFile, sessionReading } = await import("@thincoder/core/session.mjs")
 const {
   _setSessionsDirForTest, _resetSessionsDirForTest, pageHistory, slotPath, writeSessionFile,
 } = await import("../../thincoder-desktop/src/main/session-slots.mjs")
@@ -160,6 +166,52 @@ test("斜径 /eng 与控件 setMode 同走 session:flags → 槽写 → ev:flags
   await flush()
   assert.equal(readFileSync(slotPath(cwd, 1), "utf8"), before, "engineering 下开 PLAN 零写")
   assert.equal(wire.failure()?.reason, "invalid-patch")
+
+  // ── 打开态分母（本用例 12-1 面 · §2「实施后裁决（第 4 轮）· 一」）─────────────────────────
+  // 判据：打开会话显示的用量百分比必须与该会话实跑所用档位同一条分母。读数点 = 首屏回执 `seed.usage`，
+  // 该键是**百分比数值**（有效门 = 数字 ∧ `> 0`，分母不随回执带出）⇒ 不是读分母，而是与同一槽数据经核
+  // `sessionReading` **显式传该会话槽里的档**算出的候选值对拍。判定前先立「两方向读数不同」——
+  // 否则取槽档与取配置档读同一值，这个检查证明不了走的是哪一路。
+  // 夹具：1M 窗渠道 ⇒ tiny 档有效窗口 262144、normal 档 = 模型窗口（两档可分辨）；
+  // 本块临时改写模块级共享配置档（`configPath`），块尾还原——不让残留配置漏到同档后一个用例。
+  const channel = { name: "probe", apiKey: "probe-key", model: "probe-model", modelContext: { "probe-model": 1024 } }
+  const writeConfig = (mode) => writeFileSync(configPath, JSON.stringify({
+    providers: [channel], defaultModel: `${channel.name}:${channel.model}`, agent: { mode },
+  }, null, 2))
+  const history = Array.from({ length: 400 }, (_, i) => ({ role: i % 2 ? "assistant" : "user", content: "x".repeat(400) }))
+  /** 同一槽数据、同一入参，唯档位由本用例点名：`openingSeed` 的候选值。 */
+  const candidateOf = (workMode) => {
+    const config = loadConfig()
+    return sessionReading(loadSlotFile(cwd, 1), {
+      providers: config.providersList, fallback: config.provider, defaultModel: config.defaultModel, workMode,
+    })
+  }
+  const openAt = () => {
+    const receipt = pageHistory(cwd, { key: "1", before: null })
+    assert.equal(typeof receipt.seed?.usage, "number", "打开态读数应在场（本槽有历史）")
+    return receipt
+  }
+
+  // 方向 A：槽 tiny ∥ 配置 normal ⇒ 按 262144 分母
+  writeConfig("normal")
+  saveSlot(1, { mode: "tiny", history })
+  assert.notEqual(candidateOf("tiny"), candidateOf("normal"), "夹具前提：同一槽数据两档读数不同")
+  const tinyOpen = openAt()
+  assert.equal(tinyOpen.seed.usage, candidateOf("tiny"), "槽 tiny：打开态百分比按 262144 分母")
+  assert.notEqual(tinyOpen.seed.usage, candidateOf("normal"), "不得取配置档 normal 的读数")
+  assert.equal(tinyOpen.flags.mode, "tiny", "同回执的模式位与读数同源")
+
+  // 方向 B：槽 normal ∥ 配置 tiny ⇒ 按模型窗口分母（只翻配置档，槽档不动）
+  writeConfig("tiny")
+  saveSlot(1, { mode: "normal", history })
+  assert.notEqual(candidateOf("normal"), candidateOf("tiny"), "夹具前提：同一槽数据两档读数不同")
+  const normalOpen = openAt()
+  assert.equal(normalOpen.seed.usage, candidateOf("normal"), "槽 normal：打开态百分比按模型窗口分母")
+  assert.notEqual(normalOpen.seed.usage, candidateOf("tiny"), "不得取配置档 tiny 的读数")
+  assert.equal(normalOpen.flags.mode, "normal", "同回执的模式位与读数同源")
+
+  // 夹具收尾：共享配置档还原成档顶那份（`providers: []` / `agent.mode: normal`）。
+  writeFileSync(configPath, JSON.stringify({ providers: [], agent: { mode: "normal" } }, null, 2))
 })
 
 test("非法 patch 整笔零写：槽零动、零事件、store 零动、回执 fail-loud", async () => {

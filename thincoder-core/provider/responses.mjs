@@ -18,6 +18,8 @@ import { requestWithRetry } from "./retry.mjs"
 import { rateGate, recordRate, estimateRequestTokens } from "./rate.mjs"
 import { buildBody, normalizeUsage } from "./responses-request.mjs"
 import { classifyResponsesErrorCode, assertPromptFits } from "./errors.mjs"
+// §2.2 发送面：只读 maxTokens（输出合同）——发送前净判共用同一个预算对象
+import { requestBudget } from "../config.mjs"
 // 同名 re-export（2026-09-29 structure-split-2 · 台账 #620——缝 = 同名再出口）：请求构造面出档 `provider/responses-request.mjs`；
 // `buildBody` / `isStoreRequiredHost` / `builtinToolsFor` 三名既有导出经本档转口——消费者 import 面零改。
 export { buildBody, isStoreRequiredHost, builtinToolsFor } from "./responses-request.mjs"
@@ -232,7 +234,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   // §6.17 发送面净判：估准面补 `tools`（原只投影 messages）；body 用 `max_output_tokens`、无 `max_tokens` 键 ⇒ 减项恒 0
   const estimated = estimateRequestTokens({ messages, tools })
   const estPrompt = estimated - (body.max_tokens ?? 0)
-  assertPromptFits(provider, estPrompt, logCtx)
+  assertPromptFits(provider, estPrompt, logCtx, requestBudget(provider))
   await rateGate(provider, estimated, onWait, signal)
   // 定制头 + 产品标识头（UA 不可被渠道覆盖——PROVIDER.md §6.17）：定制头在前、内置头在后——同名内置头胜出（三处 fetch 共用）
   const headers = { ...withUserAgent(provider.headers), "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` }

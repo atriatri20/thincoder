@@ -46,8 +46,8 @@ export async function prepareRun(agent, input, callbacks, {
   if (agent.config) setConfigWorkMode(agent.config, mode)
   const tiny = mode === "tiny"
   // §6.17 每 run 现算：数值在场 = 显式原样；不在场 = auto 现算（按在用 provider——切模型后下一 run 跟手）。
-  // 派生值不落 agent.compactThreshold（显式键永不被改写）。
-  const threshold = resolveCompactThreshold(agent.config?.agent?.compactThreshold, agent.provider).value
+  // 派生值不落 agent.compactThreshold（显式键永不被改写）。auto 档走**有效窗口**（§2.1）：tiny 把压缩线一起压下去。
+  const threshold = resolveCompactThreshold(agent.config?.agent?.compactThreshold, agent.provider, mode).value
   // 注入开关（PROMPT-SYSTEM.md §6.24 · 台账 #1420）：判据 `!== false`（缺省 = 现行为零变）——
   // 逐 run 现读 `agent.config` ⇒ `settings` 工具 ∕ `/config` 写入后本会话下一次组装即生效。
   const injectDocs = !tiny && agent.config?.agent?.injectDocs !== false

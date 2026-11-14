@@ -171,13 +171,15 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   const { messages: adaptedMessages, warnings } = convertMessages(chatMessages)
 
   const spec = specForModel(provider.model)
+  // §2.2 发送面：只读 maxTokens（输出合同）——请求体与发送前净判共用这一个对象，不各算一套。
+  const budget = requestBudget(provider)
   const body = {
     model: provider.model,
     messages: adaptedMessages,
     stream: true,
     // §6.17 发送面同源：anthropic 恒发 max_tokens（显式 ?? 规格 maxOutput——原第三级兜底不可达已随本批删净，
     // §6.17「装配面不留第二算式」）
-    max_tokens: requestBudget(provider).maxTokens,
+    max_tokens: budget.maxTokens,
   }
   if (systemMessages.length > 0) body.system = systemMessages.join("\n\n")
   if (tools?.length) body.tools = tools
@@ -212,7 +214,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   // 走 body 会把整块 system 漏在判据外。`estimated`（含 max_tokens）仍供 rateGate / recordRate。
   const estPrompt = estimateRequestTokens({ messages, tools })
   const estimated = estimateRequestTokens(body)
-  assertPromptFits(provider, estPrompt, logCtx)
+  assertPromptFits(provider, estPrompt, logCtx, budget)
   await rateGate(provider, estimated, onWait, signal)
 
   // 2026-08-31：4xx/5xx/网络与 OpenAI 格式统一退避重试链（原仅 429 Retry-After 单次重试，

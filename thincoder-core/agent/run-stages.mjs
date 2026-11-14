@@ -9,8 +9,8 @@
  */
 
 import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "../context.mjs"
-// §6.17/D-CC32 溢出守卫（兜底，非主修）：预算面单源 requestBudget ∥ 再估面 contextUsage（与压缩判定同一函数）
-import { requestBudget } from "../config.mjs"
+// §6.17/D-CC32 溢出守卫（兜底，非主修）：预算面单源 `policyBudget`（有效窗口）∥ 再估面 contextUsage（与压缩判定同一函数）
+import { policyBudget, resolveWorkMode } from "../config.mjs"
 import { contextUsage } from "../token-window.mjs"
 import { contextOverflowError, overheadOverflowError } from "../provider/errors.mjs"
 import { ensureAutoReminder, injectEngineeringReminder, ContinueError, snapshotGuard } from "./helpers.mjs"
@@ -132,7 +132,7 @@ export async function runCompactionCheck(agent, ctx) {
       // 否则 = 短历史无中段。两种 no-op 的处置不同，回执不能同一句。
       const { compactNoopNote, compactOverheadNote } = await import("../agent-tools/context.mjs")
       const forced = contextUsage(agent, compactionOverhead)
-      const budget = requestBudget(agent.provider)
+      const budget = policyBudget(agent.provider, undefined, resolveWorkMode(agent.config?.agent))
       const note = forced.fixedFloor > budget.limit
         ? compactOverheadNote(forced.fixedFloor, budget.limit, budget.window)
         : compactNoopNote()
@@ -157,7 +157,7 @@ export async function runCompactionCheck(agent, ctx) {
 
 /**
  * 越窗守卫 / 自适应共用原子（CONTEXT-COMPACTION.md §6.17 守卫 ∥ §6.17.1 链三自适应）：
- * `requestBudget` 判 → 强压一次（`force`）→ 再判 → 抛三实数（不截断、不静默削输出）。
+ * `policyBudget` 判 → 强压一次（`force`）→ 再判 → 抛三实数（不截断、不静默削输出）。
  *
  * `opts.forceCompact`（链三面）：**跳过前置估算判据**、直接强压——服务端已判越窗时估算准不准不再作门
  * （本批要治的就是估算低估：死锁现场估 491K < limit 606,784，按估算开门会压 0 次、重试同一请求再吃 400）。
@@ -168,7 +168,9 @@ export async function enforceContextFit(agent, ctx, { forceCompact = false } = {
   const { threshold, callbacks, compactionOverhead, signal } = ctx
   // 判据 = prompt 估算 > `budget.limit`（**无档次门**——absent 档 limit 取地板 max(window − reserve, threshold)，
   // 恒为正数、恒可判）。**判据不用 maxTokens**：未发时为 undefined ⇒ NaN ⇒ 守卫静默失效（§6.17）。
-  const budget = requestBudget(agent.provider)
+  // 预算取**有效窗口**（`CONTEXT-COMPACTION.md` §2.2「stats、守卫和压缩使用同一预算对象」）：tiny 档下
+  // 守卫与压缩线同一把尺，否则只降阈值不动 limit = 「早压缩但仍放行到模型窗口」，与上界相反。
+  const budget = policyBudget(agent.provider, undefined, resolveWorkMode(agent.config?.agent))
   let usage = contextUsage(agent, compactionOverhead)
   // 固定开销单独越线（#2398 · `CONTEXT-COMPACTION.md` §5）：history 归零后 `total` 仍等于固定开销 ⇒ 压缩无解，
   // 在强压**之前**抛 typed error（`forceCompact` 同样拦：强制压缩跳得过阈值，跳不过这条）。

@@ -74,8 +74,8 @@ export async function handleConfigCommand(ctx, args = []) {
     // §6.17：auto 派生值永不回写 agent.compactThreshold——只刷新显示面 compactThresholdResolved
     // （每 run 的判定阈值由 setup.mjs 现算，本处只管 /config 显示面与显式键隔离）
     if (agent.config?.agent?.compactThresholdAuto) {
-      const { resolveCompactThreshold } = await import("@thincoder/core/config.mjs")
-      agent.config.agent.compactThresholdResolved = resolveCompactThreshold(null, agent.provider).value
+      const { resolveCompactThreshold, resolveWorkMode } = await import("@thincoder/core/config.mjs")
+      agent.config.agent.compactThresholdResolved = resolveCompactThreshold(null, agent.provider, resolveWorkMode(agent.config?.agent)).value
     }
   }
 

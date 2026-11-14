@@ -6,7 +6,8 @@
  * 机械面：`stats` 不新增第三口径（首行主口径 = 窗口占用 total / window，压缩线以具名数值 + 距线呈现；状态行行（第 6 行）走核 `historyReading`——与 CLI ∥ VSC 同源：一个实现点，端侧零自算式）；`prune` = 合格集（`token-window.mjs` 单源）+「原位换内容」应用面（`context.mjs`）；`compact` **当次零执行**（只登记 `agent._pendingCompact`，由下一安全点消费——§6.16.2）。
  */
 import { contextUsage, estimateTokens, collectStaleToolOutputs, historyReading, tokenRatioOf, PRUNE_MIN_TOKENS } from "../token-window.mjs"
-import { requestBudget } from "../config.mjs"
+// 预算面 = **有效窗口**（`CONTEXT-COMPACTION.md` §2.2：stats ∥ 守卫 ∥ 压缩同一个预算对象）
+import { policyBudget, resolveWorkMode } from "../config.mjs"
 import { pruneStaleToolOutputs, COMPRESS_FAILURE_LIMIT } from "../context.mjs"
 import { slotPath } from "../session-slots.mjs"
 // #15 描述外置：描述文本单点 = tool-docs/context.md（DESC 单解析面，缺档抛错语义不变）
@@ -73,8 +74,10 @@ export function pushContextNudge(agent) {
 
 /** stats 报面（§6.16.4 逐行定稿——机判可解析；三段 / 工具输出小计 / 状态行百分比 / 压缩履历）。 */
 function statsReport(agent) {
+  // 档位自 agent 现取（§2.3 握有 agent 的面自取）：本档三处读数（有效窗口预算 ∥ 保护尾 ∥ 状态行分母）同取它。
+  const workMode = resolveWorkMode(agent?.config?.agent)
   const usage = contextUsage(agent, agent?._ctxBasis?.overhead ?? {})
-  const stale = collectStaleToolOutputs(agent?.history ?? [], agent?.provider)
+  const stale = collectStaleToolOutputs(agent?.history ?? [], agent?.provider, workMode)
   let toolOut = 0
   let toolCount = 0
   for (const m of agent?.history ?? []) {
@@ -100,15 +103,15 @@ function statsReport(agent) {
     : `Cache: hit ${cacheHit} · miss ${cacheMiss} tokens (${Math.round((cacheHit / cacheTotal) * 100)}% hit) across ${cacheTurns} response(s)`
   // 第 6 行 = 核读数投影（§6.16.4）：`pct` 与括号内的 `calibratedHistory` 是同一次调用的两个返回值——同屏两值同尺；
   // 标记 `calibrated history estimate` 把它与 `Segments ≈` 行的裸估算 `history`（核 `estimateTokens`，未乘比）分名。
-  const statusReading = historyReading(agent?.history ?? [], agent?.provider, tokenRatioOf(agent))
+  const statusReading = historyReading(agent?.history ?? [], agent?.provider, tokenRatioOf(agent), workMode)
   return [
     `Context ≈${usage.total} tokens (${pct}% of ${usage.window} window); compaction line ${usage.threshold} (${toGo} to the line)`,
-    // §6.16.4 字面单源（该行为唯一字面，逐字；预算面同源 requestBudget——不自算第二套）:
+    // §6.16.4 字面单源（该行为唯一字面，逐字；预算面同源 policyBudget——不自算第二套）:
     // window {window} ({modelContext|provider-override|list|spec|default}) · max_tokens {maxTokens|not sent} ({explicit|spec|absent})
     // · prompt {total} · to compaction line {threshold − total} · to window limit {limit − total}
     // 两距离带符号（负 = 已越）；maxTokens 未发写 not sent、来源写 absent（该档守卫不覆盖——§6.17 射程）。
     (() => {
-      const budget = requestBudget(agent?.provider)
+      const budget = policyBudget(agent?.provider, undefined, workMode)
       const mt = budget.maxTokens === undefined ? "not sent" : String(budget.maxTokens)
       return `Request budget: window ${budget.window} (${budget.windowSource}) · max_tokens ${mt} (${budget.maxTokensSource})`
         + ` · prompt ${usage.total} · to compaction line ${usage.threshold - usage.total}`

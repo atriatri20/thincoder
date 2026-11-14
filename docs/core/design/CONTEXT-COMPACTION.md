@@ -24,6 +24,10 @@ history 是机读线；_fullHistory/fullHistory 是完整记录。压缩只动�
 
 用户请求与最终回复逐字入轮记录，没有长度上限。机读线的容量由「本轮工具过程退出」控制，不靠丢用户与模型的原文；截断过的记录是一条静默不同的轮记录，事后无从分辨是被截断还是原本如此。
 
+§4 的 shrinkOversized 不是这条的例外，两条按对象切开：它只在无中段时生效，改的是机读线里单条超限消息的副本。
+
+`context-degrade.mjs` 按 copy-on-write 重建，人读线与 `_fullHistory` 保留原文；轮记录里的 userRequest ∥ finalResponse 逐字不动——「截断过的轮记录」它产生不出来。
+
 上限只留在摘要面：命令与结果摘要单行折叠到 `SUMMARY_CAP` ∥ `COMMAND_CAP`（`turn-task-state.mjs`）。这是两个面，不是一条「文本预算」——需求 §4 的「机读 history 可摘要、截断或 prune」说的是摘要面，用户与模型的原文不在其中。
 
 taskState 是持久化对象，至少包含：
@@ -60,7 +64,26 @@ verification 面只收真正执行过命令的工具（bash、execute）。
 
 ## 2. 请求预算
 
-requestBudget(provider, spec) 统一返回 window、windowSource、maxTokens、maxTokensSource、reserve、usable、threshold、limit。
+### 2.1 有效窗口
+
+有效窗口 = 本 run 参与预算算式和一切上下文百分比分母的输入窗口。它由模型的真实窗口经工作模式策略收敛得到，是策略值，不是模型事实。
+
+```text
+有效窗口 = tiny 档 ? min(模型窗口, 262144) : 模型窗口
+```
+
+模型窗口仍只由 providerSpec 回答（五级链见 PROVIDER.md §6.15），本档不改它。tiny 关闭后有效窗口逐位回到模型窗口；normal 与 engineering 不设任何上限；模型自身窗口小于 262144 时取模型窗口。
+
+单点实现 = `thincoder-core/window-policy.mjs` 的 `effectiveWindow(provider, workMode)`：窗口派生的一切读数（threshold ∥ limit ∥ 尾部两式 ∥ 百分比分母）全从它取，端侧不另立算式。
+
+需求三条是这条策略的来处：`docs/core/requirements/CONTEXT-COMPACTION.md` §2 的「有效窗口 = `min(模型窗口, 262144)`」∥「切换档位即生效与解除」∥「一切以窗口为分母的量同取有效窗口」。本节是它的设计落地，不重述需求原文。
+
+### 2.2 两个预算出口
+
+同一份算式有两个出口，区别只在窗口取哪一边：
+
+- `requestBudget(provider, spec)` 取模型窗口，供 `provider/core.mjs`（OpenAI 兼容面）∥ `provider/anthropic.mjs`（Messages）∥ `provider/google.mjs`（generateContent）∥ `provider/responses-request.mjs`（Responses）四个发送面读 maxTokens——max_tokens 是输出合同，不受输入窗口策略影响。
+- `policyBudget(provider, spec, workMode)` 取有效窗口，供压缩阈值、stats、发送前守卫读 window ∥ usable ∥ threshold ∥ limit；maxTokens ∥ maxTokensSource ∥ reserve ∥ windowSource 逐位转交 `requestBudget`，不另算。
 
 ```text
 reserve = actualMaxTokens ?? spec.maxOutput
@@ -71,7 +94,19 @@ limit = window - reserve，退化档按当前 threshold 地板
 
 显式 compactThreshold 优先；auto 派生只写运行时 compactThresholdResolved，不回写用户配置。
 
-四个 provider 发送面使用同一 maxTokens；stats、守卫和压缩使用同一预算对象。
+上述四个发送面使用同一 maxTokens；stats、守卫和压缩使用同一预算对象——window ∥ usable ∥ threshold ∥ limit 同源，不各算一套。
+
+### 2.3 缺参即拒
+
+`workMode` 是必填参数，`effectiveWindow` ∥ `policyBudget` ∥ `resolveCompactThreshold` ∥ `keepTailSize` ∥ `tailBudgetTokens` ∥ `historyReading` ∥ `historyPercent` 一个默认值都没有：值不在 WORK_MODES 里，就在入口拒绝并点名 `workMode`（薄转口 `historyPercent` 由 `historyReading` 那一层抛）。
+
+理由：默认值把「忘传」静默成一条不下上限的窗口，压缩线随之上移，人要等到账单才发现；一个能在入口喊出参数名的拒绝，比一条静默放行的默认便宜。
+
+握有 agent 的面用 `resolveWorkMode(agent.config?.agent)` 自己取模式；只握有 provider 的面把它当参数透传。本仓只握 provider 的透传面有三处：
+
+- `thincoder-vscode/src/specs.mjs` 的 `ctxUsageForHistory` ∥ `ctxPercentForHistory`——宿主只给 history ∥ provider ∥ ratio。
+- `thincoder-core/session-lifecycle.mjs` 的打开态读数：`historyPercent(line, provider, sampleRatio(data.estimateSample, provider), workMode)`。
+- `thincoder-core/token-window.mjs` 的 `collectStaleToolOutputs(history, provider, workMode)` 向 `keepTailSize` ∥ `tailBudgetTokens` 透传。
 
 ## 3. 估算与样本
 
@@ -83,7 +118,7 @@ contextUsage 有实测时使用 `_lastPromptTokens + 增量估算`，否则估�
 
 ## 4. 切割与降级
 
-tail 先按当前条数公式得到候选，再受 history 段窗口比例预算约束。预算不足时保留当前最近消息保底，配对安全优先。
+tail 先按当前条数公式得到候选，再受 history 段窗口比例预算约束。两条公式同取有效窗口（§2.1）：窗口被 tiny 压小，尾部跟着变短，不另立一套尾部规则。预算不足时保留当前最近消息保底，配对安全优先。
 
 KEEP_HEAD=0；旧任务进入摘要而非原文锚定。
 
@@ -91,7 +126,7 @@ KEEP_HEAD=0；旧任务进入摘要而非原文锚定。
 
 1. LLM 摘要。
 2. 连续失败达到当前上限后确定性 fallback。
-3. 无中段时 shrinkOversized 截断单条超大内容。
+3. 无中段时 shrinkOversized 截断单条超大内容：改的只是机读线里那条消息的副本，轮记录与人读线保留原文（§1.1）。
 
 失败有可见状态，不阻塞完整记录。
 

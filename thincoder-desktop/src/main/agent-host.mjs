@@ -38,6 +38,8 @@
 import { runAgent } from "@thincoder/core/agent.mjs"
 import { resolveWorkMode } from "@thincoder/core/config.mjs"
 import { historyReading, tokenRatioOf } from "@thincoder/core/token-window.mjs"
+// 读数面上的档位用法（`CONTEXT-COMPACTION.md` §2.3）：本面握 agent，故自取当前档——tiny 档下百分比分母是有效窗口。
+// （`resolveWorkMode` 的 import 在本档上方已有一条，不重复引入。）
 // 会话键语义（`String(slot)` 单源）与端壳同档 —— 键面归一不造第二口径；偏好写面（`writeSlotPrefs`）同档。
 import { slotOfKey, writeSlotPrefs } from "./session-slots.mjs"
 // 选定写回单点（#880 —— `defaultModel` 同拍写回；判据句 6 ∕ `IPC.md` §2 项 8；零环：settings.mjs 不依本档）。
@@ -168,7 +170,9 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
    *  （核装配缺省 `createAgent` · 接续恒置 `applySession`）⇒ 本读数不改结算链。 */
   function postUsage(key, agent) {
     // 一次核读数出两值（§2.1 单源）：`ctxPct` 与 `ctxTokens` 同一调用——同屏两值必须同尺（已乘校准比）。
-    const { pct: ctxPct, tokens: ctxTokens } = historyReading(agent?.history ?? [], agent?.provider, tokenRatioOf(agent))
+    // 第四参 = 当前档位（自 agent 现取）——分母同取有效窗口，与 CLI ∥ VSC ∥ stats 同一个数。
+    const workMode = resolveWorkMode(agent?.config?.agent)
+    const { pct: ctxPct, tokens: ctxTokens } = historyReading(agent?.history ?? [], agent?.provider, tokenRatioOf(agent), workMode)
     const timers = pendingTimers(agent)
     if (!usageFrameWanted(ctxPct, ctxTokens, timers)) return
     post("ev:usage", { key, ctxPct, ctxTokens, usage: { ...tokensOf(key) }, timers })

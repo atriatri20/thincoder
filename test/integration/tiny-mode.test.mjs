@@ -18,7 +18,7 @@ import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../../thincode
 import { assembleBuiltinTools } from "../../thincoder-core/tools/index.mjs"
 import { _upsertCodeFile, createMemory, docSync, put } from "../../thincoder-core/memory.mjs"
 import { normalizeOrigin } from "../../thincoder-core/memory/origin.mjs"
-import { handleTinyCommand } from "../../thincoder-cli/src/tui/cmd-eng.mjs"
+import { handleNormalCommand, handleTinyCommand } from "../../thincoder-cli/src/tui/cmd-eng.mjs"
 import { buildSpawnChild } from "../../thincoder-core/agent-tools/subagent-spawn.mjs"
 import { fakeAnthropic } from "./fixtures/anthropic-endpoint.mjs"
 
@@ -171,4 +171,77 @@ test("CLI 50-3 startup loads the real TUI module graph without stale session-wri
   const entry = join(process.cwd(), "thincoder-cli", "src", "tui.mjs")
   const loaded = await import(pathToFileURL(entry).href)
   assert.equal(typeof loaded.startTUI, "function")
+})
+
+/** `context` 工具 stats 回执读回面：stats 文本作为 tool_result 随下一发请求回到端点。 */
+function statsTextOf(request) {
+  const texts = []
+  for (const m of request?.body?.messages ?? []) {
+    for (const block of Array.isArray(m?.content) ? m.content : []) {
+      if (block?.type === "tool_result") texts.push(String(block.content))
+    }
+  }
+  return texts.filter((t) => t.startsWith("Context ≈")).at(-1) ?? null
+}
+
+/** 一发 stats 的窗口读数：首行分母 ∥ 请求预算窗口 ∥ 状态行分母 三处同取一个数。 */
+function windowReadings(stats) {
+  const missing = stats == null
+  return {
+    missing,
+    occupancy: Number((stats?.match(/of (\d+) window/) ?? [])[1]),
+    budget: Number((stats?.match(/Request budget: window (\d+)/) ?? [])[1]),
+    statusLine: Number((stats?.match(/calibrated history estimate \/ (\d+) window/) ?? [])[1]),
+    compactionLine: Number((stats?.match(/compaction line (\d+)/) ?? [])[1]),
+  }
+}
+
+test("CLI 50-6 tiny 档切进切出，窗口分母随档变化", { timeout: 180_000 }, async (t) => {
+  const root = makeProject("50-6")
+  // 三发 stats：起会话（normal）· `/tiny` 后 · `/normal` 后——每发工具回合占两次对话请求，故按请求序号派单。
+  const statsCall = [{ id: "ctx_stats", name: "context", input: { action: "stats" } }]
+  const endpoint = await fakeAnthropic({ callsAt: { 1: statsCall, 3: statsCall, 5: statsCall } })
+  const store = mkdtempSync(join(tmpdir(), "tiny-int-store-"))
+  _setSessionsDirForTest(store)
+  t.after(async () => {
+    _resetSessionsDirForTest()
+    await endpoint.close()
+    removeTempDirBestEffort(root)
+    removeTempDirBestEffort(store)
+  })
+
+  const modelWindow = 1024 * 1000 // provider.context 1000K = 1_024_000（夹具 = 1M 窗模型）
+  const agent = await agentOf(root, endpoint.port, { mode: "normal" })
+  agent._slot = 1
+  saveSlotData(root, 1, newSlotData(root))
+  const ctx = { agent, pushLine() {}, pushLabel() {} }
+
+  await runAgent(agent, "read the context window", {}, {})
+  const before = windowReadings(statsTextOf(endpoint.requests.at(-1)))
+  assert.equal(before.missing, false, "起会话那一发要真的拿到 stats 回执")
+  assert.deepEqual([before.occupancy, before.budget, before.statusLine], [modelWindow, modelWindow, modelWindow], "normal 档三处分母 = 模型窗口")
+
+  await handleTinyCommand(ctx)
+  assert.equal(loadSlotFile(root, 1).mode, "tiny")
+  await runAgent(agent, "read the context window again", {}, {})
+  const tinyRequest = endpoint.requests.at(-1)
+  const tiny = windowReadings(statsTextOf(tinyRequest))
+  assert.equal(tiny.missing, false)
+  assert.deepEqual([tiny.occupancy, tiny.budget, tiny.statusLine], [262144, 262144, 262144], "tiny 档三处分母全部落到 262144")
+  assert.ok(tiny.compactionLine > 0 && tiny.compactionLine < tiny.budget, "压缩线跟着有效窗口压下来，且仍是一条可触及的线")
+
+  await handleNormalCommand(ctx)
+  assert.equal(loadSlotFile(root, 1).mode, "normal")
+  await runAgent(agent, "read the context window once more", {}, {})
+  const afterRequest = endpoint.requests.at(-1)
+  const back = windowReadings(statsTextOf(afterRequest))
+  assert.equal(back.missing, false)
+  assert.deepEqual([back.occupancy, back.budget, back.statusLine], [modelWindow, modelWindow, modelWindow], "切出 tiny 后三处分母回到模型窗口，不残留 262144")
+  assert.equal(back.compactionLine, before.compactionLine, "切出后压缩线回到同一条")
+
+  // 两档工具面与提示词面不变：切档只动窗口分母，不动工具集与项目规则块。
+  assert.deepEqual(toolNames(tinyRequest.body), toolNames(afterRequest.body), "两档工具面一致")
+  assert.ok(toolNames(tinyRequest.body).includes("context"))
+  assert.ok(tinyRequest.body.system.includes("PROJECT-RULE-MARKER"), "tiny 档项目规则仍在")
+  assert.ok(afterRequest.body.system.includes("PROJECT-RULE-MARKER"), "normal 档项目规则仍在")
 })

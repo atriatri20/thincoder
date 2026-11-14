@@ -64,6 +64,8 @@ tiny 槽不使用这些包含锚。knowledge 工具与完整档装配读取同�
 
 tiny 始终使用普通工作流，不加载工程 discipline，也不启用工程设计令牌或工程写门。normal 与 engineering 继续使用既有完整场景槽。
 
+tiny 的有效上下文窗口取 `CONTEXT-COMPACTION.md` §2.1 的有效窗口（上限数值与算式以该节为唯一出处）；本档只裁定 tiny 用这条预算，不另立窗口规则。
+
 consult 与 advisor 的独立基底不经过极简槽替换。工具面同一口径：advisor 与 consult 装配的工具描述取完整档，不随会话 mode 变化——独立基底被极简装配改写，就与 requirements §9.1 的「不被极简装配改写」当场矛盾。
 
 ## 5. 装配入口

@@ -10,7 +10,9 @@
 
 - 只在配对安全的边界压缩，不能留下孤立 tool 结果。
 - 完整 prompt 预算包含 system、tools 和 history。
-- 显式 agent.compactThreshold 优先；缺省时按当前模型窗口与完成预留派生。
+- 显式 agent.compactThreshold 优先；缺省时按当前有效窗口与完成预留派生。
+- 有效窗口在 tiny 档收敛为 `min(模型窗口, 262144)`；normal 与 engineering 用模型窗口本身。切换档位即生效与解除，不落盘、不跨会话带走。
+- 一切以窗口为分母的量（压缩线、尾部预算、用量百分比、发送前守卫）同取有效窗口，不各算一套分母。
 - 自动阈值 = `min(usableWindow, floor(window × 0.6))`。
 - 预留使用实发 maxTokens，未发时使用规格 maxOutput，不封顶。
 - 预留占满窗口时使用当前半窗退化，不能让阈值变成零。

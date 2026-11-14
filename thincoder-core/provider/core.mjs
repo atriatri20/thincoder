@@ -206,6 +206,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   // 保守抑制（非能力断言）：带 `noUsageStream` 的行 = 核不主动发 stream_options.include_usage（glm 族已实测带该参数全 200）；逐族等级 = MODEL-SPECS.md §15.2
   if (!spec.noUsageStream) body.stream_options = { include_usage: true }
   // §6.17 发送面同源：max_tokens = requestBudget().maxTokens（显式才发——spec.maxOutput 是预留面非合同值）
+  // 同一个预算对象也交给发送前净判（§2.2「stats、守卫和压缩使用同一预算对象」——本档不重算第二份）。
   const budget = requestBudget(provider, spec)
   if (budget.maxTokens !== undefined) body.max_tokens = budget.maxTokens
   if (provider.temperature != null) {
@@ -258,7 +259,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   const estimated = estimateRequestTokens(body)
   // §6.17 发送面净判（第二道）：`estPrompt` = 输入侧估算——不减掉 `max_tokens` 会把输出预算白扣一份
   const estPrompt = estimated - (body.max_tokens ?? 0)
-  assertPromptFits(provider, estPrompt, logCtx)
+  assertPromptFits(provider, estPrompt, logCtx, budget)
   await rateGate(provider, estimated, onWait, signal)
 
   const response = await requestWithRetry(provider, body, signal, onWait)
