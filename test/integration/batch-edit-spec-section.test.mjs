@@ -53,7 +53,7 @@ function fixture(tag) {
 
 const readRecord = (root) => readFileSync(join(root, BATCH_REL), "utf8")
 
-test("CLI 7-10 正常 · 设计席把 §2 里一行已作废的判据就地换掉 ⇒ 该行被换、其余行逐字节不变", async () => {
+test("CLI 7-10 正常 · 设计席把 §2 里一行已作废的判据就地换掉 ⇒ 该行被换、其余行逐字节不变（§2 状态行同笔置位）", async () => {
   const { root, ctx } = fixture("ok")
   const before = readRecord(root)
   assert.ok(before.includes(OBSOLETE), "前置：作废判据那一行在 §2 段体里")
@@ -68,15 +68,21 @@ test("CLI 7-10 正常 · 设计席把 §2 里一行已作废的判据就地换�
   assert.match(receipt, /^batch: edited §2 of the batch record — replaced \d+ characters with \d+\./, `回执形 — ${receipt}`)
   assert.match(receipt, /\[doc-check gate\] DOC-CHECK GATE: PASS/, `门回执 — ${receipt}`)
 
-  // ② 业务结果：那一行没了、新行在、其余行逐字节不变（旧行不残留 → 不留「两种读法」）
+  // ② 业务结果：那一行没了、新行在、其余行逐字节不变（旧行不残留 → 不留「两种读法」）。
+  // 变动行恰两处：目标行 + §2 段级状态行——后者是写正文那一笔的被动同笔写
+  // （`BATCH-RECORD.md` §4.12：§2 写正文 ⇒ 该段状态行置「设计完成」），不是第二处改写。
   assert.equal(after.includes(OBSOLETE), false, "作废判据退场（整行删掉，不留「以本节为准」指针）")
   assert.ok(after.includes(REPLACEMENT), "新判据落位")
   const b = before.split("\n")
   const a = after.split("\n")
   assert.equal(a.length, b.length, "行数不变")
   const changed = b.map((line, i) => (line === a[i] ? null : i)).filter((i) => i !== null)
-  assert.deepEqual(changed.length, 1, `只有目标行变，其余行逐字节不变（变动行 = ${changed.map((i) => i + 1)}）`)
-  assert.equal(a[changed[0]], REPLACEMENT)
+  assert.deepEqual(changed.length, 2, `只有目标行与 §2 状态行变，其余行逐字节不变（变动行 = ${changed.map((i) => i + 1)}）`)
+  // 变动的两行（按档内次序）：§2 段头区状态行 ∥ §2 段体里那一行作废判据
+  assert.deepEqual(changed.map((i) => [b[i], a[i]]), [
+    ["**状态行**：（eng-designer 写入时更新）", "**状态行**：设计完成"],
+    [OBSOLETE, REPLACEMENT],
+  ], "两处变动各是它该变的那一行")
 })
 
 test("CLI 7-10 错误 · 同一句在 §2 段体出现两处 ⇒ 锚不唯一，拒且档字节一字不动", async () => {

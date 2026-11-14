@@ -76,7 +76,7 @@ engDesignTokenSeals[designId] 保存 `{hash, docs, docHashes}`。派单只读槽
 
 封印不一致时拒；有 docHashes 则按 docs 原序点名变化文档。被审档缺失或不可读时拒。
 
-settle 面无法计算封印时拒签且不写槽或 §3 签字；spawn 面无结算可回，读取失败按当前错误通道外显。
+settle 面无法计算封印时拒签：不写槽、不落轮次块、不动 §3 状态行；spawn 面无结算可回，读取失败按当前错误通道外显。
 
 ## 9. 实现归属
 

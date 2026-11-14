@@ -106,7 +106,7 @@ export function batchAbsPath(docSetKey) {
  *  `advisor.mjs` 落在实例上）优先；② 否则 `batchAbsPath(run.docSetKey)` 兜底（批档写进 `documents`
  *  的调用形）。两源同时有值**不是取舍**——主源在手就不查兜底（派生不改写声明）。两者皆无 ⇒ `null`
  *  （归属 = 无，不猜）。设计单源 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §10「批次标识的来源」；
- *  兜底源可得归属、而 §3 落地门只认 `run.batchDoc` 这一残余，登记在
+ *  兜底源可得归属、而结算的 §3 记录只认 `run.batchDoc` 这一残余（缺则程序不变量 throw），登记在
  *  `docs/core/design/ADVISOR-GUARDS.md` §1.2。 */
 export function batchAbsPathOfRun(run) {
   const bound = run?.batchDoc

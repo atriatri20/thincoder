@@ -63,6 +63,28 @@ export const SEGMENT_BY_ROLE = { "eng-designer": 2, "eng-coder": 5 }
  *  实施记录（可选绑定自写——未绑定由主 agent 代记、行内注明来源）。 */
 export const SEGMENT_BY_ROLE_NORMAL = { "coder": 5 }
 
+/**
+ * 评审实例的可写段（`BATCH-RECORD.md` §4.1 ∥ §4.4，按「模式 × 评审轨」分岔）：
+ * 工程模式的**设计轨** ⇒ `null`（`§3` 对那一路的一切工具通道只读——轮次块只由设计评审结算写）；
+ * 工程模式的**代码轨**与**普通模式** ⇒ `3`（那两条路没有设计结算可代写，而收口门读的是 `§3` 的段级状态行）。
+ * 两个输入（模式 × 评审轨）缺一即判不出，故不许用默认值顶替：`reviewTrack` 未给 ⇒ 按设计轨处置
+ * （这一面是拒面，判不出就不放行——fail-closed）。
+ * 消费面两处、同一判据：`batch-record-write.mjs` 的段白名单（`append` ∥ `edit`）∥
+ * `batch-lifecycle.mjs` 的 `status` 段域。
+ * @param {boolean} engineering 模式位（执行期实读）
+ * @param {string|null|undefined} reviewTrack 评审轨（`"design"` ∥ `"code"`）
+ * @returns {3|null} 可写段号 / 不可写
+ */
+export function reviewWritableSegment(engineering, reviewTrack) {
+  return engineering && reviewTrack !== "code" ? null : 3
+}
+
+/** 工程设计轨 §3 写面拒串（`BATCH-RECORD.md` §4.4——评审席与批工具的任何席位通道都不写它）。
+ *  前缀由调用面给（`append` = `batch_segment:`，`edit` ∥ `status` = `batch:`——三面各自既有前缀零改）。 */
+export function sectionThreeDesignTrackError(prefix) {
+  return `${prefix}: §3 is closed to this caller — in engineering mode the design-track round block is written by the settlement: the tool stamps the round heading, adds the settlement header line and the review's report verbatim, in the same stroke that decides the token. §3 is read-only for every tool channel on that track (a block you add would sit beside the settlement's and the record would read as two rounds). The code track and normal mode keep the §3 channel. Nothing was written.`
+}
+
 /** depth-0 段白名单（§4.16——**模式键两集**；工程面判定字面逐字保持、普通面新增）：
  *  append：工程 = §1/§4/§6 ∥ 普通 = §1/§2/§4/§5/§6（§2 = 设计师席并入主 agent；§5 = 直做实施记录）；
  *  status：工程 = §1 ∥ 普通 = §1/§2/§5（写域仍「调用者自己段」；`segment` 缺省 = §1）。 */

@@ -19,7 +19,8 @@
  * 绑定。create/close/attach 仅 depth-0 放行；depth-0 的 append/status/close/attach 可选 `path`（D-BR21：
  * 缺省 = findInFlightBatch 取唯一在飞批，0/复数 ⇒ throw）；子代理/评审传 path ⇒ 拒（目标 =
  * spawn/实例注入，语法上写不到别处——运行期门拒）。append 段白名单（**模式感知**——§4.16）：
- * depth-0 → 工程 §1/§4/§6 ∥ 普通 §1/§2/§4/§5/§6 · eng-designer → §2 · 评审 → §3 · eng-coder → §5 ·
+ * depth-0 → 工程 §1/§4/§6 ∥ 普通 §1/§2/§4/§5/§6 · eng-designer → §2 · 评审 → §3（**工程设计轨除外**——那一路的
+ * `§3` 只由结算写，§4.4）· eng-coder → §5 ·
  * coder（普通模式分支增表——SEGMENT_BY_ROLE_NORMAL）→ §5；status 写域 = 调用者自己段（模式感知
  * ——见 batch-lifecycle.mjs）。**edit 的段域 = 同模式 append 白名单**（§4.19「段域」行——一张表两
  * 个动作，不另立第二张）：能 append 哪段就 edit 哪段，两动作只差写法（段尾加内容 ∥ 段内改既有字）。
@@ -196,10 +197,13 @@ function fullParameters() {
  * status / close / supersede）。
  * @param {string|null} batchDoc — 绑定的目标档（spawn：`child._batchDoc`；评审：实例键；
  *   depth-0 主 agent 挂载时 = null——目标走 D-BR21 可选 path / 在飞扫描）
- * @param {{review?: boolean, role?: string|null}} [opts] — review=true 表示"设计评审实例"形态
- *   （写 §3 + 工具盖戳）；`role` = 装配面的角色身份（`family-tools.mjs` 传；缺省 = depth-0 全量面）
+ * @param {{review?: boolean, role?: string|null, reviewType?: string|null}} [opts] —
+ *   `review=true` 表示评审实例形态（写 `§3` + 工具盖戳）；`role` = 装配面的角色身份
+ *   （`family-tools.mjs` 传；缺省 = depth-0 全量面）；`reviewType` = 本评审实例的**评审轨**
+ *   （`"design"` ∥ `"code"`）——与模式位一起决定 `§3` 写不写得进去（`BATCH-RECORD.md` §4.3 ∥ §4.4：
+ *   工程设计轨收回，代码轨与普通模式保留）。两项缺一即判不出，故这里不给默认值。
  */
-export function batchTool(batchDoc = null, { review = false, role = null } = {}) {
+export function batchTool(batchDoc = null, { review = false, role = null, reviewType } = {}) {
   const profileKey = review ? "review" : (role && PROFILE_DOCS[role] ? role : null)
   const full = fullParameters()
   const profileParameters = profileKey
@@ -257,11 +261,11 @@ export function batchTool(batchDoc = null, { review = false, role = null } = {})
         case "attach":
           return attachBatchRecord({ args, ctx, review, cwd, pickTarget, onWritten })
         case "append":
-          return appendBatchRecord({ args, ctx, review, batchDoc, onWritten })
+          return appendBatchRecord({ args, ctx, review, reviewTrack: reviewType, batchDoc, onWritten })
         case "edit":
-          return editBatchRecord({ args, ctx, review, batchDoc, onWritten })
+          return editBatchRecord({ args, ctx, review, reviewTrack: reviewType, batchDoc, onWritten })
         case "status":
-          return statusBatchRecord({ args, ctx, review, pickTarget, onWritten })
+          return statusBatchRecord({ args, ctx, review, reviewTrack: reviewType, pickTarget, onWritten })
         case "close":
           return closeBatchRecord({ args, ctx, review, pickTarget, onWritten })
         case "supersede":

@@ -72,7 +72,10 @@ export async function freshRecord(tag, { s3Body = true } = {}) {
   writeFileSync(recOf(root), src)
   return root
 }
-export const review = (root) => batchTool(REC, { review: true })
+/** 评审实例的 batch 工具（14-1 ∥ 14-8 用它写 `§3`）：夹具走**工程模式代码轨**——那一路没有设计结算
+ *  可代写块，故 `§3` 通道与「随裁定行置位」都保留（`BATCH-RECORD.md` §4.3 ∥ §4.4）；工程设计轨的
+ *  `§3` 对一切工具通道只读，夹具不能落在那条路上。 */
+export const review = (root) => batchTool(REC, { review: true, reviewType: "code" })
 /** 手工把一条新行推进到 `待核销`（收口后行已是归档终态 ⇒ 这是造「待核销」夹具的唯一合法路）。 */
 export const pushToSettling = (root, title) => {
   const id = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title, task_book: REC, trigger: "归批", evidence: "工作证据" }, boundary: root })

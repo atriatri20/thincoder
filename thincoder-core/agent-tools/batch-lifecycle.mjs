@@ -14,7 +14,8 @@
  * `resolveBatchCreatePath`——住 `batch-paths.mjs`）与 #84 记账缝住 batch.mjs 主档——本档不回 import 主档（防环）。
  *
  * 身份判据（D-BR17/D-BR18/D-BR21）：主 agent 的工具调用 ctx 带 `depth === 0`（dispatch 装配）；
- * eng 子代理 `ctx.depth > 0`；评审实例 ctx 无 depth 但工具以 `review: true` 绑定。create/close
+ * eng 子代理 `ctx.depth > 0`；评审实例 ctx 无 depth 但工具以 `review: true` 绑定（`reviewTrack` = 评审轨——
+ * 工程**设计轨**的 `§3` 只由结算写、本面拒，§4.4）。create/close
  * 仅 depth-0 放行（BR-19/BR-24）；status 写域 = 调用者自己段（eng-designer → §2 · 评审 → §3 ·
  * eng-coder → §5 · coder → §5【普通模式分支增表】· 主 agent → 工程 §1 ∥ 普通 §1/§2/§5【取段——§4.16】）。
  *
@@ -48,8 +49,8 @@ import { dirname, relative, resolve } from "node:path"
 
 import {
   DEPTH0_SEGMENTS, SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, STATUS_WORDS, TEMPLATE_PLACEHOLDERS,
-  findPlaceholderResidue, placeholderResidueError, readBatchStatusLine, sectionHasStatusLine,
-  updateSectionStatusLine, zoneStatusCount,
+  findPlaceholderResidue, placeholderResidueError, readBatchStatusLine, reviewWritableSegment, sectionHasStatusLine,
+  sectionThreeDesignTrackError, updateSectionStatusLine, zoneStatusCount,
 } from "./batch-skeleton.mjs"
 import { assertCloseoutGates, checkReceipt, closeHalfStateError, closeLedgerFailedError, consistencyReceiptLine, newDebtReasonOf, newDebtReasonReceiptLine, readCloseoutSource, reanchorReceiptLine, repairReceiptLine, repairTraceLine } from "./batch-closeout.mjs"
 import { assertCloseDisposition, consistencyOf, repairDecisionOf } from "./batch-ledger-view.mjs"
@@ -222,12 +223,17 @@ function STATUS_LINE_AMBIGUOUS_ERROR(seg, count) {
  * **其余一切用法零台账写**；本 action 的回执末尾恒带一行 `[ledger consistency]`。
  * @returns {Promise<string>} 成功消息
  */
-export async function statusBatchRecord({ args, ctx, review, pickTarget, onWritten }) {
+export async function statusBatchRecord({ args, ctx, review, reviewTrack, pickTarget, onWritten }) {
   const depth0 = isDepthZero(ctx)
   // 模式位执行期实读（§4.16——同款先例 = task.mjs execute 门；翻转即时生效——D-BR26）。
   const engineering = !!ctx?.agent?.config?.agent?.engineering
-  let seg = review ? 3 : depth0 ? 1 : SEGMENT_BY_ROLE[ctx?.agent?._role] ?? (engineering ? null : SEGMENT_BY_ROLE_NORMAL[ctx?.agent?._role] ?? null)
+  // 段域与 append/edit 同一道闸、同一判据（§4.1 ∥ §4.4）：工程**设计轨**的 `§3` 对一切工具通道只读——
+  // `status` 也在其中（那条路的状态行由结算随块同笔写，没有手写口）。判据单源 = `reviewWritableSegment`。
+  let seg = review
+    ? reviewWritableSegment(engineering, reviewTrack)
+    : depth0 ? 1 : SEGMENT_BY_ROLE[ctx?.agent?._role] ?? (engineering ? null : SEGMENT_BY_ROLE_NORMAL[ctx?.agent?._role] ?? null)
   if (seg === null) {
+    if (review) throw new Error(sectionThreeDesignTrackError("batch"))
     throw new Error("batch: no segment is writable by this caller — status writes the caller's OWN section (eng-designer → §2, design review → §3, eng-coder → §5, main agent → §1).")
   }
   // 段域判据（BR-22「eng-designer 对 §1 调 status ⇒ 段白名单拒」——镜像 append 面）：

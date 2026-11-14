@@ -9,8 +9,6 @@
  * synchronous always.
  */
 import { runAdvisorReview, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
-import { readFileSync } from "node:fs"
-import { countRoundBlocks } from "./batch-skeleton.mjs"
 import { resolveBatchDocPath } from "./batch.mjs"
 // 设计评审的文档受理面单源 = review-facts.mjs 的 resolveReviewDocPaths（判据正文 =
 // docs/core/design/ADVISOR-GUARDS.md §12：相对形按会话项目根 / 绝对形照用 / 受理 = 项目内现存 `.md`）。
@@ -38,21 +36,8 @@ import { DESC } from "../tools/shared.mjs"
 export { validateDesignToken } from "./advisor-async.mjs"
 
 /**
- * §3 点火基线（`docs/core/design/ADVISOR-GUARDS.md` §1.1 判据 1）：绑了批档 ⇒ 记下点火时该档 §3
- * 已有的轮次块数（块计数单源 = `countRoundBlocks`）；未绑 / 读不到 ⇒ `null`——读不到不等于
- * 「没有记录要验」，结算面的 §3 落地门据此判 `batch-unreadable`。每轮发起刷新：同一实例的修轮
- * 是新的一轮，基线随之推进（否则上一轮留下的块会让本轮一字未写也过门）。
+ * `batchDoc` 缺失形态（缺失 ∥ `null` ∥ 空串 ∥ 纯空白——非字符串不在此判，留给 `resolveBatchDocPath` 的既有文案）。
  */
-function section3BlocksBaseline(batchDocAbs) {
-  if (typeof batchDocAbs !== "string" || !batchDocAbs) return null
-  try {
-    return countRoundBlocks(readFileSync(batchDocAbs, "utf8"), 3)
-  } catch {
-    return null
-  }
-}
-
-/** `batchDoc` 缺失形态（缺失 ∥ `null` ∥ 空串 ∥ 纯空白——非字符串不在此判，留给 `resolveBatchDocPath` 的既有文案）。 */
 function missingBatchDoc(raw) {
   return raw === undefined || raw === null || (typeof raw === "string" && raw.trim() === "")
 }
@@ -139,7 +124,7 @@ export const advisorTool = {
       },
       batchDoc: {
         type: "string",
-        description: "Optional: the batch record this review belongs to. Carrying it binds: on either track the reviewer also gets the `batch` write channel scoped to that record, and its verdict lands in that record's §3. A design review that omits it is refused at launch (a token with no batch has no closer); a path that does not resolve to a readable file is refused. Relative paths resolve against the session cwd first, then candidate project roots (project-root-relative e.g. <repo>/docs/batches/…, or absolute). A tool-face batch — delivered files are scripts / tests / CI, no design doc — runs on the code track and passes this same parameter together with `paths` = the delivered files.",
+        description: "Optional: the batch record this review belongs to. Carrying it binds the review to that record on either track. On a design review the settlement writes the round's block into that record's §3 (tool stamp + a settlement header line + the review verbatim) in the same stroke that decides the token, and the reviewer gets no batch tool in engineering mode; a code review bound to a record keeps the §3 write channel (there is no settlement to write for it), and so does a reviewer in normal mode. A design review that omits it is refused at launch (a token with no batch has no closer); a path that does not resolve to a readable file is refused. Relative paths resolve against the session cwd first, then candidate project roots (project-root-relative e.g. <repo>/docs/batches/…, or absolute). A tool-face batch — delivered files are scripts / tests / CI, no design doc — runs on the code track and passes this same parameter together with `paths` = the delivered files.",
       },
     },
     required: ["type"],
@@ -279,11 +264,6 @@ export const advisorTool = {
     // the run.mjs cap read THIS instance's round/prior (multi-review isolation).
     const resolved = resolveAdvisorLaunch(agent, reviewType, { documents })
     resolved.run.batchDoc = launchBatchDoc
-    // §3 点火基线（ADVISOR-GUARDS.md §1.1 判据 1）：结算面判「§3 已被本轮写过」需要「本轮之前有几块」
-    // 这个点——只在点火拍可得（结算时再读只能得到「现在有几块」）。按**本笔**绑定值算，不按继承值；
-    // 同时也是逐笔快照（随 launch 载荷传下）：实例字段会被同实例的后一笔发起覆盖，排队那笔启动时再写回自己的值。
-    const launchSection3Baseline = section3BlocksBaseline(launchBatchDoc)
-    resolved.run.section3BlocksAtStart = launchSection3Baseline
     // Design token minted for EVERY design round — the reviewer echoes it only on
     // a clean pass; on pass it is slotted under the instance's designId at settle
     // (sync: right here; async: the settle callback — fix #2). A NEW instance
@@ -302,7 +282,6 @@ export const advisorTool = {
         designToken, designId, run: resolved.run,
         // 逐笔绑定快照：条目持此值，`entry.start()` 不再读活的 `run.batchDoc`（排队窗口的值会被后一笔覆盖）。
         batchDoc: launchBatchDoc,
-        section3BlocksAtStart: launchSection3Baseline,
       })
       if (ack.error) {
         // Pool-full refusal (②-6a — no queueing): the review did NOT launch — the

@@ -38,7 +38,7 @@ const { codeSearchTool } = await import("../memory/code-sync.mjs")
 
 /**
  * Advisor tool set — ZERO git, every round：只读六件 + 文档工具面两件（`doc_check` ∥ `doc_graph` 只读变体）
- * + 绑定档时追加 `batch`（该通道写面限 `§3`）。
+ * + 绑定档时追加 `batch`（写面限 `§3`；工程设计轨不追加——`BATCH-RECORD.md` §4.3）。
  * The change surface comes from the
  * review scope (paths / _touchedFiles injected by the caller), never from git: git output misled
  * reviews (committed fixes never show in `git diff HEAD`, so "no changes" was read as "not
@@ -56,19 +56,21 @@ function advisorCodeSearchTool(agent) {
 
 /**
  * 评审侧工具表（纯函数）。
- * @param {Object} agent — 索引面载体（`agent.memory`）。
- * @param {string} [reviewType] — **保留为签名兼容**（调用方与测试缝按位置传参），本函数不再消费：
- *   绑定判据只有 `batchDoc` 在场，与评审轨无关（判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）。
- * @param {string|null} [batchDoc] — 本评审逐笔绑定的批次档（绝对路径）；非空 ⇒ 追加 `batch`（写面限 `§3`）。
+ * @param {Object} agent — 索引面载体（`agent.memory`）+ 模式位（`agent.config.agent.engineering`）。
+ * @param {string} reviewType — 本评审实例的**评审轨**（`"design"` ∥ `"code"`）——挂载判据的一半
+ *   （`docs/core/design/BATCH-RECORD.md` §4.3）。**不给默认值**：模式 × 评审轨两项缺一即判不出，
+ *   用默认值顶替就等于替调用方选了一条路。
+ * @param {string|null} [batchDoc] — 本评审逐笔绑定的批次档（绝对路径）；非空 ⇒ 按下方判据追加 `batch`（写面限 `§3`）。
  * @returns {{schemas: object[], byName: Map<string, object>}}
  */
-function advisorToolsFor(agent, reviewType = "code", batchDoc = null) {
+function advisorToolsFor(agent, reviewType, batchDoc = null) {
   const tools = [readTool, globTool, grepTool, lsTool, lspTool, advisorCodeSearchTool(agent), docCheckTool, docGraphReadTool]
-  // BATCH-RECORD.md §4.3：**绑了批次档就额外拿到写通道，与评审轨无关**（判据单源 =
-  // `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）。工具面批走代码轨，评审员要写 `§3`
-  // 就靠这一条；不注册 ⇒ 绑定落不到任何一处，`§3` 只能编。未绑定 → 不挂载（fail-closed）。
-  // 绑了以后写面仍只有 `§3` 一段（段白名单按评审身份判），只读六件与零 git 不变。
-  if (batchDoc) tools.push(batchTool(batchDoc, { review: true }))
+  // BATCH-RECORD.md §4.3：挂载判据 = 绑定 ∧ ¬（工程模式 ∧ 设计轨）。工程设计轨的 §3 对一切工具通道只读、
+  // 轮次块由结算写，工具给了它也只会收到一条拒——不发（fail-closed）。代码轨与普通模式照旧追加：那两条路
+  // 没有设计结算可代写，而收口门读的是 §3 的段级状态行（工具面批走代码轨，评审员要写 §3 就靠这一条）。
+  // 未绑定 → 不挂载（fail-closed）。
+  const engineering = !!agent?.config?.agent?.engineering
+  if (batchDoc && !(engineering && reviewType !== "code")) tools.push(batchTool(batchDoc, { review: true, reviewType }))
   // 工具描述取完整档（设计 TOOLS §1）：评审是独立基底，不随会话 mode 变化（requirements §9.1）。
   return { schemas: tools.map((tool) => toOpenAISchema(tool, "normal")), byName: new Map(tools.map((t) => [t.name, t])) }
 }
@@ -87,7 +89,7 @@ export { advisorToolsFor, advisorToolsFor as _advisorToolsFor }
  * @param {{now?: Function, chat?: Function, describeArgs?: Function}} [seams] — 测试缝 + ④ 端差注入点
  *   （默认 Date.now / chat / 无进度行——生产调用不传时进度行由端装配层补齐）。
  */
-async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, cwd, toolsOverride = null, reviewType = "code", batchDoc = null, pinned = null, seams = {}) {
+async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, cwd, toolsOverride = null, reviewType, batchDoc = null, pinned = null, seams = {}) {
   const now = seams.now ?? Date.now
   const chatCall = seams.chat ?? chat
   // ④ 端差注入点（CORE-UNIFICATION §2.5 #109「进度行按端注入」）：工具进度行的参数摘要

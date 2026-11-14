@@ -23,10 +23,10 @@
  * 住下半档——与骨架模板共址即判据不会与模板脱节；本档 `batchSkeleton` 仍是对外产出口。
  */
 import {
-  STATUS_LINE_RE, STATUS_WORDS, sectionHeaderRe, sectionBodyLines, readSectionStatusWord,
+  STATUS_LINE_RE, STATUS_WORDS, sectionHeaderRe, sectionBodyLines, readSectionStatusWord, zoneStatusCount,
 } from "./batch-segment-vocab.mjs"
 
-// 搬去 batch-segment-vocab.mjs 的十四个导出名原样再出口（二十三个经新档 re-export 的名字之一族）——
+// 搬去 batch-segment-vocab.mjs 的导出名原样再出口（二十三个经新档 re-export 的名字之一族）——
 // 既有 import 面（batch.mjs / batch-lifecycle.mjs / batch-read.mjs / batch-reopen.mjs / batch-gate.mjs /
 // batch-closeout.mjs / design-token.mjs / advisor.mjs / batch-ledger-bind.mjs / ledger-close-proof.mjs）零改。
 export {
@@ -35,21 +35,21 @@ export {
   findPlaceholderResidue, placeholderResidueError,
   readBatchStatusLine, updateSectionStatusLine, readSectionStatusWord,
   zoneStatusLines, zoneStatusCount, firstZoneStatusLineRange,
+  reviewWritableSegment, sectionThreeDesignTrackError,
 } from "./batch-segment-vocab.mjs"
 
 /**
  * 轮次块标题形态（**写面与读面的单源正则**）：§3 的轮次块只由工具戳
  * `### 轮次 N（评审子代理）` 标题——写入面 `batch-record-write.mjs` 丢弃调用方自带的同名行、按本形态计数
- * 生成 N；读面（结算点 §3 落地门的轮次块计数）读同一形态。两份正则必漂，故只留这一处
- * （`docs/core/design/ADVISOR-GUARDS.md` §1.1 判据 1）。`### 轮次与发现（…）` 骨架行不匹配。
+ * 生成 N；读面（结算写块前取 N、写后回读点数）读同一形态。两份正则必漂，故只留这一处
+ * （`docs/core/design/ADVISOR-GUARDS.md` §1.2 判据 2）。`### 轮次与发现（…）` 骨架行不匹配。
  */
 export const ROUND_HEADING_RE = /^### 轮次 \d+（评审子代理）/
 
 /**
- * §N 段内轮次块计数（纯函数 · 零 fs）：段体逐行测 `ROUND_HEADING_RE`。段头缺失 ⇒ 0
- * （无 §3 段 = 评审写不进 §3 ⇒ 结算面判 `no-section3-block`，不是「跳过」）。
+ * §N 段内轮次块计数（纯函数 · 零 fs）：段体逐行测 `ROUND_HEADING_RE`。段头缺失 ⇒ 0。
  * 消费点两处、同一形态：`batch-record-write.mjs`（写入面生成下一轮 N）∥ `design-token.mjs`
- * （结算点判「§3 已被本轮写过」——块数 > 点火基线）。
+ * （结算写块前取 N、写后回读确认这一块真落进了 §3）。
  * @param {string} src — 批档全文
  * @param {number|string} [seg] — 段号（缺省 3——轮次块只落 §3）
  * @returns {number} 段内轮次块数
@@ -193,6 +193,38 @@ export function statusPassPlan(src, seg, body, date) {
 }
 
 /**
+ * 正文写入同笔置完成词的计划形（**纯函数 · 零 fs**；`BATCH-RECORD.md` §4.12 ∥ §4.21 ∥ §7 D-BR43）：
+ * `append`/`edit` 往 `§2`/`§5` 写入之后，同一笔把该段状态行置成它的完成词——`§2` ⇒ `设计完成`、
+ * `§5` ⇒ `实施完成`。两态本就在 `STATUS_WORDS` 里（词表零扩），已是完成词则返回 `null`（幂等零写）。
+ *
+ * 只答 `§2` ∥ `§5`：`§3` 走上面两条裁定计划（`statusPassPlan` ∥ `statusResetPlan`——那条被动写不归本函数），
+ * `§1`/`§4`/`§6` 没有完成词。
+ *
+ * 判空复用段内容判据 `sectionContentState`（排除空行 / 标题行 / 状态行 / 模板占位 /「不适用」行）：
+ * 正文只有占位行或标题行 ⇒ 段仍是 `empty` ⇒ 状态行不动——把骨架占位当内容置成完成词，等于让
+ * 「§5 写入门 ∥ 收口门 ∥ 核销门」读到一句没人写过的话。
+ * 为什么必须机械：状态行是那三道门的唯一判据面，而「段属主记得回头调 `status`」是纪律，
+ * 纪律在最忙的那一轮最先漏。
+ * @param {string} src — 写入后的档全文（判的是这一笔写完之后的段内容）
+ * @param {number|string} seg — 本笔的目标段号
+ * @returns {{statusValue:string}|null} 要写的完成词 / 零写
+ */
+export function statusDonePlan(src, seg) {
+  const n = Number(seg)
+  if (n !== 2 && n !== 5) return null
+  const { done } = STATUS_WORDS[n]
+  if (readSectionStatusWord(src, n) === done) return null
+  // 段头区两条状态行 ⇒ 该段的状态读不出来（§4.21.4「恰一条才可读」）：此时零写，与 `status` 面对同一
+  // 前置的结论一致（`batch-lifecycle.mjs` 的 `STATUS_LINE_AMBIGUOUS_ERROR` 同样拒）。可复现路径 = 人手工
+  // 文件写在 §2 段头区留下第二条 `**状态行**：` 行，随后该段 append —— 被动写若照写，会重写第一条并
+  // 留下第二条，读侧仍判 null：写了一个读不出来的字，比不写更坏。
+  if (zoneStatusCount(src, n) > 1) return null
+  if (sectionContentState(src, n) !== "content") return null
+  return { statusValue: done }
+}
+
+
+/**
  * 「不适用」声明行形态（**声明机制已退役**——2026-11-02 用户裁定封掉这条口子）：形 = `> 不适用：§N —— <理由>`，
  * 理由非空（`\S.*` = 至少一个非空白字符起头）；识别域 = §1 段体。退役后本正则只服务**痕迹检测**
  * （`malformedInapplicableLine`）：`§1` 里还写着声明行的人当场被拒并读到「这条路没有了」，而不是静默当作没写。
@@ -285,8 +317,8 @@ export function sectionHasStatusLine(src, seg) {
 /**
  * create 骨架模板（BATCH-RECORD.md §4.10 行为规格的**代码单源**——红线：模板只覆盖骨架与占位，不模板化内容）：
  * `## §1–§6` 段头（含职责署名）+ 档头 boilerplate（**两句形**：六段一段一作者句 + 每段只有一个作者句（作者对本段可 `append` 加内容 ∥ 可 `edit` 就地改，§4.10「档头两句」/ §4.19），加编制行 + 台账/前情指针行）+ §1 段内
- * **占位状态行**（含 gate 合法关键字「进行中」——建档即过 gate；整行不含「已收口」——gate 已收口优先，占位
- * 行不得携带冻结词）+ 各段模板子标题占位。已知实参替换：date / topic / **source** / prev（§4.11 参数面 +
+ * **状态行**（gate 合法关键字「进行中」，**纯关键词、不带括注**——括注由主 agent 人工写；整行不含「已收口」
+ * ——gate 已收口优先，骨架行不得携带冻结词）+ **§2 状态占位句**（由 §4.12 的被动写覆盖）+ 各段模板子标题占位。已知实参替换：date / topic / **source** / prev（§4.11 参数面 +
  * F11-B——source 必填、prev 入值过幂等剥前缀，归一化在 lifecycle 面）；`baseSha` = create 建档前取的**批起快照提交号**（全树快照，含未跟踪 ∥ 未提交的改动，建好挂
  * `refs/thincoder/baseline/<批档名>`）或「未取到（原因）」——两者都自动落 §1；`ledger` = **必填**（2026-10-27 起建档
  * 同拍建台账行——真实行号由绑定事务回填，永不落回 `#<编号>` 占位）；`board` 可选（未给 ⇒ 括注写 `—`——`board`
@@ -308,7 +340,10 @@ export function batchSkeleton({ date, topic, source, prev, baseSha, ledger = nul
     `> 编制：主 agent · ${date} · 来源 = ${source}。`,
     `> 台账 = ${ledger ?? "#<编号>"}（${board ?? (ledger ? "—" : "<板块>")} · 归批）。前情 = ${prev}。`,
     "## §1 讨论（主 agent）",
-    `**状态行**：🔄 ${STATUS_WORDS[1].open}（…）`,
+    // §1 状态行骨架写**纯「进行中」**：括注由主 agent 人工写（§4.10）。骨架不产一个没有机制会清的假占位
+    // ——`§2`/`§5` 的占位句会被 §4.12 的被动写覆盖，`§1` 的括注没有任何机制会清，留在每一本新档上就是
+    // 一句陪着整批跑完的假话。
+    `**状态行**：${STATUS_WORDS[1].open}`,
     `批起 sha = ${baseSha}`,
     "<§1 模板占位：本批条目 / 关键判据 / 授权口径>",
     `## §2 批次任务与设计（${designerSeat}）`,

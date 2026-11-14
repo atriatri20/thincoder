@@ -19,7 +19,7 @@
  * （本档不 import `batch.mjs`，两条 action 的调用者只在原档的分发里）。
  */
 import { readFileSync, writeFileSync } from "node:fs"
-import { DEPTH0_SEGMENTS, ROUND_HEADING_RE, SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, STATUS_LINE_RE, findPlaceholderResidue, firstZoneStatusLineRange, nextRoundNumber, placeholderResidueError, readBatchStatusLine, sectionHeaderRe, statusPassPlan, statusResetPlan, updateSectionStatusLine, verdictGapOf, zoneStatusCount } from "./batch-skeleton.mjs"
+import { DEPTH0_SEGMENTS, ROUND_HEADING_RE, SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, STATUS_LINE_RE, findPlaceholderResidue, firstZoneStatusLineRange, nextRoundNumber, placeholderResidueError, readBatchStatusLine, reviewWritableSegment, sectionHeaderRe, sectionThreeDesignTrackError, statusDonePlan, statusPassPlan, statusResetPlan, updateSectionStatusLine, verdictGapOf, zoneStatusCount } from "./batch-skeleton.mjs"
 import { batchDocBases, resolveBatchDocPath } from "./batch-paths.mjs"
 import { gateReceiptLine, gateRefusalMessage, runBatchGate } from "./batch-gate.mjs"
 import { assertSectionFiveGate } from "./batch-closeout.mjs"
@@ -44,11 +44,13 @@ function segmentNumber(raw) {
   return m ? Number(m[1]) : null
 }
 
-/** 身份 → 可写段号；无写权身份 → null。评审实例绑定优先（评审者的身份即"设计评审"。）
+/** 身份 → 可写段号；无写权身份 → null。评审实例绑定优先（评审者的身份即"设计评审"），**评审轨那一维就在这里判**
+ *  （`BATCH-RECORD.md` §4.3：两张面判同一对输入——模式 × 评审轨）：工程模式**设计轨** ⇒ null（`§3` 只由结算写），
+ *  工程**代码轨**与普通模式 ⇒ 3。
  *  depth-0 的段白名单（append——模式感知，§4.16）由 appendBatchRecord 分支，不经本表；
  *  普通模式分支额外合并 coder 增表（`SEGMENT_BY_ROLE_NORMAL`——**合并查只在普通模式分支**）。 */
-function allowedSegment(agent, review, engineering) {
-  if (review) return 3
+function allowedSegment(agent, review, engineering, reviewTrack) {
+  if (review) return reviewWritableSegment(engineering, reviewTrack)
   const role = agent?._role
   return SEGMENT_BY_ROLE[role] ?? (engineering ? null : SEGMENT_BY_ROLE_NORMAL[role]) ?? null
 }
@@ -105,24 +107,30 @@ function insertIntoSection(src, seg, text, blockLead = "") {
 /**
  * append 执行体（action=append——原 batch_segment execute 迁移 + depth-0 分支）：
  *  - 段白名单（**模式感知**——§4.16）：depth-0 工程 → §1/§4/§6（新错误面，"batch:" 前缀）∥
- *    depth-0 普通 → §1/§2/§4/§5/§6（模式化新串）；eng-designer → §2 · 评审 → §3 ·
- *    eng-coder → §5 · coder（普通模式分支增表）→ §5（迁移错误面，"batch_segment:" 前缀**逐字保持**）；
+ *    depth-0 普通 → §1/§2/§4/§5/§6（模式化新串）；eng-designer → §2 · 评审 → §3（**工程设计轨除外**：
+ *    那一路的 §3 只由结算写，本面直接拒——§4.4）· eng-coder → §5 · coder（普通模式分支增表）→ §5
+ *    （迁移错误面，"batch_segment:" 前缀**逐字保持**）；
  *  - 目标定位（D-BR21）：depth-0 path 可选（缺省 = findInFlightBatch 唯一在飞批）；子代理/评审
  *    传 path ⇒ 拒，目标 = spawn/实例绑定；
  *  - 其余（gate / text 校验 / 剥凭证 / 骨架保护 / **状态行拒写（J3——行首形态行不得入档，§4.21.4）** /
- *    **死占位机检（F11-C）** / 插入（候选全文成形 = 盘上现文 + 这一段 + 状态行改写） / **文档机检门
+ *    **死占位机检（F11-C）** / 插入（候选全文成形 = 盘上现文 + 这一段 + **状态行改写（§4.12 被动写：
+ *    `§3` 随裁定行置位 ∥ 重置，`§2`/`§5` 写正文即置完成词）**） / **文档机检门
  *    （§3.20 结构兜底 ①——**全部 append 同挂**（含 depth-0 与评审写 §3）：判的是候选全文里这一笔写的行
  *    （判面单源 = `docs/core/design/DOC-CHECK.md` §6「写时点怎么取区间」），命中 ⇒ 拒写且零字节（写盘在门之后），
  *    ERROR ⇒ 写 + 回执明示；批档已落段不再入判）** / 写盘 / 记账 / 回执）逐字保持原语义（新增的一道 = 状态行拒写）。
  */
-export function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
+export function appendBatchRecord({ args, ctx, review, reviewTrack, batchDoc, onWritten }) {
   const agent = ctx?.agent ?? {}
   const cwd = agent.cwd
   const depth0 = ctx?.depth === 0
   // 模式位执行期实读（§4.16——同款先例 = task.mjs execute 门；翻转即时生效——D-BR26）
   const engineering = !!agent?.config?.agent?.engineering
-  const seg = allowedSegment(agent, review, engineering)
-  if (!depth0 && seg === null) throw new Error(noSegmentError(engineering))
+  const seg = allowedSegment(agent, review, engineering, reviewTrack)
+  if (!depth0 && seg === null) {
+    // 评审实例被拒时点名真因（§4.4 只读）；其余无写权身份给段白名单那句。
+    if (review) throw new Error(sectionThreeDesignTrackError("batch_segment"))
+    throw new Error(noSegmentError(engineering))
+  }
   const n = segmentNumber(args?.segment)
   if (n === null) {
     if (depth0) {
@@ -207,7 +215,13 @@ export function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const date = todayLocal()
   const plan = statusResetPlan(src, n, body, date) ?? statusPassPlan(src, n, body, date)
   const { written: inserted, roundN } = insertIntoSection(src, n, body, plan?.traceLine ?? "")
-  const written = plan ? updateSectionStatusLine(inserted, 3, plan.statusValue) : inserted
+  // 状态行进同一笔（`BATCH-RECORD.md` §4.12 ∥ §4.21）：§3 按裁定置位 ∥ 重置（两条计划，三合取互斥）；
+  // §2/§5 按正文置完成词（`statusDonePlan`——正文只有占位行 ⇒ 段仍判空 ⇒ 零写）；
+  // §1/§4/§6 不动。仍是**一次** `writeFileSync`——块与字进的是同一个字符串（无「块已落、字未到」的窗口）。
+  const done = plan ? null : statusDonePlan(inserted, n)
+  const written = plan
+    ? updateSectionStatusLine(inserted, n, plan.statusValue)
+    : done ? updateSectionStatusLine(inserted, n, done.statusValue) : inserted
   // 文档机检门（§3.20「结构兜底」①——门位 = 既有拒因全部之后、写入之前）：
   // **工程模式 append 同挂**（§1–§6，含 depth-0 与评审写 §3——规则一条，不按身份分支）；普通模式跳过内容门。
   // `pending.body` = **候选全文**（`written`：盘上现文加上这一段及其状态行改写的整档视图）——门拿它与盘上现文两份
@@ -221,7 +235,7 @@ export function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   // 本条 = `AGENT-LOOP.md` §6.6 `wrote` 判据的计数面（成功写盘才增；上面各门已过）。
   agent._batchWrites = (agent._batchWrites ?? 0) + 1
   onWritten?.(agent, abs)
-  return `batch_segment: appended ${body.length} characters to §${n} of the batch record${roundN ? ` (### 轮次 ${roundN}（评审子代理）)` : ""}.${gateReceiptLine(gate)}`
+  return `batch_segment: appended ${body.length} characters to §${n} of the batch record${roundN ? ` (### 轮次 ${roundN}（评审子代理）)` : ""}.${done ? ` §${n} 状态行 = ${done.statusValue}（同笔置位——不另调 status）.` : ""}${gateReceiptLine(gate)}`
 }
 
 // ─── 拒串单源（append / edit 共用——两动作只差写法，不差判据）───────────────
@@ -280,24 +294,29 @@ function sectionBodySpan(src, seg) {
  * 判定与写盘**全部复用既有面**（零新写盘路径）：段域 = 同模式 append 白名单（§4.1 一处单源，一张表两个动作）· path 门（D-BR21）·
  * 冻结拒写（§4.9 门 ②，串与 append 逐字同）· 剥凭证（同一条 `sanitizeText`；§3 另丢伪造轮次戳——§4.7 不变量 5）· 骨架保护 ·
  * `newText` 单次上限 ∥ F11-C 死占位（§4.21.1 两道门，与 append 同一批判据）·
- * 文档机检门（段长类判 `newText`、锚类判改后视图的本次替换区）· `onWrite` 记账 · 一次 `writeFileSync`。
+ * 文档机检门（段长类判 `newText`、锚类判改后视图的本次替换区）· 状态行被动写（`§2`/`§5` 改后段内有正文 ⇒
+ * 同笔置完成词，判据单源 = 骨架档 `statusDonePlan`，§4.12）· `onWrite` 记账 · 一次 `writeFileSync`。
  * **不跑 §5 段序门**（§4.19「段序门」行：edit 须有既有锚 ⇒ 写不出原本不存在的内容，造不出「先实施」；
  * 反过来在 §3 进行中时拒掉 §5 的旧行，正是本批要消的那种死锁）。
  * **不做整段替换**（段体实测两成超 `MAX_TEXT_CHARS`——重发全文 = 静默丢内容）∥ **不做模糊匹配**（一次近似改写 = 一次
  * 没人看见的错改；匹配 = 逐字节，`\r\n` 档上的 LF 锚零命中 ⇒ 拒，安全方向）。
  * 拒面（全 fail-closed，零字节落盘）：空锚 E1 · 零命中 E2 · ≥2 命中（列命中行号）E3 · 锚越段界 E4 · 锚触及**受保护行** ∥
- * 替换**引入**一条形态行 E5 · 改写后段头区条数多于改写前 E5b（§4.21.2 第二道）· 骨架保护 ∥ 冻结 ∥ 段域 ∥ newText 缺参
- * ∥ `newText` 超单次上限（§4.21.1）∥ 档头死占位残留（§4.21.1 F11-C）。
+ * 替换**引入**一条形态行 E5 · 改写后段头区条数多于改写前 E5b（§4.21.2 第二道）· 骨架保护 ∥ 冻结 ∥ 段域（含工程**设计轨**的
+ * `§3`——§4.4 只读）∥ newText 缺参 ∥ `newText` 超单次上限（§4.21.1）∥ 档头死占位残留（§4.21.1 F11-C）。
  */
-export function editBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
+export function editBatchRecord({ args, ctx, review, reviewTrack, batchDoc, onWritten }) {
   const agent = ctx?.agent ?? {}
   const cwd = agent.cwd
   const depth0 = ctx?.depth === 0
   const engineering = !!agent?.config?.agent?.engineering
   // 段域（§4.19「段域」行）：**= 同模式 append 白名单**——能 append 哪段就 edit 哪段，段域一处单源、一张表两个动作。
-  // 子代理侧取身份段（§4.1：身份 → 段）；depth-0 侧取同模式 append 白名单（工程 §1/§4/§6 ∥ 普通 §1/§2/§4/§5/§6，§4.16）。
-  const own = allowedSegment(agent, review, engineering)
-  if (!depth0 && own === null) throw new Error(noSegmentError(engineering))
+  // 子代理侧取身份段（§4.1：身份 → 段；含「模式 × 评审轨」那一维——工程设计轨的 §3 取到 null）；
+  // depth-0 侧取同模式 append 白名单（工程 §1/§4/§6 ∥ 普通 §1/§2/§4/§5/§6，§4.16）。
+  const own = allowedSegment(agent, review, engineering, reviewTrack)
+  if (!depth0 && own === null) {
+    if (review) throw new Error(sectionThreeDesignTrackError("batch"))
+    throw new Error(noSegmentError(engineering))
+  }
   const n = segmentNumber(args?.segment)
   if (n === null) {
     throw new Error(depth0
@@ -382,13 +401,17 @@ export function editBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const zoneBefore = zoneStatusCount(src, n)
   const zoneAfter = zoneStatusCount(postEdit, n)
   if (zoneAfter > zoneBefore) throw new Error(EDIT_STATUS_LINE_PROMOTION_ERROR(n, zoneBefore, zoneAfter))
+  // 状态行同笔（§4.12——与 append 同一条被动写，判据单源 `statusDonePlan`）：`§2`/`§5` 改后段内有正文
+  // ⇒ 该段状态行置完成词；`§3` 的置位归裁定计划（`edit` 不挂裁定行闸，也不置位——§4.4），其余段不动。
+  const done = statusDonePlan(postEdit, n)
+  const finalSrc = done ? updateSectionStatusLine(postEdit, n, done.statusValue) : postEdit
   // 文档机检门：工程模式的段长类判本次写入的 `newText`；锚类判改后视图 `recordView` 里的本次替换区；普通模式跳过。
   // 区外锚类不入判集、也不出行（判域 = 本次替换区），别让另一段的失效引文与本段互锁。REFUSED ⇒ 拒（零字节落盘）∥ ERROR ⇒ 写 + 回执明示。
-  const gate = ctx.agent?.config?.agent?.engineering === false ? null : runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body: replacement, recordView: postEdit } })
+  const gate = ctx.agent?.config?.agent?.engineering === false ? null : runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body: replacement, recordView: finalSrc } })
   if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "edit"))
-  writeFileSync(abs, postEdit)
+  writeFileSync(abs, finalSrc)
   // #84：记账面按端注入（与 append 同一条缝——缺省 no-op = CLI 语义零行为变）。
   agent._batchWrites = (agent._batchWrites ?? 0) + 1 // §6.6 `wrote` 判据：成功写盘计数（与 append 同一条面）
   onWritten?.(agent, abs)
-  return `batch: edited §${n} of the batch record — replaced ${oldText.length} characters with ${replacement.length}.${gateReceiptLine(gate)}`
+  return `batch: edited §${n} of the batch record — replaced ${oldText.length} characters with ${replacement.length}.${done ? ` §${n} 状态行 = ${done.statusValue}（同笔置位——不另调 status）.` : ""}${gateReceiptLine(gate)}`
 }
