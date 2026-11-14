@@ -12,7 +12,7 @@
  *      残值倾出 · 窗中止清队；取项 = 核件 `takeQueuedBatchItem`（**取项单源——本档零第二判据**）。
  *   ③ 六帧（推送点 = 窗内受理 ∕ 步边界消费 ∕ 窗内消费 ∕ 残输入续发 ∕ 窗中止清队 ∕ **残值弃件链尾**）：
  *      受理 ∕ 清队 ∥ 链尾 ⇒ 状态形（快照整置 · 幂等）；消费 ∕ 残续发 ∕ 步边界消费 ⇒ 消费回执形（`delivered = { text, ts?, degraded? }`）。
- *      链尾状态帧 = 弃件径收口（#912）——**帧类记一，物理站点两**（墓碑出口 ∥ `!stillHeld` 断点——均住 `suspension-drive.mjs` `resumeResidual`）。
+ *      链尾状态帧 = 弃件径收口（#912）——**帧类记一，物理站点两**（墓碑出口 ∥ `!stillHeld` 断点——均住 `suspension-window-close.mjs` `resumeResidual`）。
  *      帧出站经注入 `postQueue`（= 链
  *      `postQueue` —— **帧构造单点保位 `turn-chain.mjs`**，本档只定点不造形）。
  *   ④ 送达面（携图径 —— 与 `turn-chain.mjs` **同判据**）：`prepare` 判决 ⇒ `degrade` 定局（非视觉读图：成功 = 描述

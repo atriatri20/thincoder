@@ -23,15 +23,27 @@ const SEARCH_STOPWORDS = new Set([
 ])
 
 /**
- * 查询 → 参与计分的词。按空白切、转小写、去重、去停用词，最后排序（查询词序因而影响不了
- * 片段集合与名次）。过滤后一个词都不剩 ⇒ 显式失败并点名 `query`：全虚词查询（`the`、`a of the`）
- * 走的就是这一支，不退化成一句「没有匹配」——两者在模型看来长得一模一样。
+ * 查询 → 参与计分的词。整串转小写后按空白切、逐词剥去首尾标点、丢掉剥空的词、去重、去停用词，最后
+ * 排序（查询词序因而影响不了片段集合与名次）。
+ * 剥的是词首尾「不属于字母、数字或组合附加符（`\p{L}` ∥ `\p{N}` ∥ `\p{M}`）」的字符：中文括号、全角
+ * 标点与表情一并剥掉，词内字符原样保留——`doc?` → `doc`、`compaction,` → `compaction`，而 `doc-check`
+ * 整词不动。按标点把整串拆开会把语料里唯一稳定的标识符形式打散：随包主题标识无一例外都带连字符。
+ * 去重必须排在剥之后：否则 `doc? doc` 留下两个 `doc`，`titleHits` 与 `totalHits` 各计两次，命中该词的
+ * 主题被同倍抬高，与别的词命中同一批主题的名次当场错开。
+ * 过滤后一个词都不剩 ⇒ 显式失败并点名 `query`：全虚词查询（`the`、`a of the`）与只有标点的查询（`?`）
+ * 走的就是这一支，报文点名两种清空原因，不退化成一句「没有匹配」——两者在模型看来长得一模一样。
  */
 function tokenizeQuery(query) {
-  const tokens = [...new Set(query.toLowerCase().split(/\s+/).filter(Boolean))]
+  const stripped = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.replace(/^[^\p{L}\p{N}\p{M}]+|[^\p{L}\p{N}\p{M}]+$/gu, ""))
+    .filter(Boolean)
+  const tokens = [...new Set(stripped)]
   const meaningful = tokens.filter((token) => !SEARCH_STOPWORDS.has(token)).sort()
   if (meaningful.length === 0) {
-    throw new Error("knowledge search: query has no searchable word after stopword filtering — replace it with a concrete noun, or call list for every topic id")
+    throw new Error(`knowledge search: No searchable word in query ${JSON.stringify(query)} after stopword and punctuation filtering — replace it with a concrete noun, or call list for every topic id`)
   }
   return meaningful
 }

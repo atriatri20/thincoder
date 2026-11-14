@@ -106,7 +106,7 @@ export function usageFrameWanted(ctxPct, ctxTokens, timers) {
  *  `projects` = 项目面（`currentCwd()` 供装配取值）；返回正文面 + 子 agent 面（`subagent-face.mjs` 展开：
  *  `stopSubagent` / `heartbeatBeat` / `startHeartbeat` / `stopHeartbeat`）+ `flagsOf` + `table` / `agents`。
  *  **提示面注入三件（桌面空闲唤醒批 —— 皆可缺省：缺 ⇒ 零动作）**：`notify` = 平台落子 · `focused` = 焦态判据 · `reveal` = 点击聚焦；
- *  **timer 面（timer-wake 阶段 2）**：闩 ∕ 三武装点 ∕ 窗内 `timerFace` 装配住挂起驱动档（`suspension-drive.mjs` ⋈ `timer-watch.mjs`），
+ *  **timer 面（timer-wake 阶段 2）**：闩 ∕ 三武装点 ∕ 窗内 `timerFace` 装配住挂起驱动档（`suspension-drive.mjs` 族 = 装配档 + 四语义档 ⋈ `timer-watch.mjs`），
  *  驱动族只供两枚注入面 —— `busyOf`（在飞判据）+ `takeOver`（timer 轮后同判），二者随族装配住 `turn-driver.mjs`。 */
 export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, deps = {}, projects, notify = null, focused = null, reveal = null } = {}) {
   if (typeof emit !== "function") throw new Error("[agent-host] emit required (out-bound channel)")

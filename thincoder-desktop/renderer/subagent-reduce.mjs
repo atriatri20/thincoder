@@ -239,7 +239,7 @@ export function resetSubBlocks(state, key) {
 
 /** `subBlocksFreezeAll`（R5 · #522② —— **退出兜底**；VSC `rowsOf` 同义）：挂起窗
  *  退出帧（`ev:susp {active:false}`）⇒ 本键**全体归档** —— live ⇒ 折叠（核 `freezeMeta`；`interrupted`
- *  注记只随载荷真值落 —— 出窗帧今携该键（`suspension-drive.mjs` `postSuspEnd` 端帧 · #554①），
+ *  注记只随载荷真值落 —— 出窗帧今携该键（`suspension-window-close.mjs` `postSuspEnd` 端帧 · #554①），
  *  键缺 ∕ 假 ⇒ 恒零注记，不假造）· 等待消化（`awaitingDigest`）⇒ 清态标 +
  *  归档 · 已墓碑（`region:"flow"`）⇒ 不动（`regionOf` 注入 = 桌面区判据：**墓碑外皆「在区」**）。归档入流
  *  单源 = 核效果表 + 本档 `archiveIntoFlow` 派生（与 `onSubagent` 同径 —— 单一实现零副本）。 */

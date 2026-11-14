@@ -3,7 +3,8 @@ Pure-reference topics are never inlined into system prompts.
 
 Actions: `list` shows globally unique topic ids and titles; `search` returns bounded locating snippets; `get` returns the complete topic by exact id.
 
-Search splits the query on whitespace, lowercases it and drops high-frequency function words (`the`, `of`, `a`, `的`, `了` …).
+Search splits the query on whitespace, lowercases each word, trims the punctuation at both ends of each word and then drops high-frequency function words (`the`, `of`, `a`, `的`, `了` …).
+A word's inner characters stay as written, so `doc?` searches `doc` while `doc-check` is searched whole.
 A query left with no word fails explicitly and names `query` — type a concrete noun instead of retrying the same shape.
 Every remaining word matching the id, the title, an alias or the body puts that topic in the result (OR — not all words must match).
 Ranking: title-level hits first (a distinct word hitting the id, the title or an alias), then total hits, then id ascending.

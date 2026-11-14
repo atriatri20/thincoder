@@ -193,10 +193,10 @@
 
 ## CLI 53. knowledge 检索有界（宽词查询不吞窗口 · 0 命中指路）
 
-> 目的：search 的返回受主题数与字符数双上限约束并如实披露截断；全虚词查询与 0 命中都给出可执行的下一步。
-> 节注：回指 = `docs/core/requirements/PROMPT-SYSTEM.md` §6「按用户给出的关键词查找相关主题，并返回有界定位片段」∥ 同节末句「查询不到时如实返回无匹配」∥ §9.2「未知主题与无匹配有明确结果」；机制单源 = `docs/core/design/PROMPT-SYSTEM.md` §6「knowledge 工具」；组件 = knowledge 检索链（`thincoder-core/tools/knowledge.mjs` 的 `execute` search 支）⟷ 主题加载与别名剥离（`thincoder-core/prompt-files.mjs` 的 `readKnowledgeEntries`）⟷ 三档工具表（tiny ∥ normal ∥ engineering）⟷ 真 CLI 会话的模型请求体；进入口 = 真 CLI 起 tiny 档会话，本地脚本化模型端点首回合派三次 `knowledge` 调用（`{action:"search", query:"the"}` ∥ `{action:"search", query:"the evidence"}` ∥ 一次 0 命中查询），读第二回合请求体里带回的这三条工具结果；单态 = 53-1 正常。
+> 目的：search 的返回受主题数与字符数双上限约束并如实披露截断；全虚词查询与 0 命中都给出可执行的下一步，带首尾标点的查询剥掉标点后命中的是同一个词。
+> 节注：回指 = `docs/core/requirements/PROMPT-SYSTEM.md` §6「按用户给出的关键词查找相关主题，并返回有界定位片段」∥ 同节末句「查询不到时如实返回无匹配」∥ §9.2「未知主题与无匹配有明确结果」；机制单源 = `docs/core/design/PROMPT-SYSTEM.md` §6「knowledge 工具」；组件 = knowledge 检索链（`thincoder-core/tools/knowledge.mjs` 的 `execute` search 支）⟷ 主题加载与别名剥离（`thincoder-core/prompt-files.mjs` 的 `readKnowledgeEntries`）⟷ 三档工具表（tiny ∥ normal ∥ engineering）⟷ 真 CLI 会话的模型请求体；进入口 = 真 CLI 起 tiny 档会话，本地脚本化模型端点首回合派四次 `knowledge` 调用（`{action:"search", query:"the"}` ∥ `{action:"search", query:"the evidence"}` ∥ 一次 0 命中查询 ∥ `{action:"search", query:"doc?"}`），读第二回合请求体里带回的这四条工具结果；单态 = 53-1 正常。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
-| 53-1 | 真 CLI 起 tiny 档会话（`handleTinyCommand` 落槽后掀下一轮），首回合一次派三条 `knowledge` search 调用：全虚词 `the` ∥ 含虚词的宽词 `the evidence` ∥ 必然 0 命中的查询；读第二回合请求体里回到模型的三条工具结果 | ① 全虚词查询在工具门口显式失败，报文点名 `query` 且给下一步，回执里零个主题片段；② 宽词查询的紧凑 JSON ≤ 6,000 字符、返回主题数 ≤ 10，外层报 `matched` ∥ `shown` ∥ `truncated` 且 `matched > shown`、`truncated: true`；③ 0 命中回执点名两条下一步（换单个英文关键词 ∥ 先 `list`），且不伪造主题 | 无 | `test/integration/knowledge-search-bounded.test.mjs` |
+| 53-1 | 真 CLI 起 tiny 档会话（`handleTinyCommand` 落槽后掀下一轮），首回合一次派四条 `knowledge` search 调用：全虚词 `the` ∥ 含虚词的宽词 `the evidence` ∥ 必然 0 命中的查询 ∥ 带首尾标点的 `doc?`；读第二回合请求体里回到模型的四条工具结果 | ① 全虚词查询在工具门口显式失败，报文点名 `query` 且给下一步，回执里零个主题片段；② 宽词查询的紧凑 JSON ≤ 6,000 字符、返回主题数 ≤ 10，外层报 `matched` ∥ `shown` ∥ `truncated` 且 `matched > shown`、`truncated: true`；③ 0 命中回执点名两条下一步（换单个英文关键词 ∥ 先 `list`），且不伪造主题；④ 标点查询 `doc?` 的回执不是零命中回执，而是一份 `matched > 0` 的紧凑 JSON，外层 `matched` ∥ `shown` ∥ `truncated` 三键齐备 | 无 | `test/integration/knowledge-search-bounded.test.mjs` |
 

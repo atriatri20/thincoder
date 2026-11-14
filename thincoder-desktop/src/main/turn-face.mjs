@@ -23,7 +23,7 @@
  * 抛出点 `runAgent`）：`autoTurn`（消化 ∕ 上行 ∕ timer 轮——无人值守档）⇒ **cap 即收口**（核 D-TC15 同支，
  * 零自续）；**#541**：边界轮（`autoTurn ∧ ¬timerTurn`）撞帽另出 `ev:digest { status:"cap", mode, turns }` 帧
  * （留档批 · #719：记录同点双动作 ⇒ 人读线 cap 行；渲染面 cap 行 —— 对位 VSC `runTurnLoop` ⇒
- *  `postDigestCap(panel, "stop", e.turn)`；timer 轮不冒充消化边界 —— 沿 `suspension-drive.mjs` `boundary` 同判）；
+ *  `postDigestCap(panel, "stop", e.turn)`；timer 轮不冒充消化边界 —— 沿 `suspension-window-turn.mjs` `boundary` 同判）；
  * 用户回合 ⇒ **「继续？」薄形询问**（`askContinue` 注入面 —— 载体 = 既有待决门，不造第二交互面）⇒
  * 同意 = 重建 controller + `resume: true` 重入同回合（历史已在 ⇒ 不重推用户消息）∕ 拒绝（∥ 缺注入 ∥ 会话已中止
  * 墓碑命中）⇒ `stopped` 结算（同中止三径序：落盘 → 读数 → 终局事件）。
@@ -140,7 +140,7 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
           if (err instanceof ContinueError) {
             if (opts.autoTurn === true) {
               // #541：消化边界轮撞帽 ⇒ cap 帧出站（部分消化不静默 —— 对位 VSC `postDigestCap`）；判据 = 边界轮
-              //（`autoTurn ∧ ¬timerTurn` —— 沿 `suspension-drive.mjs` `boundary` 同判：timer 轮不冒充消化边界）。
+              //（`autoTurn ∧ ¬timerTurn` —— 沿 `suspension-window-turn.mjs` `boundary` 同判：timer 轮不冒充消化边界）。
               // #782：墓碑查位（记录分支自带门 —— 与 `emitDigestEnd` 同源判据）——已撤销 ∥ 已删会话 ⇒ 帧 ∥ 记录同抑制。
               if (opts.timerTurn !== true && !revokedTurn(key, agent)) { // 留档批 · #719：记录与发帧同点双动作（人读线 cap 行 —— 机器线零触）
                 post("ev:digest", { key, status: "cap", mode: "stop", turns: err.turn })
