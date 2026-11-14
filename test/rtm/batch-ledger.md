@@ -44,8 +44,8 @@
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
-| 10-1 | 工程模式夹具里，让一次设计评审以 `batchDoc` 带上批档（签发一个槽；夹具须让该评审把 §3 写进批档——轮次块 + 状态行 = `评审通过`，否则 §3 落地门挡住签发、本行断言不可达），再调 `batch close` 收该批 | close 回执含 `[design tokens]` 且点名消费 1 枚；随后同 designId 的 eng-coder spawn 被机械拒；`design-slots` 里该槽不在 | — | `test/integration/batch-close-token-consume.test.mjs` |
-| 10-4 | 工程模式夹具里以 `batchDoc` 带批档跑一次设计评审（签发一个槽；夹具同上：该评审须把 §3 写进批档），再调 `subagent` `action:'design-slots'` | 该槽行 `batch=<批档 basename>`（不是 `—`）；其余列零变 | — | `test/integration/batch-close-token-consume.test.mjs` |
+| 10-1 | 工程模式夹具里以 `batchDoc` 带批档跑一次设计评审——夹具前提 = §3 由结算落块并置位（轮次块 + 段级状态行 = `评审通过`），再调 `batch close` 收该批 | close 回执含 `[design tokens]` 且点名消费 1 枚；随后同 designId 的 eng-coder spawn 被机械拒；`design-slots` 里该槽不在 | — | `test/integration/batch-close-token-consume.test.mjs` |
+| 10-4 | 工程模式夹具里以 `batchDoc` 带批档跑一次设计评审（夹具前提同 `10-1`），再调 `subagent` `action:'design-slots'` | 该槽行 `batch=<批档 basename>`（不是 `—`）；其余列零变 | — | `test/integration/batch-close-token-consume.test.mjs` |
 | 10-2 | 同一夹具，把 `persistEngTokens` 注入为抛错后再 close | close 被拒且回执点名消费失败；§1 状态行字节不变；槽仍在盘（内存已回滚） | — | `test/integration/batch-close-token-consume.test.mjs` |
 | 10-3 | 分别让待核销行指向已收口、未收口、未评审与带存量声明的批档：未收口那一档走 `ledger close` 与 `ledger update` 两条入口，已收口三档凭既有工作证据核销；证据负例（无证据 ∥ 空白覆盖）落在已收口夹具 | 未收口档下两条入口同拒（拒文含 `批档未收口` 且指回 `batch close`），行整笔不变；已收口三档均核销成功且 `closed_at` 落值（评审状态与存量声明行都不进归档判据）；无证据与空白覆盖均拒且整行不变 | 回指 = `docs/core/design/LEDGER.md`「锚批门」（证据负例移到 CLOSED 夹具 = 本批 delta） | `test/integration/ledger-close-proof.test.mjs` |
 | 10-5 | 待讨论 / 待设计 / 在途分别直接核销；待核销正常勾销；已核销再撤回，已废弃重复撤回及再核销 | 非待核销直接核销均拒且行不变；正常链成功；两种归档态都拒绝后续归档写入，状态与时间戳不变 | 回指 = `docs/core/design/LEDGER.md`「状态机」 | `test/integration/ledger-close-proof.test.mjs` |
@@ -86,14 +86,14 @@
 | 14-13 | 全归档批（先正常收口结清行，再重开 ⇒ 档 open、行全归档）：分别以 `close` 与 `status` 写 §1 已收口补关；再以未签字的在途行现场与「全归档 + 档头号不在账」两种现场试补关 | 两路均补关成功：档冻结、§1 段尾落一行 `**补关记录**`（行数 +1、其余字节不变）、回执出 `[ledger repair]`、台账行字节不变，`check` 的 `open-but-settled` 读形补关后消失；在途行现场 ⇒ 链门照拒（档账零改）；额外半状态 ⇒ 补关拒、逐项点名半状态并指回 `batch({action:"check"})` | 回指 = `docs/core/design/LEDGER.md`「补关」∥ `docs/core/design/BATCH-RECORD.md`「收口分流」 | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-14 | 一本 §5 空、行 = 3 `待核销` + 8 `在途` 的批档（对象已消失、永不实施）调 `batch({action:"supersede"})` 并点名取代者；再以同形档试四种拒面（取代者空白 ∥ 解不到 ∥ 指回本档 ∥ 行集全归档）与 `completed` 点名的正路 | 状态行变 `已收口 <日期>（被取代）`、§1 段尾落 `**取代记录**`、§3/§4/§6 逐字节不变、此后 `append` 拒；3 行结清为 `已核销`（证据带 `收口 <日期>：` 前缀）；8 行退回 `待讨论` 并改挂 `条件`（续启句入 `resume_when`，`task_book` / `executor` 清空）；`check` 读一致。空白 ∥ 解不到 ∥ 指回本档 ∥ 全归档 ⇒ 各拒并点名（全归档指回 `close` / 补关），档账零改；`completed` 点名的那条结清、其余退回 | 新增（回指 = `docs/core/design/BATCH-RECORD.md` ∥ `docs/core/requirements/ENGINEERING-MODE-V2.md`） | `test/integration/batch-gates-reanchor.test.mjs` |
 
-## CLI 17. 评审没写进批档就不算过
+## CLI 17. 评审记录落进批档才签发（块写不进 ⇒ 拒签、档零字节）
 
-> 目的：判 pass 的评审必须已经把结论落进该批档 §3——不落地就不签发凭证；而没有批档绑定的设计评审根本发不出去（批次档是评审的前提，不是纸张）。下游 spawn 拿不到授权（代价不落到实施席头上）。
-> 节注：回指 = `docs/core/requirements/ADVISOR-CONVERGENCE.md` F11 ∥ F20；机制单源 = `docs/core/design/ADVISOR-GUARDS.md`「§3 落地门」∥「点火顺序」∥「账链门」；交互组件 = 准入面（`advisor` 工具入参门）⟷ 账链面（台账库读取）⟷ 结算面（`settleDesignReview`）⟷ 批档 §3 读写 ⟷ spawn 门 ⟷ 槽清点；进入口 = 父侧发设计评审（工程模式 depth-0）→ 读回执 → 派 eng-coder；三态（行序）= 17-1 错误 · 17-2 错误 · 17-3 错误。
+> 目的：评审通过后由结算把轮次块与段级状态行写进批档 §3——写不进即拒签、档字节零变；而没有批档绑定的设计评审根本发不出去（批次档是评审的前提，不是纸张）。下游 spawn 拿不到授权（代价不落到实施席头上）。
+> 节注：回指 = `docs/core/requirements/ADVISOR-CONVERGENCE.md` F11 ∥ F20；机制单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.2「§3 记录与结算判据」∥「点火顺序」∥「账链门」；交互组件 = 准入面（`advisor` 工具入参门）⟷ 账链面（台账库读取）⟷ 结算面（`settleDesignReview`）⟷ 批档 §3 读写 ⟷ spawn 门 ⟷ 槽清点；进入口 = 父侧发设计评审（工程模式 depth-0）→ 读回执 → 派 eng-coder；三态（行序）= 17-1 错误 · 17-2 错误 · 17-3 错误。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
-| 17-1 | 带 `batchDoc` 的设计评审回 pass 但不写 §3 | 无 token、回执含 `review record incomplete`、同 designId 的 eng-coder spawn 被机械拒；补写 §3 后重评 ⇒ 签发（spawn 门放行） | — | `test/integration/advisor-record-gate.test.mjs` |
+| 17-1 | 工程模式设计轨夹具，批档 §3 无轮次块、无段级状态行，结算直接进场（评审席在工程模式没有 §3 通道）。正半幅 = 回 pass 的评审；失败半幅 = 注入块写失败后跑同一调用 | 正半幅 = §3 落本轮块 1 块（块内结算头点名已签发）、段级状态行 = `评审通过`、同 designId 的 spawn 门放行；失败半幅 = 不签发、回执含 `review record incomplete`、档字节 = 写前（零字节）、同 designId 的 eng-coder 机械拒 | — | `test/integration/advisor-record-gate.test.mjs` |
 | 17-2 | 不带 `batchDoc` 的设计评审（`documents` 只放设计档） | 当场拒发：回执首行点名 `batchDoc` 必填（标识行 `criterion=batchdoc-missing`）+ 两条期望形 + 无档时先 `batch create` 的下一步；拒发登记；跑前跑后槽数不变、零评审实例、零 LLM；随后同 designId 的 eng-coder spawn 因无授权被机械拒 | 修前红 = 准入判据未落地 ⇒ 不带 `batchDoc` 照常签发——本行断言的就是那条已退场的旧行为 | `test/integration/advisor-record-gate.test.mjs` |
 | 17-3 | 批档的未决行已被撤（`已废弃`）后，携该 `batchDoc` 发设计评审 | 拒发：回执含 `criterion=batchdoc-no-ledger` ∧ `reason=no-pending-row` ∧ `Record:` 读数 `unsettled: 0`；零实例 / 零 token / 零 LLM。反证格 = 另一本带未决行的批档发同调用 ⇒ 放行 | 修前红 = 账链门未落地 ⇒ 未决行被撤后照常发评审、token 照签而无收口能收 | `test/integration/advisor-record-gate.test.mjs` |
 
@@ -133,16 +133,15 @@
 | 24-6 | 夹具层内建一个子目录，把一份标准档放进该子目录，再发起一次设计评审 | 该档正文与绝对路径定位注都在评审消息里（层内成员递归）；注入序按层根相对路径码点序 | — | `test/integration/review-standards-injection.test.mjs` |
 | 24-7 | 夹具 = 工作区锚（无数据档、有 AGENTS.md）+ 其下子项目（数据档声明 docRoot.standards，子项目内有 docs/README.md），设计档在子项目内；agent.cwd = 锚，发起一次设计评审 | 评审消息 `## Project Standards` 段含该标准档正文与绝对路径定位注、不含 NO_STANDARDS_NOTICE，**且** `## Document Map` 段含子项目 docs/README.md 正文、不含 NO_DOC_MAP_NOTICE | — | `test/integration/review-standards-injection.test.mjs` |
 
-## CLI 27. 评审写一笔 §3 就够：状态行由工具置位
+## CLI 27. 状态行由工具置位，不另调 status
 
-> 目的：绑了批档的评审写完 §3 就完成该轮——`append §3` 那一笔随裁定行置位，`edit §3` 写块的那一笔由结算当场补签；评审不必记得再签一次 `status`，漏签不再白跑一轮评审。
-> 节注：回指 = `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-BATCH-SEGMENT.md`「评审记录」；机制 + 判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md`「评审状态」∥「实施与关闭门」∥ `docs/core/design/BATCH-RECORD.md`「§3 评审记录」∥「评审通过与凭证」；交互组件 = `batch append §3` ∥ `batch edit §3`（`thincoder-core/agent-tools/batch.mjs` 的两条写作轨）⟷ §3 段级状态行（`updateSectionStatusLine`）⟷ 结算面（`settleDesignReview`）∥ `§5` 写入门（`assertSectionFiveGate`）；进入口 = 父侧派设计评审（工程模式 depth-0，`batchDoc` 绑定）→ 读回执 → 派 eng-coder（与 17-1 同一入口、同一格回执）；三态（行序）= 27-1 正常 · 27-2 正常（工具面批走代码轨）· 27-3 正常（`edit §3` 写块、签字由结算补）。
+> 目的：绑了批档的评审不必记得再签一次 `status`：设计轨的轮次块与段级状态行都由结算在同一笔里写（评审席没有 §3 通道）；代码轨由评审自己 `batch append §3`，段级状态行仍由工具同笔置位。漏签不再白跑一轮评审。
+> 节注：回指 = `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-BATCH-SEGMENT.md`「评审记录」；机制 + 判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md`「评审状态」∥「实施与关闭门」∥ `docs/core/design/BATCH-RECORD.md`「§3 评审记录」∥「评审通过与凭证」∥「状态行：主动 status 与被动同笔写」；交互组件 = `batch append §3`（代码轨评审的建块轨；块内改写仍走同档「edit」的段内精确替换，`thincoder-core/agent-tools/batch.mjs`）⟷ §3 段级状态行（`updateSectionStatusLine`）⟷ 结算面（`settleDesignReview`）∥ `§5` 写入门（`assertSectionFiveGate`）⟷ §2／§5 写正文那一笔（eng-designer ∥ eng-coder）⟷ 段头区状态行；进入口 = 设计轨由父侧派设计评审（工程模式 depth-0，`batchDoc` 绑定）→ 读回执 → 派 eng-coder（与 17-1 同一入口、同一格回执），代码轨由父侧对工具面批 fire 一轮评审（`batchDoc` + `documents` 同档），写出段由 eng-designer ∥ eng-coder 经 `batch append` 写自己那段；两态（行序）= 27-2 正常（工程模式代码轨 · 异常格 = 工程设计轨）· 27-4 正常 ∥ 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
 |---|---|---|---|---|
-| 27-1 | 带 `batchDoc` 绑定的设计评审对**骨架原形批档**（§3 无段级状态行）只写一笔 §3，正文携 `VERDICT: pass`——**不另调 `status`、不手写状态行**；随后读回执、结算、由 eng-coder 追加 §5 | §3 段内出现 `**状态行**：评审通过`（轮次块 +1、零留痕行、读侧 `readSectionStatusWord` 同值）；结算签发 token（回执带 `Approved. Pass this exact token to eng-coder`、槽内为该 designId 的全串）；随后同一档 `append §5` 放行 | 修前红 = 那一笔之后 §3 仍无状态行 ⇒ 结算面拒 `status-not-passed`（「补一次签字」正是本行要消掉的那一步） | `test/integration/batch-status-auto-set.test.mjs` |
-| 27-2 | 工具面批（交付件全在仓根 `scripts/**`，无设计档）：父侧 fire 一轮**代码轨**评审，携 `batchDoc` = 本批批次档、`documents` = 同档、`paths` = 交付件 | 评审员工具表含 `batch`（请求体 `tools` 里有该名）⇒ 它把 §3 写进绑定档、段级状态行由工具置位成 `评审通过`；收口门与核销门③随后放行 | 未携 `batchDoc` ⇒ 工具表不含 `batch`、§3 写不进去（fail-closed） | `test/integration/batch-status-auto-set.test.mjs` |
-| 27-3 | 绑 `batchDoc` 的设计评审只用 `edit §3` 把本轮结论写成 pass（`edit` 不挂裁定行闸 ⇒ 块进了、状态行没进），全程不调 `status`、不手写状态行；随后结算、由 eng-coder 追加 §5 | 结算当场补签：§3 段内出现 `**状态行**：评审通过`（`readSectionStatusWord` 同值）、回执带 `Approved. Pass this exact token to eng-coder`、槽内为该 designId 的全串；随后同一档 `append §5` 放行 | 签字仍挂回写通道面（`append §3` 的通过置位）⇒ 本行结算拒 `status-not-passed`（「另发一轮评审补签」正是本行要消掉的那一步） | `test/integration/batch-status-auto-set.test.mjs` |
+| 27-2 | 工具面批夹具（交付件全在仓根 `scripts/**`、无设计档），工程模式。父侧 fire 一轮**代码轨**评审，携 `batchDoc` = 本批批次档、`documents` = 同档、`paths` = 交付件 | 评审员工具表含 `batch`（请求体 `tools` 里有该名）⇒ 它把 §3 写进绑定档、轮次块 +1、段级状态行由工具置位成 `评审通过`；两次模型请求（工具调用 + 收尾）、回执带回模型文本；收口门与核销门随后放行 | 同一夹具走工程模式**设计轨** ⇒ 工具表不含 `batch`、`§3` 对调用者关闭、§3 零块且无段级状态行（fail-closed） | `test/integration/batch-status-auto-set.test.mjs` |
+| 27-4 | 先给 §2 写一笔只含占位行的正文，再由 eng-designer 写一笔非空正文（全程不调 `status`）；随后代码轨评审写 §3，eng-coder 写一笔非空 §5 正文 | 占位行那一笔 ⇒ §2 状态行不动（仍缺）；非空正文那一笔 ⇒ 回执点名 `状态行 = 设计完成`、§2 段内 = `设计完成`；写 §5 正文那一笔 ⇒ 回执点名 `状态行 = 实施完成`、§5 段内 = `实施完成`；四条段级状态行四值齐备（`进行中` ∥ `设计完成` ∥ `评审通过` ∥ `实施完成`），§1 不动 | — | `test/integration/batch-status-auto-set.test.mjs` |
 
 ## CLI 51. 台账查询分页：每页十条，翻页仍读同一本账
 

@@ -24,7 +24,7 @@
 | CLI 14 | 评审过、完成清单收口、重开回、被取代冻结 | batch-ledger | 有 | 缺 | 缺 |
 | CLI 15 | 偶发空响应不打断会话 | loop | 有 | 缺 | 缺 |
 | CLI 16 | 状态行百分比与压缩判据同尺 | loop | 有 | 缺 | 缺 |
-| CLI 17 | 评审没写进批档就不算过 | batch-ledger | 有 | 缺 | 缺 |
+| CLI 17 | 评审记录落进批档才签发（块写不进 ⇒ 拒签、档零字节） | batch-ledger | 有 | 缺 | 缺 |
 | CLI 18 | 一条后台报告只投递一次，未签收时才升级 | loop | 有 | 缺 | 缺 |
 | CLI 19 | 首 token 慢的长上下文请求不再被当断流 | loop | 有 | 缺 | 缺 |
 | CLI 20 | 一本批档只服务一个并发 spawn | batch-ledger | 有 | 缺 | 缺 |
@@ -33,7 +33,7 @@
 | CLI 23 | 配了 OpenCode Go 的会话能发出话 | loop | 有 | 缺 | 缺 |
 | CLI 24 | 评审的方法论符合度不再恒空 | batch-ledger | 有 | 缺 | 缺 |
 | CLI 25 | 撞帽了，用户看得见自己转了多久 | loop | 有 | 缺 | 缺 |
-| CLI 27 | 评审写一笔 §3 就够：状态行由工具置位 | batch-ledger | 有 | 缺 | 缺 |
+| CLI 27 | 状态行由工具置位，不另调 status | batch-ledger | 有 | 缺 | 缺 |
 | CLI 28 | 拿行号改文档不会静默改错行 | tooling | 有 | 缺 | 缺 |
 | CLI 29 | 路径解析统一层 | paths | 有 | 缺 | 缺 |
 | CLI 30 | 读数子代理：派一个 tester 跑验证 | tooling | 有 | 缺 | 缺 |
