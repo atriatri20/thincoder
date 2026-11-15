@@ -4,7 +4,7 @@
 > 编制：主 agent · 2026-11-15 · 来源 = 用户 2026-11-15 报「deepseek-flash 上下文设 320K ⇒ context overflow: prompt ~193962 tokens · window 327680 (limit 163840)」，并令「一/二一起修」。
 > 台账 = #2444（— · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：进行中
+**状态行**：已收口 2026-11-15
 批起 sha = 100def4c0e7cd59956b595aca56b12f223c99d04
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
@@ -411,7 +411,7 @@ const reserve = maxTokensSource === "absent"
 
 **已定决定**：收口前置门（tier-reading gate）要求 §2 机读清单为「本批窗口内改动过的代码档」各有一行读数。本批窗口内混进了相邻批 `#2443` 的提交 `52eeeab1`，七个代码档因此被判为「本批改动」而清单里没有它们。处置 = 由设计席在 §2 机读清单末尾补登记，**并如实注明它们不是本批改动**。 · 用户原话：「自动跑完」 · 时间：2026-11-15 17:00
 
-**要补的七行 + 一行**（第三列写该档在**批起快照**上的 `countContentLines` 读数；快照取法见本档 §8；快照里没有的写 `新`）：
+**要补的七行 + 一行**（第三列写该档在**批起快照**上的 `countContentLines` 读数；快照取法 = `git show <档头所列批起 sha>:<档>` 过后者的量法；快照里没有的写 `新`）：
 
 - `bench/check/probe.check.mjs` — 338
 - `bench/probe/data.mjs` — 237
@@ -428,8 +428,34 @@ const reserve = maxTokensSource === "absent"
 
 **不做**：不改任何代码；不动 §2 的条目 1–10、验收对照、集成增量；不重新设计任何内容。这一轮只为让记录如实承载收口门的取材口径。
 
+## 收口门二次报缺：八档缺读数 + 一档越线（主 agent，2026-11-15 18:25）
+
+**事实**：补完邻批 `#2443` 八档后，`batch close` 仍拒绝，门这次报的是**另一批八档**——六档是本批自己改的、两档是 `#2450` 的：
+
+| 档 | 门给的基线读数 | 归属 |
+|---|---|---|
+| `test/integration/context-overflow-guard.test.mjs` | 497（现 513） | 本批 |
+| `test/integration/tiny-mode.test.mjs` | 260 | 本批 |
+| `thincoder-core/agent/turn-loop.mjs` | 332 | 本批 |
+| `thincoder-core/context-echo.mjs` | 88 | 本批 |
+| `thincoder-server/src/agent/chat-compact.mjs` | 334 | 本批 |
+| `test/integration/context-window-derivation.test.mjs` | `新` | 本批 |
+| `thincoder-core/tools/git.mjs` | 425 | 邻批 `#2450` |
+| `test/integration/git-commit-untracked-path.test.mjs` | `新` | 邻批 `#2450` |
+
+**我上一轮报错过一次口径**（说门报了十档，实为八档，且把 `#2443` 的已补行与本批缺件混算）。这次一律按门自己给的基线走，不自己算。
+
+**要做的两件**：
+
+1. 在 §2「受影响文件（机读清单）」围栏内补这八行，第三列按上面门给的数写；两档记 `新`。表下再补一句如实交代：六档是本批改动、两档属邻批 `#2450`、登记它们同样只为满足门的取材口径（跨批重叠见 `#2439`）。
+2. `test/integration/context-overflow-guard.test.mjs` 现 513 > 500，按门口径第二列要有分拆方案。**本批实施轮已结束、没有拆**——方案必须是「下一批怎么拆」，写正向形（点名目标档、带目录段、写落步 `实施轮`），**不许写成本批已拆**。
+
+**不得改**：条目 1–10、验收对照、集成增量、单测面、任何代码或设计档。本轮只动机读清单与那两处交代。
+
+**另**：`快照取法见本档 §8` 这处悬空指针我已改掉（改指档头所列的批起 sha；本档只有 §1–§6，`§8` 是 `DOC-CHECK.md` 的节号）。机检 PASS。
+
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（本轮 = 修面轮 #26 的落地核对：八处全部在盘（第 3 条由主 agent 落）、机检 PASS、回执见本段末；待裁仍是灰度开关（本席建议 B））
+**状态行**：设计完成（本轮 = 收口门二次报缺的补登记：八档进机读清单（六档本批 · 两档邻批 #2450），一档现盘 513 过 500 ⇒ 第二列写下一批分拆方案；待裁仍是灰度开关（本席建议 B））
 
 
 
@@ -604,9 +630,47 @@ const reserve = maxTokensSource === "absent"
 | thincoder-desktop/src/main/agent-host.mjs | — | 344 |
 | docs/batches/2026-11-15-window-reserve-and-baseline.test.mjs | — | 新 |
 | docs/core/design/TOOL-OUTPUT-LIMITS.md | — | — |
+| bench/check/probe.check.mjs | — | 338 |
+| bench/probe/data.mjs | — | 237 |
+| bench/probe/driver.mjs | — | 274 |
+| thincoder-core/agent-tools/audit-block.mjs | — | 62 |
+| thincoder-core/agent-tools/spawn-gates.mjs | — | 203 |
+| thincoder-core/agent-tools/subagent-spawn.mjs | — | 430 |
+| thincoder-core/agent-tools/subagent.mjs | — | 425 |
+| thincoder-core/agent-tools/taskbook-block.mjs | — | 新 |
+| test/integration/context-overflow-guard.test.mjs | 下一批 `实施轮`：11-6 ∥ 11-7 ∥ 11-8 ∥ 11-9 四例连同 `giantTool` ∥ `shortHistory` ∥ `historyWithGiantAndTailResult` 三个夹具拆到 `test/integration/context-overflow-fixed-overhead.test.mjs`，`test/rtm/loop.md` 那四行的档列同轮改指新档 | 497 |
+| test/integration/tiny-mode.test.mjs | — | 260 |
+| test/integration/context-window-derivation.test.mjs | — | 新 |
+| thincoder-core/agent/turn-loop.mjs | — | 332 |
+| thincoder-core/context-echo.mjs | — | 88 |
+| thincoder-server/src/agent/chat-compact.mjs | — | 334 |
+| thincoder-core/tools/git.mjs | — | 425 |
+| test/integration/git-commit-untracked-path.test.mjs | — | 新 |
 ```
 
-**档位结论**：机读清单里的十四档代码档逐档在批起快照 `100def4c` 上用 `countContentLines` 量（`git show <sha>:<档>` 的输出过该尺），最大 426（`thincoder-core/config.mjs`），全部 ≤ 500 ⇒ 第二列全写 `—`。剩下两行不带行数读数：单测档为本批新建、快照里没有，记 `新`；母版设计档是 `.md`，记 `—`。
+这八档由相邻批 `#2443` 在本窗口内改动，本批对它们零改动；登记它们只为满足收口门的取材口径（跨批重叠，另见台账 `#2439`）。
+
+后补的八档里，六档是本批改动：
+
+- `test/integration/context-overflow-guard.test.mjs`
+- `test/integration/tiny-mode.test.mjs`
+- `test/integration/context-window-derivation.test.mjs`
+- `thincoder-core/agent/turn-loop.mjs`
+- `thincoder-core/context-echo.mjs`
+- `thincoder-server/src/agent/chat-compact.mjs`
+
+另两档属邻批 `#2450`：`thincoder-core/tools/git.mjs` ∥ `test/integration/git-commit-untracked-path.test.mjs`。登记这八档同样只为满足收口门的取材口径（跨批重叠见台账 `#2439`）。
+
+八档的第三列取收口门报的基线读数，本轮不另量一次。其中 `test/integration/context-overflow-guard.test.mjs` 的 497 与 §5 实施记录记的「集成档 497→513」逐位相符。
+
+**档位结论**：机读清单带行数读数的代码档在批起快照 `100def4c` 上用 `countContentLines` 量（`git show <sha>:<档>` 的输出过该尺）；二十七行带读数，五行不带。
+
+本批自己改动的二十一行里，快照读数最大的是 `test/integration/context-overflow-guard.test.mjs` 497，现盘 513 ⇒ 该行第二列写下一批的分拆方案，其余各行读数 ≤ 500、第二列写 `—`。
+
+五行的分布：
+
+- 四档在快照里没有、记 `新`：本批单测档 · `test/integration/context-window-derivation.test.mjs` · `thincoder-core/agent-tools/taskbook-block.mjs` · `test/integration/git-commit-untracked-path.test.mjs`。
+- 母版设计档 `docs/core/design/TOOL-OUTPUT-LIMITS.md` 是 `.md`、记 `—`。
 
 ### 集成增量（对 `test/RTM.md`）
 
@@ -901,6 +965,33 @@ const threshold = Math.min(limit - INJECT_HEADROOM_TOKENS, RETAIN_CAP_TOKENS)
 **边界**：本轮零代码、零需求档（第 3 条由主 agent 落）、零单测档、零新增条目。
 
 **验收面（读者判错的方式）**：读 §1.2 的清单行 ∥ §2.1 的算式块与段末 ∥ §2.2 的斜率段 ∥ §2.2.1 的两处（取较小者的射程）∥ §2.4 的 doubao 段 ∥ §4 的两段。判错 = 引文与盘上代码对不上，或某句仍能读成「常量只有一种进入方式」「封顶是同一件事」。
+
+### 收口门前置 · 邻批 `#2443` 八档进机读清单（设计席，2026-11-15）
+
+**派单** = §1 的 17:25 段。收口前置门（tier-reading gate）要求 §2 机读清单对「本批窗口内改动过的代码档」各有一行读数；相邻批 `#2443` 的提交 `52eeeab1` 落在本窗口内，八档因此被判为本批改动，而清单里没有它们。
+
+**本轮范围**：只补登记。八档零改动，本批的条目 1–10、验收行、单测面、集成增量一个字未动。
+
+**读数复核**（尺 = `countContentLines`（`thincoder-core/agent-tools/batch-tier-gate.mjs`），取数 = `git show 100def4c0e7cd59956b595aca56b12f223c99d04:<档>`，本席本轮实跑）：
+
+| 档 | 派单给的读数 | 本席实量 |
+|---|---|---|
+| `bench/check/probe.check.mjs` | 338 | 338 |
+| `bench/probe/data.mjs` | 237 | 237 |
+| `bench/probe/driver.mjs` | 274 | 274 |
+| `thincoder-core/agent-tools/audit-block.mjs` | 62 | 62 |
+| `thincoder-core/agent-tools/spawn-gates.mjs` | 203 | 203 |
+| `thincoder-core/agent-tools/subagent-spawn.mjs` | 430 | 430 |
+| `thincoder-core/agent-tools/subagent.mjs` | 425 | 425 |
+| `thincoder-core/agent-tools/taskbook-block.mjs` | `新` | 快照内没有该档 ⇒ `新` |
+
+**差异：无。** 七个数字与派单逐位相同；第八档在批起快照上确实不存在（`git show` 报 `does not exist`），记 `新` 成立。
+
+**同尺正对照**：同一把尺对清单里已登记的两行重量得 `thincoder-core/config.mjs` 426、`thincoder-core/window-policy.mjs` 160，与清单现值逐位相同——本轮取数与当初登记是同一把尺，不是两把（D15）。
+
+**表下那句已按派单逐字落**（紧邻机读清单，位于围栏之后、「档位结论」之前）：这八档由相邻批 `#2443` 在本窗口内改动，本批对它们零改动；登记它们只为满足收口门的取材口径（跨批重叠，另见台账 `#2439`）。
+
+**连带更正**：「档位结论」随清单同轮改计数——带行数读数的代码档 14 → 21、`新` 行 1 → 2、最大值由 426 改记 430（430 出自邻批那一行，本批十四档仍以 426 为最大）；结论「全部 ≤ 500 ⇒ 分拆方案列全 `—`」不变。
 
 ## §3 设计评审（评审子代理）
 **状态行**：评审通过
