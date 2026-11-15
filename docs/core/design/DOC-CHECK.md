@@ -19,7 +19,7 @@
 
 - 一段 = 相邻的非空正文行。标题、表格、列表、引用、围栏代码块和缩进代码块各自成界，不计入正文段落。排除单位是完整块：列表的缩进续行、懒惰续行和疏松列表内部空行也属于列表；无首尾竖线的表格由表头与分隔行共同确认。
 - 缩进代码块以四格空格或 Tab 起头，块首必须位于文档开头、空行之后或另一缩进代码行之后；普通段落后的缩进续行不因此变成代码块。
-- 提示词面每行自成一界，因为提示词中的换行是版式，不是段落组织；表格块、列表块和代码块仍整体排除。
+- 提示词面每行自成一界，因为提示词中的换行是版式，不是段落组织；标题行、表格块、列表块、引用块、围栏代码块和缩进代码块整体排除，不逐行计。
 - 字数按字符计，一个汉字算一个。阈值 300 是产品常量，不读项目配置。
 - 段内包含变更行时，段长判据检查整段；完全未变更的段不进入变更区判定。
 
@@ -59,7 +59,7 @@
 - **跨仓缺口（对 §4「仓外一律不看」）**：`thincoder-core/doc-check/existence.mjs` 的 `existenceHits` 目前只经 `siblingProjectForm` 跳过「同级目录且有 `PROJECT-MANIFEST.json`」的别仓路径，不读取 `index.publicRepos`。已声明公共仓不符合这一目录形时，缺失目标仍会命中悬空指针，与「所有跨仓引用一律不报」不同。
 - **无项目缺口（对 §3「项目身份与仓内路径」）**：`thincoder-core/agent-tools/doc-check.mjs` 的 `execute` 目前在项目视图不是 ok 时把 `target` 赋给 root；`thincoder-core/doc-check/index.mjs` 的 `projectRootOf` 也以调用方基根兜底。无项目目标因此仍进入检查，与「无项目不运行文档门」不同。
 
-这两项是待修技术债，不能按目标契约视为当前行为。
+两项都是代码写错了，处置 = 修代码；§3 ∥ §4 的目标契约不改。
 
 ## 5. 报什么
 
@@ -124,6 +124,8 @@ DOC-CHECK GATE: PASS
 | `thincoder-core/tools/doc-write-gate.mjs` | 普通文档写门 |
 | `thincoder-core/agent-tools/batch-gate.mjs` | 批档写入与收口调用面 |
 | `thincoder-core/agent-tools/batch-regions.mjs` | git 变更区和按路径暂存 |
+| `thincoder-core/agent-tools/batch-tier-gate.mjs` | 码档行数门：读数比对、越线方案判定与拒文（`assertTierPlan` ∥ `countContentLines` ∥ `FILE_CLOSE_MAX`） |
+| `thincoder-core/agent-tools/batch-segment-vocab.mjs` | 机读清单解析：块头形 `machineListHeadOf` 与表行 `machineListRowsOf` |
 
 模型可见参数与行为描述住在 `thincoder-core/tool-docs/doc_check.md`，必须与当前调用面一致。
 
@@ -135,7 +137,7 @@ DOC-CHECK GATE: PASS
 
 ### 8.1 块头、表形与取值
 
-**块头两形都认**：行首粗体 `**受影响文件（机读清单）**`；或同名标题行——`#{1,6}` 起头，标题文字剥掉粗体符、行内代码符与句末冒号后**以这个名字结尾**。`### 受影响文件（机读清单）` 与 `### 3. 受影响文件（机读清单）` 都算；`### 受影响文件（机读清单）的写法` 不算——那一行是在提它，不是在开这一块。理由：小标题是历史批档里最常见的一种写法，只认粗体会让整块静默读成零行，下游再把零行说成「漏写了行」。
+**块头两形都认**：行首粗体 `**受影响文件（机读清单）**`；或同名标题行——`#{1,6}` 起头，标题文字剥掉粗体符、行内代码符与句末冒号后**以这个名字结尾**。`### 受影响文件（机读清单）` 与 `### 3. 受影响文件（机读清单）` 都算；`### 受影响文件（机读清单）的写法` 不算——那一行是在提它，不是在开这一块。理由：需求层已定两形都认（`docs/core/requirements/DOC-CHECK.md` 给「机读清单」下定义的那一段）；只认粗体会让整块静默读成零行，下游再把零行说成「漏写了行」。
 
 两形共用一个实现面：`thincoder-core/agent-tools/batch-segment-vocab.mjs` 的 `machineListHeadOf` 按同一判据返回 `bold` ∥ `heading` ∥ `null`，本段是它的形单源。
 
@@ -143,11 +145,11 @@ DOC-CHECK GATE: PASS
 
 粗体形的块头不是标题行，所以除标题行外还须另认块头。两个块头相邻、表只跟在后一个之下是正常写法（先举例、再写真清单）；只按标题行划界，同一张表会被两个块各算一遍。
 
-表头为 `| 档 | 分拆方案 | 行数 |`，表是 2–3 列。3 格行的第三列是读数；2 格行没有读数格，按缺读数算——依据 docs/batches/2026-11-12-ledger-query-default-limit.md「| thincoder-core/ledger-tools.mjs | — |」：读数格是后加的列，早先的批档只写两列，那些行仍在盘上并被读作记录。
+表头为 `| 档 | 分拆方案 | 行数 |`，表是 2–3 列。3 格行的第三列是读数；2 格行没有读数格，按缺读数算——读数格是后加的列，早先的批档只写两列，那些行仍在盘上并被读作记录。
 
 多于 3 格的行不是记录：它落在表形契约之外，与分隔行、表头行和 `<…>` 占位行同类，不是一处容差。实现面同判——`batch-segment-vocab.mjs` 的 `machineListRowsOf` 只解 2–3 格的行，2 格以下与 4 格以上整行跳过：多出来的列没有判据，读了就是替写手猜。
 
-表行必须连续，中间夹一个空行即截断，其后的行读不到——依据同一份批档：两列的机读清单结束于「| test/rtm/batch-ledger.md | — |」，隔一个空行后紧跟另一张表「| 档 | 改动 | 改前读数 |」；不按连续性截止，后一张表的行会连同它自己的行数一起读成记录，逐档报缺读数。
+表行必须连续，中间夹一个空行即截断，其后的行读不到：机读清单之后常紧跟另一张表（列形如「| 档 | 改动 | 改前读数 |」）；不按连续性截止，后一张表的行会连同它自己的行数一起读成记录，逐档报缺读数。
 
 行数只接受两种值：
 
@@ -191,7 +193,7 @@ DOC-CHECK GATE: PASS
 
 - **触发物** = 本批改动面里在盘的码档中，收口时盘上内容行数越过收口线的档。没有这样的档 ⇒ 这一半不启动，对该档不看 §2 那一行的方案格。
 - **收口线**：语义与时点的单源 = `docs/core/standards/CODE-TIER.md` §2.2；代码实现的单源 = `thincoder-core/agent-tools/batch-tier-gate.mjs` 的 `FILE_CLOSE_MAX`。本档不另写一份数。
-  - 这个数在提示词面只由一处承载：`thincoder-core/prompts/persona-eng-designer.md` 的「The affected-file table carries one number per code file」条里的 over 800 半句，改数值时看那一处。`thincoder-core/prompts/advisor-design.md` 的「Affected-file tier check」判据只承载设计时线，收口线的数值不写进去——写进去等于把收口门的判定派给不执行它的席位。原文归提示词档自己，本档不转录。
+  - 这个数在提示词面只由一处承载：`thincoder-core/prompts/persona-eng-designer.md` 的「The affected-file table carries one number per code file」条里那个讲收口线数值的分句，改数值时看那一处。`thincoder-core/prompts/advisor-design.md` 的「Affected-file tier check」判据只承载设计时线，收口线的数值不写进去——写进去等于把收口门的判定派给不执行它的席位。原文归提示词档自己，本档不转录。
 - **基准 = 收口时盘上的内容行数**（量法同 §8.2）。本半既不读批起快照，也不读 git。
 - **设计时线不在本半判域**（`CODE-TIER.md` §2.1）：它归设计席在设计时采用，基准是改代码前的长度，收口面不复判。两条线各归各时点，本节只判后者。
 - **常量处置**：代码里的码档长度阈值只此一个常量 `FILE_CLOSE_MAX`，取值随 `CODE-TIER.md` §2.2 那条线；设计时线在代码里没有消费点（§2.1 归设计席自觉），不留无人读取的第二个阈值常量。

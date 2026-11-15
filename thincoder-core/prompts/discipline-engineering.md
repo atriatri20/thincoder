@@ -376,8 +376,8 @@ the difference register records **ruled host-capability exceptions only** — it
    domain is fixed in the round it is found; a state claim, and an out-of-scope escalation, are made in the round they apply to.
    **Out-of-scope items are not booked** (scope test: only findings inside this task book's scope are booked; anything beyond it is a suspicion, not a fact).
 
-### Doc update discipline (D1–D17)
-Each doc category has one landing route, and the doc system is maintained by discipline. Seventeen doc-update disciplines:
+### Doc update discipline (D1–D22)
+Each doc category has one landing route, and the doc system is maintained by discipline. Twenty-two doc-update disciplines:
 
 1. **D1 dispatch routing** — the write domain is fixed by this table; no later sentence gives the same document a second writer.
 
@@ -461,14 +461,24 @@ Each doc category has one landing route, and the doc system is maintained by dis
    A discussion about **convention ∥ definition ∥ measuring method ∥ counting formula** carries one count taken **this round** with that ruler, written in the D12 form; none ⇒ the paragraph itself is a defect — measure first; another ruler used ⇒ that paragraph is void, **measure again**.
    **A measured disagreement is still argued out**: the rule fixes the ruler, not which side wins — measure first with it, then argue.
    **Why**: four rulers measured one document to four numbers, and "report your method" made all four legal — that is not four conventions, it is nobody measuring right. A ruler left in a script has to be remembered; built into the tool it sits in the hand.
-16. **D16 a cell filled by inference says so** — a row, a coordinate or a count derived from a pattern — a title match, a neighbouring line, the shape of a row — is an inference, and it is written `inferred from …`, never as a reading.
-   Why: a section number guessed off a title is how a dispatch sends readers to a section that held something else — the inference lands looking exactly like a reading taken that day.
+16. **D16 an example goes in a fence** — a block example goes inside a fenced code block; an inline assumed name takes the angle-bracket placeholder form (e.g. `<area>/<name>.md`).
+    Why: a fake path written in the body is a dangling pointer — the reader and the gate both treat it as real.
 17. **D17 carrier boundary** — a design or requirement document states what should be now, never how this batch will change it: no
     "this batch will…", no "will be added", no "to be verified". The plan lives in the batch record — §2 for what changes, §5 for what
     changed. A design sentence the landing contradicts is only ever one of two things: the code is wrong, or the target moved (a design
     change). There is no third case "stale but both are right" — that case only exists when a plan was written into the design.
     Why: the document lags because the wrong thing was written in the wrong place, not because a step was missing — no write-back round
     can fix a sentence that never belonged there.
+18. **D18 a document carries no line count** — a document never states how many lines it has, nor a size tier; line and size thresholds bind source and unit-test files only.
+    Why: a line count is stale the moment anything above it changes, and a stale number costs the reader a judgement before they can trust it.
+19. **D19 never point by line number** — to point at a place in a document, write that section's heading or quote the words; no line numbers, no "the third paragraph above".
+    Why: a line number points at a position, not at the content, so one line inserted above sends the reader to another sentence.
+20. **D20 a basis quotes its source verbatim** — when you write `依据 X`, what follows must be contiguous verbatim text from X: no paraphrase, no elision, no splicing. Without such a quote, write no `依据`.
+    Why: a second-hand quotation reads perfectly reasonable — one hung a clause that did not exist on a document's name, one took a code comment for the contract.
+21. **D21 the too-long verdict is taken from the diagnostic face** — judge a document's length with `doc_check` run in `mode` = `report`, which judges each named document whole.
+    Why: the `gate` face judges only this batch's changed region, and with no batch record bound it prints a bare `PASS` and judges nothing — a writing standard taken off it measures nothing.
+22. **D22 a cell filled by inference says so** — a row, a coordinate or a count derived from a pattern — a title match, a neighbouring line, the shape of a row — is an inference, and it is written `inferred from …`, never as a reading.
+    Why: a section number guessed off a title is how a dispatch sends readers to a section that held something else — the inference lands looking exactly like a reading taken that day.
 
 ### Docs must be human-readable
 When writing/editing docs (requirement layer / design layer — roots are `docRoot.requirements` / `docRoot.design`, read with `manifest read`) — **content complete, format readable**: markdown with normal line breaks (headings/tables/lists/rules separated by blank lines and breaks).
@@ -477,7 +487,7 @@ When writing/editing docs (requirement layer / design layer — roots are `docRo
 **Long and well-structured is not too long — do not touch it**: a fence or an indented code block, a table row, a list item and its lazy continuation, a heading, and a quote block are read as structure, not as a wall of prose.
   A verbatim quotation stays whole: never re-break it, and on the prompt face put a long one inside a fence, the same way an example goes there.
 **The one form to rewrite is prose read word by word** — one chain of sentences a reader cannot finish: reorganize it into several shorter sentences, turn what it enumerates into a list or a table, delete what carries nothing.
-  Inserting blank lines, or breaking a line, is not that reorganization — the same word chain re-broken still reads as one long sentence, and on the doc face a blank line only hides the hit from the gate.
+  On the doc face, inserting blank lines, or breaking a line, is not that reorganization — the same word chain re-broken still reads as one long sentence, and a blank line there only hides the hit from the gate.
   On the doc face a paragraph that cleared a hit with not one word changed is still non-compliant; the one who judges that is the reviewer and the closeout seat, reading the changed paragraph, not the tool's verdict.
   On the prompt face a line broken where a sentence or a clause ends is layout, not a way around the gate; the one who judges it is whoever writes that face and the reviewer, asking whether the line can be read in one go, not whether a blank line went in.
 Docs are read by humans (reviewers/leaders included) — an unreadable doc equals an unwritten one.

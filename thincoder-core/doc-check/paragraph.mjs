@@ -8,6 +8,10 @@
  *
  * 结构谓词族（围栏 ∥ 标题 ∥ 列表 ∥ 引用 ∥ 表格 ∥ 码段）住本档**一处**，消费面只有两个：
  * 本档的段判据，与 `thincoder-core/doc-graph/anchors.mjs` 的指针扫描。各写一份必然漂。
+ *
+ * **整行排除表 `structuralExclusionLines` 由两面共用**（六族：标题行 ∥ 表格块 ∥ 列表块 ∥ 引用块 ∥
+ * 围栏代码块 ∥ 缩进代码块）：文档面的并段判与提示词面的逐行判读的是同一张表，
+ * 两面差别只在「谁和谁并成一段」，不在「哪些行不算正文段落」。
  */
 
 /** 一段的字数上限（判据参数 · 常量）：超过即命中。 */
@@ -83,8 +87,10 @@ function listContinuesAfterBlank(lines, i) {
   return false
 }
 
-/** 表格块、列表块与缩进代码块的整行排除表；围栏截断表格，但缩进围栏不截断它所属的列表。
- *  列表项之后的普通行是 Markdown 的懒惰续行，同样属于列表；表格体延续到第一个无竖线的非空行。 */
+/** 两面共用的整行排除表（六族）：标题行 ∥ 表格块 ∥ 列表块 ∥ 引用块 ∥ 围栏代码块 ∥ 缩进代码块。
+ *  文档面的并段判与提示词面的逐行判都只问它「哪些行不算正文段落」。
+ *  围栏截断表格，但缩进围栏不截断它所属的列表；列表项之后的普通行是 Markdown 的懒惰续行，
+ *  同样属于列表；表格体延续到第一个无竖线的非空行。 */
 function structuralExclusionLines(lines) {
   const excluded = new Array(lines.length).fill(false)
   let fence = null
@@ -100,9 +106,13 @@ function structuralExclusionLines(lines) {
       if (!nestedInList) inList = false
       inTable = false
       inIndentedCode = false
+      excluded[i] = true
       return
     }
-    if (fence !== null) return
+    if (fence !== null) {
+      excluded[i] = true
+      return
+    }
     const previous = i === 0 ? "" : lines[i - 1]
     const codeBoundary = i === 0 || previous.trim() === "" || inIndentedCode
     inIndentedCode = isIndentedCodeLine(l) && codeBoundary
@@ -121,10 +131,11 @@ function structuralExclusionLines(lines) {
       return
     }
     inTable = false
-    if (headingMark(l)) inList = false
+    const heading = headingMark(l)
+    if (heading !== null) inList = false
     else if (isListItem(l)) inList = true
     else if (inList && l.trim() === "") inList = listContinuesAfterBlank(lines, i)
-    if (inList) excluded[i] = true
+    if (inList || heading !== null || isQuoteLine(l)) excluded[i] = true
   })
   return excluded
 }
@@ -223,22 +234,14 @@ export function paragraphHits(text, { promptFace = false, region = null } = {}) 
     return spans.filter((s, i) => s.len > PARAGRAPH_MAX && owned(s.line, s.end, i)).map(({ line, len }) => ({ line, len }))
   }
   const spans = []
-  let fence = null
   let cur = null
   const flush = () => {
     if (cur !== null) spans.push(cur)
     cur = null
   }
   lines.forEach((l, i) => {
-    const mark = fenceMark(l)
-    if (mark !== null) {
-      if (fence === null) fence = mark
-      else if (isFenceClose(mark, fence)) fence = null
-      flush()
-      return
-    }
-    if (fence !== null) { flush(); return } // 围栏块内整行断段（未闭合 ⇒ 至档尾免）
-    if (excluded[i] || headingMark(l) || l.trim() === "" || isQuoteLine(l)) { flush(); return }
+    // 排除行与空行都断段：围栏 ∥ 标题 ∥ 引用 ∥ 表格 ∥ 列表 ∥ 缩进代码六族的判据全在排除表里，这里不再自持一套。
+    if (excluded[i] || l.trim() === "") { flush(); return }
     if (cur === null) cur = { line: i + 1, end: i + 1, len: 0 }
     cur.end = i + 1
     cur.len += [...l].length
