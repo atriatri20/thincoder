@@ -1,8 +1,6 @@
 # 工具系统（TOOLS）· 设计
 
 > 需求 = `docs/core/requirements/TOOLS.md`。
-> 最近先例：`AGENT-LOOP.md` 的 dispatch 与 `PORTABILITY.md` 的项目归属。对齐 = 统一调度、真实副作用、宿主注入。
-> 勘察证据：已读注册、权限、编辑、git、后台、SSH、网络与角色收窄。相关 = 当前工具面。
 
 ## 1. 装配
 
@@ -18,24 +16,28 @@ mode 是必填参数：缺它或取值不在 tiny / normal / engineering 之内�
 
 因此 `tools.map(toOpenAISchema)` 这种直接把函数交给 `map` 的写法不成立：`map` 的第二手参（下标）会被当成 mode，首个元素即因取值非法而抛。
 
-`map` 形态的第二个实参填该行「传哪一档」列给出的值，不填裸 `mode`：主链那一行的档位值是会话 mode 与 consult 的合取，写成 `.map((tool) => toOpenAISchema(tool, toolMode))`，`toolMode` 在 prepareRun 里先绑出。
-
-下表其余五个面的作用域里没有会话档位，直接填实参 `"normal"`，例如 `.map((tool) => toOpenAISchema(tool, "normal"))`。非 `map` 形态同样把档位写在实参位：`toOpenAISchema(readImageTool, "normal")`、`core.toOpenAISchema(toolOf[name], "normal")`、`.map((name) => toOpenAISchema(DECLARED_TOOLS[name], "normal"))`。
+档位一律写在第二实参位，逐点的真形见下表：主链那一行的档位值是会话 mode 与 consult 的合取，`toolMode` 在 prepareRun 里先绑出；其余面的作用域里没有会话档位，直接填 `"normal"`。
 
 各调用表达式传哪一档（`thincoder-vscode/src/tools/index.mjs` 只 re-export，不是调用点）：
 
 | 调用点 | 表达式 | 传哪一档 | 依据 |
 |---|---|---|---|
-| `thincoder-core/agent/setup.mjs` 的 prepareRun | `tools.map(toOpenAISchema)` | 会话现读 mode（`resolveWorkMode(agent.config?.agent)`）；`agent._role === "consult"` 时取完整档 | 主链按档装配（PROMPT-SYSTEM 设计档 §5） |
-| `thincoder-core/advisor/loop.mjs` 的 `advisorToolsFor` | `schemas: tools.map(toOpenAISchema)` | 完整档 `normal`，不读会话 mode | requirements §9.1「完整档工具描述和 consult/advisor 独立基底不被极简装配改写」；与 PROMPT-SYSTEM 设计档 §4 同一口径 |
-| `thincoder-server/src/agent/chat-env-tools.mjs` 的 `createEnvTools` | `core.toOpenAISchema(toolOf[name])` | `normal` | 环境工具面不经极简装配，可见文本与改造前一致 |
-| `bench/check/toolcall.check.mjs` | `builtinTools.map(toOpenAISchema)` ∥ `toOpenAISchema(readImageTool)` | `normal` | 对照面 = 产品面实面逐字，对照文本 = 改造前全文 = 完整档装配 |
-| `bench/toolcall/variants.mjs` | `builtinTools.map(toOpenAISchema)` ∥ `tools.push(toOpenAISchema(readImageTool))` | `normal` | 同上 |
-| `prompt-fixture/tools.mjs` | `.map((name) => toOpenAISchema(DECLARED_TOOLS[name]))` | `normal` | 同上 |
+| `thincoder-core/agent/setup.mjs` 的 prepareRun | `tools.map((tool) => toOpenAISchema(tool, toolMode))` | 会话现读 mode（`resolveWorkMode(agent.config?.agent)`）；`agent._role === "consult"` 时取完整档 | 主链按档装配（PROMPT-SYSTEM 设计档 §5） |
+| `thincoder-core/advisor/loop.mjs` 的 `advisorToolsFor` | `tools.map((tool) => toOpenAISchema(tool, "normal"))` | 完整档 `normal`，不读会话 mode | `requirements/PROMPT-SYSTEM.md` §9.1「完整档工具描述和 consult/advisor 独立基底不被极简装配改写」；与 PROMPT-SYSTEM 设计档 §4 同一口径 |
+| `thincoder-server/src/agent/chat-env-tools.mjs` 的 `createEnvTools` | `ENV_TOOL_NAMES.map((name) => core.toOpenAISchema(toolOf[name], "normal"))` | `normal` | 环境工具面不经极简装配，可见文本与改造前一致 |
+| `bench/check/toolcall.check.mjs` | `builtinTools.map((tool) => toOpenAISchema(tool, "normal"))` ∥ `toOpenAISchema(readImageTool, "normal")` | `normal` | 对照面 = 产品面实面逐字，对照文本 = 改造前全文 = 完整档装配 |
+| `bench/toolcall/variants.mjs` | `builtinTools.map((tool) => toOpenAISchema(tool, "normal"))` ∥ `tools.push(toOpenAISchema(readImageTool, "normal"))` | `normal` | 同上 |
+| `prompt-fixture/tools.mjs` | `.map((name) => toOpenAISchema(DECLARED_TOOLS[name], "normal"))` | `normal` | 同上 |
 
-consult 子代理与主链共用 prepareRun（`thincoder-core/agent-tools/consult.mjs` 以 `role: "consult"` 建子代理，再由 `thincoder-core/agent/run-start.mjs` 进同一条装配链），所以它的工具描述档位在 prepareRun 里按 `agent._role === "consult"` 取完整档，与系统提示词用的会话 mode 分开取——否则极简会话内的 consult 被极简档改写，就与 requirements §9.1 当场矛盾。
+consult 子代理与主链共用 prepareRun（`thincoder-core/agent-tools/consult.mjs` 以 `role: "consult"` 建子代理，再由 `thincoder-core/agent/run-start.mjs` 进同一条装配链），所以它的工具描述档位在 prepareRun 里按 `agent._role === "consult"` 取完整档，与系统提示词用的会话 mode 分开取——否则极简会话内的 consult 被极简档改写，就与 `requirements/PROMPT-SYSTEM.md` §9.1 当场矛盾。
 
 分档装配只覆盖主链工具面：consult 虽在主链装配，取的是完整档、不随会话档位变化；advisor、server 环境工具面、bench 与 prompt-fixture 的对照面同样不随会话档位变化。
+
+角色与模式收窄在 `thincoder-core/agent/family-tools.mjs` 组合。`tester` 的工具表 = 只读集 ∪ `{execute, bash}` 减 `{verify, advisor}`，表内无写工具（该档注释「tester's tool table (read-only set ∪ execute/bash − {verify, advisor}) holds no write tool」）。
+
+「只跑不改」是角色纪律，不是文件系统隔离——`bash` 仍能写，这是有意的。
+
+工程模式下 `task` 与 `plan` 都不入表（`engineering ? [timerTool, knowledgeTool, …] : [taskTool, planTool, …]`），模型看不见、零 token 税；追踪由批次记录与台账承担。
 
 ### 1.1 宿主侧对描述母版的行级改写
 
@@ -43,17 +45,17 @@ consult 子代理与主链共用 prepareRun（`thincoder-core/agent-tools/consul
 
 顺序不可倒：锚展开先发生，剔除在它之后；倒过来，展开面里的端面行原样回到 VSC 描述，带上端面没有的动作。
 
-`thincoder-core/tool-docs/subagent.md` 的 `- action:'panel'` 一行按内容归属属动作细则，落在展开面，不进常驻面；剔除点因此落在装配之后。
+`thincoder-core/prompts/knowledge/tool-subagent.md` 的 `- action:'panel'` 一行按内容归属属动作细则，落在展开面，不进常驻面；剔除点因此落在装配之后。
 
 展开文法与失败语义单点在 prompt-files.mjs（PROMPT-SYSTEM 设计档 §2）：锚独占一行、重复标识失败、未解析失败，与提示词母版同一套。
 
 ### 1.2 写门参数的说明面
 
-写门挂在十一个入口工具上（`write` / `edit` / `insert_after` / `apply_patch` / `delete` / `hashline_edit` / `file_ops` / `bash` / `execute` / `memory` / `ssh`）：十一把的 schema 都带 `ledger`，其中带本地定位参数的十把另带 `project`，`ssh` 不带；`required` 不因档位或工具变化。
+写门挂在十一个入口工具上（`write` / `edit` / `insert_after` / `apply_patch` / `delete` / `hashline_edit` / `file_ops` / `bash` / `execute` / `memory` / `ssh`）：十一把的 schema 都带 `ledger`，除 `ssh` 外的十把另带 `project`；`required` 不因档位或工具变化。
 
 `ssh` 不带 `project` 是因为它写的是远端主机，本机项目根对这笔写入没有语义——它的写门只按 action 判（`get` 往本机落盘）。缺键不是待补的缺口：补上它就动了参数 schema 的键集。
 
-参数说明只写这一笔要传什么：`ledger` = 本笔服务的在途行号（`"#N"` 或 `"N"`），`project` = 带 `PROJECT-MANIFEST.json` 的项目根。三处每工具差异留在参数行内，因为它们改的是「这一笔该传什么」：`memory` 只有落 project 层的写型 action 要号、`ssh` 只有 `get` 要号、`project` 是纯声明不改执行目录。
+参数说明只写这一笔要传什么：`ledger` = 本笔调用服务的在途台账号（`"#N"` 或 `"N"`），`project` = 带 `PROJECT-MANIFEST.json` 的项目根。三处每工具差异留在参数行内，因为它们改的是「这一笔该传什么」：`memory` 只有落 project 层的写型 action 要号、`ssh` 只有 `get` 要号、`project` 是纯声明不改执行目录。
 
 这两行身份句的文本单点在 `thincoder-core/tools/write-gate-params.mjs`；`thincoder-core/tools/shared.mjs` 只转出同一常量，八处导入档的导入面不动——文本单点与导入面分开，改口径只改一处，消费面不跟着改名。
 
@@ -64,6 +66,8 @@ consult 子代理与主链共用 prepareRun（`thincoder-core/agent-tools/consul
 ## 2. 调度
 
 dispatch 依次做参数、plan、工程写门、批次、权限、hooks 与执行。action 级分类覆盖 subagent/batch 等。
+
+这里的 `hooks` 是配置里的用户自定义生命周期命令（`thincoder-core/hooks.mjs` 的 `runHooks(event, ctx)`，事件取自 `config.hooks`），不是「写完跑 lint」那道工序——后者落在提示词面（`thincoder-core/prompts/discipline-normal.md`「After every write/edit: `lint`.」）。`verify` 只读调用者的声明、不代跑测试（VERIFY-REDESIGN 设计档 §1「command 只是声明，不由 verify 执行」）。
 
 只读可并行，副作用保序；undo 快照在写前。结果经当前 offload，console 捕获有界。
 
@@ -79,9 +83,29 @@ runGit 在单点设置非交互环境、pager 抑制、超时和错误。发现�
 
 bash async 使用当前后台池、日志与统一 digest。process kill 定向杀树；会话中止与单轮中断按当前不同生命周期。
 
+`execute` 起的是真实 `node` 子进程（`thincoder-core/tools/execute.mjs` 的 `spawn(process.execPath, childArgs, …)`），与 `bash` 同一权限边界，不是伪沙箱。
+
+### 4.1 commit 携 path 的未跟踪预检
+
+`commit` 带 `path` 时走 `git commit --only`，只认已进索引的路径。请求里任一路径未被跟踪，git 抛 `pathspec '<path>' did not match any file(s) known to git`——句子只说「没匹配上」，真实原因却只有一个：该档从未进过索引。工具因此在调用 git 之前逐条预检，一次拒并点名未跟踪的档。
+
+- **判据取索引视图，不拿 git 的报错文案做分支**：逐条 `git ls-files -z --with-tree=HEAD -- <path>`，输出为空即该路径未被跟踪。`--with-tree=HEAD` 不能省：`git rm <档>` 之后该档已不在索引里，纯索引视图读到空，而 `--only` 提交它是成功的——只查索引就会把一次可成功的提交拒掉，正好是本条预检的反面。预检问的对象与提交面是同一条路径规格——依据 `thincoder-core/tools/git.mjs`「commit = await runGitStrict(ctx.cwd, ["commit", "--only", "-m", args.message, "--", ...trimmed.split(/\s+/)])」。
+  为什么不 catch 到 `pathspec ... did not match` 再翻译：那是拿英文句式做分支，git 换措辞或换语言环境即失效，与「不拿散文做判据」同一条纪律。
+- **逐条问，不批量取回再比字符串**：目录、通配（`*.mjs`）、已 `git add` 的新档三种形由 git 自己的 pathspec 引擎判。批量取回再字面比较，会把通配与带尾斜杠的目录误判成未跟踪，拒掉一次本可成功的提交。逐条之间互不依赖、只读索引，因此并行问，不为一串路径排 N 次往返。
+- **全有或全无**：任一请求路径未跟踪 ⇒ 整次拒，不做部分提交——`--only` 本就是原子语义，放行一半会让「提交了哪些档」与请求集对不上。
+- **拒文点名并给两条出路**：`Error: commit path not tracked by git — untracked: <paths> — run git add on them first, or omit path to commit all changes (add -A + full commit)`。形态沿用同分支已有的前置拒（空路径那条：`Error: commit path is empty/whitespace — give at least one file path (space-separated)`）。
+- **预检自身失败不构成拒**：`ls-files` 非零退出（路径规格语法错、HEAD 尚未出生）⇒ 该路径不判，落回原提交路径，由 git 报它自己的错。可复现路径：`git ls-files -z -- ':(bad)'` 退出 128 并打印 `fatal: Invalid pathspec magic 'bad' in ':(bad)'`。业务结果不变（同样不产生提交），只是诊断退回改前形态；把技术故障读成「未跟踪」，会拒掉一次本可成功的提交。仓外由这一条覆盖：仓发现在零候选时按原值继续（`thincoder-core/tools/git.mjs` 仓发现注释「零 ⇒ 原值 落 §6.12 fail-closed（零行为变）」），`ls-files` 在那里非零退出 ⇒ 不判、由 git 报它自己的错。
+- **工具描述面须承载这一条**：未 `git add` 的新档会被拒且拒文点名，出路是先 `git add` 或不带 `path`。落点 = `thincoder-core/prompts/knowledge/tool-git.md` 的 commit 一条。
+
+**边界**：只加这一条预检。`--only` 的提交语义与已跟踪档的提交路径不动；不带 `path` 的分支（`add -A` + 全量 commit）不动；`add` / `rm` 的多路径拆分语义不同，不加同类预检。
+
 ## 5. 网络
 
 websearch/fetch 在请求前执行 SSRF 规则。DeepSeek 后端资格、超时、重试、熔断和回落由核统一；本地后端不依赖第三方。工具描述不宣称未配置后端可用。
+
+搜索工具的先手顺序不在这条工具里：MCP 搜索工具优先，`websearch` 只在没有 MCP 工具时兜底（`thincoder-core/prompts/knowledge/tool-operations.md`「MCP search tools (`*_web_search*` / `*_search_prime` etc.) are PRIMARY for technical verification and general search」）。
+
+凭据熔断只认 401 / 402 / 403：404 是目标页面的状态，不是凭据失效，不触发熔断（`thincoder-core/tools/web-deepseek.mjs` 的 `TRIP_STATUS`，注释「404 = 目标页面的状态，不是凭据失效（D-WB3）」）。
 
 ### 5.1 初始 URL 与主机分类
 
@@ -93,7 +117,7 @@ fetch 的初始 URL 必须以字面 `http://` 或 `https://` 开头，并能由 
 |---|---|
 | 本地与元数据名称 | `localhost` 及其子域、`metadata.google.internal` |
 | IPv4 | `0.0.0.0`、`0/8`、`127/8`、`10/8`、`172.16/12`、`192.168/16`、`169.254/16`、`169.254.169.254` |
-| IPv6 | `::1`、`fc/fd`、`fe80::/10` |
+| IPv6 | `::1`、`fc00::/7`、`fe80::/10` |
 
 当前门只检查 URL 中的主机字面，不做 DNS 解析。域名解析后落到私网或元数据地址不在现有覆盖内，不得写成已防护。
 
@@ -122,8 +146,10 @@ SCP/SFTP 是单文件二进制通道；传输复用会话主机与凭据，get �
 
 VERIFY-REDESIGN、CONTEXT-COMPACTION、BATCH-RECORD、LEDGER、DOC-CHECK、DOC-GRAPH、BROWSER-TOOL 和各编辑专题文档负责其详细契约，本档不复制。
 
+配置键的消费点落在各自的工具面上，写入口是 `settings` 工具：`set` 把值写进 `config.json` 并对当前会话热应用，`list` ∥ `get` 只读。一个键没有消费点时它不该存在——配置项与消费它的那段代码同批落地。
+
 ## 8. 验证
 
 验证角色工具表、描述与执行一致、权限与业务负例、批量部分写、git 零/多仓、后台退出、网络失败、SSH 凭据和输出回查。
 
-写门参数面另验三条：十一个入口工具的 schema 都带 `ledger`、带本地定位参数的十把另带 `project`，且 `required` 不变；两键的说明只剩一行身份句（逐份遍历，不抽样）；完整口径在工程纪律段只出现一处。
+写门参数面：键集、说明面与拒的行为见 §1.2，本处不复述。

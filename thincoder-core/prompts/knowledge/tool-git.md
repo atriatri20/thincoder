@@ -9,7 +9,7 @@ status / log / diff / show / add / rm / commit / push / tag / branch / checkout 
 - show: one commit with --stat (`ref`, default HEAD).
 - add: stage files — `path` (granular) or all changes.
 - rm: untrack a file/dir (`git rm --cached` — kept on disk; `path` required).
-- commit: `message` required. With `path` → `git commit --only <paths>`: commits those files' working-tree content only, atomic — other staged batches are NOT mixed in; without → add -A + full commit. New (untracked) files: `git add` them first (staging extra is safe — `--only` commits only the listed files).
+- commit: `message` required. With `path` → `git commit --only <paths>`: commits those files' working-tree content only, atomic — other staged batches are NOT mixed in; without → add -A + full commit. New (untracked) files: `git add` them first — the tool refuses a path list with any untracked entry and names them (staging extra is safe — `--only` commits only the listed files).
 - push / fetch / pull: sync with remote — `remote`, `ref` (space-separated for multiple); `tags` for --tags.
 - tag / branch: manage via `tagAction` / `branchAction` — list / create (name, optional ref) / delete (snapshots first); branch also switch (name).
 - checkout: switch to `ref`; with `path`, restore a file from the index (discards its working-tree changes — snapshots first).

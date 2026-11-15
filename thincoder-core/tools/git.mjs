@@ -227,7 +227,25 @@ const gitActionCore = {
         if (args.path !== undefined && args.path !== null) {
           const trimmed = args.path.trim()
           if (!trimmed) return "Error: commit path is empty/whitespace — give at least one file path (space-separated)"
-          commit = await runGitStrict(ctx.cwd, ["commit", "--only", "-m", args.message, "--", ...trimmed.split(/\s+/)])
+          const paths = trimmed.split(/\s+/)
+          // 未跟踪预检（`docs/core/design/TOOLS.md` §4.1）：`--only` 只认已进索引的路径——请求里任一档从未进过索引时，
+          // git 只抛 `pathspec '…' did not match any file(s) known to git`，读起来像路径打错，
+          // 真实原因却只有一个。判据取索引视图、**不拿 git 的报错文案做分支**（换措辞或换语言环境即失效）；
+          // 逐条问 git 自己的 pathspec 引擎，目录 / 通配 / 已 `git add` 的新档三种形都不需要额外分支。
+          // `--with-tree=HEAD` 不能省：`git rm <档>` 之后该档已不在索引里（纯索引视图读到空），
+          // 而 `--only` 拿它提交是**成功**的（实测：`1 file changed, 1 deletion(-)`）——
+          // 只查索引就会把一次可成功的提交拒掉，正是这条预检存在的反面。HEAD 里仍在的档因此放行。
+          // 逐条互不依赖、只读索引 ⇒ 并行问，不为一串路径排 N 次往返。
+          const probes = await Promise.all(
+            paths.map((p) => runGitStrict(ctx.cwd, ["ls-files", "-z", "--with-tree=HEAD", "--", p]))
+          )
+          // 预检自身失败（`ls-files` 非零退出：路径规格语法错、HEAD 尚未出生）⇒ 该路径不判，
+          // 落回原提交路径由 git 报它自己的错。把技术故障读成「未跟踪」会拒掉一次本可成功的提交——
+          // 那才是改变业务结果。
+          const untracked = paths.filter((p, i) => probes[i].ok && !probes[i].out)
+          // 全有或全无：`--only` 本就是原子语义，放行一半会让「提交了哪些档」与请求集对不上。
+          if (untracked.length) return truncate(`Error: commit path not tracked by git — untracked: ${untracked.join(" ")} — run git add on them first, or omit path to commit all changes (add -A + full commit)`)
+          commit = await runGitStrict(ctx.cwd, ["commit", "--only", "-m", args.message, "--", ...paths])
         } else {
           const add = await runGitStrict(ctx.cwd, ["add", "-A"])
           if (!add.ok) return truncate(`git add failed: ${add.err || add.out || "(no output)"}`)

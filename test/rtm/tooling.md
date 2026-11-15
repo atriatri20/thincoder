@@ -200,3 +200,13 @@
 |---|---|---|---|---|
 | 53-1 | 真 CLI 起 tiny 档会话（`handleTinyCommand` 落槽后掀下一轮），首回合一次派四条 `knowledge` search 调用：全虚词 `the` ∥ 含虚词的宽词 `the evidence` ∥ 必然 0 命中的查询 ∥ 带首尾标点的 `doc?`；读第二回合请求体里回到模型的四条工具结果 | ① 全虚词查询在工具门口显式失败，报文点名 `query` 且给下一步，回执里零个主题片段；② 宽词查询的紧凑 JSON ≤ 6,000 字符、返回主题数 ≤ 10，外层报 `matched` ∥ `shown` ∥ `truncated` 且 `matched > shown`、`truncated: true`；③ 0 命中回执点名两条下一步（换单个英文关键词 ∥ 先 `list`），且不伪造主题；④ 标点查询 `doc?` 的回执不是零命中回执，而是一份 `matched > 0` 的紧凑 JSON，外层 `matched` ∥ `shown` ∥ `truncated` 三键齐备 | 无 | `test/integration/knowledge-search-bounded.test.mjs` |
 
+## CLI 55. git commit 携未跟踪路径 ⇒ 当场拒并点名（不给原始 pathspec 报错）
+
+> 目的：`commit` 携 `path` 时若请求里有一个从没进过索引的档，git 只回一句 `pathspec '…' did not match any file(s) known to git`——读起来像路径打错。工具因此在调用 git 之前逐条预检，一次性拒并点名未跟踪的那几个，给两条出路（先 `git add`，或不带 `path` 全量提交），且一次拒即零提交。
+> 节注：回指 = `docs/core/requirements/TOOLS.md` §2「git 全动作非交互」∥ §1「工具失败必须带可读原因」；机制单源 = `docs/core/design/TOOLS.md` §4.1「commit 携 path 的未跟踪预检」；组件 = git 工具的 `commit` 分支（`thincoder-core/tools/git.mjs` 的 `case "commit"`）⟷ `runGitStrict` 的 `ls-files -z --with-tree=HEAD` 探针 ⟷ 工具描述面（`thincoder-core/prompts/knowledge/tool-git.md` 的 commit 一条）⟷ 真 CLI 会话的模型请求体；进入口 = 真 CLI 起会话，本地脚本化模型端点派 `git` 的 `add` ∥ `rm` ∥ `commit` 调用组合；单态 = 55-1 正常。其余放行面（已 `git add` 的新档 ∥ 暂存删除的档 ∥ 目录路径）目前只在一次性单测里覆盖，尚无永久用例。
+
+| 编号 | 怎么做 | 怎么算通过 | 异常 | 证据 |
+|---|---|---|---|---|
+| 55-1 | 真 CLI 起会话，在仓内造一个未 `git add` 的新档与一个已跟踪档，派 `git` 的 `commit` 携这两个路径；再单独派一次只携未跟踪档的 `commit` | ① 两次都以可读原因拒绝，报文点名未跟踪的那几个路径，并给「先 `git add`」与「不带 `path` 全量提交」两条出路；② 报文里不出现原始 `pathspec '…' did not match any file(s) known to git`；③ 拒绝后 `git log` 条数不变——该新档与其余档都没进提交（全有或全无，含已 staged 的改动） | 回落分支不构成拒：探针 `ls-files` 非零退出（路径规格语法错、HEAD 尚未出生）⇒ 该路径不判、由 git 报它自己的错 | `test/integration/git-commit-untracked-path.test.mjs` |
+
+
