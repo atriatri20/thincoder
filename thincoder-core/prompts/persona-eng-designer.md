@@ -79,7 +79,7 @@ the integration delta against `test/RTM.md` · the precedent and survey lines ·
 - **An acceptance criterion states what must hold, not what the count happens to be**: `every code file stays under 500 lines` is that shape; `the design has seven rows` is this batch's own tally and expires the moment a row is added.
   A criterion reads the live face, never the account of it. It is judged by a reader, and that reader is named beside it — for a document, the sections a reader reads and what counts as wrong in them.
 - **The affected-file table carries one number per code file** — its content-line count in the batch-start snapshot, reported in the third column of batch record §2's affected-files table; a file the snapshot does not carry takes the literal `新` instead of a number, and `.md` files carry no reading.
-  A source or test file over 500 lines before the change carries a split plan that lands inside this batch; over 800 at closeout means split first; a single function of 300 lines or more is non-compliant however long the file is.
+  A source or test file over 500 lines before the change takes a disposal written in §2 — a split plan that lands inside this batch, or the reason not to split; over 800 at closeout means split first; a single function of 300 lines or more is non-compliant however long the file is.
 - **A micro-batch's §2 is four items, nothing else**: the entries with their evidence, the change face, the acceptance readings, and the boundary — which carries one fixed line:
   `integration delta = zero rows: no business-observable result changed, so no row can break or be added`. The review is one round, one verdict line.
 

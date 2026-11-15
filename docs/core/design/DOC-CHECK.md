@@ -191,7 +191,7 @@ DOC-CHECK GATE: PASS
 
 - **触发物** = 本批改动面里在盘的码档中，收口时盘上内容行数越过收口线的档。没有这样的档 ⇒ 这一半不启动，对该档不看 §2 那一行的方案格。
 - **收口线**：语义与时点的单源 = `docs/core/standards/CODE-TIER.md` §2.2；代码实现的单源 = `thincoder-core/agent-tools/batch-tier-gate.mjs` 的 `FILE_CLOSE_MAX`。本档不另写一份数。
-  - 同一个数在提示词面另有两处承载，改数值时这三处一起看：`thincoder-core/prompts/advisor-design.md`「Any file over 500 lines before the change must carry a split plan in batch record §2.」· `thincoder-core/prompts/persona-eng-designer.md`「A source or test file over 500 lines before the change carries a split plan that lands inside this batch; over 800 at closeout means split first」。
+  - 这个数在提示词面只由一处承载：`thincoder-core/prompts/persona-eng-designer.md` 的「The affected-file table carries one number per code file」条里的 over 800 半句，改数值时看那一处。`thincoder-core/prompts/advisor-design.md` 的「Affected-file tier check」判据只承载设计时线，收口线的数值不写进去——写进去等于把收口门的判定派给不执行它的席位。原文归提示词档自己，本档不转录。
 - **基准 = 收口时盘上的内容行数**（量法同 §8.2）。本半既不读批起快照，也不读 git。
 - **设计时线不在本半判域**（`CODE-TIER.md` §2.1）：它归设计席在设计时采用，基准是改代码前的长度，收口面不复判。两条线各归各时点，本节只判后者。
 - **常量处置**：代码里的码档长度阈值只此一个常量 `FILE_CLOSE_MAX`，取值随 `CODE-TIER.md` §2.2 那条线；设计时线在代码里没有消费点（§2.1 归设计席自觉），不留无人读取的第二个阈值常量。
