@@ -18,6 +18,8 @@ import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../../thincode
 import { assembleBuiltinTools } from "../../thincoder-core/tools/index.mjs"
 import { listKnowledgeTopics, loadKnowledgeTopic } from "../../thincoder-core/prompt-files.mjs"
 import { _upsertCodeFile, createMemory, docSync, put } from "../../thincoder-core/memory.mjs"
+// 期望值取核的单源算式（`CONTEXT-COMPACTION.md` §2.2 两个预算出口）——本档不手算第二套。
+import { policyBudget } from "../../thincoder-core/config.mjs"
 import { normalizeOrigin } from "../../thincoder-core/memory/origin.mjs"
 import { handleNormalCommand, handleTinyCommand } from "../../thincoder-cli/src/tui/cmd-eng.mjs"
 import { buildSpawnChild } from "../../thincoder-core/agent-tools/subagent-spawn.mjs"
@@ -195,14 +197,15 @@ function statsTextOf(request) {
   return texts.filter((t) => t.startsWith("Context ≈")).at(-1) ?? null
 }
 
-/** 一发 stats 的窗口读数：首行分母 ∥ 请求预算窗口 ∥ 状态行分母 三处同取一个数。 */
+/** 一发 stats 的窗口读数：首行分母 ∥ 请求预算窗口 ∥ 状态行分母——按 `CONTEXT-COMPACTION.md` §2.5
+ *  「显示与判定同基准」，前两处与状态行的**分母**都取 `limit`（用户实际可填的量），窗口只作具名读数。 */
 function windowReadings(stats) {
   const missing = stats == null
   return {
     missing,
-    occupancy: Number((stats?.match(/of (\d+) window/) ?? [])[1]),
+    occupancy: Number((stats?.match(/of (\d+) fillable limit/) ?? [])[1]),
     budget: Number((stats?.match(/Request budget: window (\d+)/) ?? [])[1]),
-    statusLine: Number((stats?.match(/calibrated history estimate \/ (\d+) window/) ?? [])[1]),
+    statusLine: Number((stats?.match(/calibrated history estimate \/ (\d+) fillable limit/) ?? [])[1]),
     compactionLine: Number((stats?.match(/compaction line (\d+)/) ?? [])[1]),
   }
 }
@@ -228,11 +231,15 @@ test("CLI 50-6 tiny 档切进切出，窗口分母随档变化", { timeout: 180_
   agent._slot = 1
   saveSlotData(root, 1, newSlotData(root))
   const ctx = { agent, pushLine() {}, pushLabel() {} }
+  // 期望值从核的单源算式取（不在此手算第二套）：分母 = `limit`，窗口 = 有效窗口（§2.5 / §2.2）。
+  const normalBudget = policyBudget(agent.provider, undefined, "normal")
+  const tinyBudget = policyBudget(agent.provider, undefined, "tiny")
 
   await runAgent(agent, "read the context window", {}, {})
   const before = windowReadings(statsTextOf(endpoint.requests.at(-1)))
   assert.equal(before.missing, false, "起会话那一发要真的拿到 stats 回执")
-  assert.deepEqual([before.occupancy, before.budget, before.statusLine], [modelWindow, modelWindow, modelWindow], "normal 档三处分母 = 模型窗口")
+  assert.equal(normalBudget.window, modelWindow, "夹具前提：normal 档窗口 = 模型窗口")
+  assert.deepEqual([before.occupancy, before.budget, before.statusLine], [normalBudget.limit, modelWindow, normalBudget.limit], "normal 档第一/三处读 limit，第二处报窗口")
 
   await handleTinyCommand(ctx)
   assert.equal(loadSlotFile(root, 1).mode, "tiny")
@@ -240,8 +247,9 @@ test("CLI 50-6 tiny 档切进切出，窗口分母随档变化", { timeout: 180_
   const tinyRequest = endpoint.requests.at(-1)
   const tiny = windowReadings(statsTextOf(tinyRequest))
   assert.equal(tiny.missing, false)
-  assert.deepEqual([tiny.occupancy, tiny.budget, tiny.statusLine], [262144, 262144, 262144], "tiny 档三处分母全部落到 262144")
-  assert.ok(tiny.compactionLine > 0 && tiny.compactionLine < tiny.budget, "压缩线跟着有效窗口压下来，且仍是一条可触及的线")
+  assert.equal(tinyBudget.window, 262144, "夹具前提：tiny 档窗口落到上限 262144")
+  assert.deepEqual([tiny.occupancy, tiny.budget, tiny.statusLine], [tinyBudget.limit, 262144, tinyBudget.limit], "tiny 档分母与窗口全部落到 262144 那一档派生值")
+  assert.ok(tiny.compactionLine > 0 && tiny.compactionLine < tinyBudget.limit, "压缩线跟着有效窗口压下来，且仍是一条可触及的线")
 
   await handleNormalCommand(ctx)
   assert.equal(loadSlotFile(root, 1).mode, "normal")
@@ -249,7 +257,7 @@ test("CLI 50-6 tiny 档切进切出，窗口分母随档变化", { timeout: 180_
   const afterRequest = endpoint.requests.at(-1)
   const back = windowReadings(statsTextOf(afterRequest))
   assert.equal(back.missing, false)
-  assert.deepEqual([back.occupancy, back.budget, back.statusLine], [modelWindow, modelWindow, modelWindow], "切出 tiny 后三处分母回到模型窗口，不残留 262144")
+  assert.deepEqual([back.occupancy, back.budget, back.statusLine], [normalBudget.limit, modelWindow, normalBudget.limit], "切出 tiny 后三处读数回到模型窗口那一档，不残留 262144")
   assert.equal(back.compactionLine, before.compactionLine, "切出后压缩线回到同一条")
 
   // 两档工具面与提示词面不变：切档只动窗口分母，不动工具集与项目规则块。

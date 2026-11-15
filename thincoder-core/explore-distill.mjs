@@ -12,6 +12,7 @@
 
 import { chat } from "./provider/index.mjs"
 import { buildCompressMessages } from "./compress-form.mjs"
+import { estimateTokens, rebaseMeasured } from "./token-window.mjs"
 
 /** Read-only knowledge tools counted as "exploration" (execute writes files → never exploration). */
 export const EXPLORE_TOOLS = new Set([
@@ -138,13 +139,18 @@ async function distillExplorations(history, start, provider, signal, agent, dept
  * `extras` = 前缀面（{ systemPrompt, tools }——调用点透传、与回合请求同源 · §6.15）；缺省 ⇒ 退化面 1。
  */
 export async function summarizeRunExplorations(agent, callbacks, signal, depth = 0, extras) {
-  const next = await distillExplorations(agent.history, agent._runStartHistoryLen ?? 0, agent.provider, signal, agent, depth, extras)
+  const before = agent.history
+  const measuredEnd = Number.isInteger(agent._usageAtLen) ? agent._usageAtLen : before.length
+  const next = await distillExplorations(before, agent._runStartHistoryLen ?? 0, agent.provider, signal, agent, depth, extras)
   if (!next) return
   agent.history = next
-  // The machine line changed shape — the measured token baseline was for the pre-shrink context.
-  // Invalidate so the next compaction check re-estimates instead of over-counting stale history.
-  agent._lastPromptTokens = null
-  agent._usageAtLen = null
+  // 基线按 §3.1 **重定，不归零**：蒸馏是「替换非删除」——被换掉的那些块与替换上来的那条注记各取
+  // `estimateTokens`，差就是这一步在实测尺上的差。剪辑后仍属旧前缀的消息按身份找回，其后的第一个下标
+  // 即新的 `_usageAtLen`（与压缩同一条重定规则）。
+  const kept = new Set(next)
+  const dropped = before.filter((m) => !kept.has(m))
+  const note = next.find((m) => typeof m.content === "string" && m.content.startsWith("[Exploration summary]"))
+  rebaseMeasured(agent, estimateTokens(dropped), note ? estimateTokens([note]) : 0, { before, measuredEnd })
   // The compressed machine line must reach the disk: the run's own save already happened,
   // so without this hook the async distill would leave the session un-compressed on exit.
   callbacks.onDistilled?.()

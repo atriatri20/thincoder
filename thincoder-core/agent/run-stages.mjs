@@ -8,7 +8,7 @@
  * agent.mjs 迁入，agent.mjs 内无其他引用）。verbatim 迁移 + 签名化，语义零变。
  */
 
-import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "../context.mjs"
+import { compressIfNeeded } from "../context.mjs"
 // §6.17/D-CC32 溢出守卫（兜底，非主修）：预算面单源 `policyBudget`（有效窗口）∥ 再估面 contextUsage（与压缩判定同一函数）
 import { policyBudget, resolveWorkMode } from "../config.mjs"
 import { contextUsage } from "../token-window.mjs"
@@ -77,7 +77,7 @@ export function injectResponseReminders(agent, response) {
   }
 }
 
-// ─── 压缩记账三件（§6.17 阈值面 ∥ 守卫面 ∥ §6.17.1 链三自适应面共用同一段，零复制）───
+// ─── 压缩记账两件（§6.17 阈值面 ∥ 守卫面 ∥ §6.17.1 链三自适应面共用同一段，零复制）───
 
 /** 压缩成功记账：失败计数清零 / 计划提醒 cadence 复位 / 停滞检测计数复位 / 完成事件 / AUTO 提醒重注入。 */
 function bookkeepCompaction(agent, ctx) {
@@ -90,28 +90,22 @@ function bookkeepCompaction(agent, ctx) {
   ensureAutoReminder(agent)
 }
 
-/** 压缩失败记账——AbortError 必须透传（用户中止不得被当成压缩失败吞掉）。 */
+/** 压缩失败记账——AbortError 必须透传（用户中止不得被当成压缩失败吞掉）。
+ *  计数只为面板与 stats 读（§5.1 之后它不再触发任何降级：摘要失败一次当场走丢弃）。 */
 function noteCompressFailure(agent, ctx, compressError) {
   if (compressError?.name === "AbortError" || ctx.signal?.aborted) throw compressError
   agent._compressFailures = (agent._compressFailures ?? 0) + 1
-  // Q3 (CONTEXT-COMPACTION §7 D-C1): a failed compression is surfaced to the panel;
-  // COMPRESS_FAILURE_LIMIT consecutive failures still degrade to compressFallback.
+  // Q3 (CONTEXT-COMPACTION §7 D-C1): a failed compression is surfaced to the panel.
+  // 降级不再由「连续失败 N 次」触发：`compressIfNeeded` 的 ⑥ 步在失败当次就丢弃（§5.1）。
   ctx.callbacks?.onCompressFail?.(compressError)
-}
-
-/** 三连败降级（确定性截断——零网络，§6.5 D6）。 */
-function degradeIfCompressExhausted(agent, ctx) {
-  if (agent._compressFailures < COMPRESS_FAILURE_LIMIT) return
-  agent._compressFailures = 0
-  if (compressFallback(agent)) ctx.callbacks?.onCompress?.(agent._lastCompressInfo ?? {})
 }
 
 /**
  * 回合压缩检查（2026-09-05 实践轮——自 runAgent 主循环提取）：仅安全点（history 以
  * 完整交换结尾——user/tool 位）。成功：失败计数清零/计划提醒 cadence 复位/停滞检测
  * 计数复位（recentCallSigs——runAgent 回合级局部——经 ctx 传对象引用）/压缩完成事件
- * /AUTO 提醒重注入。失败：AbortError 透传；计数 + Q3 onCompressFail；
- * COMPRESS_FAILURE_LIMIT 连续失败降级 compressFallback（确定性截断——不发 LLM）。
+ * /AUTO 提醒重注入。失败：AbortError 透传；计数 + Q3 onCompressFail——降级不由「连续失败 N 次」
+ * 触发：`compressIfNeeded` 的 ⑥ 步在摘要失败当次就丢弃（§5.1）。
  * 模型主动压缩（`context` 工具）由本点消费（§6.16.2——取用即清槽；no-op 与失败各落一行注记）。
  */
 export async function runCompactionCheck(agent, ctx) {
@@ -147,7 +141,6 @@ export async function runCompactionCheck(agent, ctx) {
       const { compactFailureNote } = await import("../agent-tools/context.mjs")
       agent.history.push({ role: "user", content: compactFailureNote(errText(compressError), agent._compressFailures), transient: true })
     }
-    degradeIfCompressExhausted(agent, ctx)
   }
 
   // 溢出守卫（CONTEXT-COMPACTION.md §6.17 / D-CC32——兜底，非主修；本缝 = catch 闭合后、返回前）。
@@ -166,8 +159,8 @@ export async function runCompactionCheck(agent, ctx) {
  */
 export async function enforceContextFit(agent, ctx, { forceCompact = false } = {}) {
   const { threshold, callbacks, compactionOverhead, signal } = ctx
-  // 判据 = prompt 估算 > `budget.limit`（**无档次门**——absent 档 limit 取地板 max(window − reserve, threshold)，
-  // 恒为正数、恒可判）。**判据不用 maxTokens**：未发时为 undefined ⇒ NaN ⇒ 守卫静默失效（§6.17）。
+  // 判据 = prompt 估算 > `budget.limit`（**无档次门**——`limit = window − reserve`，恒为正数、恒可判；
+  // 派生不成立的配置在装载期已被拒，见 §2.4）。**判据不用 maxTokens**：未发时为 undefined ⇒ NaN ⇒ 守卫静默失效（§6.17）。
   // 预算取**有效窗口**（`CONTEXT-COMPACTION.md` §2.2「stats、守卫和压缩使用同一预算对象」）：tiny 档下
   // 守卫与压缩线同一把尺，否则只降阈值不动 limit = 「早压缩但仍放行到模型窗口」，与上界相反。
   const budget = policyBudget(agent.provider, undefined, resolveWorkMode(agent.config?.agent))
@@ -176,8 +169,8 @@ export async function enforceContextFit(agent, ctx, { forceCompact = false } = {
   // 在强压**之前**抛 typed error（`forceCompact` 同样拦：强制压缩跳得过阈值，跳不过这条）。
   if (usage.fixedFloor > budget.limit) throw overheadOverflowError(agent.provider, budget, usage.fixedFloor)
   if (!forceCompact && !(usage.total > budget.limit)) return false
-  // 强压一次：失败走与阈值面同一条记账 / 降级链（不把摘要错误当回合错误直抛——
-  // 记账后仍按「压后仍超」判：降级截断可能已把上下文压到线下）。
+  // 强压一次：失败走与阈值面同一条记账链（不把摘要错误当回合错误直抛——
+  // 记账后仍按「压后仍超」判：⑥ 的丢弃可能已把上下文压到线下）。
   try {
     const compacted = await compressIfNeeded(
       agent, threshold, callbacks, { ...compactionOverhead, force: true }, signal,
@@ -185,14 +178,49 @@ export async function enforceContextFit(agent, ctx, { forceCompact = false } = {
     if (compacted) bookkeepCompaction(agent, ctx)
   } catch (compressError) {
     noteCompressFailure(agent, ctx, compressError)
-    degradeIfCompressExhausted(agent, ctx)
   }
   usage = contextUsage(agent, compactionOverhead)
   if (usage.total > budget.limit) {
-    const remedy = budget.limit < 0
-      ? `max_tokens ${budget.maxTokens} alone exceeds the window — lower provider.maxTokens or switch to a larger-window model`
-      : "forced compaction ran but the prompt still exceeds the window; reduce the conversation (/compact or prune) before retrying"
+    const remedy = "forced compaction ran but the prompt still exceeds the window; reduce the conversation (/compact or prune) before retrying"
     throw contextOverflowError(agent.provider, usage.total, budget, remedy)
+  }
+  return true
+}
+
+/**
+ * 切换预判（`CONTEXT-COMPACTION.md` §5.2）：run 装配之后、第一个回合之前，比一次实测优先的
+ * `contextUsage.total` 与 `policyBudget(...).limit`。
+ *
+ * 存量历史可能超过新窗口：用户从 1M 模型切到 256K 模型、把 `providers[].context` 调小，或改
+ * `reasoningEffort`（`max` 档把 `reserve` 抬到 131,072）——这几种变更都让 `limit` 变小，而 `agent.history`
+ * 一条没少。不预判就得等下一次请求撞上守卫：报文说 `context_overflow`，用户读到的是「上下文太大」，
+ * 真实原因（刚换的配置装不下已有历史）被报文挡在后面。
+ *
+ * 超了就**跑 §5.1 的同一条处置链**（force 面：prune → 摘要 → 丢弃），不另立第二条路径；跑完仍超 `limit`
+ * ⇒ 守卫照 §5 抛三实数，报文点明切换后的模型装不下存量历史。
+ * 判据用实测优先的 `contextUsage`：切换前的最后一次响应给过真值，它比估算更接近服务端会看到的量。
+ * 返回是否越线（未越线 = 零动作）。
+ */
+export async function preflightWindowFit(agent, ctx) {
+  const { threshold, callbacks, compactionOverhead, signal } = ctx
+  const budget = policyBudget(agent.provider, undefined, resolveWorkMode(agent.config?.agent))
+  let usage = contextUsage(agent, compactionOverhead)
+  if (!(usage.total > budget.limit)) return false
+  if (usage.fixedFloor > budget.limit) throw overheadOverflowError(agent.provider, budget, usage.fixedFloor)
+  try {
+    const compacted = await compressIfNeeded(
+      agent, threshold, callbacks, { ...compactionOverhead, force: true }, signal,
+    )
+    if (compacted) bookkeepCompaction(agent, ctx)
+  } catch (compressError) {
+    noteCompressFailure(agent, ctx, compressError)
+  }
+  usage = contextUsage(agent, compactionOverhead)
+  if (usage.total > budget.limit) {
+    throw contextOverflowError(
+      agent.provider, usage.total, budget,
+      "the stored history does not fit the configuration this run started with (model switch, smaller providers[].context or a larger reasoningEffort reservation); /compact or start a fresh session, or switch back to a larger-window model",
+    )
   }
   return true
 }

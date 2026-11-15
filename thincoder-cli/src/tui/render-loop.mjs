@@ -38,12 +38,14 @@ const MIN_RENDER_INTERVAL_MS = 16
 export function ctxCacheOf(agent, prev) {
   const history = agent?.history ?? []
   const ratio = tokenRatioOf(agent)
-  // 档位自 agent 现取（§2.3）；窗口用**有效窗口**——它既是分母也是失效键的第三项。
+  // 档位自 agent 现取（§2.3）；窗口用**有效窗口**——它是失效键的第三项（也是预算的输入）。
   const workMode = resolveWorkMode(agent?.config?.agent)
   const window = effectiveWindow(agent?.provider, workMode)
   if (prev && prev.len === history.length && prev.ratio === ratio && prev.window === window) return prev
-  const { tokens, pct } = historyReading(history, agent?.provider, ratio, workMode)
-  return { len: history.length, ratio, window, tokens, pct }
+  // 一次核读数出四个值（§2.5）：分母是 `limit`（用户实际可填的量），`threshold` 随读带出供告警判据用——
+  // 状态行不再拿窗口当分母、也不再自造 `ctxPct >= 80` 这一档。
+  const { tokens, pct, limit, threshold } = historyReading(history, agent?.provider, ratio, workMode)
+  return { len: history.length, ratio, window, tokens, pct, limit, threshold }
 }
 
 /**

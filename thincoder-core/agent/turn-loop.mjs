@@ -12,7 +12,7 @@ import { executeToolCalls } from "./dispatch.mjs"
 import { recordToolResults } from "./record-results.mjs"
 import { injectPostTurn } from "./post-turn.mjs"
 import { handleCompletion, isSubstantiveResponse } from "./completion.mjs"
-import { runCompactionCheck, enforceContextFit, injectTurnReminders, injectResponseReminders } from "./run-stages.mjs"
+import { runCompactionCheck, enforceContextFit, preflightWindowFit, injectTurnReminders, injectResponseReminders } from "./run-stages.mjs"
 import { recordTokenSample } from "../token-window.mjs"
 import { callModelTurn } from "./chat-call.mjs"
 import {
@@ -48,6 +48,11 @@ export async function runTurnLoop(agent, {
   // F-CC1（§6.16.4 阈值单源接线）：本回合压缩判定所用的阈值 + 固定开销面暂存——
   // `context` 工具的 stats 报**同一口径**（不自行重算第二口径；VSC checkAndCompact 同款暂存）。
   agent._ctxBasis = { threshold, overhead: compactionOverhead }
+
+  // 切换预判（`CONTEXT-COMPACTION.md` §5.2）：run 装配之后、第一个回合之前——模型切换 ∥ `providers[].context`
+  // 调小 ∥ `reasoningEffort` 变更这三条来路都让 `limit` 变小，而 `agent.history` 一条没少。预判点因此就是
+  // 装备点（参数按 run 现算），一处覆盖三条来路，不必为每条各立钩子。越线 ⇒ 跑与安全点同一条处置链。
+  await preflightWindowFit(agent, { threshold, callbacks, compactionOverhead, recentCallSigs, signal })
 
   // §6.17.1 链三（越窗 400 自适应）：单回合调用外包一层 catch——服务端说越窗 ⇒ 强制压一次 + 重试同一回合一次。
   // 排除面：`stage ∈ {compress, distill}` 的请求**不经本函数**（压缩机与蒸馏各自直调 `chat`，续写子请求的

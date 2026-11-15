@@ -44,14 +44,14 @@ export { specForModel, providerSpec, providerSpecResolution, specMatch, formatCo
 import { positiveInt, warnContextOnce } from "./model-context.mjs"
 
 
-// 预算族（`COMPACT_RATIO` ∥ `outputReserve` ∥ `usableWindow` ∥ `requestBudget` ∥ `policyBudget` ∥
-// `effectiveWindow` ∥ `resolveCompactThreshold`）居 `window-policy.mjs`——`CONTEXT-COMPACTION.md` §2.1 ∥
+// 预算族（`outputReserve` ∥ `usableWindow` ∥ `requestBudget` ∥ `policyBudget` ∥ `effectiveWindow` ∥
+// `resolveCompactThreshold` ∥ `INJECT_HEADROOM_TOKENS` ∥ `RETAIN_CAP_TOKENS`）居 `window-policy.mjs`——`CONTEXT-COMPACTION.md` §2.1 ∥
 // §2.2 把「窗口事实」与「窗口策略」两件事分开，本档越 500 行硬限按设计给的候选线抽出；以下 re-export
 // 保既有导入面（同 `model-specs.mjs` 拆分形态）。`resolveCompactThreshold` 在本档装载期自用
 // （auto 档派生 `compactThresholdResolved`——按本会话档位现算，tiny 档随之落在有效窗口上），故先 import 再转口。
 import { resolveCompactThreshold } from "./window-policy.mjs"
 export {
-  TINY_WINDOW_CAP, effectiveWindow, outputReserve, usableWindow, requestBudget, policyBudget, resolveCompactThreshold,
+  TINY_WINDOW_CAP, INJECT_HEADROOM_TOKENS, RETAIN_CAP_TOKENS, effectiveWindow, outputReserve, usableWindow, requestBudget, policyBudget, resolveCompactThreshold,
 } from "./window-policy.mjs"
 
 /**

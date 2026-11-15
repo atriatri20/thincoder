@@ -13,9 +13,9 @@
 
 import { chat } from "./provider/index.mjs"
 import { buildCompressMessages } from "./compress-form.mjs"
-import { contextUsage, estimateTokens, keepTailSize, splitHistory, SUMMARY_TOKEN_ESTIMATE, tailBudgetTokens } from "./token-window.mjs"
-import { COMPACTION_PLACEHOLDER, withPlaceholderPrefix } from "./context-echo.mjs"
-import { shrinkOversized } from "./context-degrade.mjs"
+import { contextUsage, estimateTokens, keepTailSize, splitHistory, NOTE_ESTIMATE, rebaseMeasured, tailBudgetTokens, tokenRatioOf } from "./token-window.mjs"
+import { COMPACTION_PREFIX, COMPACTION_PLACEHOLDER, withPlaceholderPrefix } from "./context-echo.mjs"
+import { pruneStaleToolOutputs, shrinkOversized } from "./context-degrade.mjs"
 // 固定开销越线判据的另一半（#2398）：`limit` 单源 = `policyBudget`（有效窗口——与守卫面同一个数）。
 import { policyBudget, resolveWorkMode } from "./config.mjs"
 // 覆盖条数（#2399）：按折叠身份账算——轮投影与压缩共用同一张账，不在本档另立一份判据。
@@ -35,33 +35,18 @@ Requirements:
 - Use bullet-point output. Stay under ~1K tokens (≈1000 Chinese chars / 4000 ASCII chars) — a hard target. An oversized summary wastes window and dilutes the tail; the old unbounded-length guidance is deprecated. When over budget, trim in this order: completed recaps to one line; FILES CHANGED why-notes to bare paths; in-progress prose tightened. NEVER cut design anchors or UNRESOLVED ISSUES/TODOs — recovery depends on them.
 `
 
-/** Context prefix after compaction, informing the agent what happened */
-const COMPACTION_PREFIX =
-  "[Context was automatically compacted. Below is a summary of earlier work. " +
-  "Treat it as notes, not proof — trust its conclusions (don't redo what it reports as done) " +
-  "but re-verify transient state with tools. Check memory search for any missing decisions.]\n\n"
-
-/**
- * 注记 + 占位的估算（§6.17 可达性门的 `note` 项）：摘要正文取 `SUMMARY_TOKEN_ESTIMATE`（§6.9 的 ~1K 目标，常量单源 =
- * `token-window.mjs`），注记前缀与占位句按 §6.3 估算式（`estimateTokens` 走同一 `estimateText`）——零新常数、零新算式。
- * 残余方向：真实摘要超 1K 时本值低估 `post`（门可能放行一次压不到线下的压缩），不会反向误拦——守卫面仍抛三实数。
- * 另：`applyCompression` 压完还会追加任务表回注与 plan 提醒（`agent.tasks` / `planMode` 非空时），本值同样不含——
- * 同向低估（大任务表会话里 `post` 偏小），不会把本该压的格拦下。
- */
-const NOTE_ESTIMATE = SUMMARY_TOKEN_ESTIMATE + estimateTokens([
-  { role: "user", content: COMPACTION_PREFIX },
-  { role: "assistant", content: COMPACTION_PLACEHOLDER },
-])
-
-/** After this many consecutive compaction summary failures, degrade to deterministic truncation (losing info is better than task-killing 400 errors) */
-export const COMPRESS_FAILURE_LIMIT = 3
+// 注记 + 占位的估算（§6.17 可达性门的 `note` 项 ∥ §4 减法链的末项）住 `token-window.mjs` 的 `NOTE_ESTIMATE`——
+// 尾预算也要用它，而本档 import 那一档（反向就会成环）。两条固定文本的单源 = `context-echo.mjs`。
+// 残余方向：真实摘要超 1K 时本值低估 `post`（门可能放行一次压不到线下的压缩），不会反向误拦——守卫面仍抛三实数。
+// 另：`applyCompression` 压完还会追加任务表回注与 plan 提醒（`agent.tasks` / `planMode` 非空时），本值同样不含——
+// 同向低估（大任务表会话里 `post` 偏小），不会把本该压的格拦下。
 
 /** Task re-injection reminder prefix (after compaction, clear old versions from history first for a single source of truth) */
 const TASK_REINJECT_PREFIX = "[System reminder: your current task list after compaction:"
 
-/** Truncation fallback note (used when the summary LLM fails repeatedly; no LLM call) */
+/** Truncation fallback note (deterministic discard, no LLM call — §5.1 第 ⑥ 步) */
 const FALLBACK_NOTE =
-  "[Context was truncated after repeated summarization failures. " +
+  "[Context was truncated because summarization failed. " +
   "The middle portion of earlier work was dropped WITHOUT a summary. " +
   "Re-verify any state you need with tools before relying on it.]\n\n"
 
@@ -101,6 +86,11 @@ function applyCompression(agent, headEnd, tailStart, note) {
   // possibly-completed earlier requests.
   const head = agent.history.slice(0, headEnd)
   const tail = agent.history.slice(tailStart)
+  // 结构编辑后的实测基线（§3.1）：压缩是「替换非删除」——被改的那一段 = 中段，替换后的那一段 = 注记（+ 占位）。
+  // 编辑前的数组与它被量到的长度先记下：`_usageAtLen` 要按身份重算，不能沿用旧下标。
+  const before = agent.history
+  const measuredEnd = Number.isInteger(agent._usageAtLen) ? agent._usageAtLen : before.length
+  const estBefore = estimateTokens(before.slice(headEnd, tailStart))
   // SESSION.md §6.9: compaction-injected messages carry a ts — Date.now() at the compaction
   // moment (the note below; and the separate "Understood" placeholder in the non-merge branch).
   // They are machine-only (never in _fullHistory), but the machine-line timeline stays consistent
@@ -144,9 +134,14 @@ function applyCompression(agent, headEnd, tailStart, note) {
     ]
     agent._runStartHistoryLen = head.length + 2
   }
-  // Measured token baseline is invalidated along with old history (prompt_tokens were for pre-compaction context), fall back to estimation until next response
-  agent._lastPromptTokens = null
-  agent._usageAtLen = null
+  // 实测基线按 §3.1 **重定，不归零**：压缩之后恰恰是最需要准确读数的时刻，而真值要等一整次往返。
+  // `estAfter` = 替换中段的那一段（注记 + 占位，归并支里占位并进了 `tail[0]`，不进这一段）；重定本身
+  // 放在函数尾——上面的摘旧行与回注都会挪下标，身份扫描必须在数组定形之后。
+  const estAfter = estimateTokens(
+    tail[0]?.role === "assistant"
+      ? [{ role: "user", content: note }]
+      : [{ role: "user", content: note }, { role: "assistant", content: COMPACTION_PLACEHOLDER }],
+  )
 
   // After compaction, re-inject the task list (the agent needs to know what it was doing).
   // Single source of truth: first remove any stale re-injections from the tail, then inject the latest version —
@@ -179,6 +174,9 @@ function applyCompression(agent, headEnd, tailStart, note) {
   }
   // 压缩成果落内存载体（#2399）：槽保存取它、恢复播种取它（SESSION.md §2 ∥ CONTEXT-COMPACTION.md §6）。
   agent._compactCheckpoint = { note, turnsCovered }
+  // §3.1 基线重定（数组已定形）：中段换成注记，`measuredEnd` 之后的消息从没被量过，故只按身份找
+  // 「旧前缀最后一个还在线上的消息」，其后第一个下标就是新的 `_usageAtLen`。
+  rebaseMeasured(agent, estBefore, estAfter, { before, measuredEnd })
 }
 
 /**
@@ -195,45 +193,65 @@ function postCompactionTotal(agent, usage, middle) {
 }
 
 /**
- * Compact when the prompt is over the threshold AND compaction can actually get back under it
- * (CONTEXT-COMPACTION.md §6.17 reachability gate); `extras.force` skips both early-exit criteria.
- * Returns whether compaction happened.
- * Only called at safe points in the loop (history ends with user or tool message — a complete exchange boundary).
- * Automatically re-injects task list state after compaction.
+ * 压缩链（`CONTEXT-COMPACTION.md` §5.1）：越线不等于要付一次摘要请求——越线之后先做一次零成本、
+ * 确定性的 prune，再重测。裁 → 摘要 → 丢弃，三步串联，每步之后重测，够则停：
+ *
+ * ```text
+ * ① 阈值早退（total ≤ threshold，force 跳过）
+ * ② 固定开销越线门（force 跳不过）
+ * ③ prune 一次 → 重定基线（§3.1）→ 重测 contextUsage
+ * ④ 未 force 且重测后 total ≤ threshold ⇒ 停（零摘要请求）
+ * ⑤ splitHistory（尾预算 = §4 的减法链）→ 可达性门 → 摘要请求 → 重测
+ * ⑥ 摘要失败，或压后 total 仍 > threshold ⇒ compressFallback（丢弃，零网络）→ 重测
+ * ⑦ 压后 total 仍 > limit ⇒ 守卫抛三实数（`enforceContextFit`，本链之外的同一个原子）
+ * ```
+ *
+ * `force` 面也 prune，但不因 prune 就早退，也不因 ④ 就停：`/compact` 与越窗自愈要的是一次真实的压缩动作，
+ * prune 只让中段变小、摘要请求更省。第 ③ 步的射程：合格集非空的只有 §7.2 列的那两类状态（尚无一条轮记录带
+ * `toolProcess` ∥ 由 `history` 播种的旧槽）；其余状态下 `tool` 消息全在保留窗内、因而全在保护尾里，prune 返回
+ * 0 条——③ 是一步 no-op，常见路径的成本落在 ⑤。
+ *
+ * 返回是否发生了压缩（摘要成功 ∥ 弃真的发生）。摘要失败一次就走到丢弃，不等连续失败——「一次网络抖动换一个
+ * 死会话」正是这条链要避开的结局；只有在丢弃也无中段可丢时才把那个错抛出去（调用点照既有失败链记一行回执）。
+ * 摘要请求是 SILENT 的（从不转 onToken/onReasoning——压缩是内部机制，不是模型回复）；`onCompressStart` 在
+ * 摘要请求发出前触发（§6.8 D-C1 生命周期可见）。只在安全点调用（history 以完整交换结尾）。
  * @param {object} agent
  * @param {number} threshold - compaction threshold in tokens
- * @param {object} callbacks - { onToken, onReasoning, onCompress, onCompressStart } — summary
- *   generation is SILENT (never forwards onToken/onReasoning: the compaction process is an
- *   internal mechanism, not a model reply); onCompressStart fires right before the summary call
- *   (§6.8 D-C1, compression lifecycle visibility — panel start state)
+ * @param {object} callbacks - { onCompress, onCompressStart, onCompressFail }
  * @param {object} extras - { systemPrompt?, tools?, force?, focus? } — 固定开销面（system + tools 估计）+
- *   模型主动压缩面（§6.16.2）：`force` **跳过阈值面的全部早退判据**（`total <= threshold` 与 §6.17 可达性门的
- *   `post > threshold` 两条），其余全同（同切分 / 同尾部预算 / 同摘要链 / 同回注 / 同基线失效）；`focus` 追加在摘要指令尾段。
+ *   模型主动压缩面（§6.16.2）：`force` **跳过阈值面的全部早退判据**（`total <= threshold`、第 ④ 步与 §6.17
+ *   可达性门的 `post > threshold`），其余全同（同切分 / 同尾部预算 / 同摘要链 / 同回注 / 同基线重定）；
+ *   `focus` 追加在摘要指令尾段。
  */
 export async function compressIfNeeded(agent, threshold, callbacks, extras = {}, signal) {
-  const history = agent.history
-  // 单源（§6.16.4）：total 与 stats 面同一函数（既有内联式改调 contextUsage，判定语义零改）
-  const usage = contextUsage(agent, extras)
-  const tokens = usage.total
-  // 档位 = 本 run 的策略输入（§2.3 握有 agent 的面自取）：守卫、尾部两式、固定开销判据全从它派生有效窗口。
+  // 档位 = 本 run 的策略输入（§2.3 握有 agent 的面自取）：守卫、尾预算、固定开销判据全从它派生有效窗口。
   const workMode = resolveWorkMode(agent.config?.agent)
-  // 固定开销单独越线（#2398 · §5）：history 归零后 `total` 仍等于固定开销 ⇒ 压缩无解。强压面直接 no-op、
-  // 不发摘要请求（守卫面照抛 typed error；`/compact` 回执报同一原因）——压一次白付一次摘要请求，压完仍抛同一个错。
-  // 判据窗口 = 有效窗口（§2.2）：tiny 把 limit 一起压下去，压缩线与守卫面同尺。
-  if (extras.force && usage.fixedFloor > policyBudget(agent.provider, undefined, workMode).limit) return false
-  if (!extras.force && tokens <= threshold) return false
+  const ratio = tokenRatioOf(agent)
+  // 单源（§6.16.4）：total 与 stats 面同一函数（既有内联式改调 contextUsage，判定语义零改）。
+  // ① 阈值早退（force 跳过）
+  let usage = contextUsage(agent, extras)
+  if (!extras.force && usage.total <= threshold) return false
+  // ② 固定开销单独越线（#2398 · §5）：history 归零后 `total` 仍等于固定开销 ⇒ 压缩无解。强压面也不放行
+  // （压一次白付一次摘要请求，压完仍抛同一个错）；判据窗口 = 有效窗口（§2.2）。
+  if (usage.fixedFloor > policyBudget(agent.provider, undefined, workMode).limit) return false
+  // ③ prune 一次 → 基线按 §3.1 重定（在 prune 内部）→ 重测
+  if (pruneStaleToolOutputs(agent).pruned > 0) usage = contextUsage(agent, extras)
+  // ④ 未 force 且重测后已够 ⇒ 停：prune 换来的线下，不必再付一次摘要请求
+  if (!extras.force && usage.total <= threshold) return false
+  const tokens = usage.total
 
-  const keepTail = keepTailSize(agent.provider, history.length, workMode)
-  const split = splitHistory(history, keepTail, tailBudgetTokens(agent.provider, workMode), retentionWindowStart(agent))
+  const keepTail = keepTailSize(agent.provider, agent.history.length, workMode)
+  const split = splitHistory(agent.history, keepTail, tailBudgetTokens(agent.provider, workMode, usage.overhead, ratio), retentionWindowStart(agent))
   if (!split) {
     // History is too short (≤KEEP_HEAD+keepTail+1 messages) to find a middle section, but tokens exceed threshold — typically a single giant message
     // (large paste / huge injection). When summarization has no room, degrade to deterministic shrinking to ensure context always reduces
     return shrinkOversized(agent)
   }
 
-  const middle = history.slice(split.headEnd, split.tailStart)
+  const middle = agent.history.slice(split.headEnd, split.tailStart)
   // 可达性门（§6.17）：压完落不到线下 ⇒ 不压——不为一次没有净减的摘要白付请求。`force` 全文豁免（模型主动压缩 ∥
   // 守卫强压：模型判定优先于阈值，压后仍超由守卫面抛三实数）。到不了线下的格仍由守卫 `enforceContextFit` 兜住。
+  // 判据的输入是 prune 之后的 `usage` 与 prune 之后的 `middle`（同一次 `splitHistory` 产出），判据本身零改。
   if (!extras.force && postCompactionTotal(agent, usage, middle) > threshold) return false
 
   // Compression request form v2/v3 (§6.14 / D-CC20): continuation — same system + same tools declaration (the turn's own
@@ -251,58 +269,79 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   const startedAt = performance.now()
   // F-CC2 焦点块（§6.16.2）：仅模型主动面携带——追加在**指令末条尾段**（`SUMMARIZE_PROMPT` 文本零改，
   // 只追加焦点块；无 focus ⇒ 请求体逐字节同修前——compress-form.test.mjs 零回归）。
-  const messages = buildCompressMessages(history, split.tailStart, extras?.systemPrompt, SUMMARIZE_PROMPT)
+  const messages = buildCompressMessages(agent.history, split.tailStart, extras?.systemPrompt, SUMMARIZE_PROMPT)
   if (extras.focus) {
     const last = messages.at(-1)
     messages[messages.length - 1] = { ...last, content: last.content + focusBlock(String(extras.focus), anchorText(agent)) }
   }
-  const summary = await chat({ ...agent.provider, thinking: null }, {
-    messages,
-    tools: extras?.tools,
-    signal,
-    // TRACES.md §6.1 D-TR4：轨迹元数据增补——kind=compress（上下文构建面——agent 元数据透出；
-    // depth 经 extras.traceDepth——agent.mjs 主作用域传入——compress 调用点补齐）
-    logCtx: {
-      stage: "compress", child: agent._logId, kind: "compress",
-      role: agent._role ?? null, depth: extras?.traceDepth ?? null,
-      session: agent._sessionStart ?? null, cwd: agent.cwd,
-      traces: agent.config?.traces?.enabled !== false,
-    },
-  })
-
-  // Blank-summary guard (§6.14 退化面 3): a blank summary would land in applyCompression as
-  // "middle dropped + empty note" and still count as success — throw into the failure chain instead.
-  if (!summary.content?.trim()) throw new Error("compaction summary is empty")
-
-  applyCompression(agent, split.headEnd, split.tailStart, COMPACTION_PREFIX + summary.content)
-
-  // Completion info for the compression panel (D-C2): tokens freed = the pre-compression prompt
-  // estimate (`tokens` — the value that tripped the threshold, incl. system/tools overhead on the
-  // pure-estimation path) minus the post-compression estimate on the SAME basis (`contextUsage`
-  // — a bare `estimateTokens` sum would skip the §6.17 `_tokRatio` and overstate the freed tokens).
-  // Elapsed = the summary call + splice duration. agent.mjs forwards this to onCompress unchanged.
-  agent._lastCompressInfo = {
-    mode: "summary",
-    tokensFreed: Math.max(0, Math.round(tokens - contextUsage(agent, extras).total)),
-    elapsedMs: performance.now() - startedAt,
+  // ⑤ 摘要请求。失败不抛给上游（除用户中止）：单次失败即发 `onCompressFail`，随后走 ⑥ 的丢弃。
+  let summarized = false
+  let summaryError = null
+  try {
+    const summary = await chat({ ...agent.provider, thinking: null }, {
+      messages,
+      tools: extras?.tools,
+      signal,
+      // TRACES.md §6.1 D-TR4：轨迹元数据增补——kind=compress（上下文构建面——agent 元数据透出；
+      // depth 经 extras.traceDepth——agent.mjs 主作用域传入——compress 调用点补齐）
+      logCtx: {
+        stage: "compress", child: agent._logId, kind: "compress",
+        role: agent._role ?? null, depth: extras?.traceDepth ?? null,
+        session: agent._sessionStart ?? null, cwd: agent.cwd,
+        traces: agent.config?.traces?.enabled !== false,
+      },
+    })
+    // Blank-summary guard (§6.14 退化面 3): a blank summary would land in applyCompression as
+    // "middle dropped + empty note" and still count as success — treat it as this call failing.
+    if (!summary.content?.trim()) throw new Error("compaction summary is empty")
+    applyCompression(agent, split.headEnd, split.tailStart, COMPACTION_PREFIX + summary.content)
+    // Completion info for the compression panel (D-C2): tokens freed = the pre-compression prompt
+    // estimate (`tokens` — the value that tripped the threshold, incl. system/tools overhead on the
+    // pure-estimation path) minus the post-compression estimate on the SAME basis (`contextUsage`
+    // — a bare `estimateTokens` sum would skip the §6.17 `_tokRatio` and overstate the freed tokens).
+    // Elapsed = the summary call + splice duration. agent.mjs forwards this to onCompress unchanged.
+    agent._lastCompressInfo = {
+      mode: "summary",
+      tokensFreed: Math.max(0, Math.round(tokens - contextUsage(agent, extras).total)),
+      elapsedMs: performance.now() - startedAt,
+    }
+    summarized = true
+  } catch (e) {
+    // 用户中止不是压缩失败：原样透传（调用点据此不记账、不降级）。
+    if (e?.name === "AbortError" || signal?.aborted) throw e
+    summaryError = e
+    callbacks?.onCompressFail?.(e)
   }
-  return true
+  // ⑥ 摘要失败，或压后仍在线上一档之上 ⇒ 丢弃（零网络、确定性），再重测。
+  const after = contextUsage(agent, extras)
+  if (!summarized || after.total > threshold) {
+    if (compressFallback(agent)) return true
+    // 没有中段可丢：无摘要产物，把摘要那个错交回调用点（既有失败链记一行回执）。
+    if (summaryError) throw summaryError
+  }
+  return summarized
 }
 
 /**
- * Deterministic truncation fallback: called when the summary LLM fails repeatedly, no network call.
+ * Deterministic truncation fallback（§5.1 第 ⑥ 步）：dropped without a summary, no network call.
  * Drops the middle so the task can continue. Returns whether truncation happened.
+ * 丢弃要报量（§5.1）：`discardedMessages` = 被丢弃的消息条数；`discardedTurns` = 其中全部记录消息都落在
+ * 该区间的轮次数（与 §6 的覆盖账同一本）；`tailMessages` = 留下的尾部条数——只报留下的条数，读的人推不出丢了什么。
  */
 export function compressFallback(agent) {
   const workMode = resolveWorkMode(agent.config?.agent)
+  const ratio = tokenRatioOf(agent)
+  const overhead = contextUsage(agent).overhead
   const keepTail = keepTailSize(agent.provider, agent.history.length, workMode)
-  const split = splitHistory(agent.history, keepTail, tailBudgetTokens(agent.provider, workMode), retentionWindowStart(agent))
+  const split = splitHistory(agent.history, keepTail, tailBudgetTokens(agent.provider, workMode, overhead, ratio), retentionWindowStart(agent))
   if (!split) return false
   const tailMessages = agent.history.length - split.tailStart
+  const discardedMessages = split.tailStart - split.headEnd
+  const discardedTurns = coveredTurnCount(agent, split.tailStart)
   applyCompression(agent, split.headEnd, split.tailStart, FALLBACK_NOTE)
-  // Fallback completion info (D-C2): mode marks the deterministic-truncation path — the panel
-  // shows the degradation note ("truncated to N messages") ONLY after 3 consecutive failures.
-  agent._lastCompressInfo = { mode: "fallback", tailMessages }
+  // Fallback completion info (D-C2): mode marks the deterministic-discard path — the panel shows the
+  // degradation note on the same callback, distinguished by `mode === "fallback"` alone.
+  agent._lastCompressInfo = { mode: "fallback", discardedMessages, discardedTurns, tailMessages }
   return true
 }
 

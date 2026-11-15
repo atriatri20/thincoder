@@ -3,7 +3,7 @@
  * A1 工具轮回灌形（核 `model-specs.mjs` `assistantToolCallMessage`——回声族携 `reasoning_content`〔缺值 ⇒ `""`〕∥
  * 非回声族零字段；`tool_calls[].extra_content` 在场才带；`chat.mjs` ∥ `run.mjs` 两 face 共用）∥ A2 历史修复（核
  * `agent/helpers.mjs` `repairHistory`——断链 pair 修复成对；**常态输入原样**）∥ A3 上下文压缩（核 `context.mjs`
- * `compressIfNeeded` ∥ `compressFallback` ∥ `COMPRESS_FAILURE_LIMIT`——阈值触发 ⇒ 标记行落库适配；3 连败 ⇒ 降级）。
+ * `compressIfNeeded`——阈值触发 ⇒ 标记行落库适配；摘要失败当次即由核走确定性丢弃，见下「失败链」）。
  *
  * 接法（§17.1——沿既有先例：动载 + 缓存 ∥ 注入口 ∥ 缺核降级）：核件**动载**（`import()`——ESM 模块缓存即缓存，失败缓存零重试）；
  * 单元测试档经注入口（`coreSpecs` ∥ `coreHelpers` ∥ `coreCompact`——仓内直引真件）；缺核 ⇒ 该面**退中性**（回灌形回落自建
@@ -16,8 +16,9 @@
  * 回放面解析 = `chat-store.mjs`（覆盖区间以标记行代；嵌套标记自然消解）；**原行不删**（审计面原文留存）。
  * 覆盖区间 = 压缩前后差分求（首变点 ⇒ 尾重合段前沿——`applyCompression` 实读口径：head ＋ 注记〔＋占位 ∥ 并入尾首相邻助手〕＋ tail；
  * 「重合」按对象同一性 ∨ 并入形（`尾首.content` ⊆ `原.content` 尾段 ∥ 原内容空 ⇒ 并入副本调用面逐值同）判）。
- * 失败链 = 垫片 `_compressFailures` 进程内计数（0 起）：成功 ⇒ 清 ∥ 失败 ⇒ ＋1 ∥ 达 `COMPRESS_FAILURE_LIMIT`（= 3）⇒
- * 降级 `compressFallback`（确定性截断——同出标记面）；中断（`AbortError` ∥ signal 已中止）⇒ 零计数跳过（回合环自收尾）。
+ * 失败链 = 垫片 `_compressFailures` 进程内计数（0 起）：成功 ⇒ 清 ∥ 失败 ⇒ ＋1（只进日志与 stats 读数——
+ * 降级不由计数触发：核在摘要失败当次就走确定性丢弃，见 `CONTEXT-COMPACTION.md` §5.1 第 ⑥ 步）；
+ * 中断（`AbortError` ∥ signal 已中止）⇒ 零计数跳过（回合环自收尾）。
  * 缩减路径（核 `shrinkOversized`——`_lastCompressInfo` 缺席）⇒ 机器线已缩（逐回合瞬态）但零摘要产物 ⇒ **零标记**（回放面零动）。
  */
 /** 压缩阈值（**服务端自持**常量；核已改为每 run `resolveCompactThreshold` 现算——两者不同源，核变不自动同步）。 */
@@ -30,7 +31,7 @@ let coreSpecsCache = null // A1 懒载缓存（`assistantToolCallMessage` ∥ `s
 let coreSpecsError = null // A1 装载失败缓存（零重试）
 let coreHelpersCache = null // A2 懒载缓存（`repairHistory`）
 let coreHelpersError = null
-let coreCompactCache = null // A3 懒载缓存（`compressIfNeeded` ∥ `compressFallback` ∥ `COMPRESS_FAILURE_LIMIT`）
+let coreCompactCache = null // A3 懒载缓存（`compressIfNeeded` ∥ `compressFallback`）
 let coreCompactError = null
 const warnedFaces = new Set() // 缺核警告旗（一面一条——沿 `noteEnvToolsDegraded` 先例）
 
@@ -92,13 +93,9 @@ export async function loadCoreCompact({ coreCompact = null } = {}) {
   try {
     const mod = await import("@thincoder/core/context.mjs")
     assertCoreFace(mod, ["compressIfNeeded", "compressFallback"], "context")
-    if (!Number.isInteger(mod.COMPRESS_FAILURE_LIMIT) || mod.COMPRESS_FAILURE_LIMIT < 1) {
-      throw new Error("取核面形不符（context）：COMPRESS_FAILURE_LIMIT 非正整数——按缺核处置")
-    }
     coreCompactCache = Object.freeze({
       compressIfNeeded: mod.compressIfNeeded,
       compressFallback: mod.compressFallback,
-      COMPRESS_FAILURE_LIMIT: mod.COMPRESS_FAILURE_LIMIT,
     })
     return coreCompactCache
   } catch (e) {
@@ -298,18 +295,8 @@ export async function compactTurnHistory({
     log?.warn?.("chat_compact_failed", {
       chatId: Number(chatId),
       attempt: compactPad._compressFailures,
-      limit: core.COMPRESS_FAILURE_LIMIT,
       message: e?.message ?? String(e),
     })
-    if (compactPad._compressFailures >= core.COMPRESS_FAILURE_LIMIT) {
-      compactPad._compressFailures = 0 // 达限 ⇒ 降级（确定性截断——同出标记面；计数复位重起）
-      try {
-        compressed = core.compressFallback(compactPad)
-      } catch (e2) {
-        log?.warn?.("chat_compact_fallback_failed", { chatId: Number(chatId), message: e2?.message ?? String(e2) })
-        compressed = false
-      }
-    }
   }
   if (pad) pad._compressFailures = compactPad._compressFailures
   if (!compressed) return skip("below_threshold")

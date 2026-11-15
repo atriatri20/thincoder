@@ -43,9 +43,9 @@
 
 折叠以整组为单位，不产生孤立 tool 消息：一条 `assistant(tool_calls)` 与它的全部 `tool` 结果一起进出机读线，只动一边就留下孤立配对，首个请求必 400。
 
-移出机读线不是丢失证据：当轮原文仍在内存的 `_fullHistory` 里。落到盘上的两条线不是一回事——人读线 slim、机读线逐字，射程与尺寸的单源 = `SESSION.md` §5。`read_history` 取回的就是人读线那一段，长于 slim 尺寸的部分重启之后没有第二条通道。
+移出机读线不是丢失证据：当轮原文仍在内存的 `_fullHistory` 里。槽里两条线不是一回事，射程与尺寸的单源 = `SESSION.md` §5；保留窗内外的分界见 §1.2 末段（窗内两轮的工具过程逐字在槽里，窗外只剩人读线的 slim 前段）。
 
-逐字是这条保留的全部意义——slim 之后重启读回的工具结果是残片，读的人却无从知道那是残片：同一个位置既装「结果本来就这么短」也装「结果被砍过」，轮记录就不再是执行事实。
+逐字是这条保留的全部意义：slim 之后重启读回的工具结果是残片。标记确实说明了它是残片——`thincoder-core/session-segments.mjs` 的 `slimForDisplay` 对 tool 内容截到前 500 字符后拼 `"\n… (truncated for storage)"`，`thincoder-core/session-lifecycle.mjs` 的注记写明被截断的 `arguments` 以 U+2026 结尾，标记按角色分支。但残片就是残片：回查面认得出「被砍过」，认不出被砍掉的是什么。
 
 用户请求与最终回复逐字入轮记录，没有长度上限。截断过的记录是一条静默不同的轮记录，事后无从分辨是被截断还是原本如此——所以工具段的截断与移出各自带标记（§1.2），不靠沉默。
 
@@ -103,7 +103,7 @@ verification 面只收真正执行过命令的工具（bash、execute）。
 
 依据 `docs/core/design/TOOL-OUTPUT-LIMITS.md` §2「预览由头部、实际省略数注记和尾部组成；总长度不超过预算。tail 取预算余量，不硬编码固定值。」本仓唯一的截断形状就是这一个，保留窗按同一形状排，不另立一种截法。
 
-实现落在既有构造器上，不另写一份：`buildDualEndPreview(text, budget)`（`agent/offload.mjs`）收总预算，头取 `floor(budget / 4)`、注记报实际省略数、尾取预算余量；两个切点走 `thincoder-core/text-budget.mjs` 导出的 `safeSliceUTF16` ∥ `safeSliceUTF16Tail`，模块里那份本地尾切片随之删掉——`TOOL-OUTPUT-LIMITS.md` §2 点名的是导出面那两个，留一份本地副本就是同一规则的第二个实现。
+实现落在既有构造器上，不另写一份：`buildDualEndPreview(text, budget)`（`agent/offload.mjs`）收总预算，头取 `floor(budget / 4)`、注记报实际省略数、尾取预算余量；两个切点走 `thincoder-core/text-budget.mjs` 导出的 `safeSliceUTF16` ∥ `safeSliceUTF16Tail`——`TOOL-OUTPUT-LIMITS.md` §2 点名的是导出面那两个，一份本地副本就是同一规则的第二个实现。
 
 构造器的契约：`buildDualEndPreview(text, budget)` 的 `budget` 必填、无默认值，非法值即抛并点名该参数——默认值等于替调用方决定这一档裁多少，与「三面同一把尺」相反。
 
@@ -111,18 +111,21 @@ verification 面只收真正执行过命令的工具（bash、execute）。
 
 64K 面逐位不变：`floor(65536 / 4)` = 16384，与现头值相同；尾本就是预算余量。
 
-母版随之承载这一签名：`docs/core/design/TOOL-OUTPUT-LIMITS.md` §2 写的就是带 `budget` 的构造器与「本地尾切片已删、切点只用导出面那两个」，本档与母版同口径，不各写一套。
+母版承载同一契约：`docs/core/design/TOOL-OUTPUT-LIMITS.md` §2 写的就是带 `budget` 的构造器、`budget` 必填无默认、两个调用点传 `TOOL_RESULT_PREVIEW`，以及「切点只用导出面这两个」；本档与母版同口径，不各写一套。
 
-三个新常量的来处，按三问逐个回答：
+本档条目用到的常量与函数名，按三问逐个回答：
 
-- `TOOL_PROCESS_WINDOW` = 2 · `none found:` 查过 `thincoder-core/token-window.mjs`（`TAIL_FLOOR_MESSAGES` = 10 是尾部消息条数地板，`TAIL_BUDGET_FRACTION` 与 `SUMMARY_TOKEN_ESTIMATE` 是尾部 token 预算，`PRUNE_MIN_TOKENS` = 200 是 prune 的逐条门槛——都不按「轮」计数）∥ `thincoder-core/agent/turn-projection.mjs`（`turns` 只作数组名，无保留轮数常量）。没有既有的「保留几轮」这一维。大小为什么是 2，理由在 §1.1「为什么是 2 轮」；本条只答有没有现成的。
-- `TOOL_PROCESS_MSG_CHARS` = 4000 · `existing but unusable:` `thincoder-core/agent/offload.mjs` 的 `TOOL_RESULT_PREVIEW` 与 `TOOL_RESULT_OFFLOAD_LIMIT`（都是 64×1024 字符，前者是单条结果在当轮机读线上的预览总预算）∥ `slimForDisplay` 的 500 字符（人读线存储尺寸）。两个 64K 是保留窗单条上限的十六倍，一条就吃掉单轮 8000 token 预算的大半；500 是人读线的存储尺寸，拿它当机读线上限等于把本批要消灭的残片搬过来。4000 字符 ≈ 1000 token，占单轮预算八分之一，一轮装得下八条满额结果。
+- `TOOL_PROCESS_WINDOW` = 2 · `none found:` 查过 `thincoder-core/token-window.mjs`（`TAIL_FLOOR_MESSAGES` = 10 是尾部消息条数地板，`SUMMARY_TOKEN_ESTIMATE` 是摘要篇幅目标，`PRUNE_MIN_TOKENS` = 200 是 prune 的逐条门槛——都不按「轮」计数）∥ `thincoder-core/agent/turn-projection.mjs`（`turns` 只作数组名，无保留轮数常量）。没有既有的「保留几轮」这一维。大小为什么是 2，理由在 §1.1「为什么是 2 轮」；本条只答有没有现成的。
+- `TOOL_PROCESS_MSG_CHARS` = 4000 · `existing but unusable:` `thincoder-core/agent/offload.mjs` 的 `TOOL_RESULT_PREVIEW` 与 `TOOL_RESULT_OFFLOAD_LIMIT`（都是 64×1024 字符，前者是单条结果在当轮机读线上的预览总预算）∥ `slimForDisplay` 的 500 字符（人读线存储尺寸）。两个 64K 是保留窗单条上限的十六倍，一条就吃掉单轮 8000 token 预算的大半；500 是人读线的存储尺寸，拿它当机读线上限等于把机读线降成人读面的残片。4000 字符 ≈ 1000 token，占单轮预算八分之一，一轮装得下八条满额结果。
 - `TOOL_PROCESS_TURN_TOKENS` = 8000 · `none found:` 查过 `thincoder-core/token-window.mjs`（尾部两式与 `PRUNE_MIN_TOKENS`，无逐轮工具段预算）∥ `docs/core/design/TOOL-OUTPUT-LIMITS.md`（只有单条面）∥ `turn-task-state.mjs`（摘要面单行上限）。无既有量可复用，按单条上限乘八条估出。
 - `FOLD_HINT_TOKENS` = 1000 · `none found:` `PRUNE_MIN_TOKENS` = 200 是 prune 的逐条门槛、`SUMMARY_TOKEN_ESTIMATE` = 1000 是摘要篇幅目标（一次成本），两者都不是「一行提示的噪声门」。它是一个独立含义的阈值，故另立。
-- `retentionWindowStart` · `none found:` 查过 `thincoder-core/token-window.mjs`（尾部两式与 `collectStaleToolOutputs`）∥ `thincoder-core/agent/turn-projection.mjs`（折叠与投影面）——无既有「保留窗起点」函数；它是本批新增的唯一取起点面。
+- `retentionWindowStart` · `none found:` 查过 `thincoder-core/token-window.mjs`（尾部两式与 `collectStaleToolOutputs`）∥ `thincoder-core/agent/turn-projection.mjs`（折叠与投影面）——无既有「保留窗起点」函数；取起点面只有这一个。
 - `thincoder-core/agent/turn-tool-process.mjs` · `existing but unusable:` 现成归属是 `turn-projection.mjs`（该类事实已越过单档承载），拆出只搬不改——五个常量 ∥ 九个函数，原档 re-export 保住导入面，先例 = `turn-task-state.mjs` 拆出时同形。
 - `protectFrom` · `none found:` 查过 `splitHistory` 现三参（`history` ∥ `keepTail` ∥ `budgetTokens`）∥ `collectStaleToolOutputs` 现三参——无既有「保护下界」维。不复用 `budgetTokens`：两者方向相反，预算收紧切点、保护放宽切点。
-- `agent._turnFoldMarks` · `existing:` `thincoder-core/agent/turn-projection.mjs` 的折叠身份登记（`registerFoldMarks`），§6 已用它判「一条消息是否已进中段」；保留窗起点按同一本账取身份，不新立第二本账。
+- `agent._turnFoldMarks` · `existing:` `thincoder-core/agent/turn-projection.mjs` 的折叠身份登记（`registerFoldMarks`），§6 已用它判「一条消息是否已进中段」；保留窗起点按同一本账取身份。
+- `RETAIN_CAP_TOKENS` = 262144 · `none found:` 查过 `thincoder-core/window-policy.mjs`（`TINY_WINDOW_CAP` 封的是窗口、`INJECT_HEADROOM_TOKENS` 是减法项，两个都不封压缩线）∥ `docs/core/requirements/CONTEXT-COMPACTION.md` 的压缩线条目（只有一条派生式，没有上限项）——无既有量可复用。它是用户现场观测落的独立常量（大上下文注意力衰减），算式与理由在 §2.2。
+- `requestBudget` ∥ `policyBudget` · `existing:` `thincoder-core/window-policy.mjs` 的两个出口（前者取模型窗口、后者取有效窗口，同一算式 `budgetOf`）——本档改的是共用算式，签名与名字沿用。
+- `preflightWindowFit` · `none found:` 查过 `thincoder-core/agent/run-stages.mjs`（`runCompactionCheck` 在回合后、`enforceContextFit` 在发送前）∥ `thincoder-core/session-lifecycle.mjs` 的 `applySession`（只按 `switched` 判模型变更）——装配后、首回合前这一格没有现成函数。
 
 两条预算分支各自的来处：
 
@@ -147,11 +150,9 @@ verification 面只收真正执行过命令的工具（bash、execute）。
 
 `tool_calls.arguments` 不进单条预算。单条预算量的是 `tool` 结果内容，参数不是结果：它是结果的上下文，截过的参数会让这次调用看起来是以别的参数发出的，等于造一条伪的执行事实；而它的自然尺寸是路径与命令行，本身就是小量。病态的巨量参数计入整段 token 预算，随它那一组一起被移出。残留写明：最新一组整组保留、不另加标记，落在这组里的巨量参数因此直达请求，整段可越过 `TOOL_PROCESS_TURN_TOKENS`——这是已声明的上界，不是漏项。
 
-人读线的那一份不是全文的第二份拷贝——它按 `slimForDisplay` 存，尺寸与射程单源 = `SESSION.md` §5。
+槽里到底有什么，按射程说：**保留窗内那两轮的工具过程在槽里逐字**——它挂在轮记录上、经 `turns` 投影落槽，只受本节两条预算约束（越限时是这里的双端截断并自带注记，不是 slim 残片）；**窗口之外的工具过程只剩人读线的 slim 前段**，尺寸与射程单源 = `SESSION.md` §5。
 
-机读线上的 `toolProcess` 按原文落盘，只受本节两条预算约束——越限时是这里的双端截断并自带注记，不是 slim 残片。
-
-折叠真的丢掉量的时候要说出来：一轮的工具段逾期离开机读线、或工具段被上述预算裁掉，任务状态里留一行 `folded:`，只报量——折掉几条工具结果、估算多少 token（几轮、几组调用作附注）。这一行不指向任何回查位置：落盘的工具结果只留 slim 后的前段（射程见 `SESSION.md` §5），写「全文可取回」是一句读的人验不了、也兑现不了的话。低于 `FOLD_HINT_TOKENS` = 1000 token 时整行不出现——一行常态化的噪声，读的人第二次起就不看了。
+折叠真的丢掉量的时候要说出来：一轮的工具段逾期离开机读线、或工具段被上述预算裁掉，任务状态里留一行 `folded:`，只报量——折掉几条工具结果、估算多少 token（几轮、几组调用作附注）。这一行不指向任何回查位置：被折掉的那一段已离开保留窗，槽里只剩它的 slim 前段（射程见 `SESSION.md` §5），写「全文可取回」是一句读的人验不了、也兑现不了的话。低于 `FOLD_HINT_TOKENS` = 1000 token 时整行不出现——一行常态化的噪声，读的人第二次起就不看了。
 
 这一行落在**触发它的那一轮**的任务状态上（刚过去的那轮把旧轮的段挤出了窗口），不回头改写已被折叠的轮记录：改一条已在机读线上的消息，槽里那份仍是旧的，恢复面按它投影的结果跟着分叉。
 
@@ -173,11 +174,15 @@ verification 面只收真正执行过命令的工具（bash、execute）。
 
 这不是新的故障类——尾部地板本来就能钉住同一批消息——但保留窗把这条边界撑宽了。
 
-它约束的是**未来的配置**，不是今日可达的状态：本仓固定开销已越过 128K 窗格模型的请求上限（§5），小窗模型本就跑不起来；在今日可运行的档位上，固定开销那一格先于这条边界判出（§5），保留窗地板因此没有能发生的现场。
+常见路径上它先被另一格拦住：本仓固定开销已越过 128K 窗格模型的请求上限（§5），固定开销那一格先于这条边界判出，小窗模型本就跑不起来。
+
+还有一条来路排除不掉：保留窗内的**一条特大用户请求**本身。用户请求逐字入轮记录、没有长度上限（§1.1），一条几十万 token 的粘贴请求就能把保留窗顶到阈值之上，压缩随之无事可做。处置是如实报错、不给用户请求另设上限：剪掉用户请求就是改写执行事实，而 `enforceContextFit` 的 `context_overflow` 报文带着三个实数（total ∥ limit ∥ window），用户看得见是哪一格装不下。给用户请求单设一道上限是另一个决定，要改就连 §1.1「不截断用户请求、截断必须带标记」那条一起改，不在本档。
 
 取舍写在这里：宁可压缩压不动、让越窗守卫如实报错，也不剪掉已经承诺保留的工具过程去换一次压得动。
 
-两条预算关系降级为「为什么通常装得下」的理由，不再承担正确性：`TOOL_PROCESS_TURN_TOKENS × 2 < tailBudgetTokens`，且保留窗的消息条数通常落在 `keepTailSize` 以内。两条都读 `token-window.mjs`，这里写关系不写当前数字。小窗模型上它们本来就不成立（`tailBudgetTokens` 在有效窗口约 113K 以下时装不下两个满额单轮预算），承重的因此是上面那条结构关系，不是这两条。第三条腿仍在：无中段 ⇒ `tailStart` 归 0，历史短到切不出中段时全史即保护尾。
+两条预算关系只是「为什么通常装得下」的理由，不承担正确性：`TOOL_PROCESS_TURN_TOKENS × 2 < tailBudgetTokens`，且保留窗的消息条数通常落在 `keepTailSize` 以内。两条都读 `token-window.mjs`，这里写关系不写当前数字。
+
+小窗格配置上它们本来就不成立（尾部预算按 §4 的减法链由压缩线扣掉固定开销得出，窗口小到装不下两个满额单轮预算），承重的因此是上面那条结构关系，不是这两条。第三条腿仍在：无中段 ⇒ `tailStart` 归 0。
 
 ## 2. 请求预算
 
@@ -186,12 +191,17 @@ verification 面只收真正执行过命令的工具（bash、execute）。
 有效窗口 = 本 run 参与预算算式和一切上下文百分比分母的输入窗口。它由模型的真实窗口经工作模式策略收敛得到，是策略值，不是模型事实。
 
 ```text
-有效窗口 = tiny 档 ? min(模型窗口, 262144) : 模型窗口
+有效窗口 = tiny 档 ? min(模型窗口, TINY_WINDOW_CAP) : 模型窗口
+TINY_WINDOW_CAP = 262144
 ```
 
 模型窗口仍只由 providerSpec 回答（五级链见 PROVIDER.md §6.15），本档不改它。tiny 关闭后有效窗口逐位回到模型窗口；normal 与 engineering 不设任何上限；模型自身窗口小于 262144 时取模型窗口。
 
+`TINY_WINDOW_CAP` 是 `thincoder-core/window-policy.mjs` 的导出常量，`effectiveWindow` 与 `policyBudget` 同调 `capWindow` 时取它。
+
 单点实现 = `thincoder-core/window-policy.mjs` 的 `effectiveWindow(provider, workMode)`：窗口派生的一切读数（threshold ∥ limit ∥ 尾部两式 ∥ 百分比分母）全从它取，端侧不另立算式。
+
+有效窗口是**读数时现推的推导值**：它由 `provider` 与 `workMode` 在每次读数上算出，不写进槽、不进 `provider` ∥ `config` 对象、不跨会话带走。档位是槽里的事实，有效窗口是从它推出来的——两者不可互代：把有效窗口落盘，就等于把「此刻的档位」冻成一个跨会话生效的窗口，切出 tiny 也不再解除。
 
 advisor 不在本射程，这是明确排除而不是漏项。
 
@@ -206,26 +216,114 @@ advisor 不在本射程，这是明确排除而不是漏项。
 同一份算式有两个出口，区别只在窗口取哪一边：
 
 - `requestBudget(provider, spec)` 取模型窗口，供 `provider/core.mjs`（OpenAI 兼容面）∥ `provider/anthropic.mjs`（Messages）∥ `provider/google.mjs`（generateContent）∥ `provider/responses-request.mjs`（Responses）四个发送面读 maxTokens——max_tokens 是输出合同，不受输入窗口策略影响。
-- `policyBudget(provider, spec, workMode)` 取有效窗口，供压缩阈值、stats、发送前守卫读 window ∥ usable ∥ threshold ∥ limit；maxTokens ∥ maxTokensSource ∥ reserve ∥ windowSource 逐位转交 `requestBudget`，不另算。
+- `policyBudget(provider, spec, workMode)` 取有效窗口，供压缩阈值、stats、发送前守卫读 window ∥ limit ∥ threshold；maxTokens ∥ maxTokensSource ∥ windowSource 逐位转交 `requestBudget`，不另算。
+
+`reserve` 不在转交之列：它按同一算式现算（§2.2.1），与窗口无关，两个出口因此在数值上相同——需要转交的只有窗口那一边。
 
 ```text
-reserve = actualMaxTokens ?? spec.maxOutput
-usable = usableWindow(window, reserve)
-threshold = min(usable, floor(window × COMPACT_RATIO))
-limit = window - reserve（absent 行取 max(limit, threshold)）
+reserve   = outputReserve(provider, spec)
+outputReserve = explicit > 0 ? explicit
+              : format === "anthropic" ? spec.maxOutput
+              : min(spec.maxOutput, defaultOutput)
+defaultOutput = reasoningEffort === "max" ? 131072 : (spec.thinking ? 65536 : 8192)
+limit     = window - reserve
+threshold = min(limit - INJECT_HEADROOM_TOKENS, RETAIN_CAP_TOKENS)
 ```
 
-`usableWindow`（`thincoder-core/window-policy.mjs`）在 `reserve` 占满窗口时退到 `floor(window / 2)`：这就是需求 §2 的半窗退化——usable 退到半窗，`threshold = min(usable, floor(window × COMPACT_RATIO))` 随之落到半窗，不会变成 0。
+派生链单向：`window` 是唯一输入。`reserve` 不随窗口变；`limit = window − reserve` 是服务端接受的输入量（prompt + 预留输出 ≤ 窗口）；`threshold = min(limit − INJECT_HEADROOM_TOKENS, RETAIN_CAP_TOKENS)` 是压缩线。
 
-`limit` 为负即任何 prompt 都越线（守卫只读这个数）；发送面不发 `max_tokens` 的 absent 行取 `max(limit, threshold)`，只有 `reserve ≥ window` 的退化行会移动。
+`limit` 对窗口的斜率是 1，`reserve` 是 0，所以 `limit − INJECT_HEADROOM_TOKENS` 的斜率仍是 1；这一支取上界 `RETAIN_CAP_TOKENS` 之后，封顶段上的斜率转 0。两个臂都不随窗口减小，`min` 的结果因此也不减小——窗口增大时 `limit` 与 `threshold` 都不得减小，封顶段上是「恒定」，恒定不算减小。
+
+封顶只夹压缩线，不夹 `limit`：`limit` 是物理线（窗口减预留），把守卫线压到它之下会在真实越窗之前就报错，制造本来不存在的溢出。封顶段上 `limit` 继续随窗口长、`threshold` 不动，两线间距只增不减——压缩线永远在前，硬上限永远在它之后。
+
+与窗口无关的常量进入算式有两种形态：减法项与 `min` 的上界。减法项（`INJECT_HEADROOM_TOKENS`）把曲线整条平移，斜率仍是 1；上界（`RETAIN_CAP_TOKENS`）把斜率截成 0。两者都不反转方向，压不回曲线。任何一个窗口坐标上 `limit` 或 `threshold` 低于更小窗口处的取值，都说明有常量以第三种形态参与了算式。
+
+`INJECT_HEADROOM_TOKENS` = 50000 是压缩线上方留给注入上下文的余量。目录树、git 上下文、提纲、项目指令、memory ∥ doc 检索这些量按会话注入，**不随窗口缩放**——1M 窗口上与 320K 窗口上它们占同样多的条目。
+
+绝对量才是这条余量的正确刻度。
+
+依据 `thincoder-core/window-policy.mjs`「Headroom above the line absorbs injected」——该注记列出这条余量吸收的五类注入，体量记作 `30–50K`。
+
+取上界 50000 的理由不对称：估小一档的后果是注入把 prompt 顶过硬上限而压缩线帮不上（守卫报 `context_overflow`），估大一档只多付一次早压。
+
+`RETAIN_CAP_TOKENS` = 262144 是压缩线的绝对上限，与 `INJECT_HEADROOM_TOKENS` 同住 `thincoder-core/window-policy.mjs`。它封的是**压缩线**：上下文越长，部分模型的注意力越衰减，用户对 1M 窗口的模型也只要求用到 256K。理由是用户的现场观测事实，不是估算，也不是设计推断。
+
+封顶的生效面在压缩线本身越过上限的那一段：`limit > RETAIN_CAP_TOKENS + INJECT_HEADROOM_TOKENS`，即 `limit > 312,144`。换成窗口还要加上当档的 `reserve`，而 `reserve` 按档不同——absent 档思考模型是 65,536，因此 `window > 377,680` 起封顶生效。门槛因此写在这两个量上，不写成某一个窗口数。
+
+封顶段上压缩线与窗口脱钩，`limit` 照旧随窗口增长：大窗口换来的余量不进上下文，硬上限仍跟着窗口走，两个数不会重合。
+
+两个 262144 不是一回事：本常量封的是**压缩线**，`TINY_WINDOW_CAP`（§2.1）封的是**窗口**。同值不同物——tiny 档把窗口压到 262144，压缩线再从那个窗口派生出更小的数；本常量不动窗口，只削压缩线。改一个不动另一个。
+
+`threshold ≤ 0` 不是可运行状态而是配置矛盾：窗口扣掉输出预留之后连注入余量都装不下，压缩线不存在。判据与处置见 §2.4。
+
+`usable` 不是预算对象的一个字段：它与 `limit` 是同一个数（`limit = window − reserve`），两个名字描述一个量就是第二个事实源。
+
+### 2.2.1 absent 档的预留取服务端默认输出
+
+`outputReserve` 的第三段只作用在 absent 档（transport 不发 `max_tokens`）。
+
+那一档的 `reserve` 不是我们的策略取值，是**服务端收到请求后自己会生成多少**：`max_tokens` 不发，服务端按它自己的默认值预留输出。
+
+`spec.maxOutput` 是模型**最多能**输出多少，不是一次请求实际会输出多少。两个数不是一回事：`deepseek-flash` 的 `maxOutput` 是 384,000，而不发 `max_tokens` 时服务端只按 64K 预留。拿一个不会被发出的值做预留，任何窗口下的读数都是虚假的——1M 下也虚假，只是没触发故障。
+
+依据 `https://api-docs.deepseek.com/zh-cn/api/create-chat-completion` 的 `max_tokens` 段「限制一次请求中模型生成 completion 的最大 token 数。取值范围为 1 到 384K（393216）。未设置时，非思考模式默认 8K，思考模式默认 64K（`reasoning_effort` 为 `max` 时为 128K）。输入 token 和输出 token 的总长度受模型的上下文长度的限制。」
+
+三个数的出处就是这一句：思考模型 65,536、非思考模型 8,192、`reasoning_effort = "max"` 时 131,072。
+
+覆盖范围按 `provider.format` 判，与渠道名单无关：`format === "anthropic"` 恒发 `max_tokens`、走 spec 档；其余格式（OpenAI 兼容 ∥ google ∥ responses）且未设 `provider.maxTokens` 的，都是 absent 档，全按这三个数取较小者。
+
+已核过默认值的族只有 DeepSeek（依据同上那一句）。其余渠道的默认输出未文档化，按同一组数预留——这是假设，方向与代价写明：真实默认更大时 `limit` 高于物理线，代价是一次 400 加 §5 的越窗自愈链强压一次；真实默认更小时多压一次。要按渠道分档，先要有该渠道的文档事实，不能凭空取数。
+
+explicit 档与 spec 档（anthropic 恒发 `max_tokens`）不取服务端默认输出的较小者：那两档的 `reserve` 就是实发输出预算，拿默认输出压它等于把真实输出挤进输入里。
+
+依据 `thincoder-core/window-policy.mjs`「NOT capped: the old 25% cap reopened a residual band between the counted reservation and the real output budget」（同注记记着 2026-10-18 那次 `budget counted 250_000, 393_216 actually sent`）。
+
+分支只有一处：`outputReserve` 自己按 `provider.maxTokens` 与 `provider.format` 判档；`budgetOf`（`window-policy.mjs` 的私有算式，两个出口共用）照它的返回值取数，不另判一次。`reserve` 与窗口无关，因此不需要传窗口，两个出口（§2.2）拿到同一个数。
+
+`usableWindow` 接的是「占掉输出的预留」，喂进那个位置的是每次请求的真实预留——`explicit` 档的实发 `maxTokens`，或 absent 档的服务端默认输出，不是模型能力上限。`reserve ≥ window` 时它拒绝并点三个数（§2.4）。
+
+三处调用喂的窗口不同，点名字如下（预留的算式同一，变的只是窗口那一边）：
+
+| 调用点 | 喂的窗口 | 窗口从哪来 |
+|---|---|---|
+| `budgetOf` ← `requestBudget` | 模型窗口 | `providerSpec` 的左值，不经策略 |
+| `budgetOf` ← `policyBudget` | 有效窗口 | `capWindow(spec.context, workMode)`——`effectiveWindow` 用的同一条算式 |
+| `advisorContextBudget` | 它自己模型的窗口 | 不参与 workMode（§2.1 的明确排除） |
+
+tiny 档的判据随 `effectiveWindow` 走：`capWindow` 是 `effectiveWindow` 与 `policyBudget` 共用的唯一实现，tiny 在读数那一刻由 `workMode` 现推。装载期的判据（§2.4）调 `usableWindow` 时喂的是 `policyBudget` 那一边的有效窗口——用户开 tiny 时的可用窗口就是他要用的那个窗。
+
+为什么不是「第二个魔数」：**它是服务端的事实，不是我们的旋钮**。三个数由 provider 文档规定，要改先改文档事实；而一个自选的固定预留（「absent 档一律留 32K」）是我们替服务端决定它生成多少，没有出处，也不随模型走。
+
+同一个函数还服务 `advisorContextBudget`（`thincoder-core/advisor/compaction.mjs`），它传自己的模型窗口，absent 档按服务端默认输出取较小者这一支在那儿一并生效。
+
+§2.1 排出单源射程的是**有效窗口**这一维，不是预留的算式——预留只有一个算式、两个消费面。
+
+四条推论：
+
+- 两条线的间距在未封顶的窗口段上是常数 `INJECT_HEADROOM_TOKENS`；封顶段上 `threshold` 不动而 `limit` 继续长，间距只增不减，两线不重合。为什么压缩线不由比例式定，理由在下「被否掉的候选」第一条。
+- 压缩线随窗口一次抬升到封顶为止：窗口在门槛以下时它由 `limit` 派生，「用户设了多大窗口就用到多大」；越过后压在 `RETAIN_CAP_TOKENS` 上，窗口再增大也不动。
+- `limit` 取到的就是物理上限：prompt + 服务端默认输出 ≤ 窗口。absent 档不再有被虚假预留吃掉的余带。
+- 硬上限变窄只剩一条来路：`reasoning_effort = "max"` 时服务端预留 128K，320K 窗口下 `limit = 196,608`、`threshold = 146,608`——间距仍是 50,000，变窄的是 `limit` 本身。那是「服务端要占 128K 输出」在 320K 窗口上的后果；要放宽只能改 `max_tokens` 发送值（本档不碰）或换更大窗口。
+
+被否掉的候选三条：
+
+- 保留比例项作第二支上限（`min(limit − 余量, floor(window × COMPACT_RATIO))`）：它与绝对余量算的是同一件事——压缩线上方要留多少注入空间——而两者刻度不同。比例项唯一能生效的地方是大窗口，它在那里把线压回 `0.6 × window`，用户设的 1M 窗口因此只用得到 629K；小窗口上比例数比绝对量小，余量由绝对量决定。一个量两套刻度，其中一套必然在某个窗口上与另一套打架。
+- absent 档按 `floor(window × (1 − COMPACT_RATIO))` 封顶 `reserve`：它修的是报错，不是「预留拿错了变量」——封顶值仍是我们的旋钮，而 absent 档实际发出的是服务端默认值。`reserve` 随窗口变化又让 §2.2 的单向派生断掉。
+- absent 档按自选固定预留：那是替服务端决定它生成多少，没有出处（见上）。
+
+`limit ≤ 0` 与 `threshold ≤ 0` 都在装载期拒绝（§2.4）。守卫面因此永远拿到一个正数 `limit`；absent 档的 `limit` 就是 `window − reserve` 本身，没有第二个算式。
 
 显式 compactThreshold 优先；auto 派生只写运行时 compactThresholdResolved，不回写用户配置。
 
-上述四个发送面使用同一 maxTokens；stats、守卫和压缩使用同一预算对象——window ∥ usable ∥ threshold ∥ limit 同源，不各算一套。
+上述四个发送面使用同一 maxTokens；stats、守卫和压缩使用同一预算对象——window ∥ limit ∥ threshold 同源，不各算一套。
+
+压缩线里没有比例项，尾预算里没有窗口比例：`COMPACT_RATIO` 与 `TAIL_BUDGET_FRACTION` 因此不在本档的算式里——算式只有上面那个块。
 
 ### 2.3 缺参即拒
 
-`workMode` 是必填参数，`effectiveWindow` ∥ `policyBudget` ∥ `resolveCompactThreshold` ∥ `keepTailSize` ∥ `tailBudgetTokens` ∥ `historyReading` ∥ `historyPercent` 一个默认值都没有：值不在 WORK_MODES 里，就在入口拒绝并点名 `workMode`（薄转口 `historyPercent` 由 `historyReading` 那一层抛）。
+同一条纪律覆盖尾部预算的四个新增参数：`tailBudgetTokens(provider, workMode, fixedOverhead, ratio)` 与 `collectStaleToolOutputs(history, provider, workMode, protectFrom, fixedOverhead, ratio)` 的 `fixedOverhead` ∥ `ratio` ∥ `protectFrom` 都没有缺省。**这两个签名就是全部，不另立简版**：`collectStaleToolOutputs` 的每个调用点都传满六个实参。
+
+`fixedOverhead` 缺省等于把「这份 run 的固定开销」静默定成 0，压后的尾会按一个装不下的量去切；`ratio` 缺省等于把校准后的阈值和未校准的估算放进同一次减法。
 
 理由：默认值把「忘传」静默成一条不下上限的窗口，压缩线随之上移，人要等到账单才发现；一个能在入口喊出参数名的拒绝，比一条静默放行的默认便宜。
 
@@ -234,11 +332,56 @@ limit = window - reserve（absent 行取 max(limit, threshold)）
 - `thincoder-vscode/src/specs.mjs` 的 `ctxUsageForHistory` ∥ `ctxPercentForHistory`——宿主只给 history ∥ provider ∥ ratio。
 - `thincoder-core/session-lifecycle.mjs` 的打开态读数：`historyPercent(line, provider, sampleRatio(data.estimateSample, provider), workMode)`。
 
-`thincoder-core/token-window.mjs` 的 `collectStaleToolOutputs(history, provider, workMode, protectFrom)` 不属于那一面：它比前两处多一维 `protectFrom`（保留窗起点，义与钳法见 §1.2）。
+`protectFrom` 只有握有 `agent` 的一面算得出来——`retentionWindowStart(agent)`（`thincoder-core/agent/turn-tool-process.mjs`）。所以四个消费点各自算好再传。
 
-这一维只有握有 `agent` 的一面算得出来——`retentionWindowStart(agent)`（`thincoder-core/agent/turn-tool-process.mjs`）。所以四个消费点各自算好再传，没有一个能退回「只握 provider」的旧形态。
+四个消费点 = `thincoder-core/context.mjs` 的 `compressIfNeeded` ∥ `compressFallback`、`thincoder-core/context-degrade.mjs` 的 `pruneStaleToolOutputs`、`thincoder-core/agent-tools/context.mjs` 的 stats prunable 读数。四个都握有 `agent`，三个新参数因此在每个点上同源取：
 
-四个消费点 = `thincoder-core/context.mjs` 的两处压缩调用、`thincoder-core/context-degrade.mjs` 的 `pruneStaleToolOutputs`、`thincoder-core/agent-tools/context.mjs` 的 stats prunable 读数。
+| 消费点 | `fixedOverhead` | `ratio` | `protectFrom` |
+|---|---|---|---|
+| `compressIfNeeded` | 第 ② 步固定开销门已算过的同一个 `contextUsage(agent, extras).overhead` | `tokenRatioOf(agent)` | `retentionWindowStart(agent)` |
+| `compressFallback` | `contextUsage(agent).overhead` | `tokenRatioOf(agent)` | `retentionWindowStart(agent)` |
+| `pruneStaleToolOutputs` | `contextUsage(agent).overhead` | `tokenRatioOf(agent)` | `retentionWindowStart(agent)` |
+| stats 的 prunable 读数 | `contextUsage(agent).overhead` | `tokenRatioOf(agent)` | `retentionWindowStart(agent)` |
+
+三点各算一次同一批值不构成第二个事实源：三个量都是当场读出的推导值，没有一处落盘。
+
+### 2.4 派生不成立即拒
+
+`reserve ≥ window` 时派生链没有解：没有任何输入装得下，`limit ≤ 0`、`threshold < 0`。
+
+这一格不静默兜底：配置不成立就在装载期抛。留到发送期才报的后果是报文说 `context_overflow`、指向会话内容，而真实原因是配置矛盾。
+
+判据单点 = `usableWindow(context, reserve)`（`thincoder-core/window-policy.mjs`）：减法结果 ≤ 0 即抛，报文点三个数（window ∥ reserve ∥ 差值）与三条出路（调大窗口 ∥ 调小 `maxTokens` ∥ 换掉 `maxOutput` 与窗口相等的模型配置）。
+
+落进这一格的是 `reserve` 不小于窗口的配置：显式把 `maxTokens` 设到窗口或窗口以上的（`maxTokens: 256000` 配 256,000 窗，`reserve = 256,000`，`usable = 0`）。
+
+规格上的输出能力与窗口相等不算。`doubao-seed-2-1-turbo-260628` 就是这一格：依据 `thincoder-core/model-specs.mjs`「["doubao-seed-2-1-turbo-260628", { context: 256_000,   maxOutput: 256_000, thinking: true」——窗口与 `maxOutput` 都是 256,000。
+
+它走 absent 档，`reserve = min(256000, 65536) = 65,536`，跑在 `limit` 190,464 上，不被拒。
+
+装载期的判据点 = run 装配（`thincoder-core/agent/setup.mjs`）在 provider 落定之后调一次 `usableWindow`，用户在与该模型的第一条读数之前就听到矛盾。
+
+`budgetOf` 与 `advisorContextBudget` 走同一个函数，运行期任何读数路径也拒绝同一种配置。
+
+`threshold ≤ 0` 同一处置，报文给 `window` ∥ `reserve` ∥ `INJECT_HEADROOM_TOKENS` 三个数。
+
+它是**构造判据，不是观测来的分支**：`threshold = min(limit − INJECT_HEADROOM_TOKENS, RETAIN_CAP_TOKENS)` 是减法链的一环。`RETAIN_CAP_TOKENS` 是正数，所以它非正只能来自第一个臂：`limit` 为正而 `limit − 注入余量` 非正，来路只有一个——窗口刚好压过 `reserve`，却没给注入留出余量。
+
+它与 `reserve ≥ window` 不是同一句：这里的窗口装得下输出，装不下的是那 50K 注入余量。报文因此点注入那一项，读的人才知道缺的是余量而不是全部窗口。
+
+### 2.5 显示与判定同基准
+
+状态行百分比的分母 = 用户实际可填的量 = `limit`。`window` 含输出预留，拿它当分母时 100% 永远到不了，读数只说明「窗口有多大」，不说明「还能填多少」。
+
+单点实现仍是 `historyReading`：返回 `{ tokens, pct, window, limit, threshold }`，`pct = round(tokens / limit × 100)`。
+
+五个读取面照旧只渲染、端侧零自算式：端侧三面 = CLI 状态行（`thincoder-cli/src/tui/render-loop.mjs` 的 `ctxCacheOf` → `status-line.mjs`）、VSC（`thincoder-vscode/src/specs.mjs` 的 `ctxUsageForHistory`）、Desktop（`thincoder-desktop/src/main/agent-host.mjs` 的回合尾 `ev:usage` 载荷）。
+
+核内两面 = stats 第 6 行（`thincoder-core/agent-tools/context.mjs`）与打开态读数（`session-lifecycle.mjs` 走 `historyPercent`）。五个面读的 `pct` 都出自 `historyReading`。
+
+压缩线与硬上限在界面上可分辨：状态行告警不再用魔数 `ctxPct >= 80`，改为 `tokens >= threshold`（同一次读数带出的 `threshold`）。
+
+越过压缩线标示「下一次安全点会压缩」，100% 标示「已到硬上限」。判定与显示读同一个数，端侧不各发明一档阈值。
 
 ## 3. 估算与样本
 
@@ -246,17 +389,72 @@ contextUsage 有实测时使用 `_lastPromptTokens + 增量估算`，否则估�
 
 估算使用当前加权函数。自校准样本带估算器版本与模型键，随会话槽保存和恢复；不匹配时不复用。
 
-校准比有下界，承载者是 `sampleRatio` ∥ `recordTokenSample`（`thincoder-core/token-window.mjs`）：两处同取 `Math.max(1, num / den)`。
+校准比只有一个读取面 = `tokenRatioOf(agent)`（`thincoder-core/token-window.mjs`）：`contextUsage` ∥ `historyReading` ∥ 尾部预算的调用方全从它取，不各自换算。它内部按会话样本经 `sampleRatio(sample, provider)` 折算，`recordTokenSample` 只写样本、不产出比值。
 
-样本坏或不在场时回中性值 1。偏差方向已知是估算偏低，所以比降到 1 以下会把该压的格判成不该压。
+下界落在这个读取面上：`sampleRatio` ∥ `recordTokenSample` 同取 `Math.max(1, num / den)`，样本坏或不在场时回中性值 1。偏差方向已知是估算偏低，所以比降到 1 以下会把该压的格判成不该压。
 
 这是需求 §3「比例不得低于当前安全下界」的落点：下界就是 1，不是一个另配的常数。
 
-压缩、恢复、prune 和结构变化后使实测基线失效。
+### 3.1 结构编辑后的实测基线
+
+`_lastPromptTokens` 是服务端真值，`_usageAtLen` 是它覆盖到的那个下标：实测支 = `_lastPromptTokens + estimateTokens(history.slice(_usageAtLen)) × ratio`。
+
+两个字段合起来说的是同一件事——前缀这一段是量的，其后是估的。
+
+prune ∥ shrink ∥ 压缩 ∥ 蒸馏都只改动机读线的一部分，前缀因此对不上旧真值。**不能沿用，也不必归零**：改掉那一段的估算差就是它在实测尺上的差。
+
+```text
+_lastPromptTokens' = _lastPromptTokens − round((estBefore − estAfter) × ratio)
+_usageAtLen'       = 剪切后仍属于旧前缀的那些消息之后的第一个下标（就地替换 ⇒ 不变）
+```
+
+`estBefore` / `estAfter` = 旧前缀里被改动的那一段、与它在编辑后对应的那一段，各取 `estimateTokens`。
+
+乘 `ratio` 与实测支对后缀的换算同一把尺：整条读数 = 「前缀的实测值」+「后缀的估算值 × ratio」，前缀的差因此也乘 `ratio`。
+
+四个性质：
+
+- **误差** = 只有被改那一段的估算误差，方向不预判。`ratio` 已知偏低，所以重定后的基线可能偏低；偏低的方向是「该压没压」，由 §5 的可达性门与守卫面接着兜，不会静默越窗。
+- **自纠** = 下一次服务端响应整体覆写两个字段（`agent/turn-loop.mjs` 的 `agent._lastPromptTokens = response.usage.prompt_tokens`），漂移活不过这一回合的其余读数。
+- **边界** = 同回合内多次结构编辑的差累加，误差上界是各段估算误差之和；减到非正 ⇒ 基线不再描述任何东西，退回 `null`（与归零同形，但只在算不出来时走）。
+- **形态** = 三种编辑都是「替换非删除」：prune 把 content 换成 stub、shrink 截成头尾、压缩把中段换成注记。折叠量本身就是 `estBefore − estAfter`，不需要第二套记账，也不需要一条新的真值通道。
+
+归零为什么不行：归零之后 `contextUsage` 回落纯估算，而压缩、prune、shrink 之后恰恰是最需要准确读数的时刻，且此时没有真值可纠——下一次真值要等一整次往返。
+
+两处置零不是本条的例外：新会话（`thincoder-core/session-lifecycle.mjs`）与 run 装配起点（`agent/setup.mjs`）没有「被改动的历史」，它们是还没有历史。
 
 ## 4. 切割与降级
 
-tail 先按 `keepTailSize(provider, historyLen, workMode)` 得到候选（`thincoder-core/token-window.mjs`：`min(max(10, floor(有效窗口 / 100000 × 30)), floor(historyLen × 0.4))`），再受 history 段窗口比例预算 `tailBudgetTokens` 收紧，收紧不破 `TAIL_FLOOR_MESSAGES`（10 条）这条地板。
+尾的宽度由可用容量倒推，不由窗口比例决定：
+
+```text
+tailBudgetTokens(provider, workMode, fixedOverhead, ratio)
+  = max(0, floor(threshold / ratio) − fixedOverhead − SUMMARY_TOKEN_ESTIMATE − 注记与占位估算)
+```
+
+`threshold` 取 §2.2 封顶后的压缩线；`fixedOverhead` = system + tools 的估算（`contextUsage` 的 `overhead`）；`ratio` = 校准比（`tokenRatioOf`）。
+
+注记与占位估算 = `NOTE_ESTIMATE` 减 `SUMMARY_TOKEN_ESTIMATE`，因为 `NOTE_ESTIMATE` 本身含它：`thincoder-core/token-window.mjs` 的 `export const NOTE_ESTIMATE = SUMMARY_TOKEN_ESTIMATE + estimateTokens([...])`。算式里已减过一次摘要目标，再减整额就重复计一次。
+
+两个常量都住 `token-window.mjs`。减法链在那里，而 `context.mjs` 已经 import `token-window.mjs`——`NOTE_ESTIMATE` 若留在 `context.mjs`，就得让 `token-window.mjs` 反向 import，成环。
+
+减法链把「压完之后落在 `threshold` 以下」写成构造而不是事后检查：压后的量是 `(tail + 注记 + 固定开销) × ratio`，尾按上式取，它就落在 `threshold` 以内。
+
+乘 `ratio` 是必需的：`threshold` 是校准后的量，尾的估算要换到同一把尺上才可比。
+
+封顶直接落到尾预算上：尾的宽度由封顶后的压缩线倒推，封顶段上它不随窗口增长。1M 窗口上封顶后是 `262,144 − 固定开销 − 注记估算`，不封顶是 `933,040 − 固定开销 − 注记估算`（`NOTE_ESTIMATE` = 1112）。
+
+两者之差 = `window − reserve − 312,144`，与固定开销无关，与当档的 `reserve` 有关。
+
+按 `deepseek-flash`（`reserve` 65,536、窗 1,048,576）算，差是 670,896；按固定开销 4.5 万、`ratio` 取 1 计，两个尾预算分别是 216,032 与 886,928。
+
+这是本条的目的，不是副作用：拿大窗口的余量换注意力质量。窗口再大，逐字保留量也不再跟着涨；要把上下文放长，改的是 `RETAIN_CAP_TOKENS`，不是一个更大的窗口。
+
+`keepTailSize(provider, historyLen, workMode)` 是**条数上限**，不是预算：一条消息的体量跨三个数量级，按条数推算容量必然错。
+
+它的算式（`min(max(10, floor(有效窗口 / 100000 × 30)), floor(historyLen × 0.4))`）就是上界与地板，不是容量。
+
+尾的实际宽度 = 在不破 `TAIL_FLOOR_MESSAGES`（10 条）地板、不超过 `keepTailSize` 上界的前提下，能装进 `tailBudgetTokens` 的最大配对安全后缀；切分仍由 `splitHistory` 一处给出。
 
 收紧之后还有一条腿，方向相反：切点退到不晚于保留窗起点（`splitHistory` 的第四参 `protectFrom`，§1.2）——保护优先于预算，保留窗内的工具过程不因尾部预算小而落进中段。
 
@@ -287,6 +485,60 @@ usage.total > threshold && post(plan) <= threshold
 ```
 
 post 使用真实切割计划、注记、tail 和固定开销估算。force 跳过该早退，但不跳过发送前真实预算守卫。
+
+### 5.1 压缩链的前置裁剪
+
+越线不等于要付一次摘要请求：越线之后先做一次零成本、确定性的 prune（§7.2 的 `pruneStaleToolOutputs`），再重测。
+
+裁 → 摘要 → 丢弃，三步串联，每步之后重测，够则停：
+
+```text
+① 阈值早退（total ≤ threshold，force 跳过）
+② 固定开销越线门（force 跳不过）
+③ prune 一次 → 重定基线（§3.1）→ 重测 contextUsage
+④ 未 force 且重测后 total ≤ threshold ⇒ 停（零摘要请求）
+⑤ splitHistory（尾预算 = §4 的减法链）→ 可达性门 → 摘要请求 → 重测
+⑥ 摘要失败，或压后 total 仍 > threshold ⇒ compressFallback（丢弃，零网络）→ 重测
+⑦ 压后 total 仍 > limit ⇒ 守卫抛三实数
+```
+
+`force` 面也 prune，但不因 prune 就早退，也不因 `④` 就停：`/compact` 与越窗自愈要的是一次真实的压缩动作，prune 只让中段变小、摘要请求更省。
+
+第 ③ 步的射程：合格集非空的只有 §7.2 列的那两类状态（尚无一条轮记录带 `toolProcess` ∥ 由 `history` 播种的旧槽）。其余状态下 `tool` 消息全在保留窗内、因而全在保护尾里，prune 返回 0 条——③ 是一步 no-op，常见路径的成本落在 ⑤。
+
+第 ⑥ 步的作用：摘要失败一次就走到丢弃，不等连续失败——「一次网络抖动换一个死会话」正是这条链要避开的结局。丢弃零成本、确定性（`compressFallback` 只丢中段、不调模型），换到的是一段能继续工作的上下文。
+
+丢弃要报量：`compressFallback` 落 `agent._lastCompressInfo = { mode: "fallback", discardedMessages, discardedTurns, tailMessages }`。
+
+`discardedMessages` = 被丢弃的消息条数（`split.tailStart − split.headEnd`）；`discardedTurns` = 其中全部记录消息都落在该区间的轮次数（判据与 §6 的覆盖账同一本：`turnRecordMessages` 逐条判）；`tailMessages` = 留下的尾部条数。只报留下的条数，读的人推不出丢了什么。
+
+所以它排在摘要失败之后立刻执行，不等连续三次失败。代价写明：端点持续不可用时，每个安全点白付一次失败的摘要请求；换来的是任务不因摘要面故障而中止。
+
+失败计数与面板的失败态照旧每次失败发一次（`onCompressFail`），降级态（`onCompress` 且 `mode === "fallback"`）在丢弃真的发生时发——需求 §8 的两个态各由一个回调产生这一条不变。
+
+可达性门跟着重测：`post` 的输入是 prune 之后的 `usage` 与 prune 之后的 `middle`（同一次 `splitHistory` 产出），判据零改。
+
+先后与耦合：prune 先改历史，重测依赖 §3.1 的基线重定。prune 若仍把基线置零，重测就落到纯估算——「先裁剪」换来一个不比自己更准的读数。两条同批落，不各修一半。
+
+幂等由门槛保证：已替换的 stub 只有一行说明文字，估算低于 `PRUNE_MIN_TOKENS`，不会被第二次选中，因此同一条链上再走一次 prune 是 no-op。
+
+呈现决定：链上的 prune 不发新的宿主事件。模型面看到的是 stub 自己那行说明（含原长度与重跑路径），人读面看的是 stats 的下降；为它新开一个回调要给 CLI ∥ VSC ∥ Desktop 三端各加一个态、headless 再走一次可选链，而需求没有这一态。
+
+### 5.2 模型与参数变更的预判
+
+存量历史可能超过新窗口：用户从 1M 模型切到 256K 模型，或把 `providers[].context` 调小，或改 `reasoningEffort`（`max` 档把 `reserve` 抬到 131,072）——这几种变更都让 `limit` 变小，而 `agent.history` 一条没少。
+
+不预判的话，这种局面要等下一次请求撞上守卫才发现：报文说的是 `context_overflow`，用户读到的是「上下文太大」，真实原因（刚换的配置装不下已有历史）被报文挡在后面。
+
+处置点 = run 装配之后、第一个回合之前：`agent/run-stages.mjs` 新增 `preflightWindowFit(agent, ctx)`，比一次 `contextUsage(agent, overhead).total` 与 `policyBudget(...).limit`。
+
+超了就直接跑 §5.1 的同一处置链（`force` 面：prune → 摘要 → 丢弃），不另立第二条路径。
+
+「变更那一刻」= 下一次 run 的装配点：参数按 run 现算（`effectiveWindow` 每次读档位，`reserve` 每次读 provider），会话打开时的模型合并（`session-lifecycle.mjs` 的 `applySession` 已按 `switched` 判出模型变更）只改运行态取值，真正生效就在下一次装配。
+
+放在装配点因此覆盖模型切换、`context` 调小与 `reasoningEffort` 变更三条来路，不需要为每一条各立一个钩子。
+
+判据用实测优先的 `contextUsage`：切换前的最后一次响应给过真值，它比估算更接近服务端会看到的量。处置链跑完仍超 `limit` ⇒ 守卫照 §5 抛三实数，报文点明「切换后的模型装不下存量历史」。
 
 enforceContextFit 在发送前检查 usage.total > limit，可强压一次；仍超则 context_overflow，不发请求。
 
@@ -363,13 +615,15 @@ tail 首条 assistant 的回声占位按当前 copy-on-write 规则并入；恢�
 
 ### 7.1 stats
 
-从同一 `contextUsage` ∥ `policyBudget` ∥ `historyReading` 取数，六项读数各自具名，不混用分母：总量（首行 `Context ≈`）、窗口与压缩线、请求预算（`policyBudget` 的 window ∥ max_tokens ∥ 两个来源名）、分段（`Segments ≈` 行的 system ∥ tools ∥ history）、缓存（`Cache:` 行的命中 ∥ 未命中 ∥ 响应数，取 `agent._cacheHitTokens` ∥ `_cacheMissTokens` ∥ `_usageTurns`）、状态行历史读数。
+从同一 `contextUsage` ∥ `policyBudget` ∥ `historyReading` 取数，六项读数各自具名，不混用分母。首行的百分比分母 = `limit`（§2.5），与状态行同一个数。
+
+六项 = 总量（首行 `Context ≈`）· 窗口与压缩线 · 请求预算（`policyBudget` 的 window ∥ max_tokens ∥ 两个来源名）· 分段（`Segments ≈` 行的 system ∥ tools ∥ history）· 缓存（`Cache:` 行的命中 ∥ 未命中 ∥ 响应数，取 `agent._cacheHitTokens` ∥ `_cacheMissTokens` ∥ `_usageTurns`）· 状态行历史读数。
 
 `Segments ≈` 的 history 是未乘校准比的裸估算，与状态行的 `calibrated history estimate` 是两个量，名字已分开——不要把两者当同一个数。
 
 ### 7.2 prune
 
-`collectStaleToolOutputs(history, provider, workMode, protectFrom)`（`thincoder-core/token-window.mjs`）选择保护尾外、且估算达到 `PRUNE_MIN_TOKENS`（200 token）的 tool 消息。
+`collectStaleToolOutputs(history, provider, workMode, protectFrom, fixedOverhead, ratio)`（`thincoder-core/token-window.mjs`）选择保护尾外、且估算达到 `PRUNE_MIN_TOKENS`（200 token）的 tool 消息。四个新增实参的来处见 §2.3。
 
 保护尾与压缩面是同一个尾：它按 `splitHistory` 取回的 `tailStart` 判「尾内」，第四参 `protectFrom` 由调用方给保留窗起点（§1.2、§2.3）。保留窗内那几轮的工具输出因此永远不在合格集里。
 
@@ -381,7 +635,7 @@ tail 首条 assistant 的回声占位按当前 copy-on-write 规则并入；恢�
 
 原位替换 content 为 stub，不改数组、索引、tool_call_id 或全史。
 
-prune 后基线失效；回执给出释放量与跳过项，并请模型需要时重跑工具。不指向任何回查位置——落盘的只有人读线那一份、且只留 slim 后的前段（射程见 `SESSION.md` §5）；内存里的全史随进程走，重启之后没有第二条通道。写「全文仍在盘上」是一句兑现不了的话。
+prune 后基线按 §3.1 重定（不归零）；回执给出释放量与跳过项，并请模型需要时重跑工具。不指向任何回查位置——被 prune 的都是保留窗之外的工具结果，槽里只剩它们的 slim 前段（射程见 `SESSION.md` §5）；内存里的全史随进程走，重启之后没有第二条通道。
 
 ### 7.3 compact
 
@@ -408,7 +662,7 @@ onCompressStart/onCompress/onCompressFail 是核回调。TUI 面板、VSC 状态
 | 开始 | `onCompressStart({ messages })`——摘要请求发出前触发（`context.mjs` 的 `callbacks?.onCompressStart?.({ messages: middle.length })`） |
 | 进行中 | 核不发第二个事件：宿主在开始态上按流逝时间渲染（CLI `ensureCompressPanel` 的 elapsed 计时），不新开通道 |
 | 成功 | `onCompress(info)` 且 `info.mode !== "fallback"` |
-| 降级 | `onCompress(info)` 且 `info.mode === "fallback"`——连续失败达 `COMPRESS_FAILURE_LIMIT` 后 `degradeIfCompressExhausted` 走 `compressFallback`，回执用同一回调、同一载荷位 |
+| 降级 | `onCompress(info)` 且 `info.mode === "fallback"`——摘要失败当次即走 `compressFallback`（§5.1 第 ⑥ 步），回执用同一回调、同一载荷位；载荷带 `discardedMessages` ∥ `discardedTurns` ∥ `tailMessages`（§5.1） |
 | 失败 | `onCompressFail(error)`，单次失败即发 |
 
 失败与降级不是同一件事：失败可以先来几次，达到上限那一步才降级；两个态各有自己的回调，端侧不必从失败次数反推降级。
@@ -417,4 +671,12 @@ headless 没有回调 ⇒ 全链可选链（`callbacks?.onCompressStart?.` ∥ `
 
 ## 10. 验证
 
-验证安全点、配对、预算公式、auto 配置、可达性门、强制面、越窗一次重试、估算样本恢复、prune 配对、主动压缩回执、恢复回声、全史不变、压缩检查点的落槽回读、恢复播种后的第二次压缩、压缩后的在途段边界重定、在途段尾端孤立的调用与结果的收口、工具段双端截断后尾部结论仍在、保留窗在最小受支持窗口下仍完整落在保护尾里，以及固定开销单独越线的 typed error。
+验证安全点、配对、预算公式、auto 配置、可达性门、强制面、越窗一次重试、估算样本恢复、prune 配对、主动压缩回执、恢复回声、全史不变、压缩检查点的落槽回读、恢复播种后的第二次压缩。
+
+也验证：压缩后的在途段边界重定、在途段尾端孤立的调用与结果的收口、工具段双端截断后尾部结论仍在、保留窗在最小受支持窗口下仍完整落在保护尾里、固定开销单独越线的 typed error。
+
+验证常态：absent 档预留取服务端默认输出（未封顶的窗口段上两条线间距恒为注入余量）、派生链单调（窗口增大时 `limit` 与 `threshold` 都不减小）、压缩线在封顶处饱和（窗口再大也不超过 `RETAIN_CAP_TOKENS`，`limit` 仍随窗口增长）、派生不成立在装载期报错并点三个数。
+
+也验证：尾预算按减法链随窗口与固定开销移动、结构编辑后基线重定且下一次响应即自纠、压缩链先 prune 再重测（prune 够则不发摘要请求）、摘要失败一次即降级丢弃并报出丢弃条数。
+
+以及：模型与参数变更后在首个回合之前处置存量历史、状态行百分比与压缩线同取 `limit` 为分母。

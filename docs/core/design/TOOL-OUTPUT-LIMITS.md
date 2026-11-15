@@ -14,7 +14,13 @@ TOOL_RESULT_OFFLOAD_LIMIT 与 TOOL_RESULT_PREVIEW 当前均为 64K。
 
 预览由头部、实际省略数注记和尾部组成；总长度不超过预算。tail 取预算余量，不硬编码固定值。
 
-safeSliceUTF16 与 safeSliceUTF16Tail 保证切点不制造孤立代理。失败回退也使用头尾形态，不退回纯头截断。
+构造器 = `buildDualEndPreview(text, budget)`（`thincoder-core/agent/offload.mjs`）：`budget` 必填、无默认值，头取 `floor(budget / 4)`、注记报实际省略数、尾取预算余量；`budget` 非法即抛并点名该参数。
+
+默认值等于替调用方决定这一档裁多少：两个调用点都在 `offloadToolResult`，传 `TOOL_RESULT_PREVIEW`，拿 4000 去调它得到 4000 的预览，不是 64K。
+
+safeSliceUTF16 与 safeSliceUTF16Tail（`thincoder-core/text-budget.mjs`）保证切点不制造孤立代理，切点只用导出面这两个。失败回退也使用头尾形态，不退回纯头截断。
+
+保留窗（`CONTEXT-COMPACTION.md` §1.2）按同一形状排，不另立一种截法。
 
 ## 3. 落盘
 

@@ -144,11 +144,16 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const statusText = state.processing ? `${state.status}${toolHint}${elapsed}${quietHint}` : state.status
   // 2026-09-02 Q1（SESSION.md §6.8）：provider 可为 null —— 核 `providerSpec(null)` 保守 128K 不抛错。
   // 2026-09-02 §15 ∥ context-percent-parity：窗口 / 校准比 / 两值全在核 `historyReading` 内解析（`ctxCacheOf` 缓出）——
-  // 本段零自算式，只格式化核读数的两个返回值；零值不显示门 `ctxPct > 0` 留在端侧（空历史口径已登记）。
+  // 本段零自算式，只格式化核读数的返回值；零值不显示门 `ctxPct > 0` 留在端侧（空历史口径已登记）。
+  // CONTEXT-COMPACTION.md §2.5「显示与判定同基准」：分母 = `limit`（用户实际可填的量）；告警判据 = `tokens >= threshold`
+  // （同一次读数带出的压缩线），不再用魔数 `ctxPct >= 80`——判定与显示读同一个数，端侧不各发明一档阈值。
   const ctxPct = state.ctxCache.pct
-  const ctxTokensHint = state.ctxCache.tokens > 0 ? ` ${fmtK(state.ctxCache.tokens)}` : ""
+  const ctxTokens = state.ctxCache.tokens
+  const ctxTokensHint = ctxTokens > 0 ? ` ${fmtK(ctxTokens)}` : ""
+  const threshold = state.ctxCache.threshold
+  const ctxWarn = Number.isFinite(threshold) && ctxTokens >= threshold
   const ctxHint = ctxPct > 0
-    ? ctxPct >= 80 ? ` │ ${ansi.reset}${C.warn}context ${ctxPct}%${ctxTokensHint}${ansi.reset}${ansi.dim}` : ` │ context ${ctxPct}%${ctxTokensHint}` : ""
+    ? ctxWarn ? ` │ ${ansi.reset}${C.warn}context ${ctxPct}%${ctxTokensHint}${ansi.reset}${ansi.dim}` : ` │ context ${ctxPct}%${ctxTokensHint}` : ""
   // INPUT-LOCK-ASYNC（C'——F-3）：busy（processing 含 digest）状态栏提示——取代旧排队提示
   // （F-7 已删）；F16（TUI.md §7.5）**四态分流**（queue-visible 批 2026-09-24）：队列非空 ⇒
   // 条数段（dim 段样式 · 零注意力色对——F13 豁免 · 消费即消失）；队空 ⇒ 按 busy 面分排队句

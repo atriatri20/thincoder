@@ -10,6 +10,17 @@
 export const COMPACTION_PLACEHOLDER = "Understood. I'll continue from these notes, re-verifying anything transient."
 
 /**
+ * 压缩注记的前缀（`context.mjs` 的 `applyCompression` 拼在摘要正文之前）。
+ * 住在本档的理由：它是压缩产物那对固定文本之一，另一条就是上面的占位句；两条一起被
+ * `token-window.mjs` 的 `NOTE_ESTIMATE` 量一次（§4 的减法链要扣注记与占位），分住两档就得让
+ * `token-window.mjs` 反向 import `context.mjs`（成环）。
+ */
+export const COMPACTION_PREFIX =
+  "[Context was automatically compacted. Below is a summary of earlier work. " +
+  "Treat it as notes, not proof — trust its conclusions (don't redo what it reports as done) " +
+  "but re-verify transient state with tools. Check memory search for any missing decisions.]\n\n"
+
+/**
  * Content-shape-safe prefixing (D-CC18, generalized for D-CC19 merge reuse):
  * string → text + blank line + original; multimodal array → text part prepended;
  * empty string / null / undefined / other → text alone.
