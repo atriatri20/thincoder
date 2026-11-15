@@ -16,6 +16,7 @@ import { DRY_RUN_FIXTURE, FIXTURES, FROZEN_FIXTURES, PROBE_VERSION, SANDBOX_BATC
 import { FROZEN_FIXTURES as FROZEN_COPY, SANDBOX_BATCH_RECORDS as BATCH_COPY } from "./probe-frozen.mjs"
 import { ENG_REFUSED_PARAMS, PLAIN_TASK_BOOK_MIN, isEngineeringRole, rejectEngFreeTextParams, taskBookParamsFor, validateRoundParam, validateTaskBookParams } from "../../thincoder-core/agent-tools/spawn-gates.mjs"
 import { formatPermission } from "../../thincoder-core/permission.mjs"
+import { loadToolDoc, expandKnowledgeTopics } from "../../thincoder-core/prompt-files.mjs"
 import { buildAuditBlock } from "../../thincoder-core/agent-tools/audit-block.mjs"
 import { buildSpawnChild } from "../../thincoder-core/agent-tools/subagent-spawn.mjs"
 import {
@@ -60,7 +61,7 @@ check("夹具两层机检逐字等值（运行面副本 ↔ 冻结副本）+ PRO
   assert.equal(typeof PROBE_VERSION, "number")
   assert.equal(Number.isInteger(PROBE_VERSION), true)
   assert.ok(PROBE_VERSION >= 1, "PROBE_VERSION 须为 ≥1 的整数")
-  assert.equal(PROBE_VERSION, 3, "本批落档值（夹具 / 判据 / 停止条件 / rubric 任一变化 ⇒ +1）")
+  assert.equal(PROBE_VERSION, 4, "本批落档值（夹具 / 判据 / 停止条件 / rubric 任一变化 ⇒ +1）")
   assert.equal("PROBE_VERSION" in FROZEN_COPY, false, "冻结副本不得另立版本常量（单源 = probe/data.mjs）")
   assert.deepEqual(FROZEN_FIXTURES, FROZEN_COPY, "夹具两层机检：运行面副本与冻结副本必须逐字等值")
   assert.deepEqual(SANDBOX_BATCH_RECORDS, BATCH_COPY, "沙箱批次档全文两层逐字等值")
@@ -73,6 +74,7 @@ check("审计块：批档路径行 + §2 指向句（A2 拼装摘要面已删）
   assert.equal(block.includes("Delivery task book: §2 of the batch record at D:/repo/docs/batches/b.md"), true, "审计块须含 §2 指向句（限定为交付任务书）")
   assert.equal(block.includes("it is the criterion source for this audit"), true, "§2 是本审计的判据源")
   assert.equal(block.includes("it is the only task channel for this spawn"), false, "审计子代理（explore）自带五项任务书——不得冒称本 child 的唯一通道")
+  assert.equal(block.includes("reproduced verbatim in your system prompt"), false, "审计子代理（explore）不带工程角色的任务书正文——不得冒称正文已在 system 里")
   assert.equal(block.includes("- src/a.mjs"), true, "touched 快照仍在")
   assert.equal(block.includes("[Audit instructions — mechanical template"), true, "审计指令模板逐字仍在")
   assert.equal(block.includes("[Audit budget — mechanical]"), true, "预算句仍在")
@@ -111,9 +113,12 @@ check("实施轮腿：真 buildSpawnChild 直调——任务书行 / 异步形 /
     assert.equal(facts.parentChannelWired, true, "上行通道父位接线")
     assert.equal(facts.personaEngDesigner, true, "人格装配 = eng-designer 场景")
     assert.equal(facts.batchDocBound, true, "batchDoc 绑定在场")
-    assert.equal(facts.taskBookLine, true, "任务书行 = 批档绝对路径 + §2 唯一通道句；_engTaskInput 同值")
+    assert.equal(facts.taskBookLine, true, "任务书行 = 批档绝对路径 + 按角色的指向句；_engTaskInput 同值")
+    assert.equal(facts.taskBookInSystem, true, "§8.1：该角色任务书正文（§1 + §2）逐行在 systemPrompt 里")
     assert.equal(built.child._engTaskInput, built.input, "记账面 _engTaskInput 与 input 同值")
-    assert.equal(built.input.includes("Task book: §2 of the batch record at "), true, "任务书行指向 §2")
+    assert.equal(built.input.includes("Task book: the batch record at "), true, "任务书行指向本批档")
+    assert.equal(built.input.includes("§1 (the rulings that bind you) and §2 (your own pen)"), true, "eng-designer 指向句按角色切片（§1 具约束力 ∥ §2 是它自己的笔）")
+    assert.equal(/\bonly\b|唯一/.test(built.input), false, "#2443：eng-designer 侧不出现「唯一通道」措辞（§3.1）")
     assert.equal(built.input.includes(built.child._batchDoc), true, "任务书行含批档**绝对**路径（AC-SC-3）")
     assert.match(facts.relayPrefix, /^eng-designer#\d+\/$/, "relay 前缀 = 角色计数形")
     // 父面 provider 抛错桩（§10.3-1）：任何 LLM 路径键访问即硬失败（「父面零 LLM」可机检）
@@ -160,22 +165,34 @@ check("实施轮腿：真 buildSpawnChild 直调——任务书行 / 异步形 /
   })
 })
 
-check("AC-11 承重句在三处产品面在位（权限预览 / 内部 explore 通道描述 / 参数骨架）+ 任务书段归一逐字 = 设计档 §6.22.8-A", () => {
+check("AC-11 承重句在三处产品面在位（权限预览 / 内部 explore 通道描述 / 参数骨架）+ 参数骨架行单源（装配面恰 1 次、指针档 0 次）", () => {
+  // 权限预览的「§2」那句属于**任务书 = §2**为真的那一侧（eng-coder）。它不再钉在 eng-designer 上：
+  // 设计席的任务书是整份批档（§3.1——§1 裁决约束它、§2 是它自己的笔），对该角色声称「task book: batch record §2」
+  // 就变成一条为假的预览；它的文案源（`permission.mjs` 的拼装）不在本批清扫面内，故本处只不再为它背书。
+  const coderPreview = formatPermission("subagent", { action: "spawn", role: "eng-coder", batchDoc: "docs/batches/x.md", round: "initial", designToken: "t" })
+  assert.equal(coderPreview.includes("task book: batch record §2 (docs/batches/x.md)"), true, "eng-coder 的 spawn 权限预览非空且指向 §2（对它为真）")
   const engPreview = formatPermission("subagent", { action: "spawn", role: "eng-designer", batchDoc: "docs/batches/x.md", round: "initial" })
-  assert.equal(engPreview.includes("task book: batch record §2 (docs/batches/x.md)"), true, "工程 spawn 权限预览非空且指向 §2")
+  assert.equal(engPreview.includes("docs/batches/x.md"), true, "eng-designer 的 spawn 权限预览非空且点名本批档")
   const plainPreview = formatPermission("subagent", { action: "spawn", role: "explore", goal: "g", knownFacts: "k", scope: "s", acceptance: "a", reportFormat: "r" })
   assert.equal(plainPreview.includes("Goal & why:") && plainPreview.includes("Scope (what to read / what not to touch):"), true, "非工程预览 = 五参拼装（零变）")
   const familySrc = readFileSync(new URL("../../thincoder-core/agent/family-tools.mjs", import.meta.url), "utf8")
   assert.equal((familySrc.match(/The spawn carries the five task-book parameters[^\n]*scope[^\n]*a task-only spawn is refused/g) ?? []).length, 2, "两条内部 explore 通道描述各含契约句")
+  // 骨架行的判据面 = **装配后的**工具描述，取 `loadToolDoc` + `expandKnowledgeTopics` 两步——这正是工具装配那一步
+  // （`tools/shared.mjs` 的 `expandToolDescription` 本体就是这两行）；本档不直接 import 它，因为那条链会把整个 agent
+  // 运行时拖进一条 bench 自检。散文面拼接改造后骨架行搬进 knowledge 分档，读散档会把判据钉在文件位置上——一搬就假红。
+  // 行尾多了 `async=true` ⇒ 取稳定前缀形（到 `files=[…]` 之前为止），不写字面全行。
+  const assembledDocs = expandKnowledgeTopics(loadToolDoc("subagent"), { tiny: false })
+  const ENG_SKELETON = 'subagent(role="eng-coder", round="initial", batchDoc="<batch record>", designToken="…", files=[…]'
+  const PLAIN_SKELETON = 'subagent(role="explore"'
+  assert.equal(assembledDocs.includes(ENG_SKELETON), true, "工程参数骨架行在装配后的 subagent 工具描述里")
+  assert.equal(assembledDocs.includes(PLAIN_SKELETON), true, "非工程参数骨架行在装配后的 subagent 工具描述里")
+  // 单源（不复制）：骨架行只住一份——装配面恰 1 次，指针档（`tool-docs/subagent.md`）里 0 次。
+  // 旧的「tool-docs 任务书段 = 设计档 §6.22.8-A 归一逐字」已删：那个锚点对象在设计档里已不存在（改写后无此节），
+  // 保留它只能永远红——删的是**失去对象**的那一半，不是降低覆盖面（单源由此行取代）。
+  const countOf = (s, needle) => s.split(needle).length - 1
+  assert.equal(countOf(assembledDocs, ENG_SKELETON), 1, "工程骨架行在装配面恰 1 次（不复制）")
   const docsSrc = readFileSync(new URL("../../thincoder-core/tool-docs/subagent.md", import.meta.url), "utf8")
-  assert.equal(docsSrc.includes('subagent(role="eng-coder", round="initial", batchDoc="<batch record>", designToken="…", files=[…])'), true, "工程参数骨架行（§6.30 第 1 行逐字）")
-  assert.equal(docsSrc.includes('subagent(role="explore"'), true, "非工程参数骨架行在描述面")
-  // AC-SC-5：tool-docs 的任务书段与设计档 §6.22.8-A 归一后逐字全等（折行不折字——`\n` 两侧空白折叠为单空格；正本住设计档，本档不复制）
-  const designSrc = readFileSync(new URL("../../docs/core/design/AGENT-LOOP-SUBAGENT.md", import.meta.url), "utf8")
-  const aBlock = designSrc.split("**§6.22.8-A（P1 的整段替换")[1]?.split("```text")[1]?.split("```")[0]?.trim()
-  assert.equal(typeof aBlock === "string" && aBlock.length > 0, true, "设计档 §6.22.8-A 块可解析")
-  const foldNl = (s) => s.replace(/\s*\n\s*/g, " ")
-  assert.equal(foldNl(docsSrc).split(foldNl(aBlock)).length - 1, 1, "tool-docs 任务书段 = §6.22.8-A 归一逐字（恰 1 处）")
+  assert.equal(docsSrc.includes("subagent(role="), false, "tool-docs/subagent.md 只是指针档（`{{knowledge:…}}`）——不再持骨架行第二份")
 })
 
 check("行为类表逐态（含 skipped）+ 反例信号列 + §10.5 字段在场（含 continuation / landedFiles[].target）", () => {

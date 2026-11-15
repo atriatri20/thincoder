@@ -2,8 +2,9 @@
  * spawn-gates.mjs — M5 委派与 spawn 门新门禁统一落点（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.3）：
  * 全部新增门禁逻辑集中于此——装配点（buildSpawnChild / normalizeFileList）只加 import 调用。
  * 已实现：F2（round 枚举 + 任务书参数门/拼装）· F6（files 声明面拦截谓词）。
- * 2026-10-24（AGENT-LOOP-SUBAGENT.md §6.22）：任务书单通道 = 批次档 §2——工程角色
- *   （eng-coder / eng-designer）零任务书文本参数，八个自由文本键（键在场即拒）命中即点名拒收；
+ * 2026-10-24（AGENT-LOOP-SUBAGENT.md §6.22）：工程角色零任务书文本参数——八个自由文本键
+ *   （键在场即拒）命中即点名拒收；任务书 = 绑定批档、按角色切片（2026-11-15 §8.1：eng-coder 取 §2，
+ *   eng-designer 取 §1 + §2）；
  *   非工程角色（explore / plan / coder / tester）保持四项核心 + `scope`。
  * 裁撤（2026-09-17 主 agent 裁定——不落代码）：
  *   - F4 修复轮窄带：全量勘察散文 marker 不可机判（误拒风险不可接受）→ 由 F2 的 round 参数承载轮次语义；
@@ -18,7 +19,7 @@
 export const ROUND_VALUES = ["initial", "fix"]
 
 /** 任务书样例内容（供人照抄；不是门的判据——门只判存在 / 类型 / 非空）：非工程角色
- *  = 四项核心 + `scope`（工程角色无任务书文本参数——任务书 = 批次档 §2）。 */
+ *  = 四项核心 + `scope`（工程角色无任务书文本参数——任务书 = 绑定批档，按角色切片（§8.1））。 */
 const TASK_BOOK_CORE_MIN = {
   goal: "实现批准设计（样例任务书——四项核心 + `scope` 齐备）。",
   knownFacts: "设计已评审通过、token 已签发、批次档在册。",
@@ -53,7 +54,7 @@ export function validateRoundParam(args) {
 /** 工程角色名集（单一判据 = 是否有写权 ⇒ 只应有唯一任务来源——AGENT-LOOP-SUBAGENT.md §6.22）。 */
 const ENGINEERING_ROLES = new Set(["eng-coder", "eng-designer"])
 
-/** 角色 ∈ 工程角色（任务书 = 批次档 §2，零任务书文本参数）。 */
+/** 角色 ∈ 工程角色（任务书 = 绑定批档，按角色切片（§8.1）；零任务书文本参数）。 */
 export function isEngineeringRole(role) {
   return ENGINEERING_ROLES.has(role)
 }
@@ -86,8 +87,8 @@ export function rejectEngFreeTextParams(args, role) {
   const required = ENG_REQUIRED_NAMES[role] ?? "role · batchDoc (readable) · round"
   throw new Error(
     `Spawn task-channel gate (role='${role}'): ${names}. ` +
-    `An engineering spawn carries NO task-book text parameters — the task book is batch record §2 (batchDoc), read by the child itself. ` +
-    `Put everything the child needs into §2 before spawning; a thin §2 earns a bounce, not a supplement. ` +
+    `An engineering spawn carries NO task-book text parameters — the task book is the bound batch record (batchDoc), sliced per role into the spawn system block (eng-coder: §2; eng-designer: §1 + §2). ` +
+    `Put everything the child needs into ${role === "eng-designer" ? "the record (§1 rulings bind; §2 is your pen)" : "§2"} before spawning; a thin section earns a bounce, not a supplement. ` +
     `Required for role='${role}': ${required}.`)
 }
 
@@ -103,7 +104,7 @@ export const TASK_BOOK_PARAMS = {
 }
 
 /** 角色 → 该角色的任务书名集（四项核心 + `scope`；序 = 拼装序：第五项插在 `knownFacts` 之后）。
- *  工程角色返回空集——它们没有任务书文本参数（任务书 = 批次档 §2）。 */
+ *  工程角色返回空集——它们没有任务书文本参数（任务书 = 绑定批档，按角色切片（§8.1））。 */
 export function taskBookParamsFor(role) {
   if (isEngineeringRole(role)) return []
   const core = TASK_BOOK_PARAMS.core
@@ -152,7 +153,7 @@ export function validateTaskBookParams(args, role) {
 
 /** 非工程角色任务书 → 子代理任务书文本（**非门禁**，纯拼装）：按 `taskBookParamsFor(role)` 固定序
  * + 标签，空值跳过，`\n\n` 分隔。拼装单源 = 本函数——子代理 input、权限预览与探针判官同源。
- * 工程角色名集为空 ⇒ 返回空串（任务书 = 批次档 §2，运行时不拼装——KD-SC5）。 */
+ * 工程角色名集为空 ⇒ 返回空串（任务书 = 绑定批档，按角色切片（§8.1），运行时不拼装——KD-SC5）。 */
 export function composeTaskBookBrief(args, role) {
   const a = args ?? {}
   const parts = []

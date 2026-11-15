@@ -94,10 +94,24 @@ export function installProbeProvider(parent, providerEntry) {
 }
 
 /** child 装配（`buildSpawnChild`——`wantAsync = true` ⇒ 异步形返回注；spawn 门照走——§10.3-2）。
- *  §6.22：工程角色零任务书文本参数——args = `{ round, batchDoc, model }`（任务书 = 批次档 §2）。 */
+ *  §6.22：工程角色零任务书文本参数——args = `{ round, batchDoc, model }`（任务书 = 绑定批档，按角色切片（§8.1））。 */
 export function assembleProbeChild({ parent, ctx, model, batchDoc }) {
   const args = { round: "initial", batchDoc, model }
   return buildSpawnChild(parent, ctx, args, PROBE_ROLE, true, [], [], null)
+}
+
+/** 沙箱批档的 §N 段体行集（探针侧独立切法——不用产品面构造器，否则切片坏了还是一条绿）：
+ *  自 `## §<seg>` 行之后起，到下一个 `## §<数字>` 段头为止；首尾空行不计。 */
+function segmentLinesOf(text, seg) {
+  const lines = String(text).split(/\r?\n/)
+  const start = lines.findIndex((l) => l.startsWith(`## §${seg} `) || l === `## §${seg}`)
+  if (start < 0) return []
+  let end = lines.findIndex((l, i) => i > start && /^## §\d/.test(l))
+  if (end < 0) end = lines.length
+  const body = lines.slice(start + 1, end)
+  while (body.length > 0 && body[0].trim() === "") body.shift()
+  while (body.length > 0 && body[body.length - 1].trim() === "") body.pop()
+  return body
 }
 
 /** 装配腿（§10.10 结构级 / `--dry-run`）：真 `buildSpawnChild` + `prepareRun`（人格与家族段装配）——**不驱动**。 */
@@ -107,6 +121,12 @@ export async function assemblyLeg({ parent, model, batchDoc }) {
   const { tools, systemPrompt } = await prepareRun(built.child, built.input, built.childOpts, { depth: 1 })
   const names = tools.map((t) => t.name)
   const marker = personaMarker()
+  // §8.1 任务书正文进 system 固块的读数面：逐行持有该角色的段体（判据自沙箱批档切，不经产品构造器）。
+  // 段号 = 产品切片表的同值字面（探针角色 = eng-designer ⇒ §1 + §2）；不 import `TASK_BOOK_SEGMENTS` 派生——
+  // 夹具判据要独立切法，否则切片器坏了还是一条绿。
+  const recordPath = join(parent.cwd, batchDoc)
+  const segNos = [1, 2]
+  const taskBookLines = segNos.flatMap((s) => segmentLinesOf(readFileSync(recordPath, "utf8"), s))
   return {
     built,
     facts: {
@@ -116,13 +136,15 @@ export async function assemblyLeg({ parent, model, batchDoc }) {
       parentChannelWired: built.child._upstream?.parent === parent,
       personaEngDesigner: marker != null && systemPrompt.includes(marker),
       batchDocBound: typeof built.child._batchDoc === "string" && built.child._batchDoc.replaceAll("\\", "/").endsWith(batchDoc),
-      // §6.22.2 / AC-SC-3：工程角色 input = 一行机械任务书行（批档绝对路径 + §2 唯一通道句）；
-      // `_engTaskInput` 同值（记账面）。
+      // §6.22.2 / AC-SC-3：工程角色 input = 一行机械任务书行（批档绝对路径 + 按角色的指向句）；
+      // `_engTaskInput` 同值（记账面）。逐角色句 = eng-designer 那两句（§1 具约束力 ∥ §2 是它自己的笔）。
       taskBookLine: typeof built.input === "string" &&
-        built.input.includes("§2 of the batch record at ") &&
-        built.input.includes("it is the only task channel for this spawn") &&
+        built.input.includes("Task book: the batch record at ") &&
+        built.input.includes("§1 (the rulings that bind you) and §2 (your own pen) are reproduced verbatim in your system prompt") &&
         typeof built.child._batchDoc === "string" && built.input.includes(built.child._batchDoc) &&
         built.child._engTaskInput === built.input,
+      // §8.1 载体读数：该角色应有的整段原文逐行在 `systemPrompt` 里（不在 history、因而不被压缩吞）。
+      taskBookInSystem: taskBookLines.length > 0 && taskBookLines.every((l) => systemPrompt.includes(l)),
     },
   }
 }

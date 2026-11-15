@@ -7,7 +7,7 @@
  * 装配侧只收集（`thincoder-core/agent-tools/subagent-spawn.mjs`），下发面 = system 固块
  * （`child._spawnSystemBlock` → 核 `prepareRun` 拼接——`thincoder-core/agent/setup.mjs`）。
  *
- * 2026-10-24（§6.22 KD-SC6）：任务书 = 批次档 §2（子代理自读）；A2 拼装摘要面（按 marker 抽取
+ * 2026-10-24（§6.22 KD-SC6）：任务书 = 绑定批档，按角色切片（§8.1 现行；本块只引交付任务书 = §2）；A2 拼装摘要面（按 marker 抽取
  * 设计档 / 文件清单 / 验收三段）已随 KD-SC6 删除——审计块只注入批档路径行 + §2 指向句（路径取
  * `ctx.agent._batchDoc`）。理由：工程角色 `_engTaskInput` 只剩一行机械文本，摘要失去来源。
  */
@@ -37,7 +37,7 @@ export function buildAuditBlock(ctx) {
     `workspace changes not listed there are unrelated to this delivery and are NOT grounds for an out-of-list finding.\n` +
     `Scope discipline (F-TS6 A1): read ONLY the audited files and the design-doc sections relevant to this delivery — do NOT re-read whole documents.\n` +
     `Every deviation item MUST be fieldized: file:line + design reference (doc path + section/AC id) + severity + evidence (quoted code or doc text).\n` +
-    // §6.22 KD-SC6：任务书 = 批次档 §2（审计子代理自读）——审计块注入批档路径 + §2 指向句
+    // §6.22 KD-SC6：任务书 = 绑定批档，按角色切片（§8.1）——审计块注入批档路径 + 交付任务书 §2 的指向句
     // （A2 拼装摘要面已删：工程角色 _engTaskInput = 一行机械文本，摘要无来源）。审计子代理本身是
     // explore（任务书 = 父侧五项）——故指向句限定为「**交付**的任务书 = §2」，不冒称本 child 的唯一通道。
     `Batch record (batchDoc): ${batchDoc}\n` +

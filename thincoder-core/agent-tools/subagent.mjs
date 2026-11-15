@@ -224,10 +224,10 @@ export const subagentTool = {
     // schema), so the mechanical check lives here: an absent task would otherwise
     // flow downstream as `content: undefined` and surface as an obscure error.
     // 载体判据：**非工程角色** = 结构化参数（拼装后非空）——task 只作补充；两者皆缺 ⇒ 此处先拒。
-    // 工程角色 = 无任务书文本参数（任务书 = 批次档 §2）：此处不判——自由文本键由
+    // 工程角色 = 无任务书文本参数（任务书 = 绑定批档，按角色切片（§8.1））：此处不判——自由文本键由
     // buildSpawnChild 的任务书门键在场即拒并点名（空集拼装不得误报「缺任务书」）。
     if (!isEngineeringRole(args.role) && !composeTaskBookBrief(args, args.role) && (typeof args.task !== "string" || !args.task.trim())) {
-      throw new Error("subagent action:'spawn' requires the structured task-book parameters for non-engineering roles (explore / plan / coder / tester) (four core: goal / knownFacts / acceptance / reportFormat + scope) — a free-text task alone is not the brief. Engineering roles take no task-book text parameters: their task book is batch record §2.")
+      throw new Error("subagent action:'spawn' requires the structured task-book parameters for non-engineering roles (explore / plan / coder / tester) (four core: goal / knownFacts / acceptance / reportFormat + scope) — a free-text task alone is not the brief. Engineering roles take no task-book text parameters: their task book is the bound batch record (batchDoc), sliced per role into the spawn system block.")
     }
     // §18 D-E1a（必填化——2026-11-07 批 tool-param-zero-defaults）：`recent` ∥ `async` 皆必填；
     // depth 不再替调用方选（旧形 `args.async ?? depth === 0` 已撤）。depth>0 无异步——显式
