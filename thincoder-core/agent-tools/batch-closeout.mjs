@@ -32,6 +32,10 @@ import { isAbsolute, relative, resolve } from "node:path"
 
 import { owningProject } from "../manifest.mjs"
 import { batchProjectRoot } from "./batch-paths.mjs"
+// 取材面的判据一族（比较键 ∥ 显示式 ∥ 三处判据）——依赖单向：本档 import 它，它不 import 本档。
+import {
+  displayRelOf, neighborListClaims, selfAttributedOf, sessionClaimsOf, surfaceKey,
+} from "../agent/batch-changed-surface.mjs"
 
 import {
   countRoundBlocks, inapplicableDeclarationError, lastRoundBlock, malformedInapplicableLine, readSectionStatusWord,
@@ -96,7 +100,8 @@ export function assertCloseoutChainComplete(src) {
  *      ② 越线方案支：其中实测越了设计时线的档，§2 须带它的正向形分拆方案。无在盘码档就两节都不启动
  *      （**§2 缺块不是拒因**）；判的是**记录缺件**，不是代码长短（代码 > 800 仍由 ④ 那条判）。
  *      基线内容由本档交进去（`baseTextReaderOf`——门自己不读 git）。
- * 位次 = 既有拒因之后、写盘之前（任一被拒 ⇒ 档字节不变）。返回 `④` 的门结果供回执拼行（`null` = 未跑）。
+ * 位次 = 既有拒因之后、写盘之前（任一被拒 ⇒ 档字节不变）。返回 `④` 的门结果供回执拼行（`null` = 未跑）；
+ * `mode === "normal"` 时同一笔把 ⑤ 的取材读数挂上 `changedSurface`，回执行从它取「只报不判」的那一半。
  * @param {{abs:string, cwd:string, agent:object, src:string, action:"close"|"status", mode?:"normal"|"repair"|"supersede"}} o
  *   `src` = 调用方已读的写盘前全文（判据与写盘读同一份字节，不二次读盘）。
  *   `mode` = **哪一条收口边在跑**（三值闭集；跳过集由这一处决定）：
@@ -120,21 +125,76 @@ export function assertCloseoutGates({ abs, cwd, agent, src, action = "close", mo
   // ⑤ 档位臂：与 ①② 同属 `mode === "normal"` 组（`repair` ∥ `supersede` 按定义没有可判的 §2）。
   if (mode === "normal") {
     const root = tierRootOf(abs, cwd)
-    assertTierPlan(src, root, changedSurface(abs, root, agent), baseTextReaderOf(abs, root))
+    const surface = changedSurface(abs, root, agent)
+    assertTierPlan(src, root, surface.judged, baseTextReaderOf(abs, root))
+    // 只报不判的那一半随门结果交回调用面（同一笔取材，不取第二次——两次取才可能各说各的）。
+    gate.changedSurface = surface
   }
   return gate
 }
 
-/** 本批改动面（**取材 = 现成两面**：写工具触达账 ∪ 提交 diff；本档不另造登记）——交绝对路径，供档位臂量长度。
- *  触达账条目本就是绝对路径（写工具记账）；提交清单以 **git 仓根**为基，故按 `committedDocs` 回的 `base`
- *  还原成绝对路径——项目根住大仓子目录时也不丢条目。基 sha 未定 ⇒ 只以触达账为准（那正是本会话写过的档）。
- *  @returns {string[]} 改动面条目（可能含非源档——后缀筛在门档里） */
+/**
+ * 本批改动面（**取材 = 现成两面，按批判**；判据单源 = 设计档 §4.18.1）——交绝对路径，供档位臂量长度。
+ *
+ * 两腿，**判据一在前**：
+ *  判据一 = 写时归属（记账面记下的「这笔写服务哪一批」，取自 `agent._batchAttribution`）；
+ *  判据二 = 提交 diff，按认领收窄：减去**别的批已认领**的档。认领两源对批档状态的要求不同——观测源
+ *    （本会话归属表里别的批档）不看那一批收没收口；计划源（盘上批档的 §2 机读清单）只给可读地未收口的批。
+ * 三条合成规则：
+ *  - 归属表里属本档 ⇒ **判**（一条直接的写记录不被另一个批的计划推翻）；
+ *  - 归属表里没有它、认领成立 ⇒ **不判，只报**（收口回执点名它，请人确认是否本批）；
+ *  - 两腿都不说话 ⇒ **判**（认领不成立就当它是本批的，fail-closed）。
+ * 触达账条目本就是绝对路径（写工具记账）；提交清单以 **git 仓根**为基，故按 `committedDocs` 回的 `base`
+ * 还原成绝对路径——项目根住大仓子目录时也不丢条目。基 sha 未定 ⇒ 只以触达账为准（diff 腿不启动）。
+ * @returns {{root:string, judged:string[], reported:string[]}} `judged` = 交给档位臂判读数的档；
+ *   `reported` = 认领成立、只进回执行的档（绝对路径）
+ */
 function changedSurface(abs, root, agent) {
   const touched = Array.isArray(agent?._touchedFiles) ? agent._touchedFiles : []
   const baseSha = baseShaOf(abs)
-  if (baseSha === null) return [...touched]
-  const diff = committedDocs(root, baseSha)
-  return [...touched, ...(diff.files ?? []).map((f) => resolve(diff.base, f))]
+  const diff = []
+  if (baseSha !== null) {
+    const committed = committedDocs(root, baseSha)
+    for (const f of committed.files ?? []) diff.push(resolve(committed.base, f))
+  }
+  // 同一档两腿都会给（触达账记过又提交过）：按比较键去重，留首次出现的原形。
+  const entries = new Map()
+  for (const p of [...touched, ...diff]) {
+    if (typeof p !== "string" || p === "") continue
+    const key = surfaceKey(p)
+    if (!entries.has(key)) entries.set(key, p)
+  }
+  const mine = selfAttributedOf(agent, abs)
+  // 认领只在真有「不属于本档」的条目时才去问（会话归属是内存读，盘上清单那一路每个邻批各两次 git 调用）。
+  const claimed = new Set()
+  if ([...entries.keys()].some((k) => !mine.has(k))) {
+    for (const key of sessionClaimsOf(agent, abs)) claimed.add(key)
+    for (const key of neighborListClaims(root, abs).keys()) claimed.add(key)
+  }
+  const judged = []
+  const reported = []
+  for (const [key, p] of entries) {
+    if (mine.has(key) || !claimed.has(key)) judged.push(p) // 判据一说了算 ∥ 两腿都不说话
+    else reported.push(p) // 只报不判
+  }
+  return { root, judged, reported }
+}
+
+/**
+ * `[changed surface]` 收口回执段（判据单源 = 设计档 §4.18.1「被别的批认领的档只报不判」）：这些档不判读数，
+ * 但**点名它们**，请人确认「是否本批」——判据收窄了，这件事仍然看得见。
+ * 认领的来源如实写成两源（本会话归属表 ∥ 盘上在途批的 §2 清单）：观测源不按状态筛，已收口的邻批也能靠它认领，
+ * 所以串里不写「在途」那一个限定——回执说的必须是它真做了的那件事。
+ * 承载面 = 收口那一笔返回给调用方的回执文本（与 `[doc-check gate]` ∥ `[ledger reanchor]` 同面）；
+ * 读者 = 收口这一笔的调用者，他正是决定「这些档算不算本批」的人。不写进批档、不进台账：它不是规范，是一次收口的读数。
+ * @param {{root?:string, reported?:string[]}|null} surface — `assertCloseoutGates` 交回的取材读数
+ * @returns {string} 以换行起头；没有被认领的档 ⇒ 空串
+ */
+export function changedSurfaceReceiptLine(surface) {
+  const rows = surface?.reported ?? []
+  if (rows.length === 0) return ""
+  const items = rows.map((p) => `\n  ${displayRelOf(surface.root, p)}`).join("")
+  return `\n[changed surface] 只报不判：${rows.length} 档被别的批认领（本会话归属表 ∥ 盘上在途批的 §2 清单），本批没判它们的读数——确认是否本批${items}`
 }
 
 /** 仓根（§2 机读清单的第一列是仓根相对路径）——解析式与文档机检门同式

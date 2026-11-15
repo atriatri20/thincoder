@@ -52,7 +52,7 @@ import {
   findPlaceholderResidue, placeholderResidueError, readBatchStatusLine, reviewWritableSegment, sectionHasStatusLine,
   sectionThreeDesignTrackError, updateSectionStatusLine, zoneStatusCount,
 } from "./batch-skeleton.mjs"
-import { assertCloseoutGates, checkReceipt, closeHalfStateError, closeLedgerFailedError, consistencyReceiptLine, newDebtReasonOf, newDebtReasonReceiptLine, readCloseoutSource, reanchorReceiptLine, repairReceiptLine, repairTraceLine } from "./batch-closeout.mjs"
+import { assertCloseoutGates, changedSurfaceReceiptLine, checkReceipt, closeHalfStateError, closeLedgerFailedError, consistencyReceiptLine, newDebtReasonOf, newDebtReasonReceiptLine, readCloseoutSource, reanchorReceiptLine, repairReceiptLine, repairTraceLine } from "./batch-closeout.mjs"
 import { assertCloseDisposition, consistencyOf, repairDecisionOf } from "./batch-ledger-view.mjs"
 import { appendLineToSection, assertSingleLineNote, reclaimOnReopen, reopenHalfStateError, reopenLedgerFailedError, reopenReasonError, reopenReceiptLine, rewriteAsReopen, todayLocal } from "./batch-reopen.mjs"
 import { gateReceiptLine } from "./batch-gate.mjs"
@@ -332,7 +332,7 @@ export async function statusBatchRecord({ args, ctx, review, reviewTrack, pickTa
   const reanchor = closingValue && readBatchStatusLine(src) !== "closed"
     ? await ledgerAfterRecordWrite({ side: "close", abs, src, run: () => reanchorOnClose(abs, ctx?.agent?.cwd, args?.completed, args?.closeEvidence, true) })
     : null
-  return `batch: §${seg} status line updated to ${JSON.stringify(lineValue)} — the freeze gate (§1) is a read-only domain for non-§1 writes (frozen truth stays = the §1 line).${gateReceiptLine(gate)}${designTokensReceiptLine(designTokens)}${repairReceiptLine(repair?.repair ? { rows: repair.rows, date: todayLocal() } : null)}${reanchorReceiptLine(reanchor)}${newDebtReasonReceiptLine(reanchor)}${consistencyReceiptLine(await consistencyOf(abs, ctx?.agent?.cwd))}`
+  return `batch: §${seg} status line updated to ${JSON.stringify(lineValue)} — the freeze gate (§1) is a read-only domain for non-§1 writes (frozen truth stays = the §1 line).${gateReceiptLine(gate)}${changedSurfaceReceiptLine(gate?.changedSurface)}${designTokensReceiptLine(designTokens)}${repairReceiptLine(repair?.repair ? { rows: repair.rows, date: todayLocal() } : null)}${reanchorReceiptLine(reanchor)}${newDebtReasonReceiptLine(reanchor)}${consistencyReceiptLine(await consistencyOf(abs, ctx?.agent?.cwd))}`
 }
 
 /**
@@ -374,7 +374,7 @@ export async function closeBatchRecord({ args, ctx, review, pickTarget, onWritte
   const reanchor = await ledgerAfterRecordWrite({
     side: "close", abs, src, run: () => reanchorOnClose(abs, ctx?.agent?.cwd, args?.completed, args?.closeEvidence, true),
   })
-  return `batch: §1 status line → 「已收口 ${date}」 — the record is frozen: append is refused from now on, and status is refused except the reopen conjunction (§1 → 进行中 with a note) (整档冻结；改 = 新批新档; §6 内容与台账核销仍走既有通道).${gateReceiptLine(gate)}${designTokensReceiptLine(designTokens)}${repairReceiptLine(repair.repair ? { rows: repair.rows, date } : null)}${reanchorReceiptLine(reanchor)}${newDebtReasonReceiptLine(reanchor)}${consistencyReceiptLine(await consistencyOf(abs, ctx?.agent?.cwd))}`
+  return `batch: §1 status line → 「已收口 ${date}」 — the record is frozen: append is refused from now on, and status is refused except the reopen conjunction (§1 → 进行中 with a note) (整档冻结；改 = 新批新档; §6 内容与台账核销仍走既有通道).${gateReceiptLine(gate)}${changedSurfaceReceiptLine(gate?.changedSurface)}${designTokensReceiptLine(designTokens)}${repairReceiptLine(repair.repair ? { rows: repair.rows, date } : null)}${reanchorReceiptLine(reanchor)}${newDebtReasonReceiptLine(reanchor)}${consistencyReceiptLine(await consistencyOf(abs, ctx?.agent?.cwd))}`
 }
 
 // ─── 收口自动消费本批设计凭证（DESIGN-TOKEN-SETTLEMENT §10——单源，close ∥ status 两通路同调）──

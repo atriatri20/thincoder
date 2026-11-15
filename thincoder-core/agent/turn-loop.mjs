@@ -10,6 +10,8 @@ import { abortError, annotateAbort } from "../abort-provenance.mjs"
 import { specForModel, assistantToolCallMessage } from "../config.mjs"
 import { executeToolCalls } from "./dispatch.mjs"
 import { recordToolResults } from "./record-results.mjs"
+// 归属表（收口取材的判据一）：中断分支的记账点与常路同笔——两处 `_touchedFiles.push` 都写归属。
+import { recordAttribution } from "./batch-attribution.mjs"
 import { injectPostTurn } from "./post-turn.mjs"
 import { handleCompletion, isSubstantiveResponse } from "./completion.mjs"
 import { runCompactionCheck, enforceContextFit, preflightWindowFit, injectTurnReminders, injectResponseReminders } from "./run-stages.mjs"
@@ -283,10 +285,13 @@ export async function runTurnLoop(agent, {
         try {
           const args = JSON.parse(toolCall.arguments)
           const paths = toolTouchPaths(tool, args)
+          const touched = []
           for (const p of paths) {
             const abs = resolve(agent.cwd, p)
             if (!agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
+            touched.push(abs)
           }
+          recordAttribution(agent, touched, agent._batchDoc)
         } catch { /* 畸形 args 不影响记账（touchedFiles 尽力而为） */ }
       }
       // The assistant tool_calls were committed above — synthesize placeholder tool

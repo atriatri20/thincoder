@@ -37,6 +37,8 @@ import { isReadonlyAction } from "./dispatch-gates.mjs"
 // 跨轮投影的**账本采集点**（CONTEXT-COMPACTION.md §1.1 · 台账 #2395）：每一条工具结果入史的同时记一笔
 // 运行记账（验证命令与结果摘要）；变更文件面仍走 `_touchedFiles` 既有归集（不另立第二份清单）。
 import { noteTurnToolFacts } from "./turn-projection.mjs"
+// 归属表（收口取材的判据一）：记账的同时写下「这笔写服务哪一批」——`_touchedFiles` 形状一字不动。
+import { recordAttribution } from "./batch-attribution.mjs"
 
 let _reindexFile = null
 
@@ -174,10 +176,12 @@ export async function recordToolResults(agent, toolByName, results) {
         try {
           const args = JSON.parse(toolCall.arguments)
           const paths = toolTouchPaths(tool, args)
+          const touched = []
           for (const p of paths) {
             if (typeof p !== "string" || !p) continue // 非字符串项不拖累合法路径（与 dispatch / VSC 消费面同口径）
             const abs = resolve(agent.cwd, p)
             if (!agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
+            touched.push(abs)
             if (agent.memory) {
               // Fire-and-forget: don't block the agent loop on indexing.
               // Reuses a single cached import; errors surface as pending reminders on next turn.
@@ -190,6 +194,8 @@ export async function recordToolResults(agent, toolByName, results) {
               })
             }
           }
+          // 归属与路径同一笔记（`agent._batchDoc` 由 spawn 绑定；未绑定 ⇒ 不入表，收口按本批判）。
+          recordAttribution(agent, touched, agent._batchDoc)
         } catch { /* #327：畸形 args（含 null）/ 畸形路径不再裸抛——touchedFiles 尽力而为 */ }
       }
     }

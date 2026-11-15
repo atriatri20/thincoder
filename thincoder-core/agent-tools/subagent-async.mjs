@@ -40,6 +40,7 @@ import { noteReviewDelivered } from "./review-facts.mjs"
 import { injectBgResult } from "./bash-async.mjs"
 // 批 browser-async-fix：后台浏览器动作注入器（同族——role="browser" 分发到 browser-async.mjs）。
 import { injectBrowserResult } from "./browser-async.mjs"
+import { mergeAttribution } from "../agent/batch-attribution.mjs" // 归属表合入（收口取材的判据一；子代理记在自己的 agent 上，并回父侧）
 
 // agent-tools 共享：并行子代理的审批/继续弹窗经 owner 上命名 promise 链串行——
 // 永不叠弹窗（返回链供调用方 .then 续接）。
@@ -463,11 +464,9 @@ export function mergeChildMutations(parent, child) {
   // to the parent's guard state.
   if (!child._mutatedThisRun || !(child._touchedFiles?.length)) return false
   parent._mutatedThisRun = true
-  const merged = []
-  for (const abs of child._touchedFiles ?? []) {
-    if (!parent._touchedFiles.includes(abs)) parent._touchedFiles.push(abs)
-    merged.push(abs)
-  }
+  const merged = [...(child._touchedFiles ?? [])]
+  for (const abs of merged) if (!parent._touchedFiles.includes(abs)) parent._touchedFiles.push(abs)
+  mergeAttribution(parent, child) // 归属表并集（判据一的取材面随 `_touchedFiles` 同笔并回）
   // §6.10: merged code mutates the parent's state — log it for the stale
   // scan of in-flight reviews (a review whose code changed under it is stale).
   noteMutations(parent, merged)

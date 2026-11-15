@@ -176,6 +176,7 @@ REFUSED 或无法形成有效通过结果时不得写成成功。检查范围按
 - 状态行只有一个可读值（主动 status 与被动同笔写同一词表、同一段头区）。
 - 失败明示。
 - 并发批次隔离。
+- 改动面按批判：绑定了批档的写记下它服务的批，收口只判本批的档（§4.18.1）。
 - 普通模式不获得工程机械门。
 
 ### 4.8 验证面
@@ -248,6 +249,54 @@ status 将已收口 §1 改为进行中时必须带 note。工具追加重开记
 - 补关：行集全归档且唯一读数为 open-but-settled；不补造历史段。
 - supersede：对象已消失或永不实施，并有真实 successor；结算已完成行，退回其他在途行。
 
+### 4.18.1 本批改动面的取材
+
+档位臂要判的是「**本批**改动面里在盘的码档，§2 有没有它的行」。取材面若混进邻批的档，§2 那张表就从「本批的改动面」变成「窗口里所有批的改动面」，记录会说一件不真的事；两批同工作树并行时，任一方收口都会要求另一方补镜像行。
+
+取材按批判，两腿，判据一在前：
+
+- **判据一 = 写时归属**。记账那一刻「这笔写服务哪一批」在**绑定了批档的 agent 上**是已知的，所以每笔记账除路径之外同时写下它服务的批档——记账面 = `thincoder-core/agent/record-results.mjs` 与 `thincoder-core/agent/turn-loop.mjs` 里那两处 `agent._touchedFiles.push(abs)`，两处都按 `agent` 记、不看深度。
+- **绑定只在子代理上有**。`agent._batchDoc` 的唯一赋值点是 spawn：`thincoder-core/agent-tools/subagent-spawn.mjs`「if (batchBound) child._batchDoc = batchDocAbs」；depth-0 主 agent 挂载时为 `null`（`thincoder-core/agent-tools/batch.mjs`「depth-0 主 agent 挂载时 = null——目标走 D-BR21 可选 path / 在飞扫描」）。未绑定的那一笔记路径、不入归属表（`recordAttribution` 对空绑定返回 `false`，不替它猜一个批），收口按本批判（见本文末段边界）。
+- **归属表**。载体 = `thincoder-core/agent/batch-attribution.mjs`（纯函数、零 fs、零 import），挂 `agent._batchAttribution`，键 = 批档绝对路径、值 = 该批的绝对路径集。三个导出面：`recordAttribution(agent, paths, batchDoc)` 记账 · `attributedTo(agent, batchDoc)` 取某批的路径集（收口取「归属含本档」的那些）· `mergeAttribution(parent, child)` 并集合入（子代理的归属表随 `mergeChildMutations` 并回父侧，不靠路径再猜）。
+- **判据二 = 提交 diff，按认领收窄**。`提交 diff` 是事后从 git 取的，天然没有批次标记；它的作用是兜住不经记账工具写的档（`bash` ∥ `execute` 落盘的档、脚本生成的档）。收窄方式 = 减去**别的批已认领**的档。两源对批档状态的要求不同（见下条）：观测源不看那一批收没收口，计划源只给未收口的批。
+- **认领要有观测支撑**。认领两源，性质不同。本会话归属表里别的批档是**观测**：它记的是「那一批写了这一档」这件已发生的事，那一批收口之后这个事实不变，故这一源**不看批档状态**——同会话并行的两批，后收口的一方正是靠它减掉先收口那一方的档。盘上另一份批档的 §2 机读清单只是**计划面**：它声明打算改哪些档，不证明真改了。单凭计划认领，一条永不兑现的计划就能把一档从每一批的判据里摘出去，那正好是静默放过。故清单这一源另加三条：那份批档**可读地未收口**（状态词 = 进行中；状态不可读的按冻结处置，不给认领权）、该档确在**那份批档自己的**批起 sha..HEAD 之内（`baseShaOf` 取那份批档的批起 sha，`committedDocs` 给档清单），且那份批档与本次收口**同项目根**（路径按仓根相对归一后再比，win32 再折大小写）——跨项目同名的相对路径不认领。
+- **认领的抽取面**。清单这一源须归到**具体那份批档**：认领要它自己的批起 sha，跨批合并后的路径集给不出这一条。两个面各取各的：批档目录 = `batchDirs`（`thincoder-core/doc-check/existence.mjs`）；机读清单行 = `machineListRowsOf`（`thincoder-core/agent-tools/batch-segment-vocab.mjs`，与档位门同一个解析面）。`existence.mjs` 另导出 `plannedPathsOf`，那是**跨批并集**，给不出「哪一份批档列了哪一档」。
+- **两腿相反时判据一说了算**。同一档在归属表里属本档、又被邻批认领 ⇒ 本批的，判：一条直接的写记录不被另一个批的计划推翻。归属表里没有它、认领成立 ⇒ 不判，只报。两腿都不说话 ⇒ 本批的，判（认领不成立就当它是本批的，fail-closed）。
+- **被别的批认领的档只报不判**：不判读数，但回执里留一行 `[changed surface]` 点名它们，请人确认「是否本批」。判据收窄了，这件事仍然看得见。
+
+`agent._touchedFiles` 的形状不动（读者有 `recent_changes`、`verify`、子代理调度、审计块多处），归属记在它旁边那张表上。
+
+`[changed surface]` 的承载面 = 收口那一笔返回给调用方的回执文本，与 `[doc-check gate]` ∥ `[ledger reanchor]` 同面：`batch-lifecycle.mjs` 的 `close` 与 `status → 已收口` 两条回执串各内联一行，串由 `batch-closeout.mjs` 出。读者 = 收口这一笔的调用者，他正是决定「这些档算不算本批」的人。不写进批档、不进台账：它不是规范，是一次收口的读数。
+
+归属只能从记账面取：`thincoder-core/agent/record-results.mjs`「if (!agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)」按 `agent` 记、不看深度。
+
+三个面——归属表、认领表、改动面条目——共用一把比较键：`surfaceKey`（`resolve` 后统一 `/` 分隔符，win32 折小写）。归一不做在记账面：`thincoder-core/agent/batch-attribution.mjs` 只存放原值、不持第二把尺（「路径只做**存放**，不在这里归一」），收口那一笔才归一——`selfAttributedOf` 取 `attributedTo` 的原值，再按归一键补一遍。
+
+子代理那一笔记在它自己的 `agent` 上，再由 `thincoder-core/agent-tools/subagent-async.mjs` 的 `mergeChildMutations` 并回父侧：同一笔里走「for (const abs of merged) if (!parent._touchedFiles.includes(abs)) parent._touchedFiles.push(abs)」并路径，也走 `mergeAttribution(parent, child)` 并归属表。
+
+写门不提供这条信息：`thincoder-core/agent/write-gate-ledger.mjs`「if (!(depth === 0)) return null // 子代理走既有 token 门」。子代理的绑定来自 spawn：`thincoder-core/agent-tools/subagent-spawn.mjs`「if (batchBound) child._batchDoc = batchDocAbs」。
+
+三个方向各自的静默失效面（取舍的依据就在这里）：
+
+| 方向 | 判据 | 在什么情况下会静默放过一个真的漏登记 |
+|---|---|---|
+| 甲 只按写时归属 | 归属表 | 不经记账工具写的码档（`bash` ∥ `execute` 落盘的、脚本生成的）根本不在归属表里，门看不见它们 |
+| 乙 清单即契约 | 只判 §2 清单内的档 | 漏登记且该档没进改动面时永远不报——门不再主动发现漏登记 |
+| 丙 只按 diff 提示 | diff 只提示 | 跨会话并行时，别的会话的批不在本会话归属表里，而 diff 又只作提示，它改的档两边都不判 |
+
+故选甲 + 丙的组合：归属作判据（唯一带「归属」这个事实的来源），diff 作兜底再按认领收窄、余下的照判。乙的发现能力不能削。
+
+边界：
+
+- 不改档位门第三列与批起基线的比对规则（那是读数基准，另一件事）。
+- 不改 §2 机读清单的三列语义。
+- 不改写门的拒绝行为与报文（它仍要求 `ledger:"#N"`）。
+- `baseShaOf` 返回 `null` 时 diff 腿不启动：判据 = 归属 + 认领，diff 腿不贡献条目。
+- 记账时没有绑定批档的路径（`agent._batchDoc` 为空——depth-0 主 agent 的写、以及不携绑定的子代理）按本批判：它们不入归属表，故邻批收口之后仍会被本批要行。这是 fail-closed 的方向，代价是主 agent 独占写并提交的档会被邻批要一次镜像行。
+- 归属表不出会话：它挂在 `agent` 上，随会话结束消失。别的会话开的批所写的档不进本会话归属表，那一批收口之后计划源也不再认领它（计划源只给未收口的批）⇒ 跨会话并行时那一档仍会被要一行镜像行。与上一条是两个缺口：上一条是写入侧没有绑定，这一条是观测面只覆盖本会话。
+
+末两条与「认领不成立就当它是本批的」是同一句话：拿不准就往判的方向倒。
+
 ### 4.19 edit
 
 oldText 必须在作者段内精确命中一次。越段、触及受保护状态行、引入新状态行、超过当前大小限制或死占位均拒绝。
@@ -314,6 +363,7 @@ core 提供同一工具与规则。端侧只负责宿主会话、权限和界面
 | D-BR41 | 状态行值的写者只有工具（模型的 `status` 与正文同笔都由工具落笔，§4.12） | 两个写路同一词表、同一段头区，读侧只有一个可读值，机器读取不必猜 |
 | D-BR42 | 现役档用 attach 接新事 | 不复活已核销行 |
 | D-BR43 | 正文写入同笔置段完成词（`§2` ⇒ 设计完成 · `§5` ⇒ 实施完成） | 状态行是下游门的唯一判据面，靠段属主记得调 `status` 就是靠纪律 |
+| D-BR44 | 改动面取材按批判：绑定时的归属作主判据，提交 diff 只兜底、按别的批的**有观测的**认领收窄（观测源不看批档状态，计划源要求未收口），两腿相反时判据一说了算（§4.18.1） | 会话级触达账与工作树级 diff 都不区分「哪一批改的」，两批并行时任一方收口都要求另一方补镜像行；而归属在绑定时已知。认领要观测，因为邻批的 §2 清单是计划面——计划也能把一档从每一批的判据里摘出去 |
 
 ## 8. 边界
 
