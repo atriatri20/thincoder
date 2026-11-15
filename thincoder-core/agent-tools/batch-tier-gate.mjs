@@ -1,7 +1,7 @@
 /**
  * agent-tools/batch-tier-gate.mjs — 收口面的第 ⑤ 臂：**档位臂**（单源叶档）。
  *
- * 权威规格（语义单源）= `docs/core/standards/CODE-TIER.md` §2 ②：收口面判的是 **§2 的记录缺件**，分两半，
+ * 权威规格（语义单源）= `docs/core/standards/CODE-TIER.md` §2.2：收口面判的是 **§2 的记录缺件**，分两半，
  * 同一臂里一遍判完、两半的发现拼成一条拒文。读数那一半的判法、三值分流与拒文措辞 =
  * `docs/core/design/DOC-CHECK.md` §8；量法的定义单源 = 同档 §1。位次与跳过集 =
  * `batch-closeout.mjs` 的 `assertCloseoutGates` 第 ⑤ 臂。本档只实现，不重述口径（D2）。
@@ -12,12 +12,11 @@
  *      快照里没有这一档 ⇒ 那一格只认 `新`；写数即拒。
  *      **读数之前先判表形**：档全文出现块名、清单却解析出零行 ⇒ 一条专门拒文（`tierListUnreadableError`），
  *      不逐档报缺行——「表形不对」与「漏写行」的下一步动作不同（口径 = `docs/core/design/DOC-CHECK.md` §8.4）。
- *   ② **越线方案支**（触发物 = 实测 > `fileSoftMax`）：越线档须带正向形分拆方案。
+ *   ② **越线方案支**（触发物 = 收口时盘上的实测越过收口线）：越线档须带正向形分拆方案。
  *
  * **读数支的实质是「与基线一致」，不是「有没有数」**：只查有没有数，写个 1 也能过。
  * **「§2 缺块」仍不是拒因**：块缺时拒的是「每个在盘码档都缺它那一行读数」，不是「格式没写对」。
  * 而「档里有它的名字、清单零行」不是缺行——那是表形不对，另出一条拒文（见 ①）。
- * 判的也不是代码长短（代码 > 800 仍由文档机检那一条判，本臂不碰）。
  *
  * 入参 `(src, root, changed, baseTextOf)`：`src` = 调用方已读的**写盘前全文**；
  * `root` = 仓根（清单第一列是仓根相对路径）；`changed` = 本批改动面——**调用方交的现成两面**
@@ -34,8 +33,8 @@ import { isAbsolute, relative, resolve } from "node:path"
 
 import { MACHINE_LIST_HEAD_NAME, machineListRowsOf } from "./batch-segment-vocab.mjs"
 
-/** 设计器硬线（> 即越线）：数值单源 = `docs/core/standards/CODE-TIER.md` §4（该档登记本常量）。 */
-const FILE_SOFT_MAX = 500
+/** 收口线（> 即越线）：语义与时点的单源 = `docs/core/standards/CODE-TIER.md` §2.2。 */
+const FILE_CLOSE_MAX = 800
 
 /** 内容行数（末行换行不计）——本档是它唯一的消费面，量法随消费面走。 */
 export function countContentLines(text) {
@@ -100,10 +99,10 @@ function tierReadingHeader() {
     "（判的是记录缺件，不是代码长短）:"
 }
 
-/** 越线方案那一半的节首句（旧句逐字——A2 认它）。 */
+/** 越线方案那一半的节首句（`tier-plan gate` 是 A2 认的那一句）。 */
 function tierPlanHeader() {
-  return "batch: 越了设计时线却没有分拆方案（收口前置门 · tier-plan gate）— close refuses: a source/test file this batch changed " +
-    `crosses the design-time line (> ${FILE_SOFT_MAX}) and §2 carries no usable split plan for it（判的是记录缺件，不是代码长短）:`
+  return "batch: 越了收口线却没有分拆方案（收口前置门 · tier-plan gate）— close refuses: a source/test file this batch changed " +
+    `crosses the closeout line (> ${FILE_CLOSE_MAX}) and §2 carries no usable split plan for it（判的是记录缺件：§2 有没有可用方案）:`
 }
 
 /** 拒文（基线不可判）：它不是逐档读数的问题，是整批的比对基准缺件——整批一条，不逐档点名。 */
@@ -285,14 +284,14 @@ export function assertTierPlan(src, root, changed, baseTextOf) {
     throw new Error(tierListUnreadableError(files, root))
   }
   const readingFindings = files.length ? readingFindingsOf(files, rows, root, baseTextOf) : []
-  // ② 越线方案支：只在实测 > 设计时线时才查（`§2 缺块本身不是拒因` 照旧成立）。
+  // ② 越线方案支：只在收口时的实测越过收口线时才查（`§2 缺块本身不是拒因` 照旧成立）。
   const planFindings = []
   for (const f of files) {
-    if (f.len <= FILE_SOFT_MAX) continue
+    if (f.len <= FILE_CLOSE_MAX) continue
     const row = rowFor(f.abs, rows)
     const gap = row === null ? "§2 清单里没有这一档的方案行" : planGapOf(row.plan)
     if (gap === null) continue
-    planFindings.push(`  ${displayPath(f.abs, root)} — ${f.len} > ${FILE_SOFT_MAX}；${gap}`)
+    planFindings.push(`  ${displayPath(f.abs, root)} — ${f.len} > ${FILE_CLOSE_MAX}；${gap}`)
   }
   if (readingFindings.length || planFindings.length) throw new Error(tierRefusalError(readingFindings, planFindings))
 }

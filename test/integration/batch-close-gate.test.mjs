@@ -1,5 +1,5 @@
 /**
- * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4 / 7-5 / 7-6 / 7-7 / 7-8 / 7-9 / 7-11 / 7-13 / 7-19 / 7-20 / 7-21 / 7-22 / 7-24 / 7-25 / 7-26
+ * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4 / 7-5 / 7-6 / 7-7 / 7-8 / 7-9 / 7-11 / 7-13 / 7-19 / 7-20 / 7-21 / 7-22 / 7-24 / 7-25 / 7-26 / 7-33
  * （RTM CLI 端故事 7「收口只判本批改过的档」；判据原文 = `test/rtm/guard.md` 第 7 节；
  * 7-1…7-3 的机制 = `docs/core/design/DOC-CHECK.md` §6（判域 = 本批变更区）∥ §9（两个时点）∥ §3（悬空指针），
  * 7-4 的机制 = `docs/core/design/TESTING.md` §3.5（零留存的收口门），
@@ -7,7 +7,8 @@
  * 7-7 / 7-21 / 7-22 / 7-23 的机制 = `docs/core/design/DOC-CHECK.md` §9（两个时点：判域跟着时点走），
  * 7-24 / 7-25 的机制 = `docs/core/design/DOC-CHECK.md` §6（区内照判、区外一个字都不出），
  * 7-19 / 7-20 的机制 = `docs/core/design/DOC-CHECK.md` §8（§2 那一列行读数与批起快照比），
- * 7-26 的机制 = `docs/core/design/DOC-CHECK.md` §10（排除面收窄判集：声明前缀下的档不进判域）。
+ * 7-26 的机制 = `docs/core/design/DOC-CHECK.md` §10（排除面收窄判集：声明前缀下的档不进判域），
+ * 7-33 的机制 = `docs/core/design/DOC-CHECK.md` §8.5（越线方案支：触发物 = 收口时盘上长度越过收口线）。
  *
  * 业务入口 = 真 `batch` 工具（`agent-tools/batch.mjs`）的 depth-0 `close` 轨——不直调 `runBatchGate`：
  * 本档要的是「收口这件事」的业务可观察结果（放行 ∥ 拒绝、回执行、§1 状态行落没落盘）。
@@ -29,7 +30,7 @@ import { runDocCheck } from "../../thincoder-core/doc-check/index.mjs"
 import {
   BATCH_REL, CLEAN, CLEAN_A, CLEAN_B, DIRTY, DIRTY_REL, OUT_REL, OUTSIDE_DANGLING, OWN_TEST_REL, OWN_VARIANT_REL,
   PROBE_REL, assertBatchCommitted, asDesigner, cleanupTemp, commit, designerCtx, depth0, gateLineOf, git, gitRepo,
-  makeProject, parentCtx, record, statusLineOf,
+  makeProject, parentCtx, record, snapshot, statusLineOf,
 } from "./close-gate-fixture.mjs"
 
 after(cleanupTemp)
@@ -629,5 +630,65 @@ test('CLI 7-26 正常 · 声明前缀下的档不进判域 ∥ 撤声明照判 �
   )
   assert.match(statusLineOf(root2), /进行中/, "§1 状态行仍「进行中」")
 })
+
+// 7-33：越线方案支的触发物 = **收口线**（基准 = 收口时盘上的内容行数）——设计时线不再由本支判
+// （判据 = `docs/core/design/DOC-CHECK.md` §8.5；两条线各归各时点 = `docs/core/standards/CODE-TIER.md` §2.1 ∥ §2.2）。
+// 同批两个码档：`big` 收口时越过收口线而第二列 `—` ⇒ 拒；`mid` 只越设计时线（510，未过 800）⇒ 这一半对它不启动。
+const BIG_REL = "src/big.mjs"
+const MID_REL = "src/mid.mjs"
+const BIG_START = 359
+const MID_START = 490
+const BIG_CLOSE = 860
+const MID_CLOSE = 510
+/** 恰好 `n` 行内容（末行换行 → `countContentLines` 数到 `n`）。 */
+const linesOf = (n, tag) => Array.from({ length: n }, (_, i) => `// ${tag} ${i + 1}`).join("\n") + "\n"
+/** §2 机读清单逐档给方案格与快照读数（夹具的 `record` 只写一条 `src/probe.mjs` 行；本例要两个码档各自一行）。 */
+const recordWithRows = (sha, rows) => {
+  const base = record(sha)
+  const probeRow = `| \`${PROBE_REL}\` | — | 1 |`
+  assert.ok(base.includes(probeRow), `夹具前提：record 的清单行须是 ${probeRow}`)
+  return base.replace(probeRow, rows.map(([p, plan, reading]) => `| \`${p}\` | ${plan} | ${reading} |`).join("\n"))
+}
+test('CLI 7-33 错误 · 越过收口线而 §2 第二列无方案 ⇒ 拒（点名该档与 800）；补上正向形方案后放行；只越设计时线的 510 行档照放行', async () => {
+  const root = makeProject("r733")
+  writeFileSync(join(root, BIG_REL), linesOf(BIG_START, "big"))
+  writeFileSync(join(root, MID_REL), linesOf(MID_START, "mid"))
+  git(root, "init", "-q")
+  commit(root, "base")
+  const sha = snapshot(root)
+  // 收口时点的盘上长度：big 越过收口线（860 > 800）∥ mid 只越过设计时线（510 > 500，未过 800）
+  writeFileSync(join(root, BIG_REL), linesOf(BIG_CLOSE, "big"))
+  writeFileSync(join(root, MID_REL), linesOf(MID_CLOSE, "mid"))
+  // 第三列 = 批起快照上的读数（359 ∥ 490）：读数那一半因此全绿，拒因只可能来自越线那一半
+  const withPlan = (bigPlan) => recordWithRows(sha, [[BIG_REL, bigPlan, BIG_START], [MID_REL, "—", MID_START]])
+  writeFileSync(join(root, BATCH_REL), withPlan("—"))
+  commit(root, "本批两个码档")
+  const close = () => depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, []))
+  const before = readFileSync(join(root, BATCH_REL), "utf8")
+
+  await assert.rejects(
+    close,
+    (e) => {
+      assert.match(e.message, /越了收口线却没有分拆方案/, `拒文说的是它真判的那条线：${e.message}`)
+      assert.match(e.message, /crosses the closeout line \(> 800\)/, `拒文携收口线数值：${e.message}`)
+      assert.ok(e.message.includes(`${BIG_REL} — ${BIG_CLOSE} > 800`), `逐档行点名该档与两个数：${e.message}`)
+      assert.match(e.message, /方案为空/, `拒因落在第二列没有可用方案：${e.message}`)
+      assert.match(e.message, /为每个越线档补一行/, `拒文说要写什么：${e.message}`)
+      assert.ok(!e.message.includes(MID_REL), `只越设计时线的档不进这条拒文：${e.message}`)
+      assert.doesNotMatch(e.message, /> 500/, `设计时线不在本支拒文里：${e.message}`)
+      return true
+    },
+  )
+  assert.equal(readFileSync(join(root, BATCH_REL), "utf8"), before, "拒收口 ⇒ 档全文逐字不变（§1 状态行字节不变）")
+  assert.match(statusLineOf(root), /进行中/, "§1 状态行仍「进行中」")
+
+  // 补上正向形方案（点名目标档，带目录段 + 本批落步 `§5`）⇒ 同跑放行：越线档不再是缺件
+  writeFileSync(join(root, BATCH_REL), withPlan("把夹具段拆到 `thincoder-core/agent-tools/big-part.mjs`，本批 `§5` 落成"))
+  const receipt = await close()
+  assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `补上方案后收口放行且落盘：${receipt}`)
+  assert.doesNotMatch(receipt, /越了收口线/, `放行零回执（本门不出回执段）：${receipt}`)
+  assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
+})
+
 
 
