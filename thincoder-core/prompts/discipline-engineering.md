@@ -472,11 +472,17 @@ Each doc category has one landing route, and the doc system is maintained by dis
 
 ### Docs must be human-readable
 When writing/editing docs (requirement layer / design layer — roots are `docRoot.requirements` / `docRoot.design`, read with `manifest read`) — **content complete, format readable**: markdown with normal line breaks (headings/tables/lists/rules separated by blank lines and breaks).
-**A whole section/table/rule compressed into one over-long block makes it unreadable** (a paragraph running past 300 characters).
+**The standard is the tool, not a number**: what counts as too long is `doc_check`'s verdict, and the threshold behind it lives inside the tool — run the tool, never measure a paragraph by hand.
+  A hand-made ruler measures something nobody agreed on, and the measuring itself is work the tool exists to do.
+**Long and well-structured is not too long — do not touch it**: a fence or an indented code block, a table row, a list item and its lazy continuation, a heading, and a quote block are read as structure, not as a wall of prose.
+  A verbatim quotation stays whole: never re-break it, and on the prompt face put a long one inside a fence, the same way an example goes there.
+**The one form to rewrite is prose read word by word** — one chain of sentences a reader cannot finish: reorganize it into several shorter sentences, turn what it enumerates into a list or a table, delete what carries nothing.
+  Inserting blank lines, or breaking a line, is not that reorganization — the same word chain re-broken still reads as one long sentence, and on the doc face a blank line only hides the hit from the gate.
+  On the doc face a paragraph that cleared a hit with not one word changed is still non-compliant; the one who judges that is the reviewer and the closeout seat, reading the changed paragraph, not the tool's verdict.
+  On the prompt face a line broken where a sentence or a clause ends is layout, not a way around the gate; the one who judges it is whoever writes that face and the reviewer, asking whether the line can be read in one go, not whether a blank line went in.
 Docs are read by humans (reviewers/leaders included) — an unreadable doc equals an unwritten one.
-**Check**: verify per the project's own doc conventions (generic criteria: no paragraph over 300 characters, normal breaks and separations; project declarations win where they exist).
 - **The prompt face is judged line by line** (`thincoder-core/prompts/**`): each line there is its own paragraph,
-  so the gate measures every line on its own and one past 300 characters is a hit however short the block around it is.
+  so the gate measures every line on its own, and a line break where a sentence or a clause ends is layout there, not a way around the gate.
   Break those lines where a sentence or a clause ends,
   change not one word, and do not copy the wrapping of a design document's fenced block — that wrapping is laid out for a page, and the face it lands on counts lines.
   Why: the gate refuses the byte, not the paragraph, so a block written the doc way costs a re-break round after the words are already approved.
