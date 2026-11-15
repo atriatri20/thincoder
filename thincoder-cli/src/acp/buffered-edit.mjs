@@ -57,12 +57,12 @@ export function makeBufferedEditFace({ agent, readBuffer, writeBuffer, pathOf })
     await writeBuffer(p, joinWithEol(normalizeEOL(out.updated).split("\n"), raw))
     // 缓冲写回**成功之后**记账（快照对同一坐标系有效——缓冲与盘面可能不同步，行号语义跟的是缓冲）
     recordWrite(abs, { type: "edit", startLine: out.editStartLine, shift: out.lineShift })
-    // 逐条回执（§7.4「单形态删行不经桥」）：单形态经桥恒为确认形——路由门要求单形态的
-    // `new_string` 是字符串，而删行只在**省略**它时成立 ⇒ 单形态删行走不到这里（落本地通道，
-    // 回执 = 核面 `Deleted line N of <path>`），桥面的删行回执只来自 `edits` 数组形态（editBatch）。
-    // 不留删行分支：为没出现过的输入加分支 = 加一条没人走的路，且它会让下一个读这里的人
-    // 以为单形态删行走 IDE 缓冲（实测不走）；放宽路由门是行为变更，没人要求过。
-    return `OK: edited ${p} via IDE (${out.occurrences} occurrence(s))${out.note ? ` — ${out.note}` : ""}`
+    // 单形态回执说真话（EDIT.md §3）：路由门要求单形态的 `new_string` 是字符串，而空串也是字符串
+    // ⇒ 行号形 + 空串改后确实走到这里，且它的结局是一次删除——继续印 `OK: edited` 就是把删除
+    // 说成替换。两路同一措辞：`Deleted <line N|lines N-M> of <path>`（行号段 = 同一 `deleteTarget`）。
+    return out.deleted
+      ? `Deleted ${deleteTarget(out)} of ${p}`
+      : `OK: edited ${p} via IDE (${out.occurrences} occurrence(s))${out.note ? ` — ${out.note}` : ""}`
   }
   /** 数组形态：与核批面同一条六段流水线（EDIT.md §8 D-15）——
    *  ① 容器守卫整批拒 → ② 分组（非对象条目 ∥ 缺 path ∥ 条目校验不过 ⇒ 该条失败、不进组）→

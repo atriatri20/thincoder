@@ -8,7 +8,7 @@
  * 内容条目随后按调用序串行累积；同一档的多条**只写一次**（写前门判该档最终内容）。
  * 一条失败只废它自己，同档其余条照应用、其余档照落盘，批内零回滚；档级失败（读不到 ∥ 门拒 ∥
  * 写盘抛错）只连坐该档。每条目独立按判定序（EDIT.md §4——分支 0 单行替换 / 零重叠→替换即删 /
- * LCS / 空 new 显式报错；EDIT.md §5（约束——删行形态）：省略 new_string = 删行。顶层 path
+ * LCS / 内容形空 new 显式报错；行号形省略 new_string 或传空串 = 删行——EDIT.md §1 空值矩阵）。顶层 path
  * （args.path）为无自带 path 条目的默认（2026-09-05 用户裁定——条目自带 path 优先——见
  * EDIT.md §5 修订注）。排顺序与累积走 edit-diff 的两个零 IO 纯函数——本档只留 IO（读 / 写 / 回执）。
  */
@@ -23,7 +23,7 @@ import { writeThroughPath, lineAnchorVerdict, lineAnchorRefusal } from "./write-
 // 回执组装共用 edit-diff 的 composeEditReceipt（单点——缺省回执 = base + 写入点上下文）；
 // 批级回执的两件文案（逐条失败行 ∥ 末行汇总）单源 = edit-receipt.mjs（EDIT.md §5 ∥ §8 D-16）。
 import { editEntryFailureLine, editBatchSummary } from "./edit-receipt.mjs"
-import { assertEditArgsExclusive, assertEditsContainer, validateEditEntry, hasLineParams, planEditEntries, applyPlannedEntries, splitLines, EMPTY_NEW_STRING_LINE, EDIT_ENTRY_NO_PATH, editEntryLabel, editsEntryError, deleteTarget, composeEditReceipt } from "./edit-diff.mjs"
+import { assertEditArgsExclusive, assertEditsContainer, validateEditEntry, hasLineParams, planEditEntries, applyPlannedEntries, splitLines, EDIT_ENTRY_NO_PATH, editEntryLabel, editsEntryError, deleteTarget, composeEditReceipt } from "./edit-diff.mjs"
 
 /**
  * Apply the `edits` array form: **逐条成败、逐档落盘**（EDIT.md §5 ∥ §8 D-5）。
@@ -256,11 +256,12 @@ export function findFuzzyWindow(content, old) {
 }
 
 /**
- * D1 按行号改（EDIT.md §2/§5——F1）：entry 带 line（单行）或 startLine/endLine（1-based
+ * D1 按行号改（EDIT.md §1/§2——F1）：entry 带 line（单行）或 startLine/endLine（1-based
  * 闭区间）→ 直接按行号替换该行/行范围为 new_string（无需 old_string——互斥校验在
- * validateEditEntry）。阶段 2 删行形态（EDIT.md §5——裁定 A）：**省略 new_string =
- * 删除该行/范围**（意图有界——删哪行是显式声明）；显式空串 `new_string: ""` →
- * EMPTY_NEW_STRING_LINE 显式报错（模板生成 new_string 但落空 ≠ 删行意图——防误删）。
+ * validateEditEntry）。阶段 2 删行形态：**省略 new_string 或传空串 = 删除该行/范围**
+ * （同一结局——删行意图由行号表达，两种写法得到同一个结果）。归一只在本函数内落一次：
+ * 开头取局部量 `target`，其后的删除分支与替换分支都读它——`""` 与 `undefined` 于是走同
+ * 一条路（不靠 `splitLines("")` 的巧合）。
  * 内容域 = normalizeEOL 后 LF（与 computeEditEntry 同域）；尾随换行随原文件保持（删到
  * 文件为空 → ""——无剩余行即无终止符）。行号越界 → 明确报错。原子性由调用方保证
  * （本函数纯计算）。
@@ -269,7 +270,9 @@ export function findFuzzyWindow(content, old) {
 export function applyLineEdit(content, entry, opts = {}) {
   // 错误文本不带任何写盘结论（EDIT.md §5 / §8 D-14）：` — nothing written` 后缀的取废由 validateEditEntry
   // 按 `scope:"batch"` 决定，本函数只报行号事实；前缀形随 D-17 退役，不再有要拼的。
-  if (entry.new_string === "") throw new Error(EMPTY_NEW_STRING_LINE)
+  // 归一（单源——一个输入一条语义）：`""` 读成 `undefined`，与调用方省略 new_string 同一个局部量。
+  // 不就地改条目对象：批量里条目是调用方数组的元素，就地赋值会把兄弟条目一起改掉。
+  const target = entry.new_string === "" ? undefined : entry.new_string
   const lines = splitLines(content)
   const start = entry.line ?? entry.startLine
   const end = entry.line ?? entry.endLine
@@ -277,13 +280,13 @@ export function applyLineEdit(content, entry, opts = {}) {
     throw new Error(`line ${end > lines.length ? end : start} out of range — ${opts.path ?? "file"} has ${lines.length} line(s)`)
   }
   const removed = end - start + 1
-  if (entry.new_string === undefined) {
-    // 删行/删范围（EDIT.md §5）——省略 new_string：受影响行整体移除
+  if (target === undefined) {
+    // 删行/删范围（EDIT.md §1）：省略 new_string ∥ 传空串——两种写法都到这里
     const remaining = [...lines.slice(0, start - 1), ...lines.slice(end)]
     const updated = remaining.join("\n") + (remaining.length > 0 && content.endsWith("\n") ? "\n" : "")
     return { updated, editStartLine: start, lineShift: -removed, occurrences: 1, note: null, deleted: true }
   }
-  const newLines = splitLines(entry.new_string)
+  const newLines = splitLines(target)
   const updated = [...lines.slice(0, start - 1), ...newLines, ...lines.slice(end)].join("\n") +
     (content.endsWith("\n") ? "\n" : "")
   return { updated, editStartLine: start, lineShift: newLines.length - removed, occurrences: 1, note: null }

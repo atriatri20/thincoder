@@ -6,7 +6,8 @@
  *    行/行范围为 new_string（无需 old_string——实现落点 edit-batch.mjs applyLineEdit）；
  *    **先过行号锚护栏**（判据与拒文单源 = write-path.mjs 的 lineAnchorVerdict /
  *    lineAnchorRefusal——上一笔写之后目标区落在受影响区内即拒）；
- *    阶段 2 删行形态（EDIT.md §5——约束）：省略 new_string = 删除该行/范围（有界意图）；
+ *    阶段 2 删行形态（EDIT.md §1——空值矩阵）：省略 new_string 或传空串 = 删除该行/范围
+ *    （有界意图——删行意图由行号表达，两种写法同一结局）；
  * ② 内容定位：old_string = 变化区**当前内容**（单次匹配——匹配档位：逐字 → P15.11 唯一
  *    空白差异窗口 → D2/F2 模糊匹配（行级 normalize 后 ≥90% 行相等——edit-batch.mjs
  *    findFuzzyWindow））；new_string = 该区的**期望结果**。判定序：
@@ -17,8 +18,8 @@
  *   2. 有公共行（≥1）→ 行级 LCS——公共行保留、差异行增删；
  *   3. new 与 old 行级完全一致 → 原样替换（no-op 语义——仍报成功）。
  * 内容形态空 new_string（纯删除意图）→ 显式报错（不静默——先于分支 0——单行替换永不
- * 成删除）；行号形态显式空串 → 同样显式错（防误删——模板落空 ≠ 删行意图；EDIT.md
- * §5 空串 vs 省略矩阵）；**省略 new_string = 删行/范围**（阶段 2 命名删行形态）；
+ * 成删除；无界意图：replace_all 配空串会删掉全部匹配）；**行号形态省略 new_string 或
+ * 传空串 = 删行/范围**（同一结局——归一落点 applyLineEdit，EDIT.md §1/§2）；
  * 分支 0 只在 computeEditEntry 条目判定层（壳/桥/批量自动继承）——
  * applyPatchLines（纯 diff 层）语义不动。old/new 行数各上限 1000（超限报错）。
  *
@@ -43,8 +44,7 @@ import { applyLineEdit, findFuzzyWindow, FUZZY_MATCH_NOTE } from "./edit-batch.m
 
 export const MAX_DIFF_LINES = 1000
 export const REGION_TOO_LARGE = "edit region too large — narrow the change"
-export const EMPTY_NEW_STRING = "empty new_string — for deletion, keep the context lines you want to preserve in both old_string and new_string"
-export const EMPTY_NEW_STRING_LINE = "empty new_string with line-based targeting is an explicit error — OMIT new_string to delete the line/range (deleting by number is explicit intent; an empty replacement is a mistake, not a delete)"
+export const EMPTY_NEW_STRING = "empty new_string is an explicit error for content-based targeting (old_string) — a content entry's delete intent can only be expressed by the content, and replace_all + \"\" would delete every match with no bound; to delete, use line-based targeting (line / startLine+endLine), where new_string may be omitted or passed as an empty string"
 export const EDIT_ARGS_MUTEX = "edits array is mutually exclusive with top-level old_string/new_string/line/startLine/endLine — a top-level path is allowed (default for entries without their own path); provide each change's targeting (old_string or line range) and new_string inside its edits entry"
 
 // ─── #325 入参守卫文案（单源——EDIT.md §5 / §8 D-7：核 edit-batch 与 ACP 桥 bridge.mjs 同调用）───
@@ -154,7 +154,7 @@ export function assertEditsContainer(edits) {
  * 前置校验——内容形态：空 old / 非字符串 new；按行号改形态（D1，2026-09-08；阶段 2
  * 删行——EDIT.md §5）：与 old_string 互斥 / line 与 startLine|endLine 互斥 /
  * startLine+endLine 须成对 / 正整数 / endLine ≥ startLine / replace_all 不适用 /
- * new_string：省略（undefined）= 删行 / 显式空串 = 显式错（防误删）/ 其他类型报错。
+ * new_string：省略（undefined）或空串 = 删行（同一结局——除行号外不给别的结局）/ 其他类型报错。
  * error 文本按调用形态（单形态 rich / 批量 label）。
  * opts: { label = ""（批量前缀 = editEntryLabel(path)）, rich = true（单形态完整文本）,
  *         scope = "batch" 时一律按 rich=false（批面不带写盘结论——EDIT.md §5 / §8 D-14） }
@@ -182,9 +182,6 @@ export function validateEditEntry(entry, opts = {}) {
     }
     if (entry.replace_all) {
       throw new Error(label + "replace_all does not apply to line-based edits (a line range is already a single explicit target)")
-    }
-    if (entry.new_string === "") {
-      throw new Error(label + EMPTY_NEW_STRING_LINE + (rich ? " — nothing written" : ""))
     }
     if (entry.new_string !== undefined && typeof entry.new_string !== "string") {
       throw new Error(
@@ -278,9 +275,9 @@ export function computeEditEntry(content, entry, opts = {}) {
   // ` — nothing written` 后缀（批面逐条报，那句在批面为假）。前缀形随 D-17 退役，不再有要拼的。
   const batchScope = opts.scope === "batch"
   validateEditEntry(entry, { ...opts, rich: !batchScope })
-  // D1 按行号改（EDIT.md §2/§5）：行号定位条目直接按行替换（applyLineEdit——落点
-  // edit-batch.mjs），不走 old_string 匹配/判定序；省略 new_string = 删行（EDIT.md §5）；
-  // 互斥/越界/显式空串均在 validateEditEntry/applyLineEdit 显式报错。
+  // D1 按行号改（EDIT.md §1/§2）：行号定位条目直接按行替换（applyLineEdit——落点
+  // edit-batch.mjs），不走 old_string 匹配/判定序；省略 new_string 或传空串 = 删行（同一
+  // 结局，归一在 applyLineEdit 内落一次）；互斥/越界在 validateEditEntry/applyLineEdit 显式报错。
   if (hasLineParams(entry)) return applyLineEdit(content, entry, opts)
   // P15.11：not-found 时先查唯一空白差异窗口——命中则以其原文为实际 old 继续（内容零差异
   // ——自动落点 + note 明示）；实质差异/歧义仍走下方 not-found 报错（不猜内容）。

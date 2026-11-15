@@ -1,7 +1,7 @@
 aliases: 编辑, 改档, 修改文件
 Two targeting forms (mutually exclusive — use one):
 
-① line-based: `line: N` replaces that single line, `startLine: N, endLine: M` replaces the inclusive 1-based line range — no old_string needed when you know the line number; give new_string to replace, or OMIT new_string to delete the line/range;
+① line-based: `line: N` replaces that single line, `startLine: N, endLine: M` replaces the inclusive 1-based line range — no old_string needed when you know the line number; give new_string to replace, or OMIT new_string (an empty string deletes too) to delete the line/range;
 
 ② content-based: old_string is the current content of the region to change (must match exactly once); new_string is the desired result of that region.
 
@@ -14,7 +14,7 @@ A unique single-line old_string paired with a single-line new_string replaces th
 replace_all applies to content-based edits only: literal replacement of every occurrence — the diff rules do not apply.
 
 **Routing — pick the right edit tool:**
-- Delete a line/range by number → omit new_string: edit with `line: N` / `startLine: N, endLine: M`
+- Delete a line/range by number → omit new_string (an empty string deletes too): edit with `line: N` / `startLine: N, endLine: M`
 - Line numbers fresh (just read) → `line`/`startLine`/`endLine` targeting — precise, no content copy needed
 - Line numbers may have drifted / content has whitespace-encoding noise → `hashline_edit` (content-hash addressing — position-independent)
 - Add a line/entry after a known line → insert_after

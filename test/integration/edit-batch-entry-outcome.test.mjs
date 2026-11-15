@@ -1,13 +1,16 @@
 /*
- * edit-batch-entry-outcome.test.mjs — 集成用例 41-1（RTM CLI 端故事 41「批量改多档：一条失败只废那一条，成了的不返工，回执逐条说清」）。
+ * edit-batch-entry-outcome.test.mjs — 集成用例 41-1 ∥ 41-3（RTM CLI 端故事 41「批量改多档：一条失败只废那一条，成了的不返工，回执逐条说清」）。
  *
- * 回指 = 设计档 `docs/core/design/EDIT.md` §5「批量回执（逐条 + 末行计数）」∥「一条失败只废它自己」∥
- * 「该档写不成就整档不成」；需求 = `docs/core/requirements/TOOLS.md` F16；批档
- * `docs/batches/2026-11-09-edit-batch-atomic-receipt.md` §2「集成用例设计（RTM 增量）」。
+ * 回指 = 设计档 `docs/core/design/EDIT.md` §1「参数」（两形态空值矩阵）∥ §2「匹配与应用」（归一落点）∥
+ * §4「验证」；需求 = `docs/core/requirements/TOOLS.md` F16；批档
+ * `docs/batches/2026-11-09-edit-batch-atomic-receipt.md` §2「集成用例设计（RTM 增量）」∥
+ * `docs/batches/2026-11-15-edit-empty-string-deletion.md` §2「集成增量」。
  *
- * 业务入口 = 真 `edit` 工具的 `edits` 形（不直调 `applyEditBatch`）。它答的业务问题：
- * **批量改多档时一条手滑，会不会把已经改成的档一起退回去**（改前 = 整批抛错、前面档零字节，
+ * 业务入口 = 真 `edit` 工具的 `edits` 形（不直调 `applyEditBatch`）。它答两个业务问题：
+ * 41-1：**批量改多档时一条手滑，会不会把已经改成的档一起退回去**（改前 = 整批抛错、前面档零字节，
  * 用户为此改成一档一调 + 逐次回读；本用例钉住那条行为已退场）。
+ * 41-3：**行号形传空串删行，会不会又被拒、逼用户绕去手写文件**（2026-11-15 现场：`new_string: ""`
+ * 被拒 → 绕行 PowerShell 写档 → 编码写坏；本用例钉住空串 = 删除与内容形空串仍拒两边）。
  *
  * 复跑（cwd = 仓根）：`node --test test/integration/edit-batch-entry-outcome.test.mjs`
  */
@@ -89,4 +92,34 @@ test("CLI 41-1 批量改多档：一条失败只废那一条（成了的留在�
   assert.equal(gated.split("文档机检门拒写（doc-check gate）").length - 1, 2,
     "失败原因 = 门拒文原文（对它报的那一档为真）")
   assert.equal(gated.split("\n").at(-1), "edit batch: 1/3 entries applied, 2 failed — 1 file(s) written: notes.txt")
+})
+
+test("CLI 41-3 批内行号形空串按删除生效：一条删、一条替换各按语义，内容形空串仍拒", async () => {
+  const root = fixture("empty-string")
+  const p = join(root, "p.txt")
+  const q = join(root, "q.txt")
+  writeFileSync(p, "keep\ndrop\nchange\n")
+  writeFileSync(q, "dup\ndup\n")
+  const qBefore = sha(q)
+
+  const receipt = await editTool.execute({ edits: [
+    { path: "p.txt", line: 2, new_string: "" },
+    { path: "p.txt", old_string: "change", new_string: "CHANGED" },
+    { path: "q.txt", old_string: "dup", new_string: "", replace_all: true },
+  ] }, { cwd: root })
+
+  // ① 行号形空串 = 删除：那一行真没了，同批的替换照自己的语义落
+  assert.equal(readFileSync(p, "utf8"), "keep\nCHANGED\n", "空串删行与替换各按自己的语义生效")
+  // ② 内容形空串仍拒：不该静默删掉全部匹配（q.txt 字节逐字不变）
+  assert.equal(sha(q), qBefore, "内容形空串的条目一个字节也没写")
+  // ③ 回执逐条说清：删行说「删了哪行」，替换说「换了几处」，内容形空串报它自己那句
+  const lines = receipt.split("\n")
+  assert.ok(lines[0].startsWith("Deleted line 2 of p.txt"), `第 1 条是删行回执：${lines[0]}`)
+  assert.ok(receipt.includes("\nEdited p.txt: replaced 1 occurrence(s)"), `第 2 条是替换回执：\n${receipt}`)
+  const failed = lines.filter((l) => /^edits\[2\] — failed: /.test(l))
+  assert.equal(failed.length, 1, `第 3 条按原位报它自己：\n${receipt}`)
+  assert.match(failed[0], /content-based/, `报文点名这是内容形：${failed[0]}`)
+  assert.match(failed[0], /line-based/, `报文指到行号形可传空串：${failed[0]}`)
+  assert.equal(lines.at(-1), "edit batch: 2/3 entries applied, 1 failed — 1 file(s) written: p.txt")
+  assert.doesNotMatch(receipt, /nothing written|no files written/, "批面回执不说「什么都没写」那句假话")
 })
