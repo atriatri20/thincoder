@@ -36,7 +36,7 @@ aliases: 文档, 文档体系, 文档评审, 文档标准
     Keeping history in the doc is therefore **pure loss**: git already holds every past version, so the doc copy adds zero recoverability while adding a live pollution surface.
     **The trail lives in git commits** — that is where you go to ask "what changed".
     Organize by business board (not per feature point); closed records stay as written — a back-edit rewrites an account someone already settled.
-11. Citation form — cite as `doc:section` (a relative pointer like "see earlier" / "see elsewhere" goes stale, while a section name resolves).
+11. Citation form — a citation is judged by whether it resolves against the current state: a relative pointer like "see earlier" / "see elsewhere" goes stale, while a named target stays findable.
     Citations are one-directional (a cycle leaves neither end primary); cite instead of copying — a copy drifts from its source; pointers resolve against the current state.
     - **Direction rule: a state doc cites a state doc** — a batch record is a one-off carrier that can be deleted whole, so a requirement/design doc citing it (or its unit test files, **history lines included**) dies with it.
       **The citation direction is batch record → state doc only**, and not the reverse — the reverse breaks the moment the record is deleted.
@@ -47,3 +47,10 @@ aliases: 文档, 文档体系, 文档评审, 文档标准
       And a "cleanup batch" is that same reason wearing a different name — which is why the old half-sentence about one is gone.
 12. Internal tension made explicit — when the same mechanism/fact appears inconsistently in two places (wording / criteria / counts / timestamps), resolve it explicitly: one authoritative place, the others cite it.
     Report on discovery — silently picking one side leaves two versions live, and nobody can tell which is current.
+
+**D Evaluation domain**:
+13. **The evaluation domain is the document as it stands now**: content that only later stages of the work can produce is outside that domain while the document is read before those stages.
+    Such content includes an approval given only after the review passes, an implementation record and a verification record; an empty section of that kind is not a defect of the document.
+    **No review-object declaration pulls it in**: naming such a section in the review target does not make its emptiness a finding.
+    **Reading is not judging**: the file stays readable for whatever it tells you about what exists now; the exclusion covers findings about that section, not reading it.
+    Why: judging such a section asks the document to carry a product that cannot exist yet, and the review then fails it on emptiness where nothing was ever due.

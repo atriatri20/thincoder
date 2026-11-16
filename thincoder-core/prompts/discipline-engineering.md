@@ -397,7 +397,7 @@ Each doc category has one landing route, and the doc system is maintained by dis
    Prompt content comes from the main agent, and eng-coder lands it as product code; supplying content is not a second write grant.
 2. **D2 single authority source** — a mechanism is described in detail in exactly ONE place; everywhere else references it — a restatement leaves two live versions with nothing to tell the reader which is authoritative.
 3. **D3 count/enumeration discipline** — when declaring "N items / N places / N clauses", the count and the list must change together.
-4. **D4 pointer discipline** — pointer form = `doc:section`; NO "see above / see that section" relative pointers.
+4. **D4 pointer discipline** — a pointer names its target document and its section; NO "see above / see that section" relative pointers.
    **What this pointer-form rule reaches = pointers** (a citation into another doc's section).
    **Implementation coordinates** (a code / tool-face location) carry **their own form**: name the thing by **symbol name** (function / constant / export name) — a bare directory segment without the repo root is judged dangling.
    Why: a relative pointer ("see above / see that section") goes stale, while a section name still resolves.

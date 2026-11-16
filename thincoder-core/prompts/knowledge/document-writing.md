@@ -7,6 +7,8 @@ aliases: 文档, 写文档, 文档写作, 语义合并
 - **The doc holds only the final, current state** — no history, no "previously X", no changelog, no lineage section.
   Why: invalidated statements are a RAG pollution source — retrieval surfaces a deleted wrong statement as if it were current guidance, and the reader cannot tell it apart from the live rule.
   History lives only in **git commits**.
+- **A document carries its own stage's products, not the next stage's**: a design document carries the design, its target state and its acceptance criteria; it carries no implementation record, and lists no product that exists only after implementation as something this document must contain.
+  Why: the next reader takes that line as this document's requirement and hunts for what cannot exist yet — and a review then fails the document for being empty where nothing was ever due.
 - **Verify the merge mapping's semantics file by file first** — surface resemblance is not topic identity; two documents can carry the same name and answer different questions.
 - **Scripted moves fit only zero-semantics operations** (e.g. a single-symbol global rename), and even then say so explicitly; scripting a semantic document change loses the semantics at the move — a script does not read what it moves.
 - **The user's words outrank any paraphrase of yours**: task books / design docs / plans you wrote are not grounds to violate an explicit user instruction — on conflict, stop and re-align instead of hiding behind your own document.
@@ -24,6 +26,19 @@ aliases: 文档, 写文档, 文档写作, 语义合并
   **An execution coordinate is allowed**: a task-book reference to the approved design tells the implementer which spec to read and follow; it carries the work, not the wording of a rule in this prompt.
   The model acts on it directly, and nothing outside can reword it.
   **Operand exemption**: `AGENTS.md` · `SKILL.md` · `README.md` · `MANIFEST.md` · `.thincoder/advisor.md` · `project_rules.md` · path forms · the `".md"` literal — names the model **reads, writes or passes**, not prose it has to chase; those stay.
+- **A document's numbers belong to that document**: a decision number, a feature number, an acceptance number, a section number — each is the label one document gives its own item.
+  Its scope is that document, sometimes a single section of it; the same string in another document names something else.
+  **A reference from another document carries that document's name**, and a search hit is not evidence of what a number means — the hit finds the string, never the document that issued it.
+  Why: a label read as global makes a live reference look dead, and what the deletion takes out is a rule the other document still runs on.
+- **Two positions, two forms — and the evidence claim**: pick by where the reference is written, never by habit.
+  **Body text**: the target's path, then the section's number, then the section's name in 「」 — `docs/<area>/<name>.md §<N>`「<section name>」.
+  **Nothing sits between the path and its number, not even a backtick**: written apart, the number stops being part of the address, and the edge a graph builds from that line is a document-level edge with no section at all.
+  Bare assumed names follow the convention this discipline already states (`<area>/<name>.md`); the body form adds the doc root so the path resolves.
+  The number is what a graph query builds its edge from; the name is what a person still reads after a renumbering moved the number. Both, never one of them.
+  **Tool parameter**: the `doc:` identity form — a query's argument, a tool's output, a ledger pointer, a case assertion. Never in body text, where it says nothing to a person reading the document.
+  **Evidence claim**: the target's path with the source's own words, unchanged.
+  **A line number is none of the three** — it drifts under every later edit.
+  Why: a citation is read twice — a tool needs an address, a person needs a name — and whichever one is missing leaves that reader guessing.
 - **Know the what and the why before you write** (write with the why): when updating or adding any normative text (prompts ∥ docs ∥ batch records ∥ ledger evidence), three things hold.
   **Know your basis first** — a source up front: the user's words / evidence / review; a cut with no ground leaves nothing to point at.
   **Carry the why** — beyond the requirement, state the cause / lesson / precedent, in plain reasoning.
