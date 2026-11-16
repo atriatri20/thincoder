@@ -1,8 +1,8 @@
 /**
  * edit-receipt.mjs — 批级回执文案**单源**（两个具名构造器各领各的）。
  *
- * 契约 = `docs/core/design/EDIT.md` §5「守卫与文案单源」∥ §8 D-16；骨架单源 =
- * `docs/core/design/EDIT-HELPERS.md` §7.6「跨工具失败回执骨架」· 决策 = `docs/core/design/APPLY-PATCH.md` §7 D-P4。
+ * 契约 = `docs/core/design/EDIT.md` §2「匹配与应用」（回执按调用序、报真实条目/文件数）；骨架单源 =
+ * `docs/core/design/EDIT-HELPERS.md` §4「批量帧」（回执由 editEntryFailureLine/editBatchSummary 统一构造）。
  *
  * 两个构造器：
  * - 逐条 / 逐档失败行 ← `editEntryFailureLine(label, reason)`——`<定位> — failed: <原因原文>`，
@@ -15,7 +15,7 @@
  * 自己回答「我的单位是不是档」，不照抄一段多余的话。
  *
  * 为什么住在自己这一档而不进 `thincoder-core/tools/edit-diff.mjs`：后者已贴近 500 行硬线，
- * 本批为它零增长（`docs/core/design/EDIT.md` §6「档位结论」）。
+ * 本批为它零增长。
  */
 
 /** 报单位 = 档时的单位词——末段 ` — <K> file(s) written` 的存在与否由 `unit` 与它是否相等决定。 */

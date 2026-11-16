@@ -275,8 +275,8 @@ export const editTool = {
     // （应用逻辑在 edit-batch.mjs——2026-09-01 拆出，500 行硬限，先例 git-ext.mjs）
     if (args.edits) return applyEditBatch(args, ctx)
 
-    // 单文件（现状路径）——执行体整段迁出至 edit-diff.mjs（EDIT.md §6——
-    // 行级 LCS 判定：零重叠→替换即删 / 一般 diff→LCS / 空 new→显式报错）
+    // 单文件（现状路径）——执行体整段迁出至 edit-diff.mjs（判定序：零重叠→替换即删 /
+    // 一般 diff→行级 LCS / 空 new→显式报错）
     return runSingleEdit(args, ctx)
   },
 }

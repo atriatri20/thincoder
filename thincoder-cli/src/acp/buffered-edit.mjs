@@ -11,16 +11,16 @@
  * `write-path.mjs`；批级回执的两件文案单源 `edit-receipt.mjs`（与核同调、零字面副本）；
  * 记账键 = `resolveInCwd` 后的绝对路径（与核同一键）。
  *
- * **批量口径与核批面同一**（`docs/core/design/EDIT.md` §8 D-15）：逐条成败、逐档一次写回、批内零回滚。
+ * **批量口径与核批面同一**（`docs/core/design/EDIT.md` §2「匹配与应用」）：逐条成败、逐档一次写回、批内零回滚。
  *
  * 依赖单向：`本档 ← bridge.mjs`（本档不 import `bridge.mjs`）。
  */
 import { normalizeEOL, joinWithEol, resolveInCwd } from "@thincoder/core/tools/shared.mjs"
 import { computeEditEntry, validateEditEntry, assertEditArgsExclusive, assertEditsContainer, hasLineParams, planEditEntries, applyPlannedEntries, deleteTarget, EDIT_ENTRY_NO_PATH, editEntryLabel, editsEntryError } from "@thincoder/core/tools/edit-diff.mjs"
-// 行号锚护栏（EDIT-HELPERS §7）：桥不经 writeThroughPath ⇒ 判据与记账都得在桥面接（§7.4）。
+// 行号锚护栏（`EDIT-HELPERS.md` §3「行号锚」）：桥不经 writeThroughPath ⇒ 判据与记账都得在桥面接（同节）。
 // 判据 / 拒文 = 核单源；记账 = 写缓冲成功后桥自 recordWrite，键 = resolveInCwd 后的绝对路径。
 import { recordWrite, lineAnchorVerdict, lineAnchorRefusal } from "@thincoder/core/tools/write-path.mjs"
-// 批级回执两件文案（逐条失败行 ∥ 末行汇总）单源 = edit-receipt.mjs（EDIT.md §5 ∥ §8 D-16）：
+// 批级回执两件文案（逐条失败行 ∥ 末行汇总）单源 = edit-receipt.mjs（`EDIT-HELPERS.md` §4「批量帧」）：
 // 核批面与桥面同调用——两工具一副骨架，改一处就同时改到另一处。
 import { editEntryFailureLine, editBatchSummary } from "@thincoder/core/tools/edit-receipt.mjs"
 
@@ -35,7 +35,7 @@ import { editEntryFailureLine, editBatchSummary } from "@thincoder/core/tools/ed
  * @returns {{ absOf: (p: string) => string, editSingle: Function, editBatch: Function }}
  */
 export function makeBufferedEditFace({ agent, readBuffer, writeBuffer, pathOf }) {
-  /** 记账键（§7.4）：与核同一键 = `resolveInCwd` 后的绝对路径——键不一致则核与桥各记一条、
+  /** 记账键（`EDIT-HELPERS.md` §3「行号锚」）：与核同一键 = `resolveInCwd` 后的绝对路径——键不一致则核与桥各记一条、
    *  互相看不见，护栏对另一条通道等于零。 */
   const absOf = (p) => resolveInCwd({ cwd: agent?.cwd ?? process.cwd() }, p)
   /** 单形态：读 IDE 缓冲 → 行号锚护栏判定 → computeEditEntry（rich——同本地 runSingleEdit）→
@@ -45,7 +45,7 @@ export function makeBufferedEditFace({ agent, readBuffer, writeBuffer, pathOf })
     const raw = await readBuffer(p)
     const content = normalizeEOL(raw)
     const abs = absOf(p)
-    // 行号锚护栏（§7.4）：行号形才需判——内容形态是位置无关寻址，没有可漂移的锚。
+    // 行号锚护栏（`EDIT-HELPERS.md` §3「行号锚」）：行号形才需判——内容形态是位置无关寻址，没有可漂移的锚。
     // 形态校验先于护栏（与核 runSingleEdit 同序）：缺 endLine / 与 old_string 互斥报自己的句。
     if (hasLineParams(args)) {
       validateEditEntry(args, { rich: true })
@@ -57,14 +57,14 @@ export function makeBufferedEditFace({ agent, readBuffer, writeBuffer, pathOf })
     await writeBuffer(p, joinWithEol(normalizeEOL(out.updated).split("\n"), raw))
     // 缓冲写回**成功之后**记账（快照对同一坐标系有效——缓冲与盘面可能不同步，行号语义跟的是缓冲）
     recordWrite(abs, { type: "edit", startLine: out.editStartLine, shift: out.lineShift })
-    // 单形态回执说真话（EDIT.md §3）：路由门要求单形态的 `new_string` 是字符串，而空串也是字符串
+    // 单形态回执说真话（EDIT.md §3「写与桥」）：路由门要求单形态的 `new_string` 是字符串，而空串也是字符串
     // ⇒ 行号形 + 空串改后确实走到这里，且它的结局是一次删除——继续印 `OK: edited` 就是把删除
     // 说成替换。两路同一措辞：`Deleted <line N|lines N-M> of <path>`（行号段 = 同一 `deleteTarget`）。
     return out.deleted
       ? `Deleted ${deleteTarget(out)} of ${p}`
       : `OK: edited ${p} via IDE (${out.occurrences} occurrence(s))${out.note ? ` — ${out.note}` : ""}`
   }
-  /** 数组形态：与核批面同一条六段流水线（EDIT.md §8 D-15）——
+  /** 数组形态：与核批面同一条六段流水线（EDIT.md §2「匹配与应用」）——
    *  ① 容器守卫整批拒 → ② 分组（非对象条目 ∥ 缺 path ∥ 条目校验不过 ⇒ 该条失败、不进组）→
    *  ③ 逐档读缓冲（读不到连坐该档）→ ④ 行号锚护栏逐条判（命中只废那一条）→
    *  ⑤ 帧排 + `onEntryError:"collect"` 累积（重叠两条互指、各得一行）→
@@ -73,11 +73,11 @@ export function makeBufferedEditFace({ agent, readBuffer, writeBuffer, pathOf })
    *  **两段结构保留、不拆**：`readBuffer` / `writeBuffer` 指 IDE 文档缓冲（传输事实），不是暂存区；
    *  变的是第一段的身份——从「全过才写的闸」变成逐条判定点。桥的 IO 缝与消息契约字段零改。
    *
-   *  回执三形（EDIT.md §5）：成功行保持桥面现措辞；失败行与末行与核同一构造器；末行汇总行桥面
+   *  回执三形（EDIT.md §2「匹配与应用」）：成功行保持桥面现措辞；失败行与末行与核同一构造器；末行汇总行桥面
    *  照写——它的数字（条目总数 / 成功条数 / 已写档数与路径）全在内存里，没有宿主能力依据可以挡它。
    *  桥面不写的三样仍是 diff ∥ 语法检查 ∥ 写入点上下文（它们都读盘面内容或起外部进程）。
    *
-   *  ACP batch-edit 通道**不进 offload 面**（EDIT.md:#796）：回执自持逐条文字行，不含 diff 结构。
+   *  ACP batch-edit 通道**不进 offload 面**：回执自持逐条文字行，不含 diff 结构。
    */
   const editBatch = async (args) => {
     const edits = args.edits
@@ -112,7 +112,7 @@ export function makeBufferedEditFace({ agent, readBuffer, writeBuffer, pathOf })
         groups.set(abs, g)
       }
       g.entries.push(e)
-      g.idx.push(i) // 条目在 `edits` 数组里的原始下标——回显按它回位（§7.3）
+      g.idx.push(i) // 条目在 `edits` 数组里的原始下标——回显按它回位（`EDIT-HELPERS.md` §4「批量帧」）
     }
 
     // ③ 逐档读一次缓冲（读不到 ⇒ 该档所有条失败——原因取读错误原文）

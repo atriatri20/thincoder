@@ -11,7 +11,7 @@
  * process is killed like bash).
  *
  * The child runs PURE node ESM — no helpers are injected (exec-prelude.mjs
- * retired 2026-09-03, TOOLS.md §12: preloaded readFile/writeFile/glob/grep/log
+ * retired 2026-09-03: preloaded readFile/writeFile/glob/grep/log
  * helpers made execute look like a file tool, bypassing the dedicated
  * read/ls/glob/grep/write/edit tools). Scripts that need fs/path import the
  * node: modules themselves — same boundary as bash, no fake sandbox.

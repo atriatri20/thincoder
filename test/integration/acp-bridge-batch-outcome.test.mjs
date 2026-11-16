@@ -2,8 +2,8 @@
  * acp-bridge-batch-outcome.test.mjs — 集成用例 CLI 41-2（RTM CLI 端故事 41「批量改多档：一条失败只废那一条，
  * 成了的不返工，回执逐条说清」）。
  *
- * 回指 = 设计档 `docs/core/design/EDIT.md` §7 集成测试设计（RTM 增量）的 `CLI 41-2` 行 ∥ §5「批量回执」∥
- * §8 D-15 ∥ D-16；需求 = `docs/core/requirements/TOOLS.md` F16 ∥ F17。
+ * 回指 = 设计档 `docs/core/design/EDIT.md` §2「匹配与应用」（批量回执逐条说清）∥ 用例索引 =
+ * `test/rtm/tooling.md`「CLI 41」故事的 `CLI 41-2` 行；需求 = `docs/core/requirements/TOOLS.md` F16 ∥ F17。
  *
  * 业务入口 = ACP 客户端（IDE）发起的一次批量编辑：走 `thincoder-cli/src/acp/bridge.mjs` 的会话入口
  * `buildAcpCallbacks` 的 `toolRouter("edit", { edits: […] })`，读写两侧都经反向 RPC（`fs/read_text_file` ∥

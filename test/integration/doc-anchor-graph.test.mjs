@@ -127,11 +127,11 @@ test("CLI 43-1 正常 · 扫本仓后 chain 以 req:F16 起 depth 6：第 1 跳�
   }
 })
 
-test("CLI 43-2 正常 · reverse 查 EDIT.md §5：需求档与批档两条引用方都在，各带出处", async () => {
-  const rev = await call({ action: "reverse", target: REPO, node: "doc:docs/core/design/EDIT.md#5" })
+test("CLI 43-2 正常 · reverse 查 EDIT.md §2：需求档与批档两条引用方都在，各带出处", async () => {
+  const rev = await call({ action: "reverse", target: REPO, node: "doc:docs/core/design/EDIT.md#2" })
   const lines = rev.split("\n")
   // 首行断到 `kind = 全部十类：` 为止（入边条数那个混合总数已从首行去掉——AC-7）
-  assert.match(lines[0], /^doc_graph\(reverse\) · 起点 doc:docs\/core\/design\/EDIT\.md#5 · kind = 全部十类：/)
+  assert.match(lines[0], /^doc_graph\(reverse\) · 起点 doc:docs\/core\/design\/EDIT\.md#2 · kind = 全部十类：/)
   assert.ok(!/条边|\d+ 条/.test(lines[0]), `首行不得带混合条数：${lines[0]}`)
   // 按类计数行紧跟首行，`cites` 自己一格（本条问的就是档引用那条链）
   assert.match(lines[1] ?? "", /^按类：/, `按类计数行须紧跟首行：${lines.slice(0, 3).join(" | ")}`)

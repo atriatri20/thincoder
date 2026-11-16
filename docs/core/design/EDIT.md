@@ -1,8 +1,10 @@
 # edit 工具（EDIT）· 设计
 
-> 需求 = `docs/core/requirements/TOOLS.md`；共享底层 = `EDIT-HELPERS.md`。
+> 需求 = `docs/core/requirements/TOOLS.md` 的 `F16`（edit 批量逐条成败）；共享底层 = `EDIT-HELPERS.md`。
 
 ## 1. 参数
+
+工具入口 = `editTool`（`thincoder-core/tools/file.mjs`，`name: "edit"`）。
 
 支持顶层单次或 edits 数组。定位可用 line/startLine+endLine 或 old_string；形态互斥。replace_all 只服务内容形。
 

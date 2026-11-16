@@ -1,16 +1,16 @@
 /**
  * edit-batch.mjs — edit 工具的数组形态（edits: [...]）：一次多档替换，**逐条成败、逐档落盘**。
  * （2026-08-31 工具顺手度 §9 ②；2026-09-01 缺陷修复"同文件多条串行累积"；
- * 2026-09-04 EDIT.md §6——条目级判定+应用迁至 edit-diff.mjs——批量调共用。）
+ * 2026-09-04 EDIT.md §2「匹配与应用」——条目级判定+应用迁至 edit-diff.mjs——批量调共用。）
  *
- * 语义（权威 = EDIT.md §5 ∥ §8 D-5）：同一 path 的多条编辑**分两类应用**（帧判据单源 =
- * EDIT-HELPERS §7.3 R1–R4）——行号条目先应用（按 startLine 降序，范围重叠则**那两条都废**），
+ * 语义（权威 = EDIT.md §2「匹配与应用」）：同一 path 的多条编辑**分两类应用**（帧判据单源 =
+ * `EDIT-HELPERS.md` §4「批量帧」的 R1–R4）——行号条目先应用（按 startLine 降序，范围重叠则**那两条都废**），
  * 内容条目随后按调用序串行累积；同一档的多条**只写一次**（写前门判该档最终内容）。
  * 一条失败只废它自己，同档其余条照应用、其余档照落盘，批内零回滚；档级失败（读不到 ∥ 门拒 ∥
- * 写盘抛错）只连坐该档。每条目独立按判定序（EDIT.md §4——分支 0 单行替换 / 零重叠→替换即删 /
- * LCS / 内容形空 new 显式报错；行号形省略 new_string 或传空串 = 删行——EDIT.md §1 空值矩阵）。顶层 path
- * （args.path）为无自带 path 条目的默认（2026-09-05 用户裁定——条目自带 path 优先——见
- * EDIT.md §5 修订注）。排顺序与累积走 edit-diff 的两个零 IO 纯函数——本档只留 IO（读 / 写 / 回执）。
+ * 写盘抛错）只连坐该档。每条目独立按判定序（分支 0 单行替换 / 零重叠→替换即删 /
+ * LCS / 内容形空 new 显式报错；行号形省略 new_string 或传空串 = 删行——EDIT.md §1「参数」空值矩阵）。顶层 path
+ * （args.path）为无自带 path 条目的默认（2026-09-05 用户裁定——条目自带 path 优先）。
+ * 排顺序与累积走 edit-diff 的两个零 IO 纯函数——本档只留 IO（读 / 写 / 回执）。
  */
 import { readFile } from "node:fs/promises"
 import { resolveInCwd, normalizeEOL, joinWithEol, gitDiffOne, autoSyntaxCheck } from "./shared.mjs"
@@ -18,23 +18,23 @@ import { resolveInCwd, normalizeEOL, joinWithEol, gitDiffOne, autoSyntaxCheck } 
 // 仅在调用期使用——ESM 循环下安全（无模块求值期取值）。
 // 写盘经单一写路径点（§2.13.5）——本档不再直调 fs；回执组装共用 edit-diff 的 composeEditReceipt。
 import { writeThroughPath, lineAnchorVerdict, lineAnchorRefusal } from "./write-path.mjs"
-// EDIT.md §6：批量条目判定+应用共用 edit-diff（EDIT.md §4 分支 0 单行替换 + 行级 LCS——零重叠→替换即删）；
-// EDIT.md §5：edits 互斥错误文本随前置校验分支迁出至 edit-diff.mjs。
+// EDIT.md §2「匹配与应用」：批量条目判定+应用共用 edit-diff；判定序（分支 0 单行替换 + 行级 LCS——零重叠→替换即删）见 computeEditEntry；
+// EDIT.md §1「参数」：edits 互斥错误文本随前置校验分支迁出至 edit-diff.mjs。
 // 回执组装共用 edit-diff 的 composeEditReceipt（单点——缺省回执 = base + 写入点上下文）；
-// 批级回执的两件文案（逐条失败行 ∥ 末行汇总）单源 = edit-receipt.mjs（EDIT.md §5 ∥ §8 D-16）。
+// 批级回执的两件文案（逐条失败行 ∥ 末行汇总）单源 = edit-receipt.mjs（`EDIT-HELPERS.md` §4「批量帧」：回执由 `editEntryFailureLine` ∥ `editBatchSummary` 统一构造）。
 import { editEntryFailureLine, editBatchSummary } from "./edit-receipt.mjs"
 import { assertEditArgsExclusive, assertEditsContainer, validateEditEntry, hasLineParams, planEditEntries, applyPlannedEntries, splitLines, EDIT_ENTRY_NO_PATH, editEntryLabel, editsEntryError, deleteTarget, composeEditReceipt } from "./edit-diff.mjs"
 
 /**
- * Apply the `edits` array form: **逐条成败、逐档落盘**（EDIT.md §5 ∥ §8 D-5）。
+ * Apply the `edits` array form: **逐条成败、逐档落盘**（EDIT.md §2「匹配与应用」）。
  *
  * 一条失败只废它那一条：条目校验 ∥ 行号锚护栏 ∥ 应用都在内存里逐条做，失败只记它自己那一行，
- * 同档其余条照应用、其余档照落盘；批内零回滚（§8 D-10）。档级失败（档读不到 ∥ 该档最终内容
+ * 同档其余条照应用、其余档照落盘；批内零回滚。档级失败（档读不到 ∥ 该档最终内容
  * 被写前门拒 ∥ 写盘抛错）只连坐该档——那几条没有可落的内容，报成功就是假话。
  *
  * **写单位 = 档、报单位 = 条**：同一 path 的多条合成一次就地写（`writeThroughPath` 的
- * `op:"write"` + 同一跳记账，不落暂存档、不走 `rename`——§8 D-12）；回执逐条一行、按调用序
- * 回原位，末行恒为计数行（§8 D-9 ∥ D-14）。
+ * `op:"write"` + 同一跳记账，不落暂存档、不走 `rename`）；回执逐条一行、按调用序
+ * 回原位，末行恒为计数行。
  *
  * 批内**没有任何跨档保证**：已写成的档不回滚，「全部成功」不是可以依赖的前提——调用方据以
  * 决策的单位是每一行回执。
@@ -52,9 +52,9 @@ export async function applyEditBatch(args, ctx) {
   // ① 分组（路径解析 ∥ 条目校验——失败的条目只记它自己，不进组）
   for (let i = 0; i < total; i++) {
     const e = args.edits[i]
-    // 条目非对象（null / 字符串 / 数字 / 数组）= **该条**成形错、不进组（EDIT.md §5「条目守卫」
+    // 条目非对象（null / 字符串 / 数字 / 数组）= **该条**成形错、不进组（EDIT.md §2「匹配与应用」
     // 的文案单源 editsEntryError(i)「一条失败只废它自己」——整批拒会让一条手滑废掉全批，而那正是
-    // 逐条成败要灭的代价）。桥面同一判据（EDIT.md §8 D-15）。
+    // 逐条成败要灭的代价）。桥面同一判据（EDIT.md §2「匹配与应用」）。
     if (e === null || typeof e !== "object" || Array.isArray(e)) { fail(i, editsEntryError(i)); continue }
     // 2026-09-05 用户裁定：顶层 path + edits 并存合法化——`e.path || args.path`（条目优先；
     // 缺省入口仅在此兜底）；两者皆无 → 原错误文本（措辞补顶层选项）。
@@ -74,7 +74,7 @@ export async function applyEditBatch(args, ctx) {
       groups.set(abs, g)
     }
     g.entries.push(e)
-    g.idx.push(i) // 条目在 args.edits 里的原始下标——回显按它回位（EDIT-HELPERS §7.3）
+    g.idx.push(i) // 条目在 args.edits 里的原始下标——回显按它回位（`EDIT-HELPERS.md` §4「批量帧」）
   }
 
   // ② 逐档读一次（读不到 ⇒ 该档所有条失败——原因带 ENOENT 原文）
@@ -151,7 +151,7 @@ export async function applyEditBatch(args, ctx) {
         record: { type: "edit", startLine, shift },
       })
     } catch (err) {
-      // 档级失败只连坐该档：原因 = 那个档级错误原文（门拒文对它报的那一档为真——§8 D-11）。
+      // 档级失败只连坐该档：原因 = 那个档级错误原文（门拒文对它报的那一档为真——EDIT.md §2「匹配与应用」）。
       // 已有自己失败原因的条目保留自己那一句——它讲的是另一件事，覆写掉就丢一件（不改报成成功）。
       for (const k of idx) if (!state[k]) fail(k, err.message)
       continue
@@ -184,7 +184,7 @@ export async function applyEditBatch(args, ctx) {
       note: s.out.note,
     })
   }
-  // 末行恒为一行计数（#796 ∥ §8 D-9 ∥ D-14）：大回执（>64K）落盘后双端 preview 保尾
+  // 末行恒为一行计数：大回执（>64K）落盘后双端 preview 保尾
   // （TOOL-OUTPUT-LIMITS.md §2）⇒ 汇总结论恒可见。三个符号各一义：M = 条目总数、k = 应用成功的
   // 条目数、K = 实际写盘的档数（一档多条只写一次 ⇒ K ≤ M）；K = 0 ⇒ 无路径清单支。
   const written = [...groups.values()].filter((g) => g.written).map((g) => g.path)
@@ -193,15 +193,15 @@ export async function applyEditBatch(args, ctx) {
 }
 
 // ---------------------------------------------------------------------------
-// 2026-09-08 edit 语义升级（EDIT.md §2/§3——D1 按行号改 / D2 模糊匹配，落点定死本模块；
+// 2026-09-08 edit 语义升级（EDIT.md §2「匹配与应用」——D1 按行号改 / D2 模糊匹配，落点定死本模块；
 // 条目判定接线在 edit-diff.mjs computeEditEntry——单形态/批量/ACP 桥三通道自动继承；
 // 2026-11-02：排顺序（帧 R1–R4）与累积也上提到 edit-diff（planEditEntries /
 // applyPlannedEntries）——两通道共用同一份排法。
-// 阶段 2 删行形态见 EDIT.md §5（约束）。以下均为纯函数（无 IO）——edit-diff.mjs 调用期导入
+// 阶段 2 删行形态见 EDIT.md §1「参数」。以下均为纯函数（无 IO）——edit-diff.mjs 调用期导入
 // （ESM 循环引用安全：两侧仅函数声明，提升初始化——同 file.mjs ↔ edit-diff.mjs 先例）。
 
 /**
- * D2 行级 normalize（EDIT.md §3——匹配档位；阶段 2 normalize 统一基准——双端同算法）：
+ * D2 行级 normalize（EDIT.md §2「匹配与应用」——匹配档位；阶段 2 normalize 统一基准——双端同算法）：
  * ① 去首尾空白 + 去行尾空格；② tab → 2 空格；③ 引号**单遍逐字符映射**——ASCII 单引号 /
  * 弯引号 ‘ ’ “ ” / 反引号 → 直双引号 "（评审 #2 定稿目标字符 = "——与 ASCII 单引号规则
  * 合并为单遍映射，无顺序依赖——防两端分叉）。**不做行内 \s+ 折叠**——缩进/对齐是结构信息，
@@ -256,7 +256,7 @@ export function findFuzzyWindow(content, old) {
 }
 
 /**
- * D1 按行号改（EDIT.md §1/§2——F1）：entry 带 line（单行）或 startLine/endLine（1-based
+ * D1 按行号改（EDIT.md §1「参数」/§2「匹配与应用」——F1）：entry 带 line（单行）或 startLine/endLine（1-based
  * 闭区间）→ 直接按行号替换该行/行范围为 new_string（无需 old_string——互斥校验在
  * validateEditEntry）。阶段 2 删行形态：**省略 new_string 或传空串 = 删除该行/范围**
  * （同一结局——删行意图由行号表达，两种写法得到同一个结果）。归一只在本函数内落一次：
@@ -268,8 +268,8 @@ export function findFuzzyWindow(content, old) {
  * 返回 { updated, editStartLine, lineShift, occurrences, note, deleted? }（同 computeEditEntry 形态）。
  */
 export function applyLineEdit(content, entry, opts = {}) {
-  // 错误文本不带任何写盘结论（EDIT.md §5 / §8 D-14）：` — nothing written` 后缀的取废由 validateEditEntry
-  // 按 `scope:"batch"` 决定，本函数只报行号事实；前缀形随 D-17 退役，不再有要拼的。
+  // 错误文本不带任何写盘结论（EDIT.md §3「写与桥」）：` — nothing written` 后缀的取废由 validateEditEntry
+  // 按 `scope:"batch"` 决定，本函数只报行号事实；前缀形已退役，不再有要拼的。
   // 归一（单源——一个输入一条语义）：`""` 读成 `undefined`，与调用方省略 new_string 同一个局部量。
   // 不就地改条目对象：批量里条目是调用方数组的元素，就地赋值会把兄弟条目一起改掉。
   const target = entry.new_string === "" ? undefined : entry.new_string
@@ -281,7 +281,7 @@ export function applyLineEdit(content, entry, opts = {}) {
   }
   const removed = end - start + 1
   if (target === undefined) {
-    // 删行/删范围（EDIT.md §1）：省略 new_string ∥ 传空串——两种写法都到这里
+    // 删行/删范围（EDIT.md §1「参数」）：省略 new_string ∥ 传空串——两种写法都到这里
     const remaining = [...lines.slice(0, start - 1), ...lines.slice(end)]
     const updated = remaining.join("\n") + (remaining.length > 0 && content.endsWith("\n") ? "\n" : "")
     return { updated, editStartLine: start, lineShift: -removed, occurrences: 1, note: null, deleted: true }
