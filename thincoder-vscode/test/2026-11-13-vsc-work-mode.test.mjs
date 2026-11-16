@@ -55,7 +55,7 @@ document.body.innerHTML = pageHtml
 const posted = []
 globalThis.acquireVsCodeApi = () => ({ postMessage: (m) => posted.push(m), getState: () => undefined, setState: () => {} })
 
-const { _setConfigPathForTest, _resetConfigPathForTest } = await import("../../thincoder-core/config-io.mjs")
+const { _setConfigPathForTest, _resetConfigPathForTest } = await import("@thincoder/core/config-io.mjs")
 _setConfigPathForTest(cfgPath)
 const sessionIo = await import("../src/extension/session-io.mjs")
 sessionIo._setSessionsDirForTest(sessions)
@@ -250,7 +250,7 @@ test("ENG 工具镜像携带完整 mode 并写同一槽", async () => {
   saveSlot(5, { mode: "normal" })
   const { wireAgentToolSeams } = await import("../src/agent/setup-tooltable.mjs")
   await wireAgentToolSeams()
-  const { engTool } = await import("../../thincoder-core/agent-tools/eng.mjs")
+  const { engTool } = await import("@thincoder/core/agent-tools/eng.mjs")
   const agent = {
     config: { agent: { mode: "normal", engineering: false } }, cwd: proj,
     _engPersist: { cwd: proj, slot: 5 }, _pendingReminders: [], _engDesignTokens: new Map(),

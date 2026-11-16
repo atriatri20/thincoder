@@ -69,7 +69,7 @@ registerHooks({
   },
 })
 
-const { _setConfigPathForTest, _resetConfigPathForTest } = await import("../../thincoder-core/config-io.mjs")
+const { _setConfigPathForTest, _resetConfigPathForTest } = await import("@thincoder/core/config-io.mjs")
 _setConfigPathForTest(cfgPath)
 const { loadSlot, _setSessionsDirForTest, _resetSessionsDirForTest } = await import("../src/extension/session-io.mjs")
 _setSessionsDirForTest(sessions)
@@ -79,10 +79,10 @@ const { removeTempDirBestEffort } = await import("../../test/teardown.mjs")
 // B5（2026-11-13 追补 · 台账 #2395）：跨端场景要真跑一轮模型（核 `runAgent`）并让核 `applySession` 读回同一槽——
 // 核 agent 链 ∥ 会话恢复面 ∥ 轮记录标记 ∥ 核日志目录（轮记录 evidence 面不写本机真实日志目录）按需动态取
 // （与上列同式；核 agent 链静态达 node:sqlite，端侧不为它加静态边）。
-const { createAgent, runAgent } = await import("../../thincoder-core/agent.mjs")
-const { applySession } = await import("../../thincoder-core/session.mjs")
-const { TASK_STATE_MARK } = await import("../../thincoder-core/agent/turn-projection.mjs")
-const { _setLogsDirForTest, _resetLogsDirForTest } = await import("../../thincoder-core/log.mjs")
+const { createAgent, runAgent } = await import("@thincoder/core/agent.mjs")
+const { applySession } = await import("@thincoder/core/session.mjs")
+const { TASK_STATE_MARK } = await import("@thincoder/core/agent/turn-projection.mjs")
+const { _setLogsDirForTest, _resetLogsDirForTest } = await import("@thincoder/core/log.mjs")
 const { agentState } = await import("../src/agent/run-helpers.mjs")
 const logs = join(work, "logs")
 mkdirSync(logs, { recursive: true })
@@ -329,7 +329,7 @@ function providerStub(handler) {
  * `await runAgent` 返回处调用它）。agent 取 VSC 载体形：`buildTopLevelAgent` 不播种五个轮载体（`_turns` 等），
  * 故先删掉——否则夹具会自带一张不属于本场景的账。
  */
-test("B5 完成载荷 turns 含刚收尾那一轮；VSC 存槽 → 核 applySession 开：机读线无工具过程、最后一轮在", { timeout: 120_000 }, async (t) => {
+test("B5 完成载荷 turns 含刚收尾那一轮；VSC 存槽 → 核 applySession 开：机读线带最近轮工具段、最后一轮在", { timeout: 120_000 }, async (t) => {
   const panel = newPanel()
   const stub = await providerStub((index) => (index % 2 === 0
     ? { calls: [{ name: "write", args: { path: `turn-${index / 2}.txt`, content: "T" } }] }
@@ -378,7 +378,7 @@ test("B5 完成载荷 turns 含刚收尾那一轮；VSC 存槽 → 核 applySess
   assert.ok(slotTurns(first)[0].taskState, "有工具活动 ⇒ 任务状态在场")
 
   const cli1 = openInCli(first)
-  assert.equal(hasToolProcess(cli1.history), false, `跨端打开后机读线不得装工具过程：${wire(cli1.history).slice(0, 1200)}`)
+  assert.equal(hasToolProcess(cli1.history), true, `跨端打开后最近一轮的工具段随 toolProcess 进机读线（SESSION.md「turns 最近 2 轮另带 toolProcess」）：${wire(cli1.history).slice(0, 1200)}`)
   assert.ok(wire(cli1.history).includes(FIRST_TURN), `机读线带本轮的请求：${wire(cli1.history).slice(0, 1200)}`)
   assert.ok(wire(cli1.history).includes("answer 0"), "机读线带本轮的回复")
   assert.ok(wire(cli1.history).includes(TASK_STATE_MARK), "机读线带任务状态")
@@ -391,7 +391,7 @@ test("B5 完成载荷 turns 含刚收尾那一轮；VSC 存槽 → 核 applySess
   assert.equal(slotTurns(second).at(-1).finalResponse, "answer 1", "最新那一条的回复 = 本轮最终回复")
 
   const cli2 = openInCli(second)
-  assert.equal(hasToolProcess(cli2.history), false, `两轮之后机读线仍无工具过程：${wire(cli2.history).slice(0, 1200)}`)
+  assert.equal(hasToolProcess(cli2.history), true, `两轮都在保留窗内，工具段仍随 toolProcess 在：${wire(cli2.history).slice(0, 1200)}`)
   assert.ok(wire(cli2.history).includes(FIRST_TURN) && wire(cli2.history).includes(SECOND_TURN), "两轮的请求都在机读线")
   assert.ok(wire(cli2.history).includes("answer 0") && wire(cli2.history).includes("answer 1"), "两轮的回复都在机读线")
   assert.equal(cli2._turns.length, 2, "两轮记录随槽恢复")

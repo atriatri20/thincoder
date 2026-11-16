@@ -74,7 +74,7 @@ document.body.innerHTML = pageHtml
 
 globalThis.acquireVsCodeApi = () => ({ postMessage: () => {}, getState: () => undefined, setState: () => {} })
 
-const { _setConfigPathForTest, _resetConfigPathForTest } = await import("../../thincoder-core/config-io.mjs")
+const { _setConfigPathForTest, _resetConfigPathForTest } = await import("@thincoder/core/config-io.mjs")
 _setConfigPathForTest(cfgPath)
 const { _setSessionsDirForTest, _resetSessionsDirForTest } = await import("../src/extension/session-io.mjs")
 _setSessionsDirForTest(sessions)

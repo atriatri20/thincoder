@@ -87,7 +87,7 @@ const posted = []
 globalThis.acquireVsCodeApi = () => ({ postMessage: (m) => { posted.push(m) }, getState: () => undefined, setState: () => {} })
 
 // ─── 隔离缝（两条产品测试缝；不摸本机真实配置与真实会话目录）──────────────────────────────
-const { _setConfigPathForTest, _resetConfigPathForTest } = await import("../../thincoder-core/config-io.mjs")
+const { _setConfigPathForTest, _resetConfigPathForTest } = await import("@thincoder/core/config-io.mjs")
 _setConfigPathForTest(cfgPath)
 const { _setSessionsDirForTest, _resetSessionsDirForTest } = await import("../src/extension/session-io.mjs")
 _setSessionsDirForTest(sessions)
