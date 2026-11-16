@@ -68,7 +68,7 @@ export function slotWarning(fileName) {
  *
  * 锚替换缝（CORE-UNIFICATION §2.13.8——U0）：**两个 return 逐条**经 `applyPromptInjections`
  * （槽位拼接结果 / consult 基底）——未配置 = 恒等，现行行为零变；读取径（模块级缓存）不动。
- * 结构机检（`test/prompt-injections.test.mjs`）按 return 分支逐条守。
+ * 必须保持的不变量：每个 return 分支都经 `applyPromptInjections`，新增分支未挂即错。
  */
 export function assemblePrompt(scenario, mode = "normal") {
   const files = SCENARIO_SLOT_FILES[scenario]

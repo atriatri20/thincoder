@@ -2,7 +2,7 @@
 
 > 需求 = `docs/core/requirements/ADVISOR-CONVERGENCE.md`。
 > 最近先例：`ADVISOR-GUARDS.md` 的宿主确定性判定。对齐 = 状态由宿主产生；分工 = 本档负责轮次、会话、响应与覆盖，守卫档负责边缘判定。
-> 勘察证据：已读当前 advisor 工具契约、需求与守卫设计；相关 = type、documents、batchDoc、异步和评审对象声明。
+> 勘察证据：已读当前 advisor 工具契约、需求与守卫设计；相关 = type、documents、batchDoc、异步和评审对象声明。§8.4 的三处提示词落点：声明面 `advisor-design.md` 的 **Boundary** 条载射程天花板，判据面 `documentation-evaluation.md` 的 **D Evaluation domain** 组载判域，写作面 `document-writing.md` 的 **A document carries its own stage's products, not the next stage's** 条载跨阶段产物归属。
 
 ## 1. 目标
 
@@ -18,11 +18,17 @@
 | Round 2 | round2 | 以验证 prior 为主 | 仅明显崩溃、数据丢失、逻辑错误 |
 | Round 3+ | round3 | 严格只验 prior | 不寻找新问题 |
 
-每轮用户消息带机械生成的 Review-object declaration。设计首轮还包含 Approval Signal。
+表按代码评审陈述。设计评审不衰减，每轮都用 `advisor-design.md`（§2.2）。
+
+每轮用户消息带机械生成的 Review-object declaration 与 Approval Signal——设计评审每轮都走完整构造，首轮与后续轮同一形态；信号缺失时构建面补齐，启动前仍缺则拒绝（`docs/core/design/ADVISOR-GUARDS.md`）。
 
 ### 2.2 轮次映射
 
 已完成尝试数决定下一轮提示词；有 prior 且已有完成尝试才进入 round2+。拒绝启动不消耗轮次。
+
+设计评审不衰减：每一轮都按 `advisor-design.md` 的完整判据重审全文，轮次只用于显示、争议窗和评审凭证重签，不选择收敛提示词。代码评审仍按完成尝试数在 round2 / round3 收敛提示词间切换。
+
+设计评审轮 2+ 的用户消息仍带上一轮评审输出与 agent 的修复声明表，作参考而非核验清单：评审据此不再重报已修项，判据仍取自本轮全文重审。收敛横幅与「只验上轮条目」指令只属代码评审。
 
 轮次属于评审实例，同步与异步共用实例事实。没有 prior 且本 run 未改代码时可开始新周期；本 run 改过代码则保留轮次。
 
@@ -147,6 +153,24 @@ Fixed 表示已落地，Dispatched 表示在途，Not an issue 表示技术反�
 
 评审循环调用工具时把同步值与 Promise 归一为 Promise，使超时竞速和拒绝处理一致。
 
+### 8.4 射程天花板：评审侧与写侧
+
+评审侧规则归 `docs/core/requirements/ADVISOR-CONVERGENCE.md` §2.3 的 F36（设计评审的目标域止于本轮评审判得着的面）。本档只补它的机制理由与提示词落点，不复述它的判决面。
+
+为什么：批档 §5 只有实施完成后才存在，判它等于让设计卡在本轮 pass 尚未放行的段上——这一轮关不掉，死锁是评审自己造出来的。
+
+写侧是这条边界的镜像，产物枚举归 `docs/core/requirements/DOC-SYSTEM.md` §2「功能性需求」的 FR8（一份文档只承载本阶段该有的产物）。本档同样只补它的理由与提示词落点。
+
+只堵评审侧不够：写侧照旧把下一阶段的产物列进必备项，评审迟早又照着去查，天花板由文档自己顶穿。
+
+提示词落点合计三处，各按自己的读者陈述；三处措辞不得互相矛盾，三处同改，单改一处就是两版并存。
+
+- 声明面：`thincoder-core/prompts/advisor-design.md` 的 **Boundary** 条管「对象声明能拉到哪」。
+- 判据面：`thincoder-core/prompts/knowledge/documentation-evaluation.md` 的 **D Evaluation domain** 组管「文档评价的判域」。
+- 写作面：`thincoder-core/prompts/knowledge/document-writing.md` 的 **A document carries its own stage's products, not the next stage's** 条管「本档该不该写这个产物」，是方向的另一端。
+
+`advisor-round2.md` 与 `advisor-round3.md` 不在落点内：两档是代码评审的收敛轮提示词，设计评审不走它们（§2.2）。
+
 ## 9. 配置
 
 - 项目 `.thincoder/advisor.md` 提供评审准则覆盖。
@@ -158,8 +182,16 @@ Fixed 表示已落地，Dispatched 表示在途，Not an issue 表示技术反�
 
 验证轮次选择、无轮次封禁、新会话、prior、引文、覆盖失效、guard、响应表语义、争议窗、需求契合和工具返回归一。
 
-提示词文本可用逐字阅读或结构检查；文档变化本身不需要制造业务集成用例。真实业务或生产问题按 TESTING 决定永久集成覆盖。
+提示词文本可用逐字阅读或结构检查。提示词文本与提示词选取的变化不改变业务可观察结果，故不因此新增集成用例：集成用例只从真实业务需要和真实生产问题产生（`docs/core/design/TESTING.md` §13.1「当前规则」），也只断言业务可观察结果。真实业务或生产问题按 TESTING 决定永久集成覆盖。
 
 ## 11. 边界
 
 轮次语义归本档；不完整族、启动门、预算、冻结和失败文案归 ADVISOR-GUARDS；异步实例生命周期归 AGENT-LOOP-ASYNC-POOL；凭证槽归 DESIGN-TOKEN-SETTLEMENT。
+
+需求里不归本档的几面各有承档：
+
+- 项目上下文注入（AGENTS.md、项目规则、skills 能力清单）归 `docs/core/design/PROMPT-SYSTEM.md` §7「自动注入策略」。
+- 评审上下文的发现与降级归 `docs/core/design/PORTABILITY.md` 的「评审上下文」行。
+- 项目标准层注入归 `docs/core/design/MANIFEST.md` §2.12「标准层」。
+- 上下文压缩后的重挂载与不可用时的报告归 ADVISOR-GUARDS。
+- 请求预算的派生归 `docs/core/design/CONTEXT-COMPACTION.md` §2「请求预算」。

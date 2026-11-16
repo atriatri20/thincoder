@@ -1,8 +1,11 @@
 /**
  * advisor/convergence.mjs — shared convergence-round message building (round 2+).
- * SINGLE source for the round-2+ sections used by BOTH the normal advisor flow
+ * buildConvergenceBody / buildConvergenceInstructions: SINGLE source for the
+ * round-2+ sections of CODE reviews, used by BOTH the normal flow
  * (buildAdvisorFollowUp) and the legacy path (buildAdvisorUserMessage) — fixes must
- * not be replicated in two places. Lives in its own module to avoid the advisor-entry
+ * not be replicated in two places. buildPriorReviewBlock serves the design-review
+ * round 2+, whose prior output is a reference rather than a verification list.
+ * Lives in its own module to avoid the advisor-entry
  * ↔ message-building import cycle.
  */
 
@@ -77,4 +80,32 @@ export function buildConvergenceBody(p, response, round, scopeFiles) {
     "",
   ]
   return parts.join("\n")
+}
+
+/**
+ * Design-review reference block for round 2+ (decision 2026-11-16 — a design
+ * review has NO convergence decay). The prior review output and the agent's fix
+ * claims travel so the reviewer does not re-report what is already fixed, but
+ * both are REFERENCE: the round is a full review at the same standard as the
+ * first, and the prior items are not the verification list.
+ * Deliberately separate from buildConvergenceBody — that one keeps serving code
+ * reviews, whose rounds DO narrow (round 2 semi-convergence, round 3+ strict).
+ * @param {string} p — full prior review output (verbatim)
+ * @param {string} response — agent fix-claims table (or fallback text)
+ * @returns {string} the reference block
+ */
+export function buildPriorReviewBlock(p, response) {
+  return [
+    "## Prior Review Output (previous round — reference, not the verification list)",
+    p,
+    "",
+    "## Agent Response (fix claims — reference only)",
+    response,
+    "",
+    "## Instructions",
+    "1. This round is a FULL review at the same standard as the first: the system prompt's complete criteria apply, and every document in the review scope is read in full.",
+    "2. The prior review output above is a reference, not the verification list: report an item as still open only where the current file state shows it, and report anything new you find.",
+    "3. Evidence rule: every finding MUST quote the exact line content from THIS round's `read` output — one CONTIGUOUS excerpt, quoted exactly as it stands. Line numbers alone are NOT evidence.",
+    "",
+  ].join("\n")
 }
