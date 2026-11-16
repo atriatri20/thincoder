@@ -2,6 +2,21 @@
 
 All notable changes to ThinCoder VS Code are documented here.
 
+## [0.11.2] — 2026-11-16
+
+### Added
+
+- **近底阈按视口比例**（半个视口为下限），回底钮与 `pin` 同源。
+
+### Changed
+
+- **工作模式 `minimal` → `tiny`**；tiny 档有效窗口 256K。
+- **settings 面与输入面**一并入库。
+
+### Fixed
+
+- **写门窄口**：上滚解钉，拒绝形状补全。
+
 ## [0.11.1] — 2026-11-04
 
 ### Added

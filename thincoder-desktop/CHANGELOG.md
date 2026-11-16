@@ -2,6 +2,22 @@
 
 All notable changes to ThinCoder Desktop are documented here.
 
+## [0.11.2] — 2026-11-16
+
+### Added
+
+- **knowledge 检索分词剥首尾标点**。
+- **挂起驱动拆成骨干与四语义档**。
+
+### Changed
+
+- **工作模式 `minimal` → `tiny`**；tiny 档有效窗口 256K。
+- **近底阈按视口比例**，回底钮与 `pin` 同源。
+
+### Fixed
+
+- **跨实例取件判据分家**：挂起窗照常取件。
+
 ## [0.11.1] — 2026-11-04
 
 ### Changed
