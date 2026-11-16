@@ -134,27 +134,51 @@ export function assertCloseoutGates({ abs, cwd, agent, src, action = "close", mo
 }
 
 /**
+ * 本批 diff 腿读不出的拒文（判据单源 = 设计档 §4.18.1「提交 diff 读不出 ⇒ 拒收口，不静默少一腿」）。
+ * 三件必须点在串里：**根**（在哪儿跑）、**批起 sha**（拿什么比）、**下一步**（`git diff --name-only <sha> HEAD`
+ * 看 git 报什么），收尾句 = `Nothing was written.`。
+ * 为什么必须拒：`committedDocs` 的失败面是 `ok: false` + 空集；空集若被读成「本批没有提交改动」，不经记账工具
+ * 写的档（`bash` ∥ `execute` 落盘的、脚本生成的）就一档都判不到，而收口照样把记录冻成历史——业务失败变成功。
+ * 只属**本批自己的**这一笔：邻批那几笔读不出不拒（见 `batch-changed-surface.mjs` 的 `neighborListClaims`）。
+ * @param {string} root 项目根（拒文点名的那个根）
+ * @param {string} baseSha 本批批起 sha（`baseShaOf` 的返回形，此处必非 `null`）
+ */
+export function changedSurfaceUnreadableError(root, baseSha) {
+  return "batch: 本批改动面读不出（changed surface unreadable）— close refuses: this batch's own commit-diff leg " +
+    `could not be read at root ${root} with base sha ${baseSha}, so the changed surface has no diff side left. ` +
+    "Closing now would freeze the record while the files written outside the ledger (files dropped by `bash` / `execute` / a script) were never judged — " +
+    "an unread diff must not pass for \"this batch committed nothing\". " +
+    `下一步：在该根跑 \`git diff --name-only ${baseSha} HEAD\`，看 git 报什么（批起 sha 指向的对象在不在 ∥ 这个目录还在不在仓里），修好后再收口。 ` +
+    "Nothing was written."
+}
+
+/**
  * 本批改动面（**取材 = 现成两面，按批判**；判据单源 = 设计档 §4.18.1）——交绝对路径，供档位臂量长度。
  *
  * 两腿，**判据一在前**：
  *  判据一 = 写时归属（记账面记下的「这笔写服务哪一批」，取自 `agent._batchAttribution`）；
  *  判据二 = 提交 diff，按认领收窄：减去**别的批已认领**的档。认领两源对批档状态的要求不同——观测源
- *    （本会话归属表里别的批档）不看那一批收没收口；计划源（盘上批档的 §2 机读清单）只给可读地未收口的批。
+ *    （本会话归属表里别的批档）不看那一批收没收口；计划源（盘上批档的 §2 机读清单）**状态可读即收**，
+ *    上界随状态定：未收口取 HEAD、已收口取那份批档自己的最后一次提交（取不到就不认领）。
  * 三条合成规则：
  *  - 归属表里属本档 ⇒ **判**（一条直接的写记录不被另一个批的计划推翻）；
  *  - 归属表里没有它、认领成立 ⇒ **不判，只报**（收口回执点名它，请人确认是否本批）；
  *  - 两腿都不说话 ⇒ **判**（认领不成立就当它是本批的，fail-closed）。
  * 触达账条目本就是绝对路径（写工具记账）；提交清单以 **git 仓根**为基，故按 `committedDocs` 回的 `base`
- * 还原成绝对路径——项目根住大仓子目录时也不丢条目。基 sha 未定 ⇒ 只以触达账为准（diff 腿不启动）。
+ * 还原成绝对路径——项目根住大仓子目录时也不丢条目。基 sha 未定 ⇒ 只以触达账为准（diff 腿不启动）；
+ * **基 sha 有了却读不出**（`committed.ok === false`）⇒ 抛拒（`changedSurfaceUnreadableError`），不静默少一腿：
+ * 空集若被当成「本批没有提交改动」，不经记账工具写的档就一档都判不到，而收口照样冻记录。
+ * 拒收口只属**本批自己的这一笔**：邻批那几笔读不出由 `neighborListClaims` 按「认领不成立」处置。
  * @returns {{root:string, judged:string[], reported:string[]}} `judged` = 交给档位臂判读数的档；
  *   `reported` = 认领成立、只进回执行的档（绝对路径）
  */
-function changedSurface(abs, root, agent) {
+export function changedSurface(abs, root, agent) {
   const touched = Array.isArray(agent?._touchedFiles) ? agent._touchedFiles : []
   const baseSha = baseShaOf(abs)
   const diff = []
   if (baseSha !== null) {
     const committed = committedDocs(root, baseSha)
+    if (!committed.ok) throw new Error(changedSurfaceUnreadableError(root, baseSha))
     for (const f of committed.files ?? []) diff.push(resolve(committed.base, f))
   }
   // 同一档两腿都会给（触达账记过又提交过）：按比较键去重，留首次出现的原形。
@@ -183,8 +207,9 @@ function changedSurface(abs, root, agent) {
 /**
  * `[changed surface]` 收口回执段（判据单源 = 设计档 §4.18.1「被别的批认领的档只报不判」）：这些档不判读数，
  * 但**点名它们**，请人确认「是否本批」——判据收窄了，这件事仍然看得见。
- * 认领的来源如实写成两源（本会话归属表 ∥ 盘上在途批的 §2 清单）：观测源不按状态筛，已收口的邻批也能靠它认领，
- * 所以串里不写「在途」那一个限定——回执说的必须是它真做了的那件事。
+ * 认领的来源如实写成两源（本会话归属表 ∥ 盘上批档的 §2 清单）：观测源不按状态筛；计划源**状态可读即收**、
+ * 上界随状态定（未收口取 HEAD、已收口取它自己的收口提交），所以串里不写「在途」那一个限定——回执说的必须是
+ * 它真做了的那件事。
  * 承载面 = 收口那一笔返回给调用方的回执文本（与 `[doc-check gate]` ∥ `[ledger reanchor]` 同面）；
  * 读者 = 收口这一笔的调用者，他正是决定「这些档算不算本批」的人。不写进批档、不进台账：它不是规范，是一次收口的读数。
  * @param {{root?:string, reported?:string[]}|null} surface — `assertCloseoutGates` 交回的取材读数
@@ -194,7 +219,7 @@ export function changedSurfaceReceiptLine(surface) {
   const rows = surface?.reported ?? []
   if (rows.length === 0) return ""
   const items = rows.map((p) => `\n  ${displayRelOf(surface.root, p)}`).join("")
-  return `\n[changed surface] 只报不判：${rows.length} 档被别的批认领（本会话归属表 ∥ 盘上在途批的 §2 清单），本批没判它们的读数——确认是否本批${items}`
+  return `\n[changed surface] 只报不判：${rows.length} 档被别的批认领（本会话归属表 ∥ 盘上批档的 §2 清单），本批没判它们的读数——确认是否本批${items}`
 }
 
 /** 仓根（§2 机读清单的第一列是仓根相对路径）——解析式与文档机检门同式

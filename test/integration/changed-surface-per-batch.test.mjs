@@ -1,8 +1,8 @@
 /**
- * changed-surface-per-batch.test.mjs — 集成用例 `CLI 7-32`（RTM CLI 端故事 7「收口只判本批改过的档」；
- * 判据原文 = `test/rtm/guard.md` 第 7 节那一行）。
+ * changed-surface-per-batch.test.mjs — 集成用例 `CLI 7-32` ∥ `CLI 7-34`（RTM CLI 端故事 7「收口只判本批改过的档」；
+ * 判据原文 = `test/rtm/guard.md` 第 7 节那两行）。
  * 机制 = `docs/core/design/BATCH-RECORD.md` §4.18.1（本批改动面的取材：写时归属作判据一 ∥ 提交 diff 按认领收窄，
- * 认领的两源性质不同——本会话归属表是观测、盘上在途批档的 §2 清单是计划面）。
+ * 认领的两源性质不同——本会话归属表是观测、盘上批档的 §2 清单是计划面）。
  *
  * 业务入口 = 真 `batch` 工具（`agent-tools/batch.mjs`）的 depth-0 `close` 轨——不直调 `assertTierPlan`：
  * 本档要的是「收口这件事」的业务可观察结果（放行 ∥ 拒绝、回执行点名了谁、§1 状态行落没落盘）。
@@ -27,12 +27,12 @@ after(() => {
   for (const p of projects) removeTempDirBestEffort(p)
 })
 
-/** 六段批档（链门 + §3 状态词臂的前置）；`rows` = §2 机读清单的行（`[仓根相对, 读数]`）。 */
-const recordSrc = ({ baseSha, rows }) => [
+/** 六段批档（链门 + §3 状态词臂的前置）；`rows` = §2 机读清单的行（`[仓根相对, 读数]`）；`status` = §1 状态词。 */
+const recordSrc = ({ baseSha, rows, status = "进行中" }) => [
   "# 并行批 · 改动面取材",
   "",
   "## §1 讨论（主 agent）",
-  "**状态行**：进行中",
+  `**状态行**：${status}`,
   "",
   "夹具讨论。",
   "",
@@ -168,3 +168,73 @@ test('CLI 7-32 正常 · 两批同工作树并行：各自收口只判本批改�
   // 拒收口 ⇒ 档字节逐字不变：§1 状态行仍「进行中」。
   assert.equal(readFileSync(join(red.root, REL_A), "utf8"), before, "被拒的收口没有落盘")
 })
+
+// ─── CLI 7-34：已收口批的区间上界 ────────────────────────────────────────────────────────
+
+const CLOSED_A = "docs/batches/closed-a.md" // 已收口批（区间内 = alpha、区间之后 = delta）
+const CLOSED_B = "docs/batches/closed-b.md" // 区间内那一档的收口方
+const CLOSED_D = "docs/batches/closed-d.md" // 区间外那一档的收口方
+
+/**
+ * 现场：同一工作树里 A 已收口，它的 §2 列了 alpha 与 delta 两档；只有 alpha 在 A 自己的区间
+ * （批起 → A 的最后一次提交 = 收口提交）内被提交，delta 在那之后才提交。A 的收口只改盘上那份档、
+ * 不提交——上界仍指它自己的收口提交（钉死的上界不许长到 HEAD）。
+ */
+function closedScene(tag) {
+  const root = mkdtempSync(join(tmpdir(), `csurf-closed-${tag}-`))
+  projects.push(root)
+  mkdirSync(join(root, "docs", "batches"), { recursive: true })
+  mkdirSync(join(root, "docs", "notes"), { recursive: true })
+  mkdirSync(join(root, "src"), { recursive: true })
+  writeFileSync(join(root, "PROJECT-MANIFEST.json"), JSON.stringify({ version: 1, phase: "initial-dev" }, null, 2))
+  write(root, "docs/notes/readme.md", "# notes\n")
+  write(root, "src/alpha.mjs", "// alpha v1\n")
+  write(root, "src/delta.mjs", "// delta v1\n")
+  git(root, "init", "-q")
+  commit(root, "base")
+
+  const shaA = snapshot(root)
+  const rowsA = [["src/alpha.mjs", "1"], ["src/delta.mjs", "1"]]
+  write(root, CLOSED_A, recordSrc({ baseSha: shaA, rows: rowsA }))
+  write(root, "src/alpha.mjs", "// alpha v2\n")
+  commit(root, "A: 改 alpha 并提交批档") // A 的最后一次提交（正常路径上的收口提交）
+  write(root, "src/delta.mjs", "// delta v2\n")
+  commit(root, "later: 改 delta") // 落在 A 的区间之后
+  write(root, CLOSED_A, recordSrc({ baseSha: shaA, rows: rowsA, status: "已收口" }))
+
+  // B：本次要收口的批——它的 §2 **没列** alpha（若被照判就会因缺读数被拒），批起快照取在全部提交之后。
+  const shaB = snapshot(root)
+  write(root, CLOSED_B, recordSrc({ baseSha: shaB, rows: [["docs/notes/readme.md", "1"]] }))
+  const agent = { cwd: root, _touchedFiles: [], config: { agent: { engineering: true } } }
+  return { root, agent }
+}
+
+test('CLI 7-34 边界 · 已收口批的 §2 清单按它自己的收口提交认领（区间内只报不判、区间外照判）', async () => {
+  const { root, agent } = closedScene("self")
+  const alpha = join(root, "src/alpha.mjs")
+  const delta = join(root, "src/delta.mjs")
+
+  // ① 区间内：A 已收口，alpha 在 A 自己的区间之内 ⇒ 认领成立 ⇒ 只进回执行（B 的 §2 没列它，照判就会拒）。
+  const first = await close(root, agent, CLOSED_B, [alpha])
+  assert.match(first, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `B 收口放行：${first}`)
+  assert.match(first, /\[doc-check gate\] DOC-CHECK GATE: PASS/, `B 的机检门放行：${first}`)
+  assert.match(first, /\[changed surface\] 只报不判：1 档/, `回执行点名一档被已收口批认领：${first}`)
+  assert.match(first, /src\/alpha\.mjs/, `区间内那一档被认领：${first}`)
+  assert.doesNotMatch(first, /src\/delta\.mjs/, `区间外那一档不被它认领（也不在本批改动面里）：${first}`)
+  const bLine = readFileSync(join(root, CLOSED_B), "utf8").split("\n").find((l) => l.startsWith("**状态行**："))
+  assert.match(bLine, /已收口/, "B 的 §1 状态行已写「已收口」")
+
+  // ② 区间外：delta 也写在 A 的 §2 里，但它在 A 的收口提交之后才提交 ⇒ 不在 A 的区间内 ⇒ 不被认领、照本批判；
+  //    D 的 §2 没列它而它在盘 ⇒ 档位臂拒收口并点名该档（正是「上界钉死之后认领退回确实改过的档」那一面）。
+  const shaD = snapshot(root)
+  write(root, CLOSED_D, recordSrc({ baseSha: shaD, rows: [["docs/notes/readme.md", "1"]] }))
+  const before = readFileSync(join(root, CLOSED_D), "utf8")
+  await assert.rejects(() => close(root, agent, CLOSED_D, [delta]), (e) => {
+    assert.match(e.message, /tier-reading gate/, `拒文点名门位：${e.message}`)
+    assert.match(e.message, /src\/delta\.mjs/, `区间外那一档被照判（点名该档）：${e.message}`)
+    assert.match(e.message, /Nothing was written\./, `拒文收尾句：${e.message}`)
+    return true
+  })
+  assert.equal(readFileSync(join(root, CLOSED_D), "utf8"), before, "被拒的收口没有落盘")
+})
+

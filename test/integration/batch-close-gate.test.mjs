@@ -205,8 +205,10 @@ test('CLI 7-6 正常 · 批档 §1 含一条带目录段、不在批档根下的
 test('CLI 7-7 正常 · 笔域集只含批档自身 ⇒ 判域 0 档：回执「PASS · 范围 0 档」，同一份判域清单 checkFiles = 0', async () => {
   const root = makeProject("r77")
   // 无 git 仓 + 触达账零档 ⇒ 笔域集 = 批档自身；收口时点批档面整份不进判域 ⇒ 这一批没有别的档可判。
+  // §1 **不写**「批起 sha」记入行：非 git 仓的真实现场（无可取快照 ⇒ `baseShaOf` 回 `null`、diff 腿不启动）；
+  // 写一个占位 sha 会落在「有基线却读不出」那一形上——那条按设计档 §4.18.1 是拒收口，不是本用例要断的东西。
   // 「范围 0 档」断的是判域真跟着时点缩：批档自身还在笔域集里，却不再算一个被判过的档。
-  writeFileSync(join(root, BATCH_REL), record("0".repeat(40)))
+  writeFileSync(join(root, BATCH_REL), record(null))
 
   const receipt = await depth0.execute({ action: "close", path: BATCH_REL, completed: [], closeEvidence: "夹具收口证据" }, parentCtx(root, []))
   assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 0 档", `笔域集只含批档自身 ⇒ 判域 0 档：${receipt}`)

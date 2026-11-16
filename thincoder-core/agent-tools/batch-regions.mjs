@@ -2,14 +2,16 @@
  * agent-tools/batch-regions.mjs — 批档门的两条 git 腿：收口面「本批笔域集」的档清单，与本批变更区。
  *
  * 判据句单源 = `docs/core/design/DOC-CHECK.md` §6：收口那一刻只判**本批变更区**——区内照判三件、区外一个字都不出。
- * 本档出三样东西，三样都是「哪些档 / 哪几行」这一侧的事实，判定归引擎：
- *   `committedDocs`——本批提交 diff 腿的**档清单**（笔域集的取材面）。
+ * 本档出的几样东西都是「哪些档 / 哪几行 / 哪个提交」这一侧的事实，判定归引擎：
+ *   `committedDocs`——本批提交 diff 腿的**档清单**（笔域集的取材面），右端恒为 HEAD。
+ *   `committedDocsUpto`——同一取材、右端换成调用方给的提交（已收口批的区间上界用）。
+ *   `lastCommitOf`——某一档最后一次被改动的提交（已收口批的区间上界来源）。
  *   `changedRegionsOf`——本批变更区（`git diff -U0 <批起 sha>` 的变更行），判域的行级事实。
  *   `stageDocs`——收口门自己那一笔 `git add`（§6「收口门自己把要判的档 `git add` 掉」）：写索引；取区不写索引。
  */
 import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
-import { relative, resolve } from "node:path"
+import { isAbsolute, relative, resolve } from "node:path"
 
 /** 读档（读不到 ⇒ 空串：归属标注取不到就只出 `§N`，不猜）。 */
 export function safeRead(abs) {
@@ -47,20 +49,67 @@ const gitAt = (cwd, argv) => execFileSync(
 )
 
 /**
- * 本批提交 diff 腿（`git diff --name-only <base> HEAD`——只取清单，判定归引擎）：路径以**仓根**
- * （`rev-parse --show-toplevel`）为基还原——项目根住大仓子目录时条目不丢（清单相对仓根）。
+ * 提交 diff 腿的公共取材（两个具名函数共用一套：仓根还原 + `diffBaseOf`，只有**右端**不同）：
+ * 路径以**仓根**（`rev-parse --show-toplevel`）为基还原——项目根住大仓子目录时条目不丢（清单相对仓根）。
  * `<base>` = `diffBaseOf` 判出的基准：旧形批 = 记入行的 sha；快照批 = 快照的**第一父**（建档时的 HEAD）。
  * 两个 sha 各管一头：读数基线取快照（设计席看到的那棵树），而「本批改过哪些档」只能从建档时的 HEAD 算起。
- * 跑不出（非仓 / sha 不可解析）⇒ `ok: false` + 空集（调用面按「基 sha 未定」明示，不静默）。
+ * 跑不出（非仓 / sha 不可解析 / 右端解不开）⇒ `ok: false` + 空集（调用面按「基 sha 未定」明示，不静默）。
  */
-export function committedDocs(root, sha) {
+function diffSince(root, sha, end) {
   const run = gitAt
   try {
     const top = run(root, ["rev-parse", "--show-toplevel"]).trim() || root
-    const files = run(top, ["diff", "--name-only", diffBaseOf(run, top, sha), "HEAD"]).split(/\r?\n/).filter(Boolean)
+    const files = run(top, ["diff", "--name-only", diffBaseOf(run, top, sha), end]).split(/\r?\n/).filter(Boolean)
     return { ok: true, base: top, files }
   } catch {
     return { ok: false, base: root, files: [] }
+  }
+}
+
+/**
+ * 本批提交 diff 腿（`git diff --name-only <base> HEAD`——只取清单，判定归引擎）。契约：右端恒为 HEAD。
+ * 调用面 = 本批自己的改动面（`changedSurface`）与仍可继续长的邻批（未收口批）。
+ * @param {string} root 项目根（git 命令的起点；仓根由 `rev-parse --show-toplevel` 还原）
+ * @param {string} sha 批起 sha（取法单源 = `batch-gate.mjs` 的 `baseShaOf`）
+ * @returns {{ok:boolean, base:string, files:string[]}}
+ */
+export function committedDocs(root, sha) {
+  return diffSince(root, sha, "HEAD")
+}
+
+/**
+ * 同一取材、**右端是调用方给的提交**（已收口批的区间上界：那份批档自己的最后一次改动）。
+ * `upper` **必填、无缺省**：缺省会让右端静默退回 HEAD，而「上界悄悄长到 HEAD」正是本函数要消掉的那一形
+ * （收口批的区间若取 HEAD，「该档在它的区间之内」对它几乎恒真 ⇒ 计划面变成所有权）。取不到合形的右端 ⇒
+ * 按「认领不成立」处置（`ok: false` + 空集），不猜一个右端。
+ * @param {string} root 项目根
+ * @param {string} sha 批起 sha
+ * @param {string} upper 区间上界提交（非空串；调用方从不带缺省地传进来）
+ * @returns {{ok:boolean, base:string, files:string[]}}
+ */
+export function committedDocsUpto(root, sha, upper) {
+  if (typeof upper !== "string" || upper.trim() === "") return { ok: false, base: resolve(root), files: [] }
+  return diffSince(root, sha, upper)
+}
+
+/**
+ * 某一档最后一次被改动的提交（已收口批的区间上界来源 = 正常路径上的收口提交）：
+ * `rev-parse --show-toplevel` 取仓根，再 `log -1 --format=%H -- <仓根相对路径>`。
+ * 取不到就回 `null`，调用面按「上界取不到 ⇒ 不认领」处置：非 git 目录 / 该档在仓外 / 该档一次都没提交过。
+ * 为什么用这一手而不用「收口时写一份清单」：认领事实本就能从 git 区间算出来，另写一份清单就是第二份真相。
+ * @param {string} root 项目根（git 命令的起点）
+ * @param {string} abs 该档的绝对路径（或相对 `root` 的路径）
+ * @returns {string|null} 40–64 位提交 sha ∥ `null`（取不到）
+ */
+export function lastCommitOf(root, abs) {
+  try {
+    const top = gitAt(root, ["rev-parse", "--show-toplevel"]).trim() || root
+    const rel = relative(top, resolve(root, String(abs))).replace(/\\/g, "/")
+    if (rel === "" || rel.startsWith("../") || isAbsolute(rel)) return null // 仓外（不是这一档的提交面）
+    const sha = gitAt(top, ["log", "-1", "--format=%H", "--", rel]).trim()
+    return /^[0-9a-f]{40,64}$/i.test(sha) ? sha : null // 无提交 ⇒ 空输出 ⇒ null
+  } catch {
+    return null
   }
 }
 

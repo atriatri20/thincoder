@@ -61,7 +61,8 @@ function machineListBlock(reading) {
   return ["**受影响文件（机读清单）**", "", "| 档 | 分拆方案 | 行数 |", "|---|---|---|", `| \`${PROBE_REL}\` | — | ${reading} |`, ""]
 }
 
-/** 六段批档全文（`sha` ⇒ §1 落 `批起 sha = <sha>` 记入行；`sec1` = §1 正文；`sec5` = §5 正文；
+/** 六段批档全文（`sha` ⇒ §1 落 `批起 sha = <sha>` 记入行；`sha === null` ⇒ **不写**那行——非 git 仓 ∥ 无可取快照的现场，
+ *  `baseShaOf` 届时回 `null`、diff 腿不启动；`sec1` = §1 正文；`sec5` = §5 正文；
  *  `reading` = §2 机读清单那一行第三列（缺省 = 快照上那一档的真读数 `1`；`null` ⇒ 两格旧形）；
  *  §2/§3/§4/§6 各有内容——close 的链门前置）。 */
 export const record = (sha, { sec1 = "夹具讨论。", sec5 = "夹具实施。", reading = "1" } = {}) => [
@@ -76,8 +77,7 @@ export const record = (sha, { sec1 = "夹具讨论。", sec5 = "夹具实施。"
   "",
   sec1,
   "",
-  `**批起 sha = ${sha}**`,
-  "",
+  ...(sha === null ? [] : [`**批起 sha = ${sha}**`, ""]),
   "## §2 批次任务与设计（eng-designer）",
   "**状态行**：设计完成",
   "",
