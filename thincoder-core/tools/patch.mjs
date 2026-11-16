@@ -9,7 +9,7 @@ import {
   PROJECT_PARAM_DESC
 } from "./shared.mjs";
 import { writeThroughPath, TMP_SUFFIX, markDirty, clearLastWrite } from "./write-path.mjs";
-// 失败回执（未全成）两件文案单源 = edit-receipt.mjs（骨架单源 = EDIT-HELPERS §7.6 ·
+// 失败回执（未全成）两件文案单源 = edit-receipt.mjs（骨架单源 = EDIT-HELPERS §4 ·
 // 决策 = APPLY-PATCH §7 D-P4）：与 `edit` 批面同一副骨架，本工具只填工具名 ∥ 单位 ∥ 定位。
 import { editEntryFailureLine, editBatchSummary, FILE_UNIT } from "./edit-receipt.mjs";
 import { spawnGit } from "./git-run.mjs";
@@ -183,7 +183,7 @@ function hunkFailure(hunkNumber, message) {
 
 /**
  * 失败回执（未全成）：逐档一行、按补丁序 + 末行汇总——骨架单源 = `docs/core/design/EDIT-HELPERS.md`
- * §7.6，本工具只填填充位（工具名 `apply_patch` · 单位 `file(s)` ⇒ 末段省：报单位 = 写单位 = 档）。
+ * §4，本工具只填填充位（工具名 `apply_patch` · 单位 `file(s)` ⇒ 末段省：报单位 = 写单位 = 档）。
  *
  * 三态逐档行：已落盘 `  modified <path>` ∥ `  created <path>`（逐字复用全成路径那一行）·
  * 失败那档 `<定位> — failed: <原因原文>`（hunk 段带 hunk 序）· 未落盘且没有自身原因的档
@@ -279,10 +279,10 @@ export const applyPatchTool = {
     const committed = new Set() // 已落盘 = 注入径已提交 ∪ 提交段 rename 成功——回执的 k 与逐档行的唯一来源
     // Mark every touched file dirty — insert_after must not run on stale line numbers.
     // 整批记账（dirty）= apply_patch 的批级语义；**只对已落盘的档跑，成功 ∥ 失败两路同**（注入径那批在内）——
-    // 已落盘却未记账的档会让行号锚护栏拿着写前快照放行（EDIT-HELPERS §7.1 第 4 行），下一笔行号编辑按旧行号改到别处。
+    // 已落盘却未记账的档会让行号锚护栏拿着写前快照放行（EDIT-HELPERS §3 第 4 行），下一笔行号编辑按旧行号改到别处。
     // 2026-11-02：落 dirty 同时清写入快照——apply_patch 不记快照，留着旧 `startLine` 就是
     // 陈旧的锚：行号锚护栏第 2 行（dirty ∧ 快照在场）会拒，而第 4 行会拿旧值判「目标区在之前
-    // ⇒ 放行」——两种结果都不该由一笔没更新快照的写来决定（EDIT-HELPERS §7.1）。
+    // ⇒ 放行」——两种结果都不该由一笔没更新快照的写来决定（EDIT-HELPERS §3）。
     const recordCommitted = () => {
       for (const p of planned) {
         if (!committed.has(p.abs)) continue

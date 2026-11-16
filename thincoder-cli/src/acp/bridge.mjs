@@ -25,7 +25,7 @@
  */
 import { detectDanger } from "@thincoder/core/tools/shared.mjs"
 import { hasLineParams } from "@thincoder/core/tools/edit-diff.mjs"
-// 行号锚护栏（EDIT-HELPERS §7）：桥不经 writeThroughPath ⇒ 判据与记账都得在桥面接（§7.4）。
+// 行号锚护栏（EDIT-HELPERS §3）：桥不经 writeThroughPath ⇒ 判据与记账都得在桥面接（§4）。
 // 判据 / 拒文 = 核单源（住 `buffered-edit.mjs`）；记账 = 写缓冲成功后 recordWrite，键 = resolveInCwd 后的绝对路径。
 import { recordWrite } from "@thincoder/core/tools/write-path.mjs"
 // IDE 缓冲编辑面（2026-11-05 拆档族）：`absOf` ∥ `editSingle` ∥ `editBatch` 三件住同目录兄弟档，
@@ -306,7 +306,7 @@ export function buildAcpCallbacks({ sessionId, agent, notify, request, log = () 
         const content = args.content
         try {
           await request("fs/write_text_file", { sessionId, path, content }, { timeoutMs: 30000 })
-          // 全文重写也是「我们写的」——与核 writeTool 同型记账（§7.1 第 3 行：之后任何行号形拒）。
+          // 全文重写也是「我们写的」——与核 writeTool 同型记账（§3 第 3 行：之后任何行号形拒）。
           // 不记这一格，同一份漂移就成了「本地拒、IDE 缓冲放」。
           recordWrite(absOf(path), { type: "write", startLine: 1, shift: 0 })
           return { handled: true, result: `OK: wrote ${path} via IDE` }

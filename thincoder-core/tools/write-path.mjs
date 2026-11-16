@@ -85,7 +85,7 @@ export const dirtyRefusalMessage = (abs) =>
 // ────────────────────────────────────────
 /**
  * 判据（六行按序判）：放行 ⇒ `null`；拒绝 ⇒ 命中行的实况
- * `{ row, type?, startLine?, shift? }`（row = §7.1 的行号 1–6）。
+ * `{ row, type?, startLine?, shift? }`（row = §3 的行号 1–6）。
  *
  * @param {string} abs 目标绝对路径（记账键）
  * @param {number|null} startLine 目标区首行；`null` = 调用方没有行号目标（正则定位形）
