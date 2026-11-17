@@ -72,14 +72,19 @@ export function buildHeadTailPreview(text) {
 }
 
 /** 会话槽持久化载荷（CLI session.mjs fields——`saveSession` parity；消费 = 端 onComplete ∕
- *  onDistilled 的 `_saveLines` spread）：engineering ∕ advisor.guard ∕ 多槽表 engDesignTokens
+ *  onDistilled 的 `_saveLines` spread）：mode ∕ advisor.guard ∕ 多槽表 engDesignTokens
  *  （Map → JSON-safe 对象，空态 null——槽清否由 saveLines 的 D2 合并语义定）+ 会话级三字段
  *  tasks ∕ goal ∕ pendingReminders（快照拷贝——异步保存间后续回合的内存变更不得泄漏）
  *  + 估算校准样本 estimateSample（§6.17.1 链二端面①：核 `tokenSampleOf`——空样本 null，
- *  键恒在场 ⇒ 端槽写的「内存即权威」支可判；落槽见 saveLines）。 */
+ *  键恒在场 ⇒ 端槽写的「内存即权威」支可判；落槽见 saveLines）
+ *  + 轮记录 turns（SESSION §2 ∥ CONTEXT-COMPACTION §1.1 · 台账 #2395：每项形如
+ *  `{ userRequest, finalResponse, taskState }`——端侧独立载荷必须把本进程记的轮记录带出去，
+ *  `applySlotSessionState` 从槽读回；拷贝数本数组，内存与载荷不共享可变结构）。
+ *  `_turns` 由核惰性建立；本函数在它缺席时返回 null 而非空数组，以免端槽写的「内存即权威」
+ *  支把槽上既有轮记录覆盖成空（空数组 = 本进程确无轮记录的在场声明）。 */
 export function agentState(agent) {
   return {
-    engineering: agent.config?.agent?.engineering ?? false,
+    mode: agent.config?.agent?.mode ?? "normal",
     advisorGuard: agent.config?.advisor?.guard === true,
     engDesignTokens: agent._engDesignTokens instanceof Map && agent._engDesignTokens.size > 0
       ? Object.fromEntries(agent._engDesignTokens)
@@ -88,5 +93,6 @@ export function agentState(agent) {
     goal: agent._goal ? { ...agent._goal } : null,
     pendingReminders: Array.isArray(agent._pendingReminders) ? [...agent._pendingReminders] : [],
     estimateSample: tokenSampleOf(agent),
+    turns: Array.isArray(agent._turns) ? [...agent._turns] : null,
   }
 }

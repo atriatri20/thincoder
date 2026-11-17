@@ -231,6 +231,9 @@ export function initMessageLoop(deps) {
       // timer-wake 阶段 2（协议 §3.2 行 19 · §6.30.11 VSC 可见面）：到期触发落流一行（`{status:"fired", text}`）
       // ——显示裁 ≤3 行 + `…`（CLI 同规）；未登记 status / 非非空串 ⇒ 零动作（见 `addTimerLine`）。
       case "timer":            addTimerLine(ctx, m); break
+      // 跨实例投递面（MULTI-INSTANCE-COLLAB §5.4 · D-MI32 ∥ D-MI33）：丢失行 ∥ 受阻跨阈行——文案逐字来自
+      // 核（`inboxTakeLostLine` ∥ `inboxBlockedLine`），本处零构造；非非空串 ⇒ 零动作（见 `addInboxLine`）。
+      case "inbox":            addInboxLine(ctx, m); break
       case "statusText":       handleStatusText(m); break
       case "turnFrame":        S._turnFrame = { turn: m.turn, maxTurns: m.maxTurns }; renderStatusBar(); break
       case "permissionRequest":
@@ -283,7 +286,7 @@ export function initMessageLoop(deps) {
 }
 
 /** timer 触发落流行（`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.11 VSC 可见面 · 协议 §3.2 行 19）：
- *  `text` = 交付原文逐字（`[System reminder: ⏰ timer — …]`）；显示裁 = ≤3 行 + `…`（CLI `timer-watch.mjs`
+ *  `text` = 交付原文逐字（`[System reminder: timer — …]`）；显示裁 = ≤3 行 + `…`（CLI `timer-watch.mjs`
  *  `reminderDisplay` 同规）；逐行落子节点 = 免依赖样式面（同桌面 `timerGroupNode` 口径）。
  *  未登记 status / 非非空串 ⇒ 零动作（fail-closed——禁假造空行）。 */
 function addTimerLine(ctx, m) {
@@ -299,3 +302,18 @@ function addTimerLine(ctx, m) {
   ctx.messagesEl.appendChild(el)
   maybeScrollDown(ctx)
 }
+
+/** 跨实例投递面落流一行（`docs/core/design/MULTI-INSTANCE-COLLAB.md` §5.4 两条逐字锚 · D-MI32 ∥ D-MI33）：
+ *  `text` = 核拼好的整行（`inboxTakeLostLine` ∥ `inboxBlockedLine`）——本档零构造、零改写；**append-only**
+ *  落流（同 `addTimerLine` 形的非块行：无 state 槽、无清点门——CLI `pushLine` 同为 append-only 宿主能力）。
+ *  非非空串 ⇒ 零动作（fail-closed——禁假造空行）。 */
+function addInboxLine(ctx, m) {
+  if (typeof m?.text !== "string" || m.text === "") return
+  const el = document.createElement("div")
+  el.className = "inbox-line"
+  el.setAttribute("data-inbox-line", "")
+  el.textContent = m.text
+  ctx.messagesEl.appendChild(el)
+  maybeScrollDown(ctx)
+}
+

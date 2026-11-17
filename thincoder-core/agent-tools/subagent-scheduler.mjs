@@ -17,7 +17,7 @@ import { logEvent } from "../log.mjs"
 // M5 F6（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.3）：files 声明面拦截谓词本体落
 // spawn-gates.mjs（纯谓词零依赖——本处只加 import 调用，无环）。
 import { rejectProcessDocPaths } from "./spawn-gates.mjs"
-// `files` 落点单源 = 统一解析层（`docs/core/design/PATH-RESOLUTION.md` §2.5 第 4 行：`kind:"none"` /
+// `files` 落点单源 = 统一解析层（`docs/core/design/PATH-RESOLUTION.md` §2.5 的「子代理 `files`（spawn 门）」行：`kind:"none"` /
 // `order:"near-first"` ⇒ 恒解析出、只做调度、不校验存在性）。门判（目录声明 / 过程档）
 // 仍吃**原始声明形状**——判据在转绝对之前跑，顺序零改。
 import { resolvePathTarget } from "../path-resolve.mjs"
@@ -191,7 +191,7 @@ export function describeBlockers(parent, entry) {
  * 三条判据各防一个具体的错：① 池**经访问器读**（`getAsyncPool`，读法同 `depInfo`）——
  * 裸读 `parent._asyncSubagents` 在只携 `history` 的合成 parent 上读到空池 ⇒ 护栏不报错、
  * 不生效、没人知道；② **按 status 过滤**（`done` / `cancelled` 皆假）——正常 settle 的条目
- * 留在池里（`async-settle.mjs:295`）⇒ 只看「池里有同档条目」会把单席顺序交接全部误拒；
+ * 留在池里（`async-settle.mjs` 的「留池 done-in-pool」段）⇒ 只看「池里有同档条目」会把单席顺序交接全部误拒；
  * ③ **占用判据只认 `_batchDoc`、不分角色**（普通面 coder 携档也算），而被检面只有工程角色的
  * spawn、sync spawn 不入池也不是占用者（同档 §6.58.7 第 7 条）——**这个不对称勿「顺手统一」**。
  * 入参 = 已解析的绝对路径（唯一消费方 `buildSpawnChild` 的工程分支，路径由 `resolveBatchReadPath`
@@ -374,7 +374,7 @@ export function dependentLabels(parent, depId) {
 /** §6.9 D-SD3b 排队态面板刷新（⟦ev⟧queued 事件族——TUI routeSubToken 消费）：对全部
  *  queued 条目重算等待态并发射变化（去重 sig——kind/position/detail 全变才发）——
  *  调用点 = 一切队列突变与等待态变迁（spawn 入队 / settle 后补位与依赖转移 / cancel
- *  出队 / 自动通道消费）。position = 队列序（D-A1 既有——cancel 前移同源）。
+ *  出队 / 自动通道消费）。position = 队列序（§6.7.3 既有——cancel 前移同源）。
  *  P1 禁静默（zero-block 批 §6.8.3.2②）：relay 异常不再静默——留痕一条
  *  `ev:queued-paint-failed`（**池状态不被破坏**语义不变——catch 不重抛）。 */
 export function refreshQueuedTokens(parent, onToken) {
@@ -396,7 +396,7 @@ export function refreshQueuedTokens(parent, onToken) {
 }
 
 /**
- * Slot-queue refill (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1/D-A6 + §6.9 D-SD4 + AGENT-LOOP-ASYNC-POOL.md §6.10 D-24a/R14 分域):
+ * Slot-queue refill (AGENT-LOOP-SUBAGENT.md §6.7.3 + §6.9 D-SD4 + AGENT-LOOP-ASYNC-POOL.md §6.10 D-24a/R14 分域):
  * start queue heads while a running slot is free — called from every settle
  * (completion frees a slot) and from the turn-end collection's refill loop. 队列现可混合 waiting-deps 与 slot-queued——扫描选"依赖全满足 + 域无冲突"的最早
  * 条目启动（waiting 越行不阻塞槽位；多任务同时解除按 queued 序逐个启动）。

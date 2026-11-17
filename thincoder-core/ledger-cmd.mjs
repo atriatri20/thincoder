@@ -4,20 +4,23 @@
  * 台账 #473——纯搬移、语义零变）；逐行写核 + 两个批级写点 = 拆分件 `thincoder-core/ledger-write-ops.mjs`
  * （2026-10-27 三链统一批——本档收尾 455 行，新增两枚批级写点会越 500 顾问线，故外提；本档反向 import
  * 取用并 re-export，公共面逐字不变）。核函数（`ledgerQuery` / `ledgerCount` / `ledgerAdd` /
- * `ledgerUpdate` / `ledgerClose` + 批级批量 `ledgerUpdateBatch` / `ledgerCloseBatch` + 重锚单源
- * `ledgerReanchorBatch`）留本档，工具档消费之；`ledgerBindBatch` / `ledgerReclaimBatch` 由本档
- * re-export（设计档 §2.4 / §2.13 的公共面落点不变）。
+ * `ledgerUpdate` / `ledgerClose` + 批级批量 `ledgerUpdateBatch` / `ledgerCloseBatch`）留本档，工具档消费之；
+ * `ledgerBindBatch` / `ledgerReclaimBatch` 由本档 re-export（设计档 §2.4 / §2.13 的公共面落点不变）。
+ *
+ * **2026-11-11 三族分拆**（判据原文 = `docs/core/design/BATCH-RECORD.md` §4.18-D「分档结论」；刀法 = 按符号
+ * 边界整族搬、零语义改）：收口重锚族 ⇒ `ledger-close.mjs` ∥ 半状态读数族 ⇒ `ledger-consistency.mjs`。
+ * 两族由本档**逐名转出**（文件末），`ledger.mjs` 的转出面逐名不变 ⇒ 调用方零改。
  *
  * 读数面（逐行携、不入库、不入 `DATA_COLUMNS`——先例 = `aged`）：`evidenceTooLong`（§5 P4 文字太长）∥
  * `overdue`（§3.7 出口态——机判单源 `overdueOf`）∥ `taskBookOnDisk`（§7.1 B——指针在盘读数）。
  * 三枚皆**读数非闸门**（不拒任何写入）。
- * 指针判据重锚面（§6.1 两臂写门 ∥ §6.2 收口重锚 · 台账 #1550）：写门判**本笔写入面**、只判本笔新指名；
- * 「档此刻在不在盘」降为读数——读面导出 `ledgerBatchRows`、收口重锚单源 `ledgerReanchorBatch`。
+ * 指针判据读面（§7.1 · 台账 #1550）：写门判**本笔写入面**、只判本笔新指名；「档此刻在不在盘」降为读数——
+ * 读面导出 `ledgerBatchRows`。收口重锚单源 `ledgerReanchorBatch` 已随族搬出 ⇒ `ledger-close.mjs`。
  * 批量面（§3.3 P1）：选行单源 `resolveBatchRows` + 逐行落笔 `applyRowUpdate` / `applyRowClose`
  * （与单行形共函数——迁移表判 / 写门 / evidence 门逐行照判）。
- * 核销机检（F-LX4 · 2026-10-26 批 §2；2026-10-27 改判 ③ = 档面）：同一两逐行共函数在写 `已核销` 前判
- * 三件（批档在盘 ∥ §1 = 已收口 ∥ §3 = 评审通过），缺一即拒、一次报全缺项、行零改；判据只有目标值一条。
- * 本体住拆分件 `ledger-close-proof.mjs`（同 `ledger-tools.mjs` 先例）。
+ * 核销工作证据门：两处逐行写核先算应用本笔后的 evidence，再由 `ledger-close-proof.mjs` 判其非空白。
+ * 锚批结算门（§11.2 同一档）：归档两个目标态（`已核销` ∥ `已废弃`）另读锚批 `§1`——证据门与锚批门
+ * 互不替代（前者问「有没有工作事实」，后者问「档收口没有」）；四支豁免的原因走回执 `notices`。
  *
  * 接线（设计档 §2.2 命令面接线）：族出口 = `ledger.mjs`（re-export 两源——KD-M2-3）；查询命令 ←
  * tools/index.mjs（assembleBuiltinTools 全角色面）；写命令 ← agent/family-tools.mjs（assembleFamilyTools
@@ -27,9 +30,10 @@
 import { AGING_DAYS, EVIDENCE_TOO_LONG_MAX, PENDING_STATUSES, nowIso, openLedger, resolveLedgerRoot } from "./ledger-db.mjs"
 import { resolveDeclaredRef } from "./declaration.mjs"
 import { filePartOf, namesPointer } from "./ledger-close-proof.mjs"
-import {
-  applyRowClose, applyRowUpdate, assertBatchArg, assertTaskBookGate, baseOf, evidenceValue, resolveBatchRows,
-} from "./ledger-write-ops.mjs"
+// 本地日界随收口重锚族搬进 `ledger-close.mjs`（`closeEvidenceText` 依赖它）——本档反向 import 取用，
+// 单向依赖、无环（本档对它是 consumer，本档再从文件末把该族逐名转出）。
+import { localDay } from "./ledger-close.mjs"
+import { applyRowClose, applyRowUpdate, assertBatchArg, assertTaskBookGate, baseOf, resolveBatchRows } from "./ledger-write-ops.mjs"
 
 export { ledgerBindBatch, ledgerReclaimBatch } from "./ledger-write-ops.mjs"
 
@@ -47,9 +51,6 @@ function isRowAged(row, now) {
 /** `evidence` 文字太长读数（设计档 §5 P4——**读数非闸门**）：缺 / 空 ⇒ false；`query` 逐行携（含归档
  *  行——行值事实）；`count` 的统计集 = 未决四态（§7.1）。 */
 const isEvidenceTooLong = (row) => row?.evidence != null && String(row.evidence).length > EVIDENCE_TOO_LONG_MAX
-
-/** 本地日界（`YYYY-MM-DD`）——`resume_due` 比较粒度（设计档 §3.7：本地日界，当日锚当日即到期）。 */
-const localDay = (ms) => { const d = new Date(ms); const p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` }
 
 /** 复启锚判定（设计档 §3.4「锚判定文法」单源）：从左到右取首个 `@` 起始 token——
  *  ① 形合 `^\d{4}-\d{2}-\d{2}$` ∧ 真日历日（回写一致）⇒ 日期锚；② 含 `@` 而非日期锚 ⇒ 事件锚
@@ -166,18 +167,14 @@ export function ledgerUpdate({ cwd, id, patch, executorSessionId, boundary, agen
   try {
     const row = db.prepare("SELECT * FROM items WHERE id = ?").get(id)
     if (!row) throw new Error(`ledgerUpdate：行 ${id} 不存在`)
-    const { id: rowId } = applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary, { agent, base: baseOf(cwd, boundary) })
-    return { id: rowId }
+    const out = applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary, { agent, base: baseOf(cwd, boundary) })
+    return { id: out.id, ...(out.reason === undefined ? {} : { reason: out.reason }), ...(out.notices ? { notices: out.notices } : {}) }
   } finally { db.close() }
 }
 
-/** 收口（写命令，仅主 agent）：核销（**只有一条边**——`待核销 → 已核销`：其余现态一律拒，拒文点名现态 + 该现态
- *  的出路句）/ 撤回（任意态 → 已废弃），事务包裹；归档 = 软删除。
- *  可选 `evidence` 参：传值 = 追加缺省（§13.9——旧空直写 / 旧非空拼 `旧｜新`）、`evidenceReplace: true`
- *  同传 = 整段替换；核销 / 撤回两径同携（写值落行，内容不判）；两拒面（旗独传 @值计算 ∥
- *  新值空白 @值计算后）见 `evidenceValue` / `assertEvidenceValue`。
- *  判序（同函数体同层，§13.9）：目标集判 → 行取 → 源态判 → **核销机检**（`已核销` 才触）→ 值计算 →
- *  拒面②（新值空白）→ UPDATE（LEDGER.md §3 核销只有一条边）。**单行形**（`id`）——逐行落笔 = `applyRowClose`。 */
+/** 收口（写命令，仅主 agent）：核销只有 `待核销 → 已核销` 一条边；撤回只允许未归档态。
+ *  证据先按本笔补丁计算，再判核销工作证据非空白；两种归档态都拒绝后续归档写入。
+ *  事务包裹，逐行落笔 = `applyRowClose`。 */
 export function ledgerClose({ cwd, id, status, evidence, evidenceReplace, boundary, agent }) {
   if (status !== "已核销" && status !== "已废弃") throw new Error(`ledgerClose：目标态 ${status} ∉ {已核销, 已废弃}`)
   const db = openLedger(cwd, { create: true, boundary })
@@ -201,8 +198,9 @@ export function ledgerClose({ cwd, id, status, evidence, evidenceReplace, bounda
  *  （`why` = 该门拒因文案原文），其余行照落；**事务级失败**（取写锁 / `COMMIT` 层）⇒ 整批 `ROLLBACK`
  *  并抛（零行改）——故「部分落地」只由逐行门拒产生，「中途失败」不留半批。
  *  `BEGIN IMMEDIATE`：写锁一次先把（逐行不升级锁 ⇒ 事务级失败在首行之前即失败）。
- *  核销机检 ③ 自 2026-10-27 起读档面（不看 token 槽），本径不再预读归属并集——逐行照判、不缺不省。
- *  @returns {{batch: string, status: string|null, applied: number[], skipped: {id: number, from: string, why: string}[]}} */
+ *  核销只读应用本笔后的工作证据，本径不预读批档或令牌归属。
+ *  @returns {{batch: string, status: string|null, applied: number[], skipped: {id: number, from: string, why: string}[],
+ *    notices?: {id: number, reason: string, message: string}[]}} `notices` 仅在本笔命中锚批结算门豁免时出现（§11.2）*/
 export function ledgerUpdateBatch({ cwd, batch, patch = {}, executorSessionId, boundary, agent }) {
   const db = openLedger(cwd, { create: true, boundary })
   try {
@@ -211,13 +209,16 @@ export function ledgerUpdateBatch({ cwd, batch, patch = {}, executorSessionId, b
     const proof = { agent, base }
     db.exec("BEGIN IMMEDIATE")
     try {
-      const applied = [], skipped = []
+      const applied = [], skipped = [], notices = []
       for (const row of resolveBatchRows(db, base, abs)) {
-        try { applied.push(applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary, proof, true).id) }
-        catch (e) { skipped.push({ id: Number(row.id), from: row.status, why: String(e?.message ?? e) }) }
+        try {
+          const out = applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary, proof, true)
+          applied.push(out.id)
+          if (out.notices) notices.push(...out.notices) // 单行整笔回滚；豁免 notice 逐行汇总到顶层
+        } catch (e) { skipped.push({ id: Number(row.id), from: row.status, why: String(e?.message ?? e) }) }
       }
       db.exec("COMMIT")
-      return { batch, status: patch.status ?? null, applied, skipped }
+      return { batch, status: patch.status ?? null, applied, skipped, ...(patch.status === "待讨论" && patch.evidence != null ? { reason: patch.evidence } : {}), ...(notices.length ? { notices } : {}) }
     } catch (e) { db.exec("ROLLBACK"); throw e }
   } finally { db.close() }
 }
@@ -228,17 +229,18 @@ export function ledgerUpdateBatch({ cwd, batch, patch = {}, executorSessionId, b
  *  不入 `skipped`——归档行本非结算对象，点名会让每批重跑刷屏）。`evidence` 逐行追加同一文本
  *  （`evidenceValue` 同源）。回执 `status` 恒 `已核销`（批量形缺省 = 勾销单值；携则守卫已收窄为
  *  `{已核销}`——§3.2 `whenPresent`）。事务语义同 `ledgerUpdateBatch`。
- *  @returns {{batch: string, status: string, applied: number[], skipped: {id: number, from: string, why: string}[]}} */
+ *  @returns {{batch: string, status: string, applied: number[], skipped: {id: number, from: string, why: string}[],
+ *    notices?: {id: number, reason: string, message: string}[]}} `notices` 仅在本笔命中锚批结算门豁免时出现（§11.2）*/
 export function ledgerCloseBatch({ cwd, batch, evidence, evidenceReplace, boundary, agent }) {
   const status = "已核销"
   const db = openLedger(cwd, { create: true, boundary })
   try {
     const base = baseOf(cwd, boundary)
     const abs = assertBatchArg("ledgerClose", base, batch)
-    const proof = { agent, base } // ③ 读档面（2026-10-27 起不再预读 token 槽归属）
+    const proof = { agent, base } // `base` = 锚批结算门的指针解析基准（§11.2）；逐行门拒 ⇒ 本行计入 `skipped`
     db.exec("BEGIN IMMEDIATE")
     try {
-      const applied = [], skipped = []
+      const applied = [], skipped = [], notices = []
       for (const row of resolveBatchRows(db, base, abs)) {
         if (row.status === "已核销" || row.status === "已废弃") continue // 归档态静默不计
         if (row.status !== "待核销") {
@@ -246,16 +248,19 @@ export function ledgerCloseBatch({ cwd, batch, evidence, evidenceReplace, bounda
           skipped.push({ id: Number(row.id), from: row.status, why })
           continue
         }
-        try { applied.push(applyRowClose(db, row, status, evidence, evidenceReplace, proof).id) }
-        catch (e) { skipped.push({ id: Number(row.id), from: row.status, why: String(e?.message ?? e) }) }
+        try {
+          const out = applyRowClose(db, row, status, evidence, evidenceReplace, proof)
+          applied.push(out.id)
+          if (out.notices) notices.push(...out.notices) // 豁免 notice 逐行汇总到顶层
+        } catch (e) { skipped.push({ id: Number(row.id), from: row.status, why: String(e?.message ?? e) }) }
       }
       db.exec("COMMIT")
-      return { batch, status, applied, skipped }
+      return { batch, status, applied, skipped, ...(notices.length ? { notices } : {}) }
     } catch (e) { db.exec("ROLLBACK"); throw e }
   } finally { db.close() }
 }
 
-// ── 指针判据重锚面（设计档 §7.1 · B 读数 ∥ C 收口重锚 · 台账 #1550）────────────────
+// ── 指针判据读面（设计档 §7.1 · B 读数 · 台账 #1550；C 收口重锚已搬 `ledger-close.mjs`）──────
 
 /** 本批行集（只读，任意状态——设计档 §7.1）：批身份单源 = `resolveBatchRows` 解析同址（零二写）；
  *  逐行携读数 `taskBookOnDisk`（不入库、不入 `DATA_COLUMNS`）。`batch` 不可解析 ∥ 无根 ⇒ 抛（同族
@@ -273,58 +278,9 @@ export function ledgerBatchRows({ cwd, batch, boundary } = {}) {
   } finally { db.close() }
 }
 
-/**
- * 收口重锚单源（写命令，主 agent 面——设计档 §6.2 · C · AC-M2-30；2026-10-27 按行状态分流 · §2.7）：
- * 取本批行集 → **先行排除** `trigger = 认账不排期`（零触、不点名——政策判断归行主人）→ 按**行状态**分流：
- *   · `在途`（本批的工作行，父侧没在收口前处置）⇒ `待核销`（做完待结账）+ `executor = NULL`（出边的自动
- *     语义——同 §3.1），回执点名；
- *   · `待讨论` / `待设计`（本批没动的行）⇒ `条件` + 复启句（`原批 <批名> 已收口，须另起批次接手`）落
- *     `resume_when`；该列现值非空（行主条件句在册）⇒ **不覆盖**、复句追加 `evidence`；回执点名；
- *   · `条件`（已在锚位）⇒ 零写跳过（幂等）；`待核销` / 归档态 ⇒ 不动、不点名（`alreadyAnchored` 承载
- *     幂等跳过面，回执不噪）。
- * 单事务：任一步失败 ⇒ 整集 `ROLLBACK`（零行改）。**不抛**——失败经返回形 `failed` 报出（`null` 常态）；
- * `cwd` 无根 ⇒ 不取行、不重锚（**不落兜底基准**——落了就是静默零命中）。
- * `updated_at` 零触（机器重锚不是人工推进的痕迹——行龄读数照旧）。
- * `boundary` = 上溯上界（会话锚——与工具面 / `ledgerBatchRows` 同一枚界；缺省 = 进程 cwd）。
- * @returns {{batch:string, reanchored:{id:number,status:string,title:string,to:"待核销"|"条件",sentenceTo?:"resume_when"|"evidence"}[], alreadyAnchored:{id:number,status:string,title:string}[], failed:string|null}}
- */
-export function ledgerReanchorBatch({ cwd, batch, boundary } = {}) {
-  const failedResult = (why) => ({ batch, reanchored: [], alreadyAnchored: [], failed: why })
-  const derived = cwd == null ? null : resolveLedgerRoot(cwd, boundary)
-  if (!derived) return failedResult("批档所属项目根不可推导")
-  const base = derived.root
-  let db
-  try { db = openLedger(base, { boundary }) } catch (e) { return failedResult(String(e?.message ?? e)) } // 库不可开 ⇒ 零写报因
-  if (!db) return { batch, reanchored: [], alreadyAnchored: [], failed: null } // 库不在 ⇒ 零行可锚
-  try {
-    let abs
-    try { abs = assertBatchArg("ledgerReanchorBatch", base, batch) } catch (e) { return failedResult(String(e?.message ?? e)) }
-    const sentence = `原批 ${filePartOf(batch)} 已收口，须另起批次接手`
-    try {
-      db.exec("BEGIN IMMEDIATE")
-      const reanchored = [], alreadyAnchored = []
-      for (const row of resolveBatchRows(db, base, abs)) {
-        if (row.trigger === "认账不排期") continue // 先行排除：零触、不点名（§2.7）
-        const face = { id: Number(row.id), status: row.status, title: row.title }
-        if (row.status === "在途") {
-          // 本批的工作行：做完待结账（出边自动语义——executor 清零，行离工作位）
-          db.prepare("UPDATE items SET status = ?, executor = NULL WHERE id = ?").run("待核销", row.id)
-          reanchored.push({ ...face, to: "待核销" })
-          continue
-        }
-        if (row.status !== "待讨论" && row.status !== "待设计") continue // 待核销 / 归档态：不动、不点名
-        if (row.trigger === "条件") { alreadyAnchored.push(face); continue } // 幂等零写
-        const kept = row.resume_when != null && String(row.resume_when).trim() !== ""
-        const nextEvidence = kept ? evidenceValue("ledgerReanchorBatch", row.evidence, sentence, false) : row.evidence
-        db.prepare("UPDATE items SET trigger = ?, resume_when = ?, evidence = ? WHERE id = ?")
-          .run("条件", kept ? row.resume_when : sentence, nextEvidence, row.id)
-        reanchored.push({ ...face, to: "条件", sentenceTo: kept ? "evidence" : "resume_when" })
-      }
-      db.exec("COMMIT")
-      return { batch, reanchored, alreadyAnchored, failed: null }
-    } catch (e) {
-      try { db.exec("ROLLBACK") } catch { /* 事务未开 / 已结 */ }
-      return failedResult(String(e?.message ?? e))
-    }
-  } finally { db.close() }
-}
+// ── 两族转出（2026-11-11 三族分拆）────────────────────────────────────────────────
+// 收口重锚族（完成清单 ∥ 分流 ∥ 证据 ∥ 预检 ∥ 重锚）⇒ `./ledger-close.mjs`；
+// 半状态读数族（出路表 ∥ `unknown` 出口句 ∥ 半状态项 ∥ 批-账一致性读数）⇒ `./ledger-consistency.mjs`。
+// 本档**逐名转出**：`ledger.mjs` 的转出面逐名不变 ⇒ 调用方零改（`docs/core/design/BATCH-RECORD.md` §4.18-D「分档结论」）。
+export { assertLedgerCloseDisposition, ledgerReanchorBatch } from "./ledger-close.mjs"
+export { batchLedgerConsistency } from "./ledger-consistency.mjs"

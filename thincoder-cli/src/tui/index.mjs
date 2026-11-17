@@ -43,7 +43,7 @@ import { createTuiState } from "./tui-state.mjs"
 import { createInputFace } from "./input-face.mjs"
 import { createConversationWriter } from "./conversation-writer.mjs"
 import { createTurnFace } from "./turn-face.mjs"
-import { createTimerWatch, fireTimerWake } from "./timer-watch.mjs"
+import { createTimerWatch, fireTimerWake, createInboxWatch, createInboxTake, inboxBlockedLine, registerInstance, unregisterInstance } from "./timer-watch.mjs"
 import { initTeamState, teamAskCancel, teamAskSubmit } from "./cmd-team.mjs"
 
 export { upgradeFailureText, pendingNoticeReady } from "./update-notice.mjs"
@@ -179,7 +179,36 @@ export async function startTUI(agent, opts = {}) {
   // #448①「关闭后补评估」（KD-6）：用户自发模态（picker ∕ wizard）全部退场 ⇒ 闩重武装——模态期被
   // 抑制的到期件即达（无在途 / 开关关 ⇒ `sync()` 自判零注册——幂等）。两关闭点（picker 栈空 ∕
   // wizard 退场）同注本回调；抑制本体 = `timer-watch.mjs` `fireTimerWake` 模态门（同谓词 `modalOpen`）。
-  const reevalTimerWake = () => { turnCtx.timerWatch?.sync() }
+  // 跨实例取件闩同点补一次（幂等 —— 自续闩存活不靠它；它换的是「模态关后 ≤ 1 ms 取件」而非「≤ 1 s」）。
+  const reevalTimerWake = () => { turnCtx.timerWatch?.sync(); turnCtx.inboxWatch?.sync() }
+
+  // 跨实例投递面取件闩（MULTI-INSTANCE-COLLAB「取件闩」「消息落法」· D-MI28 · D-MI31 · D-MI34）：**会话起点**武装 + 登记名册；
+  // 闩**自续**（先重臂再试取件）⇒ 回合起点不撤、回合链尾与模态关闭两处 `sync()` 只是幂等补位；
+  // 退出删名册条目。两个谓词各答一件事（住本档转口 `timer-watch.mjs`：`isBusy` = `state.processing`，`ready` =
+  // 无面板在场）；取件后的开轮面 = `createInboxTake` 的两条去路：**有活挂起窗 ⇒ 入窗队列 + 唤醒**，否则开
+  // **普通用户回合**（`autoTurn` 缺省 false——手动态照常走审批面；**恒不带 `resume`**——走 resume 时那一串
+  // 不落成 user 消息而消息已离盘 = 静默丢）。
+  // `onTake` 的 promise 契约（交接：失败单源 = reject）：开轮侧读到 `state.processing` 为真 = 已登记为在飞
+  // （resolve）；入窗侧消息已进活窗口输入队列（resolve）；两者皆否 = 开轮没成（reject）⇒ 核记
+  // `ev:inbox-watch-take-lost` + 丢失单源、端壳出逐字丢失行。**拿 `isBusy()` 的一次读数判死是禁止形**
+  // （短轮 / 审批悬挂会被误报成丢失）。
+  // `onPending(n)` = 待取条数常驻面：本端有一轮在飞且 inbox 有未取消息 ⇒ 状态栏出一段条数（`status-line.mjs`），
+  // 归零即摘除；与 `onBlocked` 那条一次性受阻行不是一件事（后者仍由核拼串）。
+  turnCtx.inboxWatch = createInboxWatch({
+    state,
+    onTake: createInboxTake({ state, turn, pushLine }),
+    onBlocked: (ms, pending) => pushLine(inboxBlockedLine(ms, pending), C.warn), // D-MI33：门开不了要出声
+    onPending: (n) => { // 待取条数→状态面；值未变不重绘（零注入：没变化就不打扰）
+      if (state.inboxPending === n) return
+      state.inboxPending = n
+      render()
+    },
+  })
+  registerInstance({ cwd: process.cwd() })
+  turnCtx.inboxWatch.sync()
+  // 正常退出撤闩 + 删名册条目（D-MI28 · 设计「取件闩」CLI 行）：退出途多路（/exit · Ctrl+C×2 · 关终端），
+  // `exit` 钩子一处全覆盖且恒达（闩是一次性 `unref` 定时器——进程走它也走；此处是本点的字面形态）。
+  process.on("exit", () => { turnCtx.inboxWatch?.disarm(); unregisterInstance() })
 
   // ---------------------------------------------------------- Slash Commands
 

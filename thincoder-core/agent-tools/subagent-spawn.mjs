@@ -1,26 +1,38 @@
 /**
  * subagent-spawn.mjs — spawn 路径装配（2026-09-05 module-split：subagent.mjs 726
- * > 500 硬限——spawn 前置 helpers（effectiveSubagentModel/resolveDesignSlot——审计块
- * 构造器 2026-09-22 起另立 ./audit-block.mjs）+ AGENT-LOOP-SUBAGENT.md §6.9 调度参数准入（prepareScheduling）+ child 装配
+ * > 500 硬限——spawn 前置 helpers（effectiveSubagentModel）+ AGENT-LOOP-SUBAGENT.md §6.9 调度参数准入（prepareScheduling）+ child 装配
  * （buildSpawnChild）verbatim 迁入（仅闭包变量参数化），语义零变；executeAsyncSpawn
  * 另在 subagent-run.mjs。subagent.mjs execute 经本文件 import 调用。
+ * **本轮（档位 500 设计器硬线）再切两族**：任务书与 system 固块拼装 → `./subagent-brief.mjs`、
+ * 设计令牌门 → `./subagent-design-token.mjs`（落点 = `docs/core/design/PATH-RESOLUTION.md` §3 末条）。
+ * **两族的对外面各不相同、各自守住**：设计令牌族**原样再导出**（`subagent.mjs` 的再导出行与用例的 import 行零改）；
+ * 任务书族由本档直接 import 消费，不对外导出（今天没有任何调用点从本档取它）。
  * 2026-09-07：executeConsumeDesignAction 消费执行器（token 链终消费制——与 spawn 侧
  * slot 族同域——ENGINEERING-MODE.md §2.6 F1——removeDesignTokenSlot 自 token-ttl.mjs）。
  * 2026-09-22（台账 #23 · AGENT-LOOP-SUBAGENT.md §6.26）：审计块构造器外提 `./audit-block.mjs`；
  * spawn 级固定机制性指令改走 system 固块（`child._spawnSystemBlock` 单点绑定——消费点 = 核
  * `prepareRun`），`input` 只留任务书。2026-10-24（§6.22）：工程角色 `input` = 一行机械任务书行
- * （批档绝对路径 + §2 指向句），任务书本体由子代理自读 §2。
+ * （批档绝对路径 + 按角色的指向句），任务书本体由子代理从批档读（§8.1 切片）。
  */
 
+// 2026-11-15（AGENT-LOOP-SUBAGENT.md §8.1）：工程角色的任务书正文随 system 固块下发——spawn 当刻读一次
+// 批档并冻结（`readFileSync` 在本档，切段与拼块的本体住 `./taskbook-block.mjs`）。
+import { readFileSync } from "node:fs"
 import {
   createAgent,
   readonlyToolNames, escapeXml, excludeSubagentTools,
 } from "../agent.mjs"
-import { allocRelay, wrapChildCallbacks, relayPrefixOf } from "../agent/spawn-child.mjs"
+import { allocRelay, wrapChildCallbacks, relayPrefixOf, chargeDesignerSurveySpawn, rootAgentOf } from "../agent/spawn-child.mjs"
+// B8（TOOLS.md §6.29 ④）：eng 两角色的受限父历史（同名 `read_history`，只在 extraTools 注入）
+import { makeBatchHistoryTool, recordBatchHistoryStart } from "./read-history.mjs"
+// B4（TOOLS.md §6.29 ①）：只读角色的 action 级变体派生（构造器单源 = `agent/helpers.mjs`，
+// 判据单源 = `agent/dispatch-gates.mjs` 的 `readonlyActionOf`）。
+import { deriveReadonlyTools } from "../agent/helpers.mjs"
+import { readonlyActionTest } from "../agent/dispatch-gates.mjs"
 // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §6.15）：子代理人读线窗口常量单源（store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
-import { validateDesignToken } from "./advisor.mjs"
-import { tokenExpired, removeDesignTokenSlot, reconcileEngTokensFromSlot } from "../token-ttl.mjs"
+// 设计令牌门（七态拒句 ∥ 槽解析 ∥ 令牌判定）本体落 `./subagent-design-token.mjs`；本档只吃判定。
+import { gateDesignToken } from "./subagent-design-token.mjs"
 import { resolveChildProvider, buildChildRunOpts, enqueueAsk } from "./subagent-async.mjs"
 import { nextSubagentId } from "./subagent-scheduler.mjs"
 import {
@@ -29,12 +41,16 @@ import {
 // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.3）：任务书 round 枚举 + 五项结构化参数校验/拼装本体落
 // spawn-gates.mjs（纯谓词零依赖）——本处只加 import 调用。
 import {
-  validateRoundParam, validateTaskBookParams, composeTaskBookBrief,
+  validateRoundParam, validateTaskBookParams,
   isEngineeringRole, rejectEngFreeTextParams,
 } from "./spawn-gates.mjs"
+// 任务书与 system 固块拼装（任务书播报 ∥ 写域行 S4 ∥ 文档坐标行 S5）落 `./subagent-brief.mjs`。
+import { docsCoordinatesBlockOf, filesBlockOf, taskBriefOf } from "./subagent-brief.mjs"
 // 台账 #23（AGENT-LOOP-SUBAGENT.md §6.26 · D23-3）：审计块构造器外提（`buildAuditBlock` 纯函数）
 // ——spawn 档只做「收集 + 绑定」；块文本逐字搬移（D23-4）。
 import { buildAuditBlock } from "./audit-block.mjs"
+// 任务书正文块（`AGENT-LOOP-SUBAGENT.md` §8.1 载体 ∥ 切片 ∥ 快照 ∥ 失效即拒）——纯函数外提，同审计块先例。
+import { buildTaskBookBlock, taskBookPointerLine } from "./taskbook-block.mjs"
 // 批次档路径解析单源（BATCH-RECORD.md §4.15 · 台账 #287）：门内解析改经叶档（读面非抛形），
 // 与 append / create 同源——门判据仍「参数在 + 路径可读」，错误文案逐字零变。
 import { resolveBatchReadPath, resolveBatchReadResult } from "./batch-paths.mjs"
@@ -51,14 +67,6 @@ function unreadableHint(cwd, given) {
   }
   if (r.state === "ambiguous") return `；Candidates: ${r.candidates.join(" ∥ ")}`
   return ""
-}
-
-/** 任务书播报文本：该角色名集拼装 + 可选 task 自由文本（拼装空 ⇒ 原 task 逐字——旧形零变）。 */
-function taskBriefOf(args, role) {
-  const composed = composeTaskBookBrief(args, role)
-  if (!composed) return args.task
-  const extra = typeof args.task === "string" ? args.task.trim() : ""
-  return extra ? `${composed}\n\n${extra}` : composed
 }
 
 /** 原 #309 任务书 token 观测（`child:batchdoc-ref`）已废止——2026-10-24 用户裁定
@@ -81,47 +89,6 @@ export function effectiveSubagentModel(parent, role, modelArg) {
   if (modelArg && String(modelArg).toLowerCase() !== "default") return modelArg
   const cfg = parent.config?.agent ?? {}
   return cfg.subagentModels?.[role] ?? cfg.subagentModel ?? null
-}
-
-/**
- * Resolve the design-token slot for an eng-coder spawn (2026-09-01 multi-design, FR3):
- * - designId given → exact slot lookup (no match = explicit error, never a fuzzy guess)
- * - designId omitted → exactly ONE slot must exist (single-design compatibility); with
- *   multiple slots we refuse rather than pick one (T16: never silently aim the wrong design)
- * Returns { token } on success; throws with a parent-actionable message otherwise.
- * R16 (2026-09-06): the slot Map is the authority; the format/TTL check itself stays in
- * validateDesignToken (2026-09-06: HMAC 防伪层已删——token 为无签名流程凭证——见
- * ENGINEERING-MODE.md 2026-09-06 段）。
- * DESIGN-TOKEN-SETTLEMENT D2（2026-09-08）：内存 Map miss（指定 designId 不在 / 空 Map）
- * 时回读槽文件权威台账 reconcile + 判定（reconcileEngTokensFromSlot——与 dispatch 写门
- * D3 同源）——覆盖"进程重启后槽有但 Map 未及回填/缓存与槽不一致"（槽文件 = 权威台账）。
- * TTL 过滤保留（reconcile 只并入未过期项）。单值镜像 `_engDesignToken` 已随 D3 退役——
- * 本门禁不再读镜像（AC3 零命中）。
- */
-export function resolveDesignSlot(parent, designIdArg) {
-  let slots = parent._engDesignTokens
-  const hasSlots = slots instanceof Map && slots.size > 0
-  // D2：内存 miss（指定 designId 不在 或 空 Map）→ 权威槽回读 reconcile + 判定
-  if (designIdArg ? !(hasSlots && slots.has(designIdArg)) : !hasSlots) {
-    const rec = reconcileEngTokensFromSlot(parent)
-    if (rec && rec !== slots) slots = rec
-  }
-  // F2d: both refusal branches carry the HELD id list — after a
-  // persistence restore the parent has no digest to look the id up in; the error
-  // list is the only discovery path (ids are not credentials — the token is).
-  const size = slots instanceof Map ? slots.size : 0
-  const heldIds = size > 0 ? [...slots.keys()].join(", ") : "(none)"
-  if (designIdArg) {
-    if (!(slots instanceof Map) || !slots.has(designIdArg)) {
-      throw new Error(`designId not found — no approved design review holds this id. Run advisor with type='design' again and pass the designId echoed with the token. (session holds ${size} approved design slot(s); held design ids: ${heldIds})`)
-    }
-    return { token: slots.get(designIdArg) }
-  }
-  if (size > 1) {
-    throw new Error(`Multiple approved designs in this session (${size}) — pass the designId parameter (echoed with each token) to choose which design this eng-coder spawn belongs to. Held design ids: ${heldIds}`)
-  }
-  if (size === 1) return { token: [...slots.values()][0] }
-  throw designTokenRefusal("missing")
 }
 
 /**
@@ -181,16 +148,6 @@ export function prepareScheduling(parent, filesRaw, dependsRaw, wantAsync) {
   return { files, dependsOn, errorJson: null }
 }
 
-/** S4 写域行（AGENT-LOOP-SUBAGENT.md §6.26「写域行（S4）」）：表头 + 逐条绝对路径 + 两句语义——
- *  本档局部纯函数（D23-9：不外提模块）。两句不可省：缺① 子代理读成「我只能写这些」⇒ 该写的漏掉；
- *  缺② 仍把任务书 §2 全文当成自己的改动面（本块的病因）。清单不截断——截断正是本块要消除的
- *  「看不见」。返回块文本（块间分隔由装配侧 `join("\n\n")` 施加）。 */
-function filesBlockOf(files) {
-  return `Files declared for this spawn (the write domain this task declares, for scheduling):\n` +
-    files.map((f) => `- ${f}`).join("\n") +
-    `\n\nThis list is not an authorization boundary: touching a file outside it is allowed — report every out-of-list file you changed, with its reason. It is also not the whole change surface: other spawns on this task declare their own files, and what is listed here is your share only.`
-}
-
 /**
  * AGENT-LOOP-SUBAGENT.md §6.9 准入通过后的 child 装配（2026-09-05 module-split——自 execute 参数化提取，
  * 原 318-488 段 verbatim——语义零变）。副作用保留：relay 取号（sync 支 allocRelay——
@@ -201,7 +158,7 @@ function filesBlockOf(files) {
 export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, dependsOn, engAuditAttempt) {
   // Provider/model override: tool `model` arg > subagentModels[role] > subagentModel > parent provider
   const childProvider = resolveChildProvider(parent, effectiveSubagentModel(parent, role, args.model))
-  // 工程角色（任务书 = 批次档 §2，零任务书文本参数）——AGENT-LOOP-SUBAGENT.md §6.22.1。
+  // 工程角色（任务书 = 绑定批档，按角色切片（§8.1）；零任务书文本参数）——AGENT-LOOP-SUBAGENT.md §6.22.1。
   const engineeringRole = isEngineeringRole(role)
 
   // ── batchDoc gate（ENGINEERING-MODE.md §2.12 + §2.15 D1——FR20 #9 机械面）────────
@@ -264,17 +221,54 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     validateTaskBookParams(args, role)
   }
 
-  // eng-coder token gate（TOOLS.md §6.25 ④）：判定本体 = gateDesignToken（本档模块尾）——
-  // missing / mismatch / expired / invalid 四态各出互异拒句；拒绝集合与旧三条件合取全等。
+  // AGENT-LOOP-SUBAGENT.md §8.1：任务书**正文**进 system 固块（§8.2 收集序首块）——spawn 当刻读一次批档
+  // 并冻结，此后改动不回流（快照语义）；切片与块文本住 `./taskbook-block.mjs`，本处只做「读 + 收集」。
+  // 失效即拒：段切不出来（无对应段头）⇒ 拒发并点名路径与缺失段（拒文由构造器给出）——
+  // 退回只发指向句会让 §8.1 的承诺落空而无人知道。读不到走同一条拒因：batchDoc 门已判过可读，
+  // 这里只剩「读的那一刻文件不在了」，那不是可降级情形。
+  // 落点 = 任务书参数门之后、token 门之前（门序 §3.3：既有门的先后不变）。
+  let taskBookBlock = null
+  if (engineeringRole) {
+    let recordText
+    try {
+      recordText = readFileSync(batchDocAbs, "utf8")
+    } catch (e) {
+      throw new Error(`Task book unavailable — spawn refused: the batch record at ${batchDocAbs} could not be read at spawn time (${e?.message ?? e}); the ${role} task book is cut from it, so this spawn would have no authorized text. Restore the file and spawn again.`)
+    }
+    taskBookBlock = buildTaskBookBlock({ role, record: { path: batchDocAbs, text: recordText } })
+  }
+
+  // eng-coder token gate（TOOLS.md §6.25 ④⑤⑥）：判定本体 = `./subagent-design-token.mjs` 的 `gateDesignToken`——
+  // missing / mismatch / expired / invalid / batch-mismatch / seal-mismatch / seal-unreadable 七态各出互异拒句；
+  // 前四态的拒绝集合与旧三条件合取全等。第三参 = 本函数上方 batchDoc 门已解析好的绝对路径
+  // （§10.1 的比较对象；本门不二次解析 `args.batchDoc`）。
   // 返回值 = 槽内令牌，必须落回 issuedToken：下方 `child._engDesignId` 回写依赖它。
   let issuedToken
-  if (role === "eng-coder") issuedToken = gateDesignToken(parent, args)
+  if (role === "eng-coder") issuedToken = gateDesignToken(parent, args, { batchDocAbs })
+
+  // ── B7（TOOLS.md §6.29 B7）：eng-designer 的勘察预算计数 ──────────────────────────
+  // 计的是**设计席发起的勘察**（`parent._role === "eng-designer"` 且本 spawn 的 role = explore），
+  // 不是设计师自己的被派次数——模型面承诺的是「≤6 explore spawns per batch」。
+  // 判据序（设计档原话「先完成角色、同步方式与 batchDoc 准入再计数」）：角色/同步两道门在
+  // `gateEngCoderSpawn`（调用方，本函数之前已过）；本角色的 batchDoc 绑定在设计师自己那一次 spawn
+  // 就过完了门（`parent._batchDoc`）；任务书门在本函数上方 ⇒ 到此处仍未拒的 spawn 才占额度。
+  // 载体 = depth-0 根 agent 的独立 Map（K5：挂一次性 designer child 上会在 fix respawn 归零）。
+  if (role === "explore" && parent?._role === "eng-designer" && parent._batchDoc) {
+    chargeDesignerSurveySpawn(rootAgentOf(parent), parent._batchDoc)
+  }
+
+  // ── B8（TOOLS.md §6.29 ④）：eng 两角色的限量父历史 ────────────────────────────────
+  // 绑定的是**父会话**（depth-0 根 agent）与**本批起点**；未绑定角色（explore/plan/coder/tester/consult）
+  // 一个新历史工具都拿不到（K7：新工具解决不了「没有 _batchDoc 时范围怎么定」）。
+  if (engineeringRole) recordBatchHistoryStart(rootAgentOf(parent), batchDocAbs, Date.now())
 
   // Filter tool set by role: explore/plan are read-only (plan is a planning agent, its deliverable is the plan itself)
   let tools
   if (role === "explore" || role === "plan") {
-    const allowed = readonlyToolNames(parent.tools)
-    tools = parent.tools.filter((t) => allowed.has(t.name))
+    // B4（TOOLS.md §6.29）：整把只读集 ∪ action 级只读变体——旧形只认 `t.readonly`，`git` / `memory` /
+    // `settings` / `process` 整把不是只读，于是它们的只读动作在只读角色里一起消失（需求 B4 的直接病因）。
+    // 判据单源 = 运行期 `readonlyActionOf`（经 `readonlyActionTest` 适配）——不另写一份只读动作名单。
+    tools = deriveReadonlyTools(parent.tools, readonlyActionTest)
   } else if (role === "tester") {
     // tester = the THIRD tool face (AGENT-LOOP-SUBAGENT.md §6.59.2 ④): read-only set ∪ {execute, bash},
     // minus {verify, advisor}.
@@ -330,7 +324,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 场景映射落到 assemblePrompt("eng-coder"/"eng-designer")（persona-{role} + common +
   // discipline-engineering）；designer 也必须 engineering=true 才能装配工程纪律槽。
   const childConfig = engineeringRole
-    ? { ...parent.config, agent: { ...parent.config.agent, engineering: true } }
+    ? { ...parent.config, agent: { ...parent.config.agent, mode: "engineering", engineering: true } }
     : parent.config
 
   const child = createAgent({
@@ -377,21 +371,24 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 审计/探索（"status 里这个文件算不算超清单？"）。注入分支整体删除（B 方案
   // git 只读变体亦随裁定废弃——D-AG5）。顶层主 agent 注入保留（§3 prepareRun——
   // setup.mjs depth===0——D-AG7 范围边界）。
-  // §6.22.2 子代理任务输入：工程角色 `input` = 一行机械任务书行（批档绝对路径 + §2 指向句）——
-  // 任务书本体由子代理自读 §2（KD-SC5：运行时不抽取正文注入，避免过期副本 / 脆标题解析）；
+  // §6.22.2 子代理任务输入：工程角色 `input` = 一行机械任务书行（批档绝对路径 + 按角色的指向句）；
+  // 任务书**正文**在 system 固块（§8.1），本行只指路（指向句文本住 `./taskbook-block.mjs`）；
   // 非工程角色 = 既有拼装（context 前缀 + 任务书参数 + 可选 task——零变）。
   const input = engineeringRole
-    ? `Task book: §2 of the batch record at ${batchDocAbs} — read it before acting; it is the only task channel for this spawn.`
+    ? taskBookPointerLine(role, batchDocAbs)
     : (args.context ? `Context:\n${args.context}\n\nTask:\n${taskBriefOf(args, role)}` : taskBriefOf(args, role))
   // 台账 #23（AGENT-LOOP-SUBAGENT.md §6.26 · D23-1）：**spawn 级固定机制性指令改走 system 固块**——
   // 两处（批次档路径行 + 审计模板块）原随 user 首条下发，压缩把首条并入摘要即丢（长任务中后期
   // 既看不到批次档路径、也看不到审计模板 ⇒ 过度勘察的真病根）；固块值在 child 生命周期内恒定
   // ⇒ run 内 system 前缀逐字节稳定（前缀缓存不破），且不在 `agent.history` 内 ⇒ 压缩结构上吞不掉。
-  // 收集序 = 批次档行 → 审计块 → 写域行（S4，见下）；空数组 ⇒ 不绑定（depth-0 / explore / plan /
-  // consult 的 system 逐字节同改前——§6.26 缓存契约兼容证明）。
+  // 收集序 = 任务书正文（§8.2）→ 批次档行 → 审计块 → 写域行（S4，见下）→ 文档坐标行（S5，见下）；
+  // 空数组 ⇒ 不绑定（depth-0 不进本函数、system 逐字节同改前——§6.26 缓存契约兼容证明）。
+  // S5 与角色无关 ⇒ explore ∥ plan 的子代理也会带上它；它随本项目 manifest 声明而定、与 spawn 参数无关，同一 child 终身不变。
   const spawnBlocks = []
+  // §8.1 任务书正文（§8.2 收集序首块）：仅工程角色携带，已按角色切片（eng-coder = §2、eng-designer = §1 + §2）。
+  if (taskBookBlock) spawnBlocks.push(taskBookBlock)
   // §2.11 第 1 点（FR16 载体 + FR17 铁律 #5 的机械面）：批次档**绝对路径**下发给工程角色
-  // （eng-coder 实现 / eng-designer 写稿）——任务书本体 = 本档 §2；本行让子代理"拿到本档路径"。
+  // （eng-coder 实现 / eng-designer 写稿）——任务书正文就在上方那块；本行让子代理“拿到本档路径”（改写前回读磁盘用）。
   // 工程角色恒注入；携绑定 coder（§4.16）随绑定注入（绑定 coder 要能读到本档）。
   if (batchBound) spawnBlocks.push(`Batch record (batchDoc): ${batchDocAbs}`)
   // AGENT-LOOP-SUBAGENT.md §6.7.6 D-E2 ③ + §6.22 KD-SC6：审计 spawn 的范围证据 = 机械跟踪的
@@ -401,8 +398,13 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // §6.26「写域行（S4）」：`files`（本 spawn 的预期写域，`prepareScheduling` 已归一化）非空 ⇒ 追加
   // 一格——写域此前只有调度器知道，子代理只能猜自己的改动面；空 / 未传 ⇒ 不推块，system 逐字节同改前。
   if (files.length > 0) spawnBlocks.push(filesBlockOf(files))
+  // §6.61「子代理文档坐标行（S5）」：本项目声明的三层文档坐标一行随 system 面下发。子代理此前也读得到
+  // `docRoot`（`manifestReadTool` 按需主动读），但那得先想到坐标记在 manifest 里、再知道键名——本行把
+  // 答案在 spawn 时就放进 system 面，省掉的只是那一趟（出口零新解析）。读不出 ⇒ 不推块。
+  const docsBlock = docsCoordinatesBlockOf(parent.cwd)
+  if (docsBlock) spawnBlocks.push(docsBlock)
   // The child's own task input rides the child object: D23-6 —— `_engTaskInput` 语义 = **一行机械
-  // 任务书行**（批档绝对路径 + §2 指向句；不含固块）。
+  // 任务书行**（批档绝对路径 + 按角色的指向句；不含固块——正文在 system 面）。
   if (engineeringRole) child._engTaskInput = input
   // spawn 固块单点绑定（sync / async 同点——buildSpawnChild 唯一调用点）：此后只读 ⇒ 同一
   // child 的任意 run（resume 续跑 / 报告追问重跑）逐字节恒定；消费点 = 核 `prepareRun`。
@@ -412,7 +414,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // pipeline (AGENT-LOOP-SUBAGENT.md §6.7.2 D3). Prefix includes a unique id: parallel child agents
   // with the same role stay independent and don't overwrite each other.
   // Format: role#id/  →  onToken("coder#2/writing..."), onToolCall("coder#2/read", args)
-  // Async id allocation (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1): reserve the relay counter at
+  // Async id allocation (AGENT-LOOP-SUBAGENT.md §6.7.3): reserve the relay counter at
   // spawn time — the returned id must be stable while the item sits in the queue.
   // The [model] token (TUI block creation) is DEFERRED to actual start so queued
   // children don't paint an empty panel block ("queued 态不显示").
@@ -441,34 +443,12 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     ...wrapChildCallbacks(relayPrefix, ctx.callbacks),
   }
   const childRunOpts = buildChildRunOpts(ctx)
+  // B8（TOOLS.md §6.29 ④）：eng 两角色各挂一枚**本批窗口**的受限 `read_history`（同名工具、
+  // 经 extraTools 注入——装配面在 `agent/setup.mjs` 的 `extraTools` 段）。未绑定角色不挂（K7）。
+  if (engineeringRole) childRunOpts.extraTools = [makeBatchHistoryTool(rootAgentOf(parent), batchDocAbs)]
   return { child, input, childOpts, childRunOpts, relayPrefix, childProvider }
 }
-
-// ── design-token 门（TOOLS.md §6.25 ③④——四态互异拒句；拒绝集合与旧三条件合取全等） ──
-
-/** 四态拒句（逐字 = TOOLS.md §6.25 ③）：missing / mismatch / expired / invalid。
- *  mismatch 可携 designId（非凭证）；四句均零令牌值回显。 */
-export function designTokenRefusal(kind, designId) {
-  if (kind === "missing") return new Error("designToken missing — the eng-coder spawn is refused: no usable token for an approved design slot came with this spawn. Pass the designToken parameter with the exact value from the subagent action:'design-slots' row (the text after designToken=), copied verbatim; if that list is empty, no design review has been approved in this session yet — run advisor with type='design' first. No token value is echoed here.")
-  if (kind === "mismatch") return new Error("designToken mismatch — the eng-coder spawn is refused: the value passed does not equal the token held for this design slot. Re-read the subagent action:'design-slots' row and pass the value after designToken= verbatim, unchanged. No token value is echoed here." + (designId ? ` (designId: ${designId})` : ""))
-  if (kind === "expired") return new Error("designToken expired — the eng-coder spawn is refused: the token matches this design slot but is past its TTL. The expired slot has been removed; run advisor with type='design' again on the current design and pass the newly issued token — an expired authorization cannot be retried. No token value is echoed here.")
-  return new Error("designToken invalid — the eng-coder spawn is refused: the value passed equals this design slot's stored token, but that stored value is not a well-formed token, so no expiry can be judged and the slot was left in place. Run advisor with type='design' to issue a fresh token for this design; a malformed record never passes the gate. No token value is echoed here.")
-}
-
-/** eng-coder spawn 的令牌门（TOOLS.md §6.25 ④）：resolveDesignSlot 的既有两条 designId
- *  诊断零改 → 参数在场 → 值相等 → 值有效。槽删除只在 tokenExpired(given) 成立时发生
- *  （D-R16c ③）；mismatch / invalid 不删槽（T-R16d）。返回槽内令牌（调用方回写 designId
- *  依赖它）；sync / async 两路共经 buildSpawnChild——一处判定双路生效。 */
-export function gateDesignToken(parent, args) {
-  const issuedToken = resolveDesignSlot(parent, args?.designId).token
-  // 非字符串 ⇒ 空串 ⇒ missing（本意——T9 锁定）
-  const given = typeof args?.designToken === "string" ? args.designToken : ""
-  if (!issuedToken || !given.trim()) throw designTokenRefusal("missing")
-  if (given !== issuedToken) throw designTokenRefusal("mismatch", args?.designId)
-  if (!validateDesignToken(given)) {
-    const expired = tokenExpired(given)
-    if (expired) removeDesignTokenSlot(parent, args?.designId, given)
-    throw designTokenRefusal(expired ? "expired" : "invalid")
-  }
-  return issuedToken
-}
+// 设计令牌门（七态拒句 ∥ eng-coder spawn 的令牌判定）已搬 `./subagent-design-token.mjs`（分拆落点 =
+// `docs/core/design/PATH-RESOLUTION.md` §3 末条）；本档**原样再导出**其导出面 ⇒ `subagent.mjs` 的再导出行与
+// 用例的 import 行零改。
+export { designTokenRefusal, gateDesignToken, resolveDesignSlot } from "./subagent-design-token.mjs"

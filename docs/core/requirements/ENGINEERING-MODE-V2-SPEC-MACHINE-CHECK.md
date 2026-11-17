@@ -1,49 +1,39 @@
 # Function Spec · M8 机检引擎
 
-> 模块划分权威源 = `docs/core/design/ENGINEERING-MODE-V2.md` §2.2（M8）
+> 当前权威 = `docs/core/requirements/DOC-CHECK.md` 与 `docs/core/design/DOC-CHECK.md`。本规格保留模块入口，不另立第二套判据。
 
 ## ① 模块目标
 
-机检砍到**单引擎 + 声明面**：一个引擎（锚 + 行宽），判据全部从 manifest `checkConfig` 读——不再硬编码本仓路径。这是「可迁移」（N3）的结构承载点。
+文档机检使用单一 doc_check 引擎，只判段长、行号锚和悬空指针。判据常量内建；项目只能通过 index.docCheckExcludePaths 调整判集。
 
 ## ② 功能点
 
-1. **单引擎**：保留内核 = ① 锚检查（段引用可解析）② 行宽检查（单行 > 阈值）③ 台账一致性（由 SQLite schema 承接，`check-ledger` 作废）。
-2. **声明面判据**：扫描域（`scanDirs`）/ 行宽阈值（`lineWidth`）/ **宽面豁免区带（`widthExemptZones`）** / 锚域（`anchors.domain`）/ 豁免（`exemptions` / `anchors.exclude`）全读 `checkConfig`——改 manifest 即改行为。
-3. **砍掉**（v1 过度工程）：
-   - 双引擎
-   - 三套源域
-   - 三套行宽判据
-   - 参照历史面豁免族
-   - 六档并入映射
-   - V3 历史常量
-4. **读 `docRoot`**：目录落点从声明面取。
-5. **判定面与判据规格单源**：用例定义面 = 域根下**全部 `test` 树**（非 `<域根>/test`）；三锚抽取 / 存在性域 / 注记集 / 豁免族与 `docs/core/design/DOC-DISCIPLINE.md` §4 判据句**逐条一致**（一处详述，引擎只实现）。
+1. report 整档诊断，gate 只判本批变更区。
+2. 目标项目由目标自身或祖先的 PROJECT-MANIFEST.json 决定；无项目声明时 report 与 gate 都不运行。显式 target 和会话锚只定位，不制造项目身份。
+3. 批次档在读取面不判；写入时仍按当前写门判段长与行号锚。
+4. 计划创建文件与项目声明排除路径按 DOC-CHECK 的豁免处理。
+5. 台账一致性由 ledger schema、写核和 batch check 承担，不属于 doc_check。
+6. 语义质量、覆盖完整性和需求契合由评审负责，不伪造成 doc_check 判据。
 
-## ③ 边界（不做什么）
+## ③ 边界
 
-- 不做台账（M2）；不做文档写作（designer / 主 agent）。
-- 不保留 v1 的豁免族 / 六档映射 / V3 常量（明确砍）。
-- 不做「判据语义」之外的检查（机检只判可机判项；语义判据归评审）。
+- 不读取退役的 checkConfig。
+- 不运行旧的 doc-anchors、check-doc-width 或 check-ledger 脚本族。
+- 不把“运行过”当成“判据覆盖”。
+- 不把 report 模式当作交付 gate。
 
-## ④ 验收（逐条可机判）
+## ④ 验收
 
-| # | 判据 | 方式 |
-|---|---|---|
-| AC-M8-1 | 单引擎（无第二引擎入口） | 检查脚本集 |
-| AC-M8-2 | 改 `checkConfig` → 机检行为随之变（声明面生效） | 改阈值 → 期望结果变 |
-| AC-M8-3 | 全仓无硬编码本仓 `docs/` 路径于机检判据 | grep |
-| AC-M8-4 | 台账一致性由 schema 承接（无 `check-ledger`） | 文件不存在 |
-| AC-M8-5 | 锚检查 / 行宽检查可跑并出红绿 | 跑脚本 |
-| AC-M8-6 | 判据项计数 = `checkConfig` 键数 + `anchors` 拆分 1（D3；现读「**7 = 6 + 1**」= 去 `lineCounts` 后 6 键 + 新增 `anchors.roots`；键集单源 = 机制档 §7 F2 表行数） | 计数比对 |
-| AC-M8-8 | 判据句 ⇄ 实装一致（抽核四面：右界守卫转义 · 谓词闭枚举 13 词 · 用例定义面 · 两族三态） | `node --test thincoder-cli/test/doc-check.test.mjs` |
-| AC-M8-9 | 判据单元测试档跑过（名随批次档 · 用毕即删；零落仓 + 并发免疫） | 跑用例 + 扫描域前后快照比对 |
+| # | 判据 |
+|---|---|
+| AC-M8-1 | doc_check 三类命中与 DOC-CHECK 一致 |
+| AC-M8-2 | 阈值和命中类没有项目级配置 |
+| AC-M8-3 | index.docCheckExcludePaths 只改变判集 |
+| AC-M8-4 | report 与 gate 的范围差异可复现 |
+| AC-M8-5 | 台账一致性由 ledger/batch 机制承担 |
+| AC-M8-6 | 无命中时 PASS；不可判对象明确标未判 |
+| AC-M8-7 | 无项目目录收到显式 target 或相对会话锚定位时，report 与 gate 均不运行 |
 
 ## ⑤ 依赖
 
-- **上游**：M1（`checkConfig` / `docRoot`）。
-- **下游**：无（终端检查面）。
-
-## 需求依据
-
-v2 §8.7（机检引擎）· §8.3（纪律 → 机检映射）· 架构设计 §2.3 E4 · KD2。
+MANIFEST、PATH-RESOLUTION、DOC-DISCIPLINE、LEDGER。

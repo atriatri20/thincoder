@@ -16,13 +16,16 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { _resetSessionsDirForTest, _setSessionsDirForTest, slotPath, writeEndMarker, writeSessionFile } from "../../thincoder-core/session-slots.mjs"
 import { applySession, resumeSlot } from "../../thincoder-core/session-lifecycle.mjs"
 import { historyPercent, tokenKey, tokenRatioOf } from "../../thincoder-core/token-window.mjs"
+import { resolveWorkMode } from "../../thincoder-core/config.mjs"
 import { ESTIMATOR_VERSION } from "../../thincoder-core/provider/rate.mjs"
 import { createAgent } from "../../thincoder-core/agent.mjs"
 import { contextTool } from "../../thincoder-core/agent-tools/context.mjs"
@@ -59,12 +62,12 @@ const ctxPercentOnStatusLine = (line) => {
   return m ? Number(m[1]) : undefined
 }
 
-test("16-1 恢复带 estimateSample 的会话 ⇒ 状态行百分比 = 核读数（不是未校准值），stats 同值", async (t) => {
+test("CLI 16-1 恢复带 estimateSample 的会话 ⇒ 状态行百分比 = 核读数（不是未校准值），stats 同值", async (t) => {
   const cwd = mkdtempSync(join(tmpdir(), "ctx-percent-calibrated-"))
   _setSessionsDirForTest(join(cwd, "sessions"))
   t.after(() => {
     _resetSessionsDirForTest()
-    rmSync(cwd, { recursive: true, force: true })
+    removeTempDirBestEffort(cwd)
   })
 
   // ① 盘上会话：机读线（contextHistory 为空 ⇒ 回退 history）+ 校准样本
@@ -95,10 +98,11 @@ test("16-1 恢复带 estimateSample 的会话 ⇒ 状态行百分比 = 核读数
     .split("\n").find((line) => line.startsWith("Status line:"))
   const statsPct = Number((statsLine.match(/context (\d+)%/) ?? [])[1])
 
-  // 两处一个数，且 = 核读数（合并后机读线 + provider + 恢复出的比）
-  const calibrated = historyPercent(agent.history, agent.provider, tokenRatioOf(agent))
+  // 两处一个数，且 = 核读数（合并后机读线 + provider + 恢复出的比）；第四参 = 当前档位（分母的来源，§2.3 无缺省）
+  const mode = resolveWorkMode(agent.config?.agent)
+  const calibrated = historyPercent(agent.history, agent.provider, tokenRatioOf(agent), mode)
   assert.equal(shown, calibrated, `状态行 ${shown}% 应等于核读数 ${calibrated}%`)
   assert.equal(statsPct, calibrated, `stats ${statsPct}% 应等于核读数 ${calibrated}%`)
   // 校准比真的进了显示面：不是未校准读数
-  assert.notEqual(calibrated, historyPercent(agent.history, agent.provider, 1))
+  assert.notEqual(calibrated, historyPercent(agent.history, agent.provider, 1, mode))
 })

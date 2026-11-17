@@ -21,6 +21,46 @@
  *    本档被 `config.mjs` import ⇒ 不得反向 import（循环）——故 ② 保持纯函数形态。
  */
 
+export const WORK_MODES = Object.freeze(["tiny", "normal", "engineering"])
+
+/** 旧值读取别名（CONFIG §5.4）：`minimal` 是 `tiny` 的历史写法。归一只在读取面发生——读一次
+ * 比一次，不写盘；写入面仍以 WORK_MODES 为唯一值域，旧字面走既有拒绝语义。 */
+const LEGACY_MODE_ALIASES = Object.freeze({ minimal: "tiny" })
+/** 旧值归一（读取口单源）：只换别名、不判合法值——合法性仍由 `WORK_MODES.includes` 判。
+ *  给“读到旧字面要就地归一”的快照/写回面用（如 VSC 端槽写前的 mode 归一），不改变回退语义。 */
+export const normalizeWorkMode = (mode) => (typeof mode === "string" && Object.hasOwn(LEGACY_MODE_ALIASES, mode) ? LEGACY_MODE_ALIASES[mode] : mode)
+
+/** The only work-mode authority. A present but invalid mode falls back to normal; legacy
+ * engineering is consulted only when the mode key is absent. */
+export function resolveWorkMode(agentConfig = {}) {
+  if (agentConfig && typeof agentConfig === "object" && Object.hasOwn(agentConfig, "mode")) {
+    const mode = normalizeWorkMode(agentConfig.mode)
+    return WORK_MODES.includes(mode) ? mode : "normal"
+  }
+  return agentConfig?.engineering === true ? "engineering" : "normal"
+}
+
+/** Restore prefers a valid slot mode, then migrates the legacy slot boolean, then uses config. */
+export function resolveSessionWorkMode(data, agentConfig = {}) {
+  if (data && typeof data === "object") {
+    const mode = normalizeWorkMode(data.mode)
+    if (WORK_MODES.includes(mode)) return mode
+  }
+  if (data && typeof data === "object" && data.engineering !== undefined) {
+    return data.engineering === true ? "engineering" : "normal"
+  }
+  return resolveWorkMode(agentConfig)
+}
+
+/** Update the sole mode and derive the compatibility boolean for old runtime consumers. */
+export function setConfigWorkMode(config, mode) {
+  if (!WORK_MODES.includes(mode)) throw new Error(`work mode must be one of ${WORK_MODES.join("/")} — got ${JSON.stringify(mode)}`)
+  config.agent ??= {}
+  config.agent.mode = mode
+  config.agent.engineering = mode === "engineering"
+  return mode
+}
+
 export function migrateLegacyModelFields(raw) {
   if (!raw || typeof raw !== "object") return false
   const providers = Array.isArray(raw.providers) ? raw.providers : []

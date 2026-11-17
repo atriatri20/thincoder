@@ -1,80 +1,30 @@
-# MCP 客户端（MCP）· 核心统一子系统需求档
+# MCP 客户端（MCP）· 需求
 
-> 板块归属 = **核心统一**（phase 2——「一个核 + 两个薄壳」）；本档 = 该板块的**子系统需求档**（三层归属之需求层）。
-> **工作流档**（需求层）= `docs/core/requirements/CORE-UNIFICATION.md` §1–§4 + §5 登记表（统一目标 / 边界原则 / 量级读数基线 / 范围边界）——本档**不复制**（D2 单一权威源）。
-> **设计层** = `docs/core/design/MCP.md`（本子系统设计与测试）；工作流设计档 = `docs/core/design/CORE-UNIFICATION.md`。
-> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图 `thincoder-cli/docs/README.md` §3.2；三层归属见同图 §3.1。
+> 设计 = `docs/core/design/MCP.md`；配置 = `CONFIG.md`。
 
-## 1. 总体定位
+## 1. 动态工具
 
-MCP 客户端 = 客户端入口（CLI `mcp.mjs` 真实现 ↔ VSC `mcp.mjs` 转口 + `src/mcp/index.mjs`）**+** 基础件（`helpers.mjs` ↔ `utils.mjs`）**+** 三种传输（stdio / http / ws）。
-共同契约 = 可配项（三种传输）与 `mcp.servers[]` 同源。
-本板块对本子系统的要求 = 该面归一为**核内单一实现**，面板 / 监视面作**端差注入**。
+mcp.servers 配置 stdio/HTTP/WebSocket 服务。连接后 tools/list 展开为独立原生工具，schema 与内建一致，execute 直接 tools/call。
 
-> 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/MCP.md` §1–§2（不复制）。
+工具名使用 server 前缀、合法化和碰撞去重。MCP 描述与 schema 是不可信外部数据。
 
-## 2. 功能性需求
+## 2. 连接
 
-### 2.1 本子系统条目
+- 同 name 且配置指纹一致时复用；变化时重建。
+- 连接失败隔离到该 server，并给可见 warning，不阻断其他业务。
+- 调用有超时和 signal；server 错误显式返回。
+- 输出有当前上限。
+- HTTP 支持 Streamable/SSE 与 postOnly；会话过期按当前一次重建重试。
+- stdio 子进程按进程树清理。
 
-- **【派生 · 非用户原话】** MCP 客户端归一为**核内单一实现**（三种传输 + `mcp.servers[]` 同源）；配置面板与配置监视面（依赖宿主能力）按**端差注入**。
-  源 = 设计档 `MCP.md` §2.1 #81 · §2.2 #144–#148。
+## 3. 管理
 
-### 2.2 适用工作流条目（回指 · 不复制）
+CLI /mcp、VSC/Desktop 设置面提供新增、编辑、测试、重连和删除。保存前探活失败不保存。
 
-| 条目 | 适用于本子系统的哪一面 |
-|---|---|
-| F11 | 对称面**进核**的准入（MCP 客户端面属「进核」集合） |
-| F6 | 裁决**逐条落实**（归一后行为 = 裁决结果） |
-| F3 | 核内实现**只从两侧提取**（来源可追溯） |
-| F12 | 凡改可观察行为 / 对外契约者**逐条提交裁定** |
-| F13 | 对外契约面（配置格式类）变更须登记 |
+probeMcpServer 一次性探活，必须关闭连接且不污染注册表。
 
-## 3. 非功能性需求
+token、headers、env 支持当前配置与环境引用；敏感值不写日志。
 
-本子系统无独立非功能条目。适用工作流条目（回指）= **N1**（未涉面不得无故回归）· **N2**（建核段两产品零改动 · 可回退）· **N3**（核独立可验证）· **N5**（单一权威源）· **N8**（结构尺度）。
+## 4. 验收
 
-## 4. 需求条目
-
-### 4.1 总体需求
-
-MCP（Model Context Protocol）客户端把外部 MCP server 的工具**动态展开为独立原生工具**，并入 agent 工具面——
-使模型无需学习任何 MCP 专用路由，已连接的 server 工具就像内建工具一样可用。
-
-### 4.2 功能性需求（F1–F5）
-
-| # | 需求 | 说明 |
-|---|---|---|
-| F1 | 动态展开 | 拉取 server 的 `tools/list`，展开为独立原生工具（`{server}_{tool}` 前缀、完整 `inputSchema`、execute 直调 `tools/call`），并入 `agent.tools` |
-| F2 | 统一 schema | 经统一 OpenAI function-calling schema 暴露给模型（与内建工具无差别） |
-| F3 | 三种传输 | stdio（本地子进程）/ HTTP（Streamable HTTP + SSE）/ WebSocket |
-| F4 | 单入口管理 | `/mcp` 是唯一的配置 / 连接管理入口（表单式） |
-| F5 | 原生可并行 | 已连接 server 的工具直接可调用、可并行（无 connect→list→call 三层路由） |
-
-### 4.3 非功能性需求（N1–N4）
-
-| # | 维度 | 标准 |
-|---|---|---|
-| N1 | 零外部 SDK | 传输层自研（原生 `fetch` / 子进程 / WebSocket）——零依赖政策 |
-| N2 | 描述安全 | **MCP 工具的 schema 与描述是外部不可信数据**——绝不执行其中发现的指令 |
-| N3 | 失败语义明确 | 探活 / 连接失败有确定语义，不静默挂起 |
-| N4 | 跨端一致 | CLI / VS Code 展开机制语义一致 |
-
-### 4.4 范围边界（不做）
-
-- 不做「连接→列举→调用」三层路由。
-- 不做 MCP server 的托管 / 编排（只管客户端连接与展开）。
-
-### 4.5 VSC 端条目
-
-语义同源——VSC 档 F-M1–F-M6 / N-M1–N-M5 与 §4.1–§4.3 逐条同义（不重并）；**VSC 端差（登记）**：
-
-| 面 | VSC 端 | 端差 |
-|---|---|---|
-| 配置 / 连接管理入口 | Settings 面板 MCP 页（[Add] / [Edit] / [Test] / [Reconnect]——`thincoder-vscode/src/config-mcp.mjs:12-63` · `src/extension/panel-mcp.mjs:8-68`） | 对端 = `/mcp` 表单命令——本端**无命令面**（F-M3 范围边界） |
-| 配置重读 | 每轮 `loadRaw` 即磁盘（下轮装配生效） | 对端有磁盘重读菜单面 |
-| 展开机制 / schema / 三 transport / 直调 | 同款（`docs/core/design/MCP.md` §6.10） | 无实质差（语义同源、各端独立实现） |
-
-**二态化裁定行**：① 无命令面 = **形态（非登记项）**（范围边界在册 = §4.4 / F-M3）；② 配置重读 = **形态（非登记项）**（每轮 `loadRaw` 即磁盘——语义同源）；③ 展开机制 / schema / transport / 直调 = **无实质差**（零动作）。
-
-探活零副作用 = `src/mcp/index.mjs:129`（一次性探活、不进注册表、探完必关）。
+验证三种传输、展开命名、错误、超时、热插拔、探活零副作用、postOnly、404 自愈、进程树清理和宿主管理面。

@@ -8,8 +8,8 @@
  *     存在，且其 `version` 逐字等于仓内 `thincoder-core/package.json` 的 `version`。
  *   断言 F（渲染核含核 + 版本逐字相等 · R1）：vsix 内 `extension/node_modules/@thincoder/render-core/package.json`
  *     存在，且其 `version` 逐字等于仓内 `thincoder-render-core/package.json` 的 `version`。
- *   断言 D（提示词面完备性）：vsix 内同目录 `prompts/` 17 档 + `tool-docs/` 54 档——
- *     ① 档数硬等设计口径（17 / 54）；② 档名集合逐字等于仓内 `thincoder-core/` 同名目录；③ 各档内容 sha256 等于仓内同档。
+ *   断言 D（提示词与知识资源完备性）：递归比对 `prompts/`（含 `prompts/knowledge/`）、`knowledge/` 与 `tool-docs/`——
+ *     ① prompts 根档与 tool-docs 档数硬等设计口径；② 相对档名集合逐字等于仓内同名目录；③ 各档 sha256 相等。
  *
  *   断言 E（撞帽检查点接线 · 2026-09-26 · F9② / T6）：vsix 内 `extension/node_modules/@thincoder/core/agent-tools/checkpoint.mjs`
  *     存在，且同目录 `subagent-run.mjs` 含 `registerTurnCapCheckpoint` 接线——防「仓内已修、运行面仍旧」（实盘教训）。
@@ -34,8 +34,10 @@ const vsix = resolve(arg ?? join(ROOT, `${PKG.name}-${PKG.version}.vsix`))
 if (!existsSync(vsix)) { console.error(`✘ vsix 不存在：${vsix}（先 \`npm run package\`）`); process.exit(1) }
 const IN_VSIX = "extension/node_modules/@thincoder/core/"
 const IN_VSIX_RC = "extension/node_modules/@thincoder/render-core/"
-const EXPECT = { prompts: 17, "tool-docs": 54 } // 档数口径（T-C7 / `CORE-UNIFICATION.md` §2.8——计数规则：枚举工具 N ∥ 描述档目录 N+1，prompts 17 单独计；prompts 由 15 收正为 16 = escalation-canon 批 · 父侧直接执行 · 可 revert；tool-docs 由 24 收正为 52 = #15 描述外置波后实盘计数 2026-09-29，复由 52 收正为 48 = ledger 统一入口批（#923）五退一增后实读 2026-10-05 · 父侧直接执行 · 可 revert；2026-10-08 收正为 50 = manifest-agent-tool 批（#1098）：仓内侧实读 49（10-05 后 +1 未随的既有漂移）∧ 本批工具描述档 +1 ⇒ 50 · 父侧直接执行 · 可 revert；2026-10-13 收正为 51 = team-ledger 批（#1206）：工具描述档 `team_ledger.md` +1 ⇒ 实施当刻实读 51 · 父侧直接执行 · 可 revert；2026-10-15 收正为 52 = ssh 批（#1436）：工具描述档 `ssh.md` +1 ⇒ 实施当刻实读 52 · 父侧直接执行 · 可 revert；2026-10-16 收正为 53 = doc-check 内建批（#1586）：工具描述档 `doc_check.md` +1 ⇒ 实施当刻实读 53 · 父侧直接执行 · 可 revert）
+const EXPECT = { prompts: 17, "tool-docs": 69 } // 档数口径（T-C7 / `CORE-UNIFICATION.md` §2.8——计数规则：枚举工具 N ∥ 描述档目录 N+1，prompts 17 单独计；prompts 由 15 收正为 16 = escalation-canon 批 · 父侧直接执行 · 可 revert；tool-docs 由 24 收正为 52 = #15 描述外置波后实盘计数 2026-09-29，复由 52 收正为 48 = ledger 统一入口批（#923）五退一增后实读 2026-10-05 · 父侧直接执行 · 可 revert；2026-10-08 收正为 50 = manifest-agent-tool 批（#1098）：仓内侧实读 49（10-05 后 +1 未随的既有漂移）∧ 本批工具描述档 +1 ⇒ 50 · 父侧直接执行 · 可 revert；2026-10-13 收正为 51 = team-ledger 批（#1206）：工具描述档 `team_ledger.md` +1 ⇒ 实施当刻实读 51 · 父侧直接执行 · 可 revert；2026-10-15 收正为 52 = ssh 批（#1436）：工具描述档 `ssh.md` +1 ⇒ 实施当刻实读 52 · 父侧直接执行 · 可 revert；2026-10-16 收正为 53 = doc-check 内建批（#1586）：工具描述档 `doc_check.md` +1 ⇒ 实施当刻实读 53 · 父侧直接执行 · 可 revert）
 // 2026-10-22 收正为 54 = manifest-read 批（台账 #1738）：新增工具描述档 `manifest-read.md` +1 ⇒ 实施当刻实读 54（eng-coder 落笔 · 可 revert）。
+// 2026-11-09 收正为 55 = doc-anchor-graph 批（台账 #2236）：新增工具描述档 `doc_graph.md` +1 ⇒ 实施当刻实读 55（eng-coder 落笔 · 可 revert）。
+// 2026-11-10 收正为 68 = p1-1 工具按角色收窄批（台账 #2286）：本批新增 11 份描述档（四族只读变体 + 三角色 `batch` 变体 + 历史变体）⇒ 实施当刻 `node` 计目录实读 68（eng-coder 落笔 · 可 revert）。
 // 2026-11-04 收正为 17 = persona-tester 批（提交 95ed07a1 签入）：新增提示词档 `persona-tester.md` +1 ⇒ 实施当刻实读 17（槽位挂载 = `thincoder-core/prompt-overlays.mjs` 的 `persona-tester.md` 加载行 ∥ tester 角色行；设计面读数 = `docs/core/design/PROMPT-SYSTEM.md` §8「17 档」）——eng-coder 落笔 · 可 revert。
 const sha = (buf) => createHash("sha256").update(buf).digest("hex")
 
@@ -47,8 +49,20 @@ const bad = (m) => { failures.push(m); console.error(`✘ ${m}`) }
 const openZip = (p) => new Promise((res, rej) => yauzl.open(p, { lazyEntries: true, autoClose: false }, (e, z) => (e ? rej(e) : res(z))))
 const listEntries = (z) => new Promise((res, rej) => { const out = []; z.on("entry", (e) => { out.push(e); z.readEntry() }); z.on("error", rej); z.on("end", () => res(out)); z.readEntry() })
 const readEntry = (z, e) => new Promise((res, rej) => z.openReadStream(e, (err, s) => { if (err) return rej(err); const c = []; s.on("data", (d) => c.push(d)); s.on("end", () => res(Buffer.concat(c))); s.on("error", rej) }))
-/** 档名 → sha256 表（仓内目录 / vsix 内目录各一版）。 */
-const repoFace = (dir) => new Map(readdirSync(join(CORE, dir)).filter((f) => f.endsWith(".md")).map((f) => [f, sha(readFileSync(join(CORE, dir, f)))]))
+/** 相对档名 → sha256 表。仓内递归走访，确保 prompts/knowledge 与 knowledge 等目录不脱离断言。 */
+const repoFace = (dir) => {
+  const out = new Map()
+  const walk = (rel = "") => {
+    for (const entry of readdirSync(join(CORE, dir, rel), { withFileTypes: true })) {
+      const child = rel ? `${rel}/${entry.name}` : entry.name
+      if (entry.isDirectory()) walk(child)
+      else if (entry.isFile() && entry.name.endsWith(".md")) out.set(child, sha(readFileSync(join(CORE, dir, child))))
+    }
+  }
+  walk()
+  return out
+}
+// zip 路径恒用 `/`；startsWith 全前缀 + 相对键切片同时覆盖根档与任意深度子目录。
 const vsixFace = async (z, entries, dir) => { const pre = `${IN_VSIX}${dir}/`; const m = new Map(); for (const e of entries.filter((x) => x.fileName.startsWith(pre) && x.fileName.endsWith(".md"))) m.set(e.fileName.slice(pre.length), sha(await readEntry(z, e))); return m }
 
 const zip = await openZip(vsix).catch((e) => { console.error(`✘ vsix 无法解包：${vsix}（${e.message}）`); process.exit(1) })
@@ -86,15 +100,28 @@ else {
 }
 
 // 断言 D —— 提示词面完备性（档名集合逐字 + 同档 sha256）
-for (const dir of ["prompts", "tool-docs"]) {
+for (const dir of ["prompts", "tool-docs", "knowledge"]) {
   const repo = repoFace(dir)
   const packed = await vsixFace(zip, entries, dir)
   const missing = [...repo.keys()].filter((k) => !packed.has(k))
   const extra = [...packed.keys()].filter((k) => !repo.has(k))
   const differs = [...repo.keys()].filter((k) => packed.has(k) && packed.get(k) !== repo.get(k))
-  const label = `断言 D/${dir}（仓内 ${repo.size} 档 · 口径 ${EXPECT[dir]}）`
-  if (repo.size === EXPECT[dir] && !missing.length && !extra.length && !differs.length) ok(`${label}：档数达标 + 档名集合逐字相等 + sha256 逐档相同`)
-  else bad(`${label}：仓内侧档数不符 [${repo.size}] · 缺 [${missing.join(",")}] · 多 [${extra.join(",")}] · 内容异 [${differs.join(",")}]`)
+  // prompts 的 17 是根档口径；knowledge 目录只按递归全集与逐档 hash 约束，不设易漂移的档数常量。
+  const count = dir === "prompts" ? [...repo.keys()].filter((k) => !k.includes("/")).length : repo.size
+  const expected = EXPECT[dir] ?? null
+  const label = `断言 D/${dir}（仓内 ${repo.size} 档 · ${expected === null ? "递归全集" : `${dir === "prompts" ? "根档 " : ""}口径 ${expected}`}）`
+  const countOff = expected !== null && count !== expected
+  if (!countOff && !missing.length && !extra.length && !differs.length) ok(`${label}：${expected === null ? "" : "档数达标 + "}档名集合逐字相等 + sha256 逐档相同`)
+  else {
+    // 2026-11-10 修轮 4（p1-1 · 台账 #2286）：失败消息只陈述真正失败的那几项——档数达标时不得再喊「档数不符」，
+    // 否则读的人会去查一个不存在的档数问题（实测：仓内 68 · 口径 68 仍印「档数不符 [68]」）。
+    const why = []
+    if (countOff) why.push(`仓内侧档数不符 [${count}]（口径 ${EXPECT[dir]}）`)
+    if (missing.length) why.push(`缺 [${missing.join(",")}]`)
+    if (extra.length) why.push(`多 [${extra.join(",")}]`)
+    if (differs.length) why.push(`内容异 [${differs.join(",")}]`)
+    bad(`${label}：${why.join(" · ")}`)
+  }
 }
 
 zip.close()

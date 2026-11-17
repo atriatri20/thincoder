@@ -40,6 +40,8 @@ import { buildPanelCallbacks, makeAskInPanel } from "./panel-callbacks.mjs"
 // 机判 = `grep -n 'from "./panel-chat.mjs"' panel-turn-stages.mjs` 零命中）。
 import { newTurnController, runTurnLoop } from "./panel-turn-loop.mjs"
 import { resolveTurnStage, finalizeTurn, enterSuspensionTurn } from "./panel-turn-stages.mjs"
+// 跨实例取件闩 = **自续**（MULTI-INSTANCE-COLLAB §5.4 · D-MI31）：**回合起点不撤**（撤闩 =
+// 「要靠别人再把你叫醒」，而那个「别人」正是会漏叫醒的地方）——本档不再引撤闩面。
 // 缝保持（KD-12 · 承 KD-13）：`newTurnController` 迁出 + 本档 re-export——消费档 import 行零改。
 export { newTurnController } from "./panel-turn-loop.mjs"
 
@@ -122,6 +124,7 @@ async function runPanelChatImpl(panel, opts = {}) {
   // running（真实回合执行中——routeUserTurn 据此排队）；回合尾 finally 按会话/池态回
   // susp 或 idle。
   panel._publishTurnState("running")
+  // 跨实例取件闩：**回合起点不撤**（自续闩 · D-MI31）；在飞期零 stat 由 `isBusy()` 臂早退承担。
   // F-MI7：冷路径 null ⇒ awaited 认领（唯一阻塞点：在 `_publishTurnState("running")` 之后、
   // `ensurePanelAgent`/`distillSlot` 之前——切换竞态由 :116 忙态守卫挡；认领失败 ⇒ 抛回，
   // chat-panel F-C1a 兜底复位忙态（:398-413——不变量：回合 promise 永不悬挂）。

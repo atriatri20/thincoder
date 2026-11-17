@@ -17,10 +17,7 @@
 import { buildAdvisorBlock, appendAdvisorChunk } from "../flow/block.mjs"
 import { t } from "../i18n.mjs"
 import { refreshBlock, noteChunk } from "./activity-view.mjs"
-import { applyPin, createPinWatch } from "../scroll.mjs"
-
-/** 近底阈再出口保名（**唯一数值源** = 核 `../scroll.mjs`——消费面零改；KD-RC-8 ④ 收正）。 */
-export { NEAR_BOTTOM_PX } from "../scroll.mjs"
+import { applyPin, createPinWatch, PIN_GRACE_MS } from "../scroll.mjs"
 
 /** 建子代理块（`details.advisor-block.sub-block.sub-live` + data 面 + toggle 监听 + 首刷）。`model` 须含
  *  `{ key, label, role, id }`（态机 `born` / `takeover` 路径产出）；块元素持 `_subMeta = model`。 */
@@ -59,8 +56,11 @@ export function renderSubagentChunk(block, m) {
 
 // ─── 块内容区跟滚（滚动策略族四件 = 核 `../scroll.mjs`；本档 = 薄包 + 出口钮自持面）─────────
 
-/** 手势门宽（让位三律②——远离底仅凭用户手势门；值 = 设计定 600ms；传核 `createPinWatch({ gestureGateMs })`）。 */
-export const GESTURE_GATE_MS = 600
+/** 手势门宽（让位三律②——远离底仅凭用户手势门；传核 `createPinWatch({ gestureGateMs })`）。
+ *  **数值单源 = 策略族件 `PIN_GRACE_MS`**（不另写字面）：同一把 600 治的是同一件事「用户手动位移让位多久」，
+ *  两处各写一个数只会让同一次操作在两个载体上手感不同；且本档已从策略族件导入写口与旗标维护，
+ *  反向字面重复不减少依赖只多一处可漂的读数。导入方向 = 子块 ← 策略族（单向 · 无环）。 */
+export const GESTURE_GATE_MS = PIN_GRACE_MS
 
 /** 让位期出口钮同步（幂等 · 建 ∕ 更 ∕ 删一体——KD-RC-8 出口钮 = 原语自持面）：在场判据 = `open ∧ 非冻结
  *  （sub-frozen 缺席）∧ _pinFollow === false ∧ 内容可滚`；两态文案 = 让位期有新行（`_subFollowNew`）⇒

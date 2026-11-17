@@ -18,9 +18,11 @@
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 const HOME = mkdtempSync(join(tmpdir(), "tc-int-browser-home-"))
 const SAVED = {
@@ -40,7 +42,8 @@ after(() => {
     if (value === undefined) delete process.env[key]
     else process.env[key] = value
   }
-  rmSync(HOME, { recursive: true, force: true })
+  // 尽力面（并行负载下浏览器仍占着 profile 目录 ⇒ `EPERM`）：失败写一行 stderr，不把全绿的档判红。
+  removeTempDirBestEffort(HOME)
 })
 
 const ctx = { agent: { config: {} } }
@@ -63,7 +66,7 @@ function withEnv(t, env) {
 
 const navigate = () => browserTool.execute({ action: "navigate", url: "http://127.0.0.1:1/" }, ctx)
 
-test('4-1 env 旋钮生效：BROWSER_START_TIMEOUT_MS=2000 的失败句含 within 2s，且失败后会话仍可用', { timeout: 120_000 }, async (t) => {
+test('CLI 4-1 env 旋钮生效：BROWSER_START_TIMEOUT_MS=2000 的失败句含 within 2s，且失败后会话仍可用', { timeout: 120_000 }, async (t) => {
   withEnv(t, { BROWSER_PATH: process.execPath, BROWSER_START_TIMEOUT_MS: "2000" })
 
   const first = await navigate()
@@ -76,7 +79,7 @@ test('4-1 env 旋钮生效：BROWSER_START_TIMEOUT_MS=2000 的失败句含 withi
   assert.doesNotMatch(second, /session is already running/, "启动失败后会话态已复位，第二次是干净重开")
 })
 
-test('4-2 缺省窗口：不设 env 的失败句含 within 25s，12s 时代的句子不再出现', { timeout: 120_000 }, async (t) => {
+test('CLI 4-2 缺省窗口：不设 env 的失败句含 within 25s，12s 时代的句子不再出现', { timeout: 120_000 }, async (t) => {
   withEnv(t, { BROWSER_PATH: process.execPath, BROWSER_START_TIMEOUT_MS: undefined })
 
   const receipt = await navigate()
@@ -85,7 +88,7 @@ test('4-2 缺省窗口：不设 env 的失败句含 within 25s，12s 时代的�
   assert.doesNotMatch(receipt, /within 12s/, "12s 时代句子不再出现")
 })
 
-test('4-3 真机首动作 navigate：自启段不吃动作预算（无 Chromium 则 skip 并打印）', { timeout: 180_000 }, async (t) => {
+test('CLI 4-3 真机首动作 navigate：自启段不吃动作预算（无 Chromium 则 skip 并打印）', { timeout: 180_000 }, async (t) => {
   withEnv(t, { BROWSER_PATH: undefined, BROWSER_START_TIMEOUT_MS: undefined })
 
   try {

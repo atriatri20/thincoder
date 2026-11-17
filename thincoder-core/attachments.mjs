@@ -2,8 +2,8 @@
  * attachments.mjs — 回合附件（粘贴图）族：dataURL 解析 ∕ 临时落盘管线 ∕ 非多模态降级
  * （上提核件 —— 处理流批 R5 · 2026-09-28）。
  *
- * 上提源（迁移前坐标）= VSC `thincoder-vscode/src/extension/image-handler.mjs`（`parseDataUrl` :34 ·
- * `savePastedImages` :49 · `downgradeNonVisionImages` :109）；预算语义（合计 30MB ∕ 轮 · 溢出项弃后
+ * 上提源（迁移前源档）= VSC `thincoder-vscode/src/extension/image-handler.mjs`（`parseDataUrl` ·
+ * `savePastedImages` · `downgradeNonVisionImages`）；预算语义（合计 30MB ∕ 轮 · 溢出项弃后
  * **继续扫**「其余照发」）与配额单位 = 桌面同档 `thincoder-desktop/src/main/attachments.mjs`
  * （15MB ∕ 条 —— 与核 `read_image` 内闸同值同单位：`tools/file.mjs` `MAX_IMAGE_BYTES = 15_000_000`，
  * 接纳面不得宽于该闸）。本档 = 单源（消费面 = 桌面 `src/main/attachments.mjs`；VSC 自持副本已随本批（parity-b4）迁移改指本档）。
@@ -112,7 +112,7 @@ export function savePastedImages(dataUrls, cwd, { fs } = {}) {
  */
 export async function downgradeNonVisionImages({ text, images, model, visionReader, signal } = {}) {
   const keep = { text, images, downgraded: false }
-  if (!Array.isArray(images) || images.length === 0) return keep // 无图 ⇒ no-op（VSC :110 同判）
+  if (!Array.isArray(images) || images.length === 0) return keep // 无图 ⇒ no-op（VSC 侧 `downgradeNonVisionImages` 同判）
   if (!model || !isNonVisionModel(model)) return keep // 多模态主模型 ∕ 模型缺省 ⇒ 不降级
   if (typeof visionReader !== "function") {
     throw new TypeError("downgradeNonVisionImages: visionReader seam missing — inject the one-shot vision-subagent reader")

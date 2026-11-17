@@ -1,6 +1,6 @@
 /**
  * views-me-chat-pull.mjs — 成员·对话页·拉取弹窗与凭据就地绑（`webui/CHAT.md` §2.2 差异③；机制 = `agent/MEMBER-AGENT.md` §3.6 + KD-SV-215）：
- * 自 `views-me-chat.mjs` 外拆（拆档缘由 = 该件越 500 软线——增行前先外拆；沿 `views-chat-messages.mjs` 先例）；面内两族：
+ * 自 `views-me-chat.mjs` 外拆（拆档缘由 = 该件当年已过 500 行；沿 `views-chat-messages.mjs` 先例）；面内两族：
  * ① 拉取弹窗 = 可见项目清单（`GET /api/projects?q=` 复用——含搜索）+ 目标目录 + `POST …/pulls` + 四态轮询（`queued`/`running`/`done`/`failed` 人话；
  *    失败 `detail` 原文直呈）；② 凭据就地绑（KD-SV-215）= 提交前预检（`GET /api/me/git-credentials` 清单对 host = 项目 address 首段小写）
  *    ⇒ 缺 ⇒ 窗内表单（主机只读 ∥ 用户名 ∥ 令牌）⇒ 保存（`PUT`）成功即**自动续拉**（无二次点击）；公开仓「跳过」不录直拉 ∥ 预检失败 ⇒ 降级直 POST ∥

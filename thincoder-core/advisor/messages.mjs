@@ -7,7 +7,7 @@
  */
 import { join, relative, sep } from "node:path"
 import { findReviewRepos, collectRepoSnapshots, collectChangedFiles } from "./repos.mjs"
-import { buildConvergenceBody, buildConvergenceInstructions } from "./convergence.mjs"
+import { buildConvergenceBody, buildConvergenceInstructions, buildPriorReviewBlock } from "./convergence.mjs"
 import { loadAdvisorMd, extractConversationBackground, extractAgentResponseTable } from "./history.mjs"
 import { injectProjectGuide, injectDocumentMap, injectProjectStandards, NO_GIT_NOTICE } from "./project-context.mjs"
 
@@ -87,7 +87,7 @@ export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = 
   return `${body}\n\n${buildDesignApprovalBlock(designToken, designId)}`
 }
 
-/** 内层构建（无自愈尾包）——出口、分支与消息形态与拆分前逐字一致。 */
+/** 内层构建（无自愈尾包）。设计评审每轮走这里：首轮无 prior 参考块，轮 2+ 带 prior 参考块，其余消息形态相同。 */
 function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = null, documents = null, paths = null, object = null, designId = null) {
   // prior = the full prior review output (string) when a convergence round is
   // being built (decision 2026-08-08 — verbatim injection, model understands it).
@@ -96,24 +96,29 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
 
   const parts = []
   // Review-object declaration FIRST — D-OA1: at the start of the user message
-  // (after the system prompt, before the review content). Covers round 1
-  // design/code and the legacy convergence path; the round-2+ normal path
-  // prepends it in buildAdvisorFollowUp (T-OA2 — every round stays anchored).
+  // (after the system prompt, before the review content). Covers every design
+  // round and code round 1 here; the code-review round-2+ path prepends it in
+  // buildAdvisorFollowUp (T-OA2 — every round stays anchored).
   const declaration = buildObjectDeclarationBlock(object)
   if (declaration) parts.push(declaration)
   const docList = Array.isArray(documents) ? documents.filter((d) => typeof d === "string" && d.trim()) : []
   const pathList = Array.isArray(paths) ? [...new Set(paths.filter((p) => typeof p === "string" && p.trim()))] : []
+  // 评审范围项 = 指南 ∥ 标准层 ∥ 文档地图共用的**同一份操作数**（序 = 喂给 `findGuideRoot` 的那个序）。
+  // 只算一处：两条 base 推导同源的前提是三个调用点拿到的确实是同一份列表。
+  const scopeFiles = [...pathList, ...docList]
 
-  // Project guide FIRST in EVERY review path (code AND design round 0): the map
+  // Project guide FIRST in EVERY review path (code AND design): the map
   // to the requirements docs is needed for design reviews too (design must fit
-  // the requirements, not just the methodology). Design round 0 early-returns
+  // the requirements, not just the methodology). The design branch early-returns
   // below — the guide must be injected before that return. Project root is
   // discovered from the review scope (code paths AND design-doc paths, so a
   // documents-only design review still finds the subproject guide).
-  const guideRoot = injectProjectGuide(agent, parts, [...pathList, ...docList])
+  const guideRoot = injectProjectGuide(agent, parts, scopeFiles)
 
-  // Design review: simplified message — focus on the design doc, not code
-  if (reviewType === "design" && (agent._advisorRound || 0) === 0) {
+  // Design review — EVERY round (decision 2026-11-16: no convergence decay; each
+  // round re-reads the whole scope against the complete criteria). Round 2+ adds
+  // the prior review output as a REFERENCE block below.
+  if (reviewType === "design") {
     const repos = findReviewRepos(agent)
     parts.push("## Design Review")
     // FR15/P8: no git → change-set context is unavailable. Say it (never silent).
@@ -126,7 +131,7 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
       // doc list — the advisor reviews ONLY these. No git-diff change-set
       // collection: diff-based discovery reviewed unrelated files, and untracked
       // design docs were invisible to git diff anyway (ENGINEERING-MODE.md §2.4).
-      parts.push("The documents below are the review scope. Review ONLY these files — do not scan git diff or read any other files.")
+      parts.push("The documents below are the review scope — the review target is these documents only. Do not scan git diff; reading other files is allowed where a criterion needs it (feasibility, affected-file size), but findings outside these documents are out of scope.")
       parts.push("")
       parts.push("## Documents to Review")
       parts.push(docList.map((d) => `- ${d} — Read this file in full`).join("\n"))
@@ -159,13 +164,17 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
     // Engineering mode: the project standards section — read from the project's own
     // declaration (`docRoot.standards`); three states, each machine-distinguishable:
     // undeclared / declared-but-unreadable / injected. Never a probed convention name (PO-2).
+    // The base is derived inside the injector from this review's scope (the owning project of
+    // those paths) — NOT from `guideRoot`: the guide's root is the nearest AGENTS.md, which is a
+    // different question, and under a workspace anchor it is the anchor (no manifest ⇒ state 1).
     if (agent.config?.agent?.engineering) {
-      injectProjectStandards(agent, parts, guideRoot)
+      injectProjectStandards(agent, parts, scopeFiles)
     }
 
     // Document map: derived from the manifest `docRoot` (declared roots' README, then their common
-    // ancestor); neither → explicit degradation sentence (never a silent skip).
-    injectDocumentMap(agent, parts, guideRoot ?? agent.cwd)
+    // ancestor); neither → explicit degradation sentence (never a silent skip). Same base as the
+    // standards face (one derivation, two consumers).
+    injectDocumentMap(agent, parts, scopeFiles)
 
     parts.push("## Instructions")
     if (docList.length > 0) {
@@ -177,6 +186,16 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
     parts.push("3. If the ## Project Guide (AGENTS.md) section above is present, also check requirement fit: does the design match what the requirements documents it points to actually ask for?")
     parts.push("4. Do NOT run git diff or look for code changes — there are none at this stage.")
     parts.push("5. If you find issues, produce your review table with the format: | # | Category | Severity | Issue | Suggestion |. If the design passes, no table is needed.")
+    // Round 2+: the prior review output and the agent's fix claims travel as
+    // REFERENCE — they keep the reviewer from re-reporting what is already fixed,
+    // and they are explicitly NOT the verification list (this round is a full
+    // review at the same standard as the first).
+    if (p && (agent._advisorRound || 0) > 0) {
+      const response = extractAgentResponseTable(agent.history, agent._advisorResponseAnchor ?? undefined)
+        || "(Agent did not provide a response table — report every issue the current file state shows)"
+      parts.push("")
+      parts.push(buildPriorReviewBlock(p, response))
+    }
     if (designToken) {
       parts.push("")
       parts.push(buildDesignApprovalBlock(designToken, designId))
@@ -184,11 +203,11 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
     return parts.join("\n")
   }
 
-  // Convergence data (round 2+). LEGACY COMPATIBILITY PATH: the normal advisor
+  // Convergence data (round 2+). LEGACY COMPATIBILITY PATH: the normal code-review
   // flow routes convergence rounds through buildAdvisorFollowUp (fresh session,
-  // decision d698434); this block only fires for direct external callers of
-  // buildAdvisorUserMessage with a stored prior review output. Kept to avoid
-  // breaking those. Same rule as buildAdvisorFollowUp: the FULL prior review
+  // decision d698434); a design review never reaches here (it returns above, every round).
+  // This block only fires for direct external callers of buildAdvisorUserMessage
+  // with a stored prior review output. Kept to avoid breaking those. Same rule as buildAdvisorFollowUp: the FULL prior review
   // output is injected verbatim (decision 2026-08-08 — the model understands it;
   // no table/header/phrase parsing).
   // NOTE: this legacy path does NOT apply escapeLiteralEscapes (that lives in
@@ -218,11 +237,8 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
     parts.push("")
   }
   if (docList.length > 0) {
-    if (reviewType === "design") {
-      parts.push("The documents below are the review scope. Review ONLY these files — do NOT scan git diff or read any other files.")
-    } else {
-      parts.push("The documents below define acceptance criteria and review context. Read them for context, then read the code files specified in the review scope. Judge the implementation against these documents.")
-    }
+    // Code-review path only — a design review returns inside its own branch above.
+    parts.push("The documents below define acceptance criteria and review context. Read them for context, then read the code files specified in the review scope. Judge the implementation against these documents.")
     parts.push("")
     parts.push("## Documents to Review")
     parts.push(docList.map((d) => `- ${d} — Read this file in full`).join("\n"))
@@ -250,9 +266,10 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
   parts.push("")
 
   // Engineering mode: project standards (declaration-only, same helper as the
-  // design path) — undeclared degrades visibly (PO-2).
+  // design path) — undeclared degrades visibly (PO-2). Base = this review's scope's owning
+  // project (same derivation as the document map), not `guideRoot`.
   if (agent.config?.agent?.engineering) {
-    injectProjectStandards(agent, parts, guideRoot)
+    injectProjectStandards(agent, parts, scopeFiles)
   }
 
   // Instructions — round-aware: re-reviews skip convention discovery entirely.

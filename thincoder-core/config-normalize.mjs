@@ -7,9 +7,35 @@
  *
  * config.mjs re-exports the four load-bearing ones (`sanitizeSubagentModel` ·
  * `sanitizeSubagentModels` · `normalizeProxy` · `normalizeTeamSection`) — importers keep their
- * path. `sanitizeProviderHeaders` / `sanitizeConsultModels` / the two warn helpers are consumed
- * by loadConfig only and are not part of the public config.mjs surface.
+ * path. `sanitizeProviderHeaders` / `sanitizeConsultModels` / `providerDropReason` (+ its admission
+ * face `isUsableProviderEntry`) / the two warn helpers are consumed by `loadConfig` only and are not
+ * part of the public config.mjs surface — `reloadProviders` shares that one judgement by going through
+ * `loadConfig`, it does not import them itself.
  */
+
+/** 渠道条目丢弃原因（`docs/core/design/PROVIDER.md` §6.29「丢弃要看得见」）：返回闭集四种之一，
+ *  可进使用面 ⇒ `null`。**判据单源**——准入谓词 `isUsableProviderEntry` 就是本函数的 `null` 判定，
+ *  所以「收不收」与「记什么原因」永远对着同一处代码判，不会给同一条目判出两种说法。
+ *  为什么只出原因、不出条目内容：载体会进日志 ∥ 报错 ∥ 别人的调试输出，而一条「有 apiKey 却缺 name」
+ *  的条目若取 JSON，`sk-…` 就原样写进数据层；判据只需要知道「第几条坏了、坏在哪」，条目内容对它零价值。
+ *  为什么按 name 认：`name` 是渠道唯一句柄（`findProvider` ∥ `parseModelRef` ∥ 会话槽 ∥ 选择器
+ *  全按 name 匹配），无名条目既不可寻址也不可被发送，留着只能让读它的地方失真——而失真点就是
+ *  `/model` 的 `${p.name.padEnd(12)}` 抛 `Cannot read properties of undefined (reading 'padEnd')`。
+ *  数组不是条目（`typeof [] === "object"`）；空串 name 同样不可寻址 ⇒ 一并拒绝。
+ *  「不给无名条目编名字」：编名等于把坏配置伪装成好配置，所以这里只判真伪，不修补。 */
+export function providerDropReason(p) {
+  if (p === null) return "null"
+  if (typeof p !== "object" || Array.isArray(p)) return "not an object"
+  if (typeof p.name !== "string") return "no name"
+  if (p.name === "") return "empty name"
+  return null
+}
+
+/** 渠道条目准入判据——本谓词只是 `providerDropReason` 的准入面（`=== null` ⇒ 可引用）。
+ *  装载（`thincoder-core/config.mjs` 的 `providers:` 分支）∥ 运行中重读（`reloadProviders`）共用。 */
+export function isUsableProviderEntry(p) {
+  return providerDropReason(p) === null
+}
 
 /** F-4 (IKCDMR) 软失败清洗（D-S1 范式——loadConfig 是 CLI 启动砖点）：consultModels 非法
  *  条目过滤不 throw——非数组 → []、形状非法/未知渠道丢弃、超 5 截断（keep 前 5）。

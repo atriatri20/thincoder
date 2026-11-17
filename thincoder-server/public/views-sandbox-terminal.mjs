@@ -2,7 +2,7 @@
  * views-sandbox-terminal.mjs — 终端窗·控制台消费件（`webui/SANDBOX.md` §2.1①「终端」∥ `webui/TERMINAL.md` §2.1/§2.6——
  * 终端核三件本期唯一落地点；sandbox-container-terminal 批——台账 #1374）：
  * 壳 = `modal.mjs`（大窗类 `.terminal-modal`）∥ 终端面 = 终端核渲染（`terminal-core.mjs` + 拆出 `terminal-vt.mjs`/`terminal-codec.mjs` ∥
- * `terminal-render.mjs` ∥ `terminal-link.mjs`——实施实读越 500 软线按职责拆，`webui/TERMINAL.md` §3）∥
+ * `terminal-render.mjs` ∥ `terminal-link.mjs`——实施实读越 500 行按职责拆，`webui/TERMINAL.md` §3）∥
  * 状态行四态（连接中 ∥ 已连接 `{cols}×{rows}` ∥ 已断开 ∥ 会话已结束（退出码 `{code}`））∥ 脚区「重新连接」钮（断开态显——
  * 重连 = 新会话）∥ 窗内说明行（Esc 不关窗/断开语义）∥ i18n `admin.sandbox.terminal*` ∥ 关窗 ⇒ 会话收口（客户端关 WS——
  * 服务端三件归其收口，`sandbox/SANDBOX.md` §3）∥ **Esc 不关窗**（`dialog` `cancel` 事件 `preventDefault`——唯一与弹窗族

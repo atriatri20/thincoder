@@ -35,8 +35,12 @@ export function docSetKey(documents, cwd) {
 
 /** **写门面**评审根的 docRoot 键集（`agent/write-gate.mjs` 的 `resolveReviewTargetPaths` 消费）——
  *  设计评审**受理面不再消费**本键集（受理 = 项目内现存 `.md`，判据单源 = `ADVISOR-GUARDS.md` §12）。
- *  2026-10-04 自 `agent/write-gate.mjs` 迁入（键集本体零变；write-gate 同名再出口）。 */
-export const REVIEW_ROOT_KEYS = ["requirements", "specs", "design", "modules", "batches"]
+ *  2026-10-04 自 `agent/write-gate.mjs` 迁入（键集本体零变；write-gate 同名再出口）。
+ *
+ *  **六层**（`docs/core/design/MANIFEST.md` §2.5「键集」条）：末位 `standards` = 标准层（目录语义，
+ *  见同档 §2.12）。键集只在本处改——写面 `agent/write-face.mjs`、评审候选扫描、文档锚点图
+ *  `doc-graph.mjs` 三处共用这一份，不各持字面（KD-M1-64）。 */
+export const REVIEW_ROOT_KEYS = ["requirements", "specs", "design", "modules", "batches", "standards"]
 
 /**
  * 写门评审根解析单点（按用点形——2026-09-21 收口 · 台账 #828；2026-10-04 自 `agent/write-gate.mjs`
@@ -93,7 +97,7 @@ export function resolveReviewDocPaths(documents, cwd) {
   for (const doc of (documents ?? [])) {
     if (typeof doc !== "string" || !doc.trim()) continue
     const abs = /^[a-zA-Z]:[\\/]/.test(doc) || doc.startsWith("/") || doc.startsWith("\\\\")
-    const r = resolvePathTarget(cwd, doc, { kind: "file", order: "root-first", crossRepo: "dangling", scanBases })
+    const r = resolvePathTarget(cwd, doc, { kind: "file", order: "root-first", scanBases })
     if (r.state === "ambiguous") { invalid.push({ doc, resolved: null, reason: "ambiguous-path", candidates: r.candidates }); continue }
     // 相对形 ∧ 锚无项目根 ⇒ 无基可挂（受理判据「必须在项目内」）——**与盘上有没有那档无关**：
     // 同一锚态同一个词（KD-8），否则拒因词成了磁盘状态的函数。
@@ -103,6 +107,9 @@ export function resolveReviewDocPaths(documents, cwd) {
       invalid.push({ doc, resolved: r.tried?.[0] ?? null, reason: "not-doc-file", sameName: r.sameName })
       continue
     }
+    // 其余非 `resolved` 态（`unverified` ∥ `outOfDomain`）：本面不传 `declaredRepos` / `domainRoots`，两者今天都不会出现，
+    // 但消费面必须**总覆盖**——拿不到 `abs` 的态一律按「解析无果」拒（fail-closed），不让 undefined 流进 `isInside`。
+    if (r.state !== "resolved") { invalid.push({ doc, resolved: null, reason: "dangling-path" }); continue }
     const p = r.abs
     if (!abs && !isInside(p, view.root)) { invalid.push({ doc, resolved: p, reason: "outside-project" }); continue }
     if (abs && !owningProject(p, cwd)) { invalid.push({ doc, resolved: p, reason: "outside-project" }); continue }

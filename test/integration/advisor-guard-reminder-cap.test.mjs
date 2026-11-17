@@ -25,9 +25,11 @@
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { createAgent, runAgent } from "../../thincoder-core/agent.mjs"
 import { mergeChildMutations } from "../../thincoder-core/agent-tools/subagent-async.mjs"
@@ -40,8 +42,8 @@ const logsDir = mkdtempSync(join(tmpdir(), "advisor-cap-int-logs-"))
 _setLogsDirForTest(logsDir)
 after(() => {
   _resetLogsDirForTest()
-  rmSync(cwd, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(logsDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  removeTempDirBestEffort(cwd)
+  removeTempDirBestEffort(logsDir)
 })
 
 /** 写工具（真正落盘；`.js` 路径按内容级判定算产品代码 ⇒ 触发 guard）。 */
@@ -189,7 +191,7 @@ function assertHonestyText(text, which) {
 
 // ---------- 故事 32 · 行 32-1（层 1 先耗尽）----------
 
-test("32-1 改代码后一路只读、始终不调 advisor：层 1 耗尽即停推（3 条），其后恰好一条诚实提醒，会话正常收尾", { timeout: 120_000 }, async (t) => {
+test("CLI 32-1 改代码后一路只读、始终不调 advisor：层 1 耗尽即停推（3 条），其后恰好一条诚实提醒，会话正常收尾", { timeout: 120_000 }, async (t) => {
   const s = await session(t, [
     WRITE(),          // 1  改一处代码
     SAY("收尾 A"),     // 2  推回 1
@@ -235,7 +237,7 @@ test("32-1 改代码后一路只读、始终不调 advisor：层 1 耗尽即停�
 
 // ---------- 故事 32 · 行 32-2（推满 5 条）----------
 
-test("32-2 中途反复成功写代码（多个进展窗口）：提醒推满 5 条、第 5 条带末条句，其后恰好一条诚实提醒", { timeout: 120_000 }, async (t) => {
+test("CLI 32-2 中途反复成功写代码（多个进展窗口）：提醒推满 5 条、第 5 条带末条句，其后恰好一条诚实提醒", { timeout: 120_000 }, async (t) => {
   const s = await session(t, [
     WRITE(),          // 1  改代码 ⇒ 进展窗口开
     SAY("收尾 A"),     // 2  推回 1
@@ -279,7 +281,7 @@ test("32-2 中途反复成功写代码（多个进展窗口）：提醒推满 5 
 
 // ---------- 故事 32 · 行 32-3（子代理合并算进展）----------
 
-test("32-3 父侧把改代码委托给子代理（合入父侧修改追踪）、自己不再直接写文件：合入算进展 ⇒ 越过 3 条继续推到 5 条", { timeout: 120_000 }, async (t) => {
+test("CLI 32-3 父侧把改代码委托给子代理（合入父侧修改追踪）、自己不再直接写文件：合入算进展 ⇒ 越过 3 条继续推到 5 条", { timeout: 120_000 }, async (t) => {
   const s = await session(t, [
     DELEGATE(),       // 1  子代理合入一处改动（父侧零直接写）⇒ 写序推进、预算回满
     SAY("收尾 A"),     // 2  推回 1
@@ -315,7 +317,7 @@ test("32-3 父侧把改代码委托给子代理（合入父侧修改追踪）、
 
 // ---------- 故事 32 · 行 32-4（诚实提醒位随新进展复位）----------
 
-test("32-4 接 32-1 形态：层 1 耗尽并已发一条诚实提醒之后又成功写一次代码 ⇒ 位随写序推进复位，推回续推到 5 条，再得一条诚实提醒（其间无一次静默收尾）", { timeout: 120_000 }, async (t) => {
+test("CLI 32-4 接 32-1 形态：层 1 耗尽并已发一条诚实提醒之后又成功写一次代码 ⇒ 位随写序推进复位，推回续推到 5 条，再得一条诚实提醒（其间无一次静默收尾）", { timeout: 120_000 }, async (t) => {
   // 收尾轮 = 零工具调用且文案以「收尾 」开头的脚本项；下面按脚本派生“应该发生几次”，不写死常数。
   const FINISH_PREFIX = "收尾 "
   const script = [

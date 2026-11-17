@@ -19,6 +19,7 @@ import { expandHome } from "@thincoder/core/expand-home.mjs"
 import { resolveEngineeringManifest, projectView } from "@thincoder/core/manifest.mjs"
 import { loadRaw, resolveProviders } from "@thincoder/core/config-io.mjs"
 import { DEFAULTS, normalizeProxy, sanitizeSubagentModel, sanitizeSubagentModels } from "@thincoder/core/config.mjs"
+import { resolveWorkMode } from "@thincoder/core/config-migrate.mjs"
 import { loadConsultPool } from "../extension/presets.mjs"
 import { setSlotEngDesignTokens, setSlotPlanMode } from "../extension/session-slot-write.mjs"
 import { appendImagePointer, detectRestoredSession, applyMcpWarnings } from "./setup-reminders.mjs"
@@ -51,7 +52,10 @@ export function buildTopLevelAgent() {
     // C — 会话级状态（单例收益本体——hydrate 槽 reconcile / destroy 重建回填）
     _tasks: [], _goal: null,
     _engDesignTokens: null, // 惰性建 Map（spawn-gate/advisor.mjs ??= 既有）
-    _pendingReminders: [], // A 复位 + restore 槽回填（resetRunState / applySlotSessionState——agent-state.mjs）
+     _pendingReminders: [], // A 复位 + restore 槽回填（resetRunState / applySlotSessionState——agent-state.mjs）
+     // 轮记录（#2395）：会话级、跨 run 存活，restore 槽回填（applySlotSessionState）；
+     // 与核 createAgent 同形——活动轮载体不跨进程恢复（异常轮不折叠）。
+     _turns: [], _turnLedger: null, _turnPending: null, _turnStartLen: null, _turnResponseEnd: null,
     // A — 回合级预算/守卫/计数器（resetRunState 每 runAgent 调用清零）
     _touchedFiles: [], _verifiedThisRun: false, _verifyPassed: undefined, _verifyRetries: 0,
     _honestReminderInjected: false, _pendingTimers: [], // _pendingTimers 例外：跨 run 存活（D-TW3——不再随 resetRunState 清）
@@ -66,7 +70,7 @@ export function buildTopLevelAgent() {
     cwd: null, history: null, _fullHistory: null,
     config: {
       advisor: { guard: false },
-      agent: { engineering: false },
+      agent: { mode: "normal", engineering: false },
       proxy: undefined, shell: null, providersList: [], websearch: { apiKey: "" },
     },
   }
@@ -100,6 +104,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // Runtime config: advisor settings live in the shared config.json (CLI agent.advisor),
   // engineering state is per-session (slot authority — see applySlotSessionState).
   let advisorCfg = { guard: false }
+  let cfgMode = DEFAULTS.agent?.mode ?? "normal"
   let cfgEngineering = false
   let cfgVerifyGuard = false
   let cfgCompactThreshold = null
@@ -136,6 +141,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   try {
     const raw = loadRaw()
     advisorCfg = raw.agent?.advisor ?? { guard: false }
+    cfgMode = resolveWorkMode(raw.agent)
     cfgEngineering = raw.agent?.engineering ?? false
     cfgVerifyGuard = raw.agent?.verifyGuard === true // opt-in, CLI parity
     cfgCompactThreshold = raw.agent?.compactThreshold ?? null // null = auto from model context
@@ -173,6 +179,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     ? (() => { try { return loadSlot(bind.cwd, bind.slot) } catch { return null } })()
     : null
   const cfgBag = {
+    mode: cfgMode,
     engineering: cfgEngineering,
     advisor: advisorCfg,
     agentFields: {
@@ -190,14 +197,14 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     traces: cfgTraces,
     fetch: cfgFetch,
   }
-  const { engineering, droppedExpired } = applySlotSessionState(agent, {
+  const { mode, engineering, droppedExpired } = applySlotSessionState(agent, {
     slot: sessionData,
     engState,
     planModeOverride: opts.planMode,
   }, { cfg: cfgBag, restore, provider })
-  // #45（WEBVIEW-PROTOCOL.md §3.3 判据①）：`_engShown` = 已展示基线（槽应用之后取值）；
+  // #45（WEBVIEW-PROTOCOL.md §3.3 判据①）：`_modeShown` = 已展示基线（槽应用之后取值）；
   // 工具驱动翻转的比对起点（写入面 = agent-state 同步 cell）。
-  agent._engShown = agent.config?.agent?.engineering === true
+  agent._modeShown = mode
   // D2 触发③：restore/水合发现槽内过期项 → 回写权威台账清 expired（幂等；map 可能已含内存项）
   if (droppedExpired && bind?.cwd && bind?.slot) {
     try {

@@ -38,7 +38,7 @@ export function normalizeTools(tools) {
 
 /**
  * Convert OpenAI-format messages to Gemini contents array.
- * Gemini: [{ role: "user"|"model", parts: [{ text }] }]
+ * Gemini: [{ role: "user"|"model", parts: [{ text } | { functionCall } | { functionResponse }] }]
  * system → systemInstruction (top-level in request body)
  */
 export function convertMessages(messages) {
@@ -50,7 +50,7 @@ export function convertMessages(messages) {
     const role = m.role === "assistant" ? "model" : "user"
 
     const parts = []
-    if (typeof m.content === "string") {
+    if (typeof m.content === "string" && m.role !== "tool") {
       parts.push({ text: m.content })
     } else if (Array.isArray(m.content)) {
       for (const part of m.content) {
@@ -63,6 +63,23 @@ export function convertMessages(messages) {
           }
         }
       }
+    }
+    if (m.role === "assistant") {
+      for (const call of m.tool_calls ?? []) {
+        let args = {}
+        const rawArguments = call.function?.arguments ?? call.arguments
+        try { args = JSON.parse(rawArguments || "{}") } catch { /* 与公共工具参数读取一致：畸形参数按空对象投影 */ }
+        const part = { functionCall: { name: call.function?.name ?? call.name, args } }
+        const thoughtSignature = call.extra_content?.google?.thought_signature
+        if (typeof thoughtSignature === "string" && thoughtSignature) part.thoughtSignature = thoughtSignature
+        parts.push(part)
+      }
+    }
+    if (m.role === "tool") {
+      const callId = String(m.tool_call_id ?? "")
+      const name = m.name || (/_\d+$/.test(callId) ? callId.replace(/_\d+$/, "") : "")
+      if (!name) throw new Error("Google tool result is missing its function name")
+      parts.push({ functionResponse: { name, response: { result: String(m.content ?? "") } } })
     }
     if (parts.length === 0) continue
 
@@ -82,15 +99,15 @@ export function convertMessages(messages) {
 export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice, logCtx }) {
   const systemMessages = messages.filter((m) => m.role === "system")
   const contents = convertMessages(messages)
+  // §2.2 发送面：只读 maxTokens（输出合同）——请求体与发送前净判共用这一个对象，不各算一套。
+  const budget = requestBudget(provider)
 
   const body = {
     contents,
     generationConfig: {
       ...(provider.temperature != null ? { temperature: provider.temperature } : {}),
       // §6.17 发送面同源：显式才发（requestBudget().maxTokens——无显式 ⇒ undefined ⇒ 字段不落）
-      ...(requestBudget(provider).maxTokens !== undefined
-        ? { maxOutputTokens: requestBudget(provider).maxTokens }
-        : {}),
+      ...(budget.maxTokens !== undefined ? { maxOutputTokens: budget.maxTokens } : {}),
       // #1200（MODEL-SPECS.md §18.8）：off 形在场 ⇒ 禁思考形——载荷逐字同标题径先例
       // （`generate-title.mjs` 的 `generateTitle`）；其余值（缺 ∥ on 形 ∥ null）⇒ 零发（误发 none = 反向禁用）。
       ...(provider.thinking?.type === "disabled" ? { thinkingConfig: { thinkingLevel: "none" } } : {}),
@@ -123,7 +140,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   // §6.17 发送面净判：估准面补 `tools`（原只投影 messages）；body 用 `maxOutputTokens`、无 `max_tokens` 键 ⇒ 减项恒 0
   const estimated = estimateRequestTokens({ messages, tools })
   const estPrompt = estimated - (body.max_tokens ?? 0)
-  assertPromptFits(provider, estPrompt, logCtx)
+  assertPromptFits(provider, estPrompt, logCtx, budget)
   await rateGate(provider, estimated, onWait, signal)
 
   // 2026-08-31：5xx/网络与 OpenAI 格式统一退避重试链（原完全无重试——Gemini 高峰
@@ -212,7 +229,7 @@ export async function parseGeminiStream(response, { onToken, onReasoning, signal
           slot = { id: part.functionCall.name + "_" + result.toolCalls.length, name: part.functionCall.name, arguments: JSON.stringify(part.functionCall.args || {}) }
           result.toolCalls.push(slot)
         }
-        // §6.24 原生路签名捕获（字段名 `thoughtSignature`——官方口径 unverified；在场才建 ⇒ 字段名不符零副作用）
+        // Gemini Function Calling 原生签名：字段名 `thoughtSignature`，统一历史中存为 extra_content.google.thought_signature。
         if (typeof part.thoughtSignature === "string" && part.thoughtSignature) {
           slot.extra_content = { google: { thought_signature: part.thoughtSignature } }
         }

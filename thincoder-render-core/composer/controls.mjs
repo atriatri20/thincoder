@@ -1,31 +1,24 @@
 /**
- * controls.mjs — 控件行七钮 + 模式钮两态 + AUTO 确认工厂（核化 VSC `webview/mode-buttons.js`(131) +
- * `index.html` 控件行结构——上提批 `2026-09-28-desktop-input-vsc-align.md` §2.3 ∕ §2.4 P8；
- * 模块级副作用（DOM 查询 ∕ 事件注册 ∕ `vscode.*` 直调）搬进工厂体，语义零变）。
+ * controls.mjs — 控件行、三档会话模式与 AUTO 确认工厂。
  *
- * 面：
- *  - 结构七钮（`#model-btn` ∕ `#reasoning-btn` ∕ `#auto-btn` ∕ `#advisor-btn` ∕ `#eng-btn` ∕ `#plan-btn` ∕
- *    `#settings-btn`——title ∕ aria-label ∕ 静止字面照 `index.html` 逐字；`Send` ∕ `Stop` 族静态字面口径 = C4）。
- *    模型 ∕ 推理两钮的接线与两浮层归 `model-menu.mjs`（本档只造钮 + 给出引用）。
- *  - 模式钮两态（`mode-buttons.js` 逐字）：advisor ∕ eng 两态类；ENG×PLAN 互斥（工程态 ⇒ plan 钮
- *    `disabled` + `toolbar.planDisabled` 题注 + 不亮 active）；plan 点击守卫兜底。
- *  - AUTO 两态 + 内联确认（`mode-buttons.js` 逐字）：关无确认；开走 popover（背板 + alertdialog，焦点默认落取消）；
- *    两出口 = yes 置位 + `⚠ AUTO` / no 关；Esc 关（源 = `chat.js` 本件部分——确认在场期注册监听）。
- *  - 推送面（`mode-buttons.js` 三 handler 逐字）：`autoApprove` ∕ `agentSettings` ∕ `planMode` ⇒ 镜像 + 重绘
- *    （`planMode` 兼 `#input-row.plan-active` 与状态行刷新）。
- *
- * 注入面（五项之局部）：② `post`（`setAdvisorGuard` ∕ `setEngineeringEnabled` ∕ `setPlanMode` ∕
- * `setAutoApprove` 出站）；③ `state`（模式位读面：`flags()`——**构造期初值即落面**：`paintFlags()` 同点重绘，
- * 缺省 flags 下与 VSC 静态 HTML 起始面逐字同形）；⑤ `hooks`（`openSettings` 第 7 钮出口 ·
- * `syncModeState` 跨面状态同步（status-bar 同面读 `_planActive`）· `onStatusRefresh`（`mode-buttons.js`）·
- * `onAgentSettings`（`mode-buttons.js`——VSC 绑设置面板刷新的 `updateAgentSettings`））；④ 取词 = 核 `../i18n.mjs`。
+ * `#mode-select` 只持 tiny/normal/engineering 一个状态；旧 `engineering` 推送只作读取迁移。
+ * engineering × PLAN 互斥；其余两档不限制 PLAN。模式变更统一发 `setMode { value }`。
  */
 import { t } from "../i18n.mjs"
+
+const MODES = ["tiny", "normal", "engineering"]
+// 旧值读取别名（CONFIG §5.4）：`minimal` 是 tiny 的历史写法，只在此读取口归一，写面不收旧值。
+const LEGACY_MODE_ALIASES = { minimal: "tiny" }
+const validMode = (value) => MODES.includes(value)
+const modeOf = (flags) => {
+  const mode = LEGACY_MODE_ALIASES[flags?.mode] ?? flags?.mode
+  return validMode(mode) ? mode : (flags?.engineering === true ? "engineering" : "normal")
+}
 
 /**
  * 控件行工厂。`deps`：`post` ∕ `state.flags()` 读面 ∕ `hooks`（见件头）· `inputRow`（`#input-row`——plan-active 类宿主）·
  * `inputEl`（浮层关后回焦）。返回：`{ el, modelBtn, reasoningBtn, applyModeButtons, applyAutoApprove,
- * applyAgentSettings, applyPlanMode, syncModeState, toggleAuto, togglePlan, toggleEng }`——三 toggle = 各钮 handler
+ * applyAgentSettings, applyPlanMode, syncModeState, toggleAuto, togglePlan, toggleEng, setMode, modeSelect }`——三 toggle = 各钮 handler
  * 提取件（斜径 `/auto` ∥ `/plan` ∥ `/eng` 同钮同门消费；见其函数注）。
  */
 export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inputEl } = {}) {
@@ -47,7 +40,15 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
   const reasoningBtn = ctrlBtn("reasoning-btn", "active", "max", "listbox")
   const autoBtn = ctrlBtn("auto-btn", "", "AUTO")
   const advisorBtn = ctrlBtn("advisor-btn", "", "ADVISOR")
-  const engBtn = ctrlBtn("eng-btn", "", "ENG")
+  const modeSelect = document.createElement("select")
+  modeSelect.id = "mode-select"
+  modeSelect.className = "ctrl-btn mode-select"
+  for (const value of MODES) {
+    const option = document.createElement("option")
+    option.value = value
+    modeSelect.appendChild(option)
+  }
+  row.appendChild(modeSelect)
   const planBtn = ctrlBtn("plan-btn", "", "PLAN")
   const settingsBtn = ctrlBtn("settings-btn", "", "⚙")
 
@@ -55,12 +56,12 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
   const init = state.flags?.() ?? {}
   let _autoApprove = init.autoApprove === true
   let _advisorOn = init.advisorGuard === true
-  let _engOn = init.engineering === true
+  let _mode = modeOf(init)
   let _planActive = init.planMode === true
 
   /** 跨面状态同步（⑤ 注入）——VSC 绑 = S 三 ∕ 四位镜像（status-bar 同面读 `_planActive`）。 */
   function syncModeState() {
-    hooks.syncModeState?.({ autoApprove: _autoApprove, advisorGuard: _advisorOn, engineering: _engOn, planMode: _planActive })
+    hooks.syncModeState?.({ autoApprove: _autoApprove, advisorGuard: _advisorOn, mode: _mode, planMode: _planActive })
   }
 
   /** 钮面重绘（内态 → 面）：构造期初绘 ∥ AUTO 推送 ∕ 点击终点共用；不含跨面同步（见 `syncModeState`）。 */
@@ -74,26 +75,26 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
   function applyModeButtons() {
     advisorBtn.classList.toggle("active", _advisorOn)
     advisorBtn.classList.toggle("warning", _advisorOn)
-    engBtn.classList.toggle("active", _engOn)
-    engBtn.classList.toggle("warning", _engOn)
+    modeSelect.value = _mode
+    modeSelect.classList.toggle("active", _mode === "engineering")
+    modeSelect.classList.toggle("warning", _mode === "engineering")
     // ENG-PLAN-EXCLUSION（FR31 ② / AC13——宿主 `_setPlanMode` 拒绝的回弹口径）：工程模式 ⇒
     // plan 面排除——按钮 disabled + title（新键 `toolbar.planDisabled`，两 locale 同步）+ 不亮
     // active 类（半状态不呈现）。非工程态逐字回落既有形态。
-    const planActive = _planActive === true && _engOn !== true
+    const planActive = _planActive === true && _mode !== "engineering"
     planBtn.classList.toggle("active", planActive)
     planBtn.classList.toggle("warning", planActive)
-    planBtn.disabled = _engOn === true
-    planBtn.title = _engOn === true ? t("toolbar.planDisabled") : t("toolbar.planMode")
+    planBtn.disabled = _mode === "engineering"
+    planBtn.title = _mode === "engineering" ? t("toolbar.planDisabled") : t("toolbar.planMode")
   }
 
-  /** 词面重派生单源（创建期取词 ∕ 挂载先于词表的面——端侧词表到位后调用；幂等）：七钮 title ∥ aria-label
+  /** 词面重派生单源（创建期取词 ∕ 挂载先于词表的面——端侧词表到位后调用；幂等）：按钮与 MODE title ∥ aria-label
    *  两层 + plan 标题随内态（`applyModeButtons` 收口——工程态 ⇒ `toolbar.planDisabled`）。 */
   const WORDS = [
     [modelBtn, "toolbar.model", "toolbar.model"],
     [reasoningBtn, "toolbar.reasoning", "toolbar.reasoning"],
     [autoBtn, "toolbar.autoApprove", "toolbar.autoApproveToggle"],
     [advisorBtn, "toolbar.advisor", "toolbar.advisorToggle"],
-    [engBtn, "toolbar.engineering", "toolbar.engineeringToggle"],
     [planBtn, "toolbar.planMode", "toolbar.planToggle"],
     [settingsBtn, "toolbar.settings", "toolbar.settingsOpen"],
   ]
@@ -101,6 +102,12 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
     for (const [btn, titleKey, ariaKey] of WORDS) {
       btn.title = t(titleKey)
       btn.setAttribute("aria-label", t(ariaKey))
+    }
+    modeSelect.title = t("toolbar.mode")
+    modeSelect.setAttribute("aria-label", t("toolbar.mode"))
+    for (const option of modeSelect.options) {
+      const suffix = option.value[0].toUpperCase() + option.value.slice(1)
+      option.textContent = t(`toolbar.mode${suffix}`)
     }
     applyModeButtons()
   }
@@ -133,7 +140,7 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
 
   function togglePlan() {
     // ENG-PLAN-EXCLUSION（FR31 ②）：工程模式点击守卫（disabled 的兜底——不依赖宿主回弹）。
-    if (_engOn === true) return false // 门拒（斜径 ⇒ 面板层出 `rejectKey` = `toolbar.planDisabled`）
+    if (_mode === "engineering") return false // 门拒（斜径 ⇒ 面板层出 `rejectKey` = `toolbar.planDisabled`）
     _planActive = !_planActive
     applyModeButtons()
     post("setPlanMode", { value: _planActive })
@@ -141,15 +148,24 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
     return true
   }
 
-  function toggleEng() {
-    _engOn = !_engOn
+  function setMode(value) {
+    if (!validMode(value)) return false
+    _mode = value
+    if (_mode === "engineering") {
+      _planActive = false
+      inputRow.classList.remove("plan-active")
+    }
     applyModeButtons()
-    post("setEngineeringEnabled", { value: _engOn })
+    post("setMode", { value: _mode })
     syncModeState()
+    hooks.onStatusRefresh?.()
     return true
   }
 
-  engBtn.addEventListener("click", toggleEng)
+  // 既有 /eng 斜径只切换同一 mode，不引入第二个可写状态。
+  function toggleEng() { return setMode(_mode === "engineering" ? "normal" : "engineering") }
+
+  modeSelect.addEventListener("change", () => setMode(modeSelect.value))
   planBtn.addEventListener("click", togglePlan)
   settingsBtn.addEventListener("click", () => hooks.openSettings?.())
   autoBtn.addEventListener("click", toggleAuto)
@@ -208,19 +224,24 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
 
   /**
    * agentSettings message: refresh the settings panel (via ⑤ `onAgentSettings`——VSC 绑
-   * `updateAgentSettings`) and mirror the advisor/engineering flags onto the quick-switch buttons.
+   * `updateAgentSettings`) and mirror advisor/mode onto the quick-switch controls.
    */
   function applyAgentSettings(m) {
     hooks.onAgentSettings?.(m.settings || {})
     _advisorOn = !!(m.settings?.advisor?.guard)
-    _engOn = !!(m.settings?.engineering)
+    _mode = modeOf(m.settings)
+    if (_mode === "engineering") {
+      _planActive = false
+      inputRow.classList.remove("plan-active")
+    }
     applyModeButtons()
     syncModeState()
+    hooks.onStatusRefresh?.()
   }
 
   /** planMode message: toggle the plan styling, button state, and status bar. */
   function applyPlanMode(m) {
-    _planActive = m.active
+    _planActive = m.active === true && _mode !== "engineering"
     inputRow.classList.toggle("plan-active", _planActive)
     applyModeButtons()
     syncModeState()
@@ -228,9 +249,9 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
   }
 
   // 构造期初绘一次（③ `flags()` 读面 → 钮面 ∥ AUTO 面同点落位）：VSC 侧不可达「内态与钮面分离」态（其
-  // `_advisorOn ∕ _engOn ∕ _autoApprove ∕ _planActive` 只经「必重绘」的推送 ∕ 点击入口写入）；本核多一个读面
+  // `_advisorOn ∕ _mode ∕ _autoApprove ∕ _planActive` 只经「必重绘」的推送 ∕ 点击入口写入）；本核多一个读面
   // 初值 ⇒ 同点补绘。缺省 flags（全假）下与 VSC 静态 HTML 起始面逐字同形（零差）；无跨面同步（构造非状态变更）。
   paintFlags()
 
-  return { el: row, modelBtn, reasoningBtn, applyWords, applyModeButtons, applyAutoApprove, applyAgentSettings, applyPlanMode, syncModeState, toggleAuto, togglePlan, toggleEng }
+  return { el: row, modelBtn, reasoningBtn, modeSelect, applyWords, applyModeButtons, applyAutoApprove, applyAgentSettings, applyPlanMode, syncModeState, toggleAuto, togglePlan, toggleEng, setMode }
 }

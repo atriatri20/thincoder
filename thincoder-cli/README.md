@@ -227,7 +227,7 @@ src/
   tui.mjs                re-export shim → src/tui/index.mjs
   upgrade.mjs            version check and self-upgrade
 test/               suite entry (npm test) — integration set; unit tests = batch-local files (docs/batches/) — current state: ../docs/core/design/TESTING.md §2.3
-scripts/            repo-side scripts — release check, doc-impact, syntax/endpoint probes,
+scripts/            repo-side scripts — release check, syntax/endpoint probes,
                     real-environment verification (compaction, team sync)
 ```
 
@@ -434,7 +434,7 @@ intelligently reclaimed via `isProcessAlive()` check
 - **Interactive slash command UX** — `/advisor`, `/think`, `/config`, `/mcp` now use persistent menu loops with live state feedback. Toggle, change settings, and see results without re-entering the command. Cursor position is remembered across menu cycles. `/plan` and `/auto` now
 show immediate local feedback (`❯ Plan: ON/OFF`).
 - **User-level AGENTS.md** — `~/.thincoder/AGENTS.md` is now loaded alongside the project-level `AGENTS.md`. User-level preferences (language, style, format) apply across all projects; project-level rules take priority.
-- **Skill subdirectory format** — `.thincoder/skills/` now supports the standard `skill-name/SKILL.md` subdirectory convention (Claude Code / Cursor compatible). Flat `.md` files remain fully backward-compatible. Subdirectories take priority when both formats exist with the same name.
+- **Skill subdirectory format** — `.thincoder/skills/` now supports the standard one-directory-per-skill convention: each skill sits in its own directory holding a `SKILL.md` (Claude Code / Cursor compatible). Flat `.md` files remain fully backward-compatible. Subdirectories take priority when both formats exist with the same name.
 - **MCP stdio `env` field** — `env` key in MCP stdio server config is now merged into the child process environment. Enables MCP servers requiring custom environment variables (e.g. `deveco-mcp`).
 - **Project-level `.mcp.json`** — `.mcp.json` in the project root is auto-loaded at startup (standard MCP client convention). Servers defined here are merged with `config.json` servers — `config.json` takes priority for same-named entries.
 - **Cleaner conversations** — Removed redundant `[System reminder: ...]` injections from `/advisor`, `/plan`, `/auto`, and `/think` toggles. All feedback is now local TUI output, not conversation noise.
@@ -488,7 +488,7 @@ extensions, Office add-ins, Program Files)
 ### 0.8.11 (2026-07)
 - **Feat**: `checklist` tool — persistent project task tracking in a checklist file under `.thincoder/`. Add/mark/list items, auto-archive done items to a separate done file. Injected at session start (pending + in_progress only)
 - **Feat**: updated prompts — four-step workflow (requirements→design→development→testing), three-step debugging strategy (logs→docs→binary search), working checklist discipline
-- **Feat**: methodology docs — `docs/core/requirements/METHODOLOGY.md` rebuilt, `docs/core/requirements/PHILOSOPHY.md` expanded with worldview #6 (official docs over guessing)
+- **Feat**: methodology docs — `METHODOLOGY.md` rebuilt, `PHILOSOPHY.md` expanded with worldview #6 (official docs over guessing)
 - **Bugfix**: vision guard — `read_image` now refuses non-vision models before reading the file, the agent loop injects a system reminder instead of image parts for text-only models, and `stripImagesForTextModel` sanitizes image parts at send time (history untouched, restored
 when switching back to a vision model). Previously a single image in history made text-only APIs (e.g. DeepSeek) reject EVERY subsequent request with 400, bricking the conversation
 - **Improvement**: silent `catch {}` blocks now log to stderr (checkpoint file copies, MCP notify/close, session incremental save, clipboard paste, provider picker, team-memory rebase abort, tool dispatch) — failures are visible for debugging instead of disappearing

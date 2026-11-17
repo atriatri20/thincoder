@@ -1,7 +1,7 @@
 /**
  * terminal-codec.mjs — 终端核·编解码面·纯件（`webui/TERMINAL.md` §2.1/§2.2/§2.3；终端核的**输入/字节面**）：
  * 下行 = 字节 ⇒ 文本（增量 UTF-8——`Utf8Decoder`）∥ 上行 = 键/粘贴 ⇒ 待发序列（§2.3 键盘编码表——`encodeKey`/`encodePaste`）。
- * **实施实读越 500 软线后按职责界线拆出**（拆案触发点在册——`webui/TERMINAL.md` §3；同批 `terminal-vt.mjs` = 解析面）。
+ * **实施实读越 500 行后按职责界线拆出**（拆案触发点在册——`webui/TERMINAL.md` §3；同批 `terminal-vt.mjs` = 解析面）。
  * 出口经 `terminal-core.mjs` 转出（单点取件——沿 `views-sandbox-containers.mjs` 转出口先例）：消费面仍 import 核件一处。
  * **零 DOM ∥ 零网络 ∥ 零控制台依赖**（可独立直测——喂字节 ⇒ 文本 ∥ 喂键 ⇒ 序列）。
  */

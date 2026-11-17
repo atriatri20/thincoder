@@ -11,6 +11,9 @@
 import { beginRun } from "./agent/run-start.mjs"
 import { runTurnLoop } from "./agent/turn-loop.mjs"
 import { finalizeAgentTurn } from "./agent/run-stages.mjs"
+// 跨轮机读投影（CONTEXT-COMPACTION §1.1 ∥ SESSION §2 · 台账 #2395）：完成轮登记点住本档——
+// 只有 `finalizeAgentTurn` 成功返回之后才登记，ContinueError / AbortError / 其它异常不登记。
+import { registerCompletedTurn, noteTurnRunError } from "./agent/turn-projection.mjs"
 import {
   escapeXml, listWorkDir,
   readonlyToolNames, collectGitContext, loadProjectInstructions,
@@ -76,9 +79,15 @@ export function createAgent({
     _tok: null, _tokRatio: 1, // §6.17 估算自校准池化比（{key,num,den}；采样 = turn-loop，清空 = /new）
     _compressFailures: 0,
     _emptyRetries: 0, // empty-response retry budget (per-run; reset on a fresh user turn)
+    // §6.6 `wrote` 判据与注入帽的载体（AGENT-LOOP.md §6.6 · §6.2 resume 保留集）：
+    // `_batchWrites` = `batch` 工具成功写盘的累计数（`onWritten` 各汇聚点自增）；`_designTurnNotices` = 本链已注入的设计轮提醒条数。
+    _batchWrites: 0, _designTurnNotices: 0,
     _runStartHistoryLen: 0, // machine-line length at the start of the current run — end-of-run exploration distillation slices from here
     _pendingDistill: null, // in-flight end-of-run exploration distillation (SEND-STALL-DISTILL §2.1) — awaited at next run start / TUI exit flush
     _currentTurn: 0, _maxTurns: DEFAULT_MAX_TURNS, // turn counter for status bar display
+    // 跨轮机读投影（CONTEXT-COMPACTION §1.1 ∥ SESSION §2 · 台账 #2395）：轮记录 ∥ 活动轮账本 ∥
+    // 待折叠的完成轮。三件只在轮边界改写（`agent/turn-projection.mjs`），新 agent 从空账起。
+    _turns: [], _turnLedger: null, _turnPending: null, _turnStartLen: null, _turnResponseEnd: null,
   }
 }
 
@@ -89,18 +98,28 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   })
 
   let thrownError = null
+  let finalResponse = null
   try {
-    return await runTurnLoop(agent, {
+    finalResponse = await runTurnLoop(agent, {
       maxTurns, threshold, toolSchemas, toolByName, systemPrompt,
       depth, signal, autoTurn, suspDriven, streamOutput, consumeInjected, consumeQueuedInput, callbacks, distillSignal,
     })
+    // 本轮原始机读段的终点（折叠边界）：此后回合收尾注入的异步结果不属于本轮的模型过程，
+    // 折叠时保留（下一个模型请求仍看得见它们）。
+    agent._turnResponseEnd = agent.history.length
+    return finalResponse
   } catch (e) {
     thrownError = e
+    // 异常面只记账不登记（异常轮不折叠）：原因留给同一账本（续跑沿用）。
+    noteTurnRunError(agent._turnLedger, e)
     throw e
   } finally {
     // 2026-09-05 实践轮：回合收尾（consult 清理/async 池分流/guard 继承——原 425-462
     // 段 + collectSettledAsync 466-494 整体迁 agent/run-stages.mjs finalizeAgentTurn——
     // CLI 对位 VS run-stages——finally 只剩一行调用 + 骨架注释）。
     await finalizeAgentTurn(agent, { signal, autoTurn, upstreamTurn, timerTurn, suspDriven, thrownError, depth })
+    // 正常返回 ∧ 收尾成功 ⇒ 登记完成轮（设计 §2：ContinueError / AbortError / 其它异常不登记，
+    // 续跑沿用同一账本）。登记只置事实与折叠计划——机读线在下一轮起点（`beginRun`）才折叠。
+    if (!thrownError) registerCompletedTurn(agent, { finalResponse })
   }
 }

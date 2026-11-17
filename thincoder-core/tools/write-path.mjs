@@ -16,10 +16,16 @@
  * 记账面（dirty-file tracking）**同源住本档**：核内写盘只此一处 ⇒ 记账面只此一处（Map/Set +
  * 函数）。默认径的记账由本档代落——`meta.record` ⇒ `recordWrite`、`op="delete"` ⇒ `markDirty`；
  * 调用方不再自行 `recordWrite` / `markDirty`（**不重复记账**）。**唯一例外 = apply_patch 的批级
- * 记账**（两段式全部成功后由调用方一次 `markDirty`——批级语义，与改前逐字同）。`file.mjs` 只做
- * 再导出，保既有 import 面稳定（模块拆分写优先纪律）。
+ * 记账**——判据（谁在哪一层写记账表）：写点内由写点自己记、调用方只交记录的值，只有「调用方
+ * 自持」才不经写点；`edit` 批面把合并快照当 `record` 交给本档 ⇒ 仍属写点内，不是例外。
+ * 量法（结论可复跑）：仓根 `grep -rn "markDirty(\|clearLastWrite(\|recordWrite(" thincoder-core/tools`
+ * ⇒ 只有 `write-path.mjs`（定义 ∥ 写点内自用）· `patch.mjs`（批级循环，对已落盘档跑，成功 ∥ 失败
+ * 两路同、含注入径已提交那批）· `file.mjs`（`read` 清快照）三档命中；出现第四档就是又一个调用方
+ * 自持的记账面，这一句要重判。`file.mjs` 只做再导出，保既有 import 面稳定（模块拆分写优先纪律）。
  */
 import { writeFile, unlink, rename, cp, rm, rmdir } from "node:fs/promises"
+
+import { runDocWriteGate } from "./doc-write-gate.mjs"
 
 /** apply_patch 两段式的暂存后缀（单点定义——阶段一落暂存档、阶段二提交、失败清理均用它）。 */
 export const TMP_SUFFIX = ".thincoder-tmp"
@@ -79,7 +85,7 @@ export const dirtyRefusalMessage = (abs) =>
 // ────────────────────────────────────────
 /**
  * 判据（六行按序判）：放行 ⇒ `null`；拒绝 ⇒ 命中行的实况
- * `{ row, type?, startLine?, shift? }`（row = §7.1 的行号 1–6）。
+ * `{ row, type?, startLine?, shift? }`（row = §3 的行号 1–6）。
  *
  * @param {string} abs 目标绝对路径（记账键）
  * @param {number|null} startLine 目标区首行；`null` = 调用方没有行号目标（正则定位形）
@@ -244,9 +250,15 @@ async function defaultPath(abs, content, meta) {
  *   `via:"editor"` 与 `meta.stage` 组合 = 编辑器径已直接提交目标档（无暂存档）
  */
 export async function writeThroughPath(abs, content, meta = {}) {
+  const op = meta.op ?? "write"
+  // **写前文档机检门**（`docs/core/design/DOC-DISCIPLINE.md` §3.26 条目 Z）：只挂内容写点，且写在两条落盘径
+  // 之前——命中即 throw，于是目标档与暂存档都还是零字节。其余 op（commit ∥ delete ∥ rmdir ∥ copy ∥ move ∥
+  // rename）不写文档内容 ⇒ 零门调用。`apply_patch` 两段式的第一段（`op:"write"` + `stage`）判，提交段不判。
+  // 普通模式（meta.agent.config.agent.engineering === false）不运行内容写门；无 agent 的低层调用保持原行为。
+  if (op === "write" && meta.agent?.config?.agent?.engineering !== false) await runDocWriteGate({ abs, content })
   // `op="commit"` = 默认径两段式的收尾（暂存档 → 目标）——编辑器径是即时提交、不产生暂存
   // 档 ⇒ 无端侧载体，不再问注入面（避免无意义的门禁调用；目标档的门禁已在 staging 问过）。
-  if ((meta.op ?? "write") !== "commit") {
+  if (op !== "commit") {
     const handled = await tryInjectedPath(abs, content, meta)
     if (handled) return handled
   }

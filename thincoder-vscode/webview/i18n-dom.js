@@ -30,7 +30,7 @@ export function applyI18nToDOM() {
   const autoBtn = document.getElementById("auto-btn")
   if (autoBtn) autoBtn.title = t("toolbar.autoApprove")
   if (document.getElementById("advisor-btn")) document.getElementById("advisor-btn").title = t("toolbar.advisor")
-  if (document.getElementById("eng-btn")) document.getElementById("eng-btn").title = t("toolbar.engineering")
+  if (document.getElementById("mode-select")) document.getElementById("mode-select").title = t("toolbar.mode")
   const settingsBtn = document.getElementById("settings-btn")
   if (settingsBtn) settingsBtn.title = t("toolbar.settings")
 

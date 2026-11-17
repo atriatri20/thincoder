@@ -157,12 +157,12 @@ export const subagentTool = {
       scope: { type: "string", description: "REQUIRED for role='explore'/'plan'/'coder'/'tester' (non-engineering task book, the fifth parameter): scope & forbidden scope — what to read / search and what not to touch." },
       acceptance: { type: "string", description: "REQUIRED for role='explore'/'plan'/'coder'/'tester' (non-engineering task book): acceptance criteria — machine-verifiable (commands / thresholds / assertion counts)." },
       reportFormat: { type: "string", description: "REQUIRED for role='explore'/'plan'/'coder'/'tester' (non-engineering task book): the delivery-report format the child must produce." },
-      async: { type: "boolean", description: "action:'spawn'/'escalate': default at depth 0 = true (async; the report arrives automatically); depth>0 always sync. async:false forces the blocking flight." },
+      async: { type: "boolean", description: "Required: `true` = async spawn (report via the auto channel); `false` = blocking; omitting it is refused. At depth>0 every spawn is synchronous — an explicit `async: true` there is refused. action:'escalate' keeps its own form: omission there still means the async flight, and `false` asks for the blocking one." },
       files: { type: "array", items: { type: "string" }, description: "action:'spawn' only: the file write-domain this task declares — file-level paths only (cwd-relative or absolute; directories rejected — they bypass the conflict detector). Overlapping-file tasks serialize automatically. Omit = no conflict detection." },
       dependsOn: { type: "array", items: { type: "string" }, description: "action:'spawn' only: ids from prior async returns whose outcome this task needs — queues until every dependency settles, then starts. Consumed ids count as satisfied; a cancelled/failed dependency stays queued marked 'dependency cancelled' until you decide (AUTO sessions auto-start). Unknown ids error." },
       id: { type: "string", description: "action:'status'/'observe'/'send'/'cancel': the subagent id from the spawn return. status: omit = pool overview; observe/send/cancel: REQUIRED." },
       message: { type: "string", description: "action:'send' only (REQUIRED there): the direction to inject — consumed by the running child at its next turn boundary as an ordinary instruction (non-interrupting)." },
-      recent: { type: "integer", description: "action:'observe' only (optional, default 5): how many recent-turn summaries (1..20)." },
+      recent: { type: "integer", description: "Required for action:'observe': how many recent-turn summaries (1..20)" },
     },
     required: [],
   },
@@ -224,17 +224,18 @@ export const subagentTool = {
     // schema), so the mechanical check lives here: an absent task would otherwise
     // flow downstream as `content: undefined` and surface as an obscure error.
     // 载体判据：**非工程角色** = 结构化参数（拼装后非空）——task 只作补充；两者皆缺 ⇒ 此处先拒。
-    // 工程角色 = 无任务书文本参数（任务书 = 批次档 §2）：此处不判——自由文本键由
+    // 工程角色 = 无任务书文本参数（任务书 = 绑定批档，按角色切片（§8.1））：此处不判——自由文本键由
     // buildSpawnChild 的任务书门键在场即拒并点名（空集拼装不得误报「缺任务书」）。
     if (!isEngineeringRole(args.role) && !composeTaskBookBrief(args, args.role) && (typeof args.task !== "string" || !args.task.trim())) {
-      throw new Error("subagent action:'spawn' requires the structured task-book parameters for non-engineering roles (explore / plan / coder / tester) (four core: goal / knownFacts / acceptance / reportFormat + scope) — a free-text task alone is not the brief. Engineering roles take no task-book text parameters: their task book is batch record §2.")
+      throw new Error("subagent action:'spawn' requires the structured task-book parameters for non-engineering roles (explore / plan / coder / tester) (four core: goal / knownFacts / acceptance / reportFormat + scope) — a free-text task alone is not the brief. Engineering roles take no task-book text parameters: their task book is the bound batch record (batchDoc), sliced per role into the spawn system block.")
     }
-    // §18 D-E1a depth-gated async default (2026-09-06 需求池 R12): depth-0 spawns
-    // default to async for EVERY role (the old role-level default — eng-coder only —
-    // is superseded); depth>0 spawns default to sync (子代理内部强制同步现状保留).
-    // async:false remains the explicit escape hatch; async:true at depth>0 is
-    // refused downstream (executeAsyncSpawn top-level gate).
-    const wantAsync = args.async ?? ((ctx.depth ?? 0) === 0)
+    // §18 D-E1a（必填化——2026-11-07 批 tool-param-zero-defaults）：`recent` ∥ `async` 皆必填；
+    // depth 不再替调用方选（旧形 `args.async ?? depth === 0` 已撤）。depth>0 无异步——显式
+    // `async:true` 下游拒（`async spawn only available at the top level`）；`async:false` 仍是阻塞飞行的显式形。
+    if (args.async !== true && args.async !== false) {
+      throw new Error("subagent: async is required — pass true for an async spawn or false for a blocking flight")
+    }
+    const wantAsync = args.async
 
     // Role normalization + whitelist (2026-08-25, coder-leak fix): exact-string gates let
     // variant roles ("Coder", " coder") bypass BOTH mode gates and fall through to

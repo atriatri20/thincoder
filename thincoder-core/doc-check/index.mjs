@@ -1,242 +1,338 @@
 /**
- * doc-check/index.mjs — 文档纪律机检 · 引擎入口（两条判据 + 报面行）。
+ * doc-check/index.mjs — 文档机检引擎：判三件事，出一份回执。
  *
- * 判据两条（起步 · 闭集——口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20 条目 S）：
- *   ① 锚（档缺 / 节缺 / 引缺）——实现 = `./anchors.mjs`；② 段判据（文字太长，难于阅读 ∥ 行太长）——口径 = §3.18 条目 Q，实现 = `./paragraph.mjs`。
- * 判据参数 = **工具内置常量** `DOC_CHECK_BUILTINS`：不读任何项目的声明面，因而没有「缺参数 ⇒ 拒跑」这一层，
- *   也没有常量校验面——改判据 = 改代码、走评审。
- * 判定范围 = **调用方传入的文件清单**（判定范围 = 解析范围 = 传入的那几档；无目录遍历、无全域兜底）：
- *   不给清单 ⇒ 明确报错要求显式清单——判了本轮没碰过的档，别轮的存量问题会记到本轮头上。
- * 两种问法（§3.20「工具形」——同一条判据）：
- *   `report`（缺省）= 报告态——**零门禁 / 零退出码 / 零阻断**，输出不得被读作拒执行的理由（用户令 > 机检）；
- *   清单里不可判档（不在盘 ∥ 非 .md）⇒ 报错点名、整次零判定；
- *   `gate` = 交付时点的裁定——首行给机器可判 verdict；不可判档给跳过行（可见，不静默丢掉）。
- *   强制面住交付协议 + 批次档 §6 前置，工具本体不阻断任何动作。
- * **`report` 面另有一份只读清点：行号坐标清单**（`./line-refs.mjs` · 口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.23 条目 W）——
- *   **只报不拦**：不进 `gate`、不计入 `hits`、不阻断写入。判据面仍是上面两条，一字不改。
+ * 判据句单源 = `docs/core/design/DOC-CHECK.md`：① 一段太长（`./paragraph.mjs`）∥ ② 拿行号做锚（`./line-refs.mjs`）
+ * ∥ ③ 悬空指针（`./existence.mjs`）。**这三件之外不判**——节号、引文、行数、跨仓都不在射程（§1 ∥ §4）。
+ * 面别只决定判据 ③：批档面（`docRoot.batches` 之下的档）整份不判悬空（§3）——它的读者不照着 §1–§6 去找档。
+ *
+ * 判域 = 交给门的那几档里的**本批变更区**（§6）：区内照判三件、区外一个字都不出。两个时点取法不同源：收口那一刻
+ * 读 `git diff`（`changedRegionsOf`，`agent-tools/batch-regions.mjs`），写时点读**两份文本**——盘上现文与这一笔要写的
+ * 改后整份（`changedRegionOf`，本档）。判整份的只有诊断面（`doc_check` 的 `report` mode）与写时点的新档 / 读不到
+ * 现文那一支。区间由调用方算好交进来——引擎不读 git。
+ *
+ * 报面（§5）：首行是机器判的，后面每行一句人话；没有命中 ⇒ `PASS` 一行，不再添任何一行。
+ * 两个调用点共用这套句子，差别只在拿不拿它挡这一笔写：写盘前 / 批档写入与收口 / `doc_check` 工具面。
+ *
+ * **判域带时点**（§9）：批档只在「写」的那一刻判。写时点 = `batch` 的 `append` ∥ `edit`，加 `.md` 落盘前那道门；
+ * 收口时点 = `batch close`，加 `doc_check` 工具面。判域谓词 = 本档的 `judgedDomainDocs`（**一条，三面共用**）：
+ * 写时点原样交回，收口时点把批档面整份移出判域。判据本体 `judgeText` 不带时点——它对批档面的悬空豁免
+ * 正是**写时点**那条规则，两件事各有自己的单源。
+ *
+ * **判域上挂着两道滤**（「哪些档进来」的加减只在本档这一处发生）：第一道认批档面（§9，按**时点**），
+ * 第二道认**排除面**（§10，两个时点都认）——项目在 manifest 的 `index.docCheckExcludePaths` 里声明的
+ * 路径前缀之下，档一律不进判域。判据仍是三件，排除面只决定「哪些档进来」。
+ *
+ * 「没判」照实说：不在盘、读不到的那几档各出一行，不当命中也不当干净——删掉它，一个什么都没判的 `PASS`
+ * 会被读成「都判过了、都干净」，那是假绿。
  */
-import { statSync } from "node:fs"
-import { relative, resolve } from "node:path"
-import { checkParagraphs, DOC_CLASS } from "./paragraph.mjs"
-import { checkAnchors } from "./anchors.mjs"
-import { collectLineRefs, lineRefsBlock } from "./line-refs.mjs"
-// 跨仓引用一行读数的文案骨架（单源 = 统一解析层；本档只把它摆进报面）。
-import { crossRepoNote } from "../path-resolve.mjs"
+import { existsSync, readFileSync } from "node:fs"
+import { join, relative, resolve } from "node:path"
 
-/** 判据参数（内置常量 · 冻结）：阈值 300 字符（一段 ∥ 一行同值——§3.18 ④）；两项空列表 = 区带类 / 豁免类默认值且恒空
- *  ——豁免谓词（表行 / 围栏 / 列表项 / 引文）住代码，没有「登记后放过」的写入口（空列表 ≠ 可登记豁免）。 */
-export const DOC_CHECK_BUILTINS = Object.freeze({
-  paragraphMax: 300,
-  lineMax: 300,
-  paragraphExemptZones: Object.freeze([]),
-  exemptions: Object.freeze([]),
-})
+import { readManifest } from "../manifest.mjs"
+import { normalizePathList } from "../declaration.mjs" // 归一的同一把尺（与 `index.excludePaths` 同款）
+import { PARAGRAPH_MAX, isPromptFace, paragraphHits } from "./paragraph.mjs"
+import { lineRefHits } from "./line-refs.mjs"
+import { existenceHits, isBatchFace, pathIndexOf, plannedPathsOf } from "./existence.mjs"
 
-/** 命中类名单源再出口（`./paragraph.mjs` 的 `DOC_CLASS`）：`agent-tools/batch-gate.mjs` 要判「处置块何时出」，
- *  而它按判据链纪律只 import 本档（引擎 import 只指向 `../doc-check/index.mjs`）⇒ 类名由本档再出口，
- *  消费面不抄字面类名——抄一次就是「改报面忘改过滤」那类字面漂移（`paragraph.mjs` 头注记着 2026-10-26 实发过一次）。 */
-export { DOC_CLASS }
+/** 命中的类名（报面句子按类各一句；消费面按类取用时也认这三个字面）。 */
+export const HIT_KIND = Object.freeze({ missing: "missing", paragraph: "paragraph", lineRef: "lineRef" })
 
-/** 段命中的处置块（五行 · 逐字单源）：口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「报面（固定句形 · 交付门 gate）」尾行。
- *  三处消费面（本档 `gateReport` ∥ `agent-tools/batch-gate.mjs` 的报面组装与拒串 ∥ `scripts/doc-check.mjs` 的段报告段）
- *  只 import 本数组、零字面复制——同一句话抄三遍，改一处漏两处是必然。
- *  **为什么住本档**：报面尾行本来就住这里，`batch-gate.mjs` 已 import 本档 ⇒ 字面随报面同源，不新增第三个 import 面。
- *  **为什么是五行而不是一句命令口吻的单条出路**：被拒的人当场只读得到这一面——旧句只说「你该怎么改」且只给一条出路；
- *  规则面本有三条，且「过机检」与「是处置」是两件事（切段 ∥ 缩短能过计数，读者拿到的还是同一堵墙）。
- *  **何时出**：只跟「文字太长，难于阅读」类命中走；仅锚 ∥ 仅行命中 ⇒ 零处置块（叫人对段落动手而问题不在此 = 指错方向）。 */
-export const PARA_DISPOSE = Object.freeze([
-  "处置：上面这些段落，读者一口气读不完——不是字符数超了，是这一段装的事太多。",
-  "出路三条：① 重组结构——无标记的续行逐条添标记、逐条起名，拆成带名的列表项（逐字不改）∥ ② 重写文字——把长句拆成几句短的（意思不变，句子变少）∥ ③ 改写成表格行——内容本是逐条读数 / 映射 / 清单时成立。",
-  "① ∥ ③ 只对能逐条起名的并列断言成立——一条因果链拆成带名条目还是同一条因果链，读者拿到的只有断点；讲因果的长段走 ②。",
-  "折行连机检都过不了——句子中间插换行，读者拿到的还是同一堵墙；切段 ∥ 缩短能过机检，但不是处置——机检绿了不等于读者读得动。",
-  "同轮修正后复跑；不转台账。",
-])
+/** 时点两值（闭集）：`writer` = 手上正在写的那段文本 ∥ `close` = 已在盘的记录（§9 那张表）。
+ *  字面与 `runBatchGate` 的 `scope` 同一对——一件事一个名字，不另起一套词。 */
+export const MOMENT = Object.freeze({ writer: "writer", close: "close" })
 
-/** 相对路径显示形（正斜杠——跨平台同形）。 */
-const rel = (root, p) => relative(root, p).replace(/\\/g, "/")
-
-/** 平台路径键（Windows 大小写不敏感——只用于清单去重，非判据面）。 */
-const pathKey = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
-
-/** 不可判档的两因（闭集 · 判序 = 存在性 → 类型）：不在盘 ∥ 非 markdown 档（目录归后因）。 */
-function undecidableReason(abs) {
-  let st
-  try { st = statSync(abs) } catch { return "not on disk" }
-  if (!st.isFile() || !abs.toLowerCase().endsWith(".md")) return "not a markdown document"
-  return null
-}
-
-/** 清单 → 可判集（去重保序）+ 不可判档两类（`missing` ∥ `notMarkdown`）+ 非法条目下标（非字符串 / 空白）。 */
-function resolveRange(base, docs) {
-  const seen = new Set()
-  const check = []
-  const undecidable = []
-  const missing = []
-  const notMarkdown = []
-  const invalid = []
-  docs.forEach((d, i) => {
-    if (typeof d !== "string" || d.trim() === "") { invalid.push(i); return }
-    const abs = resolve(base, d)
-    const key = pathKey(abs)
-    const reason = undecidableReason(abs)
-    if (reason === null) { if (!seen.has(key)) { seen.add(key); check.push(abs) } return }
-    undecidable.push({ abs, reason })
-    if (reason === "not on disk") missing.push(abs)
-    else notMarkdown.push(abs)
-  })
-  return { check: check.sort(), undecidable, missing, notMarkdown, invalid }
-}
-
-/** 段判据命中行（报面单源——两类命中同形，按 `clazz` 分词）。**不报字符数**：用户 2026-10-26 11:16「不能表述成超长多少个字符，要表述成为文字太长难于阅读」。 */
-const paragraphHitLine = (base, h) => `✗ ${h.clazz} ${rel(base, h.file)}:${h.line}`
-
-/** 跨仓引用读数行（零命中、只入回执——文案骨架单源 = `path-resolve.mjs` 的 `crossRepoNote`）。 */
-const crossRepoLine = (h) => `跨仓引用：${crossRepoNote(h.token, h)}`
-
-/** `档缺` 命中行的追加提示（§2.6：缺的那一段 + 盘上同名——候选只提示，不改判态）。 */
-const missingHint = (base, h) => {
-  const seg = typeof h.missing === "string" && h.missing !== "" ? `缺「${h.missing}」` : ""
-  const same = Array.isArray(h.sameName) && h.sameName.length > 0 ? `盘上同名：${h.sameName.map((p) => rel(base, p)).join(" ∥ ")}` : ""
-  const parts = [seg, same].filter(Boolean)
-  return parts.length > 0 ? `（${parts.join("；")}）` : ""
-}
-
-/** 锚命中的类名词（报面标签——类名由引擎定，本档只配显示形；三属同一条判据、同计「锚 N 条」）。 */
-const ANCHOR_LABELS = { 档缺: "锚·档缺", 节缺: "锚·节缺", 引缺: "锚·引缺" }
-
-/** 锚命中行（报面单源——三命中类同形，按 `clazz` 分词）：`档缺` 追加缺哪一段与盘上同名，
- *  `节缺` 点名目标档，`引缺` 点名引文前 40 字（读者不必回目标档自己找哪一段不对）。
- *  两处消费（`gate` 报面 ∥ 报告态报面）只调本函数——各写一份三元式改一处必漏一处。 */
-const anchorHitLine = (base, h) => {
-  const head = `✗ ${ANCHOR_LABELS[h.clazz] ?? `锚·${h.clazz}`} ${rel(base, h.file)}:${h.line} \`${h.token}\``
-  if (h.clazz === "引缺") return `${head}（引文不在该档内：「${String(h.quote ?? "").slice(0, 40)}…」）`
-  if (h.clazz === "节缺") return `${head}（目标 ${rel(base, h.target)} 无 §${h.section}）`
-  return head + missingHint(base, h)
-}
-
-/** gate 报面（固定句形——§3.20「报面（固定句形 · 交付门 gate）」）：首行 verdict = 唯一机判串。 */
-function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs }) {
-  const total = anchors.hits.length + paragraphs.length
-  const src = docsSource === "session" ? "本会话写过的文档" : "显式 docs"
-  // 首行：锚与段分列（用户 11:16：段的问题叫「文字太长，难于阅读」，不是「命中 N 条」也不是字符数）
-  const verdict = () => {
-    if (total === 0) return checkFiles.length ? "DOC-CHECK GATE: PASS" : "DOC-CHECK GATE: PASS（0 档）"
-    const parts = []
-    if (anchors.hits.length) parts.push(`锚 ${anchors.hits.length} 条`)
-    // 段与行分列——两类命中不得合并（提示词面一行 = 一个块，属「行太长」，不是「一段文字太长」）
-    const paraCount = paragraphs.filter((h) => h.clazz === DOC_CLASS.para).length
-    const lineCount = paragraphs.filter((h) => h.clazz === DOC_CLASS.line).length
-    if (paraCount) parts.push(`${paraCount} 段${DOC_CLASS.para}`)
-    if (lineCount) parts.push(`${lineCount} ${DOC_CLASS.line}`)
-    return `DOC-CHECK GATE: REFUSED（${parts.join(" · ")}）`
+/** 项目根：沿这份档往上最近的带 `PROJECT-MANIFEST.json` 的目录；找不到 ⇒ 调用方给的基根。 */
+function projectRootOf(abs, fallback) {
+  let dir = resolve(abs, "..")
+  for (;;) {
+    if (existsSync(join(dir, "PROJECT-MANIFEST.json"))) return dir
+    const up = resolve(dir, "..")
+    if (up === dir) return fallback
+    dir = up
   }
-  const out = [
-    verdict(),
-    "文档纪律机检（交付门 · gate）",
-    checkFiles.length
-      ? `范围：${src} ${checkFiles.length} 档`
-      : `范围：${src} —— **0 档受检**（空清单：本次没有判任何档，不得读作「已检」）`,
-    "判据：逐段检查——" + DOC_CLASS.para,
-  ]
-  if (skipped.missing.length) out.push(`跳过 ${skipped.missing.length} 档（已不在盘，未检）：${skipped.missing.map((p) => rel(base, p)).join(" ∥ ")}`)
-  if (skipped.notMarkdown.length) out.push(`跳过 ${skipped.notMarkdown.length} 档（非 markdown 档，未检）：${skipped.notMarkdown.map((p) => rel(base, p)).join(" ∥ ")}`)
-  // 跨仓引用读数（零命中类——不进 `total`、不改 verdict，只让作者看到「这一处没保证」）；
-  // 位置 = 命中区之前，末行仍留给结论 / 处置块。
-  for (const h of anchors.crossRepo ?? []) out.push(crossRepoLine(h))
-  if (checkFiles.length === 0) {
-    // 空范围不静默当通过（K6）——照实说明 + 给出补充通道（两侧都不得读成「已检」）。
-    // 措辞按「有没有跳过行」分流：无跳过行时不得写「见上方跳过行」。
-    const hasSkips = skipped.missing.length > 0 || skipped.notMarkdown.length > 0
-    out.push(docsSource === "session"
-      ? (hasSkips
-        ? "范围为空：本会话触达的档均不可判（见上方跳过行）——若确认改过 ⇒ 显式传 docs"
-        : "范围为空：本会话没有写过 .md 档——若确认改过 ⇒ 显式传 docs")
-      : (hasSkips
-        ? "范围为空：显式 docs 里没有可判档——见上方跳过行"
-        : "范围为空：显式 docs 是空清单——列出要判的档后复跑"))
-  } else if (total === 0) {
-    out.push(`结论：0 段有问题（${checkFiles.length} 档全清）`)
-  } else {
-    for (const h of anchors.hits) out.push(anchorHitLine(base, h))
-    for (const w of paragraphs) out.push(paragraphHitLine(base, w))
-    // 处置块只跟「段」命中走：仅有行太长时不得叫人对段落重写；字面单源 = `PARA_DISPOSE`（三处消费面同一份）
-    if (paragraphs.some((h) => h.clazz === DOC_CLASS.para)) out.push(...PARA_DISPOSE)
-  }
-  return out.join("\n")
+}
+
+/** 相对路径显示形（正斜杠；仓外照原值——不猜）。 */
+export function displayPath(root, abs) {
+  const r = relative(root, resolve(abs)).replace(/\\/g, "/")
+  return r === "" || r.startsWith("../") ? resolve(abs).replace(/\\/g, "/") : r
 }
 
 /**
- * 跑一次文档纪律机检。
- * @param {string} root 项目根（解析序 ① 的基准）
- * @param {{docs?:string[], mode?:'report'|'gate', docsSource?:'session'|'explicit'}} [o]
- *   `mode` 缺省 = `report`；`docs` = 被判档清单（相对 `root` 或绝对）——**必填**（两种问法同）：
- *   缺省 ∥ 非数组 ⇒ 报错要求显式清单（零遍历、零全域兜底）；`report` 面**空数组也报错**，`gate` 面空数组 ⇒
- *   `PASS（0 档）` + 空范围说明（「本轮一档没碰」是真实读数）；`report` 面不可判档 ⇒ 报错、整次零判定；
- *   `gate` 面不可判档 ⇒ 跳过行；`docsSource` = 范围来源标签（`session` = 本会话触达记账 ∥ `explicit` = 显式
- *   `docs`）——缺省 = `explicit`；只影响报面措辞。
- * @returns {{report:string, hits:{total:number, anchors:number, paragraph:number}, anchorHits:Array,
- *   paragraphHits:Array, files:string[], checkFiles:string[], paragraphMax:number,
- *   skipped:{missing:string[], notMarkdown:string[]}, lineRefs?:{body:Array, fenced:Array, total:number}}}
- *   `lineRefs`（行号坐标清单的采集结果）**只在 `report` 面返回**——`gate` 面构造上不产该字段。
- *   消费面判「清」须读 `report` 首行（gate）∥ `hits.total`（report），不得只看其中一个。
+ * 该档所属项目声明的排除前缀（`index.docCheckExcludePaths`，归一 = `../declaration.mjs` 的 `normalizePathList`）。
+ * **读不到 manifest ∥ 键写成非数组 ⇒ 空表 ⇒ 照判**（放行必须有声明，不替项目放行）：
+ * `readManifest` 对盘上没有的 manifest 返 `{ ok: false, reason: "missing" }`，读数方拿到的默认值就是 schema 里那个空数组。
+ * `memo` = 本次调用内按项目根记忆——一次判多档时同一根只读一次盘。
  */
-export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
-  const base = resolve(root)
-  const gate = mode === "gate"
-  if (docs !== undefined && !Array.isArray(docs)) {
-    throw new Error(`doc_check: \`docs\` must be an array of paths (got ${typeof docs}) — a bare string is refused rather than read as a whole-domain request; pass ["<path>"].`)
+function exclusionPrefixesOf(root, memo) {
+  if (memo.has(root)) return memo.get(root)
+  let prefixes = []
+  try {
+    const read = readManifest(root)
+    if (read?.ok) prefixes = normalizePathList(read.manifest?.index?.docCheckExcludePaths)
+  } catch { prefixes = [] } // 读面抛错也走「照判」那一侧：宁多判一份档，不替项目放行
+  memo.set(root, prefixes)
+  return prefixes
+}
+
+/** 该档是否落在排除面上：**项目根相对路径**恰好等于某前缀，或以「前缀 + `/`」起头。
+ *  裸前缀不比——声明 `docs/_arch` 不吞 `docs/_archive-x` 之下的档（那不是声明的意思）。
+ *  比对按**字面**取（与 `normalizePathList` 同一把尺，不折大小写）：声明写什么就比什么。
+ *  大小写不敏感是 `batch-paths.mjs` 的 `baseContaining` 那一族的判据（它比的是盘上同一个根），不是这一条。 */
+function isExcludedDoc(abs, root, memo) {
+  const rel = relative(root, abs).replace(/\\/g, "/")
+  return exclusionPrefixesOf(root, memo).some((p) => rel === p || rel.startsWith(`${p}/`))
+}
+
+/**
+ * 判域谓词（**一条，三个调用面共用**）：批档面这道滤只在收口时点生效（写时点原样交回）；排除面那道两个时点都认。
+ * 判据句单源 = `docs/core/design/DOC-CHECK.md` §9——写的那一刻量的是手上正在产生的文本，量得出缺陷；
+ * 收口那一刻量的是几小时前的记录、现态已经变了，量得出的是时间差。
+ *
+ * 面别判据不新造：批档面 = `existence.mjs` 的 `isBatchFace`（与 §3 第二条例外同一个谓词）。
+ * 时点按**谁在调**判，不按批档 §1 状态行判——状态行是记录自己的属性，时点是调用者的位置。
+ *
+ * **第二道滤 = 排除面**（§10）：按每份档自己的项目根读声明，两个时点都认——一个档要么在门里、要么不在，
+ * 不按调用面分家。判据仍是三件，排除面只决定「哪些档进来」。
+ *
+ * @param {string[]} docs 候选档清单（绝对路径，或相对 `root` 的路径；交回的条目保持原形，不改写成绝对路径）：
+ *   非数组一律抛——不许读成「空判域」，那会印出一个什么都没判过的 `PASS`
+ * @param {{moment:'writer'|'close', root?:string}} o `moment` = 这一刻谁在调（**必填**：它决定批档判不判，
+ *   缺省值等于替调用者决定一件事）；`root` = 项目根（`isBatchFace` 与排除面读声明的基准；缺省按每份档自己往上找）
+ * @returns {string[]} 判域内的档（原顺序）
+ */
+export function judgedDomainDocs(docs, { moment, root } = {}) {
+  if (!Array.isArray(docs)) {
+    throw new Error(`doc_check: \`docs\` must be an array of paths (got ${typeof docs}) — a non-array is refused rather than read as an empty domain, which would print a PASS over nothing judged.`)
+  }
+  if (moment !== MOMENT.writer && moment !== MOMENT.close) {
+    throw new Error(`doc_check: unknown moment ${JSON.stringify(moment)} — take "${MOMENT.writer}" (text still being written) or "${MOMENT.close}" (a record already on disk). Which moment it is decides whether batch records are judged, so it is never defaulted.`)
+  }
+  const base = typeof root === "string" && root.trim() !== "" ? resolve(root) : null
+  const prefixesByRoot = new Map()
+  return docs.filter((d) => {
+    const abs = base === null ? resolve(String(d)) : resolve(base, String(d))
+    const docRoot = projectRootOf(abs, base ?? resolve(abs, ".."))
+    // 两道滤的顺序跟本节的说法走（先批档面、再排除面）；两条谓词互不相干，顺序不影响结果。
+    if (moment === MOMENT.close && isBatchFace(abs, docRoot)) return false
+    return !isExcludedDoc(abs, docRoot, prefixesByRoot)
+  })
+}
+
+/**
+ * 单行长度表（`y` 侧一维滚动）：`out[k]` = `x` 与 `y[0…k-1]` 的最长公共子序列长度。
+ * 只留一行 ⇒ 空间线性于 `y`；这是 Hirschberg 的「一遍长度重算」。
+ */
+function lcsRowOf(x, y) {
+  const out = new Array(y.length + 1).fill(0)
+  for (let i = 0; i < x.length; i += 1) {
+    let diag = 0 // = 上一行在 k-1 处的值（LCS(x[0…i-1], y[0…k-2])）
+    for (let k = 1; k <= y.length; k += 1) {
+      const carried = out[k]
+      out[k] = x[i] === y[k - 1] ? diag + 1 : out[k] >= out[k - 1] ? out[k] : out[k - 1]
+      diag = carried
+    }
+  }
+  return out
+}
+
+/**
+ * 按行对齐求最长公共子序列的**配对**（Hirschberg：正反各算一遍长度表，再按中分点分段回溯）。
+ * 返回 `[[i, j], …]`（两侧 0-based 下标，按序）。空间线性于较短那一份——行×行全表在文档面上装不下。
+ */
+function lcsPairs(x, y) {
+  if (x.length === 0 || y.length === 0) return []
+  if (x.length === 1) {
+    const j = y.indexOf(x[0])
+    return j < 0 ? [] : [[0, j]]
+  }
+  const mid = Math.floor(x.length / 2)
+  const forward = lcsRowOf(x.slice(0, mid), y)
+  const backward = lcsRowOf(x.slice(mid).reverse(), y.slice().reverse())
+  let cut = 0
+  let best = -1
+  for (let k = 0; k <= y.length; k += 1) {
+    const v = forward[k] + backward[y.length - k]
+    if (v > best) {
+      best = v
+      cut = k
+    }
+  }
+  const left = lcsPairs(x.slice(0, mid), y.slice(0, cut))
+  const right = lcsPairs(x.slice(mid), y.slice(cut))
+  return left.concat(right.map(([i, j]) => [i + mid, j + cut]))
+}
+
+/**
+ * 两份文本求变更区（**写时点**的取区法；判据句单源 = `docs/core/design/DOC-CHECK.md` §6「写时点怎么取区间」）。
+ *
+ * 输入 = 调用方手上的两份整档文本：「盘上现文」与「这一笔要写的改后整份」。输出形与收口面的
+ * `changedRegionsOf`（`thincoder-core/agent-tools/batch-regions.mjs` 读 `git diff -U0`）**逐字同形**：
+ * `{rows, gaps}`——`rows` = 改后文本里变了的行（1-based），`gaps` = 纯删那一处的缝（缝前那一行在改后文本里的
+ * 行号，档头写 `0`）。两条链一个形状、一个消费面（`judgeText` ∥ `paragraphHits`），不各造一套语义。
+ *
+ * 算法 = 按行对齐求最长公共子序列；没被对齐的旧行与没被对齐的新行成**组**：组里有新行 ⇒ 新行全部进 `rows`；
+ * 组里没有新行 ⇒ 纯删，落一个 `gaps`。**不按前后缀裁剪了事**——那样两处远处的改动会连成一片，中间没变的行
+ * 被算成变更行，与「没变的行一条都不出」相反。前后缀只**减量**：剥掉公共前后缀后中段仍按行对齐求组，精度一字不减。
+ * 回溯用两遍长度重算（Hirschberg），空间线性于较短那一份——行数之积是时间上界，而文档面上有上万行的档，
+ * 行×行全表装不下。
+ *
+ * 本函数**不收 `null`**：两参都是字符串（不是字符串 ⇒ 当场抛）。「盘上取不到现文」这件事由调用方判（它改交
+ * `region: null`），不由本函数猜——猜了就是把「整份判」这条决定替调用方做了。
+ *
+ * @param {string} oldText 盘上现文
+ * @param {string} newText 这一笔要写的改后整份文本
+ * @returns {{rows:number[], gaps:number[]}}
+ */
+export function changedRegionOf(oldText, newText) {
+  for (const [name, value] of [["oldText", oldText], ["newText", newText]]) {
+    if (typeof value !== "string") {
+      throw new Error(`changedRegionOf: \`${name}\` must be a string (got ${value === null ? "null" : typeof value}) — "no old text on disk" is the caller's call: it passes \`region: null\` (judge the whole document) instead of calling this function, and this function never guesses it.`)
+    }
+  }
+  const before = oldText.split("\n")
+  const after = newText.split("\n")
+  const limit = Math.min(before.length, after.length)
+  let head = 0
+  while (head < limit && before[head] === after[head]) head += 1
+  let tail = 0
+  while (tail < limit - head && before[before.length - 1 - tail] === after[after.length - 1 - tail]) tail += 1
+  const olds = before.slice(head, before.length - tail)
+  const news = after.slice(head, after.length - tail)
+  const rows = []
+  const gaps = []
+  // 一组 = 没被对齐的旧行 [oldFrom, oldTo) 与没被对齐的新行 [newFrom, newTo)。
+  // 组里有新行 ⇒ 新行全部进 `rows`（取代 ∥ 插入同一处置）；组里没有新行 ⇒ 纯删，缝前那一行的行号 = `head + newFrom`。
+  const emit = (oldFrom, oldTo, newFrom, newTo) => {
+    if (oldFrom === oldTo && newFrom === newTo) return
+    if (newFrom === newTo) {
+      gaps.push(head + newFrom)
+      return
+    }
+    for (let j = newFrom; j < newTo; j += 1) rows.push(head + j + 1)
+  }
+  let oi = 0
+  let ni = 0
+  for (const [pi, pj] of lcsPairs(olds, news)) {
+    emit(oi, pi, ni, pj)
+    oi = pi + 1
+    ni = pj + 1
+  }
+  emit(oi, olds.length, ni, news.length)
+  return { rows, gaps }
+}
+
+/**
+ * 判一份文本的三件事（**判据的唯一入口**：读盘的、还没落盘的，都从这里过）。
+ * @param {string} text 档全文
+ * @param {{file:string, root:string, planned?:Set<string>, indexPath?:Set<string>|null,
+ *   region:{rows:number[],gaps:number[]}|null}} o `file` = 绝对路径（报面坐标与命中身份的来源）；
+ *   `root` = 项目根（判据 ③ 找一次的基准）；`planned` = 在途批档 §2 清单并集（判据 ③ 的「在建不报」）；
+ *   `region` = 本批变更区（**必填，不收缺省值**）：`null` = 判整份，区间表 = 只判这几行——两件事由调用方明说。
+ * @returns {{file:string, line:number|null, kind:string, token?:string, len?:number}[]}
+ */
+export function judgeText(text, { file, root, planned = new Set(), indexPath = null, region } = {}) {
+  if (region === undefined) {
+    throw new Error("doc_check: `region` must be given on every call — null (judge the whole document) or the changed-region entry for this document (judge only those lines). It is never defaulted: the default would decide the domain on the caller's behalf.")
+  }
+  const abs = resolve(file)
+  const rows = region === null ? null : new Set(region.rows ?? [])
+  // 行级判据（② ∥ ③）只认**变更行**；纯删的零宽区间在改后文本里没有可指的行 ⇒ 不产生命中（§6）。
+  const inRegion = (line) => rows === null || rows.has(line)
+  const hits = []
+  for (const h of paragraphHits(text, { promptFace: isPromptFace(abs), region })) {
+    hits.push({ file: abs, line: h.line, kind: HIT_KIND.paragraph, len: h.len })
+  }
+  for (const h of lineRefHits(text)) if (inRegion(h.line)) hits.push({ file: abs, line: h.line, kind: HIT_KIND.lineRef, token: h.token })
+  // 批档面整份不判悬空（§3）：批档是可整份删掉的执行记录，不是导航——记录里出现一个不存在的档名
+  // 是这一轮的**发现**，判它等于把发现本身拦在门外。**这条豁免本身就是写时点的规则**：写的那一刻
+  // 段长 ∥ 行号锚对批档照旧生效；收口时点批档整份不进判域，那一半由 `judgedDomainDocs` 管（§9）。
+  if (!isBatchFace(abs, root)) {
+    for (const h of existenceHits(text, { root, planned, indexPath })) {
+      if (inRegion(h.line)) hits.push({ file: abs, line: h.line, kind: HIT_KIND.missing, token: h.token })
+    }
+  }
+  return hits
+}
+
+/**
+ * 一条命中的人话（报面行形的单一出处：三个调用点都不拼字面）。
+ * 字面 = `docs/core/design/DOC-CHECK.md` §5 的三句。
+ */
+export function hitLine(root, h) {
+  const at = displayPath(root, h.file)
+  if (h.kind === HIT_KIND.missing) return `${at} ${h.token} 这个档不存在`
+  if (h.kind === HIT_KIND.paragraph) return `${at} 第 ${h.line} 段 ${h.len} 字，超过 ${PARAGRAPH_MAX}`
+  return `${at} 第 ${h.line} 行的 ${h.token} 用行号做锚，行号会漂`
+}
+
+/**
+ * 跑一次文档机检。
+ * @param {string} root 基根（相对 `docs` 条目按它解析；某档不在任何项目内时也落它）
+ * @param {{docs:string[], moment:'writer'|'close',
+ *   regions:Map<string,{rows:number[],gaps:number[]}>|null}} o `docs` = 被判档清单（相对 `root` 或绝对）——**必填**：
+ *   缺省 ∥ 非数组 ∥ 空清单 ⇒ 抛（什么都没有的清单一律不许读成「判过且干净」）。
+ *   `moment` = 这一刻谁在调（**必填**，判法单源 = `judgedDomainDocs`）：收口时点落进批档面的那些档整份不进判域
+ *   ⇒ 它们连「不在盘，未判」都不出一行（那一句留给判域内读不到的档）；调用方交进来的清单因此可能判完 0 档。
+ *   `regions` = 本批变更区（**必填，不收缺省值**，判据句单源 = `docs/core/design/DOC-CHECK.md` §6）：
+ *   `null` = 判整份（诊断面 ∥ 写时点的新档与读不到现文那一支）；表 = 只判表里那几行，键 = `resolve(<档>)`；
+ *   **表里某一格可以是 `null`**（= 这一档判整份；写时点那一臂用它在「盘上读不到现文」时交整份）。
+ *   **没有要判的行 ⇒ 这一档一行也不出**（不在表里 ∥ 表里没它的条目）：不点名、不解释，也不计入 `checkFiles`。
+ * @returns {{report:string, verdict:'PASS'|'REFUSED', hits:Array, checkFiles:string[],
+ *   missing:string[], unreadable:string[]}}
+ *   `hits` = 三判据的命中（每条携 `file` ∥ `line` ∥ `kind`），`missing` ∥ `unreadable` = 没判成的档；
+ *   `checkFiles` = **真判过的档**（判域外的档不在其中——回执与 `范围 N 档` 数的是同一件事）。
+ */
+export function runDocCheck(root, { docs, moment, regions } = {}) {
+  const base = resolve(String(root ?? "."))
+  if (regions === undefined) {
+    throw new Error("doc_check: `regions` must be given on every call — null (judge each document whole: the diagnostic face, or a write-time document with no old text to compare) or the changed-region table keyed by `resolve(<doc>)` (judge only those lines). It is never defaulted: the default would decide the domain on the caller's behalf.")
   }
   if (!Array.isArray(docs)) {
-    throw new Error('doc_check: `docs` is required — pass the explicit list of documents to judge. There is no default range: nothing is scanned unless you name it.')
+    throw new Error(`doc_check: \`docs\` must be an array of paths (got ${typeof docs}) — a bare string is refused rather than read as a whole-domain request; pass ["<path>"].`)
   }
-  // 报告态空清单 = 报错（「没跑」不得装成「跑了且清」）；gate 面空清单照实出 `PASS（0 档）` + 空范围说明
-  // ——交付面「本轮一档没碰」是一种真实读数，不是省略。
-  if (!gate && (docs.length === 0 || docs.every((d) => typeof d !== "string" || d.trim() === ""))) {
-    throw new Error('doc_check: docs is empty — an empty list names no document, so nothing can be judged; list the documents you mean.')
+  if (docs.length === 0 || docs.some((d) => typeof d !== "string" || d.trim() === "")) {
+    throw new Error("doc_check: `docs` names no document — pass the explicit list of documents to judge. There is no default range: nothing is scanned unless you name it.")
   }
-  const source = docsSource ?? "explicit"
-  const range = resolveRange(base, docs)
-  // 清单条目本身非法（非字符串 / 空白）——调用方错误，两种问法同拒：静默丢掉一条就是不静默地收窄范围。
-  if (range.invalid.length) {
-    throw new Error(`doc_check: \`docs\` entries ${range.invalid.map((i) => `[${i}]`).join(", ")} are not paths — every entry must be a non-empty string; no document was judged.`)
+  // 判域 = 交进来的清单 ∩ 这一刻要判的档（§9）。空清单的护栏在上面、按**交进来的**清单判：
+  // 「一张清单都没给」与「给的都在判域外」是两件事——后者是这一批确实没有别的档可判。
+  const domain = judgedDomainDocs(docs, { moment, root: base })
+  const plannedByRoot = new Map()
+  const plannedOf = (r) => {
+    if (!plannedByRoot.has(r)) plannedByRoot.set(r, plannedPathsOf(r))
+    return plannedByRoot.get(r)
   }
-  // 报告态 fail-closed：清单里有一个不可判档 ⇒ 报错点名、整次零判定——清单写错却报 0 命中就是「没跑」装成「跑了且清」。
-  if (!gate && range.undecidable.length) {
-    const named = range.undecidable.map((u) => `${rel(base, u.abs)}（${u.reason}）`).join(" ∥ ")
-    throw new Error(`doc_check: docs names ${range.undecidable.length} document(s) that cannot be judged — no document was checked: ${named}. Fix the list and re-run; nothing is silently skipped and the check never widens beyond the list.`)
+  const indexByRoot = new Map()
+  const indexOf = (r) => {
+    if (!indexByRoot.has(r)) indexByRoot.set(r, pathIndexOf(r))
+    return indexByRoot.get(r)
   }
-  const checkFiles = range.check
-  const { paragraphMax, lineMax, paragraphExemptZones } = DOC_CHECK_BUILTINS
-  const anchors = checkAnchors(base, { files: checkFiles })
-  const paragraphs = checkParagraphs({ paragraphMax, lineMax, exemptZones: paragraphExemptZones, files: checkFiles })
-
-  const hits = { total: anchors.hits.length + paragraphs.length, anchors: anchors.hits.length, paragraph: paragraphs.length }
-  const shared = {
-    hits, anchorHits: anchors.hits, paragraphHits: paragraphs, files: checkFiles, checkFiles, paragraphMax,
-    skipped: { missing: range.missing, notMarkdown: range.notMarkdown },
+  const checkFiles = []
+  const hits = []
+  const missing = []
+  const unreadable = []
+  for (const d of domain) {
+    const abs = resolve(base, d)
+    // 本批变更区（§6）：表里没它的条目 ⇒ 这一档没有要判的行 ⇒ 一行也不出（不点名、不计数）。
+    const region = regions === null ? null : regions.get(abs)
+    if (regions !== null && region === undefined) continue
+    let text
+    try { text = readFileSync(abs, "utf8") } catch (e) {
+      // 区间面、区内只有纯删的缝（`rows` 空）、且盘上真没了（ENOENT）= 这一档在建档之后被删掉整份
+      // ⇒ 没有文本可判 ⇒ 一行也不出（§6）。两个条件缺一条就不是那个情形：还在地盘上却读不到，
+      // 那一句「读不到，未判」仍然是留给它的（§9）。
+      if (regions !== null && region !== null && (region.rows ?? []).length === 0 && e?.code === "ENOENT") continue
+      if (e?.code === "ENOENT") missing.push(abs)
+      else unreadable.push(abs)
+      continue
+    }
+    checkFiles.push(abs)
+    const docRoot = projectRootOf(abs, base)
+    hits.push(...judgeText(text, { file: abs, root: docRoot, planned: plannedOf(docRoot), indexPath: indexOf(docRoot), region }))
   }
-  if (gate) {
-    return { ...shared, report: gateReport({ base, docsSource: source, checkFiles, skipped: shared.skipped, anchors, paragraphs }) }
-  }
-
-  // 行号坐标清单的**唯一采集点**：放在 `if (gate)` 早返回之后——`gate` 分支上一行已返回，够不着这里。
-  // 「闸看不见清单」靠这个结构成立（不是「算出来再声明它不参与」——一份存在但被声明无用的数，读者迟早拿它当判据）。
-  const lineRefs = collectLineRefs({ files: checkFiles })
-
-  const out = [
-    "文档纪律机检（报告态 · 非门禁）",
-    `射程：${base} · 传入清单 ${checkFiles.length} 档 · 区带豁免：${paragraphExemptZones.length ? paragraphExemptZones.join(" ∥ ") : "无"}`,
-    "声明：判据参数 = 工具内置常量；范围 = 传入文件（判定范围 = 解析范围）",
-    `范围：传入清单 ${checkFiles.length} 档（整档入判 · 判定范围 = 解析范围）`,
-    `命中 ${hits.total} 条（锚 ${anchors.hits.length} · ${DOC_CLASS.para} ${paragraphs.filter((h) => h.clazz === DOC_CLASS.para).length} · ${DOC_CLASS.line} ${paragraphs.filter((h) => h.clazz === DOC_CLASS.line).length}）`,
-  ]
-  for (const h of anchors.hits) out.push(anchorHitLine(base, h))
-  for (const w of paragraphs) out.push(paragraphHitLine(base, w))
-  // 跨仓引用读数（零命中类——只报不拦，位置 = 命中区之后、清单块之前）
-  for (const h of anchors.crossRepo ?? []) out.push(crossRepoLine(h))
-  // 清单块位置 = 命中区之后、末行 `结论：…` 之前（报面的末行恒是结论句，清单不抢它的位）。
-  out.push(...lineRefsBlock({ base, files: checkFiles, refs: lineRefs }))
-  out.push(hits.total ? `结论：${hits.total} 条命中——报告态，不作拒执行的理由` : `结论：0 条命中（锚 ∥ ${DOC_CLASS.para} ∥ ${DOC_CLASS.line} 均清）`)
-
-  return { ...shared, report: out.join("\n"), lineRefs }
+  const out = [`DOC-CHECK GATE: ${hits.length ? "REFUSED" : "PASS"}`]
+  for (const h of hits) out.push(hitLine(base, h))
+  for (const p of missing) out.push(`${displayPath(base, p)} 不在盘，未判`)
+  for (const p of unreadable) out.push(`${displayPath(base, p)} 读不到，未判`)
+  return { report: out.join("\n"), verdict: hits.length ? "REFUSED" : "PASS", hits, checkFiles, missing, unreadable }
 }

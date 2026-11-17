@@ -6,6 +6,8 @@ import { homedir } from "node:os"
 import { join } from "node:path"
 import { execFile } from "node:child_process"
 import { promisify } from "node:util"
+// 只读变体的描述取值面（§6.29 ①「描述」行：档名 → `DESC` → `loadToolDoc`，档定义期读一次）
+import { DESC } from "../tools/shared.mjs"
 export { offloadToolResult, cleanupOldToolResults, TMP_RETENTION_MS } from "./offload.mjs"
 
 /** Single source for the AUTO-mode reminder (was duplicated in agent.mjs +
@@ -286,6 +288,121 @@ export function listWorkDir(cwd, { rootMax = 30, subMax = 10 } = {}) {
 /** Return the set of tool names that are marked as read-only */
 export function readonlyToolNames(tools) {
   return new Set(tools.filter((t) => t.readonly).map((t) => t.name))
+}
+
+// ─── 只读角色的 action 级变体（TOOLS.md §6.29 ①）───────────────────────────────
+/** 嵌套动作键闭集（§6.29「嵌套动作的配对规则」）：键 → 顶层 action。schema 是平铺的，配对只在
+ *  「顶层 action + 这个键的一个值」这一对上判；表外的键不参与配对。 */
+const NESTED_ACTION_KEYS = {
+  stash: "stashAction",
+  worktree: "worktreeAction",
+  tag: "tagAction",
+  branch: "branchAction",
+  remote: "remoteAction",
+  checkpoint: "checkpointAction",
+}
+
+/** 只读变体登记表（**单源**——核装配 `agent-tools/subagent-spawn.mjs` ∥ `agent-tools/consult.mjs`
+ *  与端装配 `thincoder-vscode/src/agent/tool-table.mjs` 同取本表）：
+ *  - `doc` = 该变体的描述档名（`tool-docs/<doc>.md`）；**没有登记的工具不挂入只读角色**
+ *    （§6.29「档与角色」：`browser` ∥ `ssh` 的 `isReadonlyAction` 判的是审批门，不造变体）。
+ *  - `writeOnly` = 只有被剔掉的写动作才消费的参数名。没有通用派生法：参数名与注释都不说
+ *    它服务哪个 action（`git` 的 `name` 挂在 `branch` 上，而 `branch` 的只读项 `list` 并不读它），
+ *    所以这一列按工具声明，动作集仍只由运行期谓词裁决（K2：不另立第二份动作名单）。 */
+export const READONLY_VARIANT_DOCS = {
+  git: { doc: "git-read", writeOnly: ["message", "name", "remoteUrl", "tags", "mode", "rebaseAction", "dryRun", "create", "dest"] },
+  memory: { doc: "memory-read", writeOnly: ["title", "content", "tags", "id", "confirm", "ledger", "project"] },
+  settings: { doc: "settings-read", writeOnly: [] },
+  process: { doc: "process-read", writeOnly: ["pid", "id"] },
+}
+
+/**
+ * 只读变体构造器（§6.29 ①「共用 action 变体」）：接收**工具、谓词、描述档名**三样注入，
+ * 本函数不持角色名单、也不复制任何工具的动作表。
+ *
+ * 三面同时收窄（K4）：schema 的 `action.enum` 与嵌套键 `enum` ∥ 描述 ∥ execute 第二道门——
+ * 只删 enum 会留下写参数与全文诱导，只做文本过滤又会被直接 execute 绕过（provider 不保证执行 schema）。
+ *
+ * @param {object} tool — 原工具（读它的 `parameters`；执行仍回原 `execute`）
+ * @param {{docName: string, writeOnly?: string[], isReadonly: (tool: object, args: object) => boolean}} opts
+ *   `isReadonly` = 运行期动作判据（调用点一律传 `readonlyActionOf` 的单参形 `readonlyActionTest`）。
+ * @returns {object} 同名只读变体（`readonly: true`）
+ */
+export function makeReadonlyToolVariant(tool, { docName, writeOnly = [], isReadonly }) {
+  const params = tool.parameters ?? {}
+  const props = params.properties ?? {}
+  const declared = Array.isArray(props.action?.enum) ? props.action.enum : []
+  const keptActions = []
+  const keptNested = {}
+  for (const action of declared) {
+    const nestedKey = NESTED_ACTION_KEYS[action]
+    if (nestedKey && Array.isArray(props[nestedKey]?.enum)) {
+      // 候选形 = 「顶层 action + 同 schema 里被钩子读取的嵌套键」这一对；每个枚举值各成一候选
+      const values = props[nestedKey].enum.filter((v) => isReadonly(tool, { action, [nestedKey]: v }))
+      if (values.length > 0) {
+        keptActions.push(action)
+        keptNested[nestedKey] = values
+      }
+      continue
+    }
+    if (isReadonly(tool, { action })) keptActions.push(action)
+  }
+  // 缺省空调用候选（`process` 缺省 action = list）：空调用判为只读 ⇒ action 不设必填，
+  // 必填与否就由它自己决定，而不是替调用方补一个默认值。
+  const emptyCallReadonly = isReadonly(tool, {})
+  const variantProps = {}
+  for (const [key, spec] of Object.entries(props)) {
+    if (key === "action") {
+      variantProps.action = {
+        ...spec,
+        enum: keptActions,
+        description: `Read-only variant: ${keptActions.join(" / ")} — the only actions this tool face carries. Every one of them only reads; write actions are not part of it.`,
+      }
+      continue
+    }
+    if (writeOnly.includes(key)) continue
+    const owningAction = Object.keys(NESTED_ACTION_KEYS).find((a) => NESTED_ACTION_KEYS[a] === key)
+    if (owningAction) {
+      // 嵌套键的 enum = 各保留顶层下只读值的并集；其顶层不在变体里 ⇒ 本键整枚不出现
+      if (keptNested[key]) variantProps[key] = { ...spec, enum: keptNested[key] }
+      continue
+    }
+    variantProps[key] = spec
+  }
+  const required = (params.required ?? []).filter((k) => !(k === "action" && emptyCallReadonly))
+  return {
+    ...tool,
+    description: DESC(docName), // 档定义期取值：全量档仍服务 depth-0，两变体各一份描述
+    parameters: { ...params, properties: variantProps, required },
+    readonly: true,
+    isReadonlyAction(args) { return isReadonly(tool, args) },
+    async execute(args, ctx) {
+      const call = args && typeof args === "object" ? args : {}
+      if (!isReadonly(tool, call)) {
+        const named = call.action === undefined ? "(no action)" : JSON.stringify(call.action)
+        throw new Error(`${tool.name}: ${named} is not available to a read-only role — this tool face carries only ${keptActions.join(" / ")}; nothing was executed (zero file write, zero ledger write, zero network write).`)
+      }
+      return tool.execute(args, ctx)
+    },
+  }
+}
+
+/**
+ * 只读角色的工具面（§6.29 B4）：整把 `readonly` 工具原样 ∪ 登记的 action 级只读变体。
+ * `isReadonly` 注入面同 `makeReadonlyToolVariant`；`tester` 面不消费本函数（它只用整把只读集，不顺扩）。
+ * @param {object[]} tools — 调用方父面工具表
+ * @param {(tool: object, args: object) => boolean} isReadonly
+ * @returns {object[]} 新数组（原表零改）
+ */
+export function deriveReadonlyTools(tools, isReadonly) {
+  const out = []
+  for (const t of tools ?? []) {
+    if (t?.readonly) { out.push(t); continue }
+    const reg = READONLY_VARIANT_DOCS[t?.name]
+    if (!reg) continue // 无描述档 ⇒ 不挂入只读角色（§6.29「档与角色」）
+    out.push(makeReadonlyToolVariant(t, { docName: reg.doc, writeOnly: reg.writeOnly, isReadonly }))
+  }
+  return out
 }
 
 /** Depth>0 tool exclusions — subagents never get the interactive main-session tools (`question`:

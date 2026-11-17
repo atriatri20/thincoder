@@ -3,11 +3,14 @@
  * 单一工具三操作（用户定形 F-CC5）：`stats`（感知 F-CC1）· `prune`（噪声清理 F-CC3）· `compact`（主动压缩 F-CC2，携 focus + 自动附任务/目标 + 可回查锚——裁令 A/D）。
  * 描述外置（tool-docs/context.md——#15 统一面：文本单点 = tool-docs，DESC 加载）；装配面 = 登记册 `agent-tools.mjs`（#83）+ `agent/family-tools.mjs` 的 depth-0 段（`depthOnly`）——两端自动同表；**depth>0 不给**（§6.16.6）。
  * 本档同时是**注记文案 / 轻推行 / 回执文案的单源**（核与 VSC 的 run-stages 消费点经动态 import 取用——零新增静态边）。
- * 机械面：`stats` 不新增第三口径（首行主口径 = 窗口占用 total / window，压缩线以具名数值 + 距线呈现；状态行行（第 6 行）走核 `historyReading`——与 CLI ∥ VSC 同源：一个实现点，端侧零自算式）；`prune` = 合格集（`token-window.mjs` 单源）+「原位换内容」应用面（`context.mjs`）；`compact` **当次零执行**（只登记 `agent._pendingCompact`，由下一安全点消费——§6.16.2）。
+ * 机械面：`stats` 不新增第三口径（首行主口径 = 可填量占用 total / `limit`，窗口与压缩线各以具名数值呈现；状态行行（第 6 行）走核 `historyReading`——与 CLI ∥ VSC 同源：一个实现点，端侧零自算式）；`prune` = 合格集（`token-window.mjs` 单源）+「原位换内容」应用面（`context-degrade.mjs`）；`compact` **当次零执行**（只登记 `agent._pendingCompact`，由下一安全点消费——§6.16.2）。
  */
 import { contextUsage, estimateTokens, collectStaleToolOutputs, historyReading, tokenRatioOf, PRUNE_MIN_TOKENS } from "../token-window.mjs"
-import { requestBudget } from "../config.mjs"
-import { pruneStaleToolOutputs, COMPRESS_FAILURE_LIMIT } from "../context.mjs"
+// 预算面 = **有效窗口**（`CONTEXT-COMPACTION.md` §2.2：stats ∥ 守卫 ∥ 压缩同一个预算对象）
+import { policyBudget, resolveWorkMode } from "../config.mjs"
+import { pruneStaleToolOutputs } from "../context.mjs"
+// 保留窗起点（#2431）：stats 的 prunable 读数与 prune 本体同一个合格集——两处传同一值，不自成第二套（§1.2）。
+import { retentionWindowStart } from "../agent/turn-projection.mjs"
 import { slotPath } from "../session-slots.mjs"
 // #15 描述外置：描述文本单点 = tool-docs/context.md（DESC 单解析面，缺档抛错语义不变）
 import { DESC } from "../tools/shared.mjs"
@@ -23,9 +26,20 @@ export function compactNoopNote() {
   return `${CONTEXT_NOTE_PREFIX} did nothing right now (no middle section — the history is too short to summarize). The context is unchanged.]`
 }
 
-/** 压缩失败注记（§6.16.2 回执面②——模型面告知缺口；失败链本体复用既有：连续 3 次降级确定性截断）。 */
+/** 压缩 no-op 注记——固定开销单独越线（`CONTEXT-COMPACTION.md` §5）：与守卫抛出的 typed error **同一个原因**，
+ *  回执里带 `reason`、固定开销、limit 与 window 三数，并说清压缩解不了——不把方向指到会话内容上。 */
+export function compactOverheadNote(fixedFloor, limit, window) {
+  return `${CONTEXT_NOTE_PREFIX} did nothing right now: the fixed overhead (system + tools) ~${fixedFloor} tokens alone` +
+    ` exceeds the limit ${limit} (window ${window}) — reason: overhead_exceeds_limit.` +
+    ` Compaction cannot help (the overhead stays after the history is summarized): lower max_tokens,` +
+    ` switch to a larger-window model, or trim the system prompt / tools declaration.]`
+}
+
+/** 压缩失败注记（§6.16.2 回执面②——模型面告知缺口）。§5.1 之后**没有「第 N 次 / 共 3 次」**：摘要在失败当次
+ *  就转确定性丢弃，计数不再是一道降级门的输入。这条注记只在整条链没留下任何产物时才落（摘要失败且无中段可丢），
+ *  所以它说的是「这一次没压成」，不是「已经压过一次」。 */
 export function compactFailureNote(message, attempt) {
-  return `${CONTEXT_NOTE_PREFIX} failed (attempt ${attempt} of ${COMPRESS_FAILURE_LIMIT}): ${message}]`
+  return `${CONTEXT_NOTE_PREFIX} failed (attempt ${attempt}): ${message} — the context is unchanged: the summary call failed and there was no middle section to drop.]`
 }
 
 /** 轻推锚（§6.16.5）：active goal 目标 ⇒ in_progress 任务标题 ⇒ 首个 pending 标题 ⇒ `(none set)`。 */
@@ -64,8 +78,14 @@ export function pushContextNudge(agent) {
 
 /** stats 报面（§6.16.4 逐行定稿——机判可解析；三段 / 工具输出小计 / 状态行百分比 / 压缩履历）。 */
 function statsReport(agent) {
+  // 档位自 agent 现取（§2.3 握有 agent 的面自取）：本档三处读数（有效窗口预算 ∥ 保护尾 ∥ 状态行分母）同取它。
+  const workMode = resolveWorkMode(agent?.config?.agent)
   const usage = contextUsage(agent, agent?._ctxBasis?.overhead ?? {})
-  const stale = collectStaleToolOutputs(agent?.history ?? [], agent?.provider)
+  // 合格集与 prune 本体同一组实参（§2.3 表）：`fixedOverhead` ∥ `ratio` 都当场现算，没有一处落盘。
+  const stale = collectStaleToolOutputs(
+    agent?.history ?? [], agent?.provider, workMode, retentionWindowStart(agent),
+    usage.overhead, tokenRatioOf(agent),
+  )
   let toolOut = 0
   let toolCount = 0
   for (const m of agent?.history ?? []) {
@@ -73,12 +93,15 @@ function statsReport(agent) {
     toolCount++
     toolOut += estimateTokens([m])
   }
-  const pct = Math.round((usage.total / usage.window) * 100) // 主口径 = 窗口占用（§6.16.4 首行定稿 / D-CC29）
+  // 预算取一次，全行共用（§7.1「从同一 contextUsage ∥ policyBudget ∥ historyReading 取数，各自具名，不混用分母」）。
+  const budget = policyBudget(agent?.provider, undefined, workMode)
+  // 分母 = `limit`（用户实际可填的量，§2.5 / §7.1）：与状态行第 6 行同一个数，`window` 只作具名读数出现。
+  const pct = Math.round((usage.total / budget.limit) * 100)
   const toGo = Math.max(0, usage.threshold - usage.total) // 已越阈值 ⇒ 0（自动压缩将在下一安全点接手）
   const info = agent?._lastCompressInfo
   const compaction = !info ? "none"
     : info.mode === "summary" ? `last summary freed ${info.tokensFreed} tokens`
-      : "last fallback truncation"
+      : `last fallback discard: dropped ${info.discardedMessages ?? 0} msg / ${info.discardedTurns ?? 0} turn(s), kept ${info.tailMessages ?? 0} tail msg`
   // Cache line (batch 2026-10-18-context-cache-visibility): the provider reports
   // prompt_cache_hit/miss per response; the core now tallies them so the question
   // "is the prefix cache actually helping?" is answered by a reading, not a guess.
@@ -91,29 +114,32 @@ function statsReport(agent) {
     : `Cache: hit ${cacheHit} · miss ${cacheMiss} tokens (${Math.round((cacheHit / cacheTotal) * 100)}% hit) across ${cacheTurns} response(s)`
   // 第 6 行 = 核读数投影（§6.16.4）：`pct` 与括号内的 `calibratedHistory` 是同一次调用的两个返回值——同屏两值同尺；
   // 标记 `calibrated history estimate` 把它与 `Segments ≈` 行的裸估算 `history`（核 `estimateTokens`，未乘比）分名。
-  const statusReading = historyReading(agent?.history ?? [], agent?.provider, tokenRatioOf(agent))
+  const statusReading = historyReading(agent?.history ?? [], agent?.provider, tokenRatioOf(agent), workMode)
   return [
-    `Context ≈${usage.total} tokens (${pct}% of ${usage.window} window); compaction line ${usage.threshold} (${toGo} to the line)`,
-    // §6.16.4 字面单源（该行为唯一字面，逐字；预算面同源 requestBudget——不自算第二套）:
+    `Context ≈${usage.total} tokens (${pct}% of ${budget.limit} fillable limit; window ${usage.window}, compaction line ${usage.threshold} (${toGo} to the line))`,
+    // §6.16.4 字面单源（该行为唯一字面，逐字；预算面同源 policyBudget——不自算第二套）:
     // window {window} ({modelContext|provider-override|list|spec|default}) · max_tokens {maxTokens|not sent} ({explicit|spec|absent})
     // · prompt {total} · to compaction line {threshold − total} · to window limit {limit − total}
-    // 两距离带符号（负 = 已越）；maxTokens 未发写 not sent、来源写 absent（该档守卫不覆盖——§6.17 射程）。
+    // 两距离带符号（负 = 已越）；maxTokens 未发写 not sent、来源写 absent。
     (() => {
-      const budget = requestBudget(agent?.provider)
       const mt = budget.maxTokens === undefined ? "not sent" : String(budget.maxTokens)
       return `Request budget: window ${budget.window} (${budget.windowSource}) · max_tokens ${mt} (${budget.maxTokensSource})`
+        + ` · input limit ${budget.limit} (window − reserve ${budget.reserve})`
         + ` · prompt ${usage.total} · to compaction line ${usage.threshold - usage.total}`
         + ` · to window limit ${budget.limit - usage.total}`
     })(),
     `Segments ≈: system ${usage.system} · tools ${usage.tools} · history ${usage.history} (basis: ${usage.basis})`,
     `History: tool outputs ${toolOut} tokens in ${toolCount} msgs · prunable stale ${stale.tokens} tokens in ${stale.indexes.length} msgs · protected tail ${stale.tailCount} msgs`,
     cacheLine,
-    `Status line: context ${statusReading.pct}% (${statusReading.tokens} calibrated history estimate / ${statusReading.window} window)`,
-    `Compaction so far: ${compaction} · failures ${agent?._compressFailures ?? 0}/${COMPRESS_FAILURE_LIMIT}`,
+    `Status line: context ${statusReading.pct}% (${statusReading.tokens} calibrated history estimate / ${statusReading.limit} fillable limit, compaction line ${statusReading.threshold})`,
+    `Compaction so far: ${compaction} · failed attempts ${agent?._compressFailures ?? 0}`,
   ].join("\n")
 }
 
-/** prune 回执（§6.16.3：计数 + 扫过候选 / 保护尾内保留 / 门槛下跳过 + 记录面零改）。 */
+/** prune 回执（§6.16.3：计数 + 扫过候选 / 保护尾内保留 / 门槛下跳过 + 记录面零改）。
+ *  可回查面（`CONTEXT-COMPACTION.md` §7.2）：只报释放量与跳过项、请模型需要时重跑工具，**不指向任何回查位置**——
+ *  落盘的只有人读线那一份、且长工具结果只留 slim 后的前段（射程见 `SESSION.md` §5），写「全文仍在盘上」是一句
+ *  兑现不了的话；内存里的全史随进程走，重启之后没有第二条通道。 */
 function pruneReceipt(agent) {
   const r = pruneStaleToolOutputs(agent)
   const scan = `(scanned ${r.candidates} tool result(s): ${r.tailKept} inside the protected tail, ${r.belowMin} below the ${PRUNE_MIN_TOKENS}-token floor)`
@@ -121,7 +147,8 @@ function pruneReceipt(agent) {
     return `Nothing to prune — no stale tool output matched ${scan}. The context and the session record are unchanged.`
   }
   return `Pruned ${r.pruned} stale tool output(s) ≈${r.freed} tokens freed ${scan}. ` +
-    `Tool pairing is intact and the session record is unchanged — the full text is still on disk; re-run a tool if you need its output again.`
+    `Tool pairing is intact and the session record is unchanged. The record keeps only the front segment of a long tool result, ` +
+    `so this text is not retrievable from it — re-run the tool if you need that output again.`
 }
 
 /**

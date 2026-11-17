@@ -12,6 +12,7 @@ import {
   majorityEol,
   FFFD_WARNING,
   LEDGER_PARAM_DESC,
+  PROJECT_PARAM_DESC,
 } from "./shared.mjs";
 import { applyEditBatch } from "./edit-batch.mjs";
 import { runSingleEdit } from "./edit-diff.mjs";
@@ -214,6 +215,8 @@ export const writeTool = {
       path: { type: "string", description: "File path (relative to cwd or absolute)" },
       content: { type: "string", description: "Full content to write" },
       ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      // 工作区根窄口（设计档 §2.3.1）：目标取不到项目根时才被读；目标有根时以路径为准（定位参数优先）。
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["path", "content"],
   },
@@ -230,7 +233,7 @@ export const writeTool = {
     const eol = prev != null ? detectFileEol(prev) : majorityEol(dirname(abs))
     const content = eol === "\r\n" ? normalizeEOL(args.content).replace(/\n/g, "\r\n") : args.content
     // 单一写路径点：默认 = writeFile + 记账；端侧注入 ⇒ 编辑器径（§2.13.5）。
-    await writeThroughPath(abs, content, { op: "write", record: { type: "write", startLine: 1, shift: 0 } }) // 全文重写——全文件受影响
+    await writeThroughPath(abs, content, { op: "write", agent: ctx.agent, record: { type: "write", startLine: 1, shift: 0 } }) // 全文重写——全文件受影响
     const diff = await gitDiffOne(ctx.cwd, abs)
     return `Wrote ${args.content.length} chars to ${args.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
   },
@@ -246,14 +249,14 @@ export const editTool = {
     properties: {
       path: { type: "string", description: "File path — single form: required; with the edits array: optional top-level default for entries without their own path" },
       old_string: { type: "string", description: "Exact text to replace (tolerant matching: exact → whitespace-only variant → fuzzy match at ≥90% line equality after whitespace/indent/quote normalization). Mutually exclusive with line/startLine/endLine" },
-      new_string: { type: "string", description: "Replacement text — content-based edits require it (empty is an explicit error); with line-based targeting (line/startLine/endLine) give it to replace the line/range, or OMIT it to delete (an explicit empty string is an error — omission is the delete signal)" },
-      line: { type: "integer", description: "1-based line number — replace that single line with new_string, or OMIT new_string to DELETE the line; no old_string needed (mutually exclusive with old_string and startLine/endLine)" },
-      startLine: { type: "integer", description: "1-based first line of the range to replace with new_string (inclusive — requires endLine; mutually exclusive with old_string); OMIT new_string to DELETE the range" },
-      endLine: { type: "integer", description: "1-based last line of the range to replace with new_string (inclusive — requires startLine; mutually exclusive with old_string); OMIT new_string to DELETE the range" },
+      new_string: { type: "string", description: "Replacement text — content-based edits require it (an empty string is an explicit error there: with replace_all it would delete every match); with line-based targeting (line/startLine/endLine) give it to replace the line/range, or OMIT it — an empty string is the same delete, not an error" },
+      line: { type: "integer", description: "1-based line number — replace that single line with new_string, or OMIT new_string (an empty string deletes too) to DELETE the line; no old_string needed (mutually exclusive with old_string and startLine/endLine)" },
+      startLine: { type: "integer", description: "1-based first line of the range to replace with new_string (inclusive — requires endLine; mutually exclusive with old_string); OMIT new_string (an empty string deletes too) to DELETE the range" },
+      endLine: { type: "integer", description: "1-based last line of the range to replace with new_string (inclusive — requires startLine; mutually exclusive with old_string); OMIT new_string (an empty string deletes too) to DELETE the range" },
       replace_all: { type: "boolean", description: "Replace all occurrences (default false)" },
       edits: {
         type: "array",
-        description: "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; line-number entries apply first, in descending startLine order, and their ranges must not overlap — overlap refuses the whole batch; content entries then apply in array order). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. A top-level path is allowed — it defaults entries without their own path (entry paths win). Mutually exclusive with top-level old_string/new_string/line/startLine/endLine — provide each change's targeting (old_string, or line / startLine+endLine) inside its edits entry; new_string replaces when given, and line-targeted entries may omit it to DELETE the line/range.",
+        description: "Batch form — multiple edits in ONE call, each entry reported as its own block: an entry that fails is named and the rest still apply (a file whose final content is rejected writes nothing and all its entries fail; a file already written is never rolled back). Line-number entries apply first, in descending startLine order, and their ranges must not overlap — an overlapping pair fails on both sides; content entries then apply in array order. Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. A top-level path is allowed — it defaults entries without their own path (entry paths win). Mutually exclusive with top-level old_string/new_string/line/startLine/endLine — provide each change's targeting (old_string, or line / startLine+endLine) inside its edits entry; new_string replaces when given, and line-targeted entries may omit it (or pass an empty string — same delete) to DELETE the line/range, while content-targeted entries need a non-empty new_string.",
         items: {
           type: "object",
           properties: {
@@ -268,6 +271,7 @@ export const editTool = {
         },
       },
       ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: [],
   },
@@ -291,8 +295,8 @@ export const editTool = {
     // （应用逻辑在 edit-batch.mjs——2026-09-01 拆出，500 行硬限，先例 git-ext.mjs）
     if (args.edits) return applyEditBatch(args, ctx)
 
-    // 单文件（现状路径）——执行体整段迁出至 edit-diff.mjs（EDIT.md §6——
-    // 行级 LCS 判定：零重叠→替换即删 / 一般 diff→LCS / 空 new→显式报错）
+    // 单文件（现状路径）——执行体整段迁出至 edit-diff.mjs（判定序：零重叠→替换即删 /
+    // 一般 diff→行级 LCS / 空 new→显式报错）
     return runSingleEdit(args, ctx)
   },
 }
@@ -310,6 +314,7 @@ export const insertAfterTool = {
       after_regex: { type: "string", description: "JavaScript regex to find the line to insert after (must match exactly one line)" },
       content: { type: "string", description: "Text to insert (with leading newline if you need a blank line)" },
       ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["path", "content"],
   },
@@ -367,6 +372,7 @@ export const insertAfterTool = {
     const updated = joinWithEol(lines, raw)
     await writeThroughPath(abs, updated, {
       op: "write",
+      agent: ctx.agent,
       record: { type: "insert", startLine: targetLine, shift: normalizeEOL(args.content).split("\n").length },
     })
     const diff = await gitDiffOne(ctx.cwd, abs)
@@ -395,6 +401,7 @@ export const hashlineEditTool = {
       old_hashes: { type: "array", items: { type: "string" }, description: "SHA256 hashes (12 chars) of the lines to replace. Read the file with hashes=true first to obtain these hashes. Single line: pass 1 hash; multiple lines: pass the exact sequence of hashes." },
       new_content: { type: "string", description: "Replacement text (can span multiple lines)" },
       ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["path", "old_hashes", "new_content"],
   },
@@ -463,6 +470,7 @@ export const hashlineEditTool = {
     const updated = joinWithEol(lines, raw)
     await writeThroughPath(abs, updated, {
       op: "write",
+      agent: ctx.agent,
       record: { type: "edit", startLine: pos + 1, shift: newLines.length - target.length },
     })
     const diff = await gitDiffOne(ctx.cwd, abs)

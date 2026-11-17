@@ -112,6 +112,9 @@ export function inflightDesignReviewConflict(agent, absPaths) {
  *     mirror retired per DESIGN-TOKEN-SETTLEMENT D3) + D1 settle-time slot persist
  *     (persistEngTokens — write failure = settle failure: no registration, no
  *     Approved echo, re-review — 评审 #1);
+ *     **轮次块与状态行同成一笔，再与落盘同成败**（先写块、后落盘；落盘失败 ⇒ 档字节回写写前原文
+ *     ⇒ 块与状态行一并撤销 + 槽 Map 回 `preMap`）
+ *     —— 一笔的范围、顺序与回退 = `docs/core/design/BATCH-RECORD.md` §4.23。
  *  4. fix B — branch-shaped report output (the caller writes it back to
  *     entry.report; digest injects the CLEANED form): pass → stripped +
  *     Approved/designId suffix (sync 参照形态); persist-failed → stripped +
@@ -147,6 +150,10 @@ export function settleAdvisorRun(agent, entry) {
   const launchRefused = result != null && String(result).startsWith(ADVISOR_LAUNCH_REFUSAL_PREFIX)
   if (!stale) {
     if (run.reviewType === "design" && entry.designToken && result) {
+      // 结算面只认本笔快照（判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）：`run` 是
+      // 实例级对象，排队窗口里 `batchDoc` 被同一实例的后一笔发起覆盖过 ⇒ 不写回的话，本轮块会落进别人的档、
+      // token 归属也落到别人的档。
+      run.batchDoc = entry.batchDoc
       // settle 前 Map 快照——落盘失败时回滚用（settle 失败 = 结算未发生，不留半结算态：
       // 重评覆盖旧槽的边角（F2h 复用 designId）也原样恢复旧 token——内存与盘一致）。
       const preMap = agent._engDesignTokens instanceof Map
@@ -175,9 +182,25 @@ export function settleAdvisorRun(agent, entry) {
           else delete agent._engDesignTokens
           run.approvedSuffix = null
           persistFailed = true
+          // §4.23 ③（回退两处）：档字节写回**写前原文**——只回退 Map 会在档上留一块没有 token 的轮次块，
+          // 下一轮读 §3 以为本轮已评过（轮次计数也虚增一块）。回退写也失败 ⇒ 两处并报、不静默
+          // （token 才是 spawn 的凭据，残留的块不授予假授权）。
+          // 范围如实 = **两处**（档字节 ∥ 槽 Map）：`settleDesignReview` 同拍翻的实例态（`run.open` ∥
+          // `priorOutput`）不回退 ⇒ 失败后重跑是全新一轮评审，不是同一实例重评（同档 §4.23 ③ 的两处口径）。
+          let rollbackErr = null
+          if (settled.sign) {
+            try {
+              settled.sign.rollback()
+            } catch (e) {
+              rollbackErr = e?.message ?? String(e)
+            }
+          }
           logEvent("advisor:error", { id: `advisor#${entry.id}`, err: "engDesignTokens slot persist failed — settle failed (re-review)" })
           const stripped = stripDesignTokenEcho(String(result), entry.designToken).trim()
-          report = `${stripped}\n\nD1: the design review passed but the token could NOT be durably written to the session ledger (slot persist failed) — re-run advisor(type='design') to re-issue; no eng-coder spawn is authorized for this review (评审通过但 token 未能持久化——需重评).`.trim()
+          const rollbackNote = rollbackErr
+            ? `\n\n并报：块回写也失败了——批档 §3 上留着一条没有 token 的评审记录 (the block rollback failed too; the record keeps a round block that grants no authorization; reason: ${rollbackErr})。直接重跑评审即可。`
+            : ""
+          report = `${stripped}\n\nD1: the design review passed but the token could NOT be durably written to the session ledger (slot persist failed) — re-run advisor(type='design') to re-issue; no eng-coder spawn is authorized for this review (评审通过但 token 未能持久化——需重评；整笔未签发)。${rollbackNote}`.trim()
         }
       } else {
         report = settled.output

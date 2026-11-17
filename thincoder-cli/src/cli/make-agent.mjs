@@ -11,6 +11,7 @@ import { join } from "node:path"
 // 装配序核单源（B5 装配序上提批）：本档 = 核调用 + MCP 缝 + 后处理。
 import { assembleAgent as coreAssemble, DEFAULT_DEPS, gitAuthor, teamConfig, validateProvider } from "@thincoder/core/agent/assemble.mjs"
 import { resolveEngineeringManifest, projectView } from "@thincoder/core/manifest.mjs"
+import { resolveSessionWorkMode } from "@thincoder/core/config.mjs"
 
 // 四名转口（核单源**恒等绑定**；调用面零改 —— 枚举见档头）。
 export { DEFAULT_DEPS, gitAuthor, teamConfig, validateProvider }
@@ -125,8 +126,7 @@ async function finalizeTools(baseTools, { cwd, config, excludeTools, warnings })
  * @returns {object|null} 附着后的 manifest / 非 ok 态与普通会话 null
  */
 export function attachManifest(agent, { cwd = agent.cwd, slotData } = {}) {
-  const slotEng = slotData?.engineering
-  const engineering = slotEng !== undefined ? slotEng === true : agent.config?.agent?.engineering === true
+  const engineering = resolveSessionWorkMode(slotData, agent.config?.agent) === "engineering"
   if (!engineering) {
     agent.manifest = null // 清残留附着（KD-M1-12）——普通会话不读 / 不拒 / 不建档
     return null

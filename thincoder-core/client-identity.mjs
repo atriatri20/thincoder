@@ -52,7 +52,7 @@ export function userAgent() {
 
 /** 值位模板解析（单串精确替换）：整值与内嵌同解、可多处。"${sessionId}" 之外的 `${…}` 按构造原样
  *  出站——不做变量识别，故没有「识别失败」这一支、也没有兜底路径（写法笔误出站就是该字面）。
- *  非字符串值原样通过（同 `env-ref.mjs:29` 的类型门；配置链路经装载面净化只到字符串值，该门只兜
+ *  非字符串值原样通过（同 `env-ref.mjs` 的 `resolveEnvRefs` 类型门；配置链路经装载面净化只到字符串值，该门只兜
  *  直接调本函数的面：单测 ∥ 编程调用）。 */
 function resolveSessionRefs(value) {
   return typeof value === "string" ? value.replaceAll(SESSION_REF, getSessionId()) : value

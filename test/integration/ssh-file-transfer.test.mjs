@@ -22,10 +22,12 @@
 import { after, before, test } from "node:test"
 import assert from "node:assert/strict"
 import { createHash } from "node:crypto"
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { createAgent } from "../../thincoder-core/agent.mjs"
 import { executeToolCalls } from "../../thincoder-core/agent/dispatch.mjs"
@@ -41,6 +43,7 @@ const SCP_FIXTURE = join(HERE, "fixtures", "fake-scp.mjs")
 let project = ""     // 工程模式会话的项目根（22-5 的落点在里面）
 let cfgDir = ""      // sshConfigDir 测试缝
 let remoteRoot = ""  // 假设备的 flash 树
+let scratch = ""     // 本档自建的临时根（收尾点名它；不经 `..` 推导）
 let agent = null
 let sessionId = ""
 
@@ -50,7 +53,7 @@ const receipt = (text) => String(text ?? "")
 const engAgent = () => agent
 
 before(async () => {
-  const scratch = mkdtempSync(join(tmpdir(), "ssh-xfer-int-"))
+  scratch = mkdtempSync(join(tmpdir(), "ssh-xfer-int-"))
   project = join(scratch, "project")
   cfgDir = join(scratch, "cfg")
   remoteRoot = join(scratch, "remote")
@@ -82,7 +85,7 @@ after(async () => {
   _resetLedgerDirForTest()
   delete process.env.FAKE_SCP_MODE
   delete process.env.FAKE_SCP_REMOTE
-  try { rmSync(join(project, ".."), { recursive: true, force: true, maxRetries: 3, retryDelay: 50 }) } catch { /* 尽力面 */ }
+  if (scratch) removeTempDirBestEffort(scratch)
 })
 
 /** 挂一条在途台账行（写门拒文点名的两步路线：先挂行、再在行上开批档 = 已由夹具备好指针档）。 */
@@ -99,7 +102,7 @@ function inFlightRow() {
 
 // ---------- 行 22-4 ----------
 
-test("22-4 正常：经典 SCP 替身上 `put` 1 MiB 二进制 ⇒ 远端 sha256 相等、回执 = 冠行 + 一行状态句、对话零文件内容", { timeout: 180_000 }, async () => {
+test("CLI 22-4 正常：经典 SCP 替身上 `put` 1 MiB 二进制 ⇒ 远端 sha256 相等、回执 = 冠行 + 一行状态句、对话零文件内容", { timeout: 180_000 }, async () => {
   const local = join(project, "firmware.img")
   const bytes = Buffer.alloc(1024 * 1024)
   for (let i = 0; i < bytes.length; i++) bytes[i] = (i * 31 + 7) % 256
@@ -118,7 +121,7 @@ test("22-4 正常：经典 SCP 替身上 `put` 1 MiB 二进制 ⇒ 远端 sha256
 
 // ---------- 行 22-5 ----------
 
-test("22-5 边界：`get` 回仓 —— 无在途号 ⇒ 写门拒且本地档不存在；带号落盘；目标已存在 ⇒ 拒、原档零改", { timeout: 180_000 }, async () => {
+test("CLI 22-5 边界：`get` 回仓 —— 无在途号 ⇒ 写门拒且本地档不存在；带号落盘；目标已存在 ⇒ 拒、原档零改", { timeout: 180_000 }, async () => {
   const config = Buffer.from("hostname sw-core-1\ninterface Gi0/1\n ip address 10.0.0.1 255.255.255.0\n")
   writeFileSync(join(remoteRoot, "flash/running-config.txt"), config)
   const target = join(project, "backup/running-config.txt")

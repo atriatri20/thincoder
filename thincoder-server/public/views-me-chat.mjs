@@ -1,11 +1,11 @@
 /**
  * views-me-chat.mjs — 我的·对话（`webui/CHAT.md` §2.2——`#/me/chat`；机制全文 = `agent/MEMBER-AGENT.md`；member-face-parity 批——台账 #1215）——**页四段** = 会话条 sticky 顶 ∥ 消息流文档流 ∥ 状态行 + 输入区 sticky 底（四轴沿 §2.1；零 `.card` 面）。
  * **成员差异六条**：① 取数面 = `/api/me/chat/*` + `/api/me/sandbox/*`；② 工作区维度（会话条示工作区名 + 盒态 + `agentOnline`；新会话选工作区——一枚 ⇒ 零选择）；③ 盒态动作（就地启动 ∥ 拉仓四态人话）；④ 无源钮收窄（五枚 CSS + 主机凭据钮不设；
- * 本批四模式钮经适配层开关解隐藏——`data-flags="live"`，§2.2 差异④）；⑤ notice 六值；⑥ 档位面（核菜单 ⇒ `PATCH …/:id { reasoning }`）。会话源 = 盒内（KD-SV-152）——盒离线 ⇒ 409（就启动引导，非静默）。
+ * 会话控件经适配层开关解隐藏——`data-flags="live"`，§2.2 差异④）；⑤ notice 六值；⑥ 档位面（核菜单 ⇒ `PATCH …/:id { reasoning }`）。会话源 = 盒内（KD-SV-152）——盒离线 ⇒ 409（就启动引导，非静默）。
  * 取数：列表/详情 = `GET …/sessions[/:id]`（读时读）∥ 发送 = `POST …/:id/messages`（体 = `{ content, images? }`——图列 dataURL 直通，服务端视觉门拒 ⇒ 400 人话 + 草稿保留）∥ 中止 = `POST …/abort`（携 `{ key? }`——停单件）。
- * 换模型/设档/四旗/标题 = `PATCH …/:id`（一次一件）∥ 删除 = `POST …/:id/delete { confirm: true }` ∥ ask 应答 = `POST …/asks/:promptId`；模型候选 = `GET …/models`；`@` 候选 = `GET …/chat/files`；工作区 = `GET …/sandbox/workspaces` + 建/启/拉。
+ * 换模型/设档/布尔开关/mode/标题 = `PATCH …/:id`（一次一件）∥ 删除 = `POST …/:id/delete { confirm: true }` ∥ ask 应答 = `POST …/asks/:promptId`；模型候选 = `GET …/models`；`@` 候选 = `GET …/chat/files`；工作区 = `GET …/sandbox/workspaces` + 建/启/拉。
  * 断连/离页 = 读流中止（回合仍在盒内执行）。直测面 = `renderMeChat`。
- * 外拆（member-pull-inline-cred 批 ∥ member-face-parity 批 KD-SV-221——本件外拆至 500 软线内）：拉取弹窗与凭据就地绑 = `views-me-chat-pull.mjs`（KD-SV-215）∥ 会话条与会话起点弹窗 = `views-me-chat-sessions.mjs` ∥ ask 卡族四件 = `views-me-chat-cards.mjs` ∥ 子代理面 = `views-me-chat-subs.mjs`——本档 `export … from` 兼容重导出拉取两纯件（旧测试面零改）。
+ * 外拆（member-pull-inline-cred 批 ∥ member-face-parity 批 KD-SV-221——本件外拆至 500 行内）：拉取弹窗与凭据就地绑 = `views-me-chat-pull.mjs`（KD-SV-215）∥ 会话条与会话起点弹窗 = `views-me-chat-sessions.mjs` ∥ ask 卡族四件 = `views-me-chat-cards.mjs` ∥ 子代理面 = `views-me-chat-subs.mjs`——本档 `export … from` 兼容重导出拉取两纯件（旧测试面零改）。
  */
 import { t, langTag } from "./i18n.mjs"
 import { buildUserMessage, renderBlock } from "/rc/flow/block.mjs"
@@ -16,7 +16,7 @@ import { createSearch } from "/rc/search.mjs"
 import { applyPin, createPinWatch, nearBottom } from "/rc/scroll.mjs"
 import { setStrings } from "/rc/i18n.mjs"
 import { showToast } from "/rc/toast.mjs"
-import { createMeChatComposer, FLAG_KEYS, SEARCH_CSS, injectStylesheet } from "./views-me-chat-composer.mjs"
+import { CONTROL_KEYS, createMeChatComposer, SEARCH_CSS, injectStylesheet, workModeOf } from "./views-me-chat-composer.mjs"
 import { createAskCards } from "./views-me-chat-cards.mjs"
 import { createSessionBar, createSessionDialogs } from "./views-me-chat-sessions.mjs"
 import { createSubAgentFace } from "./views-me-chat-subs.mjs"
@@ -63,6 +63,7 @@ export async function renderMeChat(ctx, mount) {
   let liveTools = new Map()
   let turnLabeled = false // 一回合一个助手标签（本回合已画 ⇒ 真）
   let reasoningWrite = null // 在飞档位写（单变量串行——发送前 await；选中即改 ⇒ 下回合生效——KD-SV-111 同口径）
+  const flagWrites = new Map() // 在飞旗标写（按会话串行——连续写按调用顺序生效，旧回执不得后至覆盖新值）
 
   mount.append(h("h2", { text: t("me.chat.title") }))
   // ① 会话条（sticky 顶：工作区读数 + 自绘会话下拉 + 新会话/启动/拉取/重读/📁——外拆件 `sessions.mjs`）
@@ -160,13 +161,16 @@ export async function renderMeChat(ctx, mount) {
   function pageReadings() {
     const pool = subs.pool(); const row = activeRow()
     const title = row === null ? "" : (String(row.title ?? "").trim() !== "" ? String(row.title).trim() : String(row.excerpt ?? "").trim())
-    return { planMode: row?.flags?.planMode === true, approvalCount: cards.pendingCount(), suspRunning: pool.running, suspSettled: pool.settled, title }
+    const planMode = workModeOf(row?.flags) !== "engineering" && row?.flags?.planMode === true
+    return { planMode, approvalCount: cards.pendingCount(), suspRunning: pool.running, suspSettled: pool.settled, title }
   }
 
-  /** 会话条重渲（读数 ∥ 下拉行集 ∥ 钮显隐与门）⇒ 输入区钮面随正（模型字 ∥ 四旗镜像 ∥ 状态行）。 */
+  /** 会话条重渲 ⇒ 输入区随正（模型字 ∥ 会话控件镜像 ∥ 状态行）。 */
   function renderBar() {
     bar.render({ workspaces, sessions: scopedSessions(), activeId, startingId, ws: shownWorkspace(), row: activeRow(), needStart: needStart() })
-    composer.syncModel() // 当刻会话模型 ⇒ 核模型钮面字； composer.syncFlags() // 四旗镜像重派生（行 `flags` 真源）； composer.refreshStatus()
+    composer.syncModel() // 当刻会话模型 ⇒ 核模型钮面字
+    composer.syncFlags() // 控件镜像重派生（行 `flags` 真源）
+    composer.refreshStatus()
   }
   /** 选中会话（选择器随正 + 取详情——读时读；盒离线 ⇒ 就地人话，非静默）∥ 子代理面随会话复位（跨会话零残留）。 */
   function selectChat(sessionId) {
@@ -390,14 +394,18 @@ export async function renderMeChat(ctx, mount) {
     reasoningWrite = write.then(() => {}, () => {}) // 尾链吞错（不阻断后续 ∥ 发送前 await 不炸）
     return write.then((data) => { applyReceipt(data?.session); return true }, (error) => { ctx.fail(error); return false }) // 回执无条件并入列表行（按 id 自筛）——切走后回切亦不示旧值；详情写自带 id 卫
   }
-  /** 四旗写（§3.11(3)）：`PATCH …/:id { <旗> }` **一次一件**（核槽写面四件在盒内）；回执并入行 ⇒ 显示面重派生（失败 ⇒ 旧值回弹——`composer.syncFlags()` 回读行值）。 */
-  async function onSelectFlag(name, value) {
-    if (activeId === null || FLAG_KEYS.includes(name) === false) return false
-    try {
-      const data = await ctx.api(`/api/me/chat/sessions/${activeId}`, { method: "PATCH", body: { [name]: value === true } })
-      applyReceipt(data?.session)
-      return true
-    } catch (error) { ctx.fail(error); return false }
+  /** 会话控件写（布尔开关或三档 mode）：`PATCH …/:id` 一次一件；回执并入行，失败回读旧值。
+   *  按会话串行（`flagWrites` 单变量链——连续写按调用顺序生效；旧回执不得后至覆盖新值）。 */
+  function onSelectFlag(name, value, sessionId = activeId) {
+    if (sessionId === null || CONTROL_KEYS.includes(name) === false) return false
+    const body = name === "mode" ? { mode: value } : { [name]: value === true }
+    const key = String(sessionId)
+    const write = (flagWrites.get(key) ?? Promise.resolve()).then(() => ctx.api(`/api/me/chat/sessions/${sessionId}`, { method: "PATCH", body }))
+    flagWrites.set(key, write.then(() => {}, () => {})) // 尾链吞错（不阻断后续连写）
+    return write.then(
+      (data) => { applyReceipt(data?.session); return true },
+      (error) => { ctx.fail(error); return false },
+    ) // 回执无条件并入列表行（按 id 自筛）——切走后回切亦不示旧值
   }
   /** `@` 文件引用桥（§3.11(6)）：取候选（`GET …/chat/files`——盒 `cmd files.list`）⇒ `atResults` 回推核件面板（两列）。 */
   async function onAtComplete(payload) {

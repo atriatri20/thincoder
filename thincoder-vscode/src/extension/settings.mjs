@@ -19,6 +19,7 @@ import { probeProviderAdmission } from "./provider-flows.mjs"
 import { listModels, admissionOf } from "@thincoder/core/provider/list-models.mjs"
 import { MASKED } from "@thincoder/core/agent-tools/settings.mjs"
 import { effortEnumForModel } from "../specs.mjs"
+import { resolveSessionWorkMode, resolveWorkMode } from "@thincoder/core/config-migrate.mjs"
 import { loadModelPrefs, loadSlot } from "./session-io.mjs"
 import { _probeWindow, _probeBatch, _retryFailed } from "./provider-probe-window.mjs"
 import { teamStatus } from "./team.mjs"
@@ -46,7 +47,7 @@ export function loadAgentSettings() {
     injectProjectRules: a?.injectProjectRules ?? d.injectProjectRules, // #1465（§6.27）：① 项目指令注入独立键
     injectDocs: a?.injectDocs ?? d.injectDocs, // #1420：注入开关（默认 true——判据 `!== false`）
     injectMemories: a?.injectMemories ?? d.injectMemories,
-    engineering: a?.engineering ?? d.engineering,
+    mode: resolveWorkMode(a),
     consultTurns: a?.consultTurns ?? d.consultTurns,
     consultTimeoutMs: a?.consultTimeoutMs ?? d.consultTimeoutMs,
     advisor: a?.advisor ?? d.advisor,
@@ -156,10 +157,9 @@ export function handleSetProviderProxy(name, proxy) {
 }
 
 /** Agent/Advisor settings snapshot for the panel (from shared config.json).
- *  `session` ({ cwd, slot }, optional): engineering + advisor.guard are SESSION-level
- *  (2026-08-29 refactor — slot authority; end-side config.json mirror write retired). When given, the
- *  session slot's values override the config snapshot so the ENG/GUARD buttons show the
- *  live session state, not the global one; without it (no panel bound yet) config is shown. */
+ *  `session` ({ cwd, slot }, optional): mode + advisor.guard are session-level.
+ *  `mode` reflects the slot; `defaultMode` is the config default for new sessions.
+ *  The old engineering boolean is only a read-time migration source. */
 export function agentSettings(session) {
   const s = loadAgentSettings()
   // Slot read failure must not break the settings push — fall back to config.
@@ -176,7 +176,8 @@ export function agentSettings(session) {
     injectProjectRules: s.injectProjectRules, // #1465：读链补环（loadAgentSettings 已载）
     injectDocs: s.injectDocs, // #1420：读链补环（loadAgentSettings 已载）
     injectMemories: s.injectMemories,
-    engineering: slotData?.engineering ?? s.engineering,
+    defaultMode: s.mode,
+    mode: resolveSessionWorkMode(slotData, { mode: s.mode }),
     consultTurns: s.consultTurns,
     consultTimeoutMs: s.consultTimeoutMs,
     // Guard chain: slot value when the session ever set it (explicit false ≠ unset — an

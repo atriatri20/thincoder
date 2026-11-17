@@ -1,6 +1,6 @@
 /**
  * terminal-vt.mjs — VT 解析器·纯件（`webui/TERMINAL.md` §2.1/§2.2；终端核的**解析面**）：
- * **实施实读越 500 软线后按职责界线拆出**（拆案触发点在册——`webui/TERMINAL.md` §3「实施实读 >500 ⇒ 按职责界线拆
+ * **实施实读越 500 行后按职责界线拆出**（拆案触发点在册——`webui/TERMINAL.md` §3「实施实读 >500 ⇒ 按职责界线拆
  * （候选 = VT 解析 ∥ 网格模型两档）」；本档 = 候选①，网格/语义 = `terminal-core.mjs`）。
  * 面 = **字符级状态机**（ground ∥ ESC ∥ CSI ∥ OSC ∥ 字符集设计）逐码点进食 ⇒ 事件回调
  * （`print`/`control`/`escape`/`csi`）——语义（网格/光标/SGR/模式位）归 `terminal-core.mjs`，本档零网格知识。

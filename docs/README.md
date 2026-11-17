@@ -1,105 +1,231 @@
-# 项目文档（Project docs — thincoder 合并仓）
+# ThinCoder 项目文档地图
 
-> 本目录 = **基准层**（项目级唯一权威层——跨两产品的文档：台账 · 板块档 · 批次档；**提示词 = `thincoder-core/prompts/`**（产品代码面 · 唯一副本；本目录下无提示词档））。
-> 产品 `docs/**` = **v1 参照历史**（**保留 ≠ 维护**——不参与内容同步；其中属项目级的旧档按 §2 政策**被触碰时随批迁**——D-C14）——
-> **VSC 树**（`thincoder-vscode/docs/**`）**已归档**（`_archive/`——2026-09-18 **轮 A** 已落）；**CLI 树**（`thincoder-cli/docs/**`）**已归档**（`_archive/`——同批**轮 B** 已落；**phase-1 三档按父侧裁定暂留原地**——§3）——**两树退役至此闭合**（状态见 §2）。
-> 建档：2026-09-13（用户裁定：「逐步在根仓建立起全套的文档体系，项目目录里的先保留做参照，不要一下子全改掉，免得没法回顾」）。
+本目录是项目级文档层。本图只登记当前文档的归属和入口；执行过程由 `batches/` 承载，历史版本由 git 承载。
 
-## 1. 本层内容
+下表中的路径均相对本目录。检索与检查范围以 `PROJECT-MANIFEST.json` 的 `docRoot` 声明为准。
 
-| 类 | 位置 | 形态 |
+## 1. 查找顺序
+
+1. 先按板块定位需求文档，确认目标、边界和验收条件。
+2. 再读同主题设计文档，确认机制、接口和实现归属。
+3. 需要核对验收资产时，进入 `test/RTM.md` 及其分册。
+4. 需要了解某次修改过程时，再读 `batches/` 中的过程记录；过程记录不作为当前规则的权威来源。
+
+## 2. 文档层
+
+| 层 | 位置 | 回答的问题 |
 |---|---|---|
-| 发布流程 · 需求（统一面） | `docs/RELEASE.md` | 2026-09-20 用户裁定迁根（原 `core/requirements/`）+ **三端合一**（23:23「把各端的 release.md 整合成一个」⇒ CLI 链设计档并回 ✗ 单档承载）——**总发布计划**（**四发布单元**：核 / CLI / VSC / 桌面〔阶段一：Windows 安装包 ∥ 官网托管——2026-10-01 入主线；**阶段二：自动更新 feed ∥ 官网桌面面——2026-10-02**〕· 顺序 = 核 → CLI → VSC → 桌面〔桌面按需〕） |
-| 测试环境运维（内部机器） | `TEST-ENV-ECS.md` | 2026-10-10 建（用户令「每次这么盲人摸象摸一遍不是个办法」）——ECS 测试箱（ha-proxy · `10.0.0.5`）的访问 ∥ 布局 ∥ 更新部署 ∥ 自检探针 ∥ 回滚 ∥ 坑；与产品侧部署档的分工见该档头 |
-| 台账（项目级唯一真相） | SQLite——用户数据目录键控库 `~/.thincoder/ledger/<sha1(项目根)>.db`（2026-09-17 落点裁定：不在项目目录） | ✅ 唯一台账面 = SQLite（`/ledger` 查询）；`TODO.md` · `TODO-archive.md` = 退役历史（md 形态；**已排除在锚检查之外**——`PROJECT-MANIFEST.json` 的 `checkConfig.anchors.exclude`） |
-| 板块档（需求 / 设计） | `core/requirements/` · `core/design/` | ✅ 核心统一已迁入（2026-09-13）；后续新板块档直接落此。**子系统档（设计 / 需求各 15 档）见 §4** |
-| 批次档 | `batches/` | ✅ 核心统一已迁入（2026-09-13） |
-| 部分档（各端面） | `cli/requirements/` · `cli/design/` · `vsc/requirements/` · `vsc/design/` · `desktop/requirements/` · `desktop/design/` · `render-core/design/` · `server/requirements/` · `server/design/` | ✅ **六部分**落点齐（`core/` · `cli/` · `vsc/` · `desktop/` · `render-core/` · `server/`）——**部分档 194**（`core/` 110 = 设计 61 + 需求 49 · `cli/` 17 = 设计 11 + 需求 6 · `vsc/` 10 = 设计 7 + 需求 3 · `desktop/` 25 = 设计 15 + 需求 10 · `render-core/` 1 = 设计 1 · `server/` 31 = 设计 30 + 需求 1）；desktop 设计**十五档**住 `desktop/design/`（档名见目录列举）；desktop 需求**十档**住 `desktop/requirements/`（一档顶层 + 九域卷）；render-core 设计**一档**住 `render-core/design/`；server 设计**三十档**住 `server/design/`（顶层 2 + 十二域，域内含子档）。**逐名清单 = 各目录文件列举**——地图只登记落点与计数，不复制目录内容。 |
+| 需求 | `<板块>/requirements/` | 产品或机制现在必须做到什么 |
+| 设计 | `<板块>/design/` | 当前机制如何实现，边界和理由是什么 |
+| 标准 | `core/standards/` | 跨主题共用的工程与方法标准 |
+| 发布 | `RELEASE.md` | 各发布单元如何验证和发布 |
+| 测试环境 | `TEST-ENV-ECS.md` | 内部测试机器如何访问、部署和自检 |
+| 批次 | `batches/` | 一轮工作如何设计、实施、评审和收口 |
+| 集成追溯 | `../test/RTM.md` · `../test/rtm/` | 业务故事由哪些集成用例覆盖 |
 
-## 2. 迁移政策（2026-09-13 用户裁定——「逐步建立 · 旧档留参照 · 不一刀切」；2026-09-14 层级裁定——根仓 `docs/` = 基准层，产品 `docs/**` = 迁移期保留的参照历史）
+项目台账不在工作树内，通过 `ledger` 工具查询。提示词的唯一副本在 `thincoder-core/prompts/`，不是本目录的文档层。
 
-1. **新项目级档一律落本层**——此后新板块的需求 / 设计 / 批次档直接建在 `docs/` 下，不再落产品树。
-2. **旧档不批量搬**——保留原地作**参照**；**被触碰时随批迁**（一次一档或一批）；迁移 = `git mv` + 改引用 + 机检 + 与触发批同提交。
-3. **不复制**——同一档同一时间只有一份实体（迁移是**移动**不是拷贝），避免双权威源。
-4. **产品级档留各产品树**；**哪些旧档属项目级随触碰逐个判定**（判定依据：是否跨两产品被引用）。
-5. 迁移动作的验收 = **源面核**（逐处：引用可解析——目标档 + 节在盘；行宽无 >300 字符单行；受影响档清单逐档比对）——**读数器禁调**（用户 2026-10-15 12:10 令「不再跑、不再引其读数、不再以其红 / 绿作任何判据」），机检读数不作判据。
-6. **五部分落点规划**（core / CLI / VSC / desktop / render-core）——目标结构 / 命名规则 / 归属判据 / 交叉引用形态 = `core/design/DOC-SYSTEM.md`（2026-09-14 建档；2026-09-25 桌面端设计轮收正为四部分；2026-09-27 布局收正轮收正为五部分——模块镜像裁定）；
-   本节政策（逐档随批迁 / 不复制 / 旧档留参照）不变，迁入时的**落点与档名**按该档 §4–§6 判定。
+## 3. 总体与治理入口
 
-> **退役状态（2026-09-18 · v1 文档退役（台账 #22）· 轮 A 已落）**：`thincoder-vscode/docs/**` 136 活档已 `git mv` 入 `thincoder-vscode/docs/_archive/<原相对路径>`（恒等映射 · 正文一字未改）——VSC 树自本政策第 4 / 5 条的「随批迁」路径转为**归档形退役**（保留语义不变；执行记录 = 该批记录）；
-> `thincoder-cli/docs/**`（**轮 B · 已落 2026-09-18**）——**139 活档**同法 `git mv` 入 `thincoder-cli/docs/_archive/<原相对路径>`（恒等映射 · 正文一字未改 · `R` 对 139 / 错配 0）；
-> **三档暂留原地**（`batches/` · `design/` · `requirements/` 各 1 档——父侧裁定，见 §3；迁移期该块已结清、台账退役）；执行记录 = 该批记录。**两树退役闭合**（VSC 轮 A 136 + CLI 轮 B 139）。
+| 主题 | 权威文档 |
+|---|---|
+| 项目目标与范围 | `core/requirements/PROJECT.md` |
+| 产品与工程原则 | `core/requirements/PHILOSOPHY.md` |
+| 总体架构 | `core/design/ARCHITECTURE.md` |
+| 核心统一与模块关系 | `core/requirements/CORE-UNIFICATION.md` · `core/design/CORE-UNIFICATION.md` |
+| 文档体系需求与落点 | `core/requirements/DOC-SYSTEM.md` · `core/design/DOC-SYSTEM.md` |
+| 文档体系诊断 | `DOC-SYSTEM-ASSESSMENT.md`（带日期的诊断报告，不作当前规范） |
+| 文档写作与失效处置 | `core/design/DOC-DISCIPLINE.md` |
+| 文档机械检查 | `core/requirements/DOC-CHECK.md` · `core/design/DOC-CHECK.md` |
+| 文档引用图 | `core/requirements/DOC-GRAPH.md` · `core/design/DOC-GRAPH.md` |
+| 文档与代码 reconciliation | `core/design/DOC-CODE-RECONCILE.md` |
+| 方法与协作标准 | `core/standards/METHODOLOGY.md` |
+| 代码结构分档标准 | `core/standards/CODE-TIER.md` |
 
-## 3. 待迁清单（现状）
+## 4. core 文档索引
 
-| 档 | 现址 | 状态 |
+### 4.1 总体、工作区与可移植性
+
+| 主题 | 需求 | 设计 |
 |---|---|---|
-| 核心统一（phase 2）· 需求 / 设计 / 批次 | 原 `thincoder-cli/docs/{requirements,design,batches}/` → 现 **`docs/core/{requirements,design}/` · `docs/batches/`** | ✅ **已迁入**（2026-09-13——`git mv` 三档 + 17 处引用改写；源面核过；2026-09-14 板块档再迁入 `docs/core/`） |
-| 两仓合并（phase 1）· 需求 / 设计 / 批次 | `thincoder-cli/docs/{requirements,design,batches}/TWO-REPO-MERGE*` | **参照**——已闭环；引用面大（约 40 处，含两产品文档树与脚本头注），**暂留原地**，被触碰时再议 |
+| 核心统一 | `core/requirements/CORE-UNIFICATION.md` | `core/design/CORE-UNIFICATION.md` |
+| 普通模式 | `core/requirements/NORMAL-MODE.md` | — |
+| 可移植性 | `core/requirements/PORTABILITY.md` | `core/design/PORTABILITY.md` |
+| 结构债务 | `core/requirements/STRUCTURE-DEBT.md` | `core/design/STRUCTURE-DEBT.md` |
+| 仓库合并 | `core/requirements/TWO-REPO-MERGE.md` | `core/design/TWO-REPO-MERGE.md` |
+| 工作区约定 | `core/requirements/WORKSPACE.md` | `core/design/WORKSPACE.md` |
+| 文案与本地化 | `core/requirements/I18N.md` | `core/design/I18N.md` |
+| 日志 | `core/requirements/LOGGING.md` | `core/design/LOGGING.md` |
+| 轨迹 | `core/requirements/TRACES.md` | `core/design/TRACES.md` |
+| 会话可观测性 | — | `core/design/SESSION-OBSERVABILITY.md` |
 
-## 4. 子系统设计档（核心统一拆分——2026-09-13）
+### 4.2 文档、测试与工程流程
 
-**依据** = 用户 2026-09-13 裁定（「不是，我们不是让它拆开的吗？！怎么还是写在一个文件里？！」「以后维护怎么办？」）。
-**命名与落点** = 板块镜像形态（`core/requirements/<板块>.md` ↔ `core/design/<板块>.md`，**同板块名**）：本节各档 = `core/design/` 侧；`core/requirements/` 侧（同名）**已建齐**（15 档——2026-09-13 需求侧拆分轮，与本节各档**逐一同名成对**；登记表见 `core/requirements/CORE-UNIFICATION.md` §5）。
+| 主题 | 需求 | 设计 |
+|---|---|---|
+| 文档体系 | `core/requirements/DOC-SYSTEM.md` | `core/design/DOC-SYSTEM.md` |
+| 文档检查 | `core/requirements/DOC-CHECK.md` | `core/design/DOC-CHECK.md` |
+| 文档图 | `core/requirements/DOC-GRAPH.md` | `core/design/DOC-GRAPH.md` |
+| 文档纪律 | — | `core/design/DOC-DISCIPLINE.md` |
+| 文档与代码对账 | — | `core/design/DOC-CODE-RECONCILE.md` |
+| 锚点债务修复 | — | `core/design/ANCHOR-DEBT-REPAIR.md` |
+| 测试体系 | `core/requirements/TESTING.md` | `core/design/TESTING.md` |
+| 工程模式 | `core/requirements/ENGINEERING-MODE-V2.md` | `core/design/ENGINEERING-MODE-V2.md` |
+| 工程系统优化 | `core/requirements/ENGINEERING-SYSTEM-OPTIMIZATION.md` | — |
+| 批档结构 | `core/requirements/ENGINEERING-MODE-V2-SPEC-BATCH-SEGMENT.md` | `core/design/BATCH-RECORD.md` |
+| 批档、台账与评审统一 | — | `core/design/BATCH-LEDGER-REVIEW-UNIFY.md` |
+| 检查单移除 | `core/requirements/ENGINEERING-MODE-V2-SPEC-CHECKLIST-REMOVAL.md` | — |
+| 跨仓写 | `core/requirements/ENGINEERING-MODE-V2-SPEC-CROSS-REPO-WRITE.md` | `core/design/CROSS-REPO-WRITE.md` |
+| 委派 | `core/requirements/ENGINEERING-MODE-V2-SPEC-DELEGATION.md` | — |
+| 台账规格 | `core/requirements/ENGINEERING-MODE-V2-SPEC-LEDGER.md` | `core/design/LEDGER.md` |
+| 机械检查规格 | `core/requirements/ENGINEERING-MODE-V2-SPEC-MACHINE-CHECK.md` | — |
+| 项目声明规格 | `core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md` | `core/design/MANIFEST.md` |
+| 提示词管线规格 | `core/requirements/ENGINEERING-MODE-V2-SPEC-PROMPT-PIPELINE.md` | — |
+| 评审凭证规格 | `core/requirements/ENGINEERING-MODE-V2-SPEC-REVIEW-CREDENTIAL.md` | — |
+| 工程 token 绑定 | `core/requirements/ENG-TOKEN-BINDING.md` | `core/design/ENG-TOKEN-BINDING.md` |
+| 测试纪律规格 | `core/requirements/ENGINEERING-MODE-V2-SPEC-TEST-DISCIPLINE.md` | — |
+| 写门规格 | `core/requirements/ENGINEERING-MODE-V2-SPEC-WRITE-GATE.md` | — |
+| 设计凭证结算 | `core/requirements/DESIGN-TOKEN-SETTLEMENT.md` | `core/design/DESIGN-TOKEN-SETTLEMENT.md` |
+| 台账自含 | — | `core/design/LEDGER-SELF-CONTAINED.md` |
+| 验证工具 | `core/requirements/VERIFY-REDESIGN.md` | `core/design/VERIFY-REDESIGN.md` |
+| 回合上限与续跑 | `core/requirements/TURN-CAP-CONTINUE.md` | `core/design/TURN-CAP-CONTINUE.md` |
 
-| 子系统 | 设计档（`core/design/`） | 覆盖裁决行 | 行数 |
-|---|---|---|---|
-| 记忆系统（记忆库 + 代码 / 文档索引 + 嵌入） | `core/design/MEMORY.md` | #75 · #82 · #133–#137 · #168 | 8 |
-| 会话与历史 | `core/design/SESSION.md` | #89 · #123–#127 | 6 |
-| 配置系统 | `core/design/CONFIG.md` | #74 · #77 · #79 · #80 · #87 · #128–#132 · #177 | 11 |
-| 工具系统（实现面 + 描述面 + 注册表 + agent-tools） | `core/design/TOOLS.md` | #10–#29 · #52–#70 · #83–#86 · #88 · #90–#92 · #96 · #97 · #178 · #179 | 51 |
-| 提示词系统（槽位 / 工具描述） | `core/design/PROMPT-SYSTEM.md` | #2–#9 · #30–#39 · #43–#47 · #50 · #51 · #117–#122 | 31 |
-| agent 主循环与子代理 | `core/design/AGENT-LOOP.md` | #76 · #78 · #94 · #98–#103 · #111–#113 · #149–#158 · #165 · #166 · #169 · #175 · #176 · #184 | 28 |
-| 评审 · 会诊 · 飞刀 | `core/design/CONSULTATION.md` | #1 · #40 · #41 · #93 · #95 · #104–#110 · #159–#161 | 15 |
-| 供应商与模型 | `core/design/PROVIDER.md` | #114 · #115 · #138–#143 | 8 |
-| MCP 客户端 | `core/design/MCP.md` | #81 · #144–#148 | 6 |
-| 轨迹存储 | `core/design/TRACES.md` | #116 | 1 |
-| 检查点与 git 面 | `core/design/CHECKPOINT.md` | #48 · #49 · #167 | 3 |
-| 上下文压缩 · 标题 · 文本额度 | `core/design/CONTEXT-COMPACTION.md` | #162–#164 | 3 |
-| 诊断日志 | `core/design/LOGGING.md` | #42 | 1 |
-| 文案与本地化 | `core/design/I18N.md` | #185 | 1 |
-| 工作区约定（技能 / 规则 / 同伴 / 台账） | `core/design/WORKSPACE.md` | #71–#73 · #170–#174 | 8 |
-| **合计** | —— | —— | **181**（另 4 行 = 端特有桶 #180–#183，住工作流档 §2.5） |
+### 4.3 提示词、agent 与协作
 
-**其它板块（非核心统一拆分）**：`core/design/DOC-SYSTEM.md` + `core/requirements/DOC-SYSTEM.md`——文档体系（`docs/` 的 core / CLI / VSC / desktop / render-core 五部分落点规划）；2026-09-14 建档，**只做规划、不执行迁移**。
+| 主题 | 需求 | 设计 |
+|---|---|---|
+| 提示词系统 | `core/requirements/PROMPT-SYSTEM.md` | `core/design/PROMPT-SYSTEM.md` |
+| 提示词夹具 | — | `core/design/PROMPT-FIXTURE.md` |
+| agent 主循环 | `core/requirements/AGENT-LOOP.md` | `core/design/AGENT-LOOP.md` |
+| 异步代理池 | — | `core/design/AGENT-LOOP-ASYNC-POOL.md` |
+| 子代理 | — | `core/design/AGENT-LOOP-SUBAGENT.md` |
+| 上游请求循环 | — | `core/design/AGENT-LOOP-UPSTREAM.md` |
+| agent 参数 | `core/requirements/AGENT-PARAMS.md` | `core/design/AGENT-PARAMS.md` |
+| 上下文压缩 | `core/requirements/CONTEXT-COMPACTION.md` | `core/design/CONTEXT-COMPACTION.md` |
+| 发送停滞提炼 | `core/requirements/SEND-STALL-DISTILL.md` | `core/design/SEND-STALL-DISTILL.md` |
+| 超时与 digest | — | `core/design/TIMEOUT-DIGEST.md` |
+| 评审收敛 | `core/requirements/ADVISOR-CONVERGENCE.md` | `core/design/ADVISOR-CONVERGENCE.md` |
+| 评审守护 | — | `core/design/ADVISOR-GUARDS.md` |
+| 会诊 | `core/requirements/CONSULTATION.md` | `core/design/CONSULTATION.md` |
+| 飞刀 | `core/requirements/ESCALATE.md` | `core/design/ESCALATE.md` |
+| 多实例协作 | `core/requirements/MULTI-INSTANCE-COLLAB.md` | `core/design/MULTI-INSTANCE-COLLAB.md` |
 
-**迁移迁入档（2026-09-15——非核心统一拆分）**：按 §2 政策「逐档随批迁」自产品树迁入（B 式重建——源档留原地作参照历史），落点按 `core/design/DOC-SYSTEM.md` §5.1 判据（P1 统一面 ⇒ `core/` · P2 产品面 ⇒ `cli/` ∥ `vsc/`）：
-- `core/design/` **4 档**：`core/design/ARCHITECTURE.md` · `core/design/PORTABILITY.md` · `core/design/STRUCTURE-DEBT.md` · `core/design/TWO-REPO-MERGE.md`；
-- `core/requirements/` **2 档**：`core/requirements/PHILOSOPHY.md` · `core/requirements/TWO-REPO-MERGE.md`（`RELEASE.md` 同批迁入后 2026-09-20 再迁根 = `docs/RELEASE.md`——§1 首行）；
-- `cli/` **14 档**——设计 9 住 `cli/design/`（其中 `cli/design/CLI-DEBT.md` 与 `cli/design/CLI-ENTRY.md` 为 2026-09-25 新建的非迁移档，载体收口 = 台账 #340 ∥ #350）；需求 5 住 `cli/requirements/`（P2——2026-09-15 首迁 2 档后历批续迁；`RELEASE.md` 已随三端合一迁根 = `docs/RELEASE.md`——2026-09-20）。**逐名清单见目录列举**；
-- `vsc/` **10 档**：`design/` = `vsc/design/VSC-MIGRATION.md` · `vsc/design/SETTINGS.md` · `vsc/design/PROJECT-SWITCHER.md` · `vsc/design/WEBVIEW.md` · `vsc/design/WEBVIEW-PROTOCOL.md` · `vsc/design/WEBVIEW-INPUT.md` · `vsc/design/VSC-DEBT.md`；`requirements/` = `vsc/requirements/VSC-MIGRATION.md` · `vsc/requirements/WEBVIEW.md` · `vsc/requirements/PROJECT.md`。
+### 4.4 工具、模型与状态
 
-**`core/design/` 其余 40 档（工具 · 机制 · 流程面——批 11 补登 · 2026-10-07 补登记一档 · 2026-10-10 补登记一档 · 2026-10-13 补登记一档（`core/design/TEAM-LEDGER.md`——团队客户端面） · 判据 = `core/design/DOC-SYSTEM.md` §5.1（P1–P5 归属判据） · 计数随批收正 2026-11-03）**：
-- 文件 / 编辑 / 执行工具面 **8 档**：`core/design/APPLY-PATCH.md` · `core/design/EDIT.md` · `core/design/EDIT-HELPERS.md` · `core/design/HASHLINE-EDIT.md` · `core/design/INSERT-AFTER.md` · `core/design/TOOL-OUTPUT-LIMITS.md` · `core/design/WRITE.md` · `core/design/BASH-EXECUTOR-FACE.md`（bash 执行器语义面——运行时探测与声明单源；2026-10-04 建档，2026-10-07 补登记）；
-- 浏览器工具面 **1 档**：`core/design/BROWSER-TOOL.md`（浏览器工具——自启浏览器驱动面：十六动作契约（基线八 + 输入域八：press/hover/wheel/mouse/drag/touch/insert/clipboard）∥ 引用 / 几何机制 ∥ 会话模型 ∥ 写闸 ∥ 剪贴板面；2026-10-07 建档）；
-- 顾问 / 协作 / 子代理面 **9 档**：`core/design/ADVISOR-CONVERGENCE.md` · `core/design/ADVISOR-GUARDS.md` · `core/design/AGENT-LOOP-ASYNC-POOL.md` · `core/design/AGENT-LOOP-SUBAGENT.md` · `core/design/AGENT-LOOP-UPSTREAM.md` · `core/design/ESCALATE.md` · `core/design/MULTI-INSTANCE-COLLAB.md` · `core/design/PROXY.md` · `core/design/SEND-STALL-DISTILL.md`；
-- 令牌 / 参数 / 设置面 **5 档**：`core/design/AGENT-PARAMS.md` · `core/design/DESIGN-TOKEN-SETTLEMENT.md` · `core/design/ENG-TOKEN-BINDING.md` · `core/design/SETTINGS-TOOL.md` · `core/design/VERIFY-REDESIGN.md`；
-- 流程 / 文档机制面 **10 档**：`core/design/ANCHOR-DEBT-REPAIR.md` · `core/design/BATCH-RECORD.md` · `core/design/DOC-CODE-RECONCILE.md` · `core/design/DOC-DISCIPLINE.md` · `core/design/ENGINEERING-MODE-V2.md` · `core/design/LEDGER.md` · `core/design/LEDGER-SELF-CONTAINED.md` ·
-  `core/design/MANIFEST.md` · `core/design/TESTING.md` · `core/design/TURN-CAP-CONTINUE.md`；
-- 基准测试 **2 档**：`core/design/MODEL-BENCH.md`（模型基准测试套件——独立评估面的设计档：对外部 provider 做性能评估，产物 = `bench/results/` 评估报告 = 产品输出，不打包进三端；2026-09-23 建档）· `core/design/MODEL-SPECS.md`（模型规格表设计档——bench 名单面规格行承载；2026-09-24 建行）；
-- 团队客户端面 **2 档**：`core/design/TEAM.md`（团队客户端——登录与接入：`team` 段 ∥ 派生 provider 条目 ∥ 三端同构 ∥ 决策 D-TM1–6；2026-10-10 B1 建档）· `core/design/TEAM-LEDGER.md`（团队台账客户端面——核工具 `team_ledger` 端侧面单源；2026-10-13 建档）；
-- 会话可观测 · 超时投递面 **2 档**：`core/design/SESSION-OBSERVABILITY.md`（槽事件 · 设计凭证丢弃报明 · 状态栏标题单行化——批档 `docs/batches/2026-10-24-session-events-and-title.md`）· `core/design/TIMEOUT-DIGEST.md`（超时旋钮与投递兜底——body 空闲可配 ∥ 子代理报告无条件落盘 ∥ 完成门认池；2026-10-24 建档，批档 `docs/batches/2026-10-24-timeout-and-digest.md`）；
-- 提示词效果夹具 **1 档**：`core/design/PROMPT-FIXTURE.md`（副本 A/B 夹具——改前/改后副本跑同一批场景出读数与差异；不内置「有效」门槛；2026-10-26 建档，批档 `docs/batches/2026-10-26-prompt-fixture.md`）；
-- **计数核对（按名对账）**：`core/design/` 实档 **63** = 本图登记 **63** + **待补登 0**（逐名相等）。
+| 主题 | 需求 | 设计 |
+|---|---|---|
+| 工具系统 | `core/requirements/TOOLS.md` | `core/design/TOOLS.md` |
+| 补丁工具 | — | `core/design/APPLY-PATCH.md` |
+| bash 执行面 | — | `core/design/BASH-EXECUTOR-FACE.md` |
+| 浏览器工具 | `core/requirements/BROWSER-TOOL.md` | `core/design/BROWSER-TOOL.md` |
+| 检查点 | `core/requirements/CHECKPOINT.md` | `core/design/CHECKPOINT.md` |
+| 编辑工具 | — | `core/design/EDIT.md` |
+| 编辑辅助 | — | `core/design/EDIT-HELPERS.md` |
+| 哈希行编辑 | — | `core/design/HASHLINE-EDIT.md` |
+| 插入工具 | — | `core/design/INSERT-AFTER.md` |
+| 写入工具 | — | `core/design/WRITE.md` |
+| 工具输出限制 | — | `core/design/TOOL-OUTPUT-LIMITS.md` |
+| 工具参数零默认值 | — | `core/design/TOOL-PARAM-ZERO-DEFAULTS.md` |
+| MCP | `core/requirements/MCP.md` | `core/design/MCP.md` |
+| provider | `core/requirements/PROVIDER.md` | `core/design/PROVIDER.md` |
+| 模型基准 | — | `core/design/MODEL-BENCH.md` |
+| 模型规格 | — | `core/design/MODEL-SPECS.md` |
+| 代理 | — | `core/design/PROXY.md` |
+| 配置 | `core/requirements/CONFIG.md` | `core/design/CONFIG.md` |
+| 记忆 | `core/requirements/MEMORY.md` | `core/design/MEMORY.md` |
+| 会话 | `core/requirements/SESSION.md` | `core/design/SESSION.md` |
+| 设置工具 | `core/requirements/SETTINGS-TOOL.md` | `core/design/SETTINGS-TOOL.md` |
+| 路径解析 | — | `core/design/PATH-RESOLUTION.md` |
+| 团队客户端 | — | `core/design/TEAM.md` |
+| 团队台账客户端 | — | `core/design/TEAM-LEDGER.md` |
 
-**工作流档** = `core/design/CORE-UNIFICATION.md`（注册表 · 事实基线 · 核形态 · 选型 · 分段执行 · 决策 · 验收 · 契约策略 · 测试——**计入上条实档计数**）——子系统档由它索引、**不复制**其内容（D2 单一权威源）；裁决行的**列定义**亦住该档 §2.5。
+## 5. CLI 文档索引
 
-**两产品旧子系统档的处置（建议 · 未代裁）**：按本层 §2 迁移政策「**旧档不批量搬 · 保留原地作参照 · 被触碰时随批迁**」——各子系统于 **S2 迁移该子系统时**逐档 `git mv` 入本层（一次一档 + 引用改写 + 机检），并在产品地图撤登记行。
+| 主题 | 需求 | 设计 |
+|---|---|---|
+| 功能总览 | `cli/requirements/FEATURES.md` | — |
+| TUI | `cli/requirements/TUI.md` | `cli/design/TUI.md` |
+| TUI 命令 | — | `cli/design/TUI-COMMANDS.md` |
+| TUI 输入框 | — | `cli/design/TUI-INPUT-BOX.md` |
+| TUI 会话视图 | — | `cli/design/TUI-SESSION-VIEW.md` |
+| TUI 工具输出 | `cli/requirements/TUI-TOOL-OUTPUT.md` | `cli/design/TUI-TOOL-OUTPUT.md` |
+| ACP 客户端 | `cli/requirements/ACP-CLIENT.md` | `cli/design/ACP-CLIENT.md` |
+| ACP 协议符合性 | — | `cli/design/ACP-PROTOCOL-COMPLIANCE.md` |
+| CLI 入口 | — | `cli/design/CLI-ENTRY.md` |
+| CLI 债务 | — | `cli/design/CLI-DEBT.md` |
+| 崩溃报告 | `cli/requirements/CRASH-REPORTS.md` | `cli/design/CRASH-REPORTS.md` |
+| 数据读取接口 | `cli/requirements/READ-DATA-INTERFACE.md` | `cli/design/READ-DATA-INTERFACE.md` |
 
-**`core/requirements/` 登记（逐档 · 48）**：与 design 侧同形，分五组逐档列名（全 48 档）：
+## 6. VSC 文档索引
 
-- 子系统档（与 design 侧同名成对）**15**：`core/requirements/AGENT-LOOP.md` · `core/requirements/CHECKPOINT.md` · `core/requirements/CONFIG.md` · `core/requirements/CONSULTATION.md` · `core/requirements/CONTEXT-COMPACTION.md` · `core/requirements/I18N.md` · `core/requirements/LOGGING.md` · `core/requirements/MCP.md` · `core/requirements/MEMORY.md` · `core/requirements/PROMPT-SYSTEM.md` · `core/requirements/PROVIDER.md` · `core/requirements/SESSION.md` · `core/requirements/TOOLS.md` · `core/requirements/TRACES.md` · `core/requirements/WORKSPACE.md`；
-- 其它板块 / 迁入档 **3**：`core/requirements/DOC-SYSTEM.md` · `core/requirements/PHILOSOPHY.md` · `core/requirements/TWO-REPO-MERGE.md`；
-- 工作流档 **1**：`core/requirements/CORE-UNIFICATION.md`（登记表 · 事实基线 —— 计入实档计数）；
-- 工程模式 V2 面 **11**：`core/requirements/ENGINEERING-MODE-V2.md` + `ENGINEERING-MODE-V2-SPEC-{BATCH-SEGMENT,CHECKLIST-REMOVAL,DELEGATION,LEDGER,MACHINE-CHECK,MANIFEST,PROMPT-PIPELINE,REVIEW-CREDENTIAL,TEST-DISCIPLINE,WRITE-GATE}.md`；
-- 其余机制 / 流程 / 文档面 **18**：`core/requirements/ADVISOR-CONVERGENCE.md` · `core/requirements/AGENT-PARAMS.md` · `core/requirements/BROWSER-TOOL.md` · `core/requirements/DESIGN-TOKEN-SETTLEMENT.md` · `core/requirements/DOC-CHECK.md` · `core/requirements/ENG-TOKEN-BINDING.md` · `core/requirements/ESCALATE.md` · `core/requirements/METHODOLOGY.md` · `core/requirements/MULTI-INSTANCE-COLLAB.md`
-  余 9 档（`NORMAL-MODE` · `PORTABILITY` · `PROJECT` · `SEND-STALL-DISTILL` · `SETTINGS-TOOL` · `STRUCTURE-DEBT` · `TESTING` · `TURN-CAP-CONTINUE` · `VERIFY-REDESIGN`）同住 `core/requirements/`（档名见目录列举）。
+| 主题 | 需求 | 设计 |
+|---|---|---|
+| 项目需求 | `vsc/requirements/PROJECT.md` | — |
+| Webview | `vsc/requirements/WEBVIEW.md` | `vsc/design/WEBVIEW.md` |
+| Webview 输入 | — | `vsc/design/WEBVIEW-INPUT.md` |
+| Webview 协议 | — | `vsc/design/WEBVIEW-PROTOCOL.md` |
+| 设置 | — | `vsc/design/SETTINGS.md` |
+| 项目切换 | — | `vsc/design/PROJECT-SWITCHER.md` |
+| 迁移 | `vsc/requirements/VSC-MIGRATION.md` | `vsc/design/VSC-MIGRATION.md` |
+| 技术债务 | — | `vsc/design/VSC-DEBT.md` |
 
-**计数核对（按名对账）**：`core/requirements/` 实档 **48** = 本图登记 **48** + **待补登 0**（逐名相等）。
+## 7. Desktop 文档索引
 
-## 5. 与产品文档地图的关系
+| 主题 | 需求 | 设计 |
+|---|---|---|
+| 项目 | `desktop/requirements/PROJECT.md` | `desktop/design/PROJECT.md` |
+| 活动区 | `desktop/requirements/ACTIVITY.md` | `desktop/design/ACTIVITY.md` |
+| 聊天 | `desktop/requirements/CHAT.md` | `desktop/design/CHAT.md` |
+| 输入与附件 | `desktop/requirements/COMPOSER.md` | `desktop/design/COMPOSER.md` |
+| IPC | — | `desktop/design/IPC.md` |
+| 菜单 | `desktop/requirements/MENU.md` | `desktop/design/MENU.md` |
+| 打包 | `desktop/requirements/PACKAGING.md` | `desktop/design/PACKAGING.md` |
+| 面板读回 | — | `desktop/design/PANEL-READBACK.md` |
+| 渲染器 | — | `desktop/design/RENDERER.md` |
+| 会话 | `desktop/requirements/SESSIONS.md` | `desktop/design/SESSIONS.md` |
+| 设置 | `desktop/requirements/SETTINGS.md` | `desktop/design/SETTINGS.md` |
+| 外壳 | `desktop/requirements/SHELL.md` | `desktop/design/SHELL.md` |
+| UI | `desktop/requirements/UI.md` | `desktop/design/UI.md` |
+| 端到端测试 | — | `desktop/design/E2E-TESTING.md` |
+| Web 快速检查 | — | `desktop/design/WEB-QUICKCHECK.md` |
 
-- CLI 产品地图 = 兄弟目录 `thincoder-cli/docs/` 下的 README（**CLI 产品**的文档入口）——它此前登记了项目级板块（历史原因：合并前无项目级层）；板块迁入本层后，其登记行**撤除**（该板块不再属 CLI 产品树——本层为唯一登记处）。
-- VSC 产品地图 = 兄弟目录 `thincoder-vscode/docs/` 下的 README（VSC 产品入口）。
-- 本层**不进**两产品的文档域扫描；本层自带**源面核**面（扫描域 = `docs`；**读数器禁调**——用户 2026-10-15 12:10 令）；台账核销面 = `/ledger`（`thincoder-core/ledger.mjs`）。
-- **五部分不各设地图**——本 README = 五部分（`core/` · `cli/` · `vsc/` · `desktop/` · `render-core/`）的唯一地图（目标结构 `core/design/DOC-SYSTEM.md` §4）；`cli/` · `vsc/` 两产品面档所对应的产品树旧档（`thincoder-cli/docs/**` · `thincoder-vscode/docs/**`）= 迁移期参照历史（§2 政策——保留 ≠ 维护）。
+## 8. render-core 文档索引
+
+| 主题 | 需求 | 设计 |
+|---|---|---|
+| 宿主无关渲染核 | `render-core/requirements/RENDER-CORE.md` | `render-core/design/RENDER-CORE.md` |
+
+## 9. Server 文档索引
+
+| 主题 | 需求 | 设计 |
+|---|---|---|
+| 项目与功能总览 | `server/requirements/PROJECT.md` | `server/design/PROJECT.md` |
+| 演进 | — | `server/design/EVOLUTION.md` |
+| 账号 | — | `server/design/accounts/ACCOUNTS.md` |
+| 管理端 agent | — | `server/design/agent/ADMIN-AGENT.md` |
+| 成员端 agent | — | `server/design/agent/MEMBER-AGENT.md` |
+| 客户端接入 | — | `server/design/client/CLIENT.md` |
+| 网关 API | — | `server/design/gateway/API.md` |
+| 公网访问 | — | `server/design/gateway/PUBLICNET.md` |
+| 团队台账 | — | `server/design/ledger/LEDGER.md` |
+| MCP | — | `server/design/mcp/MCP.md` |
+| 计量 | — | `server/design/metering/METERING.md` |
+| 运维与部署 | — | `server/design/ops/OPS.md` |
+| 项目管理 | — | `server/design/project/PROJECTS.md` |
+| 沙箱 | — | `server/design/sandbox/SANDBOX.md` |
+| 执行 | — | `server/design/sandbox/EXECUTION.md` |
+| 存储 | — | `server/design/store/STORE.md` |
+| 管理控制台 | — | `server/design/webui/ADMIN.md` |
+| Web 聊天 | — | `server/design/webui/CHAT.md` |
+| 控制台国际化 | — | `server/design/webui/I18N.md` |
+| 台账界面 | — | `server/design/webui/LEDGER.md` |
+| MCP 界面 | — | `server/design/webui/MCP.md` |
+| 成员界面 | — | `server/design/webui/ME.md` |
+| 项目界面 | — | `server/design/webui/PROJECTS.md` |
+| 读数界面 | — | `server/design/webui/READINGS.md` |
+| 沙箱界面 | — | `server/design/webui/SANDBOX.md` |
+| 样式 | — | `server/design/webui/STYLE.md` |
+| 系统界面 | — | `server/design/webui/SYSTEM.md` |
+| 标签页 | — | `server/design/webui/TABS.md` |
+| 终端界面 | — | `server/design/webui/TERMINAL.md` |
+| WebUI 总体 | — | `server/design/webui/WEBUI.md` |

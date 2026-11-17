@@ -38,6 +38,9 @@ import { memoryTool } from "../memory-tool.mjs"
 import { ideTool } from "./ide.mjs"
 import { focusTool } from "./focus.mjs"
 import { peerInstancesTool } from "../extension/peer-instances.mjs" // R10 L2（MULTI-INSTANCE-COLLAB D-L2b）只读工具
+// 跨实例投递面工具两件（MULTI-INSTANCE-COLLAB §5.2：装配点 = `peer_instances` 同点；核档直引——端零副本）
+import { instanceListTool } from "@thincoder/core/instance-registry.mjs"
+import { instanceSendTool } from "@thincoder/core/instance-inbox.mjs"
 
 /**
  * git 工具登记行（2026-11-03 笔-账绑定批 · 决策 37：**端覆写已删**）。
@@ -175,4 +178,6 @@ export const builtinTools = [
   treeTool,
   browserTool,
   peerInstancesTool, // R10 L2——只读（纯查询——不认领不写）
+  instanceListTool, // F-MI10 名册只读面（机器级可投递实例）
+  instanceSendTool, // F-MI10 投递面（可达性四态 + inbox 原子写）
 ]

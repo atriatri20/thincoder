@@ -12,7 +12,7 @@
  * 走显式形状表（_NULL_LEAF_SHAPES 相等面 / _SIBLING_SHAPES 存在性面——按各自真实消费形态
  * 校验，完备性机械锁 + 一次性警告；SETTINGS-TOOL.md §8）；set 侧效走审批门（dispatch 动作级分类）。
  */
-import { DEFAULTS, configPath, promoteAgentViews, writeConfigAtomic } from "../config.mjs"
+import { DEFAULTS, WORK_MODES, configPath, promoteAgentViews, resolveWorkMode, setConfigWorkMode, writeConfigAtomic } from "../config.mjs"
 import { DESC } from "../tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/settings.md
 
 /** 敏感键段判定（完整点分路径的段级匹配——两句取或：词表段 ∨ 开口键族段；SETTINGS-TOOL.md §2.4）。
@@ -164,6 +164,20 @@ function _checkAdvisorTimeout(value) {
  *  ③ 未知键 → 原样通过（全量域）。
  */
 function _checkKnownKeyValue(path, value) {
+  if (path === "agent.engineering") {
+    throw new Error("settings set: agent.engineering is derived from agent.mode and cannot be written directly")
+  }
+  if (path === "agent.mode" && !WORK_MODES.includes(value)) {
+    throw new Error(`settings set: agent.mode expects one of ${WORK_MODES.join(", ")} — got ${_shownValue(path, value)}`)
+  }
+  if (path === "agent" && value !== null && typeof value === "object" && !Array.isArray(value)) {
+    if (Object.hasOwn(value, "engineering")) {
+      throw new Error("settings set: agent.engineering is derived from agent.mode and cannot be written through an agent object")
+    }
+    if (Object.hasOwn(value, "mode") && !WORK_MODES.includes(value.mode)) {
+      throw new Error(`settings set: agent.mode expects one of ${WORK_MODES.join(", ")} — got ${_shownValue("agent.mode", value.mode)}`)
+    }
+  }
   if (path === "agent.advisor.timeoutMs" || path === "advisor.timeoutMs") return _checkAdvisorTimeout(value)
   if ((path === "agent.advisor" || path === "advisor") && value !== null && typeof value === "object" && !Array.isArray(value) && "timeoutMs" in value) {
     _checkAdvisorTimeout(value.timeoutMs) // 整段赋值腿（两个段名）：对象内该键同规则校验（§2.6）
@@ -307,6 +321,7 @@ export function settingsTool(opts = {}) {
       // set
       if (!args.key || args.value === undefined) throw new Error("settings set: key and value are required")
       const value = parseValue(args.value)
+      const sessionMode = resolveWorkMode(config.agent)
       // 已知键校验（形状表两表都查 + 派生类型表——SETTINGS-TOOL.md §8.3；未知键 JSON 原样）
       _checkKnownKeyValue(String(args.key), value)
       // 写盘（D-F5b：磁盘真相最小化——默认不固化；冲突/畸形抛错，内存不热应用（零虚假成功））+
@@ -340,11 +355,17 @@ export function settingsTool(opts = {}) {
           setKeyPath(config, promotedPath, value) // 子键 set：键级同步（与 null 腿同一种「同一子键」口径）
         }
       }
+      // agent.mode persisted here is the new-session default. Keep the existing session's sole
+      // mode and its derived boolean unchanged; session commands and host controls switch slots.
+      const modeDefaultWrite = args.key === "agent.mode" || args.key === "agent"
+      if (modeDefaultWrite) setConfigWorkMode(config, sessionMode)
       const sensitive = isSensitiveKey(String(args.key))
       const shown = sensitive ? MASKED : value
       const suffix = value === null
         ? " — key removed（键已删除——回退默认）"
-        : sensitive ? " — stored（值不回显）" : " — persisted + hot-applied（运行中已生效）"
+        : sensitive ? " — stored（值不回显）"
+          : modeDefaultWrite ? " — persisted as the new-session default（当前会话不变）"
+            : " — persisted + hot-applied（运行中已生效）"
       return `settings set: ${args.key} = ${shown} (${_kindOf(value)})${suffix}`
     },
   }

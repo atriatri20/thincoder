@@ -1,11 +1,11 @@
 /**
  * chat-chrome.mjs — 对话流**帧尾态刷面**（拆分产出 —— 「对齐第三批」触碰批执行在册预案：`renderer/views/chat.mjs`
  * 越 300 在册、本批触碰 ⇒ 出档；登记面 = `docs/desktop/design/PROJECT.md` §4.2 本批行）：
- *   ① 根锚四（`chromeProps`）+ 帧尾态刷 `syncChrome`（摘要块 / **压缩行** / 消化行族 / **到期触发行组** / 停止痕 /
+ *   ① 根锚四（`chromeProps`）+ 帧尾态刷 `syncChrome`（摘要块 / **压缩行** / 消化行族 / **到期触发行组** / **取件行组** / 停止痕 /
  *      **帮助行族** / 审批卡 / 药丸 / **真置焦执行** —— 幂等 · 与档位解耦 · `none` 帧同刷）；② 尾组的构树（`summaryNode` /
- *      `timerGroupNode` / `stoppedNode` / `helpGroupNode` / `pillNode`）与插点锚（`blockAnchor` 等 —— 单源：
+ *      `timerGroupNode` / `inboxGroupNode` / `stoppedNode` / `helpGroupNode` / `pillNode`）与插点锚（`blockAnchor` 等 —— 单源：
  *      族内序 = 压缩行〔R4 增 —— 构树 ∕ 态刷 ∕ 锚出档 `renderer/views/compress-status.mjs`〕→ 消化行族〔单档 `renderer/views/chat-digest-rows.mjs`（构树 ∥ 帧刷引调）—— 流内落位批改**逐轮行族 · 流内就地**〔无轮容器——#747〕；**自然形收正批 · 2026-10-01 · 台账 #768**：到达序出生 ∥ 行出生即定型（零就地换文 ∥ 零摘除——行出即留）〕；
- *      构树消费面 = 构树出档 `renderer/views/chat-tree.mjs`（留档批拆分 —— 按记录位次复列）〕→ 到期触发行组 → 停止痕 → 帮助行族〔`/help` 增量 · 2026-10-01② —— 行族三件（构树 ∕ 态刷 ∥ 锚）住本档〕 —— **压缩行例外 = 流元素冻结点**〔创建点定位 —— `blockAnchor` 链不收本行，新块随流居其下〕）；
+ *      构树消费面 = 构树出档 `renderer/views/chat-tree.mjs`（留档批拆分 —— 按记录位次复列）〕→ 到期触发行组 → **取件行组** → 停止痕 → 帮助行族〔`/help` 增量 · 2026-10-01② —— 行族三件（构树 ∕ 态刷 ∥ 锚）住本档〕 —— **压缩行例外 = 流元素冻结点**〔创建点定位 —— `blockAnchor` 链不收本行，新块随流居其下〕）；
  *   ③ 帧尾真置焦执行 `focusAutofocus`（F-置焦 · 「对齐第三批」重核入册）。
  * 依赖单向：`renderer/views/chat.mjs` → 本档（构树与帧尾两径引调）；反向无引用 ⇒ 无环。
  * 文案一律经 `t()`（零硬编码；`+` / `−` / 游标字形住 `renderer/chat.css`）；零 `node:` / 零裸包。
@@ -45,7 +45,7 @@ export function timerGroupNode(slice) {
 }
 
 /** 帧尾组同步（幂等）：在场 ⟺ 本键切片在场（`ev:timer` 归约面写——同键就地替换）；内容逐行等价 ⇒ 零写；
- *  切片换代 ⇒ 原位换（零序跳）；缺席 ⇒ 摘除。`anchor` = 尾插点（停止痕之前 —— 恒居消化行族之右）。 */
+ *  切片换代 ⇒ 原位换（零序跳）；缺席 ⇒ 摘除。`anchor` = 尾插点（取件行组 ∥ 停止痕之前 —— 恒居消化行族之右）。 */
 function syncTimer(root, model, anchor = null) {
   if (!root || typeof root.querySelector !== "function") return
   const slice = model?.timer ?? null
@@ -56,6 +56,32 @@ function syncTimer(root, model, anchor = null) {
   if (node && rows.length === want.length && rows.every((row, index) => row.textContent === want[index])) return
   const fresh = build(timerGroupNode(slice))
   if (node) { node.replaceWith(fresh); return }
+  if (typeof root.insertBefore === "function") root.insertBefore(fresh, anchor)
+  else root.append(fresh)
+}
+
+/** 取件行组（行痕族第四员 —— **非块节点组**：零 `data-block-id` ⇒ 不占块序 ∕ 不动 `data-blocks` 不变式；
+ *  **与 `[data-timer]` 行同族**）：逐行 `div[data-inbox-line]` + `data-inbox-kind`（`lost` ∥ `blocked` ∥ `pending`）；
+ *  行文 = 视图模型面产出的行文（`lost` ∥ `blocked` = 核拼串逐字，`pending` = 「待取 N 条消息」）；本组**零显示裁**（行裁 = timer 专属，取件行不裁）；
+ *  单源 = `docs/desktop/design/RENDERER.md` §1.1「跨实例取件行」条。 */
+export function inboxGroupNode(rows) {
+  const row = (line) => ({ tag: "div", props: { class: `chat-inbox-${line.kind}`, "data-inbox-line": "", "data-inbox-kind": line.kind }, children: [line.text] })
+  return { tag: "div", props: { class: "chat-inbox", "data-inbox": "" }, children: rows.map(row) }
+}
+
+/** 取件行组态刷（幂等 · 同 `syncTimer` 形）；在场 ⟺ 模型行表在场（`ev:inbox` 归约面写——**一类一槽**）；
+ *  内容逐行等价（`kind` + 行文）⇒ 零写；换代 ⇒ 原位换（零序跳）；缺席 ⇒ 摘除。
+ *  `anchor` = 尾插点（停止痕之前 —— 恒居到期触发行组之右）。 */
+function syncInbox(root, model, anchor = null) {
+  if (!root || typeof root.querySelector !== "function") return
+  const rows = Array.isArray(model?.inbox) && model.inbox.length > 0 ? model.inbox : null
+  const node = root.querySelector("[data-inbox]")
+  if (rows === null) { if (node) node.remove(); return }
+  const want = rows.map((line) => `${line.kind} ${line.text}`)
+  const live = node === null ? [] : [...node.querySelectorAll("[data-inbox-line]")].map((row) => `${row.getAttribute("data-inbox-kind")} ${row.textContent}`)
+  if (node && live.length === want.length && live.every((rowText, index) => rowText === want[index])) return
+  const fresh = build(inboxGroupNode(rows))
+  if (node) { node.replaceWith(fresh); return } // 换代 ⇒ 原位换（零搬移）
   if (typeof root.insertBefore === "function") root.insertBefore(fresh, anchor)
   else root.append(fresh)
 }
@@ -134,9 +160,9 @@ function chromeSlot(root, selector, want, make, update, atStart = false) {
   else root.append(built)
 }
 
-/** 帧尾态刷（刷新面单点 · 幂等 · 与档位解耦 —— `none` 帧同刷）：根锚四 + 引导节点 / 摘要块 / **压缩行** / **消化行族** / **到期触发行组** / **停止痕** /
- *  **帮助行族** / 审批卡 / 药丸随判据（尾组 = 流内非块节点 —— 在场 ⟺ 各自本键切片；
- *  落点 = 块后卡前，族内序 = 压缩行 → 消化行族 → 到期触发行组 → 停止痕 → 帮助行族）；**帧尾真置焦执行** = `focusAutofocus`。
+/** 帧尾态刷（刷新面单点 · 幂等 · 与档位解耦 —— `none` 帧同刷）：根锚四 + 引导节点 / 摘要块 / **压缩行** / **消化行族** / **到期触发行组** / **取件行组** /
+ *  **停止痕** / **帮助行族** / 审批卡 / 药丸随判据（尾组 = 流内非块节点 —— 在场 ⟺ 各自本键切片；
+ *  落点 = 块后卡前，族内序 = 压缩行 → 消化行族 → 到期触发行组 → **取件行组** → 停止痕 → 帮助行族）；**帧尾真置焦执行** = `focusAutofocus`。
  *  **压缩行例外 = 流元素冻结点、不在块插入点上** —— 插入点纪律单源 = `docs/desktop/design/RENDERER.md` §1.1（`blockAnchor` 链不收本行）。
  *  `none` 态零块节点化不破：诸控件判据皆含 `state !== "none"`（卡面由 `chatModel` 归零）⇒ 零插入（只摘——
  *  引导节点同此面纪律：缺席 ⇒ 零动作 · 判据空 ⇒ 摘，「只摘不插」）；卡面态刷住 `renderer/views/chat-cards.mjs`。 */
@@ -158,6 +184,7 @@ export function syncChrome(root, model, handlers = {}) {
   // 消化行族帧刷（**唯追加** —— 出生已在入流步（`settleFrame` 步①）落定，此拍采纳 ∥ 零写；非 live 面 ⇒ 零动作）。
   syncDigest(root, live ? model : { digest: null }, blockAnchor(root))
   syncTimer(root, live ? model : { timer: null }, timerAnchorOf(root))
+  syncInbox(root, live ? model : { inbox: null }, inboxAnchorOf(root))
   syncTailNode(root, "[data-stopped]", live && model.stopped === true, () => stoppedNode(), stoppedAnchorOf(root))
   syncHelp(root, live ? model : { help: null }, helpAnchorOf(root))
   syncCards(root, model, handlers)
@@ -180,21 +207,29 @@ export function focusAutofocus(root) {
   if (typeof node.focus === "function") node.focus()
 }
 
-/** 块节点插点锚（单源 —— 尾段挂载与头侧前插同用）：首个**到期触发行组**之前、无组 ⇒ 首个**停止痕**之前、
- *  无痕 ⇒ 首个**帮助行族**之前、无族 ⇒ 首个**卡节点**之前（尾组任一 —— 卡序判据 = 卡序单源）、
+/** 块节点插点锚（单源 —— 尾段挂载与头侧前插同用）：首个**到期触发行组**之前、无组 ⇒ 首个**取件行组**之前、
+ *  无组 ⇒ 首个**停止痕**之前、无痕 ⇒ 首个**帮助行族**之前、无族 ⇒ 首个**卡节点**之前（尾组任一 —— 卡序判据 = 卡序单源）、
  *  无卡 ⇒ 药丸之前；两锚皆缺 ⇒ `null`（末位）。**消化行族元素不在链上**（逐轮行族：常规新块随流落轮行**之下**——
  *  入流步先于尾段挂载 ⇒ 同帧行族出生 ∥ 换代在前）；归档块（`kind: "subagent"`）= **普通块**（随到达入流——同此锚）；
  *  单源 = `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条）。
  *  **压缩行不在链上**（R4 定位语义收正 —— 行 = 流元素冻结点：创建点定位后新块随流居其下；VSC D-C3 append-once 对齐 —— 单源 = `renderer/views/compress-status.mjs` 档头）。**待发送块不入流**（收正轮 B12 新口径：住输入区带 —— 本档零参）。 */
 export function blockAnchor(root) {
   if (typeof root?.querySelector !== "function") return null
-  return root.querySelector("[data-timer]") ?? root.querySelector("[data-stopped]")
+  return root.querySelector("[data-timer]") ?? root.querySelector("[data-inbox]") ?? root.querySelector("[data-stopped]")
     ?? root.querySelector("[data-help]") ?? root.querySelector("[data-card]") ?? root.querySelector("[data-pill]")
 }
 
-/** 到期触发行组插点锚（组恒居**块后、停止痕 / 帮助行族前** —— 族内序 = 消化行族 → 本组 → 停止痕）：
- *  首个停止痕 ∨ 帮助行族 ∨ 卡节点 ∨ 药丸 ∨ `null`（末位 —— 消化行族在场时本组仍落其右：同锚前插）。 */
+/** 到期触发行组插点锚（组恒居**块后、取件行组 / 停止痕 / 帮助行族前** —— 族内序 = 消化行族 → 本组 → 取件行组 → 停止痕）：
+ *  首个取件行组 ∨ 停止痕 ∨ 帮助行族 ∨ 卡节点 ∨ 药丸 ∨ `null`（末位 —— 消化行族在场时本组仍落其右：同锚前插）。 */
 function timerAnchorOf(root) {
+  if (typeof root?.querySelector !== "function") return null
+  return root.querySelector("[data-inbox]") ?? root.querySelector("[data-stopped]") ?? root.querySelector("[data-help]")
+    ?? root.querySelector("[data-card]") ?? root.querySelector("[data-pill]")
+}
+
+/** 取件行组插点锚（组恒居**到期触发行组之右、停止痕 / 帮助行族前** —— 族内序 = 到期触发行组 → 本组 → 停止痕）：
+ *  首个停止痕 ∨ 帮助行族 ∨ 卡节点 ∨ 药丸 ∨ `null`（末位）。 */
+function inboxAnchorOf(root) {
   if (typeof root?.querySelector !== "function") return null
   return root.querySelector("[data-stopped]") ?? root.querySelector("[data-help]")
     ?? root.querySelector("[data-card]") ?? root.querySelector("[data-pill]")

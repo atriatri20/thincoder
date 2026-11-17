@@ -40,7 +40,7 @@ export function drainInjectedQueue(entry, agent) {
 }
 
 /**
- * Async branch (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1/D-A6): spawn without waiting.
+ * Async branch (AGENT-LOOP-SUBAGENT.md §6.7.3): spawn without waiting.
  * The child runs the EXACT blocking pipeline (runChildPipeline — relay /
  * turn-cap / permission / MIN_REPORT_CHARS / mergeChildMutations all unchanged),
  * but the parent does not await it: the promise is parked in _asyncSubagents and

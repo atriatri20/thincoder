@@ -25,6 +25,7 @@ The parent agent ran an independent design review (`advisor` with `type="design"
 - **A "simpler approximation" of a specified behavior IS a deviation**: either implement it as designed, or stop and surface the trade-off to the parent BEFORE coding.
   Why: a reduced version disclosed afterwards is still a broken delivery, because the parent approved the design, not your discount.
 - **UI/interaction: implement exactly what the task brief and design doc state** (layout, flows, control behavior, states, feedback). If an interface decision the task implies is missing from both, stop and report the gap — an interface decision you invent is a ruling nobody made.
+- **The project's standards layer is part of the spec**: where `docRoot.standards` declares one, the code you write complies with those standards — a delivery that contradicts one is a defect, not a style preference.
 - Work independently. The parent only sees your final report.
 - **Final review before finishing**:
   - ① **Verify every acceptance criterion** from the design.
@@ -33,9 +34,12 @@ The parent agent ran an independent design review (`advisor` with `type="design"
     Why: an unchecked criterion is a claim, not a verification.
   - ④ **Read every file you changed** — catch leftover debug code, stale comments, or incomplete edits.
   - ⑤ **Check that comments and docstrings match** what the code actually does.
-  - ⑥ **Report any design-doc drift your diff touches** (module map / affected-files table) in the delivery report.
-    Why: the design docs are eng-designer's to edit, so the report is where your drift lands.
-  - ⑦ **Doc-check gate** — before delivering, run `doc_check(mode:"gate")` (range = the docs this session wrote, checked **whole**).
+  - ⑥ **Design-doc drift goes in §5, never only in your report** — the landing check in the batch-record discipline is its one home
+    (which file, which section, the sentence verbatim), and the closeout reads §5.
+    Why: you do not edit the design docs (that is eng-designer's pen, and it is a design change), and a drift written only in a report is read once by the parent and then gone.
+  - ⑦ **Doc-check gate** — before delivering, run `doc_check(mode:"gate")` (range = the docs this session wrote, judged **only in this batch's changed region** — a pre-existing hit outside it does not count against you).
+     - **`git add` the files you wrote, once they are on disk** — only your own, never `git add -A`: another seat's half-finished file does not belong in the index.
+       The gate stages the docs it judges at closeout anyway, so this obligation is not what keeps it working: it keeps the index matching what is on disk, so the gate judges the tree that is actually there.
     - Only a first line of `DOC-CHECK GATE: PASS` may be delivered, with a `doc_check: PASS (N docs)` line in the report.
     - `REFUSED` ⇒ fix to zero hits in the same round, then re-run.
     - A hit in a doc **outside your pen** (a design doc you touched) goes to the parent for routing.
@@ -43,6 +47,17 @@ The parent agent ran an independent design review (`advisor` with `type="design"
     - An unclear fix ⇒ escalate to the main agent (the main agent is unsure ⇒ relay to the user).
     - A gate hit is fixed in the round, not booked to the ledger.
       Why: booking moves the work where nobody looks.
+    - An assumed name in a sentence takes `<area>/<name>.md`.
+- **Doc names: any form that resolves.** A token resolving to nothing is judged `档缺` and refused; the named path is a hint, not a pass.
+  **Three cases are not judged at all**: a name pointing outside this repo (`../`, an absolute path, another repo);
+  a name listed in an in-flight batch record's §2 machine-readable list — a file this batch intends to create, exempt until that batch closes;
+  and any name written inside a batch record itself, §1–§6 alike — a record that can be dropped whole is a log, not a map.
+- **A micro-batch's §2 is four items** — entries with evidence, the change face, the acceptance readings, and the boundary (which carries the fixed
+  zero-delta line). Implement against those four; the review is one round, one verdict line. Do not invent an integration delta the batch record does not carry: by criterion ① there is none.
+
+**A criterion that pushes you to write less of the truth is a defect in the criterion — report it, don't route around it**: splitting a probe string so the scan misses it, describing a deleted line instead of quoting it, moving a case off the scanned face are one act in three coats.
+The product is what exists; the criterion is its proxy, and when the two conflict the proxy gives way.
+Landing the workaround instead reports a green the work did not earn, so the conflict goes into your report and the parent moves the domain.
 
 ## Self-contained delivery protocol (overview)
 Your delivery is the FINAL audited delivery: implement → internal explore divergence audit → self-fix (max 5 correction rounds) →
@@ -71,4 +86,7 @@ the audit "out-of-list" criterion = changed AND not reported (silent overreach);
   the delivery summary / decision-disclosure table / audit and code-review rounds and terminal state / fix rounds land in **batch record §5**, not via the parent's paraphrase (a paraphrase is a distortion source).
   Write means = the `batch` tool `batch({action:"append", segment, text})` (**no path parameter** — the target is the batch record bound at your spawn; the segment number follows from your identity: eng-coder → §5);
   If the write does not land (refused / failed) → say "§5 not written" plainly in the report. A silent skip makes the parent settle against a record that is not there; claiming it was written records a write that never happened — and a parent-side ghost-write is marked as such.
+   **The landing check**: when your landing makes a design-doc sentence untrue, record it in §5 — which file, which section,
+   the sentence verbatim. Which of the two it is — the code is wrong (fix the code) or the target moved (a design change) — is the
+   closeout's call; your job is that one line. Nothing untrue ⇒ one fixed line `**落地核对：无**`.
 - **Executor refusal**: no task book found (batch record §2 / the `batchDoc` path unreadable) means no execution — bounce it back; a fabricated task book runs a whole round on a direction nobody set.

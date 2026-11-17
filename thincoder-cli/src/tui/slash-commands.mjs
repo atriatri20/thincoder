@@ -35,7 +35,7 @@ import { handleHelpCommand } from "./cmd-help.mjs"
 import { handleUpgradeCommand } from "./cmd-upgrade.mjs"
 import { handleFoldCommand } from "./cmd-fold.mjs"
 import { handleUndoCommand } from "./cmd-undo.mjs"
-import { handleEngCommand } from "./cmd-eng.mjs"
+import { handleEngCommand, handleTinyCommand, handleNormalCommand } from "./cmd-eng.mjs"
 import { handleTeamCommand } from "./cmd-team.mjs" // 团队登录（登录面补全批——/team login ∥ logout ∥ status）
 // 派生条目隐藏判据单源（TEAM.md §2.4——#1223：/model·/submodel Tab 补全面过滤）
 import { isDerivedProviderHidden } from "./provider-admin.mjs"
@@ -43,7 +43,9 @@ import { isDerivedProviderHidden } from "./provider-admin.mjs"
 export const SLASH_COMMANDS = [
   { name: "/plan", group: "Agent", desc: "toggle plan mode (design first, then implement)" },
   { name: "/auto", group: "Agent", desc: "toggle auto-approve" },
-  { name: "/eng", group: "Agent", desc: "toggle engineering mode — strict methodology enforcement" },
+  { name: "/eng", group: "Agent", desc: "toggle engineering ↔ normal work mode" },
+  { name: "/tiny", group: "Agent", desc: "toggle tiny ↔ normal work mode" },
+  { name: "/normal", group: "Agent", desc: "select normal work mode" },
   { name: "/advisor", group: "Agent", desc: "advisor settings (model, thinking, review gate)" },
   { name: "/model", group: "Agent", desc: "select model & manage providers" },
   { name: "/submodel", group: "Agent", desc: "subagent model per type (explore/plan/coder/eng-coder/eng-designer)" },
@@ -102,6 +104,8 @@ export const HANDLERS = {
   "/fold": handleFoldCommand,
   "/undo": handleUndoCommand,
   "/eng": handleEngCommand,
+  "/tiny": handleTinyCommand,
+  "/normal": handleNormalCommand,
   "/extract": handleExtractCommand,
   "/help": handleHelpCommand,
 }

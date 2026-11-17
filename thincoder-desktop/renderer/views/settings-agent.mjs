@@ -22,7 +22,7 @@ const EDITABLE_KINDS = Object.freeze(["string", "number", "boolean"])
 
 /** **自持值面**控件型（B10 W3）：值不取自读面字段类型门（选择器现值 ∕ 槽投影自持 —— 字段缺位 / 值形不齐
  *  照出空控件，禁假造值）：S10 模型槽 ∕ S11 推理档 ∕ S14b guard 开关。 */
-const SELF_FACED_KINDS = Object.freeze(["model", "effort", "guard"])
+const SELF_FACED_KINDS = Object.freeze(["mode", "model", "effort", "guard"])
 
 /** agent 具名控件**二十一键**（「对齐第三批」P15 十键 + R7 增 `agent.autoThink`〔auto-think 档〕+ B10 W3 七键 + 注入开关三键（#1420 #1465）
  *  —— 本表 = 键集 / 词键 / 表定控型三面单源）：
@@ -39,6 +39,7 @@ const SELF_FACED_KINDS = Object.freeze(["model", "effort", "guard"])
  *  切片投影，写经 `session:flags` 槽面；读面字段作 `taken` 排除防重复行）。
  */
 export const NAMED_FIELDS = Object.freeze([
+  { path: "agent.mode", word: "settings.agent.mode", kind: "mode" },
   { path: "agent.maxTurns", word: "settings.agent.maxTurns", kind: "number" },
   { path: "agent.subagentTurns", word: "settings.agent.subagentTurns", kind: "number" },
   { path: "agent.poolLimits.engCoder", word: "settings.agent.poolLimits.engCoder", kind: "number" },
@@ -135,6 +136,17 @@ function effortOptions(section, current) {
   return selectOptions(["none", ...levels], current, t("settings.noneMark"))
 }
 
+/** 新会话默认工作模式：固定三档，无自由文本或额外清除态。 */
+function modeOptions(fields) {
+  const current = fields.get("agent.mode")?.value
+  const selected = ["tiny", "normal", "engineering"].includes(current) ? current : "normal"
+  return ["tiny", "normal", "engineering"].map((value) => ({
+    tag: "option",
+    props: value === selected ? { value, selected: true } : { value },
+    children: [t(`settings.agent.mode${value[0].toUpperCase()}${value.slice(1)}`)],
+  }))
+}
+
 /** 具名控件显示值（`scale` 面：显单位 = 分钟 ⇒ ÷60000 取整 —— 非数 / 缺 ⇒ 空串，禁假造）。 */
 function namedValueText(entry, field) {
   if (field === undefined) return ""
@@ -159,6 +171,9 @@ function namedFieldNode(entry, field, section, handlers) {
     const onToggle = typeof handlers?.onToggleGuard === "function" ? (event) => handlers.onToggleGuard(event) : undefined
     const props = { class: "settings-field", id, type: "checkbox", checked: live && section.guard === true ? true : undefined }
     control = { tag: "input", props: live && onToggle !== undefined ? { ...props, onChange: onToggle } : { ...props, disabled: true } }
+  } else if (entry.kind === "mode") {
+    const props = { class: "settings-field", id }
+    control = { tag: "select", props: onNamed === undefined ? { ...props, disabled: true } : { ...props, onChange: onNamed }, children: modeOptions(fields) }
   } else if (entry.kind === "model" || entry.kind === "effort") {
     const current = entry.kind === "model" ? modelValueOf(fields, id) : advisorEffortValue(fields)
     const options = entry.kind === "model" ? submodelOptions(section, current) : effortOptions(section, current)

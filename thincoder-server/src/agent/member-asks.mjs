@@ -1,6 +1,6 @@
 /**
  * member-asks.mjs — 成员面 ask 应答 / 会话删除 / `@` 候选三端点（`gateway/API.md` §2.11 ∥ `agent/MEMBER-AGENT.md`
- * §3.11(2)/(6)；member-face-parity 批——自 `member-routes.mjs` 拆出（越 500 软线拆案），端点形与错误门逐字沿族）。
+ * §3.11(2)/(6)；member-face-parity 批——自 `member-routes.mjs` 拆出（越 500 行拆案），端点形与错误门逐字沿族）。
  *
  * 三端点：
  *  ① `POST /api/me/chat/sessions/:id/asks/:promptId`——ask 应答（体按 kind 一件；relay 在途表对位 ⇒ 下行 `answer`）；

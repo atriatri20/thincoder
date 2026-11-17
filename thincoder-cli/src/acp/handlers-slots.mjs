@@ -11,7 +11,7 @@
  */
 import { ACP_ERRORS } from "./transport.mjs"
 import { sessionConfigOptions } from "./handlers-session.mjs"
-import { loadConfig } from "@thincoder/core/config.mjs"
+import { loadConfig, resolveSessionWorkMode, resolveWorkMode } from "@thincoder/core/config.mjs"
 import { resolveEngineeringManifest } from "@thincoder/core/manifest.mjs"
 import { replayHistory } from "./bridge.mjs"
 import { listSlots, applySession, deleteSlot, loadSlotFile, slotOccupancy, loadManifest, saveManifest, getSessionId, newSession } from "@thincoder/core/session.mjs"
@@ -24,9 +24,10 @@ export function createSlotsHandlers(ctx) {
    *  `engineering` 字段 ? 槽值 : config 回退」。本路装配期（`applySession` 之前）无会话
    *  agent ⇒ 回退源 = 盘上 config（与装配产物同源：`defaultCreateSession` → `assembleAgent`
    *  → `loadConfig`）。 */
-  const slotEngineering = (data) => data?.engineering !== undefined
-    ? data.engineering === true
-    : (() => { try { return loadConfig().agent?.engineering === true } catch { return false } })()
+  const slotEngineering = (data) => {
+    try { return resolveSessionWorkMode(data, loadConfig().agent) === "engineering" }
+    catch { return false }
+  }
 
   /** #41 装载后一行重估（F3 准翻列 / F4）：`applySession` 已按槽订正 config ⇒ 工程模式会话
    *  就地判据（单源）+ 附着——缺档格 `writer:'main'` 建档；非工程模式零动作（零 manifest I/O）。
@@ -122,7 +123,7 @@ export function createSlotsHandlers(ctx) {
           // fork 会经 saveSession → activeSlot → ensureActive 分支1 早退（slotSessions
           // [active] === mySessionId 同进程恒真）落回同进程 active 槽 → 两会话写同一槽
           // 静默互覆盖。newSession 跳过活认领号/现存文件号，必定落到新槽。
-          session.agent._slot = await newSession(getCwd())
+          session.agent._slot = await newSession(getCwd(), { mode: resolveWorkMode(session.agent.config?.agent) })
         }
         sessions.set(id, session)
         // Replay the human line (role → chunk mapping, design §4.5) so the
@@ -185,7 +186,7 @@ export function createSlotsHandlers(ctx) {
         } else {
           // 2026-09-01 advisor 🔴：同 load——显式 newSession fork（_slot=null 的 fork 会
           // 落回同进程 active 槽 → 两会话写同一槽静默互覆盖）
-          session.agent._slot = await newSession(getCwd())
+          session.agent._slot = await newSession(getCwd(), { mode: resolveWorkMode(session.agent.config?.agent) })
         }
         sessions.set(id, session)
         // resume: no history replay — the client keeps its own rendering.
@@ -216,7 +217,7 @@ export function createSlotsHandlers(ctx) {
       // 互覆盖（sessionStart 均 null → F2 永不轮转）。与 load/resume 同型修复：
       // 立即 newSession 钉全新槽（跳过活认领号/现存文件号）。
       for (const s of sessions.values()) {
-        if (s.agent?._slot === slot) s.agent._slot = await newSession(getCwd())
+        if (s.agent?._slot === slot) s.agent._slot = await newSession(getCwd(), { mode: resolveWorkMode(s.agent.config?.agent) })
       }
       log(`session ${slot} archive deleted`)
       return {}

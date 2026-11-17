@@ -245,11 +245,14 @@ export function trimOldMessages(ctx) {
 }
 
 /** Wire the pin/unpin listeners once（核工厂直写模式 —— 近底直写；事件集 `wheel` / `touchmove` / `scroll` 保持）。
+ *  **两处均开上滚解钉**（`unpinOnUpScroll`——本端是本批唯一开启面）：流式每帧 `applyPin` 把 `scrollTop` 写回底 ⇒
+ *  半视口距离判据在流式期间永远攒不到（用户实感 = 滚不动、被拽回）⇒ 判「上滚了」不收距离，并给 `PIN_GRACE_MS`
+ *  宽限窗（机制单源 = `docs/render-core/design/RENDER-CORE.md` §5「滚动策略族」∥ §2 KD-RC-17；端面 = `docs/vsc/design/WEBVIEW.md` §5.5）。
  *  活动区（§12.3 第 7 条）同口径独立 pin——两 watch 各自宿主键面；`?.` 空安全：
  *  夹具缺区 id 零抛错（缺 el ⇒ `attach` 零动作）。 */
 export function initScrollFollow(ctx) {
   ctx._pinBottom = true
   ctx._pinActivity = true
-  createPinWatch(ctx.messagesEl, { holder: ctx, flagKey: "_pinBottom" }).attach()
-  createPinWatch(ctx.activityEl, { holder: ctx, flagKey: "_pinActivity" }).attach()
+  createPinWatch(ctx.messagesEl, { holder: ctx, flagKey: "_pinBottom", unpinOnUpScroll: true }).attach()
+  createPinWatch(ctx.activityEl, { holder: ctx, flagKey: "_pinActivity", unpinOnUpScroll: true }).attach()
 }

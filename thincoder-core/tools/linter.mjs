@@ -30,7 +30,7 @@ export const lintTool = {
     }
 
     // Full cascade: language-aware (tsc → node --check, ruff, cargo, go vet —
-    // third-party linter cascade removed 2026-09-02, TOOLS.md §10.2: zero-dependency lint)
+    // third-party linter cascade removed 2026-09-02: zero-dependency lint)
     const ext = abs.split(".").pop()?.toLowerCase()
     const checkers = LANG_CHECKERS[ext]
     if (!checkers) return nodeCheckResult(abs, ctx.signal) // fall back to node --check
@@ -56,7 +56,7 @@ async function nodeCheckResult(abs, signal) {
   }
 }
 
-// ─── Full-check cascade checkers (third-party linter branch removed 2026-09-02, TOOLS.md §10.2) ──────
+// ─── Full-check cascade checkers (third-party linter branch removed 2026-09-02) ──────
 
 async function tscCheck(file, { cwd, signal, existsSync, join, run }) {
   if (!existsSync(join(cwd, "tsconfig.json"))) return null
@@ -110,7 +110,7 @@ async function goVet(file, { cwd, signal, run }) {
 }
 
 const LANG_CHECKERS = {
-  // js/mjs/cjs/jsx fall back to node --check (no entry — third-party linter cascade removed 2026-09-02, TOOLS.md §10.2)
+  // js/mjs/cjs/jsx fall back to node --check (no entry — third-party linter cascade removed 2026-09-02)
   ts:  [tscCheck],
   tsx: [tscCheck],
   mts: [tscCheck],

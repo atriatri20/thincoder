@@ -1,66 +1,29 @@
-# apply_patch 工具权威语义（APPLY-PATCH）· 编辑工具板块
+# apply_patch 工具（APPLY-PATCH）· 设计
 
-> 板块 = **编辑工具**；本档 = **apply_patch 语义的权威源**（逐工具权威档之一）。
-> 地图与契约要点 = `docs/core/design/TOOLS.md` §6.6 · §8.2——本档不复制其内容（D2）。
-> 共享底层 = `docs/core/design/EDIT-HELPERS.md`（EOL 写回 / 新建随目录多数派——本档只指不述）。
-> 双端：CLI `thincoder-core/tools/patch.mjs`（`applyPatchTool`）· VSC `thincoder-vscode/src/tools/more-file.mjs`——VSC 现体同指 `thincoder-core/tools/patch.mjs`。
-> 模型可见描述 = `thincoder-core/tool-docs/apply_patch.md`（提示词面 / 产品代码）。
-> 需求侧 = `docs/core/requirements/TOOLS.md`（工具系统板块；CLI 树无逐工具需求档）。
+> 需求 = `docs/core/requirements/TOOLS.md`；共享底层 = `EDIT-HELPERS.md`。
+> 最近先例：`EDIT.md` 的部分失败回执。对齐 = hunk 预检、写后如实报告。
+> 勘察证据：已读统一 diff、hunk 定位、两段写与编辑器注入。相关 = 当前多文件写面。
 
-## 1. 定位
+## 1. 语法
 
-apply_patch = **统一 diff 形态应用到一或多文件，原子**（任一 hunk 失败 → 全不写）。
+patch 为 unified diff。支持多文件、/dev/null 新建、当前 lone header 与无坐标 hunk 容缺。
 
-**适用**：一次新建多个文件（每文件 `--- /dev/null` 头）· 整文件替换 · 跨文件重构（改接口 + 全调用方）——一个 diff 调用覆盖整变更（一次授权 / 一个 undo 单元 / 一个 turn）。
-**不是**：单文件小改（→ edit 更简单）、整文件重写（→ write）、删文件（→ delete 工具）。
+无坐标纯添加且没有可靠锚时拒绝。删除文件不使用本工具。
 
-## 2. 参数与语法
+## 2. 定位与原子性
 
-- `patch`（必须）——unified diff 文本。每文件 `--- a/<path>` / `+++ b/<path>` 头对，后接 `@@ -old,count +new,count @@` hunks；`--- /dev/null` = 新建文件。
+hunk 按上下文/删除行定位，多匹配拒绝。所有 hunk 在写前计算；hunk 阶段失败则尚未写目标文件。
 
-**宽容格式**（三处）：
+写盘阶段逐文件提交，中途失败时已提交文件保留。编辑器注入路径可在当前 stage 点即时提交，回执必须计入。
 
-- `+++ b/<path>` 头对可省：既有文件可写 lone `--- a/<path>`（或 `--- b/<path>`）后直接接 hunk；**新建仍须** `--- /dev/null` + `+++ b/<path>`。
-- **无坐标 hunk**：裸 `@@` 若上下文行 <2 且含 ≥1 `-` 行 → 定位锚 = hunk 内匹配行序列（空格上下文 + `-` 行按出现序）连续；唯一序列匹配即应用（`-` 后随 `+` = 替换、无 `+` = 删除）；0/1 上下文同待遇；多匹配 → 报错（matches N locations）；**纯 `+` 零上下文（无 `-` 锚）仍拒**（位置不明）；上下文 ≥2 走既有路径。
-- **文件头容缺**：`--- /dev/null` 缺 `+++ b/<path>` → 仍拒并**特报**（新文件名不可从 `---` 侧推导）；`-- x` 内容删行不误判文件头；多文件补丁完整 / 容缺可混合；空段过滤（不虚报 touchedPaths）。
+## 3. 回执与记账
 
-标准坐标格式 `@@ -old,count +new,count @@` 不变，两格式并存；hunk 体 `-` / `+` 行语义不变。
+全成返回 Applied patch。失败时按补丁序列出 modified/created/not committed 和当前失败原因，末行给真实 k/M。
 
-## 3. 定位规则（hunk）
+已写文件永不回滚，不能声称零写。已提交文件统一 markDirty/clearLastWrite，包括编辑器注入。
 
-hunk 按**上下文 / 删除行定位，非行号**——但上下文必须与文件**精确匹配**（先 `read` 再从实际内容生成 patch）；一 hunk 上下文匹配多处 → 拒绝（须补更多上下文）。
+EOL 与新建目录多数派由 EDIT-HELPERS 负责。
 
-## 4. 约束
+## 4. 验证
 
-- **删文件不支持**（→ delete 工具；`--- b/... +++ /dev/null` 形态显式拒绝）。
-- **多文件原子**：任一 hunk 失败 → 全不写。
-- **返回值**：`Applied patch to N file(s)` + 每文件变更行 + 变更 JS 文件的 syntax-check 注。
-- **EOL**：写回按原行尾（`docs/core/design/EDIT-HELPERS.md` §4 F1）；新建按目录多数派（F2）。
-
-## 5. 何时用（模型路由）
-
-跨文件 / 多文件 / 整块 / 新建多个 → apply_patch（一次授权）；单文件小改 → edit；加新行 → insert_after；整文件重写 → write。（路由权威 = AGENT-LOOP 板。）
-
-## 6. 机制面
-
-### 6.1 实现坐标
-
-| 面 | 落点 | 实核 |
-|---|---|---|
-| 工具对象 / 执行 | `thincoder-core/tools/patch.mjs:171`（`applyPatchTool`） | 导出在位 |
-| 删文件拒绝 | `thincoder-core/tools/patch.mjs:49` | 错误文案在位 |
-| `/dev/null` 缺 `+++` 特报 | `thincoder-core/tools/patch.mjs:63` | 错误文案在位 |
-| 返回文案 | `thincoder-core/tools/patch.mjs:243`（`Applied patch to N file(s)`） | 在位 |
-| 注册面 | `thincoder-core/tools/index.mjs:5`（import）· `:21`（注册表） | patch 组（apply_patch / delete） |
-| 描述面（模型可见） | `thincoder-core/tool-docs/apply_patch.md` | 在位（`DESC()` 加载） |
-| VSC 对位实现 | `thincoder-vscode/src/tools/more-file.mjs:239`（`apply_patch`）——现体 = 核 `thincoder-core/tools/patch.mjs` | 同名机制 |
-
-**VSC 端差异（编辑器路径面）**：VSC 端 `more-file.mjs:239`（`apply_patch`）——同机制；EOL 写回 / 新建随目录多数派（F1 / F2）同口径（`docs/core/design/EDIT-HELPERS.md` §4）；**无编辑器路径分支**（apply_patch = 整文件域、不进编辑器 range——见 §1）；宽容格式三处（§2）双端同。
-
-## 7. 关键决策记录
-
-| # | 决策 | 理由 |
-|---|---|---|
-| D-P1 | **hunk 按锚序列定位**（无坐标 hunk 须含 ≥1 `-` 行） | 上下文/删除行是唯一可靠锚；纯 `+` 无锚 = 位置不明（宁可拒，不许猜） |
-| D-P2 | **多文件原子**（全有或全无） | 半应用的多文件补丁留下不自洽工作树 |
-| D-P3 | 文件头**容缺但特报**（新建名缺 `+++` 显式拒） | 新文件名不可推导——特报优于笼统语法错 |
+验证多文件、新建、无坐标锚、歧义、hunk 失败零写、写盘中途失败、编辑器已提交和回执真值。

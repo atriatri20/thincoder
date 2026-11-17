@@ -210,6 +210,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   // 保守抑制（非能力断言）：带 `noUsageStream` 的行 = 核不主动发 stream_options.include_usage（glm 族已实测带该参数全 200）；逐族等级 = MODEL-SPECS.md §15.2
   if (!spec.noUsageStream) body.stream_options = { include_usage: true }
   // §6.17 发送面同源：max_tokens = requestBudget().maxTokens（显式才发——spec.maxOutput 是预留面非合同值）
+  // 同一个预算对象也交给发送前净判（§2.2「stats、守卫和压缩使用同一预算对象」——本档不重算第二份）。
   const budget = requestBudget(provider, spec)
   if (budget.maxTokens !== undefined) body.max_tokens = budget.maxTokens
   if (provider.temperature != null) {
@@ -235,7 +236,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   } else if (
     // D-14（MODEL-SPECS §9.6 · 批 2026-09-20-channel-onboarding）：effort 族非百炼渠道的
     // 「off 静默失效」——两端「关思考」发的是 `thinking:null` 标记（CLI cmd-think.mjs / VSC
-    // reasoning-mode.mjs），该标记在 :193 被 falsy 跳过 ⇒ 服务端默认想 on、不发任何思考字段
+    // reasoning-mode.mjs），该标记在 `if (provider.thinking) body.thinking = …` 那支被 falsy 跳过 ⇒ 服务端默认想 on、不发任何思考字段
     // = UI 显 OFF 实际在想（假告知，同 PROVIDER.md §6.12 先例）。`reasoning_effort:"none"` 是
     // 实测唯一有效 off 路径（hy3 / seed：tok=0、rc 消失）。五 guard 面（MODEL-SPECS §9.9 B-5）：
     // 无枚举行（hy4-preview）透传不变 / 显式档优先只携该档（上支）/ 百炼 flash 同义多携 /
@@ -262,7 +263,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   const estimated = estimateRequestTokens(body)
   // §6.17 发送面净判（第二道）：`estPrompt` = 输入侧估算——不减掉 `max_tokens` 会把输出预算白扣一份
   const estPrompt = estimated - (body.max_tokens ?? 0)
-  assertPromptFits(provider, estPrompt, logCtx)
+  assertPromptFits(provider, estPrompt, logCtx, budget)
   await rateGate(provider, estimated, onWait, signal)
 
   const response = await requestWithRetry(provider, body, signal, onWait)

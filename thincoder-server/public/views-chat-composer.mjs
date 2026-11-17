@@ -162,7 +162,7 @@ export function createChatComposer(ctx, deps = {}) {
     turnState: () => (status.running ? "running" : "idle"),
     queue: () => ({ count: queue.length }),
     models: () => modelRows,
-    flags: () => ({ autoApprove: false, advisorGuard: false, engineering: false, planMode: false }), // 无源（模式位面无）——核面构造期初值
+    flags: () => ({ autoApprove: false, advisorGuard: false, mode: "normal", planMode: false }), // 管理面无会话模式源，控件由 CSS 隐藏
     workspaceRequired: () => false, // 浏览器面恒有工作区语义（不入会话）
     subscribe: (handler) => { pushHandler = handler },
   }

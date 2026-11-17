@@ -1,6 +1,6 @@
 /**
  * views-me-chat-subs.mjs — 成员·对话页·子代理面（`webui/CHAT.md` §2.2 差异⑨；机制 = `agent/MEMBER-AGENT.md` §3.11(5) KD-SV-219）；
- * 自 `views-me-chat.mjs` 外拆（拆档缘由 = 该件越 500 软线——增行前先外拆；member-face-parity 批）——面内四族：
+ * 自 `views-me-chat.mjs` 外拆（拆档缘由 = 该件当年已过 500 行；member-face-parity 批）——面内四族：
  * ① **`sub` 帧 ⇒ 核 `subblocks/*` 链**：`ev` 事件 token ⇒ 核 `relayEventToSubPatch` ⇒ `subBlocksReduce`；内容 ⇒ 核
  *    `relaySubContentChunk` ⇒ `renderSubagentChunk`；块装配 = 核 `renderSubBlock`（出生 ∕ 接管 ∥ 终态折叠 ∥ 归档 ∥ 排队取消）；
  * ② **效果表执行**（`born`/`takeover`/`fold`/`awaiting`/`archive`/`remove`/`refresh`——核件效果表逐条、`key → DOM` 于该条执行时解析）；

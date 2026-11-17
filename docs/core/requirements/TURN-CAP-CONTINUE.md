@@ -1,45 +1,44 @@
 # 撞轮数墙可继续（TURN-CAP-CONTINUE）· 需求
 
-> 板块 = **Agent 循环 · 轮数预算耗尽后的续跑**（撞墙可继续）。
-> 本档 = 该机制的**需求层权威**（**F1–F9 / N1–N6** 判定句）。
-> 设计侧 = `docs/core/design/TURN-CAP-CONTINUE.md`（统一语义 / 四执行体 / 跨段累计编号 / 双端坐标）。
-> 相邻需求档 = `docs/core/requirements/AGENT-LOOP.md`（主循环与子代理）。
+> 设计 = `docs/core/design/TURN-CAP-CONTINUE.md`；主循环 = `AGENT-LOOP.md`。
 
-## 1. 总体定位
+## 1. 目标
 
-agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续跑（同一执行体、保留历史与改动），而不是重开一次任务。
-续跑必须是**用户可控**的（拒绝时返回部分成果），且**次数不设上限**。
+耗尽当前段 maxTurns 时保留同一执行体、历史与改动，由有权者决定继续或停止，不重开任务。
 
-## 2. 功能性需求
+## 2. 功能需求
 
-| # | 需求 | 判定句（可机器验证） |
+| # | 需求 |
+|---|---|
+| F1 | 撞帽统一抛 ContinueError；继续以 resume:true 重入同一执行体 |
+| F2 | 续跑不重新注入任务，保留 history、写序与当前工作状态 |
+| F3 | 主 agent、子代理、escalate、consult 都有当前续跑或部分交付路径 |
+| F4 | 拒绝、headless 或无法续跑时返回部分成果与明确 turn-cap 标记 |
+| F5 | 用户 Stop/AbortError 优先，不弹继续卡、不自动续跑 |
+| F6 | 同时撞帽的提示按当前会话队列串行；后台异步不直接弹用户卡 |
+| F7 | 轮号跨段累计，显示当前段与累计读数，编号不倒退 |
+| F8 | 异步族在段边界向父代理报请；AUTO 不自动批准续期 |
+| F9 | 运行产物可自证实际 core 路径、版本与当前续跑接线 |
+| F10 | 撞帽提示同时含本段轮数与累计轮数，不重复印等价 limit |
+
+## 3. 执行体
+
+| 执行体 | 预算配置 | 续跑决定 |
 |---|---|---|
-| **F1** | 统一语义 | 撞墙 = `runAgent` 耗尽 `maxTurns` 抛 `ContinueError`（类 `thincoder-core/agent/helpers.mjs`（唯一实现；VSC `thincoder-vscode/src/agent.mjs:9` 只剩转口）/ 抛点 `thincoder-core/agent/turn-loop.mjs:316`）；继续 = `resume:true` 重跑同一执行体 |
-| **F2** | 续跑不重来 | 继续**不重新注入任务文本**、保留 history 与改动——`resume` 把子执行体的活 history 交回（VSC `thincoder-vscode/src/agent-tools/subagent-run.mjs:141`） |
-| **F3** | 全执行体覆盖 | 四类执行体均有续跑分支：主 agent（`thincoder-vscode/src/extension/panel-chat.mjs` 回合循环）· 子 agent（`agent-tools/subagent-run.mjs:85`/`:175`）· 飞刀（现体 = 核 `thincoder-core/agent-tools/subagent-actions.mjs`）· 会诊（`agent-tools/consult.mjs:310`） |
-| **F4** | 拒绝返回部分成果 | 拒绝 / headless / 无法续跑 → 部分成果 + turn-cap 标记（VSC `agent-tools/subagent-run.mjs:195`/`:199`，文本含 "work may be partial"）——报告据此判定「撞墙中断、工作可能不完整」 |
-| **F5** | 用户 Stop 优先 | 中止路径（`AbortError` / `signal.aborted`）始终优先于继续提示——不弹继续卡、不自动续跑 |
-| **F6** | 继续提示串行 | 按会话级队列串行（`continueQueue`——`thincoder-vscode/src/agent-tools/consult.mjs:319`）——并行执行体同时撞墙不弹多个卡；后台 async 子代理**永不弹用户卡**——撞帽改走**父代理检查点**（F8）；无父代理 ⇒ 降级 partial |
-| **F7** | 编号跨段累计 | 触发回合帽续跑后，面向上层的逐轮编号**跨段累计为唯一单调序列**（不重置、不倒退）——展示口径 `turn n/max`：n = 链内累计已跑轮数，max = 累计已授予预算（段数 × 段预算）；双端同源（各端独立实现） |
-| **F8** | 撞帽即续期检查点（裁定 A） | 撞帽（`ContinueError`——核 `thincoder-core/agent.mjs:439`）**不再静默自动续期**：**异步族**（后台子代理 / 异步飞刀 / 会诊）⇒ **向父代理报请**（ask；答「续期」⇒ `resume:true` 重入 · 答「停」⇒ 部分成果 + turn-cap 标记）；**同步族**（阻塞子代理 / 同步飞刀）⇒ **用户卡路径保留**（父代理被本次调用阻塞 · 应答不可达）；depth-0 ⇒ 回用户；**AUTO 一律不再自动批准续期**（无人应答 ⇒ partial）；续期**留痕** = 累计轮次 / 段数可查；**撞帽检查 = 无条件**（**有无产出皆检查**——**不设零产出阈值**，裁定 D） |
-| **F9** | 载入面自证（裁定 E） | **运行面**必须可自证：① **启动期一行诊断** = 记录当前 core 的**实体路径 + 版本**；② **打包面机检** = 扩展打包内 core 须含撞帽检查点接线（`checkpoint.mjs` + `subagent-run.mjs` 接线）——防「仓内已修、运行面仍旧」✗（实盘教训 = 安装面冻结旧构建 ⇒ 静默续段半天） |
-| **F10** | 撞帽提示带累计 | 撞帽提示必须同时给出**本段轮数**与**链内累计轮数**，并删掉 `(limit …)` 括注（各可交互面同一信息集）。只报本段，用户判不出「已经转了 40 轮」还是「刚转 12 轮」，而继续 / 停的决断正好取决于这个量级；`(limit N)` 在撞帽面上恒等于本段轮数（`ContinueError(maxTurns)` 于循环跑满后抛出 ⇒ 同一个数说两遍；VSC / 桌面更印成无数字的断头句） |
+| 主 agent | agent.maxTurns | 用户；无人值守时部分收口 |
+| 子代理/escalate | agent.subagentTurns | 异步由父 send/cancel；同步按用户卡 |
+| consult | agent.consultTurns | 父检查点，续期重置当前 watchdog |
 
-## 3. 非功能性需求
+继续次数不设上限；每段仍受当前预算，停滞治理由用户 Stop 与看门狗负责。
 
-| # | 维度 | 标准（含度量） |
-|---|---|---|
-| **N1** | 继续次数不设上限 | 防卡死靠用户 Stop——无次数帽（VSC 侧 `src/` 面零命中实核） |
-| **N2** | 预算可配 | `agent.maxTurns` / `agent.subagentTurns` / `agent.consultTurns`（默认 200 / 100 / 40——其中 200 / 100 的单源 = `DEFAULT_MAX_TURNS` / `DEFAULT_SUBAGENT_TURNS`，`thincoder-core/agent/helpers.mjs`）；explore 执行体走 `subagentTurns`（双端对齐） |
-| **N3** | 时钟语义 | 会诊继续 = 新预算 = 墙钟 watchdog 重置（重挂点 VSC `agent-tools/consult.mjs:323-325`） |
-| **N4** | 显示 / 协议零改动 | 编号经既有回调与终态快照消费——**桥消息字段零新增**；webview 显示文件零改动 |
-| **N5** | 回归锁 | 跨段编号用例族全绿 + 全量回归全绿；双端语义同源、**异载体**（VSC 种子经 `opts`、核侧同一 child 对象跨段 ⇒ 种子零作用） |
-| **N6** | 零机制改动 | 段内帽判定（`turn < maxTurns`）与 `ContinueError` 抛点、续跑预算语义**零变化**——F7 只改展示 / 协议编号值 |
+## 4. 验收
 
-## 4. 范围边界（不做）
+- 续跑同 history、同改动、同累计轮号。
+- 父未答、拒绝和中止都不会静默续跑。
+- AUTO 不改变“需要裁定”的语义。
+- 无父/headless 明确 partial。
+- 打包产物缺当前检查点接线时发布检查失败。
 
-- 不建 live 头逐轮跳动（需桥通道——登记保持开放；本项只修**值语义**）。
-- 不改段内帽判定（`turn < maxTurns`）与 `ContinueError` 载荷；**续期决策点改由检查点裁定**（F8）——续跑循环结构与 `resume` 语义不变。
-- **无人值守的已知后果**（F8 接受）：无父代理 / 无人应答 ⇒ **停在段边界交付部分成果**（F4），不再无限续跑；脚本 / CI / headless 侧按此预期调整。
-- 不做分段显式显示（段号 + 段内号——`turn 30/100 · seg 2` 形态）：选型 = 跨段累计（协议字段零新增）。
-- 不设继续次数上限（N1）。
+## 5. 边界
+
+不新增分段编号协议，不把零产出当自动续跑条件，不改变段内 maxTurns 判定。

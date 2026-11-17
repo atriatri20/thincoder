@@ -11,6 +11,7 @@
 import { ansi, C } from "./ansi.mjs"
 import { sliceByWidth, stringWidth } from "./render.mjs"
 import { t } from "@thincoder/core/i18n.mjs" // 停滞轻显形（TUI.md §7.7）：句式键 status.quiet——词面单源（CLI 直取）
+import { resolveWorkMode } from "@thincoder/core/config.mjs" // 档名读取口归一单源（CONFIG §5.4——旧值 minimal 读成 tiny）
 import { isRealUserMsg } from "@thincoder/core/history-window.mjs" // B6 回退链：首条真实 user 消息谓词（纯件单源）
 import { isYesNoModal } from "./interaction.mjs" // X8 跟进①：y/n-only 族判据单源
 
@@ -52,7 +53,8 @@ export function renderStatus(state, agent, cols, slashCommands) {
   const planBanner = agent.planMode ? `${C.tool} PLAN${ansi.reset}${ansi.dim}│` : ""
   const advisorBanner = agent.config?.advisor?.guard === true ? `${C.advisor} ADVISOR${ansi.reset}${ansi.dim}│` : ""
   const engBanner = agent.config?.agent?.engineering ? `${C.advisor} ENG${ansi.reset}${ansi.dim}│` : ""
-  const bannerPrefix = (agent.planMode ? " PLAN│ " : "") + (agent.autoApprove ? " AUTO│ " : "") + (agent.config?.advisor?.guard === true ? " ADVISOR│ " : "") + (agent.config?.agent?.engineering ? " ENG│ " : "")
+  const tinyBanner = resolveWorkMode(agent.config?.agent) === "tiny" ? `${C.tool} TINY${ansi.reset}${ansi.dim}│` : ""
+  const bannerPrefix = (agent.planMode ? " PLAN│ " : "") + (agent.autoApprove ? " AUTO│ " : "") + (agent.config?.advisor?.guard === true ? " ADVISOR│ " : "") + (agent.config?.agent?.engineering ? " ENG│ " : "") + (resolveWorkMode(agent.config?.agent) === "tiny" ? " TINY│ " : "")
   // 第 33 批（TUI §14.3(b)/(c)）：attention 态 = chip 行首 + 整行注意力色对包裹（blocked >
   // awaiting；blocked 内 permission > question——与按键分发优先级同序）；平态零注入。
   const kind = attentionKind(state)
@@ -61,7 +63,7 @@ export function renderStatus(state, agent, cols, slashCommands) {
   const attentionPad = chip ? `${chip} │ ` : ""
   // 宽度预算（N9④）：chip 占位计入——整行仍 ≤ cols − 1（既有口径）。
   const statusMax = cols - 1 - (bannerPrefix ? stringWidth(bannerPrefix) : 0) - (attentionPad ? stringWidth(attentionPad) : 0)
-  const inner = `${ansi.dim}${planBanner}${autoBanner}${advisorBanner}${engBanner}${sliceByWidth(statusLine, Math.max(10, statusMax))}`
+  const inner = `${ansi.dim}${planBanner}${autoBanner}${advisorBanner}${engBanner}${tinyBanner}${sliceByWidth(statusLine, Math.max(10, statusMax))}`
   // 负向锁（§14.3）：attention 为 null ⇒ 半态路径逐字节等价（不经包裹 / 零字节注入）。
   if (!chip) return `${inner}${ansi.reset}`
   // 底色存活（§14.3）：既有内容含内部 ansi.reset（banner / ctx 警示段）——每次内部复位后
@@ -142,11 +144,16 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const statusText = state.processing ? `${state.status}${toolHint}${elapsed}${quietHint}` : state.status
   // 2026-09-02 Q1（SESSION.md §6.8）：provider 可为 null —— 核 `providerSpec(null)` 保守 128K 不抛错。
   // 2026-09-02 §15 ∥ context-percent-parity：窗口 / 校准比 / 两值全在核 `historyReading` 内解析（`ctxCacheOf` 缓出）——
-  // 本段零自算式，只格式化核读数的两个返回值；零值不显示门 `ctxPct > 0` 留在端侧（空历史口径已登记）。
+  // 本段零自算式，只格式化核读数的返回值；零值不显示门 `ctxPct > 0` 留在端侧（空历史口径已登记）。
+  // CONTEXT-COMPACTION.md §2.5「显示与判定同基准」：分母 = `limit`（用户实际可填的量）；告警判据 = `tokens >= threshold`
+  // （同一次读数带出的压缩线），不再用魔数 `ctxPct >= 80`——判定与显示读同一个数，端侧不各发明一档阈值。
   const ctxPct = state.ctxCache.pct
-  const ctxTokensHint = state.ctxCache.tokens > 0 ? ` ${fmtK(state.ctxCache.tokens)}` : ""
+  const ctxTokens = state.ctxCache.tokens
+  const ctxTokensHint = ctxTokens > 0 ? ` ${fmtK(ctxTokens)}` : ""
+  const threshold = state.ctxCache.threshold
+  const ctxWarn = Number.isFinite(threshold) && ctxTokens >= threshold
   const ctxHint = ctxPct > 0
-    ? ctxPct >= 80 ? ` │ ${ansi.reset}${C.warn}context ${ctxPct}%${ctxTokensHint}${ansi.reset}${ansi.dim}` : ` │ context ${ctxPct}%${ctxTokensHint}` : ""
+    ? ctxWarn ? ` │ ${ansi.reset}${C.warn}context ${ctxPct}%${ctxTokensHint}${ansi.reset}${ansi.dim}` : ` │ context ${ctxPct}%${ctxTokensHint}` : ""
   // INPUT-LOCK-ASYNC（C'——F-3）：busy（processing 含 digest）状态栏提示——取代旧排队提示
   // （F-7 已删）；F16（TUI.md §7.5）**四态分流**（queue-visible 批 2026-09-24）：队列非空 ⇒
   // 条数段（dim 段样式 · 零注意力色对——F13 豁免 · 消费即消失）；队空 ⇒ 按 busy 面分排队句
@@ -172,6 +179,11 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   // 零在途 ⇒ 零注入（负向锁——半态逐字节等价）；到期态（任一在途项已过期未送达）⇒ 同段警示色。
   const timers = agent._pendingTimers ?? []
   const timerHint = timers.length === 0 ? "" : ` │ ${timers.some((t) => t.expiresAt <= Date.now()) ? `${ansi.reset}${C.warn}timer ${timers.length}${ansi.reset}${ansi.dim}` : `timer ${timers.length}`}`
+  // 跨实例待取提示（跨实例取件闩·等待期提示 —— `docs/cli/design/TUI.md`「4. 状态栏与活动」）：本端有一轮在飞且
+  // inbox 里有未取消息 ⇒ 状态段出一段待取条数（沿「已排队 N 条消息」一脉，同段样式）；归零即摘除（负向锁——
+  // 零条 ∥ 非在飞 ⇒ 零注入，整行逐字节等价）。值 = `onPending` 每拍交来的读数（`index.mjs` 写 `state.inboxPending`）。
+  const inboxN = state.inboxPending ?? 0
+  const inboxPendingHint = state.processing && inboxN > 0 ? ` │ 待取 ${inboxN} 条消息` : ""
   // D8（2026-09-21 块标题行对齐批——会话标题常显 · `docs/cli/design/TUI.md` §7.4）：状态段簇尾
   // （ledgerHint 后、键位组前）；取值 = `agent.title` 活读（每帧 recompute）· 40 列截断。
   // B6 消（#677）：空白 ⇒ 回退链值（对位 VSC 顶栏——生成前 ∕ 失败期两端同值；值逐字，行级超宽走 statusMax）。
@@ -180,7 +192,7 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const titleHint = ` │ ${titleShown}`
   // 团队登录态段（登录面补全批 · `docs/cli/design/TUI.md` §7.8）：簇尾末位（titleHint 后、`│ <enterHint>` 前）
   const teamHint = teamSegmentHint(state.team)
-  return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${scrollHint}${ledgerHint}${timerHint}${titleHint}${teamHint} │ ${enterHint} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
+  return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${scrollHint}${ledgerHint}${timerHint}${inboxPendingHint}${titleHint}${teamHint} │ ${enterHint} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
 }
 
 /** 团队状态段（TUI.md §7.8——三态闭集）：未登录 ⇒ `""`（**负控：零注入——整行逐字节等价**）；

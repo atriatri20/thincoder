@@ -1,8 +1,10 @@
 /**
- * tester-role.test.mjs — 集成用例 30-1（RTM CLI 端故事 30「读数子代理：派一个 tester 跑验证」）。
+ * tester-role.test.mjs — 集成用例 30-1 ∥ 30-2（RTM CLI 端故事 30「读数子代理：派一个 tester 跑验证」）。
  *
- * 判据原文 = `test/RTM.md` 第 30 节；机制 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.59
- * （工具面 §6.59.2 ④ · 报告形态 §6.59.10 · 集成行设计 §6.59.9）。
+ * 判据原文 = `test/RTM.md` 第 30 节与 `test/rtm/tooling.md` 故事 30 两行；30-1 机制 =
+ * `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.59（工具面 §6.59.2 ④ · 报告形态 §6.59.10 · 集成行设计
+ * §6.59.9），30-2 机制 = 同档 §6.60（文档工具面装配 · 集成行 §6.60.9，需求回指 =
+ * `docs/core/requirements/DOC-GRAPH.md` §4 AC-10）。
  *
  * **进入口 = 父侧工具面**（`subagent` 走 `executeToolCalls` 的真门与真装配——不直调 `buildSpawnChild`）：
  * 本档要的是「父侧派一个读数子代理跑一条必败断言」这件事的业务可观察结果——
@@ -22,6 +24,12 @@
  *
  * 复跑（cwd = 仓根）：`node --test test/integration/tester-role.test.mjs`
  *
+ * 30-2 的另一面：它只读**子代理那一发请求体**里的工具表（`doc_check` ∥ `doc_graph` 在位，且 `doc_graph` 的
+ * `action` 枚举只三值、无 `scan`），并与**同一次派单所在父进程**的 depth-0 家族段对读（那里 `doc_graph` 仍四值）。
+ * 父侧一格取的是 `assembleFamilyTools({ depth: 0, … })` 的真输出，不是夹具父表的请求体：夹具的父表只喂
+ * **基础集**，家族段由核 `agent/setup.mjs` 按 depth 在同一处追加（父表里本来就没有 `doc_graph`）——取那条
+ * 请求体问「父侧 `doc_graph` 几动作」会得到一个不存在的缺席，而不是四值。
+ *
  * 本档证明得了什么、证不了什么：报告文本里的命令原文 ∥ 跑者计数 ∥ 用例名 ∥ exit code 都**来自本地真跑者**
  * （夹具把实际收到的工具结果拼成回复），所以它们证明「子代理真跑过、结果原样回到父侧」；
  * 它们**不**证明模型会照 persona 的四块形态写（模型只要回吐工具结果就恒过）。四块形态 = 模型行为面，
@@ -36,10 +44,12 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { registerHooks } from "node:module"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { createAgent } from "../../thincoder-core/agent.mjs"
 import { executeToolCalls } from "../../thincoder-core/agent/dispatch.mjs"
@@ -99,13 +109,12 @@ const { buildToolTable: vscBuildToolTable } = await import("../../thincoder-vsco
 function makeProject(tag, extra = {}) {
   const root = mkdtempSync(join(SCRATCH, `tt-${tag}-`))
   mkdirSync(join(root, "docs/batches"), { recursive: true })
-  mkdirSync(join(root, "test"), { recursive: true })
   writeFileSync(join(root, "PROJECT-MANIFEST.json"), JSON.stringify({ version: 1, docRoot: { batches: "docs/batches" } }, null, 2))
   writeFileSync(join(root, "docs/batches/probe.md"), "# probe\n\n## §2 批次任务与设计\n\n占位。\n")
-  writeFileSync(join(root, "test/failing.test.mjs"),
+  writeFileSync(join(root, "failing.test.mjs"),
     `import { test } from "node:test"\nimport assert from "node:assert/strict"\n`
     + `test("${FAIL_CASE}", () => { assert.equal(2 + 2, 5) })\n`)
-  writeFileSync(join(root, "test/passing.test.mjs"),
+  writeFileSync(join(root, "passing.test.mjs"),
     `import { test } from "node:test"\nimport assert from "node:assert/strict"\n`
     + `test("TT-30-1 passing assertion", () => { assert.equal(2 + 2, 4) })\n`)
   for (const [rel, content] of Object.entries(extra)) writeFileSync(join(root, rel), content)
@@ -210,17 +219,17 @@ async function assertSameToolFace(endpoint, label) {
   assert.deepEqual(vscNames, coreNames.slice().sort(), `${label}：核 ∥ 端同一角色的工具面必须逐名相等（端差 = 缺陷）`)
 }
 
-test("30-1 派一个 tester 跑一条必败 ∥ 必过断言：受理 · 工具表无写面（核 ∥ 端逐名相等）· 报告带回命令原文与跑者读数", { timeout: 180_000 }, async (t) => {
+test("CLI 30-1 派一个 tester 跑一条必败 ∥ 必过断言：受理 · 工具表无写面（核 ∥ 端逐名相等）· 报告带回命令原文与跑者读数", { timeout: 180_000 }, async (t) => {
   const root = makeProject("30-1")
   const runs = []
   t.after(async () => {
     for (const r of runs) await r.endpoint.close()
-    rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-    rmSync(VSCODE_STUB_PATH, { force: true }) // 桩模块是夹具（模块已在进程内载完，删掉不扰后续断言）
+    removeTempDirBestEffort(root)
+    removeTempDirBestEffort(VSCODE_STUB_PATH) // 桩模块是夹具（模块已在进程内载完，删掉不扰后续断言）
   })
 
   // ── 必败断言 ──
-  const failing = await runTester({ root, command: "node --test test/failing.test.mjs", fixture: "failing", callsId: "tu_30_1_fail" })
+  const failing = await runTester({ root, command: "node --test failing.test.mjs", fixture: "failing", callsId: "tu_30_1_fail" })
   runs.push(failing)
   const failReport = failing.report
 
@@ -236,13 +245,13 @@ test("30-1 派一个 tester 跑一条必败 ∥ 必过断言：受理 · 工具�
   await assertSameToolFace(failing.endpoint, "必败跑")
 
   // ③ 必败跑的报告把读数原样带回：命令原文 ∥ 跑者汇总行 ∥ 失败用例名（都来自本地跑者）
-  assert.ok(failReport.includes("node --test test/failing.test.mjs"), `报告须带命令原文：${failReport.slice(0, 400)}`)
+  assert.ok(failReport.includes("node --test failing.test.mjs"), `报告须带命令原文：${failReport.slice(0, 400)}`)
   assert.match(failReport, /fail 1/, `报告须带跑者给的 fail 计数：${failReport.slice(-800)}`)
   assert.ok(failReport.includes(FAIL_CASE), `报告须带失败用例名：${failReport.slice(-800)}`)
   assert.match(failReport, /\(exit code 1\)/, `报告须带这次跑的 exit code：${failReport.slice(-500)}`)
 
   // ── 必过断言（§6.59.9：同一交互，只差可观察结果 —— 合并在本行的第二条断言）──
-  const passing = await runTester({ root, command: "node --test test/passing.test.mjs", fixture: "passing", callsId: "tu_30_1_pass" })
+  const passing = await runTester({ root, command: "node --test passing.test.mjs", fixture: "passing", callsId: "tu_30_1_pass" })
   runs.push(passing)
   const passReport = passing.report
   assert.equal(passing.res.ok, true, `派 tester 必须受理（必过跑），实得：${passReport.slice(0, 400)}`)
@@ -250,3 +259,39 @@ test("30-1 派一个 tester 跑一条必败 ∥ 必过断言：受理 · 工具�
   assert.match(passReport, /pass 1/, `报告须带跑者给的 pass 计数：${passReport.slice(-800)}`)
   assert.match(passReport, /\(exit code 0\)/, `报告须带这次的 exit code 0：${passReport.slice(-500)}`)
 })
+
+test("CLI 30-2 子代理的工具表里有 doc_check 与 doc_graph（枚举只三值、无 scan），同一次派单的父侧 depth-0 仍四值", { timeout: 180_000 }, async (t) => {
+  const root = makeProject("30-2")
+  const runs = []
+  t.after(async () => {
+    for (const r of runs) await r.endpoint.close()
+    removeTempDirBestEffort(root)
+    removeTempDirBestEffort(VSCODE_STUB_PATH)
+  })
+
+  // 真门 + 真装配：同 30-1 的入口派一个 tester（子代理里跑的是一条无副作用的 `echo`，本行看的是工具表）
+  const run = await runTester({ root, command: "echo 30-2", fixture: "passing", callsId: "tu_30_2_tools" })
+  runs.push(run)
+  assert.equal(run.res.ok, true, `派 tester 必须受理：${run.report.slice(0, 400)}`)
+
+  const testerReq = run.endpoint.requests.find((r) => String(r.body?.system ?? "").includes(TESTER_PERSONA_MARK))
+  assert.ok(testerReq, "没抓到 tester 的请求，取不到它实际拿到的工具表")
+  const childTools = testerReq.body.tools ?? []
+  const childNames = childTools.map((tool) => tool.name ?? tool?.function?.name)
+  assert.ok(childNames.includes("doc_check"), `子代理工具表须含 doc_check：${JSON.stringify(childNames)}`)
+  assert.ok(childNames.includes("doc_graph"), `子代理工具表须含 doc_graph：${JSON.stringify(childNames)}`)
+
+  // 枚举读的是子代理真收到的那份 schema（anthropic 形 = input_schema）
+  const childGraph = childTools.find((tool) => (tool.name ?? tool?.function?.name) === "doc_graph")
+  const childSchema = childGraph?.input_schema ?? childGraph?.function?.parameters
+  assert.deepEqual(childSchema?.properties?.action?.enum, ["forward", "reverse", "chain"], `子代理面只三值：${JSON.stringify(childSchema?.properties?.action)}`)
+  assert.ok(!JSON.stringify(childSchema?.properties?.action?.enum).includes("scan"), "子代理面的枚举不得含 scan")
+
+  // 同一次派单的父侧 depth-0 家族段（核在同一处按 depth 追加——父表只喂基础集）
+  const parentFamily = await assembleFamilyTools({ depth: 0, engineering: true, consultModels: [], batchDoc: null })
+  const parentGraph = parentFamily.find((tool) => tool.name === "doc_graph")
+  assert.ok(parentGraph, "父侧 depth-0 家族段须有 doc_graph")
+  assert.deepEqual(parentGraph.parameters.properties.action.enum, ["scan", "forward", "reverse", "chain"], "父侧 depth-0 的 doc_graph 仍四值（含 scan）")
+  assert.equal(parentGraph.readonly, false, "父侧 depth-0 的 doc_graph 仍是写面工具")
+})
+

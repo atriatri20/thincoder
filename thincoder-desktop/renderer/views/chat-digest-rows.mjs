@@ -13,7 +13,7 @@
  * 复列 = **记录序重放**（恢复序 ≡ 记录序）：轮于其记录位次复列（**全量——未结轮照现**）∥ 运行期轮 = 流末 —— 归构树面
  * `renderer/views/chat-tree.mjs`（重挂 ∥ 首屏 ∥ **回填整置**（回填落位批 · 2026-10-04——删档 + 新写） = 树面重建；行族随树逐位采纳 —— 零采纳步）。
  * 导出面：构树 `digestRows` · 帧刷 `syncDigest` · 位次读面 `roundAt`（记录面字段）·
- * 首屏清点 `clearDigest`（运行期痕五清之四 —— 引调面 `renderer/page-read.mjs`）。
+ * 首屏清点 `clearDigest`（运行期痕六清之四 —— 引调面 `renderer/page-read.mjs`）。
  * 依赖单向：`renderer/views/chat.mjs` ∥ `renderer/views/chat-chrome.mjs` ∥ `renderer/views/chat-tree.mjs` ∥
  * `renderer/page-read.mjs` → 本档（引调）；本档 → `../dom.mjs` ∥ `../i18n.mjs`（反向零 import ⇒ 无环）。
  */
@@ -271,7 +271,7 @@ export function syncDigest(root, model, anchor = null) {
   syncRoundRows(root, rounds, floor, anchor) // 末轮行账三支（判据 ∥ 建行面零改）
 }
 
-/** 首屏页读清点（**运行期痕五清之四** —— 引调面 `renderer/page-read.mjs` 首屏门）：末轮未结（`status !== "end"`）
+/** 首屏页读清点（**运行期痕六清之四** —— 引调面 `renderer/page-read.mjs` 首屏门）：末轮未结（`status !== "end"`）
  *  ⇒ **保末轮**（活态——「窗存续 · 切回即见」）；余整清（清点口径 = **未结末轮保**——维持现行；归属过滤住并入点
  *  `withFoldedDigest`）；余轮内容随首屏记录复列**全量（未结轮照现）**承接（留档批 · #719 ∥ 自然形收正批 · 2026-10-01 ∥
  *  消化重放口径批 · 2026-10-01）；null ∕ 非载体 ∕ 无轮 ∕ 原样保留 ⇒ **原引用**（零写）。 */

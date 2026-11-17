@@ -7,6 +7,7 @@
       "docs/cli/requirements",
       "docs/vsc/requirements",
       "docs/desktop/requirements",
+      "docs/render-core/requirements",
       "docs/server/requirements",
       "docs/RELEASE.md"
     ],
@@ -17,11 +18,12 @@
       "docs/vsc/design",
       "docs/desktop/design",
       "docs/render-core/design",
-      "docs/server/design"
+      "docs/server/design",
+      "docs/TEST-ENV-ECS.md"
     ],
     "modules": "docs/core/design/modules",
     "batches": "docs/batches",
-    "standards": "docs/core/requirements/METHODOLOGY.md"
+    "standards": "docs/core/standards"
   },
   "codePaths": [
     "src"
@@ -30,9 +32,15 @@
     "codeExtensions": [],
     "docExtensions": [],
     "excludePaths": [
-      "docs/core/design/_archive",
-      "docs/core/requirements/_archive"
+      "docs/core/design/DOC-MIGRATION.md"
     ],
-    "publicRepos": []
+    "docCheckExcludePaths": [],
+    "publicRepos": [
+      "../.thincoder",
+      "../thincoder.com"
+    ],
+    "writableRepos": [
+      ".."
+    ]
   }
 }

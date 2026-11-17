@@ -1,7 +1,8 @@
 /**
  * conventions.mjs — the single authority for code / doc / temp / aux path classification,
- * plus the project declaration surface (the three declaration families of the project's
- * `PROJECT-MANIFEST.json`: `codePaths` / `index.*` / `advisor.*`).
+ * plus the project declaration surface (the declaration families of the project's
+ * `PROJECT-MANIFEST.json`: `codePaths` / `index.*` — the `advisor` family is retired and
+ * dropped on write, so it is not part of this surface).
  *
  * Why one module: the write-domain gates and guards (design gate, review-doc gate,
  * mutation accounting, verify fast path) each carried their own copy of the
@@ -23,12 +24,13 @@
  *   visible warning per load (existence check only — zero content parsing — KD-M1-34).
  *
  * Classification vocabulary (PORTABILITY design §3.2):
- *   code — inside a declared code segment (default: the path segment `src`), or the
- *          fallback;  doc — documentation extension outside any code segment and not
- *          scratch;  temp — tmp-* name or .tmp/.temp extension;  aux — a default
- *          auxiliary-path segment sequence (test / tests / scripts / .thincoder/tmp — F9)
- *          that matched no code segment and neither doc nor temp;  state — a project state
- *          file (`PROJECT-MANIFEST.json` basename ∥ `.thincoder/conventions.json` pair — #941).
+ *   code — inside a declared code segment (none by default: a project declares
+ *          `codePaths`), or the fallback;  doc — documentation extension outside any
+ *          code segment and not scratch;  temp — tmp-* name or .tmp/.temp extension;
+ *          aux — a default auxiliary-path segment sequence (test / tests / scripts /
+ *          .thincoder/tmp — F9) that matched no code segment and neither doc nor temp;
+ *          state — a project state file (`PROJECT-MANIFEST.json` basename ∥
+ *          `.thincoder/conventions.json` pair — #941).
  * Precedence: code segment → temp → doc → aux → state → fallback code.
  *
  * Segment matching runs on the PROJECT-ROOT-RELATIVE FACE of a path (D17 · 2026-09-28): the
@@ -189,4 +191,4 @@ export function isStatePath(p, conv) {
 // 迁出面（2026-10-01 拆分批 · #755 ∥ #786）：声明装载面外提 `declaration.mjs`——本档经
 // 转口保名（消费面 / 单元测试档 import 面零改；`DEFAULT_DECLARATION` 另供本档分类裁判缺省取用）。
 // ─────────────────────────────────────────────────────────────────────────────
-export { loadProjectDeclaration, declarationForTarget, DEFAULT_DECLARATION, isExcludedRelPath, declaredIndexScope, isInDeclaredScope, declaredPublicRoots, clearDeclarationCache } from "./declaration.mjs"
+export { loadProjectDeclaration, declarationForTarget, DEFAULT_DECLARATION, isExcludedRelPath, declaredIndexScope, isInDeclaredScope, declaredPublicRoots, declaredWritableRoots, clearDeclarationCache } from "./declaration.mjs"

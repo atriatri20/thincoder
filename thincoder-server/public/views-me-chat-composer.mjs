@@ -6,11 +6,11 @@
  * 适配层四面（§2.1③——逐面）：① **容器自建**（控制台建 `#toolbar`——核件不造容器）+ 两样式 `<link>` 幂等注（`data-rc-css`）；
  * ② **变量别名桥** = `:root` 别名块（落 `style.css`——核壳族变量名 ⇒ 控制台既有变量，零新值）；③ **注入口桥** = 本档 `post`/`state`/`hooks` 三件；
  * ④ **钮可见性 = 适配层开关**（member-face-parity 批 KD-SV-218）：容器挂 `data-flags="live"`（本档建 `#toolbar` 之点）+ `style.css`
- * 作用域覆写 `#toolbar[data-flags="live"]` 下四模式钮 + 设置钮 `display: inline-flex` —— 全局收窄五 id 规则零动（管理面五枚仍隐、AC-19 canon 不破）。
+ * 作用域覆写 `#toolbar[data-flags="live"]` 下会话控件 + 设置钮 `display: inline-flex`；管理面无源控件仍隐。
  * `workspaceRequired` ⇒ `false`（§2.2 差异④——工作区 = 会话级已绑，非逐消息概念）。
  *
- * 三端对齐面（member-face-parity 批——机制 = `agent/MEMBER-AGENT.md` §3.11）：**四旗**读面 = `deps.flagsOf()`（当刻会话行 `flags` 槽四字段——
- * 恒假改真读；写 = 核件钮 ⇒ `post("setAutoApprove"…)` ⇒ 本档 `deps.onSelectFlag(name, value)`（页面 `PATCH …/:id` 一次一件）⇒ 回读重派生）；
+ * 会话控件读面 = `deps.flagsOf()`（当刻会话行三布尔开关 + mode；旧 engineering 只读迁移）；
+ * 写 = 核件 `setMode`/布尔动作 ⇒ `deps.onSelectFlag(name, value)`（页面 `PATCH …/:id` 一次一件）⇒ 回读重派生；
  * **状态行段表 19 段**（§3.11(4)——段集 ⊆ 表 ∥ 缺源 ⇒ 零段；页内读数经 `deps.readings()` 现取：审批在决 ∥ 挂起池 ∥ 计划旗 ∥ 标题）；
  * **图片通道** = `payload.images` 放行入 `onSend(text, images)`（§3.11(6)——零静默丢：服务端视觉门 400 ⇒ 就地人话 + 草稿保留）；
  * **`@` 文件引用** = `post("atComplete")` ⇒ `deps.onAtComplete(payload)`（页面取 `GET /api/me/chat/files` ⇒ `atResults` 回推）。
@@ -37,8 +37,19 @@ export const SEARCH_CSS = "/rc/search.css"
 export const QUIET_MS = 10000
 /** context 段警示阈（§2.1④——≥80% ⇒ 警示色段）。 */
 export const CONTEXT_WARN_PCT = 80
-/** 四模式旗键（核槽四字段——KD-SV-218；写径 = `PATCH` 一次一件）。 */
-export const FLAG_KEYS = Object.freeze(["autoApprove", "advisorGuard", "engineering", "planMode"])
+/** 会话布尔开关与工作模式值域。旧 engineering 只在读面迁移，不是写面字段。 */
+export const FLAG_KEYS = Object.freeze(["autoApprove", "advisorGuard", "planMode"])
+export const WORK_MODES = Object.freeze(["tiny", "normal", "engineering"])
+export const CONTROL_KEYS = Object.freeze([...FLAG_KEYS, "mode"])
+/** 旧值读取别名（CONFIG §5.4）：`minimal` 是 tiny 的历史写法，只在读取口归一。 */
+const LEGACY_MODE_ALIASES = Object.freeze({ minimal: "tiny" })
+
+/** 会话工作模式读面：合法 mode 优先（旧值先归一）；旧槽仅从 engineering 布尔迁移。 */
+export function workModeOf(flags) {
+  const mode = LEGACY_MODE_ALIASES[flags?.mode] ?? flags?.mode
+  if (WORK_MODES.includes(mode)) return mode
+  return flags?.engineering === true ? "engineering" : "normal"
+}
 
 /** 单档样式注入（幂等——重渲 ∥ 语言切换重挂零重复）。 */
 export function injectStylesheet(href) {
@@ -149,6 +160,11 @@ export function statusSegments(state, nowMs = Date.now()) {
 export function createSlashCommands(handlers = {}) {
   return [
     { name: "/model", aliases: ["/m"], group: "Agent", descKey: "slash.desc.model", run: (ctx) => ctx.actions.openModelMenu() === true },
+    { name: "/auto", group: "Agent", descKey: "slash.desc.auto", run: (ctx) => ctx.actions.toggleAuto() === true },
+    { name: "/plan", aliases: ["/p"], group: "Agent", descKey: "slash.desc.plan", rejectKey: "toolbar.planDisabled", run: (ctx) => ctx.actions.togglePlan() === true },
+    { name: "/eng", group: "Agent", descKey: "slash.desc.eng", run: (ctx) => ctx.actions.toggleEng() === true },
+    { name: "/tiny", group: "Agent", descKey: "slash.desc.tiny", run: (ctx) => ctx.actions.setMode(handlers.mode?.() === "tiny" ? "normal" : "tiny") },
+    { name: "/normal", group: "Agent", descKey: "slash.desc.normal", run: (ctx) => ctx.actions.setMode("normal") },
     { name: "/new", aliases: ["/n"], group: "Session", descKey: "slash.desc.new", run: () => handlers.newChat?.() === true },
     { name: "/help", aliases: ["/h"], group: "System", descKey: "slash.desc.help", run: () => handlers.help?.() === true },
   ]
@@ -237,14 +253,15 @@ export function createMeChatComposer(ctx, deps = {}) {
     turnState: () => (status.running ? "running" : "idle"),
     queue: () => ({ count: queue.length }),
     models: () => modelRows,
-    // 四旗读面（§3.11(3)——恒假改真读：当刻会话行 `flags` 槽四字段；缺行 ⇒ 全假）
+    // 会话控件读面：合法 mode 优先，旧 engineering 只作迁移；工程态的 PLAN 显示值恒假。
     flags: () => {
       const flags = deps.flagsOf?.() ?? null
+      const mode = workModeOf(flags)
       return {
         autoApprove: flags?.autoApprove === true,
         advisorGuard: flags?.advisorGuard === true,
-        engineering: flags?.engineering === true,
-        planMode: flags?.planMode === true,
+        mode,
+        planMode: mode !== "engineering" && flags?.planMode === true,
       }
     },
     workspaceRequired: () => false, // 工作区 = 会话级已绑（§2.2 差异④——非逐消息概念）
@@ -256,7 +273,11 @@ export function createMeChatComposer(ctx, deps = {}) {
     onStatusRefresh: () => paintStatus(),
     openSettings: () => deps.onOpenSettings?.(), // 控件行第 7 钮 ⇒ 账户页路由（§3.11(6) ⚙ 判定）
   }
-  const commands = createSlashCommands({ newChat: () => deps.onNewChat?.() === true, help: () => printHelp() })
+  const commands = createSlashCommands({
+    newChat: () => deps.onNewChat?.() === true,
+    help: () => printHelp(),
+    mode: () => workModeOf(deps.flagsOf?.()),
+  })
 
   /** `/help` 行集就地打印（核 `formatHelp` 单源——本档零第二清单）。 */
   function printHelp() {
@@ -265,7 +286,7 @@ export function createMeChatComposer(ctx, deps = {}) {
 
   /** 出站映射表（§2.1③ ③——未在册类型零动作：钮/菜单项面已 CSS 收窄，零静默假动作面）。
    *  成员面消息链 = `content` + `images`（§3.11(6) 图片通道——`payload.images` 放行；文本档内联 `withAttachedFiles` 照常）；
-   *  四模式旗 = `setAutoApprove`/`setAdvisorGuard`/`setEngineeringEnabled`/`setPlanMode` ⇒ 页面 `PATCH` 一次一件；
+   *  会话控件 = `setAutoApprove`/`setAdvisorGuard`/`setMode`/`setPlanMode` ⇒ 页面 `PATCH` 一次一件；
    *  `atComplete` = `@` 桥出站（页面取候选 ⇒ `atResults` 回推核件面板）。 */
   const post = (type, payload = {}) => {
     if (type === "userMessage") { void runTurn(String(payload?.text ?? ""), imagesOf(payload)); return }
@@ -277,7 +298,10 @@ export function createMeChatComposer(ctx, deps = {}) {
     if (type === "atComplete") { deps.onAtComplete?.(payload ?? {}); return }
     if (type === "setAutoApprove") { void writeFlag("autoApprove", payload?.value === true); return }
     if (type === "setAdvisorGuard") { void writeFlag("advisorGuard", payload?.value === true); return }
-    if (type === "setEngineeringEnabled") { void writeFlag("engineering", payload?.value === true); return }
+    if (type === "setMode") {
+      if (WORK_MODES.includes(payload?.value)) void writeFlag("mode", payload.value)
+      return
+    }
     if (type === "setPlanMode") { void writeFlag("planMode", payload?.value === true); return }
   }
 
@@ -415,20 +439,19 @@ export function createMeChatComposer(ctx, deps = {}) {
     if (ok !== true) pushModels()
   }
 
-  /** 四旗写（核件钮/`/auto`/`/plan`/`/eng` 同门出站 ⇒ 页面 `PATCH` 一次一件）：回执后回读当刻行值重派生
-   *  （成功 ⇒ 新值；失败 ⇒ 旧值回弹——核控件面镜像与行槽零分离）。 */
+  /** 会话控件写（核件钮与斜径同门出站 ⇒ 页面 `PATCH` 一次一件）：回执后回读当刻行值重派生。 */
   async function writeFlag(name, value) {
     const ok = await deps.onSelectFlag?.(name, value)
     syncFlags()
     return ok === true
   }
 
-  /** 四旗镜像重派生（核控件行三 handler：`autoApprove`/`agentSettings`/`planMode`——当刻行 `flags` 为真源）：
+  /** 控件镜像重派生（`autoApprove`/`agentSettings`/`planMode`——当刻行 `flags` 为真源）：
    *  会话切换 ∥ PATCH 回执 ∥ 回读失败三处调用。 */
   function syncFlags() {
     const flags = state.flags()
     pushHandler?.({ type: "autoApprove", value: flags.autoApprove })
-    pushHandler?.({ type: "agentSettings", settings: { advisor: { guard: flags.advisorGuard }, engineering: flags.engineering } })
+    pushHandler?.({ type: "agentSettings", settings: { advisor: { guard: flags.advisorGuard }, mode: flags.mode } })
     pushHandler?.({ type: "planMode", active: flags.planMode })
   }
 
@@ -436,7 +459,7 @@ export function createMeChatComposer(ctx, deps = {}) {
   const imagesOf = (payload) => (Array.isArray(payload?.images) ? payload.images.filter((item) => typeof item === "string" && item !== "") : [])
 
   pushModels() // 构造期先落一次（当刻会话可能已在手——钮面字零空窗）
-  syncFlags() // 构造期四旗初绘（行 `flags` 真值——`state.flags()` 读面）
+  syncFlags() // 构造期控件初绘（行 `flags` 真值——`state.flags()` 读面）
 
   return {
     el,

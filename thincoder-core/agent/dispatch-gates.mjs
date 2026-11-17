@@ -132,6 +132,12 @@ export function isSubagentEscalateAction(toolName, args) {
 export function readonlyActionOf(tool, toolName, args) {
   return tool?.isReadonlyAction?.(args) ?? isReadonlyAction(toolName, args)
 }
+/** 只读变体派生面的谓词形（`(tool, args)`——`readonlyActionOf` 的单参适配，单源只此一处）。
+ *  消费点 = `agent/helpers.mjs` 的 `makeReadonlyToolVariant` / `deriveReadonlyTools` 注入面：
+ *  构造器不 import 本档（本档 import 它——成环），故由调用方把这枚函数传进去（TOOLS.md §6.29 ①）。 */
+export function readonlyActionTest(tool, args) {
+  return readonlyActionOf(tool, tool?.name, args)
+}
 export function controlActionOf(tool, toolName, args) {
   return tool?.isControlAction?.(args) ?? isSubagentControlAction(toolName, args)
 }

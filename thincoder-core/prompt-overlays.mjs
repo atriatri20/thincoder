@@ -8,7 +8,7 @@
  * reuse PERSONA_NORMAL as their persona slot (蓝图 §3.1 同槽位复用——变体差异归人格层覆写; design D1 G1 note).
  */
 
-import { loadSlot, applyPromptInjections } from "./prompt-files.mjs"
+import { loadSlot, applyPromptInjections, expandKnowledgeTopics } from "./prompt-files.mjs"
 
 // ── G1 槽位内容表（文件名 → 内容常量）──
 const SLOT_CONTENTS = {
@@ -30,9 +30,9 @@ const SLOT_CONTENTS = {
 //    persona-{role} 三件由 SLOT_CONTENTS 承载、不设独立常量导出——装配表唯一消费面）──
 export const PERSONA_ENGINEERING = SLOT_CONTENTS["persona-engineering.md"]
 export const PERSONA_NORMAL = SLOT_CONTENTS["persona-normal.md"]
-export const COMMON = SLOT_CONTENTS["common.md"]
+export const COMMON = expandKnowledgeTopics(SLOT_CONTENTS["common.md"])
 export const DISCIPLINE_ENGINEERING = SLOT_CONTENTS["discipline-engineering.md"]
-export const DISCIPLINE_NORMAL = SLOT_CONTENTS["discipline-normal.md"]
+export const DISCIPLINE_NORMAL = expandKnowledgeTopics(SLOT_CONTENTS["discipline-normal.md"])
 export const CONSULT_BASE = loadSlot("consult-base.md")
 
 // ── D1 场景→槽位文件表（PROMPT-SYSTEM.md §3.2 装配矩阵内联——①②并行契约锚：
@@ -68,16 +68,19 @@ export function slotWarning(fileName) {
  *
  * 锚替换缝（CORE-UNIFICATION §2.13.8——U0）：**两个 return 逐条**经 `applyPromptInjections`
  * （槽位拼接结果 / consult 基底）——未配置 = 恒等，现行行为零变；读取径（模块级缓存）不动。
- * 结构机检（`test/prompt-injections.test.mjs`）按 return 分支逐条守。
+ * 必须保持的不变量：每个 return 分支都经 `applyPromptInjections`，新增分支未挂即错。
  */
-export function assemblePrompt(scenario) {
+export function assemblePrompt(scenario, mode = "normal") {
   const files = SCENARIO_SLOT_FILES[scenario]
   if (!files) return { prompt: applyPromptInjections(CONSULT_BASE), warnings: [] }
   const parts = []
   const warnings = []
   for (const file of files) {
     const content = SLOT_CONTENTS[file]
-    if (content) parts.push(content)
+    const expanded = file === "common.md" || file === "discipline-normal.md"
+      ? expandKnowledgeTopics(content, { tiny: mode === "tiny" })
+      : content
+    if (expanded) parts.push(expanded)
     else warnings.push(slotWarning(file))
   }
   return { prompt: applyPromptInjections(parts.join("\n\n")), warnings }

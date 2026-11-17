@@ -33,8 +33,11 @@
  * **#1121 修③（写失败零乐观写）**：`session:prefs` 失败 ⇒ B21 行（`source` 分量携来源通道——渲染面按
  * 来源分「切换未生效」行）+ **回滚钩** `rollbackPrefs(key)`（挂载面注入；缺省 ⇒ 零动作）；写成功而配置面
  * 写回失败（回执 `carryover:{ ok:false, reason }`）⇒ 同一条失败行（槽写不反扑）。
+ * **模式位写失败可见与回滚（状态一致性批）**：`session:flags` 失败 ⇒ B21 行 + `rollbackFlags(key)`（以当前
+ * `sessionFlags` 切片重推核件控件行 —— 核件乐观态回退；零取数）。
  */
 import { clearRunning } from "./badges.mjs"
+import { modeOfFlags } from "./events-flags.mjs"
 import { clearTurnTraces, convergeBlockText, setProviderState, withFlowOp } from "./store.mjs"
 import { ADD_MODAL_GROUP } from "./views/settings.mjs" // KD-77 ③：添加弹窗组名单源（零双抄 —— 沿「不引视图面向下依赖」例外注：本档仍 node 可装载）/** 回执 `reason` 归一（缺 ∕ 非串 ∕ 空串 ⇒ `fallback`）—— 诊断串单源（mount 侧候选面同引）。 */
 export function reasonOf(receipt, fallback = "unknown") {
@@ -249,11 +252,30 @@ export function createComposerWire(deps = {}) {
     if (carried !== null && typeof carried === "object" && carried.ok === false) recordFailure("session:prefs", { reason: carried.reason })
   }
 
-  /** 模式位写（D4）：回执成功径携 `flags` 活值 ⇒ 切片写（`applyFlags` —— 与页读 ∕ 出站两径同点）。 */
+  /** 模式位写失败回滚（零乐观写）：以**当前 store** 重推核件控件行（`autoApprove` ∕ `planMode` ∕
+   *  `agentSettings` 三消息 —— 与随动面 `pushFlags` 同形），核件控件乐观态回退到槽现值；键缺 ⇒ 以活动会话代。
+   *  零取数（读 `sessionFlags` 切片现值 —— 与推送单点同源）。 */
+  function rollbackFlags(key) {
+    const held = store.get()
+    const live = typeof key === "string" && key !== "" ? key : (held?.activeSession ?? null)
+    const record = live === null ? null : held?.sessionFlags?.[live]
+    const flags = record !== null && typeof record === "object" ? record : {}
+    const mode = modeOfFlags(flags)
+    push({ type: "autoApprove", value: flags.autoApprove === true })
+    push({ type: "planMode", active: mode !== "engineering" && flags.planMode === true })
+    push({ type: "agentSettings", settings: { advisor: { guard: flags.advisorGuard === true }, mode } })
+  }
+
+  /** 模式位写（D4）：回执成功径携 `flags` 活值 ⇒ 切片写（`applyFlags` —— 与页读 ∕ 出站两径同点）。
+   *  失败 ⇒ B21 行（来源 = 本通道，可见）+ 回滚（核件控件乐观态从当前 store 重推）。 */
   async function writeFlags(key, patch) {
     if (key === null) return void console.error("[composer] session:flags skipped: no active session")
     const receipt = await call("session:flags", { key, patch })
-    if (receipt.ok !== true) return void console.error(`[composer] session:flags failed: ${reasonOf(receipt)}`)
+    if (receipt.ok !== true) {
+      recordFailure("session:flags", receipt)
+      rollbackFlags(key) // 写失败零乐观写：核件控件乐观态回退（同步 ∥ 异步径皆过此处——零第二条）
+      return
+    }
     if (receipt.flags !== undefined) store.set(applyFlags(store.get(), key, receipt.flags))
   }
 
@@ -272,7 +294,7 @@ export function createComposerWire(deps = {}) {
       case "setAutoApprove": return void writeFlags(key, flag("autoApprove"))
       case "setPlanMode": return void writeFlags(key, flag("planMode"))
       case "setAdvisorGuard": return void writeFlags(key, flag("advisorGuard"))
-      case "setEngineeringEnabled": return void writeFlags(key, flag("engineering"))
+      case "setMode": return void writeFlags(key, { mode: payload.value })
       // footer 三出口 ⇒ 设置面（A8 唯一映射点）：渠道删 / 密钥两事开设置页（本端零第二实现）；
       // 添加 ⇒ 直开添加弹窗（KD-77 ③ —— 组名单源 = 视图档 `ADD_MODAL_GROUP`；宿主双口：缺组 ⇒ 页）。
       case "addProvider": return void openSettings?.(ADD_MODAL_GROUP)

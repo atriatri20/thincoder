@@ -9,9 +9,11 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { batchTool } from "../../thincoder-core/agent-tools/batch.mjs"
 
@@ -33,7 +35,7 @@ const MANIFEST = JSON.stringify({
 /** 夹具：锚目录（无档） + 下辖 1 个带档项目 `only`。返回锚绝对路径。 */
 function workspaceFixture(t) {
   const box = mkdtempSync(join(tmpdir(), "tc-int-batch-anchor-"))
-  t.after(() => rmSync(box, { recursive: true, force: true }))
+  t.after(() => removeTempDirBestEffort(box))
   mkdirSync(join(box, "only"), { recursive: true })
   writeFileSync(join(box, "only", "PROJECT-MANIFEST.json"), MANIFEST)
   return box
@@ -45,7 +47,7 @@ const create = (box, path) => batchTool().execute(
   { agent: { cwd: box }, depth: 0 },
 )
 
-test('8-1 多根工作区锚（下辖 1 个项目）+ create 无所属 ⇒ 报明 + 路径指引，零建档', { timeout: 60_000 }, async (t) => {
+test('CLI 8-1 多根工作区锚（下辖 1 个项目）+ create 无所属 ⇒ 报明 + 路径指引，零建档', { timeout: 60_000 }, async (t) => {
   const box = workspaceFixture(t)
   const candidate = resolve(join(box, "only"))
 
@@ -64,7 +66,7 @@ test('8-1 多根工作区锚（下辖 1 个项目）+ create 无所属 ⇒ 报�
   assert.equal(existsSync(join(candidate, "docs", "batches")), false, "被报明的项目侧也零建档（本动作未落盘）")
 })
 
-test('8-2 多根工作区锚 + create 目标属某项目 ⇒ 落该项目声明基底，锚目录零新建', { timeout: 60_000 }, async (t) => {
+test('CLI 8-2 多根工作区锚 + create 目标属某项目 ⇒ 落该项目声明基底，锚目录零新建', { timeout: 60_000 }, async (t) => {
   const box = workspaceFixture(t)
   const project = resolve(join(box, "only"))
   const expected = resolve(join(project, "docs", "batches", "x.md"))

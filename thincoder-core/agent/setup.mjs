@@ -22,7 +22,7 @@ import { assembleFamilyTools } from "./family-tools.mjs"
 import { normalizeOrigin } from "../memory/origin.mjs"
 import { searchOrigins } from "../memory/code-search.mjs"
 import { INDEX_ORIGIN_ROW_WARN } from "../memory/schema.mjs"
-import { resolveCompactThreshold } from "../config.mjs"
+import { policyBudget, resolveCompactThreshold, resolveWorkMode, setConfigWorkMode } from "../config.mjs"
 import { safeSliceUTF16 } from "../text-budget.mjs"
 
 const DOC_SEARCH_LIMIT = 5
@@ -41,16 +41,25 @@ export async function prepareRun(agent, input, callbacks, {
   injections = null, toolDecorate = undefined,
 } = {}) {
   const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_TURNS
+  // Read the sole mode on every run so commands and host controls affect the next request only.
+  const mode = resolveWorkMode(agent.config?.agent)
+  if (agent.config) setConfigWorkMode(agent.config, mode)
+  const tiny = mode === "tiny"
   // §6.17 每 run 现算：数值在场 = 显式原样；不在场 = auto 现算（按在用 provider——切模型后下一 run 跟手）。
-  // 派生值不落 agent.compactThreshold（显式键永不被改写）。
-  const threshold = resolveCompactThreshold(agent.config?.agent?.compactThreshold, agent.provider).value
+  // 派生值不落 agent.compactThreshold（显式键永不被改写）。auto 档走**有效窗口**（§2.1）：tiny 把压缩线一起压下去。
+  const threshold = resolveCompactThreshold(agent.config?.agent?.compactThreshold, agent.provider, mode).value
+  // 派生不成立即拒（`CONTEXT-COMPACTION.md` §2.4）：装载期的判据点 = 这里，provider 落定之后调一次，
+  // 用户在与该模型的第一条读数之前就听到矛盾。喂的是 `policyBudget` 那一边的**有效窗口**——用户开 tiny 时
+  // 的可用窗口就是他要用的那个窗（§2.2.1）。显式 `compactThreshold` 会让上面那行跳过派生，所以本行独立走一次：
+  // `reserve ≥ window`（`usableWindow`）与 `threshold ≤ 0`（减法链）都在这一行抛出并点三个数。
+  policyBudget(agent.provider, undefined, mode)
   // 注入开关（PROMPT-SYSTEM.md §6.24 · 台账 #1420）：判据 `!== false`（缺省 = 现行为零变）——
   // 逐 run 现读 `agent.config` ⇒ `settings` 工具 ∕ `/config` 写入后本会话下一次组装即生效。
-  const injectDocs = agent.config?.agent?.injectDocs !== false
+  const injectDocs = !tiny && agent.config?.agent?.injectDocs !== false
   // 2026-10-15（PROMPT-SYSTEM.md §6.27 · 台账 #1465）：项目指令块独立开关——与 `injectDocs`
   // 完全正交（用户 05:05 裁）；判点 = 下方 `projectRules` 装配支（原读 `injectDocs` ⇒ 换读本变量）。
   const injectProjectRules = agent.config?.agent?.injectProjectRules !== false
-  const injectMemories = agent.config?.agent?.injectMemories !== false
+  const injectMemories = !tiny && agent.config?.agent?.injectMemories !== false
 
   agent._lastPromptTokens = null
   agent._usageAtLen = null
@@ -106,7 +115,7 @@ export async function prepareRun(agent, input, callbacks, {
         agent._processRestartPending = false
         agent.history.push({ role: "user", content: `[System reminder: process restarted at ${new Date().toISOString()}.]`, transient: true })
       }
-      if (agent.memory && !agent.history.some((m) => typeof m.content === "string" && m.content.startsWith(OUTLINE_INJECT_PREFIX))) {
+      if (!tiny && agent.memory && !agent.history.some((m) => typeof m.content === "string" && m.content.startsWith(OUTLINE_INJECT_PREFIX))) {
         try {
           const { buildSummary } = await import("../tools/repomap.mjs")
           // §6.14 B4：origin 限定 + 文件数上界（越界 ⇒ 提示行 + 跳过大纲构建——见 repomap.mjs）
@@ -223,7 +232,10 @@ export async function prepareRun(agent, input, callbacks, {
   })
   // 两段式：绑定值（基础集）→ 家族段 → caller 注入面（§2.3F 不相交义务在注入方）。
   const tools = [...agent.tools, ...familyTools, ...(Array.isArray(extraTools) ? extraTools : [])]
-  const toolSchemas = tools.map(toOpenAISchema)
+  // 工具描述按档装配（设计 TOOLS §1）：主链取会话现读的 mode；`agent._role === "consult"` 取完整档
+  // ——consult 与主链共用这处装配，取会话档就等于把 requirements §9.1「独立基底不被极简装配改写」撤掉。
+  const toolMode = agent._role === "consult" ? "normal" : mode
+  const toolSchemas = tools.map((tool) => toOpenAISchema(tool, toolMode))
   const toolByName = new Map(tools.map((t) => [t.name, t]))
   agent._onTaskUpdate = callbacks.onTaskUpdate
 
@@ -245,6 +257,7 @@ export async function prepareRun(agent, input, callbacks, {
       : (depth === 0 || engChildRole) && agent.config?.agent?.engineering
         ? (engChildRole ?? "engineering")
         : (depth === 0 ? "normal" : agent._role ?? "normal"),
+    mode,
   )
   // D2 警告通道 = 既有 setup 警告通道（history 注入）——不新增机制。深度 0 才注入
   // （子代理警告不打扰主会话历史——旧工程警告块同款深度门）。
@@ -268,10 +281,10 @@ export async function prepareRun(agent, input, callbacks, {
   // const 声明会 TypeError: Assignment to constant variable（每次 run 必炸）。
   let systemPrompt = base
   // 派单固块（台账 #23 · AGENT-LOOP-SUBAGENT.md §6.26）：spawn 级固定的机制性指令（批次档路径行 /
-  // 审计模板）随 system 面下发——固块值在 child 生命周期内恒定 ⇒ run 内前缀逐字节稳定（前缀缓存
-  // 不破），且不在 `agent.history` 内 ⇒ 压缩只重建 history（吞不掉）。拼接位 = 槽位装配之后、
-  // 项目指令之前；`_spawnSystemBlock` 为 null/undefined ⇒ 分支不进（depth-0 / explore / plan /
-  // consult 的 system 逐字节同改前）。
+  // 审计模板 / 写域行 / 文档坐标行）随 system 面下发——固块值在 child 生命周期内恒定 ⇒ run 内前缀
+  // 逐字节稳定（前缀缓存不破），且不在 `agent.history` 内 ⇒ 压缩只重建 history（吞不掉）。拼接位 =
+  // 槽位装配之后、项目指令之前；`_spawnSystemBlock` 为 null/undefined ⇒ 分支不进（depth-0 的 system
+  // 逐字节同改前——它不走 `buildSpawnChild`）。子代理可有可无该块：四块里一个都没推 ⇒ 同样不进。
   if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
 
   // Time injection deliberately does NOT live here: system prompts must be byte-identical

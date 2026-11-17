@@ -143,11 +143,17 @@ async function actScreenshot(args, ctx, h) {
   return `[screenshot] ${saved.path} (${saved.bytes} bytes)`
 }
 
-/** close（§2.2）：幂等——无会话 ⇒ `[close] no browser session`（成功态）。 */
+/** close（§2.2 ∥ §12）：幂等——无会话 ⇒ `[close] no browser session`（成功态）。
+ *  有会话 ⇒ 摘自己；仍有用者则浏览器留着、回执明说还有几家在用；最后一个关 ⇒ 末关（浏览器关 + 删锁）。
+ *  两形回执不可互换：前者浏览器还在跑，后者它已经不在了（模型据此判断「还能不能接着用」）。
+ *  末关但浏览器没关成（中止 ∥ 关不下去）⇒ **不得报「已关」**：回执明说它还在跑、下一位持有者收它（§12 代价 4）。 */
 async function actClose(args, ctx, h) {
   if (!h.connection()) return "[close] no browser session"
-  await h.closeSession()
-  return "[close] browser session closed"
+  const outcome = await h.closeSession()
+  if (outcome.lastUser && outcome.browserClosed) return "[close] shared browser closed (last user)"
+  if (outcome.lastUser) return "[close] released the shared browser (last user) — the browser is still running; the next instance reclaims it"
+  const others = Number(outcome.others) || 0
+  return `[close] released the shared browser (${others} other instance(s) still using it — the browser is left running)`
 }
 
 /** 基线八动作分发表（会话档并入总表——§5）。 */

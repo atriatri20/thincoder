@@ -36,7 +36,10 @@
  * 文件枚举过滤 + `seq` 原样回携）；本档只留 import + 装配 ∕ 暴露两行（拆分评审结论 = 批档 §2.7 本档行）。
  */
 import { runAgent } from "@thincoder/core/agent.mjs"
+import { resolveWorkMode } from "@thincoder/core/config.mjs"
 import { historyReading, tokenRatioOf } from "@thincoder/core/token-window.mjs"
+// 读数面上的档位用法（`CONTEXT-COMPACTION.md` §2.3）：本面握 agent，故自取当前档——tiny 档下百分比分母是有效窗口。
+// （`resolveWorkMode` 的 import 在本档上方已有一条，不重复引入。）
 // 会话键语义（`String(slot)` 单源）与端壳同档 —— 键面归一不造第二口径；偏好写面（`writeSlotPrefs`）同档。
 import { slotOfKey, writeSlotPrefs } from "./session-slots.mjs"
 // 选定写回单点（#880 —— `defaultModel` 同拍写回；判据句 6 ∕ `IPC.md` §2 项 8；零环：settings.mjs 不依本档）。
@@ -104,7 +107,7 @@ export function usageFrameWanted(ctxPct, ctxTokens, timers) {
  *  `projects` = 项目面（`currentCwd()` 供装配取值）；返回正文面 + 子 agent 面（`subagent-face.mjs` 展开：
  *  `stopSubagent` / `heartbeatBeat` / `startHeartbeat` / `stopHeartbeat`）+ `flagsOf` + `table` / `agents`。
  *  **提示面注入三件（桌面空闲唤醒批 —— 皆可缺省：缺 ⇒ 零动作）**：`notify` = 平台落子 · `focused` = 焦态判据 · `reveal` = 点击聚焦；
- *  **timer 面（timer-wake 阶段 2）**：闩 ∕ 三武装点 ∕ 窗内 `timerFace` 装配住挂起驱动档（`suspension-drive.mjs` ⋈ `timer-watch.mjs`），
+ *  **timer 面（timer-wake 阶段 2）**：闩 ∕ 三武装点 ∕ 窗内 `timerFace` 装配住挂起驱动档（`suspension-drive.mjs` 族 = 装配档 + 四语义档 ⋈ `timer-watch.mjs`），
  *  驱动族只供两枚注入面 —— `busyOf`（在飞判据）+ `takeOver`（timer 轮后同判），二者随族装配住 `turn-driver.mjs`。 */
 export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, deps = {}, projects, notify = null, focused = null, reveal = null } = {}) {
   if (typeof emit !== "function") throw new Error("[agent-host] emit required (out-bound channel)")
@@ -176,7 +179,9 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
    *  （核装配缺省 `createAgent` · 接续恒置 `applySession`）⇒ 本读数不改结算链。 */
   function postUsage(key, agent) {
     // 一次核读数出两值（§2.1 单源）：`ctxPct` 与 `ctxTokens` 同一调用——同屏两值必须同尺（已乘校准比）。
-    const { pct: ctxPct, tokens: ctxTokens } = historyReading(agent?.history ?? [], agent?.provider, tokenRatioOf(agent))
+    // 第四参 = 当前档位（自 agent 现取）——分母同取有效窗口，与 CLI ∥ VSC ∥ stats 同一个数。
+    const workMode = resolveWorkMode(agent?.config?.agent)
+    const { pct: ctxPct, tokens: ctxTokens } = historyReading(agent?.history ?? [], agent?.provider, tokenRatioOf(agent), workMode)
     const timers = pendingTimers(agent)
     if (!usageFrameWanted(ctxPct, ctxTokens, timers)) return
     post("ev:usage", { key, ctxPct, ctxTokens, usage: { ...tokensOf(key) }, timers })
@@ -287,11 +292,12 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     if (key === undefined || key === null) return null
     const agent = agents.get(String(key))
     if (!agent) return null
+    const mode = resolveWorkMode(agent.config?.agent)
     return {
-      planMode: agent.planMode === true,
+      planMode: mode !== "engineering" && agent.planMode === true,
       autoApprove: agent.autoApprove === true,
       advisorGuard: agent.config?.advisor?.guard === true,
-      engineering: agent.config?.agent?.engineering === true,
+      mode,
     }
   }
 

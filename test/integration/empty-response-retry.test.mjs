@@ -15,9 +15,11 @@
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { createAgent, runAgent } from "../../thincoder-core/agent.mjs"
 import { _resetLogsDirForTest, _setLogsDirForTest } from "../../thincoder-core/log.mjs"
@@ -29,8 +31,8 @@ const logsDir = mkdtempSync(join(tmpdir(), "empty-retry-int-logs-"))
 _setLogsDirForTest(logsDir)
 after(() => {
   _resetLogsDirForTest()
-  rmSync(cwd, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(logsDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  removeTempDirBestEffort(cwd)
+  removeTempDirBestEffort(logsDir)
 })
 
 /** 实质轮携带的工具（提供端常见形态：只发工具调用、正文空；执行只回一个串，不碰磁盘）。 */
@@ -116,7 +118,7 @@ const emptyReminders = (agent) => agent.history.filter(
 
 // ---------- 故事 15 三行 ----------
 
-test("15-1 空 → 带正文且带工具调用 → 空 → 带正文：用户拿到两次答复，全程不抛", { timeout: 60_000 }, async (t) => {
+test("CLI 15-1 空 → 带正文且带工具调用 → 空 → 带正文：用户拿到两次答复，全程不抛", { timeout: 60_000 }, async (t) => {
   const s = await session(t, [
     {},                                        // 1 空
     { content: "checking", tool: true },       // 2 实质（正文 + 工具调用）
@@ -144,7 +146,7 @@ test("15-1 空 → 带正文且带工具调用 → 空 → 带正文：用户拿
   assert.equal(s.reads[3].emptyRetries, 1, "其后的空从 1 重新起算——不是累计到 2")
 })
 
-test("15-2 桩恒回空：第 3 次空当场抛 `LLM returned empty response`，前两次各注入一次提醒", { timeout: 60_000 }, async (t) => {
+test("CLI 15-2 桩恒回空：第 3 次空当场抛 `LLM returned empty response`，前两次各注入一次提醒", { timeout: 60_000 }, async (t) => {
   const s = await session(t, [{}]) // 恒回空响应
 
   const error = await runAgent(s.agent, "hi", {}).then(() => null, (e) => e)
@@ -156,7 +158,7 @@ test("15-2 桩恒回空：第 3 次空当场抛 `LLM returned empty response`，
   assert.equal(emptyReminders(s.agent), 2, "前两次空各注入一次提醒（用户在第三次才看到错误）")
 })
 
-test("15-3 空 → 带工具调用 → 空 → 空 → 带正文：不抛（工具轮复位；修前第 3 次空即抛）", { timeout: 60_000 }, async (t) => {
+test("CLI 15-3 空 → 带工具调用 → 空 → 空 → 带正文：不抛（工具轮复位；修前第 3 次空即抛）", { timeout: 60_000 }, async (t) => {
   const s = await session(t, [
     {},                     // 1 空
     { tool: true },         // 2 工具轮（正文空、带工具调用）⇒ 复位

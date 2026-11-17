@@ -1,135 +1,251 @@
 /**
- * doc-check/paragraph.mjs — 文档纪律机检的产品档位（段判据谓词族 + 段判据——实现单源）。
+ * doc-check/paragraph.mjs — 判据 ①「一段太长」+ 全仓共用的结构谓词族。
  *
- * 口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.18 条目 Q（单位是段 / 面谓词 / 阈值 / 不分域）；
- * 产品内建裁定 = 同档 §3.20 条目 S——谓词单源随迁：本仓 `scripts/doc-check-paragraph.mjs` 改述为
- * **再出口缝**（薄档 · 零逻辑 · 逐名再出口），盘上不留第二份谓词实现。
- * 两面切块：文档面量段（相邻非空正文行合并成一段，量段长）· 提示词面（`isPromptFace`）量行
- * （逐行裸判，无结构豁免）——判据不分适用面，工具描述面同样按段判（口径 = §3.18 条 7）。度量 = `[...line].length`（CJK 计 1——不引显示宽度 / 字体）；
- * 阈值 = 调用方的内置常量（`DOC_CHECK_BUILTINS.paragraphMax` / `lineMax`）——不读声明面，也不扫目录：
- * **判定集 = 调用方传入的文件清单**。
- * 不计入段的行类（同时把段断开）= 空行 ∥ 表格行 ∥ 标题 ∥ 列表项 ∥ 引用行 ∥ 围栏（标记行与块内整行）
- * ∥ 区带内：只认结构谓词，无行级白名单（按行号 / 注释声明的豁免不入判）；可执行行在段判据里**不豁免**
- * （段 = 读者所见，码段渲染后仍在段内——§3.18 关键决策 ①）。
- * 边界：本档零门禁 / 零退出码 / 零阻断——报告态由 `agent-tools/doc-check.mjs` 呈现。
+ * 判据句单源 = `docs/core/design/DOC-CHECK.md` §2：一段 = 相邻的非空正文行合起来的那一片文字；
+ * 标题 ∥ 表格 ∥ 列表 ∥ 引用 ∥ 围栏块 ∥ 缩进代码块各自成界（它们断开段，自己也不算进段）；超过 300 字 ⇒ 报。
+ * 提示词面（`thincoder-core/prompts/`）每行自成一界——那里的换行排的是版式，不是分段。
+ * 阈值 300 是常量：判据不读项目配置，要改就改代码、走评审（§2 末行）。
+ *
+ * 结构谓词族（围栏 ∥ 标题 ∥ 列表 ∥ 引用 ∥ 表格 ∥ 码段）住本档**一处**，消费面只有两个：
+ * 本档的段判据，与 `thincoder-core/doc-graph/anchors.mjs` 的指针扫描。各写一份必然漂。
+ *
+ * **整行排除表 `structuralExclusionLines` 由两面共用**（六族：标题行 ∥ 表格块 ∥ 列表块 ∥ 引用块 ∥
+ * 围栏代码块 ∥ 缩进代码块）：文档面的并段判与提示词面的逐行判读的是同一张表，
+ * 两面差别只在「谁和谁并成一段」，不在「哪些行不算正文段落」。
  */
-import { readFileSync } from "node:fs"
 
-/** 段判据类名单源（报面与统计同取此名——改报面忘改过滤的字面漂移，2026-10-26 实发过一次）。 */
-export const DOC_CLASS = Object.freeze({ para: "文字太长，难于阅读", line: "行太长" })
+/** 一段的字数上限（判据参数 · 常量）：超过即命中。 */
+export const PARAGRAPH_MAX = 300
 
-/** 表格行谓词（markdown 表格行结构性不可折行——不计入段，与锚检查同源）。 */
+/** 表格行谓词（markdown 表格行结构性不可折行——不计入段，且断段）。 */
 export const isTableRow = (l) => /^\s*\|.*\|\s*$/.test(String(l))
 
-/** 围栏标记（行首可选空白 + 三反引号 ∥ 三波浪号 ⇒ `{ ch, len }`；非围栏行 ⇒ null）——**单源**：
- *  `isFenceLine` 与两处块扫描（本节段判据 ∥ `./anchors.mjs` 锚抽取）同取此式，使「同形围栏行止」只此一解
- *  （同一模块内同符两义 = 单源可漂的结构口子）。
- *  **长度带出**：闭合 = 同字符 ∧ 长度 ≥ 开启长度（CommonMark 围栏语义）——只比字符会让
- *  `` ```` `` 包 `` ``` `` 的嵌套围栏在外层开启行处提前闭合，内层代码行落入正文并被并成段。 */
+/** 围栏标记（行首可选空白 + 三反引号 ∥ 三波浪号 ⇒ `{ ch, len }`；非围栏行 ⇒ null）。
+ *  闭合语义带长度：同字符 ∧ 长度 ≥ 开启长度（CommonMark）——只比字符会让四反引号围栏包住的三反引号块提前闭合，
+ *  块内代码行落进正文并被并成段。 */
 export function fenceMark(l) {
   const m = /^\s*(`{3,}|~{3,})/.exec(String(l))
   return m ? { ch: m[1][0], len: m[1].length } : null
 }
 
-/** 围栏闭合谓词（单源 = 上面的长度语义）：两个 `{ ch, len }` 判闭合。 */
+/** 围栏闭合谓词（单源 = 上面的长度语义）。 */
 export const isFenceClose = (mark, fence) => mark.ch === fence.ch && mark.len >= fence.len
 
-/** 围栏行谓词（单源 = `fenceMark`）——围栏行自身与块内整行均不计入段。 */
-export const isFenceLine = (l) => fenceMark(l) !== null
-
-/** 引文块行谓词（行首可选空白 + `>`）——连续 `>` 行整块不计入段（引证须逐字连续、不可折，同表行理据）。 */
+/** 引文块行谓词（行首可选空白 + `>`）——引文整块不计入段（逐字连续、不可折）。 */
 export const isQuoteLine = (l) => /^\s*>/.test(String(l))
 
-/** 列表项谓词（无序 `-` ∥ `*` ∥ `+` · 有序 `数字 + . ∥ ） ∥ 、` · 中文标记 `·` ∥ `•`——三族要求标记后有空白；圈号 `①`–`⑳` 另起一式、不要求）——列表项不计入段且断段。 */
+/** 列表项谓词（无序 `-` ∥ `*` ∥ `+` · 有序 `数字 + . ∥ ） ∥ 、` · 中文标记 `·` ∥ `•`；圈号 `①`–`⑳` 另起一式）。 */
 export const isListItem = (l) => /^\s*(?:[-*+]|\d+[.)、]|[·•])\s/.test(String(l)) || /^\s*[①-⑳]/.test(String(l))
 
-/** 提示词面谓词（`thincoder-core/prompts/**`——形态对齐 `./anchors.mjs` 的 `OPERAND_FACE`，单源住本档）：
- *  模型读原始文本，一行就是一个块（FR46 同源理由）⇒ 该面逐行裸判，无结构豁免。 */
-export const isPromptFace = (abs) => /(?:^|\/)thincoder-core\/prompts\//i.test(String(abs).replace(/\\/g, "/"))
+/** 缩进代码行：四格空格或 Tab 起头；是否成块还要看前一行是否为空或也是代码。 */
+const isIndentedCodeLine = (l) => /^(?: {4}|\t)/.test(String(l))
 
-/** 区带头谓词（§3.15 谓词面）：标题文本去首部编号（`^\d+(?:\.\d+)*[.、]?\s*`）后——等于区带名 ∨ 以
- *  「区带名 + （∕(」起（容括注后缀，如 `变更记录（续）`）；闭集外一律不纳（fail-closed）。 */
-export function isZoneHead(headingText, zones = []) {
-  const text = String(headingText).replace(/^\d+(?:\.\d+)*[.、]?\s*/, "")
-  return zones.some((z) => typeof z === "string" && z !== "" && (text === z || text.startsWith(z + "（") || text.startsWith(z + "(")))
+/** 表格单元：只把未转义且在码段外的竖线当分隔符；外侧竖线形成的空单元再剥掉。 */
+function tableCells(l) {
+  const s = String(l).trim()
+  if (!s.includes("|")) return null
+  const cells = []
+  let start = 0
+  let codeTicks = 0
+  let i = 0
+  while (i < s.length) {
+    if (s[i] === "\\" && s[i + 1] === "|" && codeTicks === 0) { i += 2; continue }
+    if (s[i] === "`") {
+      let end = i + 1
+      while (s[end] === "`") end += 1
+      const ticks = end - i
+      if (codeTicks === 0) codeTicks = ticks
+      else if (codeTicks === ticks) codeTicks = 0
+      i = end
+      continue
+    }
+    if (s[i] === "|" && codeTicks === 0) {
+      cells.push(s.slice(start, i))
+      start = i + 1
+    }
+    i += 1
+  }
+  cells.push(s.slice(start))
+  if (s.startsWith("|") && cells[0].trim() === "") cells.shift()
+  if (s.endsWith("|") && cells.at(-1).trim() === "") cells.pop()
+  return cells.map((cell) => cell.trim())
 }
 
-/** 行内可执行坐标（命令 / 搜索模式串码段）——锚判据整行跳过用（证据与命令保字面）；段判据不豁免（段 = 读者所见）。 */
-export function isExecutableLine(line) {
-  const l = String(line)
-  if (/`[^`\n]*&&[^`\n]*`/.test(l)) return true // 命令链（cd … && …）
-  if (/`[^`\n]*\b(?:cd|node|npm|npx|grep|rg|git)\s[^`\n]*`/.test(l)) return true // 码段内命令词
-  if (/`[^`\n]*(?:\[\^|\\\.|\(\?<|\(\?:|\{\d)/.test(l)) return true // 码段内搜索模式串片段
+/** 无首尾竖线的表头只能由下一行的分隔行确认；列数必须一致，避免把普通竖线文本误判成表。 */
+function startsTable(lines, i) {
+  const header = tableCells(lines[i])
+  const delimiter = i + 1 < lines.length ? tableCells(lines[i + 1]) : null
+  return header !== null && delimiter !== null && header.length === delimiter.length && delimiter.every((cell) => /^:?-{3,}:?$/.test(cell))
+}
+
+/** 空行之后仍是缩进内容或下一列表项 ⇒ 这是疏松列表的内部空行，不是列表结束。 */
+function listContinuesAfterBlank(lines, i) {
+  for (let j = i + 1; j < lines.length; j += 1) {
+    if (lines[j].trim() === "") continue
+    return isListItem(lines[j]) || /^\s{2,}\S/.test(lines[j])
+  }
   return false
 }
 
-/** 行内位置是否在反引号码段内（引述面不判）。 */
-export function inCodeSpan(line, idx) {
-  return (String(line).slice(0, idx).match(/`/g) ?? []).length % 2 === 1
+/** 两面共用的整行排除表（六族）：标题行 ∥ 表格块 ∥ 列表块 ∥ 引用块 ∥ 围栏代码块 ∥ 缩进代码块。
+ *  文档面的并段判与提示词面的逐行判都只问它「哪些行不算正文段落」。
+ *  围栏截断表格，但缩进围栏不截断它所属的列表；列表项之后的普通行是 Markdown 的懒惰续行，
+ *  同样属于列表；表格体延续到第一个无竖线的非空行。 */
+function structuralExclusionLines(lines) {
+  const excluded = new Array(lines.length).fill(false)
+  let fence = null
+  let inList = false
+  let inTable = false
+  let inIndentedCode = false
+  lines.forEach((l, i) => {
+    const mark = fenceMark(l)
+    if (mark !== null) {
+      const nestedInList = inList && /^\s{2,}\S/.test(l)
+      if (fence === null) fence = mark
+      else if (isFenceClose(mark, fence)) fence = null
+      if (!nestedInList) inList = false
+      inTable = false
+      inIndentedCode = false
+      excluded[i] = true
+      return
+    }
+    if (fence !== null) {
+      excluded[i] = true
+      return
+    }
+    const previous = i === 0 ? "" : lines[i - 1]
+    const codeBoundary = i === 0 || previous.trim() === "" || inIndentedCode
+    inIndentedCode = isIndentedCodeLine(l) && codeBoundary
+    if (inIndentedCode) {
+      excluded[i] = true
+      inTable = false
+      return
+    }
+    if (startsTable(lines, i)) {
+      inTable = true
+      inList = false
+    }
+    if (isTableRow(l) || (inTable && tableCells(l) !== null)) {
+      excluded[i] = true
+      inList = false
+      return
+    }
+    inTable = false
+    const heading = headingMark(l)
+    if (heading !== null) inList = false
+    else if (isListItem(l)) inList = true
+    else if (inList && l.trim() === "") inList = listContinuesAfterBlank(lines, i)
+    if (inList || heading !== null || isQuoteLine(l)) excluded[i] = true
+  })
+  return excluded
 }
 
-/** 段判据（阈值 = 调用方内置常量 `paragraphMax` ∥ `lineMax`；口径逐字 = §3.18 条目 Q）：
- *  · 文档面：相邻非空正文行合并成一段，段长 = 组成行 `[...line].length` 之和 > `paragraphMax` ⇔ 命中
- *    （`clazz: "文字太长，难于阅读"`，定位 = 段首行号）。正文行 = 非空 ∧ 非表格行 ∧ 非标题 ∧ 非列表项 ∧ 非引用行
- *    ∧ 非围栏（标记行与块内整行）∧ 非区带内；其余行类不计入、且把段断开。
- *  · 提示词面（`isPromptFace`）：逐行裸判——`[...line].length` > `lineMax` ⇔ 命中（`clazz: "行太长"`，
- *    无结构豁免）。
- *  单遍扫描携标题栈（`^(#{1,6})\s` 行入栈——同级 ∥ 更高级出栈）：行所属标题链任一为区带头 ⇒ 区带内
- *  （不计入段且断段）。围栏未闭合 ⇒ 至档尾整块免（fail-open 方向——§3.18 残余登记 ①）；
- *  `exemptZones` 缺省 ∥ 空集 ⇒ 零豁免。`files`（必填）= **判定集**（调用方传入的档清单——本档不遍历
- *  任何目录；空集 ⇒ 零命中）。 */
-export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files = [] } = {}) {
-  // 配置缺失 = 硬错，不是静默不命中。
-  // `para.len > undefined` 恒 false ⇒ **永不命中 = 假绿**；而误报会被人发现，假绿不会。
-  // 实测来源：围栏批（2026-10-27）调试时把配置当第二参数传，一度以为修复无效——
-  // 两个阈值都是 undefined，门一路绿灯。
-  if (!Number.isFinite(paragraphMax) || !Number.isFinite(lineMax)) {
-    throw new Error(`checkParagraphs: paragraphMax ∥ lineMax 必须是有限数字（收到 ${paragraphMax} / ${lineMax}）。` +
-      "配置全在第一个参数：{ paragraphMax, lineMax, exemptZones, files }。阈值缺失时永不命中，读起来就是「全部过关」。")
+/** 提示词面谓词（`thincoder-core/prompts/**`）：模型读原始文本，一行就是一个块 ⇒ 该面逐行判。 */
+export const isPromptFace = (abs) => /(?:^|\/)thincoder-core\/prompts\//i.test(String(abs).replace(/\\/g, "/"))
+
+/** 码段切分（行内反引号按出现序配对）：`{ start, end, text }[]`——开启反引号之后一位到闭合反引号所在位。
+ *  消费面是图侧指针扫描（它跳过命令形码段）；段判据不吃它（段 = 读者所见，码段渲染后仍在段内）。 */
+export function codeSpans(line) {
+  const l = String(line)
+  const ticks = []
+  for (let i = 0; i < l.length; i++) if (l[i] === "`") ticks.push(i)
+  const spans = []
+  for (let k = 0; k + 1 < ticks.length; k += 2) {
+    spans.push({ start: ticks[k] + 1, end: ticks[k + 1], text: l.slice(ticks[k] + 1, ticks[k + 1]) })
   }
-  const zones = (Array.isArray(exemptZones) ? exemptZones : []).filter((z) => typeof z === "string" && z !== "")
-  const hits = []
-  for (const f of files) {
-    let text = ""
-    try { text = readFileSync(f, "utf8") } catch { continue }
-    if (isPromptFace(f)) {
-      text.split("\n").forEach((l, i) => {
-        const len = [...l].length
-        if (len > lineMax) hits.push({ file: f, line: i + 1, len, clazz: DOC_CLASS.line })
-      })
-      continue
+  return spans
+}
+
+/** 单个码段的可执行谓词（命令 / 搜索模式串）：判域只是这一段的文本，不连同同一行的其他码段。 */
+export function isExecutableSpan(span) {
+  const t = typeof span === "string" ? span : String(span?.text ?? "")
+  return t.includes("&&") ||
+    /\b(?:cd|node|npm|npx|grep|rg|git)\s/.test(t) ||
+    /(?:\[\^|\\\.|\(\?<|\(\?:|\{\d)/.test(t)
+}
+
+/** 行内可执行坐标（任一码段满足 `isExecutableSpan`）。 */
+export function isExecutableLine(line) {
+  return codeSpans(line).some(isExecutableSpan)
+}
+
+/** 行内位置是否在反引号码段内（与 `isExecutableLine` 同取一份配对规则）。 */
+export function inCodeSpan(line, idx) {
+  return codeSpans(line).some((s) => idx >= s.start && idx <= s.end)
+}
+
+/** 标题谓词：行首 1–6 个 `#` 后接空白 ⇒ `{ level, text }`；非标题行 ⇒ null。
+ *  不锚行尾（`$` 会让 CRLF 的标题行漏认），也不要求标题后还有正文。 */
+export function headingMark(l) {
+  const s = String(l)
+  const m = /^(#{1,6})\s+/.exec(s)
+  return m ? { level: m[1].length, text: s.slice(m[0].length) } : null
+}
+
+/** 围栏块**之外**的行（`{ no, text }`，`no` = 1-based 行号）：判据 ② ∥ ③ 的扫描面。
+ *  围栏里是逐字证据与举例，不是指路——判它只会让每一份「改前 / 改后」对照块都来一条假命中。 */
+export function bodyLines(text) {
+  const out = []
+  let fence = null
+  String(text ?? "").split("\n").forEach((l, i) => {
+    const mark = fenceMark(l)
+    if (mark !== null) {
+      if (fence === null) fence = mark
+      else if (isFenceClose(mark, fence)) fence = null
+      return
     }
-    const stack = [] // 标题栈 —— { level, exempt }；exempt = 自身 ∥ 祖先命中区带
-    let fence = null // 围栏标记（` ∥ ~）；null = 不在块内
-    let para = null // 在写的段 —— { start, len }；非正文行 ⇒ 断开
-    const lines = text.split("\n")
-    const flush = () => {
-      if (para !== null && para.len > paragraphMax) hits.push({ file: f, line: para.start, len: para.len, clazz: DOC_CLASS.para })
-      para = null
+    if (fence === null) out.push({ no: i + 1, text: l })
+  })
+  return out
+}
+
+/**
+ * 判据 ①：一段超过 `PARAGRAPH_MAX` 字 ⇒ 一条命中 `{ line, len }`（`line` = 段首行，1-based）。
+ *
+ * **区间归属就落在这里，因为「一段跨哪几行」只有本函数知道**：命中只带段首行与字数，跨行从命中里读不出来
+ * （判据句单源 = `docs/core/design/DOC-CHECK.md` §6「区间只在段这一级扩」）。
+ * @param {string} text 档全文（调用方读好的，本档不读盘）
+ * @param {{promptFace?:boolean, region?:{rows:number[],gaps:number[]}|null}} o
+ *   `promptFace` = 该档在提示词面 ⇒ 逐行判（每行自成一段）；
+ *   `region` = 本批变更区（`null` = 判整份）：段内含变更行 ⇒ 整段量；整段无变更行 ⇒ 不判。
+ *   纯删的零宽区间（`gaps`）落在缝上 ⇒ 取**缝上现占位的那一段**——缝前那一行属于它，或缝后那一行是它的首行。
+ * @returns {{line:number, len:number}[]}
+ */
+export function paragraphHits(text, { promptFace = false, region = null } = {}) {
+  const src = String(text ?? "")
+  const lines = src.split("\n")
+  const excluded = structuralExclusionLines(lines)
+  // 段的归属：变更行在段内，或纯删的缝贴在段首之前 ∥ 落在段内；**缝落在档头（`g = 0`）则取第一段**。
+  // 第一段只有把段收齐之后才指得出来，所以本函数先收段、再按 `i` 判第一段。
+  const owned = (s, e, i) => {
+    if (region === null || region === undefined) return true
+    for (const r of region.rows ?? []) if (r >= s && r <= e) return true
+    for (const g of region.gaps ?? []) {
+      if (g === 0) return i === 0
+      if (g >= s - 1 && g <= e) return true
     }
+    return false
+  }
+  if (promptFace) {
+    const spans = []
     lines.forEach((l, i) => {
-      const mark = fenceMark(l)
-      if (mark !== null) {
-        if (fence === null) fence = mark
-        else if (isFenceClose(mark, fence)) fence = null
-        flush()
-        return // 围栏标记行自身断段
-      }
-      if (fence !== null) { flush(); return } // 块内整行断段（未闭合 ⇒ 至档尾免）
-      const hm = /^(#{1,6})\s+(.*)$/.exec(l)
-      if (hm) {
-        while (stack.length && stack[stack.length - 1].level >= hm[1].length) stack.pop()
-        const self = isZoneHead(hm[2].trim(), zones)
-        stack.push({ level: hm[1].length, exempt: self || (stack[stack.length - 1]?.exempt ?? false) })
-        flush()
-        return // 标题断段
-      }
-      const inZone = stack[stack.length - 1]?.exempt === true
-      if (inZone || l.trim() === "" || isTableRow(l) || isListItem(l) || isQuoteLine(l)) { flush(); return }
-      if (para === null) para = { start: i + 1, len: 0 }
-      para.len += [...l].length
+      if (!excluded[i]) spans.push({ line: i + 1, end: i + 1, len: [...l].length })
     })
-    flush()
+    return spans.filter((s, i) => s.len > PARAGRAPH_MAX && owned(s.line, s.end, i)).map(({ line, len }) => ({ line, len }))
   }
-  return hits
+  const spans = []
+  let cur = null
+  const flush = () => {
+    if (cur !== null) spans.push(cur)
+    cur = null
+  }
+  lines.forEach((l, i) => {
+    // 排除行与空行都断段：围栏 ∥ 标题 ∥ 引用 ∥ 表格 ∥ 列表 ∥ 缩进代码六族的判据全在排除表里，这里不再自持一套。
+    if (excluded[i] || l.trim() === "") { flush(); return }
+    if (cur === null) cur = { line: i + 1, end: i + 1, len: 0 }
+    cur.end = i + 1
+    cur.len += [...l].length
+  })
+  flush()
+  return spans.filter((s, i) => s.len > PARAGRAPH_MAX && owned(s.line, s.end, i)).map(({ line, len }) => ({ line, len }))
 }

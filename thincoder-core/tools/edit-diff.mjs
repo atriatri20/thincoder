@@ -1,24 +1,25 @@
 /**
  * edit-diff.mjs — edit 工具的行级 diff 内核（权威语义 = EDIT.md——2026-09-04 拆出）。
  *
- * edit 语义（权威 = EDIT.md §2-§5——2026-09-08 语义升级 D1/D2/D3 已并入）：两种定位形态（互斥）——
+ * edit 语义（权威 = EDIT.md——2026-09-08 语义升级 D1/D2/D3 已并入）：两种定位形态（互斥）——
  * ① 按行号改（D1/F1）：line（单行）/ startLine+endLine（1-based 闭区间）→ 直接替换该
  *    行/行范围为 new_string（无需 old_string——实现落点 edit-batch.mjs applyLineEdit）；
  *    **先过行号锚护栏**（判据与拒文单源 = write-path.mjs 的 lineAnchorVerdict /
  *    lineAnchorRefusal——上一笔写之后目标区落在受影响区内即拒）；
- *    阶段 2 删行形态（EDIT.md §5——约束）：省略 new_string = 删除该行/范围（有界意图）；
+ *    阶段 2 删行形态（EDIT.md §1「参数」——空值矩阵）：省略 new_string 或传空串 = 删除该行/范围
+ *    （有界意图——删行意图由行号表达，两种写法同一结局）；
  * ② 内容定位：old_string = 变化区**当前内容**（单次匹配——匹配档位：逐字 → P15.11 唯一
  *    空白差异窗口 → D2/F2 模糊匹配（行级 normalize 后 ≥90% 行相等——edit-batch.mjs
  *    findFuzzyWindow））；new_string = 该区的**期望结果**。判定序：
- *   0. 分支 0（EDIT.md §4——单行精确替换）：old 单行 && new 单行 && old 全文唯一 &&
+ *   0. 分支 0（单行精确替换）：old 单行 && new 单行 && old 全文唯一 &&
  *      new 非空 → **就地替换该行**（行数不变——EOL 由调用方 joinWithEol 恢复）；
  *   1. 零重叠（old 每一行都不出现在 new 行集中）→ **替换即删**（D3/F3，2026-09-08——
  *      breaking：old 行整体删除、new 取而代之——旧行不再保留；新增行用 insert_after）；
  *   2. 有公共行（≥1）→ 行级 LCS——公共行保留、差异行增删；
  *   3. new 与 old 行级完全一致 → 原样替换（no-op 语义——仍报成功）。
  * 内容形态空 new_string（纯删除意图）→ 显式报错（不静默——先于分支 0——单行替换永不
- * 成删除）；行号形态显式空串 → 同样显式错（防误删——模板落空 ≠ 删行意图；EDIT.md
- * §5 空串 vs 省略矩阵）；**省略 new_string = 删行/范围**（阶段 2 命名删行形态）；
+ * 成删除；无界意图：replace_all 配空串会删掉全部匹配）；**行号形态省略 new_string 或
+ * 传空串 = 删行/范围**（同一结局——归一落点 applyLineEdit，EDIT.md §1「参数」/§2「匹配与应用」）；
  * 分支 0 只在 computeEditEntry 条目判定层（壳/桥/批量自动继承）——
  * applyPatchLines（纯 diff 层）语义不动。old/new 行数各上限 1000（超限报错）。
  *
@@ -38,24 +39,21 @@ import {
 // 写盘经单一写路径点（§2.13.5）——本档不再直调 fs。
 import { appendWriteContext } from "./file.mjs"
 import { writeThroughPath, lastWriteOf, isDirty, lineAnchorVerdict, lineAnchorRefusal } from "./write-path.mjs"
-// D1/D2 落点（EDIT.md §6——edit-batch.mjs）：按行号改 + 模糊匹配纯函数。
+// D1/D2 落点（EDIT.md §2「匹配与应用」——edit-batch.mjs）：按行号改 + 模糊匹配纯函数。
 import { applyLineEdit, findFuzzyWindow, FUZZY_MATCH_NOTE } from "./edit-batch.mjs"
 
 export const MAX_DIFF_LINES = 1000
 export const REGION_TOO_LARGE = "edit region too large — narrow the change"
-export const EMPTY_NEW_STRING = "empty new_string — for deletion, keep the context lines you want to preserve in both old_string and new_string"
-export const EMPTY_NEW_STRING_LINE = "empty new_string with line-based targeting is an explicit error — OMIT new_string to delete the line/range (deleting by number is explicit intent; an empty replacement is a mistake, not a delete)"
+export const EMPTY_NEW_STRING = "empty new_string is an explicit error for content-based targeting (old_string) — a content entry's delete intent can only be expressed by the content, and replace_all + \"\" would delete every match with no bound; to delete, use line-based targeting (line / startLine+endLine), where new_string may be omitted or passed as an empty string"
 export const EDIT_ARGS_MUTEX = "edits array is mutually exclusive with top-level old_string/new_string/line/startLine/endLine — a top-level path is allowed (default for entries without their own path); provide each change's targeting (old_string or line range) and new_string inside its edits entry"
 
-// ─── #325 入参守卫文案（单源——EDIT.md §5 / §8 D-7：核 edit-batch 与 ACP 桥 bridge.mjs 同调用）───
+// ─── #325 入参守卫文案（单源——核 edit-batch 与 ACP 桥 bridge.mjs 同调用）───
 /** 容器级成形错误（真值非数组 / 空数组——同一错误面）。 */
 export const EDITS_CONTAINER_ERROR = "edits must be a non-empty array of {path, old_string | line/startLine+endLine, new_string}"
 /** 条目级成形错误（i = 数组下标；非对象条目 = null / 字符串 / 数字 / 数组）。 */
 export const editsEntryError = (i) => `edits[${i}] must be an object of {path, old_string | line/startLine+endLine, new_string}`
 /** 条目缺 path 且无顶层默认路径。 */
 export const EDIT_ENTRY_NO_PATH = "each edit must have a path — give each entry its own path or pass a top-level path"
-/** 批量原子失败前缀（条目判定失败时拼在消息前的 abortPrefix）。 */
-export const EDIT_ABORT_PREFIX = "edit aborted (atomic — no files written): "
 /** 批量条目校验前缀（validateEditEntry 的 opts.label）。 */
 export const editEntryLabel = (path) => `edit for ${path}: `
 
@@ -135,7 +133,7 @@ function lcsMerge(a, b) {
 }
 
 /**
- * （2026-09-05 用户裁定——EDIT.md §5——顶层 path + edits 并存合法化：顶层 path = 无自带
+ * （2026-09-05 用户裁定——顶层 path + edits 并存合法化：顶层 path = 无自带
  * path 条目的默认——模型直觉形态「顶层 path + 数组条目」不再拒绝；条目自带 path 优先）。
  * 互斥收窄为只对顶层 old_string/new_string（+ 2026-09-08 D1 的 line/startLine/endLine）——
  * edits 下它们无批语义可解释——顶层 path 不再触发。
@@ -146,31 +144,24 @@ export function assertEditArgsExclusive(args) {
   }
 }
 
-/** 入参容器守卫（#325——EDIT.md §5）：edits 真值非数组 / 空数组 ⇒ 成形错误（同句单源——
+/** 入参容器守卫（#325）：edits 真值非数组 / 空数组 ⇒ 成形错误（同句单源——
  *  核 edit-batch 与 ACP 桥 bridge.mjs 同调用）。批量判定序：容器 → 互斥 → 条目预扫 → 条目循环。 */
 export function assertEditsContainer(edits) {
   if (!Array.isArray(edits) || edits.length === 0) throw new Error(EDITS_CONTAINER_ERROR)
 }
 
-/** 入参条目守卫（#325——EDIT.md §5）：条目非对象（null / 字符串 / 数字 / 数组）⇒ 含下标成形
- *  错误——预扫于条目循环之前（不读盘、不触盘、零部分应用）。 */
-export function assertEditEntries(edits) {
-  for (let i = 0; i < edits.length; i++) {
-    const e = edits[i]
-    if (e === null || typeof e !== "object" || Array.isArray(e)) throw new Error(editsEntryError(i))
-  }
-}
-
 /**
  * 前置校验——内容形态：空 old / 非字符串 new；按行号改形态（D1，2026-09-08；阶段 2
- * 删行——EDIT.md §5）：与 old_string 互斥 / line 与 startLine|endLine 互斥 /
+ * 删行——EDIT.md §1「参数」）：与 old_string 互斥 / line 与 startLine|endLine 互斥 /
  * startLine+endLine 须成对 / 正整数 / endLine ≥ startLine / replace_all 不适用 /
- * new_string：省略（undefined）= 删行 / 显式空串 = 显式错（防误删）/ 其他类型报错。
+ * new_string：省略（undefined）或空串 = 删行（同一结局——除行号外不给别的结局）/ 其他类型报错。
  * error 文本按调用形态（单形态 rich / 批量 label）。
- * opts: { label = ""（批量前缀 = editEntryLabel(path)）, rich = true（单形态完整文本） }
+ * opts: { label = ""（批量前缀 = editEntryLabel(path)）, rich = true（单形态完整文本）,
+ *         scope = "batch" 时一律按 rich=false（批面不带写盘结论——EDIT.md §3「写与桥」） }
  */
 export function validateEditEntry(entry, opts = {}) {
   const label = opts.label ?? ""
+  const rich = opts.scope === "batch" ? false : opts.rich !== false
   if (hasLineParams(entry)) {
     if (entry.old_string !== undefined) {
       throw new Error(label + "line/startLine/endLine are mutually exclusive with old_string — target by line number OR by content, not both")
@@ -192,37 +183,34 @@ export function validateEditEntry(entry, opts = {}) {
     if (entry.replace_all) {
       throw new Error(label + "replace_all does not apply to line-based edits (a line range is already a single explicit target)")
     }
-    if (entry.new_string === "") {
-      throw new Error(label + EMPTY_NEW_STRING_LINE + (opts.rich === false ? "" : " — nothing written"))
-    }
     if (entry.new_string !== undefined && typeof entry.new_string !== "string") {
       throw new Error(
         label + `new_string must be a string (got ${typeof entry.new_string})` +
-        (opts.rich === false ? "" : " — nothing written")
+        (rich ? " — nothing written" : "")
       )
     }
     return
   }
   if (!entry.old_string) {
     throw new Error(
-      label + "old_string must not be empty" + (opts.rich === false ? "" : " (empty string matches everywhere and would corrupt the file)")
+      label + "old_string must not be empty" + (rich ? " (empty string matches everywhere and would corrupt the file)" : "")
     )
   }
   if (entry.new_string === "") {
-    // 空串 vs 省略矩阵（EDIT.md §5/§8.1）：内容形态空串 = 显式错（无界意图防静默）——
+    // 空串 vs 省略矩阵（EDIT.md §1「参数」）：内容形态空串 = 显式错（无界意图防静默）——
     // 先于 replace_all 分支（否则 replace_all + 空串会静默删除全部 occurrences——绕过保护）
-    throw new Error(label + EMPTY_NEW_STRING + (opts.rich === false ? "" : " — nothing written"))
+    throw new Error(label + EMPTY_NEW_STRING + (rich ? " — nothing written" : ""))
   }
   if (typeof entry.new_string !== "string") {
     throw new Error(
       label + `new_string must be a string${entry.new_string === undefined ? " (missing)" : ` (got ${typeof entry.new_string})`}` +
-      (opts.rich === false ? "" : " — nothing written")
+      (rich ? " — nothing written" : "")
     )
   }
 }
 
 /**
- * 分支 0 形态判定（EDIT.md §4）：old/new 各为单行——无内部换行（splitLines
+ * 分支 0 形态判定：old/new 各为单行——无内部换行（splitLines
  * 语义：尾随单个换行符是行终止而非新行——old/new 行内容均不含 \n）——且 new 非空
  * （"" 经 splitLines 切分为 []——由下方 !== "" 守卫先拦截——空 new 不落本分支——落
  * applyPatchLines 的空 new 显式错误——单行替换永不成删除）。多匹配与 replace_all 不落
@@ -237,12 +225,15 @@ function isSingleLineReplace(entry) {
 }
 
 /**
- * 条目级判定+应用（单形态与批量共用——EDIT.md §6"批量条目判定+应用调用 edit-diff"）：
+ * 条目级判定+应用（单形态与批量共用——EDIT.md §2「匹配与应用」）：
  * 匹配校验（精确存在——非 replace_all 单次）→ 按判定序应用（分支 0 单行替换 / 零重叠替换即删 /
  * LCS 替换 / replace_all 字面）→
  * 元数据（受影响区首行/行数差/次数——recordWrite 与结果回显用）。
  * 返回 { updated, editStartLine, lineShift, occurrences, note?, deleted? }；失败抛错（含路径/引导）。
- * opts: { path, abortPrefix（批量 = EDIT_ABORT_PREFIX） }
+ * opts: { path, absPath, scope }
+ *   `scope:"batch"` = 两个批面（EDIT.md §3「写与桥」）：错误文本**不带任何写盘结论**
+ *   ——不带 ` — nothing written` 后缀（批面逐条报，那句在批面为假）；
+ *   其余取值（含缺省）= 单档面，照 `rich` 的既有取法（带后缀）。
  */
 /**
  * P15.11（2026-09-05 用户裁定——edit 连续失败分析）：old_string 逐字 not-found 时——
@@ -280,10 +271,13 @@ function findWhitespaceVariant(content, old) {
 export const WHITESPACE_VARIANT_NOTE = "applied to the unique whitespace-only match (content identical, leading/trailing whitespace differs from your old_string)"
 
 export function computeEditEntry(content, entry, opts = {}) {
-  validateEditEntry(entry, { ...opts, rich: !opts.abortPrefix })
-  // D1 按行号改（EDIT.md §2/§5）：行号定位条目直接按行替换（applyLineEdit——落点
-  // edit-batch.mjs），不走 old_string 匹配/判定序；省略 new_string = 删行（EDIT.md §5）；
-  // 互斥/越界/显式空串均在 validateEditEntry/applyLineEdit 显式报错。
+  // 写盘结论面（EDIT.md §3「写与桥」）：`scope:"batch"` 这一个开关压掉
+  // ` — nothing written` 后缀（批面逐条报，那句在批面为假）。前缀形已退役，不再有要拼的。
+  const batchScope = opts.scope === "batch"
+  validateEditEntry(entry, { ...opts, rich: !batchScope })
+  // D1 按行号改（EDIT.md §1「参数」/§2「匹配与应用」）：行号定位条目直接按行替换（applyLineEdit——落点
+  // edit-batch.mjs），不走 old_string 匹配/判定序；省略 new_string 或传空串 = 删行（同一
+  // 结局，归一在 applyLineEdit 内落一次）；互斥/越界在 validateEditEntry/applyLineEdit 显式报错。
   if (hasLineParams(entry)) return applyLineEdit(content, entry, opts)
   // P15.11：not-found 时先查唯一空白差异窗口——命中则以其原文为实际 old 继续（内容零差异
   // ——自动落点 + note 明示）；实质差异/歧义仍走下方 not-found 报错（不猜内容）。
@@ -312,7 +306,7 @@ export function computeEditEntry(content, entry, opts = {}) {
       candText = "\n" + header + "\n" + cands.map((c) => `    L${c.line}: ${c.preview} (${Math.round(c.score * 100)}%)`).join("\n")
     }
     throw new Error(
-      `${opts.abortPrefix ?? ""}old_string not found in ${opts.path ?? "file"}\n` +
+      `old_string not found in ${opts.path ?? "file"}\n` +
       `  searched: "${preview}${entry.old_string.length > 100 ? "…" : ""}" — use grep to locate the actual content\n` +
       (opts.absPath && lastWriteOf(opts.absPath)?.type === "write"
         ? `  hints: this file was modified since your last read (write 全文重写后内容全变) — re-read it to refresh your copy of the content, then retry\n`
@@ -324,7 +318,7 @@ export function computeEditEntry(content, entry, opts = {}) {
   }
   if (occurrences > 1 && !entry.replace_all) {
     throw new Error(
-      `${opts.abortPrefix ?? ""}old_string matches ${occurrences} times in ${opts.path ?? "file"}; provide more context or set replace_all`
+      `old_string matches ${occurrences} times in ${opts.path ?? "file"}; provide more context or set replace_all`
     )
   }
   const matchIdx = content.indexOf(old)
@@ -332,11 +326,11 @@ export function computeEditEntry(content, entry, opts = {}) {
   let updated
   let resultForShift
   if (entry.replace_all) {
-    // 字面替换——不做插入规则（old 多处时"插到哪处"无定义）——不落分支 0（EDIT.md §4）
+    // 字面替换——不做插入规则（old 多处时"插到哪处"无定义）——不落分支 0
     updated = content.split(old).join(entry.new_string)
     resultForShift = entry.new_string
   } else if (isSingleLineReplace(entry)) {
-    // 分支 0（EDIT.md §4——单行精确替换）：old 单行 && new 单行 && old 唯一匹配
+    // 分支 0（单行精确替换）：old 单行 && new 单行 && old 唯一匹配
     // （occ==1 既有校验保证）&& new 非空（空 new 显式错误先于本分支——防删除）→ **就地
     // 替换该行**——不再零重叠插入（P15.8——行尾段编辑反复踩的插入坑）。只替换行内容段：
     // old/new 的尾随换行符属文件结构而非行内容——留在原位——行数不变——EOL 由调用方
@@ -360,14 +354,17 @@ export function computeEditEntry(content, entry, opts = {}) {
 }
 
 /**
- * §7.3 帧（R1–R4）——同档多条 `edits` 的应用顺序：行号条目先全部应用、按 `startLine` 降序
+ * `EDIT-HELPERS.md` §4「批量帧」的 R1–R4——同档多条 `edits` 的应用顺序：行号条目先全部应用、按 `startLine` 降序
  * （从下往上改，上方行号不被同批自己顶偏）；内容条目随后按数组序（位置无关寻址无帧问题）。
  *
  * **零 IO**（只看条目自身的行号）：两个通道（本地 `edit-batch` ∥ ACP 桥）调同一份排法，
  * 各自只提供自己的 IO——抄一份组循环就是本机制要根治的形状。
  *
- * @returns {{ order: number[]|null, rejection: string|null }} `order` = 数组下标的应用序
- *   （回显仍按调用序取原位）；`rejection` 非空 = R3 重叠：整批拒、零写。
+ * @returns {{ order: number[], rejections: {index: number, reason: string}[] }}
+ *   `order` = **未被拒**条目的应用序（下标指向传入的 `entries`，回显仍按调用序取原位）；
+ *   `rejections` = R3 重叠：**互指的每一条各得一行**（原因互指对方行范围——`EDIT-HELPERS.md` §4
+ *   「批量帧」，同档其余条照应用）。拒因是**纯原因句**——不带前缀、不带写盘结论
+ *   （「no files written」在逐条模式为假）；回执行由调用方按骨架组装。
  *   `path`（可选）= 拒文里点名的目标档（条目自带 path 优先——顶层 path 不在条目上）。
  */
 export function planEditEntries(entries, path = null) {
@@ -376,34 +373,52 @@ export function planEditEntries(entries, path = null) {
   const contentIdx = []
   entries.forEach((e, i) => { (hasLineParams(e) ? lineIdx : contentIdx).push(i) })
   // R3：两条行号条目的范围在快照坐标上重叠 ⇒ 先改哪一条决定结果，模型意图在此矛盾
+  // ——两条都废（先改哪条都改意），互指对方行范围。
+  const rejected = new Map() // 条目下标 → 拒因
   const byStart = [...lineIdx].sort((a, b) => rangeOf(entries[a])[0] - rangeOf(entries[b])[0])
   for (let i = 1; i < byStart.length; i++) {
-    const prev = rangeOf(entries[byStart[i - 1]])
-    const cur = rangeOf(entries[byStart[i]])
-    if (cur[0] <= prev[1]) {
-      const label = entries[byStart[i]].path ?? entries[byStart[i - 1]].path ?? path ?? "file"
-      return {
-        order: null,
-        rejection:
-          `${EDIT_ABORT_PREFIX}line-number entries L${prev[0]}-L${prev[1]} and L${cur[0]}-L${cur[1]} (${label}) overlap — ` +
-          `two changes to the same region cannot both be anchored on the numbers you read; split them into separate calls`,
-      }
-    }
+    const a = byStart[i - 1]
+    const b = byStart[i]
+    const ra = rangeOf(entries[a])
+    const rb = rangeOf(entries[b])
+    if (rb[0] > ra[1]) continue
+    const label = entries[b].path ?? entries[a].path ?? path ?? "file"
+    const reason =
+      `line-number entries L${ra[0]}-L${ra[1]} and L${rb[0]}-L${rb[1]} (${label}) overlap — ` +
+      `two changes to the same region cannot both be anchored on the numbers you read; split them into separate calls`
+    if (!rejected.has(a)) rejected.set(a, reason)
+    if (!rejected.has(b)) rejected.set(b, reason)
   }
+  const rejections = [...rejected.entries()]
+    .sort((x, y) => x[0] - y[0])
+    .map(([index, reason]) => ({ index, reason }))
   // R2：降序（同档起始行不会相等——相等即重叠，已在 R3 拒掉）
-  const desc = [...lineIdx].sort((a, b) => rangeOf(entries[b])[0] - rangeOf(entries[a])[0])
-  return { order: [...desc, ...contentIdx], rejection: null }
+  const alive = lineIdx.filter((i) => !rejected.has(i))
+  const desc = [...alive].sort((a, b) => rangeOf(entries[b])[0] - rangeOf(entries[a])[0])
+  return { order: [...desc, ...contentIdx], rejections }
 }
 
 /**
  * 按 `planEditEntries` 排出的应用序逐条 `computeEditEntry` 累积——**零 IO**。
  * `results` 按调用序回到原位（回显顺序不变），元数据形同 `computeEditEntry` 返回。
+ *
+ * opts.onEntryError：`"throw"`（缺省——整批拒的调用面）∥ `"collect"`（逐条成败：一条抛错
+ * 就记它自己一行、累积内容不动、继续下一条——EDIT.md §2「匹配与应用」）。
  */
 export function applyPlannedEntries(content, entries, order, opts = {}) {
   let cur = content
   const results = new Array(entries.length)
+  const failures = []
+  const collect = opts.onEntryError === "collect"
   for (const i of order) {
-    const out = computeEditEntry(cur, entries[i], { ...opts, abortPrefix: opts.abortPrefix ?? EDIT_ABORT_PREFIX })
+    let out
+    try {
+      out = computeEditEntry(cur, entries[i], opts)
+    } catch (err) {
+      if (!collect) throw err
+      failures.push({ index: i, reason: err?.message ?? String(err) })
+      continue
+    }
     results[i] = {
       editStartLine: out.editStartLine,
       lineShift: out.lineShift,
@@ -413,7 +428,7 @@ export function applyPlannedEntries(content, entries, order, opts = {}) {
     }
     cur = out.updated
   }
-  return { content: cur, results }
+  return { content: cur, results, failures }
 }
 
 /**
@@ -438,6 +453,7 @@ export async function runSingleEdit(args, ctx) {
   // 单一写路径点：默认 = writeFile + 记账；端侧注入 ⇒ 编辑器径（§2.13.5）。
   await writeThroughPath(abs, joinWithEol(normalizeEOL(out.updated).split("\n"), raw), {
     op: "write",
+    agent: ctx.agent,
     record: { type: "edit", startLine: out.editStartLine, shift: out.lineShift },
   })
   const diff = await gitDiffOne(ctx.cwd, abs)

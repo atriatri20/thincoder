@@ -1,5 +1,5 @@
 /**
- * scripts/check-syntax.mjs — zero-dependency syntax checker (TOOLS.md §10.2).
+ * scripts/check-syntax.mjs — zero-dependency syntax checker.
  *
  * Replaces the third-party linter devDependency pipeline: walks the repo's JS surface
  * (src/**\/\*.mjs + test/**\/\*.mjs + bin/*.cjs + scripts/*.mjs, self included)
@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url"
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 
-/** Default traversal set — keep in sync with TOOLS.md §10.2 D-L2 (+ review round2 #6: scripts/*.mjs) */
+/** Default traversal set (+ review round2 #6: scripts/*.mjs) */
 const DEFAULT_SETS = [
   ["src", /\.mjs$/],
   ["test", /\.mjs$/],

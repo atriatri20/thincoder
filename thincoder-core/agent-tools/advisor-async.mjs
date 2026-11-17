@@ -7,17 +7,14 @@
  * delivers the report (AGENT-LOOP-ASYNC-POOL.md §6.8 consumption machinery — role-agnostic; entries carry
  * role "advisor" and ride the subagent panel as a pseudo-role, ruling ②-4 A).
  *
- * This module owns:
- *  1. the per-review INSTANCE registry (agent._advisorRuns — ruling ②-5 A:
- *     Map<reviewId, {reviewType, round, priorOutput, stale, open, docSetKey,
- *     designId}>) — rounds/prior are PER REVIEW (fix #4), no longer a run-global
- *     shared counter (design + code used to share _advisorRound);
- *  2. launch resolution: design reviews continue the instance of the same
- *     document set (reviewId = the designId minted at the instance's first
- *     launch); code reviews continue the newest OPEN code instance (round 2+ of
- *     a fix loop) and CLOSE at normal user-run ends once no review is in flight
- *     (a converged/abandoned thread must not burn the cap of later tasks);
- *  3. the async pool (agent._asyncAdvisors — ADVISOR_POOL_LIMIT = 4 default,
+ * This module owns the WRITE half — launch ∥ queue ∥ cancel ∥ close. The READ half
+ * (which instance a launch continues, and whether the pool admits a start: the
+ * per-review INSTANCE registry agent._advisorRuns + launch resolution + pool limits
+ * + the same-scope guard) lives in `advisor-launch.mjs`, split out 2026-11-12 when
+ * this file crossed the 500-line design line; its exports are re-exported below, so
+ * the existing import face is unchanged.
+ *
+ *  1. the async pool (agent._asyncAdvisors — ADVISOR_POOL_LIMIT = 4 default,
  *     agent.poolLimits.advisor configurable — POOL-CONFIG-UNIFIED; same-scope
  *     running launches are refused at once — never queued (F-5); over-limit +
  *     DIFFERENT scope launches QUEUE (ED-4 2026-09-16 — AGENT-LOOP-ASYNC-POOL.md §6.10:
@@ -25,7 +22,7 @@
  *     queued cancel dequeue+renumber — the former over-limit refusal ②-6a is
  *     retired); cancel (ruling ②-6b — directed abort → cancelled settle: no
  *     pending entry, no token, a "评审已取消——token 未签发" reminder);
- *  4. SETTLE accounting (fixes #2/#4 — moved from the tool-result commit): a
+ *  2. SETTLE accounting (fixes #2/#4 — moved from the tool-result commit): a
  *     review whose targets mutated after launch settles STALE — it marks no
  *     _calledAdvisorThisRun and issues no token (the guard pushes back); a
  *     non-stale code review marks _calledAdvisorThisRun; a passing design review
@@ -37,7 +34,15 @@
  * the same instance resolution (rounds/prior/cap) — its accounting still lands
  * in recordToolResults (agent.mjs run loop), marker-keyed by toolCall id.
  */
-import { randomUUID } from "node:crypto"
+// 实例与池判定一族（只读：哪条实例接这一轮、池让不让起）2026-11-12 迁 advisor-launch.mjs——
+// 本档过 500 设计器硬线，分拆方案 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §10（本批内实施）。
+// 既有 import 面（completion.mjs ∥ advisor.mjs ∥ design-slots.mjs ∥ record-results.mjs ∥ 测试）
+// 经此 re-export 不变。
+import { advisorRunsRead, advisorPoolLimitFor, runningAdvisorOfScope, runningAdvisorCount } from "./advisor-launch.mjs"
+export {
+  ADVISOR_POOL_LIMIT, advisorRuns, advisorReviewPending, advisorPoolLimitFor, effectiveAdvisorRound,
+  openCodeRun, resolveAdvisorLaunch, resolveAdvisorPoolLimit, runningAdvisorCount, runningAdvisorOfScope,
+} from "./advisor-launch.mjs"
 // design-token 工具组（2026-09-08 自本文件迁至 design-token.mjs——再越 500 行硬限）——
 // 既有 import 面（advisor.mjs / 测试）不变：原导出全部经此 re-export 保留。
 export {
@@ -52,8 +57,8 @@ export {
   mutationSeqOf, noteMutations, reviewIsStale, settleAdvisorRun, inflightDesignReviewConflict,
 } from "./advisor-settle.mjs"
 // 第 33 批（评审失败护栏）：doc-set 键迁事实面档（实例续跑与陈旧判定同锚单源；原为私有——零 import 面）。
-// 本文件继续在实例解析 / 池 entries 上消费它。
-import { docSetKey, resolveReviewDocPaths, scopeAdvisorMirror } from "./review-facts.mjs"
+// 实例解析随 2026-11-12 拆分迁 advisor-launch.mjs；本文件只剩池 entries 的 docAbs 产出面消费它。
+import { resolveReviewDocPaths, scopeAdvisorMirror } from "./review-facts.mjs"
 // F31（2026-09-18 顾问面治理批）：拒回文案对象标识行单源。
 import { withIdentityLine, scopeSummary } from "../advisor/notice.mjs"
 import { runAdvisorReview, resolveAdvisorProvider, ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
@@ -67,159 +72,6 @@ import { bindChildController, buildChildSignal, carrierField, getAsyncPool, sett
 import { nextSubagentId, consumeSubagentToken, assertPoolKeyFree, entryTerminal } from "./subagent-scheduler.mjs"
 // #934（零落笔看门狗——AGENT-LOOP-UPSTREAM.md §6.32.6 触发接线②）：评审族推送单源（叶档——恒零抛）。
 import { pushAdvisorAlert } from "./zero-write-watch.mjs"
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Review-instance registry (_advisorRuns — per-review rounds/prior/cap)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** 载体吸收后的只读读取（不创建）：父对象字段优先、缺字段回退跨 run 载体
- *  （`history` 数组——agent 逐 run 重建的形态靠它跨 run 存活）。无 ⇒ null。 */
-function advisorRunsRead(agent) {
-  const m = carrierField(agent, "_advisorRuns")
-  return m instanceof Map ? m : null
-}
-
-export function advisorRuns(agent) {
-  // 实例注册表读取吸收（与 #94 载体口径同源）：既有形态（字段挂 agent）零变；
-  // 注册表已挂跨 run 载体的形态直接沿用（不另建分叉）。
-  const existing = advisorRunsRead(agent)
-  if (existing) return existing
-  // 缺省创建：落在跨 run 载体上（有 history 时）——与其余载体字段同口径。
-  const holder = agent?.history ?? agent
-  if (!holder) return new Map()
-  if (!(holder._advisorRuns instanceof Map)) holder._advisorRuns = new Map()
-  return holder._advisorRuns
-}
-
-/** The newest OPEN code instance (the thread a fix-round launch continues), or null. */
-export function openCodeRun(agent) {
-  const runs = advisorRunsRead(agent)
-  if (!(runs instanceof Map) || runs.size === 0) return null
-  for (const r of [...runs.values()].reverse()) {
-    if (r.reviewType === "code" && r.open) return r
-  }
-  return null
-}
-
-/** The newest OPEN design instance for the given document set, or null. */
-function openDesignRun(agent, key) {
-  const runs = advisorRunsRead(agent)
-  if (!(runs instanceof Map) || runs.size === 0) return null
-  for (const r of [...runs.values()].reverse()) {
-    if (r.reviewType === "design" && r.open && r.docSetKey === key) return r
-  }
-  return null
-}
-
-/**
- * Resolve the review instance a launch continues (AGENT-LOOP-ASYNC-POOL.md §6.10 ③ — per-review
- * rounds/prior; reviewId = designId for design reviews, a random id for code).
- *  - design: continue the OPEN instance of the same document set (fix rounds of
- *    a review thread keep its designId and its round/prior); none → new instance.
- *  - code: continue the newest OPEN code instance (guard-driven fix loops);
- *    none → new instance.
- * The legacy agent._advisorRound/_lastAdvisorOutput fields are SCOPED to the
- * instance before the launch (message building + the run.mjs cap read them) —
- * prior-less continuation degrades to round 1 semantics (fresh full review).
- * @returns {{run: object, isNew: boolean, reviewId: string, designId: string|null}}
- */
-export function resolveAdvisorLaunch(agent, reviewType, { documents = null } = {}) {
-  const runs = advisorRuns(agent)
-  let run = null
-  if (reviewType === "design") {
-    const key = docSetKey(documents, agent.cwd)
-    run = openDesignRun(agent, key)
-    if (!run) {
-      const reviewId = randomUUID()
-      // F2h (§29.1 2026-09-07): a same-scope re-review reuses the session's
-      // designId for this doc-set (any prior instance of the scope — open OR
-      // closed — the newest wins). A passed re-review overwrites the slot under
-      // the same id (no slot residue — T14: the old token is then rejected at
-      // the gate); old slots die at TTL only, kept as the fail-safe fallback.
-      const prior = [...runs.values()].reverse().find((r) => r.reviewType === "design" && r.docSetKey === key)
-      // #863 实例回收（§6.10）：同 docSetKey 保最新一条 closed（= prior——F2h 只取 newest，语义零变）；
-      // 余者去重回收（实例随删释放——closed 零消费面）。
-      for (const r of [...runs.values()]) {
-        if (r !== prior && r.reviewType === "design" && !r.open && r.docSetKey === key) runs.delete(r.reviewId)
-      }
-      run = {
-        reviewId, reviewType, designId: prior?.designId ?? reviewId,
-        round: 0, priorOutput: null, stale: false, open: true, docSetKey: key,
-      }
-      runs.set(reviewId, run)
-    }
-  } else {
-    run = openCodeRun(agent)
-    if (!run) {
-      // #863 实例回收（§6.10）：新 code 实例创建 ⇒ closed 实例清除（openCodeRun 仅取 open——零消费）。
-      for (const r of [...runs.values()]) {
-        if (r.reviewType === "code" && !r.open) runs.delete(r.reviewId)
-      }
-      const reviewId = randomUUID()
-      run = {
-        reviewId, reviewType, designId: null,
-        round: 0, priorOutput: null, stale: false, open: true, docSetKey: null,
-      }
-      runs.set(reviewId, run)
-    }
-  }
-  // Scope the mirror fields to THIS instance (message builder + run.mjs cap +
-  // displays; #949 ① — the queued-launch window is re-secured at entry.start).
-  scopeAdvisorMirror(agent, run)
-  return { run, isNew: run.round === 0 && !run.priorOutput, reviewId: run.reviewId, designId: run.designId }
-}
-
-/** Guard round — the OPEN CODE instance only (2026-09-07 §8 F2): the design-written
- *  mirror never gates the code guard — no open code instance → 0. */
-export function effectiveAdvisorRound(agent) {
-  return openCodeRun(agent)?.round ?? 0
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Async pool (agent._asyncAdvisors — pool 上限 F-1/F-2:常量 = 运行时回退权威(2 → 4),
-// config.mjs DEFAULTS.agent.poolLimits.advisor = config 层镜像——耦合锁 config-pool
-// .test.mjs 逐键断言——勿单侧改默认)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const ADVISOR_POOL_LIMIT = 4
-
-/** AGENT-LOOP-ASYNC-POOL.md §6.10 advisor 池生效上限（纯——读 agent.poolLimits.advisor——合法 ≥1 整数生效——
- *  非法/缺省回退 ADVISOR_POOL_LIMIT——与 subagent 域 resolvePoolLimits 独立不共享
- *  （subagent 两键表不含本键——键表语义不同——POOL-CONFIG-UNIFIED F-2））。 */
-export function resolveAdvisorPoolLimit(raw) {
-  const v = raw?.advisor
-  return Number.isInteger(v) && v >= 1 ? v : ADVISOR_POOL_LIMIT
-}
-
-/** launch 判定点每次读 agent.config（/config 热应用——变更即生效下个 launch——文案
- *  如实报本值）。 */
-export function advisorPoolLimitFor(agent) {
-  return resolveAdvisorPoolLimit(agent?.config?.agent?.poolLimits)
-}
-/** §6.10 同 scope 守卫（F-5——用户裁①）：同 reviewType+scope 有 running 评审 → true
- *  （拒——running 并行多实例歧义放大——settled 续跑语义不变）。design scope = 文档集键
- *  （docSetKey）；code = 单 code 线程（记录不记路径键——与 openCodeRun 语义一致）。
- *  与池容量守卫独立：容量 = 全局 ≤N——scope = 同 scope ≤1——两关都过才启动。 */
-export function runningAdvisorOfScope(agent, reviewType, docSetKey) {
-  const pool = getAsyncPool(agent, "advisor")
-  if (!(pool instanceof Map)) return false
-  for (const e of pool.values()) {
-    if (e.status !== "running" || e.reviewType !== reviewType) continue
-    if (reviewType === "design" && e.run?.docSetKey !== docSetKey) continue
-    return true
-  }
-  return false
-}
-
-export function runningAdvisorCount(agent) {
-  return [...(getAsyncPool(agent, "advisor")?.values() ?? [])].filter((e) => e.status === "running").length
-}
-
-/** Any in-flight (non-done) async advisor review? — the completion guard skips
- *  its push-back while a review is pending (T-24b4: 未决不算未评审). */
-export function advisorReviewPending(agent) {
-  return [...(getAsyncPool(agent, "advisor")?.values() ?? [])].some((e) => !e.done)
-}
 
 /** Directed cancel (ruling ②-6b — ⏹/cancel): abort the running review's
  *  controller (run.mjs signal chain) → the settle callback runs the cancelled
@@ -367,7 +219,7 @@ export function refillAdvisorQueue(parent, onToken) {
  *   or invalid ctx.
  */
 export function launchAsyncAdvisor(parent, ctx, launch) {
-  const { reviewType, documents, paths, object, designToken, designId, run } = launch
+  const { reviewType, documents, paths, object, designToken, designId, run, batchDoc = null } = launch
   const limit = advisorPoolLimitFor(parent)
   // §6.10 same-scope guard（F-5——用户裁①）：同 type+scope 有 running → 拒——与池容量
   // 守卫独立两关都过才启动——同 scope 不等不排（settled 续跑不变；排队仅异 scope 面）。
@@ -391,6 +243,10 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
   const entry = {
     id, role: "advisor", reviewType, run,
     reviewId: run.reviewId, designId, designToken, documents, paths, object,
+    // 批次档绑定 = 逐笔快照（发起时点的值，与 reviewId / designToken 同族）：排队条目若在启动时读活的
+    // `run.batchDoc`，读到的是后一笔发起覆盖后的值 ⇒ 评审把裁定写进别人的档（判据单源 =
+    // `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）。
+    batchDoc,
     launchSeq: mutationSeqOf(parent),
     // docAbs 产出面同源归一（2026-10-04 · #921 · A 随件）：四分支单源 resolved（裸形/前缀形
     // 命中候选项目根即归一为绝对路径）——冻结窗/陈旧判定对**裸形受理档**照护成立（否则 A
@@ -431,6 +287,10 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
       onOutput: (chunk) => relayAdvisorOutput(ctx?.callbacks, entry.relayPrefix, chunk),
       signal: entry.controller.signal,
       onStall: (rounds) => pushAdvisorAlert(parent, `advisor#${id}`, rounds), // #934：连续无产出越阈 ⇒ 自动上行提醒（只推——§6.32）
+      // 本笔发起时点的绑定快照（入口条目字段），与评审轨无关（判据单源 =
+      // `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）。不读活的 `run.batchDoc`：
+      // 排队条目启动时那个字段已被后一笔发起覆盖。
+      batchDoc: entry.batchDoc,
     }, designToken, documents, paths, object, designId)
       .then((report) => { entry.report = report })
       // §6.12 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀

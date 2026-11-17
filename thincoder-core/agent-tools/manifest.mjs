@@ -11,8 +11,8 @@
  *  - `write` ⇒ **点改**：读现档 → 设节点 → 落盘（`writeManifest` 内先 `validateManifest`——
  *              编辑结果非法 ⇒ 拒 + 盘零变）；**缺档 ⇒ 拒** + 引导 `init`（写不建档）。
  *
- * 写面白名单（判据单源 = `MANIFEST_SCHEMA`——钉死谓词）：**13 个可写节点** = `keys` 中**非** `nestedKeys`
- * 父键者（`version` / `phase` / `codePaths` 整键）+ `nestedKeys` 子键（`docRoot.*` 六子键 / `index.*` 四子键）；
+ * 写面白名单（判据单源 = `MANIFEST_SCHEMA`——钉死谓词）：**16 个可写节点** = `keys` 中**非** `nestedKeys`
+ * 父键者（`version` / `phase` / `codePaths` 整键）+ `nestedKeys` 子键（`docRoot.*` 六子键 / `index.*` 七子键）；
  * **两族整键写（传整个对象）⇒ 拒**；白名单外 ⇒ 拒（拼写保护——未知键写盘 = 静默死键，KD-M1-36 问题本体）。
  * `value` 解析 = 同款口径 `settings.mjs` 的 `parseValue`（先 `JSON.parse`，失败取字面串；`"null"` ⇒ `null`
  * ——`docRoot.*` 的「本面无」，KD-M1-37）。
@@ -22,7 +22,14 @@
  * 工作区塌缩 `null`（**回落发生在调用方 `writeRoot`，非本函数**）⇒ 写 / 建两动作**不得**直用。
  *
  * 写路径复用（零新写路径）：落盘恒经 `writeManifest` / `initManifest`——`writer` 恒显式 `'main'`
- * （缺省 `'subagent'` = 写门 fail-closed 缺省，KD-M1-3 / AC-M1-5 零改）。
+ * （缺省 `'subagent'` = 写门 fail-closed 缺省，KD-M1-3 / AC-M1-5 零改）。**这里的「写门」= `writer` 身份闸**，
+ * 与下面那道不是同一道。
+ *
+ * **不在笔-账绑定写锁的入口集**（2026-11-10 整把出集批 · 决策 44）：`read` ∥ `init` ∥ `write` 三动作一律不要
+ * 台账号、不要项目声明——本工具写的这份档正是写锁的输入（取根 ∥ 读 `index.writableRepos` 判跨仓），把写它
+ * 也放在门后就成环（档缺失建不出项目、档坏修不回来）。机制与理由单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md`
+ * §2.3「`manifest` 不进写门」；该出口因此不在 `thincoder-core/agent/write-gate-ledger.mjs` 的入口集里，
+ * `ledger` ∥ `project` 两格也不在本工具的 `parameters.properties`（名字只为被读的地方存在）。
  *
  * 报告面随动（KD-M1-40）：本工具**不写** `agent.manifest`（第二值源否——工具目标可为非锚项目）——
  * 写盘 = 盘面变化，情境行经既有 ③b mtime 门控于下回合采纳（`agent/setup-reminders.mjs`）。
@@ -37,9 +44,9 @@
  * （`readonly: false` = 动作级分类面，只读性归 `dispatch-gates` 的 `read` 判定）。
  */
 import { existsSync } from "node:fs"
-import { join, resolve } from "node:path"
+import { isAbsolute, join, resolve } from "node:path"
 import { MANIFEST_REL, MANIFEST_SCHEMA, initManifest, projectRootView, projectView, readManifest, writeManifest } from "../manifest.mjs"
-import { DESC, LEDGER_PARAM_DESC_MANIFEST, PROJECT_PARAM_DESC } from "../tools/shared.mjs"
+import { DESC } from "../tools/shared.mjs"
 import { clearDeclarationCache } from "../conventions.mjs" // #1367 面⑦：写档成功 ⇒ 缓存失效（fix 轮接线）
 
 /** 拒面统一前缀（设计 §2.10：`manifest <action>: refused — …`）——盘零变类拒绝一律经此抛错。 */
@@ -47,11 +54,23 @@ function refuse(action, reason) {
   return new Error(`manifest ${action}: refused — ${reason}`)
 }
 
-/** `target` 解析（先例 `eng.mjs` 的 `resolveEngineeringManifest` 缺省会话锚 ∥ `git.mjs` 的 `resolveBaseDir` 相对形归一）：缺省 = 会话锚
- *  （`ctx.agent.cwd ?? ctx.cwd`）；显式相对形按会话锚归一（绝对形原样）。 */
-function resolveTarget(args, ctx) {
+/** `target` 解析：`target` 必填；`base` 只作相对形基根。缺 ∥ 空串 ∥ `null` ⇒ 抛、报文点名 `target`，零判定
+ *  （不拿锚替调用方选根）。`base` = `ctx.agent.cwd ?? ctx.cwd`（KD-9）；绝对形原样。 */
+function resolveTarget(action, args, ctx) {
   const base = ctx?.agent?.cwd ?? ctx?.cwd
-  return args?.target ? resolve(base, String(args.target)) : resolve(base)
+  const given = args?.target
+  if (typeof given !== "string" || given.trim() === "") {
+    throw new Error(`manifest ${action}: target is required — pass the project root or directory you mean (an absolute path, or a path relative to the session anchor); there is no default.`)
+  }
+  // 锚只作**相对形**的基根（KD-9）：锚缺位 + 相对形 ⇒ 拒、点名锚——不许落 `process.cwd()`
+  // （同 `thincoder-core/agent-tools/doc-check.mjs` 的同支，全批共用契约）。
+  if (!base) {
+    if (!isAbsolute(given)) {
+      throw new Error(`manifest ${action}: target is required as an absolute path — no session anchor is available (\`ctx.agent.cwd\` / \`ctx.cwd\` both empty), so a relative \`target\` has no base to resolve against.`)
+    }
+    return resolve(given)
+  }
+  return resolve(base, given)
 }
 
 /** 写面白名单谓词（**钉死**——设计 §2.10）：点分路径恰两形——
@@ -131,14 +150,11 @@ export const manifestTool = {
     type: "object",
     properties: {
       action: { type: "string", enum: ["read", "init", "write"], description: "read — current manifest + validation state (five-state anchor, never throws); init — create the default manifest when missing (refused when one already exists); write — point-edit one node (key + value) of an existing manifest" },
-      target: { type: "string", description: "Explicit target directory — defaults to the session anchor; relative paths resolve against it. A workspace target (several projects below it) is refused with the full project list — pass the project root you mean." },
+      target: { type: "string", description: "Required — pass the project root or directory you mean (relative paths resolve against the session anchor; a workspace target is reported with its project list)" },
       key: { type: "string", description: "(write) Dot path of the node to set — version / phase / codePaths, or a sub-key of docRoot / index (e.g. docRoot.design / index.publicRepos); whole-object writes of those two families are refused", },
       value: { type: "string", description: "(write) New value — parsed as JSON first (null / true / 5 / [\"a\"]), otherwise kept as a literal string; \"null\" is the explicit no-such-face for docRoot.<key>" },
-      ledger: { type: "string", description: LEDGER_PARAM_DESC_MANIFEST },
-      // 项目声明面（决策 40）：`target` 缺位时才被读（定位参数优先）；纯声明，不改查/建的目标目录。
-      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
-    required: ["action"],
+    required: ["action", "target"],
   },
   readonly: false, // 动作级分类（dispatch-gates `isReadonlyAction`）：read = 只读类；init / write 保持侧效门
   async execute(args, ctx) {
@@ -146,7 +162,7 @@ export const manifestTool = {
     if (!["read", "init", "write"].includes(action)) {
       throw new Error(`manifest: action must be one of read/init/write — got ${JSON.stringify(action)}`)
     }
-    const target = resolveTarget(args, ctx)
+    const target = resolveTarget(action, args, ctx)
 
     if (action === "read") return readAction(target)
 
@@ -220,15 +236,15 @@ export const manifestReadTool = {
     type: "object",
     properties: {
       action: { type: "string", enum: ["read"], description: "read — current manifest + validation state (five-state anchor, never throws)" },
-      target: { type: "string", description: "Explicit target directory — defaults to the session anchor; relative paths resolve against it. A workspace target (several projects below it) is reported with the full project list — pass the project root you mean." },
+      target: { type: "string", description: "Required — pass the project root or directory you mean (relative paths resolve against the session anchor; a workspace target is reported with its project list)" },
     },
-    required: ["action"],
+    required: ["action", "target"],
   },
   readonly: true,
   async execute(args, ctx) {
     if (args?.action !== "read") {
       throw new Error(`manifest read: refused — this read-only variant exposes only action=read (got ${JSON.stringify(args?.action)})`)
     }
-    return readAction(resolveTarget(args, ctx), { canInit: false })
+    return readAction(resolveTarget("read", args, ctx), { canInit: false })
   },
 }

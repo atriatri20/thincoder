@@ -3,8 +3,6 @@ import {
   truncate,
   runGit,
   gitFailureMessage,
-  LEDGER_PARAM_DESC_GIT,
-  PROJECT_PARAM_DESC,
 } from "./shared.mjs";
 import { spawnGit } from "./git-run.mjs";
 import { resolve } from "node:path";
@@ -88,22 +86,21 @@ export const gitTool = {
       create: { type: "boolean", description: "(switch) create the branch then switch (-c)" },
       dest: { type: "string", description: "(mv) destination path (file or directory)" },
       worktreeAction: { type: "string", enum: ["list", "add", "remove"], description: "(worktree) list / add (path, ref) / remove (path)" },
-      ledger: { type: "string", description: LEDGER_PARAM_DESC_GIT },
-      // 项目声明面（决策 40）：`path` ∥ `workdir` 缺位时才被读（定位参数优先）；纯声明，不改执行目录。
-      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["action"],
   },
   readonly: false,
   /**
    * 动作级只读分类（决策 37 · 2026-11-03 笔-账绑定批——**本钩子是单源**）。
-   * 消费面两处：`thincoder-core/agent/dispatch-gates.mjs` 的 `readonlyActionOf(tool, "git", args)`
-   * （planMode 门 ∥ 权限短路 ∥ 写门的 `git` 写型/只读判定）——三面（CLI ∥ desktop ∥ vscode）同答案。
+   * 消费面 = **审批面**：`thincoder-core/agent/dispatch-gates.mjs` 的 `readonlyActionOf(tool, "git", args)`
+   * （planMode 门 ∥ 免审批短路，调用点 = `thincoder-core/agent/dispatch.mjs`）——三面（CLI ∥ desktop ∥ vscode）同答案。
+   * 写门那个消费者随 2026-11-05 免号批退场：`git` 整把不在写门入口集，写型与只读在门上同判（都不要号）；
+   * 名单照留——谁消费谁负责，一处不用不是删它的理由（设计档 §2.3「只读名单本体」）。
    * 名单与 `thincoder-vscode/src/tools/index.mjs` 原端装饰体逐条同形（该覆写随本钩子同笔删除）：
    * 六项平铺 + 六条子动作分支。`checkpoint` 的 `list` ∥ `cat` 判只读——`checkpoint list` 有 F6 清理副作用
    * （`lazyClearIfCommitted` 可能删除整个 checkpoint 目录），但清的是 commit 后已失去意义的过期快照 ⇒
    * 保留只读分类免审批（`docs/core/design/CHECKPOINT.md` F6/D3 设计意图）。
-   * 缺此钩子的面回落到核名面谓词（无 `git` 分支 ⇒ false ⇒ 写型 ⇒ 要号），fail-closed，不出洞。
+   * 缺此钩子的面回落到核名面谓词（无 `git` 分支 ⇒ false ⇒ 写型 ⇒ 走审批），fail-closed，不出洞。
    */
   isReadonlyAction(args) {
     if (!args || typeof args.action !== "string") return false
@@ -230,7 +227,25 @@ const gitActionCore = {
         if (args.path !== undefined && args.path !== null) {
           const trimmed = args.path.trim()
           if (!trimmed) return "Error: commit path is empty/whitespace — give at least one file path (space-separated)"
-          commit = await runGitStrict(ctx.cwd, ["commit", "--only", "-m", args.message, "--", ...trimmed.split(/\s+/)])
+          const paths = trimmed.split(/\s+/)
+          // 未跟踪预检（`docs/core/design/TOOLS.md` §4.1）：`--only` 只认已进索引的路径——请求里任一档从未进过索引时，
+          // git 只抛 `pathspec '…' did not match any file(s) known to git`，读起来像路径打错，
+          // 真实原因却只有一个。判据取索引视图、**不拿 git 的报错文案做分支**（换措辞或换语言环境即失效）；
+          // 逐条问 git 自己的 pathspec 引擎，目录 / 通配 / 已 `git add` 的新档三种形都不需要额外分支。
+          // `--with-tree=HEAD` 不能省：`git rm <档>` 之后该档已不在索引里（纯索引视图读到空），
+          // 而 `--only` 拿它提交是**成功**的（实测：`1 file changed, 1 deletion(-)`）——
+          // 只查索引就会把一次可成功的提交拒掉，正是这条预检存在的反面。HEAD 里仍在的档因此放行。
+          // 逐条互不依赖、只读索引 ⇒ 并行问，不为一串路径排 N 次往返。
+          const probes = await Promise.all(
+            paths.map((p) => runGitStrict(ctx.cwd, ["ls-files", "-z", "--with-tree=HEAD", "--", p]))
+          )
+          // 预检自身失败（`ls-files` 非零退出：路径规格语法错、HEAD 尚未出生）⇒ 该路径不判，
+          // 落回原提交路径由 git 报它自己的错。把技术故障读成「未跟踪」会拒掉一次本可成功的提交——
+          // 那才是改变业务结果。
+          const untracked = paths.filter((p, i) => probes[i].ok && !probes[i].out)
+          // 全有或全无：`--only` 本就是原子语义，放行一半会让「提交了哪些档」与请求集对不上。
+          if (untracked.length) return truncate(`Error: commit path not tracked by git — untracked: ${untracked.join(" ")} — run git add on them first, or omit path to commit all changes (add -A + full commit)`)
+          commit = await runGitStrict(ctx.cwd, ["commit", "--only", "-m", args.message, "--", ...paths])
         } else {
           const add = await runGitStrict(ctx.cwd, ["add", "-A"])
           if (!add.ok) return truncate(`git add failed: ${add.err || add.out || "(no output)"}`)

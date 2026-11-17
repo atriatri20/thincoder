@@ -1,6 +1,6 @@
 /**
  * container-routes.mjs — 容器面路由（sandbox/SANDBOX.md §3 ∥ gateway/API.md §2.5 九行；runner-admin-console 批——台账 #1251；sandbox-docker-admin 批续扩五件）。
- * 拆分缘由（SANDBOX §13 拆分预案①）：`routes.mjs` 越 500 软线 ⇒ 容器面独立成档——端点路径零变。
+ * 拆分缘由（SANDBOX §13 拆分预案①）：`routes.mjs` 越 500 行 ⇒ 容器面独立成档——端点路径零变。
  *
  * 语义（§3）：容器不落库（Docker 引擎即真源——KD-SV-79）；列表 = 读时读（`containers/json?all=1`）；创建 = 三件（名/镜像/卷）；
  * 启动 ∥ 停止（**304 = 已启/已停 ⇒ 幂等成功**；`t` 不带 = 引擎缺省 10s）；删除 = `?force=1`（运行中强停强删；**卷不随删**）；

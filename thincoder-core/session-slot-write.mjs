@@ -20,7 +20,8 @@
  * （settle 落盘 / 门禁回读 / 链终清理三面齐备）；本档只承载其**保存面合并规则**
  * （`mergeEngTokensForSave`——空态保留 + 并集 + 新铸者胜，纯函数）。批次归属旁列
  * （`engDesignTokenBatches`）同款分层：槽 I/O 在 `token-ttl.mjs`，本档只持其保存面合并规则
- * （`mergeEngTokenBatchesForSave`）。槽标题写面同样不在
+ * （`mergeEngTokenBatchesForSave`）。评审封印旁列（`engDesignTokenSeals`，§10.2）同一分层，
+ * 合并规则 = `mergeEngTokenSealsForSave`。槽标题写面同样不在
  * 本档——单源 = `session-rename.mjs` 的 `renameSlot`（同 `{ok, reason}` 契约 + mtime 门控）。
  */
 
@@ -36,6 +37,7 @@ import { tokenExpiryMs } from "./token-ttl.mjs"
 // 与 off 可达性（`thinkOffPath`）；两叶档（零 import）⇒ 不涉环，核内零第二份族别 / 枚举表。
 import { specForModel } from "./model-specs.mjs"
 import { thinkOffPath } from "./think-off.mjs"
+import { WORK_MODES } from "./config-migrate.mjs"
 
 /** mtime 缓存（键 = 槽文件路径 → 上次所见 mtimeMs）：同一槽连写时跳过重复解析。
  *  测试复位缝（与 `_setSessionsDirForTest` 同款）：缓存为进程级单例，用例间需可复位
@@ -47,10 +49,12 @@ export function _resetSlotMtimeCacheForTest() { slotMtimeCache.clear() }
  *  批起 `newSession` 与本构造器单源；`effort: null` = 会话级档位未设态——§6.21 判据句 5 规范
  *  结构同源；老槽无该键由读侧按 `null` 容忍）。首物化即记创建端（§6.20 判据句 4 写面：本端
  *  物化者 = 进程端名；「禁回填」不适用——本构造器只产全新槽）。 */
-export function newSlotData(cwd) {
+export function newSlotData(cwd, mode) {
+  if (mode !== undefined && !WORK_MODES.includes(mode)) throw new Error(`invalid session work mode: ${JSON.stringify(mode)}`)
   return {
     version: 2, cwd, title: "", updatedAt: Date.now(),
-    history: [], contextHistory: [], tasks: [],
+    history: [], contextHistory: [], tasks: [], turns: [],
+    ...(mode !== undefined ? { mode } : {}),
     planMode: false, goal: null, autoApprove: false, advisor: null, effort: null,
     pendingReminders: [], sessionStart: null,
     createdBy: sessionEnd(),
@@ -160,9 +164,19 @@ export function setSlotPlanMode(cwd, slot, value) {
   return writeFlag(cwd, slot, (d) => { d.planMode = value })
 }
 
-/** 会话级 engineering 开关——槽是会话真值来源（配置文件只作初始默认 / 跨端镜像）。 */
+/** 会话级互斥工作模式——槽是会话真值来源；旧 engineering 字段在写入时退役。 */
+export function setSlotMode(cwd, slot, value) {
+  if (!["tiny", "normal", "engineering"].includes(value)) return false
+  return writeFlag(cwd, slot, (d) => {
+    d.mode = value
+    if (value === "engineering") d.planMode = false
+    delete d.engineering
+  })
+}
+
+/** 旧调用面保留，但写入同样只落到唯一 mode。 */
 export function setSlotEngineering(cwd, slot, value) {
-  return writeFlag(cwd, slot, (d) => { d.engineering = value })
+  return setSlotMode(cwd, slot, value === true ? "engineering" : "normal")
 }
 
 /** advisor 守卫开关（`advisor: { guard }`——空值升格为对象）。 */
@@ -205,6 +219,24 @@ export function mergeEngTokensForSave(incoming, existing) {
  *  理由：忙时保存把归属写丢 ⇒ 收口 no-op ⇒ 凭证留存，正是 §10 要消的窗口。
  */
 export function mergeEngTokenBatchesForSave(incoming, existing) {
+  if (incoming === undefined) return existing ?? null
+  const hasNew = incoming && typeof incoming === "object" && !Array.isArray(incoming) && Object.keys(incoming).length > 0
+  const slotHas = existing && typeof existing === "object" && !Array.isArray(existing) && Object.keys(existing).length > 0
+  if (!hasNew) return slotHas ? existing : null
+  if (!slotHas) return incoming
+  return { ...existing, ...incoming }
+}
+
+/**
+ * 保存面「评审封印旁列」合并规则（DESIGN-TOKEN-SETTLEMENT §10.2——纯函数）：与
+ * `mergeEngTokenBatchesForSave` **同形**（槽独有项保留；同 key 冲突以新写者胜——封印值是
+ * `{ hash, docs, docHashes }`，同一 designId 的新值来自更晚的一次评审，不比时刻、就是新写者）。
+ *  - `incoming === undefined`（调用方未携带该字段）⇒ 保留槽值；
+ *  - incoming 空值 ⇒ 槽有值则保留槽、槽也空 ⇒ null（写 null = 清字段）；
+ *  - 两端都有 ⇒ 并集：槽独有项保留、incoming 覆盖同 key。
+ *  理由同批归属：忙时保存把封印写丢 ⇒ 闸面落进「无封印值 ⇒ 不拦」，正是 §10.2 要消的窗口。
+ */
+export function mergeEngTokenSealsForSave(incoming, existing) {
   if (incoming === undefined) return existing ?? null
   const hasNew = incoming && typeof incoming === "object" && !Array.isArray(incoming) && Object.keys(incoming).length > 0
   const slotHas = existing && typeof existing === "object" && !Array.isArray(existing) && Object.keys(existing).length > 0

@@ -9,6 +9,8 @@ It is **not a confirmation gate** (it has no approval power, and it may be busy)
   **The confirmation-type question — a question that asks for a nod before you continue — is ruled out: the parent cannot approve anything, so the nod buys nothing**; the decision-type question is exactly what it wants — keep the two apart.
 - **Send decision-grade questions**: the answer changes your next step and the materials cannot supply it ⇒ send `notify_parent` (`ask`) at once —
   one line with the question and your leaning; **send-and-go**: keep working on the unaffected parts; mark the affected part pending until the reply arrives.
+- **What goes up is a question for the parent, not a decision it makes in the user's place**: the four classes above are facts, conflicts and domain questions the parent can settle from what it holds;
+  a direction, a scope or a trade-off is the user's, and the parent carries it there. State the question with your leaning — an answer to something nobody ruled on is one nobody stands behind.
 - **Decision-grade = four classes**: ① a stated premise the facts contradict; ② two requirements that conflict and you cannot arbitrate
   (two documents describing the same mechanism differently ⇒ **judged the same as a conflict**); ③ whether the action is inside your task domain; ④ a choice that would waste work already done.
 - **The conflict class is sent at once**: two requirements in conflict ⇒ send an `ask` right away — weighing produces no new information, picking a side settles what the user has not settled, and a round parked to the final report has already been done on the wrong premise.

@@ -19,6 +19,12 @@ import { specForModel } from "../specs.mjs"
 // 子代面排除集（核单源——TOOLS.md §6.16；核 `agent/helpers.mjs` 静态安全——W8 扫描实测）
 import { SUBAGENT_TOOL_EXCLUSIONS } from "@thincoder/core/agent/helpers.mjs"
 
+/** 端面无该动作的行级剔除（#99 · CORE-UNIFICATION §2.13.4）：跑在 `toOpenAISchema` 把常驻面与展开面
+ *  拼完之后（设计 TOOLS §1.1）。顺序不可倒——`- action:'panel'` 一行按内容归属住在展开面，装配前剔它
+ *  看不到那一行；倒过来做，展开面里的端面行会原样回到 VSC 描述，带上端面没有的动作。 */
+const stripPanelActionLines = (description) =>
+  description.split("\n").filter((l) => !l.startsWith("- action:'panel'")).join("\n")
+
 /**
  * VSC subagent 工具面装饰（原 W13 端侧装饰 + 本批 role 面取核合并——**装饰体单点**）。
  * 面清单：
@@ -38,6 +44,7 @@ import { SUBAGENT_TOOL_EXCLUSIONS } from "@thincoder/core/agent/helpers.mjs"
  * @param {{engineering?: boolean, consultModels?: object[]}} [opts]
  */
 export function vscSubagentFace(tool, { engineering = false, consultModels = [] } = {}) {
+
   const { view, freeze, ...props } = tool.parameters.properties
   const actionProp = props.action
   // ① role 面（取核拷贝）：模式互斥——普通模式 coder ∕ 工程模式 eng-coder（+ eng-designer）；tester 两模式都可派
@@ -64,8 +71,10 @@ export function vscSubagentFace(tool, { engineering = false, consultModels = [] 
     : actionProp
   return {
     ...tool,
-    // ① 描述：先剔 panel 行（端面无该动作）**再**附 role suffix——后缀居尾（取核同位）
-    description: tool.description.split("\n").filter((l) => !l.startsWith("- action:'panel'")).join("\n") + subagentRoles.suffix,
+    // ① 描述：role suffix 仍居尾（取核同位）；panel 行的剔除改由 `descriptionPostProcess` 在**装配之后**跑
+    //    （设计 TOOLS §1.1）——该行按内容归属搬进了展开面，装配前剔它看不到那一行。
+    description: tool.description + subagentRoles.suffix,
+    descriptionPostProcess: stripPanelActionLines,
     parameters: {
       ...tool.parameters,
       properties: {
@@ -169,16 +178,21 @@ export async function buildToolTable({ depth, role, engineering, provider, mcpSe
   // ── ③ 基础集：subagent role-based tool filtering —— explore/plan/consult get read-only tools only；
   // `tester` 取第三面（AGENT-LOOP-SUBAGENT.md §6.59.2 ⑥）：只读集 ∪ `{execute, bash}` − `{verify, advisor}`；
   // depth>0 面另剔 depth-excluded 工具（核单源 `SUBAGENT_TOOL_EXCLUSIONS`——TOOLS.md §6.16）。
-  // 端侧两条成文规则（§6.59.2 ⑥「端侧只读集怎么取」——勿自择）：只读集 = `builtinTools.filter((t) => t.readonly)`
-  // （就是下面这一行的现成形，端侧不调核 `readonlyToolNames`）；`TRIMMED` 端侧自持同形字面量（§6.24
-  // 「端镜像面不 import 核常量，同集由判据锁死」）。两枚减法按名显式做，不看 `readonly` 旗标——
-  // 旗标说的是「不写盘」，不是「不产出结论」（`verify` = 宣布达标 ∥ `advisor` = 开评审出判断，都是结论）。
+  // `tester` 的只读集仍 = `builtinTools.filter((t) => t.readonly)`（端侧成形，不调核 `readonlyToolNames`）；
+  // `TRIMMED` 端侧自持同形字面量（§6.24「端镜像面不 import 核常量，同集由判据锁死」）。两枚减法按名显式做，
+  // 不看 `readonly` 旗标——旗标说的是「不写盘」，不是「不产出结论」（`verify` = 宣布达标 ∥ `advisor` = 开评审出判断）。
   const isReadOnlyRole = depth > 0 && (role === "explore" || role === "plan" || role === "consult")
   const isTesterRole = depth > 0 && role === "tester"
   const TESTER_TRIMMED = new Set(["verify", "advisor"])
+  // B4（TOOLS.md §6.29 ①）：只读角色的面 = 整把只读集 ∪ action 级只读变体——构造器与判据都取核
+  // （变体登记表 = 核 `agent/helpers.mjs` 的 `READONLY_VARIANT_DOCS`；判据 = 核 `readonlyActionOf`）。
+  // 判据面**动态** import：核 `dispatch-gates.mjs` 经 `agent-tools/advisor-async.mjs` 静态可达核
+  // agent 栈（W8 契约②）——端壳静态闭包不得触达，同 `agent-tools.mjs` 那几处纪律。
+  const { deriveReadonlyTools } = await import("@thincoder/core/agent/helpers.mjs")
+  const { readonlyActionTest } = await import("@thincoder/core/agent/dispatch-gates.mjs")
   const baseTools = [
     ...(isReadOnlyRole
-      ? builtinTools.filter((t) => t.readonly)
+      ? deriveReadonlyTools(builtinTools, readonlyActionTest)
       : isTesterRole
         ? builtinTools
             .filter((t) => t.readonly || t.name === "execute" || t.name === "bash")

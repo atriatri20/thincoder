@@ -128,7 +128,8 @@ export async function createEnvTools({ coreTools = null } = {}) {
   const missing = ENV_TOOL_NAMES.filter((name) => !toolOf[name])
   if (missing.length > 0) throw new Error(`环境工具面缺件：${missing.join(" ∥ ")}（核件装载不完整）`)
   if (typeof core.toOpenAISchema !== "function") throw new Error("环境工具面缺件：toOpenAISchema（schema 形转换单源）")
-  const schemas = ENV_TOOL_NAMES.map((name) => core.toOpenAISchema(toolOf[name]))
+  // 环境工具面不经极简装配（设计 TOOLS §1）：取完整档，可见文本与改造前一致。
+  const schemas = ENV_TOOL_NAMES.map((name) => core.toOpenAISchema(toolOf[name], "normal"))
 
   /** 工具调用入口（不抛——见档头；`ok` = 调用完成，非命令退出码语义）。 */
   async function invoke(name, args = {}, ctx = {}) {

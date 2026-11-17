@@ -17,7 +17,7 @@
  * （本端不再写旧键）；同批替代 = `setModelContextFlow`——按模型写 `providers[].modelContext`，
  * 单位仍是 K（输入 ∥ 存储 ∥ 提示 ∥ 回显四处同口径；端侧零 ×1024——唯一乘点在核）。
  */
-import { PROVIDER_PRESETS as PRESETS, resolveCompactThreshold } from "@thincoder/core/config.mjs"
+import { PROVIDER_PRESETS as PRESETS, resolveCompactThreshold, resolveWorkMode } from "@thincoder/core/config.mjs"
 import { hasKey } from "@thincoder/core/model-ref.mjs"
 import { normalizeModelKey, positiveInt } from "@thincoder/core/model-context.mjs"
 import { formatDeclaredContextK } from "@thincoder/core/model-specs.mjs"
@@ -302,8 +302,9 @@ export function createProviderAdmin(ctx) {
       if (target.modelContext === undefined) delete agent.provider.modelContext
       else agent.provider.modelContext = target.modelContext
       // §6.17：窗口覆盖后 auto 派生线跟手——只刷新显示面 compactThresholdResolved，显式键永不被改写
+      // （按当前档的有效窗口算：tiny 档下窗口覆盖后压缩线仍以 262144 封顶）
       if (agent.config?.agent?.compactThresholdAuto) {
-        agent.config.agent.compactThresholdResolved = resolveCompactThreshold(null, agent.provider).value
+        agent.config.agent.compactThresholdResolved = resolveCompactThreshold(null, agent.provider, resolveWorkMode(agent.config?.agent)).value
       }
     }
     // 回显串 = 核出词（`128K` / `1M`）——不同时给 token 数（两个数并排又把人绕回单位问题）

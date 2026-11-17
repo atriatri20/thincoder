@@ -2,8 +2,9 @@
  * ledger-db.mjs — 台账 SQLite 连接 / DDL / 枚举常量（M2 模块拆分件——设计档
  * docs/core/design/modules/ENGINEERING-MODE-V2-MODULE-LEDGER.md §2.3 拆分计划）。
  *
- * items 单表 + 三 CHECK 枚举（kind / status / trigger）+ task_book 咬合 CHECK——枚举机械锁死
+ * items 表 + 三 CHECK 枚举（kind / status / trigger）+ task_book 咬合 CHECK——枚举机械锁死
  * 靠 DDL（AC-M2-2），不靠应用层 if。归档 = 软删除（状态值，无物理 DELETE——KD-M2-4）。
+ * 同库第二张表 `doc_edges`（文档锚点图的边）—— 同一 `db.exec`、同一文件，不新建第二个库。
  * 本档静态 import node:sqlite ⇒ 消费侧一律动态 import 本模块链（W8 契约②——KD-M2-3）。
  *
  * 项目根推导单源（`resolveLedgerRoot` = 判据本体 `owningProject` 的 `basis` 形状包装）+ 同级枚举
@@ -40,7 +41,7 @@ export function _resetLedgerDirForTest() { ledgerDir = join(configDir, "ledger")
 export function ledgerDirPath() { return ledgerDir }
 
 /** 项目根 → 库键（**键式单源**——设计档 `LEDGER.md` §2.1：键只在**本函数**一处生成）：
- *  `sha1(normalizeCwd(root))[:16]`——`normalizeCwd`（盘符统一大写）是唯一补丁面：`resolve()`
+ *  `sha1(normalizeCwd(root))` 取前 16 位——`normalizeCwd`（盘符统一大写）是唯一补丁面：`resolve()`
  *  已覆盖分隔符 / 点段 / 尾斜杠；非盘符段大小写**不折叠**（§2.1 不做段）。
  *  @param {string} root 项目根绝对路径
  *  @returns {string} 16 位十六进制键 */
@@ -53,7 +54,7 @@ export function ledgerKey(root) {
 const keyedDbFile = (root) => join(ledgerDir, `${ledgerKey(root)}.db`)
 
 /** 「已注册」判据（**唯一**事实）：该目录带项目声明档 `PROJECT-MANIFEST.json`。
- *  项目 = 带 manifest 的目录（`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md:68`）——
+ *  项目 = 带 manifest 的目录（`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md` 的「解析模型与作用定位」节）——
  *  台账没有自己的「项目」定义：台账根 = 项目根，一个判据。 */
 function isRegistered(dir) {
   return existsSync(join(dir, MANIFEST_REL))
@@ -146,26 +147,41 @@ export const AGING_DAYS = 30
  *  `evidenceTooLong` ∥ `count` 回报）。 */
 export const EVIDENCE_TOO_LONG_MAX = 300
 
+/** `query` 工具面每页行数（设计档 `LEDGER.md` §7.2「常量单源」）：分页在工具面做（核仍全量），
+ *  带不带过滤条件都是这个数。**本档 = 唯一字面**——工具面取本常量；描述面两档（`tool-docs/ledger.md`
+ *  ∥ `ledger-read.md`）写死该数字（模型读不到常量），同步判据 = 文案数字恒等 `String(QUERY_PAGE_SIZE)`。 */
+export const QUERY_PAGE_SIZE = 10
+
+
 /** 台账库结构版本（N2 标记**单源**——`PRAGMA user_version` 落标：写面开库 `v < 本值 ⇒ 置`；
  *  读面如实回读（旧库未标 = 0）；结构变更（新列 / 新表）同步升号——2026-10-03 read-data-interface 批。
- *  2 = `resume_when` 可空列（设计档 §3.4 P5）。 */
-export const LEDGER_SCHEMA_VERSION = 2
+ *  2 = `resume_when` 可空列（设计档 §3.4 P5）。
+ *  3 = 同库第二张表 `doc_edges` 与两条索引（文档锚点图 · 机制单源 = `docs/core/design/DOC-GRAPH.md` §2.3
+ *  ——边表与台账行住同一个 SQLite 文件，不新建第二个库）。 */
+export const LEDGER_SCHEMA_VERSION = 3
 
-/** 六态允许迁移表（ledgerUpdate 迁移前判，不在表内 → 拒——规格 ②.2；设计档 §2.1）。
- *  2026-10-27 批（三链统一）补两条边：
- *  - `待讨论 → 在途`：建档事务的必经一步（新建行只能先 INSERT `待讨论`——`在途` 被 DDL 咬合 CHECK 强制
- *    非空指针；落档后才迁 `在途` 并写指针。没有这条边，`batch create` 写不出来）；
- *  - `待核销 → 在途`：重开回收（批档重开 ⇒ 行回工作位）。六态唯一的回退边，人面出路与机器径同一条。 */
+/** 六态允许迁移表（ledgerUpdate 迁移前判，不在表内 → 拒）。
+ *  `待讨论 → 在途` 是建档点火边；`在途 / 待核销 → 待讨论` 是未完成行的退回边；
+ *  `待核销 → 在途` 是重开或手工回退边。`已核销 / 已废弃` 都是终态，没有出边。 */
 export const ALLOWED_MIGRATIONS = {
   "待讨论": ["待设计", "在途", "已废弃"],
   "待设计": ["在途", "已废弃"],
-  "在途": ["待核销", "已废弃"],
-  "待核销": ["已核销", "在途", "已废弃"],
-  "已核销": ["已废弃"],
+  "在途": ["待核销", "待讨论", "已废弃"],
+  "待核销": ["已核销", "在途", "待讨论", "已废弃"],
+  "已核销": [],
   "已废弃": [],
 }
 
-/** 建表 DDL（幂等——设计档 §2.2 逐字；CHECK 字符串用单引号——KD7 实核）。 */
+/** `doc_edges.kind` 的闭集（设计档 `docs/core/design/DOC-GRAPH.md` §2.2 的六类）。
+ *  **一份闭集、两个消费面**：本档 DDL 的 CHECK 由它生成；查询面的 `kind` 收窄入参也按它校验
+ *  （`doc-graph.mjs` 动态 import 本常量）——两边不各持一份字面，两份一漂就是「能存不能查」。 */
+export const DOC_EDGE_KINDS = ["cites", "cites-req", "mentions-case", "case-file", "cites-symbol", "imports"]
+
+/** 建表 DDL（幂等——设计档 §2.2 逐字；CHECK 字符串用单引号——KD7 实核）。
+ *  两张表同一个 `db.exec`、同一个文件：`items`（台账行）∥ `doc_edges`（文档锚点图的边——机制单源 =
+ *  `docs/core/design/DOC-GRAPH.md` §2.3，需求 F1「边表与台账同库」）。边表的三值 `state` 与本档台账的
+ *  六态无关：它是「目标在不在盘」的三态（`ok` ∥ `目标不在盘` ∥ `判不了存在性`），与 `doc_check` 的
+ *  `档缺` / `unverified` 同义不同词。 */
 const DDL = `
 CREATE TABLE IF NOT EXISTS items (
   id         INTEGER PRIMARY KEY,
@@ -183,7 +199,23 @@ CREATE TABLE IF NOT EXISTS items (
   closed_at  TEXT,
   resume_when TEXT,
   CHECK (status NOT IN ('在途','待核销') OR (task_book IS NOT NULL AND task_book <> ''))
-)`
+);
+CREATE TABLE IF NOT EXISTS doc_edges (
+  id         INTEGER PRIMARY KEY,
+  src        TEXT NOT NULL,
+  src_label  TEXT,
+  kind       TEXT NOT NULL CHECK(kind IN (${DOC_EDGE_KINDS.map((k) => `'${k}'`).join(",")})),
+  dst        TEXT NOT NULL,
+  dst_label  TEXT,
+  evidence   TEXT NOT NULL,
+  state      TEXT NOT NULL CHECK(state IN ('ok','目标不在盘','判不了存在性')),
+  scope      TEXT NOT NULL,
+  scanned_at TEXT NOT NULL,
+  UNIQUE(src, kind, dst, evidence)
+);
+CREATE INDEX IF NOT EXISTS doc_edges_dst ON doc_edges(dst);
+CREATE INDEX IF NOT EXISTS doc_edges_scope ON doc_edges(scope);
+`
 
 /** 老库幂等迁移共件：items 表缺该可空列 ⇒ ALTER 补列（`executor` ∥ `resume_when` 两列共用一份
  *  「复判列在否」逻辑——设计档 §3.4）。判据 = PRAGMA table_info 实查（不猜版本号）；ALTER

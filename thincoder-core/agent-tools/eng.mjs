@@ -19,6 +19,7 @@ import { ENG_ON_REMINDER, ENG_OFF_REMINDER } from "../agent.mjs"
 import { clearPlanMode } from "./plan.mjs"
 import { purgeExpiredDesignTokens } from "../token-ttl.mjs"
 import { resolveEngineeringManifest } from "../manifest.mjs"
+import { resolveWorkMode, setConfigWorkMode } from "../config.mjs"
 // 描述面 = `tool-docs/eng.md`（#15 描述外置统一——DESC 单一解析面，与内置工具族同径）
 import { DESC } from "../tools/shared.mjs"
 
@@ -26,7 +27,7 @@ import { DESC } from "../tools/shared.mjs"
 /**
  * 工程模式切换通知注入位（**缺省不覆盖** = no-op——CLI 语义（只进会话），零行为变；端装配层
  * 可覆盖为本端镜像写盘 / 面板提示）。核内零端名分支（契约 5——本档只认 `onToggle` 函数名）。
- * 契约：`onToggle(enabled, ctx) → string | null | undefined | Promise<同>`——非空字符串 =
+ * 契约：`onToggle(mode, ctx) → string | null | undefined | Promise<同>`——非空字符串 =
  * 追加到结果文案尾（如镜像写入碰撞提示）；其余值 = 无提示。调用时机 = 状态翻转后（观察新态）。
  */
 let injectedMirror = null
@@ -37,8 +38,8 @@ export function configureEngMirror(impl) {
 export function resetEngMirror() { injectedMirror = null }
 
 /** 镜像通知串（缺省空串；仅非空字符串追加）。 */
-async function mirrorNotice(enabled, ctx) {
-  const out = await injectedMirror?.onToggle(enabled, ctx)
+async function mirrorNotice(mode, ctx) {
+  const out = await injectedMirror?.onToggle(mode, ctx)
   return typeof out === "string" && out.length > 0 ? ` ${out}` : ""
 }
 
@@ -56,7 +57,7 @@ export const engTool = {
   async execute(args, ctx) {
     ctx.agent.config.agent ??= {}
     if (args.action === "exit") {
-      ctx.agent.config.agent.engineering = false
+      setConfigWorkMode(ctx.agent.config, "normal")
       // R16 (F-R16a): OFF 不清 token——有效 token 跨模式存活（设计评审过的产物不因
       // 开关重复烧）。过期清理跑在另外三处（恢复过滤 / 开模式 / spawn 门禁拒）。
       ctx.agent._advisorRound = 0          // reset convergence budget
@@ -65,13 +66,13 @@ export const engTool = {
       ctx.agent._lastEngState = false
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
       ctx.agent._pendingReminders.push(ENG_OFF_REMINDER)
-      return "Engineering mode exited. Standard discipline now applies. You may edit files directly." + await mirrorNotice(false, ctx)
+      return "Engineering mode exited. Standard discipline now applies. You may edit files directly." + await mirrorNotice(ctx.agent.config.agent.mode, ctx)
     }
     if (args.action === "enter") {
       // Idempotent enter (v2 2026-08-25): already in engineering mode → pure no-op
       // (cleanup only runs on a real off→on transition — T-R16c precondition: first
       // exit/OFF, then enter; an already-on enter must not touch tokens at all).
-      if (ctx.agent.config.agent.engineering) {
+      if (resolveWorkMode(ctx.agent.config.agent) === "engineering") {
         return "Engineering mode already active. Existing design tokens stay valid."
       }
       // #41 先判后翻（MANIFEST.md §2.8 F2 / KD-M1-21）：判据 = 入口决策树**单源**
@@ -85,7 +86,7 @@ export const engTool = {
         return `Error: cannot enter engineering mode — ${r.message} (mode unchanged)`
       }
       ctx.agent.manifest = r.ok ? r.manifest : null // 工作区放行 ⇒ 零附着（显式置 null——§2.8 F2 放行行）
-      ctx.agent.config.agent.engineering = true
+      setConfigWorkMode(ctx.agent.config, "engineering")
       // FR31 ③ / KD10（翻转点①）：工程模式 ⇒ planMode 恒 false——中途开模式时清残留
       //（planMode 位 + reminder 计数 + 未注入的 plan 提示语），半状态（工程纪律 × plan 只读）不产生。
       clearPlanMode(ctx.agent)
@@ -100,7 +101,7 @@ export const engTool = {
       if (cleared > 0) {
         msg += ` Cleared ${cleared} expired design token${cleared === 1 ? "" : "s"} — 清 ${cleared} 个过期 token，有效 token 保留（TTL 内不重评）。`
       }
-      msg += await mirrorNotice(true, ctx)
+      msg += await mirrorNotice(ctx.agent.config.agent.mode, ctx)
       return msg
     }
     return "Invalid action: expected 'enter' or 'exit'"

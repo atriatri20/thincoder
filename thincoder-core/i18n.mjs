@@ -60,7 +60,7 @@ export const CORE_MESSAGES = Object.freeze({
   "sub.cancelled": { en: "cancelled", zh: "已取消" },
   "sub.awaitingDigest": { en: "done · awaiting digestion", zh: "已完成 · 等待消化" },
   "sub.queueSlot": { en: "queued · position ${n} (slot full)", zh: "排队中 · 位置 ${n}（槽满等位）" },
-  // #1507 补四键（核字典缺键——值形与宿主同形：desktop `renderer/i18n.mjs:197-200` ∥ VSC `locales/{en,zh}.json`）
+  // #1507 补四键（核字典缺键——值形与宿主同形：desktop `renderer/i18n.mjs` 的 `sub.async` ∥ `sub.sync` ∥ `sub.waiting` ∥ `sub.awaitingApproval` 四键 ∥ VSC `locales/{en,zh}.json`）
   "sub.async": { en: "async", zh: "异步" },
   "sub.sync": { en: "sync", zh: "同步" },
   "sub.waiting": { en: "waiting", zh: "等待中" },

@@ -71,7 +71,7 @@ function makeHarness(segments) {
   return { ctx, lines, statuses, agent }
 }
 
-test("25-1 续跑一段后再次撞帽：第二张卡给出本段 3 ∥ 累计 6", async () => {
+test("CLI 25-1 续跑一段后再次撞帽：第二张卡给出本段 3 ∥ 累计 6", async () => {
   const h = makeHarness([SEG, SEG])
   await runAgentTurn(h.ctx, "长任务", {})
   const cards = h.lines.filter((l) => l.startsWith("Ran "))
@@ -85,7 +85,7 @@ test("25-1 续跑一段后再次撞帽：第二张卡给出本段 3 ∥ 累计 6
   for (const l of h.lines) assert.ok(!l.includes("(limit"), `卡上不该再有 (limit：${l}`)
 })
 
-test("25-2 首段即撞帽：累计等于本段，两个数都在", async () => {
+test("CLI 25-2 首段即撞帽：累计等于本段，两个数都在", async () => {
   const h = makeHarness([SEG])
   await runAgentTurn(h.ctx, "长任务", {})
   const cards = h.lines.filter((l) => l.startsWith("Ran "))

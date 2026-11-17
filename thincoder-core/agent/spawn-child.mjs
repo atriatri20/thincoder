@@ -48,6 +48,41 @@ export { TURN_CAP_MARK, STOPPED_MARK } from "./child-marks.mjs"
  * schema 层过滤（setup.mjs 受限变体）只是给模型的参数提示——本函数是机械强制。
  */
 export const ENG_AUDIT_SPAWN_LIMIT = 6 // 允许 6 次审计 spawn；第 7 次拒绝
+
+/** 文件域比较键（与 `agent-tools/subagent-scheduler.mjs` 的 `fileKey` 同律：win32 大小写不敏感）。
+ *  本档不 import 那个档（它 import 本档——成环），故这枚三字规则在此重述一次。 */
+const batchKeyOf = (p) => (process.platform === "win32" ? String(p).toLowerCase() : String(p))
+
+/** 设计席勘察预算（TOOLS.md §6.29 B7）：模型面对 eng-designer 承诺「≤6 explore spawns per batch」，
+ *  而 `gateEngCoderSpawn` 对 designer 直接返回 null（不计数）——承诺没有实现。
+ *
+ *  三处判据都在调用点保证：**角色、同步方式、batchDoc 准入**先过完，本函数只计数
+ *  （被拒的 spawn 不占额度）；计数挂 **depth-0 根 agent 的独立 Map**（挂在一次性 designer child 上
+ *  会在 fix respawn 归零；复用 `_engAuditSpawns` 会把两种预算混成一本 —— K5）。
+ *  @returns {number} 本次是第几次勘察（1 起）
+ */
+export function chargeDesignerSurveySpawn(rootAgent, batchDoc) {
+  const key = batchKeyOf(batchDoc)
+  const map = (rootAgent._engSurveySpawns ??= new Map())
+  const used = map.get(key) ?? 0
+  if (used >= ENG_AUDIT_SPAWN_LIMIT) {
+    throw new Error(`explore survey budget exhausted — ${ENG_AUDIT_SPAWN_LIMIT} explore spawns per batch record, and this record has already used ${used} (${key}). Correction rounds do not reset the budget: finish the design with what these surveys returned, or state the gap in the design document instead of surveying again.`)
+  }
+  map.set(key, used + 1)
+  return used + 1
+}
+
+/** depth-0 根 agent（沿 `_upstream.parent` 走上：子代理面拿到的预算载体必须在根上，否则
+ *  每次 respawn 都是一本新账）。链断（无 `_upstream`）= 传入者即根。 */
+export function rootAgentOf(agent) {
+  let cur = agent
+  for (let hop = 0; cur && hop < 8; hop++) {
+    const parent = cur._upstream?.parent
+    if (!parent) return cur
+    cur = parent
+  }
+  return cur ?? agent
+}
 export function gateEngCoderSpawn(parent, depth, role, async) {
   const parentRole = parent?._role
   if ((depth ?? 0) <= 0 || (parentRole !== "eng-coder" && parentRole !== "eng-designer")) return null
@@ -58,6 +93,8 @@ export function gateEngCoderSpawn(parent, depth, role, async) {
     throw new Error(`${parentRole} internal spawns are sync-only — the child's report must return before the next protocol step; async spawn is only available at the top level`)
   }
   // designer 勘察路径：校验通过即返回 null（非审计——不计数、不触发审计任务书注入）
+  // **designer 的勘察预算不在本函数**：它按「设计席自己发起的 explore」计在批档上，
+  // 调用点 = `agent-tools/subagent-spawn.mjs` 的 `buildSpawnChild`（TOOLS.md §6.29 B7）。
   if (parentRole === "eng-designer") return null
   const attempt = (parent._engAuditSpawns ?? 0) + 1
   if (attempt > ENG_AUDIT_SPAWN_LIMIT) {
@@ -110,7 +147,7 @@ export function makeRelay(parent, label, emit, model) {
 // Single source for the event grammar branch lists (consult P3, 2026-08-30):
 // stripEventToken (display) and stripEventTokensForCapture (capture) shared them
 // literally — extending the event set meant touching both regexes.
-// "done" = AGENT-LOOP-SUBAGENT.md §6.7.3 D-A3 async-child completion event (emitted by the parent's
+// "done" = AGENT-LOOP-SUBAGENT.md §6.7.3 async-child completion event (emitted by the parent's
 // turn-end collection, not by children — listed so the grammar stays honest).
 const EVENT_PHASE = "turn|approval|done"
 const EVENT_TYPE = "llm|tool|approval|done"

@@ -143,7 +143,7 @@ Agent 永远比人快，速度根本不是瓶颈。唯一能坏事的，是匆�
 | `thincoder-core/prompts/persona-normal.md` / `thincoder-core/prompts/persona-engineering.md` / `thincoder-core/prompts/persona-{role}.md` | 人格层定义 | **三观在该角色上的具体化 + 岗位身份**——同一上位依据按角色取形，不复制原文 |
 | `thincoder-core/prompts/common.md` | 公共层（人机分工 / 确认门 / 语言） | **协作基础 + 9 条公共三观**（2.1 ∥ 2.3 ∥ 2.5 ∥ 2.6 ∥ 3.7 ∥ 4.1 ∥ 4.2 ∥ 4.3 ∥ 4.4） |
 | `thincoder-core/prompts/discipline-normal.md` / `thincoder-core/prompts/discipline-engineering.md` | 纪律层 | **方法论**（三观的操作化：流程 / 规则 / 工具观） |
-| 特殊模块（顾问 / 评审） | 子代理基底（自含装配，不装配公共层） | 本批不接三观——待另批（其基底档自带独立性要求） |
+| 特殊模块（顾问 / 评审） | 子代理基底（自含装配，不装配公共层） | 三观按角色职责落入自含基底，保持模块独立性 |
 | 工具描述（`thincoder-core/tool-docs/**`） | 工具行为约束 | 价值观（正确性绝对优先、关联问题不回避） |
 
 **提示词 = 代码单源**：`thincoder-core/prompts/**`（运行期加载面，唯一副本）；规则的人读权威 = 中文机制文档。项目地图与文档规范 = `docs/README.md`。三层可逐级核对：**哲学 → 纪律层 → 提示词**。

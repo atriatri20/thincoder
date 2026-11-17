@@ -9,9 +9,9 @@
  * 核件坐标（本档实际消费面——实施当刻实读）：
  *   装配 `core/agent/assemble.mjs` `assembleAgent`/`validateProvider` ∥ 回合 `core/agent.mjs`
  *   `runAgent` ∥ 会话 `core/session.mjs`（`applySession`/`saveSession`/`loadSlotFile`/`listSlots`/
- *   `newSession`/`loadManifest`/`slotPath`/`deleteSlot`/`renameSlot`）∥ 偏好与四旗写面
+ *   `newSession`/`loadManifest`/`slotPath`/`deleteSlot`/`renameSlot`）∥ 偏好、布尔开关与 mode 写面
  *   `core/session-slot-write.mjs`（`setSlotPrefs`/`setSlotAutoApprove`/`setSlotPlanMode`/
- *   `setSlotEngineering`/`setSlotAdvisorGuard`）∥ 配置 `core/config.mjs` `loadConfig` ∥ 事件 token
+ *   `setSlotMode`/`setSlotAdvisorGuard`）∥ 配置 `core/config.mjs` `loadConfig`/`resolveWorkMode` ∥ 事件 token
  *   文法 `core/agent/relay-prefix.mjs` `parseRelayPath`（本批：relay 前缀 token **零剥离** ⇒ `sub` 帧）
  *   ∥ 停单件控制面 `core/agent-tools/subagent-async.mjs`（`cancelSyncChild`/`executeCancelAction`）+
  *   `core/agent-tools/async-settle.mjs` `getAsyncPool`（同桌面 `subagent-face.mjs` 的 `stopSubagent` 先例）。
@@ -27,7 +27,7 @@
  *   ② 会话行形（读指令回呈）：`{ id, model, reasoning, title, count, flags, status, excerpt, updatedAt }`
  *      —— `id` = 槽号（`.id` 复合形的服务器侧拼装归 server）；`model` = 槽 `activeModel`（成员面
  *      外标）∥ `reasoning` = 槽 `effort`（`null` = 未设）∥ `title` = 槽 `title`（空串 = 未命名）∥
- *      `count` = 槽 `history` 消息数 ∥ `flags` = 槽四旗（KD-SV-218 读面）∥ `status` = `running`/`idle`
+ *      `count` = 槽 `history` 消息数 ∥ `flags` = 三布尔开关 + 三档 mode ∥ `status` = `running`/`idle`
  *      （本壳在途态）∥ `excerpt` = 首条用户消息 ≤40 字。
  *   ③ MCP 桩件并面（`mcp/MCP.md` §6.1）：逐回合取表（`./mcp-tools.mjs`——`GET /api/box/mcp`，秘密零出服务器）⇒ 防撞过滤
  *      ⇒ `runAgent(…, { extraTools })`（件序 = 成员件先 ∥ MCP 件后）；失败降级 = 零件 + 日志一条（回合不阻断）。
@@ -44,7 +44,7 @@ import {
 } from "./protocol.mjs"
 import { createMcpTools } from "./mcp-tools.mjs"
 import { MEMBER_TOOL_NAMES, createMemberTools } from "./member-tools.mjs"
-import { BOX_PROVIDER, FLAG_KEYS, FLAG_SETTERS, ShellError, excerptOf, flagsOf, isToolFailureText, listFilesOf, projectMessages, slotOf, withBoxProvider } from "./core-run-util.mjs"
+import { BOX_PROVIDER, FLAG_KEYS, FLAG_SETTERS, WORK_MODES, ShellError, excerptOf, flagsOf, isToolFailureText, listFilesOf, mergeSlotControl, projectMessages, slotOf, withBoxProvider, workModeOf } from "./core-run-util.mjs"
 
 export {
   MAX_TOOL_OUTPUT, BOX_PROVIDER, ShellError, FLAG_KEYS, FILE_LIST_LIMIT, FILE_SCAN_LIMIT,
@@ -56,7 +56,7 @@ export {
  * @param {{env?: object, cwd?: string, core: object, fetchImpl?: Function, log?: object, promptIdOf?: Function}} opts
  *   `core` = 核面束（生产 = `loadCore()`；测试 = 假件）——键：assembleAgent ∥ validateProvider ∥
  *   runAgent ∥ applySession ∥ saveSession ∥ loadSlotFile ∥ listSlots ∥ newSession ∥ setSlotPrefs ∥
- *   loadManifest ∥ slotPath ∥ deleteSlot ∥ renameSlot ∥ 四旗四件 ∥ loadConfig ∥ parseRelayPath ∥
+ *   loadManifest ∥ slotPath ∥ deleteSlot ∥ renameSlot ∥ 三布尔写件 + setSlotMode ∥ loadConfig/resolveWorkMode ∥ parseRelayPath ∥
  *   cancelSyncChild ∥ executeCancelAction ∥ getAsyncPool。
  *   `fetchImpl`/`log` = MCP 取表与调用桥两缝（`mcp-tools.mjs` 同源——测试假件/降级日志面）；
  *   `promptIdOf` = ask 帧 promptId 铸造缝（缺省 = `node:crypto` randomUUID）。
@@ -207,19 +207,19 @@ export function createCoreRun({
       return { session: row, messages: projectMessages(data) }
     },
 
-    /** 新建 = 核全新槽分配（`newSession`；模型缺省由 server 选定后随 `{ model }` 落槽）。 */
+    /** 新建 = 核全新槽分配；工作模式取 agent.mode 的新会话默认值。 */
     async createSession({ model = null } = {}) {
-      const slot = await core.newSession(cwd)
+      const mode = core.resolveWorkMode(core.loadConfig().agent)
+      const slot = await core.newSession(cwd, { mode })
       if (model && !core.setSlotPrefs(cwd, slot, { provider: BOX_PROVIDER, model })) {
         throw new ShellError("write_failed", "会话模型写入失败")
       }
-      return { id: slot }
+      return { id: slot, session: rowOf(slot) }
     },
 
-    /** 改（换模型/设档/四旗）：换模型 ⇒ 档位清 `null`（§3.4）；四旗 ⇒ 核写面四件（KD-SV-218）。
+    /** 改模型/档位/布尔开关/mode；换模型清档位，engineering 写槽时清 PLAN。
      *  返回更新后行；槽不存在 ⇒ null。入参槽号面 = `slot`（服务器下行形——`member-routes.mjs`）∥
-     *  `sessionId`/`id` 兼容容错。**一次一件由 server 门把守**（`gateway/API.md` §2.11 PATCH——盒侧
-     *  再立第二判据 = 双源）；本档按补丁序合成（`model` 先置 ⇒ `effort` 后写 ⇒ 四旗逐件）。 */
+     *  `sessionId`/`id` 兼容容错。**一次一件由 server 门把守**；盒侧仍先验全部值域，再按补丁序写。 */
     updateSession(args = {}) {
       const { model, reasoning } = args
       const slot = slotOf(args.slot ?? args.sessionId ?? args.id)
@@ -232,8 +232,17 @@ export function createCoreRun({
       }
       if (Object.hasOwn(args, "reasoning")) patch.effort = reasoning ?? null
       const flags = FLAG_KEYS.filter((key) => Object.hasOwn(args, key))
-      if (Object.keys(patch).length === 0 && flags.length === 0) {
-        throw new ShellError("invalid_request_error", "至少需要一个字段（model ∥ reasoning ∥ 四旗）")
+      const hasMode = Object.hasOwn(args, "mode")
+      // 全部值域先验后写：非法 mode 不得让同包其他字段或 PLAN 发生部分写入。
+      if (hasMode && !WORK_MODES.includes(args.mode)) {
+        throw new ShellError("invalid_request_error", `非法工作模式：${JSON.stringify(args.mode)}`)
+      }
+      const targetMode = hasMode ? args.mode : workModeOf(core.loadSlotFile(cwd, slot))
+      if (args.planMode === true && targetMode === "engineering") {
+        throw new ShellError("invalid_request_error", "工程模式下不可启用 PLAN")
+      }
+      if (Object.keys(patch).length === 0 && flags.length === 0 && !hasMode) {
+        throw new ShellError("invalid_request_error", "至少需要一个字段（model ∥ reasoning ∥ mode ∥ 布尔开关）")
       }
       if (Object.keys(patch).length > 0 && !core.setSlotPrefs(cwd, slot, patch)) {
         throw new ShellError("write_failed", "会话偏好写入失败")
@@ -242,6 +251,9 @@ export function createCoreRun({
         if (!core[FLAG_SETTERS[key]](cwd, slot, args[key] === true)) {
           throw new ShellError("write_failed", `会话旗写入失败：${key}`)
         }
+      }
+      if (hasMode && !core.setSlotMode(cwd, slot, args.mode)) {
+        throw new ShellError("write_failed", "会话工作模式写入失败")
       }
       return { session: rowOf(slot) }
     },
@@ -429,6 +441,7 @@ export function createCoreRun({
         turnHost.close() // 兜底结算（`end` ∥ 中止 ∥ 掉线——未决 ask 全量收口；§3.11(2)）
       }
       try {
+        mergeSlotControl(agent, core.loadSlotFile(cwd, slot)) // 回合尾并回忙期 PATCH 最新控制值（history 不重载——当回合历史不丢）
         core.saveSession(agent)
       } catch (e) {
         if (status === "succeeded") {
@@ -479,9 +492,10 @@ export async function loadCore() {
     setSlotPrefs: slotWriteMod.setSlotPrefs,
     setSlotAutoApprove: slotWriteMod.setSlotAutoApprove,
     setSlotPlanMode: slotWriteMod.setSlotPlanMode,
-    setSlotEngineering: slotWriteMod.setSlotEngineering,
+    setSlotMode: slotWriteMod.setSlotMode,
     setSlotAdvisorGuard: slotWriteMod.setSlotAdvisorGuard,
     loadConfig: configMod.loadConfig,
+    resolveWorkMode: configMod.resolveWorkMode,
     parseRelayPath: relayMod.parseRelayPath,
     cancelSyncChild: subagentAsyncMod.cancelSyncChild,
     executeCancelAction: subagentAsyncMod.executeCancelAction,

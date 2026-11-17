@@ -286,7 +286,7 @@ main:has(.chat-thread) > section { display: flex; flex-direction: column; min-he
 
 /* 无源钮收窄（§2.1③④——CSS 隐藏 + 逐条无源实证）：四模式位（无人值守裁剪）∥ 设置（开发壳面）∥
    模型菜单 footer 管理三项（provider 增删/密钥——控制台落点 = Provider 页）；档位钮（`#reasoning-btn`）经 KD-SV-111 解隐藏——档位通道三段补齐 */
-#auto-btn, #advisor-btn, #eng-btn, #plan-btn, #settings-btn { display: none; }
+#auto-btn, #advisor-btn, #mode-select, #plan-btn, #settings-btn { display: none; }
 .mm-sep, .mm-row.mm-manage { display: none; } /* 特征度升形（`.mm-row.mm-manage` ≻ 核件 `.mm-row` 0,1,0）——核件表后加载，平形同胜者会盖掉收窄（2026-10-12 走查实修） */
 
 /* ── 对话页·核件族（console-chat-align 批——§2.10；chat-shell-align 批：md 块级宿主随消息块换壳 ⇒ `.bubble`）：
@@ -384,7 +384,7 @@ dialog.modal.terminal-modal[open] { display: flex; flex-direction: column; } /* 
 
 /* ① 钮可见性解隐藏（适配层开关 = 容器 `data-flags="live"`；仅本页容器命中——全局五 id 收窄规则零动）：
    特征度 = `#toolbar[data-flags="live"]`（1 id + 1 attr） + `:is(#…)`（id）≻ 全局 `#id` 平形——核 `.ctrl-btn` 同值 `inline-flex` */
-#toolbar[data-flags="live"] :is(#auto-btn, #advisor-btn, #eng-btn, #plan-btn, #settings-btn) { display: inline-flex; }
+#toolbar[data-flags="live"] :is(#auto-btn, #advisor-btn, #mode-select, #plan-btn, #settings-btn) { display: inline-flex; }
 
 /* ② 会话条·自绘下拉（原 `<select>` 换壳——`views-me-chat-sessions.mjs`；行 = 位标 ∥ 标题 ∥ meta ∥ ✎ ∥ ✕） */
 .chat-drop { position: relative; flex: 1 1 260px; min-width: 200px; } /* 尺寸字面（非刻度面——同 `.chat-select` 先例） */

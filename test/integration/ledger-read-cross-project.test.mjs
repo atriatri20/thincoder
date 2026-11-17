@@ -23,9 +23,11 @@
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { basename, join, resolve } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { createReadDataHandlers } from "../../thincoder-cli/src/acp/read-data.mjs"
 
@@ -75,8 +77,8 @@ ledgerClose({ cwd: B, id: closedId, status: "已废弃", boundary: B })
 
 after(() => {
   _resetLedgerDirForTest()
-  // `force` 只忽略 ENOENT、不重试 EPERM/EBUSY；句柄未即释时清理会抛 ⇒ 给重试窗（先例 batch-close-gate.test.mjs）。
-  for (const p of tempRoots) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  // 句柄未即释时清理会抛 ⇒ 走助手（有界重试、失败只写一行 stderr，不判红整档）。
+  for (const p of tempRoots) removeTempDirBestEffort(p)
 })
 
 /** `chdir` 包裹（夹具纪律②③）：只包住被测调用本身，`finally` 恒复原进程锚。
@@ -115,7 +117,7 @@ function singleJson(stdout) {
 /** ACP 面（会话锚 = `getCwd()`；凭据门放行 = `requireConfigured` 回值不带 error 键）。 */
 const acpHandlers = (anchor) => createReadDataHandlers({ getCwd: () => anchor, requireConfigured: () => ({}) }).handlers
 
-test('21-1 正常 · 进程锚 A、--cwd B ⇒ ledger list --json 给 1 项（根 = B）与 B 的行、零 A 行', () => {
+test('CLI 21-1 正常 · 进程锚 A、--cwd B ⇒ ledger list --json 给 1 项（根 = B）与 B 的行、零 A 行', () => {
   const r = runListCli(["--json", "--cwd", B], A)
   assert.equal(r.code, 0, `跨项目读应 exit 0，实际 ${r.code}：${r.stderr}`)
   assert.equal(r.stderr, "", "stderr 零行")
@@ -126,13 +128,13 @@ test('21-1 正常 · 进程锚 A、--cwd B ⇒ ledger list --json 给 1 项（�
   const [p] = payload.projects
   assert.equal(p.root, resolve(B), "项目项须是目标项目 B（不是进程锚 A）")
   assert.equal(p.name, basename(B), "项目名 = 目标项目目录名")
-  assert.equal(p.schemaVersion, 2, "schemaVersion = 库 PRAGMA user_version 如实回读（刻意按载荷值硬断，不引 LEDGER_SCHEMA_VERSION 常量）")
+  assert.equal(p.schemaVersion, 3, "schemaVersion = 库 PRAGMA user_version 如实回读（刻意按载荷值硬断，不引 LEDGER_SCHEMA_VERSION 常量）")
   assert.deepEqual(p.rows.map((x) => x.id), B_IDS, "行 id 集 = B 的行")
   assert.deepEqual(p.rows.map((x) => x.title), B_TITLES, "行集须是 B 的行（导出面不筛状态 ⇒ 含已废弃行）")
   assert.deepEqual(p.rows.filter((x) => A_TITLES.includes(x.title)), [], "零 A 行（旁项目不掺入）")
 })
 
-test('21-2 边界 · 同一 A 锚、--cwd <带档但无台账库的项目> ⇒ exit 0 · projects [] · stderr 零行', () => {
+test('CLI 21-2 边界 · 同一 A 锚、--cwd <带档但无台账库的项目> ⇒ exit 0 · projects [] · stderr 零行', () => {
   // 夹具两项自证（缺任一项本例空转）：目标带档 ∧ 键控库不在盘
   assert.ok(existsSync(join(C, MANIFEST_REL)), "夹具：目标项目 C 带 PROJECT-MANIFEST.json")
   assert.equal(existsSync(ledgerDbPath(C, C)), false, `夹具：C 的键控库不在盘（${ledgerDbPath(C, C)}）`)
@@ -143,7 +145,7 @@ test('21-2 边界 · 同一 A 锚、--cwd <带档但无台账库的项目> ⇒ e
   assert.deepEqual(singleJson(r.stdout), { projects: [] }, "空集，不是报错")
 })
 
-test('21-3 正常 · ACP ledger/list（params.cwd = B、会话锚 = A）⇒ 1 项 · 根 = B · 零 A 行，且与 21-1 载荷深等', async () => {
+test('CLI 21-3 正常 · ACP ledger/list（params.cwd = B、会话锚 = A）⇒ 1 项 · 根 = B · 零 A 行，且与 21-1 载荷深等', async () => {
   const cliPayload = singleJson(runListCli(["--json", "--cwd", B], A).stdout)
   const reply = await withCwdAsync(A, () => acpHandlers(A)["ledger/list"]({ cwd: B }))
 
@@ -155,7 +157,7 @@ test('21-3 正常 · ACP ledger/list（params.cwd = B、会话锚 = A）⇒ 1 �
   assert.deepEqual(reply, cliPayload, "两出口载荷深等（同一序列化单源）")
 })
 
-test('21-4 正常 · ACP ledger/count（params.cwd = B、会话锚 = A）⇒ count = B 的未决四态行数（≠ 0）', async () => {
+test('CLI 21-4 正常 · ACP ledger/count（params.cwd = B、会话锚 = A）⇒ count = B 的未决四态行数（≠ 0）', async () => {
   const reply = await withCwdAsync(A, () => acpHandlers(A)["ledger/count"]({ cwd: B }))
 
   assert.notEqual(reply.count, 0, `跨项目计数须非 0（无根 ⇒ 三零、零报错——正是本行要抓的形态）：${JSON.stringify(reply)}`)

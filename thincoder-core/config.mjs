@@ -14,7 +14,7 @@
 import { existsSync, readFileSync } from "node:fs"
 import { parseModelRef, resolveChannelModel, resolveProviderPlan, resolveRuntimeProvider, defaultModelReason } from "./model-ref.mjs"
 // 老形态迁移核（M7 v2——纯函数零依赖——本文件超 500 行硬限拆分，VSC 同构文件）
-import { migrateLegacyModelFields } from "./config-migrate.mjs"
+import { migrateLegacyModelFields, resolveWorkMode } from "./config-migrate.mjs"
 import { expandHome } from "./expand-home.mjs"
 // 核内单一读写面 + 预设表（§2.5 #129 / #131——拆档以容纳 500 行硬限）
 import {
@@ -23,6 +23,7 @@ import {
 } from "./config-io.mjs"
 
 export { parseModelRef, resolveChannelModel, resolveProviderPlan, resolveRuntimeProvider, defaultModelReason, migrateLegacyModelFields }
+export { WORK_MODES, resolveWorkMode, resolveSessionWorkMode, setConfigWorkMode } from "./config-migrate.mjs"
 export { PROVIDER_PRESETS, presetToEntry, configDir, configPath, _setConfigPathForTest, _resetConfigPathForTest }
 // 核内单一写盘执行体（已迁 `config-io.mjs`）——本档 re-export 保持既有导入面（§2.5 #131）。
 export { writeConfigAtomic }
@@ -43,94 +44,15 @@ export { specForModel, providerSpec, providerSpecResolution, specMatch, formatCo
 import { positiveInt, warnContextOnce } from "./model-context.mjs"
 
 
-// Window utilization ratio (CONTEXT-COMPACTION.md §6.2 / D-CC30 / §6.17 / D-CC32): auto threshold =
-// min(usableWindow(window, reserve), ⌊window × COMPACT_RATIO⌋) — reserve is the output budget
-// ACTUALLY sent as max_tokens (uncapped; §6.17 requestBudget is the single source). Rows with
-// reserve < 40% of the window land on the ratio term (line = 60.0% of the window); larger
-// reservations pull the line down to window − reserve — overflow-free outranks the ratio (the two
-// are mathematically exclusive once reserve ≥ 40%, §6.2). Headroom above the line absorbs injected
-// context (directory tree, git context, outline, project instructions, memory/doc search — 30–50K).
-const COMPACT_RATIO = 0.6
-
-/** Output reservation counted against the window: the value ACTUALLY sent as max_tokens —
- *  explicit `provider.maxTokens` when set (the transport faces send it verbatim), else the spec
- *  `maxOutput`, else 0. NOT capped: the old 25% cap reopened a residual band between the counted
- *  reservation and the real output budget — messages could cross the true window while still below
- *  the compaction line (2026-10-18 overflow 400: budget counted 250_000, 393_216 actually sent).
- *  Single source = §6.17 requestBudget; this is its reserve face (advisor budget reuses it). */
-export function outputReserve(provider, spec) {
-  const explicit = provider?.maxTokens
-  return Number.isFinite(explicit) && explicit > 0 ? explicit : spec?.maxOutput ?? 0
-}
-
-/** Usable input window = window − output reservation. Degenerate guard: a reservation
- *  ≥ the window is non-physical (no input could ever fit — e.g. `doubao-seed-2-1-turbo-260628`:
- *  256_000 window / 256_000 `maxOutput` (官方口径) ∥ the test harness&apos;s 1K window vs the
- *  default spec); collapsing the budget to 0 would be instant `context_limit` death — the very
- *  failure the reservation fold exists to prevent. Fall back to half the window.
- *  (2026-10-06——收口核验捕获：advisor-loop-split B5a 红。） */
-export function usableWindow(context, reserve) {
-  const ctx = context ?? 0
-  const usable = ctx - reserve
-  return usable > 0 ? usable : Math.floor(ctx / 2)
-}
-
-/** Request budget — single source for window ∥ actually-sent max_tokens ∥ compaction threshold ∥
- *  overflow guard (CONTEXT-COMPACTION.md §6.17 / D-CC32). One formula, four consumer faces:
- *  threshold (resolveCompactThreshold / per-run setup), the four transport faces (read ONLY
- *  maxTokens), the stats budget line (agent-tools/context.mjs), the pre-send guard
- *  (agent/run-stages.mjs). transport derives from provider.format ("anthropic" | "google" |
- *  "responses" | default = OpenAI-compatible). Fields:
- *  - window / windowSource: spec.context (the §6.15 chain — modelContext / legacy context /
- *    /models self-report / static table / default — already resolved by providerSpec);
- *    source = providerSpecResolution(provider).source — closed set { modelContext |
- *    provider-override | list | spec | default }, passed through verbatim (no class merging).
- *  - maxTokens / maxTokensSource: the value THIS transport writes into the request body —
- *    anthropic always sends it (explicit ?? spec.maxOutput); the other three faces send only an
- *    explicit provider.maxTokens, absent ⇒ undefined / "absent". Never a guard criterion
- *    (undefined ⇒ NaN — §6.17 guard); the guard reads limit instead.
- *  - reserve: maxTokens ?? spec.maxOutput — uncapped, always a number.
- *  - usable: usableWindow(window, reserve) (degenerate half-window guard).
- *  - threshold: min(usable, ⌊window × COMPACT_RATIO⌋) — the compaction trigger line.
- *  - limit: window − reserve — hard prompt ceiling; the guard's ONLY numeric criterion field
- *    (always a number; negative = any prompt overflows). `absent` rows (the transport sends no
- *    max_tokens) take the floor max(window − reserve, threshold): only the degenerate
- *    reserve ≥ window rows move (bare value 0 ⇒ every prompt would be rejected), and for
- *    reserve < window threshold ≤ usable = window − reserve makes the floor a no-op. */
-export function requestBudget(provider, spec) {
-  // windowSource = 五级链的同一次遍历出口（§6.15）——L1 / L3 命中也会如实报来源，不再二值猜。
-  // 调用方传 spec（core.mjs 已算过 providerSpec）时窗口值用它，来源仍读 resolution（恒等映射，不并类）。
-  const resolution = providerSpecResolution(provider)
-  const resolved = spec ?? resolution.spec
-  const window = resolved?.context ?? 0
-  const windowSource = resolution.source
-  const explicitRaw = Number(provider?.maxTokens)
-  const explicit = Number.isFinite(explicitRaw) && explicitRaw > 0 ? explicitRaw : undefined
-  const anthropicAlwaysSends = provider?.format === "anthropic"
-  const maxTokens = explicit ?? (anthropicAlwaysSends ? resolved?.maxOutput ?? 0 : undefined)
-  const maxTokensSource = explicit != null ? "explicit" : anthropicAlwaysSends ? "spec" : "absent"
-  const reserve = maxTokens ?? resolved?.maxOutput ?? 0
-  const usable = usableWindow(window, reserve)
-  const threshold = Math.min(usable, Math.floor(window * COMPACT_RATIO))
-  const bare = window - reserve
-  return {
-    window, windowSource, maxTokens, maxTokensSource, reserve, usable, threshold,
-    // §6.17 地板：absent 档 reserve 可能 ≥ window（退化行，bare ≤ 0）——裸式下任何 prompt 都判真、
-    // 该档永久发不出去；地板把它抬到 ≤ ⌊w/2⌋。非 absent 档逐位不变（仍是 bare）。
-    limit: maxTokensSource === "absent" ? Math.max(bare, threshold) : bare,
-  }
-}
-
-/** Derive compaction threshold; explicit is the value explicitly set in config file (takes priority),
- *  otherwise auto = requestBudget().threshold (§6.17 single source — min(usable, ⌊window × 0.6⌋),
- *  reserve uncapped). Second param accepts EITHER a model name string (pure spec lookup — compat shape,
- *  no caller passes a string today) OR a provider object (providerSpec — the providers[].context
- *  override in K units is honored, PROVIDER.md §15 T-C2). */
-export function resolveCompactThreshold(explicit, modelOrProvider) {
-  if (explicit != null) return { value: explicit, auto: false }
-  const provider = typeof modelOrProvider === "string" ? { model: modelOrProvider } : (modelOrProvider ?? {})
-  return { value: requestBudget(provider).threshold, auto: true }
-}
+// 预算族（`outputReserve` ∥ `usableWindow` ∥ `requestBudget` ∥ `policyBudget` ∥ `effectiveWindow` ∥
+// `resolveCompactThreshold` ∥ `INJECT_HEADROOM_TOKENS` ∥ `RETAIN_CAP_TOKENS`）居 `window-policy.mjs`——`CONTEXT-COMPACTION.md` §2.1 ∥
+// §2.2 把「窗口事实」与「窗口策略」两件事分开，本档越 500 行硬限按设计给的候选线抽出；以下 re-export
+// 保既有导入面（同 `model-specs.mjs` 拆分形态）。`resolveCompactThreshold` 在本档装载期自用
+// （auto 档派生 `compactThresholdResolved`——按本会话档位现算，tiny 档随之落在有效窗口上），故先 import 再转口。
+import { resolveCompactThreshold } from "./window-policy.mjs"
+export {
+  TINY_WINDOW_CAP, INJECT_HEADROOM_TOKENS, RETAIN_CAP_TOKENS, effectiveWindow, outputReserve, usableWindow, requestBudget, policyBudget, resolveCompactThreshold,
+} from "./window-policy.mjs"
 
 /**
  * Bailian (阿里云百炼) host check — enable_thinking is a Bailian-only extension parameter;
@@ -142,7 +64,7 @@ export function isBailianHost(baseURL) {
 }
 
 /**
- * Resolve the Bailian `enable_thinking` switch for qwen hybrid-thinking models (PROVIDER.md §12).
+ * Resolve the Bailian `enable_thinking` switch for qwen hybrid-thinking models (`docs/core/design/PROVIDER.md` §6.12).
  * qwen3.x on Bailian defaults to thinking ON, so an explicit off must send enable_thinking:false
  * or the server silently keeps thinking. Whitelist: model name starts with "qwen" (excluding the
  * non-thinking qwen3-coder line) AND the provider points at a Bailian host.
@@ -160,7 +82,7 @@ export function resolveEnableThinking(provider, spec) {
   if (!isBailianHost(provider?.baseURL)) return undefined
   // 一致性分支（#1659）：effort 档位有值且非 "none" ⇒ effort 赢（thinking on）。
   // 百炼约束：enable_thinking:false 时 reasoning_effort 必须为 "none"，互斥即 400。
-  // 压缩下行（context.mjs:203）显式 thinking:null 但继承 effort（v3 同源裁定）——
+  // 压缩下行（context.mjs 的 compressIfNeeded）显式 thinking:null 但继承 effort（v3 同源裁定）——
   // 无此分支则发出 {enable_thinking:false, reasoning_effort:"medium"} ⇒ 400 ⇒ 压缩三连败。
   if (provider.reasoningEffort && provider.reasoningEffort !== "none") return true
   if (provider.thinking === null) return false
@@ -169,11 +91,12 @@ export function resolveEnableThinking(provider, spec) {
 }
 
 // 加载期归一 / 清洗纯函数族已迁 `config-normalize.mjs`（§6.16.9 —— C1）——四个公共函数经本档
-// re-export 保持既有导入面；其余四个（sanitizeProviderHeaders ∥ sanitizeConsultModels ∥ 两枚
-// 一次性警告旗）只由 loadConfig 消费。
+// re-export 保持既有导入面；其余六个（sanitizeProviderHeaders ∥ sanitizeConsultModels ∥
+// isUsableProviderEntry ∥ providerDropReason ∥ 两枚一次性警告旗）只由 loadConfig 消费
+// （`reloadProviders` 经 loadConfig 共用同一次判定，本档只转交，不另调）。
 import {
   sanitizeConsultModels, warnConsultModelsFiltered, sanitizeSubagentModel, sanitizeSubagentModels,
-  warnSubagentModelsFiltered, sanitizeProviderHeaders, normalizeProxy, normalizeTeamSection,
+  warnSubagentModelsFiltered, sanitizeProviderHeaders, normalizeProxy, normalizeTeamSection, isUsableProviderEntry, providerDropReason,
 } from "./config-normalize.mjs"
 export { sanitizeSubagentModel, sanitizeSubagentModels, normalizeProxy, normalizeTeamSection }
 
@@ -210,6 +133,17 @@ export function promoteAgentViews(config) {
 }
 
 /**
+ * 丢弃记录一句一条（`docs/core/design/PROVIDER.md` §6.29「丢弃要看得见」）：`providers[18]: null`。
+ * 只有盘上下标 + 原因闭集四值之一——**绝不带条目内容**：载体是数据层，会进日志 ∥ 报错 ∥ 调试输出，
+ * 一条「有 apiKey 却缺 name」的条目若取 JSON，`sk-…` 就原样写进不需要它的地方。原因由
+ * `providerDropReason`（`thincoder-core/config-normalize.mjs`）给出——与准入判据同源，同一条目不会
+ * 在这里和装载分支各判出一种说法；下标让用户能找到要改的那一条。
+ */
+function providerDropLine(index, reason) {
+  return `providers[${index}]: ${reason}`
+}
+
+/**
  * Load configuration.
  * No env-var overrides — config.json is the single source of truth
  * (API keys, baseURL, defaultModel all come from the file).
@@ -237,13 +171,28 @@ export function loadConfig() {
     }
   }
 
+  // 渠道条目准入过滤（`docs/core/design/PROVIDER.md` §6.29）：无名条目不进使用面——`name` 是渠道
+  // 唯一句柄（findProvider ∥ parseModelRef ∥ 会话槽 ∥ 选择器全按 name 匹配），无名条目既不可寻址
+  // 也不可被发送，留着只会让读它的地方失真：`/model` 的 `${p.name.padEnd(12)}` 直接抛
+  // `Cannot read properties of undefined (reading 'padEnd')`，19 个正常渠道被 1 条空条目连累。
+  // 过滤在整表别名 `merged.providersList = merged.providers` **之前**：别名之后没有第二个汇聚点，
+  // 漏一处就留一条不可寻址的条目在运行面。判据单源 = `isUsableProviderEntry`（装载 ∥ 重读共用）。
+  // 盘面处置 = 不重写被丢弃的那条（同节「零写盘」：它可能携用户已填的 apiKey ∥ baseURL）。
+  // 丢弃记录只写盘上下标 + 原因闭集（条目内容不进载体——载体是数据层，会进日志与调试输出）。
+  const droppedProviders = []
+  const providers = Array.isArray(config.providers)
+    ? config.providers.flatMap((p, index) => {
+      if (isUsableProviderEntry(p)) return [sanitizeProviderHeaders({ ...p })]
+      droppedProviders.push(providerDropLine(index, providerDropReason(p)))
+      return []
+    })
+    : []
+
   const merged = {
     ...DEFAULTS,
     ...config,
     defaultModel: typeof config.defaultModel === "string" && config.defaultModel.trim() ? config.defaultModel : null,
-    providers: Array.isArray(config.providers)
-      ? config.providers.map((p) => sanitizeProviderHeaders({ ...p }))
-      : [],
+    providers,
     agent: { ...DEFAULTS.agent, ...config.agent },
     memory: { ...DEFAULTS.memory, ...config.memory },
     embedding: { ...DEFAULTS.embedding, ...config.embedding },
@@ -251,6 +200,17 @@ export function loadConfig() {
     traces: { ...DEFAULTS.traces, ...config.traces },
     diagnostics: { ...DEFAULTS.diagnostics },
   }
+
+  // Work mode is normalized from the raw input: a valid mode wins; legacy engineering is read
+  // only when mode is absent. The old boolean remains a derived runtime view, never a second authority.
+  merged.agent.mode = resolveWorkMode(config.agent)
+  merged.agent.engineering = merged.agent.mode === "engineering"
+
+  // 丢弃要看得见（同节「丢弃要看得见 · 数据面载体」）：载体只在有丢弃时有值（无丢弃 ⇒ undefined，
+  // 与 `[]` 同义）。一条一句挂数据层；出词归消费面——本批唯一消费方 = `/model` L1 列表首行
+  // （`thincoder-cli/src/tui/provider-entries.mjs`），故不走 console。无条件写一次：载体是派生值，
+  // 而 `merged` 先摊平了盘上原文（`...config`），条件赋值会把盘上手写的同名键原样放进数据层。
+  merged.providersDropped = droppedProviders.length ? droppedProviders : undefined
 
   // 家目录展开（第 29 批）：config 路径字段单一规范化点——只读归一（磁盘原文保留）
   merged.memory.dbPath = expandHome(merged.memory.dbPath)
@@ -369,7 +329,7 @@ export function loadConfig() {
     merged.agent.compactThresholdAuto = false
   } else {
     merged.agent.compactThreshold = undefined
-    merged.agent.compactThresholdResolved = resolveCompactThreshold(null, merged.provider).value
+    merged.agent.compactThresholdResolved = resolveCompactThreshold(null, merged.provider, merged.agent.mode).value
     merged.agent.compactThresholdAuto = true
   }
 
@@ -386,6 +346,10 @@ export function loadConfig() {
 
   return merged
 }
+
+// 运行中重读盘上渠道表本体居 `config-reload.mjs`（`docs/core/design/PROVIDER.md` §6.30）——本档已过
+// 500 行后按设计指的候选线抽出，以下 re-export 保持既有导入面（同 config-io.mjs 拆分形态）。
+export { reloadProviders } from "./config-reload.mjs"
 
 /**
  * MCP.md §5 D-3 (2026-09-01): re-read config.json and replace ONLY the agent's mcp section

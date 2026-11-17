@@ -8,11 +8,11 @@
  * agent.mjs 迁入，agent.mjs 内无其他引用）。verbatim 迁移 + 签名化，语义零变。
  */
 
-import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "../context.mjs"
-// §6.17/D-CC32 溢出守卫（兜底，非主修）：预算面单源 requestBudget ∥ 再估面 contextUsage（与压缩判定同一函数）
-import { requestBudget } from "../config.mjs"
+import { compressIfNeeded } from "../context.mjs"
+// §6.17/D-CC32 溢出守卫（兜底，非主修）：预算面单源 `policyBudget`（有效窗口）∥ 再估面 contextUsage（与压缩判定同一函数）
+import { policyBudget, resolveWorkMode } from "../config.mjs"
 import { contextUsage } from "../token-window.mjs"
-import { contextOverflowError } from "../provider/errors.mjs"
+import { contextOverflowError, overheadOverflowError } from "../provider/errors.mjs"
 import { ensureAutoReminder, injectEngineeringReminder, ContinueError, snapshotGuard } from "./helpers.mjs"
 import { pushManifestStateReminder } from "./setup-reminders.mjs"
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
@@ -27,6 +27,9 @@ import { discardAbortedPool, discardAbortedAdvisors, discardAbortedBgTasks, disc
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3a)：回合末域登记 flush（写工具钩子累积 →
 // 整写一次本实例 peers 文件——无写入跳过；失败容忍不抛）
 import { flushPeerDomains } from "../peer-domains.mjs"
+// 投递面名册（MULTI-INSTANCE-COLLAB §5.2 · D-MI28）：回合收尾刷新 `updatedAt`（与足迹 flush 同点；
+// 不在册 ⇒ 零动作——入册只发生在取件面装配处）
+import { refreshInstance } from "../instance-registry.mjs"
 // 第 30 批 D1（Stop 钩子——AGENT-LOOP.md §6.13）：主会话 run 终止事件（触发块见 finalizeAgentTurn）
 import { runHooks } from "../hooks.mjs"
 
@@ -74,7 +77,7 @@ export function injectResponseReminders(agent, response) {
   }
 }
 
-// ─── 压缩记账三件（§6.17 阈值面 ∥ 守卫面 ∥ §6.17.1 链三自适应面共用同一段，零复制）───
+// ─── 压缩记账两件（§6.17 阈值面 ∥ 守卫面 ∥ §6.17.1 链三自适应面共用同一段，零复制）───
 
 /** 压缩成功记账：失败计数清零 / 计划提醒 cadence 复位 / 停滞检测计数复位 / 完成事件 / AUTO 提醒重注入。 */
 function bookkeepCompaction(agent, ctx) {
@@ -87,28 +90,22 @@ function bookkeepCompaction(agent, ctx) {
   ensureAutoReminder(agent)
 }
 
-/** 压缩失败记账——AbortError 必须透传（用户中止不得被当成压缩失败吞掉）。 */
+/** 压缩失败记账——AbortError 必须透传（用户中止不得被当成压缩失败吞掉）。
+ *  计数只为面板与 stats 读（§5.1 之后它不再触发任何降级：摘要失败一次当场走丢弃）。 */
 function noteCompressFailure(agent, ctx, compressError) {
   if (compressError?.name === "AbortError" || ctx.signal?.aborted) throw compressError
   agent._compressFailures = (agent._compressFailures ?? 0) + 1
-  // Q3 (CONTEXT-COMPACTION §7 D-C1): a failed compression is surfaced to the panel;
-  // COMPRESS_FAILURE_LIMIT consecutive failures still degrade to compressFallback.
+  // Q3 (CONTEXT-COMPACTION §7 D-C1): a failed compression is surfaced to the panel.
+  // 降级不再由「连续失败 N 次」触发：`compressIfNeeded` 的 ⑥ 步在失败当次就丢弃（§5.1）。
   ctx.callbacks?.onCompressFail?.(compressError)
-}
-
-/** 三连败降级（确定性截断——零网络，§6.5 D6）。 */
-function degradeIfCompressExhausted(agent, ctx) {
-  if (agent._compressFailures < COMPRESS_FAILURE_LIMIT) return
-  agent._compressFailures = 0
-  if (compressFallback(agent)) ctx.callbacks?.onCompress?.(agent._lastCompressInfo ?? {})
 }
 
 /**
  * 回合压缩检查（2026-09-05 实践轮——自 runAgent 主循环提取）：仅安全点（history 以
  * 完整交换结尾——user/tool 位）。成功：失败计数清零/计划提醒 cadence 复位/停滞检测
  * 计数复位（recentCallSigs——runAgent 回合级局部——经 ctx 传对象引用）/压缩完成事件
- * /AUTO 提醒重注入。失败：AbortError 透传；计数 + Q3 onCompressFail；
- * COMPRESS_FAILURE_LIMIT 连续失败降级 compressFallback（确定性截断——不发 LLM）。
+ * /AUTO 提醒重注入。失败：AbortError 透传；计数 + Q3 onCompressFail——降级不由「连续失败 N 次」
+ * 触发：`compressIfNeeded` 的 ⑥ 步在摘要失败当次就丢弃（§5.1）。
  * 模型主动压缩（`context` 工具）由本点消费（§6.16.2——取用即清槽；no-op 与失败各落一行注记）。
  */
 export async function runCompactionCheck(agent, ctx) {
@@ -125,9 +122,15 @@ export async function runCompactionCheck(agent, ctx) {
       signal,
     )
     if (!compacted && pending) {
-      // 强制面无可压（短历史无中段）⇒ 记 no-op 注记后**照常**跑阈值面（阈值面不因模型请求让位）
-      const { compactNoopNote } = await import("../agent-tools/context.mjs")
-      agent.history.push({ role: "user", content: compactNoopNote(), transient: true })
+      // 强制面无可压：固定开销单独越线 ⇒ 回执报与守卫同一个原因（`CONTEXT-COMPACTION.md` §5），
+      // 否则 = 短历史无中段。两种 no-op 的处置不同，回执不能同一句。
+      const { compactNoopNote, compactOverheadNote } = await import("../agent-tools/context.mjs")
+      const forced = contextUsage(agent, compactionOverhead)
+      const budget = policyBudget(agent.provider, undefined, resolveWorkMode(agent.config?.agent))
+      const note = forced.fixedFloor > budget.limit
+        ? compactOverheadNote(forced.fixedFloor, budget.limit, budget.window)
+        : compactNoopNote()
+      agent.history.push({ role: "user", content: note, transient: true })
       compacted = await compressIfNeeded(agent, threshold, callbacks, compactionOverhead, signal)
     }
     if (compacted) bookkeepCompaction(agent, ctx)
@@ -138,7 +141,6 @@ export async function runCompactionCheck(agent, ctx) {
       const { compactFailureNote } = await import("../agent-tools/context.mjs")
       agent.history.push({ role: "user", content: compactFailureNote(errText(compressError), agent._compressFailures), transient: true })
     }
-    degradeIfCompressExhausted(agent, ctx)
   }
 
   // 溢出守卫（CONTEXT-COMPACTION.md §6.17 / D-CC32——兜底，非主修；本缝 = catch 闭合后、返回前）。
@@ -148,7 +150,7 @@ export async function runCompactionCheck(agent, ctx) {
 
 /**
  * 越窗守卫 / 自适应共用原子（CONTEXT-COMPACTION.md §6.17 守卫 ∥ §6.17.1 链三自适应）：
- * `requestBudget` 判 → 强压一次（`force`）→ 再判 → 抛三实数（不截断、不静默削输出）。
+ * `policyBudget` 判 → 强压一次（`force`）→ 再判 → 抛三实数（不截断、不静默削输出）。
  *
  * `opts.forceCompact`（链三面）：**跳过前置估算判据**、直接强压——服务端已判越窗时估算准不准不再作门
  * （本批要治的就是估算低估：死锁现场估 491K < limit 606,784，按估算开门会压 0 次、重试同一请求再吃 400）。
@@ -157,13 +159,18 @@ export async function runCompactionCheck(agent, ctx) {
  */
 export async function enforceContextFit(agent, ctx, { forceCompact = false } = {}) {
   const { threshold, callbacks, compactionOverhead, signal } = ctx
-  // 判据 = prompt 估算 > `budget.limit`（**无档次门**——absent 档 limit 取地板 max(window − reserve, threshold)，
-  // 恒为正数、恒可判）。**判据不用 maxTokens**：未发时为 undefined ⇒ NaN ⇒ 守卫静默失效（§6.17）。
-  const budget = requestBudget(agent.provider)
+  // 判据 = prompt 估算 > `budget.limit`（**无档次门**——`limit = window − reserve`，恒为正数、恒可判；
+  // 派生不成立的配置在装载期已被拒，见 §2.4）。**判据不用 maxTokens**：未发时为 undefined ⇒ NaN ⇒ 守卫静默失效（§6.17）。
+  // 预算取**有效窗口**（`CONTEXT-COMPACTION.md` §2.2「stats、守卫和压缩使用同一预算对象」）：tiny 档下
+  // 守卫与压缩线同一把尺，否则只降阈值不动 limit = 「早压缩但仍放行到模型窗口」，与上界相反。
+  const budget = policyBudget(agent.provider, undefined, resolveWorkMode(agent.config?.agent))
   let usage = contextUsage(agent, compactionOverhead)
+  // 固定开销单独越线（#2398 · `CONTEXT-COMPACTION.md` §5）：history 归零后 `total` 仍等于固定开销 ⇒ 压缩无解，
+  // 在强压**之前**抛 typed error（`forceCompact` 同样拦：强制压缩跳得过阈值，跳不过这条）。
+  if (usage.fixedFloor > budget.limit) throw overheadOverflowError(agent.provider, budget, usage.fixedFloor)
   if (!forceCompact && !(usage.total > budget.limit)) return false
-  // 强压一次：失败走与阈值面同一条记账 / 降级链（不把摘要错误当回合错误直抛——
-  // 记账后仍按「压后仍超」判：降级截断可能已把上下文压到线下）。
+  // 强压一次：失败走与阈值面同一条记账链（不把摘要错误当回合错误直抛——
+  // 记账后仍按「压后仍超」判：⑥ 的丢弃可能已把上下文压到线下）。
   try {
     const compacted = await compressIfNeeded(
       agent, threshold, callbacks, { ...compactionOverhead, force: true }, signal,
@@ -171,14 +178,49 @@ export async function enforceContextFit(agent, ctx, { forceCompact = false } = {
     if (compacted) bookkeepCompaction(agent, ctx)
   } catch (compressError) {
     noteCompressFailure(agent, ctx, compressError)
-    degradeIfCompressExhausted(agent, ctx)
   }
   usage = contextUsage(agent, compactionOverhead)
   if (usage.total > budget.limit) {
-    const remedy = budget.limit < 0
-      ? `max_tokens ${budget.maxTokens} alone exceeds the window — lower provider.maxTokens or switch to a larger-window model`
-      : "forced compaction ran but the prompt still exceeds the window; reduce the conversation (/compact or prune) before retrying"
+    const remedy = "forced compaction ran but the prompt still exceeds the window; reduce the conversation (/compact or prune) before retrying"
     throw contextOverflowError(agent.provider, usage.total, budget, remedy)
+  }
+  return true
+}
+
+/**
+ * 切换预判（`CONTEXT-COMPACTION.md` §5.2）：run 装配之后、第一个回合之前，比一次实测优先的
+ * `contextUsage.total` 与 `policyBudget(...).limit`。
+ *
+ * 存量历史可能超过新窗口：用户从 1M 模型切到 256K 模型、把 `providers[].context` 调小，或改
+ * `reasoningEffort`（`max` 档把 `reserve` 抬到 131,072）——这几种变更都让 `limit` 变小，而 `agent.history`
+ * 一条没少。不预判就得等下一次请求撞上守卫：报文说 `context_overflow`，用户读到的是「上下文太大」，
+ * 真实原因（刚换的配置装不下已有历史）被报文挡在后面。
+ *
+ * 超了就**跑 §5.1 的同一条处置链**（force 面：prune → 摘要 → 丢弃），不另立第二条路径；跑完仍超 `limit`
+ * ⇒ 守卫照 §5 抛三实数，报文点明切换后的模型装不下存量历史。
+ * 判据用实测优先的 `contextUsage`：切换前的最后一次响应给过真值，它比估算更接近服务端会看到的量。
+ * 返回是否越线（未越线 = 零动作）。
+ */
+export async function preflightWindowFit(agent, ctx) {
+  const { threshold, callbacks, compactionOverhead, signal } = ctx
+  const budget = policyBudget(agent.provider, undefined, resolveWorkMode(agent.config?.agent))
+  let usage = contextUsage(agent, compactionOverhead)
+  if (!(usage.total > budget.limit)) return false
+  if (usage.fixedFloor > budget.limit) throw overheadOverflowError(agent.provider, budget, usage.fixedFloor)
+  try {
+    const compacted = await compressIfNeeded(
+      agent, threshold, callbacks, { ...compactionOverhead, force: true }, signal,
+    )
+    if (compacted) bookkeepCompaction(agent, ctx)
+  } catch (compressError) {
+    noteCompressFailure(agent, ctx, compressError)
+  }
+  usage = contextUsage(agent, compactionOverhead)
+  if (usage.total > budget.limit) {
+    throw contextOverflowError(
+      agent.provider, usage.total, budget,
+      "the stored history does not fit the configuration this run started with (model switch, smaller providers[].context or a larger reasoningEffort reservation); /compact or start a fresh session, or switch back to a larger-window model",
+    )
   }
   return true
 }
@@ -228,6 +270,9 @@ export async function finalizeAgentTurn(agent, ctx) {
   // R10 L3（MULTI-INSTANCE-COLLAB §2a.5 D-L3a）：回合末登记 flush——本回合写足迹整写
   // 一次（首行执行：收尾链后续任何异常都不吞登记）；无写入 → 跳过（hot 窗口自然衰减）。
   flushPeerDomains(agent)
+  // 投递面名册走时（MULTI-INSTANCE-COLLAB §5.2 · D-MI28：回合收尾刷新 `updatedAt`，与足迹 flush 同点）——
+  // 只刷新已在册条目；失败容忍（吞掉——名册写失败不得影响收尾链后续任何一步）。
+  try { refreshInstance({ cwd: agent?.cwd }) } catch { /* NF2：失败容忍 */ }
   // 第 30 批 D1（Stop 钩子）：主会话 run 终止 → fire-and-forget（非阻塞；失败静默——与 PostToolUse 同语义）。
   // 排除用户中止（Ctrl+C / Ctrl+I——中止后 TUI 重建 controller 续跑或已显式停回合）与 AbortError 展开。
   if (depth === 0 && !signal?.aborted && thrownError?.name !== "AbortError") {
@@ -247,7 +292,7 @@ export async function finalizeAgentTurn(agent, ctx) {
   // resumes); the Ctrl+C abort branch below is the only path that aborts them
   // (cleanupConsultSessions — marked stopped → no digest), and the suspension
   // driver aborts them on its own abort unwind.
-  // Async subagent turn-end handling (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A3 + AGENT-LOOP-ASYNC-POOL.md §6.8 D-S1). Lifecycle:
+  // Async subagent turn-end handling (AGENT-LOOP-SUBAGENT.md §6.7.3 + AGENT-LOOP-ASYNC-POOL.md §6.8 D-S1). Lifecycle:
   // - Ctrl+C (plain abort): children were aborted with the parent signal — discard dead
   //   entries (tombstone/out-of-pool/notice — AGENT-LOOP-ASYNC-POOL.md §6.20; no stale
   //   errors injected — user explicitly stopped); consultation sessions are cross-turn

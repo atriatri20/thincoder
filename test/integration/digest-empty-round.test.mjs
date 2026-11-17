@@ -15,9 +15,11 @@
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { createAgent, runAgent } from "../../thincoder-core/agent.mjs"
 import { unsettledCount } from "../../thincoder-core/agent/digest-account.mjs"
@@ -30,8 +32,8 @@ const logsDir = mkdtempSync(join(tmpdir(), "digest-deliver-once-int-logs-"))
 _setLogsDirForTest(logsDir)
 after(() => {
   _resetLogsDirForTest()
-  rmSync(cwd, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(logsDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  removeTempDirBestEffort(cwd)
+  removeTempDirBestEffort(logsDir)
 })
 
 /** 报告正文的可检索标记（断言「正文在会话流里出现几次」= 投递了几次）。 */
@@ -106,7 +108,7 @@ async function digestRound(agent) {
 
 // ---------- 故事 18 行 18-1 ----------
 
-test("18-1 一条后台报告只投递一次：连空 3 个消化轮不丢不提醒，第 4 轮升级才终局披露，此后零投递", { timeout: 120_000 }, async (t) => {
+test("CLI 18-1 一条后台报告只投递一次：连空 3 个消化轮不丢不提醒，第 4 轮升级才终局披露，此后零投递", { timeout: 120_000 }, async (t) => {
   // 前 4 轮 = 恒空提供端（该轮抛错）；第 5 轮起提供端恢复出正文
   const { agent, entry, state } = await session(t)
 

@@ -2,11 +2,13 @@ import { ansi, C } from "./ansi.mjs"
 import { embeddingPatch, poolCur, compactThresholdSuffix, compactThresholdHint } from "./config-helpers.mjs"
 // 四子菜单（代理 ∥ 会诊池 ∥ 并发池 ∥ 默认模型）已迁 `cmd-config-menus.mjs`（§6.16.9 —— C2）
 import { createProxyMenu, createConsultMenu, createPoolMenu, createDefaultModelMenu } from "./cmd-config-menus.mjs"
+import { resolveWorkMode, setConfigWorkMode } from "@thincoder/core/config.mjs"
 
 /** /config command: view and set agent/embedding/proxy config. */
 export async function handleConfigCommand(ctx, args = []) {
   const { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw, maskKey, pickModelForSlot } = ctx
-  const { configPath, DEFAULTS } = await import("@thincoder/core/config.mjs")
+  const { configPath, DEFAULTS, loadConfig } = await import("@thincoder/core/config.mjs")
+  let defaultMode = loadConfig().agent.mode
   let ac = agent.config?.agent ?? {}
   let ec = agent.config?.embedding ?? {}
   let tc = agent.config?.traces ?? {}
@@ -39,15 +41,18 @@ export async function handleConfigCommand(ctx, args = []) {
    *  MODEL-MERGE-SESSION 三支改写（cfg 无 active*）：运行时由「会话槽复合仍在 providers 中 →
    *  保持槽值」或「config defaultModel（新会话起点）」决定（渠道条目不携模型——2026-10-09 清除批）。 */
   async function reloadConfig() {
-    const { loadConfig } = await import("@thincoder/core/config.mjs")
+    const sessionMode = resolveWorkMode(agent.config?.agent)
     const { injectProxy } = await import("@thincoder/core/proxy.mjs")
     const cfg = loadConfig()
+    defaultMode = cfg.agent.mode
     injectProxy(cfg.providersList, cfg)
     const sessionName = agent.activeProvider
     const sessionModel = agent.activeModel
     agent.providers = cfg.providersList
     agent.config = cfg
     agent.config.agent ??= {}
+    // agent.mode in config.json seeds new sessions; reloading settings must not switch this slot.
+    setConfigWorkMode(agent.config, sessionMode)
     const keep = sessionName ? cfg.providersList.find((p) => p.name === sessionName) : null
     if (keep) {
       // 会话 provider 仍存在 → 会话复合优先（槽值——不看 cfg 默认；模型空时落默认复合；
@@ -69,8 +74,8 @@ export async function handleConfigCommand(ctx, args = []) {
     // §6.17：auto 派生值永不回写 agent.compactThreshold——只刷新显示面 compactThresholdResolved
     // （每 run 的判定阈值由 setup.mjs 现算，本处只管 /config 显示面与显式键隔离）
     if (agent.config?.agent?.compactThresholdAuto) {
-      const { resolveCompactThreshold } = await import("@thincoder/core/config.mjs")
-      agent.config.agent.compactThresholdResolved = resolveCompactThreshold(null, agent.provider).value
+      const { resolveCompactThreshold, resolveWorkMode } = await import("@thincoder/core/config.mjs")
+      agent.config.agent.compactThresholdResolved = resolveCompactThreshold(null, agent.provider, resolveWorkMode(agent.config?.agent)).value
     }
   }
 
@@ -128,6 +133,7 @@ export async function handleConfigCommand(ctx, args = []) {
       { type: "item", text: `并发池 agent.poolLimits = engCoder ${cur("engCoder")} / other ${cur("other")} / advisor ${cur("advisor")}（async 分域上限）`, action: "pool" },
       { type: "item", text: `agent.compactThreshold = ${ctDisplay}${ctSuffix}`, action: "agent.compactThreshold" },
       { type: "item", text: `config.defaultModel = ${agent.config?.defaultModel ?? "(未设置 — 新会话起点)"}`, action: "defaultModel" },
+      { type: "item", text: `agent.mode = ${defaultMode}（新会话默认工作模式；当前会话 ${ac.mode ?? "normal"}）`, action: "agent.mode" },
       { type: "item", text: `agent.verifyGuard = ${ac.verifyGuard === true ? "on" : "off"}`, action: "agent.verifyGuard" },
       { type: "item", text: `traces.enabled = ${tc.enabled === false ? "off" : "on"}（轨迹存档——发布默认关——隐私）`, action: "traces.enabled" },
       { type: "item", text: `traces.retentionHours = ${tc.retentionHours ?? 24} h（超期文件启动时清理）`, action: "traces.retentionHours" },
@@ -152,6 +158,7 @@ export async function handleConfigCommand(ctx, args = []) {
       pushLine(`Session model: ${agent.activeProvider ? `${agent.activeProvider}:${agent.activeModel ?? ""}` : "(none)"}`, C.dim)
       pushLine(`defaultModel (config): ${agent.config?.defaultModel ?? "(not set — 新会话起点)"}`, C.dim)
       pushLine(`Key:    ${maskKey(agent.provider.apiKey)}`, C.dim)
+      pushLine(`agent.mode (new-session default): ${defaultMode}`, C.dim)
       pushLine(`agent.maxTurns: ${ac.maxTurns ?? 200}`, C.dim)
       pushLine(`agent.subagentTurns: ${ac.subagentTurns ?? 100}`, C.dim)
       pushLine(`agent.compactThreshold: ${ctDisplay}${ctSuffix}`, C.dim)
@@ -194,6 +201,22 @@ export async function handleConfigCommand(ctx, args = []) {
 
     if (choice.action === "embedkey") {
       await setEmbedKey() // 保存成功/取消都回主菜单（Esc 退出）
+      continue
+    }
+
+    if (choice.action === "agent.mode") {
+      const selected = await showPicker("New-session work mode", [
+        { type: "item", text: "tiny — compact prompts with on-demand knowledge", action: "tiny" },
+        { type: "item", text: "normal — full normal workflow", action: "normal" },
+        { type: "item", text: "engineering — design-first engineering workflow", action: "engineering" },
+      ])
+      if (selected) {
+        try {
+          await saveProxy((raw) => { raw.agent ??= {}; raw.agent.mode = selected.action })
+          pushLabel("❯ Config", ansi.bold + C.tool)
+          pushLine(`agent.mode = ${selected.action}（新会话默认；当前会话不变）`, C.tool)
+        } catch (error) { pushLine(`Save failed: ${error.message}`, C.error) }
+      }
       continue
     }
 

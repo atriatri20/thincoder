@@ -5,9 +5,13 @@ import {
   normalizeEOL,
   detectFileEol,
   majorityEol,
-  LEDGER_PARAM_DESC
+  LEDGER_PARAM_DESC,
+  PROJECT_PARAM_DESC
 } from "./shared.mjs";
 import { writeThroughPath, TMP_SUFFIX, markDirty, clearLastWrite } from "./write-path.mjs";
+// 失败回执（未全成）两件文案单源 = edit-receipt.mjs（骨架单源 = EDIT-HELPERS §4 ·
+// 决策 = APPLY-PATCH §7 D-P4）：与 `edit` 批面同一副骨架，本工具只填工具名 ∥ 单位 ∥ 定位。
+import { editEntryFailureLine, editBatchSummary, FILE_UNIT } from "./edit-receipt.mjs";
 import { spawnGit } from "./git-run.mjs";
 import { mkdir, readFile, lstat, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -140,7 +144,7 @@ function applyHunks(fileLines, hunks, eol, path) {
   const cr = eol === "\r\n" ? "\r" : ""
   for (let h = 0; h < hunks.length; h++) {
     const oldSeq = hunks[h].ops.filter((o) => o.type !== "+").map((o) => o.text)
-    if (oldSeq.length === 0) throw new Error(`Hunk ${h + 1} in ${path} has no context/removed lines to locate`)
+    if (oldSeq.length === 0) throw hunkFailure(h + 1, `Hunk ${h + 1} in ${path} has no context/removed lines to locate`)
     const matches = []
     for (let pos = 0; pos + oldSeq.length <= fileLines.length; pos++) {
       let ok = true
@@ -151,11 +155,11 @@ function applyHunks(fileLines, hunks, eol, path) {
     }
     if (matches.length === 0) {
       const preview = oldSeq.slice(0, 3).join(" ⏎ ")
-      throw new Error(`Hunk ${h + 1} in ${path} does not apply — context not found: "${preview}${oldSeq.length > 3 ? "…" : ""}". Read the file first and regenerate the patch from actual content.`)
+      throw hunkFailure(h + 1, `Hunk ${h + 1} in ${path} does not apply — context not found: "${preview}${oldSeq.length > 3 ? "…" : ""}". Read the file first and regenerate the patch from actual content.`)
     }
     if (matches.length > 1) {
       const preview = oldSeq.slice(0, 3).join(" ⏎ ")
-      throw new Error(`Hunk ${h + 1} in ${path} matches ${matches.length} locations — add more context lines to make it unique. Anchor: "${preview}${oldSeq.length > 3 ? "…" : ""}"`)
+      throw hunkFailure(h + 1, `Hunk ${h + 1} in ${path} matches ${matches.length} locations — add more context lines to make it unique. Anchor: "${preview}${oldSeq.length > 3 ? "…" : ""}"`)
     }
     const pos = matches[0]
     const out = []
@@ -169,6 +173,66 @@ function applyHunks(fileLines, hunks, eol, path) {
   }
 }
 
+/** hunk 段失败带上 hunk 序（1-based）：回执的定位 = `<path> hunk <n>`（APPLY-PATCH.md §4）——
+ *  调用方据 `hunkNumber` 组装定位，不去解析文案（错误对象本来只有文本、不带路径）。 */
+function hunkFailure(hunkNumber, message) {
+  const err = new Error(message)
+  err.hunkNumber = hunkNumber
+  return err
+}
+
+/**
+ * 失败回执（未全成）：逐档一行、按补丁序 + 末行汇总——骨架单源 = `docs/core/design/EDIT-HELPERS.md`
+ * §4，本工具只填填充位（工具名 `apply_patch` · 单位 `file(s)` ⇒ 末段省：报单位 = 写单位 = 档）。
+ *
+ * 三态逐档行：已落盘 `  modified <path>` ∥ `  created <path>`（逐字复用全成路径那一行）·
+ * 失败那档 `<定位> — failed: <原因原文>`（hunk 段带 hunk 序）· 未落盘且没有自身原因的档
+ * `  not committed <path>`——不替它编一个原因（APPLY-PATCH.md §4）。
+ */
+function failureReceipt({ entries, failedPath, failedHunk, reason }) {
+  const lines = []
+  for (const e of entries) {
+    if (failedPath != null && e.path === failedPath) {
+      lines.push(editEntryFailureLine(failedHunk == null ? e.path : `${e.path} hunk ${failedHunk}`, reason))
+    } else if (e.landed) {
+      lines.push(`  ${e.isNew ? "created " : "modified"} ${e.path}`)
+    } else {
+      lines.push(`  not committed ${e.path}`)
+    }
+  }
+  const written = entries.filter((e) => e.landed).map((e) => e.path)
+  lines.push(editBatchSummary({ tool: "apply_patch", applied: written.length, total: entries.length, unit: FILE_UNIT, filesWritten: written }))
+  return lines.join("\n")
+}
+
+/**
+ * 阶段一（hunk 段）：读盘 + 内存算 + 全部 hunk 应用——任一档失败 ⇒ 调用方一个字节都还没写。
+ * `onFile(f)` = 正在算的那一档：失败回执靠它点名失败档，并与 `hunkNumber` 配对组装定位。
+ */
+async function planFiles(files, ctx, onFile) {
+  const planned = []
+  for (const f of files) {
+    onFile(f)
+    const abs = resolveInCwd(ctx, f.path)
+    if (f.isNew) {
+      if (existsSync(abs)) throw new Error(`Cannot create ${f.path}: file already exists`)
+      // New file: follow the directory's majority EOL style (default LF).
+      const eol = majorityEol(dirname(abs))
+      const content = f.hunks.flatMap((h) => h.ops.filter((o) => o.type === "+").map((o) => o.text)).join(eol) + eol
+      planned.push({ abs, path: f.path, content, isNew: true })
+    } else {
+      const original = await readFile(abs, "utf8").catch(() => { throw new Error(`File not found: ${f.path}`) })
+      const eol = detectFileEol(original)
+      // Apply hunks in the normalized LF domain, then write back joined with the
+      // file's ORIGINAL EOL style — join("\n") here used to rewrite CRLF files as LF.
+      const lines = normalizeEOL(original).split("\n")
+      applyHunks(lines, f.hunks, "\n", f.path)
+      planned.push({ abs, path: f.path, content: lines.join(eol), isNew: false })
+    }
+  }
+  return planned
+}
+
 export const applyPatchTool = {
   name: "apply_patch",
   description: DESC("apply_patch"),
@@ -177,6 +241,8 @@ export const applyPatchTool = {
     properties: {
       patch: { type: "string", description: "Unified diff. May span multiple files (multiple --- / +++ header pairs — including creating MULTIPLE new files via --- /dev/null); --- / +++ headers per file, @@ -old,count +new,count @@ hunks (a bare @@ header is also accepted — coordinate-less hunks are located by their anchor lines: context lines plus the removed (-) lines, matched as a contiguous sequence — a unique match applies; a zero/one-context hunk is accepted only when it removes (-) at least one line and that anchor sequence is unique, while anchor-free pure-+ (insert) hunks need at least 2 context lines). The +++ b/<path> pair may be omitted for existing files — a lone --- a/<path> (or --- b/<path>) header followed directly by hunks applies to that path (new files still need --- /dev/null + +++ b/<path>)." },
       ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      // 工作区根窄口（设计档 §2.3.1）：目标取不到项目根时才被读；目标有根时以路径为准（定位参数优先）。
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["patch"],
   },
@@ -187,62 +253,75 @@ export const applyPatchTool = {
   },
   async execute(args, ctx) {
     const files = parsePatch(args.patch ?? "")
-    // Read all into memory first for trial: if any hunk fails, abort entirely — never write a partial patch (atomicity)
-    const planned = []
-    for (const f of files) {
-      const abs = resolveInCwd(ctx, f.path)
-      if (f.isNew) {
-        if (existsSync(abs)) throw new Error(`Cannot create ${f.path}: file already exists`)
-        // New file: follow the directory's majority EOL style (default LF).
-        const eol = majorityEol(dirname(abs))
-        const content = f.hunks.flatMap((h) => h.ops.filter((o) => o.type === "+").map((o) => o.text)).join(eol) + eol
-        planned.push({ abs, path: f.path, content, isNew: true })
-      } else {
-        const original = await readFile(abs, "utf8").catch(() => { throw new Error(`File not found: ${f.path}`) })
-        const eol = detectFileEol(original)
-        // Apply hunks in the normalized LF domain, then write back joined with the
-        // file's ORIGINAL EOL style — join("\n") here used to rewrite CRLF files as LF.
-        const lines = normalizeEOL(original).split("\n")
-        applyHunks(lines, f.hunks, "\n", f.path)
-        planned.push({ abs, path: f.path, content: lines.join(eol), isNew: false })
-      }
+    // 阶段一（hunk 段）：读盘 + 内存算 + 全部 hunk 应用——任一档失败 ⇒ 一个字节都没写
+    // （APPLY-PATCH.md §4「两个失败段」）。失败回执按补丁序列出全部档：失败那档带 hunk 序、
+    // 其余档 `not committed`，末行 `k = 0`（零字节，故无路径清单、无末段——单位本来就是档）。
+    let inFlight = null // 正在处理的那一档：catch 靠它点名失败档（错误对象不带路径）
+    let planned
+    try {
+      planned = await planFiles(files, ctx, (f) => { inFlight = f })
+    } catch (err) {
+      throw new Error(failureReceipt({
+        entries: files.map((f) => ({ path: f.path, isNew: f.isNew, landed: false })),
+        failedPath: inFlight?.path ?? null,
+        failedHunk: err?.hunkNumber ?? null,
+        reason: err?.message ?? String(err),
+      }))
     }
-    // Multi-file write: write all to .tmp first, rename only after all succeed — failure cleans up written .tmp without affecting committed files
+    // 阶段二（写盘段）：逐档暂存 → 逐档提交。**非原子（登记行为）**——已落盘的档留在盘上、不回滚
+    // （APPLY-PATCH.md §4 ∥ §7 D-P2）；失败时按盘上实况逐档报，`k` 计入每一个已落盘的档。
     // 两段式经单一写路径点（§2.13.5）：阶段一全部 staging（写入各自 `<abs>.thincoder-tmp`）
-    // ⇒ 阶段二逐档 commit（rename 到目标）。**默认径 = 改前语义逐字同**（任一失败无档落盘：
-    // 阶段一失败时目标档全未动、阶段二失败时已提交档保持——同改前）。
-    // 编辑器径（注入面）例外：内容在阶段一即提交（宿主侧同款——applyEdit + save）⇒ 阶段
-    // 二跳过该档；已提交档不回滚（与宿主侧现行为一致，非本档引入的语义）。
+    // ⇒ 阶段二逐档 commit（rename 到目标）。
+    // 编辑器径（注入面）例外：内容在阶段一即提交（宿主侧同款——applyEdit + save）⇒ 阶段二跳过该档；
+    // 已提交档不回滚（与宿主侧现行为一致，非本档引入的语义），但它**算已落盘**——计入 k、列 modified。
     const staged = []
     const committedByEditor = new Set()
+    const committed = new Set() // 已落盘 = 注入径已提交 ∪ 提交段 rename 成功——回执的 k 与逐档行的唯一来源
+    // Mark every touched file dirty — insert_after must not run on stale line numbers.
+    // 整批记账（dirty）= apply_patch 的批级语义；**只对已落盘的档跑，成功 ∥ 失败两路同**（注入径那批在内）——
+    // 已落盘却未记账的档会让行号锚护栏拿着写前快照放行（EDIT-HELPERS §3 第 4 行），下一笔行号编辑按旧行号改到别处。
+    // 2026-11-02：落 dirty 同时清写入快照——apply_patch 不记快照，留着旧 `startLine` 就是
+    // 陈旧的锚：行号锚护栏第 2 行（dirty ∧ 快照在场）会拒，而第 4 行会拿旧值判「目标区在之前
+    // ⇒ 放行」——两种结果都不该由一笔没更新快照的写来决定（EDIT-HELPERS §3）。
+    const recordCommitted = () => {
+      for (const p of planned) {
+        if (!committed.has(p.abs)) continue
+        markDirty(p.abs)
+        clearLastWrite(p.abs)
+      }
+    }
     try {
       for (const p of planned) {
+        inFlight = p
         await mkdir(dirname(p.abs), { recursive: true })
-        const r = await writeThroughPath(p.abs, p.content, { op: "write", stage: true })
-        if (r.via === "editor") committedByEditor.add(p.abs)
-        else staged.push(p.abs)
+        const r = await writeThroughPath(p.abs, p.content, { op: "write", stage: true, agent: ctx.agent })
+        if (r.via === "editor") {
+          committedByEditor.add(p.abs)
+          committed.add(p.abs) // 注入径无暂存档（即时提交）⇒ 它已经在盘上了
+        } else staged.push(p.abs)
       }
       for (const p of planned) {
         if (committedByEditor.has(p.abs)) continue
+        inFlight = p
         await writeThroughPath(p.abs, null, { op: "commit" })
+        committed.add(p.abs)
       }
-    } catch (renameError) {
-      // rename phase failed: clean up leftover .tmp files
+    } catch (writeError) {
+      // 失败路径照样记账：已落盘的档就是盘上事实，与成功路径同一把尺（否则见上面的护栏后果）。
+      recordCommitted()
+      // rename / staging 失败：清掉默认径已暂存的 .tmp（那些目标档逐字未动——它们是「没写」，不是「写了」）
       for (const abs of staged) {
         try { await unlink(abs + TMP_SUFFIX) } catch {}
       }
-      throw renameError
+      throw new Error(failureReceipt({
+        entries: planned.map((p) => ({ path: p.path, isNew: p.isNew, landed: committed.has(p.abs) })),
+        failedPath: inFlight?.path ?? null,
+        failedHunk: null, // 写盘段的失败只到档——hunk 早在阶段一应用过，没有 hunk 序可报
+        reason: writeError?.message ?? String(writeError),
+      }))
     }
     const summary = planned.map((p) => `  ${p.isNew ? "created " : "modified"} ${p.path}`).join("\n")
-    // Mark every touched file dirty — insert_after must not run on stale line numbers.
-    // 整批记账（dirty）= apply_patch 的批级语义（两段式全成功后一次落账——与改前逐字同）。
-    // 2026-11-02：落 dirty 同时清写入快照——apply_patch 不记快照，留着旧 `startLine` 就是
-    // 陈旧的锚：行号锚护栏第 2 行（dirty ∧ 快照在场）会拒，而第 4 行会拿旧值判「目标区在之前
-    // ⇒ 放行」——两种结果都不该由一笔没更新快照的写来决定（EDIT-HELPERS §7.1）。
-    for (const p of planned) {
-      markDirty(p.abs)
-      clearLastWrite(p.abs)
-    }
+    recordCommitted()
     const syntaxChecks = await Promise.all(planned.map(async (p) => {
       const r = await autoSyntaxCheck(p.abs)
       return r ? `${p.path}:${r.replace("Syntax: ", "")}` : ""
@@ -265,6 +344,7 @@ export const deleteTool = {
       path: { type: "string", description: "File or empty-directory path (relative to cwd or absolute)" },
       force: { type: "boolean", description: "Allow deleting git-tracked files (default false)" },
       ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["path"],
   },

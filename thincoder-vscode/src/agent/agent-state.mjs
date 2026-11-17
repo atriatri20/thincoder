@@ -15,6 +15,7 @@ import { clearPlanMode } from "@thincoder/core/agent-tools/plan.mjs"
 import { restoreTokenSample } from "@thincoder/core/token-window.mjs"
 // W16：traces 默认值 = 核 DEFAULTS.traces（单一来源——原 config-io TRACES_DEFAULTS 随删旧退场）。
 import { DEFAULTS } from "@thincoder/core/config.mjs"
+import { resolveSessionWorkMode, resolveWorkMode } from "@thincoder/core/config-migrate.mjs"
 
 /** designId 键 = token 的 uuid 段（原 `advisor.mjs` extractTokenUUID 语义逐字）。 */
 const tokenUUID = (token) => String(token).split(":")[0]
@@ -79,7 +80,7 @@ export function reconcileEngDesignTokens(existing, slotTokens, legacyToken) {
 
 /**
  * 槽字段 ↔ hydrate 映射（纯函数——单元测试锚点）。槽 = 权威（每轮 apply）：
- * engineering/advisor.guard → agent.config（槽字段钉；缺席 → engState（子代理镜像）→ cfg）；
+ * mode/advisor.guard → agent.config（合法槽 mode 优先；旧 engineering 只读迁移；缺席 → engState → cfg）；
  * traces → agent.config.traces（cfg.traces 或核 DEFAULTS.traces 合并——TRACE-STORE-VSC
  * D-TR6——恒有定义——chat 调用点开关读 agent.config.traces.enabled）；
  * planMode → agent._planMode（B 类每轮重指；engineering 真值优先 ⇒ 恒 false——FR31 ③；
@@ -90,20 +91,21 @@ export function reconcileEngDesignTokens(existing, slotTokens, legacyToken) {
  * @param cfg config.json 解析产物（agent.config 由此整建——AC7 每轮拾取外部变更）。
  * @param provider 第三参对象新增键：样本的 key 同源校验用它（`agent._provider` 在本调用点之后
  *  才落 ⇒ 取不到 agent 上的 provider）；缺省 ⇒ 校验③恒不符 ⇒ 比 1、不抛（退化到未校准档）。
- * @returns {{ engineering: boolean, droppedExpired: boolean }}
+ * @returns {{ mode: string, engineering: boolean, droppedExpired: boolean }}
  */
 export function applySlotSessionState(agent, { slot, engState, planModeOverride }, { cfg, restore = false, provider }) {
-  const slotEng = slot?.engineering
-  const engEnabled = engState?.enabled
-  const engineering = slotEng != null ? slotEng === true
-    : (engEnabled != null ? engEnabled === true : cfg.engineering === true)
+  const fallback = engState && (engState.mode !== undefined || engState.enabled !== undefined)
+    ? (engState.mode !== undefined ? { mode: engState.mode } : { engineering: engState.enabled })
+    : (cfg.mode !== undefined ? { mode: cfg.mode } : { engineering: cfg.engineering })
+  const mode = resolveSessionWorkMode(slot, fallback)
+  const engineering = mode === "engineering"
   const slotGuard = slot?.advisor?.guard
   const engGuard = engState?.advisorGuard
   const guard = slotGuard != null ? slotGuard === true
     : (engGuard != null ? engGuard === true : cfg.advisor?.guard === true)
   agent.config = {
     advisor: { ...(cfg.advisor ?? {}), guard },
-    agent: { ...(cfg.agentFields ?? {}), engineering },
+    agent: { ...(cfg.agentFields ?? {}), mode, engineering },
     // P2 批 §2.16：hooks 段随 config 整建（`runHooks` 读 `agent.config.hooks[event]`——缺段 = 钩子恒空转）
     hooks: cfg.hooks ?? null,
     proxy: cfg.proxy, shell: cfg.shell, providersList: cfg.providersList, websearch: cfg.websearch,
@@ -127,6 +129,14 @@ export function applySlotSessionState(agent, { slot, engState, planModeOverride 
     agent._tasks = Array.isArray(slot?.tasks) ? [...slot.tasks] : []
     agent._goal = slot?.goal ?? null
     agent._pendingReminders = Array.isArray(slot?.pendingReminders) ? [...slot.pendingReminders] : []
+    // 轮记录读回（SESSION §2 · 台账 #2395）：端侧载荷把 `turns` 带出、本切片从槽读回（旧槽无
+    // 该键 ⇒ 空账，机载线继续沿 `contextHistory` 回退——旧槽零回归）。活动轮载体不跨进程
+    // 恢复（异常轮不折叠）：`_turnLedger` ∕ `_turnPending` 永不由槽播种。
+    agent._turns = Array.isArray(slot?.turns) ? [...slot.turns] : []
+    agent._turnLedger = null
+    agent._turnPending = null
+    agent._turnStartLen = null
+    agent._turnResponseEnd = null
     // §6.17.1 链二端面③：估算校准样本读回（与 CLI applySession 同函数、同四条校验）——
     // 恢复会话后首请求即按学到的比值判，不再从 1 起步（链二要杀的死锁就在这一面）。
     restoreTokenSample(agent, slot?.estimateSample, provider)
@@ -135,29 +145,29 @@ export function applySlotSessionState(agent, { slot, engState, planModeOverride 
   // （除生效值外，摘除**槽恢复回填的未注入 plan 提示语**——`PLAN_EXIT_REMINDER` 否则会跨模式落地；
   // 纯函数面零 IO——槽值回写归 hydrateRun 水合面，先例 = droppedExpired）。
   if (engineering) clearPlanMode(agent)
-  return { engineering, droppedExpired: rt.droppedExpired }
+  return { mode, engineering, droppedExpired: rt.droppedExpired }
 }
 
 /**
  * §3.3（#45——`docs/vsc/design/WEBVIEW-PROTOCOL.md`）工具驱动的模式 / 参数变更 → **端显示同步**
  * cell（纯函数、零 IO——单元测试锚点）：触发面 = 工具批后（`src/agent.mjs` 载体镜像回填块尾）。
  * 判据两条（**读后复位**——快照重推幂等）：
- *  ① **模式分支** —— `agent.config?.agent?.engineering` 与 `agent._engShown`（**已展示基线**
- *     布尔；`hydrateRun` 按槽应用处置值——非 `undefined` / `null`）不等；触发 ⇒ 基线更新 +
+ *  ① **模式分支** —— `agent.config?.agent?.mode` 与 `agent._modeShown`（**已展示基线**；
+ *     `hydrateRun` 按槽应用处置值）不等；触发 ⇒ 基线更新 +
  *     `callbacks.onEngMode(新值)`。
  *  ② **参数分支** —— `agent._settingsTouched`（端侧 settings 工具包装 `execute` 返回处置位；
  *     不做「成功」判定）为 true；触发 ⇒ 位复位 + `callbacks.onSettingsChanged()`。
  * 深度 > 0 子代理：其 `callbacks` 无该两键 ⇒ `?.` 调用恒 no-op（零注入、零推送）。
- * @param {object} agent 顶层 agent（读 `config.agent.engineering` / 写两状态位）
+ * @param {object} agent 顶层 agent（读 `config.agent.mode` / 写两状态位）
  * @param {object} [callbacks] runAgent 回调面（单 sink = 面板 `_pushSettingsLight()`）
  * @returns {{eng:boolean, settings:boolean}} 本批实际触发的两路（测试直驱面）
  */
 export function syncToolDrivenDisplayState(agent, callbacks) {
-  const engNow = agent?.config?.agent?.engineering === true
-  const eng = engNow !== agent._engShown
+  const modeNow = resolveWorkMode(agent?.config?.agent)
+  const eng = modeNow !== agent._modeShown
   if (eng) {
-    agent._engShown = engNow
-    callbacks?.onEngMode?.(engNow)
+    agent._modeShown = modeNow
+    callbacks?.onEngMode?.(modeNow)
   }
   const settings = agent?._settingsTouched === true
   if (settings) {

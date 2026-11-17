@@ -1,225 +1,55 @@
 /**
- * agent-tools/batch-skeleton.mjs — 批次档骨架模板 + 状态行机械形态单源（KD-4 拆分档）。
+ * agent-tools/batch-skeleton.mjs — 批次档骨架模板 + 裁定锚 + 轮次块 + 段内容判据（KD-4 拆分档）。
  *
- * 本档是纯常量/纯函数单源（零副作用、零 fs）：`batch` 工具的 create 骨架、STATUS_WORDS
- * 分段词表、状态行形态与解析、轮次块标题形态与计数全部只住这里——其他档 import 消费，**不复制字面**
- * （BATCH-RECORD.md §4.10 / §4.12 / D-BR19；轮 2 #8——骨架占位状态行由 STATUS_WORDS §1 项
- * 引用生成，全仓无第二份独立词表字面）。
+ * 本档是纯常量/纯函数单源（零副作用、零 fs）的**上半**：create 骨架模板（`batchSkeleton`）· 裁定行锚
+ * （`VERDICT_PASS_LINE` / `VERDICT_CHANGES_LINE` / `verdictGapOf`）· 轮次块形态与计数
+ * （`ROUND_HEADING_RE` / `countRoundBlocks` / `lastRoundBlock` / `nextRoundNumber`）· 状态行计划
+ * （`statusResetPlan` / `statusPassPlan`）· 段内容判据（`sectionContentState`）∥ 「不适用」声明痕迹检测 ·
+ * 档头台账行补编号（`appendLedgerNoToHeader`——与骨架的台账行同址：行形一处单源）。
  *
- * 状态行解析（readBatchStatusLine）住本档：冻结门与 lifecycle（status/close 写入、在飞批扫描）消费
- * **同一个解析器**——解析单源即 gate 与三 action 的判定字面零漂移。
+ * 下半（词表 / 段白名单 / 段头与状态行形态 / **段解析** / 状态行读写三件 / 段头区位置与计数三件）
+ * 住 `batch-segment-vocab.mjs`，本档 import 消费并**原样再导出**——十个 `.mjs` 消费者的 import 行零改。依赖单向：
+ * `batch-segment-vocab ← 本档 ← 其余批次档`（本档不 import 任何批次档上层）。
  *
- * 段标题定位（sectionHeaderRe）同住本档：append 段尾定位与 status/close 段头区状态行定位
- * 消费**同一个段头正则**——`## §N` 形态单源（`## §20` 不误命中 §2）。
+ * 状态行解析（`readBatchStatusLine`）的判定字面住下半档：冻结门与 lifecycle（status/close 写入、
+ * 在飞批扫描）消费**同一个解析器**——解析单源即 gate 与三 action 的判定字面零漂移。
  *
- * F11-C：**骨架死占位枚举**（TEMPLATE_PLACEHOLDERS）与残留扫描纯函数（findPlaceholderResidue——
- * 判定域 = 档头结构行，2026-10-05 判据收正）同住本档——与骨架模板共址即判据不会与模板脱节。
+ * 段标题定位（`sectionHeaderRe`）同住下半档：append 段尾定位与 status/close 段头区状态行定位
+ * 消费**同一个段头正则**——`## §N` 形态单源（`## §20` 不误命中 §2）。段解析本体
+ * （`sectionBodyLines` ∥ `sectionHeaderZoneEntries`）随状态行读面同住下半档：段行集只有一份实现，
+ * 本档按名 import 回来（复制一份 = 判据出现第二份字面）。
+ *
+ * F11-C：**骨架死占位枚举**（`TEMPLATE_PLACEHOLDERS`）与残留扫描纯函数（`findPlaceholderResidue`）
+ * 住下半档——与骨架模板共址即判据不会与模板脱节；本档 `batchSkeleton` 仍是对外产出口。
  */
-/**
- * 段标题定位（`## §N` 独立标题——`## §20` 不误命中 §2）。
- */
-export const sectionHeaderRe = (seg) => new RegExp(`^## §${seg}(?=\\s|$)`, "m")
+import {
+  STATUS_LINE_RE, STATUS_WORDS, sectionHeaderRe, sectionBodyLines, readSectionStatusWord, zoneStatusCount,
+} from "./batch-segment-vocab.mjs"
 
-/** §1 段头正则（单源——`readBatchStatusLine` 与 `isBatchRecord` 共用；`## §10` 不误命中 §1）。 */
-const SECTION_1_HEADER_RE = /^## §1(?=\s|$)/m
-/** 批档谓词（只读 · 零 fs）：档内有 §1 段头 ⇒ 批次档——判别式 = 上面那条同一正则（「是不是批档」与
- *  「§1 状态行是什么」两问不各持一份）；消费面 = 台账核销机检（`ledger-close-proof.mjs`）。 */
-export function isBatchRecord(src) {
-  return typeof src === "string" && SECTION_1_HEADER_RE.test(src)
-}
-/**
- * STATUS_WORDS——状态行合法关键字**分段词表常量单源**（D-BR19 / fix 轮 #1；轮 2 #3 裁定②）：
- *  - §1 项 = gate 词表 `{ open: 进行中, closed: 已收口 }`——**gate 只消费 §1 项**（单源仍成立）；
- *  - §2/§3/§5 各带段内生命周期词表（`done` 词 = 段属主的完成态关键字）；
- *  - §4/§6 无项——主 agent 的 status 写域**仅 §1**（§4/§6 状态面走普通文档写，与 D-BR18 分工一致）。
- * 词面纪律（最小词面）：一条状态行值只带**一个**关键字——校验面（batch 工具 status）拒绝内嵌另一冻结词的
- * 值（含「进行中…已收口」双词 ⇒ 已收口优先误冻结——2026-09-20 词面纪律）。emoji / 括注 / 日期后缀容忍
- * （**读侧** gate 判定 = 子串包含，同 gate——写入面 value 谓词自本批起收紧为「剥装饰白名单后余核 = 关键词」，
- * 见 batch-lifecycle.mjs）；全词表并集 = 各段项去重集合（note 字段零命中的判据——括注永不误触 gate）。
- */
-export const STATUS_WORDS = Object.freeze({
-  1: Object.freeze({ open: "进行中", closed: "已收口" }),
-  2: Object.freeze({ open: "进行中", done: "设计完成" }),
-  3: Object.freeze({ open: "进行中", done: "评审通过" }),
-  5: Object.freeze({ open: "进行中", done: "实施完成" }),
-})
-
-/** 段状态行**旧字面兼容别名表**（只用于**读侧**：写侧词表零别名——旧字面写不进去，词表外拒）。
- *  §3 自 2026-10-27 起只留一个完成词 `评审通过`（只有 pass 叫完成；`changes-required` 不写状态词——
- *  「评审没通过」= 评审未完成）。存量批档里的旧字面 `评审完成` 读侧等义于 `评审通过`（存量档**不回填**
- *  ——已冻结档不改字节）。**退场条件**：盘上再无该字面（判据 = `grep -r '评审完成' docs/batches`）。 */
-export const STATUS_WORD_ALIASES = Object.freeze({
-  3: Object.freeze({ "评审完成": "评审通过" }),
-})
-
-/** 身份 → 可写段号（append 段白名单的**子代理面**——原 batch-segment.mjs 逐字迁移；主 agent
- *  的 depth-0 白名单（模式感知——工程 §1/§4/§6 · §1 ∥ 普通 §1/§2/§4/§5/§6 · §1/§2/§5，§4.16）
- *  由身份判据在 batch.mjs / batch-lifecycle.mjs 分支，不经本表。旧 batch-segment.mjs 导出面等价
- *  保持——本符号经 batch.mjs re-export（过渡 shim 面零触）。**表零字面改**——普通模式另立增表
- *  `SEGMENT_BY_ROLE_NORMAL`（合并查只在普通模式分支）；工程面「逐字不变」判据据此成立。 */
-export const SEGMENT_BY_ROLE = { "eng-designer": 2, "eng-coder": 5 }
-
-/** 普通模式增表（§4.16——**合并查只在普通模式分支**，工程模式分支不消费本表）：coder 承办 ⇒ §5
- *  实施记录（可选绑定自写——未绑定由主 agent 代记、行内注明来源）。 */
-export const SEGMENT_BY_ROLE_NORMAL = { "coder": 5 }
-
-/** depth-0 段白名单（§4.16——**模式键两集**；工程面判定字面逐字保持、普通面新增）：
- *  append：工程 = §1/§4/§6 ∥ 普通 = §1/§2/§4/§5/§6（§2 = 设计师席并入主 agent；§5 = 直做实施记录）；
- *  status：工程 = §1 ∥ 普通 = §1/§2/§5（写域仍「调用者自己段」；`segment` 缺省 = §1）。 */
-export const DEPTH0_SEGMENTS = Object.freeze({
-  append: Object.freeze({ engineering: Object.freeze([1, 4, 6]), normal: Object.freeze([1, 2, 4, 5, 6]) }),
-  status: Object.freeze({ engineering: Object.freeze([1]), normal: Object.freeze([1, 2, 5]) }),
-})
-
-/** §1 状态行前缀形态（`**状态行**：` 独立行——表格行 / 块引用行不命中；判定只认关键字）。 */
-export const STATUS_LINE_RE = /^\s*\*\*状态行\*\*[：:]\s*(.*)$/
-
-const ZONE_END_RE = /^#{2,}/ // 段头区界：任意 `##` / `###` 起的行（写面与触发读面同一条判据）
-
-/**
- * 骨架死占位**枚举单源**（F11-C 判据——create 骨架产出过的全部死占位字面）：
- *  - `#<编号>` / `<板块>` = 现行骨架仍在产出的两处（台账行——填充人 = 主 agent，时点 =
- *    建档后、本档首个 append/status 之前）；
- *  - `<BATCH-ID>` / `<讨论来源>` = 改形**删除**的两处旧占位（create 不再产出；旧档残留同判）。
- * 判据 = 枚举而非泛形正则：`<[^>]{1,40}>` 一类泛形会误杀正文合法尖括号（`Error: <message>` /
- * 泛型 `Array<T>` / 讨论字面本身）与 `<§N 模板占位：…>` 合法暂存行（append 不删行——段内留存
- * 是常态）——设计档 `TOOLS.md` 6.15 裁定点④。
- */
-export const TEMPLATE_PLACEHOLDERS = ["<BATCH-ID>", "<讨论来源>", "#<编号>", "<板块>"]
-
-/** 档头结构行值形（骨架三类——标题行 `# …` / 编制行 `> 编制` / 台账行 `> 台账`）：判据可辨性收正
- *  （`TOOLS.md` §6.20）后只有这三类行参与死占位判定；骨架↔结构行不变量 = `batchSkeleton` 产出中
- *  枚举字面 ⊆ 本三类行（骨架改形与判据同拍——结构行外新增占位 = 静默漏检）。 */
-const HEADER_STRUCTURAL_RE = [/^#\s/, /^>\s*编制/, /^>\s*台账/]
-
-/**
- * 死占位残留扫描（F11-C——append/status 落笔前的机检；**纯函数 · 零 fs**）。
- * 判定域 = **档头结构行**（区域 = 档首至首个 `## §N` 段头前；值形 = 骨架三类结构行：标题行 `# …` / 编制行
- * `> 编制` / 台账行 `> 台账`）——行内出现枚举字面 ⇒ 残留；段体（首段头起）任意位置出现字面 = 正文引用 ⇒
- * **豁免**（引用非未填——2026-10-05 判据可辨性收正，`TOOLS.md` §6.20；原全域子串扫描分不清两者——本批 §1 首投实害）。
- * @param {string} src — 档全文
- * @returns {Array<{line: number, text: string}>} 残留列表（空 = 无残留）；
- *   `line` = 档头域内 1-based 行号（档头域自档首行起——便于定位），`text` = 命中行 trim 原文
- */
-export function findPlaceholderResidue(src) {
-  const firstSection = /^## §\d/m.exec(src)
-  const out = []
-  src.slice(0, firstSection ? firstSection.index : 0).split("\n").forEach((line, i) => {
-    if (!HEADER_STRUCTURAL_RE.some((re) => re.test(line))) return
-    if (TEMPLATE_PLACEHOLDERS.some((ph) => line.includes(ph))) out.push({ line: i + 1, text: line.trim() })
-  })
-  return out
-}
-
-/**
- * 占位残留拒绝句（F11-C——append / status 两个挂点共用单源文案；逐行列残留：行号 + 原文）。
- * 错误句前缀 = `batch:`（本批新增错误面——与 append 迁移面的 `batch_segment:` 旧面不混）。
- * 逐字 = `TOOLS.md` §6.20 拒句表（「or your target section」半句随判定域收正退场）。
- * @param {Array<{line:number,text:string}>} residues — findPlaceholderResidue 的返回值（非空）
- * @returns {string} 完整拒绝句（调用方 throw new Error(...)）
- */
-export function placeholderResidueError(residues) {
-  const list = residues.map((r) => `  档头 line ${r.line}: ${r.text}`).join("\n")
-  return "batch: 骨架死占位残留 — the batch record's header still carries skeleton placeholders. " +
-    "Fill them before writing: create with ledger / board fills the 台账 line at creation; otherwise the main agent fills the header by file edit ⇒ the record's first append/status opens. " +
-    `Nothing was written. Residue:\n${list}`
-}
-
-
-/**
- * §1 状态行解析（冻结门与 lifecycle 共用的**单源解析器**——原 batch-segment.mjs 逐字迁移，
- * 字面「已收口/进行中」改为消费 STATUS_WORDS[1]，行为零变）：解析对象 = §1 **段头区**内
- * `**状态行**：` 前缀行（`## §1` 标题之后、下一 `^#{2,}` 之前——与写面同一条定位面；
- * 段体 / 轮次块里引述的状态行不参与判定）。判定只认关键字（emoji / 括号装饰 / 日期后缀容忍）：含「已收口」→ "closed"
- * （冻结优先）、含「进行中」→ "open"；无 §1 / 无该行 / 两关键字皆不命中 → "unknown"
- * （fail-closed 视为冻结）。
- */
-export function readBatchStatusLine(src) {
-  const lines = sectionHeaderZoneLines(src, 1) // 段头单源（段头缺失 ⇒ null；与 isBatchRecord 同一段头正则）
-  if (lines === null) return "unknown"
-  const m = lines.map((line) => STATUS_LINE_RE.exec(line)).find(Boolean)
-  if (!m) return "unknown"
-  const value = m[1].trim()
-  if (value.includes(STATUS_WORDS[1].closed)) return "closed"
-  if (value.includes(STATUS_WORDS[1].open)) return "open"
-  return "unknown"
-}
-
-/**
- * 段内状态行**单行改写**（status / close / 重开三处共用——改写面之一，域限状态行；另两处 = §2 段体区间改写
- * （`edit`，§4.19）∥ 重开追记行（§4.18-B），三处都不动其余字节）：定位 `## §N` 段
- * （sectionHeaderRe 单源），**段头区**（标题行之后、下一 `##` / `###` 起行之前）内首命中行原位替换（行尾随命中行
- * 自身）；区内无该行 ⇒ 沿用既有插入形（状态行 + 两空行，段头后原有空行不动；插入块行尾 = 标题行自身行尾）。
- * 区外正文（轮次块引述的 `**状态行**：…` 行）字节零变——住所只有段头区，§1–§5 同一规则，无按段分支。
- * 字节零变（行切分 = /\r?\n/：EOL 形态无关）；段标题缺失 ⇒ throw（create 是骨架唯一权威入口）；纯字符串变换（零 fs）。
- * @param {string} src — 档全文
- * @param {number|string} seg — 段号
- * @param {string} value — 状态行值（`**状态行**：<value>`）
- * @returns {string} 改写后全文
- */
-export function updateSectionStatusLine(src, seg, value) {
-  const hdr = sectionHeaderRe(seg).exec(src)
-  if (!hdr) {
-    throw new Error(`batch: the batch record has no "## §${seg}" section header — cannot update its status line (create is the skeleton's only authoritative entry; append/status never add one). Nothing was written.`)
-  }
-  const nextRe = /^## §\d/gm
-  nextRe.lastIndex = hdr.index + hdr[0].length
-  const next = nextRe.exec(src)
-  const endIdx = next ? next.index : src.length
-  const line = `**状态行**：${value}`
-  const parts = src.slice(hdr.index, endIdx).split(/(\r?\n)/) // 保留分隔符（奇数下标 = 行尾）——替换只动命中行
-  const zoneEnd = parts.findIndex((p, i) => i >= 2 && ZONE_END_RE.test(p)) // 段头区界下标（0 = 段头行自身，不判）
-  const limit = zoneEnd < 0 ? parts.length : zoneEnd
-  const idx = parts.findIndex((p, i) => i < limit && STATUS_LINE_RE.test(p))
-  if (idx >= 0) { parts[idx] = line } else {
-    const eol = parts[1] === "\r\n" ? "\r\n" : "\n" // 缺行插入块行尾 = 标题行自身行尾
-    if (parts.length === 1) parts.splice(1, 0, eol, line, eol, "", eol, "")
-    else parts.splice(2, 0, line, eol, "", eol, "", eol)
-  }
-  return src.slice(0, hdr.index) + parts.join("") + src.slice(endIdx)
-}
-
-/**
- * §N 段状态词解析（读面单源，设计档 §2.5 的单源表）：段头（sectionHeaderRe）/ 状态行正则（STATUS_LINE_RE）/
- * 词表（STATUS_WORDS）全消费既有单源常量——与冻结门字面零漂移。**取值区只有一个 = 段头区**（`## §N` 标题行
- * 之后、下一 `^#{2,}` 之前，与写面 `updateSectionStatusLine` 同一条定位面）；区外正文引述的 `**状态行**：…`
- * 既不被改写，也不构成结论。区内命中按**终态词优先**（closed / done 先于 open——镜像冻结门取值序）⇒ 返回该关键词；
- * 段头缺失 / 无该行 / 无命中 ⇒ null。`§4` / `§6` 无词条 ⇒ 字面 `无状态词`（不造词）。
- * @param {string} src — 档全文
- * @param {number|string} seg — 段号（`2` / `"2"`——同 sectionHeaderRe 消费形）
- * @returns {string|null} 已识别关键词 / null / 字面「无状态词」（§4 / §6）
- */
-export function readSectionStatusWord(src, seg) {
-  const words = STATUS_WORDS[seg]
-  if (!words) return "无状态词"
-  const lines = sectionHeaderZoneLines(src, seg)
-  if (lines === null) return null
-  const m = lines.map((line) => STATUS_LINE_RE.exec(line)).find(Boolean)
-  if (!m) return null
-  const value = m[1].trim()
-  // 旧字面先映到规范词（读侧等义——写侧词表零别名）
-  for (const [alias, canonical] of Object.entries(STATUS_WORD_ALIASES[seg] ?? {})) {
-    if (value.includes(alias)) return canonical
-  }
-  for (const w of [words.closed, words.done, words.open]) {
-    if (w !== undefined && value.includes(w)) return w
-  }
-  return null
-}
+// 搬去 batch-segment-vocab.mjs 的导出名原样再出口（二十三个经新档 re-export 的名字之一族）——
+// 既有 import 面（batch.mjs / batch-lifecycle.mjs / batch-read.mjs / batch-reopen.mjs / batch-gate.mjs /
+// batch-closeout.mjs / design-token.mjs / advisor.mjs / batch-ledger-bind.mjs / ledger-close-proof.mjs）零改。
+export {
+  STATUS_WORDS, STATUS_WORD_ALIASES, SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, DEPTH0_SEGMENTS,
+  STATUS_LINE_RE, sectionHeaderRe, isBatchRecord, TEMPLATE_PLACEHOLDERS,
+  findPlaceholderResidue, placeholderResidueError,
+  readBatchStatusLine, updateSectionStatusLine, readSectionStatusWord,
+  zoneStatusLines, zoneStatusCount, firstZoneStatusLineRange,
+  reviewWritableSegment, sectionThreeDesignTrackError,
+} from "./batch-segment-vocab.mjs"
 
 /**
  * 轮次块标题形态（**写面与读面的单源正则**）：§3 的轮次块只由工具戳
- * `### 轮次 N（评审子代理）` 标题——写入面 `batch.mjs` 丢弃调用方自带的同名行、按本形态计数
- * 生成 N；读面（结算点 §3 落地门的轮次块计数）读同一形态。两份正则必漂，故只留这一处
- * （`docs/core/design/ADVISOR-GUARDS.md` §1.1 判据 1）。`### 轮次与发现（…）` 骨架行不匹配。
+ * `### 轮次 N（评审子代理）` 标题——写入面 `batch-record-write.mjs` 丢弃调用方自带的同名行、按本形态计数
+ * 生成 N；读面（结算写块前取 N、写后回读点数）读同一形态。两份正则必漂，故只留这一处
+ * （`docs/core/design/ADVISOR-GUARDS.md` §1.2 判据 2）。`### 轮次与发现（…）` 骨架行不匹配。
  */
 export const ROUND_HEADING_RE = /^### 轮次 \d+（评审子代理）/
 
 /**
- * §N 段内轮次块计数（纯函数 · 零 fs）：段体逐行测 `ROUND_HEADING_RE`。段头缺失 ⇒ 0
- * （无 §3 段 = 评审写不进 §3 ⇒ 结算面判 `no-section3-block`，不是「跳过」）。
- * 消费点两处、同一形态：`batch.mjs`（写入面生成下一轮 N）∥ `design-token.mjs`
- * （结算点判「§3 已被本轮写过」——块数 > 点火基线）。
+ * §N 段内轮次块计数（纯函数 · 零 fs）：段体逐行测 `ROUND_HEADING_RE`。段头缺失 ⇒ 0。
+ * 消费点两处、同一形态：`batch-record-write.mjs`（写入面生成下一轮 N）∥ `design-token.mjs`
+ * （结算写块前取 N、写后回读确认这一块真落进了 §3）。
  * @param {string} src — 批档全文
  * @param {number|string} [seg] — 段号（缺省 3——轮次块只落 §3）
  * @returns {number} 段内轮次块数
@@ -254,7 +84,7 @@ export function lastRoundBlock(src, seg = 3) {
 
 /**
  * 段内**下一轮**轮次号（`countRoundBlocks + 1` 的组合名——**不二次实现计数**）：写入面
- * （`batch.mjs` 的 `insertIntoSection` 盖戳 `### 轮次 N`）与打回重置（`statusResetPlan` 的留痕行
+ * （`batch-record-write.mjs` 的 `insertIntoSection` 盖戳 `### 轮次 N`）与打回重置（`statusResetPlan` 的留痕行
  * 「第 N 轮打回」）必须取同一个 N——各算一遍，将来改了 `ROUND_HEADING_RE` 就会一处变一处不变。
  * @param {string} src — 批档全文（写盘前）
  * @param {number|string} [seg] — 段号（缺省 3——轮次块只落 §3）
@@ -294,7 +124,7 @@ export const VERDICT_PASS_LINE = new RegExp(
  * **先打回、后 pass**（两行同携 ⇒ 判打回——同一份回执在两个面上不能结论相反）。
  * 三个消费面同读这一个函数，各自只做自己那一层的映射，不再各写一遍组合序：
  *  - `§5` 写入门判据 2（`batch-closeout.mjs` 的 `lastRoundVerdictGap`）——原样取四格；
- *  - `append §3` 写入闸（`batch.mjs`）——只拒 `「无裁定行」` ∥ `「两者同携」`，判打回的一笔照写；
+ *  - `append §3` 写入闸（`batch-record-write.mjs`）——只拒 `「无裁定行」` ∥ `「两者同携」`，判打回的一笔照写；
  *  - 签发面（`design-token.mjs` 的 `verdictGateFailure`）——四格映回它原有的两个词
  *    （`changes-required` ∥ `no-pass-line`），对外说法零改。
  * 入参是**文本**而不是块：写面手上是「本笔净化后正文」，落档的就是它（每笔 `§3` 自成一块）——为复用切块
@@ -311,7 +141,7 @@ export function verdictGapOf(text) {
 }
 
 /**
- * 打回即重置的计划形（**纯函数 · 零 fs**；`batch.mjs` 与 `insertIntoSection` 在同一笔写盘里消费）。三合取全中
+ * 打回即重置的计划形（**纯函数 · 零 fs**；`batch-record-write.mjs` 与 `insertIntoSection` 在同一笔写盘里消费）。三合取全中
  * ⇒ `{ roundN, statusValue, traceLine }`，否则 `null`（零写 = 零回归）：① 本笔写 §3；② 本笔**净化后**正文命中
  * 打回裁定行（`VERDICT_CHANGES_LINE` 单源）；③ 写这一笔之前 §3 **段头区**状态行 = `STATUS_WORDS[3].done`
  * （**取词表，不写死字面**——写死则词表一改这条判据静默失效；读区与写面同一条定位面）。
@@ -363,6 +193,38 @@ export function statusPassPlan(src, seg, body, date) {
 }
 
 /**
+ * 正文写入同笔置完成词的计划形（**纯函数 · 零 fs**；`BATCH-RECORD.md` §4.12 ∥ §4.21 ∥ §7 D-BR43）：
+ * `append`/`edit` 往 `§2`/`§5` 写入之后，同一笔把该段状态行置成它的完成词——`§2` ⇒ `设计完成`、
+ * `§5` ⇒ `实施完成`。两态本就在 `STATUS_WORDS` 里（词表零扩），已是完成词则返回 `null`（幂等零写）。
+ *
+ * 只答 `§2` ∥ `§5`：`§3` 走上面两条裁定计划（`statusPassPlan` ∥ `statusResetPlan`——那条被动写不归本函数），
+ * `§1`/`§4`/`§6` 没有完成词。
+ *
+ * 判空复用段内容判据 `sectionContentState`（排除空行 / 标题行 / 状态行 / 模板占位 /「不适用」行）：
+ * 正文只有占位行或标题行 ⇒ 段仍是 `empty` ⇒ 状态行不动——把骨架占位当内容置成完成词，等于让
+ * 「§5 写入门 ∥ 收口门 ∥ 核销门」读到一句没人写过的话。
+ * 为什么必须机械：状态行是那三道门的唯一判据面，而「段属主记得回头调 `status`」是纪律，
+ * 纪律在最忙的那一轮最先漏。
+ * @param {string} src — 写入后的档全文（判的是这一笔写完之后的段内容）
+ * @param {number|string} seg — 本笔的目标段号
+ * @returns {{statusValue:string}|null} 要写的完成词 / 零写
+ */
+export function statusDonePlan(src, seg) {
+  const n = Number(seg)
+  if (n !== 2 && n !== 5) return null
+  const { done } = STATUS_WORDS[n]
+  if (readSectionStatusWord(src, n) === done) return null
+  // 段头区两条状态行 ⇒ 该段的状态读不出来（§4.21.4「恰一条才可读」）：此时零写，与 `status` 面对同一
+  // 前置的结论一致（`batch-lifecycle.mjs` 的 `STATUS_LINE_AMBIGUOUS_ERROR` 同样拒）。可复现路径 = 人手工
+  // 文件写在 §2 段头区留下第二条 `**状态行**：` 行，随后该段 append —— 被动写若照写，会重写第一条并
+  // 留下第二条，读侧仍判 null：写了一个读不出来的字，比不写更坏。
+  if (zoneStatusCount(src, n) > 1) return null
+  if (sectionContentState(src, n) !== "content") return null
+  return { statusValue: done }
+}
+
+
+/**
  * 「不适用」声明行形态（**声明机制已退役**——2026-11-02 用户裁定封掉这条口子）：形 = `> 不适用：§N —— <理由>`，
  * 理由非空（`\S.*` = 至少一个非空白字符起头）；识别域 = §1 段体。退役后本正则只服务**痕迹检测**
  * （`malformedInapplicableLine`）：`§1` 里还写着声明行的人当场被拒并读到「这条路没有了」，而不是静默当作没写。
@@ -377,26 +239,6 @@ const INAPPLICABLE_RE = /^>\s*不适用[：:]\s*§(\d+)\s*——\s*(\S.*)$/
 export const INAPPLICABLE_SEGMENTS = []
 /** §1 声明行的识别前缀（痕迹扫描的宽网——行首命中它即违规，不再区分形合规与否）。 */
 const INAPPLICABLE_PREFIX_RE = /^>\s*不适用/
-
-/** §N 段体行集（段头缺失 ⇒ null——create 是骨架唯一权威入口；行切分 = /\r?\n/——EOL 形态无关）。 */
-function sectionBodyLines(src, seg) {
-  const hdr = sectionHeaderRe(seg).exec(src)
-  if (!hdr) return null
-  const nextRe = /^## §\d/gm
-  nextRe.lastIndex = hdr.index + hdr[0].length
-  const next = nextRe.exec(src)
-  const body = src.slice(hdr.index + hdr[0].length, next ? next.index : src.length)
-  const nl = body.indexOf("\n") // 跳过段头行余文（`## §N …` 的标题部分）
-  return (nl >= 0 ? body.slice(nl + 1) : "").split(/\r?\n/)
-}
-
-/** §N **段头区**行集（段级状态行的唯一住所：`## §N` 标题行之后、下一个 `##` / `###` 起行之前；段头缺失 ⇒ null）。 */
-function sectionHeaderZoneLines(src, seg) {
-  const lines = sectionBodyLines(src, seg)
-  if (lines === null) return null
-  const end = lines.findIndex((l) => ZONE_END_RE.test(l))
-  return end < 0 ? lines : lines.slice(0, end)
-}
 
 /**
  * 段内容判据**单源**（§4.18-A closeout chain gate 的判空口径；D-BR30 判据单源——**不许两套**；
@@ -475,34 +317,145 @@ export function sectionHasStatusLine(src, seg) {
 /**
  * create 骨架模板（BATCH-RECORD.md §4.10 行为规格的**代码单源**——红线：模板只覆盖骨架与占位，不模板化内容）：
  * `## §1–§6` 段头（含职责署名）+ 档头 boilerplate（**两句形**：六段一段一作者句 + 每段只有一个作者句（作者对本段可 `append` 加内容 ∥ 可 `edit` 就地改，§4.10「档头两句」/ §4.19），加编制行 + 台账/前情指针行）+ §1 段内
- * **占位状态行**（含 gate 合法关键字「进行中」——建档即过 gate；整行不含「已收口」——gate 已收口优先，占位
- * 行不得携带冻结词）+ 各段模板子标题占位。已知实参替换：date / topic / **source** / prev（§4.11 参数面 +
- * F11-B——source 必填、prev 入值过幂等剥前缀，归一化在 lifecycle 面）；`ledger` = **必填**（2026-10-27 起建档
+ * **状态行**（gate 合法关键字「进行中」，**纯关键词、不带括注**——括注由主 agent 人工写；整行不含「已收口」
+ * ——gate 已收口优先，骨架行不得携带冻结词）+ **§2 状态占位句**（由 §4.12 的被动写覆盖）+ 各段模板子标题占位。已知实参替换：date / topic / **source** / prev（§4.11 参数面 +
+ * F11-B——source 必填、prev 入值过幂等剥前缀，归一化在 lifecycle 面）；`baseSha` = create 建档前取的**批起快照提交号**（全树快照，含未跟踪 ∥ 未提交的改动，建好挂
+ * `refs/thincoder/baseline/<批档名>`）或「未取到（原因）」——两者都自动落 §1；`ledger` = **必填**（2026-10-27 起建档
  * 同拍建台账行——真实行号由绑定事务回填，永不落回 `#<编号>` 占位）；`board` 可选（未给 ⇒ 括注写 `—`——`board`
  * 是分类不是身份，不拒）。本批改形删除（F11-B）：旧 `# …（<BATCH-ID>）` 后缀与 `来源 = <讨论来源>` 占位实参化。
- * 模式取形（§4.16——普通模式变体**四处替换**、余行逐字同；`mode` 缺省 = "engineering" ⇒ 工程产出逐字不变）：
+ * 模式取形（§4.16——普通模式变体**四处替换**、余行逐字同；`mode` 缺省 = "engineering"）：
  * ① 汇总行 §2/§5 标签；② `## §2` 段头；③ §2 状态占位句；④ `## §5` 段头。
  */
-export function batchSkeleton({ date, topic, source, prev, ledger = null, board = null, mode = "engineering" }) {
+export function batchSkeleton({ date, topic, source, prev, baseSha, ledger = null, board = null, mode = "engineering" }) {
+  if (typeof baseSha !== "string" || baseSha.trim() === "") {
+    throw new Error("batchSkeleton: baseSha is required — pass the pre-create HEAD, or 未取到（<原因>） when git cannot supply it.")
+  }
   const normal = mode === "normal"
   const designerSeat = normal ? "主 agent" : "eng-designer" // ① 汇总行 §2 标签 ∥ ② §2 段头
   const implementerSeat = normal ? "实施者：主 agent ∥ coder" : "eng-coder" // ① 汇总行 §5 标签 ∥ ④ §5 段头
   return [
     `# ${date} · ${topic}`,
     `> 六段，一段一作者：§1 讨论（主 agent）· §2 批次任务与设计（${designerSeat}）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（${implementerSeat}）· §6 验证与收口（父代理）。`,
-    `> 每段只有一个作者：作者的段可 \`append\` 加内容、可就地改（\`edit\`，§4.19）；非作者一概拒。`,
+    `> 每段只有一个作者：作者的段可 \`append\` 加内容、可就地改（\`edit\`）；非作者一概拒。`,
     `> 编制：主 agent · ${date} · 来源 = ${source}。`,
     `> 台账 = ${ledger ?? "#<编号>"}（${board ?? (ledger ? "—" : "<板块>")} · 归批）。前情 = ${prev}。`,
     "## §1 讨论（主 agent）",
-    `**状态行**：🔄 ${STATUS_WORDS[1].open}（…）`,
+    // §1 状态行骨架写**纯「进行中」**：括注由主 agent 人工写（§4.10）。骨架不产一个没有机制会清的假占位
+    // ——`§2`/`§5` 的占位句会被 §4.12 的被动写覆盖，`§1` 的括注没有任何机制会清，留在每一本新档上就是
+    // 一句陪着整批跑完的假话。
+    `**状态行**：${STATUS_WORDS[1].open}`,
+    `批起 sha = ${baseSha}`,
     "<§1 模板占位：本批条目 / 关键判据 / 授权口径>",
     `## §2 批次任务与设计（${designerSeat}）`,
     `**状态行**：（${normal ? "主 agent" : "eng-designer"} 写入时更新）`, // ③ §2 状态占位句
+    // 空行分隔**不是排版偏好**：doc_check 的段判据把「相邻非空正文行」并成一段，几行相连必越过 300 字
+    // ——工具建出的每一本批档都会在自己的收口门里因 §2 占位而拒。占位行各自成段；
+    // 单行自身也须留在 300 字以内（同一阈值）——往这句里加话之前先量一遍。
+    "",
     "<§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试覆盖 / 验收对照 / 关键决策 / 上抛项>",
+    "",
+    // 机读清单的**形单源**：写在这里、不落成真表——模板一旦落成真表，§2 在建档时就已算「有内容」，
+    // ① 链门的「§2 真跑过」那一支就对工具建出的档永久失效（改前 §2 只有状态行与占位行，两者都在排除类里）。
+    // 门 = `batch-tier-gate.mjs` 的 `assertTierPlan`：改动面里有**在盘码档**时就逐档核第三列读数
+    // （缺行 ∥ 缺数 ∥ 与批起快照不符 ⇒ 拒）；有越线档时另核第二列方案。**缺这一块不算拒因**——
+    // 拒的是「每个码档都缺它那一行读数」。
+    // 一行一档、只列**代码档（源 ∥ 单测）**——`.md` 零行数义务不列（`docs/core/standards/CODE-TIER.md` §1）；
+    // 本批自己的单测档（收口第 ③ 臂要求删净，到档位臂已不在盘）也不列。
+    // 示例档用**在盘**的档：写一个不存在的档名，下一批照抄就必被自己的收口门拒。
+    // 第三列**只示形不示值**：写 `新` 对一个在盘档会被收口门当场拒（`batch-tier-gate.mjs` 的 `readingGapOf`
+    // 「写的是 `新`，而批起快照里这一档有 N 行」）；写具体数又是读数、档一改就漂——哪种档写哪一种，交给第二行说。
+    // 阈值语义不在本档复述（娘家 = `docs/core/standards/CODE-TIER.md` §2 ①；落步闭集 = `batch-tier-gate.mjs` 的 `STEP_WORDS`）。
+    // 这一块占位**分两行、行间留一个空行**：两行各 183 ∥ 155 字（当轮实测，改字须重量），并成一段就是 338 字，越过 doc_check 的 300 字一段长线
+    // （段法 = `docs/core/design/DOC-CHECK.md` §2「一段 = 相邻的非空正文行」）——合并成一行或删掉行间那个空行，
+    // 都让工具建出的每一本新档在建档时被自己的写门拒。行序也是约束：示例行留在第一行——集成夹具 `CLI 7-10`
+    // 先整行剔掉「本批条目」那条占位、再按非全局首匹配剔一条，留下的正是第二行；第二行不含带目录段的档
+    // token，所以留着也不产生 `档缺`。倒过来放示例行，夹具就留下一个真档指针。
+    "<§2 模板占位：机读清单 = 标题行「**受影响文件（机读清单）**」+ 围栏内三列表（表头 | 档 | 分拆方案 | 行数 |、分隔行 |---|---|---|、一行一档，只列代码档（源 ∥ 单测））；示例行 = | thincoder-core/agent-tools/batch-tier-gate.mjs | — | <该档在批起快照上的内容行数> |>",
+    "",
+    "<§2 模板占位：第二列两件事——越设计时线的档写处置（分拆方案，或写明不拆的理由）；越过收口线的档写正向形方案（点名带目录段的档 + 本批落步 `实施轮` ∥ `§5`）；两条线都不越写 —。第三列：该档在批起快照上的内容行数（量法 = `countContentLines`），快照里没有这一档写 `新`>",
+    "",
     "## §3 设计评审（评审子代理）",
     "## §4 用户批准（主 agent）",
     `## §5 实施记录（${implementerSeat}）`,
     "## §6 验证与收口（父代理）",
     "",
   ].join("\n")
+}
+
+/** 档头 `台账` 行识别形（行首 `>` + `台账` + `=`）——判定域 = **档头域**（档首至首个 `## §N` 段头前，
+ *  与 F11-C 的死占位扫描同域：段体里引述的同一行不是档头行）。 */
+const LEDGER_HEADER_RE = /^>\s*台账\s*=/
+/** 台账编号枚（`#12` 形）；与模板占位 `#<编号>` 天然不同形（占位不是编号）。 */
+const LEDGER_NO_RE = /#\d+/g
+/** 档头缺行拒串（`attach` 的拒面之一——本动作只**延展**既有档头行，不造行：造行是 create 的事）。 */
+const LEDGER_HEADER_MISSING_ERROR = "batch: the record has no `> 台账 = …` line in its header zone — attach only extends an existing header 台账 line and never creates one (creating a record, header included, is create's job). Fix the header by file edit first. Nothing was written."
+/** 档头行无可接编号位拒串（既无 `#<编号>` 也无真编号——无处可接，不猜形）。 */
+const LEDGER_HEADER_NO_SLOT_ERROR = "batch: the record's header 台账 line carries neither a ledger number nor the `#<编号>` placeholder — there is no slot to extend, and attach does not invent one. Fix that line by file edit first. Nothing was written."
+
+/** 档头 `台账` 行定位（读写共用）：只认首个 `## §N` 之前的档头域；CRLF 的行尾单独留住。 */
+function ledgerHeaderLineOf(src) {
+  const lines = src.split("\n")
+  const firstSection = lines.findIndex((line) => /^## §\d/.test(line))
+  const limit = firstSection < 0 ? lines.length : firstSection
+  const idx = lines.findIndex((line, i) => i < limit && LEDGER_HEADER_RE.test(line))
+  if (idx < 0) return null
+  const cr = lines[idx].endsWith("\r") ? "\r" : ""
+  return { lines, idx, cr, text: cr ? lines[idx].slice(0, -1) : lines[idx] }
+}
+
+/** 号集合切分（读写共用）：第一个 `（` 起的括注组不参与，前置列表逐枚取 `#\d+`。 */
+function ledgerNumberMatches(text) {
+  const open = text.indexOf("（")
+  return [...text.slice(0, open < 0 ? text.length : open).matchAll(LEDGER_NO_RE)]
+}
+
+/**
+ * 档头 `台账` 行号集只读解析器（§2.17 `headerRows` 的单源）：与 `appendLedgerNoToHeader`
+ * 共用 `ledgerHeaderLineOf` 与 `ledgerNumberMatches`，档头语法只此一份。无档头行 ⇒ 空集。
+ * @param {string} src — 批档全文
+ * @returns {number[]} 档头登记的台账行号（保持登记顺序）
+ */
+export function readLedgerHeaderNumbers(src) {
+  if (typeof src !== "string") return []
+  const header = ledgerHeaderLineOf(src)
+  return header ? ledgerNumberMatches(header.text).map((m) => Number(m[0].slice(1))) : []
+}
+
+/**
+ * 档头 `台账` 行补编号（设计档 §4.21.3「档头拆分的规则」——纯函数 · 零 fs）。
+ * 行形 = `> 台账 = #a · #b（core · 归批）。前情 = …`；四条规则：
+ *  ① **先剔括注组**：行内第一个 `（` 起整组不参与拆分——`·` 也是括注组内的分隔符（`core · 归批`），
+ *    不剔就把它读成两枚编号。② **再拆编号列表**：括注组之前的串逐枚取 `#\d+`，其余段（空白 / 残留符）跳过、不据此拒。
+ *  ③ **追加在列表尾**（新编号接在末枚之后），括注组位置不动。④ **已是列表成员** ⇒ 零写 + `already: true`（幂等）。
+ * 档头仍带 `#<编号>` 死占位 ⇒ 占位**就地换成真编号**（这正是「把死占位换成真编号」的那条通道——F11-C 随之放行）。
+ * @param {string} src — 档全文
+ * @param {number} n — 台账行号（正整数）
+ * @returns {{src:string, already:boolean, line:string}} 新全文 ∥ 是否已在列表（`already` ⇒ `src` 逐字未变）∥
+ *  改写后的档头行原文（回执用；`already` 时为现形）
+ */
+export function appendLedgerNoToHeader(src, n) {
+  const no = Number(n)
+  if (!Number.isInteger(no) || no <= 0) {
+    throw new Error(`batch: a ledger entry number is required to extend the header 台账 line — got ${JSON.stringify(n ?? null)}. Nothing was written.`)
+  }
+  const header = ledgerHeaderLineOf(src)
+  if (!header) throw new Error(LEDGER_HEADER_MISSING_ERROR)
+  const { lines, idx, cr, text } = header
+  const open = text.indexOf("（")
+  const preEnd = open < 0 ? text.length : open
+  const pre = text.slice(0, preEnd)
+  const nums = ledgerNumberMatches(text)
+  if (nums.some((m) => Number(m[0].slice(1)) === no)) return { src, already: true, line: text }
+  let next
+  if (nums.length) {
+    const last = nums[nums.length - 1]
+    const after = last.index + last[0].length
+    next = `${pre.slice(0, after)} · #${no}${pre.slice(after)}${text.slice(preEnd)}`
+  } else if (pre.includes("#<编号>")) {
+    next = `${pre.replace("#<编号>", `#${no}`)}${text.slice(preEnd)}`
+  } else {
+    throw new Error(LEDGER_HEADER_NO_SLOT_ERROR)
+  }
+  lines[idx] = next + cr
+  return { src: lines.join("\n"), already: false, line: next }
 }

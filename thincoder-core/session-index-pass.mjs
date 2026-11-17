@@ -1,7 +1,7 @@
 /**
  * session-index-pass.mjs — 有界趟 / 全量重建 / 源消失清行 / 延迟拍（SESSION.md §6.19 D-SE45/D-SE46）。
  *
- * `session-index-build.mjs` 的 >300 软线二分产物（设计「跨档线拆分预案」：枚举与水位增量 ∥
+ * `session-index-build.mjs` 的 >300 行线二分产物（设计「跨档线拆分预案」：枚举与水位增量 ∥
  * 重建 / 拍 / 清行）。触发三点（均不触主存档）：
  *   ① 懒保证（`session-index-build.mjs` `ensureSessionIndexed`——射程 = 有段档）
  *   ② 启动窗外延迟拍（`scheduleSessionIndexPass`——端壳挂点，核会话档零改）

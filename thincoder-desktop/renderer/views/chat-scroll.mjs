@@ -1,8 +1,9 @@
 /**
  * chat-scroll.mjs — 对话流滚动面（`docs/desktop/design/RENDERER.md` §1.1 第二形 / §3 · `docs/desktop/design/UI.md` §2）：
  * 常量单源 + 四条纯判据 + `attachScroll` 接线面。滚动容器 = `[data-slot="flow"]` 宿主自身（KD-1：零额外层级）。
- *   ① 常量单源（`FOLLOW_PX`（= 核工厂 `NEAR_BOTTOM_PX` 再出口保名）/ `BACKFILL_PX` / `SMOOTH_MS` /
- *      `MAX_RENDER_BLOCKS`）——别处只引用不复写；近底判据 ∕ 写门 = **核抽核件 `/rc/scroll.mjs` 工厂消费**
+ *   ① 常量单源（`BACKFILL_PX` / `SMOOTH_MS` / `MAX_RENDER_BLOCKS`）——别处只引用不复写；近底判据 ∕
+ *      写门 = **核抽核件 `/rc/scroll.mjs` 工厂消费**（阈 = 视口比例——算式单源 = 核 `nearBottomThreshold`；
+ *      本端零自持像素常量）
  *      （2026-09-29 留端清算 ∕ 批 `docs/batches/2026-09-29-desktop-rebuild-fidelity.md` §2.5——`nearBottom` ∕ `applyPin`）；
  *   ② `scrollAction(metrics, guards)`：序 backfill → follow → unfollow（触顶回填优先于贴底判）；
  *   ③ `compensateTop`（帧尾视口补偿算式）/ `nextWindow`（限增宽窗 = 现限 + 本页**实并入块数**）/ `smoothWindowOpen`（平滑窗判据）；
@@ -14,10 +15,11 @@
  * 本档零 `node:` / 零裸包；取件经 `/rc/`（app 第二根 —— 平 node 面 = rc-resolve 钩子）；纯函数零 DOM 依赖
  * （`root` 只取三读数 + `addEventListener` / `scrollTo`）⇒ 假 root 可注入。
  */
-import { applyPin, nearBottom } from "/rc/scroll.mjs"
+import { applyPin, nearBottomThreshold } from "/rc/scroll.mjs"
 
-/** 近底阈再出口保名（**唯一数值源** = 核工厂 `NEAR_BOTTOM_PX`——消费面零改；判据漂移 = 缺陷）。 */
-export { NEAR_BOTTOM_PX as FOLLOW_PX } from "/rc/scroll.mjs"
+/** 近底阈单源 = 核工厂 `nearBottomThreshold(clientHeight)`（上游 0.11.2 视口比例：半视口 ∕ 24px 下限——
+ *  `NEAR_BOTTOM_RATIO` ∕ `NEAR_BOTTOM_MIN_PX` 同档再出口）。旧 `FOLLOW_PX` 常量随比例阈退役。 */
+export { NEAR_BOTTOM_RATIO, NEAR_BOTTOM_MIN_PX, nearBottomThreshold } from "/rc/scroll.mjs"
 
 /* 回填触发阈（fork 2026-10-06 二调 —— 用户「滚动卡住」：原 VSC 40px = 撞死顶才取 ⇒ 每页边界
    一次 IPC + 头段重建的可见停顿；480px = 提前一屏多预取，页边界隐入滚动途中——ZCode loadOlder
@@ -40,10 +42,11 @@ function metricsOf(source) {
 }
 
 /** 滚动出口判据（统一批 · fork 2026-10-06 —— **两出口**：backfill 出口退役，加载唯一 = 预载链）：
- *  近底（判据 = 核工厂 `nearBottom`——三读数归一 + 严格小于：恰阈不判近底）⇒ `follow`；其余 ⇒ `unfollow`。
- *  `guards` 形保留（读数口兼容——现无消费键）。 */
+ *  近底（判据 = 核工厂 `nearBottomThreshold(clientHeight)`——比例阈 + 24px 下限；严格小于：恰阈不判近底）
+ *  ⇒ `follow`；其余 ⇒ `unfollow`。`guards` 形保留（读数口兼容——现无消费键）。 */
 export function scrollAction(metrics, guards = {}) {
-  if (nearBottom(metrics)) return "follow"
+  const { scrollTop, scrollHeight, clientHeight } = metricsOf(metrics)
+  if (scrollHeight - scrollTop - clientHeight < nearBottomThreshold(clientHeight)) return "follow"
   return "unfollow"
 }
 

@@ -14,7 +14,8 @@
  *   { advisor: { enabled: true, provider: "deepseek", model: "deepseek-chat" } }
  *   provider + model are optional — defaults to the main agent's provider/model.
  *
- * Convergence protocol:
+ * Convergence protocol (CODE REVIEW — a design review has none: it takes
+ * `advisor-design.md` every round and never decays):
  *   Round 1: full review → produces a numbered issue table.
  *   Agent responds with a response table per issue (fix claims).
  *   Round 2: semi-convergence — verifies the prior table + can flag obvious new issues.
@@ -32,7 +33,7 @@
  *   counter only drives prompt decay and display; failure paths end in a
  *   settlement conclusion block, and repeated failures are reported to the user.
  *   Rounds 2+ also declare all earlier diffs STALE and require read-verified
- *   file:line evidence for any unfixed/new finding — see docs/design/ADVISOR-CONVERGENCE.md.
+ *   file:line evidence for any unfixed/new finding — see docs/core/design/ADVISOR-CONVERGENCE.md.
  *
  * Session memory (agent._advisorSession):
  *   RETAINED for initialization compatibility but NEVER read (decision d698434):
@@ -45,7 +46,7 @@
  * Project customisation: .thincoder/advisor.md in the project root.
  */
 import { extractAgentResponseTable } from "./advisor/history.mjs"
-import { buildAdvisorUserMessage, resolveScopeFiles, buildObjectDeclarationBlock, buildDesignApprovalBlock } from "./advisor/messages.mjs"
+import { buildAdvisorUserMessage, resolveScopeFiles, buildObjectDeclarationBlock } from "./advisor/messages.mjs"
 import { buildConvergenceBody } from "./advisor/convergence.mjs"
 import { escapeLiteralEscapes } from "./escape.mjs"
 import { applyPromptInjections, loadAdvisorPrompt } from "./prompt-files.mjs"
@@ -61,10 +62,11 @@ export { buildObjectDeclarationBlock, buildDesignApprovalBlock } from "./advisor
 // 改经核内单一解析面 `loadAdvisorPrompt`（契约 8 / D-C13）；缺档语义不变 = 抛错（契约 9）。
 
 const ADVISOR_ROUND1 = loadAdvisorPrompt("advisor-round1.md")
-// ROUND2/3 are used whenever a convergence round (round 2+) is being built:
-// in-run session continuation replaces the system prompt with them, and a
+// ROUND2/3 are used whenever a CODE-REVIEW convergence round (round 2+) is being
+// built: in-run session continuation replaces the system prompt with them, and a
 // rebuilt fresh session (e.g. after a failed review) also selects them via
-// buildAdvisorSystemPrompt when _advisorRound > 0.
+// buildAdvisorSystemPrompt when _advisorRound > 0. A design review never takes
+// them — it re-applies the full criteria every round (ADVISOR_DESIGN).
 const ADVISOR_ROUND2 = loadAdvisorPrompt("advisor-round2.md")
 const ADVISOR_ROUND3 = loadAdvisorPrompt("advisor-round3.md")
 // Design-review prompt — hard-loaded like the round prompts (decision
@@ -78,16 +80,16 @@ const ADVISOR_DESIGN = loadAdvisorPrompt("advisor-design.md")
 // ────────────────────────────────────────
 
 /**
-/** Build the system prompt for an advisor review session.
+ * Build the system prompt for an advisor review session.
  * @param {Object} agent — the parent agent
  * @param {Object|null} [prior] — prior review output (full text; decision 2026-08-08)
  * @param {string} [reviewType] — "design" for design review, undefined/"code" for code review
  * @returns {string} the system prompt
  */
 
-// 锚替换缝（CORE-UNIFICATION §2.13.8——U0）：本函数**六个 return 逐条**经 `applyPromptInjections`
-// （未配置 = 恒等，现行行为零变）；读取径（模块级常量缓存）不动。结构机检
-// （`test/prompt-injections.test.mjs`）按 return 分支逐条守——新增分支未挂即红。
+// 锚替换缝（CORE-UNIFICATION §2.13.8——U0）：本函数**每个 return 分支**都经 `applyPromptInjections`
+// （未配置 = 恒等，现行行为零变）；读取径（模块级常量缓存）不动。必须保持的不变量：每个 return
+// 分支都经 `applyPromptInjections`，新增分支未挂即错。
 export function buildAdvisorSystemPrompt(agent, prior, reviewType) {
   // Round decision is DETERMINISTIC (decision 2026-08-08): _advisorRound > 0
   // with a stored review output means convergence (round 2+); 0 means round 1.
@@ -95,16 +97,11 @@ export function buildAdvisorSystemPrompt(agent, prior, reviewType) {
   // and the stored output are the only inputs. A restarted process has
   // _advisorRound 0 → conservative full re-review.
   const hasPrior = (agent._advisorRound || 0) > 0 && (prior ?? agent._lastAdvisorOutput)
-  // Design review: round 1 uses the dedicated design-review prompt (full scope +
-  // approval token); rounds 2+ converge like code reviews (verify agent fix claims).
-  if (reviewType === "design") {
-    if (!hasPrior) {
-      return applyPromptInjections(ADVISOR_DESIGN)
-    }
-    const round = (agent._advisorRound || 0) + 1
-    if (round === 2) return applyPromptInjections(ADVISOR_ROUND2)
-    return applyPromptInjections(ADVISOR_ROUND3)
-  }
+  // Design review: EVERY round takes the dedicated design-review prompt — the
+  // complete criteria, applied to a full re-read (decision 2026-11-16). Design
+  // review has no convergence decay: the round counter drives display and audit
+  // only, never which criteria are in force.
+  if (reviewType === "design") return applyPromptInjections(ADVISOR_DESIGN)
   if (!hasPrior) return applyPromptInjections(ADVISOR_ROUND1)
   const round = (agent._advisorRound || 0) + 1
   if (round === 2) return applyPromptInjections(ADVISOR_ROUND2)
@@ -178,8 +175,10 @@ export { escapeLiteralEscapes }
 /**
  * Build the advisor conversation for this run.
  * EVERY call builds a fresh [system, user] session (decision d698434) — no
- * session reuse across rounds: round 1 = full scope (ROUND1 prompt), rounds
- * 2+ = convergence (ROUND2/ROUND3 prompt + fix-claims follow-up).
+ * session reuse across rounds. CODE REVIEW: round 1 = full scope (ROUND1
+ * prompt), rounds 2+ = convergence (ROUND2/ROUND3 prompt + fix-claims
+ * follow-up). DESIGN REVIEW: every round takes ADVISOR_DESIGN and the full
+ * review scope, with the prior output carried as a reference block (no decay).
  * @param {Object} agent — the parent agent
  * @param {string} [reviewType] — "design" or "code" (已由工具层类型门定轨——此处无缺省；F30)
  * @param {string|null} [designToken] — design-review approval token (design only)
@@ -198,10 +197,13 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   // as buildAdvisorSystemPrompt (single source of truth for round semantics).
   const prior = (agent._advisorRound || 0) > 0 ? (priorParam ?? agent._lastAdvisorOutput) : null
 
-  // Design review round 1: the dedicated full-scope review with the approval
-  // token (an independent gate — it runs even when a prior review exists, e.g.
-  // after a failed design review). Fresh session.
-  if (reviewType === "design" && (agent._advisorRound || 0) === 0) {
+  // Design review — EVERY round: the dedicated full-scope review, with the
+  // approval token re-injected (an async fix-round continuation must be able to
+  // re-approve) and the prior review carried as a REFERENCE block, never as the
+  // verification list (decision 2026-11-16: a design review has no convergence
+  // decay — each round re-reads the whole scope against the complete criteria).
+  // Fresh session, exactly like round 1.
+  if (reviewType === "design") {
     return [
       { role: "system", content: buildAdvisorSystemPrompt(agent, prior, reviewType) },
       { role: "user", content: escapeLiteralEscapes(buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, object, designId)) },
@@ -213,7 +215,7 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   // re-review false reports (the model quoted pre-fix file content instead of
   // re-reading) and a token sink. The agent response table (fix claims) is
   // injected through buildAdvisorFollowUp instead; the system prompt carries
-  // the round (ROUND2/ROUND3) via buildAdvisorSystemPrompt.
+  // the round (ROUND2/ROUND3, code review only) via buildAdvisorSystemPrompt.
   // No prior review output: reset ONLY when this run made no code changes (user
   // decision 2026-08-05: any loop that modified code must NOT reset — the
   // advisor guard WILL push back, so the convergence round must keep advancing
@@ -260,22 +262,6 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   // review surface.
   const scopeFiles = resolveScopeFiles(agent, paths)
   const followUp = buildAdvisorFollowUp(agent, prior, scopeFiles, object)
-  // AGENT-LOOP-ASYNC-POOL.md §6.10 D-24b (design round 2+ — async fix-round continuations must be able to
-  // re-approve): re-anchor the review scope (the convergence follow-up carries no
-  // document list) and inject the round's design token with the approval signal.
-  if (reviewType === "design") {
-    const docList = Array.isArray(documents)
-      ? documents.filter((d) => typeof d === "string" && d.trim())
-      : []
-    const scopeBlock = docList.length > 0
-      ? `\n\n## Documents to Review\nThe documents below are the review scope. Review ONLY these files — do not scan git diff or read any other files.\n${docList.map((d) => `- ${d} — Read this file in full`).join("\n")}`
-      : ""
-    const tokenBlock = designToken ? `\n\n${buildDesignApprovalBlock(designToken, designId)}` : ""
-    return [
-      { role: "system", content: buildAdvisorSystemPrompt(agent, prior, reviewType) },
-      { role: "user", content: escapeLiteralEscapes(followUp + scopeBlock + tokenBlock) },
-    ]
-  }
   return [
     { role: "system", content: buildAdvisorSystemPrompt(agent, prior, reviewType) },
     { role: "user", content: escapeLiteralEscapes(followUp) },

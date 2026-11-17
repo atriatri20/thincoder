@@ -1,0 +1,6 @@
+aliases: 文档检索, 搜索文档, 设计检索
+Use this to find design decisions, coding conventions, architecture docs, or project rules.
+
+Prefer this over code_search when you need to understand the project's intended design rather than existing implementation. Returns matching doc chunks: path, heading, line range, relevance score, content excerpt.
+
+For what was said in sessions (conversation/chat history — decisions, rulings), use read_history.

@@ -124,10 +124,9 @@ export const S = {
   // 流式 ∕ 工具面 ∕ 子代理面；回合起刻 = 初始锚）；读面 = status-bar 静默段（`t("status.quiet")`）。
   // 语义单源 = `docs/cli/design/TUI.md` §7.7。
   _lastOutputAt: null,
-  // Review-guard / Engineering mode quick-switch state (session-bar buttons;
-  // the settings panel has the full advisor configuration).
+  // Review-guard / session work-mode mirror; settings owns the full advisor configuration.
   _advisorOn: false,
-  _engOn: false,
+  _mode: "normal",
   // AGENT-LOOP-ASYNC-POOL.md §6.8 suspension session (AGENT-LOOP.md D-S2..S9): active while background async
   // subagents run after a turn — the input box stays usable (Enter queues instead of
   // breaking digests), the status line shows the background counts. Never touched by

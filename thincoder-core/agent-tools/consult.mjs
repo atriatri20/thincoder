@@ -23,7 +23,10 @@
  * 同族收齐批 · #748; a cancelled session's children emit ⟦ev⟧stopped — R17: the old
  * in-turn check consumption is gone; consumed blocks archive at the consumption window).
  */
-import { createAgent, runAgent, readonlyToolNames, excludeSubagentTools } from "../agent.mjs"
+import { createAgent, runAgent, excludeSubagentTools } from "../agent.mjs"
+// B4（TOOLS.md §6.29 ①）：会诊席与派单面同一只读派生面（构造器 ∥ 判据各一处单源）。
+import { deriveReadonlyTools } from "../agent/helpers.mjs"
+import { readonlyActionTest } from "../agent/dispatch-gates.mjs"
 import { resolveChildProvider } from "./subagent.mjs"
 import { pushReal } from "../context.mjs"
 import { offloadToolResult, escapeXml } from "../agent/helpers.mjs"
@@ -273,9 +276,9 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     clampEffort(provider, m.model, m.effort)
 
     // Read-only consultant: filter the parent tool set down to readonly tools + main_history.
-    const allowed = readonlyToolNames(agent.tools ?? [])
+    // B4（TOOLS.md §6.29 ①）：整把只读集 ∪ action 级只读变体（与 core 派单面同一派生面、同一判据）。
     const tools = [
-      ...excludeSubagentTools((agent.tools ?? []).filter((t) => allowed.has(t.name))), // TOOLS.md §6.16：继承面过谓词
+      ...excludeSubagentTools(deriveReadonlyTools(agent.tools ?? [], readonlyActionTest)), // TOOLS.md §6.16：继承面过谓词
       makeMainHistoryTool(agent),
     ]
 
@@ -404,7 +407,7 @@ export const consultStartTool = {
     type: "object",
     properties: {
       problem: { type: "string", description: "Problem brief (symptom + failure trail + entry files)" },
-      models: { type: "array", items: { type: "string" }, description: 'Optional subset of agent.consultModels to run (default: all) — each entry "provider:model", a bare provider, or a bare model name (case-insensitive).' },
+      models: { type: "array", items: { type: "string" }, description: 'Optional subset to narrow the pool — omit to run the whole pool. Each entry is "provider:model", a bare provider, or a bare model name (case-insensitive).' },
     },
     required: ["problem"],
   },

@@ -1,6 +1,6 @@
 /**
  * views-chat-messages.mjs — 管理·对话页·消息面（`webui/CHAT.md` §2.1②；console-chat-live-step 批——台账 #1325）；
- * 自 `views-chat.mjs` 外拆（拆档缘由 = 该件 500 软线已贴满——增行前必须先外拆）。面内四族：
+ * 自 `views-chat.mjs` 外拆（拆档缘由 = 该件当年已过 500 行）。面内四族：
  * 帧面纯函数（`splitLines`/`parseFrame`/`argsText`——NDJSON 行切分 ∥ 帧解析 ∥ 参数摘要取读）∥
  * notice 行文案映射（`data.reason` 五值）∥ 工具结果文案（**失败判据 = 核 `isToolFailure`** 单源）∥
  * 回读装配（库行 ⇒ 核 `buildUserMessage`/`buildAssistantRestore`/`renderToolHistory`——`messageNodes`）。

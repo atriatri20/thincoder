@@ -1,29 +1,30 @@
 /**
- * advisor-record-gate.test.mjs — 集成用例 17-1 / 17-2 / 17-3（RTM CLI 端故事 17「评审没写进批档就不算过」；
- * 回指需求 F-A13；机制单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.1 ∥ §1.3（结算面 §3 落地门 ∥
- * 账链门的集成 delta）∥ §2 第 6 条（准入面：设计评审必携 `batchDoc`）∥ §2 第 7 条（账链门：批档须挂
- * 未决台账行））。
+ * advisor-record-gate.test.mjs — 集成用例 17-1 / 17-2 / 17-3 / 17-4（RTM CLI 端故事 17「评审没写进批档就不算过」；
+ * 回指需求 F-A13；机制单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.2（结算判据：批档可读 ∥ 块写进并回读）∥
+ * §2 第 6 条（准入面：设计评审必携 `batchDoc`）∥ §2 第 7 条（账链门：批档须挂未决台账行））。
  *
  * 业务可观察面 = 两件：① 准入回执 / 结算回执（有没有 token、拒因点名）② 同 designId 的 eng-coder spawn 门解析
  * （放行 ∥ 机械拒）。驱动面 = 准入面与账链门都走真工具 `advisorTool.execute`（两门都发生在工具入参门，
  * 结算函数不参与）；结算面直调函数本体 `settleDesignReview`——同步轨（`advisor.mjs`）与异步轨（`advisor-settle.mjs`）
  * 调的就是它，本档不重复模拟工具包装层。
  *
- * 每轮 = 一次「点火 + 结算」：点火时读 §3 轮次块数作基线（生产 = `advisor.mjs` 绑批档时同拍读）；
- * 评审轮内是否把 §3 写进批档由 `writeBlock` 决定（生产 = 评审经 `batch` 的 append / status 动作写入）。
+ * 每轮 = 一次「点火 + 结算」：§3 的轮次块由**结算**写（评审席在工程模式没有 §3 写通道），
+ * 故本档不再模拟评审往 §3 写字——它只检验结算自写之后的业务结果。
  *
  * 夹具 = 系统临时域（项目根 + 六段批档 + 设计档；独立 sessions 根 ∥ 台账库目录——零落真实用户目录）。
  * 复跑（cwd = 仓根）：`node --test test/integration/advisor-record-gate.test.mjs`
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join, relative, resolve } from "node:path"
+import { join, relative } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
-import { countRoundBlocks } from "../../thincoder-core/agent-tools/batch-skeleton.mjs"
+import { countRoundBlocks, readSectionStatusWord } from "../../thincoder-core/agent-tools/batch-skeleton.mjs"
 import { advisorTool } from "../../thincoder-core/agent-tools/advisor.mjs"
-import { settleDesignReview } from "../../thincoder-core/agent-tools/design-token.mjs"
+import { __setRecordWriterForTest, settleDesignReview } from "../../thincoder-core/agent-tools/design-token.mjs"
 import { docSetKey } from "../../thincoder-core/agent-tools/review-facts.mjs"
 import { resolveDesignSlot } from "../../thincoder-core/agent-tools/subagent-spawn.mjs"
 import { _resetSessionsDirForTest, _setSessionsDirForTest } from "../../thincoder-core/session-slots.mjs"
@@ -34,9 +35,9 @@ const BATCH_REL = "docs/batches/fixture.md"
 const DESIGN_REL = "docs/core/design/DESIGN-FIXTURE.md"
 const DESIGN_ID = "design-17"
 
-/** 六段批档；`blocks` = §3 轮次块数，`statusRow` = §3 段级状态行（`null` = 该行不存在）。 */
+/** 六段批档；`blocks` = §3 存量轮次块数，`statusRow` = §3 段级状态行（`null` = 该行不存在）。 */
 const recordText = ({ blocks = 0, statusRow = null } = {}) => [
-  "# 夹具批 · §3 落地门",
+  "# 夹具批 · §3 评审记录",
   "",
   "> 编制：夹具 · 2026-10-27 · 来源 = 集成夹具。",
   "",
@@ -71,11 +72,12 @@ const ledgerDir = mkdtempSync(join(tmpdir(), "arg-ledger-"))
 _setLedgerDirForTest(ledgerDir)
 const roots = []
 after(() => {
+  __setRecordWriterForTest(null)
   _resetSessionsDirForTest()
   _resetLedgerDirForTest()
-  for (const p of roots) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(sessionsDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(ledgerDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  for (const p of roots) removeTempDirBestEffort(p)
+  removeTempDirBestEffort(sessionsDir)
+  removeTempDirBestEffort(ledgerDir)
 })
 
 function fixture(tag, text) {
@@ -128,35 +130,39 @@ function seedRow(root, batchAbs) {
   return id
 }
 
-/**
- * 一次评审轮（点火 → 评审写入 → 结算）：`writeBlock` = 本轮是否把 §3 写进批档。
- * 生产同形：`advisor.mjs` 点火时读基线落 `run.section3BlocksAtStart`；评审经 `batch` 写 §3 后结算。
- * 夹具恒绑 `batchDoc`——未绑已不是一种夹具形态，而是接线故障（`settleDesignReview` 的程序不变量 throw）。
- */
-function reviewRound(agent, run, { writeBlock }) {
-  run.section3BlocksAtStart = countRoundBlocks(readFileSync(run.batchDoc, "utf8"), 3)
-  if (writeBlock) writeFileSync(run.batchDoc, recordText({ blocks: run.section3BlocksAtStart + 1, statusRow: "评审通过" }))
-  const token = mintToken()
-  return { settled: settleDesignReview(agent, run, token, receipt(token)), token }
-}
+/** 评审实例键（结算读的就是它：`batchDoc` 必携，`docSetKey` 给封印集合）。 */
+const runOf = (root, batchAbs) => ({ reviewId: DESIGN_ID, designId: DESIGN_ID, batchDoc: batchAbs, docSetKey: docSetKey([DESIGN_REL], root), open: true })
 
-test("17-1 错误 · 评审回 pass 但 §3 未写 ⇒ 无 token、spawn 被机械拒；补写 §3 后重评 ⇒ 签发", () => {
-  const { root, agent, batchAbs } = fixture("r171", recordText({ blocks: 0, statusRow: null }))
-  const run = { reviewId: DESIGN_ID, designId: DESIGN_ID, batchDoc: batchAbs, docSetKey: docSetKey([DESIGN_REL], root), section3BlocksAtStart: null, open: true }
+test("CLI 17-1 错误 · 块写不进 ⇒ 拒签且零字节", () => {
+  // 正半幅：pass 轮由结算自己把轮次块写进 §3（评审席在工程模式没有这条通道）⇒ 记录在案且签发
+  const ok = fixture("r171a", recordText({ blocks: 0, statusRow: null }))
+  const runA = runOf(ok.root, ok.batchAbs)
+  const tokenA = mintToken()
+  const issued = settleDesignReview(ok.agent, runA, tokenA, receipt(tokenA))
+  assert.equal(issued.passed, true, `结算自写块后应签发：${issued.output}`)
+  const afterOk = readFileSync(ok.batchAbs, "utf8")
+  assert.equal(countRoundBlocks(afterOk, 3), 1, "§3 本轮块由结算写（1 块）")
+  assert.match(afterOk, /^\*\*结算\*\*：已签发（pass）· \d{4}-\d{2}-\d{2}$/m, "块内结算头点名已签发")
+  assert.equal(readSectionStatusWord(afterOk, 3), "评审通过", "§3 段级状态行 = 评审通过（同笔）")
+  assert.equal(resolveDesignSlot(ok.agent, DESIGN_ID).token, tokenA, "spawn 门放行（拿到本 designId 的凭证）")
 
-  // 第一轮：回 pass，一字未写进 §3
-  const first = reviewRound(agent, run, { writeBlock: false })
-  assert.equal(first.settled.passed, false, `未落档不得签发：${first.settled.output}`)
-  assert.ok(first.settled.output.includes("review record incomplete"), `回执应点名记录不合格：${first.settled.output}`)
-  assert.throws(() => resolveDesignSlot(agent, DESIGN_ID), /designId not found/, "同 designId 的 eng-coder spawn 被机械拒")
-
-  // 第二轮：本次评审把 §3 写进批档（轮次块 + 状态行 = 评审通过）⇒ 签发
-  const second = reviewRound(agent, run, { writeBlock: true })
-  assert.equal(second.settled.passed, true, `补写后重评应签发：${second.settled.output}`)
-  assert.equal(resolveDesignSlot(agent, DESIGN_ID).token, second.token, "spawn 门放行（拿到本 designId 的凭证）")
+  // 失败侧：块写不进 ⇒ 拒签、档字节回到写前、槽零写、spawn 被机械拒
+  const bad = fixture("r171b", recordText({ blocks: 0, statusRow: null }))
+  const before = readFileSync(bad.batchAbs, "utf8")
+  const tokenB = mintToken()
+  __setRecordWriterForTest(() => { throw new Error("injected write failure") })
+  try {
+    const refused = settleDesignReview(bad.agent, runOf(bad.root, bad.batchAbs), tokenB, receipt(tokenB))
+    assert.equal(refused.passed, false, "块写不进不得签发")
+    assert.ok(refused.output.includes("review record incomplete"), `回执应点名记录不合格：${refused.output}`)
+  } finally {
+    __setRecordWriterForTest(null)
+  }
+  assert.equal(readFileSync(bad.batchAbs, "utf8"), before, "档字节 = 写前（零字节写入）")
+  assert.throws(() => resolveDesignSlot(bad.agent, DESIGN_ID), /designId not found/, "同 designId 的 eng-coder spawn 被机械拒")
 })
 
-test("17-2 错误 · 不带 `batchDoc` 的设计评审 ⇒ 拒发、槽数不变、spawn 被机械拒", async () => {
+test("CLI 17-2 错误 · 不带 `batchDoc` 的设计评审 ⇒ 拒发、槽数不变、spawn 被机械拒", async () => {
   const { agent } = fixture("r172", recordText({ blocks: 0, statusRow: null }))
   const slotsBefore = agent._engDesignTokens?.size ?? 0
   // 准入门（`docs/core/design/ADVISOR-GUARDS.md` §2 第 6 条）：未携 `batchDoc` ⇒ 拒发，零实例 / 零槽 / 零 LLM。
@@ -176,14 +182,16 @@ test("17-2 错误 · 不带 `batchDoc` 的设计评审 ⇒ 拒发、槽数不变
   assert.throws(() => resolveDesignSlot(agent, DESIGN_ID), /designId not found/, "随后 eng-coder spawn 因无授权被机械拒")
 })
 
-test("17-3 错误 · 批档的未决行被撤后发设计评审 ⇒ 拒发（账不在）；另一本带未决行的批档 ⇒ 放行", { timeout: 120_000 }, async () => {
+test("CLI 17-3 错误 · 批档的未决行被撤后发设计评审 ⇒ 拒发（账不在）；另一本带未决行的批档 ⇒ 放行", { timeout: 120_000 }, async () => {
   const { root, batchAbs } = ledgerFixture("r173", recordText({ blocks: 0, statusRow: null }))
   // 反证格：同一根下另起一本批档，它那一行保持未决（`在途`）
   const otherAbs = join(root, "docs/batches/other.md")
   writeFileSync(otherAbs, recordText({ blocks: 0, statusRow: null }))
 
-  // 本档那一行被撤回（`在途 → 已废弃`，撤回不设机检）⇒ 本档零未决行
+  // 本档那一行被撤回 ⇒ 本档零未决行。P2-5 锚批门之后，「在途 → 已废弃」必须先退回等待态
+  //（退回同时解绑指针，既有语义）——结果仍是本用例要的现场：该档不在账上。
   const withdrawn = seedRow(root, batchAbs)
+  ledgerUpdate({ cwd: root, id: withdrawn, patch: { status: "待讨论", evidence: "本批不做了，先退回" }, boundary: root })
   ledgerClose({ cwd: root, id: withdrawn, status: "已废弃", boundary: root })
   const alive = seedRow(root, otherAbs)
   assert.ok(alive > 0, "反证格的未决行已种上")
@@ -214,3 +222,43 @@ test("17-3 错误 · 批档的未决行被撤后发设计评审 ⇒ 拒发（账
   assert.equal(agent._advisorRefusals.has("t17-3b"), false, "未登记拒发（本门放行）")
 })
 
+test("CLI 17-4 正常 · 设计轨结算写进 §3 的轮次块只含结论表、裁定行与计数——评审的推理正文不进块", () => {
+  // 块正文三件（`docs/core/design/BATCH-RECORD.md` §4.4）：结论表行 → 裁定行 → 计数行。
+  // 评审的推理正文留在报告里——块里只留「每条 finding 的处置」，读块的人不必翻通篇独白。
+  const ok = fixture("r174", recordText({ blocks: 0, statusRow: null }))
+  const token = mintToken()
+  const monologue = "Let me double-check the design against the requirement line by line."
+  const body = [
+    monologue,
+    "",
+    "A reasoning paragraph that must stay out of the block.",
+    "",
+    "| # | Severity | Status | Evidence |",
+    "|---|---|---|---|",
+    "| 1 | 🔴 | Unfixed | §4.4「块形三件，按序」 |",
+    "| 2 | 🟡 | Fixed | ADVISOR-GUARDS.md §9 验收行 |",
+    "| 3 | 🔵 | Accepted | 协调项，非缺陷 |",
+    "",
+    "VERDICT: pass",
+    `[DESIGN-TOKEN: ${token}]`,
+  ].join("\n")
+
+  const settled = settleDesignReview(ok.agent, runOf(ok.root, ok.batchAbs), token, body)
+  assert.equal(settled.passed, true, `结算自写块后应签发：${settled.output}`)
+  const src = readFileSync(ok.batchAbs, "utf8")
+  const block = src.slice(src.indexOf("### 轮次 1（评审子代理）"))
+  const lines = block.split("\n").map((line) => line.replace(/^ {4}/, ""))
+  const headerAt = lines.indexOf("| # | Severity | Status | Evidence |")
+  const verdictAt = lines.findIndex((line) => /^VERDICT:/.test(line))
+  const countsAt = lines.findIndex((line) => /^计数：/.test(line))
+
+  assert.ok(headerAt >= 0, `块内有四列表头行：${block}`)
+  assert.ok(headerAt < verdictAt && verdictAt < countsAt, `三件按序：表头 ${headerAt} → 裁定 ${verdictAt} → 计数 ${countsAt}`)
+  assert.equal(lines.filter((line) => /^VERDICT:/.test(line)).length, 1, "块内裁定行恰一行")
+  assert.equal(lines[verdictAt], "VERDICT: pass", "裁定行 = 本轮处置（结算按处置写，不从评审体里挑）")
+  // 结论三件 = 表头 1 + 分隔 1 + 表体 3 + 裁定 1 + 计数 1 = 表体行数 + 4（结算头一行另计）。
+  assert.equal(lines.slice(headerAt, countsAt + 1).length, 3 + 4, "结论三件的行数 = 表体行数 + 4")
+  assert.equal(block.includes(monologue), false, "推理独白不进块")
+  assert.equal(block.includes("A reasoning paragraph"), false, "推理段落不进块")
+  assert.equal(settled.output.includes(monologue), true, "原文不丢——回执仍带剥净回显的全文")
+})

@@ -2,7 +2,7 @@
  * ledger-executors.mjs — 在途 executor 判活展示（F-LX1 · 设计档 LEDGER.md §7.3.1）。
  *
  * 红线：写径零探测——判活只落显示面。本档从 ledger.mjs 拆出（2026-09-21 executor 判活批，
- * ledger.mjs 307 → ≤300 软线回落），语义零变：`resolveExecutorStates` async 单源 + `executorTail`
+ * ledger.mjs 307 → ≤300 行线回落），语义零变：`resolveExecutorStates` async 单源 + `executorTail`
  * 三态文案（双端同文——CLI L2 与 VSC tooltip 共此函数）+ TTL 缓存（与 peer-instances 同源口径）。
  */
 import { classifyEnd, ownerState, probeOwnersAsync } from "./process-probe.mjs"

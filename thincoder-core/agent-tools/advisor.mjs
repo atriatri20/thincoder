@@ -3,13 +3,12 @@
  * The agent calls this explicitly to get an independent review.
  * The top-level `type` is REQUIRED and must be exactly "code" or "design"
  * (F30 fail-closed — no silent default; ADVISOR-GUARDS.md §2.4).
- * AGENT-LOOP-ASYNC-POOL.md §6.10 (R13 — async advisor): at depth 0 the review launches into the
- * background pool by DEFAULT (async:true / omitted; async:false forces the
- * blocking review); depth>0 (eng-coder self-review) stays synchronous always.
+ * AGENT-LOOP-ASYNC-POOL.md §6.10 (R13 — async advisor): `async` is REQUIRED — `true` launches the
+ * review into the background pool at depth 0, `false` forces the blocking review (omitting it is
+ * refused: a default here would decide for the caller); depth>0 (eng-coder self-review) stays
+ * synchronous always.
  */
 import { runAdvisorReview, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
-import { readFileSync } from "node:fs"
-import { countRoundBlocks } from "./batch-skeleton.mjs"
 import { resolveBatchDocPath } from "./batch.mjs"
 // 设计评审的文档受理面单源 = review-facts.mjs 的 resolveReviewDocPaths（判据正文 =
 // docs/core/design/ADVISOR-GUARDS.md §12：相对形按会话项目根 / 绝对形照用 / 受理 = 项目内现存 `.md`）。
@@ -37,21 +36,8 @@ import { DESC } from "../tools/shared.mjs"
 export { validateDesignToken } from "./advisor-async.mjs"
 
 /**
- * §3 点火基线（`docs/core/design/ADVISOR-GUARDS.md` §1.1 判据 1）：绑了批档 ⇒ 记下点火时该档 §3
- * 已有的轮次块数（块计数单源 = `countRoundBlocks`）；未绑 / 读不到 ⇒ `null`——读不到不等于
- * 「没有记录要验」，结算面的 §3 落地门据此判 `batch-unreadable`。每轮发起刷新：同一实例的修轮
- * 是新的一轮，基线随之推进（否则上一轮留下的块会让本轮一字未写也过门）。
+ * `batchDoc` 缺失形态（缺失 ∥ `null` ∥ 空串 ∥ 纯空白——非字符串不在此判，留给 `resolveBatchDocPath` 的既有文案）。
  */
-function section3BlocksBaseline(batchDocAbs) {
-  if (typeof batchDocAbs !== "string" || !batchDocAbs) return null
-  try {
-    return countRoundBlocks(readFileSync(batchDocAbs, "utf8"), 3)
-  } catch {
-    return null
-  }
-}
-
-/** `batchDoc` 缺失形态（缺失 ∥ `null` ∥ 空串 ∥ 纯空白——非字符串不在此判，留给 `resolveBatchDocPath` 的既有文案）。 */
 function missingBatchDoc(raw) {
   return raw === undefined || raw === null || (typeof raw === "string" && raw.trim() === "")
 }
@@ -113,7 +99,7 @@ export const advisorTool = {
       type: { type: "string", enum: ["code", "design"], description: "Review type (required): 'design' for design doc review, 'code' for code review. Omitting it is refused — there is no default." },
       async: {
         type: "boolean",
-        description: "Background review: default at depth 0 = true (ack now, report via digest); async:false forces the blocking review. depth>0 → always sync.",
+        description: "Background review: Required — `true` = review in the background (ack now, report via digest); `false` = the blocking review; omitting it is refused. depth>0 → always sync: an explicit `async: true` there is refused.",
       },
       object: {
         type: "object",
@@ -134,11 +120,11 @@ export const advisorTool = {
       documents: {
         type: "array",
         items: { type: "string" },
-        description: "Doc paths to review (design / requirements / referenced docs). One rule: a relative path resolves against the session project root (e.g. docs/core/design/ADVISOR-GUARDS.md); an absolute path is used as-is. Accepted = an existing .md file anywhere inside a project (a repo-root doc such as METHODOLOGY.md counts); anything else is refused with the resolved path, the reason, and the two expected forms. The advisor reviews ONLY these — no git diff scan. Use for both review types to pass the task's docs list.",
+        description: "Doc paths to review (design / requirements / referenced docs). One rule: a relative path resolves against the session project root (e.g. docs/<area>/<name>.md); an absolute path is used as-is. Accepted = an existing .md file anywhere inside a project (a repo-root doc counts); anything else is refused with the resolved path, the reason, and the two expected forms. The advisor reviews ONLY these — no git diff scan. Use for both review types to pass the task's docs list.",
       },
       batchDoc: {
         type: "string",
-        description: "Design review only, REQUIRED: the batch record this review belongs to — the reviewer then also gets the `batch` write channel to record its findings + verdict. A design review without it is refused at launch (a token with no batch has no closer); a path that does not resolve to a readable file is refused. Relative paths resolve against the session cwd first, then candidate project roots (project-root-relative e.g. <repo>/docs/batches/…, or absolute). Code reviews do not pass it.",
+        description: "Optional: the batch record this review belongs to. Carrying it binds the review to that record on either track. On a design review the settlement writes the round's block into that record's §3 (tool stamp + a settlement header line + the review verbatim) in the same stroke that decides the token, and the reviewer gets no batch tool in engineering mode; a code review bound to a record keeps the §3 write channel (there is no settlement to write for it), and so does a reviewer in normal mode. A design review that omits it is refused at launch (a token with no batch has no closer); a path that does not resolve to a readable file is refused. Relative paths resolve against the session cwd first, then candidate project roots (project-root-relative e.g. <repo>/docs/batches/…, or absolute). A tool-face batch — delivered files are scripts / tests / CI, no design doc — runs on the code track and passes this same parameter together with `paths` = the delivered files.",
       },
     },
     required: ["type"],
@@ -168,6 +154,12 @@ export const advisorTool = {
       })
     }
     const reviewType = args.type
+    // §6.10 (R13)：`async` 必填——**参数级拒判放在类型门之后、账链门之前**（缺参不该先花一次台账查；
+    // 也不该让“先补另一个参数”成为模型的下一步）。depth 不再替调用方选。
+    if (args.async !== true && args.async !== false) {
+      if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
+      return "Advisor: async is required — pass true for the background review or false for the blocking review. Nothing was sent: no review instance, no round consumed, no design token minted, no LLM call."
+    }
     // 准入门：`type="design"` 且 `batchDoc` 缺失 / 空 ⇒ 拒发（判据与拒文 = `docs/core/design/ADVISOR-GUARDS.md`
     // §2 第 6 条）；「携了须可读」那半幅随账链门（下段）一并判——判据与文案仍单源 `resolveBatchDocPath`。
     // 绑定落 `resolved.run`（评审实例键）。
@@ -191,7 +183,8 @@ export const advisorTool = {
     // 评审照发、token 照签，收口时重锚不到任何行。
     // 批档绝对路径在本门就要用 ⇒ `resolveBatchDocPath` 从绑定行提前到此处调一次（绑定行复用同值，不二次解析）；
     // 携了不可读 ⇒ 走其既有 throw（顺序表第 3 行：可读是账链的前提，前提坏先报前提）。
-    // 代码评审不走本门（绑定行对 `type="code"` 仍走原解析——行为零变）。
+    // 代码评审不走本门（账链门仍只判设计轨——代码轨不签 token，没有可关之物）。绑定面则与轨无关：
+    // 携 `batchDoc` 即在绑定行落 `resolved.run.batchDoc`（判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）。
     let designBatchDocAbs = null
     if (reviewType === "design") {
       designBatchDocAbs = resolveBatchDocPath(agent.cwd, args.batchDoc)
@@ -234,7 +227,7 @@ export const advisorTool = {
           const cands = [...new Set(invalid.flatMap((v) => v.candidates ?? []))]
           if (cands.length > 0) lines.push(`Candidates: ${cands.join(" ∥ ")} — pass one explicitly (an absolute path is the surest form).`)
         }
-        lines.push("Expected form 1 — project-root-relative: docs/core/design/ADVISOR-GUARDS.md (resolved against the session project root).", "Expected form 2 — absolute: D:\\repo\\docs\\core\\design\\ADVISOR-GUARDS.md (used as-is).")
+        lines.push("Expected form 1 — project-root-relative: docs/<area>/<name>.md (resolved against the session project root).", "Expected form 2 — absolute: D:\\repo\\docs\\<area>\\<name>.md (used as-is).")
         return withIdentityLine(
           `Advisor: design review documents must be documentation files (per the project's conventions). Invalid:\n${lines.join("\n")}`,
           { type: reviewType, scope: scopeSummary(documents), round: "—", criterion: "scope-not-doc" },
@@ -242,41 +235,35 @@ export const advisorTool = {
       }
     }
 
-    // §6.10 (R13 — ruling ②-3 A): async gate. Depth-0 defaults to the
-    // background pool; depth>0 (eng-coder internal self-review) is ALWAYS sync —
-    // an explicit async:true there is rejected, the default never flips.
-    // depth 显式校验（归一形态——判定单点：`depth` 取一次 + `asyncRequested` 显式布尔，
-    // 判定表与原逐值等价）：
-    //   depth 0 + 未传/true ⇒ 异步（本层默认）/ depth 0 + false ⇒ 同步；
-    //   depth>0（或直调方无 depth） + 显式 true ⇒ 拒；其余 ⇒ 同步。
-    // 「无 depth」= 无 dispatch 上下文的直调方（测试/legacy）——按同步处理。
+    // §6.10 (R13 — ruling ②-3 A)：depth 0 可异步、depth>0 一律同步——显式 `async:true` 在那里被拒
+    // （判据不变）。“无 depth” = 无 dispatch 上下文的直调方（测试/legacy）——按同步处理。
     const depth = ctx?.depth ?? null
     const asyncRequested = args.async === true
     if (asyncRequested && depth !== 0) {
       // 拒发登记（与 cap/池满拒同款）：评审未跑——不置 called/不耗轮次（record-results
       // 的 REFUSED 契约——advisor 评审发现 #1：拒发不得静默满足 guard）。
       if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
-      return "Advisor: async reviews are only available at depth 0 — the top-level session owns the background pool; inside a child (eng-coder self-review) reviews run synchronously. Call advisor again without async:true (or with async:false)."
+      return "Advisor: async reviews are only available at depth 0 — the top-level session owns the background pool; inside a child (eng-coder self-review) reviews run synchronously. Call advisor again with async:false."
     }
-    const isAsync = asyncRequested || (depth === 0 && args.async !== false)
+    const isAsync = asyncRequested
 
+    // BATCH-RECORD.md §4.2 评审侧批次档绑定（判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）：
+    // 绑定值在**发起时点取一次**，随后随 launch 载荷一路传下去（异步 = 条目 `batchDoc` 字段，同步 = callbacks）。
+    // 为什么不能在启动时读活字段：`resolved.run` 是实例级对象（代码轨续用同一实例）——发起①携 A 排队、
+    // 发起②携 B 覆盖同一字段，槽释放后①启动读到 B，评审就把裁定写进一本它没被指派的档。
+    // 不携即清：这一笔不携档（缺 / null / 空串 / 纯空白）⇒ null，不继承上一笔（静默继承比没有绑定更坏）。
+    // 位置 = 实例解析之前：路径不可读 ⇒ 在建实例与记账镜之前就炸（本档不变量「零实例 / 零 token / 零槽」）。
+    const launchBatchDoc = missingBatchDoc(args.batchDoc)
+      ? null
+      // 设计评审的绝对路径由账链门那一段算好（`designBatchDocAbs`——不二次解析）；代码评审仍走原解析。
+      : designBatchDocAbs ?? resolveBatchDocPath(agent.cwd, args.batchDoc)
     // Per-review instance resolution (§6.10 ③ — ruling ②-5 A): fix rounds
     // continue the same reviewId (design = the doc-set instance's designId —
     // slot/spawn continuity; code = the newest OPEN instance). The resolution
     // scopes agent._advisorRound/_lastAdvisorOutput so the message builder and
     // the run.mjs cap read THIS instance's round/prior (multi-review isolation).
     const resolved = resolveAdvisorLaunch(agent, reviewType, { documents })
-    // BATCH-RECORD.md §4.2 评审侧批次档绑定（评审实例的唯一路径来源）：准入面与账链门已保证设计评审的
-    // `batchDoc`（判据 = `docs/core/design/ADVISOR-GUARDS.md` §2 第 6 ∥ 7 条），本段只剩绑定落 `resolved.run`
-    // （评审实例键，与 reviewType/round/designId 同族）——并发设计评审各绑各档，不用单值会话态
-    // （BATCH-RECORD.md §4.7 #6）。
-    if (args.batchDoc !== undefined && args.batchDoc !== null) {
-      // 设计评审的绝对路径由账链门那一段算好（`designBatchDocAbs`——不二次解析）；代码评审仍走原解析。
-      resolved.run.batchDoc = designBatchDocAbs ?? resolveBatchDocPath(agent.cwd, args.batchDoc)
-    }
-    // §3 点火基线（ADVISOR-GUARDS.md §1.1 判据 1）：结算面判「§3 已被本轮写过」需要「本轮之前有几块」
-    // 这个点——只在点火拍可得（结算时再读只能得到「现在有几块」）。两轨同源（`run` 由池条目透传）。
-    resolved.run.section3BlocksAtStart = section3BlocksBaseline(resolved.run.batchDoc)
+    resolved.run.batchDoc = launchBatchDoc
     // Design token minted for EVERY design round — the reviewer echoes it only on
     // a clean pass; on pass it is slotted under the instance's designId at settle
     // (sync: right here; async: the settle callback — fix #2). A NEW instance
@@ -293,6 +280,8 @@ export const advisorTool = {
       const ack = launchAsyncAdvisor(agent, ctx, {
         reviewType, documents, paths, object: reviewObject,
         designToken, designId, run: resolved.run,
+        // 逐笔绑定快照：条目持此值，`entry.start()` 不再读活的 `run.batchDoc`（排队窗口的值会被后一笔覆盖）。
+        batchDoc: launchBatchDoc,
       })
       if (ack.error) {
         // Pool-full refusal (②-6a — no queueing): the review did NOT launch — the
@@ -336,8 +325,8 @@ export const advisorTool = {
     const result = await runAdvisorReview(agent, reviewType, {
       onOutput: ctx.onOutput,
       signal: ctx.signal,
-      // 同步路径的实例绑定传递（异步路径由池条目 run.batchDoc 取——run.mjs 自行解析）。
-      batchDoc: resolved.run.batchDoc ?? null,
+      // 同步路径的绑定传递 = 同一逐笔值（异步路径走条目 `batchDoc` 字段，同值同形）。
+      batchDoc: launchBatchDoc,
     }, designToken, documents, paths, reviewObject, designId)
 
     // B 启动拒绝（稳定前缀）：拒发登记（同池满 / cap 款——不置 called、不耗轮次），

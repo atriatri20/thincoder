@@ -52,12 +52,22 @@ function declaredBases(cwd) {
   return man.ok ? docRootPaths(man.manifest?.docRoot?.batches, base) : []
 }
 
-/** 批次档基底根数组（**声明面单源**——create / 在飞扫描 / 锚定判据共用）：manifest `docRoot.batches`
+/**
+ * 批次档基底根数组（**声明面单源**——create / 在飞扫描 / 锚判的面判共用）：manifest `docRoot.batches`
  *  （串 | 多根数组）→ 声明基底；缺失 / 非法 ⇒ 回退默认基底 `"docs/batches"`（恒返回非空数组）。
  *  **工作区锚**（条 5）⇒ 候选项目基底**并集**（候选按名排序、并集保序）——在飞扫描 / 写门基底集同取此值。
+ *  **注入形**（`{ manifest }` 可选——`thincoder-core/doc-check/index.mjs` 的组根调用吃它）：引擎已按组根
+ *  读过一次 manifest，这里不再重读（每根一次读）；缺省仍自读，既有调用零改。注入只换读取来源，
+ *  形态判据与回退支零改（manifest 是 `readManifest` 的返回值，`ok:false` 照走缺省回退——降级不静默）。
  *  @param {string} cwd
+ *  @param {{manifest?:{ok:boolean, manifest?:object|null}}} [injected] 引擎已读的那份（可选）
  *  @returns {string[]} */
-export function batchDocBases(cwd) {
+export function batchDocBases(cwd, injected = {}) {
+  const man = injected?.manifest
+  if (man) {
+    const roots = man.ok ? docRootPaths(man.manifest?.docRoot?.batches, cwd) : []
+    return roots.length ? roots : [resolve(docRootBase(cwd), "docs/batches")]
+  }
   const ws = workspaceCandidates(cwd)
   if (ws) {
     const union = []
@@ -86,14 +96,25 @@ function anchoredPrefix(p, prefixes) {
   return null
 }
 
-/** 越基底判据（create 面）：解析后须落在某一基底根之内；win32 大小写不敏感比较。 */
-function insideBases(abs, bases) {
+/** 落在哪个基底根之内（不落任何一个 ⇒ null）——**判据单源**：create 面的越基底判据（`insideBases`）与
+ *  doc-check 的面判（`thincoder-core/doc-graph/anchors.mjs` 的 `isBatchFaceRef`——「同一基底根」要的正是**哪一根**）
+ *  同取本函数。按**路径段**判（`docs/batches-old/` 不算落在 `docs/batches` 内），win32 大小写不敏感。
+ *  @param {string} abs 绝对路径
+ *  @param {string[]} bases 基底根数组（`batchDocBases`——已是绝对路径）
+ *  @returns {string|null} 命中的那个基底根（原值，不归一大小写）∥ null */
+export function baseContaining(abs, bases) {
   const norm = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
   const target = norm(abs)
-  return bases.some((b) => {
+  for (const b of bases) {
     const root = norm(b)
-    return target === root || target.startsWith(root.endsWith(sep) ? root : root + sep)
-  })
+    if (target === root || target.startsWith(root.endsWith(sep) ? root : root + sep)) return b
+  }
+  return null
+}
+
+/** 越基底判据（create 面）：解析后须落在某一基底根之内（判定单源 = 同档 `baseContaining`）。 */
+function insideBases(abs, bases) {
+  return baseContaining(abs, bases) !== null
 }
 
 /** create 越基底（原文案逐字——零变面）。 */
@@ -107,7 +128,7 @@ const ambiguousLandingError = (raw, landings) => new Error(`batch: create path r
 
 /**
  * **读面**解析的四态本体（候选序 + 判态全部经统一解析层——本面只声明自己的参数：
- * `order:"near-first"`（近基根 = cwd / 会话锚 先）+ `kind:"file"` + `crossRepo:"dangling"`，
+ * `order:"near-first"`（近基根 = cwd / 会话锚 先）+ `kind:"file"`，本面**不传 `declaredRepos`**（不放宽跨仓形：
  * `bases` = `docRoot.batches` 声明面（读面无 manifest ⇒ 无这一级））。锚定串只解析项目根形
  * （不二次拼接——§4.15 判据，见 `resolveBatchReadPath`）。
  * 导出面供 spawn 门拼「追加同名候选」（§2.6：既有文案逐字在前，新信息追加在后）。

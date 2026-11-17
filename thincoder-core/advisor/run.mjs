@@ -135,10 +135,13 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
     }
   }
 
-  // BATCH-RECORD.md §4.3 批次档写通道的绑定（仅设计评审）：同步路径 = 调用方（advisor 工具）传入的
-  // callbacks.batchDoc（即 resolved.run 的实例绑定）；异步路径 = 本实例在跑池条目的
-  // run.batchDoc（同文档集实例键——各评审各取各档，不用单值会话态）。
-  const boundBatchDoc = reviewType === "design" ? batchDocForReview(agent, documents, callbacks) : null
+  // BATCH-RECORD.md §4.3 批次档写通道的绑定——**与评审轨无关**：携了可读 `batchDoc` 即绑定
+  // （判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.15）。同步路径 = 调用方（advisor
+  // 工具）传入的 callbacks.batchDoc（本笔发起时点的绑定值）；异步路径 = 池条目 `entry.start()` 传入的
+  // 同一逐笔快照（条目字段 `batchDoc`，不读活的实例字段）。
+  // 工具面批走代码轨，评审员靠这一绑定才拿得到写 §3 的手；按轨截断 ⇒ 那一轨永远没有写通道，
+  // `§3` 只能编或永远挂着（用户 2026-11-01 11:43 否掉的那件事）。
+  const boundBatchDoc = batchDocForReview(agent, documents, callbacks)
   // F13/`ADVISOR-GUARDS.md §2` #3：压缩定锚简报（评审参数构建——压缩触发时由 compaction 重挂）。
   const pinned = buildPinnedBrief(reviewType, documents, object, designToken, designId)
 

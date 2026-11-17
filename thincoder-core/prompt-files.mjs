@@ -20,7 +20,7 @@
  * supplies values via `configurePromptInjections`. Unconfigured = identity; missing key = throw.
  */
 
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -30,6 +30,96 @@ const ROOT = dirname(fileURLToPath(import.meta.url))
 export const PROMPTS_DIR = join(ROOT, "prompts")
 /** Core package-internal `tool-docs/` directory (tool descriptions). */
 export const TOOL_DOCS_DIR = join(ROOT, "tool-docs")
+/** Prompt topics may inline into full prompts; query topics never inline in any mode. */
+export const KNOWLEDGE_DIR = join(PROMPTS_DIR, "knowledge")
+export const QUERY_KNOWLEDGE_DIR = join(ROOT, "knowledge")
+const KNOWLEDGE_SOURCES = Object.freeze([
+  { kind: "prompt", dir: KNOWLEDGE_DIR },
+  { kind: "query", dir: QUERY_KNOWLEDGE_DIR },
+])
+const KNOWLEDGE_ID_RE = /^[a-z0-9-]+$/
+const ALIAS_DECLARATION_PREFIX = "aliases"
+/** 别名分隔符：半角逗号 ∥ 全角逗号 ∥ 顿号——中文习惯里的 `，` 与 `、` 都要切得开。 */
+const ALIAS_SEPARATOR_RE = /[,，、]/
+
+/**
+ * 剥掉主题首行的 `aliases:` 声明，返回 `{ aliases, body }`。声明是元数据不是正文：`get`、完整档内联与
+ * 锚回填都只看剩下的 `body`，否则为检索加的元数据会随主题正文一起进系统提示词与 `get` 回执。
+ * 声明只有两种形态——没有这一行，或首行是一行 `aliases:` 加至少一个非空词；首行以 `aliases` 开头却不成形
+ * （无冒号或取不出词）就在加载期点名主题失败：静默丢掉别名会把「声明写坏了」说成「这个词本来不命中」，
+ * 两者在模型的失败回执上长得一模一样。
+ */
+function splitAliasDeclaration(id, content) {
+  const newline = content.indexOf("\n")
+  const firstLine = (newline < 0 ? content : content.slice(0, newline)).replace(/\r$/, "").trimStart()
+  if (!firstLine.toLowerCase().startsWith(ALIAS_DECLARATION_PREFIX)) return { aliases: [], body: content }
+  const declaration = firstLine.slice(ALIAS_DECLARATION_PREFIX.length).trim()
+  const words = declaration.startsWith(":")
+    ? declaration.slice(1).split(ALIAS_SEPARATOR_RE).map((word) => word.trim()).filter(Boolean)
+    : []
+  if (words.length === 0) {
+    throw new Error(`knowledge: topic "${id}" has a malformed aliases declaration on its first line — write "aliases: word, word", or drop the line`)
+  }
+  return { aliases: words, body: newline < 0 ? "" : content.slice(newline + 1) }
+}
+
+/** 主题条目面（标识 ∥ 标题 ∥ 别名 ∥ 正文）：List 与 search 共读一处，别名只在这里解析一次。 */
+export function readKnowledgeEntries(sources = KNOWLEDGE_SOURCES) {
+  const entries = []
+  const seen = new Set()
+  for (const source of sources) {
+    const files = readdirSync(source.dir).filter((name) => name.endsWith(".md") && name.toLowerCase() !== "readme.md").sort()
+    for (const file of files) {
+      const id = file.slice(0, -3).toLowerCase()
+      if (!KNOWLEDGE_ID_RE.test(id)) throw new Error(`knowledge: invalid topic identifier "${id}"`)
+      if (seen.has(id)) throw new Error(`knowledge: duplicate topic identifier "${id}" across bundled resource directories`)
+      seen.add(id)
+      const path = join(source.dir, file)
+      let raw
+      try { raw = readFileSync(path, "utf8") }
+      catch (error) { throw new Error(`knowledge: topic "${id}" is unavailable at ${path} — ${error.message}`, { cause: error }) }
+      const { aliases, body } = splitAliasDeclaration(id, raw)
+      const title = body.match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim() || id
+      entries.push({ id, title, content: body, aliases, kind: source.kind })
+    }
+  }
+  return entries.sort((a, b) => a.id.localeCompare(b.id))
+}
+
+/** Read one complete topic from the global namespace. Full-prompt expansion excludes query-only topics. */
+export function loadKnowledgeTopic(id, { promptOnly = false } = {}) {
+  if (typeof id !== "string" || !KNOWLEDGE_ID_RE.test(id)) {
+    throw new Error(`knowledge: unknown topic ${JSON.stringify(id)} — call list for valid topic identifiers`)
+  }
+  const entry = readKnowledgeEntries().find((item) => item.id === id)
+  if (!entry || (promptOnly && entry.kind !== "prompt")) {
+    throw new Error(`knowledge: unknown topic "${id}" — call list for valid topic identifiers`)
+  }
+  return entry.content
+}
+
+/** Stable combined topic inventory. README files are documentation, not topics. */
+export function listKnowledgeTopics(sources = KNOWLEDGE_SOURCES) {
+  return readKnowledgeEntries(sources).map(({ id, title }) => ({ id, title }))
+}
+
+const KNOWLEDGE_ANCHOR_RE = /\{\{knowledge:([a-z0-9-]+)\}\}/g
+
+/** Expand the shared master for full mode, or remove standalone topic anchors for tiny. */
+export function expandKnowledgeTopics(text, { tiny = false } = {}) {
+  const seen = new Set()
+  // In tiny mode an anchor owns its following line break and blank line; the preceding
+  // separator keeps the surrounding hard sections apart without a global whitespace rewrite.
+  const pattern = tiny ? /\{\{knowledge:([a-z0-9-]+)\}\}(?:\r?\n){0,2}/g : KNOWLEDGE_ANCHOR_RE
+  const result = text.replace(pattern, (anchor, id) => {
+    if (seen.has(id)) throw new Error(`prompt knowledge anchor duplicated: ${id}`)
+    seen.add(id)
+    return tiny ? "" : loadKnowledgeTopic(id, { promptOnly: true })
+  })
+  const unresolved = result.match(/\{\{knowledge:[^{}]*\}\}/)
+  if (unresolved) throw new Error(`prompt knowledge anchor cannot be resolved: ${unresolved[0]}`)
+  return result
+}
 
 /**
  * Slot prompt (`prompts/<name>`) — missing file ⇒ "" (silent). The caller (the assembly

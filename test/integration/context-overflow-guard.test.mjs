@@ -5,7 +5,9 @@
  * 业务入口两档（都是用户真会走的那条路）：
  *  - 11-1 / 11-2 / 11-4 / 11-6 / 11-7 / 11-8 = **真会话链路**：`runAgent`（prepareRun → 安全点守卫 → 压缩 → 发送面净判 → 回执）；
  *  - 11-3 / 11-9 = 安全点（`runCompactionCheck`）∥ 发送面（`chat`）按回合环同序（`agent/turn-loop.mjs:143-147`）——
- *    该行设计的交互组件就是「预算面 ↔ 发送面」与「`splitHistory` 无中段支 → `shrinkOversized`」，故不进会话层。
+ *    该行设计的交互组件就是「预算面 ↔ 发送面」与「`splitHistory` 无中段支 → `shrinkOversized`」，故不进会话层；
+ *  - 11-5 = **恢复链路 + 真会话链路**：盘上槽（巨历史 + `estimateSample`）→ `resumeSlot` → `applySession`
+ *    （样本在此接回）→ `runAgent`。判的是「重启后继续大会话不再吃 400」。
  *
  * 模型侧 = `node:http` 本机假 OpenAI SSE 端点 + 请求体留档（先例 `test/integration/review-doc-scope.test.mjs:27-52`）；
  * 零外网、零付费端点、零 `globalThis.fetch` 桩（走真 transport：`chat` → `proxyFetch` 直连分支 → 本机 127.0.0.1）。
@@ -18,15 +20,20 @@
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { createAgent, runAgent } from "../../thincoder-core/agent.mjs"
 import { runCompactionCheck } from "../../thincoder-core/agent/run-stages.mjs"
 import { chat } from "../../thincoder-core/provider/core.mjs"
-import { ASCII_CHARS_PER_TOKEN } from "../../thincoder-core/provider/rate.mjs"
-import { contextUsage } from "../../thincoder-core/token-window.mjs"
+import { ASCII_CHARS_PER_TOKEN, ESTIMATOR_VERSION } from "../../thincoder-core/provider/rate.mjs"
+import { contextUsage, estimateTokens, tokenKey, tokenRatioOf } from "../../thincoder-core/token-window.mjs"
+import { policyBudget } from "../../thincoder-core/config.mjs"
+import { _resetSessionsDirForTest, _setSessionsDirForTest, slotPath, writeEndMarker, writeSessionFile } from "../../thincoder-core/session-slots.mjs"
+import { applySession, resumeSlot } from "../../thincoder-core/session-lifecycle.mjs"
 import { _resetLogsDirForTest, _setLogsDirForTest } from "../../thincoder-core/log.mjs"
 
 // ---------- 夹具 ----------
@@ -134,15 +141,16 @@ const logsDir = mkdtempSync(join(tmpdir(), "ctx-overflow-int-logs-"))
 _setLogsDirForTest(logsDir)
 after(() => {
   _resetLogsDirForTest()
-  rmSync(cwd, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(logsDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  removeTempDirBestEffort(cwd)
+  removeTempDirBestEffort(logsDir)
 })
 
-/** 真会话场景：假 provider + `createAgent`（`deepseek-flash` 无 `maxTokens` ⇒ absent 档）。 */
-async function session(t, { history = [], handler, model = "deepseek-flash", compactThreshold, tools = [] }) {
+/** 真会话场景：假 provider + `createAgent`（`deepseek-flash` 无 `maxTokens` ⇒ absent 档）。
+ *  `providerFields` 追加到 provider 条目（窗口档 `modelContext` 等）；缺省 = 模型自身窗口。 */
+async function session(t, { history = [], handler, model = "deepseek-flash", compactThreshold, tools = [], providerFields = {} }) {
   const stub = await providerStub(handler)
   t.after(() => stub.close())
-  const provider = { model, baseURL: `http://127.0.0.1:${stub.port}`, apiKey: "sk-test" }
+  const provider = { model, ...providerFields, baseURL: `http://127.0.0.1:${stub.port}`, apiKey: "sk-test" }
   const agent = createAgent({
     provider,
     tools,
@@ -164,11 +172,13 @@ const turnCalls = (stub) => stub.requests.filter((r) => !r.compress)
 
 // ---------- 用例 ----------
 
-test('11-1 CLI 会话估算越线：压缩出现一次、回合请求照发、无 400', { timeout: 120_000 }, async (t) => {
+test('CLI 11-1 CLI 会话估算越线：压缩出现一次、回合请求照发、无 400', { timeout: 120_000 }, async (t) => {
   const s = await session(t, {
     history: historyWithGiant(620_000),
-    // 显式压缩线 750,000 抬到估算之上 ⇒ 阈值面早退，那一次压缩只可能来自**安全点守卫**
-    // （620,039 > limit 616,000）——量的就是本批 ① 的那一跳。
+    // 窗口压到 320K（`CONTEXT-COMPACTION.md` §2.2 的用户现场档）：absent 档 reserve = 服务端默认 65,536
+    // ⇒ limit 262,144、压缩线 212,144。620,039 > 262,144 ⇒ 起跑预判（§5.2）当场处置存量历史。
+    providerFields: { modelContext: { "deepseek-flash": 320 } },
+    // 显式压缩线 750,000 抬到估算之上 ⇒ 阈值面早退，那一次压缩只可能来自 run 起跑的切换预判/安全点守卫。
     compactThreshold: 750_000,
     handler: ({ compress }) => ({ content: compress ? "SUMMARY: earlier work compressed." : "handled" }),
   })
@@ -190,37 +200,39 @@ test('11-1 CLI 会话估算越线：压缩出现一次、回合请求照发、�
   assert.ok(s.stub.requests.every((r) => r.body.max_tokens === undefined), "absent 语义不动——本批仍不发 max_tokens")
 })
 
-test('11-2 摘要超长压后仍越线：一条带三实数的错误、回合请求零发、无 400', { timeout: 120_000 }, async (t) => {
+test('CLI 11-2 摘要超长：处置链丢弃后照发，压后的请求落在上限内', { timeout: 120_000 }, async (t) => {
   const s = await session(t, {
     history: historyWithGiant(620_000),
-    // 同上：阈值面早退，这次压缩由守卫强压一次；摘要桩回 700,000-token 内容
-    // （"y".repeat(2_100_000)，ASCII/4）⇒ 压后仍 > limit 616,000。
+    // 同上：窗口 320K ⇒ limit 262,144；阈值面早退（显式线 750,000），处置由起跑预判发起。
+    // 摘要桩回 700,000-token 内容（"y".repeat(2_800_000)，ASCII/4 口径 ⇒ 远超 limit）——
+    // `CONTEXT-COMPACTION.md` §5.1 第 ⑥ 步：摘要压不到线下就当场丢弃，不等连续失败。
+    providerFields: { modelContext: { "deepseek-flash": 320 } },
     compactThreshold: 750_000,
-    handler: ({ compress }) => ({ content: compress ? "y".repeat(2_800_000) : "should never be sent" }),
+    handler: ({ compress }) => ({ content: compress ? "y".repeat(2_800_000) : "handled" }),
   })
 
-  const error = await runAgent(s.agent, "continue", s.callbacks).then(() => null, (e) => e)
+  const answer = await runAgent(s.agent, "continue", s.callbacks)
 
-  assert.ok(error, "压后仍越线必须当场报错")
-  assert.equal(error.kind, "context_overflow", "错误分类 = 上下文超限")
-  assert.equal(error.retryable, false, "不可重试（同一条请求不再重发）")
-  const prompt = Number(/prompt ~(\d+) tokens/.exec(error.message)?.[1])
-  assert.ok(prompt > 690_000, `三实数之一：prompt 估算 ${prompt} 取自压缩后的超长摘要（≈700,000），远超 limit 616,000`)
-  assert.match(error.message, /max_tokens not sent/, "三实数之二：max_tokens 未发（absent 档）")
-  assert.match(error.message, /window 1000000 \(limit 616000\)/, "三实数之三：窗口 / 上限")
-  assert.doesNotMatch(error.message, /LLM API error/, "是本地拒绝，不是服务端 400 回执")
-
-  assert.equal(compressCalls(s.stub).length, 1, "那一次强压确实发过（否则「压后仍超」不成立）")
-  assert.equal(turnCalls(s.stub).length, 0, "回合请求零发（越窗请求没交给服务端）")
+  assert.equal(answer, "handled", "摘要面压不下来也不把任务打断（⑥ 丢弃把它救回来）")
+  assert.equal(s.events.compress.length, 1, "面板收到一次压缩完成")
+  assert.equal(s.events.compress[0].mode, "fallback", "那一次走了确定性丢弃（摘要本身太长的必然结果）")
+  assert.ok(s.events.compress[0].discardedMessages > 0, "回执报出丢了多少条（§5.1 载荷）")
+  assert.equal(compressCalls(s.stub).length, 1, "摘要请求恰一次（丢弃零网络，不重发）")
+  assert.equal(turnCalls(s.stub).length, 1, "回合请求恰一次")
   assert.ok(s.stub.requests.every((r) => r.status === 200), "零 400")
+
+  // 业务可观察：发出去的那条请求落在用户设的窗口里（压后的历史估算 ≤ limit）
+  const sent = contextUsage(s.agent, s.agent._ctxBasis?.overhead ?? {})
+  assert.ok(sent.total <= 262_144, `压后的请求 ${sent.total} 应落在 limit 262,144 之内`)
+  assert.ok(s.stub.requests.every((r) => r.body.max_tokens === undefined), "absent 语义不动——仍不发 max_tokens")
 })
 
-test('11-3 absent 档：越线强压一次后照发；未越线零压缩——deepseek 形状与退化档各验', { timeout: 120_000 }, async (t) => {
+test('CLI 11-3 absent 档：越线强压一次后照发；未越线零压缩——deepseek 形状与退化档各验', { timeout: 120_000 }, async (t) => {
   // 安全点 ∥ 发送面（`agent/turn-loop.mjs:119-131` 同序）：非会话层——本行的交互组件就是这两面。
-  const safetyPoint = async (model, tokens, handler) => {
+  const safetyPoint = async (model, tokens, handler, providerFields = {}) => {
     const stub = await providerStub(handler)
     t.after(() => stub.close())
-    const provider = { model, baseURL: `http://127.0.0.1:${stub.port}`, apiKey: "sk-test" }
+    const provider = { model, ...providerFields, baseURL: `http://127.0.0.1:${stub.port}`, apiKey: "sk-test" }
     const events = { compress: [] }
     const callbacks = { onCompress: (info) => events.compress.push(info) }
     const agent = createAgent({
@@ -249,8 +261,9 @@ test('11-3 absent 档：越线强压一次后照发；未越线零压缩——de
     return { stub, events, error }
   }
 
-  // 半段一（越线，620,000）：强压一次，回合请求照发、无 400
-  const over = await safetyPoint("deepseek-flash", 620_000, ({ compress }) => ({ content: compress ? "SUMMARY: compressed." : "handled" }))
+  // 半段一（越线，620,000，320K 窗 ⇒ limit 262,144）：强压一次，回合请求照发、无 400
+  const WIN320 = { modelContext: { "deepseek-flash": 320 } }
+  const over = await safetyPoint("deepseek-flash", 620_000, ({ compress }) => ({ content: compress ? "SUMMARY: compressed." : "handled" }), WIN320)
   const overError = over.error
   assert.equal(overError, null, `越线强压后必须发得出去，实读错误：${overError?.message ?? ""}`)
   assert.equal(over.events.compress.length, 1, "面板收到一次压缩完成")
@@ -258,22 +271,23 @@ test('11-3 absent 档：越线强压一次后照发；未越线零压缩——de
   assert.equal(turnCalls(over.stub).length, 1, "回合请求恰一次")
   assert.ok(over.stub.requests.every((r) => r.status === 200), "零 400")
 
-  // 半段二（未越线，100,000）：零压缩、零抛、请求照发
-  const under = await safetyPoint("deepseek-flash", 100_000, () => ({ content: "handled" }))
+  // 半段二（未越线，100,000 < limit 262,144）：零压缩、零抛、请求照发
+  const under = await safetyPoint("deepseek-flash", 100_000, () => ({ content: "handled" }), WIN320)
   assert.equal(under.error, null, "未越线不得抛")
   assert.equal(under.events.compress.length, 0, "零压缩")
   assert.equal(compressCalls(under.stub).length, 0, "零压缩请求")
   assert.equal(turnCalls(under.stub).length, 1, "请求照发")
   assert.equal(turnCalls(under.stub)[0].body.max_tokens, undefined, "absent 语义不动（不发 max_tokens）")
 
-  // 半段三（退化档 256K 窗口 / 256K 最大回答 + 100,000）：上限由地板抬到 128,000 ⇒ 不误伤
+  // 半段三（256K 窗 / 256K 最大回答的模型 + 100,000）：absent 档 reserve 取服务端默认 65,536
+  // ⇒ limit 190,464、压缩线 140,464 ⇒ 100,039 既未到线也未越限，不误伤
   const degenerate = await safetyPoint("doubao-seed-2-1-turbo-260628", 100_000, () => ({ content: "handled" }))
-  assert.equal(degenerate.error, null, "退化档不得被自己的上限卡死")
-  assert.equal(degenerate.events.compress.length, 0, "零压缩（100,000 未到 128,000）")
+  assert.equal(degenerate.error, null, "窄窗档不得被自己的上限卡死")
+  assert.equal(degenerate.events.compress.length, 0, "零压缩（100,039 未到 140,464）")
   assert.equal(turnCalls(degenerate.stub).length, 1, "请求照发")
 })
 
-test('11-4a provider 回 400 越窗报文：压一次 + 重试一次，成功即返回', { timeout: 120_000 }, async (t) => {
+test('CLI 11-4a provider 回 400 越窗报文：压一次 + 重试一次，成功即返回', { timeout: 120_000 }, async (t) => {
   const overflowText = JSON.stringify({
     error: {
       message: "This model's maximum context length is 1048576 tokens. However, you requested 1068083 tokens (674867 in the messages, 393216 in the completion).",
@@ -299,7 +313,7 @@ test('11-4a provider 回 400 越窗报文：压一次 + 重试一次，成功即
   assert.equal(turnCalls(s.stub)[1].status, 200, "重试回合 200")
 })
 
-test('11-4b 二次越窗：typed 错误浮出、不再压、不截断', { timeout: 120_000 }, async (t) => {
+test('CLI 11-4b 二次越窗：typed 错误浮出、不再压、不截断', { timeout: 120_000 }, async (t) => {
   const overflowText = JSON.stringify({
     error: {
       message: "This model's maximum context length is 1048576 tokens. However, you requested 1068083 tokens (674867 in the messages, 393216 in the completion).",
@@ -321,9 +335,82 @@ test('11-4b 二次越窗：typed 错误浮出、不再压、不截断', { timeou
   assert.ok(!text.includes("\u2026truncated") && !/truncated/i.test(text), "不静默截断")
 })
 
+// ---------- 11-5 恢复带样本的会话：首请求走估算支（CONTEXT-COMPACTION.md §6.17.1 链二）----------
+
+/** 真上游的计法比本机估算高 `TRUE_RATIO` 倍——现场读数 = 723,272 / 491,000（`provider/rate.mjs` 头注同记这一对）：
+ *  「本机估 491,000 < 压缩线」而「服务端眼里 723,272 > limit」正是样本存在的理由，也是本行要断的那一跳。
+ *  样本值照现场原样落盘；缩放的是夹具的历史体量——压缩线封顶后，现场那对体量在 1M 窗上落不进上面那个缺口。 */
+const TRUE_RATIO = 723_272 / 491_000
+
+test('CLI 11-5 恢复带样本的长会话：首请求走估算支先压一次，不吃 400', { timeout: 120_000 }, async (t) => {
+  // RTM 11-5 行的三个数：槽样本 num 723_272 / den 491_000（比 ≈1.473）· 窗档 `providers[].modelContext: 320`
+  // ⇒ window 327,680 · absent 档 reserve 65,536 ⇒ limit 262,144 · 压缩线 212,144（limit − 注入余量 50,000）。
+  // 窗档必须落在封顶门槛以下（`limit ≤ 312,144`）：那一带 `limit − threshold` 恒为 50,000，
+  // 「未校准在线上、校准后越线」这个前提才可达——1M 窗封顶后 threshold 262,144 而 limit 606,784，
+  // 解不出同时满足 `raw < threshold` 与 `raw × 1.473 > limit` 的 raw（下限 411,939 已高于上限）。
+  const GIANT = 195_000
+  const SAMPLE = { num: 723_272, den: 491_000 }
+  const provider = { model: "deepseek-flash", apiKey: "sk-test", modelContext: { "deepseek-flash": 320 } }
+  // 前提三数读生产面同一出口 `policyBudget`（有效窗口那一侧）：压缩线、守卫与尾预算都读它——
+  // 用 `requestBudget` 取的是模型窗口那一侧，normal 档下逐位相同，但换档就会分叉，前提不再镜像被测路径。
+  const budget = policyBudget(provider, undefined, "normal")
+  assert.equal(budget.window, 327_680, `夹具前提：窗口读数 ${budget.window}`)
+  assert.equal(budget.limit, 262_144, `夹具前提：limit = window − reserve = ${budget.limit}`)
+  assert.equal(budget.threshold, 212_144, `夹具前提：压缩线 ${budget.threshold}`)
+
+  // 桩按真上游口径作答：输入估算 × TRUE_RATIO 越 limit 就回越窗 400（报文逐字同 11-4a 那一族）。
+  const stub = await providerStub(({ compress, body }) => {
+    if (compress) return { content: "SUMMARY: earlier work compressed." }
+    const promptTokens = Math.round(estimateTokens(body.messages ?? []) * TRUE_RATIO)
+    const message = `This model's maximum context length is ${budget.window} tokens. However, you requested ${promptTokens} tokens (${promptTokens} in the messages, ${budget.reserve} in the completion).`
+    return promptTokens > budget.limit
+      ? { status: 400, text: JSON.stringify({ error: { message, type: "invalid_request_error" } }) }
+      : { content: "handled" }
+  })
+  t.after(() => stub.close())
+  provider.baseURL = `http://127.0.0.1:${stub.port}`
+
+  // ① 盘上会话：可摘中段的巨历史（本机估算 ≈ 195,000）+ 校准样本（键 = `tokenKey(provider)`）
+  const sessCwd = mkdtempSync(join(tmpdir(), "ctx-overflow-resume-"))
+  _setSessionsDirForTest(join(sessCwd, "sessions"))
+  t.after(() => { _resetSessionsDirForTest(); removeTempDirBestEffort(sessCwd) })
+  writeSessionFile(slotPath(sessCwd, 1), {
+    version: 2, cwd: sessCwd, history: historyWithGiant(GIANT), contextHistory: [],
+    activeProvider: "stub", activeModel: provider.model, updatedAt: Date.now(),
+    estimateSample: { key: tokenKey(provider), num: SAMPLE.num, den: SAMPLE.den, est: ESTIMATOR_VERSION },
+  })
+  writeEndMarker(sessCwd, 1)
+
+  // ② 真恢复链路：resumeSlot → applySession（样本在此被 restoreTokenSample 接回）
+  const { slot, data } = await resumeSlot(sessCwd)
+  assert.equal(slot, 1, "本端记录可用的槽应被复用")
+  const agent = createAgent({ provider, tools: [], config: { agent: {}, traces: { enabled: false } }, cwd: sessCwd, history: [] })
+  applySession(agent, data)
+  const ratio = tokenRatioOf(agent)
+  assert.ok(ratio > 1, `恢复后校准比应 > 1（样本真的接回来了），实读：${ratio}`)
+
+  // 前提读数（不是判据）：不校准 = 在线下（不会压），校准后 = 越过 limit（真上游会 400）——
+  // 两者都在 ⇒ 这一次压缩只可能来自恢复出的样本。
+  const raw = estimateTokens(agent.history)
+  assert.ok(raw < budget.threshold, `夹具前提：未校准估算 ${raw} 应低于压缩线 ${budget.threshold}`)
+  assert.ok(Math.round(raw * ratio) > budget.limit, `夹具前提：校准后 ${Math.round(raw * ratio)} 应越过 limit ${budget.limit}`)
+
+  // ③ 发一条消息：业务可观察 = 用户拿到答复、压缩恰一次、零 400
+  const events = { compress: [] }
+  const answer = await runAgent(agent, "continue", { onCompress: (info) => events.compress.push(info) })
+
+  assert.equal(answer, "handled", "用户拿到答复（不是越窗错误，也不是被上游 400 打回）")
+  assert.equal(events.compress.length, 1, "压缩事件恰一次")
+  assert.equal(events.compress[0].mode, "summary", "那一次是真摘要压缩")
+  assert.ok(stub.requests.every((r) => r.status === 200), `零 400，实读状态序列：${JSON.stringify(stub.requests.map((r) => r.status))}`)
+  assert.equal(stub.requests[0].compress, true, "压缩请求在回合请求之前（首请求前先压一次，不是吃了 400 才补救）")
+  assert.equal(compressCalls(stub).length, 1, "摘要请求恰一次")
+  assert.equal(turnCalls(stub).length, 1, "回合请求恰一次")
+})
+
 // ---------- 11-6 / 11-7 / 11-8 / 11-9 可达性门（CONTEXT-COMPACTION.md §6.17）----------
 
-test('11-6 正常：固定开销吃掉压缩线 ⇒ 零压缩、零摘要请求，用户照常拿到答复', { timeout: 120_000 }, async (t) => {
+test('CLI 11-6 正常：固定开销吃掉压缩线 ⇒ 零压缩、零摘要请求，用户照常拿到答复', { timeout: 120_000 }, async (t) => {
   const s = await session(t, {
     // 复刻 #1833 现场：压缩线 76,800（128K 档的线，此处写显式值 ⇒ 与本档窗口解耦）、
     // 巨型工具 schema 把 system + tools 抬到线上、history 只一百来 token。
@@ -348,7 +435,7 @@ test('11-6 正常：固定开销吃掉压缩线 ⇒ 零压缩、零摘要请求�
   assert.ok(s.stub.requests.every((r) => r.status === 200), "零 400")
 })
 
-test('11-7 边界：固定开销逼近压缩线、中段可摘够 ⇒ 压缩恰一次，回复仍引用尾部工具结果', { timeout: 120_000 }, async (t) => {
+test('CLI 11-7 边界：固定开销逼近压缩线、中段可摘够 ⇒ 压缩恰一次，回复仍引用尾部工具结果', { timeout: 120_000 }, async (t) => {
   const s = await session(t, {
     // 开销逼近线（约 0.8 倍线）但仍在线下：门该放行，且这靠的是「中段够大」而不是「开销小」
     tools: [giantTool(300_000)],
@@ -375,7 +462,7 @@ test('11-7 边界：固定开销逼近压缩线、中段可摘够 ⇒ 压缩恰�
   assert.ok(s.stub.requests.every((r) => r.status === 200), "零 400")
 })
 
-test('11-8 边界：模型主动压缩（context 工具）不受门拦 —— 压后仍越线也执行恰一次', { timeout: 120_000 }, async (t) => {
+test('CLI 11-8 边界：模型主动压缩（context 工具）不受门拦 —— 压后仍越线也执行恰一次', { timeout: 120_000 }, async (t) => {
   let dialogSeq = 0
   const s = await session(t, {
     // 与 11-6 同一格：阈值面本该被门挡住（压后仍越线），force 全文豁免
@@ -399,13 +486,16 @@ test('11-8 边界：模型主动压缩（context 工具）不受门拦 —— �
 
   assert.equal(answer, "handled", "主动压缩之后用户照常拿到答复")
   assert.equal(s.events.compress.length, 1, "压缩仍执行恰一次（门只拦阈值面，`force` 全文豁免）")
-  assert.equal(s.events.compress[0].mode, "summary", "走的是真摘要压缩")
-  assert.equal(compressCalls(s.stub).length, 1, "摘要请求恰一次")
+  // 夹具前提已说清：压完仍越线 ⇒ `CONTEXT-COMPACTION.md` §5.1 第 ⑥ 步当场补一次确定性丢弃，
+  // 回执因此报 `mode:"fallback"`（摘要请求照发过，丢弃是它之后那一格，不是它的替代）。
+  assert.equal(s.events.compress[0].mode, "fallback", "压后仍越线 ⇒ 回执是丢弃那一格")
+  assert.ok(s.events.compress[0].discardedMessages > 0, "丢弃报出条数")
+  assert.equal(compressCalls(s.stub).length, 1, "摘要请求恰一次（丢弃零网络）")
   assert.equal(turnCalls(s.stub).length, 2, "回合请求两次（派 context 工具那次 + 压缩后的下一次）")
   assert.ok(s.stub.requests.every((r) => r.status === 200), "零 400")
 })
 
-test('11-9 错误：无中段可摘 ⇒ 走确定性截断，门不拦、零摘要请求', { timeout: 120_000 }, async (t) => {
+test('CLI 11-9 错误：无中段可摘 ⇒ 走确定性截断，门不拦、零摘要请求', { timeout: 120_000 }, async (t) => {
   // 安全点位形（与 11-3 同口径——本行设计的交互组件 = `splitHistory` 无中段支 → `shrinkOversized`）：
   // 「无中段」只在整段历史就是那一条巨消息时出现；真会话里 `runAgent` 至少再推入两条机器提醒，
   // `keepTailSize` / `splitHistory` 因而总能切出中段（len 2 ⇒ keepTail 0 ⇒ 中段 = 整段）。

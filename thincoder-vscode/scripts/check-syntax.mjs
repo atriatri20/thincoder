@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * scripts/check-syntax.mjs — zero-dependency syntax gate (TOOLS.md §10.2).
+ * scripts/check-syntax.mjs — zero-dependency syntax gate.
  *
  * Replaces the eslint devDependency (removed 2026-09-02): walks every JS file
  * in the repo (src/ + test/ + webview/ + extension.mjs + scripts/ — this file
  * self-included) and runs `node --check` on each. Non-zero exit lists every
  * failing file; zero exit = all files parse.
  *
- * Detection-capability loss (documented in TOOLS.md §10.2): node --check is
+ * Detection-capability loss: node --check is
  * syntax-only — eslint's unused-vars/no-undef-class rules are no longer run;
  * real-link verification and the test suite cover that ground.
  */

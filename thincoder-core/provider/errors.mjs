@@ -8,7 +8,6 @@
  */
 
 import { RETRYABLE_STATUS, RATE_LIMIT_BACKOFF_MS } from "./rate.mjs"
-import { requestBudget } from "../config.mjs"
 
 /** Parse Retry-After: 秒数 or HTTP-date；上限 300s（会诊 #11）— 异常头不得让 CLI 睡数小时。
  *  header 缺失/非法时退回指数退避表（rateLimitHits 计数取档）。 */
@@ -150,14 +149,40 @@ export function contextOverflowError(provider, prompt, budget, remedy) {
   return err
 }
 
+/**
+ * 固定开销单独越线的 typed 错误（`CONTEXT-COMPACTION.md` §5）：history 归零后 `total` 仍等于固定开销 ⇒ 压缩无解。
+ * `kind` 仍取 `context_overflow`（同一种条件一个 kind——CLI ∥ VSC ∥ Desktop 三处渲染面不必多认一类），
+ * `reason` 把处置分开：这一格不可通过压缩解决。报文给固定开销 ∥ limit ∥ window 三数，
+ * 并说明压缩解不了、只能降 max_tokens ∥ 换更大窗的模型 ∥ 减 system 与 tools 声明。
+ */
+export function overheadOverflowError(provider, budget, fixedFloor) {
+  const cls = classifyResponsesErrorCode("context_length_exceeded")
+  const err = new Error(
+    `context overflow: fixed overhead (system + tools) ~${fixedFloor ?? 0} tokens alone exceeds the limit` +
+    ` ${budget?.limit} (window ${budget?.window}) — compaction cannot help: the overhead stays after the history is summarized.` +
+    ` Lower max_tokens, switch to a larger-window model, or trim the system prompt / tools declaration.` +
+    ` [model ${provider?.model ?? "unknown"}]`,
+  )
+  err.kind = cls.kind
+  err.retryable = cls.retryable
+  err.reason = "overhead_exceeds_limit"
+  return err
+}
+
 /** 发送面净判（§6.17 第二道，四个装配面同形一次调用）：`estPrompt` = 输入侧估算
  *  （= `estimateRequestTokens(X) − (body.max_tokens ?? 0)`，四面同一定义——不减会把输出预算白扣一份）。
  *  内部阶段豁免：`compress` / `distill` / 续写本身就是越线后用来把上下文降下来的那次调用，
- *  判它 = 判掉止血动作本身（标签已存在，零新增机制）。 */
-export function assertPromptFits(provider, estPrompt, logCtx) {
+ *  判它 = 判掉止血动作本身（标签已存在，零新增机制）。
+ *  `budget` = **调用方已算好的预算对象**（`requestBudget` ∥ `policyBudget`，与本链两个数同源）——
+ *  本档不自己重算一次预算（`CONTEXT-COMPACTION.md` §2.2「stats、守卫和压缩使用同一预算对象」）：
+ *  重算一处就会与调用方那处按不同窗口算，报文里的 limit 与它拿来判的 limit 成了两个数。
+ *  缺参即拒，不给默认值：漏传时 `estPrompt > undefined` 恒为假 ⇒ 守卫静默放行（比不守更贵）。 */
+export function assertPromptFits(provider, estPrompt, logCtx, budget) {
   const stage = logCtx?.stage
   if (stage === "compress" || stage === "distill" || logCtx?.isContinuation === true) return
-  const budget = requestBudget(provider)
+  if (!budget || typeof budget.limit !== "number") {
+    throw new Error(`assertPromptFits: budget is required (the caller's requestBudget() / policyBudget() object) — got ${JSON.stringify(budget)}; a missing budget would silently disable the pre-send guard`)
+  }
   if (!(estPrompt > budget.limit)) return
   throw contextOverflowError(provider, estPrompt, budget, "the request was not sent; reduce the conversation (/compact or prune) before retrying")
 }

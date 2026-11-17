@@ -1,15 +1,16 @@
 /**
- * edit-batch.mjs — edit 工具的数组形态（edits: [...]）：一次多文件原子替换。
+ * edit-batch.mjs — edit 工具的数组形态（edits: [...]）：一次多档替换，**逐条成败、逐档落盘**。
  * （2026-08-31 工具顺手度 §9 ②；2026-09-01 缺陷修复"同文件多条串行累积"；
- * 2026-09-04 EDIT.md §6——条目级判定+应用迁至 edit-diff.mjs——批量调共用。）
+ * 2026-09-04 EDIT.md §2「匹配与应用」——条目级判定+应用迁至 edit-diff.mjs——批量调共用。）
  *
- * 语义：同一 path 的多条编辑**分两类应用**（帧判据单源 = EDIT-HELPERS §7.3 R1–R4）——
- * 行号条目先全部应用（按 startLine 降序，范围重叠则整批拒），内容条目随后按调用序
- * 串行累积；跨 path 条目互不影响（并行原子语义）；任一条失败 → 全不写（原子性保留）。
- * 每条目独立按判定序（EDIT.md §4——分支 0 单行替换 / 零重叠→替换即删 /
- * LCS / 空 new 显式报错；EDIT.md §5（约束——删行形态）：省略 new_string = 删行。顶层 path
- * （args.path）为无自带 path 条目的默认（2026-09-05 用户裁定——条目自带 path 优先——见
- * EDIT.md §5 修订注）。排顺序与累积走 edit-diff 的两个零 IO 纯函数——本档只留 IO（读 / 写 / 回执）。
+ * 语义（权威 = EDIT.md §2「匹配与应用」）：同一 path 的多条编辑**分两类应用**（帧判据单源 =
+ * `EDIT-HELPERS.md` §4「批量帧」的 R1–R4）——行号条目先应用（按 startLine 降序，范围重叠则**那两条都废**），
+ * 内容条目随后按调用序串行累积；同一档的多条**只写一次**（写前门判该档最终内容）。
+ * 一条失败只废它自己，同档其余条照应用、其余档照落盘，批内零回滚；档级失败（读不到 ∥ 门拒 ∥
+ * 写盘抛错）只连坐该档。每条目独立按判定序（分支 0 单行替换 / 零重叠→替换即删 /
+ * LCS / 内容形空 new 显式报错；行号形省略 new_string 或传空串 = 删行——EDIT.md §1「参数」空值矩阵）。顶层 path
+ * （args.path）为无自带 path 条目的默认（2026-09-05 用户裁定——条目自带 path 优先）。
+ * 排顺序与累积走 edit-diff 的两个零 IO 纯函数——本档只留 IO（读 / 写 / 回执）。
  */
 import { readFile } from "node:fs/promises"
 import { resolveInCwd, normalizeEOL, joinWithEol, gitDiffOne, autoSyntaxCheck } from "./shared.mjs"
@@ -17,117 +18,190 @@ import { resolveInCwd, normalizeEOL, joinWithEol, gitDiffOne, autoSyntaxCheck } 
 // 仅在调用期使用——ESM 循环下安全（无模块求值期取值）。
 // 写盘经单一写路径点（§2.13.5）——本档不再直调 fs；回执组装共用 edit-diff 的 composeEditReceipt。
 import { writeThroughPath, lineAnchorVerdict, lineAnchorRefusal } from "./write-path.mjs"
-// EDIT.md §6：批量条目判定+应用共用 edit-diff（EDIT.md §4 分支 0 单行替换 + 行级 LCS——零重叠→替换即删）；
-// EDIT.md §5：edits 互斥错误文本随前置校验分支迁出至 edit-diff.mjs。
-// 回执组装共用 edit-diff 的 composeEditReceipt（单点——缺省回执 = base + 写入点上下文）。
-import { assertEditArgsExclusive, assertEditsContainer, assertEditEntries, validateEditEntry, hasLineParams, planEditEntries, applyPlannedEntries, splitLines, EMPTY_NEW_STRING_LINE, EDIT_ENTRY_NO_PATH, editEntryLabel, deleteTarget, composeEditReceipt } from "./edit-diff.mjs"
+// EDIT.md §2「匹配与应用」：批量条目判定+应用共用 edit-diff；判定序（分支 0 单行替换 + 行级 LCS——零重叠→替换即删）见 computeEditEntry；
+// EDIT.md §1「参数」：edits 互斥错误文本随前置校验分支迁出至 edit-diff.mjs。
+// 回执组装共用 edit-diff 的 composeEditReceipt（单点——缺省回执 = base + 写入点上下文）；
+// 批级回执的两件文案（逐条失败行 ∥ 末行汇总）单源 = edit-receipt.mjs（`EDIT-HELPERS.md` §4「批量帧」：回执由 `editEntryFailureLine` ∥ `editBatchSummary` 统一构造）。
+import { editEntryFailureLine, editBatchSummary } from "./edit-receipt.mjs"
+import { assertEditArgsExclusive, assertEditsContainer, validateEditEntry, hasLineParams, planEditEntries, applyPlannedEntries, splitLines, EDIT_ENTRY_NO_PATH, editEntryLabel, editsEntryError, deleteTarget, composeEditReceipt } from "./edit-diff.mjs"
 
 /**
- * Apply the `edits` array form: multi-file atomic replacement. Throws on any
- * failure (atomic — nothing written). Returns the per-entry result text (joined)
- * + the constant batch summary line at the end (#796 — EDIT.md §5).
+ * Apply the `edits` array form: **逐条成败、逐档落盘**（EDIT.md §2「匹配与应用」）。
+ *
+ * 一条失败只废它那一条：条目校验 ∥ 行号锚护栏 ∥ 应用都在内存里逐条做，失败只记它自己那一行，
+ * 同档其余条照应用、其余档照落盘；批内零回滚。档级失败（档读不到 ∥ 该档最终内容
+ * 被写前门拒 ∥ 写盘抛错）只连坐该档——那几条没有可落的内容，报成功就是假话。
+ *
+ * **写单位 = 档、报单位 = 条**：同一 path 的多条合成一次就地写（`writeThroughPath` 的
+ * `op:"write"` + 同一跳记账，不落暂存档、不走 `rename`）；回执逐条一行、按调用序
+ * 回原位，末行恒为计数行。
+ *
+ * 批内**没有任何跨档保证**：已写成的档不回滚，「全部成功」不是可以依赖的前提——调用方据以
+ * 决策的单位是每一行回执。
  */
 export async function applyEditBatch(args, ctx) {
   assertEditsContainer(args.edits)
   assertEditArgsExclusive(args)
-  assertEditEntries(args.edits) // #325 条目预扫（非对象条目 ⇒ 含下标成形错误；不读盘）
-  // 原子：先全量检查（所有文件的替换都可执行）——任一失败全不写。
-  // 2026-09-01 缺陷修复（TOOLS.md §9 ②"同文件多条规则"）：同一 path 的多条编辑基于同一份
-  // 累积内容应用，写盘前不得让后者覆盖前者（原实现每条都基于盘上原始内容计算、写盘循环
-  // 后置 → 除最后一条外全部静默丢失）；跨 path 条目互不影响（并行原子语义不变）。
-  // 累积顺序自 2026-11-02 起 = 帧（行号条目降序先应用、内容条目随后）——见下方判定点。
-  const groups = new Map() // abs → 每文件一条流水线
-  for (let i = 0; i < args.edits.length; i++) {
+  const total = args.edits.length
+  // 每条一个结局：{ ok:true, g, out } ∥ { ok:false, reason }。回执只在全部写盘之后组装——
+  // 档级写失败要把该档已算成的条改判为失败（「该档不成就整档不成」）。
+  const state = new Array(total)
+  const fail = (i, reason) => { state[i] = { ok: false, reason } }
+  const groups = new Map() // abs → 每档一条流水线
+
+  // ① 分组（路径解析 ∥ 条目校验——失败的条目只记它自己，不进组）
+  for (let i = 0; i < total; i++) {
     const e = args.edits[i]
+    // 条目非对象（null / 字符串 / 数字 / 数组）= **该条**成形错、不进组（EDIT.md §2「匹配与应用」
+    // 的文案单源 editsEntryError(i)「一条失败只废它自己」——整批拒会让一条手滑废掉全批，而那正是
+    // 逐条成败要灭的代价）。桥面同一判据（EDIT.md §2「匹配与应用」）。
+    if (e === null || typeof e !== "object" || Array.isArray(e)) { fail(i, editsEntryError(i)); continue }
     // 2026-09-05 用户裁定：顶层 path + edits 并存合法化——`e.path || args.path`（条目优先；
     // 缺省入口仅在此兜底）；两者皆无 → 原错误文本（措辞补顶层选项）。
     const p = e.path || args.path
-    if (!p) throw new Error(EDIT_ENTRY_NO_PATH)
-    // 前置校验（空 old / 非字符串 new——文本同 edit-diff 批量形态；读盘前校验）
-    validateEditEntry(e, { label: editEntryLabel(p), rich: false })
+    if (!p) { fail(i, EDIT_ENTRY_NO_PATH); continue }
+    try {
+      // 成形错 ∥ 空串 ∥ 互斥 ∥ 行号非法：都只废这一条（scope:"batch" ⇒ 文本不带写盘结论）
+      validateEditEntry(e, { label: editEntryLabel(p), scope: "batch" })
+    } catch (err) {
+      fail(i, err.message)
+      continue
+    }
     const abs = resolveInCwd(ctx, p)
     let g = groups.get(abs)
     if (!g) {
-      const raw = await readFile(abs, "utf8")
-      g = { abs, path: p, raw, content: normalizeEOL(raw), edits: [], origIdx: [] }
+      g = { abs, path: p, raw: null, content: null, readError: null, entries: [], idx: [], written: false }
       groups.set(abs, g)
     }
-    g.edits.push(e)
-    g.origIdx.push(i) // 条目在 args.edits 里的原始下标——回显按它回位（EDIT-HELPERS §7.3）
+    g.entries.push(e)
+    g.idx.push(i) // 条目在 args.edits 里的原始下标——回显按它回位（`EDIT-HELPERS.md` §4「批量帧」）
   }
-  // 判定点（§7.3 写死）：组循环**之前**用批前快照判一次——命中即抛、零写（下方第二个循环才写盘）。
-  // 组内不再逐条判：组内漂移由 R2（降序应用）自己算得出来，逐条再判会用同一份快照判出与 R2 相反的结果。
+
+  // ② 逐档读一次（读不到 ⇒ 该档所有条失败——原因带 ENOENT 原文）
   for (const g of groups.values()) {
-    for (const e of g.edits) {
-      if (!hasLineParams(e)) continue
-      const startLine = e.line ?? e.startLine
-      const endLine = e.line ?? e.endLine
-      if (lineAnchorVerdict(g.abs, startLine, endLine)) throw new Error(lineAnchorRefusal(g.abs, startLine, endLine))
+    try {
+      g.raw = await readFile(g.abs, "utf8")
+      g.content = normalizeEOL(g.raw)
+    } catch (err) {
+      g.readError = err.message
+      for (const i of g.idx) fail(i, g.readError)
     }
   }
-  // 回显按调用序（EDIT-HELPERS §7.3）：按条目在 `edits` 数组里的**原始下标**回填——跨文件
-  // 交错的批同样如此；按文件分组去排会排成 A、A、B，而模型是按位置对号的，顺序一变它会把
-  // 结果贴到错的那一笔上。
-  const prepared = new Array(args.edits.length)
+
+  // ③ 行号锚护栏（判定点写死：批前快照逐条判——命中只废那一条，零写不是它的后果）
+  // 组内不逐条再判：组内漂移由 R2（降序应用）自己算得出来，逐条再判会用同一份快照判出与 R2 相反的结果。
   for (const g of groups.values()) {
-    // 帧单源（§7.3 R1–R4）= edit-diff 的两个零 IO 纯函数：排顺序 + 按计划序累积
-    const plan = planEditEntries(g.edits, g.path)
-    if (plan.rejection) throw new Error(plan.rejection)
-    const applied = applyPlannedEntries(g.content, g.edits, plan.order, { path: g.path })
-    g.content = applied.content
-    // 合并快照的 shift = 全组净漂移（公式不变；重排后的取值由 AC11 钉住）
-    g.netShift = applied.results.reduce((n, r) => n + r.lineShift, 0)
-    // results 按组内调用序；g.origIdx[k] = 该结果在 args.edits 里的原始下标
-    applied.results.forEach((r, k) => { prepared[g.origIdx[k]] = { g, ...r } })
-  }
-  // 全部检查通过——每文件一次写盘（同文件多条：写入按帧排好后累积出的最终内容）；
-  // recordWrite 每组一条合并快照：startLine = 组内**所有**编辑受影响行的最小值
-  // （#2，2026-09-01 交付评审尾巴——原实现取首条 = 调用序第一条，逆序条目时
-  // 护栏下界过高、受影响区内的 insert_after 被放行），shift = 全组行数差累积
-  // ——受影响区护栏覆盖组内所有编辑（公式不变；重排后的取值由 AC11 钉住）
-  for (const g of groups.values()) {
-    const startLine = Math.min(...prepared.filter((p) => p.g === g).map((p) => p.editStartLine))
-    // 单一写路径点：默认 = writeFile + 记账；端侧注入 ⇒ 编辑器径（§2.13.5）。
-    await writeThroughPath(g.abs, joinWithEol(normalizeEOL(g.content).split("\n"), g.raw), {
-      op: "write",
-      record: { type: "edit", startLine, shift: g.netShift },
+    if (g.readError) continue
+    const keep = []
+    const keepIdx = []
+    g.entries.forEach((e, k) => {
+      if (hasLineParams(e)) {
+        const startLine = e.line ?? e.startLine
+        const endLine = e.line ?? e.endLine
+        if (lineAnchorVerdict(g.abs, startLine, endLine)) {
+          fail(g.idx[k], lineAnchorRefusal(g.abs, startLine, endLine))
+          return
+        }
+      }
+      keep.push(e)
+      keepIdx.push(g.idx[k])
     })
+    g.entries = keep
+    g.idx = keepIdx
   }
-  const results = []
-  for (const p of prepared) {
+
+  // ④ 帧排 + 逐条累积（帧单源 = edit-diff 的两个零 IO 纯函数：排顺序 + 按计划序累积）
+  const planned = [] // { g, results, idx }——待写档
+  for (const g of groups.values()) {
+    if (g.readError || g.entries.length === 0) continue
+    const plan = planEditEntries(g.entries, g.path)
+    const rejected = new Set(plan.rejections.map((r) => r.index))
+    for (const r of plan.rejections) fail(g.idx[r.index], r.reason) // 重叠：两条互指，各得一行
+    const pos = new Map() // 组内下标 → 存活序下标
+    const liveE = []
+    const liveIdx = []
+    g.entries.forEach((e, k) => {
+      if (rejected.has(k)) return
+      pos.set(k, liveE.length)
+      liveE.push(e)
+      liveIdx.push(g.idx[k])
+    })
+    if (liveE.length === 0) continue
+    const order = plan.order.filter((k) => !rejected.has(k)).map((k) => pos.get(k))
+    const applied = applyPlannedEntries(g.content, liveE, order, { path: g.path, scope: "batch", onEntryError: "collect" })
+    g.content = applied.content
+    for (const f of applied.failures) fail(liveIdx[f.index], f.reason)
+    planned.push({ g, results: applied.results, idx: liveIdx })
+  }
+
+  // ⑤ 逐档一次就地写（该档有 ≥1 条成功才写；零条成功 ⇒ 不写、也不记账）
+  // recordWrite 每档一条合并快照：startLine = 已应用条受影响行的最小值（#2——原实现取首条 =
+  // 调用序第一条，逆序条目时护栏下界过高、受影响区内的 insert_after 被放行），shift = 已应用条净漂移之和。
+  for (const { g, results, idx } of planned) {
+    const okPos = []
+    results.forEach((r, k) => { if (r) okPos.push(k) })
+    if (okPos.length === 0) continue
+    const startLine = Math.min(...okPos.map((k) => results[k].editStartLine))
+    const shift = okPos.reduce((n, k) => n + results[k].lineShift, 0)
+    try {
+      // 单一写路径点：默认 = writeFile + 记账；写前文档门挂在这一跳之前（命中即 throw、该档一个字节没动）
+      await writeThroughPath(g.abs, joinWithEol(normalizeEOL(g.content).split("\n"), g.raw), {
+        op: "write",
+        agent: ctx.agent,
+        record: { type: "edit", startLine, shift },
+      })
+    } catch (err) {
+      // 档级失败只连坐该档：原因 = 那个档级错误原文（门拒文对它报的那一档为真——EDIT.md §2「匹配与应用」）。
+      // 已有自己失败原因的条目保留自己那一句——它讲的是另一件事，覆写掉就丢一件（不改报成成功）。
+      for (const k of idx) if (!state[k]) fail(k, err.message)
+      continue
+    }
+    g.written = true
+    okPos.forEach((k) => { state[idx[k]] = { ok: true, g, out: results[k] } })
+  }
+
+  // ⑥ 回执：逐条一行、按调用序回原位（成 = 现成功回执一字不改；败 = `edits[<i>] — failed: <原因原文>`）
+  const results = new Array(total)
+  let appliedCount = 0
+  for (let i = 0; i < total; i++) {
+    const s = state[i]
+    if (!s) throw new Error(`applyEditBatch: entry ${i} produced no outcome — internal invariant break, not a bad input`)
+    if (!s.ok) { results[i] = editEntryFailureLine(`edits[${i}]`, s.reason); continue }
+    appliedCount++
     // #4（2026-09-01 交付评审尾巴）：与单文件路径对齐——每条结果附 git diff +
     // autoSyntaxCheck（同文件多条会重复 diff/检查，换取格式一致、实现零分支）
-    const diff = await gitDiffOne(ctx.cwd, p.g.abs)
-    const base = p.deleted
-      ? `Deleted ${deleteTarget(p)} of ${p.g.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(p.g.abs)}`
-      : `Edited ${p.g.path}: replaced ${p.occurrences} occurrence(s)${p.note ? ` — ${p.note}` : ""}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(p.g.abs)}`
-    results.push(await composeEditReceipt({
-      abs: p.g.abs,
-      path: p.g.path,
-      writeLine: p.editStartLine,
+    const diff = await gitDiffOne(ctx.cwd, s.g.abs)
+    const base = s.out.deleted
+      ? `Deleted ${deleteTarget(s.out)} of ${s.g.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(s.g.abs)}`
+      : `Edited ${s.g.path}: replaced ${s.out.occurrences} occurrence(s)${s.out.note ? ` — ${s.out.note}` : ""}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(s.g.abs)}`
+    results[i] = await composeEditReceipt({
+      abs: s.g.abs,
+      path: s.g.path,
+      writeLine: s.out.editStartLine,
       base,
-      deleted: p.deleted === true,
-      occurrences: p.occurrences,
-      note: p.note,
-    }))
+      deleted: s.out.deleted === true,
+      occurrences: s.out.occurrences,
+      note: s.out.note,
+    })
   }
-  // #796（核面小修批——EDIT.md §5 批量回执汇总行 ∥ §8 D-9）：末行**恒为**汇总行——大回执
-  // （>64K）落盘后双端 preview 保尾（TOOL-OUTPUT-LIMITS.md §2）⇒ 汇总结论恒可见；N = 条目数
-  // （全判后原子写 ⇒ 成功恒 N/N）；路径 = 条目原样形、去重保序首现序（groups 插入序即首现序）。
-  const summary = `edit batch: ${args.edits.length}/${args.edits.length} entries — ${[...groups.values()].map((g) => g.path).join(", ")}`
+  // 末行恒为一行计数：大回执（>64K）落盘后双端 preview 保尾
+  // （TOOL-OUTPUT-LIMITS.md §2）⇒ 汇总结论恒可见。三个符号各一义：M = 条目总数、k = 应用成功的
+  // 条目数、K = 实际写盘的档数（一档多条只写一次 ⇒ K ≤ M）；K = 0 ⇒ 无路径清单支。
+  const written = [...groups.values()].filter((g) => g.written).map((g) => g.path)
+  const summary = editBatchSummary({ tool: "edit batch", applied: appliedCount, total, unit: "entries", filesWritten: written })
   return [...results, summary].join("\n")
 }
 
 // ---------------------------------------------------------------------------
-// 2026-09-08 edit 语义升级（EDIT.md §2/§3——D1 按行号改 / D2 模糊匹配，落点定死本模块；
+// 2026-09-08 edit 语义升级（EDIT.md §2「匹配与应用」——D1 按行号改 / D2 模糊匹配，落点定死本模块；
 // 条目判定接线在 edit-diff.mjs computeEditEntry——单形态/批量/ACP 桥三通道自动继承；
 // 2026-11-02：排顺序（帧 R1–R4）与累积也上提到 edit-diff（planEditEntries /
 // applyPlannedEntries）——两通道共用同一份排法。
-// 阶段 2 删行形态见 EDIT.md §5（约束）。以下均为纯函数（无 IO）——edit-diff.mjs 调用期导入
+// 阶段 2 删行形态见 EDIT.md §1「参数」。以下均为纯函数（无 IO）——edit-diff.mjs 调用期导入
 // （ESM 循环引用安全：两侧仅函数声明，提升初始化——同 file.mjs ↔ edit-diff.mjs 先例）。
 
 /**
- * D2 行级 normalize（EDIT.md §3——匹配档位；阶段 2 normalize 统一基准——双端同算法）：
+ * D2 行级 normalize（EDIT.md §2「匹配与应用」——匹配档位；阶段 2 normalize 统一基准——双端同算法）：
  * ① 去首尾空白 + 去行尾空格；② tab → 2 空格；③ 引号**单遍逐字符映射**——ASCII 单引号 /
  * 弯引号 ‘ ’ “ ” / 反引号 → 直双引号 "（评审 #2 定稿目标字符 = "——与 ASCII 单引号规则
  * 合并为单遍映射，无顺序依赖——防两端分叉）。**不做行内 \s+ 折叠**——缩进/对齐是结构信息，
@@ -182,33 +256,37 @@ export function findFuzzyWindow(content, old) {
 }
 
 /**
- * D1 按行号改（EDIT.md §2/§5——F1）：entry 带 line（单行）或 startLine/endLine（1-based
+ * D1 按行号改（EDIT.md §1「参数」/§2「匹配与应用」——F1）：entry 带 line（单行）或 startLine/endLine（1-based
  * 闭区间）→ 直接按行号替换该行/行范围为 new_string（无需 old_string——互斥校验在
- * validateEditEntry）。阶段 2 删行形态（EDIT.md §5——裁定 A）：**省略 new_string =
- * 删除该行/范围**（意图有界——删哪行是显式声明）；显式空串 `new_string: ""` →
- * EMPTY_NEW_STRING_LINE 显式报错（模板生成 new_string 但落空 ≠ 删行意图——防误删）。
+ * validateEditEntry）。阶段 2 删行形态：**省略 new_string 或传空串 = 删除该行/范围**
+ * （同一结局——删行意图由行号表达，两种写法得到同一个结果）。归一只在本函数内落一次：
+ * 开头取局部量 `target`，其后的删除分支与替换分支都读它——`""` 与 `undefined` 于是走同
+ * 一条路（不靠 `splitLines("")` 的巧合）。
  * 内容域 = normalizeEOL 后 LF（与 computeEditEntry 同域）；尾随换行随原文件保持（删到
  * 文件为空 → ""——无剩余行即无终止符）。行号越界 → 明确报错。原子性由调用方保证
  * （本函数纯计算）。
  * 返回 { updated, editStartLine, lineShift, occurrences, note, deleted? }（同 computeEditEntry 形态）。
  */
 export function applyLineEdit(content, entry, opts = {}) {
-  const prefix = opts.abortPrefix ?? ""
-  if (entry.new_string === "") throw new Error(prefix + EMPTY_NEW_STRING_LINE)
+  // 错误文本不带任何写盘结论（EDIT.md §3「写与桥」）：` — nothing written` 后缀的取废由 validateEditEntry
+  // 按 `scope:"batch"` 决定，本函数只报行号事实；前缀形已退役，不再有要拼的。
+  // 归一（单源——一个输入一条语义）：`""` 读成 `undefined`，与调用方省略 new_string 同一个局部量。
+  // 不就地改条目对象：批量里条目是调用方数组的元素，就地赋值会把兄弟条目一起改掉。
+  const target = entry.new_string === "" ? undefined : entry.new_string
   const lines = splitLines(content)
   const start = entry.line ?? entry.startLine
   const end = entry.line ?? entry.endLine
   if (start > lines.length || end > lines.length) {
-    throw new Error(prefix + `line ${end > lines.length ? end : start} out of range — ${opts.path ?? "file"} has ${lines.length} line(s)`)
+    throw new Error(`line ${end > lines.length ? end : start} out of range — ${opts.path ?? "file"} has ${lines.length} line(s)`)
   }
   const removed = end - start + 1
-  if (entry.new_string === undefined) {
-    // 删行/删范围（EDIT.md §5）——省略 new_string：受影响行整体移除
+  if (target === undefined) {
+    // 删行/删范围（EDIT.md §1「参数」）：省略 new_string ∥ 传空串——两种写法都到这里
     const remaining = [...lines.slice(0, start - 1), ...lines.slice(end)]
     const updated = remaining.join("\n") + (remaining.length > 0 && content.endsWith("\n") ? "\n" : "")
     return { updated, editStartLine: start, lineShift: -removed, occurrences: 1, note: null, deleted: true }
   }
-  const newLines = splitLines(entry.new_string)
+  const newLines = splitLines(target)
   const updated = [...lines.slice(0, start - 1), ...newLines, ...lines.slice(end)].join("\n") +
     (content.endsWith("\n") ? "\n" : "")
   return { updated, editStartLine: start, lineShift: newLines.length - removed, occurrences: 1, note: null }

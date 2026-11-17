@@ -1,1 +1,3 @@
-Read the main agent's conversation history — what has been tried, the exact errors, recent context. Ground your analysis in the actual failure trail instead of guessing. Output is capped (~60k chars — older messages are trimmed with a note).
+Read the main agent's conversation history.
+
+{{knowledge:tool-main-history}}

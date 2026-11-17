@@ -217,11 +217,10 @@ function queuedPositionOf(agent, key) {
   return i >= 0 ? i + 1 : undefined
 }
 
-/** recent 参数钳制（默认 ~5 条摘要——可参数；钳到 1..20 防超长 N2 失控）。 */
+/** recent 参数钳制（必填，1..20；不再造默认值）。值已在 `executeObserveAction` 入口判过缺 ∥ 非法，
+ *  本函数只钳区间；钳制到 1..20 防超长 N2 失控。 */
 function clampRecent(n) {
-  const v = Number.parseInt(n, 10)
-  if (!Number.isFinite(v)) return 5
-  return Math.max(1, Math.min(20, v))
+  return Math.max(1, Math.min(20, n))
 }
 
 /**
@@ -242,6 +241,11 @@ export function executeObserveAction(args, ctx) {
     return JSON.stringify({ status: "error", error: "observe requires the id of the async subagent to inspect (from the async spawn return) — pass the id; omitting it observes nothing" })
   }
   const key = String(id)
+  // `recent` 必填（KD-4）：钳制函数里的 `return 5` 是代码造的值——缺了就拒，不替调用方选条数。
+  const recentNum = Number.parseInt(args?.recent, 10)
+  if (!Number.isFinite(recentNum)) {
+    return JSON.stringify({ status: "error", error: `observe: recent is required — pass how many recent-turn summaries to return (1..20); got ${JSON.stringify(args?.recent ?? null)}` })
+  }
   const entry = getAsyncPool(agent, "subagent")?.get(key)
   if (!entry) {
     if (getAsyncPool(agent, "advisor")?.has(key)) {
@@ -259,7 +263,7 @@ export function executeObserveAction(args, ctx) {
     // 执行前后维护——LLM 生成/工具间空隙为空；子代理 await 长工具调用时父回合可见它。
     const inflight = child?._inflightTools
     if (inflight instanceof Set && inflight.size > 0) out.currentTool = [...inflight]
-    const n = clampRecent(args?.recent)
+    const n = clampRecent(recentNum)
     out.recentTurns = recentTurnLines(child, n)
     out.note = `observing running ${entry.role}#${key} — recentTurns newest-first (cap ${n}); currentTool shown only while a tool is executing (stuck detection); sent directions consume at the next turn boundary`
   } else if (entry.status === "queued") {
@@ -270,7 +274,7 @@ export function executeObserveAction(args, ctx) {
     out.done = true
     out.turn = entry.turn ?? 0
     out.maxTurns = entry.maxTurns ?? 0
-    out.recentTurns = child ? recentTurnLines(child, clampRecent(args?.recent)) : []
+    out.recentTurns = child ? recentTurnLines(child, clampRecent(recentNum)) : []
     out.note = "settled — the final report is delivered by the auto channel (turn-end collection or the suspension digest); observe returns the activity summary, not the full report (N2)"
   }
   return JSON.stringify(out)

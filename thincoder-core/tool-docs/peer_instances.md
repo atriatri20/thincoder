@@ -1,1 +1,3 @@
-peer_instances — read-only: list other live ThinCoder instances sharing this workspace cwd. Returns [{ pid, end, sessionId, slots }]; never includes self; pure read — writes nothing.
+List other live ThinCoder instances sharing this workspace cwd.
+
+{{knowledge:tool-peer-instances}}

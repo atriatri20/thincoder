@@ -2,9 +2,11 @@
  * tools/browser.mjs — 浏览器工具面：schema ∥ 参数校验 ∥ `isReadonlyAction` ∥ 回执/错误形（§2.1/§2.2/§3.1）。
  *
  * 设计权威 = `docs/core/design/BROWSER-TOOL.md`（工具系统档 §6.7 只留指针）。
- * 分类钩子（KD-2 ∥ KD-11）：过门 = `click` ∥ `evaluate` + `press` ∥ `mouse` ∥ `drag` ∥ `touch` 点按 ∥
+ * 分类钩子（KD-2 ∥ KD-11 ∥ N-BT7）：过门 = `click` ∥ `evaluate` + `press` ∥ `mouse` ∥ `drag` ∥ `touch` 点按 ∥
  * `clipboard` 全量；免审 = `navigate` ∥ `type` ∥ `snapshot` ∥ `screenshot` ∥ `wait` ∥ `close` +
- * `hover` ∥ `wheel` ∥ `insert` ∥ `touch` 手势（swipe / pinch）——同一钩子按参数分类，机制零新增。
+ * `hover` ∥ `wheel` ∥ `insert` ∥ `touch` 手势（swipe / pinch）+ `cookies` ∥ `storage` 六形
+ * （会话态是测试数据，不是对用户系统的破坏性动作——用户 2026-11-06 裁「不要搞鸡毛审核」）
+ * ——同一钩子按参数分类，机制零新增。
  * 失败回执**返回**（不 throw）——首行 `Error: …` = 模型面失败形（`bash`/`execute` 既例；dispatch 侧按该前缀
  * 判失败——`agent/dispatch-run.mjs` 的 `runPreparedItem`（三处））。
  * 异步面（§2.11——批 browser-async-fix）：`async:true`（depth-0 专项）⇒ `agent-tools/browser-async.mjs`
@@ -12,12 +14,16 @@
  */
 import { CLIPBOARD_OPS } from "../browser/clipboard.mjs"
 import { TOUCH_GESTURES, parseTargetSpec } from "../browser/input.mjs"
+import {
+  COOKIE_OPS, STORAGE_AREAS, STORAGE_OPS, cookieDomainError, cookieSetError, storageKeyError,
+  unknownCookieOp, unknownStorageArea, unknownStorageOp,
+} from "../browser/session-state.mjs"
 import { runAction } from "../browser/session.mjs"
 import { DESC } from "./shared.mjs"
 
 export const BROWSER_ACTIONS = [
   "navigate", "snapshot", "click", "type", "evaluate", "wait", "screenshot", "close",
-  "press", "hover", "wheel", "mouse", "drag", "touch", "insert", "clipboard",
+  "press", "hover", "wheel", "mouse", "drag", "touch", "insert", "clipboard", "cookies", "storage",
 ]
 const REF_RE = /^e\d+$/
 const GATED_ACTIONS = new Set(["click", "evaluate", "press", "mouse", "drag", "clipboard"])
@@ -85,6 +91,41 @@ export function validateArgs(args) {
     if (!CLIPBOARD_OPS.includes(op)) return `Error: unknown clipboard op "${op}" — ops: ${CLIPBOARD_OPS.join(", ")}`
     if (op === "write" && typeof args.text !== "string") return "Error: clipboard write requires text"
   }
+  // 会话态条件校验（§2.2 两段；逐项文案单源 = `browser/session-state.mjs`）。判法只有一条：键不存在 = 没给；
+  // 给了就必须是声明类型且形合法，否则显式拒（`null` 也算「给了但形不对」）。`cookieSetError` 是 `cookies[]`
+  // 逐项的唯一判法，工具面与动作面同调它 ⇒ 两处同句（D2）。
+  if (action === "cookies") {
+    if (!nonEmpty(args.op)) return "Error: cookies requires op"
+    if (!COOKIE_OPS.includes(String(args.op))) return `Error: ${unknownCookieOp(String(args.op))}`
+    // 形不对就拒，不当作「没给」（§2.2 · U86 ∥ U93）：当作没给会让 `clear` 兑现成全域清空；带端口的 `localhost:3000`
+    // 放行就等于一次零匹配过滤（回 0 条，读起来像「本来就没有」）
+    if (args.domain !== undefined) {
+      const badDomain = cookieDomainError(args.domain)
+      if (badDomain) return `Error: ${badDomain}`
+    }
+    if (args.op === "set") {
+      const bad = cookieSetError(args.cookies)
+      if (bad) return `Error: ${bad}`
+    }
+  }
+  if (action === "storage") {
+    const op = String(args.op ?? "")
+    if (!nonEmpty(args.op)) return "Error: storage requires op"
+    if (!STORAGE_OPS.includes(op)) return `Error: ${unknownStorageOp(op)}`
+    // 形不对就拒，不当作「没给」（§2.2 · U86）：`null` ∥ 非串 ∥ 空串静默落缺省，与 `clear` 落全域同一类；
+    // 判形只认 `typeof`——`String()` 仅用于渲染错误句（`["localStorage"]` 也 stringify 成合法域名）。
+    if (args.area !== undefined && (typeof args.area !== "string" || !STORAGE_AREAS.includes(args.area))) {
+      return `Error: ${unknownStorageArea(String(args.area))}`
+    }
+    if (op === "set" && (typeof args.key !== "string" || typeof args.value !== "string")) {
+      return "Error: storage set requires key and value"
+    }
+    // 形不对就拒，不当作「没给」（§2.2 · U86）：当作没给会让 `clear` 清整份 store；空串是合法键名，不拒
+    if (args.key !== undefined) {
+      const badKey = storageKeyError(args.key)
+      if (badKey) return `Error: ${badKey}`
+    }
+  }
   return null
 }
 
@@ -94,7 +135,7 @@ export const browserTool = {
   parameters: {
     type: "object",
     properties: {
-      action: { type: "string", enum: BROWSER_ACTIONS, description: "Action to run (one per call): navigate | snapshot | click | type | evaluate | wait | screenshot | close | press | hover | wheel | mouse | drag | touch | insert | clipboard." },
+      action: { type: "string", enum: BROWSER_ACTIONS, description: "Action to run (one per call): navigate | snapshot | click | type | evaluate | wait | screenshot | close | press | hover | wheel | mouse | drag | touch | insert | clipboard | cookies | storage." },
       url: { type: "string", description: "navigate: http/https URL to open — also the `wait` url predicate (substring of location.href)." },
       ref: { type: "string", description: "click / type / press / hover / wheel / mouse / touch / insert: element reference from the last snapshot (`e<N>`)." },
       text: { type: "string", description: "type: text to enter — insert: text to insert; clipboard write: text to write; wait: the awaited visible text." },
@@ -105,8 +146,8 @@ export const browserTool = {
       networkIdle: { type: "boolean", description: "wait: true = wait until network activity is quiet for 500ms." },
       timeoutMs: { type: "number", description: "Budget override in ms: wait = the predicate timeout (default 30000, cap 120000); other actions = the whole-call budget (default per action table, hard cap 120000)." },
       fullPage: { type: "boolean", description: "screenshot: true = capture the whole page, false = viewport (default)." },
-      headless: { type: "boolean", description: "Session-open parameter (any action): default true. A different value on a running session is an error — close it first." },
-      key: { type: "string", description: "press: key name (Enter, Escape, Tab, Backspace, Delete, Space, Insert, Home, End, PageUp, PageDown, Arrows, F1-F12, modifiers) or a single character." },
+      headless: { type: "boolean", description: "The shared browser's first-open attribute (any action): default true. When another instance already started it, your value cannot be applied — the session reuses the running mode and the receipt carries a `[note: the shared browser is running headless=<actual> …]` line saying so. Switching modes needs every instance to release the browser first." },
+      key: { type: "string", description: "press: key name (Enter, Escape, Tab, Backspace, Delete, Space, Insert, Home, End, PageUp, PageDown, Arrows, F1-F12, modifiers) or a single character. storage: the target key (get / clear address one key; storage set requires it)." },
       modifiers: { type: "array", items: { type: "string" }, description: "press: modifier keys held (and observed by the page) — Control | Alt | Shift | Meta, any combination." },
       phase: { type: "string", description: "press: press (default) | down | up. mouse: click (default) | down | up." },
       repeat: { type: "number", description: "press: auto-repeat count while the key is held (0-100, default 0)." },
@@ -123,7 +164,11 @@ export const browserTool = {
       gesture: { type: "string", description: "touch: tap (default) | doubleTap | swipe | pinch." },
       scale: { type: "number", description: "touch pinch: scale factor (>1 zoom in, <1 zoom out)." },
       ime: { type: "string", description: "insert: IME composition text staged before the committed text is inserted." },
-      op: { type: "string", description: "clipboard: read | write | copy | paste." },
+      op: { type: "string", description: "clipboard: read | write | copy | paste. cookies / storage: get | set | clear." },
+      cookies: { type: "array", items: { type: "object" }, description: "cookies set: one or more cookies — { name, value, domain?, path?, expires?, httpOnly?, secure?, sameSite? }. Every declared field is type-checked before anything is written: `path` must be a string starting with \"/\", `expires` must be Unix seconds as a number (a string is rejected, never coerced), `httpOnly` and `secure` must be booleans, `sameSite` must be Strict | Lax | None. A value of the wrong type is an error naming the field, never silently defaulted — `httpOnly:\"true\"` would otherwise store a cookie that is not httpOnly while the receipt reported success. A given `domain` is written as-is: cross-domain writes are intentional (no switch, no approval), but it must be a bare host — a scheme, a path or a `host:port` pair (`localhost:3000`; cookie domains never carry a port) is an error, never treated as omitted. Omit `domain` to land on the current page's origin." },
+      domain: { type: "string", description: "cookies: get = domain filter (subdomains included; an IP literal matches itself only); clear = scope. A value that is not a non-empty host string is an error, never treated as omitted — a `host:port` pair such as `localhost:3000` counts as one (cookie domains never carry a port, so it would filter to nothing and read as \"that domain has no cookies\"). Omit it on get ⇒ every cookie in the shared profile, on clear ⇒ the whole profile's cookies are wiped for every instance." },
+      area: { type: "string", description: "storage: localStorage (default) | sessionStorage. The two areas are separate scopes and never bleed into each other. Any other value — null, a non-string, an empty string — is an error naming the value, never treated as omitted: only leaving it out selects the default." },
+      value: { type: "string", description: "storage set: the value (a string; a non-string is rejected, never silently stringified)." },
       async: { type: "boolean", description: "Run this action in the background (default false, depth-0 only): returns an ack at once (browser#<N> started (running) — <action> <subject>); the finished result arrives later as a system reminder summary. Use wait_for \"browser id:N done\" to wait; process {action:\"kill\", id:N} to cancel." },
     },
     required: ["action"],

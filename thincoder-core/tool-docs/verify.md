@@ -1,13 +1,3 @@
-Generic pre-completion verification gate — language/framework/project agnostic. verify does NOT run any test/verification command for you and does NOT require a test per change.
+Generic pre-completion verification gate — language, framework and project agnostic.
 
-You DECLARE your verification status via the verification argument ({ status: 'passed' | 'failed' | 'skipped', command?, summary?, basis? } — effects per parameter): the declaration is self-reported evidence —
-
-verify only mechanically gates on it ('passed' → allowed; 'failed' → blocked; 'skipped' → allowed but needs a reason).
-
-'basis' (optional) is the 'what it stands on' dimension of the declaration — a judgment source, the exact words you read at their path, or an explicit 'unverified' (declaration-only: no format is enforced or machine-checked);
-
-a passed / skipped declaration with no basis gets one advisory hint line in the report — never blocking and never changing the gate — while the failed face gets no basis hint (already blocked).
-
-Whether/how to verify is described in natural language in the project's AGENTS.md and is decided + executed by you. The report also carries the changed files (git diff), an advisory node --check hint on changed .js/.mjs (not gating), the task list, and a self-review checklist.
-
-Call this BEFORE declaring a coding task complete — do not say 'done' until verify passes.
+{{knowledge:tool-verify}}

@@ -15,9 +15,11 @@
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+// 收尾尽力面单源（`docs/core/design/TESTING.md` §4.6）：清理失败不判红整档，但要可见。
+import { removeTempDirBestEffort } from "../teardown.mjs"
 
 import { createAgent, runAgent } from "../../thincoder-core/agent.mjs"
 import { _resetLogsDirForTest, _setLogsDirForTest } from "../../thincoder-core/log.mjs"
@@ -30,8 +32,8 @@ const logsDir = mkdtempSync(join(tmpdir(), "opencode-session-header-int-logs-"))
 _setLogsDirForTest(logsDir)
 after(() => {
   _resetLogsDirForTest()
-  rmSync(cwd, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
-  rmSync(logsDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  removeTempDirBestEffort(cwd)
+  removeTempDirBestEffort(logsDir)
 })
 
 /** 上游被问到时助手回的那段话（业务判据的取值来源）。 */
@@ -108,7 +110,7 @@ async function session(t, { withSessionHeader }) {
 
 // ---------- 行 23-1 ----------
 
-test("23-1 正常：配了 OpenCode Go 的会话能发出话（上游带头才回 200）", { timeout: 60_000 }, async (t) => {
+test("CLI 23-1 正常：配了 OpenCode Go 的会话能发出话（上游带头才回 200）", { timeout: 60_000 }, async (t) => {
   const s = await session(t, { withSessionHeader: true })
 
   const answer = await runAgent(s.agent, "在吗", {})
@@ -121,7 +123,7 @@ test("23-1 正常：配了 OpenCode Go 的会话能发出话（上游带头才�
   assert.deepEqual(assistantTexts, [REPLY], "回复同样落进会话历史（那一格对用户可见）")
 })
 
-test("23-1 对照：修前配置形状（渠道不携该头）复现 400 MissingSessionID", { timeout: 60_000 }, async (t) => {
+test("CLI 23-1 对照：修前配置形状（渠道不携该头）复现 400 MissingSessionID", { timeout: 60_000 }, async (t) => {
   const s = await session(t, { withSessionHeader: false })
 
   const error = await runAgent(s.agent, "在吗", {}).then(() => null, (e) => e)

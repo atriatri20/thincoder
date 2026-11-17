@@ -22,7 +22,9 @@
  *   slot 残留 engDesignToken → 迁入 Map，此后不写不读镜像）。
  * - **§10（2026-10-26）**：批次归属旁列 `engDesignTokenBatches`（designId → 批档绝对路径）与
  *   槽多槽表**同点序列化 / 同拍恢复 / 同处落盘**；轻读面 = `readEngTokenBatchesFromSlot`。
- *   token 值形零改（仍 `<uuid>:<expiryMs>`）——旁列只承载归属，不承载授权。
+ * - **§10.2（2026-11-12）**：评审封印旁列 `engDesignTokenSeals`（designId → `{ hash, docs, docHashes }`）同点序列化 /
+ *   同拍恢复 / 同处落盘；轻读面 = `readEngTokenSealsFromSlot`（与批归属同形兄弟、同一两形读法）。
+ *   token 值形零改（仍 `<uuid>:<expiryMs>`）——两条旁列只承载归属与版本，不承载授权。
  *
  * 依赖方向：本模块只 import 底层槽 I/O（session-slots.mjs 原语 + session-guard.mjs 轮转
  * 守卫）——session.mjs 同时 import 本模块（engTokenSlotFields/restoreEngTokens），形成
@@ -112,8 +114,9 @@ export function purgeExpiredDesignTokens(agent) {
  *  NO field，不从上次 save 复活槽。
  *  DESIGN-TOKEN-SETTLEMENT D3（2026-09-08）：单值镜像 `engDesignToken` 退役——
  *  saveSession 不再写镜像字段（AC3 零写）；只产多槽表 engDesignTokens。
- *  批次归属旁列 `engDesignTokenBatches`（DESIGN-TOKEN-SETTLEMENT §10）同处序列化——
- *  与槽表并列、同空态语义（空表 ⇒ undefined ⇒ 字段不落盘）；承载归属，不承载恢复。 */
+ *  批次归属旁列 `engDesignTokenBatches`（DESIGN-TOKEN-SETTLEMENT §10）与评审封印旁列
+ *  `engDesignTokenSeals`（§10.2）同处序列化——与槽表并列、同空态语义（空表 ⇒ undefined ⇒
+ *  字段不落盘）；承载归属与版本，不承载恢复。 */
 export function engTokenSlotFields(agent) {
   return {
     engDesignTokens: agent._engDesignTokens instanceof Map && agent._engDesignTokens.size > 0
@@ -121,6 +124,10 @@ export function engTokenSlotFields(agent) {
       : undefined,
     engDesignTokenBatches: agent._engDesignTokenBatches instanceof Map && agent._engDesignTokenBatches.size > 0
       ? Object.fromEntries(agent._engDesignTokenBatches)
+      : undefined,
+    // 评审封印旁列（§10.2）同处序列化——与槽表、批归属并列为第三个槽字段，空表 ⇒ undefined ⇒ 字段不落盘。
+    engDesignTokenSeals: agent._engDesignTokenSeals instanceof Map && agent._engDesignTokenSeals.size > 0
+      ? Object.fromEntries(agent._engDesignTokenSeals)
       : undefined,
   }
 }
@@ -169,6 +176,26 @@ export function restoreEngTokens(agent, data) {
   }
   if (batches.size > 0) agent._engDesignTokenBatches = batches
   else delete agent._engDesignTokenBatches
+  // 评审封印旁列同拍读入（§10.2）：值 = `{ hash, docs, docHashes }`（被审档绝对路径清单 + 组合 sha256 +
+  // 逐档 `[{ path, hash }]`——逐档列只服务拒文点名，旧行没有它时保留缺席，不补不猜）。
+  // 只收形状完整的行——缺 `hash` ∥ `docs` 不是清单 ⇒ 闸面按「无封印值」判（旧槽同层降级）。
+  const seals = new Map()
+  if (data.engDesignTokenSeals && typeof data.engDesignTokenSeals === "object" && !Array.isArray(data.engDesignTokenSeals)) {
+    for (const [id, s] of Object.entries(data.engDesignTokenSeals)) {
+      if (s && typeof s === "object" && !Array.isArray(s) && typeof s.hash === "string"
+        && Array.isArray(s.docs) && s.docs.every((p) => typeof p === "string")) {
+        const row = { hash: s.hash, docs: [...s.docs] }
+        // `docHashes` 不是成形判据（闸面 `hasSeal` 零改）：形状不全 ⇒ 整列按「没有」处理，行照旧读入。
+        const docHashes = Array.isArray(s.docHashes)
+          ? s.docHashes.filter((d) => d && typeof d === "object" && typeof d.path === "string" && typeof d.hash === "string").map((d) => ({ path: d.path, hash: d.hash }))
+          : null
+        if (docHashes) row.docHashes = docHashes
+        seals.set(id, row)
+      }
+    }
+  }
+  if (seals.size > 0) agent._engDesignTokenSeals = seals
+  else delete agent._engDesignTokenSeals
   let droppedDesignTokens = 0
   for (const id of before) if (!map.has(id)) droppedDesignTokens++
   return { droppedDesignTokens }
@@ -241,6 +268,41 @@ export function readEngTokenBatchesFromSlot(agent, { strict = false } = {}) {
   } catch (e) {
     if (strict) {
       throw new Error(`readEngTokenBatchesFromSlot: the session slot file's batch-attribution side column could NOT be read (${p}: ${e?.message ?? e}) — the closeout consume cannot tell which slots belong to this batch, so the closeout is refused with the record untouched; fix the slot file or its permissions and retry.`)
+    }
+    return null
+  }
+}
+
+/** 读当前会话槽文件的**评审封印**旁列（DESIGN-TOKEN-SETTLEMENT §10.2——不做 TTL 过滤、不改盘）。
+ *  与 `readEngTokenBatchesFromSlot` 同形兄弟（同一轻读形、同一两形读法）——两者不能合成一个函数：
+ *  字段名硬编码是既有读者的形状，合并就得让每个读者自己再筛字段。
+ *  **两形**：`strict:false`（缺省）读不到 ⇒ `null`；`strict:true`（闸面）读不到 ⇒ **抛**——派单侧
+ *  不能在「封印读不到」时落进「无封印值 ⇒ 不拦」。
+ *  判据 = **「没有」与「读不到」分清**：无槽号 ∥ 文件不存在（`ENOENT`）∥ 无该字段 ⇒ 空集（合法缺省，
+ *  两形同）；其余 I/O 错 ∥ `JSON.parse` 失败 ⇒ 宽容形 `null` / 严格形抛。
+ *  槽号解析在 `try` 之外：manifest 层的「读不到」自带 manifest 坐标，不被重包成封印读失败。
+ *  返回 {designId: {hash, docs}} 对象或 null。 */
+export function readEngTokenSealsFromSlot(agent, { strict = false } = {}) {
+  const slot = currentSlotNoReadOnly(agent, { strict })
+  if (slot == null) return null
+  let p = "(unresolved slot path)"
+  try {
+    p = slotPath(agent.cwd, slot)
+    let raw
+    try {
+      raw = readFileSync(p, "utf8")
+    } catch (e) {
+      if (e?.code === "ENOENT") return null // 「没有」：文件不存在——合法缺省
+      throw e // 「读不到」：其余 I/O 错交外层按读形处置
+    }
+    const data = JSON.parse(raw)
+    return (data && typeof data === "object" && !Array.isArray(data.engDesignTokenSeals)
+      && data.engDesignTokenSeals && typeof data.engDesignTokenSeals === "object")
+      ? data.engDesignTokenSeals
+      : null
+  } catch (e) {
+    if (strict) {
+      throw new Error(`readEngTokenSealsFromSlot: the session slot file's review-seal side column could NOT be read (${p}: ${e?.message ?? e}) — the eng-coder spawn cannot tell which version of the reviewed documents passed, so the spawn is refused with nothing written; fix the slot file or its permissions and retry.`)
     }
     return null
   }
@@ -326,7 +388,7 @@ export function persistEngTokens(agent) {
       tasks: agent.tasks ?? [],
       planMode: agent.planMode ?? false,
       autoApprove: agent.autoApprove ?? false,
-      engineering: agent.config?.agent?.engineering ?? false,
+      mode: agent.config?.agent?.mode ?? (agent.config?.agent?.engineering === true ? "engineering" : "normal"),
       goal: agent.goal ?? null,
       advisor: agent.config?.advisor ?? null,
       // 会话级档位（#441③ 键齐——与 `newSlotData` 规范结构 / `saveSession` 携带面同源：
@@ -339,12 +401,19 @@ export function persistEngTokens(agent) {
       createdBy: agent._slotCreatedBy ?? sessionEnd(),
     }
   }
+  // Migrate legacy slots at the same write: removing the old boolean without mode would lose
+  // the session's engineering state if the process stops before the next full saveSession.
+  data.mode = agent.config?.agent?.mode ?? (agent.config?.agent?.engineering === true ? "engineering" : "normal")
+  delete data.engineering
   const fields = engTokenSlotFields(agent)
   if (fields.engDesignTokens !== undefined) data.engDesignTokens = fields.engDesignTokens
   else delete data.engDesignTokens
   // 批次归属旁列逐字段复制同处（§10「保存 / 合并路径」第二处）：空表 ⇒ 字段删（不从上次落盘复活）。
   if (fields.engDesignTokenBatches !== undefined) data.engDesignTokenBatches = fields.engDesignTokenBatches
   else delete data.engDesignTokenBatches
+  // 评审封印旁列同处落盘（§10.2 落点表「落盘」行）：同一空态语义（空表 ⇒ 字段删）。
+  if (fields.engDesignTokenSeals !== undefined) data.engDesignTokenSeals = fields.engDesignTokenSeals
+  else delete data.engDesignTokenSeals
   // 单值镜像字段永不复写（D3 零写）——残留 engDesignToken 随本次写一并清（更快退役，
   // 杜绝 stale 镜像 + 空 Map 组合在下次 restore 二次迁移复活死 token 的边角）。
   delete data.engDesignToken

@@ -36,14 +36,25 @@ export const DEFAULT_MANIFEST = Object.freeze({
     design: "docs/design",
     modules: "docs/design/modules",
     batches: "docs/batches",
-    // 第六子键（MANIFEST.md §2.12 · KD-M1-55/57）：**标准档本身**的文件路径（单份 ∥ 多份数组），
-    // 不是目录——目录会逼着在目录里猜文件名，正是本批禁的「猜固定名」。默认 `null`（未声明）是
-    // 三态的地基：给一条默认路径，「未声明」与「声明了但读不到」会读出同一路径、塌成一态。
+    // 第六子键（MANIFEST.md §2.12 · KD-M1-62/63/66）：**一个文档层**——项目根相对的**目录**
+    // （单目录 ∥ 多目录数组），层内成员 = 目录及其全部子目录下的 `.md`，按层根相对路径码点序（KD-M1-63）。
+    // 文件值不受理（一个键一个语义——KD-M1-62）；旧文件值得到一句可读原因，不自动改档（KD-M1-66）。
+    // 默认 `null`（未声明）是三态的地基：给一条默认目录，「未声明」与「声明了但层里没档」会读出
+    // 同一路径、塌成一态。
     standards: null,
   }),
   // 项目声明三族（2026-09-27 声明载体唯一化批并入——键名 / 形态逐字承前；来源档已退役）。
-  codePaths: Object.freeze(["src"]),
-  index: Object.freeze({ codeExtensions: Object.freeze([]), docExtensions: Object.freeze([]), excludePaths: Object.freeze([]), publicRepos: Object.freeze([]) }),
+  // 无默认段（KD-M1-31 · 逐面对照 = `docs/core/design/MANIFEST.md` §2.4.1）：默认段不是便利缺省，
+  // 是产品替项目下的一条判据——段名任意深度匹配，默认 `["src"]` 会让每个未声明代码面的项目静默按
+  // `src` 分类（用户 2026-11-10「不要带这个默认值」）。空数组是合法声明 =「无段名代码面」（兜底分类
+  // 仍在）；收回路径 = 在项目档里显式写 `"codePaths": ["src"]`。
+  codePaths: Object.freeze([]),
+  // `docCheckExcludePaths` = 文档机检的**排除面**（消费方 = `thincoder-core/doc-check/index.mjs` 的 `judgedDomainDocs`；
+  // 机制 = `docs/core/design/DOC-CHECK.md` §10）：落在声明前缀下的档不进判域——判据仍是三件，一件不加。
+  // 数组层 fail-closed 照旧（非数组 ⇒ 拒）；归一 = `thincoder-core/declaration.mjs` 的 `normalizePathList`（与 `index.excludePaths` 同一把尺）。
+  // `writableRepos` = 可写外部**目录**表（写权声明，单向；机制 = `docs/core/design/CROSS-REPO-WRITE.md` §2.1）：
+  // 与 `publicRepos` 成对但**不互派**——一个读名单、一个写名单，一个键的变化不顺带改另一个的授权面。
+  index: Object.freeze({ codeExtensions: Object.freeze([]), docExtensions: Object.freeze([]), excludePaths: Object.freeze([]), docCheckExcludePaths: Object.freeze([]), publicRepos: Object.freeze([]), writableRepos: Object.freeze([]) }),
 })
 
 /** 校验判据（模块设计 §2.2）——枚举 / 键存在（fallback 用）；判据单源（KD-M1-4）。 */
@@ -119,8 +130,19 @@ export function validateManifest(obj) {
     if (obj.index.excludePaths !== undefined && !Array.isArray(obj.index.excludePaths)) {
       errors.push(`index.excludePaths 值形态非法：${JSON.stringify(obj.index.excludePaths)}（须为数组——非数组 fail-closed；空 ∕ 非串元素由归一剔除）`)
     }
+    // `index.docCheckExcludePaths`（排除面 · 机制 = `docs/core/design/DOC-CHECK.md` §10）：只是**数组层** fail-closed
+    // ——非数组 ⇒ 拒（元素层宽容，由归一剔除）。读侧：消费方读不到可用声明 ⇒ 排除面为空、档照判。
+    if (obj.index.docCheckExcludePaths !== undefined && !Array.isArray(obj.index.docCheckExcludePaths)) {
+      errors.push(`index.docCheckExcludePaths 值形态非法：${JSON.stringify(obj.index.docCheckExcludePaths)}（须为数组——非数组 fail-closed；空 ∕ 非串元素由归一剔除）`)
+    }
     if (obj.index.publicRepos !== undefined && !Array.isArray(obj.index.publicRepos)) {
       errors.push(`index.publicRepos 值形态非法：${JSON.stringify(obj.index.publicRepos)}（须为数组——非数组 fail-closed；空 ∕ 非串元素由归一剔除）`)
+    }
+    // `index.writableRepos`（跨仓写权声明 · 机制 = `docs/core/design/CROSS-REPO-WRITE.md` §2.1）：与上一行同款
+    // **数组层** fail-closed——非数组 ⇒ 拒（元素层宽容，由归一剔除）。键写坏不该让整份 manifest 不可用；
+    // 而把非数组当「一项」读则是静默放行，故数组层照拒。
+    if (obj.index.writableRepos !== undefined && !Array.isArray(obj.index.writableRepos)) {
+      errors.push(`index.writableRepos 值形态非法：${JSON.stringify(obj.index.writableRepos)}（须为数组——非数组 fail-closed；空 ∕ 非串元素由归一剔除）`)
     }
   }
   if (obj.phase !== undefined && !MANIFEST_SCHEMA.enum.phase.includes(obj.phase)) {

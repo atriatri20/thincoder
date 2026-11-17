@@ -7,7 +7,7 @@ import { activeSlot, slotPath } from "@thincoder/core/session.mjs"
 // off 形族单源（`docs/core/design/MODEL-SPECS.md` §16.2 / §16.3 / §16.4）——取形与「有效 off 路径」
 // 判据一律自本档取，本档零副本（叶档：零 import 纯函数）。
 import { thinkOffShape, thinkOffPath } from "@thincoder/core/think-off.mjs"
-import { writeSessionFile } from "./cmd-eng.mjs"
+import { writeSessionFile } from "@thincoder/core/session.mjs"
 
 export async function handleAdvisorCommand(ctx) {
   const { agent, showPicker, pushLine, pushLabel } = ctx

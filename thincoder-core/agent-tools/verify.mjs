@@ -82,7 +82,7 @@ export const verifyTool = {
     properties: {
       verification: {
         type: "object",
-        description: "Your declaration of whether you already ran the project's verification and its outcome — self-reported evidence (verify does not execute the command).",
+        description: "Your declaration of whether you already ran the project's verification and its outcome — self-reported evidence (verify does not execute the command). Required when code files changed: omitting it is refused there (the doc-only fast path and the no-code path need no declaration).",
         properties: {
           status: { type: "string", enum: ["passed", "failed", "skipped"], description: "The verification outcome you declare: 'passed' → allowed; 'failed' → blocked; 'skipped' → allowed but requires a summary reason." },
           command: { type: "string", description: "Optional: the verification command you ran (self-reported)." },
@@ -173,9 +173,10 @@ export const verifyTool = {
     // 1b. Doc-only fast path: every changed file is documentation (docs/, *.md,
     // LICENSE…) — syntax checks and a verification declaration are meaningless
     // for doc changes, and the task list/self-review checklist add nothing either.
-    // Paths inside a declared code segment (default: src — incl. prompts/*.md) are
-    // product code — excluded from the fast path, consistent with the design gate.
-    // The project's own layout is declarable (the manifest's codePaths).
+    // Paths inside a declared code segment are product code — excluded from the fast
+    // path, consistent with the design gate. There is no default segment: the layout is
+    // what the project declares (`codePaths` in its manifest), so a project that never
+    // declares one has no code segment at all (a `.md` under `src/` then reads as a doc).
     // Empty list (no changes / git unavailable)
     // intentionally falls through to the normal path below.
     const conv = loadProjectDeclaration(cwd)
@@ -191,6 +192,14 @@ export const verifyTool = {
     // neither code nor docs and fall out of this list (a throwaway diagnostic script
     // is not a code change — no declaration is demanded for it).
     const codeFiles = changedFiles.filter((f) => isCodePath(f, conv))
+
+    // 有码面必填（KD-6）：缺参是**入参面**语义，不是 BLOCKED 报面——抛前先置 `_verifyPassed = false`
+    // （fail-closed：不改状态就抛，`thincoder-core/agent/completion.mjs` 读到的仍是上一轮的 `true`，
+    // 本次交付门被悄悄放行）。无码面（`codeFiles.length === 0`）不要求——既有语义零变。
+    if (codeFiles.length > 0 && (args.verification === undefined || args.verification === null)) {
+      ctx.agent._verifyPassed = false
+      throw new Error("verify: verification is required when code files changed — declare {status: 'passed'|'failed'|'skipped'}")
+    }
 
     // 2. Advisory syntax hint (D-V5) — node --check on changed .js/.mjs when node
     // exists. SOFT hint only — it does NOT gate done (no language-specific

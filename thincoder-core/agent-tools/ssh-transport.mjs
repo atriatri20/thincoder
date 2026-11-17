@@ -1,22 +1,26 @@
 /**
- * ssh-transport.mjs — SSH 传输面单点（askpass 链 ∥ 子进程 ∥ 沉降 ∥ 遮蔽 ∥ 输出帽）。
+ * ssh-transport.mjs — SSH 传输面单点（askpass 链 ∥ 子进程 ∥ 沉降 ∥ 输出帽）。
  * 设计 = `docs/core/design/TOOLS.md` §6.22（D-TO17/D-TO18 · 台账 #1436）。
  *
- * 拆档由 = 机制档触 500 顾问线（§6.22 落点表「触 500 顾问线 ⇒ 实施轮先审拆分」）——本档收**运行面**
+ * 拆档由 = 设计轮判定机制档改前读数过 500（`docs/core/design/DOC-GRAPH.md` §3「行数档位口径」）——本档收**运行面**
  * （与会话语义无关的传输原语），`ssh-session.mjs` 收**会话面**（池 / 生命周期 / 动作）。条目形
  * （entry）由 `ssh-session.mjs` 定义并持有；本档只经其字段工作（`buf` / `mask` / `_waiters` /
  * `promptRe` / `state` / `child` / `logStream` / `_notify` / `lastDataAt` / `bytes`）。
  *
+ * 2026-11-05 拆档族再切一刀：**可见文本面**（剥离 ∥ 归一 ∥ 遮蔽 ∥ 收场注记）搬进同目录叶档
+ * `ssh-text.mjs`——本档只留进程、计时、四门与输出面。
+ *
  * - askpass 链：包装档（Win `.cmd` ∥ POSIX `.sh` 0700）→ `tools/ssh-askpass.mjs` → stdout；秘密只经
  *   ssh 子进程环境 `TC_SSH_SECRET`（零入参 / 零落盘 / 零回显；环境经 `nodeChildEnv` 单点补 Electron 旗标）。
  * - 终端噪声：有状态剥离（CSI ∥ OSC ∥ 单字符控制三类 + CRLF 归一；状态跨 chunk 携带）——落点 = 传输入口，
- *   **先剥离后遮蔽**；日志面 = 模型面同源（D-TO23）。
+ *   **先剥离后遮蔽**；日志面 = 模型面同源（D-TO23）。剥离器与遮蔽器本体住 `ssh-text.mjs`，本档 import 消费。
  * - 就绪判据：四门（待答标记 ∥ 提示符 ∥ 仍在吐 ∥ 硬超时 60 s）；静默窗只作去抖（D-TO21）。
- * - 遮蔽：写入的秘密对**捕获面与日志面**做字面移除（比较面 = 同一归一 + 按不可见处切段 ≥ 4）。
+ * - 遮蔽：写入的秘密对**捕获面与日志面**做字面移除（比较面 = 同一归一 + 按不可见处切段 ≥ 4）——
+ *   实现住 `ssh-text.mjs` 的 `createMask`。
  * - 失败分类族（auth ∥ unreachable ∥ hostkey）照服务端 `src/sandbox/ssh.mjs` 同源判据。
  * 模块图：→ config.mjs（configDir 缺省）· tools/shared.mjs（解码）· text-budget.mjs（截断本体）·
- * tools/node-child.mjs（nodeChildEnv）· expand-home.mjs（`~` 展开单源——`identityFile` 用）——叶子向、无环
- * （本档不 import `ssh-session.mjs`）。
+ * tools/node-child.mjs（nodeChildEnv）· expand-home.mjs（`~` 展开单源——`identityFile` 用）·
+ * ssh-text.mjs（可见文本面）——叶子向、无环（本档不 import `ssh-session.mjs`）。
  */
 import { chmodSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs"
 import { spawn } from "node:child_process"
@@ -26,6 +30,10 @@ import { expandHome } from "../expand-home.mjs"
 import { makeDecoder } from "../tools/shared.mjs"
 import { nodeChildEnv } from "../tools/node-child.mjs"
 import { capText as capBudgetText, fillMarker } from "../text-budget.mjs"
+// 可见文本面（剥离 ∥ 归一 ∥ 遮蔽 ∥ 收场注记）2026-11-05 外移同目录叶档 `ssh-text.mjs`：体逐字搬家、
+// 导出名零改——`ssh-session.mjs` / `ssh-transfer.mjs` / `ssh-vault.mjs` 的 import 行零改。
+import { createStripper, createMask, escapeNote, normalizeText } from "./ssh-text.mjs"
+export { createStripper, createMask, escapeNote, normalizeText }
 
 /** 静默窗（§6.22 ③）：**只作去抖**——判尾部这半条标记到没到齐；不再单独构成「已就绪」。 */
 export const SSH_SETTLE_MS = 800
@@ -37,8 +45,6 @@ export const SSH_CONNECT_SETTLE_MS = 10_000
 export const SSH_RETURN_CAP = 8000
 /** 帽窗头尾比例（§6.22 ⑥：头 60% ∥ 尾 40%——头段装接口 / ACL，尾段装结束证据）。 */
 const CAP_HEAD_RATIO = 0.6
-/** 遮蔽分段下限（§6.22 ③「`≥ 4` 为选定策略值」：3 字符以下与正常输出撞面过高）。 */
-const MASK_SEG_MIN = 4
 /** 保活缺省（§6.22 ④：`ServerAliveInterval=30`；测试态时间缝按 ms 传入后换算）。 */
 export const SSH_KEEPALIVE_MS = 30_000
 /** 秘密环境变量名（§6.22 ②「秘密传递」行）。 */
@@ -113,138 +119,11 @@ export function buildSshArgs({ host, user, port, probe, identityFile = null, kee
   ]
 }
 
-// ─── 终端噪声（§6.22 ③「终端噪声」· D-TO23）────────────────────────────────
-
-/** 不可见处（遮蔽比较面的切段器——与剥离同一类目：CSI ∥ ESC+1 ∥ 任一控制字符）。 */
-const INVISIBLE_SPLIT = /\x1b\[[\x20-\x3f]*[\x40-\x7e]|\x1b[^\x1b]?|[\x00-\x1f\x7f]/
-
-/** 有状态剥离器（§6.22 ③）：三类序列 CSI ∥ OSC ∥ 单字符控制 + `\r\n`∥裸 `\r` 归 `\n`。
- *  状态跨 chunk 携带（序列被 chunk 边界切开不残留成字面）；三类之外的序列（DCS / APC 等）按
- *  单字符控制处理——头字节剥掉，体内字节当可见文本如实交出（设计「表外序列的出口」）。
- *  `push` = 返回边界（状态保留）；`end` = 收场（硬超时 ∥ close ∥ 会话终结：尾部半条序列丢弃并计一次）。 */
-export function createStripper() {
-  let state = "ground" // ground ∥ esc ∥ csi ∥ osc ∥ oscEsc ∥ charset
-  let pendingCr = false // chunk 尾的 `\r`（下一片首字为 `\n` ⇒ 仍归一条——跨 chunk 的 CRLF）
-  const scan = (text) => {
-    const s = String(text ?? "")
-    let out = ""
-    let i = 0
-    while (i < s.length) {
-      const ch = s[i]
-      if (pendingCr) {
-        pendingCr = false
-        out += "\n"
-        if (ch === "\n") { i += 1; continue }
-      }
-      if (state === "esc") {
-        state = "ground"
-        if (ch === "[") state = "csi"
-        else if (ch === "]") state = "osc"
-        else if (ch === "(" || ch === ")" || ch === "*" || ch === "+") state = "charset"
-        else if (ch === "\x1b") state = "esc"
-        i += 1
-        continue
-      }
-      if (state === "charset") { state = "ground"; i += 1; continue } // `ESC ( 0` 字符集指定（既有覆盖不回归）
-      if (state === "csi") {
-        const c = ch.charCodeAt(0)
-        if (c >= 0x20 && c <= 0x3f) { i += 1; continue } // 参数 ∥ 中间字节
-        if (c >= 0x40 && c <= 0x7e) { state = "ground"; i += 1; continue } // 终字节
-        state = "ground" // 类外字 ⇒ 序列作废，本字按常规面重判（不吞可见字节）
-        continue
-      }
-      if (state === "osc") {
-        if (ch === "\x07") { state = "ground"; i += 1; continue }
-        if (ch === "\x1b") { state = "oscEsc"; i += 1; continue }
-        i += 1
-        continue
-      }
-      if (state === "oscEsc") {
-        state = "ground"
-        if (ch === "\\") { i += 1; continue } // `ESC \` = ST
-        state = "osc" // 非 ST ⇒ 本字仍在 OSC 体内（ESC 已丢弃，体内字节本就要丢）
-        continue
-      }
-      if (ch === "\x1b") { state = "esc"; i += 1; continue }
-      if (ch === "\r") {
-        if (i + 1 >= s.length) { pendingCr = true; i += 1; continue }
-        out += "\n"
-        i += s[i + 1] === "\n" ? 2 : 1
-        continue
-      }
-      if (ch === "\n" || ch === "\t") { out += ch; i += 1; continue }
-      const code = ch.charCodeAt(0)
-      if (code < 0x20 || code === 0x7f) { i += 1; continue } // BEL ∥ 退格 ∥ 其余 C0（保留 `\n` / `\t`）
-      out += ch
-      i += 1
-    }
-    return out
-  }
-  return {
-    /** 喂一片（返回可交出文本；半条序列留给下一片）。 */
-    feed(text) { return scan(text) },
-    /** 收场：尾部半条序列丢弃并计一次；其前后的可见字节照常交出。 */
-    end(text = "") {
-      let out = scan(text)
-      if (pendingCr) { out += "\n"; pendingCr = false }
-      const dropped = state === "ground" ? 0 : 1
-      state = "ground"
-      return { text: out, dropped }
-    },
-  }
-}
-
-/** 同一归一（无状态旁路——遮蔽比较面用：秘密值先过控制字节剥离 + CRLF 归一）。 */
-export function normalizeText(text) {
-  return createStripper().end(String(text ?? "")).text
-}
-
-// ─── 遮蔽（§6.22 ⑦）────────────────────────────────────────────────────────
-
-/** 秘密遮蔽过滤器：字面移除 + `len-1` 尾缓冲（跨 chunk 切分不泄；尾至沉降冲涮）。
- *  比较面 = 与剥离同一归一（§6.22 ③）：秘密值先归一、再按不可见处切段（段长 ≥ 4）——
- *  裸字面匹配会漏掉夹控制字节 ∥ 被 chunk 切开的回显。 */
-export function createMask() {
-  const secrets = []
-  let tail = ""
-  let keep = 0
-  return {
-    add(secret) {
-      const raw = String(secret ?? "")
-      if (!raw) return
-      const table = [normalizeText(raw), ...raw.split(INVISIBLE_SPLIT).filter((seg) => seg.length >= MASK_SEG_MIN)]
-      for (const s of table) {
-        if (!s || secrets.includes(s)) continue
-        secrets.push(s)
-        keep = Math.max(keep, s.length - 1)
-      }
-    },
-    push(text) {
-      let out = tail + String(text ?? "")
-      for (const s of secrets) out = out.split(s).join("")
-      if (out.length <= keep) { tail = out; return "" }
-      const emit = out.slice(0, out.length - keep)
-      tail = out.slice(out.length - keep)
-      return emit
-    },
-    /** 尾缓冲现行内容（**判据面用**：门①② 要看到已达字节——尾在 drain 时释放，判据不得被它推迟）。 */
-    peek() { return tail },
-    /** 沉降时冲涮尾缓冲：**只放行非秘密前缀段**（尾内最长可疑后缀一律扣下——整尾 ∥ 移位前缀
-     *  都不出返回面；扣下的至多 `秘密长-1` 字符，代价 < 前缀外泄）。 */
-    flush() {
-      const t = tail
-      tail = ""
-      if (!t) return ""
-      let cut = 0
-      for (const s of secrets) {
-        const max = Math.min(t.length, s.length - 1)
-        for (let L = 1; L <= max; L++) if (t.endsWith(s.slice(0, L))) cut = Math.max(cut, L)
-      }
-      return cut ? t.slice(0, t.length - cut) : t
-    },
-  }
-}
-
+// ─── 终端噪声 / 遮蔽（2026-11-05 拆档族已外移 `ssh-text.mjs`）──────────────────
+// 剥离器（`createStripper`）、同一归一（`normalizeText`）与遮蔽过滤器（`createMask`）的体全住兄弟档
+// `ssh-text.mjs`（纯「字节 → 可见文本」链，零子进程 / 零计时）；本档 import 回来原样再出口。
+// 收场面作两半：**半条序列的冲涮**（`flushEscapes`）留本档——它把交出的字节经 `handleChunk` 汇入
+// log / 缓冲 / 等待者（运行时汇聚点住这里，搬过去就得反向 import）；**注记**（`escapeNote`）随文本面走。
 // ─── 子进程（起跑 ∥ 双流汇入 ∥ 退出）────────────────────────────────────────
 
 /** 悬挂 chunk 双流汇入（已剥离已遮蔽 → log ∥ 缓冲 ∥ 面板 → 唤醒沉降等待者）。 */
@@ -504,14 +383,6 @@ export function flushEscapes(entry) {
     dropped += res.dropped
   }
   return dropped
-}
-
-/** 半条序列收场注记（§6.22 ③ flush②）——报告一次即清零。 */
-export function escapeNote(entry) {
-  const n = entry.escDropped ?? 0
-  if (!n) return ""
-  entry.escDropped = 0
-  return `\n— ${n} incomplete escape sequence dropped`
 }
 
 /** 状态行冠形（§6.22 动作表末行）：每返回首行。 */

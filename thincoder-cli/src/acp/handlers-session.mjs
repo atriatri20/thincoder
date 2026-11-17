@@ -14,14 +14,17 @@
  * 释放该会话认领（保留集 = 本进程其余在存会话的活绑定槽，同 cwd；落盘判据三条沿用）。
  */
 import { resolve } from "node:path"
-import { loadManifest, normalizeCwd, bindRecordStore, deleteSlot, newSession, saveManifest, slotPath } from "@thincoder/core/session.mjs"
+import { activeSlot, loadManifest, normalizeCwd, bindRecordStore, deleteSlot, newSession, saveManifest, slotPath } from "@thincoder/core/session.mjs"
+import { setSlotMode } from "@thincoder/core/session-slot-write.mjs"
 // 认领释放谓词单源（SESSION.md §6.2 / §6.16——与 VSC 端壳 `releaseClaimsAll` 同源档；
 // core `session.mjs` 未 re-export 该名——直引 manifest 档，先例 = `thincoder-vscode/src/extension/session-io.mjs`）。
 import { staleClaims } from "@thincoder/core/session-slots-manifest.mjs"
 import { PLAN_ENGINEERING_REFUSED } from "@thincoder/core/agent-tools/plan.mjs"
 // #363①（off 形族单源——MODEL-SPECS.md §16.2）：thinking 开关的取形引核（本档零副本）。
 import { thinkOffShape } from "@thincoder/core/think-off.mjs"
-import { providerSpec } from "@thincoder/core/config.mjs"
+import { loadConfig, providerSpec, resolveWorkMode, setConfigWorkMode, WORK_MODES } from "@thincoder/core/config.mjs"
+import { clearPlanMode } from "@thincoder/core/agent-tools/plan.mjs"
+import { resolveEngineeringManifest } from "@thincoder/core/manifest.mjs"
 import { ACP_ERRORS } from "./transport.mjs"
 // §2.5（ACP-PROTOCOL-COMPLIANCE）：prompt 内容块聚合（resource_link 内联 ∥ 降级标记——基线 MUST）。
 import { buildPromptText } from "./resource-link.mjs"
@@ -49,6 +52,9 @@ export function sessionConfigOptions(agent) {
   opts.push({ id: "thinking", name: "Thinking", type: "boolean", currentValue: th != null && th.type !== "disabled" })
   opts.push({ id: "mode", name: "Mode", type: "select", currentValue: agent?.planMode ? "plan" : "normal",
     options: [{ value: "normal", name: "Normal" }, { value: "plan", name: "Plan" }] })
+  const workMode = resolveWorkMode(agent?.config?.agent)
+  opts.push({ id: "workMode", name: "Work mode", type: "select", currentValue: workMode,
+    options: WORK_MODES.map((value) => ({ value, name: value[0].toUpperCase() + value.slice(1) })) })
   return opts
 }
 
@@ -140,6 +146,12 @@ export function applyConfigOption(agent, configId, value) {
       agent.planMode = value === "plan"
       return true
     }
+    case "workMode": {
+      if (!WORK_MODES.includes(value)) return false
+      setConfigWorkMode(agent.config, value)
+      if (value === "engineering") clearPlanMode(agent)
+      return true
+    }
     default:
       return false
   }
@@ -190,9 +202,11 @@ export function createSessionHandlers(ctx) {
       let slot = null
       let committed = false
       try {
-        slot = await newSession(getCwd())
+        const initialMode = loadConfig().agent.mode
+        slot = await newSession(getCwd(), { mode: initialMode })
         const id = String(slot)
         const session = await createSession({ id, notify: notifyRef.current, request: requestRef.current, log })
+        setConfigWorkMode(session.agent.config, initialMode)
         // §11.5 装配后检查（兜底，与门互补）：门拦「key 缺失 / defaultModel 不可解析」；
         // 本行拦「门放行但 provider 仍不可用」的残余（如 defaultModel 可解析而 provider 缺
         // baseURL）——显式报错而**不建半死会话**（槽已认领 ⇒ 由 finally 回滚撤除——无半态）。
@@ -304,6 +318,23 @@ export function createSessionHandlers(ctx) {
       // `mode:"normal"` 照常接受（唯一合法态，幂等）。
       if (configId === "mode" && value === "plan" && isEngineering(found.session.agent)) {
         return { error: { ...ACP_ERRORS.INVALID_PARAMS, message: PLAN_ENGINEERING_REFUSED } }
+      }
+      if (configId === "workMode") {
+        if (!WORK_MODES.includes(value)) {
+          return { error: { ...ACP_ERRORS.INVALID_PARAMS, message: `workMode must be one of ${WORK_MODES.join("/")}` } }
+        }
+        const agent = found.session.agent
+        if (value === "engineering" && !isEngineering(agent)) {
+          const r = resolveEngineeringManifest(getCwd(), { writer: "main" })
+          if (!r.ok && r.code !== "workspace") {
+            return { error: { ...ACP_ERRORS.INVALID_PARAMS, message: `cannot enter engineering mode: ${r.message}` } }
+          }
+          agent.manifest = r.ok ? r.manifest : null
+        }
+        const slot = agent._slot ?? activeSlot(getCwd())
+        if (!setSlotMode(getCwd(), slot, value)) {
+          return { error: { code: ACP_ERRORS.INTERNAL.code, message: `failed to persist workMode to session slot ${slot}` } }
+        }
       }
       const applied = applyConfigOption(found.session.agent, configId, value)
       if (!applied) {

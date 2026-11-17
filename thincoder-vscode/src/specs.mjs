@@ -79,11 +79,14 @@ export function effortEnumForModel(model) {
  * session showed two percentages under the same `context X%` label (端差 M2). `pct` = null when the
  * estimate is 0（零值不显示门留在端侧）；`tokens` = 状态行 `Yk` 尾串源（#677 I16a——两值同点产出，
  * 单次估算）。`ratio` = 该 agent 的估算校准比（宿主传 `tokenRatioOf(agent)`）——**无缺省**。
+ * `workMode` = 当前档位（`CONTEXT-COMPACTION.md` §2.3「只握有 provider 的面把它当参数透传」）——
+ * 本面只有 history ∥ provider ∥ ratio，档位无自取之处，故由宿主（`panel-callbacks.mjs`，握 `panel._agent`）
+ * 传 `resolveWorkMode(agent.config?.agent)` 进来；**同样无缺省**：分母只有一种取法，忘传就拒并点名参数。
  */
-export function ctxUsageForHistory(history, provider, ratio) {
-  const { tokens, pct } = historyReading(history, provider, ratio)
+export function ctxUsageForHistory(history, provider, ratio, workMode) {
+  const { tokens, pct } = historyReading(history, provider, ratio, workMode)
   return { tokens, pct: tokens ? pct : null }
 }
 
-/** 占比单值形（既有名面——设计档 `WEBVIEW.md` §4.6 派生单点）。 */
-export function ctxPercentForHistory(history, provider, ratio) { return ctxUsageForHistory(history, provider, ratio).pct }
+/** 占比单值形（既有名面——设计档 `WEBVIEW.md` §4.6 派生单点）。`workMode` 同 `ctxUsageForHistory`：无缺省。 */
+export function ctxPercentForHistory(history, provider, ratio, workMode) { return ctxUsageForHistory(history, provider, ratio, workMode).pct }

@@ -20,7 +20,7 @@ import { handleNewSession, handleSwitchSession, handleDeleteSession, handleRenam
 // ——本档分发表按**同名 case 标签**转发行分发（case 标签集合零变化；两新档名带 `panel-messages`
 // 前缀以落在 reverse 机检的 `HOST_DISPATCH` 扫描域内）。
 import { handleAbort, handleCancelSubagent, handleInterrupt, handleOpenFile, handleOpenDiff, handleQuestionResponse, handleSecretInputResponse, handleSetAutoApprove, handleAtComplete, handlePermissionResponse, handleBatchPermissionResponse } from "./panel-messages-turn.mjs"
-import { handleSaveProviderKey, handleDeleteProviderKey, handleSaveMcpServer, handleDeleteMcpServer, handleReconnectMcp, handleEditMcp, handleTestMcp, handleAddProvider, handleRemoveProvider, handleSetProviderProxy, handleSaveProviderModelContext, handleSetKey, handleSaveEmbedKey, handleDeleteEmbedKey, handleSaveWebsearchKey, handleDeleteWebsearchKey, handleTestProvider, handleBuildIndex, handleGetMcpStatus, handleMcpTools, handleSaveAgentSettings, handleGetAgentSettings, handleSetAdvisorGuard, handleSetEngineeringEnabled, handleSetPlanMode, handleGetShellCandidates, handleSaveShellSettings, handleSaveProxySettings, handleTestProxy, handleTeamLogin, handleTeamLogout, handleTeamRotate } from "./panel-messages-settings.mjs"
+import { handleSaveProviderKey, handleDeleteProviderKey, handleSaveMcpServer, handleDeleteMcpServer, handleReconnectMcp, handleEditMcp, handleTestMcp, handleAddProvider, handleRemoveProvider, handleSetProviderProxy, handleSaveProviderModelContext, handleSetKey, handleSaveEmbedKey, handleDeleteEmbedKey, handleSaveWebsearchKey, handleDeleteWebsearchKey, handleTestProvider, handleBuildIndex, handleGetMcpStatus, handleMcpTools, handleSaveAgentSettings, handleGetAgentSettings, handleSetAdvisorGuard, handleSetMode, handleSetPlanMode, handleGetShellCandidates, handleSaveShellSettings, handleSaveProxySettings, handleTestProxy, handleTeamLogin, handleTeamLogout, handleTeamRotate } from "./panel-messages-settings.mjs"
 // C-B2-6 细则⑥（busy-injection 批 fix 轮 2026-09-22）：F-1 降级判决函数已迁 `image-handler.mjs`
 // ——本档只留触发（`downgradeNonVisionImages` + `visionReader` per-call 缝）。
 import { savePastedImages, downgradeNonVisionImages } from "./image-handler.mjs"
@@ -276,8 +276,8 @@ export async function handlePanelMessage(panel, msg) {
     }
     // 会话族（D-3 迁出——handler 住 panel-messages-session.mjs；case 标签与分发零改——缝保持）
     case "newSession": await handleNewSession(panel); break
-    case "switchSession": await handleSwitchSession(panel, msg); break
-    case "deleteSession": await handleDeleteSession(panel, msg); break
+    case "switchSession": await handleSwitchSession(panel, msg); await panel._pushSettingsLight(); break
+    case "deleteSession": await handleDeleteSession(panel, msg); await panel._pushSettingsLight(); break
     case "renameSession": await handleRenameSession(panel, msg); break
     case "setProject": await handleSetProject(panel, msg); break
     case "retry": {
@@ -359,6 +359,8 @@ export async function handlePanelMessage(panel, msg) {
       // cb——不同 tick 保留）。槽绑定随之顺延至此——webviewReady 前无 slot 读者（安全）。
       // F-MI7：快段 = async（认领束 awaited——本 case 已 async ✓）
       await openSessionContent(panel)
+      // 槽在快段才绑定；绑定后重推同一快照链，旧槽 mode 才能覆盖握手前的配置默认。
+      await panel._pushSettingsLight()
       // C-B2-6 ⑦（queue-band 批 2026-10-20）：Reload 冷启按 `items` 重建带面——推点必须在上面这拍
       // **之后**：`openSessionContent` 内的 `clearMessages` 会复位带面（`chat-messages.js` 清屏分支）。
       pushBusyQueued(panel)
@@ -385,7 +387,7 @@ export async function handlePanelMessage(panel, msg) {
       break
     }
     case "setAdvisorGuard": handleSetAdvisorGuard(panel, msg); break
-    case "setEngineeringEnabled": handleSetEngineeringEnabled(panel, msg); break
+    case "setMode": await handleSetMode(panel, msg); break
     case "setPlanMode": await handleSetPlanMode(panel, msg); break
     case "getShellCandidates": await handleGetShellCandidates(panel); break
     case "saveShellSettings": handleSaveShellSettings(panel, msg); break

@@ -39,7 +39,7 @@
  * `batch:status` → `question:respond` → `session:prefs` → `subagent:stop` → `file:open` → `session:flags` → `at:complete` → `session:gc` → `session:index` → `index:build` → `index:status` →
  * `settings:env` → `settings:tools` → `mcp:tools` → `model:catalog` → `provider:setKey` → `provider:delKey` →
  * `provider:models` → `provider:setProxy` → `mcp:update` → `mcp:reconnect` → `record:append` → `theme:state` → `panel:state` → `team:status` → `team:login` → `team:logout` → `team:verify` → `secret:respond` → `team:rotate` → `provider:setModelContext`；顺序供白名单定序断言 —— 主侧据以注册）。
- * 出站订阅面 `on(name, cb)`：白名单 = **二十五条** `ev:*`（`EVENT_CHANNELS` —— 菜单体系批增 `ev:menu`；SSH 会话批增 `ev:secret`）——表外名 **throw**（不入 IPC）；
+ * 出站订阅面 `on(name, cb)`：白名单 = **二十六条** `ev:*`（`EVENT_CHANNELS` —— 菜单体系批增 `ev:menu`；SSH 会话批增 `ev:secret`；桌面取件行批增 `ev:inbox`）——表外名 **throw**（不入 IPC）；
  * 返回退订函数（同 listener 引用 ⇒ 二次退订零抛）。
  */
 const CHANNELS = Object.freeze([
@@ -68,7 +68,7 @@ const CHANNELS = Object.freeze([
   "team:rotate",
   "provider:setModelContext",
 ])
-/** 出站订阅白名单（序同桥面表；名面与主侧 `webContents.send` 用名同；**二十五条** = 回调映射十四条（含 **R4 增 `ev:statusText` ∕ `ev:compress`**——桥 `onWait` ∕ `onCompressStart` ∕ `onCompress` ∕ `onCompressFail` 映射；**SSH 会话批增 `ev:secret`**——桥 `onSecretInput` 映射，凭据门）+ 宿主自产十一条（`ev:usage` / `ev:error` / `ev:susp` / `ev:digest` / `ev:ledger` [`ev:timer` —— timer-wake 阶段 2 增] / [`ev:queue` —— 「回合中插入」批增] / [`ev:flags` —— R1 输入面板移植增：工具驱动翻转 ∕ 写回执后] / [`ev:goal` —— **R5 增**：goal 工具结果时点采样] / [`ev:config` —— **R8 增**：config 写盘感知——宿主 watch onChange 出站，渲染面设置面复读] / [`ev:menu` —— **D36 增**：菜单动作（主→渲染单向；六动作闭集——#817 收正（五 ⇒ 六：+`openSettings`）；纯信号）]）—— 非回调映射；计数族权威数 / 三档同值收正 = 在册登记（`docs/desktop/design/PROJECT.md` §10 BE 行），事件映射段 = `docs/desktop/design/IPC.md` §1）。 */
+/** 出站订阅白名单（序同桥面表；名面与主侧 `webContents.send` 用名同；**二十六条** = 回调映射十四条（含 **R4 增 `ev:statusText` ∕ `ev:compress`**——桥 `onWait` ∕ `onCompressStart` ∕ `onCompress` ∕ `onCompressFail` 映射；**SSH 会话批增 `ev:secret`**——桥 `onSecretInput` 映射，凭据门）+ 宿主自产十二条（`ev:usage` / `ev:error` / `ev:susp` / `ev:digest` / `ev:ledger` [`ev:timer` —— timer-wake 阶段 2 增] / [`ev:queue` —— 「回合中插入」批增] / [`ev:flags` —— R1 输入面板移植增：工具驱动翻转 ∕ 写回执后] / [`ev:goal` —— **R5 增**：goal 工具结果时点采样] / [`ev:config` —— **R8 增**：config 写盘感知——宿主 watch onChange 出站，渲染面设置面复读] / [`ev:menu` —— **D36 增**：菜单动作（主→渲染单向；六动作闭集——#817 收正（五 ⇒ 六：+`openSettings`）；纯信号）] / [`ev:inbox` —— **桌面取件行批增**：跨实例取件面行痕（取件回调两径 `onTake` reject ∥ `onBlocked`；行痕族第四员）]）—— 非回调映射；计数族 = 本表实数（**二十六条**）；档面登记者 = `docs/desktop/design/IPC.md` §1 事件映射段（二十六通道表）。 */
 const EVENT_CHANNELS = Object.freeze([
   "ev:token", "ev:reasoning", "ev:activity", "ev:subagent", "ev:subchunk", "ev:tool-call", "ev:tool-output", "ev:tool-result",
   "ev:approval", "ev:question", "ev:secret", "ev:task", "ev:susp", "ev:digest", "ev:usage", "ev:error", "ev:ledger", "ev:timer",
@@ -78,6 +78,7 @@ const EVENT_CHANNELS = Object.freeze([
   "ev:goal",
   "ev:config",
   "ev:menu",
+  "ev:inbox",
 ])
 const BRIDGE_KEY = "thincoder"
 

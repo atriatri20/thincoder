@@ -26,14 +26,16 @@ export class ShellError extends Error {
   }
 }
 
-/** 会话四旗（KD-SV-218——槽字段键序；读 = 行 `flags` ∥ 写 = `session.update` 四件）。 */
-export const FLAG_KEYS = Object.freeze(["autoApprove", "planMode", "engineering", "advisorGuard"])
+/** 会话布尔开关与三档工作模式。旧 engineering 只在读面迁移，不进入写面。 */
+export const FLAG_KEYS = Object.freeze(["autoApprove", "planMode", "advisorGuard"])
+export const WORK_MODES = Object.freeze(["tiny", "normal", "engineering"])
+/** 旧值读取别名（CONFIG §5.4）：`minimal` 是 tiny 的历史写法，只在读取口归一——写面仍只收旧值外的三档。 */
+const LEGACY_MODE_ALIASES = Object.freeze({ minimal: "tiny" })
+const normalizeMode = (mode) => LEGACY_MODE_ALIASES[mode] ?? mode
 
-/** 四旗写面（核 `session-slot-write.mjs` `setSlotAutoApprove`/`setSlotPlanMode`/`setSlotEngineering`/`setSlotAdvisorGuard` 四件——名对位）。 */
 export const FLAG_SETTERS = Object.freeze({
   autoApprove: "setSlotAutoApprove",
   planMode: "setSlotPlanMode",
-  engineering: "setSlotEngineering",
   advisorGuard: "setSlotAdvisorGuard",
 })
 
@@ -87,14 +89,59 @@ function textOf(content) {
   return ""
 }
 
-/** 槽四旗读面（KD-SV-218——槽字段；未设 ⇒ 假）。 */
+/** 槽工作模式读面：合法 mode 优先（旧值 `minimal` 先归一为 tiny），旧槽才读 engineering 布尔。 */
+export function workModeOf(data) {
+  const mode = normalizeMode(data?.mode)
+  if (WORK_MODES.includes(mode)) return mode
+  return data?.engineering === true ? "engineering" : "normal"
+}
+
+/** 会话控件读面；engineering 与残留 PLAN 的半状态在投影层收正。 */
 export function flagsOf(data) {
+  const mode = workModeOf(data)
   return {
     autoApprove: data?.autoApprove === true,
-    planMode: data?.planMode === true,
-    engineering: data?.engineering === true,
+    planMode: mode !== "engineering" && data?.planMode === true,
     advisorGuard: data?.advisor?.guard === true,
+    mode,
   }
+}
+
+/**
+ * 回合尾控制字段合并（纯函数）：起跑快照 agent 的槽控制字段落后于忙期 PATCH（mode/plan/auto/
+ * advisor/model/effort/title 皆经槽写面直落盘）——`saveSession(agent)` 原样写会把忙期新值盖回
+ * 起跑旧值。此函数把盘上最新控制值并回 agent（**只并控制字段**——history/_fullHistory/记录存储
+ * 一律不动 ⇒ 当回合历史不丢）。盒内回合（runAgent）不写控制字段（零自动标题 ∥ 零 /eng·/plan 件），
+ * 故盘面即真源。
+ */
+export function mergeSlotControl(agent, data) {
+  if (!agent || !data || typeof data !== "object") return agent
+  agent.config ??= {}
+  agent.config.agent ??= {}
+  // 模型身份（槽双字段；`setSlotPrefs` 换模型写 `activeProvider`/`activeModel`）
+  if (typeof data.activeProvider === "string" && data.activeProvider !== "") agent.activeProvider = data.activeProvider
+  if (typeof data.activeModel === "string" && data.activeModel !== "") {
+    agent.activeModel = data.activeModel
+    if (agent.provider && typeof agent.provider === "object") agent.provider.model = data.activeModel
+  }
+  // 工作模式（单源：合法 mode 优先（旧值先归一），旧 engineering 布尔回落；盘面无 mode 信息 ⇒ 不动现行值）
+  const restoredMode = normalizeMode(data.mode)
+  if (WORK_MODES.includes(restoredMode)) {
+    agent.config.agent.mode = restoredMode
+    agent.config.agent.engineering = restoredMode === "engineering"
+  } else if (data.engineering !== undefined) {
+    agent.config.agent.mode = data.engineering === true ? "engineering" : "normal"
+    agent.config.agent.engineering = data.engineering === true
+  }
+  // 三布尔开关（槽规范结构恒有 planMode/autoApprove；advisor 守卫空 ⇒ 不落）
+  if (Object.hasOwn(data, "planMode")) agent.planMode = data.planMode === true
+  if (Object.hasOwn(data, "autoApprove")) agent.autoApprove = data.autoApprove === true
+  if (data.advisor && typeof data.advisor === "object") agent.config.advisor = { ...data.advisor }
+  // 标题（盒内回合零自动标题——盘面 = 起跑值 ∥ 忙期重命名新值，皆真源）
+  if (typeof data.title === "string") agent.title = data.title
+  // 会话级档位（§6.21 判据句 5 保存面——`_slotEffort` 原样携带：键在 ⇒ 原样，缺键 ⇒ undefined 不落盘）
+  agent._slotEffort = Object.hasOwn(data, "effort") ? (data.effort ?? null) : undefined
+  return agent
 }
 
 /** 读史投射：核槽 `history`（人读线）⇒ 展示行集（role 四值面取三值——notice 无源不造）。

@@ -315,7 +315,7 @@ export const HOST_DICT = Object.freeze({
     "status.banner.plan": "PLAN",
     "status.banner.auto": "AUTO",
     "status.banner.advisor": "ADVISOR",
-    "status.banner.eng": "ENG",
+    "status.banner.mode": "MODE:${mode}",
     // ── 挂起句三键（桌面空闲唤醒批 —— 核 i18n 无同源键；值单源 = `docs/desktop/design/IPC.md` §1「挂起 ∕ 消化词键注」：
     //    en = VSC 逐字（`en.json` 的 `settings.inherit` 等同名键）· zh = CLI 逐字；消费 = 状态行段 3 支①）──
     "susp.running": "${n} background subagent(s) running",
@@ -470,7 +470,7 @@ export const HOST_DICT = Object.freeze({
     "status.banner.plan": "PLAN",
     "status.banner.auto": "AUTO",
     "status.banner.advisor": "ADVISOR",
-    "status.banner.eng": "ENG",
+    "status.banner.mode": "MODE:${mode}",
     // ── 挂起句三键（桌面空闲唤醒批 —— zh = CLI 逐字：`thincoder-cli/src/tui/suspension-drive.mjs` `backgroundStatusText`；
     //    两语句合成式（` · ` 分隔）沿 CLI 同字面）──
     "susp.running": "后台 ${n} 子代理运行中",

@@ -19,9 +19,11 @@
  *
  * Returns a JSON array in chronological order. Every message without ts comes
  * back as ts:null and can never match a time window (legacy sessions). Content
- * is truncated to ~500 chars with an explicit marker — full text lives in the
- * session file. assistant tool_calls come back as [{name, arguments}] with the
- * stored argument string capped at 300 chars (matches the stored precision).
+ * is truncated to ~500 chars with an explicit marker that states what is actually
+ * retrievable: for `tool` results the session file stores only those first 500
+ * chars (re-run the tool for more), for `user` / `assistant` text the full text
+ * is in the session file. assistant tool_calls come back as [{name, arguments}]
+ * with the stored argument string capped at 300 chars (matches the stored precision).
  *
  * Cross-session (SESSION.md §6.13 D-R19a + §6.19 D-SE47 — 索引优先 + 主存回落):
  * path = a session file path (absolute, or relative to the project cwd) → when the derived
@@ -78,16 +80,21 @@ function messageText(m) {
   return ""
 }
 
-/** Truncate long content (~500 chars) with an explicit marker. The cut never splits a UTF-16
- *  surrogate pair (emoji etc.) — a lone high surrogate in tool output would be an eyesore at
- *  minimum; the send layer sanitizes it anyway, but clean output costs nothing
- *  (thincoder-core/text-budget.mjs `safeSliceUTF16` same rule). */
-function truncateContent(text) {
+/** Truncate long content (~500 chars) with an explicit marker whose wording is **true for the role**
+ *  (`SESSION.md` §5 取回面标记条): on the human line a `tool` result is stored as the first 500 chars
+ *  (`slimForDisplay`), so the session file holds no more than what already came back — “full text is in
+ *  the session file” would be a promise nobody can keep, and a model that believes it stops re-running
+ *  the tool. `user` / `assistant` bodies are never slimmed, so that promise still holds there.
+ *  The cut never splits a UTF-16 surrogate pair (emoji etc.) — `text-budget.mjs` `safeSliceUTF16` same rule. */
+function truncateContent(text, role) {
   const t = String(text ?? "")
   if (t.length <= CONTENT_CAP) return t
   let end = CONTENT_CAP
   if (t.charCodeAt(end - 1) >= 0xd800 && t.charCodeAt(end - 1) <= 0xdbff) end-- // high surrogate at the cut → step back
-  return t.slice(0, end) + `\n… (truncated: ${t.length - end} chars — full text is in the session file)`
+  const where = role === "tool"
+    ? "the session file keeps only the first 500 chars of a tool result — re-run the tool if you need it"
+    : "full text is in the session file"
+  return t.slice(0, end) + `\n… (truncated: ${t.length - end} chars — ${where})`
 }
 
 /** Tool name across both stored shapes ({function:{name}} and flat {name}). */
@@ -124,7 +131,7 @@ function toEntry(m) {
   }
   if (m.name !== undefined) entry.name = m.name
   if (m.tool_call_id !== undefined) entry.tool_call_id = m.tool_call_id
-  entry.content = truncateContent(messageText(m))
+  entry.content = truncateContent(messageText(m), m.role)
   if (Array.isArray(m.tool_calls) && m.tool_calls.length > 0) {
     const calls = toolCallEntries(m.tool_calls)
     if (calls.length > 0) entry.tool_calls = calls
@@ -259,7 +266,7 @@ function indexEntry(r) {
   const entry = { ts: typeof r.ts === "number" ? r.ts : null, role: r.role ?? null }
   if (r.name !== undefined && r.name !== null) entry.name = r.name
   if (r.tool_call_id !== undefined && r.tool_call_id !== null) entry.tool_call_id = r.tool_call_id
-  entry.content = truncateContent(r.content ?? "")
+  entry.content = truncateContent(r.content ?? "", r.role)
   if (Array.isArray(r.tool_calls) && r.tool_calls.length > 0) entry.tool_calls = r.tool_calls
   return entry
 }
@@ -308,6 +315,100 @@ async function queryAllSessions(filters, current = null) {
   } finally { if (db) db.close() }
 }
 
+// ─── 受限父历史（TOOLS.md §6.29 ④ · B8）─────────────────────────────────────────
+/** 变体 `limit` 上限（设计档：必传且上限 50——读的是父会话的一个批窗口，不是整本历史）。 */
+export const BATCH_HISTORY_LIMIT_MAX = 50
+
+/** 批档比较键（win32 大小写不敏感——与 `agent-tools/subagent-scheduler.mjs` 的 fileKey 同律）。 */
+const batchKeyOf = (p) => (process.platform === "win32" ? String(p).toLowerCase() : String(p))
+
+/**
+ * 记录一批的父会话起点（`depth-0 根 agent` 上按规范化 batchDoc 存）：批创建成功时记一次；
+ * 旧批没有起点时由首次绑定 spawn 记一次（`subagent-spawn.mjs` 的 `buildSpawnChild`）——
+ * **已记过的不动**（不回填一个虚构的历史范围）。
+ * @param {object} rootAgent — depth-0 根 agent（历史与窗口都属于它那一本账）
+ * @param {string} batchDoc — 批次档绝对路径
+ * @param {number} [ts] — 起点时刻（epoch ms；缺省 = 现在）
+ */
+export function recordBatchHistoryStart(rootAgent, batchDoc, ts = Date.now()) {
+  if (!rootAgent || !batchDoc) return
+  const map = (rootAgent._batchHistoryStart ??= new Map())
+  const key = batchKeyOf(batchDoc)
+  if (!map.has(key)) map.set(key, ts)
+}
+
+/** 本批的父会话窗口：`[起点, 下一批起点)`；没有下一批 ⇒ 终点开放到查询时刻。
+ *  起点不在账上 ⇒ null（fail-closed：不拿一个猜出来的下界去读）。 */
+function historyWindowOf(rootAgent, batchDoc) {
+  const map = rootAgent?._batchHistoryStart
+  const key = batchKeyOf(batchDoc)
+  const start = map instanceof Map ? map.get(key) : undefined
+  if (typeof start !== "number") return null
+  let end = null
+  for (const [k, v] of map) {
+    if (k === key || typeof v !== "number" || v <= start) continue
+    if (end === null || v < end) end = v
+  }
+  return { start, end }
+}
+
+/**
+ * 绑定父 agent 的受限 `read_history`（同名工具，只在 eng 子代理的 `childRunOpts.extraTools` 注入）：
+ * 读的是**父会话**里本批起点之后、下一批起点之前的消息，限量 50，禁止 `path` / 跨会话
+ * （`ctx.agent` 固定为闭包里的父 agent ⇒ 读不到 child 自己，也不能反向写父状态）。
+ * 无时间戳消息按原工具规则不进入时间窗——所需无日期事实由任务书 `knownFacts` 携带（K6）。
+ * @param {object} parentAgent — depth-0 根 agent（父会话 + 窗口账本）
+ * @param {string} batchDoc — 本批批次档绝对路径（窗口键）
+ */
+export function makeBatchHistoryTool(parentAgent, batchDoc) {
+  return {
+    name: "read_history",
+    description: DESC("read_history-batch"),
+    parameters: {
+      type: "object",
+      required: ["limit"],
+      properties: {
+        role: { type: "string", enum: ["user", "assistant", "tool"], description: "Only messages with this role." },
+        keyword: { type: "string", description: "Case-insensitive substring of the message text (multimodal matches on text parts)." },
+        tool: { type: "string", description: "Only messages for this tool: role=tool messages with name=tool, plus assistant messages that declared a call to it." },
+        since: { type: "integer", description: "Earliest ts to match, epoch ms, INCLUSIVE — this batch window's start applies too (the later of the two wins); messages without ts never match." },
+        until: { type: "integer", description: "Latest ts to match, epoch ms, INCLUSIVE — the next batch's start (or now) applies too (the earlier of the two wins)." },
+        limit: { type: "integer", description: "REQUIRED — how many messages to return (1–50). No default: the window is decided by the caller, never supplied for it." },
+        direction: { type: "string", enum: ["oldest", "newest"], description: "Take the limit window from the oldest or newest end of the matched set (default newest)." },
+      },
+    },
+    readonly: true,
+    execute(args, ctx) {
+      const a = args ?? {}
+      // `path` 不在本变体 schema 里；直接调进来的一笔同样拒（schema 是提示，不是门）
+      if (Object.hasOwn(a, "path")) {
+        throw new Error("read_history: `path` is not available here — this bounded face reads the parent session's window for THIS batch only (no other session, no other batch). Drop `path`. Nothing was read.")
+      }
+      if (a.limit === undefined || a.limit === null) {
+        throw new Error(`read_history: limit is required and has no default — pass how many messages you need (1–${BATCH_HISTORY_LIMIT_MAX}). Nothing was read.`)
+      }
+      const limit = Math.floor(Number(a.limit))
+      if (!Number.isFinite(limit) || limit < 1) {
+        throw new Error(`read_history: limit ${JSON.stringify(a.limit)} is not a positive integer — pass 1–${BATCH_HISTORY_LIMIT_MAX}. Nothing was read.`)
+      }
+      if (limit > BATCH_HISTORY_LIMIT_MAX) {
+        throw new Error(`read_history: limit ${limit} exceeds the cap of ${BATCH_HISTORY_LIMIT_MAX} for this bounded face — narrow it by keyword / since / until and ask again. Nothing was read.`)
+      }
+      const window = historyWindowOf(parentAgent, batchDoc)
+      if (window === null) {
+        throw new Error(`read_history: no history window is recorded for this batch record (${batchDoc}) — the window is recorded when the batch is created or when its first spawn binds it. Nothing was read; carry the fact you need in the task book instead.`)
+      }
+      const asNumber = (v) => (v === undefined || v === null ? null : Number(v))
+      const sinceGiven = asNumber(a.since)
+      const untilGiven = asNumber(a.until)
+      const since = sinceGiven === null || !Number.isFinite(sinceGiven) ? window.start : Math.max(sinceGiven, window.start)
+      const end = window.end ?? Date.now()
+      const until = untilGiven === null || !Number.isFinite(untilGiven) ? end : Math.min(untilGiven, end)
+      // ctx.agent 固定为父 agent：读到的是父会话，读不到 child 自己，也写不回父状态
+      return readHistoryTool.execute({ ...a, limit, since, until }, { ...ctx, agent: parentAgent })
+    },
+  }
+}
 export const readHistoryTool = {
   name: "read_history",
   description: DESC("read_history"),
